@@ -4,6 +4,8 @@
 #readelf: -lW
 
 #...
- +[0-9]+ +\.note\.gnu\.build-id \.text 
+ +[0-9]+ +\.note\.gnu\.build-id .*
+ +[0-9]+ +\.text 
+#...
  +[0-9]+ +\..* \.note\.gnu\.property .*
 #pass

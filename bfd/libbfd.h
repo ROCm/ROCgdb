@@ -832,10 +832,6 @@ extern void bfd_section_already_linked_table_traverse
   (bool (*) (struct bfd_section_already_linked_hash_entry *,
 		    void *), void *) ATTRIBUTE_HIDDEN;
 
-extern bfd_vma _bfd_read_unsigned_leb128
-  (bfd *, bfd_byte *, unsigned int *) ATTRIBUTE_HIDDEN;
-extern bfd_signed_vma _bfd_read_signed_leb128
-  (bfd *, bfd_byte *, unsigned int *) ATTRIBUTE_HIDDEN;
 extern bfd_vma _bfd_safe_read_leb128
   (bfd *, bfd_byte **, bool, const bfd_byte * const) ATTRIBUTE_HIDDEN;
 extern bfd_byte * _bfd_write_unsigned_leb128

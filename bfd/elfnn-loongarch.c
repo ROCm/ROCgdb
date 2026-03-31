@@ -3110,9 +3110,11 @@ perform_relocation (const Elf_Internal_Rela *rel, asection *input_section,
     case R_LARCH_ADD_ULEB128:
     case R_LARCH_SUB_ULEB128:
       {
-	unsigned int len = 0;
-	/* Before write uleb128, first read it to get it's length.  */
-	_bfd_read_unsigned_leb128 (input_bfd, contents + rel->r_offset, &len);
+	/* Before write uleb128, first read it to get its length.  */
+	bfd_byte *p = contents + rel->r_offset;
+	bfd_byte *end = contents + input_section->size;
+	_bfd_safe_read_leb128 (input_bfd, &p, false, end);
+	size_t len = p - (contents + rel->r_offset);
 	loongarch_write_unsigned_leb128 (contents + rel->r_offset, len, value);
 	r = bfd_reloc_ok;
 	break;
@@ -3805,9 +3807,11 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	case R_LARCH_SUB_ULEB128:
 	  {
 	    /* Get the value and length of the uleb128 data.  */
-	    unsigned int len = 0;
-	    bfd_vma old_value = _bfd_read_unsigned_leb128 (input_bfd,
-				    contents + rel->r_offset, &len);
+	    bfd_byte *p = contents + rel->r_offset;
+	    bfd_byte *end = contents + input_section->size;
+	    bfd_vma old_value = _bfd_safe_read_leb128 (input_bfd, &p,
+						       false, end);
+	    size_t len = p - (contents + rel->r_offset);
 
 	    if (R_LARCH_ADD_ULEB128 == ELFNN_R_TYPE (rel->r_info))
 	      relocation = old_value + relocation + rel->r_addend;

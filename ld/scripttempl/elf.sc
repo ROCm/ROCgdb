@@ -82,6 +82,8 @@
 #               applied to every symbol definition
 #       ALL_TEXT_BEFORE_RO - put all code sections before read-only
 #               sections
+#       ALL_TEXT_AFTER_RO - put all code sections after read-only
+#               sections
 #
 # When adding sections, do note that the names of some sections are used
 # when specifying the start address of the next.
@@ -360,7 +362,11 @@ SHLIB_TEXT_START_ADDR="SEGMENT_START(\"text-segment\", ${SHLIB_TEXT_START_ADDR:-
 if test -z "$TINY_READONLY_SECTION"; then
   case "$LD_FLAG" in
     *ro*textonly*)
-      ALL_TEXT_BEFORE_RO=" "
+      if test -n "${ALL_TEXT_AFTER_RO}"; then
+        TEXT_AFTER_RO=" "
+      else
+        ALL_TEXT_BEFORE_RO=" "
+      fi
       SEPARATE_TEXT=" "
       TEXT_SEGMENT_ALIGN=". = ALIGN(${MAXPAGESIZE});"
       ;;
@@ -1021,7 +1027,7 @@ EOF
 
   #------Early Read Only Data -----------------------------------------------
 
-  if test -z "${ALL_TEXT_BEFORE_RO}"; then
+  if test -n "${TEXT_AFTER_RO}" || test -z "${ALL_TEXT_BEFORE_RO}"; then
     # We are allowed to put R/O sections before code sections.
     # Doing so either puts read only data into the code segment, if the data
     # and code sections are contiguous, or creates a data segment followed by
@@ -1033,6 +1039,7 @@ EOF
 
     test -n "${SEPARATE_CODE}" || emit_early_ro
     test -n "${NON_ALLOC_DYN}${SEPARATE_CODE}" || emit_dyn
+    test -z "${TEXT_AFTER_RO}" || emit_rodata
 
     # We only need the alignment if we have emitted some sections.
     if test -z "${SEPARATE_CODE}"; then
@@ -1058,24 +1065,26 @@ EOF
 
   align_text
 
-  #------Read Only Data -----------------------------------------------------
+  if test -z "${TEXT_AFTER_RO}"; then
+    #------Read Only Data ------------------------------------------------
 
-  align_rodata
+    align_rodata
 
-  # If we have not already emitted the early read only data sections then do
-  # so now.  Also if the dynamic section has not already been emitted and we
-  # can put it into the data segment, then do that here as well.
+    # If we have not already emitted the early read only data sections then do
+    # so now.  Also if the dynamic section has not already been emitted and we
+    # can put it into the data segment, then do that here as well.
 
-  if test -n "${ALL_TEXT_BEFORE_RO}"; then
-    test -n "${SEPARATE_CODE}" || emit_early_ro
-    test -n "${NON_ALLOC_DYN}${SEPARATE_CODE}" || emit_dyn
+    if test -n "${ALL_TEXT_BEFORE_RO}"; then
+      test -n "${SEPARATE_CODE}" || emit_early_ro
+      test -n "${NON_ALLOC_DYN}${SEPARATE_CODE}" || emit_dyn
+    fi
+    test -z "${SEPARATE_CODE}" || emit_early_ro
+    test -z "${SEPARATE_CODE}" || emit_dyn
+
+    # Now emit the rest of the read only data.
+
+    emit_rodata
   fi
-  test -z "${SEPARATE_CODE}" || emit_early_ro
-  test -z "${SEPARATE_CODE}" || emit_dyn
-
-  # Now emit the rest of the read only data.
-
-  emit_rodata
 
   #------Read Write Data ----------------------------------------------------
 

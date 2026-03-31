@@ -30,6 +30,7 @@ OTHER_PLT_SECTIONS="
 "
 OTHER_GOT_RELOC_SECTIONS="
   .rel.tls	${RELOCATING-0} : { *(.rel.tls) }"
+ALL_TEXT_AFTER_RO=yes
 
 # Linux modify the default library search path to first include
 # a 32-bit specific directory.

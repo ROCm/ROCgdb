@@ -11,6 +11,7 @@ EXTRA_EM_FILE="elf-x86"
 GENERATE_SHLIB_SCRIPT=yes
 GENERATE_PIE_SCRIPT=yes
 NO_SMALL_DATA=yes
+ALL_TEXT_AFTER_RO=yes
 source_sh ${srcdir}/emulparams/vxworks.sh
 source_sh ${srcdir}/emulparams/extern_protected_data.sh
 source_sh ${srcdir}/emulparams/dynamic_undefined_weak.sh

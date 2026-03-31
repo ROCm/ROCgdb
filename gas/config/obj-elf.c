@@ -1949,7 +1949,8 @@ obj_elf_get_vtable_inherit (void)
 {
   char *cname, *pname;
   symbolS *csym, *psym;
-  char c, bad = 0;
+  char c;
+  bool bad = false;
 
   if (*input_line_pointer == '#')
     ++input_line_pointer;
@@ -1961,11 +1962,13 @@ obj_elf_get_vtable_inherit (void)
      the same child symbol.  Also, we can currently only do this if the
      child symbol is already exists and is placed in a fragment.  */
 
-  if (csym == NULL || symbol_get_frag (csym) == NULL)
+  if (csym == NULL
+      || symbol_get_frag (csym) == NULL
+      || symbol_get_value_expression (csym)->X_op != O_constant)
     {
       as_bad (_("expected `%s' to have already been set for .vtable_inherit"),
 	      cname);
-      bad = 1;
+      bad = true;
     }
 
   restore_line_pointer (c);
@@ -2003,7 +2006,6 @@ obj_elf_get_vtable_inherit (void)
   if (bad)
     return NULL;
 
-  gas_assert (symbol_get_value_expression (csym)->X_op == O_constant);
   return fix_new (symbol_get_frag (csym),
 		  symbol_get_value_expression (csym)->X_add_number,
 		  0, psym, 0, 0, BFD_RELOC_VTABLE_INHERIT);

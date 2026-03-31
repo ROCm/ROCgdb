@@ -21,6 +21,7 @@ IREL_IN_PLT=
 OTHER_PLT_SECTIONS="
 .plt.got      ${RELOCATING-0} : { *(.plt.got) }
 "
+ALL_TEXT_AFTER_RO=yes
 
 # Linux modify the default library search path to first include
 # a 32-bit specific directory.

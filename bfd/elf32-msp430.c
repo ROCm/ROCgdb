@@ -893,13 +893,16 @@ msp430_final_link_relocate (reloc_howto_type *	   howto,
       bfd_byte *endp, *p;
       unsigned int val = relocation;
 
-      _bfd_read_unsigned_leb128 (input_bfd, contents + rel->r_offset, &len);
+      p = contents + rel->r_offset;
+      endp = contents + input_section->size;
+      _bfd_safe_read_leb128 (input_bfd, &p, false, endp);
 
       /* Clean the contents value to zero.  Do not reduce the length.  */
+      endp = p - 1;
       p = contents + rel->r_offset;
-      endp = (p + len) - 1;
+      len = endp + 1 - p;
       memset (p, 0x80, len - 1);
-      *(endp) = 0;
+      *endp = 0;
 
       /* Get the length of the new uleb128 value.  */
       do

@@ -2953,9 +2953,10 @@ _bfd_coff_gc_mark_hook (asection *sec,
 	      /* PE weak externals.  A weak symbol may include an auxiliary
 		 record indicating that if the weak symbol is not resolved,
 		 another external symbol is used instead.  */
-	      struct coff_link_hash_entry *h2 =
-		h->auxbfd->tdata.coff_obj_data->sym_hashes
-		[h->aux->x_sym.x_tagndx.u32];
+	      struct coff_link_hash_entry *h2 = NULL;
+	      unsigned long symndx2 = h->aux->x_sym.x_tagndx.u32;
+	      if (symndx2 < obj_raw_syment_count (h->auxbfd))
+		h2 = obj_coff_sym_hashes (h->auxbfd)[symndx2];
 
 	      if (h2 && h2->root.type != bfd_link_hash_undefined)
 		return  h2->root.u.def.section;
@@ -2982,8 +2983,11 @@ _bfd_coff_gc_mark_rsec (struct bfd_link_info *info, asection *sec,
 			struct coff_reloc_cookie *cookie)
 {
   struct coff_link_hash_entry *h;
+  unsigned long rsym = cookie->rel->r_symndx;
 
-  h = cookie->sym_hashes[cookie->rel->r_symndx];
+  if (rsym >= obj_raw_syment_count (cookie->abfd))
+    return NULL;
+  h = cookie->sym_hashes[rsym];
   if (h != NULL)
     {
       while (h->root.type == bfd_link_hash_indirect
@@ -2995,7 +2999,7 @@ _bfd_coff_gc_mark_rsec (struct bfd_link_info *info, asection *sec,
 
   return (*gc_mark_hook) (sec, info, cookie->rel, NULL,
 			  &(cookie->symbols
-			    + obj_convert (sec->owner)[cookie->rel->r_symndx])->native->u.syment);
+			    + obj_convert (sec->owner)[rsym])->native->u.syment);
 }
 
 static bool _bfd_coff_gc_mark
