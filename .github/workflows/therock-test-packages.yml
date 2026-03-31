@@ -27,6 +27,9 @@ permissions:
 
 env:
   THEROCK_COMMIT_REF: c9529ebdedc2e52c7b4dc26d209725a31f616ac7 # 2026-03-13 commit
+  VENV_DIR: ${{ github.workspace }}/.venv
+  OUTPUT_ARTIFACTS_DIR: "./build"
+  THEROCK_BIN_DIR: "./build/bin"
 
 jobs:
   rocgdb-tests:
@@ -36,17 +39,14 @@ jobs:
 
     container:
       image: ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb@sha256:939b8e35887144d1ca4eca928dc2869991339cab869168790e495fc0a5907bbb
-      options: --cap-add=SYS_PTRACE
+      options: "--cap-add=SYS_PTRACE --ipc host --group-add video --device /dev/kfd --device /dev/dri --group-add 110 --ulimit memlock=-1:-1 --security-opt seccomp=unconfined --env-file /etc/podinfo/gha-gpu-isolation-settings --user 0:0"
 
     defaults:
       run:
         shell: bash
 
     env:
-      VENV_DIR: ${{ github.workspace }}/.venv
       ARTIFACT_RUN_ID: "${{ inputs.artifact_run_id }}"
-      OUTPUT_ARTIFACTS_DIR: "./build"
-      THEROCK_BIN_DIR: "./build/bin"
 
     steps:
       - name: Checkout Repository
@@ -77,25 +77,14 @@ jobs:
 
     container:
       image: ghcr.io/rocm/no_rocm_image_ubuntu24_04@sha256:4150afe4759d14822f0e3f8930e1124f26e11f68b5c7b91ec9a02b20b1ebbb98
-      options: --ipc host
-        --group-add video
-        --device /dev/kfd
-        --device /dev/dri
-        --group-add 110
-        --ulimit memlock=-1:-1
-        --security-opt seccomp=unconfined
-        --env-file /etc/podinfo/gha-gpu-isolation-settings
-        --user 0:0
+      options: ${{ env.GPU_CONTAINER_OPTIONS }}
 
     defaults:
       run:
         shell: bash
 
     env:
-      VENV_DIR: ${{ github.workspace }}/.venv
       ARTIFACT_RUN_ID: "${{ inputs.artifact_run_id }}"
-      OUTPUT_ARTIFACTS_DIR: "./build"
-      THEROCK_BIN_DIR: "./build/bin"
 
     steps:
       - name: Checkout Repository
