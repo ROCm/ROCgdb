@@ -1235,6 +1235,7 @@ add_relaxed_insn (struct bpf_insn *insn, expressionS *exp)
 
 static int exp_parse_failed = 0;
 static bool parsing_insn_operands = false;
+static char *g_curr_insn_str;
 
 static char *
 parse_expression (char *s, expressionS *exp)
@@ -1357,8 +1358,8 @@ bpf_parse_name (const char *name, expressionS *exp, enum expr_mode mode)
       if (parse_bpf_register ((char *) name, 'r', &regno)
           || parse_bpf_register ((char *) name, 'w', &regno))
         {
-          as_bad (_("unexpected register name `%s' in expression"),
-                  name);
+	  as_bad (_("unexpected register name `%s' in instruction `%s'"),
+		  name, g_curr_insn_str);
           return false;
         }
     }
@@ -1464,6 +1465,7 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
      function above.  */
   partial_match_length = 0;
   errmsg = NULL;
+  g_curr_insn_str = str;
 
 #define PARSE_ERROR(...) parse_error (s > str ? s - str : 0, __VA_ARGS__)
 
