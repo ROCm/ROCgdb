@@ -657,71 +657,6 @@ typedef struct bfd_section
 
   /*  End of section flags.  */
 
-  /* Some internal packed boolean fields.  */
-
-  /* See the vma field.  */
-  unsigned int user_set_vma : 1;
-
-  /* A mark flag used by some of the linker backends.  */
-  unsigned int linker_mark : 1;
-
-  /* Another mark flag used by some of the linker backends.  Set for
-     output sections that have an input section.  */
-  unsigned int linker_has_input : 1;
-
-  /* Mark flag used by some linker backends for garbage collection.  */
-  unsigned int gc_mark : 1;
-
-  /* Section compression status.  */
-  unsigned int compress_status : 2;
-#define COMPRESS_SECTION_NONE    0
-#define COMPRESS_SECTION_DONE    1
-#define DECOMPRESS_SECTION_ZLIB  2
-#define DECOMPRESS_SECTION_ZSTD  3
-
-  /* The following flags are used by the ELF linker. */
-
-  /* Mark sections which have been allocated to segments.  */
-  unsigned int segment_mark : 1;
-
-  /* Type of sec_info information.  */
-  unsigned int sec_info_type:3;
-#define SEC_INFO_TYPE_NONE      0
-#define SEC_INFO_TYPE_STABS     1
-#define SEC_INFO_TYPE_MERGE     2
-#define SEC_INFO_TYPE_EH_FRAME  3
-#define SEC_INFO_TYPE_JUST_SYMS 4
-#define SEC_INFO_TYPE_TARGET    5
-#define SEC_INFO_TYPE_EH_FRAME_ENTRY 6
-#define SEC_INFO_TYPE_SFRAME  7
-
-  /* Nonzero if this section uses RELA relocations, rather than REL.  */
-  unsigned int use_rela_p:1;
-
-  /* Nonzero if section contents are mmapped.  */
-  unsigned int mmapped_p:1;
-
-  /* Nonzero if section contents should not be freed.  */
-  unsigned int alloced:1;
-
-  /* Indicate that the section contains branch veneers.  This is used when
-     support for non-contiguous memory regions is enabled.  The veneers have
-     to be allocated to the same memory region as the code they are refered
-     by, i.e. they cannot be moved to a subsequent memory region.  */
-  unsigned int veneer : 1;
-
-  /* Bits used by various backends.  The generic code doesn't touch
-     these fields.  */
-
-  unsigned int sec_flg0:1;
-  unsigned int sec_flg1:1;
-  unsigned int sec_flg2:1;
-  unsigned int sec_flg3:1;
-  unsigned int sec_flg4:1;
-  unsigned int sec_flg5:1;
-
-  /* End of internal packed boolean fields.  */
-
   /*  The virtual memory address of the section - where it will be
       at run time.  The symbols are relocated against this.  The
       user_set_vma flag is maintained by bfd; if it's not set, the
@@ -816,9 +751,6 @@ typedef struct bfd_section
      linenumbers are written out.  */
   file_ptr moving_line_filepos;
 
-  /* What the section number is in the target world.  */
-  int target_index;
-
   void *used_by_bfd;
 
   /* If this is a constructor section then here is a list of the
@@ -853,6 +785,74 @@ typedef struct bfd_section
 
   /* Explicitly specified section type, if non-zero.  */
   unsigned int type;
+
+  /* What the section number is in the target world.  */
+  int target_index;
+
+  /* Some internal packed boolean fields.  */
+
+  /* See the vma field.  */
+  unsigned int user_set_vma : 1;
+
+  /* A mark flag used by some of the linker backends.  */
+  unsigned int linker_mark : 1;
+
+  /* Another mark flag used by some of the linker backends.  Set for
+     output sections that have an input section.  */
+  unsigned int linker_has_input : 1;
+
+  /* Mark flag used by some linker backends for garbage collection.  */
+  unsigned int gc_mark : 1;
+
+  /* Section compression status.  */
+  unsigned int compress_status : 2;
+#define COMPRESS_SECTION_NONE    0
+#define COMPRESS_SECTION_DONE    1
+#define DECOMPRESS_SECTION_ZLIB  2
+#define DECOMPRESS_SECTION_ZSTD  3
+
+  /* The following flags are used by the ELF linker. */
+
+  /* Mark sections which have been allocated to segments.  */
+  unsigned int segment_mark : 1;
+
+  /* Type of sec_info information.  */
+  unsigned int sec_info_type:3;
+#define SEC_INFO_TYPE_NONE      0
+#define SEC_INFO_TYPE_STABS     1
+#define SEC_INFO_TYPE_MERGE     2
+#define SEC_INFO_TYPE_EH_FRAME  3
+#define SEC_INFO_TYPE_JUST_SYMS 4
+#define SEC_INFO_TYPE_TARGET    5
+#define SEC_INFO_TYPE_EH_FRAME_ENTRY 6
+#define SEC_INFO_TYPE_SFRAME  7
+
+  /* Nonzero if this section uses RELA relocations, rather than REL.  */
+  unsigned int use_rela_p:1;
+
+  /* Nonzero if section contents are mmapped.  */
+  unsigned int mmapped_p:1;
+
+  /* Nonzero if section contents should not be freed.  */
+  unsigned int alloced:1;
+
+  /* Indicate that the section contains branch veneers.  This is used when
+     support for non-contiguous memory regions is enabled.  The veneers have
+     to be allocated to the same memory region as the code they are refered
+     by, i.e. they cannot be moved to a subsequent memory region.  */
+  unsigned int veneer : 1;
+
+  /* Bits used by various backends.  The generic code doesn't touch
+     these fields.  */
+
+  unsigned int sec_flg0:1;
+  unsigned int sec_flg1:1;
+  unsigned int sec_flg2:1;
+  unsigned int sec_flg3:1;
+  unsigned int sec_flg4:1;
+  unsigned int sec_flg5:1;
+
+  /* End of internal packed boolean fields.  */
 
 } asection;
 
@@ -1226,12 +1226,12 @@ typedef enum bfd_print_symbol
 typedef struct _symbol_info
 {
   symvalue value;
-  char type;
   const char *name;            /* Symbol name.  */
+  const char *stab_name;       /* String for stab type.  */
   unsigned char stab_type;     /* Stab type.  */
   char stab_other;             /* Stab other.  */
   short stab_desc;             /* Stab desc.  */
-  const char *stab_name;       /* String for stab type.  */
+  char type;
 } symbol_info;
 
 /* An empty string that will not match the address of any other
