@@ -239,8 +239,6 @@ static bool do_dump = false;
 static bool do_version = false;
 static bool do_histogram = false;
 static bool do_debugging = false;
-static bool do_ctf = false;
-static bool do_sframe = false;
 static bool do_arch = false;
 static bool do_notes = false;
 static bool do_archive_index = false;
@@ -6569,7 +6567,6 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	  dwarf_check = true;
 	  break;
 	case OPTION_CTF_DUMP:
-	  do_ctf = true;
 	  request_dump (dumpdata, CTF_DUMP);
 	  break;
 	case OPTION_CTF_SYMBOLS:
@@ -6585,7 +6582,6 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	  dump_ctf_parent_name = strdup (optarg);
 	  break;
 	case OPTION_SFRAME_DUMP:
-	  do_sframe = true;
 	  /* Providing section name is optional.  request_dump (), however,
 	     thrives on non NULL optarg.  Handle it explicitly here.  */
 	  if (optarg != NULL)
