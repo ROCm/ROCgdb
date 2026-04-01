@@ -41,6 +41,7 @@
 #include "expop.h"
 #include "c-exp.h"
 #include "inferior.h"
+#include "cli/cli-style.h"
 
 
 /* Parse the string EXP as a C expression, evaluate it,
@@ -1119,7 +1120,8 @@ eval_op_func_static_var (struct type *expect_type, struct expression *exp,
   struct block_symbol sym = lookup_symbol (var, blk, SEARCH_VAR_DOMAIN,
 					   nullptr);
   if (sym.symbol == NULL)
-    error (_("No symbol \"%s\" in specified context."), var);
+    error (_("No symbol \"%ps\" in specified context."),
+	   styled_string (variable_name_style.style (), var));
   return evaluate_var_value (noside, sym.block, sym.symbol);
 }
 

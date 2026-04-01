@@ -52,8 +52,9 @@ get_ulongest (const char **pp, int trailer)
 	  std::string varname (start, p - start);
 	  if (!get_internalvar_integer (lookup_internalvar (varname.c_str ()),
 				       &retval))
-	    error (_("Convenience variable $%s does not have integer value."),
-		   varname.c_str ());
+	    error (_("Convenience variable %p[$%s%p] does not have integer value."),
+		   variable_name_style.style ().ptr (),
+		   varname.c_str (), nullptr);
 	}
     }
   else

@@ -1349,7 +1349,9 @@ write_object_renaming (struct parser_state *par_state,
   block_symbol sym_info = ada_lookup_encoded_symbol (name, orig_left_context,
 						     SEARCH_VFT);
   if (sym_info.symbol == NULL)
-    error (_("Could not find renamed variable: %s"), ada_decode (name).c_str ());
+    error (_("Could not find renamed variable: %ps"),
+	   styled_string (variable_name_style.style (),
+			  ada_decode (name).c_str ()));
   else if (sym_info.symbol->loc_class () == LOC_TYPEDEF)
     /* We have a renaming of an old-style renaming symbol.  Don't
        trust the block information.  */

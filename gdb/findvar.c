@@ -32,6 +32,7 @@
 #include "block.h"
 #include "objfiles.h"
 #include "language.h"
+#include "cli/cli-style.h"
 
 /* Basic byte-swapping routines.  All 'extract' functions return a
    host-format integer from a target-format integer at ADDR which is
@@ -299,7 +300,8 @@ language_defn::read_var_value (struct symbol *var,
   if (sym_need == SYMBOL_NEEDS_FRAME)
     gdb_assert (frame != NULL);
   else if (sym_need == SYMBOL_NEEDS_REGISTERS && !target_has_registers ())
-    error (_("Cannot read `%s' without registers"), var->print_name ());
+    error (_("Cannot read `%ps' without registers"),
+	   styled_string (variable_name_style.style (), var->print_name ()));
 
   if (frame != NULL)
     frame = get_hosting_frame (var, var_block, frame);

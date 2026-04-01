@@ -40,6 +40,7 @@
 #include "extension.h"
 #include "gdbsupport/byte-vector.h"
 #include "typeprint.h"
+#include "cli/cli-style.h"
 
 /* Local functions.  */
 
@@ -3985,8 +3986,9 @@ value_of_this (const struct language_defn *lang)
 
   sym = lookup_language_this (lang, b);
   if (sym.symbol == NULL)
-    error (_("current stack frame does not contain a variable named `%s'"),
-	   lang->name_of_this ());
+    error (_("current stack frame does not contain a variable named `%ps'"),
+	   styled_string (variable_name_style.style (),
+			  lang->name_of_this ()));
 
   return read_var_value (sym.symbol, sym.block, frame);
 }
