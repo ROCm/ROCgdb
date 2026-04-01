@@ -1079,8 +1079,9 @@ block	:	block COLONCOLON name
 					     nullptr).symbol;
 
 			  if (tem == nullptr)
-			    error (_("No function \"%s\" in specified context."),
-				   copy.c_str ());
+			    error (_("No function \"%ps\" in specified context."),
+				   styled_string (function_name_style.style (),
+						  copy.c_str ()));
 			  $$ = tem->value_block (); }
 	;
 

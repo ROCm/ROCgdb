@@ -784,9 +784,10 @@ scope_operation::evaluate_funcall (struct type *expect_type,
       if (!static_memfuncp)
 	{
 	  /* For the time being, we don't handle this.  */
-	  error (_("Call to overloaded function %s requires "
+	  error (_("Call to overloaded function %ps requires "
 		   "`this' pointer"),
-		 function_name);
+		 styled_string (function_name_style.style (),
+				function_name));
 	}
 
       arg_view = arg_view.slice (1);

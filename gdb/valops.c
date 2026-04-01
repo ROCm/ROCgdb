@@ -2963,26 +2963,29 @@ find_overload_match (gdb::array_view<value *> args,
     {
       std::string hint = incomplete_type_hint (args);
       if (method == METHOD)
-	error (_("Cannot resolve method %s%s%s to any overloaded instance%s"),
+	error (_("Cannot resolve method %p[%s%s%s%p] to any overloaded instance%s"),
+	       function_name_style.style ().ptr (),
 	       obj_type_name,
 	       (obj_type_name && *obj_type_name) ? "::" : "",
-	       name, hint.c_str ());
+	       name, nullptr, hint.c_str ());
       else
-	error (_("Cannot resolve function %s to any overloaded instance%s"),
-	       func_name, hint.c_str ());
+	error (_("Cannot resolve function %ps to any overloaded instance%s"),
+	       styled_string (function_name_style.style (), func_name),
+	       hint.c_str ());
     }
   else if (match_quality == NON_STANDARD)
     {
       if (method == METHOD)
 	warning (_("Using non-standard conversion to match "
-		   "method %s%s%s to supplied arguments"),
+		   "method %p[%s%s%s%p] to supplied arguments"),
+		 function_name_style.style ().ptr (),
 		 obj_type_name,
 		 (obj_type_name && *obj_type_name) ? "::" : "",
-		 name);
+		 name, nullptr);
       else
 	warning (_("Using non-standard conversion to match "
-		   "function %s to supplied arguments"),
-		 func_name);
+		   "function %ps to supplied arguments"),
+		 styled_string (function_name_style.style (), func_name));
     }
 
   if (staticp != NULL)
@@ -3726,8 +3729,8 @@ value_struct_elt_for_reference (struct type *domain, int offset,
 	      else if (noside == EVAL_AVOID_SIDE_EFFECTS)
 		return value::allocate (TYPE_FN_FIELD_TYPE (f, j));
 	      else
-		error (_("Cannot reference virtual member function \"%s\""),
-		       name);
+		error (_("Cannot reference virtual member function \"%ps\""),
+		       styled_string (function_name_style.style (), name));
 	    }
 	  else
 	    {

@@ -1751,11 +1751,13 @@ rust_structop::evaluate_funcall (struct type *expect_type,
 					   SEARCH_FUNCTION_DOMAIN,
 					   nullptr);
   if (sym.symbol == NULL)
-    error (_("Could not find function named '%s'"), name.c_str ());
+    error (_("Could not find function named '%ps'"),
+	   styled_string (function_name_style.style (), name.c_str ()));
 
   struct type *fn_type = sym.symbol->type ();
   if (fn_type->num_fields () == 0)
-    error (_("Function '%s' takes no arguments"), name.c_str ());
+    error (_("Function '%ps' takes no arguments"),
+	   styled_string (function_name_style.style (), name.c_str ()));
 
   if (fn_type->field (0).type ()->code () == TYPE_CODE_PTR)
     args[0] = value_addr (args[0]);
