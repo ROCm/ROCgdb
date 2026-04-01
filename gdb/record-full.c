@@ -45,6 +45,7 @@
 #include "top.h"
 #include "valprint.h"
 #include "interps.h"
+#include "cli/cli-style.h"
 
 #include <signal.h>
 
@@ -2312,8 +2313,9 @@ bfdcore_read (bfd *obfd, asection *osec, void *buf, int len, int *offset)
   if (ret)
     *offset += len;
   else
-    error (_("Failed to read %d bytes from core file %s ('%s')."),
-	   len, bfd_get_filename (obfd),
+    error (_("Failed to read %d bytes from core file %ps ('%s')."),
+	   len, styled_string (file_name_style.style (),
+			       bfd_get_filename (obfd)),
 	   bfd_errmsg (bfd_get_error ()));
 }
 
@@ -2368,8 +2370,9 @@ record_full_restore (struct bfd &cbfd)
   /* Check the magic code.  */
   bfdcore_read (&cbfd, osec, &magic, sizeof (magic), &bfd_offset);
   if (magic != RECORD_FULL_FILE_MAGIC)
-    error (_("Version mismatch or file format error in core file %s."),
-	   bfd_get_filename (&cbfd));
+    error (_("Version mismatch or file format error in core file %ps."),
+	   styled_string (file_name_style.style (),
+			  bfd_get_filename (&cbfd)));
   if (record_debug)
     gdb_printf (gdb_stdlog,
 		"  Reading 4-byte magic cookie "
@@ -2472,8 +2475,9 @@ record_full_restore (struct bfd &cbfd)
 	      break;
 
 	    default:
-	      error (_("Bad entry type in core file %s."),
-		     bfd_get_filename (&cbfd));
+	      error (_("Bad entry type in core file %ps."),
+		     styled_string (file_name_style.style (),
+				    bfd_get_filename (&cbfd)));
 	      break;
 	    }
 
@@ -2518,8 +2522,9 @@ bfdcore_write (bfd *obfd, asection *osec, void *buf, int len, int *offset)
   if (ret)
     *offset += len;
   else
-    error (_("Failed to write %d bytes to core file %s ('%s')."),
-	   len, bfd_get_filename (obfd),
+    error (_("Failed to write %d bytes to core file %ps ('%s')."),
+	   len, styled_string (file_name_style.style (),
+			       bfd_get_filename (obfd)),
 	   bfd_errmsg (bfd_get_error ()));
 }
 
@@ -2603,8 +2608,8 @@ record_full_base_target::save_record (const char *recfilename)
 					     SEC_HAS_CONTENTS
 					     | SEC_READONLY);
   if (osec == NULL)
-    error (_("Failed to create 'precord' section for corefile %s: %s"),
-	   recfilename,
+    error (_("Failed to create 'precord' section for corefile %ps: %s"),
+	   styled_string (file_name_style.style (), recfilename),
 	   bfd_errmsg (bfd_get_error ()));
   bfd_set_section_size (osec, save_size);
   bfd_set_section_vma (osec, 0);

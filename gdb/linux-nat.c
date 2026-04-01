@@ -63,6 +63,7 @@
 #include "gdbsupport/scope-exit.h"
 #include "gdbsupport/gdb-sigmask.h"
 #include "gdbsupport/common-debug.h"
+#include "cli/cli-style.h"
 
 /* This comment documents high-level logic of this file.
 
@@ -4307,7 +4308,8 @@ linux_proc_pending_signals (int pid, sigset_t *pending,
   xsnprintf (fname, sizeof fname, "/proc/%d/status", pid);
   gdb_file_up procfile = gdb_fopen_cloexec (fname, "r");
   if (procfile == NULL)
-    error (_("Could not open %s"), fname);
+    error (_("Could not open %ps"),
+	   styled_string (file_name_style.style () ,fname));
 
   while (fgets (buffer, PATH_MAX, procfile.get ()) != NULL)
     {

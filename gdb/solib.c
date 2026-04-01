@@ -387,7 +387,8 @@ solib_bfd_fopen (const char *pathname, int fd)
   gdb_bfd_ref_ptr abfd (gdb_bfd_open (pathname, gnutarget, fd));
 
   if (abfd == NULL)
-    error (_("Could not open `%s' as an executable file: %s"), pathname,
+    error (_("Could not open `%ps' as an executable file: %s"),
+	   styled_string (file_name_style.style (), pathname),
 	   bfd_errmsg (bfd_get_error ()));
 
   return abfd;
@@ -419,15 +420,18 @@ solib_bfd_open (const char *pathname)
 
   /* Check bfd format.  */
   if (!bfd_check_format (abfd.get (), bfd_object))
-    error (_("`%s': not in executable format: %s"),
-	   bfd_get_filename (abfd.get ()), bfd_errmsg (bfd_get_error ()));
+    error (_("`%ps': not in executable format: %s"),
+	   styled_string (file_name_style.style (),
+			  bfd_get_filename (abfd.get ())),
+	   bfd_errmsg (bfd_get_error ()));
 
   /* Check bfd arch.  */
   b = gdbarch_bfd_arch_info (current_inferior ()->arch ());
   if (!b->compatible (b, bfd_get_arch_info (abfd.get ())))
-    error (_("`%s': Shared library architecture %s is not compatible "
+    error (_("`%ps': Shared library architecture %s is not compatible "
 	     "with target architecture %s."),
-	   bfd_get_filename (abfd.get ()),
+	   styled_string (file_name_style.style (),
+			  bfd_get_filename (abfd.get ())),
 	   bfd_get_arch_info (abfd.get ())->printable_name, b->printable_name);
 
   return abfd;

@@ -23,6 +23,7 @@
 #include "symtab.h"
 #include "xcoffread.h"
 #include "observable.h"
+#include "cli/cli-style.h"
 
 /* solib_ops for AIX systems.  */
 
@@ -540,8 +541,9 @@ aix_solib_ops::bfd_open (const char *pathname) const
 						found_file));
   if (archive_bfd == NULL)
     {
-      warning (_("Could not open `%s' as an executable file: %s"),
-	       filename.c_str (), bfd_errmsg (bfd_get_error ()));
+      warning (_("Could not open `%ps' as an executable file: %s"),
+	       styled_string (file_name_style.style (), filename.c_str ()),
+	       bfd_errmsg (bfd_get_error ()));
       return NULL;
     }
 
@@ -550,8 +552,9 @@ aix_solib_ops::bfd_open (const char *pathname) const
 
   if (! bfd_check_format (archive_bfd.get (), bfd_archive))
     {
-      warning (_("\"%s\": not in executable format: %s."),
-	       filename.c_str (), bfd_errmsg (bfd_get_error ()));
+      warning (_("\"%ps\": not in executable format: %s."),
+	       styled_string (file_name_style.style (), filename.c_str ()),
+	       bfd_errmsg (bfd_get_error ()));
       return NULL;
     }
 
@@ -589,8 +592,9 @@ aix_solib_ops::bfd_open (const char *pathname) const
 
   if (! bfd_check_format (object_bfd.get (), bfd_object))
     {
-      warning (_("%s(%s): not in object format: %s."),
-	       filename.c_str (), member_name.c_str (),
+      warning (_("%ps(%s): not in object format: %s."),
+	       styled_string (file_name_style.style (), filename.c_str ()),
+	       member_name.c_str (),
 	       bfd_errmsg (bfd_get_error ()));
       return NULL;
     }

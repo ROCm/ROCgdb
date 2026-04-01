@@ -1314,39 +1314,49 @@ target_translate_tls_address (struct objfile *objfile, CORE_ADDR offset,
 	      break;
 	    case TLS_LOAD_MODULE_NOT_FOUND_ERROR:
 	      if (objfile_is_library)
-		error (_("Cannot find shared library `%s' in dynamic"
-			 " linker's load module list"), objfile_name (objfile));
+		error (_("Cannot find shared library `%ps' in dynamic"
+			 " linker's load module list"),
+		       styled_string (file_name_style.style (),
+				      objfile_name (objfile)));
 	      else
-		error (_("Cannot find executable file `%s' in dynamic"
-			 " linker's load module list"), objfile_name (objfile));
+		error (_("Cannot find executable file `%ps' in dynamic"
+			 " linker's load module list"),
+		       styled_string (file_name_style.style (),
+				      objfile_name (objfile)));
 	      break;
 	    case TLS_NOT_ALLOCATED_YET_ERROR:
 	      if (objfile_is_library)
 		error (_("The inferior has not yet allocated storage for"
 			 " thread-local variables in\n"
-			 "the shared library `%s'\n"
+			 "the shared library `%ps'\n"
 			 "for %s"),
-		       objfile_name (objfile),
+		       styled_string (file_name_style.style (),
+				      objfile_name (objfile)),
 		       target_pid_to_str (ptid).c_str ());
 	      else
 		error (_("The inferior has not yet allocated storage for"
 			 " thread-local variables in\n"
-			 "the executable `%s'\n"
+			 "the executable `%ps'\n"
 			 "for %s"),
-		       objfile_name (objfile),
+		       styled_string (file_name_style.style (),
+				      objfile_name (objfile)),
 		       target_pid_to_str (ptid).c_str ());
 	      break;
 	    case TLS_GENERIC_ERROR:
 	      if (objfile_is_library)
 		error (_("Cannot find thread-local storage for %s, "
-			 "shared library %s:\n%s"),
+			 "shared library %ps:\n%s"),
 		       target_pid_to_str (ptid).c_str (),
-		       objfile_name (objfile), ex.what ());
+		       styled_string (file_name_style.style (),
+				      objfile_name (objfile)),
+		       ex.what ());
 	      else
 		error (_("Cannot find thread-local storage for %s, "
-			 "executable file %s:\n%s"),
+			 "executable file %ps:\n%s"),
 		       target_pid_to_str (ptid).c_str (),
-		       objfile_name (objfile), ex.what ());
+		       styled_string (file_name_style.style (),
+				      objfile_name (objfile)),
+		       ex.what ());
 	      break;
 	    default:
 	      throw;

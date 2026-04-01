@@ -50,6 +50,7 @@
 #include "x86-tdep.h"
 #include "dwarf2/frame.h"
 #include "frame-unwind.h"
+#include "cli/cli-style.h"
 
 /* The syscall's XML filename for i386.  */
 #define XML_SYSCALL_FILENAME_AMD64 "syscalls/amd64-linux.xml"
@@ -1868,8 +1869,8 @@ amd64_linux_lam_untag_mask ()
       errno = 0;
       unsigned long long result = std::strtoul (start, &endptr, 0);
       if (errno != 0 || endptr == start)
-	error (_("Failed to parse untag_mask from file %s."),
-	       std::string (filename).c_str ());
+	error (_("Failed to parse untag_mask from file %ps."),
+	       styled_string (file_name_style.style (), filename.c_str ()));
 
       return result;
     }

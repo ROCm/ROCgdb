@@ -14010,7 +14010,8 @@ remote_target::remote_file_put (const char *local_file, const char *remote_file,
 	  if (bytes == 0)
 	    {
 	      if (ferror (file.get ()))
-		error (_("Error reading %s."), local_file);
+		error (_("Error reading %ps."),
+		       styled_string (file_name_style.style (), local_file));
 	      else
 		{
 		  /* EOF.  Unless there is something still in the

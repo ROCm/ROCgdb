@@ -26,6 +26,7 @@
 #include "inferior.h"
 #include "regcache.h"
 #include "gdb_bfd.h"
+#include "cli/cli-style.h"
 
 #include "solib.h"
 #include "solib-darwin.h"
@@ -623,8 +624,10 @@ darwin_solib_ops::bfd_open (const char *pathname) const
        (abfd.get (), bfd_object,
 	gdbarch_bfd_arch_info (current_inferior ()->arch ())));
   if (res == NULL)
-    error (_("`%s': not a shared-library: %s"),
-	   bfd_get_filename (abfd.get ()), bfd_errmsg (bfd_get_error ()));
+    error (_("`%ps': not a shared-library: %s"),
+	   styled_string (file_name_style.style (),
+			  bfd_get_filename (abfd.get ())),
+	   bfd_errmsg (bfd_get_error ()));
 
   /* The current filename for fat-binary BFDs is a name generated
      by BFD, usually a string containing the name of the architecture.

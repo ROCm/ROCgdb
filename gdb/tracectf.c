@@ -31,6 +31,7 @@
 #include <algorithm>
 #include "gdbsupport/filestuff.h"
 #include "gdbarch.h"
+#include "cli/cli-style.h"
 
 /* GDB saves trace buffers and other information (such as trace
    status) got from the remote target into Common Trace Format (CTF).
@@ -317,8 +318,9 @@ ctf_start (struct trace_file_writer *self, const char *dirname)
 
   /* Create DIRNAME.  */
   if (mkdir (dirname, hmode) && errno != EEXIST)
-    error (_("Unable to open directory '%s' for saving trace data (%s)"),
-	   dirname, safe_strerror (errno));
+    error (_("Unable to open directory '%ps' for saving trace data (%s)"),
+	   styled_string (file_name_style.style (), dirname),
+	   safe_strerror (errno));
 
   memset (&writer->tcs, '\0', sizeof (writer->tcs));
 
@@ -327,8 +329,9 @@ ctf_start (struct trace_file_writer *self, const char *dirname)
   writer->tcs.metadata_fd
     = gdb_fopen_cloexec (file_name.c_str (), "w").release ();
   if (writer->tcs.metadata_fd == NULL)
-    error (_("Unable to open file '%s' for saving trace data (%s)"),
-	   file_name.c_str (), safe_strerror (errno));
+    error (_("Unable to open file '%ps' for saving trace data (%s)"),
+	   styled_string (file_name_style.style (), file_name.c_str ()),
+	   safe_strerror (errno));
 
   ctf_save_metadata_header (&writer->tcs);
 
@@ -336,8 +339,9 @@ ctf_start (struct trace_file_writer *self, const char *dirname)
   writer->tcs.datastream_fd
     = gdb_fopen_cloexec (file_name.c_str (), "w").release ();
   if (writer->tcs.datastream_fd == NULL)
-    error (_("Unable to open file '%s' for saving trace data (%s)"),
-	   file_name.c_str (), safe_strerror (errno));
+    error (_("Unable to open file '%ps' for saving trace data (%s)"),
+	   styled_string (file_name_style.style (), file_name.c_str ()),
+	   safe_strerror (errno));
 }
 
 /* This is the implementation of trace_file_write_ops method

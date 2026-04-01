@@ -35,6 +35,7 @@
 #include "complaints.h"
 #include "dwarf2/sect-names.h"
 #include "dwarf2/public.h"
+#include "cli/cli-style.h"
 
 struct xcoff_symfile_info
 {
@@ -134,8 +135,9 @@ xcoff_find_toc_offset (objfile *objfile)
 
   /* Seek to symbol table location.  */
   if (bfd_seek (abfd, symtab_offset, SEEK_SET) < 0)
-    error (_("Error reading symbols from %s: %s"),
-	   objfile_name (objfile), bfd_errmsg (bfd_get_error ()));
+    error (_("Error reading symbols from %ps: %s"),
+	   styled_string (file_name_style.style (), objfile_name (objfile)),
+	   bfd_errmsg (bfd_get_error ()));
 
   unsigned int num_symbols = bfd_get_symcount (abfd);
   size_t size = coff_data (abfd)->local_symesz * num_symbols;

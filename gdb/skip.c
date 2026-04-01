@@ -1373,8 +1373,9 @@ save_skip_command (const char *filename, int from_tty)
   gdb::unique_xmalloc_ptr<char> expanded_filename (tilde_expand (filename));
   stdio_file fp;
   if (!fp.open (expanded_filename.get (), "w"))
-    error (_("Unable to open file '%s' for saving (%s)"),
-	   expanded_filename.get (), safe_strerror (errno));
+    error (_("Unable to open file '%ps' for saving (%s)"),
+	   styled_string (file_name_style.style (), expanded_filename.get ()),
+	   safe_strerror (errno));
 
   for (const auto &entry : skiplist_entries)
     entry.print_recreate (&fp);

@@ -1902,8 +1902,9 @@ save_user_command (const char *filename, int from_tty)
   std::string expanded_filename = gdb_tilde_expand (filename);
   stdio_file fp;
   if (!fp.open (expanded_filename.c_str (), "w"))
-    error (_("Unable to open file '%s' for saving (%s)"),
-	   expanded_filename.c_str (), safe_strerror (errno));
+    error (_("Unable to open file '%ps' for saving (%s)"),
+	   styled_string (file_name_style.style (), expanded_filename.c_str ()),
+	   safe_strerror (errno));
 
   cli_ui_out uiout (&fp);
   for (struct cmd_list_element *c = cmdlist; c != nullptr; c = c->next)

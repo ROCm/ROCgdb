@@ -3727,7 +3727,9 @@ extract_single_filename_arg (const char *args)
   std::string filename = extract_string_maybe_quoted (&args);
   args = skip_spaces (args);
   if (*args != '\0')
-    error (_("Junk after filename \"%s\": %s"), filename.c_str (), args);
+    error (_("Junk after filename \"%ps\": %s"),
+	   styled_string (file_name_style.style (), filename.c_str ()),
+	   args);
   if (!filename.empty ())
     filename = gdb_tilde_expand (filename.c_str ());
   return filename;

@@ -97,7 +97,8 @@ locate_dwz_sections (objfile *objfile, dwz_file &dwz_file)
 static void
 debug_sup_failure (const char *text, bfd *abfd)
 {
-  error (_("%s [in modules %s]"), text, bfd_get_filename (abfd));
+  error (_("%s [in modules %ps]"), text,
+	 styled_string (file_name_style.style (), bfd_get_filename (abfd)));
 }
 
 /* Look for the .debug_sup section and read it.  If the section does
@@ -390,9 +391,9 @@ dwz_file::read_dwz_file (dwarf2_per_objfile *per_objfile)
     }
 
   if (dwz_bfd == NULL)
-    error (_("could not find supplementary DWARF file (%s) for %s"),
-	   filename.c_str (),
-	   per_bfd->filename ());
+    error (_("could not find supplementary DWARF file (%ps) for %ps"),
+	   styled_string (file_name_style.style (), filename.c_str ()),
+	   styled_string (file_name_style.style (), per_bfd->filename ()));
 
   dwz_file_up result (new dwz_file (std::move (dwz_bfd)));
 

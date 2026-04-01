@@ -45,6 +45,7 @@
 #include <algorithm>
 #include "inferior.h"
 #include "gdbsupport/unordered_set.h"
+#include "cli/cli-style.h"
 
 /* An enumeration of the various things a user might attempt to
    complete for a linespec location.  */

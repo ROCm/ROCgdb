@@ -9500,8 +9500,10 @@ resolve_sal_pc (struct symtab_and_line *sal)
   if (sal->pc == 0 && sal->symtab != NULL)
     {
       if (!find_pc_for_line (sal->symtab, sal->line, &pc))
-	error (_("No line %d in file \"%s\"."),
-	       sal->line, symtab_to_filename_for_display (sal->symtab));
+	error (_("No line %d in file \"%ps\"."),
+	       sal->line,
+	       styled_string (file_name_style.style (),
+			      symtab_to_filename_for_display (sal->symtab)));
       sal->pc = pc;
 
       /* If this SAL corresponds to a breakpoint inserted using a line
@@ -14545,8 +14547,10 @@ save_breakpoints (const char *filename, int from_tty,
   stdio_file fp;
 
   if (!fp.open (expanded_filename.get (), "w"))
-    error (_("Unable to open file '%s' for saving (%s)"),
-	   expanded_filename.get (), safe_strerror (errno));
+    error (_("Unable to open file '%ps' for saving (%s)"),
+	   styled_string (file_name_style.style (),
+			  expanded_filename.get ()),
+	   safe_strerror (errno));
 
   if (extra_trace_bits)
     save_trace_state_variables (&fp);
