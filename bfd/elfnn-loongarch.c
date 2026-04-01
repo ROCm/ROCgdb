@@ -1229,9 +1229,6 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_LARCH_GOT_PCADD_HI20:
 	case R_LARCH_GOT_HI20:
 	case R_LARCH_SOP_PUSH_GPREL:
-	  /* For la.global.  */
-	  if (h)
-	    h->pointer_equality_needed = 1;
 	  if (!loongarch_elf_record_tls_and_got_reference (abfd, info, h,
 							   r_symndx,
 							   GOT_NORMAL,
@@ -6543,13 +6540,17 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
       if (!h->def_regular)
 	{
 	  /* Mark the symbol as undefined, rather than as defined in
-	     the .plt section.  Leave the value alone.  */
+	     the .plt section.  */
 	  sym->st_shndx = SHN_UNDEF;
 	  /* If the symbol is weak, we do need to clear the value.
 	     Otherwise, the PLT entry would provide a definition for
 	     the symbol even if the symbol wasn't defined anywhere,
-	     and so the symbol would never be NULL.  */
-	  if (!h->ref_regular_nonweak)
+	     and so the symbol would never be NULL.  Leave the value if
+	     there were any relocations where pointer equality matters
+	     (this is a clue for the dynamic linker, to make function
+	     pointer comparisons work between an application and shared
+	     library).  */
+	  if (!h->ref_regular_nonweak || !h->pointer_equality_needed)
 	    sym->st_value = 0;
 	}
     }
@@ -6605,6 +6606,10 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 	  else
 	    {
 	      asection *plt;
+
+	      if (!h->pointer_equality_needed)
+		abort ();
+
 	      /* For non-shared object, we can't use .got.plt, which
 		 contains the real function address if we need pointer
 		 equality.  We load the GOT entry with the PLT entry.  */
