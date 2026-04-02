@@ -674,6 +674,7 @@ X_LIBS
 X_LDFLAGS
 X_CFLAGS
 TK_XINCLUDES
+TK_PLATFORM_DEFINE
 TK_DEPS
 TK_LIBRARY
 TK_INCLUDE
@@ -686,6 +687,7 @@ TK_LIB_FILE
 TK_SRC_DIR
 TK_BIN_DIR
 TK_VERSION
+TCL_PLATFORM_DEFINE
 TCL_DEPS
 TCL_LIBRARY
 TCL_INCLUDE
@@ -11886,7 +11888,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11889 "configure"
+#line 11891 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11992,7 +11994,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11995 "configure"
+#line 11997 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -32924,27 +32926,18 @@ $as_echo "could not find ${TCL_BIN_DIR}/tclConfig.sh" >&6; }
 
 
 
-	# Check for in-tree tcl
-	here=`pwd`
-	cd ${srcdir}/..
-	topdir=`pwd`
-	cd ${here}
-
-	intree="no"
-	if test "${TCL_SRC_DIR}" = "${topdir}/tcl"; then
-	  intree="yes"
-	fi
-
 	# Find Tcl private headers
-	if test x"${intree}" = xno; then
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Tcl private headers" >&5
 $as_echo_n "checking for Tcl private headers... " >&6; }
   private_dir=""
-  dir=`echo ${TCL_INCLUDE_SPEC}/tcl-private/generic | sed -e s/-I//`
-  if test -f ${dir}/tclInt.h ; then
-    private_dir=${dir}
-  fi
+  for dir in "${TCL_INCLUDE_SPEC}/tcl-private" "${TCL_SRC_DIR}"; do
+    dir=`echo "${dir}/generic" | sed -e s/-I//`
+    if test -f "${dir}/tclInt.h"; then
+      private_dir="${dir}"
+      break
+    fi
+  done
 
   if test x"${private_dir}" = x; then
     as_fn_error $? "could not find private Tcl headers" "$LINENO" 5
@@ -32952,19 +32945,28 @@ $as_echo_n "checking for Tcl private headers... " >&6; }
     TCL_PRIVATE_INCLUDE="-I${private_dir}"
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${private_dir}" >&5
 $as_echo "${private_dir}" >&6; }
+    TCL_PLATFORM=unknown
+    dir="`dirname \"${private_dir}\"`"
+    for platform in Unix Win MacOSX; do
+      # FIXME: actually, MacOSX is not detected. How to do it ?
+      pf="`echo \"${platform}\" | tr 'A-Z' 'a-z'`"
+      if test -f "${dir}/generic/tcl${platform}Port.h"; then
+	TCL_PLATFORM="${pf}"
+	break
+      elif test -f "${dir}/${pf}/tcl${platform}Port.h"; then
+	TCL_PLATFORM="${pf}"
+	TCL_PRIVATE_INCLUDE="${TCL_PRIVATE_INCLUDE} -I${dir}/${pf}"
+	break
+      fi
+    done
   fi
 
-	  TCL_INCLUDE="${TCL_INCLUDE_SPEC} ${TCL_PRIVATE_INCLUDE}"
-	  TCL_LIBRARY="${TCL_LIB_SPEC}"
-	  TCL_DEPS=""
-	else
-	  # If building tcl in the same src tree, private headers
-	  # are not needed, but we need to be sure to use the right
-	  # headers library
-	  TCL_INCLUDE="-I${TCL_SRC_DIR}/generic"
-	  TCL_LIBRARY="${TCL_BUILD_LIB_SPEC}"
-	  TCL_DEPS="../tcl/${configdir}${TCL_LIB_FILE}"
-	fi
+	TCL_INCLUDE="${TCL_INCLUDE_SPEC} ${TCL_PRIVATE_INCLUDE}"
+	TCL_LIBRARY="${TCL_LIB_SPEC}"
+	TCL_DEPS=""
+	TCL_PLATFORM_DEFINE="TCL_PLATFORM_`echo \"${TCL_PLATFORM}\" | tr 'a-z-' 'A-Z_'`"
+	TCL_PLATFORM_DEFINE="${TCL_PLATFORM_DEFINE}=${TCL_PLATFORM_DEFINE}"
+
 
 
 
@@ -33038,22 +33040,18 @@ $as_echo "could not find ${TK_BIN_DIR}/tkConfig.sh" >&6; }
 
 
 
-	# Check for in-tree Tk
-	intree="no"
-	if test "${TK_SRC_DIR}" = "${topdir}/tk"; then
-	  intree="yes"
-	fi
-
 	# Find Tk private headers
-	if test x"${intree}" = xno; then
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Tk private headers" >&5
 $as_echo_n "checking for Tk private headers... " >&6; }
   private_dir=""
-  dir=`echo ${TK_INCLUDE_SPEC}/tk-private/generic | sed -e s/-I//`
-  if test -f ${dir}/tkInt.h; then
-    private_dir=${dir}
-  fi
+  for dir in "${TK_INCLUDE_SPEC}/tk-private" "${TK_SRC_DIR}"; do
+    dir=`echo "${dir}/generic" | sed -e s/-I//`
+    if test -f "${dir}/tkInt.h"; then
+      private_dir="${dir}"
+      break
+    fi
+  done
 
   if test x"${private_dir}" = x; then
     as_fn_error $? "could not find Tk private headers" "$LINENO" 5
@@ -33061,16 +33059,27 @@ $as_echo_n "checking for Tk private headers... " >&6; }
     TK_PRIVATE_INCLUDE="-I${private_dir}"
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${private_dir}" >&5
 $as_echo "${private_dir}" >&6; }
+    TK_PLATFORM=unknown
+    dir="`dirname \"${private_dir}\"`"
+    for platform in Unix Win MacOSX; do
+      pf="`echo \"${platform}\" | tr 'A-Z' 'a-z'`"
+      if test -f "${dir}/generic/tk${platform}Port.h"; then
+	TK_PLATFORM="${pf}"
+	break
+      elif test -f "${dir}/${pf}/tk${platform}Port.h"; then
+	TK_PLATFORM="${pf}"
+	TK_PRIVATE_INCLUDE="${TK_PRIVATE_INCLUDE} -I${dir}/${pf}"
+	break
+      fi
+    done
   fi
 
-	  TK_INCLUDE="${TK_INCLUDE_SPEC} ${TK_PRIVATE_INCLUDE}"
-	  TK_LIBRARY=${TK_LIB_SPEC}
-	  TK_DEPS=""
-	else
-	  TK_INCLUDE="-I${TK_SRC_DIR}/generic"
-	  TK_LIBRARY="${TK_BUILD_LIB_SPEC}"
-	  TK_DEPS="../tk/${configdir}/${TK_LIB_FILE}"
-	fi
+	TK_INCLUDE="${TK_INCLUDE_SPEC} ${TK_PRIVATE_INCLUDE}"
+	TK_LIBRARY=${TK_LIB_SPEC}
+	TK_DEPS=""
+	TK_PLATFORM_DEFINE="TK_PLATFORM_`echo \"${TK_PLATFORM}\" | tr 'a-z-' 'A-Z_'`"
+	TK_PLATFORM_DEFINE="${TK_PLATFORM_DEFINE}=${TK_PLATFORM_DEFINE}"
+
 
 
 

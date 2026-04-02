@@ -2111,57 +2111,31 @@ if test "${enable_gdbtk}" = "yes"; then
     if test -z "${no_tcl}" -a -z "${no_tk}"; then
 	SC_LOAD_TCLCONFIG
 
-	# Check for in-tree tcl
-	here=`pwd`
-	cd ${srcdir}/..
-	topdir=`pwd`
-	cd ${here}
-
-	intree="no"
-	if test "${TCL_SRC_DIR}" = "${topdir}/tcl"; then
-	  intree="yes"
-	fi
-
 	# Find Tcl private headers
-	if test x"${intree}" = xno; then
-	  CY_AC_TCL_PRIVATE_HEADERS
-	  TCL_INCLUDE="${TCL_INCLUDE_SPEC} ${TCL_PRIVATE_INCLUDE}"
-	  TCL_LIBRARY="${TCL_LIB_SPEC}"
-	  TCL_DEPS=""
-	else
-	  # If building tcl in the same src tree, private headers
-	  # are not needed, but we need to be sure to use the right
-	  # headers library
-	  TCL_INCLUDE="-I${TCL_SRC_DIR}/generic"
-	  TCL_LIBRARY="${TCL_BUILD_LIB_SPEC}"
-	  TCL_DEPS="../tcl/${configdir}${TCL_LIB_FILE}"
-	fi
+	CY_AC_TCL_PRIVATE_HEADERS
+	TCL_INCLUDE="${TCL_INCLUDE_SPEC} ${TCL_PRIVATE_INCLUDE}"
+	TCL_LIBRARY="${TCL_LIB_SPEC}"
+	TCL_DEPS=""
+	TCL_PLATFORM_DEFINE="TCL_PLATFORM_`echo \"${TCL_PLATFORM}\" | tr 'a-z-' 'A-Z_'`"
+	TCL_PLATFORM_DEFINE="${TCL_PLATFORM_DEFINE}=${TCL_PLATFORM_DEFINE}"
 	AC_SUBST(TCL_INCLUDE)
 	AC_SUBST(TCL_LIBRARY)
 	AC_SUBST(TCL_DEPS)
+	AC_SUBST(TCL_PLATFORM_DEFINE)
 
 	SC_LOAD_TKCONFIG
 
-	# Check for in-tree Tk
-	intree="no"
-	if test "${TK_SRC_DIR}" = "${topdir}/tk"; then
-	  intree="yes"
-	fi
-
 	# Find Tk private headers
-	if test x"${intree}" = xno; then
-	  CY_AC_TK_PRIVATE_HEADERS
-	  TK_INCLUDE="${TK_INCLUDE_SPEC} ${TK_PRIVATE_INCLUDE}"
-	  TK_LIBRARY=${TK_LIB_SPEC}
-	  TK_DEPS=""
-	else
-	  TK_INCLUDE="-I${TK_SRC_DIR}/generic"
-	  TK_LIBRARY="${TK_BUILD_LIB_SPEC}"
-	  TK_DEPS="../tk/${configdir}/${TK_LIB_FILE}"
-	fi
+	CY_AC_TK_PRIVATE_HEADERS
+	TK_INCLUDE="${TK_INCLUDE_SPEC} ${TK_PRIVATE_INCLUDE}"
+	TK_LIBRARY=${TK_LIB_SPEC}
+	TK_DEPS=""
+	TK_PLATFORM_DEFINE="TK_PLATFORM_`echo \"${TK_PLATFORM}\" | tr 'a-z-' 'A-Z_'`"
+	TK_PLATFORM_DEFINE="${TK_PLATFORM_DEFINE}=${TK_PLATFORM_DEFINE}"
 	AC_SUBST(TK_INCLUDE)
 	AC_SUBST(TK_LIBRARY)
 	AC_SUBST(TK_DEPS)
+	AC_SUBST(TK_PLATFORM_DEFINE)
 	AC_SUBST(TK_XINCLUDES)
 
 	ENABLE_CFLAGS="${ENABLE_CFLAGS} \$(SUBDIR_GDBTK_CFLAGS)"
