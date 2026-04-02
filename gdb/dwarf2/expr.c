@@ -32,12 +32,21 @@
 #include "dwarf2/read.h"
 #include "frame.h"
 #include "gdbsupport/underlying.h"
+#include "gdbsupport/refcounted-object.h"
 #include "gdbarch.h"
 #include "gdbthread.h"
 #include "inferior.h"
 #include "objfiles.h"
 #include "observable.h"
 #include "extract-store-integer.h"
+
+using context_generation_t = ULONGEST;
+
+/* A monotically increasing counter modified every time any inferior memory
+   is touched or any register in any target is modified.  This can be used to
+   know if state (register value) cached by the evaluator might be stale.  */
+
+static context_generation_t context_generation = 0;
 
 /* This holds gdbarch-specific types used by the DWARF expression
    evaluator.  See comments in execute_stack_op.  */
@@ -1244,13 +1253,12 @@ public:
 		  bool on_entry = false, LONGEST offset = 0,
 		  LONGEST bit_suboffset = 0)
     : dwarf_location (arch, offset, bit_suboffset),
-      m_regnum (regnum), m_on_entry (on_entry)
+      m_storage {register_storage_ptr::new_reference
+		   (new register_storage (regnum, on_entry))}
   {}
 
   dwarf_register (const dwarf_register &reg)
-    : dwarf_location (reg),
-      m_regnum (reg.m_regnum),
-      m_on_entry (reg.m_on_entry)
+    : dwarf_location (reg), m_storage (reg.m_storage)
   {}
 
   std::shared_ptr<dwarf_entry> clone () const override
@@ -1277,12 +1285,62 @@ public:
 			 size_t location_bit_limit) const override;
 
 private:
-  /* DWARF register number.  */
-  unsigned int m_regnum;
+  struct register_storage : public refcounted_object
+  {
+    register_storage (unsigned int regnum, bool on_entry)
+      : m_regnum { regnum }, m_on_entry { on_entry }
+      , m_read_cache {}
+    {}
 
-  /* True if location is on the frame entry, described
-     in CFI of the previous frame.  */
-  bool m_on_entry;
+    /* DWARF register number.  */
+    unsigned int m_regnum;
+
+    /* True if location is on the frame entry, described
+       in CFI of the previous frame.  */
+    bool m_on_entry;
+
+    struct read_cache
+    {
+      read_cache (gdbarch *arch, const frame_info_ptr &frame, int regnum)
+	: m_frame { frame }, m_context_generation { context_generation }
+	, m_data (register_size (arch, regnum))
+	{
+	  enum lval_type lval;
+	  CORE_ADDR address;
+	  int realnum;
+	  frame_register_unwind (get_next_frame_sentinel_okay (frame), regnum,
+				 &m_optimized_out, &m_unavailable, &lval,
+				 &address, &realnum, m_data);
+	}
+
+      bool outdated (const frame_info_ptr &frame) const
+      {
+	return (m_context_generation != context_generation
+		|| frame != m_frame);
+      }
+
+      bool optimized_out () const { return m_optimized_out; }
+      bool unavailable () const { return m_unavailable; }
+      gdb::array_view<const gdb_byte> data () const
+      {
+	return {m_data};
+      }
+
+    private:
+      frame_info_ptr m_frame;
+      context_generation_t m_context_generation;
+      bool m_optimized_out;
+      bool m_unavailable;
+      gdb::byte_vector m_data;
+    };
+    std::optional<read_cache> m_read_cache;
+  };
+
+  using register_storage_ptr
+    = gdb::ref_ptr<register_storage,
+		   refcounted_object_delete_ref_policy<register_storage>>;
+
+  register_storage_ptr m_storage;
 };
 
 void
@@ -1296,7 +1354,7 @@ dwarf_register::read (const frame_info_ptr &initial_frame, gdb_byte *buf,
   LONGEST total_bits_to_skip = bits_to_skip;
   size_t read_bit_limit = location_bit_limit;
   gdbarch *arch = get_frame_arch (frame);
-  int reg = dwarf_reg_to_regnum_or_error (arch, m_regnum);
+  int reg = dwarf_reg_to_regnum_or_error (arch, m_storage->m_regnum);
   ULONGEST reg_bits = HOST_CHAR_BIT * register_size (arch, reg);
   gdb::byte_vector temp_buf;
 
@@ -1314,21 +1372,28 @@ dwarf_register::read (const frame_info_ptr &initial_frame, gdb_byte *buf,
   LONGEST this_size = bits_to_bytes (total_bits_to_skip, bit_size);
   temp_buf.resize (this_size);
 
-  if (m_on_entry)
+  if (m_storage->m_on_entry)
     frame = get_prev_frame_always (frame);
 
   if (frame == NULL)
     internal_error (_("invalid frame information"));
 
-  /* Can only read from a register on byte granularity so an
-     additional buffer is required.  */
-  read_from_register (frame, reg, total_bits_to_skip / HOST_CHAR_BIT,
-		      temp_buf, optimized, unavailable);
+  /* Populate or refresh the cache if needed.  */
+  if (m_storage->m_read_cache.has_value ()
+      && m_storage->m_read_cache->outdated (frame))
+    m_storage->m_read_cache.reset ();
 
-  /* Only copy data if valid.  */
+  if (!m_storage->m_read_cache.has_value ())
+    m_storage->m_read_cache.emplace (arch, frame, reg);
+
+  *optimized = m_storage->m_read_cache->optimized_out ();
+  *unavailable = m_storage->m_read_cache->unavailable ();
+
   if (!*optimized && !*unavailable)
-    copy_bitwise (buf, buf_bit_offset, temp_buf.data (),
-		  total_bits_to_skip % HOST_CHAR_BIT, bit_size, big_endian);
+    copy_bitwise (buf, buf_bit_offset,
+		  m_storage->m_read_cache->data ().data (),
+		  total_bits_to_skip, bit_size, big_endian);
+
 }
 
 void
@@ -1338,15 +1403,18 @@ dwarf_register::write (const frame_info_ptr &initial_frame, const gdb_byte *buf,
 		       bool big_endian, bool *optimized,
 		       bool *unavailable) const
 {
+  /* Invalidate the cache.  */
+  m_storage->m_read_cache.reset ();
+
   frame_info_ptr frame = initial_frame;
   LONGEST total_bits_to_skip = bits_to_skip;
   size_t write_bit_limit = location_bit_limit;
   gdbarch *arch = get_frame_arch (frame);
-  int gdb_regnum = dwarf_reg_to_regnum_or_error (arch, m_regnum);
+  int gdb_regnum = dwarf_reg_to_regnum_or_error (arch, m_storage->m_regnum);
   ULONGEST reg_bits = HOST_CHAR_BIT * register_size (arch, gdb_regnum);
   gdb::byte_vector temp_buf;
 
-  if (m_on_entry)
+  if (m_storage->m_on_entry)
     frame = get_prev_frame_always (frame);
 
   if (frame == NULL)
@@ -1390,12 +1458,12 @@ dwarf_register::to_gdb_value (const frame_info_ptr &initial_frame,
 {
   frame_info_ptr frame = initial_frame;
   gdbarch *arch = get_frame_arch (frame);
-  int gdb_regnum = dwarf_reg_to_regnum_or_error (arch, m_regnum);
+  int gdb_regnum = dwarf_reg_to_regnum_or_error (arch, m_storage->m_regnum);
 
   if (subobj_type == nullptr)
     subobj_type = type;
 
-  if (m_on_entry)
+  if (m_storage->m_on_entry)
     frame = get_prev_frame_always (frame);
 
   if (frame == NULL)
@@ -4767,4 +4835,39 @@ dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
   return ctx.evaluate (addr, len, as_lval, per_cu,
 		       frame, init_values, addr_info,
 		       type, subobj_type, subobj_offset);
+}
+
+static void
+expr_observer_target_changed (struct target_ops * /* target */)
+{
+  context_generation++;
+}
+
+static void
+expr_observer_memory_changed (CORE_ADDR /* addr */, ssize_t /* len */,
+			      const bfd_byte * /* data */)
+{
+  context_generation++;
+}
+
+INIT_GDB_FILE (expr)
+{
+  /* Register the observers we need to invalidate our internal caches.
+
+     Every time a register is modified (every time a value is assigned to
+     really, also applies to lval_memory values), target_changed ends-up being
+     called.  Any such assignment should invalidate any cached value we hold
+     in the expression evaluator.  */
+  gdb::observers::target_changed.attach (expr_observer_target_changed,
+					 "dwarf2_expr");
+
+  /* Note that we can implicitly cache register values which are not currently
+     stored in a register.  For example, if a register was spilled to memory
+     from the previous frame, a memory change could impact a register value
+     we cached.  It is possible to modify such memory without triggering
+     target_changed for example using "Inferior.write_memory" in Python or
+     "-data-write-memory-bytes" with MI.  Use the memory_changed observable to
+     invalidate our caches if such access is done.  */
+  gdb::observers::memory_changed.attach (expr_observer_memory_changed,
+					 "dwarf2_expr");
 }
