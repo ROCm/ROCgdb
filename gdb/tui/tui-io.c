@@ -818,6 +818,10 @@ tui_rl_display_match_list (char **matches, int len, int max)
   gdb_display_match_list (matches, len, max, &displayer);
 }
 
+/* Whether the IO is setup for curses (1) or non-curses (0).  */
+
+static int tui_io_mode;
+
 /* Setup the IO for curses or non-curses mode.
    - In non-curses mode, readline and gdb use the standard input and
    standard output/error directly.
@@ -830,6 +834,14 @@ void
 tui_setup_io (int mode)
 {
   extern int _rl_echoing_p;
+
+  if (tui_io_mode == mode)
+    {
+      /* Nothing to do.  Also, this makes sure that we don't try to restore
+	 things before having saved them. */
+      return;
+    }
+  tui_io_mode = mode;
 
   if (mode)
     {
