@@ -2,6 +2,7 @@
 #source: pr22393-1.s
 #ld: -shared -z separate-code -z relro --rosegment
 #readelf: -l --wide
+#notarget: ![check_relro_support]
 #target: i?86-*-* x86_64-*-*
 
 #...
