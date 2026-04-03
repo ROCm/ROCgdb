@@ -358,7 +358,8 @@ CODE_FRAGMENT
 .
 .  {* If this field is non null, then the supplied function is
 .     called rather than the normal function.  This allows really
-.     strange relocation methods to be accommodated.  *}
+.     strange relocation methods to be accommodated.  See
+.     bfd_perform_relocation.  *}
 .  bfd_reloc_status_type (*special_function)
 .    (bfd *, arelent *, struct bfd_symbol *, void *, asection *,
 .     bfd *, char **);
@@ -637,21 +638,24 @@ SYNOPSIS
 	   char **error_message);
 
 DESCRIPTION
-	If @var{output_bfd} is supplied to this function, the
-	generated image will be relocatable; the relocations are
-	copied to the output file after they have been changed to
-	reflect the new state of the world. There are two ways of
-	reflecting the results of partial linkage in an output file:
-	by modifying the output data in place, and by modifying the
-	relocation record.  Some native formats (e.g., basic a.out and
-	basic coff) have no way of specifying an addend in the
-	relocation type, so the addend has to go in the output data.
-	This is no big deal since in these formats the output data
-	slot will always be big enough for the addend. Complex reloc
-	types with addends were invented to solve just this problem.
+	@var{abfd} is the input bfd.  If @var{output_bfd} is equal to
+	@var{abfd} then this function (well, bfd_install_relocation)
+	is being called from gas.  If @var{output_bfd} is NULL then
+	this function is being called for final linking.  Otherwise,
+	with @var{output_bfd} being non-NULL and not equal to
+	@var{abfd}, this function is being called for relocatable
+	linking.
+	There are two ways of reflecting the results of relocatable
+	linking in an output file: by modifying the output data in
+	place, and by modifying the relocation record.  Some native
+	formats (e.g., basic a.out and basic coff) have no way of
+	specifying an addend in the relocation type, so the addend has
+	to go in the output data.  This is no big deal since in these
+	formats the output data field will always be big enough for
+	the addend.  Relocation types with addends were invented to
+	solve the problem of fields not large enough for all addends.
 	The @var{error_message} argument is set to an error message if
-	this return @code{bfd_reloc_dangerous}.
-
+	this function returns @code{bfd_reloc_dangerous}.
 */
 
 bfd_reloc_status_type
