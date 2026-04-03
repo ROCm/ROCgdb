@@ -3020,6 +3020,34 @@ symbol_equated_reloc_p (const symbolS *s)
 	      || S_IS_COMMON (s)));
 }
 
+/* Return the final symbol in a chain of equated symbols, and the offset
+   from that symbol.  If the chain has a loop, return NULL.
+   For a non-equated SYM, return SYM.  */
+
+symbolS *
+symbol_equated_to (symbolS *sym, offsetT *off)
+{
+  valueT add = 0;
+  symbolS *ret = sym;
+  while (ret && symbol_equated_p (ret))
+    {
+      const expressionS *e = symbol_get_value_expression (ret);
+      add += e->X_add_number;
+      ret->flags.resolving = 1;
+      ret = e->X_add_symbol;
+      if (ret->flags.resolving)
+	ret = NULL;
+    }
+  while (sym && sym->flags.resolving)
+    {
+      const expressionS *e = symbol_get_value_expression (sym);
+      sym->flags.resolving = 0;
+      sym = e->X_add_symbol;
+    }
+  *off = add;
+  return ret;
+}
+
 /* Return whether a symbol has a constant value.  */
 
 int

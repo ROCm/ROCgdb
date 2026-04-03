@@ -2473,22 +2473,19 @@ resolve_expression (expressionS *expressionP)
 void resolve_register (expressionS *expP)
 {
   symbolS *sym;
-  offsetT acc = 0;
-  const expressionS *e = expP;
+  offsetT acc;
+  const expressionS *e;
 
   if (expP->X_op != O_symbol)
     return;
 
-  do
-    {
-      if (!md_register_arithmetic && e->X_add_number)
-	break;
-      sym = e->X_add_symbol;
-      acc += e->X_add_number;
-      e = symbol_get_value_expression (sym);
-    }
-  while (symbol_equated_p (sym));
+  sym = symbol_equated_to (expP->X_add_symbol, &acc);
+  acc += expP->X_add_number;
+  if (sym == NULL
+      || (!md_register_arithmetic && acc != 0))
+    return;
 
+  e = symbol_get_value_expression (sym);
   if (e->X_op == O_register)
     {
       expr_copy (expP, e);
