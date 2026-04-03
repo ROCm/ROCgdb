@@ -37,7 +37,7 @@ foreach_gnat_encoding scenario flags {all minimal} {
 	"Warning: the current language does not match this frame."
 
     if {$scenario == "minimal"} {
-	set exp "ptype/o does not work with dynamic types.*"
+	set exp "ptype/o does not work with this dynamic type.*"
     } else {
 	# In "all" mode this prints nonsense, but at least does not
 	# crash.

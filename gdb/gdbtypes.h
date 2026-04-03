@@ -2616,6 +2616,10 @@ extern struct type *resolve_dynamic_type
    "dynamic".  */
 extern bool is_dynamic_type (struct type *type);
 
+/* Return true if TYPE cannot be printed using ptype /o.  */
+
+extern bool cannot_print_offsets (struct type *type);
+
 /* Resolve any dynamic components of FIELD.  FIELD is updated.
    ADDR_STACK and FRAME are used where necessary to supply information
    for the resolution process; see resolve_dynamic_type.

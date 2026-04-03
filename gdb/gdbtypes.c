@@ -1910,10 +1910,11 @@ array_type_has_dynamic_stride (struct type *type)
   return prop != nullptr && prop->is_constant ();
 }
 
-/* Worker for is_dynamic_type.  */
+/* Worker for is_dynamic_type/cannot_print_offsets.  */
 
 static bool
-is_dynamic_type_internal_1 (struct type *type)
+is_dynamic_type_internal_1 (struct type *type,
+			    bool cannot_print_offsets_p = false)
 {
   type = check_typedef (type);
 
@@ -1988,7 +1989,24 @@ is_dynamic_type_internal_1 (struct type *type)
 	      continue;
 	    /* If the field has dynamic type, then so does TYPE.  */
 	    if (is_dynamic_type_internal_1 (f.type ()))
-	      return true;
+	      {
+		bool last_struct_field_p
+		  = (type->code () == TYPE_CODE_STRUCT
+		     && i == type->num_fields () - 1);
+		if (cannot_print_offsets_p && last_struct_field_p)
+		  {
+		    if (f.type ()->code () == TYPE_CODE_STRUCT)
+		      /* The last field is a dynamic type and a struct.  Check
+			 if we can print the offsets for the struct.  */
+		      return is_dynamic_type_internal_1 (f.type (), true);
+
+		    /* The last field is a dynamic type, this is ok to print
+		       offsets for.  */
+		    return false;
+		  }
+
+		return true;
+	      }
 	    /* If the field is at a fixed offset, then it is not
 	       dynamic.  */
 	    if (!f.loc_is_dwarf_block ())
@@ -2029,6 +2047,21 @@ bool
 is_dynamic_type (struct type *type)
 {
   return is_dynamic_type_internal (type, true);
+}
+
+/* See gdbtypes.h.  */
+
+bool
+cannot_print_offsets (struct type *type)
+{
+  type = check_typedef (type);
+
+  /* We only want to recognize references and pointers at the outermost
+     level.  */
+  if (type->is_pointer_or_reference ())
+    type = check_typedef (type->target_type ());
+
+  return is_dynamic_type_internal_1 (type, true);
 }
 
 static struct type *resolve_dynamic_type_internal
