@@ -1913,14 +1913,9 @@ array_type_has_dynamic_stride (struct type *type)
 /* Worker for is_dynamic_type.  */
 
 static bool
-is_dynamic_type_internal (struct type *type, bool top_level)
+is_dynamic_type_internal_1 (struct type *type)
 {
   type = check_typedef (type);
-
-  /* We only want to recognize references and pointers at the outermost
-     level.  */
-  if (top_level && type->is_pointer_or_reference ())
-    type = check_typedef (type->target_type ());
 
   /* Types that have a dynamic TYPE_DATA_LOCATION are considered
      dynamic, even if the type itself is statically defined.
@@ -1957,7 +1952,7 @@ is_dynamic_type_internal (struct type *type, bool top_level)
 	   of the range type are static.  It allows us to assume that
 	   the subtype of a static range type is also static.  */
 	return (!has_static_range (type->bounds ())
-		|| is_dynamic_type_internal (type->target_type (), false));
+		|| is_dynamic_type_internal_1 (type->target_type ()));
       }
 
     case TYPE_CODE_STRING:
@@ -1968,10 +1963,10 @@ is_dynamic_type_internal (struct type *type, bool top_level)
 	gdb_assert (type->num_fields () == 1);
 
 	/* The array is dynamic if either the bounds are dynamic...  */
-	if (is_dynamic_type_internal (type->index_type (), false))
+	if (is_dynamic_type_internal_1 (type->index_type ()))
 	  return true;
 	/* ... or the elements it contains have a dynamic contents...  */
-	if (is_dynamic_type_internal (type->target_type (), false))
+	if (is_dynamic_type_internal_1 (type->target_type ()))
 	  return true;
 	/* ... or if it has a dynamic stride...  */
 	if (array_type_has_dynamic_stride (type))
@@ -1992,7 +1987,7 @@ is_dynamic_type_internal (struct type *type, bool top_level)
 	    if (f.is_static ())
 	      continue;
 	    /* If the field has dynamic type, then so does TYPE.  */
-	    if (is_dynamic_type_internal (f.type (), false))
+	    if (is_dynamic_type_internal_1 (f.type ()))
 	      return true;
 	    /* If the field is at a fixed offset, then it is not
 	       dynamic.  */
@@ -2010,6 +2005,22 @@ is_dynamic_type_internal (struct type *type, bool top_level)
     }
 
   return false;
+}
+
+/* Worker for is_dynamic_type.  If TOP_LEVEL and TYPE is a pointer or a
+   reference to a dynamic type, it is also considered a dynamic type.  */
+
+static bool
+is_dynamic_type_internal (struct type *type, bool top_level)
+{
+  type = check_typedef (type);
+
+  /* We only want to recognize references and pointers at the outermost
+     level.  */
+  if (top_level && type->is_pointer_or_reference ())
+    type = check_typedef (type->target_type ());
+
+  return is_dynamic_type_internal_1 (type);
 }
 
 /* See gdbtypes.h.  */
