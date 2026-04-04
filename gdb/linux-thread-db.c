@@ -429,7 +429,7 @@ thread_from_lwp (thread_info *stopped, ptid_t ptid)
 
 /* See linux-nat.h.  */
 
-int
+bool
 thread_db_notice_clone (ptid_t parent, ptid_t child)
 {
   struct thread_db_info *info;
@@ -437,7 +437,7 @@ thread_db_notice_clone (ptid_t parent, ptid_t child)
   info = get_thread_db_info (linux_target, child.pid ());
 
   if (info == NULL)
-    return 0;
+    return false;
 
   thread_info *stopped = linux_target->find_thread (parent);
 
@@ -446,7 +446,7 @@ thread_db_notice_clone (ptid_t parent, ptid_t child)
   /* If we do not know about the main thread's pthread info yet, this
      would be a good time to find it.  */
   thread_from_lwp (stopped, parent);
-  return 1;
+  return true;
 }
 
 static void *
@@ -460,10 +460,10 @@ verbose_dlsym (void *handle, const char *name)
 }
 
 /* Verify inferior's '\0'-terminated symbol VER_SYMBOL starts with "%d.%d" and
-   return 1 if this version is lower (and not equal) to
-   VER_MAJOR_MIN.VER_MINOR_MIN.  Return 0 in all other cases.  */
+   return true if this version is lower (and not equal) to
+   VER_MAJOR_MIN.VER_MINOR_MIN.  Return false in all other cases.  */
 
-static int
+static bool
 inferior_has_bug (const char *ver_symbol, int ver_major_min, int ver_minor_min)
 {
   CORE_ADDR version_addr;
@@ -472,7 +472,7 @@ inferior_has_bug (const char *ver_symbol, int ver_major_min, int ver_minor_min)
   bound_minimal_symbol version_msym
     = lookup_minimal_symbol (current_program_space, ver_symbol);
   if (version_msym.minsym == NULL)
-    return 0;
+    return false;
 
   version_addr = version_msym.value_address ();
   gdb::unique_xmalloc_ptr<char> version
@@ -493,10 +493,10 @@ inferior_has_bug (const char *ver_symbol, int ver_major_min, int ver_minor_min)
 /* Similar as thread_db_find_new_threads_1, but try to silently ignore errors
    if appropriate.
 
-   Return 1 if the caller should abort libthread_db initialization.  Return 0
-   otherwise.  */
+   Return true if the caller should abort libthread_db initialization.
+   Return false otherwise.  */
 
-static int
+static bool
 thread_db_find_new_threads_silently (thread_info *stopped)
 {
 
@@ -518,25 +518,25 @@ thread_db_find_new_threads_silently (thread_info *stopped)
 	 itself.
 
 	 If the nptl bug is NOT present in the inferior and still thread_db
-	 reports an error return 1.  It means the inferior has corrupted thread
-	 list and GDB should fall back only to LWPs.
+	 reports an error return true.  It means the inferior has corrupted
+	 thread list and GDB should fall back only to LWPs.
 
-	 If the nptl bug is present in the inferior return 0 to silently ignore
-	 such errors, and let gdb enumerate threads again later.  In such case
-	 GDB cannot properly display LWPs if the inferior thread list is
-	 corrupted.  For core files it does not apply, no 'later enumeration'
-	 is possible.  */
+	 If the nptl bug is present in the inferior return false to
+	 silently ignore such errors, and let gdb enumerate threads again
+	 later.  In such case GDB cannot properly display LWPs if the
+	 inferior thread list is corrupted.  For core files it does not
+	 apply, no 'later enumeration' is possible.  */
 
       if (!target_has_execution () || !inferior_has_bug ("nptl_version", 2, 7))
 	{
 	  exception_fprintf (gdb_stderr, except,
 			     _("Warning: couldn't activate thread debugging "
 			       "using libthread_db: "));
-	  return 1;
+	  return true;
 	}
     }
 
-  return 0;
+  return false;
 }
 
 /* Lookup a library in which given symbol resides.
@@ -924,7 +924,7 @@ try_thread_db_load_1 (struct thread_db_info *info)
 
       linux_unstop_all_lwps ();
     }
-  else if (thread_db_find_new_threads_silently (inferior_thread ()) != 0)
+  else if (thread_db_find_new_threads_silently (inferior_thread ()))
     {
       /* Even if libthread_db initializes, if the thread list is
 	 corrupted, we'd not manage to list any threads.  Better reject this
