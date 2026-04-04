@@ -141,6 +141,7 @@ struct windows_nat_target : public inf_child_target
 
   void interrupt () override;
   void pass_ctrlc () override;
+  void stop (ptid_t ptid) override;
 
   const char *pid_to_exec_file (int pid) override;
 
