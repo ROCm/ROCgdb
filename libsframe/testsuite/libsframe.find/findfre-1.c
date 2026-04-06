@@ -174,13 +174,13 @@ int main (void)
 {
   int64_t sframe_vaddr = 0x402220;
   int64_t text_vaddr = 0x401020;
-  printf ("Testing with text_vaddr = %#lx; sframe_vaddr = %#lx\n", text_vaddr,
-	  sframe_vaddr);
+  printf ("Testing with text_vaddr = %#" PRIx64 "; sframe_vaddr = %#" PRIx64
+	  " \n", text_vaddr, sframe_vaddr);
   test_text_findfre ('a', text_vaddr, sframe_vaddr);
 
   sframe_vaddr = 0x401020;
   text_vaddr = 0x402220;
-  printf ("Testing with text_vaddr = %#lx; sframe_vaddr = %#lx\n", text_vaddr,
-	  sframe_vaddr);
+  printf ("Testing with text_vaddr = %#" PRIx64 "; sframe_vaddr = %#" PRIx64
+	  "\n", text_vaddr, sframe_vaddr);
   test_text_findfre ('b', text_vaddr, sframe_vaddr);
 }
