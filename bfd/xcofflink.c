@@ -1335,6 +1335,7 @@ xcoff_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
   } *reloc_info = NULL;
   bfd_size_type amt;
   unsigned short visibility;
+  unsigned int max_target_index;
 
   keep_syms = obj_coff_keep_syms (abfd);
 
@@ -1398,7 +1399,19 @@ xcoff_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
      order by VMA within a given section, so we handle this by
      scanning along the relocs as we process the csects.  We index
      into reloc_info using the section target_index.  */
-  amt = abfd->section_count + 1;
+  max_target_index = 0;
+  for (o = abfd->section_last; o != NULL; o = o->prev)
+    if (o->target_index != 0)
+      {
+	/* The last section added from the object file will have the
+	   highest target_index.  See coffgen.c coff_real_object_p and
+	   make_a_section_from_file.  Sections added by
+	   xcoff_link_create_extra_sections will have a zero
+	   target_index.  */
+	max_target_index = o->target_index;
+	break;
+      }
+  amt = max_target_index + 1;
   amt *= sizeof (struct reloc_info_struct);
   reloc_info = bfd_zmalloc (amt);
   if (reloc_info == NULL)
