@@ -528,12 +528,12 @@ gen_gmon_map (char *name)
   msize = (msize + page_size - 1) & mpage;
 
   fprintf (mapx, "<event kind=\"map\" object=\"segment\" tstamp=\"%u.%09u\" "
-	   "vaddr=\"0x%016llX\" size=\"%lu\" pagesz=\"%d\" foffset=\"%c0x%08llX\" "
+	   "vaddr=\"0x%016llX\" size=\"%llu\" pagesz=\"%d\" foffset=\"%c0x%08llX\" "
 	   "modes=\"0x%03X\" chksum=\"0x%0X\" name=\"%s\"/>\n",
 	   (unsigned) (timestamp / NANOSEC),
 	   (unsigned) (timestamp % NANOSEC),
-	   (long long unsigned) loadaddr, msize, (int) page_size,
-	   offset < 0 ? '-' : '+',
+	   (long long unsigned) loadaddr, (long long unsigned) msize,
+	   (int) page_size, offset < 0 ? '-' : '+',
 	   (long long unsigned) (offset < 0 ? -offset : offset),
 	   modeflags, check, name);
 
