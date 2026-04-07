@@ -51,6 +51,7 @@
 #include <optional>
 #include <deque>
 #include <signal.h>
+#include <variant>
 
 /* This module implements "target record-full", also known as "process
    record and replay".  This target sits on top of a "normal" target
@@ -92,13 +93,121 @@ struct record_full_mem_entry
   CORE_ADDR addr;
   int len;
   /* Set this flag if target memory for this entry
-     can no longer be accessed.  */
-  int mem_entry_not_accessible;
+     can be accessed.  */
+  bool mem_entry_accessible;
   union
   {
     gdb_byte *ptr;
     gdb_byte buf[sizeof (gdb_byte *)];
   } u;
+
+  record_full_mem_entry () : addr (0), len (0), mem_entry_accessible (true)
+  { }
+
+  record_full_mem_entry (CORE_ADDR mem_addr, int mem_len)
+  {
+    addr = mem_addr;
+    len = mem_len;
+    if (len > sizeof (u.buf))
+      u.ptr = new gdb_byte[len];
+    mem_entry_accessible = true;
+  }
+
+  record_full_mem_entry (record_full_mem_entry &&other)
+  {
+    addr = other.addr;
+    len = other.len;
+    memcpy (u.buf, other.u.buf, sizeof (u.buf));
+    mem_entry_accessible = other.mem_entry_accessible;
+    /* With len == 0, OTHER is guaranteed to not try to free the
+       memory when it is destructed.  */
+    other.len = 0;
+  }
+
+  ~record_full_mem_entry ()
+  {
+    if (len > sizeof (u.buf))
+      delete[] u.ptr;
+  }
+
+  record_full_mem_entry &operator= (record_full_mem_entry &&other)
+  {
+    /* Since this struct can't be copied, there will only be one instance
+       of it at a time.  Therefore, there isn't really a way to do
+       self-assignment, unless we actually do "entry = entry".  */
+    gdb_assert (this != &other);
+    if (len > sizeof (u.buf))
+      free (u.ptr);
+    addr = other.addr;
+    len = other.len;
+    memcpy (u.buf, other.u.buf, sizeof (u.buf));
+    mem_entry_accessible = other.mem_entry_accessible;
+    /* With len == 0, OTHER is guaranteed to not try to free the
+       memory when it is destructed.  */
+    other.len = 0;
+    return *this;
+  }
+
+  DISABLE_COPY_AND_ASSIGN (record_full_mem_entry);
+
+  gdb_byte *get_loc ()
+  {
+    if (len > sizeof (u.buf))
+      return u.ptr;
+    else
+      return u.buf;
+  }
+
+  bool execute (gdbarch *gdbarch)
+  {
+    /* Nothing to do if the memory is flagged not_accessible.  */
+    if (!mem_entry_accessible)
+      return false;
+
+    gdb::byte_vector buf (len);
+
+    if (record_debug > 1)
+      gdb_printf (gdb_stdlog,
+		  "Process record: record_full_mem %s to "
+		  "inferior addr = %s len = %d.\n",
+		  host_address_to_string (this),
+		  paddress (gdbarch, addr),
+		  len);
+
+    if (record_read_memory (gdbarch, addr, buf.data (), len))
+      mem_entry_accessible = false;
+    else
+      {
+	if (target_write_memory (addr,
+				 get_loc (),
+				 len))
+	  {
+	    mem_entry_accessible = false;
+	    if (record_debug)
+	      warning (_("Process record: error writing memory at "
+			 "addr = %s len = %d."),
+		       paddress (gdbarch, addr),
+		       len);
+	  }
+	else
+	  {
+	    memcpy (get_loc (), buf.data (), len);
+
+	    /* We've changed memory --- check if a hardware
+	       watchpoint should trap.  Note that this
+	       presently assumes the target beneath supports
+	       continuable watchpoints.  On non-continuable
+	       watchpoints target, we'll want to check this
+	       _before_ actually doing the memory change, and
+	       not doing the change at all if the watchpoint
+	       traps.  */
+	    if (hardware_watchpoint_inserted_in_range
+		(current_inferior ()->aspace.get (), addr, len))
+	      return true;
+	  }
+      }
+    return false;
+  }
 };
 
 struct record_full_reg_entry
@@ -110,6 +219,84 @@ struct record_full_reg_entry
     gdb_byte *ptr;
     gdb_byte buf[2 * sizeof (gdb_byte *)];
   } u;
+
+  record_full_reg_entry () : num (0), len (0) {
+    u.ptr = nullptr;
+  }
+
+  record_full_reg_entry (gdbarch *gdbarch, int regnum)
+  {
+    num = regnum;
+    len = register_size (gdbarch, regnum);
+    if (len > sizeof (u.buf))
+      u.ptr = new gdb_byte[len];
+    else
+      u.ptr = nullptr;
+  }
+
+  record_full_reg_entry (record_full_reg_entry &&other)
+  {
+    num = other.num;
+    len = other.len;
+    memcpy (u.buf, other.u.buf, sizeof (u.buf));
+    /* With len == 0, OTHER is guaranteed to not try to free the
+       memory when it is destructed.  */
+    other.len = 0;
+  }
+
+  ~record_full_reg_entry ()
+  {
+    if (len > sizeof (u.buf))
+      delete[] u.ptr;
+  }
+
+  record_full_reg_entry &operator= (record_full_reg_entry &&other)
+  {
+    /* Since this struct can't be copied, there will only be one instance
+       of it at a time.  Therefore, there isn't really a way to do
+       self-assignment, unless we actually do "entry = entry".
+       Also, again because we can't copy it, if we are moving OTHER to a
+       pre-existing entry, we'll be losing information on a recorded or
+       partial instruction.  So we should only assign when the entry is
+       uninitialized (len == 0).  */
+    gdb_assert (this != &other);
+    if (len > sizeof (u.buf))
+      free (u.ptr);
+    num = other.num;
+    len = other.len;
+    memcpy (u.buf, other.u.buf, sizeof (u.buf));
+    /* With len == 0, OTHER is guaranteed to not try to free the
+       memory when it is destructed.  */
+    other.len = 0;
+    return *this;
+  }
+
+  DISABLE_COPY_AND_ASSIGN (record_full_reg_entry);
+
+  gdb_byte *get_loc ()
+  {
+    if (len > sizeof (u.buf))
+      return u.ptr;
+    else
+      return u.buf;
+  }
+
+  bool execute (regcache *regcache)
+  {
+    gdb::byte_vector buf (len);
+
+    if (record_debug > 1)
+      gdb_printf (gdb_stdlog,
+		  "Process record: record_full_reg %s to "
+		  "inferior num = %d.\n",
+		  host_address_to_string (this),
+		  num);
+
+    regcache->cooked_read (num, buf);
+    regcache->cooked_write (num, get_loc ());
+    memcpy (get_loc (), buf.data (), len);
+    return false;
+  }
 };
 
 enum record_full_type
@@ -118,16 +305,88 @@ enum record_full_type
   record_full_mem
 };
 
-struct record_full_entry
+class record_full_entry
 {
-  enum record_full_type type;
-  union
+  std::variant<record_full_reg_entry, record_full_mem_entry> entry;
+
+public:
+  record_full_entry () : entry (record_full_reg_entry ()) {}
+
+  /* Constructor for a register entry.  Type is here to make it
+     easier to recognize it in the constructor calls, it isn't
+     actually important.  */
+  record_full_entry (record_full_type reg_type, gdbarch *gdbarch,
+		     int regnum)
+  : entry(record_full_reg_entry (gdbarch, regnum))
   {
-    /* reg */
-    struct record_full_reg_entry reg;
-    /* mem */
-    struct record_full_mem_entry mem;
-  } u;
+    gdb_assert (reg_type == record_full_reg);
+  }
+
+  record_full_entry (record_full_type mem_type, CORE_ADDR addr, int len)
+  : entry(record_full_mem_entry (addr, len))
+  {
+    gdb_assert (mem_type == record_full_mem);
+  }
+
+  record_full_entry (record_full_entry &&other)
+  : entry (std::move (other.entry))
+  {
+  }
+
+  DISABLE_COPY_AND_ASSIGN (record_full_entry);
+
+  record_full_reg_entry& reg ()
+  {
+    gdb_assert (type () == record_full_reg);
+    return std::get<record_full_reg_entry> (entry);
+  }
+
+  record_full_mem_entry& mem ()
+  {
+    gdb_assert (type () == record_full_mem);
+    return std::get<record_full_mem_entry> (entry);
+  }
+
+  record_full_type type () const
+  {
+    switch (entry.index ())
+    {
+    case 0:
+      return record_full_reg;
+    case 1:
+      return record_full_mem;
+    }
+    gdb_assert_not_reached ("Impossible variant index");
+  }
+
+  /* Get the pointer to the data stored by this entry.  */
+  gdb_byte *get_loc ()
+  {
+    switch (type ())
+    {
+    case record_full_reg:
+      return reg ().get_loc ();
+    case record_full_mem:
+      return mem ().get_loc ();
+    }
+    gdb_assert_not_reached ("Impossible entry type");
+  }
+
+  /* Execute this entry, swapping the appropriate values from memory or
+     register and the recorded ones.  Returns TRUE if the execution was
+     stopped by a watchpoint.  */
+
+  bool execute (regcache *regcache)
+  {
+    switch (type ())
+      {
+      case record_full_reg:
+	return reg ().execute (regcache);
+      case record_full_mem:
+	return mem ().execute (regcache->arch ());
+      }
+    return false;
+  }
 };
 
 /* This is the main structure that comprises the execution log.
@@ -386,90 +645,11 @@ static struct cmd_list_element *record_full_cmdlist;
 static void record_full_goto_insn (size_t target_insn,
 				   enum exec_direction_kind dir);
 
-/* Initialization and cleanup functions for record_full_reg and
-   record_full_mem entries.  */
-
-/* Init a record_full_reg record entry.  */
-
-static inline record_full_entry
-record_full_reg_init (struct regcache *regcache, int regnum)
-{
-  record_full_entry rec;
-  struct gdbarch *gdbarch = regcache->arch ();
-
-  rec.type = record_full_reg;
-  rec.u.reg.num = regnum;
-  rec.u.reg.len = register_size (gdbarch, regnum);
-  if (rec.u.reg.len > sizeof (rec.u.reg.u.buf))
-    rec.u.reg.u.ptr = (gdb_byte *) xmalloc (rec.u.reg.len);
-
-  return rec;
-}
-
-/* Cleanup a record_full_reg record entry.  */
-
-static inline void
-record_full_reg_cleanup (record_full_entry rec)
-{
-  gdb_assert (rec.type == record_full_reg);
-  if (rec.u.reg.len > sizeof (rec.u.reg.u.buf))
-    xfree (rec.u.reg.u.ptr);
-}
-
-/* Init a record_full_mem record entry.  */
-
-static inline record_full_entry
-record_full_mem_init (CORE_ADDR addr, int len)
-{
-  record_full_entry rec;
-
-  rec.type = record_full_mem;
-  rec.u.mem.addr = addr;
-  rec.u.mem.len = len;
-  if (rec.u.mem.len > sizeof (rec.u.mem.u.buf))
-    rec.u.mem.u.ptr = (gdb_byte *) xmalloc (len);
-  rec.u.mem.mem_entry_not_accessible = 0;
-
-  return rec;
-}
-
-/* Cleanup a record_full_mem record entry.  */
-
-static inline void
-record_full_mem_cleanup (record_full_entry rec)
-{
-  gdb_assert (rec.type == record_full_mem);
-  if (rec.u.mem.len > sizeof (rec.u.mem.u.buf))
-    xfree (rec.u.mem.u.ptr);
-}
-
-/* Free one record entry, any type.  */
-
-static inline void
-record_full_entry_cleanup (record_full_entry rec)
-{
-
-  switch (rec.type) {
-  case record_full_reg:
-    record_full_reg_cleanup (rec);
-    break;
-  case record_full_mem:
-    record_full_mem_cleanup (rec);
-    break;
-  }
-}
-
 static void
 record_full_reset_history ()
 {
   record_full_insn_count = 0;
   record_full_next_insn = 0;
-
-  for (auto &insn : record_full_list)
-    {
-      for (auto &entry : insn.effects)
-	record_full_entry_cleanup (entry);
-    }
 
   record_full_list.clear ();
 }
@@ -483,11 +663,7 @@ record_full_list_release_following (int index)
     return;
 
   for (int i = record_full_list.size () - 1; i > index; i--)
-    {
-      for (auto &entry : record_full_list[i].effects)
-	record_full_entry_cleanup (entry);
-      record_full_list.pop_back ();
-    }
+    record_full_list.pop_back ();
   /* Set the next instruction to be past the end of the log so we
      start recording if the user moves forward again.  */
   record_full_next_insn = index;
@@ -516,9 +692,6 @@ record_full_list_release_first (void)
   if (record_full_list.empty ())
     return;
 
-  for (auto &entry : record_full_list[0].effects)
-    record_full_entry_cleanup (entry);
-
   record_full_list.pop_front ();
   --record_full_next_insn;
 }
@@ -528,28 +701,7 @@ record_full_list_release_first (void)
 static void
 record_full_arch_list_add (record_full_entry &rec)
 {
-  record_full_incomplete_instruction.effects.push_back (rec);
-}
-
-/* Return the value storage location of a record entry.  */
-static inline gdb_byte *
-record_full_get_loc (struct record_full_entry *rec)
-{
-  switch (rec->type) {
-  case record_full_mem:
-    if (rec->u.mem.len > sizeof (rec->u.mem.u.buf))
-      return rec->u.mem.u.ptr;
-    else
-      return rec->u.mem.u.buf;
-  case record_full_reg:
-    if (rec->u.reg.len > sizeof (rec->u.reg.u.buf))
-      return rec->u.reg.u.ptr;
-    else
-      return rec->u.reg.u.buf;
-  default:
-    gdb_assert_not_reached ("unexpected record_full_entry type");
-    return NULL;
-  }
+  record_full_incomplete_instruction.effects.push_back (std::move (rec));
 }
 
 /* Record the value of a register NUM to record_full_arch_list.  */
@@ -557,7 +709,7 @@ record_full_get_loc (struct record_full_entry *rec)
 int
 record_full_arch_list_add_reg (struct regcache *regcache, int regnum)
 {
-  record_full_entry rec;
+  record_full_entry rec (record_full_reg, regcache->arch (), regnum);
 
   if (record_debug > 1)
     gdb_printf (gdb_stdlog,
@@ -565,9 +717,7 @@ record_full_arch_list_add_reg (struct regcache *regcache, int regnum)
 		"record list.\n",
 		regnum);
 
-  rec = record_full_reg_init (regcache, regnum);
-
-  regcache->cooked_read (regnum, record_full_get_loc (&rec));
+  regcache->cooked_read (regnum, rec.get_loc ());
 
   record_full_arch_list_add (rec);
 
@@ -580,7 +730,7 @@ record_full_arch_list_add_reg (struct regcache *regcache, int regnum)
 int
 record_full_arch_list_add_mem (CORE_ADDR addr, int len)
 {
-  record_full_entry rec;
+  record_full_entry rec (record_full_mem, addr, len);
 
   if (record_debug > 1)
     gdb_printf (gdb_stdlog,
@@ -591,14 +741,9 @@ record_full_arch_list_add_mem (CORE_ADDR addr, int len)
   if (!addr)	/* FIXME: Why?  Some arch must permit it...  */
     return 0;
 
-  rec = record_full_mem_init (addr, len);
-
   if (record_read_memory (current_inferior ()->arch (), addr,
-			  record_full_get_loc (&rec), len))
-    {
-      record_full_mem_cleanup (rec);
-      return -1;
-    }
+			  rec.get_loc (), len))
+    return -1;
 
   record_full_arch_list_add (rec);
 
@@ -726,91 +871,6 @@ record_full_gdb_operation_disable_set (void)
 static enum target_stop_reason record_full_stop_reason
   = TARGET_STOPPED_BY_NO_REASON;
 
-/* Execute one instruction from the record log.  Each instruction in
-   the log will be represented by an arbitrary sequence of register
-   entries and memory entries, followed by an 'end' entry.  */
-
-static inline void
-record_full_exec_entry (regcache *regcache,
-			gdbarch *gdbarch,
-			record_full_entry *entry)
-{
-  switch (entry->type)
-    {
-    case record_full_reg: /* reg */
-      {
-	gdb::byte_vector reg (entry->u.reg.len);
-
-	if (record_debug > 1)
-	  gdb_printf (gdb_stdlog,
-		      "Process record: record_full_reg %s to "
-		      "inferior num = %d.\n",
-		      host_address_to_string (entry),
-		      entry->u.reg.num);
-
-	regcache->cooked_read (entry->u.reg.num, reg.data ());
-	regcache->cooked_write (entry->u.reg.num, record_full_get_loc (entry));
-	memcpy (record_full_get_loc (entry), reg.data (), entry->u.reg.len);
-      }
-      break;
-
-    case record_full_mem: /* mem */
-      {
-	/* Nothing to do if the entry is flagged not_accessible.  */
-	if (!entry->u.mem.mem_entry_not_accessible)
-	  {
-	    gdb::byte_vector mem (entry->u.mem.len);
-
-	    if (record_debug > 1)
-	      gdb_printf (gdb_stdlog,
-			  "Process record: record_full_mem %s to "
-			  "inferior addr = %s len = %d.\n",
-			  host_address_to_string (entry),
-			  paddress (gdbarch, entry->u.mem.addr),
-			  entry->u.mem.len);
-
-	    if (record_read_memory (gdbarch,
-				    entry->u.mem.addr, mem.data (),
-				    entry->u.mem.len))
-	      entry->u.mem.mem_entry_not_accessible = 1;
-	    else
-	      {
-		if (target_write_memory (entry->u.mem.addr,
-					 record_full_get_loc (entry),
-					 entry->u.mem.len))
-		  {
-		    entry->u.mem.mem_entry_not_accessible = 1;
-		    if (record_debug)
-		      warning (_("Process record: error writing memory at "
-				 "addr = %s len = %d."),
-			       paddress (gdbarch, entry->u.mem.addr),
-			       entry->u.mem.len);
-		  }
-		else
-		  {
-		    memcpy (record_full_get_loc (entry), mem.data (),
-			    entry->u.mem.len);
-
-		    /* We've changed memory --- check if a hardware
-		       watchpoint should trap.  Note that this
-		       presently assumes the target beneath supports
-		       continuable watchpoints.  On non-continuable
-		       watchpoints target, we'll want to check this
-		       _before_ actually doing the memory change, and
-		       not doing the change at all if the watchpoint
-		       traps.  */
-		    if (hardware_watchpoint_inserted_in_range
-			(current_inferior ()->aspace.get (),
-			 entry->u.mem.addr, entry->u.mem.len))
-		      record_full_stop_reason = TARGET_STOPPED_BY_WATCHPOINT;
-		  }
-	      }
-	  }
-      }
-      break;
-    }
-}
-
 /* Execute one entry in the log by executing all the effects.  */
 
 static inline void
@@ -819,7 +879,8 @@ record_full_exec_insn (regcache *regcache,
 		       record_full_instruction &insn)
 {
   for (auto &entry : insn.effects)
-    record_full_exec_entry (regcache, gdbarch, &entry);
+    if (entry.execute (regcache))
+      record_full_stop_reason = TARGET_STOPPED_BY_WATCHPOINT;
 }
 
 static void record_full_restore (struct bfd &cbfd);
@@ -2210,21 +2271,19 @@ record_full_read_entry_from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
 	bfdcore_read (cbfd, osec, &regnum, sizeof (regnum), bfd_offset);
 	regnum = netorder32 (regnum);
 
-	record_full_entry rec;
-
-	rec = record_full_reg_init (cache, regnum);
+	record_full_entry rec (record_full_reg, cache->arch (), regnum);
 
 	/* Get val.  */
-	bfdcore_read (cbfd, osec, record_full_get_loc (&rec),
-		      rec.u.reg.len, bfd_offset);
+	bfdcore_read (cbfd, osec, rec.get_loc (),
+		      rec.reg ().len, bfd_offset);
 
 	if (record_debug)
 	  gdb_printf (gdb_stdlog,
 		      "  Reading register %d (1 "
 		      "plus %lu plus %d bytes)\n",
-		      rec.u.reg.num,
+		      rec.reg ().num,
 		      (unsigned long) sizeof (regnum),
-		      rec.u.reg.len);
+		      rec.reg ().len);
 
 	record_full_arch_list_add (rec);
 	break;
@@ -2240,22 +2299,20 @@ record_full_read_entry_from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
 	bfdcore_read (cbfd, osec, &addr, sizeof (addr), bfd_offset);
 	addr = netorder64 (addr);
 
-	record_full_entry rec;
-	rec = record_full_mem_init (addr, len);
+	record_full_entry rec (record_full_mem, addr, len);
 
 	/* Get val.  */
-	bfdcore_read (cbfd, osec, record_full_get_loc (&rec),
-		      len, bfd_offset);
+	bfdcore_read (cbfd, osec, rec.get_loc (), len, bfd_offset);
 
 	if (record_debug)
 	  gdb_printf (gdb_stdlog,
 		      "  Reading memory %s (1 plus "
 		      "%lu plus %lu plus %d bytes)\n",
 		      paddress (get_current_arch (),
-				rec.u.mem.addr),
+				rec.mem ().addr),
 		      (unsigned long) sizeof (addr),
 		      (unsigned long) sizeof (len),
-		      rec.u.mem.len);
+		      rec.mem ().len);
 
 	record_full_arch_list_add (rec);
 	break;
@@ -2402,57 +2459,56 @@ record_full_write_entry_to_bfd (record_full_entry &entry,
   uint32_t regnum, len;
   uint64_t addr;
 
-  type = entry.type;
+  type = entry.type ();
   bfdcore_write (obfd.get (), osec, &type, sizeof (type), bfd_offset);
 
-  switch (entry.type)
+  switch (type)
     {
     case record_full_reg: /* reg */
-      if (record_debug)
-	gdb_printf (gdb_stdlog,
-		    "  Writing register %d (1 "
-		    "plus %lu plus %d bytes)\n",
-		    entry.u.reg.num,
-		    (unsigned long) sizeof (regnum),
-		    entry.u.reg.len);
+      {
+	auto &reg = entry.reg ();
+	if (record_debug)
+	  gdb_printf (gdb_stdlog,
+		      "  Writing register %d (1 "
+		      "plus %lu plus %d bytes)\n",
+		      reg.num,
+		      (unsigned long) sizeof (regnum),
+		      reg.len);
 
-      /* Write regnum.  */
-      regnum = netorder32 (entry.u.reg.num);
-      bfdcore_write (obfd.get (), osec, &regnum,
-		     sizeof (regnum), bfd_offset);
+	/* Write regnum.  */
+	regnum = netorder32 (reg.num);
+	bfdcore_write (obfd.get (), osec, &regnum, sizeof (regnum), bfd_offset);
 
-      /* Write regval.  */
-      bfdcore_write (obfd.get (), osec,
-		     record_full_get_loc (&entry),
-		     entry.u.reg.len, bfd_offset);
-      break;
+	/* Write regval.  */
+	bfdcore_write (obfd.get (), osec, entry.get_loc (), reg.len, bfd_offset);
+	break;
+      }
 
     case record_full_mem: /* mem */
-      if (record_debug)
-	gdb_printf (gdb_stdlog,
-		    "  Writing memory %s (1 plus "
-		    "%lu plus %lu plus %d bytes)\n",
-		    paddress (gdbarch,
-			      entry.u.mem.addr),
-		    (unsigned long) sizeof (addr),
-		    (unsigned long) sizeof (len),
-		    entry.u.mem.len);
+      {
+	auto &mem = entry.mem ();
+	if (record_debug)
+	  gdb_printf (gdb_stdlog,
+		      "  Writing memory %s (1 plus "
+		      "%lu plus %lu plus %d bytes)\n",
+		      paddress (gdbarch, mem.addr),
+		      (unsigned long) sizeof (addr),
+		      (unsigned long) sizeof (len),
+		      mem.len);
 
-      /* Write memlen.  */
-      len = netorder32 (entry.u.mem.len);
-      bfdcore_write (obfd.get (), osec, &len, sizeof (len),
-		     bfd_offset);
+	/* Write memlen.  */
+	len = netorder32 (mem.len);
+	bfdcore_write (obfd.get (), osec, &len, sizeof (len), bfd_offset);
 
-      /* Write memaddr.  */
-      addr = netorder64 (entry.u.mem.addr);
-      bfdcore_write (obfd.get (), osec, &addr,
-		     sizeof (addr), bfd_offset);
+	/* Write memaddr.  */
+	addr = netorder64 (mem.addr);
+	bfdcore_write (obfd.get (), osec, &addr, sizeof (addr), bfd_offset);
 
-      /* Write memval.  */
-      bfdcore_write (obfd.get (), osec,
-		     record_full_get_loc (&entry),
-		     entry.u.mem.len, bfd_offset);
-      break;
+	/* Write memval.  */
+	bfdcore_write (obfd.get (), osec, entry.get_loc (), mem.len,
+		       bfd_offset);
+	break;
+      }
     }
 }
 
@@ -2499,13 +2555,13 @@ record_full_base_target::save_record (const char *recfilename)
       /* Number of effects of an instruction.  */
       save_size += sizeof (uint32_t) + sizeof (uint8_t) + sizeof (uint32_t);
       for (auto &entry : record_full_list[i].effects)
-	switch (entry.type)
+	switch (entry.type ())
 	  {
 	  case record_full_reg:
-	    save_size += 1 + 4 + entry.u.reg.len;
+	    save_size += 1 + 4 + entry.reg ().len;
 	    break;
 	  case record_full_mem:
-	    save_size += 1 + 4 + 8 + entry.u.mem.len;
+	    save_size += 1 + 4 + 8 + entry.mem ().len;
 	    break;
 	  }
     }
@@ -2640,18 +2696,18 @@ maintenance_print_record_instruction (const char *args, int from_tty)
 
   gdbarch *arch = current_inferior ()->arch ();
 
-  for (auto entry : to_print->effects)
+  for (auto &entry : to_print->effects)
     {
-      switch (entry.type)
+      switch (entry.type ())
 	{
 	  case record_full_reg:
 	    {
-	      type *regtype = gdbarch_register_type (arch, entry.u.reg.num);
+	      type *regtype = gdbarch_register_type (arch, entry.reg ().num);
 	      value *val
 		  = value_from_contents (regtype,
-					 record_full_get_loc (&entry));
+					 entry.get_loc ());
 	      gdb_printf ("Register %s changed: ",
-			  gdbarch_register_name (arch, entry.u.reg.num));
+			  gdbarch_register_name (arch, entry.reg ().num));
 	      struct value_print_options opts;
 	      get_user_print_options (&opts);
 	      opts.raw = true;
@@ -2661,11 +2717,12 @@ maintenance_print_record_instruction (const char *args, int from_tty)
 	    }
 	  case record_full_mem:
 	    {
-	      gdb_byte *b = record_full_get_loc (&entry);
+	      record_full_mem_entry& mem = entry.mem ();
+	      gdb_byte *b = entry.get_loc ();
 	      gdb_printf ("%d bytes of memory at address %s changed from:",
-			  entry.u.mem.len,
-			  print_core_address (arch, entry.u.mem.addr));
-	      for (int i = 0; i < entry.u.mem.len; i++)
+			  mem.len,
+			  print_core_address (arch, mem.addr));
+	      for (int i = 0; i < mem.len; i++)
 		gdb_printf (" %02x", b[i]);
 	      gdb_printf ("\n");
 	      break;
