@@ -638,6 +638,18 @@ struct language_defn
 
   virtual const struct lang_varobj_ops *varobj_ops () const;
 
+  /* Normally a "static link" (a reference to an outer frame) is
+     represented by DW_AT_static_link in DWARF.  However, some
+     compilers do not emit this -- but do provide some
+     language-specific way to find the correct outer frame.  If the
+     ordinary search for a static link fails for a given frame, then
+     this method will be called for that frame's language.  It should
+     either return the correct outer instance, if one exists, or a
+     null frame if no such frame exists.  */
+
+  virtual frame_info_ptr follow_static_link (const frame_info_ptr &frame)
+    const;
+
 protected:
 
   /* This is the overridable part of the GET_SYMBOL_NAME_MATCHER method.

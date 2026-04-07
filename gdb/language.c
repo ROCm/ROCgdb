@@ -917,6 +917,14 @@ language_defn::value_string (struct gdbarch *gdbarch,
 
 /* See language.h.  */
 
+frame_info_ptr
+language_defn::follow_static_link (const frame_info_ptr &frame) const
+{
+  return {};
+}
+
+/* See language.h.  */
+
 struct type *
 language_bool_type (const struct language_defn *la,
 		    struct gdbarch *gdbarch)

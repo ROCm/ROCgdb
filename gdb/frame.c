@@ -3226,7 +3226,11 @@ frame_follow_static_link (const frame_info_ptr &initial_frame)
 
   const struct dynamic_prop *static_link = frame_block->static_link ();
   if (static_link == nullptr)
-    return {};
+    {
+      const language_defn *lang
+	= language_def (get_frame_language (initial_frame));
+      return lang->follow_static_link (initial_frame);
+    }
 
   CORE_ADDR upper_frame_base;
 
