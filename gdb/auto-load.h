@@ -40,6 +40,11 @@ extern bool debug_auto_load;
 #define auto_load_debug_printf(fmt, ...) \
   debug_prefixed_printf_cond (debug_auto_load, "auto-load", fmt, ##__VA_ARGS__)
 
+/* Print "auto-load" enter/exit debug statements.  */
+
+#define AUTO_LOAD_SCOPED_DEBUG_ENTER_EXIT			\
+  scoped_debug_enter_exit (debug_auto_load, "auto-load")
+
 extern bool global_auto_load;
 
 extern bool auto_load_local_gdbinit;

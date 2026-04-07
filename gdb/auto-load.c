@@ -878,6 +878,11 @@ void
 auto_load_objfile_script (struct objfile *objfile,
 			  const struct extension_language_defn *language)
 {
+  AUTO_LOAD_SCOPED_DEBUG_ENTER_EXIT;
+  auto_load_debug_printf ("objfile: %s, language: %s",
+			  objfile_name (objfile),
+			  ext_lang_capitalized_name (language));
+
   gdb::unique_xmalloc_ptr<char> realname
     = gdb_realpath (objfile_name (objfile));
 
