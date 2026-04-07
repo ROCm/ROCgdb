@@ -26,6 +26,23 @@
 #include "nat/windows-nat.h"
 #include "ser-event.h"
 
+extern bool debug_exec;		/* show execution */
+extern bool debug_events;	/* show events from kernel */
+extern bool debug_memory;	/* show target memory accesses */
+extern bool debug_exceptions;	/* show target exceptions */
+
+#define DEBUG_EXEC(fmt, ...) \
+  debug_prefixed_printf_cond (debug_exec, "windows exec", fmt, ## __VA_ARGS__)
+#define DEBUG_EVENTS(fmt, ...) \
+  debug_prefixed_printf_cond (debug_events, "windows events", fmt, \
+			      ## __VA_ARGS__)
+#define DEBUG_MEM(fmt, ...) \
+  debug_prefixed_printf_cond (debug_memory, "windows mem", fmt, \
+			      ## __VA_ARGS__)
+#define DEBUG_EXCEPT(fmt, ...) \
+  debug_prefixed_printf_cond (debug_exceptions, "windows except", fmt, \
+			      ## __VA_ARGS__)
+
 using windows_nat::windows_thread_info;
 
 /* A pointer to a function that should return non-zero iff REGNUM

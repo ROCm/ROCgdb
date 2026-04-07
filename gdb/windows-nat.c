@@ -87,17 +87,11 @@ windows_per_inferior *windows_process;
 #define _CYGWIN_SIGNAL_STRING "cYgSiGw00f"
 #endif
 
-#define DEBUG_EXEC(fmt, ...) \
-  debug_prefixed_printf_cond (debug_exec, "windows exec", fmt, ## __VA_ARGS__)
-#define DEBUG_EVENTS(fmt, ...) \
-  debug_prefixed_printf_cond (debug_events, "windows events", fmt, \
-			      ## __VA_ARGS__)
-#define DEBUG_MEM(fmt, ...) \
-  debug_prefixed_printf_cond (debug_memory, "windows mem", fmt, \
-			      ## __VA_ARGS__)
-#define DEBUG_EXCEPT(fmt, ...) \
-  debug_prefixed_printf_cond (debug_exceptions, "windows except", fmt, \
-			      ## __VA_ARGS__)
+/* Debug options.  */
+bool debug_exec = false;	/* show execution */
+bool debug_events = false;	/* show events from kernel */
+bool debug_memory = false;	/* show target memory accesses */
+bool debug_exceptions = false;	/* show target exceptions */
 
 /* User options.  */
 static bool new_console = false;
@@ -105,10 +99,6 @@ static bool new_console = false;
 static bool cygwin_exceptions = false;
 #endif
 static bool new_group = true;
-static bool debug_exec = false;		/* show execution */
-static bool debug_events = false;	/* show events from kernel */
-static bool debug_memory = false;	/* show target memory accesses */
-static bool debug_exceptions = false;	/* show target exceptions */
 static bool useshell = false;		/* use shell for subprocesses */
 
 /* See windows_nat_target::resume to understand why this is commented
