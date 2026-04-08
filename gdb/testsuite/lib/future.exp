@@ -121,20 +121,28 @@ proc gdb_find_rustc {} {
     return $rustc
 }
 
-proc gdb_find_hipcc {} {
+proc gdb_find_hip_compiler {} {
     global tool_root_dir
     if {![is_remote host]} {
-	set hipcc [lookfor_file $tool_root_dir hipcc]
-	if {$hipcc eq "" && [info exists ::env(ROCM_PATH)]} {
-	    set hipcc [lookfor_file $::env(ROCM_PATH)/bin hipcc]
+	set compiler [lookfor_file $tool_root_dir amdclang++]
+	if {$compiler eq "" && [info exists ::env(ROCM_PATH)]} {
+	    set compiler [lookfor_file $::env(ROCM_PATH)/llvm/bin amdclang++]
 	}
-	if {$hipcc eq ""} {
-	    set hipcc hipcc
+	if {$compiler eq ""} {
+	    set compiler [lookfor_file /opt/rocm/llvm/bin amdclang++]
+	}
+	if {$compiler eq ""} {
+	    set compiler amdclang++
 	}
     } else {
-	set hipcc ""
+	set compiler ""
     }
-    return $hipcc
+    return $compiler
+}
+
+# Backwards compatibility alias.
+proc gdb_find_hipcc {} {
+    return [gdb_find_hip_compiler]
 }
 
 proc gdb_find_ldd {} {
@@ -343,7 +351,7 @@ proc gdb_default_target_compile_1 {source destfile type options} {
 	    if {[board_info $dest exists hipcompiler]} {
 		set compiler [target_info hipcompiler]
 	    } else {
-		set compiler [find_hipcc]
+		set compiler [find_hip_compiler]
 	    }
 	}
 
@@ -409,6 +417,7 @@ proc gdb_default_target_compile_1 {source destfile type options} {
     global GO_FOR_TARGET
     global GO_LD_FOR_TARGET
     global RUSTC_FOR_TARGET
+    global HIP_COMPILER_FOR_TARGET
     global HIPCC_FOR_TARGET
 
     if {[info exists GNATMAKE_FOR_TARGET]} {
@@ -456,7 +465,11 @@ proc gdb_default_target_compile_1 {source destfile type options} {
 	}
     }
 
-    if {[info exists HIPCC_FOR_TARGET]} {
+    if {[info exists HIP_COMPILER_FOR_TARGET]} {
+	if {$compiler_type == "hip"} {
+	    set compiler $HIP_COMPILER_FOR_TARGET
+	}
+    } elseif {[info exists HIPCC_FOR_TARGET]} {
 	if {$compiler_type == "hip"} {
 	    set compiler $HIPCC_FOR_TARGET
 	}
@@ -762,12 +775,20 @@ if {[info procs find_rustc] == ""} {
     rename gdb_find_rustc ""
 }
 
-if {[info procs find_hipcc] == ""} {
-    rename gdb_find_hipcc find_hipcc
+if {[info procs find_hip_compiler] == ""} {
+    rename gdb_find_hip_compiler find_hip_compiler
     set use_gdb_compile(hip) 1
     gdb_note [join [list $note_prefix "HIP" $note_suffix] ""]
 } else {
-    rename gdb_find_hipcc ""
+    rename gdb_find_hip_compiler ""
+}
+
+# Backwards compatibility: provide find_hipcc as an alias that always
+# delegates to find_hip_compiler (which is guaranteed to exist at this
+# point, either from the rename above or from an external definition).
+catch {rename gdb_find_hipcc ""}
+if {[info procs find_hipcc] == ""} {
+    proc find_hipcc {} { return [find_hip_compiler] }
 }
 
 # If dejagnu's default_target_compile is missing support for any language,
