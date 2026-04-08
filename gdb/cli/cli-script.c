@@ -1718,8 +1718,11 @@ script_from_file (FILE *stream, const char *file)
       /* Re-throw the error, but with the file name information
 	 prepended.  */
       throw_error (e.error,
-		   _("%s:%d: Error in sourced command file:\n%s"),
-		   source_file_name.c_str (), source_line_number,
+		   _("%ps:%ps: Error in sourced command file:\n%s"),
+		   styled_string (file_name_style.style (),
+				  source_file_name.c_str ()),
+		   styled_string (line_number_style.style (),
+				  plongest (source_line_number)),
 		   e.what ());
     }
 }

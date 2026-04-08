@@ -35,6 +35,7 @@
 #include "interps.h"
 #include "target.h"
 #include "arch-utils.h"
+#include "cli/cli-style.h"
 #include "cli/cli-utils.h"
 #include "filenames.h"
 #include "ada-lang.h"
@@ -1536,7 +1537,8 @@ symbol_not_found_error (const char *symbol, const char *filename)
       if (filename)
 	throw_error (NOT_FOUND_ERROR,
 		     _("Undefined convenience variable or function \"%s\" "
-		       "not defined in \"%s\"."), symbol, filename);
+		       "not defined in \"%ps\"."), symbol,
+		     styled_string (file_name_style.style (), filename));
       else
 	throw_error (NOT_FOUND_ERROR,
 		     _("Undefined convenience variable or function \"%s\" "
@@ -1546,8 +1548,9 @@ symbol_not_found_error (const char *symbol, const char *filename)
     {
       if (filename)
 	throw_error (NOT_FOUND_ERROR,
-		     _("Function \"%s\" not defined in \"%s\"."),
-		     symbol, filename);
+		     _("Function \"%s\" not defined in \"%ps\"."),
+		     symbol,
+		     styled_string (file_name_style.style (), filename));
       else
 	throw_error (NOT_FOUND_ERROR,
 		     _("Function \"%s\" not defined."), symbol);
@@ -1602,7 +1605,8 @@ undefined_label_error (const char *function, const char *label)
 [[noreturn]] static void
 source_file_not_found_error (const char *name)
 {
-  throw_error (NOT_FOUND_ERROR, _("No source file named %s."), name);
+  throw_error (NOT_FOUND_ERROR, _("No source file named %ps."),
+	       styled_string (file_name_style.style (), name));
 }
 
 /* Unless at EIO, save the current stream position as completion word
@@ -2141,12 +2145,16 @@ create_sals_line_offset (struct linespec_state *self,
     {
       if (ls->explicit_loc.source_filename)
 	throw_error (NOT_FOUND_ERROR,
-		     _("No compiled code for line %d in file \"%s\"."),
-		     line, ls->explicit_loc.source_filename.get ());
+		     _("No compiled code for line %ps in file \"%ps\"."),
+		     styled_string (line_number_style.style (),
+				    plongest (line)),
+		     styled_string (file_name_style.style (),
+				    ls->explicit_loc.source_filename.get ()));
       else
 	throw_error (NOT_FOUND_ERROR,
-		     _("No compiled code for line %d in the current file."),
-		     line);
+		     _("No compiled code for line %ps in the current file."),
+		     styled_string (line_number_style.style (),
+				    plongest (line)));
     }
 
   return values;
