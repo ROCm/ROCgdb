@@ -1526,7 +1526,8 @@ symbol_not_found_error (const char *symbol, const char *filename)
       && !current_program_space->has_partial_symbols ()
       && !current_program_space->has_minimal_symbols ())
     throw_error (NOT_FOUND_ERROR,
-		 _("No symbol table is loaded.  Use the \"file\" command."));
+		 _("No symbol table is loaded.  Use the \"%ps\" command."),
+		 styled_string (command_style.style (), "file"));
 
   /* If SYMBOL starts with '$', the user attempted to either lookup
      a function/variable in his code starting with '$' or an internal
@@ -3653,7 +3654,8 @@ symtabs_from_filename (const char *filename,
 	  && !current_program_space->has_partial_symbols ())
 	throw_error (NOT_FOUND_ERROR,
 		     _("No symbol table is loaded.  "
-		       "Use the \"file\" command."));
+		       "Use the \"%ps\" command."),
+		     styled_string (command_style.style (), "file"));
       source_file_not_found_error (filename);
     }
 
