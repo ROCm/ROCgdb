@@ -2229,6 +2229,42 @@ s_aarch64_cons (int nbytes)
     {
       struct reloc_table_entry *reloc;
 
+      /* Check for %dtprel(var) syntax */
+      if (*input_line_pointer == '%')
+	{
+	  if (strncmp (input_line_pointer, "%dtprel(", 8) == 0)
+	    {
+	      input_line_pointer += 8;
+
+	      expression (&exp);
+
+	      /* Ensure we have a closing parenthesis */
+	      if (*input_line_pointer == ')')
+		input_line_pointer++;
+	      else
+		{
+		  as_bad (_("missing ')' after %%dtprel"));
+		  ignore_rest_of_line ();
+		  return;
+		}
+
+	      addressT where = frag_now_fix ();
+	      fix_new_exp (frag_now, where, nbytes, &exp, 0,
+			   BFD_RELOC_AARCH64_TLS_DTPREL);
+
+	      char *dest = frag_more (nbytes);
+	      memset (dest, 0, nbytes);
+	      continue;
+	    }
+
+	  else
+	    {
+	      as_bad (_("unknown relocation operator"));
+	      ignore_rest_of_line ();
+	      return;
+	    }
+	}
+
       expression (&exp);
 
       if (exp.X_op != O_symbol)
@@ -10114,6 +10150,7 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
     case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
     case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
     case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
+    case BFD_RELOC_AARCH64_TLS_DTPREL:
       S_SET_THREAD_LOCAL (fixP->fx_addsy);
       /* Should always be exported to object file, see
 	 aarch64_force_relocation().  */

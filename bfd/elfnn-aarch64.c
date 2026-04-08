@@ -6496,6 +6496,17 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
       *unresolved_reloc_p = false;
       break;
 
+    case BFD_RELOC_AARCH64_TLS_DTPREL:
+      if (input_section->flags & SEC_ALLOC)
+	return bfd_reloc_notsupported;
+      value -= dtpoff_base (info);
+      value += rel->r_addend;
+
+      bfd_put_64 (output_bfd, value, contents + rel->r_offset);
+
+      *unresolved_reloc_p = false;
+      break;
+
     case BFD_RELOC_AARCH64_TLSDESC_OFF_G0_NC:
     case BFD_RELOC_AARCH64_TLSDESC_OFF_G1:
       if (globals->root.sgot == NULL)

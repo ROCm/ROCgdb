@@ -1,0 +1,9 @@
+#source: tls-debug.s
+#ld: -shared -T relocs.ld -e0
+#objdump: -s -j .debug_info
+
+#...
+Contents of section .debug_info:
+#...
+ [0-9a-f]+ 08000000 00000000 09000000 00000000 .*
+#...
