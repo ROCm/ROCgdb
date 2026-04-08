@@ -1,0 +1,62 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib "fortran.exp"
+
+require allow_fortran_tests
+
+standard_testfile .f90
+
+if { [prepare_for_testing "failed to prepare" $testfile $srcfile {debug f90}] } {
+    return
+}
+
+if {![fortran_runto_main]} {
+    return
+}
+
+# Test global alias at program scope
+gdb_breakpoint [gdb_get_line_number "bp-main"]
+gdb_continue_to_breakpoint "bp-main" ".*bp-main.*"
+
+with_test_prefix "global_test" {
+    gdb_test "print global_alias" " = 200"
+    gdb_test "print global_var_i_from_mod1" " = 300"
+}
+
+gdb_breakpoint [gdb_get_line_number "bp-sub1"]
+gdb_continue_to_breakpoint "bp-sub1" ".*bp-sub1.*"
+
+with_test_prefix "sub1_test" {
+    gdb_test "print var_i_alias" " = 3"
+    gdb_test "print var_i" " = 4"
+}
+
+gdb_breakpoint [gdb_get_line_number "bp-sub2"]
+gdb_continue_to_breakpoint "bp-sub2" ".*bp-sub2.*"
+
+with_test_prefix "sub2_test" {
+    gdb_test "print var_i_alias" " = 23"
+    gdb_test "print var_i" " = 25"
+}
+
+# Test same-name variables shadowed within same function
+gdb_breakpoint [gdb_get_line_number "bp-sub3"]
+gdb_continue_to_breakpoint "bp-sub3" ".*bp-sub3.*"
+
+with_test_prefix "sub3_shadow_test" {
+    gdb_test "print var_i_from_mod1" " = 31"
+    gdb_test "print var_i_from_mod2" " = 32"
+}
