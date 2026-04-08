@@ -1871,7 +1871,7 @@ coff_get_normalized_symtab (bfd *abfd)
   const char *string_table = NULL;
   asection * debug_sec = NULL;
   char *debug_sec_data = NULL;
-  bfd_size_type size;
+  size_t size;
 
   if (obj_raw_syments (abfd) != NULL)
     return obj_raw_syments (abfd);
@@ -1879,12 +1879,14 @@ coff_get_normalized_symtab (bfd *abfd)
   if (! _bfd_coff_get_external_symbols (abfd))
     return NULL;
 
-  size = obj_raw_syment_count (abfd);
   /* Check for integer overflow.  */
-  if (size > (bfd_size_type) -1 / sizeof (combined_entry_type))
-    return NULL;
-  size *= sizeof (combined_entry_type);
-  internal = (combined_entry_type *) bfd_zalloc (abfd, size);
+  if (_bfd_mul_overflow (obj_raw_syment_count (abfd),
+			 sizeof (combined_entry_type), &size))
+    {
+      bfd_set_error (bfd_error_file_too_big);
+      return NULL;
+    }
+  internal = bfd_zalloc (abfd, size);
   if (internal == NULL && size != 0)
     return NULL;
 
@@ -1911,7 +1913,17 @@ coff_get_normalized_symtab (bfd *abfd)
 
       /* PR 17512: Prevent buffer overrun.  */
       if (sym->u.syment.n_numaux > ((raw_end - 1) - raw_src) / symesz)
-	return NULL;
+	{
+	  char buf[SYMNMLEN + 1];
+	  const char *name;
+
+	  name = _bfd_coff_internal_syment_name (abfd, &sym->u.syment, buf);
+	  _bfd_error_handler
+	    /* xgettext:c-format */
+	    (_("%pB: class %d symbol '%s' has missing aux entries"),
+	     abfd, sym->u.syment.n_sclass, name ? name : "");
+	  return NULL;
+	}
 
       for (i = 0; i < sym->u.syment.n_numaux; i++)
 	{
