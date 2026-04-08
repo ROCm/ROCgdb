@@ -193,8 +193,6 @@ static bool record_full_stop_at_limit = true;
 /* Maximum allowed number of insns in execution log.  */
 static unsigned int record_full_insn_max_num
 	= DEFAULT_RECORD_FULL_INSN_MAX_NUM;
-/* Actual count of insns presently in execution log.  */
-static unsigned int record_full_insn_num = 0;
 /* Count of insns logged so far (may be larger
    than count of insns presently in execution log).  */
 static ULONGEST record_full_insn_count;
@@ -464,7 +462,6 @@ record_full_entry_cleanup (record_full_entry rec)
 static void
 record_full_reset_history ()
 {
-  record_full_insn_num = 0;
   record_full_insn_count = 0;
   record_full_next_insn = 0;
 
@@ -511,9 +508,7 @@ record_full_save_instruction ()
 }
 
 /* Delete the first instruction from the beginning of the log, to make
-   room for adding a new instruction at the end of the log.
-
-   Note -- this function does not modify record_full_insn_num.  */
+   room for adding a new instruction at the end of the log.  */
 
 static void
 record_full_list_release_first (void)
@@ -613,7 +608,7 @@ record_full_arch_list_add_mem (CORE_ADDR addr, int len)
 static void
 record_full_check_insn_num (void)
 {
-  if (record_full_insn_num == record_full_insn_max_num)
+  if (record_full_list.size () == record_full_insn_max_num)
     {
       /* Ask user what to do.  */
       if (record_full_stop_at_limit)
@@ -695,10 +690,8 @@ record_full_message (struct regcache *regcache, enum gdb_signal signal)
 
   record_full_save_instruction ();
 
-  if (record_full_insn_num == record_full_insn_max_num)
+  if (record_full_list.size () == record_full_insn_max_num)
     record_full_list_release_first ();
-  else
-    record_full_insn_num++;
 }
 
 static bool
@@ -1478,10 +1471,8 @@ record_full_registers_change (struct regcache *regcache, int regnum)
     }
   record_full_save_instruction ();
 
-  if (record_full_insn_num == record_full_insn_max_num)
+  if (record_full_list.size () == record_full_insn_max_num)
     record_full_list_release_first ();
-  else
-    record_full_insn_num++;
 }
 
 /* "store_registers" method for process record target.  */
@@ -1582,10 +1573,8 @@ record_full_target::xfer_partial (enum target_object object,
 	}
       record_full_save_instruction ();
 
-      if (record_full_insn_num == record_full_insn_max_num)
+      if (record_full_list.size () == record_full_insn_max_num)
 	record_full_list_release_first ();
-      else
-	record_full_insn_num++;
     }
 
   return this->beneath ()->xfer_partial (object, annex, readbuf, writebuf,
@@ -1827,8 +1816,8 @@ record_full_base_target::info_record ()
 		  pulongest (record_full_insn_count));
 
       /* Display log count.  */
-      gdb_printf (_("Log contains %u instructions.\n"),
-		  record_full_insn_num);
+      gdb_printf (_("Log contains %lu instructions.\n"),
+		  (unsigned long int) record_full_list.size ());
     }
   else
     gdb_printf (_("No instructions have been logged.\n"));
@@ -2319,8 +2308,6 @@ record_full_restore (struct bfd &cbfd)
 		"RECORD_FULL_FILE_MAGIC (0x%s)\n",
 		phex_nz (netorder32 (magic), 4));
 
-  record_full_insn_num = 0;
-
   try
     {
       while (bfd_offset < osec_size)
@@ -2360,9 +2347,9 @@ record_full_restore (struct bfd &cbfd)
     }
 
   /* Update record_full_insn_max_num.  */
-  if (record_full_insn_num > record_full_insn_max_num)
+  if (record_full_list.size () > record_full_insn_max_num)
     {
-      record_full_insn_max_num = record_full_insn_num;
+      record_full_insn_max_num = record_full_list.size ();
       warning (_("Auto increase record/replay buffer limit to %u."),
 	       record_full_insn_max_num);
     }
@@ -2623,14 +2610,10 @@ static void
 set_record_full_insn_max_num (const char *args, int from_tty,
 			      struct cmd_list_element *c)
 {
-  if (record_full_insn_num > record_full_insn_max_num)
+  if (record_full_list.size () > record_full_insn_max_num)
     {
-      /* Count down record_full_insn_num while releasing records from list.  */
-      while (record_full_insn_num > record_full_insn_max_num)
-       {
-	 record_full_list_release_first ();
-	 record_full_insn_num--;
-       }
+      while (record_full_list.size () > record_full_insn_max_num)
+	record_full_list_release_first ();
     }
 }
 
