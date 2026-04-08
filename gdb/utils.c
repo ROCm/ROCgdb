@@ -182,6 +182,16 @@ vwarning (const char *string, va_list args)
     }
 }
 
+/* See common-exceptions.h.  */
+
+std::string
+vformat_exception (const char *fmt, va_list args)
+{
+  string_file text (true);
+  text.vprintf (fmt, args);
+  return text.release ();
+}
+
 /* Print an error message and return to command level.
    The first argument STRING is the error message, used as a fprintf string,
    and the remaining args are passed as arguments to it.  */

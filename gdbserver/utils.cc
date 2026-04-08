@@ -104,3 +104,15 @@ paddress (CORE_ADDR addr)
 {
   return phex_nz (addr);
 }
+
+#ifndef IN_PROCESS_AGENT
+
+/* See common-exceptions.h.  */
+
+std::string
+vformat_exception (const char *fmt, va_list args)
+{
+  return string_vprintf (fmt, args);
+}
+
+#endif /* IN_PROCESS_AGENT */
