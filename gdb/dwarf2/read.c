@@ -638,6 +638,14 @@ struct fnfieldlist
    in an instance of a field_info structure, as defined below.  */
 struct field_info
 {
+  explicit field_info (die_info *base)
+    : base_die (base)
+  {
+  }
+
+  /* The DIE for the overall structure.  */
+  die_info *base_die;
+
   /* List of data member and baseclasses fields.  */
   std::vector<struct nextfield> fields;
   std::vector<struct nextfield> baseclasses;
@@ -812,9 +820,6 @@ static void get_scope_pc_bounds (struct die_info *,
 
 static void dwarf2_record_block_ranges (struct die_info *, struct block *,
 					struct dwarf2_cu *);
-
-static void dwarf2_add_field (struct field_info *, struct die_info *,
-			      struct dwarf2_cu *);
 
 static void dwarf2_attach_fields_to_type (struct field_info *,
 					  struct type *, struct dwarf2_cu *);
@@ -1575,6 +1580,11 @@ static struct compunit_symtab *
 dw2_instantiate_symtab (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
 			bool skip_partial)
 {
+  /* Expand the corresponding canonical outermost CU.  This will
+     expand the desired CU as a side effect when following the
+     DW_TAG_imported_unit.  */
+  per_cu = per_cu->canonical_outermost_cu ();
+
   if (!per_objfile->compunit_symtab_set_p (per_cu))
     {
       free_cached_comp_units freer (per_objfile);
@@ -3304,7 +3314,7 @@ cooked_index_worker_debug_info::process_unit
     {
       auto new_reader
 	= std::make_unique<cutu_reader> (*this_cu, *per_objfile, nullptr,
-					 false, std::nullopt,
+					 true, std::nullopt,
 					 storage->get_abbrev_table_cache ());
 
       if (new_reader->is_dummy ())
@@ -3318,13 +3328,13 @@ cooked_index_worker_debug_info::process_unit
 
   if (this_cu->is_debug_types ())
     process_type_unit (reader, storage);
-  else if (reader->top_level_die ()->tag != DW_TAG_partial_unit)
+  else
     {
       bool nope = false;
       if (this_cu->scanned.compare_exchange_strong (nope, true))
 	{
 	  gdb_assert (storage != nullptr);
-	  cooked_indexer indexer (storage, this_cu, reader->cu ()->lang ());
+	  cooked_indexer indexer (storage, reader->cu ()->lang ());
 	  indexer.make_index (reader);
 	}
     }
@@ -3344,7 +3354,7 @@ cooked_index_worker_debug_info::process_type_unit
     return;
 
   gdb_assert (storage != nullptr);
-  cooked_indexer indexer (storage, per_cu, cu->lang ());
+  cooked_indexer indexer (storage, cu->lang ());
   indexer.make_index (reader);
 }
 
@@ -4800,15 +4810,6 @@ process_imported_unit_die (die_info *die, dwarf2_cu *source_cu)
       sect_offset sect_off = attr->get_ref_die_offset ();
       dwarf2_per_cu *per_cu
 	= dwarf2_find_containing_unit ({ &section, sect_off }, per_objfile);
-
-      /* We're importing a C++ compilation unit with tag DW_TAG_compile_unit
-	 into another compilation unit, at root level.  Regard this as a hint,
-	 and ignore it.  This is a best effort, it only works if unit_type and
-	 lang are already set.  */
-      if (die->parent && die->parent->parent == NULL
-	  && per_cu->unit_type (false) == DW_UT_compile
-	  && is_cplus_dialect (per_cu->lang (false)))
-	return;
 
       /* Load its DIEs and add it to the queue.  */
       if (dwarf2_cu *dst_cu = ensure_loaded_comp_unit (per_cu, per_objfile,
@@ -9493,7 +9494,7 @@ compute_field_location (dwarf2_cu *cu, die_info *die, field *fp)
 
 static void
 dwarf2_add_field (struct field_info *fip, struct die_info *die,
-		  struct dwarf2_cu *cu)
+		  struct dwarf2_cu *cu, bool force_artificial = false)
 {
   struct nextfield *new_field;
   struct attribute *attr;
@@ -9526,6 +9527,9 @@ dwarf2_add_field (struct field_info *fip, struct die_info *die,
     new_field->field.set_virtual ();
 
   fp = &new_field->field;
+
+  if (force_artificial)
+    fp->set_is_artificial (true);
 
   if ((die->tag == DW_TAG_member || die->tag == DW_TAG_namelist_item)
       && !die_is_declaration (die, cu))
@@ -10567,6 +10571,29 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
   return type;
 }
 
+/* Return true if DIE appears to be nested in the structure being
+   defined by FI.  */
+
+static bool
+field_info_encloses_die (field_info *fi, die_info *die)
+{
+  for (; die != nullptr; die = die->parent)
+    {
+      if (die == fi->base_die)
+	return true;
+
+      /* If the current DIE is not a member, then maybe we found a DIE
+	 that is nested in some other object that is itself nested in
+	 the outermost structure.  We do allow nesting in variants
+	 (though it's unclear if this really makes sense).  */
+      if (die->tag != DW_TAG_member && die->tag != DW_TAG_variant
+	  && die->tag != DW_TAG_variant_part)
+	return false;
+    }
+
+  return false;
+}
+
 static void handle_struct_member_die
   (struct die_info *child_die,
    struct type *type,
@@ -10600,11 +10627,6 @@ handle_variant_part (struct die_info *die, struct type *type,
       new_part = &current.variant_parts.emplace_back ();
     }
 
-  /* When we recurse, we want callees to add to this new variant
-     part.  */
-  scoped_restore save_current_variant_part
-    = make_scoped_restore (&fi->current_variant_part, new_part);
-
   struct attribute *discr = dwarf2_attr (die, DW_AT_discr, cu);
   if (discr == NULL)
     {
@@ -10616,6 +10638,15 @@ handle_variant_part (struct die_info *die, struct type *type,
       struct die_info *target_die = follow_die_ref (die, discr, &target_cu);
 
       new_part->discriminant_offset = target_die->sect_off;
+
+      /* In Ada, a discriminant might be inherited from some
+	 superclass.  DWARF does not admit this possibility, so
+	 compilers have adapted in one of two ways: LLVM emits a local
+	 copy of the field (marking it as artificial); but GCC just
+	 references the field DIE in the parent type.  Here we handle
+	 the GCC case by creating an artificial copy of the field.  */
+      if (!field_info_encloses_die (fi, target_die))
+	dwarf2_add_field (fi, target_die, cu, true);
     }
   else
     {
@@ -10625,6 +10656,10 @@ handle_variant_part (struct die_info *die, struct type *type,
 		 objfile_name (cu->per_objfile->objfile));
     }
 
+  /* When we recurse, we want callees to add to this new variant
+     part.  */
+  scoped_restore save_current_variant_part
+    = make_scoped_restore (&fi->current_variant_part, new_part);
   for (die_info *child_die : die->children ())
     handle_struct_member_die (child_die, type, fi, template_args, cu);
 }
@@ -10771,7 +10806,8 @@ process_structure_scope (struct die_info *die, struct dwarf2_cu *cu)
   bool has_template_parameters = false;
   if (die->child != NULL && ! die_is_declaration (die, cu))
     {
-      struct field_info fi;
+      field_info fi (die);
+
       std::vector<struct symbol *> template_args;
 
       for (die_info *child_die : die->children ())
@@ -11491,13 +11527,13 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
   struct type *type;
   struct type *element_type, *range_type, *index_type;
   const char *name;
-  unsigned int bit_stride = 0;
 
-  /* If the stride is seen and used, byte_stride_prop will be
-     non-NULL.  In this case stride_storage will be used to store the
-     data locally.  */
-  dynamic_prop *byte_stride_prop = nullptr;
+  /* If the stride is seen and used, stride_prop will be non-NULL.  In
+     this case stride_storage will be used to store the data
+     locally.  */
+  dynamic_prop *stride_prop = nullptr;
   dynamic_prop stride_storage;
+  bool is_byte_stride = true;
 
   element_type = die_type (die, cu);
 
@@ -11511,10 +11547,9 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
     {
       struct type *prop_type = cu->addr_sized_int_type (false);
 
-      byte_stride_prop = &stride_storage;
-      bool stride_ok
-	= attr_to_dynamic_prop (attr, die, cu, byte_stride_prop, prop_type);
-
+      stride_prop = &stride_storage;
+      bool stride_ok = attr_to_dynamic_prop (attr, die, cu, stride_prop,
+					     prop_type);
       if (!stride_ok)
 	{
 	  complaint (_("unable to read array DW_AT_byte_stride "
@@ -11524,13 +11559,30 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
 	  /* Ignore this attribute.  We will likely not be able to print
 	     arrays of this type correctly, but there is little we can do
 	     to help if we cannot read the attribute's value.  */
-	  byte_stride_prop = NULL;
+	  stride_prop = nullptr;
 	}
     }
 
   if (attribute *attr = dwarf2_attr (die, DW_AT_bit_stride, cu);
       attr != nullptr)
-    bit_stride = attr->unsigned_constant ().value_or (0);
+    {
+      if (stride_prop != nullptr)
+	complaint (_("Found DW_AT_bit_stride and DW_AT_byte_stride "
+		     "- DIE at %s [in module %s]"),
+		   sect_offset_str (die->sect_off),
+		   objfile_name (cu->per_objfile->objfile));
+      else if (attr_to_dynamic_prop (attr, die, cu, &stride_storage,
+				     cu->addr_sized_int_type (false)))
+	{
+	  stride_prop = &stride_storage;
+	  is_byte_stride = false;
+	}
+      else
+	complaint (_("unable to read array DW_AT_bit_stride "
+		     " - DIE at %s [in module %s]"),
+		   sect_offset_str (die->sect_off),
+		   objfile_name (cu->per_objfile->objfile));
+    }
 
   /* Irix 6.2 native cc creates array types without children for
      arrays with unspecified length.  */
@@ -11540,7 +11592,7 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
       index_type = alloc.copy_type (builtin_type (objfile)->builtin_int);
       range_type = create_static_range_type (alloc, index_type, 0, -1);
       type = create_array_type_with_stride (alloc, element_type, range_type,
-					    byte_stride_prop, bit_stride);
+					    stride_prop, is_byte_stride);
       return set_die_type (die, type, cu);
     }
 
@@ -11582,10 +11634,9 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
       while (i < range_types.size ())
 	{
 	  type = create_array_type_with_stride (alloc, type, range_types[i++],
-						byte_stride_prop, bit_stride);
+						stride_prop, is_byte_stride);
 	  type->set_is_multi_dimensional (true);
-	  bit_stride = 0;
-	  byte_stride_prop = nullptr;
+	  stride_prop = nullptr;
 	}
     }
   else
@@ -11594,10 +11645,9 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
       while (ndim-- > 0)
 	{
 	  type = create_array_type_with_stride (alloc, type, range_types[ndim],
-						byte_stride_prop, bit_stride);
+						stride_prop, is_byte_stride);
 	  type->set_is_multi_dimensional (true);
-	  bit_stride = 0;
-	  byte_stride_prop = nullptr;
+	  stride_prop = nullptr;
 	}
     }
 
@@ -14099,26 +14149,23 @@ cooked_index_functions::search
 	      || !entry->matches (domain))
 	    continue;
 
-	  if (lang_matcher != nullptr)
+	  /* If LANG_MATCHER is non-NULL, try to skip CUs with a
+	     non-matching language.  The other case here is a bit of a
+	     hack to support .gdb_index.  Since .gdb_index does not
+	     record languages, and since we want to know the language
+	     to avoid excessive CU expansion due to false matches, if
+	     we see a symbol with an unknown language we find the CU's
+	     language.  Only the .gdb_index reader creates such
+	     symbols.  */
+	  if (lang_matcher != nullptr || entry->lang == language_unknown)
 	    {
-	      /* Try to skip CUs with non-matching language.  */
 	      entry->per_cu->ensure_lang (per_objfile);
-	      if (!entry->per_cu->maybe_multi_language ()
+	      if (lang_matcher != nullptr
+		  && !entry->per_cu->maybe_multi_language ()
 		  && !lang_matcher (entry->per_cu->lang ()))
 		continue;
-	    }
-
-	  /* This is a bit of a hack to support .gdb_index.  Since
-	     .gdb_index does not record languages, and since we want
-	     to know the language to avoid excessive CU expansion due
-	     to false matches, if we see a symbol with an unknown
-	     language we find the CU's language.  Only the .gdb_index
-	     reader creates such symbols.  */
-	  enum language entry_lang = entry->lang;
-	  if (entry_lang == language_unknown)
-	    {
-	      entry->per_cu->ensure_lang (per_objfile);
-	      entry_lang = entry->per_cu->lang ();
+	      else if (entry->lang == language_unknown)
+		entry->force_set_language ();
 	    }
 
 	  /* We've found the base name of the symbol; now walk its
@@ -14127,7 +14174,7 @@ cooked_index_functions::search
 	  bool found = true;
 
 	  const cooked_index_entry *parent = entry->get_parent ();
-	  const language_defn *lang_def = language_def (entry_lang);
+	  const language_defn *lang_def = language_def (entry->lang);
 	  for (int i = name_vec.size () - 1; i > 0; --i)
 	    {
 	      /* If we ran out of entries, or if this segment doesn't
@@ -14183,8 +14230,12 @@ cooked_index_functions::search
 	  else if (!symbol_matcher (full_name))
 	    continue;
 
-	  if (!search_one (entry->per_cu, per_objfile, cus_to_skip,
-			   file_matcher, listener, nullptr))
+	  bool check = entry->visit_defining_cus ([&] (dwarf2_per_cu *per_cu)
+	    {
+	      return search_one (per_cu, per_objfile, cus_to_skip,
+				 file_matcher, listener, nullptr);
+	    });
+	  if (!check)
 	    return false;
 	}
     }
@@ -15772,7 +15823,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	    struct context_stack *curr
 	      = cu->get_builder ()->get_current_context_stack ();
 	    if (curr != nullptr && curr->name != nullptr)
-	      sym->set_is_argument (1);
+	      sym->set_is_argument (true);
 	    attr = dwarf2_attr (die, DW_AT_location, cu);
 	    if (attr != nullptr)
 	      {
@@ -17948,6 +17999,30 @@ dwarf2_per_cu::ensure_lang (dwarf2_per_objfile *per_objfile)
   abbrev_table_cache abbrev_table_cache;
   cutu_reader reader (*this, *per_objfile, per_objfile->get_cu (this),
 		      true, std::nullopt, abbrev_table_cache);
+}
+
+/* See read.h.  */
+
+bool
+dwarf2_per_cu::recursively_visit_cus (per_cu_callback callback)
+{
+  if (including_cus.empty ())
+    return callback (this);
+  for (dwarf2_per_cu *iter : including_cus)
+    if (!iter->recursively_visit_cus (callback))
+      return false;
+  return true;
+}
+
+/* See read.h.  */
+
+dwarf2_per_cu *
+dwarf2_per_cu::canonical_outermost_cu ()
+{
+  dwarf2_per_cu *iter = this;
+  while (!iter->including_cus.empty ())
+    iter = *iter->including_cus.begin ();
+  return iter;
 }
 
 /* Return the unit from ALL_UNITS that potentially contains TARGET.

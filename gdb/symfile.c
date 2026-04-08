@@ -969,20 +969,15 @@ syms_from_objfile (struct objfile *objfile,
 static void
 finish_new_objfile (struct objfile *objfile, symfile_add_flags add_flags)
 {
-  /* If this is the main symbol file we have to clean up all users of the
-     old main symbol file.  Otherwise it is sufficient to fixup all the
-     breakpoints that may have been redefined by this symbol file.  */
-  if (add_flags & SYMFILE_MAINLINE)
-    {
-      /* OK, make it the "real" symbol file.  */
-      current_program_space->symfile_object_file = objfile;
+  /* If this is the main symbol file then record it as such in the program
+     space.  Don't record any separate debug files loaded as a consequence
+     of loading the main symbol file though.  */
+  if (add_flags & SYMFILE_MAINLINE
+      && objfile->separate_debug_objfile_backlink == nullptr)
+    current_program_space->symfile_object_file = objfile;
 
-      clear_symtab_users (add_flags);
-    }
-  else if ((add_flags & SYMFILE_DEFER_BP_RESET) == 0)
-    {
-      breakpoint_re_set ();
-    }
+  if ((add_flags & SYMFILE_DEFER_BP_RESET) == 0)
+    breakpoint_re_set ();
 
   /* We're done reading the symbol file; finish off complaints.  */
   clear_complaints ();
@@ -1047,7 +1042,17 @@ symbol_file_add_with_addrs (const gdb_bfd_ref_ptr &abfd, const char *name,
     error (_("Not confirmed."));
 
   if (mainline)
-    flags |= OBJF_MAINLINE;
+    {
+      flags |= OBJF_MAINLINE;
+
+      /* Before we create the new objfile, or load any debug symbols,
+	 discard any existing cached symbols.  Don't reset breakpoints at
+	 this point as we haven't discarded the previous main objfile yet,
+	 and we'd only end up resolving the breakpoints against the old
+	 symbols.  The breakpoints will be reset in finish_new_objfile.  */
+      if (parent == nullptr)
+	clear_symtab_users (add_flags | SYMFILE_DEFER_BP_RESET);
+    }
 
   objfile *objfile
     = objfile::make (abfd, current_program_space, name, flags, parent);

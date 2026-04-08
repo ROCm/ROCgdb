@@ -1,6 +1,6 @@
 #source: pr27491-1.s
 #as: --64
-#ld: --gc-sections -melf_x86_64 -shared
+#ld: --gc-sections -melf_x86_64 -shared --no-rosegment
 #objdump: --syms -dw
 
 .*: +file format elf64-x86-64

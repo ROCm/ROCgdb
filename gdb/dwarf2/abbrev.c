@@ -46,7 +46,6 @@ tag_interesting_for_index (dwarf_tag tag)
     case DW_TAG_enumerator:
     case DW_TAG_imported_declaration:
     case DW_TAG_imported_unit:
-    case DW_TAG_inlined_subroutine:
     case DW_TAG_interface_type:
     case DW_TAG_module:
     case DW_TAG_namespace:

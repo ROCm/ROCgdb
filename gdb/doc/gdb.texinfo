@@ -7042,6 +7042,44 @@ over when stepping.
 (@value{GDBP}) skip -gfile utils/*.c
 @end smallexample
 
+If @var{file-glob-pattern} is an absolute filename, for example, on
+Unix systems, if @var{file-glob-pattern} starts with @file{/}, then
+the glob will only match full filenames.
+
+@smallexample
+(@value{GDBP}) skip -gfile /include/*.h
+@end smallexample
+
+In this case @file{/include/foo.h} would match, but
+@file{/usr/include/foo.h} would not.  In contrast@:
+
+@smallexample
+(@value{GDBP}) skip -gfile include/*.h
+@end smallexample
+
+This would match both @file{/include/foo.h} and
+@file{/usr/include/foo.h} as the glob pattern is not an absolute
+filename.
+
+In addition to the standard @code{glob} special characters,
+@value{GDBN} supports @samp{**}.  The @samp{**} pattern, called
+@dfn{globstar}, can be used to match against 0 or more filename
+components.  For example, given the files @file{/include/a.h},
+@file{/include/xxx/b.h}, @file{/include/yyy/zzz/c.h}, then all of
+these could be skipped using@:
+
+@smallexample
+(@value{GDBP}) skip -gfile /include/**/*.h
+@end smallexample
+
+The @samp{**} pattern must appear on its own within the pattern, it
+cannot be combined with other characters, so @samp{include/**/*.h}
+will provide the globstar behaviour, but @samp{include/x**/*.h} will
+not as @samp{x**} combines the @samp{**} with the @samp{x} character.
+The @samp{x**} will be treated as @samp{x} followed by two @samp{*}
+characters, matching zero or more characters within that one directory
+component.
+
 @item -function @var{linespec}
 Functions named by @var{linespec} or the function containing the line
 named by @var{linespec} will be skipped over when stepping.
@@ -23548,6 +23586,43 @@ indicates that the associated entry is a linkage name, and not a
 source name.
 
 @end table
+
+@value{GDBN} also has some special handling for cases not considered
+in the DWARF specification.
+
+@itemize @bullet
+@item
+The @code{DW_IDX_parent} for a C-style enumerator does not point at
+the entry for @code{enum} itself, but rather the parent of the type.
+The reason for this is that C-style enumerators are injected into the
+containing scope, and so their name is not qualified by the
+@code{enum}; and furthermore there is no way to distinguish between
+C-style enumerators and @code{enum class}-style enumerators in
+@samp{.debug_names}.
+
+@item
+Similarly, @code{DW_IDX_parent} is omitted for any linkage name
+entries that are written.
+
+@item
+Definitions in partial units are handled differently.  These most
+typically are seen in the output of @code{dwz}.
+
+In general, a DWARF partial unit cannot be read in isolation, but only
+by reading it in the context of some other unit that references it via
+@code{DW_TAG_imported_unit}.
+
+Therefore, an ordinary definition in a partial unit is attributed to
+one of the outermost containing units.  This is done by referencing
+this containing CU in the @code{DW_IDX_compile_unit} attribute.
+
+A further special case applies to @code{DW_TAG_inlined_subroutine}
+entries.  An inlined subroutine appearing in a partial unit may be
+inlined in all of the outermost compilation units that directly or
+indirectly include the partial unit.  Therefore, in this case,
+@value{GDBN} will emit a separate index entry for the entry, once for
+each such containing unit.
+@end itemize
 
 @node Symbol Errors
 @section Errors Reading Symbol Files

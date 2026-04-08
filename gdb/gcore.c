@@ -152,7 +152,8 @@ gcore_command (const char *args, int from_tty)
     stop_all_threads ("generating coredump", inf);
   else
     {
-      all_stop_was_running = any_thread_of_inferior (inf)->executing ();
+      all_stop_was_running = (any_thread_of_inferior (inf)->internal_state ()
+			      == THREAD_INT_RUNNING);
 
       if (all_stop_was_running)
 	{
@@ -908,7 +909,7 @@ thread_info *
 gcore_find_signalled_thread ()
 {
   thread_info *curr_thr = inferior_thread ();
-  if (curr_thr->state != THREAD_EXITED
+  if (curr_thr->state () != THREAD_EXITED
       && curr_thr->stop_signal () != GDB_SIGNAL_0)
     return curr_thr;
 
@@ -917,7 +918,7 @@ gcore_find_signalled_thread ()
       return &thr;
 
   /* Default to the current thread, unless it has exited.  */
-  if (curr_thr->state != THREAD_EXITED)
+  if (curr_thr->state () != THREAD_EXITED)
     return curr_thr;
 
   return nullptr;

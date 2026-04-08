@@ -31,17 +31,17 @@ if { ![istarget mips*-*-*]
     return
 }
 
-set has_o32abi [expr ![istarget *-*-openbsd*] \
-		     && ![istarget mips64*-ps2-elf*]]
-set has_n32abi [expr [istarget *-img-elf*] \
+set has_abi(o32) [expr ![istarget *-*-openbsd*] \
+		     && ![istarget mips64*el-ps2-elf*]]
+set has_abi(n32) [expr [istarget *-img-elf*] \
 		     || [istarget *-mti-elf*] \
-		     || [istarget *-ps2-elf*] \
+		     || [istarget mips64*el-ps2-elf*] \
 		     || [istarget *-sde-elf*] \
 		     || [istarget *-*-freebsd*] \
 		     || [istarget *-*-irix6*] \
 		     || [istarget *-*-kfreebsd*-gnu] \
 		     || [istarget *-*-linux*]]
-set has_n64abi [expr [istarget *-*-freebsd*] \
+set has_abi(n64) [expr [istarget *-*-freebsd*] \
 		     || [istarget *-*-irix6*] \
 		     || [istarget *-*-kfreebsd*-gnu] \
 		     || [istarget *-*-linux*] \
@@ -83,7 +83,7 @@ if {[istarget *-img-elf*] \
     } else {
 	set abi_ldemul(o32) elf32b4300
     }
-} elseif { [istarget *-ps2-elf*] } {
+} elseif { [istarget mips64*el-ps2-elf*] } {
     set abi_ldemul(o32) elf32lr5900
     set abi_ldemul(n32) elf32lr5900n32
 } elseif { [istarget *-*-elf*] \
@@ -157,13 +157,13 @@ proc mips_comm_data_test { abi flag emul reloc } {
 # the 64-bit -march option is required to override it, like for
 # "mipsisa32r2el-*-*".
 set abis ""
-if $has_o32abi {
+if $has_abi(o32) {
     lappend abis o32 -32 $abi_ldemul(o32)
 }
-if $has_n32abi {
+if $has_abi(n32) {
     lappend abis n32 "-n32 -march=mips3" $abi_ldemul(n32)
 }
-if $has_n64abi {
+if $has_abi(n64) {
     lappend abis n64 "-64 -march=mips3" $abi_ldemul(n64)
 }
 set relocs { copyreloc nocopyreloc }

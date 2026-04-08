@@ -618,9 +618,9 @@ breakpoints_should_be_inserted_now (void)
 	  return 1;
 
       /* Don't remove breakpoints yet if, even though all threads are
-	 stopped, we still have events to process.  */
+	 stopped, some still have pending events to process.  */
       for (thread_info &tp : all_non_exited_threads ())
-	if (tp.resumed () && tp.has_pending_waitstatus ())
+	if (tp.internal_state () == THREAD_INT_RESUMED_PENDING_STATUS)
 	  return 1;
     }
   return 0;
@@ -2062,7 +2062,7 @@ watchpoint_in_thread_and_simd_lane_scope (struct watchpoint *b)
   else if (b->watchpoint_thread == null_ptid)
     return true;
   else if (inferior_ptid != b->watchpoint_thread
-	   || inferior_thread ()->executing ())
+	   || inferior_thread ()->internal_state () == THREAD_INT_RUNNING)
     return false;
   else if (b->watchpoint_simd_lane == -1)
     return true;
@@ -5124,7 +5124,8 @@ get_bpstat_thread ()
     return NULL;
 
   thread_info *tp = inferior_thread ();
-  if (tp->state == THREAD_EXITED || tp->executing ())
+  if (tp->internal_state () == THREAD_INT_EXITED
+      || tp->internal_state () == THREAD_INT_RUNNING)
     return NULL;
   return tp;
 }

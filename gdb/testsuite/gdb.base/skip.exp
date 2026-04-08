@@ -54,6 +54,14 @@ gdb_test "skip -function foo -rfunction foo*" \
 gdb_test "skip -file foo.c -gfile foo*.c" \
     "Cannot specify both -file and -gfile\\."
 
+# Some invalid -gfile patterns.
+gdb_test "skip -gfile \[\]-W\]" \
+    "skip glob regexp: invalid character range \\\]-W"
+gdb_test "skip -gfile \[n-a\]" \
+    "skip glob regexp: invalid character range n-a"
+gdb_test "skip -gfile \[\[:punct:\]\]*.c" \
+    "skip glob regexp: unsupported character class '\\\[:punct:\\\]'"
+
 if {![runto_main]} {
     return
 }

@@ -44,8 +44,6 @@ enum
 
 struct x86_windows_per_inferior : public windows_per_inferior
 {
-  uintptr_t dr[8] {};
-
   /* The function to use in order to determine whether a register is
      a segment register or not.  */
   segment_register_p_ftype *segment_register_p = nullptr;
@@ -77,8 +75,6 @@ static x86_windows_per_inferior x86_windows_process;
 void
 x86_windows_nat_target::initialize_windows_arch (bool attaching)
 {
-  memset (x86_windows_process.dr, 0, sizeof (x86_windows_process.dr));
-
 #ifdef __x86_64__
   x86_windows_process.ignore_first_breakpoint
     = !attaching && x86_windows_process.wow64_process;
@@ -113,19 +109,6 @@ x86_windows_nat_target::fill_thread_context (windows_thread_info *th)
     {
       context->ContextFlags = WindowsContext<decltype(context)>::all;
       CHECK (get_thread_context (th->h, context));
-
-      /* Copy dr values from that thread.
-	 But only if there were not modified since last stop.
-	 PR gdb/2388 */
-      if (!th->debug_registers_changed)
-	{
-	  x86_windows_process.dr[0] = context->Dr0;
-	  x86_windows_process.dr[1] = context->Dr1;
-	  x86_windows_process.dr[2] = context->Dr2;
-	  x86_windows_process.dr[3] = context->Dr3;
-	  x86_windows_process.dr[6] = context->Dr6;
-	  x86_windows_process.dr[7] = context->Dr7;
-	}
     });
 }
 
@@ -137,15 +120,18 @@ x86_windows_nat_target::thread_context_continue (windows_thread_info *th,
 {
   x86_windows_process.with_context (th, [&] (auto *context)
     {
+      struct x86_debug_reg_state *state
+	= x86_debug_reg_state (windows_process->process_id);
+
       if (th->debug_registers_changed)
 	{
 	  context->ContextFlags |= WindowsContext<decltype(context)>::debug;
-	  context->Dr0 = x86_windows_process.dr[0];
-	  context->Dr1 = x86_windows_process.dr[1];
-	  context->Dr2 = x86_windows_process.dr[2];
-	  context->Dr3 = x86_windows_process.dr[3];
+	  context->Dr0 = state->dr_mirror[0];
+	  context->Dr1 = state->dr_mirror[1];
+	  context->Dr2 = state->dr_mirror[2];
+	  context->Dr3 = state->dr_mirror[3];
 	  context->Dr6 = DR6_CLEAR_VALUE;
-	  context->Dr7 = x86_windows_process.dr[7];
+	  context->Dr7 = state->dr_control_mirror;
 	  th->debug_registers_changed = false;
 	}
 
@@ -301,7 +287,6 @@ cygwin_set_dr (int i, CORE_ADDR addr)
 {
   if (i < 0 || i > 3)
     internal_error (_("Invalid register %d in cygwin_set_dr.\n"), i);
-  x86_windows_process.dr[i] = addr;
 
   for (auto &th : x86_windows_process.thread_list)
     th->debug_registers_changed = true;
@@ -313,8 +298,6 @@ cygwin_set_dr (int i, CORE_ADDR addr)
 static void
 cygwin_set_dr7 (unsigned long val)
 {
-  x86_windows_process.dr[7] = (CORE_ADDR) val;
-
   for (auto &th : x86_windows_process.thread_list)
     th->debug_registers_changed = true;
 }
@@ -324,26 +307,48 @@ cygwin_set_dr7 (unsigned long val)
 static CORE_ADDR
 cygwin_get_dr (int i)
 {
-  return x86_windows_process.dr[i];
+  windows_thread_info *th
+    = windows_process->thread_rec (inferior_ptid, DONT_INVALIDATE_CONTEXT);
+
+  return windows_process->with_context (th, [&] (auto *context) -> CORE_ADDR
+    {
+      gdb_assert (context->ContextFlags != 0);
+      switch (i)
+	{
+	case 0:
+	  return context->Dr0;
+	case 1:
+	  return context->Dr1;
+	case 2:
+	  return context->Dr2;
+	case 3:
+	  return context->Dr3;
+	case 6:
+	  return context->Dr6;
+	case 7:
+	  return context->Dr7;
+	};
+
+      gdb_assert_not_reached ("invalid x86 dr register number: %d", i);
+    });
 }
 
-/* Get the value of the DR6 debug status register from the inferior.
-   Here we just return the value stored in dr[6]
-   by the last call to thread_rec for current_event.dwThreadId id.  */
+/* Get the value of the DR6 debug status register from the
+   inferior.  */
+
 static unsigned long
 cygwin_get_dr6 (void)
 {
-  return (unsigned long) x86_windows_process.dr[6];
+  return cygwin_get_dr (6);
 }
 
-/* Get the value of the DR7 debug status register from the inferior.
-   Here we just return the value stored in dr[7] by the last call to
-   thread_rec for current_event.dwThreadId id.  */
+/* Get the value of the DR7 debug status register from the
+   inferior.  */
 
 static unsigned long
 cygwin_get_dr7 (void)
 {
-  return (unsigned long) x86_windows_process.dr[7];
+  return cygwin_get_dr (7);
 }
 
 static int

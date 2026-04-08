@@ -39,9 +39,13 @@ hppa64elf_after_parse (void)
     lang_add_unique (".text");
 
   /* We always need to link against milli.a on HP-UX.  */
-  lang_add_input_file ("/lib/pa20_64/milli.a",
-		       lang_input_file_is_file_enum,
+  lang_add_input_file ("milli.a",
+		       lang_input_file_is_search_file_enum,
 		       NULL);
+
+  /* Default 64-bit search paths on HP-UX.  */
+  ldfile_add_library_path ("/lib/pa20_64", false);
+  ldfile_add_library_path ("/usr/lib/pa20_64", false);
 
   /* HP-UX shared libraries have some unresolved symbols.  We need to
      ignore unresolved symbols in shared libraries.  */

@@ -451,9 +451,9 @@ whatis_exp (const char *exp, int show)
       type = val->type ();
     }
 
-  if (flags.print_offsets && is_dynamic_type (type))
+  if (flags.print_offsets && cannot_print_offsets (type))
     {
-      warning (_("ptype/o does not work with dynamic types; disabling '/o'"));
+      warning (_("ptype/o does not work with this dynamic type; disabling '/o'"));
       flags.print_offsets = 0;
     }
 

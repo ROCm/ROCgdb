@@ -11020,19 +11020,20 @@ elf_link_output_extsym (struct bfd_hash_entry *bh, void *data)
      symbol.  FIXME: Not calling elf_backend_finish_dynamic_symbol for
      forced local syms when non-shared is due to a historical quirk.
      STT_GNU_IFUNC symbol must go through PLT.  */
-  if ((h->type == STT_GNU_IFUNC
-       && h->def_regular
-       && !bfd_link_relocatable (flinfo->info))
-      || ((h->dynindx != -1
-	   || h->forced_local)
-	  && ((bfd_link_pic (flinfo->info)
-	       && (ELF_ST_VISIBILITY (h->other) == STV_DEFAULT
-		   || h->root.type != bfd_link_hash_undefweak))
-	      || !h->forced_local)
-	  && elf_hash_table (flinfo->info)->dynamic_sections_created))
+  if (((h->type == STT_GNU_IFUNC
+	&& h->def_regular
+	&& !bfd_link_relocatable (flinfo->info))
+       || ((h->dynindx != -1
+	    || h->forced_local)
+	   && ((bfd_link_pic (flinfo->info)
+		&& (ELF_ST_VISIBILITY (h->other) == STV_DEFAULT
+		    || h->root.type != bfd_link_hash_undefweak))
+	       || !h->forced_local)
+	   && elf_hash_table (flinfo->info)->dynamic_sections_created))
+      && bed->elf_backend_finish_dynamic_symbol != NULL)
     {
-      if (! ((*bed->elf_backend_finish_dynamic_symbol)
-	     (flinfo->output_bfd, flinfo->info, h, &sym)))
+      if (!bed->elf_backend_finish_dynamic_symbol (flinfo->output_bfd,
+						   flinfo->info, h, &sym))
 	{
 	  eoinfo->failed = true;
 	  return false;

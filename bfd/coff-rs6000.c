@@ -3016,8 +3016,7 @@ xcoff_swap_ldrel_out (bfd *abfd, const struct internal_ldrel *src, void * d)
   bfd_put_16 (abfd, (bfd_vma) src->l_rsecnm, dst->l_rsecnm);
 }
 
-
-bool
+bfd_reloc_status_type
 xcoff_reloc_type_noop (bfd *input_bfd ATTRIBUTE_UNUSED,
 		       asection *input_section ATTRIBUTE_UNUSED,
 		       bfd *output_bfd ATTRIBUTE_UNUSED,
@@ -3030,14 +3029,14 @@ xcoff_reloc_type_noop (bfd *input_bfd ATTRIBUTE_UNUSED,
 		       bfd_byte *contents ATTRIBUTE_UNUSED,
 		       struct bfd_link_info *info ATTRIBUTE_UNUSED)
 {
-  return true;
+  return bfd_reloc_ok;
 }
 
-bool
-xcoff_reloc_type_fail (bfd *input_bfd,
+bfd_reloc_status_type
+xcoff_reloc_type_fail (bfd *input_bfd ATTRIBUTE_UNUSED,
 		       asection *input_section ATTRIBUTE_UNUSED,
 		       bfd *output_bfd ATTRIBUTE_UNUSED,
-		       struct internal_reloc *rel,
+		       struct internal_reloc *rel ATTRIBUTE_UNUSED,
 		       struct internal_syment *sym ATTRIBUTE_UNUSED,
 		       struct reloc_howto_struct *howto ATTRIBUTE_UNUSED,
 		       bfd_vma val ATTRIBUTE_UNUSED,
@@ -3046,15 +3045,10 @@ xcoff_reloc_type_fail (bfd *input_bfd,
 		       bfd_byte *contents ATTRIBUTE_UNUSED,
 		       struct bfd_link_info *info ATTRIBUTE_UNUSED)
 {
-  _bfd_error_handler
-    /* xgettext: c-format */
-    (_("%pB: unsupported relocation type %#x"),
-     input_bfd, (unsigned int) rel->r_type);
-  bfd_set_error (bfd_error_bad_value);
-  return false;
+  return bfd_reloc_notsupported;
 }
 
-bool
+bfd_reloc_status_type
 xcoff_reloc_type_pos (bfd *input_bfd ATTRIBUTE_UNUSED,
 		      asection *input_section ATTRIBUTE_UNUSED,
 		      bfd *output_bfd ATTRIBUTE_UNUSED,
@@ -3068,10 +3062,10 @@ xcoff_reloc_type_pos (bfd *input_bfd ATTRIBUTE_UNUSED,
 		      struct bfd_link_info *info ATTRIBUTE_UNUSED)
 {
   *relocation = val + addend;
-  return true;
+  return bfd_reloc_ok;
 }
 
-bool
+bfd_reloc_status_type
 xcoff_reloc_type_neg (bfd *input_bfd ATTRIBUTE_UNUSED,
 		      asection *input_section ATTRIBUTE_UNUSED,
 		      bfd *output_bfd ATTRIBUTE_UNUSED,
@@ -3085,10 +3079,10 @@ xcoff_reloc_type_neg (bfd *input_bfd ATTRIBUTE_UNUSED,
 		      struct bfd_link_info *info ATTRIBUTE_UNUSED)
 {
   *relocation = - val - addend;
-  return true;
+  return bfd_reloc_ok;
 }
 
-bool
+bfd_reloc_status_type
 xcoff_reloc_type_rel (bfd *input_bfd ATTRIBUTE_UNUSED,
 		      asection *input_section,
 		      bfd *output_bfd ATTRIBUTE_UNUSED,
@@ -3109,10 +3103,10 @@ xcoff_reloc_type_rel (bfd *input_bfd ATTRIBUTE_UNUSED,
   *relocation = val + addend;
   *relocation -= (input_section->output_section->vma
 		  + input_section->output_offset);
-  return true;
+  return bfd_reloc_ok;
 }
 
-bool
+bfd_reloc_status_type
 xcoff_reloc_type_toc (bfd *input_bfd,
 		      asection *input_section ATTRIBUTE_UNUSED,
 		      bfd *output_bfd,
@@ -3127,8 +3121,8 @@ xcoff_reloc_type_toc (bfd *input_bfd,
 {
   struct xcoff_link_hash_entry *h;
 
-  if (0 > rel->r_symndx)
-    return false;
+  if ((unsigned long) rel->r_symndx >= obj_raw_syment_count (input_bfd))
+    return bfd_reloc_undefined;
 
   h = obj_xcoff_sym_hashes (input_bfd)[rel->r_symndx];
 
@@ -3140,8 +3134,7 @@ xcoff_reloc_type_toc (bfd *input_bfd,
 	    /* xgettext: c-format */
 	    (_("%pB: TOC reloc at %#" PRIx64 " to symbol `%s' with no TOC entry"),
 	     input_bfd, (uint64_t) rel->r_vaddr, h->root.root.string);
-	  bfd_set_error (bfd_error_bad_value);
-	  return false;
+	  return bfd_reloc_undefined;
 	}
 
       BFD_ASSERT ((h->flags & XCOFF_SET_TOC) == 0);
@@ -3152,17 +3145,18 @@ xcoff_reloc_type_toc (bfd *input_bfd,
   /* We can't use the preexisting value written down by the
      assembly, as R_TOCU needs to be adjusted when the final
      R_TOCL value is signed.  */
-  *relocation = val - xcoff_data (output_bfd)->toc;
+  val -= xcoff_data (output_bfd)->toc;
 
   if (rel->r_type == R_TOCU)
-    *relocation = ((*relocation + 0x8000) >> 16) & 0xffff;
-  if (rel->r_type == R_TOCL)
-    *relocation = *relocation & 0x0000ffff;
+    val = ((val + 0x8000) >> 16) & 0xffff;
+  else if (rel->r_type == R_TOCL)
+    val = val & 0xffff;
 
-  return true;
+  *relocation = val;
+  return bfd_reloc_ok;
 }
 
-bool
+bfd_reloc_status_type
 xcoff_reloc_type_ba (bfd *input_bfd ATTRIBUTE_UNUSED,
 		     asection *input_section ATTRIBUTE_UNUSED,
 		     bfd *output_bfd ATTRIBUTE_UNUSED,
@@ -3180,10 +3174,10 @@ xcoff_reloc_type_ba (bfd *input_bfd ATTRIBUTE_UNUSED,
 
   *relocation = val + addend;
 
-  return true;
+  return bfd_reloc_ok;
 }
 
-static bool
+static bfd_reloc_status_type
 xcoff_reloc_type_br (bfd *input_bfd,
 		     asection *input_section,
 		     bfd *output_bfd ATTRIBUTE_UNUSED,
@@ -3201,8 +3195,8 @@ xcoff_reloc_type_br (bfd *input_bfd,
   struct xcoff_stub_hash_entry *stub_entry = NULL;
   enum xcoff_stub_type stub_type;
 
-  if (0 > rel->r_symndx)
-    return false;
+  if ((unsigned long) rel->r_symndx >= obj_raw_syment_count (input_bfd))
+    return bfd_reloc_undefined;
 
   h = obj_xcoff_sym_hashes (input_bfd)[rel->r_symndx];
   section_offset = rel->r_vaddr - input_section->vma;
@@ -3264,8 +3258,7 @@ xcoff_reloc_type_br (bfd *input_bfd,
 	{
 	  _bfd_error_handler (_("Unable to find the stub entry targeting %s"),
 			      h->root.root.string);
-	  bfd_set_error (bfd_error_bad_value);
-	  return false;
+	  return bfd_reloc_undefined;
 	}
 
       stub_csect = stub_entry->hcsect->root.u.def.section;
@@ -3310,10 +3303,10 @@ xcoff_reloc_type_br (bfd *input_bfd,
 		      + input_section->output_offset
 		      + section_offset);
     }
-  return true;
+  return bfd_reloc_ok;
 }
 
-bool
+bfd_reloc_status_type
 xcoff_reloc_type_crel (bfd *input_bfd ATTRIBUTE_UNUSED,
 		       asection *input_section,
 		       bfd *output_bfd ATTRIBUTE_UNUSED,
@@ -3336,10 +3329,10 @@ xcoff_reloc_type_crel (bfd *input_bfd ATTRIBUTE_UNUSED,
   *relocation = val + addend;
   *relocation -= (input_section->output_section->vma
 		  + input_section->output_offset);
-  return true;
+  return bfd_reloc_ok;
 }
 
-bool
+bfd_reloc_status_type
 xcoff_reloc_type_tls (bfd *input_bfd ATTRIBUTE_UNUSED,
 		      asection *input_section ATTRIBUTE_UNUSED,
 		      bfd *output_bfd ATTRIBUTE_UNUSED,
@@ -3354,8 +3347,8 @@ xcoff_reloc_type_tls (bfd *input_bfd ATTRIBUTE_UNUSED,
 {
   struct xcoff_link_hash_entry *h;
 
-  if (0 > rel->r_symndx)
-    return false;
+  if ((unsigned long) rel->r_symndx >= obj_raw_syment_count (input_bfd))
+    return bfd_reloc_undefined;
 
   h = obj_xcoff_sym_hashes (input_bfd)[rel->r_symndx];
 
@@ -3366,12 +3359,13 @@ xcoff_reloc_type_tls (bfd *input_bfd ATTRIBUTE_UNUSED,
   if (howto->type == R_TLSML)
     {
       *relocation = 0;
-      return true;
+      return bfd_reloc_ok;
     }
 
   /* The target symbol should always be available even if it's not
      exported.  */
-  BFD_ASSERT (h != NULL);
+  if (h == NULL)
+    return bfd_reloc_undefined;
 
   /* TLS relocations must target a TLS symbol.  */
   if (h->smclas != XMC_TL && h->smclas != XMC_UL)
@@ -3379,7 +3373,7 @@ xcoff_reloc_type_tls (bfd *input_bfd ATTRIBUTE_UNUSED,
       _bfd_error_handler
 	(_("%pB: TLS relocation at 0x%" PRIx64 " over non-TLS symbol %s (0x%x)\n"),
 	 input_bfd, (uint64_t) rel->r_vaddr, h->root.root.string, h->smclas);
-      return false;
+      return bfd_reloc_undefined;
     }
 
   /* Local TLS relocations must target a local symbol, ie
@@ -3392,7 +3386,7 @@ xcoff_reloc_type_tls (bfd *input_bfd ATTRIBUTE_UNUSED,
       _bfd_error_handler
 	(_("%pB: TLS local relocation at 0x%" PRIx64 " over imported symbol %s\n"),
 	 input_bfd, (uint64_t) rel->r_vaddr, h->root.root.string);
-      return false;
+      return bfd_reloc_undefined;
     }
 
   /* R_TLSM are relocations used by the loader.
@@ -3400,7 +3394,7 @@ xcoff_reloc_type_tls (bfd *input_bfd ATTRIBUTE_UNUSED,
   if (howto->type == R_TLSM)
     {
       *relocation = 0;
-      return true;
+      return bfd_reloc_ok;
     }
 
   /* Other TLS relocations aims to put offsets from TLS pointers
@@ -3410,7 +3404,7 @@ xcoff_reloc_type_tls (bfd *input_bfd ATTRIBUTE_UNUSED,
      TODO: implement optimization when tls size is < 62K.  */
   *relocation = val + addend;
 
-  return true;
+  return bfd_reloc_ok;
 }
 
 static bool
@@ -3745,68 +3739,70 @@ xcoff_complain_overflow_unsigned_func (bfd *input_bfd,
 */
 
 bool
-xcoff_ppc_relocate_section (bfd *output_bfd,
-			    struct bfd_link_info *info,
-			    bfd *input_bfd,
-			    asection *input_section,
-			    bfd_byte *contents,
-			    struct internal_reloc *relocs,
-			    struct internal_syment *syms,
-			    asection **sections)
+_bfd_xcoff_relocate_section (bfd *output_bfd,
+			     struct bfd_link_info *info,
+			     bfd *input_bfd,
+			     asection *input_section,
+			     bfd_byte *contents,
+			     struct internal_reloc *relocs,
+			     struct internal_syment *syms,
+			     asection **sections,
+			     bool xcoff64,
+			     size_t num_howtos,
+			     const struct reloc_howto_struct *howto_table,
+			     xcoff_reloc_function *const *calc_reloc)
 {
-  struct internal_reloc *rel;
-  struct internal_reloc *relend;
+  struct internal_reloc *rel = relocs;
+  struct internal_reloc *relend = rel + input_section->reloc_count;
 
-  rel = relocs;
-  relend = rel + input_section->reloc_count;
   for (; rel < relend; rel++)
     {
       long symndx;
-      struct xcoff_link_hash_entry *h;
-      struct internal_syment *sym;
+      struct xcoff_link_hash_entry *h = NULL;
+      struct internal_syment *sym = NULL;
       bfd_vma addend;
       bfd_vma val;
       struct reloc_howto_struct howto;
-      bfd_vma relocation;
-      bfd_vma value_to_relocate;
-      bfd_vma address;
-      bfd_byte *location;
+      bfd_reloc_status_type r;
+      bfd_vma address = rel->r_vaddr - input_section->vma;
+      bool fail = false;
 
       /* Relocation type R_REF is a special relocation type which is
 	 merely used to prevent garbage collection from occurring for
 	 the csect including the symbol which it references.  */
       if (rel->r_type == R_REF)
 	continue;
-      if (rel->r_type >= ARRAY_SIZE (xcoff_howto_table))
+      if (rel->r_type >= num_howtos)
 	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: unsupported relocation type %#x"),
-			      input_bfd, rel->r_type);
-	  bfd_set_error (bfd_error_bad_value);
-	  return false;
+	  r = bfd_reloc_notsupported;
+	  goto report_error;
 	}
 
       /* Retrieve default value in HOWTO table and fix up according
 	 to r_size field, if it can be different.
 	 This should be made during relocation reading but the algorithms
 	 are expecting constant howtos.  */
-      memcpy (&howto, &xcoff_howto_table[rel->r_type], sizeof (howto));
-      if (howto.bitsize != (rel->r_size & 0x1f) + 1)
+      memcpy (&howto, howto_table + rel->r_type, sizeof (howto));
+      if (howto.bitsize != (rel->r_size & (xcoff64 ? 0x3f : 0x1f)) + 1)
 	{
 	  switch (rel->r_type)
 	    {
 	    case R_POS:
 	    case R_NEG:
-	      howto.bitsize = (rel->r_size & 0x1f) + 1;
-	      howto.size = HOWTO_RSIZE (howto.bitsize > 16 ? 4 : 2);
+	      howto.bitsize = (rel->r_size & (xcoff64 ? 0x3f : 0x1f)) + 1;
+	      howto.size = HOWTO_RSIZE (howto.bitsize <= 16 ? 2
+					: !xcoff64 || howto.bitsize <= 32 ? 4
+					: 8);
 	      howto.src_mask = howto.dst_mask = N_ONES (howto.bitsize);
 	      break;
 
 	    default:
 	      _bfd_error_handler
-		(_("%pB: relocation (%#x) at 0x%" PRIx64 " has wrong r_rsize (0x%x)\n"),
+		(_("%pB: relocation (%#x) at 0x%" PRIx64
+		   " has wrong r_rsize (0x%x)\n"),
 		 input_bfd, rel->r_type, (uint64_t) rel->r_vaddr, rel->r_size);
-	      return false;
+	      r = bfd_reloc_notsupported;
+	      goto report_error;
 	    }
 	}
 
@@ -3817,11 +3813,9 @@ xcoff_ppc_relocate_section (bfd *output_bfd,
       /* symbol */
       val = 0;
       addend = 0;
-      h = NULL;
-      sym = NULL;
       symndx = rel->r_symndx;
 
-      if (-1 != symndx)
+      if ((unsigned long) symndx < obj_raw_syment_count (input_bfd))
 	{
 	  asection *sec;
 
@@ -3847,12 +3841,10 @@ xcoff_ppc_relocate_section (bfd *output_bfd,
 	    {
 	      if (info->unresolved_syms_in_objects != RM_IGNORE
 		  && (h->flags & XCOFF_WAS_UNDEFINED) != 0)
-		(*info->callbacks->undefined_symbol)
-		  (info, h->root.root.string,
-		   input_bfd, input_section,
-		   rel->r_vaddr - input_section->vma,
-		   info->unresolved_syms_in_objects == RM_DIAGNOSE &&
-		       !info->warn_unresolved_syms);
+		{
+		  r = bfd_reloc_undefined;
+		  goto report_error;
+		}
 
 	      if (h->root.type == bfd_link_hash_defined
 		  || h->root.type == bfd_link_hash_defweak)
@@ -3867,7 +3859,6 @@ xcoff_ppc_relocate_section (bfd *output_bfd,
 		  sec = h->root.u.c.p->section;
 		  val = (sec->output_section->vma
 			 + sec->output_offset);
-
 		}
 	      else
 		{
@@ -3879,24 +3870,40 @@ xcoff_ppc_relocate_section (bfd *output_bfd,
 		}
 	    }
 	}
+      else if (symndx != -1)
+	{
+	  r = bfd_reloc_undefined;
+	  fail = true;
+	  goto report_error;
+	}
 
-      if (!((*xcoff_calculate_relocation[rel->r_type])
-	    (input_bfd, input_section, output_bfd, rel, sym, &howto, val,
-	     addend, &relocation, contents, info)))
-	return false;
+      bfd_vma relocation;
+      r = calc_reloc[rel->r_type] (input_bfd, input_section, output_bfd,
+				   rel, sym, &howto, val, addend,
+				   &relocation, contents, info);
 
-      /* address */
-      address = rel->r_vaddr - input_section->vma;
-      location = contents + address;
+      if (r != bfd_reloc_ok)
+	{
+	  fail = true;
+	  goto report_error;
+	}
 
-      if (address > input_section->size)
-	abort ();
+      if (!bfd_reloc_offset_in_range (&howto, input_bfd, input_section, address))
+	{
+	  r = bfd_reloc_outofrange;
+	  goto report_error;
+	}
+      bfd_byte *location = contents + address;
 
       /* Get the value we are going to relocate.  */
-      if (2 == bfd_get_reloc_size (&howto))
+      bfd_vma value_to_relocate;
+      unsigned int field_size = bfd_get_reloc_size (&howto);
+      if (field_size == 2)
 	value_to_relocate = bfd_get_16 (input_bfd, location);
-      else
+      else if (!xcoff64 || field_size == 4)
 	value_to_relocate = bfd_get_32 (input_bfd, location);
+      else
+	value_to_relocate = bfd_get_64 (input_bfd, location);
 
       /* overflow.
 
@@ -3907,32 +3914,7 @@ xcoff_ppc_relocate_section (bfd *output_bfd,
 
       if (((*xcoff_complain_overflow[howto.complain_on_overflow])
 	   (input_bfd, value_to_relocate, relocation, &howto)))
-	{
-	  const char *name;
-	  char buf[SYMNMLEN + 1];
-	  char reloc_type_name[10];
-
-	  if (symndx == -1)
-	    {
-	      name = "*ABS*";
-	    }
-	  else if (h != NULL)
-	    {
-	      name = NULL;
-	    }
-	  else
-	    {
-	      name = _bfd_coff_internal_syment_name (input_bfd, sym, buf);
-	      if (name == NULL)
-		name = "UNKNOWN";
-	    }
-	  sprintf (reloc_type_name, "0x%02x", rel->r_type);
-
-	  (*info->callbacks->reloc_overflow)
-	    (info, (h ? &h->root : NULL), name, reloc_type_name,
-	     (bfd_vma) 0, input_bfd, input_section,
-	     rel->r_vaddr - input_section->vma);
-	}
+	r = bfd_reloc_overflow;
 
       /* Add RELOCATION to the right bits of VALUE_TO_RELOCATE.  */
       value_to_relocate = ((value_to_relocate & ~howto.dst_mask)
@@ -3940,13 +3922,89 @@ xcoff_ppc_relocate_section (bfd *output_bfd,
 			       + relocation) & howto.dst_mask));
 
       /* Put the value back in the object file.  */
-      if (2 == bfd_get_reloc_size (&howto))
+      if (field_size == 2)
 	bfd_put_16 (input_bfd, value_to_relocate, location);
-      else
+      else if (!xcoff64 || field_size == 4)
 	bfd_put_32 (input_bfd, value_to_relocate, location);
+      else
+	bfd_put_64 (input_bfd, value_to_relocate, location);
+
+    report_error:
+      if (r != bfd_reloc_ok)
+	{
+	  const char *name = NULL;
+	  char buf[SYMNMLEN + 1];
+
+	  if (h != NULL)
+	    name = h->root.root.string;
+	  else if (sym != NULL)
+	    name = _bfd_coff_internal_syment_name (input_bfd, sym, buf);
+	  else if (rel->r_symndx == -1)
+	    name = "*ABS*";
+	  if (name == NULL)
+	    name = "UNKNOWN";
+
+	  if (r == bfd_reloc_undefined)
+	    {
+	      bool err = (info->unresolved_syms_in_objects == RM_DIAGNOSE
+			  && !info->warn_unresolved_syms);
+	      info->callbacks->undefined_symbol
+		(info, name, input_bfd, input_section, address, err);
+	    }
+	  else
+	    {
+	      char reloc_type_name[10];
+	      sprintf (reloc_type_name, "0x%02x", rel->r_type);
+
+	      if (r == bfd_reloc_overflow)
+		info->callbacks->reloc_overflow
+		  (info, h ? &h->root : NULL, name, reloc_type_name, 0,
+		   input_bfd, input_section, address);
+	      else if (r == bfd_reloc_outofrange)
+		{
+		  info->callbacks->einfo
+		    /* xgettext:c-format */
+		    (_("%X%P: %pB(%pA): relocation \"%s\" goes out of range\n"),
+		     input_bfd, input_section, reloc_type_name);
+		  fail = true;
+		}
+	      else if (r == bfd_reloc_notsupported)
+		{
+		  info->callbacks->einfo
+		    /* xgettext:c-format */
+		    (_("%X%P: %pB(%pA): relocation \"%s\" is not supported\n"),
+		     input_bfd, input_section, reloc_type_name);
+		  fail = true;
+		}
+	      else
+		{
+		  BFD_ASSERT (0);
+		  fail = true;
+		}
+	    }
+	  if (fail)
+	    return false;
+	}
     }
 
   return true;
+}
+
+static bool
+xcoff_ppc_relocate_section (bfd *output_bfd,
+			    struct bfd_link_info *info,
+			    bfd *input_bfd,
+			    asection *input_section,
+			    bfd_byte *contents,
+			    struct internal_reloc *relocs,
+			    struct internal_syment *syms,
+			    asection **sections)
+{
+  return _bfd_xcoff_relocate_section (output_bfd, info, input_bfd, input_section,
+				      contents, relocs, syms, sections,
+				      false, ARRAY_SIZE (xcoff_howto_table),
+				      xcoff_howto_table,
+				      xcoff_calculate_relocation);
 }
 
 /* gcc-8 warns (*) on all the strncpy calls in this function about

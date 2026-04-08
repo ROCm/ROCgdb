@@ -107,6 +107,27 @@ if { [prepare_for_testing ${testfile}.exp ${testfile} \
     return -1
 }
 
+# Note: This test may fail with certain clang + linker combinations
+# Specifically, clang + ld.lld can fail to apply relocations when linking
+# nodebug .o with separate DWARF .o, leaving fd__global as NULL instead
+# of pointing to buffer. The failure is a linker limitation, not a GDB bug.
+#
+# Known to fail: clang 20/22 + GNU ld 2.42, clang 22 + ld.lld 22
+# Known to pass: GCC + GNU ld, clang 17/19 + GNU ld 2.45.0
+set unsupported 0
+gdb_test_multiple "print /x fd__global" "check fd__global value" {
+    -re -wrap "@0x0: 0x0" {
+	set unsupported 1
+    }
+    -re -wrap "" {
+	pass $gdb_test_name
+    }
+}
+if {$unsupported} {
+    unsupported "linker failed to apply relocation for fd__global"
+    return
+}
+
 gdb_test_no_output "set language ada"
 
 gdb_test "print fd.global" \

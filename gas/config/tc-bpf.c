@@ -1235,6 +1235,7 @@ add_relaxed_insn (struct bpf_insn *insn, expressionS *exp)
 
 static int exp_parse_failed = 0;
 static bool parsing_insn_operands = false;
+static char *g_curr_insn_str;
 
 static char *
 parse_expression (char *s, expressionS *exp)
@@ -1357,8 +1358,8 @@ bpf_parse_name (const char *name, expressionS *exp, enum expr_mode mode)
       if (parse_bpf_register ((char *) name, 'r', &regno)
           || parse_bpf_register ((char *) name, 'w', &regno))
         {
-          as_bad (_("unexpected register name `%s' in expression"),
-                  name);
+	  as_bad (_("unexpected register name `%s' in instruction `%s'"),
+		  name, g_curr_insn_str);
           return false;
         }
     }
@@ -1464,6 +1465,7 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
      function above.  */
   partial_match_length = 0;
   errmsg = NULL;
+  g_curr_insn_str = str;
 
 #define PARSE_ERROR(...) parse_error (s > str ? s - str : 0, __VA_ARGS__)
 
@@ -1522,11 +1524,17 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
                     s += 1;
                   p += 2;
                 }
-              else if (strncmp (p, "%dr", 3) == 0)
+              else if (strncmp (p, "%dr", 3) == 0
+                       || strncmp (p, "%dw", 3) == 0
+                       || strncmp (p, "%dR", 3) == 0)
                 {
+                  char rw = *(p + 2);
                   uint8_t regno;
-                  char *news = parse_bpf_register (s, 'r', &regno);
+                  char *news = parse_bpf_register (s, rw == 'R' ? 'r' : rw,
+                                                   &regno);
 
+                  if (rw == 'R' && news == NULL)
+                    news = parse_bpf_register (s, 'w', &regno);
                   if (news == NULL || (insn.has_dst && regno != insn.dst))
                     {
                       if (news != NULL)
@@ -1541,49 +1549,17 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
                   insn.has_dst = 1;
                   p += 3;
                 }
-              else if (strncmp (p, "%sr", 3) == 0)
+              else if (strncmp (p, "%sr", 3) == 0
+                       || strncmp (p, "%sw", 3) == 0
+                       || strncmp (p, "%sR", 3) == 0)
                 {
+                  char rw = *(p + 2);
                   uint8_t regno;
-                  char *news = parse_bpf_register (s, 'r', &regno);
+                  char *news = parse_bpf_register (s, rw == 'R' ? 'r' : rw,
+                                                   &regno);
 
-                  if (news == NULL || (insn.has_src && regno != insn.src))
-                    {
-                      if (news != NULL)
-                        PARSE_ERROR ("expected register r%d, got r%d",
-                                     insn.dst, regno);
-                      else
-                        PARSE_ERROR ("expected register name, got '%s'", s);
-                      break;
-                    }
-                  s = news;
-                  insn.src = regno;
-                  insn.has_src = 1;
-                  p += 3;
-                }
-              else if (strncmp (p, "%dw", 3) == 0)
-                {
-                  uint8_t regno;
-                  char *news = parse_bpf_register (s, 'w', &regno);
-
-                  if (news == NULL || (insn.has_dst && regno != insn.dst))
-                    {
-                      if (news != NULL)
-                        PARSE_ERROR ("expected register r%d, got r%d",
-                                     insn.dst, regno);
-                      else
-                        PARSE_ERROR ("expected register name, got '%s'", s);
-                      break;
-                    }
-                  s = news;
-                  insn.dst = regno;
-                  insn.has_dst = 1;
-                  p += 3;
-                }
-              else if (strncmp (p, "%sw", 3) == 0)
-                {
-                  uint8_t regno;
-                  char *news = parse_bpf_register (s, 'w', &regno);
-
+                  if (rw == 'R' && news == NULL)
+                    news = parse_bpf_register (s, 'w', &regno);
                   if (news == NULL || (insn.has_src && regno != insn.src))
                     {
                       if (news != NULL)

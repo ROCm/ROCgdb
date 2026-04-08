@@ -4596,6 +4596,9 @@ static const struct elf_size_info hppa64_elf_size_info =
 #define elf64_bed			elf64_hppa_linux_bed
 #undef elf_backend_special_sections
 #define elf_backend_special_sections	(elf64_hppa_special_sections + 1)
+#undef elf_backend_modify_segment_map
 #undef elf_backend_want_p_paddr_set_to_zero
+#undef elf_backend_want_dynrelro
+#define elf_backend_want_dynrelro	1
 
 #include "elf64-target.h"

@@ -1789,7 +1789,7 @@ amd_dbgapi_target::stop (ptid_t ptid)
     /* Use the threads_safe iterator since stop_one_thread may delete the
        thread if it has exited.  */
     for (auto &thread : inf->threads_safe ())
-      if (thread.state != THREAD_EXITED && thread.ptid.matches (ptid)
+      if (thread.state () != THREAD_EXITED && thread.ptid.matches (ptid)
 	  && ptid_is_gpu (thread.ptid))
 	stop_one_thread (&thread);
 }
@@ -2047,8 +2047,8 @@ add_gpu_thread (inferior *inf, ptid_t wave_ptid)
   /* When debugging a corefile, leave the threads marked as not executing.  */
   if (get_inferior_core_bfd (inf) == nullptr)
     {
-      set_running (proc_target, wave_ptid, true);
-      set_executing (proc_target, wave_ptid, true);
+      set_state (proc_target, wave_ptid, THREAD_RUNNING);
+      set_internal_state (proc_target, wave_ptid, THREAD_INT_RUNNING);
     }
   return thread;
 }
@@ -2885,7 +2885,7 @@ amd_dbgapi_target::update_thread_list ()
 	 which does not have a corresponding wave_id represents a wave which
 	 is gone at this point and should be deleted.  */
       for (thread_info &tp : inf->threads_safe ())
-	if (ptid_is_gpu (tp.ptid) && tp.state != THREAD_EXITED)
+	if (ptid_is_gpu (tp.ptid) && tp.state () != THREAD_EXITED)
 	  {
 	    auto it = threads.find (tp.ptid.tid ());
 

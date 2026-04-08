@@ -448,6 +448,11 @@ enum dynamic_prop_node_kind
   /* A property providing an array's byte stride.  */
   DYN_PROP_BYTE_STRIDE,
 
+  /* A property providing an array's bit stride.  Note that the bit-
+     and byte-stride are mutually exclusive; if both happen to be
+     provided somehow, the byte stride will take precedence.  */
+  DYN_PROP_BIT_STRIDE,
+
   /* A property holding variant parts.  */
   DYN_PROP_VARIANT_PARTS,
 
@@ -2518,21 +2523,21 @@ extern struct type *create_static_range_type (type_allocator &alloc,
    Elements will be of type ELEMENT_TYPE, the indices will be of type
    RANGE_TYPE.
 
-   BYTE_STRIDE_PROP, when not NULL, provides the array's byte stride.
-   This byte stride property is added to the resulting array type
-   as a DYN_PROP_BYTE_STRIDE.  As a consequence, the BYTE_STRIDE_PROP
-   argument can only be used to create types that are objfile-owned
-   (see add_dyn_prop), meaning that either this function must be called
-   with an objfile-owned RESULT_TYPE, or an objfile-owned RANGE_TYPE.
+   STRIDE_PROP, when not NULL, provides the array's stride.  If
+   IS_BYTE_STRIDE is true, then this is a byte stride; when false this
+   is a bit stride.  This stride property is added to the resulting
+   array type as a DYN_PROP_BYTE_STRIDE or a DYN_PROP_BIT_STRIDE, as
+   appropriate.  As a consequence, the STRIDE_PROP argument can only
+   be used to create types that are objfile-owned (see add_dyn_prop),
+   meaning that either this function must be called with an
+   objfile-owned RESULT_TYPE, or an objfile-owned RANGE_TYPE.
 
-   BIT_STRIDE is taken into account only when BYTE_STRIDE_PROP is NULL.
-   If BIT_STRIDE is not zero, build a packed array type whose element
-   size is BIT_STRIDE.  Otherwise, ignore this parameter.  */
+   IS_BYTE_STRIDE is ignored when STRIDE_PROP is NULL.  */
 
 extern struct type *create_array_type_with_stride
      (type_allocator &alloc, struct type *element_type,
-      struct type *range_type, struct dynamic_prop *byte_stride_prop,
-      unsigned int bit_stride);
+      struct type *range_type, dynamic_prop *stride_prop,
+      bool is_byte_stride);
 
 /* Create a range type using ALLOC with a dynamic range from LOW_BOUND
    to HIGH_BOUND, inclusive.  INDEX_TYPE is the underlying type.  BIAS
@@ -2555,8 +2560,8 @@ extern struct type *create_range_type_with_stride
    const struct dynamic_prop *high_bound, LONGEST bias,
    const struct dynamic_prop *stride, bool byte_stride_p);
 
-/* Same as create_array_type_with_stride but with no bit_stride
-   (BIT_STRIDE = 0), thus building an unpacked array.  */
+/* Same as create_array_type_with_stride but with no stride, thus
+   building an unpacked array.  */
 
 extern struct type *create_array_type (type_allocator &alloc,
 				       struct type *element_type,
@@ -2615,6 +2620,10 @@ extern struct type *resolve_dynamic_type
    where an apparently-resolved type may still be considered
    "dynamic".  */
 extern bool is_dynamic_type (struct type *type);
+
+/* Return true if TYPE cannot be printed using ptype /o.  */
+
+extern bool cannot_print_offsets (struct type *type);
 
 /* Resolve any dynamic components of FIELD.  FIELD is updated.
    ADDR_STACK and FRAME are used where necessary to supply information

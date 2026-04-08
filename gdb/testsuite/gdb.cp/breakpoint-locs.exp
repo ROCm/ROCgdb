@@ -27,3 +27,11 @@ if { [prepare_for_testing "failed to prepare" $testfile "$srcfile $srcfile2"\
 }
 
 gdb_test "break N1::C1::baz" "\\(2 locations\\)"
+
+if {[have_index $binfile] == ""} {
+    set index_dir [host_standard_output_file ""]
+    # This is a regression test for a crash that occurred in the
+    # dwz+inlining series.  See PR symtab/30728.
+    gdb_test_no_output "save gdb-index -dwarf-5 $index_dir" \
+	"save gdb-index"
+}

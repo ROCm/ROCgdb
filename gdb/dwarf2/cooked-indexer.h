@@ -37,7 +37,7 @@ struct section_and_offset;
 class cooked_indexer
 {
 public:
-  cooked_indexer (cooked_index_worker_result *storage, dwarf2_per_cu *per_cu,
+  cooked_indexer (cooked_index_worker_result *storage,
 		  enum language language);
 
   DISABLE_COPY_AND_ASSIGN (cooked_indexer);
@@ -85,6 +85,7 @@ private:
 				   const cooked_index_entry **parent_entry,
 				   parent_map::addr_type *maybe_defer,
 				   bool *is_enum_class,
+				   bool *is_inlined,
 				   bool for_specification);
 
   /* Handle DW_TAG_imported_unit, by scanning the DIE to find
@@ -104,11 +105,6 @@ private:
 
   /* The storage object, where the results are kept.  */
   cooked_index_worker_result *m_index_storage;
-  /* The CU that we are reading on behalf of.  This object might be
-     asked to index one CU but to treat the results as if they come
-     from some including CU; in this case the including CU would be
-     recorded here.  */
-  dwarf2_per_cu *m_per_cu;
   /* The language that we're assuming when reading.  */
   enum language m_language;
 

@@ -545,6 +545,8 @@ score_elf_gprel15_reloc (bfd *abfd,
     {
       relocateable = false;
       output_bfd = symbol->section->output_section->owner;
+      if (output_bfd == NULL)
+	return bfd_reloc_undefined;
     }
 
   ret = score_elf_final_gp (output_bfd, symbol, relocateable, error_message, &gp);
@@ -583,6 +585,8 @@ score_elf_gprel32_reloc (bfd *abfd, arelent *reloc_entry, asymbol *symbol,
     {
       relocatable = false;
       output_bfd = symbol->section->output_section->owner;
+      if (output_bfd == NULL)
+	return bfd_reloc_undefined;
     }
 
   ret = score_elf_final_gp (output_bfd, symbol, relocatable, error_message, &gp);

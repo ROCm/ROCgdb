@@ -207,7 +207,6 @@ if {[istarget *-*-openbsd*] } {
      || [istarget *-mti-elf*] \
      || [istarget *-sde-elf*] \
      || [istarget *-*-netbsd*] \
-     || [istarget *-*-linux*] \
      || [istarget *-*-sysv4*] } {
     if [istarget *el-*-*] {
 	set abi_asflags(o32) -32

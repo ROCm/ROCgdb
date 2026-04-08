@@ -72,7 +72,7 @@ run_cc_link_tests [list \
     [list \
 	"Build no PLT (dynamic 1a)" \
 	"$NOPIE_LDFLAGS tmpdir/no-plt-check1.o tmpdir/no-plt-main1.o \
-	 tmpdir/no-plt-func1.o tmpdir/no-plt-extern1.o" \
+	 -Wl,--no-rosegment tmpdir/no-plt-func1.o tmpdir/no-plt-extern1.o" \
 	"-Wa,-mx86-used-note=yes" \
 	{dummy.s} \
 	{{readelf -Wr no-plt-1a.rd} {objdump -dwrj.text no-plt-1a.dd}} \
@@ -80,7 +80,7 @@ run_cc_link_tests [list \
     ] \
     [list \
 	"Build no PLT (dynamic 1b)" \
-	"tmpdir/no-plt-check1.o tmpdir/no-plt-main1.o \
+	"-Wl,--no-rosegment tmpdir/no-plt-check1.o tmpdir/no-plt-main1.o \
 	 tmpdir/libno-plt-1a.so tmpdir/libno-plt-1b.so" \
 	"-Wa,-mx86-used-note=yes" \
 	{dummy.s} \
@@ -90,7 +90,7 @@ run_cc_link_tests [list \
     [list \
 	"Build no PLT (dynamic 1c)" \
 	"$NOPIE_LDFLAGS tmpdir/no-plt-check1.o tmpdir/no-plt-main1.o \
-	 tmpdir/no-plt-func1.o tmpdir/libno-plt-1b.so" \
+	 -Wl,--no-rosegment tmpdir/no-plt-func1.o tmpdir/libno-plt-1b.so" \
 	"-Wa,-mx86-used-note=yes" \
 	{dummy.s} \
 	{{readelf -Wr no-plt-1c.rd} {objdump -dwrj.text no-plt-1c.dd}} \
@@ -99,7 +99,7 @@ run_cc_link_tests [list \
     [list \
 	"Build no PLT (static 1d)" \
 	"-static tmpdir/no-plt-check1.o tmpdir/no-plt-main1.o \
-	 tmpdir/no-plt-func1.o tmpdir/no-plt-extern1.o" \
+	 -Wl,--no-rosegment tmpdir/no-plt-func1.o tmpdir/no-plt-extern1.o" \
 	"-Wa,-mx86-used-note=yes" \
 	{dummy.s} \
 	{{readelf -Wr no-plt-1d.rd} {objdump -dwrj.text no-plt-1d.dd}} \
@@ -108,7 +108,7 @@ run_cc_link_tests [list \
     [list \
 	"Build no PLT (PIE 1e)" \
 	"-pie tmpdir/no-plt-check1.o tmpdir/no-plt-main1.o \
-	 tmpdir/no-plt-func1.o tmpdir/no-plt-extern1.o" \
+	 -Wl,--no-rosegment tmpdir/no-plt-func1.o tmpdir/no-plt-extern1.o" \
 	"-Wa,-mx86-used-note=yes" \
 	{dummy.s} \
 	{{readelf -Wr no-plt-1e.rd} {nm -gD no-plt-1e.nd} {objdump -dwrj.text no-plt-1e.dd}} \
@@ -117,7 +117,7 @@ run_cc_link_tests [list \
     [list \
 	"Build no PLT (PIE 1f)" \
 	"-pie tmpdir/no-plt-check1.o tmpdir/no-plt-main1.o \
-	 tmpdir/libno-plt-1a.so tmpdir/libno-plt-1b.so" \
+	 -Wl,--no-rosegment tmpdir/libno-plt-1a.so tmpdir/libno-plt-1b.so" \
 	"-Wa,-mx86-used-note=yes" \
 	{ dummy.s } \
 	{{readelf -Wr no-plt-1f.rd} {objdump -dwrj.text no-plt-1f.dd}} \
@@ -126,7 +126,7 @@ run_cc_link_tests [list \
     [list \
 	"Build no PLT (PIE 1g)" \
 	"-pie tmpdir/no-plt-check1.o tmpdir/no-plt-main1.o \
-	 tmpdir/no-plt-func1.o tmpdir/libno-plt-1b.so" \
+	 -Wl,--no-rosegment tmpdir/no-plt-func1.o tmpdir/libno-plt-1b.so" \
 	"-Wa,-mx86-used-note=yes" \
 	{ dummy.s } \
 	{{readelf -Wr no-plt-1g.rd} {objdump -dwrj.text no-plt-1g.dd}} \

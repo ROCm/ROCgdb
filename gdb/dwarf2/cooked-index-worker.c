@@ -106,6 +106,16 @@ cooked_index_worker_result::emit_complaints_and_exceptions
 /* See cooked-index-worker.h.  */
 
 void
+cooked_index_worker_result::invert_cu_inclusions ()
+{
+  for (auto &iter : m_inclusions)
+    for (dwarf2_per_cu *included : iter.second)
+      included->add_includer (iter.first);
+}
+
+/* See cooked-index-worker.h.  */
+
+void
 cooked_index_worker::start ()
 {
   gdb::thread_pool::g_thread_pool->post_task ([this] ()
@@ -238,6 +248,10 @@ cooked_index_worker::done_reading ()
     for (auto &one_result : m_results)
       m_all_parents_map.add_map (*one_result.get_parent_map ());
   }
+
+  /* Update all the CU inclusion information.  */
+  for (auto &item : m_results)
+    item.invert_cu_inclusions ();
 
   dwarf2_per_bfd *per_bfd = m_per_objfile->per_bfd;
   cooked_index *table

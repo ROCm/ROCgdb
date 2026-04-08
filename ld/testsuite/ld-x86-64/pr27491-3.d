@@ -1,5 +1,5 @@
 #as: --64
-#ld: --gc-sections -melf_x86_64 -z start-stop-gc -shared
+#ld: --gc-sections -melf_x86_64 -z start-stop-gc -shared --no-rosegment
 #objdump: --syms -dw
 
 .*: +file format elf64-x86-64

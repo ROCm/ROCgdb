@@ -170,14 +170,14 @@ main (void)
 {
   int64_t sframe_vaddr = 0x402220;
   int64_t plt_vaddr = 0x401020;
-  printf ("plt-findfre-2a: Testing with plt_vaddr = %#lx; sframe_vaddr = %#lx\n",
-	  plt_vaddr, sframe_vaddr);
+  printf ("plt-findfre-2a: Testing with plt_vaddr = %#" PRIx64
+	  "; sframe_vaddr = %#" PRIx64 "\n", plt_vaddr, sframe_vaddr);
   test_plt_findfre ('a', plt_vaddr, sframe_vaddr);
 
   sframe_vaddr = 0x401020;
   plt_vaddr = 0x402220;
-  printf ("plt-findfre-2b: Testing with plt_vaddr = %#lx; sframe_vaddr = %#lx\n",
-	  plt_vaddr, sframe_vaddr);
+  printf ("plt-findfre-2b: Testing with plt_vaddr = %#" PRIx64
+	  "; sframe_vaddr = %#" PRIx64 "\n", plt_vaddr, sframe_vaddr);
   test_plt_findfre ('b', plt_vaddr, sframe_vaddr);
 
   return 0;

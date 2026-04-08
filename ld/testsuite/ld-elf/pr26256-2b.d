@@ -1,5 +1,5 @@
 #source: pr26256-2.s
-#ld: -e _start
+#ld: -e _start $NO_ROSEGMENT_LDFLAGS
 #nm: -n
 #notarget: fr30-*-* iq2000-*-* ip2k-*-* xgate-*-* xstormy16-*-*
 # These targets place .linkorder sections before .text sections.

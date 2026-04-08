@@ -399,6 +399,14 @@ if { ![info exists NO_MEMORY_SEAL_LDFLAGS] } then {
     }
 }
 
+if { ![info exists NO_ROSEGMENT_LDFLAGS] } then {
+    if { [check_rosegment_support] } then {
+	set NO_ROSEGMENT_LDFLAGS "--no-rosegment"
+    } else {
+	set NO_ROSEGMENT_LDFLAGS {}
+    }
+}
+
 # Set LD_CLASS to "64bit" for a 64-bit *host* linker.
 if { ![info exists LD_CLASS] } then {
     set REAL_LD [findfile $base_dir/.libs/ld-new .libs/ld-new $LD [transform ld]]

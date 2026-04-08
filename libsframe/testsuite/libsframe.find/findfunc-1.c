@@ -236,13 +236,13 @@ int main (void)
 {
   int64_t sframe_vaddr = 0x4b5620;
   int64_t text_vaddr = 0x4038b0;
-  printf ("Testing with text_vaddr = %#lx; sframe_vaddr = %#lx\n", text_vaddr,
-	  sframe_vaddr);
+  printf ("Testing with text_vaddr = %#" PRIx64 "; sframe_vaddr = %#" PRIx64
+	  "\n", text_vaddr, sframe_vaddr);
   test_text_findfre ('a', text_vaddr, sframe_vaddr);
 
   sframe_vaddr = 0x4038b0;
   text_vaddr = 0x4b5620;
-  printf ("Testing with text_vaddr = %#lx; sframe_vaddr = %#lx\n", text_vaddr,
-	  sframe_vaddr);
+  printf ("Testing with text_vaddr = %#" PRIx64 "; sframe_vaddr = %#" PRIx64
+	  "\n", text_vaddr, sframe_vaddr);
   test_text_findfre ('b', text_vaddr, sframe_vaddr);
 }

@@ -16,18 +16,7 @@
 # This file is part of the GDB testsuite.  It tests automagic loading of
 # scripts specified in the .debug_gdb_scripts section.
 
-# This test can only be run on targets which support ELF and use gas.
-# For now pick a sampling of likely targets.
-if {![istarget *-*-linux*]
-    && ![istarget *-*-gnu*]
-    && ![istarget *-*-elf*]
-    && ![istarget *-*-openbsd*]
-    && ![istarget arm*-*-eabi*]
-    && ![istarget powerpc-*-eabi*]} {
-    verbose "Skipping py-section-script.exp because of lack of support."
-    return
-}
-
+require is_elf_target
 require allow_python_tests
 
 standard_testfile
@@ -39,7 +28,25 @@ set remote_python_file [gdb_remote_download host \
 
 set quoted_name "\"$remote_python_file\""
 
+# Helper proc to 'set auto-load safe-path ...'.  Build the new path value by
+# joining ARGS together with an appropriate path separator character.
+proc set_auto_load_safe_path { args } {
+    if {[ishost *-*-mingw*]} {
+	set remote_pathsep ";"
+    } else {
+	set remote_pathsep ":"
+    }
+
+    set safe_path [join $args $remote_pathsep]
+
+    gdb_test_no_output "set auto-load safe-path $safe_path" \
+	"set auto-load safe-path"
+}
+
 foreach_with_prefix variant {plain compressed} {
+    set the_testfile $testfile-$variant
+    set the_binfile [standard_output_file $the_testfile]
+
     set flags [list debug \
 		   additional_flags=-I${srcdir}/../../include \
 		   additional_flags=-DSCRIPT_FILE=$quoted_name]
@@ -48,18 +55,18 @@ foreach_with_prefix variant {plain compressed} {
 	lappend flags additional_flags=-Wl,--compress-debug-sections=zlib-gabi
     }
 
-    if {[build_executable $testfile.exp $testfile $srcfile $flags] == -1} {
+    if {[build_executable "build executable" $the_testfile $srcfile $flags] == -1} {
 	return
     }
 
     if {$variant == "compressed"} {
 	set objdump_program [gdb_find_objdump]
-	set debug_sect [exec $objdump_program -j .debug_gdb_scripts -s "$binfile"]
+	set debug_sect [exec $objdump_program -j .debug_gdb_scripts -s "$the_binfile"]
 	set debug_sect_decompressed [exec $objdump_program -j .debug_gdb_scripts \
-			    -s "$binfile" --decompress]
+			    -s "$the_binfile" --decompress]
 
 	if {$debug_sect == $debug_sect_decompressed} {
-	    fail ".debug_gdb_scripts in $binfile is not compressed"
+	    fail ".debug_gdb_scripts in $the_binfile is not compressed"
 	}
     }
 
@@ -69,16 +76,15 @@ foreach_with_prefix variant {plain compressed} {
 
     gdb_test_no_output "set auto-load safe-path /restricted" \
 	"set restricted auto-load safe-path"
-    gdb_load ${binfile}
+    gdb_load ${the_binfile}
 
     # Verify gdb did not load the scripts.
-    set test_name "verify scripts not loaded"
-    gdb_test_multiple "info auto-load python-scripts" "$test_name" {
-	-re "Yes.*${testfile}.py.*Yes.*inlined-script.*$gdb_prompt $" {
-	    fail "$test_name"
+    gdb_test_multiple "info auto-load python-scripts" "verify scripts not loaded" {
+	-re -wrap "Yes.*${testfile}.py.*Yes.*inlined-script.*" {
+	    fail $gdb_test_name
 	}
-	-re "No.*${testfile}.py.*No.*inlined-script.*$gdb_prompt $" {
-	    pass "$test_name"
+	-re -wrap "No.*${testfile}.py.*No.*inlined-script.*" {
+	    pass $gdb_test_name
 	}
     }
 
@@ -89,31 +95,23 @@ foreach_with_prefix variant {plain compressed} {
     # Get the name of the binfile on the host; on a remote host this means
     # stripping off any directory prefix.
     if {[is_remote host]} {
-	set remote_binfile [file tail ${binfile}]
+	set remote_binfile [file tail ${the_binfile}]
     } else {
-	set remote_binfile ${binfile}
+	set remote_binfile ${the_binfile}
     }
 
-    if {[ishost *-*-mingw*]} {
-	set remote_pathsep ";"
-    } else {
-	set remote_pathsep ":"
-    }
-    gdb_test_no_output "set auto-load safe-path ${remote_python_file}${remote_pathsep}${remote_binfile}" \
-	"set auto-load safe-path"
-    gdb_load ${binfile}
-
+    set_auto_load_safe_path $remote_python_file $remote_binfile
+    gdb_load ${the_binfile}
     # Verify gdb loaded each script and they appear once in the list.
-    set test_name "verify scripts loaded"
-    gdb_test_multiple "info auto-load python-scripts" "$test_name" {
-	-re "Yes.*${testfile}.py.*Yes.*inlined-script.*$gdb_prompt $" {
-	    pass "$test_name"
+    gdb_test_multiple "info auto-load python-scripts" "verify scripts loaded" {
+	-re -wrap "Yes.*${testfile}.py.*Yes.*inlined-script.*" {
+	    pass $gdb_test_name
 	}
-	-re "${testfile}.py.*${testfile}.py.*$gdb_prompt $" {
-	    fail "$test_name"
+	-re -wrap "${testfile}.py.*${testfile}.py.*" {
+	    fail $gdb_test_name
 	}
-	-re "inlined-script.*inlined-script.*$gdb_prompt $" {
-	    fail "$test_name"
+	-re -wrap "inlined-script.*inlined-script.*" {
+	    fail $gdb_test_name
 	}
     }
 
@@ -128,7 +126,7 @@ foreach_with_prefix variant {plain compressed} {
 	return
     }
 
-    gdb_test "b [gdb_get_line_number {break to inspect} ${testfile}.c ]" \
+    gdb_test "b [gdb_get_line_number {break to inspect}]" \
 	".*Breakpoint.*"
     gdb_test "continue" ".*Breakpoint.*"
 
@@ -137,13 +135,17 @@ foreach_with_prefix variant {plain compressed} {
     gdb_test "test-cmd 1 2 3" "test-cmd output, arg = 1 2 3"
 
 
-    # eu-strip creates NOBITS .debug_gdb_scripts sections in the debug files.
-    # Make sure those are ignored silently.
+    # eu-strip creates NOBITS .debug_gdb_scripts sections in the debug
+    # files, and leaves a useful copy of .debug_gdb_scripts in the
+    # executable.  Make sure the NOBITS copy in the separate debug file is
+    # ignored silently.
+    with_test_prefix "sepdebug from eu-strip" {
+	clean_restart
 
-    with_test_prefix "sepdebug" {
-	gdb_exit
+	set eu_strip_binfile [standard_output_file ${the_testfile}-eu-strip]
+	file copy -force $the_binfile $eu_strip_binfile
 
-	set result [catch {exec eu-strip -g -f ${binfile}.debug ${binfile}} output]
+	set result [catch {exec eu-strip -g -f ${eu_strip_binfile}.debug ${eu_strip_binfile}} output]
 	verbose "result is $result"
 	verbose "output is $output"
 	if {$result != 0 || $output != ""} {
@@ -151,18 +153,70 @@ foreach_with_prefix variant {plain compressed} {
 	    return
 	}
 
-	gdb_start
-	gdb_reinitialize_dir $srcdir/$subdir
-
-	gdb_test_no_output "set auto-load safe-path ${remote_python_file}:${binfile}" \
-	    "set auto-load safe-path"
-	set test "load sepdebug"
-	gdb_test_multiple "file $binfile" $test {
-	    -re "\r\nwarning: Invalid entry in \\.debug_gdb_scripts section.*\r\n$gdb_prompt $" {
-		fail $test
+	set_auto_load_safe_path $remote_python_file $eu_strip_binfile
+	gdb_test_multiple "file $eu_strip_binfile" "load sepdebug" {
+	    -re -wrap "\r\nwarning: Invalid entry in \\.debug_gdb_scripts section.*" {
+		fail $gdb_test_name
 	    }
-	    -re "\r\n$gdb_prompt $" {
-		pass $test
+	    -re -wrap "" {
+		pass $gdb_test_name
+	    }
+	}
+
+	# Verify gdb loaded each script and they appear once in the list.
+	gdb_test_multiple "info auto-load python-scripts" "verify scripts loaded" {
+	    -re -wrap "Yes.*${testfile}.py.*Yes.*inlined-script.*" {
+		pass $gdb_test_name
+	    }
+	    -re -wrap "${testfile}.py.*${testfile}.py.*" {
+		fail $gdb_test_name
+	    }
+	    -re -wrap "inlined-script.*inlined-script.*" {
+		fail $gdb_test_name
+	    }
+	}
+
+	# Again, with a regexp this time.
+	gdb_test "info auto-load python-scripts ${testfile}" "Yes.*${testfile}.py.*"
+
+	# Again, with a regexp that matches no scripts.
+	gdb_test "info auto-load python-scripts no-script-matches-this" \
+	    "No auto-load scripts matching no-script-matches-this."
+    }
+
+    # Unlike eu-strip, objcopy moves the .debug_gdb_scripts into the .debug
+    # file, removing it from the executable.  GDB should still load the
+    # script though, just when it loads the symbol file, not the main
+    # executable.
+    with_test_prefix "sepdebug from objcopy" {
+	clean_restart
+
+	set objcopy_testfile ${the_testfile}-objcopy
+	set objcopy_binfile [standard_output_file $objcopy_testfile]
+	file copy -force $the_binfile $objcopy_binfile
+
+	if { [gdb_gnu_strip_debug $objcopy_binfile] != 0 } {
+	    fail "strip $objcopy_testfile debuginfo"
+	    return
+	}
+
+	# Add the directory containing OBJCOPY_BINFILE because the scripts
+	# section will be auto-loaded from the separate .debug file (not the
+	# main executable), which resides alongside it.
+	set_auto_load_safe_path $remote_python_file \
+	    [file dirname ${objcopy_binfile}]
+	gdb_load $objcopy_binfile
+
+	# Verify gdb loaded each script and they appear once in the list.
+	gdb_test_multiple "info auto-load python-scripts" "verify scripts loaded" {
+	    -re -wrap "Yes.*${testfile}.py.*Yes.*inlined-script.*" {
+		pass $gdb_test_name
+	    }
+	    -re -wrap "${testfile}.py.*${testfile}.py.*" {
+		fail $gdb_test_name
+	    }
+	    -re -wrap "inlined-script.*inlined-script.*" {
+		fail $gdb_test_name
 	    }
 	}
 

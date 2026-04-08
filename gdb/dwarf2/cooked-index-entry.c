@@ -18,6 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "dwarf2/cooked-index-entry.h"
+#include "dwarf2/read.h"
 #include "dwarf2/tag.h"
 #include "gdbsupport/selftest.h"
 
@@ -33,6 +34,7 @@ to_string (cooked_index_flag flags)
     MAP_ENUM_FLAG (IS_TYPE_DECLARATION),
     MAP_ENUM_FLAG (IS_PARENT_DEFERRED),
     MAP_ENUM_FLAG (IS_SYNTHESIZED),
+    MAP_ENUM_FLAG (IS_INLINED),
   };
 
   return flags.to_string (mapping);
@@ -239,6 +241,28 @@ cooked_index_entry::write_scope (struct obstack *storage,
   obstack_grow (storage, local_name, strlen (local_name));
   obstack_grow (storage, sep, strlen (sep));
 }
+
+/* See cooked_index_entry.h.  */
+
+void
+cooked_index_entry::force_set_language () const
+{
+  gdb_assert (lang == language_unknown);
+  lang = per_cu->lang ();
+}
+
+/* See cooked-index-entry.h.  */
+
+bool
+cooked_index_entry::visit_defining_cus (per_cu_callback callback) const
+{
+  if ((flags & IS_INLINED) == 0)
+    return callback (per_cu->canonical_outermost_cu ());
+
+  return per_cu->recursively_visit_cus (callback);
+}
+
+/* See cooked-index-entry.h.  */
 
 INIT_GDB_FILE (dwarf2_entry)
 {

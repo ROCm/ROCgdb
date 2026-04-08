@@ -878,7 +878,7 @@ mi_interp::on_user_selected_context_changed (user_selected_what selection)
 	gdb_printf (this->event_channel,
 		    ",lane-id=\"%d\"", tp->current_simd_lane ());
 
-      if (tp->state != THREAD_RUNNING)
+      if (tp->state () != THREAD_RUNNING)
 	{
 	  if (has_stack_frames ())
 	    print_stack_frame_to_uiout (mi_uiout, get_selected_frame (NULL),

@@ -252,8 +252,10 @@ struct bpf_opcode
      %% - literal %.
      %dr - destination 64-bit register.
      %dw - destination 32-bit register.
+     %dR - destination register, either r or w prefix accepted.
      %sr - source 64-bit register.
      %sw - source 32-bit register.
+     %sR - source register, either r or w prefix accepted.
      %d32 - 32-bit signed displacement (in 64-bit words minus one.)
      %d16 - 16-bit signed displacement (in 64-bit words minus one.)
      %o16 - 16-bit signed offset (in bytes.)
@@ -268,7 +270,7 @@ struct bpf_opcode
      denote something like `[%r3 + 10]', please use a template like `[
      %sr %o16]' instead of `[ %sr + %o16 ]'.
      
-     If %dr, %dw, %sr or %sw are found multiple times in a template,
+     If %dr, %dw, %dR, %sr, %sw or %sR are found multiple times in a template,
      they refer to the same register, i.e. `%rd = le64 %rd' denotes
      `r2 = le64 r2', but not `r2 = le64 r1'.
 

@@ -1235,7 +1235,7 @@ windows_nat_target::do_initial_windows_stuff (DWORD pid, bool attaching)
   windows_process->cygwin_load_start = 0;
   windows_process->cygwin_load_end = 0;
 #endif
-  windows_process->current_event.dwProcessId = pid;
+  windows_process->process_id = pid;
   memset (&windows_process->current_event, 0,
 	  sizeof (windows_process->current_event));
   inf = current_inferior ();
@@ -1412,6 +1412,13 @@ windows_nat_target::attach (const char *args, int from_tty)
 #endif
 
   do_initial_windows_stuff (pid, 1);
+
+  /* The thread that reports the initial breakpoint, and thus ends up
+     as the selected thread when we get here, was injected into the
+     inferior by DebugActiveProcess.  Switch to the main thread, which
+     is normally more useful to the user than the injected thread.  */
+  switch_to_thread (first_thread_of_inferior (current_inferior ()));
+
   target_terminal::ours ();
 }
 

@@ -337,12 +337,12 @@ EXTERNAL
 .typedef struct _symbol_info
 .{
 .  symvalue value;
-.  char type;
 .  const char *name;		{* Symbol name.  *}
+.  const char *stab_name;	{* String for stab type.  *}
 .  unsigned char stab_type;	{* Stab type.  *}
 .  char stab_other;		{* Stab other.  *}
 .  short stab_desc;		{* Stab desc.  *}
-.  const char *stab_name;	{* String for stab type.  *}
+.  char type;
 .} symbol_info;
 .
 .{* An empty string that will not match the address of any other

@@ -3145,10 +3145,24 @@ ada_value_slice_from_ptr (struct value *array_ptr, struct type *type,
   type_allocator alloc (base_index_type);
   struct type *index_type
     = create_static_range_type (alloc, base_index_type, low, high);
+
+  dynamic_prop prop_storage;
+  dynamic_prop *prop = type0->dyn_prop (DYN_PROP_BYTE_STRIDE);
+  bool is_byte_stride = true;
+  if (prop == nullptr)
+    {
+      prop = type0->dyn_prop (DYN_PROP_BIT_STRIDE);
+      is_byte_stride = false;
+      if (prop == nullptr)
+	{
+	  prop = &prop_storage;
+	  prop->set_const_val (type0->field (0).bitsize ());
+	}
+    }
+
   struct type *slice_type = create_array_type_with_stride
 			      (alloc, type0->target_type (), index_type,
-			       type0->dyn_prop (DYN_PROP_BYTE_STRIDE),
-			       type0->field (0).bitsize ());
+			       prop, is_byte_stride);
   LONGEST base_low = ada_discrete_type_low_bound (type0->index_type ());
   std::optional<LONGEST> base_low_pos, low_pos;
   CORE_ADDR base;
@@ -3180,10 +3194,24 @@ ada_value_slice (struct value *array, LONGEST low, LONGEST high)
   type_allocator alloc (type->index_type ());
   struct type *index_type
     = create_static_range_type (alloc, type->index_type (), low, high);
+
+  dynamic_prop prop_storage;
+  dynamic_prop *prop = type->dyn_prop (DYN_PROP_BYTE_STRIDE);
+  bool is_byte_stride = true;
+  if (prop == nullptr)
+    {
+      prop = type->dyn_prop (DYN_PROP_BIT_STRIDE);
+      is_byte_stride = false;
+      if (prop == nullptr)
+	{
+	  prop = &prop_storage;
+	  prop->set_const_val (type->field (0).bitsize ());
+	}
+    }
+
   struct type *slice_type = create_array_type_with_stride
 			      (alloc, type->target_type (), index_type,
-			       type->dyn_prop (DYN_PROP_BYTE_STRIDE),
-			       type->field (0).bitsize ());
+			       prop, is_byte_stride);
   std::optional<LONGEST> low_pos, high_pos;
 
 

@@ -17062,19 +17062,13 @@ parse_register (const char *reg_string, char **end_op)
       char *save = input_line_pointer;
       char *buf = xstrdup (reg_string), *name;
       symbolS *symbolP;
+      offsetT off;
 
       input_line_pointer = buf;
       get_symbol_name (&name);
       symbolP = symbol_find (name);
-      while (symbolP && symbol_equated_p (symbolP))
-	{
-	  const expressionS *e = symbol_get_value_expression(symbolP);
-
-	  if (e->X_add_number)
-	    break;
-	  symbolP = e->X_add_symbol;
-	}
-      if (symbolP && S_GET_SEGMENT (symbolP) == reg_section)
+      symbolP = symbol_equated_to (symbolP, &off);
+      if (symbolP && off == 0 && S_GET_SEGMENT (symbolP) == reg_section)
 	{
 	  const expressionS *e = symbol_get_value_expression (symbolP);
 
