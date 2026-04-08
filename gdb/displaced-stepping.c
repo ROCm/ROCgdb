@@ -20,6 +20,7 @@
 #include "displaced-stepping.h"
 
 #include "cli/cli-cmds.h"
+#include "cli/cli-style.h"
 #include "command.h"
 #include "gdbarch.h"
 #include "gdbcore.h"
@@ -115,9 +116,11 @@ displaced_step_buffers::prepare (thread_info *thread, CORE_ADDR &displaced_pc)
 				    buffer->saved_copy.data (), len);
   if (status != 0)
     throw_error (MEMORY_ERROR,
-		 _("Error accessing memory address %s (%s) for "
+		 _("Error accessing memory address %ps (%s) for "
 		   "displaced-stepping scratch space."),
-		 paddress (arch, buffer->addr), safe_strerror (status));
+		 styled_string (address_style.style (),
+				paddress (arch, buffer->addr)),
+		 safe_strerror (status));
 
   displaced_debug_printf ("saved %s: %s",
 			  paddress (arch, buffer->addr),
