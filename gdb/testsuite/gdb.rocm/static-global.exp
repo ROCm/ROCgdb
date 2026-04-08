@@ -38,7 +38,7 @@
 
 load_lib rocm.exp
 
-require allow_hipcc_tests
+require allow_hip_tests
 
 standard_testfile .cpp
 

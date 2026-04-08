@@ -18,7 +18,7 @@
 
 # tclint-disable redefined-builtin
 
-# ROCM_PATH is used by hipcc as well.
+# ROCM_PATH is used by the HIP toolchain.
 if {[info exists ::env(ROCM_PATH)]} {
     set rocm_path $::env(ROCM_PATH)
 } else {
@@ -60,8 +60,8 @@ gdb_caching_proc find_amdgpu_devices {} {
     # Compile without --offload-arch (which is fine because this is a
     # host-only program), because otherwise gdb_compile would call
     # hcc_amdgpu_targets to know which --offload-arch flags to pass to
-    # HIPCC, and we'd end up here again, resulting in infinite
-    # recursion.
+    # the HIP compiler, and we'd end up here again, resulting in
+    # infinite recursion.
     set options {hip hip_no_offload_arch}
     if {![gdb_simple_compile device_enumerator {
 	    #include <hip/hip_runtime.h>
@@ -107,7 +107,7 @@ gdb_caching_proc find_amdgpu_devices {} {
 # Otherwise, consider the devices available on the system.
 
 proc hcc_amdgpu_targets {} {
-    # First, look for HCC_AMDGPU_TARGET (same env var hipcc uses).
+    # First, look for HCC_AMDGPU_TARGET (same env var the HIP toolchain uses).
     if {[info exists ::env(HCC_AMDGPU_TARGET)]} {
 	# We don't verify the contents of HCC_AMDGPU_TARGET.
 	# That's the toolchain's job.
@@ -117,7 +117,7 @@ proc hcc_amdgpu_targets {} {
     return [find_amdgpu_devices]
 }
 
-gdb_caching_proc allow_hipcc_tests {} {
+gdb_caching_proc allow_hip_tests {} {
     # Only the native target supports ROCm debugging.  E.g., when
     # testing against GDBserver, there's no point in running the ROCm
     # tests.
@@ -140,7 +140,7 @@ gdb_caching_proc allow_hipcc_tests {} {
     }
 
     # Check if there's any GPU device to run the tests on.  If this
-    # works, then we also know we have a working hipcc compiler
+    # works, then we also know we have a working HIP compiler
     # available.
     set devices [find_amdgpu_devices]
     if {[llength $devices] == 0} {
@@ -148,6 +148,14 @@ gdb_caching_proc allow_hipcc_tests {} {
     }
 
     return 1
+}
+
+# Backwards compatibility alias.  The testsuite previously used
+# allow_hipcc_tests when the legacy hipcc wrapper was the HIP
+# compiler.  Keep this alias so that any out-of-tree test files
+# or scripts referencing the old name continue to work.
+gdb_caching_proc allow_hipcc_tests {} {
+    return [allow_hip_tests]
 }
 
 # Return true if GPU core dump tests are allowed.
@@ -175,7 +183,7 @@ proc rocm_assemble {source dest {options ""}} {
     global objdir
 
     # Pick the first target as the default one.
-    # The list can't be empty.  Else, allow_hipcc_tests would've caught it.
+    # The list can't be empty.  Else, allow_hip_tests would've caught it.
     set gpu_target [lindex [hcc_amdgpu_targets] 0]
 
     global rocm_path
@@ -418,7 +426,7 @@ proc hip_devices_support_debug_multi_process {} {
 
 proc hip_device_is_less_than { version } {
   # Pick the first device as the current one.
-  # The list can't be empty.  Else, allow_hipcc_tests would've caught it.
+  # The list can't be empty.  Else, allow_hip_tests would've caught it.
   set target [lindex [find_amdgpu_devices] 0]
 
   # Strip "gfx" prefix.

@@ -6203,7 +6203,7 @@ proc quote_for_host { args } {
 #   - column-info/no-column-info: Enable/Disable generation of column table
 #     information.
 #   - dwarf5: Force compilation with dwarf-5 debug information.
-#   - hip_no_offload_arch: Do not pass --offload-arch to HIPCC.
+#   - hip_no_offload_arch: Do not pass --offload-arch to the HIP compiler.
 #
 # And here are some of the not too obscure options understood by DejaGnu that
 # influence the compilation:
@@ -6269,7 +6269,9 @@ proc gdb_compile {source dest type options} {
     if {[lsearch -exact $options rust] != -1} {
 	# -fdiagnostics-color is not a rustcc option.
     } elseif {[lsearch -exact $options hip] != -1} {
-	# -fdiagnostics-color is not a hipcc option.
+	# The legacy hipcc wrapper did not support -fdiagnostics-color.
+	# amdclang++ does support it, but we skip it for HIP compilation
+	# to keep the behavior consistent.
     } else {
 	# icx/clang compilers support the -fdiagnostics-color option for
 	# ".S" files and only it is not supported for ".s" files.
@@ -6556,14 +6558,34 @@ proc gdb_compile {source dest type options} {
 	#    '-mllvm=-amdgpu-spill-cfi-saved-regs' [-Wunused-command-line-argument]
 	#
 	# These happen when we're compiling an executable _and_ all
-	# the input files are .o files, like: hipcc foo.o -o foo ...
+	# the input files are .o files, like: amdclang++ foo.o -o foo ...
 	#
-	# HIPCC defaults to -O2, so add -O0 to early flags for the HIP
-	# language.  If "optimize" is also requested, another -O flag
-	# (e.g. -O2) will be added to the flags, overriding this -O0.
-	lappend new_options "early_flags=-O0\
+	# amdclang++ needs -x hip to treat .cpp/.c as HIP source when
+	# compiling, and --hip-link to link the HIP runtime when
+	# linking.  When linking only .o files, -x hip must NOT be
+	# passed, otherwise amdclang++ tries to parse them as HIP
+	# source.  Add -O0 as default optimization.  If "optimize"
+	# is also requested, another -O flag (e.g. -O2) will be added
+	# to the flags, overriding -O0.
+	set has_source_files 0
+	foreach src $source {
+	    set ext [file extension $src]
+	    if {$ext ne ".o" && $ext ne ".a"} {
+		set has_source_files 1
+		break
+	    }
+	}
+
+	set hip_early_flags "-O0\
 			     -mllvm=-amdgpu-spill-cfi-saved-regs\
 			     -Wno-unused-command-line-argument"
+	if {$has_source_files} {
+	    set hip_early_flags "-x hip $hip_early_flags"
+	}
+	if {$type eq "executable"} {
+	    set hip_early_flags "--hip-link $hip_early_flags"
+	}
+	lappend new_options "early_flags=$hip_early_flags"
 
 	if {[istarget "*-*-mingw*"]} {
 	    # This tells Clang to emit DWARF, but only if -g, or -gN
@@ -6585,12 +6607,9 @@ proc gdb_compile {source dest type options} {
 	    lappend new_options "ldflags=-Wl,-debug:none -Wl,-debug:dwarf"
 	}
 
-	# Unlike on Linux, on Windows, HIPCC doesn't automatically
-	# pick the available GPUs, and --offload-arch=native doesn't
-	# work either.  Explicitly pass one --offload-arch for each
-	# available device.  Do it on Linux too, just to minimize
-	# potential behavior differences between OSs.  But don't do it
-	# if the testcase explicitly used --offload-arch.
+	# amdclang++ requires explicit --offload-arch.  Explicitly
+	# pass one --offload-arch for each available device.  But
+	# don't do it if the testcase explicitly used --offload-arch.
 	if {[lsearch -exact $options hip_no_offload_arch] == -1
 	    && [lsearch -regexp $options "--offload-arch="] == -1} {
 	    foreach gpu_target [hcc_amdgpu_targets] {
@@ -6722,7 +6741,7 @@ proc gdb_compile {source dest type options} {
 
 	    # For most C-based languages, we compile the special
 	    # object with the C compiler.  For HIP, compile it with
-	    # HIPCC.
+	    # the HIP compiler.
 	    if {[lsearch -exact $options hip] != -1} {
 		set unbuf_obj_lang hip
 	    } {
@@ -6741,9 +6760,9 @@ proc gdb_compile {source dest type options} {
 		set unbuf_obj_options {nowarnings}
 		if {[lsearch -exact $options hip] != -1} {
 		    lappend unbuf_obj_options hip
-		    # While HIPCC makes Clang treat .cc/.cpp files as
-		    # HIP files (via '-x hip'), it treats .c files as
-		    # C files (via '-x c').  Since we have a .c file,
+		    # While amdclang++ treats .cc/.cpp files as HIP
+		    # files (via '-x hip'), it treats .c files as C
+		    # files (via '-x c').  Since we have a .c file,
 		    # force compilation in HIP mode ourselves.
 		    lappend unbuf_obj_options "additional_flags=-x hip"
 
@@ -6752,9 +6771,9 @@ proc gdb_compile {source dest type options} {
 		    # otherwise, when compiling the GPU device
 		    # enumerator (see find_amdgpu_devices),
 		    # gdb_compile would call hcc_amdgpu_targets to
-		    # know which --offload-arch flags to pass to
-		    # HIPCC, and we'd end up here again, resulting in
-		    # infinite recursion.
+		    # know which --offload-arch flags to pass to the
+		    # HIP compiler, and we'd end up here again,
+		    # resulting in infinite recursion.
 		    lappend unbuf_obj_options hip_no_offload_arch
 		}
 
@@ -6796,19 +6815,19 @@ proc gdb_compile {source dest type options} {
 			"ldflags=$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
 		} else {
 		    # With ldflags, the .o file would be placed last
-		    # in the HIPCC invocation, like:
+		    # in the HIP compiler invocation, like:
 		    #
-		    #  $ hipcc source.cc set_unbuffered_mode_obj.o
+		    #  $ amdclang++ source.cc set_unbuffered_mode_obj.o
 		    #
 		    # Unfortunately, if a foo.o file appears after a
-		    # bar.cc file, HIPCC treats the foo.o file as a
-		    # source file, and invokes Clang with "clang -x
-		    # hip foo.o", which fails.
+		    # bar.cc file, the compiler treats the foo.o file
+		    # as a source file, and invokes Clang with
+		    # "clang -x hip foo.o", which fails.
 		    #
-		    # HIPCC works correctly if we put the .o file
-		    # first, though, like:
+		    # It works correctly if we put the .o file first,
+		    # though, like:
 		    #
-		    #  $ hipcc set_unbuffered_mode_obj.o source.cc
+		    #  $ amdclang++ set_unbuffered_mode_obj.o source.cc
 		    #
 		    # So for HIP, we prepend the
 		    # set_unbuffered_mode_obj.o file to the sources
