@@ -30,6 +30,7 @@
 #include "gdbarch.h"
 #include "rust-lang.h"
 #include "ada-lang.h"
+#include "cli/cli-style.h"
 
 /* Forward declarations.  */
 static struct value *value_subscripted_rvalue (struct value *array,
@@ -559,7 +560,8 @@ value_x_binop (struct value *arg1, struct value *arg2, enum exp_opcode op,
 				    argvec.slice (1, 2 - static_memfuncp));
     }
   throw_error (NOT_FOUND_ERROR,
-	       _("member function %s not found"), tstr);
+	       _("member function %ps not found"),
+	       styled_string (function_name_style.style (), tstr));
 }
 
 /* We know that arg1 is a structure, so try to find a unary user
@@ -672,7 +674,8 @@ value_x_unop (struct value *arg1, enum exp_opcode op, enum noside noside)
 				    argvec.slice (1, nargs));
     }
   throw_error (NOT_FOUND_ERROR,
-	       _("member function %s not found"), tstr);
+	       _("member function %ps not found"),
+	       styled_string (function_name_style.style (), tstr));
 }
 
 

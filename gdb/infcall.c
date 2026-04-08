@@ -29,6 +29,7 @@
 #include "language.h"
 #include "objfiles.h"
 #include "cli/cli-cmds.h"
+#include "cli/cli-style.h"
 #include "command.h"
 #include "dummy-frame.h"
 #include "ada-lang.h"

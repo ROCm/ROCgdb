@@ -1549,12 +1549,13 @@ symbol_not_found_error (const char *symbol, const char *filename)
     {
       if (filename)
 	throw_error (NOT_FOUND_ERROR,
-		     _("Function \"%s\" not defined in \"%ps\"."),
-		     symbol,
+		     _("Function \"%ps\" not defined in \"%ps\"."),
+		     styled_string (function_name_style.style (), symbol),
 		     styled_string (file_name_style.style (), filename));
       else
 	throw_error (NOT_FOUND_ERROR,
-		     _("Function \"%s\" not defined."), symbol);
+		     _("Function \"%ps\" not defined."),
+		     styled_string (function_name_style.style (), symbol));
     }
 }
 
@@ -1593,8 +1594,9 @@ undefined_label_error (const char *function, const char *label)
 {
   if (function != NULL)
     throw_error (NOT_FOUND_ERROR,
-		_("No label \"%s\" defined in function \"%s\"."),
-		label, function);
+		 _("No label \"%s\" defined in function \"%ps\"."),
+		 label,
+		 styled_string (function_name_style.style (), function));
   else
     throw_error (NOT_FOUND_ERROR,
 		_("No label \"%s\" defined in current function."),
