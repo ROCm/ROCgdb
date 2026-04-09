@@ -1107,7 +1107,7 @@ s390_lit_suffix (char **str_p, expressionS *exp_p, elf_suffix_type suffix)
       if (nbytes == 2)
 	reloc = BFD_RELOC_390_GOT16;
       else if (nbytes == 4)
-	reloc = BFD_RELOC_32_GOT_PCREL;
+	reloc = BFD_RELOC_390_GOT32;
       else if (nbytes == 8)
 	reloc = BFD_RELOC_390_GOT64;
     }
@@ -1271,7 +1271,7 @@ s390_elf_cons (int nbytes /* 1=.byte, 2=.word, 4=.long */)
 	      static bfd_reloc_code_real_type tab4[] =
 		{
 		  BFD_RELOC_UNUSED, 		/* ELF_SUFFIX_NONE  */
-		  BFD_RELOC_32_GOT_PCREL,	/* ELF_SUFFIX_GOT  */
+		  BFD_RELOC_390_GOT32,		/* ELF_SUFFIX_GOT  */
 		  BFD_RELOC_32_PLT_PCREL,	/* ELF_SUFFIX_PLT  */
 		  BFD_RELOC_UNUSED,		/* ELF_SUFFIX_GOTENT  */
 		  BFD_RELOC_32_GOTOFF,		/* ELF_SUFFIX_GOTOFF  */
@@ -2396,7 +2396,7 @@ tc_s390_fix_adjustable (fixS *fixP)
       || fixP->fx_r_type == BFD_RELOC_390_GOT12
       || fixP->fx_r_type == BFD_RELOC_390_GOT20
       || fixP->fx_r_type == BFD_RELOC_390_GOT16
-      || fixP->fx_r_type == BFD_RELOC_32_GOT_PCREL
+      || fixP->fx_r_type == BFD_RELOC_390_GOT32
       || fixP->fx_r_type == BFD_RELOC_390_GOT64
       || fixP->fx_r_type == BFD_RELOC_390_GOTENT
       || fixP->fx_r_type == BFD_RELOC_390_GOTPLT12
@@ -2443,7 +2443,7 @@ tc_s390_force_relocation (struct fix *fixp)
     {
     case BFD_RELOC_390_GOT12:
     case BFD_RELOC_390_GOT20:
-    case BFD_RELOC_32_GOT_PCREL:
+    case BFD_RELOC_390_GOT32:
     case BFD_RELOC_32_GOTOFF:
     case BFD_RELOC_64_GOTOFF:
     case BFD_RELOC_390_PLTOFF16:
@@ -2728,7 +2728,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  if (fixP->fx_done)
 	    md_number_to_chars (where, value, 4);
 	  break;
-	case BFD_RELOC_32_GOT_PCREL:
+	case BFD_RELOC_390_GOT32:
 	case BFD_RELOC_390_PLTOFF32:
 	case BFD_RELOC_32_PLT_PCREL:
 	case BFD_RELOC_390_GOTPLT32:

@@ -202,7 +202,7 @@ extern bool sh_fix_adjustable (struct fix *);
 #define TC_FORCE_RELOCATION_LOCAL(FIX)			\
   (GENERIC_FORCE_RELOCATION_LOCAL (FIX)			\
    || (FIX)->fx_r_type == BFD_RELOC_32_PLT_PCREL	\
-   || (FIX)->fx_r_type == BFD_RELOC_32_GOT_PCREL	\
+   || (FIX)->fx_r_type == BFD_RELOC_SH_GOT32		\
    || (FIX)->fx_r_type == BFD_RELOC_SH_GOTPC)
 
 #define TC_FORCE_RELOCATION_SUB_LOCAL(FIX, SEG)		\

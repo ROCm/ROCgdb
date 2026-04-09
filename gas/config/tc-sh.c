@@ -340,7 +340,7 @@ sh_check_fixup (expressionS *main_exp, bfd_reloc_code_real_type *r_type_p)
 	case BFD_RELOC_SH_DISP20:
 	  switch (exp->X_md)
 	    {
-	    case BFD_RELOC_32_GOT_PCREL:
+	    case BFD_RELOC_SH_GOT32:
 	      *r_type_p = BFD_RELOC_SH_GOT20;
 	      break;
 
@@ -3313,7 +3313,7 @@ bool
 sh_fix_adjustable (fixS *fixP)
 {
   if (fixP->fx_r_type == BFD_RELOC_32_PLT_PCREL
-      || fixP->fx_r_type == BFD_RELOC_32_GOT_PCREL
+      || fixP->fx_r_type == BFD_RELOC_SH_GOT32
       || fixP->fx_r_type == BFD_RELOC_SH_GOT20
       || fixP->fx_r_type == BFD_RELOC_SH_GOTPC
       || fixP->fx_r_type == BFD_RELOC_SH_GOTFUNCDESC
@@ -3670,7 +3670,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
     case BFD_RELOC_SH_TLS_IE_32:
       S_SET_THREAD_LOCAL (fixP->fx_addsy);
       /* Fallthrough */
-    case BFD_RELOC_32_GOT_PCREL:
+    case BFD_RELOC_SH_GOT32:
     case BFD_RELOC_SH_GOT20:
     case BFD_RELOC_SH_GOTPLT32:
     case BFD_RELOC_SH_GOTFUNCDESC:
@@ -3962,7 +3962,7 @@ sh_parse_name (char const *name,
   else if ((next_end = sh_end_of_match (next + 1, "GOTPLT")))
     reloc_type = BFD_RELOC_SH_GOTPLT32;
   else if ((next_end = sh_end_of_match (next + 1, "GOT")))
-    reloc_type = BFD_RELOC_32_GOT_PCREL;
+    reloc_type = BFD_RELOC_SH_GOT32;
   else if ((next_end = sh_end_of_match (next + 1, "PLT")))
     reloc_type = BFD_RELOC_32_PLT_PCREL;
   else if ((next_end = sh_end_of_match (next + 1, "TLSGD")))

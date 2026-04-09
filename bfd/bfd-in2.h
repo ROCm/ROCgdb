@@ -4339,6 +4339,7 @@ enum bfd_reloc_code_real
   BFD_RELOC_SH_RELATIVE64,
   BFD_RELOC_SH_GOT10BY4,
   BFD_RELOC_SH_GOT10BY8,
+  BFD_RELOC_SH_GOT32,
   BFD_RELOC_SH_GOTPLT10BY4,
   BFD_RELOC_SH_GOTPLT10BY8,
   BFD_RELOC_SH_GOTPLT32,
@@ -5431,6 +5432,9 @@ enum bfd_reloc_code_real
 
   /* 16 bit GOT offset.  */
   BFD_RELOC_390_GOT16,
+
+  /* 32 bit GOT offset.  */
+  BFD_RELOC_390_GOT32,
 
   /* PC relative 12 bit shifted by 1.  */
   BFD_RELOC_390_PC12DBL,
