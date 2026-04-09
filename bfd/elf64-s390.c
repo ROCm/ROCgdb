@@ -227,7 +227,7 @@ elf_s390_reloc_type_lookup (bfd *abfd,
       return &elf_howto_table[(int) R_390_RELATIVE];
     case BFD_RELOC_32_GOTOFF:
       return &elf_howto_table[(int) R_390_GOTOFF32];
-    case BFD_RELOC_390_GOTPC:
+    case BFD_RELOC_64_GOT_PCREL:
       return &elf_howto_table[(int) R_390_GOTPC];
     case BFD_RELOC_390_GOT16:
       return &elf_howto_table[(int) R_390_GOT16];

@@ -3356,6 +3356,7 @@ enum bfd_reloc_code_real
   BFD_RELOC_16_SECIDX,
 
   /* For ELF.  */
+  BFD_RELOC_64_GOT_PCREL,
   BFD_RELOC_32_GOT_PCREL,
   BFD_RELOC_16_GOT_PCREL,
   BFD_RELOC_8_GOT_PCREL,
@@ -3869,7 +3870,6 @@ enum bfd_reloc_code_real
   /* i386/elf relocations.  */
   BFD_RELOC_386_GOT32,
   BFD_RELOC_386_PLT32,
-  BFD_RELOC_386_GOTPC,
   BFD_RELOC_386_TLS_TPOFF,
   BFD_RELOC_386_TLS_IE,
   BFD_RELOC_386_TLS_GOTIE,
@@ -3902,7 +3902,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_X86_64_GOTPC32,
   BFD_RELOC_X86_64_GOT64,
   BFD_RELOC_X86_64_GOTPCREL64,
-  BFD_RELOC_X86_64_GOTPC64,
   BFD_RELOC_X86_64_GOTPLT64,
   BFD_RELOC_X86_64_GOTPC32_TLSDESC,
   BFD_RELOC_X86_64_TLSDESC_CALL,
@@ -4215,7 +4214,6 @@ enum bfd_reloc_code_real
 
   /* Relocations for setting up GOTs and PLTs for shared libraries.  */
   BFD_RELOC_ARM_GOT32,
-  BFD_RELOC_ARM_GOTPC,
   BFD_RELOC_ARM_GOT_PREL,
 
   /* ARM thread-local storage relocations.  */
@@ -4332,7 +4330,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_SH_LABEL,
   BFD_RELOC_SH_LOOP_START,
   BFD_RELOC_SH_LOOP_END,
-  BFD_RELOC_SH_GOTPC,
   BFD_RELOC_SH_COPY64,
   BFD_RELOC_SH_GLOB_DAT64,
   BFD_RELOC_SH_JMP_SLOT64,
@@ -4401,7 +4398,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_ARC_SDA16_ST2,
   BFD_RELOC_ARC_32_PCREL,
   BFD_RELOC_ARC_GOT32,
-  BFD_RELOC_ARC_GOTPC32,
   BFD_RELOC_ARC_GOTPC,
   BFD_RELOC_ARC_S21W_PCREL_PLT,
   BFD_RELOC_ARC_S25H_PCREL_PLT,
@@ -4958,7 +4954,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_V850_CALLT_15_16_OFFSET,
 
   /* DSO relocations.  */
-  BFD_RELOC_V850_32_GOTPCREL,
   BFD_RELOC_V850_16_GOT,
   BFD_RELOC_V850_32_GOT,
   BFD_RELOC_V850_22_PLT_PCREL,
@@ -5426,9 +5421,6 @@ enum bfd_reloc_code_real
 
   /* 12 bit GOT offset.  */
   BFD_RELOC_390_GOT12,
-
-  /* 32 bit PC relative offset to GOT.  */
-  BFD_RELOC_390_GOTPC,
 
   /* 16 bit GOT offset.  */
   BFD_RELOC_390_GOT16,

@@ -3973,7 +3973,7 @@ _reloc (unsigned int size,
 	  case BFD_RELOC_X86_64_GOT32:
 	    return BFD_RELOC_X86_64_GOT64;
 	  case BFD_RELOC_X86_64_GOTPC32:
-	    other = BFD_RELOC_X86_64_GOTPC64;
+	    other = BFD_RELOC_64_GOT_PCREL;
 	    break;
 	  case BFD_RELOC_X86_64_GOTPCREL:
 	    other = BFD_RELOC_X86_64_GOTPCREL64;
@@ -13081,13 +13081,13 @@ output_disp (fragS *insn_start_frag, offsetT insn_start_off)
 		{
 		  if (!object_64bit)
 		    {
-		      reloc_type = BFD_RELOC_386_GOTPC;
+		      reloc_type = BFD_RELOC_32_GOT_PCREL;
 		      i.has_gotpc_tls_reloc = true;
 		      i.op[n].disps->X_add_number +=
 			encoding_length (insn_start_frag, insn_start_off, p);
 		    }
 		  else if (reloc_type == BFD_RELOC_64)
-		    reloc_type = BFD_RELOC_X86_64_GOTPC64;
+		    reloc_type = BFD_RELOC_64_GOT_PCREL;
 		  else
 		    /* Don't do the adjustment for x86-64, as there
 		       the pcrel addressing is relative to the _next_
@@ -13315,11 +13315,11 @@ output_imm (fragS *insn_start_frag, offsetT insn_start_off)
 			      == O_subtract))))
 		{
 		  if (!object_64bit)
-		    reloc_type = BFD_RELOC_386_GOTPC;
+		    reloc_type = BFD_RELOC_32_GOT_PCREL;
 		  else if (size == 4)
 		    reloc_type = BFD_RELOC_X86_64_GOTPC32;
 		  else if (size == 8)
-		    reloc_type = BFD_RELOC_X86_64_GOTPC64;
+		    reloc_type = BFD_RELOC_64_GOT_PCREL;
 		  i.has_gotpc_tls_reloc = true;
 		  i.op[n].imms->X_add_number +=
 		    encoding_length (insn_start_frag, insn_start_off, p);
@@ -18521,7 +18521,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
     case BFD_RELOC_386_GOT32:
     case BFD_RELOC_386_GOT32X:
     case BFD_RELOC_32_GOTOFF:
-    case BFD_RELOC_386_GOTPC:
+    case BFD_RELOC_32_GOT_PCREL:
     case BFD_RELOC_386_TLS_GD:
     case BFD_RELOC_386_TLS_LDM:
     case BFD_RELOC_386_TLS_LDO_32:
@@ -18546,7 +18546,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
     case BFD_RELOC_X86_64_GOTPC32:
     case BFD_RELOC_X86_64_GOT64:
     case BFD_RELOC_X86_64_GOTPCREL64:
-    case BFD_RELOC_X86_64_GOTPC64:
+    case BFD_RELOC_64_GOT_PCREL:
     case BFD_RELOC_X86_64_GOTPLT64:
     case BFD_RELOC_64_PLTOFF:
     case BFD_RELOC_X86_64_GOTPC32_TLSDESC:
@@ -18618,7 +18618,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
       && fixp->fx_addsy == GOT_symbol)
     {
       if (!object_64bit)
-	code = BFD_RELOC_386_GOTPC;
+	code = BFD_RELOC_32_GOT_PCREL;
       else
 	code = BFD_RELOC_X86_64_GOTPC32;
     }
@@ -18626,7 +18626,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
       && GOT_symbol
       && fixp->fx_addsy == GOT_symbol)
     {
-      code = BFD_RELOC_X86_64_GOTPC64;
+      code = BFD_RELOC_64_GOT_PCREL;
     }
 
   rel = notes_alloc (sizeof (arelent));
@@ -18660,7 +18660,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 	  case BFD_RELOC_64_GOTOFF:
 	  case BFD_RELOC_X86_64_GOT64:
 	  case BFD_RELOC_X86_64_GOTPCREL64:
-	  case BFD_RELOC_X86_64_GOTPC64:
+	  case BFD_RELOC_64_GOT_PCREL:
 	  case BFD_RELOC_X86_64_GOTPLT64:
 	  case BFD_RELOC_64_PLTOFF:
 	    as_bad_where (fixp->fx_file, fixp->fx_line,

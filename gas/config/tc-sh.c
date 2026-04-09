@@ -320,7 +320,7 @@ sh_check_fixup (expressionS *main_exp, bfd_reloc_code_real_type *r_type_p)
     {
       if (exp->X_add_symbol && exp->X_add_symbol == GOT_symbol)
 	{
-	  *r_type_p = BFD_RELOC_SH_GOTPC;
+	  *r_type_p = BFD_RELOC_32_GOT_PCREL;
 	  return 0;
 	}
       exp = symbol_get_value_expression (exp->X_add_symbol);
@@ -3315,7 +3315,7 @@ sh_fix_adjustable (fixS *fixP)
   if (fixP->fx_r_type == BFD_RELOC_32_PLT_PCREL
       || fixP->fx_r_type == BFD_RELOC_SH_GOT32
       || fixP->fx_r_type == BFD_RELOC_SH_GOT20
-      || fixP->fx_r_type == BFD_RELOC_SH_GOTPC
+      || fixP->fx_r_type == BFD_RELOC_32_GOT_PCREL
       || fixP->fx_r_type == BFD_RELOC_SH_GOTFUNCDESC
       || fixP->fx_r_type == BFD_RELOC_SH_GOTFUNCDESC20
       || fixP->fx_r_type == BFD_RELOC_SH_GOTOFFFUNCDESC
@@ -3644,7 +3644,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       apply_full_field_fix (fixP, buf, val, 4);
       break;
 
-    case BFD_RELOC_SH_GOTPC:
+    case BFD_RELOC_32_GOT_PCREL:
       /* This is tough to explain.  We end up with this one if we have
          operands that look like "_GLOBAL_OFFSET_TABLE_+[.-.L284]".
          The goal here is to obtain the absolute address of the GOT,

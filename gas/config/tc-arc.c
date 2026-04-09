@@ -543,7 +543,7 @@ static const struct arc_reloc_op_tag
   arc_reloc_op[] =
 {
   DEF (gotoff,  BFD_RELOC_32_GOTOFF,		1),
-  DEF (gotpc,   BFD_RELOC_ARC_GOTPC32,		0),
+  DEF (gotpc,   BFD_RELOC_32_GOT_PCREL,		0),
   DEF (plt,	BFD_RELOC_32_PLT_PCREL,		0),
   DEF (sda,	DUMMY_RELOC_ARC_ENTRY,		1),
   DEF (pcl,	BFD_RELOC_32_PCREL,		1),
@@ -3089,7 +3089,7 @@ md_apply_fix (fixS *fixP,
       md_number_to_chars (fixpos, value, fixP->fx_size);
       return;
 
-    case BFD_RELOC_ARC_GOTPC32:
+    case BFD_RELOC_32_GOT_PCREL:
       /* I cannot fix an GOTPC relocation because I need to relax it
 	 from ld rx,[pcl,@sym@gotpc] to add rx,pcl,@sym@gotpc.  */
       as_bad (_("Unsupported operation on reloc"));
@@ -3262,7 +3262,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED,
 
   /* if we have something like add gp, pcl,
      _GLOBAL_OFFSET_TABLE_@gotpc.  */
-  if (code == BFD_RELOC_ARC_GOTPC32
+  if (code == BFD_RELOC_32_GOT_PCREL
       && GOT_symbol
       && fixP->fx_addsy == GOT_symbol)
     code = BFD_RELOC_ARC_GOTPC;
@@ -4217,7 +4217,7 @@ tc_arc_fix_adjustable (fixS *fixP)
   /* Adjust_reloc_syms doesn't know about the GOT.  */
   switch (fixP->fx_r_type)
     {
-    case BFD_RELOC_ARC_GOTPC32:
+    case BFD_RELOC_32_GOT_PCREL:
     case BFD_RELOC_32_PLT_PCREL:
     case BFD_RELOC_ARC_S25H_PCREL_PLT:
     case BFD_RELOC_ARC_S21H_PCREL_PLT:

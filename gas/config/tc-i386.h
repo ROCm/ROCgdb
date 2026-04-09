@@ -164,7 +164,7 @@ extern int tc_i386_fix_adjustable (struct fix *);
 #define TC_FORCE_RELOCATION_LOCAL(FIX)				\
   (GENERIC_FORCE_RELOCATION_LOCAL (FIX)				\
    || (FIX)->fx_r_type == BFD_RELOC_386_PLT32			\
-   || (FIX)->fx_r_type == BFD_RELOC_386_GOTPC			\
+   || (FIX)->fx_r_type == BFD_RELOC_32_GOT_PCREL		\
    || (FIX)->fx_r_type == BFD_RELOC_X86_64_GOTPCREL		\
    || (FIX)->fx_r_type == BFD_RELOC_X86_64_GOTPCRELX		\
    || (FIX)->fx_r_type == BFD_RELOC_X86_64_REX_GOTPCRELX	\

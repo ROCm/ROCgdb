@@ -2449,7 +2449,8 @@ tc_s390_force_relocation (struct fix *fixp)
     case BFD_RELOC_390_PLTOFF16:
     case BFD_RELOC_390_PLTOFF32:
     case BFD_RELOC_390_PLTOFF64:
-    case BFD_RELOC_390_GOTPC:
+    case BFD_RELOC_32_GOT_PCREL:
+    case BFD_RELOC_64_GOT_PCREL:
     case BFD_RELOC_390_GOT16:
     case BFD_RELOC_390_GOTPCDBL:
     case BFD_RELOC_390_GOT64:
@@ -2838,10 +2839,11 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED, fixS *fixp)
   code = fixp->fx_r_type;
   if (GOT_symbol && fixp->fx_addsy == GOT_symbol)
     {
-      if (   (s390_arch_size == 32 && code == BFD_RELOC_32_PCREL)
-	  || (s390_arch_size == 64 && code == BFD_RELOC_64_PCREL))
-	code = BFD_RELOC_390_GOTPC;
-      if (code == BFD_RELOC_390_PC32DBL)
+      if (s390_arch_size == 32 && code == BFD_RELOC_32_PCREL)
+	code = BFD_RELOC_32_GOT_PCREL;
+      else if (s390_arch_size == 64 && code == BFD_RELOC_64_PCREL)
+	code = BFD_RELOC_64_GOT_PCREL;
+      else if (code == BFD_RELOC_390_PC32DBL)
 	code = BFD_RELOC_390_GOTPCDBL;
     }
 

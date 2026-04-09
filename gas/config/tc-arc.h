@@ -129,7 +129,7 @@ extern const char *arc_target_format;
    relocations.  Check also that fx_addsy is not NULL, in order to
    make sure that the fixup refers to some sort of label.  */
 #define TC_VALIDATE_FIX(FIXP,SEG,SKIP)				     \
-  if ((FIXP->fx_r_type == BFD_RELOC_ARC_GOTPC32			     \
+  if ((FIXP->fx_r_type == BFD_RELOC_32_GOT_PCREL		     \
        || FIXP->fx_r_type == BFD_RELOC_32_PLT_PCREL		     \
        || FIXP->fx_r_type == BFD_RELOC_ARC_S25W_PCREL_PLT	     \
        || FIXP->fx_r_type == BFD_RELOC_ARC_S25H_PCREL_PLT	     \

@@ -29554,7 +29554,7 @@ tc_gen_reloc (asection *section, fixS *fixp)
       && GOT_symbol
       && fixp->fx_addsy == GOT_symbol)
     {
-      code = BFD_RELOC_ARM_GOTPC;
+      code = BFD_RELOC_32_GOT_PCREL;
       reloc->addend = fixp->fx_offset = reloc->address;
     }
 #endif
