@@ -1107,7 +1107,7 @@ s390_lit_suffix (char **str_p, expressionS *exp_p, elf_suffix_type suffix)
       if (nbytes == 2)
 	reloc = BFD_RELOC_390_GOT16;
       else if (nbytes == 4)
-	reloc = BFD_RELOC_32_GOT_PCREL;
+	reloc = BFD_RELOC_390_GOT32;
       else if (nbytes == 8)
 	reloc = BFD_RELOC_390_GOT64;
     }
@@ -1271,7 +1271,7 @@ s390_elf_cons (int nbytes /* 1=.byte, 2=.word, 4=.long */)
 	      static bfd_reloc_code_real_type tab4[] =
 		{
 		  BFD_RELOC_UNUSED, 		/* ELF_SUFFIX_NONE  */
-		  BFD_RELOC_32_GOT_PCREL,	/* ELF_SUFFIX_GOT  */
+		  BFD_RELOC_390_GOT32,		/* ELF_SUFFIX_GOT  */
 		  BFD_RELOC_32_PLT_PCREL,	/* ELF_SUFFIX_PLT  */
 		  BFD_RELOC_UNUSED,		/* ELF_SUFFIX_GOTENT  */
 		  BFD_RELOC_32_GOTOFF,		/* ELF_SUFFIX_GOTOFF  */
@@ -1294,7 +1294,7 @@ s390_elf_cons (int nbytes /* 1=.byte, 2=.word, 4=.long */)
 		  BFD_RELOC_390_GOT64,		/* ELF_SUFFIX_GOT  */
 		  BFD_RELOC_64_PLT_PCREL,	/* ELF_SUFFIX_PLT  */
 		  BFD_RELOC_UNUSED,		/* ELF_SUFFIX_GOTENT  */
-		  BFD_RELOC_390_GOTOFF64,	/* ELF_SUFFIX_GOTOFF  */
+		  BFD_RELOC_64_GOTOFF,		/* ELF_SUFFIX_GOTOFF  */
 		  BFD_RELOC_390_GOTPLT64,	/* ELF_SUFFIX_GOTPLT  */
 		  BFD_RELOC_390_PLTOFF64,	/* ELF_SUFFIX_PLTOFF  */
 		  BFD_RELOC_390_TLS_GD64,	/* ELF_SUFFIX_TLS_GD  */
@@ -2383,7 +2383,7 @@ tc_s390_fix_adjustable (fixS *fixP)
   /* adjust_reloc_syms doesn't know about the GOT.  */
   if (   fixP->fx_r_type == BFD_RELOC_16_GOTOFF
       || fixP->fx_r_type == BFD_RELOC_32_GOTOFF
-      || fixP->fx_r_type == BFD_RELOC_390_GOTOFF64
+      || fixP->fx_r_type == BFD_RELOC_64_GOTOFF
       || fixP->fx_r_type == BFD_RELOC_390_PLTOFF16
       || fixP->fx_r_type == BFD_RELOC_390_PLTOFF32
       || fixP->fx_r_type == BFD_RELOC_390_PLTOFF64
@@ -2396,7 +2396,7 @@ tc_s390_fix_adjustable (fixS *fixP)
       || fixP->fx_r_type == BFD_RELOC_390_GOT12
       || fixP->fx_r_type == BFD_RELOC_390_GOT20
       || fixP->fx_r_type == BFD_RELOC_390_GOT16
-      || fixP->fx_r_type == BFD_RELOC_32_GOT_PCREL
+      || fixP->fx_r_type == BFD_RELOC_390_GOT32
       || fixP->fx_r_type == BFD_RELOC_390_GOT64
       || fixP->fx_r_type == BFD_RELOC_390_GOTENT
       || fixP->fx_r_type == BFD_RELOC_390_GOTPLT12
@@ -2443,13 +2443,14 @@ tc_s390_force_relocation (struct fix *fixp)
     {
     case BFD_RELOC_390_GOT12:
     case BFD_RELOC_390_GOT20:
-    case BFD_RELOC_32_GOT_PCREL:
+    case BFD_RELOC_390_GOT32:
     case BFD_RELOC_32_GOTOFF:
-    case BFD_RELOC_390_GOTOFF64:
+    case BFD_RELOC_64_GOTOFF:
     case BFD_RELOC_390_PLTOFF16:
     case BFD_RELOC_390_PLTOFF32:
     case BFD_RELOC_390_PLTOFF64:
-    case BFD_RELOC_390_GOTPC:
+    case BFD_RELOC_32_GOT_PCREL:
+    case BFD_RELOC_64_GOT_PCREL:
     case BFD_RELOC_390_GOT16:
     case BFD_RELOC_390_GOTPCDBL:
     case BFD_RELOC_390_GOT64:
@@ -2728,7 +2729,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  if (fixP->fx_done)
 	    md_number_to_chars (where, value, 4);
 	  break;
-	case BFD_RELOC_32_GOT_PCREL:
+	case BFD_RELOC_390_GOT32:
 	case BFD_RELOC_390_PLTOFF32:
 	case BFD_RELOC_32_PLT_PCREL:
 	case BFD_RELOC_390_GOTPLT32:
@@ -2750,7 +2751,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	    md_number_to_chars (where, value, sizeof (int));
 	  break;
 
-	case BFD_RELOC_390_GOTOFF64:
+	case BFD_RELOC_64_GOTOFF:
 	  if (fixP->fx_done)
 	    md_number_to_chars (where, value, 8);
 	  break;
@@ -2838,10 +2839,11 @@ tc_gen_reloc (asection *seg ATTRIBUTE_UNUSED, fixS *fixp)
   code = fixp->fx_r_type;
   if (GOT_symbol && fixp->fx_addsy == GOT_symbol)
     {
-      if (   (s390_arch_size == 32 && code == BFD_RELOC_32_PCREL)
-	  || (s390_arch_size == 64 && code == BFD_RELOC_64_PCREL))
-	code = BFD_RELOC_390_GOTPC;
-      if (code == BFD_RELOC_390_PC32DBL)
+      if (s390_arch_size == 32 && code == BFD_RELOC_32_PCREL)
+	code = BFD_RELOC_32_GOT_PCREL;
+      else if (s390_arch_size == 64 && code == BFD_RELOC_64_PCREL)
+	code = BFD_RELOC_64_GOT_PCREL;
+      else if (code == BFD_RELOC_390_PC32DBL)
 	code = BFD_RELOC_390_GOTPCDBL;
     }
 

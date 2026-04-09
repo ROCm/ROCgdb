@@ -1699,11 +1699,13 @@ symfile_bfd_open (const char *name)
 
   gdb_bfd_ref_ptr sym_bfd (gdb_bfd_open (name, gnutarget, desc));
   if (sym_bfd == NULL)
-    error (_("`%s': can't open to read symbols: %s."), name,
+    error (_("`%ps': can't open to read symbols: %s."),
+	   styled_string (file_name_style.style (), name),
 	   bfd_errmsg (bfd_get_error ()));
 
   if (!bfd_check_format (sym_bfd.get (), bfd_object))
-    error (_("`%s': can't read symbols: %s."), name,
+    error (_("`%ps': can't read symbols: %s."),
+	   styled_string (file_name_style.style (), name),
 	   bfd_errmsg (bfd_get_error ()));
 
   return sym_bfd;
@@ -1766,8 +1768,9 @@ find_sym_fns (bfd *abfd)
       iter != symtab_fns.end ())
     return iter->second;
 
-  error (_("Object file %s could not be read.  Symbol format `%s' unknown."),
-	 abfd->filename, bfd_get_target (abfd));
+  error (_("Object file %ps could not be read.  Symbol format `%s' unknown."),
+	 styled_string (file_name_style.style (), abfd->filename),
+	 bfd_get_target (abfd));
 }
 
 
@@ -2013,10 +2016,9 @@ generic_load (const char *args, int from_tty)
     perror_with_name (filename.get ());
 
   if (!bfd_check_format (loadfile_bfd.get (), bfd_object))
-    {
-      error (_("\"%s\" is not an object file: %s"), filename.get (),
-	     bfd_errmsg (bfd_get_error ()));
-    }
+    error (_("\"%ps\" is not an object file: %s"),
+	   styled_string (file_name_style.style (), filename.get ()),
+	   bfd_errmsg (bfd_get_error ()));
 
   for (asection *asec : gdb_bfd_sections (loadfile_bfd))
     total_progress.total_size += bfd_section_size (asec);
@@ -2436,8 +2438,9 @@ remove_symbol_file_command (const char *args, int from_tty)
     error (_("No symbol file found"));
 
   if (from_tty
-      && !query (_("Remove symbol table from file \"%s\"? "),
-		 objfile_name (objf)))
+      && !query (_("Remove symbol table from file \"%ps\"? "),
+		 styled_string (file_name_style.style (),
+				objfile_name (objf))))
     error (_("Not confirmed."));
 
   objf->unlink ();
@@ -2551,14 +2554,17 @@ reread_symbols (int from_tty)
 	    gdb_bfd_ref_ptr temp (gdb_bfd_open (obfd_filename, gnutarget));
 	    objfile.obfd = std::move (temp);
 	    if (objfile.obfd == NULL)
-	      error (_("Can't open %s to read symbols."), obfd_filename);
+	      error (_("Can't open %ps to read symbols."),
+		     styled_string (file_name_style.style (), obfd_filename));
 	  }
 
 	  std::string original_name = objfile.original_name;
 
 	  /* bfd_openr sets cacheable to true, which is what we want.  */
 	  if (!bfd_check_format (objfile.obfd.get (), bfd_object))
-	    error (_("Can't read symbols from %s: %s."), objfile_name (&objfile),
+	    error (_("Can't read symbols from %ps: %s."),
+		   styled_string (file_name_style.style (),
+				  objfile_name (&objfile)),
 		   bfd_errmsg (bfd_get_error ()));
 
 	  objfile.compunit_symtabs.clear ();

@@ -23894,7 +23894,7 @@ static const struct asm_shift_name shift_names [] =
 static struct reloc_entry reloc_names[] =
 {
   { "got",     BFD_RELOC_ARM_GOT32   },	 { "GOT",     BFD_RELOC_ARM_GOT32   },
-  { "gotoff",  BFD_RELOC_ARM_GOTOFF  },	 { "GOTOFF",  BFD_RELOC_ARM_GOTOFF  },
+  { "gotoff",  BFD_RELOC_32_GOTOFF  },	 { "GOTOFF",  BFD_RELOC_32_GOTOFF  },
   { "plt",     BFD_RELOC_32_PLT_PCREL},	 { "PLT",     BFD_RELOC_32_PLT_PCREL},
   { "target1", BFD_RELOC_ARM_TARGET1 },	 { "TARGET1", BFD_RELOC_ARM_TARGET1 },
   { "target2", BFD_RELOC_ARM_TARGET2 },	 { "TARGET2", BFD_RELOC_ARM_TARGET2 },
@@ -28458,7 +28458,7 @@ md_apply_fix (fixS *	fixP,
       break;
 
     case BFD_RELOC_ARM_GOT32:
-    case BFD_RELOC_ARM_GOTOFF:
+    case BFD_RELOC_32_GOTOFF:
       break;
 
     case BFD_RELOC_ARM_GOT_PREL:
@@ -29413,7 +29413,7 @@ tc_gen_reloc (asection *section, fixS *fixp)
     case BFD_RELOC_ARM_TLS_DESCSEQ:
     case BFD_RELOC_ARM_THM_TLS_DESCSEQ:
     case BFD_RELOC_ARM_GOT32:
-    case BFD_RELOC_ARM_GOTOFF:
+    case BFD_RELOC_32_GOTOFF:
     case BFD_RELOC_ARM_GOT_PREL:
     case BFD_RELOC_32_PLT_PCREL:
     case BFD_RELOC_ARM_TARGET1:
@@ -29554,7 +29554,7 @@ tc_gen_reloc (asection *section, fixS *fixp)
       && GOT_symbol
       && fixp->fx_addsy == GOT_symbol)
     {
-      code = BFD_RELOC_ARM_GOTPC;
+      code = BFD_RELOC_32_GOT_PCREL;
       reloc->addend = fixp->fx_offset = reloc->address;
     }
 #endif
@@ -29746,7 +29746,7 @@ arm_fix_adjustable (fixS * fixP)
   /* Don't allow symbols to be discarded on GOT related relocs.	 */
   if (fixP->fx_r_type == BFD_RELOC_32_PLT_PCREL
       || fixP->fx_r_type == BFD_RELOC_ARM_GOT32
-      || fixP->fx_r_type == BFD_RELOC_ARM_GOTOFF
+      || fixP->fx_r_type == BFD_RELOC_32_GOTOFF
       || fixP->fx_r_type == BFD_RELOC_ARM_TLS_GD32
       || fixP->fx_r_type == BFD_RELOC_ARM_TLS_GD32_FDPIC
       || fixP->fx_r_type == BFD_RELOC_ARM_TLS_LE32

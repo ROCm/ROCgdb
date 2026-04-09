@@ -213,7 +213,7 @@ elf_s390_reloc_type_lookup (bfd *abfd,
       return &elf_howto_table[(int) R_390_PC32];
     case BFD_RELOC_390_GOT12:
       return &elf_howto_table[(int) R_390_GOT12];
-    case BFD_RELOC_32_GOT_PCREL:
+    case BFD_RELOC_390_GOT32:
       return &elf_howto_table[(int) R_390_GOT32];
     case BFD_RELOC_32_PLT_PCREL:
       return &elf_howto_table[(int) R_390_PLT32];
@@ -227,7 +227,7 @@ elf_s390_reloc_type_lookup (bfd *abfd,
       return &elf_howto_table[(int) R_390_RELATIVE];
     case BFD_RELOC_32_GOTOFF:
       return &elf_howto_table[(int) R_390_GOTOFF32];
-    case BFD_RELOC_390_GOTPC:
+    case BFD_RELOC_64_GOT_PCREL:
       return &elf_howto_table[(int) R_390_GOTPC];
     case BFD_RELOC_390_GOT16:
       return &elf_howto_table[(int) R_390_GOT16];
@@ -263,7 +263,7 @@ elf_s390_reloc_type_lookup (bfd *abfd,
       return &elf_howto_table[(int) R_390_GOTENT];
     case BFD_RELOC_16_GOTOFF:
       return &elf_howto_table[(int) R_390_GOTOFF16];
-    case BFD_RELOC_390_GOTOFF64:
+    case BFD_RELOC_64_GOTOFF:
       return &elf_howto_table[(int) R_390_GOTOFF64];
     case BFD_RELOC_390_GOTPLT12:
       return &elf_howto_table[(int) R_390_GOTPLT12];

@@ -23,6 +23,8 @@
 #include "gdbsupport/filestuff.h"
 #include <vector>
 #include <string>
+#include "cli/cli-style.h"
+#include "ui-out.h"
 
 /* Debugging flag.  */
 static bool debug_xml;
@@ -990,7 +992,8 @@ xml_fetch_content_from_file (const char *filename, const char *dirname)
   if (fread (text.data (), 1, len, file.get ()) != len
       || ferror (file.get ()))
     {
-      warning (_("Read error from \"%s\""), filename);
+      warning (_("Read error from \"%ps\""),
+	       styled_string (file_name_style.style (), filename));
       return {};
     }
 

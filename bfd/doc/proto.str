@@ -138,18 +138,6 @@
 	ifinternal
 	;
 : ENUMX ENUM catstr ;
-: ENUMEQ
-	skip_past_newline
-	"#define "
-	copy_past_newline remchar
-	catstr
-	" "
-	catstr
-	copy_past_newline
-	catstr
-	"" swap 0 internalmode ! maybecatstr
-	;
-: ENUMEQX ENUMEQ catstr ;
 : ENUMDOC
 	skip_past_newline
 	get_stuff_in_command

@@ -84,6 +84,7 @@
 #include "maint.h"
 #include "objfiles.h"
 #include "progspace.h"
+#include "cli/cli-style.h"
 
 /* When true, print debug messages related to CTF reading.  */
 static bool debug_ctf = false;
@@ -1305,13 +1306,15 @@ elfctf_build_symtabs (objfile *objfile)
 
   ctf_archive_up archive (ctf_bfdopen (abfd, &err));
   if (archive == nullptr)
-    error (_("ctf_bfdopen failed on %s - %s"),
-	   bfd_get_filename (abfd), ctf_errmsg (err));
+    error (_("ctf_bfdopen failed on %ps - %s"),
+	   styled_string (file_name_style.style (), bfd_get_filename (abfd)),
+	   ctf_errmsg (err));
 
   ctf_dict_up dict (ctf_dict_open (archive.get (), NULL, &err));
   if (dict == nullptr)
-    error (_("ctf_dict_open failed on %s - %s"),
-	   bfd_get_filename (abfd), ctf_errmsg (err));
+    error (_("ctf_dict_open failed on %ps - %s"),
+	   styled_string (file_name_style.style (), bfd_get_filename (abfd)),
+	   ctf_errmsg (err));
 
   ctf_per_objfile &per_objfile
     = ctf_per_objfile_key.emplace (objfile, objfile, std::move (archive),
@@ -1321,8 +1324,9 @@ elfctf_build_symtabs (objfile *objfile)
   if (ctf_archive_iter (per_objfile.archive.get (), build_ctf_archive_member,
 			&iter_data)
       < 0)
-    error (_("ctf_archive_iter failed in input file %s: - %s"),
-	   bfd_get_filename (abfd), ctf_errmsg (err));
+    error (_("ctf_archive_iter failed in input file %ps: - %s"),
+	   styled_string (file_name_style.style (), bfd_get_filename (abfd)),
+	   ctf_errmsg (err));
 
   objfile->qf.emplace_front (std::make_unique<expanded_symbols_functions>
 			     (std::move (iter_data.compunit_symtabs)));

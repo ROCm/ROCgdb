@@ -7049,7 +7049,8 @@ void
 remote_target::disconnect (const char *args, int from_tty)
 {
   if (args)
-    error (_("Argument given to \"disconnect\" when remotely debugging."));
+    error (_("Argument given to \"%ps\" when remotely debugging."),
+	   styled_string (command_style.style (), "disconnect"));
 
   /* Make sure we unpush even the extended remote targets.  Calling
      target_mourn_inferior won't unpush, and
@@ -11558,9 +11559,15 @@ Remote replied unexpectedly while setting startup-with-shell: %s"),
       /* vRun was not supported.  Fail if we need it to do what the
 	 user requested.  */
       if (remote_exec_file[0])
-	error (_("Remote target does not support \"set remote exec-file\""));
+	error (_("Remote target does not support \"%ps\""),
+	       styled_string (command_style.style (),
+			      "set remote exec-file"));
       if (!args.empty ())
-	error (_("Remote target does not support \"set args\" or run ARGS"));
+	error (_("Remote target does not support \"%ps\" or \"%ps\""),
+	       styled_string (command_style.style (),
+			      "set args"),
+	       styled_string (command_style.style (),
+			      "run ARGS"));
 
       /* Fall back to "R".  */
       extended_remote_restart ();
@@ -12606,7 +12613,9 @@ remote_target::rcmd (const char *command, struct ui_file *outbuf)
 
   if ((strlen (rs->buf.data ()) + strlen (command) * 2 + 8/*misc*/)
       > get_remote_packet_size ())
-    error (_("\"monitor\" command ``%s'' is too long."), command);
+    error (_("\"%ps\" command ``%s'' is too long."),
+	   styled_string (command_style.style (), "monitor"),
+	   command);
 
   /* Encode the actual command.  */
   bin2hex ((const gdb_byte *) command, p, strlen (command));
@@ -14001,7 +14010,8 @@ remote_target::remote_file_put (const char *local_file, const char *remote_file,
 	  if (bytes == 0)
 	    {
 	      if (ferror (file.get ()))
-		error (_("Error reading %s."), local_file);
+		error (_("Error reading %ps."),
+		       styled_string (file_name_style.style (), local_file));
 	      else
 		{
 		  /* EOF.  Unless there is something still in the

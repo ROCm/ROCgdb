@@ -44,6 +44,7 @@
 #include "frame.h"
 #include "block.h"
 #include "ada-exp.h"
+#include "cli/cli-style.h"
 
 #define parse_type(ps) builtin_type (ps->gdbarch ())
 
@@ -1348,7 +1349,9 @@ write_object_renaming (struct parser_state *par_state,
   block_symbol sym_info = ada_lookup_encoded_symbol (name, orig_left_context,
 						     SEARCH_VFT);
   if (sym_info.symbol == NULL)
-    error (_("Could not find renamed variable: %s"), ada_decode (name).c_str ());
+    error (_("Could not find renamed variable: %ps"),
+	   styled_string (variable_name_style.style (),
+			  ada_decode (name).c_str ()));
   else if (sym_info.symbol->loc_class () == LOC_TYPEDEF)
     /* We have a renaming of an old-style renaming symbol.  Don't
        trust the block information.  */
@@ -1873,7 +1876,8 @@ write_var_or_type (struct parser_state *par_state,
       if (!current_program_space->has_full_symbols ()
 	  && !current_program_space->has_partial_symbols ()
 	  && block == NULL)
-	error (_("No symbol table is loaded.  Use the \"file\" command."));
+	error (_("No symbol table is loaded.  Use the \"%ps\" command."),
+	       styled_string (command_style.style (), "file"));
       if (block == par_state->expression_context_block)
 	error (_("No definition of \"%s\" in current context."), name0.ptr);
       else

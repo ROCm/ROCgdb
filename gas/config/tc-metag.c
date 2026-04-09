@@ -679,7 +679,7 @@ parse_imm_addr (const char *line, metag_addr *addr)
 	  addr->reloc_type = BFD_RELOC_METAG_TLS_IE;
 	}
       else if (exp->X_op == O_PIC_reloc &&
-	  exp->X_md == BFD_RELOC_METAG_GOTOFF)
+	  exp->X_md == BFD_RELOC_32_GOTOFF)
 	{
 	  exp->X_op = O_symbol;
 	  addr->reloc_type = BFD_RELOC_METAG_GETSET_GOTOFF;
@@ -1880,12 +1880,12 @@ parse_imm16 (const char *line, metag_insn *insn, int *value)
 	{
 	  exp->X_op = O_symbol;
 
-	  if (exp->X_md == BFD_RELOC_METAG_GOTOFF)
+	  if (exp->X_md == BFD_RELOC_32_GOTOFF)
 	    {
 	      if (is_hi)
-		insn->reloc_type = BFD_RELOC_METAG_HI16_GOTOFF;
+		insn->reloc_type = BFD_RELOC_HI16_GOTOFF;
 	      else if (is_lo)
-		insn->reloc_type = BFD_RELOC_METAG_LO16_GOTOFF;
+		insn->reloc_type = BFD_RELOC_LO16_GOTOFF;
 	      else
 		return NULL;
 	    }
@@ -6779,8 +6779,8 @@ metag_fix_adjustable (fixS * fixP)
   if (S_IS_WEAK (fixP->fx_addsy))
     return 0;
 
-  if (fixP->fx_r_type == BFD_RELOC_METAG_HI16_GOTOFF ||
-      fixP->fx_r_type == BFD_RELOC_METAG_LO16_GOTOFF ||
+  if (fixP->fx_r_type == BFD_RELOC_HI16_GOTOFF ||
+      fixP->fx_r_type == BFD_RELOC_LO16_GOTOFF ||
       fixP->fx_r_type == BFD_RELOC_METAG_GETSET_GOTOFF ||
       fixP->fx_r_type == BFD_RELOC_METAG_GETSET_GOT ||
       fixP->fx_r_type == BFD_RELOC_METAG_HI16_GOTPC ||
@@ -6922,7 +6922,7 @@ metag_parse_name (char const * name, expressionS * exprP, enum expr_mode mode,
     goto no_suffix;
   else if ((next_end = metag_end_of_match (next + 1, "GOTOFF")))
     {
-      reloc_type = BFD_RELOC_METAG_GOTOFF;
+      reloc_type = BFD_RELOC_32_GOTOFF;
       op_type = O_PIC_reloc;
     }
   else if ((next_end = metag_end_of_match (next + 1, "GOT")))

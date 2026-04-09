@@ -1081,7 +1081,8 @@ typy_repr (PyObject *self)
   auto py_typename = PyUnicode_Decode (type_name.c_str (), type_name.size (),
 				       host_charset (), NULL);
 
-  return PyUnicode_FromFormat ("<%s code=%s name=%U>", Py_TYPE (self)->tp_name,
+  return PyUnicode_FromFormat ("<%s code=%s name=%U>",
+			       gdbpy_py_obj_tp_name (self),
 			       code, py_typename);
 }
 

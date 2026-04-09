@@ -834,8 +834,10 @@ get_file_crc (bfd *abfd, unsigned long *file_crc_return)
 
   if (bfd_seek (abfd, 0, SEEK_SET) != 0)
     {
-      warning (_("Problem reading \"%s\" for CRC: %s"),
-	       bfd_get_filename (abfd), bfd_errmsg (bfd_get_error ()));
+      warning (_("Problem reading \"%ps\" for CRC: %s"),
+	       styled_string (file_name_style.style (),
+			      bfd_get_filename (abfd)),
+	       bfd_errmsg (bfd_get_error ()));
       return 0;
     }
 
@@ -847,8 +849,10 @@ get_file_crc (bfd *abfd, unsigned long *file_crc_return)
       count = bfd_read (buffer, sizeof (buffer), abfd);
       if (count == (bfd_size_type) -1)
 	{
-	  warning (_("Problem reading \"%s\" for CRC: %s"),
-		   bfd_get_filename (abfd), bfd_errmsg (bfd_get_error ()));
+	  warning (_("Problem reading \"%ps\" for CRC: %s"),
+		   styled_string (file_name_style.style (),
+				  bfd_get_filename (abfd)),
+		   bfd_errmsg (bfd_get_error ()));
 	  return 0;
 	}
       if (count == 0)

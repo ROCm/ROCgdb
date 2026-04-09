@@ -2441,10 +2441,10 @@ frv_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
     case BFD_RELOC_FRV_GOTOFF12:
       return &elf32_frv_howto_table[ (int) R_FRV_GOTOFF12];
 
-    case BFD_RELOC_FRV_GOTOFFHI:
+    case BFD_RELOC_HI16_GOTOFF:
       return &elf32_frv_howto_table[ (int) R_FRV_GOTOFFHI];
 
-    case BFD_RELOC_FRV_GOTOFFLO:
+    case BFD_RELOC_LO16_GOTOFF:
       return &elf32_frv_howto_table[ (int) R_FRV_GOTOFFLO];
 
     case BFD_RELOC_FRV_GETTLSOFF:

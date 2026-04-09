@@ -3502,7 +3502,7 @@ cris_get_reloc_suffix (char **cPP, bfd_reloc_code_real_type *relocp,
       PICMAP ("GOTPLT16", BFD_RELOC_CRIS_16_GOTPLT),
       PICMAP ("GOTPLT", BFD_RELOC_CRIS_32_GOTPLT),
       PICMAP ("PLTG", BFD_RELOC_CRIS_32_PLT_GOTREL),
-      PICMAP ("PLT", BFD_RELOC_CRIS_32_PLT_PCREL),
+      PICMAP ("PLT", BFD_RELOC_32_PLT_PCREL),
       PICMAP ("GOTOFF", BFD_RELOC_CRIS_32_GOTREL),
       PICMAP ("GOT16", BFD_RELOC_CRIS_16_GOT),
       PICMAP ("GOT", BFD_RELOC_CRIS_32_GOT),
@@ -3672,7 +3672,7 @@ cris_number_to_imm (char *bufp, long val, int n, fixS *fixP, segT seg)
     case BFD_RELOC_CRIS_16_GOTPLT:
     case BFD_RELOC_CRIS_32_GOTPLT:
     case BFD_RELOC_CRIS_32_PLT_GOTREL:
-    case BFD_RELOC_CRIS_32_PLT_PCREL:
+    case BFD_RELOC_32_PLT_PCREL:
       /* We don't want to put in any kind of non-zero bits in the data
 	 being relocated for these.  */
       md_number_to_chars (bufp, 0, n);
@@ -3924,7 +3924,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixP)
     case BFD_RELOC_CRIS_32_GOTPLT:
     case BFD_RELOC_CRIS_32_GOTREL:
     case BFD_RELOC_CRIS_32_PLT_GOTREL:
-    case BFD_RELOC_CRIS_32_PLT_PCREL:
+    case BFD_RELOC_32_PLT_PCREL:
     case BFD_RELOC_32:
     case BFD_RELOC_32_PCREL:
     case BFD_RELOC_16:
@@ -4101,7 +4101,7 @@ md_cris_force_relocation (struct fix *fixp)
     case BFD_RELOC_CRIS_32_GOTPLT:
     case BFD_RELOC_CRIS_32_GOTREL:
     case BFD_RELOC_CRIS_32_PLT_GOTREL:
-    case BFD_RELOC_CRIS_32_PLT_PCREL:
+    case BFD_RELOC_32_PLT_PCREL:
       return 1;
     default:
       ;

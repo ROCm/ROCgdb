@@ -509,7 +509,7 @@ micmdpy_set_installed (PyObject *self, PyObject *newvalue, void *closure)
     {
       PyErr_Format (PyExc_TypeError,
 		    _("gdb.MICommand.installed must be set to a bool, not %s"),
-		    newvalue == Py_None ? "None" : Py_TYPE(newvalue)->tp_name);
+		    newvalue == Py_None ? "None" : gdbpy_py_obj_tp_name (newvalue));
       return -1;
     }
 

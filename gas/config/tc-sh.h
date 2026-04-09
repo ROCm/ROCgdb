@@ -181,7 +181,7 @@ extern void sh_elf_final_processing (void);
    when used at runtime implies that we should add the address of the
    GOT to the specified location, and as a result we have simplified
    the expression into something we can use.  */
-#define TC_RELOC_GLOBAL_OFFSET_TABLE BFD_RELOC_SH_GOTPC
+#define TC_RELOC_GLOBAL_OFFSET_TABLE BFD_RELOC_32_GOT_PCREL
 
 #define tc_fix_adjustable(FIX) sh_fix_adjustable(FIX)
 extern bool sh_fix_adjustable (struct fix *);
@@ -202,8 +202,8 @@ extern bool sh_fix_adjustable (struct fix *);
 #define TC_FORCE_RELOCATION_LOCAL(FIX)			\
   (GENERIC_FORCE_RELOCATION_LOCAL (FIX)			\
    || (FIX)->fx_r_type == BFD_RELOC_32_PLT_PCREL	\
-   || (FIX)->fx_r_type == BFD_RELOC_32_GOT_PCREL	\
-   || (FIX)->fx_r_type == BFD_RELOC_SH_GOTPC)
+   || (FIX)->fx_r_type == BFD_RELOC_SH_GOT32		\
+   || (FIX)->fx_r_type == BFD_RELOC_32_GOT_PCREL)
 
 #define TC_FORCE_RELOCATION_SUB_LOCAL(FIX, SEG)		\
   ((!md_register_arithmetic && (SEG) == reg_section)	\

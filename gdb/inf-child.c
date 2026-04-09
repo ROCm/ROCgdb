@@ -169,7 +169,8 @@ void
 inf_child_target::disconnect (const char *args, int from_tty)
 {
   if (args != NULL)
-    error (_("Argument given to \"disconnect\"."));
+    error (_("Argument given to \"%ps\"."),
+	   styled_string (command_style.style (), "disconnect"));
 
   /* This offers to detach/kill current inferiors, and then pops all
      targets.  */

@@ -21,6 +21,7 @@
 #include "value.h"
 #include "dwarf2/loc.h"
 #include "objfiles.h"
+#include "cli/cli-style.h"
 
 /* Helper to get the imported symbol's real name.  */
 static const char *
@@ -98,8 +99,9 @@ ada_alias_get_block_value (const struct symbol *sym)
   block_symbol real_symbol = lookup_global_symbol (name, nullptr,
 						   SEARCH_FUNCTION_DOMAIN);
   if (real_symbol.symbol == nullptr)
-    error (_("could not find alias '%s' for function '%s'"),
-	   name, sym->print_name ());
+    error (_("could not find alias '%s' for function '%ps'"),
+	   name,
+	   styled_string (function_name_style.style (), sym->print_name ()));
   if (real_symbol.symbol->loc_class () != LOC_BLOCK)
     error (_("alias '%s' for function '%s' is not a function"),
 	   name, sym->print_name ());

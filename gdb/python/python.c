@@ -452,7 +452,8 @@ gdbpy_eval_from_control_command (const struct extension_language_defn *extlang,
 				 struct command_line *cmd)
 {
   if (cmd->body_list_1 != nullptr)
-    error (_("Invalid \"python\" block structure."));
+    error (_("Invalid \"%ps\" block structure."),
+	   styled_string (command_style.style (), "python"));
 
   gdbpy_enter enter_py;
 
@@ -1579,7 +1580,7 @@ gdbpy_write (PyObject *self, PyObject *args, PyObject *kw)
       PyErr_Format
 	(PyExc_TypeError,
 	 _("'style' argument must be gdb.Style or None, not %s."),
-	 Py_TYPE (style_obj)->tp_name);
+	 gdbpy_py_obj_tp_name (style_obj));
       return nullptr;
     }
 

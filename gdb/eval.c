@@ -41,6 +41,7 @@
 #include "expop.h"
 #include "c-exp.h"
 #include "inferior.h"
+#include "cli/cli-style.h"
 
 
 /* Parse the string EXP as a C expression, evaluate it,
@@ -783,9 +784,10 @@ scope_operation::evaluate_funcall (struct type *expect_type,
       if (!static_memfuncp)
 	{
 	  /* For the time being, we don't handle this.  */
-	  error (_("Call to overloaded function %s requires "
+	  error (_("Call to overloaded function %ps requires "
 		   "`this' pointer"),
-		 function_name);
+		 styled_string (function_name_style.style (),
+				function_name));
 	}
 
       arg_view = arg_view.slice (1);
@@ -1119,7 +1121,8 @@ eval_op_func_static_var (struct type *expect_type, struct expression *exp,
   struct block_symbol sym = lookup_symbol (var, blk, SEARCH_VAR_DOMAIN,
 					   nullptr);
   if (sym.symbol == NULL)
-    error (_("No symbol \"%s\" in specified context."), var);
+    error (_("No symbol \"%ps\" in specified context."),
+	   styled_string (variable_name_style.style (), var));
   return evaluate_var_value (noside, sym.block, sym.symbol);
 }
 

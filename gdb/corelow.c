@@ -379,8 +379,9 @@ core_target::core_target (gdb_bfd_ref_ptr cbfd_ref)
 
   if (!m_core_gdbarch
       || !gdbarch_iterate_over_regset_sections_p (m_core_gdbarch))
-    error (_("\"%s\": Core file format not supported"),
-	   bfd_get_filename (this->core_bfd ()));
+    error (_("\"%ps\": Core file format not supported"),
+	   styled_string (file_name_style.style (),
+			  bfd_get_filename (this->core_bfd ())));
 
   /* Find the data section */
   m_core_section_table = build_section_table (this->core_bfd ());
@@ -1059,8 +1060,9 @@ core_target_open (const char *arg, int from_tty)
       /* FIXME: should be checking for errors from bfd_close (for one
 	 thing, on error it does not free all the storage associated
 	 with the bfd).  */
-      error (_("\"%s\" is not a core dump: %s"),
-	     filename.c_str (), bfd_errmsg (bfd_get_error ()));
+      error (_("\"%ps\" is not a core dump: %s"),
+	     styled_string (file_name_style.style (), filename.c_str ()),
+	     bfd_errmsg (bfd_get_error ()));
     }
 
   core_target *target = new core_target (std::move (temp_bfd));

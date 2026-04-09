@@ -18,7 +18,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include "cli/cli-style.h"
 #include "cli/cli-utils.h"
+#include "ui-out.h"
 #include "value.h"
 
 #include <algorithm>
@@ -52,8 +54,9 @@ get_ulongest (const char **pp, int trailer)
 	  std::string varname (start, p - start);
 	  if (!get_internalvar_integer (lookup_internalvar (varname.c_str ()),
 				       &retval))
-	    error (_("Convenience variable $%s does not have integer value."),
-		   varname.c_str ());
+	    error (_("Convenience variable %p[$%s%p] does not have integer value."),
+		   variable_name_style.style ().ptr (),
+		   varname.c_str (), nullptr);
 	}
     }
   else
@@ -185,9 +188,11 @@ report_unrecognized_option_error (const char *command, const char *args)
 {
   std::string option = extract_arg (&args);
 
-  error (_("Unrecognized option '%s' to %s command.  "
-	   "Try \"help %s\"."), option.c_str (),
-	 command, command);
+  error (_("Unrecognized option '%s' to \"%ps\" command.  "
+	   "Try \"%p[help %s%p]\"."),
+	 option.c_str (),
+	 styled_string (command_style.style (), command),
+	 command_style.style ().ptr (), command, nullptr);
 }
 
 /* See documentation in cli-utils.h.  */
@@ -434,7 +439,8 @@ void
 validate_flags_qcs (const char *which_command, qcs_flags *flags)
 {
   if (flags->cont && flags->silent)
-    error (_("%s: -c and -s are mutually exclusive"), which_command);
+    error (_("%ps: -c and -s are mutually exclusive"),
+	   styled_string (command_style.style (), which_command));
 }
 
 /* See documentation in cli-utils.h.  */

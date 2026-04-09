@@ -160,13 +160,17 @@ build_command_line (enum command_control_type type, const char *args)
   if (args == NULL || *args == '\0')
     {
       if (type == if_control)
-	error (_("if command requires an argument."));
+	error (_("\"%ps\" command requires an argument."),
+	       styled_string (command_style.style (), "if"));
       else if (type == while_control)
-	error (_("while command requires an argument."));
+	error (_("\"%ps\" command requires an argument."),
+	       styled_string (command_style.style (), "while"));
       else if (type == define_control)
-	error (_("define command requires an argument."));
+	error (_("\"%ps\" command requires an argument."),
+	       styled_string (command_style.style (), "define"));
       else if (type == document_control)
-	error (_("document command requires an argument."));
+	error (_("\"%ps\" command requires an argument."),
+	       styled_string (command_style.style (), "document"));
     }
   gdb_assert (args != NULL);
 
@@ -1338,7 +1342,8 @@ validate_comname (const char **comname)
 
       c = lookup_cmd (&tem, cmdlist, "", NULL, 0, 1);
       if (!c->is_prefix ())
-	error (_("\"%s\" is not a prefix command."), prefix.c_str ());
+	error (_("\"%ps\" is not a prefix command."),
+	       styled_string (command_style.style (), prefix.c_str ()));
 
       list = c->subcommands;
       *comname = last_word;
@@ -1411,7 +1416,8 @@ do_define_command (const char *comname, int from_tty,
       else
 	q = query (_("Really redefine built-in command \"%s\"? "), c->name);
       if (!q)
-	error (_("Command \"%s\" not redefined."), c->name);
+	error (_("Command \"%ps\" not redefined."),
+	       styled_string (command_style.style (), c->name));
     }
 
   /* If this new command is a hook, then mark the command which it
@@ -1520,17 +1526,21 @@ do_document_command (const char *comname, int from_tty,
 
   lookup_cmd_composition (comfull, &alias, &prefix_cmd, &c);
   if (c == nullptr)
-    error (_("Undefined command: \"%s\"."), comfull);
+    error (_("Undefined command: \"%ps\"."),
+	   styled_string (command_style.style (), comfull));
   else if (c == CMD_LIST_AMBIGUOUS)
-    error (_("Ambiguous command: \"%s\"."), comfull);
+    error (_("Ambiguous command: \"%ps\"."),
+	   styled_string (command_style.style (), comfull));
 
   if (c->theclass != class_user
       && (alias == nullptr || alias->theclass != class_alias))
     {
       if (alias == nullptr)
-	error (_("Command \"%s\" is built-in."), comfull);
+	error (_("Command \"%ps\" is built-in."),
+	       styled_string (command_style.style (), comfull));
       else
-	error (_("Alias \"%s\" is built-in."), comfull);
+	error (_("Alias \"%ps\" is built-in."),
+	       styled_string (command_style.style (), comfull));
     }
 
   /* If we found an alias of class_alias, the user is documenting this
@@ -1595,7 +1605,8 @@ define_prefix_command (const char *comname, int from_tty)
   c = lookup_cmd_exact (comname, *list);
 
   if (c != nullptr && c->theclass != class_user)
-    error (_("Command \"%s\" is built-in."), comfull);
+    error (_("Command \"%ps\" is built-in."),
+	   styled_string (command_style.style (), comfull));
 
   if (c != nullptr && c->is_prefix ())
     {

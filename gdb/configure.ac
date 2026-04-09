@@ -933,6 +933,7 @@ else
     # do except assume that the compiler will be able to find those files.
     python_includes=
     python_libs=
+    python_prefix=
     have_python_config=no
   fi
 
@@ -1062,6 +1063,13 @@ AC_SUBST(PYTHON_CPPFLAGS)
 AC_SUBST(PYTHON_LIBS)
 AM_CONDITIONAL(HAVE_PYTHON, test "${have_libpython}" != no)
 
+dnl Use --enable-py-limited-api to enable the build of GDB against the Python
+dnl limited API.
+dnl
+dnl no -   Disable the Python limited API.
+dnl yes -  Use the Python limited API to build GDB, error if the selected
+dnl        version of Python is not compatible with the Python limited API.
+
 # Check whether to build GDB against Python limited C API.
 AC_ARG_ENABLE([py-limited-api],
 	      [AS_HELP_STRING([--enable-py-limited-api],
@@ -1070,12 +1078,33 @@ AC_ARG_ENABLE([py-limited-api],
 	      [enable_py_limited_api=no])
 
 if test "$enable_py_limited_api" = yes; then
-  # The minimal Python limited API version is currently set to 3.11 for the
-  # support of PyBuffer_FillInfo and PyBuffer_Release.
-  # The choice of the minimal version for the Python limited API won't be frozen
-  # until the end of the migration.
-  AC_DEFINE(Py_LIMITED_API, 0x030b0000,
-	    [Define if GDB should be built against the Python limited C API.])
+  # The minimal Python limited API version is currently set to 3.14 for the
+  # support of Py_TYPE().
+  # The choice of the minimal version for the Python limited API won't be
+  # frozen until the end of the migration.
+  old_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS $PYTHON_CFLAGS"
+  old_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
+  old_LIBS="$LIBS"
+  LIBS="$LIBS $PYTHON_LIBS"
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
+    [[#include <Python.h>
+#ifndef PY_VERSION_HEX
+#error "PY_VERSION_HEX is not defined"
+#endif
+#if PY_VERSION_HEX < 0x030e0000
+#error "Python limited API support requires at least Python version 3.14"
+#endif
+    ]],[[]])],
+    [AC_DEFINE(Py_LIMITED_API, 0x030e0000,
+      [Define if GDB should be built against the Python limited C API.])
+    ],[
+      AC_MSG_ERROR([Python limited API support requires at least Python version 3.14])
+    ])
+  CFLAGS="$old_CFLAGS"
+  CPPFLAGS="$old_CPPFLAGS"
+  LIBS="$old_LIBS"
 fi
 
 # -------------------- #

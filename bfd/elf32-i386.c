@@ -233,11 +233,11 @@ elf_i386_reloc_type_lookup (bfd *abfd,
       TRACE ("BFD_RELOC_RELATIVE");
       return &elf_howto_table[R_386_RELATIVE];
 
-    case BFD_RELOC_386_GOTOFF:
-      TRACE ("BFD_RELOC_386_GOTOFF");
+    case BFD_RELOC_32_GOTOFF:
+      TRACE ("BFD_RELOC_32_GOTOFF");
       return &elf_howto_table[R_386_GOTOFF];
 
-    case BFD_RELOC_386_GOTPC:
+    case BFD_RELOC_32_GOT_PCREL:
       TRACE ("BFD_RELOC_386_GOTPC");
       return &elf_howto_table[R_386_GOTPC];
 

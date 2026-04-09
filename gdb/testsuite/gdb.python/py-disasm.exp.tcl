@@ -124,7 +124,7 @@ set test_plans \
 	 [list "" "${base_pattern}\r\n.*"] \
 	 [list "GlobalNullDisassembler" "${base_pattern}\r\n.*"] \
 	 [list "ShowInfoRepr" "${base_pattern}\\s+## <gdb.disassembler.DisassembleInfo address=$hex architecture=\[^>\]+>\r\n.*"] \
-	 [list "ShowInfoSubClassRepr" "${base_pattern}\\s+## <MyInfo address=$hex architecture=\[^>\]+>\r\n.*"] \
+	 [list "ShowInfoSubClassRepr" "${base_pattern}\\s+## <ShowInfoSubClassRepr.MyInfo address=$hex architecture=\[^>\]+>\r\n.*"] \
 	 [list "ShowResultRepr" "${base_pattern}\\s+## <gdb.disassembler.DisassemblerResult length=$decimal string=\"\[^\r\n\]+\">\r\n.*"] \
 	 [list "ShowResultStr" "${base_pattern}\\s+## ${nop}\r\n.*"] \
 	 [list "GlobalPreInfoDisassembler" "${base_pattern}\\s+## ad = $hex, ar = ${curr_arch}\r\n.*"] \
@@ -154,10 +154,10 @@ set test_plans \
 		   "Buffer returned from read_memory is sized $decimal instead of the expected $decimal"]] \
 	 [list "ResultOfWrongType" \
 	      [make_exception_pattern "TypeError" \
-		   "Result from Disassembler must be gdb.DisassemblerResult, not Blah."]] \
+		   "Result from Disassembler must be gdb.DisassemblerResult, not ResultOfWrongType.Blah."]] \
 	 [list "ResultOfVeryWrongType" \
 	      [make_exception_pattern "TypeError" \
-		   "Result from Disassembler must be gdb.DisassemblerResult, not Blah."]] \
+		   "Result from Disassembler must be gdb.DisassemblerResult, not ResultOfVeryWrongType.Blah."]] \
 	 [list "ErrorCreatingTextPart_NoArgs" \
 	      [make_exception_pattern "TypeError" \
 		   [missing_arg_pattern "style" 1]]] \
@@ -337,7 +337,7 @@ foreach len {0 -1} {
 foreach type {DisassemblerTextPart DisassemblerAddressPart} {
     gdb_test "python result = gdb.disassembler.${type}()" \
 	[multi_line \
-	     "RuntimeError.*: Cannot create instances of DisassemblerPart\\." \
+	     "RuntimeError.*: Cannot create instances of gdb.disassembler.${type}\\." \
 	     "Error occurred in Python.*"] \
 	 "try to create an instance of ${type}"
 }

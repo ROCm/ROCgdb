@@ -1228,8 +1228,9 @@ info_task (struct ui_out *uiout, const char *taskno_str, struct inferior *inf)
     }
 
   if (taskno <= 0 || taskno > data->task_list.size ())
-    error (_("Task ID %d not known.  Use the \"info tasks\" command to\n"
-	     "see the IDs of currently known tasks"), taskno);
+    error (_("Task ID %d not known.  Use the \"%ps\" command to\n"
+	     "see the IDs of currently known tasks"),
+	   taskno, styled_string (command_style.style (), "info tasks"));
   task_info = &data->task_list[taskno - 1];
 
   /* Print the Ada task ID.  */
@@ -1349,8 +1350,9 @@ task_command_1 (const char *taskno_str, int from_tty, struct inferior *inf)
   struct ada_tasks_inferior_data *data = get_ada_tasks_inferior_data (inf);
 
   if (taskno <= 0 || taskno > data->task_list.size ())
-    error (_("Task ID %d not known.  Use the \"info tasks\" command to\n"
-	     "see the IDs of currently known tasks"), taskno);
+    error (_("Task ID %d not known.  Use the \"%ps\" command to\n"
+	     "see the IDs of currently known tasks"),
+	   taskno, styled_string (command_style.style (), "info tasks"));
   task_info = &data->task_list[taskno - 1];
 
   if (!ada_task_is_alive (task_info))

@@ -54,6 +54,7 @@
 #include "elf/common.h"
 #include "gdb_bfd.h"
 #include "inferior.h"
+#include "cli/cli-style.h"
 
 /* Verify parameters of target_read_memory_bfd and target_read_memory are
    compatible.  */
@@ -91,7 +92,9 @@ symbol_file_add_from_memory (struct bfd *templ, CORE_ADDR addr,
   symfile_add_flags add_flags = SYMFILE_NOT_FILENAME;
 
   if (bfd_get_flavour (templ) != bfd_target_elf_flavour)
-    error (_("add-symbol-file-from-memory not supported for this target"));
+    error (_("\"%ps\" not supported for this target"),
+	   styled_string (command_style.style (),
+			  "add-symbol-file-from-memory"));
 
   nbfd = bfd_elf_bfd_from_remote_memory (templ, addr, size, &loadbase,
 					 target_read_memory_bfd);
@@ -138,7 +141,9 @@ add_symbol_file_from_memory_command (const char *args, int from_tty)
   struct bfd *templ;
 
   if (args == NULL)
-    error (_("add-symbol-file-from-memory requires an expression argument"));
+    error (_("\"%ps\" requires an expression argument"),
+	   styled_string (command_style.style (),
+			  "add-symbol-file-from-memory"));
 
   addr = parse_and_eval_address (args);
 
@@ -148,8 +153,11 @@ add_symbol_file_from_memory_command (const char *args, int from_tty)
   else
     templ = current_program_space->exec_bfd ();
   if (templ == NULL)
-    error (_("Must use symbol-file or exec-file "
-	     "before add-symbol-file-from-memory."));
+    error (_("Must use \"%ps\" or \"%ps\" before \"%ps\"."),
+	   styled_string (command_style.style (), "symbol-file"),
+	   styled_string (command_style.style (), "exec-file"),
+	   styled_string (command_style.style (),
+			  "add-symbol-file-from-memory"));
 
   symbol_file_add_from_memory (templ, addr, 0, NULL, from_tty);
 }

@@ -43,6 +43,7 @@
 #include <algorithm>
 #include "gdbsupport/scope-exit.h"
 #include <list>
+#include "cli/cli-style.h"
 
 /* True if we are debugging inferior calls.  */
 
@@ -1100,9 +1101,11 @@ call_function_by_hand_dummy (struct value *function,
   CORE_ADDR funaddr = find_function_addr (function, &values_type, &ftype);
 
   if (is_nocall_function (ftype))
-    error (_("Cannot call the function '%s' which does not follow the "
+    error (_("Cannot call the function '%ps' which does not follow the "
 	     "target calling convention."),
-	   get_function_name (funaddr, name_buf, sizeof (name_buf)));
+	   styled_string (function_name_style.style (),
+			  get_function_name (funaddr, name_buf,
+					     sizeof (name_buf))));
 
   if (values_type == NULL || values_type->is_stub ())
     values_type = default_return_type;
@@ -1110,9 +1113,9 @@ call_function_by_hand_dummy (struct value *function,
     {
       const char *name = get_function_name (funaddr,
 					    name_buf, sizeof (name_buf));
-      error (_("'%s' has unknown return type; "
+      error (_("'%ps' has unknown return type; "
 	       "cast the call to its declared return type"),
-	     name);
+	     styled_string (function_name_style.style (), name));
     }
 
   values_type = check_typedef (values_type);
@@ -1675,9 +1678,10 @@ call_function_by_hand_dummy (struct value *function,
 	  throw_error (e.error, _("%s\n\
 An error occurred while in a function called from GDB.\n\
 Evaluation of the expression containing the function\n\
-(%s) will be abandoned.\n\
+(%ps) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-		       e.what (), name);
+		       e.what (),
+		       styled_string (function_name_style.style (), name));
 	case RETURN_QUIT:
 	default:
 	  throw_exception (std::move (e));
@@ -1703,8 +1707,8 @@ When the function is done executing, GDB will silently stop."),
       error (_("The program being debugged exited while in a function "
 	       "called from GDB.\n"
 	       "Evaluation of the expression containing the function\n"
-	       "(%s) will be abandoned."),
-	     name);
+	       "(%ps) will be abandoned."),
+	     styled_string (function_name_style.style (), name));
     }
 
   if (call_thread_ptid != inferior_ptid)
@@ -1724,16 +1728,16 @@ When the function is done executing, GDB will silently stop."),
 The program received a signal in another thread while\n\
 making a function call from GDB.\n\
 Evaluation of the expression containing the function\n\
-(%s) will be abandoned.\n\
+(%ps) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-	       name);
+	       styled_string (function_name_style.style (), name));
       else
 	error (_("\
 The program stopped in another thread while making a function call from GDB.\n\
 Evaluation of the expression containing the function\n\
-(%s) will be abandoned.\n\
+(%ps) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-	       name);
+	       styled_string (function_name_style.style (), name));
     }
 
     {
@@ -1774,10 +1778,11 @@ The program being debugged received signal %s, %s\n\
 while in a function called from GDB.  GDB has restored the context\n\
 to what it was before the call.  To change this behavior use\n\
 \"set unwind-on-signal off\".  Evaluation of the expression containing\n\
-the function (%s) will be abandoned."),
+the function (%ps) will be abandoned."),
 		     gdb_signal_to_name (stop_signal),
 		     gdb_signal_to_string (stop_signal),
-		     name.c_str ());
+		     styled_string (function_name_style.style (),
+				    name.c_str ()));
 	    }
 	  else
 	    {
@@ -1794,9 +1799,10 @@ The program being debugged was signaled while in a function called from GDB.\n\
 GDB remains in the frame where the signal was received.\n\
 To change this behavior use \"set unwind-on-signal on\".\n\
 Evaluation of the expression containing the function\n\
-(%s) will be abandoned.\n\
+(%ps) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-		     name.c_str ());
+		     styled_string (function_name_style.style (),
+				    name.c_str ()));
 	    }
 	}
 
@@ -1822,8 +1828,9 @@ The program being debugged timed out while in a function called from GDB.\n\
 GDB has restored the context to what it was before the call.\n\
 To change this behavior use \"set unwind-on-timeout off\".\n\
 Evaluation of the expression containing the function\n\
-(%s) will be abandoned."),
-		     name.c_str ());
+(%ps) will be abandoned."),
+		     styled_string (function_name_style.style (),
+				    name.c_str ()));
 	    }
 	  else
 	    {
@@ -1837,9 +1844,10 @@ The program being debugged timed out while in a function called from GDB.\n\
 GDB remains in the frame where the timeout occurred.\n\
 To change this behavior use \"set unwind-on-timeout on\".\n\
 Evaluation of the expression containing the function\n\
-(%s) will be abandoned.\n\
+(%ps) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-		     name.c_str ());
+		     styled_string (function_name_style.style (),
+				    name.c_str ()));
 	    }
 	}
 
@@ -1859,9 +1867,10 @@ caused by an unhandled C++ exception.  GDB blocked this call in order\n\
 to prevent the program from being terminated, and has restored the\n\
 context to its original state before the call.\n\
 To change this behavior use \"set unwind-on-terminating-exception off\".\n\
-Evaluation of the expression containing the function (%s)\n\
+Evaluation of the expression containing the function (%ps)\n\
 will be abandoned."),
-		 name.c_str ());
+		 styled_string (function_name_style.style (),
+				name.c_str ()));
 	}
       else if (stop_stack_dummy == STOP_NONE)
 	{
@@ -1883,9 +1892,10 @@ will be abandoned."),
 	  error (_("\
 The program being debugged stopped while in a function called from GDB.\n\
 Evaluation of the expression containing the function\n\
-(%s) will be abandoned.\n\
+(%ps) will be abandoned.\n\
 When the function is done executing, GDB will silently stop."),
-		 name.c_str ());
+		 styled_string (function_name_style.style (),
+				name.c_str ()));
 	}
 
     }

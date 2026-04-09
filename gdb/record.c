@@ -23,6 +23,7 @@
 #include "observable.h"
 #include "inferior.h"
 #include "gdbsupport/common-utils.h"
+#include "cli/cli-style.h"
 #include "cli/cli-utils.h"
 #include "disasm.h"
 #include "interps.h"
@@ -87,8 +88,9 @@ record_preopen (void)
 {
   /* Check if a record target is already running.  */
   if (find_record_target () != NULL)
-    error (_("The process is already being recorded.  Use \"record stop\" to "
-	     "stop recording first."));
+    error (_("The process is already being recorded.  Use \"%ps\" to "
+	     "stop recording first."),
+	   styled_string (command_style.style (), "record stop"));
 }
 
 /* See record.h.  */

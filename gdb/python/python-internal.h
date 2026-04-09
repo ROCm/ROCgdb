@@ -59,6 +59,7 @@
 #include <Python.h>
 #include <frameobject.h>
 #include "py-ref.h"
+#include "py-obj-type.h"
 
 static_assert (PY_VERSION_HEX >= 0x03040000);
 
@@ -1126,12 +1127,13 @@ gdbpy_type_ready (PyTypeObject *type, PyObject *mod = nullptr)
 {
   if (PyType_Ready (type) < 0)
     return -1;
+  const char *tp_name = gdb_py_tp_name (type);
   if (mod == nullptr)
     {
-      gdb_assert (startswith (type->tp_name, "gdb."));
+      gdb_assert (startswith (tp_name, "gdb."));
       mod = gdb_module;
     }
-  const char *dot = strrchr (type->tp_name, '.');
+  const char *dot = strrchr (tp_name, '.');
   gdb_assert (dot != nullptr);
   return gdb_pymodule_addobject (mod, dot + 1, (PyObject *) type);
 }

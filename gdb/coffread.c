@@ -27,6 +27,7 @@
 #include "target.h"
 #include "dwarf2/public.h"
 #include "coff-pe-read.h"
+#include "cli/cli-style.h"
 
 /* Simplified internal version of coff symbol table information.  */
 
@@ -324,7 +325,8 @@ coff_reader::symfile_read (symfile_add_flags symfile_flags)
   gdb::unique_xmalloc_ptr<char> stringtab_storage;
   val = init_stringtab (stringtab_offset, &stringtab_storage);
   if (val < 0)
-    error (_("\"%s\": can't get string table"), filename);
+    error (_("\"%ps\": can't get string table"),
+	   styled_string (file_name_style.style (), filename));
 
   read_minsyms (symtab_offset, num_symbols);
 
@@ -386,8 +388,10 @@ coff_reader::symtab_read (minimal_symbol_reader &reader,
   /* Position to read the symbol table.  */
   val = bfd_seek (symfile_bfd, symtab_offset, 0);
   if (val < 0)
-    error (_("Error reading symbols from %s: %s"),
-	   objfile_name (coffread_objfile), bfd_errmsg (bfd_get_error ()));
+    error (_("Error reading symbols from %ps: %s"),
+	   styled_string (file_name_style.style (),
+			  objfile_name (coffread_objfile)),
+	   bfd_errmsg (bfd_get_error ()));
 
   while (symnum < nsyms)
     {
@@ -530,7 +534,9 @@ coff_reader::read_one_sym (struct coff_symbol *cs)
 
   bytes = bfd_read (temp_sym, local_symesz, symfile_bfd);
   if (bytes != local_symesz)
-    error (_("%s: error reading symbols"), objfile_name (coffread_objfile));
+    error (_("%ps: error reading symbols"),
+	   styled_string (file_name_style.style (),
+			  objfile_name (coffread_objfile)));
   bfd_coff_swap_sym_in (symfile_bfd, temp_sym, &sym);
   cs->c_naux = sym.n_numaux & 0xff;
   if (cs->c_naux >= 1)
@@ -540,8 +546,9 @@ coff_reader::read_one_sym (struct coff_symbol *cs)
 	{
 	  bytes = bfd_read (temp_aux, local_auxesz, symfile_bfd);
 	  if (bytes != local_auxesz)
-	    error (_("%s: error reading symbols"),
-		   objfile_name (coffread_objfile));
+	    error (_("%ps: error reading symbols"),
+		   styled_string (file_name_style.style (),
+				  objfile_name (coffread_objfile)));
 	}
     }
   cs->c_name = getsymname (&sym);

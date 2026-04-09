@@ -32,6 +32,7 @@
 #include "target-descriptions.h"
 #include "gdbsupport/pathstuff.h"
 #include <algorithm>
+#include "cli/cli-style.h"
 
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
@@ -123,8 +124,9 @@ tfile_start (struct trace_file_writer *self, const char *filename)
   writer->pathname = gdb_rl_tilde_expand (filename).release ();
   writer->fp = gdb_fopen_cloexec (writer->pathname, "wb").release ();
   if (writer->fp == NULL)
-    error (_("Unable to open file '%s' for saving trace data (%s)"),
-	   writer->pathname, safe_strerror (errno));
+    error (_("Unable to open file '%ps' for saving trace data (%s)"),
+	   styled_string (file_name_style.style (), writer->pathname),
+	   safe_strerror (errno));
 }
 
 /* This is the implementation of trace_file_write_ops method

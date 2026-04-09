@@ -1141,7 +1141,8 @@ set_per_command_cmd (const char *args, int from_tty)
 
   val = parse_cli_boolean_value (args);
   if (val < 0)
-    error (_("Bad value for 'mt set per-command no'."));
+    error (_("Bad value for \"%ps\"."),
+	   styled_string (command_style.style (), "mt set per-command no"));
 
   for (list = per_command_setlist; list != NULL; list = list->next)
     if (list->var->type () == var_boolean)

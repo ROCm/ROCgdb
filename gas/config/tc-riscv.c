@@ -4748,7 +4748,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
 	  && S_GET_VALUE (fixP->fx_subsy)
 	     == fixP->fx_frag->fr_address + fixP->fx_where)
 	{
-	  fixP->fx_r_type = BFD_RELOC_RISCV_32_PCREL;
+	  fixP->fx_r_type = BFD_RELOC_32_PCREL;
 	  fixP->fx_subsy = NULL;
 	  break;
 	}

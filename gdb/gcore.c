@@ -39,6 +39,7 @@
 #include "gdbsupport/scope-exit.h"
 #include "gdb/finish-thread-state.h"
 #include "auxv.h"
+#include "cli/cli-style.h"
 
 /* To generate sparse cores, we look at the data to write in chunks of
    this size when considering whether to skip the write.  Only if we
@@ -69,7 +70,8 @@ create_gcore_bfd (const char *filename)
   gdb_bfd_ref_ptr obfd (gdb_bfd_openw (filename, default_gcore_target ()));
 
   if (obfd == NULL)
-    error (_("Failed to open '%s' for output."), filename);
+    error (_("Failed to open '%ps' for output."),
+	   styled_string (file_name_style.style (), filename));
   bfd_set_format (obfd.get (), bfd_core);
   bfd_set_arch_mach (obfd.get (), default_gcore_arch (), 0);
   return obfd;
@@ -96,8 +98,9 @@ write_gcore_file_1 (bfd *obfd)
 						 | SEC_READONLY
 						 | SEC_ALLOC);
   if (note_sec == NULL)
-    error (_("Failed to create 'note' section for corefile: %s"),
-	   bfd_errmsg (bfd_get_error ()));
+    error (_("Failed to create 'note' section for corefile: %ps"),
+	   styled_string (file_name_style.style (),
+			  bfd_errmsg (bfd_get_error ())));
 
   bfd_set_section_vma (note_sec, 0);
   bfd_set_section_alignment (note_sec, 0);

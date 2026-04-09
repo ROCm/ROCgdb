@@ -48,6 +48,7 @@
 #include "block.h"
 #include "type-stack.h"
 #include "expop.h"
+#include "cli/cli-style.h"
 
 #define parse_type(ps) builtin_type (ps->gdbarch ())
 #define parse_d_type(ps) builtin_d_type (ps->gdbarch ())
@@ -468,7 +469,8 @@ PrimaryExpression:
 			pstate->push_new<var_msym_value_operation> (msymbol);
 		      else if (!current_program_space->has_full_symbols ()
 			       && !current_program_space->has_partial_symbols ())
-			error (_("No symbol table is loaded.  Use the \"file\" command"));
+			error (_("No symbol table is loaded.  Use the \"%ps\" command"),
+			       styled_string (command_style.style (), "file"));
 		      else
 			error (_("No symbol \"%s\" in current context."),
 			       copy.c_str ());

@@ -28509,6 +28509,7 @@ fi
     # do except assume that the compiler will be able to find those files.
     python_includes=
     python_libs=
+    python_prefix=
     have_python_config=no
   fi
 
@@ -28745,6 +28746,7 @@ else
 fi
 
 
+
 # Check whether to build GDB against Python limited C API.
 # Check whether --enable-py-limited-api was given.
 if test "${enable_py_limited_api+set}" = set; then :
@@ -28763,13 +28765,48 @@ fi
 
 
 if test "$enable_py_limited_api" = yes; then
-  # The minimal Python limited API version is currently set to 3.11 for the
-  # support of PyBuffer_FillInfo and PyBuffer_Release.
-  # The choice of the minimal version for the Python limited API won't be frozen
-  # until the end of the migration.
+  # The minimal Python limited API version is currently set to 3.14 for the
+  # support of Py_TYPE().
+  # The choice of the minimal version for the Python limited API won't be
+  # frozen until the end of the migration.
+  old_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS $PYTHON_CFLAGS"
+  old_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$CPPFLAGS $PYTHON_CPPFLAGS"
+  old_LIBS="$LIBS"
+  LIBS="$LIBS $PYTHON_LIBS"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <Python.h>
+#ifndef PY_VERSION_HEX
+#error "PY_VERSION_HEX is not defined"
+#endif
+#if PY_VERSION_HEX < 0x030e0000
+#error "Python limited API support requires at least Python version 3.14"
+#endif
 
-$as_echo "#define Py_LIMITED_API 0x030b0000" >>confdefs.h
+int
+main ()
+{
 
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+$as_echo "#define Py_LIMITED_API 0x030e0000" >>confdefs.h
+
+
+else
+
+      as_fn_error $? "Python limited API support requires at least Python version 3.14" "$LINENO" 5
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CFLAGS="$old_CFLAGS"
+  CPPFLAGS="$old_CPPFLAGS"
+  LIBS="$old_LIBS"
 fi
 
 # -------------------- #

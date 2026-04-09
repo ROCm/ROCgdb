@@ -1108,7 +1108,8 @@ proc define_if_without_arg_test {} {
 	    }
 	}
 
-	gdb_test "$cmd" "$cmd command requires an argument." "type $cmd without args"
+	gdb_test "$cmd" "\"$cmd\" command requires an argument." \
+	    "type $cmd without args"
     }
 }
 

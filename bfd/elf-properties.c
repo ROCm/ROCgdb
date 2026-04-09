@@ -670,7 +670,12 @@ elf_write_gnu_properties (struct bfd_link_info *info,
       size += datasz;
 
       /* Align each property.  */
-      size = (size + (align_size - 1)) & ~ (align_size - 1);
+      datasz = -size & (align_size - 1);
+      if (datasz)
+	{
+	  memset (contents + size, 0, datasz);
+	  size += datasz;
+	}
     }
 }
 
@@ -933,7 +938,7 @@ _bfd_elf_link_setup_gnu_properties (struct bfd_link_info *info)
 
       /* Update .note.gnu.property section now.  */
       sec->size = size;
-      contents = (bfd_byte *) bfd_zalloc (first_pbfd, size);
+      contents = bfd_alloc (first_pbfd, size);
 
       elf_write_gnu_properties (info, first_pbfd, contents, list, size,
 				align_size);

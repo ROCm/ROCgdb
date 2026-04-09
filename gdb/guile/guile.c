@@ -23,6 +23,7 @@
 #include "breakpoint.h"
 #include "cli/cli-cmds.h"
 #include "cli/cli-script.h"
+#include "cli/cli-style.h"
 #include "cli/cli-utils.h"
 #include "command.h"
 #include "top.h"
@@ -256,7 +257,8 @@ gdbscm_eval_from_control_command
   char *script;
 
   if (cmd->body_list_1 != nullptr)
-    error (_("Invalid \"guile\" block structure."));
+    error (_("Invalid \"%ps\" block structure."),
+	   styled_string (command_style.style (), "guile"));
 
   script = compute_scheme_string (cmd->body_list_0.get ());
   gdb::unique_xmalloc_ptr<char> msg = gdbscm_safe_eval_string (script, 0);

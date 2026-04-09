@@ -522,7 +522,8 @@ blpy_repr (PyObject *self)
       if (++written_symbols < len)
 	str += ", ";
     }
-  return PyUnicode_FromFormat ("<%s %s {%s}>", Py_TYPE (self)->tp_name,
+  return PyUnicode_FromFormat ("<%s %s {%s}>",
+			       gdbpy_py_obj_tp_name (self),
 			       name, str.c_str ());
 }
 

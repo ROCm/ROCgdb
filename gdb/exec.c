@@ -462,10 +462,9 @@ exec_file_attach (const char *filename, int from_tty)
       current_program_space->set_exec_bfd (std::move (temp));
 
       if (!current_program_space->exec_bfd ())
-	{
-	  error (_("\"%s\": could not open as an executable file: %s."),
-		 scratch_pathname, bfd_errmsg (bfd_get_error ()));
-	}
+	error (_("\"%ps\": could not open as an executable file: %s."),
+	       styled_string (file_name_style.style (), scratch_pathname),
+	       bfd_errmsg (bfd_get_error ()));
 
       /* gdb_realpath_keepfile resolves symlinks on the local
 	 filesystem and so cannot be used for "target:" files.  */
@@ -485,7 +484,8 @@ exec_file_attach (const char *filename, int from_tty)
 	  /* Make sure to close exec_bfd, or else "run" might try to use
 	     it.  */
 	  current_program_space->exec_close ();
-	  error (_("\"%s\": not in executable format: %s"), scratch_pathname,
+	  error (_("\"%ps\": not in executable format: %s"),
+		 styled_string (file_name_style.style (), scratch_pathname),
 		 gdb_bfd_errmsg (bfd_get_error (), matching).c_str ());
 	}
 
@@ -523,7 +523,9 @@ void
 no_executable_specified_error ()
 {
   error (_("No executable file specified.\n\
-Use the \"file\" or \"exec-file\" command."));
+Use the \"%ps\" or \"%ps\" command."),
+	 styled_string (command_style.style (), "file"),
+	 styled_string (command_style.style (), "exec-file"));
 }
 
 /*  Process the first arg in ARGS as the new exec file.

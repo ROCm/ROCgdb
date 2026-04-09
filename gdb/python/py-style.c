@@ -267,7 +267,7 @@ stylepy_init_from_parts (PyObject *self, PyObject *fg, PyObject *bg,
       PyErr_Format
 	(PyExc_TypeError,
 	 _("'foreground' argument must be gdb.Color or None, not %s."),
-	 Py_TYPE (fg)->tp_name);
+	 gdbpy_py_obj_tp_name (fg));
       return -1;
     }
 
@@ -276,7 +276,7 @@ stylepy_init_from_parts (PyObject *self, PyObject *fg, PyObject *bg,
       PyErr_Format
 	(PyExc_TypeError,
 	 _("'background' argument must be gdb.Color or None, not %s."),
-	 Py_TYPE (bg)->tp_name);
+	 gdbpy_py_obj_tp_name (bg));
       return -1;
     }
 
@@ -483,7 +483,7 @@ stylepy_set_foreground (PyObject *self, PyObject *newvalue, void *closure)
   if (!gdbpy_is_color (newvalue))
     {
       PyErr_Format (PyExc_TypeError, _("value must be gdb.Color, not %s"),
-		    Py_TYPE (newvalue)->tp_name);
+		    gdbpy_py_obj_tp_name (newvalue));
       return -1;
     }
 
@@ -541,7 +541,7 @@ stylepy_set_background (PyObject *self, PyObject *newvalue, void *closure)
   if (!gdbpy_is_color (newvalue))
     {
       PyErr_Format (PyExc_TypeError, _("value must be gdb.Color, not %s"),
-		    Py_TYPE (newvalue)->tp_name);
+		    gdbpy_py_obj_tp_name (newvalue));
       return -1;
     }
 
@@ -623,7 +623,7 @@ stylepy_set_intensity (PyObject *self, PyObject *newvalue, void *closure)
       PyErr_Format
 	(PyExc_TypeError,
 	 _("value must be a Long (a gdb.INTENSITY constant), not %s"),
-	 Py_TYPE (newvalue)->tp_name);
+	 gdbpy_py_obj_tp_name (newvalue));
       return -1;
     }
 
@@ -733,12 +733,12 @@ stylepy_repr (PyObject *self)
 
   if (style_obj->style_name == nullptr)
     return PyUnicode_FromFormat ("<%s fg=%s, bg=%s, intensity=%s>",
-				 Py_TYPE (self)->tp_name,
+				 gdbpy_py_obj_tp_name (self),
 				 fg_str.get (), bg_str.get (),
 				 intensity_str);
   else
     return PyUnicode_FromFormat ("<%s name='%s', fg=%s, bg=%s, intensity=%s>",
-				 Py_TYPE (self)->tp_name,
+				 gdbpy_py_obj_tp_name (self),
 				 style_obj->style_name, fg_str.get (),
 				 bg_str.get (), intensity_str);
 }

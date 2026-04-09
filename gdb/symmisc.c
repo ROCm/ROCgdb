@@ -499,7 +499,8 @@ maintenance_print_symbols (const char *args, int from_tty)
 	}
 
       if (source_arg != NULL && !found)
-	error (_("No symtab for source file: %s"), source_arg);
+	error (_("No symtab for source file: %ps"),
+	       styled_string (file_name_style.style (), source_arg));
     }
 }
 
