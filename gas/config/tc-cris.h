@@ -79,7 +79,7 @@ extern int md_cris_force_relocation (struct fix *);
    || (RTYPE) == BFD_RELOC_CRIS_32_GOTPLT		\
    || (RTYPE) == BFD_RELOC_CRIS_32_GOTREL		\
    || (RTYPE) == BFD_RELOC_CRIS_32_PLT_GOTREL		\
-   || (RTYPE) == BFD_RELOC_CRIS_32_PLT_PCREL)
+   || (RTYPE) == BFD_RELOC_32_PLT_PCREL)
 
 /* Make sure we don't resolve fixups for which we want to emit dynamic
    relocations.  */

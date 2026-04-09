@@ -3932,8 +3932,7 @@ enum bfd_reloc_code_real
   BFD_RELOC_NS32K_DISP_16_PCREL,
   BFD_RELOC_NS32K_DISP_32_PCREL,
 
-  /* PDP11 relocations.  */
-  BFD_RELOC_PDP11_DISP_8_PCREL,
+  /* PDP11 relocation(s).  */
   BFD_RELOC_PDP11_DISP_6_PCREL,
 
   /* Picojava relocs.  Not all of these appear in object files.  */
@@ -3941,8 +3940,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_PJ_CODE_LO16,
   BFD_RELOC_PJ_CODE_DIR16,
   BFD_RELOC_PJ_CODE_DIR32,
-  BFD_RELOC_PJ_CODE_REL16,
-  BFD_RELOC_PJ_CODE_REL32,
 
   /* Power(rs6000) and PowerPC relocations.  */
   BFD_RELOC_PPC_B26,
@@ -5345,7 +5342,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_RISCV_SET8,
   BFD_RELOC_RISCV_SET16,
   BFD_RELOC_RISCV_SET32,
-  BFD_RELOC_RISCV_32_PCREL,
   BFD_RELOC_RISCV_SET_ULEB128,
   BFD_RELOC_RISCV_SUB_ULEB128,
 
@@ -5885,10 +5881,6 @@ enum bfd_reloc_code_real
   /* 32-bit offset to symbol with PLT entry, relative to GOT.  */
   BFD_RELOC_CRIS_32_PLT_GOTREL,
 
-  /* 32-bit offset to symbol with PLT entry, relative to this
-     relocation.  */
-  BFD_RELOC_CRIS_32_PLT_PCREL,
-
   /* Relocs used in TLS code for CRIS.  */
   BFD_RELOC_CRIS_32_GOT_GD,
   BFD_RELOC_CRIS_16_GOT_GD,
@@ -5980,8 +5972,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_MSP430_10_PCREL,
   BFD_RELOC_MSP430_16_PCREL,
   BFD_RELOC_MSP430_16,
-  BFD_RELOC_MSP430_16_PCREL_BYTE,
-  BFD_RELOC_MSP430_16_BYTE,
   BFD_RELOC_MSP430_2X_PCREL,
   BFD_RELOC_MSP430_RL_PCREL,
   BFD_RELOC_MSP430_ABS8,
@@ -7260,7 +7250,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_LARCH_TLS_LD_HI20,
   BFD_RELOC_LARCH_TLS_GD_PC_HI20,
   BFD_RELOC_LARCH_TLS_GD_HI20,
-  BFD_RELOC_LARCH_32_PCREL,
   BFD_RELOC_LARCH_RELAX,
   BFD_RELOC_LARCH_DELETE,
   BFD_RELOC_LARCH_ALIGN,
@@ -7270,7 +7259,6 @@ enum bfd_reloc_code_real
   BFD_RELOC_LARCH_SUB6,
   BFD_RELOC_LARCH_ADD_ULEB128,
   BFD_RELOC_LARCH_SUB_ULEB128,
-  BFD_RELOC_LARCH_64_PCREL,
   BFD_RELOC_LARCH_CALL36,
   BFD_RELOC_LARCH_TLS_DESC_PC_HI20,
   BFD_RELOC_LARCH_TLS_DESC_PC_LO12,

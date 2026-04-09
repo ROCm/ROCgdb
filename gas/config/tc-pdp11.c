@@ -268,7 +268,7 @@ md_apply_fix (fixS *fixP,
       mask = 0xffffffff;
       shift = 0;
       break;
-    case BFD_RELOC_PDP11_DISP_8_PCREL:
+    case BFD_RELOC_8_PCREL:
       mask = 0x00ff;
       shift = 1;
       break;
@@ -790,7 +790,7 @@ md_assemble (char *instruction_string)
 	new_pointer = parse_expression (str, &op1);
 	op1.code = 0;
 	op1.reloc.pc_rel = 1;
-	op1.reloc.type = BFD_RELOC_PDP11_DISP_8_PCREL;
+	op1.reloc.type = BFD_RELOC_8_PCREL;
 	if (op1.reloc.exp.X_op != O_symbol)
 	  {
 	    op1.error = _("Symbol expected");

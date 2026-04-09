@@ -291,7 +291,7 @@ target_is_430xv2 (void)
        : ((OP).vshift == 1				\
 	  ? BFD_RELOC_MSP430_ABS_HI16 : BFD_RELOC_16))	\
    : ((imm_op || byte_op)				\
-      ? BFD_RELOC_MSP430_16_BYTE : BFD_RELOC_MSP430_16))
+      ? BFD_RELOC_16 : BFD_RELOC_MSP430_16))
 
 /* Generate a 16-bit pc-relative relocation.
    For the 430X we generate a relocation without linker range checking.
@@ -302,7 +302,7 @@ target_is_430xv2 (void)
   (target_is_430x ()					     \
    ? BFD_RELOC_MSP430X_PCR16				     \
    : (imm_op || byte_op)				     \
-   ? BFD_RELOC_MSP430_16_PCREL_BYTE : BFD_RELOC_MSP430_16_PCREL)
+   ? BFD_RELOC_16_PCREL : BFD_RELOC_MSP430_16_PCREL)
 
 /* Profiling capability:
    It is a performance hit to use gcc's profiling approach for this tiny target.
@@ -4523,7 +4523,7 @@ md_apply_fix (fixS * fixp, valueT * valuep, segT seg)
 			  _("odd address operand: %ld"), value);
 	  /* Fall through.  */
 
-	case BFD_RELOC_MSP430_16_PCREL_BYTE:
+	case BFD_RELOC_16_PCREL:
 	  /* Nothing to be corrected here.  */
 	  if (value < -32768 || value > 65536)
 	    as_bad_where (fixp->fx_file, fixp->fx_line,
@@ -4533,7 +4533,6 @@ md_apply_fix (fixS * fixp, valueT * valuep, segT seg)
 	case BFD_RELOC_MSP430X_ABS16:
 	case BFD_RELOC_MSP430_16:
 	case BFD_RELOC_16:
-	case BFD_RELOC_MSP430_16_BYTE:
 	  value &= 0xffff;	/* Get rid of extended sign.  */
 	  bfd_putl16 (value, where);
 	  break;

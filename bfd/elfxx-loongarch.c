@@ -1389,7 +1389,7 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
 	 0,					/* src_mask */
 	 0xffffffff,				/* dst_mask */
 	 true,					/* pcrel_offset */
-	 BFD_RELOC_LARCH_32_PCREL,		/* bfd_reloc_code_real_type */
+	 BFD_RELOC_32_PCREL,			/* bfd_reloc_code_real_type */
 	 reloc_sign_bits,			/* adjust_reloc_bits */
 	 NULL),					/* larch_reloc_type_name */
 
@@ -1581,7 +1581,7 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
 	 0,					/* src_mask */
 	 0xffffffffffffffff,			/* dst_mask */
 	 true,					/* pcrel_offset */
-	 BFD_RELOC_LARCH_64_PCREL,		/* bfd_reloc_code_real_type */
+	 BFD_RELOC_64_PCREL,			/* bfd_reloc_code_real_type */
 	 NULL,					/* adjust_reloc_bits */
 	 NULL),					/* larch_reloc_type_name */
 
@@ -2144,10 +2144,10 @@ loongarch_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
   BFD_ASSERT (ARRAY_SIZE (loongarch_howto_table) == R_LARCH_count);
 
   /* Fast search for new reloc types.  */
-  if (BFD_RELOC_LARCH_B16 <= code && code < BFD_RELOC_LARCH_RELAX)
+  if (BFD_RELOC_LARCH_B16 <= code && code <= BFD_RELOC_LARCH_TLS_GD_HI20)
     {
-      BFD_ASSERT (BFD_RELOC_LARCH_RELAX - BFD_RELOC_LARCH_B16
-		  == R_LARCH_RELAX - R_LARCH_B16);
+      BFD_ASSERT (BFD_RELOC_LARCH_TLS_GD_HI20 - BFD_RELOC_LARCH_B16
+		  == R_LARCH_TLS_GD_HI20 - R_LARCH_B16);
       loongarch_reloc_howto_type *ht;
       ht = &loongarch_howto_table[code - BFD_RELOC_LARCH_B16 + R_LARCH_B16];
       BFD_ASSERT (ht->bfd_type == code);

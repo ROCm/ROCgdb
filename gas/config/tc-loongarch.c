@@ -865,8 +865,10 @@ loongarch_args_parser_can_match_arg_helper (char esc_ch1, char esc_ch2,
 		      _("not support reloc bit-field\nfmt: %c%c %s\nargs: %s"),
 		      esc_ch1, esc_ch2, bit_field, arg);
 
-	  if (ip->reloc_info[0].type >= BFD_RELOC_LARCH_B16
-	      && ip->reloc_info[0].type <= BFD_RELOC_LARCH_TLS_DESC_PCADD_LO12)
+	  if ((ip->reloc_info[0].type >= BFD_RELOC_LARCH_B16
+	       && ip->reloc_info[0].type <= BFD_RELOC_LARCH_TLS_DESC_PCADD_LO12)
+	      || ip->reloc_info[0].type == BFD_RELOC_32_PCREL
+	      || ip->reloc_info[0].type == BFD_RELOC_64_PCREL)
 	    {
 	      /* As we compact stack-relocs, it is no need for pop operation.
 		 But break out until here in order to check the imm field.
@@ -1714,10 +1716,10 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  switch (fixP->fx_r_type)
 	    {
 	    case BFD_RELOC_64:
-	      fixP->fx_r_type = BFD_RELOC_LARCH_64_PCREL;
+	      fixP->fx_r_type = BFD_RELOC_64_PCREL;
 	      break;
 	    case BFD_RELOC_32:
-	      fixP->fx_r_type = BFD_RELOC_LARCH_32_PCREL;
+	      fixP->fx_r_type = BFD_RELOC_32_PCREL;
 	      break;
 	    default:
 	      break;
@@ -1736,7 +1738,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  && S_GET_VALUE (fixP->fx_subsy)
 	  == fixP->fx_frag->fr_address + fixP->fx_where)
 	{
-	  fixP->fx_r_type = BFD_RELOC_LARCH_32_PCREL;
+	  fixP->fx_r_type = BFD_RELOC_32_PCREL;
 	  fixP->fx_subsy = NULL;
 	  break;
 	}
