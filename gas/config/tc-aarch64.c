@@ -6780,7 +6780,6 @@ parse_operands (char *str, const aarch64_opcode *opcode)
   int i;
   char *backtrack_pos = 0;
   const enum aarch64_opnd *operands = opcode->operands;
-  const uint64_t flags = opcode->flags;
 
   clear_error ();
   skip_whitespace (str);
@@ -7210,22 +7209,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 		goto failure;
 
 	      po_imm_nc_or_fail ();
-	      if (flags & F_OPD_NARROW)
-		{
-		  if ((operands[i] == AARCH64_OPND_CRn)
-		      && (val < 8 || val > 9))
-		    {
-		      set_fatal_syntax_error (_(N_ ("C8 - C9 expected")));
-		      goto failure;
-		    }
-		  else if ((operands[i] == AARCH64_OPND_CRm)
-			   && (val > 7))
-		    {
-		      set_fatal_syntax_error (_(N_ ("C0 - C7 expected")));
-		      goto failure;
-		    }
-		}
-	      else if (val > 15)
+	      if (val > 15)
 		{
 		  set_fatal_syntax_error (_(N_ ("C0 - C15 expected")));
 		  goto failure;

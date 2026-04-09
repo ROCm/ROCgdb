@@ -1497,11 +1497,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
    to be optional, then we also implicitly specify (N+1)th operand to also be
    optional.  */
 #define F_OPD_PAIR_OPT (1ULL << 32)
-/* This instruction does not allow the full range of values that the
-   width of fields in the assembler instruction would theoretically
-   allow.  This impacts the constraints on assembly but yields no
-   impact on disassembly.  */
-#define F_OPD_NARROW (1ULL << 33)
+
 /* For the instruction with size[22:23] field.  */
 #define F_OPD_SIZE (1ULL << 34)
 /* RCPC3 instruction has the field of 'size'.  */
@@ -1549,7 +1545,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
 /* As above, plus PN registers.  */
 #define F_INVALID_IMM_SYMS_3 (3ULL << 42)
 
-/* Next bit is 44.  */
+/* Next bit is 44, and 33 is also unused.  */
 
 /* Instruction constraints.  */
 /* This instruction has a predication constraint on the instruction at PC+4.  */
