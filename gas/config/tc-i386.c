@@ -1403,8 +1403,8 @@ gotrel[] =
     { STRING_COMMA_LEN ("GOTPLT"),   { _dummy_first_bfd_reloc_code_real,
 				       BFD_RELOC_X86_64_GOTPLT64 },
     OPERAND_TYPE_IMM64_DISP64, true },
-    { STRING_COMMA_LEN ("GOTOFF"),   { BFD_RELOC_386_GOTOFF,
-				       BFD_RELOC_X86_64_GOTOFF64 },
+    { STRING_COMMA_LEN ("GOTOFF"),   { BFD_RELOC_32_GOTOFF,
+				       BFD_RELOC_64_GOTOFF },
     OPERAND_TYPE_IMM64_DISP64, true },
     { STRING_COMMA_LEN ("GOTPCREL"), { _dummy_first_bfd_reloc_code_real,
 				       BFD_RELOC_X86_64_GOTPCREL },
@@ -4099,7 +4099,7 @@ tc_i386_fix_adjustable (fixS *fixP)
      for size relocations.  */
   if (fixP->fx_r_type == BFD_RELOC_SIZE32
       || fixP->fx_r_type == BFD_RELOC_SIZE64
-      || fixP->fx_r_type == BFD_RELOC_386_GOTOFF
+      || fixP->fx_r_type == BFD_RELOC_32_GOTOFF
       || fixP->fx_r_type == BFD_RELOC_386_GOT32
       || fixP->fx_r_type == BFD_RELOC_386_GOT32X
       || fixP->fx_r_type == BFD_RELOC_386_TLS_GD
@@ -4129,7 +4129,7 @@ tc_i386_fix_adjustable (fixS *fixP)
       || fixP->fx_r_type == BFD_RELOC_X86_64_CODE_6_GOTTPOFF
       || fixP->fx_r_type == BFD_RELOC_X86_64_TPOFF32
       || fixP->fx_r_type == BFD_RELOC_X86_64_TPOFF64
-      || fixP->fx_r_type == BFD_RELOC_X86_64_GOTOFF64
+      || fixP->fx_r_type == BFD_RELOC_64_GOTOFF
       || fixP->fx_r_type == BFD_RELOC_X86_64_GOT64
       || fixP->fx_r_type == BFD_RELOC_X86_64_GOTPC32_TLSDESC
       || fixP->fx_r_type == BFD_RELOC_X86_64_CODE_4_GOTPC32_TLSDESC
@@ -15079,9 +15079,9 @@ i386_finalize_displacement (segT exp_seg ATTRIBUTE_UNUSED, expressionS *exp,
   /* We do this to make sure that the section symbol is in
      the symbol table.  We will ultimately change the relocation
      to be relative to the beginning of the section.  */
-  if (i.reloc[this_operand] == BFD_RELOC_386_GOTOFF
+  if (i.reloc[this_operand] == BFD_RELOC_32_GOTOFF
       || i.reloc[this_operand] == BFD_RELOC_X86_64_GOTPCREL
-      || i.reloc[this_operand] == BFD_RELOC_X86_64_GOTOFF64)
+      || i.reloc[this_operand] == BFD_RELOC_64_GOTOFF)
     {
       if (exp->X_op != O_symbol)
 	goto inv_disp;
@@ -15094,7 +15094,7 @@ i386_finalize_displacement (segT exp_seg ATTRIBUTE_UNUSED, expressionS *exp,
       exp->X_op_symbol = GOT_symbol;
       if (i.reloc[this_operand] == BFD_RELOC_X86_64_GOTPCREL)
 	i.reloc[this_operand] = BFD_RELOC_32_PCREL;
-      else if (i.reloc[this_operand] == BFD_RELOC_X86_64_GOTOFF64)
+      else if (i.reloc[this_operand] == BFD_RELOC_64_GOTOFF)
 	i.reloc[this_operand] = BFD_RELOC_64;
       else
 	i.reloc[this_operand] = BFD_RELOC_32;
@@ -18414,9 +18414,9 @@ i386_validate_fix (fixS *fixp)
 	  else
 	    {
 	      if (!object_64bit)
-		fixp->fx_r_type = BFD_RELOC_386_GOTOFF;
+		fixp->fx_r_type = BFD_RELOC_32_GOTOFF;
 	      else
-		fixp->fx_r_type = BFD_RELOC_X86_64_GOTOFF64;
+		fixp->fx_r_type = BFD_RELOC_64_GOTOFF;
 	    }
 	  fixp->fx_subsy = 0;
 	}
@@ -18520,7 +18520,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
     case BFD_RELOC_386_PLT32:
     case BFD_RELOC_386_GOT32:
     case BFD_RELOC_386_GOT32X:
-    case BFD_RELOC_386_GOTOFF:
+    case BFD_RELOC_32_GOTOFF:
     case BFD_RELOC_386_GOTPC:
     case BFD_RELOC_386_TLS_GD:
     case BFD_RELOC_386_TLS_LDM:
@@ -18542,7 +18542,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
     case BFD_RELOC_X86_64_CODE_6_GOTTPOFF:
     case BFD_RELOC_X86_64_TPOFF32:
     case BFD_RELOC_X86_64_TPOFF64:
-    case BFD_RELOC_X86_64_GOTOFF64:
+    case BFD_RELOC_64_GOTOFF:
     case BFD_RELOC_X86_64_GOTPC32:
     case BFD_RELOC_X86_64_GOT64:
     case BFD_RELOC_X86_64_GOTPCREL64:
@@ -18657,7 +18657,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 	  case BFD_RELOC_X86_64_DTPOFF64:
 	  case BFD_RELOC_X86_64_TPOFF64:
 	  case BFD_RELOC_64_PCREL:
-	  case BFD_RELOC_X86_64_GOTOFF64:
+	  case BFD_RELOC_64_GOTOFF:
 	  case BFD_RELOC_X86_64_GOT64:
 	  case BFD_RELOC_X86_64_GOTPCREL64:
 	  case BFD_RELOC_X86_64_GOTPC64:

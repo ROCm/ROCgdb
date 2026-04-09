@@ -211,7 +211,7 @@ parse_gotoff_hi16 (CGEN_CPU_DESC cd,
       bfd_vma value;
 
       *strp += 11;
-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_LM32_GOTOFF_HI16,
+      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_HI16_GOTOFF,
                                    & result_type, & value);
       if (**strp != ')')
         return _("missing `)'");
@@ -241,7 +241,7 @@ parse_gotoff_lo16 (CGEN_CPU_DESC cd,
       bfd_vma value;
 
       *strp += 11;
-      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_LM32_GOTOFF_LO16,
+      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_LO16_GOTOFF,
                                    &result_type, &value);
       if (**strp != ')')
         return _("missing `)'");

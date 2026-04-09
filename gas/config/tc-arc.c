@@ -542,7 +542,7 @@ static const struct arc_reloc_op_tag
 }
   arc_reloc_op[] =
 {
-  DEF (gotoff,  BFD_RELOC_ARC_GOTOFF,		1),
+  DEF (gotoff,  BFD_RELOC_32_GOTOFF,		1),
   DEF (gotpc,   BFD_RELOC_ARC_GOTPC32,		0),
   DEF (plt,	BFD_RELOC_32_PLT_PCREL,		0),
   DEF (sda,	DUMMY_RELOC_ARC_ENTRY,		1),
@@ -3101,7 +3101,7 @@ md_apply_fix (fixS *fixP,
       gas_assert (!fixP->fx_subsy);
       /* Fall through.  */
 
-    case BFD_RELOC_ARC_GOTOFF:
+    case BFD_RELOC_32_GOTOFF:
     case BFD_RELOC_ARC_32_ME:
     case BFD_RELOC_32_PCREL:
       md_number_to_chars_midend (fixpos, value, fixP->fx_size);

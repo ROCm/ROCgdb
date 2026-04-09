@@ -256,7 +256,7 @@ parse_ulo16 (CGEN_CPU_DESC cd,
 	{
 	  *strp += 10;
 	  errmsg = parse_symbolic_address (cd, strp, opindex,
-					   BFD_RELOC_FRV_GOTOFFLO,
+					   BFD_RELOC_LO16_GOTOFF,
 					   & result_type, & value);
 	  if (**strp != ')')
 	    return "missing ')'";
@@ -382,7 +382,7 @@ parse_uslo16 (CGEN_CPU_DESC cd,
 	{
 	  *strp += 10;
 	  errmsg = parse_symbolic_address (cd, strp, opindex,
-					   BFD_RELOC_FRV_GOTOFFLO,
+					   BFD_RELOC_LO16_GOTOFF,
 					   & result_type, & value);
 	  if (**strp != ')')
 	    return "missing ')'";
@@ -515,7 +515,7 @@ parse_uhi16 (CGEN_CPU_DESC cd,
 	{
 	  *strp += 10;
 	  errmsg = parse_symbolic_address (cd, strp, opindex,
-					   BFD_RELOC_FRV_GOTOFFHI,
+					   BFD_RELOC_HI16_GOTOFF,
 					   & result_type, & value);
 	  if (**strp != ')')
 	    return "missing ')'";

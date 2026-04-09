@@ -263,7 +263,7 @@ elf_s390_reloc_type_lookup (bfd *abfd,
       return &elf_howto_table[(int) R_390_GOTENT];
     case BFD_RELOC_16_GOTOFF:
       return &elf_howto_table[(int) R_390_GOTOFF16];
-    case BFD_RELOC_390_GOTOFF64:
+    case BFD_RELOC_64_GOTOFF:
       return &elf_howto_table[(int) R_390_GOTOFF64];
     case BFD_RELOC_390_GOTPLT12:
       return &elf_howto_table[(int) R_390_GOTPLT12];
