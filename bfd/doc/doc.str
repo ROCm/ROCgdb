@@ -148,19 +148,6 @@ variable synopsis_seen
 	copy_past_newline catstr
 	catstr
 	;
-: ENUMEQ
-	skip_past_newline
-	"@deffn {} "
-	copy_past_newline catstr catstr
-	skip_past_newline
-	;
-: ENUMEQX
-	skip_past_newline
-	"@deffnx {} "
-	copy_past_newline catstr
-	catstr
-	skip_past_newline
-	;
 : ENUMDOC
 	skip_past_newline
 	get_stuff_in_command
