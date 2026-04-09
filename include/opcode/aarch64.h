@@ -1598,16 +1598,13 @@ aarch64_opcode_subclass_p (const aarch64_opcode *opcode, uint64_t flag)
   return ((opcode->flags & F_SUBCLASS) == flag);
 }
 
-/* Deal with two possible scenarios: If F_OP_PAIR_OPT not set, as is the case
-   by default, F_OPDn_OPT must equal IDX + 1, else F_OPDn_OPT must be in range
-   [IDX, IDX + 1].  */
+/* Return whether OPCODE has an optional operand at position IDX.  */
 static inline bool
 optional_operand_p (const aarch64_opcode *opcode, unsigned int idx)
 {
-  if (opcode->flags & F_OPD_PAIR_OPT)
-    return (((opcode->flags >> 12) & 0x7) == idx
-	    || ((opcode->flags >> 12) & 0x7) == idx + 1);
-  return ((opcode->flags >> 12) & 0x7) == idx + 1;
+  unsigned int optional_idx = ((opcode->flags >> 12) & 0x7) - 1;
+  return (idx == optional_idx
+	  || ((opcode->flags & F_OPD_PAIR_OPT) && idx == optional_idx + 1));
 }
 
 static inline aarch64_insn
