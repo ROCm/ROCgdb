@@ -3218,7 +3218,7 @@ print_symbol_value_1 (FILE *file, symbolS *sym)
 	fprintf (file, " frag %p", locsym->frag);
       if (locsym->flags.resolved)
 	fprintf (file, " resolved");
-      fprintf (file, " local");
+      fprintf (file, " locsym");
     }
   else
     {
@@ -3256,7 +3256,7 @@ print_symbol_value_1 (FILE *file, symbolS *sym)
 
       if (s != undefined_section
 	  && s != expr_section)
-	fprintf (file, " %lx", (unsigned long) S_GET_VALUE (sym));
+	fprintf (file, " %"PRIx64, (uint64_t) S_GET_VALUE (sym));
     }
   else if (indent_level < max_indent_level
 	   && S_GET_SEGMENT (sym) != undefined_section)
@@ -3264,8 +3264,8 @@ print_symbol_value_1 (FILE *file, symbolS *sym)
       indent_level++;
       fprintf (file, "\n%*s<", indent_level * 4, "");
       if (sym->flags.local_symbol)
-	fprintf (file, "constant %lx",
-		 (unsigned long) ((struct local_symbol *) sym)->value);
+	fprintf (file, "constant %"PRIx64,
+		 (uint64_t) ((struct local_symbol *) sym)->value);
       else
 	print_expr_1 (file, &sym->x->value);
       fprintf (file, ">");
@@ -3399,6 +3399,16 @@ print_expr_1 (FILE *file, expressionS *exp)
       print_symbol_value_1 (file, exp->X_op_symbol);
       fprintf (file, ">");
       goto maybe_print_addnum;
+    case O_index:
+      indent_level++;
+      fprintf (file, "index\n%*s<", indent_level * 4, "");
+      if (exp->X_add_symbol != NULL)
+	print_symbol_value_1 (file, exp->X_add_symbol);
+      fprintf (file, ">\n%*s<", indent_level * 4, "");
+      print_symbol_value_1 (file, exp->X_op_symbol);
+      fprintf (file, ">");
+      indent_level--;
+      break;
     default:
       fprintf (file, "{unknown opcode %d}", (int) exp->X_op);
       break;

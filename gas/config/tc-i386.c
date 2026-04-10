@@ -15083,13 +15083,26 @@ i386_finalize_displacement (segT exp_seg ATTRIBUTE_UNUSED, expressionS *exp,
       || i.reloc[this_operand] == BFD_RELOC_X86_64_GOTPCREL
       || i.reloc[this_operand] == BFD_RELOC_64_GOTOFF)
     {
-      if (exp->X_op != O_symbol)
+      if (exp->X_op != O_symbol
+	  && exp->X_op != O_add
+	  && exp->X_op != O_subtract)
 	goto inv_disp;
 
       if (S_IS_LOCAL (exp->X_add_symbol)
 	  && S_GET_SEGMENT (exp->X_add_symbol) != undefined_section
 	  && S_GET_SEGMENT (exp->X_add_symbol) != expr_section)
 	section_symbol (S_GET_SEGMENT (exp->X_add_symbol));
+
+      if (exp->X_op != O_symbol)
+	{
+	  if (S_IS_LOCAL (exp->X_op_symbol)
+	      && S_GET_SEGMENT (exp->X_op_symbol) != undefined_section
+	      && S_GET_SEGMENT (exp->X_op_symbol) != expr_section)
+	    section_symbol (S_GET_SEGMENT (exp->X_op_symbol));
+
+	  exp->X_add_symbol = make_expr_symbol (exp);
+	}
+
       exp->X_op = O_subtract;
       exp->X_op_symbol = GOT_symbol;
       if (i.reloc[this_operand] == BFD_RELOC_X86_64_GOTPCREL)
