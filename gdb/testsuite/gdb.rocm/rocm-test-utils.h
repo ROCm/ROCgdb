@@ -44,10 +44,18 @@
   asm volatile (".if .amdgcn.gfx_generation_number < 10\n"		\
 		"  s_waitcnt 0\n"					\
 		".elseif .amdgcn.gfx_generation_number < 11\n"		\
+		/* Wait for reads and scalar ops.  */			\
+		"  s_waitcnt vmcnt(0) & lgkmcnt(0)\n"			\
+		/* Wait for vector stores.  */				\
 		"  s_waitcnt_vscnt null, 0\n"				\
 		".else\n"						\
 		"  s_wait_idle\n"					\
-		".endif")
+		".endif\n"						\
+		/* Give time for trap delivery.	 */			\
+		"  s_nop 7\n"						\
+		"  s_nop 7\n"						\
+		"  s_nop 7\n"						\
+		"  s_nop 7")
 
 /* Insert a "s_nop <n>" marker into the code.  It is better than
    an empty function that might get optimised away.  */
