@@ -1,0 +1,94 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test triggering watchpoints on device and host writes, of
+# device/vram and host/system memory.  I.e.:
+#
+# - device write vram
+# - device write system memory
+# - host write vram
+# - host write system memory
+#
+# Test all the scenarios above in combination with setting watchpoint
+# both from device or host context.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc do_test {residency set_watch_from} {
+    clean_restart
+    gdb_load $::binfile
+
+    with_rocm_gpu_lock {
+	gdb_test_no_output "set args $residency"
+
+	if {$set_watch_from == "device"} {
+	    if {![runto kern allow-pending message]} {
+		return
+	    }
+
+	    set watch_expr "-location *ptr"
+	} else {
+	    if {![runto [gdb_get_line_number "break 1 here"] allow-pending message]} {
+		return
+	    }
+
+	    set watch_expr "-location *managed_ptr"
+	}
+
+	set watch_expr_re [string_to_regexp $watch_expr]
+
+	gdb_test "watch $watch_expr" \
+	    "Hardware watchpoint $::decimal: $watch_expr_re"
+
+	# Test that the watchpoint hits from the device side.
+
+	# Set a guard breakpoint, so that if the device watchpoint
+	# doesn't fire, we don't stop at the host watchpoint access,
+	# confusing the host watchpoint test below.
+	gdb_breakpoint [gdb_get_line_number "break 2 here"]
+
+	gdb_test_multiple "continue" "hit watchpoint in kern" {
+	    -re -wrap "Hardware watchpoint $::decimal: $watch_expr_re.*Old value = 0\r\nNew value = 1\r\n($::hex in )?kern.*" {
+		pass $gdb_test_name
+	    }
+	    -re -wrap "break 2 here.*" {
+		fail $gdb_test_name
+	    }
+	}
+	gdb_test_no_output "delete \$bpnum" "delete guard breakpoint"
+
+	# Test that the watchpoint hits from the host side.  Ignore
+	# old value, in case the kernel side watchpoint failed to hit
+	# earlier.
+
+	gdb_test "continue" \
+	    "Hardware watchpoint $::decimal: $watch_expr_re.*Old value = $::decimal\r\nNew value = 2\r\nmain.*" \
+	    "hit watchpoint in main"
+    }
+}
+
+foreach_with_prefix residency { device host } {
+    foreach_with_prefix set_watch_from { device host } {
+	do_test $residency $set_watch_from
+    }
+}
