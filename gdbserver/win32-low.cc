@@ -663,7 +663,7 @@ win32_clear_process ()
 int
 win32_process_target::kill (process_info *process)
 {
-  TerminateProcess (windows_process.handle, 0);
+  TerminateProcess (windows_process.handle, 137);
   for (;;)
     {
       if (!child_continue (DBG_CONTINUE, -1))
