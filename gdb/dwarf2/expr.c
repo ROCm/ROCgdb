@@ -1306,9 +1306,12 @@ private:
 	  enum lval_type lval;
 	  CORE_ADDR address;
 	  int realnum;
+	  int optimized, unavailable;
 	  frame_register_unwind (get_next_frame_sentinel_okay (frame), regnum,
-				 &m_optimized_out, &m_unavailable, &lval,
-				 &address, &realnum, m_data);
+				 &optimized, &unavailable, &lval,
+				 &address, &realnum, m_data.data ());
+	  m_optimized_out = optimized;
+	  m_unavailable = unavailable;
 	}
 
       bool outdated (const frame_info_ptr &frame) const
@@ -4783,7 +4786,9 @@ expr_observer_memory_changed (CORE_ADDR /* addr */, ssize_t /* len */,
   context_generation++;
 }
 
-INIT_GDB_FILE (expr)
+void _initialize_dwarf2_expr ();
+void
+_initialize_dwarf2_expr ()
 {
   /* Register the observers we need to invalidate our internal caches.
 
