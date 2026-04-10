@@ -3218,7 +3218,7 @@ print_symbol_value_1 (FILE *file, symbolS *sym)
 	fprintf (file, " frag %p", locsym->frag);
       if (locsym->flags.resolved)
 	fprintf (file, " resolved");
-      fprintf (file, " local");
+      fprintf (file, " locsym");
     }
   else
     {
