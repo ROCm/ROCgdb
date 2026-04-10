@@ -3256,7 +3256,7 @@ print_symbol_value_1 (FILE *file, symbolS *sym)
 
       if (s != undefined_section
 	  && s != expr_section)
-	fprintf (file, " %lx", (unsigned long) S_GET_VALUE (sym));
+	fprintf (file, " %"PRIx64, (uint64_t) S_GET_VALUE (sym));
     }
   else if (indent_level < max_indent_level
 	   && S_GET_SEGMENT (sym) != undefined_section)
@@ -3264,8 +3264,8 @@ print_symbol_value_1 (FILE *file, symbolS *sym)
       indent_level++;
       fprintf (file, "\n%*s<", indent_level * 4, "");
       if (sym->flags.local_symbol)
-	fprintf (file, "constant %lx",
-		 (unsigned long) ((struct local_symbol *) sym)->value);
+	fprintf (file, "constant %"PRIx64,
+		 (uint64_t) ((struct local_symbol *) sym)->value);
       else
 	print_expr_1 (file, &sym->x->value);
       fprintf (file, ">");
