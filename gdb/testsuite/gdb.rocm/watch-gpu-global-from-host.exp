@@ -35,16 +35,43 @@ proc do_test {} {
 	    return
 	}
 
+	gdb_test "print managed_var" " = \\(int \\*\\) 0x0" \
+	    "print managed_var from host"
+
 	gdb_test "with breakpoint pending on -- break kern" \
 	    "Breakpoint $::decimal \\(kern\\) pending."
 
 	gdb_test "continue" \
 	    "Thread $::decimal \"kern\" hit Breakpoint $::decimal, with lane 0, kern .*"
 
-	gdb_test "watch global" "Hardware watchpoint $::decimal: global"
+	# Sigh, from a GPU context, we get:
+	#
+	#  (gdb) print managed_var
+	#  'managed_var' has unknown type; cast it to its declared type
+	#
+	# why???
+	setup_kfail "*-*-*" "xxxx"
+	gdb_test "print managed_var" " = \\(int \\*\\) 0x0" \
+	    "print managed_var from device"
+
+	set watch_expr "*(int *)managed_var"
+	set watch_expr_re [string_to_regexp $watch_expr]
+
+	# The kernel argument should be the same pointer as the host's
+	# MANAGED_PTR global.
+	gdb_test "print ptr == (int *)managed_var" " = true"
+
+	gdb_test "watch $watch_expr" \
+	    "Hardware watchpoint $::decimal: $watch_expr_re"
+
+	# XXX we should catch the write in the kernel too!
+	#
+	# If we set a watchpoint on "*ptr" instead, then we catch the
+	# kernel write, but not the CPU write!
+	#
 
 	gdb_test "continue" \
-	    "Hardware watchpoint $::decimal: global.*Old value = 0\r\nNew value = 8\r\nmain.*" \
+	    "Hardware watchpoint $::decimal: $watch_expr_re.*Old value = 0\r\nNew value = 8\r\nmain.*" \
 	    "hit watchpoint in main"
     }
 }

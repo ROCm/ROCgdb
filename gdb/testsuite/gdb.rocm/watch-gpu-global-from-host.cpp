@@ -16,26 +16,53 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include <hip/hip_runtime.h>
-
-__device__ int global = 0;
+#include <stdio.h>
+#include "rocm-test-utils.h"
 
 __global__ void
-kern ()
+kern (int *ptr)
 {
+  (*ptr)++;
 }
 
+int *managed_var = nullptr;
+
 int
-main (int argc, char* argv[])
+main ()
 {
-  kern<<<1, 1>>> ();
-  if (hipDeviceSynchronize () != hipSuccess)
-    return 1;
+  int device_id = 0;
 
-  int *devGlobal;
-  if (hipGetSymbolAddress (reinterpret_cast<void **> (&devGlobal), global))
-    return 2;
+  /* Allocate a variable using managed memory so that we can allocate
+     the variable in the 256MB aperture on non-ReBar systems.  A
+     __device__ global would only be guaranteed to be in the aperture
+     on ReBar systems.  */
+  CHECK (hipMallocManaged (&managed_var, sizeof (int)));
 
-  /* Now update the device global from a CPU thread.  */
-  *devGlobal = 8;
+  /* Apply hints before any access.  On non-ReBar systems, force the
+     driver to find a spot on the GPU, CPU-visible in the 256MB BAR
+     aperture.  */
+  CHECK (hipMemAdvise (managed_var, sizeof (int),
+		       hipMemAdviseSetAccessedBy, hipCpuDeviceId));
+  CHECK (hipMemAdvise (managed_var, sizeof (int),
+		       hipMemAdviseSetPreferredLocation, device_id));
+
+  /* Ensure the physical pages are on the GPU.  */
+  CHECK (hipMemPrefetchAsync (managed_var, sizeof (int), device_id, 0));
+
+  /* Warm up the GPU.  */
+  kern<<<1, 1>>> (managed_var);
+  CHECK (hipDeviceSynchronize ());
+
+  printf ("Pointer address: %p\n", (void *) managed_var);
+  printf ("Attempting host write...\n");
+
+  /* Now update the device global from the host.  On ReBar systems,
+     and on non-ReBar systems (if the hints worked), this writes
+     across the PCIe BAR into the GPU's memory controller.  */
+  *managed_var = 8;
+
+  printf ("Write successful.  Value: %d\n", *managed_var);
+
+  CHECK (hipFree (managed_var));
   return 0;
 }
