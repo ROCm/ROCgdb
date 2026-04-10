@@ -50,12 +50,6 @@ uclamp z31.d, z0.d, z17.d
 uclamp z8.d, z1.d, z31.d
 
 /* The unpredicated MOVPRFX instruction.  */
-movprfx z3, z5
-revd z3.q, p1/m, z5.q
-
-movprfx z1, z4
-revd z1.q, p1/m, z5.q
-
 movprfx z1, z4
 sclamp z1.b, z10.b, z11.b
 

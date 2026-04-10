@@ -5152,7 +5152,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   GCS_INSN ("gcssttr", 0xd91f1c00, 0xfffffc00, OP2 (Rt, ADDR_SIMPLE), QL_DST_X, 0),
   CORE_INSN ("gcsb", 0xd503227f, 0xffffffff, ic_system, 0, OP1 (BARRIER_GCSB), {}, F_ALIAS),
   CORE_INSN ("sys", 0xd5080000, 0xfff80000, ic_system, 0, OP5 (UIMM3_OP1, CRn, CRm, UIMM3_OP2, Rt), QL_SYS, F_HAS_ALIAS | F_OPD4_OPT | F_DEFAULT (0x1F)),
-  D128_INSN ("sysp", 0xd5480000, 0xfff80000, OP6 (UIMM3_OP1, CRn, CRm, UIMM3_OP2, Rt, PAIRREG_OR_XZR), QL_SYSP, F_HAS_ALIAS | F_OPD_NARROW | F_OPD4_OPT | F_OPD_PAIR_OPT | F_DEFAULT (0x1f)),
+  D128_INSN ("sysp", 0xd5480000, 0xfff80000, OP6 (UIMM3_OP1, CRn, CRm, UIMM3_OP2, Rt, PAIRREG_OR_XZR), QL_SYSP, F_HAS_ALIAS | F_OPD4_OPT | F_OPD_PAIR_OPT | F_DEFAULT (0x1f)),
   CORE_INSN ("at",  0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_AT, Rt), QL_SRC_X, F_ALIAS),
   CORE_INSN ("dc",  0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_DC, Rt), QL_SRC_X, F_ALIAS),
   CORE_INSN ("ic",  0xd5080000, 0xfff80000, ic_system, 0, OP2 (SYSREG_IC, Rt_SYS), QL_SRC_X, F_ALIAS | F_OPD1_OPT | F_DEFAULT (0x1F)),
@@ -6358,7 +6358,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   SME_INSN ("ldr", 0xe1000000, 0xffff9c10, sme_ldr, 0, OP2 (SME_ZA_array_off4, SME_ADDR_RI_U4xVL), {}, 0, 1),
   SME_INSN ("str", 0xe1200000, 0xffff9c10, sme_str, 0, OP2 (SME_ZA_array_off4, SME_ADDR_RI_U4xVL), {}, 0, 1),
 
-  SVE2p1_SME_INSNC ("revd", 0x052e8000, 0xffffe000, sme_misc, 0, OP3 (SVE_Zd, SVE_Pg3, SVE_Zn), OP_SVE_QMQ, 0, C_SCAN_MOVPRFX, 0),
+  SVE2p1_SME_INSNC ("revd", 0x052e8000, 0xffffe000, sme_misc, 0, OP3 (SVE_Zd, SVE_Pg3, SVE_Zn), OP_SVE_QMQ, 0, 0, 0),
   SVE2p1_SME_INSNC ("sclamp", 0x4400c000, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_BHSD, 0, C_SCAN_MOVPRFX, 0),
   SVE2p1_SME_INSNC ("uclamp", 0x4400c400, 0xff20fc00, sve_size_bhsd, 0, OP3 (SVE_Zd, SVE_Zn, SVE_Zm_16), OP_SVE_VVV_BHSD, 0, C_SCAN_MOVPRFX, 0),
   SVE2p1_SME_INSN ("psel", 0x25204000, 0xff20c210, sme_psel, 0, OP3 (SVE_Pd, SVE_Pg4_10, SME_PnT_Wm_imm), OP_SVE_NN_BHSD, F_HAS_ALIAS, 0),

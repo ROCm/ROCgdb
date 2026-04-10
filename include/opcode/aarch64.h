@@ -1497,11 +1497,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
    to be optional, then we also implicitly specify (N+1)th operand to also be
    optional.  */
 #define F_OPD_PAIR_OPT (1ULL << 32)
-/* This instruction does not allow the full range of values that the
-   width of fields in the assembler instruction would theoretically
-   allow.  This impacts the constraints on assembly but yields no
-   impact on disassembly.  */
-#define F_OPD_NARROW (1ULL << 33)
+
 /* For the instruction with size[22:23] field.  */
 #define F_OPD_SIZE (1ULL << 34)
 /* RCPC3 instruction has the field of 'size'.  */
@@ -1549,7 +1545,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
 /* As above, plus PN registers.  */
 #define F_INVALID_IMM_SYMS_3 (3ULL << 42)
 
-/* Next bit is 44.  */
+/* Next bit is 44, and 33 is also unused.  */
 
 /* Instruction constraints.  */
 /* This instruction has a predication constraint on the instruction at PC+4.  */
@@ -1598,16 +1594,13 @@ aarch64_opcode_subclass_p (const aarch64_opcode *opcode, uint64_t flag)
   return ((opcode->flags & F_SUBCLASS) == flag);
 }
 
-/* Deal with two possible scenarios: If F_OP_PAIR_OPT not set, as is the case
-   by default, F_OPDn_OPT must equal IDX + 1, else F_OPDn_OPT must be in range
-   [IDX, IDX + 1].  */
+/* Return whether OPCODE has an optional operand at position IDX.  */
 static inline bool
 optional_operand_p (const aarch64_opcode *opcode, unsigned int idx)
 {
-  if (opcode->flags & F_OPD_PAIR_OPT)
-    return (((opcode->flags >> 12) & 0x7) == idx
-	    || ((opcode->flags >> 12) & 0x7) == idx + 1);
-  return ((opcode->flags >> 12) & 0x7) == idx + 1;
+  unsigned int optional_idx = ((opcode->flags >> 12) & 0x7) - 1;
+  return (idx == optional_idx
+	  || ((opcode->flags & F_OPD_PAIR_OPT) && idx == optional_idx + 1));
 }
 
 static inline aarch64_insn

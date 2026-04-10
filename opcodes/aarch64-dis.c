@@ -331,12 +331,9 @@ aarch64_ext_regrt_sysins (const aarch64_operand *self, aarch64_opnd_info *info,
      help the disassembler determine whether this operand is optional or
      not.  */
 
-  if (aarch64_sys_ins_reg_tlbid_xt (inst->operands[0].sysins_op)
-      && info->reg.regno != 31)
-    info->present = true;
-  else
-    info->present = aarch64_sys_ins_reg_has_xt (inst->operands[0].sysins_op);
-
+  info->present
+    = (info->reg.regno != 31
+       || aarch64_sys_ins_reg_has_xt (inst->operands[0].sysins_op));
   return true;
 }
 
