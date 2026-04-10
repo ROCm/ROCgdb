@@ -55,7 +55,10 @@ jobs:
         -DTHEROCK_ENABLE_ALL=OFF 
         -DTHEROCK_BUILD_TESTING=ON 
         -DTHEROCK_ENABLE_DEBUG_TOOLS=ON
-        -DTHEROCK_ROCGDB_SOURCE_DIR=./rocgdb
+        -DTHEROCK_SHARED_PYTHON_EXECUTABLES=/opt/python-shared/cp310-cp310/bin/python3;/opt/python-shared/cp311-cp311/bin/python3;/opt/python-shared/cp312-cp312/bin/python3;/opt/python-shared/cp313-cp313/bin/python3;/opt/python-shared/cp314-cp314/bin/python3
+        -DTHEROCK_DIST_PYTHON_EXECUTABLES=/opt/python/cp310-cp310/bin/python;/opt/python/cp311-cp311/bin/python;/opt/python/cp312-cp312/bin/python;/opt/python/cp313-cp313/bin/python
+        -DTHEROCK_USE_EXTERNAL_ROCGDB=ON
+        -DTHEROCK_ROCGDB_SOURCE_DIR=./rocgdb_under_test
 
   therock_ci_summary:
     name: TheRock CI Summary
