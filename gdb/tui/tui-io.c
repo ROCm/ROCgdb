@@ -46,6 +46,7 @@
 #include "pager.h"
 #include "gdbsupport/gdb-checked-static-cast.h"
 #include "logging-file.h"
+#include "gdbsupport/selftest.h"
 
 /* This redefines CTRL if it is not already defined, so it must come
    after terminal state related include files like <term.h> and
@@ -1327,4 +1328,37 @@ tui_getc (FILE *fp)
 	 character.  */
       return 0;
     }
+}
+
+#if GDB_SELF_TEST
+namespace selftests {
+namespace tui {
+namespace io {
+
+static void
+run_tests ()
+{
+  if (!tui_active)
+    {
+      /* Calling tui_setup_io (0) when tui is disabled should have no effect.  */
+      tui_setup_io (0);
+
+      /* If the output streams are reduced to nullptrs, then the self-test
+	 infrastructure will crash when trying to report these failures.  */
+      SELF_CHECK (*redirectable_stdout () != nullptr);
+      SELF_CHECK (*redirectable_stderr () != nullptr);
+      SELF_CHECK (*redirectable_stdlog () != nullptr);
+    }
+}
+
+} /* namespace io */
+} /* namespace tui */
+} /* namespace selftests */
+#endif /* GDB_SELF_TEST */
+
+INIT_GDB_FILE (tui_io)
+{
+#if GDB_SELF_TEST
+  selftests::register_test ("tui-io", selftests::tui::io::run_tests);
+#endif
 }
