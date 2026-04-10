@@ -3399,6 +3399,16 @@ print_expr_1 (FILE *file, expressionS *exp)
       print_symbol_value_1 (file, exp->X_op_symbol);
       fprintf (file, ">");
       goto maybe_print_addnum;
+    case O_index:
+      indent_level++;
+      fprintf (file, "index\n%*s<", indent_level * 4, "");
+      if (exp->X_add_symbol != NULL)
+	print_symbol_value_1 (file, exp->X_add_symbol);
+      fprintf (file, ">\n%*s<", indent_level * 4, "");
+      print_symbol_value_1 (file, exp->X_op_symbol);
+      fprintf (file, ">");
+      indent_level--;
+      break;
     default:
       fprintf (file, "{unknown opcode %d}", (int) exp->X_op);
       break;
