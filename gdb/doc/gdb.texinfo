@@ -10130,7 +10130,7 @@ Variables}).  You can abbreviate this command as @code{rev}.
 @node Source Path
 @section Specifying Source Directories
 
-@cindex source path
+@cindex source search path
 @cindex directories for source files
 Executable programs sometimes do not record the directories of the source
 files from which they were compiled, just the names.  Even when they do,
@@ -10256,6 +10256,8 @@ Whenever you reset or rearrange the source path, @value{GDBN} clears out
 any information it has cached about where source files are found and where
 each line is in the file.
 
+@cindex source path, add directory
+@cindex add directory to source search path
 @kindex directory
 @kindex dir
 When you start @value{GDBN}, its source path includes only @samp{$cdir}
@@ -10265,8 +10267,10 @@ To add other directories, use the @code{directory} command.
 The search path is used to find both program source files and @value{GDBN}
 script files (read using the @samp{-command} option and @samp{source} command).
 
+@cindex substitution rules, for source search path
+@cindex source directories, substitution rules
 In addition to the source path, @value{GDBN} provides a set of commands
-that manage a list of source path substitution rules.  A @dfn{substitution
+that manage the list of source path substitution rules.  A @dfn{substitution
 rule} specifies how to rewrite source directories stored in the program's
 debug information in case the sources were moved to a different
 directory between compilation and debugging.  A rule is made of
@@ -10348,18 +10352,18 @@ Reset the source path to its default value (@samp{$cdir:$cwd} on Unix systems). 
 @c RET-repeat for @code{directory} is explicitly disabled, but since
 @c repeating it would be a no-op we do not say that.  (thanks to RMS)
 
-@item set directories @var{path-list}
 @kindex set directories
+@item set directories @var{path-list}
 Set the source path to @var{path-list}.
 @samp{$cdir:$cwd} are added if missing.
 
-@item show directories
 @kindex show directories
+@item show directories
 Print the source path: show which directories it contains.
 
 @anchor{set substitute-path}
-@item set substitute-path @var{from} @var{to}
 @kindex set substitute-path
+@item set substitute-path @var{from} @var{to}
 Define a source path substitution rule, and add it at the end of the
 current list of existing substitution rules.  If a rule with the same
 @var{from} was already defined, then the old rule is also deleted.
@@ -10395,16 +10399,16 @@ use the second rule to rewrite @file{/usr/src/lib/foo.c} into
 @file{/mnt/src/lib/foo.c}.
 
 
-@item unset substitute-path [path]
 @kindex unset substitute-path
+@item unset substitute-path [path]
 If a path is specified, search the current list of substitution rules
 for a rule that would rewrite that path.  Delete that rule if found.
 A warning is emitted by the debugger if no rule could be found.
 
 If no path is specified, then all substitution rules are deleted.
 
-@item show substitute-path [path]
 @kindex show substitute-path
+@item show substitute-path [path]
 If a path is specified, then print the source path substitution rule
 which would rewrite that path, if any.
 
