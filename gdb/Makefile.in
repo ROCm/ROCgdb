@@ -560,28 +560,18 @@ GDBTK_LIBRARY = $(datadir)/insight$(GDBTK_VERSION)
 # the testsuite won't run properly.
 GDBTK_SRC_DIR = @GDBTK_SRC_DIR@
 
-SUBDIR_GDBTK_OBS = \
-	gdbtk.o \
-	gdbtk-bp.o \
-	gdbtk-cmds.o \
-	gdbtk-hooks.o \
-	gdbtk-interp.o \
-	gdbtk-register.o \
-	gdbtk-stack.o \
-	gdbtk-varobj.o \
-	gdbtk-wrapper.o
-
 SUBDIR_GDBTK_SRCS = \
 	gdbtk/generic/gdbtk.c \
 	gdbtk/generic/gdbtk-bp.c \
 	gdbtk/generic/gdbtk-cmds.c \
 	gdbtk/generic/gdbtk-hooks.c \
 	gdbtk/generic/gdbtk-interp.c \
-	gdbtk/generic/gdbtk-main.c \
 	gdbtk/generic/gdbtk-register.c \
 	gdbtk/generic/gdbtk-stack.c \
 	gdbtk/generic/gdbtk-varobj.c \
 	gdbtk/generic/gdbtk-wrapper.c
+
+SUBDIR_GDBTK_OBS = $(patsubst %.c,%.o,$(SUBDIR_GDBTK_SRCS))
 
 SUBDIR_GDBTK_DEPS = $(LIBGUI) $(TCL_DEPS) $(TK_DEPS)
 SUBDIR_GDBTK_LDFLAGS =
@@ -600,7 +590,7 @@ HAVE_NATIVE_GCORE_TARGET = @HAVE_NATIVE_GCORE_TARGET@
 HAVE_GSTACK = @HAVE_GSTACK@
 
 CONFIG_SRC_SUBDIR = arch cli dwarf2 mi compile tui unittests guile python \
-	target nat
+	target nat gdbtk/generic
 CONFIG_DEP_SUBDIR = $(addsuffix /$(DEPDIR),$(CONFIG_SRC_SUBDIR))
 
 # -I. for config files.
@@ -2114,10 +2104,8 @@ $(CONFIG_DEP_SUBDIR):
 # Python files need special flags.
 python/%.o: INTERNAL_CFLAGS += $(PYTHON_CFLAGS)
 
-# Rules for compiling .c files in the various source subdirectories.
-%.o: $(srcdir)/gdbtk/generic/%.c
-	$(COMPILE) $(all_gdbtk_cflags) $<
-	$(POSTCOMPILE)
+# Insight UI needs special flags.
+gdbtk/generic/%.o: INTERNAL_CFLAGS += $(all_gdbtk_cflags)
 
 installcheck:
 
@@ -2347,6 +2335,7 @@ uninstall: force $(CONFIG_UNINSTALL)
 # computing the list of source files from the list of object files.
 
 INIT_FILES_FILTER_OUT = \
+	gdbres.o \
 	init.o \
 	version.o \
 	xml-builtin.o \
@@ -2828,10 +2817,10 @@ clean-gdbtk:
 	rm -f insight$(EXEEXT)
 
 # Removing the old gdb first works better if it is running, at least on SunOS.
-insight$(EXEEXT): gdbtk-main.o libgdb.a $(CDEPS) $(TDEPLIBS)
-	rm -f insight$(EXEEXT)
+insight$(EXEEXT): gdbtk/generic/gdbtk-main.o $(LIBGDB_OBS) $(CDEPS) $(TDEPLIBS)
+	$(SILENCE) rm -f insight$(EXEEXT)
 	$(ECHO_CXXLD) $(CC_LD) $(INTERNAL_LDFLAGS) $(WIN32LDAPP) \
-		-o insight$(EXEEXT) gdbtk-main.o libgdb.a \
+		-o insight$(EXEEXT) gdbtk/generic/gdbtk-main.o $(LIBGDB_OBS) \
 		$(TDEPLIBS) $(TUI_LIBRARY) $(CLIBS) $(LOADLIBES)
 
 gdbres.o: $(srcdir)/gdbtk/gdb.rc $(srcdir)/gdbtk/gdbtool.ico
@@ -2866,7 +2855,7 @@ endif
 
 # A list of all the objects we might care about in this build, for
 # dependency tracking.
-all_object_files = gdb.o $(LIBGDB_OBS) gdbtk-main.o
+all_object_files = gdb.o $(LIBGDB_OBS) gdbtk/generic/gdbtk-main.o
 
 # All the .deps files to include.
 all_deps_files = $(foreach dep,$(patsubst %.o,%.Po,$(all_object_files)),\
