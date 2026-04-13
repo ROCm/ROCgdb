@@ -177,7 +177,7 @@ static const struct ld_option ld_options[] =
   { {"output", required_argument, NULL, 'o'},
     'o', N_("FILE"), N_("Set output file name"), EXACTLY_TWO_DASHES },
   { {NULL, required_argument, NULL, '\0'},
-    'O', NULL, N_("Optimize output file"), ONE_DASH },
+    'O', N_("LEVEL"), N_("Optimize output file"), ONE_DASH },
   { {"out-implib", required_argument, NULL, OPTION_OUT_IMPLIB},
     '\0', N_("FILE"), N_("Generate import library"), TWO_DASHES },
   { {"plugin", required_argument, NULL, OPTION_PLUGIN},
@@ -1211,6 +1211,24 @@ parse_args (unsigned argc, char **argv)
 
 	  /* Enable optimizations of output files.  */
 	  link_info.optimize = strtoul (optarg, NULL, 0) != 0;
+	  if (link_info.optimize == 0)
+	    {
+	      /* "-O -" or "-O default" means restore the linker's default behaviour.  */
+	      if ((optarg[0] == '-' && optarg[1] == 0) || strcmp (optarg, "default") == 0)
+		{
+		  link_info.optimize = link_info.skip_optional = 0;
+		}
+	      /* "-O 0" or "-O fast" means disable optimizations and skip optional features.  */
+	      else if ((optarg[0] == '0' && optarg[1] == 0) || strcmp (optarg, "fast") == 0)
+		{
+		  link_info.optimize = 0;
+		  link_info.skip_optional = 1;
+		}
+	      else
+		fatal (_("%P: -O requires a numerical argument or '-' or 'fast' or 'default'"));
+	    }
+	  else
+	    link_info.skip_optional = 0;
 	  break;
 	case 'o':
 	  lang_add_output (optarg, 0);

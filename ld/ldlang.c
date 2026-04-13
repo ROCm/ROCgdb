@@ -8820,16 +8820,19 @@ lang_process (void)
     {
       asection *found;
 
-      ld_start_phase (PHASE_MERGE);
+      if (! link_info.skip_optional)
+	{
+	  ld_start_phase (PHASE_MERGE);
 
-      /* Merge SEC_MERGE sections.  This has to be done after GC of
-	 sections, so that GCed sections are not merged, but before
-	 assigning dynamic symbols, since removing whole input sections
-	 is hard then.  */
-      if (!bfd_merge_sections (link_info.output_bfd, &link_info))
-	fatal (_("%P: bfd_merge_sections failed: %E\n"));
+	  /* Merge SEC_MERGE sections.  This has to be done after GC of
+	     sections, so that GCed sections are not merged, but before
+	     assigning dynamic symbols, since removing whole input sections
+	     is hard then.  */
+	  if (!bfd_merge_sections (link_info.output_bfd, &link_info))
+	    fatal (_("%P: bfd_merge_sections failed: %E\n"));
 
-      ld_stop_phase (PHASE_MERGE);
+	  ld_stop_phase (PHASE_MERGE);
+	}
 
       /* Look for a text section and set the readonly attribute in it.  */
       found = bfd_get_section_by_name (link_info.output_bfd, ".text");

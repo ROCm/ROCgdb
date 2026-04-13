@@ -551,9 +551,14 @@ struct bfd_link_info
      an executable stack.  */
   unsigned int default_execstack : 1;
   
-  /* TRUE if we want to produced optimized output files.  This might
+  /* TRUE if we want to produce optimized output files.  This might
      need much more time and therefore must be explicitly selected.  */
   unsigned int optimize: 1;
+
+  /* TRUE if we want to skip optional steps during linking.  This can
+     include section merging for example.  This is effectively the opposite
+     of the 'optimize' field, and both should not be TRUE at the same time.  */
+  unsigned int skip_optional: 1;
 
   /* TRUE if user should be informed of removed unreferenced sections.  */
   unsigned int print_gc_sections: 1;

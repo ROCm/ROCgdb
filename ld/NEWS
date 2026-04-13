@@ -1,5 +1,10 @@
 -*- text -*-
 
+* Add a linker optimization level of zero.  Using "-O 0" on the linker command
+  line will stop it from combining the contents of mergeable sections.  This
+  can significantly speed up the link process at the cost of producing larger
+  binaries.
+
 Changes in 2.47:
 
 * Add linker support for --start-lib/--end-lib options and LIB linker script

@@ -1043,6 +1043,16 @@ the linker may make more use of this option.  Also currently there is
 no difference in the linker's behaviour for different non-zero values
 of this option.  Again this may change with future releases.
 
+If @var{level} is zero or the string @samp{fast} then @command{ld}
+instead skips operations that are optional, resulting in a faster link
+but producing slower, larger binaries.  Currently the only operation
+that is skipped is the combining of mergeable sections, but this may
+change in the future.
+
+If @var{level} is the string @samp{default} or just the @samp{-}
+character then the linker's default behaviour of neither optimizing
+nor skipping operations is selected.
+
 @kindex -plugin @var{name}
 @item -plugin @var{name}
 Involve a plugin in the linking process.  The @var{name} parameter is
