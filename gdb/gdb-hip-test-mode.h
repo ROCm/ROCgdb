@@ -18,8 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDB_HIP_TEST_MODE_H
-#define GDB_HIP_TEST_MODE_H
+#ifndef GDB_GDB_HIP_TEST_MODE_H
+#define GDB_GDB_HIP_TEST_MODE_H
 
 #include <string_view>
 
@@ -30,4 +30,4 @@ const char *gdb_hip_test_mode_frob_names (struct objfile *objfile,
 std::string_view gdb_hip_test_mode_frob_names (struct objfile *objfile,
 					       std::string_view name);
 
-#endif
+#endif /* GDB_GDB_HIP_TEST_MODE_H */
