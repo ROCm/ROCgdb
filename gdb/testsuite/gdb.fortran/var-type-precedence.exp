@@ -1,0 +1,60 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test variable lookup when local Fortran variable names conflict with
+# type names from a C shared library.
+
+require allow_fortran_tests
+
+standard_testfile var-type-precedence.f90 var-type-precedence-lib.c
+load_lib fortran.exp
+
+set libname "${testfile}-lib"
+set srcfile_lib ${srcdir}/${subdir}/${srcfile2}
+set binfile_lib [standard_output_file ${libname}.so]
+
+# Compile the C shared library.
+if {[gdb_compile_shlib ${srcfile_lib} ${binfile_lib} \
+	{debug}] != ""} {
+  untested "failed to compile C shared library"
+  return
+}
+
+# Compile the Fortran main program with the C shared library.
+if {[prepare_for_testing "failed to prepare" $testfile \
+	${srcfile} [list debug f90 shlib=${binfile_lib}]]} {
+  return
+}
+
+if {![fortran_runto_main]} {
+  return
+}
+
+set bp_loc [gdb_get_line_number "break-here"]
+gdb_breakpoint "$srcfile:$bp_loc"
+gdb_continue_to_breakpoint "stop-at-bp" ".*$srcfile:$bp_loc.*"
+
+set integer4 [fortran_int4]
+
+# Test that local variable 'type_shadowing_var' is resolved correctly.
+gdb_test "print type_shadowing_var" "= \\(1, 1, 1, 1, 1\\)" \
+    "print local type_shadowing_var variable"
+gdb_test "ptype type_shadowing_var" "type = $integer4 \\(-2:2\\)" \
+    "ptype local type_shadowing_var"
+
+# Verify the C types exist in debug info by checking info types.
+gdb_test "info types type_shadowing_var" \
+    ".*File.*var-type-precedence-lib\\.c:.*struct type_shadowing_var.*" \
+    "C type type_shadowing_var exists in debug info"
