@@ -28,7 +28,7 @@ standard_testfile
 get_func_info foo
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
-	  [list ${srcfile}]] } {
+	  [list ${srcfile}] {debug nopie}]} {
     return -1
 }
 
@@ -83,7 +83,7 @@ proc get_next_suffix {} {
 
 proc build_and_runto_main { suffix asm_file } {
     if {[prepare_for_testing "failed to prepare" "${::testfile}-${suffix}" \
-	     [list $::srcfile $asm_file] {nodebug}]} {
+	     [list $::srcfile $asm_file] {nodebug nopie}]} {
 	return false
     }
 
