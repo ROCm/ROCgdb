@@ -898,8 +898,7 @@ set_step_frame (thread_info *tp)
   symtab_and_line sal = find_frame_sal (frame);
   set_step_info (tp, frame, sal);
 
-  CORE_ADDR pc = get_frame_pc (frame);
-  tp->control.set_step_start_function (pc);
+  tp->control.set_step_start_function (frame);
 }
 
 /* Step until outside of current statement.  */

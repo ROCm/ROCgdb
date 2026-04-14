@@ -52,8 +52,11 @@ get_func_info main
 # Create DWARF for the test.  In this case, inline function 'foo' is created
 # with a contiguous address range that needs extending.
 
-proc build_dwarf_for_contiguous_block { asm_file } {
+proc build_dwarf_for_contiguous_block { asm_file {range_correct 0} {variant 0} } {
     Dwarf::assemble $asm_file {
+	upvar range_correct range_correct
+	upvar variant variant
+
 	declare_labels lines_table inline_func
 
 	cu { } {
@@ -83,7 +86,11 @@ proc build_dwarf_for_contiguous_block { asm_file } {
 			DW_AT_call_file 1 data1
 			DW_AT_call_line $::foo_call_line data1
 			DW_AT_low_pc main_1 addr
-			DW_AT_high_pc main_3 addr
+			if {$range_correct} {
+			    DW_AT_high_pc main_4 addr
+			} else {
+			    DW_AT_high_pc main_3 addr
+			}
 		    }
 		}
 	    }
@@ -120,10 +127,15 @@ proc build_dwarf_for_contiguous_block { asm_file } {
 		DW_LNS_copy
 
 		DW_LNE_set_address main_4
+		if {$variant == 1} {
+		    DW_LNS_advance_line 1
+		}
 		DW_LNS_copy
 
 		DW_LNE_set_address main_5
-		DW_LNS_advance_line 1
+		if {$variant == 0} {
+		    DW_LNS_advance_line 1
+		}
 		DW_LNS_negate_stmt
 		DW_LNS_copy
 
@@ -144,6 +156,22 @@ proc build_dwarf_for_contiguous_block { asm_file } {
 	    }
 	}
     }
+}
+
+# Like build_dwarf_for_contiguous_block, but use a slightly different line
+# info by setting variant == 1.
+# Use range_correct 1, so we're not testing the fix for PR33930.
+
+proc build_dwarf_for_contiguous_block_2 { asm_file } {
+    return [build_dwarf_for_contiguous_block $asm_file 1 1]
+}
+
+# Like build_dwarf_for_contiguous_block, but use a slightly different line
+# info by setting variant == 1.
+# Use range_correct 0, so we're testing the fix for PR33930.
+
+proc build_dwarf_for_contiguous_block_3 { asm_file } {
+    return [build_dwarf_for_contiguous_block $asm_file 0 1]
 }
 
 # Assuming GDB is stopped at the entry $pc for 'foo', use 'maint info
@@ -555,6 +583,12 @@ set test_list \
 	 [list "contiguous block" \
 	      build_dwarf_for_contiguous_block \
 	      check_contiguous_block] \
+	 [list "contiguous block 2" \
+	      build_dwarf_for_contiguous_block_2 \
+	      check_contiguous_block] \
+	 [list "contiguous block 3" \
+	      build_dwarf_for_contiguous_block_3 \
+	      check_contiguous_block] \
 	]
 
 # Run all the tests.
@@ -565,6 +599,11 @@ foreach test_spec $test_list {
     set prefix [lindex $test_spec 0]
     set build_dwarf_func [lindex $test_spec 1]
     set check_block_func [lindex $test_spec 2]
+
+    if {$build_dwarf_func == "build_dwarf_for_contiguous_block_3"} {
+	# Work around PR gdb/33930.
+	continue
+    }
 
     with_test_prefix $prefix {
 	set asm_file [standard_output_file ${testfile}-${suffix}.S]

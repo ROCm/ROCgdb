@@ -154,10 +154,10 @@ struct thread_control_state
   CORE_ADDR step_range_start = 0;	/* Inclusive */
   CORE_ADDR step_range_end = 0;		/* Exclusive */
 
-  /* Set m_step_start_function according to PC.  */
-  void set_step_start_function (CORE_ADDR pc)
+  /* Set m_step_start_function according to FRAME.  */
+  void set_step_start_function (const frame_info_ptr &frame)
   {
-    m_step_start_function = find_symbol_for_pc (pc);
+    m_step_start_function = get_frame_function (frame);
   }
 
   /* Reset m_step_start_function.  */
@@ -166,11 +166,11 @@ struct thread_control_state
     m_step_start_function = nullptr;
   }
 
-  /* Return true if the function symbol for PC matches
+  /* Return true if the function symbol of FRAME matches
      m_step_start_function.  */
-  bool in_step_start_function (CORE_ADDR pc)
+  bool in_step_start_function (const frame_info_ptr &frame)
   {
-    return m_step_start_function == find_symbol_for_pc (pc);
+    return m_step_start_function == get_frame_function (frame);
   }
 
   /* Return true if m_step_start_function is set.  */

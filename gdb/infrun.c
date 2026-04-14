@@ -7871,8 +7871,7 @@ process_event_stop_test (struct execution_control_state *ecs)
 	   == ecs->event_thread->control.step_stack_frame_id)
 	  && ((ecs->event_thread->control.step_stack_frame_id
 	       != outer_frame_id)
-	      || !ecs->event_thread->control.in_step_start_function
-		    (ecs->event_thread->stop_pc ()))))
+	      || !ecs->event_thread->control.in_step_start_function (frame))))
     {
       CORE_ADDR stop_pc = ecs->event_thread->stop_pc ();
       CORE_ADDR real_stop_pc;
@@ -9359,7 +9358,7 @@ print_stop_location (const target_waitstatus &ws)
       if (tp->control.stop_step
 	  && (tp->control.step_frame_id
 	      == get_frame_id (get_current_frame ()))
-	  && tp->control.in_step_start_function (tp->stop_pc ()))
+	  && tp->control.in_step_start_function (get_current_frame ()))
 	{
 	  symtab_and_line sal = find_frame_sal (get_selected_frame (nullptr));
 	  if (sal.symtab != tp->current_symtab)
