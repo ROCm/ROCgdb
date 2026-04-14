@@ -1249,8 +1249,7 @@ jump_command (const char *arg, int from_tty)
 
   /* See if we are trying to jump to another function.  */
   fn = get_frame_function (get_current_frame ());
-  sfn = find_symbol_for_pc_sect_maybe_inline (sal.pc,
-					  find_pc_mapped_section (sal.pc));
+  sfn = find_symbol_for_pc_maybe_inline (sal.pc);
   if (fn != nullptr && sfn != fn)
     {
       if (!query (_("Line %ps is not in `%ps'.  Jump anyway? "),
