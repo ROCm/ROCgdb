@@ -6,8 +6,9 @@ name: pre-commit
 on:
   pull_request:
   push:
-    branches: [amd-staging]
-
+    branches:
+      - amd-staging
+      - 'amd-staging-rocgdb-*'
 permissions:
   contents: read
 
@@ -25,13 +26,14 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_REF="${{ github.event.pull_request.base.ref }}"
           else
-            BASE_REF="amd-staging"
+            # For push events, use the current branch name
+            BASE_REF="${{ github.ref_name }}"
           fi
           echo "base_ref=${BASE_REF}" >> $GITHUB_OUTPUT
           echo "Base ref: ${BASE_REF}"
 
       - name: Fetch base branch
-        run: git fetch origin ${{ steps.base-ref.outputs.base_ref }}:${{ steps.base-ref.outputs.base_ref }}
+        run: git fetch origin ${{ steps.base-ref.outputs.base_ref }}
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
