@@ -9349,7 +9349,12 @@ print_stop_location (const target_waitstatus &ws)
   struct thread_info *tp = inferior_thread ();
 
   bpstat_ret = bpstat_print (tp->control.stop_bpstat, ws.kind ());
-  switch (bpstat_ret)
+  /* Function bpstat_print selects the frame to print.  Typically, that is the
+     stop frame, in other words get_current_frame ().  But bpstat_print may
+     select a different frame, see for instance ada_catchpoint::print_it.  */
+  frame_info_ptr print_frame = get_selected_frame (nullptr);
+
+ switch (bpstat_ret)
     {
     case PRINT_UNKNOWN:
       /* FIXME: cagney/2002-12-01: Given that a frame ID does (or
@@ -9357,10 +9362,10 @@ print_stop_location (const target_waitstatus &ws)
 	 that when doing a frame comparison.  */
       if (tp->control.stop_step
 	  && (tp->control.step_frame_id
-	      == get_frame_id (get_current_frame ()))
-	  && tp->control.in_step_start_function (get_current_frame ()))
+	      == get_frame_id (print_frame))
+	  && tp->control.in_step_start_function (print_frame))
 	{
-	  symtab_and_line sal = find_frame_sal (get_selected_frame (nullptr));
+	  symtab_and_line sal = find_frame_sal (print_frame);
 	  if (sal.symtab != tp->current_symtab)
 	    {
 	      /* Finished step in same frame but into different file, print
@@ -9403,7 +9408,7 @@ print_stop_location (const target_waitstatus &ws)
      LOCATION: Print only location
      SRC_AND_LOC: Print location and source line.  */
   if (do_frame_printing)
-    print_stack_frame (get_selected_frame (nullptr), 0, source_flag, 1);
+    print_stack_frame (print_frame, 0, source_flag, 1);
 }
 
 /* See `print_stop_event` in infrun.h.  */
