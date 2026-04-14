@@ -232,57 +232,58 @@ debuginfod_is_enabled ()
 {
   const char *urls = skip_spaces (getenv (DEBUGINFOD_URLS_ENV_VAR));
 
-  if (debuginfod_enabled == debuginfod_off
-      || urls == nullptr
+  if (urls == nullptr
       || *urls == '\0')
     return false;
 
-  if (debuginfod_enabled == debuginfod_ask)
+  if (debuginfod_enabled != debuginfod_ask)
+    return debuginfod_enabled == debuginfod_on;
+
+  gdb_printf (_("\nThis GDB supports auto-downloading debuginfo " \
+		"from the following URLs:\n"));
+
+  std::string_view url_view (urls);
+  while (true)
     {
-      gdb_printf (_("\nThis GDB supports auto-downloading debuginfo " \
-		    "from the following URLs:\n"));
+      size_t off = url_view.find_first_not_of (' ');
+      if (off == std::string_view::npos)
+	break;
+      url_view = url_view.substr (off);
+      /* g++ 11.2.1 on s390x, g++ 11.3.1 on ppc64le and g++ 11 on
+	 hppa seem convinced url_view might be of SIZE_MAX length.
+	 And so complains because the length of an array can only
+	 be PTRDIFF_MAX.  */
+      DIAGNOSTIC_PUSH
+      DIAGNOSTIC_IGNORE_STRINGOP_OVERREAD
+      off = url_view.find_first_of (' ');
+      DIAGNOSTIC_POP
+      gdb_printf
+	(_("  <%ps>\n"),
+	 styled_string (file_name_style.style (),
+			std::string (url_view.substr (0, off)).c_str ()));
+      if (off == std::string_view::npos)
+	break;
+      url_view = url_view.substr (off);
+    }
 
-      std::string_view url_view (urls);
-      while (true)
-	{
-	  size_t off = url_view.find_first_not_of (' ');
-	  if (off == std::string_view::npos)
-	    break;
-	  url_view = url_view.substr (off);
-	  /* g++ 11.2.1 on s390x, g++ 11.3.1 on ppc64le and g++ 11 on
-	     hppa seem convinced url_view might be of SIZE_MAX length.
-	     And so complains because the length of an array can only
-	     be PTRDIFF_MAX.  */
-	  DIAGNOSTIC_PUSH
-	  DIAGNOSTIC_IGNORE_STRINGOP_OVERREAD
-	  off = url_view.find_first_of (' ');
-	  DIAGNOSTIC_POP
-	  gdb_printf
-	    (_("  <%ps>\n"),
-	     styled_string (file_name_style.style (),
-			    std::string (url_view.substr (0, off)).c_str ()));
-	  if (off == std::string_view::npos)
-	    break;
-	  url_view = url_view.substr (off);
-	}
-
-      int resp = nquery (_("Enable debuginfod for this session? "));
-      if (!resp)
-	{
-	  gdb_printf (_("Debuginfod has been disabled.\nTo make this " \
-			"setting permanent, add \'set debuginfod " \
-			"enabled off\' to .gdbinit.\n"));
-	  debuginfod_enabled = debuginfod_off;
-	  return false;
-	}
-
-      gdb_printf (_("Debuginfod has been enabled.\nTo make this " \
+  int resp = nquery (_("Enable debuginfod for this session? "));
+  if (!resp)
+    {
+      gdb_printf (_("Debuginfod has been disabled.\nTo make this " \
+		    "setting permanent, add \'set debuginfod " \
+		    "enabled off\' to .gdbinit.\n"));
+      debuginfod_enabled = debuginfod_off;
+    }
+  else
+    {
+      gdb_printf (_("Debuginfod has been enabled.\nTo make this "      \
 		    "setting permanent, add \'set debuginfod enabled " \
 		    "on\' to .gdbinit.\n"));
       debuginfod_enabled = debuginfod_on;
     }
 
-  return true;
+  gdb_assert (debuginfod_enabled != debuginfod_ask);
+  return debuginfod_enabled == debuginfod_on;
 }
 
 /* Print the result of the most recent attempted download.  */
