@@ -899,7 +899,7 @@ set_step_frame (thread_info *tp)
   set_step_info (tp, frame, sal);
 
   CORE_ADDR pc = get_frame_pc (frame);
-  tp->control.step_start_function = find_symbol_for_pc (pc);
+  tp->control.set_step_start_function (pc);
 }
 
 /* Step until outside of current statement.  */

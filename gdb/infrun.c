@@ -3098,7 +3098,7 @@ clear_proceed_status_thread (struct thread_info *tp)
   tp->control.step_frame_id = null_frame_id;
   tp->control.step_stack_frame_id = null_frame_id;
   tp->control.step_over_calls = STEP_OVER_UNDEBUGGABLE;
-  tp->control.step_start_function = nullptr;
+  tp->control.reset_step_start_function ();
   tp->stop_requested = false;
 
   tp->control.stop_step = 0;
@@ -7745,9 +7745,9 @@ process_event_stop_test (struct execution_control_state *ecs)
   if (execution_direction != EXEC_REVERSE
       && ecs->event_thread->control.step_over_calls == STEP_OVER_UNDEBUGGABLE
       && in_solib_dynsym_resolve_code (ecs->event_thread->stop_pc ())
-      && (ecs->event_thread->control.step_start_function == nullptr
+      && (!ecs->event_thread->control.step_start_function_p ()
 	  || !in_solib_dynsym_resolve_code (
-	       ecs->event_thread->control.step_start_function->value_block ()
+	       ecs->event_thread->control.step_start_function ()->value_block ()
 		->entry_pc ())))
     {
       CORE_ADDR pc_after_resolver =
@@ -7871,8 +7871,8 @@ process_event_stop_test (struct execution_control_state *ecs)
 	   == ecs->event_thread->control.step_stack_frame_id)
 	  && ((ecs->event_thread->control.step_stack_frame_id
 	       != outer_frame_id)
-	      || (ecs->event_thread->control.step_start_function
-		  != find_symbol_for_pc (ecs->event_thread->stop_pc ())))))
+	      || !ecs->event_thread->control.in_step_start_function
+		    (ecs->event_thread->stop_pc ()))))
     {
       CORE_ADDR stop_pc = ecs->event_thread->stop_pc ();
       CORE_ADDR real_stop_pc;
@@ -9359,8 +9359,7 @@ print_stop_location (const target_waitstatus &ws)
       if (tp->control.stop_step
 	  && (tp->control.step_frame_id
 	      == get_frame_id (get_current_frame ()))
-	  && (tp->control.step_start_function
-	      == find_symbol_for_pc (tp->stop_pc ())))
+	  && tp->control.in_step_start_function (tp->stop_pc ()))
 	{
 	  symtab_and_line sal = find_frame_sal (get_selected_frame (nullptr));
 	  if (sal.symtab != tp->current_symtab)
