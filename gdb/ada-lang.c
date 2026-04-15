@@ -5527,7 +5527,7 @@ static void
 map_matching_symbols (struct objfile *objfile,
 		      const lookup_name_info &lookup_name,
 		      domain_search_flags domain,
-		      int global,
+		      bool global,
 		      match_data &data)
 {
   data.objfile = objfile;
@@ -5548,13 +5548,13 @@ map_matching_symbols (struct objfile *objfile,
 
 /* Add to RESULT all non-local symbols whose name and domain match
    LOOKUP_NAME and DOMAIN respectively.  The search is performed on
-   GLOBAL_BLOCK symbols if GLOBAL is non-zero, or on STATIC_BLOCK
+   GLOBAL_BLOCK symbols if GLOBAL is true, or on STATIC_BLOCK
    symbols otherwise.  */
 
 static void
 add_nonlocal_symbols (std::vector<struct block_symbol> &result,
 		      const lookup_name_info &lookup_name,
-		      domain_search_flags domain, int global)
+		      domain_search_flags domain, bool global)
 {
   struct match_data data (&result);
 
@@ -5657,13 +5657,13 @@ ada_add_all_symbols (std::vector<struct block_symbol> &result,
 
   /* Search symbols from all global blocks.  */
 
-  add_nonlocal_symbols (result, lookup_name, domain, 1);
+  add_nonlocal_symbols (result, lookup_name, domain, true);
 
   /* Now add symbols from all per-file blocks if we've gotten no hits
      (not strictly correct, but perhaps better than an error).  */
 
   if (result.empty ())
-    add_nonlocal_symbols (result, lookup_name, domain, 0);
+    add_nonlocal_symbols (result, lookup_name, domain, false);
 }
 
 /* Find symbols in DOMAIN matching LOOKUP_NAME, in BLOCK and, if FULL_SEARCH
