@@ -940,14 +940,25 @@ buildsym_compunit::push_context (CORE_ADDR valu)
   return ctx;
 }
 
-/* Pop a context block.  Returns the address of the context block just
-   popped.  */
+/* See buildsym.h.  */
 
-context_stack
-buildsym_compunit::pop_context ()
+block *
+buildsym_compunit::pop_context (CORE_ADDR end_addr,
+				const struct dynamic_prop *static_link,
+				bool required)
 {
   gdb_assert (!m_context_stack.empty ());
-  context_stack result = m_context_stack.back ();
+  context_stack cstk = std::move (m_context_stack.back ());
   m_context_stack.pop_back ();
+
+  block *result = nullptr;
+  if (required || !m_local_symbols.empty ()
+      || m_local_using_directives != nullptr)
+    result = finish_block (cstk.name, cstk.old_blocks, static_link,
+			   cstk.start_addr, end_addr);
+
+  m_local_symbols = std::move (cstk.locals);
+  m_local_using_directives = cstk.local_using_directives;
+
   return result;
 }

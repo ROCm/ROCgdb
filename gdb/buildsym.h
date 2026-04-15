@@ -189,11 +189,6 @@ struct buildsym_compunit
     return &m_local_using_directives;
   }
 
-  void set_local_using_directives (struct using_direct *new_local)
-  {
-    m_local_using_directives = new_local;
-  }
-
   struct using_direct **get_global_using_directives ()
   {
     return &m_global_using_directives;
@@ -243,7 +238,15 @@ struct buildsym_compunit
 
   context_stack &push_context (CORE_ADDR valu);
 
-  context_stack pop_context ();
+  /* Pop a context and create the corresponding block.  Returns the
+     block.  END_ADDR is the final address of the block.  STATIC_LINK,
+     if provided, is the static link.  REQUIRED controls whether the
+     block is required.  When false, if the block does not contain any
+     variables or 'using' directives, this method will return
+     nullptr.  */
+  block *pop_context (CORE_ADDR end_addr,
+		      const struct dynamic_prop *static_link = nullptr,
+		      bool required = true);
 
   struct block *end_compunit_symtab_get_static_block
     (CORE_ADDR end_addr, bool expandable, bool required);
