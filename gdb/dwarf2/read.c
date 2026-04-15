@@ -7480,9 +7480,8 @@ inherit_abstract_dies (struct die_info *die, struct dwarf2_cu *cu)
 
   /* We're inheriting ORIGIN's children into the scope we'd put DIE's
      symbols in.  */
-  std::vector<symbol *> *origin_previous_list_in_scope
-    = origin_cu->list_in_scope;
-  origin_cu->list_in_scope = cu->list_in_scope;
+  scoped_restore save_scope = make_scoped_restore (&origin_cu->list_in_scope,
+						   cu->list_in_scope);
 
   if (die->tag != origin_die->tag
       && !(die->tag == DW_TAG_inlined_subroutine
@@ -7630,8 +7629,6 @@ inherit_abstract_dies (struct die_info *die, struct dwarf2_cu *cu)
 	    process_die (origin_child_die, origin_cu);
 	}
     }
-
-  origin_cu->list_in_scope = origin_previous_list_in_scope;
 
   if (cu != origin_cu)
     compute_delayed_physnames (origin_cu);
@@ -7828,7 +7825,9 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
       attr_to_dynamic_prop (attr, die, cu, static_link, cu->addr_type ());
     }
 
-  cu->list_in_scope = &cu->get_builder ()->get_local_symbols ();
+  scoped_restore save_scope
+    = make_scoped_restore (&cu->list_in_scope,
+			   &cu->get_builder ()->get_local_symbols ());
 
   for (die_info *child_die : die->children ())
     {
@@ -7914,11 +7913,6 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
      back to building a containing block's symbol lists.  */
   cu->get_builder ()->get_local_symbols () = std::move (cstk.locals);
   cu->get_builder ()->set_local_using_directives (cstk.local_using_directives);
-
-  /* If we've finished processing a top-level function, subsequent
-     symbols go in the file symbol list.  */
-  if (cu->get_builder ()->outermost_context_p ())
-    cu->list_in_scope = &cu->get_builder ()->get_file_symbols ();
 }
 
 /* Process all the DIES contained within a lexical block scope.  Start
