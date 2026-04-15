@@ -104,7 +104,7 @@ static void ada_add_block_symbols (std::vector<struct block_symbol> &,
 static void ada_add_all_symbols (std::vector<struct block_symbol> &,
 				 const struct block *,
 				 const lookup_name_info &lookup_name,
-				 domain_search_flags, int, int *);
+				 domain_search_flags, bool, bool *);
 
 static bool is_nonfunction (const std::vector<struct block_symbol> &);
 
@@ -5505,7 +5505,7 @@ ada_add_block_renamings (std::vector<struct block_symbol> &result,
 	  lookup_name_info decl_lookup_name (r_name,
 					     lookup_name.match_type ());
 	  ada_add_all_symbols (result, block, decl_lookup_name, domain,
-			       1, NULL);
+			       true, nullptr);
 	}
     }
 }
@@ -5585,10 +5585,10 @@ add_nonlocal_symbols (std::vector<struct block_symbol> &result,
 }
 
 /* Find symbols in DOMAIN matching LOOKUP_NAME, in BLOCK and, if
-   FULL_SEARCH is non-zero, enclosing scope and in global scopes,
+   FULL_SEARCH is true, enclosing scope and in global scopes,
    returning the number of matches.  Add these to RESULT.
 
-   When FULL_SEARCH is non-zero, any non-function/non-enumeral
+   When FULL_SEARCH is true, any non-function/non-enumeral
    symbol match within the nest of blocks whose innermost member is BLOCK,
    is the one match returned (no other matches in that or
    enclosing blocks is returned).  If there are any matches in or
@@ -5606,13 +5606,13 @@ ada_add_all_symbols (std::vector<struct block_symbol> &result,
 		     const struct block *block,
 		     const lookup_name_info &lookup_name,
 		     domain_search_flags domain,
-		     int full_search,
-		     int *made_global_lookup_p)
+		     bool full_search,
+		     bool *made_global_lookup_p)
 {
   struct symbol *sym;
 
-  if (made_global_lookup_p)
-    *made_global_lookup_p = 0;
+  if (made_global_lookup_p != nullptr)
+    *made_global_lookup_p = false;
 
   /* Special case: If the user specifies a symbol name inside package
      Standard, do a non-wild matching of the symbol name without
@@ -5652,8 +5652,8 @@ ada_add_all_symbols (std::vector<struct block_symbol> &result,
       return;
     }
 
-  if (made_global_lookup_p)
-    *made_global_lookup_p = 1;
+  if (made_global_lookup_p != nullptr)
+    *made_global_lookup_p = true;
 
   /* Search symbols from all global blocks.  */
 
@@ -5667,12 +5667,12 @@ ada_add_all_symbols (std::vector<struct block_symbol> &result,
 }
 
 /* Find symbols in DOMAIN matching LOOKUP_NAME, in BLOCK and, if FULL_SEARCH
-   is non-zero, enclosing scope and in global scopes.
+   is true, enclosing scope and in global scopes.
 
    Returns (SYM,BLOCK) tuples, indicating the symbols found and the
    blocks and symbol tables (if any) in which they were found.
 
-   When full_search is non-zero, any non-function/non-enumeral
+   When FULL_SEARCH is true, any non-function/non-enumeral
    symbol match within the nest of blocks whose innermost member is BLOCK,
    is the one match returned (no other matches in that or
    enclosing blocks is returned).  If there are any matches in or
@@ -5685,9 +5685,9 @@ static std::vector<struct block_symbol>
 ada_lookup_symbol_list_worker (const lookup_name_info &lookup_name,
 			       const struct block *block,
 			       domain_search_flags domain,
-			       int full_search)
+			       bool full_search)
 {
-  int syms_from_global_search;
+  bool syms_from_global_search;
   std::vector<struct block_symbol> results;
 
   ada_add_all_symbols (results, block, lookup_name,
@@ -5718,11 +5718,11 @@ ada_lookup_symbol_list (const char *name, const struct block *block,
   symbol_name_match_type name_match_type = name_match_type_from_name (name);
   lookup_name_info lookup_name (name, name_match_type);
 
-  return ada_lookup_symbol_list_worker (lookup_name, block, domain, 1);
+  return ada_lookup_symbol_list_worker (lookup_name, block, domain, true);
 }
 
 /* The result is as for ada_lookup_symbol_list with FULL_SEARCH set
-   to 1, but choosing the first symbol found if there are multiple
+   to true, but choosing the first symbol found if there are multiple
    choices.  */
 
 block_symbol
@@ -11442,7 +11442,7 @@ get_var_value (const char *name, const char *err_msg)
   std::vector<struct block_symbol> syms
     = ada_lookup_symbol_list_worker (lookup_name,
 				     get_selected_block (0),
-				     SEARCH_VFT, 1);
+				     SEARCH_VFT, true);
 
   if (syms.size () != 1)
     {
@@ -13634,7 +13634,7 @@ public:
 	 for_each_symbol_callback_ftype callback) const override
   {
     std::vector<struct block_symbol> results
-      = ada_lookup_symbol_list_worker (name, block, domain, 0);
+      = ada_lookup_symbol_list_worker (name, block, domain, false);
     for (block_symbol &sym : results)
       callback (&sym);
   }
