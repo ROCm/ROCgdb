@@ -74,12 +74,11 @@ using subfile_up = std::unique_ptr<subfile>;
 struct context_stack
 {
   context_stack (std::vector<symbol *> locals, using_direct *local_using_directives,
-		 pending_block *old_blocks, CORE_ADDR start_addr, int depth)
+		 pending_block *old_blocks, CORE_ADDR start_addr)
     : locals (std::move (locals)),
       local_using_directives (local_using_directives),
       old_blocks (old_blocks),
-      start_addr (start_addr),
-      depth (depth)
+      start_addr (start_addr)
   {}
 
   /* Outer locals at the time we entered.  */
@@ -96,9 +95,6 @@ struct context_stack
 
   /* PC where this context starts.  */
   CORE_ADDR start_addr;
-
-  /* For error-checking matching push/pop.  */
-  int depth;
 };
 
 /* Flags associated with a linetable entry.  */
@@ -245,7 +241,7 @@ struct buildsym_compunit
     m_producer = producer;
   }
 
-  context_stack &push_context (int desc, CORE_ADDR valu);
+  context_stack &push_context (CORE_ADDR valu);
 
   context_stack pop_context ();
 

@@ -924,17 +924,16 @@ buildsym_compunit::augment_type_symtab ()
     }
 }
 
-/* Push a context block.  Args are an identifying nesting level
-   (checkable when you pop it), and the starting PC address of this
+/* Push a context block.  VALU is the starting PC address of this
    context.  */
 
 context_stack &
-buildsym_compunit::push_context (int desc, CORE_ADDR valu)
+buildsym_compunit::push_context (CORE_ADDR valu)
 {
   context_stack &ctx
     = m_context_stack.emplace_back (std::move (m_local_symbols),
 				    m_local_using_directives,
-				    m_pending_blocks, valu, desc);
+				    m_pending_blocks, valu);
 
   m_local_using_directives = nullptr;
 

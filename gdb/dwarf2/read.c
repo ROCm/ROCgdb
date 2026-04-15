@@ -7803,7 +7803,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
     }
 
   gdb_assert (cu->get_builder () != nullptr);
-  context_stack &ctx = cu->get_builder ()->push_context (0, lowpc);
+  context_stack &ctx = cu->get_builder ()->push_context (lowpc);
   ctx.name = new_symbol (die, read_type_die (die, cu), cu, templ_func);
 
   if (dwarf2_func_is_main_p (die, cu))
@@ -7955,7 +7955,7 @@ read_lexical_block_scope (struct die_info *die, struct dwarf2_cu *cu)
   lowpc = per_objfile->relocate (unrel_low);
   highpc = per_objfile->relocate (unrel_high);
 
-  cu->get_builder ()->push_context (0, lowpc);
+  cu->get_builder ()->push_context (lowpc);
   for (die_info *child_die : die->children ())
     process_die (child_die, cu);
 
