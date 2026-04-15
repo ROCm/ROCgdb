@@ -806,7 +806,6 @@ init_entry_point_info (struct objfile *objfile)
   if (ei->entry_point_p)
     {
       CORE_ADDR entry_point =  ei->entry_point;
-      int found;
 
       /* Make certain that the address points at real code, and not a
 	 function descriptor.  */
@@ -818,7 +817,7 @@ init_entry_point_info (struct objfile *objfile)
       ei->entry_point
 	= gdbarch_addr_bits_remove (objfile->arch (), entry_point);
 
-      found = 0;
+      bool found = false;
       for (obj_section &osect : objfile->sections ())
 	{
 	  struct bfd_section *sect = osect.the_bfd_section;
@@ -829,13 +828,17 @@ init_entry_point_info (struct objfile *objfile)
 	    {
 	      ei->the_bfd_section_index
 		= gdb_bfd_section_index (objfile->obfd.get (), sect);
-	      found = 1;
+	      found = true;
 	      break;
 	    }
 	}
 
+      /* We store the section index so that the entry address can be
+	 relocated when used.  If the entry address is outside of any
+	 section then we cannot relocate it.  Just claim that there is no
+	 entry address in this case.  */
       if (!found)
-	ei->the_bfd_section_index = SECT_OFF_TEXT (objfile);
+	ei->entry_point_p = false;
     }
 }
 
