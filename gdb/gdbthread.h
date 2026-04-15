@@ -156,8 +156,36 @@ struct thread_control_state
   CORE_ADDR step_range_start = 0;	/* Inclusive */
   CORE_ADDR step_range_end = 0;		/* Exclusive */
 
-  /* Function the thread was in as of last it started stepping.  */
-  struct symbol *step_start_function = nullptr;
+  /* Set m_step_start_function according to FRAME.  */
+  void set_step_start_function (const frame_info_ptr &frame)
+  {
+    m_step_start_function = get_frame_function (frame);
+  }
+
+  /* Reset m_step_start_function.  */
+  void reset_step_start_function ()
+  {
+    m_step_start_function = nullptr;
+  }
+
+  /* Return true if the function symbol of FRAME matches
+     m_step_start_function.  */
+  bool in_step_start_function (const frame_info_ptr &frame)
+  {
+    return m_step_start_function == get_frame_function (frame);
+  }
+
+  /* Return true if m_step_start_function is set.  */
+  bool step_start_function_p ()
+  {
+    return m_step_start_function != nullptr;
+  }
+
+  /* Return m_step_start_function.  */
+  struct symbol *step_start_function ()
+  {
+    return m_step_start_function;
+  }
 
   /* If GDB issues a target step request, and this is nonzero, the
      target should single-step this thread once, and then continue
@@ -210,6 +238,10 @@ struct thread_control_state
 
   /* True if the thread is evaluating a BP condition.  */
   bool in_cond_eval = false;
+
+private:
+  /* Function the thread was in as of last it started stepping.  */
+  struct symbol *m_step_start_function = nullptr;
 };
 
 /* Inferior thread specific part of `struct infcall_suspend_state'.  */

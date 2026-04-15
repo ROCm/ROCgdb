@@ -2352,7 +2352,7 @@ windows_xfer_memory (gdb_byte *readbuf, const gdb_byte *writebuf,
 void
 windows_nat_target::kill ()
 {
-  CHECK (TerminateProcess (windows_process->handle, 0));
+  CHECK (TerminateProcess (windows_process->handle, 137));
 
   for (;;)
     {

@@ -2195,6 +2195,12 @@ extern struct type *lookup_enum (const char *, const struct block *);
 
 extern struct symbol *find_symbol_for_pc (CORE_ADDR);
 
+/* Lookup the function symbol corresponding to the address.  The return value
+   will be the closest enclosing function, which might be an inline
+   function.  */
+
+extern struct symbol *find_symbol_for_pc_maybe_inline (CORE_ADDR pc);
+
 /* lookup the function corresponding to the address and section.  The
    return value will not be an inlined function; the containing
    function will be returned instead.  */
