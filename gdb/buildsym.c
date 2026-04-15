@@ -944,7 +944,7 @@ buildsym_compunit::pop_context (CORE_ADDR end_addr,
 				bool required)
 {
   gdb_assert (!m_context_stack.empty ());
-  context_stack cstk = std::move (m_context_stack.back ());
+  lexical_context cstk = std::move (m_context_stack.back ());
   m_context_stack.pop_back ();
 
   block *result = nullptr;

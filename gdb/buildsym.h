@@ -68,35 +68,6 @@ struct subfile
 
 using subfile_up = std::unique_ptr<subfile>;
 
-/* Stack representing unclosed lexical contexts (that will become
-   blocks, eventually).  */
-
-struct context_stack
-{
-  context_stack (std::vector<symbol *> locals, using_direct *local_using_directives,
-		 pending_block *old_blocks, CORE_ADDR start_addr)
-    : locals (std::move (locals)),
-      local_using_directives (local_using_directives),
-      old_blocks (old_blocks),
-      start_addr (start_addr)
-  {}
-
-  /* Outer locals at the time we entered.  */
-  std::vector<symbol *> locals;
-
-  /* Pending using directives at the time we entered.  */
-  using_direct *local_using_directives;
-
-  /* Pointer into blocklist as of entry.  */
-  pending_block *old_blocks;
-
-  /* Name of function, if any, defining context.  */
-  symbol *name = nullptr;
-
-  /* PC where this context starts.  */
-  CORE_ADDR start_addr;
-};
-
 /* Flags associated with a linetable entry.  */
 
 enum linetable_entry_flag : unsigned
@@ -340,9 +311,38 @@ private:
   /* Global "using" directives.  */
   struct using_direct *m_global_using_directives = nullptr;
 
+  /* Unclosed lexical contexts (that will become blocks,
+     eventually).  */
+  struct lexical_context
+  {
+    lexical_context (std::vector<symbol *> locals,
+		     using_direct *local_using_directives,
+		     pending_block *old_blocks, CORE_ADDR start_addr)
+      : locals (std::move (locals)),
+	local_using_directives (local_using_directives),
+	old_blocks (old_blocks),
+	start_addr (start_addr)
+    {}
+
+    /* Outer locals at the time we entered.  */
+    std::vector<symbol *> locals;
+
+    /* Pending using directives at the time we entered.  */
+    using_direct *local_using_directives;
+
+    /* Pointer into blocklist as of entry.  */
+    pending_block *old_blocks;
+
+    /* Name of function, if any, defining context.  */
+    symbol *name = nullptr;
+
+    /* PC where this context starts.  */
+    CORE_ADDR start_addr;
+  };
+
   /* The stack of contexts that are pushed by push_context and popped
      by pop_context.  */
-  std::vector<struct context_stack> m_context_stack;
+  std::vector<lexical_context> m_context_stack;
 
   struct subfile *m_current_subfile = nullptr;
 
