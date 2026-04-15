@@ -7801,10 +7801,11 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 	}
     }
 
-  gdb_assert (cu->get_builder () != nullptr);
-  context_stack &ctx = cu->get_builder ()->push_context (lowpc);
+  buildsym_compunit *builder = cu->get_builder ();
+  gdb_assert (builder != nullptr);
+  builder->push_context (lowpc);
   symbol *func_sym = new_symbol (die, read_type_die (die, cu), cu, templ_func);
-  ctx.name = func_sym;
+  builder->set_current_context_function (func_sym);
 
   if (dwarf2_func_is_main_p (die, cu))
     set_objfile_main_name (objfile, func_sym->linkage_name (),
@@ -7827,7 +7828,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 
   scoped_restore save_scope
     = make_scoped_restore (&cu->list_in_scope,
-			   &cu->get_builder ()->get_local_symbols ());
+			   &builder->get_local_symbols ());
 
   for (die_info *child_die : die->children ())
     {
@@ -7866,7 +7867,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 	}
     }
 
-  block *block = cu->get_builder ()->pop_context (highpc, static_link);
+  block *block = builder->pop_context (highpc, static_link);
 
   /* For C++, set the block's scope.  */
   if ((cu->lang () == language_cplus
@@ -15791,9 +15792,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	       pretend it's a local variable in that case so that the user can
 	       still see it.  */
 	    sym->set_domain (VAR_DOMAIN);
-	    struct context_stack *curr
-	      = cu->get_builder ()->get_current_context_stack ();
-	    if (curr != nullptr && curr->name != nullptr)
+	    if (cu->get_builder ()->current_context_has_function ())
 	      sym->set_is_argument (true);
 	    attr = dwarf2_attr (die, DW_AT_location, cu);
 	    if (attr != nullptr)

@@ -199,11 +199,22 @@ struct buildsym_compunit
     return m_context_stack.empty ();
   }
 
-  struct context_stack *get_current_context_stack ()
+  /* Return true if the lexical context currently being constructed
+     has a symbol, false otherwise.  */
+  bool current_context_has_function () const
   {
-    if (m_context_stack.empty ())
-      return nullptr;
-    return &m_context_stack.back ();
+    return (!m_context_stack.empty ()
+	    && m_context_stack.back ().name != nullptr);
+  }
+
+  /* Set the symbol on the lexical context currently being
+     constructed.  */
+  void set_current_context_function (symbol *fun)
+  {
+    gdb_assert (!m_context_stack.empty ());
+    gdb_assert (m_context_stack.back ().name == nullptr);
+    gdb_assert (fun != nullptr);
+    m_context_stack.back ().name = fun;
   }
 
   struct subfile *get_current_subfile ()
@@ -236,7 +247,7 @@ struct buildsym_compunit
     m_producer = producer;
   }
 
-  context_stack &push_context (CORE_ADDR valu);
+  void push_context (CORE_ADDR valu);
 
   /* Pop a context and create the corresponding block.  Returns the
      block.  END_ADDR is the final address of the block.  STATIC_LINK,
