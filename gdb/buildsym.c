@@ -625,28 +625,9 @@ buildsym_compunit::end_compunit_symtab_get_static_block (CORE_ADDR end_addr,
 							 bool expandable,
 							 bool required)
 {
-  /* Finish the lexical context of the last function in the file; pop
-     the context stack.  */
-
-  if (!m_context_stack.empty ())
-    {
-      struct context_stack cstk = pop_context ();
-
-      /* Make a block for the local symbols within.  */
-      finish_block (cstk.name, cstk.old_blocks, NULL,
-		    cstk.start_addr, end_addr);
-
-      if (!m_context_stack.empty ())
-	{
-	  /* This is said to happen with SCO.  The old coffread.c
-	     code simply emptied the context stack, so we do the
-	     same.  FIXME: Find out why it is happening.  This is not
-	     believed to happen in most cases (even for coffread.c);
-	     it used to be an abort().  */
-	  complaint (_("Context stack not empty in end_compunit_symtab"));
-	  m_context_stack.clear ();
-	}
-    }
+  /* The user should have guaranteed that all previous blocks have
+     been created.  */
+  gdb_assert (m_context_stack.empty ());
 
   /* Executables may have out of order pending blocks; sort the
      pending blocks.  */
