@@ -776,7 +776,7 @@ init_entry_point_info (struct objfile *objfile)
 
   if (ei->initialized)
     return;
-  ei->initialized = 1;
+  ei->initialized = true;
 
   /* Save startup file's range of PC addresses to help blockframe.c
      decide where the bottom of the stack is.  */
@@ -786,7 +786,7 @@ init_entry_point_info (struct objfile *objfile)
       /* Executable file -- record its entry point so we'll recognize
 	 the startup file because it contains the entry point.  */
       ei->entry_point = bfd_get_start_address (objfile->obfd.get ());
-      ei->entry_point_p = 1;
+      ei->entry_point_p = true;
     }
   else if (bfd_get_file_flags (objfile->obfd.get ()) & DYNAMIC
 	   && bfd_get_start_address (objfile->obfd.get ()) != 0)
@@ -795,12 +795,12 @@ init_entry_point_info (struct objfile *objfile)
 	 runnable.  There's no clear way to indicate this, so just check
 	 for values other than zero.  */
       ei->entry_point = bfd_get_start_address (objfile->obfd.get ());
-      ei->entry_point_p = 1;
+      ei->entry_point_p = true;
     }
   else
     {
       /* Examination of non-executable.o files.  Short-circuit this stuff.  */
-      ei->entry_point_p = 0;
+      ei->entry_point_p = false;
     }
 
   if (ei->entry_point_p)

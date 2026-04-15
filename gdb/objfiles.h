@@ -115,11 +115,11 @@ struct entry_info
   /* The index of the section in which the entry point appears.  */
   int the_bfd_section_index;
 
-  /* Set to 1 iff ENTRY_POINT contains a valid value.  */
-  unsigned entry_point_p : 1;
+  /* Set to true iff ENTRY_POINT contains a valid value.  */
+  bool entry_point_p;
 
-  /* Set to 1 iff this object was initialized.  */
-  unsigned initialized : 1;
+  /* Set to true iff this object was initialized.  */
+  bool initialized;
 };
 
 #define SECT_OFF_DATA(objfile) \
