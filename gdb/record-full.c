@@ -79,7 +79,8 @@
   ((record_full_next_insn != record_full_list.size ()) \
     || ::execution_direction == EXEC_REVERSE)
 
-#define RECORD_FULL_FILE_MAGIC	netorder32(0x20091016)
+#define RECORD_FULL_FILE_MAGIC_OLD	netorder32(0x20091016)
+#define RECORD_FULL_FILE_MAGIC	netorder32(0x20260415)
 
 /* These are the core structs of the process record functionality.
 
@@ -2249,6 +2250,27 @@ record_full_core_target::has_execution (inferior *inf)
        8 bytes: memory address (network byte order).
        n bytes: memory value (n == memory length).
 
+   Version 3 (all numbers are in network order).
+     4 bytes: Magic number (0x20260415).
+       NOTE: be sure to change whenever this file format changes!
+
+    Records:
+      record_full_instruction:
+	1 byte: signal.
+	4 bytes: number of reg and mem entries for this instruction.
+	4 bytes: instruction sequence number.
+	4 bytes: PC register ID.
+	N bytes: PC address of instruction (N == size of PC).
+	Effects:
+	  record_full_reg:
+	    1 byte: record_type (record_full_reg, see enum record_full_type).
+	    4 bytes: Register ID.
+	    n bytes: register value (n == actual register size).
+	  record_full_mem:
+	    1 byte: record_type (record_full_mem, see enum record_full_type).
+	    4 bytes: memory length.
+	    8 bytes: memory address.
+	    n bytes: memory value (n = memory length).
 */
 
 /* bfdcore_read -- read bytes from a core file section.  */
@@ -2444,9 +2466,14 @@ record_full_restore (struct bfd &cbfd)
   /* Check the magic code.  */
   bfdcore_read (&cbfd, osec, &magic, sizeof (magic), &bfd_offset);
   if (magic != RECORD_FULL_FILE_MAGIC)
-    error (_("Version mismatch or file format error in core file %ps."),
-	   styled_string (file_name_style.style (),
-			  bfd_get_filename (&cbfd)));
+    {
+      if (magic == RECORD_FULL_FILE_MAGIC_OLD)
+	error (_("This old recording format is no longer supported."));
+      else
+	error (_("Version mismatch or file format error in core file %ps."),
+	       styled_string (file_name_style.style (),
+			      bfd_get_filename (&cbfd)));
+    }
   if (record_debug)
     gdb_printf (gdb_stdlog,
 		"  Reading 4-byte magic cookie "
