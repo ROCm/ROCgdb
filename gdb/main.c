@@ -1385,7 +1385,7 @@ captured_main (captured_main_args *context)
 }
 
 int
-gdb_main (struct captured_main_args *args)
+gdbmain (struct captured_main_args *args)
 {
   try
     {

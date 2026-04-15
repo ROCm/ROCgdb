@@ -65,10 +65,10 @@
 # be generated.  The predicate will use the generic validation
 # function for the field.  See below.
 #
-# * "predefault", "postdefault", and "invalid" - These are used for
+              # * "predefault", "postdefault", and "invalid" - These are used for
 # the initialization and verification steps:
 #
-# A gdbarch is zero-initialized.  Then, if a field has a "predefault",
+              # A gdbarch is zero-initialized.  Then, if a field has a "predefault",
 # the field is set to that value.  This becomes the field's initial
 # value.
 #
