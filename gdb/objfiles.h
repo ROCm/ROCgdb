@@ -571,21 +571,17 @@ public:
   /* See quick_symbol_functions.  */
   void forget_cached_source_info ();
 
-  /* Expand and iterate over each "partial" symbol table in OBJFILE
-     where the source file is named NAME.
+  /* Find the first symtab where the source file matches NAME and REAL_PATH,
+     and for which CALLBACK returns true.
 
      If NAME is not absolute, a match after a '/' in the symbol table's
      file name will also work, REAL_PATH is NULL then.  If NAME is
      absolute then REAL_PATH is non-NULL absolute file name as resolved
-     via gdb_realpath from NAME.
+     via gdb_realpath from NAME.  */
 
-     If a match is found, the "partial" symbol table is expanded.
-     Then, this calls iterate_over_some_symtabs (or equivalent) over
-     all newly-created symbol tables, passing CALLBACK to it.
-     The result of this call is returned.  */
-  iteration_status map_symtabs_matching_filename
-    (const char *name, const char *real_path,
-     gdb::function_view<iteration_status (symtab *)> callback);
+  symtab *find_symtab_matching_filename (const char *name,
+					 const char *real_path,
+					 find_symtab_callback_ftype callback);
 
   /* Check to see if the symbol is defined in a "partial" symbol table
      of this objfile.  BLOCK_INDEX should be either GLOBAL_BLOCK or

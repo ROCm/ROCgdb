@@ -638,8 +638,6 @@ static symtab *
 find_symtab (program_space *pspace, const char *name,
 	     find_symtab_callback_ftype callback)
 {
-  struct symtab *result = nullptr;
-
   gdb::unique_xmalloc_ptr<char> real_path;
 
   /* Here we are interested in canonicalizing an absolute path, not
@@ -650,21 +648,11 @@ find_symtab (program_space *pspace, const char *name,
       gdb_assert (IS_ABSOLUTE_PATH (real_path.get ()));
     }
 
-  auto map_callback = [&] (symtab *symtab)
-    {
-      if (callback (symtab))
-	{
-	  result = symtab;
-	  return iteration_status::stop;
-	}
-
-      return iteration_status::keep_going;
-    };
-
   for (objfile &objfile : pspace->objfiles ())
-    if (objfile.map_symtabs_matching_filename (name, real_path.get (),
-					       map_callback)
-	== iteration_status::stop)
+    if (symtab *result
+	  = objfile.find_symtab_matching_filename (name, real_path.get (),
+						   callback);
+	result != nullptr)
       return result;
 
   return nullptr;
