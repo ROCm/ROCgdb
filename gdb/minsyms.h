@@ -20,6 +20,7 @@
 #ifndef GDB_MINSYMS_H
 #define GDB_MINSYMS_H
 
+#include "gdbsupport/function-view.h"
 #include <deque>
 
 struct program_space;
@@ -279,16 +280,36 @@ bound_minimal_symbol lookup_minimal_symbol_by_pc_section
 
 bound_minimal_symbol lookup_minimal_symbol_by_pc (CORE_ADDR);
 
-/* Iterate over all the minimal symbols in the objfile OBJF which
-   match NAME.  Both the ordinary and demangled names of each symbol
-   are considered.  The caller is responsible for canonicalizing NAME,
-   should that need to be done.
+/* Callback type for function for_each_minimal_symbol.  */
 
-   For each matching symbol, CALLBACK is called with the symbol.  */
+using for_each_minimal_symbol_callback_ftype
+  = gdb::function_view<void (struct minimal_symbol *)>;
 
-void iterate_over_minimal_symbols
-    (struct objfile *objf, const lookup_name_info &name,
-     gdb::function_view<bool (struct minimal_symbol *)> callback);
+/* Call CALLBACK for all minimal symbols in objfile OBJF which match NAME.
+
+   Both the ordinary and demangled names of each symbol are considered.  The
+   caller is responsible for canonicalizing NAME, should that need to be
+   done.  */
+
+void for_each_minimal_symbol (struct objfile *objf,
+			      const lookup_name_info &name,
+			      for_each_minimal_symbol_callback_ftype callback);
+
+/* Callback type for function find_minimal_symbol.  */
+
+using find_minimal_symbol_callback_ftype
+  = gdb::function_view<bool (struct minimal_symbol *)>;
+
+/* Find the first minimal symbol for objfile OBJF which matches NAME and for
+   which CALLBACK returns true.
+
+   Both the ordinary and demangled names of each symbol are considered.  The
+   caller is responsible for canonicalizing NAME, should that need to be
+   done.  */
+
+minimal_symbol *find_minimal_symbol
+  (struct objfile *objf, const lookup_name_info &name,
+   find_minimal_symbol_callback_ftype callback);
 
 /* Compute the upper bound of MINSYM.  The upper bound is the last
    address thought to be part of the symbol.  If the symbol has a

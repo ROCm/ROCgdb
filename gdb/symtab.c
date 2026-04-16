@@ -5782,32 +5782,32 @@ find_gnu_ifunc (const symbol *sym)
   struct objfile *objfile = sym->objfile ();
 
   CORE_ADDR address = sym->value_block ()->entry_pc ();
-  minimal_symbol *ifunc = NULL;
-
-  iterate_over_minimal_symbols (objfile, lookup_name,
-				[&] (minimal_symbol *minsym)
+  minimal_symbol *ifunc
+    = find_minimal_symbol (objfile, lookup_name,
+			   [&] (minimal_symbol *minsym)
     {
       if (minsym->type () == mst_text_gnu_ifunc
 	  || minsym->type () == mst_data_gnu_ifunc)
 	{
 	  CORE_ADDR msym_addr = minsym->value_address (objfile);
+
 	  if (minsym->type () == mst_data_gnu_ifunc)
 	    {
 	      struct gdbarch *gdbarch = objfile->arch ();
 	      msym_addr = gdbarch_convert_from_func_ptr_addr
 		(gdbarch, msym_addr, current_inferior ()->top_target ());
 	    }
+
 	  if (msym_addr == address)
-	    {
-	      ifunc = minsym;
-	      return true;
-	    }
+	    return true;
 	}
+
       return false;
     });
 
-  if (ifunc != NULL)
+  if (ifunc != nullptr)
     return {ifunc, objfile};
+
   return {};
 }
 

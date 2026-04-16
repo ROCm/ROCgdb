@@ -4150,33 +4150,30 @@ search_minsyms_for_name (struct collect_info *info,
 	  set_current_program_space (pspace);
 
 	  for (objfile &objfile : pspace->objfiles ())
-	    {
-	      iterate_over_minimal_symbols (&objfile, name,
-					    [&] (struct minimal_symbol *msym)
-					    {
-					      add_minsym (msym, &objfile, nullptr,
-							  info->state->list_mode,
-							  &minsyms);
-					      return false;
-					    });
-	    }
+	    for_each_minimal_symbol (&objfile, name,
+				     [&] (minimal_symbol *msym)
+				       {
+					 add_minsym (msym, &objfile, nullptr,
+						     info->state->list_mode,
+						     &minsyms);
+				       });
 	}
     }
   else
     {
-      program_space *pspace = symtab->compunit ()->objfile ()->pspace ();
+      objfile &objfile = *symtab->compunit ()->objfile ();
+      program_space *pspace = objfile.pspace ();
 
       if (search_pspace == NULL || pspace == search_pspace)
 	{
 	  set_current_program_space (pspace);
-	  iterate_over_minimal_symbols
-	    (symtab->compunit ()->objfile (), name,
-	     [&] (struct minimal_symbol *msym)
-	       {
-		 add_minsym (msym, symtab->compunit ()->objfile (), symtab,
-			     info->state->list_mode, &minsyms);
-		 return false;
-	       });
+	  for_each_minimal_symbol (&objfile, name,
+				   [&] (minimal_symbol *msym)
+				     {
+				       add_minsym (msym, &objfile, symtab,
+						   info->state->list_mode,
+						   &minsyms);
+				     });
 	}
     }
 
