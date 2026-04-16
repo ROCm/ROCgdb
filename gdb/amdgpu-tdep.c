@@ -1755,7 +1755,6 @@ amdgpu_address_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address)
     error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
 
   amd_dbgapi_status_t ret;
-#if AMD_DBGAPI_VERSION_MAJOR > 0 || AMD_DBGAPI_VERSION_MINOR >= 79
   /* Access to GPU globals can be made from host threads.  When we place a
      watchpoint on such global GPU variable, a matching watchpoint is also
      added on the CPU side for the same address, so it is possible to call here
@@ -1770,11 +1769,6 @@ amdgpu_address_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address)
   ret = amd_dbgapi_address_dependency (process_id, wave_id,
 				       address_space_id, segment_address,
 				       &segment_address_dependency);
-#else
-  ret = amd_dbgapi_address_dependency (address_space_id,
-				       segment_address,
-				       &segment_address_dependency);
-#endif
   if (ret != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_address_dependency failed"));
 
