@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 65a2a9cd5895a9cdb2a1352767377f35e70254d1 # 14/04/2026
+  THEROCK_COMMIT_REF: 00439e98624e206a06effc64d0c717a86f62cbb6 # 16/04/2026
 
 jobs:
   therock-build-linux:
