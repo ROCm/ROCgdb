@@ -249,14 +249,17 @@ debuginfod_is_enabled ()
       if (off == std::string_view::npos)
 	break;
       url_view = url_view.substr (off);
-      /* g++ 11.2.1 on s390x, g++ 11.3.1 on ppc64le and g++ 11 on
-	 hppa seem convinced url_view might be of SIZE_MAX length.
-	 And so complains because the length of an array can only
-	 be PTRDIFF_MAX.  */
-      DIAGNOSTIC_PUSH
-      DIAGNOSTIC_IGNORE_STRINGOP_OVERREAD
+#if defined (__GNUC__) && !defined (__clang__)				\
+  && ((__GNUC__ <= 11) || (__GNUC__ == 12 && __GNUC_MINOR__ < 1))
+      /* With g++ 11, we encounter a Wstringop-overread in
+	 url_view.find_first_of.  G++ seems convinced url_view might be of
+	 SIZE_MAX length here.  And so complains because the length of an
+	 array can only be PTRDIFF_MAX.  Work around this by explicitly
+	 limiting the size of url_view to PTRDIFF_MAX.  This is supposed to be
+	 fixed in GCC 12.1, see PR gcc/124879.  */
+      url_view = url_view.substr (0, PTRDIFF_MAX);
+#endif
       off = url_view.find_first_of (' ');
-      DIAGNOSTIC_POP
       gdb_printf
 	(_("  <%ps>\n"),
 	 styled_string (file_name_style.style (),
