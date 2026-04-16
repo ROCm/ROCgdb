@@ -30,6 +30,7 @@
 #include "gdbsupport/gdb_regex.h"
 #include "gdbsupport/enum-flags.h"
 #include "gdbsupport/function-view.h"
+#include "gdbsupport/iteration-status.h"
 #include <optional>
 #include <string_view>
 #include "gdbsupport/next-iterator.h"
@@ -2793,10 +2794,11 @@ bool compare_filenames_for_search (const char *filename,
    symtab filename will also work.
 
    Call CALLBACK with each symtab that is found.  If CALLBACK returns
-   true, the search stops.  */
+   iteration_status::stop, the search stops.  */
 
-void iterate_over_symtabs (program_space *pspace, const char *name,
-			   gdb::function_view<bool (symtab *)> callback);
+void iterate_over_symtabs
+  (program_space *pspace, const char *name,
+   gdb::function_view<iteration_status (symtab *)> callback);
 
 std::vector<const linetable_entry *> find_linetable_entries_for_symtab_line
     (struct symtab *symtab, int line, const linetable_entry **best_entry);

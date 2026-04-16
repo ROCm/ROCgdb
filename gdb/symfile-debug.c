@@ -170,19 +170,18 @@ objfile::forget_cached_source_info ()
    CUST indicates which compunit symtab to search.  Each symtab within
    the specified compunit symtab is also searched.  */
 
-static bool
-iterate_over_one_compunit_symtab (const char *base_name,
-				  const char *name,
-				  const char *real_path,
-				  compunit_symtab *cust,
-				  gdb::function_view<bool (symtab *)> callback)
+static iteration_status
+iterate_over_one_compunit_symtab
+  (const char *base_name, const char *name, const char *real_path,
+   compunit_symtab *cust,
+   gdb::function_view<iteration_status (symtab *)> callback)
 {
   for (symtab *s : cust->filetabs ())
     {
       if (compare_filenames_for_search (s->filename (), name))
 	{
-	  if (callback (s))
-	    return true;
+	  if (callback (s) == iteration_status::stop)
+	    return iteration_status::stop;
 	  continue;
 	}
 
@@ -194,8 +193,8 @@ iterate_over_one_compunit_symtab (const char *base_name,
 
       if (compare_filenames_for_search (symtab_to_fullname (s), name))
 	{
-	  if (callback (s))
-	    return true;
+	  if (callback (s) == iteration_status::stop)
+	    return iteration_status::stop;
 	  continue;
 	}
 
@@ -212,25 +211,26 @@ iterate_over_one_compunit_symtab (const char *base_name,
 	  fullname = fullname_real_path.get ();
 	  if (FILENAME_CMP (real_path, fullname) == 0)
 	    {
-	      if (callback (s))
-		return true;
+	      if (callback (s) == iteration_status::stop)
+		return iteration_status::stop;
 	      continue;
 	    }
 	}
     }
 
   for (compunit_symtab *iter : cust->includes)
-    if (iterate_over_one_compunit_symtab (base_name, name, real_path,
-					  iter, callback))
-      return true;
+    if (iterate_over_one_compunit_symtab (base_name, name, real_path, iter,
+					  callback)
+	== iteration_status::stop)
+      return iteration_status::stop;
 
-  return false;
+  return iteration_status::keep_going;
 }
 
-bool
+iteration_status
 objfile::map_symtabs_matching_filename
   (const char *name, const char *real_path,
-   gdb::function_view<bool (symtab *)> callback)
+   gdb::function_view<iteration_status (symtab *)> callback)
 {
   if (debug_symfile)
     gdb_printf (gdb_stdlog,
@@ -240,7 +240,6 @@ objfile::map_symtabs_matching_filename
 		real_path ? real_path : NULL,
 		host_address_to_string (&callback));
 
-  bool retval = false;
   const char *name_basename = lbasename (name);
 
   auto match_one_filename = [&] (const char *filename, bool basenames)
@@ -260,30 +259,33 @@ objfile::map_symtabs_matching_filename
     /* Skip included compunits, as they are searched by
        iterate_over_one_compunit_symtab.  */
     if (symtab->user != nullptr)
-      return true;
+      return iteration_status::keep_going;
 
-    /* CALLBACK returns false to keep going and true to continue, so
-       we have to invert the result here, for search.  */
-    return !iterate_over_one_compunit_symtab (name_basename, name, real_path,
-					      symtab, callback);
+    /* iterate_over_one_compunit_symtab returns true to stop,
+       convert to iteration_status.  */
+    return iterate_over_one_compunit_symtab (name_basename, name, real_path,
+					     symtab, callback);
   };
+
+  iteration_status retval = iteration_status::keep_going;
 
   for (const auto &iter : qf)
     {
-      if (!iter->search (this, match_one_filename, nullptr, nullptr,
-			 compunit_callback,
-			 SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
-			 SEARCH_ALL_DOMAINS))
+      if (iter->search (this, match_one_filename, nullptr, nullptr,
+			compunit_callback,
+			SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
+			SEARCH_ALL_DOMAINS)
+	  == iteration_status::stop)
 	{
-	  retval = true;
+	  retval = iteration_status::stop;
 	  break;
 	}
     }
 
   if (debug_symfile)
     gdb_printf (gdb_stdlog,
-		"qf->map_symtabs_matching_filename (...) = %d\n",
-		retval);
+		"qf->map_symtabs_matching_filename (...) = %s\n",
+		iteration_status_str (retval));
 
   return retval;
 }
@@ -316,22 +318,23 @@ objfile::lookup_symbol (block_enum kind, const lookup_name_info &name,
       {
 	retval = stab;
 	/* Found it.  */
-	return false;
+	return iteration_status::stop;
       }
     if (with_opaque != nullptr)
       retval = stab;
 
     /* Keep looking through other psymtabs.  */
-    return true;
+    return iteration_status::keep_going;
   };
 
   for (const auto &iter : qf)
     {
-      if (!iter->search (this, nullptr, &name, nullptr, search_one_symtab,
-			 kind == GLOBAL_BLOCK
-			 ? SEARCH_GLOBAL_BLOCK
-			 : SEARCH_STATIC_BLOCK,
-			 domain))
+      if (iter->search (this, nullptr, &name, nullptr, search_one_symtab,
+			kind == GLOBAL_BLOCK
+			? SEARCH_GLOBAL_BLOCK
+			: SEARCH_STATIC_BLOCK,
+			domain)
+	  == iteration_status::stop)
 	break;
     }
 
@@ -397,7 +400,7 @@ objfile::expand_symtabs_with_fullname (const char *fullname)
 		  SEARCH_ALL_DOMAINS);
 }
 
-bool
+iteration_status
 objfile::search (search_symtabs_file_matcher file_matcher,
 		 const lookup_name_info *lookup_name,
 		 search_symtabs_symbol_matcher symbol_matcher,
@@ -419,10 +422,12 @@ objfile::search (search_symtabs_file_matcher file_matcher,
 		domain_name (domain).c_str ());
 
   for (const auto &iter : qf)
-    if (!iter->search (this, file_matcher, lookup_name, symbol_matcher,
-		       compunit_callback, search_flags, domain, lang_matcher))
-      return false;
-  return true;
+    if (iter->search (this, file_matcher, lookup_name, symbol_matcher,
+		      compunit_callback, search_flags, domain, lang_matcher)
+	== iteration_status::stop)
+      return iteration_status::stop;
+
+  return iteration_status::keep_going;
 }
 
 struct compunit_symtab *

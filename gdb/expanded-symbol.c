@@ -47,7 +47,7 @@ expanded_symbols_functions::lookup_global_symbol_language
 
 /* See expanded-symbol.h.  */
 
-bool
+iteration_status
 expanded_symbols_functions::search
      (objfile *objfile,
       search_symtabs_file_matcher file_matcher,
@@ -92,10 +92,12 @@ expanded_symbols_functions::search
 	 consult lookup_name and symbol_matcher (if any).  This should be
 	 okay since i) all symtabs are already expanded and ii) callbacks
 	 iterate over matching symbols themselves.  */
-      if (compunit_callback != nullptr && !compunit_callback (cu))
-	return false;
+      if (compunit_callback != nullptr
+	  && compunit_callback (cu) == iteration_status::stop)
+	return iteration_status::stop;
     }
-  return true;
+
+  return iteration_status::keep_going;
 }
 
 /* See expanded-symbol.h.  */

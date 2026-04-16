@@ -721,7 +721,7 @@ public:
 	    entry->visit_defining_cus ([&] (dwarf2_per_cu *one_cu)
 	      {
 		per_cus.push_back (one_cu);
-		return true;
+		return iteration_status::keep_going;
 	      });
 	    /* Make sure the output is stable.  */
 	    std::sort (per_cus.begin (), per_cus.end (),
@@ -1317,7 +1317,7 @@ write_cooked_index (cooked_index *table,
 	  gdb_assert (it != cu_index_htab.cend ());
 	  symtab->add_index_entry (name, (entry->flags & IS_STATIC) != 0,
 				   kind, it->second);
-	  return true;
+	  return iteration_status::keep_going;
 	});
     }
 }

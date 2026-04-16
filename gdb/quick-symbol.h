@@ -21,6 +21,7 @@
 #define GDB_QUICK_SYMBOL_H
 
 #include "symtab.h"
+#include "gdbsupport/iteration-status.h"
 
 /* Like block_enum, but used as flags to pass to lookup functions.  */
 
@@ -56,12 +57,10 @@ using search_symtabs_lang_matcher
   = gdb::function_view<bool (enum language lang)>;
 
 /* Callback for quick_symbol_functions::search to be called when a
-   compunit_symtab matches (perhaps expanding it first).  If this
-   returns true, more compunit_symtabs are checked; if it returns false,
-   iteration stops.  */
+   compunit_symtab matches (perhaps expanding it first).  */
 
 using compunit_symtab_iteration_callback
-  = gdb::function_view<bool (compunit_symtab *symtab)>;
+  = gdb::function_view<iteration_status (compunit_symtab *symtab)>;
 
 /* The "quick" symbol functions exist so that symbol readers can
    avoiding an initial read of all the symbols.  For example, symbol
@@ -153,11 +152,12 @@ struct quick_symbol_functions
 
      Then (regardless of whether the symbol table was already
      expanded, or just expanded in response to this search),
-     COMPUNIT_CALLBACK is called.  If COMPUNIT_CALLBACK returns false,
-     execution stops and this method returns false.  Otherwise, more
-     files are considered.  This method returns true if all calls to
-     COMPUNIT_CALLBACK return true.  */
-  virtual bool search
+     COMPUNIT_CALLBACK is called.  If COMPUNIT_CALLBACK returns
+     iteration_status::stop, execution stops and this method returns
+     iteration_status::stop.  Otherwise, more files are considered.  This
+     method returns iteration_status::keep_going if all calls to
+     COMPUNIT_CALLBACK return iteration_status::keep_going.  */
+  virtual iteration_status search
     (struct objfile *objfile,
      search_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,

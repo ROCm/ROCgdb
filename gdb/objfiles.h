@@ -583,9 +583,9 @@ public:
      Then, this calls iterate_over_some_symtabs (or equivalent) over
      all newly-created symbol tables, passing CALLBACK to it.
      The result of this call is returned.  */
-  bool map_symtabs_matching_filename
+  iteration_status map_symtabs_matching_filename
     (const char *name, const char *real_path,
-     gdb::function_view<bool (symtab *)> callback);
+     gdb::function_view<iteration_status (symtab *)> callback);
 
   /* Check to see if the symbol is defined in a "partial" symbol table
      of this objfile.  BLOCK_INDEX should be either GLOBAL_BLOCK or
@@ -618,14 +618,13 @@ public:
   void expand_symtabs_with_fullname (const char *fullname);
 
   /* See quick_symbol_functions.  */
-  bool search
-    (search_symtabs_file_matcher file_matcher,
-     const lookup_name_info *lookup_name,
-     search_symtabs_symbol_matcher symbol_matcher,
-     compunit_symtab_iteration_callback compunit_callback,
-     block_search_flags search_flags,
-     domain_search_flags domain,
-     search_symtabs_lang_matcher lang_matcher = nullptr);
+  iteration_status search (search_symtabs_file_matcher file_matcher,
+			   const lookup_name_info *lookup_name,
+			   search_symtabs_symbol_matcher symbol_matcher,
+			   compunit_symtab_iteration_callback compunit_callback,
+			   block_search_flags search_flags,
+			   domain_search_flags domain,
+			   search_symtabs_lang_matcher lang_matcher = nullptr);
 
   /* See quick_symbol_functions.  */
   struct compunit_symtab *

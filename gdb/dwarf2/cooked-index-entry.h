@@ -232,12 +232,14 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
   void force_set_language () const;
 
   /* Type of callback used when visiting defining CUs.  */
-  using per_cu_callback = gdb::function_view<bool (dwarf2_per_cu *)>;
+  using per_cu_callback
+    = gdb::function_view<iteration_status (dwarf2_per_cu *)>;
 
   /* Calls CALLBACK for each CU that "defines" this entry.
 
-     If any call to CALLBACK returns false, this immediately returns
-     false (skipping the remaining calls); otherwise returns true.
+     If any call to CALLBACK returns iteration_status::stop, this
+     immediately returns iteration_status::stop (skipping the remaining
+     calls); otherwise returns iteration_status::keep_going.
 
      For most entries, there is a single defining CU, which is the
      canonical outermost includer of the CU holding the entry.  In the
@@ -248,7 +250,7 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
      such outermost includer -- if a subroutine is inlined in many
      places, and then "dwz" is run, the IS_INLINED subroutine may be
      defined in some CU that is included by many other CUs.  */
-  bool visit_defining_cus (per_cu_callback callback) const;
+  iteration_status visit_defining_cus (per_cu_callback callback) const;
 
   /* The name as it appears in DWARF.  This always points into one of
      the mapped DWARF sections.  Note that this may be the name or the

@@ -237,7 +237,7 @@ struct cooked_index_functions : public dwarf2_base_index_functions
     dwarf2_base_index_functions::expand_all_symtabs (objfile);
   }
 
-  bool search
+  iteration_status search
     (struct objfile *objfile,
      search_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,

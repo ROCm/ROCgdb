@@ -32,6 +32,7 @@
 #include "gdbsupport/cxx-thread.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "gdbsupport/function-view.h"
+#include "gdbsupport/iteration-status.h"
 #include "gdbsupport/packed.h"
 
 /* Hold 'maintenance (set|show) dwarf' commands.  */
@@ -429,13 +430,15 @@ public:
   }
 
   /* Type of callback used when visiting defining CUs.  */
-  using per_cu_callback = gdb::function_view<bool (dwarf2_per_cu *)>;
+  using per_cu_callback
+    = gdb::function_view<iteration_status (dwarf2_per_cu *)>;
 
   /* Calls CALLBACK for each CU that is the outermost includer of
      ONE_CU.  If ONE_CU has no includers, it calls CALLBACK on ONE_CU.
-     If any call to CALLBACK returns false, this immediately returns
-     false (skipping the remaining calls); otherwise returns true.  */
-  bool recursively_visit_cus (per_cu_callback callback);
+     If any call to CALLBACK returns iteration_status::stop, this
+     immediately returns iteration_status::stop (skipping the remaining
+     calls); otherwise returns iteration_status::keep_going.  */
+  iteration_status recursively_visit_cus (per_cu_callback callback);
 
   /* Return a canonical outermost CU corresponding to this CU.  If
      this CU is standalone (not included by other CUs), then this
@@ -1321,10 +1324,11 @@ protected:
   /* If CUS_TO_SKIP does not include the CU's index and the CU's language
      matches LANG_MATCHER, expand the CU and call COMPUNIT_CALLBACK (if
      provided) on it.  */
-  bool search_one (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
-		   auto_bool_vector &cus_to_skip,
-		   compunit_symtab_iteration_callback compunit_callback,
-		   search_symtabs_lang_matcher lang_matcher);
+  iteration_status search_one
+    (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
+     auto_bool_vector &cus_to_skip,
+     compunit_symtab_iteration_callback compunit_callback,
+     search_symtabs_lang_matcher lang_matcher);
 };
 
 /* Return pointer to string at .debug_str offset STR_OFFSET.  */

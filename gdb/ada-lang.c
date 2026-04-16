@@ -5568,7 +5568,7 @@ map_matching_symbols (struct objfile *objfile,
       bool result = iterate_over_symbols (block, lookup_name, domain, data);
       gdb_assert (result);
       data.finish (block);
-      return true;
+      return iteration_status::keep_going;
     };
 
   objfile->search (nullptr, &lookup_name, nullptr, callback,
@@ -13207,7 +13207,7 @@ ada_add_global_exceptions (compiled_regex *preg,
 		  }
 	    }
 
-	  return true;
+	  return iteration_status::keep_going;
 	};
 
       /* In Ada, the symbol "search name" is a linkage name, whereas
@@ -13883,7 +13883,7 @@ public:
 		  }
 	      }
 
-	    return true;
+	    return iteration_status::keep_going;
 	  };
 
 	objfile.search

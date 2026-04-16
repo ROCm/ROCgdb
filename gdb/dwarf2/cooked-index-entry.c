@@ -253,7 +253,7 @@ cooked_index_entry::force_set_language () const
 
 /* See cooked-index-entry.h.  */
 
-bool
+iteration_status
 cooked_index_entry::visit_defining_cus (per_cu_callback callback) const
 {
   if ((flags & IS_INLINED) == 0)

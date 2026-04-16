@@ -633,7 +633,7 @@ compare_filenames_for_search (const char *filename, const char *search_name)
 
 void
 iterate_over_symtabs (program_space *pspace, const char *name,
-		      gdb::function_view<bool (symtab *)> callback)
+		      gdb::function_view<iteration_status (symtab *)> callback)
 {
   gdb::unique_xmalloc_ptr<char> real_path;
 
@@ -647,7 +647,8 @@ iterate_over_symtabs (program_space *pspace, const char *name,
 
   for (objfile &objfile : pspace->objfiles ())
     if (objfile.map_symtabs_matching_filename (name, real_path.get (),
-					       callback))
+					       callback)
+	== iteration_status::stop)
       return;
 }
 
@@ -661,7 +662,7 @@ lookup_symtab (program_space *pspace, const char *name)
   iterate_over_symtabs (pspace, name, [&] (symtab *symtab)
     {
       result = symtab;
-      return true;
+      return iteration_status::stop;
     });
 
   return result;
@@ -2381,9 +2382,11 @@ lookup_symbol_via_quick_fns (struct objfile *objfile,
     {
       const struct blockvector *bv = symtab->blockvector ();
       const struct block *block = bv->block (block_index);
-      /* If the accumulator finds a best symbol, end the search by
-	 returning false; otherwise keep going by returning true.  */
-      return !accum.search (symtab, block, lookup_name, domain);
+      /* End the search if the accumulator finds a best symbol.  */
+      if (accum.search (symtab, block, lookup_name, domain))
+	return iteration_status::stop;
+
+      return iteration_status::keep_going;
     };
 
   objfile->search (nullptr, &lookup_name, nullptr, searcher,
@@ -5952,7 +5955,7 @@ default_collect_symbol_completion_matches_break_on
 	     add_symtab_completions (symtab,
 				     tracker, mode, lookup_name,
 				     sym_text, word, code);
-	     return true;
+	     return iteration_status::keep_going;
 	   },
 	 SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
 	 SEARCH_ALL_DOMAINS);
@@ -6142,7 +6145,7 @@ collect_file_symbol_completion_matches (completion_tracker &tracker,
       add_symtab_completions (s->compunit (),
 			      tracker, mode, lookup_name,
 			      sym_text, word, TYPE_CODE_UNDEF);
-      return false;
+      return iteration_status::keep_going;
     });
 }
 

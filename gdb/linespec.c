@@ -1169,7 +1169,7 @@ iterate_over_all_matching_symtabs
 		    }
 		}
 
-	      return true;
+	      return iteration_status::keep_going;
 	    };
 
 	  objfile.search (nullptr, &lookup_name, nullptr, expand_callback,
@@ -3613,7 +3613,7 @@ collect_symtabs_from_filename (const char *file,
     {
       if (symtab_table.insert (symtab).second)
 	symtabs.push_back (symtab);
-      return false;
+      return iteration_status::keep_going;
     };
 
   /* Find that file's data.  */
