@@ -22,8 +22,6 @@
 
 #include <signal.h>
 
-#undef HAVE_SIGACTION
-
 /* RAII class to set a signal handler for a scope, that will take care of
    unsetting the handler when the scope is left.
    This class will try to use sigaction whenever available, following the
