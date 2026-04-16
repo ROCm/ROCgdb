@@ -1119,14 +1119,14 @@ sol_thread_target::get_ada_task_ptid (long lwp, ULONGEST thread)
        };
 
   struct thread_info *thread_info
-    = iterate_over_threads (thread_db_find_thread_from_tid);
+    = find_thread (thread_db_find_thread_from_tid);
 
   if (thread_info == NULL)
     {
       /* The list of threads is probably not up to date.  Find any
 	 thread that is missing from the list, and try again.  */
       update_thread_list ();
-      thread_info = iterate_over_threads (thread_db_find_thread_from_tid);
+      thread_info = find_thread (thread_db_find_thread_from_tid);
     }
 
   gdb_assert (thread_info != NULL);

@@ -12694,10 +12694,9 @@ delete_breakpoint (struct breakpoint *bpt)
      event-top.c won't do anything, and temporary breakpoints with
      commands won't work.  */
 
-  iterate_over_threads ([&] (struct thread_info *th)
+  for_each_thread ([&] (struct thread_info *th)
     {
       bpstat_remove_bp_location (th->control.stop_bpstat, bpt);
-      return false;
     });
 
   /* Now that breakpoint is removed from breakpoint list, update the

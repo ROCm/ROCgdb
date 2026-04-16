@@ -705,7 +705,7 @@ fbsd_make_corefile_notes (struct gdbarch *gdbarch, bfd *obfd, int *note_size)
     signalled_thr = curr_thr;
   else
     {
-      signalled_thr = iterate_over_threads (find_signalled_thread);
+      signalled_thr = find_thread (find_signalled_thread);
       if (signalled_thr == NULL)
 	signalled_thr = curr_thr;
     }
