@@ -2701,7 +2701,7 @@ bool
 iterate_over_symbols (const struct block *block,
 		      const lookup_name_info &name,
 		      const domain_search_flags domain,
-		      gdb::function_view<symbol_found_callback_ftype> callback)
+		      symbol_found_callback_ftype callback)
 {
   for (struct symbol *sym : block_iterator_range (block, &name))
     {

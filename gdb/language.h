@@ -362,7 +362,7 @@ struct language_defn
   virtual bool iterate_over_symbols
 	(const struct block *block, const lookup_name_info &name,
 	 domain_search_flags domain,
-	 gdb::function_view<symbol_found_callback_ftype> callback) const
+	 symbol_found_callback_ftype callback) const
   {
     return ::iterate_over_symbols (block, name, domain, callback);
   }

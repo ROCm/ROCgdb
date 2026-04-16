@@ -363,7 +363,7 @@ struct linespec_parser
 static void iterate_over_file_blocks
   (struct symtab *symtab, const lookup_name_info &name,
    domain_search_flags domain,
-   gdb::function_view<symbol_found_callback_ftype> callback);
+   symbol_found_callback_ftype callback);
 
 static void initialize_defaults (struct symtab **default_symtab,
 				 int *default_line);
@@ -1128,7 +1128,7 @@ iterate_over_all_matching_symtabs
    const lookup_name_info &lookup_name,
    const domain_search_flags domain,
    struct program_space *search_pspace, bool include_inline,
-   gdb::function_view<symbol_found_callback_ftype> callback)
+   symbol_found_callback_ftype callback)
 {
   for (struct program_space *pspace : program_spaces)
     {
@@ -1196,7 +1196,7 @@ static void
 iterate_over_file_blocks
   (struct symtab *symtab, const lookup_name_info &name,
    domain_search_flags domain,
-   gdb::function_view<symbol_found_callback_ftype> callback)
+   symbol_found_callback_ftype callback)
 {
   const struct block *block;
 

@@ -13705,7 +13705,7 @@ public:
   bool iterate_over_symbols
 	(const struct block *block, const lookup_name_info &name,
 	 domain_search_flags domain,
-	 gdb::function_view<symbol_found_callback_ftype> callback) const override
+	 symbol_found_callback_ftype callback) const override
   {
     std::vector<struct block_symbol> results
       = ada_lookup_symbol_list_worker (name, block, domain, 0);

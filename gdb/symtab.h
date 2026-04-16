@@ -2813,7 +2813,7 @@ std::vector<const linetable_entry *> find_linetable_entries_for_symtab_line
    true to indicate that LA_ITERATE_OVER_SYMBOLS should continue
    iterating, or false to indicate that the iteration should end.  */
 
-typedef bool (symbol_found_callback_ftype) (struct block_symbol *bsym);
+using symbol_found_callback_ftype = gdb::function_view<bool (block_symbol *)>;
 
 /* Iterate over the symbols named NAME, matching DOMAIN, in BLOCK.
 
@@ -2827,7 +2827,7 @@ typedef bool (symbol_found_callback_ftype) (struct block_symbol *bsym);
 bool iterate_over_symbols (const struct block *block,
 			   const lookup_name_info &name,
 			   const domain_search_flags domain,
-			   gdb::function_view<symbol_found_callback_ftype> callback);
+			   symbol_found_callback_ftype callback);
 
 /* Storage type used by demangle_for_lookup.  demangle_for_lookup
    either returns a const char * pointer that points to either of the
