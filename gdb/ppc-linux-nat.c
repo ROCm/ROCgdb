@@ -3103,18 +3103,18 @@ ppc_linux_nat_target::mark_debug_registers_changed (pid_t pid)
   /* We do this in two passes to make sure all threads are marked even if
      we get an exception when stopping one of them.  */
 
-  iterate_over_lwps (ptid_t (pid),
-		     [this] (struct lwp_info *lp) -> int {
-		       this->mark_thread_stale (lp);
-		       return 0;
-		     });
+  for_each_lwp (pid,
+		[this] (struct lwp_info *lp)
+		{
+		  this->mark_thread_stale (lp);
+		});
 
-  iterate_over_lwps (ptid_t (pid),
-		     [] (struct lwp_info *lp) -> int {
-		       if (!lwp_is_stopped (lp))
-			 linux_stop_lwp (lp);
-		       return 0;
-		     });
+  for_each_lwp (pid,
+		[] (struct lwp_info *lp)
+		{
+		  if (!lwp_is_stopped (lp))
+		    linux_stop_lwp (lp);
+		});
 }
 
 /* Register a hardware breakpoint or watchpoint BP for the pid PID, then

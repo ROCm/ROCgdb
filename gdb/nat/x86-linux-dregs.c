@@ -69,21 +69,18 @@ x86_linux_dr_set (ptid_t ptid, int regnum, unsigned long value)
     perror_with_name (_("Couldn't write debug register"));
 }
 
-/* Callback for iterate_over_lwps.  Mark that our local mirror of
+/* Callback for for_each_lwp.  Mark that our local mirror of
    LWP's debug registers has been changed, and cause LWP to stop if
    it isn't already.  Values are written from our local mirror to
    the actual debug registers immediately prior to LWP resuming.  */
 
-static int
+static void
 update_debug_registers_callback (struct lwp_info *lwp)
 {
   lwp_set_debug_registers_changed (lwp, 1);
 
   if (!lwp_is_stopped (lwp))
     linux_stop_lwp (lwp);
-
-  /* Continue the iteration.  */
-  return 0;
 }
 
 /* See nat/x86-linux-dregs.h.  */
@@ -101,11 +98,9 @@ x86_linux_dr_get_addr (int regnum)
 void
 x86_linux_dr_set_addr (int regnum, CORE_ADDR addr)
 {
-  ptid_t pid_ptid = ptid_t (current_lwp_ptid ().pid ());
-
   gdb_assert (DR_FIRSTADDR <= regnum && regnum <= DR_LASTADDR);
 
-  iterate_over_lwps (pid_ptid, update_debug_registers_callback);
+  for_each_lwp (current_lwp_ptid ().pid (), update_debug_registers_callback);
 }
 
 /* See nat/x86-linux-dregs.h.  */
@@ -121,9 +116,7 @@ x86_linux_dr_get_control (void)
 void
 x86_linux_dr_set_control (unsigned long control)
 {
-  ptid_t pid_ptid = ptid_t (current_lwp_ptid ().pid ());
-
-  iterate_over_lwps (pid_ptid, update_debug_registers_callback);
+  for_each_lwp (current_lwp_ptid ().pid (), update_debug_registers_callback);
 }
 
 /* See nat/x86-linux-dregs.h.  */

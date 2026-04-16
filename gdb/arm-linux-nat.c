@@ -960,7 +960,7 @@ arm_linux_hw_breakpoint_equal (const struct arm_linux_hw_breakpoint *p1,
 /* Callback to mark a watch-/breakpoint to be updated in all threads of
    the current process.  */
 
-static int
+static void
 update_registers_callback (struct lwp_info *lwp, int watch, int index)
 {
   if (lwp->arch_private == NULL)
@@ -977,8 +977,6 @@ update_registers_callback (struct lwp_info *lwp, int watch, int index)
      we can update its breakpoint registers.  */
   if (!lwp->stopped)
     linux_stop_lwp (lwp);
-
-  return 0;
 }
 
 /* Insert the hardware breakpoint (WATCHPOINT = 0) or watchpoint (WATCHPOINT
@@ -987,13 +985,9 @@ static void
 arm_linux_insert_hw_breakpoint1 (const struct arm_linux_hw_breakpoint* bpt,
 				 int watchpoint)
 {
-  int pid;
-  ptid_t pid_ptid;
+  int pid = inferior_ptid.pid ();
   gdb_byte count, i;
   struct arm_linux_hw_breakpoint* bpts;
-
-  pid = inferior_ptid.pid ();
-  pid_ptid = ptid_t (pid);
 
   if (watchpoint)
     {
@@ -1010,12 +1004,11 @@ arm_linux_insert_hw_breakpoint1 (const struct arm_linux_hw_breakpoint* bpt,
     if (!arm_hwbp_control_is_enabled (bpts[i].control))
       {
 	bpts[i] = *bpt;
-	iterate_over_lwps (pid_ptid,
-			   [=] (struct lwp_info *info)
-			   {
-			     return update_registers_callback (info, watchpoint,
-							       i);
-			   });
+	for_each_lwp (pid,
+		      [=] (struct lwp_info *info)
+		      {
+			update_registers_callback (info, watchpoint, i);
+		      });
 	break;
       }
 
@@ -1028,13 +1021,9 @@ static void
 arm_linux_remove_hw_breakpoint1 (const struct arm_linux_hw_breakpoint *bpt,
 				 int watchpoint)
 {
-  int pid;
+  int pid = inferior_ptid.pid ();
   gdb_byte count, i;
-  ptid_t pid_ptid;
   struct arm_linux_hw_breakpoint* bpts;
-
-  pid = inferior_ptid.pid ();
-  pid_ptid = ptid_t (pid);
 
   if (watchpoint)
     {
@@ -1051,12 +1040,11 @@ arm_linux_remove_hw_breakpoint1 (const struct arm_linux_hw_breakpoint *bpt,
     if (arm_linux_hw_breakpoint_equal (bpt, bpts + i))
       {
 	bpts[i].control = arm_hwbp_control_disable (bpts[i].control);
-	iterate_over_lwps (pid_ptid,
-			   [=] (struct lwp_info *info)
-			   {
-			     return update_registers_callback (info, watchpoint,
-							       i);
-			   });
+	for_each_lwp (pid,
+		      [=] (struct lwp_info *info)
+		      {
+			update_registers_callback (info, watchpoint, i);
+		      });
 	break;
       }
 

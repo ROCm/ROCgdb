@@ -1768,20 +1768,18 @@ num_lwps (process_info *process)
 
 /* See nat/linux-nat.h.  */
 
-lwp_info *
-iterate_over_lwps (ptid_t filter, iterate_over_lwps_ftype callback)
+void
+for_each_lwp (int pid, for_each_lwp_ftype callback)
 {
-  thread_info *thread = find_thread (filter, [&] (thread_info *thr_arg)
+  process_info *process = find_process_pid (pid);
+
+  if (process == nullptr)
+    return;
+
+  process->for_each_thread ([&] (thread_info *thread)
     {
-      lwp_info *lwp = get_thread_lwp (thr_arg);
-
-      return callback (lwp);
+      callback (get_thread_lwp (thread));
     });
-
-  if (thread == NULL)
-    return NULL;
-
-  return get_thread_lwp (thread);
 }
 
 bool

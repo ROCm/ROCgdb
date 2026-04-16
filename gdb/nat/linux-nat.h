@@ -46,17 +46,15 @@ extern tribool have_ptrace_getregset;
 
 extern ptid_t current_lwp_ptid (void);
 
-/* Function type for the CALLBACK argument of iterate_over_lwps.  */
-using iterate_over_lwps_ftype = gdb::function_view<int (lwp_info *lwp)>;
+/* Function type for the CALLBACK argument of for_each_lwp.  */
 
-/* Iterate over all LWPs.  Calls CALLBACK with its second argument set
-   to DATA for every LWP in the list.  If CALLBACK returns nonzero for
-   a particular LWP, return a pointer to the structure describing that
-   LWP immediately.  Otherwise return NULL.  This function must be
-   provided by the client.  */
+using for_each_lwp_ftype = gdb::function_view<void (lwp_info *lwp)>;
 
-extern lwp_info *iterate_over_lwps (ptid_t filter,
-				    iterate_over_lwps_ftype callback);
+/* Iterate over all LWPs, calling CALLBACK for every LWP.
+
+   Only consider the LWPs with that pid.  */
+
+extern void for_each_lwp (int pid, for_each_lwp_ftype callback);
 
 /* Return the ptid of LWP.  */
 
