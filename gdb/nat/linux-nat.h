@@ -47,7 +47,7 @@ extern tribool have_ptrace_getregset;
 extern ptid_t current_lwp_ptid (void);
 
 /* Function type for the CALLBACK argument of iterate_over_lwps.  */
-typedef int (iterate_over_lwps_ftype) (struct lwp_info *lwp);
+using iterate_over_lwps_ftype = gdb::function_view<int (lwp_info *lwp)>;
 
 /* Iterate over all LWPs.  Calls CALLBACK with its second argument set
    to DATA for every LWP in the list.  If CALLBACK returns nonzero for
@@ -55,9 +55,8 @@ typedef int (iterate_over_lwps_ftype) (struct lwp_info *lwp);
    LWP immediately.  Otherwise return NULL.  This function must be
    provided by the client.  */
 
-extern struct lwp_info *iterate_over_lwps
-    (ptid_t filter,
-     gdb::function_view<iterate_over_lwps_ftype> callback);
+extern lwp_info *iterate_over_lwps (ptid_t filter,
+				    iterate_over_lwps_ftype callback);
 
 /* Return the ptid of LWP.  */
 

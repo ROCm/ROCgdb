@@ -928,9 +928,8 @@ find_lwp_pid (ptid_t ptid)
 
 /* See nat/linux-nat.h.  */
 
-struct lwp_info *
-iterate_over_lwps (ptid_t filter,
-		   gdb::function_view<iterate_over_lwps_ftype> callback)
+lwp_info *
+iterate_over_lwps (ptid_t filter, iterate_over_lwps_ftype callback)
 {
   for (lwp_info &lp : all_lwps_safe ())
     {

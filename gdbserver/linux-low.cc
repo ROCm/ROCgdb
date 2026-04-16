@@ -1768,9 +1768,8 @@ num_lwps (process_info *process)
 
 /* See nat/linux-nat.h.  */
 
-struct lwp_info *
-iterate_over_lwps (ptid_t filter,
-		   gdb::function_view<iterate_over_lwps_ftype> callback)
+lwp_info *
+iterate_over_lwps (ptid_t filter, iterate_over_lwps_ftype callback)
 {
   thread_info *thread = find_thread (filter, [&] (thread_info *thr_arg)
     {
