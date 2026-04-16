@@ -1457,7 +1457,7 @@ struct readnow_functions : public dwarf2_base_index_functions
 	       search_symtabs_file_matcher file_matcher,
 	       const lookup_name_info *lookup_name,
 	       search_symtabs_symbol_matcher symbol_matcher,
-	       search_symtabs_expansion_listener listener,
+	       compunit_symtab_iteration_callback compunit_callback,
 	       block_search_flags search_flags,
 	       domain_search_flags domain,
 	       search_symtabs_lang_matcher lang_matcher) override
@@ -1480,8 +1480,9 @@ struct readnow_functions : public dwarf2_base_index_functions
 	    || per_cu->unit_type (false) == 0
 	    || per_objfile->get_compunit_symtab (per_cu.get ()) == nullptr)
 	  continue;
-	if (!search_one (per_cu.get (), per_objfile, cus_to_skip, listener,
-			 lang_matcher))
+
+	if (!search_one (per_cu.get (), per_objfile, cus_to_skip,
+			 compunit_callback, lang_matcher))
 	  return false;
       }
     return true;
@@ -1923,7 +1924,7 @@ dwarf2_base_index_functions::search_one
   (dwarf2_per_cu *per_cu,
    dwarf2_per_objfile *per_objfile,
    auto_bool_vector &cus_to_skip,
-   search_symtabs_expansion_listener listener,
+   compunit_symtab_iteration_callback compunit_callback,
    search_symtabs_lang_matcher lang_matcher)
 {
   /* Already visited, or intentionally skipped.  */
@@ -1943,10 +1944,10 @@ dwarf2_base_index_functions::search_one
     = dw2_instantiate_symtab (per_cu, per_objfile, false);
   gdb_assert (symtab != nullptr);
 
-  if (listener != nullptr)
+  if (compunit_callback != nullptr)
     {
       cus_to_skip.set (per_cu->index, true);
-      return listener (symtab);
+      return compunit_callback (symtab);
     }
 
   return true;
@@ -14035,7 +14036,7 @@ cooked_index_functions::search
    search_symtabs_file_matcher file_matcher,
    const lookup_name_info *lookup_name,
    search_symtabs_symbol_matcher symbol_matcher,
-   search_symtabs_expansion_listener listener,
+   compunit_symtab_iteration_callback compunit_callback,
    block_search_flags search_flags,
    domain_search_flags domain,
    search_symtabs_lang_matcher lang_matcher)
@@ -14055,7 +14056,7 @@ cooked_index_functions::search
 	{
 	  QUIT;
 
-	  if (!search_one (per_cu, per_objfile, cus_to_skip, listener,
+	  if (!search_one (per_cu, per_objfile, cus_to_skip, compunit_callback,
 			   lang_matcher))
 	    return false;
 	}
@@ -14223,8 +14224,8 @@ cooked_index_functions::search
 
 	  bool check = entry->visit_defining_cus ([&] (dwarf2_per_cu *per_cu)
 	    {
-	      return search_one (per_cu, per_objfile, cus_to_skip, listener,
-				 nullptr);
+	      return search_one (per_cu, per_objfile, cus_to_skip,
+				 compunit_callback, nullptr);
 	    });
 	  if (!check)
 	    return false;

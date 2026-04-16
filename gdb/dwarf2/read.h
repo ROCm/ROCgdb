@@ -1319,11 +1319,11 @@ struct dwarf2_base_index_functions : public quick_symbol_functions
 
 protected:
   /* If CUS_TO_SKIP does not include the CU's index and the CU's language
-     matches LANG_MATCHER, expand the CU and call LISTENER (if provided) on
-     it.  */
+     matches LANG_MATCHER, expand the CU and call COMPUNIT_CALLBACK (if
+     provided) on it.  */
   bool search_one (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
 		   auto_bool_vector &cus_to_skip,
-		   search_symtabs_expansion_listener listener,
+		   compunit_symtab_iteration_callback compunit_callback,
 		   search_symtabs_lang_matcher lang_matcher);
 };
 

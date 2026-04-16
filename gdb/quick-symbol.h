@@ -55,11 +55,12 @@ using search_symtabs_symbol_matcher
 using search_symtabs_lang_matcher
   = gdb::function_view<bool (enum language lang)>;
 
-/* Callback for quick_symbol_functions::search to be called when
-   symtab matches (perhaps expanding it first).  If this returns true,
-   more symtabs are checked; if it returns false, iteration stops.  */
+/* Callback for quick_symbol_functions::search to be called when a
+   compunit_symtab matches (perhaps expanding it first).  If this
+   returns true, more compunit_symtabs are checked; if it returns false,
+   iteration stops.  */
 
-using search_symtabs_expansion_listener
+using compunit_symtab_iteration_callback
   = gdb::function_view<bool (compunit_symtab *symtab)>;
 
 /* The "quick" symbol functions exist so that symbol readers can
@@ -151,17 +152,17 @@ struct quick_symbol_functions
      Otherwise, the symbol's symbol table is expanded if needed.
 
      Then (regardless of whether the symbol table was already
-     expanded, or just expanded in response to this search), LISTENER
-     is called.  If LISTENER returns false, execution stops and this
-     method returns false.  Otherwise, more files are considered.
-     This method returns true if all calls to LISTENER return
-     true.  */
+     expanded, or just expanded in response to this search),
+     COMPUNIT_CALLBACK is called.  If COMPUNIT_CALLBACK returns false,
+     execution stops and this method returns false.  Otherwise, more
+     files are considered.  This method returns true if all calls to
+     COMPUNIT_CALLBACK return true.  */
   virtual bool search
     (struct objfile *objfile,
      search_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,
      search_symtabs_symbol_matcher symbol_matcher,
-     search_symtabs_expansion_listener listener,
+     compunit_symtab_iteration_callback compunit_callback,
      block_search_flags search_flags,
      domain_search_flags domain,
      search_symtabs_lang_matcher lang_matcher = nullptr) = 0;

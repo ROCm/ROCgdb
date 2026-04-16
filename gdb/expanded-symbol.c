@@ -53,7 +53,7 @@ expanded_symbols_functions::search
       search_symtabs_file_matcher file_matcher,
       const lookup_name_info *lookup_name,
       search_symtabs_symbol_matcher symbol_matcher,
-      search_symtabs_expansion_listener listener,
+      compunit_symtab_iteration_callback compunit_callback,
       block_search_flags search_flags,
       domain_search_flags domain,
       search_symtabs_lang_matcher lang_matcher)
@@ -88,11 +88,11 @@ expanded_symbols_functions::search
 	    continue;
 	}
 
-      /* Here we simply call the listener (if any) without bothering to
+      /* Here we simply call the callback (if any) without bothering to
 	 consult lookup_name and symbol_matcher (if any).  This should be
-	 okay since i) all symtabs are already expanded and ii) listeners
+	 okay since i) all symtabs are already expanded and ii) callbacks
 	 iterate over matching symbols themselves.  */
-      if (listener != nullptr && !listener (cu))
+      if (compunit_callback != nullptr && !compunit_callback (cu))
 	return false;
     }
   return true;

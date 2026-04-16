@@ -255,7 +255,7 @@ objfile::map_symtabs_matching_filename
     return false;
   };
 
-  auto listener = [&] (compunit_symtab *symtab)
+  auto compunit_callback = [&] (compunit_symtab *symtab)
   {
     /* Skip included compunits, as they are searched by
        iterate_over_one_compunit_symtab.  */
@@ -271,7 +271,7 @@ objfile::map_symtabs_matching_filename
   for (const auto &iter : qf)
     {
       if (!iter->search (this, match_one_filename, nullptr, nullptr,
-			 listener,
+			 compunit_callback,
 			 SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
 			 SEARCH_ALL_DOMAINS))
 	{
@@ -401,7 +401,7 @@ bool
 objfile::search (search_symtabs_file_matcher file_matcher,
 		 const lookup_name_info *lookup_name,
 		 search_symtabs_symbol_matcher symbol_matcher,
-		 search_symtabs_expansion_listener listener,
+		 compunit_symtab_iteration_callback compunit_callback,
 		 block_search_flags search_flags,
 		 domain_search_flags domain,
 		 search_symtabs_lang_matcher lang_matcher)
@@ -415,12 +415,12 @@ objfile::search (search_symtabs_file_matcher file_matcher,
 		objfile_debug_name (this),
 		host_address_to_string (&file_matcher),
 		host_address_to_string (&symbol_matcher),
-		host_address_to_string (&listener),
+		host_address_to_string (&compunit_callback),
 		domain_name (domain).c_str ());
 
   for (const auto &iter : qf)
     if (!iter->search (this, file_matcher, lookup_name, symbol_matcher,
-		       listener, search_flags, domain, lang_matcher))
+		       compunit_callback, search_flags, domain, lang_matcher))
       return false;
   return true;
 }

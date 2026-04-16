@@ -242,7 +242,7 @@ struct cooked_index_functions : public dwarf2_base_index_functions
      search_symtabs_file_matcher file_matcher,
      const lookup_name_info *lookup_name,
      search_symtabs_symbol_matcher symbol_matcher,
-     search_symtabs_expansion_listener listener,
+     compunit_symtab_iteration_callback compunit_callback,
      block_search_flags search_flags,
      domain_search_flags domain,
      search_symtabs_lang_matcher lang_matcher) override;
