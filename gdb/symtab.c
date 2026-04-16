@@ -2697,23 +2697,18 @@ lookup_transparent_type (const char *name, domain_search_flags flags)
 
 /* See symtab.h.  */
 
-bool
-iterate_over_symbols (const struct block *block,
-		      const lookup_name_info &name,
-		      const domain_search_flags domain,
-		      symbol_found_callback_ftype callback)
+void
+for_each_symbol (const struct block *block, const lookup_name_info &name,
+		 const domain_search_flags domain,
+		 for_each_symbol_callback_ftype callback)
 {
   for (struct symbol *sym : block_iterator_range (block, &name))
-    {
-      if (sym->matches (domain))
-	{
-	  struct block_symbol block_sym = {sym, block};
+    if (sym->matches (domain))
+      {
+	block_symbol block_sym = { sym, block };
 
-	  if (!callback (&block_sym))
-	    return false;
-	}
-    }
-  return true;
+	callback (&block_sym);
+      }
 }
 
 /* Find the compunit symtab associated with PC and SECTION.

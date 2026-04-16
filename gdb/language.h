@@ -353,18 +353,13 @@ struct language_defn
      The caller is responsible for iterating up through superblocks
      if desired.
 
-     For each one, call CALLBACK with the symbol.  If CALLBACK
-     returns false, the iteration ends at that point.
-
-     This field may not be NULL.  If the language does not need any
-     special processing here, 'iterate_over_symbols' should be
-     used as the definition.  */
-  virtual bool iterate_over_symbols
+     For each one, call CALLBACK with the symbol.  */
+  virtual void for_each_symbol
 	(const struct block *block, const lookup_name_info &name,
 	 domain_search_flags domain,
-	 symbol_found_callback_ftype callback) const
+	 for_each_symbol_callback_ftype callback) const
   {
-    return ::iterate_over_symbols (block, name, domain, callback);
+    ::for_each_symbol (block, name, domain, callback);
   }
 
   /* Return a pointer to the function that should be used to match a

@@ -939,7 +939,7 @@ for_each_lwp (int pid, for_each_lwp_ftype callback)
 
 /* Iterate over all LWPs, calling CALLBACK for every LWP.
 
-   Only consider the LWPs matching FILTER.  */
+   Only consider the LWPs that match FILTER.  */
 
 static void
 for_each_lwp (ptid_t filter, for_each_lwp_ftype callback)
@@ -2951,7 +2951,7 @@ select_event_lwp (ptid_t filter, struct lwp_info **orig_lp, int *status)
   (*orig_lp)->status = 0;
 }
 
-/* Return non-zero if LP has been resumed.  */
+/* Return true if LP has been resumed.  */
 
 static bool
 resumed_callback (struct lwp_info *lp)

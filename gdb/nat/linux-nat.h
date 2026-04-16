@@ -52,7 +52,7 @@ using for_each_lwp_ftype = gdb::function_view<void (lwp_info *lwp)>;
 
 /* Iterate over all LWPs, calling CALLBACK for every LWP.
 
-   Only consider the LWPs with that pid.  */
+   Only consider the LWPs that match PID.  */
 
 extern void for_each_lwp (int pid, for_each_lwp_ftype callback);
 

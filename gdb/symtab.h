@@ -2808,26 +2808,18 @@ using find_symtab_callback_ftype = std::function<bool (symtab *)>;
 std::vector<const linetable_entry *> find_linetable_entries_for_symtab_line
     (struct symtab *symtab, int line, const linetable_entry **best_entry);
 
-/* Prototype for callbacks for LA_ITERATE_OVER_SYMBOLS.  The callback
-   is called once per matching symbol SYM.  The callback should return
-   true to indicate that LA_ITERATE_OVER_SYMBOLS should continue
-   iterating, or false to indicate that the iteration should end.  */
+/* Callback type for function for_each_symbol.  */
 
-using symbol_found_callback_ftype = gdb::function_view<bool (block_symbol *)>;
+using for_each_symbol_callback_ftype
+  = gdb::function_view<void (block_symbol *)>;
 
 /* Iterate over the symbols named NAME, matching DOMAIN, in BLOCK.
 
-   For each symbol that matches, CALLBACK is called.  The symbol is
-   passed to the callback.
+   For each symbol that matches, call CALLBACK with the symbol.  */
 
-   If CALLBACK returns false, the iteration ends and this function
-   returns false.  Otherwise, the search continues, and the function
-   eventually returns true.  */
-
-bool iterate_over_symbols (const struct block *block,
-			   const lookup_name_info &name,
-			   const domain_search_flags domain,
-			   symbol_found_callback_ftype callback);
+void for_each_symbol (const struct block *block, const lookup_name_info &name,
+		      const domain_search_flags domain,
+		      for_each_symbol_callback_ftype callback);
 
 /* Storage type used by demangle_for_lookup.  demangle_for_lookup
    either returns a const char * pointer that points to either of the
