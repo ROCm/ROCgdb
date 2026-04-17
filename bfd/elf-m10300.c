@@ -1068,7 +1068,7 @@ mn10300_elf_check_relocs (bfd *abfd,
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
   sym_hashes = elf_sym_hashes (abfd);
 
@@ -1978,7 +1978,7 @@ mn10300_elf_relocate_section (bfd *output_bfd,
   Elf_Internal_Rela *rel, *relend;
   Elf_Internal_Rela * trel;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
 
   rel = relocs;
@@ -2476,7 +2476,7 @@ mn10300_elf_relax_delete_bytes (bfd *abfd,
      region are moved to the address of the start of the region, which
      actually means that they will address the byte beyond the end of
      the region once the deletion has been completed.  */
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   isym = (Elf_Internal_Sym *) symtab_hdr->contents;
   for (isymend = isym + symtab_hdr->sh_info; isym < isymend; isym++)
     {
@@ -2568,7 +2568,7 @@ mn10300_elf_symbol_address_p (bfd *abfd,
   sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
 
   /* Examine all the symbols.  */
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   for (isymend = isym + symtab_hdr->sh_info; isym < isymend; isym++)
     if (isym->st_shndx == sec_shndx
 	&& isym->st_value == addr)
@@ -2669,7 +2669,7 @@ mn10300_elf_relax_section (bfd *abfd,
 	   input_bfd = input_bfd->link.next)
 	{
 	  /* We're going to need all the symbols for each bfd.  */
-	  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+	  symtab_hdr = &elf_symtab_hdr (input_bfd);
 	  if (symtab_hdr->sh_info != 0)
 	    {
 	      isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
@@ -3012,7 +3012,7 @@ mn10300_elf_relax_section (bfd *abfd,
 	   input_bfd = input_bfd->link.next)
 	{
 	  /* We're going to need all the local symbols for each bfd.  */
-	  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+	  symtab_hdr = &elf_symtab_hdr (input_bfd);
 	  if (symtab_hdr->sh_info != 0)
 	    {
 	      isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
@@ -3275,7 +3275,7 @@ mn10300_elf_relax_section (bfd *abfd,
       || (sec->flags & SEC_CODE) == 0)
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
   internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
@@ -4432,7 +4432,7 @@ mn10300_elf_get_relocated_section_contents (bfd *output_bfd,
 						       relocatable,
 						       symbols);
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
 
   bfd_byte *orig_data = data;
   if (data == NULL)

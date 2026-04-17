@@ -61,7 +61,7 @@ arc_get_local_got_ents (bfd * abfd)
 {
   if (elf_local_got_ents (abfd) == NULL)
     {
-      bfd_size_type amt = (elf_tdata (abfd)->symtab_hdr.sh_info
+      bfd_size_type amt = (elf_symtab_hdr (abfd).sh_info
 			   * sizeof (*elf_local_got_ents (abfd)));
       elf_local_got_ents (abfd) = bfd_zmalloc (amt);
       if (elf_local_got_ents (abfd) == NULL)

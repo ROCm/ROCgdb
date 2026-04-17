@@ -1675,7 +1675,7 @@ get_got_entry (bfd *abfd, struct alpha_elf_link_hash_entry *h,
 	  bfd_size_type size;
 	  Elf_Internal_Shdr *symtab_hdr;
 
-	  symtab_hdr = &elf_tdata(abfd)->symtab_hdr;
+	  symtab_hdr = &elf_symtab_hdr (abfd);
 	  size = symtab_hdr->sh_info;
 	  size *= sizeof (struct alpha_elf_got_entry *);
 
@@ -2187,7 +2187,7 @@ elf64_alpha_can_merge_gots (bfd *a, bfd *b)
   for (bsub = b; bsub ; bsub = alpha_elf_tdata (bsub)->in_got_link_next)
     {
       struct alpha_elf_link_hash_entry **hashes = alpha_elf_sym_hashes (bsub);
-      Elf_Internal_Shdr *symtab_hdr = &elf_tdata (bsub)->symtab_hdr;
+      Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (bsub);
       int i, n;
 
       n = NUM_SHDR_ENTRIES (symtab_hdr) - symtab_hdr->sh_info;
@@ -2251,7 +2251,7 @@ elf64_alpha_merge_gots (bfd *a, bfd *b)
       local_got_entries = alpha_elf_tdata (bsub)->local_got_entries;
       if (local_got_entries)
 	{
-	  n = elf_tdata (bsub)->symtab_hdr.sh_info;
+	  n = elf_symtab_hdr (bsub).sh_info;
 	  for (i = 0; i < n; ++i)
 	    {
 	      struct alpha_elf_got_entry *ent;
@@ -2262,7 +2262,7 @@ elf64_alpha_merge_gots (bfd *a, bfd *b)
 
       /* Merge the global .got entries.  */
       hashes = alpha_elf_sym_hashes (bsub);
-      symtab_hdr = &elf_tdata (bsub)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (bsub);
 
       n = NUM_SHDR_ENTRIES (symtab_hdr) - symtab_hdr->sh_info;
       for (i = 0; i < n; ++i)
@@ -2382,7 +2382,7 @@ elf64_alpha_calc_got_offsets (struct bfd_link_info *info)
 	  if (!local_got_entries)
 	    continue;
 
-	  for (k = 0, n = elf_tdata(j)->symtab_hdr.sh_info; k < n; ++k)
+	  for (k = 0, n = elf_symtab_hdr (j).sh_info; k < n; ++k)
 	    for (gotent = local_got_entries[k]; gotent; gotent = gotent->next)
 	      if (gotent->use_count > 0)
 		{
@@ -2762,7 +2762,7 @@ elf64_alpha_size_rela_got_section (struct bfd_link_info *info)
 	  if (!local_got_entries)
 	    continue;
 
-	  for (k = 0, n = elf_tdata(j)->symtab_hdr.sh_info; k < n; ++k)
+	  for (k = 0, n = elf_symtab_hdr (j).sh_info; k < n; ++k)
 	    for (gotent = local_got_entries[k];
 		 gotent ; gotent = gotent->next)
 	      if (gotent->use_count > 0)

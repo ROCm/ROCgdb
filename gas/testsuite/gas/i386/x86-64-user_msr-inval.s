@@ -6,7 +6,9 @@ _start:
 	urdmsr	$-32767, %r14
 	urdmsr	$-2147483648, %r14
 	urdmsr	$0x7fffffffffffffff, %r14
+	urdmsr	(%rax), $0
 	uwrmsr	%r12, $-1
 	uwrmsr	%r12, $-32767
 	uwrmsr	%r12, $-2147483648
 	uwrmsr	%r12, $0x7fffffffffffffff
+	uwrmsr	$0, (%rax)

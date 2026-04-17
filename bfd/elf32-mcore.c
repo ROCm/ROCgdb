@@ -399,7 +399,7 @@ mcore_elf_relocate_section (bfd * output_bfd,
 			    Elf_Internal_Sym * local_syms,
 			    asection ** local_sections)
 {
-  Elf_Internal_Shdr * symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  Elf_Internal_Shdr * symtab_hdr = &elf_symtab_hdr (input_bfd);
   struct elf_link_hash_entry ** sym_hashes = elf_sym_hashes (input_bfd);
   Elf_Internal_Rela * rel = relocs;
   Elf_Internal_Rela * relend = relocs + input_section->reloc_count;
@@ -594,7 +594,7 @@ mcore_elf_check_relocs (bfd * abfd,
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = & elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   rel_end = relocs + sec->reloc_count;

@@ -365,7 +365,7 @@ elf32_m68hc11_size_stubs (bfd *output_bfd, bfd *stub_bfd,
       Elf_Internal_Shdr *symtab_hdr;
 
       /* We'll need the symbol table in a second.  */
-      symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (input_bfd);
       if (symtab_hdr->sh_info == 0)
 	continue;
 
@@ -398,7 +398,7 @@ elf32_m68hc11_size_stubs (bfd *output_bfd, bfd *stub_bfd,
       sym_hashes = elf_sym_hashes (input_bfd);
 
       /* We'll need the symbol table in a second.  */
-      symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (input_bfd);
       if (symtab_hdr->sh_info == 0)
 	continue;
 
@@ -856,7 +856,7 @@ elf32_m68hc11_check_relocs (bfd *abfd, struct bfd_link_info *info,
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = & elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
   rel_end = relocs + sec->reloc_count;
 
@@ -939,7 +939,7 @@ elf32_m68hc11_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
   struct m68hc11_elf_link_hash_table *htab;
   unsigned long e_flags;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   e_flags = elf_elfheader (input_bfd)->e_flags;
 

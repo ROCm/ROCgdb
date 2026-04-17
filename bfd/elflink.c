@@ -139,7 +139,7 @@ _bfd_get_local_sym_section (struct elf_reloc_cookie *cookie,
   bfd *abfd = cookie->abfd;
   if (elf_loc_shndx (abfd) == NULL)
     {
-      Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+      Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
       Elf_Internal_Sym *locsyms = bfd_elf_get_elf_syms (abfd, symtab_hdr,
 							cookie->locsymcount, 0,
 							NULL, NULL, NULL);
@@ -877,7 +877,7 @@ bfd_elf_link_record_local_dynamic_symbol (struct bfd_link_info *info,
     return 0;
 
   /* Go find the symbol, so that we can find it's name.  */
-  if (!bfd_elf_get_elf_syms (input_bfd, &elf_tdata (input_bfd)->symtab_hdr,
+  if (!bfd_elf_get_elf_syms (input_bfd, &elf_symtab_hdr (input_bfd),
 			     1, input_indx, &entry->isym, esym, &eshndx))
     {
       bfd_release (input_bfd, entry);
@@ -900,7 +900,7 @@ bfd_elf_link_record_local_dynamic_symbol (struct bfd_link_info *info,
     }
 
   name = (bfd_elf_string_from_elf_section
-	  (input_bfd, elf_tdata (input_bfd)->symtab_hdr.sh_link,
+	  (input_bfd, elf_symtab_hdr (input_bfd).sh_link,
 	   entry->isym.st_name));
 
   dynstr = elf_hash_table (info)->dynstr;
@@ -2820,7 +2820,7 @@ elf_link_read_relocs_from_section (bfd *abfd,
 				 external_relocs_addr, abfd, true))
     return false;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   nsyms = NUM_SHDR_ENTRIES (symtab_hdr);
 
   bed = get_elf_backend_data (abfd);
@@ -3726,7 +3726,7 @@ elf_link_is_defined_archive_symbol (bfd * abfd, carsym * symdef)
       /* Use the IR symbol table if the object has been claimed by
 	 plugin.  */
       abfd = abfd->plugin_dummy_bfd;
-      hdr = &elf_tdata (abfd)->symtab_hdr;
+      hdr = &elf_symtab_hdr (abfd);
     }
   else
     {
@@ -3737,7 +3737,7 @@ elf_link_is_defined_archive_symbol (bfd * abfd, carsym * symdef)
 	}
 
       if ((abfd->flags & DYNAMIC) == 0 || elf_dynsymtab (abfd) == 0)
-	hdr = &elf_tdata (abfd)->symtab_hdr;
+	hdr = &elf_symtab_hdr (abfd);
       else
 	hdr = &elf_tdata (abfd)->dynsymtab_hdr;
     }
@@ -4822,7 +4822,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
      look at .symtab for a dynamic object.  */
 
   if (! dynamic || elf_dynsymtab (abfd) == 0)
-    hdr = &elf_tdata (abfd)->symtab_hdr;
+    hdr = &elf_symtab_hdr (abfd);
   else
     hdr = &elf_tdata (abfd)->dynsymtab_hdr;
 
@@ -8767,9 +8767,9 @@ bfd_elf_match_symbols_in_sections (asection *sec1, asection *sec2,
 
   bed1 = get_elf_backend_data (bfd1);
   bed2 = get_elf_backend_data (bfd2);
-  hdr1 = &elf_tdata (bfd1)->symtab_hdr;
+  hdr1 = &elf_symtab_hdr (bfd1);
   symcount1 = hdr1->sh_size / bed1->s->sizeof_sym;
-  hdr2 = &elf_tdata (bfd2)->symtab_hdr;
+  hdr2 = &elf_symtab_hdr (bfd2);
   symcount2 = hdr2->sh_size / bed2->s->sizeof_sym;
 
   if (symcount1 == 0 || symcount2 == 0)
@@ -9200,7 +9200,7 @@ resolve_symbol (const char *name,
   Elf_Internal_Shdr *symtab_hdr;
   size_t i;
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
 
   for (i = 0; i < locsymcount; ++ i)
     {
@@ -10524,7 +10524,7 @@ elf_link_swap_symbols_out (struct elf_final_link_info *flinfo)
 					 elfsym->dest_index));
     }
 
-  hdr = &elf_tdata (flinfo->output_bfd)->symtab_hdr;
+  hdr = &elf_symtab_hdr (flinfo->output_bfd);
   pos = hdr->sh_offset + hdr->sh_size;
   amt = bed->s->sizeof_sym * flinfo->output_bfd->symcount;
   if (bfd_seek (flinfo->output_bfd, pos, SEEK_SET) == 0
@@ -12849,10 +12849,10 @@ _bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 		  /* We are interested in just local symbols, not all
 		     symbols.  */
 		  if (elf_bad_symtab (sec->owner))
-		    sym_count = (elf_tdata (sec->owner)->symtab_hdr.sh_size
+		    sym_count = (elf_symtab_hdr (sec->owner).sh_size
 				 / bed->s->sizeof_sym);
 		  else
-		    sym_count = elf_tdata (sec->owner)->symtab_hdr.sh_info;
+		    sym_count = elf_symtab_hdr (sec->owner).sh_info;
 
 		  if (sym_count > max_sym_count)
 		    max_sym_count = sym_count;
@@ -13008,7 +13008,7 @@ _bfd_elf_final_link (bfd *abfd, struct bfd_link_info *info)
      the .symtab section at the current file position, and write directly to it.
      We build the .strtab section in memory.  */
   abfd->symcount = 0;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   /* sh_name is set in prep_headers.  */
   symtab_hdr->sh_type = SHT_SYMTAB;
   /* sh_flags, sh_addr and sh_size all start off zero.  */
@@ -13905,7 +13905,7 @@ init_reloc_cookie (struct elf_reloc_cookie *cookie, bfd *abfd)
   elf_backend_data *bed;
 
   bed = get_elf_backend_data (abfd);
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   cookie->abfd = abfd;
   cookie->num_sym = symtab_hdr->sh_size / bed->s->sizeof_sym;
@@ -14815,9 +14815,9 @@ bfd_elf_gc_record_vtinherit (bfd *abfd,
   /* The sh_info field of the symtab header tells us where the
      external symbols start.  We don't care about the local symbols at
      this point.  */
-  extsymcount = elf_tdata (abfd)->symtab_hdr.sh_size / bed->s->sizeof_sym;
+  extsymcount = elf_symtab_hdr (abfd).sh_size / bed->s->sizeof_sym;
   if (!elf_bad_symtab (abfd))
-    extsymcount -= elf_tdata (abfd)->symtab_hdr.sh_info;
+    extsymcount -= elf_symtab_hdr (abfd).sh_info;
 
   sym_hashes = elf_sym_hashes (abfd);
   sym_hashes_end = PTR_ADD (sym_hashes, extsymcount);
@@ -15101,7 +15101,7 @@ bfd_elf_gc_common_finalize_got_offsets (bfd *abfd,
       if (!local_got)
 	continue;
 
-      symtab_hdr = &elf_tdata (i)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (i);
       if (elf_bad_symtab (i))
 	locsymcount = symtab_hdr->sh_size / bed->s->sizeof_sym;
       else

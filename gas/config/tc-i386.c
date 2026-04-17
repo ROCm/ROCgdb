@@ -7305,7 +7305,9 @@ i386_assemble (char *line)
 	  && i.imm_operands && i.operands > i.imm_operands))
       swap_2_operands (0, 1);
 
-  if (i.imm_operands)
+  /* All legitimate immediates are placed first now.  Others, if any, will be
+     rejected by match_template() anyway.  */
+  if (operand_type_check (i.types[0], imm))
     {
       /* For USER_MSR and MSR_IMM instructions, imm32 stands for the name of a
 	 model specific register (MSR). That's an unsigned quantity, whereas all
@@ -7315,10 +7317,7 @@ i386_assemble (char *line)
       if (is_cpu(current_templates.start, CpuUSER_MSR)
 	  || t->mnem_off == MN_rdmsr
 	  || t->mnem_off == MN_wrmsrns)
-	{
-	  for (j = 0; j < i.imm_operands; j++)
-	    i.types[j] = smallest_imm_type (i.op[j].imms->X_add_number);
-	}
+	i.types[0] = smallest_imm_type (i.op[0].imms->X_add_number);
       else
 	optimize_imm ();
     }
@@ -8522,7 +8521,7 @@ optimize_imm (void)
 	       && current_templates.start->mnem_off != MN_jmpabs))
     guess_suffix = LONG_MNEM_SUFFIX;
 
-  for (op = i.operands; --op >= 0;)
+  for (op = i.imm_operands; --op >= 0;)
     if (operand_type_check (i.types[op], imm))
       {
 	switch (i.op[op].imms->X_op)
@@ -15438,7 +15437,7 @@ static INLINE bool starts_memory_operand (char c)
 {
   return ISDIGIT (c)
 	 || is_name_beginner (c)
-	 || strchr ("([\"+-!~", c);
+	 || (c && strchr ("([\"+-!~", c));
 }
 
 /* Parse OPERAND_STRING into the i386_insn structure I.  Returns zero

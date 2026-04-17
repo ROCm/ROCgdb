@@ -701,7 +701,7 @@ loongarch_elf_record_tls_and_got_reference (bfd *abfd,
 					    bool with_relax_reloc)
 {
   struct loongarch_elf_link_hash_table *htab = loongarch_elf_hash_table (info);
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* This is a global offset table entry for a local symbol.  */
   if (elf_local_got_refcounts (abfd) == NULL)
@@ -1113,7 +1113,7 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
     return true;
 
   htab = loongarch_elf_hash_table (info);
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   if (htab->elf.dynobj == NULL)
@@ -5267,7 +5267,7 @@ loongarch_relax_perform_deletes (bfd *abfd, asection *sec,
   unsigned int i, symcount;
   bfd_vma toaddr = sec->size;
   struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (abfd);
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
   unsigned int sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
   struct bfd_elf_section_data *data = elf_section_data (sec);
   bfd_byte *contents = data->this_hdr.contents, *contents_end = NULL;

@@ -66,7 +66,7 @@ v850_elf_check_relocs (bfd *abfd,
 		      sec, abfd);
 #endif
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   rel_end = relocs + sec->reloc_count;
@@ -2185,7 +2185,7 @@ v850_elf_relocate_section (bfd *output_bfd,
   Elf_Internal_Rela *rel;
   Elf_Internal_Rela *relend;
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
 
   /* Reset the list of remembered HI16S relocs to empty.  */
@@ -3210,7 +3210,7 @@ v850_elf_relax_delete_bytes (bfd *abfd,
   struct elf_link_hash_entry *sym_hash;
   Elf_External_Sym_Shndx *shndx;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   extsyms = (Elf32_External_Sym *) symtab_hdr->contents;
 
   sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
@@ -3450,7 +3450,7 @@ v850_elf_relax_section (bfd *abfd,
       || sec->reloc_count == 0)
     return true;
 
-  symtab_hdr = & elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   internal_relocs = (_bfd_elf_link_read_relocs
 		     (abfd, sec, NULL, NULL, link_info->keep_memory));

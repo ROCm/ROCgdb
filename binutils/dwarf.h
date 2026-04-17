@@ -462,6 +462,7 @@ typedef struct separate_info
 extern separate_info * first_separate_info;
 
 extern unsigned int eh_addr_size;
+extern const char * separate_debug_info_dir;
 
 extern int do_debug_info;
 extern int do_debug_abbrevs;

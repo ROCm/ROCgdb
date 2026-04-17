@@ -381,7 +381,7 @@ elf64_ia64_relax_section (bfd *abfd, asection *sec,
   if (ia64_info == NULL)
     return false;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Load the relocations for this section.  */
   internal_relocs = (_bfd_elf_link_read_relocs
@@ -1930,7 +1930,7 @@ elf64_ia64_check_relocs (bfd *abfd, struct bfd_link_info *info,
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   ia64_info = elf64_ia64_hash_table (info);
   if (ia64_info == NULL)
     return false;
@@ -3385,7 +3385,7 @@ elf64_ia64_relocate_section (bfd *output_bfd,
   bool ret_val = true;	/* for non-fatal errors */
   bfd_vma gp_val;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   ia64_info = elf64_ia64_hash_table (info);
   if (ia64_info == NULL)
     return false;
@@ -4881,7 +4881,7 @@ elf64_vms_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	 This should be harmless and shouldn't happen in practice.  */
     }
 
-  hdr = &elf_tdata (abfd)->symtab_hdr;
+  hdr = &elf_symtab_hdr (abfd);
   symcount = hdr->sh_size / bed->s->sizeof_sym;
 
   /* The sh_info field of the symtab header tells us where the

@@ -48,7 +48,7 @@ set lineno_f1 [gdb_get_line_number "func1 ();" $srcfile]
 set lineno_f2 [gdb_get_line_number "func2 ();" $srcfile]
 set lineno_f3 [gdb_get_line_number "func3 ();" $srcfile]
 set lineno_f4 [gdb_get_line_number "func4 ();" $srcfile]
-set lineno_end [gdb_get_line_number "End marker" $srcfile]
+set lineno_f5 [gdb_get_line_number "func5 ();" $srcfile]
 
 # Compile all the source files into DESTFILE.  If RELATIVE_FILENAMES
 # is true then the compilation is done using relative filenames to the
@@ -139,19 +139,29 @@ proc run_test { file_glob skip_func1 skip_func2 skip_func3 skip_func4 \
 		     "$::decimal\\s+\\+\\+global_var_$i;"] \
 		"step into func$i"
 
-	    # Now finish the function, returning to the caller.
-	    gdb_test "finish" ".*" \
-		"finish from func$i"
+	    # Now finish the function, returning to the caller.  Some
+	    # targets, after the finish, will place the inferior back
+	    # on the calling line.  We spot this and issue a 'next' to
+	    # move forward to the next function call.
+	    set saw_next_line false
+	    set saw_previous_line false
+	    gdb_test_multiple "finish" "finish from func$i" {
+		-re -wrap "\r\n$::decimal\\s+func[expr {$i + 1}] \\(\\);\[^\r\n\]*" {
+		    pass $gdb_test_name
+		}
+		-re -wrap "\r\n$::decimal\\s+func$i \\(\\);\[^\r\n\]*" {
+		    # After 'finish' this target reports the inferior
+		    # as still on the calling line.  Use 'next' to
+		    # prepare for the next test.
+		    send_gdb "next\n"
+		    exp_continue
+		}
+	    }
 	} else {
 	    # After skipping the function, on which line should we
 	    # stop, and what does the line look like.
-	    if { $j < 5 } {
-		set lineno [set "::lineno_f$j"]
-		set after_skip_re "func$j \\(\\);\[^\r\n\]+"
-	    } else {
-		set lineno $::lineno_end
-		set after_skip_re "\\+\\+global_var;\[^\r\n\]+"
-	    }
+	    set lineno [set "::lineno_f$j"]
+	    set after_skip_re "func$j \\(\\);\[^\r\n\]+"
 
 	    # Step the inferior, we expect to skip the function.
 	    gdb_test "step" \

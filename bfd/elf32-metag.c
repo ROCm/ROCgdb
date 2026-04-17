@@ -921,7 +921,7 @@ metag_reloc_name_lookup (bfd *abfd ATTRIBUTE_UNUSED,
    bfd_hash_lookup ((table), (string), (create), (copy)))
 
 #define metag_elf_local_got_tls_type(abfd) \
-  ((char *)(elf_local_got_offsets (abfd) + (elf_tdata (abfd)->symtab_hdr.sh_info)))
+  ((char *)(elf_local_got_offsets (abfd) + elf_symtab_hdr (abfd).sh_info))
 
 /* Assorted hash table functions.  */
 
@@ -1431,7 +1431,7 @@ elf_metag_relocate_section (bfd *output_bfd,
   Elf_Internal_Rela *relend;
   asection *sreloc;
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   eh_syms = elf_sym_hashes (input_bfd);
   relend = relocs + input_section->reloc_count;
 
@@ -2038,7 +2038,7 @@ elf_metag_check_relocs (bfd *abfd,
 
   htab = metag_link_hash_table (info);
   dynobj = htab->etab.dynobj;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   eh_syms = elf_sym_hashes (abfd);
   sreloc = NULL;
 
@@ -2752,7 +2752,7 @@ elf_metag_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       if (!local_got)
 	continue;
 
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       locsymcount = symtab_hdr->sh_info;
       end_local_got = local_got + locsymcount;
       local_tls_type = metag_elf_local_got_tls_type (ibfd);
@@ -3595,7 +3595,7 @@ get_local_syms (bfd *output_bfd ATTRIBUTE_UNUSED, bfd *input_bfd,
       Elf_Internal_Shdr *symtab_hdr;
 
       /* We'll need the symbol table in a second.  */
-      symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (input_bfd);
       if (symtab_hdr->sh_info == 0)
 	continue;
 
@@ -3694,7 +3694,7 @@ elf_metag_size_stubs(bfd *output_bfd, bfd *stub_bfd,
 	  Elf_Internal_Sym *local_syms;
 
 	  /* We'll need the symbol table in a second.  */
-	  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+	  symtab_hdr = &elf_symtab_hdr (input_bfd);
 	  if (symtab_hdr->sh_info == 0)
 	    continue;
 

@@ -5223,7 +5223,7 @@ mips_elf_local_relocation_p (bfd *input_bfd,
   size_t extsymoff;
 
   r_symndx = ELF_R_SYM (input_bfd, relocation->r_info);
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   extsymoff = (elf_bad_symtab (input_bfd)) ? 0 : symtab_hdr->sh_info;
 
   if (r_symndx < extsymoff)
@@ -5596,7 +5596,7 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
 
   /* Figure out whether or not the symbol is local, and get the offset
      used in the array of hash table entries.  */
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   local_p = mips_elf_local_relocation_p (input_bfd, relocation,
 					 local_sections);
   was_local_p = local_p;
@@ -8518,7 +8518,7 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
   BFD_ASSERT (htab != NULL);
 
   dynobj = elf_hash_table (info)->dynobj;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
   extsymoff = (elf_bad_symtab (abfd)) ? 0 : symtab_hdr->sh_info;
 
@@ -10536,7 +10536,7 @@ _bfd_mips_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
       howto = MIPS_ELF_RTYPE_TO_HOWTO (input_bfd, r_type, !rel_reloc);
 
       r_symndx = ELF_R_SYM (input_bfd, rel->r_info);
-      symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (input_bfd);
       if (mips_elf_local_relocation_p (input_bfd, rel, local_sections))
 	{
 	  sec = local_sections[r_symndx];
@@ -13710,7 +13710,7 @@ mips_elf_relax_delete_bytes (bfd *abfd,
   BFD_ASSERT (count % 2 == 0);
 
   /* Adjust the local symbols defined in this section.  */
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   isym = (Elf_Internal_Sym *) symtab_hdr->contents;
   for (isymend = isym + symtab_hdr->sh_info; isym < isymend; isym++)
     if (isym->st_shndx == sec_shndx && isym->st_value > addr)
@@ -14122,7 +14122,7 @@ _bfd_mips_elf_relax_section (bfd *abfd, asection *sec,
       || (sec->flags & SEC_CODE) == 0)
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
   internal_relocs = (_bfd_elf_link_read_relocs

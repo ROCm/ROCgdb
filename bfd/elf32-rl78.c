@@ -718,7 +718,7 @@ rl78_elf_relocate_section
   asection *splt;
   bool ret;
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
 
@@ -1327,7 +1327,7 @@ rl78_elf_check_relocs
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
   local_plt_offsets = elf_local_got_offsets (abfd);
   dynobj = elf_hash_table(info)->dynobj;
@@ -1570,7 +1570,7 @@ rl78_elf_relax_plt_section (bfd *dynobj,
       if (! local_plt_offsets)
 	continue;
 
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       if (symtab_hdr->sh_info != 0)
 	{
 	  isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
@@ -1637,7 +1637,7 @@ rl78_elf_relax_plt_section (bfd *dynobj,
       for (ibfd = info->input_bfds; ibfd ; ibfd = ibfd->link.next)
 	{
 	  bfd_vma *local_plt_offsets = elf_local_got_offsets (ibfd);
-	  unsigned int nlocals = elf_tdata (ibfd)->symtab_hdr.sh_info;
+	  unsigned int nlocals = elf_symtab_hdr (ibfd).sh_info;
 	  unsigned int idx;
 
 	  if (! local_plt_offsets)
@@ -1726,7 +1726,7 @@ elf32_rl78_relax_delete_bytes (bfd *abfd, asection *sec, bfd_vma addr, int count
     }
 
   /* Adjust the local symbols defined in this section.  */
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   isym = (Elf_Internal_Sym *) symtab_hdr->contents;
   isymend = isym + symtab_hdr->sh_info;
 

@@ -356,7 +356,7 @@ ft32_elf_relocate_section (bfd *output_bfd,
   Elf_Internal_Rela *rel;
   Elf_Internal_Rela *relend;
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
 
@@ -539,7 +539,7 @@ ft32_reloc_shortable
   r_type = ELF32_R_TYPE (irel->r_info);
   howto = &ft32_elf_howto_table [r_type];
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get the value of the symbol referred to by the reloc.  */
   if (ELF32_R_SYM (irel->r_info) < symtab_hdr->sh_info)
@@ -777,7 +777,7 @@ elf32_ft32_relax_delete_bytes (struct bfd_link_info *link_info, bfd * abfd,
   unsigned int symcount;
   Elf_Internal_Sym *isymbuf = NULL;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
 
   contents = elf_section_data (sec)->this_hdr.contents;
@@ -898,7 +898,7 @@ elf32_ft32_relax_delete_bytes (struct bfd_link_info *link_info, bfd * abfd,
   }
 
   /* Adjust the local symbols defined in this section.  */
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   isym = (Elf_Internal_Sym *) symtab_hdr->contents;
   if (isym)
     {
@@ -974,7 +974,7 @@ elf32_ft32_relax_is_branch_target (struct bfd_link_info *link_info,
   struct elf_link_hash_entry **start_hashes;
   unsigned int symcount;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Now we check for relocations pointing to ret.  */
   for (isec = abfd->sections; isec; isec = isec->next)
@@ -1110,7 +1110,7 @@ ft32_elf_relax_section (bfd *abfd,
       elf_section_data (sec)->this_hdr.contents = contents;
     }
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Read this BFD's local symbols if we haven't done so already.  */
   if (isymbuf == NULL && symtab_hdr->sh_info != 0)

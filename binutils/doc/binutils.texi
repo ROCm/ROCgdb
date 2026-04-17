@@ -2360,6 +2360,7 @@ objdump [@option{-a}|@option{--archive-headers}]
         [@option{-WN}|@option{--dwarf=no-follow-links}]
         [@option{-WD}|@option{--dwarf=use-debuginfod}]
         [@option{-WE}|@option{--dwarf=do-not-use-debuginfod}]
+        [@option{--debug-dir=@file{dir}}]
         [@option{--map-global-vars}]
         [@option{-L}|@option{--process-links}]
         [@option{--ctf=}@var{section}]
@@ -3008,6 +3009,9 @@ The @option{off} argument disables colored disassembly.
 
 @item --dwarf-check
 Enable additional checks for consistency of Dwarf information.
+
+@item --debug-dir=@file{dir}
+Search @file{dir} when looking for separate debug info files.
 
 @include ctf.options.texi
 
@@ -5182,6 +5186,7 @@ readelf [@option{-a}|@option{--all}]
         [@option{-wN}|@option{--debug-dump=no-follow-links}]
         [@option{-wD}|@option{--debug-dump=use-debuginfod}]
         [@option{-wE}|@option{--debug-dump=do-not-use-debuginfod}]
+        [@option{--debug-dir=@file{dir}}]
         [@option{-P}|@option{--process-links}]
         [@option{--dwarf-depth=@var{n}}]
         [@option{--dwarf-start=@var{n}}]
@@ -5486,6 +5491,9 @@ command to @command{ar}, but without using the BFD library.  @xref{ar}.
 @item -w[lLiaprmfFsOoRtUuTgAckK]
 @itemx --debug-dump[=rawline,=decodedline,=info,=abbrev,=pubnames,=aranges,=macro,=frames,=frames-interp,=str,=str-offsets,=loc,=Ranges,=pubtypes,=trace_info,=trace_abbrev,=trace_aranges,=gdb_index,=addr,=cu_index,=links,=follow-links]
 @include debug.options.texi
+
+@item --debug-dir=@file{dir}
+Search @file{dir} when looking for separate debug info files.
 
 @item -P
 @itemx --process-links

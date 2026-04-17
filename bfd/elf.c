@@ -677,7 +677,7 @@ group_signature (bfd *abfd, Elf_Internal_Shdr *ghdr)
     return NULL;
 
   /* Go read the symbol.  */
-  hdr = &elf_tdata (abfd)->symtab_hdr;
+  hdr = &elf_symtab_hdr (abfd);
   if (bfd_elf_get_elf_syms (abfd, hdr, 1, ghdr->sh_info,
 			    &isym, esym, &eshndx) == NULL)
     return NULL;
@@ -3036,7 +3036,7 @@ bfd_sym_from_r_symndx (struct sym_cache *cache,
       unsigned char esym[sizeof (Elf64_External_Sym)];
       Elf_External_Sym_Shndx eshndx;
 
-      symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (abfd);
       if (bfd_elf_get_elf_syms (abfd, symtab_hdr, 1, r_symndx,
 				&cache->sym[ent], esym, &eshndx) == NULL)
 	return NULL;
@@ -3959,7 +3959,7 @@ bfd_elf_set_group_contents (bfd *abfd, asection *sec, void *failedptrarg)
 	{
 	  Elf_Internal_Shdr *symtab_hdr;
 
-	  symtab_hdr = &elf_tdata (igroup->owner)->symtab_hdr;
+	  symtab_hdr = &elf_symtab_hdr (igroup->owner);
 	  extsymoff = symtab_hdr->sh_info;
 	}
       h = elf_sym_hashes (igroup->owner)[symndx - extsymoff];
@@ -8754,7 +8754,7 @@ swap_out_syms (bfd *abfd,
 
   bed = get_elf_backend_data (abfd);
   symcount = bfd_get_symcount (abfd);
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   symtab_hdr->sh_type = SHT_SYMTAB;
   symtab_hdr->sh_entsize = bed->s->sizeof_sym;
   symtab_hdr->sh_size = symtab_hdr->sh_entsize * (symcount + 1);
@@ -9097,7 +9097,7 @@ _bfd_elf_get_symtab_upper_bound (bfd *abfd)
 {
   bfd_size_type symcount;
   long symtab_size;
-  Elf_Internal_Shdr *hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *hdr = &elf_symtab_hdr (abfd);
 
   symcount = hdr->sh_size / get_elf_backend_data (abfd)->s->sizeof_sym;
   if (symcount > LONG_MAX / sizeof (asymbol *))

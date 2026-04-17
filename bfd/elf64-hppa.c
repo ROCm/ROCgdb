@@ -470,7 +470,7 @@ count_dyn_reloc (bfd *abfd,
 static bfd_signed_vma *
 hppa64_elf_local_refcounts (bfd *abfd)
 {
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
   bfd_signed_vma *local_refcounts;
 
   local_refcounts = elf_local_got_refcounts (abfd);
@@ -519,7 +519,7 @@ elf64_hppa_check_relocs (bfd *abfd,
   hppa_info = hppa_link_hash_table (info);
   if (hppa_info == NULL)
     return false;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* If necessary, build a new table holding section symbols indices
      for this BFD.  */
@@ -1731,7 +1731,7 @@ elf64_hppa_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
       if (!start_local_dlt)
 	continue;
 
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       locsymcount = symtab_hdr->sh_info;
 
       end_local_dlt = start_local_dlt + locsymcount;
@@ -3489,7 +3489,7 @@ elf_hppa_final_link_relocate (Elf_Internal_Rela *rel,
   if (hppa_info == NULL)
     return bfd_reloc_notsupported;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   local_offsets = elf_local_got_offsets (input_bfd);
   insn = bfd_get_32 (input_bfd, hit_data);
 
@@ -4302,7 +4302,7 @@ elf64_hppa_relocate_section (bfd *output_bfd,
   if (hppa_info == NULL)
     return false;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
 
   rel = relocs;
   relend = relocs + input_section->reloc_count;

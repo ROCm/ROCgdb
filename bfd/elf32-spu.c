@@ -500,7 +500,7 @@ get_sym_h (struct elf_link_hash_entry **hp,
 	   unsigned long r_symndx,
 	   bfd *ibfd)
 {
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (ibfd);
 
   if (r_symndx >= symtab_hdr->sh_info)
     {
@@ -1018,7 +1018,7 @@ needs_ovl_stub (struct elf_link_hash_entry *h,
 	      else
 		{
 		  Elf_Internal_Shdr *symtab_hdr;
-		  symtab_hdr = &elf_tdata (input_section->owner)->symtab_hdr;
+		  symtab_hdr = &elf_symtab_hdr (input_section->owner);
 		  sym_name = bfd_elf_sym_name (input_section->owner,
 					       symtab_hdr,
 					       sym,
@@ -1096,7 +1096,7 @@ count_stub (struct spu_link_hash_table *htab,
     {
       if (elf_local_got_ents (ibfd) == NULL)
 	{
-	  bfd_size_type amt = (elf_tdata (ibfd)->symtab_hdr.sh_info
+	  bfd_size_type amt = (elf_symtab_hdr (ibfd).sh_info
 			       * sizeof (*elf_local_got_ents (ibfd)));
 	  elf_local_got_ents (ibfd) = bfd_zmalloc (amt);
 	  if (elf_local_got_ents (ibfd) == NULL)
@@ -1552,7 +1552,7 @@ process_stubs (struct bfd_link_info *info, bool build)
 	continue;
 
       /* We'll need the symbol table in a second.  */
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       if (symtab_hdr->sh_info == 0)
 	continue;
 
@@ -2509,7 +2509,7 @@ func_name (struct function_info *fun)
       return name;
     }
   ibfd = sec->owner;
-  symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (ibfd);
   return bfd_elf_sym_name (ibfd, symtab_hdr, fun->u.sym, sec);
 }
 
@@ -2711,7 +2711,7 @@ mark_functions_via_relocs (asection *sec,
   if (internal_relocs == NULL)
     return false;
 
-  symtab_hdr = &elf_tdata (sec->owner)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (sec->owner);
   psyms = &symtab_hdr->contents;
   irela = internal_relocs;
   irelaend = irela + sec->reloc_count;
@@ -2999,7 +2999,7 @@ discover_functions (struct bfd_link_info *info)
 	continue;
 
       /* Read all the symbols.  */
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       symcount = symtab_hdr->sh_size / symtab_hdr->sh_entsize;
       if (symcount == 0)
 	{
@@ -3117,7 +3117,7 @@ discover_functions (struct bfd_link_info *info)
 
 	  psecs = sec_arr[bfd_idx];
 
-	  symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+	  symtab_hdr = &elf_symtab_hdr (ibfd);
 	  syms = (Elf_Internal_Sym *) symtab_hdr->contents;
 
 	  gaps = false;
@@ -4848,7 +4848,7 @@ spu_elf_relocate_section (bfd *output_bfd,
 	   && maybe_needs_stubs (input_section));
   iovl = overlay_index (input_section);
   ea = bfd_get_section_by_name (output_bfd, "._ea");
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = (struct elf_link_hash_entry **) (elf_sym_hashes (input_bfd));
 
   rel = relocs;

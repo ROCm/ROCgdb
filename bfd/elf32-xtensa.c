@@ -1063,7 +1063,7 @@ elf_xtensa_check_relocs (bfd *abfd,
   if (htab == NULL)
     return false;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   rel_end = relocs + sec->reloc_count;
@@ -1528,7 +1528,7 @@ elf_xtensa_allocate_local_got_size (struct bfd_link_info *info)
       if (!local_got_refcounts)
 	continue;
 
-      symtab_hdr = &elf_tdata (i)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (i);
       cnt = symtab_hdr->sh_info;
 
       for (j = 0; j < cnt; ++j)
@@ -2525,7 +2525,7 @@ elf_xtensa_relocate_section (bfd *output_bfd,
   if (htab == NULL)
     return false;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   local_got_tls_types = elf_xtensa_local_got_tls_type (input_bfd);
 
@@ -6824,7 +6824,7 @@ retrieve_local_syms (bfd *input_bfd)
   Elf_Internal_Sym *isymbuf;
   size_t locsymcount;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   locsymcount = symtab_hdr->sh_info;
 
   isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
@@ -10232,7 +10232,7 @@ shrink_dynamic_reloc_sections (struct bfd_link_info *info,
   if (htab == NULL)
     return;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   r_type = ELF32_R_TYPE (rel->r_info);
@@ -10817,7 +10817,7 @@ relax_section_symbols (bfd *abfd, asection *sec)
 
   sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   isymbuf = retrieve_local_syms (abfd);
 
   num_syms = symtab_hdr->sh_size / sizeof (Elf32_External_Sym);
@@ -11004,7 +11004,7 @@ elf_xtensa_get_gotplt_section (struct bfd_link_info *info, int chunk)
 static asection *
 get_elf_r_symndx_section (bfd *abfd, unsigned long r_symndx)
 {
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
   asection *target_sec = NULL;
   if (r_symndx < symtab_hdr->sh_info)
     {
@@ -11059,7 +11059,7 @@ get_elf_r_symndx_hash_entry (bfd *abfd, unsigned long r_symndx)
 {
   unsigned long indx;
   struct elf_link_hash_entry *h;
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
 
   if (r_symndx < symtab_hdr->sh_info)
     return NULL;
@@ -11078,7 +11078,7 @@ get_elf_r_symndx_hash_entry (bfd *abfd, unsigned long r_symndx)
 static bfd_vma
 get_elf_r_symndx_offset (bfd *abfd, unsigned long r_symndx)
 {
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
   bfd_vma offset = 0;
 
   if (r_symndx < symtab_hdr->sh_info)

@@ -875,7 +875,7 @@ riscv_elf_record_got_reference (bfd *abfd, struct bfd_link_info *info,
 				struct elf_link_hash_entry *h, long symndx)
 {
   struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
 
   if (htab->elf.sgot == NULL)
     {
@@ -938,7 +938,7 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
     return true;
 
   htab = riscv_elf_hash_table (info);
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   if (htab->elf.dynobj == NULL)
@@ -4661,7 +4661,7 @@ _riscv_relax_delete_bytes (bfd *abfd,
 {
   unsigned int i, symcount;
   struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (abfd);
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
   unsigned int sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
   struct bfd_elf_section_data *data = elf_section_data (sec);
   bfd_byte *contents = data->this_hdr.contents;

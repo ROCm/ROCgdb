@@ -1427,7 +1427,7 @@ elf32_avr_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
   if (htab == NULL)
     return false;
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
 
@@ -1922,7 +1922,7 @@ elf32_avr_relax_delete_bytes (bfd *abfd,
   bool did_shrink = false;
   bool did_pad = false;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sec_shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
   contents = elf_section_data (sec)->this_hdr.contents;
   relax_info = get_avr_relax_info (sec);
@@ -2191,7 +2191,7 @@ retrieve_local_syms (bfd *input_bfd)
   Elf_Internal_Sym *isymbuf;
   size_t locsymcount;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   locsymcount = symtab_hdr->sh_info;
 
   isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
@@ -2217,7 +2217,7 @@ retrieve_local_syms (bfd *input_bfd)
 static asection *
 get_elf_r_symndx_section (bfd *abfd, unsigned long r_symndx)
 {
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
   asection *target_sec = NULL;
   if (r_symndx < symtab_hdr->sh_info)
     {
@@ -2271,7 +2271,7 @@ get_elf_r_symndx_section (bfd *abfd, unsigned long r_symndx)
 static bfd_vma
 get_elf_r_symndx_offset (bfd *abfd, unsigned long r_symndx)
 {
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
   bfd_vma offset = 0;
 
   if (r_symndx < symtab_hdr->sh_info)
@@ -2529,7 +2529,7 @@ elf32_avr_relax_section (bfd *abfd,
   if (!(elf_elfheader (abfd)->e_flags & EF_AVR_LINKRELAX_PREPARED))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
   internal_relocs = (_bfd_elf_link_read_relocs
@@ -3211,7 +3211,7 @@ elf32_avr_get_relocated_section_contents (bfd *output_bfd,
 						       link_order, data,
 						       relocatable,
 						       symbols);
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
 
   bfd_byte *orig_data = data;
   if (data == NULL)
@@ -3580,7 +3580,7 @@ get_local_syms (bfd *input_bfd, struct bfd_link_info *info)
       Elf_Internal_Shdr *symtab_hdr;
 
       /* We'll need the symbol table in a second.  */
-      symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (input_bfd);
       if (symtab_hdr->sh_info == 0)
 	continue;
 
@@ -3659,7 +3659,7 @@ elf32_avr_size_stubs (bfd *output_bfd,
 	  Elf_Internal_Sym *local_syms;
 
 	  /* We'll need the symbol table in a second.  */
-	  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+	  symtab_hdr = &elf_symtab_hdr (input_bfd);
 	  if (symtab_hdr->sh_info == 0)
 	    continue;
 

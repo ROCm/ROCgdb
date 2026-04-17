@@ -1459,7 +1459,7 @@ elf_arc_relocate_section (bfd *			  output_bfd,
   Elf_Internal_Rela *		 relend;
   struct elf_link_hash_table *   htab = elf_hash_table (info);
 
-  symtab_hdr = &((elf_tdata (input_bfd))->symtab_hdr);
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
 
   rel = wrel = relocs;
@@ -1995,7 +1995,7 @@ elf_arc_check_relocs (bfd *			 abfd,
     htab->dynobj = abfd;
 
   dynobj = (elf_hash_table (info))->dynobj;
-  symtab_hdr = &((elf_tdata (abfd))->symtab_hdr);
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   rel_end = relocs + sec->reloc_count;
@@ -3010,7 +3010,7 @@ arc_elf_relax_section (bfd *abfd, asection *sec,
       || (sec->flags & SEC_CODE) == 0)
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
   internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,

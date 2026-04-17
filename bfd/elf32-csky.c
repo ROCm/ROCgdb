@@ -1965,7 +1965,7 @@ csky_elf_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       if (!local_got_refcounts)
 	continue;
 
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       locsymcount = symtab_hdr->sh_info;
       end_local_got = local_got_refcounts + locsymcount;
       local_tls_type = csky_elf_local_got_tls_type (ibfd);
@@ -2487,7 +2487,7 @@ csky_elf_check_relocs (bfd * abfd,
   if (htab == NULL)
     return false;
 
-  symtab_hdr = & elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   rel_end = relocs + sec->reloc_count;
@@ -3458,7 +3458,7 @@ elf32_csky_size_stubs (bfd *output_bfd,
 	  Elf_Internal_Sym *local_syms = NULL;
 
 	  /* We'll need the symbol table in a second.  */
-	  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+	  symtab_hdr = &elf_symtab_hdr (input_bfd);
 	  if (symtab_hdr->sh_info == 0)
 	    continue;
 

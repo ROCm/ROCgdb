@@ -22,17 +22,26 @@ extern void func4 (void);
 
 static volatile int global_var;
 
+void
+func5 (void)
+{
+  /* Nothing.  */
+}
+
 int
 main (void)
 {
+  /* Some filler before the real work starts.  */
   ++global_var;
 
   func1 ();	/* In aa/bb/file.c */
   func2 ();	/* In cc/bb/file.c */
   func3 ();	/* In dd/ee/file.c */
   func4 ();	/* In dd/ee/ff/file.c */
+  func5 ();	/* Makes exp file simpler.  */
 
-  ++global_var;	/* End marker.  */
+  /* Some filler before the function ends.  */
+  ++global_var;
 
   return 0;
 }
