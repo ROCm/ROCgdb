@@ -565,7 +565,7 @@ elf_vax_check_relocs (bfd *abfd, struct bfd_link_info *info, asection *sec,
     return true;
 
   dynobj = elf_hash_table (info)->dynobj;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   sreloc = NULL;
@@ -1220,7 +1220,7 @@ elf_vax_relocate_section (bfd *output_bfd,
   Elf_Internal_Rela *rel;
   Elf_Internal_Rela *relend;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
 
   sgot = NULL;

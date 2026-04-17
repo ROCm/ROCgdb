@@ -518,7 +518,7 @@ rx_elf_relocate_section
   else
     pid_mode = false;
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
   for (rel = relocs; rel < relend; rel ++)
@@ -1638,7 +1638,7 @@ elf32_rx_relax_delete_bytes (bfd *abfd, asection *sec, bfd_vma addr, int count,
     }
 
   /* Adjust the local symbols defined in this section.  */
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   isym = (Elf_Internal_Sym *) symtab_hdr->contents;
   isymend = isym + symtab_hdr->sh_info;
 
@@ -3358,7 +3358,7 @@ rx_dump_symtab (bfd * abfd, void * internal_syms, void * external_syms)
   char * st_other_str;
   char * st_shndx_str;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   locsymcount = symtab_hdr->sh_size / get_elf_backend_data (abfd)->s->sizeof_sym;
   if (!internal_syms)
     isymbuf = bfd_elf_get_elf_syms (abfd, symtab_hdr,

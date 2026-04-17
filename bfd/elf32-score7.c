@@ -1092,7 +1092,7 @@ score_elf_local_relocation_p (bfd *input_bfd,
   size_t extsymoff;
 
   r_symndx = ELF32_R_SYM (relocation->r_info);
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   extsymoff = (elf_bad_symtab (input_bfd)) ? 0 : symtab_hdr->sh_info;
 
   if (r_symndx < extsymoff)
@@ -2287,7 +2287,7 @@ s7_bfd_score_elf_relocate_section (bfd *output_bfd,
 	return false;
     }
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   extsymoff = (elf_bad_symtab (input_bfd)) ? 0 : symtab_hdr->sh_info;
   rel = relocs;
   relend = relocs + input_section->reloc_count;
@@ -2607,7 +2607,7 @@ s7_bfd_score_elf_check_relocs (bfd *abfd,
     return true;
 
   dynobj = elf_hash_table (info)->dynobj;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
   extsymoff = (elf_bad_symtab (abfd)) ? 0 : symtab_hdr->sh_info;
 

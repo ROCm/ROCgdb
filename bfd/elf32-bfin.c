@@ -1179,7 +1179,7 @@ bfin_check_relocs (bfd * abfd,
     return true;
 
   dynobj = elf_hash_table (info)->dynobj;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
   local_got_refcounts = elf_local_got_refcounts (abfd);
 
@@ -1378,7 +1378,7 @@ bfin_relocate_section (bfd * output_bfd,
   Elf_Internal_Rela *relend;
 
   dynobj = elf_hash_table (info)->dynobj;
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   local_got_offsets = elf_local_got_offsets (input_bfd);
 
@@ -2506,7 +2506,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
     check_segment[2];
   int silence_segment_error = !bfd_link_pic (info);
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
 
@@ -4119,7 +4119,7 @@ _bfinfdpic_check_discarded_relocs (bfd *abfd, asection *sec,
       || sec->reloc_count == 0)
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   rel = elf_section_data (sec)->relocs;
@@ -4520,7 +4520,7 @@ bfinfdpic_check_relocs (bfd *abfd, struct bfd_link_info *info,
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   dynobj = elf_hash_table (info)->dynobj;
@@ -5307,7 +5307,7 @@ bfd_bfin_elf32_create_embedded_relocs (bfd *abfd,
   if (datasec->reloc_count == 0)
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
   internal_relocs = (_bfd_elf_link_read_relocs

@@ -1268,7 +1268,7 @@ elf_slurp_symbol_table (bfd *abfd, asymbol **symptrs, bool dynamic)
 
   if (! dynamic)
     {
-      hdr = &elf_tdata (abfd)->symtab_hdr;
+      hdr = &elf_symtab_hdr (abfd);
       verhdr = NULL;
       symcount = hdr->sh_size / ebd->s->sizeof_sym;
     }

@@ -724,7 +724,7 @@ lm32_elf_relocate_section (bfd *output_bfd,
 			   Elf_Internal_Sym *local_syms,
 			   asection **local_sections)
 {
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (input_bfd);
   struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (input_bfd);
   Elf_Internal_Rela *rel, *relend;
   struct elf_lm32_link_hash_table *htab = lm32_elf_hash_table (info);
@@ -738,7 +738,7 @@ lm32_elf_relocate_section (bfd *output_bfd,
 
   sgot = htab->root.sgot;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
 
   rel = relocs;
@@ -1129,7 +1129,7 @@ lm32_elf_check_relocs (bfd *abfd,
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   htab = lm32_elf_hash_table (info);
@@ -1979,7 +1979,7 @@ lm32_elf_late_size_sections (bfd *output_bfd,
       if (!local_got)
 	continue;
 
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       locsymcount = symtab_hdr->sh_info;
       end_local_got = local_got + locsymcount;
       s = htab->root.sgot;
@@ -2087,12 +2087,12 @@ lm32_elf_late_size_sections (bfd *output_bfd,
 		      end = internal_relocs + s->reloc_count;
 		      while (internal_relocs < end)
 			{
-			  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
-			  struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (ibfd);
+			  Elf_Internal_Shdr *symtab_hdr;
+			  struct elf_link_hash_entry **sym_hashes;
 			  unsigned long r_symndx;
 			  struct elf_link_hash_entry *h;
 
-			  symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+			  symtab_hdr = &elf_symtab_hdr (ibfd);
 			  sym_hashes = elf_sym_hashes (ibfd);
 			  r_symndx = ELF32_R_SYM (internal_relocs->r_info);
 			  h = NULL;

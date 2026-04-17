@@ -381,7 +381,7 @@ elfNN_ia64_relax_section (bfd *abfd, asection *sec,
   if (ia64_info == NULL)
     return false;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Load the relocations for this section.  */
   internal_relocs = (_bfd_elf_link_read_relocs
@@ -2173,7 +2173,7 @@ elfNN_ia64_check_relocs (bfd *abfd, struct bfd_link_info *info,
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   ia64_info = elfNN_ia64_hash_table (info);
   if (ia64_info == NULL)
     return false;
@@ -2703,7 +2703,7 @@ global_sym_index (struct elf_link_hash_entry *h)
   for (p = elf_sym_hashes (obj); *p != h; ++p)
     continue;
 
-  return p - elf_sym_hashes (obj) + elf_tdata (obj)->symtab_hdr.sh_info;
+  return p - elf_sym_hashes (obj) + elf_symtab_hdr (obj).sh_info;
 }
 
 /* Allocate function descriptors.  We can do these for every function
@@ -3777,7 +3777,7 @@ elfNN_ia64_relocate_section (bfd *output_bfd,
   bool ret_val = true;	/* for non-fatal errors */
   bfd_vma gp_val;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   ia64_info = elfNN_ia64_hash_table (info);
   if (ia64_info == NULL)
     return false;

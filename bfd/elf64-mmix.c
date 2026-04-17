@@ -1364,7 +1364,7 @@ mmix_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
   size_t pjsno = 0;
 
   size = input_section->rawsize ? input_section->rawsize : input_section->size;
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend = relocs + input_section->reloc_count;
 
@@ -1953,7 +1953,7 @@ mmix_elf_check_relocs (bfd *abfd,
   const Elf_Internal_Rela *rel;
   const Elf_Internal_Rela *rel_end;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   /* First we sort the relocs so that any register relocs come before
@@ -2547,7 +2547,7 @@ mmix_elf_relax_section (bfd *abfd,
 	  && mmix_elf_section_data (sec)->pjs.n_pushj_relocs == 0))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   if (bpodata != NULL)
     {

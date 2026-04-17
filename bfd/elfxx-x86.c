@@ -1119,7 +1119,7 @@ _bfd_x86_elf_link_relax_section (bfd *abfd ATTRIBUTE_UNUSED,
 
   is_x86_64 = bed->target_id == X86_64_ELF_DATA;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
   local_got_offsets = elf_local_got_offsets (abfd);
 

@@ -2670,7 +2670,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
   int silence_segment_error = !bfd_link_pic (info);
   unsigned long insn;
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
 
@@ -5505,7 +5505,7 @@ _frvfdpic_check_discarded_relocs (bfd *abfd, asection *sec,
       || sec->reloc_count == 0)
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   rel = elf_section_data (sec)->relocs;
@@ -6017,7 +6017,7 @@ elf32_frv_check_relocs (bfd *abfd,
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   dynobj = elf_hash_table (info)->dynobj;

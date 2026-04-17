@@ -311,7 +311,7 @@ struct elf32_hppa_link_hash_table
    bfd_hash_lookup ((table), (string), (create), (copy)))
 
 #define hppa_elf_local_got_tls_type(abfd) \
-  ((char *)(elf_local_got_offsets (abfd) + (elf_tdata (abfd)->symtab_hdr.sh_info * 2)))
+  ((char *)(elf_local_got_offsets (abfd) + (elf_symtab_hdr (abfd).sh_info * 2)))
 
 #define hh_name(hh) \
   (hh ? hh->eh.root.root.string : "<undef>")
@@ -1062,7 +1062,7 @@ elf32_hppa_optimized_tls_reloc (struct bfd_link_info *info ATTRIBUTE_UNUSED,
 static bfd_signed_vma *
 hppa32_elf_local_refcounts (bfd *abfd)
 {
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
   bfd_signed_vma *local_refcounts;
 
   local_refcounts = elf_local_got_refcounts (abfd);
@@ -1112,7 +1112,7 @@ elf32_hppa_check_relocs (bfd *abfd,
   htab = hppa_link_hash_table (info);
   if (htab == NULL)
     return false;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   eh_syms = elf_sym_hashes (abfd);
   sreloc = NULL;
 
@@ -2124,7 +2124,7 @@ elf32_hppa_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       if (!local_got)
 	continue;
 
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       locsymcount = symtab_hdr->sh_info;
       end_local_got = local_got + locsymcount;
       local_tls_type = hppa_elf_local_got_tls_type (ibfd);
@@ -2496,7 +2496,7 @@ get_local_syms (bfd *output_bfd, bfd *input_bfd, struct bfd_link_info *info)
       Elf_Internal_Shdr *symtab_hdr;
 
       /* We'll need the symbol table in a second.  */
-      symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (input_bfd);
       if (symtab_hdr->sh_info == 0)
 	continue;
 
@@ -2672,7 +2672,7 @@ elf32_hppa_size_stubs
 	  Elf_Internal_Sym *local_syms;
 
 	  /* We'll need the symbol table in a second.  */
-	  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+	  symtab_hdr = &elf_symtab_hdr (input_bfd);
 	  if (symtab_hdr->sh_info == 0)
 	    continue;
 
@@ -3515,7 +3515,7 @@ elf32_hppa_relocate_section (bfd *output_bfd,
   Elf_Internal_Rela *rela;
   Elf_Internal_Rela *relend;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
 
   htab = hppa_link_hash_table (info);
   if (htab == NULL)

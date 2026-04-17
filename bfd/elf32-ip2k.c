@@ -582,7 +582,7 @@ adjust_all_relocations (bfd *abfd,
   unsigned int symcount;
   asection *stab;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
 
   shndx = _bfd_elf_section_from_bfd_section (abfd, sec);
@@ -1102,7 +1102,7 @@ ip2k_elf_relax_section (bfd *abfd,
       || (sec->flags & SEC_CODE) == 0)
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
 					       link_info->keep_memory);
@@ -1400,7 +1400,7 @@ ip2k_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
   Elf_Internal_Rela *rel;
   Elf_Internal_Rela *relend;
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
 

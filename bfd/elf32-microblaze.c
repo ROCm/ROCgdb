@@ -967,7 +967,7 @@ microblaze_elf_relocate_section (bfd *output_bfd,
 				 asection **local_sections)
 {
   struct elf32_mb_link_hash_table *htab;
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (input_bfd);
   struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (input_bfd);
   Elf_Internal_Rela *rel, *relend;
   int endian = (bfd_little_endian (output_bfd)) ? 0 : 2;
@@ -1796,7 +1796,7 @@ microblaze_elf_relax_section (bfd *abfd,
     sec->size = sec->rawsize;
 
   /* Get symbols for this section.  */
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
   symcount =  symtab_hdr->sh_size / sizeof (Elf32_External_Sym);
   if (isymbuf == NULL)
@@ -2385,7 +2385,7 @@ microblaze_elf_check_relocs (bfd * abfd,
   if (htab == NULL)
     return false;
 
-  symtab_hdr = & elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   rel_end = relocs + sec->reloc_count;
@@ -3016,7 +3016,7 @@ microblaze_elf_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       if (!local_got)
 	continue;
 
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       locsymcount = symtab_hdr->sh_info;
       end_local_got = local_got + locsymcount;
       lgot_masks = (unsigned char *) end_local_got;

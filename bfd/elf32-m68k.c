@@ -2574,7 +2574,7 @@ elf_m68k_check_relocs (bfd *abfd,
     return true;
 
   dynobj = elf_hash_table (info)->dynobj;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   sreloc = NULL;
@@ -3441,7 +3441,7 @@ elf_m68k_relocate_section (bfd *output_bfd,
   Elf_Internal_Rela *rel;
   Elf_Internal_Rela *relend;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
 
   sgot = NULL;
@@ -4390,7 +4390,7 @@ bfd_m68k_elf32_create_embedded_relocs (bfd *abfd, struct bfd_link_info *info,
   if (datasec->reloc_count == 0)
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
   internal_relocs = (_bfd_elf_link_read_relocs

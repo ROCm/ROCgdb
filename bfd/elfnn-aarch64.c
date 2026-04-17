@@ -4383,7 +4383,7 @@ _bfd_aarch64_add_call_stub_entries (bool *stub_changed, bfd *output_bfd,
 	continue;
 
       /* We'll need the symbol table in a second.  */
-      symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (input_bfd);
       if (symtab_hdr->sh_info == 0)
 	continue;
 

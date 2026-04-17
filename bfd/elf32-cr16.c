@@ -715,7 +715,7 @@ cr16_elf_check_relocs (bfd *abfd, struct bfd_link_info *info, asection *sec,
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   dynobj = elf_hash_table (info)->dynobj;
@@ -1240,7 +1240,7 @@ elf32_cr16_relax_delete_bytes (struct bfd_link_info *link_info, bfd *abfd,
       irel->r_offset -= count;
 
   /* Adjust the local symbols defined in this section.  */
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   isym = (Elf_Internal_Sym *) symtab_hdr->contents;
   for (isymend = isym + symtab_hdr->sh_info; isym < isymend; isym++)
     {
@@ -1343,7 +1343,7 @@ elf32_cr16_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
   struct elf_link_hash_entry **sym_hashes;
   Elf_Internal_Rela *rel, *relend;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
 
   rel = relocs;
@@ -1480,7 +1480,7 @@ elf32_cr16_get_relocated_section_contents (bfd *output_bfd,
 						       relocatable,
 						       symbols);
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
 
   bfd_byte *orig_data = data;
   if (data == NULL)
@@ -1723,7 +1723,7 @@ elf32_cr16_relax_section (bfd *abfd, asection *sec,
       || (sec->flags & SEC_CODE) == 0)
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
   internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
@@ -2680,7 +2680,7 @@ bfd_cr16_elf32_create_embedded_relocs (bfd *abfd,
   if (datasec->reloc_count == 0)
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
   internal_relocs = (_bfd_elf_link_read_relocs

@@ -1335,7 +1335,7 @@ or1k_elf_relocate_section (bfd *output_bfd,
       got_base = sgot->output_section->vma + sgot->output_offset;
     }
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend = relocs + input_section->reloc_count;
 
@@ -1959,7 +1959,7 @@ or1k_elf_check_relocs (bfd *abfd,
   if (bfd_link_relocatable (info))
     return true;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   htab = or1k_elf_hash_table (info);
@@ -3122,7 +3122,7 @@ or1k_elf_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       if (!local_got)
 	continue;
 
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       locsymcount = symtab_hdr->sh_info;
       end_local_got = local_got + locsymcount;
       s = htab->root.sgot;

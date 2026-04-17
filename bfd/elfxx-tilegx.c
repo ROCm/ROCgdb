@@ -1602,7 +1602,7 @@ tilegx_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
     return true;
 
   htab = tilegx_elf_hash_table (info);
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   sreloc = NULL;

@@ -3550,7 +3550,7 @@ elf32_arm_allocate_local_sym_info (bfd *abfd)
 	 structure, this interferes with the work of memory checkers looking
 	 for buffer overruns.  So allocate each array individually.  */
 
-      num_syms = elf_tdata (abfd)->symtab_hdr.sh_info;
+      num_syms = elf_symtab_hdr (abfd).sh_info;
 
       elf_local_got_refcounts (abfd) = bfd_zalloc
 	(abfd, num_syms * sizeof (* elf_local_got_refcounts (abfd)));
@@ -3610,7 +3610,7 @@ elf32_arm_create_local_iplt (bfd *abfd, unsigned long r_symndx)
   if (!elf32_arm_allocate_local_sym_info (abfd))
     return NULL;
 
-  BFD_ASSERT (r_symndx < elf_tdata (abfd)->symtab_hdr.sh_info);
+  BFD_ASSERT (r_symndx < elf_symtab_hdr (abfd).sh_info);
   BFD_ASSERT (r_symndx < elf32_arm_num_entries (abfd));
   ptr = &elf32_arm_local_iplt (abfd)[r_symndx];
   if (*ptr == NULL)
@@ -5924,7 +5924,7 @@ cmse_scan (bfd *input_bfd, struct elf32_arm_link_hash_table *htab,
   struct elf32_arm_stub_hash_entry *stub_entry;
   bool is_v8m, new_stub, cmse_invalid, ret = true;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_count = symtab_hdr->sh_size / bed->s->sizeof_sym;
   ext_start = symtab_hdr->sh_info;
   is_v8m = (out_attr[Tag_CPU_arch].i >= TAG_CPU_ARCH_V8M_BASE
@@ -6480,7 +6480,7 @@ elf32_arm_size_stubs (bfd *output_bfd,
 	  num_a8_relocs = 0;
 
 	  /* We'll need the symbol table in a second.  */
-	  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+	  symtab_hdr = &elf_symtab_hdr (input_bfd);
 	  if (symtab_hdr->sh_info == 0)
 	    continue;
 
@@ -15927,7 +15927,7 @@ elf32_arm_gc_mark_extra_sections (struct bfd_link_info *info,
 
 	      sym_hashes = elf_sym_hashes (sub);
 	      bed = get_elf_backend_data (sub);
-	      symtab_hdr = &elf_tdata (sub)->symtab_hdr;
+	      symtab_hdr = &elf_symtab_hdr (sub);
 	      sym_count = symtab_hdr->sh_size / bed->s->sizeof_sym;
 	      ext_start = symtab_hdr->sh_info;
 

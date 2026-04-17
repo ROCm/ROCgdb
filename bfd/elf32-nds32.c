@@ -4428,7 +4428,7 @@ nds32_elf_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       if (!local_got)
 	continue;
 
-      symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      symtab_hdr = &elf_symtab_hdr (ibfd);
       locsymcount = symtab_hdr->sh_info;
       end_local_got = local_got + locsymcount;
       sgot = elf_hash_table (info)->sgot;
@@ -5066,7 +5066,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
   int eliminate_gc_relocs;
   bfd_vma fpbase_addr;
 
-  symtab_hdr = &elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   ehtab = elf_hash_table (info);
   htab = nds32_elf_hash_table (info);
@@ -7047,7 +7047,7 @@ elf32_nds32_allocate_local_sym_info (bfd *abfd)
       bfd_size_type size;
       char *data;
 
-      num_syms = elf_tdata (abfd)->symtab_hdr.sh_info;
+      num_syms = elf_symtab_hdr (abfd).sh_info;
       /* This space is for got_refcounts, got_tls_type, tlsdesc_gotent, and
 	 gp_offset.  The details can refer to struct elf_nds32_obj_tdata.  */
       size = num_syms * (sizeof (bfd_signed_vma) + sizeof (char)
@@ -7097,7 +7097,7 @@ nds32_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       return true;
     }
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
   ehtab = elf_hash_table (info);
@@ -8828,7 +8828,7 @@ is_convert_32_to_16 (bfd *abfd, asection *sec,
   else
     return false;
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   if (!nds32_get_local_syms (abfd, sec, &isymbuf))
     return false;
 
@@ -9265,7 +9265,7 @@ nds32_elf_relax_delete_blanks (bfd *abfd, asection *sec,
   /* The deletion must stop at the next ALIGN reloc for an alignment
      power larger than the number of bytes we are deleting.  */
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   if (!nds32_get_local_syms (abfd, sec, &isym))
     return false;
 
@@ -9570,7 +9570,7 @@ nds32_get_local_syms (bfd *abfd, asection *sec ATTRIBUTE_UNUSED,
 		      Elf_Internal_Sym **isymbuf_p)
 {
   Elf_Internal_Shdr *symtab_hdr;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Read this BFD's local symbols if we haven't done so already.  */
   if (*isymbuf_p == NULL && symtab_hdr->sh_info != 0)
@@ -12225,7 +12225,7 @@ nds32_elf_relax_section (bfd *abfd, asection *sec,
       relax_range_measurement (abfd, link_info);
     }
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   /* Relocations MUST be kept in memory, because relaxation adjust them.  */
   internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
 					       true /* keep_memory */);
@@ -12910,7 +12910,7 @@ nds32_relax_fp_as_gp (struct bfd_link_info *link_info,
      To suppress the conversion, we simply NOT to apply
      R_NDS32_INSN16_FP7U2_FLAG flag.  */
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
 
   contents = NULL;
   if (!nds32_get_section_contents (abfd, sec, &contents, true)
@@ -13049,7 +13049,7 @@ nds32_fag_remove_unused_fpbase (bfd *abfd, asection *sec,
        R_NDS32_17IFC_PCREL_RELA
        R_NDS32_10IFCU_PCREL_RELA.  */
 
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   nds32_get_section_contents (abfd, sec, &contents, true);
 
   for (irel = internal_relocs; irel < irelend; irel++)
@@ -13548,7 +13548,7 @@ nds32_elf_unify_tls_model (bfd *inbfd, asection *insec, bfd_byte *incontents,
 
   relax_group_list_t chain = { .id = -1, .next = NULL, .next_sibling = NULL };
 
-  Elf_Internal_Shdr *symtab_hdr = &elf_tdata (inbfd)->symtab_hdr;
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (inbfd);
   struct elf_link_hash_entry **sym_hashes;
   sym_hashes = elf_sym_hashes (inbfd);
 

@@ -440,7 +440,7 @@ mep_elf_relocate_section
   Elf_Internal_Rela *		rel;
   Elf_Internal_Rela *		relend;
 
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
 

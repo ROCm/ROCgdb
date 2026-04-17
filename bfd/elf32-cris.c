@@ -995,7 +995,7 @@ cris_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 
   dynobj = htab->root.dynobj;
   local_got_offsets = elf_local_got_offsets (input_bfd);
-  symtab_hdr = & elf_tdata (input_bfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
 
@@ -2967,7 +2967,7 @@ cris_elf_check_relocs (bfd *abfd,
     return false;
 
   dynobj = elf_hash_table (info)->dynobj;
-  symtab_hdr = &elf_tdata (abfd)->symtab_hdr;
+  symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
   local_got_refcounts = elf_local_got_refcounts (abfd);
 
@@ -4007,7 +4007,7 @@ elf_cris_got_elt_size (bfd *abfd ATTRIBUTE_UNUSED,
      entries.  */
   if (h == NULL)
     {
-      Elf_Internal_Shdr *symtab_hdr = &elf_tdata (ibfd)->symtab_hdr;
+      Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (ibfd);
       bfd_signed_vma *local_got_refcounts = elf_local_got_refcounts (ibfd);
 
       BFD_ASSERT (local_got_refcounts != NULL);
