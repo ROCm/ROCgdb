@@ -1,0 +1,265 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test writing to all registers in the GPU, and confirming that:
+#  - For registers with non-read-only bits, written values are really
+#    written and can be read back.
+#  - Writing to read-only registers is ignored.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+# Make an array value for a vector register, with COUNT number of
+# values starting at START.
+proc make_vector_val {start count} {
+    set end [expr {$start + $count}]
+    set val "{"
+    for {set i $start} {$i < $end} {incr i} {
+	if {$i == $start} {
+	    append val "$i"
+	} else {
+	    append val ", $i"
+	}
+    }
+    append val "}"
+    return $val
+}
+
+# Return register REG's size in bytes.
+proc register_size {reg} {
+    return [get_valueof "/d" "sizeof(\$$reg)" INVALID "get size"]
+}
+
+# Save the original value of REG, run BODY, and then restore the
+# original value of REG.  The register's original value is saved in
+# ORG_VALUE_NAME.  Saving/restoring is important because modifying
+# some registers has side effects on what values can be written on
+# others.
+proc save_restore_register { reg org_value_name body } {
+    upvar 1 $org_value_name org_value
+    set org_value [get_valueof "/x" "\$$reg" INVALID "get original value"]
+
+    set code [catch {uplevel 1 $body} result]
+
+    gdb_test "p/x \$$reg = $org_value" \
+	" = $org_value" \
+	"restore original value"
+
+    if {$code == 1} {
+	global errorInfo errorCode
+	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+    } else {
+	return -code $code $result
+    }
+}
+
+# Registers that are fully read-only from the client's perspective.
+proc is_client_readonly {reg} {
+    if {[regexp "^ttmp\[0-9\]+" $reg]} {
+	return 1
+    }
+    return [expr {$reg in {
+	excp_flag_priv
+	flat_scratch
+	scratch_base
+	state_priv
+	status
+	trap_ctrl
+	trapsts
+    }}]
+}
+
+# Registers that have some (but not all) bits that are read-only.
+proc is_some_readonly {reg} {
+    # The single list contains all the special registers from all
+    # supported architectures, sorted in alphabetical order.
+    return [expr {$reg in {
+	excp_flag_user
+	mode
+    }}]
+}
+
+# True if REG is a vector register.
+proc is_vector_register {reg} {
+    return [regexp "^(v|a)\[0-9\]+" $reg]
+}
+
+# Write VALUE to register REG, and then read it back to confirm the
+# write worked.  FMT is the format to pass to the print command.
+# TEST_SUFFIX is appended to the test messages.
+proc write_read_register_fmt {fmt reg value test_suffix} {
+    set value_re [string_to_regexp $value]
+    gdb_test "p/$fmt \$$reg = $value" \
+	" = $value_re" \
+	"write value $test_suffix"
+    gdb_test "p/$fmt \$$reg" \
+	" = $value_re" \
+	"read value $test_suffix"
+}
+
+# Like write_read_register_fmt, for decimal values.
+proc write_read_register_dec {reg dec_value test_suffix} {
+    return [write_read_register_fmt "d" $reg $dec_value $test_suffix]
+}
+
+# Like write_read_register_fmt, for hexadecimal values.
+proc write_read_register_hex {reg hex_value test_suffix} {
+    return [write_read_register_fmt "x" $reg $hex_value $test_suffix]
+}
+
+proc do_test {} {
+    clean_restart
+    gdb_load $::binfile
+
+    with_rocm_gpu_lock {
+	if {![runto kern allow-pending message]} {
+	    return
+	}
+
+	# Collect the names of all registers.
+	set all_registers {}
+	set any "\[^\r\n\]+"
+	gdb_test_multiple "info all-registers" "" -lbl {
+	    -re "^info all-registers(?=\r\n)" {
+		exp_continue
+	    }
+	    -re "^\r\n(\[a-z0-9_\]+) ${any}(?=\r\n)" {
+		set reg "$expect_out(1,string)"
+		verbose -log "got $reg"
+		lappend all_registers $reg
+		exp_continue
+	    }
+	    -re "^\r\n$::gdb_prompt $" {
+		pass $gdb_test_name
+	    }
+	}
+
+	# Build values for the vector registers.
+	set vector_length \
+	    [get_valueof "/d" "sizeof(\$v0)/sizeof(\$v0\[0\])" INVALID \
+		"get number of elements of \$v0"]
+	set vec_val1 [make_vector_val 1 $vector_length]
+	set vec_val2 [make_vector_val 128 $vector_length]
+
+	# For each register, write to it, and confirm the value did
+	# change.  Write two different values, in case the register
+	# happened to already have the first value.
+	foreach_with_prefix reg $all_registers {
+	    if {[is_vector_register $reg]} {
+		write_read_register_dec $reg $vec_val1 "1"
+		write_read_register_dec $reg $vec_val2 "2"
+	    } elseif {$reg == "pc"} {
+		# Must be multiples of 4.
+		write_read_register_hex $reg 0x223344556600 "1"
+		write_read_register_hex $reg 0x778899aabb04 "2"
+	    } elseif {[is_client_readonly $reg] || [is_some_readonly $reg]} {
+		set reg_size [register_size $reg]
+		if {$reg_size == 4} {
+		    set all_ones_val 0xffffffff
+		} elseif {$reg_size == 8} {
+		    set all_ones_val 0xffffffffffffffff
+		} else {
+		    fail "unsupported register size"
+		    continue
+		}
+
+		save_restore_register $reg org_value {
+		    if {[is_client_readonly $reg]} {
+			gdb_test "p/x \$$reg = $all_ones_val" \
+			    " = $all_ones_val" \
+			    "try set all ones"
+			gdb_test "p \$$reg == $org_value"  \
+			    " = true" \
+			    "read-only register did not change 1"
+
+			gdb_test "p/x \$$reg = 0x0" " = 0x0" \
+			    "try set all zeroes"
+			gdb_test "p \$$reg == $org_value"  \
+			    " = true" \
+			    "read-only register did not change 2"
+		    } elseif {[is_some_readonly $reg]} {
+			# Find the set of read-only registers:
+			#  - write all 1s, collect mask of bits that stay at 0
+			#  - write all 0s, collect mask of bits that stay at 1
+			#  - OR the two masks
+			# There should be at least one writable bit.
+
+			gdb_test "p/x \$$reg = $all_ones_val" \
+			    " = $all_ones_val" \
+			    "try set all ones"
+			set read_only_zero_mask \
+			    [get_valueof "/x" "~\$$reg" INVALID \
+				 "get read-only zero mask"]
+
+			gdb_test "p/x \$$reg = 0x0" " = 0x0" \
+			    "try set all zeroes"
+			set read_only_one_mask \
+			    [get_valueof "/x" "\$$reg" INVALID \
+				 "get read-only one mask"]
+
+			set read_only_mask \
+			    [get_valueof "/x" \
+				 "$read_only_zero_mask | $read_only_one_mask" \
+				 INVALID \
+				 "get read-only mask"]
+
+			gdb_assert {$read_only_mask != $all_ones_val} \
+			    "at least one bit is writable"
+
+			set all_writable_clear_value \
+			    [get_valueof "/x" \
+				 "$org_value & $read_only_mask" INVALID \
+				 "get all-writable clear value"]
+			set all_writable_set_value \
+			    [get_valueof "/x" \
+				 "$all_writable_clear_value | ($all_ones_val & ~$read_only_mask)" \
+				 INVALID \
+				 "get all-writable set value"]
+
+			write_read_register_hex $reg $all_writable_clear_value "1"
+			write_read_register_hex $reg $all_writable_set_value "2"
+		    } else {
+			error "unreachable"
+		    }
+		}
+	    } else {
+		# Scalar registers.
+
+		set reg_size [register_size $reg]
+
+		save_restore_register $reg _ {
+		    if {$reg_size == 4} {
+			write_read_register_hex $reg 0xaa55aa55 "1"
+			write_read_register_hex $reg 0x55aa55aa "2"
+		    } elseif {$reg_size == 8} {
+			write_read_register_hex $reg 0xaa55aa55aa55aa55 "1"
+			write_read_register_hex $reg 0x55aa55aa55aa55aa "2"
+		    } else {
+			fail "unsupported register size"
+		    }
+		}
+	    }
+	}
+    }
+}
+
+do_test
