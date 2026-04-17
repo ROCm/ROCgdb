@@ -24,6 +24,7 @@
 #include "cli/cli-decode.h"
 #include "exceptions.h"
 #include "gdbsupport/byte-vector.h"
+#include "gdbsupport/enumerate.h"
 #include "gdbsupport/filestuff.h"
 #include "gdbsupport/gdb_unlinker.h"
 #include "gdbsupport/pathstuff.h"
@@ -1496,32 +1497,28 @@ write_debug_names (dwarf2_per_bfd *per_bfd, cooked_index *table,
   unit_lists units = get_unit_lists (*per_bfd);
   debug_names nametable (per_bfd, dwarf5_is_dwarf64, dwarf5_byte_order);
   data_buf comp_unit_list;
-  int comp_unit_counter = 0;
 
-  for (const auto per_cu : units.comp)
+  for (auto [i, per_cu] : gdb::ranges::views::enumerate (units.comp))
     {
-      nametable.add_cu (per_cu, comp_unit_counter);
+      nametable.add_cu (per_cu, i);
       comp_unit_list.append_uint (nametable.dwarf5_offset_size (),
 				  dwarf5_byte_order,
 				  to_underlying (per_cu->sect_off ()));
-      comp_unit_counter++;
     }
 
   data_buf type_unit_list;
-  int type_unit_counter = 0;
 
-  for (const auto per_cu : units.type)
+  for (auto [i, per_cu] : gdb::ranges::views::enumerate (units.type))
     {
-      nametable.add_cu (per_cu, type_unit_counter);
+      nametable.add_cu (per_cu, i);
       type_unit_list.append_uint (nametable.dwarf5_offset_size (),
 				  dwarf5_byte_order,
 				  to_underlying (per_cu->sect_off ()));
-      type_unit_counter++;
     }
 
-   /* Verify that all units are represented.  */
-  gdb_assert (comp_unit_counter == per_bfd->num_comp_units);
-  gdb_assert (type_unit_counter == per_bfd->num_type_units);
+  /* Verify that all units are represented.  */
+  gdb_assert (units.comp.size () == per_bfd->num_comp_units);
+  gdb_assert (units.type.size () == per_bfd->num_type_units);
 
   for (const cooked_index_entry *entry : table->all_entries ())
     nametable.insert (entry);
@@ -1560,11 +1557,11 @@ write_debug_names (dwarf2_per_bfd *per_bfd, cooked_index *table,
   header.append_uint (2, dwarf5_byte_order, 0);
 
   /* comp_unit_count - The number of CUs in the CU list.  */
-  header.append_uint (4, dwarf5_byte_order, comp_unit_counter);
+  header.append_uint (4, dwarf5_byte_order, units.comp.size ());
 
   /* local_type_unit_count - The number of TUs in the local TU
      list.  */
-  header.append_uint (4, dwarf5_byte_order, type_unit_counter);
+  header.append_uint (4, dwarf5_byte_order, units.type.size ());
 
   /* foreign_type_unit_count - The number of TUs in the foreign TU
      list.  */
