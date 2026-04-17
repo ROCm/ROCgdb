@@ -15437,7 +15437,7 @@ static INLINE bool starts_memory_operand (char c)
 {
   return ISDIGIT (c)
 	 || is_name_beginner (c)
-	 || strchr ("([\"+-!~", c);
+	 || (c && strchr ("([\"+-!~", c));
 }
 
 /* Parse OPERAND_STRING into the i386_insn structure I.  Returns zero
