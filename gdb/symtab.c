@@ -629,12 +629,17 @@ compare_filenames_for_search (const char *filename, const char *search_name)
 	      && STRIP_DRIVE_SPEC (filename) == &filename[len - search_len]));
 }
 
-/* See symtab.h.  */
+/* Return the first symtab in PSPACE matching NAME and for which
+   CALLBACK returns true.
 
-void
-iterate_over_symtabs (program_space *pspace, const char *name,
-		      gdb::function_view<iteration_status (symtab *)> callback)
+   See documentation for for_each_symtab for how exactly NAME is matched.  */
+
+static symtab *
+find_symtab (program_space *pspace, const char *name,
+	     find_symtab_callback_ftype callback)
 {
+  struct symtab *result = nullptr;
+
   gdb::unique_xmalloc_ptr<char> real_path;
 
   /* Here we are interested in canonicalizing an absolute path, not
@@ -645,11 +650,37 @@ iterate_over_symtabs (program_space *pspace, const char *name,
       gdb_assert (IS_ABSOLUTE_PATH (real_path.get ()));
     }
 
+  auto map_callback = [&] (symtab *symtab)
+    {
+      if (callback (symtab))
+	{
+	  result = symtab;
+	  return iteration_status::stop;
+	}
+
+      return iteration_status::keep_going;
+    };
+
   for (objfile &objfile : pspace->objfiles ())
     if (objfile.map_symtabs_matching_filename (name, real_path.get (),
-					       callback)
+					       map_callback)
 	== iteration_status::stop)
-      return;
+      return result;
+
+  return nullptr;
+}
+
+/* See symtab.h.  */
+
+void
+for_each_symtab (program_space *pspace, const char *name,
+		 for_each_symtab_callback_ftype callback)
+{
+  find_symtab (pspace, name, [&] (symtab *symtab)
+	       {
+		 callback (symtab);
+		 return false;
+	       });
 }
 
 /* See symtab.h.  */
@@ -657,15 +688,7 @@ iterate_over_symtabs (program_space *pspace, const char *name,
 symtab *
 lookup_symtab (program_space *pspace, const char *name)
 {
-  struct symtab *result = NULL;
-
-  iterate_over_symtabs (pspace, name, [&] (symtab *symtab)
-    {
-      result = symtab;
-      return iteration_status::stop;
-    });
-
-  return result;
+  return find_symtab (pspace, name, [&] (symtab *symtab) { return true; });
 }
 
 
@@ -6140,12 +6163,11 @@ collect_file_symbol_completion_matches (completion_tracker &tracker,
 
   /* Go through symtabs for SRCFILE and check the externs and statics
      for symbols which match.  */
-  iterate_over_symtabs (current_program_space, srcfile, [&] (symtab *s)
+  for_each_symtab (current_program_space, srcfile, [&] (symtab *s)
     {
       add_symtab_completions (s->compunit (),
 			      tracker, mode, lookup_name,
 			      sym_text, word, TYPE_CODE_UNDEF);
-      return iteration_status::keep_going;
     });
 }
 

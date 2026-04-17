@@ -3613,7 +3613,6 @@ collect_symtabs_from_filename (const char *file,
     {
       if (symtab_table.insert (symtab).second)
 	symtabs.push_back (symtab);
-      return iteration_status::keep_going;
     };
 
   /* Find that file's data.  */
@@ -3624,11 +3623,11 @@ collect_symtabs_from_filename (const char *file,
 	  if (pspace->executing_startup)
 	    continue;
 
-	  iterate_over_symtabs (pspace, file, collector);
+	  for_each_symtab (pspace, file, collector);
 	}
     }
   else
-    iterate_over_symtabs (search_pspace, file, collector);
+    for_each_symtab (search_pspace, file, collector);
 
   /* It is tempting to use the unordered_dense 'extract' method here,
      and remove the separate vector -- but it's unclear if ordering
