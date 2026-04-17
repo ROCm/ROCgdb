@@ -6471,6 +6471,7 @@ enum long_option_values
   OPTION_DWARF_DEPTH,
   OPTION_DWARF_START,
   OPTION_DWARF_CHECK,
+  OPTION_DEBUG_DIR,
   OPTION_CTF_DUMP,
   OPTION_CTF_PARENT,
   OPTION_CTF_SYMBOLS,
@@ -6537,6 +6538,7 @@ static struct option options[] =
   {"dwarf-depth",      required_argument, 0, OPTION_DWARF_DEPTH},
   {"dwarf-start",      required_argument, 0, OPTION_DWARF_START},
   {"dwarf-check",      no_argument, 0, OPTION_DWARF_CHECK},
+  {"debug-dir",        required_argument, NULL, OPTION_DEBUG_DIR},
 #ifdef ENABLE_LIBCTF
   {"ctf",	       required_argument, 0, OPTION_CTF_DUMP},
   {"ctf-symbols",      required_argument, 0, OPTION_CTF_SYMBOLS},
@@ -6680,6 +6682,8 @@ usage (FILE * stream)
   --dwarf-depth=N        Do not display DIEs at depth N or greater\n"));
   fprintf (stream, _("\
   --dwarf-start=N        Display DIEs starting at offset N\n"));
+  fprintf (stream, _("\
+  --debug-dir=<DIR>      Search DIR for debug info files\n"));
 #ifdef ENABLE_LIBCTF
   fprintf (stream, _("\
   --ctf=<number|name>    Display CTF info from section <number|name>\n"));
@@ -6958,6 +6962,9 @@ parse_args (struct dump_data *dumpdata, int argc, char ** argv)
 	  break;
 	case OPTION_DWARF_CHECK:
 	  dwarf_check = true;
+	  break;
+	case OPTION_DEBUG_DIR:
+	  separate_debug_info_dir = optarg;
 	  break;
 	case OPTION_CTF_DUMP:
 	  request_dump (dumpdata, CTF_DUMP);

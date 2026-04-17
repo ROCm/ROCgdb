@@ -125,6 +125,8 @@ separate_info * first_separate_info = NULL;
 
 unsigned int eh_addr_size;
 
+const char * separate_debug_info_dir = NULL;
+
 int do_debug_info;
 int do_debug_abbrevs;
 int do_debug_lines;
@@ -13379,17 +13381,22 @@ load_separate_debug_info (const char *            main_filename,
 #define EXTRA_DEBUG_ROOT2 "/usr/lib/debug/usr"
 #endif
 
-  debug_filename = (char *) malloc (strlen (DEBUGDIR) + 1
-				    + canon_dirlen
-				    + strlen (".debug/")
+  unsigned long len = strlen (DEBUGDIR) + 1
+    + canon_dirlen
+    + strlen (".debug/")
 #ifdef EXTRA_DEBUG_ROOT1
-				    + strlen (EXTRA_DEBUG_ROOT1)
+    + strlen (EXTRA_DEBUG_ROOT1)
 #endif
 #ifdef EXTRA_DEBUG_ROOT2
-				    + strlen (EXTRA_DEBUG_ROOT2)
+    + strlen (EXTRA_DEBUG_ROOT2)
 #endif
-				    + strlen (separate_filename)
-				    + 1);
+    + strlen (separate_filename)
+    + 1;
+
+  if (separate_debug_info_dir)
+    len += strlen (separate_debug_info_dir);
+
+  debug_filename = (char *) malloc (len);
   if (debug_filename == NULL)
     {
       warn (_("Out of memory\n"));
@@ -13398,7 +13405,15 @@ load_separate_debug_info (const char *            main_filename,
       return NULL;
     }
 
-  /* First try in the current directory.  */
+  /* If the user has supplied a debug info directory then try that first.  */
+  if (separate_debug_info_dir != NULL)
+    {
+      sprintf (debug_filename, "%s/%s", separate_debug_info_dir, separate_filename);
+      if (check_func (debug_filename, func_data))
+	goto found;      
+    }
+  
+  /* Next try in the current directory.  */
   sprintf (debug_filename, "%s", separate_filename);
   if (check_func (debug_filename, func_data))
     goto found;
@@ -13425,7 +13440,7 @@ load_separate_debug_info (const char *            main_filename,
     goto found;
 
   /* Try the first extra debug file root.  */
-  sprintf (debug_filename, "%s/%s/%s", EXTRA_DEBUG_ROOT1, canon_dir, separate_filename);
+  sprintf (debug_filename, "%s/%s%s", EXTRA_DEBUG_ROOT1, canon_dir, separate_filename);
   if (check_func (debug_filename, func_data))
     goto found;
 #endif
@@ -13468,37 +13483,19 @@ load_separate_debug_info (const char *            main_filename,
   if (do_debug_links)
     {
       /* Failed to find the file.  */
-      warn (_("could not find separate debug file '%s'\n"),
-	    separate_filename);
-      warn (_("tried: %s\n"), debug_filename);
-
-#ifdef EXTRA_DEBUG_ROOT2
-      sprintf (debug_filename, "%s/%s", EXTRA_DEBUG_ROOT2,
-	       separate_filename);
-      warn (_("tried: %s\n"), debug_filename);
-#endif
-
+      warn (_("could not find separate debug file '%s'\n"), separate_filename);
+      if (separate_debug_info_dir != NULL)
+	warn (_("tried: %s/%s\n"), separate_debug_info_dir, separate_filename);
+      warn (_("tried: %s\n"), separate_filename);
+      warn (_("tried: .debug/%s\n"), separate_filename);
+      warn (_("tried: %s%s\n"), canon_dir, separate_filename);
 #ifdef EXTRA_DEBUG_ROOT1
-      sprintf (debug_filename, "%s/%s/%s", EXTRA_DEBUG_ROOT1,
-	       canon_dir, separate_filename);
-      warn (_("tried: %s\n"), debug_filename);
-
-      sprintf (debug_filename, "%s/%s", EXTRA_DEBUG_ROOT1,
-	       separate_filename);
-      warn (_("tried: %s\n"), debug_filename);
+      warn (_("tried: %s/%s\n"), EXTRA_DEBUG_ROOT1, separate_filename);
+      warn (_("tried: %s/%s%s\n"), EXTRA_DEBUG_ROOT1, canon_dir, separate_filename);
 #endif
-
-      sprintf (debug_filename, "%s.debug/%s", canon_dir,
-	       separate_filename);
-      warn (_("tried: %s\n"), debug_filename);
-
-      sprintf (debug_filename, "%s%s", canon_dir, separate_filename);
-      warn (_("tried: %s\n"), debug_filename);
-
-      sprintf (debug_filename, ".debug/%s", separate_filename);
-      warn (_("tried: %s\n"), debug_filename);
-
-      sprintf (debug_filename, "%s", separate_filename);
+#ifdef EXTRA_DEBUG_ROOT2
+      warn (_("tried: %s/%s\n"), EXTRA_DEBUG_ROOT2, separate_filename);
+#endif
       warn (_("tried: %s\n"), debug_filename);
 
 #if HAVE_LIBDEBUGINFOD
@@ -13547,6 +13544,7 @@ load_separate_debug_info (const char *            main_filename,
 
   if (do_debug_links)
     printf (_("\n%s: Found separate debug info file: %s\n"), main_filename, debug_filename);
+
   add_separate_debug_file (debug_filename, debug_handle);
 
   /* Do not free debug_filename - it might be referenced inside
@@ -13906,6 +13904,7 @@ load_separate_debug_files (void * file, const char * filename)
   /* FIXME: We do not check for the presence of a dwo link as well as a debuglink.  */
 
   check_for_and_load_links (file, filename);
+
   if (first_separate_info != NULL)
     return true;
 

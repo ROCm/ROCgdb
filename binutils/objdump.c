@@ -160,7 +160,6 @@ static enum color_selection
   off;
 #endif
 
-static int dump_any_debugging;
 static int demangle_flags = DMGL_ANSI | DMGL_PARAMS;
 
 /* This is reset to false each time we enter the disassembler, and set true
@@ -329,6 +328,8 @@ usage (FILE *stream, int status)
                            When following links, do not query debuginfod servers\n"));
 #endif
   fprintf (stream, _("\
+      --debug-dir=<DIR>    Search DIR for debug info files\n"));
+  fprintf (stream, _("\
       --map-global-vars    Display memory mapping of global variables\n"));
   fprintf (stream, _("\
   -L, --process-links      Display the contents of non-debug sections in\n\
@@ -481,6 +482,7 @@ enum option_values
     OPTION_START_ADDRESS,
     OPTION_STOP_ADDRESS,
     OPTION_DWARF,
+    OPTION_DEBUG_DIR,
     OPTION_PREFIX,
     OPTION_PREFIX_STRIP,
     OPTION_INSN_WIDTH,
@@ -514,6 +516,7 @@ static struct option long_options[]=
   {"ctf-parent", required_argument, NULL, OPTION_CTF_PARENT},
   {"ctf-parent-section", required_argument, NULL, OPTION_CTF_PARENT_SECTION},
 #endif
+  {"debug-dir", required_argument, NULL, OPTION_DEBUG_DIR},
   {"debugging", no_argument, NULL, 'g'},
   {"debugging-tags", no_argument, NULL, 'e'},
   {"decompress", no_argument, NULL, 'Z'},
@@ -4402,9 +4405,6 @@ load_debug_section (enum dwarf_section_display_enum debug, void *file)
   asection *sec;
   const char *name;
 
-  if (!dump_any_debugging)
-    return false;
-
   /* If it is already loaded, do nothing.  */
   if (section->start != NULL)
     {
@@ -5742,6 +5742,9 @@ might_need_separate_debug_info (bool is_mainfile)
     return true;
   
   if (process_links || dump_symtab || dump_debugging
+      /* Disassembly benefits from symbol tables, which might
+	 be stored in the separate debug info file.  */
+      || disassemble
       || dump_dwarf_section_info || with_source_code)
     return true;
 
@@ -5765,7 +5768,9 @@ dump_bfd (bfd *abfd, bool is_mainfile)
   /* Load any separate debug information files.  */
   if (byte_get != NULL && might_need_separate_debug_info (is_mainfile))
     {
-      load_separate_debug_files (abfd, bfd_get_filename (abfd));
+      /* Since it is possible that there are no separate debug files,
+	 do not complain if calling load_separate_debug_files returns false.  */
+      (void) load_separate_debug_files (abfd, bfd_get_filename (abfd));
 
       /* If asked to do so, recursively dump the separate files.  */
       if (do_follow_links)
@@ -6386,6 +6391,9 @@ main (int argc, char **argv)
 	case OPTION_DWARF_CHECK:
 	  dwarf_check = true;
 	  break;
+	case OPTION_DEBUG_DIR:
+	  separate_debug_info_dir = optarg;
+	  break;
 #ifdef ENABLE_LIBCTF
 	case OPTION_CTF:
 	  dump_ctf_section_info = true;
@@ -6473,12 +6481,6 @@ main (int argc, char **argv)
 
   if (!seenflag)
     usage (stderr, 2);
-
-  dump_any_debugging = (dump_debugging
-			|| dump_dwarf_section_info
-			|| dump_global_vars
-			|| process_links
-			|| with_source_code);
 
   if (formats_info)
     exit_status = display_info ();
