@@ -142,25 +142,6 @@ struct entry_info
    uninitialized section index.  */
 #define SECT_OFF_BSS(objfile) (objfile)->sect_index_bss
 
-/* The "objstats" structure provides a place for gdb to record some
-   interesting information about its internal state at runtime, on a
-   per objfile basis, such as information about the number of symbols
-   read, size of string table (if any), etc.  */
-
-struct objstats
-{
-  /* Number of full symbols read.  */
-  int n_syms = 0;
-
-  /* Number of types.  */
-  int n_types = 0;
-
-  /* Size of stringtable, (if applicable).  */
-  int sz_strtab = 0;
-};
-
-#define OBJSTAT(objfile, expr) (objfile -> stats.expr)
-#define OBJSTATS struct objstats stats
 extern void print_objfile_statistics (void);
 
 /* Number of entries in the minimal symbol hash table.  */
@@ -689,6 +670,17 @@ public:
 	     section_iterator (sections_end, sections_end)));
   }
 
+  /* Allocate a new symbol on this objfile's obstack.  Normally a
+     symbol is made, but other subtypes (e.g., template_symbol) can
+     also be created.  */
+  template<typename T>
+  T *new_symbol ()
+  {
+    T *result = new (&objfile_obstack) T;
+    ++n_syms;
+    return result;
+  }
+
 public:
 
   /* The object file's original name as specified by the user,
@@ -818,9 +810,11 @@ public:
 
   struct objfile *separate_debug_objfile_link = nullptr;
 
-  /* Place to stash various statistics about this objfile.  */
+  /* Number of full symbols read.  */
+  int n_syms = 0;
 
-  OBJSTATS;
+  /* Number of types.  */
+  int n_types = 0;
 
   /* A linked list of symbols created when reading template types or
      function templates.  These symbols are not stored in any symbol

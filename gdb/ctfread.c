@@ -416,8 +416,7 @@ ctf_add_enum_member_cb (const char *name, int enum_value, void *arg)
   if (name != nullptr && *name != '\0')
     {
       objfile *objfile = ccp->per_objfile->objfile;
-      struct symbol *sym = new (&objfile->objfile_obstack) symbol;
-      OBJSTAT (objfile, n_syms++);
+      symbol *sym = objfile->new_symbol<symbol> ();
 
       sym->set_language (language_c, &objfile->objfile_obstack);
       sym->compute_and_set_names (name, false, objfile->per_bfd);
@@ -444,8 +443,7 @@ new_type_symbol (struct ctf_context *ccp, struct type *type, ctf_id_t tid)
   if (name != nullptr && *name != '\0')
     {
       objfile *objfile = ccp->per_objfile->objfile;
-      struct symbol *sym = new (&objfile->objfile_obstack) symbol;
-      OBJSTAT (objfile, n_syms++);
+      symbol *sym = objfile->new_symbol<symbol> ();
 
       sym->set_language (language_c, &objfile->objfile_obstack);
       sym->compute_and_set_names (name, false, objfile->per_bfd);
@@ -1131,8 +1129,7 @@ ctf_add_var_cb (const char *name, ctf_id_t id, void *arg)
       complaint (_("ctf_add_var_cb: %s has NO type (%ld)"), name, id);
       type = builtin_type (objfile)->builtin_error;
     }
-  sym = new (&objfile->objfile_obstack) symbol;
-  OBJSTAT (objfile, n_syms++);
+  sym = objfile->new_symbol<symbol> ();
   sym->set_type (type);
   sym->set_loc_class_index (LOC_OPTIMIZED_OUT);
   sym->compute_and_set_names (name, false, objfile->per_bfd);
@@ -1178,8 +1175,7 @@ add_stt_entries (struct ctf_context *ccp, int functions)
       ctf_debug_printf ("adding %s '%s' tid=0x%lx",
 			functions ? "function" : "object", tname, tid);
 
-      sym = new (&objfile->objfile_obstack) symbol;
-      OBJSTAT (objfile, n_syms++);
+      sym = objfile->new_symbol<symbol> ();
       sym->set_type (type);
       sym->set_domain (functions ? FUNCTION_DOMAIN : VAR_DOMAIN);
       sym->set_loc_class_index (LOC_STATIC);

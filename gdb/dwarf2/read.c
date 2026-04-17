@@ -7795,7 +7795,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
       if (child_die->tag == DW_TAG_template_type_param
 	  || child_die->tag == DW_TAG_template_value_param)
 	{
-	  templ_func = new (&objfile->objfile_obstack) template_symbol;
+	  templ_func = objfile->new_symbol<template_symbol> ();
 	  templ_func->subclass = SYMBOL_TEMPLATE;
 	  break;
 	}
@@ -8329,7 +8329,7 @@ read_variable (struct die_info *die, struct dwarf2_cu *cu)
 	{
 	  struct objfile *objfile = cu->per_objfile->objfile;
 
-	  storage = new (&objfile->objfile_obstack) rust_vtable_symbol;
+	  storage = objfile->new_symbol<rust_vtable_symbol> ();
 	  storage->concrete_type = containing_type;
 	  storage->subclass = SYMBOL_RUST_VTABLE;
 	}
@@ -15461,8 +15461,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
       if (space)
 	sym = space;
       else
-	sym = new (&objfile->objfile_obstack) symbol;
-      OBJSTAT (objfile, n_syms++);
+	sym = objfile->new_symbol<symbol> ();
 
       /* Cache this symbol's name and the name's demangled form (if any).  */
       sym->set_language (cu->lang (), &objfile->objfile_obstack);
