@@ -6268,10 +6268,6 @@ proc gdb_compile {source dest type options} {
     set new_options {}
     if {[lsearch -exact $options rust] != -1} {
 	# -fdiagnostics-color is not a rustcc option.
-    } elseif {[lsearch -exact $options hip] != -1} {
-	# The legacy hipcc wrapper did not support -fdiagnostics-color.
-	# amdclang++ does support it, but we skip it for HIP compilation
-	# to keep the behavior consistent.
     } else {
 	# icx/clang compilers support the -fdiagnostics-color option for
 	# ".S" files and only it is not supported for ".s" files.
@@ -6760,10 +6756,6 @@ proc gdb_compile {source dest type options} {
 		set unbuf_obj_options {nowarnings}
 		if {[lsearch -exact $options hip] != -1} {
 		    lappend unbuf_obj_options hip
-		    # While amdclang++ treats .cc/.cpp files as HIP
-		    # files (via '-x hip'), it treats .c files as C
-		    # files (via '-x c').  Since we have a .c file,
-		    # force compilation in HIP mode ourselves.
 		    lappend unbuf_obj_options "additional_flags=-x hip"
 
 		    # Compile without --offload-arch (which is fine
@@ -6815,23 +6807,14 @@ proc gdb_compile {source dest type options} {
 			"ldflags=$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
 		} else {
 		    # With ldflags, the .o file would be placed last
-		    # in the HIP compiler invocation, like:
-		    #
-		    #  $ amdclang++ source.cc set_unbuffered_mode_obj.o
-		    #
-		    # Unfortunately, if a foo.o file appears after a
-		    # bar.cc file, the compiler treats the foo.o file
-		    # as a source file, and invokes Clang with
-		    # "clang -x hip foo.o", which fails.
-		    #
-		    # It works correctly if we put the .o file first,
-		    # though, like:
-		    #
-		    #  $ amdclang++ set_unbuffered_mode_obj.o source.cc
-		    #
-		    # So for HIP, we prepend the
-		    # set_unbuffered_mode_obj.o file to the sources
-		    # list.
+		    # in the compiler invocation.  With -x hip in
+		    # early_flags, amdclang++ would treat the .o
+		    # file as HIP source, which fails.  By
+		    # prepending the .o to the sources list, it
+		    # appears before the .cc file.  The conditional
+		    # -x hip logic in gdb_compile only adds -x hip
+		    # when source files are present, so the .o is
+		    # handled correctly during linking.
 		    set source \
 			[linsert $source 0 \
 			     $gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)]
