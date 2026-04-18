@@ -630,11 +630,14 @@ compare_filenames_for_search (const char *filename, const char *search_name)
 	      && STRIP_DRIVE_SPEC (filename) == &filename[len - search_len]));
 }
 
-/* See symtab.h.  */
+/* Return the first symtab in PSPACE matching NAME and for which
+   CALLBACK returns true.
 
-void
-iterate_over_symtabs (program_space *pspace, const char *name,
-		      gdb::function_view<bool (symtab *)> callback)
+   See documentation for for_each_symtab for how exactly NAME is matched.  */
+
+static symtab *
+find_symtab (program_space *pspace, const char *name,
+	     find_symtab_callback_ftype callback)
 {
   gdb::unique_xmalloc_ptr<char> real_path;
 
@@ -647,9 +650,26 @@ iterate_over_symtabs (program_space *pspace, const char *name,
     }
 
   for (objfile &objfile : pspace->objfiles ())
-    if (objfile.map_symtabs_matching_filename (name, real_path.get (),
-					       callback))
-      return;
+    if (symtab *result
+	  = objfile.find_symtab_matching_filename (name, real_path.get (),
+						   callback);
+	result != nullptr)
+      return result;
+
+  return nullptr;
+}
+
+/* See symtab.h.  */
+
+void
+for_each_symtab (program_space *pspace, const char *name,
+		 for_each_symtab_callback_ftype callback)
+{
+  find_symtab (pspace, name, [&] (symtab *symtab)
+	       {
+		 callback (symtab);
+		 return false;
+	       });
 }
 
 /* See symtab.h.  */
@@ -657,15 +677,7 @@ iterate_over_symtabs (program_space *pspace, const char *name,
 symtab *
 lookup_symtab (program_space *pspace, const char *name)
 {
-  struct symtab *result = NULL;
-
-  iterate_over_symtabs (pspace, name, [&] (symtab *symtab)
-    {
-      result = symtab;
-      return true;
-    });
-
-  return result;
+  return find_symtab (pspace, name, [&] (symtab *symtab) { return true; });
 }
 
 
@@ -2382,9 +2394,11 @@ lookup_symbol_via_quick_fns (struct objfile *objfile,
     {
       const struct blockvector *bv = symtab->blockvector ();
       const struct block *block = bv->block (block_index);
-      /* If the accumulator finds a best symbol, end the search by
-	 returning false; otherwise keep going by returning true.  */
-      return !accum.search (symtab, block, lookup_name, domain);
+      /* End the search if the accumulator finds a best symbol.  */
+      if (accum.search (symtab, block, lookup_name, domain))
+	return iteration_status::stop;
+
+      return iteration_status::keep_going;
     };
 
   objfile->search (nullptr, &lookup_name, nullptr, searcher,
@@ -2684,23 +2698,18 @@ lookup_transparent_type (const char *name, domain_search_flags flags)
 
 /* See symtab.h.  */
 
-bool
-iterate_over_symbols (const struct block *block,
-		      const lookup_name_info &name,
-		      const domain_search_flags domain,
-		      gdb::function_view<symbol_found_callback_ftype> callback)
+void
+for_each_symbol (const struct block *block, const lookup_name_info &name,
+		 const domain_search_flags domain,
+		 for_each_symbol_callback_ftype callback)
 {
   for (struct symbol *sym : block_iterator_range (block, &name))
-    {
-      if (sym->matches (domain))
-	{
-	  struct block_symbol block_sym = {sym, block};
+    if (sym->matches (domain))
+      {
+	block_symbol block_sym = { sym, block };
 
-	  if (!callback (&block_sym))
-	    return false;
-	}
-    }
-  return true;
+	callback (&block_sym);
+      }
 }
 
 /* Find the compunit symtab associated with PC and SECTION.
@@ -5780,32 +5789,32 @@ find_gnu_ifunc (const symbol *sym)
   struct objfile *objfile = sym->objfile ();
 
   CORE_ADDR address = sym->value_block ()->entry_pc ();
-  minimal_symbol *ifunc = NULL;
-
-  iterate_over_minimal_symbols (objfile, lookup_name,
-				[&] (minimal_symbol *minsym)
+  minimal_symbol *ifunc
+    = find_minimal_symbol (objfile, lookup_name,
+			   [&] (minimal_symbol *minsym)
     {
       if (minsym->type () == mst_text_gnu_ifunc
 	  || minsym->type () == mst_data_gnu_ifunc)
 	{
 	  CORE_ADDR msym_addr = minsym->value_address (objfile);
+
 	  if (minsym->type () == mst_data_gnu_ifunc)
 	    {
 	      struct gdbarch *gdbarch = objfile->arch ();
 	      msym_addr = gdbarch_convert_from_func_ptr_addr
 		(gdbarch, msym_addr, current_inferior ()->top_target ());
 	    }
+
 	  if (msym_addr == address)
-	    {
-	      ifunc = minsym;
-	      return true;
-	    }
+	    return true;
 	}
+
       return false;
     });
 
-  if (ifunc != NULL)
+  if (ifunc != nullptr)
     return {ifunc, objfile};
+
   return {};
 }
 
@@ -5953,7 +5962,7 @@ default_collect_symbol_completion_matches_break_on
 	     add_symtab_completions (symtab,
 				     tracker, mode, lookup_name,
 				     sym_text, word, code);
-	     return true;
+	     return iteration_status::keep_going;
 	   },
 	 SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
 	 SEARCH_ALL_DOMAINS);
@@ -6138,12 +6147,11 @@ collect_file_symbol_completion_matches (completion_tracker &tracker,
 
   /* Go through symtabs for SRCFILE and check the externs and statics
      for symbols which match.  */
-  iterate_over_symtabs (current_program_space, srcfile, [&] (symtab *s)
+  for_each_symtab (current_program_space, srcfile, [&] (symtab *s)
     {
       add_symtab_completions (s->compunit (),
 			      tracker, mode, lookup_name,
 			      sym_text, word, TYPE_CODE_UNDEF);
-      return false;
     });
 }
 

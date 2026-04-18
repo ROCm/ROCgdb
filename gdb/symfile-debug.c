@@ -159,30 +159,30 @@ objfile::forget_cached_source_info ()
     iter->forget_cached_source_info (this);
 }
 
-/* Check for a symtab of a specific name by searching some symtabs.
+/* Find the first symtab of CUST matching BASE_NAME, NAME and REAL_PATH, for
+   which CALLBACK returns true.
 
    If NAME is not absolute, then REAL_PATH is NULL
    If NAME is absolute, then REAL_PATH is the gdb_realpath form of NAME.
 
    The return value, NAME, REAL_PATH and CALLBACK are identical to the
-   `map_symtabs_matching_filename' method of quick_symbol_functions.
+   `objfile::find_symtab_matching_filename' method.
 
    CUST indicates which compunit symtab to search.  Each symtab within
    the specified compunit symtab is also searched.  */
 
-static bool
-iterate_over_one_compunit_symtab (const char *base_name,
-				  const char *name,
-				  const char *real_path,
-				  compunit_symtab *cust,
-				  gdb::function_view<bool (symtab *)> callback)
+static symtab *
+find_symtab_in_compunit_symtab (const char *base_name, const char *name,
+				const char *real_path, compunit_symtab *cust,
+				find_symtab_callback_ftype callback)
 {
   for (symtab *s : cust->filetabs ())
     {
       if (compare_filenames_for_search (s->filename (), name))
 	{
 	  if (callback (s))
-	    return true;
+	    return s;
+
 	  continue;
 	}
 
@@ -195,7 +195,8 @@ iterate_over_one_compunit_symtab (const char *base_name,
       if (compare_filenames_for_search (symtab_to_fullname (s), name))
 	{
 	  if (callback (s))
-	    return true;
+	    return s;
+
 	  continue;
 	}
 
@@ -213,34 +214,36 @@ iterate_over_one_compunit_symtab (const char *base_name,
 	  if (FILENAME_CMP (real_path, fullname) == 0)
 	    {
 	      if (callback (s))
-		return true;
+		return s;
+
 	      continue;
 	    }
 	}
     }
 
   for (compunit_symtab *iter : cust->includes)
-    if (iterate_over_one_compunit_symtab (base_name, name, real_path,
-					  iter, callback))
-      return true;
+    if (symtab *result = find_symtab_in_compunit_symtab (base_name, name,
+							 real_path, iter,
+							 callback);
+	result != nullptr)
+      return result;
 
-  return false;
+  return nullptr;
 }
 
-bool
-objfile::map_symtabs_matching_filename
-  (const char *name, const char *real_path,
-   gdb::function_view<bool (symtab *)> callback)
+symtab *
+objfile::find_symtab_matching_filename (const char *name,
+					const char *real_path,
+					find_symtab_callback_ftype callback)
 {
   if (debug_symfile)
     gdb_printf (gdb_stdlog,
-		"qf->map_symtabs_matching_filename (%s, \"%s\", "
+		"qf->find_symtab_matching_filename (%s, \"%s\", "
 		"\"%s\", %s)\n",
 		objfile_debug_name (this), name,
 		real_path ? real_path : NULL,
 		host_address_to_string (&callback));
 
-  bool retval = false;
   const char *name_basename = lbasename (name);
 
   auto match_one_filename = [&] (const char *filename, bool basenames)
@@ -255,37 +258,34 @@ objfile::map_symtabs_matching_filename
     return false;
   };
 
-  auto listener = [&] (compunit_symtab *symtab)
+  symtab *result = nullptr;
+  auto compunit_callback = [&] (compunit_symtab *symtab)
   {
     /* Skip included compunits, as they are searched by
-       iterate_over_one_compunit_symtab.  */
+       find_symtab_in_compunit_symtab.  */
     if (symtab->user != nullptr)
-      return true;
+      return iteration_status::keep_going;
 
-    /* CALLBACK returns false to keep going and true to continue, so
-       we have to invert the result here, for search.  */
-    return !iterate_over_one_compunit_symtab (name_basename, name, real_path,
-					      symtab, callback);
+    result = find_symtab_in_compunit_symtab (name_basename, name, real_path,
+					     symtab, callback);
+    return (result == nullptr
+	    ? iteration_status::keep_going
+	    : iteration_status::stop);
   };
 
   for (const auto &iter : qf)
-    {
-      if (!iter->search (this, match_one_filename, nullptr, nullptr,
-			 listener,
-			 SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
-			 SEARCH_ALL_DOMAINS))
-	{
-	  retval = true;
-	  break;
-	}
-    }
+    if (iter->search (this, match_one_filename, nullptr, nullptr,
+		      compunit_callback,
+		      SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
+		      SEARCH_ALL_DOMAINS)
+	== iteration_status::stop)
+      break;
 
   if (debug_symfile)
-    gdb_printf (gdb_stdlog,
-		"qf->map_symtabs_matching_filename (...) = %d\n",
-		retval);
+    gdb_printf (gdb_stdlog, "qf->find_symtab_matching_filename (...) = %p\n",
+		result);
 
-  return retval;
+  return result;
 }
 
 struct compunit_symtab *
@@ -316,22 +316,23 @@ objfile::lookup_symbol (block_enum kind, const lookup_name_info &name,
       {
 	retval = stab;
 	/* Found it.  */
-	return false;
+	return iteration_status::stop;
       }
     if (with_opaque != nullptr)
       retval = stab;
 
     /* Keep looking through other psymtabs.  */
-    return true;
+    return iteration_status::keep_going;
   };
 
   for (const auto &iter : qf)
     {
-      if (!iter->search (this, nullptr, &name, nullptr, search_one_symtab,
-			 kind == GLOBAL_BLOCK
-			 ? SEARCH_GLOBAL_BLOCK
-			 : SEARCH_STATIC_BLOCK,
-			 domain))
+      if (iter->search (this, nullptr, &name, nullptr, search_one_symtab,
+			kind == GLOBAL_BLOCK
+			? SEARCH_GLOBAL_BLOCK
+			: SEARCH_STATIC_BLOCK,
+			domain)
+	  == iteration_status::stop)
 	break;
     }
 
@@ -397,11 +398,11 @@ objfile::expand_symtabs_with_fullname (const char *fullname)
 		  SEARCH_ALL_DOMAINS);
 }
 
-bool
+iteration_status
 objfile::search (search_symtabs_file_matcher file_matcher,
 		 const lookup_name_info *lookup_name,
 		 search_symtabs_symbol_matcher symbol_matcher,
-		 search_symtabs_expansion_listener listener,
+		 compunit_symtab_iteration_callback compunit_callback,
 		 block_search_flags search_flags,
 		 domain_search_flags domain,
 		 search_symtabs_lang_matcher lang_matcher)
@@ -415,14 +416,16 @@ objfile::search (search_symtabs_file_matcher file_matcher,
 		objfile_debug_name (this),
 		host_address_to_string (&file_matcher),
 		host_address_to_string (&symbol_matcher),
-		host_address_to_string (&listener),
+		host_address_to_string (&compunit_callback),
 		domain_name (domain).c_str ());
 
   for (const auto &iter : qf)
-    if (!iter->search (this, file_matcher, lookup_name, symbol_matcher,
-		       listener, search_flags, domain, lang_matcher))
-      return false;
-  return true;
+    if (iter->search (this, file_matcher, lookup_name, symbol_matcher,
+		      compunit_callback, search_flags, domain, lang_matcher)
+	== iteration_status::stop)
+      return iteration_status::stop;
+
+  return iteration_status::keep_going;
 }
 
 struct compunit_symtab *

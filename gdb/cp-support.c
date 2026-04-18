@@ -1490,7 +1490,7 @@ add_symbol_overload_list_qualified (const char *func_name,
 	     /* Don't do this block twice.  */
 	     if (b != surrounding_static_block)
 	       add_symbol_overload_list_block (func_name, b, overload_list);
-	     return true;
+	     return iteration_status::keep_going;
 	   };
 
 	 /* Look through the partial symtabs for all symbols which

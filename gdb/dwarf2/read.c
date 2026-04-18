@@ -1455,14 +1455,14 @@ struct readnow_functions : public dwarf2_base_index_functions
   {
   }
 
-  bool search (struct objfile *objfile,
-	       search_symtabs_file_matcher file_matcher,
-	       const lookup_name_info *lookup_name,
-	       search_symtabs_symbol_matcher symbol_matcher,
-	       search_symtabs_expansion_listener listener,
-	       block_search_flags search_flags,
-	       domain_search_flags domain,
-	       search_symtabs_lang_matcher lang_matcher) override
+  iteration_status search (struct objfile *objfile,
+			   search_symtabs_file_matcher file_matcher,
+			   const lookup_name_info *lookup_name,
+			   search_symtabs_symbol_matcher symbol_matcher,
+			   compunit_symtab_iteration_callback compunit_callback,
+			   block_search_flags search_flags,
+			   domain_search_flags domain,
+			   search_symtabs_lang_matcher lang_matcher) override
   {
     dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
     auto_bool_vector cus_to_skip;
@@ -1482,11 +1482,14 @@ struct readnow_functions : public dwarf2_base_index_functions
 	    || per_cu->unit_type (false) == 0
 	    || per_objfile->get_compunit_symtab (per_cu.get ()) == nullptr)
 	  continue;
-	if (!search_one (per_cu.get (), per_objfile, cus_to_skip, file_matcher,
-			 listener, lang_matcher))
-	  return false;
+
+	if (search_one (per_cu.get (), per_objfile, cus_to_skip,
+			compunit_callback, lang_matcher)
+	    == iteration_status::stop)
+	  return iteration_status::stop;
       }
-    return true;
+
+    return iteration_status::keep_going;
   }
 
   struct symbol *find_symbol_by_address (struct objfile *objfile,
@@ -1920,18 +1923,17 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 
 /* See read.h.  */
 
-bool
+iteration_status
 dwarf2_base_index_functions::search_one
   (dwarf2_per_cu *per_cu,
    dwarf2_per_objfile *per_objfile,
    auto_bool_vector &cus_to_skip,
-   search_symtabs_file_matcher file_matcher,
-   search_symtabs_expansion_listener listener,
+   compunit_symtab_iteration_callback compunit_callback,
    search_symtabs_lang_matcher lang_matcher)
 {
   /* Already visited, or intentionally skipped.  */
   if (cus_to_skip.is_set (per_cu->index))
-    return true;
+    return iteration_status::keep_going;
 
   if (lang_matcher != nullptr)
     {
@@ -1939,20 +1941,20 @@ dwarf2_base_index_functions::search_one
       per_cu->ensure_lang (per_objfile);
       if (!per_cu->maybe_multi_language ()
 	  && !lang_matcher (per_cu->lang ()))
-	return true;
+	return iteration_status::keep_going;
     }
 
   compunit_symtab *symtab
     = dw2_instantiate_symtab (per_cu, per_objfile, false);
   gdb_assert (symtab != nullptr);
 
-  if (listener != nullptr)
+  if (compunit_callback != nullptr)
     {
       cus_to_skip.set (per_cu->index, true);
-      return listener (symtab);
+      return compunit_callback (symtab);
     }
 
-  return true;
+  return iteration_status::keep_going;
 }
 
 /* If FILE_MATCHER is non-NULL, update CUS_TO_SKIP as appropriate
@@ -14038,13 +14040,13 @@ cooked_index_functions::find_symbol_by_address
   return cu->symbol_at_address (address);
 }
 
-bool
+iteration_status
 cooked_index_functions::search
   (objfile *objfile,
    search_symtabs_file_matcher file_matcher,
    const lookup_name_info *lookup_name,
    search_symtabs_symbol_matcher symbol_matcher,
-   search_symtabs_expansion_listener listener,
+   compunit_symtab_iteration_callback compunit_callback,
    block_search_flags search_flags,
    domain_search_flags domain,
    search_symtabs_lang_matcher lang_matcher)
@@ -14064,11 +14066,13 @@ cooked_index_functions::search
 	{
 	  QUIT;
 
-	  if (!search_one (per_cu, per_objfile, cus_to_skip, file_matcher,
-			   listener, lang_matcher))
-	    return false;
+	  if (search_one (per_cu, per_objfile, cus_to_skip, compunit_callback,
+			  lang_matcher)
+	      == iteration_status::stop)
+	    return iteration_status::stop;
 	}
-      return true;
+
+      return iteration_status::keep_going;
     }
 
   lookup_name_info lookup_name_without_params
@@ -14230,17 +14234,19 @@ cooked_index_functions::search
 	  else if (!symbol_matcher (full_name))
 	    continue;
 
-	  bool check = entry->visit_defining_cus ([&] (dwarf2_per_cu *per_cu)
+	  iteration_status status
+	    = entry->visit_defining_cus ([&] (dwarf2_per_cu *per_cu)
 	    {
 	      return search_one (per_cu, per_objfile, cus_to_skip,
-				 file_matcher, listener, nullptr);
+				 compunit_callback, nullptr);
 	    });
-	  if (!check)
-	    return false;
+
+	  if (status == iteration_status::stop)
+	    return iteration_status::stop;
 	}
     }
 
-  return true;
+  return iteration_status::keep_going;
 }
 
 /* Start reading .debug_info using the indexer.  */
@@ -18003,15 +18009,17 @@ dwarf2_per_cu::ensure_lang (dwarf2_per_objfile *per_objfile)
 
 /* See read.h.  */
 
-bool
+iteration_status
 dwarf2_per_cu::recursively_visit_cus (per_cu_callback callback)
 {
   if (including_cus.empty ())
     return callback (this);
+
   for (dwarf2_per_cu *iter : including_cus)
-    if (!iter->recursively_visit_cus (callback))
-      return false;
-  return true;
+    if (iter->recursively_visit_cus (callback) == iteration_status::stop)
+      return iteration_status::stop;
+
+  return iteration_status::keep_going;
 }
 
 /* See read.h.  */

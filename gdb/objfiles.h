@@ -115,11 +115,11 @@ struct entry_info
   /* The index of the section in which the entry point appears.  */
   int the_bfd_section_index;
 
-  /* Set to 1 iff ENTRY_POINT contains a valid value.  */
-  unsigned entry_point_p : 1;
+  /* Set to true iff ENTRY_POINT contains a valid value.  */
+  bool entry_point_p;
 
-  /* Set to 1 iff this object was initialized.  */
-  unsigned initialized : 1;
+  /* Set to true iff this object was initialized.  */
+  bool initialized;
 };
 
 #define SECT_OFF_DATA(objfile) \
@@ -571,21 +571,17 @@ public:
   /* See quick_symbol_functions.  */
   void forget_cached_source_info ();
 
-  /* Expand and iterate over each "partial" symbol table in OBJFILE
-     where the source file is named NAME.
+  /* Find the first symtab where the source file matches NAME and REAL_PATH,
+     and for which CALLBACK returns true.
 
      If NAME is not absolute, a match after a '/' in the symbol table's
      file name will also work, REAL_PATH is NULL then.  If NAME is
      absolute then REAL_PATH is non-NULL absolute file name as resolved
-     via gdb_realpath from NAME.
+     via gdb_realpath from NAME.  */
 
-     If a match is found, the "partial" symbol table is expanded.
-     Then, this calls iterate_over_some_symtabs (or equivalent) over
-     all newly-created symbol tables, passing CALLBACK to it.
-     The result of this call is returned.  */
-  bool map_symtabs_matching_filename
-    (const char *name, const char *real_path,
-     gdb::function_view<bool (symtab *)> callback);
+  symtab *find_symtab_matching_filename (const char *name,
+					 const char *real_path,
+					 find_symtab_callback_ftype callback);
 
   /* Check to see if the symbol is defined in a "partial" symbol table
      of this objfile.  BLOCK_INDEX should be either GLOBAL_BLOCK or
@@ -618,14 +614,13 @@ public:
   void expand_symtabs_with_fullname (const char *fullname);
 
   /* See quick_symbol_functions.  */
-  bool search
-    (search_symtabs_file_matcher file_matcher,
-     const lookup_name_info *lookup_name,
-     search_symtabs_symbol_matcher symbol_matcher,
-     search_symtabs_expansion_listener listener,
-     block_search_flags search_flags,
-     domain_search_flags domain,
-     search_symtabs_lang_matcher lang_matcher = nullptr);
+  iteration_status search (search_symtabs_file_matcher file_matcher,
+			   const lookup_name_info *lookup_name,
+			   search_symtabs_symbol_matcher symbol_matcher,
+			   compunit_symtab_iteration_callback compunit_callback,
+			   block_search_flags search_flags,
+			   domain_search_flags domain,
+			   search_symtabs_lang_matcher lang_matcher = nullptr);
 
   /* See quick_symbol_functions.  */
   struct compunit_symtab *

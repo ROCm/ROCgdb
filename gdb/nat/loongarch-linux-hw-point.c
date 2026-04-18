@@ -44,7 +44,7 @@
    N.B.  The actual updating of hardware debug registers is not
    carried out until the moment the thread is resumed.  */
 
-static int
+static void
 loongarch_dr_change_callback (struct lwp_info *lwp, int is_watchpoint,
 			      unsigned int idx)
 {
@@ -93,8 +93,6 @@ loongarch_dr_change_callback (struct lwp_info *lwp, int is_watchpoint,
 		    phex (info->dr_changed_bp, 8),
 		    phex (info->dr_changed_wp, 8));
     }
-
-  return 0;
 }
 
 /* Notify each thread that their IDXth breakpoint/watchpoint register
@@ -106,14 +104,12 @@ void
 loongarch_notify_debug_reg_change (ptid_t ptid,
 				 int is_watchpoint, unsigned int idx)
 {
-  ptid_t pid_ptid = ptid_t (ptid.pid ());
-
-  iterate_over_lwps (pid_ptid, [=] (struct lwp_info *info)
-			       {
-				 return loongarch_dr_change_callback (info,
-								      is_watchpoint,
-								      idx);
-			       });
+  for_each_lwp (ptid.pid (), [=] (struct lwp_info *info)
+			     {
+			       loongarch_dr_change_callback (info,
+							     is_watchpoint,
+							     idx);
+			     });
 }
 
 /* Call ptrace to set the thread TID's hardware breakpoint/watchpoint

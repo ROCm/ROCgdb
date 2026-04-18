@@ -2395,8 +2395,8 @@ procfs_xfer_memory (gdb_byte *readbuf, const gdb_byte *writebuf,
    descriptors for the parent process, but discard any file
    descriptors we may have accumulated for the threads.
 
-   As this function is called by iterate_over_threads, it always
-   returns zero (so that iterate_over_threads will keep
+   As this function is called by proc_iterate_over_threads, it always
+   returns zero (so that proc_iterate_over_threads will keep
    iterating).  */
 
 static int
@@ -3541,7 +3541,7 @@ find_signalled_thread (struct thread_info *info)
 static enum gdb_signal
 find_stop_signal (void)
 {
-  struct thread_info *info = iterate_over_threads (find_signalled_thread);
+  struct thread_info *info = find_thread (find_signalled_thread);
 
   if (info)
     return info->stop_signal ();

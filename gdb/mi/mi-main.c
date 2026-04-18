@@ -279,10 +279,9 @@ exec_continue (const char *const *argv, int argc)
 	      pid = inf->pid;
 	    }
 
-	  iterate_over_threads ([&] (struct thread_info *thread)
+	  for_each_thread ([&] (struct thread_info *thread)
 	    {
 	      proceed_thread (thread, pid);
-	      return false;
 	    });
 	  disable_commit_resumed.reset_and_commit ();
 	}
@@ -365,16 +364,15 @@ mi_cmd_exec_interrupt (const char *command, const char *const *argv, int argc)
       scoped_disable_commit_resumed disable_commit_resumed
 	("interrupting all threads of thread group");
 
-      iterate_over_threads ([&] (struct thread_info *thread)
+      for_each_thread ([&] (struct thread_info *thread)
 	{
 	  if (thread->state () != THREAD_RUNNING)
-	    return false;
+	    return;
 
 	  if (thread->ptid.pid () != inf->pid)
-	    return false;
+	    return;
 
 	  target_stop (thread->ptid);
-	  return false;
 	});
     }
   else
@@ -506,7 +504,7 @@ mi_cmd_target_detach (const char *command, const char *const *argv, int argc)
 
       /* Pick any thread in the desired process.  Current
 	 target_detach detaches from the parent of inferior_ptid.  */
-      tp = iterate_over_threads ([&] (struct thread_info *ti)
+      tp = find_thread ([&] (struct thread_info *ti)
 	{
 	  return ti->ptid.pid () == pid && ti->state () != THREAD_EXITED;
 	});
@@ -651,7 +649,7 @@ print_one_inferior (struct inferior *inferior, bool recurse,
 
       if (inferior->pid != 0)
 	{
-	  iterate_over_threads ([&] (struct thread_info *ti)
+	  for_each_thread ([&] (struct thread_info *ti)
 	    {
 	      if (ti->ptid.pid () == inferior->pid)
 		{
@@ -660,7 +658,6 @@ print_one_inferior (struct inferior *inferior, bool recurse,
 		  if (core != -1)
 		    cores.insert (core);
 		}
-	      return false;
 	    });
 	}
 

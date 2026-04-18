@@ -5430,7 +5430,7 @@ struct match_data
   }
   DISABLE_COPY_AND_ASSIGN (match_data);
 
-  bool operator() (struct block_symbol *bsym);
+  void operator() (struct block_symbol *bsym);
 
   void finish (const block *block);
 
@@ -5455,14 +5455,14 @@ match_data::finish (const block *block)
 /* A callback for add_nonlocal_symbols that adds symbol, found in
    BSYM, to a list of symbols.  */
 
-bool
+void
 match_data::operator() (struct block_symbol *bsym)
 {
   const struct block *block = bsym->block;
   struct symbol *sym = bsym->symbol;
 
   if (sym->loc_class () == LOC_UNRESOLVED)
-    return true;
+    return;
   else if (sym->is_argument ())
     arg_sym = sym;
   else
@@ -5470,8 +5470,6 @@ match_data::operator() (struct block_symbol *bsym)
       found_sym = true;
       add_defn_to_vec (*resultp, sym, block);
     }
-
-  return true;
 }
 
 /* Helper for add_nonlocal_symbols.  Find symbols in DOMAIN which are
@@ -5566,12 +5564,9 @@ map_matching_symbols (struct objfile *objfile,
     {
       const struct block *block
 	= symtab->blockvector ()->block (block_kind);
-      /* match_data::operator() always returns true; we ignore the
-	 result but assert just to be future-proof.  */
-      bool result = iterate_over_symbols (block, lookup_name, domain, data);
-      gdb_assert (result);
+      for_each_symbol (block, lookup_name, domain, data);
       data.finish (block);
-      return true;
+      return iteration_status::keep_going;
     };
 
   objfile->search (nullptr, &lookup_name, nullptr, callback,
@@ -5667,9 +5662,8 @@ ada_add_all_symbols (std::vector<struct block_symbol> &result,
 	ada_add_local_symbols (result, lookup_name, block, domain);
       else
 	{
-	  /* In the !full_search case we're are being called by
-	     iterate_over_symbols, and we don't want to search
-	     superblocks.  */
+	  /* In the !full_search case we're being called by for_each_symbol, and
+	     we don't want to search superblocks.  */
 	  ada_add_block_symbols (result, block, lookup_name, domain, NULL);
 	}
       if (!result.empty () || !full_search)
@@ -13210,7 +13204,7 @@ ada_add_global_exceptions (compiled_regex *preg,
 		  }
 	    }
 
-	  return true;
+	  return iteration_status::keep_going;
 	};
 
       /* In Ada, the symbol "search name" is a linkage name, whereas
@@ -13705,20 +13699,15 @@ public:
 
   /* See language.h.  */
 
-  bool iterate_over_symbols
+  void for_each_symbol
 	(const struct block *block, const lookup_name_info &name,
 	 domain_search_flags domain,
-	 gdb::function_view<symbol_found_callback_ftype> callback) const override
+	 for_each_symbol_callback_ftype callback) const override
   {
     std::vector<struct block_symbol> results
       = ada_lookup_symbol_list_worker (name, block, domain, 0);
     for (block_symbol &sym : results)
-      {
-	if (!callback (&sym))
-	  return false;
-      }
-
-    return true;
+      callback (&sym);
   }
 
   /* See language.h.  */
@@ -13886,7 +13875,7 @@ public:
 		  }
 	      }
 
-	    return true;
+	    return iteration_status::keep_going;
 	  };
 
 	objfile.search

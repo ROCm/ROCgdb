@@ -237,17 +237,14 @@ struct collect_info
   std::vector<bound_minimal_symbol> *minimal_symbols;
 
   /* Possibly add a symbol to the results.  */
-  bool add_symbol (block_symbol *bsym);
+  void add_symbol (block_symbol *bsym);
 };
 
-bool
+void
 collect_info::add_symbol (block_symbol *bsym)
 {
   if (record_all || bsym->symbol->loc_class () == LOC_BLOCK)
     this->symbols->push_back (*bsym);
-
-  /* Continue iterating.  */
-  return true;
 }
 
 /* Token types  */
@@ -363,7 +360,7 @@ struct linespec_parser
 static void iterate_over_file_blocks
   (struct symtab *symtab, const lookup_name_info &name,
    domain_search_flags domain,
-   gdb::function_view<symbol_found_callback_ftype> callback);
+   for_each_symbol_callback_ftype callback);
 
 static void initialize_defaults (struct symtab **default_symtab,
 				 int *default_line);
@@ -1126,7 +1123,7 @@ iterate_over_all_matching_symtabs
    const lookup_name_info &lookup_name,
    const domain_search_flags domain,
    struct program_space *search_pspace, bool include_inline,
-   gdb::function_view<symbol_found_callback_ftype> callback)
+   for_each_symbol_callback_ftype callback)
 {
   for (struct program_space *pspace : program_spaces)
     {
@@ -1154,20 +1151,19 @@ iterate_over_all_matching_symtabs
 		  for (i = FIRST_LOCAL_BLOCK; i < bv->num_blocks (); i++)
 		    {
 		      block = bv->block (i);
-		      state->language->iterate_over_symbols
+		      state->language->for_each_symbol
 			(block, lookup_name, domain,
 			 [&] (block_symbol *bsym)
 			 {
 			   /* Restrict calls to CALLBACK to symbols
 			      representing inline symbols only.  */
 			   if (bsym->symbol->is_inlined ())
-			     return callback (bsym);
-			   return true;
+			     callback (bsym);
 			 });
 		    }
 		}
 
-	      return true;
+	      return iteration_status::keep_going;
 	    };
 
 	  objfile.search (nullptr, &lookup_name, nullptr, expand_callback,
@@ -1194,14 +1190,14 @@ static void
 iterate_over_file_blocks
   (struct symtab *symtab, const lookup_name_info &name,
    domain_search_flags domain,
-   gdb::function_view<symbol_found_callback_ftype> callback)
+   for_each_symbol_callback_ftype callback)
 {
   const struct block *block;
 
   for (block = symtab->compunit ()->blockvector ()->static_block ();
        block != NULL;
        block = block->superblock ())
-    current_language->iterate_over_symbols (block, name, domain, callback);
+    current_language->for_each_symbol (block, name, domain, callback);
 }
 
 /* A helper for find_method.  This finds all methods in type T of
@@ -3323,8 +3319,8 @@ decode_objc (struct linespec_state *self, linespec *ls, const char *arg)
 
 namespace {
 
-/* A function object that serves as symbol_found_callback_ftype
-   callback for iterate_over_symbols.  This is used by
+/* A function object that serves as for_each_symbol_callback_ftype
+   callback for for_each_symbol.  This is used by
    lookup_prefix_sym to collect type symbols.  */
 class decode_compound_collector
 {
@@ -3339,8 +3335,8 @@ public:
     return std::move (m_symbols);
   }
 
-  /* Callable as a symbol_found_callback_ftype callback.  */
-  bool operator () (block_symbol *bsym);
+  /* Callable as a for_each_symbol_callback_ftype callback.  */
+  void operator () (block_symbol *bsym);
 
 private:
   /* A hash table of all symbols we found.  We use this to avoid
@@ -3351,26 +3347,24 @@ private:
   std::vector<block_symbol>  m_symbols;
 };
 
-bool
+void
 decode_compound_collector::operator () (block_symbol *bsym)
 {
   struct type *t;
   struct symbol *sym = bsym->symbol;
 
   if (sym->loc_class () != LOC_TYPEDEF)
-    return true; /* Continue iterating.  */
+    return;
 
   t = sym->type ();
   t = check_typedef (t);
   if (t->code () != TYPE_CODE_STRUCT
       && t->code () != TYPE_CODE_UNION
       && t->code () != TYPE_CODE_NAMESPACE)
-    return true; /* Continue iterating.  */
+    return;
 
   if (m_unique_syms.insert (sym).second)
     m_symbols.push_back (*bsym);
-
-  return true; /* Continue iterating.  */
 }
 
 } // namespace
@@ -3611,7 +3605,6 @@ collect_symtabs_from_filename (const char *file,
     {
       if (symtab_table.insert (symtab).second)
 	symtabs.push_back (symtab);
-      return false;
     };
 
   /* Find that file's data.  */
@@ -3622,11 +3615,11 @@ collect_symtabs_from_filename (const char *file,
 	  if (pspace->executing_startup)
 	    continue;
 
-	  iterate_over_symtabs (pspace, file, collector);
+	  for_each_symtab (pspace, file, collector);
 	}
     }
   else
-    iterate_over_symtabs (search_pspace, file, collector);
+    for_each_symtab (search_pspace, file, collector);
 
   /* It is tempting to use the unordered_dense 'extract' method here,
      and remove the separate vector -- but it's unclear if ordering
@@ -4148,33 +4141,30 @@ search_minsyms_for_name (struct collect_info *info,
 	  set_current_program_space (pspace);
 
 	  for (objfile &objfile : pspace->objfiles ())
-	    {
-	      iterate_over_minimal_symbols (&objfile, name,
-					    [&] (struct minimal_symbol *msym)
-					    {
-					      add_minsym (msym, &objfile, nullptr,
-							  info->state->list_mode,
-							  &minsyms);
-					      return false;
-					    });
-	    }
+	    for_each_minimal_symbol (&objfile, name,
+				     [&] (minimal_symbol *msym)
+				       {
+					 add_minsym (msym, &objfile, nullptr,
+						     info->state->list_mode,
+						     &minsyms);
+				       });
 	}
     }
   else
     {
-      program_space *pspace = symtab->compunit ()->objfile ()->pspace ();
+      objfile &objfile = *symtab->compunit ()->objfile ();
+      program_space *pspace = objfile.pspace ();
 
       if (search_pspace == NULL || pspace == search_pspace)
 	{
 	  set_current_program_space (pspace);
-	  iterate_over_minimal_symbols
-	    (symtab->compunit ()->objfile (), name,
-	     [&] (struct minimal_symbol *msym)
-	       {
-		 add_minsym (msym, symtab->compunit ()->objfile (), symtab,
-			     info->state->list_mode, &minsyms);
-		 return false;
-	       });
+	  for_each_minimal_symbol (&objfile, name,
+				   [&] (minimal_symbol *msym)
+				     {
+				       add_minsym (msym, &objfile, symtab,
+						   info->state->list_mode,
+						   &minsyms);
+				     });
 	}
     }
 
@@ -4247,7 +4237,7 @@ add_matching_symbols_to_info (const char *name,
 
   auto add_symbol = [&] (block_symbol *bsym)
     {
-      return info->add_symbol (bsym);
+      info->add_symbol (bsym);
     };
 
   for (const auto &elt : info->file_symtabs)

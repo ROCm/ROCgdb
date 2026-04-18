@@ -599,7 +599,7 @@ gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
 	      /* Skip included compunits to prevent including compunits from
 		 being searched twice.  */
 	      if (cust->user != nullptr)
-		return true;
+		return iteration_status::keep_going;
 
 	      const struct blockvector *bv = cust->blockvector ();
 	      const struct block *block = bv->static_block ();
@@ -615,16 +615,22 @@ gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
 		      if (sym_obj == nullptr
 			  || PyList_Append (return_list.get (),
 					    sym_obj.get ()) == -1)
-			return false;
+			return iteration_status::stop;
 		    }
 		}
 
-	      return true;
+	      return iteration_status::keep_going;
 	    };
 
-	  if (!objfile.search (nullptr, &lookup_name, nullptr, callback,
-			       SEARCH_STATIC_BLOCK, flags))
-	    return nullptr;
+	  /* The only reason why the iteration would stop is if an error was
+	     encountered during the callback execution.  */
+	  if (objfile.search (nullptr, &lookup_name, nullptr, callback,
+			      SEARCH_STATIC_BLOCK, flags)
+	      == iteration_status::stop)
+	    {
+	      gdb_assert (PyErr_Occurred ());
+	      return nullptr;
+	    }
 	}
     }
   catch (const gdb_exception &except)

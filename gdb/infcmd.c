@@ -688,7 +688,7 @@ starti_command (const char *args, int from_tty)
   run_command_1 (args, from_tty, RUN_STOP_AT_FIRST_INSN);
 }
 
-static bool
+static void
 proceed_thread_callback (struct thread_info *thread)
 {
   /* We go through all threads individually instead of compressing
@@ -701,15 +701,14 @@ proceed_thread_callback (struct thread_info *thread)
      way to tell the target `hold this thread stopped until I say
      otherwise', then we can optimize this.  */
   if (thread->state () != THREAD_STOPPED)
-    return false;
+    return;
 
   if (!thread->inf->has_execution ())
-    return false;
+    return;
 
   switch_to_thread (thread);
   clear_proceed_status (0);
   proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
-  return false;
 }
 
 static void
@@ -766,7 +765,7 @@ continue_1 (int all_threads)
       scoped_disable_commit_resumed disable_commit_resumed
 	("continue all threads in non-stop");
 
-      iterate_over_threads (proceed_thread_callback);
+      for_each_thread (proceed_thread_callback);
 
       if (current_ui->prompt_state == PROMPT_BLOCKED)
 	{

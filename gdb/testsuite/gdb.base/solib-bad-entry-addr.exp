@@ -1,0 +1,99 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This test aims to exercise a specific situation which was seen
+# causing GDB to crash.  An application has a shared library that
+# meets the following conditions:
+#
+# 1. No ".text" section,
+# 2. at least 3 LOAD segments, and
+# 3. a non-zero entry address that is outside of every section.
+#
+# When these 3 conditions are met then GDB would run into a problem in
+# init_entry_point_info for the shared library.  The non-zero entry
+# address means GDB would try to find the section corresponding to the
+# address.  As the address is outside of all sections then GDB would
+# try to use the .text section as a fall-back.  But there is no text
+# section, so an internal error would be triggered.
+#
+# The 3 LOAD segments is important because, if there are only 1 or 2
+# segments GDB has a default in symfile_find_segment_sections where
+# it assumes the text section is the first section in the first
+# segment, which means init_entry_point_info will have a .text section
+# to use.
+#
+# This test has a very simple assembler file (which hopefully contains
+# no architecture specific content), which will compile to a couple of
+# sections, but no .text section.  These sections force the creation
+# of more than 2 LOAD segments.  The compiler flags then set the entry
+# address to 0x1, which (we hope) is outside all sections.  This
+# assembler file is compiled into a shared library.
+
+require allow_shlib_tests
+require !use_gdb_stub
+require {istarget *-linux*}
+
+standard_testfile .c -lib.s
+
+# Build shared library.
+set lib_testfile ${testfile}-lib.so
+set lib_srcfile ${srcfile2}
+set lib_binfile [standard_output_file ${lib_testfile}]
+set lib_flags {shlib \
+		   additional_flags=-nostartfiles \
+		   additional_flags=-Wl,-e,0x1 \
+		   additional_flags=-Wl,-z,separate-code}
+if { [build_executable "build solib" $lib_testfile $lib_srcfile \
+	  $lib_flags] == -1 } {
+    return
+}
+
+# Build the test executable.
+if { [build_executable "build exec" $testfile $srcfile \
+	  [list debug pie shlib=${lib_binfile}]] == -1 } {
+    return
+}
+
+# Confirm we have more than 2 LOAD segments in the shared library.
+set readelf_program [gdb_find_readelf]
+set command "exec $readelf_program -Wl $lib_binfile"
+verbose -log "command is $command"
+set result [catch {{*}$command} output]
+verbose -log "result is $result"
+verbose -log "output is $output"
+if {$result != 0} {
+    fail "read program headers from $lib_testfile"
+    return
+}
+if {![regexp {\nProgram Headers:\n *Type [^\n]* Align\n(.*?)\n\n} $output trash phdr]} {
+    fail "no Program Headers found"
+    return
+}
+set load_segment_count 0
+foreach line [regexp -line -all -inline {^ *LOAD .* 0x[0-9]+$} $phdr] {
+    incr load_segment_count
+}
+if { $load_segment_count <= 2 } {
+    fail "not enough LOAD segments"
+    return
+}
+
+# Start GDB and run to main.  If the shared library is causing issues
+# then we will see an internal error once the inferior starts running.
+clean_restart $testfile
+
+if {![runto_main message]} {
+  return 0
+}

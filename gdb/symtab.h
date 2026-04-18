@@ -30,6 +30,7 @@
 #include "gdbsupport/gdb_regex.h"
 #include "gdbsupport/enum-flags.h"
 #include "gdbsupport/function-view.h"
+#include "gdbsupport/iteration-status.h"
 #include <optional>
 #include <string_view>
 #include "gdbsupport/next-iterator.h"
@@ -2782,39 +2783,37 @@ extern bool basenames_may_differ;
 bool compare_filenames_for_search (const char *filename,
 				   const char *search_name);
 
-/* Check in PSPACE for a symtab of a specific name; first in symtabs, then in
-   psymtabs.  *If* there is no '/' in the name, a match after a '/' in the
-   symtab filename will also work.
+/* Callback type for function for_each_symtab.  */
 
-   Call CALLBACK with each symtab that is found.  If CALLBACK returns
-   true, the search stops.  */
+using for_each_symtab_callback_ftype = std::function<void (symtab *)>;
 
-void iterate_over_symtabs (program_space *pspace, const char *name,
-			   gdb::function_view<bool (symtab *)> callback);
+/* Check in PSPACE for symtabs of a specific name.  *If* there is no '/' in
+   the name, a match after a '/' in the symtab filename will also work.
+
+   Call CALLBACK with each symtab that is found.  */
+
+void for_each_symtab (program_space *pspace, const char *name,
+		      for_each_symtab_callback_ftype callback);
+
+/* Callback type for function find_symtab.  */
+
+using find_symtab_callback_ftype = std::function<bool (symtab *)>;
 
 std::vector<const linetable_entry *> find_linetable_entries_for_symtab_line
     (struct symtab *symtab, int line, const linetable_entry **best_entry);
 
-/* Prototype for callbacks for LA_ITERATE_OVER_SYMBOLS.  The callback
-   is called once per matching symbol SYM.  The callback should return
-   true to indicate that LA_ITERATE_OVER_SYMBOLS should continue
-   iterating, or false to indicate that the iteration should end.  */
+/* Callback type for function for_each_symbol.  */
 
-typedef bool (symbol_found_callback_ftype) (struct block_symbol *bsym);
+using for_each_symbol_callback_ftype
+  = gdb::function_view<void (block_symbol *)>;
 
 /* Iterate over the symbols named NAME, matching DOMAIN, in BLOCK.
 
-   For each symbol that matches, CALLBACK is called.  The symbol is
-   passed to the callback.
+   For each symbol that matches, call CALLBACK with the symbol.  */
 
-   If CALLBACK returns false, the iteration ends and this function
-   returns false.  Otherwise, the search continues, and the function
-   eventually returns true.  */
-
-bool iterate_over_symbols (const struct block *block,
-			   const lookup_name_info &name,
-			   const domain_search_flags domain,
-			   gdb::function_view<symbol_found_callback_ftype> callback);
+void for_each_symbol (const struct block *block, const lookup_name_info &name,
+		      const domain_search_flags domain,
+		      for_each_symbol_callback_ftype callback);
 
 /* Storage type used by demangle_for_lookup.  demangle_for_lookup
    either returns a const char * pointer that points to either of the

@@ -680,28 +680,25 @@ find_thread_by_handle (gdb::array_view<const gdb_byte> handle,
 					      inf);
 }
 
-/*
- * Thread iterator function.
- *
- * Calls a callback function once for each thread, so long as
- * the callback function returns false.  If the callback function
- * returns true, the iteration will end and the current thread
- * will be returned.  This can be useful for implementing a
- * search for a thread with arbitrary attributes, or for applying
- * some operation to every thread.
- *
- * FIXME: some of the existing functionality, such as
- * "Thread apply all", might be rewritten using this functionality.
- */
+/* See gdbthread.h.  */
+
+void
+for_each_thread (for_each_thread_callback_ftype callback)
+{
+  for (thread_info &tp : all_threads_safe ())
+    callback (&tp);
+}
+
+/* See gdbthread.h.  */
 
 struct thread_info *
-iterate_over_threads (gdb::function_view<bool (struct thread_info *)> callback)
+find_thread (find_thread_callback_ftype callback)
 {
   for (thread_info &tp : all_threads_safe ())
     if (callback (&tp))
       return &tp;
 
-  return NULL;
+  return nullptr;
 }
 
 /* See gdbthread.h.  */

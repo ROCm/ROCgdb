@@ -827,10 +827,23 @@ extern struct thread_info *any_live_thread_of_inferior (inferior *inf);
 void thread_change_ptid (process_stratum_target *targ,
 			 ptid_t old_ptid, ptid_t new_ptid);
 
-/* Iterator function to call a user-provided callback function
-   once for each known thread.  */
-typedef gdb::function_view<bool (struct thread_info *)> thread_callback_func;
-extern struct thread_info *iterate_over_threads (thread_callback_func);
+/* Callback function type for function for_each_thread.  */
+
+using for_each_thread_callback_ftype
+  = gdb::function_view<void (thread_info *)>;
+
+/* Call CALLBACK once for each known thread.  */
+
+extern void for_each_thread (for_each_thread_callback_ftype callback);
+
+/* Callback function type for function find_thread.  */
+
+using find_thread_callback_ftype = gdb::function_view<bool (thread_info *)>;
+
+/* Return the first thread for which CALLBACK returns true, or nullptr if
+   there is no such thread.  */
+
+extern struct thread_info *find_thread (find_thread_callback_ftype callback);
 
 /* Pull in the internals of the inferiors/threads ranges and
    iterators.  Must be done after struct thread_info is defined.  */
