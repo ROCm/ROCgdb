@@ -1369,7 +1369,6 @@ bfin_relocate_section (bfd * output_bfd,
 		       Elf_Internal_Sym * local_syms,
 		       asection ** local_sections)
 {
-  bfd *dynobj;
   Elf_Internal_Shdr *symtab_hdr;
   struct elf_link_hash_entry **sym_hashes;
   bfd_vma *local_got_offsets;
@@ -1377,7 +1376,6 @@ bfin_relocate_section (bfd * output_bfd,
   Elf_Internal_Rela *rel;
   Elf_Internal_Rela *relend;
 
-  dynobj = elf_hash_table (info)->dynobj;
   symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = elf_sym_hashes (input_bfd);
   local_got_offsets = elf_local_got_offsets (input_bfd);
@@ -1462,23 +1460,18 @@ bfin_relocate_section (bfd * output_bfd,
 	  if (h != NULL
 	      && strcmp (h->root.root.string, "__GLOBAL_OFFSET_TABLE_") == 0)
 	    goto do_default;
-	  /* Fall through.  */
+
 	  /* Relocation is the offset of the entry for this symbol in
 	     the global offset table.  */
+	  sgot = elf_hash_table (info)->sgot;
+	  if (sgot == NULL)
+	    {
+	      r = bfd_reloc_undefined;
+	      goto report_error;
+	    }
 
 	  {
 	    bfd_vma off;
-
-	    if (dynobj == NULL)
-	      {
-		/* Create the .got section.  */
-		elf_hash_table (info)->dynobj = dynobj = output_bfd;
-		if (!_bfd_elf_create_got_section (dynobj, info))
-		  return false;
-	      }
-
-	    sgot = elf_hash_table (info)->sgot;
-	    BFD_ASSERT (sgot != NULL);
 
 	    if (h != NULL)
 	      {
@@ -1565,14 +1558,13 @@ bfin_relocate_section (bfd * output_bfd,
 	    /* bfin : preg = [preg + 17bitdiv4offset] relocation is div by 4.  */
 	    relocation /= 4;
 	  }
-	  goto do_default;
+	  /* Fall through.  */
 
 	default:
 	do_default:
 	  r = bfin_final_link_relocate (rel, howto, input_bfd, input_section,
 					contents, address,
 					relocation, rel->r_addend);
-
 	  break;
 	}
 
@@ -1583,16 +1575,9 @@ bfin_relocate_section (bfd * output_bfd,
 	  && !((input_section->flags & SEC_DEBUGGING) != 0 && h->def_dynamic)
 	  && _bfd_elf_section_offset (output_bfd, info, input_section,
 				      rel->r_offset) != (bfd_vma) -1)
-	{
-	  _bfd_error_handler
-	    /* xgettext:c-format */
-	    (_("%pB(%pA+%#" PRIx64 "): "
-	       "unresolvable relocation against symbol `%s'"),
-	     input_bfd, input_section, (uint64_t) rel->r_offset,
-	     h->root.root.string);
-	  return false;
-	}
+	r = bfd_reloc_undefined;
 
+    report_error:
       if (r != bfd_reloc_ok)
 	{
 	  const char *name;
@@ -1614,6 +1599,15 @@ bfin_relocate_section (bfd * output_bfd,
 	    (*info->callbacks->reloc_overflow)
 	      (info, (h ? &h->root : NULL), name, howto->name,
 	       (bfd_vma) 0, input_bfd, input_section, rel->r_offset);
+	  else if (r == bfd_reloc_undefined)
+	    {
+	      _bfd_error_handler
+		/* xgettext:c-format */
+		(_("%pB(%pA+%#" PRIx64 "): "
+		   "unresolvable relocation against symbol `%s'"),
+		 input_bfd, input_section, (uint64_t) rel->r_offset, name);
+	      return false;
+	    }
 	  else
 	    {
 	      _bfd_error_handler
