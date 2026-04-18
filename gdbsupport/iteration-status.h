@@ -30,19 +30,4 @@ enum class iteration_status
   stop,
 };
 
-constexpr const char *
-iteration_status_str (iteration_status status)
-{
-  switch (status)
-    {
-    case iteration_status::keep_going:
-      return "keep_going";
-
-    case iteration_status::stop:
-      return "stop";
-    }
-
-  gdb_assert_not_reached ("invalid iteration_status value");
-}
-
 #endif /* GDBSUPPORT_ITERATION_STATUS_H */

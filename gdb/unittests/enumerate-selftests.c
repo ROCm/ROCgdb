@@ -81,11 +81,17 @@ test_enumerate ()
   {
     std::vector<int> vec = { 1, 2, 3 };
     std::vector<int> expected = { 10, 20, 30 };
+    std::vector<int> actual_i;
+    std::vector<int> expected_i = { 0, 1, 2 };
 
     for (auto [i, val] : gdb::ranges::views::enumerate (vec))
-      val *= 10;
+      {
+	val *= 10;
+	actual_i.push_back (i);
+      }
 
     SELF_CHECK (vec == expected);
+    SELF_CHECK (actual_i == expected_i);
   }
 
   /* Test enumeration over an empty container.  */
