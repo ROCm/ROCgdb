@@ -244,7 +244,7 @@ cp_type_print_derivation_info (struct ui_file *stream,
 /* Print the C++ method arguments ARGS to the file STREAM.  */
 
 static void
-cp_type_print_method_args (struct type *mtype, const char *prefix,
+cp_type_print_method_args (struct type *mtype,
 			   const char *varstring, int staticp,
 			   struct ui_file *stream,
 			   enum language language,
@@ -255,8 +255,6 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
   int varargs = mtype->has_varargs ();
   int i;
 
-  fprintf_symbol (stream, prefix,
-		  language_cplus, DMGL_ANSI);
   fprintf_symbol (stream, varstring,
 		  language_cplus, DMGL_ANSI);
   gdb_puts ("(", stream);
@@ -1164,7 +1162,6 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
 		  struct type *mtype = TYPE_FN_FIELD_TYPE (f, j);
 
 		  cp_type_print_method_args (mtype,
-					     "",
 					     method_name,
 					     staticp,
 					     stream, language,
