@@ -279,7 +279,9 @@ static INLINE int i386_intel_check (const reg_entry *rreg,
 static INLINE void i386_intel_fold (expressionS *e, symbolS *sym)
 {
   expressionS *exp = symbol_get_value_expression (sym);
-  if (S_GET_SEGMENT (sym) == absolute_section)
+
+  if (S_GET_SEGMENT (sym) == absolute_section
+      || S_GET_SEGMENT (sym) == expr_section)
     {
       offsetT val = e->X_add_number;
 
@@ -453,10 +455,22 @@ i386_intel_simplify (expressionS *e, bool in_equate)
       if (!newsym)
 	return 0;
       e->X_op_symbol = newsym;
-      if (e->X_add_symbol)
-	e->X_op = O_add;
-      else
+      if (!e->X_add_symbol)
 	i386_intel_fold (e, e->X_op_symbol);
+      else if (S_GET_SEGMENT (e->X_add_symbol) == expr_section
+	       && (S_GET_SEGMENT (e->X_op_symbol) == absolute_section
+		   || S_GET_SEGMENT (e->X_op_symbol) == expr_section)
+	       && symbol_get_value_expression (e->X_op_symbol)->X_op
+		  == O_constant)
+	{
+	  offsetT val
+	    = symbol_get_value_expression (e->X_op_symbol)->X_add_number;
+
+	  i386_intel_fold (e, e->X_add_symbol);
+	  e->X_add_number += val;
+	}
+      else
+	e->X_op = O_add;
       break;
 
     case O_offset:
@@ -528,10 +542,68 @@ i386_intel_simplify (expressionS *e, bool in_equate)
       i386_intel_fold (e, e->X_op_symbol);
       break;
 
+    case O_add:
+      if (this_operand >= 0 && intel_state.in_bracket)
+	{
+	  expressionS *left = NULL, *right = NULL;
+	  segT leftseg = NULL, rightseg = NULL;
+
+	  newsym = i386_intel_simplify_symbol (e->X_add_symbol, in_equate);
+	  if (newsym)
+	    {
+	      e->X_add_symbol = newsym;
+
+	      if (base != intel_state.base || state_index != intel_state.index)
+		{
+		  base = intel_state.base;
+		  state_index = intel_state.index;
+		  left = symbol_get_value_expression (newsym);
+		  resolve_expression (left);
+		  leftseg = S_GET_SEGMENT (newsym);
+		}
+	    }
+
+	  newsym = i386_intel_simplify_symbol (e->X_op_symbol, in_equate);
+	  if (newsym)
+	    {
+	      e->X_op_symbol = newsym;
+
+	      if (base != intel_state.base || state_index != intel_state.index)
+		{
+		  base = intel_state.base;
+		  state_index = intel_state.index;
+		  right = symbol_get_value_expression (newsym);
+		  resolve_expression (right);
+		  rightseg = S_GET_SEGMENT (newsym);
+		}
+	    }
+
+	  if (left && right
+	      && (leftseg == absolute_section || leftseg == expr_section)
+	      && left->X_op == O_constant
+	      && (rightseg == absolute_section || rightseg == expr_section)
+	      && right->X_op == O_constant)
+	    {
+	       e->X_op = O_constant;
+	       e->X_add_number += left->X_add_number + right->X_add_number;
+	       e->X_add_symbol = NULL;
+	       e->X_op_symbol = NULL;
+	    }
+	  else if (left
+		   && (leftseg == absolute_section || leftseg == expr_section)
+		   && left->X_op == O_constant)
+	    i386_intel_fold (e, e->X_op_symbol);
+	  else if (right
+		   && (rightseg == absolute_section || rightseg == expr_section)
+		   && right->X_op == O_constant)
+	    i386_intel_fold (e, e->X_add_symbol);
+	}
+      goto fallthrough;
+
     case O_multiply:
       if (this_operand >= 0 && intel_state.in_bracket)
 	{
-	  expressionS *scale = NULL;
+	  expressionS *scale = NULL, *other = NULL;
 	  int has_index = (intel_state.index != NULL);
 
 	  if (!intel_state.in_scale++)
@@ -543,7 +615,10 @@ i386_intel_simplify (expressionS *e, bool in_equate)
 	      e->X_add_symbol = newsym;
 
 	      if (!has_index && intel_state.index)
-		scale = symbol_get_value_expression (e->X_op_symbol);
+		{
+		  scale = symbol_get_value_expression (e->X_op_symbol);
+		  other = symbol_get_value_expression (e->X_add_symbol);
+		}
 
 	      newsym = i386_intel_simplify_symbol (e->X_op_symbol, in_equate);
 	    }
@@ -553,16 +628,32 @@ i386_intel_simplify (expressionS *e, bool in_equate)
 	      e->X_op_symbol = newsym;
 
 	      if (!scale && !has_index && intel_state.index)
-		scale = symbol_get_value_expression (e->X_add_symbol);
+		{
+		  scale = symbol_get_value_expression (e->X_add_symbol);
+		  other = symbol_get_value_expression (e->X_op_symbol);
+		}
 	    }
 
 	  if (newsym && scale)
 	    {
+	      segT seg;
+
 	      resolve_expression (scale);
 	      if (scale->X_op != O_constant
 		  || intel_state.index->reg_type.bitfield.word)
 		scale->X_add_number = 0;
 	      intel_state.scale_factor *= scale->X_add_number;
+
+	      resolve_expression (other);
+	      seg = S_GET_SEGMENT (newsym);
+	      if ((seg == absolute_section || seg == expr_section)
+		  && other->X_op == O_constant
+		  && other->X_add_number == 0)
+		{
+		  e->X_op = O_constant;
+		  e->X_add_symbol = NULL;
+		  e->X_op_symbol = NULL;
+		}
 	    }
 
 	  --intel_state.in_scale;
@@ -646,7 +737,7 @@ i386_intel_simplify (expressionS *e, bool in_equate)
 
   if (this_operand >= 0
       && e->X_op == O_symbol
-      && !intel_state.in_offset)
+      && !intel_state.has_offset)
     {
       segT seg = S_GET_SEGMENT (e->X_add_symbol);
 
