@@ -13568,6 +13568,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
     {
   bad:
       *saved_ilp = saved_char;
+      input_line_pointer = saved_ilp;
       ignore_rest_of_line ();
       i.tm.mnem_off = 0;
       memset (&pp, 0, sizeof (pp));
