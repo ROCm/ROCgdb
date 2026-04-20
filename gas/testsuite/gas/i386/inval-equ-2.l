@@ -18,10 +18,13 @@ GAS LISTING .*
 [ 	]*6[ 	]+\.globl  bar2
 [ 	]*7[ 	]+\.set    bar3,\(%eax\+1\)
 [ 	]*8[ 	]+\?\?\?\? A1...... 		mov bar3,%eax
+[ 	]*8[ 	]+..
+[ 	]*9[ 	]+\.globl  bar4
+[ 	]*10[ 	]+\.set    bar4,\(%eax\+1\)
+[ 	]*11[ 	]+\?\?\?\? 90       		nop
 .*  Error: invalid .* relocation against register
 .*  Error: invalid .* relocation against register
 .*  Error: invalid .* relocation against register
 .*  Error: can't make global register symbol `bar1'
 .*  Error: can't make global register symbol `bar2'
-.*  Error: can't make global register symbol `bar3'
-[ 	]*8[ 	]+..
+.*  Error: can't make global register symbol `bar4'

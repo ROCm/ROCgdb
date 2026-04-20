@@ -2396,24 +2396,22 @@ write_object_file (void)
 	  if (symbol_equated_reloc_p (symp)
 	      || S_IS_WEAKREFR (symp))
 	    {
-	      const char *sname = S_GET_NAME (symp);
-
 	      if (S_IS_COMMON (symp)
-		  && !TC_FAKE_LABEL (sname)
+		  && !TC_FAKE_LABEL (name)
 		  && !S_IS_WEAKREFR (symp))
 		{
 		  expressionS *e = symbol_get_value_expression (symp);
 
 		  as_bad (_("`%s' can't be equated to common symbol `%s'"),
-			  sname, S_GET_NAME (e->X_add_symbol));
+			  name, S_GET_NAME (e->X_add_symbol));
 		}
-	      if (S_GET_SEGMENT (symp) == reg_section)
-		{
+
+	      if (S_GET_SEGMENT (symp) == reg_section
+		  && S_IS_EXTERNAL (symp)
 		  /* Report error only if we know the symbol name.  */
-		  if (S_GET_NAME (symp) != reg_section->name)
-		    as_bad (_("can't make global register symbol `%s'"),
-			    sname);
-		}
+		  && name != reg_section->name)
+		as_bad (_("can't make global register symbol `%s'"), name);
+
 	      symbol_remove (symp, &symbol_rootP, &symbol_lastP);
 	      continue;
 	    }
