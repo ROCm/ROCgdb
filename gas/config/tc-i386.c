@@ -167,7 +167,7 @@ static int i386_finalize_displacement (segT, expressionS *, i386_operand_type,
 				       const char *);
 static int i386_att_operand (char *);
 static int i386_intel_operand (char *, int);
-static int i386_intel_simplify (expressionS *);
+static int i386_intel_simplify (expressionS *, bool);
 static int i386_intel_parse_name (const char *, expressionS *, enum expr_mode);
 static const reg_entry *parse_register (const char *, char **);
 static const char *parse_insn (const char *, char *, enum parse_mode);
@@ -13527,7 +13527,7 @@ x86_cons (expressionS *exp, int size)
   intel_syntax = -intel_syntax;
 
   if (intel_syntax)
-    i386_intel_simplify (exp);
+    i386_intel_simplify (exp, false);
 
   /* If not 64bit, massage value, to account for wraparound when !BFD64.  */
   if (size <= 4 && expr_mode == expr_operator_present
@@ -13568,6 +13568,7 @@ s_insn (int dummy ATTRIBUTE_UNUSED)
     {
   bad:
       *saved_ilp = saved_char;
+      input_line_pointer = saved_ilp;
       ignore_rest_of_line ();
       i.tm.mnem_off = 0;
       memset (&pp, 0, sizeof (pp));

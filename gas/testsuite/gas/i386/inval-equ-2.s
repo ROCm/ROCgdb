@@ -6,3 +6,6 @@
 	.globl  bar2
 	.set    bar3,(%eax+1)
 	mov bar3,%eax
+	.globl  bar4
+	.set    bar4,(%eax+1)
+	nop

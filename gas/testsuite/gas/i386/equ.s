@@ -59,6 +59,3 @@ _start:
  .if s == x
  .err
  .endif
-
- .equ r, -3
- .equ s, -3

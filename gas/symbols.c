@@ -1871,20 +1871,32 @@ snapshot_symbol (symbolS **symbolPP, valueT *valueP, segT *segP, fragS **fragPP)
 	}
 
       *symbolPP = symbolP;
+      *valueP = exp.X_add_number;
 
-      /* A bogus input file can result in resolve_expression()
-	 generating a local symbol, so we have to check again.  */
+      /* We may have picked up a local symbol above: Check again.  */
       if (symbolP->flags.local_symbol)
 	{
 	  struct local_symbol *locsym = (struct local_symbol *) symbolP;
 
-	  *valueP = locsym->value;
+	  if (locsym->section == expr_section
+	      || locsym->section == absolute_section
+	      || locsym->section == reg_section)
+	    {
+	      switch (exp.X_op)
+		{
+		case O_constant:
+		case O_register:
+		  *valueP += locsym->value;
+		  break;
+		default:
+		  break;
+		}
+	    }
 	  *segP = locsym->section;
 	  *fragPP = locsym->frag;
 	}
       else
 	{
-	  *valueP = exp.X_add_number;
 	  *segP = symbolP->bsym->section;
 	  *fragPP = symbolP->frag;
 	}

@@ -364,6 +364,8 @@ if { [is_elf_format] } then {
 
     run_list_test "line2" -I${srcdir}/$subdir
 
+    run_list_test "equ-rept"
+
     run_dump_test "pr25917"
     run_dump_test "bss"
     # Some targets treat .bss similar to .lcomm.

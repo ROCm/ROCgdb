@@ -3058,9 +3058,14 @@ out_debug_str (segT str_seg, symbolS **name_sym, symbolS **comp_dir_sym,
 #endif
       free (dirname);
     }
-  len = strlen (files[first_file].filename) + 1;
-  p = frag_more (len);
-  memcpy (p, files[first_file].filename, len);
+  if (files[first_file].filename)
+    {
+      len = strlen (files[first_file].filename) + 1;
+      p = frag_more (len);
+      memcpy (p, files[first_file].filename, len);
+    }
+  else
+    frag_append_1_char (0);
 
   /* DW_AT_comp_dir */
   *comp_dir_sym = symbol_temp_new_now_octets ();
