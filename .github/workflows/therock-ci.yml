@@ -6,6 +6,7 @@ on:
       - amd-staging
       - amd-staging-rocgdb-*
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - amd-staging
       - amd-staging-rocgdb-*
@@ -60,12 +61,97 @@ jobs:
         -DTHEROCK_USE_EXTERNAL_ROCGDB=ON
         -DTHEROCK_ROCGDB_SOURCE_DIR=./rocgdb_under_test
 
+  extended-test-check-read1:
+    name: "--check-type check-read1"
+    if: (success() || failure()) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'testing:extended')
+    needs: extended-test-optimization
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: gfx94X-dcgpu
+      artifact_group: gfx94X-dcgpu
+      test_runs_on: linux-gfx942-1gpu-ossci-rocm
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--check-type check-read1 --parallel"
+
+  extended-test-check-readmore:
+    name: "--check-type check-readmore"
+    if: (success() || failure()) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'testing:extended')
+    needs: extended-test-check-read1
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: gfx94X-dcgpu
+      artifact_group: gfx94X-dcgpu
+      test_runs_on: linux-gfx942-1gpu-ossci-rocm
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--check-type check-readmore --parallel"
+
+  extended-test-parallel:
+    name: "--parallel"
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'testing:extended')
+    needs: therock-ci-linux
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: gfx94X-dcgpu
+      artifact_group: gfx94X-dcgpu
+      test_runs_on: linux-gfx942-1gpu-ossci-rocm
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--parallel"
+
+  extended-test-hip-board:
+    name: "hip board gdb.base/break.exp"
+    if: (success() || failure()) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'testing:extended')
+    needs: extended-test-check-readmore
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: gfx94X-dcgpu
+      artifact_group: gfx94X-dcgpu
+      test_runs_on: linux-gfx942-1gpu-ossci-rocm
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--runtestflags=--target_board=hip --tests gdb.base/break.exp"
+
+  extended-test-optimization:
+    name: "--optimization=-O3"
+    if: (success() || failure()) && github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'testing:extended')
+    needs: extended-test-parallel
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: gfx94X-dcgpu
+      artifact_group: gfx94X-dcgpu
+      test_runs_on: linux-gfx942-1gpu-ossci-rocm
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--optimization=-O3 --max-failed-retries=0 --parallel"
+
   therock_ci_summary:
     name: TheRock CI Summary
     if: always()
     needs:
       - setup
       - therock-ci-linux
+      - extended-test-check-read1
+      - extended-test-check-readmore
+      - extended-test-parallel
+      - extended-test-hip-board
+      - extended-test-optimization
     runs-on: ubuntu-24.04
     steps:
       - name: Output failed jobs

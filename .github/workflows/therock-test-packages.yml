@@ -75,6 +75,5 @@ jobs:
           IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
 
       - name: Run rocgdb tests
-        continue-on-error: ${{ inputs.continue_on_failure }}
         run: |
           python build_tools/github_actions/test_executable_scripts/test_rocgdb.py ${{ inputs.test_options }}
