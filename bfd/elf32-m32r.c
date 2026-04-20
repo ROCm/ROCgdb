@@ -353,7 +353,7 @@ m32r_elf_free_cached_info (bfd *abfd)
 
 
 static bfd_reloc_status_type
-m32r_elf_hi16_reloc (bfd *abfd ATTRIBUTE_UNUSED,
+m32r_elf_hi16_reloc (bfd *abfd,
 		     arelent *reloc_entry,
 		     asymbol *symbol,
 		     void * data,
@@ -378,7 +378,8 @@ m32r_elf_hi16_reloc (bfd *abfd ATTRIBUTE_UNUSED,
     }
 
   /* Sanity check the address (offset in section).  */
-  if (reloc_entry->address > bfd_get_section_limit (abfd, input_section))
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd, input_section,
+				  reloc_entry->address))
     return bfd_reloc_outofrange;
 
   ret = bfd_reloc_ok;
@@ -413,8 +414,9 @@ m32r_elf_hi16_reloc (bfd *abfd ATTRIBUTE_UNUSED,
 
 /* Handle an M32R ELF HI16 reloc.  */
 
-static void
+static bfd_reloc_status_type
 m32r_elf_relocate_hi16 (bfd *input_bfd,
+			asection *input_section,
 			int type,
 			Elf_Internal_Rela *relhi,
 			Elf_Internal_Rela *rello,
@@ -423,6 +425,11 @@ m32r_elf_relocate_hi16 (bfd *input_bfd,
 {
   unsigned long insn;
   bfd_vma addlo;
+  bfd_vma end = bfd_get_section_limit_octets (input_bfd, input_section);
+
+  if (relhi->r_offset > end || end - relhi->r_offset < 4
+      || rello->r_offset > end || end - rello->r_offset < 4)
+    return bfd_reloc_outofrange;
 
   insn = bfd_get_32 (input_bfd, contents + relhi->r_offset);
 
@@ -435,13 +442,13 @@ m32r_elf_relocate_hi16 (bfd *input_bfd,
   addend += ((insn & 0xffff) << 16) + addlo;
 
   /* Reaccount for sign extension of low part.  */
-  if (type == R_M32R_HI16_SLO
-      && (addend & 0x8000) != 0)
-    addend += 0x10000;
+  if (type == R_M32R_HI16_SLO)
+    addend += 0x8000;
 
   bfd_put_32 (input_bfd,
 	      (insn & 0xffff0000) | ((addend >> 16) & 0xffff),
 	      contents + relhi->r_offset);
+  return bfd_reloc_ok;
 }
 
 /* Do an R_M32R_LO16 relocation.  This is a straightforward 16 bit
@@ -470,6 +477,10 @@ m32r_elf_lo16_reloc (bfd *input_bfd,
       return bfd_reloc_ok;
     }
 
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, input_bfd, input_section,
+				  reloc_entry->address))
+    return bfd_reloc_outofrange;
+
   sdata = m32r_elf_section_data (input_section);
   if (sdata->m32r_hi16_list != NULL)
     {
@@ -488,16 +499,15 @@ m32r_elf_lo16_reloc (bfd *input_bfd,
 	     find the low 16 bits of the addend needed by the LO16.  */
 	  insn = bfd_get_32 (input_bfd, l->addr);
 	  vallo = ((bfd_get_32 (input_bfd, (bfd_byte *) data + reloc_entry->address)
-		   & 0xffff) ^ 0x8000) - 0x8000;
+		    & 0xffff) ^ 0x8000) - 0x8000;
 	  val = ((insn & 0xffff) << 16) + vallo;
 	  val += l->addend;
 
 	  /* Reaccount for sign extension of low part.  */
-	  if ((val & 0x8000) != 0)
-	    val += 0x10000;
+	  val += 0x8000;
 
-	  insn = (insn &~ (bfd_vma) 0xffff) | ((val >> 16) & 0xffff);
-	  bfd_put_32 (input_bfd, (bfd_vma) insn, l->addr);
+	  insn = (insn & ~0xffff) | ((val >> 16) & 0xffff);
+	  bfd_put_32 (input_bfd, insn, l->addr);
 
 	  next = l->next;
 	  free (l);
@@ -2451,11 +2461,9 @@ m32r_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		continue;
 	      if (lorel < relend
 		  && ELF32_R_TYPE (lorel->r_info) == R_M32R_LO16)
-		{
-		  m32r_elf_relocate_hi16 (input_bfd, r_type, rel, lorel,
-					  contents, addend);
-		  r = bfd_reloc_ok;
-		}
+		r = m32r_elf_relocate_hi16 (input_bfd, input_section,
+					    r_type, rel, lorel,
+					    contents, addend);
 	      else
 		r = _bfd_relocate_contents (howto, input_bfd,
 					    addend, contents + offset);
@@ -2778,11 +2786,9 @@ m32r_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		  continue;
 		if (lorel < relend
 		    && ELF32_R_TYPE (lorel->r_info) == R_M32R_LO16)
-		  {
-		    m32r_elf_relocate_hi16 (input_bfd, r_type, rel, lorel,
-					    contents, relocation + addend);
-		    r = bfd_reloc_ok;
-		  }
+		  r = m32r_elf_relocate_hi16 (input_bfd, input_section,
+					      r_type, rel, lorel,
+					      contents, relocation + addend);
 		else
 		  r = _bfd_final_link_relocate (howto, input_bfd, input_section,
 						contents, offset,
