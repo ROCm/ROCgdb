@@ -11,6 +11,10 @@ on:
         type: string
       artifact_run_id:
         type: string
+      test_options:
+        type: string
+        description: 'Options to pass to test_rocgdb.py (e.g., "--parallel", "--optimization", "--timeout")'
+        default: ''
   workflow_dispatch:
     inputs:
       amdgpu_families:
@@ -21,6 +25,10 @@ on:
         type: string
       artifact_run_id:
         type: string
+      test_options:
+        type: string
+        description: 'Options to pass to test_rocgdb.py (e.g., "--parallel", "--optimization", "--timeout")'
+        default: ''
 
 permissions:
   contents: read
@@ -67,5 +75,6 @@ jobs:
           IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
 
       - name: Run rocgdb tests
+        continue-on-error: ${{ inputs.continue_on_failure }}
         run: |
-          python build_tools/github_actions/test_executable_scripts/test_rocgdb.py
+          python build_tools/github_actions/test_executable_scripts/test_rocgdb.py ${{ inputs.test_options }}
