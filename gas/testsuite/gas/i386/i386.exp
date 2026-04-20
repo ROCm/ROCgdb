@@ -726,6 +726,7 @@ if [gas_32_check] then {
 	run_dump_test "pcrel-elf"
 	run_dump_test "relax"
 	run_dump_test "gotpc"
+	run_dump_test "equ2"
 	run_dump_test "tlsd"
 	run_dump_test "tlspic"
 	run_dump_test "tlsnopic"
