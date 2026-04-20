@@ -725,6 +725,28 @@ AC_CONFIG_FILES([jit-reader.h:jit-reader.in])
 
 AC_SEARCH_LIBS(dlopen, dl)
 
+# Check for members required by the legacy Linux custom baud rate path.
+AC_CHECK_MEMBERS([struct termios.c_ospeed], [], [], [[#include <termios.h>]])
+
+# Check whether cfsetispeed/cfsetospeed accept arbitrary baud rates.
+AC_CACHE_CHECK([whether cfsetispeed/cfsetospeed accept arbitrary baud rates],
+  [gdb_cv_cfsetspeed_arbitrary], [
+  AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM([[#include <termios.h>]],
+      [[
+       #if B9600 != 9600
+       #error B-constants are not numeric symbols
+       #endif
+      ]])],
+    [gdb_cv_cfsetspeed_arbitrary=yes],
+    [gdb_cv_cfsetspeed_arbitrary=no])
+])
+
+if test "$gdb_cv_cfsetspeed_arbitrary" = yes; then
+  AC_DEFINE([HAVE_CFSETSPEED_ARBITRARY], [1],
+	    [Define if cfsetispeed/cfsetospeed accept arbitrary baud rates.])
+fi
+
 GDB_AC_WITH_DIR([JIT_READER_DIR], [jit-reader-dir],
 		[directory to load the JIT readers from],
 		[${libdir}/gdb])

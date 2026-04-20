@@ -55,7 +55,10 @@
 
 #include "gdbsupport/scoped_ignore_sigttou.h"
 
-#if defined(HAVE_SYS_IOCTL_H) && (defined(BOTHER) || defined(IOSSIOSPEED))
+#if (defined(HAVE_CFSETSPEED_ARBITRARY) \
+     || (defined(HAVE_SYS_IOCTL_H) \
+	 && ((defined(BOTHER) && defined(HAVE_STRUCT_TERMIOS_C_OSPEED)) \
+	     || defined(IOSSIOSPEED))))
 #  define HAVE_CUSTOM_BAUDRATE_SUPPORT 1
 #endif
 
@@ -508,7 +511,32 @@ set_baudcode_baudrate (struct serial *scb, int baud_code)
     perror_with_name (_("could not set tty state"));
 }
 
-#if HAVE_CUSTOM_BAUDRATE_SUPPORT && defined(BOTHER)
+#if HAVE_CUSTOM_BAUDRATE_SUPPORT && defined(HAVE_CFSETSPEED_ARBITRARY)
+
+/* Set a custom baud rate using the POSIX cfsetispeed/cfsetospeed
+   interface.  Supported in glibc 2.42 and later and expected to be
+   standardized in a future POSIX revision.  It is platform-agnostic
+   and also covers systems like GNU Hurd that do not provide BOTHER.  */
+
+static void
+set_custom_baudrate_posix (int fd, int rate)
+{
+  struct termios tio;
+
+  if (tcgetattr (fd, &tio) < 0)
+    perror_with_name (_("Cannot get current baud rate"));
+
+  if (cfsetispeed (&tio, rate) < 0)
+    perror_with_name (_("Cannot set custom input baud rate"));
+
+  if (cfsetospeed (&tio, rate) < 0)
+    perror_with_name (_("Cannot set custom output baud rate"));
+
+  if (tcsetattr (fd, TCSANOW, &tio) < 0)
+    perror_with_name (_("Cannot set custom baud rate"));
+}
+
+#elif HAVE_CUSTOM_BAUDRATE_SUPPORT && defined(BOTHER)
 
 /* Set a custom baud rate using the termios BOTHER.  */
 
@@ -555,19 +583,24 @@ set_custom_baudrate_darwin (int fd, int rate)
 }
 
 #endif /* HAVE_CUSTOM_BAUDRATE_SUPPORT
-	  && (defined(BOTHER) || defined(IOSSIOSPEED)) */
+	  && (defined(HAVE_CFSETSPEED_ARBITRARY)
+	     || defined(BOTHER)
+	     || defined(IOSSIOSPEED)) */
 
 #if HAVE_CUSTOM_BAUDRATE_SUPPORT
 
 /* Set a baud rate that differs from the OS B_codes.
-   This is possible if one of the following macros is available:
-   - BOTHER (Linux).
-   - IOSSIOSPEED (Darwin).  */
+   Prefer the POSIX cfsetispeed/cfsetospeed interface when the host
+   libc accepts arbitrary baud rates.  Otherwise fall back to
+   Linux-specific (BOTHER) or Darwin-specific (IOSSIOSPEED)
+   interfaces.  */
 
 static void
 set_custom_baudrate (int fd, int rate)
 {
-#if defined(BOTHER)
+#if defined(HAVE_CFSETSPEED_ARBITRARY)
+  set_custom_baudrate_posix (fd, rate);
+#elif defined(BOTHER)
   set_custom_baudrate_linux (fd, rate);
 #elif defined(IOSSIOSPEED)
   set_custom_baudrate_darwin (fd, rate);

@@ -27730,6 +27730,58 @@ if test "$ac_res" != no; then :
 fi
 
 
+# Check for members required by the legacy Linux custom baud rate path.
+ac_fn_c_check_member "$LINENO" "struct termios" "c_ospeed" "ac_cv_member_struct_termios_c_ospeed" "#include <termios.h>
+"
+if test "x$ac_cv_member_struct_termios_c_ospeed" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_STRUCT_TERMIOS_C_OSPEED 1
+_ACEOF
+
+
+fi
+
+
+# Check whether cfsetispeed/cfsetospeed accept arbitrary baud rates.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether cfsetispeed/cfsetospeed accept arbitrary baud rates" >&5
+$as_echo_n "checking whether cfsetispeed/cfsetospeed accept arbitrary baud rates... " >&6; }
+if ${gdb_cv_cfsetspeed_arbitrary+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <termios.h>
+int
+main ()
+{
+
+       #if B9600 != 9600
+       #error B-constants are not numeric symbols
+       #endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  gdb_cv_cfsetspeed_arbitrary=yes
+else
+  gdb_cv_cfsetspeed_arbitrary=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdb_cv_cfsetspeed_arbitrary" >&5
+$as_echo "$gdb_cv_cfsetspeed_arbitrary" >&6; }
+
+if test "$gdb_cv_cfsetspeed_arbitrary" = yes; then
+
+$as_echo "#define HAVE_CFSETSPEED_ARBITRARY 1" >>confdefs.h
+
+fi
+
 
 
 # Check whether --with-jit-reader-dir was given.

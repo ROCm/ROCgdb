@@ -1063,7 +1063,9 @@ operand (expressionS *expressionP, enum expr_mode mode)
 	     character, parity errors and all, is taken as the value
 	     of the operand.  VERY KINKY.  */
 	  expressionP->X_op = O_constant;
-	  expressionP->X_add_number = *input_line_pointer++;
+	  expressionP->X_add_number = *input_line_pointer;
+	  if (!is_end_of_stmt (*input_line_pointer))
+	    input_line_pointer++;
 	  break;
 	}
 
@@ -1325,7 +1327,6 @@ operand (expressionS *expressionP, enum expr_mode mode)
       /* In MRI mode, this is a floating point constant represented
 	 using hexadecimal digits.  */
 
-      ++input_line_pointer;
       integer_constant (16, expressionP);
       break;
 
