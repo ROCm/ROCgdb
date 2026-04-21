@@ -4616,28 +4616,26 @@ remote_target::update_thread_list ()
 
       /* And now add threads we don't know about yet to our list.  */
       for (thread_item &item : context.items)
-	{
-	  if (item.ptid != null_ptid)
-	    {
-	      /* In non-stop mode, we assume new found threads are
-		 running until proven otherwise with a stop reply.  In
-		 all-stop, we can only get here if all threads are
-		 stopped.  */
-	      thread_int_state internal_state = (target_is_non_stop_p ()
-						 ? THREAD_INT_RUNNING
-						 : THREAD_INT_STOPPED);
+	if (item.ptid != null_ptid)
+	  {
+	    /* In non-stop mode, we assume new found threads are
+	       running until proven otherwise with a stop reply.  In
+	       all-stop, we can only get here if all threads are
+	       stopped.  */
+	    thread_int_state internal_state = (target_is_non_stop_p ()
+					       ? THREAD_INT_RUNNING
+					       : THREAD_INT_STOPPED);
 
-	      remote_notice_new_inferior (item.ptid, internal_state);
+	    remote_notice_new_inferior (item.ptid, internal_state);
 
-	      thread_info *tp = this->find_thread (item.ptid);
-	      remote_thread_info *info = get_remote_thread_info (tp);
-	      info->core = item.core;
-	      info->extra = std::move (item.extra);
-	      info->name = std::move (item.name);
-	      info->id_str = std::move (item.id_str);
-	      info->thread_handle = std::move (item.thread_handle);
-	    }
-	}
+	    thread_info *tp = this->find_thread (item.ptid);
+	    remote_thread_info *info = get_remote_thread_info (tp);
+	    info->core = item.core;
+	    info->extra = std::move (item.extra);
+	    info->name = std::move (item.name);
+	    info->id_str = std::move (item.id_str);
+	    info->thread_handle = std::move (item.thread_handle);
+	  }
     }
 
   if (!got_list)
