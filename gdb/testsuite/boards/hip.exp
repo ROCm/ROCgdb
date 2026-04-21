@@ -302,7 +302,9 @@ proc gdb_compile {source dest type options} {
 	#    '-mllvm -amdgpu-spill-cfi-saved-regs'
 	#    [-Wunused-command-line-argument]
 	#
+	global rocm_path
 	set hip_options "early_flags=\
+			 --rocm-path=$rocm_path\
 			 -O0\
 			 -std=gnu++11\
 			 -fgpu-rdc\
@@ -377,6 +379,7 @@ proc gdb_compile {source dest type options} {
 		lappend options "ldflags=$gdb_saved_hip_driver_obj"
 
 		lappend options $hip_options
+		lappend options "early_flags=--hip-link"
 
 		# All compiled.  Now link, and we're done.
 		return [hip_org_gdb_compile $source $dest $type $options]
@@ -422,6 +425,7 @@ proc gdb_compile {source dest type options} {
 	    }
 
 	    lappend options $hip_options
+	    lappend options "early_flags=-x hip"
 	}
     }
     hip_org_gdb_compile $source $dest $type $options
