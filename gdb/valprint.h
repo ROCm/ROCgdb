@@ -197,10 +197,12 @@ extern void print_function_pointer_address (const struct value_print_options *op
 
 /* Helper function to check the validity of some bits of a value.
 
-   If TYPE represents some aggregate type (e.g., a structure), return true.
+   If TYPE is a structure, union, array, or complex type, return 1.  These
+   types can have components with different availability states, so callers
+   should check components individually.
 
-   For non-aggregate TYPEs, if any of the bytes starting at FIELD_BYTE_OFFSET
-   and extending for TYPE->length () bytes are invalid, print a message to
+   Otherwise, if any of the bytes starting at FIELD_BYTE_OFFSET and
+   extending for TYPE->length () bytes are invalid, print a message to
    STREAM and return false.  Otherwise, return true.  */
 
 extern bool valprint_check_validity (struct ui_file *stream, struct type *type,

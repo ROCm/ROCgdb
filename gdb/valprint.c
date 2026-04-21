@@ -336,7 +336,8 @@ valprint_check_validity (struct ui_file *stream,
 
   if (type->code () != TYPE_CODE_UNION
       && type->code () != TYPE_CODE_STRUCT
-      && type->code () != TYPE_CODE_ARRAY)
+      && type->code () != TYPE_CODE_ARRAY
+      && type->code () != TYPE_CODE_COMPLEX)
     {
       if (val->bits_any_optimized_out (TARGET_CHAR_BIT * field_byte_offset,
 				       TARGET_CHAR_BIT * type->length ()))

@@ -1,0 +1,101 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test printing of partially optimized complex variables.
+
+load_lib dwarf.exp
+
+# This test can only be run on targets which support DWARF-2.
+require dwarf2_support
+
+standard_testfile main.c -dw.S
+
+set asm_file [standard_output_file $srcfile2]
+
+Dwarf::assemble $asm_file {
+    cu {} {
+	compile_unit {
+	    DW_AT_language @DW_LANG_C99
+	    DW_AT_name     $::srcfile
+	    DW_AT_comp_dir /tmp
+	} {
+	    declare_labels float_label complex_label
+
+	    float_label: DW_TAG_base_type {
+		DW_AT_byte_size 4 DW_FORM_sdata
+		DW_AT_encoding  @DW_ATE_float
+		DW_AT_name      float
+	    }
+
+	    complex_label: DW_TAG_base_type {
+		DW_AT_byte_size 8 DW_FORM_sdata
+		DW_AT_encoding  @DW_ATE_complex_float
+		DW_AT_name      "complex float"
+	    }
+
+	    DW_TAG_subprogram {
+		MACRO_AT_func {main}
+		DW_AT_type :$float_label
+		DW_AT_external 1 DW_FORM_flag
+	    } {
+		# Complex variable 'z1' with real part as constant value, imaginary
+		# optimized out
+		DW_TAG_variable {
+		    DW_AT_name z1
+		    DW_AT_type :$complex_label
+		    DW_AT_location {
+			DW_OP_implicit_value 0x00 0x00 0x40 0x40
+			DW_OP_piece 4
+			DW_OP_piece 4
+		    } SPECIAL_expr
+		}
+		# Complex variable 'z2' with real part optimized out, imaginary
+		# part as constant value
+		DW_TAG_variable {
+		    DW_AT_name z2
+		    DW_AT_type :$complex_label
+		    DW_AT_location {
+			DW_OP_piece 4
+			DW_OP_implicit_value 0x00 0x00 0x40 0x40
+			DW_OP_piece 4
+		    } SPECIAL_expr
+		}
+	    }
+	}
+    }
+}
+
+if {[prepare_for_testing "failed to prepare" ${testfile} \
+	 [list $srcfile $asm_file] {nodebug}]} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+# Test that complex variable prints with real part shown and imaginary as
+# <optimized out>.
+# Expected output format: "$1 = <real_value> + <optimized out>i".
+# The regex ensures there's a real value (not <optimized out>) before the +.
+gdb_test "print z1" "= \[0-9\]+ \\+ <optimized out>i" \
+    "complex with imaginary part optimized out shows real value"
+
+# Test that complex variable prints with real part optimized out and imaginary
+# part shown.
+# Expected output format: "$2 = <optimized out> + <imaginary_value>i".
+# The regex ensures there's an imaginary value (not <optimized out>) after the +.
+gdb_test "print z2" "= <optimized out> \\+ \[0-9\]+i" \
+    "complex with real part optimized out shows imaginary value"
