@@ -63,12 +63,12 @@ print_objfile_statistics (void)
 	if (objfile.per_bfd->n_minsyms > 0)
 	  gdb_printf (_("  Number of \"minimal\" symbols read: %d\n"),
 		      objfile.per_bfd->n_minsyms);
-	if (OBJSTAT ((&objfile), n_syms) > 0)
+	if (objfile.n_syms > 0)
 	  gdb_printf (_("  Number of \"full\" symbols read: %d\n"),
-		      OBJSTAT ((&objfile), n_syms));
-	if (OBJSTAT ((&objfile), n_types) > 0)
+		      objfile.n_syms);
+	if (objfile.n_types > 0)
 	  gdb_printf (_("  Number of \"types\" defined: %d\n"),
-		      OBJSTAT ((&objfile), n_types));
+		      objfile.n_types);
 
 	i = linetables = 0;
 	for (compunit_symtab &cu : objfile.compunits ())
@@ -90,9 +90,6 @@ print_objfile_statistics (void)
 
 	objfile.print_stats (false);
 
-	if (OBJSTAT ((&objfile), sz_strtab) > 0)
-	  gdb_printf (_("  Space used by string tables: %d\n"),
-		      OBJSTAT ((&objfile), sz_strtab));
 	gdb_printf (_("  Total memory used for objfile obstack: %s\n"),
 		    pulongest (obstack_memory_used (&objfile
 						    .objfile_obstack)));

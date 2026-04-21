@@ -23,6 +23,7 @@
 #include "inferior.h"
 #include "gdbcore.h"
 #include "gdbsupport/rsp-low.h"
+#include "py-event.h"
 
 /* A gdb.Corefile object.  */
 
@@ -320,13 +321,47 @@ cfpy_mapped_files (PyObject *self, PyObject *args)
   return obj->mapped_files;
 }
 
-/* Callback from gdb::observers::core_file_changed.  The core file in
-   PSPACE has been changed.  */
+/* Emit a CorefileChangedEvent event, INF is the inferior in which the core
+   file changed.  Return 0 on success, or a negative value on error.  */
+
+static int
+emit_corefile_changed_event (inferior *inf)
+{
+  /* If there are no listeners then we are done.  */
+  if (evregpy_no_listeners_p (gdb_py_events.corefile_changed))
+    return 0;
+
+  gdbpy_ref<> event_obj
+    = create_event_object (&corefile_changed_event_object_type);
+  if (event_obj == nullptr)
+    return -1;
+
+  gdbpy_ref<inferior_object> inf_obj = inferior_to_inferior_object (inf);
+  if (inf_obj == nullptr
+      || evpy_add_attribute (event_obj.get (), "inferior",
+			     inf_obj.get ()) < 0)
+    return -1;
+
+  return evpy_emit_event (event_obj.get (), gdb_py_events.corefile_changed);
+}
+
+/* Callback from gdb::observers::core_file_changed.  The core file for
+   INF has been changed.  */
 
 static void
 cfpy_corefile_changed (inferior *inf)
 {
+  /* It's safe to do this even if Python is not initialized, but there
+     should be nothing to clear in that case.  */
   cfpy_inferior_corefile_data_key.clear (inf);
+
+  if (!gdb_python_initialized)
+    return;
+
+  gdbpy_enter enter_py;
+
+  if (emit_corefile_changed_event (inf) < 0)
+    gdbpy_print_stack ();
 }
 
 /* Called when a gdb.Corefile is destroyed.  */

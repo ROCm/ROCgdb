@@ -222,7 +222,7 @@ type_allocator::new_type ()
 
   if (m_is_objfile)
     {
-      OBJSTAT (m_data.objfile, n_types++);
+      ++m_data.objfile->n_types;
       type->set_owner (m_data.objfile);
     }
   else

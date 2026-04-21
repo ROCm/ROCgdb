@@ -625,28 +625,9 @@ buildsym_compunit::end_compunit_symtab_get_static_block (CORE_ADDR end_addr,
 							 bool expandable,
 							 bool required)
 {
-  /* Finish the lexical context of the last function in the file; pop
-     the context stack.  */
-
-  if (!m_context_stack.empty ())
-    {
-      struct context_stack cstk = pop_context ();
-
-      /* Make a block for the local symbols within.  */
-      finish_block (cstk.name, cstk.old_blocks, NULL,
-		    cstk.start_addr, end_addr);
-
-      if (!m_context_stack.empty ())
-	{
-	  /* This is said to happen with SCO.  The old coffread.c
-	     code simply emptied the context stack, so we do the
-	     same.  FIXME: Find out why it is happening.  This is not
-	     believed to happen in most cases (even for coffread.c);
-	     it used to be an abort().  */
-	  complaint (_("Context stack not empty in end_compunit_symtab"));
-	  m_context_stack.clear ();
-	}
-    }
+  /* The user should have guaranteed that all previous blocks have
+     been created.  */
+  gdb_assert (m_context_stack.empty ());
 
   /* Executables may have out of order pending blocks; sort the
      pending blocks.  */
@@ -943,31 +924,37 @@ buildsym_compunit::augment_type_symtab ()
     }
 }
 
-/* Push a context block.  Args are an identifying nesting level
-   (checkable when you pop it), and the starting PC address of this
+/* Push a context block.  VALU is the starting PC address of this
    context.  */
 
-context_stack &
-buildsym_compunit::push_context (int desc, CORE_ADDR valu)
+void
+buildsym_compunit::push_context (CORE_ADDR valu)
 {
-  context_stack &ctx
-    = m_context_stack.emplace_back (std::move (m_local_symbols),
-				    m_local_using_directives,
-				    m_pending_blocks, valu, desc);
-
+  m_context_stack.emplace_back (std::move (m_local_symbols),
+				m_local_using_directives,
+				m_pending_blocks, valu);
   m_local_using_directives = nullptr;
-
-  return ctx;
 }
 
-/* Pop a context block.  Returns the address of the context block just
-   popped.  */
+/* See buildsym.h.  */
 
-context_stack
-buildsym_compunit::pop_context ()
+block *
+buildsym_compunit::pop_context (CORE_ADDR end_addr,
+				const struct dynamic_prop *static_link,
+				bool required)
 {
   gdb_assert (!m_context_stack.empty ());
-  context_stack result = m_context_stack.back ();
+  lexical_context cstk = std::move (m_context_stack.back ());
   m_context_stack.pop_back ();
+
+  block *result = nullptr;
+  if (required || !m_local_symbols.empty ()
+      || m_local_using_directives != nullptr)
+    result = finish_block (cstk.name, cstk.old_blocks, static_link,
+			   cstk.start_addr, end_addr);
+
+  m_local_symbols = std::move (cstk.locals);
+  m_local_using_directives = cstk.local_using_directives;
+
   return result;
 }

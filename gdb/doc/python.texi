@@ -4147,6 +4147,17 @@ file is updated first, so when this event is emitted, the executable
 filename will have changed, but the symbol filename might still hold
 its previous value.
 
+@item events.corefile_changed
+Emits @code{gdb.CorefileChangedEvent} which indicates that the core
+file associated with a @code{gdb.Inferior} has changed, either a new
+core file has been loaded, or the existing core file has been
+unloaded (@pxref{Core Files In Python}).
+
+@defvar CorefileChangedEvent.inferior
+The @code{gdb.Inferior} in which the core file has changed
+(@pxref{Inferiors In Python}).
+@end defvar
+
 @item events.new_progspace
 This is emitted when @value{GDBN} adds a new program space
 (@pxref{Progspaces In Python,,Program Spaces In Python}).  The event

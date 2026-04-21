@@ -7488,9 +7488,8 @@ inherit_abstract_dies (struct die_info *die, struct dwarf2_cu *cu)
 
   /* We're inheriting ORIGIN's children into the scope we'd put DIE's
      symbols in.  */
-  std::vector<symbol *> *origin_previous_list_in_scope
-    = origin_cu->list_in_scope;
-  origin_cu->list_in_scope = cu->list_in_scope;
+  scoped_restore save_scope = make_scoped_restore (&origin_cu->list_in_scope,
+						   cu->list_in_scope);
 
   if (die->tag != origin_die->tag
       && !(die->tag == DW_TAG_inlined_subroutine
@@ -7639,8 +7638,6 @@ inherit_abstract_dies (struct die_info *die, struct dwarf2_cu *cu)
 	}
     }
 
-  origin_cu->list_in_scope = origin_previous_list_in_scope;
-
   if (cu != origin_cu)
     compute_delayed_physnames (origin_cu);
 }
@@ -7728,7 +7725,6 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
   CORE_ADDR highpc;
   struct attribute *attr, *call_line, *call_file;
   const char *name;
-  struct block *block;
   int inlined_func = (die->tag == DW_TAG_inlined_subroutine);
   std::vector<struct symbol *> template_args;
   struct template_symbol *templ_func = NULL;
@@ -7807,25 +7803,27 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
       if (child_die->tag == DW_TAG_template_type_param
 	  || child_die->tag == DW_TAG_template_value_param)
 	{
-	  templ_func = new (&objfile->objfile_obstack) template_symbol;
+	  templ_func = objfile->new_symbol<template_symbol> ();
 	  templ_func->subclass = SYMBOL_TEMPLATE;
 	  break;
 	}
     }
 
-  gdb_assert (cu->get_builder () != nullptr);
-  context_stack &ctx = cu->get_builder ()->push_context (0, lowpc);
-  ctx.name = new_symbol (die, read_type_die (die, cu), cu, templ_func);
+  buildsym_compunit *builder = cu->get_builder ();
+  gdb_assert (builder != nullptr);
+  builder->push_context (lowpc);
+  symbol *func_sym = new_symbol (die, read_type_die (die, cu), cu, templ_func);
+  builder->set_current_context_function (func_sym);
 
   if (dwarf2_func_is_main_p (die, cu))
-    set_objfile_main_name (objfile, ctx.name->linkage_name (),
+    set_objfile_main_name (objfile, func_sym->linkage_name (),
 			   cu->lang ());
 
   /* If there is a location expression for DW_AT_frame_base, record
      it.  */
   attr = dwarf2_attr (die, DW_AT_frame_base, cu);
   if (attr != nullptr)
-    dwarf2_symbol_mark_computed (attr, ctx.name, cu, 1);
+    dwarf2_symbol_mark_computed (attr, func_sym, cu, 1);
 
   /* If there is a location for the static link, record it.  */
   dynamic_prop *static_link = nullptr;
@@ -7836,7 +7834,9 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
       attr_to_dynamic_prop (attr, die, cu, static_link, cu->addr_type ());
     }
 
-  cu->list_in_scope = &cu->get_builder ()->get_local_symbols ();
+  scoped_restore save_scope
+    = make_scoped_restore (&cu->list_in_scope,
+			   &builder->get_local_symbols ());
 
   for (die_info *child_die : die->children ())
     {
@@ -7875,11 +7875,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
 	}
     }
 
-  struct context_stack cstk = cu->get_builder ()->pop_context ();
-
-  /* Make a block for the local symbols within.  */
-  block = cu->get_builder ()->finish_block (cstk.name, cstk.old_blocks,
-					    static_link, lowpc, highpc);
+  block *block = builder->pop_context (highpc, static_link);
 
   /* For C++, set the block's scope.  */
   if ((is_cplus_dialect (cu->lang ())
@@ -7893,7 +7889,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
   /* If we have address ranges, record them.  */
   dwarf2_record_block_ranges (die, block, cu);
 
-  gdbarch_make_symbol_special (gdbarch, cstk.name, objfile);
+  gdbarch_make_symbol_special (gdbarch, func_sym, objfile);
 
   /* Attach template arguments to function.  */
   if (!template_args.empty ())
@@ -7915,18 +7911,6 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
       for (symbol *sym : template_args)
 	sym->set_symtab (templ_func->symtab ());
     }
-
-  /* In C++, we can have functions nested inside functions (e.g., when
-     a function declares a class that has methods).  This means that
-     when we finish processing a function scope, we may need to go
-     back to building a containing block's symbol lists.  */
-  cu->get_builder ()->get_local_symbols () = std::move (cstk.locals);
-  cu->get_builder ()->set_local_using_directives (cstk.local_using_directives);
-
-  /* If we've finished processing a top-level function, subsequent
-     symbols go in the file symbol list.  */
-  if (cu->get_builder ()->outermost_context_p ())
-    cu->list_in_scope = &cu->get_builder ()->get_file_symbols ();
 }
 
 /* Process all the DIES contained within a lexical block scope.  Start
@@ -7969,34 +7953,26 @@ read_lexical_block_scope (struct die_info *die, struct dwarf2_cu *cu)
   lowpc = per_objfile->relocate (unrel_low);
   highpc = per_objfile->relocate (unrel_high);
 
-  cu->get_builder ()->push_context (0, lowpc);
+  cu->get_builder ()->push_context (lowpc);
   for (die_info *child_die : die->children ())
     process_die (child_die, cu);
 
   inherit_abstract_dies (die, cu);
-  struct context_stack cstk = cu->get_builder ()->pop_context ();
 
-  if (!cu->get_builder ()->get_local_symbols ().empty ()
-      || (*cu->get_builder ()->get_local_using_directives ()) != NULL)
-    {
-      struct block *block
-	= cu->get_builder ()->finish_block (0, cstk.old_blocks, NULL,
-				     cstk.start_addr, highpc);
+  block *block = cu->get_builder ()->pop_context (highpc, nullptr, false);
 
-      /* Note that recording ranges after traversing children, as we
-	 do here, means that recording a parent's ranges entails
-	 walking across all its children's ranges as they appear in
-	 the address map, which is quadratic behavior.
+  /* Note that recording ranges after traversing children, as we
+     do here, means that recording a parent's ranges entails
+     walking across all its children's ranges as they appear in
+     the address map, which is quadratic behavior.
 
-	 It would be nicer to record the parent's ranges before
-	 traversing its children, simply overriding whatever you find
-	 there.  But since we don't even decide whether to create a
-	 block until after we've traversed its children, that's hard
-	 to do.  */
-      dwarf2_record_block_ranges (die, block, cu);
-    }
-  cu->get_builder ()->get_local_symbols () = std::move (cstk.locals);
-  cu->get_builder ()->set_local_using_directives (cstk.local_using_directives);
+     It would be nicer to record the parent's ranges before
+     traversing its children, simply overriding whatever you find
+     there.  But since we don't even decide whether to create a
+     block until after we've traversed its children, that's hard
+     to do.  */
+  if (block != nullptr)
+    dwarf2_record_block_ranges (die, block, cu);
 }
 
 static void dwarf2_ranges_read_low_addrs
@@ -8361,7 +8337,7 @@ read_variable (struct die_info *die, struct dwarf2_cu *cu)
 	{
 	  struct objfile *objfile = cu->per_objfile->objfile;
 
-	  storage = new (&objfile->objfile_obstack) rust_vtable_symbol;
+	  storage = objfile->new_symbol<rust_vtable_symbol> ();
 	  storage->concrete_type = containing_type;
 	  storage->subclass = SYMBOL_RUST_VTABLE;
 	}
@@ -15495,8 +15471,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
       if (space)
 	sym = space;
       else
-	sym = new (&objfile->objfile_obstack) symbol;
-      OBJSTAT (objfile, n_syms++);
+	sym = objfile->new_symbol<symbol> ();
 
       /* Cache this symbol's name and the name's demangled form (if any).  */
       sym->set_language (cu->lang (), &objfile->objfile_obstack);
@@ -15826,9 +15801,7 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	       pretend it's a local variable in that case so that the user can
 	       still see it.  */
 	    sym->set_domain (VAR_DOMAIN);
-	    struct context_stack *curr
-	      = cu->get_builder ()->get_current_context_stack ();
-	    if (curr != nullptr && curr->name != nullptr)
+	    if (cu->get_builder ()->current_context_has_function ())
 	      sym->set_is_argument (true);
 	    attr = dwarf2_attr (die, DW_AT_location, cu);
 	    if (attr != nullptr)

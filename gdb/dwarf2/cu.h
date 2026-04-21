@@ -309,12 +309,7 @@ public:
   /* The generic symbol table building routines have separate lists for
      file scope symbols and all all other scopes (local scopes).  So
      we need to select the right one to pass to add_symbol_to_list().
-     We do it by keeping a pointer to the correct list in list_in_scope.
-
-     FIXME: The original dwarf code just treated the file scope as the
-     first local scope, and all other local scopes as nested local
-     scopes, and worked fine.  Check to see if we really need to
-     distinguish these in buildsym.c.  */
+     We do it by keeping a pointer to the correct list in list_in_scope.  */
   std::vector<symbol *> *list_in_scope = nullptr;
 
   /* Storage for things with the same lifetime as this read-in
