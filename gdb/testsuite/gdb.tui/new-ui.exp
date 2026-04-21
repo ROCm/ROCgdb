@@ -1,0 +1,93 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test TUI in combination with a new UI.
+
+tuiterm_env
+
+# Creating a pty is done on build, and we use it with gdb on host, so we need
+# build == host, in other words, local host.
+require {!is_remote host}
+
+# Create a pty.
+spawn -pty
+set new_ui_spawn_id $spawn_id
+set new_ui_tty_name $spawn_out(slave,name)
+
+set re_cannot_enable_disable_tui \
+    "Cannot enable or disable the TUI when the interpreter is 'console'"
+
+with_test_prefix main-ui {
+    Term::clean_restart 24 80
+
+    # Check that we cannot setup a new tui UI.  Also checked in
+    # gdb.base/new-ui.exp.
+    gdb_test "new-ui tui $new_ui_tty_name" \
+	"interpreter 'tui' cannot be used with a new UI" \
+	{new-ui tui $new_ui_tty_name}
+
+    # Set up a new console UI.
+    gdb_test "new-ui console $new_ui_tty_name" \
+	"New UI allocated" \
+	{new-ui cli $new_ui_tty_name}
+}
+
+with_test_prefix new-ui {
+    with_spawn_id $new_ui_spawn_id {
+	# Check that we cannot enable TUI in the new UI.
+	gdb_test "tui enable" $re_cannot_enable_disable_tui
+    }
+}
+
+with_test_prefix main-ui {
+    if {![Term::enter_tui]} {
+	unsupported "TUI not supported"
+	return
+    }
+}
+
+with_test_prefix new-ui {
+    with_spawn_id $new_ui_spawn_id {
+	# Check that we cannot disable TUI in the new UI.
+	# Regression test for PR34035.  Without the fix, this test will timeout,
+	# because no prompt will appear.
+	gdb_test "tui disable" $re_cannot_enable_disable_tui
+
+	gdb_test "print 1" \
+	    [quotemeta {$@DECIMAL = 1}] \
+	    "Check that UI is responsive"
+    }
+
+    # Try out some TUI commands.  We don't check for the effect in the main
+    # UI, we just check that the main UI is still responsive at the end.
+    with_spawn_id $new_ui_spawn_id {
+	gdb_test "info win" [quotemeta "@...(has focus)@..."]
+
+	gdb_test "focus cmd" \
+	    [string_to_regexp "Focus set to cmd window."]
+
+	# This command leaves a blinking cursor at the end of the status line.
+	gdb_test_no_output "layout asm"
+
+	gdb_test "winheight asm +1"
+	gdb_test_no_output "tui refresh"
+    }
+}
+
+with_test_prefix main-ui {
+    gdb_assert {[Term::command "print 1"]} \
+	"Check that UI is responsive"
+    Term::dump_screen
+}

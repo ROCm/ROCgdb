@@ -394,6 +394,17 @@ gdb_getenv_term (void)
   return "<unset>";
 }
 
+/* Error out if the toplevel interpreter is not the TUI interpreter.  */
+
+static void
+require_tui_interpreter ()
+{
+  const char *interp = top_level_interpreter ()->name ();
+  if (!streq (interp, INTERP_TUI))
+    error (_("Cannot enable or disable the TUI when the interpreter is '%s'"),
+	   interp);
+}
+
 /* Enter in the tui mode (curses).
    When in normal mode, it installs the tui hooks in gdb, redirects
    the gdb output, configures the readline to work in tui mode.
@@ -424,13 +435,10 @@ tui_enable (void)
 #ifndef __MINGW32__
        const char *cap;
 #endif
-      const char *interp;
 
       /* If the top level interpreter is not the console/tui (e.g.,
 	 MI), enabling curses will certainly lose.  */
-      interp = top_level_interpreter ()->name ();
-      if (!streq (interp, INTERP_TUI))
-	error (_("Cannot enable the TUI when the interpreter is '%s'"), interp);
+      require_tui_interpreter ();
 
       /* Don't try to setup curses (and print funny control
 	 characters) if we're not outputting to a terminal.  */
@@ -555,6 +563,8 @@ tui_disable (void)
 
   if (!tui_active)
     return;
+
+  require_tui_interpreter ();
 
   /* Restore initial readline keymap.  */
   rl_set_keymap (tui_readline_standard_keymap);
