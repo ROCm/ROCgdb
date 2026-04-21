@@ -4584,34 +4584,29 @@ remote_target::update_thread_list ()
       /* CONTEXT now holds the current thread list on the remote
 	 target end.  Delete GDB-side threads no longer found on the
 	 target.  */
-      for (thread_info &tp : all_threads_safe ())
-	{
-	  if (tp.inf->process_target () != this)
-	    continue;
+      for (thread_info &tp : all_threads_safe (this))
+	if (!context.contains_thread (tp.ptid))
+	  {
+	    /* Do not remove the thread if it is the last thread in
+	       the inferior.  This situation happens when we have a
+	       pending exit process status to process.  Otherwise we
+	       may end up with a seemingly live inferior (i.e.  pid
+	       != 0) that has no threads.  */
+	    if (has_single_non_exited_thread (tp.inf))
+	      continue;
 
-	  if (!context.contains_thread (tp.ptid))
-	    {
-	      /* Do not remove the thread if it is the last thread in
-		 the inferior.  This situation happens when we have a
-		 pending exit process status to process.  Otherwise we
-		 may end up with a seemingly live inferior (i.e.  pid
-		 != 0) that has no threads.  */
-	      if (has_single_non_exited_thread (tp.inf))
-		continue;
+	    /* Do not remove the thread if we've requested to be
+	       notified of its exit.  For example, the thread may be
+	       displaced stepping, infrun will need to handle the
+	       exit event, and displaced stepping info is recorded
+	       in the thread object.  If we deleted the thread now,
+	       we'd lose that info.  */
+	    if ((tp.thread_options () & GDB_THREAD_OPTION_EXIT) != 0)
+	      continue;
 
-	      /* Do not remove the thread if we've requested to be
-		 notified of its exit.  For example, the thread may be
-		 displaced stepping, infrun will need to handle the
-		 exit event, and displaced stepping info is recorded
-		 in the thread object.  If we deleted the thread now,
-		 we'd lose that info.  */
-	      if ((tp.thread_options () & GDB_THREAD_OPTION_EXIT) != 0)
-		continue;
-
-	      /* Not found.  */
-	      delete_thread (&tp);
-	    }
-	}
+	    /* Not found.  */
+	    delete_thread (&tp);
+	  }
 
       /* Remove any unreported fork/vfork/clone child threads from
 	 CONTEXT so that we don't interfere with follow
@@ -4621,28 +4616,26 @@ remote_target::update_thread_list ()
 
       /* And now add threads we don't know about yet to our list.  */
       for (thread_item &item : context.items)
-	{
-	  if (item.ptid != null_ptid)
-	    {
-	      /* In non-stop mode, we assume new found threads are
-		 running until proven otherwise with a stop reply.  In
-		 all-stop, we can only get here if all threads are
-		 stopped.  */
-	      thread_int_state internal_state = (target_is_non_stop_p ()
-						 ? THREAD_INT_RUNNING
-						 : THREAD_INT_STOPPED);
+	if (item.ptid != null_ptid)
+	  {
+	    /* In non-stop mode, we assume new found threads are
+	       running until proven otherwise with a stop reply.  In
+	       all-stop, we can only get here if all threads are
+	       stopped.  */
+	    thread_int_state internal_state = (target_is_non_stop_p ()
+					       ? THREAD_INT_RUNNING
+					       : THREAD_INT_STOPPED);
 
-	      remote_notice_new_inferior (item.ptid, internal_state);
+	    remote_notice_new_inferior (item.ptid, internal_state);
 
-	      thread_info *tp = this->find_thread (item.ptid);
-	      remote_thread_info *info = get_remote_thread_info (tp);
-	      info->core = item.core;
-	      info->extra = std::move (item.extra);
-	      info->name = std::move (item.name);
-	      info->id_str = std::move (item.id_str);
-	      info->thread_handle = std::move (item.thread_handle);
-	    }
-	}
+	    thread_info *tp = this->find_thread (item.ptid);
+	    remote_thread_info *info = get_remote_thread_info (tp);
+	    info->core = item.core;
+	    info->extra = std::move (item.extra);
+	    info->name = std::move (item.name);
+	    info->id_str = std::move (item.id_str);
+	    info->thread_handle = std::move (item.thread_handle);
+	  }
     }
 
   if (!got_list)
@@ -4651,7 +4644,7 @@ remote_target::update_thread_list ()
 	 each known thread is alive, one by one, with the T packet.
 	 If the target doesn't support threads at all, then this is a
 	 no-op.  See remote_thread_alive.  */
-      prune_threads ();
+      prune_threads (this);
     }
 }
 

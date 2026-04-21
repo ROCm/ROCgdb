@@ -899,13 +899,14 @@ all_non_exited_threads (process_stratum_target *proc_target = nullptr,
 	 delete &f;
 */
 
-inline all_threads_safe_range
-all_threads_safe ()
+inline all_matching_threads_safe_range
+all_threads_safe (process_stratum_target *proc_target = nullptr,
+		  ptid_t filter_ptid = minus_one_ptid)
 {
-  all_threads_iterator begin (all_threads_iterator::begin_t {});
-  all_threads_safe_iterator safe_begin (std::move (begin));
+  all_matching_threads_iterator begin (proc_target, filter_ptid);
+  all_matching_threads_safe_iterator safe_begin (std::move (begin));
 
-  return all_threads_safe_range (std::move (safe_begin));
+  return all_matching_threads_safe_range (std::move (safe_begin));
 }
 
 extern int thread_count (process_stratum_target *proc_target);
@@ -1041,14 +1042,15 @@ extern struct thread_info* inferior_thread (void);
 
 extern void update_thread_list (void);
 
-/* Delete any thread the target says is no longer alive.  */
+/* Delete any thread of TARGET that the target says is no longer
+   alive.  */
 
-extern void prune_threads (void);
+extern void prune_threads (process_stratum_target *target);
 
 /* Delete threads marked THREAD_EXITED.  Unlike prune_threads, this
-   does not consult the target about whether the thread is alive right
-   now.  */
-extern void delete_exited_threads (void);
+   does not consult TARGET about whether the thread is alive right
+   now.  If TARGET is nullptr, operate on all targets.  */
+extern void delete_exited_threads (process_stratum_target *target);
 
 /* Return true if PC is in the stepping range of THREAD.  */
 

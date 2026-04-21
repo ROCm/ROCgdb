@@ -2146,7 +2146,7 @@ gnu_nat_target::create_inferior (const char *exec_file,
 
   inf->pending_execs = 0;
   /* Get rid of the old shell threads.  */
-  prune_threads ();
+  prune_threads (this);
 
   inf_validate_procinfo (inf);
   inf_update_signal_thread (inf);

@@ -155,7 +155,7 @@ nbsd_nat_target::post_attach (int pid)
 void
 nbsd_nat_target::update_thread_list ()
 {
-  delete_exited_threads ();
+  delete_exited_threads (this);
 }
 
 /* Convert PTID to a string.  */

@@ -1256,7 +1256,7 @@ static void
 follow_exec (ptid_t ptid, const char *exec_file_target)
 {
   int pid = ptid.pid ();
-  ptid_t process_ptid;
+  ptid_t process_ptid (pid);
 
   /* Switch terminal for any messages produced e.g. by
      breakpoint_re_set.  */
@@ -1302,8 +1302,9 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
      them.  Deleting them now rather than at the next user-visible
      stop provides a nicer sequence of events for user and MI
      notifications.  */
-  for (thread_info &th : all_threads_safe ())
-    if (th.ptid.pid () == pid && th.ptid != ptid)
+  process_stratum_target *target = current_inferior ()->process_target ();
+  for (thread_info &th : all_threads_safe (target, process_ptid))
+    if (th.ptid != ptid)
       delete_thread (&th);
 
   /* We also need to clear any left over stale state for the
@@ -1325,7 +1326,6 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
   update_breakpoints_after_exec ();
 
   /* What is this a.out's name?  */
-  process_ptid = ptid_t (pid);
   gdb_printf (_("%s is executing new program: %s\n"),
 	      target_pid_to_str (process_ptid).c_str (),
 	      exec_file_target);

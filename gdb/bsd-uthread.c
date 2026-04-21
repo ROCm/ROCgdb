@@ -454,7 +454,7 @@ bsd_uthread_target::update_thread_list ()
   int offset = bsd_uthread_thread_next_offset;
   CORE_ADDR addr;
 
-  prune_threads ();
+  prune_threads (current_inferior ()->process_target ());
 
   addr = bsd_uthread_read_memory_address (bsd_uthread_thread_list_addr);
   while (addr != 0)

@@ -48,7 +48,7 @@ obsd_nat_target::update_thread_list ()
   pid_t pid = inferior_ptid.pid ();
   struct ptrace_thread_state pts;
 
-  prune_threads ();
+  prune_threads (this);
 
   if (ptrace (PT_GET_THREAD_FIRST, pid, (caddr_t)&pts, sizeof pts) == -1)
     perror_with_name (("ptrace"));

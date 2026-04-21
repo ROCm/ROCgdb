@@ -1012,7 +1012,7 @@ void
 sol_thread_target::update_thread_list ()
 {
   /* Delete dead threads.  */
-  prune_threads ();
+  prune_threads (current_inferior ()->process_target ());
 
   /* Find any new LWP's.  */
   beneath ()->update_thread_list ();
