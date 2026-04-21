@@ -983,9 +983,9 @@ extern void update_thread_list (void);
 extern void prune_threads (process_stratum_target *target);
 
 /* Delete threads marked THREAD_EXITED.  Unlike prune_threads, this
-   does not consult the target about whether the thread is alive right
-   now.  */
-extern void delete_exited_threads (void);
+   does not consult TARGET about whether the thread is alive right
+   now.  If TARGET is nullptr, operate on all targets.  */
+extern void delete_exited_threads (process_stratum_target *target);
 
 /* Return true if PC is in the stepping range of THREAD.  */
 

@@ -3967,7 +3967,7 @@ linux_nat_target::update_thread_list ()
   /* We add/delete threads from the list as clone/exit events are
      processed, so just try deleting exited threads still in the
      thread list.  */
-  delete_exited_threads ();
+  delete_exited_threads (this);
 
   /* Update the processor core that each lwp/thread was last seen
      running on.  */
