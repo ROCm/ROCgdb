@@ -1490,7 +1490,9 @@ struct target_ops_ref_policy
 };
 
 /* A gdb::ref_ptr pointer to a target_ops.  */
-typedef gdb::ref_ptr<target_ops, target_ops_ref_policy> target_ops_ref;
+using target_ops_ref = gdb::ref_ptr<target_ops, target_ops_ref_policy>;
+using process_target_ops_ref
+  = gdb::ref_ptr<process_stratum_target, target_ops_ref_policy>;
 
 /* Native target backends call this once at initialization time to
    inform the core about which is the target that can respond to "run"

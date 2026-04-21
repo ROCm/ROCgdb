@@ -2565,14 +2565,12 @@ target_detach (inferior *inf, int from_tty)
 
   /* Hold a strong reference because detaching may unpush the
      target.  */
-  auto proc_target_ref = target_ops_ref::new_reference (inf->process_target ());
+  auto proc_target_ref
+    = process_target_ops_ref::new_reference (inf->process_target ());
 
   current_inferior ()->top_target ()->detach (inf, from_tty);
 
-  process_stratum_target *proc_target
-    = as_process_stratum_target (proc_target_ref.get ());
-
-  registers_changed_ptid (proc_target, save_pid_ptid);
+  registers_changed_ptid (proc_target_ref.get (), save_pid_ptid);
 
   /* We have to ensure we have no frame cache left.  Normally,
      registers_changed_ptid (save_pid_ptid) calls reinit_frame_cache when

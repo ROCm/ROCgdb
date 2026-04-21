@@ -3045,7 +3045,8 @@ detach_command (const char *args, int from_tty)
      detaching the parent.  Otherwise detaching could close the
      target.  */
   inferior *inf = current_inferior ();
-  auto target_ref = target_ops_ref::new_reference (inf->process_target ());
+  auto target_ref
+    = process_target_ops_ref::new_reference (inf->process_target ());
 
   /* Save this before detaching, since detaching may unpush the
      process_stratum target.  */
@@ -3071,7 +3072,7 @@ detach_command (const char *args, int from_tty)
     deprecated_detach_hook ();
 
   if (!was_non_stop_p)
-    restart_after_all_stop_detach (as_process_stratum_target (target_ref.get ()));
+    restart_after_all_stop_detach (target_ref.get ());
 
   disable_commit_resumed.reset_and_commit ();
 }
