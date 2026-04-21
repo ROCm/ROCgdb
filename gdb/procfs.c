@@ -2868,7 +2868,7 @@ procfs_target::update_thread_list ()
 {
   procinfo *pi;
 
-  prune_threads ();
+  prune_threads (this);
 
   /* Find procinfo for main process.  */
   pi = find_procinfo_or_die (inferior_ptid.pid (), 0);

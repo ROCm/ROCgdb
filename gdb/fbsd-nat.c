@@ -1006,7 +1006,7 @@ fbsd_nat_target::update_thread_list ()
      list as events are reported, so just try deleting exited threads.  */
   delete_exited_threads ();
 #else
-  prune_threads ();
+  prune_threads (this);
 
   fbsd_add_threads (this, inferior_ptid.pid ());
 #endif

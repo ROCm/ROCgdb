@@ -4646,7 +4646,7 @@ remote_target::update_thread_list ()
 	 each known thread is alive, one by one, with the T packet.
 	 If the target doesn't support threads at all, then this is a
 	 no-op.  See remote_thread_alive.  */
-      prune_threads ();
+      prune_threads (this);
     }
 }
 

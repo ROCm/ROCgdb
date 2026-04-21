@@ -977,9 +977,10 @@ extern struct thread_info* inferior_thread (void);
 
 extern void update_thread_list (void);
 
-/* Delete any thread the target says is no longer alive.  */
+/* Delete any thread of TARGET that the target says is no longer
+   alive.  */
 
-extern void prune_threads (void);
+extern void prune_threads (process_stratum_target *target);
 
 /* Delete threads marked THREAD_EXITED.  Unlike prune_threads, this
    does not consult the target about whether the thread is alive right
