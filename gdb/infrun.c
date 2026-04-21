@@ -3688,11 +3688,8 @@ proceed (CORE_ADDR addr, enum gdb_signal siggnal)
   /* Even if RESUME_PTID is a wildcard, and we end up resuming fewer
      threads (e.g., we might need to set threads stepping over
      breakpoints first), from the user/frontend's point of view, all
-     threads in RESUME_PTID are now running.  Unless we're calling an
-     inferior function, as in that case we pretend the inferior
-     doesn't run at all.  */
-  if (!cur_thr->control.in_infcall)
-    set_state (resume_target, resume_ptid, THREAD_RUNNING);
+     threads in RESUME_PTID are now running.  */
+  set_state (resume_target, resume_ptid, THREAD_RUNNING);
 
   infrun_debug_printf ("addr=%s, signal=%s, resume_ptid=%s",
 		       paddress (gdbarch, addr),
@@ -6636,7 +6633,7 @@ restart_threads (struct thread_info *event_thread, inferior *inf)
 	  continue;
 	}
 
-      if (!(tp.state () == THREAD_RUNNING || tp.control.in_infcall))
+      if (tp.state () != THREAD_RUNNING)
 	{
 	  infrun_debug_printf ("restart threads: [%s] not meant to be running",
 			       tp.ptid.to_string ().c_str ());

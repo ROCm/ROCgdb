@@ -34,14 +34,20 @@ thread_function (void *arg)
     foo ();
 }
 
+#define NTHREADS 10
+
 void
 new_thread (void)
 {
-  pthread_t thread;
-  int res;
+  pthread_t thread[NTHREADS];
+  int i;
 
-  res = pthread_create (&thread, NULL, thread_function, NULL);
-  assert (res == 0);
+  for (i = 0; i < NTHREADS; i++)
+    {
+      int res;
+      res = pthread_create (&thread[i], NULL, thread_function, NULL);
+      assert (res == 0);
+    }
 }
 
 int
