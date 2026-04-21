@@ -2915,7 +2915,7 @@ _bfd_coff_write_armap (bfd *arch,
     return false;
   _bfd_ar_spacepad (hdr.ar_date, sizeof (hdr.ar_date), "%ld",
 		    ((arch->flags & BFD_DETERMINISTIC_OUTPUT) == 0
-		     ? time (NULL) : 0));
+		     ? bfd_get_current_time (0) : 0));
   /* This, at least, is what Intel coff sets the values to.  */
   _bfd_ar_spacepad (hdr.ar_uid, sizeof (hdr.ar_uid), "%ld", 0);
   _bfd_ar_spacepad (hdr.ar_gid, sizeof (hdr.ar_gid), "%ld", 0);
