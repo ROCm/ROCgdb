@@ -4584,34 +4584,29 @@ remote_target::update_thread_list ()
       /* CONTEXT now holds the current thread list on the remote
 	 target end.  Delete GDB-side threads no longer found on the
 	 target.  */
-      for (thread_info &tp : all_threads_safe ())
-	{
-	  if (tp.inf->process_target () != this)
-	    continue;
+      for (thread_info &tp : all_threads_safe (this))
+	if (!context.contains_thread (tp.ptid))
+	  {
+	    /* Do not remove the thread if it is the last thread in
+	       the inferior.  This situation happens when we have a
+	       pending exit process status to process.  Otherwise we
+	       may end up with a seemingly live inferior (i.e.  pid
+	       != 0) that has no threads.  */
+	    if (has_single_non_exited_thread (tp.inf))
+	      continue;
 
-	  if (!context.contains_thread (tp.ptid))
-	    {
-	      /* Do not remove the thread if it is the last thread in
-		 the inferior.  This situation happens when we have a
-		 pending exit process status to process.  Otherwise we
-		 may end up with a seemingly live inferior (i.e.  pid
-		 != 0) that has no threads.  */
-	      if (has_single_non_exited_thread (tp.inf))
-		continue;
+	    /* Do not remove the thread if we've requested to be
+	       notified of its exit.  For example, the thread may be
+	       displaced stepping, infrun will need to handle the
+	       exit event, and displaced stepping info is recorded
+	       in the thread object.  If we deleted the thread now,
+	       we'd lose that info.  */
+	    if ((tp.thread_options () & GDB_THREAD_OPTION_EXIT) != 0)
+	      continue;
 
-	      /* Do not remove the thread if we've requested to be
-		 notified of its exit.  For example, the thread may be
-		 displaced stepping, infrun will need to handle the
-		 exit event, and displaced stepping info is recorded
-		 in the thread object.  If we deleted the thread now,
-		 we'd lose that info.  */
-	      if ((tp.thread_options () & GDB_THREAD_OPTION_EXIT) != 0)
-		continue;
-
-	      /* Not found.  */
-	      delete_thread (&tp);
-	    }
-	}
+	    /* Not found.  */
+	    delete_thread (&tp);
+	  }
 
       /* Remove any unreported fork/vfork/clone child threads from
 	 CONTEXT so that we don't interfere with follow

@@ -162,10 +162,11 @@ using all_non_exited_threads_iterator
 using inf_non_exited_threads_iterator
   = filtered_iterator<inf_threads_iterator, non_exited_thread_filter>;
 
-/* Iterate over all threads of all inferiors, safely.  */
+/* Iterate over all threads that are matched by the wrapped
+   iterator, safely.  */
 
-using all_threads_safe_iterator
-  = basic_safe_iterator<all_threads_iterator>;
+using all_matching_threads_safe_iterator
+  = basic_safe_iterator<all_matching_threads_iterator>;
 
 /* Iterate over all threads of an inferior, safely.  */
 
@@ -189,10 +190,11 @@ using inf_non_exited_threads_range
 using safe_inf_threads_range = iterator_range<safe_inf_threads_iterator>;
 
 /* A range adapter that makes it possible to iterate over all threads
-   with range-for "safely".  I.e., it is safe to delete the
-   currently-iterated thread.  */
+   that are matched by the given iterator with range-for "safely".  I.e.,
+   it is safe to delete the currently-iterated thread.  */
 
-using all_threads_safe_range = iterator_range<all_threads_safe_iterator>;
+using all_matching_threads_safe_range
+  = iterator_range<all_matching_threads_safe_iterator>;
 
 /* A range adapter that makes it possible to iterate over all threads
    that match a PTID filter with range-for.  */

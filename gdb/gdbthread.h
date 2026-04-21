@@ -863,13 +863,14 @@ all_non_exited_threads (process_stratum_target *proc_target = nullptr,
 	 delete &f;
 */
 
-inline all_threads_safe_range
-all_threads_safe ()
+inline all_matching_threads_safe_range
+all_threads_safe (process_stratum_target *proc_target = nullptr,
+		  ptid_t filter_ptid = minus_one_ptid)
 {
-  all_threads_iterator begin (all_threads_iterator::begin_t {});
-  all_threads_safe_iterator safe_begin (std::move (begin));
+  all_matching_threads_iterator begin (proc_target, filter_ptid);
+  all_matching_threads_safe_iterator safe_begin (std::move (begin));
 
-  return all_threads_safe_range (std::move (safe_begin));
+  return all_matching_threads_safe_range (std::move (safe_begin));
 }
 
 extern int thread_count (process_stratum_target *proc_target);
