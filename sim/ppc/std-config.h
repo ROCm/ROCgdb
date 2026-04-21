@@ -584,7 +584,7 @@ extern int current_stdio;
 /* idecode acts as the hub of the system, everything else is imported
    into this file */
 
-#ifndef IDECOCE_INLINE
+#ifndef IDECODE_INLINE
 #define IDECODE_INLINE			INLINE_LOCALS
 #endif
 
