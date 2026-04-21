@@ -18,7 +18,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "elf/common.h"
-#include "gdbsupport/common-defs.h"
 #include "nat/gdb_ptrace.h"
 #include "nat/linux-ptrace.h"
 #include "nat/x86-cpuid.h"
