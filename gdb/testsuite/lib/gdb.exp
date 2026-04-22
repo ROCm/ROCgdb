@@ -6248,6 +6248,7 @@ proc gdb_compile {source dest type options} {
 	}
     }
 
+
     set outdir [file dirname $dest]
 
     # GDB doesn't support minimal symbols in AIX, so fail the compilation
@@ -6806,18 +6807,52 @@ proc gdb_compile {source dest type options} {
 		    lappend options \
 			"ldflags=$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
 		} else {
-		    # With ldflags, the .o file would be placed last
-		    # in the compiler invocation.  With -x hip in
-		    # early_flags, amdclang++ would treat the .o
-		    # file as HIP source, which fails.  By
-		    # prepending the .o to the sources list, it
-		    # appears before the .cc file.  The conditional
-		    # -x hip logic in gdb_compile only adds -x hip
-		    # when source files are present, so the .o is
-		    # handled correctly during linking.
-		    set source \
-			[linsert $source 0 \
-			     $gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)]
+		    # For HIP, amdclang++ needs -x hip to treat
+		    # sources as HIP, but -x hip applied to a .o
+		    # file makes amdclang++ try to parse the object
+		    # as HIP source, which fails.  To avoid mixing
+		    # sources and the unbuffered .o in a single
+		    # amdclang++ invocation, pre-compile each source
+		    # file to its own .o first (with -x hip), then
+		    # replace the source list with the resulting
+		    # .o files plus the unbuffered .o.  The final
+		    # link step must use only .o inputs, so also
+		    # strip -x hip from the accumulated early_flags
+		    # so the link sees just --hip-link.
+		    set new_source {}
+		    foreach src $source {
+			set ext [file extension $src]
+			if {$ext eq ".o" || $ext eq ".a"} {
+			    lappend new_source $src
+			} else {
+			    set out \
+				[standard_temp_file [file tail $src].hip.o]
+			    set res [gdb_compile $src $out object $options]
+			    if {$res ne ""} {
+				return $res
+			    }
+			    lappend new_source $out
+			}
+		    }
+		    lappend new_source \
+			$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)
+		    set source $new_source
+
+		    # Strip -x hip from early_flags in options since
+		    # we no longer have any source files in the
+		    # final link invocation.
+		    set stripped_options {}
+		    foreach opt $options {
+			if {[regexp {^early_flags=(.*)} $opt -> val]} {
+			    regsub -all {(^| )-x hip( |$)} \
+				$val { } val
+			    set val [string trim $val]
+			    lappend stripped_options "early_flags=$val"
+			} else {
+			    lappend stripped_options $opt
+			}
+		    }
+		    set options $stripped_options
 		}
 	    }
 	}
