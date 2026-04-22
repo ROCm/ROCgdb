@@ -24,7 +24,6 @@
    code and provide the illusion that the kernel/device's main is
    really called main.  */
 
-#include "defs.h"
 #include "gdb-hip-test-mode.h"
 #include "objfiles.h"
 

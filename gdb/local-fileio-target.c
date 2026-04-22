@@ -18,7 +18,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include "local-fileio-target.h"
 #include "gdbsupport/fileio.h"
 #include "gdbsupport/filestuff.h"
