@@ -79,7 +79,7 @@ value_of_builtin_frame_sp_reg (const frame_info_ptr &frame, const void *baton)
   if (gdbarch_sp_regnum (gdbarch) >= 0)
     return value_of_register (gdbarch_sp_regnum (gdbarch),
 			      get_next_frame_sentinel_okay (frame));
-  error (_("Standard register ``$sp'' is not available for this target"));
+  error (_("Standard register \"$sp\" is not available for this target"));
 }
 
 static struct value *
@@ -90,7 +90,7 @@ value_of_builtin_frame_ps_reg (const frame_info_ptr &frame, const void *baton)
   if (gdbarch_ps_regnum (gdbarch) >= 0)
     return value_of_register (gdbarch_ps_regnum (gdbarch),
 			      get_next_frame_sentinel_okay (frame));
-  error (_("Standard register ``$ps'' is not available for this target"));
+  error (_("Standard register \"$ps\" is not available for this target"));
 }
 
 INIT_GDB_FILE (frame_reg)

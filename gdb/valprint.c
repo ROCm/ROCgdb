@@ -2257,7 +2257,7 @@ set_input_radix_1 (int from_tty, unsigned radix)
   if (radix < 2)
     {
       input_radix_1 = input_radix;
-      error (_("Nonsense input radix ``decimal %u''; input radix unchanged."),
+      error (_("Nonsense input radix \"decimal %u\"; input radix unchanged."),
 	     radix);
     }
   input_radix_1 = input_radix = radix;
@@ -2299,7 +2299,7 @@ set_output_radix_1 (int from_tty, unsigned radix)
       break;
     default:
       output_radix_1 = output_radix;
-      error (_("Unsupported output radix ``decimal %u''; "
+      error (_("Unsupported output radix \"decimal %u\"; "
 	       "output radix unchanged."),
 	     radix);
     }
