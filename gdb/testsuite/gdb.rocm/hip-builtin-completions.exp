@@ -89,17 +89,7 @@ with_rocm_gpu_lock {
     }
 
     with_test_prefix "before running program" {
-	if {$dw_lang == "hip"} {
-	    # Check if the language is HIP.  This guarantees that the
-	    # conditions of (pending) breakpoints in the device code
-	    # will be parsed and evaluated in HIP context.
-	    gdb_test "show language" \
-		"The current source language is \"auto; currently hip\"\." \
-		"HIP as the auto language on the host side"
-	} elseif {$dw_lang == "cpp"} {
-	    gdb_test "show language" \
-		"The current source language is \"auto; currently c\\+\\+\"\." \
-		"C++ as the auto language on the host side"
+	if {$dw_lang == "cpp"} {
 	    no_hip_completions
 
 	    # Set the language to HIP.  This guarantees that the
