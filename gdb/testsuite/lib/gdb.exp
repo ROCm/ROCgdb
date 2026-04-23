@@ -6861,21 +6861,14 @@ proc gdb_compile {source dest type options} {
 	    # used.  Thus, we need to disable it if -nostdlib option
 	    # is used.
 	    if {[lsearch -regexp $options "-nostdlib"] < 0 } {
-		if {[lsearch -exact $options hip] == -1} {
-		    # Use ldflags to avoid copying the object file to
-		    # the host multiple times.
-		    lappend options \
-			"ldflags=$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
-		} else {
-		    # For HIP, the generalized pre-compile step at
-		    # the top of gdb_compile has already turned any
-		    # source files into .o files.  Prepending the
-		    # unbuffered .o to the (all-.o) source list is
-		    # safe -- no mixed source/.o invocation happens.
-		    set source \
-			[linsert $source 0 \
-			     $gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)]
-		}
+		# Use ldflags to avoid copying the object file to
+		# the host multiple times.  For HIP, the generalized
+		# pre-compile at the top of gdb_compile ensures
+		# $source is all-.o by the time we get here, so
+		# -x hip is not in early_flags and appending another
+		# .o via ldflags is safe.
+		lappend options \
+		    "ldflags=$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
 	    }
 	}
     }
