@@ -302,6 +302,10 @@ proc gdb_compile {source dest type options} {
 	#    '-mllvm -amdgpu-spill-cfi-saved-regs'
 	#    [-Wunused-command-line-argument]
 	#
+	# Pass --rocm-path explicitly so amdclang++ can locate the HIP
+	# headers and device libraries when it's invoked from the board
+	# via PATH rather than an absolute path.  rocm_path comes from
+	# rocm.exp and defaults to /opt/rocm if ROCM_PATH is not set.
 	global rocm_path
 	set hip_options "early_flags=\
 			 --rocm-path=$rocm_path\

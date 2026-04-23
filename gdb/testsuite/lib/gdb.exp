@@ -6248,6 +6248,52 @@ proc gdb_compile {source dest type options} {
 	}
     }
 
+    # For HIP executables, amdclang++ needs -x hip to treat .cpp/.c as
+    # HIP source, but -x hip applied to a .o file makes amdclang++ try
+    # to parse the object as HIP source, which fails.  Since gdb_compile
+    # may later inject additional .o inputs (e.g. set_unbuffered_mode.o),
+    # we cannot safely mix any source files with any .o inputs in a
+    # single amdclang++ invocation.  To avoid that, pre-compile each
+    # source file to its own .o first (with -x hip), then recurse with
+    # an all-.o source list.  The recursive call will not add -x hip
+    # and the final link will work correctly.
+    if {[lsearch -exact $options hip] != -1
+	&& $type eq "executable"
+	&& [lsearch -exact $options getting_compiler_info] == -1} {
+	set has_source 0
+	foreach src $source {
+	    set ext [file extension $src]
+	    if {$ext ne ".o" && $ext ne ".a"} {
+		set has_source 1
+		break
+	    }
+	}
+	if {$has_source} {
+	    set new_source {}
+	    set idx 0
+	    foreach src $source {
+		set ext [file extension $src]
+		if {$ext eq ".o" || $ext eq ".a"} {
+		    lappend new_source $src
+		} else {
+		    # Include an index in the temp filename so that
+		    # two source files with the same basename (e.g.
+		    # dir1/foo.cpp and dir2/foo.cpp) do not collide
+		    # to the same intermediate .o.
+		    set out \
+			[standard_temp_file \
+			     ${idx}-[file tail $src].hip.o]
+		    set res [gdb_compile $src $out object $options]
+		    if {$res ne ""} {
+			return $res
+		    }
+		    lappend new_source $out
+		}
+		incr idx
+	    }
+	    return [gdb_compile $new_source $dest $type $options]
+	}
+    }
 
     set outdir [file dirname $dest]
 
@@ -6559,11 +6605,16 @@ proc gdb_compile {source dest type options} {
 	#
 	# amdclang++ needs -x hip to treat .cpp/.c as HIP source when
 	# compiling, and --hip-link to link the HIP runtime when
-	# linking.  When linking only .o files, -x hip must NOT be
-	# passed, otherwise amdclang++ tries to parse them as HIP
-	# source.  Add -O0 as default optimization.  If "optimize"
-	# is also requested, another -O flag (e.g. -O2) will be added
-	# to the flags, overriding -O0.
+	# linking.  -x hip must NOT be passed when any .o input is
+	# present, otherwise amdclang++ tries to parse the .o file
+	# as HIP source.  The executable-linking path above pre-
+	# compiles all sources to .o first, so by the time we get
+	# here with $type == "executable" all inputs are .o files.
+	# For the $type == "object" path, $source is always a single
+	# source file, so -x hip is safe.  Add -O0 as default
+	# optimization.  If "optimize" is also requested, another
+	# -O flag (e.g. -O2) will be added to the flags, overriding
+	# -O0.
 	set has_source_files 0
 	foreach src $source {
 	    set ext [file extension $src]
@@ -6581,6 +6632,15 @@ proc gdb_compile {source dest type options} {
 	}
 	if {$type eq "executable"} {
 	    set hip_early_flags "--hip-link $hip_early_flags"
+	}
+	# Pass --rocm-path explicitly so amdclang++ can locate the HIP
+	# headers and device libraries regardless of how it was invoked
+	# (full path vs bare name on PATH) or whether ROCM_PATH is set
+	# in the environment.  rocm_path comes from rocm.exp and
+	# defaults to /opt/rocm if ROCM_PATH is not set.
+	global rocm_path
+	if {[info exists rocm_path] && $rocm_path ne ""} {
+	    set hip_early_flags "--rocm-path=$rocm_path $hip_early_flags"
 	}
 	lappend new_options "early_flags=$hip_early_flags"
 
@@ -6807,52 +6867,14 @@ proc gdb_compile {source dest type options} {
 		    lappend options \
 			"ldflags=$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
 		} else {
-		    # For HIP, amdclang++ needs -x hip to treat
-		    # sources as HIP, but -x hip applied to a .o
-		    # file makes amdclang++ try to parse the object
-		    # as HIP source, which fails.  To avoid mixing
-		    # sources and the unbuffered .o in a single
-		    # amdclang++ invocation, pre-compile each source
-		    # file to its own .o first (with -x hip), then
-		    # replace the source list with the resulting
-		    # .o files plus the unbuffered .o.  The final
-		    # link step must use only .o inputs, so also
-		    # strip -x hip from the accumulated early_flags
-		    # so the link sees just --hip-link.
-		    set new_source {}
-		    foreach src $source {
-			set ext [file extension $src]
-			if {$ext eq ".o" || $ext eq ".a"} {
-			    lappend new_source $src
-			} else {
-			    set out \
-				[standard_temp_file [file tail $src].hip.o]
-			    set res [gdb_compile $src $out object $options]
-			    if {$res ne ""} {
-				return $res
-			    }
-			    lappend new_source $out
-			}
-		    }
-		    lappend new_source \
-			$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)
-		    set source $new_source
-
-		    # Strip -x hip from early_flags in options since
-		    # we no longer have any source files in the
-		    # final link invocation.
-		    set stripped_options {}
-		    foreach opt $options {
-			if {[regexp {^early_flags=(.*)} $opt -> val]} {
-			    regsub -all {(^| )-x hip( |$)} \
-				$val { } val
-			    set val [string trim $val]
-			    lappend stripped_options "early_flags=$val"
-			} else {
-			    lappend stripped_options $opt
-			}
-		    }
-		    set options $stripped_options
+		    # For HIP, the generalized pre-compile step at
+		    # the top of gdb_compile has already turned any
+		    # source files into .o files.  Prepending the
+		    # unbuffered .o to the (all-.o) source list is
+		    # safe -- no mixed source/.o invocation happens.
+		    set source \
+			[linsert $source 0 \
+			     $gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)]
 		}
 	    }
 	}
