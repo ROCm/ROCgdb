@@ -929,16 +929,6 @@ set lto_run_elf_shared_tests [list \
    {-Wl,-R,tmpdir} {} \
    {pr31644a.c} {pr31644b.exe} {pass.out} {-flto} {c} {} \
    {-Wl,--as-needed tmpdir/pr31644b.a tmpdir/pr31644c.so}] \
-  [list {PR ld/34088} \
-   {-static -flto -fuse-linker-plugin} \
-   {} \
-   {pr34088.c} \
-   {pr34088.exe} \
-   {pass.out} \
-   {-flto -O0} \
-   {c} \
-   {} \
-   {-lm}] \
 ]
 
 # LTO run-time tests for ELF
@@ -1222,6 +1212,24 @@ if { [is_elf_format] } {
 	    "pr22983" \
 	] \
     ]
+
+    if { [istarget "aarch64*-*-linux"]
+	 || [istarget "x86_64-*-linux*"] } {
+	run_ld_link_exec_tests [list \
+	    [list \
+		{PR ld/34088} \
+		{-static -flto -fuse-linker-plugin} \
+		{} \
+		{pr34088.c} \
+		{pr34088.exe} \
+		{pass.out} \
+		{-flto -O0} \
+		{c} \
+		{} \
+		{-lm}] \
+	   ] \
+	]
+    }
 }
 
 if { [is_elf_format] && [check_lto_shared_available] } {
