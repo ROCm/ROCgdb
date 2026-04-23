@@ -59,7 +59,6 @@ HEAD = f"""\
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "defs.h"
 #include "riscv-linux-tdep.h"
 
 /* riscv_linux_canonicalize_syscall maps from the native RISC-V Linux set

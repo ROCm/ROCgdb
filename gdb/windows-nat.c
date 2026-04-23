@@ -909,6 +909,12 @@ windows_nat_target::pass_ctrlc ()
   interrupt ();
 }
 
+void
+windows_nat_target::stop (ptid_t ptid)
+{
+  interrupt ();
+}
+
 /* Get the next event from the child.  Returns the thread ptid.  */
 
 ptid_t

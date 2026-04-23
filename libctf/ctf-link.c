@@ -1114,19 +1114,19 @@ ctf_link_deduplicating_per_cu (ctf_dict_t *fp)
       uint32_t noutputs;
       uint32_t *parents;
 
-      if ((ninputs = ctf_link_deduplicating_count_inputs (fp, in,
-							  &only_input)) == -1)
+      ninputs = ctf_link_deduplicating_count_inputs (fp, in, &only_input);
+      if (ninputs == -1)
 	goto err_open_inputs;
 
       /* CU mapping with no inputs?  Skip.  */
       if (ninputs == 0)
 	continue;
 
-      if (labs ((long int) ninputs) > 0xfffffffe)
+      if ((size_t) ninputs > 0xfffffffe)
 	{
 	  ctf_set_errno (fp, EFBIG);
 	  ctf_err_warn (fp, 0, 0, _("too many inputs in deduplicating "
-				    "link: %li"), (long int) ninputs);
+				    "link: %lu"), (long unsigned) ninputs);
 	  goto err_open_inputs;
 	}
 

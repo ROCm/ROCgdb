@@ -214,4 +214,6 @@ client_state &get_client_state ();
 #include "gdbthread.h"
 #include "inferiors.h"
 
+#else
+#  error gdbserver/server.h should not be included manually
 #endif /* GDBSERVER_SERVER_H */

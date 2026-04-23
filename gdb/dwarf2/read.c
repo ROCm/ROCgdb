@@ -15436,6 +15436,52 @@ is_ada_import_or_export (dwarf2_cu *cu, const char *name,
 	  && !streq (linkagename, "adainit"));
 }
 
+/* Apply the DW_AT_{call,decl}_{file,line} attributes of DIE in CU to SYM.  */
+
+static void
+new_symbol_file_line (struct die_info *die, struct dwarf2_cu *cu,
+		      struct symbol *sym)
+{
+  bool inlined_func = (die->tag == DW_TAG_inlined_subroutine);
+
+  /* Handle DW_AT_call_line / DW_AT_decl_line.  */
+  struct attribute *attr
+    = dwarf2_attr (die, inlined_func ? DW_AT_call_line : DW_AT_decl_line,
+		   cu);
+  if (attr != nullptr)
+    sym->set_line (attr->unsigned_constant ().value_or (0));
+
+  /* Handle DW_AT_call_file / DW_AT_decl_file.  */
+  struct dwarf2_cu *file_cu = cu;
+  attr = dwarf2_attr (die, inlined_func ? DW_AT_call_file : DW_AT_decl_file,
+		      &file_cu);
+  if (attr == nullptr)
+    return;
+
+  std::optional<ULONGEST> index_cst = attr->unsigned_constant ();
+  if (!index_cst.has_value ())
+    return;
+
+  if (file_cu->line_header == nullptr)
+    {
+      file_and_directory fnd (nullptr, nullptr);
+      decode_line_header_for_cu (file_cu->dies, file_cu, fnd);
+    }
+
+  file_name_index file_index = (file_name_index) *index_cst;
+  struct file_entry *fe = nullptr;
+  if (file_cu->line_header != nullptr)
+    fe = file_cu->line_header->file_name_at (file_index);
+
+  if (fe == nullptr)
+    {
+      complaint (_("file index out of range"));
+      return;
+    }
+
+  sym->set_symtab (fe->symtab (*file_cu));
+}
+
 /* Given a pointer to a DWARF information entry, figure out if we need
    to make a symbol table entry for it, and if so, create a new entry
    and return a pointer to it.
@@ -15455,8 +15501,6 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
   struct attribute *attr = NULL;
   struct attribute *attr2 = NULL;
   std::vector<symbol *> *list_to_add = nullptr;
-
-  int inlined_func = (die->tag == DW_TAG_inlined_subroutine);
 
   name = dwarf2_name (die, cu);
   if (name == nullptr && (die->tag == DW_TAG_subprogram
@@ -15510,41 +15554,9 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 	sym->set_type (type);
       else
 	sym->set_type (die_type (die, cu));
-      attr = dwarf2_attr (die,
-			  inlined_func ? DW_AT_call_line : DW_AT_decl_line,
-			  cu);
-      if (attr != nullptr)
-	sym->set_line (attr->unsigned_constant ().value_or (0));
 
-      struct dwarf2_cu *file_cu = cu;
-      attr = dwarf2_attr (die,
-			  inlined_func ? DW_AT_call_file : DW_AT_decl_file,
-			  &file_cu);
-      if (attr != nullptr)
-	{
-	  std::optional<ULONGEST> index_cst = attr->unsigned_constant ();
-	  if (index_cst.has_value ())
-	    {
-	      file_name_index file_index = (file_name_index) *index_cst;
-	      struct file_entry *fe;
-
-	      if (file_cu->line_header == nullptr)
-		{
-		  file_and_directory fnd (nullptr, nullptr);
-		  decode_line_header_for_cu (file_cu->dies, file_cu, fnd);
-		}
-
-	      if (file_cu->line_header != nullptr)
-		fe = file_cu->line_header->file_name_at (file_index);
-	      else
-		fe = NULL;
-
-	      if (fe == NULL)
-		complaint (_("file index out of range"));
-	      else
-		sym->set_symtab (fe->symtab (*file_cu));
-	    }
-	}
+      /* Handle DW_AT_{call,decl}_{file,line}.  */
+      new_symbol_file_line (die, cu, sym);
 
       switch (die->tag)
 	{

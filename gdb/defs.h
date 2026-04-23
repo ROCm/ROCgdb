@@ -451,4 +451,6 @@ struct arch_addr_space
   extern void _initialize_ ## NAME (); \
   void _initialize_ ## NAME ()
 
+#else
+#  error gdb/defs.h should not be included manually
 #endif /* GDB_DEFS_H */

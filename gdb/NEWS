@@ -155,6 +155,8 @@ maint print psymbols
   ** The launch and attach requests now accept the adaSourceCharset
      parameter.
 
+  ** The attach request now accepts the coreFile parameter.
+
   ** Constants are now returned in scopes.
 
 * Changed remote packets

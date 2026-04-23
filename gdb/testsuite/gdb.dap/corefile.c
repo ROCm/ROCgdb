@@ -1,6 +1,6 @@
-/* Copyright (C) 2023-2026 Free Software Foundation, Inc.
+/* This testcase is part of GDB, the GNU debugger.
 
-   This file is part of GDB.
+   Copyright 2026 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,20 +15,31 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "gdbsupport/remote-args.h"
-#include "gdbsupport/common-inferior.h"
-#include "gdbsupport/buildargv.h"
+#include <stdlib.h>
 
-/* See remote-args.h.  */
+int global_var = 0;
 
-std::vector<std::string>
-gdb::remote_args::split (const std::string &args)
+void
+baz (void)
 {
-  std::vector<std::string> results;
+  abort ();
+}
 
-  gdb_argv argv (args.c_str ());
-  for (int i = 0; argv[i] != nullptr; i++)
-    results.emplace_back (argv[i]);
+void
+bar (void)
+{
+  baz ();
+}
 
-  return results;
+void
+foo (void)
+{
+  bar ();
+}
+
+int
+main (void)
+{
+  foo ();
+  return 0;
 }

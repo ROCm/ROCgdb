@@ -43612,9 +43612,9 @@ the same approach as the @code{starti} command.  @xref{Starting}.
 @end table
 
 @value{GDBN} defines some additional parameters that can be passed to
-the @code{attach} request.  Either @code{pid} or @code{target} must be
-specified, but if both are specified then @code{target} will be
-ignored.
+the @code{attach} request.  One of @code{pid}, @code{target}, or
+@code{coreFile} must be specified.  If multiple are specified, they
+are checked for in that order, and the first one found is used.
 
 @table @code
 @item pid
@@ -43623,6 +43623,10 @@ The process ID to which @value{GDBN} should attach.  @xref{Attach}.
 @item target
 The target to which @value{GDBN} should connect.  This is a string and
 is passed to the @code{target remote} command.  @xref{Connecting}.
+
+@item coreFile
+A string that specifies a core file to use.  This corresponds to the
+@kbd{core-file} command.  @xref{core-file command}.
 @end table
 
 In response to the @code{disassemble} request, DAP allows the client
