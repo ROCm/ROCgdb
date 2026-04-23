@@ -580,6 +580,10 @@ z80_elf_16_be_reloc (bfd *abfd,
     return bfd_elf_generic_reloc (abfd, reloc_entry, symbol, data,
 				  input_section, output_bfd, error_message);
 
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, octets))
+    return bfd_reloc_outofrange;
+
   /* Get symbol value.  */
   val = 0;
   if (!bfd_is_com_section (symbol->section))
