@@ -1492,27 +1492,22 @@ amdgpu_segment_address_to_core_address (arch_addr_space_id address_space_id,
   gdb_assert ((significant_bits & address) == address);
 
   const amd_dbgapi_segment_address_t aspace_id_mask = ~significant_bits;
-  /* Encode the address space in the "free" bits of the segment address.
-     We expect that the free bits are somewhere close to the MSB (do not have
-     to be contiguous).  Skip all the LSBs which can't be touched using ctz
-     as an optimisation.  */
-  size_t shift = __builtin_ctzl (aspace_id_mask);
-  while (address_space_id != 0)
-    {
-      /* Find the next free bit.  */
-      while ((significant_bits & (1ull << shift)) != 0)
-	{
-	  shift++;
-	  gdb_assert (shift <
-		      sizeof (amd_dbgapi_segment_address_t) * HOST_CHAR_BIT);
-	}
 
-      /* Store one bit of address space there.  */
-      address = ((address & ~(1ull << shift))
-		 | ((static_cast<amd_dbgapi_segment_address_t>
-		     (address_space_id) & 1) << shift));
-      shift++;
-      address_space_id >>= 1;
+  uint64_t id = address_space_id;
+  uint64_t mask = aspace_id_mask;
+  while (id != 0)
+    {
+      /* Isolate the lowest set bit in the mask.  */
+      uint64_t lowbit = mask & ~(mask - 1);
+
+      if (id & 1)
+	address |= lowbit;
+
+      mask ^= lowbit; /* Clear bit from mask.  */
+      id >>= 1;	      /* Move on to the next bit in ID.  */
+
+      /* As long as there's ID bits, there should be some MASK bits too.  */
+      gdb_assert (!(mask == 0 && id != 0));
     }
 
   /* If all the bits are set, then this could collide with the
@@ -1551,16 +1546,20 @@ amdgpu_address_space_id_from_core_address (CORE_ADDR addr)
     return 0;
 
   arch_addr_space_id aspace_id = 0;
-  size_t aspace_id_shift = 0;
-  /* Skip the majority of LSBs in one go using ctz.  */
-  size_t shift = __builtin_ctzl (aspace_id_mask);
-  while ((addr >> shift) != 0)
+  uint64_t mask = aspace_id_mask;
+  uint64_t set_bit = 1;    /* A set bit in the lowest position.  */
+  while (mask != 0)
     {
-      if (((1ull << shift) & aspace_id_mask) != 0)
-	aspace_id
-	  |= (static_cast<arch_addr_space_id> (!!(addr & (1ull << shift)))
-	      << aspace_id_shift++);
-      shift++;
+      /* Isolate the lowest set bit in the mask.  */
+      uint64_t lowbit = mask & ~(mask - 1);
+
+      if (addr & lowbit)
+	aspace_id |= set_bit;
+
+      /* Move on to the next bit position.  */
+      set_bit <<= 1;
+      /* Clear bit from mask.  */
+      mask ^= lowbit;
     }
 
   return aspace_id;
