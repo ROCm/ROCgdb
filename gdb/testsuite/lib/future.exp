@@ -126,10 +126,7 @@ proc gdb_find_hip_compiler {} {
     if {![is_remote host]} {
 	set compiler [lookfor_file $tool_root_dir amdclang++]
 	if {$compiler eq "" && [info exists ::env(ROCM_PATH)]} {
-	    set compiler [lookfor_file $::env(ROCM_PATH)/llvm/bin amdclang++]
-	}
-	if {$compiler eq ""} {
-	    set compiler [lookfor_file /opt/rocm/llvm/bin amdclang++]
+	    set compiler [lookfor_file $::env(ROCM_PATH)/lib/llvm/bin amdclang++]
 	}
 	if {$compiler eq ""} {
 	    set compiler amdclang++
@@ -138,11 +135,6 @@ proc gdb_find_hip_compiler {} {
 	set compiler ""
     }
     return $compiler
-}
-
-# Backwards compatibility alias.
-proc gdb_find_hipcc {} {
-    return [gdb_find_hip_compiler]
 }
 
 proc gdb_find_ldd {} {
@@ -776,14 +768,6 @@ if {[info procs find_hip_compiler] == ""} {
     gdb_note [join [list $note_prefix "HIP" $note_suffix] ""]
 } else {
     rename gdb_find_hip_compiler ""
-}
-
-# Backwards compatibility: provide find_hipcc as an alias that always
-# delegates to find_hip_compiler (which is guaranteed to exist at this
-# point, either from the rename above or from an external definition).
-catch {rename gdb_find_hipcc ""}
-if {[info procs find_hipcc] == ""} {
-    proc find_hipcc {} { return [find_hip_compiler] }
 }
 
 # If dejagnu's default_target_compile is missing support for any language,
