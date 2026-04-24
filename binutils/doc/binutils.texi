@@ -2729,6 +2729,12 @@ When in AT&T mode and also for a limited set of instructions when in Intel
 mode, instructs the disassembler to print a mnemonic suffix even when the
 suffix could be inferred by the operands or, for certain instructions, the
 execution mode's defaults.
+
+@item annotate-immediates
+Display the symbol associated with immediate values, should there be
+one.  Only works on executable binaries and shared libraries, not
+static object files.
+
 @end table
 
 For PowerPC, the @option{-M} argument @option{raw} selects
