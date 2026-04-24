@@ -837,6 +837,9 @@ dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
   /* Calculate the CFA.  */
   switch (fs.regs.cfa_how)
     {
+    case CFA_UNSET:
+      error (_("Could not compute CFA; needed to translate this expression"));
+
     case CFA_REG_OFFSET:
       {
 	int regnum = dwarf_reg_to_regnum_or_error (gdbarch, fs.regs.cfa_reg);

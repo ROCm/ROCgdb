@@ -116,14 +116,10 @@ struct symbol *
 get_frame_function (const frame_info_ptr &frame)
 {
   const struct block *bl = get_frame_block (frame, 0);
+  if (bl == nullptr)
+    return nullptr;
 
-  if (bl == NULL)
-    return NULL;
-
-  while (bl->function () == NULL && bl->superblock () != NULL)
-    bl = bl->superblock ();
-
-  return bl->function ();
+  return bl->containing_function ();
 }
 
 

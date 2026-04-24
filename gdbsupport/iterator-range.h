@@ -27,6 +27,9 @@ struct iterator_range
 {
   using iterator = IteratorType;
 
+  /* Create an empty range.  */
+  iterator_range () = default;
+
   /* Create an iterator_range using BEGIN as the begin iterator.
 
      Assume that the end iterator can be default-constructed.  */

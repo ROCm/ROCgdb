@@ -365,13 +365,15 @@ struct dynamic_prop *
 block::static_link () const
 {
   struct objfile *objfile = this->objfile ();
+  const struct block *function_block = this->function_block ();
 
-  /* Only objfile-owned blocks that materialize top function scopes can have
+  /* Only objfile-owned blocks that materialize function scopes can have
      static links.  */
-  if (objfile == NULL || function () == NULL)
+  if (objfile == NULL || function_block == NULL)
     return NULL;
 
-  return (struct dynamic_prop *) objfile_lookup_static_link (objfile, this);
+  return (struct dynamic_prop *) objfile_lookup_static_link (objfile,
+							     function_block);
 }
 
 /* See block.h.  */

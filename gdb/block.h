@@ -305,7 +305,7 @@ struct block : public allocate_on_obstack<block>
      DW_AT_static_link attribute) for a function is a way to get the
      frame corresponding to the enclosing function.
 
-     Note that only objfile-owned and function-level blocks can have a
+     Note that only objfile-owned and in-function blocks can have a
      static link.  Return NULL if there is no such property.  */
 
   struct dynamic_prop *static_link () const;
