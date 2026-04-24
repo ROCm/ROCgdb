@@ -203,6 +203,9 @@ notify_thread_exited (thread_info *t, std::optional<ULONGEST> exit_code,
 {
   if (!silent && print_thread_events)
     {
+      /* Switch inferior before the target calls below.  */
+      auto restore_inf = maybe_switch_inferior (t->inf);
+
       if (exit_code.has_value ())
 	gdb_printf (_("[%s (id %s) exited with code %s]\n"),
 		    target_pid_to_str (t->ptid).c_str (),
