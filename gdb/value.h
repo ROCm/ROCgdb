@@ -987,6 +987,10 @@ struct lval_funcs
 
 [[noreturn]] extern void error_value_optimized_out ();
 
+/* Throw an error complaining that the value is not available.  */
+
+[[noreturn]] extern void error_value_not_available ();
+
 /* Pointer to internal variable.  */
 #define VALUE_INTERNALVAR(val) (*((val)->deprecated_internalvar_hack ()))
 

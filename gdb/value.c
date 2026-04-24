@@ -1128,6 +1128,12 @@ error_value_optimized_out (void)
 }
 
 void
+error_value_not_available ()
+{
+  throw_error (NOT_AVAILABLE_ERROR, _("value is not available"));
+}
+
+void
 value::require_not_optimized_out () const
 {
   if (!m_optimized_out.empty ())
@@ -1144,7 +1150,7 @@ void
 value::require_available () const
 {
   if (!m_unavailable.empty ())
-    throw_error (NOT_AVAILABLE_ERROR, _("value is not available"));
+    error_value_not_available ();
 }
 
 gdb::array_view<const gdb_byte>
