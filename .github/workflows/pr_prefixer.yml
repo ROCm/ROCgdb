@@ -1,0 +1,50 @@
+name: Add Branch Prefix to PR Title
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  add-branch-prefix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add branch prefix to PR title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const baseBranch = context.payload.pull_request.base.ref;
+            const currentTitle = context.payload.pull_request.title;
+
+            // Strictly match:
+            // - amd-staging-rocgdb-<version>
+            // - amd-temp-<name>
+            const validBranchPattern = /^(amd-staging-rocgdb-\d+|amd-temp-[a-zA-Z0-9-]+)$/;
+            if (!validBranchPattern.test(baseBranch)) {
+              core.info(`Skipping: base branch '${baseBranch}' does not match allowed patterns`);
+              core.info(`Allowed: 'amd-staging-rocgdb-<version>' or 'amd-temp-<name>'`);
+              return;
+            }
+
+            // Check if title already has the specific branch prefix
+            const escapedBranch = baseBranch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const prefixPattern = new RegExp(`^\\[${escapedBranch}\\]\\s`);
+            if (prefixPattern.test(currentTitle)) {
+              core.info(`Skipping: title already has [${baseBranch}] prefix: ${currentTitle}`);
+              return;
+            }
+
+            // Add the branch prefix
+            const newTitle = `[${baseBranch}] ${currentTitle}`;
+
+            core.info(`Updating PR title from: ${currentTitle}`);
+            core.info(`                      to: ${newTitle}`);
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              title: newTitle
+            });
