@@ -67,7 +67,7 @@ test_iterator_range ()
 
   {
     /* Empty range.  */
-    auto r3 = int_array_iterator_range (end, end);
+    auto r3 = int_array_iterator_range ();
     test_iterator_range_1 (r3, nullptr, 0, end, end);
   }
 
