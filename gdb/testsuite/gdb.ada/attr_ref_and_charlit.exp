@@ -39,7 +39,7 @@ with_test_prefix "run" {
 }
 
 gdb_test "continue" \
-    ".*Breakpoint ${::decimal}, foo\\.p \\(s=.*\\) at .*foo.adb:${::decimal}.*"
+    ".*Breakpoint ${::decimal}, foo\\.p \\(in_val=.*\\) at .*foo.adb:${::decimal}.*"
 
 with_test_prefix "cont" {
     gdb_test "print s'first" " = 4"
