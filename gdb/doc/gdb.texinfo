@@ -29237,6 +29237,14 @@ to compile a HIP program that can utilize ``Vega 10'' and ``Vega 7nm''
 @acronym{AMD GPU} devices, with no optimization:
 
 @smallexample
+amdclang++ -x hip --hip-link -O0 -g --offload-arch=gfx900 --offload-arch=gfx906 bit_extract.cpp -o bit_extract
+@end smallexample
+
+@noindent
+The legacy @command{hipcc} wrapper is deprecated.  If you are still
+using @command{hipcc}, the equivalent command is:
+
+@smallexample
 hipcc -O0 -g --offload-arch=gfx900 --offload-arch=gfx906 bit_extract.cpp -o bit_extract
 @end smallexample
 

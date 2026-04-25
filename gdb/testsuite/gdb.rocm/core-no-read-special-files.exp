@@ -25,7 +25,7 @@ load_lib rocm.exp
 require {istarget *-linux*}
 
 require allow_rocm_core_tests
-require allow_hipcc_tests
+require allow_hip_tests
 
 standard_testfile .cpp
 

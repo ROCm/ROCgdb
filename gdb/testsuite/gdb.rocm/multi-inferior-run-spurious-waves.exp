@@ -27,7 +27,7 @@
 
 load_lib rocm.exp
 
-require allow_hipcc_tests
+require allow_hip_tests
 require allow_multi_inferior_tests
 
 if { [hip_device_is_less_than gfx90a] } {

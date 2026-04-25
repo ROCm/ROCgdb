@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # This file is a dejagnu "board file" and is used to run the testsuite
-# against C/C++ device code compiled with hipcc.
+# against C/C++ device code compiled with amdclang++ (HIP).
 #
 # Example usage:
 #  bash$ make check RUNTESTFLAGS='--target_board=hip'
@@ -80,8 +80,8 @@ load_lib rocm.exp
 load_generic_config "unix"
 process_multilib_options ""
 
-set_board_info compiler [find_hipcc]
-set_board_info c++compiler [find_hipcc]
+set_board_info compiler [find_hip_compiler]
+set_board_info c++compiler [find_hip_compiler]
 
 set_board_info gdb,cannot_call_functions 1
 
@@ -149,8 +149,16 @@ proc skip_opencl_tests {} {
 # Yup, we don't want to run the gdb.rocm/ tests against this board.
 # That would be kind of recursive.  Those tests really expect that
 # "main()" is host code and start kernels themselves.
-proc allow_hipcc_tests {} {
+proc allow_hip_tests {} {
     return 0
+}
+
+# Backwards compatibility alias.  The testsuite previously used
+# allow_hipcc_tests when hipcc was the HIP compiler wrapper.  Keep
+# this alias so that any out-of-tree board files or scripts that
+# reference the old name continue to work.
+proc allow_hipcc_tests {} {
+    return [allow_hip_tests]
 }
 
 # Override this to fail faster.  If we let the default run, tests
@@ -271,10 +279,14 @@ proc gdb_compile {source dest type options} {
 
 	# We need:
 	#
-	# . explicit -O0, because hipcc optimizes by default.
+	# . explicit -O0, because the legacy hipcc wrapper optimized by
+	#   default.  amdclang++ does not, but we keep -O0 explicit for
+	#   clarity and to stay safe if defaults ever change.
 	#
-	# . -std=gnu++11 because hipcc defaults to -std=c++11, and
-	#   some testcases assume GNU extensions.
+	# . -std=gnu++11 because the legacy hipcc wrapper defaulted to
+	#   -std=c++11, and some testcases assume GNU extensions.
+	#   amdclang++ defaults to a later standard but we keep this
+	#   for consistency.
 	#
 	# . -fgpu-rdc enables separate compilation mode, so we can
 	#   compile the kernel from multiple translation units.
@@ -290,7 +302,13 @@ proc gdb_compile {source dest type options} {
 	#    '-mllvm -amdgpu-spill-cfi-saved-regs'
 	#    [-Wunused-command-line-argument]
 	#
+	# Pass --rocm-path explicitly so amdclang++ can locate the HIP
+	# headers and device libraries when it's invoked from the board
+	# via PATH rather than an absolute path.  rocm_path comes from
+	# rocm.exp and defaults to /opt/rocm if ROCM_PATH is not set.
+	global rocm_path
 	set hip_options "early_flags=\
+			 --rocm-path=$rocm_path\
 			 -O0\
 			 -std=gnu++11\
 			 -fgpu-rdc\
@@ -303,7 +321,7 @@ proc gdb_compile {source dest type options} {
 	} elseif {[info exists CC_FOR_TARGET]} {
 	    set compiler $CC_FOR_TARGET
 	}
-	if {[string first "hipcc" $compiler] != -1} {
+	if {[string first "amdclang++" $compiler] != -1} {
 
 	    # Remove "c++" from the options when linking, otherwise we
 	    # would get:
@@ -365,6 +383,7 @@ proc gdb_compile {source dest type options} {
 		lappend options "ldflags=$gdb_saved_hip_driver_obj"
 
 		lappend options $hip_options
+		lappend options "early_flags=--hip-link"
 
 		# All compiled.  Now link, and we're done.
 		return [hip_org_gdb_compile $source $dest $type $options]
@@ -410,6 +429,7 @@ proc gdb_compile {source dest type options} {
 	    }
 
 	    lappend options $hip_options
+	    lappend options "early_flags=-x hip"
 	}
     }
     hip_org_gdb_compile $source $dest $type $options
