@@ -40,6 +40,9 @@
 #include "objfiles.h"
 #include "auto-load.h"
 #include "maint.h"
+#ifdef PDB_FORMAT_AVAILABLE
+#include "pdb/pdb.h"
+#endif
 
 #include "filenames.h"
 #include "gdbsupport/filestuff.h"
@@ -776,6 +779,9 @@ captured_main_1 (struct captured_main_args *context)
       OPT_EIEX,
       OPT_READNOW,
       OPT_READNEVER,
+#ifdef PDB_FORMAT_AVAILABLE
+      OPT_PDB_PATH,
+#endif
       OPT_SET_ESC_ARGS,
       OPT_SET_NO_ESC_ARGS,
 #ifdef USE_WIN32API
@@ -790,6 +796,9 @@ captured_main_1 (struct captured_main_args *context)
       {"tui", no_argument, 0, OPT_TUI},
       {"readnow", no_argument, NULL, OPT_READNOW},
       {"readnever", no_argument, NULL, OPT_READNEVER},
+#ifdef PDB_FORMAT_AVAILABLE
+      {"pdb-path", required_argument, NULL, OPT_PDB_PATH},
+#endif
       {"r", no_argument, NULL, OPT_READNOW},
       {"quiet", no_argument, &quiet, 1},
       {"q", no_argument, &quiet, 1},
@@ -1043,6 +1052,12 @@ captured_main_1 (struct captured_main_args *context)
 	      validate_readnow_readnever ();
 	    }
 	    break;
+
+#ifdef PDB_FORMAT_AVAILABLE
+	  case OPT_PDB_PATH:
+	    pdb_file_override = optarg;
+	    break;
+#endif
 
 #ifdef USE_WIN32API
 	  case OPT_BINARY_OUTPUT:

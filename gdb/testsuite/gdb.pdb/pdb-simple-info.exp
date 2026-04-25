@@ -1,0 +1,379 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test PDB debugging: breakpoints, locals, globals, stepping, info commands.
+# Uses pdb-test.cpp precompiled with cl /Zi /Od (no compiler needed).
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+# --- Set up file paths ---
+standard_testfile pdb-test.cpp
+
+set exe ${binfile}.exe
+set pdb ${binfile}.pdb
+
+# Precompiled exe+pdb in source directory (no compiler required).
+set src_dir_exe $srcdir/$subdir/pdb-info-cmd-Od.exe
+set src_dir_pdb $srcdir/$subdir/pdb-info-cmd-Od.pdb
+
+if {![file exists $src_dir_exe]} {
+    unsupported "prebuilt exe not found: $src_dir_exe"
+    return
+}
+if {![file exists $src_dir_pdb]} {
+    unsupported "prebuilt pdb not found: $src_dir_pdb"
+    return
+}
+
+catch {file mkdir [file dirname $exe]}
+file copy -force $src_dir_exe $exe
+file copy -force $src_dir_pdb $pdb
+
+if {![file exists $exe]} {
+    fail "failed to copy exe to $exe"
+    return
+}
+
+verbose -log "Using prebuilt exe: $src_dir_exe"
+verbose -log "Copied to: $exe"
+
+# ===================================================================
+# Load executable
+# ===================================================================
+clean_restart $exe
+disable_pdb_symbol_server
+
+# Increase expect buffer — unfiltered info commands can produce
+# more output than the default 16 KB
+match_max 131072
+
+# ===================================================================
+# info sources — should mention pdb-test.cpp
+# ===================================================================
+gdb_test "info sources" \
+    ".*pdb-test\\.cpp.*" \
+    "info sources lists pdb-test.cpp"
+
+# ===================================================================
+# info functions
+# ===================================================================
+gdb_test "info functions main" \
+    ".*main.*" \
+    "info functions lists main"
+
+gdb_test "info functions add_values" \
+    ".*add_values.*" \
+    "info functions add_values"
+
+gdb_test "info functions compute1" \
+    ".*compute1.*" \
+    "info functions compute1"
+
+gdb_test "info functions static_helper" \
+    ".*static_helper.*" \
+    "info functions static_helper (file-static)"
+
+gdb_test "info functions process_point" \
+    ".*process_point.*" \
+    "info functions process_point"
+
+gdb_test "info functions modify_volatile" \
+    ".*modify_volatile.*" \
+    "info functions modify_volatile"
+
+gdb_test "info functions fast_abs" \
+    ".*fast_abs.*" \
+    "info functions fast_abs"
+
+# ===================================================================
+# info variables — globals and statics
+# ===================================================================
+gdb_test "info variables g_counter" \
+    ".*g_counter.*" \
+    "info variables g_counter (global)"
+
+gdb_test "info variables g_max_iterations" \
+    ".*g_max_iterations.*" \
+    "info variables g_max_iterations (const global)"
+
+gdb_test "info variables g_flag" \
+    ".*g_flag.*" \
+    "info variables g_flag (volatile global)"
+
+gdb_test "info variables g_tag" \
+    ".*g_tag.*" \
+    "info variables g_tag (global char)"
+
+gdb_test "info variables s_accumulator" \
+    ".*s_accumulator.*" \
+    "info variables s_accumulator (file-static)"
+
+gdb_test "info variables s_color" \
+    ".*s_color.*" \
+    "info variables s_color (file-static enum)"
+
+# ===================================================================
+# Break at main, check pre-loop globals, then continue to compute1
+# (past the loop) to inspect locals.
+# ===================================================================
+gdb_breakpoint "main"
+gdb_run_cmd
+gdb_test "" ".*Breakpoint.*main.*" "hit breakpoint at main"
+
+# info frame in main
+gdb_test "info frame" \
+    ".*main.*" \
+    "info frame in main"
+
+# Inspect global variables at main entry — before the loop modifies them.
+gdb_test "print g_counter" \
+    "= 0" \
+    "print g_counter is 0 before loop"
+
+gdb_test "print g_flag" \
+    "= 1" \
+    "print g_flag is 1 before modification"
+
+gdb_test "print g_tag" \
+    "= 65 'A'" \
+    "print g_tag is 'A' before modification"
+
+gdb_test "print g_max_iterations" \
+    "= .*" \
+    "print g_max_iterations (const)"
+
+gdb_test "print s_accumulator" \
+    "= 0" \
+    "print s_accumulator (static) is 0 before loop"
+
+gdb_test "print *g_ptr" \
+    "= 0" \
+    "print pointer deref *g_ptr (g_counter before loop)"
+
+# Continue past the loop to compute1 — all of main's local initializations
+# are done.
+gdb_breakpoint "compute1"
+gdb_test "continue" ".*compute1.*" "continue to compute1"
+
+# backtrace — should show compute1 called from main
+gdb_test "backtrace" \
+    ".*#0.*compute1.*#1.*main.*" \
+    "backtrace in compute1 shows call chain"
+
+# info frame in compute1
+gdb_test "info frame" \
+    ".*compute1.*" \
+    "info frame in compute1"
+
+# info args — compute1(int a, int b, BinaryOp op)
+gdb_test "info args" \
+    ".*a = .*b = .*" \
+    "info args in compute1 shows a and b"
+
+# (Locals in main are tested later — after "finish" from process_point
+# makes main the current frame.  The PDB reader cannot resolve locals
+# in a parent frame selected via "up".)
+
+# ===================================================================
+# Step into static_helper (called from compute1)
+# ===================================================================
+delete_breakpoints
+gdb_breakpoint "static_helper"
+gdb_test "continue" ".*static_helper.*" "continue to static_helper"
+
+# backtrace — static_helper <- compute1 <- main
+gdb_test "backtrace" \
+    ".*#0.*static_helper.*#1.*compute1.*#2.*main.*" \
+    "backtrace in static_helper shows 3 frames"
+
+# info frame in static_helper
+gdb_test "info frame" \
+    ".*static_helper.*" \
+    "info frame in static_helper"
+
+# info args in static_helper
+gdb_test "info args" \
+    ".*x = .*y = .*" \
+    "info args in static_helper"
+
+# info locals — should show result (initialized to 0)
+gdb_test "info locals" \
+    ".*result = 0.*" \
+    "info locals in static_helper shows result = 0"
+
+# Step through static_helper and verify nested block locals
+gdb_test "next" ".*" "next in static_helper 1"
+gdb_test "next" ".*" "next in static_helper 2"
+gdb_test "info locals" \
+    ".*temp = .*" \
+    "info locals shows temp in nested block"
+
+# finish — return from static_helper back to compute1
+gdb_test "finish" ".*compute1.*" \
+    "finish from static_helper to compute1"
+
+# Continue back to main
+gdb_breakpoint "process_point"
+gdb_test "continue" ".*process_point.*" "continue to process_point"
+
+# backtrace in process_point
+gdb_test "backtrace" \
+    ".*#0.*process_point.*#1.*main.*" \
+    "backtrace in process_point"
+
+# info args — process_point
+gdb_test "info args" \
+    ".*pt = .*" \
+    "info args in process_point"
+
+# ===================================================================
+# Return to main as the current frame.  The PDB reader support
+# the current frame only.
+# ===================================================================
+gdb_test "finish" ".*" "finish from process_point to main"
+
+# info locals
+gdb_test "info locals" \
+    ".*local_int = 42.*" \
+    "info locals shows local_int = 42"
+
+gdb_test "info locals" \
+    ".*local_double = 3\\.14.*" \
+    "info locals shows local_double"
+
+# Print individual locals
+gdb_test "print local_int" \
+    "= 42" \
+    "print local_int is 42"
+
+gdb_test "print local_double" \
+    "= 3\\.14.*" \
+    "print local_double is 3.14"
+
+gdb_test "print g_array\[0\]" \
+    "= 10" \
+    "print array element g_array(0)"
+
+gdb_test "print g_array\[2\]" \
+    "= 30" \
+    "print array element g_array(2)"
+
+# Expression evaluation
+gdb_test "print local_int + 10" \
+    "= 52" \
+    "print local_int + 10 evaluates to 52"
+
+# ===================================================================
+# set variable — quick set+print for local, global, and static.
+# ===================================================================
+gdb_test "set variable local_int = 99" "" \
+    "set local to 99"
+gdb_test "print local_int" \
+    "= 99" \
+    "set+print local"
+
+gdb_test "set variable g_counter = 77" "" \
+    "set global to 77"
+gdb_test "print g_counter" \
+    "= 77" \
+    "set+print global"
+
+gdb_test "set variable s_accumulator = 55" "" \
+    "set static to 55"
+gdb_test "print s_accumulator" \
+    "= 55" \
+    "set+print static"
+
+# ===================================================================
+# set variable + execution verification.
+# Set variables in main's current frame, then continue to
+# verify_marker and check that it received the modified values.
+#
+# XFAIL: Windows x64 calling convention support is missing. GDB will
+# read the wrong registers for parameters.
+# ===================================================================
+gdb_test "set variable local_int = 999" "" \
+    "set local_int for execution verify"
+gdb_test "set variable g_counter = 888" "" \
+    "set g_counter for execution verify"
+gdb_test "set variable s_accumulator = 777" "" \
+    "set s_accumulator for execution verify"
+gdb_test "set variable g_flag = 42" "" \
+    "set g_flag for execution verify"
+
+delete_breakpoints
+gdb_breakpoint "verify_marker"
+gdb_test "continue" ".*verify_marker.*" "continue to verify_marker"
+
+setup_xfail "*-*-*"
+gdb_test "print local_val" \
+    "= 999" \
+    "verify: local set took effect (needs Win64 ABI)"
+
+setup_xfail "*-*-*"
+gdb_test "print global_val" \
+    "= 888" \
+    "verify: global set took effect (needs Win64 ABI)"
+
+setup_xfail "*-*-*"
+gdb_test "print static_val" \
+    "= 777" \
+    "verify: static set took effect (needs Win64 ABI)"
+
+setup_xfail "*-*-*"
+gdb_test "print flag_val" \
+    "= 42" \
+    "verify: volatile set took effect (needs Win64 ABI)"
+
+# ===================================================================
+# Continue to near the end of main and check global side effects.
+# modify_volatile sets g_flag = 0 (overwrites our 42).
+# The if sets g_tag = 'B' (since local_double > 0.0).
+# Globals g_counter=888 and s_accumulator=777 persist.
+# ===================================================================
+delete_breakpoints
+gdb_breakpoint "printf"
+gdb_test "continue" ".*printf.*" "continue to printf"
+
+# Go up to main's frame to inspect globals.
+gdb_test "up" ".*main.*" "up to main frame from printf"
+
+# Check globals after execution
+gdb_test "print g_flag" \
+    "= 0" \
+    "print g_flag is 0 after modify_volatile"
+
+gdb_test "print g_tag" \
+    "= 66 'B'" \
+    "print g_tag is 'B' after conditional"
+
+# s_accumulator: set to 777.
+gdb_test "print s_accumulator" \
+    "= 777" \
+    "print s_accumulator is 777 (set earlier)"
+
+# g_counter: set to 888
+gdb_test "print g_counter" \
+    "= 888" \
+    "print g_counter is 888 (set earlier)"
+
+gdb_test "print g_max_iterations - 1" \
+    "= .*" \
+    "print g_max_iterations - 1 evaluates"
