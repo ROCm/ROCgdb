@@ -323,3 +323,34 @@ if {[catch "system \"bzip2 -dc $t > $obj\""] != 0} {
     run_pr33230_test "$testname" $obj "" $run_readelf
     run_pr33230_test "$testname" $obj "--input-target=default" $run_readelf
 }
+
+# Test objdump -M annotate
+
+proc test_objdump_M_annotate { } {
+    global srcdir
+    global subdir
+    global OBJDUMP
+    global OBJDUMPFLAGS
+    global exe
+
+    set test "objdump -M annotate"
+
+    if { [target_compile $srcdir/$subdir/../testprog.c tmpdir/testprog${exe} executable debug] != "" } {
+	unsupported "$test (build)"
+	return
+    }
+
+    set got [binutils_run $OBJDUMP "$OBJDUMPFLAGS -d -M annotate tmpdir/testprog${exe}"]
+
+    # Look for something like this in the disassembly:
+    #   400419: bf 18 30 40 00   mov $0x403018,%edi  #  [common]
+    set want " \[common\]"
+
+    if [regexp $want $got] then {
+	pass $test
+    } else {
+	fail $test
+    }
+}
+
+test_objdump_M_annotate

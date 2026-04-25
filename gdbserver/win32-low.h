@@ -178,13 +178,14 @@ public:
 
 struct gdbserver_windows_process : public windows_nat::windows_process_info
 {
-  windows_nat::windows_thread_info *thread_rec
-       (ptid_t ptid,
-	windows_nat::thread_disposition_type disposition) override;
-  int handle_output_debug_string (struct target_waitstatus *ourstatus) override;
+  windows_nat::windows_thread_info *find_thread (ptid_t ptid) override;
+  DWORD handle_output_debug_string (const DEBUG_EVENT &current_event,
+				    struct target_waitstatus *ourstatus) override;
   void handle_load_dll (const char *dll_name, LPVOID base) override;
-  void handle_unload_dll () override;
+  void handle_unload_dll (const DEBUG_EVENT &current_event) override;
   bool handle_access_violation (const EXCEPTION_RECORD *rec) override;
+
+  void fill_thread_context (windows_nat::windows_thread_info *th) override;
 
   int attaching = 0;
 
@@ -192,14 +193,6 @@ struct gdbserver_windows_process : public windows_nat::windows_process_info
      win32_wait should return it next, instead of fetching the next
      debug event off the win32 API.  */
   struct target_waitstatus cached_status;
-
-  /* Non zero if an interrupt request is to be satisfied by suspending
-     all threads.  */
-  int soft_interrupt_requested = 0;
-
-  /* Non zero if the inferior is stopped in a simulated breakpoint done
-     by suspending all the threads.  */
-  int faked_breakpoint = 0;
 
   /* True if current_process_handle needs to be closed.  */
   bool open_process_used = false;

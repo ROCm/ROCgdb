@@ -1,5 +1,3 @@
-/* This is a sample program for the HP WDB debugger. */
-
 #include <stdio.h>
 #include <stdlib.h>
 

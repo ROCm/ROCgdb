@@ -41,6 +41,8 @@
 
 typedef struct instr_info instr_info;
 
+static bool annotate_immediates = false;
+
 static bool dofloat (instr_info *, int);
 static int putop (instr_info *, const char *, int);
 static void oappend_with_style (instr_info *, const char *,
@@ -121,6 +123,9 @@ static void ATTRIBUTE_PRINTF_3 i386_dis_printf (const disassemble_info *,
 /* The maximum operand buffer size.  */
 #define MAX_OPERAND_BUFFER_SIZE 128
 
+/* The comment buffer size.  */
+#define COMMENT_BUFFER_SIZE 128
+
 enum address_mode
 {
   mode_16bit,
@@ -176,6 +181,8 @@ struct instr_info
 
   char obuf[MAX_OPERAND_BUFFER_SIZE];
   char *obufp;
+  char cbuf[COMMENT_BUFFER_SIZE];
+  char * cbufp;
   char *mnemonicendp;
   const uint8_t *start_codep;
   uint8_t *codep;
@@ -9043,6 +9050,7 @@ with the -M switch (multiple options should be separated by commas):\n"));
   fprintf (stream, _("  suffix      Always display instruction suffix in AT&T syntax\n"));
   fprintf (stream, _("  amd64       Display instruction in AMD64 ISA\n"));
   fprintf (stream, _("  intel64     Display instruction in Intel64 ISA\n"));
+  fprintf (stream, _("  annotate-immediates  Annotate immediate operands that match symbols\n"));
 }
 
 /* Bad opcode.  */
@@ -9741,6 +9749,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
     .start_codep = priv.the_buffer,
     .codep = priv.the_buffer,
     .obufp = ins.obuf,
+    .cbufp = ins.cbuf,
     .last_lock_prefix = -1,
     .last_repz_prefix = -1,
     .last_repnz_prefix = -1,
@@ -9824,6 +9833,9 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	}
       else if (startswith (p, "suffix"))
 	priv.orig_sizeflag |= SUFFIX_ALWAYS;
+
+      else if (startswith (p, "annotate"))
+	annotate_immediates = true;
 
       p = strchr (p, ',');
       if (p != NULL)
@@ -10363,6 +10375,13 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	  info);
 	break;
       }
+  if (ins.cbufp != ins.cbuf)
+    {
+      if (i == MAX_OPERANDS)
+	i386_dis_printf (info, dis_style_comment_start, "        # ");
+      i386_dis_printf (info, dis_style_comment_start, "%s", ins.cbuf);
+    }
+  
   ret = ins.codep - priv.the_buffer;
  out:
   info->private_data = NULL;
@@ -11564,6 +11583,26 @@ oappend_with_style (instr_info *ins, const char *s,
   ins->obufp = stpcpy (ins->obufp, s);
 }
 
+/* Add a comment to the comment buffer.  */
+
+static void
+cappend_with_style (instr_info *ins, const char *s,
+		    enum disassembler_style style)
+{
+  if (ins->cbufp + strlen (s) + 4 >= ins->cbuf + COMMENT_BUFFER_SIZE)
+    return;
+
+  unsigned num = (unsigned) style;
+
+  *ins->cbufp++ = STYLE_MARKER_CHAR;
+  *ins->cbufp++ = (num < 10 ? ('0' + num)
+		   : ((num < 16) ? ('a' + (num - 10)) : '0'));
+  *ins->cbufp++ = STYLE_MARKER_CHAR;
+  *ins->cbufp = '\0';
+
+  ins->cbufp = stpcpy (ins->cbufp, s);
+}
+
 /* Add a single character C to the buffer pointer to by INS->obufp, marking
    the style for the character as STYLE.  */
 
@@ -11637,7 +11676,36 @@ oappend_immediate (instr_info *ins, bfd_vma imm)
 {
   if (!ins->intel_syntax)
     oappend_char_with_style (ins, '$', dis_style_immediate);
+
   print_operand_value (ins, imm, dis_style_immediate);
+
+  /* Determine if we can display some more information about this immediate.  */
+  if (! annotate_immediates
+      /* Don't bother with zero, even if there is symbol associated with it.  */
+      || imm == 0
+      /* For the next tests we need a BFD.  If we do not have one then do not proceed.  */
+      || ins->info->section == NULL
+      || ins->info->section->owner == NULL
+      /* Save time by avoiding immediates that cannot reference part of the address space.  */
+      || imm < ins->info->section->owner->start_address
+      /* Also skip static object files as their symbols have not been resolved.  */
+      || (ins->info->section->owner->flags & (EXEC_P | DYNAMIC)) == 0)
+    return;
+
+  asymbol * sym = ins->info->symbol_at_address_func (imm, ins->info);
+  if (sym == NULL)
+    return;
+
+  char * annotation = NULL;
+
+  /* FIXME: Potential memory leak: strictly speaking asprintf()
+     can return 0 whilst also having allocated some memory.  */
+  if (asprintf (& annotation, " [%s]", sym->name) > 0)
+    {
+      /* Display the symbol associated with address 'imm'.  */
+      cappend_with_style (ins, annotation, dis_style_symbol);
+      free (annotation);
+    }
 }
 
 /* Put DISP in BUF as signed hex number.  */

@@ -26,8 +26,24 @@
 #include "nat/windows-nat.h"
 #include "ser-event.h"
 
+extern bool debug_exec;		/* show execution */
+extern bool debug_events;	/* show events from kernel */
+extern bool debug_memory;	/* show target memory accesses */
+extern bool debug_exceptions;	/* show target exceptions */
+
+#define DEBUG_EXEC(fmt, ...) \
+  debug_prefixed_printf_cond (debug_exec, "windows exec", fmt, ## __VA_ARGS__)
+#define DEBUG_EVENTS(fmt, ...) \
+  debug_prefixed_printf_cond (debug_events, "windows events", fmt, \
+			      ## __VA_ARGS__)
+#define DEBUG_MEM(fmt, ...) \
+  debug_prefixed_printf_cond (debug_memory, "windows mem", fmt, \
+			      ## __VA_ARGS__)
+#define DEBUG_EXCEPT(fmt, ...) \
+  debug_prefixed_printf_cond (debug_exceptions, "windows except", fmt, \
+			      ## __VA_ARGS__)
+
 using windows_nat::windows_thread_info;
-using windows_nat::thread_disposition_type;
 
 /* A pointer to a function that should return non-zero iff REGNUM
    corresponds to one of the segment registers.  */
@@ -45,14 +61,33 @@ struct windows_solib
   std::string name;
 };
 
+/* Flags that can be passed to windows_continue.  */
+
+enum windows_continue_flag
+  {
+    /* This means we have killed the inferior, so windows_continue
+       should ignore weird errors due to threads shutting down.  */
+    WCONT_KILLED = 1,
+
+    /* This means we expect this windows_continue call to be the last
+       call to continue the inferior -- we are either mourning it or
+       detaching.  */
+    WCONT_LAST_CALL = 2,
+  };
+
+DEF_ENUM_FLAGS_TYPE (windows_continue_flag, windows_continue_flags);
+
 struct windows_per_inferior : public windows_nat::windows_process_info
 {
-  windows_thread_info *thread_rec (ptid_t ptid,
-				   thread_disposition_type disposition) override;
-  int handle_output_debug_string (struct target_waitstatus *ourstatus) override;
+  windows_thread_info *find_thread (ptid_t ptid) override;
+  DWORD handle_output_debug_string (const DEBUG_EVENT &current_event,
+				    struct target_waitstatus *ourstatus) override;
   void handle_load_dll (const char *dll_name, LPVOID base) override;
-  void handle_unload_dll () override;
+  void handle_unload_dll (const DEBUG_EVENT &current_event) override;
   bool handle_access_violation (const EXCEPTION_RECORD *rec) override;
+
+  /* Invalidate the thread context.  */
+  virtual void invalidate_thread_context (windows_thread_info *th) = 0;
 
   int windows_initialization_done = 0;
 
@@ -97,6 +132,9 @@ struct windows_nat_target : public inf_child_target
   windows_nat_target ();
 
   void close () override;
+
+  thread_control_capabilities get_thread_control_capabilities () override
+  { return tc_schedlock; }
 
   void attach (const char *, int) override;
 
@@ -152,7 +190,8 @@ struct windows_nat_target : public inf_child_target
   const char *thread_name (struct thread_info *) override;
 
   ptid_t get_windows_debug_event (int pid, struct target_waitstatus *ourstatus,
-				  target_wait_flags options);
+				  target_wait_flags options,
+				  DEBUG_EVENT *current_event);
 
   void do_initial_windows_stuff (DWORD pid, bool attaching);
 
@@ -186,9 +225,6 @@ protected:
   virtual void initialize_windows_arch (bool attaching) = 0;
   /* Cleanup arch-specific data after inferior exit.  */
   virtual void cleanup_windows_arch () = 0;
-
-  /* Reload the thread context.  */
-  virtual void fill_thread_context (windows_thread_info *th) = 0;
 
   /* Prepare the thread context for continuing.  */
   virtual void thread_context_continue (windows_thread_info *th,
@@ -224,10 +260,13 @@ private:
   windows_thread_info *add_thread (ptid_t ptid, HANDLE h, void *tlb,
 				   bool main_thread_p);
   void delete_thread (ptid_t ptid, DWORD exit_code, bool main_thread_p);
-  DWORD fake_create_process ();
+  DWORD fake_create_process (const DEBUG_EVENT &current_event);
 
-  BOOL windows_continue (DWORD continue_status, int id, int killed,
-			 bool last_call = false);
+  void continue_one_thread (windows_thread_info *th,
+			    windows_continue_flags cont_flags);
+
+  BOOL windows_continue (DWORD continue_status, int id,
+			 windows_continue_flags cont_flags = 0);
 
   /* Helper function to start process_thread.  */
   static DWORD WINAPI process_thread_starter (LPVOID self);
@@ -247,6 +286,12 @@ private:
   /* This waits for a debug event, dispatching to the worker thread as
      needed.  */
   void wait_for_debug_event_main_thread (DEBUG_EVENT *event);
+
+  /* This continues the last debug event, dispatching to the worker
+     thread as needed.  */
+  void continue_last_debug_event_main_thread (const char *context_str,
+					      DWORD continue_status,
+					      bool last_call = false);
 
   /* Force the process_thread thread to return from WaitForDebugEvent.
      PROCESS_ALIVE is set to false if the inferior process exits while

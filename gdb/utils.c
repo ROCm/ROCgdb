@@ -3816,12 +3816,30 @@ test_c_ctrl_unctrl ()
   SELF_CHECK (c_ctrl ('?') == 0x7f);
   SELF_CHECK (c_unctrl (0x7f) == '?');
 
-  /* Consistency check.  */
-  for (unsigned int i = 0; i < 0x100; i++)
+  /* Consistency check.
+
+     The ctype.h function iscntrl has an int parameter, and defined behavior
+     for inputs [0, 255] and EOF.  Consequently, iscntrl has undefined
+     behavior when called with a negative signed char argument (with the
+     possible exception of EOF, which is a negative int constant).  That
+     extends to chars on platforms where char == signed char.  Consequently,
+     to write portable code, iscntrl char and signed char arguments need to be
+     cast to unsigned char.
+
+     The c-ctype.h variant c_iscntrl sidesteps this problem by having defined
+     behavior for inputs [-128, 255] and not bothering about EOF.
+
+     The functions c_ctrl/c_unctrl sidestep this issue by using parameter
+     type unsigned char instead of int.
+
+     So, testing input values [0..255] tests all relevant behavior of
+     c_ctrl/c_unctrl.  However, we designed these functions to be compatible
+     with c_iscntrl, so we test for all valid inputs of that function.  */
+  for (int i = -128; i < 256; i++)
     {
       unsigned char ch = i;
       unsigned char unctrl_ch = c_unctrl (ch);
-      if (!c_iscntrl (ch))
+      if (!c_iscntrl (i))
 	{
 	  SELF_CHECK (unctrl_ch == ch);
 	  continue;

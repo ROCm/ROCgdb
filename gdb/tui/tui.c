@@ -1,8 +1,9 @@
-/* General functions for the WDB TUI.
+/* General functions for the GDB TUI.
 
    Copyright (C) 1998-2026 Free Software Foundation, Inc.
 
-   Contributed by Hewlett-Packard Company.
+   Contributed by Hewlett-Packard Company.  Developed as part of HP Wildebeest
+   (WDB), a port of GDB to HP-UX.
 
    This file is part of GDB.
 

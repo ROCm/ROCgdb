@@ -47,14 +47,15 @@ struct x86_windows_per_inferior : public windows_per_inferior
   /* The function to use in order to determine whether a register is
      a segment register or not.  */
   segment_register_p_ftype *segment_register_p = nullptr;
+
+  void fill_thread_context (windows_thread_info *th) override;
+  void invalidate_thread_context (windows_thread_info *th) override;
 };
 
 struct x86_windows_nat_target final : public x86_nat_target<windows_nat_target>
 {
   void initialize_windows_arch (bool attaching) override;
   void cleanup_windows_arch () override;
-
-  void fill_thread_context (windows_thread_info *th) override;
 
   void thread_context_continue (windows_thread_info *th, int killed) override;
   void thread_context_step (windows_thread_info *th) override;
@@ -100,15 +101,29 @@ x86_windows_nat_target::cleanup_windows_arch ()
   x86_cleanup_dregs ();
 }
 
-/* See windows-nat.h.  */
+/* See nat/windows-nat.h.  */
 
 void
-x86_windows_nat_target::fill_thread_context (windows_thread_info *th)
+x86_windows_per_inferior::fill_thread_context (windows_thread_info *th)
 {
   x86_windows_process.with_context (th, [&] (auto *context)
     {
-      context->ContextFlags = WindowsContext<decltype(context)>::all;
-      CHECK (get_thread_context (th->h, context));
+      if (context->ContextFlags == 0)
+	{
+	  context->ContextFlags = WindowsContext<decltype(context)>::all;
+	  CHECK (get_thread_context (th->h, context));
+	}
+    });
+}
+
+/* See nat/windows-nat.h.  */
+
+void
+x86_windows_per_inferior::invalidate_thread_context (windows_thread_info *th)
+{
+  x86_windows_process.with_context (th, [&] (auto *context)
+    {
+      context->ContextFlags = 0;
     });
 }
 
@@ -125,13 +140,56 @@ x86_windows_nat_target::thread_context_continue (windows_thread_info *th,
 
       if (th->debug_registers_changed)
 	{
-	  context->ContextFlags |= WindowsContext<decltype(context)>::debug;
-	  context->Dr0 = state->dr_mirror[0];
-	  context->Dr1 = state->dr_mirror[1];
-	  context->Dr2 = state->dr_mirror[2];
-	  context->Dr3 = state->dr_mirror[3];
-	  context->Dr6 = DR6_CLEAR_VALUE;
-	  context->Dr7 = state->dr_control_mirror;
+	  windows_process->fill_thread_context (th);
+
+	  gdb_assert ((context->ContextFlags & CONTEXT_DEBUG_REGISTERS) != 0);
+
+	  /* Check whether the thread has Dr6 set indicating a
+	     watchpoint hit, and we haven't seen the watchpoint event
+	     yet (reported as
+	     EXCEPTION_SINGLE_STEP/STATUS_WX86_SINGLE_STEP).  In that
+	     case, don't change the debug registers.  Changing debug
+	     registers, even if to the same values, makes the kernel
+	     clear Dr6.  The result would be we would lose the
+	     unreported watchpoint hit.  */
+	  if ((context->Dr6 & ~DR6_CLEAR_VALUE) != 0)
+	    {
+	      if (th->last_event.dwDebugEventCode == EXCEPTION_DEBUG_EVENT
+		  && (th->last_event.u.Exception.ExceptionRecord.ExceptionCode
+		      == EXCEPTION_SINGLE_STEP
+		      || (th->last_event.u.Exception.ExceptionRecord.ExceptionCode
+			  == STATUS_WX86_SINGLE_STEP)))
+		{
+		  DEBUG_EVENTS ("0x%x already reported watchpoint", th->tid);
+		}
+	      else
+		{
+		  DEBUG_EVENTS ("0x%x last reported something else (0x%x)",
+				th->tid,
+				th->last_event.dwDebugEventCode);
+
+		  /* Don't touch debug registers.  Let the pending
+		     watchpoint event be reported instead.  We will
+		     update the debug registers later when the thread
+		     is re-resumed by the core after the watchpoint
+		     event.  */
+		  context->ContextFlags &= ~CONTEXT_DEBUG_REGISTERS;
+		}
+	    }
+	  else
+	    DEBUG_EVENTS ("0x%x has no dr6 set", th->tid);
+
+	  if ((context->ContextFlags & CONTEXT_DEBUG_REGISTERS) != 0)
+	    {
+	      DEBUG_EVENTS ("0x%x changing dregs", th->tid);
+	      context->Dr0 = state->dr_mirror[0];
+	      context->Dr1 = state->dr_mirror[1];
+	      context->Dr2 = state->dr_mirror[2];
+	      context->Dr3 = state->dr_mirror[3];
+	      context->Dr6 = DR6_CLEAR_VALUE;
+	      context->Dr7 = state->dr_control_mirror;
+	    }
+
 	  th->debug_registers_changed = false;
 	}
 
@@ -170,7 +228,6 @@ x86_windows_nat_target::fetch_one_register (struct regcache *regcache,
 					    windows_thread_info *th, int r)
 {
   gdb_assert (r >= 0);
-  gdb_assert (!th->reload_context);
 
   char *context_ptr = x86_windows_process.with_context (th, [] (auto *context)
     {
@@ -239,6 +296,7 @@ x86_windows_nat_target::store_one_register (const struct regcache *regcache,
 
   char *context_ptr = x86_windows_process.with_context (th, [] (auto *context)
     {
+      gdb_assert (context->ContextFlags != 0);
       return (char *) context;
     });
 
@@ -283,10 +341,10 @@ x86_windows_nat_target::is_sw_breakpoint (const EXCEPTION_RECORD *er) const
    Here we just store the address in dr array, the registers will be
    actually set up when windows_continue is called.  */
 static void
-cygwin_set_dr (int i, CORE_ADDR addr)
+windows_set_dr (int i, CORE_ADDR addr)
 {
   if (i < 0 || i > 3)
-    internal_error (_("Invalid register %d in cygwin_set_dr.\n"), i);
+    internal_error (_("Invalid register %d in windows_set_dr.\n"), i);
 
   for (auto &th : x86_windows_process.thread_list)
     th->debug_registers_changed = true;
@@ -296,7 +354,7 @@ cygwin_set_dr (int i, CORE_ADDR addr)
    register.  Here we just store the address in D_REGS, the watchpoint
    will be actually set up in windows_wait.  */
 static void
-cygwin_set_dr7 (unsigned long val)
+windows_set_dr7 (unsigned long val)
 {
   for (auto &th : x86_windows_process.thread_list)
     th->debug_registers_changed = true;
@@ -305,10 +363,9 @@ cygwin_set_dr7 (unsigned long val)
 /* Get the value of debug register I from the inferior.  */
 
 static CORE_ADDR
-cygwin_get_dr (int i)
+windows_get_dr (int i)
 {
-  windows_thread_info *th
-    = windows_process->thread_rec (inferior_ptid, DONT_INVALIDATE_CONTEXT);
+  windows_thread_info *th = windows_process->find_thread (inferior_ptid);
 
   return windows_process->with_context (th, [&] (auto *context) -> CORE_ADDR
     {
@@ -337,18 +394,18 @@ cygwin_get_dr (int i)
    inferior.  */
 
 static unsigned long
-cygwin_get_dr6 (void)
+windows_get_dr6 (void)
 {
-  return cygwin_get_dr (6);
+  return windows_get_dr (6);
 }
 
 /* Get the value of the DR7 debug status register from the
    inferior.  */
 
 static unsigned long
-cygwin_get_dr7 (void)
+windows_get_dr7 (void)
 {
-  return cygwin_get_dr (7);
+  return windows_get_dr (7);
 }
 
 static int
@@ -443,7 +500,7 @@ display_selectors (const char * args, int from_tty)
     }
 
   windows_thread_info *current_windows_thread
-    = windows_process->thread_rec (inferior_ptid, DONT_INVALIDATE_CONTEXT);
+    = windows_process->find_thread (inferior_ptid);
 
   if (!args)
     {
@@ -474,11 +531,11 @@ display_selectors (const char * args, int from_tty)
 
 INIT_GDB_FILE (x86_windows_nat)
 {
-  x86_dr_low.set_control = cygwin_set_dr7;
-  x86_dr_low.set_addr = cygwin_set_dr;
-  x86_dr_low.get_addr = cygwin_get_dr;
-  x86_dr_low.get_status = cygwin_get_dr6;
-  x86_dr_low.get_control = cygwin_get_dr7;
+  x86_dr_low.set_control = windows_set_dr7;
+  x86_dr_low.set_addr = windows_set_dr;
+  x86_dr_low.get_addr = windows_get_dr;
+  x86_dr_low.get_status = windows_get_dr6;
+  x86_dr_low.get_control = windows_get_dr7;
 
   /* x86_dr_low.debug_register_length field is set by
      calling x86_set_debug_register_length function

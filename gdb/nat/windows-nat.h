@@ -38,12 +38,16 @@
 namespace windows_nat
 {
 
+struct windows_process_info;
+
 /* Thread information structure used to track extra information about
    each thread.  */
 struct windows_thread_info
 {
-  windows_thread_info (DWORD tid_, HANDLE h_, CORE_ADDR tlb)
-    : tid (tid_),
+  windows_thread_info (windows_process_info *proc_,
+		       DWORD tid_, HANDLE h_, CORE_ADDR tlb)
+    : proc (proc_),
+      tid (tid_),
       h (h_),
       thread_local_base (tlb)
   {
@@ -62,6 +66,18 @@ struct windows_thread_info
      the next call.  */
   const char *thread_name ();
 
+  /* Read LEN bytes of the thread's $_siginfo into READBUF, starting
+     at OFFSET.  Store the number of actually-read bytes in
+     XFERED_LEN.  Returns true on success, false on failure.  Passing
+     READBUF as NULL indicates that the caller is trying to write to
+     $_siginfo, which is a failure case.  */
+  bool xfer_siginfo (gdb_byte *readbuf,
+		     ULONGEST offset, ULONGEST len,
+		     ULONGEST *xfered_len);
+
+  /* The process this thread belongs to.  */
+  windows_process_info *const proc;
+
   /* The Win32 thread identifier.  */
   DWORD tid;
 
@@ -77,6 +93,31 @@ struct windows_thread_info
      was not.  */
   int suspended = 0;
 
+/* Info about a potential pending stop.
+
+   Sometimes, Windows will report a stop on a thread that has been
+   ostensibly suspended.  We believe what happens here is that two
+   threads hit a breakpoint simultaneously, and the Windows kernel
+   queues the stop events.  However, this can result in the strange
+   effect of trying to single step thread A -- leaving all other
+   threads suspended -- and then seeing a stop in thread B.  To handle
+   this scenario, we queue the "pending" stop here, and then
+   process it once the step has completed.  See PR gdb/22992.
+   If we do have a pending event, its Windows event info is in
+   LAST_EVENT.
+
+   TARGET_WAITKIND_IGNORE if the thread does not have a pending
+   stop.  */
+  target_waitstatus pending_status;
+
+  /* The last Windows event returned by WaitForDebugEvent for this
+     thread.  */
+  DEBUG_EVENT last_event {};
+
+  /* The last signal reported for this thread, extracted out of
+     last_event.  */
+  enum gdb_signal last_sig = GDB_SIGNAL_0;
+
   /* The context of the thread, including any manipulations.  */
   union
   {
@@ -90,10 +131,6 @@ struct windows_thread_info
      the thread.  */
   bool debug_registers_changed = false;
 
-  /* Nonzero if CONTEXT is invalidated and must be re-read from the
-     inferior thread.  */
-  bool reload_context = false;
-
   /* True if this thread is currently stopped at a software
      breakpoint.  This is used to offset the PC when needed.  */
   bool stopped_at_software_breakpoint = false;
@@ -105,34 +142,6 @@ struct windows_thread_info
 
   /* The name of the thread.  */
   gdb::unique_xmalloc_ptr<char> name;
-};
-
-
-/* Possible values to pass to 'thread_rec'.  */
-enum thread_disposition_type
-{
-  /* Do not invalidate the thread's context, and do not suspend the
-     thread.  */
-  DONT_INVALIDATE_CONTEXT,
-  /* Invalidate the context, but do not suspend the thread.  */
-  DONT_SUSPEND,
-  /* Invalidate the context and suspend the thread.  */
-  INVALIDATE_CONTEXT
-};
-
-/* A single pending stop.  See "pending_stops" for more
-   information.  */
-struct pending_stop
-{
-  /* The thread id.  */
-  DWORD thread_id;
-
-  /* The target waitstatus we computed.  */
-  target_waitstatus status;
-
-  /* The event.  A few fields of this can be referenced after a stop,
-     and it seemed simplest to store the entire event.  */
-  DEBUG_EVENT event;
 };
 
 enum handle_exception_result
@@ -152,30 +161,6 @@ struct windows_process_info
   HANDLE handle = 0;
   DWORD process_id = 0;
   DWORD main_thread_id = 0;
-  enum gdb_signal last_sig = GDB_SIGNAL_0;
-
-  /* The current debug event from WaitForDebugEvent or from a pending
-     stop.  */
-  DEBUG_EVENT current_event {};
-
-  /* The ID of the thread for which we anticipate a stop event.
-     Normally this is -1, meaning we'll accept an event in any
-     thread.  */
-  DWORD desired_stop_thread_id = -1;
-
-  /* A vector of pending stops.  Sometimes, Windows will report a stop
-     on a thread that has been ostensibly suspended.  We believe what
-     happens here is that two threads hit a breakpoint simultaneously,
-     and the Windows kernel queues the stop events.  However, this can
-     result in the strange effect of trying to single step thread A --
-     leaving all other threads suspended -- and then seeing a stop in
-     thread B.  To handle this scenario, we queue all such "pending"
-     stops here, and then process them once the step has completed.  See
-     PR gdb/22992.  */
-  std::vector<pending_stop> pending_stops;
-
-  /* Contents of $_siginfo */
-  EXCEPTION_RECORD siginfo_er {};
 
 #ifdef __x86_64__
   /* The target is a WOW64 process */
@@ -184,14 +169,16 @@ struct windows_process_info
   bool ignore_first_breakpoint = false;
 #endif
 
-
-  /* Find a thread record given a thread id.  THREAD_DISPOSITION
-     controls whether the thread is suspended, and whether the context
-     is invalidated.
+  /* Find a thread record given a thread id.
 
      This function must be supplied by the embedding application.  */
-  virtual windows_thread_info *thread_rec (ptid_t ptid,
-					   thread_disposition_type disposition) = 0;
+  virtual windows_thread_info *find_thread (ptid_t ptid) = 0;
+
+  /* Fill in the thread's CONTEXT/WOW64_CONTEXT, if it wasn't filled
+     in yet.
+
+     This function must be supplied by the embedding application.  */
+  virtual void fill_thread_context (windows_thread_info *th) = 0;
 
   /* Handle OUTPUT_DEBUG_STRING_EVENT from child process.  Updates
      OURSTATUS and returns the thread id if this represents a thread
@@ -201,7 +188,8 @@ struct windows_process_info
      a Cygwin signal.  Otherwise just print the string as a warning.
 
      This function must be supplied by the embedding application.  */
-  virtual int handle_output_debug_string (struct target_waitstatus *ourstatus) = 0;
+  virtual DWORD handle_output_debug_string (const DEBUG_EVENT &current_event,
+					    struct target_waitstatus *ourstatus) = 0;
 
   /* Handle a DLL load event.
 
@@ -222,7 +210,7 @@ struct windows_process_info
 
      This function must be supplied by the embedding application.  */
 
-  virtual void handle_unload_dll () = 0;
+  virtual void handle_unload_dll (const DEBUG_EVENT &current_event) = 0;
 
   /* When EXCEPTION_ACCESS_VIOLATION is processed, we give the embedding
      application a chance to change it to be considered "unhandled".
@@ -232,28 +220,17 @@ struct windows_process_info
   virtual bool handle_access_violation (const EXCEPTION_RECORD *rec) = 0;
 
   handle_exception_result handle_exception
-       (struct target_waitstatus *ourstatus, bool debug_exceptions);
+      (DEBUG_EVENT &current_event,
+       struct target_waitstatus *ourstatus, bool debug_exceptions);
 
   /* Call to indicate that a DLL was loaded.  */
 
-  void dll_loaded_event ();
+  void dll_loaded_event (const DEBUG_EVENT &current_event);
 
   /* Iterate over all DLLs currently mapped by our inferior, and
      add them to our list of solibs.  */
 
   void add_all_dlls ();
-
-  /* Return true if there is a pending stop matching
-     desired_stop_thread_id.  If DEBUG_EVENTS is true, logging will be
-     enabled.  */
-
-  bool matching_pending_stop (bool debug_events);
-
-  /* See if a pending stop matches DESIRED_STOP_THREAD_ID.  If so,
-     remove it from the list of pending stops, set 'current_event', and
-     return it.  Otherwise, return an empty optional.  */
-
-  std::optional<pending_stop> fetch_pending_stop (bool debug_events);
 
   const char *pid_to_exec_file (int);
 
@@ -284,7 +261,7 @@ private:
 
      Return true if the exception was handled; return false otherwise.  */
 
-  bool handle_ms_vc_exception (const EXCEPTION_RECORD *rec);
+  bool handle_ms_vc_exception (const DEBUG_EVENT &current_event);
 
   /* Iterate over all DLLs currently mapped by our inferior, looking for
      a DLL which is loaded at LOAD_ADDR.  If found, add the DLL to our
@@ -314,6 +291,11 @@ private:
 
 extern BOOL continue_last_debug_event (DWORD continue_status,
 				       bool debug_events);
+
+/* Return the ptid_t of the thread that the last waited-for event was
+   for.  */
+
+extern ptid_t get_last_debug_event_ptid ();
 
 /* A simple wrapper for WaitForDebugEvent that also sets the internal
    'last_wait_event' on success.  */

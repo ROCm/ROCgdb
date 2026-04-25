@@ -1,5 +1,9 @@
 -*- text -*-
 
+* The x86 and x86_64 disassemblers now accept a command line option of
+  "-M annotate-immediates" which displays the symbol associated with immediate
+  values, should there be one.
+  
 * Objdump and readelf now have a --debug-dir=<DIR> option which can be used to
   tell them where to find separate debug info files.
 

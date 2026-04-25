@@ -153,6 +153,55 @@ windows_thread_info::thread_name ()
   return name.get ();
 }
 
+/* Read Windows signal info.  See nat/windows-nat.h.  */
+
+bool
+windows_thread_info::xfer_siginfo (gdb_byte *readbuf,
+				   ULONGEST offset, ULONGEST len,
+				   ULONGEST *xfered_len)
+{
+  if (last_event.dwDebugEventCode != EXCEPTION_DEBUG_EVENT)
+    return false;
+
+  if (readbuf == nullptr)
+    return false;
+
+  EXCEPTION_RECORD &er = last_event.u.Exception.ExceptionRecord;
+
+  char *buf = (char *) &er;
+  size_t bufsize = sizeof (er);
+
+#ifdef __x86_64__
+  EXCEPTION_RECORD32 er32;
+  if (proc->wow64_process)
+    {
+      buf = (char *) &er32;
+      bufsize = sizeof (er32);
+
+      er32.ExceptionCode = er.ExceptionCode;
+      er32.ExceptionFlags = er.ExceptionFlags;
+      er32.ExceptionRecord
+	= (uintptr_t) er.ExceptionRecord;
+      er32.ExceptionAddress
+	= (uintptr_t) er.ExceptionAddress;
+      er32.NumberParameters = er.NumberParameters;
+      for (int i = 0; i < EXCEPTION_MAXIMUM_PARAMETERS; i++)
+	er32.ExceptionInformation[i] = er.ExceptionInformation[i];
+    }
+#endif
+
+  if (offset > bufsize)
+    return false;
+
+  if (offset + len > bufsize)
+    len = bufsize - offset;
+
+  memcpy (readbuf, buf + offset, len);
+  *xfered_len = len;
+
+  return true;
+}
+
 /* Try to determine the executable filename.
 
    EXE_NAME_RET is a pointer to a buffer whose size is EXE_NAME_MAX_LEN.
@@ -300,8 +349,10 @@ get_image_name (HANDLE h, void *address, int unicode)
 /* See nat/windows-nat.h.  */
 
 bool
-windows_process_info::handle_ms_vc_exception (const EXCEPTION_RECORD *rec)
+windows_process_info::handle_ms_vc_exception (const DEBUG_EVENT &current_event)
 {
+  const EXCEPTION_RECORD *rec = &current_event.u.Exception.ExceptionRecord;
+
   if (rec->NumberParameters >= 3
       && (rec->ExceptionInformation[0] & 0xffffffff) == 0x1000)
     {
@@ -315,9 +366,8 @@ windows_process_info::handle_ms_vc_exception (const EXCEPTION_RECORD *rec)
       if (named_thread_id == (DWORD) -1)
 	named_thread_id = current_event.dwThreadId;
 
-      named_thread = thread_rec (ptid_t (current_event.dwProcessId,
-					 named_thread_id, 0),
-				 DONT_INVALIDATE_CONTEXT);
+      named_thread = find_thread (ptid_t (current_event.dwProcessId,
+					  named_thread_id, 0));
       if (named_thread != NULL)
 	{
 	  int thread_name_len;
@@ -343,7 +393,8 @@ windows_process_info::handle_ms_vc_exception (const EXCEPTION_RECORD *rec)
 #define MS_VC_EXCEPTION 0x406d1388
 
 handle_exception_result
-windows_process_info::handle_exception (struct target_waitstatus *ourstatus,
+windows_process_info::handle_exception (DEBUG_EVENT &current_event,
+					struct target_waitstatus *ourstatus,
 					bool debug_exceptions)
 {
 #define DEBUG_EXCEPTION_SIMPLE(x)       if (debug_exceptions) \
@@ -354,14 +405,6 @@ windows_process_info::handle_exception (struct target_waitstatus *ourstatus,
   EXCEPTION_RECORD *rec = &current_event.u.Exception.ExceptionRecord;
   DWORD code = rec->ExceptionCode;
   handle_exception_result result = HANDLE_EXCEPTION_HANDLED;
-
-  memcpy (&siginfo_er, rec, sizeof siginfo_er);
-
-  /* Record the context of the current thread.  */
-  thread_rec (ptid_t (current_event.dwProcessId, current_event.dwThreadId, 0),
-	      DONT_SUSPEND);
-
-  last_sig = GDB_SIGNAL_0;
 
   switch (code)
     {
@@ -475,7 +518,7 @@ windows_process_info::handle_exception (struct target_waitstatus *ourstatus,
       break;
     case MS_VC_EXCEPTION:
       DEBUG_EXCEPTION_SIMPLE ("MS_VC_EXCEPTION");
-      if (handle_ms_vc_exception (rec))
+      if (handle_ms_vc_exception (current_event))
 	{
 	  ourstatus->set_stopped (GDB_SIGNAL_TRAP);
 	  result = HANDLE_EXCEPTION_IGNORED;
@@ -496,7 +539,11 @@ windows_process_info::handle_exception (struct target_waitstatus *ourstatus,
     }
 
   if (ourstatus->kind () == TARGET_WAITKIND_STOPPED)
-    last_sig = ourstatus->sig ();
+    {
+      ptid_t ptid (current_event.dwProcessId, current_event.dwThreadId, 0);
+      windows_thread_info *th = find_thread (ptid);
+      th->last_sig = ourstatus->sig ();
+    }
 
   return result;
 
@@ -615,11 +662,11 @@ windows_process_info::add_dll (LPVOID load_addr)
 /* See nat/windows-nat.h.  */
 
 void
-windows_process_info::dll_loaded_event ()
+windows_process_info::dll_loaded_event (const DEBUG_EVENT &current_event)
 {
   gdb_assert (current_event.dwDebugEventCode == LOAD_DLL_DEBUG_EVENT);
 
-  LOAD_DLL_DEBUG_INFO *event = &current_event.u.LoadDll;
+  const LOAD_DLL_DEBUG_INFO *event = &current_event.u.LoadDll;
   const char *dll_name;
 
   /* Try getting the DLL name via the lpImageName field of the event.
@@ -647,53 +694,10 @@ windows_process_info::add_all_dlls ()
 
 /* See nat/windows-nat.h.  */
 
-bool
-windows_process_info::matching_pending_stop (bool debug_events)
+ptid_t
+get_last_debug_event_ptid ()
 {
-  /* If there are pending stops, and we might plausibly hit one of
-     them, we don't want to actually continue the inferior -- we just
-     want to report the stop.  In this case, we just pretend to
-     continue.  See the comment by the definition of "pending_stops"
-     for details on why this is needed.  */
-  for (const auto &item : pending_stops)
-    {
-      if (desired_stop_thread_id == -1
-	  || desired_stop_thread_id == item.thread_id)
-	{
-	  DEBUG_EVENTS ("pending stop anticipated, desired=0x%x, item=0x%x",
-			desired_stop_thread_id, item.thread_id);
-	  return true;
-	}
-    }
-
-  return false;
-}
-
-/* See nat/windows-nat.h.  */
-
-std::optional<pending_stop>
-windows_process_info::fetch_pending_stop (bool debug_events)
-{
-  std::optional<pending_stop> result;
-  for (auto iter = pending_stops.begin ();
-       iter != pending_stops.end ();
-       ++iter)
-    {
-      if (desired_stop_thread_id == -1
-	  || desired_stop_thread_id == iter->thread_id)
-	{
-	  result = *iter;
-	  current_event = iter->event;
-
-	  DEBUG_EVENTS ("pending stop found in 0x%x (desired=0x%x)",
-			iter->thread_id, desired_stop_thread_id);
-
-	  pending_stops.erase (iter);
-	  break;
-	}
-    }
-
-  return result;
+  return ptid_t (last_wait_event.dwProcessId, last_wait_event.dwThreadId, 0);
 }
 
 /* See nat/windows-nat.h.  */
