@@ -2993,29 +2993,101 @@ bfd_emul_get_commonpagesize (const char *emul)
 
 /*
 FUNCTION
-	bfd_demangle
+	bfd_is_msvc_symbol
 
 SYNOPSIS
-	char *bfd_demangle (bfd *, const char *, int);
+	bool bfd_is_msvc_symbol (const char *);
 
 DESCRIPTION
-	Wrapper around cplus_demangle.  Strips leading underscores and
+	Checks if the symbol mangled name is in MSVC format.
+	The MSVC format:
+	 - symbol starts with '?'
+	 - symbol starts with either '.' or '$'.
+	   ending with '?'. This is taken from the existing 
+	   bfd_demangle implementation which strips these chars.
+	 - $ANYTHING$?. MSVC compiler-generated prefixes.
+    We keep the check in bfd in case it ever needs binary 
+    examination or more prefix/suffix evaluation.
+*/
+
+static bool
+bfd_is_msvc_symbol (const char *name)
+{
+  const char *p;
+  
+  if (name == NULL || *name == '\0')
+    return false;
+  
+  /* Pattern 1: any leading '.' or '$' chars followed by '?' .  */
+  p = name;
+  while (*p == '.' || *p == '$')
+     ++p;
+  if (*p == '?')
+    return true;
+  
+  /* Pattern 2: begins with '$', then anything, then "$?".  */
+  if (name[0] == '$')
+  {
+    const char *marker = strstr (name + 1, "$?");
+    if (marker != NULL)
+    	return true;
+  }
+  
+  return false;
+}
+
+/*
+FUNCTION
+	bfd_demangle_new
+
+SYNOPSIS
+	char *bfd_demangle_new (bfd *, const char *, int, 
+				char* (*)(const char *, int));
+
+DESCRIPTION
+	Wrapper around demanglers. Strips leading underscores and
 	other such chars that would otherwise confuse the demangler.
 	If passed a g++ v3 ABI mangled name, returns a buffer allocated
 	with malloc holding the demangled name.  Returns NULL otherwise
 	and on memory alloc failure.
+	This new implementation adds msvc_demangler as a callback,
+	in order to avoid mandatory linking libbfd with libdemangle_msvc.
+	Only the tools that use libdemangle_msvc will pass the callback.
+	Stripping of platform-specific prefixes and suffixes differs between
+	MSVC and Itanium symbols. This could warrant separate functions but is
+	consolidated here for consistency. Symbol type detection (MSVC vs 
+	Itanium) is kept in BFD to allow future enhancements such as examining 
+	the binary.
 */
-
 char *
-bfd_demangle (bfd *abfd, const char *name, int options)
+bfd_demangle_new (bfd *abfd, const char *name, int options,
+                  char *(*msvc_demangler) (const char *, int))
 {
   char *res, *alloc;
-  const char *pre, *suf;
+  const char *pre = NULL;
+  const char *suf = NULL;
   size_t pre_len;
   bool skip_lead;
+  
+  bool is_msvc = msvc_demangler ? bfd_is_msvc_symbol(name) : false;
+
+  /* For MSVC compiler generated prefixes we don't return the 
+     prefix with the demangled string as it's unclear if the 
+     further parsing would fail. E.g $unwind$?_Xlen_string@std@@YAXXZ  
+     would demangle to unwind$std::_Xlen_string(void) which looks wrong.
+     Note that the same logic can apply to stripped '.' and '$',
+     below, but for those the existing implementation already
+     returns the prefix so we keep it there. */
+  if (msvc_demangler && is_msvc && name[0] == '$')
+    {
+      const char *marker = strstr (name + 1, "$?");
+      if (marker != NULL)
+      name = marker + 1;
+    }
 
   skip_lead = (abfd != NULL
 	       && *name != '\0'
+	       && !is_msvc
 	       && bfd_get_symbol_leading_char (abfd) == *name);
   if (skip_lead)
     ++name;
@@ -3031,7 +3103,9 @@ bfd_demangle (bfd *abfd, const char *name, int options)
 
   /* Strip off @plt and suchlike too.  */
   alloc = NULL;
-  suf = strchr (name, '@');
+  if (!is_msvc)
+    suf = strchr (name, '@');
+
   if (suf != NULL)
     {
       alloc = (char *) bfd_malloc (suf - name + 1);
@@ -3042,7 +3116,10 @@ bfd_demangle (bfd *abfd, const char *name, int options)
       name = alloc;
     }
 
-  res = cplus_demangle (name, options);
+  if (is_msvc && msvc_demangler)  
+    res = msvc_demangler (name, options);
+  else
+    res = cplus_demangle (name, options); 
 
   free (alloc);
 
@@ -3083,6 +3160,22 @@ bfd_demangle (bfd *abfd, const char *name, int options)
     }
 
   return res;
+}
+/*
+FUNCTION
+	bfd_demangle
+
+SYNOPSIS
+	char *bfd_demangle (bfd *, const char *, int);
+
+DESCRIPTION
+	Wrapper around cp_demangle. The implemenation is moved to
+	bfd_demangle_new. 
+*/
+char *
+bfd_demangle (bfd *abfd, const char *name, int options)
+{
+  return bfd_demangle_new(abfd, name, options, NULL);
 }
 
 /* Get the linker information.  */

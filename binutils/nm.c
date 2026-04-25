@@ -703,7 +703,7 @@ print_symname (const char *form, struct extended_symbol_info *info,
 
   if (do_demangle && *name)
     {
-      alloc = bfd_demangle (abfd, name, demangle_flags);
+      alloc = bfd_demangle_new (abfd, name, demangle_flags, msvc_demangle);
       if (alloc != NULL)
 	name = alloc;
     }

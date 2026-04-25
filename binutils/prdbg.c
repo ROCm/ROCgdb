@@ -51,7 +51,9 @@ struct pr_handle
   /* The symbols table for this BFD.  */
   asymbol **syms;
   /* Pointer to a function to demangle symbols.  */
-  char *(*demangler) (bfd *, const char *, int);
+  char *(*demangler) (bfd *, const char *, int, char * (*) (const char *, int));
+  /* The callback for demangler.  */
+  char * (*demangler_cb) (const char *, int);
 };
 
 /* The type stack.  */
@@ -270,8 +272,10 @@ static int demangle_flags = DMGL_ANSI | DMGL_PARAMS;
 /* Print out the generic debugging information recorded in dhandle.  */
 
 bool
-print_debugging_info (FILE *f, void *dhandle, bfd *abfd, asymbol **syms,
-		      char * (*demangler) (struct bfd *, const char *, int),
+print_debugging_info(FILE *f, void *dhandle, bfd *abfd, asymbol **syms,
+		      char * (*demangler) (struct bfd *, const char *, int, 
+		      char * (*) (const char *, int)),
+		      char * (*cb) (const char *, int),
 		      bool as_tags)
 {
   struct pr_handle info;
@@ -284,6 +288,7 @@ print_debugging_info (FILE *f, void *dhandle, bfd *abfd, asymbol **syms,
   info.abfd = abfd;
   info.syms = syms;
   info.demangler = demangler;
+  info.demangler_cb = cb;
 
   if (as_tags)
     {
@@ -2571,7 +2576,7 @@ tg_variable (void *p, const char *name, enum debug_var_kind kind,
 
   dname = NULL;
   if (info->demangler)
-    dname = info->demangler (info->abfd, name, demangle_flags);
+    dname = info->demangler (info->abfd, name, demangle_flags, info->demangler_cb);
 
   from_class = NULL;
   if (dname != NULL)
@@ -2632,7 +2637,7 @@ tg_start_function (void *p, const char *name, bool global)
 
   dname = NULL;
   if (info->demangler)
-    dname = info->demangler (info->abfd, name, demangle_flags);
+    dname = info->demangler (info->abfd, name, demangle_flags, info->demangler_cb);
 
   if (! substitute_type (info, dname ? dname : name))
     return false;

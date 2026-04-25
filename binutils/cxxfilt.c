@@ -46,6 +46,7 @@ static const struct option long_options[] =
   {"recursion-limit", no_argument, NULL, 'R'},
   {"no-recurse-limit", no_argument, NULL, 'r'},
   {"no-recursion-limit", no_argument, NULL, 'r'},
+  {"msvc-full", no_argument, NULL, 'M'},
   {NULL, no_argument, NULL, 0}
 };
 
@@ -55,6 +56,14 @@ demangle_it (char *mangled_name)
   char *result;
   unsigned int skip_first = 0;
 
+  /* For MSVC strip compiler generated prefix */
+  if (mangled_name[0] == '$')
+    {
+      char *marker = strstr (mangled_name + 1, "$?");
+      if (marker != NULL)
+      mangled_name = marker + 1;
+    }
+
   /* _ and $ are sometimes found at the start of function names
      in assembler sources in order to distinguish them from other
      names (eg register names).  So skip them here.  */
@@ -63,7 +72,10 @@ demangle_it (char *mangled_name)
   if (strip_underscore && mangled_name[skip_first] == '_')
     ++skip_first;
 
-  result = cplus_demangle (mangled_name + skip_first, flags);
+  /* Try MSVC demangler first */
+  result = msvc_demangle (mangled_name + skip_first, flags);
+  if (result == NULL)
+    result = cplus_demangle (mangled_name + skip_first, flags);
 
   if (result == NULL)
     printf ("%s", mangled_name);
@@ -95,7 +107,8 @@ ATTRIBUTE_NORETURN static void
 usage (FILE *stream, int status)
 {
   fprintf (stream, "\
-Usage: %s [options] [mangled names]\n", program_name);
+Usage: %s [options] [mangled names]. \n\
+       Enclose MSVC symbols with single quotes.\n", program_name);
   fprintf (stream, "\
 Options are:\n\
   [-_|--strip-underscore]     Ignore first leading underscore%s\n",
@@ -106,9 +119,14 @@ Options are:\n\
   fprintf (stream, "\
   [-p|--no-params]            Do not display function arguments\n\
   [-i|--no-verbose]           Do not show implementation details (if any)\n\
+                                (Ignored for MSVC demangling)\n\
+  [-M|--msvc-full]            Preserve MSVC-specific keywords (__cdecl, etc.)\n\
   [-R|--recurse-limit]        Enable a limit on recursion whilst demangling.  [Default]\n\
+                                (Ignored for MSVC demangling)\n\
   ]-r|--no-recurse-limit]     Disable a limit on recursion whilst demangling\n\
+                                (Always on for MSVC demangling)\n\
   [-t|--types]                Also attempt to demangle type encodings\n\
+                                (Always on for MSVC demangling)\n\
   [-s|--format ");
   print_demangler_list (stream);
   fprintf (stream, "]\n");
@@ -150,7 +168,7 @@ main (int argc, char **argv)
 
   expandargv (&argc, &argv);
 
-  while ((c = getopt_long (argc, argv, "_hinprRs:tv", long_options, (int *) 0)) != EOF)
+  while ((c = getopt_long (argc, argv, "_hinMprRs:tv", long_options, (int *) 0)) != EOF)
     {
       switch (c)
 	{
@@ -164,6 +182,9 @@ main (int argc, char **argv)
 	  break;
 	case 'p':
 	  flags &= ~ DMGL_PARAMS;
+	  break;
+	case 'M':
+	  flags |= DMGL_MSVC;
 	  break;
 	case 'r':
 	  flags |= DMGL_NO_RECURSE_LIMIT;

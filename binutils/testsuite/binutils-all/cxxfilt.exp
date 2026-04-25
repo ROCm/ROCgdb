@@ -30,6 +30,25 @@ proc test_cxxfilt {options mangled_string demangled_string} {
     pass $testname
 }
 
+# Improved test so that templates can be specified properly.
+proc test_cxxfilt_msvc {options mangled_string demangled_string} {
+    global CXXFILT
+    global CXXFILTFLAGS
+    
+    set testname "cxxfilt: demangling $mangled_string"
+    set got [binutils_run $CXXFILT "$options $CXXFILTFLAGS $mangled_string"]
+
+    if {[string first $demangled_string $got] == -1} then {
+	fail "$testname"
+	send_user "EXPECTED: $demangled_string\n"
+	send_user "GOT:      $got\n"
+	return
+    }
+
+    pass $testname
+}
+
+
 # Mangled and demangled strings stolen from libiberty/testsuite/demangle-expected.
 test_cxxfilt {--no-strip-underscores} \
     "_Z1fIvJiELb0EEvPDOT1_EFT_DpT0_E" \
@@ -42,3 +61,29 @@ test_cxxfilt {--format=gnu-v3 --no-strip-underscores} \
 test_cxxfilt {--no-recurse-limit} \
     "Z3fooiPiPS_PS0_PS1_PS2_PS3_PS4_PS5_PS6_PS7_PS8_PS9_PSA_PSB_PSC_" \
     "foo(int, int., int.., int..., int...., int....., int......, int......., int........, int........., int.........., int..........., int............, int............., int.............., int...............)*"
+
+# Do the same functions but with MSVC mangling.
+
+test_cxxfilt_msvc {--no-strip-underscores} \
+    {??$f@XH$0A@@@YAXP6AXH@Z@Z} \
+    {void f<void, int, 0>(void ( *)(int))}
+
+test_cxxfilt {--format=gnu-v3 --no-strip-underscores} \
+    {??$int_if_addable@UY@@@@YAAEAHPEAU?$A@$00@@@Z} \
+    {int & int_if_addable< Y>( A<1> *)*}
+
+test_cxxfilt {--no-recurse-limit} \
+    {?foo@@YAXHPEAHPEAPEAHPEAPEAPEAHPEAPEAPEAPEAHPEAPEAPEAPEAPEAHPEAPEAPEAPEAPEAPEAHPEAPEAPEAPEAPEAPEAPEAHPEAPEAPEAPEAPEAPEAPEAPEAHPEAPEAPEAPEAPEAPEAPEAPEAPEAHPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAHPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAHPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAHPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAHPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAHPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAPEAH@Z} \
+    {foo(int, int., int.., int..., int...., int....., int......, int......., int........, int........., int.........., int..........., int............, int............., int.............., int...............)*}
+
+test_cxxfilt_msvc {--no-strip-underscores --no-params} \
+    {??$f@XH$0A@@@YAXP6AXH@Z@Z} \
+    {void f<void, int, 0>}
+
+test_cxxfilt_msvc {--no-strip-underscores --no-verbose} \
+    {??$f@XH$0A@@@YAXP6AXH@Z@Z} \
+    {void f<void, int, 0>}
+
+test_cxxfilt_msvc {--no-strip-underscores --msvc-full} \
+    {?m3@C@@IAEXI@Z} \
+    {protected: void __thiscall C::m3(unsigned int)}

@@ -182,6 +182,8 @@ LIBSFRAME = ../libsframe/libsframe.la
 
 LIBIBERTY = ../libiberty/libiberty.a
 
+LIBDEMANGLE_MSVC = ../libdemangle-msvc/libdemangle-msvc.a
+
 POTFILES = $(CFILES) $(DEBUG_SRCS) $(HFILES)
 po/POTFILES.in: @MAINT@ Makefile
 	for f in $(POTFILES); do echo $$f; done | LC_ALL=C sort > tmp \
@@ -232,13 +234,13 @@ installcheck-local:
 # which depends on libintl, since we don't know whether LIBINTL_DEP will be
 # non-empty until configure time.  Ugh!
 size_DEPENDENCIES =      $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
-objdump_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB) $(OPCODES) $(LIBCTF) $(OBJDUMP_PRIVATE_OFILES) $(LIBSFRAME)
-nm_new_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
+objdump_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB) $(LIBDEMANGLE_MSVC) $(OPCODES) $(LIBCTF) $(OBJDUMP_PRIVATE_OFILES) $(LIBSFRAME)
+nm_new_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB) $(LIBDEMANGLE_MSVC)
 ar_DEPENDENCIES =        $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 strings_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 strip_new_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 ranlib_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
-cxxfilt_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
+cxxfilt_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB) $(LIBDEMANGLE_MSVC)
 objcopy_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 srconv_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 sysdump_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
@@ -246,7 +248,7 @@ coffdump_DEPENDENCIES =  $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 dlltool_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 windres_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 windmc_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
-addr2line_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
+addr2line_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB) $(LIBDEMANGLE_MSVC)
 readelf_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(LIBCTF_NOBFD) $(LIBSFRAME)
 elfedit_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY)
 dllwrap_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY)
@@ -263,18 +265,19 @@ objcopy_SOURCES = not-strip.c rename.c $(WRITE_DEBUG_SRCS) $(BULIBS)
 strings_SOURCES = strings.c $(BULIBS)
 
 readelf_SOURCES = readelf.c version.c unwind-ia64.c dwarf.c demanguse.c $(ELFLIBS)
-readelf_LDADD   = $(LIBCTF_NOBFD) $(LIBINTL) $(LIBIBERTY) $(ZLIB) $(ZSTD_LIBS) $(DEBUGINFOD_LIBS) $(MSGPACK_LIBS) $(LIBSFRAME)
+readelf_LDADD   = $(LIBCTF_NOBFD) $(LIBINTL) $(LIBIBERTY) $(LIBICONV) $(ZLIB) $(ZSTD_LIBS) $(DEBUGINFOD_LIBS) $(MSGPACK_LIBS) $(LIBSFRAME)
 
 elfedit_SOURCES = elfedit.c version.c $(ELFLIBS)
-elfedit_LDADD = $(LIBINTL) $(LIBIBERTY)
+elfedit_LDADD = $(LIBINTL) $(LIBICONV) $(LIBIBERTY)
 
 strip_new_SOURCES = is-strip.c rename.c $(WRITE_DEBUG_SRCS) $(BULIBS)
 
 nm_new_SOURCES = nm.c demanguse.c $(BULIBS)
+nm_new_LDADD = $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(LIBICONV) $(LIBDEMANGLE_MSVC) -lstdc++ 
 
 objdump_SOURCES = objdump.c dwarf.c prdbg.c demanguse.c $(DEBUG_SRCS) $(BULIBS) $(ELFLIBS)
 EXTRA_objdump_SOURCES = od-elf32_avr.c od-macho.c od-xcoff.c od-pe.c
-objdump_LDADD = $(OBJDUMP_PRIVATE_OFILES) $(OPCODES) $(LIBCTF) $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(DEBUGINFOD_LIBS) $(LIBSFRAME)
+objdump_LDADD = $(OBJDUMP_PRIVATE_OFILES) $(OPCODES) $(LIBCTF) $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(LIBICONV) $(DEBUGINFOD_LIBS) $(LIBSFRAME) $(LIBDEMANGLE_MSVC) -lstdc++ 
 
 objdump.@OBJEXT@:objdump.c
 if am__fastdepCC
@@ -289,6 +292,7 @@ endif
 endif
 
 cxxfilt_SOURCES = cxxfilt.c $(BULIBS)
+cxxfilt_LDADD = $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(LIBICONV) $(LIBDEMANGLE_MSVC) -lstdc++
 
 ar_SOURCES = arparse.y arlex.l not-ranlib.c arsup.c rename.c binemul.c \
 	emul_$(EMULATION).c $(BULIBS)
@@ -300,6 +304,7 @@ ranlib_SOURCES = arparse.y arlex.l is-ranlib.c arsup.c rename.c binemul.c \
 ranlib_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL)
 
 addr2line_SOURCES = addr2line.c $(BULIBS)
+addr2line_LDADD = $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(LIBICONV) $(LIBDEMANGLE_MSVC) -lstdc++
 
 coremerge_SOURCES = coremerge.c $(BULIBS)
 coremerge_LDADD = $(BFDLIB) $(LIBIBERTY)  $(LIBINTL) -lm
@@ -531,7 +536,7 @@ windmc_SOURCES = windmc.c mcparse.y mclex.c \
 windmc_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL) $(LIBICONV)
 
 dllwrap_SOURCES = dllwrap.c version.c
-dllwrap_LDADD = $(LIBIBERTY) $(LIBINTL)
+dllwrap_LDADD = $(LIBIBERTY) $(LIBINTL) $(LIBICONV)
 
 
 EXTRA_DIST = arparse.c arparse.h arlex.c sysinfo.c sysinfo.h \

@@ -30,7 +30,9 @@ extern void *read_debugging_info (bfd *, asymbol **, long, bool);
 
 extern bool print_debugging_info
   (FILE *, void *, bfd *, asymbol **,
-   char * (*) (struct bfd *, const char *, int), bool);
+   char * (*) (struct bfd *, const char *, int,
+   char * (*) (const char *, int)),
+   char * (*) (const char *, int), bool);
 
 /* Routines used to read and write stabs information.  */
 

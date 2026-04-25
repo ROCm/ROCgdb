@@ -1,0 +1,18 @@
+https://github.com/llvm/llvm-project
+Path: llvm/lib/Demangle
+Commit: 04b05998b16721d41d2ad1e453cc4549483bb8e7
+Copied to .
+
+Path: /llvm/include/llvm/Demangle
+Commit: 54c9ddddd1da353b0303df1e86cf444c5363733d
+Copied to ./llvm/include/llvm/Demangle
+
+Notes:
+- Files copied manually.
+    Sources: MicrosoftDemangle.cpp, MicrosoftDemangleNodes.cpp
+	Headers: All.
+- Added empty llvm-config.h to /llvm/include/llvm/Config
+- MicrosoftDemangle.cpp changes:
+   - Errors sent to SET_ERROR macro, for error location reporting.
+   - Demangler::parse() has itanium demangler calls commented out.
+     See #if 0

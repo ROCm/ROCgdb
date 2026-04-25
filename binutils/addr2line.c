@@ -239,7 +239,7 @@ lookup_symbol (bfd *abfd, char *sym, size_t offset)
   /* Try again mangled */
   for (i = 0; i < symcount; i++)
     {
-      char *d = bfd_demangle (abfd, syms[i]->name, demangle_flags);
+      char *d = bfd_demangle_new (abfd, syms[i]->name, demangle_flags, msvc_demangle);
       bool match = d && !strcmp (d, sym);
       free (d);
 
@@ -364,7 +364,7 @@ translate_addresses (bfd *abfd, asection *section)
                     name = "??";
                   else if (do_demangle)
                     {
-                      alloc = bfd_demangle (abfd, name, demangle_flags);
+                      alloc = bfd_demangle_new (abfd, name, demangle_flags, msvc_demangle);
                       if (alloc != NULL)
                         name = alloc;
                     }

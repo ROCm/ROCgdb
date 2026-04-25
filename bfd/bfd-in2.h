@@ -2830,6 +2830,8 @@ bfd_vma bfd_emul_get_maxpagesize (const char *);
 bfd_vma bfd_emul_get_commonpagesize (const char *);
 
 char *bfd_demangle (bfd *, const char *, int);
+char *bfd_demangle_new (bfd *, const char *, int,
+			char* (*)(const char*, int));
 
 asymbol *bfd_group_signature (asection *group, asymbol **isympp);
 

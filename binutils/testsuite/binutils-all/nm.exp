@@ -29,6 +29,89 @@ if ![is_remote host] {
 
 send_user "Version [binutil_version $NM]"
 
+# Test nm with MSVC demangling
+# This test compiles a C++ file with clang targeting MSVC with DWARF debug info
+# and verifies that nm correctly uses msvc_demangle.
+proc test_nm_msvc_demangle {} {
+    global NM
+    global NMFLAGS
+    global srcdir
+    global subdir
+    global CLANG_FOR_TARGET
+
+    set test "nm --demangle with MSVC mangled symbols"
+    
+    # Check platform first
+    if {![istarget "x86_64-*-*"] && ![istarget "i?86-*-*"]} then {
+	unsupported "$test (not x86/x86-64 platform)"
+	return
+    }
+
+    # Check if clang is available
+    if {![info exists CLANG_FOR_TARGET]} then {
+	unsupported "$test (CLANG_FOR_TARGET not set)"
+	return
+    }
+    
+    # Source file path
+    set srcfile "$srcdir/$subdir/x86-64/msvc-demangle.cpp"
+    if {![file exists $srcfile]} then {
+	unsupported "$test (source file not found: $srcfile)"
+	return
+    }
+    
+    set testfile "tmpdir/msvc-demangle.obj"
+    
+    # Set flags for MSVC target with DWARF debug info
+    set CLANG_CFLAGS "--target=x86_64-pc-windows-msvc -O0 -gdwarf-5 -c"
+    
+    # Compile with clang
+    set compile_cmd [concat $CLANG_FOR_TARGET $CLANG_CFLAGS $srcfile -o $testfile]
+    if { [catch {eval exec $compile_cmd} compile_output] != 0 } {
+	unsupported "$test (compilation failed: $compile_output)"
+	return
+    }
+    
+    # Run nm with demangling
+    set got [binutils_run $NM "$NMFLAGS --demangle $testfile"]
+    
+    # Check for demangled MSVC symbols
+    # The mangled symbol is: ?myMethod@MyClass@MyNamespace@@QEAAXHN@Z
+    # Should be demangled to: MyNamespace::MyClass::myMethod
+    # Also check for template: ??$templateMethod@H@MyClass@MyNamespace@@QEAAHH@Z
+    
+    set found_mymethod 0
+    set found_template 0
+    
+    # Look for demangled method name
+    if {[regexp {MyNamespace::MyClass::myMethod} $got]} then {
+	set found_mymethod 1
+    }
+    
+    # Look for demangled template method
+    if {[regexp {MyNamespace::MyClass::templateMethod} $got]} then {
+	set found_template 1
+    }
+    
+    if { $found_mymethod && $found_template } then {
+	pass $test
+    } else {
+	fail $test
+	if { !$found_mymethod } then {
+	    verbose "Failed to find demangled myMethod (expected pattern: MyNamespace::MyClass22::myMethod)"
+	}
+	if { !$found_template } then {
+	    verbose "Failed to find demangled templateMethod (expected pattern: MyNamespace::MyClass33::templateMethod)"
+	}
+	verbose "Got: $got"
+    }
+    
+    # Clean up
+    catch {file delete $testfile}
+}
+
+# Run MSVC demangling test - it will report UNSUPPORTED if conditions aren't met
+test_nm_msvc_demangle
 
 if {![binutils_assemble $srcdir/$subdir/bintest.s tmpdir/bintest.o]} then {
     fail "nm (assembling)"
