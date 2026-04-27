@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 00439e98624e206a06effc64d0c717a86f62cbb6 # 16/04/2026
+  THEROCK_COMMIT_REF: 8df747734dda21ac24eb63a43454eb448655a507 # 27/04/2026
 
 jobs:
   therock-build-linux:
@@ -23,7 +23,7 @@ jobs:
     permissions:
       id-token: write
     container:
-      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:d6ae5712a9c7e8b88281d021e907b312cd8a26295b95690baef3e8dde4805858 # 2026-02-12T04:27:43.622Z
+      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:48492540591673fdc8d51beb89bde41e7ba13cbb528f643c0a481ba42c4058f2 # 2026-04-17T00:02:57.922524016Z
       options: -v /runner/config:/home/awsconfig/
     env:
       AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
