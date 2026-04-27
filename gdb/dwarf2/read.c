@@ -15462,16 +15462,28 @@ new_symbol_file_line (struct die_info *die, struct dwarf2_cu *cu,
   if (!index_cst.has_value ())
     return;
 
-  if (file_cu->line_header == nullptr)
+  /* decode_line_header_for_cu is CU-only and asserts on type units.
+     For type units, the line header setup runs before processing child
+     DIEs, in method dwarf2_cu::setup_type_unit_groups.  So if
+     line_header is still nullptr here it means there is no usable line
+     table for this unit.  */
+  if (file_cu->line_header == nullptr
+      && !file_cu->per_cu->is_debug_types ())
     {
       file_and_directory fnd (nullptr, nullptr);
       decode_line_header_for_cu (file_cu->dies, file_cu, fnd);
     }
 
   file_name_index file_index = (file_name_index) *index_cst;
-  struct file_entry *fe = nullptr;
-  if (file_cu->line_header != nullptr)
-    fe = file_cu->line_header->file_name_at (file_index);
+
+  /* Check if we successfully got line_header.  */
+  if (file_cu->line_header == nullptr)
+    {
+      complaint (_("missing .debug_line information to resolve file index"));
+      return;
+    }
+
+  struct file_entry *fe = file_cu->line_header->file_name_at (file_index);
 
   if (fe == nullptr)
     {

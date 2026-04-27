@@ -1216,10 +1216,8 @@ windows_nat_target::wait (ptid_t ptid, struct target_waitstatus *ourstatus,
 	      th->stopped_at_software_breakpoint = false;
 	      if (current_event.dwDebugEventCode
 		  == EXCEPTION_DEBUG_EVENT
-		  && ((current_event.u.Exception.ExceptionRecord.ExceptionCode
-		       == EXCEPTION_BREAKPOINT)
-		      || (current_event.u.Exception.ExceptionRecord.ExceptionCode
-			  == STATUS_WX86_BREAKPOINT))
+		  && is_sw_breakpoint (&current_event
+				       .u.Exception.ExceptionRecord)
 		  && windows_process->windows_initialization_done)
 		{
 		  th->stopped_at_software_breakpoint = true;

@@ -1432,6 +1432,11 @@ loongarch_assemble_INSNs (char *str, unsigned int expand_from_macro)
       if (*str == '\0')
 	break;
 
+      /* LoongArch instructions require 4-byte alignment.  When emitting
+	 instructions into any section, record the appropriate section
+	 alignment.  */
+      record_alignment (now_seg, 2);
+
       struct loongarch_cl_insn the_one;
       memset (&the_one, 0, sizeof (the_one));
       the_one.name = str;
