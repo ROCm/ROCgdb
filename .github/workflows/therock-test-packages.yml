@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 00439e98624e206a06effc64d0c717a86f62cbb6 # 16/04/2026
+  THEROCK_COMMIT_REF: 8df747734dda21ac24eb63a43454eb448655a507 # 27/04/2026
   VENV_DIR: ${{ github.workspace }}/.venv
   OUTPUT_ARTIFACTS_DIR: "./build"
   THEROCK_BIN_DIR: "./build/bin"
@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 45
 
     container:
-      image: ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb@sha256:939b8e35887144d1ca4eca928dc2869991339cab869168790e495fc0a5907bbb
+      image: ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb@sha256:7063e922b4b9145c92f20011674571f1c97b8fad6faaeb0b7d2d165b0bd9ae8b
       options: "--cap-add=SYS_PTRACE --ipc host --group-add video --device /dev/kfd --device /dev/dri --group-add 110 --ulimit memlock=-1:-1 --security-opt seccomp=unconfined --env-file /etc/podinfo/gha-gpu-isolation-settings --user 0:0"
 
     defaults:
