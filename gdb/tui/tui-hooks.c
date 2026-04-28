@@ -167,7 +167,26 @@ tui_inferior_exit (struct inferior *inf)
 static void
 tui_before_prompt (const char *current_gdb_prompt)
 {
-  tui_refresh_frame_and_register_information ();
+  /* If TUI_DEFER_RERENDER is true then the window content will not
+     yet have been filled in, do so now.  This is only expected to
+     happen during the switches into TUI mode as it means the CMD
+     window will exist by the time all the other windows have their
+     content filled in.  If filling in one of the other windows
+     triggers a secondary prompt (e.g. debuginfod prompt) then the CMD
+     window will be available to display the prompt.  */
+  if (tui_defer_rerender)
+    {
+      target_terminal::scoped_restore_terminal_state term_state;
+      target_terminal::ours_for_output ();
+
+      tui_defer_rerender = false;
+      for (tui_win_info *window : tui_windows)
+	if (window->is_visible ())
+	  window->rerender ();
+    }
+  else
+    tui_refresh_frame_and_register_information ();
+
   from_stack = false;
   from_source_symtab = false;
 }

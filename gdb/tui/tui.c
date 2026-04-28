@@ -69,6 +69,9 @@ show_tui_debug (struct ui_file *file, int from_tty,
 /* Tells whether the TUI is active or not.  */
 bool tui_active = false;
 
+/* See tui.h.  */
+bool tui_defer_rerender = false;
+
 /* Tells whether the TUI should do deferred curses initialization.
    If TRIBOOL_TRUE, then yes.  If TRIBOOL_FALSE. then no (because
    initialization is already done).  If TRIBOOL_UNKNOWN, then no (because
@@ -499,6 +502,14 @@ tui_enable (void)
     return;
 
   tui_batch_rendering defer;
+
+  /* Defer filling in window contents at this time.  The window
+     content will be filled in by calling rerender later.  We do this
+     so that we can be sure the CMD window will exist as other windows
+     are rendered, filling in some windows might trigger a secondary
+     prompt (e.g. debuginfod prompt) and we want to be sure that the
+     CMD window exists to display the prompt in.  */
+  tui_defer_rerender = true;
 
   /* To avoid to initialize curses when gdb starts, there is a deferred
      curses initialization.  This initialization is made only once

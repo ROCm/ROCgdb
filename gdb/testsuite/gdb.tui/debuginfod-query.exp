@@ -1,0 +1,270 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check that a debuginfod query during TUI initialization doesn't cause a
+# crash.
+
+require allow_tui_tests
+
+load_lib debuginfod-support.exp
+require allow_debuginfod_tests
+
+tuiterm_env
+
+standard_testfile
+
+if { [build_executable "build executable" $testfile $srcfile] == -1 } {
+    return
+}
+
+if {[section_get $binfile ".gnu_debuglink"] ne ""} {
+    unsupported "debug information has already been split out"
+    return
+}
+
+# Assume that GDB is in TUI mode, in the SRC layout, and that a
+# debuginfod prompt is currently active in the CMD window.
+#
+# Send ANSWER, either 'y' or 'n' to the debuginfod prompt, and check
+# how the SRC window updates.  Answer 'y' and debuginfod should
+# download the source code, which should be displayed in the SRC
+# window.  Answer 'n' and the 'No Source Available' message should
+# appear in the SRC window.
+#
+# Finally, send a basic 'print' command to GDB to check that the CMD
+# window is still responsive.
+proc src_layout_answer_prompt_check_screen { answer } {
+    set re \
+	[string_to_regexp \
+	     {(y or [n]) }]
+
+    send_gdb "${answer}\n"
+    Term::wait_for ""
+    set re "${re}${answer}"
+    gdb_assert { [Term::check_region_contents_p 0 15 80 9 $re] } \
+	"wait for answer to interactive prompt to show"
+
+    if { $answer eq "n" } {
+	gdb_assert { [Term::check_region_contents_p 0 15 80 9 \
+			 "Debuginfod has been disabled\\."] } \
+	    "debuginfod has been disabled"
+
+	gdb_assert { [Term::check_region_contents_p 1 1 78 13 \
+			  "\\\[ No Source Available \\\]"] } \
+	    "source code was not downloaded"
+    } else {
+	gdb_assert { [Term::check_region_contents_p 0 15 80 9 \
+			 "Debuginfod has been enabled\\."] } \
+	    "debuginfod has been enabled"
+
+	gdb_assert { [Term::check_region_contents_p 1 1 78 13 \
+			 "main \\(void\\)"] } \
+	    "source code was downloaded"
+    }
+
+    # Check that prompt is responsive.
+    gdb_assert { [Term::command "print 1"] } "responsive prompt"
+}
+
+# Basic setup before running a test.  Disable debuginfod progress
+# bars, setup the substitute path so GDB cannot find the source code,
+# and must instead, use debuginfod to get the source code.
+proc setup_for_debuginfod_test {} {
+    # Hide progress bars when downloading from debuginfod.
+    gdb_test_no_output "set progress-bars enabled off"
+
+    # Ensure GDB cannot find the source file.  If available the source
+    # can be fetched from debuginfod.
+    gdb_test_no_output "set directories"
+    gdb_test_no_output "set substitute-path $::srcdir /dev/null" \
+	"set substitute-path"
+
+    # Reset the height, and enable the pager.  We don't expect to see
+    # any pagination prompts from these tests, but some bugs trigger
+    # the pager at the wrong time, and we want to expose those.
+    gdb_test_no_output "set pagination on"
+    gdb_test_no_output "set height 24"
+}
+
+
+# Trigger a switch to TUI mode based on HOW, which is either 'command'
+# or 'keys'.  We expect to see an interactive prompt while TUI is
+# being enabled, to which we reply ANSWER (either 'y' or 'n').
+#
+# When FILL_SCREEN is true we emit lots of lines at the CLI prompt
+# before switching to the TUI, at one point this would cause GDB to
+# incorrectly print the pagination prompt when switching to the TUI
+# via a multi-key combination (e.g. C-x C-a).
+proc_with_prefix run_switch_with_prompt_test { how answer fill_screen } {
+    Term::clean_restart 24 80 $::testfile
+
+    setup_for_debuginfod_test
+
+    if {![Term::prepare_for_tui]} {
+	return
+    }
+
+    Term::gen_prompt
+
+    # Print lots of content to the screen, but not enough to trigger
+    # the pager.  The critical thing here is that we must print more
+    # lines than will fit in the TUI's CMD window.  If the pager is
+    # not reset when switching to TUI mode, the first output in the
+    # TUI CMD window will trigger the pager, which is not correct.
+    if { $fill_screen } {
+	set cmd "echo "
+	for { set i 0 } { $i < 20 } { incr i } {
+	    set cmd "${cmd}${i}\\n"
+	}
+	gdb_test $cmd ".*" \
+	    "echo lots of lines"
+    }
+
+    # Trigger the switch to TUI mode.
+    if { $how eq "command" } {
+	send_gdb "tui enable\n"
+    } elseif { $how eq "keys" } {
+	send_gdb "\030\001"
+    } else {
+	perror "unknown test mode: $how"
+    }
+
+    set re \
+	[string_to_regexp \
+	     {(y or [n]) }]
+    gdb_assert { [Term::wait_for_region_contents 0 17 80 3 $re] } \
+	"wait for initial interactive prompt"
+
+    foreach mk { \030\001 \0302 \0301 \030o \030q \030s } {
+	set before [Term::get_region 0 0 80 24 "\r\n"]
+	send_gdb $mk
+
+	# It's not easy to check that pressing a key doesn't cause the
+	# display to change.  If we read the output then either the
+	# display didn't change, or we read the display to quickly,
+	# and the changes haven't been drawn yet.
+	#
+	# We could just throw a 'sleep 1' in here, which will mostly
+	# work, but still depends on GDB responding fast enough.
+	#
+	# To avoid this race we send the string '123' to GDB.  As
+	# GDB's UI is single threaded, by the time '123' is drawn then
+	# any effects from the multi-key combination should also have
+	# been drawn.
+	#
+	# We can then delete the '123' by sending 'C-u' to clear the
+	# line, and after this we can check that the display is
+	# exactly as it was before we started, this means that the
+	# multi-key combination didn't result in a UI change.
+
+	set a_string 123
+	send_gdb $a_string
+	Term::wait_for_region_contents 0 0 80 24 $a_string
+
+	send_gdb "\025"
+	Term::wait_for_region_contents 0 0 80 24 [string_to_regexp $before]
+
+	set after [Term::get_region 0 0 80 24 "\r\n"]
+	gdb_assert { $before eq $after } \
+	    "no changes after sending '[unprintable_to_octal $mk]'"
+    }
+
+    src_layout_answer_prompt_check_screen $answer
+}
+
+# Switch into TUI mode, but directly into ASM layout using "layout
+# asm".  As the SRC window is not visible no debuginfod prompt should
+# be displayed.
+#
+# Now switch to SRC layout.  If HOW is 'command' then use 'layout
+# next' to select the SRC layout.  If HOW is 'keys' then use 'C-x 2'
+# which also selects the next layout, which is the SRC layout.
+#
+# As the SRC window is now visible, we should see a debuginfod prompt.
+# Use ANSWER (either 'y' or 'n') to answer the prompt, and check how
+# the SRC window updates as a result.
+proc_with_prefix run_switch_to_asm_test { how answer } {
+    Term::clean_restart 24 80 $::testfile
+
+    setup_for_debuginfod_test
+
+    if {![Term::prepare_for_tui]} {
+	return
+    }
+
+    Term::gen_prompt
+
+    # Switching to ASM layout doesn't require the source file, so
+    # shouldn't trigger the debuginfod prompt.
+    send_gdb "layout asm\n"
+    Term::wait_for ""
+
+    # Now switching to the next layout, which should be the SRC
+    # layout.  The SRC layout needs the source code, so this should
+    # trigger the debuginfod prompt.
+    if { $how eq "command" } {
+	send_gdb "layout next\n"
+    } elseif { $how eq "keys" } {
+	send_gdb "\0302"
+    } else {
+	perror "unknown test mode: $how"
+    }
+
+    set re \
+	[string_to_regexp \
+	     {(y or [n]) }]
+    gdb_assert { [Term::wait_for_region_contents 0 18 80 3 $re] } \
+	"wait for debuginfod interactive prompt"
+
+    src_layout_answer_prompt_check_screen $answer
+}
+
+# Setup directory for the debuginfod server to serve from.
+set debugdir [standard_output_file "debug"]
+file copy -force $binfile $debugdir/
+
+# Create CACHE and DB directories ready for debuginfod to use.
+prepare_for_debuginfod cache db
+
+# Can add 'keys' to MODES list, but this doesn't currently
+# work due to PR gdb/33794.  This will be fixed in the next
+# commit, and this comment removed.
+set modes {command}
+
+with_debuginfod_env $cache {
+    save_vars { env(DEBUGINFOD_URLS) } {
+	foreach_with_prefix how $modes {
+	    foreach_with_prefix ans { n y } {
+		file delete -force $cache
+
+		set url [start_debuginfod $db $debugdir]
+		if { $url eq "" } {
+		    unresolved "failed to start debuginfod server"
+		    continue
+		}
+
+		# Point the client to the server.
+		setenv DEBUGINFOD_URLS $url
+
+		foreach_with_prefix fill_screen { true false } {
+		    run_switch_with_prompt_test $how $ans $fill_screen
+		}
+		run_switch_to_asm_test $how $ans
+
+		stop_debuginfod
+	    }
+	}
+    }
+}
