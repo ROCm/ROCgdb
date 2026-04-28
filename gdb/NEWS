@@ -72,6 +72,9 @@
   automatically set to UTF-8.  (Users can use the Windows 'chcp'
   command to change the output codepage of the console.)
 
+* The Windows native target now supports scheduler-locking.  E.g.,
+  "set scheduler-locking on" now works.  Previously it gave an error.
+
 * New targets
 
 GNU/Linux/MicroBlaze (gdbserver) microblazeel-*linux*
