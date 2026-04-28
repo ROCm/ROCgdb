@@ -165,6 +165,7 @@ proc Term::_ctl_0x0a {} {
 	    }
 
 	    incr _cur_row -1
+	    _clear_lines $_cur_row $_rows
 	}
     }
 }
