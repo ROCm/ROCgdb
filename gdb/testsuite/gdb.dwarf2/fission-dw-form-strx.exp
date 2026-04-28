@@ -18,7 +18,7 @@
 load_lib dwarf.exp
 
 # We run objcopy locally to split out the .dwo file.
-if [is_remote host] {
+if {[is_remote host]} {
     return 0
 }
 
@@ -75,9 +75,9 @@ Dwarf::assemble $asm_file {
 
 # Build the executable and extract the .dwo file using objcopy.
 set obj [standard_output_file "${testfile}-dw.o"]
-if [build_executable_and_dwo_files "$testfile.exp" "${binfile}" {nodebug} \
-	[list $asm_file [list nodebug split-dwo] $obj] \
-	[list $srcfile  [list nodebug]]] {
+if {[build_executable_and_dwo_files "$testfile.exp" "${binfile}" {nodebug} \
+	 [list $asm_file [list nodebug split-dwo] $obj] \
+	 [list $srcfile  [list nodebug]]]} {
     return -1
 }
 
