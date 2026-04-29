@@ -22,7 +22,7 @@ set gcc_compiled [is_c_compiler_gcc]
 
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile $srcfile2] debug]} {
-    return -1
+    return
 }
 
 #

@@ -31,12 +31,12 @@ standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile \
 	 {debug build-id}] == -1} {
-    return -1
+    return
 }
 
 # Split out BINFILE.debug.  Remove debug from BINFILE.
 if {[gdb_gnu_strip_debug $binfile] != 0} {
-    return -1
+    return
 }
 
 # Get the '.build-id/xx/xxx...xxx' part of the filename.

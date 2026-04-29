@@ -19,7 +19,7 @@ set u_msg "Memory tagging not supported or disabled by the current architecture\
 
 standard_testfile
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
-    return -1
+    return
 }
 
 if {[target_info gdb_protocol] == "extended-remote"} {
@@ -40,14 +40,14 @@ with_test_prefix "before program execution" {
 clean_restart $testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Targets that don't support memory tagging should not execute the
 # runtime memory tagging tests.
 if {![supports_memtag]} {
     unsupported "memory tagging unsupported"
-    return -1
+    return
 }
 
 # With the program running, try to use the memory tagging commands.

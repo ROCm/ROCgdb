@@ -18,7 +18,7 @@ standard_testfile .c
 # This test is Linux-only.
 if {![istarget *-*-linux*]} {
     unsupported "info-os.exp"
-    return -1
+    return
 }
 
 # Support for XML-output is needed to run this test.
@@ -26,11 +26,11 @@ require allow_xml_test
 
 # Compile test program.
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile {debug pthreads}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Get PID of test program.

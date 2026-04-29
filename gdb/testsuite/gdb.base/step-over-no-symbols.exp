@@ -19,7 +19,7 @@
 standard_testfile start.c
 
 if { [build_executable "failed to build" ${testfile} $srcfile] } {
-    return -1
+    return
 }
 
 # Get the current PC.  MSG is used as test message.

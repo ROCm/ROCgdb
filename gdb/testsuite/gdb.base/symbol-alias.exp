@@ -20,7 +20,7 @@ set old_clang [expr {[test_compiler_info {clang-1[0-4]-*-*}] \
 			 || [test_compiler_info {clang-[1-9]-*}]}]
 
 if { [prepare_for_testing "failed to prepare" ${testfile} [list $srcfile $srcfile2]] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {

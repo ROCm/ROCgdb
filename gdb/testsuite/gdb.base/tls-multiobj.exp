@@ -167,15 +167,15 @@ proc do_tests {force_internal_tls {do_kfail_tls_access 0}} {
 
 if { [gdb_compile_shlib $lib1src $lib1obj {debug}] != "" } {
     untested "failed to compile shared object"
-    return -1
+    return
 }
 if { [gdb_compile_shlib $lib2src $lib2obj {debug}] != "" } {
     untested "failed to compile shared object"
-    return -1
+    return
 }
 if { [gdb_compile_shlib $lib3src $lib3obj {debug}] != "" } {
     untested "failed to compile shared object"
-    return -1
+    return
 }
 
 # Certain linux target architectures implement support for internal

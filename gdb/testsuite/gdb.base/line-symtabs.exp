@@ -21,11 +21,11 @@ if { [is_remote host] } {
 }
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # PR 17559: gdb_disassembly was using the wrong symtab lookup function.

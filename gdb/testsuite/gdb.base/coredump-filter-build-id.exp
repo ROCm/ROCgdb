@@ -26,16 +26,16 @@ standard_testfile "normal.c"
 # This test is Linux x86_64 only.
 if { ![istarget *-*-linux*] } {
     untested "$testfile.exp"
-    return -1
+    return
 }
 require is_x86_64_m64_target gcore_cmd_available
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile {debug build-id}] } {
-    return -1
+    return
 }
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 # First we need to generate a corefile.
@@ -43,7 +43,7 @@ set corefilename "[standard_output_file gcore.test]"
 if { ![gdb_gcore_cmd "$corefilename" "save corefile"] } {
     verbose -log "Could not save corefile"
     untested "$testfile.exp"
-    return -1
+    return
 }
 
 # Determine if GDB dumped the mapping containing the build-id.  This

@@ -16,7 +16,7 @@
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
@@ -35,7 +35,7 @@ gdb_test_multiple "l main:L1" "" {
 }
 
 if { ! $supported } {
-    return -1
+    return
 }
 
 gdb_test "break main:L1" "Location main:L1 not available"

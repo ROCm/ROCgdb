@@ -20,7 +20,7 @@ standard_testfile .c
 
 if {[build_executable "failed to prepare" $testfile \
 	 $srcfile {debug nowarnings}]} {
-    return -1
+    return
 }
 clean_restart
 
@@ -32,7 +32,7 @@ gdb_load ${binfile}
 set test "verify no symtabs are expanded"
 if { [readnow] } {
     unsupported $test
-    return -1
+    return
 }
 gdb_test_no_output "maint info symtabs" $test
 

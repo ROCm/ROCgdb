@@ -23,7 +23,7 @@ set testfile "solib-corrupted"
 set srcfile start.c
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return -1
+    return
 }
 
 # With probes interface GDB no longer scans the inferior library list so its

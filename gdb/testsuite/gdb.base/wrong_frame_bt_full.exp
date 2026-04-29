@@ -37,14 +37,14 @@ if {[gdb_compile \
       [standard_output_file ${main_testfile}] \
       executable {debug}] != ""} {
     untested "failed to build $main_testfile"
-    return -1
+    return
 }
 
 clean_restart ${main_testfile}
 
 if {![runto opaque_routine]} {
     untested "could not run to opaque_routine"
-    return -1
+    return
 }
 
 # Make sure that "bt full" command is capable of displaying MY_TABLE

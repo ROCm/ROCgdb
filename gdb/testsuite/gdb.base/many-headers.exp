@@ -27,7 +27,7 @@ if { [target_info gdb_protocol] != "" } {
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # Generate core file.
@@ -49,7 +49,7 @@ catch {
 } msg
 if { "$msg" != "" } {
     untested "Can't set stack limit"
-    return -1
+    return
 }
 
 set cmd \

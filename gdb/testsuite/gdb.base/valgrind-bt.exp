@@ -22,11 +22,11 @@ require {!is_remote target}
 
 standard_testfile .c
 if {[build_executable $testfile.exp $testfile $srcfile {debug}] == -1} {
-    return -1
+    return
 }
 
 if { [vgdb_start] == -1 } {
-    return -1
+    return
 }
 
 set double_free [gdb_get_line_number "double-free"]

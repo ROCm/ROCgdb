@@ -80,7 +80,7 @@ proc test {cmds_after_kill} {
 }
 
 if {[build_executable "failed to prepare" $testfile $srcfile] == -1} {
-    return -1
+    return
 }
 
 # The actual output GDB prints in response to commands after the

@@ -36,7 +36,7 @@
 # Use the same test program constvars.c.
 
 if { [prepare_for_testing "failed to prepare" volatile constvars.c] } {
-    return -1
+    return
 }
 
 #

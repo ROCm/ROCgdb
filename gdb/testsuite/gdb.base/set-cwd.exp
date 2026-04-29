@@ -20,7 +20,7 @@ require !use_gdb_stub
 standard_testfile
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile debug] } {
-    return -1
+    return
 }
 
 # Test that tilde expansion works fine.

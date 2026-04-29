@@ -31,11 +31,11 @@ set srcfile_lib "${test}-lib.c"
 
 if {[build_executable "build library" ${binfile_lib} ${srcfile_lib} \
 	 {debug shlib}] == -1} {
-    return -1
+    return
 }
 
 if {[build_executable ${test}.exp $binfile_test ${srcfile_test} {}] == -1} {
-    return -1
+    return
 }
 
 # Note: The separate debug info file content build-id/crc32 are not verified

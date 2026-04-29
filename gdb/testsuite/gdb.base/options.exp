@@ -37,14 +37,14 @@ load_lib completion-support.exp
 standard_testfile .c
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 clean_restart
 
 if { ![readline_is_used] } {
     untested "no tab completion support without readline"
-    return -1
+    return
 }
 
 set tui_supported_p [allow_tui_tests]

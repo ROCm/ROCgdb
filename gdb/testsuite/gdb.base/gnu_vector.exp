@@ -43,7 +43,7 @@ if { [do_compile {-mcpu=native}] != ""
 clean_restart $testfile
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 # Get endianess for the scalar->vector casts

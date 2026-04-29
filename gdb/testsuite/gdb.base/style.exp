@@ -23,7 +23,7 @@ standard_testfile
 
 # Compile the test executable.
 if {[build_executable "failed to build" $testfile $srcfile {debug macros}]} {
-    return -1
+    return
 }
 
 # The tests in this file are run multiple times with GDB's styles

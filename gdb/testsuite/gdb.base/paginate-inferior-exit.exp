@@ -18,7 +18,7 @@
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug] == -1} {
-    return -1
+    return
 }
 
 # Test paginating while printing about the inferior having exited.

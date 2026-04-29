@@ -21,12 +21,12 @@ standard_testfile with-mf-main.c with-mf-inc.c
 
 if {[prepare_for_testing "failed to prepare" $testfile "$srcfile $srcfile2" \
 	 debug]} {
-    return -1
+    return
 }
 
 if { [ensure_gdb_index $binfile] == -1 } {
     untested "error adding gdb index"
-    return -1
+    return
 }
 
 clean_restart $testfile

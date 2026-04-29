@@ -27,12 +27,12 @@ require {!is_remote host}
 if { [catch {file copy -force ${srcdir}/${subdir}/${srcfile} \
 			      [standard_output_file tmp-${srcfile}]}] != 0 } {
     error "Could not create temporary file"
-    return -1
+    return
 }
 
 # Build the test executable using an absolute path.
 if  { [gdb_compile [standard_output_file tmp-${srcfile}] "${binfile}" executable {debug}] != "" } {
-    return -1
+    return
 }
 
 # Unlike most GDB tests, we do not use gdb_reinitialize_dir in this script.
@@ -67,7 +67,7 @@ if { [gdb_breakpoint [standard_output_file tmp-${srcfile}]:${line} {no-message}]
 # Build the test executable using a relative path.
 if  { [gdb_compile [relative_filename [pwd] [build_standard_output_file tmp-${srcfile}]] \
 	   "${binfile}" executable {debug}] != "" } {
-    return -1
+    return
 }
 
 clean_restart $testfile

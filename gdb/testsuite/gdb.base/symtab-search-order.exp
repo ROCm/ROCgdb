@@ -36,7 +36,7 @@ if { [prepare_for_testing "prepare" $testfile [list $srcfile $srcfile2] \
 gdb_load_shlib $lib1
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # PR 17564

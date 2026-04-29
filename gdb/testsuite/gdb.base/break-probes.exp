@@ -23,14 +23,14 @@ set binfile_lib [standard_output_file $libname.so]
 
 if { [gdb_compile_shlib $srcfile_lib $binfile_lib {}] != "" } {
     untested "failed to compile shared library"
-    return -1
+    return
 }
 
 set binfile_lib_target [gdb_download_shlib $binfile_lib]
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile \
 	  [list debug shlib_load additional_flags=-DSHLIB_NAME=\"$binfile_lib_target\"]] } {
-    return -1
+    return
 }
 
 gdb_locate_shlib $binfile_lib
@@ -57,7 +57,7 @@ gdb_test_multiple "p /x \$pc" "" {
 }
 if { $pc == "" } {
     unsupported "Couldn't get $pc"
-    return -1
+    return
 }
 regsub "0x0*" $pc "" pc
 
@@ -72,7 +72,7 @@ gdb_test_multiple "info probes stap rtld" "" {
 
 if { ! $using_probes } {
     unsupported "probes not present on this system"
-    return -1
+    return
 }
 
 set sysroot ""

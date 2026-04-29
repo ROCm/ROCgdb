@@ -18,11 +18,11 @@ require allow_hw_watchpoint_access_tests
 set test watchpoint-hw-hit-once
 set srcfile ${test}.c
 if { [prepare_for_testing "failed to prepare" ${test} ${srcfile}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "rwatch watchee"

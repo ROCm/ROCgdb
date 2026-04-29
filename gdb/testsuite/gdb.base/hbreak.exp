@@ -18,11 +18,11 @@ require allow_hw_breakpoint_tests
 set test hbreak
 set srcfile ${test}.c
 if { [prepare_for_testing "failed to prepare" ${test} ${srcfile}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set breakline [gdb_get_line_number "break-at-exit"]

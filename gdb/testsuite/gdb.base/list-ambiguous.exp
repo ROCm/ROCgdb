@@ -24,7 +24,7 @@ setenv EDITOR true
 
 if {[prepare_for_testing "failed to prepare" $testfile [list $srcfile $srcfile2] \
 	 {debug}]} {
-    return -1
+    return
 }
 
 # Build source listing pattern based on an inclusive line range.

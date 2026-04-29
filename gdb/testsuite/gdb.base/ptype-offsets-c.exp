@@ -30,7 +30,7 @@ if { ![is_lp64_target] } {
 }
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile] } {
-    return -1
+    return
 }
 
 # Tests handling flexible array member.  Regression tests for PR gdb/33966.

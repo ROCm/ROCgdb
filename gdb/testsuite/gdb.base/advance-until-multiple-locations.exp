@@ -22,7 +22,7 @@ require allow_cplus_tests
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	  {debug c++}] } {
-    return -1
+    return
 }
 
 set lineno [gdb_get_line_number "multiple locations here"]

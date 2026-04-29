@@ -31,7 +31,7 @@ require !gdb_debug_enabled
 standard_testfile
 
 if { [build_executable "failed to prepare" $testfile $srcfile debug] } {
-    return -1
+    return
 }
 
 # This is the expected output for each of the test combinations

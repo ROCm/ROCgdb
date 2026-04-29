@@ -31,13 +31,13 @@ set exec2 [standard_output_file $testfile2]
 if { [gdb_compile [file join $srcdir $subdir $srcfile] $objfile \
 	  object [list debug]] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 if { [gdb_compile $objfile $exec1 executable {debug text_segment=0x1000000}] != ""
      || [gdb_compile $objfile $exec2 executable {debug text_segment=0x2000000}] != ""} {
     untested "link failed"
-    return -1
+    return
 }
 
 # First check whether the address of "main" in exec1 is readable in
@@ -45,7 +45,7 @@ if { [gdb_compile $objfile $exec1 executable {debug text_segment=0x1000000}] != 
 
 clean_restart $testfile1
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set addr ""
@@ -59,7 +59,7 @@ gdb_test_multiple "p/x &main" $test {
 
 clean_restart $testfile2
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set cannot_access 0

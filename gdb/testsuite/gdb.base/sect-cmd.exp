@@ -17,7 +17,7 @@
 
 if { [prepare_for_testing "failed to prepare" "sect-cmd" \
 	  {break.c break1.c} {debug nowarnings}] } {
-    return -1
+    return
 }
 set srcfile break.c
 set srcfile1 break1.c

@@ -19,11 +19,11 @@ require allow_fork_tests
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Test "catch signal SIGHUP"

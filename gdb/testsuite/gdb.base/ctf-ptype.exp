@@ -88,16 +88,16 @@ gdb_test "ptype struct t_struct" \
 # Test the equivalence between '.' and '->' for struct member references.
 
 if {[gdb_test "ptype v_struct1.v_float_member"	"type = float"] < 0} {
-    return -1
+    return
 }
 if {[gdb_test "ptype v_struct1->v_float_member"	"type = float"] < 0} {
-    return -1
+    return
 }
 if {[gdb_test "ptype v_t_struct_p.v_float_member"	"type = float"] < 0} {
-    return -1
+    return
 }
 if {[gdb_test "ptype v_t_struct_p->v_float_member"	"type = float"] < 0} {
-    return -1
+    return
 }
 
 gdb_test "ptype struct link" \

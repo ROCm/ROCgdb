@@ -34,7 +34,7 @@ require !use_gdb_stub
 standard_testfile
 
 if {[build_executable "failed to build" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # Start the program running, and return its PID, ready for attaching.

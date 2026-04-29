@@ -18,7 +18,7 @@ set executable ${testfile}
 
 if {[build_executable "failed to prepare for dprintf with non-stop" \
 	 ${testfile} ${srcfile} {debug}]} {
-    return -1
+    return
 }
 
 save_vars { GDBFLAGS } {
@@ -27,7 +27,7 @@ save_vars { GDBFLAGS } {
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "dprintf foo,\"At foo entry\\n\"" "Dprintf .*"

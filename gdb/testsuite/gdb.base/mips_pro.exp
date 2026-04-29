@@ -24,7 +24,7 @@ if {[test_compiler_info gcc-*-*]} {
 }
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $options]} {
-    return -1
+    return
 }
 
 if {[runto middle]} {

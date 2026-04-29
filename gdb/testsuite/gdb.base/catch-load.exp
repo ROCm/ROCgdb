@@ -18,7 +18,7 @@ require allow_shlib_tests
 standard_testfile .c
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug shlib_load}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 set testfile2 catch-load-so
@@ -27,7 +27,7 @@ set binfile2 [standard_output_file ${testfile2}.so]
 set binfile2_dlopen [shlib_target_file ${testfile2}.so]
 if { [gdb_compile_shlib "${srcdir}/${subdir}/${srcfile2}" ${binfile2} {debug}] != "" } {
     untested "failed to compile shared library"
-    return -1
+    return
 }
 
 # Run one set of tests.

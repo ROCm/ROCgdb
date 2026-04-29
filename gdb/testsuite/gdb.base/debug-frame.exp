@@ -20,11 +20,11 @@ require !gdb_debug_enabled
 standard_testfile .c -2.c
 set srcfiles [list $srcfile $srcfile2]
 if {[prepare_for_testing "failed to prepare" $testfile $srcfiles]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Redirect debug output to file.

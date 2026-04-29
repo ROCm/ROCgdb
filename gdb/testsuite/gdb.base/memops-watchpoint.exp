@@ -21,12 +21,12 @@ standard_testfile
 set options "-fno-builtin-memset -fno-builtin-memcpy -fno-builtin-memmove"
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	  [list debug additional_flags=$options]] } {
-    return -1
+    return
 }
 
 set linespec ${srcfile}:[gdb_get_line_number "Break here"]
 if {![runto ${linespec}]} {
-    return -1
+    return
 }
 
 gdb_test "watch -location a\[28\]" \

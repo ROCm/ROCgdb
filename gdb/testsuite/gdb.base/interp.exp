@@ -18,7 +18,7 @@
 standard_testfile
 
 if { [prepare_for_testing "failed to prepare" ${testfile} $srcfile {debug}] } {
-    return -1
+    return
 }
 
 # Do not use gdb_test for this test, since it has two prompts.

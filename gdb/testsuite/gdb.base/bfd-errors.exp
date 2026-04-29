@@ -57,7 +57,7 @@ set lib_flags debug
 # Compile shared library:
 if { [gdb_compile_shlib ${srcfile_lib} ${binfile_lib} $lib_flags] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Open the shared library and determine some basic facts.  The key
@@ -71,7 +71,7 @@ set data [read $solib_fp 4]
 if { ![string equal $data "\x7fELF"] } {
     close $solib_fp
     untested "shared library is not an ELF file"
-    return -1
+    return
 }
 
 # Read EI_CLASS for ELF32 versus ELF64.
@@ -93,7 +93,7 @@ if { [catch {exec $objcopy_program \
 		 ${binfile_lib}} output] } {
     untested "failed objcopy dump-section"
     verbose -log "objcopy output: $output"
-    return -1
+    return
 }
 
 # Determine length of .dynstr.  We'll use the length for creating invalid
@@ -144,7 +144,7 @@ if { [catch {exec $objcopy_program \
 		 ${binfile_lib}} output] } {
     untested "failed objcopy update-section"
     verbose -log "objcopy output: $output"
-    return -1
+    return
 }
 
 clean_restart

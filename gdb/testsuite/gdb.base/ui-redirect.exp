@@ -17,11 +17,11 @@
 require !gdb_debug_enabled
 
 if { [prepare_for_testing "failed to prepare" ui-redirect start.c] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set test "commands"

@@ -26,13 +26,13 @@ remote_exec build "ln -sf ${srcdirabs}/${subdir}/${srcfile2} $srcfilelink"
 
 if { [file type $srcfilelink] != "link" } {
     unsupported "target directory cannot have symbolic links"
-    return -1
+    return
 }
 
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile} ${srcfilelink}" "${binfile}" \
 		  executable {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart ${testfile}

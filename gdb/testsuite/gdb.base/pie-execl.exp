@@ -42,7 +42,7 @@ set binfile2_test_msg OBJDIR/${subdir}/${executable2}
 set opts [list debug pie]
 if {[build_executable ${testfile}.exp $executable1 $srcfile [concat $opts {additional_flags=-DBIN=1}]] == -1
     || [build_executable ${testfile}.exp $executable2 $srcfile [concat $opts {additional_flags=-DBIN=2}]] == -1} {
-    return -1
+    return
 }
 
 clean_restart ${executable1}
@@ -50,7 +50,7 @@ clean_restart ${executable1}
 gdb_test_no_output "set args ${binfile2}" "set args ${binfile2_test_msg}"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Do not stop on `main' after re-exec.

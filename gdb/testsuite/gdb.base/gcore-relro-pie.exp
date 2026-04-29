@@ -21,7 +21,7 @@ standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile \
 	 {debug pie "ldflags=-Wl,-z,relro"}]} {
-    return -1
+    return
 }
 
 set stripped_binfile ${binfile}.stripped
@@ -30,7 +30,7 @@ set gcorefile ${binfile}.gcore
 set strip_program [transform strip]
 remote_file host delete ${stripped_binfile}
 if {[run_on_host "strip" "$strip_program" "-g -o ${stripped_binfile} $binfile"]} {
-    return -1
+    return
 }
 
 # Workaround PR binutils/10802:
@@ -43,11 +43,11 @@ gdb_load $stripped_binfile
 
 # The binary is stripped of debug info, but not minsyms.
 if {![runto break_here]} {
-    return -1
+    return
 }
 
 if {![gdb_gcore_cmd $gcorefile "save a corefile"]} {
-    return -1
+    return
 }
 
 # Now restart gdb with the unstripped binary and load the corefile.

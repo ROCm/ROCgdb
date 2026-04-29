@@ -35,7 +35,7 @@ lappend opts additional_flags=-DHAVE_BUILTIN_TRAP=[have_builtin_trap]
 
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable $opts] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $testfile

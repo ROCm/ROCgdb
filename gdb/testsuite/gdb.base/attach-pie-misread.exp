@@ -26,7 +26,7 @@ set executable $testfile
 
 if {[build_executable_own_libs ${testfile}.exp $executable $srcfile \
 	 {pie}] == ""} {
-    return -1
+    return
 }
 
 # Program Headers:
@@ -110,7 +110,7 @@ set phdr [read_phdr $binfile "readelf rebuilt with stub_size"]
 set dynamic_vaddr_prelinkno [lindex $phdr 0]
 
 if {![prelink_yes $prelink_args]} {
-    return -1
+    return
 }
 
 set phdr [read_phdr $binfile "readelf with prelink -R"]

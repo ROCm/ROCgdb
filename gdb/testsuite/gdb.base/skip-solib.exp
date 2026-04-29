@@ -41,18 +41,18 @@ set binfile_lib [standard_output_file ${libname}.so]
 
 if {[gdb_compile_shlib ${srcdir}/${subdir}/${srcfile_lib} ${binfile_lib} \
 	 [list debug]] != ""} {
-    return -1
+    return
 }
 
 if {[gdb_compile "${srcdir}/${subdir}/${srcfile_main}" "${binfile_main}.o" \
 	 object debug] != ""} {
-    return -1
+    return
 }
 
 set testobjdir [standard_output_file {}]
 if {[gdb_compile "${binfile_main}.o" "${binfile_main}" executable \
 	 [list debug shlib=$binfile_lib]] != ""} {
-    return -1
+    return
 }
 
 #

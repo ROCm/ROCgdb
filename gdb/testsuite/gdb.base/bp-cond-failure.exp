@@ -36,7 +36,7 @@ if { [prepare_for_testing "failed to prepare" $testfile $srcfile \
 # 'show breakpoint condition-evaluation' checks below will be
 # performed with the remote connection in place.
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 # This test relies on reading address zero triggering a SIGSEGV.

@@ -29,7 +29,7 @@ standard_testfile
 set has_argv0 [gdb_has_argv0]
 
 if { [build_executable ${testfile}.exp ${testfile} ${srcfile}] == -1 } {
-    return -1
+    return
 }
 
 with_test_prefix "file symlink" {

@@ -318,29 +318,29 @@ proc do_tests {force_internal_tls} {
 # Build shared objects for dlopen:
 if { [gdb_compile_shlib $libsrc $lib1obj [list debug additional_flags=-DN=1]] != "" } {
     untested "failed to compile shared object"
-    return -1
+    return
 }
 if { [gdb_compile_shlib $libsrc $lib2obj [list debug additional_flags=-DN=2]] != "" } {
     untested "failed to compile shared object"
-    return -1
+    return
 }
 if { [gdb_compile_shlib $libsrc $lib3obj [list debug additional_flags=-DN=3]] != "" } {
     untested "failed to compile shared object"
-    return -1
+    return
 }
 if { [gdb_compile_shlib $libsrc $lib4obj [list debug additional_flags=-DN=4]] != "" } {
     untested "failed to compile shared object"
-    return -1
+    return
 }
 
 # Build shared objects to link against main program:
 if { [gdb_compile_shlib $libsrc $lib10obj [list debug additional_flags=-DN=10]] != "" } {
     untested "failed to compile shared object"
-    return -1
+    return
 }
 if { [gdb_compile_shlib $libsrc $lib11obj [list debug additional_flags=-DN=11]] != "" } {
     untested "failed to compile shared object"
-    return -1
+    return
 }
 
 # Use gdb_compile_pthreads to build and link the main program for

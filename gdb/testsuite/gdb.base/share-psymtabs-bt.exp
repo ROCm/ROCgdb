@@ -30,19 +30,19 @@ standard_testfile .c share-psymtabs-bt-2.c
 if { [prepare_for_testing "failed to prepare" $testfile "$srcfile $srcfile2" \
 	 {debug}] } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Load $binfile a second time.  The second created objfile will re-use the
 # partial symtabs created by the first one.
 if { [gdb_file_cmd $binfile] != 0 } {
     fail "file command failed"
-    return -1
+    return
 }
 
 gdb_breakpoint "bar"
 if { ![runto "bar"] } {
-    return -1
+    return
 }
 
 # A buggy GDB would fail to find the full symbol associated to this frame's

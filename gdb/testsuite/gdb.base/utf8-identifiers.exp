@@ -33,7 +33,7 @@ standard_testfile
 setenv LC_ALL C.UTF-8
 
 if { [prepare_for_testing "failed to prepare" ${testfile} [list $srcfile]] } {
-    return -1
+    return
 }
 
 if {![runto done]} {
@@ -66,7 +66,7 @@ gdb_test_no_output "nosharedlibrary"
 
 if { ![readline_is_used] } {
     untested "no tab completion support without readline"
-    return -1
+    return
 }
 
 # Test linespec completion.

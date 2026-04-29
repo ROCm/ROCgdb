@@ -20,7 +20,7 @@ require target_can_use_run_cmd
 standard_testfile
 
 if {[build_executable "failed to build" $testfile $srcfile {debug}]} {
-    return -1
+    return
 }
 
 proc test_run {testname} {

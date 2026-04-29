@@ -20,7 +20,7 @@
 
 
 if { [prepare_for_testing "failed to prepare" "hbreak2" {break.c break1.c} {debug nowarnings}] } {
-    return -1
+    return
 }
 set srcfile break.c
 set srcfile1 break1.c
@@ -517,7 +517,7 @@ test_next_with_recursion
 # on targets with optimized prologues.
 
 if { [prepare_for_testing "failed to prepare" "hbreak2o2" {break.c break1.c} {debug nowarnings optimize=-O2}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {

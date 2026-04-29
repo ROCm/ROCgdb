@@ -24,7 +24,7 @@ standard_testfile break.c break1.c
 
 if {[prepare_for_testing "failed to prepare" ${testfile} \
 	 [list $srcfile $srcfile2] {debug nowarnings}]} {
-    return -1
+    return
 }
 
 set bp_location1 [gdb_get_line_number "set breakpoint 1 here"]

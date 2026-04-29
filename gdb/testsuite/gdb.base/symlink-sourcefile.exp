@@ -32,11 +32,11 @@ if {[lindex $status 0] != 0} {
 }
 
 if {[prepare_for_testing $testfile $testfile $srcfilelink]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Using a line number ensures that the default symtab is used.

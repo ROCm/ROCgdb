@@ -19,7 +19,7 @@ standard_testfile .c
 set executable ${testfile}
 
 if { [prepare_for_testing "failed to prepare" $executable "" [list debug pie]] } {
-    return -1
+    return
 }
 
 set arch ""

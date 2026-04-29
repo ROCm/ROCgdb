@@ -18,7 +18,7 @@ standard_testfile
 
 if {[gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != ""} {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart
@@ -32,7 +32,7 @@ gdb_test "list" \
 
 gdb_load ${binfile}
 if {! [runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "list" \
@@ -40,7 +40,7 @@ gdb_test "list" \
     "list in main"
 
 if {! [runto "func2"]} {
-    return -1
+    return
 }
 
 gdb_test "list" \
@@ -58,7 +58,7 @@ gdb_test "list -1" \
 gdb_test_no_output "set listsize 3"
 
 if {! [runto_main]} {
-    return -1
+    return
 }
 gdb_test "list" \
     "func1 \\(\\);" \

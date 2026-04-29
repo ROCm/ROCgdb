@@ -37,7 +37,7 @@
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # DISPLACED indicates whether to use displaced-stepping.

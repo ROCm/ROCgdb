@@ -28,11 +28,11 @@ if {[gdb_protocol_is_native]} {
 set opts {debug nopie}
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $opts]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Manually change the value of the_variable.

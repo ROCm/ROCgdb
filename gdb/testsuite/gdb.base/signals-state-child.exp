@@ -47,13 +47,13 @@ remote_file target delete $standalone_txt
 set options [list debug "additional_flags=-DOUTPUT_TXT=\"$gdb_txt\""]
 if {[build_executable $testfile.exp $testfile $srcfile $options]} {
     untested "failed to compile"
-    return -1
+    return
 }
 
 set options [list debug "additional_flags=-DOUTPUT_TXT=\"$standalone_txt\""]
 if {[build_executable $testfile.exp $testfile-standalone $srcfile $options]} {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Run the program directly, and dump its initial signal actions and
@@ -100,7 +100,7 @@ remote_close target
 clean_restart $testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_continue_to_end "collect signals state under gdb"
@@ -108,7 +108,7 @@ gdb_continue_to_end "collect signals state under gdb"
 set test "signals states are identical"
 if { ! $have_standalone } {
     untested $test
-    return -1
+    return
 }
 
 if {!$purely_local} {

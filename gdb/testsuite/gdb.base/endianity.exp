@@ -45,7 +45,7 @@ if { !$test_sso } {
     # The rest of the testcase requires Scalar Storage Order support.
     # This compiler does not support it, so skip the rest.
     unsupported "No scalar storage order support"
-    return -1
+    return
 }
 
 gdb_test "x/x &o.v" "0x04000000"

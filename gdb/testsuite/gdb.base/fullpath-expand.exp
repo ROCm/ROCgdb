@@ -21,7 +21,7 @@ require {!is_remote host}
 
 if { [file pathtype $objdir] != "absolute" } {
     untested "objdir $objdir is not absolute"
-    return -1
+    return
 }
 
 with_cwd $srcdir {
@@ -36,7 +36,7 @@ with_cwd $srcdir {
 set result [catch {exec realpath ${srcdir}/${subdir}/${srcfile2}} realsrcfile2]
 if { $result != 0 || $realsrcfile2 == "" } {
     untested "invalid realpath of ${srcfile2}: result $result output $realsrcfile2"
-    return -1
+    return
 }
 
 clean_restart ${testfile}

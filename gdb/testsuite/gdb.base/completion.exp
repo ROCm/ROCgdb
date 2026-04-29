@@ -54,7 +54,7 @@ standard_testfile break.c break1.c
 
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile $srcfile2] {debug nowarnings}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
@@ -165,7 +165,7 @@ gdb_assert {$all_regs eq $completed_regs} "complete 'info registers '"
 # library isn't used.  Check it first.
 
 if { ![readline_is_used] } {
-    return -1
+    return
 }
 
 # The bulk of this test script pre-dates the completion-support

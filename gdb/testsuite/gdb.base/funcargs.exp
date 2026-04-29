@@ -28,7 +28,7 @@ if {[support_complex_tests]} {
 set allow_float_test [allow_float_test]
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $compile_flags]} {
-    return -1
+    return
 }
 
 #

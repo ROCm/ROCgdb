@@ -60,7 +60,7 @@ if { ! [use_gdb_stub] } {
 gdb_test "set environment GDB_INFO_PROC_ENVIRON_2 TWO"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "info proc" "process ${decimal}.*" "info proc with process"

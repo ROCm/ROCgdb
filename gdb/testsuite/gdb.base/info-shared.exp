@@ -27,12 +27,12 @@ set binfile_lib2 [standard_output_file $lib2name.so]
 
 if { [gdb_compile_shlib $srcfile_lib1 $binfile_lib1 {}] != "" } {
     untested "failed to compile shared library 1"
-    return -1
+    return
 }
 
 if { [gdb_compile_shlib $srcfile_lib2 $binfile_lib2 {}] != "" } {
     untested "failed to compile shared library 2"
-    return -1
+    return
 }
 
 set binfile_lib1_target [gdb_download_shlib $binfile_lib1]
@@ -44,7 +44,7 @@ set define1 -DSHLIB1_NAME=\"$binfile_lib1_target\"
 set cflags "$define1 $define2"
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile \
 	  [list additional_flags=$cflags shlib_load]] } {
-    return -1
+    return
 }
 
 gdb_locate_shlib $binfile_lib1

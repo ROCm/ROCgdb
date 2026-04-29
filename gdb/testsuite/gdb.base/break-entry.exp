@@ -30,7 +30,7 @@ standard_testfile start.c
 require !use_gdb_stub
 
 if { [prepare_for_testing "failed to prepare" ${testfile} $srcfile {additional_flags=-static}] } {
-    return -1
+    return
 }
 
 set test "info files"

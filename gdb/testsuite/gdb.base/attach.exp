@@ -30,21 +30,21 @@ remote_exec build "rm -f ${binfile} ${binfile2} ${binfile3}"
 #
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Build the in-system-call test
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile2}" "${binfile2}" executable {debug}] != "" } {
     untested "failed to compile in-system-call test"
-    return -1
+    return
 }
 
 # Build the third file, used to check attach when the exec-file has changed.
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile3}" "${binfile3}" executable {debug}] != "" } {
     untested "failed to compile attach exec-file changed test"
-    return -1
+    return
 }
 
 # This is a test of the error cases for gdb's ability to attach to a

@@ -24,11 +24,11 @@ if { [gcc_major_version] >= 8 } {
 }
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile \
 	[list debug "additional_flags=$cflags"]] } {
-    return -1
+    return
 }
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 # Do repeated instruction steps in order to reach TARGET from CURRENT

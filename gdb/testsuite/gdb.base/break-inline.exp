@@ -15,7 +15,7 @@
 
 
 if { [prepare_for_testing "failed to prepare" "break-inline" {} {debug nowarnings optimize=-O2}] } {
-    return -1
+    return
 }
 
 gdb_breakpoint "main" "temporary"

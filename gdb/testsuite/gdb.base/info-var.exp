@@ -19,7 +19,7 @@ standard_testfile info-var-f1.c info-var-f2.c
 
 if {[prepare_for_testing "failed to prepare" \
 	 "${testfile}" "$srcfile $srcfile2" "debug"]} {
-    return -1
+    return
 }
 
 # Note: we do not run to main, as otherwise, the output of info variables

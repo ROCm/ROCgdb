@@ -29,7 +29,7 @@ if { ![is_lp64_target] } {
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile \
 	  { debug c++ }] } {
-    return -1
+    return
 }
 
 # Test general offset printing, ctor/dtor printing, union, formatting.

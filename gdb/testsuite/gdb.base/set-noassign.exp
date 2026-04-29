@@ -15,7 +15,7 @@
 
 
 if { [prepare_for_testing "failed to prepare" "set-noassign" start.c {debug nowarnings}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {

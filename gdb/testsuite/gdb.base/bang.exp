@@ -20,7 +20,7 @@ standard_testfile args.c
 
 if {[prepare_for_testing "failed to prepare" ${testfile}! $srcfile \
 	 {debug nowarnings}]} {
-    return -1
+    return
 }
 
 # Verify that we can run the program and that it terminates normally.

@@ -18,15 +18,15 @@ standard_testfile
 # This test is Linux-only.
 if {![istarget *-*-linux*]} {
     untested "coredump-filter.exp"
-    return -1
+    return
 }
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile debug] } {
-    return -1
+    return
 }
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "break-here"]
@@ -184,7 +184,7 @@ set all_anon_corefiles { { "non-Private-Anonymous" "0x7e" \
 set core_supported [gdb_gcore_cmd "$non_private_anon_core" "save a corefile"]
 if { !$core_supported } {
     untested "corefile generation is not supported"
-    return -1
+    return
 }
 
 gdb_test_multiple "info inferiors" "getting inferior pid" {

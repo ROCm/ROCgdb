@@ -19,16 +19,16 @@ standard_testfile
 set executable $testfile
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile {debug}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_range_stepping_enabled]} {
     unsupported "range stepping not supported by the target"
-    return -1
+    return
 }
 
 # Check that range stepping can step a range of multiple instructions.

@@ -23,7 +23,7 @@ require can_spawn_for_attach
 standard_testfile
 
 if { [build_executable ${testfile}.exp ${testfile} $srcfile {debug}] == -1 } {
-    return -1
+    return
 }
 
 proc do_test {} {

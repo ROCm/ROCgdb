@@ -16,11 +16,11 @@
 standard_testfile .c
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "test-next"] temporary
