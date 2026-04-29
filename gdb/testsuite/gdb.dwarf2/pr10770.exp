@@ -18,17 +18,17 @@
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
-    return 0
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # This test also requires DWARF.
 get_debug_format
 if {![test_debug_format "DWARF \[0-9\]"]} {
-    return -1
+    return
 }
 
 gdb_test "break force_unwind" "Breakpoint .*" "set breakpoint for pr10770"

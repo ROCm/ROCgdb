@@ -29,7 +29,7 @@ get_func_info foo
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list ${srcfile}] {debug nopie}]} {
-    return -1
+    return
 }
 
 # Address for the middle of foo.  This is used as our entry point when

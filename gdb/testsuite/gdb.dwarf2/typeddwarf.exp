@@ -26,7 +26,7 @@ if { [is_x86_like_target] } {
 } elseif { [is_x86_64_m64_target] } {
     set sfile ${test}-amd64.S
 } else {
-    return 0
+    return
 }
 
 set opts {}
@@ -34,11 +34,11 @@ lappend opts nodebug
 lappend opts nopie
 
 if { [prepare_for_testing "failed to prepare" "${test}" ${sfile} $opts] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Initialize tests to be an empty array.

@@ -26,7 +26,7 @@ standard_testfile .S
 
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	 ${additional_flags}]} {
-    return -1
+    return
 }
 
 # The "info func" code tries to expand the corresponding symtab when a

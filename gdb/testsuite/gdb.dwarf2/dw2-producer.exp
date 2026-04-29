@@ -22,7 +22,7 @@ set dwarf_srcfile "file1.txt"
 
 if {[prepare_for_testing_full "failed to prepare" \
 	 [list $testfile debug main.c debug $srcfile nodebug]]} {
-    return -1
+    return
 }
 
 gdb_remote_download host ${srcdir}/${subdir}/${dwarf_srcfile}

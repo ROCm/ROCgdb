@@ -25,12 +25,12 @@ lappend flags {dwarf5}
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  $srcfile $flags] } {
-    return -1
+    return
 }
 
 if { [ensure_gdb_index $binfile] != 1 } {
     untested "error adding gdb index"
-    return -1
+    return
 }
 
 clean_restart ${::testfile}

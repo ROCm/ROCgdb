@@ -23,7 +23,7 @@ set binfile_stripped ${binfile}-stripped
 
 if { [prepare_for_testing "failed to prepare" "${testfile}" \
 	  [list $srcfile2 $srcfile] {nodebug nopie}] } {
-    return -1
+    return
 }
 
 set break_at ""
@@ -52,7 +52,7 @@ if {$result != 0} {
 gdb_load ${binfile_stripped}
 
 if {![runto "*${break_at}"]} {
-    return -1
+    return
 }
 
 set index [have_index $binfile_stripped]

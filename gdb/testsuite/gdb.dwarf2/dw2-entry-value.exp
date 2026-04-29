@@ -18,11 +18,11 @@ load_lib dwarf.exp
 require dwarf2_support
 
 if { [prepare_for_testing "failed to prepare" "dw2-entry-value" {dw2-entry-value-main.c dw2-entry-value.S} {nodebug}] } {
-    return -1
+    return
 }
 
 if {![runto f]} {
-    return -1
+    return
 }
 
 # FAIL was printing:

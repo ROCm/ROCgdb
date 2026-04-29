@@ -24,11 +24,11 @@ require dwarf2_support
 require is_x86_64_m64_target
 
 if { [prepare_for_testing "failed to prepare" "${test}" ${test}.S {nodebug}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint "breakpt"

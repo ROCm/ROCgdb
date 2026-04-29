@@ -24,7 +24,7 @@ standard_testfile .S main.c
 
 if { [build_executable "failed to prepare" ${testfile} \
 	  [list $srcfile $srcfile2] {nodebug}] } {
-    return -1
+    return
 }
 
 # We are trying to verify that the partial symtab to symtab expansion

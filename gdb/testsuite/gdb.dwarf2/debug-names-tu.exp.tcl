@@ -90,7 +90,7 @@ Dwarf::assemble {
 
 if {[prepare_for_testing "failed to prepare" $testfile "${asm_file} ${srcfile}" \
 	 [list ldflags=-nostartfiles]]} {
-    return -1
+    return
 }
 
 # Verify that .debug_names section is not ignored.

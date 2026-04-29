@@ -107,14 +107,14 @@ set object_file [standard_output_file ${testfile}.o]
 if { [build_executable_and_dwo_files "${testfile}.exp" ${testfile} {nodebug} \
 	  [list $asm_file {nodebug split-dwo} ${object_file}] \
 	  [list $srcfile {nodebug}]] } {
-    return -1
+    return
 }
 
 # Now we can start GDB.
 clean_restart ${testfile}
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Print the type of global_var.  This type information is entirely

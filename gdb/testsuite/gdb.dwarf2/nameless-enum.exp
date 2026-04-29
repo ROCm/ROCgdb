@@ -54,7 +54,7 @@ Dwarf::assemble $asm_file {
 
 if {[prepare_for_testing "failed to prepare" ${testfile} \
 	 [list $srcfile $asm_file] {nodebug}]} {
-    return -1
+    return
 }
 
 # The bug was a crash, so just do anything here to verify gdb is still

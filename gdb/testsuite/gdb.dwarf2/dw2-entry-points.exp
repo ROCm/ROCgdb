@@ -191,11 +191,11 @@ Dwarf::assemble $asm_file {
 
 if {[prepare_for_testing "failed to prepare" ${testfile} \
 	 [list $srcfile $asm_file] {nodebug}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Try whether we can set and hit breakpoints at the entry_points.
@@ -220,7 +220,7 @@ gdb_test "bt" [multi_line \
 clean_restart ${testfile}
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint "*fooso"

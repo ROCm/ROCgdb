@@ -28,7 +28,7 @@ lappend opts additional_flags=-fdebug-types-section
 
 if { [gdb_compile "$srcdir/$subdir/$srcfile" "$binfile" object \
 	  $opts] != "" } {
-    return -1
+    return
 }
 
 clean_restart $::testfile

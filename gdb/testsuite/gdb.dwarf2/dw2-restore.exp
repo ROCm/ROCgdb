@@ -28,11 +28,11 @@ if { [test_compiler_info clang*] } {
 
 if {[prepare_for_testing "failed to prepare" $testfile [list $srcfile] \
 	 $opts]} {
-    return -1
+    return
 }
 
 if {![runto foo]} {
-    return 0
+    return
 }
 gdb_test "continue" "$hex in foo \\(\\)"
 gdb_test "where" "#0 +$hex in foo \\(\\)\r\n#1 +$hex in _start \\(\\)"

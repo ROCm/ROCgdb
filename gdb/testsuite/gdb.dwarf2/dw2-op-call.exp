@@ -23,7 +23,7 @@ standard_testfile .S main.c
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile $srcfile2] {nodebug}] } {
-    return -1
+    return
 }
 
 # Additional test to verify the referenced CU is not aged out.
@@ -35,7 +35,7 @@ gdb_test "p array3" " = 3" "array3 using DW_OP_call4"
 
 # Location lists need PC.
 if {![runto_main]} {
-    return -1
+    return
 }
 gdb_test "p arraynoloc" " = <optimized out>"
 gdb_test "p arraycallnoloc" {Asked for position 0 of stack, stack only has 0 elements on it\.}

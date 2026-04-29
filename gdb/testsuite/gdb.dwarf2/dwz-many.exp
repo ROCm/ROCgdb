@@ -42,7 +42,7 @@ if {[prepare_for_testing_full "failed to prepare" \
 	      $srcfile {nodebug} \
 	      $asm_file {nodebug} \
 	      $srcfile3 {debug}]]} {
-    return -1
+    return
 }
 
 set linenr [gdb_get_line_number "return 0" $srcfile3]

@@ -99,7 +99,7 @@ Dwarf::assemble $asm_file {
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile $asm_file] {nodebug}] } {
-    return -1
+    return
 }
 
 set struct_s_i_re \
@@ -114,7 +114,7 @@ set struct_s_j_re \
 	 "}"]
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "ptype struct s" $struct_s_i_re \

@@ -65,11 +65,11 @@ Dwarf::assemble $asm_file {
 
 if { [prepare_for_testing ${testfile}.exp ${testfile} \
 	  [list $srcfile $asm_file] {nodebug}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set lines [gdb_get_lines "info locals"]

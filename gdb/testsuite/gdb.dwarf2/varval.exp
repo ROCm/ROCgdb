@@ -34,7 +34,7 @@ set asm_file [standard_output_file ${srcfile2}]
 # Any program would do, but since we already have varval
 # specifically for this testcase, might as well use that.
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
-    return -1
+    return
 }
 set int_size [get_sizeof "int" -1]
 # gdb always assumes references are implemented as pointers.
@@ -320,7 +320,7 @@ proc setup_exec { arg_bad } {
 }
 
 if { [setup_exec 0] == -1 } {
-    return -1
+    return
 }
 
 with_test_prefix "pre-main" {
@@ -329,7 +329,7 @@ with_test_prefix "pre-main" {
 
 # DW_OP_GNU_variable_value implementation requires a valid frame.
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "print varval" "= 8"
@@ -353,12 +353,12 @@ gdb_test "print untypedval" \
 	 "Type of DW_OP_GNU_variable_value DIE must be an integer or pointer\\."
 
 if { [setup_exec 1] == -1 } {
-    return -1
+    return
 }
 
 # DW_OP_GNU_variable_value implementation requires a valid frame.
 if {![runto_main]} {
-    return -1
+    return
 }
 gdb_test "print badval" "value has been optimized out"
 gdb_test "print bad_die_val1" \

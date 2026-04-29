@@ -24,11 +24,11 @@ standard_testfile .cc
 if { [prepare_for_testing "failed to prepare" "${testfile}" \
 	  $srcfile {debug c++ additional_flags=-gdwarf-4 \
 			additional_flags=-fdebug-types-section}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "ptype X" "type = struct X {.*"

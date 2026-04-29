@@ -77,12 +77,12 @@ Dwarf::assemble $asm_file {
 }
 
 if {[prepare_for_testing "failed to prepare" $executable "${asm_file} ${srcfile}" {}]} {
-    return -1
+    return
 }
 
 # DW_OP_GNU_implicit_pointer implementation requires a valid frame.
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "p p->f" " = <optimized out>"

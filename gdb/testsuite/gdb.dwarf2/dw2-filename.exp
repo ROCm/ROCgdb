@@ -23,7 +23,7 @@ standard_testfile .S
 set dwarf_srcfile "file1.txt"
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" object {nodebug}] != "" } {
-    return -1
+    return
 }
 
 gdb_remote_download host ${srcdir}/${subdir}/${dwarf_srcfile}

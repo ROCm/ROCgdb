@@ -60,7 +60,7 @@ get_func_info main
 # can't be disabled.
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list ${srcfile}] {debug nopie}] } {
-    return -1
+    return
 }
 
 # Some addresses that we need when generating the DWARF.

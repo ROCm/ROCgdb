@@ -25,7 +25,7 @@ standard_testfile main.c
 
 if { [prepare_for_testing "failed to prepare" "${testfile}" \
 	  [list ${srcfile}]] } {
-    return -1
+    return
 }
 
 # Add a .gdb_index section to PROGRAM.
@@ -141,11 +141,11 @@ gdb_test "mt print objfiles ${testfile}" \
 # First make sure enough time has passed, file mtime resolution is seconds.
 gdb_test_no_output "shell sleep 1"
 if {[run_on_host "touch binary" touch $host_binfile_with_index]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 gdb_test "mt print objfiles ${testfile}" \
     "(gdb_index|debug_names).*" \

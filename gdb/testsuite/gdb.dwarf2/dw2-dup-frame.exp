@@ -23,12 +23,12 @@ require is_x86_64_m64_target
 standard_testfile .S
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile {nodebug nopie}] } {
-    return -1
+    return
 }
 
 if {![runto stop_frame]} {
     perror "Failed to stop in stop_frame"
-    return -1
+    return
 }
 
 gdb_test "bt" \

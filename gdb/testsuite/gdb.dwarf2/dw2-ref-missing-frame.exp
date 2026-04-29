@@ -44,7 +44,7 @@ if { [prepare_for_testing_full "failed to prepare" \
 	       $srcfile [concat $flags {nodebug}]  \
 	       $srcfile2 {nodebug} \
 	       $srcfile3 {debug}]] == -1 } {
-    return -1
+    return
 }
 
 # First try referencing DW_AT_frame_base which is not defined.
