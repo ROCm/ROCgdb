@@ -10,6 +10,9 @@ Full documentation for ROCgdb is available at
 - Dumping core of AMD GPU programs with the "gcore" command is now
   significantly faster, particularly for kernels that use small
   amounts of VRAM.
+- New "catch hiperr" command that stops the inferior when a HIP API
+  call returns an error.  The convenience variable `$_hiperr` holds
+  the error code at the catchpoint.
 
 ## ROCgdb-16-3 for ROCm-7.13
 
