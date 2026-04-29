@@ -133,7 +133,7 @@ foreach_with_prefix column_info_flag {column-info no-column-info} {
 
     if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	     $options]} {
-	return -1
+	return
    }
 
     run_tests

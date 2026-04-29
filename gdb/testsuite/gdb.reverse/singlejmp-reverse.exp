@@ -24,13 +24,13 @@ if {[info exists COMPILE]} {
 				      ${testfile}.c {debug optimize=-O2} \
 				      ${testfile}-nodebug.c {optimize=-O2} \
 				      ] == -1 } {
-	return -1
+	return
     }
 } else {
     require is_x86_64_m64_target
     if { [build_executable ${testfile}.exp ${testfile} \
 	      [list ${srcfile} ${srcfile2}] {}] == -1 } {
-	return -1
+	return
     }
 }
 

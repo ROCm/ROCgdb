@@ -46,7 +46,7 @@ proc test_print { has_history level test_name } {
 }
 
 if { ![runto_main] } {
-    return 0
+    return
 }
 
 #confirm that GDB doesn't go crazy if recording isn't enabled
