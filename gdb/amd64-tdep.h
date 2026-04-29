@@ -138,6 +138,12 @@ extern void amd64_collect_fxsave (const struct regcache *regcache, int regnum,
 /* Similar to amd64_collect_fxsave, but use XSAVE extended state.  */
 extern void amd64_collect_xsave (const struct regcache *regcache,
 				 int regnum, void *xsave, int gcore);
+
+/* Helper routine to fetch error parameters of a HIP error from the
+   STRUCT_ADDR within the FRAME context.  */
+
+extern std::optional<hiperr_parameters> amd64_fetch_hiperr_parameters
+  (frame_info_ptr frame, CORE_ADDR struct_addr);
 
 /* Floating-point register set. */
 extern const struct regset amd64_fpregset;
