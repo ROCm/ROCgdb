@@ -223,6 +223,7 @@ struct wave_info
 /* Properties' names we're interested in.  */
 static const char *PROPERTY_PRECISE_MEMORY = "precise-memory";
 static const char *PROPERTY_PRECISE_ALU = "precise-alu-exceptions";
+static const char *PROPERTY_LDS_EXCEPTION = "lds-exception";
 
 struct dbgapi_property_t
 {
@@ -243,7 +244,7 @@ static std::unordered_map<const char *, dbgapi_property_t>
   amd_dbgapi_properties;
 
 /* Initialize "amd_dbgapi_properties" with the properties that we
-   care about: PROPERTY_{PRECISE_MEMORY,PRECISE_ALU}.  */
+   care about: PROPERTY_{PRECISE_MEMORY,PRECISE_ALU,LDS_EXCEPTION}.  */
 
 static void
 fetch_amd_dbgapi_properties ()
@@ -280,6 +281,8 @@ fetch_amd_dbgapi_properties ()
 	key = PROPERTY_PRECISE_MEMORY;
       else if (strcmp (name, PROPERTY_PRECISE_ALU) == 0)
 	key = PROPERTY_PRECISE_ALU;
+      else if (strcmp (name, PROPERTY_LDS_EXCEPTION) == 0)
+	key = PROPERTY_LDS_EXCEPTION;
       else
 	continue;
 
@@ -328,11 +331,13 @@ struct amd_dbgapi_inferior_info
 {
   explicit amd_dbgapi_inferior_info
     (inferior *inf, bool precise_memory_requested = false,
-     bool precise_alu_exceptions_requested = false)
+     bool precise_alu_exceptions_requested = false,
+     bool lds_exception_requested = false)
     : inf (inf)
   {
     precise_memory.requested = precise_memory_requested;
     precise_alu_exceptions.requested = precise_alu_exceptions_requested;
+    lds_exception.requested = lds_exception_requested;
   }
 
   /* Backlink to inferior.  */
@@ -371,6 +376,10 @@ struct amd_dbgapi_inferior_info
   /* Track the status of precise ALU exception reporting request and
      enablement.  */
   struct dbgapi_feature_request precise_alu_exceptions;
+
+  /* Track the status of local memory out-of-range address exception reporting
+     request and enablement.  */
+  struct dbgapi_feature_request lds_exception;
 
   gdb::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
 		     struct breakpoint *>
@@ -2717,6 +2726,24 @@ set_process_alu_exceptions_precision (amd_dbgapi_inferior_info &info)
 #endif
 }
 
+
+/* Set the process' LDS exception reporting mode.
+
+   Warn if the requested mode is not supported by at least one of
+   the agents in the process or the dbgapi interface does not provide
+   a way to set it.  */
+
+static void
+set_process_lds_exception (amd_dbgapi_inferior_info &info)
+{
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  set_process_property (info.process_id, PROPERTY_LDS_EXCEPTION,
+			info.lds_exception);
+#else
+  warning (_("dbgapi does not support lds exception setting"));
+#endif
+}
+
 /* Handle extra initialisation after we have attached to a AMDGPU corefile.  */
 
 static void
@@ -2840,6 +2867,7 @@ attach_amd_dbgapi (inferior *inf)
 
   set_process_memory_precision (info);
   set_process_alu_exceptions_precision (info);
+  set_process_lds_exception (info);
 
   /* If GDB is attaching to a process that has the runtime loaded, there will
      already be a "runtime loaded" event available.  Consume it and push the
@@ -2889,10 +2917,11 @@ detach_amd_dbgapi (inferior *inf)
   for (auto &&value : info.breakpoint_map)
     delete_breakpoint (value.second);
 
-  /* Reset the amd_dbgapi_inferior_info, except for precise_memory_mode and
-     precise_alu_exceptions.  */
-  info = amd_dbgapi_inferior_info (inf, info.precise_memory.requested,
-				   info.precise_alu_exceptions.requested);
+  /* Reset the amd_dbgapi_inferior_info, except for the requested fields.  */
+  info = amd_dbgapi_inferior_info (
+    inf, info.precise_memory.requested,
+    info.precise_alu_exceptions.requested,
+    info.lds_exception.requested);
 
   maybe_reset_amd_dbgapi ();
 }
@@ -3321,13 +3350,14 @@ amd_dbgapi_target_inferior_cloned (inferior *original_inferior,
   amd_dbgapi_inferior_info &new_info
     = get_amd_dbgapi_inferior_info (new_inferior);
 
-  /* At this point, the process is not started.  Therefore it is sufficient to
-     copy the precise memory request, it will be applied when the process
-     starts.  */
+  /* At this point, the process is not started.  Therefore it is sufficient
+     to copy the precise memory and local memory requests, they will be
+     applied when the process starts.  */
   gdb_assert (new_info.process_id == AMD_DBGAPI_PROCESS_NONE);
   new_info.precise_memory.requested = orig_info.precise_memory.requested;
   new_info.precise_alu_exceptions.requested
     = orig_info.precise_alu_exceptions.requested;
+  new_info.lds_exception.requested = orig_info.lds_exception.requested;
 }
 
 /* inferior_execd observer.  */
@@ -3340,14 +3370,17 @@ amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
      the new process image.  */
   detach_amd_dbgapi (exec_inf);
 
-  /* If using "follow-exec-mode new", carry over the precise-memory setting
+  /* If using "follow-exec-mode new", carry over the process-level properties
      to the new inferior (otherwise, FOLLOW_INF and ORIG_INF point to the same
      inferior, so this is a no-op).  */
-  get_amd_dbgapi_inferior_info (follow_inf).precise_memory.requested
-    = get_amd_dbgapi_inferior_info (exec_inf).precise_memory.requested;
-  get_amd_dbgapi_inferior_info (follow_inf).precise_alu_exceptions.requested
-    = get_amd_dbgapi_inferior_info (exec_inf)
-	.precise_alu_exceptions.requested;
+  const amd_dbgapi_inferior_info &exec_info
+    = get_amd_dbgapi_inferior_info (exec_inf);
+  amd_dbgapi_inferior_info &follow_info
+    = get_amd_dbgapi_inferior_info (follow_inf);
+  follow_info.precise_memory.requested = exec_info.precise_memory.requested;
+  follow_info.precise_alu_exceptions.requested
+    = exec_info.precise_alu_exceptions.requested;
+  follow_info.lds_exception.requested = exec_info.lds_exception.requested;
 
   attach_amd_dbgapi (follow_inf);
 }
@@ -3361,7 +3394,7 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
 {
   if (child_inf != nullptr)
     {
-      /* Copy precise-memory requested value from parent to child.  */
+      /* Copy requested features from parent to child.  */
       const amd_dbgapi_inferior_info &parent_info
 	= get_amd_dbgapi_inferior_info (parent_inf);
       amd_dbgapi_inferior_info &child_info
@@ -3370,6 +3403,7 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
 	= parent_info.precise_memory.requested;
       child_info.precise_alu_exceptions.requested
 	= parent_info.precise_alu_exceptions.requested;
+      child_info.lds_exception.requested = parent_info.lds_exception.requested;
 
       if (fork_kind != TARGET_WAITKIND_VFORKED)
 	{
@@ -3936,6 +3970,58 @@ get_effective_precise_alu_exception_mode ()
   amd_dbgapi_inferior_info &info
     = get_amd_dbgapi_inferior_info (current_inferior ());
   return info.precise_alu_exceptions.enabled;
+}
+
+/* Callback for "show amdgpu lds-exception".  */
+
+static void
+show_lds_exception_mode (struct ui_file *file, int from_tty,
+			 struct cmd_list_element *c, const char *value)
+{
+  amd_dbgapi_inferior_info &info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+
+  gdb_printf (file,
+	      _("AMDGPU local memory out-of-range address exception "
+		"reporting is %s (currently %s).\n"),
+	      info.lds_exception.requested ? "on" : "off",
+	      info.lds_exception.enabled ? "enabled" : "disabled");
+}
+
+/* Callback for "set amdgpu lds-exception".  */
+
+static void
+set_lds_exception_mode (bool value)
+{
+  amd_dbgapi_inferior_info &info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+
+  info.lds_exception.requested = value;
+
+  if (info.process_id != AMD_DBGAPI_PROCESS_NONE)
+    set_process_lds_exception (info);
+}
+
+/* Get the local memory out-of-range address exception reporting
+   requested mode.  */
+
+static bool
+get_lds_exception_mode ()
+{
+  amd_dbgapi_inferior_info &info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+  return info.lds_exception.requested;
+}
+
+/* Get the local memory out-of-range address exception reporting
+   effective mode.  */
+
+static bool
+get_effective_lds_exception_mode ()
+{
+  amd_dbgapi_inferior_info &info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+  return info.lds_exception.enabled;
 }
 
 static const char *
@@ -5484,6 +5570,20 @@ running.  If off (default), precise ALU exceptions reporting is disabled."),
 
   cmds.show->var->set_effective_value_getter<bool>
     (get_effective_precise_alu_exception_mode);
+
+  cmds = add_setshow_boolean_cmd ("lds-exception", no_class,
+				  _("Set lds-exception mode."),
+				  _("Show lds-exception mode."), _("\
+If on, local memory out-of-range address exception reporting is enabled when\n\
+the inferior is running.  If off (default), the exception reporting is\n\
+disabled."),
+				  set_lds_exception_mode,
+				  get_lds_exception_mode,
+				  show_lds_exception_mode,
+				  &set_amdgpu_list, &show_amdgpu_list);
+
+  cmds.show->var->set_effective_value_getter<bool>
+    (get_effective_lds_exception_mode);
 
   add_cmd ("version", no_set_class, show_dbgapi_version,
 	   _("Show the ROCdbgapi library version and build information."),
