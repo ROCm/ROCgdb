@@ -170,5 +170,5 @@ if {[test_compiler_info gcc*]} {
     altivec_abi_tests "additional_flags=-qaltivec" "auto"
 } else {
     warning "unknown compiler"
-    return -1
+    return
 }

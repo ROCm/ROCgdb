@@ -22,7 +22,7 @@ if {[gdb_compile \
       [list ${srcdir}/${subdir}/$srcfile ${srcdir}/${subdir}/$srcfile2] \
       "${binfile}" executable {}] != ""} {
     untested "failed to build $binfile"
-    return -1
+    return
 }
 
 

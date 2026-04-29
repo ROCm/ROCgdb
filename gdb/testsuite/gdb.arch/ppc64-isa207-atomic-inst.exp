@@ -27,7 +27,7 @@ standard_testfile  .c .S
 
 if { [prepare_for_testing "failed to prepare" $testfile "$srcfile $srcfile2" \
       {debug quiet}] } {
-    return -1
+    return
 }
 
 # The test proper.  DISPLACED is true if we should try with displaced

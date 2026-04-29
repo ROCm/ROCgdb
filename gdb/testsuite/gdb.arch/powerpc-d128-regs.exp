@@ -36,7 +36,7 @@ if {![runto_main]} {
 }
 
 if {[gdb_test "show arch" ".*powerpc:common.*" "checking for PPC arch"]} {
-    return -1
+    return
 }
 
 gdb_test "next" ""

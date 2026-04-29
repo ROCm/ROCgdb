@@ -42,7 +42,7 @@ gdb_load ${binfile}
 #
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_test "b marker" "Breakpoint 2 at.*file.*e500-abi.c, line ${::decimal}." "break marker"

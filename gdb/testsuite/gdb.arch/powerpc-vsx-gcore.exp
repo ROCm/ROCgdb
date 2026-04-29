@@ -31,13 +31,13 @@ gdb_produce_source $gen_src {
 }
 
 if {[build_executable "compile" $binfile $gen_src] == -1} {
-    return -1
+    return
 }
 
 clean_restart $testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Check if VSX register access through gdb is supported
@@ -59,7 +59,7 @@ proc check_vsx_access {} {
 }
 
 if { ![check_vsx_access] } {
-    return -1
+    return
 }
 
 for {set i 0} {$i < 64} {incr i 1} {
@@ -70,7 +70,7 @@ set core_filename [standard_output_file "$testfile.core"]
 set core_generated [gdb_gcore_cmd "$core_filename" "generate core file"]
 
 if { !$core_generated } {
-    return -1
+    return
 }
 
 clean_restart
@@ -78,7 +78,7 @@ clean_restart
 set core_loaded [gdb_core_cmd "$core_filename" "load core file"]
 
 if { $core_loaded != 1 } {
-    return -1
+    return
 }
 
 for {set i 0} {$i < 64} {incr i 1} {

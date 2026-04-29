@@ -16,7 +16,7 @@
 require {istarget "powerpc*-*-aix*"}
 
 if { [prepare_for_testing "failed to prepare" aix-sighandle aix-sighandle.c] } {
-    return -1
+    return
 }
 
 set srcfile aix-sighandle.c

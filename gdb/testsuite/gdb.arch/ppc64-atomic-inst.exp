@@ -24,7 +24,7 @@ require {istarget "powerpc*"} is_lp64_target
 standard_testfile .S
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug quiet}] } {
-    return -1
+    return
 }
 
 # The test proper.  DISPLACED is true if we should try with displaced
