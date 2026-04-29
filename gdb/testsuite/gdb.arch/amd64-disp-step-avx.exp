@@ -25,7 +25,7 @@ standard_testfile .S
 
 set options [list debug nopie]
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} $options] } {
-    return -1
+    return
 }
 
 # Get things started.
@@ -34,7 +34,7 @@ gdb_test "set displaced-stepping on" ""
 gdb_test "show displaced-stepping" ".* displaced stepping .* is on.*"
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # GDB picks a spare register from this list to hold the RIP-relative

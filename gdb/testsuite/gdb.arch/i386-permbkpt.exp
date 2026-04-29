@@ -27,7 +27,7 @@ set additional_flags [gdb_target_symbol_prefix_flags_asm]
 
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable [list debug $additional_flags]] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart ${::testfile}

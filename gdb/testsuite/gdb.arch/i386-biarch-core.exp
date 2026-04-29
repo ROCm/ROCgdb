@@ -40,13 +40,13 @@ set address 0x400078
 set corefile [decompress_bz2 $corebz2file]
 if { $corefile == "" } {
     untested "failed bzip2"
-    return -1
+    return
 }
 
 file stat ${corefile} corestat
 if {$corestat(size) != 102400} {
     untested "bzip2 produces invalid result"
-    return -1
+    return
 }
 
 set corefile [gdb_remote_download host $corefile]

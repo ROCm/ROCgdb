@@ -31,14 +31,14 @@ require target_can_use_run_cmd is_x86_64_m64_target
 if {[target_info gdb_protocol] == "remote"
     || [target_info gdb_protocol] == "extended-remote"} {
     unsupported "using [target_info gdb_protocol] protocol"
-    return -1
+    return
 }
 
 standard_testfile
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	  { debug }] } {
-    return -1
+    return
 }
 
 # Insert the watchpoint, it should default to a h/w watchpoint.

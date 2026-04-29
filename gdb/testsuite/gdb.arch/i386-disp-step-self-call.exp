@@ -25,14 +25,14 @@ set opts {debug nopie}
 standard_testfile .S -alarm.c
 
 if { [prepare_for_testing "failed to prepare" $testfile "$srcfile $srcfile2" $opts] } {
-    return -1
+    return
 }
 
 gdb_test "set displaced-stepping on" ""
 gdb_test "show displaced-stepping" ".* displaced stepping .* is on.*"
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Proceed to the test function.

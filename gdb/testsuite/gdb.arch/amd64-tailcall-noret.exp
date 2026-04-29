@@ -27,11 +27,11 @@ if {[info exists COMPILE]} {
 lappend opts nopie
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} $opts] } {
-    return -1
+    return
 }
 
 if {![runto noret]} {
-    return -1
+    return
 }
 
 gdb_test "bt" "#0 +noret \\(x=1\\) at \[^\r\n\]*\r\n#1 +${::hex} in mayret \\(x=x@entry=1\\) at \[^\r\n\]*\r\n#2 +${::hex} in tailcall \\(x=x@entry=1\\) at \[^\r\n\]*\r\n#3 +${::hex} in main \\(\\) at .*"

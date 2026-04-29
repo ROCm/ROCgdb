@@ -19,13 +19,13 @@ standard_testfile ".S"
 require is_x86_like_target
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile] } {
-    return -1
+    return
 }
 
 gdb_test_no_output "set language ada"
 
 if { ![runto "-pstap bar"] } {
-    return -1
+    return
 }
 
 gdb_test "print \$_probe_arg0" " = 40" \

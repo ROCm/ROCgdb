@@ -26,11 +26,11 @@ standard_testfile .S
 set additional_flags [gdb_target_symbol_prefix_flags_asm]
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile [list debug nopie $additional_flags]] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 with_test_prefix "zero" {

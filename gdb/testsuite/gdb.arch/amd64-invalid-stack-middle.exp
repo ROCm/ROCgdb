@@ -32,11 +32,11 @@ standard_testfile .S
 require is_x86_64_m64_target
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {nopie}] } {
-    return -1
+    return
 }
 
 if {![runto breakpt]} {
-    return -1
+    return
 }
 
 gdb_test "bt" "^#0 +breakpt *\\(\\) \[^\r\n\]*\r\n#1 +${::hex} in func5\[^\r\n\]*\r\n#2 +${::hex} in func4\[^\r\n\]*\r\n#3 +${::hex} in func3\[^\r\n\]*\r\nBacktrace stopped: Cannot access memory at address ${::hex}" \
@@ -48,7 +48,7 @@ gdb_test "bt" "^#0 +breakpt *\\(\\) \[^\r\n\]*\r\n#1 +${::hex} in func5\[^\r\n\]
 clean_restart ${::testfile}
 
 if {![runto breakpt]} {
-    return -1
+    return
 }
 
 gdb_test "interpreter-exec mi \"-stack-info-depth\"" \
@@ -62,7 +62,7 @@ gdb_test "interpreter-exec mi \"-stack-info-depth\"" \
 clean_restart ${::testfile}
 
 if {![runto breakpt]} {
-    return -1
+    return
 }
 
 gdb_test "interpreter-exec mi \"-stack-list-frames\"" \

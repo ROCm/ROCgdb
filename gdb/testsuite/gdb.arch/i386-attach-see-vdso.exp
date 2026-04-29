@@ -28,7 +28,7 @@ if {![istarget "i386-*-*"]} {
 
 # The kernel VDSO is used for the syscalls returns only on i386 (not x86_64).
 if { [build_executable "failed to prepare" $testfile $srcfile $options] } {
-    return -1
+    return
 }
 
 # Don't tell GDB which executable we're debugging.

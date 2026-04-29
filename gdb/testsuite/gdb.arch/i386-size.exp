@@ -32,7 +32,7 @@ set additional_flags [gdb_target_symbol_prefix_flags]
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 	  executable [list debug $additional_flags]] != "" } {
     untested "i386-size"
-    return -1
+    return
 }
 
 clean_restart $::testfile
