@@ -13,6 +13,11 @@ Full documentation for ROCgdb is available at
 - New "catch hiperr" command that stops the inferior when a HIP API
   call returns an error.  The convenience variable `$_hiperr` holds
   the error code at the catchpoint.
+- Add support for local memory out-of-address-range reporting for
+  architectures that support it.  Local memory out-of-address-range
+  reporting is controlled with the following commands:
+  - set amdgpu lds-out-of-addr-exception
+  - show amdgpu lds-out-of-addr-exception
 
 ## ROCgdb-16-3 for ROCm-7.13
 
