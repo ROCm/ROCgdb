@@ -70,7 +70,7 @@ for { set i 1 } { $i <= $Term::_cols } { incr i } {
 gdb_assert { $main_screen_line == 7 } \
     "check main is where we expect on the screen"
 if { $main_screen_line == -1 } {
-    return 0
+    return
 }
 
 # Check the horizontal scrolling.
