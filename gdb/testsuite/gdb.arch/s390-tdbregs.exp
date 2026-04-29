@@ -28,11 +28,11 @@ standard_testfile .c
 # endless loop would result.
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile \
 	  [list "debug" "additional_flags=-msoft-float"]] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_test_multiple "next" "check for TE support" {
