@@ -38,7 +38,7 @@ proc restart {} {
 
 with_test_prefix "save" {
     if {![restart]} {
-	return -1
+	return
     }
 
     gdb_breakpoint "function" qualified
@@ -56,7 +56,7 @@ with_test_prefix "save" {
 
 with_test_prefix "restore" {
     if {![restart]} {
-	return -1
+	return
     }
 
     # Restore the breakpoints.

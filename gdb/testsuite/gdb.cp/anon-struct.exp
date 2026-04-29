@@ -20,7 +20,7 @@
 standard_testfile .cc
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug c++}] } {
-     return -1
+    return
 }
 
 # Clang doesn't add any names for functions within anonymous structures,
