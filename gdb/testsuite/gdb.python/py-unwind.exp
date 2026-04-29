@@ -37,7 +37,7 @@ require is_x86_64_m64_target
 # The following tests require execution.
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Check for the corrupt backtrace.

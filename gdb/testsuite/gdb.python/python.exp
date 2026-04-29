@@ -210,7 +210,7 @@ clean_restart ${testfile}
 # The following tests require execution.
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 set lineno [gdb_get_line_number "Break to end."]
@@ -424,7 +424,7 @@ clean_restart ${testfile}
 # The following tests require execution.
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # print-stack settings
@@ -479,7 +479,7 @@ clean_restart ${testfile}
 # The following tests require execution.
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 runto [gdb_get_line_number "Break at func2 call site."]

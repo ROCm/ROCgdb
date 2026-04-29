@@ -27,7 +27,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 set python_error_text "Error occurred in Python.*"
@@ -120,7 +120,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile}2 ${srcfile} {nodebug l
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_py_test_silent_cmd "python objfile = gdb.objfiles()\[0\]" \

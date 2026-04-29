@@ -821,7 +821,7 @@ test_add_to_history
 # The following tests require execution.
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 test_unavailable

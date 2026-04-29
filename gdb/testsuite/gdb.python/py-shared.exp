@@ -44,7 +44,7 @@ gdb_load_shlib ${library}
 # The following tests require execution.
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 runto [gdb_get_line_number "Break to end."]

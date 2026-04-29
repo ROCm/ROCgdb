@@ -56,7 +56,7 @@ set remote_python_file \
 set corefile [core_find $binfile {}]
 if {$corefile == ""} {
     unsupported "core file not generated"
-    return 0
+    return
 }
 
 # Create a directory named DIRNAME for use as the

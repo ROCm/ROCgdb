@@ -27,7 +27,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_breakpoint "bottom_func"
