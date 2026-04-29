@@ -1019,6 +1019,16 @@ using gdbarch_fetch_pointer_argument_ftype = CORE_ADDR (const frame_info_ptr &fr
 CORE_ADDR gdbarch_fetch_pointer_argument (struct gdbarch *gdbarch, const frame_info_ptr &frame, int argi, struct type *type);
 void set_gdbarch_fetch_pointer_argument (struct gdbarch *gdbarch, gdbarch_fetch_pointer_argument_ftype *fetch_pointer_argument);
 
+/* Fetch HIP error parameters from the FRAME's function arguments.
+   FRAME is the frame of a "__hipOnError ()" function.  On a successful
+   run, return the parameters.  Otherwise, return a std::nullopt. */
+
+bool gdbarch_fetch_hiperr_parameters_p (struct gdbarch *gdbarch);
+
+using gdbarch_fetch_hiperr_parameters_ftype = std::optional<hiperr_parameters> (frame_info_ptr frame);
+std::optional<hiperr_parameters> gdbarch_fetch_hiperr_parameters (struct gdbarch *gdbarch, frame_info_ptr frame);
+void set_gdbarch_fetch_hiperr_parameters (struct gdbarch *gdbarch, gdbarch_fetch_hiperr_parameters_ftype *fetch_hiperr_parameters);
+
 /* Iterate over all supported register notes in a core file.  For each
    supported register note section, the iterator must call CB and pass
    CB_DATA unchanged.  If REGCACHE is not NULL, the iterator can limit

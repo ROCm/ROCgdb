@@ -1,0 +1,332 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test catching HIP's API errors:
+#
+# 1. The executable is loaded and started.
+# 2. The executable is loaded but not started.
+# 3. There's no executable set yet.
+# 4. Two API errors are returned and caught.
+# 5. Implicit (stub) execution in the form of "kernel<<<...>>>();"
+# 6. Conditional catch of 1 error, using $_hiperr, while there are 2 errors.
+# 7. Temporary catch of the first error, while there are 2 errors.
+# 8. $_hiperr is printed correctly when debug symbols are available.
+# 9. $_hiperr is printed correctly without debug symbols.
+#    This one checks if "catch hiperr" works without debug symbols as well.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[prepare_for_testing "failed to prepare debug version of ${testfile}" \
+	${::testfile}.dbg ${::srcfile} {debug hip}]} {
+    return -1
+}
+
+if {[prepare_for_testing "failed to prepare non-debug version of ${testfile}" \
+	${::testfile}.nodbg ${::srcfile} {hip}]} {
+    return -1
+}
+
+# Reference error parameters for HIP API calls:
+#   hipSetDevice (...)
+#   hipGetDevice (...)
+#   hipLaunchKernel (...)
+#
+# See init_reference_hip_errors.
+
+set hip_set_device_err_no ""
+set hip_set_device_err_name ""
+set hip_set_device_err_str ""
+set hip_get_device_err_no ""
+set hip_get_device_err_name ""
+set hip_get_device_err_str ""
+set hip_launch_kernel_err_no ""
+set hip_launch_kernel_err_name ""
+set hip_launch_kernel_err_str ""
+
+# Retrieve the value of EXP in the inferior, as a string value
+# (using "print /s").  DEFAULT is used as fallback if print fails.
+
+proc get_string_valueof {exp default} {
+    set val ${default}
+    gdb_test_multiple "print /s ${exp}" "get string value of \"${exp}\"" {
+	-re -wrap "^${::valnum_re} = $::hex \"(\[^\"\]*)\"" {
+	    set val $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+    return ${val}
+}
+
+# Get the reference values from the program (which is run with "ref" argument)
+
+proc init_reference_hip_errors {} {
+    foreach func {set_device get_device launch_kernel} {
+	set ::hip_${func}_err_no [get_integer_valueof "hip_${func}_err.no" bad]
+	gdb_assert {[set ::hip_${func}_err_no] != "bad"} \
+	    "hip_${func}_err_no initialized"
+
+	set ::hip_${func}_err_name [get_string_valueof "hip_${func}_err.name" bad]
+	gdb_assert {[set ::hip_${func}_err_name] != "bad"} \
+	    "hip_${func}_err_name initialized"
+
+	set ::hip_${func}_err_str [get_string_valueof "hip_${func}_err.str" bad]
+	gdb_assert {[set ::hip_${func}_err_str] != "bad"} \
+	    "hip_${func}_err_str initialized"
+    }
+}
+
+# Set a hiperr catchpoint and check if it set accordingly.  If TEMP is
+# true, then a temporary version (tcatch) is used.  Differences between the
+# permanent and temporary are:
+#
+# catch hiperr                 vs. tcatch hiperr
+# Catchpoint <number> ...      vs. Temporary catchpoint <number> ...
+# info breakpoints
+# <number> catchpoint keep ... vs. <number> catchpoint del ...
+
+proc catch_hiperr {{temp false}} {
+    if {!$temp} {
+	set cmd "catch hiperr"
+	set type "Catchpoint"
+	set catch_test_name "set catchpoint"
+	set disp "keep"
+    } else {
+	set cmd "tcatch hiperr"
+	set type "Temporary catchpoint"
+	set catch_test_name "set temporary catchpoint"
+	set disp "del"
+    }
+
+    gdb_test "$cmd" "$type $::decimal \\(HIP error\\)" "$catch_test_name"
+
+    gdb_test "info break" \
+	"$::decimal\[ \t\]+catchpoint\[ \t\]+$disp\[ \t\]+y\[ \t\]+catch hiperr" \
+	"check breakpoints"
+}
+
+# Set a conditional "catch hiperr" that checks the error number is NUMBER.
+
+proc catch_hiperr_cond {number} {
+    gdb_test "catch hiperr if \$_hiperr == $number" \
+	"Catchpoint $::decimal \\(HIP error\\)" \
+	"set conditional catchpoint"
+}
+
+# Execute CMD (e.g. "run" or "cont") and look for two lines
+# in the output:
+#
+# Thread 1 "hip" hit Catchpoint 1 (HIP error)
+# (...) hipErrorInvalidDevice (101): invalid device ordinal
+#       ^^^^^^^^^^^^^^^^^^^^^  ^^^   ^^^^^^^^^^^^^^^^^^^^^^
+#               NAME          NUMBER STR
+#
+# As the last step, also check that $_hiperr is equal to NUMBER.
+# If TEMP is true, the catchpoint is temporary.
+
+proc check_hiperr_is_caught {cmd number name str {temp false}} {
+    if {!$temp} {
+	set type "Catchpoint"
+    } else {
+	set type "Temporary catchpoint"
+    }
+    set hit_line "Thread $::decimal .* hit $type $::decimal \\(HIP error\\)"
+    set err_line "HIP API call failed with error $name \\($number\\): $str\r\n.*"
+
+    gdb_test "$cmd" "${hit_line}\r\n${err_line}" "caught $name"
+    gdb_test "p/d \$_hiperr" "= $number" "\$_hiperr must be $number"
+}
+
+# Execute CMD and check the reported hiperr catchpoint against the
+# reference values for hipSetDevice (...).  TEMP, if true, indicates
+# the catchpoint must be a temporary one.
+
+proc check_hip_set_device_err {cmd {temp false}} {
+    check_hiperr_is_caught $cmd \
+	$::hip_set_device_err_no \
+	$::hip_set_device_err_name \
+	$::hip_set_device_err_str \
+	$temp
+}
+
+# Execute CMD and check the reported hiperr catchpoint against the
+# reference values for hipGetDevice (...).
+
+proc check_hip_get_device_err {cmd} {
+    check_hiperr_is_caught $cmd \
+	$::hip_get_device_err_no \
+	$::hip_get_device_err_name \
+	$::hip_get_device_err_str
+}
+
+# Execute CMD and check the reported hiperr catchpoint against the
+# reference values for kernel<<<...>>> ().
+
+proc check_hip_launch_kernel_err {cmd} {
+    check_hiperr_is_caught $cmd \
+	$::hip_launch_kernel_err_no \
+	$::hip_launch_kernel_err_name \
+	$::hip_launch_kernel_err_str
+}
+
+proc do_test {} {
+    with_rocm_gpu_lock {
+
+	clean_restart ${::testfile}.dbg
+	if {![runto_main]} {
+	    return
+	}
+	gdb_test_multiple "info symbol __hipOnError" \
+	    "check if __hipOnError symbol exists" {
+	    -re -wrap "^__hipOnError in section .text of .*" {
+		pass $gdb_test_name
+	    }
+	    -re -wrap ".*" {
+		unsupported "no __hipOnError symbol was found"
+		return
+	    }
+	}
+
+	# Let all the errors occur and their values be recorded by the program.
+	with_test_prefix "getting reference values" {
+	    clean_restart ${::testfile}.dbg
+	    gdb_test_no_output "set args ref"
+	    if {![runto [gdb_get_line_number \
+			    "Break after reference initialization"]]} {
+		return
+	    }
+	    init_reference_hip_errors
+	}
+
+	with_test_prefix "after starting" {
+	    clean_restart ${::testfile}.dbg
+	    gdb_test_no_output "set args one"
+	    runto_main
+	    catch_hiperr
+	    check_hip_set_device_err "cont"
+	}
+
+	with_test_prefix "after loading" {
+	    clean_restart ${::testfile}.dbg
+	    gdb_test_no_output "set args one"
+	    catch_hiperr
+	    check_hip_set_device_err "run"
+	}
+
+	with_test_prefix "before loading" {
+	    clean_restart
+	    catch_hiperr
+	    gdb_load ${::binfile}.dbg
+	    gdb_test_no_output "set args one"
+	    check_hip_set_device_err "run"
+	}
+
+	with_test_prefix "two catchpoints" {
+	    clean_restart ${::testfile}.dbg
+	    gdb_test_no_output "set args two"
+	    catch_hiperr
+	    check_hip_set_device_err "run"
+	    check_hip_get_device_err "cont"
+	}
+
+	with_test_prefix "stub kernel launch" {
+	    clean_restart ${::testfile}.dbg
+	    gdb_test_no_output "set args launch"
+	    catch_hiperr
+	    check_hip_launch_kernel_err "run"
+	    gdb_test "backtrace" \
+		".*__hipOnError.*hipLaunchKernel.*__device_stub__kernel.*" \
+		"call stack"
+	}
+
+	with_test_prefix "conditional catchpoint" {
+	    clean_restart ${::testfile}.dbg
+	    gdb_test_no_output "set args two"
+	    catch_hiperr_cond $::hip_get_device_err_no
+	    check_hip_get_device_err "run"
+	}
+
+	with_test_prefix "temporary catchpoint" {
+	    clean_restart ${::testfile}.dbg
+	    gdb_test_no_output "set args two"
+	    catch_hiperr true
+	    check_hip_set_device_err "run" true
+	    gdb_test "continue" \
+		"Inferior $::decimal .* exited normally.*" \
+		"no more catches"
+	}
+
+	# With the debug symbols (with "hipError_t" type), $_hiperr
+	# must be printed as an enum like hipErrorSomething.
+	with_test_prefix "prints of \$_hiperr with debug symbols" {
+	    clean_restart ${::testfile}.dbg
+	    gdb_test_no_output "set args one"
+	    runto_main
+	    # Without any error, "$_hiperr" must be "void".
+	    gdb_test "p \$_hiperr" " = void" "not in scope"
+
+	    # Check "hipError_t" type is known.
+	    set type_found false
+	    gdb_test_multiple "info types hipError_t" \
+		"check if hipError_t type exists" {
+		-re ".*File \[^\r\n\]+:\r\n" {
+		    set type_found true
+		    exp_continue
+		}
+		-re "$::gdb_prompt $" {
+		    gdb_assert {$type_found} $gdb_test_name
+		}
+	    }
+
+	    catch_hiperr
+	    gdb_test "cont" ".*call failed.*$::hip_set_device_err_name.*" \
+		"caught $::hip_set_device_err_name"
+	    gdb_test "p \$_hiperr" " = $::hip_set_device_err_name" \
+		"print as $::hip_set_device_err_name"
+	}
+
+	# Without the debug symbols (no "hipError_t" type),
+	# $_hiperr must be printed as a number.
+	with_test_prefix "print \$_hiperr without debug symbols" {
+	    clean_restart ${::testfile}.nodbg
+	    gdb_test_no_output "set args launch"
+	    runto_main
+
+	    # Check "hipError_t" type is not detected.
+	    set type_found true
+	    gdb_test_multiple "info types hipError_t" \
+		"check hipError_t type existence" {
+		-re -wrap "\r\nAll types matching regular expression \"hipError_t\":" {
+		    set type_found false
+		    pass $gdb_test_name
+		}
+	    }
+	    gdb_assert {!$type_found} "there must be no hipError_t"
+
+	    catch_hiperr
+	    check_hip_launch_kernel_err "cont"
+	    gdb_test "p \$_hiperr" " = $::hip_launch_kernel_err_no" \
+		"print as $::hip_launch_kernel_err_no"
+	}
+    }
+}
+
+do_test

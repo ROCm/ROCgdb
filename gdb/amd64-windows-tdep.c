@@ -1271,6 +1271,17 @@ amd64_windows_skip_trampoline_code (const frame_info_ptr &frame, CORE_ADDR pc)
   return destination;
 }
 
+/* The AMD64 Windows ABI version of fetch_hiperr_parameters.  */
+
+static std::optional<hiperr_parameters>
+amd64_windows_fetch_hiperr_parameters (frame_info_ptr frame)
+{
+  CORE_ADDR struct_addr
+    = value_as_address (value_of_register (AMD64_RCX_REGNUM, frame));
+
+  return amd64_fetch_hiperr_parameters (frame, struct_addr);
+}
+
 /* Common parts for gdbarch initialization for Windows and Cygwin on AMD64.  */
 
 static void
@@ -1312,6 +1323,10 @@ amd64_windows_init_abi_common (gdbarch_info info, struct gdbarch *gdbarch)
   set_gdbarch_core_xfer_shared_libraries
     (gdbarch, windows_core_xfer_shared_libraries);
   set_gdbarch_core_pid_to_str (gdbarch, windows_core_pid_to_str);
+
+  /* Extract hiperr parameters for 'catch hiperr'.  */
+  set_gdbarch_fetch_hiperr_parameters
+    (gdbarch, amd64_windows_fetch_hiperr_parameters);
 }
 
 /* gdbarch initialization for Windows on AMD64.  */

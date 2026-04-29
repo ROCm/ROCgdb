@@ -1740,6 +1740,20 @@ Fetch the pointer to the ith function argument.
     invalid=False,
 )
 
+Function(
+    comment="""
+Fetch HIP error parameters from the FRAME's function arguments.
+FRAME is the frame of a "__hipOnError ()" function.  On a successful
+run, return the parameters.  Otherwise, return a std::nullopt.
+""",
+    type="std::optional<hiperr_parameters>",
+    name="fetch_hiperr_parameters",
+    params=[
+        ("frame_info_ptr", "frame"),
+    ],
+    predicate=True,
+)
+
 Method(
     comment="""
 Iterate over all supported register notes in a core file.  For each

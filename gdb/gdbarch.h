@@ -144,6 +144,20 @@ enum call_dummy_location_type
   AT_ENTRY_POINT,
 };
 
+/* The data structure holding the HIP error parameters.  */
+
+struct hiperr_parameters
+{
+  /* The error number.  */
+  uint32_t err_no;
+
+  /* The string representing the error name.  */
+  gdb::unique_xmalloc_ptr<char> err_name;
+
+  /* The string describing the error name.  */
+  gdb::unique_xmalloc_ptr<char> err_str;
+};
+
 #include "gdbarch-gen.h"
 
 /* An internal function that should _only_ be called from gdbarch_tdep.
