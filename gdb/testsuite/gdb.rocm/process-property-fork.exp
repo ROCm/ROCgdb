@@ -15,8 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test that the "set amdgpu precise-memory" setting is inherited by a fork
-# child.
+# Test that the
+#
+#   set amdgpu precise-memory
+#   set amdgpu precise-alu-exceptions
+#   set lds-exception
+#
+# settings are inherited by a forked child.
 
 load_lib rocm.exp
 
@@ -34,18 +39,29 @@ with_rocm_gpu_lock {
 	return
     }
 
-    # Set precise-memory on in the parent, before fork.
-    gdb_test "show amdgpu precise-memory" " is off.*" \
-	"show amdgpu precise-memory before set"
-    gdb_test "set amdgpu precise-memory on"
-    gdb_test "show amdgpu precise-memory" " is on.*" \
-	"show amdgpu precise-memory after set"
+    # Check that the properties are off (default).
+    foreach property {precise-memory precise-alu-exceptions \
+		      lds-exception} {
+	gdb_test "show amdgpu $property" " is off.*" \
+	    "show amdgpu $property before set"
+    }
 
-    # Continue past fork, following the child.  The precise-memory setting should
-    # be on.
-    gdb_test "set follow-fork-mode child"
+    # Set the properties on in the parent, before fork.
+    foreach property {precise-memory precise-alu-exceptions \
+		      lds-exception} {
+	gdb_test "set amdgpu $property on"
+	gdb_test "show amdgpu $property" " is on.*" \
+	    "show amdgpu $property after set"
+    }
+
+    # Continue past fork, following the child.
+    # The setting should still be on.
+    gdb_test_no_output "set follow-fork-mode child"
     gdb_test "break child"
     gdb_test "continue" "Thread 2.1 .* hit Breakpoint .*"
-    gdb_test "show amdgpu precise-memory" " is on.*" \
-	"show amdgpu precise-memory after fork"
+    foreach property {precise-memory precise-alu-exceptions \
+		      lds-exception} {
+	gdb_test "show amdgpu $property" " is on.*" \
+	    "show amdgpu $property after fork"
+    }
 }
