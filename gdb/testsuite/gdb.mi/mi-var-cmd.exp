@@ -592,7 +592,7 @@ lappend inline_tests floating
 
 foreach_with_prefix inline_test $inline_tests {
     if { [mi_run_inline_test $inline_test] < 0 } {
-	return -1
+	return
     }
 }
 

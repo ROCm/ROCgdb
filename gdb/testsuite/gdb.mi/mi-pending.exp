@@ -141,10 +141,10 @@ set testname "run till MI pending breakpoint on pendfunc3 on thread 2"
 gdb_expect {
     -re "\\*stopped,reason=\"breakpoint-hit\",disp=\"keep\",bkptno=\"4\",frame=\{addr=\"$hex\",func=\"pendfunc3\".*thread-id=\"2\".*" {
 	pass $testname
-	return 0
+	return
     }
     timeout {
 	fail "$testname (timeout)"
-	return -1
+	return
     }
 }

@@ -23,7 +23,7 @@
 # we're actually testing native.
 require isnative
 if {![istarget *-linux*]} {
-  return
+    return
 }
 
 # Check if start command is supported.
@@ -34,8 +34,8 @@ load_lib mi-support.exp
 standard_testfile basics.c
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 # The plan is for async mode to become the default but toggle for now.
