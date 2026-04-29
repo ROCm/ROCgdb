@@ -99,7 +99,7 @@ for {set i 0} {$i < 5} {incr i} {
 	    # when it first notices that the thread library doesn't support
 	    # debugging, or if we could explicitly ask GDB somehow.
 	    unsupported "this GDB does not support threads on this system."
-	    return -1
+	    return
 	}
 	-re "$gdb_prompt $" {
 	}

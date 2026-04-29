@@ -30,7 +30,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile $opts]} {
 if {[info procs gdb_openmp_setup] != ""} {
     if {[gdb_openmp_setup $binfile] != ""} {
 	untested "could not set up OpenMP environment"
-	return -1
+	return
     }
 }
 

@@ -42,7 +42,7 @@ foreach reorder {0 1} { with_test_prefix "reorder$reorder" {
     gdb_test "set can-use-hw-watchpoints 1"
 
     if {![runto_main]} {
-	return -1
+	return
     }
 
     # Use "rwatch" as "watch" would report the watchpoint changed just based on its

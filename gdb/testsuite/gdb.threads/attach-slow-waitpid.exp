@@ -53,7 +53,7 @@ with_test_prefix "compile preload library" {
     # limit this test to running when ISNATIVE is true.
     if { [gdb_compile_shlib_pthreads \
 	      $libsrc $libobj {debug}] != "" } then {
-	return -1
+	return
     }
 }
 
@@ -62,7 +62,7 @@ with_test_prefix "compile test executable" {
     if { [gdb_compile_pthreads \
 	      "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 	      executable {debug}] != "" } {
-	return -1
+	return
     }
 }
 
