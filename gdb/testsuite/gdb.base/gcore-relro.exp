@@ -24,13 +24,13 @@ set objfile [standard_output_file ${testfile}.o]
 
  if { [gdb_compile_shlib ${srcdir}/${subdir}/${srcfile_lib} ${binfile_lib} {debug}] != ""
       || [gdb_compile ${srcdir}/${subdir}/${srcfile} ${objfile} object {debug}] != "" } {
-      untested "failed to compile"
-      return -1
+     untested "failed to compile"
+     return
  }
  set opts [list debug shlib=${binfile_lib} ldflags=-Wl,-z,relro]
  if { [gdb_compile ${objfile} ${binfile} executable $opts] != "" } {
-      unsupported "-Wl,-z,relro compilation failed"
-      return -1
+     unsupported "-Wl,-z,relro compilation failed"
+     return
  }
 
 with_test_prefix "first session" {
@@ -38,11 +38,11 @@ with_test_prefix "first session" {
     gdb_load_shlib ${binfile_lib}
 
     if {![runto lib]} {
-	return -1
+	return
     }
 
     if {![gdb_gcore_cmd $gcorefile "save a corefile"]} {
-	return -1
+	return
     }
 }
 

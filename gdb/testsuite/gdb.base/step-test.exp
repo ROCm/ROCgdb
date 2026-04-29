@@ -25,7 +25,7 @@ if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
 }
 
 if {![runto_main]} {
-   return 0
+    return
 }
 
 # Set a breakpoint at line 45, if stepi then finish fails, we would
@@ -142,10 +142,10 @@ gdb_test_multiple "finish" "$test" {
     -re ".*(Program received|$inferior_exited_re).*$gdb_prompt $" {
 	# Oops... We ran to the end of the program...  Better reset
 	if {![runto_main]} {
-	    return 0
+	    return
 	}
 	if {![runto step-test.c:45]} {
-	    return 0
+	    return
 	}
 	fail "$test"
     }

@@ -45,7 +45,7 @@ gdb_load_shlib $binfile_lib1
 gdb_load_shlib $binfile_lib2
 
 if { ![runto_main] } {
-  return -1
+    return
 }
 
 gdb_test "next" "$decimal.*b_main \\(\\);" "step over c_main"

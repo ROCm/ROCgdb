@@ -82,7 +82,7 @@ gdb_test "$commands\nend" "" "finish defining hello command"
 gdb_test "hello" [string_to_regexp "^done,value=\"23\""]
 
 if {![runto_main]} {
-  return -1
+    return
 }
 
 gdb_test "list" ".*\[0-9\].*main \\(int argc.*" "can list sources"

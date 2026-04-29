@@ -95,7 +95,7 @@ if { [gdb_breakpoint [standard_output_file tmp-${srcfile}]:${line} {no-message}]
 with_cwd [standard_output_file {}] {
     if  { [gdb_compile [standard_output_file tmp-${srcfile}] "${testfile}" \
 	       executable {debug}] != "" } {
-	return -1
+	return
     }
 }
 

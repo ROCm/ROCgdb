@@ -42,13 +42,13 @@ gdb_test_multiple "continue" $test {
 	fail "$test (remote connection closed)"
 	# Only if valgrind got stuck.
 	kill_wait_spawned_process $valgrind_spawn_id
-	return -1
+	return
     }
     -re "The program is not being run\\.\r\n$gdb_prompt $" {
 	fail "$test (valgrind vgdb has terminated)"
 	# Only if valgrind got stuck.
 	kill_wait_spawned_process $valgrind_spawn_id
-	return -1
+	return
     }
     -re "\r\n$gdb_prompt $" {
 	pass "$test (false warning)"

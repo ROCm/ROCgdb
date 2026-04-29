@@ -27,7 +27,7 @@ foreach_with_prefix opts { "" "pie" } {
 	if  { [gdb_compile "${srcdir}/${subdir}/${srcfile1}" "${binfile1}" \
 		   executable ${testfile1_opt}] != "" } {
 	    untested "failed to compile first testcase"
-	    return -1
+	    return
 	}
 
 	# build the second test case
@@ -44,7 +44,7 @@ foreach_with_prefix opts { "" "pie" } {
 	      && [gdb_compile "${srcdir}/${subdir}/${srcfile2}" "${binfile2}" \
 		      executable ${testfile2_opt2}] != ""} {
 	    untested "failed to compile second testcase"
-	    return -1
+	    return
 	}
 
 	# Start with a fresh gdb.

@@ -27,7 +27,7 @@ if { [build_executable "failed to build" $testfile $srcfile { debug }] == -1 } {
 save_vars { GDBFLAGS } {
     append GDBFLAGS " --readnever"
     if { [clean_restart $testfile] == -1 } {
-       return -1
+       return
     }
 }
 

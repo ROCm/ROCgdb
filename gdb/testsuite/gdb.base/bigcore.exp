@@ -39,8 +39,8 @@ standard_testfile .c
 set corefile [standard_output_file ${binfile}.corefile]
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 # Traverse part of bigcore's linked list of memory chunks (forward or

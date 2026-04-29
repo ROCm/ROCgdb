@@ -154,7 +154,7 @@ save_vars { env(TERM) } {
 
     if { ![readline_is_used] } {
 	unsupported "readline isn't used."
-	return -1
+	return
     }
 
     save_vars { timeout env(GDBHISTSIZE) env(GDBHISTFILE) } {

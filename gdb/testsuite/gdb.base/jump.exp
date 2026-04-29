@@ -110,7 +110,7 @@ for {set inf 2} {$inf <= $num_inferiors} {incr inf} {
 	"Switching to inferior ${inf} .*" \
 	"switch to inferior ${inf}"
     if {![runto_main]} {
-	return -1
+	return
     }
 }
 

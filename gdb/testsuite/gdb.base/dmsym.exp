@@ -26,8 +26,8 @@ set dmsym_o [standard_output_file dmsym.o]
 if {[gdb_compile "${srcdir}/${subdir}/dmsym.c" \
 		 $dmsym_o \
 		 object {}] != ""} {
-  untested "failed to compile object file"
-  return -1
+    untested "failed to compile object file"
+    return
 }
 
 if {[gdb_compile \

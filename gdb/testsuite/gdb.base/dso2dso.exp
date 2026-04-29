@@ -49,14 +49,14 @@ if { [build_executable "build shlib 2" $binfile_libdso2 \
 
 if { [prepare_for_testing "prepare" $testfile $srcfile \
 	  [list debug shlib=$binfile_libdso2 shlib=$binfile_libdso1]] != 0 } {
-  return
+    return
 }
 
 gdb_load_shlib $binfile_libdso2
 gdb_load_shlib $binfile_libdso1
 
 if { ![runto_main] } {
-  return -1
+    return
 }
 
 set bp_location [gdb_get_line_number "STOP HERE" [file tail $srcfile_libdso1]]

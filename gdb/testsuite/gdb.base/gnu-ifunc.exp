@@ -393,7 +393,7 @@ with_test_prefix "static" {
 	 || [gdb_compile "${srcdir}/${subdir}/$srcfile $lib_o $final_o" \
 		 $staticbinfile executable {debug}] != "" } {
 	untested "failed to compile second testcase"
-	return -1
+	return
     }
 
     clean_restart $staticexecutable

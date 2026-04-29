@@ -67,7 +67,7 @@ foreach libsepdebug {NO IN SEP} { with_test_prefix "$libsepdebug" {
     if { [gdb_compile_shlib ${srcfile_lib} ${binfile_lib} $sep_lib_flags] != ""
 	 || [gdb_compile ${srcfile} ${binfile} executable $bin_flags] != "" } {
       untested "failed to compile"
-      return -1
+      return
     }
 
     if {$libsepdebug == "SEP"} {
@@ -82,7 +82,7 @@ foreach libsepdebug {NO IN SEP} { with_test_prefix "$libsepdebug" {
     clean_restart $executable
 
     if {![runto_main]} {
-      return 0
+      return
     }
 
     gdb_test "display (int) a_global" "1: \\(int\\) a_global = 41"

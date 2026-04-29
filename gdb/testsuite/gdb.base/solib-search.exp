@@ -90,7 +90,7 @@ set corefile [standard_output_file solib-search.core]
 set core_supported [gdb_gcore_cmd "$corefile" "save a corefile"]
 
 if {!$core_supported} {
-  return -1
+    return
 }
 
 # Before we restart gdb, replace the libs with the "wrong" ones.

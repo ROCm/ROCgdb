@@ -95,5 +95,5 @@ if { $load_segment_count <= 2 } {
 clean_restart $testfile
 
 if {![runto_main message]} {
-  return 0
+    return
 }

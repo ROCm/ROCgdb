@@ -65,7 +65,7 @@ with_test_prefix "absolute path" {
 	set corefile [core_find $binfile]
 	if {$corefile == ""} {
 	    untested "unable to create corefile"
-	    return 0
+	    return
 	}
 	set corefile_1 "$binfile.1.core"
 	remote_exec build "mv $corefile $corefile_1"
@@ -86,7 +86,7 @@ with_test_prefix "absolute path" {
 	set corefile [core_find $symlink]
 	if {$corefile == ""} {
 	    untested "unable to create corefile"
-	    return 0
+	    return
 	}
 	set corefile_2 "$binfile.2.core"
 	remote_exec build "mv $corefile $corefile_2"
@@ -108,7 +108,7 @@ with_test_prefix "absolute path" {
 	set corefile [core_find $symlink]
 	if {$corefile == ""} {
 	    untested "unable to create corefile"
-	    return 0
+	    return
 	}
 	set corefile_3 "$binfile.3.core"
 	remote_exec build "mv $corefile $corefile_3"
@@ -142,7 +142,7 @@ with_test_prefix "absolute path" {
 	set corefile [core_find $binfile_2]
 	if {$corefile == ""} {
 	    untested "unable to create corefile"
-	    return 0
+	    return
 	}
 	set corefile_4 "$binfile.4.core"
 	remote_exec build "mv $corefile $corefile_4"
@@ -216,7 +216,7 @@ with_test_prefix "relative path" {
 	    set corefile [core_find $rel_path_to_file]
 	    if {$corefile == ""} {
 		untested "unable to create corefile"
-		return 0
+		return
 	    }
 	    set corefile_5 "${work_dir}/${testfile}.5.core"
 	    remote_exec build "mv $corefile $corefile_5"
@@ -230,7 +230,7 @@ with_test_prefix "relative path" {
 	    set corefile [core_find $rel_path_to_symlink_2]
 	    if {$corefile == ""} {
 		untested "unable to create corefile"
-		return 0
+		return
 	    }
 	    set corefile_6 "${work_dir}/${testfile}.6.core"
 	    remote_exec build "mv $corefile $corefile_6"

@@ -38,7 +38,7 @@ if {[is_remote host]} {
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 [list debug "additional_flags=-DPI_TXT=\"$pi_txt\" -DCOPY1_TXT=\"$copy1_txt\""]]} {
-     return -1
+    return
 }
 
 global gdb_prompt

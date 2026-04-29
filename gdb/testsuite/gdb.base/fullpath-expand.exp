@@ -29,7 +29,7 @@ with_cwd $srcdir {
 
     if { $err != "" } {
 	untested "${srcfile} or ${srcfile2} compilation failed"
-	return -1
+	return
     }
 }
 

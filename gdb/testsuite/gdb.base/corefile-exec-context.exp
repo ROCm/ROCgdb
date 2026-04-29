@@ -147,7 +147,7 @@ save_vars { ::env($env_var_name) } {
     set corefile [core_find $binfile {} $args]
     if {$corefile == ""} {
 	untested "unable to create corefile"
-	return 0
+	return
     }
 }
 set corefile_3 "$binfile.2.core"

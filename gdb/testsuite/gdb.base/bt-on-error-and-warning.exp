@@ -37,7 +37,7 @@ gdb_test_multiple "maint set internal-error backtrace on" \
     "check backtrace is supported" {
     -re "support for this feature is not compiled into GDB" {
 	untested "feature not supported"
-	return -1
+	return
     }
     -re "$gdb_prompt $" {
 	pass $gdb_test_name

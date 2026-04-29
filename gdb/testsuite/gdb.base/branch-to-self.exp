@@ -28,7 +28,7 @@ with_test_prefix "single-step" {
 
     clean_restart ${testfile}
     if {![runto_main]} {
-	return -1
+	return
     }
     set line_num [gdb_get_line_number "loop-line" ${testfile}.c]
 
@@ -61,7 +61,7 @@ with_test_prefix "break-cond" {
 	clean_restart ${testfile}
 
 	if {![runto_main]} {
-	    return -1
+	    return
 	}
 
 	set test "set breakpoint condition-evaluation $side"

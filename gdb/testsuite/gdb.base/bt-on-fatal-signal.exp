@@ -42,7 +42,7 @@ if {![runto_main]} {
 gdb_test_multiple "maint set backtrace-on-fatal-signal on" "" {
     -re "support for this feature is not compiled into GDB" {
 	untested $testfile
-	return -1
+	return
     }
     -re "$gdb_prompt $" {
 	pass $gdb_test_name

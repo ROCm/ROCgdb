@@ -42,13 +42,13 @@ with_test_prefix "file symlink" {
 		    "ln -sf ${testfile} [standard_output_file $filelink]"]
     if {[lindex $status 0] != 0} {
 	unsupported "$test (host does not support symbolic links)"
-	return 0
+	return
     }
 
     clean_restart "$filelink"
 
     if {![runto_main]} {
-	return -1
+	return
     }
 
     gdb_test_no_output "set print repeats 10000"
@@ -82,13 +82,13 @@ with_test_prefix "dir symlink" {
     set status [remote_exec host "ln -sf . [standard_output_file $dirlink]"]
     if {[lindex $status 0] != 0} {
 	unsupported "$test (host does not support symbolic links)"
-	return 0
+	return
     }
 
     clean_restart "$dirlink/$filelink"
 
     if {![runto_main]} {
-	return -1
+	return
     }
 
     gdb_test_no_output "set print repeats 10000"

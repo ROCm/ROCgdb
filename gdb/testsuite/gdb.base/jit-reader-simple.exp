@@ -181,7 +181,7 @@ with_test_prefix "two JITers" {
     gdb_load $binfile_dl2
 
     if {![runto_main]} {
-	return -1
+	return
     }
 
     set num_bps 0

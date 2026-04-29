@@ -38,7 +38,7 @@ foreach_with_prefix n_flag { 0 1 } {
 	     || [gdb_compile $srcdir/$subdir/${srcfile} ${binfile} \
 		     executable $bin_flags] != "" } {
 	    untested "failed to compile"
-	    return -1
+	    return
 	}
 
 	if {$libsepdebug == "SEP"} {
@@ -53,7 +53,7 @@ foreach_with_prefix n_flag { 0 1 } {
 	clean_restart $executable
 
 	if {![runto_main]} {
-	    return 0
+	    return
 	}
 
 	set match_str {All functions matching regular expression "foo":[\r\n]*}

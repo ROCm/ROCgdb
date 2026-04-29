@@ -21,12 +21,12 @@ set test_sso [expr \
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	  [list debug additional_flags=-DTEST_SSO=$test_sso]] } {
-  return -1
+    return
 }
 
 set bp_location [gdb_get_line_number "START"]
 if {![runto "endianity.c:$bp_location"]} {
-  return -1
+    return
 }
 
 gdb_test "print o" "= {v = 3, w = 2, x = 7, f = 23.5, cplx = 1.25 \\+ 7.25i, d = 75}" \

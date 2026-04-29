@@ -47,7 +47,7 @@ gdb_test "br foo2" \
 delete_breakpoints
 
 if {![runto_main]} {
-  return 0
+    return
 }
 
 # Break in the library.
