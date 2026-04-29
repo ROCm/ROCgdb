@@ -23,7 +23,7 @@ set MIFLAGS "-i=mi"
 standard_testfile
 
 if {[build_executable ${testfile}.exp ${binfile} ${srcfile}]} {
-    return -1
+    return
 }
 
 # Create a breakpoint with a condition that invokes an inferior

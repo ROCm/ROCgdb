@@ -26,7 +26,7 @@ set MIFLAGS "-i=mi"
 standard_testfile .cc
 
 if {[build_executable ${testfile}.exp ${binfile} ${srcfile} {debug c++}]} {
-    return -1
+    return
 }
 
 # Create a breakpoint with a condition that invokes an inferior

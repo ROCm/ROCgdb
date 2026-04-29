@@ -39,7 +39,7 @@ if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" $objsfile object {}] != ""
      || [gdb_compile "${srcdir}/${subdir}/${srcfile2}" $objfuncfile object {}] != ""
      || [gdb_compile "${srcdir}/${subdir}/${srcfile3}" $objmainfile object {debug}] != ""
      || [gdb_compile "$objfuncfile $objsfile $objmainfile" $binfile executable {}] != "" } {
-    return -1
+    return
 }
 
 if {[mi_clean_restart $::testfile]} {

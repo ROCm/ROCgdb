@@ -28,7 +28,7 @@ if {[info exists COMPILE]} {
 }
 
 if {[build_executable ${testfile}.exp ${binfile} ${srcfile} $opts]} {
-    return -1
+    return
 }
 
 if {[mi_clean_restart $::testfile]} {

@@ -35,7 +35,7 @@ if {[mi_clean_restart $::testfile]} {
 
 if {![mi_runto stop_frame]} {
     perror "Failed to stop in stop_frame"
-    return -1
+    return
 }
 
 mi_gdb_test "111-stack-list-frames" \

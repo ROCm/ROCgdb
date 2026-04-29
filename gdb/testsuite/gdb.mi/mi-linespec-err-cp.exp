@@ -26,7 +26,7 @@ standard_testfile .cc
 set exefile $testfile
 
 if {[build_executable "failed to prepare" $exefile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 mi_clean_restart $::testfile

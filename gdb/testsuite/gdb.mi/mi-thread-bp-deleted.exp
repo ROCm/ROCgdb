@@ -32,7 +32,7 @@ standard_testfile
 
 if { [build_executable "failed to prepare" $testfile $srcfile \
 	  {debug pthreads}] } {
-    return -1
+    return
 }
 
 foreach_mi_ui_mode mode {

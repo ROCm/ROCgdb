@@ -23,13 +23,13 @@ standard_testfile
 
 set opts {debug}
 if {[build_executable ${testfile}.exp ${testfile} ${srcfile} $opts]} {
-    return -1
+    return
 }
 
 mi_clean_restart $::testfile
 
 if {[mi_runto_main] < 0} {
-    return -1
+    return
 }
 
 mi_create_breakpoint do_nothing \

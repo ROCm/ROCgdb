@@ -31,7 +31,7 @@ set MIFLAGS "-i=mi"
 standard_testfile
 
 if { [build_executable "failed to prepare" $testfile $srcfile] } {
-    return -1
+    return
 }
 
 # Helper proc to create a breakpoint location regexp.  NUM is the

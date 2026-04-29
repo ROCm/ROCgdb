@@ -45,7 +45,7 @@ require allow_multi_inferior_tests
 set compile_options "debug pthreads"
 if {[build_executable $testfile.exp $testfile ${srcfile} ${compile_options}] == -1} {
     untested "failed to compile"
-    return -1
+    return
 }
 
 set main_break_line [gdb_get_line_number "main break line"]

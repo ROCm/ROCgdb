@@ -19,7 +19,7 @@ set MIFLAGS "-i=mi"
 # This test is Linux-only.
 if {![istarget *-*-linux*]} {
     unsupported "mi-info-os.exp"
-    return -1
+    return
 }
 
 # Support for XML-output is needed to run this test.
@@ -29,7 +29,7 @@ standard_testfile basics.c
 
 if {[build_executable "Failed to build $testfile" $testfile $srcfile \
 	 debug]} {
-    return -1;
+    return;
 }
 
 if {[mi_clean_restart $::testfile]} {
@@ -44,7 +44,7 @@ if {[mi_clean_restart $::testfile]} {
 # running any program, so we want to avoid "run".  Using
 # mi_gdb_target_load directly instead achieves this.
 if {[mi_gdb_target_load] < 0} {
-    return -1
+    return
 }
 
 # Try the argument-less form that lists all the types in a table.
