@@ -21,14 +21,14 @@ standard_testfile
 
 if {[build_executable "failed to prepare" ${testfile} ${srcfile} \
     {debug build-id}]} {
-    return -1
+    return
 }
 
 # Remove debug information from BINFILE and place it into
 # BINFILE.debug.
 if {[gdb_gnu_strip_debug $binfile]} {
     unsupported "cannot produce separate debug info files"
-    return -1
+    return
 }
 
 set remote_python_file \

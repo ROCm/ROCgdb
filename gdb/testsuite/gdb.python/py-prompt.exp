@@ -24,7 +24,7 @@ load_lib prompt.exp
 require allow_python_tests
 
 if {[build_executable $testfile.exp $testfile $srcfile debug] == -1} {
-    return -1
+    return
 }
 
 save_vars { INTERNAL_GDBFLAGS GDBFLAGS } {

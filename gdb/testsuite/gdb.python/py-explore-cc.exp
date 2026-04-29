@@ -21,7 +21,7 @@ require allow_cplus_tests allow_python_tests
 standard_testfile py-explore.cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 set int_ptr_ref_desc "The value of 'int_ptr_ref' is of type 'int_ptr' which is a typedef of type 'int \\*'.*\'int_ptr_ref' is a pointer to a value of type 'int'.*"

@@ -26,12 +26,12 @@ set binfile2 [standard_output_file $testfile2]
 
 if {[build_executable "failed to prepare first executable" \
 	 $binfile1 $srcfile]} {
-    return -1
+    return
 }
 
 if {[build_executable "failed to prepare second executable" \
 	 $binfile2 $srcfile]} {
-    return -1
+    return
 }
 
 set binfile1 [gdb_remote_download host $binfile1]

@@ -29,7 +29,7 @@ if { [build_executable_from_specs \
 	  $testfile {c++} \
 	  $srcfile {c++ debug} \
 	  $srcfile2 {c++}] == -1 } {
-    return -1
+    return
 }
 
 # Start with a fresh gdb.

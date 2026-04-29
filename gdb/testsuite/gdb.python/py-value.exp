@@ -800,7 +800,7 @@ proc test_unavailable {} {
 
 # Build C version of executable.  C++ is built later.
 if { [build_inferior "${binfile}" "c"] < 0 } {
-    return -1
+    return
 }
 
 # Start with a fresh gdb.

@@ -22,7 +22,7 @@ standard_testfile python.c python-1.c
 
 if {[build_executable $testfile.exp $testfile \
 	 [list $srcfile $srcfile2] debug] == -1} {
-    return -1
+    return
 }
 
 clean_restart
