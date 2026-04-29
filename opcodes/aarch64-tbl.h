@@ -8674,8 +8674,6 @@ const struct aarch64_opcode aarch64_opcode_table[] =
     Y(SYSTEM, none, "SME_ZT0_LIST", 0, F (), "{ ZT0 }")			\
     Y(IMMEDIATE, imm, "TME_UIMM16", 0, F(FLD_imm16_5),			\
       "a 16-bit unsigned immediate for TME tcancel")			\
-    Y(SIMD_ELEMENT, reglane, "SM3_IMM2", 0, F(FLD_SM3_imm2),		\
-      "an indexed SM3 vector immediate")				\
     /* These next two are really register fields; the [...] notation	\
        is just syntactic sugar.  */					\
     Y(INT_REG, x0_to_x30, "MOPS_ADDR_Rd", 0, F(FLD_Rd),			\

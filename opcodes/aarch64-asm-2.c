@@ -866,7 +866,6 @@ aarch64_insert_operand (const aarch64_operand *self,
     case AARCH64_OPND_Em:
     case AARCH64_OPND_Em16:
     case AARCH64_OPND_Em8:
-    case AARCH64_OPND_SM3_IMM2:
       return aarch64_ins_reglane (self, info, code, inst, errors);
     case AARCH64_OPND_Em_INDEX1_14:
     case AARCH64_OPND_Em_INDEX2_13:
