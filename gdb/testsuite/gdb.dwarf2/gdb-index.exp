@@ -117,7 +117,7 @@ gdb_test_multiple $cmd $test {
 	lassign [local_add_gdb_index $binfile] binfile_with_index host_binfile_with_index
 	set testfile_with_index [file tail $binfile_with_index]
 	if { ${binfile_with_index} == "" } {
-	    return -1
+	    return
 	}
     }
     -re ".*${gdb_prompt} $" {

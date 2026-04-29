@@ -46,7 +46,7 @@ set result [catch {exec {*}$command} output]
 verbose "result is $result"
 verbose "output is $output"
 if {$result != 0} {
-  return -1
+    return
 }
 
 gdb_load ${binfile_stripped}

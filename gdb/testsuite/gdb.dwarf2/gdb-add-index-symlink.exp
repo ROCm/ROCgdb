@@ -27,12 +27,12 @@ standard_testfile main.c
 with_test_prefix non-symlink {
     if { [prepare_for_testing "failed to prepare" "${testfile}" \
 	      [list ${srcfile}]] } {
-	return -1
+	return
     }
 
     if { [ensure_gdb_index $binfile] == -1 } {
 	untested "error adding gdb index"
-	return -1
+	return
     }
 }
 

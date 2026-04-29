@@ -212,7 +212,7 @@ foreach_with_prefix is_64 {false true} {
 
     if { [prepare_for_testing "failed to prepare" ${testfile} \
 	      [list $srcfile $asm_file] {nodebug}] } {
-	return -1
+	return
     }
 
     if { ![runto_main] } {
