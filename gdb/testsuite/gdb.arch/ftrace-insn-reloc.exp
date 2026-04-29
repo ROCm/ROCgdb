@@ -21,16 +21,16 @@ set additional_flags [gdb_target_symbol_prefix_flags]
 
 if {[prepare_for_testing "failed to prepare" $testfile-no-ipa $srcfile \
 	 [list debug $additional_flags]]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "target does not support trace"
-    return -1
+    return
 }
 
 require allow_in_proc_agent
@@ -43,20 +43,20 @@ set libipa [get_in_proc_agent]
 if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile \
 	  executable [list debug $additional_flags shlib=$libipa] ] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 clean_restart $testfile
 set remote_libipa [gdb_load_shlib $libipa]
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_reinitialize_dir $srcdir/$subdir
 
 if { [gdb_test "info sharedlibrary" ".*[file tail $libipa].*" "IPA loaded"] != 0 } {
     untested "could not find IPA lib loaded"
-    return 1
+    return
 }
 
 # Read function name from testcases[N].
@@ -79,7 +79,7 @@ set n_testcases [gdb_readexpr "n_testcases"]
 
 if { ${n_testcases} == 0 } {
     untested "no instruction relocation to test"
-    return 1
+    return
 }
 
 # Set a fast tracepoint on each set_point${i} symbol.  There is one for
