@@ -34,8 +34,8 @@ if {[test_compiler_info gcc*]} {
 }
 
 if  { [gdb_compile ${srcdir}/${subdir}/${srcfile} ${binfile} executable $compile_flags] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 gdb_start
@@ -181,7 +181,7 @@ for {set i 0} {$i < 32} {incr i 1} {
 # Test reading the core file.
 
 if {!$core_supported} {
-  return -1
+    return
 }
 
 clean_restart
