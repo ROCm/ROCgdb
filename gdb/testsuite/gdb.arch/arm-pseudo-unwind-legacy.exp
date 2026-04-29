@@ -31,7 +31,7 @@ standard_testfile arm-pseudo-unwind-legacy.c arm-pseudo-unwind-legacy-asm.S
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	"${srcfile} ${srcfile2}" {debug additional_flags=-marm}] } {
-    return -1
+    return
 }
 
 clean_restart $testfile

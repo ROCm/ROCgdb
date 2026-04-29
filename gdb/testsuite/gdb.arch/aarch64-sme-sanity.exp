@@ -47,11 +47,11 @@ require !gdb_protocol_is_remote
 set compile_flags {"debug" "macros" "additional_flags=-march=armv8.5-a+sve"}
 standard_testfile
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} ${compile_flags}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Adjust the repeat count for the test.

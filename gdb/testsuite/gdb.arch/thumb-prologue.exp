@@ -23,7 +23,7 @@ standard_testfile
 # fragments.
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {"additional_flags=-mthumb"}] != "" } {
     untested "ARM prologue tests"
-    return -1
+    return
 }
 
 
@@ -34,7 +34,7 @@ clean_restart $testfile
 #
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Testcase for TPCS prologue.

@@ -22,11 +22,11 @@ set srcfile ${testfile}.S
 
 set additional_flags "additional_flags=-mthumb"
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} [list debug $additional_flags]]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # GDB doesn't skip prologue for asm files, so do one single step to

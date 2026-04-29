@@ -22,11 +22,11 @@ require allow_aarch64_fpmr_tests
 
 standard_testfile
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set reg_main_value "0x3fff7fc049"

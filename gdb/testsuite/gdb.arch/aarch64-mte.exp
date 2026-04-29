@@ -47,24 +47,24 @@ require is_aarch64_target
 
 standard_testfile
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Targets that don't support memory tagging should not execute the
 # runtime memory tagging tests.
 if {![supports_memtag]} {
     unsupported "memory tagging unsupported"
-    return -1
+    return
 }
 
 gdb_breakpoint "access_memory"
 
 if {[gdb_continue "access_memory"]} {
-    return -1
+    return
 }
 
 # Fetch a known pointer to an area mapped with PROT_MTE.
@@ -73,7 +73,7 @@ set tagged_ptr_addr [get_hexadecimal_valueof $tagged_ptr_symbol -1]
 
 if {$tagged_ptr_addr == -1} {
     unresolved "unexpected pointer or tag value"
-    return -1
+    return
 }
 
 # Fetch a known pointer to an area not mapped with PROT_MTE.
@@ -82,7 +82,7 @@ set untagged_ptr_addr [get_hexadecimal_valueof $untagged_ptr_symbol -1]
 
 if {$untagged_ptr_addr == -1} {
     unresolved "unexpected pointer or tag value"
-    return -1
+    return
 }
 
 with_test_prefix "literals" {

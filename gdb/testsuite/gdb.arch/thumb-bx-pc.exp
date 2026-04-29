@@ -22,11 +22,11 @@ set srcfile ${testfile}.S
 set opts {}
 
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} $opts]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "stepi" "$hex in main \\(\\)" "stepi for bx pc"

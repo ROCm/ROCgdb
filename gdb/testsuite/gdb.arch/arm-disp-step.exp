@@ -22,7 +22,7 @@ require is_aarch32_target
 standard_testfile .S
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile] } {
-    return -1
+    return
 }
 
 
@@ -407,7 +407,7 @@ proc test_add_rn_pc {} {
 gdb_test_no_output "set displaced-stepping off"
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_test_no_output "set displaced-stepping on"
