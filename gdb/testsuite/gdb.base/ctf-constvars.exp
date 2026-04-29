@@ -36,7 +36,7 @@ lappend opts nowarnings
 
 if { [build_executable "failed to prepare" ${testfile} \
 	  [list $srcfile] $opts] } {
-    return 0
+    return
 }
 
 clean_restart

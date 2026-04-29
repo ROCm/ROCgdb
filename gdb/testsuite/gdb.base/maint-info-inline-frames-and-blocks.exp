@@ -24,7 +24,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 }
 
 if {![runto normal_func]} {
-    return 0
+    return
 }
 
 # Make a pattern to match 'maint info blocks' output.  ARGS is the

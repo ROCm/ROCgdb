@@ -22,7 +22,7 @@ if { [prepare_for_testing "failed to prepare" "func-ptr" {func-ptr.c} {debug}] }
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # This would put gdb into an infinite loop.

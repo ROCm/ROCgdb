@@ -44,7 +44,7 @@ if { $binfile_len <= 80 } {
 set corefile [core_find $binfile {}]
 if {$corefile == ""} {
     untested "unable to create corefile"
-    return 0
+    return
 }
 set corefile_1 "$binfile.1.core"
 remote_exec build "mv $corefile $corefile_1"
@@ -73,7 +73,7 @@ set args "aaaaa bbbbb ccccc ddddd e\\\\ e\\\\ e\\\\ e\\\\ e"
 set corefile [core_find $binfile {} $args]
 if {$corefile == ""} {
     untested "unable to create corefile"
-    return 0
+    return
 }
 set corefile_2 "$binfile.2.core"
 remote_exec build "mv $corefile $corefile_2"

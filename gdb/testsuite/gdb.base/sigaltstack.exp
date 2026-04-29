@@ -38,7 +38,7 @@ gdb_test "handle SIGPROF print pass nostop"
 
 # Advance to main
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Stop in handle, when at the inner most level

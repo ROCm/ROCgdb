@@ -29,7 +29,7 @@ if {![istarget *-*-linux*]
     && ![istarget *-*-elf*]
     && ![istarget arm*-*-eabi*]
     && ![istarget powerpc-*-eabi*]} {
-    return 0
+    return
 }
 
 standard_testfile .S

@@ -28,7 +28,7 @@ set status [remote_exec host \
 		"ln -sf $srcdir/$subdir/$srcfile $srcfilelink"]
 if {[lindex $status 0] != 0} {
     unsupported "$test (host does not support symbolic links)"
-    return 0
+    return
 }
 
 if {[prepare_for_testing $testfile $testfile $srcfilelink]} {

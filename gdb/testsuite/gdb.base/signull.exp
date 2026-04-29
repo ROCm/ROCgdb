@@ -41,7 +41,7 @@ if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
 #
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # If we can examine what's at memory address 0, it is possible that we

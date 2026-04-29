@@ -38,7 +38,7 @@ if { [prepare_for_testing "prepare" $testfile $execsrc \
 gdb_load_shlib ${libobj}
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 

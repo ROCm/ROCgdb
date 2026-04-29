@@ -30,7 +30,7 @@ if {[prepare_for_testing_full "failed to prepare" \
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Return a two element list, the first element is the stack-pointer

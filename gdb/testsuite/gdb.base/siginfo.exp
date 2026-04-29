@@ -36,7 +36,7 @@ gdb_test "display/i \$pc"
 
 # Advance to main
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Pass all the alarms straight through (but verbosely)

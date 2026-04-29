@@ -121,7 +121,7 @@ clean_restart
 gdb_load $binfile_main
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Running the command 'info sharedlibrary' should output a path to

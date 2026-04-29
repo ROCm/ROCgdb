@@ -45,7 +45,7 @@ proc get_dummy_frame_number { } {
 }
 
 if { ![runto_main] } {
-    return 0
+    return
 }
 
 gdb_test "break stop_one" "Breakpoint \[0-9\]* at .*"
@@ -57,7 +57,7 @@ gdb_test "continue" "Continuing.*Breakpoint \[0-9\]*, stop_one.*" \
 if {[gdb_test "call gen_signal ()"  \
 	 "\[\r\n\]*The program being debugged was signaled.*" \
 	 "inferior function call signaled"] != 0} {
-    return 0
+    return
 }
 
 set frame_number [get_dummy_frame_number]

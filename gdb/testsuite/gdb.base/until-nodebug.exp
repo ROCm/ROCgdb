@@ -23,7 +23,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile nodebug]} {
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Without debug information, the program stops at the next

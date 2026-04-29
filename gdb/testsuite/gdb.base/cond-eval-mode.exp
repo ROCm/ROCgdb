@@ -30,7 +30,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 set test_host "set breakpoint condition-evaluation host"

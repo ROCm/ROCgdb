@@ -80,7 +80,7 @@ gdb_test_multiple $command $test {
 
 # Now get past startup code.
 if {![runto_main]} {
-    return 0
+    return
 }
 
 with_test_prefix "after run to main" {

@@ -39,7 +39,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # The line we'll be stepping.

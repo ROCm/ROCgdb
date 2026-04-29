@@ -39,7 +39,7 @@ if {[is_lp64_target]} {
 } elseif {[is_ilp32_target]} {
    set target_size TARGET_ILP32
 } else {
-    return 0
+    return
 }
 
 set main_basename sym-file-main

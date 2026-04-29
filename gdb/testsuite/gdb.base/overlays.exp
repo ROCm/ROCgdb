@@ -45,7 +45,7 @@ gdb_load ${binfile}
 #
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # couple of convenience variables

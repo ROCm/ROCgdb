@@ -81,7 +81,7 @@ remote_exec build "rmdir $coredir"
 
 if { $found == 0  } {
     warning "can't generate a core file - prelink tests suppressed - check ulimit -c"
-    return 0
+    return
 }
 
 # Relink $libfile to a different address.

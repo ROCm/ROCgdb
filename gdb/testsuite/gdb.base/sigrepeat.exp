@@ -30,7 +30,7 @@ if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
 
 # Advance to main
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Run to the signal handler wait loop.

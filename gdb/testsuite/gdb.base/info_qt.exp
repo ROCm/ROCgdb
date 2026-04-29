@@ -28,7 +28,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile}] } {
 }
 
 if {![runto setup_done]} {
-    return 0
+    return
 }
 
 set any "\[^\r\n\]*"

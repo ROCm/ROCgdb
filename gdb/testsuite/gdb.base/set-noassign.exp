@@ -19,7 +19,7 @@ if { [prepare_for_testing "failed to prepare" "set-noassign" start.c {debug nowa
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Verify that set command without assignment emits a warning.
