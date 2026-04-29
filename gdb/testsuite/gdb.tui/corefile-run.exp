@@ -27,19 +27,19 @@ standard_testfile tui-layout.c
 set core [standard_output_file "${testfile}.core"]
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile debug] } {
-    return -1
+    return
 }
 
 # Only run on native boards.
 require {target_can_use_run_cmd core}
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 if { ![gdb_gcore_cmd "$core" "save a corefile"] } {
     untested "could not generate a corefile"
-    return -1
+    return
 }
 
 set src_line "return 0;"

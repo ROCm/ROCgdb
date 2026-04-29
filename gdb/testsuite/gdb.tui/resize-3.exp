@@ -23,7 +23,7 @@ if { [build_executable_from_specs "failed to prepare" \
 	  $testfile {debug} \
 	  $srcfile {debug} \
 	  $srcfile2 {nodebug}] == -1 } {
-    return -1
+    return
 }
 
 tuiterm_env

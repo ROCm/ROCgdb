@@ -24,7 +24,7 @@ standard_testfile main-one-line.c
 set main_line [gdb_get_line_number "int main"]
 
 if {[build_executable "failed to prepare" ${testfile} ${srcfile}] == -1} {
-    return -1
+    return
 }
 
 Term::clean_restart 24 80 $testfile

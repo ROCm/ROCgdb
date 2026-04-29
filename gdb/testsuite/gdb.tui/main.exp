@@ -22,7 +22,7 @@ tuiterm_env
 standard_testfile tui-layout.c
 
 if {[build_executable "failed to prepare" ${testfile} ${srcfile}] == -1} {
-    return -1
+    return
 }
 
 # Note: don't pass the executable here

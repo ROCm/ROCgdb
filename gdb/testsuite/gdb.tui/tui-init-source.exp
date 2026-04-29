@@ -23,7 +23,7 @@ tuiterm_env
 standard_testfile
 
 if {[build_executable "failed to prepare" ${testfile} ${srcfile}] == -1} {
-    return -1
+    return
 }
 
 Term::clean_restart 24 80 $testfile

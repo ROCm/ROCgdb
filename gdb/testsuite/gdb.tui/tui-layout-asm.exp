@@ -21,7 +21,7 @@ tuiterm_env
 standard_testfile tui-layout.c
 
 if {[build_executable "failed to prepare" ${testfile} ${srcfile}] == -1} {
-    return -1
+    return
 }
 
 # The wider the window is, the less line truncation happens, so matching
