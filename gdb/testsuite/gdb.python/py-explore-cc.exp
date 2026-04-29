@@ -37,7 +37,7 @@ i = <Enter 1 to explore this field of type 'int'>.*\
 c = <Enter 2 to explore this field of type 'char'>.*"
 
 if {![runto_main]} {
-   return -1
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "Break here."]

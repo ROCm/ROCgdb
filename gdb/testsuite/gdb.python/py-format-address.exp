@@ -23,7 +23,7 @@ foreach func_name { foo bar } {
 	     [list debug \
 		  nopie \
 		  additional_flags=-DFUNCTION_NAME=${func_name}]] == -1} {
-	return -1
+	return
     }
 }
 
@@ -35,7 +35,7 @@ set binary_bar [standard_output_file $testfile_bar]
 clean_restart $testfile_foo
 
 if {![runto_main]} {
-   return -1
+    return
 }
 
 # Check the gdb.format_address method when using the default values

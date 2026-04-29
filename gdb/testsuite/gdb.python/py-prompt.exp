@@ -70,7 +70,7 @@ save_vars { INTERNAL_GDBFLAGS GDBFLAGS } {
     }
 
     if {![can_spawn_for_attach]} {
-	return 0
+	return
     }
 
     set test_spawn_id [spawn_wait_for_attach $binfile]

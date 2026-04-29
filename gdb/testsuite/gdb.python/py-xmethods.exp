@@ -27,7 +27,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
 }
 
 if {![runto_main]} {
-   return -1
+    return
 }
 
 set xmethods_script [gdb_remote_download host \

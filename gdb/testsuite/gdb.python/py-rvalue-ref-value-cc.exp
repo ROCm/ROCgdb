@@ -27,7 +27,7 @@ if {[prepare_for_testing $testfile.exp $testfile $srcfile \
 }
 
 if {![runto_main]} {
-   return -1
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "Break here."]

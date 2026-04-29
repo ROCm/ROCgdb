@@ -29,13 +29,13 @@ set f2_o [standard_output_file ${gdb_test_file_name}-f2.o]
 
 # Now build the object files.
 if {[gdb_compile "${srcdir}/${subdir}/${srcfile2}" ${f1_o} object {}] != ""} {
-  untested "failed to compile object file f1.o"
-  return -1
+    untested "failed to compile object file f1.o"
+    return
 }
 
 if {[gdb_compile "${srcdir}/${subdir}/${srcfile3}" ${f2_o} object {}] != ""} {
-  untested "failed to compile object file f2.o"
-  return -1
+    untested "failed to compile object file f2.o"
+    return
 }
 
 # Copy the two Python scripts to where the tests are being run.
@@ -50,7 +50,7 @@ if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
 }
 
 if {![runto_main]} {
-   return -1
+    return
 }
 
 set safe_path [standard_output_file ""]

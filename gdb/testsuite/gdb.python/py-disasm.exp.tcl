@@ -30,7 +30,7 @@ if { $kind == "obj" } {
     if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile object \
 	      "debug"] != "" } {
 	untested "failed to compile object file $testfile"
-	return -1
+	return
     }
 
     clean_restart $testfile
@@ -38,12 +38,12 @@ if { $kind == "obj" } {
 } else {
 
     if { [prepare_for_testing "failed to prepare" $testfile $srcfile] } {
-	return -1
+	return
     }
 
     if { ![runto_main] } {
 	fail "can't run to main"
-	return 0
+	return
     }
 
 }

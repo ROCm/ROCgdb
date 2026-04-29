@@ -24,7 +24,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
 }
 
 if {![runto_main]} {
-   return -1
+    return
 }
 
 # First, use 'maint print reggroups' to get a list of all register

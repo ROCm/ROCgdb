@@ -21,7 +21,7 @@ if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
 }
 
 if {![runto_main]} {
-   return -1
+    return
 }
 
 # Test python/15461.  Invalid architectures should not trigger an
