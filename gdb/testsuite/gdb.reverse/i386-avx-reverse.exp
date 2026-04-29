@@ -41,7 +41,7 @@ lappend_include_file alloc_lib $srcdir/lib/precise-aligned-alloc.c
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 [list debug $additional_flags $alloc_lib]]} {
-    return -1
+    return
 }
 
 # Shorthand to test reversing through one instruction and

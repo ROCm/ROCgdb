@@ -27,11 +27,11 @@ if {[info exists COMPILE]} {
 }
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} $opts] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {[supports_process_record]} {

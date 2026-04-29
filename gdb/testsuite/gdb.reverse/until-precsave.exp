@@ -24,7 +24,7 @@ set precsave [standard_output_file until.precsave]
 
 if { [prepare_for_testing "failed to prepare" $testfile \
 	  [list $srcfile $srcfile2]] } {
-    return -1
+    return
 }
 
 set bp_location1  [gdb_get_line_number "set breakpoint 1 here"]

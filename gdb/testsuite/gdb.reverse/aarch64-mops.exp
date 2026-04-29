@@ -37,11 +37,11 @@ standard_testfile
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	  [list debug additional_flags=-march=armv9.3-a]] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test_no_output "record full"

@@ -30,7 +30,7 @@ set additional_flags [gdb_target_symbol_prefix_flags]
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 [list debug $additional_flags]]} {
-    return -1
+    return
 }
 
 set end_of_main          [gdb_get_line_number " end of main "]

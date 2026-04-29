@@ -20,7 +20,7 @@ require supports_reverse
 standard_testfile
 
 if {[build_executable $testfile.exp $testfile $srcfile debug] == -1} {
-    return -1
+    return
 }
 
 proc test_one_sig {nextsig} {

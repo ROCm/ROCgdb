@@ -41,7 +41,7 @@ standard_testfile .c ms1.c
 
 if { [prepare_for_testing "failed to prepare" $testfile \
 	  [list $srcfile $srcfile2]] } {
-    return -1
+    return
 }
 
 set newline "\[\r\n\]+"

@@ -41,7 +41,7 @@ require {istarget "powerpc*"} allow_power_isa_3_1_tests
 
 set options [list additional_flags=-mcpu=power10 debug]
 if {[build_executable "failed to prepare" $executable $srcfile $options] == -1} {
-    return -1
+    return
 }
 
 clean_restart $executable
