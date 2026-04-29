@@ -22,11 +22,11 @@ standard_testfile riscv64-unwind-prologue-with-ld-lw.c \
 		  riscv64-unwind-prologue-with-ld-lw-foo.s
 if {[prepare_for_testing "failed to prepare" $testfile \
 			 "$srcfile $srcfile2"  nodebug]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_breakpoint "bar"
