@@ -18,7 +18,7 @@ standard_testfile exceptprint.cc
 require allow_cplus_tests
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 # This tests that $_exception gives an error when the systemtap probes
@@ -26,7 +26,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
 gdb_test "maint ignore-probes libstdcxx .*" ".*OBJNAME: ''"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "catch throw" "Catchpoint $decimal \\(throw\\)" \

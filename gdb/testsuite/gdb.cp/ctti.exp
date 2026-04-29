@@ -27,7 +27,7 @@ standard_testfile cttiadd.cc cttiadd1.cc cttiadd2.cc cttiadd3.cc
 
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile $srcfile2 $srcfile3 $srcfile4] {debug c++}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {

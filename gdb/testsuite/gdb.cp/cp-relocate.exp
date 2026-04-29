@@ -112,7 +112,7 @@ gdb_test_multiple "info file" "info file" {
 
 if { $func1_sec == $func2_sec } {
     untested "cp-relocate.exp - template functions in same sections"
-    return -1
+    return
 }
 
 # Now start a clean GDB, for add-symbol-file tests.

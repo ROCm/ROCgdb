@@ -20,7 +20,7 @@ require allow_cplus_tests
 standard_testfile .cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {c++ debug}]} {
-    return -1
+    return
 }
 
 gdb_test_no_output "set language c++"
@@ -28,7 +28,7 @@ gdb_test_no_output "set language c++"
 gdb_test "p *u" {You can't do that without a process to debug.} "test crash"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "p *v" " = 42" "test typedef"

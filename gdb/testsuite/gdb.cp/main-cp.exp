@@ -25,7 +25,7 @@ lappend opts debug
 lappend opts c++
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile $opts] } {
-    return -1
+    return
 }
 
 require {string eq [have_index $binfile] ""}

@@ -706,7 +706,7 @@ standard_testfile cpexprs.cc
 set flags "$flags debug c++"
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile "$flags"]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {

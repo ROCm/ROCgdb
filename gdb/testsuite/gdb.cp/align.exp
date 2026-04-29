@@ -139,7 +139,7 @@ standard_testfile $filename
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 {debug nowarnings c++ additional_flags=-std=c++11}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {

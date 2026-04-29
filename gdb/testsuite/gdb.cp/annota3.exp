@@ -26,7 +26,7 @@ standard_testfile .cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 {debug c++ nowarnings}]} {
-    return -1
+    return
 }
 
 # This testcase cannot use runto_main because of the different prompt

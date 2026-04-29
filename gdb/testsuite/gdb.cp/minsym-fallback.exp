@@ -37,7 +37,7 @@ if {[gdb_compile $srcdir/$subdir/$srcfile $objfile object $nodebug_flags] != ""
     || [gdb_compile $srcdir/$subdir/$srcfile2 $objmainfile object $debug_flags] != ""
     || [gdb_compile "$objfile $objmainfile" $binfile executable $debug_flags] != ""} {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart ${executable}

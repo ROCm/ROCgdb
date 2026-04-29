@@ -22,11 +22,11 @@ standard_testfile .cc
 set exefile $testfile
 
 if {[prepare_for_testing "failed to prepare" $exefile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Run to a location in the file.

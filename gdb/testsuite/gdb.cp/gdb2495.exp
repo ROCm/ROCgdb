@@ -42,7 +42,7 @@ standard_testfile .cc
 require {!target_info exists gdb,cannot_call_functions}
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {

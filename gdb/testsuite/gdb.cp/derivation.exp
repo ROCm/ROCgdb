@@ -36,7 +36,7 @@ standard_testfile derivation.cc derivation2.cc
 
 if {[prepare_for_testing "failed to prepare" $testfile \
 	[list $srcfile $srcfile2] {debug c++}]} {
-    return -1
+    return
 }
 
 # Check inheritance of typedefs.

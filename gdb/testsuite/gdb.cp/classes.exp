@@ -34,7 +34,7 @@ if { [test_compiler_info "clang-*" "c++"] } {
 }
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $flags]} {
-    return -1
+    return
 }
 
 # Test ptype of class objects.

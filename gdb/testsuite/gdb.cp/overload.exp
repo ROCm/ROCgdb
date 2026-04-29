@@ -29,7 +29,7 @@ require allow_cplus_tests
 standard_testfile .cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 # Set it up at a breakpoint so we can play with the variable values.

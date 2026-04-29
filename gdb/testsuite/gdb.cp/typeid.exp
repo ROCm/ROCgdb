@@ -18,7 +18,7 @@ standard_testfile .cc
 require allow_cplus_tests
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 proc do_typeid_tests {started} {
@@ -83,7 +83,7 @@ with_test_prefix "before starting" {
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 with_test_prefix "after starting" {

@@ -56,7 +56,7 @@ require allow_cplus_tests
 standard_testfile .cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 # Tests below are about tab-completion, which doesn't work if readline
@@ -64,7 +64,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
 
 if { ![readline_is_used] } {
     untested "no tab completion support without readline"
-    return -1
+    return
 }
 
 # Test that completion is restricted by class name (all methods)

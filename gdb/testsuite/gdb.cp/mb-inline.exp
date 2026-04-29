@@ -26,7 +26,7 @@ include_file $hdrfile
 
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile $srcfile2] {debug c++}]} {
-    return -1
+    return
 }
 
 set bp_location [gdb_get_line_number "set breakpoint here" $hdrfile]
@@ -80,7 +80,7 @@ delete_breakpoints
 set bp_location [gdb_get_line_number "set multi-line breakpoint here" $hdrfile]
 
 if { ![runto_main] } {
-    return 0
+    return
 }
 
 gdb_test "break $hdrfile:$bp_location" \
