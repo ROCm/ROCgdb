@@ -40,7 +40,7 @@ clean_restart $::testfile
 #
 
 if {![runto_main]} {
-  return -1
+    return
 }
 
 set function "standard"
@@ -53,8 +53,8 @@ set retcode [gdb_test_multiple "disassemble $function" "disassemble function '$f
 }]
 
 if {$retcode != 0} {
-  fail "disassemble failed, skipping entire test."
-  return -1
+    fail "disassemble failed, skipping entire test."
+    return
 }
 
 gdb_breakpoint "*$address_bp"

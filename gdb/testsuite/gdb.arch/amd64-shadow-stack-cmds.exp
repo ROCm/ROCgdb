@@ -44,12 +44,12 @@ save_vars { ::env(GLIBC_TUNABLES) } {
 
     if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	  {debug additional_flags="-fcf-protection=return"}] } {
-	return -1
+	return
     }
 
     clean_restart ${::testfile}
     if { ![runto_main] } {
-	return -1
+	return
     }
 
     with_test_prefix "test inferior call and continue" {
@@ -85,7 +85,7 @@ save_vars { ::env(GLIBC_TUNABLES) } {
 
     clean_restart ${::testfile}
     if { ![runto_main] } {
-	return -1
+	return
     }
 
     set call1_line [ gdb_get_line_number "break call1" ]
@@ -122,7 +122,7 @@ save_vars { ::env(GLIBC_TUNABLES) } {
 
     clean_restart ${::testfile}
     if { ![runto_main] } {
-	return -1
+	return
     }
 
     with_test_prefix "test return from past frame" {
