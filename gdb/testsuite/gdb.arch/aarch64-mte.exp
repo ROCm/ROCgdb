@@ -278,7 +278,7 @@ with_test_prefix "print command" {
 
     if {$ltag == -1} {
 	unresolved "unexpected tag value"
-	return -1
+	return
     }
 
     set atag [expr {($ltag + 1) % 16}]
@@ -335,14 +335,14 @@ gdb_test "continue" \
 # Restart to execute the async tag fault test.
 with_test_prefix "async" {
     if {![runto_main]} {
-	return -1
+	return
     }
 
     gdb_breakpoint "access_memory"
 
     if {[gdb_continue "access_memory"]} {
 	fail "could not run to tagged memory test function"
-	return -1
+	return
     }
 
     # Force a tag fault.

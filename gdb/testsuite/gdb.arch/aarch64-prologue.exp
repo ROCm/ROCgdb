@@ -23,7 +23,7 @@ if { [prepare_for_testing "failed to prepare" $testfile $srcfile {nodebug}]} {
 }
 
 if {![runto_main]} {
-   return -1
+    return
 }
 
 # Ensure gdb can break at excessiveprologue then continue.
