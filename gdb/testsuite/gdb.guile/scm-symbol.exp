@@ -23,7 +23,7 @@ require allow_guile_tests
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # These tests are done before we call gdb_guile_runto_main so we have to
@@ -138,7 +138,7 @@ gdb_test "guile (print (symbol-symtab t))" "= #<gdb:symtab (.*/)?scm-symbol.c>"
 # Recompile binary.
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}-cxx" executable "debug c++"] != "" } {
     untested "failed to compile in C++ mode"
-    return -1
+    return
 }
 
 clean_restart ${::testfile}-cxx
