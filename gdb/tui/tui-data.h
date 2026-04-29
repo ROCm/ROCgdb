@@ -44,10 +44,6 @@ protected:
   tui_win_info () = default;
   DISABLE_COPY_AND_ASSIGN (tui_win_info);
 
-  /* This is called after the window is resized, and should update the
-     window's contents.  */
-  virtual void rerender ();
-
   /* Create the curses window.  */
   void make_window ();
 
@@ -55,7 +51,13 @@ public:
   tui_win_info (tui_win_info &&) = default;
   virtual ~tui_win_info () = default;
 
-  /* Call to refresh this window.  */
+  /* Call to update the in-memory contents of this window.  Does not
+     cause the contents to be drawn to the screen.  */
+  virtual void rerender ();
+
+  /* Call to refresh this window on the screen.  The in-memory contents of
+     the window are not updated by this call; whatever the current contents
+     are, they are drawn to the screen.  */
   virtual void refresh_window ();
 
   /* Make this window visible or invisible.  */

@@ -103,8 +103,6 @@ protected:
   /* Erase the content and display STRING.  */
   void do_erase_source_content (const char *string);
 
-  void rerender () override;
-
   virtual bool set_contents (struct gdbarch *gdbarch,
 			     const struct symtab_and_line &sal) = 0;
 
@@ -137,6 +135,8 @@ protected:
   int m_max_length;
 
 public:
+
+  void rerender () override;
 
   /* Refill the source window's source cache and update it.  If this
      is a disassembly window, then just update it.  */
