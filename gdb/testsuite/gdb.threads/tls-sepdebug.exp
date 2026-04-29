@@ -46,7 +46,7 @@ set binsharedfile      [standard_output_file ${binsharedbase}]
 if { [build_executable "build library" ${binsharedfile} ${srcsharedfile} \
 	  {debug shlib additional_flags=-std=c11}] == -1 } {
     untested "Couldn't compile test library"
-    return -1
+    return
 }
 
 # Strip debug information from $binsharedfile, placing it in
@@ -61,7 +61,7 @@ if  { [gdb_compile_pthreads \
 	"${binmainfile}" executable [list debug additional_flags=-std=c11]] \
        != "" } {
     untested "Couldn't compile test program"
-    return -1
+    return
 }
 
 set absdir [file dirname [standard_output_file ${binsharedbase}]]

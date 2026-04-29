@@ -32,7 +32,7 @@ if { ![istarget "*-*-linux*"] } {
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug pthreads}] == -1} {
-    return -1
+    return
 }
 
 for {set iteration 0} {$iteration < 10} {incr iteration} {

@@ -58,7 +58,7 @@
 standard_testfile
 
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable debug] != "" } {
-    return -1
+    return
 }
 
 

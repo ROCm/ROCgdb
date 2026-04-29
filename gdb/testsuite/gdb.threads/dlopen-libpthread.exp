@@ -33,12 +33,12 @@ set lib_dlopen [shlib_target_file ${executable}.so]
 set relink_args [build_executable_own_libs ${testfile}.exp ${executable}.so $srclibfile {debug shlib_pthreads} no]
 if {$relink_args == "" || ![prelink_no $relink_args]
     || [prepare_for_testing "failed to prepare" ${executable} ${srcmainfile} {debug shlib_load}] } {
-    return -1
+    return
 }
 gdb_load_shlib $binfile_lib
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 set probe_names {}
@@ -62,7 +62,7 @@ foreach probe_name $probe_names {
 
 if { !$have_probe } {
     untested "no matching probes"
-    return -1
+    return
 }
 
 # We link the exec without -lpthread, but libpthread.so may already be loaded at main

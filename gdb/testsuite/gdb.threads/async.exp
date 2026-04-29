@@ -16,7 +16,7 @@
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug pthreads}] == -1} {
-    return -1
+    return
 }
 
 # At this point GDB will be busy handling the breakpoint hits and

@@ -19,7 +19,7 @@ require {!target_info exists gdb,nosignals}
 
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 	 executable { debug }] != "" } {
-    return -1
+    return
 }
 
 # Run test proper.  COMMAND indicates whether to resume the inferior

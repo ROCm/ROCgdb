@@ -28,7 +28,7 @@ standard_testfile
 set linenum [gdb_get_line_number "set break here"]
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug pthreads}] == -1} {
-    return -1
+    return
 }
 
 # The test proper.  If COND_BP_TARGET is true, then test with

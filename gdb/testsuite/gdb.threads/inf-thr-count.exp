@@ -37,7 +37,7 @@ standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile \
 	 {debug pthreads}] == -1} {
-    return -1
+    return
 }
 
 # Start GDB.  Ensure we are in non-stop mode as we need to read from
@@ -48,7 +48,7 @@ save_vars {GDBFLAGS} {
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint breakpt
@@ -131,7 +131,7 @@ proc wait_for_stage { num } {
 # Wait until we can see that the extra thread has been created.
 if {![wait_for_stage 1]} {
     unresolved "failed to see thread start"
-    return -1
+    return
 }
 
 
@@ -160,7 +160,7 @@ gdb_test_no_output "set variable spin = 0" \
 # Wait until the extra thread has exited.
 if {![wait_for_stage 2]} {
     unresolved "failed to see thread start"
-    return -1
+    return
 }
 
 # Check that the second thread has gone away.

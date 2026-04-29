@@ -18,7 +18,7 @@
 
 standard_testfile linux-dp.c
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != ""} {
-    return -1
+    return
 }
 
 clean_restart ${::testfile}

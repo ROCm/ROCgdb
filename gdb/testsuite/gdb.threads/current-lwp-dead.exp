@@ -30,11 +30,11 @@ if {![istarget *-*-linux*]} {
 }
 
 if { [prepare_for_testing "failed to prepare" current-lwp-dead] } {
-    return -1
+    return
 }
 
 if {[runto_main] <= 0} {
-    return -1
+    return
 }
 
 # Run to "fn" so that thread 2 is made current.

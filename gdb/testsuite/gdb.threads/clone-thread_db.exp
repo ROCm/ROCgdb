@@ -23,11 +23,11 @@ if {![istarget *-*-linux*]} {
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug pthreads}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "break clone_fn" "Breakpoint.*at.*file.*$srcfile.*line.*"

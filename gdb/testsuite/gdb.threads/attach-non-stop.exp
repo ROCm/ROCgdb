@@ -134,7 +134,7 @@ proc test {target_non_stop non_stop cmd} {
 }
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug pthreads}] == -1} {
-    return -1
+    return
 }
 
 foreach_with_prefix target-non-stop {"off" "on"} {

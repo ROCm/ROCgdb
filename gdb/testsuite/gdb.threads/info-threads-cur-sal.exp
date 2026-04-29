@@ -20,13 +20,13 @@ set executable ${testfile}
 if {[gdb_compile_pthreads \
 	 "${srcdir}/${subdir}/${srcfile} ${srcdir}/${subdir}/${srcfile2}" \
 	 "${binfile}" executable {debug}] != "" } {
-    return -1
+    return
 }
 
 clean_restart ${executable}
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint "start"

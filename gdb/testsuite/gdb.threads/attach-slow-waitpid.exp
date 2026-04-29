@@ -98,7 +98,7 @@ if { [gdb_spawn_with_ld_preload $libobj] == -1 } {
     # Make sure we get UNTESTED rather than UNRESOLVED.
     set errcnt 0
     untested "Couldn't start GDB with preloaded lib"
-    return -1
+    return
 }
 
 # Load binary, and attach to running program.

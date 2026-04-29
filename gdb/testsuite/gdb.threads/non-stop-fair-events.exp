@@ -23,13 +23,13 @@ require {!target_info exists gdb,nosignals}
 
 set options { "additional_flags=-DTIMEOUT=$timeout" debug pthreads }
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $options] == -1} {
-    return -1
+    return
 }
 
 gdb_test_no_output "set non-stop on"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # We want "handle print", to make sure the target backend reports the
