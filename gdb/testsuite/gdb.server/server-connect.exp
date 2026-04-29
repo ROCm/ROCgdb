@@ -28,7 +28,7 @@ require allow_gdbserver_tests
 require {!is_remote target}
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile debug] } {
-    return -1
+    return
 }
 
 # Make sure we're disconnected, in case we're testing with an

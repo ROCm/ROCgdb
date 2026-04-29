@@ -20,7 +20,7 @@ require allow_gdbserver_tests
 standard_testfile normal.c
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 set target_binfile [gdb_remote_download target $binfile]

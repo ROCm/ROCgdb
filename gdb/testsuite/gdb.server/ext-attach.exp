@@ -27,7 +27,7 @@ require allow_gdbserver_tests
 require can_spawn_for_attach
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # Run the test.  TARGET_NON_STOP and TARGET_ASYNC should be 'on'

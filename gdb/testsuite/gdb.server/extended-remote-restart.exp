@@ -48,7 +48,7 @@ if { [info proc gdb_reconnect] == "" } {
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # Core of the test.  DO_KILL_P controls whether we kill one of the

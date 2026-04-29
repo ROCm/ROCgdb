@@ -27,7 +27,7 @@ require allow_gdbserver_tests allow_python_tests
 
 if {[build_executable "failed to prepare" ${testfile} \
 	 ${srcfile}] == -1} {
-    return -1
+    return
 }
 
 set target_binfile [gdb_remote_download target $binfile]
