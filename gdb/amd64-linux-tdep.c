@@ -1828,6 +1828,17 @@ amd64_linux_remove_non_address_bits_watchpoint (gdbarch *gdbarch,
   return (addr & amd64_linux_lam_untag_mask ());
 }
 
+/* The AMD64 Linux ABI version of fetch_hiperr_parameters.  */
+
+static std::optional<hiperr_parameters>
+amd64_linux_fetch_hiperr_parameters (frame_info_ptr frame)
+{
+  CORE_ADDR struct_addr
+    = value_as_address (value_of_register (AMD64_RDI_REGNUM, frame));
+
+  return amd64_fetch_hiperr_parameters (frame, struct_addr);
+}
+
 static void
 amd64_linux_init_abi_common(struct gdbarch_info info, struct gdbarch *gdbarch,
 			    int num_disp_step_buffers)
@@ -1882,6 +1893,10 @@ amd64_linux_init_abi_common(struct gdbarch_info info, struct gdbarch *gdbarch,
 
   set_gdbarch_remove_non_address_bits_watchpoint
     (gdbarch, amd64_linux_remove_non_address_bits_watchpoint);
+
+  /* Extract hiperr parameters for 'catch hiperr'.  */
+  set_gdbarch_fetch_hiperr_parameters
+    (gdbarch, amd64_linux_fetch_hiperr_parameters);
 }
 
 static void

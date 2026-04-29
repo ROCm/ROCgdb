@@ -41,6 +41,7 @@
 #include "i387-tdep.h"
 #include "gdbsupport/x86-xstate.h"
 #include <algorithm>
+#include <string>
 #include "target-descriptions.h"
 #include "arch/amd64.h"
 #include "producer.h"
@@ -1059,6 +1060,81 @@ amd64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   return sp + 16;
 }
 
+
+/* Extract HIP error parameters from the STRUCT_ADDR which is
+   a struct address passed to "__hipOnError ()" as an argument.
+
+   Only when all the parameters are retrieved successfully, return
+   them as the result.  Otherwise [1], return an std::nullopt.
+
+   [1]
+   - The "version" was not expected
+   - Not all the fields were read successfully
+   - Not all the strings were read successfully
+*/
+
+std::optional<hiperr_parameters>
+amd64_fetch_hiperr_parameters (frame_info_ptr frame, CORE_ADDR struct_addr)
+{
+  /* The HIP error parameters are packed in a struct with the following format:
+
+     struct {
+	uint32_t version;
+	uint32_t err_no;
+	const char *err_name;
+	const char *err_str;
+     };
+
+    The "version" is bumped when more fields are added to the structure.
+    Newer versions must keep backward compatibility with the previous ones,
+    by only tacking new fields at the end of the structure, so that older
+    clients can still extract the parameters they know.
+  */
+
+  /* Cover the version (4), number (4) and two pointers (2*8).  */
+  constexpr size_t buf_size = 24;
+  gdb_byte buf[buf_size];
+  CORE_ADDR addr;
+  uint32_t version, err_no;
+  gdb::unique_xmalloc_ptr<char> str, err_name, err_str;
+  enum bfd_endian byte_order = gdbarch_byte_order (get_frame_arch (frame));
+
+  /* Read the whole struct in one go.  */
+  if (target_read_memory (struct_addr, buf, buf_size) != 0)
+    return std::nullopt;
+
+  /* Get the version.  */
+  version = extract_unsigned_integer (buf, 4, byte_order);
+  /* Use less-than because versioning is designed to be ABI backwards
+     compatible.  See note above.  */
+  if (version < 1)
+    {
+      warning (_("version '%s' for HIP error parameters is not supported."),
+	       pulongest (version));
+      return std::nullopt;
+    }
+
+  /* The error code.  */
+  err_no = extract_unsigned_integer (buf + 4, 4, byte_order);
+
+  /* The error name.  */
+  addr = extract_unsigned_integer (buf + 8, 8, byte_order);
+  str = target_read_string (addr, -1);
+  if (str == nullptr)
+    return std::nullopt;
+  err_name = std::move (str);
+
+  /* The error description.  */
+  addr = extract_unsigned_integer (buf + 16, 8, byte_order);
+  str = target_read_string (addr, -1);
+  if (str == nullptr)
+    return std::nullopt;
+  err_str = std::move (str);
+
+  return hiperr_parameters {err_no, std::move (err_name), std::move (err_str)};
+}
+
+
 /* Displaced instruction handling.  */
 
 /* A partially decoded instruction.
