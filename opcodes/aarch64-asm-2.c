@@ -1001,7 +1001,6 @@ aarch64_insert_operand (const aarch64_operand *self,
       return aarch64_ins_addr_regoff (self, info, code, inst, errors);
     case AARCH64_OPND_ADDR_SIMM7:
     case AARCH64_OPND_ADDR_SIMM9:
-    case AARCH64_OPND_ADDR_SIMM9_2:
     case AARCH64_OPND_ADDR_SIMM11:
     case AARCH64_OPND_ADDR_SIMM13:
       return aarch64_ins_addr_simm (self, info, code, inst, errors);

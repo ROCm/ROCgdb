@@ -738,13 +738,6 @@ enum aarch64_opnd
   AARCH64_OPND_ADDR_REGOFF,	/* Address of register offset.  */
   AARCH64_OPND_ADDR_SIMM7,	/* Address of signed 7-bit immediate.  */
   AARCH64_OPND_ADDR_SIMM9,	/* Address of signed 9-bit immediate.  */
-  AARCH64_OPND_ADDR_SIMM9_2,	/* Same as the above, but the immediate is
-				   negative or unaligned and there is
-				   no writeback allowed.  This operand code
-				   is only used to support the programmer-
-				   friendly feature of using LDR/STR as the
-				   the mnemonic name for LDUR/STUR instructions
-				   wherever there is no ambiguity.  */
   AARCH64_OPND_ADDR_SIMM10,	/* Address of signed 10-bit immediate.  */
   AARCH64_OPND_ADDR_SIMM11,	/* Address with a signed 11-bit (multiple of
 				   16) immediate.  */

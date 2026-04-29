@@ -8122,8 +8122,6 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       "an address with 7-bit signed immediate offset")			\
     Y(ADDRESS, addr_simm, "ADDR_SIMM9", 0, F(FLD_imm9,FLD_index),	\
       "an address with 9-bit signed immediate offset")			\
-    Y(ADDRESS, addr_simm, "ADDR_SIMM9_2", 0, F(FLD_imm9,FLD_index),	\
-      "an address with 9-bit negative or unaligned immediate offset")	\
     Y(ADDRESS, addr_simm10, "ADDR_SIMM10", 0, F(FLD_Rn,FLD_S_imm10,FLD_imm9,FLD_index),\
       "an address with an optional 10-bit scaled, signed immediate offset")		\
     Y(ADDRESS, addr_simm, "ADDR_SIMM11", 0, F(FLD_imm7,FLD_index2),\

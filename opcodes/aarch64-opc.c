@@ -2347,18 +2347,6 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	    }
 	  break;
 
-	case AARCH64_OPND_ADDR_SIMM9_2:
-	  /* Unscaled signed 9 bits immediate offset, which has to be negative
-	     or unaligned.  */
-	  size = aarch64_get_qualifier_esize (qualifier);
-	  if ((value_in_range_p (opnd->addr.offset.imm, 0, 255)
-	       && !value_aligned_p (opnd->addr.offset.imm, size))
-	      || value_in_range_p (opnd->addr.offset.imm, -256, -1))
-	    return true;
-	  set_other_error (mismatch_detail, idx,
-			   _("negative or unaligned offset expected"));
-	  return false;
-
 	case AARCH64_OPND_ADDR_SIMM10:
 	  /* Scaled signed 10 bits immediate offset.  */
 	  if (!value_in_range_p (opnd->addr.offset.imm, -4096, 4088))
@@ -4952,7 +4940,6 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 
     case AARCH64_OPND_ADDR_SIMM7:
     case AARCH64_OPND_ADDR_SIMM9:
-    case AARCH64_OPND_ADDR_SIMM9_2:
     case AARCH64_OPND_ADDR_SIMM10:
     case AARCH64_OPND_ADDR_SIMM11:
     case AARCH64_OPND_ADDR_SIMM13:

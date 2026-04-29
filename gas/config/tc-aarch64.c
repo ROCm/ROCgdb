@@ -7782,14 +7782,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  break;
 
 	case AARCH64_OPND_ADDR_SIMM9:
-	case AARCH64_OPND_ADDR_SIMM9_2:
 	case AARCH64_OPND_ADDR_SIMM11:
 	case AARCH64_OPND_ADDR_SIMM13:
 	  po_misc_or_fail (parse_address (&str, info));
 	  if (info->addr.pcrel || info->addr.offset.is_reg
-	      || (!info->addr.preind && !info->addr.postind)
-	      || (operands[i] == AARCH64_OPND_ADDR_SIMM9_2
-		  && info->addr.writeback))
+	      || (!info->addr.preind && !info->addr.postind))
 	    {
 	      set_syntax_error (_("invalid addressing mode"));
 	      goto failure;
@@ -9749,7 +9746,6 @@ fix_insn (fixS *fixP, uint32_t flags, offsetT value)
 
     case AARCH64_OPND_ADDR_SIMM7:
     case AARCH64_OPND_ADDR_SIMM9:
-    case AARCH64_OPND_ADDR_SIMM9_2:
     case AARCH64_OPND_ADDR_SIMM10:
     case AARCH64_OPND_ADDR_UIMM12:
     case AARCH64_OPND_ADDR_SIMM11:
