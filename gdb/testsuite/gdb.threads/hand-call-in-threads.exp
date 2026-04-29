@@ -47,7 +47,7 @@ proc get_dummy_frame_number { } {
 clean_restart ${::testfile}
 
 if { ![runto_main] } {
-    return 0
+    return
 }
 
 gdb_test "break all_threads_running" \

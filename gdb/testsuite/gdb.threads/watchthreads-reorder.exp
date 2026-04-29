@@ -27,7 +27,7 @@
 
 require allow_hw_watchpoint_access_tests allow_hw_watchpoint_multi_tests
 if {![istarget *-*-linux*]} {
-    return 0
+    return
 }
 
 standard_testfile

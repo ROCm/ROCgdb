@@ -46,7 +46,7 @@ proc bad_dejagnu {} {
 
 if {[bad_dejagnu]} {
     unsupported "broken DejaGnu"
-    return 0
+    return
 }
 
 require can_spawn_for_attach

@@ -29,7 +29,7 @@ if {[prepare_for_testing "failed to prepare" \
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Have SIGSTOP sent to the inferior.

@@ -18,7 +18,7 @@
 set gdbserver_reconnect_p 1
 if { [info proc gdb_reconnect] == "" } {
     unsupported "requires gdbserver reconnect"
-    return 0
+    return
 }
 
 standard_testfile
@@ -35,7 +35,7 @@ if { [gdb_compile_pthreads \
 clean_restart $executable
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_test "continue" "signal SIGUSR1.*" "continue to signal"
@@ -67,7 +67,7 @@ if { [lindex $res 0] == 0 } {
     pass $test
 } else {
     fail $test
-    return 0
+    return
 }
 
 # Check that thread 2 is re-selected.

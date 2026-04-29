@@ -15,7 +15,7 @@
 
 require isnative allow_shlib_tests
 if {![istarget *-linux*]} {
-    return 0
+    return
 }
 
 load_lib prelink-support.exp

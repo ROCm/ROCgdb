@@ -32,7 +32,7 @@ clean_restart ${::testfile}
 gdb_load_shlib ${binfile_lib}
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_test "print so_extern" "0x0" "print thread local storage variable"
