@@ -27,7 +27,7 @@ lappend opts additional_flags=-nostdlib
 
 if {[prepare_for_testing "failed to prepare" $exefile \
 	 [list $srcfile $srcfile2 $srcfile3] $opts]} {
-    return -1
+    return
 }
 
 # Wrap the entire test in a namespace to avoid contaminating other tests.
@@ -98,7 +98,7 @@ namespace eval $testfile {
 
     # Fire up gdb.
     if {![runto_main]} {
-	return -1
+	return
     }
 
     # Turn off queries

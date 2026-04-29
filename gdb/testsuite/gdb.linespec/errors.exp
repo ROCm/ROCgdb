@@ -19,7 +19,7 @@
 # another one.
 
 if {[prepare_for_testing "failed to prepare" linespecs keywords.c]} {
-  return -1
+    return
 }
 
 # PR gdb/12843

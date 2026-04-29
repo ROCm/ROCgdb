@@ -25,14 +25,14 @@ require allow_cplus_tests
 if {[prepare_for_testing "failed to prepare" $execfile \
 	 [list $srcfile $baseone $basetwo] \
 	 {debug nowarnings c++}]} {
-    return -1
+    return
 }
 
 gdb_test "skip function dupname" \
 	 {Function dupname will be skipped when stepping\.}
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set test "dupname ignored from main"
@@ -64,7 +64,7 @@ gdb_test "skip file thefile.cc" \
 	 {File thefile\.cc will be skipped when stepping\.}
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "step" "static int dupname .*" "step into dupname"

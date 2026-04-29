@@ -23,7 +23,7 @@ standard_testfile .cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 {debug c++ additional_flags=-std=c++11}]} {
-    return -1
+    return
 }
 
 # Disable the completion limit for the whole testcase.

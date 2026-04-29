@@ -19,11 +19,11 @@ standard_testfile
 set exefile $testfile
 
 if {[prepare_for_testing "failed to prepare" $exefile $srcfile {debug}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Turn off pending breakpoints to facilitate testing errors.
