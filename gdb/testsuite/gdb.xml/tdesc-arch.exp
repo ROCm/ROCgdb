@@ -31,7 +31,7 @@ gdb_test_multiple "set architecture" $msg {
     -re "Requires an argument. Valid arguments are (\[^ \]*), auto\\.\r\n$gdb_prompt $" {
 	# If there is just one supported architecture, we can't do this test.
 	unsupported "tdesc-arch.exp"
-	return -1
+	return
     }
 }
 
@@ -47,7 +47,7 @@ gdb_test_multiple "show architecture" $msg {
 # If that did not work, no point running further tests.
 if { "$arch1" == "" || "$arch2" == "" || "$default_arch" == "" } {
     unresolved "architecture XML tests"
-    return -1
+    return
 }
 
 # Run these tests twice, once for $arch1 and once for $arch2, to
