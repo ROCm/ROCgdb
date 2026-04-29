@@ -7,6 +7,17 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
+- Support for local memory (LDS) out-of-range address exception reporting
+  on architectures that support it (gfx12.5 or later).  When enabled, GDB
+  reports a SIGBUS instead of the access silently failing.  Off by default;
+  can be set and viewed with:
+  - `set  amdgpu lds-exception [on|off]`
+  - `show amdgpu lds-exception`
+
+## ROCgdb-16.3 for ROCm-10.2
+
+### Added
+
 - `rocgdb-emulate`, a wrapper that runs ROCgdb against a mirage-emulated
   GPU (MI300X, MI350X, MI450X), auto-detecting the target from `--profile`,
   `ROCGDB_EMULATE_PROFILE`, the program's offload bundle, or the ROCm tree's

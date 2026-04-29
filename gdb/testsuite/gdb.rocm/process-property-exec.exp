@@ -15,8 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test that the "set amdgpu precise-memory" setting is inherited by an inferior
-# created following an exec.
+# Test that the
+#
+#   set amdgpu precise-memory
+#   set amdgpu precise-alu-exceptions
+#   set lds-exception
+#
+# settings are inherited by an inferior created following an exec.
 
 load_lib rocm.exp
 
@@ -37,20 +42,30 @@ proc do_test { follow-exec-mode } {
 	    return
 	}
 
-	# Set precise-memory on the inferior before exec.
-	gdb_test "show amdgpu precise-memory" " is off.*" \
-	    "show amdgpu precise-memory before set"
-	gdb_test "set amdgpu precise-memory on"
-	gdb_test "show amdgpu precise-memory" " is on.*" \
-	    "show amdgpu precise-memory after set"
+	# Check that the properties are off (default).
+	foreach property {precise-memory precise-alu-exceptions \
+			  lds-exception} {
+	    gdb_test "show amdgpu $property" " is off.*" \
+		"show amdgpu $property before set"
+	}
 
-	# Continue past exec.  The precise-memory setting should
-	# be on.
+	# Set the properties on for the inferior before exec.
+	foreach property {precise-memory precise-alu-exceptions \
+			  lds-exception} {
+	    gdb_test "set amdgpu $property on"
+	    gdb_test "show amdgpu $property" " is on.*" \
+		"show amdgpu $property after set"
+	}
+
+	# Continue past exec.  The settings should still be on.
 	gdb_test_no_output "set follow-exec-mode ${follow-exec-mode}"
 	gdb_test "break second"
 	gdb_test "continue" "Breakpoint 1(\.$::decimal)?, main .*"
-	gdb_test "show amdgpu precise-memory" " is on.*" \
-	    "show amdgpu precise-memory after exec"
+	foreach property {precise-memory precise-alu-exceptions \
+			  lds-exception} {
+	    gdb_test "show amdgpu $property" " is on.*" \
+		"show amdgpu $property after exec"
+	}
     }
 }
 
