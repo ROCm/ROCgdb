@@ -272,6 +272,14 @@ def parse_arguments() -> argparse.Namespace:
         help="Timeout value in seconds for individual tests (max: 600). Default is 100.",
     )
     parser.add_argument(
+        "--try-rocm-path",
+        action="store_true",
+        help="Try to use ROCM_PATH environment variable to determine the ROCm tree root. "
+        "If ROCM_PATH is set and valid, it takes precedence over OUTPUT_ARTIFACTS_DIR and script location detection. "
+        "If ROCM_PATH is not set, falls back to OUTPUT_ARTIFACTS_DIR or script location detection. "
+        "If ROCM_PATH is invalid, issues an error.",
+    )
+    parser.add_argument(
         "--check-type",
         type=str,
         choices=["check", "check-read1", "check-readmore"],
@@ -1334,19 +1342,40 @@ def main() -> None:
     # Determine paths either from arguments or environment variables.
     if args.testsuite_dir is None:
         # Determine the root of the ROCm tree.
-        output_artifacts_dir = os.getenv("OUTPUT_ARTIFACTS_DIR")
-        if output_artifacts_dir is not None:
-            # OUTPUT_ARTIFACTS_DIR is set, verify it exists.
-            rocm_dir = Path(output_artifacts_dir).resolve()
-            if not rocm_dir.is_dir():
-                _log_error_and_exit(
-                    f"OUTPUT_ARTIFACTS_DIR is set to '{rocm_dir}' but the path does not exist"
+        # Priority: ROCM_PATH (if --try-rocm-path) > OUTPUT_ARTIFACTS_DIR > script location
+        rocm_dir = None
+
+        if args.try_rocm_path:
+            rocm_path_env = os.getenv("ROCM_PATH")
+            if rocm_path_env is not None:
+                tmp_dir = Path(rocm_path_env).resolve()
+                if not tmp_dir.is_dir():
+                    _log_error_and_exit(
+                        f"ROCM_PATH is set to '{tmp_dir}' but the path does not exist"
+                    )
+                rocm_dir = tmp_dir
+                logger.info(f"Using ROCM_PATH: {rocm_dir}")
+            else:
+                logger.info(
+                    "--try-rocm-path flag set but ROCM_PATH environment variable is not set. "
+                    "Falling back to OUTPUT_ARTIFACTS_DIR or script location."
                 )
-        else:
-            # OUTPUT_ARTIFACTS_DIR is not set, use script location to find root.
-            script_path = Path(__file__).resolve()
-            rocm_dir = script_path.parent.parent.parent
-            logger.info(f"OUTPUT_ARTIFACTS_DIR not set, using script-based path: {rocm_dir}")
+
+        if rocm_dir is None:
+            output_artifacts_dir = os.getenv("OUTPUT_ARTIFACTS_DIR")
+            if output_artifacts_dir is not None:
+                # OUTPUT_ARTIFACTS_DIR is set, verify it exists.
+                rocm_dir = Path(output_artifacts_dir).resolve()
+                if not rocm_dir.is_dir():
+                    _log_error_and_exit(
+                        f"OUTPUT_ARTIFACTS_DIR is set to '{rocm_dir}' but the path does not exist"
+                    )
+                logger.info(f"Using OUTPUT_ARTIFACTS_DIR: {rocm_dir}")
+            else:
+                # OUTPUT_ARTIFACTS_DIR is not set, use script location to find root.
+                script_path = Path(__file__).resolve()
+                rocm_dir = script_path.parent.parent.parent
+                logger.info(f"Using script-based path: {rocm_dir}")
 
         rocgdb_bin = rocm_dir / "bin" / "rocgdb"
         rocgdb_testsuite_dir = rocm_dir / "tests" / "rocgdb" / "gdb" / "testsuite"
