@@ -238,10 +238,7 @@ file copy -force $binfile $debugdir/
 # Create CACHE and DB directories ready for debuginfod to use.
 prepare_for_debuginfod cache db
 
-# Can add 'keys' to MODES list, but this doesn't currently
-# work due to PR gdb/33794.  This will be fixed in the next
-# commit, and this comment removed.
-set modes {command}
+set modes {command keys}
 
 with_debuginfod_env $cache {
     save_vars { env(DEBUGINFOD_URLS) } {

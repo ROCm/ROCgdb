@@ -1,0 +1,133 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that GDB handles tui_enable failure gracefully.
+#
+# Use an LD_PRELOAD library to override ncurses' newterm function,
+# making it always return NULL.  This causes tui_enable to fail with
+# an error.
+#
+# Test both the "tui enable" command and the multi-key combination
+# (C-x C-a) paths.  The multi-key path is particularly important as it
+# exercises the tui_rl_keybinding SCOPE_EXIT error handling.
+
+require allow_tui_tests
+require {!is_remote host}
+require {istarget *-linux*}
+
+tuiterm_env
+
+standard_testfile .c -lib.c
+
+set libfile ${testfile}-lib
+set libobj [standard_output_file ${libfile}.so]
+
+# Compile the preload library.
+if { [build_executable "build preload lib" $libobj $srcfile2 \
+	  {debug shlib}] == -1 } {
+    return
+}
+
+# Compile the test executable.
+if { [build_executable "build executable" $testfile $srcfile] == -1 } {
+    return
+}
+
+# Send 'print NUM' to GDB and check the output appear on LINE.
+proc check_responsiveness { num line } {
+    gdb_assert { [Term::command "print $num"] } \
+	"send print command"
+
+    gdb_assert { [Term::check_region_contents_p 0 $line 80 1 " = $num"] } \
+	"check print output is in expected location"
+}
+
+# Try to enable TUI mode using HOW, which is either 'command' or
+# 'keys'.  The preload library ensures that newterm returns NULL, so
+# tui_enable will fail.  Check that an error is produced and that GDB
+# remains responsive.
+#
+# The first failure sets tui_finish_init to TRIBOOL_UNKNOWN, so a
+# second attempt produces a different (generic) error message.  Try
+# the second attempt too, and check that GDB is still responsive.
+#
+# The 'keys' path (C-x C-a) is particularly important as it exercises
+# the tui_rl_keybinding SCOPE_EXIT error handling.
+proc_with_prefix run_test { how } {
+    Term::clean_restart 24 80 $::testfile
+
+    if {![Term::prepare_for_tui]} {
+	return
+    }
+
+    Term::gen_prompt
+
+    # First attempt to enable TUI.
+    if { $how eq "command" } {
+	send_gdb "tui enable\n"
+	set line_offset 1
+    } elseif { $how eq "keys" } {
+	send_gdb "\030\001"
+	set line_offset 0
+    } else {
+	perror "unknown test mode: $how"
+    }
+
+    gdb_assert { [Term::wait_for "Cannot enable the TUI: error opening terminal"] } \
+	"error from first tui enable attempt"
+
+    # Check that GDB is still responsive.
+    with_test_prefix "responsive after first failure" {
+	check_responsiveness 1 [expr {2 + $line_offset}]
+    }
+
+    # Second attempt using 'tui enable' command should also fail.
+    send_gdb "tui enable\n"
+    gdb_assert { [Term::wait_for "Cannot enable the TUI"] } \
+	"error from second tui enable attempt"
+
+    # Check that GDB is still responsive.
+    with_test_prefix "responsive after second failure" {
+	check_responsiveness 2 [expr {6 + $line_offset}]
+    }
+
+    # Third attempt using multi-key combo should also fail.
+    send_gdb "\030\001"
+    gdb_assert { [Term::wait_for "Cannot enable the TUI"] } \
+	"error from third tui enable attempt"
+
+    # Check that GDB is still responsive.
+    with_test_prefix "responsive after third failure" {
+	check_responsiveness 3 [expr {9 + $line_offset}]
+    }
+}
+
+set modes {command keys}
+
+save_vars { env(LD_PRELOAD) env(ASAN_OPTIONS) } {
+    if { ![info exists env(LD_PRELOAD)]
+	 || $env(LD_PRELOAD) == "" } {
+	set env(LD_PRELOAD) "$libobj"
+    } else {
+	append env(LD_PRELOAD) ":$libobj"
+    }
+
+    # Prevent address sanitizer error about library ordering.
+    append_environment_default ASAN_OPTIONS verify_asan_link_order 0
+
+    foreach_with_prefix how $modes {
+	run_test $how
+    }
+}
