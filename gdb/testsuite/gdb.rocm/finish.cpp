@@ -77,6 +77,12 @@ struct NotPackedWithBitField
   char c6 : 8;
 };
 
+struct MixedSmallStruct
+{
+  float a;
+  short b[2];
+};
+
 struct OnlyStatic
 {
   __device__ static int something;
@@ -206,6 +212,17 @@ returnEmptyWithStatic ()
   return {};
 }
 
+__device__ static __attribute__((noinline)) MixedSmallStruct
+returnMixedSmallSruct ()
+{
+  MixedSmallStruct var;
+  var.b[0] = 4;
+  var.b[1] = 7;
+  var.a = 3.14;
+
+  return var;
+}
+
 __device__ int someGlobal = 42;
 
 __global__ void
@@ -213,6 +230,8 @@ kernel ()
 {
   returnEmpty ();
   returnEmptyWithStatic ();
+
+  returnMixedSmallSruct ();
 
   returnSized<1> ();
   returnSized<2> ();
