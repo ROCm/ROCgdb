@@ -48,6 +48,12 @@ proc_with_prefix emptyStruct {} {
     }
 }
 
+proc_with_prefix mixedSmallStruct {} {
+    gdb_breakpoint "returnMixedSmallSruct" "allow-pending"
+    gdb_continue_to_breakpoint "returnMixedSmallSruct"
+    gdb_test "finish" "Value returned is \\\$$::decimal = \\{a = 3.1400001, b = \\{4, 7\\}\\}"
+}
+
 proc_with_prefix structWithCharArray {} {
     # When dealing with a struct of size up to 8 bytes, it is returned packed
     # in registers (V0 and V1).  Above that, we allocate one register per element
@@ -155,6 +161,7 @@ proc_with_prefix struct_with_static {} {
 
 with_rocm_gpu_lock {
     emptyStruct
+    mixedSmallStruct
     structWithCharArray
     unionMember
     flexibleAraryMember
