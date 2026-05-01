@@ -4587,9 +4587,9 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   __FP_INSN ("fcmpe", 0x1e202010, 0xff20fc1f, floatcmp, 0, OP2 (Fn, Fm),     QL_FP2,   F_FPTYPE),
   FF16_INSN ("fcmpe", 0x1ee02010, 0xff20fc1f, floatcmp, OP2 (Fn, Fm),     QL_FP2_H, F_FPTYPE),
   __FP_INSN ("fcmp",  0x1e202008, 0xff20fc1f, floatcmp, 0, OP2 (Fn, FPIMM0), QL_DST_SD,F_FPTYPE),
-  FF16_INSN ("fcmp",  0x1ee02008, 0xff20fc1f, floatcmp, OP2 (Fn, FPIMM0), QL_FP2_H, F_FPTYPE),
+  FF16_INSN ("fcmp",  0x1ee02008, 0xff20fc1f, floatcmp, OP2 (Fn, FPIMM0), QL_DST_H, F_FPTYPE),
   __FP_INSN ("fcmpe", 0x1e202018, 0xff20fc1f, floatcmp, 0, OP2 (Fn, FPIMM0), QL_DST_SD,F_FPTYPE),
-  FF16_INSN ("fcmpe", 0x1ee02018, 0xff20fc1f, floatcmp, OP2 (Fn, FPIMM0), QL_FP2_H, F_FPTYPE),
+  FF16_INSN ("fcmpe", 0x1ee02018, 0xff20fc1f, floatcmp, OP2 (Fn, FPIMM0), QL_DST_H, F_FPTYPE),
   /* Data processing instructions ARMv8.5-A.  */
   FLAGMANIP_INSN ("xaflag",   0xd500403f, 0xffffffff, 0, OP0 (), {}, 0),
   FLAGMANIP_INSN ("axflag",   0xd500405f, 0xffffffff, 0, OP0 (), {}, 0),
