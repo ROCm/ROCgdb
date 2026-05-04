@@ -1283,7 +1283,7 @@ decode_interrupt_vector (const uint8_t vector)
 
   return nullptr;
 }
-#endif /* defined (LIBIPT_VERSION >= 0x201) */
+#endif /* (LIBIPT_VERSION >= 0x201) */
 
 /* Handle instruction decode events (libipt-v2).  */
 
@@ -1596,7 +1596,7 @@ handle_pt_insn_events (struct btrace_thread_info *btinfo,
 	    handle_pt_aux_insn (btinfo, aux_string, pc);
 	    break;
 	  }
-#endif /* defined (LIBIPT_VERSION >= 0x201) */
+#endif /* (LIBIPT_VERSION >= 0x201) */
 	}
     }
 #endif /* defined (HAVE_PT_INSN_EVENT) */
@@ -3011,7 +3011,7 @@ pt_print_packet (const struct pt_packet *packet)
 		  packet->payload.ptw.payload,
 		  packet->payload.ptw.ip ? (" ip") : (""));
       break;
-#endif /* defined (LIBIPT_VERSION >= 0x200)  */
+#endif /* (LIBIPT_VERSION >= 0x200)  */
 
 #if (LIBIPT_VERSION >= 0x201)
     case ppt_cfe:
@@ -3024,7 +3024,7 @@ pt_print_packet (const struct pt_packet *packet)
       gdb_printf (("evd %u: 0x%" PRIx64 ""), packet->payload.evd.type,
 		  packet->payload.evd.payload);
       break;
-#endif /* defined (LIBIPT_VERSION >= 0x201)  */
+#endif /* (LIBIPT_VERSION >= 0x201)  */
     }
 }
 
