@@ -4714,27 +4714,30 @@ info_dispatches_command (const char *args, int from_tty)
 	      error (_("amd_dbgapi_dispatch_get_info failed (%s)"),
 		     get_status_string (status));
 
-	    std::stringstream ss;
-	    if (barrier == AMD_DBGAPI_DISPATCH_BARRIER_PRESENT)
-	      ss << "B";
+	    std::string str;
 
-	    if (barrier && acquire)
-	      ss << "|";
+	    auto append_str = [&str] (const char *s)
+	      {
+		if (!str.empty ())
+		  str += "|";
+
+		str += s;
+	      };
+
+	    if (barrier == AMD_DBGAPI_DISPATCH_BARRIER_PRESENT)
+	      append_str ("B");
 
 	    if (acquire == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_AGENT)
-	      ss << "Aa";
+	      append_str ("Aa");
 	    else if (acquire == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_SYSTEM)
-	      ss << "As";
-
-	    if ((barrier | acquire) && release)
-	      ss << "|";
+	      append_str ("As");
 
 	    if (release == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_AGENT)
-	      ss << "Ra";
+	      append_str ("Ra");
 	    else if (release == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_SYSTEM)
-	      ss << "Rs";
+	      append_str ("Rs");
 
-	    uiout->field_string ("fence", ss.str ());
+	    uiout->field_string ("fence", str);
 
 	    if (opts.full || uiout->is_mi_like_p ())
 	      {
