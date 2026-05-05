@@ -146,7 +146,6 @@ gdb_internal_backtrace_1 ()
 #endif
 
 static const char *str_backtrace = "----- Backtrace -----\n";
-static const char *str_backtrace_unavailable = "Backtrace unavailable\n";
 
 #endif /* GDB_PRINT_INTERNAL_BACKTRACE */
 
@@ -157,7 +156,6 @@ gdb_internal_backtrace_init_str ()
 {
 #ifdef GDB_PRINT_INTERNAL_BACKTRACE
   str_backtrace = _("----- Backtrace -----\n");
-  str_backtrace_unavailable = _("Backtrace unavailable\n");
 #endif
 }
 

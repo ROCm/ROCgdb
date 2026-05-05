@@ -379,7 +379,6 @@ extern std::string default_get_pc_address_flags (const frame_info_ptr &frame,
 extern void default_read_core_file_mappings
   (struct gdbarch *gdbarch,
    struct bfd *cbfd,
-   read_core_file_mappings_pre_loop_ftype pre_loop_cb,
    read_core_file_mappings_loop_ftype loop_cb);
 
 /* Default implementation of gdbarch_core_parse_exec_context.  Returns

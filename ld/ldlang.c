@@ -337,10 +337,10 @@ stat_ldirname (const char *name)
 /* If PATTERN is of the form archive:file, return a pointer to the
    separator.  If not, return NULL.  */
 
-static char *
+static const char *
 archive_path (const char *pattern)
 {
-  char *p = NULL;
+  const char *p = NULL;
 
   if (link_info.path_separator == 0)
     return p;
@@ -362,7 +362,7 @@ archive_path (const char *pattern)
    return whether F matches FILE_SPEC.  */
 
 static bool
-input_statement_is_archive_path (const char *file_spec, char *sep,
+input_statement_is_archive_path (const char *file_spec, const char *sep,
 				 lang_input_statement_type *f)
 {
   bool match = false;
@@ -377,9 +377,10 @@ input_statement_is_archive_path (const char *file_spec, char *sep,
       if (sep != file_spec)
 	{
 	  const char *aname = bfd_get_filename (f->the_bfd->my_archive);
-	  *sep = 0;
+	  /* SEP which points into FILE_SPEC is in writable memory.  */
+	  *(char *) sep = 0;
 	  match = name_match (file_spec, aname) == 0;
-	  *sep = link_info.path_separator;
+	  *(char *) sep = link_info.path_separator;
 	}
     }
   return match;
@@ -421,7 +422,7 @@ walk_wild_file_in_exclude_list (struct name_list *exclude_list,
        list_tmp;
        list_tmp = list_tmp->next)
     {
-      char *p = archive_path (list_tmp->name);
+      const char *p = archive_path (list_tmp->name);
 
       if (p != NULL)
 	{
@@ -477,7 +478,7 @@ walk_wild_section_match (lang_wild_statement_type *ptr,
 {
   struct wildcard_list *sec;
   const char *file_spec = ptr->filename;
-  char *p;
+  const char *p;
 
   /* Check if filenames match.  */
   if (file_spec == NULL)
@@ -8463,21 +8464,15 @@ lang_add_gc_name (const char *name)
 static void
 lang_check_relocs (void)
 {
-  if (link_info.check_relocs_after_open_input)
-    {
-      bfd *abfd;
-
-      for (abfd = link_info.input_bfds;
-	   abfd != (bfd *) NULL; abfd = abfd->link.next)
-	if (!bfd_link_check_relocs (abfd, &link_info))
-	  {
-	    /* No object output, fail return.  */
-	    config.make_executable = false;
-	    /* Note: we do not abort the loop, but rather
-	       continue the scan in case there are other
-	       bad relocations to report.  */
-	  }
-    }
+  for (bfd *abfd = link_info.input_bfds; abfd != NULL; abfd = abfd->link.next)
+    if (!bfd_link_check_relocs (abfd, &link_info))
+      {
+	/* No object output, fail return.  */
+	config.make_executable = false;
+	/* Note: we do not abort the loop, but rather
+	   continue the scan in case there are other
+	   bad relocations to report.  */
+      }
 }
 
 /* Look through all output sections looking for places where we can
@@ -10952,7 +10947,7 @@ cmdline_fopen_temp (const char *path, const char *target,
 #ifdef HAVE_DOS_BASED_FILE_SYSTEM
   {
     /* We could have foo/bar\\baz, or foo\\bar, or d:bar.  */
-    char *bslash = strrchr (path, '\\');
+    const char *bslash = strrchr (path, '\\');
 
     if (slash == NULL || (bslash != NULL && bslash > slash))
       slash = bslash;

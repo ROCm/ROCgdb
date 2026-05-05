@@ -1089,7 +1089,7 @@ pep_fixup_stdcalls (void)
   for (undef = link_info.hash->undefs; undef; undef=undef->u.undef.next)
     if (undef->type == bfd_link_hash_undefined)
       {
-	char* at = strchr (undef->root.string, '@');
+	const char* at = strchr (undef->root.string, '@');
 	int lead_at = (*undef->root.string == '@');
 	if (lead_at)
 	  at = strchr (undef->root.string + 1, '@');
@@ -1098,12 +1098,13 @@ pep_fixup_stdcalls (void)
 	    /* The symbol is a stdcall symbol, so let's look for a
 	       cdecl symbol with the same name and resolve to that.  */
 	    char *cname = xstrdup (undef->root.string);
+	    char *at2;
 
 	    if (lead_at)
 	      *cname = '_';
-	    at = strchr (cname, '@');
-	    if (at)
-	      *at = 0;
+	    at2 = strchr (cname, '@');
+	    if (at2)
+	      *at2 = 0;
 	    sym = bfd_link_hash_lookup (link_info.hash, cname, 0, 0, 1);
 
 	    if (sym && sym->type == bfd_link_hash_defined)
@@ -1737,7 +1738,7 @@ gld${EMULATION_NAME}_after_open (void)
       {
 	if (is->the_bfd->my_archive)
 	  {
-	    char *pnt;
+	    const char *pnt;
 
 	    /* Microsoft import libraries may contain archive members for
 	       one or more DLLs, together with static object files.
@@ -1986,7 +1987,7 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
 				    int constraint)
 {
   const char *orig_secname = secname;
-  char *dollar = NULL;
+  const char *dollar = NULL;
   lang_output_section_statement_type *os;
   lang_statement_list_type add_child;
   lang_output_section_statement_type *match_by_name = NULL;

@@ -55,6 +55,7 @@ if  { ([istarget "x86_64-*-*"] || [istarget "aarch64*-*-*"]
     run_dump_test "common-empty-3"
 
     run_dump_test "cfi-sframe-common-pr33810"
+    run_dump_test "cfi-sframe-common-pr34026"
 }
 
 # x86-64 specific tests

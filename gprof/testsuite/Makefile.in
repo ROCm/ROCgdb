@@ -90,9 +90,14 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-@NATIVE_TRUE@am__append_1 = tst-gmon-gprof.sh tst-gmon-gprof-l.sh
-@NATIVE_TRUE@am__append_2 = tst-gmon-gprof.out tst-gmon-gprof-l.out
-@NATIVE_TRUE@am__append_3 = tst-gmon.$(OBJEXT) tst-gmon$(EXEEXT) gmon.out
+
+# Create a separated-debuginfo version of the initial binary 
+@NATIVE_TRUE@am__append_1 = tst-gmon-gprof.sh tst-gmon-gprof-l.sh \
+@NATIVE_TRUE@	tst-gmon-gprof-l2.sh
+@NATIVE_TRUE@am__append_2 = tst-gmon-gprof.out tst-gmon-gprof-l.out \
+@NATIVE_TRUE@	tst-gmon-gprof-l2.out
+@NATIVE_TRUE@am__append_3 = tst-gmon.$(OBJEXT) tst-gmon$(EXEEXT) \
+@NATIVE_TRUE@	gmon.out tst-gmon2$(EXEEXT) tst-gmon2.debug
 subdir = testsuite
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/../bfd/warning.m4 \
@@ -713,6 +718,13 @@ tst-gmon-gprof-l.sh.log: tst-gmon-gprof-l.sh
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+tst-gmon-gprof-l2.sh.log: tst-gmon-gprof-l2.sh
+	@p='tst-gmon-gprof-l2.sh'; \
+	b='tst-gmon-gprof-l2.sh'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 .test.log:
 	@p='$<'; \
 	$(am__set_b); \
@@ -887,10 +899,19 @@ uninstall-am:
 @NATIVE_TRUE@	$(LINK) tst-gmon.$(OBJEXT)
 @NATIVE_TRUE@tst-gmon-gprof.out: tst-gmon$(EXEEXT) $(GPROF)
 @NATIVE_TRUE@	$(srcdir)/tst-gmon-gprof.sh $(GPROF) tst-gmon$(EXEEXT)
-# Run tst-gmon-gprof-l.sh after tst-gmon-gprof.sh to avoid the race
-# condition since they both generate gmon.out.
-@NATIVE_TRUE@tst-gmon-gprof-l.out: tst-gmon$(EXEEXT) $(GPROF) tst-gmon-gprof.out
+@NATIVE_TRUE@tst-gmon-gprof-l.out: tst-gmon$(EXEEXT) $(GPROF)
 @NATIVE_TRUE@	$(srcdir)/tst-gmon-gprof-l.sh $(GPROF) tst-gmon$(EXEEXT)
+@NATIVE_TRUE@tst-gmon2$(EXEEXT) tst-gmon2.debug: tst-gmon$(EXEEXT)
+@NATIVE_TRUE@	cp -p tst-gmon$(EXEEXT) tst-gmon2$(EXEEXT)
+@NATIVE_TRUE@	objcopy --only-keep-debug tst-gmon2$(EXEEXT) tst-gmon2.debug
+@NATIVE_TRUE@	strip --strip-debug tst-gmon2$(EXEEXT)
+@NATIVE_TRUE@	objcopy --add-gnu-debuglink=tst-gmon2.debug tst-gmon2$(EXEEXT)
+
+@NATIVE_TRUE@tst-gmon-gprof-l2.out: tst-gmon2$(EXEEXT) tst-gmon2.debug $(GPROF)
+@NATIVE_TRUE@	$(srcdir)/tst-gmon-gprof-l2.sh $(GPROF) tst-gmon2$(EXEEXT)
+
+# Run all tests in series, so they don't fight over the gmon.out file
+@NATIVE_TRUE@.NOTPARALLEL:
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

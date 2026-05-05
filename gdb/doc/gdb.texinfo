@@ -7608,6 +7608,10 @@ multiple processes.
 @c This section is really only a place-holder, and needs to be expanded
 @c with more details.
 
+By default, when a thread stops to report a debugging event,
+@value{GDBN} stops all other threads as well.  This is called
+@dfn{all-stop} mode.
+
 For some multi-threaded targets, @value{GDBN} supports an optional
 mode of operation in which you can examine stopped program threads in
 the debugger while other threads continue to execute freely.  This
@@ -7626,34 +7630,22 @@ one thread while allowing others to run freely, stepping
 one thread while holding all others stopped, or stepping several threads
 independently and simultaneously.
 
-To enter non-stop mode, use this sequence of commands before you run
-or attach to your program:
-
-@smallexample
-# If using the CLI, pagination breaks non-stop.
-set pagination off
-
-# Finally, turn it on!
-set non-stop on
-@end smallexample
-
 You can use these commands to manipulate the non-stop mode setting:
 
 @table @code
 @kindex set non-stop
 @item set non-stop on
-Enable selection of non-stop mode.
+Enable non-stop mode.
 @item set non-stop off
-Disable selection of non-stop mode.
+Disable non-stop mode.  Also known as enabling all-stop mode.  This is
+the default.
 @kindex show non-stop
 @item show non-stop
 Show the current non-stop enablement setting.
 @end table
 
-Note these commands only reflect whether non-stop mode is enabled,
-not whether the currently-executing program is being run in non-stop mode.
-In particular, the @code{set non-stop} preference is only consulted when
-@value{GDBN} starts or connects to the target program, and it is generally
+Note the @code{set non-stop} preference is only consulted when
+@value{GDBN} starts or connects to the target program, and it is
 not possible to switch modes once debugging has started.  Furthermore,
 since not all targets support non-stop mode, even when you have enabled
 non-stop mode, @value{GDBN} may still fall back to all-stop operation by
@@ -46155,15 +46147,22 @@ to more easily debug problems occurring only in synchronous mode.
 @item maint set target-non-stop
 @itemx maint show target-non-stop
 
-This controls whether @value{GDBN} targets always operate in non-stop
-mode even if @code{set non-stop} is @code{off} (@pxref{Non-Stop
-Mode}).  The default is @code{auto}, meaning non-stop mode is enabled
-if supported by the target.
+This controls whether @value{GDBN} targets (e.g., the native target,
+or a remote target) operate in non-stop mode even if @code{set
+non-stop} is @code{off} (@pxref{Non-Stop Mode}).  The default is
+@code{auto}.
+
+This affects @value{GDBN} internal operation and is largely invisible
+to users.  Normally users should not need to change this setting, but
+it can be changed to more easily debug problems occurring only in a
+specific mode.
 
 @table @code
 @item maint set target-non-stop auto
 This is the default mode.  @value{GDBN} controls the target in
-non-stop mode if the target supports it.
+non-stop mode if @code{set non-stop} is @code{on}, or the target tells
+infrun that it wants to operate in non-stop mode even with @code{set
+non-stop} is set to @code{off}.
 
 @item maint set target-non-stop on
 @value{GDBN} controls the target in non-stop mode even if the target
@@ -46172,6 +46171,34 @@ does not indicate support.
 @item maint set target-non-stop off
 @value{GDBN} does not control the target in non-stop mode even if the
 target supports it.
+@end table
+
+Here is how @code{set non-stop} and @code{maint set target-non-stop}
+settings combine:
+
+@table @code
+@item @code{set non-stop off}, target operating in all-stop mode
+When a thread hits a breakpoint, finishes a step, etc., the target
+stops all threads, and reports the event to the infrun module in the
+core of @value{GDBN}.  If infrun decides the stop is not to be seen by
+the user, infrun re-resumes all threads again.  In other words, all
+threads stop and are re-resumed for every debug event, even for debug
+events that are internal and do not cause a user-visible stop.
+
+@item @code{set non-stop off}, target operating in non-stop mode
+When a thread hits a breakpoint, finishes a step, etc., the target
+does not immediately stop all other threads.  If, while processing the
+event, infrun decides the stop should be reported to the user, it then
+explicitly stops all threads, just before presenting the stop to the
+user; otherwise, infrun re-resumes the stopped thread.  This scenario
+is also called ``all-stop on top of non-stop''.
+
+@item @code{set non-stop on}, target operating in all-stop mode
+This combination is invalid.
+
+@item @code{set non-stop on}, target operating in non-stop mode
+When a thread hits a breakpoint, finishes a step, etc., neither the
+target, nor infrun stop any other thread.
 @end table
 
 @kindex maint set tui-resize-message

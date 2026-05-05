@@ -79,6 +79,10 @@ struct dwarf2_frame_state_reg
     ULONGEST reg;
     struct
     {
+      /* Return this expression.  */
+      gdb::array_view<const gdb_byte> view () const
+      { return gdb::make_array_view (start, len); }
+
       const gdb_byte *start;
       ULONGEST len;
     } exp;
@@ -146,7 +150,7 @@ struct dwarf2_frame_state_reg_info
   ULONGEST cfa_reg = 0;
   ULONGEST cfa_aspace = 0;
   enum cfa_how_kind cfa_how = CFA_UNSET;
-  const gdb_byte *cfa_exp = NULL;
+  gdb::array_view<const gdb_byte> cfa_exp;
 
   /* Used to implement DW_CFA_remember_state.  */
   struct dwarf2_frame_state_reg_info *prev = NULL;
@@ -259,15 +263,13 @@ CORE_ADDR dwarf2_frame_cfa (const frame_info_ptr &this_frame);
    OFFSET_OUT is the offset to use from this register.
    These are only filled in when true is returned.
 
-   TEXT_OFFSET_OUT, CFA_START_OUT, and CFA_END_OUT describe the CFA
-   in other cases.  These are only used when false is returned.  */
+   TEXT_OFFSET_OUT and CFA_EXPR describe the CFA in other cases.  These are
+   only filled in when false is returned.  */
 
-extern bool dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
-				   dwarf2_per_cu *data, int *regnum_out,
-				   LONGEST *offset_out,
-				   CORE_ADDR *text_offset_out,
-				   const gdb_byte **cfa_start_out,
-				   const gdb_byte **cfa_end_out);
+extern bool dwarf2_fetch_cfa_info
+  (struct gdbarch *gdbarch, CORE_ADDR pc, dwarf2_per_cu *data, int *regnum_out,
+   LONGEST *offset_out, CORE_ADDR *text_offset_out,
+   gdb::array_view<const gdb_byte> &cfa_expr_out);
 
 /* Allocate a new instance of the function unique data.
 

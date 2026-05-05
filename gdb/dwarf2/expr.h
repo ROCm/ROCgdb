@@ -29,9 +29,9 @@
 
 struct dwarf2_per_objfile;
 
-/* Evaluate the expression at ADDR (LEN bytes long) in a given PER_CU
-   FRAME context.  The PER_OBJFILE contains a pointer to the PER_BFD
-   information.  ADDR_SIZE defines a size of the DWARF generic type.
+/* Evaluate the expression EXPR in a given PER_CU FRAME context.  The
+   PER_OBJFILE contains a pointer to the PER_BFD information.
+   ADDR_SIZE defines a size of the DWARF generic type.
    INIT_VALUES vector contains values that are expected to be pushed
    on a DWARF expression stack before the evaluation.  AS_LVAL defines
    if the returned struct value is expected to be a value or a location
@@ -59,29 +59,28 @@ type *address_type (gdbarch *arch, int addr_size);
 void dwarf_expr_require_composition (const gdb_byte *, const gdb_byte *,
 				     const char *);
 
-/* If <BUF..BUF_END] contains DW_FORM_block* with single DW_OP_reg* return the
+/* If BLOCK contains DW_FORM_block* with single DW_OP_reg* return the
    DWARF register number.  Otherwise return -1.  */
-int dwarf_block_to_dwarf_reg (const gdb_byte *buf, const gdb_byte *buf_end);
+int dwarf_block_to_dwarf_reg (gdb::array_view<const gdb_byte> block);
 
-/* If <BUF..BUF_END] contains DW_FORM_block* with just DW_OP_breg*(0) and
+/* If BLOCK contains DW_FORM_block* with just DW_OP_breg*(0) and
    DW_OP_deref* return the DWARF register number.  Otherwise return -1.
    DEREF_SIZE_RETURN contains -1 for DW_OP_deref; otherwise it contains the
    size from DW_OP_deref_size.  */
-int dwarf_block_to_dwarf_reg_deref (const gdb_byte *buf,
-				    const gdb_byte *buf_end,
+int dwarf_block_to_dwarf_reg_deref (gdb::array_view<const gdb_byte> block,
 				    CORE_ADDR *deref_size_return);
 
-/* If <BUF..BUF_END] contains DW_FORM_block* with single DW_OP_fbreg(X) fill
-   in FB_OFFSET_RETURN with the X offset and return true.  Otherwise return
+/* If BLOCK contains DW_FORM_block* with single DW_OP_fbreg(X) fill in
+   FB_OFFSET_RETURN with the X offset and return true.  Otherwise return
    false.  */
-bool dwarf_block_to_fb_offset (const gdb_byte *buf, const gdb_byte *buf_end,
+bool dwarf_block_to_fb_offset (gdb::array_view<const gdb_byte> block,
 			       CORE_ADDR *fb_offset_return);
 
-/* If <BUF..BUF_END] contains DW_FORM_block* with single DW_OP_bregSP(X) fill
-   in SP_OFFSET_RETURN with the X offset and return true.  Otherwise return
+/* If BLOCK contains DW_FORM_block* with single DW_OP_bregSP(X) fill in
+   SP_OFFSET_RETURN with the X offset and return true.  Otherwise return
    false.  The matched SP register number depends on GDBARCH.  */
-bool dwarf_block_to_sp_offset (struct gdbarch *gdbarch, const gdb_byte *buf,
-			       const gdb_byte *buf_end,
+bool dwarf_block_to_sp_offset (struct gdbarch *gdbarch,
+			       gdb::array_view<const gdb_byte> block,
 			       CORE_ADDR *sp_offset_return);
 
 /* Wrappers around the leb128 reader routines to simplify them for our

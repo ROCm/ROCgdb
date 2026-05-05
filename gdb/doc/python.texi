@@ -9040,8 +9040,10 @@ processes address space when the core file was created.
 A @code{gdb.CorefileMappedFile} object has the following attributes:
 
 @defvar CorefileMappedFile.filename
-This read only attribute contains a non-empty string, the file name of
-the mapped file.
+This read only attribute contains a string, the file name of the
+mapped file.  This string can be empty if @value{GDBN} was unable to
+find the name of the mapped file.  If this string is empty then
+@code{CorefileMappedFile.build_id} will not be @code{None}.
 @end defvar
 
 @defvar CorefileMappedFile.build_id
@@ -9081,7 +9083,9 @@ the inferior.
 
 @defvar CorefileMappedFileRegion.file_offset
 This read only attribute contains the offset within the mapped file
-for this mapping.
+for this mapping.  This attribute will be @code{0} if the containing
+@code{CorefileMappedFile.filename} is empty, in which case this
+attribute has no meaning.
 @end defvar
 
 @node Python Auto-loading

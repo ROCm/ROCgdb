@@ -21,6 +21,7 @@
 #define GDB_DWARF2_LOC_H
 
 #include "gdbtypes.h"
+#include "dwarf2/attribute.h"
 #include "dwarf2/expr.h"
 
 struct symbol_computed_ops;
@@ -37,23 +38,16 @@ struct axs_value;
 extern unsigned int entry_values_debug;
 
 /* Find a particular location expression from a location list.  */
-const gdb_byte *dwarf2_find_location_expression
-  (const dwarf2_loclist_baton *baton,
-   size_t *locexpr_length,
-   CORE_ADDR pc,
-   bool at_entry = false);
+gdb::array_view<const gdb_byte> dwarf2_find_location_expression
+  (const dwarf2_loclist_baton *baton, CORE_ADDR pc, bool at_entry = false);
 
-/* Find the frame base information for FRAMEFUNC at PC.  START is an
-   out parameter which is set to point to the DWARF expression to
-   compute.  LENGTH is an out parameter which is set to the length of
-   the DWARF expression.  This throws an exception on error or if an
-   expression is not found; the returned length will never be
-   zero.  */
+/* Find the frame base information for FRAMEFUNC at PC and return the
+   DWARF expression to compute.
 
-extern void func_get_frame_base_dwarf_block (struct symbol *framefunc,
-					     CORE_ADDR pc,
-					     const gdb_byte **start,
-					     size_t *length);
+   Throw an exception if no expression is found.  */
+
+gdb::array_view<const gdb_byte> func_get_frame_base_dwarf_block
+  (struct symbol *framefunc, CORE_ADDR pc);
 
 /* A helper function to find the definition of NAME and compute its
    value.  Returns nullptr if the name is not found.  */
@@ -72,13 +66,13 @@ call_site_parameter *dwarf_expr_reg_to_entry_parameter
    dwarf2_per_objfile **per_objfile_return);
 
 
-/* Evaluate a location description, starting at DATA and with length
-   SIZE, to find the current location of variable of TYPE in the context
-   of FRAME.  AS_LVAL defines if the resulting struct value is expected to
-   be a value or a location description.  */
+/* Evaluate the location description LOC_DESC to find the current location
+   of variable of TYPE in the context of FRAME.  AS_LVAL defines if the
+   resulting struct value is expected to be a value or a location
+   description.  */
 
 value *dwarf2_evaluate_loc_desc (type *type, const frame_info_ptr &frame,
-				 const gdb_byte *data, size_t size,
+				 gdb::array_view<const gdb_byte> loc_desc,
 				 dwarf2_per_cu *per_cu,
 				 dwarf2_per_objfile *per_objfile,
 				 bool as_lval = true);
@@ -132,8 +126,26 @@ void dwarf2_compile_property_to_c (string_file *stream,
 
 struct dwarf2_locexpr_baton
 {
-  /* Pointer to the start of the location expression.  Valid only if SIZE is
-     not zero.  */
+  /* Return the expression in this baton.  */
+  gdb::array_view<const gdb_byte> expr () const
+  { return gdb::make_array_view (data, size); }
+
+  /* Set the expression in this baton from EXPR.  */
+  void set_expr (gdb::array_view<const gdb_byte> expr)
+  {
+    data = expr.data ();
+    size = expr.size ();
+  }
+
+  /* Set the expression in this baton from BLOCK.  */
+  void set_expr (const dwarf_block &block)
+  {
+    data = block.data;
+    size = block.size;
+  }
+
+  /* Pointer to the start of the location expression.  nullptr for optimized
+     out expressions.  */
   const gdb_byte *data;
 
   /* Length of the location expression.  For optimized out expressions it is
@@ -176,6 +188,10 @@ struct dwarf2_field_location_baton : public dwarf2_locexpr_baton
 
 struct dwarf2_loclist_baton
 {
+  /* Return the location list in this baton.  */
+  gdb::array_view<const gdb_byte> expr () const
+  { return gdb::make_array_view (data, size); }
+
   /* The initial base address for the location list, based on the compilation
      unit.  */
   unrelocated_addr base_address;

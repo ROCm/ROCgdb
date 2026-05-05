@@ -4117,7 +4117,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
   Elf_Internal_Rela *rel;
   Elf_Internal_Rela *relend;
   asection *sgot, *srel, *srelgot;
-  bfd *dynobj, *gotobj;
+  bfd *gotobj;
   bfd_vma gp, tp_base, dtp_base;
   struct alpha_elf_got_entry **local_got_entries;
   bool ret_val;
@@ -4136,20 +4136,8 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 
   symtab_hdr = &elf_symtab_hdr (input_bfd);
 
-  dynobj = elf_hash_table (info)->dynobj;
   srelgot = elf_hash_table (info)->srelgot;
-
-  if (input_section->flags & SEC_ALLOC)
-    {
-      const char *section_name;
-      section_name = (bfd_elf_string_from_elf_section
-		      (input_bfd, elf_elfheader(input_bfd)->e_shstrndx,
-		       _bfd_elf_single_rel_hdr (input_section)->sh_name));
-      BFD_ASSERT(section_name != NULL);
-      srel = bfd_get_linker_section (dynobj, section_name);
-    }
-  else
-    srel = NULL;
+  srel = elf_section_data (input_section)->sreloc;
 
   /* Find the gp value for this input bfd.  */
   gotobj = alpha_elf_tdata (input_bfd)->gotobj;

@@ -30,12 +30,39 @@ procedure Foo is
                                             Green => (5, 6, 7),
                                             others => (others => 72));
 
+   --  These variables ensure the bounds aren't elided by LLVM.
+   Small_First : Color := Small'First;
+   Small_Last : Color := Small'Last;
+   Multi_First1 : Color := Multi'First (1);
+   Multi_Last1 : Color := Multi'Last (1);
+   Multi_First2 : Strength := Multi'First (2);
+   Multi_Last2 : Strength := Multi'Last (2);
+
+   MM_First1 : Positive := Multi_Multi'First (1);
+   MM_Last1 : Positive := Multi_Multi'Last (1);
+   MM_First2 : Positive := Multi_Multi'First (2);
+   MM_Last2 : Positive := Multi_Multi'Last (2);
+   MM_First3 : Positive := Multi_Multi'First (3);
+   MM_Last3 : Positive := Multi_Multi'Last (3);
+
 begin
    Do_Nothing (Full'Address);  -- STOP
    Do_Nothing (Primary'Address);
    Do_Nothing (Cold'Address);
    Do_Nothing (Small'Address);
+   Do_Nothing (Small_First'Address);
+   Do_Nothing (Small_Last'Address);
    Do_Nothing (Multi'Address);
+   Do_Nothing (Multi_First1'Address);
+   Do_Nothing (Multi_Last1'Address);
+   Do_Nothing (Multi_First2'Address);
+   Do_Nothing (Multi_Last2'Address);
    Do_Nothing (Multi_Multi'Address);
    Do_Nothing (Multi_Access'Address);
+   Do_Nothing (MM_First1'Address);
+   Do_Nothing (MM_Last1'Address);
+   Do_Nothing (MM_First2'Address);
+   Do_Nothing (MM_Last2'Address);
+   Do_Nothing (MM_First3'Address);
+   Do_Nothing (MM_Last3'Address);
 end Foo;

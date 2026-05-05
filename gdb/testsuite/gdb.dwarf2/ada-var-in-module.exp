@@ -1,0 +1,151 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that an array whose upper bound references a variable
+# declaration inside a DW_TAG_module gets the correct fully qualified
+# name.  This tests that var_decl_name returns the fully qualified
+# name.
+#
+# Without the var_decl_name fix, only the non-qualified name was being
+# returned, GDB would then lookup based on this partial name, and
+# could find the wrong variable.
+
+load_lib dwarf.exp
+
+# This test can only be run on targets which support DWARF-2 and use gas.
+require dwarf2_support
+
+standard_testfile .c -dw.S
+
+# Make some DWARF for the test.
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    cu {} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_Ada95
+	    DW_AT_name	    foo.adb
+	    DW_AT_comp_dir /tmp
+	} {
+	    declare_labels integer_label array_label \
+		length_label
+
+	    # Basic integer type.
+	    integer_label: DW_TAG_base_type {
+		DW_AT_byte_size 4 DW_FORM_sdata
+		DW_AT_encoding	 @DW_ATE_signed
+		DW_AT_name	 integer
+	    }
+
+	    # A module with a variable called 'my_length', this does
+	    # not point at the array length though.  This exists to
+	    # confuse Ada's wild card variable lookup.
+	    DW_TAG_module {
+		DW_AT_name aaa
+	    } {
+		DW_TAG_variable {
+		    DW_AT_name my_length
+		    DW_AT_type :$integer_label
+		    DW_AT_external 1 flag
+		    DW_AT_location {
+			DW_OP_addr [gdb_target_symbol wrong_length]
+		    } SPECIAL_expr
+		}
+	    }
+
+	    # The 'bbb' module contains the variable that holds the
+	    # array length (the array itself is defined below).  There
+	    # MUST be a separate declaration and definition for the
+	    # variable, the bug we are testing for is when the array
+	    # bound points at the declaration.
+	    DW_TAG_module {
+		DW_AT_name bbb
+	    } {
+		length_label: DW_TAG_variable {
+		    DW_AT_name my_length
+		    DW_AT_type :$integer_label
+		    DW_AT_declaration 1 flag
+		}
+
+		DW_TAG_variable {
+		    DW_AT_name my_length
+		    DW_AT_type :$integer_label
+		    DW_AT_external 1 flag
+		    DW_AT_location {
+			DW_OP_addr [gdb_target_symbol the_length]
+		    } SPECIAL_expr
+		}
+	    }
+
+	    # Another module with a variable called 'my_length', this
+	    # also does not point at the array length.  As with the
+	    # 'aaa' module, this exists to confuse Ada's wild card
+	    # variable lookup.
+	    DW_TAG_module {
+		DW_AT_name ccc
+	    } {
+		DW_TAG_variable {
+		    DW_AT_name my_length
+		    DW_AT_type :$integer_label
+		    DW_AT_external 1 flag
+		    DW_AT_location {
+			DW_OP_addr [gdb_target_symbol wrong_length]
+		    } SPECIAL_expr
+		}
+	    }
+
+	    # Global array type.  The upper bound is held in the
+	    # 'bbb.my_length' variable.  The upper bound MUST
+	    # reference the variable declaration in order to test the
+	    # bug we are interested in.
+	    array_label: DW_TAG_array_type {
+		DW_AT_name the_array_type
+		DW_AT_type :$integer_label
+	    } {
+		DW_TAG_subrange_type {
+		    DW_AT_type	       :$integer_label
+		    DW_AT_lower_bound 1 DW_FORM_sdata
+		    DW_AT_upper_bound :$length_label
+		}
+	    }
+
+	    # Global array variable.
+	    DW_TAG_variable {
+		DW_AT_name the_array
+		DW_AT_type :$array_label
+		DW_AT_location {
+		    DW_OP_addr [gdb_target_symbol global_array]
+		} SPECIAL_expr
+		DW_AT_external 1 flag
+	    }
+	}
+    }
+}
+
+if {[prepare_for_testing "failed to prepare" ${testfile} \
+	 [list $srcfile $asm_file] {nodebug}]} {
+    return
+}
+
+# Print 'the_array'.  To establish the upper bound GDB must lookup the
+# correct variable by name.  With the bug fix in place GDB should look
+# for 'bbb.my_length' and find the correct variable.  Without the fix
+# GDB would look for just 'my_length' which is ambiguous.  The hope of
+# this test is that by having an 'aaa.my_length' and 'ccc.my_length'
+# that, without the fix, GDB will find the wrong length and use that.
+gdb_test_no_output "set language ada"
+gdb_test "print aaa.my_length" " = 9"
+gdb_test "print bbb.my_length" " = 5"
+gdb_test "print ccc.my_length" " = 9"
+gdb_test "print the_array" " = \\(1, 2, 3, 4, 5\\)"

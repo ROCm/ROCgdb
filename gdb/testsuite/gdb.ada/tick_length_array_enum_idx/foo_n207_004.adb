@@ -21,10 +21,16 @@ procedure Foo_n207_004 is
    Cold : Variable_Table := (Green => False, Blue => True, White => True);
    Vars : Variable_Table :=  New_Variable_Table (Low => Red, High => Green);
    PT_Full : Full_PT := (False, True, False, True, False);
+
+   Vars_First : Color := Vars'First;
+   Vars_Last : Color := Vars'Last;
+
 begin
    Do_Nothing (Full'Address);  -- STOP
    Do_Nothing (Prim'Address);
    Do_Nothing (Cold'Address);
    Do_Nothing (Vars'Address);
+   Do_Nothing (Vars_First'Address);
+   Do_Nothing (Vars_Last'Address);
    Do_Nothing (PT_Full'Address);
 end Foo_n207_004;

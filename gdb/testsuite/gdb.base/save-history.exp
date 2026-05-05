@@ -1,4 +1,4 @@
-# Copyright 2023 Free Software Foundation, Inc.
+# Copyright 2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,6 +30,13 @@ gdb_test_no_output "save history $filename" \
 
 set expected "set height 0\n"
 append expected "set width 0\n"
+
+# There is an additional target connection command with the
+# extended-remote board file.
+if {[target_info gdb_protocol] == "extended-remote"} {
+    append expected "target extended-remote $gdbserver_gdbport\n"
+}
+
 append expected "print 23\n"
 append expected "save history $filename\n"
 

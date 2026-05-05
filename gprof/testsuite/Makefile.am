@@ -37,9 +37,23 @@ tst-gmon-gprof.out: tst-gmon$(EXEEXT) $(GPROF)
 
 check_SCRIPTS += tst-gmon-gprof-l.sh
 check_DATA += tst-gmon-gprof-l.out
-# Run tst-gmon-gprof-l.sh after tst-gmon-gprof.sh to avoid the race
-# condition since they both generate gmon.out.
-tst-gmon-gprof-l.out: tst-gmon$(EXEEXT) $(GPROF) tst-gmon-gprof.out
+tst-gmon-gprof-l.out: tst-gmon$(EXEEXT) $(GPROF)
 	$(srcdir)/tst-gmon-gprof-l.sh $(GPROF) tst-gmon$(EXEEXT)
+
+# Create a separated-debuginfo version of the initial binary 
+check_SCRIPTS += tst-gmon-gprof-l2.sh
+tst-gmon2$(EXEEXT) tst-gmon2.debug: tst-gmon$(EXEEXT)
+	cp -p tst-gmon$(EXEEXT) tst-gmon2$(EXEEXT)
+	objcopy --only-keep-debug tst-gmon2$(EXEEXT) tst-gmon2.debug
+	strip --strip-debug tst-gmon2$(EXEEXT)
+	objcopy --add-gnu-debuglink=tst-gmon2.debug tst-gmon2$(EXEEXT)
+
+tst-gmon-gprof-l2.out: tst-gmon2$(EXEEXT) tst-gmon2.debug $(GPROF)
+	$(srcdir)/tst-gmon-gprof-l2.sh $(GPROF) tst-gmon2$(EXEEXT)
+check_DATA += tst-gmon-gprof-l2.out
+MOSTLYCLEANFILES += tst-gmon2$(EXEEXT) tst-gmon2.debug
+
+# Run all tests in series, so they don't fight over the gmon.out file
+.NOTPARALLEL:
 
 endif NATIVE

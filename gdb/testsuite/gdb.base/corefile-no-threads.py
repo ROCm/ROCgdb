@@ -18,10 +18,10 @@
 #
 # modify-core-file <corefile> <note type> [ <name regex> ]
 #
-# Find all notes in the core file <corefile> that have the type value
-# <note type>.  Change the type of those notes to 0xffffffff, which
-# should prevent GDB from processing the note.  The <corefile> is
-# modified in place.
+# Find all notes in the core file <corefile> that have the type
+# <note type>, either a name (e.g. NT_PRSTATUS) or an integer.
+# Change the type of those notes to 0xffffffff, which should prevent
+# GDB from processing the note.  The <corefile> is modified in place.
 #
 # The optional argument <name regex> is a regular expression to match
 # against the name of the note in addition to the type value check.
@@ -130,7 +130,7 @@ def invalidate_corefile_notes(core_filepath, type_val, name_re):
     ei_data = read_field(core_data, 5, "=b")
     ei_version = read_field(core_data, 6, "=b")
 
-    # Based on the endinanness of the core file, select a character to
+    # Based on the endianness of the core file, select a character to
     # use with the 'struct' module for unpacking multi-byte fields.
     if ei_data == ELF_DATA_2_LSB:
         endian_char = "<"
@@ -194,7 +194,7 @@ def invalidate_corefile_notes(core_filepath, type_val, name_re):
     # Read the e_type field and check this is a core file.
     e_type = read_field(core_data, ELF_HDR_TYPE_OFFSET, ELF_HALF_FMT)
     if e_type != ELF_TYPE_CORE:
-        raise gdb.GdbError("Unsuported ELF e_type %d" % (e_type))
+        raise gdb.GdbError("Unsupported ELF e_type %d" % (e_type))
 
     # Read the offset to the program header table, and the number of
     # entries in the program header table.
@@ -308,6 +308,31 @@ def invalidate_corefile_notes(core_filepath, type_val, name_re):
             )
 
 
+# A limited set of note names.  Extend this as needed.
+NOTE_TYPES = {
+    "NT_PRSTATUS": 1,
+    "NT_FPREGSET": 2,
+    "NT_PRPSINFO": 3,
+    "NT_TASKSTRUCT": 4,
+    "NT_AUXV": 6,
+    "NT_SIGINFO": 0x53494749,
+    "NT_FILE": 0x46494C45,
+    "NT_PRXFPREG": 0x46E62B7F,
+}
+
+
+def parse_type(type_str):
+    """Resolves string name to integer or parses raw hex/int."""
+    if type_str in NOTE_TYPES:
+        return NOTE_TYPES[type_str]
+    try:
+        return int(type_str, 0)
+    except ValueError as e:
+        raise gdb.GdbError(
+            "Error: Unable to parse '%s' as number: %s" % (type_str, str(e))
+        )
+
+
 class modify_core_file(gdb.Command):
     """Update notes within a core file.
 
@@ -315,7 +340,8 @@ class modify_core_file(gdb.Command):
     modify-core-file COREFILE NOTE_TYPE [ NAME_REGEX ]
 
     Within COREFILE, find any notes matching NOTE_TYPE, which should
-    be an integer.  Change the type of these notes to 0xffffffff.
+    be either a note type name (e.g. NT_PRSTATUS) or an integer.
+    Change the type of these notes to 0xffffffff.
 
     If NAME_REGEX is supplied, and is not the empty string, then only
     notes whose type matches NOTE_TYPE, and whose name matches
@@ -352,12 +378,7 @@ class modify_core_file(gdb.Command):
                 "Error: Cannot write to '%s'. Check file permissions." % (filename)
             )
 
-        try:
-            type_val = int(type_str, 0)
-        except ValueError as e:
-            raise gdb.GdbError(
-                "Error: Unable to parse '%s' as number: %s" % (type_str, str(e))
-            )
+        type_val = parse_type(type_str)
 
         if name_re_str != "":
             name_re = re.compile(name_re_str)

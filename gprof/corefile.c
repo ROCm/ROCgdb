@@ -34,6 +34,7 @@
 bfd *core_bfd;
 static int core_num_syms;
 static asymbol **core_syms;
+static bfd *core_debug_bfd;	/* Separated debuginfo file, if any.  */
 asection *core_text_sect;
 void * core_text_space;
 
@@ -173,6 +174,58 @@ read_function_mappings (const char *filename)
   fclose (file);
 }
 
+/* Attempt to open separated debuginfo files (e.g., created with "strip -g").
+   This function tries to follow GNU debug links to locate external debug info
+   and opens them to make symbol and line information available.  */
+
+static void
+open_separated_debug_file (bfd *abfd)
+{
+  char *debug_filename = NULL;
+  bfd *debug_bfd;
+
+  /* Try to follow .gnu_debuglink first (standard separated debug file).  */
+  debug_filename = bfd_follow_gnu_debuglink (abfd, NULL);
+
+  if (!debug_filename)
+    {
+      /* Try alternate debug info (.gnu_debugaltlink).  */
+      debug_filename = bfd_follow_gnu_debugaltlink (abfd, NULL);
+    }
+
+  if (!debug_filename)
+    {
+      /* Try build-id based debug file location.  */
+      debug_filename = bfd_follow_build_id_debuglink (abfd, NULL);
+    }
+
+  if (debug_filename)
+    {
+      debug_bfd = bfd_openr (debug_filename, 0);
+
+      if (debug_bfd)
+	{
+	  if (bfd_check_format (debug_bfd, bfd_object))
+	    {
+	      /* Successfully opened the debug file.
+	         Enable decompression on the debug file.  */
+              debug_bfd->flags |= BFD_DECOMPRESS;
+
+	      /* Store the debug BFD for use during symbol reading.
+	         We'll use this for bfd_canonicalize_symtab and other symbol ops.  */
+	      core_debug_bfd = debug_bfd;
+	    }
+	  else
+	    {
+	      /* Debug file format check failed.  */
+	      bfd_close (debug_bfd);
+	    }
+	}
+
+      free (debug_filename);
+    }
+}
+
 void
 core_init (const char * aout_name)
 {
@@ -196,6 +249,11 @@ core_init (const char * aout_name)
       done (1);
     }
 
+  /* Attempt to open separated debuginfo files if available.
+     This handles binaries stripped with "strip -g" by locating and opening
+     the external debug information via .gnu_debuglink or build-id.  */
+  open_separated_debug_file (core_bfd);
+
   /* Get core's text section.  */
   core_text_sect = bfd_get_section_by_name (core_bfd, ".text");
   if (!core_text_sect)
@@ -212,7 +270,10 @@ core_init (const char * aout_name)
   /* Read core's symbol table.  */
 
   /* This will probably give us more than we need, but that's ok.  */
-  core_sym_bytes = bfd_get_symtab_upper_bound (core_bfd);
+  /* Use debug BFD for symbol info if we found a separated debuginfo file.  */
+  bfd *sym_bfd = core_debug_bfd ? core_debug_bfd : core_bfd;
+
+  core_sym_bytes = bfd_get_symtab_upper_bound (sym_bfd);
   if (core_sym_bytes < 0)
     {
       fprintf (stderr, "%s: %s: %s\n", whoami, aout_name,
@@ -221,7 +282,7 @@ core_init (const char * aout_name)
     }
 
   core_syms = (asymbol **) xmalloc (core_sym_bytes);
-  core_num_syms = bfd_canonicalize_symtab (core_bfd, core_syms);
+  core_num_syms = bfd_canonicalize_symtab (sym_bfd, core_syms);
 
   if (core_num_syms < 0)
     {
@@ -230,7 +291,7 @@ core_init (const char * aout_name)
       done (1);
     }
 
-  synth_count = bfd_get_synthetic_symtab (core_bfd, core_num_syms, core_syms,
+  synth_count = bfd_get_synthetic_symtab (sym_bfd, core_num_syms, core_syms,
 					  0, NULL, &synthsyms);
   if (synth_count > 0)
     {
@@ -468,8 +529,10 @@ get_src_info (bfd_vma addr, const char **filename, const char **name,
 {
   const char *fname = 0, *func_name = 0;
   int l = 0;
+  /* Use debug BFD for line info if we have a separated debuginfo file.  */
+  bfd *info_bfd = core_debug_bfd ? core_debug_bfd : core_bfd;
 
-  if (bfd_find_nearest_line (core_bfd, core_text_sect, core_syms,
+  if (bfd_find_nearest_line (info_bfd, core_text_sect, core_syms,
 			     addr - core_text_sect->vma,
 			     &fname, &func_name, (unsigned int *) &l)
       && fname && func_name && l)

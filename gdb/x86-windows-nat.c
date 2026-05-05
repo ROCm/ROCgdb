@@ -58,7 +58,7 @@ struct x86_windows_nat_target final : public x86_nat_target<windows_nat_target>
   void cleanup_windows_arch () override;
 
   void thread_context_continue (windows_thread_info *th, int killed) override;
-  void thread_context_step (windows_thread_info *th) override;
+  void thread_context_step (windows_thread_info *th, bool step) override;
 
   void fetch_one_register (struct regcache *regcache,
 			   windows_thread_info *th, int r) override;
@@ -213,11 +213,15 @@ x86_windows_nat_target::thread_context_continue (windows_thread_info *th,
 /* See windows-nat.h.  */
 
 void
-x86_windows_nat_target::thread_context_step (windows_thread_info *th)
+x86_windows_nat_target::thread_context_step (windows_thread_info *th,
+					     bool enable)
 {
   x86_windows_process.with_context (th, [&] (auto *context)
     {
-      context->EFlags |= FLAG_TRACE_BIT;
+      if (enable)
+	context->EFlags |= FLAG_TRACE_BIT;
+      else
+	context->EFlags &= ~FLAG_TRACE_BIT;
     });
 }
 
@@ -346,8 +350,7 @@ windows_set_dr (int i, CORE_ADDR addr)
   if (i < 0 || i > 3)
     internal_error (_("Invalid register %d in windows_set_dr.\n"), i);
 
-  for (auto &th : x86_windows_process.thread_list)
-    th->debug_registers_changed = true;
+  windows_debug_registers_changed_all_threads ();
 }
 
 /* Pass the value VAL to the inferior in the DR7 debug control
@@ -356,8 +359,7 @@ windows_set_dr (int i, CORE_ADDR addr)
 static void
 windows_set_dr7 (unsigned long val)
 {
-  for (auto &th : x86_windows_process.thread_list)
-    th->debug_registers_changed = true;
+  windows_debug_registers_changed_all_threads ();
 }
 
 /* Get the value of debug register I from the inferior.  */

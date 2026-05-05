@@ -1226,7 +1226,6 @@ elf_vax_relocate_section (bfd *output_bfd,
   sgot = NULL;
   splt = NULL;
   sgotplt = NULL;
-  sreloc = NULL;
 
   rel = relocs;
   relend = relocs + input_section->reloc_count;
@@ -1423,13 +1422,9 @@ elf_vax_relocate_section (bfd *output_bfd,
 	      /* When generating a shared object, these relocations
 		 are copied into the output file to be resolved at run
 		 time.  */
+	      sreloc = elf_section_data (input_section)->sreloc;
 	      if (sreloc == NULL)
-		{
-		  sreloc = _bfd_elf_get_dynamic_reloc_section
-		    (input_bfd, input_section, /*rela?*/ true);
-		  if (sreloc == NULL)
-		    return false;
-		}
+		return false;
 
 	      skip = false;
 	      relocate = false;

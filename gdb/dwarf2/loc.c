@@ -50,9 +50,10 @@
 #include "extract-store-integer.h"
 
 static struct value *dwarf2_evaluate_loc_desc_full
-  (struct type *type, const frame_info_ptr &frame, const gdb_byte *data,
-   size_t size, dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
-   struct type *subobj_type, LONGEST subobj_byte_offset, bool as_lval = true);
+  (struct type *type, const frame_info_ptr &frame,
+   gdb::array_view<const gdb_byte> loc_desc, dwarf2_per_cu *per_cu,
+   dwarf2_per_objfile *per_objfile, struct type *subobj_type,
+   LONGEST subobj_byte_offset, bool as_lval = true);
 
 /* Until these have formal names, we define these here.
    ref: http://gcc.gnu.org/wiki/DebugFission
@@ -355,18 +356,16 @@ decode_debug_loc_dwo_addresses (dwarf2_per_cu *per_cu,
     }
 }
 
-/* A function for dealing with location lists.  Given a
-   symbol baton (BATON) and a pc value (PC), find the appropriate
-   location expression, set *LOCEXPR_LENGTH, and return a pointer
-   to the beginning of the expression.  Returns NULL on failure.
+/* A function for dealing with location lists.  Given a symbol baton
+   (BATON) and a pc value (PC), find and return the appropriate location
+   expression.  Returns an empty view on failure.
 
    For now, only return the first matching location expression; there
    can be more than one in the list.  */
 
-const gdb_byte *
+gdb::array_view<const gdb_byte>
 dwarf2_find_location_expression (const dwarf2_loclist_baton *baton,
-				 size_t *locexpr_length, const CORE_ADDR pc,
-				 bool at_entry)
+				 const CORE_ADDR pc, bool at_entry)
 {
   dwarf2_per_objfile *per_objfile = baton->per_objfile;
   struct objfile *objfile = per_objfile->objfile;
@@ -411,8 +410,7 @@ dwarf2_find_location_expression (const dwarf2_loclist_baton *baton,
       switch (kind)
 	{
 	case DEBUG_LOC_END_OF_LIST:
-	  *locexpr_length = 0;
-	  return NULL;
+	  return {};
 
 	case DEBUG_LOC_BASE_ADDRESS:
 	  base_address = high;
@@ -471,17 +469,11 @@ dwarf2_find_location_expression (const dwarf2_loclist_baton *baton,
 	    pc_func = pc_block->linkage_function ();
 
 	  if (pc_func && pc == pc_func->value_block ()->entry_pc ())
-	    {
-	      *locexpr_length = length;
-	      return loc_ptr;
-	    }
+	    return gdb::make_array_view (loc_ptr, length);
 	}
 
       if (unrel_pc >= low && unrel_pc < high)
-	{
-	  *locexpr_length = length;
-	  return loc_ptr;
-	}
+	return gdb::make_array_view (loc_ptr, length);
 
       loc_ptr += length;
     }
@@ -490,15 +482,13 @@ dwarf2_find_location_expression (const dwarf2_loclist_baton *baton,
 /* Implement find_frame_base_location method for LOC_BLOCK functions using
    DWARF expression for its DW_AT_frame_base.  */
 
-static void
-locexpr_find_frame_base_location (struct symbol *framefunc, CORE_ADDR pc,
-				  const gdb_byte **start, size_t *length)
+static gdb::array_view<const gdb_byte>
+locexpr_find_frame_base_location (struct symbol *framefunc, CORE_ADDR pc)
 {
   struct dwarf2_locexpr_baton *symbaton
     = (struct dwarf2_locexpr_baton *) SYMBOL_LOCATION_BATON (framefunc);
 
-  *length = symbaton->size;
-  *start = symbaton->data;
+  return symbaton->expr ();
 }
 
 /* Implement the struct symbol_block_ops::get_frame_base method for
@@ -510,8 +500,6 @@ locexpr_get_frame_base (struct symbol *framefunc, const frame_info_ptr &frame)
   struct gdbarch *gdbarch;
   struct type *type;
   struct dwarf2_locexpr_baton *dlbaton;
-  const gdb_byte *start;
-  size_t length;
   struct value *result;
 
   /* If this method is called, then FRAMEFUNC is supposed to be a DWARF block.
@@ -523,11 +511,11 @@ locexpr_get_frame_base (struct symbol *framefunc, const frame_info_ptr &frame)
   type = builtin_type (gdbarch)->builtin_data_ptr;
   dlbaton = (struct dwarf2_locexpr_baton *) SYMBOL_LOCATION_BATON (framefunc);
 
-  framefunc->block_ops ()->find_frame_base_location (framefunc,
-						     get_frame_pc (frame),
-						     &start, &length);
-  result = dwarf2_evaluate_loc_desc (type, frame, start, length,
-				     dlbaton->per_cu, dlbaton->per_objfile);
+  auto expr
+    = framefunc->block_ops ()->find_frame_base_location (framefunc,
+							 get_frame_pc (frame));
+  result = dwarf2_evaluate_loc_desc (type, frame, expr, dlbaton->per_cu,
+				     dlbaton->per_objfile);
 
   /* The DW_AT_frame_base attribute contains a location description which
      computes the base address itself.  However, the call to
@@ -549,14 +537,13 @@ const struct symbol_block_ops dwarf2_block_frame_base_locexpr_funcs =
 /* Implement find_frame_base_location method for LOC_BLOCK functions using
    DWARF location list for its DW_AT_frame_base.  */
 
-static void
-loclist_find_frame_base_location (struct symbol *framefunc, CORE_ADDR pc,
-				  const gdb_byte **start, size_t *length)
+static gdb::array_view<const gdb_byte>
+loclist_find_frame_base_location (struct symbol *framefunc, CORE_ADDR pc)
 {
   struct dwarf2_loclist_baton *symbaton
     = (struct dwarf2_loclist_baton *) SYMBOL_LOCATION_BATON (framefunc);
 
-  *start = dwarf2_find_location_expression (symbaton, length, pc);
+  return dwarf2_find_location_expression (symbaton, pc);
 }
 
 /* Implement the struct symbol_block_ops::get_frame_base method for
@@ -568,8 +555,6 @@ loclist_get_frame_base (struct symbol *framefunc, const frame_info_ptr &frame)
   struct gdbarch *gdbarch;
   struct type *type;
   struct dwarf2_loclist_baton *dlbaton;
-  const gdb_byte *start;
-  size_t length;
   struct value *result;
 
   /* If this method is called, then FRAMEFUNC is supposed to be a DWARF block.
@@ -581,11 +566,11 @@ loclist_get_frame_base (struct symbol *framefunc, const frame_info_ptr &frame)
   type = builtin_type (gdbarch)->builtin_data_ptr;
   dlbaton = (struct dwarf2_loclist_baton *) SYMBOL_LOCATION_BATON (framefunc);
 
-  framefunc->block_ops ()->find_frame_base_location (framefunc,
-						     get_frame_pc (frame),
-						     &start, &length);
-  result = dwarf2_evaluate_loc_desc (type, frame, start, length,
-				     dlbaton->per_cu, dlbaton->per_objfile);
+  auto expr
+    = framefunc->block_ops ()->find_frame_base_location (framefunc,
+							 get_frame_pc (frame));
+  result = dwarf2_evaluate_loc_desc (type, frame, expr, dlbaton->per_cu,
+				     dlbaton->per_objfile);
 
   /* The DW_AT_frame_base attribute contains a location description which
      computes the base address itself.  However, the call to
@@ -606,19 +591,20 @@ const struct symbol_block_ops dwarf2_block_frame_base_loclist_funcs =
 
 /* See dwarf2/loc.h.  */
 
-void
-func_get_frame_base_dwarf_block (struct symbol *framefunc, CORE_ADDR pc,
-				 const gdb_byte **start, size_t *length)
+gdb::array_view<const gdb_byte>
+func_get_frame_base_dwarf_block (struct symbol *framefunc, CORE_ADDR pc)
 {
+  gdb::array_view<const gdb_byte> block;
+
   if (const symbol_block_ops *block_ops = framefunc->block_ops ();
       block_ops != nullptr)
-    block_ops->find_frame_base_location (framefunc, pc, start, length);
-  else
-    *length = 0;
+    block = block_ops->find_frame_base_location (framefunc, pc);
 
-  if (*length == 0)
+  if (block.empty ())
     error (_("Could not find the frame base for \"%s\"."),
 	   framefunc->natural_name ());
+
+  return block;
 }
 
 /* See loc.h.  */
@@ -693,7 +679,7 @@ call_site_target::iterate_over_addresses (gdbarch *call_site_gdbarch,
 	caller_arch = get_frame_arch (caller_frame);
 	caller_core_addr_type = builtin_type (caller_arch)->builtin_func_ptr;
 	val = dwarf2_evaluate_loc_desc (caller_core_addr_type, caller_frame,
-					dwarf_block->data, dwarf_block->size,
+					dwarf_block->expr (),
 					dwarf_block->per_cu,
 					dwarf_block->per_objfile);
 	/* DW_AT_call_target is a DWARF expression, not a DWARF location.  */
@@ -1276,8 +1262,9 @@ dwarf_entry_parameter_to_value (struct call_site_parameter *parameter,
     throw_error (NO_ENTRY_VALUE_ERROR,
 		 _("Cannot resolve DW_AT_call_data_value"));
 
-  return dwarf2_evaluate_loc_desc (type, caller_frame, data_src, size, per_cu,
-				   per_objfile, false);
+  return dwarf2_evaluate_loc_desc (type, caller_frame,
+				   gdb::make_array_view (data_src, size),
+				   per_cu, per_objfile, false);
 }
 
 /* VALUE must be of type lval_computed with entry_data_value_funcs.  Perform
@@ -1386,8 +1373,8 @@ value_of_dwarf_reg_entry (struct type *type, const frame_info_ptr &frame,
   return val;
 }
 
-/* Read parameter of TYPE at (callee) FRAME's function entry.  DATA and
-   SIZE are DWARF block used to match DW_AT_location at the caller's
+/* Read parameter of TYPE at (callee) FRAME's function entry.  BLOCK is the
+   DWARF block used to match DW_AT_location at the caller's
    DW_TAG_call_site_parameter.
 
    Function always returns non-NULL value.  It throws NO_ENTRY_VALUE_ERROR if it
@@ -1395,16 +1382,16 @@ value_of_dwarf_reg_entry (struct type *type, const frame_info_ptr &frame,
 
 static struct value *
 value_of_dwarf_block_entry (struct type *type, const frame_info_ptr &frame,
-			    const gdb_byte *block, size_t block_len)
+			    gdb::array_view<const gdb_byte> block)
 {
   union call_site_parameter_u kind_u;
 
-  kind_u.dwarf_reg = dwarf_block_to_dwarf_reg (block, block + block_len);
+  kind_u.dwarf_reg = dwarf_block_to_dwarf_reg (block);
   if (kind_u.dwarf_reg != -1)
     return value_of_dwarf_reg_entry (type, frame, CALL_SITE_PARAMETER_DWARF_REG,
 				     kind_u);
 
-  if (dwarf_block_to_fb_offset (block, block + block_len, &kind_u.fb_offset))
+  if (dwarf_block_to_fb_offset (block, &kind_u.fb_offset))
     return value_of_dwarf_reg_entry (type, frame, CALL_SITE_PARAMETER_FB_OFFSET,
 				     kind_u);
 
@@ -1477,26 +1464,24 @@ indirect_synthetic_pointer (sect_offset die, LONGEST byte_offset,
   /* If pointed-to DIE has a DW_AT_location, evaluate it and return the
      resulting value.  Otherwise, it may have a DW_AT_const_value instead,
      or it may've been optimized out.  */
-  if (baton.data != NULL)
-    return dwarf2_evaluate_loc_desc_full (orig_type, frame, baton.data,
-					  baton.size, baton.per_cu,
+  auto expr = baton.expr ();
+  if (!expr.empty ())
+    return dwarf2_evaluate_loc_desc_full (orig_type, frame, expr, baton.per_cu,
 					  baton.per_objfile,
-					  type->target_type (),
-					  byte_offset);
+					  type->target_type (), byte_offset);
   else
     return fetch_const_value_from_synthetic_pointer (die, byte_offset, per_cu,
 						     per_objfile, type);
 }
 
-/* Evaluate a location description, starting at DATA and with length
-   SIZE, to find the current location of variable of TYPE in the
-   context of FRAME.  If SUBOBJ_TYPE is non-NULL, return instead the
-   location of the subobject of type SUBOBJ_TYPE at byte offset
-   SUBOBJ_BYTE_OFFSET within the variable of type TYPE.  */
+/* Evaluate the location description LOC_DESC to find the current location
+   of variable of TYPE in the context of FRAME.  If SUBOBJ_TYPE is non-NULL,
+   return instead the location of the subobject of type SUBOBJ_TYPE at byte
+   offset SUBOBJ_BYTE_OFFSET within the variable of type TYPE.  */
 
 static struct value *
 dwarf2_evaluate_loc_desc_full (struct type *type, const frame_info_ptr &frame,
-			       const gdb_byte *data, size_t size,
+			       gdb::array_view<const gdb_byte> loc_desc,
 			       dwarf2_per_cu *per_cu,
 			       dwarf2_per_objfile *per_objfile,
 			       struct type *subobj_type,
@@ -1511,7 +1496,7 @@ dwarf2_evaluate_loc_desc_full (struct type *type, const frame_info_ptr &frame,
   else if (subobj_byte_offset < 0)
     invalid_synthetic_pointer ();
 
-  if (size == 0)
+  if (loc_desc.empty ())
     return value::allocate_optimized_out (subobj_type);
 
   value *retval;
@@ -1520,9 +1505,10 @@ dwarf2_evaluate_loc_desc_full (struct type *type, const frame_info_ptr &frame,
   try
     {
       retval
-	= dwarf2_evaluate (data, size, as_lval, per_objfile, per_cu,
-			   frame, per_cu->addr_size (), nullptr, nullptr,
-			   type, subobj_type, subobj_byte_offset);
+	= dwarf2_evaluate (loc_desc.data (), loc_desc.size (), as_lval,
+			   per_objfile, per_cu, frame, per_cu->addr_size (),
+			   nullptr, nullptr, type, subobj_type,
+			   subobj_byte_offset);
     }
   catch (const gdb_exception_error &ex)
     {
@@ -1561,11 +1547,11 @@ dwarf2_evaluate_loc_desc_full (struct type *type, const frame_info_ptr &frame,
 
 struct value *
 dwarf2_evaluate_loc_desc (struct type *type, const frame_info_ptr &frame,
-			  const gdb_byte *data, size_t size,
+			  gdb::array_view<const gdb_byte> loc_desc,
 			  dwarf2_per_cu *per_cu,
 			  dwarf2_per_objfile *per_objfile, bool as_lval)
 {
-  return dwarf2_evaluate_loc_desc_full (type, frame, data, size, per_cu,
+  return dwarf2_evaluate_loc_desc_full (type, frame, loc_desc, per_cu,
 					per_objfile, NULL, 0, as_lval);
 }
 
@@ -1612,9 +1598,9 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
   try
     {
       result
-	= dwarf2_evaluate (dlbaton->data, dlbaton->size, true, per_objfile,
-			   per_cu, frame, per_cu->addr_size (), &init_values,
-			   addr_stack);
+	= dwarf2_evaluate (dlbaton->expr ().data (), dlbaton->expr ().size (),
+			   true, per_objfile, per_cu, frame,
+			   per_cu->addr_size (), &init_values, addr_stack);
     }
   catch (const gdb_exception_error &ex)
     {
@@ -1711,19 +1697,17 @@ dwarf2_evaluate_property (const dynamic_prop *prop,
       {
 	const dwarf2_property_baton *baton = prop->baton ();
 	CORE_ADDR pc;
-	const gdb_byte *data;
 	struct value *val;
-	size_t size;
 
 	if (frame == NULL
 	    || !get_frame_address_in_block_if_available (frame, &pc))
 	  return false;
 
-	data = dwarf2_find_location_expression (&baton->loclist, &size, pc);
-	if (data != NULL)
+	auto data = dwarf2_find_location_expression (&baton->loclist, pc);
+	if (!data.empty ())
 	  {
 	    val = dwarf2_evaluate_loc_desc (baton->property_type, frame, data,
-					    size, baton->loclist.per_cu,
+					    baton->loclist.per_cu,
 					    baton->loclist.per_objfile);
 	    if (!val->optimized_out ())
 	      {
@@ -1816,15 +1800,13 @@ dwarf2_compile_property_to_c (string_file *stream,
 {
 #if defined (HAVE_COMPILE)
   const dwarf2_property_baton *baton = prop->baton ();
-  const gdb_byte *data;
-  size_t size;
+  gdb::array_view<const gdb_byte> expr;
   dwarf2_per_cu *per_cu;
   dwarf2_per_objfile *per_objfile;
 
   if (prop->kind () == PROP_LOCEXPR)
     {
-      data = baton->locexpr.data;
-      size = baton->locexpr.size;
+      expr = baton->locexpr.expr ();
       per_cu = baton->locexpr.per_cu;
       per_objfile = baton->locexpr.per_objfile;
     }
@@ -1832,15 +1814,14 @@ dwarf2_compile_property_to_c (string_file *stream,
     {
       gdb_assert (prop->kind () == PROP_LOCLIST);
 
-      data = dwarf2_find_location_expression (&baton->loclist, &size, pc);
+      expr = dwarf2_find_location_expression (&baton->loclist, pc);
       per_cu = baton->loclist.per_cu;
       per_objfile = baton->loclist.per_objfile;
     }
 
-  compile_dwarf_bounds_to_c (stream, result_name, prop, sym, pc,
-			     gdbarch, registers_used,
-			     per_cu->addr_size (),
-			     data, data + size, per_cu, per_objfile);
+  compile_dwarf_bounds_to_c (stream, result_name, prop, sym, pc, gdbarch,
+			     registers_used, per_cu->addr_size (), expr,
+			     per_cu, per_objfile);
 #else
   gdb_assert_not_reached ("Compile support was disabled");
 #endif
@@ -1958,36 +1939,38 @@ access_memory (struct gdbarch *arch, struct agent_expr *expr, ULONGEST nbits)
 
 /* Compile a DWARF location expression to an agent expression.
 
-   EXPR is the agent expression we are building.
+   AX is the agent expression we are building.
    LOC is the agent value we modify.
-   ARCH is the architecture.
    ADDR_SIZE is the size of addresses, in bytes.
-   OP_PTR is the start of the location expression.
-   OP_END is one past the last byte of the location expression.
+   EXPR is the location expression.
 
    This will throw an exception for various kinds of errors -- for
    example, if the expression cannot be compiled, or if the expression
    is invalid.  */
 
 static void
-dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
-			   unsigned int addr_size, const gdb_byte *op_ptr,
-			   const gdb_byte *op_end, dwarf2_per_cu *per_cu,
+dwarf2_compile_expr_to_ax (struct agent_expr *ax, struct axs_value *loc,
+			   unsigned int addr_size,
+			   gdb::array_view<const gdb_byte> expr,
+			   dwarf2_per_cu *per_cu,
 			   dwarf2_per_objfile *per_objfile)
 {
-  gdbarch *arch = expr->gdbarch;
+  gdbarch *arch = ax->gdbarch;
   std::vector<int> dw_labels, patches;
-  const gdb_byte * const base = op_ptr;
-  const gdb_byte *previous_piece = op_ptr;
+  const gdb_byte *previous_piece = expr.data ();
   enum bfd_endian byte_order = gdbarch_byte_order (arch);
   ULONGEST bits_collected = 0;
   unsigned int addr_size_bits = 8 * addr_size;
   bool bits_big_endian = byte_order == BFD_ENDIAN_BIG;
 
-  std::vector<int> offsets (op_end - op_ptr, -1);
+  std::vector<int> offsets (expr.size (), -1);
 
   /* By default we are making an address.  */
   loc->kind = axs_lvalue_memory;
+
+  const gdb_byte *const base = expr.data ();
+  const gdb_byte *op_ptr = expr.data ();
+  const gdb_byte *const op_end = expr.data () + expr.size ();
 
   while (op_ptr < op_end)
     {
@@ -1996,7 +1979,7 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
       int64_t offset;
       int i;
 
-      offsets[op_ptr - base] = expr->buf.size ();
+      offsets[op_ptr - base] = ax->buf.size ();
       ++op_ptr;
 
       /* Our basic approach to code generation is to map DWARF
@@ -2049,7 +2032,7 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	case DW_OP_lit29:
 	case DW_OP_lit30:
 	case DW_OP_lit31:
-	  ax_const_l (expr, op - DW_OP_lit0);
+	  ax_const_l (ax, op - DW_OP_lit0);
 	  break;
 
 	case DW_OP_addr:
@@ -2061,57 +2044,57 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	     branching between the address and the TLS op.  */
 	  if (op_ptr >= op_end || *op_ptr != DW_OP_GNU_push_tls_address)
 	    uoffset += per_objfile->objfile->text_section_offset ();
-	  ax_const_l (expr, uoffset);
+	  ax_const_l (ax, uoffset);
 	  break;
 
 	case DW_OP_const1u:
-	  ax_const_l (expr, extract_unsigned_integer (op_ptr, 1, byte_order));
+	  ax_const_l (ax, extract_unsigned_integer (op_ptr, 1, byte_order));
 	  op_ptr += 1;
 	  break;
 
 	case DW_OP_const1s:
-	  ax_const_l (expr, extract_signed_integer (op_ptr, 1, byte_order));
+	  ax_const_l (ax, extract_signed_integer (op_ptr, 1, byte_order));
 	  op_ptr += 1;
 	  break;
 
 	case DW_OP_const2u:
-	  ax_const_l (expr, extract_unsigned_integer (op_ptr, 2, byte_order));
+	  ax_const_l (ax, extract_unsigned_integer (op_ptr, 2, byte_order));
 	  op_ptr += 2;
 	  break;
 
 	case DW_OP_const2s:
-	  ax_const_l (expr, extract_signed_integer (op_ptr, 2, byte_order));
+	  ax_const_l (ax, extract_signed_integer (op_ptr, 2, byte_order));
 	  op_ptr += 2;
 	  break;
 
 	case DW_OP_const4u:
-	  ax_const_l (expr, extract_unsigned_integer (op_ptr, 4, byte_order));
+	  ax_const_l (ax, extract_unsigned_integer (op_ptr, 4, byte_order));
 	  op_ptr += 4;
 	  break;
 
 	case DW_OP_const4s:
-	  ax_const_l (expr, extract_signed_integer (op_ptr, 4, byte_order));
+	  ax_const_l (ax, extract_signed_integer (op_ptr, 4, byte_order));
 	  op_ptr += 4;
 	  break;
 
 	case DW_OP_const8u:
-	  ax_const_l (expr, extract_unsigned_integer (op_ptr, 8, byte_order));
+	  ax_const_l (ax, extract_unsigned_integer (op_ptr, 8, byte_order));
 	  op_ptr += 8;
 	  break;
 
 	case DW_OP_const8s:
-	  ax_const_l (expr, extract_signed_integer (op_ptr, 8, byte_order));
+	  ax_const_l (ax, extract_signed_integer (op_ptr, 8, byte_order));
 	  op_ptr += 8;
 	  break;
 
 	case DW_OP_constu:
 	  op_ptr = safe_read_uleb128 (op_ptr, op_end, &uoffset);
-	  ax_const_l (expr, uoffset);
+	  ax_const_l (ax, uoffset);
 	  break;
 
 	case DW_OP_consts:
 	  op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
-	  ax_const_l (expr, offset);
+	  ax_const_l (ax, offset);
 	  break;
 
 	case DW_OP_reg0:
@@ -2169,7 +2152,7 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	      error (_("Cannot translate DW_OP_implicit_value of %d bytes"),
 		     (int) len);
 
-	    ax_const_l (expr, extract_unsigned_integer (op_ptr, len,
+	    ax_const_l (ax, extract_unsigned_integer (op_ptr, len,
 							byte_order));
 	    op_ptr += len;
 	    dwarf_expr_require_composition (op_ptr, op_end,
@@ -2218,11 +2201,11 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	case DW_OP_breg31:
 	  op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
 	  i = dwarf_reg_to_regnum_or_error (arch, op - DW_OP_breg0);
-	  ax_reg (expr, i);
+	  ax_reg (ax, i);
 	  if (offset != 0)
 	    {
-	      ax_const_l (expr, offset);
-	      ax_simple (expr, aop_add);
+	      ax_const_l (ax, offset);
+	      ax_simple (ax, aop_add);
 	    }
 	  break;
 
@@ -2231,23 +2214,21 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	    op_ptr = safe_read_uleb128 (op_ptr, op_end, &reg);
 	    op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
 	    i = dwarf_reg_to_regnum_or_error (arch, reg);
-	    ax_reg (expr, i);
+	    ax_reg (ax, i);
 	    if (offset != 0)
 	      {
-		ax_const_l (expr, offset);
-		ax_simple (expr, aop_add);
+		ax_const_l (ax, offset);
+		ax_simple (ax, aop_add);
 	      }
 	  }
 	  break;
 
 	case DW_OP_fbreg:
 	  {
-	    const gdb_byte *datastart;
-	    size_t datalen;
 	    const struct block *b;
 	    struct symbol *framefunc;
 
-	    b = block_for_pc (expr->scope);
+	    b = block_for_pc (ax->scope);
 
 	    if (!b)
 	      error (_("No block found for address"));
@@ -2257,20 +2238,19 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	    if (!framefunc)
 	      error (_("No function found for block"));
 
-	    func_get_frame_base_dwarf_block (framefunc, expr->scope,
-					     &datastart, &datalen);
+	    auto frame_base_expr = func_get_frame_base_dwarf_block (framefunc,
+								    ax->scope);
 
 	    op_ptr = safe_read_sleb128 (op_ptr, op_end, &offset);
-	    dwarf2_compile_expr_to_ax (expr, loc, addr_size, datastart,
-				       datastart + datalen, per_cu,
-				       per_objfile);
+	    dwarf2_compile_expr_to_ax (ax, loc, addr_size, frame_base_expr,
+				       per_cu, per_objfile);
 	    if (loc->kind == axs_lvalue_register)
-	      require_rvalue (expr, loc);
+	      require_rvalue (ax, loc);
 
 	    if (offset != 0)
 	      {
-		ax_const_l (expr, offset);
-		ax_simple (expr, aop_add);
+		ax_const_l (ax, offset);
+		ax_simple (ax, aop_add);
 	      }
 
 	    loc->kind = axs_lvalue_memory;
@@ -2278,28 +2258,28 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	  break;
 
 	case DW_OP_dup:
-	  ax_simple (expr, aop_dup);
+	  ax_simple (ax, aop_dup);
 	  break;
 
 	case DW_OP_drop:
-	  ax_simple (expr, aop_pop);
+	  ax_simple (ax, aop_pop);
 	  break;
 
 	case DW_OP_pick:
 	  offset = *op_ptr++;
-	  ax_pick (expr, offset);
+	  ax_pick (ax, offset);
 	  break;
 
 	case DW_OP_swap:
-	  ax_simple (expr, aop_swap);
+	  ax_simple (ax, aop_swap);
 	  break;
 
 	case DW_OP_over:
-	  ax_pick (expr, 1);
+	  ax_pick (ax, 1);
 	  break;
 
 	case DW_OP_rot:
-	  ax_simple (expr, aop_rot);
+	  ax_simple (ax, aop_rot);
 	  break;
 
 	case DW_OP_deref:
@@ -2315,36 +2295,36 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	    if (size != 1 && size != 2 && size != 4 && size != 8)
 	      error (_("Unsupported size %d in %s"),
 		     size, get_DW_OP_name (op));
-	    access_memory (arch, expr, size * TARGET_CHAR_BIT);
+	    access_memory (arch, ax, size * TARGET_CHAR_BIT);
 	  }
 	  break;
 
 	case DW_OP_abs:
 	  /* Sign extend the operand.  */
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_dup);
-	  ax_const_l (expr, 0);
-	  ax_simple (expr, aop_less_signed);
-	  ax_simple (expr, aop_log_not);
-	  i = ax_goto (expr, aop_if_goto);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_dup);
+	  ax_const_l (ax, 0);
+	  ax_simple (ax, aop_less_signed);
+	  ax_simple (ax, aop_log_not);
+	  i = ax_goto (ax, aop_if_goto);
 	  /* We have to emit 0 - X.  */
-	  ax_const_l (expr, 0);
-	  ax_simple (expr, aop_swap);
-	  ax_simple (expr, aop_sub);
-	  ax_label (expr, i, expr->buf.size ());
+	  ax_const_l (ax, 0);
+	  ax_simple (ax, aop_swap);
+	  ax_simple (ax, aop_sub);
+	  ax_label (ax, i, ax->buf.size ());
 	  break;
 
 	case DW_OP_neg:
 	  /* No need to sign extend here.  */
-	  ax_const_l (expr, 0);
-	  ax_simple (expr, aop_swap);
-	  ax_simple (expr, aop_sub);
+	  ax_const_l (ax, 0);
+	  ax_simple (ax, aop_swap);
+	  ax_simple (ax, aop_sub);
 	  break;
 
 	case DW_OP_not:
 	  /* Sign extend the operand.  */
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_bit_not);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_bit_not);
 	  break;
 
 	case DW_OP_plus_uconst:
@@ -2353,116 +2333,116 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	     but we micro-optimize anyhow.  */
 	  if (reg != 0)
 	    {
-	      ax_const_l (expr, reg);
-	      ax_simple (expr, aop_add);
+	      ax_const_l (ax, reg);
+	      ax_simple (ax, aop_add);
 	    }
 	  break;
 
 	case DW_OP_and:
-	  ax_simple (expr, aop_bit_and);
+	  ax_simple (ax, aop_bit_and);
 	  break;
 
 	case DW_OP_div:
 	  /* Sign extend the operands.  */
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_swap);
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_swap);
-	  ax_simple (expr, aop_div_signed);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_swap);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_swap);
+	  ax_simple (ax, aop_div_signed);
 	  break;
 
 	case DW_OP_minus:
-	  ax_simple (expr, aop_sub);
+	  ax_simple (ax, aop_sub);
 	  break;
 
 	case DW_OP_mod:
-	  ax_simple (expr, aop_rem_unsigned);
+	  ax_simple (ax, aop_rem_unsigned);
 	  break;
 
 	case DW_OP_mul:
-	  ax_simple (expr, aop_mul);
+	  ax_simple (ax, aop_mul);
 	  break;
 
 	case DW_OP_or:
-	  ax_simple (expr, aop_bit_or);
+	  ax_simple (ax, aop_bit_or);
 	  break;
 
 	case DW_OP_plus:
-	  ax_simple (expr, aop_add);
+	  ax_simple (ax, aop_add);
 	  break;
 
 	case DW_OP_shl:
-	  ax_simple (expr, aop_lsh);
+	  ax_simple (ax, aop_lsh);
 	  break;
 
 	case DW_OP_shr:
-	  ax_simple (expr, aop_rsh_unsigned);
+	  ax_simple (ax, aop_rsh_unsigned);
 	  break;
 
 	case DW_OP_shra:
-	  ax_simple (expr, aop_rsh_signed);
+	  ax_simple (ax, aop_rsh_signed);
 	  break;
 
 	case DW_OP_xor:
-	  ax_simple (expr, aop_bit_xor);
+	  ax_simple (ax, aop_bit_xor);
 	  break;
 
 	case DW_OP_le:
 	  /* Sign extend the operands.  */
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_swap);
-	  ax_ext (expr, addr_size_bits);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_swap);
+	  ax_ext (ax, addr_size_bits);
 	  /* Note no swap here: A <= B is !(B < A).  */
-	  ax_simple (expr, aop_less_signed);
-	  ax_simple (expr, aop_log_not);
+	  ax_simple (ax, aop_less_signed);
+	  ax_simple (ax, aop_log_not);
 	  break;
 
 	case DW_OP_ge:
 	  /* Sign extend the operands.  */
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_swap);
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_swap);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_swap);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_swap);
 	  /* A >= B is !(A < B).  */
-	  ax_simple (expr, aop_less_signed);
-	  ax_simple (expr, aop_log_not);
+	  ax_simple (ax, aop_less_signed);
+	  ax_simple (ax, aop_log_not);
 	  break;
 
 	case DW_OP_eq:
 	  /* Sign extend the operands.  */
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_swap);
-	  ax_ext (expr, addr_size_bits);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_swap);
+	  ax_ext (ax, addr_size_bits);
 	  /* No need for a second swap here.  */
-	  ax_simple (expr, aop_equal);
+	  ax_simple (ax, aop_equal);
 	  break;
 
 	case DW_OP_lt:
 	  /* Sign extend the operands.  */
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_swap);
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_swap);
-	  ax_simple (expr, aop_less_signed);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_swap);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_swap);
+	  ax_simple (ax, aop_less_signed);
 	  break;
 
 	case DW_OP_gt:
 	  /* Sign extend the operands.  */
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_swap);
-	  ax_ext (expr, addr_size_bits);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_swap);
+	  ax_ext (ax, addr_size_bits);
 	  /* Note no swap here: A > B is B < A.  */
-	  ax_simple (expr, aop_less_signed);
+	  ax_simple (ax, aop_less_signed);
 	  break;
 
 	case DW_OP_ne:
 	  /* Sign extend the operands.  */
-	  ax_ext (expr, addr_size_bits);
-	  ax_simple (expr, aop_swap);
-	  ax_ext (expr, addr_size_bits);
+	  ax_ext (ax, addr_size_bits);
+	  ax_simple (ax, aop_swap);
+	  ax_ext (ax, addr_size_bits);
 	  /* No need for a swap here.  */
-	  ax_simple (expr, aop_equal);
-	  ax_simple (expr, aop_log_not);
+	  ax_simple (ax, aop_equal);
+	  ax_simple (ax, aop_log_not);
 	  break;
 
 	case DW_OP_call_frame_cfa:
@@ -2470,26 +2450,25 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	    int regnum;
 	    CORE_ADDR text_offset;
 	    LONGEST off;
-	    const gdb_byte *cfa_start, *cfa_end;
+	    gdb::array_view<const gdb_byte> cfa_expr;
 
-	    if (dwarf2_fetch_cfa_info (arch, expr->scope, per_cu,
-				       &regnum, &off,
-				       &text_offset, &cfa_start, &cfa_end))
+	    if (dwarf2_fetch_cfa_info (arch, ax->scope, per_cu, &regnum,
+				       &off, &text_offset, cfa_expr))
 	      {
 		/* Register.  */
-		ax_reg (expr, regnum);
+		ax_reg (ax, regnum);
 		if (off != 0)
 		  {
-		    ax_const_l (expr, off);
-		    ax_simple (expr, aop_add);
+		    ax_const_l (ax, off);
+		    ax_simple (ax, aop_add);
 		  }
 	      }
 	    else
 	      {
 		/* Another expression.  */
-		ax_const_l (expr, text_offset);
-		dwarf2_compile_expr_to_ax (expr, loc, addr_size, cfa_start,
-					   cfa_end, per_cu, per_objfile);
+		ax_const_l (ax, text_offset);
+		dwarf2_compile_expr_to_ax (ax, loc, addr_size, cfa_expr,
+					   per_cu, per_objfile);
 	      }
 
 	    loc->kind = axs_lvalue_memory;
@@ -2508,7 +2487,7 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	case DW_OP_skip:
 	  offset = extract_signed_integer (op_ptr, 2, byte_order);
 	  op_ptr += 2;
-	  i = ax_goto (expr, aop_goto);
+	  i = ax_goto (ax, aop_goto);
 	  dw_labels.push_back (op_ptr + offset - base);
 	  patches.push_back (i);
 	  break;
@@ -2517,8 +2496,8 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	  offset = extract_signed_integer (op_ptr, 2, byte_order);
 	  op_ptr += 2;
 	  /* Zero extend the operand.  */
-	  ax_zero_ext (expr, addr_size_bits);
-	  i = ax_goto (expr, aop_if_goto);
+	  ax_zero_ext (ax, addr_size_bits);
+	  i = ax_goto (ax, aop_if_goto);
 	  dw_labels.push_back (op_ptr + offset - base);
 	  patches.push_back (i);
 	  break;
@@ -2551,18 +2530,18 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	    switch (loc->kind)
 	      {
 	      case axs_lvalue_register:
-		ax_reg (expr, loc->u.reg);
+		ax_reg (ax, loc->u.reg);
 		break;
 
 	      case axs_lvalue_memory:
 		/* Offset the pointer, if needed.  */
 		if (uoffset > 8)
 		  {
-		    ax_const_l (expr, uoffset / 8);
-		    ax_simple (expr, aop_add);
+		    ax_const_l (ax, uoffset / 8);
+		    ax_simple (ax, aop_add);
 		    uoffset %= 8;
 		  }
-		access_memory (arch, expr, size);
+		access_memory (arch, ax, size);
 		break;
 	      }
 
@@ -2575,18 +2554,18 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	      {
 		if (bits_big_endian)
 		  {
-		    ax_simple (expr, aop_swap);
-		    ax_const_l (expr, size);
-		    ax_simple (expr, aop_lsh);
+		    ax_simple (ax, aop_swap);
+		    ax_const_l (ax, size);
+		    ax_simple (ax, aop_lsh);
 		    /* We don't need a second swap here, because
 		       aop_bit_or is symmetric.  */
 		  }
 		else
 		  {
-		    ax_const_l (expr, size);
-		    ax_simple (expr, aop_lsh);
+		    ax_const_l (ax, size);
+		    ax_simple (ax, aop_lsh);
 		  }
-		ax_simple (expr, aop_bit_or);
+		ax_simple (ax, aop_bit_or);
 	      }
 
 	    bits_collected += size;
@@ -2606,9 +2585,9 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	    uoffset = extract_unsigned_integer (op_ptr, size, byte_order);
 	    op_ptr += size;
 
-	    auto get_frame_pc_from_expr = [expr] ()
+	    auto get_frame_pc_from_expr = [ax] ()
 	      {
-		return expr->scope;
+		return ax->scope;
 	      };
 	    cu_offset cuoffset = (cu_offset) uoffset;
 	    block = dwarf2_fetch_die_loc_cu_off (cuoffset, per_cu, per_objfile,
@@ -2617,9 +2596,8 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
 	    /* DW_OP_call_ref is currently not supported.  */
 	    gdb_assert (block.per_cu == per_cu);
 
-	    dwarf2_compile_expr_to_ax (expr, loc, addr_size, block.data,
-				       block.data + block.size, per_cu,
-				       per_objfile);
+	    dwarf2_compile_expr_to_ax (ax, loc, addr_size, block.expr (),
+				       per_cu, per_objfile);
 	  }
 	  break;
 
@@ -2640,7 +2618,7 @@ dwarf2_compile_expr_to_ax (struct agent_expr *expr, struct axs_value *loc,
       int targ = offsets[dw_labels[i]];
       if (targ == -1)
 	internal_error (_("invalid label"));
-      ax_label (expr, patches[i], targ);
+      ax_label (ax, patches[i], targ);
     }
 }
 
@@ -2654,9 +2632,8 @@ locexpr_read_variable (struct symbol *symbol, const frame_info_ptr &frame)
     = (struct dwarf2_locexpr_baton *) SYMBOL_LOCATION_BATON (symbol);
   struct value *val;
 
-  val = dwarf2_evaluate_loc_desc (symbol->type (), frame, dlbaton->data,
-				  dlbaton->size, dlbaton->per_cu,
-				  dlbaton->per_objfile);
+  val = dwarf2_evaluate_loc_desc (symbol->type (), frame, dlbaton->expr (),
+				  dlbaton->per_cu, dlbaton->per_objfile);
 
   return val;
 }
@@ -2671,8 +2648,7 @@ locexpr_read_variable_at_entry (struct symbol *symbol, const frame_info_ptr &fra
   struct dwarf2_locexpr_baton *dlbaton
     = (struct dwarf2_locexpr_baton *) SYMBOL_LOCATION_BATON (symbol);
 
-  return value_of_dwarf_block_entry (symbol->type (), frame, dlbaton->data,
-				     dlbaton->size);
+  return value_of_dwarf_block_entry (symbol->type (), frame, dlbaton->expr ());
 }
 
 /* Return true if DATA points to the end of a piece.  END is one past
@@ -2751,8 +2727,7 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
       struct symbol *framefunc;
       int frame_reg = 0;
       int64_t frame_offset;
-      const gdb_byte *base_data, *new_data, *save_data = data;
-      size_t base_size;
+      const gdb_byte *new_data, *save_data = data;
       int64_t base_offset = 0;
 
       new_data = safe_read_sleb128 (data + 1, end, &frame_offset);
@@ -2772,30 +2747,34 @@ locexpr_describe_location_piece (struct symbol *symbol, struct ui_file *stream,
 	error (_("No function found for block for symbol \"%s\"."),
 	       symbol->print_name ());
 
-      func_get_frame_base_dwarf_block (framefunc, addr, &base_data, &base_size);
+      auto frame_base_expr = func_get_frame_base_dwarf_block (framefunc, addr);
+      gdb_byte op0 = frame_base_expr[0];
 
-      if (base_data[0] >= DW_OP_breg0 && base_data[0] <= DW_OP_breg31)
+      if (op0 >= DW_OP_breg0 && op0 <= DW_OP_breg31)
 	{
 	  const gdb_byte *buf_end;
 
-	  frame_reg = base_data[0] - DW_OP_breg0;
-	  buf_end = safe_read_sleb128 (base_data + 1, base_data + base_size,
+	  frame_reg = op0 - DW_OP_breg0;
+	  buf_end = safe_read_sleb128 (frame_base_expr.data () + 1,
+				       (frame_base_expr.data ()
+					+ frame_base_expr.size ()),
 				       &base_offset);
 	/* If a location description is allowed to be placed on a DWARF
 	   stack, this becomes a valid case which is too complex to be
 	   described here.  */
-	  if (buf_end != base_data + base_size)
+	  if (buf_end != frame_base_expr.data () + frame_base_expr.size ())
 	    return save_data;
 	}
-      else if (base_data[0] >= DW_OP_reg0 && base_data[0] <= DW_OP_reg31)
+      else if (op0 >= DW_OP_reg0 && op0 <= DW_OP_reg31)
 	{
 	/* If the next operation doesn't define the end of a piece, the
 	   expression is too complex to be described here.  */
-	  if (!piece_end_p (base_data + 1, base_data + base_size))
+	  if (!piece_end_p (frame_base_expr.data () + 1,
+			    frame_base_expr.data () + frame_base_expr.size ()))
 	    return save_data;
 
 	  /* The frame base is just the register, with no offset.  */
-	  frame_reg = base_data[0] - DW_OP_reg0;
+	  frame_reg = op0 - DW_OP_reg0;
 	  base_offset = 0;
 	}
       else
@@ -3585,12 +3564,13 @@ show_dwarf_always_disassemble (struct ui_file *file, int from_tty,
 static void
 locexpr_describe_location_1 (struct symbol *symbol, CORE_ADDR addr,
 			     struct ui_file *stream,
-			     const gdb_byte *data, size_t size,
+			     gdb::array_view<const gdb_byte> expr,
 			     unsigned int addr_size,
 			     int offset_size, dwarf2_per_cu *per_cu,
 			     dwarf2_per_objfile *per_objfile)
 {
-  const gdb_byte *end = data + size;
+  const gdb_byte *data = expr.data ();
+  const gdb_byte *const end = expr.data () + expr.size ();
   int first_piece = 1, bad = 0;
   objfile *objfile = per_objfile->objfile;
 
@@ -3697,7 +3677,7 @@ locexpr_describe_location (struct symbol *symbol, CORE_ADDR addr,
   int offset_size = dlbaton->per_cu->offset_size ();
 
   locexpr_describe_location_1 (symbol, addr, stream,
-			       dlbaton->data, dlbaton->size,
+			       dlbaton->expr (),
 			       addr_size, offset_size,
 			       dlbaton->per_cu, dlbaton->per_objfile);
 }
@@ -3716,9 +3696,8 @@ locexpr_tracepoint_var_ref (struct symbol *symbol, struct agent_expr *ax,
   if (dlbaton->size == 0)
     value->optimized_out = 1;
   else
-    dwarf2_compile_expr_to_ax (ax, value, addr_size, dlbaton->data,
-			       dlbaton->data + dlbaton->size, dlbaton->per_cu,
-			       dlbaton->per_objfile);
+    dwarf2_compile_expr_to_ax (ax, value, addr_size, dlbaton->expr (),
+			       dlbaton->per_cu, dlbaton->per_objfile);
 }
 
 /* symbol_computed_ops 'generate_c_location' method.  */
@@ -3733,14 +3712,14 @@ locexpr_generate_c_location (struct symbol *sym, string_file *stream,
   struct dwarf2_locexpr_baton *dlbaton
     = (struct dwarf2_locexpr_baton *) SYMBOL_LOCATION_BATON (sym);
   unsigned int addr_size = dlbaton->per_cu->addr_size ();
+  auto expr = dlbaton->expr ();
 
-  if (dlbaton->size == 0)
+  if (expr.empty ())
     error (_("symbol \"%s\" is optimized out"), sym->natural_name ());
 
-  compile_dwarf_expr_to_c (stream, result_name,
-			   sym, pc, gdbarch, registers_used, addr_size,
-			   dlbaton->data, dlbaton->data + dlbaton->size,
-			   dlbaton->per_cu, dlbaton->per_objfile);
+  compile_dwarf_expr_to_c (stream, result_name, sym, pc, gdbarch,
+			   registers_used, addr_size, expr, dlbaton->per_cu,
+			   dlbaton->per_objfile);
 #else
   gdb_assert_not_reached ("Compile support was disabled");
 #endif
@@ -3769,13 +3748,11 @@ loclist_read_variable (struct symbol *symbol, const frame_info_ptr &frame)
   struct dwarf2_loclist_baton *dlbaton
     = (struct dwarf2_loclist_baton *) SYMBOL_LOCATION_BATON (symbol);
   struct value *val;
-  const gdb_byte *data;
-  size_t size;
   ensure_have_frame (frame, "loclist");
 
   CORE_ADDR pc = get_frame_address_in_block (frame);
-  data = dwarf2_find_location_expression (dlbaton, &size, pc);
-  val = dwarf2_evaluate_loc_desc (symbol->type (), frame, data, size,
+  auto expr = dwarf2_find_location_expression (dlbaton, pc);
+  val = dwarf2_evaluate_loc_desc (symbol->type (), frame, expr,
 				  dlbaton->per_cu, dlbaton->per_objfile);
 
   return val;
@@ -3794,8 +3771,6 @@ loclist_read_variable_at_entry (struct symbol *symbol, const frame_info_ptr &fra
 {
   struct dwarf2_loclist_baton *dlbaton
     = (struct dwarf2_loclist_baton *) SYMBOL_LOCATION_BATON (symbol);
-  const gdb_byte *data;
-  size_t size;
   CORE_ADDR pc;
 
   ensure_have_frame (frame, "loclist at entry");
@@ -3803,11 +3778,11 @@ loclist_read_variable_at_entry (struct symbol *symbol, const frame_info_ptr &fra
   if (!get_frame_func_if_available (frame, &pc))
     return value::allocate_optimized_out (symbol->type ());
 
-  data = dwarf2_find_location_expression (dlbaton, &size, pc, true);
-  if (data == NULL)
+  auto expr = dwarf2_find_location_expression (dlbaton, pc, true);
+  if (expr.empty ())
     return value::allocate_optimized_out (symbol->type ());
 
-  return value_of_dwarf_block_entry (symbol->type (), frame, data, size);
+  return value_of_dwarf_block_entry (symbol->type (), frame, expr);
 }
 
 /* Print a natural-language description of SYMBOL to STREAM.  This
@@ -3918,9 +3893,10 @@ loclist_describe_location (struct symbol *symbol, CORE_ADDR addr,
 		  paddress (gdbarch, high_reloc));
 
       /* Now describe this particular location.  */
-      locexpr_describe_location_1 (symbol, low_reloc, stream, loc_ptr, length,
-				   addr_size, offset_size,
-				   dlbaton->per_cu, per_objfile);
+      locexpr_describe_location_1 (symbol, low_reloc, stream,
+				   gdb::make_array_view (loc_ptr, length),
+				   addr_size, offset_size, dlbaton->per_cu,
+				   per_objfile);
 
       gdb_printf (stream, "\n");
 
@@ -3936,16 +3912,14 @@ loclist_tracepoint_var_ref (struct symbol *symbol, struct agent_expr *ax,
 {
   struct dwarf2_loclist_baton *dlbaton
     = (struct dwarf2_loclist_baton *) SYMBOL_LOCATION_BATON (symbol);
-  const gdb_byte *data;
-  size_t size;
   unsigned int addr_size = dlbaton->per_cu->addr_size ();
 
-  data = dwarf2_find_location_expression (dlbaton, &size, ax->scope);
-  if (size == 0)
+  auto expr = dwarf2_find_location_expression (dlbaton, ax->scope);
+  if (expr.empty ())
     value->optimized_out = 1;
   else
-    dwarf2_compile_expr_to_ax (ax, value, addr_size, data, data + size,
-			       dlbaton->per_cu, dlbaton->per_objfile);
+    dwarf2_compile_expr_to_ax (ax, value, addr_size, expr, dlbaton->per_cu,
+			       dlbaton->per_objfile);
 }
 
 /* symbol_computed_ops 'generate_c_location' method.  */
@@ -3960,17 +3934,13 @@ loclist_generate_c_location (struct symbol *sym, string_file *stream,
   struct dwarf2_loclist_baton *dlbaton
     = (struct dwarf2_loclist_baton *) SYMBOL_LOCATION_BATON (sym);
   unsigned int addr_size = dlbaton->per_cu->addr_size ();
-  const gdb_byte *data;
-  size_t size;
+  auto expr = dwarf2_find_location_expression (dlbaton, pc);
 
-  data = dwarf2_find_location_expression (dlbaton, &size, pc);
-  if (size == 0)
+  if (expr.empty ())
     error (_("symbol \"%s\" is optimized out"), sym->natural_name ());
 
-  compile_dwarf_expr_to_c (stream, result_name,
-			   sym, pc, gdbarch, registers_used, addr_size,
-			   data, data + size,
-			   dlbaton->per_cu,
+  compile_dwarf_expr_to_c (stream, result_name, sym, pc, gdbarch,
+			   registers_used, addr_size, expr, dlbaton->per_cu,
 			   dlbaton->per_objfile);
 #else
   gdb_assert_not_reached ("Compile support was disabled");

@@ -105,7 +105,9 @@ enum target_waitkind
   /* The thread was created.  */
   TARGET_WAITKIND_THREAD_CREATED,
 
-  /* The thread has exited.  The exit status is in value.integer.  */
+  /* The thread has exited.  The exit status is in value.integer.  The
+     thread should still exist in the thread list when infrun receives
+     this event.  */
   TARGET_WAITKIND_THREAD_EXITED,
 };
 

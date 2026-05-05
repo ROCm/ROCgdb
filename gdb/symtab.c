@@ -5441,8 +5441,13 @@ rbreak_command (const char *regexp, int from_tty)
 	}
     }
 
+  /* Compute this property now.  We want to use the property after
+     std::move (file_name), but at that point we can no longer compute it
+     because the std::move nullifies file_name.  */
+  bool file_name_p = file_name != nullptr;
+
   global_symbol_searcher spec (SEARCH_FUNCTION_DOMAIN, regexp);
-  if (file_name != nullptr)
+  if (file_name_p)
     spec.add_filename (std::move (file_name));
   std::vector<symbol_search> symbols = spec.search ();
 
@@ -5455,7 +5460,7 @@ rbreak_command (const char *regexp, int from_tty)
       std::string name;
       if (p.msymbol.minsym == nullptr)
 	{
-	  if (file_name != nullptr)
+	  if (file_name_p)
 	    {
 	      struct symtab *symtab = p.symbol->symtab ();
 	      const char *fullname = symtab_to_fullname (symtab);

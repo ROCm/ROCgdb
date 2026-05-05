@@ -29,7 +29,7 @@ fragment <<EOF
 static void
 elfmmix_before_parse (void)
 {
-  mmix_before_parse ();
+  gld${EMULATION_NAME}_before_parse ();
 
   /* Make sure we don't create a demand-paged executable.  Unfortunately
      this isn't changeable with a command-line option.  It makes no

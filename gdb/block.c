@@ -648,38 +648,9 @@ struct symbol *
 block_lookup_symbol (const struct block *block, const lookup_name_info &name,
 		     const domain_search_flags domain)
 {
-  if (!block->function ())
-    {
-      best_symbol_tracker tracker;
-      tracker.search (nullptr, block, name, domain);
-      return tracker.currently_best.symbol;
-    }
-  else
-    {
-      /* Note that parameter symbols do not always show up last in the
-	 list; this loop makes sure to take anything else other than
-	 parameter symbols first; it only uses parameter symbols as a
-	 last resort.  Note that this only takes up extra computation
-	 time on a match.
-	 It's hard to define types in the parameter list (at least in
-	 C/C++) so we don't do the same PR 16253 hack here that is done
-	 for the !BLOCK_FUNCTION case.  */
-
-      struct symbol *sym_found = NULL;
-
-      for (struct symbol *sym : block_iterator_range (block, &name))
-	{
-	  if (sym->matches (domain))
-	    {
-	      sym_found = sym;
-	      if (!sym->is_argument ())
-		{
-		  break;
-		}
-	    }
-	}
-      return (sym_found);	/* Will be NULL if not found.  */
-    }
+  best_symbol_tracker tracker;
+  tracker.search (nullptr, block, name, domain);
+  return tracker.currently_best.symbol;
 }
 
 /* See block.h.  */

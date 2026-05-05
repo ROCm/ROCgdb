@@ -1812,9 +1812,7 @@ elf_arc_relocate_section (bfd *			  output_bfd,
 		bfd_byte *loc;
 		bool skip = false;
 		bool relocate = false;
-		asection *sreloc = _bfd_elf_get_dynamic_reloc_section
-				 (input_bfd, input_section,
-				  /*RELA*/ true);
+		asection *sreloc = elf_section_data (input_section)->sreloc;
 
 		BFD_ASSERT (sreloc != NULL);
 

@@ -44,7 +44,7 @@ struct aarch64_windows_nat_target final
   void cleanup_windows_arch () override;
 
   void thread_context_continue (windows_thread_info *th, int killed) override;
-  void thread_context_step (windows_thread_info *th) override;
+  void thread_context_step (windows_thread_info *th, bool step) override;
 
   void fetch_one_register (struct regcache *regcache,
 			   windows_thread_info *th, int r) override;
@@ -241,9 +241,13 @@ aarch64_windows_nat_target::thread_context_continue (windows_thread_info *th,
 /* See windows-nat.h.  */
 
 void
-aarch64_windows_nat_target::thread_context_step (windows_thread_info *th)
+aarch64_windows_nat_target::thread_context_step (windows_thread_info *th,
+						 bool enable)
 {
-  th->context.Cpsr |= 0x200000;
+  if (enable)
+    th->context.Cpsr |= 0x200000;
+  else
+    th->context.Cpsr &= ~0x200000;
 }
 
 /* See windows-nat.h.  */
@@ -313,8 +317,7 @@ aarch64_notify_debug_reg_change (ptid_t ptid,
     = aarch64_get_debug_reg_state (inferior_ptid.pid ());
   aarch64_windows_process.dr_state = *state;
 
-  for (auto &th : aarch64_windows_process.thread_list)
-    th->debug_registers_changed = true;
+  windows_debug_registers_changed_all_threads ();
 }
 
 INIT_GDB_FILE (aarch64_windows_nat)

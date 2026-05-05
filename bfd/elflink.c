@@ -1162,7 +1162,7 @@ _bfd_elf_merge_symbol (bfd *abfd,
   bfd *oldbfd;
   bool newdyn, olddyn, olddef, newdef, newdyncommon, olddyncommon;
   bool newweak, oldweak, newfunc, oldfunc;
-  elf_backend_data *bed;
+  elf_backend_data *bed, *obed;
   const char *new_version;
   bool default_sym = *matched;
   struct elf_link_hash_table *htab;
@@ -1183,6 +1183,7 @@ _bfd_elf_merge_symbol (bfd *abfd,
   *sym_hash = h;
 
   bed = get_elf_backend_data (abfd);
+  obed = get_elf_backend_data (info->output_bfd);
 
   htab = elf_hash_table (info);
 
@@ -1434,7 +1435,7 @@ _bfd_elf_merge_symbol (bfd *abfd,
 	  && olddyn)
 	{
 	  h = hi;
-	  (*bed->elf_backend_hide_symbol) (info, h, true);
+	  obed->elf_backend_hide_symbol (info, h, true);
 	  h->forced_local = 0;
 	  h->ref_dynamic = 0;
 	  h->def_dynamic = 0;
@@ -1550,14 +1551,14 @@ _bfd_elf_merge_symbol (bfd *abfd,
 	    {
 	      hi->root.type = h->root.type;
 	      h->root.type = bfd_link_hash_indirect;
-	      (*bed->elf_backend_copy_indirect_symbol) (info, hi, h);
+	      obed->elf_backend_copy_indirect_symbol (info, hi, h);
 
 	      h->root.u.i.link = (struct bfd_link_hash_entry *) hi;
 	      if (ELF_ST_VISIBILITY (sym->st_other) != STV_PROTECTED)
 		{
 		  /* If the new symbol is hidden or internal, completely undo
 		     any dynamic link state.  */
-		  (*bed->elf_backend_hide_symbol) (info, h, true);
+		  obed->elf_backend_hide_symbol (info, h, true);
 		  h->forced_local = 0;
 		  h->ref_dynamic = 0;
 		}
@@ -1597,7 +1598,7 @@ _bfd_elf_merge_symbol (bfd *abfd,
 	{
 	  /* If the new symbol is hidden or internal, completely undo
 	     any dynamic link state.  */
-	  (*bed->elf_backend_hide_symbol) (info, h, true);
+	  obed->elf_backend_hide_symbol (info, h, true);
 	  h->forced_local = 0;
 	  h->ref_dynamic = 0;
 	}
@@ -1700,9 +1701,9 @@ _bfd_elf_merge_symbol (bfd *abfd,
 
   /* We now know everything about the old and new symbols.  We ask the
      backend to check if we can merge them.  */
-  if (bed->merge_symbol != NULL)
+  if (obed->merge_symbol != NULL)
     {
-      if (!bed->merge_symbol (h, sym, psec, newdef, olddef, oldbfd, oldsec))
+      if (!obed->merge_symbol (h, sym, psec, newdef, olddef, oldbfd, oldsec))
 	return false;
       sec = *psec;
     }
@@ -1819,7 +1820,7 @@ _bfd_elf_merge_symbol (bfd *abfd,
 	  {
 	  case STV_INTERNAL:
 	  case STV_HIDDEN:
-	    (*bed->elf_backend_hide_symbol) (info, h, true);
+	    obed->elf_backend_hide_symbol (info, h, true);
 	    break;
 	  }
     }
@@ -1930,7 +1931,7 @@ _bfd_elf_merge_symbol (bfd *abfd,
       flip->root.u.undef.abfd = h->root.u.undef.abfd;
       h->root.type = bfd_link_hash_indirect;
       h->root.u.i.link = (struct bfd_link_hash_entry *) flip;
-      (*bed->elf_backend_copy_indirect_symbol) (info, flip, h);
+      obed->elf_backend_copy_indirect_symbol (info, flip, h);
       if (h->def_dynamic)
 	{
 	  h->def_dynamic = 0;
@@ -2006,7 +2007,7 @@ _bfd_elf_add_default_symbol (bfd *abfd,
 	return true;
     }
 
-  bed = get_elf_backend_data (abfd);
+  bed = get_elf_backend_data (info->output_bfd);
   collect = bed->collect;
   dynamic = (abfd->flags & DYNAMIC) != 0;
 
@@ -3167,7 +3168,7 @@ _bfd_elf_fix_symbol_flags (struct elf_link_hash_entry *h,
     }
 
   /* Backend specific symbol fixup.  */
-  bed = get_elf_backend_data (elf_hash_table (eif->info)->dynobj);
+  bed = get_elf_backend_data (eif->info->output_bfd);
   if (bed->elf_backend_fixup_symbol
       && !(*bed->elf_backend_fixup_symbol) (eif->info, h))
     return false;
@@ -4425,7 +4426,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
   Elf_Internal_Sym *isymbuf = NULL;
   Elf_Internal_Sym *isym;
   Elf_Internal_Sym *isymend;
-  elf_backend_data *bed;
+  elf_backend_data *bed, *obed;
   bool add_needed;
   struct elf_link_hash_table *htab;
   void *alloc_mark = NULL;
@@ -4443,6 +4444,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 
   htab = elf_hash_table (info);
   bed = get_elf_backend_data (abfd);
+  obed = get_elf_backend_data (info->output_bfd);
 
   if (elf_use_dt_symtab_p (abfd))
     {
@@ -5703,7 +5705,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	      {
 	      case STV_INTERNAL:
 	      case STV_HIDDEN:
-		(*bed->elf_backend_hide_symbol) (info, h, true);
+		obed->elf_backend_hide_symbol (info, h, true);
 		dynsym = false;
 		break;
 	      }
@@ -5941,10 +5943,10 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	      && hi->root.u.def.value == h->root.u.def.value
 	      && hi->root.u.def.section == h->root.u.def.section)
 	    {
-	      (*bed->elf_backend_hide_symbol) (info, hi, true);
+	      obed->elf_backend_hide_symbol (info, hi, true);
 	      hi->root.type = bfd_link_hash_indirect;
 	      hi->root.u.i.link = (struct bfd_link_hash_entry *) h;
-	      (*bed->elf_backend_copy_indirect_symbol) (info, h, hi);
+	      obed->elf_backend_copy_indirect_symbol (info, h, hi);
 	      sym_hash = elf_sym_hashes (abfd);
 	      if (sym_hash)
 		for (symidx = 0; symidx < extsymcount; ++symidx)
@@ -15582,34 +15584,6 @@ get_dynamic_reloc_section_name (bfd *       abfd,
   sprintf (name, "%s%s", prefix, old_name);
 
   return name;
-}
-
-/* Returns the dynamic reloc section associated with SEC.
-   If necessary compute the name of the dynamic reloc section based
-   on SEC's name (looked up in ABFD's string table) and the setting
-   of IS_RELA.  */
-
-asection *
-_bfd_elf_get_dynamic_reloc_section (bfd *abfd,
-				    asection *sec,
-				    bool is_rela)
-{
-  asection *reloc_sec = elf_section_data (sec)->sreloc;
-
-  if (reloc_sec == NULL)
-    {
-      const char *name = get_dynamic_reloc_section_name (abfd, sec, is_rela);
-
-      if (name != NULL)
-	{
-	  reloc_sec = bfd_get_linker_section (abfd, name);
-
-	  if (reloc_sec != NULL)
-	    elf_section_data (sec)->sreloc = reloc_sec;
-	}
-    }
-
-  return reloc_sec;
 }
 
 /* Returns the dynamic reloc section associated with SEC.  If the

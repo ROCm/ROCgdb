@@ -5277,8 +5277,7 @@ dwarf2_compute_name (const char *name,
 
 		      if (baton != NULL)
 			v = dwarf2_evaluate_loc_desc (type, NULL,
-						      baton->data,
-						      baton->size,
+						      baton->expr (),
 						      baton->per_cu,
 						      baton->per_objfile);
 		      else if (bytes != NULL)
@@ -8110,13 +8109,10 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
     /* Keep NULL DWARF_BLOCK.  */;
   else if (attr->form_is_block ())
     {
-      struct dwarf2_locexpr_baton *dlbaton;
-      struct dwarf_block *block = attr->as_block ();
+      dwarf2_locexpr_baton *dlbaton
+	= OBSTACK_ZALLOC (&objfile->objfile_obstack, dwarf2_locexpr_baton);
 
-      dlbaton = OBSTACK_ZALLOC (&objfile->objfile_obstack,
-				struct dwarf2_locexpr_baton);
-      dlbaton->data = block->data;
-      dlbaton->size = block->size;
+      dlbaton->set_expr (*attr->as_block ());
       dlbaton->per_objfile = per_objfile;
       dlbaton->per_cu = cu->per_cu;
 
@@ -8236,14 +8232,12 @@ read_call_site_scope (struct die_info *die, struct dwarf2_cu *cu)
 	}
       else
 	{
-	  struct dwarf_block *block = loc->as_block ();
+	  auto block = loc->as_block ()->view ();
 
-	  parameter->u.dwarf_reg = dwarf_block_to_dwarf_reg
-	    (block->data, &block->data[block->size]);
+	  parameter->u.dwarf_reg = dwarf_block_to_dwarf_reg (block);
 	  if (parameter->u.dwarf_reg != -1)
 	    parameter->kind = CALL_SITE_PARAMETER_DWARF_REG;
-	  else if (dwarf_block_to_sp_offset (gdbarch, block->data,
-					     &block->data[block->size],
+	  else if (dwarf_block_to_sp_offset (gdbarch, block,
 					     &parameter->u.fb_offset))
 	    parameter->kind = CALL_SITE_PARAMETER_FB_OFFSET;
 	  else
@@ -9397,8 +9391,9 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	      else
 		dlbaton = OBSTACK_ZALLOC (&objfile->objfile_obstack,
 					  struct dwarf2_locexpr_baton);
-	      dlbaton->data = data_member_location_attr->as_block ()->data;
-	      dlbaton->size = data_member_location_attr->as_block ()->size;
+
+	      dlbaton->set_expr (*data_member_location_attr->as_block ());
+
 	      /* When using this baton, we want to compute the address
 		 of the field, not the value.  This is why
 		 is_reference is set to false here.  */
@@ -9431,8 +9426,8 @@ handle_member_location (struct die_info *die, struct dwarf2_cu *cu,
 	      dwarf2_locexpr_baton *dlbaton
 		= OBSTACK_ZALLOC (&per_objfile->objfile->objfile_obstack,
 				  dwarf2_locexpr_baton);
-	      dlbaton->data = data_bit_offset_attr->as_block ()->data;
-	      dlbaton->size = data_bit_offset_attr->as_block ()->size;
+
+	      dlbaton->set_expr (*data_bit_offset_attr->as_block ());
 	      dlbaton->per_objfile = per_objfile;
 	      dlbaton->per_cu = cu->per_cu;
 
@@ -11763,7 +11758,6 @@ mark_common_block_symbol_computed (struct symbol *sym,
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
   struct objfile *objfile = per_objfile->objfile;
   struct dwarf2_locexpr_baton *baton;
-  gdb_byte *ptr;
   unsigned int cu_off;
   enum bfd_endian byte_order = gdbarch_byte_order (objfile->arch ());
   LONGEST offset = 0;
@@ -11779,18 +11773,19 @@ mark_common_block_symbol_computed (struct symbol *sym,
   baton->per_cu = cu->per_cu;
   gdb_assert (baton->per_cu);
 
-  baton->size = 5 /* DW_OP_call4 */ + 1 /* DW_OP_plus */;
+  std::size_t size = 5 /* DW_OP_call4 */ + 1 /* DW_OP_plus */;
 
   if (member_loc->form_is_constant ())
     {
       offset = member_loc->unsigned_constant ().value_or (0);
-      baton->size += 1 /* DW_OP_addr */ + cu->header.addr_size;
+      size += 1 /* DW_OP_addr */ + cu->header.addr_size;
     }
   else
-    baton->size += member_loc->as_block ()->size;
+    size += member_loc->as_block ()->size;
 
-  ptr = (gdb_byte *) obstack_alloc (&objfile->objfile_obstack, baton->size);
-  baton->data = ptr;
+  gdb_byte *const start
+    = (gdb_byte *) obstack_alloc (&objfile->objfile_obstack, size);
+  gdb_byte *ptr = start;
 
   *ptr++ = DW_OP_call4;
   cu_off = common_die->sect_off - cu->per_cu->sect_off ();
@@ -11813,7 +11808,9 @@ mark_common_block_symbol_computed (struct symbol *sym,
     }
 
   *ptr++ = DW_OP_plus;
-  gdb_assert (ptr - baton->data == baton->size);
+  gdb_assert (ptr - start == size);
+
+  baton->set_expr (gdb::make_array_view (start, size));
 
   SYMBOL_LOCATION_BATON (sym) = baton;
   sym->set_loc_class_index (dwarf2_locexpr_index);
@@ -12795,13 +12792,10 @@ get_mpz_for_rational (dwarf2_cu *cu, gdb_mpz *value, attribute *attr)
       *value = gdb_mpz (1);
     }
   else if (attr->form_is_block ())
-    {
-      dwarf_block *blk = attr->as_block ();
-      value->read (gdb::make_array_view (blk->data, blk->size),
-		   bfd_big_endian (cu->per_objfile->objfile->obfd.get ())
-		   ? BFD_ENDIAN_BIG : BFD_ENDIAN_LITTLE,
-		   true);
-    }
+    value->read (attr->as_block ()->view (),
+		 (bfd_big_endian (cu->per_objfile->objfile->obfd.get ())
+		  ? BFD_ENDIAN_BIG : BFD_ENDIAN_LITTLE),
+		 true);
   else
     {
       /* Rational constants for Ada are always unsigned.  */
@@ -13405,10 +13399,7 @@ var_decl_name (struct die_info *die, struct dwarf2_cu *cu)
   if (attr == nullptr || !attr->as_boolean ())
     return nullptr;
 
-  attr = dwarf2_attr (die, DW_AT_name, cu);
-  if (attr == nullptr)
-    return nullptr;
-  return attr->as_string ();
+  return dwarf2_full_name (nullptr, die, cu);
 }
 
 /* Parse dwarf attribute if it's a block, reference or constant and put the
@@ -13452,8 +13443,7 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
       else
 	block = *attr->as_block ();
 
-      baton->locexpr.size = block.size;
-      baton->locexpr.data = block.data;
+      baton->locexpr.set_expr (block);
       switch (attr->name)
 	{
 	case DW_AT_string_length:
@@ -13509,9 +13499,7 @@ attr_to_dynamic_prop (const struct attribute *attr, struct die_info *die,
 		baton->property_type = die_type (target_die, target_cu);
 		baton->locexpr.per_cu = cu->per_cu;
 		baton->locexpr.per_objfile = per_objfile;
-		struct dwarf_block *block = target_attr->as_block ();
-		baton->locexpr.size = block->size;
-		baton->locexpr.data = block->data;
+		baton->locexpr.set_expr (*target_attr->as_block ());
 		baton->locexpr.is_reference = true;
 		prop->set_locexpr (baton);
 		gdb_assert (prop->baton () != NULL);
@@ -15494,13 +15482,428 @@ new_symbol_file_line (struct die_info *die, struct dwarf2_cu *cu,
   sym->set_symtab (fe->symtab (*file_cu));
 }
 
+/* Given a DWARF information entry CU/DIE with LINKAGENAME and PHYSNAME, fill
+   in SYM according to DIE->tag.  */
+
+static void
+new_symbol (struct die_info *die, struct dwarf2_cu *cu, struct symbol *sym,
+	    const char *linkagename, const char *physname)
+{
+  dwarf2_per_objfile *per_objfile = cu->per_objfile;
+  struct objfile *objfile = per_objfile->objfile;
+  struct attribute *attr = nullptr;
+  struct attribute *attr2 = nullptr;
+  std::vector<symbol *> *list_to_add = nullptr;
+  bool suppress_add = false;
+
+  switch (die->tag)
+    {
+    case DW_TAG_label:
+      {
+	attr = dwarf2_attr (die, DW_AT_low_pc, cu);
+	if (attr != nullptr)
+	  {
+	    CORE_ADDR addr = per_objfile->relocate (attr->as_address ());
+	    sym->set_section_index (SECT_OFF_TEXT (objfile));
+	    sym->set_value_address (addr);
+	    sym->set_loc_class_index (LOC_LABEL);
+	  }
+	else
+	  sym->set_loc_class_index (LOC_OPTIMIZED_OUT);
+	type_allocator alloc (objfile, cu->lang ());
+	struct type *addr_type
+	  = alloc.copy_type (builtin_type (objfile)->builtin_core_addr);
+	sym->set_type (addr_type);
+	sym->set_domain (LABEL_DOMAIN);
+	list_to_add = cu->list_in_scope;
+      }
+      break;
+    case DW_TAG_entry_point:
+      /* SYMBOL_BLOCK_VALUE (sym) will be filled in later by
+	 finish_block.  */
+      sym->set_domain (FUNCTION_DOMAIN);
+      sym->set_loc_class_index (LOC_BLOCK);
+      /* DW_TAG_entry_point provides an additional entry_point to an
+	 existing sub_program.  Therefore, we inherit the "external"
+	 attribute from the sub_program to which the entry_point
+	 belongs to.  */
+      attr2 = dwarf2_attr (die->parent, DW_AT_external, cu);
+      if (attr2 != nullptr && attr2->as_boolean ())
+	list_to_add = &cu->get_builder ()->get_global_symbols ();
+      else
+	list_to_add = cu->list_in_scope;
+      break;
+    case DW_TAG_subprogram:
+      /* SYMBOL_BLOCK_VALUE (sym) will be filled in later by
+	 finish_block.  */
+      sym->set_domain (FUNCTION_DOMAIN);
+      sym->set_loc_class_index (LOC_BLOCK);
+      attr2 = dwarf2_attr (die, DW_AT_external, cu);
+      if ((attr2 != nullptr && attr2->as_boolean ())
+	  || cu->lang () == language_ada
+	  || cu->lang () == language_fortran)
+	{
+	  /* Subprograms marked external are stored as a global symbol.
+	     Ada and Fortran subprograms, whether marked external or
+	     not, are always stored as a global symbol, because we want
+	     to be able to access them globally.  For instance, we want
+	     to be able to break on a nested subprogram without having
+	     to specify the context.  */
+	  list_to_add = &cu->get_builder ()->get_global_symbols ();
+	}
+      else
+	list_to_add = cu->list_in_scope;
+
+      if (is_ada_import_or_export (cu, physname, linkagename))
+	{
+	  /* This is either a Pragma Import or Export.  They can
+	     be distinguished by the declaration flag.  */
+	  sym->set_linkage_name (physname);
+	  if (die_is_declaration (die, cu))
+	    {
+	      /* For Import, create a symbol using the source
+		 name, and have it refer to the linkage name.  */
+	      SYMBOL_LOCATION_BATON (sym) = (void *) linkagename;
+	      sym->set_loc_class_index (ada_block_index);
+	    }
+	  else
+	    {
+	      /* For Export, create a symbol using the source
+		 name, then create a second symbol that refers
+		 back to it.  */
+	      add_ada_export_symbol (sym, linkagename, physname, cu,
+				     *list_to_add);
+	    }
+	}
+      break;
+    case DW_TAG_inlined_subroutine:
+      /* SYMBOL_BLOCK_VALUE (sym) will be filled in later by
+	 finish_block.  */
+      sym->set_domain (FUNCTION_DOMAIN);
+      sym->set_loc_class_index (LOC_BLOCK);
+      sym->set_is_inlined (1);
+      list_to_add = cu->list_in_scope;
+      break;
+    case DW_TAG_template_value_param:
+      suppress_add = true;
+      [[fallthrough]];
+    case DW_TAG_constant:
+    case DW_TAG_variable:
+    case DW_TAG_member:
+      sym->set_domain (VAR_DOMAIN);
+      /* Compilation with minimal debug info may result in
+	 variables with missing type entries.  Change the
+	 misleading `void' type to something sensible.  */
+      if (sym->type ()->code () == TYPE_CODE_VOID)
+	{
+	  type_allocator alloc (objfile, cu->lang ());
+	  struct type *int_type
+	    = alloc.copy_type (builtin_type (objfile)->builtin_int);
+	  sym->set_type (int_type);
+	}
+
+      attr = dwarf2_attr (die, DW_AT_const_value, cu);
+      /* In the case of DW_TAG_member, we should only be called for
+	 static const members.  */
+      if (die->tag == DW_TAG_member)
+	{
+	  /* dwarf2_add_field uses die_is_declaration,
+	     so we do the same.  */
+	  gdb_assert (die_is_declaration (die, cu));
+	  gdb_assert (attr);
+	}
+      if (attr != nullptr)
+	{
+	  dwarf2_const_value (attr, sym, cu);
+	  attr2 = dwarf2_attr (die, DW_AT_external, cu);
+	  if (!suppress_add)
+	    {
+	      if (attr2 != nullptr && attr2->as_boolean ())
+		list_to_add = &cu->get_builder ()->get_global_symbols ();
+	      else
+		list_to_add = cu->list_in_scope;
+	    }
+	  break;
+	}
+      attr = dwarf2_attr (die, DW_AT_location, cu);
+      if (attr != nullptr)
+	{
+	  var_decode_location (attr, sym, cu);
+	  attr2 = dwarf2_attr (die, DW_AT_external, cu);
+
+	  /* Fortran explicitly imports any global symbols to the local
+	     scope by DW_TAG_common_block.  */
+	  if (cu->lang () == language_fortran && die->parent
+	      && die->parent->tag == DW_TAG_common_block)
+	    attr2 = nullptr;
+
+	  if (sym->loc_class () == LOC_STATIC
+	      && sym->value_address () == 0
+	      && !per_objfile->per_bfd->has_section_at_zero)
+	    {
+	      /* When a static variable is eliminated by the linker,
+		 the corresponding debug information is not stripped
+		 out, but the variable address is set to null;
+		 do not add such variables into symbol table.  */
+	    }
+	  else if (attr2 != nullptr && attr2->as_boolean ())
+	    {
+	      if (sym->loc_class () == LOC_STATIC
+		  && (objfile->flags & OBJF_MAINLINE) == 0
+		  && per_objfile->per_bfd->can_copy)
+		{
+		  /* A global static variable might be subject to
+		     copy relocation.  We first check for a local
+		     minsym, though, because maybe the symbol was
+		     marked hidden, in which case this would not
+		     apply.  */
+		  bound_minimal_symbol found
+		    = (lookup_minimal_symbol_linkage
+		       (sym->linkage_name (), objfile, false));
+		  if (found.minsym != nullptr)
+		    sym->maybe_copied = 1;
+		}
+
+	      /* A variable with DW_AT_external is never static,
+		 but it may be block-scoped.  */
+	      list_to_add
+		= ((cu->list_in_scope
+		    == &cu->get_builder ()->get_file_symbols ())
+		   ? &cu->get_builder ()->get_global_symbols ()
+		   : cu->list_in_scope);
+	    }
+	  else
+	    list_to_add = cu->list_in_scope;
+
+	  if (list_to_add != nullptr
+	      && is_ada_import_or_export (cu, physname, linkagename))
+	    {
+	      /* This is a Pragma Export.  A Pragma Import won't
+		 be seen here, because it will not have a location
+		 and so will be handled below.  */
+	      add_ada_export_symbol (sym, physname, linkagename, cu,
+				     *list_to_add);
+	    }
+	}
+      else
+	{
+	  /* We do not know the address of this symbol.
+	     If it is an external symbol and we have type information
+	     for it, enter the symbol as a LOC_UNRESOLVED symbol.
+	     The address of the variable will then be determined from
+	     the minimal symbol table whenever the variable is
+	     referenced.  */
+	  attr2 = dwarf2_attr (die, DW_AT_external, cu);
+
+	  /* Fortran explicitly imports any global symbols to the local
+	     scope by DW_TAG_common_block.  */
+	  if (cu->lang () == language_fortran && die->parent
+	      && die->parent->tag == DW_TAG_common_block)
+	    {
+	      /* SYMBOL_CLASS doesn't matter here because
+		 read_common_block is going to reset it.  */
+	      if (!suppress_add)
+		list_to_add = cu->list_in_scope;
+	    }
+	  else if (is_ada_import_or_export (cu, physname, linkagename))
+	    {
+	      /* This is a Pragma Import.  A Pragma Export won't
+		 be seen here, because it will have a location and
+		 so will be handled above.  */
+	      sym->set_linkage_name (physname);
+	      list_to_add
+		= ((cu->list_in_scope
+		    == &cu->get_builder ()->get_file_symbols ())
+		   ? &cu->get_builder ()->get_global_symbols ()
+		   : cu->list_in_scope);
+	      SYMBOL_LOCATION_BATON (sym) = (void *) linkagename;
+	      sym->set_loc_class_index (ada_imported_index);
+	    }
+	  else if (attr2 != nullptr && attr2->as_boolean ()
+		   && dwarf2_attr (die, DW_AT_type, cu) != nullptr)
+	    {
+	      /* A variable with DW_AT_external is never static, but it
+		 may be block-scoped.  */
+	      list_to_add
+		= ((cu->list_in_scope
+		    == &cu->get_builder ()->get_file_symbols ())
+		   ? &cu->get_builder ()->get_global_symbols ()
+		   : cu->list_in_scope);
+
+	      sym->set_loc_class_index (LOC_UNRESOLVED);
+	    }
+	  else if (!die_is_declaration (die, cu))
+	    {
+	      /* Use the default LOC_OPTIMIZED_OUT class.  */
+	      gdb_assert (sym->loc_class () == LOC_OPTIMIZED_OUT);
+	      if (!suppress_add)
+		list_to_add = cu->list_in_scope;
+	    }
+	}
+      break;
+    case DW_TAG_formal_parameter:
+      {
+	/* If we are inside a function, mark this as an argument.  If
+	   not, we might be looking at an argument to an inlined function
+	   when we do not have enough information to show inlined frames;
+	   pretend it's a local variable in that case so that the user can
+	   still see it.  */
+	sym->set_domain (VAR_DOMAIN);
+	if (cu->get_builder ()->current_context_has_function ())
+	  sym->set_is_argument (true);
+	attr = dwarf2_attr (die, DW_AT_location, cu);
+	if (attr != nullptr)
+	  var_decode_location (attr, sym, cu);
+	attr = dwarf2_attr (die, DW_AT_const_value, cu);
+	if (attr != nullptr)
+	  dwarf2_const_value (attr, sym, cu);
+
+	list_to_add = cu->list_in_scope;
+      }
+      break;
+    case DW_TAG_unspecified_parameters:
+      /* From varargs functions; gdb doesn't seem to have any
+	 interest in this information, so just ignore it for now.
+	 (FIXME?) */
+      break;
+    case DW_TAG_template_type_param:
+      suppress_add = true;
+      [[fallthrough]];
+    case DW_TAG_class_type:
+    case DW_TAG_interface_type:
+    case DW_TAG_structure_type:
+    case DW_TAG_union_type:
+    case DW_TAG_set_type:
+    case DW_TAG_enumeration_type:
+      if (cu->lang () == language_c
+	  || is_cplus_dialect (cu->lang ())
+	  || cu->lang () == language_objc
+	  || cu->lang () == language_opencl
+	  || cu->lang () == language_minimal)
+	{
+	  /* These languages have a tag namespace.  Note that
+	     there's a special hack for C++ in the matching code,
+	     so we don't need to enter a separate typedef for the
+	     tag.  */
+	  sym->set_loc_class_index (LOC_TYPEDEF);
+	  sym->set_domain (STRUCT_DOMAIN);
+	}
+      else
+	{
+	  /* Other languages don't have a tag namespace.  */
+	  sym->set_loc_class_index (LOC_TYPEDEF);
+	  sym->set_domain (TYPE_DOMAIN);
+	}
+
+      /* NOTE: carlton/2003-11-10: C++ class symbols shouldn't
+	 really ever be static objects: otherwise, if you try
+	 to, say, break of a class's method and you're in a file
+	 which doesn't mention that class, it won't work unless
+	 the check for all static symbols in lookup_symbol_aux
+	 saves you.  See the OtherFileClass tests in
+	 gdb.c++/namespace.exp.  */
+
+      if (!suppress_add)
+	{
+	  buildsym_compunit *builder = cu->get_builder ();
+	  list_to_add
+	    = ((cu->list_in_scope == &builder->get_file_symbols ()
+		&& is_cplus_dialect (cu->lang ()))
+	       ? &builder->get_global_symbols ()
+	       : cu->list_in_scope);
+
+	  /* The semantics of C++ state that "struct foo {
+	     ... }" also defines a typedef for "foo".  */
+	  if (is_cplus_dialect (cu->lang ())
+	      || cu->lang () == language_ada
+	      || cu->lang () == language_d
+	      || cu->lang () == language_rust)
+	    {
+	      /* The symbol's name is already allocated along
+		 with this objfile, so we don't need to
+		 duplicate it for the type.  */
+	      if (sym->type ()->name () == 0)
+		sym->type ()->set_name (sym->search_name ());
+	    }
+	}
+      break;
+    case DW_TAG_unspecified_type:
+      if (cu->lang () == language_ada)
+	break;
+      [[fallthrough]];
+    case DW_TAG_typedef:
+    case DW_TAG_array_type:
+    case DW_TAG_base_type:
+    case DW_TAG_subrange_type:
+    case DW_TAG_generic_subrange:
+      sym->set_loc_class_index (LOC_TYPEDEF);
+      sym->set_domain (TYPE_DOMAIN);
+      list_to_add = cu->list_in_scope;
+      break;
+    case DW_TAG_enumerator:
+      sym->set_domain (VAR_DOMAIN);
+      attr = dwarf2_attr (die, DW_AT_const_value, cu);
+      if (attr != nullptr)
+	dwarf2_const_value (attr, sym, cu);
+
+      /* NOTE: carlton/2003-11-10: See comment above in the
+	 DW_TAG_class_type, etc. block.  */
+
+      list_to_add
+	= ((cu->list_in_scope == &cu->get_builder ()->get_file_symbols ()
+	    && is_cplus_dialect (cu->lang ()))
+	   ? &cu->get_builder ()->get_global_symbols ()
+	   : cu->list_in_scope);
+      break;
+    case DW_TAG_imported_declaration:
+    case DW_TAG_namespace:
+      sym->set_domain (TYPE_DOMAIN);
+      sym->set_loc_class_index (LOC_TYPEDEF);
+      list_to_add = &cu->get_builder ()->get_global_symbols ();
+      break;
+    case DW_TAG_module:
+      sym->set_loc_class_index (LOC_TYPEDEF);
+      sym->set_domain (MODULE_DOMAIN);
+      list_to_add = &cu->get_builder ()->get_global_symbols ();
+      break;
+    case DW_TAG_common_block:
+      sym->set_loc_class_index (LOC_COMMON_BLOCK);
+      sym->set_domain (COMMON_BLOCK_DOMAIN);
+      list_to_add = cu->list_in_scope;
+      break;
+    case DW_TAG_namelist:
+      sym->set_loc_class_index (LOC_STATIC);
+      sym->set_domain (VAR_DOMAIN);
+      list_to_add = cu->list_in_scope;
+      break;
+    default:
+      /* Not a tag we recognize.  Hopefully we aren't processing
+	 trash data, but since we must specifically ignore things
+	 we don't recognize, there is nothing else we should do at
+	 this point.  */
+      complaint (_("unsupported tag: '%s'"),
+		 dwarf_tag_name (die->tag));
+      break;
+    }
+
+  if (suppress_add)
+    {
+      sym->hash_next = objfile->template_symbols;
+      objfile->template_symbols = sym;
+      return;
+    }
+
+  if (list_to_add != nullptr)
+    add_symbol_to_list (sym, *list_to_add);
+}
+
 /* Given a pointer to a DWARF information entry, figure out if we need
    to make a symbol table entry for it, and if so, create a new entry
    and return a pointer to it.
-   If TYPE is NULL, determine symbol type from the die, otherwise
+   If TYPE is nullptr, determine symbol type from the die, otherwise
    used the passed type.
-   If SPACE is not NULL, use it to hold the new symbol.  If it is
-   NULL, allocate a new symbol on the objfile's obstack.  */
+   If SPACE is not nullptr, use it to hold the new symbol.  If it is
+   nullptr, allocate a new symbol on the objfile's obstack.  */
 
 static struct symbol *
 new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
@@ -15508,483 +15911,65 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu,
 {
   dwarf2_per_objfile *per_objfile = cu->per_objfile;
   struct objfile *objfile = per_objfile->objfile;
-  struct symbol *sym = NULL;
-  const char *name;
-  struct attribute *attr = NULL;
-  struct attribute *attr2 = NULL;
-  std::vector<symbol *> *list_to_add = nullptr;
 
-  name = dwarf2_name (die, cu);
+  const char *name = dwarf2_name (die, cu);
   if (name == nullptr && (die->tag == DW_TAG_subprogram
 			  || die->tag == DW_TAG_inlined_subroutine
 			  || die->tag == DW_TAG_entry_point))
     name = dw2_linkage_name (die, cu);
+  if (name == nullptr)
+    return nullptr;
 
-  if (name)
-    {
-      int suppress_add = 0;
+  struct symbol *sym = space;
+  if (sym == nullptr)
+    sym = objfile->new_symbol<symbol> ();
 
-      if (space)
-	sym = space;
-      else
-	sym = objfile->new_symbol<symbol> ();
+  sym->set_language (cu->lang (), &objfile->objfile_obstack);
 
-      /* Cache this symbol's name and the name's demangled form (if any).  */
-      sym->set_language (cu->lang (), &objfile->objfile_obstack);
-      /* Fortran does not have mangling standard and the mangling does differ
-	 between gfortran, iFort etc.  */
-      const char *physname
-	= ((cu->lang () == language_fortran || cu->lang () == language_ada)
-	   ? dwarf2_full_name (name, die, cu)
-	   : dwarf2_physname (name, die, cu));
-      const char *linkagename = dw2_linkage_name (die, cu);
+  /* Fortran does not have mangling standard and the mangling does differ
+     between gfortran, iFort etc.  */
+  const char *physname
+    = ((cu->lang () == language_fortran || cu->lang () == language_ada)
+       ? dwarf2_full_name (name, die, cu)
+       : dwarf2_physname (name, die, cu));
+  const char *linkagename = dw2_linkage_name (die, cu);
 
-      if (linkagename == nullptr)
-	sym->set_linkage_name (physname);
-      else if (cu->lang () == language_ada)
-	sym->set_linkage_name (linkagename);
-      else
-	{
-	  if (physname == linkagename)
-	    sym->set_demangled_name (name, &objfile->objfile_obstack);
-	  else
-	    sym->set_demangled_name (physname, &objfile->objfile_obstack);
+  /* Cache this symbol's name and the name's demangled form (if any).  */
+  sym->set_linkage_name (linkagename != nullptr
+			 ? linkagename
+			 : physname);
+  if (linkagename != nullptr && cu->lang () != language_ada)
+    sym->set_demangled_name (physname == linkagename
+			     ? name
+			     : physname,
+			     &objfile->objfile_obstack);
 
-	  sym->set_linkage_name (linkagename);
-	}
+  /* Handle DW_AT_artificial.  */
+  struct attribute *attr = dwarf2_attr (die, DW_AT_artificial, cu);
+  if (attr != nullptr)
+    sym->set_is_artificial (attr->as_boolean ());
 
-      /* Handle DW_AT_artificial.  */
-      attr = dwarf2_attr (die, DW_AT_artificial, cu);
-      if (attr != nullptr)
-	sym->set_is_artificial (attr->as_boolean ());
+  /* Default assumptions.
+     Use the passed type or decode it from the die.  */
+  sym->set_domain (UNDEF_DOMAIN);
+  sym->set_loc_class_index (LOC_OPTIMIZED_OUT);
+  sym->set_type (type != nullptr
+		 ? type
+		 : die_type (die, cu));
 
-      /* Default assumptions.
-	 Use the passed type or decode it from the die.  */
-      sym->set_domain (UNDEF_DOMAIN);
-      sym->set_loc_class_index (LOC_OPTIMIZED_OUT);
-      if (type != NULL)
-	sym->set_type (type);
-      else
-	sym->set_type (die_type (die, cu));
+  /* Handle DW_AT_{call,decl}_{file,line}.  */
+  new_symbol_file_line (die, cu, sym);
 
-      /* Handle DW_AT_{call,decl}_{file,line}.  */
-      new_symbol_file_line (die, cu, sym);
+  /* Handle TAG-specific part.  */
+  new_symbol (die, cu, sym, linkagename, physname);
 
-      switch (die->tag)
-	{
-	case DW_TAG_label:
-	  {
-	    attr = dwarf2_attr (die, DW_AT_low_pc, cu);
-	    if (attr != nullptr)
-	      {
-		CORE_ADDR addr = per_objfile->relocate (attr->as_address ());
-		sym->set_section_index (SECT_OFF_TEXT (objfile));
-		sym->set_value_address (addr);
-		sym->set_loc_class_index (LOC_LABEL);
-	      }
-	    else
-	      sym->set_loc_class_index (LOC_OPTIMIZED_OUT);
-	    type_allocator alloc (objfile, cu->lang ());
-	    struct type *addr_type
-	      = alloc.copy_type (builtin_type (objfile)->builtin_core_addr);
-	    sym->set_type (addr_type);
-	    sym->set_domain (LABEL_DOMAIN);
-	    list_to_add = cu->list_in_scope;
-	  }
-	  break;
-	case DW_TAG_entry_point:
-	  /* SYMBOL_BLOCK_VALUE (sym) will be filled in later by
-	     finish_block.  */
-	  sym->set_domain (FUNCTION_DOMAIN);
-	  sym->set_loc_class_index (LOC_BLOCK);
-	  /* DW_TAG_entry_point provides an additional entry_point to an
-	     existing sub_program.  Therefore, we inherit the "external"
-	     attribute from the sub_program to which the entry_point
-	     belongs to.  */
-	  attr2 = dwarf2_attr (die->parent, DW_AT_external, cu);
-	  if (attr2 != nullptr && attr2->as_boolean ())
-	    list_to_add = &cu->get_builder ()->get_global_symbols ();
-	  else
-	    list_to_add = cu->list_in_scope;
-	  break;
-	case DW_TAG_subprogram:
-	  /* SYMBOL_BLOCK_VALUE (sym) will be filled in later by
-	     finish_block.  */
-	  sym->set_domain (FUNCTION_DOMAIN);
-	  sym->set_loc_class_index (LOC_BLOCK);
-	  attr2 = dwarf2_attr (die, DW_AT_external, cu);
-	  if ((attr2 != nullptr && attr2->as_boolean ())
-	      || cu->lang () == language_ada
-	      || cu->lang () == language_fortran)
-	    {
-	      /* Subprograms marked external are stored as a global symbol.
-		 Ada and Fortran subprograms, whether marked external or
-		 not, are always stored as a global symbol, because we want
-		 to be able to access them globally.  For instance, we want
-		 to be able to break on a nested subprogram without having
-		 to specify the context.  */
-	      list_to_add = &cu->get_builder ()->get_global_symbols ();
-	    }
-	  else
-	    {
-	      list_to_add = cu->list_in_scope;
-	    }
+  /* For the benefit of old versions of GCC, check for anonymous
+     namespaces based on the demangled name.  */
+  if (!cu->processing_has_namespace_info
+      && is_cplus_dialect (cu->lang ()))
+    cp_scan_for_anonymous_namespaces (cu->get_builder (), sym, objfile);
 
-	  if (is_ada_import_or_export (cu, physname, linkagename))
-	    {
-	      /* This is either a Pragma Import or Export.  They can
-		 be distinguished by the declaration flag.  */
-	      sym->set_linkage_name (physname);
-	      if (die_is_declaration (die, cu))
-		{
-		  /* For Import, create a symbol using the source
-		     name, and have it refer to the linkage name.  */
-		  SYMBOL_LOCATION_BATON (sym) = (void *) linkagename;
-		  sym->set_loc_class_index (ada_block_index);
-		}
-	      else
-		{
-		  /* For Export, create a symbol using the source
-		     name, then create a second symbol that refers
-		     back to it.  */
-		  add_ada_export_symbol (sym, linkagename, physname, cu,
-					 *list_to_add);
-		}
-	    }
-	  break;
-	case DW_TAG_inlined_subroutine:
-	  /* SYMBOL_BLOCK_VALUE (sym) will be filled in later by
-	     finish_block.  */
-	  sym->set_domain (FUNCTION_DOMAIN);
-	  sym->set_loc_class_index (LOC_BLOCK);
-	  sym->set_is_inlined (1);
-	  list_to_add = cu->list_in_scope;
-	  break;
-	case DW_TAG_template_value_param:
-	  suppress_add = 1;
-	  [[fallthrough]];
-	case DW_TAG_constant:
-	case DW_TAG_variable:
-	case DW_TAG_member:
-	  sym->set_domain (VAR_DOMAIN);
-	  /* Compilation with minimal debug info may result in
-	     variables with missing type entries.  Change the
-	     misleading `void' type to something sensible.  */
-	  if (sym->type ()->code () == TYPE_CODE_VOID)
-	    {
-	      type_allocator alloc (objfile, cu->lang ());
-	      struct type *int_type
-		= alloc.copy_type (builtin_type (objfile)->builtin_int);
-	      sym->set_type (int_type);
-	    }
-
-	  attr = dwarf2_attr (die, DW_AT_const_value, cu);
-	  /* In the case of DW_TAG_member, we should only be called for
-	     static const members.  */
-	  if (die->tag == DW_TAG_member)
-	    {
-	      /* dwarf2_add_field uses die_is_declaration,
-		 so we do the same.  */
-	      gdb_assert (die_is_declaration (die, cu));
-	      gdb_assert (attr);
-	    }
-	  if (attr != nullptr)
-	    {
-	      dwarf2_const_value (attr, sym, cu);
-	      attr2 = dwarf2_attr (die, DW_AT_external, cu);
-	      if (!suppress_add)
-		{
-		  if (attr2 != nullptr && attr2->as_boolean ())
-		    list_to_add = &cu->get_builder ()->get_global_symbols ();
-		  else
-		    list_to_add = cu->list_in_scope;
-		}
-	      break;
-	    }
-	  attr = dwarf2_attr (die, DW_AT_location, cu);
-	  if (attr != nullptr)
-	    {
-	      var_decode_location (attr, sym, cu);
-	      attr2 = dwarf2_attr (die, DW_AT_external, cu);
-
-	      /* Fortran explicitly imports any global symbols to the local
-		 scope by DW_TAG_common_block.  */
-	      if (cu->lang () == language_fortran && die->parent
-		  && die->parent->tag == DW_TAG_common_block)
-		attr2 = NULL;
-
-	      if (sym->loc_class () == LOC_STATIC
-		  && sym->value_address () == 0
-		  && !per_objfile->per_bfd->has_section_at_zero)
-		{
-		  /* When a static variable is eliminated by the linker,
-		     the corresponding debug information is not stripped
-		     out, but the variable address is set to null;
-		     do not add such variables into symbol table.  */
-		}
-	      else if (attr2 != nullptr && attr2->as_boolean ())
-		{
-		  if (sym->loc_class () == LOC_STATIC
-		      && (objfile->flags & OBJF_MAINLINE) == 0
-		      && per_objfile->per_bfd->can_copy)
-		    {
-		      /* A global static variable might be subject to
-			 copy relocation.  We first check for a local
-			 minsym, though, because maybe the symbol was
-			 marked hidden, in which case this would not
-			 apply.  */
-		      bound_minimal_symbol found
-			= (lookup_minimal_symbol_linkage
-			   (sym->linkage_name (), objfile, false));
-		      if (found.minsym != nullptr)
-			sym->maybe_copied = 1;
-		    }
-
-		  /* A variable with DW_AT_external is never static,
-		     but it may be block-scoped.  */
-		  list_to_add
-		    = ((cu->list_in_scope
-			== &cu->get_builder ()->get_file_symbols ())
-		       ? &cu->get_builder ()->get_global_symbols ()
-		       : cu->list_in_scope);
-		}
-	      else
-		list_to_add = cu->list_in_scope;
-
-	      if (list_to_add != nullptr
-		  && is_ada_import_or_export (cu, physname, linkagename))
-		{
-		  /* This is a Pragma Export.  A Pragma Import won't
-		     be seen here, because it will not have a location
-		     and so will be handled below.  */
-		  add_ada_export_symbol (sym, physname, linkagename, cu,
-					 *list_to_add);
-		}
-	    }
-	  else
-	    {
-	      /* We do not know the address of this symbol.
-		 If it is an external symbol and we have type information
-		 for it, enter the symbol as a LOC_UNRESOLVED symbol.
-		 The address of the variable will then be determined from
-		 the minimal symbol table whenever the variable is
-		 referenced.  */
-	      attr2 = dwarf2_attr (die, DW_AT_external, cu);
-
-	      /* Fortran explicitly imports any global symbols to the local
-		 scope by DW_TAG_common_block.  */
-	      if (cu->lang () == language_fortran && die->parent
-		  && die->parent->tag == DW_TAG_common_block)
-		{
-		  /* SYMBOL_CLASS doesn't matter here because
-		     read_common_block is going to reset it.  */
-		  if (!suppress_add)
-		    list_to_add = cu->list_in_scope;
-		}
-	      else if (is_ada_import_or_export (cu, physname, linkagename))
-		{
-		  /* This is a Pragma Import.  A Pragma Export won't
-		     be seen here, because it will have a location and
-		     so will be handled above.  */
-		  sym->set_linkage_name (physname);
-		  list_to_add
-		    = ((cu->list_in_scope
-			== &cu->get_builder ()->get_file_symbols ())
-		       ? &cu->get_builder ()->get_global_symbols ()
-		       : cu->list_in_scope);
-		  SYMBOL_LOCATION_BATON (sym) = (void *) linkagename;
-		  sym->set_loc_class_index (ada_imported_index);
-		}
-	      else if (attr2 != nullptr && attr2->as_boolean ()
-		       && dwarf2_attr (die, DW_AT_type, cu) != NULL)
-		{
-		  /* A variable with DW_AT_external is never static, but it
-		     may be block-scoped.  */
-		  list_to_add
-		    = ((cu->list_in_scope
-			== &cu->get_builder ()->get_file_symbols ())
-		       ? &cu->get_builder ()->get_global_symbols ()
-		       : cu->list_in_scope);
-
-		  sym->set_loc_class_index (LOC_UNRESOLVED);
-		}
-	      else if (!die_is_declaration (die, cu))
-		{
-		  /* Use the default LOC_OPTIMIZED_OUT class.  */
-		  gdb_assert (sym->loc_class () == LOC_OPTIMIZED_OUT);
-		  if (!suppress_add)
-		    list_to_add = cu->list_in_scope;
-		}
-	    }
-	  break;
-	case DW_TAG_formal_parameter:
-	  {
-	    /* If we are inside a function, mark this as an argument.  If
-	       not, we might be looking at an argument to an inlined function
-	       when we do not have enough information to show inlined frames;
-	       pretend it's a local variable in that case so that the user can
-	       still see it.  */
-	    sym->set_domain (VAR_DOMAIN);
-	    if (cu->get_builder ()->current_context_has_function ())
-	      sym->set_is_argument (true);
-	    attr = dwarf2_attr (die, DW_AT_location, cu);
-	    if (attr != nullptr)
-	      {
-		var_decode_location (attr, sym, cu);
-	      }
-	    attr = dwarf2_attr (die, DW_AT_const_value, cu);
-	    if (attr != nullptr)
-	      {
-		dwarf2_const_value (attr, sym, cu);
-	      }
-
-	    list_to_add = cu->list_in_scope;
-	  }
-	  break;
-	case DW_TAG_unspecified_parameters:
-	  /* From varargs functions; gdb doesn't seem to have any
-	     interest in this information, so just ignore it for now.
-	     (FIXME?) */
-	  break;
-	case DW_TAG_template_type_param:
-	  suppress_add = 1;
-	  [[fallthrough]];
-	case DW_TAG_class_type:
-	case DW_TAG_interface_type:
-	case DW_TAG_structure_type:
-	case DW_TAG_union_type:
-	case DW_TAG_set_type:
-	case DW_TAG_enumeration_type:
-	  if (cu->lang () == language_c
-	      || is_cplus_dialect (cu->lang ())
-	      || cu->lang () == language_objc
-	      || cu->lang () == language_opencl
-	      || cu->lang () == language_minimal)
-	    {
-	      /* These languages have a tag namespace.  Note that
-		 there's a special hack for C++ in the matching code,
-		 so we don't need to enter a separate typedef for the
-		 tag.  */
-	      sym->set_loc_class_index (LOC_TYPEDEF);
-	      sym->set_domain (STRUCT_DOMAIN);
-	    }
-	  else
-	    {
-	      /* Other languages don't have a tag namespace.  */
-	      sym->set_loc_class_index (LOC_TYPEDEF);
-	      sym->set_domain (TYPE_DOMAIN);
-	    }
-
-	  /* NOTE: carlton/2003-11-10: C++ class symbols shouldn't
-	     really ever be static objects: otherwise, if you try
-	     to, say, break of a class's method and you're in a file
-	     which doesn't mention that class, it won't work unless
-	     the check for all static symbols in lookup_symbol_aux
-	     saves you.  See the OtherFileClass tests in
-	     gdb.c++/namespace.exp.  */
-
-	  if (!suppress_add)
-	    {
-	      buildsym_compunit *builder = cu->get_builder ();
-	      list_to_add
-		= ((cu->list_in_scope == &builder->get_file_symbols ()
-		    && is_cplus_dialect (cu->lang ()))
-		   ? &builder->get_global_symbols ()
-		   : cu->list_in_scope);
-
-	      /* The semantics of C++ state that "struct foo {
-		 ... }" also defines a typedef for "foo".  */
-	      if (is_cplus_dialect (cu->lang ())
-		  || cu->lang () == language_ada
-		  || cu->lang () == language_d
-		  || cu->lang () == language_rust)
-		{
-		  /* The symbol's name is already allocated along
-		     with this objfile, so we don't need to
-		     duplicate it for the type.  */
-		  if (sym->type ()->name () == 0)
-		    sym->type ()->set_name (sym->search_name ());
-		}
-	    }
-	  break;
-	case DW_TAG_unspecified_type:
-	  if (cu->lang () == language_ada)
-	    break;
-	  [[fallthrough]];
-	case DW_TAG_typedef:
-	case DW_TAG_array_type:
-	case DW_TAG_base_type:
-	case DW_TAG_subrange_type:
-	case DW_TAG_generic_subrange:
-	  sym->set_loc_class_index (LOC_TYPEDEF);
-	  sym->set_domain (TYPE_DOMAIN);
-	  list_to_add = cu->list_in_scope;
-	  break;
-	case DW_TAG_enumerator:
-	  sym->set_domain (VAR_DOMAIN);
-	  attr = dwarf2_attr (die, DW_AT_const_value, cu);
-	  if (attr != nullptr)
-	    {
-	      dwarf2_const_value (attr, sym, cu);
-	    }
-
-	  /* NOTE: carlton/2003-11-10: See comment above in the
-	     DW_TAG_class_type, etc. block.  */
-
-	  list_to_add
-	    = (cu->list_in_scope == &cu->get_builder ()->get_file_symbols ()
-	       && is_cplus_dialect (cu->lang ())
-	       ? &cu->get_builder ()->get_global_symbols ()
-	       : cu->list_in_scope);
-	  break;
-	case DW_TAG_imported_declaration:
-	case DW_TAG_namespace:
-	  sym->set_domain (TYPE_DOMAIN);
-	  sym->set_loc_class_index (LOC_TYPEDEF);
-	  list_to_add = &cu->get_builder ()->get_global_symbols ();
-	  break;
-	case DW_TAG_module:
-	  sym->set_loc_class_index (LOC_TYPEDEF);
-	  sym->set_domain (MODULE_DOMAIN);
-	  list_to_add = &cu->get_builder ()->get_global_symbols ();
-	  break;
-	case DW_TAG_common_block:
-	  sym->set_loc_class_index (LOC_COMMON_BLOCK);
-	  sym->set_domain (COMMON_BLOCK_DOMAIN);
-	  list_to_add = cu->list_in_scope;
-	  break;
-	case DW_TAG_namelist:
-	  sym->set_loc_class_index (LOC_STATIC);
-	  sym->set_domain (VAR_DOMAIN);
-	  list_to_add = cu->list_in_scope;
-	  break;
-	default:
-	  /* Not a tag we recognize.  Hopefully we aren't processing
-	     trash data, but since we must specifically ignore things
-	     we don't recognize, there is nothing else we should do at
-	     this point.  */
-	  complaint (_("unsupported tag: '%s'"),
-		     dwarf_tag_name (die->tag));
-	  break;
-	}
-
-      if (suppress_add)
-	{
-	  sym->hash_next = objfile->template_symbols;
-	  objfile->template_symbols = sym;
-	  list_to_add = NULL;
-	}
-
-      if (list_to_add != NULL)
-	add_symbol_to_list (sym, *list_to_add);
-
-      /* For the benefit of old versions of GCC, check for anonymous
-	 namespaces based on the demangled name.  */
-      if (!cu->processing_has_namespace_info
-	  && is_cplus_dialect (cu->lang ()))
-	cp_scan_for_anonymous_namespaces (cu->get_builder (), sym, objfile);
-    }
-  return (sym);
+  return sym;
 }
 
 /* Read a constant value from an attribute.  Either set *VALUE, or if
@@ -16031,9 +16016,9 @@ dwarf2_const_value_attr (const struct attribute *attr, struct type *type,
 	(*baton)->per_cu = cu->per_cu;
 	gdb_assert ((*baton)->per_cu);
 
-	(*baton)->size = 2 + cu_header->addr_size;
-	data = (gdb_byte *) obstack_alloc (obstack, (*baton)->size);
-	(*baton)->data = data;
+	std::size_t size = 2 + cu_header->addr_size;
+	data = (gdb_byte *) obstack_alloc (obstack, size);
+	(*baton)->set_expr (gdb::make_array_view (data, size));
 
 	data[0] = DW_OP_addr;
 	store_unsigned_integer (&data[1], cu_header->addr_size,
@@ -16650,23 +16635,28 @@ determine_prefix (struct die_info *die, struct dwarf2_cu *cu)
 	  }
 	return "";
       case DW_TAG_subprogram:
-	/* Nested subroutines in Fortran get a prefix with the name
-	   of the parent's subroutine.  Entry points are prefixed by the
-	   parent's namespace.  */
-	if (cu->lang () == language_fortran)
-	  {
-	    if ((die->tag ==  DW_TAG_subprogram)
-		&& (dwarf2_name (parent, cu) != NULL))
-	      return dwarf2_name (parent, cu);
-	    else if (die->tag == DW_TAG_entry_point)
-	      return determine_prefix (parent, cu);
-	  }
-	else if (cu->lang () == language_ada
-		 && (die->tag == DW_TAG_subprogram
-		     || die->tag == DW_TAG_inlined_subroutine
-		     || die->tag == DW_TAG_lexical_block))
-	  return dwarf2_full_name (nullptr, parent, cu);
-	return "";
+	{
+	  const char *name = nullptr;
+	  /* Nested subroutines in Fortran get a prefix with the name
+	     of the parent's subroutine.  Entry points are prefixed by the
+	     parent's namespace.  */
+	  if (cu->lang () == language_fortran)
+	    {
+	      if ((die->tag ==  DW_TAG_subprogram)
+		  && (dwarf2_name (parent, cu) != NULL))
+		name = dwarf2_name (parent, cu);
+	      else if (die->tag == DW_TAG_entry_point)
+		name = determine_prefix (parent, cu);
+	    }
+	  else if (cu->lang () == language_ada
+		   && (die->tag == DW_TAG_subprogram
+		       || die->tag == DW_TAG_inlined_subroutine
+		       || die->tag == DW_TAG_lexical_block))
+	    name = dwarf2_full_name (nullptr, parent, cu);
+	  if (name == nullptr)
+	    name = "";
+	  return name;
+	}
       case DW_TAG_enumeration_type:
 	parent_type = read_type_die (parent, cu);
 	if (parent_type->is_declared_class ())
@@ -17095,23 +17085,17 @@ dwarf2_fetch_die_loc_sect_off (sect_offset sect_off, dwarf2_per_cu *per_cu,
 
   if (!attr)
     {
-      /* DWARF: "If there is no such attribute, then there is no effect.".
-	 DATA is ignored if SIZE is 0.  */
-
-      retval.data = NULL;
-      retval.size = 0;
+      /* DWARF: "If there is no such attribute, then there is no effect.".  */
+      retval.set_expr (gdb::array_view<const gdb_byte> ());
     }
   else if (attr->form_is_section_offset ())
     {
       struct dwarf2_loclist_baton loclist_baton;
       CORE_ADDR pc = get_frame_pc ();
-      size_t size;
 
       fill_in_loclist_baton (cu, &loclist_baton, attr);
 
-      retval.data = dwarf2_find_location_expression (&loclist_baton,
-						     &size, pc);
-      retval.size = size;
+      retval.set_expr (dwarf2_find_location_expression (&loclist_baton, pc));
     }
   else
     {
@@ -17121,9 +17105,7 @@ dwarf2_fetch_die_loc_sect_off (sect_offset sect_off, dwarf2_per_cu *per_cu,
 		 " [in module %s]"),
 	       sect_offset_str (sect_off), objfile_name (objfile));
 
-      struct dwarf_block *block = attr->as_block ();
-      retval.data = block->data;
-      retval.size = block->size;
+      retval.set_expr (*attr->as_block ());
     }
   retval.per_objfile = per_objfile;
   retval.per_cu = cu->per_cu;
@@ -17947,9 +17929,7 @@ dwarf2_symbol_mark_computed (const struct attribute *attr, struct symbol *sym,
 	     info_buffer for SYM's objfile; right now we never release
 	     that buffer, but when we do clean up properly this may
 	     need to change.  */
-	  struct dwarf_block *block = attr->as_block ();
-	  baton->size = block->size;
-	  baton->data = block->data;
+	  baton->set_expr (*attr->as_block ());
 	}
       else
 	{

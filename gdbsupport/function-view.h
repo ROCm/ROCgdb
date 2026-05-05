@@ -193,6 +193,8 @@
   unittests/function-view-selftests.c.  */
 
 #include <type_traits>
+#include "gdbsupport/traits.h"
+
 namespace gdb {
 
 namespace fv_detail {

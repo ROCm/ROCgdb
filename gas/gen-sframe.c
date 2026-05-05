@@ -2478,6 +2478,14 @@ create_sframe_all (void)
       /* Initialize the translation context with information anew.  */
       sframe_xlate_ctx_init (xlate_ctx);
 
+      /* Report and fix open CFI.  */
+      if (dw_fde->end_address == NULL)
+	{
+	  as_bad (_("open CFI at the end of file; "
+		    "missing .cfi_endproc directive"));
+	  dw_fde->end_address = dw_fde->start_address;
+	}
+
       /* Process and link SFrame FDEs if no error.  */
       int err = sframe_do_fde (xlate_ctx, dw_fde);
       if (err && get_dw_fde_signal_p (dw_fde))

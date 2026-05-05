@@ -16,6 +16,10 @@
 with Pck; use Pck;
 procedure Foo is
    BT : aliased Bounded := New_Bounded (Low => 1, High => 3);
+   BT_First : Integer := BT'First;
+   BT_Last : Integer := BT'Last;
 begin
    Do_Nothing (BT'Address); -- STOP
+   Do_Nothing (BT_First'Address);
+   Do_Nothing (BT_Last'Address);
 end Foo;

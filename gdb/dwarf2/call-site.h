@@ -143,6 +143,15 @@ union call_site_parameter_u
 
 struct call_site_parameter
 {
+  /* Return the DW_AT_call_value DWARF expression.  */
+  gdb::array_view<const gdb_byte> value_expr () const
+  { return gdb::make_array_view (value, value_size); }
+
+  /* Return the DW_AT_call_data_value DWARF expression.  Returns an empty
+     view if not provided by DWARF.  */
+  gdb::array_view<const gdb_byte> data_value_expr () const
+  { return gdb::make_array_view (data_value, data_value_size); }
+
   ENUM_BITFIELD (call_site_parameter_kind) kind : 2;
 
   union call_site_parameter_u u;

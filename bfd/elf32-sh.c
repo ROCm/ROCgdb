@@ -3394,7 +3394,7 @@ sh_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
   asection *sgot = NULL;
   asection *sgotplt = NULL;
   asection *splt = NULL;
-  asection *sreloc = NULL;
+  asection *sreloc;
   asection *srelgot = NULL;
   bool is_vxworks_tls;
   unsigned isec_segment, got_segment, plt_segment, check_segment[2];
@@ -3864,13 +3864,9 @@ sh_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		 are copied into the output file to be resolved at run
 		 time.  */
 
+	      sreloc = elf_section_data (input_section)->sreloc;
 	      if (sreloc == NULL)
-		{
-		  sreloc = _bfd_elf_get_dynamic_reloc_section
-		    (input_bfd, input_section, /*rela?*/ true);
-		  if (sreloc == NULL)
-		    return false;
-		}
+		return false;
 
 	      skip = false;
 	      relocate = false;
@@ -4974,13 +4970,9 @@ sh_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		goto final_link_relocate;
 	      }
 
+	    sreloc = elf_section_data (input_section)->sreloc;
 	    if (sreloc == NULL)
-	      {
-		sreloc = _bfd_elf_get_dynamic_reloc_section
-		  (input_bfd, input_section, /*rela?*/ true);
-		if (sreloc == NULL)
-		  return false;
-	      }
+	      return false;
 
 	    if (h == NULL || h->dynindx == -1)
 	      indx = 0;

@@ -554,7 +554,7 @@ sort_sections (lang_statement_union_type *s)
 		 the linker handle the rest).  */
 	      if (sec->spec.name != NULL)
 		{
-		  char *q = strchr (sec->spec.name, '\$');
+		  const char *q = strchr (sec->spec.name, '\$');
 
 		  if (q != NULL
 		      && (q[1] == '\0'

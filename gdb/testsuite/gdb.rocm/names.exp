@@ -69,7 +69,7 @@ set all_kernels_info {
     {long_kernel_name_0123456789                  long_kernel-0245 {long_kernel_name_0123456789 ()}}
     {long_kernel_name_abcdefghijklmnopqrstuvwxyz  long_kernel-479c {long_kernel_name_abcdefghijklmnopqrstuvwxyz ()}}
     {templ_non_type                               templ_non_type   {templ_non_type<(E)0> ()}}
-    {templ_type                                   templ_type       {templ_type<int, long> (args=2, args=2)}}
+    {templ_type                                   templ_type       {templ_type<int, long> (args=1, args=2)}}
 }
 
 # KERNEL is the kernel to launch.  It is either the name of a kernel

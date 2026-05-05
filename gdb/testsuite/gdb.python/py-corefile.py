@@ -56,6 +56,10 @@ def info_proc_mappings():
 
     result = []
     for m in mappings:
+        # Ignore anonymous mappings.
+        if m.filename == "":
+            continue
+
         for r in m.regions:
             result.append(Mapping(m, r))
 

@@ -5432,25 +5432,9 @@ struct match_data
 
   void operator() (struct block_symbol *bsym);
 
-  void finish (const block *block);
-
   struct objfile *objfile = nullptr;
   std::vector<struct block_symbol> *resultp;
-  struct symbol *arg_sym = nullptr;
-  bool found_sym = false;
 };
-
-/* Finish iteration over one block.  If a symbol hasn't been found
-   already, add 'arg_sym' to the list of symbols.  */
-
-void
-match_data::finish (const block *block)
-{
-  if (!found_sym && arg_sym != nullptr)
-    add_defn_to_vec (*resultp, arg_sym, block);
-  found_sym = false;
-  arg_sym = nullptr;
-}
 
 /* A callback for add_nonlocal_symbols that adds symbol, found in
    BSYM, to a list of symbols.  */
@@ -5463,27 +5447,20 @@ match_data::operator() (struct block_symbol *bsym)
 
   if (sym->loc_class () == LOC_UNRESOLVED)
     return;
-  else if (sym->is_argument ())
-    arg_sym = sym;
   else
-    {
-      found_sym = true;
-      add_defn_to_vec (*resultp, sym, block);
-    }
+    add_defn_to_vec (*resultp, sym, block);
 }
 
 /* Helper for add_nonlocal_symbols.  Find symbols in DOMAIN which are
    targeted by renamings matching LOOKUP_NAME in BLOCK.  Add these
-   symbols to RESULT.  Return whether we found such symbols.  */
+   symbols to RESULT.  */
 
-static bool
+static void
 ada_add_block_renamings (std::vector<struct block_symbol> &result,
 			 const struct block *block,
 			 const lookup_name_info &lookup_name,
 			 domain_search_flags domain)
 {
-  int defns_mark = result.size ();
-
   symbol_name_matcher_ftype *name_match
     = ada_get_symbol_name_matcher (lookup_name);
 
@@ -5534,7 +5511,6 @@ ada_add_block_renamings (std::vector<struct block_symbol> &result,
 			       1, NULL);
 	}
     }
-  return result.size () != defns_mark;
 }
 
 /* Convenience function to get at the Ada encoded lookup name for
@@ -5565,7 +5541,6 @@ map_matching_symbols (struct objfile *objfile,
       const struct block *block
 	= symtab->blockvector ()->block (block_kind);
       for_each_symbol (block, lookup_name, domain, data);
-      data.finish (block);
       return iteration_status::keep_going;
     };
 
@@ -5597,9 +5572,7 @@ add_nonlocal_symbols (std::vector<struct block_symbol> &result,
 	  const struct block *global_block
 	    = cu.blockvector ()->global_block ();
 
-	  if (ada_add_block_renamings (result, global_block, lookup_name,
-				       domain))
-	    data.found_sym = true;
+	  ada_add_block_renamings (result, global_block, lookup_name, domain);
 	}
     }
 
@@ -6049,44 +6022,18 @@ ada_add_block_symbols (std::vector<struct block_symbol> &result,
 		       const lookup_name_info &lookup_name,
 		       domain_search_flags domain, struct objfile *objfile)
 {
-  /* A matching argument symbol, if any.  */
-  struct symbol *arg_sym;
-  /* Set true when we find a matching non-argument symbol.  */
-  bool found_sym;
-
-  arg_sym = NULL;
-  found_sym = false;
   for (struct symbol *sym : block_iterator_range (block, &lookup_name))
     {
-      if (sym->matches (domain))
-	{
-	  if (sym->loc_class () != LOC_UNRESOLVED)
-	    {
-	      if (sym->is_argument ())
-		arg_sym = sym;
-	      else
-		{
-		  found_sym = true;
-		  add_defn_to_vec (result, sym, block);
-		}
-	    }
-	}
+      if (sym->matches (domain) && sym->loc_class () != LOC_UNRESOLVED)
+	add_defn_to_vec (result, sym, block);
     }
 
   /* Handle renamings.  */
 
-  if (ada_add_block_renamings (result, block, lookup_name, domain))
-    found_sym = true;
-
-  if (!found_sym && arg_sym != NULL)
-    {
-      add_defn_to_vec (result, arg_sym, block);
-    }
+  ada_add_block_renamings (result, block, lookup_name, domain);
 
   if (!lookup_name.ada ().wild_match_p ())
     {
-      arg_sym = NULL;
-      found_sym = false;
       const std::string &ada_lookup_name = lookup_name.ada ().lookup_name ();
       const char *name = ada_lookup_name.c_str ();
       size_t name_len = ada_lookup_name.size ();
@@ -6110,25 +6057,10 @@ ada_add_block_symbols (std::vector<struct block_symbol> &result,
 		&& is_name_suffix (sym->linkage_name () + name_len + 5))
 	      {
 		if (sym->loc_class () != LOC_UNRESOLVED)
-		  {
-		    if (sym->is_argument ())
-		      arg_sym = sym;
-		    else
-		      {
-			found_sym = true;
-			add_defn_to_vec (result, sym, block);
-		      }
-		  }
+		  add_defn_to_vec (result, sym, block);
 	      }
 	  }
       }
-
-      /* NOTE: This really shouldn't be needed for _ada_ symbols.
-	 They aren't parameters, right?  */
-      if (!found_sym && arg_sym != NULL)
-	{
-	  add_defn_to_vec (result, arg_sym, block);
-	}
     }
 }
 

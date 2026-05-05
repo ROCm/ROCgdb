@@ -232,8 +232,12 @@ proc check_result { cmd before_thread before_args locked } {
 	    }
 	} else {
 	    if {$i == $before_thread} {
-		if {$cmd == "continue"
-		    || [lindex $before_args $i] == [lindex $after_args $i] - 10} {
+		if {$cmd == "continue"} {
+		    pass "$test"
+		} elseif {[llength $after_args] <= $i} {
+		    fail "$test (no arg #$i)"
+		} elseif {[lindex $before_args $i] \
+			  == [lindex $after_args $i] - 10} {
 		    pass "$test"
 		} else {
 		    fail "$test (wrong amount)"

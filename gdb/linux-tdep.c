@@ -1091,6 +1091,33 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
     }
 }
 
+/* Return a map from the start address of any LOAD segment in CBFD to the
+   associated build-id.  The map only contains entries for those segments
+   where a build-id is found, so the build-id will never be NULL, but not
+   every segment will have an entry in the map.  */
+
+static gdb::unordered_map<CORE_ADDR, const bfd_build_id *>
+linux_read_build_ids_from_core_file_mappings (struct bfd *cbfd)
+{
+  gdb::unordered_map<CORE_ADDR, const bfd_build_id *> vma_to_build_id_map;
+
+  auto restore_cbfd_build_id = make_scoped_restore (&cbfd->build_id);
+
+  /* Search for solib build-ids in the core file.  Each time one is found,
+     map the start vma of the corresponding elf header to the build-id.  */
+  for (bfd_section *sec = cbfd->sections; sec != nullptr; sec = sec->next)
+    {
+      cbfd->build_id = nullptr;
+
+      if (sec->flags & SEC_LOAD
+	  && (get_elf_backend_data (cbfd)->elf_backend_core_find_build_id
+	      (cbfd, (bfd_vma) sec->filepos)))
+	vma_to_build_id_map[sec->vma] = cbfd->build_id;
+    }
+
+  return vma_to_build_id_map;
+}
+
 /* Implementation of `gdbarch_read_core_file_mappings', as defined in
    gdbarch.h.
 
@@ -1107,154 +1134,206 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
 	long file_ofs
       followed by COUNT filenames in ASCII: "FILE1" NUL "FILE2" NUL...
 
-   CBFD is the BFD of the core file.
+   In addition to reading the NT_FILE note, this function also considers
+   all of the LOADable segments (which BFD turns into sections).  If a
+   segment is loadable, has a build-id, and isn't covered by an NT_FILE
+   entry, then we consider it an anonymous mapping.  Tracking these is
+   useful when we load shared libraries.  If a shared library corresponds
+   to an anonymous mapping then we can validate the build-id of the shared
+   library.  This is useful when core files are created without an NT_FILE
+   note.
 
-   PRE_LOOP_CB is the callback function to invoke prior to starting
-   the loop which processes individual entries.  This callback will
-   only be executed after the note has been examined in enough
-   detail to verify that it's not malformed in some way.
+   CBFD is the BFD of the core file.
 
    LOOP_CB is the callback function that will be executed once
    for each mapping.  */
 
 static void
-linux_read_core_file_mappings
-  (struct gdbarch *gdbarch,
-   struct bfd *cbfd,
-   read_core_file_mappings_pre_loop_ftype pre_loop_cb,
-   read_core_file_mappings_loop_ftype  loop_cb)
+linux_read_core_file_mappings (struct gdbarch *gdbarch, struct bfd *cbfd,
+			       read_core_file_mappings_loop_ftype  loop_cb)
 {
   /* Ensure that ULONGEST is big enough for reading 64-bit core files.  */
   static_assert (sizeof (ULONGEST) >= 8);
 
-  /* It's not required that the NT_FILE note exists, so return silently
-     if it's not found.  Beyond this point though, we'll complain
-     if problems are found.  */
-  asection *section = bfd_get_section_by_name (cbfd, ".note.linuxcore.file");
-  if (section == nullptr)
-    return;
+  /* Map from the start address of LOAD segments to the associated
+     build-id, but only for segments that have a build-id.  */
+  gdb::unordered_map<CORE_ADDR, const bfd_build_id *> vma_map
+    = linux_read_build_ids_from_core_file_mappings (cbfd);
 
-  unsigned int addr_size_bits = gdbarch_addr_bit (gdbarch);
-  unsigned int addr_size = addr_size_bits / 8;
-  size_t note_size = bfd_section_size (section);
+  /* Track the start address of each mapping found.  This allows us to
+     quickly drop duplicates when processing the NT_FILE note then the LOAD
+     segments.  */
+  gdb::unordered_set<CORE_ADDR> mapping_start_addresses;
 
-  if (note_size < 2 * addr_size)
-    {
-      warning (_("malformed core note - too short for header"));
-      return;
-    }
-
-  gdb::byte_vector contents (note_size);
-  if (!bfd_get_section_contents (cbfd, section, contents.data (), 0,
-				 note_size))
-    {
-      warning (_("could not get core note contents"));
-      return;
-    }
-
-  gdb_byte *descdata = contents.data ();
-  char *descend = (char *) descdata + note_size;
-
-  if (descdata[note_size - 1] != '\0')
-    {
-      warning (_("malformed note - does not end with \\0"));
-      return;
-    }
-
-  ULONGEST count = bfd_get (addr_size_bits, cbfd, descdata);
-  descdata += addr_size;
-
-  ULONGEST page_size = bfd_get (addr_size_bits, cbfd, descdata);
-  descdata += addr_size;
-
-  if (note_size < 2 * addr_size + count * 3 * addr_size)
-    {
-      warning (_("malformed note - too short for supplied file count"));
-      return;
-    }
-
-  char *filenames = (char *) descdata + count * 3 * addr_size;
-
-  /* Make sure that the correct number of filenames exist.  Complain
-     if there aren't enough or are too many.  */
-  char *f = filenames;
-  for (int i = 0; i < count; i++)
-    {
-      if (f >= descend)
-	{
-	  warning (_("malformed note - filename area is too small"));
-	  return;
-	}
-      f += strnlen (f, descend - f) + 1;
-    }
-  /* Complain, but don't return early if the filename area is too big.  */
-  if (f != descend)
-    warning (_("malformed note - filename area is too big"));
-
-  const bfd_build_id *orig_build_id = cbfd->build_id;
-  gdb::unordered_map<ULONGEST, const bfd_build_id *> vma_map;
-
-  /* Search for solib build-ids in the core file.  Each time one is found,
-     map the start vma of the corresponding elf header to the build-id.  */
-  for (bfd_section *sec = cbfd->sections; sec != nullptr; sec = sec->next)
-    {
-      cbfd->build_id = nullptr;
-
-      if (sec->flags & SEC_LOAD
-	  && (get_elf_backend_data (cbfd)->elf_backend_core_find_build_id
-	       (cbfd, (bfd_vma) sec->filepos)))
-	vma_map[sec->vma] = cbfd->build_id;
-    }
-
-  cbfd->build_id = orig_build_id;
-  pre_loop_cb (count);
-
-  /* Vector to collect proc mappings.  */
-  struct proc_mapping
+  /* Vector to collect all mappings.  */
+  struct a_mapping
   {
-    int num;
     ULONGEST start;
     ULONGEST end;
     ULONGEST file_ofs;
     const char *filename;
     const bfd_build_id *build_id;
   };
-  std::vector<struct proc_mapping> proc_mappings;
+  std::vector<struct a_mapping> all_mappings;
 
-  /* Collect proc mappings.  */
-  for (int i = 0; i < count; i++)
+  /* If we find the NT_FILE section in the lambda below then we need
+     to load its contents, and those contents need to remain live
+     until the end of this function.  This vector will hold the
+     contents.  */
+  gdb::byte_vector contents;
+
+  /* Read mapping from the NT_FILE note if it exists.  It is not
+     required that this note exist so wrap the parsing within a lambda
+     function, this allows us to return if the note doesn't exist, or
+     is malformed.
+
+     After parsing the NT_FILE note we will also parse the segment
+     table to fill in any additional mappings that the NT_FILE didn't
+     cover, e.g. if NT_FILE was missing or unreadable.  */
+  auto read_mappings_from_nt_file_note = [&] ()
     {
-      struct proc_mapping m = { .num = i };
-      m.start = bfd_get (addr_size_bits, cbfd, descdata);
-      descdata += addr_size;
-      m.end = bfd_get (addr_size_bits, cbfd, descdata);
-      descdata += addr_size;
-      m.file_ofs = bfd_get (addr_size_bits, cbfd, descdata) * page_size;
-      descdata += addr_size;
-      m.filename = filenames;
-      filenames += strlen ((char *) filenames) + 1;
+      asection *section = bfd_get_section_by_name (cbfd, ".note.linuxcore.file");
+      if (section == nullptr)
+	return;
 
-      m.build_id = nullptr;
-      auto vma_map_it = vma_map.find (m.start);
+      unsigned int addr_size_bits = gdbarch_addr_bit (gdbarch);
+      unsigned int addr_size = addr_size_bits / 8;
+      size_t note_size = bfd_section_size (section);
+
+      if (note_size < 2 * addr_size)
+	{
+	  warning (_("malformed core note - too short for header"));
+	  return;
+	}
+
+      contents.resize (note_size);
+      if (!bfd_get_section_contents (cbfd, section, contents.data (), 0,
+				     note_size))
+	{
+	  warning (_("could not get core note contents"));
+	  return;
+	}
+
+      gdb_byte *descdata = contents.data ();
+      char *descend = (char *) descdata + note_size;
+
+      if (descdata[note_size - 1] != '\0')
+	{
+	  warning (_("malformed note - does not end with \\0"));
+	  return;
+	}
+
+      ULONGEST count = bfd_get (addr_size_bits, cbfd, descdata);
+      descdata += addr_size;
+
+      ULONGEST page_size = bfd_get (addr_size_bits, cbfd, descdata);
+      descdata += addr_size;
+
+      if (note_size < 2 * addr_size + count * 3 * addr_size)
+	{
+	  warning (_("malformed note - too short for supplied file count"));
+	  return;
+	}
+
+      char *filenames = (char *) descdata + count * 3 * addr_size;
+
+      /* Make sure that the correct number of filenames exist.  Complain
+	 if there aren't enough or are too many.  */
+      char *f = filenames;
+      for (int i = 0; i < count; i++)
+	{
+	  if (f >= descend)
+	    {
+	      warning (_("malformed note - filename area is too small"));
+	      return;
+	    }
+	  f += strnlen (f, descend - f) + 1;
+	}
+      /* Complain, but don't return early if the filename area is too big.  */
+      if (f != descend)
+	warning (_("malformed note - filename area is too big"));
+
+      /* Collect proc mappings.  */
+      for (int i = 0; i < count; i++)
+	{
+	  struct a_mapping m;
+	  m.start = bfd_get (addr_size_bits, cbfd, descdata);
+	  descdata += addr_size;
+	  m.end = bfd_get (addr_size_bits, cbfd, descdata);
+	  descdata += addr_size;
+	  m.file_ofs = bfd_get (addr_size_bits, cbfd, descdata) * page_size;
+	  descdata += addr_size;
+	  m.filename = filenames;
+	  filenames += strlen ((char *) filenames) + 1;
+
+	  m.build_id = nullptr;
+	  auto vma_map_it = vma_map.find (m.start);
+	  if (vma_map_it != vma_map.end ())
+	    m.build_id = vma_map_it->second;
+
+	  all_mappings.push_back (m);
+	  mapping_start_addresses.insert (m.start);
+	}
+    };
+  read_mappings_from_nt_file_note ();
+
+  /* Now look through the LOAD segments.  These have all been converted to
+     sections with the SEC_LOAD flag by BFD.  If we find a section that
+     contains a build-id, and which wasn't covered by an NT_FILE note, then
+     we create a mapping entry with no filename.  */
+  for (bfd_section *sec = cbfd->sections; sec != nullptr; sec = sec->next)
+    {
+      /* Skip non LOAD segments.  */
+      if ((sec->flags & SEC_LOAD) == 0)
+	continue;
+
+      CORE_ADDR start = bfd_section_vma (sec);
+
+      /* If there is already a mapping at this address (likely from the
+	 NT_FILE processing above) then skip this LOAD segment.  Currently
+	 this is assuming that the mapping from NT_FILE will be the same
+	 size as the LOAD segment, if this ever turns out not to be the
+	 case then we might need to be smarter here and figure out
+	 non-overlapping regions.  But that seems like unnecessary
+	 complexity for now.  */
+      auto mapping_start_addresses_it = mapping_start_addresses.find (start);
+      if (mapping_start_addresses_it != mapping_start_addresses.end ())
+	continue;
+
+      /* This LOAD segment is not covered by an NT_FILE entry, so we are
+	 not going to have a filename associated with the mapping.  Still,
+	 we might be able to find a build-id, and if we can, then tracking
+	 this mapping is still useful as, when we load shared libraries, if
+	 a library sits in this mapping we can validate the library's
+	 build-id.  If we cannot find a build-id for this mapping then
+	 there's no point tracking it, as it tells us nothing of value; no
+	 filename, no build-id.  */
+      const bfd_build_id *build_id = nullptr;
+      auto vma_map_it = vma_map.find (start);
       if (vma_map_it != vma_map.end ())
-	m.build_id = vma_map_it->second;
+	build_id = vma_map_it->second;
+      if (build_id == nullptr)
+	continue;
 
-      proc_mappings.push_back (m);
+      /* Create an anonymous mapping object, one without a filename.  */
+      CORE_ADDR end = start + bfd_section_size (sec);
+
+      struct a_mapping m { .start = start, .end = end,
+	.file_ofs = 0, .filename = nullptr, .build_id = build_id };
+      all_mappings.push_back (m);
+      mapping_start_addresses.insert (start);
     }
 
-  /* Sort proc mappings.  */
-  std::sort (proc_mappings.begin (), proc_mappings.end (),
-	     [] (const proc_mapping &a, const proc_mapping &b)
-	       {
-		 return a.start < b.start;
-	       });
+  /* Sort the mappings.  */
+  std::sort (all_mappings.begin (), all_mappings.end (),
+	     [] (const a_mapping &a, const a_mapping &b)
+	     {
+	       return a.start < b.start;
+	     });
 
-  /* Call loop_cb with sorted proc mappings.  */
-  for (int i = 0; i < count; i++)
-    {
-      const auto &m = proc_mappings[i];
-      loop_cb (m.num, m.start, m.end, m.file_ofs, m.filename, m.build_id);
-    }
+  /* Call loop_cb with sorted mappings.  */
+  for (const a_mapping &m : all_mappings)
+    loop_cb (m.start, m.end, m.file_ofs, m.filename, m.build_id);
 }
 
 /* Implement "info proc mappings" for corefile CBFD.  */
@@ -1266,21 +1345,26 @@ linux_core_info_proc_mappings (struct gdbarch *gdbarch, struct bfd *cbfd,
   std::optional<ui_out_emit_table> emitter;
 
   linux_read_core_file_mappings (gdbarch, cbfd,
-    [&] (ULONGEST count)
-      {
-	gdb_printf (_("Mapped address spaces:\n\n"));
-	emitter.emplace (current_uiout, 5, -1, "ProcMappings");
-	int width = gdbarch_addr_bit (gdbarch) == 32 ? 10 : 18;
-	current_uiout->table_header (width, ui_left, "start", "Start Addr");
-	current_uiout->table_header (width, ui_left, "end", "End Addr");
-	current_uiout->table_header (width, ui_left, "size", "Size");
-	current_uiout->table_header (width, ui_left, "offset", "Offset");
-	current_uiout->table_header (0, ui_left, "objfile", "File");
-	current_uiout->table_body ();
-      },
-    [=] (int num, ULONGEST start, ULONGEST end, ULONGEST file_ofs,
+    [&] (ULONGEST start, ULONGEST end, ULONGEST file_ofs,
 	 const char *filename, const bfd_build_id *build_id)
       {
+	/* Ignore anonymous mappings.  */
+	if (filename == nullptr)
+	  return;
+
+	if (!emitter.has_value ())
+	  {
+	    gdb_printf (_("Mapped address spaces:\n\n"));
+	    emitter.emplace (current_uiout, 5, -1, "ProcMappings");
+	    int width = gdbarch_addr_bit (gdbarch) == 32 ? 10 : 18;
+	    current_uiout->table_header (width, ui_left, "start", "Start Addr");
+	    current_uiout->table_header (width, ui_left, "end", "End Addr");
+	    current_uiout->table_header (width, ui_left, "size", "Size");
+	    current_uiout->table_header (width, ui_left, "offset", "Offset");
+	    current_uiout->table_header (0, ui_left, "objfile", "File");
+	    current_uiout->table_body ();
+	  }
+
 	ui_out_emit_tuple tuple_emitter (current_uiout, nullptr);
 	current_uiout->field_core_addr ("start", gdbarch, start);
 	current_uiout->field_core_addr ("end", gdbarch, end);

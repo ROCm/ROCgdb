@@ -5478,13 +5478,13 @@ set_gdbarch_get_pc_address_flags (struct gdbarch *gdbarch,
 }
 
 void
-gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, struct bfd *cbfd, read_core_file_mappings_pre_loop_ftype pre_loop_cb, read_core_file_mappings_loop_ftype loop_cb)
+gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, struct bfd *cbfd, read_core_file_mappings_loop_ftype loop_cb)
 {
   gdb_assert (gdbarch != nullptr);
   gdb_assert (gdbarch->read_core_file_mappings != nullptr);
   if (gdbarch_debug >= 2)
     gdb_printf (gdb_stdlog, "gdbarch_read_core_file_mappings called\n");
-  gdbarch->read_core_file_mappings (gdbarch, cbfd, pre_loop_cb, loop_cb);
+  gdbarch->read_core_file_mappings (gdbarch, cbfd, loop_cb);
 }
 
 void

@@ -1148,12 +1148,11 @@ struct symbol_computed_ops
 
 struct symbol_block_ops
 {
-  /* Fill in *START and *LENGTH with DWARF block data of function
-     FRAMEFUNC valid for inferior context address PC.  Set *LENGTH to
-     zero if such location is not valid for PC; *START is left
-     uninitialized in such case.  */
-  void (*find_frame_base_location) (struct symbol *framefunc, CORE_ADDR pc,
-				    const gdb_byte **start, size_t *length);
+  /* Return the DWARF block data of function FRAMEFUNC valid for inferior
+     context address PC.  Return an empty view if no such location is
+     valid for PC.  */
+  gdb::array_view<const gdb_byte> (*find_frame_base_location)
+    (struct symbol *framefunc, CORE_ADDR pc);
 
   /* Return the frame base address.  FRAME is the frame for which we want to
      compute the base address while FRAMEFUNC is the symbol for the

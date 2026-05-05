@@ -694,6 +694,31 @@ windows_process_info::add_all_dlls ()
 
 /* See nat/windows-nat.h.  */
 
+std::string
+event_code_to_string (DWORD event_code)
+{
+#define CASE(X) \
+  case X: return #X
+
+  switch (event_code)
+    {
+    CASE (CREATE_THREAD_DEBUG_EVENT);
+    CASE (EXIT_THREAD_DEBUG_EVENT);
+    CASE (CREATE_PROCESS_DEBUG_EVENT);
+    CASE (EXIT_PROCESS_DEBUG_EVENT);
+    CASE (LOAD_DLL_DEBUG_EVENT);
+    CASE (UNLOAD_DLL_DEBUG_EVENT);
+    CASE (EXCEPTION_DEBUG_EVENT);
+    CASE (OUTPUT_DEBUG_STRING_EVENT);
+    default:
+      return string_printf ("unknown event code %u", (unsigned) event_code);
+    }
+
+#undef CASE
+}
+
+/* See nat/windows-nat.h.  */
+
 ptid_t
 get_last_debug_event_ptid ()
 {
@@ -703,17 +728,20 @@ get_last_debug_event_ptid ()
 /* See nat/windows-nat.h.  */
 
 BOOL
-continue_last_debug_event (DWORD continue_status, bool debug_events)
+continue_last_debug_event (DWORD cont_status, bool debug_events)
 {
-  DEBUG_EVENTS ("ContinueDebugEvent (cpid=%d, ctid=0x%x, %s)",
-		(unsigned) last_wait_event.dwProcessId,
-		(unsigned) last_wait_event.dwThreadId,
-		continue_status == DBG_CONTINUE ?
-		"DBG_CONTINUE" : "DBG_EXCEPTION_NOT_HANDLED");
+  DEBUG_EVENTS
+    ("ContinueDebugEvent (cpid=%d, ctid=0x%x, %s)",
+     (unsigned) last_wait_event.dwProcessId,
+     (unsigned) last_wait_event.dwThreadId,
+     cont_status == DBG_CONTINUE ? "DBG_CONTINUE" :
+     cont_status == DBG_EXCEPTION_NOT_HANDLED ? "DBG_EXCEPTION_NOT_HANDLED" :
+     cont_status == DBG_REPLY_LATER ? "DBG_REPLY_LATER" :
+     "DBG_???");
 
   return ContinueDebugEvent (last_wait_event.dwProcessId,
 			     last_wait_event.dwThreadId,
-			     continue_status);
+			     cont_status);
 }
 
 /* See nat/windows-nat.h.  */
@@ -913,6 +941,26 @@ disable_randomization_available ()
   return (InitializeProcThreadAttributeList != nullptr
 	  && UpdateProcThreadAttribute != nullptr
 	  && DeleteProcThreadAttributeList != nullptr);
+}
+
+/* See windows-nat.h.  */
+
+bool
+dbg_reply_later_available ()
+{
+  static int available = -1;
+  if (available == -1)
+    {
+      /* DBG_REPLY_LATER is supported since Windows 10, Version 1507.
+	 If supported, this fails with ERROR_INVALID_HANDLE (tested on
+	 Win10 and Win11).  If not supported, it fails with
+	 ERROR_INVALID_PARAMETER (tested on Win7).  */
+      if (ContinueDebugEvent (0, 0, DBG_REPLY_LATER))
+	internal_error (_("ContinueDebugEvent call should not "
+			  "have succeeded"));
+      available = (GetLastError () != ERROR_INVALID_PARAMETER);
+    }
+  return available;
 }
 
 /* See windows-nat.h.  */

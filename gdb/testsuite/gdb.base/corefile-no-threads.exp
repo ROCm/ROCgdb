@@ -15,8 +15,8 @@
 
 # Check how GDB handles a core file which appears to have no threads
 # within it.  We do this by asking the kernel to create a "normal"
-# core file, then use a Python script modify the core file, hiding the
-# NT_PRSTATUS notes.  The NT_PRSTATUS notes contain the general
+# core file, then use a Python script to modify the core file, hiding
+# the NT_PRSTATUS notes.  The NT_PRSTATUS notes contain the general
 # purpose registers for each thread, so with these gone GDB will
 # believe the core file has no threads.
 #
@@ -52,7 +52,11 @@ clean_restart
 # Load the Python script, and run the command which modifies the core
 # file.
 gdb_test_no_output "source $::pyfile" "import python scripts"
-gdb_test "modify-core-file \"$corefile\" 0x1" ".*" \
+gdb_test "modify-core-file \"$corefile\" NT_PRSTATUS" \
+    [multi_line \
+	 "Located PT_NOTE segment: \[^\r\n\]+" \
+	 "\\s+Found note with type $hex at file offset $hex\\..*" \
+	 "Successfully updated $decimal note\\(s\\) in \[^\r\n\]+"] \
     "update core file"
 
 set saw_no_regs_warning false

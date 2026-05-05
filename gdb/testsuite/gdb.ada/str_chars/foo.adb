@@ -14,13 +14,7 @@
 --  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 procedure Foo is
-
-   procedure Blah (Arg : String) is
-   begin
-     null; -- STOP
-   end;
-
+   Arg : String := "abcdefghijklmnopqrstuvwxyz";
 begin
-
-   Blah ("abcdefghijklmnopqrstuvwxyz");
+   null;                        --  STOP
 end Foo;

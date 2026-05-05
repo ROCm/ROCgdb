@@ -10211,7 +10211,7 @@ elf32_arm_final_link_relocate (reloc_howto_type *	    howto,
   bfd_vma *			local_tlsdesc_gotents;
   asection *			sgot;
   asection *			splt;
-  asection *			sreloc = NULL;
+  asection *			sreloc;
   asection *			srelgot;
   bfd_vma			addend;
   bfd_signed_vma		signed_addend;
@@ -10502,16 +10502,6 @@ elf32_arm_final_link_relocate (reloc_howto_type *	    howto,
 	    }
 
 	  *unresolved_reloc_p = false;
-
-	  if (sreloc == NULL && globals->root.dynamic_sections_created)
-	    {
-	      sreloc = _bfd_elf_get_dynamic_reloc_section (input_bfd, input_section,
-							   ! globals->use_rel);
-
-	      if (sreloc == NULL)
-		return bfd_reloc_notsupported;
-	    }
-
 	  skip = false;
 	  relocate = false;
 
@@ -10565,7 +10555,12 @@ elf32_arm_final_link_relocate (reloc_howto_type *	    howto,
 	  if (isrofixup)
 	    arm_elf_add_rofixup (output_bfd, globals->srofixup, outrel.r_offset);
 	  else
-	    elf32_arm_add_dynreloc (output_bfd, info, sreloc, &outrel);
+	    {
+	      sreloc = elf_section_data (input_section)->sreloc;
+	      if (sreloc == NULL)
+		return bfd_reloc_notsupported;
+	      elf32_arm_add_dynreloc (output_bfd, info, sreloc, &outrel);
+	    }
 
 	  /* If this reloc is against an external symbol, we do not want to
 	     fiddle with the addend.  Otherwise, we need to include the symbol

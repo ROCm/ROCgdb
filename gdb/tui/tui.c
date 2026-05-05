@@ -429,7 +429,8 @@ tui_enable (void)
 	 again.  */
       error (_("Cannot enable the TUI"));
     }
-  else if (tui_finish_init == TRIBOOL_TRUE)
+
+  if (tui_finish_init == TRIBOOL_TRUE)
     {
       WINDOW *w;
       SCREEN *s;
@@ -491,22 +492,31 @@ tui_enable (void)
 	 rely on this flag being true in order to know that the window
 	 they are creating is currently valid.  */
       tui_active = true;
+      try
+	{
+	  cbreak ();
+	  noecho ();
+	  /* timeout (1); */
+	  nodelay (w, FALSE);
+	  nl ();
+	  keypad (w, TRUE);
+	  tui_set_term_height_to (LINES);
+	  tui_set_term_width_to (COLS);
+	  def_prog_mode ();
+	  tui_show_frame_info (deprecated_safe_get_selected_frame ());
+	  tui_set_initial_layout ();
+	  tui_set_win_focus_to (tui_src_win ());
+	  keypad (tui_cmd_win ()->handle.get (), TRUE);
+	  wrefresh (tui_cmd_win ()->handle.get ());
+	}
+      catch (const gdb_exception &)
+	{
+	  endwin ();
+	  delscreen (s);
+	  tui_active = false;
+	  throw;
+	}
 
-      cbreak ();
-      noecho ();
-      /* timeout (1); */
-      nodelay(w, FALSE);
-      nl();
-      keypad (w, TRUE);
-      tui_set_term_height_to (LINES);
-      tui_set_term_width_to (COLS);
-      def_prog_mode ();
-
-      tui_show_frame_info (deprecated_safe_get_selected_frame ());
-      tui_set_initial_layout ();
-      tui_set_win_focus_to (tui_src_win ());
-      keypad (tui_cmd_win ()->handle.get (), TRUE);
-      wrefresh (tui_cmd_win ()->handle.get ());
       tui_finish_init = TRIBOOL_FALSE;
     }
   else

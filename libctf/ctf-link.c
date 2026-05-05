@@ -1649,7 +1649,7 @@ ctf_link_shuffle_syms (ctf_dict_t *fp)
   ctf_in_flight_dynsym_t *did, *nid;
   ctf_next_t *i = NULL;
   int err = ENOMEM;
-  void *name_, *sym_;
+  void *sym_;
 
   if (fp->ctf_stypes > 0)
     return ctf_set_errno (fp, ECTF_RDONLY);
@@ -1733,9 +1733,8 @@ ctf_link_shuffle_syms (ctf_dict_t *fp)
 				   sizeof (ctf_link_sym_t *))) == NULL)
     goto err;
 
-  while ((err = ctf_dynhash_next (fp->ctf_dynsyms, &i, &name_, &sym_)) == 0)
+  while ((err = ctf_dynhash_next (fp->ctf_dynsyms, &i, NULL, &sym_)) == 0)
     {
-      const char *name = (const char *) name;
       ctf_link_sym_t *symp = (ctf_link_sym_t *) sym_;
 
       if (!ctf_assert (fp, symp->st_symidx <= fp->ctf_dynsymmax))

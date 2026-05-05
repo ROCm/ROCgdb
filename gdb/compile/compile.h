@@ -198,7 +198,7 @@ extern void eval_compile_command (struct command_line *cmd,
 
    ADDR_SIZE is the DWARF address size to use.
 
-   OPT_PTR and OP_END are the bounds of the DWARF expression.
+   EXPR is the DWARF expression.
 
    PER_CU is the per-CU object used for looking up various other
    things.
@@ -213,8 +213,7 @@ extern void compile_dwarf_expr_to_c (string_file *stream,
 				     struct gdbarch *arch,
 				     std::vector<bool> &registers_used,
 				     unsigned int addr_size,
-				     const gdb_byte *op_ptr,
-				     const gdb_byte *op_end,
+				     gdb::array_view<const gdb_byte> expr,
 				     dwarf2_per_cu *per_cu,
 				     dwarf2_per_objfile *per_objfile);
 
@@ -237,7 +236,7 @@ extern void compile_dwarf_expr_to_c (string_file *stream,
 
    ADDR_SIZE is the DWARF address size to use.
 
-   OPT_PTR and OP_END are the bounds of the DWARF expression.
+   EXPR is the DWARF expression.
 
    PER_CU is the per-CU object used for looking up various other
    things.
@@ -252,8 +251,7 @@ extern void compile_dwarf_bounds_to_c (string_file *stream,
 				       struct gdbarch *arch,
 				       std::vector<bool> &registers_used,
 				       unsigned int addr_size,
-				       const gdb_byte *op_ptr,
-				       const gdb_byte *op_end,
+				       gdb::array_view<const gdb_byte> expr,
 				       dwarf2_per_cu *per_cu,
 				       dwarf2_per_objfile *per_objfile);
 

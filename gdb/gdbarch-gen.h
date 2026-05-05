@@ -1786,8 +1786,8 @@ void set_gdbarch_get_pc_address_flags (struct gdbarch *gdbarch, gdbarch_get_pc_a
 
 /* Read core file mappings */
 
-using gdbarch_read_core_file_mappings_ftype = void (struct gdbarch *gdbarch, struct bfd *cbfd, read_core_file_mappings_pre_loop_ftype pre_loop_cb, read_core_file_mappings_loop_ftype loop_cb);
-void gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, struct bfd *cbfd, read_core_file_mappings_pre_loop_ftype pre_loop_cb, read_core_file_mappings_loop_ftype loop_cb);
+using gdbarch_read_core_file_mappings_ftype = void (struct gdbarch *gdbarch, struct bfd *cbfd, read_core_file_mappings_loop_ftype loop_cb);
+void gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, struct bfd *cbfd, read_core_file_mappings_loop_ftype loop_cb);
 void set_gdbarch_read_core_file_mappings (struct gdbarch *gdbarch, gdbarch_read_core_file_mappings_ftype *read_core_file_mappings);
 
 /* Return true if the target description for all threads should be read from the

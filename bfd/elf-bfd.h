@@ -2497,8 +2497,6 @@ extern long _bfd_elf_get_reloc_upper_bound
   (bfd *, sec_ptr) ATTRIBUTE_HIDDEN;
 extern long _bfd_elf_canonicalize_reloc
   (bfd *, sec_ptr, arelent **, asymbol **) ATTRIBUTE_HIDDEN;
-extern asection * _bfd_elf_get_dynamic_reloc_section
-  (bfd *, asection *, bool) ATTRIBUTE_HIDDEN;
 extern asection * _bfd_elf_make_dynamic_reloc_section
   (asection *, bfd *, unsigned int, bfd *, bool) ATTRIBUTE_HIDDEN;
 extern long _bfd_elf_get_dynamic_reloc_upper_bound

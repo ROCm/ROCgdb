@@ -1457,18 +1457,14 @@ cris_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		 are copied into the output file to be resolved at run
 		 time.  */
 
+	      sreloc = elf_section_data (input_section)->sreloc;
+	      /* The section should have been created in cris_elf_check_relocs,
+		 but that function will not be called for objects which fail in
+		 cris_elf_merge_private_bfd_data.  */
 	      if (sreloc == NULL)
 		{
-		  sreloc = _bfd_elf_get_dynamic_reloc_section
-		    (dynobj, input_section, /*rela?*/ true);
-		  /* The section should have been created in cris_elf_check_relocs,
-		     but that function will not be called for objects which fail in
-		     cris_elf_merge_private_bfd_data.  */
-		  if (sreloc == NULL)
-		    {
-		      bfd_set_error (bfd_error_bad_value);
-		      return false;
-		    }
+		  bfd_set_error (bfd_error_bad_value);
+		  return false;
 		}
 
 	      skip = false;
@@ -3678,11 +3674,7 @@ elf_cris_discard_excess_dso_dynamics (struct elf_cris_link_hash_entry *h,
     {
       for (s = h->pcrel_relocs_copied; s != NULL; s = s->next)
 	{
-	  asection *sreloc
-	    = _bfd_elf_get_dynamic_reloc_section (elf_hash_table (info)
-						  ->dynobj,
-						  s->section,
-						  /*rela?*/ true);
+	  asection *sreloc = elf_section_data (s->section)->sreloc;
 	  sreloc->size -= s->count * sizeof (Elf32_External_Rela);
 	}
       return true;
