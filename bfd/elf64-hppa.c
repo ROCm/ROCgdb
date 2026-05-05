@@ -4052,35 +4052,49 @@ elf_hppa_final_link_relocate (Elf_Internal_Rela *rel,
 						     r_symndx) != -1)
 	    {
 	      bfd_vma out_off;
+	      bool skip;
 	      struct elf_link_hash_entry *baseh;
 
 	      out_off = _bfd_elf_section_offset (output_bfd, info,
 						 input_section,
 						 rel->r_offset);
+	      skip = out_off == (bfd_vma) -1 || out_off == (bfd_vma) -2;
 
-	      BFD_ASSERT (out_off != (bfd_vma) -1 && out_off != (bfd_vma) -2);
+	      /* If this triggers, we need to skip this relocation or
+		 output a NULL relocation.  Skipping the relocation messes
+		 up the relocation count as we can't detect this case in
+		 elf64_hppa_late_size_sections().  The HP dynamic linker
+		 doesn't like relocations with the R_PARISC_NONE type.
+		 So, we are scuppered.  We need to avoid dynamic relocations
+		 in linkonce sections that may be garbage collected.  */
+	      BFD_ASSERT (!skip || output_bfd->xvec != &hppa_elf64_vec);
 
-	      /* This is the output relocation offset.  */
-	      rela.r_offset = (out_off
-			       + input_section->output_offset
-			       + input_section->output_section->vma);
-
-	      /* Select base segment.  */
-	      if (sym_sec->flags & SEC_READONLY)
-		baseh = hppa_info->text_hash_entry;
+	      if (skip)
+		memset (&rela, 0, sizeof (rela));
 	      else
-		baseh = hppa_info->data_hash_entry;
+		{
+		  /* This is the output relocation offset.  */
+		  rela.r_offset = (out_off
+				   + input_section->output_offset
+				   + input_section->output_section->vma);
 
-	      sec = baseh->root.u.def.section;
-	      dynindx = baseh->dynindx;
+		  /* Select base segment.  */
+		  if (sym_sec->flags & SEC_READONLY)
+		    baseh = hppa_info->text_hash_entry;
+		  else
+		    baseh = hppa_info->data_hash_entry;
 
-	      /* Adjust addend using the difference of the symbol's
-		 location and the section symbol's address.  */
-	      rela.r_addend = (value + addend - sec->output_offset
-			       - sec->output_section->vma);
+		  sec = baseh->root.u.def.section;
+		  dynindx = baseh->dynindx;
 
-	      /* We need a dynamic relocation for this symbol.  */
-	      rela.r_info = ELF64_R_INFO (dynindx, R_PARISC_DIR64);
+		  /* Adjust addend using the difference of the symbol's
+		     location and the section symbol's address.  */
+		  rela.r_addend = (value + addend - sec->output_offset
+				   - sec->output_section->vma);
+
+		  /* We need a dynamic relocation for this symbol.  */
+		  rela.r_info = ELF64_R_INFO (dynindx, R_PARISC_DIR64);
+		}
 
 	      s = hppa_info->other_rel_sec;
 	      loc = s->contents;
@@ -4568,7 +4582,7 @@ static const struct elf_size_info hppa64_elf_size_info =
 #define elf_backend_link_output_symbol_hook \
 	elf64_hppa_link_output_symbol_hook
 
-#define elf_backend_can_gc_sections	1
+#define elf_backend_can_gc_sections	0
 #define elf_backend_want_got_plt	0
 #define elf_backend_plt_readonly	0
 #define elf_backend_want_plt_sym	0
@@ -4598,6 +4612,9 @@ static const struct elf_size_info hppa64_elf_size_info =
 #define elf_backend_special_sections	(elf64_hppa_special_sections + 1)
 #undef elf_backend_modify_segment_map
 #undef elf_backend_want_p_paddr_set_to_zero
+
+#undef elf_backend_can_gc_sections
+#define elf_backend_can_gc_sections	1
 #undef elf_backend_want_dynrelro
 #define elf_backend_want_dynrelro	1
 
