@@ -1480,8 +1480,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
 /* Instruction has the field of 'sz'.  */
 #define F_LSE_SZ (1 << 27)
 /* Require an exact qualifier match, even for NIL qualifiers.  */
-#define F_STRICT (1ULL << 28)
-/* This system instruction is used to read system registers.  */
+
 #define F_SYS_READ (1ULL << 29)
 /* This system instruction is used to write system registers.  */
 #define F_SYS_WRITE (1ULL << 30)
@@ -1543,7 +1542,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
 /* As above, plus PN registers.  */
 #define F_INVALID_IMM_SYMS_3 (3ULL << 42)
 
-/* Next bit is 44.  */
+/* Next bit is 44, and 28 is also unused.  */
 
 /* Instruction constraints.  */
 /* This instruction has a predication constraint on the instruction at PC+4.  */
