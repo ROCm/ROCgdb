@@ -2762,7 +2762,7 @@ do_misc_decoding (aarch64_inst *inst)
    with flags.  In this function, we detect such flags, decode the related
    field(s) and store the information in one of the related operands.  The
    'one' operand is not any operand but one of the operands that can
-   accommadate all the information that has been decoded.  */
+   accommodate all the information that has been decoded.  */
 
 static int
 do_special_decoding (aarch64_inst *inst)
