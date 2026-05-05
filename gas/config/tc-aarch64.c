@@ -7378,7 +7378,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	       message if the immediate cannot be moved by a single
 	       instruction.  */
 	    aarch64_set_gas_internal_fixup (&inst.reloc, info, 1);
-	    inst.base.operands[i].skip = 1;
+	    info->skip = 1;
 	  }
 	  break;
 
@@ -7427,8 +7427,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 					    " constant"));
 		goto failure;
 	      }
-	    inst.base.operands[i].imm.value = encode_imm_float_bits (qfloat);
-	    inst.base.operands[i].imm.is_fp = 1;
+	    info->imm.value = encode_imm_float_bits (qfloat);
+	    info->imm.is_fp = 1;
 	  }
 	  break;
 
@@ -7449,8 +7449,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 					    " constant"));
 		goto failure;
 	      }
-	    inst.base.operands[i].imm.value = qfloat;
-	    inst.base.operands[i].imm.is_fp = 1;
+	    info->imm.value = qfloat;
+	    info->imm.is_fp = 1;
 	  }
 	  break;
 
@@ -7521,9 +7521,9 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 		  po_misc_or_fail (parse_shift (&str, info, SHIFTED_LSL));
 		}
 	      else
-		inst.base.operands[i].shifter.amount = 0;
-	      inst.base.operands[i].shifter.kind = AARCH64_MOD_LSL;
-	      inst.base.operands[i].imm.value = 0;
+		info->shifter.amount = 0;
+	      info->shifter.kind = AARCH64_MOD_LSL;
+	      info->imm.value = 0;
 	      if (! process_movw_reloc_info ())
 		goto failure;
 	    }
@@ -8105,8 +8105,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 		set_syntax_error (_("unknown or missing system register name"));
 		goto failure;
 	      }
-	    inst.base.operands[i].sysreg.value = val;
-	    inst.base.operands[i].sysreg.flags = sysreg_flags;
+	    info->sysreg.value = val;
+	    info->sysreg.flags = sysreg_flags;
 	    break;
 	  }
 
@@ -8119,33 +8119,33 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	        set_syntax_error (_("unknown or missing PSTATE field name"));
 	        goto failure;
 	      }
-	    inst.base.operands[i].pstatefield = val;
-	    inst.base.operands[i].sysreg.flags = sysreg_flags;
+	    info->pstatefield = val;
+	    info->sysreg.flags = sysreg_flags;
 	    break;
 	  }
 
 	case AARCH64_OPND_SYSREG_IC:
-	  inst.base.operands[i].sysins_op =
+	  info->sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_ic_hsh, false);
 	  goto sys_reg_ins;
 
 	case AARCH64_OPND_SYSREG_DC:
-	  inst.base.operands[i].sysins_op =
+	  info->sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_dc_hsh, false);
 	  goto sys_reg_ins;
 
 	case AARCH64_OPND_SYSREG_AT:
-	  inst.base.operands[i].sysins_op =
+	  info->sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_at_hsh, false);
 	  goto sys_reg_ins;
 
 	case AARCH64_OPND_SYSREG_SR:
-	  inst.base.operands[i].sysins_op =
+	  info->sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_sr_hsh, false);
 	  goto sys_reg_ins;
 
 	case AARCH64_OPND_SYSREG_TLBI:
-	  inst.base.operands[i].sysins_op =
+	  info->sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh, false);
 	  goto sys_reg_ins;
 
@@ -8160,7 +8160,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  goto sys_reg_ins;
 
 	case AARCH64_OPND_SYSREG_TLBIP:
-	  inst.base.operands[i].sysins_op =
+	  info->sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh, true);
 	  goto sys_reg_ins;
 
@@ -8179,7 +8179,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    parse_sys_ins_reg (&str, aarch64_sys_ins_gsb_hsh, false);
 
 	sys_reg_ins:
-	  if (inst.base.operands[i].sysins_op == NULL)
+	  if (info->sysins_op == NULL)
 	    {
 	      set_fatal_syntax_error ( _("unknown or missing operation name"));
 	      goto failure;
@@ -8286,7 +8286,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  if (val == PARSE_FAIL)
 	    po_imm_or_fail (0, 31);
 
-	  inst.base.operands[i].prfop = aarch64_prfops + val;
+	  info->prfop = aarch64_prfops + val;
 	  break;
 
 	case AARCH64_OPND_RPRFMOP:
@@ -8468,7 +8468,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	}
 
       /* If we get here, this operand was successfully parsed.  */
-      inst.base.operands[i].present = 1;
+      info->present = 1;
 
       /* As instructions can have multiple optional operands, it is imporant to
 	 reset the backtrack_pos variable once we finish processing an operand
