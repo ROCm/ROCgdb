@@ -96,8 +96,7 @@ proc check_for_thread_specific_breakpoint { testname bpnum expected } {
 
 # Create a thread-specific breakpoint.  This will never actually be hit; we
 # don't care, we just want to see GDB auto-delete this breakpoint.
-gdb_breakpoint "main thread $worker_thread" \
-    "create a thread-specific breakpoint"
+gdb_breakpoint "main thread $worker_thread"
 set bpnum [get_integer_valueof "\$bpnum" "INVALID" \
 	       "get number for thread-specific breakpoint"]
 

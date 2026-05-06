@@ -39,12 +39,10 @@ proc do_test { displaced } {
     gdb_test_no_output "set displaced-stepping $displaced"
 
     set bp1 [gdb_get_line_number "lwarx"]
-    gdb_breakpoint "$bp1" "Breakpoint $decimal at $hex" \
-	"set the breakpoint at the start of the lwarx/stwcx sequence"
+    gdb_breakpoint "$bp1"
 
     set bp2 [gdb_get_line_number "ldarx"]
-    gdb_breakpoint "$bp2" "Breakpoint $decimal at $hex" \
-	"set the breakpoint at the start of the ldarx/stdcx sequence"
+    gdb_breakpoint "$bp2"
 
     gdb_test continue "Continuing.*Breakpoint $decimal.*" \
 	"continue until lwarx/stwcx start breakpoint"
