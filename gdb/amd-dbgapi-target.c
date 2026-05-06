@@ -2631,7 +2631,7 @@ static void maybe_reset_amd_dbgapi ();
 
 /* Make the amd-dbgapi library detach from INF.
 
-   Note that this us unrelated to the "detach" GDB concept / command.
+   Note that this is unrelated to the "detach" GDB concept / command.
 
    This undoes what attach_amd_dbgapi does.  */
 
