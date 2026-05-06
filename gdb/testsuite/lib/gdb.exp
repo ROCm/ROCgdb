@@ -817,16 +817,22 @@ proc gdb_breakpoint { linespec args } {
 # just compare to "function" because it might be a fully qualified,
 # single quoted C++ function specifier.
 #
-# If there are additional arguments, pass them to gdb_breakpoint.
-# We recognize -no-message/-message ourselves as well as -no-delete-breakpoints.
+# This proc recognizes the -no-message/-message, -no-delete-breakpoints
+# and -inferior-args options.  If there are additional arguments, pass
+# them to gdb_breakpoint.
 #
 # -no-message is messed up here, like gdb_breakpoint: to preserve
 # historical usage fails are always printed by default.
 # -no-message: turns off printing of fails (and passes, but they're already off)
 # -message: turns on printing of passes (and fails, but they're already on)
 #
-# The 'no-delete-brekpoints' option stops this proc from deleting all
+# The -no-delete-breakpoints option stops this proc from deleting all
 # breakpoints.
+#
+# The -inferior-args option allows to specify arguments to pass to the
+# inferior.  For example, this would pass three arguments:
+#
+#     runto func -inferior-args "one two three"
 
 proc runto { linespec args } {
     global gdb_prompt
@@ -838,6 +844,7 @@ proc runto { linespec args } {
 	{no-delete-breakpoints}
 	{message}
 	{no-message}
+	{inferior-args ""}
     }
 
     if {!${no-delete-breakpoints}} {
@@ -871,7 +878,7 @@ proc runto { linespec args } {
 	return 0
     }
 
-    gdb_run_cmd
+    gdb_run_cmd ${inferior-args}
 
     # the "at foo.c:36" output we get with -g.
     # the "in func" output we get without -g.
