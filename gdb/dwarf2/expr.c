@@ -4829,7 +4829,7 @@ dwarf_expr_context::execute_stack_op (gdb::array_view<const gdb_byte> expr)
 /* See expr.h.  */
 
 value *
-dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
+dwarf2_evaluate (gdb::array_view<const gdb_byte> expr, bool as_lval,
 		 dwarf2_per_objfile *per_objfile, dwarf2_per_cu *per_cu,
 		 const frame_info_ptr &frame, int addr_size,
 		 std::vector<value *> *init_values,
@@ -4839,8 +4839,7 @@ dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
 {
   dwarf_expr_context ctx (per_objfile, addr_size);
 
-  return ctx.evaluate ({addr, len}, as_lval, per_cu,
-		       frame, init_values, addr_info,
+  return ctx.evaluate (expr, as_lval, per_cu, frame, init_values, addr_info,
 		       type, subobj_type, subobj_offset);
 }
 

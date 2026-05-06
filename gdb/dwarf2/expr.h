@@ -39,7 +39,7 @@ struct dwarf2_per_objfile;
    expected struct value representation of the evaluation result.  The
    ADDR_INFO property can be specified to override the range of memory
    addresses with the passed in buffer.  */
-value *dwarf2_evaluate (const gdb_byte *addr, size_t len, bool as_lval,
+value *dwarf2_evaluate (gdb::array_view<const gdb_byte> expr, bool as_lval,
 			dwarf2_per_objfile *per_objfile,
 			dwarf2_per_cu *per_cu,
 			const frame_info_ptr &frame, int addr_size,

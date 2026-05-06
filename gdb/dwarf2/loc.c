@@ -1505,10 +1505,9 @@ dwarf2_evaluate_loc_desc_full (struct type *type, const frame_info_ptr &frame,
   try
     {
       retval
-	= dwarf2_evaluate (loc_desc.data (), loc_desc.size (), as_lval,
-			   per_objfile, per_cu, frame, per_cu->addr_size (),
-			   nullptr, nullptr, type, subobj_type,
-			   subobj_byte_offset);
+	= dwarf2_evaluate (loc_desc, as_lval, per_objfile, per_cu, frame,
+			   per_cu->addr_size (), nullptr, nullptr, type,
+			   subobj_type, subobj_byte_offset);
     }
   catch (const gdb_exception_error &ex)
     {
@@ -1598,8 +1597,7 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
   try
     {
       result
-	= dwarf2_evaluate (dlbaton->expr ().data (), dlbaton->expr ().size (),
-			   true, per_objfile, per_cu, frame,
+	= dwarf2_evaluate (dlbaton->expr (), true, per_objfile, per_cu, frame,
 			   per_cu->addr_size (), &init_values, addr_stack);
     }
   catch (const gdb_exception_error &ex)

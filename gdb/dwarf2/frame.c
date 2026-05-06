@@ -252,9 +252,8 @@ execute_stack_op (gdb::array_view<const gdb_byte> expr, int addr_size,
   init_values.push_back (init_value);
 
   value *result_val
-    = dwarf2_evaluate (expr.data (), expr.size (), as_lval, per_objfile,
-		       nullptr, this_frame, addr_size, &init_values, nullptr,
-		       type);
+    = dwarf2_evaluate (expr, as_lval, per_objfile, nullptr, this_frame,
+		       addr_size, &init_values, nullptr, type);
 
   /* We need to clean up all the values that are not needed any more.
      The problem with a value_ref_ptr class is that it disconnects the
