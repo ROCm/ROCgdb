@@ -102,7 +102,7 @@ run_tests ()
 	     "Foozle<int>::fogey<Empty<int> >");
     };
 
-  check_cpp_dialect (language_cplus);
+  check_cpp_dialect (language_cplus_);
   check_cpp_dialect (language_hip);
 
 #undef CHECK
