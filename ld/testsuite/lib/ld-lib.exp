@@ -231,11 +231,13 @@ proc get_board_flags {} {
 proc default_ld_link { ld target objects } {
     global host_triplet
     global exec_output
+    global LDFLAGS
 
     set flags ""
     if [is_endian_output_format $objects] then {
 	set flags [big_or_little_endian]
     }
+    append flags " $LDFLAGS"
 
     # When using GCC as the linker driver, we need to specify board cflags when
     # linking because cflags may contain linker options.  For example when
@@ -245,7 +247,7 @@ proc default_ld_link { ld target objects } {
     if {[string match "*cc*" $gccexe] ||
 	[string match "*++*" $gccexe] ||
 	[string match "clang*" $gccexe]} then {
-	set flags "$flags [get_board_flags]"
+	append flags " [get_board_flags]"
     }
 
     remote_file host delete $target
