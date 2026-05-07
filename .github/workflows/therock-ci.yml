@@ -21,6 +21,7 @@ concurrency:
 jobs:
   setup:
     runs-on: ubuntu-24.04
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'ci:skip') }}
     env:
       BASE_REF: HEAD^
     outputs:
