@@ -2715,11 +2715,12 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
     = [wave_id, tdep, gdbarch, regcache] (int reg, bool warn = false)
       {
 	gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
+	ULONGEST reg_size = register_type (gdbarch, reg)->length ();
+	gdb_assert (reg_size <= AMDGPU_MAX_REGISTER_SIZE);
 
 	amd_dbgapi_status_t status
 	  = amd_dbgapi_read_register (wave_id, tdep->register_ids[reg], 0,
-				      register_type (gdbarch, reg)->length (),
-				      raw);
+				      reg_size, raw);
 
 	if (status == AMD_DBGAPI_STATUS_SUCCESS)
 	  regcache->raw_supply (reg, raw);
@@ -2757,6 +2758,8 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
     = [wave_id, tdep, gdbarch, regcache] (int reg, bool warn)
       {
 	gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
+	ULONGEST reg_size = register_type (gdbarch, reg)->length ();
+	gdb_assert (reg_size < AMDGPU_MAX_REGISTER_SIZE);
 	regcache->raw_collect (reg, &raw);
 
 	/* If the register has read-only bits, invalidate the value in
@@ -2779,8 +2782,7 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
 
 	amd_dbgapi_status_t status
 	  = amd_dbgapi_write_register (wave_id, tdep->register_ids[reg], 0,
-				       register_type (gdbarch, reg)->length (),
-				       raw);
+				       reg_size, raw);
 
 	if (status != AMD_DBGAPI_STATUS_SUCCESS && warn)
 	  warning (_("Couldn't write register %s (#%d)."),
