@@ -2690,38 +2690,57 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
   struct gdbarch *gdbarch = regcache->arch ();
   gdb_assert (is_amdgpu_arch (gdbarch));
 
-  gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
-  ULONGEST reg_size = register_type (gdbarch, regno)->length ();
-  gdb_assert (reg_size <= AMDGPU_MAX_REGISTER_SIZE);
-  regcache->raw_collect (regno, &raw);
-
   amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
 
-  /* If the register has read-only bits, invalidate the value in the regcache
-     as the value actually written may differ.  */
-  if (tdep->register_properties[regno]
-      & AMD_DBGAPI_REGISTER_PROPERTY_READONLY_BITS)
-    regcache->invalidate (regno);
+  bool invalidate_volatile = false;
 
-  /* Invalidate all volatile registers if this register has the invalidate
-     volatile property.  For example, writing to VCC may change the content
-     of STATUS.VCCZ.  */
-  if (tdep->register_properties[regno]
-      & AMD_DBGAPI_REGISTER_PROPERTY_INVALIDATE_VOLATILE)
+  auto store_reg
+    = [wave_id, tdep, gdbarch, regcache, &invalidate_volatile] (int reg)
+      {
+	gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
+	ULONGEST reg_size = register_type (gdbarch, reg)->length ();
+	gdb_assert (reg_size <= AMDGPU_MAX_REGISTER_SIZE);
+	regcache->raw_collect (reg, &raw);
+
+	/* If the register has read-only bits, invalidate the value in
+	   the regcache as the value actually written may differ.  */
+	if (tdep->register_properties[reg]
+	    & AMD_DBGAPI_REGISTER_PROPERTY_READONLY_BITS)
+	  regcache->invalidate (reg);
+
+	/* Invalidate all volatile registers if this register has the
+	   invalidate volatile property.  For example, writing to VCC
+	   may change the content of STATUS.VCCZ.  */
+	if (tdep->register_properties[reg]
+	    & AMD_DBGAPI_REGISTER_PROPERTY_INVALIDATE_VOLATILE)
+	  invalidate_volatile = true;
+
+	amd_dbgapi_status_t status
+	  = amd_dbgapi_write_register (wave_id, tdep->register_ids[reg], 0,
+				       reg_size, raw);
+
+	return (status == AMD_DBGAPI_STATUS_SUCCESS);
+      };
+
+  if (regno == -1)
+    {
+      for (int i = 0; i < gdbarch_num_regs (gdbarch); i++)
+	store_reg (i);
+    }
+  else
+    {
+      if (!store_reg (regno))
+	warning (_("Couldn't write register %s (#%d)."),
+		 gdbarch_register_name (gdbarch, regno), regno);
+    }
+
+  if (invalidate_volatile)
     {
       for (size_t r = 0; r < tdep->register_properties.size (); ++r)
 	if (tdep->register_properties[r] & AMD_DBGAPI_REGISTER_PROPERTY_VOLATILE)
 	  regcache->invalidate (r);
     }
-
-  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
-  amd_dbgapi_status_t status
-    = amd_dbgapi_write_register (wave_id, tdep->register_ids[regno], 0,
-				 reg_size, raw);
-
-  if (status != AMD_DBGAPI_STATUS_SUCCESS)
-    warning (_("Couldn't write register %s (#%d)."),
-	     gdbarch_register_name (gdbarch, regno), regno);
 }
 
 /* Fix breakpoints created with an address location while the
