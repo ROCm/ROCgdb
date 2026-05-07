@@ -1847,7 +1847,7 @@ encode_asimd_fcvt (aarch64_inst *inst)
 {
   aarch64_insn value;
   aarch64_field field = AARCH64_FIELD_NIL;
-  enum aarch64_opnd_qualifier qualifier = AARCH64_OPND_QLF_NIL;
+  enum aarch64_opnd_qualifier qualifier;
 
   switch (inst->opcode->op)
     {
