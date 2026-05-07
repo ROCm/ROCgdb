@@ -39,13 +39,13 @@ proc_with_prefix emptyStruct {} {
     gdb_breakpoint "returnEmpty" "allow-pending"
     with_test_prefix "empty struct" {
 	gdb_continue_to_breakpoint "returnEmpty"
-	gdb_test "finish" "Value returned is \\\$$::decimal = {<No data fields>}"
+	gdb_test "finish" "Value returned is \\\$$::decimal = \\{<No data fields>\\}"
     }
 
     gdb_breakpoint "returnEmptyWithStatic" "allow-pending"
     with_test_prefix "ignore static values" {
 	gdb_continue_to_breakpoint "returnEmpty"
-	gdb_test "finish" "Value returned is \\\$$::decimal = {static something = 56}"
+	gdb_test "finish" "Value returned is \\\$$::decimal = \\{static something = 56\\}"
     }
 }
 
@@ -63,7 +63,7 @@ proc_with_prefix structWithCharArray {} {
 	gdb_breakpoint "returnSized<${size}> if \$_lane == 3" "allow-pending"
 	gdb_continue_to_breakpoint "returnSized<${size}>"
 	gdb_test "finish" \
-	    "Value returned is \\\$$::decimal = \\\{data = \"d\{$size\}\"\\\}"
+	    "Value returned is \\\$$::decimal = \\{data = \"d{$size}\"\\}"
     }
 
     # For elements that needs more than 32 registers, the value is returned by
@@ -82,7 +82,7 @@ proc_with_prefix unionMember {} {
 	gdb_breakpoint "returnCustomWithUnion<${size}>" "allow-pending"
 	gdb_continue_to_breakpoint "returnCustomWithUnion<${size}>"
 	gdb_test "finish" \
-	    "Value returned is \\\$$::decimal = \\\{data = \\\{(\\\{as_int = 1633771873, as_chars = \"aaaa\"\\\}(, )?)\{$size\}\\\}\\\}"
+	    "Value returned is \\\$$::decimal = \\{data = \\{(\\{as_int = 1633771873, as_chars = \"aaaa\"\\}(, )?)\{$size\}\\}\\}"
     }
 }
 
@@ -98,7 +98,7 @@ proc_with_prefix bitfield {} {
 	gdb_breakpoint "returnPackedWithBitField if \$_lane == 4"
 	gdb_continue_to_breakpoint "returnPackedWithBitField"
 	gdb_test "finish" \
-	    "Value returned is \\\$$::decimal = \\\{x = 4, y = 5, z = 6\\\}"
+	    "Value returned is \\\$$::decimal = \\{x = 4, y = 5, z = 6\\}"
     }
 
     with_test_prefix "unpacked" {
@@ -106,7 +106,7 @@ proc_with_prefix bitfield {} {
 	gdb_continue_to_breakpoint "returnNotPackedWithBitField"
 	setup_xfail "*-*-*"
 	gdb_test "finish" \
-	    "Value returned is \\\$$::decimal = \\\{foo = \\\{4, 5, 6, 7\\\}, x = 8, y = 9, z = 10, c1 = 97 'a', c2 = 98 'b', c3 = 99 'c', c4 = 100 'd', c5 = 101 'e', c6 = 102 'f'\\\}"
+	    "Value returned is \\\$$::decimal = \\{foo = \\{4, 5, 6, 7\\}, x = 8, y = 9, z = 10, c1 = 97 'a', c2 = 98 'b', c3 = 99 'c', c4 = 100 'd', c5 = 101 'e', c6 = 102 'f'\\}"
     }
 }
 
@@ -157,7 +157,7 @@ proc_with_prefix struct_with_static {} {
     gdb_continue_to_breakpoint "returnWithStatic"
 
     gdb_test "finish" \
-	"Value returned is \\\$$::decimal = \\\{a = \\\{8, 16\\\}, sub = \\\{static something = 12\\\}, b = 3.1400001, static c = 42, d = 1.60218e-19\\\}"
+	"Value returned is \\\$$::decimal = \\{a = \\{8, 16\\}, sub = \\{static something = 12\\}, b = 3.1400001, static c = 42, d = 1.60218e-19\\}"
 }
 
 with_rocm_gpu_lock {
