@@ -4060,24 +4060,33 @@ elf_hppa_final_link_relocate (Elf_Internal_Rela *rel,
 						 rel->r_offset);
 	      skip = out_off == (bfd_vma) -1 || out_off == (bfd_vma) -2;
 
-	      /* If this triggers, we need to skip this relocation or
-		 output a NULL relocation.  Skipping the relocation messes
-		 up the relocation count as we can't detect this case in
-		 elf64_hppa_late_size_sections().  The HP dynamic linker
-		 doesn't like relocations with the R_PARISC_NONE type.
-		 So, we are scuppered.  We need to avoid dynamic relocations
-		 in linkonce sections that may be garbage collected.  */
-	      BFD_ASSERT (!skip || output_bfd->xvec != &hppa_elf64_vec);
-
-	      if (skip)
-		memset (&rela, 0, sizeof (rela));
-	      else
+	      /* The HP dynamic linker doesn't support relocations with
+		 the R_PARISC_NONE type.  So, we can't just output a zero
+		 relocation if we encounter an invalid offset.  We reserve
+		 16 bytes at the start of the data section that aren't
+		 used.  */
+	      if (skip && output_bfd->xvec == &hppa_elf64_vec)
+		{
+		  /* Set the relocation offset to the start of the
+		     data section.  */
+		  skip = false;
+		  baseh = hppa_info->data_hash_entry;
+		  sec = baseh->root.u.def.section;
+		  rela.r_offset = (sec->output_offset
+				   + sec->output_section->vma);
+		}
+	      else if (!skip)
 		{
 		  /* This is the output relocation offset.  */
 		  rela.r_offset = (out_off
 				   + input_section->output_offset
 				   + input_section->output_section->vma);
+		}
 
+	      if (skip)
+		memset (&rela, 0, sizeof (rela));
+	      else
+		{
 		  /* Select base segment.  */
 		  if (sym_sec->flags & SEC_READONLY)
 		    baseh = hppa_info->text_hash_entry;
@@ -4582,7 +4591,7 @@ static const struct elf_size_info hppa64_elf_size_info =
 #define elf_backend_link_output_symbol_hook \
 	elf64_hppa_link_output_symbol_hook
 
-#define elf_backend_can_gc_sections	0
+#define elf_backend_can_gc_sections	1
 #define elf_backend_want_got_plt	0
 #define elf_backend_plt_readonly	0
 #define elf_backend_want_plt_sym	0
@@ -4612,9 +4621,6 @@ static const struct elf_size_info hppa64_elf_size_info =
 #define elf_backend_special_sections	(elf64_hppa_special_sections + 1)
 #undef elf_backend_modify_segment_map
 #undef elf_backend_want_p_paddr_set_to_zero
-
-#undef elf_backend_can_gc_sections
-#define elf_backend_can_gc_sections	1
 #undef elf_backend_want_dynrelro
 #define elf_backend_want_dynrelro	1
 
