@@ -81,6 +81,8 @@
 * The Windows native target now supports non-stop mode.  This feature
   requires Windows 10 or later.
 
+* Support for native Thread Local Storage (TLS) variables on Windows.
+
 * Configure changes
 
 ** --with-babeltrace has been removed.  The babeltrace library was
