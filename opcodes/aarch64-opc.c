@@ -6162,8 +6162,8 @@ verify_constraints (const struct aarch64_inst *inst,
 
 	  /* Now the only thing left is the qualifiers checks.  The register
 	     must have the same maximum element size.  */
-	  if (inst_dest.qualifier
-	      && blk_dest.qualifier
+	  if (inst_dest.qualifier != AARCH64_OPND_QLF_NIL
+	      && blk_dest.qualifier != AARCH64_OPND_QLF_NIL
 	      && current_elem_size
 		 != aarch64_get_qualifier_esize (blk_dest.qualifier))
 	    {
