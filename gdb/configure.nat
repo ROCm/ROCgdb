@@ -305,6 +305,10 @@ case ${gdb_host} in
 		# Host: Motorola m68k running GNU/Linux.
 		NATDEPFILES="${NATDEPFILES} m68k-linux-nat.o"
 		;;
+	    microblaze)
+		# Host: Microblaze running GNU/Linux.
+		NATDEPFILES="${NATDEPFILES} microblaze-linux-nat.o"
+		;;
 	    mips)
 		# Host: Linux/MIPS
 		NATDEPFILES="${NATDEPFILES} linux-nat-trad.o \

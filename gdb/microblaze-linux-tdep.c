@@ -35,7 +35,9 @@
 #include "frame-unwind.h"
 #include "tramp-frame.h"
 #include "linux-tdep.h"
+#include "glibc-tdep.h"
 #include "solib-svr4-linux.h"
+#include "features/microblaze-linux.c"
 
 static int
 microblaze_linux_memory_remove_breakpoint (struct gdbarch *gdbarch,
@@ -115,11 +117,22 @@ static struct tramp_frame microblaze_linux_sighandler_tramp_frame =
   microblaze_linux_sighandler_cache_init
 };
 
+static struct regset microblaze_linux_gregset =
+  {
+    nullptr,
+    microblaze_supply_gregset
+  };
 
 static void
 microblaze_linux_init_abi (struct gdbarch_info info,
 			   struct gdbarch *gdbarch)
 {
+  struct microblaze_gdbarch_tdep *tdep =
+	  gdbarch_tdep<microblaze_gdbarch_tdep> (gdbarch);
+
+  tdep->gregset = &microblaze_linux_gregset;
+  tdep->sizeof_gregset = MICROBLAZE_REGISTER_SIZE * MICROBLAZE_REDR_REGNUM;
+
   linux_init_abi (info, gdbarch, 0);
 
   set_gdbarch_memory_remove_breakpoint (gdbarch,
@@ -131,10 +144,25 @@ microblaze_linux_init_abi (struct gdbarch_info info,
   /* Trampolines.  */
   tramp_frame_prepend_unwinder (gdbarch,
 				&microblaze_linux_sighandler_tramp_frame);
+
+  /* BFD target for core files.  */
+  if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
+    set_gdbarch_gcore_bfd_target (gdbarch, "elf32-microblaze");
+  else
+    set_gdbarch_gcore_bfd_target (gdbarch, "elf32-microblazeel");
+
+
+  /* Shared library handling.  */
+  set_gdbarch_skip_trampoline_code (gdbarch, find_solib_trampoline_target);
+  set_gdbarch_skip_solib_resolver (gdbarch, glibc_skip_solib_resolver);
+
 }
 
 INIT_GDB_FILE (microblaze_linux_tdep)
 {
   gdbarch_register_osabi (bfd_arch_microblaze, 0, GDB_OSABI_LINUX,
 			  microblaze_linux_init_abi);
+
+  /* Initialize linux target description.  */
+  initialize_tdesc_microblaze_linux ();
 }

@@ -768,6 +768,70 @@ microblaze_elf_is_local_label_name (bfd *abfd, const char *name)
   return _bfd_elf_is_local_label_name (abfd, name);
 }
 
+/* Support for core dump NOTE sections.  */
+
+static bool
+microblaze_elf_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
+{
+  int offset;
+  unsigned int size;
+
+  switch (note->descsz)
+    {
+      default:
+	return false;
+
+      case 228:         /* Linux/MicroBlaze */
+	/* pr_cursig */
+	elf_tdata (abfd)->core->signal = bfd_get_16 (abfd, note->descdata + 12);
+
+	/* pr_pid */
+	elf_tdata (abfd)->core->pid = bfd_get_32 (abfd, note->descdata + 24);
+
+	/* pr_reg */
+	offset = 72;
+	size = 50 * 4;
+
+	break;
+    }
+
+  /* Make a ".reg/999" section.  */
+  return _bfd_elfcore_make_pseudosection (abfd, ".reg",
+					  size, note->descpos + offset);
+}
+
+/* Support for core dump psinfo.  */
+
+static bool
+microblaze_elf_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
+{
+  switch (note->descsz)
+    {
+      default:
+	return false;
+
+      case 128:         /* Linux/MicroBlaze elf_prpsinfo */
+	elf_tdata (abfd)->core->program
+	 = _bfd_elfcore_strndup (abfd, note->descdata + 32, 16);
+	elf_tdata (abfd)->core->command
+	 = _bfd_elfcore_strndup (abfd, note->descdata + 48, 80);
+    }
+
+  /* Note that for some reason, a spurious space is tacked
+     onto the end of the args in some (at least one anyway)
+     implementations, so strip it off if it exists.  */
+
+  {
+    char *command = elf_tdata (abfd)->core->command;
+    int n = strlen (command);
+
+    if (0 < n && command[n - 1] == ' ')
+      command[n - 1] = '\0';
+  }
+
+  return true;
+}
+
 /* ELF linker hash entry.  */
 
 struct elf32_mb_link_hash_entry
@@ -3486,5 +3550,8 @@ microblaze_elf_add_symbol_hook (bfd *abfd,
 #define elf_backend_finish_dynamic_symbol	microblaze_elf_finish_dynamic_symbol
 #define elf_backend_late_size_sections		microblaze_elf_late_size_sections
 #define elf_backend_add_symbol_hook		microblaze_elf_add_symbol_hook
+
+#define elf_backend_grok_prstatus               microblaze_elf_grok_prstatus
+#define elf_backend_grok_psinfo                 microblaze_elf_grok_psinfo
 
 #include "elf32-target.h"

@@ -1519,6 +1519,7 @@ HFILES_NO_SRCDIR = \
 	memrange.h \
 	memtag.h \
 	microblaze-tdep.h \
+	microblaze-linux-tdep.h \
 	mi/mi-cmd-break.h \
 	mi/mi-cmds.h \
 	mi/mi-common.h \
@@ -1887,6 +1888,7 @@ ALLDEPFILES = \
 	m68k-linux-nat.c \
 	m68k-linux-tdep.c \
 	m68k-tdep.c \
+	microblaze-linux-nat.c \
 	microblaze-linux-tdep.c \
 	microblaze-tdep.c \
 	mingw-hdep.c \

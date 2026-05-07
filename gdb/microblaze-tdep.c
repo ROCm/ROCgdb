@@ -252,6 +252,7 @@ microblaze_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 	  cache->frameless_p = 0; /* Frame found.  */
 	  save_hidden_pointer_found = 0;
 	  non_stack_instruction_found = 0;
+	  cache->register_offsets[rd] = -imm;
 	  continue;
 	}
       else if (IS_SPILL_SP(op, rd, ra))
@@ -399,8 +400,7 @@ microblaze_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
     {
       sal = find_sal_for_pc (func_start, 0);
 
-      if (sal.end < func_end
-	  && start_pc <= sal.end)
+      if (sal.line != 0 && sal.end <= func_end  && start_pc <= sal.end)
 	start_pc = sal.end;
     }
 
@@ -420,6 +420,7 @@ microblaze_frame_cache (const frame_info_ptr &next_frame, void **this_cache)
   struct microblaze_frame_cache *cache;
   struct gdbarch *gdbarch = get_frame_arch (next_frame);
   int rn;
+  CORE_ADDR current_pc;
 
   if (*this_cache)
     return (struct microblaze_frame_cache *) *this_cache;
@@ -432,10 +433,15 @@ microblaze_frame_cache (const frame_info_ptr &next_frame, void **this_cache)
   for (rn = 0; rn < gdbarch_num_regs (gdbarch); rn++)
     cache->register_offsets[rn] = -1;
 
-  /* Call for side effects.  */
-  get_frame_func (next_frame);
+  cache->pc = get_frame_func (next_frame);
 
-  cache->pc = get_frame_address_in_block (next_frame);
+  current_pc = get_frame_pc (next_frame);
+  if (cache->pc)
+     microblaze_analyze_prologue (gdbarch, cache->pc, current_pc, cache);
+
+  cache->saved_sp = cache->base + cache->framesize;
+  cache->register_offsets[MICROBLAZE_PREV_PC_REGNUM] = cache->base;
+  cache->register_offsets[MICROBLAZE_SP_REGNUM] = cache->saved_sp;
 
   return cache;
 }
@@ -461,19 +467,30 @@ microblaze_frame_prev_register (const frame_info_ptr &this_frame,
   struct microblaze_frame_cache *cache =
     microblaze_frame_cache (this_frame, this_cache);
 
-  if (cache->frameless_p)
+  if ((regnum == MICROBLAZE_SP_REGNUM || regnum == MICROBLAZE_FP_REGNUM)
+      && cache->register_offsets[MICROBLAZE_SP_REGNUM])
     {
-      if (regnum == MICROBLAZE_PC_REGNUM)
-	regnum = 15;
-      if (regnum == MICROBLAZE_SP_REGNUM)
-	regnum = 1;
-      return trad_frame_get_prev_register (this_frame,
-					   cache->saved_regs, regnum);
+      return frame_unwind_got_constant
+	       (this_frame, regnum,
+		cache->register_offsets[MICROBLAZE_SP_REGNUM]);
     }
-  else
-    return trad_frame_get_prev_register (this_frame, cache->saved_regs,
-					 regnum);
 
+  if (regnum == MICROBLAZE_PC_REGNUM)
+    {
+      regnum = MICROBLAZE_PREV_PC_REGNUM;
+
+      microblaze_debug ("prev pc is r15 @ frame offset 0x%x\n",
+			 (int) cache->register_offsets[regnum] );
+
+      return frame_unwind_got_memory
+	       (this_frame, regnum,
+		cache->register_offsets[MICROBLAZE_PREV_PC_REGNUM]);
+    }
+
+  if (regnum == MICROBLAZE_SP_REGNUM)
+    regnum = 1;
+
+  return trad_frame_get_prev_register (this_frame, cache->saved_regs, regnum);
 }
 
 static const struct frame_unwind_legacy microblaze_frame_unwind (
@@ -718,6 +735,43 @@ microblaze_register_g_packet_guesses (struct gdbarch *gdbarch)
 				  tdesc_microblaze_with_stack_protect.get ());
 }
 
+void
+microblaze_supply_gregset (const struct regset *regset,
+			   struct regcache *regcache,
+			   int regnum, const void *gregs, size_t size)
+{
+  const gdb_byte *regs = (const gdb_byte *) gregs;
+
+  if (regnum >= 0)
+    regcache->raw_supply (regnum, regs + regnum * MICROBLAZE_REGISTER_SIZE);
+
+  if (regnum == -1) {
+    int i;
+
+    for (i = 0; i < MICROBLAZE_REDR_REGNUM; i++)
+      {
+	regcache->raw_supply (i, regs + i * MICROBLAZE_REGISTER_SIZE);
+      }
+  }
+}
+
+
+/* Return the appropriate register set for the core section identified
+   by SECT_NAME and SECT_SIZE.  */
+
+static void
+microblaze_iterate_over_regset_sections (struct gdbarch *gdbarch,
+				     iterate_over_regset_sections_cb *cb,
+				     void *cb_data,
+				     const struct regcache *regcache)
+{
+  microblaze_gdbarch_tdep *tdep
+    = gdbarch_tdep<microblaze_gdbarch_tdep> (gdbarch);
+
+  cb (".reg", tdep->sizeof_gregset, tdep->sizeof_gregset, tdep->gregset,
+      nullptr, cb_data);
+}
+
 static struct gdbarch *
 microblaze_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
@@ -742,6 +796,7 @@ microblaze_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 				    "org.gnu.gdb.microblaze.core");
       if (feature == NULL)
 	return NULL;
+
       tdesc_data = tdesc_data_alloc ();
 
       valid_p = 1;
@@ -768,6 +823,9 @@ microblaze_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Allocate space for the new architecture.  */
   gdbarch *gdbarch
     = gdbarch_alloc (&info, gdbarch_tdep_up (new microblaze_gdbarch_tdep));
+
+  microblaze_gdbarch_tdep *tdep
+    = gdbarch_tdep<microblaze_gdbarch_tdep> (gdbarch);
 
   set_gdbarch_long_double_bit (gdbarch, 128);
 
@@ -816,6 +874,13 @@ microblaze_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   frame_base_append_sniffer (gdbarch, dwarf2_frame_base_sniffer);
   if (tdesc_data != NULL)
     tdesc_use_registers (gdbarch, tdesc, std::move (tdesc_data));
+
+  /* If we have register sets, enable the generic core file support.  */
+  if (tdep->gregset)
+    {
+      set_gdbarch_iterate_over_regset_sections
+	(gdbarch, microblaze_iterate_over_regset_sections);
+    }
 
   return gdbarch;
 }
