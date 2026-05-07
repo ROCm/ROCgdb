@@ -1136,7 +1136,7 @@ lang_vars_shadowing get_lang_vars_shadowing_option (enum language lang)
   switch (lang)
     {
     case language_c:
-    case language_cplus:
+    case language_cplus_:
     case language_fortran:
     case language_ada:
       return lang_vars_shadowing::PRINT;

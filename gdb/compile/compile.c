@@ -539,7 +539,7 @@ get_language_compile_context ()
     {
     case language_c:
       return c_get_compile_context ();
-    case language_cplus:
+    case language_cplus_:
       return cplus_get_compile_context ();
     default:
       return {};
@@ -558,7 +558,7 @@ compute_program_language (compile_instance *inst, const char *input,
     {
     case language_c:
       return c_compute_program (inst, input, gdbarch, block, pc);
-    case language_cplus:
+    case language_cplus_:
       return cplus_compute_program (inst, input, gdbarch, block, pc);
     default:
       gdb_assert_not_reached ("Unsupported language");
