@@ -295,10 +295,17 @@ AC_ARG_WITH([msgpack],
 	    [with_msgpack=auto])
 
 AS_IF([test "$with_msgpack" != no],
-  [PKG_CHECK_MODULES(MSGPACK, msgpack,
-    [AC_DEFINE([HAVE_MSGPACK], [1], [Define to 1 if msgpack is available.])],
-    [AS_IF([test "$with_msgpack" = yes],
-      [AC_MSG_ERROR([--with-msgpack was given, but msgpack is missing or unusable.])])])])
+  [have_msgpack=no
+
+   # msgpack.pc was renamed to msgpack-c.pc at some point, look for the new
+   # one first.
+   PKG_CHECK_MODULES([MSGPACK], [msgpack-c], [have_msgpack=yes],
+     [PKG_CHECK_MODULES([MSGPACK], [msgpack], [have_msgpack=yes])])
+
+   AS_IF([test "$have_msgpack" = yes],
+     [AC_DEFINE([HAVE_MSGPACK], [1], [Define to 1 if msgpack is available.])],
+     [AS_IF([test "$with_msgpack" = yes],
+       [AC_MSG_ERROR([--with-msgpack was given, but msgpack is missing or unusable.])])])])
 
 # target-specific stuff:
 
