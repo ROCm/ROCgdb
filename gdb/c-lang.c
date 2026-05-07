@@ -865,7 +865,7 @@ class cplus_language : public language_defn
 {
 public:
   cplus_language ()
-    : language_defn (language_cplus)
+    : language_defn (language_cplus_)
   { /* Nothing.  */ }
 
   /* See language.h.  */

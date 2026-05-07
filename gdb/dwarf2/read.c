@@ -13615,7 +13615,7 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
   switch (strip_cplus_dialect (cu->lang ()))
     {
     case language_c:
-    case language_cplus:
+    case language_cplus_:
       low.set_const_val (0);
       low_default_is_valid = 1;
       break;
@@ -14049,7 +14049,7 @@ cooked_index_functions::search
     /* No splitting is also a style.  */
     language_c,
     /* This includes Rust.  */
-    language_cplus,
+    language_cplus_,
     /* This includes Go.  */
     language_d,
     language_ada
@@ -14068,9 +14068,9 @@ cooked_index_functions::search
 
 	switch (strip_cplus_dialect (lang))
 	  {
-	  case language_cplus:
+	  case language_cplus_:
 	  case language_rust:
-	    unique_styles_used[language_cplus] = true;
+	    unique_styles_used[language_cplus_] = true;
 	    break;
 	  case language_d:
 	  case language_go:
@@ -15075,7 +15075,7 @@ dwarf_lang_to_enum_language (ULONGEST lang)
     case DW_LANG_C_plus_plus_17:
     case DW_LANG_C_plus_plus_20:
     case DW_LANG_C_plus_plus_23:
-      language = language_cplus;
+      language = language_cplus_;
       break;
     case DW_LANG_D:
       language = language_d;
@@ -18249,7 +18249,7 @@ cutu_reader::prepare_one_comp_unit (struct dwarf2_cu *cu,
 	     with a "set language hip" command in GDB itself.  Still, this
 	     workaround works better than checking the "producer", since
 	     various providers tend to name them slightly differently.  */
-	  if (lang == language_cplus
+	  if (lang == language_cplus_
 	      && (cu->per_objfile->per_bfd->obfd->arch_info->arch
 		  == bfd_arch_amdgcn))
 	    {

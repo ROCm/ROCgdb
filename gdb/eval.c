@@ -286,7 +286,7 @@ binop_promote (const struct language_defn *language, struct gdbarch *gdbarch,
       switch (strip_cplus_dialect (language->la_language))
 	{
 	case language_c:
-	case language_cplus:
+	case language_cplus_:
 	case language_asm:
 	case language_objc:
 	case language_opencl:
