@@ -23,7 +23,9 @@
 #include "elf/reloc-macros.h"
 
 /* e_ident[EI_ABIVERSION] values, when e_ident[EI_OSABI] is
-   ELFOSABI_AMDGPU_HSA.  */
+   ELFOSABI_AMDGPU_HSA.
+
+   https://llvm.org/docs/AMDGPUUsage.html#amdgpu-elf-header-enumeration-values-table  */
 
 #define ELFABIVERSION_AMDGPU_HSA_V2 0
 #define ELFABIVERSION_AMDGPU_HSA_V3 1
@@ -35,6 +37,10 @@
 
 #define EF_AMDGPU_MACH 0x0ff
 #define EF_AMDGPU_MACH_AMDGCN_MIN 0x020
+
+/* EF_AMDGPU_MACH_* values
+
+   https://llvm.org/docs/AMDGPUUsage.html#amdgpu-ef-amdgpu-mach-table  */
 
 #define EF_AMDGPU_MACH_AMDGCN_GFX600  0x020
 #define EF_AMDGPU_MACH_AMDGCN_GFX601  0x021
@@ -90,12 +96,16 @@
 #define EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC 0x05b
 #define EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC 0x05f
 
-/* Code object v3 machine flags.  */
+/* Code object v3 machine flags.
+
+   https://llvm.org/docs/AMDGPUUsage.html#amdgpu-elf-header-e-flags-table-v3  */
 
 #define EF_AMDGPU_FEATURE_XNACK_V3   0x100
 #define EF_AMDGPU_FEATURE_SRAMECC_V3 0x200
 
-/* Code object v4 (and later) machine flags.  */
+/* Code object v4 (and later) machine flags.
+
+   https://llvm.org/docs/AMDGPUUsage.html#amdgpu-elf-header-e-flags-table-v4-v5  */
 
 #define EF_AMDGPU_FEATURE_XNACK_V4             0x300
 #define EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4 0x000
@@ -109,16 +119,22 @@
 #define EF_AMDGPU_FEATURE_SRAMECC_OFF_V4         0x800
 #define EF_AMDGPU_FEATURE_SRAMECC_ON_V4          0xc00
 
-/* Code object v6 machine flags.  */
+/* Code object v6 machine flags.
+
+   https://llvm.org/docs/AMDGPUUsage.html#amdgpu-elf-header-e-flags-table-v6-onwards  */
 
 #define EF_AMDGPU_GENERIC_VERSION_V              0xff000000
 #define EF_AMDGPU_GENERIC_VERSION_V_SHIFT        24
 
-/* Notes. */
+/* Notes.
+
+   https://llvm.org/docs/AMDGPUUsage.html#code-object-v3-and-above-note-records  */
 
 #define NT_AMDGPU_METADATA                32
 
-/* Relocations.  */
+/* Relocations.
+
+   https://llvm.org/docs/AMDGPUUsage.html#amdgpu-elf-relocation-records-table  */
 
 START_RELOC_NUMBERS (elf_amdgpu_reloc_type)
  RELOC_NUMBER (R_AMDGPU_NONE,           0)
