@@ -630,3 +630,41 @@ gdb_caching_proc compiler_dwarf_language {} {
 	return "others"
     }
 }
+
+# Similar to `runto` but can additionally return the value 2 if a warning
+# for an unsupported GPU architecture occurred during the run command.
+proc runto_ex { linespec args } {
+    global gdb_prompt
+    delete_breakpoints
+
+    if {![gdb_breakpoint $linespec {*}$args]} {
+	return 0
+    }
+
+    gdb_run_cmd
+
+    set ret 1
+
+    gdb_expect {
+	-re "warning: os_agent_id (.*?): architecture .* not supported\.\r\n" {
+	    set ret 2
+	    exp_continue
+	}
+
+	-re "Breakpoint .* at .*" {
+	    exp_continue
+	}
+
+	-re "$gdb_prompt $" {
+	    return $ret
+	}
+
+	timeout {
+	    return 0
+	}
+
+	eof {
+	    return 0
+	}
+    }
+}

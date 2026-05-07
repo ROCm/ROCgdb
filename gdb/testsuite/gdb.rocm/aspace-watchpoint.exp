@@ -35,7 +35,12 @@ if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {deb
 with_rocm_gpu_lock {
 
 with_test_prefix "private lane watchpoints" {
-    if ![runto_main] {
+    set r [runto_ex main qualified]
+    if {$r == 2} {
+	untested "unsupported GPU arch"
+	return
+    }
+    if {!$r} {
 	fail "can't run to main"
 	return -1
     }
@@ -144,7 +149,11 @@ with_test_prefix "private lane watchpoints" {
 clean_restart ${testfile}
 
 with_test_prefix "global memory watchpoint" {
-    if ![runto_main] {
+    set r [runto_ex main qualified]
+    if {$r == 2} {
+	untested "unsupported GPU arch"
+    }
+    if {!$r} {
 	fail "can't run to main"
 	return -1
     }
@@ -189,7 +198,11 @@ with_test_prefix "global memory watchpoint" {
 }
 
 with_test_prefix "Watchpoint and thread scope change " {
-    if ![runto_main] {
+    set r [runto_ex main qualified]
+    if {$r == 2} {
+	untested "unsupported GPU arch"
+    }
+    if {!$r} {
 	fail "can't run to main"
 	return -1
     }
