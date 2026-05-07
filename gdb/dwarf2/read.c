@@ -11024,6 +11024,22 @@ read_enumeration_type (struct die_info *die, struct dwarf2_cu *cu)
 	set_type_align (type, TYPE_RAW_ALIGN (underlying_type));
     }
 
+  /* DW_AT_encoding on an enumeration type is a GCC extension.  GCC
+     will only emit DW_ATE_signed or DW_ATE_unsigned here.  If this is
+     seen, it provides a way to find the signed-ness without having to
+     guess based on the constants, which is somewhat fraught anyway
+     (see PR symtab/32680).  */
+  if (!is_unsigned.has_value ())
+    {
+      attribute *encoding_attr = dwarf2_attr (die, DW_AT_encoding, cu);
+      if (encoding_attr != nullptr)
+	{
+	  std::optional<ULONGEST> val = encoding_attr->unsigned_constant ();
+	  if (val.has_value ())
+	    is_unsigned = *val == DW_ATE_unsigned;
+	}
+    }
+
   type->set_is_declared_class (dwarf2_flag_true_p (die, DW_AT_enum_class, cu));
 
   type->set_endianity_is_not_default (die_byte_order (die, cu, nullptr));
