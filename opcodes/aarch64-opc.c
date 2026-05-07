@@ -195,7 +195,7 @@ get_data_pattern (const aarch64_opnd_qualifier_seq_t qualifiers)
     {
       /* e.g. SADDLV <V><d>, <Vn>.<T>.  */
       if (vector_qualifier_p (qualifiers[1])
-	  && qualifiers[2] == AARCH64_OPND_QLF_NIL)
+	  && (qualifiers[2] == AARCH64_OPND_QLF_UNUSED))
 	return DP_VECTOR_ACROSS_LANES;
     }
 
@@ -737,6 +737,7 @@ struct operand_qualifier_data
 /* Indexed by the operand qualifier enumerators.  */
 static const struct operand_qualifier_data aarch64_opnd_qualifiers[] =
 {
+  {0, 0, 0, "UNUSED", OQK_NIL},
   {0, 0, 0, "NIL", OQK_NIL},
   {0, 0, 0, "UNKNOWN", OQK_NIL},
 

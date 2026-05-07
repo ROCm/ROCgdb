@@ -2516,7 +2516,7 @@ aarch64_ext_plain_shrimm (const aarch64_operand *self, aarch64_opnd_info *info,
 
    N.B. CANDIDATES is a group of possible qualifiers that are valid for
    one operand; it has a maximum of AARCH64_MAX_QLF_SEQ_NUM qualifiers and
-   may end with AARCH64_OPND_QLF_NIL.  */
+   may end with AARCH64_OPND_QLF_UNUSED.  */
 
 static enum aarch64_opnd_qualifier
 get_qualifier_from_partial_encoding (aarch64_insn value,
@@ -2529,7 +2529,7 @@ get_qualifier_from_partial_encoding (aarch64_insn value,
   for (i = 0; i < AARCH64_MAX_QLF_SEQ_NUM; ++i)
     {
       aarch64_insn standard_value;
-      if (candidates[i] == AARCH64_OPND_QLF_NIL)
+      if (candidates[i] == AARCH64_OPND_QLF_UNUSED)
 	break;
       standard_value = aarch64_get_qualifier_standard_value (candidates[i]);
       if ((standard_value & mask) == (value & mask))
@@ -2549,7 +2549,7 @@ get_operand_possible_qualifiers (int idx,
 {
   int i;
   for (i = 0; i < AARCH64_MAX_QLF_SEQ_NUM; ++i)
-    if ((qualifiers[i] = list[i][idx]) == AARCH64_OPND_QLF_NIL)
+    if ((qualifiers[i] = list[i][idx]) == AARCH64_OPND_QLF_UNUSED)
       break;
 }
 
@@ -2604,7 +2604,7 @@ decode_sizeq (aarch64_inst *inst)
   if (debug_dump)
     {
       int i;
-      for (i = 0; candidates[i] != AARCH64_OPND_QLF_NIL
+      for (i = 0; candidates[i] != AARCH64_OPND_QLF_UNUSED
 	   && i < AARCH64_MAX_QLF_SEQ_NUM; ++i)
 	DEBUG_TRACE ("qualifier %d: %s", i,
 		     aarch64_get_qualifier_name(candidates[i]));

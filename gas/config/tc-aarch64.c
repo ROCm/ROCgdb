@@ -6003,7 +6003,7 @@ output_operand_error_record (const operand_error_record *record, char *str)
 	  for (i = 0; i < AARCH64_MAX_QLF_SEQ_NUM; ++i, ++qualifiers_list)
 	    {
 	      /* Most opcodes has much fewer patterns in the list.
-		 First NIL qualifier indicates the end in the list.   */
+		 First UNUSED qualifier indicates the end in the list.  */
 	      if (empty_qualifier_sequence_p (*qualifiers_list))
 		break;
 

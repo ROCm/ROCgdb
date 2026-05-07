@@ -1010,6 +1010,11 @@ enum aarch64_opnd
 
 enum aarch64_opnd_qualifier
 {
+  /* Indicating an unused entry in a list of qualifier sequences (assigned via
+     empty initialization of unused array elements), or some other unused
+     value.  */
+  AARCH64_OPND_QLF_UNUSED,
+
   /* Indicating no further qualification on an operand.  */
   AARCH64_OPND_QLF_NIL,
 
@@ -1353,15 +1358,10 @@ typedef enum aarch64_opnd_qualifier aarch64_opnd_qualifier_t;
 typedef aarch64_opnd_qualifier_t	\
 	  aarch64_opnd_qualifier_seq_t [AARCH64_MAX_OPND_NUM];
 
-/* FIXME: improve the efficiency.  */
 static inline bool
 empty_qualifier_sequence_p (const aarch64_opnd_qualifier_t *qualifiers)
 {
-  int i;
-  for (i = 0; i < AARCH64_MAX_OPND_NUM; ++i)
-    if (qualifiers[i] != AARCH64_OPND_QLF_NIL)
-      return false;
-  return true;
+  return qualifiers[0] == AARCH64_OPND_QLF_UNUSED;
 }
 
 /*  Forward declare error reporting type.  */
