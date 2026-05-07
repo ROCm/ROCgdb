@@ -1062,15 +1062,13 @@ aarch64_ext_ft (const aarch64_operand *self ATTRIBUTE_UNUSED,
       || inst->opcode->iclass == ldstpair_off
       || inst->opcode->iclass == loadlit)
     {
-      enum aarch64_opnd_qualifier qualifier;
       switch (value)
 	{
-	case 0: qualifier = AARCH64_OPND_QLF_S_S; break;
-	case 1: qualifier = AARCH64_OPND_QLF_S_D; break;
-	case 2: qualifier = AARCH64_OPND_QLF_S_Q; break;
+	case 0: info->qualifier = AARCH64_OPND_QLF_S_S; break;
+	case 1: info->qualifier = AARCH64_OPND_QLF_S_D; break;
+	case 2: info->qualifier = AARCH64_OPND_QLF_S_Q; break;
 	default: return false;
 	}
-      info->qualifier = qualifier;
     }
   else
     {
@@ -1117,8 +1115,7 @@ aarch64_ext_rcpc3_addr_opt_offset (const aarch64_operand *self ATTRIBUTE_UNUSED,
       enum aarch64_opnd type;
       for (int i = 0; i < AARCH64_MAX_OPND_NUM; i++)
 	{
-	  aarch64_opnd_info opnd = info[i];
-	  type = opnd.type;
+	  type = info[i].type;
 	  if (aarch64_operands[type].op_class == AARCH64_OPND_CLASS_ADDRESS)
 	    break;
 	}
