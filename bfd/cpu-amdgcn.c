@@ -70,7 +70,8 @@ static const bfd_arch_info_type arch_info_struct[] =
   N (bfd_mach_amdgcn_gfx10_1_generic, "amdgcn:gfx10-1-generic", false, NN (25)),
   N (bfd_mach_amdgcn_gfx10_3_generic, "amdgcn:gfx10-3-generic", false, NN (26)),
   N (bfd_mach_amdgcn_gfx11_generic, "amdgcn:gfx11-generic", false, NN (27)),
-  N (bfd_mach_amdgcn_gfx12_generic, "amdgcn:gfx12-generic", false, NULL),
+  N (bfd_mach_amdgcn_gfx12_generic, "amdgcn:gfx12-generic", false, NN (28)),
+  N (bfd_mach_amdgcn_gfx12_5_generic, "amdgcn:gfx12-5-generic", false, NULL),
 };
 
 const bfd_arch_info_type bfd_amdgcn_arch =
