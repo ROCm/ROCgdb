@@ -8,9 +8,11 @@ What is a binutils security bug?
     network, or might compromise the security of data stored on it.
     In the context of GNU Binutils there are two ways in which such
     bugs might occur.  In the first, the programs themselves might be
-    tricked into a direct compromise of security.  In the second, the
-    tools might introduce a vulnerability in the generated output that
-    was not already present in the files used as input.
+    tricked into a direct compromise of security, allowing operations
+    with elevated or unauthorized permissions than the executing
+    user.  In the second, the tools might introduce a vulnerability in
+    the generated output that was not already present in the files
+    used as input.
 
     Other than that, all other bugs will be treated as non-security
     issues.  This does not mean that they will be ignored, just that
@@ -33,6 +35,20 @@ Notes:
     The inspection tools are intended to be robust but nevertheless
     they should be appropriately sandboxed if they are used to examine
     malicious or potentially malicious input files.
+
+    The tools assume that the input is to be trusted.  If this is not
+    the case then the tools should be run inside a sandboxed
+    environment to ensure that they do not compromise the host
+    environment.  In the context of this document then a bug which
+    relies upon using untrusted input, eg a crafted binary, must show
+    that the result is a breach of trust boundary, e.g. being able to
+    execute code as another user or root, or escape from the sandboxed
+    environment.  If this is not possible then the bug will not be
+    considered a security bug.
+
+    All the tools in binutils are command line programs or internal
+    libraries used to build those programs.  None of them are intended
+    to provide a network accessible service.
 
 Reporting private security bugs
 ===============================
