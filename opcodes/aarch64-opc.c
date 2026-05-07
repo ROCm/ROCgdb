@@ -173,8 +173,6 @@ get_data_pattern (const aarch64_opnd_qualifier_seq_t qualifiers)
       if (qualifiers[0] == qualifiers[1]
 	  && vector_qualifier_p (qualifiers[2])
 	  && (aarch64_get_qualifier_esize (qualifiers[0])
-	      == aarch64_get_qualifier_esize (qualifiers[1]))
-	  && (aarch64_get_qualifier_esize (qualifiers[0])
 	      == aarch64_get_qualifier_esize (qualifiers[2])))
 	return DP_VECTOR_3SAME;
       /* e.g. v.8h, v.8b, v.8b.
@@ -190,9 +188,7 @@ get_data_pattern (const aarch64_opnd_qualifier_seq_t qualifiers)
 	  && vector_qualifier_p (qualifiers[2])
 	  && aarch64_get_qualifier_esize (qualifiers[0]) != 0
 	  && (aarch64_get_qualifier_esize (qualifiers[0])
-	      == aarch64_get_qualifier_esize (qualifiers[2]) << 1)
-	  && (aarch64_get_qualifier_esize (qualifiers[0])
-	      == aarch64_get_qualifier_esize (qualifiers[1])))
+	      == aarch64_get_qualifier_esize (qualifiers[2]) << 1))
 	return DP_VECTOR_WIDE;
     }
   else if (fp_qualifier_p (qualifiers[0]))
