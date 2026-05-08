@@ -482,7 +482,7 @@ does not insert a version string.  This is the default.
 @item --enable-non-contiguous-regions
 This option avoids generating an error if an input section does not
 fit a matching output section. The linker tries to allocate the input
-section to subseque nt matching output sections, and generates an
+section to subsequent matching output sections, and generates an
 error only if no output section is large enough.  This is useful when
 several non-contiguous memory regions are available and the input
 section does not require a particular one.  The order in which input
