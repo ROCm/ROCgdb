@@ -2,6 +2,7 @@
 #objdump: --syms
 #objcopy: --localize-hidden
 #name: --localize-hidden test 1
+#warning_output: localize-hidden-1.l
 #...
 0+1200 l .*\*ABS\*	0+ \.hidden Lhidden
 0+1300 l .*\*ABS\*	0+ \.internal Linternal

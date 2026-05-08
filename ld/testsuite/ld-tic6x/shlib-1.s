@@ -1,6 +1,7 @@
 	.text
 	.nocmp
 	.align	2
+	.global	sub1
 	.hidden	sub1
 	.type	sub1, @function
 sub1:

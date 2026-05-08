@@ -26,3 +26,12 @@ gu:	.dc.b 0
 	.protected we
 	.p2align 3
 	.dc.a we
+
+	.internal li
+li:	.dc.b 0
+
+	.hidden lh
+lh:	.dc.b 0
+
+	.protected lp
+lp:	.dc.b 0

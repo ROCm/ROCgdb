@@ -2730,6 +2730,23 @@ elf_adjust_symtab (void)
 {
   unsigned int i;
 
+  if (!had_errors ())
+    for (symbolS *symp = symbol_rootP; symp; symp = symbol_next (symp))
+      if (!symbol_removed_p (symp)
+	  && S_IS_DEFINED (symp)
+	  && (bfd_keep_unused_section_symbols (stdoutput)
+	      || !symbol_section_p (symp)
+	      || symbol_used_in_reloc_p (symp)))
+	{
+	  const asymbol *bfdsym = symbol_get_bfdsym (symp);
+	  elf_symbol_type *elfsym = elf_symbol_from (bfdsym);
+
+	  if (ELF_ST_VISIBILITY (elfsym->internal_elf_sym.st_other)
+	      && !(bfdsym->flags & (BSF_GLOBAL | BSF_WEAK | BSF_GNU_UNIQUE)))
+	    as_warn (_("local symbol `%s' has non-default visibility"),
+		     S_GET_NAME (symp));
+	}
+
   /* Make the SHT_GROUP sections that describe each section group.  We
      can't set up the section contents here yet, because elf section
      indices have yet to be calculated.  elf.c:set_group_contents does

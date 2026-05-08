@@ -1,5 +1,6 @@
 	.text
 	.type ifunc, @gnu_indirect_function
+	.global ifunc
 	.hidden ifunc
 ifunc:
 	ret
