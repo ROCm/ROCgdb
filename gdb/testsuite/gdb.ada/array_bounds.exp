@@ -32,12 +32,20 @@ if {![runto "bar.adb:$bp_location"]} {
 
 gdb_test "print itable'first" \
     "= 2"
+gdb_test "print ivector'first" \
+    "= 2"
 
 gdb_test "print itable'last" \
+    "= 5"
+gdb_test "print ivector'last" \
     "= 5"
 
 gdb_test "print table'first" \
     "= zero"
+gdb_test "print vector'first" \
+    "= zero"
 
 gdb_test "print table'last" \
+    "= two"
+gdb_test "print vector'last" \
     "= two"
