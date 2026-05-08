@@ -1532,6 +1532,15 @@ is_hidden_symbol (asymbol *sym)
   return false;
 }
 
+static void
+clear_visibility (asymbol *sym)
+{
+  elf_symbol_type *elf_sym = elf_symbol_from (sym);
+
+  if (elf_sym != NULL)
+    elf_sym->internal_elf_sym.st_other &= ~ELF_ST_VISIBILITY (~0);
+}
+
 /* Empty name is hopefully never a valid symbol name.  */
 static const char * empty_name = "";
 
@@ -1765,6 +1774,7 @@ filter_symbols (bfd *abfd, bfd *obfd, asymbol **osyms,
 	    {
 	      flags &= ~(BSF_GLOBAL | BSF_WEAK);
 	      flags |= BSF_LOCAL;
+	      clear_visibility (sym);
 	    }
 
 	  else if (!undefined
