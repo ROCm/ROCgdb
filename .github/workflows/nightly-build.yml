@@ -1,0 +1,116 @@
+name: Nightly ROCgdb Build
+
+on:
+  schedule:
+    - cron: '7 2 * * *'  # 2:07 AM UTC
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'ROCgdb branch/ref to build (defaults to master)'
+        required: false
+        default: 'master'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-rocgdb-${{ inputs.branch || 'master' }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    name: Resolve TheRock references
+    runs-on: ubuntu-24.04
+    outputs:
+      therock_commit_ref: ${{ steps.read.outputs.therock_commit_ref }}
+      build_image: ${{ steps.read.outputs.build_image }}
+      build_runs_on: ${{ steps.runner.outputs.build_runs_on }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Read TheRock dependency pins
+        id: read
+        run: python3 .github/scripts/config.py therock_commit_ref build_image
+
+      - name: Select build runner
+        id: runner
+        run: python3 .github/scripts/select_runner.py build_runs_on
+
+  nightly-rocgdb-build-linux:
+    name: Nightly ROCgdb Build Linux
+    needs: resolve
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/therock-ci-linux.yml
+    with:
+      amdgpu_families: dcgpu-all;dgpu-all;igpu-all
+      artifact_group: nightly-rocgdb-multiarch
+      build_runs_on: ${{ needs.resolve.outputs.build_runs_on }}
+      therock_commit_ref: ${{ needs.resolve.outputs.therock_commit_ref }}
+      build_image: ${{ needs.resolve.outputs.build_image }}
+      rocgdb_ref: ${{ inputs.branch || 'master' }}
+      extra_cmake_options: >
+        -DTHEROCK_AMDGPU_DIST_BUNDLE_NAME=multiarch
+        -DTHEROCK_ENABLE_ALL=OFF
+        -DTHEROCK_BUILD_TESTING=ON
+        -DTHEROCK_ENABLE_DEBUG_TOOLS=ON
+        -DTHEROCK_SHARED_PYTHON_EXECUTABLES=/opt/python-shared/cp310-cp310/bin/python3;/opt/python-shared/cp311-cp311/bin/python3;/opt/python-shared/cp312-cp312/bin/python3;/opt/python-shared/cp313-cp313/bin/python3;/opt/python-shared/cp314-cp314/bin/python3
+        -DTHEROCK_DIST_PYTHON_EXECUTABLES=/opt/python/cp310-cp310/bin/python;/opt/python/cp311-cp311/bin/python;/opt/python/cp312-cp312/bin/python;/opt/python/cp313-cp313/bin/python
+        -DTHEROCK_USE_EXTERNAL_ROCGDB=ON
+        -DTHEROCK_ROCGDB_SOURCE_DIR=./rocgdb_under_test
+        -DTHEROCK_ROCGDB_UPSTREAM_BUILD=ON
+        -DTHEROCK_ROCGDB_DOWNLOAD_CI_SCRIPT=ON
+
+  test-gpu:
+    name: Test GPU
+    needs: [nightly-rocgdb-build-linux]
+    if: ${{ needs.nightly-rocgdb-build-linux.result == 'success' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      amdgpu_families: gfx94X
+      artifact_group: nightly-rocgdb-multiarch
+      therock_ref: ${{ needs.nightly-rocgdb-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-gpu
+
+  test-cpu:
+    name: Test CPU
+    needs: [nightly-rocgdb-build-linux]
+    if: ${{ needs.nightly-rocgdb-build-linux.result == 'success' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      # CPU tests are gfx-independent; gfx94X selects the artifact set to fetch.
+      amdgpu_families: gfx94X
+      artifact_group: nightly-rocgdb-multiarch
+      therock_ref: ${{ needs.nightly-rocgdb-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-cpu
+
+  nightly_build_summary:
+    name: Nightly Build Summary
+    if: always()
+    needs:
+      - resolve
+      - nightly-rocgdb-build-linux
+      - test-gpu
+      - test-cpu
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Output failed jobs
+        run: |
+          echo '${{ toJson(needs) }}'
+          FAILED_JOBS="$(echo '${{ toJson(needs) }}' \
+            | jq --raw-output \
+            'map_values(select(.result!="success" and .result!="skipped")) | keys | join(",")' \
+          )"
+          if [[ "${FAILED_JOBS}" != "" ]]; then
+            echo "The following jobs failed: ${FAILED_JOBS}"
+            exit 1
+          fi
