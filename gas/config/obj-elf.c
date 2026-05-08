@@ -404,21 +404,24 @@ static void
 obj_elf_visibility (int visibility)
 {
   int c;
-  symbolS *symbolP;
-  asymbol *bfdsym;
-  elf_symbol_type *elfsym;
 
   do
     {
-      symbolP = get_sym_from_input_line_and_check ();
-
-      bfdsym = symbol_get_bfdsym (symbolP);
-      elfsym = elf_symbol_from (bfdsym);
+      symbolS *symbolP = get_sym_from_input_line_and_check ();
+      const asymbol *bfdsym = symbol_get_bfdsym (symbolP);
+      elf_symbol_type *elfsym = elf_symbol_from (bfdsym);
+      int current = ELF_ST_VISIBILITY (elfsym->internal_elf_sym.st_other);
 
       gas_assert (elfsym);
 
-      elfsym->internal_elf_sym.st_other &= ~3;
-      elfsym->internal_elf_sym.st_other |= visibility;
+      if (!current || visibility <= current)
+	{
+	  elfsym->internal_elf_sym.st_other &= ~ELF_ST_VISIBILITY (~0);
+	  elfsym->internal_elf_sym.st_other |= visibility;
+	}
+      else
+	as_warn (_("visibility of `%s' is already `%s'"), S_GET_NAME (symbolP),
+		 current == STV_HIDDEN ? "hidden" : "internal");
 
       c = *input_line_pointer;
       if (c == ',')

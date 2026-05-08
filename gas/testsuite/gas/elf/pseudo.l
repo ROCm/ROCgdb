@@ -4,6 +4,7 @@
 [^:]*:6: Error: Missing symbol name in directive
 [^:]*:8: Error: Missing symbol name in directive
 [^:]*:10: Error: Missing symbol name in directive
+[^:]*:10: Warning: visibility of .* is already .internal.
 [^:]*:12: Error: Missing symbol name in directive
 [^:]*:14: Error: Missing symbol name in directive
 [^:]*:14: Error: expected comma after name in .symver
