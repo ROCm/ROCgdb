@@ -277,11 +277,9 @@ show_symbol_print (struct ui_file *file, int from_tty,
 
 
 
-/* A helper function for val_print.  When printing in "summary" mode,
-   we want to print scalar arguments, but not aggregate arguments.
-   This function distinguishes between the two.  */
+/* See valprint.h.  */
 
-int
+bool
 val_print_scalar_type_p (struct type *type)
 {
   type = check_typedef (type);
@@ -297,9 +295,9 @@ val_print_scalar_type_p (struct type *type)
     case TYPE_CODE_UNION:
     case TYPE_CODE_SET:
     case TYPE_CODE_STRING:
-      return 0;
+      return false;
     default:
-      return 1;
+      return true;
     }
 }
 
@@ -317,7 +315,7 @@ val_print_scalar_or_string_type_p (struct type *type,
 
 /* See valprint.h.  */
 
-int
+bool
 valprint_check_validity (struct ui_file *stream,
 			 struct type *type,
 			 LONGEST embedded_offset,
@@ -328,13 +326,13 @@ valprint_check_validity (struct ui_file *stream,
   if (type_not_associated (type))
     {
       val_print_not_associated (stream);
-      return 0;
+      return false;
     }
 
   if (type_not_allocated (type))
     {
       val_print_not_allocated (stream);
-      return 0;
+      return false;
     }
 
   if (type->code () != TYPE_CODE_UNION
@@ -345,14 +343,14 @@ valprint_check_validity (struct ui_file *stream,
 				       TARGET_CHAR_BIT * type->length ()))
 	{
 	  val_print_optimized_out (val, stream);
-	  return 0;
+	  return false;
 	}
 
       if (val->bits_synthetic_pointer (TARGET_CHAR_BIT * embedded_offset,
 				       TARGET_CHAR_BIT * type->length ()))
 	{
-	  const int is_ref = type->code () == TYPE_CODE_REF;
-	  int ref_is_addressable = 0;
+	  const bool is_ref = type->code () == TYPE_CODE_REF;
+	  bool ref_is_addressable = false;
 
 	  if (is_ref)
 	    {
@@ -373,11 +371,11 @@ valprint_check_validity (struct ui_file *stream,
       if (!val->bytes_available (embedded_offset, type->length ()))
 	{
 	  val_print_unavailable (stream);
-	  return 0;
+	  return false;
 	}
     }
 
-  return 1;
+  return true;
 }
 
 void
@@ -609,9 +607,9 @@ generic_val_print_ref (struct type *type,
   const bool value_is_synthetic
     = original_value->bits_synthetic_pointer (TARGET_CHAR_BIT * embedded_offset,
 					      TARGET_CHAR_BIT * type->length ());
-  const int must_coerce_ref = ((options->addressprint && value_is_synthetic)
-			       || options->deref_ref);
-  const int type_is_defined = elttype->code () != TYPE_CODE_UNDEF;
+  const bool must_coerce_ref = ((options->addressprint && value_is_synthetic)
+				|| options->deref_ref);
+  const bool type_is_defined = elttype->code () != TYPE_CODE_UNDEF;
   const gdb_byte *valaddr = original_value->contents_for_printing ().data ();
 
   if (must_coerce_ref && type_is_defined)
@@ -687,7 +685,7 @@ generic_val_print_enum_1 (struct type *type, LONGEST val,
     }
   else if (type->is_flag_enum ())
     {
-      int first = 1;
+      bool first = true;
 
       /* We have a "flag" enum, so we try to decompose it into pieces as
 	 appropriate.  The enum may have multiple enumerators representing
@@ -707,7 +705,7 @@ generic_val_print_enum_1 (struct type *type, LONGEST val,
 	      if (first)
 		{
 		  gdb_puts ("(", stream);
-		  first = 0;
+		  first = false;
 		}
 	      else
 		gdb_puts (" | ", stream);
@@ -1157,11 +1155,11 @@ val_print_check_max_depth (struct ui_file *stream, int recurse,
   return false;
 }
 
-/* Check whether the value VAL is printable.  Return 1 if it is;
-   return 0 and print an appropriate error message to STREAM according to
-   OPTIONS if it is not.  */
+/* Check whether the value VAL is printable.  Return true if it is;
+   return false and print an appropriate error message to STREAM
+   according to OPTIONS if it is not.  */
 
-static int
+static bool
 value_check_printable (struct value *val, struct ui_file *stream,
 		       const struct value_print_options *options)
 {
@@ -1169,7 +1167,7 @@ value_check_printable (struct value *val, struct ui_file *stream,
     {
       fprintf_styled (stream, metadata_style.style (),
 		      _("<address of value unknown>"));
-      return 0;
+      return false;
     }
 
   if (val->entirely_optimized_out ())
@@ -1178,7 +1176,7 @@ value_check_printable (struct value *val, struct ui_file *stream,
 	gdb_printf (stream, "...");
       else
 	val_print_optimized_out (val, stream);
-      return 0;
+      return false;
     }
 
   if (val->entirely_unavailable ())
@@ -1187,7 +1185,7 @@ value_check_printable (struct value *val, struct ui_file *stream,
 	gdb_printf (stream, "...");
       else
 	val_print_unavailable (stream);
-      return 0;
+      return false;
     }
 
   if (val->type ()->code () == TYPE_CODE_INTERNAL_FUNCTION)
@@ -1195,16 +1193,16 @@ value_check_printable (struct value *val, struct ui_file *stream,
       fprintf_styled (stream, metadata_style.style (),
 		      _("<internal function %s>"),
 		      value_internal_function_name (val));
-      return 0;
+      return false;
     }
 
   if (type_not_allocated (val->type ()))
     {
       val_print_not_allocated (stream);
-      return 0;
+      return false;
     }
 
-  return 1;
+  return true;
 }
 
 /* See valprint.h.  */
