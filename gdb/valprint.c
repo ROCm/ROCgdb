@@ -318,7 +318,7 @@ val_print_scalar_or_string_type_p (struct type *type,
 bool
 valprint_check_validity (struct ui_file *stream,
 			 struct type *type,
-			 LONGEST embedded_offset,
+			 LONGEST field_byte_offset,
 			 const struct value *val)
 {
   type = check_typedef (type);
@@ -339,14 +339,14 @@ valprint_check_validity (struct ui_file *stream,
       && type->code () != TYPE_CODE_STRUCT
       && type->code () != TYPE_CODE_ARRAY)
     {
-      if (val->bits_any_optimized_out (TARGET_CHAR_BIT * embedded_offset,
+      if (val->bits_any_optimized_out (TARGET_CHAR_BIT * field_byte_offset,
 				       TARGET_CHAR_BIT * type->length ()))
 	{
 	  val_print_optimized_out (val, stream);
 	  return false;
 	}
 
-      if (val->bits_synthetic_pointer (TARGET_CHAR_BIT * embedded_offset,
+      if (val->bits_synthetic_pointer (TARGET_CHAR_BIT * field_byte_offset,
 				       TARGET_CHAR_BIT * type->length ()))
 	{
 	  const bool is_ref = type->code () == TYPE_CODE_REF;
@@ -368,7 +368,7 @@ valprint_check_validity (struct ui_file *stream,
 	  return is_ref;
 	}
 
-      if (!val->bytes_available (embedded_offset, type->length ()))
+      if (!val->bytes_available (field_byte_offset, type->length ()))
 	{
 	  val_print_unavailable (stream);
 	  return false;

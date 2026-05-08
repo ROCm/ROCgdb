@@ -199,12 +199,12 @@ extern void print_function_pointer_address (const struct value_print_options *op
 
    If TYPE represents some aggregate type (e.g., a structure), return true.
 
-   For non-aggregate TYPEs, if any of the bytes starting at EMBEDDED_OFFSET
+   For non-aggregate TYPEs, if any of the bytes starting at FIELD_BYTE_OFFSET
    and extending for TYPE->length () bytes are invalid, print a message to
    STREAM and return false.  Otherwise, return true.  */
 
 extern bool valprint_check_validity (struct ui_file *stream, struct type *type,
-				     LONGEST embedded_offset,
+				     LONGEST field_byte_offset,
 				     const struct value *val);
 
 extern void val_print_optimized_out (const struct value *val,
