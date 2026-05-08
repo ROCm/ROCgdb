@@ -9,6 +9,10 @@ on:
         type: string
       extra_cmake_options:
         type: string
+      rocgdb_ref:
+        type: string
+        required: false
+        description: 'ROCgdb branch/ref to checkout (defaults to workflow trigger ref)'
       build_runs_on:
         type: string
         default: aws-linux-scale-rocm-prod
@@ -61,6 +65,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           path: rocgdb_under_test
+          ref: ${{ inputs.rocgdb_ref || github.sha }}
 
       - name: Install python deps
         run: |
