@@ -1,5 +1,9 @@
 -*- text -*-
 
+* The AArch64 disassembler now accepts a command line option of "-M annotate"
+  which displays the symbol associated with undefined instructions, should
+  there be one.
+  
 * The x86 and x86_64 disassemblers now accept a command line option of
   "-M annotate-immediates" which displays the symbol associated with immediate
   values, should there be one.

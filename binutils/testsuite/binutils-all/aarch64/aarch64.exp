@@ -28,3 +28,35 @@ foreach t $test_list {
     verbose [file rootname $t]
     run_dump_test [file rootname $t]
 }
+
+# Test objdump -M annotate
+
+proc test_objdump_M_annotate { } {
+    global srcdir
+    global subdir
+    global OBJDUMP
+    global OBJDUMPFLAGS
+
+    set test "objdump -M annotate"
+
+    set result [target_compile "$srcdir/$subdir/objdumpM1.c $srcdir/$subdir/objdumpM2.c" tmpdir/objdumpM executable debug]
+    if { $result != "" } {
+	unsupported "$test (build): compile result: $result"
+	return
+    }
+
+    set got [binutils_run $OBJDUMP "$OBJDUMPFLAGS -D -M annotate tmpdir/objdumpM"]
+
+    # Look for something like this in the disassembly:
+    #   420020:	00400780 .inst	0x00400780 ; [func1]
+    set want "; \[func1\]"
+
+    if [regexp $want $got] then {
+	pass $test
+	# file delete objdumpM
+    } else {
+	fail $test
+    }
+}
+
+test_objdump_M_annotate
