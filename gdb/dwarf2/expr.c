@@ -492,7 +492,8 @@ check_pieced_synthetic_pointer (const value *value, LONGEST bit_offset,
   piece_closure *c = (piece_closure *) value->computed_closure ();
   int i;
 
-  bit_offset += 8 * value->offset ();
+  bit_offset += (TARGET_CHAR_BIT
+		 * (value->offset () + value->embedded_offset ()));
   if (value->bitsize ())
     bit_offset += value->bitpos ();
 
@@ -537,8 +538,9 @@ indirect_pieced_value (value *value)
   if (type->code () != TYPE_CODE_PTR)
     return NULL;
 
-  int bit_length = 8 * type->length ();
-  LONGEST bit_offset = 8 * value->offset ();
+  int bit_length = TARGET_CHAR_BIT * type->length ();
+  LONGEST bit_offset
+    = (TARGET_CHAR_BIT * (value->offset () + value->embedded_offset ()));
   if (value->bitsize ())
     bit_offset += value->bitpos ();
 
@@ -602,8 +604,7 @@ coerce_pieced_ref (const value *value)
 {
   struct type *type = check_typedef (value->type ());
 
-  if (value->bits_synthetic_pointer (value->embedded_offset (),
-				     TARGET_CHAR_BIT * type->length ()))
+  if (value->bits_synthetic_pointer (0, TARGET_CHAR_BIT * type->length ()))
     {
       const piece_closure *closure
 	= (piece_closure *) value->computed_closure ();

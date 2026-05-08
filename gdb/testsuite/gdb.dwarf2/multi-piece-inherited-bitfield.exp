@@ -1,0 +1,151 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Setup a derived struct that uses multiple inheritance and is described
+# by a multi-piece DWARF location.  The second base class contains a
+# bitfield member.  At one time, printing such a struct would incorrectly
+# display the bitfield as <synthetic pointer>.
+#
+# The cause was that check_pieced_synthetic_pointer (dwarf2/expr.c)
+# computes the bit offset as 8 * value->offset() but does not add
+# 8 * value->embedded_offset().  When a base subobject is extracted via
+# primitive_field, it gets a non-zero embedded_offset but offset remains
+# zero.  check_pieced_synthetic_pointer then checks piece 0 instead of
+# the correct piece, and if piece 0 happens to be an implicit pointer,
+# it incorrectly reports the bitfield as a synthetic pointer.
+
+require allow_cplus_tests
+
+load_lib dwarf.exp
+
+# This test can only be run on targets which support DWARF-2 and use gas.
+require dwarf2_support
+
+standard_testfile .c .S
+
+set asm_file [standard_output_file ${srcfile2}]
+
+# First compile the C file only, so we can query some type sizes.
+if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
+    return
+}
+
+Dwarf::assemble ${asm_file} {
+    cu {} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_C_plus_plus
+	} {
+	    declare_labels char_label int_label first_label second_label \
+		derived_label target_label
+	    set int_size [get_sizeof "int" -1]
+
+	    char_label: DW_TAG_base_type {
+		DW_AT_byte_size 1 DW_FORM_udata
+		DW_AT_encoding @DW_ATE_unsigned_char
+		DW_AT_name "char"
+	    }
+
+	    int_label: DW_TAG_base_type {
+		DW_AT_byte_size ${int_size} DW_FORM_udata
+		DW_AT_encoding @DW_ATE_signed
+		DW_AT_name "int"
+	    }
+
+	    first_label: DW_TAG_structure_type {
+		DW_AT_name "First"
+		DW_AT_byte_size 1 DW_FORM_udata
+	    } {
+		DW_TAG_member {
+		    DW_AT_name "a"
+		    DW_AT_type :${char_label}
+		    DW_AT_data_member_location 0 DW_FORM_udata
+		}
+	    }
+
+	    second_label: DW_TAG_structure_type {
+		DW_AT_name "Second"
+		DW_AT_byte_size 1 DW_FORM_udata
+	    } {
+		DW_TAG_member {
+		    DW_AT_name "bf"
+		    DW_AT_type :${int_label}
+		    DW_AT_data_member_location 0 DW_FORM_udata
+		    DW_AT_bit_size 8 DW_FORM_udata
+		}
+	    }
+
+	    derived_label: DW_TAG_structure_type {
+		DW_AT_name "Derived"
+		DW_AT_byte_size 2 DW_FORM_udata
+	    } {
+		DW_TAG_inheritance {
+		    DW_AT_type :${first_label}
+		    DW_AT_data_member_location 0 DW_FORM_udata
+		}
+
+		DW_TAG_inheritance {
+		    DW_AT_type :${second_label}
+		    DW_AT_data_member_location 1 DW_FORM_udata
+		}
+	    }
+
+	    target_label: DW_TAG_variable {
+		DW_AT_name "target_var"
+		DW_AT_type :${int_label}
+		DW_AT_external 1 DW_FORM_flag
+		DW_AT_location {
+		    DW_OP_addr [gdb_target_symbol "target_var"]
+		} SPECIAL_expr
+	    }
+
+	    DW_TAG_subprogram {
+		MACRO_AT_func { "main" }
+		DW_AT_type :${int_label}
+		DW_AT_external 1 DW_FORM_flag
+	    } {
+		DW_TAG_variable {
+		    DW_AT_name "d"
+		    DW_AT_type :${derived_label}
+		    DW_AT_location {
+			DW_OP_GNU_implicit_pointer $target_label 0
+			DW_OP_piece 1
+			DW_OP_const1u 42
+			DW_OP_stack_value
+			DW_OP_piece 1
+		    } SPECIAL_expr
+		}
+	    }
+	}
+    }
+}
+
+# Now compile both C source and generated DWARF assembly.
+if {[prepare_for_testing "failed to prepare" ${testfile} \
+	 [list ${asm_file} ${srcfile}] {}]} {
+    return
+}
+
+# Start the inferior so that 'd' is in scope.
+if {![runto_main]} {
+    return
+}
+
+# With the bug in check_pieced_synthetic_pointer, the bitfield bf in the
+# Second base subobject is incorrectly reported as <synthetic pointer>.
+# This happens because check_pieced_synthetic_pointer does not account for
+# embedded_offset, so it checks piece 0 (the implicit pointer covering
+# First) instead of piece 1 (the stack value covering Second).
+gdb_test "print d" " = {<First> = {a = <synthetic pointer>}, <Second> = {bf = 42}, <No data fields>}" \
+    "bitfield in base subobject is not synthetic pointer"

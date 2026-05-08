@@ -47,7 +47,8 @@ Dwarf::assemble ${asm_file} {
 	DW_TAG_compile_unit {
 	    DW_AT_language @DW_LANG_C_plus_plus
 	} {
-	    declare_labels int_label struct_label ref_type_label target_label
+	    declare_labels int_label struct_label ref_type_label target_label \
+		first_label second_label derived_label
 	    set int_size [get_sizeof "int" -1]
 	    set addr_size [get_sizeof "void *" -1]
 	    set struct_size [expr {$int_size + $addr_size}]
@@ -80,6 +81,43 @@ Dwarf::assemble ${asm_file} {
 		}
 	    }
 
+	    first_label: DW_TAG_structure_type {
+		DW_AT_name "first"
+		DW_AT_byte_size ${int_size} DW_FORM_udata
+	    } {
+		DW_TAG_member {
+		    DW_AT_name "x"
+		    DW_AT_type :${int_label}
+		    DW_AT_data_member_location 0 DW_FORM_udata
+		}
+	    }
+
+	    second_label: DW_TAG_structure_type {
+		DW_AT_name "second"
+		DW_AT_byte_size ${addr_size} DW_FORM_udata
+	    } {
+		DW_TAG_member {
+		    DW_AT_name "ref"
+		    DW_AT_type :${ref_type_label}
+		    DW_AT_data_member_location 0 DW_FORM_udata
+		}
+	    }
+
+	    derived_label: DW_TAG_structure_type {
+		DW_AT_name "derived"
+		DW_AT_byte_size ${struct_size} DW_FORM_udata
+	    } {
+		DW_TAG_inheritance {
+		    DW_AT_type :${first_label}
+		    DW_AT_data_member_location 0 DW_FORM_udata
+		}
+
+		DW_TAG_inheritance {
+		    DW_AT_type :${second_label}
+		    DW_AT_data_member_location ${int_size} DW_FORM_udata
+		}
+	    }
+
 	    target_label: DW_TAG_variable {
 		DW_AT_name "target_var"
 		DW_AT_type :${int_label}
@@ -99,6 +137,18 @@ Dwarf::assemble ${asm_file} {
 		    DW_AT_type :${struct_label}
 		    DW_AT_location {
 			DW_OP_const4u 123
+			DW_OP_stack_value
+			DW_OP_piece $int_size
+			DW_OP_GNU_implicit_pointer $target_label 0
+			DW_OP_piece $addr_size
+		    } SPECIAL_expr
+		}
+
+		DW_TAG_variable {
+		    DW_AT_name "d"
+		    DW_AT_type :${derived_label}
+		    DW_AT_location {
+			DW_OP_const4u 456
 			DW_OP_stack_value
 			DW_OP_piece $int_size
 			DW_OP_GNU_implicit_pointer $target_label 0
@@ -128,3 +178,13 @@ gdb_test "print s" " = {x = 123, ref = @$hex}" \
 
 gdb_test "print s.ref" " = \\(int &\\) @$hex: 42" \
     "print ref member of multi-piece struct"
+
+# Same test but with inheritance.  The reference field is in the
+# second base class, so it reaches coerce_pieced_ref through a
+# different path to the above case.
+gdb_test "print d" \
+    " = {<first> = {x = 456}, <second> = {ref = @$hex}, <No data fields>}" \
+    "print inherited multi-piece struct with implicit pointer ref"
+
+gdb_test "print d.ref" " = \\(int &\\) @$hex: 42" \
+    "print ref member of inherited multi-piece struct"
