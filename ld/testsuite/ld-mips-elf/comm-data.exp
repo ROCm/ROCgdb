@@ -93,6 +93,8 @@ if {[istarget *-img-elf*] \
     } else {
 	set abi_ldemul(o32) elf32ebmip
     }
+} elseif { [istarget *-*-haiku*] } {
+    set abi_ldemul(o32) elf_mipsel_haiku
 } else {
     if [istarget *el-*-*] {
 	set abi_ldemul(o32) elf32lsmip
