@@ -3,6 +3,8 @@
 #PROG: objcopy
 #objcopy: -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel -j .rela -j .rel.* -j .rela.* -j .rel* -j .rela* -j .reloc --output-target=efi-app-aarch64
 #objdump: -h -f
+# No `pei-aarch64-little' target support for Haiku.
+#notarget: *-*-haiku*
 #name: Check if efi app format is recognized
 
 .*:     file format pei-aarch64-little
