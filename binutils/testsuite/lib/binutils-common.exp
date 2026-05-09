@@ -37,6 +37,7 @@ proc is_elf_format {} {
 	 && ![istarget *-*-*freebsd*]
 	 && ![istarget *-*-fuchsia*]
 	 && ![istarget *-*-gnu*]
+	 && ![istarget *-*-haiku*]
 	 && ![istarget *-*-irix5*]
 	 && ![istarget *-*-irix6*]
 	 && ![istarget *-*-kaos*]
