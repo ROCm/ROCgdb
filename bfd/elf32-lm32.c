@@ -2208,10 +2208,6 @@ lm32_elf_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
   if (htab == NULL)
     return false;
 
-  /* Make sure we have a GOT - For the case where we have a dynamic object
-     but none of the relocs in check_relocs */
-  if (!_bfd_elf_create_got_section (abfd, info))
-    return false;
   if (IS_FDPIC (abfd) && (htab->sfixup32 == NULL))
     {
       if (! create_rofixup_section (abfd, info))
