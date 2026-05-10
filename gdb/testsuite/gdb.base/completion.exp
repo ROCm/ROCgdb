@@ -90,16 +90,6 @@ gdb_test "complete set cp-abi aut" "set cp-abi auto"
 # Test that completion of commands 'target FOO' works well.
 set targets [list "core" "tfile" "exec"]
 
-# Test that completion of command 'target ctf' if GDB supports ctf
-# target.
-gdb_test_multiple "target ctf" "" {
-    -re "Undefined target command: \"ctf\"\.  Try \"help target\"\.\r\n$gdb_prompt $" {
-    }
-    -re "No CTF directory specified.*\r\n$gdb_prompt $" {
-	lappend targets "ctf"
-    }
-}
-
 # Test artifacts are put in different locations depending on test
 # is a parallel run or not.  Firstly check file exists, and then
 # do the test on file completion.

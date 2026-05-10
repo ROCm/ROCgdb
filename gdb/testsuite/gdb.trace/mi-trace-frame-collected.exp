@@ -74,9 +74,6 @@ mi_gdb_test "-trace-stop" {.*\^done,stop-reason=.*} "trace stop"
 set tracefile [standard_output_file ${testfile}]
 mi_gdb_test "-trace-save ${tracefile}.tf" ".*\\^done" \
     "save tfile trace file"
-# Save trace frames to ctf.
-mi_gdb_test "-trace-save -ctf ${tracefile}.ctf" ".*\\^done" \
-    "save ctf trace file"
 
 # Test the MI command '-trace-frame-collected' with DATA_SOURCE as
 # trace data source.
@@ -137,26 +134,6 @@ proc test_trace_frame_collected { data_source } {
 }
 
 test_trace_frame_collected "live"
-
-# Change target to ctf if GDB supports it.
-set msg "-target-select ctf"
-send_gdb "-target-select ctf ${tracefile}.ctf\n"
-gdb_expect {
-    -re ".*\\^connected.*${mi_gdb_prompt}$" {
-	# GDB supports ctf, do the test.
-	test_trace_frame_collected "ctf"
-    }
-    -re ".*\\^error,msg=\"Undefined target command.*${mi_gdb_prompt}$" {
-	# GDB doesn't support ctf, skip the test.
-	unsupported "gdb does not support ctf target"
-    }
-    -re ".*$mi_gdb_prompt$" {
-	fail "$msg"
-    }
-    timeout {
-	fail "$msg (timeout)"
-    }
-}
 
 # Change target to tfile.
 mi_gdb_test "-target-select tfile ${tracefile}.tf" ".*\\^connected.*" \

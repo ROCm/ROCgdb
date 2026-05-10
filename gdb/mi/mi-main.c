@@ -2395,19 +2395,17 @@ void
 mi_cmd_trace_save (const char *command, const char *const *argv, int argc)
 {
   int target_saves = 0;
-  int generate_ctf = 0;
   const char *filename;
   int oind = 0;
   const char *oarg;
 
   enum opt
   {
-    TARGET_SAVE_OPT, CTF_OPT
+    TARGET_SAVE_OPT,
   };
   static const struct mi_opt opts[] =
     {
       {"r", TARGET_SAVE_OPT, 0},
-      {"ctf", CTF_OPT, 0},
       { 0, 0, 0 }
     };
 
@@ -2423,9 +2421,6 @@ mi_cmd_trace_save (const char *command, const char *const *argv, int argc)
 	case TARGET_SAVE_OPT:
 	  target_saves = 1;
 	  break;
-	case CTF_OPT:
-	  generate_ctf = 1;
-	  break;
 	}
     }
 
@@ -2435,10 +2430,7 @@ mi_cmd_trace_save (const char *command, const char *const *argv, int argc)
 
   filename = argv[oind];
 
-  if (generate_ctf)
-    trace_save_ctf (filename, target_saves);
-  else
-    trace_save_tfile (filename, target_saves);
+  trace_save_tfile (filename, target_saves);
 }
 
 void

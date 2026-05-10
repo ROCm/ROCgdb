@@ -416,8 +416,6 @@ extern void tfind_1 (enum trace_find_type type, int num,
 
 extern void trace_save_tfile (const char *filename,
 			      int target_does_save);
-extern void trace_save_ctf (const char *dirname,
-			    int target_does_save);
 
 extern traceframe_info_up parse_traceframe_info (const char *tframe_info);
 

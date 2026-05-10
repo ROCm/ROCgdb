@@ -1658,16 +1658,6 @@ This GDB was configured as follows:\n\
 "));
 #endif
 
-#if HAVE_LIBBABELTRACE
-  gdb_printf (stream, _("\
-	     --with-babeltrace\n\
-"));
-#else
-  gdb_printf (stream, _("\
-	     --without-babeltrace\n\
-"));
-#endif
-
 #if HAVE_LIBIPT
   gdb_printf (stream, _("\
 	     --with-intel-pt\n\
