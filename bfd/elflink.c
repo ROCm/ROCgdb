@@ -240,15 +240,6 @@ _bfd_elf_create_got_section (bfd *abfd, struct bfd_link_info *info)
 
   flags = bed->dynamic_sec_flags;
 
-  s = bfd_make_section_anyway_with_flags (abfd,
-					  (bed->rela_plts_and_copies_p
-					   ? ".rela.got" : ".rel.got"),
-					  flags | SEC_READONLY);
-  if (s == NULL
-      || !bfd_set_section_alignment (s, bed->s->log_file_align))
-    return false;
-  htab->srelgot = s;
-
   s = bfd_make_section_anyway_with_flags (abfd, ".got", flags);
   if (s == NULL
       || !bfd_set_section_alignment (s, bed->s->log_file_align))
@@ -279,6 +270,15 @@ _bfd_elf_create_got_section (bfd *abfd, struct bfd_link_info *info)
       if (h == NULL)
 	return false;
     }
+
+  s = bfd_make_section_anyway_with_flags (abfd,
+					  (bed->rela_plts_and_copies_p
+					   ? ".rela.got" : ".rel.got"),
+					  flags | SEC_READONLY);
+  if (s == NULL
+      || !bfd_set_section_alignment (s, bed->s->log_file_align))
+    return false;
+  htab->srelgot = s;
 
   return true;
 }
