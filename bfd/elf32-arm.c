@@ -3672,8 +3672,9 @@ elf32_arm_plt_needs_thumb_stub_p (struct bfd_link_info *info,
 
   htab = elf32_arm_hash_table (info);
 
-  return (!using_thumb_only (htab) && (arm_plt->thumb_refcount != 0
-	  || (!htab->use_blx && arm_plt->maybe_thumb_refcount != 0)));
+  return (!using_thumb_only (htab)
+	  && (arm_plt->thumb_refcount != 0
+	      || (!htab->use_blx && arm_plt->maybe_thumb_refcount != 0)));
 }
 
 /* Return a pointer to the head of the dynamic reloc list that should
@@ -3917,59 +3918,10 @@ elf32_arm_create_dynamic_sections (bfd *dynobj, struct bfd_link_info *info)
     return false;
 
 #ifdef OBJ_MAYBE_ELF_VXWORKS
-  if (htab->root.target_os == is_vxworks)
-    {
-      if (!elf_vxworks_create_dynamic_sections (dynobj, info, &htab->srelplt2))
-	return false;
-
-      if (bfd_link_pic (info))
-	{
-	  htab->plt_header_size = 0;
-	  htab->plt_entry_size
-	    = 4 * ARRAY_SIZE (elf32_arm_vxworks_shared_plt_entry);
-	}
-      else
-	{
-	  htab->plt_header_size
-	    = 4 * ARRAY_SIZE (elf32_arm_vxworks_exec_plt0_entry);
-	  htab->plt_entry_size
-	    = 4 * ARRAY_SIZE (elf32_arm_vxworks_exec_plt_entry);
-	}
-
-      if (elf_elfheader (dynobj))
-	elf_elfheader (dynobj)->e_ident[EI_CLASS] = ELFCLASS32;
-    }
-  else
-#endif /* OBJ_MAYBE_ELF_VXWORKS */
-    {
-      /* PR ld/16017
-	 Test for thumb only architectures.  Note - we cannot just call
-	 using_thumb_only() as the attributes in the output bfd have not been
-	 initialised at this point, so instead we use the input bfd.  */
-      bfd * saved_obfd = htab->obfd;
-
-      htab->obfd = dynobj;
-      if (using_thumb_only (htab))
-	{
-	  htab->plt_header_size = 4 * ARRAY_SIZE (elf32_thumb2_plt0_entry);
-	  htab->plt_entry_size  = 4 * ARRAY_SIZE (elf32_thumb2_plt_entry);
-	}
-      htab->obfd = saved_obfd;
-    }
-
-  if (htab->fdpic_p) {
-    htab->plt_header_size = 0;
-    if (info->flags & DF_BIND_NOW)
-      htab->plt_entry_size = 4 * (ARRAY_SIZE (elf32_arm_fdpic_plt_entry) - 5);
-    else
-      htab->plt_entry_size = 4 * ARRAY_SIZE (elf32_arm_fdpic_plt_entry);
-  }
-
-  if (!htab->root.splt
-      || !htab->root.srelplt
-      || !htab->root.sdynbss
-      || (!bfd_link_pic (info) && !htab->root.srelbss))
-    abort ();
+  if (htab->root.target_os == is_vxworks
+      && !elf_vxworks_create_dynamic_sections (dynobj, info, &htab->srelplt2))
+    return false;
+#endif
 
   return true;
 }
@@ -6408,7 +6360,6 @@ elf32_arm_size_stubs (bfd *output_bfd,
 		     bfd_get_mach (output_bfd));
 
   /* Stash our params away.  */
-  htab->stub_bfd = stub_bfd;
   htab->add_stub_section = add_stub_section;
   htab->layout_sections_again = layout_sections_again;
   stubs_always_after_branch = group_size < 0;
@@ -7680,10 +7631,9 @@ bfd_elf32_arm_use_long_plt (void)
   elf32_arm_use_long_plt_entry = true;
 }
 
-/* Add the glue sections to ABFD.  This function is called from the
-   linker scripts in ld/emultempl/{armelf}.em.  */
+/* Add the glue sections to the stub bfd.  */
 
-bool
+static bool
 bfd_elf32_arm_add_glue_sections_to_bfd (bfd *abfd,
 					struct bfd_link_info *info)
 {
@@ -7740,11 +7690,9 @@ bfd_elf32_arm_keep_private_stub_output_sections (struct bfd_link_info *info)
     }
 }
 
-/* Select a BFD to be used to hold the sections used by the glue code.
-   This function is called from the linker scripts in ld/emultempl/
-   {armelf/pe}.em.  */
+/* Select a BFD to be used to hold the sections used by the glue code.  */
 
-bool
+static bool
 bfd_elf32_arm_get_bfd_for_interworking (bfd *abfd, struct bfd_link_info *info)
 {
   struct elf32_arm_link_hash_table *globals;
@@ -8996,9 +8944,9 @@ bfd_elf32_arm_stm32l4xx_erratum_scan (bfd *abfd,
 /* Set target relocation values needed during linking.  */
 
 void
-bfd_elf32_arm_set_target_params (struct bfd *output_bfd,
-				 struct bfd_link_info *link_info,
-				 struct elf32_arm_params *params)
+bfd_elf32_arm_set_target_params (struct bfd_link_info *link_info,
+				 const struct elf32_arm_params *params,
+				 struct bfd *stub_bfd)
 {
   struct elf32_arm_link_hash_table *globals;
 
@@ -9033,11 +8981,19 @@ bfd_elf32_arm_set_target_params (struct bfd *output_bfd,
   globals->cmse_implib = params->cmse_implib;
   globals->in_implib_bfd = params->in_implib_bfd;
 
-  BFD_ASSERT (is_arm_elf (output_bfd));
-  elf_arm_tdata (output_bfd)->no_enum_size_warning
+  BFD_ASSERT (is_arm_elf (link_info->output_bfd));
+  elf_arm_tdata (link_info->output_bfd)->no_enum_size_warning
     = params->no_enum_size_warning;
-  elf_arm_tdata (output_bfd)->no_wchar_size_warning
+  elf_arm_tdata (link_info->output_bfd)->no_wchar_size_warning
     = params->no_wchar_size_warning;
+
+  globals->stub_bfd = stub_bfd;
+  stub_bfd->flags |= BFD_LINKER_CREATED;
+  elf_elfheader (stub_bfd)->e_ident[EI_CLASS] = ELFCLASS32;
+
+  /* Also use the stub file for stubs placed in a single output section.  */
+  bfd_elf32_arm_add_glue_sections_to_bfd (stub_bfd, link_info);
+  bfd_elf32_arm_get_bfd_for_interworking (stub_bfd, link_info);
 }
 
 /* Replace the target offset of a Thumb bl or b.w instruction.  */
@@ -16698,6 +16654,38 @@ elf32_arm_late_size_sections (bfd * output_bfd ATTRIBUTE_UNUSED,
 	  s->size = sizeof ELF_DYNAMIC_INTERPRETER;
 	  s->contents = (unsigned char *) ELF_DYNAMIC_INTERPRETER;
 	  s->alloced = 1;
+	}
+
+#ifdef OBJ_MAYBE_ELF_VXWORKS
+      if (htab->root.target_os == is_vxworks)
+	{
+	  if (bfd_link_pic (info))
+	    {
+	      htab->plt_header_size = 0;
+	      htab->plt_entry_size
+		= 4 * ARRAY_SIZE (elf32_arm_vxworks_shared_plt_entry);
+	    }
+	  else
+	    {
+	      htab->plt_header_size
+		= 4 * ARRAY_SIZE (elf32_arm_vxworks_exec_plt0_entry);
+	      htab->plt_entry_size
+		= 4 * ARRAY_SIZE (elf32_arm_vxworks_exec_plt_entry);
+	    }
+	}
+      else
+#endif /* OBJ_MAYBE_ELF_VXWORKS */
+      if (htab->fdpic_p)
+	{
+	  htab->plt_header_size = 0;
+	  htab->plt_entry_size = 4 * ARRAY_SIZE (elf32_arm_fdpic_plt_entry);
+	  if (info->flags & DF_BIND_NOW)
+	    htab->plt_entry_size -= 4 * 5;
+	}
+      else if (using_thumb_only (htab))
+	{
+	  htab->plt_header_size = 4 * ARRAY_SIZE (elf32_thumb2_plt0_entry);
+	  htab->plt_entry_size  = 4 * ARRAY_SIZE (elf32_thumb2_plt_entry);
 	}
     }
 
