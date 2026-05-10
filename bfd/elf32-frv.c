@@ -5435,10 +5435,6 @@ elf32_frvfdpic_late_size_sections (bfd *output_bfd,
   asection *s;
   struct _frvfdpic_dynamic_got_plt_info gpinfo;
 
-  dynobj = elf_hash_table (info)->dynobj;
-  if (dynobj == NULL)
-    return true;
-
   if (elf_hash_table (info)->dynamic_sections_created)
     {
       /* Set the contents of the .interp section to the interpreter.  */
@@ -5451,6 +5447,9 @@ elf32_frvfdpic_late_size_sections (bfd *output_bfd,
 	  s->alloced = 1;
 	}
     }
+
+  if (frvfdpic_relocs_info (info) == NULL)
+    return true;
 
   memset (&gpinfo, 0, sizeof (gpinfo));
   gpinfo.g.info = info;
@@ -5470,6 +5469,7 @@ elf32_frvfdpic_late_size_sections (bfd *output_bfd,
 
   /* Allocate space to save the summary information, we're going to
      use it if we're doing relaxations.  */
+  dynobj = elf_hash_table (info)->dynobj;
   frvfdpic_dynamic_got_plt_info (info) = bfd_alloc (dynobj, sizeof (gpinfo.g));
 
   if (!_frvfdpic_size_got_plt (output_bfd, &gpinfo))
