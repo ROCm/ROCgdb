@@ -5248,28 +5248,28 @@ elf64_alpha_final_link (bfd *abfd, struct bfd_link_info *info)
   /* Now write out the computed sections.  */
 
   /* The .got subsections...  */
-  {
-    bfd *i, *dynobj = elf_hash_table(info)->dynobj;
-    for (i = htab->got_list;
-	 i != NULL;
-	 i = alpha_elf_tdata(i)->got_link_next)
-      {
-	asection *sgot;
+  bfd *i, *dynobj = elf_hash_table(info)->dynobj;
+  for (i = htab->got_list;
+       i != NULL;
+       i = alpha_elf_tdata(i)->got_link_next)
+    {
+      asection *sgot;
 
-	/* elf_bfd_final_link already did everything in dynobj.  */
-	if (i == dynobj)
-	  continue;
+      /* elf_bfd_final_link already did everything in dynobj.  */
+      if (i == dynobj)
+	continue;
 
-	sgot = alpha_elf_tdata(i)->got;
-	if (! bfd_set_section_contents (abfd, sgot->output_section,
+      sgot = alpha_elf_tdata(i)->got;
+      if (sgot != NULL
+	  && !bfd_is_abs_section (sgot->output_section)
+	  && !bfd_set_section_contents (abfd, sgot->output_section,
 					sgot->contents,
 					(file_ptr) sgot->output_offset,
 					sgot->size))
-	  return false;
-      }
-  }
+	return false;
+    }
 
-  if (mdebug_sec != (asection *) NULL)
+  if (mdebug_sec != NULL)
     {
       BFD_ASSERT (abfd->output_has_begun);
       if (! bfd_ecoff_write_accumulated_debug (mdebug_handle, abfd, &debug,
