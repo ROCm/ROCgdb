@@ -1209,6 +1209,30 @@ type *dwarf2_fetch_die_type_sect_off (sect_offset sect_off,
 				      dwarf2_per_objfile *per_objfile,
 				      const char **var_name = nullptr);
 
+/* When == 1, print basic high level tracing messages.
+   When > 1, be more verbose.
+   This is in contrast to the low level DIE reading of dwarf_die_debug.  */
+
+extern unsigned int dwarf_read_debug;
+
+/* Print a "dwarf-read" debug statement if dwarf_read_debug is >= 1.  */
+
+#define dwarf_read_debug_printf(fmt, ...) 				\
+  debug_prefixed_printf_cond (dwarf_read_debug >= 1, "dwarf-read", fmt,	\
+			      ##__VA_ARGS__)
+
+/* Print a "dwarf-read" debug statement if dwarf_read_debug is >= 2.  */
+
+#define dwarf_read_debug_printf_v(fmt, ...) \
+  debug_prefixed_printf_cond (dwarf_read_debug >= 2, "dwarf-read", fmt,	\
+			      ##__VA_ARGS__)
+
+/* Print "dwarf-read" start/end debug statements.  */
+
+#define DWARF_READ_SCOPED_DEBUG_START_END(fmt, ...)			      \
+  scoped_debug_start_end ([] { return dwarf_read_debug >= 1; }, "dwarf-read", \
+			  fmt, ##__VA_ARGS__)
+
 /* When non-zero, dump line number entries as they are read in.  */
 extern unsigned int dwarf_line_debug;
 

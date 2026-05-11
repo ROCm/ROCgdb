@@ -170,7 +170,12 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
   const ULONGEST abbrev = read_unsigned_leb128 (abfd, entry, &bytes_read);
   entry += bytes_read;
   if (abbrev == 0)
-    return nullptr;
+    {
+      dwarf_read_debug_printf_v
+	("  entry pool offset 0x%tx: end of entries (abbrev 0)",
+	 offset_in_entry_pool);
+      return nullptr;
+    }
 
   const auto indexval_it = abbrev_map.find (abbrev);
   if (indexval_it == abbrev_map.cend ())
@@ -182,6 +187,12 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
     }
 
   const auto &indexval = indexval_it->second;
+
+  dwarf_read_debug_printf_v
+    ("  entry pool offset 0x%tx: abbrev %s, tag %s",
+     offset_in_entry_pool, pulongest (abbrev),
+     dwarf_tag_name (indexval.dwarf_tag));
+
   cooked_index_flag flags = 0;
   sect_offset die_offset {};
   enum language lang = language_unknown;
@@ -238,6 +249,14 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
 				  bfd_get_filename (abfd)));
 	  return nullptr;
 	}
+
+      dwarf_read_debug_printf_v ("    %s (%s): %s",
+				 get_DW_IDX_name (attr.dw_idx),
+				 dwarf_form_name (attr.form),
+				 (attr.form == DW_FORM_ref_addr
+				  ? hex_string (ull)
+				  : pulongest (ull)));
+
       switch (attr.dw_idx)
 	{
 	case DW_IDX_compile_unit:
@@ -302,6 +321,11 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
   /* Skip if we couldn't find a valid CU/TU index.  */
   if (per_cu != nullptr)
     {
+      dwarf_read_debug_printf_v
+	("    -> die_offset %s, per_cu offset %s",
+	 sect_offset_str (die_offset),
+	 sect_offset_str (per_cu->sect_off ()));
+
       *result
 	= indices[next_shard].add (die_offset, (dwarf_tag) indexval.dwarf_tag,
 				   flags, lang, name, nullptr, per_cu);
@@ -312,6 +336,8 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
 
       entry_pool_offsets_to_entries.emplace (offset_in_entry_pool, *result);
     }
+  else
+    dwarf_read_debug_printf_v ("    -> no valid CU/TU, skipping");
 
   return entry;
 }
@@ -323,6 +349,12 @@ mapped_debug_names_reader::scan_entries (uint32_t index,
 					 const char *name,
 					 const gdb_byte *entry)
 {
+  /* Print a 1-based index, because this is what readelf and llvm-dwarfdump
+     do.  This makes it easier to compare output side-by-side.  */
+  dwarf_read_debug_printf_v
+    ("scanning entries for name %u: \"%s\" (entry pool offset 0x%tx)",
+     index + 1, name, entry - entry_pool);
+
   std::vector<cooked_index_entry *> these_entries;
 
   while (true)
@@ -347,6 +379,9 @@ mapped_debug_names_reader::scan_entries (uint32_t index,
 void
 mapped_debug_names_reader::scan_all_names ()
 {
+  DWARF_READ_SCOPED_DEBUG_START_END
+    ("scanning %u names from .debug_names", name_count);
+
   all_entries.resize (name_count);
 
   /* In the first pass, create all the entries.  */
@@ -377,6 +412,9 @@ mapped_debug_names_reader::scan_all_names ()
 
      Otherwise, the DW_IDX_parent value is an offset into the entry pool, which
      is not ambiguous.  */
+  dwarf_read_debug_printf ("resolving %zu parent pointers",
+			   needs_parent.size ());
+
   for (auto &[entry, parent_val] : needs_parent)
     {
       if (augmentation_is_gdb && gdb_augmentation_version == 2)
@@ -463,6 +501,9 @@ build_and_check_tu_list_from_debug_names (dwarf2_per_objfile *per_objfile,
 					  mapped_debug_names_reader &map,
 					  dwarf2_section_info *section)
 {
+  dwarf_read_debug_printf ("building TU list from .debug_names (%u TUs)",
+			   map.tu_count);
+
   struct objfile *objfile = per_objfile->objfile;
   dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
 
@@ -476,6 +517,9 @@ build_and_check_tu_list_from_debug_names (dwarf2_per_objfile *per_objfile,
 			 (map.tu_table_reordered + i * map.offset_size,
 			  map.offset_size,
 			  map.dwarf5_byte_order));
+
+      dwarf_read_debug_printf_v ("  TU %u: offset %s", i,
+				 sect_offset_str (sect_off));
 
       /* Find the matching dwarf2_per_cu.  */
       dwarf2_per_cu *per_cu = dwarf2_find_unit ({ section, sect_off },
@@ -508,15 +552,24 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
 			       struct dwarf2_section_info *section,
 			       mapped_debug_names_reader &map)
 {
+  DWARF_READ_SCOPED_DEBUG_START_END
+    ("reading .debug_names from %s", filename);
+
   struct objfile *objfile = per_objfile->objfile;
 
   if (section->empty ())
-    return false;
+    {
+      dwarf_read_debug_printf ("section is empty");
+      return false;
+    }
 
   /* Older elfutils strip versions could keep the section in the main
      executable while splitting it for the separate debug info file.  */
   if ((section->get_flags () & SEC_HAS_CONTENTS) == 0)
-    return false;
+    {
+      dwarf_read_debug_printf ("section has no contents");
+      return false;
+    }
 
   section->read (objfile);
 
@@ -534,6 +587,11 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
 
   map.dwarf5_is_dwarf64 = bytes_read != 4;
   map.offset_size = map.dwarf5_is_dwarf64 ? 8 : 4;
+
+  dwarf_read_debug_printf ("section size: %s, initial length: %s, "
+			   "dwarf64: %d, offset_size: %d",
+			   hex_string (section->size), hex_string (length),
+			   map.dwarf5_is_dwarf64, map.offset_size);
   if (bytes_read + length != section->size)
     {
       /* There may be multiple per-CU indices.  */
@@ -549,6 +607,9 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
   /* The version number.  */
   uint16_t version = read_2_bytes (abfd, addr);
   addr += 2;
+
+  dwarf_read_debug_printf ("version: %d", version);
+
   if (version != 5)
     {
       warning (_("Section .debug_names in %ps has unsupported version %d, "
@@ -585,6 +646,11 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
      list.  */
   uint32_t foreign_tu_count = read_4_bytes (abfd, addr);
   addr += 4;
+
+  dwarf_read_debug_printf ("cu_count: %u, tu_count: %u, "
+			   "foreign_tu_count: %u",
+			   map.cu_count, map.tu_count, foreign_tu_count);
+
   if (foreign_tu_count != 0)
     {
       warning (_("Section .debug_names in %ps has unsupported %lu foreign TUs, "
@@ -613,10 +679,33 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
      string.  This value is rounded up to a multiple of 4.  */
   uint32_t augmentation_string_size = read_4_bytes (abfd, addr);
   addr += 4;
+
+  dwarf_read_debug_printf ("bucket_count: %u, name_count: %u, "
+			   "abbrev_table_size: %u, "
+			   "augmentation_string_size: %u",
+			   map.bucket_count, map.name_count,
+			   abbrev_table_size, augmentation_string_size);
+
   augmentation_string_size += (-augmentation_string_size) & 3;
 
   const auto augmentation_string
     = gdb::make_array_view (addr, augmentation_string_size);
+
+  if (dwarf_read_debug >= 1)
+    {
+      std::string aug_repr;
+      for (size_t i = 0; i < augmentation_string_size; i++)
+	{
+	  gdb_byte b = addr[i];
+	  if (c_isprint (b))
+	    aug_repr += b;
+	  else
+	    aug_repr += string_printf ("\\x%02x", b);
+	}
+
+      dwarf_read_debug_printf ("augmentation string: \"%s\"",
+			       aug_repr.c_str ());
+    }
 
   if (augmentation_string == gdb::make_array_view (dwarf5_augmentation_1))
     {
@@ -704,7 +793,26 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
 	    break;
 	  indexval.attr_vec.push_back (std::move (attr));
 	}
+
+      dwarf_read_debug_printf_v
+	("  abbrev %s: tag %s, %zu attributes",
+	 pulongest (index_num), dwarf_tag_name (indexval.dwarf_tag),
+	 indexval.attr_vec.size ());
+
+      for (const auto &attr : indexval.attr_vec)
+	dwarf_read_debug_printf_v
+	  ("    %s %s%s",
+	   get_DW_IDX_name (attr.dw_idx),
+	   dwarf_form_name (attr.form),
+	   (attr.form == DW_FORM_implicit_const
+	    ? string_printf (" (%s)",
+			     plongest (attr.implicit_const)).c_str ()
+	    : ""));
     }
+
+  dwarf_read_debug_printf ("%zu abbreviations read",
+			   map.abbrev_map.size ());
+
   if (addr != abbrev_table_start + abbrev_table_size)
     {
       warning (_("Section .debug_names in %ps has abbreviation_table "
@@ -728,6 +836,9 @@ build_and_check_cu_list_from_debug_names (dwarf2_per_bfd *per_bfd,
 					  mapped_debug_names_reader &map,
 					  dwarf2_section_info &section)
 {
+  dwarf_read_debug_printf ("building CU list from .debug_names (%u CUs)",
+			   map.cu_count);
+
   int nr_cus = per_bfd->num_comp_units;
 
   if (map.cu_count != nr_cus)
@@ -744,6 +855,9 @@ build_and_check_cu_list_from_debug_names (dwarf2_per_bfd *per_bfd,
 			 (map.cu_table_reordered + i * map.offset_size,
 			  map.offset_size,
 			  map.dwarf5_byte_order));
+
+      dwarf_read_debug_printf_v ("  CU %u: offset %s", i,
+				 sect_offset_str (sect_off));
 
       /* Find the matching dwarf2_per_cu.  */
       dwarf2_per_cu *per_cu = dwarf2_find_unit ({ &section, sect_off }, per_bfd);
