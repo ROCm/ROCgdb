@@ -155,6 +155,25 @@ struct mapped_debug_names_reader
   std::vector<std::vector<cooked_index_entry *>> all_entries;
 };
 
+/* Emit a complaint about a specific index entry.  */
+
+static void ATTRIBUTE_PRINTF (4, 5)
+complain_about_index_entry (bfd *abfd, const char *name,
+			    ptrdiff_t offset_in_entry_pool, const char *fmt,
+			    ...)
+{
+  va_list ap;
+  va_start (ap, fmt);
+  std::string msg = string_vprintf (fmt, ap);
+  va_end (ap);
+
+  msg += string_printf (_(" [in module %s, index entry for name %s,"
+			   " entry pool offset 0x%tx]"),
+			bfd_get_filename (abfd), name, offset_in_entry_pool);
+
+  complaint ("%s", msg.c_str ());
+}
+
 /* Scan a single entry from the entries table.  Set *RESULT and PARENT
    (if needed) and return the updated pointer on success, or return
    nullptr on error, or at the end of the table.  */
@@ -180,9 +199,11 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
   const auto indexval_it = abbrev_map.find (abbrev);
   if (indexval_it == abbrev_map.cend ())
     {
-      complaint (_("Wrong .debug_names undefined abbrev code %s "
-		   "[in module %s]"),
-		 pulongest (abbrev), bfd_get_filename (abfd));
+      complain_about_index_entry (abfd, name, offset_in_entry_pool,
+				  _("Wrong .debug_names abbrev code %s"),
+				  pulongest (abbrev));
+      /* We can't go past this entry because we don't know its size, stop
+	 reading this entry chain.  */
       return nullptr;
     }
 
@@ -264,10 +285,10 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
 	    /* Don't crash on bad data.  */
 	    if (ull >= this->comp_units.size ())
 	      {
-		complaint (_(".debug_names entry has bad CU index %s"
-			     " [in module %s]"),
-			   pulongest (ull),
-			   bfd_get_filename (abfd));
+		complain_about_index_entry
+		  (abfd, name, offset_in_entry_pool,
+		   _(".debug_names entry has bad CU index %s"),
+		   pulongest (ull));
 		continue;
 	      }
 
@@ -279,10 +300,10 @@ mapped_debug_names_reader::scan_one_entry (const char *name,
 	    /* Don't crash on bad data.  */
 	    if (ull >= this->type_units.size ())
 	      {
-		complaint (_(".debug_names entry has bad TU index %s"
-			     " [in module %s]"),
-			   pulongest (ull),
-			   bfd_get_filename (abfd));
+		complain_about_index_entry
+		  (abfd, name, offset_in_entry_pool,
+		   _(".debug_names entry has bad TU index %s"),
+		   pulongest (ull));
 		continue;
 	      }
 
