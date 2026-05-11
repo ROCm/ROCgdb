@@ -277,6 +277,7 @@ public:
   /* If this dwarf2_per_cu is a signatured_type, return "this" cast to
      signatured_type.  Otherwise, return nullptr.  */
   signatured_type *as_signatured_type ();
+  const signatured_type *as_signatured_type () const;
 
   dwarf2_per_bfd *per_bfd () const
   { return m_per_bfd; }
@@ -492,6 +493,17 @@ dwarf2_per_cu::as_signatured_type ()
 {
   if (m_is_debug_types)
     return static_cast<signatured_type *> (this);
+
+  return nullptr;
+}
+
+/* See dwarf2_per_cu declaration.  */
+
+inline const signatured_type *
+dwarf2_per_cu::as_signatured_type () const
+{
+  if (m_is_debug_types)
+    return static_cast<const signatured_type *> (this);
 
   return nullptr;
 }

@@ -20,10 +20,14 @@
 #ifndef GDB_DWARF2_DWO_H
 #define GDB_DWARF2_DWO_H
 
+#include <atomic>
+
 #include "dwarf2/section.h"
 #include "gdb_bfd.h"
 #include "gdbsupport/unordered_set.h"
 #include "hashtab.h"
+
+struct dwarf2_per_cu;
 
 /* These sections are what may appear in a (real or virtual) DWO file.  */
 
@@ -49,6 +53,11 @@ struct dwo_unit
 {
   /* Backlink to the containing struct dwo_file.  */
   struct dwo_file *dwo_file = nullptr;
+
+  /* For compile units only, the per-CU structure that represents the skeleton
+     that we used to reach this dwo_unit.  It starts as nullptr, and gets set
+     in cutu_reader::lookup_dwo_cutu.  */
+  std::atomic<dwarf2_per_cu *> per_cu = nullptr;
 
   /* The "id" that distinguishes this CU/TU.
      .debug_info calls this "dwo_id", .debug_types calls this "signature".

@@ -7179,6 +7179,15 @@ cutu_reader::lookup_dwo_cutu (dwarf2_cu *cu, const char *dwo_name,
 		("DWO %s %s(%s) found: @%s", kind, dwo_name,
 		 hex_string (signature),
 		 host_address_to_string (dwo_unit_it->get ()));
+
+	      /* Record the dwarf2_per_cu that was used to look up this
+		 dwo_unit.  There will typically be exactly one skeleton
+		 pointing to each DWO CU.  But if for some mysterious reason
+		 there are multiple skeletons pointing to the same DWO CU, it's
+		 fine, we just need to remember one.  This will keep the last
+		 one seen.  */
+	      (*dwo_unit_it)->per_cu = cu->per_cu;
+
 	      return dwo_unit_it->get ();
 	    }
 	}
