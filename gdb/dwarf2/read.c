@@ -695,6 +695,13 @@ static struct die_info *follow_die_ref (struct die_info *,
 					const struct attribute *,
 					struct dwarf2_cu **);
 
+static void fill_in_sig_entry_from_dwo_entry (dwarf2_per_objfile *per_objfile,
+					      signatured_type *sig_entry,
+					      dwo_unit *dwo_entry);
+
+static void fill_in_sig_entry_from_per_cu_hint
+  (dwarf2_per_objfile &per_objfile, signatured_type &sig_type);
+
 static struct die_info *follow_die_sig (struct die_info *,
 					const struct attribute *,
 					struct dwarf2_cu **);
@@ -1415,6 +1422,7 @@ dwarf2_per_bfd::allocate_per_cu (dwarf2_section_info *section,
 				 sect_offset sect_off, unsigned int length,
 				 bool is_dwz)
 {
+  gdb_assert (section != nullptr);
   dwarf2_per_cu_up result (new dwarf2_per_cu (this, section, sect_off,
 					      length, is_dwz));
   result->index = all_units.size ();
@@ -1431,9 +1439,24 @@ dwarf2_per_bfd::allocate_signatured_type (dwarf2_section_info *section,
 					  bool is_dwz,
 					  ULONGEST signature)
 {
+  gdb_assert (section != nullptr);
   auto result
     = std::make_unique<signatured_type> (this, section, sect_off, length,
 					 is_dwz, signature);
+  result->index = all_units.size ();
+  this->num_type_units++;
+  return result;
+}
+
+/* See read.h.  */
+
+signatured_type_up
+dwarf2_per_bfd::allocate_signatured_type (ULONGEST signature)
+{
+  auto result
+    = std::make_unique<signatured_type> (this, nullptr,
+					 invalid_sect_offset,
+					 0, false, signature);
   result->index = all_units.size ();
   this->num_type_units++;
   return result;
@@ -1722,6 +1745,20 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 
   for (dwarf2_per_cu *per_cu : all_units_range (per_objfile->per_bfd))
     {
+      /* If a .debug_names index contains a foreign TU but no index entry
+	 references it, the TU won't have a hint CU.  This is a problem, because
+	 we won't be able to locate it.  Skip them, for the following reasons:
+
+	  - If they don't contain anything worthy of a named index entry, they
+	    are unlikely to contain anything interesting, symbol-wise.
+	  - They are likely to be referred to by some other unit (otherwise,
+	    why does it exist?), so will get expanded anyway.  */
+      if (signatured_type *sig_type = per_cu->as_signatured_type ();
+	  (sig_type != nullptr
+	   && sig_type->section () == nullptr
+	   && sig_type->hint_per_cu == nullptr))
+	continue;
+
       /* We don't want to directly expand a partial CU, because if we
 	 read it with the wrong language, then assertion failures can
 	 be triggered later on.  See PR symtab/23010.  So, tell
@@ -2223,8 +2260,7 @@ add_type_unit (dwarf2_per_bfd *per_bfd, dwarf2_section_info *section,
   return emplace_ret.first;
 }
 
-/* Subroutine of lookup_dwo_signatured_type and lookup_dwp_signatured_type.
-   Fill in SIG_ENTRY with DWO_ENTRY.  */
+/* Fill in the missing details in SIG_ENTRY from DWO_ENTRY.  */
 
 static void
 fill_in_sig_entry_from_dwo_entry (dwarf2_per_objfile *per_objfile,
@@ -2680,6 +2716,10 @@ cutu_reader::cutu_reader (dwarf2_per_cu &this_cu,
 {
   struct objfile *objfile = per_objfile.objfile;
   struct dwarf2_section_info *section = this_cu.section ();
+
+  /* Any foreign TU must have been located before getting here.  */
+  gdb_assert (section != nullptr);
+
   bfd *abfd = section->get_bfd_owner ();
   const gdb_byte *begin_info_ptr;
   struct dwarf2_section_info *abbrev_section;
@@ -3278,6 +3318,7 @@ cooked_index_worker_debug_info::do_reading ()
   dwarf2_per_bfd *per_bfd = m_per_objfile->per_bfd;
 
   create_all_units (m_per_objfile);
+  finalize_all_units (m_per_objfile->per_bfd);
   process_type_units (m_per_objfile, &m_index_storage);
 
   if (!per_bfd->debug_aranges.empty ())
@@ -3359,20 +3400,26 @@ read_comp_units_from_section (dwarf2_per_objfile *per_objfile,
 /* See read.h.  */
 
 void
+dwarf2_per_bfd::sort_all_units ()
+{
+  std::sort (this->all_units.begin (), this->all_units.end (),
+	     [] (const dwarf2_per_cu_up &a, const dwarf2_per_cu_up &b)
+	       {
+		 return all_units_less_than (*a, { b->section (),
+						   b->sect_off () });
+	       });
+}
+
+/* See read.h.  */
+
+void
 finalize_all_units (dwarf2_per_bfd *per_bfd)
 {
   /* Sanity check.  */
   gdb_assert (per_bfd->all_units.size ()
 	      == per_bfd->num_comp_units + per_bfd->num_type_units);
 
-  /* Ensure that the all_units vector is in the expected order for
-     dwarf2_find_containing_unit to be able to perform a binary search.  */
-  std::sort (per_bfd->all_units.begin (), per_bfd->all_units.end (),
-	     [] (const dwarf2_per_cu_up &a, const dwarf2_per_cu_up &b)
-	       {
-		 return all_units_less_than (*a, { b->section (),
-						   b->sect_off () });
-	       });
+  per_bfd->sort_all_units ();
 }
 
 /* See read.h.  */
@@ -3410,7 +3457,6 @@ create_all_units (dwarf2_per_objfile *per_objfile)
 
   per_objfile->per_bfd->signatured_types = std::move (sig_types);
 
-  finalize_all_units (per_objfile->per_bfd);
   remove_all_units.disable ();
 }
 
@@ -17104,6 +17150,77 @@ dwarf2_get_die_type (cu_offset die_offset, dwarf2_per_cu *per_cu,
   return get_die_type_at_offset (die_offset_sect, per_cu, per_objfile);
 }
 
+/* Fill in the missing details in SIG_TYPE from DWO_FILE.
+
+   Error out if there isn't a type unit with the appropriate signature in
+   DWO_FILE.  */
+
+static void
+fill_in_sig_entry_from_dwo_file (dwarf2_per_objfile &per_objfile,
+				 signatured_type &sig_type, dwo_file &dwo_file)
+{
+  gdb_assert (sig_type.section () == nullptr);
+
+  dwo_unit *dwo_tu = dwo_file.find_tu (sig_type.signature);
+  if (dwo_tu == nullptr)
+    error (_(DWARF_ERROR_PREFIX
+	     "Unable to locate type unit with signature %s in DWO file %s "
+	     "[in module %s]"),
+	   hex_string (sig_type.signature), dwo_file.dwo_name.c_str (),
+	   objfile_name (per_objfile.objfile));
+
+  fill_in_sig_entry_from_dwo_entry (&per_objfile, &sig_type, dwo_tu);
+  sig_type.set_section (dwo_tu->section);
+  sig_type.set_sect_off (dwo_tu->sect_off);
+  sig_type.set_length (dwo_tu->length);
+
+  /* Setting SIG_TYPE's section invalidates the ALL_UNITS vector order,
+     re-sort it.  */
+  per_objfile.per_bfd->sort_all_units ();
+}
+
+/* Fill in the missing details in SIG_TYPE from its hint CU.
+
+   Error out if we're unable to locate the .dwo file using the hint CU.  */
+
+static void
+fill_in_sig_entry_from_per_cu_hint (dwarf2_per_objfile &per_objfile,
+				    signatured_type &sig_type)
+{
+  gdb_assert (sig_type.section () == nullptr);
+  gdb_assert (sig_type.hint_per_cu != nullptr);
+
+  dwarf2_per_cu *hint_per_cu = sig_type.hint_per_cu;
+  dwo_unit *dwo_unit;
+
+  /* If a dwarf2_cu already exists for HINT_PER_CU, no need to build another
+     one.  */
+  if (dwarf2_cu *hint_cu = per_objfile.get_cu (hint_per_cu);
+      hint_cu != nullptr)
+    dwo_unit = hint_cu->dwo_unit;
+  else
+    {
+      /* Constructing this cutu_reader will look for the .dwo file, creating
+	 the dwo_file if necessary.  */
+      abbrev_table_cache abbrev_table_cache;
+      cutu_reader reader (*hint_per_cu, per_objfile, nullptr, true,
+			  std::nullopt, abbrev_table_cache);
+
+      /* dwo_unit is owned by the per_bfd, which outlives the reader.  */
+      dwo_unit = reader.cu ()->dwo_unit;
+    }
+
+  if (dwo_unit == nullptr)
+    error (_(DWARF_ERROR_PREFIX
+	     "Hint compilation unit for foreign type unit with signature %s is "
+	     "not in a DWO file [in module %s]"),
+	   hex_string (sig_type.signature),
+	   objfile_name (per_objfile.objfile));
+
+  fill_in_sig_entry_from_dwo_file (per_objfile, sig_type,
+				   *dwo_unit->dwo_file);
+}
+
 /* Follow type unit SIG_TYPE referenced by SRC_DIE.
    On entry *REF_CU is the CU of SRC_DIE.
    On exit *REF_CU is the CU of the result.
@@ -17118,6 +17235,28 @@ follow_die_sig_1 (struct die_info *src_die, struct signatured_type *sig_type,
   /* While it might be nice to assert sig_type->type == NULL here,
      we can get here for DW_AT_imported_declaration where we need
      the DIE not the type.  */
+
+  /* If SIG_TYPE's section is not set, it means it's a .debug_names foreign
+     type unit for which we don't know the containing file or section yet.
+     Use the referencing CU as the hint: we know there must exist a TU with
+     the correct signature in its .dwo file, and that .dwo is already open,
+     might as well use it.
+
+     But this is not only an optimization.  If a .debug_names foreign unit
+     does not have any index entry referencing it, then we don't have any
+     "hint CU" for it.  The only hint we have is the referencing CU.  */
+  if (sig_type->section () == nullptr)
+    {
+      if ((*ref_cu)->dwo_unit == nullptr)
+	error (_(DWARF_ERROR_PREFIX
+		 "Unit referencing foreign type unit with signature %s is "
+		 "not from a DWO file [in module %s]"),
+	       hex_string (sig_type->signature),
+	       objfile_name (per_objfile->objfile));
+
+      fill_in_sig_entry_from_dwo_file (*per_objfile, *sig_type,
+				       *(*ref_cu)->dwo_unit->dwo_file);
+    }
 
   dwarf2_cu *sig_cu = ensure_loaded_type_unit (sig_type, per_objfile);
 
@@ -17298,6 +17437,12 @@ load_full_type_unit (signatured_type *sig_type,
 {
   gdb_assert (sig_type->is_debug_types ());
   gdb_assert (per_objfile->get_cu (sig_type) == nullptr);
+
+  /* If the section is not set, this is a .debug_names foreign type unit for
+     which we don't know the containing file nor section yet.  For these, we
+     must have a "hint" CU to follow to find the file and section.  */
+  if (sig_type->section () == nullptr)
+    fill_in_sig_entry_from_per_cu_hint (*per_objfile, *sig_type);
 
   abbrev_table_cache abbrev_table_cache;
   cutu_reader reader (*sig_type, *per_objfile, nullptr, false,

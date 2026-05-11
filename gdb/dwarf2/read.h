@@ -110,7 +110,6 @@ struct dwarf2_per_cu
       m_per_bfd (per_bfd)
   {
     gdb_assert (per_bfd != nullptr);
-    gdb_assert (section != nullptr);
   }
 
 private:
@@ -285,8 +284,23 @@ public:
   dwarf2_section_info *section () const
   { return m_section; }
 
+  /* Set the section of this unit.  */
+  void set_section (dwarf2_section_info *section)
+  {
+    gdb_assert (section != nullptr);
+    gdb_assert (m_section == nullptr);
+    m_section = section;
+  }
+
   sect_offset sect_off () const
   { return m_sect_off; }
+
+  /* Set the section offset of this unit.  */
+  void set_sect_off (sect_offset sect_off)
+  {
+    gdb_assert (m_sect_off == invalid_sect_offset);
+    m_sect_off = sect_off;
+  }
 
   bool is_dwz () const
   { return m_is_dwz; }
@@ -482,6 +496,12 @@ struct signatured_type : public dwarf2_per_cu
   /* Containing DWO unit.
      This field is valid iff per_cu.reading_dwo_directly.  */
   struct dwo_unit *dwo_unit = nullptr;
+
+  /* When using a .debug_names index, the section is not initially known for
+     foreign type units (aka skeletonless type units).  This is a reference to
+     a CU that can be used to locate the .dwo file and section containing the
+     type unit.  */
+  dwarf2_per_cu *hint_per_cu = nullptr;
 };
 
 using signatured_type_up = std::unique_ptr<signatured_type>;
@@ -576,6 +596,10 @@ struct dwarf2_per_bfd
     return this->all_units[index].get ();
   }
 
+  /* Ensure that the all_units vector is in the expected order for
+     dwarf2_find_containing_unit to be able to perform a binary search.  */
+  void sort_all_units ();
+
   /* Return the separate '.dwz' debug file.  If there is no
      .gnu_debugaltlink or .debug_sup section in the file, then the
      result depends on REQUIRE: if REQUIRE is true, error out; if
@@ -609,6 +633,12 @@ struct dwarf2_per_bfd
 					       unsigned int length,
 					       bool is_dwz,
 					       ULONGEST signature);
+
+  /* A convenience function to allocate a signatured_type.  The
+     returned object has its "index" field set properly.
+
+     This one is used when only the signature is known at creation time.  */
+  signatured_type_up allocate_signatured_type (ULONGEST signature);
 
   /* Map all the DWARF section data needed when scanning
      .debug_info.  */
@@ -1334,7 +1364,10 @@ extern const char *read_indirect_string_at_offset
 
 extern void finalize_all_units (dwarf2_per_bfd *per_bfd);
 
-/* Create a list of all compilation units in OBJFILE.  */
+/* Create a list of all compilation units in OBJFILE.
+
+   After it is done creating all units, the caller is responsible for calling
+   finalize_all_units.  */
 
 extern void create_all_units (dwarf2_per_objfile *per_objfile);
 
