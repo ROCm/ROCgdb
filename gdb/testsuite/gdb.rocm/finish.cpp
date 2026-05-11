@@ -104,14 +104,14 @@ struct WithStaticFields
 };
 __device__ int WithStaticFields::c = 12;
 
-__device__ static Empty
+__device__ __attribute__ ((noinline)) Empty
 returnEmpty ()
 {
   return {};
 }
 
 template<int N>
-__device__ static Custom<char, N>
+__device__ __attribute__ ((noinline)) Custom<char, N>
 returnSized ()
 {
   Custom<char, N> ret;
@@ -122,7 +122,7 @@ returnSized ()
 }
 
 template<int N>
-__device__ static Custom<Union, N>
+__device__ __attribute__ ((noinline)) Custom<Union, N>
 returnCustomWithUnion ()
 {
   Custom<Union, N> ret;
@@ -131,7 +131,7 @@ returnCustomWithUnion ()
   return ret;
 }
 
-__device__ static FlexibleArrayMember
+__device__ __attribute__ ((noinline)) FlexibleArrayMember
 returnFlexibleArrayMember ()
 {
   return {
@@ -139,7 +139,7 @@ returnFlexibleArrayMember ()
   };
 }
 
-__device__ static NotPackedWithBitField
+__device__ __attribute__ ((noinline)) NotPackedWithBitField
 returnNotPackedWithBitField ()
 {
   const int val = static_cast<int> (threadIdx.x);
@@ -157,7 +157,7 @@ returnNotPackedWithBitField ()
   };
 }
 
-__device__ static PackedWithBitField
+__device__ __attribute__ ((noinline)) PackedWithBitField
 returnPackedWithBitField ()
 {
   const int val = static_cast<int> (threadIdx.x);
@@ -168,7 +168,7 @@ returnPackedWithBitField ()
   };
 }
 
-__device__ static const Custom<char, 8> *
+__device__ __attribute__ ((noinline)) const Custom<char, 8> *
 returnPtr ()
 {
   static Custom<char, 8> vv {
@@ -177,13 +177,13 @@ returnPtr ()
   return &vv;
 }
 
-__device__ static int *
+__device__ __attribute__ ((noinline)) int *
 returnPtr2 (int *a)
 {
   return a;
 }
 
-__device__ static const Custom<char, 8> &
+__device__ __attribute__ ((noinline)) const Custom<char, 8> &
 returnRef ()
 {
   static Custom<char, 8> vv {
@@ -192,13 +192,13 @@ returnRef ()
   return vv;
 };
 
-__device__ static int &
+__device__ __attribute__ ((noinline)) int &
 returnRef2 (int &a)
 {
   return a;
 }
 
-__device__ static WithStaticFields
+__device__ __attribute__ ((noinline)) WithStaticFields
 returnWithStatic ()
 {
   OnlyStatic::something = 12;
@@ -210,14 +210,14 @@ returnWithStatic ()
   };
 }
 
-__device__ static OnlyStatic
+__device__ __attribute__ ((noinline)) OnlyStatic
 returnEmptyWithStatic ()
 {
   OnlyStatic::something = 56;
   return {};
 }
 
-__device__ static __attribute__((noinline)) MixedSmallStruct
+__device__ static __attribute__ ((noinline)) MixedSmallStruct
 returnMixedSmallSruct ()
 {
   MixedSmallStruct var;
@@ -230,7 +230,7 @@ returnMixedSmallSruct ()
 
 __device__ int someGlobal = 42;
 
-__global__ void
+__global__ void __attribute__ ((optnone))
 kernel ()
 {
   returnEmpty ();

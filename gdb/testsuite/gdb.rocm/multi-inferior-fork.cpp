@@ -36,9 +36,12 @@ __global__ void
 kernel ()
 {}
 
-static void
+static void __attribute__ ((optnone))
 child_after_fork ()
-{}
+{
+  int j = 0;
+  (void) j;
+}
 
 int
 main ()

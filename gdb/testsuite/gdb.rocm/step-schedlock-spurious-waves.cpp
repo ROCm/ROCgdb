@@ -24,7 +24,7 @@ THE SOFTWARE.
 
 /* Helper function where the debugger places a breakpoint to be sure no wave
    can run to completion without the debugger noticing.  */
-__device__ void
+__device__ void __attribute__ ((optnone))
 end_of_kernel ()
 {
 }

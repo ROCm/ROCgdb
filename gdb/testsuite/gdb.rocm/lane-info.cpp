@@ -33,21 +33,34 @@
   }
 
 /* The kernel never returns, via this sleep, so that the .exp file can
-   test background execution (cont&).  */
+   test background execution (cont&).  Mark noreturn so callers do not
+   need a trailing observable side effect just to keep them alive.  */
 
-__device__ static void
+__device__ void __attribute__ ((noinline, noreturn))
 sleep_forever ()
 {
-  while (1)
+  volatile bool keep_going = true;
+  while (keep_going)
     __builtin_amdgcn_s_sleep (1);
+  __builtin_unreachable ();
 }
 
-__device__ static void
+/* foo() and bar() are non-static and marked noinline so each lane has
+   a stable call frame and an externally visible symbol under
+   -O1/-O2/-O3, which the test relies on for "info lanes" and "lane
+   apply" to discriminate active vs inactive lanes.  In foo(), the
+   empty volatile asm gives the function an observable side effect so
+   the call cannot be constant-folded away.  In bar(), disable_tail_calls
+   keeps the bar() frame on the stack so the sleeping wave appears in
+   bar() rather than in sleep_forever().  */
+
+__device__ void __attribute__ ((noinline))
 foo ()
 {
+  asm volatile ("" : : : "memory");
 }
 
-__device__ static void
+__device__ void __attribute__ ((noinline, disable_tail_calls))
 bar ()
 {
   sleep_forever ();

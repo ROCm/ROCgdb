@@ -34,7 +34,7 @@
 /* A function to be called by "kern ()", without any references to
    threadIdx, blockIdx, blockDim, gridDim, or warpSize variables.  */
 
-__device__ void
+__device__ void __attribute__ ((optnone))
 inner_func1 ()
 {
   return;
@@ -42,33 +42,33 @@ inner_func1 ()
 
 /* A function to be called by "kern ()", with its own "blockIdx".  */
 
-__device__ void
+__device__ void __attribute__ ((optnone))
 inner_func2 ()
 {
   int blockIdx = 0x42424242;
   return;
 }
 
-__global__ void
+__global__ void __attribute__ ((optnone))
 kern ()
 {
-  const int thread_idx_x = threadIdx.x;
-  const int thread_idx_y = threadIdx.y;
-  const int thread_idx_z = threadIdx.z;
+  int thread_idx_x = threadIdx.x;
+  int thread_idx_y = threadIdx.y;
+  int thread_idx_z = threadIdx.z;
 
-  const int group_idx_x = blockIdx.x;
-  const int group_idx_y = blockIdx.y;
-  const int group_idx_z = blockIdx.z;
+  int group_idx_x = blockIdx.x;
+  int group_idx_y = blockIdx.y;
+  int group_idx_z = blockIdx.z;
 
-  const int group_size_x = blockDim.x;
-  const int group_size_y = blockDim.y;
-  const int group_size_z = blockDim.z;
+  int group_size_x = blockDim.x;
+  int group_size_y = blockDim.y;
+  int group_size_z = blockDim.z;
 
-  const int grid_size_x = gridDim.x;
-  const int grid_size_y = gridDim.y;
-  const int grid_size_z = gridDim.z;
+  int grid_size_x = gridDim.x;
+  int grid_size_y = gridDim.y;
+  int grid_size_z = gridDim.z;
 
-  const int wave_size = warpSize;
+  int wave_size = warpSize;
 
   /* Break here.  */
   inner_func1 ();

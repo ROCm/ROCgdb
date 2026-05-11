@@ -38,6 +38,10 @@ with_rocm_gpu_lock {
     }
 
     set line [gdb_get_line_number "break here"]
+    if {[check_for_any_flags {-O1 -O2 -O3}]} {
+	# return is optimized out, stop one statement before.
+	set line [expr {$line - 1}]
+    }
     gdb_breakpoint "$line" allow-pending
 
     gdb_test "continue" "Thread $decimal \"hip_deep\" hit Breakpoint $decimal.*"

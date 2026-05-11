@@ -32,7 +32,10 @@
       }									\
   }
 
-__device__ static void
+/* Non-static so a line breakpoint at the "done ()" call site below
+   has a stable address at -O0.  */
+
+__device__ void
 done ()
 {
 }

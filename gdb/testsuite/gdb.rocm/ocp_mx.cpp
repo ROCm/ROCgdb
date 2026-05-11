@@ -31,8 +31,10 @@
     }                                                                        \
   }
 
+/* We use the optnone attribute for all of the testing functions so the
+   compiler won't optimize values out of existence.  */
 
-__host__ __device__ void
+__host__ __device__ void __attribute__ ((optnone))
 fp8e4m3_values ()
 {
   /* FP8 E4M3 format
@@ -83,7 +85,7 @@ fp8e4m3_values ()
   return;
 }
 
-__host__ __device__ void
+__host__ __device__ void __attribute__ ((optnone))
 fp8e5m2_values ()
 {
   /* FP8 E5M2 format
@@ -137,7 +139,7 @@ fp8e5m2_values ()
   return;
 }
 
-__host__ __device__ void
+__host__ __device__ void __attribute__ ((optnone))
 fp6e2m3_values ()
 {
   /* FP6 format
@@ -186,7 +188,7 @@ fp6e2m3_values ()
   return;
 }
 
-__host__ __device__ void
+__host__ __device__ void __attribute__ ((optnone))
 fp6e3m2_values ()
 {
   /* FP6 format
@@ -235,7 +237,7 @@ fp6e3m2_values ()
   return;
 }
 
-__host__ __device__ void
+__host__ __device__ void __attribute__ ((optnone))
 fp4e2m1_values ()
 {
   /* FP4 format

@@ -226,7 +226,16 @@ with_rocm_gpu_lock {
 	# Get into inner_func2() with its own local blockIdx variable.
 	gdb_test "step" "inner_func2 \\(\\) at.*" \
 	    "step into inner_func2() with its own blockIdx"
-	gdb_test "next" "$::decimal\[ \t\]+return;" \
+	# Accept landing on either the "return;" statement or the
+	# closing brace.  At -O0 Clang emits a separate line entry
+	# for the explicit "return;", so "next" lands there.  Under
+	# __attribute__((optnone)) (which we use to keep the local
+	# blockIdx observable at -O1/-O2/-O3) Clang merges the line
+	# entry of the "return;" with the function's closing brace,
+	# so "next" lands on the brace instead.  Either is fine for
+	# this test - the point is just to step past the local
+	# initialisation before reading blockIdx.
+	gdb_test "next" "$::decimal\[ \t\]+(return;|\})" \
 	    "let the initialization happen"
 	gdb_test "p/x blockIdx" "0x42424242" \
 	    "local blockIdx shadowing the built-in"

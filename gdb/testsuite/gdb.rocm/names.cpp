@@ -124,7 +124,7 @@ templ_non_type ()
 }
 
 template<typename... Args>
-__global__ void
+__global__ void __attribute__ ((optnone))
 templ_type (Args... args)
 {
   wait_forever ();
