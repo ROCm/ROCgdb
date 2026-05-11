@@ -2311,11 +2311,9 @@ lookup_dwo_signatured_type (struct dwarf2_cu *cu, ULONGEST sig)
   /* Note: cu->dwo_unit is the dwo_unit that references this TU, not the
      dwo_unit of the TU itself.  */
   dwo_file *dwo_file = cu->dwo_unit->dwo_file;
-  auto it = dwo_file->tus.find (sig);
-  if (it == dwo_file->tus.end ())
+  dwo_unit *dwo_entry = dwo_file->find_tu (sig);
+  if (dwo_entry == nullptr)
     return nullptr;
-
-  dwo_unit *dwo_entry = it->get ();
 
   /* If the global table doesn't have an entry for this TU, add one.  */
   if (sig_type_it == per_bfd->signatured_types.end ())

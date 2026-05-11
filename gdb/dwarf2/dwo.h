@@ -121,6 +121,17 @@ struct dwo_file
   dwo_file () = default;
   DISABLE_COPY_AND_ASSIGN (dwo_file);
 
+  /* Look for a type unit with signature SIGNATURE in this dwo_file.
+
+     Return nullptr if not found.  */
+  dwo_unit *find_tu (ULONGEST signature) const
+  {
+    if (auto it = this->tus.find (signature); it != this->tus.end ())
+      return it->get ();
+
+    return nullptr;
+  }
+
   /* The DW_AT_GNU_dwo_name or DW_AT_dwo_name attribute.
      For virtual DWO files the name is constructed from the section offsets
      of abbrev,line,loc,str_offsets so that we combine virtual DWO files
