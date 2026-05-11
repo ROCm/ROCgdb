@@ -1968,10 +1968,12 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
   amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
   gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
+  ULONGEST reg_size = register_type (gdbarch, regno)->length ();
+  gdb_assert (reg_size <= AMDGPU_MAX_REGISTER_SIZE);
+
   amd_dbgapi_status_t status
     = amd_dbgapi_read_register (wave_id, tdep->register_ids[regno], 0,
-				register_type (gdbarch, regno)->length (),
-				raw);
+				reg_size, raw);
 
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
     regcache->raw_supply (regno, raw);
@@ -1994,6 +1996,8 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
   gdb_assert (is_amdgpu_arch (gdbarch));
 
   gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
+  ULONGEST reg_size = register_type (gdbarch, regno)->length ();
+  gdb_assert (reg_size <= AMDGPU_MAX_REGISTER_SIZE);
   regcache->raw_collect (regno, &raw);
 
   amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
@@ -2018,8 +2022,7 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
   amd_dbgapi_status_t status
     = amd_dbgapi_write_register (wave_id, tdep->register_ids[regno], 0,
-				 register_type (gdbarch, regno)->length (),
-				 raw);
+				 reg_size, raw);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     warning (_("Couldn't write register %s (#%d)."),
