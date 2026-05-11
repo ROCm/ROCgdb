@@ -31,6 +31,7 @@
 #include "dwarf2/abbrev.h"
 #include "dwarf2/aranges.h"
 #include "dwarf2/attribute.h"
+#include "dwarf2/dwo.h"
 #include "dwarf2/unit-head.h"
 #include "dwarf2/cooked-index-worker.h"
 #include "dwarf2/cooked-indexer.h"
@@ -65,7 +66,6 @@
 #include "dwarf2/expr.h"
 #include "dwarf2/loc.h"
 #include "cp-support.h"
-#include "hashtab.h"
 #include "command.h"
 #include "cli/cli-cmds.h"
 #include "block.h"
@@ -266,86 +266,6 @@ struct loclists_rnglists_header
   unsigned int offset_entry_count;
 };
 
-/* These sections are what may appear in a (real or virtual) DWO file.  */
-
-struct dwo_sections
-{
-  struct dwarf2_section_info abbrev;
-  struct dwarf2_section_info line;
-  struct dwarf2_section_info loc;
-  struct dwarf2_section_info loclists;
-  struct dwarf2_section_info macinfo;
-  struct dwarf2_section_info macro;
-  struct dwarf2_section_info rnglists;
-  struct dwarf2_section_info str;
-  struct dwarf2_section_info str_offsets;
-  /* In the case of a virtual DWO file, these two are unused.  */
-  std::vector<dwarf2_section_info> infos;
-  std::vector<dwarf2_section_info> types;
-};
-
-/* CUs/TUs in DWP/DWO files.  */
-
-struct dwo_unit
-{
-  /* Backlink to the containing struct dwo_file.  */
-  struct dwo_file *dwo_file = nullptr;
-
-  /* The "id" that distinguishes this CU/TU.
-     .debug_info calls this "dwo_id", .debug_types calls this "signature".
-     Since signatures came first, we stick with it for consistency.  */
-  ULONGEST signature = 0;
-
-  /* The section this CU/TU lives in, in the DWO file.  */
-  dwarf2_section_info *section = nullptr;
-
-  /* This is set if SECTION is owned by this dwo_unit.  */
-  dwarf2_section_info_up section_holder;
-
-  /* Same as dwarf2_per_cu::{sect_off,length} but in the DWO section.  */
-  sect_offset sect_off {};
-  unsigned int length = 0;
-
-  /* For types, offset in the type's DIE of the type defined by this TU.  */
-  cu_offset type_offset_in_tu;
-};
-
-using dwo_unit_up = std::unique_ptr<dwo_unit>;
-
-/* Hash function for dwo_unit objects, based on the signature.  */
-
-struct dwo_unit_hash
-{
-  using is_transparent = void;
-
-  std::size_t operator() (ULONGEST signature) const noexcept
-  { return signature; }
-
-  std::size_t operator() (const dwo_unit_up &unit) const noexcept
-  { return (*this) (unit->signature); }
-};
-
-/* Equal function for dwo_unit objects, based on the signature.
-
-   The signature is assumed to be unique within the DWO file.  So while object
-   file CU dwo_id's always have the value zero, that's OK, assuming each object
-   file DWO file has only one CU, and that's the rule for now.  */
-
-struct dwo_unit_eq
-{
-  using is_transparent = void;
-
-  bool operator() (ULONGEST sig, const dwo_unit_up  &unit) const noexcept
-  { return sig == unit->signature; }
-
-  bool operator() (const dwo_unit_up &a, const dwo_unit_up &b) const noexcept
-  { return (*this) (a->signature, b); }
-};
-
-/* Set of dwo_unit object, using their signature as identity.  */
-
-using dwo_unit_set = gdb::unordered_set<dwo_unit_up, dwo_unit_hash, dwo_unit_eq>;
-
 /* include/dwarf2.h defines the DWP section codes.
    It defines a max value but it doesn't define a min value, which we
    use for error checking, so provide one.  */
@@ -354,94 +274,6 @@ enum dwp_v2_section_ids
 {
   DW_SECT_MIN = 1
 };
-
-/* Data for one DWO file.
-
-   This includes virtual DWO files (a virtual DWO file is a DWO file as it
-   appears in a DWP file).  DWP files don't really have DWO files per se -
-   comdat folding of types "loses" the DWO file they came from, and from
-   a high level view DWP files appear to contain a mass of random types.
-   However, to maintain consistency with the non-DWP case we pretend DWP
-   files contain virtual DWO files, and we assign each TU with one virtual
-   DWO file (generally based on the line and abbrev section offsets -
-   a heuristic that seems to work in practice).  */
-
-struct dwo_file
-{
-  dwo_file () = default;
-  DISABLE_COPY_AND_ASSIGN (dwo_file);
-
-  /* The DW_AT_GNU_dwo_name or DW_AT_dwo_name attribute.
-     For virtual DWO files the name is constructed from the section offsets
-     of abbrev,line,loc,str_offsets so that we combine virtual DWO files
-     from related CU+TUs.  */
-  std::string dwo_name;
-
-  /* The DW_AT_comp_dir attribute.  */
-  const char *comp_dir = nullptr;
-
-  /* The bfd, when the file is open.  Otherwise this is NULL.
-     This is unused(NULL) for virtual DWO files where we use dwp_file.dbfd.  */
-  gdb_bfd_ref_ptr dbfd;
-
-  /* The sections that make up this DWO file.
-     Remember that for virtual DWO files in DWP V2 or DWP V5, these are virtual
-     sections (for lack of a better name).  */
-  struct dwo_sections sections {};
-
-  /* The CUs in the file.
-
-     Multiple CUs per DWO are supported as an extension to handle LLVM's Link
-     Time Optimization output (where multiple source files may be compiled into
-     a single object/dwo pair).  */
-  dwo_unit_set cus;
-
-  /* Table of TUs in the file.  */
-  dwo_unit_set tus;
-};
-
-/* See dwarf2/read.h.  */
-
-std::size_t
-dwo_file_hash::operator() (const dwo_file_search &search) const noexcept
-{
-  hashval_t hash = htab_hash_string (search.dwo_name);
-
-  if (search.comp_dir != nullptr)
-    hash += htab_hash_string (search.comp_dir);
-
-  return hash;
-}
-
-/* See dwarf2/read.h.  */
-
-std::size_t
-dwo_file_hash::operator() (const dwo_file_up &file) const noexcept
-{
-  return (*this) ({ file->dwo_name.c_str (), file->comp_dir });
-}
-
-/* See dwarf2/read.h.  */
-
-bool
-dwo_file_eq::operator() (const dwo_file_search &search,
-			 const dwo_file_up &dwo_file) const noexcept
-{
-  if (search.dwo_name != dwo_file->dwo_name)
-    return false;
-
-  if (search.comp_dir == nullptr || dwo_file->comp_dir == nullptr)
-    return search.comp_dir == dwo_file->comp_dir;
-
-  return streq (search.comp_dir, dwo_file->comp_dir);
-}
-
-/* See dwarf2/read.h.  */
-
-bool
-dwo_file_eq::operator() (const dwo_file_up &a,
-			 const dwo_file_up &b) const noexcept
-{ return (*this) ({ a->dwo_name.c_str (), a->comp_dir }, b); }
 
 /* These sections are what may appear in a DWP file.  */
 
