@@ -1350,7 +1350,7 @@ amd_dbgapi_target::async (bool enable)
 static ptid_t
 make_gpu_ptid (ptid_t::pid_type pid, amd_dbgapi_wave_id_t wave_id)
 {
- return ptid_t (pid, 1, wave_id.handle);
+  return ptid_t (pid, 1, wave_id.handle);
 }
 
 /* When a thread is deleted, remove its wave_info from the inferior's
@@ -1894,7 +1894,7 @@ static void maybe_reset_amd_dbgapi ();
 
 /* Make the amd-dbgapi library detach from INF.
 
-   Note that this us unrelated to the "detach" GDB concept / command.
+   Note that this is unrelated to the "detach" GDB concept / command.
 
    This undoes what attach_amd_dbgapi does.  */
 
