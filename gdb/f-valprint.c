@@ -36,6 +36,7 @@
 #include "cli/cli-style.h"
 #include "gdbarch.h"
 #include "f-array-walker.h"
+#include "event-top.h"
 
 static void f77_get_dynamic_length_of_aggregate (struct type *);
 
@@ -188,6 +189,8 @@ public:
 			  struct type *elt_type, LONGEST elt_off,
 			  LONGEST index, bool last_p)
   {
+    QUIT;
+
     size_t dim_indx = m_dimension - 1;
     struct type *elt_type_prev = m_elt_type_prev;
     LONGEST elt_off_prev = m_elt_off_prev;
@@ -261,6 +264,8 @@ public:
     struct type *elt_type_prev = m_elt_type_prev;
     LONGEST elt_off_prev = m_elt_off_prev;
     bool repeated = false;
+
+    QUIT;
 
     if (m_options.repeat_count_threshold < UINT_MAX
 	&& elt_type_prev != nullptr)

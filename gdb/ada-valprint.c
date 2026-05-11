@@ -183,6 +183,8 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
 					   bitsize, elttype);
       while (1)
 	{
+	  QUIT;
+
 	  /* Make sure to free any values in the inner loop.  */
 	  scoped_value_mark free_values;
 

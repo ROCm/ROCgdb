@@ -2038,6 +2038,8 @@ value_print_array_elements (struct value *val, struct ui_file *stream,
 
 	  while (rep1 < len)
 	    {
+	      QUIT;
+
 	      /* When printing large arrays this spot is called frequently, so
 		 clean up temporary values asap to prevent allocating a large
 		 amount of them.  */
