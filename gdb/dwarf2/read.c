@@ -5765,19 +5765,7 @@ read_file_scope (struct die_info *die, struct dwarf2_cu *cu)
     }
 }
 
-/* See cu.h.
-
-   This function is defined in this file (instead of cu.c) because it needs
-   to see the definition of struct dwo_unit.  */
-
-const dwarf2_section_info &
-dwarf2_cu::section () const
-{
-  if (this->dwo_unit != nullptr)
-    return *this->dwo_unit->section;
-  else
-    return *this->per_cu->section ();
-}
+/* See cu.h.  */
 
 /* See cu.h.
 

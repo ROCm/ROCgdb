@@ -58,6 +58,17 @@ dwarf2_cu::dwarf2_cu (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile)
 
 /* See cu.h.  */
 
+const dwarf2_section_info &
+dwarf2_cu::section () const
+{
+  if (this->dwo_unit != nullptr)
+    return *this->dwo_unit->section;
+  else
+    return *this->per_cu->section ();
+}
+
+/* See cu.h.  */
+
 struct type *
 dwarf2_cu::addr_sized_int_type (bool unsigned_p) const
 {
