@@ -27,6 +27,7 @@
 load_lib rocm.exp
 
 require allow_hipcc_tests
+require no_lto
 
 standard_testfile hip-builtin-variables.cpp
 

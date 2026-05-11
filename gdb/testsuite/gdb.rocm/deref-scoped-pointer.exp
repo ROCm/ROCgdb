@@ -28,6 +28,15 @@ load_lib rocm.exp
 
 require allow_hipcc_tests
 
+# At -O1+ the HIP compiler drops the DWARF name->location mapping for
+# kernel locals (e.g. "local_var") at arbitrary line breakpoints, even
+# when their address is escaped and the storage is kept live, so GDB
+# reports them as <optimized out>.  This test relies on resolving
+# "local_var" symbolically at the "set breakpoint here" location, so
+# restrict it to non-optimized builds until the toolchain improves
+# debug info for HIP kernels under optimization.
+require no_optimized_code
+
 standard_testfile .cpp
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {

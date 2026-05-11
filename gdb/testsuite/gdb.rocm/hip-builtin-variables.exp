@@ -21,6 +21,7 @@
 load_lib rocm.exp
 
 require allow_hipcc_tests
+require no_lto
 
 standard_testfile .cpp
 
@@ -234,7 +235,7 @@ with_rocm_gpu_lock {
 	# entry of the "return;" with the function's closing brace,
 	# so "next" lands on the brace instead.  Either is fine for
 	# this test - the point is just to step past the local
-	# initialisation before reading blockIdx.
+	# initialization before reading blockIdx.
 	gdb_test "next" "$::decimal\[ \t\]+(return;|\})" \
 	    "let the initialization happen"
 	gdb_test "p/x blockIdx" "0x42424242" \
