@@ -97,7 +97,7 @@ set expected_exception_count 1
 if {[string is integer -strict $reg_value]} {
     set new_value [expr {$reg_value + 1}]
     set obj [dap_request_and_response setExpression \
-		 {o expression [s \$$reg_name] value [s $new_value]}]
+		 {o expression [s \$$::reg_name] value [s $::new_value]}]
     set response [lindex $obj 0]
     gdb_assert { [dict get $response success] == "false" } \
 	"set register fails"
