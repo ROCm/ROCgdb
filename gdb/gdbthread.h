@@ -796,7 +796,14 @@ void thread_change_ptid (process_stratum_target *targ,
 using for_each_thread_callback_ftype
   = gdb::function_view<void (thread_info *)>;
 
-/* Call CALLBACK once for each known thread.  */
+/* Call CALLBACK once for each known thread.
+
+   CALLBACK must not delete the thread.  To delete threads, use:
+
+     for (thread_info &t : all_threads_safe ())
+       if (some_condition ())
+	 delete &t;
+*/
 
 extern void for_each_thread (for_each_thread_callback_ftype callback);
 
