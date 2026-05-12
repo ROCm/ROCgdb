@@ -183,6 +183,8 @@ proc rocm_assemble {source dest {options ""}} {
     lappend options "hip"
     lappend options $asm_options
 
+    return [gdb_compile $source $dest object $options]
+
     # Assemble the device side of the bundle.
     set tmp_o [standard_temp_file [file tail $dest].tmp.o]
     set res [gdb_compile $source $tmp_o object $options]

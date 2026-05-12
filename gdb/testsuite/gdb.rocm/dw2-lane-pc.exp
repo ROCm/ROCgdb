@@ -641,11 +641,14 @@ proc dwarf_assemble {stmt_list_offset} {
 }
 
 proc build {} {
-    set options {
-	"additional_flags=-gdwarf-5 -gline-tables-only"
+    set base_options {
+	"additional_flags=-gdwarf-5"
 	"early_flags=-fgpu-rdc"
 	"hip"
     }
+
+    set options $base_options
+    lappend options "additional_flags=-gline-tables-only"
 
     # The final executable with debug info is built in separate
     # object/executable steps, so we need to build the template the
@@ -695,8 +698,12 @@ proc build {} {
 	return 0
     }
 
+    set options $base_options
+    lappend options \
+	"additional_flags=-Xoffload-linker $::asm_o"
+
     # Link it all.
-    if { [gdb_compile "$::main_o $::asm_o" $::binfile executable $options] != "" } {
+    if { [gdb_compile "$::main_o" $::binfile executable $options] != "" } {
 	untested "failed to compile"
 	return 0
     }
