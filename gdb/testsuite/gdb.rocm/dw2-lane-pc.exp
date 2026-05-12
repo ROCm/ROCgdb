@@ -358,8 +358,8 @@ proc dwarf_assemble {stmt_list_offset} {
 			{DW_AT_type :$unsigned_label}
 			{DW_AT_name gid}
 			{DW_AT_location {
-			    # V0 in 64-bit wavefront mode.
-			    DW_OP_regx 2560
+			    # V8 in 64-bit wavefront mode.
+			    DW_OP_regx 2568
 			    DW_OP_LLVM_user DW_OP_LLVM_USER_push_lane
 			    DW_OP_constu 0x4
 			    DW_OP_mul
@@ -454,8 +454,8 @@ proc dwarf_assemble {stmt_list_offset} {
 			{DW_AT_type :$int_label}
 			{DW_AT_name val}
 			{DW_AT_location {
-			    # V0 in 64-bit wavefront mode.
-			    DW_OP_regx 2560
+			    # V8 in 64-bit wavefront mode.
+			    DW_OP_regx 2568
 			    DW_OP_LLVM_user DW_OP_LLVM_USER_push_lane
 			    DW_OP_constu 0x4
 			    DW_OP_mul
@@ -486,8 +486,8 @@ proc dwarf_assemble {stmt_list_offset} {
 			{DW_AT_type :$int_label}
 			{DW_AT_name val}
 			{DW_AT_location {
-			    # V0 in 64-bit wavefront mode.
-			    DW_OP_regx 2560
+			    # V8 in 64-bit wavefront mode.
+			    DW_OP_regx 2568
 			    DW_OP_LLVM_user DW_OP_LLVM_USER_push_lane
 			    DW_OP_constu 0x4
 			    DW_OP_mul
