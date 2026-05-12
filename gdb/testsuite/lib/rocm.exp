@@ -531,7 +531,7 @@ proc get_section_offset {section file} {
 #                DW_AT_producer    ("AMD clang version 13.0.0 (ssh://gerritgit/lightning/ec/llvm-project amd-mainline-open 21301 6e7a17507da98b214810082932cbb3cb29f7f3ae)")
 #  ...
 
-proc hip_get_clang_compile_unit_range {file} {
+proc hip_get_clang_compile_unit_ranges {file} {
     # Ignore warnings (SWDEV-320473).
     set cmd "${::rocm_path}/llvm/bin/llvm-dwarfdump $file 2>&1\
 	       | grep -v \"warning\"\
@@ -544,14 +544,16 @@ proc hip_get_clang_compile_unit_range {file} {
 	error "comp unit range failed: $status, \"$output\""
     }
 
-    regexp "^($::hex):.*length = ($::hex).*" $output -> start length
+    set ranges {}
+    # Iterate over each line of the output to catch all compile units.
+    foreach line [split $output "\n"] {
+	if { [regexp "^($::hex):.*length = ($::hex).*" $line -> start length] } {
+	    verbose -log "found range: start=$start length=$length"
+	    lappend ranges [list $start $length]
+	}
+    }
 
-    # Get past the header.
-    incr start 12
-
-    verbose -log "start=$start length=$length"
-
-    return [list $start $length]
+    return $ranges
 }
 
 # Zap away the compilation unit Clang emitted for the device code, in
@@ -587,22 +589,29 @@ proc hip_zap_clang_compile_unit {file} {
 
     # Now find the .debug_info offset for the compile unit we're
     # interested in.
-    lassign [hip_get_clang_compile_unit_range $file_device_so] \
-	start length
-    verbose -log "zap: start=$start length=$length"
 
-    set final_offset \
-	[expr {$hip_fatbin_offset + $bundle_offset + $debug_info_offset + $start}]
-    verbose -log "zap: final_offset=$final_offset"
-
-    # Finally, write LENGTH zeros at FINAL_OFFSET, and we're done.
+    set ranges [hip_get_clang_compile_unit_ranges $file_device_so]
 
     set fp [open $file "r+"]
     fconfigure $fp -translation binary
 
-    seek $fp $final_offset
-    for {set i 0} {$i < $length} {incr i} {
-	puts -nonewline $fp "\0"
+    foreach range $ranges {
+	lassign $range start length
+	verbose -log "zap: start=$start length=$length"
+
+	set after_header [expr {$start + 12}]
+	set final_length [expr {$length + 4 - 12}]
+
+	set final_offset \
+	    [expr {$hip_fatbin_offset + $bundle_offset + $debug_info_offset + $after_header}]
+	verbose -log "zap: final_offset=$final_offset"
+	verbose -log "zap: final_length=$final_length"
+
+	# Write FINAL_LENGTH zeros at FINAL_OFFSET.
+	seek $fp $final_offset
+	for {set i 0} {$i < $final_length} {incr i} {
+	    puts -nonewline $fp "\0"
+	}
     }
 
     close $fp
