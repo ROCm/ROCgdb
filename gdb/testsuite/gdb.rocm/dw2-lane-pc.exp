@@ -642,7 +642,7 @@ proc dwarf_assemble {stmt_list_offset} {
 
 proc build {} {
     set base_options {
-	"additional_flags=-gdwarf-5"
+	"additional_flags=-gdwarf-5 -mwavefrontsize64"
 	"early_flags=-fgpu-rdc"
 	"hip"
     }
