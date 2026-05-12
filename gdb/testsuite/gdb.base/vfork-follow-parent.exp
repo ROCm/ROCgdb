@@ -29,7 +29,7 @@ set binfile3 vforked-prog
 
 if { [build_executable "compile $binfile3" $binfile3 $srcfile2] } {
     untested "failed to compile third test binary"
-    return -1
+    return
 }
 
 if { [is_remote target] } {

@@ -19,7 +19,7 @@ clear_xfail "*-*-*"
 standard_testfile .c
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile]} {
-    return -1
+    return
 }
 
 # General testing of the 'jump' command.  GDB is already started.
@@ -99,7 +99,7 @@ if {![use_gdb_stub]} {
 
 # Run to main, add inferiors if needed.
 if {![runto_main]} {
-    return -1
+    return
 }
 for {set inf 2} {$inf <= $num_inferiors} {incr inf} {
     # Start a new inferior, and run it with the same executable.
@@ -110,7 +110,7 @@ for {set inf 2} {$inf <= $num_inferiors} {incr inf} {
 	"Switching to inferior ${inf} .*" \
 	"switch to inferior ${inf}"
     if {![runto_main]} {
-	return -1
+	return
     }
 }
 

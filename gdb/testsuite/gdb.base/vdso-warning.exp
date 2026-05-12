@@ -20,7 +20,7 @@
 standard_testfile
 
 if { [prepare_for_testing "failed to prepare" ${testfile} $srcfile] } {
-    return -1
+    return
 }
 
 with_test_prefix "setup" {
@@ -73,7 +73,7 @@ with_test_prefix "core" {
     set corefile [standard_output_file $testfile.core]
     set core_supported [gdb_gcore_cmd "$corefile" "save a corefile"]
     if {!$core_supported} {
-	return -1
+	return
     }
 
     clean_restart ${testfile}

@@ -26,7 +26,7 @@ require allow_python_tests
 standard_testfile .cc
 
 if { [build_executable "failed to build" $testfile $srcfile {debug c++}] } {
-    return -1
+    return
 }
 
 # Find the helper script in the GDB build directory.

@@ -55,7 +55,7 @@ Dwarf::assemble $asm_file {
 
 if {[prepare_for_testing "failed to prepare" ${testfile} \
 	 [list $srcfile $asm_file] {nodebug}]} {
-    return -1
+    return
 }
 
 set have_index [exec_has_index_section $binfile]
@@ -66,7 +66,7 @@ set have_index [exec_has_index_section $binfile]
 
 if {[gdb_start_cmd] < 0} {
     fail "could not start ${testfile}"
-    return -1
+    return
 }
 
 gdb_test_multiple "" "stopped at mymain" {

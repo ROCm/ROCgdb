@@ -28,7 +28,7 @@ standard_testfile
 set flags "additional_flags=-fno-stack-protector"
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} "debug $flags"] } {
-    return -1
+    return
 }
 
 # This test runs on a specific platform.
@@ -37,7 +37,7 @@ require is_x86_64_m64_target
 # The following tests require execution.
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Check for the corrupt backtrace.

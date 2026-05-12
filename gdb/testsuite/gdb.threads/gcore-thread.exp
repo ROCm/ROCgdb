@@ -37,7 +37,7 @@ set opts [list debug]
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${objfile}" object $opts] != ""
     || ([gdb_compile_pthreads "${objfile}" "${binfile}" executable [concat $opts {ldflags=-Wl,-z,norelro}] ] != ""
 	&& [gdb_compile_pthreads "${objfile}" "${binfile}" executable $opts] != "") } {
-    return -1
+    return
 }
 
 # Now we can proceed with the real testing.
@@ -56,7 +56,7 @@ set nl "\r\n"
 set timeout 30
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test_multiple "info threads" "threads are supported" {
@@ -65,7 +65,7 @@ gdb_test_multiple "info threads" "threads are supported" {
     }
     -re "${nl}$gdb_prompt $" {
 	unsupported "gdb does not support threads on this target"
-	return -1
+	return
     }
 }
 
@@ -83,7 +83,7 @@ gdb_test "continue" "Continuing.*Breakpoint.* thread2 .*" "thread 2 is running"
 set core_supported [gdb_gcore_cmd "$corefile" "save a corefile"]
 
 if {!$core_supported} {
-  return -1
+    return
 }
 
 

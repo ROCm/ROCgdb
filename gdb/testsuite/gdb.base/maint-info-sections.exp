@@ -22,11 +22,11 @@ standard_testfile break.c break1.c
 
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile $srcfile2] {debug nowarnings}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Check the output of 'maint info target-sections' command.

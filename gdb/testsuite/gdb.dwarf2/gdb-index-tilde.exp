@@ -35,7 +35,7 @@ set home $::env(HOME)
 # that's fine, but we can't test tilde expansion in this case.
 if { [string compare -length [string length $home] $full_dir $home] != 0 } {
     unsupported "test not run within home directory"
-    return -1
+    return
 }
 
 # Convert the $HOME prefix in to ~.
@@ -43,7 +43,7 @@ set dir "~[string range $full_dir [string length $home] end]"
 
 # Build the test executable.
 if { [prepare_for_testing "failed to prepare" "${testfile}" ${srcfile}] } {
-    return -1
+    return
 }
 
 # Start GDB and load in the executable.
@@ -73,12 +73,12 @@ gdb_test_multiple "maint print objfile $binfile" "check we can generate an index
 
 if { $has_index } {
     unsupported "already have an index"
-    return -1
+    return
 }
 
 if { !$can_dump_index } {
     unsupported "lacks debug information needed to dump index"
-    return -1
+    return
 }
 
 # Generate an index file.

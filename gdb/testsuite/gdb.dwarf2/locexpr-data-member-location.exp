@@ -91,7 +91,7 @@ if {[gdb_compile_shlib $libsrc $lib_so \
 set exec_options [list debug shlib=$lib_so]
 if {[prepare_for_testing "failed to prepare" ${testfile} \
 	 ${::srcfile} $exec_options]} {
-    return -1
+    return
 }
 
 ### First GDB session.

@@ -24,7 +24,7 @@
 
 
 if { [prepare_for_testing "failed to prepare" float float.c] } {
-    return -1
+    return
 }
 
 # Set it up at a breakpoint so we have its registers.

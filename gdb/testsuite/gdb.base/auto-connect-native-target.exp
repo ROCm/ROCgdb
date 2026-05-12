@@ -19,7 +19,7 @@
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 require have_native_target
@@ -53,7 +53,7 @@ if { $topmost != "exec" } {
 # Check which target this board connects to.  If testing with a native
 # target board, this should cause the native target to auto connect.
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Returns true if the native target is pushed on the target stack.

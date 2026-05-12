@@ -18,16 +18,16 @@ standard_testfile .cc
 require allow_cplus_tests
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {[skip_libstdcxx_probe_tests]} {
     untested "could not find libstdc++ stap probe"
-    return -1
+    return
 }
 
 proc do_continue_to_catchpoint {name} {
@@ -71,7 +71,7 @@ do_exceptprint_tests "reference to struct" "{mv = 77}"
 delete_breakpoints
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 with_test_prefix "2nd run" {

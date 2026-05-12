@@ -20,7 +20,7 @@ set srcfile ${testfile}.S
 set binfile ${objdir}/${subdir}/${testfile}
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart
@@ -28,7 +28,7 @@ gdb_load $binfile
 
 # We need to start the inferior to place the breakpoints in the memory at all.
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # The default "auto" mode removes all the breakpoints when we stop (and not
@@ -55,7 +55,7 @@ gdb_test_multiple "b bundle" $test {
 }
 
 if {![info exists bpt2address]} {
-    return -1
+    return
 }
 
 gdb_test "b *($bpt2address + 1)" "Breakpoint \[0-9\] at .*" "slot 1 breakpoint placed"

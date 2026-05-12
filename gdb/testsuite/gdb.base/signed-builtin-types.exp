@@ -23,22 +23,22 @@ set libname "lib${gdb_test_file_name}.so"
 set objdso [standard_output_file $libname]
 if {[gdb_compile_shlib $srcdso $objdso {debug}] != ""} {
     untested "failed to compile dso"
-    return -1
+    return
 }
 
 # Build the test executable and runto main.
 set opts [list debug shlib=$objdso]
 if { [prepare_for_testing "failed to " $testfile $srcfile $opts] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {[readnow]} {
     untested "this test checks for delayed symtab expansion"
-    return -1
+    return
 }
 
 # Use 'info sources' to check if the debug information for the shared

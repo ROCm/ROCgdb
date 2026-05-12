@@ -30,7 +30,7 @@ standard_testfile psymtab1.c psymtab2.c
 
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile $srcfile2] debug]} {
-    return -1
+    return
 }
 
 # Disable the prompt for whether to set pending breakpoints.

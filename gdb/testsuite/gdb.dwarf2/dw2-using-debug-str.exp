@@ -25,7 +25,7 @@ require dwarf2_support
 standard_testfile .c -dw.S
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return -1
+    return
 }
 
 set asm_file [standard_output_file $srcfile2]
@@ -86,11 +86,11 @@ Dwarf::assemble $asm_file {
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile $asm_file] {nodebug}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Print the type of global_var.  This type information is entirely
@@ -122,7 +122,7 @@ set result [remote_exec host "[gdb_find_objcopy] $args"]
 set status [lindex $result 0]
 set output [lindex $result 1]
 if { $status == 0 && ![string equal $output ""] } {
-    return -1
+    return
 }
 
 # Now copy the executable, and remove the .debug_str section.  This
@@ -133,7 +133,7 @@ set binfile_no_debug_str "${host_binfile}-no-debug-str"
 set args "--remove-section .debug_str $host_binfile ${binfile_no_debug_str}"
 if {[run_on_host "objcopy" [gdb_find_objcopy] "$args"]} {
     perror "failed to run objcopy"
-    return -1
+    return
 }
 
 # Restart GDB, but don't load an executable.  When we do load the

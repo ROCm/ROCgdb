@@ -22,7 +22,7 @@ set exefile $testfile
 
 if {[prepare_for_testing "failed to prepare" $exefile $srcfile \
 	 {c++ debug nowarnings}]} {
-    return -1
+    return
 }
 
 # Wrap this whole test in a namespace to avoid contaminating other tests.
@@ -90,7 +90,7 @@ namespace eval $testfile {
     # Fire up gdb.
     if {![runto_main]} {
 	namespace delete $testfile
-	return -1
+	return
     }
 
     # Test explicit linespecs, with and without conditions.

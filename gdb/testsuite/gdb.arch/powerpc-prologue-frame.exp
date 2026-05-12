@@ -22,15 +22,15 @@ if {[gdb_compile \
       [list ${srcdir}/${subdir}/$srcfile ${srcdir}/${subdir}/$srcfile2] \
       "${binfile}" executable {}] != ""} {
     untested "failed to build $binfile"
-    return -1
+    return
 }
 
 
 clean_restart $testfile
 
 if {![runto bar]} {
-  untested "could not run to bar"
-  return -1
+    untested "could not run to bar"
+    return
 }
 
 gdb_test "bt" \

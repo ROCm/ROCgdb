@@ -28,18 +28,18 @@ set tfx [standard_output_file pr10728-x.o]
 set tfy [standard_output_file pr10728-y.o]
 
 if  { [gdb_compile "${srcdir}/${subdir}/$srcfile2" "${tfy}.o" object {c++}] != "" } {
-     untested "failed to compile second object file"
-     return -1
+    untested "failed to compile second object file"
+    return
 }
 
 if  { [gdb_compile "${srcdir}/${subdir}/$srcfile" "${tfx}.o" object {debug c++}] != "" } {
-     untested "failed to compile first object file"
-     return -1
+    untested "failed to compile first object file"
+    return
 }
 
 if  { [gdb_compile "${tfx}.o ${tfy}.o" ${binfile} executable {debug c++}] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 clean_restart $::testfile

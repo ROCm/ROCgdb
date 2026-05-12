@@ -109,7 +109,7 @@ if {[string equal ${core-regs} ""]} {
 	unsupported "register tests (missing architecture-specific core-regs setting)"
     }
 
-    return 0
+    return
 }
 
 # Otherwise, we support both XML and target defined registers.

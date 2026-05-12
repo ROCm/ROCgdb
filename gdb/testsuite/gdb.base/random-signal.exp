@@ -21,7 +21,7 @@ require {!target_info exists gdb,nointerrupts}
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # Set a software watchpoint, continue, wait a bit and stop the target
@@ -52,7 +52,7 @@ with_test_prefix "run" {
     clean_restart $testfile
 
     if {![runto_main]} {
-	return -1
+	return
     }
 
     do_test

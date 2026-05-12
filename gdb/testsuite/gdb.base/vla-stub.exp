@@ -16,7 +16,7 @@
 standard_testfile .c vla-stub-define.c
 if { [prepare_for_testing "failed to prepare for vla-stub.exp" \
       ${testfile} [list ${srcfile} ${srcfile2}]] } {
-    return -1
+    return
 }
 
 gdb_test "p *local_struct.ptr" { = {dynamic_field = 0x0}}

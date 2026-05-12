@@ -16,20 +16,20 @@
 standard_testfile
 
 if {[build_executable ${testfile}.exp $testfile] == -1} {
-    return -1
+    return
 }
 
 set test "eu-strip"
 set status [remote_exec build "eu-strip -f ${binfile}.debug $binfile"]
 if {[lindex $status 0] != 0} {
     untested "failed to compile"
-    return 0
+    return
 }
 
 clean_restart $testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "p callfunc (func)" " = 2" "infcall"

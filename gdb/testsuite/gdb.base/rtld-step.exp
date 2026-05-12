@@ -93,7 +93,7 @@ if { ![gdb_can_simple_compile static-pie-static-libc \
 	   executable $rtld_flags] } {
     set reason "-static-pie not supported or static libc missing"
     untested "failed to compile ($reason)"
-    return -1
+    return
 }
 
 # Main program file names and flags:
@@ -108,20 +108,20 @@ lappend main_flags \
 # Compile pretend RTLD:
 if { [gdb_compile ${srcfile_rtld} ${binfile_rtld} executable $rtld_flags] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Compile main program:
 if { [gdb_compile ${srcfile_main} ${binfile_main} executable $main_flags] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart
 gdb_load $binfile_main
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Running the command 'info sharedlibrary' should output a path to

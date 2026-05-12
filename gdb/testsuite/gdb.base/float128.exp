@@ -27,7 +27,7 @@ proc do_compile { {opts {}} } {
 
 if { [do_compile] != "" && [do_compile {-mfloat128}] != "" } {
     untested "compiler can't handle __float128 type?"
-    return -1
+    return
 }
 
 clean_restart $testfile

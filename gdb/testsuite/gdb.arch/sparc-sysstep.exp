@@ -29,11 +29,11 @@ set binfile ${objdir}/${subdir}/${testfile}
 set opts {}
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {additional_flags=-g}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Watching the global variable will guarantee that gdb will

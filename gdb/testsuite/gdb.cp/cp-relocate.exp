@@ -21,8 +21,8 @@ append binfile .o
 require allow_cplus_tests
 
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" object {c++ debug}] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 proc get_func_address { func } {
@@ -67,7 +67,7 @@ gdb_test_multiple "info functions func<.>" "info functions" {
 	    pass "info functions"
 	} else {
 	    fail "info functions"
-	    return -1
+	    return
 	}
     }
 }
@@ -105,14 +105,14 @@ gdb_test_multiple "info file" "info file" {
 	    pass "info file"
 	} else {
 	    fail "info file"
-	    return -1
+	    return
 	}
     }
 }
 
 if { $func1_sec == $func2_sec } {
     untested "cp-relocate.exp - template functions in same sections"
-    return -1
+    return
 }
 
 # Now start a clean GDB, for add-symbol-file tests.

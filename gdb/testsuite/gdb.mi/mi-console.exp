@@ -49,8 +49,8 @@ proc semihosted_string { string } {
 standard_testfile
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 if {[mi_clean_restart $::testfile]} {

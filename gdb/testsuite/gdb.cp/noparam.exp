@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 if { [prepare_for_testing "failed to prepare" "noparam" "noparam.cc" {debug c++}] } {
-    return -1
+    return
 }
 
 # Check if GDB does not crash.

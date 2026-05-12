@@ -3,6 +3,9 @@
 
 *** Changes since GDB 17
 
+* Support for the Common Trace Format (CTF) has been removed.  GDB now
+  saves trace information exclusively in its own "tfile" format.
+
 * Support for .gdb_index sections with version less than 7 has been
   removed.
 
@@ -78,6 +81,12 @@
 * The Windows native target now supports non-stop mode.  This feature
   requires Windows 10 or later.
 
+* Configure changes
+
+** --with-babeltrace has been removed.  The babeltrace library was
+   only used to help GDB parse Common Trace Format (CTF) data.  The
+   support for CTF has also been removed.
+
 * New targets
 
 GNU/Linux/MicroBlaze (gdbserver) microblazeel-*linux*
@@ -112,7 +121,8 @@ show debug gnu-ifunc
 
 set debug ctf on|off
 show debug ctf
-  Turn on or off debug messages about CTF reading.
+  Turn on or off debug messages about Compact C Type Format (CTF)
+  reading.
 
 set progress-bars enabled on|off
 show progress-bars enabled
@@ -130,7 +140,14 @@ disable skip
   These are new aliases for 'skip delete', 'skip enable', and 'skip
   disable' respectively.
 
+* MI changes
+
+** The "-trace-save" command no longer supports the "-ctf" flag.
+
 * Changed commands
+
+tsave
+  This command no longer supports the "-ctf" flag.
 
 maintenance info program-spaces
   This command no longer displays the core file name.
@@ -146,6 +163,9 @@ New command class for help
   set of commands for a new user of GDB.
 
 * Removed commands
+
+target ctf
+  Support for the Common Trace Format (CTF) has been removed.
 
 maint check psymtabs
 maint info psymtabs

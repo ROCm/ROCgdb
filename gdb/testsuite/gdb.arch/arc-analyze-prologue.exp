@@ -26,11 +26,11 @@ standard_testfile .S
 set options {}
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile $options] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Convert list of saved registers and their offsets to a GDB string.

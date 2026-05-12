@@ -23,7 +23,7 @@ load_lib gdb-python.exp
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
-    return -1
+    return
 }
 
 # Run a series of tests based on various test specifications.

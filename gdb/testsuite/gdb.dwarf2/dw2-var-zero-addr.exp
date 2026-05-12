@@ -21,7 +21,7 @@ standard_testfile .S main.c
 
 if {[prepare_for_testing "failed to prepare" ${testfile} \
 	 [list $srcfile $srcfile2] {nodebug}]} {
-    return -1
+    return
 }
 
 proc test { } {

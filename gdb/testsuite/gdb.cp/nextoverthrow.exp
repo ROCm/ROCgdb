@@ -19,7 +19,7 @@ require allow_cplus_tests
 standard_testfile .cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
@@ -28,7 +28,7 @@ if {![runto_main]} {
 
 if {![skip_unwinder_tests]} {
     unsupported "nextoverthrow.exp could not find _Unwind_DebugHook"
-    return -1
+    return
 }
 
 # Set a temporary breakpoint and then continue to it.

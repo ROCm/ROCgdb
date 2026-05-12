@@ -29,7 +29,7 @@ set binfile ${objdir}/${subdir}/${testfile}
 # Note we have to compile WITH optimization and WITHOUT debugging information to expose the bug.
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {"additional_flags=-O2"}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart

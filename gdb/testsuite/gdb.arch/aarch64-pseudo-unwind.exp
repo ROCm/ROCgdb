@@ -26,7 +26,7 @@ standard_testfile aarch64-pseudo-unwind.c aarch64-pseudo-unwind-asm.S
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	"${srcfile} ${srcfile2}" {debug}] } {
-    return -1
+    return
 }
 
 clean_restart $testfile

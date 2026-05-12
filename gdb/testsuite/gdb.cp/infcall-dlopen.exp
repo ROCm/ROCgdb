@@ -22,13 +22,13 @@ set lib_dlopen [shlib_target_file ${testfile}.so]
 # Use completely arbitrary file for $libfile source.
 if { [gdb_compile_shlib ${srcdir}/${subdir}/${srcfile2} ${libfile} {debug c++}] != ""
      || [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug c++ shlib_load}] } {
-    return -1
+    return
 }
 
 gdb_load_shlib $libfile
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 for {set i 0} {$i < 10} {incr i} {

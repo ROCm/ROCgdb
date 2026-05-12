@@ -18,7 +18,7 @@ standard_testfile
 require allow_python_tests
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return -1
+    return
 }
 
 set SS "struct SimpleStruct"
@@ -76,7 +76,7 @@ proc scalar_value { value_name value } {
 set SS_fields [field_values {a = 10} {d = 100[.].*}]
 
 if {![runto_main]} {
-   return -1
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "Break here."]

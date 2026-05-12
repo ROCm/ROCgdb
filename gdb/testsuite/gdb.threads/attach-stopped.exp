@@ -79,7 +79,7 @@ proc corefunc { threadtype } {
 #
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
     untested "attach-stopped.exp (unthreaded)"
-    return -1
+    return
 }
 
 corefunc nonthreaded
@@ -88,7 +88,7 @@ corefunc nonthreaded
 #
 if  { [gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug additional_flags=-DUSE_THREADS}] != "" } {
     untested "attach-stopped.exp (threaded)"
-    return -1
+    return
 }
 
 corefunc threaded

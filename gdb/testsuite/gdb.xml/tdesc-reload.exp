@@ -21,11 +21,11 @@ require allow_xml_test
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Three files we're going to write out to.
@@ -60,7 +60,7 @@ gdb_load ${binfile}
 
 # Run to `main' where we begin our tests.
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Run info registers just to check this appears to run fine with the

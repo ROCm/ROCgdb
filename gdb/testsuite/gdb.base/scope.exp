@@ -20,7 +20,7 @@ standard_testfile scope0.c scope1.c
 
 if {[build_executable "failed to build" ${testfile} \
 	 [list $srcfile $srcfile2] {debug}]} {
-    return -1
+    return
 }
 
 # Test locating various things when stopped just inside main, after

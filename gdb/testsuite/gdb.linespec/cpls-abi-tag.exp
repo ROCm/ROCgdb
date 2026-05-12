@@ -31,7 +31,7 @@ if { [test_compiler_info gcc-*] } {
 
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile] {c++ debug}]} {
-    return -1
+    return
 }
 
 # Tests below are about tab-completion, which doesn't work if readline
@@ -39,7 +39,7 @@ if {[prepare_for_testing "failed to prepare" $testfile \
 
 if { ![readline_is_used] } {
     untested "no tab completion support without readline"
-    return -1
+    return
 }
 
 gdb_test_no_output "set max-completions unlimited"

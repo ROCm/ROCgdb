@@ -8406,7 +8406,7 @@ remote_target::push_stop_reply (stop_reply_up new_event)
   if (notif_debug)
     gdb_printf (gdb_stdlog,
 		"notif: push 'Stop' %s to queue %d\n",
-		new_event->ptid.to_string ().c_str (),
+		rs->stop_reply_queue.back ()->ptid.to_string ().c_str (),
 		int (rs->stop_reply_queue.size ()));
 
   /* Mark the pending event queue only if async mode is currently enabled.

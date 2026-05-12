@@ -19,7 +19,7 @@ standard_testfile .c
 set executable ${testfile}
 
 if { [prepare_for_testing "failed to prepare" $executable "" [list debug pie]] } {
-    return -1
+    return
 }
 
 set arch ""
@@ -31,7 +31,7 @@ gdb_test_multiple $test $test {
     }
 }
 if {![runto_main]} {
-    return 0
+    return
 }
 set test "sanity check info shared"
 gdb_test_multiple "info shared" $test {
@@ -46,7 +46,7 @@ gdb_exit
 
 if {$arch == ""} {
     untested "no architecture set"
-    return 0
+    return
 }
 
 # Start the program running and then wait for a bit, to be sure

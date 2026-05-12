@@ -286,6 +286,9 @@ notify_thread_exited (thread_info *t, std::optional<ULONGEST> exit_code,
 {
   if (!silent && print_thread_events)
     {
+      /* Switch inferior before the target calls below.  */
+      auto restore_inf = maybe_switch_inferior (t->inf);
+
       if (exit_code.has_value ())
 	gdb_printf (_("[%s (id %s) exited with code %s]\n"),
 		    target_pid_to_str (t->ptid).c_str (),
@@ -2627,10 +2630,19 @@ thread_command (const char *tidstr, int from_tty)
     }
   else
     {
+      inferior *previous_inferior = current_inferior ();
+
       thread_select (tidstr, parse_thread_id (tidstr, NULL));
 
-      notify_user_selected_context_changed
-	(USER_SELECTED_THREAD | USER_SELECTED_FRAME);
+      user_selected_what selection = (USER_SELECTED_THREAD
+				      | USER_SELECTED_FRAME);
+
+      /* If the inferior changed as a consequence of the thread change,
+	 then let the user know.  */
+      if (previous_inferior != current_inferior ())
+	selection |= USER_SELECTED_INFERIOR;
+
+      notify_user_selected_context_changed (selection);
     }
 }
 

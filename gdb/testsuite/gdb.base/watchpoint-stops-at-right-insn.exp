@@ -76,7 +76,7 @@ require allow_watchpoint_tests
 require allow_hw_watchpoint_tests
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {

@@ -24,7 +24,7 @@ standard_testfile
 set executable ${testfile}
 
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-    return -1
+    return
 }
 
 set iterations 10
@@ -34,7 +34,7 @@ for {set i 1} {$i <= $iterations} {incr i} {
 	clean_restart ${executable}
 
 	if {![runto_main]} {
-	    return -1
+	    return
 	}
 
 	set test "run till end"

@@ -317,7 +317,11 @@ extern void clear_solib (program_space *pspace);
 /* Called to add symbols from a shared library to gdb's symbol table.  */
 
 extern void solib_add (const char *, int, int);
-extern bool solib_read_symbols (solib &, symfile_add_flags);
+
+/* Read in symbols for shared object SO.  If SYMFILE_VERBOSE is set in FLAGS,
+   be chatty about it.  Return true if any symbols were actually loaded.  */
+
+extern bool solib_read_symbols (solib &so, symfile_add_flags flags);
 
 /* Function to be called when the inferior starts up, to discover the
    names of shared libraries that are dynamically linked, the base

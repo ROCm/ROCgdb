@@ -518,7 +518,7 @@ foreach testspec $specs {
 # These tests don't rely on the debug format.
 with_test_prefix nodebug {
     if { [prepare_for_testing "failed to prepare" $testfile $srcfile {nodebug}] } {
-	return 0
+	return
     }
 
     gdb_test "ptype _Atomic int" "type = _Atomic int"

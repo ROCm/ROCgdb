@@ -31,7 +31,7 @@ lappend flags debug
 lappend_include_file flags $srcdir/lib/unbuffer_output.c
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile $flags] } {
-    return -1
+    return
 }
 
 # Run with no arguments.

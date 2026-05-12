@@ -32,13 +32,13 @@ set srcfileabs [standard_output_file $srcfile]
 # not match" test when using Clang (it can never fail).
 if { [regsub {/[^/]+$} $srcfileabs {/\0} srcfileabs] != 1 } {
     xfail "cannot double the last slash separator"
-    return -1
+    return
 }
 
 if { [regsub {^(/[^/]+)/} $srcfileabs {\1subst/} srcfileabssubst] != 1
      || [regsub {^(/[^/]+)/.*$} $srcfileabs {\1} initdir] != 1 } {
     xfail "missing root subdirectory"
-    return -1
+    return
 }
 
 # Generate a regular expression which to match $srcfileabs with
@@ -53,7 +53,7 @@ close $f
 
 if { [gdb_compile "$srcfileabs" "${binfile}" executable {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 file delete -- $srcfileabs

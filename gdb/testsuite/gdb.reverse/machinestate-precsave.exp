@@ -43,7 +43,7 @@ set precsave [standard_output_file machinestate.precsave]
 
 if { [prepare_for_testing "failed to prepare" $testfile \
 	  [list $srcfile $srcfile2]] } {
-    return -1
+    return
 }
 
 set newline "\[\r\n\]+"

@@ -23,11 +23,11 @@ require allow_python_tests
 standard_testfile py-symbol.c
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 set debug_types [debug_types]

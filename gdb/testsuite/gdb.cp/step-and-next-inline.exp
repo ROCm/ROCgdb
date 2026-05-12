@@ -16,7 +16,7 @@
 standard_testfile .cc
 
 if {[test_compiler_info gcc*] && ![supports_statement_frontiers] } {
-    return -1
+    return
 }
 
 # Compile the test source with USE_NEXT_INLINE_H defined (when

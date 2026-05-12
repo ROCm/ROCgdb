@@ -18,7 +18,7 @@
 standard_testfile .cc
 
 if { [build_executable "failed to prepare" ${testfile} $srcfile {debug c++}] } {
-    return -1
+    return
 }
 
 proc restart {} {
@@ -38,7 +38,7 @@ proc restart {} {
 
 with_test_prefix "save" {
     if {![restart]} {
-	return -1
+	return
     }
 
     gdb_breakpoint "function" qualified
@@ -56,7 +56,7 @@ with_test_prefix "save" {
 
 with_test_prefix "restore" {
     if {![restart]} {
-	return -1
+	return
     }
 
     # Restore the breakpoints.

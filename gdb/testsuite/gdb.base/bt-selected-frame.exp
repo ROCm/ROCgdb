@@ -18,7 +18,7 @@
 standard_testfile
 
 if { [build_executable "failed to prepare" $testfile $srcfile debug] } {
-    return -1
+    return
 }
 
 proc check_selected_frame_after_bt { bt_cmd stack_pattern } {

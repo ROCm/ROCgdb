@@ -30,7 +30,7 @@
 #
 
 if { [prepare_for_testing "failed to prepare" whatis-exp int-type.c {debug nowarnings}] } {
-    return -1
+    return
 }
 
 #

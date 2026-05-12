@@ -40,7 +40,7 @@ require allow_python_tests
 
 if {[build_executable "failed to prepare" $testfile $srcfile \
 	 {debug pthreads}] == -1} {
-    return -1
+    return
 }
 
 # Run the test.  When SPAWN_INFERIOR is true the inferior is started

@@ -27,11 +27,11 @@ standard_testfile .S -main.c
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile2 $srcfile] {}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # main is not provided by DWARF.

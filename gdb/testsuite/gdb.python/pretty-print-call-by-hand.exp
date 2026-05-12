@@ -25,7 +25,7 @@ standard_testfile
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile debug] } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # This proc restarts GDB, makes the inferior reach the desired spot - marked

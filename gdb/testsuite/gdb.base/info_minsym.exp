@@ -24,7 +24,7 @@ standard_testfile info_minsym.c
 
 # Compile the program without debugging information, to have minimal symbols.
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {c}]} {
-    return -1
+    return
 }
 
 gdb_test_no_output "info variables -q -t int minsym" \

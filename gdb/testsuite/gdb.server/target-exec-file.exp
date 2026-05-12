@@ -26,7 +26,7 @@ require allow_gdbserver_tests !use_gdb_stub
 standard_testfile
 
 if { [build_executable "failed to prepare" $testfile $srcfile debug] } {
-    return -1
+    return
 }
 
 clean_restart
@@ -223,7 +223,7 @@ set res [remote_exec target "touch $target_exec"]
 set status [lindex $res 0]
 if { $status != 0 } {
     fail "touching executable on target"
-    return -1
+    return
 }
 
 # Start the inferior again, we expect to see the symbols being re-read

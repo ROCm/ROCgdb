@@ -40,7 +40,7 @@ set options [list debug]
 require {istarget "powerpc*"}
 
 if {[build_executable "failed to prepare" $executable $srcfile $options] == -1} {
-    return -1
+    return
 }
 
 clean_restart $executable

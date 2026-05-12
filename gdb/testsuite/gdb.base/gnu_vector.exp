@@ -36,14 +36,14 @@ if { [do_compile {-mcpu=native}] != ""
      && [do_compile {-mcpu=native -Wno-psabi}] != ""
      && [do_compile {-march=native}] != ""
      && [do_compile] != ""} {
-	untested "compiler can't handle vector_size attribute?"
-	return -1
+    untested "compiler can't handle vector_size attribute?"
+    return
 }
 
 clean_restart $testfile
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 # Get endianess for the scalar->vector casts

@@ -22,13 +22,13 @@ standard_testfile .c
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 	  executable {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 if {[gdb_gnu_strip_debug $binfile no-main]} {
     # check that you have a recent version of strip and objcopy installed
     unsupported "cannot produce separate debug info files"
-    return -1
+    return
 }
 
 clean_restart $testfile

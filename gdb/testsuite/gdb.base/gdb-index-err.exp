@@ -19,7 +19,7 @@
 standard_testfile
 
 if {[prepare_for_testing "prepare for test" $testfile $srcfile] == -1} {
-    return -1
+    return
 }
 
 # This test isn't going to work when the board file automatically adds
@@ -28,7 +28,7 @@ if {[prepare_for_testing "prepare for test" $testfile $srcfile] == -1} {
 set index_type [get_index_type $binfile "check debug style"]
 if { $index_type ne "cooked" } {
     unsupported "cannot test without a cooked index"
-    return -1
+    return
 }
 
 

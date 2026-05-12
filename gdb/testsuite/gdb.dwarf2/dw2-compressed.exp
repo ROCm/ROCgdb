@@ -26,7 +26,7 @@ if {[prepare_for_testing_full "failed to prepare" \
 	 [list $testfile \
 	      {debug additional_flags=-static additional_flags=-nostdlib} \
 	      main.c -g0 $srcfile nodebug]]} {
-    return -1
+    return
 }
 
 gdb_remote_download host ${srcdir}/${subdir}/${dwarf_srcfile}

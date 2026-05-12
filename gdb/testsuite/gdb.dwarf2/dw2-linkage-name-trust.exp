@@ -29,11 +29,11 @@ set executable ${testfile}
 if {[prepare_for_testing_full "failed to prepare" \
 	 [list $testfile c++ $testfile-main.cc {c++ nodebug} \
 	      $srcfile {}]]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # main is not provided by DWARF.

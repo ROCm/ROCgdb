@@ -31,7 +31,7 @@ set libfile [standard_output_file ${testfile}.so]
 
 if {[build_executable "build library" ${libfile} ${libsrcfile} \
 	 {debug shlib}] == -1} {
-    return -1
+    return
 }
 
 set srcfile ${testfile}.c
@@ -39,7 +39,7 @@ set executable ${testfile}t
 set binfile [standard_output_file ${executable}]
 set prelink_args [build_executable_own_libs ${testfile}.exp $executable $srcfile [list debug "ldflags=-Wl,${libfile},-rpath,[file dirname ${libfile}]"]]
 if {$prelink_args == ""} {
-    return -1
+    return
 }
 
 set test "split debug of executable"
@@ -51,7 +51,7 @@ if {[gdb_gnu_strip_debug $binfile]} {
 
 if {![prelink_yes $prelink_args]} {
     # Maybe we don't have prelink.
-    return -1
+    return
 }
 
 set found 0
@@ -81,12 +81,12 @@ remote_exec build "rmdir $coredir"
 
 if { $found == 0  } {
     warning "can't generate a core file - prelink tests suppressed - check ulimit -c"
-    return 0
+    return
 }
 
 # Relink $libfile to a different address.
 if {![prelink_yes $prelink_args]} {
-    return -1
+    return
 }
 
 # Start with a fresh gdb

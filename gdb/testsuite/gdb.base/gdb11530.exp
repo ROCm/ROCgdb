@@ -23,11 +23,11 @@ standard_testfile
 # Unnamed union is a GNU extension, thus we restrict the test
 # to gcc compiler.
 if { ![test_compiler_info gcc*] } {
-    return 0
+    return
 }
 
 if { [prepare_for_testing "failed to prepare" $testfile $testfile.c {debug}] } {
-    return -1
+    return
 }
 
 

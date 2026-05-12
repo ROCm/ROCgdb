@@ -33,7 +33,7 @@ proc mi_nonstop_resume { command test } {
 standard_testfile watch-nonstop.c
 
 if {[gdb_compile "$srcdir/$subdir/$srcfile" $binfile executable {debug}] != "" } {
-    return -1
+    return
 }
 
 save_vars { GDBFLAGS } {

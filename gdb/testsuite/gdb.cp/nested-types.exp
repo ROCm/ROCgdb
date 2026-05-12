@@ -27,7 +27,7 @@ standard_testfile .cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 {debug c++}]} {
-    return -1
+    return
 }
 
 # Build the node given by ID (a number representing the struct S[ID] in

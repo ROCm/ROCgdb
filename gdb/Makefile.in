@@ -198,10 +198,6 @@ LIBEXPAT = @LIBEXPAT@
 # Where is lzma?  This will be empty if lzma was not available.
 LIBLZMA = @LIBLZMA@
 
-# Where is libbabeltrace? This will be empty if libbabeltrace was not
-# available.
-LIBBABELTRACE = @LIBBABELTRACE@
-
 # Where is libxxhash? This will be empty if libxxhash was not
 # available.
 LIBXXHASH = @LIBXXHASH@
@@ -678,10 +674,10 @@ CLIBS = $(SIM) $(READLINE) $(OPCODES) $(LIBCTF) $(BFD) $(ZLIB) $(ZSTD_LIBS) \
         $(LIBSUPPORT) $(INTL) $(LIBIBERTY) $(LIBDECNUMBER) \
 	$(XM_CLIBS) $(GDBTKLIBS)  $(LIBBACKTRACE_LIB) \
 	@LIBS@ @GUILE_LIBS@ @PYTHON_LIBS@ $(AMD_DBGAPI_LIBS) \
-	$(LIBEXPAT) $(LIBLZMA) $(LIBBABELTRACE) $(LIBIPT) \
+	$(LIBEXPAT) $(LIBLZMA) $(LIBIPT) \
 	$(WIN32LIBS) $(LIBGNU) $(LIBGNU_EXTRA_LIBS) $(LIBICONV) \
 	$(GMPLIBS) $(SRCHIGH_LIBS) $(LIBXXHASH) $(PTHREAD_LIBS) \
-	$(DEBUGINFOD_LIBS) $(LIBBABELTRACE_LIB)
+	$(DEBUGINFOD_LIBS)
 CDEPS = $(NAT_CDEPS) $(SIM) $(BFD) $(READLINE_DEPS) $(CTF_DEPS) \
 	$(OPCODES) $(INTL_DEPS) $(LIBIBERTY) $(CONFIG_DEPS) $(LIBGNU) \
 	$(LIBSUPPORT)
@@ -1211,7 +1207,6 @@ COMMON_SFILES = \
 	thread-iter.c \
 	tid-parse.c \
 	top.c \
-	tracectf.c \
 	tracefile.c \
 	tracefile-tfile.c \
 	tracepoint.c \
@@ -1701,7 +1696,6 @@ HFILES_NO_SRCDIR = \
 	tid-parse.h \
 	tilegx-tdep.h \
 	top.h \
-	tracectf.h \
 	tracefile.h \
 	tracepoint.h \
 	trad-frame.h \

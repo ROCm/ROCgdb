@@ -633,6 +633,18 @@ write_address_map (const addrmap *addrmap, data_buf &addr_vec,
 		       addrmap_index_data.previous_cu_index);
 }
 
+/* Return true if TU is a foreign type unit, that is a type unit defined in a
+   .dwo file without a corresponding skeleton in the main file.  */
+
+static bool
+is_foreign_tu (const signatured_type *tu)
+{
+  /* If a type unit has a skeleton, then `tu->section ()` will be the section
+     of the skeleton, in the main file.  If it's foreign, it will point to the
+     section in the .dwo file.  */
+  return endswith (tu->section ()->get_name (), ".dwo");
+}
+
 /* DWARF-5 .debug_names builder.  */
 class debug_names
 {
@@ -1411,6 +1423,16 @@ write_gdbindex (dwarf2_per_bfd *per_bfd, cooked_index *table,
   cu_index_htab.reserve (per_bfd->all_units.size ());
 
   unit_lists units = get_unit_lists (*per_bfd);
+
+  /* .gdb_index doesn't have a way to describe skeletonless type units, the way
+     that DWARF 5's .debug_names does with "foreign type units".  If the
+     executable has such skeletonless type units, refuse to produce an index,
+     instead of producing a bogus one.  */
+  for (const signatured_type *tu : units.type)
+    if (is_foreign_tu (tu))
+      error (_("Found foreign (skeletonless) type unit, unable to produce "
+	       ".gdb_index.  Consider using .debug_names instead."));
+
   int counter = 0;
 
   /* Write comp units.  */

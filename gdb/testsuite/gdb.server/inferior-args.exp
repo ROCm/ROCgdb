@@ -35,7 +35,7 @@ if { $gdbserver == "" } {
 
 standard_testfile
 if {[build_executable "failed to prepare" $testfile $srcfile]} {
-    return -1
+    return
 }
 
 # EXTENDED_P is a boolean, when true gdbserver is started with --multi, and

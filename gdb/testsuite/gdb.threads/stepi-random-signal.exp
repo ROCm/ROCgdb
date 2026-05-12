@@ -25,14 +25,14 @@ if { [gdb_compile_pthreads \
 	  "${binfile}" \
 	  executable {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $executable
 
 # Start the second thread.
 if {![runto start]} {
-    return -1
+    return
 }
 
 # Go back to the main thread, and leave it in the loop, where we're

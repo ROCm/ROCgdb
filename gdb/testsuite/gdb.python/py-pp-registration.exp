@@ -23,14 +23,14 @@ require allow_python_tests
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 set remote_python_file [gdb_remote_download host \
 			    ${srcdir}/${subdir}/${testfile}.py]
 
 if {![runto_main ]} {
-    return -1
+    return
 }
 
 proc prepare_test { } {
@@ -64,7 +64,7 @@ proc test_printers { s_prefix } {
 
 with_test_prefix "verbose off" {
     if {![prepare_test]} {
-	return -1
+	return
     }
 
     gdb_test_no_output "set verbose off"
@@ -79,7 +79,7 @@ with_test_prefix "verbose off" {
 
 with_test_prefix "verbose on" {
     if {![prepare_test]} {
-	return -1
+	return
     }
 
     gdb_test_no_output "set verbose on"
@@ -96,7 +96,7 @@ with_test_prefix "verbose on" {
 
 with_test_prefix "replace" {
     if {![prepare_test]} {
-	return -1
+	return
     }
 
     gdb_test_no_output "py gdb.printing.register_pretty_printer(gdb, lookup_function_lookup_test)"

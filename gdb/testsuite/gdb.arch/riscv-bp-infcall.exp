@@ -21,11 +21,11 @@ require {istarget "riscv*-*-*"}
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-   return 0
+    return
 }
 
 # Figure out where the breakpoint will be placed taking account for

@@ -23,7 +23,7 @@ require allow_gdbserver_tests
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # Test spawning gdbserver with a program, connect to it and run to

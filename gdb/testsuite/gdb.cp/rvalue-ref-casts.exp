@@ -23,11 +23,11 @@ standard_testfile .cc
 
 if {[prepare_for_testing $testfile.exp $testfile $srcfile \
     {debug c++ additional_flags="-std=gnu++11"}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Prevent symbol on address 0x0 being printed.

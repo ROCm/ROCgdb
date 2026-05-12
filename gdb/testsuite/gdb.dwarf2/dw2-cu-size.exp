@@ -26,7 +26,7 @@ standard_testfile .S
 
 if {[prepare_for_testing_full "failed to prepare" \
 	 [list $testfile debug main.c debug $srcfile nodebug]]} {
-    return -1
+    return
 }
 
 gdb_test "ptype noloc" "type = const int"

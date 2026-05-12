@@ -33,7 +33,7 @@ standard_testfile .c
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug nowarnings}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Note: the procedure gdb_gnu_strip_debug will produce an executable called
@@ -45,7 +45,7 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {deb
 if {[gdb_gnu_strip_debug $binfile$EXEEXT]} {
     # check that you have a recent version of strip and objcopy installed
     unsupported "cannot produce separate debug info files"
-    return -1
+    return
 }
 
 #

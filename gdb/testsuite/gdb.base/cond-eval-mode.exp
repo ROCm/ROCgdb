@@ -26,11 +26,11 @@ set allow_hw_watchpoint_tests_p [allow_hw_watchpoint_tests]
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 set test_host "set breakpoint condition-evaluation host"
@@ -47,7 +47,7 @@ set warning "warning: Target does not support breakpoint condition evaluation.\r
 gdb_test_multiple $test_target $test_target {
     -re "$warning\r\n$gdb_prompt $" {
 	unsupported $test_target
-	return -1
+	return
     }
 
     -re "^$test_target\r\n$gdb_prompt $" {

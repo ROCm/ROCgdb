@@ -19,11 +19,11 @@ require is_amd64_regs_target
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
      [list debug nowarnings]] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "print /x \$fs_base" "= $hex" "print fs_base"

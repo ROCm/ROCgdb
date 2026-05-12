@@ -20,7 +20,7 @@ require allow_python_tests
 standard_testfile
 
 if {[gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {c++ debug}] != "" } {
-    return -1
+    return
 }
 
 save_vars { GDBFLAGS } {
@@ -28,7 +28,7 @@ save_vars { GDBFLAGS } {
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Build a regexp string that represents the __repr__ of a
@@ -80,7 +80,7 @@ gdb_test "python print(gdb.breakpoints()\[1\].locations\[0\])" \
 gdb_continue_to_breakpoint "" ".*25.*"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint "add"

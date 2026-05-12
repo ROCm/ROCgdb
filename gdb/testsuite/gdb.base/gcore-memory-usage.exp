@@ -21,7 +21,7 @@ require can_spawn_for_attach
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug}] == -1} {
-    return -1
+    return
 }
 
 # Read the proc_pid_status page, to find how much memory the given

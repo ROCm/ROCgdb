@@ -12,7 +12,7 @@ set asm_file [standard_output_file ${srcfile2}]
 # We need to know the size of integer and address types in order
 # to write some of the debugging info we'd like to generate.
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug}]} {
-    return -1
+    return
 }
 
 # Create the DWARF.
@@ -134,7 +134,7 @@ Dwarf::assemble $asm_file {
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile $asm_file] {nodebug}] } {
-    return -1
+    return
 }
 
 # If Python testing is enabled then try printing the global and static
@@ -153,7 +153,7 @@ proc test_python_block_printing { func } {
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "ptype inty" "type = int" "ptype in main"

@@ -354,11 +354,11 @@ proc_with_prefix test_detach_quit {condition_eval target_non_stop \
 set options { "additional_flags=-DTIMEOUT=$timeout" debug pthreads }
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $options] == -1} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Probe support for "set breakpoint condition-evaluation target".

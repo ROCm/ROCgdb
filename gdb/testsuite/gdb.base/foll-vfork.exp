@@ -28,17 +28,17 @@ set binfile3 vforked-prog
 
 if {[build_executable "compile $binfile" $binfile $srcfile] == -1} {
     untested "failed to compile first test binary"
-    return -1
+    return
 }
 
 if {[build_executable "compile $binfile2" $binfile2 $srcfile2] == -1} {
     untested "failed to compile second test binary"
-    return -1
+    return
 }
 
 if {[build_executable "compile $binfile3" $binfile3 $srcfile3] == -1} {
     untested "failed to compile third test binary"
-    return -1
+    return
 }
 
 # If required, download the program that we exec after vfork to the

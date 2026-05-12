@@ -22,13 +22,13 @@
 
 standard_testfile
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" ${binfile} executable [list debug additional_flags=-lrt]] != "" } {
-    return -1
+    return
 }
 
 clean_restart $testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set test "info addr label"

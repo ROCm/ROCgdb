@@ -200,13 +200,13 @@ if {[build_executable_and_dwo_files "$testfile.exp" "${binfile}" {nodebug} \
 	 [list $asm_file_1 [list nodebug split-dwo] $obj1] \
 	 [list $asm_file_2 [list nodebug split-dwo] $obj2] \
 	 [list $srcfile  [list nodebug]]]} {
-    return -1
+    return
 }
 
 clean_restart $::testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Do a few basic things to verify we're finding the DWO debug info.

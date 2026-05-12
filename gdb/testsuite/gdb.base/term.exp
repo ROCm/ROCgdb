@@ -17,7 +17,7 @@
 # the output of the "info terminal" command.
 
 if { [prepare_for_testing "failed to prepare" term term.c] } {
-    return -1
+    return
 }
 
 # Once before running the program.
@@ -26,7 +26,7 @@ gdb_test "info terminal" \
     "test info terminal pre-execution"
 
 if {![runto break_here]} {
-    return 0
+    return
 }
 
 # Read the inferior's terminal settings, saved in the T global variable.

@@ -25,7 +25,7 @@ if {[mi_gdb_start]} {
 
 if {[lsearch -exact [mi_get_features] python] < 0} {
     unsupported "python support is disabled"
-    return -1
+    return
 }
 
 standard_testfile

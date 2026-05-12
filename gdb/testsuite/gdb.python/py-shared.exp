@@ -27,14 +27,14 @@ set library  [standard_output_file ${libfile}.sl]
 
 if { [gdb_compile_shlib ${srcdir}/${subdir}/${libsrc} ${library} "debug"] != "" } {
     untested "failed to compile shared library"
-    return -1
+    return
 }
 
 set exec_opts [list debug shlib=${library}]
 
 if { [gdb_compile ${srcdir}/${subdir}/${srcfile} ${binfile} executable $exec_opts] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Start with a fresh gdb.
@@ -44,7 +44,7 @@ gdb_load_shlib ${library}
 # The following tests require execution.
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 runto [gdb_get_line_number "Break to end."]

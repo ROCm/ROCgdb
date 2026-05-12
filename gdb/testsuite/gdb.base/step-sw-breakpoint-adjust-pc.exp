@@ -22,7 +22,7 @@
 standard_testfile
 
 if {[build_executable "failed to build" ${testfile} ${srcfile} {debug}]} {
-    return -1
+    return
 }
 
 set linenum_for_user_bp [gdb_get_line_number "break for user-bp test here"]

@@ -19,11 +19,11 @@ standard_testfile .c
 require !using_fission
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug macros}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Test various error messages.

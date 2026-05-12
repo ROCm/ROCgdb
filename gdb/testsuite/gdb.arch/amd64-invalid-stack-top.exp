@@ -33,11 +33,11 @@ standard_testfile .c
 require is_x86_64_m64_target
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} $opts] } {
-    return -1
+    return
 }
 
 if {![runto breakpt]} {
-    return -1
+    return
 }
 
 # Use 'bt no-filters' here as the python filters will raise their own
@@ -52,7 +52,7 @@ gdb_test "bt no-filters" "^#0 +$hex in func2 \\(\\)\r\nBacktrace stopped: Cannot
 clean_restart ${::testfile}
 
 if {![runto breakpt]} {
-    return -1
+    return
 }
 
 gdb_test "interpreter-exec mi \"-stack-info-depth\"" \
@@ -66,7 +66,7 @@ gdb_test "interpreter-exec mi \"-stack-info-depth\"" \
 clean_restart ${::testfile}
 
 if {![runto breakpt]} {
-    return -1
+    return
 }
 
 gdb_test "interpreter-exec mi \"-stack-list-frames\"" \

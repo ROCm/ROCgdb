@@ -24,11 +24,11 @@ set binfile2 [standard_output_file $testfile2]
 
 # Build the two executables for the test.
 if {[build_executable "build exec'd file" $testfile2 $srcfile2] != 0} {
-    return -1
+    return
 }
 
 if {[prepare_for_testing "prepare" $testfile $srcfile] != 0} {
-    return -1
+    return
 }
 
 if { [is_remote target] } {
@@ -36,7 +36,7 @@ if { [is_remote target] } {
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set linenr [gdb_get_line_number "break here"]

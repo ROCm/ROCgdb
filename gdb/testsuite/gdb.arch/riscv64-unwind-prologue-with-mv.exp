@@ -21,12 +21,12 @@ require {istarget "riscv64-*-*"}
 standard_testfile .c .s
 if {[prepare_for_testing "failed to prepare" $testfile \
 			 "$srcfile $srcfile2"  nodebug]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
     fail "can't run to main"
-    return 0
+    return
 }
 
 gdb_breakpoint "bar"

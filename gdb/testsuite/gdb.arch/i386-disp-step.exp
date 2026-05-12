@@ -27,14 +27,14 @@ lappend opts debug
 lappend opts nopie
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile $opts] } {
-    return -1
+    return
 }
 
 gdb_test "set displaced-stepping on" ""
 gdb_test "show displaced-stepping" ".* displaced stepping .* is on.*"
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 ##########################################

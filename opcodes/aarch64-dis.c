@@ -49,6 +49,7 @@ static enum map_type last_type;
 static int last_mapping_sym = -1;
 static bfd_vma last_stop_offset = 0;
 static bfd_vma last_mapping_addr = 0;
+static bool annotate_undefined_insns = false;
 
 /* Other options */
 static int no_aliases = 0;	/* If set disassemble as most general inst.  */
@@ -88,6 +89,18 @@ parse_aarch64_dis_option (const char *option, unsigned int len ATTRIBUTE_UNUSED)
   if (startswith (option, "notes"))
     {
       no_notes = 0;
+      return;
+    }
+
+  if (startswith (option, "annotate"))
+    {
+      annotate_undefined_insns = true;
+      return;
+    }
+
+  if (startswith (option, "no-annotate"))
+    {
+      annotate_undefined_insns = false;
       return;
     }
 
@@ -4260,8 +4273,24 @@ print_insn_aarch64_word (bfd_vma pc,
 				    ".inst\t");
       (*info->fprintf_styled_func) (info->stream, dis_style_immediate,
 				    "0x%08x", word);
-      (*info->fprintf_styled_func) (info->stream, dis_style_comment_start,
-				    " ; %s", err_msg[ret]);
+      asymbol * sym = NULL;
+      /* See if this "instruction" is actually the address of something.  */
+      if (annotate_undefined_insns
+	  /* Skip values that have been explicitly tagged as code.  */
+	  && last_type == MAP_DATA
+	  /* Skip static object files as symbol values have not be resolved yet.  */
+	  && info->section != NULL
+	  && info->section->owner != NULL
+	  && (info->section->owner->flags & (EXEC_P | DYNAMIC)))
+	{
+	  sym = info->symbol_at_address_func (word, info);
+	  if (sym != NULL)
+	    info->fprintf_styled_func (info->stream, dis_style_symbol,
+				       " ; [%s]", sym->name);
+	}
+      if (sym == NULL)
+	info->fprintf_styled_func (info->stream, dis_style_comment_start,
+				   " ; %s", err_msg[ret]);
       break;
     case ERR_OK:
       user_friendly_fixup (&inst);
@@ -4594,6 +4623,12 @@ with the -M switch (multiple options should be separated by commas):\n"));
 
   fprintf (stream, _("\n\
   notes            Do print instruction notes.\n"));
+
+  fprintf (stream, _("\n\
+  annotate         Display symbol names for undefined instructions.\n"));
+
+  fprintf (stream, _("\n\
+  no-annotate       Do not display symbol names for undefined instructions.\n"));
 
 #ifdef DEBUG_AARCH64
   fprintf (stream, _("\n\

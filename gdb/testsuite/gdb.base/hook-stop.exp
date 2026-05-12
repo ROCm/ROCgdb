@@ -16,7 +16,7 @@
 standard_testfile
 
 if { [build_executable ${testfile}.exp "${testfile}" $srcfile {debug nowarnings}] } {
-    return -1
+    return
 }
 
 # Define the hook-stop that runs COMMANDS.

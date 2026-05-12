@@ -20,7 +20,7 @@ standard_testfile .c info_sources_base.c
 if {[prepare_for_testing $testfile.exp $testfile \
 	 [list $srcfile $srcfile2] debug]} {
     untested $testfile.exp
-    return -1
+    return
 }
 
 # Executes "info sources ARGS".
@@ -69,7 +69,7 @@ proc test_info_sources {args expect_seen_info_sources \
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # List both files with no regexp:

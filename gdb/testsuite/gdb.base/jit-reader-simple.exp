@@ -81,7 +81,7 @@ set options [list debug shlib=${binfile_lib}]
 if {[gdb_compile ${srcdir}/${subdir}/${srcfile_dl} $binfile_dl executable \
 	 $options] == -1 } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Build the program that loads *two* JIT libraries.
@@ -90,7 +90,7 @@ set options [list debug shlib=${binfile_lib} shlib=${binfile_lib2}]
 if {[gdb_compile ${srcdir}/${subdir}/${srcfile_dl} $binfile_dl2 executable \
 	 $options] == -1 } {
     untested "failed to compile two-jitter binary"
-    return -1
+    return
 }
 
 # STANDALONE is true when the JIT reader is included directly in the
@@ -181,7 +181,7 @@ with_test_prefix "two JITers" {
     gdb_load $binfile_dl2
 
     if {![runto_main]} {
-	return -1
+	return
     }
 
     set num_bps 0

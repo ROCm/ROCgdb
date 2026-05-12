@@ -26,11 +26,11 @@ require is_x86_64_m64_target
 
 if { [prepare_for_testing "failed to prepare" "${test}" ${test}.S \
       {nodebug nopie additional_flags=-nostdlib}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Initialize tests to be an empty array.

@@ -27,12 +27,12 @@
 
 require allow_hw_watchpoint_access_tests allow_hw_watchpoint_multi_tests
 if {![istarget *-*-linux*]} {
-    return 0
+    return
 }
 
 standard_testfile
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" ${binfile} executable [list debug additional_flags=-lrt]] != "" } {
-    return -1
+    return
 }
 
 foreach reorder {0 1} { with_test_prefix "reorder$reorder" {
@@ -42,7 +42,7 @@ foreach reorder {0 1} { with_test_prefix "reorder$reorder" {
     gdb_test "set can-use-hw-watchpoints 1"
 
     if {![runto_main]} {
-	return -1
+	return
     }
 
     # Use "rwatch" as "watch" would report the watchpoint changed just based on its

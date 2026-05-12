@@ -35,8 +35,8 @@ set have_startup_shell [have_startup_shell]
 standard_testfile mi-start.c
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-     untested "could not build mi-exec-run"
-     return -1
+    untested "could not build mi-exec-run"
+    return
 }
 
 # The test proper.  INFTTY_MODE determines whether "set inferior-tty"

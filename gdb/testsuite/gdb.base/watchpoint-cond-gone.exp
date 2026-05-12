@@ -23,14 +23,14 @@ require allow_watchpoint_tests
 
 if {[prepare_for_testing_full "failed to prepare" \
 	 [list $testfile debug $srcfile debug $srcfile2 {}]]} {
-    return -1
+    return
 }
 
 # Problem does not occur otherwise.
 gdb_test_no_output "set can-use-hw-watchpoints 0"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "watchpoint-here"]

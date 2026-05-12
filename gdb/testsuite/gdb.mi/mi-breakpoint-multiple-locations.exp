@@ -19,7 +19,7 @@ load_lib mi-support.exp
 standard_testfile .cc
 
 if {[gdb_compile "$srcdir/$subdir/$srcfile" $binfile executable {debug c++}] != "" } {
-    return -1
+    return
 }
 
 # Generate the regexp pattern used to match the breakpoint description emitted

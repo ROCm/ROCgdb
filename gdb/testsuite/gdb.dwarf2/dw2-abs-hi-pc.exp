@@ -50,7 +50,7 @@ lappend flags additional_flags=[quote_for_host -DWORLD_END=$world_start \
 
 set executable ${testfile}
 if {[build_executable ${testfile}.exp ${executable} $sources $flags] == -1} {
-    return -1
+    return
 }
 
 clean_restart $executable

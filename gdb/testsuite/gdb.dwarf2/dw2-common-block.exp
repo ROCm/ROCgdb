@@ -28,7 +28,7 @@ standard_testfile .S
 
 if { [prepare_for_testing "failed to prepare" "${testfile}" $srcfile \
       {nodebug nopie f90}] } {
-    return -1
+    return
 }
 
 if {![runto MAIN__]} {

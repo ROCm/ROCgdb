@@ -312,8 +312,11 @@ private:
   void delete_thread (ptid_t ptid, DWORD exit_code, bool main_thread_p);
   DWORD fake_create_process (const DEBUG_EVENT &current_event);
 
-  void stop_one_thread (windows_thread_info *th,
+  bool stop_one_thread (windows_thread_info *th,
 			enum windows_nat::stopping_kind stopping_kind);
+
+  void stop_interrupt (ptid_t ptid, bool stop_on_first_match);
+  bool dbg_break_process ();
 
   DWORD continue_status_for_event_detaching
     (const DEBUG_EVENT &event, size_t *reply_later_events_left = nullptr);

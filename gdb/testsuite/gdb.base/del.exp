@@ -20,7 +20,7 @@
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # A function to test that ALIAS is working as a shortcut of the "delete"

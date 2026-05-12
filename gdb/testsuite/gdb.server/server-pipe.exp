@@ -42,7 +42,7 @@ standard_testfile normal.c
 set executable ${testfile}
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # Start GDB using remote type TARGET, which should be either "remote"

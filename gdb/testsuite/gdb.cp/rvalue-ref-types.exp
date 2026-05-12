@@ -22,18 +22,18 @@ standard_testfile .cc
 
 if {[prepare_for_testing $testfile.exp $testfile $srcfile \
     {debug c++ additional_flags="-std=gnu++11"}]} {
-    return -1
+    return
 }
 
 #
 # Set it up at a breakpoint so we can play with the variable values.
 #
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![runto 'marker1']} {
-    return -1
+    return
 }
 
 gdb_test "up" ".*main.*" "up from marker1 1"

@@ -16766,7 +16766,6 @@ of trace data, via the @code{target tfile} command.
 
 @kindex tsave
 @item tsave [ -r ] @var{filename}
-@itemx tsave [-ctf] @var{dirname}
 Save the trace data to @var{filename}.  By default, this command
 assumes that @var{filename} refers to the host filesystem, so if
 necessary @value{GDBN} will copy raw trace data up from the target and
@@ -16775,44 +16774,19 @@ optional argument @code{-r} (``remote'') to direct the target to save
 the data directly into @var{filename} in its own filesystem, which may be
 more efficient if the trace buffer is very large.  (Note, however, that
 @code{target tfile} can only read from files accessible to the host.)
-By default, this command will save trace frame in tfile format.
-You can supply the optional argument @code{-ctf} to save data in CTF
-format.  The @dfn{Common Trace Format} (CTF) is proposed as a trace format
-that can be shared by multiple debugging and tracing tools.  Please go to
-@indicateurl{http://www.efficios.com/ctf} to get more information.
 
 @kindex target tfile
 @kindex tfile
-@kindex target ctf
-@kindex ctf
 @item target tfile @var{filename}
-@itemx target ctf @var{dirname}
-Use the file named @var{filename} or directory named @var{dirname} as
-a source of trace data.  Commands that examine data work as they do with
-a live target, but it is not possible to run any new trace experiments.
-@code{tstatus} will report the state of the trace run at the moment
-the data was saved, as well as the current trace frame you are examining.
-Both @var{filename} and @var{dirname} must be on a filesystem accessible to
-the host.
+Use the file named @var{filename} as a source of trace data.  Commands
+that examine data work as they do with a live target, but it is not
+possible to run any new trace experiments.  @code{tstatus} will report
+the state of the trace run at the moment the data was saved, as well
+as the current trace frame you are examining.  @var{filename} must be
+on a filesystem accessible to the host.
 
-The @var{filename} and @var{dirname} arguments supports escaping and
-quoting, see @ref{Filename Arguments,,Filenames As Command Arguments}.
-
-@smallexample
-(@value{GDBP}) target ctf ctf.ctf
-(@value{GDBP}) tfind
-Found trace frame 0, tracepoint 2
-39            ++a;  /* set tracepoint 1 here */
-(@value{GDBP}) tdump
-Data collected at tracepoint 2, trace frame 0:
-i = 0
-a = 0
-b = 1 '\001'
-c = @{"123", "456", "789", "123", "456", "789"@}
-d = @{@{@{a = 1, b = 2@}, @{a = 3, b = 4@}@}, @{@{a = 5, b = 6@}, @{a = 7, b = 8@}@}@}
-(@value{GDBP}) p b
-$1 = 1
-@end smallexample
+The @var{filename} argument supports escaping and quoting, see
+@ref{Filename Arguments,,Filenames As Command Arguments}.
 
 @end table
 
@@ -40704,17 +40678,13 @@ body=[variable=@{name="$trace_timestamp",initial="0"@}
 @subsubheading Synopsis
 
 @smallexample
- -trace-save [ -r ] [ -ctf ] @var{filename}
+ -trace-save [ -r ] @var{filename}
 @end smallexample
 
 Saves the collected trace data to @var{filename}.  Without the
 @samp{-r} option, the data is downloaded from the target and saved
 in a local file.  With the @samp{-r} option the target is asked
 to perform the save.
-
-By default, this command will save the trace in the tfile format.  You can
-supply the optional @samp{-ctf} argument to save it the CTF format. See
-@ref{Trace Files} for more information about CTF.
 
 @subsubheading @value{GDBN} Command
 
@@ -44652,7 +44622,7 @@ distribution; if it is not, you can get the latest version from
 @url{http://zlib.net}.
 
 @c FIXME: what about other optional libraries: debuginfod, zstd,
-@c libipt, babeltrace, xxhash, source-highlight?
+@c libipt, xxhash, source-highlight?
 @end table
 
 @node Running Configure
@@ -54452,6 +54422,12 @@ This section documents the index section that is created by @code{save
 gdb-index} (@pxref{Index Files}).  The index section is
 DWARF-specific; some knowledge of DWARF is assumed in this
 description.
+
+Note that the @code{.gdb_index} format does not support describing
+skeletonless type units, that is, type units in @file{.dwo} files that
+don't have a corresponding skeleton in the main file.  @value{GDBN}
+will refuse to generate a @code{.gdb_index} index for such executables.
+Consider using the @code{.debug_names} format instead.
 
 The mapped index file format is designed to be directly
 @code{mmap}able on any architecture.  In most cases, a datum is

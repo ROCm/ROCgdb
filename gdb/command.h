@@ -80,7 +80,7 @@ enum var_types
     var_boolean,
 
     /* "on" / "true" / "enable" or "off" / "false" / "disable" or
-       "auto.  *VAR is an ``enum auto_boolean''.  NOTE: In general a
+       "auto".  *VAR is an ``enum auto_boolean''.  NOTE: In general a
        custom show command will need to be implemented - one that for
        "auto" prints both the "auto" and the current auto-selected
        value.  */

@@ -23,8 +23,8 @@
 standard_testfile .c
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 proc test_integer_literals_accepted {} {
@@ -1213,7 +1213,7 @@ gdb_test "p ctable1\[120\]" "120 'x'" "p ctable1\[120\] #1"
 gdb_load ${binfile}
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # With a running target, printf convenience vars should of course work.

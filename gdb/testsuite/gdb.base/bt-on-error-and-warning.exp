@@ -20,13 +20,13 @@
 standard_testfile bt-on-fatal-signal.c
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile]} {
-    return -1
+    return
 }
 
 # Check we can run to main.  If this works this time then we just
 # assume that it will work later on (when we repeatedly restart GDB).
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Check that the backtrace-on-fatal-signal feature is supported.  If
@@ -37,7 +37,7 @@ gdb_test_multiple "maint set internal-error backtrace on" \
     "check backtrace is supported" {
     -re "support for this feature is not compiled into GDB" {
 	untested "feature not supported"
-	return -1
+	return
     }
     -re "$gdb_prompt $" {
 	pass $gdb_test_name

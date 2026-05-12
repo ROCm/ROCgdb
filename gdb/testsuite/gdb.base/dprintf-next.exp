@@ -21,11 +21,11 @@ set dp_location [gdb_get_line_number "Set dprintf here"]
 
 if {[prepare_for_testing "failed to prepare for dprintf with next" \
 	 ${testfile} ${srcfile} {debug}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "dprintf $dp_location, \"%d\\n\", x" \

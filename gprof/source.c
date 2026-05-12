@@ -98,7 +98,8 @@ annotate_source (Source_File *sf, unsigned int max_width,
   bool new_line;
   char buf[8192];
   char *fname;
-  char *annotation, *name_only;
+  char *annotation;
+  const char *name_only;
   FILE *ifp, *ofp;
   Search_List_Elem *sle = src_search_list.head;
 

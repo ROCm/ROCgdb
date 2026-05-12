@@ -43,7 +43,7 @@ if { [prepare_for_testing_full "failed to prepare" \
 	 [list $testfile $lopts \
 	      $srcfile $opts \
 	      $srcfile2 $opts2]] } {
-    return -1
+    return
 }
 
 gdb_test_no_output \

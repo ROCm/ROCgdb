@@ -27,7 +27,7 @@ gdb_test "tui new-layout command-layout cmd 1"
 
 if {![Term::prepare_for_tui]} {
     unsupported "TUI not supported"
-    return 0
+    return
 }
 
 # Enter TUI.

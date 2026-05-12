@@ -19,7 +19,7 @@
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug] == -1} {
-    return -1
+    return
 }
 
 set file_arg $binfile

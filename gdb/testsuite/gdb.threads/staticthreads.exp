@@ -30,7 +30,7 @@ foreach_with_prefix have_tls { "-DHAVE_TLS" "" } {
 	break
     }
     if { $have_tls == "" } {
-	return -1
+	return
     }
 }
 
@@ -99,7 +99,7 @@ clean_restart ${::testfile}
 
 if { "$have_tls" != "" } {
     if {![runto_main]} {
-	return -1
+	return
     }
     gdb_breakpoint [gdb_get_line_number "tlsvar-is-set"]
     gdb_continue_to_breakpoint "tlsvar-is-set" ".* tlsvar-is-set .*"

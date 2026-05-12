@@ -29,7 +29,7 @@ standard_testfile amd64-pseudo-unwind.c amd64-pseudo-unwind-asm.S
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	"${srcfile} ${srcfile2}" {debug}] } {
-    return -1
+    return
 }
 
 clean_restart ${::testfile}

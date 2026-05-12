@@ -16,12 +16,12 @@
 standard_testfile .c
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return -1
+    return
 }
 
 set bp_location [gdb_get_line_number "START"]
 if {![runto "wchar.c:$bp_location"]} {
-  return -1
+    return
 }
 
 gdb_test "print narrow" "= 97 L'a'"

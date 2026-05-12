@@ -18,7 +18,7 @@
 # with duplicated breakpoints.
 
 if { [prepare_for_testing "failed to prepare" break-always break-always.c] } {
-    return -1
+    return
 }
 
 set bar_location [gdb_get_line_number "break in bar" break-always.c]
@@ -78,7 +78,7 @@ foreach test_value {0 1} {
 	    # Some targets do not allow manually writing a breakpoint to a
 	    # certain memory address, like QEMU.  In that case, just bail out.
 	    unsupported "cannot write to address $bp_address"
-	    return -1
+	    return
 	}
 	-re " = .*$gdb_prompt $" {
 	    pass $write_test

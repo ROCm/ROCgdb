@@ -25,8 +25,8 @@ require is_x86_64_m64_target
 standard_testfile .S
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug nopie}] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 if {[mi_clean_restart $::testfile]} {
@@ -35,7 +35,7 @@ if {[mi_clean_restart $::testfile]} {
 
 if {![mi_runto stop_frame]} {
     perror "Failed to stop in stop_frame"
-    return -1
+    return
 }
 
 mi_gdb_test "111-stack-list-frames" \

@@ -22,7 +22,7 @@ if { [prepare_for_testing "prepare" $testfile $srcfile \
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 

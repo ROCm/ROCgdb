@@ -18,7 +18,7 @@ standard_testfile
 set compile_options "debug"
 if {[build_executable $testfile.exp $testfile ${srcfile} ${compile_options}] == -1} {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Ensure no output has been sent.  Use MESSAGE as test message.

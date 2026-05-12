@@ -36,7 +36,7 @@ set options "debug"
 if  { [gdb_compile "${srcfile}" "${binfile}" \
 	   executable $options] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Now delete the source file.
@@ -46,7 +46,7 @@ remote_file host delete $srcfile
 clean_restart $testfile
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_test "list" "1\[ \t\]+in\[ \t\]+$srcfile"

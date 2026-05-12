@@ -121,7 +121,7 @@ proc corefunc { threadtype executable } {
 #
 if {[build_executable $testfile $executable_nothr $srcfile] == -1} {
     untested "attach-into-signal.exp (nonthreaded)"
-    return -1
+    return
 }
 
 corefunc nonthreaded ${executable_nothr}
@@ -130,7 +130,7 @@ corefunc nonthreaded ${executable_nothr}
 #
 if  { [gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" [standard_output_file ${executable_thr}] executable {debug additional_flags=-DUSE_THREADS}] != "" } {
     untested "attach-into-signal.exp (threaded)"
-    return -1
+    return
 }
 
 corefunc threaded ${executable_thr}

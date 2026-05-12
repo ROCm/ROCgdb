@@ -37,7 +37,7 @@ set gcorefile ${objdir}/${subdir}/${testfile}.gcore
 
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {}] != "" } {
     unsupported "failed to compile"
-    return -1
+    return
 }
 
 clean_restart
@@ -87,7 +87,7 @@ proc get_addr_of_sym { sym } {
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 set foo [get_addr_of_sym "foo"]
@@ -123,7 +123,7 @@ proc test_core_bt { test } {
 
 set test "core at last insn in foo"
 if {![runto_main]} {
-    return 0
+    return
 }
 gdb_breakpoint "*$foo_last"
 gdb_test "continue" "Breakpoint \[0-9\]*,.* in foo.*" "$test: continue to breakpoint"
@@ -133,7 +133,7 @@ if {[gen_core $test]} {
 
 set test "core at nullified insn"
 if {![runto_main]} {
-    return 0
+    return
 }
 gdb_breakpoint "*$foo_last"
 gdb_test "continue" "Breakpoint \[0-9\]*,.* in foo.*" "$test: continue to breakpoint"

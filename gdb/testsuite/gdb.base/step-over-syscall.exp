@@ -38,7 +38,7 @@ if { [istarget "i\[34567\]86-*-linux*"] || [istarget "x86_64-*-linux*"] } {
     array set syscall_number {fork "(120|220)" vfork "(190|220)" \
       clone "(120|220)"}
 } else {
-    return -1
+    return
 }
 
 proc_with_prefix check_pc_after_cross_syscall { displaced syscall syscall_insn_next_addr } {
@@ -359,7 +359,7 @@ step_over_syscall "clone"
 set testfile "step-over-fork"
 clean_restart $testfile
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set cond_bp_target 1

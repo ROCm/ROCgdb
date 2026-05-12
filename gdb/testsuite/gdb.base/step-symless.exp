@@ -15,7 +15,7 @@
 
 standard_testfile
 if {[build_executable ${testfile}.exp ${testfile} ${srcfile} {nodebug}] == -1} {
-    return -1
+    return
 }
 
 # We need those symbols global to access them from the .S file.
@@ -33,7 +33,7 @@ pass $test
 clean_restart $testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint symful

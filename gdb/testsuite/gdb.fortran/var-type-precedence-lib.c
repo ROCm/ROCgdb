@@ -1,8 +1,4 @@
-/* CTF format support.
-
-   Copyright (C) 2012-2026 Free Software Foundation, Inc.
-
-   This file is part of GDB.
+/* Copyright 2026 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,9 +13,18 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDB_TRACECTF_H
-#define GDB_TRACECTF_H
+/* Define a struct type that will conflict with Fortran variable name.  */
+struct type_shadowing_var
+{
+  int value;
+};
 
-extern struct trace_file_writer *ctf_trace_file_writer_new (void);
+/* Global variables to ensure types are in debug info.  */
+static struct type_shadowing_var global_conflicting_var = {42};
 
-#endif /* GDB_TRACECTF_H */
+/* Function to ensure library is linked and types are used.  */
+void
+fortran_var_type_order_test (void)
+{
+  global_conflicting_var.value = 42;
+}

@@ -23,11 +23,11 @@ require is_aarch64_target
 
 standard_testfile
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # We need to iterate over two distinct ranges, separated by a single bit.
@@ -56,7 +56,7 @@ gdb_test_multiple "ptype \$pauth_cmask" "fetch PAC cmask" {
     }
     -re ".*$gdb_prompt $" {
 	fail $gdb_test_name
-	return 1
+	return
     }
 }
 

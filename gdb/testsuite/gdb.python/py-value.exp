@@ -800,7 +800,7 @@ proc test_unavailable {} {
 
 # Build C version of executable.  C++ is built later.
 if { [build_inferior "${binfile}" "c"] < 0 } {
-    return -1
+    return
 }
 
 # Start with a fresh gdb.
@@ -821,7 +821,7 @@ test_add_to_history
 # The following tests require execution.
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 test_unavailable
@@ -840,7 +840,7 @@ test_subscript_regression "${binfile}" "c"
 
 if {[allow_cplus_tests]} {
     if { [build_inferior "${binfile}-cxx" "c++"] < 0 } {
-	return -1
+	return
     }
     with_test_prefix "c++" {
 	test_subscript_regression "${binfile}-cxx" "c++"

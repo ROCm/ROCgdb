@@ -191,9 +191,6 @@ proc gdb_collect_args_test {} {
 	gdb_test "tsave ${tracefile}.args.tfile" \
 	    "Trace data saved to file '${tracefile}.args.tfile'\\." \
 	    "tsave ${testfile}.args.tfile"
-	gdb_test "tsave -ctf ${tracefile}.args.ctf" \
-	    "Trace data saved to directory '${tracefile}.args.ctf'\\." \
-	    "save ctf trace file"
 
 	foreach target_name ${trace_file_targets} {
 	    # Restart GDB and read the trace data in ${TARGET_NAME} target.
@@ -271,9 +268,6 @@ proc gdb_collect_locals_test { func msg } {
 	gdb_test "tsave ${tracefile}.locals.tfile" \
 	    "Trace data saved to file '${tracefile}.locals.tfile'\\." \
 	    "tsave ${testfile}.locals.tfile"
-	gdb_test "tsave -ctf ${tracefile}.locals.ctf" \
-	    "Trace data saved to directory '${tracefile}.locals.ctf'\\." \
-	    "save ctf trace file"
 
 	foreach target_name ${trace_file_targets} {
 	    # Restart GDB and read the trace data in ${TARGET_NAME} target.
@@ -352,9 +346,6 @@ proc gdb_unavailable_registers_test { } {
 	gdb_test "tsave ${tracefile}.registers.tfile" \
 	    "Trace data saved to file '${tracefile}.registers.tfile'\\." \
 	    "tsave ${testfile}.registers.tfile"
-	gdb_test "tsave -ctf ${tracefile}.registers.ctf" \
-	    "Trace data saved to directory '${tracefile}.registers.ctf'\\." \
-	    "save ctf trace file"
 
 	foreach target_name ${trace_file_targets} {
 	    # Restart GDB and read the trace data in ${TARGET_NAME} target.
@@ -414,9 +405,6 @@ proc gdb_unavailable_floats { } {
 	gdb_test "tsave ${tracefile}.floats.tfile" \
 	    "Trace data saved to file '${tracefile}.floats.tfile'\\." \
 	    "tsave ${testfile}.floats.tfile"
-	gdb_test "tsave -ctf ${tracefile}.floats.ctf" \
-	    "Trace data saved to directory '${tracefile}.floats.ctf'\\." \
-	    "save ctf trace file"
 
 	foreach target_name ${trace_file_targets} {
 	    # Restart GDB and read the trace data in ${TARGET_NAME} target.
@@ -679,9 +667,6 @@ proc gdb_collect_globals_test { } {
 	gdb_test "tsave ${tracefile}.globals.tfile" \
 	    "Trace data saved to file '${tracefile}.globals.tfile'\\." \
 	    "tsave ${testfile}.globals.tfile"
-	gdb_test "tsave -ctf ${tracefile}.globals.ctf" \
-	    "Trace data saved to directory '${tracefile}.globals.ctf'\\." \
-	    "save ctf trace file"
 
 	foreach target_name ${trace_file_targets} {
 	    # Restart GDB and read the trace data in ${TARGET_NAME} target.
@@ -719,13 +704,6 @@ if {![gdb_target_supports_trace]} {
 }
 
 set trace_file_targets [list "tfile"]
-gdb_test_multiple "target ctf" "" {
-    -re "Undefined target command: \"ctf\"\.  Try \"help target\"\.\r\n$gdb_prompt $" {
-    }
-    -re "No CTF directory specified.*\r\n$gdb_prompt $" {
-	lappend trace_file_targets "ctf"
-    }
-}
 
 # Body of test encased in a proc so we can return prematurely.
 gdb_trace_collection_test

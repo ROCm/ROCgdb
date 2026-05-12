@@ -24,11 +24,11 @@ set linenum [gdb_get_line_number "set break here"]
 
 if {[prepare_for_testing "failed to prepare" \
 	 $testfile $srcfile {c++ debug pthreads}] == -1} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_breakpoint $linenum

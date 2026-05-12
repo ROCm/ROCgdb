@@ -33,7 +33,7 @@ set additional_flags [gdb_target_symbol_prefix_flags]
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 [list debug $additional_flags]]} {
-    return -1
+    return
 }
 
 set end_of_main          [gdb_get_line_number " end of main "]
@@ -64,7 +64,7 @@ gdb_test_multiple "continue" $test {
     }
     -re " Illegal instruction.*\r\n$gdb_prompt $" {
 	untested i386-sse-reverse
-	return -1
+	return
     }
 }
 
@@ -590,7 +590,7 @@ gdb_test_multiple "continue" $test {
     }
     -re " Illegal instruction.*\r\n$gdb_prompt $" {
 	untested i386-ssse3-reverse
-	return -1
+	return
     }
 }
 
@@ -666,7 +666,7 @@ gdb_test_multiple "continue" $test {
     }
     -re " Illegal instruction.*\r\n$gdb_prompt $" {
 	untested i386-sse4-reverse
-	return -1
+	return
     }
 }
 

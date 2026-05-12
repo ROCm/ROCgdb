@@ -27,7 +27,7 @@ include_file subtypes.h
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile $srcfile2] \
 	 {debug c++ additional_flags=-std=c++11}]} {
-    return -1
+    return
 }
 
 # Xfail for superfluous DW_TAG_lexical_block, gcc PR debug/55541.

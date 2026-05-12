@@ -28,7 +28,7 @@ set exec_opts [list debug shlib=$lib_sl]
 if { [gdb_compile_shlib $libsrc $lib_sl $lib_opts] != ""
      || [gdb_compile $srcdir/$subdir/$srcfile $binfile executable $exec_opts] != ""} {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Start with a fresh gdb.
@@ -315,7 +315,7 @@ with_test_prefix "gdb exiting: error" {
 
     if {![runto_main]} {
 	fail "cannot run to main."
-	return 0
+	return
     }
 
     gdb_test_no_output "source ${pyfile}" "load python file"

@@ -24,7 +24,7 @@ require {!target_info exists gdb,nosignals}
 
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 	 executable { debug }] != "" } {
-    return -1
+    return
 }
 
 # Run the test proper.  STEP_OVER indicates whether we leave in place

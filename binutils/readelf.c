@@ -5315,6 +5315,7 @@ decode_AMDGPU_machine_flags (char *out, unsigned int e_flags, Filedata *filedata
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1035, "gfx1035")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1034, "gfx1034")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013")
@@ -5325,6 +5326,7 @@ decode_AMDGPU_machine_flags (char *out, unsigned int e_flags, Filedata *filedata
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC, "gfx12-5-generic")
     default:
       out += sprintf (out, _(", <unknown AMDGPU GPU type: %#x>"), mach);
       break;
@@ -5408,13 +5410,14 @@ decode_AMDGPU_machine_flags (char *out, unsigned int e_flags, Filedata *filedata
       /* Extensions for HSA v6+.  */
       if (abiversion >= ELFABIVERSION_AMDGPU_HSA_V6)
 	{
-	  int generic_v;
+	  unsigned int generic_v;
 
 	  generic_v = ((e_flags & EF_AMDGPU_GENERIC_VERSION_V)
 		       >> EF_AMDGPU_GENERIC_VERSION_V_SHIFT);
 
 	  if (generic_v > 0)
-	    out += sprintf (out, _(", generic_v%d"), generic_v);
+	    out += sprintf (out, _(", generic v%u"), generic_v);
+
 	  e_flags &= ~EF_AMDGPU_GENERIC_VERSION_V;
 	}
     }

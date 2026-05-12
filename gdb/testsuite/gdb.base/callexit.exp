@@ -24,7 +24,7 @@ if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
 }
 
 if { ![runto_main] } {
-    return 0
+    return
 }
 
 # Verify set may-call-functions behavior.

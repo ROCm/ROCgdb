@@ -24,7 +24,7 @@ load_lib prompt.exp
 require allow_python_tests
 
 if {[build_executable $testfile.exp $testfile $srcfile debug] == -1} {
-    return -1
+    return
 }
 
 save_vars { INTERNAL_GDBFLAGS GDBFLAGS } {
@@ -70,7 +70,7 @@ save_vars { INTERNAL_GDBFLAGS GDBFLAGS } {
     }
 
     if {![can_spawn_for_attach]} {
-	return 0
+	return
     }
 
     set test_spawn_id [spawn_wait_for_attach $binfile]

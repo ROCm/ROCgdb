@@ -31,7 +31,7 @@ if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
 # it really has been deleted.
 if { ! [file exists $binfile] } {
     fail "executable does not exist (${binfile})"
-    return -1
+    return
     }
 
 if {![runto_main]} {

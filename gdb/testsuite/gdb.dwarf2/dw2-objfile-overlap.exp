@@ -29,7 +29,7 @@ if { [gdb_compile "${srcdir}/${subdir}/${srcfile_outer}" "${binfile_outer}" \
       object {}] != ""
      || [gdb_compile "${srcdir}/${subdir}/${srcfile_inner}" "${binfile_inner}" \
       object {}] != "" } {
-    return -1
+    return
 }
 
 clean_restart $executable_outer

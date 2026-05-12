@@ -19,7 +19,7 @@ standard_testfile ${srcdir}/gdb.base/array-repeat.c
 
 if {[prepare_for_testing ${testfile}.exp ${testfile} ${srcfile} \
 	[list debug ${lang}]]} {
-    return -1
+    return
 }
 
 gdb_test_no_output "set print array-indexes on"

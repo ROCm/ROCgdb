@@ -22,7 +22,7 @@ load_lib completion-support.exp
 standard_testfile .c
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 clean_restart $testfile

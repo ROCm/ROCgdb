@@ -32,12 +32,12 @@ set library2 [standard_output_file ${lib2file}.sl]
 # stepping and reverse stepping doesn't end up inside them.
 if { [gdb_compile_shlib ${srcdir}/${subdir}/${lib1src} ${library1} ""] != "" } {
     untested "failed to compile shared library 1"
-    return -1
+    return
 }
 
 if { [gdb_compile_shlib ${srcdir}/${subdir}/${lib2src} ${library2} "debug"] != "" } {
     untested "failed to compile shared library 2"
-    return -1
+    return
 }
 
 set exec_opts [list debug shlib=${library1} shlib=${library2}]
@@ -50,7 +50,7 @@ if { [gdb_compile ${srcdir}/${subdir}/${srcfile} ${binfile} executable \
 		     [concat $exec_opts ldflags=-Wl,-z,norelro]] != ""
      && [gdb_compile ${srcdir}/${subdir}/${srcfile} ${binfile} executable $exec_opts] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Note: The test previously did "set debug-file-directory" to (try to)
@@ -80,7 +80,7 @@ gdb_test_multiple "continue" "run to end of main" {
     }
     -wrap -re "Process record does not support instruction 0xfae64 at.*" {
 	kfail "gdb/25038" $gdb_test_name
-	return -1
+	return
     }
 }
 

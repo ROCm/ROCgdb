@@ -20,7 +20,7 @@ require {!target_info exists gdb,nosignals}
 standard_testfile
 
 if { [build_executable ${testfile}.exp ${testfile} $srcfile {debug}] == -1 } {
-    return -1
+    return
 }
 
 with_test_prefix "single-step" {
@@ -28,7 +28,7 @@ with_test_prefix "single-step" {
 
     clean_restart ${testfile}
     if {![runto_main]} {
-	return -1
+	return
     }
     set line_num [gdb_get_line_number "loop-line" ${testfile}.c]
 
@@ -61,7 +61,7 @@ with_test_prefix "break-cond" {
 	clean_restart ${testfile}
 
 	if {![runto_main]} {
-	    return -1
+	    return
 	}
 
 	set test "set breakpoint condition-evaluation $side"

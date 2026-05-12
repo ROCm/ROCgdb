@@ -22,7 +22,7 @@
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile]} {
-    return -1
+    return
 }
 
 set script_file $srcdir/$subdir/$testfile.gdb
@@ -35,7 +35,7 @@ save_vars { GDBFLAGS } {
     gdb_exit
     if {[gdb_spawn] != 0} {
 	fail "spawn gdb"
-	return -1
+	return
     }
 }
 

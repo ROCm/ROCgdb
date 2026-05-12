@@ -25,14 +25,14 @@ require {!target_info exists gdb,nosignals}
 
 standard_testfile
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 gdb_test "display/i \$pc"
 
 # Advance to main
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Run to the signal.

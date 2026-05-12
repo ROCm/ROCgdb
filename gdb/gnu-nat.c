@@ -2623,7 +2623,8 @@ gnu_nat_target::find_memory_regions (find_memory_region_ftype func)
 		     last_protection & VM_PROT_WRITE,
 		     last_protection & VM_PROT_EXECUTE,
 		     true, /* MODIFIED is unknown, pass it as true.  */
-		     false /* No memory tags in the object file.  */);
+		     false, /* No memory tags in the object file.  */
+		     false /* Not known to be all zeroes.  */);
 	  last_region_address = region_address;
 	  last_region_end = region_address += region_length;
 	  last_protection = protection;
@@ -2637,7 +2638,8 @@ gnu_nat_target::find_memory_regions (find_memory_region_ftype func)
 	  last_protection & VM_PROT_WRITE,
 	  last_protection & VM_PROT_EXECUTE,
 	  true, /* MODIFIED is unknown, pass it as true.  */
-	  false /* No memory tags in the object file.  */);
+	  false, /* No memory tags in the object file.  */
+	  false /* Not known to be all zeroes.  */);
 
   return true;
 }

@@ -32,7 +32,7 @@ set srcfile ${testfile}.s
 set binfile ${objdir}/${subdir}/${testfile}
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable ""] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart
@@ -43,7 +43,7 @@ gdb_load $binfile
 #
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_test "advance sub1" "hello world\r\n$hex in sub1 \\(\\)" "get to sub1"

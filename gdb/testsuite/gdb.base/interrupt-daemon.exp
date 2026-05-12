@@ -21,7 +21,7 @@ require allow_fork_tests
 standard_testfile
 
 if {[build_executable "failed to build" $testfile $srcfile {debug}]} {
-    return -1
+    return
 }
 
 # The test proper.

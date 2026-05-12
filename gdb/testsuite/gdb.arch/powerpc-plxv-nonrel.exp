@@ -24,7 +24,7 @@ standard_testfile .s
 
 if { [prepare_for_testing "failed to prepare" $testfile "$srcfile" \
       {debug quiet}] } {
-    return -1
+    return
 }
 
 gdb_test "set radix 0b10000"

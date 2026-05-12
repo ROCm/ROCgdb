@@ -26,7 +26,7 @@ standard_testfile
 # failure.
 set options { "additional_flags=-DTIMEOUT=$timeout" debug }
 if { [build_executable ${testfile}.exp ${testfile} $srcfile $options] == -1 } {
-    return -1
+    return
 }
 
 # Return 0 on success, non-zero otherwise.

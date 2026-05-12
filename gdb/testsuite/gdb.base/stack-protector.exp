@@ -24,7 +24,7 @@ if { !([test_compiler_info "gcc-*"] || [test_compiler_info "clang-*"])
      || [test_compiler_info {gcc-[0-3]-*}]
      || [test_compiler_info {gcc-4-0-*}]
      || [test_compiler_info {clang-[0-4]=*}] } {
-    return 0
+    return
 }
 
 standard_testfile

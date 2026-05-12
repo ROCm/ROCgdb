@@ -20,7 +20,7 @@ require allow_shlib_tests
 set gdbserver_reconnect_p 1
 if { [info proc gdb_reconnect] == "" } {
     unsupported "requires gdbserver reconnect"
-    return 0
+    return
 }
 
 set testfile solib-disc
@@ -50,7 +50,7 @@ if { [prepare_for_testing "prepare" $testfile $execsrc $exec_opts] != 0 } {
 gdb_load_shlib $libobj
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_test_no_output "set stop-on-solib-events 1"
@@ -71,7 +71,7 @@ if { [gdb_reconnect] == 0 } {
     pass "reconnect after load"
 } else {
     fail "reconnect after load"
-    return 0
+    return
 }
 
 gdb_test "print/x \$pc" "${::valnum_re} = $saved_pc" "check \$pc after load"
@@ -93,7 +93,7 @@ if { [gdb_reconnect] == 0 } {
     pass "reconnect after unload"
 } else {
     fail "reconnect after unload"
-    return 0
+    return
 }
 
 gdb_test "print/x \$pc" "${::valnum_re} = $saved_pc" "check \$pc after unload"

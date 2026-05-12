@@ -36,7 +36,7 @@ if {[support_nested_function_tests]} {
 }
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $opts]} {
-    return -1
+    return
 }
 
 # gdb_openmp_setup may be defined to set auto-load safe-path and possibly
@@ -56,12 +56,12 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile $opts]} {
 if {[info procs gdb_openmp_setup] != ""} {
     if {[gdb_openmp_setup $binfile] != ""} {
 	untested "could not set up OpenMP environment"
-	return -1
+	return
     }
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # We want to invoke setup_kfail (and in some cases setup_xfail) when

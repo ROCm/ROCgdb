@@ -147,7 +147,7 @@ set object_file [standard_output_file ${testfile}.o]
 if { [build_executable_and_dwo_files "${testfile}.exp" ${binfile} {nodebug} \
 	  [list $asm_file {nodebug split-dwo} ${object_file}] \
 	  [list $srcfile {nodebug}]] } {
-    return -1
+    return
 }
 
 proc run_test { testfile } {

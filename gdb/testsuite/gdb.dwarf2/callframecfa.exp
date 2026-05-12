@@ -24,11 +24,11 @@ standard_testfile .S
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 [list {additional_flags=-nostdlib}]]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "break *func" "Breakpoint 2.*" "set breakpoint for call-frame-cfa"

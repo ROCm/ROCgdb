@@ -17,11 +17,11 @@ standard_testfile
 set using_clang [test_compiler_info clang*]
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set sizeof_int [get_sizeof "int" 4]

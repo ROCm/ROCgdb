@@ -22,7 +22,7 @@ standard_testfile .cc
 
 if {[build_executable $testfile.exp $testfile $srcfile \
     {debug c++ additional_flags="-std=gnu++11"}] == -1} {
-    return -1
+    return
 }
 
 proc gdb_start_again {text prefix} {

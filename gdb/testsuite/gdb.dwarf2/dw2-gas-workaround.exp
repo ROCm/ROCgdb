@@ -90,7 +90,7 @@ proc create_dwarf_assembly {source_file one_diridx} {
 set asm_file [create_dwarf_assembly $srcfile2 false]
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile $asm_file] {nodebug}] } {
-    return -1
+    return
 }
 
 gdb_test_no_output "set debug symtab-create 1"
@@ -108,7 +108,7 @@ gdb_test_multiple "ptype bar" "" {
 set asm_file [create_dwarf_assembly $srcfile3 true]
 if {[prepare_for_testing "failed to prepare" ${testfile}-one-diridx \
 	 [list $srcfile $asm_file] {nodebug}] } {
-    return -1
+    return
 }
 
 gdb_test "ptype bar" ".*" "do not crash with only one directory table entry"

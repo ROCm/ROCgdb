@@ -23,7 +23,7 @@ tuiterm_env
 standard_testfile py-arch.c
 
 if {[build_executable "failed to prepare" ${testfile} ${srcfile}] == -1} {
-    return -1
+    return
 }
 
 clean_restart

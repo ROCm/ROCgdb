@@ -28,7 +28,7 @@ proc target_no_stopped_data { } {
 
 standard_testfile
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable debug] != "" } {
-    return -1
+    return
 }
 
 clean_restart $::testfile
@@ -39,7 +39,7 @@ gdb_test_no_output "set can-use-hw-watchpoints 1" ""
 #
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 set args_0 0

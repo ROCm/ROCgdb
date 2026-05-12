@@ -27,7 +27,7 @@ lappend flags debug
 lappend_include_file flags $srcdir/lib/attributes.h
 
 if { [build_executable "failed to prepare" $testfile $srcfile $flags] } {
-    return -1
+    return
 }
 
 # Unwind to each function in FRAMES, and compare "info frame" output

@@ -28,7 +28,7 @@ if {[istarget "x86_64-*-linux*"]} {
     set cf_size 8757248
 } else {
     unsupported "no pre-generated core file for this target"
-    return -1
+    return
 }
 
 # Decompress the core file.
@@ -36,14 +36,14 @@ set corebz2file ${srcdir}/${subdir}/${cf_name}
 set corefile [decompress_bz2 $corebz2file]
 if { $corefile eq "" } {
     untested "failed to bunzip2 the core file"
-    return -1
+    return
 }
 
 # Check the size of the decompressed core file.  Just for sanity.
 file stat ${corefile} corestat
 if { $corestat(size) != ${cf_size} } {
     untested "uncompressed core file is the wrong size"
-    return -1
+    return
 }
 
 # Copy over the corefile if we are remote testing.

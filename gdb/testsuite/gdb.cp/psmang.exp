@@ -182,7 +182,7 @@ standard_testfile psmang1.cc psmang2.cc
 
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile $srcfile2] {debug c++}]} {
-    return -1
+    return
 }
 
 gdb_test "break s::method1" "Breakpoint .* at .*: file .*psmang1.cc.*"

@@ -25,7 +25,7 @@ if { [have_fvar_tracking] } {
 }
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile $opts] } {
-    return -1
+    return
 }
 
 proc finish_pretty { } {

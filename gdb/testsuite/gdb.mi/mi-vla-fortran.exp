@@ -26,8 +26,8 @@ standard_testfile vla.f90
 
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable \
      {debug f90}] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 # Depending on the compiler being used,

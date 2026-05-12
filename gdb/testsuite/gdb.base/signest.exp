@@ -20,11 +20,11 @@ standard_testfile
 require {!target_info exists gdb,nosignals}
 
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # If we can examine what's at memory address 0, it is possible that we
@@ -35,7 +35,7 @@ if {![runto_main]} {
 
 if { [is_address_zero_readable] } {
     untested "memory at address 0 is possibly executable"
-    return -1
+    return
 }
 
 # Run until we hit the SIGSEGV (or SIGBUS on some platforms).

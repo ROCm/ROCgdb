@@ -121,10 +121,6 @@ extern void tc_loongarch_parse_to_dw2regnum (expressionS *);
 
 extern int tc_loongarch_regname_to_dw2regnum (char *);
 
-#define tc_symbol_new_hook(sym) \
-  if (0 == strcmp (sym->bsym->name, FAKE_LABEL_NAME)) \
-    S_SET_OTHER (sym, STV_HIDDEN);
-
 extern void loongarch_pre_output_hook (void);
 #define md_pre_output_hook loongarch_pre_output_hook ()
 #define GAS_SORT_RELOCS 1

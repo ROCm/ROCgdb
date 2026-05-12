@@ -29,7 +29,7 @@ set basename "inline-break"
 standard_testfile .S
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile {nodebug}] } {
-    return -1
+    return
 }
 
 #

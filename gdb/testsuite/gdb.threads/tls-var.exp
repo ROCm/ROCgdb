@@ -22,13 +22,13 @@ set executable ${testfile}
 if { [gdb_compile ${srcdir}/${subdir}/${srcfile} ${objfile} object {debug}] != ""
      || [gdb_compile ${srcdir}/${subdir}/${srcmainfile} ${objmainfile} object {}] != ""
      || [gdb_compile_pthreads "${objfile} ${objmainfile}" ${binfile} executable {}] != ""} {
-    return -1
+    return
 }
 
 clean_restart ${executable}
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # FAIL was: type = <thread local variable, no debug info>

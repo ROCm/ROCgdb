@@ -21,13 +21,13 @@ standard_testfile .S
 
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable debug] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Make sure that the compiler options allow Thumb-2.
@@ -35,7 +35,7 @@ gdb_test_multiple "list" "list main" {
     -re ".*@ No Thumb-2.*$gdb_prompt $" {
 	pass "list main"
 	untested "skipping tests due to lack of Thumb-2"
-	return -1
+	return
     }
     -re ".*@ Thumb-2 OK.*$gdb_prompt $" {
 	pass "list main"

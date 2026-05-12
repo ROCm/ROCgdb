@@ -37,11 +37,11 @@ standard_testfile
 require allow_watchpoint_tests
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # The line we'll be stepping.

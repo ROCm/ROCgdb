@@ -24,7 +24,7 @@ standard_testfile
 if {[build_executable $testfile.exp $testfile \
 	$srcfile [list debug nowarnings] ] == -1} {
     untested $testfile.exp
-    return -1
+    return
 }
 
 save_vars { GDBFLAGS } {

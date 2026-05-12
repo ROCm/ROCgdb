@@ -28,7 +28,7 @@ set escapedbinfile [string_to_regexp ${binfile}]
 
 if {[build_executable "failed to prepare for dprintf-detach" \
 	 ${testfile} ${srcfile} {debug}]} {
-    return -1
+    return
 }
 
 proc dprintf_detach_test { breakpoint_always_inserted dprintf_style disconnected_dprintf } {

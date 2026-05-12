@@ -24,7 +24,7 @@ standard_testfile .cc
 
 # Do NOT compile with debug flag.
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {c++}]} {
-    return -1
+    return
 }
 
 # Before setting the language, try to set a few simple breakpoints

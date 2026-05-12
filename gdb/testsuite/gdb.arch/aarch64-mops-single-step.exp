@@ -22,7 +22,7 @@ require allow_aarch64_mops_tests
 standard_testfile
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	  [list debug additional_flags=-march=armv9.3-a]] } {
-    return -1
+    return
 }
 
 # If the inferior is rescheduled to another CPU while a main or epilogue
@@ -72,7 +72,7 @@ proc step_through_sequence { prefix } {
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint ${srcfile}:[gdb_get_line_number "Break memset"]

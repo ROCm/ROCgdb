@@ -30,7 +30,7 @@ if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable \
      && [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable \
 		  {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Use a fresh directory to confine the native core dumps.
@@ -53,7 +53,7 @@ if {$core_works} {
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 set print_core_line [gdb_get_line_number "ABORT;"]
 gdb_test "tbreak $print_core_line"

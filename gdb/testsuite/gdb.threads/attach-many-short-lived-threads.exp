@@ -46,7 +46,7 @@ proc bad_dejagnu {} {
 
 if {[bad_dejagnu]} {
     unsupported "broken DejaGnu"
-    return 0
+    return
 }
 
 require can_spawn_for_attach
@@ -195,7 +195,7 @@ set options { "additional_flags=-DTIMEOUT=$timeout" debug pthreads }
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 $options] == -1} {
-    return -1
+    return
 }
 
 test

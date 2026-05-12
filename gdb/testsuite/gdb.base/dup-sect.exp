@@ -29,7 +29,7 @@ if {![istarget *-*-linux*]
     && ![istarget *-*-elf*]
     && ![istarget arm*-*-eabi*]
     && ![istarget powerpc-*-eabi*]} {
-    return 0
+    return
 }
 
 standard_testfile .S
@@ -37,7 +37,7 @@ set srcmainfile start.c
 set executable ${testfile}
 
 if {[build_executable ${testfile}.exp $executable [list ${srcfile} ${srcmainfile}] {}] == -1} {
-    return -1
+    return
 }
 
 set test "rename section"

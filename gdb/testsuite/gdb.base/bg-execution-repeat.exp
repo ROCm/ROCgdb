@@ -20,7 +20,7 @@
 standard_testfile
 
 if { [build_executable "failed to prepare" ${testfile} $srcfile] } {
-    return -1
+    return
 }
 
 set linenum [gdb_get_line_number "set break here"]

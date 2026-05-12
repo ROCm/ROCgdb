@@ -26,7 +26,7 @@ standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile \
 	 {debug pthreads}] == -1} {
-    return -1
+    return
 }
 
 # We need to do things a little differently when using the remote protocol.
@@ -43,7 +43,7 @@ save_vars { GDBFLAGS } {
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Check we hace non-stop mode.  We do try to force this on above, but maybe
@@ -51,7 +51,7 @@ if {![runto_main]} {
 # non-stop mode will still show as off, and this test should not be run.
 if {![is_target_non_stop]} {
     unsupported "required non-stop mode"
-    return -1
+    return
 }
 
 delete_breakpoints

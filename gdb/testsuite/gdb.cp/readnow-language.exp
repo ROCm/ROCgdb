@@ -16,7 +16,7 @@
 standard_testfile .cc
 
 if {[build_executable ${testfile}.exp $testfile ${testfile}.cc {c++ debug}] == -1} {
-    return -1
+    return
 }
 
 save_vars { GDBFLAGS } {

@@ -24,11 +24,11 @@ standard_testfile
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	  {debug quiet}] } {
     unsupported "failed to compile"
-    return -1
+    return
 }
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 # First, figure out if we are 32-bit or 64-bit.
@@ -40,7 +40,7 @@ gdb_assert { $xlen != 0 && $flen != 0 } "read xlen and flen"
 # We only handle 32-bit or 64-bit x-registers.
 if { $xlen != 4 && $xlen != 8 } {
     unsupported "unknown x-register size"
-    return -1
+    return
 }
 
 # If FLEN is 1 then the target doesn't have floating point support
@@ -49,7 +49,7 @@ if { $xlen != 4 && $xlen != 8 } {
 # files.
 if { $flen != 1 && $flen != $xlen } {
     unsupport "unknown xlen/flen combination"
-    return -1
+    return
 }
 
 if { $xlen == 4 } {

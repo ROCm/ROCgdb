@@ -24,7 +24,7 @@ set precsave [standard_output_file until.precsave]
 
 if { [prepare_for_testing "failed to prepare" $testfile \
 	  [list $srcfile $srcfile2]] } {
-    return -1
+    return
 }
 
 set bp_location1  [gdb_get_line_number "set breakpoint 1 here"]
@@ -52,7 +52,7 @@ with_timeout_factor 20 {
 	}
 	-wrap -re "Process record does not support instruction 0xfae64 at.*" {
 	    kfail "gdb/25038" $gdb_test_name
-	    return -1
+	    return
 	}
     }
 }

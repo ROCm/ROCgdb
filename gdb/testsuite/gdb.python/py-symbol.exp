@@ -25,7 +25,7 @@ standard_testfile py-symbol.c py-symbol-2.c py-symbol-3.c
 set opts { debug additional_flags=-DUSE_TWO_FILES }
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile $srcfile2 $srcfile3] $opts]} {
-    return -1
+    return
 }
 
 set readnow_p [readnow]
@@ -90,7 +90,7 @@ gdb_test "python print (gdb.lookup_static_symbol ('qq') is None)" \
     "True" "lookup_static_symbol for global var"
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 global hex decimal
@@ -196,7 +196,7 @@ set testfile $testfile-cxx
 set binfile [standard_output_file $testfile]
 if { [prepare_for_testing "failed to prepare" $testfile \
 	  [list $srcfile $srcfile2] $opts] } {
-    return -1
+    return
 }
 
 gdb_test "python print (gdb.lookup_global_symbol ('(anonymous namespace)::anon') is None)" \
@@ -205,7 +205,7 @@ gdb_test "python print (gdb.lookup_static_symbol ('(anonymous namespace)::anon')
     "10" "print value of anon"
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "Break in class."]
@@ -233,7 +233,7 @@ gdb_test "python print (cplusfunc.addr_class == gdb.SYMBOL_LOC_BLOCK)" "True" "t
 # Start with a fresh gdb.
 clean_restart ${::testfile}
 if {![runto_main]} {
-    return 0
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "Break at end."]

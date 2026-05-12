@@ -1651,8 +1651,8 @@ yylex (void)
     struct block_symbol result;
     const domain_search_flags lookup_domains[] =
     {
-      SEARCH_STRUCT_DOMAIN,
       SEARCH_VFT,
+      SEARCH_STRUCT_DOMAIN,
       SEARCH_MODULE_DOMAIN
     };
     int hextype;

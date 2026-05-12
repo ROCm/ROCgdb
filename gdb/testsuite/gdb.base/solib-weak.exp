@@ -23,12 +23,12 @@ require allow_shlib_tests
 if {([istarget *-*-mingw*]
      || [istarget *-*-cygwin*]
      || [istarget *-*-pe*])} {
-    return 0
+    return
 }
 
 # This test uses GCC-specific syntax.
 if {![test_compiler_info "gcc-*"]} {
-    return 0
+    return
 }
 
 proc do_test { lib1opts lib2opts lib1first } {

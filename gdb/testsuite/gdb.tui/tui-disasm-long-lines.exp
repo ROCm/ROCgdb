@@ -31,7 +31,7 @@ if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "$binfile" \
     if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "$binfile" \
 	      executable $ccopts] != "" } {
 	untested "compile"
-	return -1
+	return
     }
 }
 

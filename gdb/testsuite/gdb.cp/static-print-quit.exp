@@ -19,7 +19,7 @@ standard_testfile .cc
 
 if { [gdb_compile $srcdir/$subdir/$srcfile $binfile.o object {debug c++}] != ""} {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $testfile.o
@@ -34,7 +34,7 @@ gdb_test_multiple "print c" "" {
     -re "\r\n$pagination_prompt$" {
 	# gdb-7.1 did not crash with this testcase but it had the same bug.
 	untested "bug does not reproduce"
-	return 0
+	return
     }
 }
 

@@ -24,8 +24,8 @@ require !use_gdb_stub
 standard_testfile mi-start.c
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-     untested "could not build mi-start"
-     return -1
+    untested "could not build mi-start"
+    return
 }
 
 if {[mi_clean_restart $::testfile]} {

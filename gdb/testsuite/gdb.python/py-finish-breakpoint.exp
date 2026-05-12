@@ -31,7 +31,7 @@ set exec_opts [list debug shlib=$lib_sl]
 if { [gdb_compile_shlib $libsrc $lib_sl $lib_opts] != ""
      || [gdb_compile $srcdir/$subdir/$srcfile $binfile executable $exec_opts] != ""} {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Start with a fresh gdb.
@@ -46,7 +46,7 @@ with_test_prefix "normal conditions" {
     gdb_load_shlib ${lib_sl}
 
     if {![runto_main]} {
-	return 0
+	return
     }
 
     set python_file [gdb_remote_download host \
@@ -98,7 +98,7 @@ with_test_prefix "return to inlined function" {
 	"import python scripts"
 
     if {![runto_main]} {
-	return 0
+	return
     }
 
     gdb_breakpoint "increase_2"
@@ -124,7 +124,7 @@ with_test_prefix "no debug symbol" {
     set cond_line [gdb_get_line_number "Condition Break."]
 
     if {![runto_main]} {
-	return 0
+	return
     }
 
     gdb_test "print do_nothing" "no debug info.*" "ensure that shared lib has no debug info"
@@ -179,7 +179,7 @@ with_test_prefix "finish in dummy frame" {
 
 
     if {![runto_main]} {
-	return 0
+	return
     }
 
     gdb_test "break ${cond_line} if test_1(i,8)" "Breakpoint .* at .*" \
@@ -206,7 +206,7 @@ with_test_prefix "finish in normal frame" {
 	"import python scripts"
 
     if {![runto_main]} {
-	return 0
+	return
     }
 
     gdb_test "break ${cond_line} if test(i,8)" \
@@ -235,7 +235,7 @@ with_test_prefix "explicit inferior function call" {
 	"import python scripts"
 
     if {![runto_main]} {
-	return 0
+	return
     }
 
     # return address in dummy frame
@@ -262,7 +262,7 @@ with_test_prefix "explicit inferior function call" {
 
 with_test_prefix "inferior exit" {
     if {![runto "test_exec_exit"]} {
-	return 0
+	return
     }
 
     gdb_test_no_output "set var self_exec = 0" "switch to exit() test"
@@ -276,7 +276,7 @@ with_test_prefix "inferior exit" {
 
 with_test_prefix "inferior exec" {
     if {![runto "test_exec_exit"]} {
-	return 0
+	return
     }
 
     gdb_test "python SimpleFinishBreakpoint(gdb.newest_frame())" "SimpleFinishBreakpoint init" "set FinishBP after the exec"

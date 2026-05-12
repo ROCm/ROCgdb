@@ -16,7 +16,7 @@
 standard_testfile .cc
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${testfile}.cc {c++ debug}] } {
-    return -1
+    return
 }
 
 gdb_test_no_output "set breakpoint pending off"

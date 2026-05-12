@@ -82,7 +82,7 @@ Dwarf::assemble {
 
 if {[build_executable ${testfile}.exp $testfile "${asm_file} ${srcfile}" \
 	 [list ldflags=-nostartfiles]] == -1} {
-    return -1
+    return
 }
 
 clean_restart

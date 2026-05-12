@@ -94,7 +94,7 @@ remote_exec host "rm -f $filenames"
 
 if {![runto checkpoint1]} {
     untested "couldn't run to checkpoint"
-    return -1
+    return
 }
 
 # Get the endianness for the later use with endianless formats.

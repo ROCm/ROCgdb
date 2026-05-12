@@ -67,7 +67,7 @@ set filename [prepare_test_source_file 250]
 standard_testfile $filename
 if {[prepare_for_testing "failed to prepare" "$testfile" $srcfile \
 	 { debug }]} {
-    return -1
+    return
 }
 
 # Start the test.

@@ -23,7 +23,7 @@ tuiterm_env
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
-    return -1
+    return
 }
 
 # Run one test of the 'layout' command, selecting LAYOUT_NAME.

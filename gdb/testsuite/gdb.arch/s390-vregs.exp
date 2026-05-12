@@ -28,11 +28,11 @@ if {[isnative]} {
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile \
 	  [list "additional_flags=-mzarch"]] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Run to the first vector instruction and step it.  If the inferior
@@ -185,7 +185,7 @@ set cores [glob -nocomplain -directory $coredir *core*]
 if {[llength $cores] != 1} {
     untested "core file not found"
     remote_exec build "rm -rf $coredir"
-    return -1
+    return
 }
 set destcore [standard_output_file ${testfile}.core]
 remote_exec build "mv [file join $coredir [lindex $cores 0]] $destcore"

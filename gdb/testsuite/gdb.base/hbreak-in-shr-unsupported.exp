@@ -39,7 +39,7 @@ if { [prepare_for_testing "prepare" $testfile $main_src $exec_opts] != 0 } {
 gdb_load_shlib $lib_so
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Get main breakpoint out of the way.

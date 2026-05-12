@@ -27,7 +27,7 @@ set shlib_path [standard_output_file ${testfile}-lib.so]
 
 if { [gdb_compile_shlib $srcdir/$subdir/$srcfile2 $shlib_path {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 set shlib_path_target [gdb_download_shlib $shlib_path]
@@ -39,7 +39,7 @@ lappend opts additional_flags=-DSHLIB_PATH=[quote_for_host $shlib_path_target]
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable $opts] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 proc do_test { separate_debuginfo } {

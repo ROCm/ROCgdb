@@ -38,12 +38,12 @@ require {!is_remote target}
 
 standard_testfile .c
 if {[build_executable $testfile.exp $testfile $srcfile {debug}] == -1} {
-    return -1
+    return
 }
 
 set active_at_startup 0
 if { [vgdb_start $active_at_startup] == -1 } {
-    return -1
+    return
 }
 
 # Determine whether we're at nanosleep.

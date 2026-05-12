@@ -54,7 +54,7 @@ if {[istarget "powerpc*"]} {
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 $compile_flags]} {
-    return -1
+    return
 }
 
 set address -1
@@ -68,7 +68,7 @@ gdb_test_multiple "disassemble eh2" "" {
 }
 
 if { $address == -1 } {
-    return 0
+    return
 }
 
 clean_restart $testfile

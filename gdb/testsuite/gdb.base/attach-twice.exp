@@ -19,7 +19,7 @@ standard_testfile
 set executable ${testfile}
 
 if { [prepare_for_testing "failed to prepare" $executable] } {
-    return -1
+    return
 }
 
 # Start the program running and then wait for a bit, to be sure

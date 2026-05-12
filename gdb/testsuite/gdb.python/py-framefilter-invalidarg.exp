@@ -24,7 +24,7 @@ require is_x86_64_m64_target
 # We cannot use prepare_for_testing as we have to set the safe-patch
 # to check objfile and progspace printers.
 if {[build_executable $testfile.exp $testfile $srcfile {}] == -1} {
-    return -1
+    return
 }
 
 # Start with a fresh gdb.

@@ -27,7 +27,7 @@ standard_testfile .S
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	${additional_flags}] == -1 } {
-    return -1
+    return
 }
 
 gdb_test "break -q main" "Breakpoint.*at.*"

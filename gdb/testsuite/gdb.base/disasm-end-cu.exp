@@ -18,11 +18,11 @@
 # can handle our use of line number 0 to mark the end of sequence.
 
 if { [prepare_for_testing "failed to prepare" "disasm-end-cu" {disasm-end-cu-1.c disasm-end-cu-2.c} {debug}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set main_addr [get_hexadecimal_valueof "&main" "0"]
@@ -30,7 +30,7 @@ set dummy_3_addr [get_hexadecimal_valueof "&dummy_3" "0"]
 
 if {$main_addr == 0 || $dummy_3_addr == 0 || $dummy_3_addr <= $main_addr} {
     fail "unable to extract required addresses, or addresses out of order"
-    return -1
+    return
 }
 
 gdb_test_multiple "disassemble /m ${main_addr},${dummy_3_addr}" "disassemble address range with source" {

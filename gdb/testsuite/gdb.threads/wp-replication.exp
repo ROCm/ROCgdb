@@ -31,7 +31,7 @@ require allow_hw_watchpoint_tests
 
 standard_testfile
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable [list debug "additional_flags=-DNR_THREADS=$NR_THREADS -DNR_TRIGGERS_PER_THREAD=$NR_TRIGGERS_PER_THREAD"]] != "" } {
-    return -1
+    return
 }
 
 clean_restart ${::testfile}
@@ -41,7 +41,7 @@ gdb_test_no_output "set can-use-hw-watchpoints 1" ""
 
 # Run to `main' where we begin our tests.
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Set some default values.

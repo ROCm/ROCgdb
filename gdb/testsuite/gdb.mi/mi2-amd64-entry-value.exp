@@ -28,7 +28,7 @@ if {[info exists COMPILE]} {
 }
 
 if {[build_executable ${testfile}.exp ${binfile} ${srcfile} $opts]} {
-    return -1
+    return
 }
 
 if {[mi_clean_restart $::testfile]} {
@@ -44,7 +44,7 @@ foreach name {different breakhere_different breakhere_validity breakhere_invalid
 
 with_test_prefix "entry-values=no" {
     if {[mi_runto_main] == -1} {
-	return -1
+	return
     }
     mi_gdb_test "-gdb-set print entry-values no" {\^done} "no: set print entry-values"
     mi_send_resuming_command "exec-continue" "no: entry_equal: continue"
@@ -63,7 +63,7 @@ with_test_prefix "entry-values=no" {
 
 with_test_prefix "entry-values=only" {
     if {[mi_runto_main] == -1} {
-	return -1
+	return
     }
     mi_gdb_test "-gdb-set print entry-values only" {\^done} "only: set print entry-values"
     mi_send_resuming_command "exec-continue" "only: entry_equal: continue"
@@ -82,7 +82,7 @@ with_test_prefix "entry-values=only" {
 
 with_test_prefix "entry-values=preferred" {
     if {[mi_runto_main] == -1} {
-	return -1
+	return
     }
     mi_gdb_test "-gdb-set print entry-values preferred" {\^done} "preferred: set print entry-values"
     mi_send_resuming_command "exec-continue" "preferred: entry_equal: continue"
@@ -101,7 +101,7 @@ with_test_prefix "entry-values=preferred" {
 
 with_test_prefix "entry-values=if-needed" {
     if {[mi_runto_main] == -1} {
-	return -1
+	return
     }
     mi_gdb_test "-gdb-set print entry-values if-needed" {\^done} "if-needed: set print entry-values"
     mi_send_resuming_command "exec-continue" "if-needed: entry_equal: continue"
@@ -120,7 +120,7 @@ with_test_prefix "entry-values=if-needed" {
 
 with_test_prefix "entry-values=both" {
     if {[mi_runto_main] == -1} {
-	return -1
+	return
     }
     mi_gdb_test "-gdb-set print entry-values both" {\^done} "both: set print entry-values"
     mi_send_resuming_command "exec-continue" "both: entry_equal: continue"
@@ -139,7 +139,7 @@ with_test_prefix "entry-values=both" {
 
 with_test_prefix "entry-values=compact" {
     if {[mi_runto_main] == -1} {
-	return -1
+	return
     }
     mi_gdb_test "-gdb-set print entry-values compact" {\^done} "compact: set print entry-values"
     mi_send_resuming_command "exec-continue" "compact: entry_equal: continue"
@@ -158,7 +158,7 @@ with_test_prefix "entry-values=compact" {
 
 with_test_prefix "entry-values=default" {
     if {[mi_runto_main] == -1} {
-	return -1
+	return
     }
     mi_gdb_test "-gdb-set print entry-values default" {\^done} "default: set print entry-values"
     mi_send_resuming_command "exec-continue" "default: entry_equal: continue"

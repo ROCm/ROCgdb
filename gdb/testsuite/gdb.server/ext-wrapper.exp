@@ -22,7 +22,7 @@ standard_testfile wrapper.c
 require allow_gdbserver_tests
 
 if {[build_executable $testfile.exp $testfile $srcfile debug] == -1} {
-    return -1
+    return
 }
 
 save_vars { GDBFLAGS } {
@@ -33,7 +33,7 @@ save_vars { GDBFLAGS } {
     }
 
     if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-	return -1
+	return
     }
 }
 

@@ -29,13 +29,13 @@ set kodebugbz2file ${srcdir}/${subdir}/cordic.ko.debug.bz2
 set kofile [decompress_bz2 $kobz2file]
 if { $kofile == "" } {
     untested "failed bzip2 for [file tail $kobz2file]"
-    return -1
+    return
 }
 
 set kodebugfile [decompress_bz2 $kodebugbz2file]
 if { $kodebugfile == "" } {
     untested "failed bzip2 for [file tail $kodebugbz2file]"
-    return -1
+    return
 }
 
 # This test won't work properly if system debuginfo is installed.

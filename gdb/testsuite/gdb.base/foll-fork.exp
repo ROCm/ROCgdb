@@ -22,7 +22,7 @@ require allow_fork_tests
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # Restart GDB and run the inferior to main.  Return 1 on success, 0 on failure.

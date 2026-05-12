@@ -22,7 +22,7 @@ require {!target_info exists gdb,nosignals}
 
 if {[build_executable "failed to prepare" $testfile $srcfile \
 	 {debug pthreads}]} {
-    return -1
+    return
 }
 
 # Run test proper.  SIGTRAP_THREAD is the thread that should get the

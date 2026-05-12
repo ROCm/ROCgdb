@@ -42,11 +42,11 @@ foreach pauth_flag "-mbranch-protection=pac-ret+leaf -msign-return-address=all" 
 
 # If we couldn't compile, just bail out.
 if {!$compilation_ok} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint [ gdb_get_line_number "break here" ]

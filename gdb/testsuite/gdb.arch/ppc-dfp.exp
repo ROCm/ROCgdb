@@ -23,12 +23,12 @@ standard_testfile
 if {![test_compiler_info gcc*]} {
     # We use GCC's extended asm syntax
     warning "unknown compiler"
-    return -1
+    return
 }
 
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {quiet debug}] != "" } {
     unsupported "this machine doesn't support Decimal Floating Point."
-    return -1
+    return
 }
 
 clean_restart $::testfile
@@ -42,7 +42,7 @@ gdb_run_cmd
 gdb_expect {
   -re "$inferior_exited_re with code 01.\[\r\n\]+$gdb_prompt $" {
     unsupported "this machine doesn't support Decimal Floating Point."
-    return -1
+    return
   }
 
   -re ".*$gdb_prompt $" {}

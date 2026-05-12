@@ -42,7 +42,7 @@ if { [build_executable "build library" ${binlibfile} ${srclibfile} \
      || [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${objfile}" object {debug}] != ""
      || [gdb_compile "${objfile} ${binlibfile}" "${binfile}" executable {}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $executable

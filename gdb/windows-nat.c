@@ -1177,6 +1177,30 @@ void
 windows_nat_target::interrupt ()
 {
   DEBUG_EVENTS ("interrupt");
+
+  if (target_is_non_stop_p ())
+    {
+      /* Since we have finer-grained control and can suspend threads,
+	 we can report a "stopped" event for an existing thread,
+	 instead of force-injecting a new thread that reports SIGTRAP
+	 with DebugBreakProcess.
+
+	 Stop one thread, any thread.  */
+      stop_interrupt (minus_one_ptid, true);
+      return;
+    }
+
+  if (!dbg_break_process ())
+    warning (_("Could not interrupt program.  "
+	       "Press Ctrl-c in the program console."));
+}
+
+/* Stop the process with DebugBreakProcess or equivalent.  Return true
+   on success, false otherwise.  */
+
+bool
+windows_nat_target::dbg_break_process ()
+{
 #ifdef __x86_64__
   if (windows_process->wow64_process)
     {
@@ -1200,23 +1224,25 @@ windows_nat_target::interrupt ()
 	  if (thread)
 	    {
 	      CloseHandle (thread);
-	      return;
+	      return true;
 	    }
 	}
     }
   else
 #endif
     if (DebugBreakProcess (windows_process->handle))
-      return;
-  warning (_("Could not interrupt program.  "
-	     "Press Ctrl-c in the program console."));
+      return true;
+
+  return false;
 }
 
 /* Stop thread TH, for STOPPING_KIND reason.  This leaves a
    GDB_SIGNAL_0 pending in the thread, which is later consumed by
-   windows_nat_target::wait.  */
+   windows_nat_target::wait.  Return true if TH gets suspended and now
+   has a new stop event to report; false if TH was already suspended
+   and has no new stop event.  */
 
-void
+bool
 windows_nat_target::stop_one_thread (windows_thread_info *th,
 				     enum stopping_kind stopping_kind)
 {
@@ -1230,6 +1256,7 @@ windows_nat_target::stop_one_thread (windows_thread_info *th,
       DEBUG_EVENTS ("already suspended %s: suspended=%d, stopping=%d",
 		    thr_ptid.to_string ().c_str (),
 		    th->suspended, th->stopping);
+      return false;
     }
 #ifdef __CYGWIN__
   else if (th->suspended
@@ -1249,6 +1276,7 @@ windows_nat_target::stop_one_thread (windows_thread_info *th,
       th->pending_status.set_stopped (GDB_SIGNAL_0);
       th->last_event = {};
       serial_event_set (m_wait_event);
+      return true;
     }
 #endif
   else if (th->suspended)
@@ -1262,6 +1290,7 @@ windows_nat_target::stop_one_thread (windows_thread_info *th,
       /* Upgrade stopping.  */
       if (stopping_kind > th->stopping)
 	th->stopping = stopping_kind;
+      return false;
     }
   else
     {
@@ -1278,7 +1307,7 @@ windows_nat_target::stop_one_thread (windows_thread_info *th,
 			thr_ptid.to_string ().c_str ());
 	  if (stopping_kind > th->stopping)
 	    th->stopping = stopping_kind;
-	  return;
+	  return false;
 	}
 
       gdb_assert (th->suspended == 1);
@@ -1291,6 +1320,27 @@ windows_nat_target::stop_one_thread (windows_thread_info *th,
 	}
 
       serial_event_set (m_wait_event);
+      return true;
+    }
+}
+
+/* Helper for windows_nat_target::stop and
+   windows_nat_target::interrupt.  Stops PTID.  If STOP_ON_FIRST_MATCH
+   is true, returns immediately as soon as one thread is stopped.  */
+
+void
+windows_nat_target::stop_interrupt (ptid_t ptid, bool stop_on_first_match)
+{
+  for (thread_info &thr : all_non_exited_threads (this))
+    {
+      if (!thr.ptid.matches (ptid))
+	continue;
+
+      if (stop_one_thread (as_windows_thread_info (&thr), SK_EXTERNAL))
+	{
+	  if (stop_on_first_match)
+	    return;
+	}
     }
 }
 
@@ -1299,11 +1349,7 @@ windows_nat_target::stop_one_thread (windows_thread_info *th,
 void
 windows_nat_target::stop (ptid_t ptid)
 {
-  for (thread_info &thr : all_non_exited_threads (this))
-    {
-      if (thr.ptid.matches (ptid))
-	stop_one_thread (as_windows_thread_info (&thr), SK_EXTERNAL);
-    }
+  stop_interrupt (ptid, false);
 }
 
 void
@@ -2010,14 +2056,24 @@ out:
   return ret;
 }
 
+/* Throw an error if we're already debugging a Windows process.  We
+   can only debug one at a time currently.  */
+
+static void
+ensure_only_one_process ()
+{
+  if (windows_process->process_id != 0)
+    error (_("Can only debug one process at a time."));
+}
+
 /* Attach to process PID, then initialize for debugging it.  */
 
 void
 windows_nat_target::attach (const char *args, int from_tty)
 {
-  DWORD pid;
+  ensure_only_one_process ();
 
-  pid = parse_pid_to_attach (args);
+  DWORD pid = parse_pid_to_attach (args);
 
   if (set_process_privilege (SE_DEBUG_NAME, TRUE) < 0)
     warning ("Failed to get SE_DEBUG_NAME privilege\n"
@@ -2368,6 +2424,8 @@ windows_nat_target::detach (inferior *inf, int from_tty)
   cleanup_windows_arch ();
   switch_to_no_thread ();
   detach_inferior (inf);
+
+  windows_process->process_id = 0;
 
   maybe_unpush_target ();
 }
@@ -2811,6 +2869,8 @@ windows_nat_target::create_inferior (const char *exec_file,
   DWORD flags = 0;
   const std::string &inferior_tty = current_inferior ()->tty ();
 
+  ensure_only_one_process ();
+
   if (!exec_file)
     error (_("No executable specified, use `target exec'."));
 
@@ -3120,6 +3180,7 @@ windows_nat_target::mourn_inferior ()
       CHECK (CloseHandle (windows_process->handle));
       windows_process->open_process_used = 0;
     }
+  windows_process->process_id = 0;
   inf_child_target::mourn_inferior ();
 }
 

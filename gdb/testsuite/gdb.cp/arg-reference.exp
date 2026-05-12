@@ -27,7 +27,7 @@ require allow_cplus_tests
 standard_testfile .cc
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
-    return -1
+    return
 }
 
 gdb_test "ptype foo" "type = int \\\(Obj\\\)" "no false reference"

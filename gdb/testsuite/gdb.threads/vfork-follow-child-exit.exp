@@ -21,7 +21,7 @@ require allow_fork_tests
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug pthreads}]} {
-    return -1
+    return
 }
 
 # DETACH indicates whether "set detach-on-fork" is enabled.  It is

@@ -28,22 +28,22 @@ require dwarf2_support
 
 if  {[gdb_compile ${srcdir}/${subdir}/${srcfile} ${binfile}1.o \
 	  object {debug nowarnings optimize=-O0}] != ""} {
-    return -1
+    return
 }
 
 # Compile .s files without debug information.
 if  {[gdb_compile ${srcdir}/${subdir}/$asm_file0 ${binfile}2.o \
 	  object {nodebug}] != ""} {
-    return -1
+    return
 }
 if  {[gdb_compile ${srcdir}/${subdir}/$asm_file1 ${binfile}3.o \
 	  object {nodebug}] != ""} {
-    return -1
+    return
 }
 
 if  {[gdb_compile [list ${binfile}1.o ${binfile}2.o ${binfile}3.o] \
 	  "${binfile}" executable {}] != ""} {
-    return -1
+    return
 }
 
 clean_restart $execfile

@@ -32,13 +32,13 @@ if {[build_executable_and_dwo_files "$testfile.exp" "${binfile}" {nodebug} \
 	 [list $srcfile \
 	      [list nodebug split-dwo additional_flags=-DDWO=\"$dwo\"] \
 	      $obj]]} {
-    return -1
+    return
 }
 
 clean_restart $::testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Do a few basic things to verify we're finding the DWO debug info.

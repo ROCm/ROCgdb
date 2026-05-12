@@ -18,13 +18,13 @@ set executable ${testfile}
 
 if { [gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $executable
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # `noprint' would not test the full logic of GDB.

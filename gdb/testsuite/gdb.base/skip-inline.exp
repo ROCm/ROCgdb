@@ -20,7 +20,7 @@ set epilogue [have_epilogue_line_info]
 if { [prepare_for_testing "failed to prepare" "skip-inline" \
 			  {skip-inline.c skip1.c } \
 			  {debug nowarnings}] } {
-    return -1
+    return
 }
 
 set srcfile skip-inline.c

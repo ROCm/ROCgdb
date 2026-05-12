@@ -24,12 +24,12 @@ standard_testfile .cc
 # expected holes will be present in the struct.
 if { ![is_lp64_target] } {
     untested "test work only on lp64 targets"
-    return 0
+    return
 }
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile \
 	  { debug c++ }] } {
-    return -1
+    return
 }
 
 # Test general offset printing, ctor/dtor printing, union, formatting.

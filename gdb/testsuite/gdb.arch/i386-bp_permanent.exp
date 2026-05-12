@@ -29,7 +29,7 @@ set additional_flags [gdb_target_symbol_prefix_flags]
 # fragments.
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable [list $additional_flags]] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 
@@ -40,7 +40,7 @@ clean_restart $::testfile
 #
 
 if {![runto_main]} {
-  return -1
+    return
 }
 
 set function "standard"
@@ -53,8 +53,8 @@ set retcode [gdb_test_multiple "disassemble $function" "disassemble function '$f
 }]
 
 if {$retcode != 0} {
-  fail "disassemble failed, skipping entire test."
-  return -1
+    fail "disassemble failed, skipping entire test."
+    return
 }
 
 gdb_breakpoint "*$address_bp"

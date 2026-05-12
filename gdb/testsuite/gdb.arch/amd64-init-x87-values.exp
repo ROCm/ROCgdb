@@ -26,7 +26,7 @@ set options [list debug \
 		 additional_flags=-static \
 		 ldflags=-nostartfiles]
 if { [build_executable "failed to prepare" ${testfile} ${srcfile} $options] } {
-    return -1
+    return
 }
 
 # Start the test file, and check the x87 control registers (and

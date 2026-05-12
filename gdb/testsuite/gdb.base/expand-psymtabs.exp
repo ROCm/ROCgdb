@@ -34,7 +34,7 @@ standard_testfile
 if {[prepare_for_testing_full "failed to prepare" \
 	 [list $testfile debug $srcfile {debug additional_flags=-DFIRST} \
 	      $srcfile debug]]} {
-    return -1
+    return
 }
 
 set foo_bp [gdb_get_line_number "Break here"]

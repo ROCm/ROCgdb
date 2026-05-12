@@ -26,7 +26,7 @@ require allow_python_tests
 standard_testfile
 
 if {[gdb_compile "$srcdir/$subdir/$srcfile" $binfile executable {debug}] != "" } {
-    return -1
+    return
 }
 
 mi_clean_restart $::testfile

@@ -21,11 +21,11 @@ standard_testfile .S -main.c
 
 if { [prepare_for_testing "failed to prepare" "${testfile}" \
 	  [list $srcfile2 $srcfile] {nodebug}] } {
-    return -1
+    return
 }
 
 if {![runto f]} {
-    return -1
+    return
 }
 
 # FAIL was printing:

@@ -30,7 +30,7 @@ require {!target_info exists gdb,cannot_call_functions}
 
 if { [build_executable ${testfile}.exp ${testfile} ${testfile}.c {debug}] } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 proc test_watchpoint { hw } {

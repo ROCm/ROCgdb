@@ -27,14 +27,14 @@ set timeout_factor 20
 set filename [selftest_prepare]
 if { $filename eq "" } {
     unsupported "${gdb_test_file_name}.exp"
-    return -1
+    return
 }
 
 # If FILENAME is a libtool wrapper, then we need to get the path of the real
 # executable.
 set filename [selftest_libtool_get_real_gdb_executable $filename]
 if { $filename eq "" } {
-    return -1
+    return
 }
 
 with_timeout_factor $timeout_factor {
@@ -48,7 +48,7 @@ set worker_threads [gdb_get_worker_threads]
 
 if { $worker_threads eq "UNKNOWN" } {
     unresolved "unable to get worker thread count"
-    return -1
+    return
 }
 
 # Generate an index file.
@@ -66,7 +66,7 @@ with_timeout_factor $timeout_factor {
 	}
     }
     if { ! $ok } {
-	return -1
+	return
     }
 
     gdb_test_no_output "save gdb-index -dwarf-5 $dir1" \

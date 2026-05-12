@@ -18,7 +18,7 @@
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug}]} {
-    return -1
+    return
 }
 
 set is_pie [exec_is_pie $binfile]
@@ -80,7 +80,7 @@ gdb_test_multiple $command $test {
 
 # Now get past startup code.
 if {![runto_main]} {
-    return 0
+    return
 }
 
 with_test_prefix "after run to main" {
@@ -117,7 +117,7 @@ with_test_prefix "read-only" {
 
     if {!$has_ro_sections} {
 	unsupported "no read-only sections"
-	return -1;
+	return
     }
 
     set orig -1
@@ -132,7 +132,7 @@ with_test_prefix "read-only" {
 
     if {$orig == -1} {
 	untested "couldn't read address of read-only section"
-	return -1
+	return
     }
 
     # Come up with different value.
@@ -153,7 +153,7 @@ with_test_prefix "read-only" {
 
     if { $written != $patch } {
 	unsupported "can't patch read-only section"
-	return -1
+	return
     }
 
     gdb_test "compare-sections -r" \

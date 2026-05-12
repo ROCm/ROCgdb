@@ -46,7 +46,7 @@ if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
 }
 
 if {![runto_main]} {
-    return 0
+    return
 }
 
 set bp_num [get_first_maint_bp_num]

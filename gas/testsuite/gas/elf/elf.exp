@@ -237,6 +237,7 @@ if { [is_elf_format] } then {
 	# The alpha port uses .set for state, e.g. nomacro.
 	run_dump_test "symtab"
     }
+    run_dump_test "visibility"
     run_dump_test "symver"
     run_dump_test "pr21661"
     run_dump_test "pr14891"

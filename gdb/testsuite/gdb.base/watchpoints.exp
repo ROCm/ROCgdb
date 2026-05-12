@@ -31,7 +31,7 @@ require allow_watchpoint_tests
 set wp_set 1
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 with_test_prefix "before inferior start" {

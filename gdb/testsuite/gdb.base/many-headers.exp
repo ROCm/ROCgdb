@@ -27,14 +27,14 @@ if { [target_info gdb_protocol] != "" } {
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # Generate core file.
 set corefile [core_find $binfile]
 if {$corefile == ""} {
     untested "unable to create or find corefile"
-    return 0
+    return
 }
 
 # Limit is in kb, so this is 4MB.
@@ -49,7 +49,7 @@ catch {
 } msg
 if { "$msg" != "" } {
     untested "Can't set stack limit"
-    return -1
+    return
 }
 
 set cmd \

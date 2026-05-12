@@ -28,7 +28,7 @@ standard_testfile foll-fork.c
 
 if { [prepare_for_testing "failed to prepare" ${testfile} $srcfile \
       {additional_flags=-static}] } {
-    return -1
+    return
 }
 
 gdb_test "catch fork" "Catchpoint \[0-9\]* \\(fork\\)"

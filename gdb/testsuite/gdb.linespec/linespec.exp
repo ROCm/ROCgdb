@@ -27,7 +27,7 @@ require allow_cplus_tests
 if {[prepare_for_testing "failed to prepare" $exefile \
 	 [list $srcfile $baseone $basetwo] \
 	 {debug nowarnings c++}]} {
-    return -1
+    return
 }
 
 gdb_test_no_output "set multiple-symbols all" \

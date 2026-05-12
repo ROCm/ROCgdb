@@ -26,7 +26,7 @@ require allow_gdbserver_tests
 if { [istarget *-*-mingw*]
      || [istarget *-*-cygwin*] } {
     unsupported "gdbserver does not support --wrapper on this target (PR server/15967)"
-    return -1
+    return
 }
 
 save_vars { GDBFLAGS } {
@@ -37,7 +37,7 @@ save_vars { GDBFLAGS } {
     }
 
     if { [prepare_for_testing "failed to prepare" $testfile $srcfile debug] } {
-	return -1
+	return
     }
 }
 

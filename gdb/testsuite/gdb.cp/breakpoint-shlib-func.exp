@@ -32,12 +32,12 @@ standard_testfile .cc -lib.cc
 set libobj [standard_output_file libfoo.so]
 if {[build_executable "build shared library" $libobj $srcfile2 \
 	 {debug c++ shlib}] != 0} {
-    return -1
+    return
 }
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 [list debug c++ shlib=$libobj]]} {
-    return -1
+    return
 }
 
 gdb_load_shlib $libobj
@@ -49,7 +49,7 @@ gdb_test "info breakpoints" "<foo\\(\\)@plt>"
 
 # Runto main, but don't delete all the breakpoints.
 if {![runto_main no-delete-breakpoints]} {
-    return -1
+    return
 }
 
 # The breakpoint should now be showing in `foo` for real.

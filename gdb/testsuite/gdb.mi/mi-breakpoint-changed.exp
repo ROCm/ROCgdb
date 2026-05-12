@@ -32,7 +32,7 @@ set lib_opts "debug"
 if { [gdb_compile_shlib $libsrc1 $lib_sl1 $lib_opts] != ""
      || [gdb_compile_shlib $libsrc2 $lib_sl2 $lib_opts] != ""} {
     untested "failed to compile shared library"
-    return -1
+    return
 }
 
 set MIFLAGS "-i=mi"
@@ -40,7 +40,7 @@ set MIFLAGS "-i=mi"
 set exec_opts [list debug shlib=$lib_sl1 shlib_load]
 if { [gdb_compile $srcdir/$subdir/$srcfile $binfile executable $exec_opts] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 proc test_insert_delete_modify { } {

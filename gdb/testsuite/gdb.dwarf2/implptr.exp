@@ -35,14 +35,14 @@ if {[info exists COMPILE]} {
 }
 
 if {[prepare_for_testing "failed to prepare" ${testfile} $srcfile $opts]} {
-    return -1
+    return
 }
 
 # Additional test to verify the referenced CU is not aged out.
 gdb_test_no_output "maintenance set dwarf max-cache-age 0"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Test various pointer depths in bar.

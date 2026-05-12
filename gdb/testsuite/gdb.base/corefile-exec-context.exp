@@ -24,7 +24,7 @@ standard_testfile
 
 if {[build_executable $testfile.exp $testfile $srcfile] == -1} {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Linux core files can encore upto 80 characters for the command and
@@ -44,7 +44,7 @@ if { $binfile_len <= 80 } {
 set corefile [core_find $binfile {}]
 if {$corefile == ""} {
     untested "unable to create corefile"
-    return 0
+    return
 }
 set corefile_1 "$binfile.1.core"
 remote_exec build "mv $corefile $corefile_1"
@@ -73,7 +73,7 @@ set args "aaaaa bbbbb ccccc ddddd e\\\\ e\\\\ e\\\\ e\\\\ e"
 set corefile [core_find $binfile {} $args]
 if {$corefile == ""} {
     untested "unable to create corefile"
-    return 0
+    return
 }
 set corefile_2 "$binfile.2.core"
 remote_exec build "mv $corefile $corefile_2"
@@ -136,7 +136,7 @@ for { set i 0 } { $i < 10 } { incr i } {
 
 if { $env_var_name eq "" } {
     unsupported "couldn't find suitable environment variable name"
-    return -1
+    return
 }
 
 # Generate a core file with this environment variable set.
@@ -147,7 +147,7 @@ save_vars { ::env($env_var_name) } {
     set corefile [core_find $binfile {} $args]
     if {$corefile == ""} {
 	untested "unable to create corefile"
-	return 0
+	return
     }
 }
 set corefile_3 "$binfile.2.core"

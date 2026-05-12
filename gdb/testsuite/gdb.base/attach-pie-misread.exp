@@ -26,7 +26,7 @@ set executable $testfile
 
 if {[build_executable_own_libs ${testfile}.exp $executable $srcfile \
 	 {pie}] == ""} {
-    return -1
+    return
 }
 
 # Program Headers:
@@ -99,7 +99,7 @@ with_test_prefix "rebuild with DGEN defined" {
     set prelink_args [build_executable_own_libs ${testfile}.exp $executable $srcfile \
 			  [list pie "additional_flags=-DGEN=\"$genfile\""]]
     if {$prelink_args == ""} {
-	return -1
+	return
     }
 }
 
@@ -110,7 +110,7 @@ set phdr [read_phdr $binfile "readelf rebuilt with stub_size"]
 set dynamic_vaddr_prelinkno [lindex $phdr 0]
 
 if {![prelink_yes $prelink_args]} {
-    return -1
+    return
 }
 
 set phdr [read_phdr $binfile "readelf with prelink -R"]

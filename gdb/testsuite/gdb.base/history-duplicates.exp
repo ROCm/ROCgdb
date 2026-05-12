@@ -57,7 +57,7 @@ gdb_start
 # These tests require readline support.
 if { ![readline_is_used] } {
     unsupported "readline isn't used."
-    return -1
+    return
 }
 
 # By default the option is set to 0.

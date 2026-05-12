@@ -27,7 +27,7 @@ if {[is_ilp32_target]} {
 
 if  { [gdb_compile [file join $srcdir $subdir $srcfile] \
 	   $binfile object [list additional_flags=-DPTRBITS=$ptrbits]] != "" } {
-    return -1
+    return
 }
 
 clean_restart $testfile

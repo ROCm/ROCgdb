@@ -19,7 +19,7 @@
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug] == -1} {
-    return -1
+    return
 }
 
 # Check that we handle a stop event coming from a background execution

@@ -19,8 +19,8 @@ standard_testfile .cc
 set executable ${testfile}
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" object {debug c++} ] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 clean_restart ${executable}

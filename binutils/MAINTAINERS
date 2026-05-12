@@ -137,7 +137,6 @@ responsibility among the other maintainers.
   VMS		   Tristan Gingold <tgingold@free.fr>
   x86_64	   Jan Beulich <jbeulich@suse.com>
   x86_64	   Jan Hubicka <jh@suse.cz>
-  x86_64	   Andreas Jaeger <aj@suse.de>
   x86_64	   H.J. Lu <hjl.tools@gmail.com>
   XGATE            Sean Keys <skeys@ipdatasys.com>
   Xtensa	   Max Filippov <jcmvbkbc@gmail.com>
@@ -150,25 +149,26 @@ These folks have acted as maintainers in the past, but have now
 moved on to other things.  Our thanks for all their hard work
 goes with them.
 
-  Paul Brook
-  Eric Christopher
-  Jason Eckhardt
-  Mike Frysinger
-  Paul Iannetta
-  Geoff Keating
-  Mark Kettenis
-  Walter Lee
-  Mei Ligang
+  Andreas Jaeger
   Arnold Metselaar
-  Vladimir Mezentsev
-  Mark Mitchell
-  Richard Sandiford
   Bernd Schmidt
-  Svein Seldal
-  Martin Schwidefsky
-  M R Swami Reddy
-  Matt Thomas
+  Eric Christopher
+  Geoff Keating
+  Jason Eckhardt
   Jim Wilson
+  M R Swami Reddy
+  Mark Kettenis
+  Mark Mitchell
+  Martin Schwidefsky
+  Matt Thomas
+  Mei Ligang
+  Mike Frysinger
+  Paul Brook
+  Paul Iannetta
+  Richard Sandiford
+  Svein Seldal
+  Vladimir Mezentsev
+  Walter Lee
 
       --------- CGEN Maintainers -------------
 

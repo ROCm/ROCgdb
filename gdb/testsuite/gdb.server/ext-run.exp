@@ -24,7 +24,7 @@ standard_testfile server.c
 require allow_gdbserver_tests
 
 if {[build_executable $testfile.exp $testfile $srcfile debug] == -1} {
-    return -1
+    return
 }
 
 # allow_xml_test must be called while gdb is not running.

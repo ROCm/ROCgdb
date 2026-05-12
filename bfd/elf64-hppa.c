@@ -4052,35 +4052,58 @@ elf_hppa_final_link_relocate (Elf_Internal_Rela *rel,
 						     r_symndx) != -1)
 	    {
 	      bfd_vma out_off;
+	      bool skip;
 	      struct elf_link_hash_entry *baseh;
 
 	      out_off = _bfd_elf_section_offset (output_bfd, info,
 						 input_section,
 						 rel->r_offset);
+	      skip = out_off == (bfd_vma) -1 || out_off == (bfd_vma) -2;
 
-	      BFD_ASSERT (out_off != (bfd_vma) -1 && out_off != (bfd_vma) -2);
+	      /* The HP dynamic linker doesn't support relocations with
+		 the R_PARISC_NONE type.  So, we can't just output a zero
+		 relocation if we encounter an invalid offset.  We reserve
+		 16 bytes at the start of the data section that aren't
+		 used.  */
+	      if (skip && output_bfd->xvec == &hppa_elf64_vec)
+		{
+		  /* Set the relocation offset to the start of the
+		     data section.  */
+		  skip = false;
+		  baseh = hppa_info->data_hash_entry;
+		  sec = baseh->root.u.def.section;
+		  rela.r_offset = (sec->output_offset
+				   + sec->output_section->vma);
+		}
+	      else if (!skip)
+		{
+		  /* This is the output relocation offset.  */
+		  rela.r_offset = (out_off
+				   + input_section->output_offset
+				   + input_section->output_section->vma);
+		}
 
-	      /* This is the output relocation offset.  */
-	      rela.r_offset = (out_off
-			       + input_section->output_offset
-			       + input_section->output_section->vma);
-
-	      /* Select base segment.  */
-	      if (sym_sec->flags & SEC_READONLY)
-		baseh = hppa_info->text_hash_entry;
+	      if (skip)
+		memset (&rela, 0, sizeof (rela));
 	      else
-		baseh = hppa_info->data_hash_entry;
+		{
+		  /* Select base segment.  */
+		  if (sym_sec->flags & SEC_READONLY)
+		    baseh = hppa_info->text_hash_entry;
+		  else
+		    baseh = hppa_info->data_hash_entry;
 
-	      sec = baseh->root.u.def.section;
-	      dynindx = baseh->dynindx;
+		  sec = baseh->root.u.def.section;
+		  dynindx = baseh->dynindx;
 
-	      /* Adjust addend using the difference of the symbol's
-		 location and the section symbol's address.  */
-	      rela.r_addend = (value + addend - sec->output_offset
-			       - sec->output_section->vma);
+		  /* Adjust addend using the difference of the symbol's
+		     location and the section symbol's address.  */
+		  rela.r_addend = (value + addend - sec->output_offset
+				   - sec->output_section->vma);
 
-	      /* We need a dynamic relocation for this symbol.  */
-	      rela.r_info = ELF64_R_INFO (dynindx, R_PARISC_DIR64);
+		  /* We need a dynamic relocation for this symbol.  */
+		  rela.r_info = ELF64_R_INFO (dynindx, R_PARISC_DIR64);
+		}
 
 	      s = hppa_info->other_rel_sec;
 	      loc = s->contents;

@@ -27,23 +27,23 @@ set objfile [standard_output_file ${testfile}.o]
 if { [gdb_compile_shlib ${srcdir}/${subdir}/${srcfile_lib} ${binfile_lib} {debug}] != ""
      || [gdb_compile ${srcdir}/${subdir}/${srcfile} ${objfile} object {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 set opts [list debug shlib=${binfile_lib}]
 if { [gdb_compile ${objfile} ${binfile} executable $opts] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $testfile
 gdb_load_shlib ${binfile_lib}
 
 if {![runto lib]} {
-    return -1
+    return
 }
 
 if {![gdb_gcore_cmd $gcorefile "save a corefile"]} {
-    return -1
+    return
 }
 
 proc test_load_core { print_symbol_loading } {

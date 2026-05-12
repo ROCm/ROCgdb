@@ -55,7 +55,7 @@ Dwarf::assemble $asm_file {
 
 if {[prepare_for_testing ${testfile}.exp ${testfile} \
 	 [list $srcfile $asm_file] {nodebug}] } {
-    return -1
+    return
 }
 
 gdb_test "ptype '(anonymous namespace)::v'" "type = myint"

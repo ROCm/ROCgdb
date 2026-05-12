@@ -20,7 +20,7 @@ require supports_reverse
 standard_testfile
 
 if {[build_executable $testfile.exp $testfile $srcfile debug] == -1} {
-    return -1
+    return
 }
 
 proc test_one_sig {nextsig} {
@@ -239,7 +239,7 @@ with_test_prefix "sig-test-1" {
     foreach sig [lrange $signals 1 end] {
 	test_one_sig $sig
 	if { $record_instruction_kfail } {
-	    return -1
+	    return
 	}
     }
 }

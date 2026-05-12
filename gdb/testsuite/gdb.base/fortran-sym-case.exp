@@ -16,11 +16,11 @@
 standard_testfile .c
 
 if { [prepare_for_testing "failed to prepare" ${testfile}] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "set language fortran" {Warning: the current language does not match this frame\.}

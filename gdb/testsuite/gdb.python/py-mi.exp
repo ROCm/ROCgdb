@@ -23,7 +23,7 @@ standard_testfile py-prettyprint.c
 set pyfile py-prettyprint.py
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug additional_flags=-DMI}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 if {[mi_clean_restart $::testfile]} {
@@ -32,7 +32,7 @@ if {[mi_clean_restart $::testfile]} {
 
 if {[lsearch -exact [mi_get_features] python] < 0} {
     unsupported "python support is disabled"
-    return -1
+    return
 }
 
 mi_runto_main
@@ -342,7 +342,7 @@ gdb_exit
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}-cxx" \
 	   executable {debug c++ additional_flags=-DMI}] != "" } {
     untested "failed to compile in C++ mode"
-    return -1
+    return
 }
 
 if {[mi_clean_restart ${::testfile}-cxx]} {
@@ -351,7 +351,7 @@ if {[mi_clean_restart ${::testfile}-cxx]} {
 
 if {[lsearch -exact [mi_get_features] python] < 0} {
     unsupported "python support is disabled"
-    return -1
+    return
 }
 
 with_test_prefix "varobj fake" {

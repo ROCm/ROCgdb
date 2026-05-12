@@ -29,12 +29,12 @@ require supports_get_siginfo_type
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 # Advance to main
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Run to the signal.
@@ -94,7 +94,7 @@ with_test_prefix "validate siginfo fields" {
 
 # Advance to main
 if {![runto_main]} {
-    return 0
+    return
 }
 
 # Run to the signal.

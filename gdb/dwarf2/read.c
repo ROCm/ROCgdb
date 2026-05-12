@@ -15856,6 +15856,16 @@ new_symbol (struct die_info *die, struct dwarf2_cu *cu, struct symbol *sym,
 	   : cu->list_in_scope);
       break;
     case DW_TAG_imported_declaration:
+      sym->set_domain (TYPE_DOMAIN);
+      sym->set_loc_class_index (LOC_TYPEDEF);
+      /* Use current scope context rather than forcing global scope.  This
+	 ensures variable aliases are scoped correctly (function-level,
+	 module-level, or program-level).  */
+      list_to_add
+	= ((cu->list_in_scope == &cu->get_builder ()->get_file_symbols ())
+	   ? &cu->get_builder ()->get_global_symbols ()
+	   : cu->list_in_scope);
+      break;
     case DW_TAG_namespace:
       sym->set_domain (TYPE_DOMAIN);
       sym->set_loc_class_index (LOC_TYPEDEF);

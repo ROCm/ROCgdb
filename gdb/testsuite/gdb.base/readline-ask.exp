@@ -20,7 +20,7 @@ set inputrc ${srcdir}/${subdir}/${testfile}.inputrc
 
 if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" object {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 setenv TERM dumb
@@ -31,7 +31,7 @@ clean_restart $testfile
 
 if { ![readline_is_used] } {
     unsupported "completion doesn't work when readline isn't used."
-    return -1
+    return
 }
 
 gdb_test_no_output "set width 50"
@@ -98,7 +98,7 @@ gdb_test_multiple "" $test {
     }
     -re "$gdb_prompt " {
 	fail $test
-	return 0
+	return
     }
 }
 

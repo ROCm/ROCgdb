@@ -37,7 +37,7 @@ set solib_name [gdb_load_shlib $solib_name]
 
 if {![runto foo]} {
     untested "failed to run to function foo"
-    return -1
+    return
 }
 
 # Invoke 'info sources EXTRA_ARGS' and extract the results.

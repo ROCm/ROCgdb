@@ -29,7 +29,7 @@ require {!target_info exists gdb,nosignals}
 
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 	 executable [list debug "incdir=${objdir}"]] != "" } {
-    return -1
+    return
 }
 
 proc get_value {var test} {
@@ -52,7 +52,7 @@ proc get_value {var test} {
 clean_restart $executable
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "set wait-thread-2 breakpoint here"]

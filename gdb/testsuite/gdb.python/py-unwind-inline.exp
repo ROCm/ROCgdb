@@ -24,12 +24,12 @@ standard_testfile
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
 	  debug] } {
-    return -1
+    return
 }
 
 # The following tests require execution.
 if {![runto_main]} {
-    return 0
+    return
 }
 
 set pyfile [gdb_remote_download host ${srcdir}/${subdir}/${testfile}.py]

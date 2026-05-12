@@ -19,11 +19,11 @@ standard_testfile
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
     [list debug]] } {
-    return -1
+    return
 }
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 # Initialize kernel_user_helper_version.
@@ -43,7 +43,7 @@ gdb_test_multiple "p kernel_user_helper_version" \
 
 if { !$kernel_helper_supported } {
     unsupported "kernel doesn't have helpers"
-    return 0
+    return
 }
 
 # Get the instruction branching to kernel helper, they can be

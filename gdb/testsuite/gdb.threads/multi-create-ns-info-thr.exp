@@ -19,14 +19,14 @@
 standard_testfile multi-create.c
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug pthreads}] == -1} {
-    return -1
+    return
 }
 
 gdb_test_no_output "set pagination off"
 gdb_test_no_output "set non-stop on"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Create a breakpoint that does "info threads" when hit, which will be

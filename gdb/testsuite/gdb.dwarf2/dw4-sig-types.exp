@@ -26,14 +26,14 @@ include_file dw4-sig-types.h
 if { [prepare_for_testing "failed to prepare" "${testfile}" \
 	  [list $srcfile $srcfile2] \
 	  {debug c++ additional_flags=-gdwarf-4 additional_flags=-fdebug-types-section}] } {
-    return -1
+    return
 }
 
 # Stress test gdb's handling of cached comp units, disable the cache.
 gdb_test_no_output "maint set dwarf max-cache-age 0"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Bring symtab for myset into gdb.

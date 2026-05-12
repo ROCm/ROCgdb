@@ -114,7 +114,7 @@ Dwarf::assemble $asm_file {
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile $asm_file $srcfile3] $build_options] } {
-    return -1
+    return
 }
 
 gdb_reinitialize_dir /tmp

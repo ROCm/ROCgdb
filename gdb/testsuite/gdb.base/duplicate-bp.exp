@@ -16,7 +16,7 @@
 standard_testfile
 
 if { [build_executable "failed to prepare" ${testfile}] } {
-    return -1
+    return
 }
 
 # Setup for the test, create COUNT breakpoints at the function BREAKPT.

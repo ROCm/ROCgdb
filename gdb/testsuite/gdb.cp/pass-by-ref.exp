@@ -336,11 +336,11 @@ gdb_produce_source $srcfile $program
 
 set options {debug c++ additional_flags=-std=c++11}
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $options]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set bp_location [gdb_get_line_number "stop here"]

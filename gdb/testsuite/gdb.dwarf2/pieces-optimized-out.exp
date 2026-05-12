@@ -27,11 +27,11 @@ lappend opts debug
 lappend opts nopie
 
 if {[prepare_for_testing "failed to prepare" ${testfile} $srcfile $opts]} {
-    return -1
+    return
 }
 
 if {![runto foo]} {
-    return -1
+    return
 }
 
 # Move back up to main.

@@ -23,7 +23,7 @@ require allow_gdbserver_tests
 
 if { [build_executable "failed to prepare" $::testfile $::srcfile \
 	  {debug}] } {
-    return -1
+    return
 }
 
 # Don't use $binfile arg, to make sure we use the remote file target:$binfile.

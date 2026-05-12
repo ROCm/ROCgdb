@@ -20,7 +20,7 @@ require can_spawn_for_attach
 standard_testfile
 
 if {[build_executable "failed to build" $testfile $srcfile {debug}]} {
-    return -1
+    return
 }
 
 set test_spawn_id [spawn_wait_for_attach $binfile]

@@ -26,7 +26,7 @@ require can_spawn_for_attach
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 if {[mi_gdb_start]} {

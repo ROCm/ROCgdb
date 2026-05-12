@@ -17,16 +17,16 @@ standard_testfile .c -2.c
 
 set sources [list $srcfile $srcfile2]
 if { [prepare_for_testing "failed to prepare" ${testfile} $sources] } {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 get_debug_format
 if { [skip_inline_frame_tests] } {
-    return -1
+    return
 }
 
 # Set a break-point in inline function bar, in a CU for which the partial

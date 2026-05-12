@@ -21,7 +21,7 @@
 standard_testfile
 
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable debug] != "" } {
-    return -1
+    return
 }
 
 # Return a list of the valid thread IDs, with the initial thread first.
@@ -81,8 +81,8 @@ set line [gdb_get_line_number "thread-specific.exp: thread loop"]
 set threads [get_thread_list]
 
 if {[llength $threads] == 0} {
-  # We have already issued a FAIL above.
-  return 1
+    # We have already issued a FAIL above.
+    return
 }
 
 gdb_test {print $_thread} ".* = [lindex $threads 0]" "thread var in main"

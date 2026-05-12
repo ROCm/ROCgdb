@@ -17,7 +17,7 @@ standard_testfile
 
 if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 	 executable { debug }] != "" } {
-    return -1
+    return
 }
 
 clean_restart ${::testfile}
@@ -51,7 +51,7 @@ gdb_test_multiple "bt" "determine thread functions" {
 # No point in continuing if we couldn't figure out which thread is which.
 if { $sigusr1_thread == 0 } {
     # FAIL already recorded.
-    return 0
+    return
 }
 
 # Advance each thread to where we want them one at a time.

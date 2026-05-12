@@ -2005,7 +2005,7 @@ amd_dbgapi_target::async (bool enable)
 static ptid_t
 make_gpu_ptid (ptid_t::pid_type pid, amd_dbgapi_wave_id_t wave_id)
 {
- return ptid_t (pid, 1, wave_id.handle);
+  return ptid_t (pid, 1, wave_id.handle);
 }
 
 /* When a thread is deleted, remove its wave_info from the inferior's
@@ -2631,7 +2631,7 @@ static void maybe_reset_amd_dbgapi ();
 
 /* Make the amd-dbgapi library detach from INF.
 
-   Note that this us unrelated to the "detach" GDB concept / command.
+   Note that this is unrelated to the "detach" GDB concept / command.
 
    This undoes what attach_amd_dbgapi does.  */
 
@@ -2715,11 +2715,12 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
     = [wave_id, tdep, gdbarch, regcache] (int reg, bool warn = false)
       {
 	gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
+	ULONGEST reg_size = register_type (gdbarch, reg)->length ();
+	gdb_assert (reg_size <= AMDGPU_MAX_REGISTER_SIZE);
 
 	amd_dbgapi_status_t status
 	  = amd_dbgapi_read_register (wave_id, tdep->register_ids[reg], 0,
-				      register_type (gdbarch, reg)->length (),
-				      raw);
+				      reg_size, raw);
 
 	if (status == AMD_DBGAPI_STATUS_SUCCESS)
 	  regcache->raw_supply (reg, raw);
@@ -2751,6 +2752,8 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
   gdb_assert (is_amdgpu_arch (gdbarch));
 
   gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
+  ULONGEST reg_size = register_type (gdbarch, regno)->length ();
+  gdb_assert (reg_size <= AMDGPU_MAX_REGISTER_SIZE);
   regcache->raw_collect (regno, &raw);
 
   amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
@@ -2775,8 +2778,7 @@ amd_dbgapi_target::store_registers (struct regcache *regcache, int regno)
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
   amd_dbgapi_status_t status
     = amd_dbgapi_write_register (wave_id, tdep->register_ids[regno], 0,
-				 register_type (gdbarch, regno)->length (),
-				 raw);
+				 reg_size, raw);
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     warning (_("Couldn't write register %s (#%d)."),

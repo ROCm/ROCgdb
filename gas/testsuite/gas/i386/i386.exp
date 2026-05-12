@@ -901,6 +901,7 @@ if {[is_elf_format] || [istarget "*-*-vxworks*"]} then {
     if {![istarget "*-*-dragonfly*"]
 	&& ![istarget "*-*-gnu*"]
 	&& ![istarget "*-*-freebsd*"]
+	&& ![istarget "*-*-haiku*"]
 	&& ![istarget "*-*-linux*"]
 	&& ![istarget "*-*-netbsd*"]} then {
 	run_dump_test "svr4"

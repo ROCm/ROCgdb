@@ -27,7 +27,7 @@ require {istarget "powerpc*-*-linux*"}
 standard_testfile .c
 
 if {[build_executable "compile" $binfile $srcfile {debug}] == -1} {
-    return -1
+    return
 }
 
 proc check_register_access { regname } {

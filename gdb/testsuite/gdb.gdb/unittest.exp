@@ -24,7 +24,7 @@ set do_xml_test [allow_xml_test]
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 proc run_selftests_1 {} {

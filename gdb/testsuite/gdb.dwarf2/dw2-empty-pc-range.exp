@@ -21,7 +21,7 @@ standard_testfile .S
 set executable ${testfile}
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" object {}] != "" } {
-    return -1
+    return
 }
 
 clean_restart $executable

@@ -124,6 +124,11 @@ enum errors {
   NR_ERRORS
 };
 
+/* The client application must provide this.  It is a printf-like that
+   formats a string for an exception.  */
+std::string vformat_exception (const char *fmt, va_list args)
+  ATTRIBUTE_PRINTF (1, 0);
+
 struct gdb_exception
 {
   gdb_exception ()
@@ -150,7 +155,7 @@ struct gdb_exception
     ATTRIBUTE_PRINTF (4, 0)
     : reason (r),
       error (e),
-      message (std::make_shared<std::string> (string_vprintf (fmt, ap)))
+      message (std::make_shared<std::string> (vformat_exception (fmt, ap)))
   {
   }
 

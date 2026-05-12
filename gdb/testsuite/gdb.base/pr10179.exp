@@ -17,13 +17,13 @@ set testname pr10179
 set sources "pr10179-a.c pr10179-b.c"
 
 if {[build_executable ${testname}.exp $testname $sources {debug}] == -1} {
-    return -1
+    return
 }
 
 clean_restart ${testname}
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test "rbreak foo.*" "Breakpoint ${::decimal}\[^\\n\]*\\nint foo\[12\]\[^\\n\]*\\nBreakpoint ${::decimal}\[^\\n\]*\\nint foo\[12\].*"

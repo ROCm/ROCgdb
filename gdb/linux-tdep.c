@@ -121,6 +121,9 @@ struct smaps_data
 
   ULONGEST inode;
   ULONGEST offset;
+
+  ULONGEST rss;
+  ULONGEST swap;
 };
 
 /* Whether to take the /proc/PID/coredump_filter into account when
@@ -1425,11 +1428,45 @@ linux_core_xfer_siginfo (struct gdbarch *gdbarch, struct bfd &cbfd,
 }
 
 using linux_find_memory_region_ftype
-  = gdb::function_view<bool (ULONGEST, ULONGEST, ULONGEST, bool, bool, bool,
-			     bool, bool, const std::string &)>;
+  = gdb::function_view<bool (ULONGEST /* vaddr */,
+			     ULONGEST /* size */,
+			     ULONGEST /* offset */,
+			     bool /* read */,
+			     bool /* write */,
+			     bool /* exec */,
+			     bool /* modified */,
+			     bool /* memory_tagged */,
+			     bool /* hole */,
+			     const std::string & /* filename */)>;
 
 typedef bool linux_dump_mapping_p_ftype (filter_flags filterflags,
 					 const smaps_data &map);
+
+/* Parse a KEY value out of a /proc/pid/smaps line.  KEYWORD is the
+   keyword that was extracted out of the LINE we're considering.
+   MAPS_FILENAME is the /proc/pid/smaps filename.  The result is
+   written to *VALUE.  Returns true if LINE is a line for KEY, false
+   otherwise.  */
+
+static bool
+parse_smaps_key_value (const char *keyword, const char *line,
+		       const char *key,
+		       const std::string &maps_filename,
+		       ULONGEST *value)
+{
+  if (!streq (keyword, key))
+    return false;
+
+  const char *startptr = skip_spaces (line + strlen (key));
+  const char *endptr;
+  *value = strtoulst (startptr, &endptr, 0);
+  if (endptr == startptr)
+    {
+      warning (_("Error parsing {s,}maps file '%s' number"),
+	       maps_filename.c_str ());
+    }
+  return true;
+}
 
 /* Helper function to parse the contents of /proc/<pid>/smaps into a data
    structure, for easy access.
@@ -1456,6 +1493,8 @@ parse_smaps_data (const char *data,
       int has_anonymous = 0;
       int mapping_anon_p;
       int mapping_file_p;
+      ULONGEST rss = -1;
+      ULONGEST swap = -1;
 
       memset (&v, 0, sizeof (v));
       struct mapping m = read_mapping (line);
@@ -1513,6 +1552,16 @@ parse_smaps_data (const char *data,
 	  else if (streq (keyword, "VmFlags:"))
 	    decode_vmflags (line, &v);
 
+	  if (parse_smaps_key_value (keyword, line, "Rss:",
+				     maps_filename,
+				     &rss))
+	    continue;
+
+	  if (parse_smaps_key_value (keyword, line, "Swap:",
+				     maps_filename,
+				     &swap))
+	    continue;
+
 	  if (streq (keyword, "AnonHugePages:")
 	      || streq (keyword, "Anonymous:"))
 	    {
@@ -1562,6 +1611,8 @@ parse_smaps_data (const char *data,
 	map.mapping_file_p = mapping_file_p? true : false;
 	map.offset = m.offset;
 	map.inode = m.inode;
+	map.rss = rss;
+	map.swap = swap;
 
 	smaps.emplace_back (map);
     }
@@ -1692,12 +1743,23 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
   for (const struct smaps_data &map : smaps)
     {
       /* Invoke the callback function to create the corefile segment.  */
-      if (should_dump_mapping_p (filterflags, map)
-	  && !func (map.start_address, map.end_address - map.start_address,
-		    map.offset, map.read, map.write, map.exec,
-		    /* MODIFIED is true because we want to dump the mapping.  */
-		    true, map.vmflags.memory_tagging != 0, map.filename))
-	return false;
+      if (should_dump_mapping_p (filterflags, map))
+	{
+	  /* If this is an anonymous PROT_NONE private mapping, check
+	     if the mapping has any physical memory backing.  If not,
+	     then we know that reading it would just yield zeroes, so
+	     we can later skip reading it.  */
+	  bool hole = (map.mapping_anon_p && map.priv
+		       && !map.read && !map.write && !map.exec
+		       && map.rss == 0 && map.swap == 0);
+	  if (!func (map.start_address, map.end_address - map.start_address,
+		     map.offset, map.read, map.write, map.exec,
+		     /* MODIFIED is true because we want to dump the
+			mapping.  */
+		     true, map.vmflags.memory_tagging != 0, hole,
+		     map.filename))
+	    return false;
+	}
     }
 
   return true;
@@ -1712,8 +1774,9 @@ linux_find_memory_regions (struct gdbarch *gdbarch,
 {
   auto cb = [&] (ULONGEST vaddr, ULONGEST size, ULONGEST offset, bool read,
 		 bool write, bool exec, bool modified, bool memory_tagged,
-		 const std::string &filename)
-    { return func (vaddr, size, read, write, exec, modified, memory_tagged); };
+		 bool hole, const std::string &filename)
+    { return func (vaddr, size, read, write, exec, modified, memory_tagged,
+		   hole); };
 
   return linux_find_memory_regions_full (gdbarch, dump_mapping_p, cb);
 }
@@ -1737,9 +1800,10 @@ linux_rocm_find_memory_regions (struct gdbarch *gdbarch,
 
   auto cb = [&] (ULONGEST vaddr, ULONGEST size, ULONGEST offset, bool read,
 		 bool write, bool exec, bool modified, bool memory_tagged,
-		 const std::string &filename)
+		 bool hole, const std::string &filename)
     {
-      return func (vaddr, size, read, write, exec, modified, memory_tagged);
+      return func (vaddr, size, read, write, exec, modified, memory_tagged,
+		   hole);
     };
 
   return linux_find_memory_regions_full (gdbarch,
@@ -1769,7 +1833,7 @@ linux_make_mappings_corefile_notes (struct gdbarch *gdbarch, bfd *obfd,
 
   auto cb = [&] (ULONGEST vaddr, ULONGEST size, ULONGEST offset, bool read,
 		 bool write, bool exec, bool modified, bool memory_tagged,
-		 const std::string &filename)
+		 bool hole, const std::string &filename)
     {
       gdb_assert (filename.length () > 0);
 

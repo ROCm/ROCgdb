@@ -42,7 +42,7 @@ if { [prepare_for_testing "prepare" $testfile $srcfile $bin_flags] != 0 } {
 }
 
 if {![runto_main]} {
-  return 0
+    return
 }
 
 # Run until the program dies.

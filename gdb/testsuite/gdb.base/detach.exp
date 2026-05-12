@@ -19,7 +19,7 @@
 
 # Only GNU/Linux is known to support this.
 if { ! [istarget "*-*-linux*"] } {
-  return 0
+    return
 }
 
 standard_testfile attach.c

@@ -29,8 +29,8 @@ standard_testfile
 require allow_watchpoint_tests
 
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-     untested "failed to compile"
-     return -1
+    untested "failed to compile"
+    return
 }
 
 # True if we're forcing no hardware watchpoints.
