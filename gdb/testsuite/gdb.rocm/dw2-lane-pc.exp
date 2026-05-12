@@ -247,18 +247,18 @@ proc dwarf_assemble {stmt_list_offset} {
 		inactive_entry_lane_pc_expr: DW_TAG_dwarf_procedure {
 		    {DW_AT_location {
 			# Undefined if exec-mask is off for the lane.
-			DW_OP_LLVM_undefined
-			DW_OP_LLVM_extend 0x40 0x40
+			DW_OP_LLVM_user DW_OP_LLVM_USER_undefined
+			DW_OP_LLVM_user DW_OP_LLVM_USER_extend 0x40 0x40
 
 			# Current PC if exec-mask is on for the lane.
 			DW_OP_regx 16
-			DW_OP_LLVM_extend 0x40 0x40
+			DW_OP_LLVM_user DW_OP_LLVM_USER_extend 0x40 0x40
 
 			# Push the exec mask.
-			DW_OP_LLVM_call_frame_entry_reg 17
+			DW_OP_LLVM_user DW_OP_LLVM_USER_call_frame_entry_reg 17
 			DW_OP_deref_size 0x8
 
-			DW_OP_LLVM_select_bit_piece 0x40 0x40
+			DW_OP_LLVM_user DW_OP_LLVM_USER_select_bit_piece 0x40 0x40
 		    } SPECIAL_expr}
 		}
 
@@ -270,18 +270,18 @@ proc dwarf_assemble {stmt_list_offset} {
 		kernel_lane_pc_expr: DW_TAG_dwarf_procedure {
 		    {DW_AT_location {
 			# Undefined if exec-mask is off for the lane.
-			DW_OP_LLVM_undefined
-			DW_OP_LLVM_extend 0x40 0x40
+			DW_OP_LLVM_user DW_OP_LLVM_USER_undefined
+			DW_OP_LLVM_user DW_OP_LLVM_USER_extend 0x40 0x40
 
 			# Current PC if exec-mask is on for the lane.
 			DW_OP_regx 16
-			DW_OP_LLVM_extend 0x40 0x40
+			DW_OP_LLVM_user DW_OP_LLVM_USER_extend 0x40 0x40
 
 			# Push the exec mask.
 			DW_OP_regx 17
 			DW_OP_deref_size 0x8
 
-			DW_OP_LLVM_select_bit_piece 0x40 0x40
+			DW_OP_LLVM_user DW_OP_LLVM_USER_select_bit_piece 0x40 0x40
 		    } SPECIAL_expr}
 		}
 
@@ -291,21 +291,21 @@ proc dwarf_assemble {stmt_list_offset} {
 		if_lane_pc_expr: DW_TAG_dwarf_procedure {
 		    {DW_AT_location {
 			DW_OP_stack_value
-			DW_OP_LLVM_extend 0x40 0x20
+			DW_OP_LLVM_user DW_OP_LLVM_USER_extend 0x40 0x20
 
 			# Current PC for active lanes.
 			DW_OP_regx 16
-			DW_OP_LLVM_extend 0x40 0x20
+			DW_OP_LLVM_user DW_OP_LLVM_USER_extend 0x40 0x20
 
 			DW_OP_regx 17
 			DW_OP_deref_size 0x8
 
-			DW_OP_LLVM_select_bit_piece 0x40 0x20
+			DW_OP_LLVM_user DW_OP_LLVM_USER_select_bit_piece 0x40 0x20
 			# 32 * 8 bits = 0x100
 			DW_OP_piece 0x100
 
 			# Pretend the last 32 lanes are inactive.
-			DW_OP_LLVM_undefined
+			DW_OP_LLVM_user DW_OP_LLVM_USER_undefined
 			DW_OP_piece 0x100
 		    } SPECIAL_expr}
 		}
@@ -317,12 +317,12 @@ proc dwarf_assemble {stmt_list_offset} {
 			# S16.
 			DW_OP_regx 48
 			DW_OP_piece 0x4
-			DW_OP_LLVM_undefined
+			DW_OP_LLVM_user DW_OP_LLVM_USER_undefined
 			DW_OP_piece 0x4
 			# V5 in 64-bit wavefront mode.
 			DW_OP_regx 2565
 			DW_OP_piece 0x80
-			DW_OP_LLVM_piece_end
+			DW_OP_LLVM_user DW_OP_LLVM_USER_piece_end
 		    } SPECIAL_expr}
 		    {external 1 flag}
 		    {external 1 flag}
@@ -360,10 +360,10 @@ proc dwarf_assemble {stmt_list_offset} {
 			{DW_AT_location {
 			    # V0 in 64-bit wavefront mode.
 			    DW_OP_regx 2560
-			    DW_OP_LLVM_push_lane
+			    DW_OP_LLVM_user DW_OP_LLVM_USER_push_lane
 			    DW_OP_constu 0x4
 			    DW_OP_mul
-			    DW_OP_LLVM_offset
+			    DW_OP_LLVM_user DW_OP_LLVM_USER_offset
 			} SPECIAL_expr}
 		    }
 
@@ -456,10 +456,10 @@ proc dwarf_assemble {stmt_list_offset} {
 			{DW_AT_location {
 			    # V0 in 64-bit wavefront mode.
 			    DW_OP_regx 2560
-			    DW_OP_LLVM_push_lane
+			    DW_OP_LLVM_user DW_OP_LLVM_USER_push_lane
 			    DW_OP_constu 0x4
 			    DW_OP_mul
-			    DW_OP_LLVM_offset
+			    DW_OP_LLVM_user DW_OP_LLVM_USER_offset
 			} SPECIAL_expr}
 		    }
 #		    DW_TAG_formal_parameter {
@@ -468,10 +468,10 @@ proc dwarf_assemble {stmt_list_offset} {
 #			{DW_AT_location {
 #			    # V1 in 64-bit wavefront mode.
 #			    DW_OP_regx 2561
-#			    DW_OP_LLVM_push_lane
+#			    DW_OP_LLVM_user DW_OP_LLVM_USER_push_lane
 #			    DW_OP_constu 0x4
 #			    DW_OP_mul
-#			    DW_OP_LLVM_offset
+#			    DW_OP_LLVM_user DW_OP_LLVM_USER_offset
 #			} SPECIAL_expr}
 #		    }
 		}
@@ -488,10 +488,10 @@ proc dwarf_assemble {stmt_list_offset} {
 			{DW_AT_location {
 			    # V0 in 64-bit wavefront mode.
 			    DW_OP_regx 2560
-			    DW_OP_LLVM_push_lane
+			    DW_OP_LLVM_user DW_OP_LLVM_USER_push_lane
 			    DW_OP_constu 0x4
 			    DW_OP_mul
-			    DW_OP_LLVM_offset
+			    DW_OP_LLVM_user DW_OP_LLVM_USER_offset
 			} SPECIAL_expr}
 		    }
 #		    DW_TAG_formal_parameter {
@@ -500,7 +500,7 @@ proc dwarf_assemble {stmt_list_offset} {
 #			{DW_AT_location {
 #			    # V1 in 64-bit wavefront mode.
 #			    DW_OP_regx 2561
-#			    DW_OP_LLVM_push_lane
+#			    DW_OP_LLVM_user DW_OP_LLVM_USER_push_lane
 #			    DW_OP_constu 0x4
 #			    DW_OP_mul
 #			    DW_OP_LLVM_offset
@@ -613,25 +613,25 @@ proc dwarf_assemble {stmt_list_offset} {
 			DW_OP_piece 0x4
 			DW_OP_regx 63
 			DW_OP_piece 0x4
-			DW_OP_LLVM_piece_end
-			DW_OP_LLVM_extend 0x40 0x20
+			DW_OP_LLVM_user DW_OP_LLVM_USER_piece_end
+			DW_OP_LLVM_user DW_OP_LLVM_USER_extend 0x40 0x20
 
 			# Current PC for active lanes.
 			DW_OP_regx 16
-			DW_OP_LLVM_extend 0x40 0x20
+			DW_OP_LLVM_user DW_OP_LLVM_USER_extend 0x40 0x20
 
 			DW_OP_regx 17
 			DW_OP_deref_size 0x8
 
 			# Pretend that first 32 lanes are running some
 			# code.
-			DW_OP_LLVM_select_bit_piece 0x40 0x20
+			DW_OP_LLVM_user DW_OP_LLVM_USER_select_bit_piece 0x40 0x20
 			# 32 * 8 bits = 0x100
 			DW_OP_piece 0x100
 
 			# And pretend the last 32 lanes are not
 			# active.
-			DW_OP_LLVM_undefined
+			DW_OP_LLVM_user DW_OP_LLVM_USER_undefined
 			DW_OP_piece 0x100
 		    }
 		}
