@@ -634,7 +634,8 @@ proc hip_extract_stmt_list {exe src} {
     if {[lindex $status 0] != 0} {
 	error "stmt_list failed: $status, \"$output\""
     }
-
+    verbose -log "stmt_list got: \"$output\""
+    return [lindex $output 2]
     return $output
 }
 
