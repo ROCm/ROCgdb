@@ -1,0 +1,250 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# TPI type-record coverage.  One PDB whose TPI stream carries the common type
+# leaves: enum, union, struct, pointer, lvalue reference, cv-modifier, array,
+# bitfield, nested type, static member.  All are reachable by name and
+# aggregated in the struct `All`, so `ptype All` shows every member type at
+# once.
+---
+PdbStream:
+  Age:             __AGE__
+  Guid:            '__GUID__'
+  Signature:       0
+  Features:        [ VC140 ]
+  Version:         VC70
+DbiStream:
+  VerHeader:       V70
+  Age:             __AGE__
+  MachineType:     Amd64
+  Modules:
+    - Module:          pdb-yaml-types.obj
+      ObjFile:         pdb-yaml-types.obj
+      SourceFiles:
+        - pdb-yaml-types.cpp
+      Modi:
+        Signature:       4
+        Records:         []
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           0
+            Name:            Red
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           1
+            Name:            Green
+        - Kind:            LF_ENUMERATE
+          Enumerator:
+            Attrs:           3
+            Value:           2
+            Name:            Blue
+    - Kind:            LF_ENUM
+      Enum:
+        NumEnumerators:  3
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4096
+        Name:            Color
+        UniqueName:      '.?AW4Color@@'
+        UnderlyingType:  116
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     0
+            Name:            i
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            64
+            FieldOffset:     0
+            Name:            f
+    - Kind:            LF_UNION
+      Union:
+        MemberCount:     2
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4098
+        Name:            UVal
+        UniqueName:      '.?ATUVal@@'
+        Size:            4
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     0
+            Name:            x
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     4
+            Name:            y
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     2
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4100
+        Name:            Point
+        UniqueName:      '.?AUPoint@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            8
+    - Kind:            LF_MODIFIER
+      Modifier:
+        ModifiedType:    116
+        Modifiers:       [ None, Const ]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    116
+        Attrs:           65548
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    116
+        Attrs:           65580
+    - Kind:            LF_ARRAY
+      Array:
+        ElementType:     116
+        IndexType:       35
+        Size:            16
+        Name:            ''
+    - Kind:            LF_BITFIELD
+      BitField:
+        Type:            116
+        BitSize:         3
+        BitOffset:       0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4097
+            FieldOffset:     0
+            Name:            c
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4099
+            FieldOffset:     4
+            Name:            u
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4101
+            FieldOffset:     8
+            Name:            pt
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4102
+            FieldOffset:     16
+            Name:            ci
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4103
+            FieldOffset:     24
+            Name:            p
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4104
+            FieldOffset:     32
+            Name:            r
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4105
+            FieldOffset:     40
+            Name:            arr
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4106
+            FieldOffset:     56
+            Name:            bf
+        - Kind:            LF_NESTTYPE
+          NestedType:
+            Type:            4101
+            Name:            Inner
+        - Kind:            LF_STMEMBER
+          StaticDataMember:
+            Attrs:           3
+            Type:            116
+            Name:            s
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     10
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4107
+        Name:            All
+        UniqueName:      '.?AUAll@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            64
+    # 0x100D pointer to data member of Point, 4 bytes wide
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    116
+        Attrs:           32844
+        MemberInfo:
+          ContainingType:  4101
+          Representation:  SingleInheritanceData
+    # 0x100E const-qualified form of it
+    - Kind:            LF_MODIFIER
+      Modifier:
+        ModifiedType:    4109
+        Modifiers:       [ None, Const ]
+    # 0x100F two of them.  The element count follows the width the pointer
+    # record declares, which the qualifier stands in front of.
+    - Kind:            LF_ARRAY
+      Array:
+        ElementType:     4110
+        IndexType:       35
+        Size:            8
+        Name:            ''
+    # 0x1010 fieldlist for MpArr
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            4111
+            FieldOffset:     0
+            Name:            mps
+    # 0x1011 struct MpArr
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     1
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4112
+        Name:            MpArr
+        UniqueName:      '.?AUMpArr@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            8
+IpiStream:
+  Version:         VC80
+  Records:         []
+...

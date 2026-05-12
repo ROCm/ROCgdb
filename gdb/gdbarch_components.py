@@ -568,6 +568,49 @@ Return -1 for bad REGNUM.  Note: Several targets get this wrong.
 
 Method(
     comment="""
+Map a CodeView register number to a GDB REGNUM.  Only architectures
+that support PDB/CodeView debug info (currently amd64) install this
+hook; callers must guard with gdbarch_codeview_reg_to_regnum_p.  This
+hook is called only for real CodeView registers: the PDB reader
+resolves the virtual CV_REG_VFRAME via cur_frame_regnum before
+dispatching here, so implementations need not handle it (a defensive
+fallback is permitted).  Return -1 for unrecognized registers.
+""",
+    type="int",
+    name="codeview_reg_to_regnum",
+    params=[("int", "cv_regnr")],
+    predicate=True,
+)
+
+Method(
+    comment="""
+Resolve a FRAMEPROCSYM encodedLocalBasePointer value (2 bits) to a GDB
+REGNUM holding the local base pointer.  Only architectures that
+support PDB/CodeView debug info install this hook; callers must guard
+with gdbarch_codeview_local_base_pointer_regnum_p.  Return -1 for the
+"none" / unknown encoding.
+""",
+    type="int",
+    name="codeview_local_base_pointer_regnum",
+    params=[("int", "encoded_lbp")],
+    predicate=True,
+)
+
+Method(
+    comment="""
+Default GDB REGNUM used as the frame register when no S_FRAMEPROC
+record applies for a function in PDB/CodeView debug info.  Only
+architectures that support PDB install this hook; callers must guard
+with gdbarch_codeview_default_frame_regnum_p.
+""",
+    type="int",
+    name="codeview_default_frame_regnum",
+    params=[],
+    predicate=True,
+)
+
+Method(
+    comment="""
 Return the name of register REGNR for the specified architecture.
 REGNR can be any value greater than, or equal to zero, and less than
 'gdbarch_num_cooked_regs (GDBARCH)'.  If REGNR is not supported for

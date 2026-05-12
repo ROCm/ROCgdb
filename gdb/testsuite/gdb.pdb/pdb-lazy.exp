@@ -1,0 +1,181 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the lazy PDB cooked index (the default mode): on-demand module
+# expansion, the "set debug pdb-qf" lookup trace, and that --readnow
+# expands eagerly.  Expansion is observed through "maintenance info
+# symtabs", since reading a module in builds its compunit.
+#
+# Builds three pdb-udt-collide TUs (a.cpp defines use_a/g_a, b.cpp defines
+# use_b/g_b, main.cpp defines main), so we can observe that breaking in one
+# module leaves some module expansion deferred.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+standard_testfile pdb-udt-collide-main.cpp pdb-udt-collide-a.cpp \
+    pdb-udt-collide-b.cpp
+
+set exe ${binfile}.exe
+if {[pdb_prepare_for_testing "prepare fixture" [file tail $exe] \
+	 [list $srcfile $srcfile2 $srcfile3] {debug c++ optimize=-O0}]} {
+    return
+}
+
+# Count the symtabs GDB has built so far, from "maintenance info symtabs".
+# Expanding a module creates its compunit, so this rises as modules are
+# read in.
+proc pdb_symtab_count {testname} {
+    global gdb_prompt
+    set count 0
+    gdb_test_multiple "maintenance info symtabs" $testname {
+	-re "\{ symtab \[^\r\n\]*\[\r\n\]+" {
+	    incr count
+	    exp_continue
+	}
+	-re "$gdb_prompt $" {
+	}
+    }
+    return $count
+}
+
+# Part 1: --readnow expands every module eagerly.
+save_vars { GDBFLAGS } {
+    append GDBFLAGS " --readnow"
+    clean_restart [file tail $exe]
+}
+disable_pdb_symbol_server
+match_max 131072
+
+set r_count [pdb_symtab_count "readnow: symtab count"]
+gdb_assert {$r_count > 0} "readnow builds symtabs at load ($r_count)"
+
+# Nothing is left to read in.
+set unread 0
+gdb_test_multiple "info sources" "readnow leaves no unexpanded symtabs" {
+    -re "has not yet been read" {
+	set unread 1
+	exp_continue
+    }
+    -re "$gdb_prompt $" {
+    }
+}
+gdb_assert {!$unread} "readnow leaves no unexpanded symtabs"
+
+# Part 2: lazy is the default — modules expand on demand, not at load.
+save_vars { GDBFLAGS } {
+    append GDBFLAGS " -iex \"maintenance set pdb-synchronous on\""
+    clean_restart [file tail $exe]
+}
+disable_pdb_symbol_server
+match_max 131072
+
+# Right after load fewer symtabs exist than readnow built: the modules
+# have not been read in.  This is the core laziness assertion.
+set l_count [pdb_symtab_count "lazy: symtab count after load"]
+gdb_assert {$l_count < $r_count} \
+    "lazy defers module expansion ($l_count < $r_count)"
+
+# Part 3: breaking in module a increases the symtab count without reaching
+# the readnow total.  The count does not identify which other modules remain
+# unexpanded.
+gdb_test "break use_a" "Breakpoint \[0-9\]+ at .*" "break in module a"
+
+set a_count [pdb_symtab_count "lazy: symtab count after break use_a"]
+gdb_assert {$a_count > $l_count && $a_count < $r_count} \
+    "break use_a expands its module but not all ($a_count)"
+
+# Part 4: the QF lookup trace (set debug pdb-qf) reports the expansion.
+gdb_test_no_output "set debug pdb-qf 1" "enable pdb-qf debug"
+
+set saw_trace 0
+gdb_test_multiple "break use_b" "pdb-qf trace on lookup" {
+    -re "'use_b'\[^\r\n\]*-> mod \[0-9\]+" {
+	set saw_trace 1
+	exp_continue
+    }
+    -re "Breakpoint \[0-9\]+ at .*$gdb_prompt $" {
+    }
+}
+if {$saw_trace} {
+    pass "pdb-qf trace shows name-driven expansion"
+} else {
+    fail "pdb-qf trace shows name-driven expansion"
+}
+
+gdb_test_no_output "set debug pdb-qf 0" "disable pdb-qf debug"
+
+# Part 5: the index is inspectable on demand — "maint print objfiles"
+# dumps it and "maint print statistics" reports its counts.  Matched
+# milestone-by-milestone as in gdb.base/maint.exp, since the dump is
+# many lines.
+set header 0
+set index 0
+set entries 0
+set addrmap 0
+gdb_test_multiple "maint print objfiles pdb-lazy" \
+	"maint print objfiles dumps the cooked index" -lbl {
+    -re "\r\nObject file\[^\r\n\]*:  Objfile at $hex" {
+	set header 1
+	exp_continue
+    }
+    -re "\r\nPDB cooked index in use:" {
+	set index 1
+	exp_continue
+    }
+    -re "\r\n  entries:" {
+	set entries 1
+	exp_continue
+    }
+    -re "\r\n  address map:" {
+	set addrmap 1
+	exp_continue
+    }
+    -re -wrap "" {
+	pass $gdb_test_name
+    }
+}
+gdb_assert {$header && $index && $entries && $addrmap} \
+    "cooked index dumped by maint print objfiles"
+
+set read_mods 0
+set index_entries 0
+gdb_test_multiple "maint print statistics" \
+	"maint print statistics reports index counts" -lbl {
+    -re "\r\n  Number of read modules: \[0-9\]+" {
+	set read_mods 1
+	exp_continue
+    }
+    -re "\r\n  Number of cooked index entries: \[0-9\]+" {
+	set index_entries 1
+	exp_continue
+    }
+    -re -wrap "" {
+	pass $gdb_test_name
+    }
+}
+gdb_assert {$read_mods && $index_entries} \
+    "cooked index counts reported by maint print statistics"
+
+# Part 6: this session built its index synchronously, which posts no
+# worker, so unloading the file must not wait for one.
+gdb_test_no_output "set confirm off"
+gdb_test "file" "No executable file now\\..*No symbol file now\\." \
+    "unload the synchronously indexed file"
+gdb_test "print 1 + 1" " = 2" "session continues after the unload"

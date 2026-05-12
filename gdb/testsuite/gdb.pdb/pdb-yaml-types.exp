@@ -1,0 +1,98 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# TPI type-record coverage.
+# Exercise support for the TPI type leaves.  Checks both that the raw records
+# are present (maint info pdb-types) and that the reader builds the expected
+# GDB `struct type`s (ptype/whatis).
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+set testfile pdb-yaml-types
+standard_testfile
+
+set exe ${binfile}.exe
+
+if {![pdb_prepare_yaml $testfile $exe]} {
+    return
+}
+
+clean_restart [file tail $exe]
+disable_pdb_symbol_server
+match_max 131072
+
+# Raw records: the reader parses the TPI stream and dumps each leaf.
+gdb_test "maint info pdb-types" \
+    ".*LF_ENUM.*Color.*LF_UNION.*UVal.*LF_STRUCTURE.*All.*" \
+    "TPI stream lists the authored leaves"
+
+# Built types: the reader turns each leaf into a GDB struct type.
+gdb_test "ptype All" \
+    [multi_line \
+	 [pdb_type_re "struct All \{"] \
+	 "    enum Color c;" \
+	 "    union UVal u;" \
+	 "    struct Point pt;" \
+	 "    const int ci;" \
+	 "    int \\*p;" \
+	 "    int &r;" \
+	 "    int arr\\\[4\\\];" \
+	 "    int bf : 3;" \
+	 "    static int s;" \
+	 "\}"] \
+    "struct All built with every member type"
+
+gdb_test "ptype Color" \
+    [multi_line \
+	 [pdb_type_re "enum Color \{"] \
+	 "    Red = 0," \
+	 "    Green = 1," \
+	 "    Blue = 2" \
+	 "\}"] \
+    "enum Color built with enumerators"
+
+gdb_test "ptype UVal" \
+    [multi_line \
+	 [pdb_type_re "union UVal \{"] \
+	 "    int i;" \
+	 "    float f;" \
+	 "\}"] \
+    "union UVal built"
+
+gdb_test "ptype Point" \
+    [multi_line \
+	 [pdb_type_re "struct Point \{"] \
+	 "    int x;" \
+	 "    int y;" \
+	 "\}"] \
+    "struct Point built"
+
+gdb_test "whatis Color" [pdb_type_re "enum Color"] \
+    "enum tag resolves by name"
+
+# A member pointer's width comes from its own record, not from the C++ ABI
+# GDB assumes, and a qualifier stands between the array and that record.
+# Counting elements with the assumed width halves the array.
+gdb_test "ptype MpArr" \
+    [multi_line \
+	 [pdb_type_re "struct MpArr \{"] \
+	 "    int Point::\\*mps\\\[2\\\];" \
+	 "\}"] \
+    "array of member pointers counts by the declared width"

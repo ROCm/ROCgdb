@@ -144,8 +144,10 @@ struct buildsym_compunit
 
      NAME_FOR_ID is a name that must be stable between the different calls to
      start_subfile referring to the same file (it is used for looking up
-     existing subfiles).  It can be equal to NAME if NAME follows that rule.  */
-  void start_subfile (const char *name, const char *name_for_id);
+     existing subfiles).  It can be equal to NAME if NAME follows that rule.
+
+     Returns the current subfile.  */
+  struct subfile *start_subfile (const char *name, const char *name_for_id);
 
   void record_line (struct subfile *subfile, int line, unrelocated_addr pc,
 		    linetable_entry_flags flags);

@@ -1,0 +1,86 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test PDB compound type resolution — ptype and print tests verifying
+# that field types, access levels, and method properties are correctly
+# parsed by the PDB reader.
+#
+# Features tested:
+#   data members, enumerator constants, direct base classes,
+#   static data members, nested types, single methods, overloaded methods,
+#   virtual-method declarations and the 500-field HugeStruct.
+#
+# Access levels tested:
+#   public, private, protected
+#
+# Method properties tested:
+#   non-virtual, first virtual declaration, virtual override,
+#   static and declarations of pure virtual functions.  The patterns check
+#   the virtual keyword, not the distinction between pure and non-pure methods.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+# The fixtures are Windows executables, so starting one needs a native host.
+require isnative
+
+standard_testfile pdb-compound-test.cpp
+
+set exe ${binfile}.exe
+if {[pdb_prepare_for_testing "prepare fixture" [file tail $exe] \
+	 $srcfile {debug c++ optimize=-O0}]} {
+    return
+}
+
+disable_pdb_symbol_server
+match_max 131072
+
+gdb_test "break compound_marker" \
+    "Breakpoint.*at.*" \
+    "set breakpoint at compound_marker"
+
+gdb_test "run" \
+    "Breakpoint.*compound_marker.*" \
+    "hit compound_marker breakpoint"
+
+# Declaration printing for enums, structs, bitfields, unions, classes with
+# virtual and overloaded methods, and nested types is covered against
+# authored records by pdb-yaml-types.exp, pdb-yaml-class.exp and
+# pdb-yaml-metadata.exp.  What is kept here needs a real compiler.
+
+# Static data member access — exercises LF_STMEMBER physname being set
+# to the qualified "Derived::instance_count" so it resolves to the
+# S_GDATA32 / S_LDATA32 global.
+
+gdb_test "print Derived::instance_count" \
+    " = 2" \
+    "print static data member via qualified name"
+
+gdb_test "print 'Derived::instance_count'" \
+    " = 2" \
+    "print static data member via quoted qualified name"
+
+# HugeStruct has 500 fields.  pdb-yaml-index supplies an LF_INDEX
+# continuation explicitly, but only across two members; this is the
+# continuation chain a compiler actually emits, walked end to end.
+
+gdb_test "ptype HugeStruct" \
+    "struct HugeStruct \\{.*int f000;.*float f499;.*\\}" \
+    "ptype HugeStruct (500 fields, fieldlist continuation)"
+

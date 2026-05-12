@@ -1,0 +1,278 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Symbol-record coverage.  One module (plus a publics stream) exercising the
+# CodeView symbol records:
+#   S_UNAMESPACE, S_GPROC32, S_LPROC32, S_GPROC32_ID, S_FRAMEPROC,
+#   S_REGREL32 (parameter), S_REGISTER, S_LOCAL including one flagged
+#   optimized-out, with all four supported defrange forms
+#   (S_DEFRANGE_REGISTER / _REGISTER_REL / _FRAMEPOINTER_REL /
+#   _FRAMEPOINTER_REL_FULL_SCOPE), S_BLOCK32, S_LABEL32, S_THUNK32,
+#   S_LDATA32, module S_GDATA32, S_CONSTANT (int and enum), S_UDT,
+#   and S_PUB32 (minimal symbol via the publics stream).
+---
+PdbStream:
+  Age:             __AGE__
+  Guid:            '__GUID__'
+  Signature:       0
+  Features:        [ VC140 ]
+  Version:         VC70
+DbiStream:
+  VerHeader:       V70
+  Age:             __AGE__
+  MachineType:     Amd64
+  Modules:
+    - Module:          pdb-yaml-symbols.obj
+      ObjFile:         pdb-yaml-symbols.obj
+      SourceFiles:
+        - pdb-yaml-symbols.cpp
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_UNAMESPACE
+            UsingNamespaceSym: { Namespace: MyNS }
+          # Module-scope data, constants and typedef.  These precede the
+          # first procedure record, so they are not nested in a procedure.
+          - Kind:            S_LDATA32
+            DataSym: { Type: 116, Offset: 256, Segment: 1, DisplayName: sdata }
+          - Kind:            S_GDATA32
+            DataSym: { Type: 116, Offset: 260, Segment: 1, DisplayName: gdata }
+          - Kind:            S_CONSTANT
+            ConstantSym: { Type: 116, Value: 42, Name: kint }
+          - Kind:            S_CONSTANT
+            ConstantSym: { Type: 4101, Value: 2, Name: kenum }
+          - Kind:            S_UDT
+            UDTSym: { Type: 116, UDTName: alias }
+          - Kind:            S_CONSTANT
+            ConstantSym: { Type: 116, Value: 111, Name: 'MyNS::imported_value' }
+          - Kind:            S_CONSTANT
+            ConstantSym: { Type: 116, Value: 222, Name: 'OtherNS::hidden_value' }
+          - Kind:            S_UDT
+            UDTSym: { Type: 4105, UDTName: 'MyNS::ImportedType' }
+          # S_GPROC32 gfunc(int): param, framepointer-rel local, block, label
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrParent: 0
+              PtrEnd: 0
+              PtrNext: 0
+              CodeSize: 32
+              DbgStart: 0
+              DbgEnd: 31
+              FunctionType: 4097
+              Offset: 0
+              Segment: 1
+              Flags: [  ]
+              DisplayName: gfunc
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 32
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags: [  ]
+          - Kind:            S_REGREL32
+            RegRelativeSym: { Offset: 8, Type: 116, Register: RSP, VarName: x }
+          - Kind:            S_LOCAL
+            LocalSym: { Type: 116, Flags: [  ], VarName: loc }
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset: 4
+              Range: { OffsetStart: 0, ISectStart: 1, Range: 32 }
+              Gaps: []
+          - Kind:            S_BLOCK32
+            BlockSym:
+              PtrParent: 0
+              PtrEnd: 0
+              CodeSize: 16
+              Offset: 8
+              Segment: 1
+              BlockName: ''
+          - Kind:            S_LABEL32
+            LabelSym: { Offset: 8, Segment: 1, Flags: [  ], DisplayName: mylabel }
+          - Kind:            S_END
+            ScopeEndSym: {}
+          - Kind:            S_END
+            ScopeEndSym: {}
+          # S_LPROC32 lfunc(): register / opt-out / defrange forms
+          - Kind:            S_LPROC32
+            ProcSym:
+              PtrParent: 0
+              PtrEnd: 0
+              PtrNext: 0
+              CodeSize: 48
+              DbgStart: 0
+              DbgEnd: 47
+              FunctionType: 4099
+              Offset: 32
+              Segment: 1
+              Flags: [  ]
+              DisplayName: lfunc
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 32
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags: [  ]
+          - Kind:            S_REGISTER
+            RegisterSym: { Type: 116, Seg: RAX, Name: regvar }
+          - Kind:            S_LOCAL
+            LocalSym: { Type: 116, Flags: [ IsOptimizedOut ], VarName: optl }
+          - Kind:            S_LOCAL
+            LocalSym: { Type: 116, Flags: [  ], VarName: rrl }
+          - Kind:            S_DEFRANGE_REGISTER_REL
+            DefRangeRegisterRelSym:
+              Register: 335
+              Flags: 0
+              BasePointerOffset: 16
+              Range: { OffsetStart: 32, ISectStart: 1, Range: 48 }
+              Gaps: []
+          - Kind:            S_LOCAL
+            LocalSym: { Type: 116, Flags: [  ], VarName: fsl }
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE
+            DefRangeFramePointerRelFullScopeSym: { Register: 8 }
+          - Kind:            S_LOCAL
+            LocalSym: { Type: 116, Flags: [  ], VarName: regl }
+          - Kind:            S_DEFRANGE_REGISTER
+            DefRangeRegisterSym:
+              Register: 17
+              MayHaveNoName: 0
+              Range: { OffsetStart: 32, ISectStart: 1, Range: 48 }
+              Gaps: []
+          - Kind:            S_END
+            ScopeEndSym: {}
+          # S_GPROC32_ID idfunc().  Its type index names an IPI record, and
+          # that record names the signature; the same value in the TPI is an
+          # argument list.
+          - Kind:            S_GPROC32_ID
+            ProcSym:
+              PtrParent: 0
+              PtrEnd: 0
+              PtrNext: 0
+              CodeSize: 16
+              DbgStart: 0
+              DbgEnd: 15
+              FunctionType: 4096
+              Offset: 80
+              Segment: 1
+              Flags: [  ]
+              DisplayName: idfunc
+          - Kind:            S_END
+            ScopeEndSym: {}
+          # S_THUNK32.  The ordinal matters: the length is 16 bits, so
+          # reading it wider swallows the ordinal byte that follows.
+          - Kind:            S_THUNK32
+            Thunk32Sym:
+              Parent: 0
+              End: 0
+              Next: 0
+              Off: 96
+              Seg: 1
+              Len: 6
+              Ordinal: ThisAdjustor
+          - Kind:            S_END
+            ScopeEndSym: {}
+          # int vfunc (int, ...)
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrParent: 0
+              PtrEnd: 0
+              PtrNext: 0
+              CodeSize: 16
+              DbgStart: 0
+              DbgEnd: 15
+              FunctionType: 4103
+              Offset: 128
+              Segment: 1
+              Flags: [  ]
+              DisplayName: vfunc
+          - Kind:            S_END
+            ScopeEndSym: {}
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrParent: 0
+              PtrEnd: 0
+              PtrNext: 0
+              CodeSize: 16
+              DbgStart: 0
+              DbgEnd: 15
+              FunctionType: 4099
+              Offset: 160
+              Segment: 1
+              Flags: [  ]
+              DisplayName: 'MyNS::imported_call'
+          - Kind:            S_END
+            ScopeEndSym: {}
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32: { Flags: [ Function ], Offset: 0, Segment: 1, Name: pubfunc }
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_ARGLIST
+      ArgList: { ArgIndices: [ 116 ] }
+    - Kind:            LF_PROCEDURE
+      Procedure: { ReturnType: 116, CallConv: NearC, Options: [ None ], ParameterCount: 1, ArgumentList: 4096 }
+    - Kind:            LF_ARGLIST
+      ArgList: { ArgIndices: [  ] }
+    - Kind:            LF_PROCEDURE
+      Procedure: { ReturnType: 116, CallConv: NearC, Options: [ None ], ParameterCount: 0, ArgumentList: 4098 }
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - { Kind: LF_ENUMERATE, Enumerator: { Attrs: 3, Value: 0, Name: E0 } }
+        - { Kind: LF_ENUMERATE, Enumerator: { Attrs: 3, Value: 1, Name: E1 } }
+        - { Kind: LF_ENUMERATE, Enumerator: { Attrs: 3, Value: 2, Name: E2 } }
+    - Kind:            LF_ENUM
+      Enum:
+        NumEnumerators:  3
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4100
+        Name:            EColor
+        UniqueName:      '.?AW4EColor@@'
+        UnderlyingType:  116
+    # 0x1006 "..." is a trailing argument of type index 0, not a parameter
+    - Kind:            LF_ARGLIST
+      ArgList: { ArgIndices: [ 116, 0 ] }
+    # 0x1007 int (int, ...)
+    - Kind:            LF_PROCEDURE
+      Procedure: { ReturnType: 116, CallConv: NearC, Options: [ None ], ParameterCount: 2, ArgumentList: 4102 }
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - { Kind: LF_MEMBER, DataMember: { Attrs: 3, Type: 116, FieldOffset: 0, Name: x } }
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount: 1
+        Options: [ None, HasUniqueName ]
+        FieldList: 4104
+        Name: 'MyNS::ImportedType'
+        UniqueName: '.?AUImportedType@MyNS@@'
+        DerivationList: 0
+        VTableShape: 0
+        Size: 4
+IpiStream:
+  Version:         VC80
+  Records:
+    # 0x1000 the id S_GPROC32_ID above names; 4099 is int ()
+    - Kind:            LF_FUNC_ID
+      FuncId:
+        ParentScope:     0
+        FunctionType:    4099
+        Name:            idfunc
+...

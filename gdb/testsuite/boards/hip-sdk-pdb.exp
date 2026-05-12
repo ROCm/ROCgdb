@@ -1,0 +1,156 @@
+load_board_description "local-board"
+load_generic_config "unix"
+process_multilib_options ""
+
+if {![string match "*-mingw*" $host_triplet]} {
+    error "This board requires a Windows-hosted GDB."
+}
+
+if {![info exists env(HIP_SDK)] || $env(HIP_SDK) eq ""} {
+    error "HIP_SDK must name the HIP SDK installation."
+}
+
+set hip_sdk [string map {\\ /} $env(HIP_SDK)]
+foreach hip_sdk_tool {clang-cl.exe lld-link.exe} {
+    set tool_path [file join $hip_sdk bin $hip_sdk_tool]
+    if {![file executable $tool_path]} {
+	error "HIP SDK tool not found: $tool_path"
+    }
+}
+
+set CC_FOR_TARGET [list [file join $hip_sdk bin clang-cl.exe] -TC]
+set CXX_FOR_TARGET [list [file join $hip_sdk bin clang-cl.exe] -TP -EHsc]
+set_board_info compiler $CC_FOR_TARGET
+set_board_info c++compiler $CXX_FOR_TARGET
+set hip_sdk_flags "-nologo --target=x86_64-pc-windows-msvc"
+set hip_sdk_resource [string trim \
+    [exec [file join $hip_sdk bin clang-cl.exe] -print-resource-dir]]
+set hip_sdk_resource [string map {\\ /} $hip_sdk_resource]
+if {![file isdirectory $hip_sdk_resource]} {
+    set hip_sdk_resource [file join $hip_sdk bin lib clang \
+			      [file tail $hip_sdk_resource]]
+    if {![file isdirectory $hip_sdk_resource]} {
+	error "HIP SDK compiler resource directory not found: $hip_sdk_resource"
+    }
+    append hip_sdk_flags " [list -resource-dir=$hip_sdk_resource]"
+}
+set_board_info cflags $hip_sdk_flags
+if {![info exists HIP_PDB_DEBUG_FLAGS]} {
+    set HIP_PDB_DEBUG_FLAGS "-Z7"
+}
+if {![info exists HIP_PDB_LDFLAGS]} {
+    set HIP_PDB_LDFLAGS "-fuse-ld=lld"
+}
+set_board_info debug_flags $HIP_PDB_DEBUG_FLAGS
+set_board_info ldflags $HIP_PDB_LDFLAGS
+set_board_info mathlib ""
+set_board_info multitop ""
+
+proc hip_sdk_pdb_flags {flags type compiling} {
+    set translated {}
+    set library_directory 0
+    foreach flag $flags {
+    if {$library_directory} {
+        if {$type eq "executable"} {
+        lappend translated -Xlinker \
+            -libpath:[host_file_normalize $flag]
+        }
+        set library_directory 0
+    } elseif {$flag eq "-L"} {
+        set library_directory 1
+    } elseif {[string match "-L?*" $flag]} {
+        if {$type eq "executable"} {
+        lappend translated -Xlinker \
+            -libpath:[host_file_normalize [string range $flag 2 end]]
+        }
+    } elseif {$flag eq "-EHsc" && !$compiling} {
+        continue
+    } elseif {[regexp {^-O([0-9gsz]|fast)$} $flag]} {
+        lappend translated -clang:$flag
+    } else {
+        lappend translated $flag
+    }
+    }
+    if {$library_directory} {
+    error "Missing directory after -L"
+    }
+    return $translated
+}
+
+proc hip-sdk-pdb_compile {source dest type options} {
+    global CC_FOR_TARGET CXX_FOR_TARGET CFLAGS_FOR_TARGET LDFLAGS_FOR_TARGET
+
+    foreach language {ada d f77 f90 go rust hip} {
+    if {[lsearch -exact $options $language] >= 0} {
+        return [default_target_compile $source $dest $type $options]
+    }
+    }
+
+    set compiling [expr {$type ne "executable"}]
+    foreach filename $source {
+    if {[file extension $filename] in {.c .cc .cpp .cxx .C .CPP .c++}} {
+        set compiling 1
+    }
+    }
+
+    set compiler $CC_FOR_TARGET
+    set prepared {}
+    if {[lsearch -exact $options c++] >= 0} {
+    set compiler $CXX_FOR_TARGET
+    if {[target_info exists cxxflags]} {
+        lappend prepared "additional_flags=[target_info cxxflags]"
+    }
+    lappend prepared "additional_flags=[g++_include_flags]"
+    if {$type eq "executable"} {
+        lappend prepared "ldflags=[g++_link_flags]"
+    }
+    }
+    set compiler [hip_sdk_pdb_flags $compiler $type $compiling]
+    set translated [list compiler=$compiler]
+    foreach option [concat $prepared $options] {
+    if {$option eq "c++"} {
+        continue
+    }
+    if {[regexp {^(early_flags|additional_flags|ldflags|libs|optimize|compiler)=(.*)$} \
+         $option -> key flags]} {
+        lappend translated \
+        "$key=[hip_sdk_pdb_flags $flags $type $compiling]"
+    } else {
+        lappend translated $option
+    }
+    }
+
+    save_target_board_info {cflags debug_flags ldflags libs multilib_flags mathlib} {
+    foreach key {cflags debug_flags ldflags libs multilib_flags mathlib} {
+        if {[target_info exists $key]} {
+        set flags [hip_sdk_pdb_flags [target_info $key] $type $compiling]
+        unset_board_info $key
+        set_board_info $key $flags
+        }
+    }
+    save_vars {CFLAGS_FOR_TARGET LDFLAGS_FOR_TARGET} {
+        foreach variable {CFLAGS_FOR_TARGET LDFLAGS_FOR_TARGET} {
+        if {[info exists $variable]} {
+            set $variable \
+            [hip_sdk_pdb_flags [set $variable] $type $compiling]
+        }
+        }
+        set result [default_target_compile $source $dest $type $translated]
+    }
+    }
+    return $result
+}
+
+proc gdb_init {args} {
+    set result [default_gdb_init {*}$args]
+    match_max -d 2097152
+    match_max [match_max -d]
+    return $result
+}
+
+proc gdb_load {arg} {
+    if {$arg eq ""} {
+	return 0
+    }
+    return [gdb_file_cmd [host_file_normalize $arg]]
+}

@@ -1,0 +1,133 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Symbol-record coverage.
+# Exercise support for S_UNAMESPACE, S_GPROC32, S_LPROC32 and S_GPROC32_ID
+# (each printed with its full signature), S_FRAMEPROC, S_REGREL32 (parameter),
+# S_REGISTER, S_LOCAL including one flagged optimized-out, with four
+# defrange forms, S_BLOCK32, S_LABEL32, S_THUNK32, S_LDATA32, module
+# S_GDATA32, S_CONSTANT (int and enum), S_UDT, and S_PUB32 (minimal symbol
+# via the publics stream).
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+set testfile pdb-yaml-symbols
+standard_testfile
+
+set exe ${binfile}.exe
+
+if {![pdb_prepare_yaml $testfile $exe]} {
+    return
+}
+
+clean_restart [file tail $exe]
+disable_pdb_symbol_server
+match_max 131072
+
+# S_GPROC32 / S_LPROC32 / S_GPROC32_ID, with signatures.
+gdb_test "info functions func" \
+    [multi_line \
+	 "All functions matching regular expression \"func\":" \
+	 "" \
+	 "File pdb-yaml-symbols.obj:" \
+	 "\[ \t\]*int gfunc\\(int\\);" \
+	 "\[ \t\]*int idfunc\\(void\\);" \
+	 "\[ \t\]*int vfunc\\(int, \\.\\.\\.\\);" \
+	 "\[ \t\]*static int lfunc\\(void\\);"] \
+    "S_GPROC32 / S_LPROC32 / S_GPROC32_ID build functions"
+
+# The trailing type index 0 in this variadic arglist represents "...", not
+# an additional typed parameter.
+gdb_test "ptype vfunc" [pdb_type_re "int \\(int, \\.\\.\\.\\)"] \
+    "variadic marker is not a parameter"
+
+# An _ID procedure's type index names an IPI record, and that record names
+# the signature.  The same value read in the TPI is an argument list.
+gdb_test "ptype idfunc" [pdb_type_re "int \\(void\\)"] \
+    "an _ID procedure follows its id to the signature"
+
+# S_REGREL32 parameter and S_DEFRANGE_FRAMEPOINTER_REL local.
+gdb_test "info scope gfunc" \
+    [multi_line \
+	 "Scope for gfunc:" \
+	 "Symbol x is register \\+ 8, length 4." \
+	 "Symbol loc is register \\+ 4, length 4."] \
+    "S_REGREL32 parameter and framepointer-rel local"
+
+# S_REGISTER, optimized-out S_LOCAL, and the register-rel / full-scope /
+# register defrange forms.
+gdb_test "info scope lfunc" \
+    [multi_line \
+	 "Scope for lfunc:" \
+	 "Symbol regvar is a register, length 4." \
+	 "Symbol optl is optimized out." \
+	 "Symbol rrl is register \\+ 16, length 4." \
+	 "Symbol fsl is register \\+ 8, length 4." \
+	 "Symbol regl is a register, length 4."] \
+    "S_REGISTER, optimized-out and all defrange forms"
+
+# S_LDATA32 and module S_GDATA32.
+gdb_test "whatis sdata" [pdb_type_re "int"] "S_LDATA32 variable"
+gdb_test "whatis gdata" [pdb_type_re "int"] \
+    "module S_GDATA32 variable"
+
+# S_CONSTANT (int and enum) and S_UDT.
+gdb_test "print kint" ".*42" "S_CONSTANT int value"
+gdb_test "print kenum" ".*E2" "S_CONSTANT enum value"
+gdb_test "whatis alias" [pdb_type_re "int"] "S_UDT alias"
+
+# S_PUB32 minimal symbol.
+gdb_test "info functions pubfunc" ".*pubfunc.*" "S_PUB32 minimal symbol"
+
+# Raw dump lists the namespace, label and thunk records.
+gdb_test "maint info pdb-symbols" \
+    [multi_line \
+	 ".*S_UNAMESPACE.*MyNS.*" \
+	 ".*S_LABEL32.*mylabel.*" \
+	 ".*S_THUNK32.*"] \
+    "module stream lists namespace, label and thunk"
+
+# The thunk length is 16 bits and the ordinal byte follows it, so a wider
+# read reports the two together.  This thunk is 6 bytes with ordinal 1.
+gdb_test "maint info pdb-symbols" \
+    ".*S_THUNK32\[^\r\n\]*sz=6 .*" \
+    "thunk length is read at its own width"
+
+gdb_test "maintenance info pdb-symbols modi=0" \
+    ".*S_UDT\[^\r\n\]*ti=0074 \\(int\\)\[^\r\n\]*.alias.*" \
+    "module stream S_UDT dumps its typind and resolved type"
+
+gdb_test_no_output "maintenance expand-symtabs" "expand for namespace lookup"
+gdb_test_no_output "set language c++" "select C++ for namespace lookup"
+
+gdb_test "print MyNS::imported_value" " = 111" \
+	"qualified constant lookup"
+gdb_test "print gfunc::imported_value" " = 111" \
+	"using directive imports a constant"
+gdb_test "ptype gfunc::ImportedType" \
+	[pdb_type_re {struct MyNS::ImportedType \{.*int x;.*\}}] \
+	"using directive imports a type"
+gdb_test "print &gfunc::imported_call == &MyNS::imported_call" " = true" \
+	"using directive imports the same function"
+gdb_test "print OtherNS::hidden_value" " = 222" \
+	"unimported qualified constant exists"
+gdb_test "print gfunc::hidden_value" \
+	{No symbol "hidden_value" in specified context\.} \
+	"using directive does not import another namespace"

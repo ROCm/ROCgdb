@@ -1,0 +1,72 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Line-table coverage.  A module carrying only C13 DEBUG_S_FILECHKSMS +
+# DEBUG_S_LINES subsections, checked through the raw maint dumps.  The module
+# intentionally has no symbol records.  pdb-yaml-infocmd and pdb-yaml-inline
+# combine symbols with C13 subsections in the same module.
+---
+PdbStream:
+  Age:             __AGE__
+  Guid:            '__GUID__'
+  Signature:       0
+  Features:        [ VC140 ]
+  Version:         VC70
+DbiStream:
+  VerHeader:       V70
+  Age:             __AGE__
+  MachineType:     Amd64
+  Modules:
+    - Module:          pdb-yaml-lines.obj
+      ObjFile:         pdb-yaml-lines.obj
+      SourceFiles:
+        - pdb-yaml-lines.cpp
+      Subsections:
+        - !FileChecksums
+          Checksums:
+            - FileName:        pdb-yaml-lines.cpp
+              Kind:            MD5
+              Checksum:        000102030405060708090A0B0C0D0E0F
+        - !Lines
+          CodeSize:        24
+          Flags:           [  ]
+          RelocOffset:     0
+          RelocSegment:    1
+          Blocks:
+            - FileName:        pdb-yaml-lines.cpp
+              Lines:
+                - Offset:          0
+                  LineStart:       10
+                  IsStatement:     true
+                  EndDelta:        0
+                - Offset:          8
+                  LineStart:       11
+                  IsStatement:     true
+                  EndDelta:        0
+                - Offset:          16
+                  LineStart:       12
+                  IsStatement:     true
+                  EndDelta:        0
+              Columns:         []
+      Modi:
+        Signature:       4
+        Records:         []
+TpiStream:
+  Version:         VC80
+  Records:         []
+IpiStream:
+  Version:         VC80
+  Records:         []
+...

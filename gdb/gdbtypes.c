@@ -505,6 +505,23 @@ lookup_function_type (struct type *return_type)
 /* See gdbtypes.h.  */
 
 struct type *
+lookup_method_type (struct type *self_type, struct type *return_type)
+{
+  struct type *mtype = type_allocator (return_type).new_type ();
+
+  mtype->set_code (TYPE_CODE_METHOD);
+  mtype->set_target_type (return_type);
+  mtype->set_length (1);
+
+  INIT_FUNC_SPECIFIC (mtype);
+  set_type_self_type (mtype, self_type);
+
+  return mtype;
+}
+
+/* See gdbtypes.h.  */
+
+struct type *
 lookup_function_type_with_arguments (struct type *return_type,
 				     int nparams,
 				     struct type **param_types)

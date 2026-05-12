@@ -1,0 +1,51 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Line-table coverage.
+# The module carries C13 DEBUG_S_FILECHKSMS and DEBUG_S_LINES subsections,
+# exercising the line/checksum parser via the raw maint dumps.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+set testfile pdb-yaml-lines
+standard_testfile
+
+set exe ${binfile}.exe
+
+if {![pdb_prepare_yaml $testfile $exe]} {
+    return
+}
+
+clean_restart [file tail $exe]
+disable_pdb_symbol_server
+match_max 131072
+
+# DEBUG_S_LINES: the parser reads the line/address entries.
+gdb_test "maint info pdb-lines" \
+    [multi_line \
+	 ".*pdb-yaml-lines.cpp" \
+	 ".*0001:00000000-00000018, line/addr entries = 3" \
+	 ".*10 00000000 +11 00000008 +12 00000010.*"] \
+    "line table parsed with three entries"
+
+# DEBUG_S_FILECHKSMS: the parser reads the file checksum.
+gdb_test "maint info pdb-files-c13" \
+    ".*MD5: 000102030405060708090a0b0c0d0e0f.*pdb-yaml-lines.cpp.*" \
+    "file checksum parsed"

@@ -64,10 +64,9 @@ buildsym_compunit::buildsym_compunit (struct objfile *objfile_,
      It can happen that the debug info provides a different path to NAME than
      DIRNAME,NAME.  We cope with this in watch_main_source_file_lossage but
      that only works if the main_subfile doesn't have a symtab yet.  */
-  start_subfile (name, name_for_id);
   /* Save this so that we don't have to go looking for it at the end
      of the subfiles list.  */
-  m_main_subfile = m_current_subfile;
+  m_main_subfile = start_subfile (name, name_for_id);
 }
 
 buildsym_compunit::~buildsym_compunit ()
@@ -419,7 +418,7 @@ buildsym_compunit::make_blockvector ()
 
 /* See buildsym.h.  */
 
-void
+struct subfile *
 buildsym_compunit::start_subfile (const char *name, const char *name_for_id)
 {
   /* See if this subfile is already registered.  */
@@ -432,7 +431,7 @@ buildsym_compunit::start_subfile (const char *name, const char *name_for_id)
 	symtab_create_debug_printf ("found existing symtab with name_for_id %s",
 				    subfile->name_for_id.c_str ());
 	m_current_subfile = subfile;
-	return;
+	return m_current_subfile;
       }
 
   /* This subfile is not known.  Add an entry for it.  */
@@ -484,6 +483,8 @@ buildsym_compunit::start_subfile (const char *name, const char *name_for_id)
   /* Link this subfile at the front of the subfile list.  */
   subfile->next = m_subfiles;
   m_subfiles = subfile.release ();
+
+  return m_current_subfile;
 }
 
 

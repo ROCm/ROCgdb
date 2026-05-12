@@ -1,0 +1,103 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Inlined-function coverage.
+# Inline records in one procedure: a plain LF_FUNC_ID inlinee
+# (`leaf_add`) nested inside a second LF_FUNC_ID inlinee (`mid_scale`, whose
+# annotation decodes to two code chunks), and an LF_MFUNC_ID member-function
+# inlinee (`Calc::compute`), plus another `leaf_add` with packed line deltas
+# and namespace-qualified inlinees using direct and substring scope IDs.
+# Each site's name is resolved from the IPI stream and
+# its ranges are decoded from the annotation bytes relative to the enclosing
+# S_GPROC32.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+set testfile pdb-yaml-inline
+standard_testfile
+
+set exe ${binfile}.exe
+
+if {![pdb_prepare_yaml $testfile $exe]} {
+    return
+}
+
+foreach inline_name {leaf_add Calc::compute inline_ns::scoped_leaf inline_ns::nested::scoped_leaf} {
+    clean_restart [file tail $exe]
+    disable_pdb_symbol_server
+    gdb_test_no_output "set breakpoint pending off" "cold $inline_name: no pending"
+    gdb_test "break $inline_name" \
+	"Breakpoint $decimal at $hex.*" "cold $inline_name: breakpoint resolves"
+    delete_breakpoints
+    gdb_test "break $inline_name" \
+	"Breakpoint $decimal at $hex.*" "warm $inline_name: breakpoint resolves"
+}
+
+clean_restart [file tail $exe]
+disable_pdb_symbol_server
+match_max 131072
+
+# LF_FUNC_ID inlinee whose annotation decodes to two code chunks (ranges=2).
+gdb_test "maintenance info pdb-symbols modi=0" \
+    ".*S_INLINESITE\[^\n\]*inlinee_idx=\[0-9A-Fa-f\]+ .mid_scale. ranges=2.*" \
+    "mid_scale inline resolved from IPI with two decoded ranges"
+
+# LF_FUNC_ID inlinee nested inside mid_scale (ranges=1).
+gdb_test "maintenance info pdb-symbols modi=0" \
+    ".*S_INLINESITE\[^\n\]*inlinee_idx=\[0-9A-Fa-f\]+ .leaf_add. ranges=1.*" \
+    "leaf_add nested inline resolved from IPI"
+
+# LF_MFUNC_ID member-function inlinee.
+gdb_test "maintenance info pdb-symbols modi=0" \
+    ".*S_INLINESITE\[^\n\]*inlinee_idx=\[0-9A-Fa-f\]+ .Calc::compute. ranges=1.*" \
+    "member-function inline (LF_MFUNC_ID) resolved from IPI"
+
+gdb_test "maintenance info pdb-symbols modi=0" \
+    ".*S_INLINESITE2\[^\n\]*inlinee_idx=1008 .inline_ns::nested::scoped_leaf. ranges=1.*" \
+    "S_INLINESITE2 resolves its namespace and decodes past the invocation count"
+
+# The nested pair emits two matching S_INLINESITE_END scope markers.
+gdb_test "maintenance info pdb-symbols modi=0" \
+    ".*S_INLINESITE_END\[^\n\]*\n\[^\n\]*S_INLINESITE_END.*" \
+    "nested inline sites close with paired scope-end markers"
+
+# The parent's C13 table has one entry, line 5, covering the whole
+# procedure, so the caller's line resumes where each inline chunk ends.
+gdb_test "maint expand-symtabs" ".*" "expand for inline line coverage"
+
+gdb_test "info line *0x14000100e" \
+    "Line 12 of .*pdb-yaml-inline.cpp.*starts at address.*ends at.*" \
+    "initial packed line delta applies to the first chunk"
+
+gdb_test "info line *0x140001011" \
+    "Line 13 of .*pdb-yaml-inline.cpp.*starts at address.*ends at.*" \
+    "subsequent packed line delta applies to the next chunk"
+
+gdb_test "info line *0x14000101a" \
+    "Line 50 of .*pdb-yaml-inline.cpp.*starts at address.*ends at.*" \
+    "S_INLINESITE2 body has the recorded source line"
+
+gdb_test "info line *0x14000100c" \
+    "Line 5 of .*pdb-yaml-inline.cpp.*starts at address 0x14000100c .*" \
+    "caller line resumes at the end of the inline chunk"
+
+gdb_test "info line *0x140001018" \
+    "Line 5 of .*pdb-yaml-inline.cpp.*" \
+    "inline line does not reach the end of the caller"

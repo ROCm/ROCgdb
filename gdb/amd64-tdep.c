@@ -3564,6 +3564,179 @@ amd64_in_indirect_branch_thunk (struct gdbarch *gdbarch, CORE_ADDR pc)
 				       AMD64_RIP_REGNUM);
 }
 
+/* CodeView register IDs for AMD64, from microsoft-pdb cvconst.h.
+   Used only by the gdbarch codeview_* hooks below; the PDB reader
+   sees only GDB regnums.  CV_REG_VFRAME is handled in the reader
+   and never reaches this file.  */
+
+enum
+{
+  /* Low byte, word and dword forms of the legacy eight.  The high-byte
+     forms (AH/CH/DH/BH) are deliberately absent: they name bits 8-15, which
+     a plain register read cannot express.  */
+  CV_AMD64_AL  = 1,
+  CV_AMD64_CL  = 2,
+  CV_AMD64_DL  = 3,
+  CV_AMD64_BL  = 4,
+  CV_AMD64_AX  = 9,
+  CV_AMD64_CX  = 10,
+  CV_AMD64_DX  = 11,
+  CV_AMD64_BX  = 12,
+  CV_AMD64_SP  = 13,
+  CV_AMD64_BP  = 14,
+  CV_AMD64_SI  = 15,
+  CV_AMD64_DI  = 16,
+  CV_AMD64_EAX = 17,
+  CV_AMD64_ECX = 18,
+  CV_AMD64_EDX = 19,
+  CV_AMD64_EBX = 20,
+  CV_AMD64_ESP = 21,
+  CV_AMD64_EBP = 22,
+  CV_AMD64_ESI = 23,
+  CV_AMD64_EDI = 24,
+
+  CV_AMD64_RAX = 328,
+  CV_AMD64_RBX = 329,
+  CV_AMD64_RCX = 330,
+  CV_AMD64_RDX = 331,
+  CV_AMD64_RSI = 332,
+  CV_AMD64_RDI = 333,
+  CV_AMD64_RBP = 334,
+  CV_AMD64_RSP = 335,
+  CV_AMD64_R8  = 336,
+  CV_AMD64_R9  = 337,
+  CV_AMD64_R10 = 338,
+  CV_AMD64_R11 = 339,
+  CV_AMD64_R12 = 340,
+  CV_AMD64_R13 = 341,
+  CV_AMD64_R14 = 342,
+  CV_AMD64_R15 = 343,
+
+  /* R8-R15 byte, word and dword forms, each a run of eight.  */
+  CV_AMD64_R8B = 344,
+  CV_AMD64_R15B = 351,
+  CV_AMD64_R8W = 352,
+  CV_AMD64_R15W = 359,
+  CV_AMD64_R8D = 360,
+  CV_AMD64_R15D = 367,
+
+  /* SSE.  XMM0-7 are one run; XMM8-15 restart much higher.  Only XMM0-7
+     were observed in the fixtures; XMM8-15 follow the published IDs.  */
+  CV_AMD64_XMM0 = 154,
+  CV_AMD64_XMM7 = 161,
+  CV_AMD64_XMM8 = 252,
+  CV_AMD64_XMM15 = 259,
+};
+
+/* Map a CodeView AMD64 register ID to a DWARF register number.
+   DWARF AMD64 numbering: RAX=0 RDX=1 RCX=2 RBX=3 RSI=4 RDI=5
+   RBP=6 RSP=7 R8..R15=8..15.  Returns -1 for unrecognized registers.  */
+
+static int
+amd64_cv_reg_to_dwarf (int cv_reg)
+{
+  /* A variable narrower than 64 bits is recorded in the sub-register that
+     matches its width -- an int parameter in RCX appears as ECX -- so those
+     map to the containing register and the value's type does the
+     truncation.  */
+  if (cv_reg >= CV_AMD64_R8B && cv_reg <= CV_AMD64_R15B)
+    cv_reg = CV_AMD64_R8 + (cv_reg - CV_AMD64_R8B);
+  else if (cv_reg >= CV_AMD64_R8W && cv_reg <= CV_AMD64_R15W)
+    cv_reg = CV_AMD64_R8 + (cv_reg - CV_AMD64_R8W);
+  else if (cv_reg >= CV_AMD64_R8D && cv_reg <= CV_AMD64_R15D)
+    cv_reg = CV_AMD64_R8 + (cv_reg - CV_AMD64_R8D);
+
+  /* DWARF puts XMM0-15 at 17-32.  A float or double parameter lives here
+     under the Windows x64 ABI, so this is ordinary, not SIMD-only.  */
+  if (cv_reg >= CV_AMD64_XMM0 && cv_reg <= CV_AMD64_XMM7)
+    return 17 + (cv_reg - CV_AMD64_XMM0);
+  if (cv_reg >= CV_AMD64_XMM8 && cv_reg <= CV_AMD64_XMM15)
+    return 25 + (cv_reg - CV_AMD64_XMM8);
+
+  switch (cv_reg)
+    {
+    case CV_AMD64_AL: case CV_AMD64_AX: case CV_AMD64_EAX:
+    case CV_AMD64_RAX: return 0;
+    case CV_AMD64_DL: case CV_AMD64_DX: case CV_AMD64_EDX:
+    case CV_AMD64_RDX: return 1;
+    case CV_AMD64_CL: case CV_AMD64_CX: case CV_AMD64_ECX:
+    case CV_AMD64_RCX: return 2;
+    case CV_AMD64_BL: case CV_AMD64_BX: case CV_AMD64_EBX:
+    case CV_AMD64_RBX: return 3;
+    case CV_AMD64_SI: case CV_AMD64_ESI:
+    case CV_AMD64_RSI: return 4;
+    case CV_AMD64_DI: case CV_AMD64_EDI:
+    case CV_AMD64_RDI: return 5;
+    case CV_AMD64_BP: case CV_AMD64_EBP:
+    case CV_AMD64_RBP: return 6;
+    case CV_AMD64_SP: case CV_AMD64_ESP:
+    case CV_AMD64_RSP: return 7;
+    case CV_AMD64_R8:  return 8;
+    case CV_AMD64_R9:  return 9;
+    case CV_AMD64_R10: return 10;
+    case CV_AMD64_R11: return 11;
+    case CV_AMD64_R12: return 12;
+    case CV_AMD64_R13: return 13;
+    case CV_AMD64_R14: return 14;
+    case CV_AMD64_R15: return 15;
+    default:           return -1;
+    }
+}
+
+/* Implement the "codeview_reg_to_regnum" gdbarch method for AMD64.
+   Maps a CodeView register ID (from PDB debug info) to a GDB regnum
+   by routing through the DWARF numbering.  Returns -1 for any CV ID
+   we don't recognize.  */
+
+static int
+amd64_codeview_reg_to_regnum (struct gdbarch *gdbarch, int cv_regnr)
+{
+  int dwarf_regnum = amd64_cv_reg_to_dwarf (cv_regnr);
+  if (dwarf_regnum < 0)
+    return -1;
+  return gdbarch_dwarf2_reg_to_regnum (gdbarch, dwarf_regnum);
+}
+
+/* Implement the "codeview_local_base_pointer_regnum" gdbarch method for
+   AMD64.  Decodes the 2-bit encodedLocalBasePointer field of
+   FRAMEPROCSYM.flags (bits 14..15) into a GDB regnum.  Per cvinfo.h
+   the AMD64 encoding is 0=none, 1=RSP, 2=RBP, 3=R13; "none" yields -1
+   and the caller falls back to codeview_default_frame_regnum.  */
+
+static int
+amd64_codeview_local_base_pointer_regnum (struct gdbarch *gdbarch,
+					  int encoded_lbp)
+{
+  int cv_reg;
+  switch (encoded_lbp)
+    {
+    case 1:  cv_reg = CV_AMD64_RSP; break;
+    case 2:  cv_reg = CV_AMD64_RBP; break;
+    case 3:  cv_reg = CV_AMD64_R13; break;
+    default: return -1;
+    }
+
+  int dwarf_regnum = amd64_cv_reg_to_dwarf (cv_reg);
+  if (dwarf_regnum < 0)
+    return -1;
+  return gdbarch_dwarf2_reg_to_regnum (gdbarch, dwarf_regnum);
+}
+
+/* Implement the "codeview_default_frame_regnum" gdbarch method for
+   AMD64.  Returns the regnum the PDB reader should assume for FP-rel
+   defranges when no S_FRAMEPROC has been seen (or when S_FRAMEPROC
+   encodes "none").  Windows x64 uses RSP-relative addressing by
+   default, so we return RSP.  */
+
+static int
+amd64_codeview_default_frame_regnum (struct gdbarch *gdbarch)
+{
+  int dwarf_regnum = amd64_cv_reg_to_dwarf (CV_AMD64_RSP);
+  if (dwarf_regnum < 0)
+    return -1;
+  return gdbarch_dwarf2_reg_to_regnum (gdbarch, dwarf_regnum);
+}
+
 void
 amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
 		const target_desc *default_tdesc)
@@ -3722,6 +3895,13 @@ amd64_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch,
 
   set_gdbarch_in_indirect_branch_thunk (gdbarch,
 					amd64_in_indirect_branch_thunk);
+
+  /* PDB/CodeView register mapping hooks.  */
+  set_gdbarch_codeview_reg_to_regnum (gdbarch, amd64_codeview_reg_to_regnum);
+  set_gdbarch_codeview_local_base_pointer_regnum
+    (gdbarch, amd64_codeview_local_base_pointer_regnum);
+  set_gdbarch_codeview_default_frame_regnum
+    (gdbarch, amd64_codeview_default_frame_regnum);
 
   register_amd64_ravenscar_ops (gdbarch);
 }

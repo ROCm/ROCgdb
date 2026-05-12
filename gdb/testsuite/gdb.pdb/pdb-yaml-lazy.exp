@@ -1,0 +1,79 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the lazy PDB cooked index on a PDB whose GSI indexes nothing.
+# yaml2pdb emits a GSI stream with zero hash records, so pdb-yaml-symbols.pdb
+# exercises the module-scan fallback: the cooked index is normally seeded from
+# the GSI (the PDB's shipped global name index), and when that yields no names
+# the background worker scans module symbol streams instead.  A by-name lookup
+# then resolves the symbol and expands its module.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+set testfile pdb-yaml-symbols
+standard_testfile
+
+set exe ${binfile}.exe
+
+# standard_testfile resets testfile to this .exp's name, so name the shared
+# fixture separately.
+set fixture pdb-yaml-symbols
+
+if {![pdb_prepare_yaml $fixture $exe]} {
+    return
+}
+
+# Keep lazy expansion but build the index synchronously.  This checks
+# fallback lookup results, not background-worker synchronization.
+save_vars { GDBFLAGS } {
+    append GDBFLAGS " -iex \"maintenance set pdb-synchronous on\""
+    clean_restart [file tail $exe]
+}
+disable_pdb_symbol_server
+match_max 131072
+
+# A module-scope S_CONSTANT is indexed, so the first lookup in the session
+# finds it.
+gdb_test "print kint" " = 42" "module constant found before any expansion"
+
+save_vars { GDBFLAGS } {
+    append GDBFLAGS " -iex \"maintenance set pdb-synchronous on\""
+    clean_restart [file tail $exe]
+}
+disable_pdb_symbol_server
+match_max 131072
+
+# A by-name lookup resolves through the cooked index — built by scanning
+# the module symbol streams, since the PDB's GSI indexes nothing — and
+# expands gfunc's module so the breakpoint resolves.
+gdb_test "break gfunc" "Breakpoint \[0-9\]+ at .*" \
+    "break resolves via cooked index"
+
+# Match the same function list as pdb-yaml-symbols.exp.
+gdb_test "info functions func" \
+    [multi_line \
+	 "All functions matching regular expression \"func\":" \
+	 "" \
+	 "File pdb-yaml-symbols.obj:" \
+	 "\[ \t\]*int gfunc\\(int\\);" \
+	 "\[ \t\]*int idfunc\\(void\\);" \
+	 "\[ \t\]*int vfunc\\(int, \\.\\.\\.\\);" \
+	 "\[ \t\]*static int lfunc\\(void\\);"] \
+    "lazy mode lists functions"

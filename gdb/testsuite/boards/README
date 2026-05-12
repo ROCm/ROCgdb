@@ -76,6 +76,9 @@ local-remote-host-native.exp
 	host == target.
 
 # Target-specific.
+hip-sdk-pdb.exp
+	Use HIP_SDK/bin/clang-cl.exe and LLD for native Windows MSVC-target
+	tests with CodeView/PDB debug information (--target_board=hip-sdk-pdb).
 simavr.exp
 	Use simavr as target.
 

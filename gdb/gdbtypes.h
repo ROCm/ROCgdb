@@ -2017,8 +2017,10 @@ extern void set_type_vptr_basetype (struct type *, struct type *);
     ? (struct cplus_struct_type*)&cplus_struct_default \
     : TYPE_RAW_CPLUS_SPECIFIC(thistype))
 #define TYPE_RAW_CPLUS_SPECIFIC(thistype) (thistype)->main_type->type_specific.cplus_stuff
+/* Readers that never allocate cplus_stuff leave this field unset, so go
+   through the accessor that falls back to cplus_struct_default.  */
 #define TYPE_CPLUS_CALLING_CONVENTION(thistype) \
-  (thistype)->main_type->type_specific.cplus_stuff->calling_convention
+  TYPE_CPLUS_SPECIFIC (thistype)->calling_convention
 #define TYPE_FLOATFORMAT(thistype) (thistype)->main_type->type_specific.floatformat
 #define TYPE_GNAT_SPECIFIC(thistype) (thistype)->main_type->type_specific.gnat_stuff
 #define TYPE_DESCRIPTIVE_TYPE(thistype) TYPE_GNAT_SPECIFIC(thistype)->descriptive_type
@@ -2585,6 +2587,16 @@ extern struct type *lookup_pointer_type (struct type *);
    The new function type has the same owner as RETURN_TYPE.  */
 
 extern struct type *lookup_function_type (struct type *return_type);
+
+/* Create a new TYPE_CODE_METHOD type with self type SELF_TYPE and return
+   type RETURN_TYPE, and an unspecified number and types of parameters.
+   The caller fills in the parameter fields (including any implicit
+   'this' slot).
+
+   The new method type has the same owner as RETURN_TYPE.  */
+
+extern struct type *lookup_method_type (struct type *self_type,
+					struct type *return_type);
 
 /* Create a new function type with return type RETURN_TYPE and NPARAMS parameter
    of types PARAM_TYPES.  If the final type in PARAM_TYPES is nullptr, create a

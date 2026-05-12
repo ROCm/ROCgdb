@@ -86,6 +86,9 @@ struct gdbarch
   int ps_regnum = -1;
   int fp0_regnum = -1;
   gdbarch_dwarf2_reg_to_regnum_ftype *dwarf2_reg_to_regnum = no_op_reg_to_regnum;
+  gdbarch_codeview_reg_to_regnum_ftype *codeview_reg_to_regnum = nullptr;
+  gdbarch_codeview_local_base_pointer_regnum_ftype *codeview_local_base_pointer_regnum = nullptr;
+  gdbarch_codeview_default_frame_regnum_ftype *codeview_default_frame_regnum = nullptr;
   gdbarch_register_name_ftype *register_name = nullptr;
   gdbarch_register_type_ftype *register_type = nullptr;
   gdbarch_dummy_id_ftype *dummy_id = default_dummy_id;
@@ -348,6 +351,9 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of ps_regnum, invalid_p == 0.  */
   /* Skip verify of fp0_regnum, invalid_p == 0.  */
   /* Skip verify of dwarf2_reg_to_regnum, invalid_p == 0.  */
+  /* Skip verify of codeview_reg_to_regnum, has predicate.  */
+  /* Skip verify of codeview_local_base_pointer_regnum, has predicate.  */
+  /* Skip verify of codeview_default_frame_regnum, has predicate.  */
   if (gdbarch->register_name == nullptr)
     log.puts ("\n\tregister_name");
   if (gdbarch->register_type == nullptr)
@@ -721,6 +727,24 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: dwarf2_reg_to_regnum = <%s>\n",
 	      host_address_to_string (gdbarch->dwarf2_reg_to_regnum));
+  gdb_printf (file,
+	      "gdbarch_dump: gdbarch_codeview_reg_to_regnum_p() = %d\n",
+	      gdbarch_codeview_reg_to_regnum_p (gdbarch));
+  gdb_printf (file,
+	      "gdbarch_dump: codeview_reg_to_regnum = <%s>\n",
+	      host_address_to_string (gdbarch->codeview_reg_to_regnum));
+  gdb_printf (file,
+	      "gdbarch_dump: gdbarch_codeview_local_base_pointer_regnum_p() = %d\n",
+	      gdbarch_codeview_local_base_pointer_regnum_p (gdbarch));
+  gdb_printf (file,
+	      "gdbarch_dump: codeview_local_base_pointer_regnum = <%s>\n",
+	      host_address_to_string (gdbarch->codeview_local_base_pointer_regnum));
+  gdb_printf (file,
+	      "gdbarch_dump: gdbarch_codeview_default_frame_regnum_p() = %d\n",
+	      gdbarch_codeview_default_frame_regnum_p (gdbarch));
+  gdb_printf (file,
+	      "gdbarch_dump: codeview_default_frame_regnum = <%s>\n",
+	      host_address_to_string (gdbarch->codeview_default_frame_regnum));
   gdb_printf (file,
 	      "gdbarch_dump: register_name = <%s>\n",
 	      host_address_to_string (gdbarch->register_name));
@@ -2179,6 +2203,78 @@ set_gdbarch_dwarf2_reg_to_regnum (struct gdbarch *gdbarch,
 				  gdbarch_dwarf2_reg_to_regnum_ftype dwarf2_reg_to_regnum)
 {
   gdbarch->dwarf2_reg_to_regnum = dwarf2_reg_to_regnum;
+}
+
+bool
+gdbarch_codeview_reg_to_regnum_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != nullptr);
+  return gdbarch->codeview_reg_to_regnum != nullptr;
+}
+
+int
+gdbarch_codeview_reg_to_regnum (struct gdbarch *gdbarch, int cv_regnr)
+{
+  gdb_assert (gdbarch != nullptr);
+  gdb_assert (gdbarch->codeview_reg_to_regnum != nullptr);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_codeview_reg_to_regnum called\n");
+  return gdbarch->codeview_reg_to_regnum (gdbarch, cv_regnr);
+}
+
+void
+set_gdbarch_codeview_reg_to_regnum (struct gdbarch *gdbarch,
+				    gdbarch_codeview_reg_to_regnum_ftype codeview_reg_to_regnum)
+{
+  gdbarch->codeview_reg_to_regnum = codeview_reg_to_regnum;
+}
+
+bool
+gdbarch_codeview_local_base_pointer_regnum_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != nullptr);
+  return gdbarch->codeview_local_base_pointer_regnum != nullptr;
+}
+
+int
+gdbarch_codeview_local_base_pointer_regnum (struct gdbarch *gdbarch, int encoded_lbp)
+{
+  gdb_assert (gdbarch != nullptr);
+  gdb_assert (gdbarch->codeview_local_base_pointer_regnum != nullptr);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_codeview_local_base_pointer_regnum called\n");
+  return gdbarch->codeview_local_base_pointer_regnum (gdbarch, encoded_lbp);
+}
+
+void
+set_gdbarch_codeview_local_base_pointer_regnum (struct gdbarch *gdbarch,
+						gdbarch_codeview_local_base_pointer_regnum_ftype codeview_local_base_pointer_regnum)
+{
+  gdbarch->codeview_local_base_pointer_regnum = codeview_local_base_pointer_regnum;
+}
+
+bool
+gdbarch_codeview_default_frame_regnum_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != nullptr);
+  return gdbarch->codeview_default_frame_regnum != nullptr;
+}
+
+int
+gdbarch_codeview_default_frame_regnum (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != nullptr);
+  gdb_assert (gdbarch->codeview_default_frame_regnum != nullptr);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_codeview_default_frame_regnum called\n");
+  return gdbarch->codeview_default_frame_regnum (gdbarch);
+}
+
+void
+set_gdbarch_codeview_default_frame_regnum (struct gdbarch *gdbarch,
+					   gdbarch_codeview_default_frame_regnum_ftype codeview_default_frame_regnum)
+{
+  gdbarch->codeview_default_frame_regnum = codeview_default_frame_regnum;
 }
 
 const char *

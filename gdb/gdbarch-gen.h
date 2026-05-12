@@ -293,6 +293,41 @@ using gdbarch_dwarf2_reg_to_regnum_ftype = int (struct gdbarch *gdbarch, int dwa
 int gdbarch_dwarf2_reg_to_regnum (struct gdbarch *gdbarch, int dwarf2_regnr);
 void set_gdbarch_dwarf2_reg_to_regnum (struct gdbarch *gdbarch, gdbarch_dwarf2_reg_to_regnum_ftype *dwarf2_reg_to_regnum);
 
+/* Map a CodeView register number to a GDB REGNUM.  Only architectures
+   that support PDB/CodeView debug info (currently amd64) install this
+   hook; callers must guard with gdbarch_codeview_reg_to_regnum_p.
+   Handling of virtual registers (e.g. CV_REG_VFRAME) is the
+   implementation's responsibility.  Return -1 for unrecognized registers. */
+
+bool gdbarch_codeview_reg_to_regnum_p (struct gdbarch *gdbarch);
+
+using gdbarch_codeview_reg_to_regnum_ftype = int (struct gdbarch *gdbarch, int cv_regnr);
+int gdbarch_codeview_reg_to_regnum (struct gdbarch *gdbarch, int cv_regnr);
+void set_gdbarch_codeview_reg_to_regnum (struct gdbarch *gdbarch, gdbarch_codeview_reg_to_regnum_ftype *codeview_reg_to_regnum);
+
+/* Resolve a FRAMEPROCSYM encodedLocalBasePointer value (2 bits) to a GDB
+   REGNUM holding the local base pointer.  Only architectures that
+   support PDB/CodeView debug info install this hook; callers must guard
+   with gdbarch_codeview_local_base_pointer_regnum_p.  Return -1 for the
+   "none" / unknown encoding. */
+
+bool gdbarch_codeview_local_base_pointer_regnum_p (struct gdbarch *gdbarch);
+
+using gdbarch_codeview_local_base_pointer_regnum_ftype = int (struct gdbarch *gdbarch, int encoded_lbp);
+int gdbarch_codeview_local_base_pointer_regnum (struct gdbarch *gdbarch, int encoded_lbp);
+void set_gdbarch_codeview_local_base_pointer_regnum (struct gdbarch *gdbarch, gdbarch_codeview_local_base_pointer_regnum_ftype *codeview_local_base_pointer_regnum);
+
+/* Default GDB REGNUM used as the frame register when no S_FRAMEPROC
+   record applies for a function in PDB/CodeView debug info.  Only
+   architectures that support PDB install this hook; callers must guard
+   with gdbarch_codeview_default_frame_regnum_p. */
+
+bool gdbarch_codeview_default_frame_regnum_p (struct gdbarch *gdbarch);
+
+using gdbarch_codeview_default_frame_regnum_ftype = int (struct gdbarch *gdbarch);
+int gdbarch_codeview_default_frame_regnum (struct gdbarch *gdbarch);
+void set_gdbarch_codeview_default_frame_regnum (struct gdbarch *gdbarch, gdbarch_codeview_default_frame_regnum_ftype *codeview_default_frame_regnum);
+
 /* Return the name of register REGNR for the specified architecture.
    REGNR can be any value greater than, or equal to zero, and less than
    'gdbarch_num_cooked_regs (GDBARCH)'.  If REGNR is not supported for

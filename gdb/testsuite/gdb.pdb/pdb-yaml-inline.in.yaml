@@ -1,0 +1,131 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Inlined-function coverage (S_INLINESITE).  A single procedure `caller`
+# carries six inline sites exercising pdb-read-inline.c and the IPI id
+# resolver in pdb-read-symbols.c:
+#   - a plain LF_FUNC_ID inlinee (`leaf_add`), nested inside
+#   - a plain LF_FUNC_ID inlinee (`mid_scale`) whose annotation decodes to two
+#     code chunks (ranges=2), and
+#   - an LF_MFUNC_ID member-function inlinee (`Calc::compute`), and
+#   - a second `leaf_add` site with initial and subsequent packed line deltas,
+#   - two namespace-qualified functions using direct and substring scope IDs.
+# Each S_INLINESITE's Inlinee id indexes the IPI stream; !InlineeLines maps the
+# id to its base file/line; the AnnotationData bytes decode to PC ranges via the
+# enclosing S_GPROC32 (segment 1 = the stub's .text).
+---
+PdbStream:
+  Age:             __AGE__
+  Guid:            '__GUID__'
+  Signature:       0
+  Features:        [ VC140 ]
+  Version:         VC70
+DbiStream:
+  VerHeader:       V70
+  Age:             __AGE__
+  MachineType:     Amd64
+  Modules:
+    - Module:          pdb-yaml-inline.obj
+      ObjFile:         pdb-yaml-inline.obj
+      SourceFiles:     [ pdb-yaml-inline.cpp ]
+      Subsections:
+        - !FileChecksums
+          Checksums:
+            - { FileName: pdb-yaml-inline.cpp, Kind: MD5, Checksum: 000102030405060708090A0B0C0D0E0F }
+        - !InlineeLines
+          HasExtraFiles:   true
+          Sites:
+            - { FileName: pdb-yaml-inline.cpp, LineNum: 10, Inlinee: 4096 }
+            - { FileName: pdb-yaml-inline.cpp, LineNum: 20, Inlinee: 4097 }
+            - { FileName: pdb-yaml-inline.cpp, LineNum: 30, Inlinee: 4098 }
+            - { FileName: pdb-yaml-inline.cpp, LineNum: 40, Inlinee: 4100, ExtraFiles: [ pdb-yaml-inline.cpp ] }
+            - { FileName: pdb-yaml-inline.cpp, LineNum: 50, Inlinee: 4104 }
+        - !Lines
+          CodeSize:        32
+          Flags:           [  ]
+          RelocOffset:     0
+          RelocSegment:    1
+          Blocks:
+            - FileName: pdb-yaml-inline.cpp
+              Lines:
+                - { Offset: 0, LineStart: 5, IsStatement: true, EndDelta: 0 }
+              Columns: []
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_GPROC32
+            ProcSym: { PtrParent: 0, PtrEnd: 0, PtrNext: 0, CodeSize: 32, DbgStart: 0, DbgEnd: 0, FunctionType: 4097, Offset: 0, Segment: 1, Flags: [ ], DisplayName: caller }
+          - Kind:            S_FRAMEPROC
+            FrameProcSym: { TotalFrameBytes: 0, PaddingFrameBytes: 0, OffsetToPadding: 0, BytesOfCalleeSavedRegisters: 0, OffsetOfExceptionHandler: 0, SectionIdOfExceptionHandler: 0, Flags: [ ] }
+          - Kind:            S_INLINESITE
+            InlineSiteSym: { PtrParent: 0, PtrEnd: 0, Inlinee: 4097, AnnotationData: [ 11, 0, 4, 4, 3, 4, 4, 4 ] }
+          - Kind:            S_INLINESITE
+            InlineSiteSym: { PtrParent: 0, PtrEnd: 0, Inlinee: 4096, AnnotationData: [ 11, 0, 4, 5 ] }
+          - Kind:            S_INLINESITE_END
+            ScopeEndSym: {}
+          - Kind:            S_INLINESITE_END
+            ScopeEndSym: {}
+          - Kind:            S_INLINESITE
+            InlineSiteSym: { PtrParent: 0, PtrEnd: 0, Inlinee: 4098, AnnotationData: [ 11, 0, 4, 6 ] }
+          - Kind:            S_INLINESITE_END
+            ScopeEndSym: {}
+          - Kind:            S_INLINESITE
+            InlineSiteSym: { PtrParent: 0, PtrEnd: 0, Inlinee: 4096, AnnotationData: [ 11, 78, 11, 35, 4, 3 ] }
+          - Kind:            S_INLINESITE_END
+            ScopeEndSym: {}
+          - Kind:            S_INLINESITE
+            InlineSiteSym: { PtrParent: 0, PtrEnd: 0, Inlinee: 4100, AnnotationData: [ 3, 20, 4, 2 ] }
+          - Kind:            S_INLINESITE_END
+            ScopeEndSym: {}
+          - Kind:            S_INLINESITE2
+            # Body: parent, end, inlinee 0x1008, invocations 1, annotations.
+            UnknownSym: { Data: '00000000000000000810000001000000031A0402' }
+          - Kind:            S_INLINESITE_END
+            ScopeEndSym: {}
+          - Kind:            S_END
+            ScopeEndSym: {}
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind: LF_ARGLIST
+      ArgList: { ArgIndices: [ ] }
+    - Kind: LF_PROCEDURE
+      Procedure: { ReturnType: 116, CallConv: NearC, Options: [ None ], ParameterCount: 0, ArgumentList: 4096 }
+    - Kind: LF_STRUCTURE
+      Class: { MemberCount: 0, Options: [ None ], FieldList: 0, Name: Calc, UniqueName: '.?AUCalc@@', DerivationList: 0, VTableShape: 0, Size: 1 }
+    - Kind: LF_MFUNCTION
+      MemberFunction: { ReturnType: 116, ClassType: 4098, ThisType: 0, CallConv: NearC, Options: [ None ], ParameterCount: 0, ArgumentList: 4096, ThisPointerAdjustment: 0 }
+IpiStream:
+  Version:         VC80
+  Records:
+    - Kind: LF_FUNC_ID
+      FuncId: { ParentScope: 0, FunctionType: 4097, Name: leaf_add }
+    - Kind: LF_FUNC_ID
+      FuncId: { ParentScope: 0, FunctionType: 4097, Name: mid_scale }
+    - Kind: LF_MFUNC_ID
+      MemberFuncId: { ClassType: 4098, FunctionType: 4099, Name: compute }
+    - Kind: LF_STRING_ID
+      StringId: { Id: 0, String: inline_ns }
+    - Kind: LF_FUNC_ID
+      FuncId: { ParentScope: 4099, FunctionType: 4097, Name: scoped_leaf }
+    - Kind: LF_STRING_ID
+      StringId: { Id: 0, String: 'inline_ns::' }
+    - Kind: LF_SUBSTR_LIST
+      StringList: { StringIndices: [ 4101 ] }
+    - Kind: LF_STRING_ID
+      StringId: { Id: 4102, String: nested }
+    - Kind: LF_FUNC_ID
+      FuncId: { ParentScope: 4103, FunctionType: 4097, Name: scoped_leaf }
+...

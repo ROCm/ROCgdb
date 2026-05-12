@@ -1,0 +1,343 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Utilities for PDB format testing
+
+# Return true if the GDB under test has the PDB reader compiled in.  Its
+# maintenance commands are built only with the reader (PDB_SRCS in
+# gdb/Makefile.in), so their presence is the test.
+#
+# NOTE: This must be called while gdb is *not* running.
+
+gdb_caching_proc pdb_support {} {
+    global gdb_spawn_id
+    global gdb_prompt
+
+    if { [info exists gdb_spawn_id] } {
+	error "GDB must not be running in pdb_support."
+    }
+
+    gdb_start
+    set missing 0
+    gdb_test_multiple "maintenance info pdb-types" "" {
+	-re "Undefined maintenance info command.*$gdb_prompt $" {
+	    set missing 1
+	}
+	-re ".*$gdb_prompt $" { }
+    }
+    gdb_exit
+    return [expr {!$missing}]
+}
+
+proc pdb_prepare_for_testing {testname executable sources options {overrides {}}} {
+    if {[llength $overrides] % 2 != 0} {
+	error "PDB build overrides must be key/value pairs"
+    }
+    foreach {key value} $overrides {
+	if {$key ni {debug_flags ldflags}} {
+	    error "Unknown PDB build override: $key"
+	}
+    }
+
+    gdb_exit
+    save_target_board_info {debug_flags ldflags} {
+	foreach {key value} $overrides {
+	    unset_board_info $key
+	    set_board_info $key $value
+	}
+	set result [prepare_for_testing $testname $executable $sources $options]
+    }
+    if {$result != 0} {
+	fail "$testname: compilation"
+	return $result
+    }
+
+    set pdb_name [file rootname [file tail $executable]].pdb
+    return [gdb_test "maintenance info pdb-loaded-files" \
+		".*[string_to_regexp $pdb_name]" \
+		"$testname: generated PDB is loaded"]
+}
+
+# Clear _NT_SYMBOL_PATH for subsequently started processes and attempt to
+# clear debug-file-directory in the running GDB.
+proc disable_pdb_symbol_server {} {
+    set ::env(_NT_SYMBOL_PATH) ""
+
+    catch {
+	send_gdb "set debug-file-directory \"\"\n"
+	gdb_expect 5 {
+	    -re "$::gdb_prompt $" {}
+	    timeout {}
+	}
+    }
+}
+
+# Locate llvm-pdbutil.
+#
+# GDB cannot validate its own view of a PDB: the cooked index scans the GSI
+# hash records linearly and never performs a bucket lookup, so a passing
+# lookup says nothing about the bitmap or the compressed bucket offsets.  A
+# second, independent reader is needed for that, and llvm-pdbutil is the one
+# the fixture generator already depends on.
+#
+# Returns the program path, or "" when it is not installed -- callers should
+# treat that as unsupported rather than as a failure, since running the tests
+# does not otherwise require the LLVM tools.
+gdb_caching_proc pdb_llvm_pdbutil {} {
+    set candidates {}
+
+    foreach var {LLVM_BIN HIP_SDK HIP_PATH} {
+	if {[info exists ::env($var)] && $::env($var) ne ""} {
+	    set root $::env($var)
+	    foreach sub {{} bin {Bin bin}} {
+		lappend candidates \
+		    [file join $root {*}$sub llvm-pdbutil.exe]
+	    }
+	}
+    }
+
+    lappend candidates "C:/Program Files/LLVM/bin/llvm-pdbutil.exe"
+
+    foreach dir [lsort -decreasing [glob -nocomplain \
+	    "C:/AMD/ROCm/*/Bin/bin" "C:/AMD/ROCm/*/bin"]] {
+	lappend candidates [file join $dir llvm-pdbutil.exe]
+    }
+
+    foreach prog $candidates {
+	if {[file executable $prog]} {
+	    verbose "pdb_llvm_pdbutil: $prog"
+	    return $prog
+	}
+    }
+
+    # Anything on PATH, under either name.
+    foreach name {llvm-pdbutil llvm-pdbutil.exe} {
+	if {![catch {exec where $name} out]} {
+	    set prog [string trim [lindex [split $out "\n"] 0]]
+	    if {[file executable $prog]} {
+		verbose "pdb_llvm_pdbutil: $prog"
+		return $prog
+	    }
+	}
+    }
+
+    verbose "pdb_llvm_pdbutil: not found"
+    return ""
+}
+
+# Run `llvm-pdbutil dump` with ARGS on PDBFILE and return its output, or ""
+# if the tool is missing or fails.
+proc pdb_llvm_dump {pdbfile args} {
+    set prog [pdb_llvm_pdbutil]
+    if {$prog eq ""} {
+	return ""
+    }
+    if {[catch {eval exec [list $prog] dump $args [list $pdbfile]} out]} {
+	verbose "pdb_llvm_dump failed: $out"
+	return ""
+    }
+    return $out
+}
+
+# Build the companion PE the generated PDBs are stamped against, in
+# DIRECTORY, and return its path ("" on failure).  Its RSDS identity is read
+# back from the built file, so a different GUID on every build is fine; what
+# must not change is the PDB base name the RSDS records, since
+# pdb_prepare_yaml writes the generated PDB under it.
+proc pdb_yaml_stub {directory} {
+    global srcdir subdir
+
+    set stub [file join $directory pdb-yaml-stub.exe]
+    if {[file exists $stub]} {
+	return $stub
+    }
+
+    set source $srcdir/$subdir/pdb-yaml-stub.c
+    if {![file exists $source]} {
+	perror "companion PE source missing: $source"
+	return ""
+    }
+
+    if {[gdb_compile $source $stub executable {debug}] != ""} {
+	return ""
+    }
+
+    return $stub
+}
+
+proc pdb_prepare_yaml {fixture executable} {
+    global srcdir subdir
+
+    set pdbutil [pdb_llvm_pdbutil]
+    if {$pdbutil eq ""} {
+	unsupported "llvm-pdbutil is required to generate $fixture"
+	return 0
+    }
+    set readobj [file join [file dirname $pdbutil] llvm-readobj.exe]
+    if {![file executable $readobj]} {
+	unsupported "llvm-readobj is required to generate $fixture"
+	return 0
+    }
+
+    set source $srcdir/$subdir/${fixture}.in.yaml
+    if {![file exists $source]} {
+	perror "YAML fixture source missing: $fixture"
+	return 0
+    }
+
+    gdb_exit
+    set directory [file dirname $executable]
+    file mkdir $directory
+    set stub [pdb_yaml_stub $directory]
+    if {$stub eq ""} {
+	unsupported "cannot build the companion PE for $fixture"
+	return 0
+    }
+    file copy -force $stub $executable
+    if {[catch {exec $readobj --coff-debug-directory \
+		    [host_file_normalize $executable]} output]
+    || ![regexp {PDBGUID: (\{[[:xdigit:]-]+\})} $output -> guid]
+	|| ![regexp {PDBAge: ([0-9]+)} $output -> age]} {
+	perror "cannot read companion PE identity: $output"
+	return 0
+    }
+    if {$fixture eq "pdb-yaml-badage"} {
+	incr age 98
+    }
+
+    set channel [open $source r]
+    set yaml [string map [list __GUID__ $guid __AGE__ $age] [read $channel]]
+    close $channel
+    set generated [file join $directory ${fixture}.yaml]
+    set channel [open $generated w]
+    puts -nonewline $channel $yaml
+    close $channel
+
+    set pdb [file join $directory pdb-yaml-stub.pdb]
+    set status [catch {exec $pdbutil yaml2pdb \
+			  --pdb=[host_file_normalize $pdb] \
+			  [host_file_normalize $generated] 2>@1} output]
+    if {$status || [regexp -nocase {error:} $output]} {
+	perror "yaml2pdb failed for $fixture: $output"
+	return 0
+    }
+
+    if {[regexp {\mModi:} $yaml]} {
+	# -B keeps Python from dropping __pycache__ beside the script, which
+	# lives in the source tree.
+	if {[catch {exec python3 -B $srcdir/$subdir/pdb-yaml-setsc.py \
+			$pdb 1 0 4096 2>@1} output]} {
+	    perror "section contribution patch failed for $fixture: $output"
+	    return 0
+	}
+    }
+    set globals $srcdir/$subdir/${fixture}.globals
+    if {[file exists $globals]} {
+	if {[catch {exec python3 -B $srcdir/$subdir/pdb-yaml-addglobals.py \
+			$pdb $globals 2>@1} output]} {
+	    perror "global stream generation failed for $fixture: $output"
+	    return 0
+	}
+    }
+    return 1
+}
+
+# the value on the same line as "type =".  Return a regexp that matches both:
+# the exception line is optional.  FIRST is the value's first line (a regexp).
+proc pdb_type_re {first} {
+    return "type = (Python Exception\[^\r\n\]*\[\r\n\]+)?$first"
+}
+
+# Remove matched Python exception diagnostics and join a split "type ="
+# line to the following type description.
+proc pdb_strip_python_exceptions {text} {
+    set kept {}
+    foreach line [split $text "\n"] {
+        set l [string trimright $line "\r"]
+    if {[regexp {^type = Python Exception <class '[^']+'>: .*$} $l]} {
+        lappend kept "type ="
+        continue
+    }
+    if {[regexp {^type = Python Exception <class 'ModuleNotFoundError'>: No module named 'gdb'$} $l]} {
+        continue
+    }
+        if {[regexp {^Python Exception <class 'ModuleNotFoundError'>: No module named 'gdb'$} $l]} {
+            continue
+        }
+    if {[regexp {^type = Python Exception <class 'NameError'>: Installation error: gdb\._execute_unwinders function is missing$} $l]} {
+        continue
+    }
+        if {[regexp {^Python Exception <class 'NameError'>: Installation error: gdb\._execute_unwinders function is missing$} $l]} {
+            continue
+        }
+        lappend kept $l
+    }
+
+        set normalized {}
+        for {set i 0} {$i < [llength $kept]} {incr i} {
+        set cur [lindex $kept $i]
+        if {$cur eq "type =" && $i + 1 < [llength $kept]} {
+            incr i
+            lappend normalized "type = [lindex $kept $i]"
+            continue
+        }
+        lappend normalized $cur
+        }
+
+        return [join $normalized "\r\n"]
+}
+
+# Run COMMAND, remove its echo and matched Python exception diagnostics,
+# then match PATTERN with either the remaining line breaks or flattened text.
+proc pdb_test {command pattern message} {
+    global gdb_prompt
+
+    set output ""
+    set got_prompt 0
+    gdb_test_multiple $command "" {
+        -re "(.*)$gdb_prompt $" {
+            set output $expect_out(1,string)
+            set got_prompt 1
+        }
+        timeout {
+            fail "$message (timeout)"
+            return
+        }
+    }
+
+    if {!$got_prompt} {
+        fail "$message (no prompt)"
+        return
+    }
+
+    set lines [split $output "\n"]
+    if {[llength $lines] > 0
+	&& [string trim [string trimright [lindex $lines 0] "\r"]] eq [string trim $command]} {
+	set output [join [lrange $lines 1 end] "\n"]
+    }
+
+    set cleaned [pdb_strip_python_exceptions $output]
+    set flattened $cleaned
+    regsub -all {\r?\n+} $flattened " " flattened
+
+    if {[regexp -- $pattern $cleaned] || [regexp -- $pattern $flattened]} {
+        pass $message
+    } else {
+        verbose -log "pdb_test command: $command"
+        verbose -log "pdb_test expected: $pattern"
+        verbose -log "pdb_test output: $cleaned"
+        fail $message
+    }
+}
