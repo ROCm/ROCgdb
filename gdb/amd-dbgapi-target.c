@@ -2648,7 +2648,7 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
   amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (regcache->ptid ());
 
   auto fetch_reg
-    = [wave_id, tdep, gdbarch, regcache] (int reg, bool warn = false)
+    = [wave_id, tdep, gdbarch, regcache] (int reg)
       {
 	gdb_byte raw[AMDGPU_MAX_REGISTER_SIZE];
 	ULONGEST reg_size = register_type (gdbarch, reg)->length ();
@@ -2660,19 +2660,22 @@ amd_dbgapi_target::fetch_registers (struct regcache *regcache, int regno)
 
 	if (status == AMD_DBGAPI_STATUS_SUCCESS)
 	  regcache->raw_supply (reg, raw);
-	else if (status != AMD_DBGAPI_STATUS_ERROR_REGISTER_NOT_AVAILABLE
-		 && warn)
-	  warning (_ ("Couldn't read register %s (#%d)."),
-		   gdbarch_register_name (gdbarch, reg), reg);
+
+	return (status == AMD_DBGAPI_STATUS_SUCCESS
+		|| status == AMD_DBGAPI_STATUS_ERROR_REGISTER_NOT_AVAILABLE);
       };
 
   if (regno == -1)
     {
       for (int i = 0; i < gdbarch_num_regs (gdbarch); i++)
-	fetch_reg (i, false);
+	fetch_reg (i);
     }
   else
-    fetch_reg (regno, true);
+    {
+      if (!fetch_reg (regno))
+	warning (_ ("Couldn't read register %s (#%d)."),
+		 gdbarch_register_name (gdbarch, regno), regno);
+    }
 }
 
 void
