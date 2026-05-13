@@ -686,29 +686,6 @@ starti_command (const char *args, int from_tty)
 }
 
 static void
-proceed_thread_callback (struct thread_info *thread)
-{
-  /* We go through all threads individually instead of compressing
-     into a single target `resume_all' request, because some threads
-     may be stopped in internal breakpoints/events, or stopped waiting
-     for its turn in the displaced stepping queue (that is, they are
-     running from the user's perspective but internally stopped).  The
-     target side has no idea about why the thread is stopped, so a
-     `resume_all' command would resume too much.  If/when GDB gains a
-     way to tell the target `hold this thread stopped until I say
-     otherwise', then we can optimize this.  */
-  if (thread->state () != THREAD_STOPPED)
-    return;
-
-  if (!thread->inf->has_execution ())
-    return;
-
-  switch_to_thread (thread);
-  clear_proceed_status (0);
-  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
-}
-
-static void
 ensure_valid_thread (void)
 {
   if (inferior_ptid == null_ptid
@@ -762,15 +739,35 @@ continue_1 (bool all_threads_p)
       scoped_disable_commit_resumed disable_commit_resumed
 	("continue all threads in non-stop");
 
-      for_each_thread (proceed_thread_callback);
+      for (auto &thread : all_threads ())
+	{
+	  /* We go through all threads individually instead of compressing
+	     into a single target `resume_all' request, because some threads
+	     may be stopped in internal breakpoints/events, or stopped waiting
+	     for its turn in the displaced stepping queue (that is, they are
+	     running from the user's perspective but internally stopped).  The
+	     target side has no idea about why the thread is stopped, so a
+	     `resume_all' command would resume too much.  If/when GDB gains a
+	     way to tell the target `hold this thread stopped until I say
+	     otherwise', then we can optimize this.  */
+	  if (thread.state () != THREAD_STOPPED)
+	    continue;
+
+	  if (!thread.inf->has_execution ())
+	    continue;
+
+	  switch_to_thread (&thread);
+	  clear_proceed_status (0);
+	  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
+	}
 
       if (current_ui->prompt_state == PROMPT_BLOCKED)
 	{
-	  /* If all threads in the target were already running,
-	     proceed_thread_callback ends up never calling proceed,
-	     and so nothing calls this to put the inferior's terminal
-	     settings in effect and remove stdin from the event loop,
-	     which we must when running a foreground command.  E.g.:
+	  /* If all threads in the target were already running, the
+	     above ends up never calling proceed, and so nothing calls
+	     this to put the inferior's terminal settings in effect
+	     and remove stdin from the event loop, which we must when
+	     running a foreground command.  E.g.:
 
 	      (gdb) c -a&
 	      Continuing.

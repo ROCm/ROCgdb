@@ -602,15 +602,6 @@ find_thread_by_handle (gdb::array_view<const gdb_byte> handle,
 
 /* See gdbthread.h.  */
 
-void
-for_each_thread (for_each_thread_callback_ftype callback)
-{
-  for (thread_info &tp : all_threads ())
-    callback (&tp);
-}
-
-/* See gdbthread.h.  */
-
 struct thread_info *
 find_thread (find_thread_callback_ftype callback)
 {

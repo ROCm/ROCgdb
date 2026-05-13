@@ -791,22 +791,6 @@ extern struct thread_info *any_live_thread_of_inferior (inferior *inf);
 void thread_change_ptid (process_stratum_target *targ,
 			 ptid_t old_ptid, ptid_t new_ptid);
 
-/* Callback function type for function for_each_thread.  */
-
-using for_each_thread_callback_ftype
-  = gdb::function_view<void (thread_info *)>;
-
-/* Call CALLBACK once for each known thread.
-
-   CALLBACK must not delete the thread.  To delete threads, use:
-
-     for (thread_info &t : all_threads_safe ())
-       if (some_condition ())
-	 delete &t;
-*/
-
-extern void for_each_thread (for_each_thread_callback_ftype callback);
-
 /* Callback function type for function find_thread.  */
 
 using find_thread_callback_ftype = gdb::function_view<bool (thread_info *)>;
