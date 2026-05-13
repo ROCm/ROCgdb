@@ -746,12 +746,12 @@ ensure_not_running (void)
 }
 
 void
-continue_1 (int all_threads)
+continue_1 (bool all_threads_p)
 {
   ERROR_NO_INFERIOR;
   ensure_not_tfind_mode ();
 
-  if (non_stop && all_threads)
+  if (non_stop && all_threads_p)
     {
       /* Don't error out if the current thread is running, because
 	 there may be other stopped threads.  */

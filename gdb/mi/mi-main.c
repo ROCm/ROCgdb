@@ -285,9 +285,7 @@ exec_continue (const char *const *argv, int argc)
 	  disable_commit_resumed.reset_and_commit ();
 	}
       else
-	{
-	  continue_1 (0);
-	}
+	continue_1 (false);
     }
   else
     {
@@ -296,7 +294,7 @@ exec_continue (const char *const *argv, int argc)
       if (current_context->all)
 	{
 	  sched_multi = 1;
-	  continue_1 (0);
+	  continue_1 (false);
 	}
       else
 	{
@@ -304,7 +302,7 @@ exec_continue (const char *const *argv, int argc)
 	     either all threads, or one thread, depending on the
 	     'scheduler-locking' variable.  Let's continue to do the
 	     same.  */
-	  continue_1 (1);
+	  continue_1 (true);
 	}
     }
 }

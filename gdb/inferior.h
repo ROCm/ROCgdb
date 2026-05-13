@@ -225,7 +225,7 @@ extern void attach_command (const char *, int);
 
 extern void registers_info (const char *, bool);
 
-extern void continue_1 (int all_threads);
+extern void continue_1 (bool all_threads_p);
 
 extern void interrupt_target_1 (bool all_threads);
 
