@@ -6460,53 +6460,6 @@ proc gdb_compile {source dest type options} {
 	}
     }
 
-    # For HIP executables, amdclang++ needs -x hip to treat .cpp/.c as
-    # HIP source, but -x hip applied to a .o file makes amdclang++ try
-    # to parse the object as HIP source, which fails.  Since gdb_compile
-    # may later inject additional .o inputs (e.g. set_unbuffered_mode.o),
-    # we cannot safely mix any source files with any .o inputs in a
-    # single amdclang++ invocation.  To avoid that, pre-compile each
-    # source file to its own .o first (with -x hip), then recurse with
-    # an all-.o source list.  The recursive call will not add -x hip
-    # and the final link will work correctly.
-    if {[lsearch -exact $options hip] != -1
-	&& $type eq "executable"
-	&& [lsearch -exact $options getting_compiler_info] == -1} {
-	set has_source 0
-	foreach src $source {
-	    set ext [file extension $src]
-	    if {$ext ne ".o" && $ext ne ".a"} {
-		set has_source 1
-		break
-	    }
-	}
-	if {$has_source} {
-	    set new_source {}
-	    set idx 0
-	    foreach src $source {
-		set ext [file extension $src]
-		if {$ext eq ".o" || $ext eq ".a"} {
-		    lappend new_source $src
-		} else {
-		    # Include an index in the temp filename so that
-		    # two source files with the same basename (e.g.
-		    # dir1/foo.cpp and dir2/foo.cpp) do not collide
-		    # to the same intermediate .o.
-		    set out \
-			[standard_temp_file \
-			     ${idx}-[file tail $src].hip.o]
-		    set res [gdb_compile $src $out object $options]
-		    if {$res ne ""} {
-			return $res
-		    }
-		    lappend new_source $out
-		}
-		incr idx
-	    }
-	    return [gdb_compile $new_source $dest $type $options]
-	}
-    }
-
     set outdir [file dirname $dest]
 
     # GDB doesn't support minimal symbols in AIX, so fail the compilation
@@ -6815,44 +6768,33 @@ proc gdb_compile {source dest type options} {
 	# These happen when we're compiling an executable _and_ all
 	# the input files are .o files, like: amdclang++ foo.o -o foo ...
 	#
-	# amdclang++ needs -x hip to treat .cpp/.c as HIP source when
-	# compiling, and --hip-link to link the HIP runtime when
-	# linking.  -x hip must NOT be passed when any .o input is
-	# present, otherwise amdclang++ tries to parse the .o file
-	# as HIP source.  The executable-linking path above pre-
-	# compiles all sources to .o first, so by the time we get
-	# here with $type == "executable" all inputs are .o files.
-	# For the $type == "object" path, $source is always a single
-	# source file, so -x hip is safe.  Add -O0 as default
-	# optimization.  If "optimize" is also requested, another
-	# -O flag (e.g. -O2) will be added to the flags, overriding
+	# amdclang++ does not infer the input language from the file
+	# extension the way hipcc did.  Rather than passing a single
+	# global "-x hip" in early_flags (which would also be applied
+	# to any .o inputs, e.g. set_unbuffered_mode.o injected via
+	# ldflags, causing amdclang++ to try to parse the object as
+	# HIP source), we tag each input individually just before
+	# target_compile: "-x hip" before .cpp/.c sources and
+	# "-x none" before .o/.a files.  --hip-link is still required
+	# when linking to bring in the HIP runtime.  Add -O0 as
+	# default optimization; if "optimize" is also requested,
+	# another -O flag (e.g. -O2) will be added later, overriding
 	# -O0.
-	set has_source_files 0
-	foreach src $source {
-	    set ext [file extension $src]
-	    if {$ext ne ".o" && $ext ne ".a"} {
-		set has_source_files 1
-		break
-	    }
-	}
-
 	set hip_early_flags "-O0\
 			     -mllvm=-amdgpu-spill-cfi-saved-regs\
 			     -Wno-unused-command-line-argument"
-	if {$has_source_files} {
-	    set hip_early_flags "-x hip $hip_early_flags"
-	}
 	if {$type eq "executable"} {
 	    set hip_early_flags "--hip-link $hip_early_flags"
 	}
-	# Pass --rocm-path explicitly so amdclang++ can locate the HIP
-	# headers and device libraries regardless of how it was invoked
-	# (full path vs bare name on PATH) or whether ROCM_PATH is set
-	# in the environment.  rocm_path comes from rocm.exp and
-	# defaults to /opt/rocm if ROCM_PATH is not set.
-	global rocm_path
-	if {[info exists rocm_path] && $rocm_path ne ""} {
-	    set hip_early_flags "--rocm-path=$rocm_path $hip_early_flags"
+	# When ROCM_PATH is set in the environment, pass --rocm-path
+	# so amdclang++ uses that specific ROCm install for HIP
+	# headers and device libraries.  When ROCM_PATH is not set,
+	# defer to amdclang++'s own HIP discovery, which looks under
+	# the parent of its own LLVM directory and falls back on
+	# /opt/rocm; overriding that here would silently mask the
+	# user's actual compiler-side install.
+	if {[info exists ::env(ROCM_PATH)] && $::env(ROCM_PATH) ne ""} {
+	    set hip_early_flags "--rocm-path=$::env(ROCM_PATH) $hip_early_flags"
 	}
 	lappend new_options "early_flags=$hip_early_flags"
 
@@ -7029,7 +6971,6 @@ proc gdb_compile {source dest type options} {
 		set unbuf_obj_options {nowarnings}
 		if {[lsearch -exact $options hip] != -1} {
 		    lappend unbuf_obj_options hip
-		    lappend unbuf_obj_options "additional_flags=-x hip"
 
 		    # Compile without --offload-arch (which is fine
 		    # because this object has no device code), because
@@ -7074,19 +7015,43 @@ proc gdb_compile {source dest type options} {
 	    # is used.
 	    if {[lsearch -regexp $options "-nostdlib"] < 0 } {
 		# Use ldflags to avoid copying the object file to
-		# the host multiple times.  For HIP, the generalized
-		# pre-compile at the top of gdb_compile ensures
-		# $source is all-.o by the time we get here, so
-		# -x hip is not in early_flags and appending another
-		# .o via ldflags is safe.
-		lappend options \
-		    "ldflags=$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
+		# the host multiple times.  For HIP, prefix "-x none"
+		# so amdclang++ does not treat the .o as HIP source
+		# (the immediately preceding command-line input may
+		# have been a .cpp/.c tagged with "-x hip").
+		if {$unbuf_obj_lang eq "hip"} {
+		    lappend options \
+			"ldflags=-x none $gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
+		} else {
+		    lappend options \
+			"ldflags=$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
+		}
 	    }
 	}
     }
 
     # Automatically handle includes in testsuite/lib/.
     auto_lappend_include_files options $source
+
+    # For HIP, amdclang++ does not infer the input language from the
+    # file extension the way hipcc did, so explicitly tag each input:
+    # "-x hip" before .cpp/.c/.cc/etc. sources, "-x none" before .o/.a
+    # so the compiler does not try to re-parse them as HIP source.
+    # This lets a single amdclang++ invocation correctly handle a mix
+    # of sources and object inputs (e.g. when set_unbuffered_mode.o
+    # is appended via ldflags later in the command line).
+    if {[lsearch -exact $options hip] != -1 && !$getting_compiler_info} {
+	set new_source {}
+	foreach src $source {
+	    set ext [file extension $src]
+	    if {$ext eq ".o" || $ext eq ".a"} {
+		lappend new_source "-x" "none" $src
+	    } else {
+		lappend new_source "-x" "hip" $src
+	    }
+	}
+	set source $new_source
+    }
 
     cond_wrap [expr {$pie != -1 || $nopie != -1}] \
 	with_PIE_multilib_flags_filtered {

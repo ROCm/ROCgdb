@@ -153,14 +153,6 @@ proc allow_hip_tests {} {
     return 0
 }
 
-# Backwards compatibility alias.  The testsuite previously used
-# allow_hipcc_tests when hipcc was the HIP compiler wrapper.  Keep
-# this alias so that any out-of-tree board files or scripts that
-# reference the old name continue to work.
-proc allow_hipcc_tests {} {
-    return [allow_hip_tests]
-}
-
 # Override this to fail faster.  If we let the default run, tests
 # compile successfully, but fail at link time.
 proc gdb_compile_pthreads {source dest type options} {
@@ -302,13 +294,15 @@ proc gdb_compile {source dest type options} {
 	#    '-mllvm -amdgpu-spill-cfi-saved-regs'
 	#    [-Wunused-command-line-argument]
 	#
-	# Pass --rocm-path explicitly so amdclang++ can locate the HIP
-	# headers and device libraries when it's invoked from the board
-	# via PATH rather than an absolute path.  rocm_path comes from
-	# rocm.exp and defaults to /opt/rocm if ROCM_PATH is not set.
-	global rocm_path
-	set hip_options "early_flags=\
-			 --rocm-path=$rocm_path\
+	# When ROCM_PATH is set in the environment, pass --rocm-path
+	# so amdclang++ uses that specific ROCm install for HIP.
+	# When unset, let amdclang++ auto-discover (parent of its own
+	# LLVM dir, falling back on /opt/rocm).
+	set rocm_path_arg ""
+	if {[info exists ::env(ROCM_PATH)] && $::env(ROCM_PATH) ne ""} {
+	    set rocm_path_arg "--rocm-path=$::env(ROCM_PATH)"
+	}
+	set hip_options "early_flags=$rocm_path_arg\
 			 -O0\
 			 -std=gnu++11\
 			 -fgpu-rdc\
@@ -380,7 +374,10 @@ proc gdb_compile {source dest type options} {
 		    # original may be automatically deleted.
 		    remote_download host $hip_driver_obj $gdb_saved_hip_driver_obj
 		}
-		lappend options "ldflags=$gdb_saved_hip_driver_obj"
+		# Prefix "-x none" so amdclang++ does not treat the
+		# driver .o as HIP source (the preceding inputs on
+		# the command line are .cpp tagged "-x hip").
+		lappend options "ldflags=-x none $gdb_saved_hip_driver_obj"
 
 		lappend options $hip_options
 		lappend options "early_flags=--hip-link"

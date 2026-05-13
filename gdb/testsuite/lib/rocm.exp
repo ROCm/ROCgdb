@@ -150,14 +150,6 @@ gdb_caching_proc allow_hip_tests {} {
     return 1
 }
 
-# Backwards compatibility alias.  The testsuite previously used
-# allow_hipcc_tests when the legacy hipcc wrapper was the HIP
-# compiler.  Keep this alias so that any out-of-tree test files
-# or scripts referencing the old name continue to work.
-gdb_caching_proc allow_hipcc_tests {} {
-    return [allow_hip_tests]
-}
-
 # Return true if GPU core dump tests are allowed.
 
 gdb_caching_proc allow_rocm_core_tests {} {
