@@ -6273,11 +6273,6 @@ The block nested just inside the global block is the @dfn{static
 block}.  The static block typically holds file-scoped variables and
 functions.
 
-@value{GDBN} provides a method to get a block's superblock, but there
-is currently no way to examine the sub-blocks of a block, or to
-iterate over all the blocks in a symbol table (@pxref{Symbol Tables In
-Python}).
-
 Here is a short example that should help explain blocks:
 
 @smallexample
