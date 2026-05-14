@@ -1,0 +1,156 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check that every struct inheriting from PyObject in the gdb/python/
+# directory has a corresponding static_assert for
+# gdb::is_python_allocatable_v immediately after the struct definition.
+# The expected format is:
+#
+#   struct some_new_type : public PyObject
+#   {
+#     ... fields go here ...
+#   };
+#
+#   static_assert (gdb::is_python_allocatable_v<some_new_type>);
+#
+# It is OK to add comments between the struct and the static_assert if
+# needed, but nothing else, the static_assert must be the next non-empty,
+# non-comment line.
+#
+# If the new type has no fields then this can be written like:
+#
+#   struct some_empty_type : public PyObject
+#   {};
+#
+#   static_assert (gdb::is_python_allocatable_v<some_empty_type>);
+#
+# We do have a few of these in GDB currently.  We require that the
+# static_assert still be present because (a) it has zero run-time cost,
+# and (b) it catches issues if fields are added in the future.
+
+set python_dir "$srcdir/$subdir/../../python"
+
+# Gather all .c and .h files in the python directory.
+set files [lsort [concat \
+		      [glob -nocomplain -directory $python_dir *.c] \
+		      [glob -nocomplain -directory $python_dir *.h]]]
+
+gdb_assert { [llength $files] > 0 } "found python source files"
+
+# Check a single file for PyObject-derived structs and matching
+# static_asserts.
+#
+# Opens FILENAME, reads it line by line looking for struct definitions of
+# the form "struct NAME : public PyObject".  For each one found, scans
+# forward past the struct body, then checks that a matching static_assert
+# line follows, allowing only blank lines and GDB-style comments to
+# intervene.
+
+proc check_file { filename } {
+    set fd [open $filename r]
+    set lines [split [read $fd] "\n"]
+    close $fd
+
+    set num_lines [llength $lines]
+    set short_name [file tail $filename]
+
+    for { set i 0 } { $i < $num_lines } { incr i } {
+	set line [lindex $lines $i]
+
+	# Look for struct definitions inheriting from PyObject.  These
+	# start in column 0.
+	if { ![regexp {^struct (\w+)\s*:\s*public PyObject} \
+		   $line whole struct_name] } {
+	    continue
+	}
+
+	set testname "$short_name: $struct_name: static assert check"
+
+	# Found a struct.  Now scan forward for the closing brace and
+	# semicolon.  Within the struct body, lines are either blank or
+	# start with whitespace.  The closing line starts in column 0.  For
+	# empty structs the open and close brace may appear together on a
+	# single line.
+	set found_close false
+	for { incr i } { $i < $num_lines } { incr i } {
+	    set line [lindex $lines $i]
+	    if { [regexp "^(?:\\{\\s*)?\\};" $line] } {
+		set found_close true
+		break
+	    }
+	}
+
+	if { !$found_close } {
+	    fail "$testname (no closing brace found)"
+	    continue
+	}
+
+	# Now scan forward from the line after the struct close, skipping
+	# empty lines and GDB-style /* ... */ comments.  The next non-blank,
+	# non-comment line should be the static_assert.
+	set in_comment false
+	set found_assert false
+	set found_other false
+	for { incr i } { $i < $num_lines } { incr i } {
+	    set line [lindex $lines $i]
+
+	    if { $in_comment } {
+		# Inside a multi-line comment, look for the closing "*/".
+		if { [regexp {\*/} $line] } {
+		    set in_comment false
+		}
+		continue
+	    }
+
+	    # Skip blank lines.
+	    if { [regexp {^\s*$} $line] } {
+		continue
+	    }
+
+	    # Check for the start of a comment.
+	    if { [regexp {^\s*/\*} $line] } {
+		# If the comment also ends on this line then we don't need
+		# to enter IN_COMMENT mode, we can just ignore this line.
+		if { ![regexp {\*/} $line] } {
+		    set in_comment true
+		}
+		continue
+	    }
+
+	    # This is a non-blank, non-comment line.  Check if it is the
+	    # expected static_assert.
+	    set expected \
+		"static_assert (gdb::is_python_allocatable_v<$struct_name>);"
+	    if { $line eq $expected } {
+		set found_assert true
+	    } else {
+		set found_other true
+	    }
+	    break
+	}
+
+	if { $found_assert } {
+	    pass $testname
+	} elseif { $found_other } {
+	    fail "$testname (missing static_assert)"
+	} else {
+	    fail "$testname (reached end of file)"
+	}
+    }
+}
+
+foreach file $files {
+    check_file $file
+}
