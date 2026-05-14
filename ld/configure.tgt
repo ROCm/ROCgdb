@@ -1024,8 +1024,10 @@ z8k-*-coff)		targ_emul=z8002
 			targ_extra_ofiles=
 			;;
 loongarch32-*)		targ_emul=elf32loongarch
+			targ_extra_libpath=elf64loongarch
 			;;
 loongarch64-*)		targ_emul=elf64loongarch
+			targ_extra_libpath=elf32loongarch
 			;;
 *-*-ieee*)		targ_emul=vanilla
 			targ_extra_ofiles=
