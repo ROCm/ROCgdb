@@ -7,6 +7,16 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
+- Add support for local memory out-of-address-range reporting for
+  architectures that support it.  Local memory out-of-address-range
+  reporting is controlled with the following commands:
+  - set amdgpu lds-out-of-addr-exception
+  - show amdgpu lds-out-of-addr-exception
+
+## ROCgdb-X for ROCm-next
+
+### Added
+
 - GDB now determines the name of AMD GPU threads based on the name of
   their kernel function.
 - Support for the HIP language and its built-in variables:
