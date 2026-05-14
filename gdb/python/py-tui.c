@@ -53,6 +53,8 @@ struct gdbpy_tui_window: public PyObject
   bool is_valid () const;
 };
 
+static_assert (gdb::is_python_allocatable_v<gdbpy_tui_window>);
+
 extern PyTypeObject gdbpy_tui_window_object_type;
 
 /* A TUI window written in Python.  */

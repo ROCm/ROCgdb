@@ -51,6 +51,8 @@ struct lazy_string_object : public PyObject
   PyObject *type;
 };
 
+static_assert (gdb::is_python_allocatable_v<lazy_string_object>);
+
 extern PyTypeObject lazy_string_object_type;
 
 static PyObject *

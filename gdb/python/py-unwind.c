@@ -104,6 +104,8 @@ struct unwind_info_object : public PyObject
   std::vector<saved_reg> *saved_regs;
 };
 
+static_assert (gdb::is_python_allocatable_v<unwind_info_object>);
+
 /* The data we keep for a frame we can unwind: frame ID and an array of
    (register_number, register_value) pairs.  */
 

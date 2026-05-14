@@ -27,6 +27,8 @@ struct linetable_entry_object : public PyObject
   CORE_ADDR pc;
 };
 
+static_assert (gdb::is_python_allocatable_v<linetable_entry_object>);
+
 extern PyTypeObject linetable_entry_object_type;
 
 struct linetable_object : public PyObject
@@ -36,6 +38,8 @@ struct linetable_object : public PyObject
      checks on it.  */
   PyObject *symtab;
 };
+
+static_assert (gdb::is_python_allocatable_v<linetable_object>);
 
 extern PyTypeObject linetable_object_type;
 
@@ -48,6 +52,8 @@ struct ltpy_iterator_object : public PyObject
      when an object file has been freed.  */
   PyObject *source;
 };
+
+static_assert (gdb::is_python_allocatable_v<ltpy_iterator_object>);
 
 extern PyTypeObject ltpy_iterator_object_type;
 

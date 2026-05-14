@@ -46,6 +46,8 @@ struct gdbpy_breakpoint_location_object : public PyObject
   gdbpy_breakpoint_object *owner;
 };
 
+static_assert (gdb::is_python_allocatable_v<gdbpy_breakpoint_location_object>);
+
 /* Require that BREAKPOINT and LOCATION->OWNER are the same; throw a Python
    exception if they are not.  */
 #define BPLOCPY_REQUIRE_VALID(Breakpoint, Location)                         \

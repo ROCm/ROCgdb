@@ -74,6 +74,8 @@ struct micmdpy_object : public PyObject
   char *mi_command_name;
 };
 
+static_assert (gdb::is_python_allocatable_v<micmdpy_object>);
+
 /* The MI command implemented in Python.  */
 
 struct mi_command_py : public mi_command

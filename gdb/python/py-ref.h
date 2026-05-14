@@ -21,6 +21,7 @@
 #define GDB_PYTHON_PY_REF_H
 
 #include "gdbsupport/gdb_ref_ptr.h"
+#include "python-traits.h"
 
 /* A policy class for gdb::ref_ptr for Python reference counting.  */
 struct gdbpy_ref_policy
@@ -101,5 +102,7 @@ struct gdbpy_dict_wrapper : public PyObject
     return dict != nullptr;
   }
 };
+
+static_assert (gdb::is_python_allocatable_v<gdbpy_dict_wrapper>);
 
 #endif /* GDB_PYTHON_PY_REF_H */

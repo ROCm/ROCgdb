@@ -48,6 +48,8 @@ struct btpy_list_object : public PyObject
   PyTypeObject* element_type;
 };
 
+static_assert (gdb::is_python_allocatable_v<btpy_list_object>);
+
 /* Python type for btrace lists.  */
 
 static PyTypeObject btpy_list_type = {

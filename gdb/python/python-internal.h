@@ -367,6 +367,8 @@ struct gdbpy_breakpoint_object : public PyObject
   int is_finish_bp;
 };
 
+static_assert (gdb::is_python_allocatable_v<gdbpy_breakpoint_object>);
+
 /* Require that BREAKPOINT be a valid breakpoint ID; throw a Python
    exception if it is invalid.  */
 #define BPPY_REQUIRE_VALID(Breakpoint)                                  \

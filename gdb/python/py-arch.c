@@ -27,6 +27,8 @@ struct arch_object : public PyObject
   struct gdbarch *gdbarch;
 };
 
+static_assert (gdb::is_python_allocatable_v<arch_object>);
+
 static const registry<gdbarch>::key<PyObject, gdb::noop_deleter<PyObject>>
      arch_object_data;
 

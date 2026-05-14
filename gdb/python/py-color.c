@@ -43,6 +43,8 @@ struct colorpy_object : public PyObject
   ui_file_style::color color;
 };
 
+static_assert (gdb::is_python_allocatable_v<colorpy_object>);
+
 extern PyTypeObject colorpy_object_type;
 
 /* See py-color.h.  */

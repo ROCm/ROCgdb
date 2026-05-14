@@ -34,6 +34,8 @@ struct recpy_record_object : public PyObject
   enum record_method method;
 };
 
+static_assert (gdb::is_python_allocatable_v<recpy_record_object>);
+
 /* Python recorded element object.  This is generic enough to represent
    recorded instructions as well as recorded function call segments, hence the
    generic name.  */
@@ -48,6 +50,8 @@ struct recpy_element_object : public PyObject
   /* Element number.  */
   Py_ssize_t number;
 };
+
+static_assert (gdb::is_python_allocatable_v<recpy_element_object>);
 
 /* Python RecordInstruction type.  */
 extern PyTypeObject recpy_insn_type;

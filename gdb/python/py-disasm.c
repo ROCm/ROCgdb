@@ -50,6 +50,8 @@ struct disasm_info_object : public PyObject
   struct disasm_info_object *next;
 };
 
+static_assert (gdb::is_python_allocatable_v<disasm_info_object>);
+
 extern PyTypeObject disasm_info_object_type;
 
 /* Implement gdb.disassembler.DisassembleAddressPart type.  An object of
@@ -69,6 +71,8 @@ struct disasm_addr_part_object : public PyObject
   struct gdbarch *gdbarch;
 };
 
+static_assert (gdb::is_python_allocatable_v<disasm_addr_part_object>);
+
 extern PyTypeObject disasm_addr_part_object_type;
 
 /* Implement gdb.disassembler.DisassembleTextPart type.  An object of
@@ -83,6 +87,8 @@ struct disasm_text_part_object : public PyObject
   /* The style to use when displaying this part.  */
   enum disassembler_style style;
 };
+
+static_assert (gdb::is_python_allocatable_v<disasm_text_part_object>);
 
 extern PyTypeObject disasm_text_part_object_type;
 
@@ -102,6 +108,8 @@ struct disasm_result_object : public PyObject
      Each part will be a DisassemblerPart sub-class.  */
   std::vector<gdbpy_ref<>> *parts;
 };
+
+static_assert (gdb::is_python_allocatable_v<disasm_result_object>);
 
 extern PyTypeObject disasm_result_object_type;
 

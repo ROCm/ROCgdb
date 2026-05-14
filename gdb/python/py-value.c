@@ -64,6 +64,8 @@ struct value_object : public PyObject
   PyObject *content_bytes;
 };
 
+static_assert (gdb::is_python_allocatable_v<value_object>);
+
 /* List of all values which are currently exposed to Python. It is
    maintained so that when an objfile is discarded, preserve_values
    can copy the values' types if needed.  */

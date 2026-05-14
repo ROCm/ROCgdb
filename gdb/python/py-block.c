@@ -33,6 +33,8 @@ struct block_object : public PyObject
   struct objfile *objfile;
 };
 
+static_assert (gdb::is_python_allocatable_v<block_object>);
+
 struct block_syms_iterator_object : public PyObject
 {
   /* The block.  */
@@ -46,6 +48,8 @@ struct block_syms_iterator_object : public PyObject
      when an object file has been freed.  */
   block_object *source;
 };
+
+static_assert (gdb::is_python_allocatable_v<block_syms_iterator_object>);
 
 /* Require a valid block.  All access to block_object->block should be
    gated by this call.  */

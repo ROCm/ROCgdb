@@ -65,6 +65,8 @@ struct corefile_mapped_file_object : public PyObject
   bool is_main_exec_p;
 };
 
+static_assert (gdb::is_python_allocatable_v<corefile_mapped_file_object>);
+
 extern PyTypeObject corefile_mapped_file_object_type;
 
 /* A gdb.CorefileMappedFileRegion object.  */
@@ -79,6 +81,8 @@ struct corefile_mapped_file_region_object : public PyObject
   /* The offset within the mapped file for this mapping.  */
   ULONGEST file_offset;
 };
+
+static_assert (gdb::is_python_allocatable_v<corefile_mapped_file_region_object>);
 
 extern PyTypeObject corefile_mapped_file_region_object_type;
 

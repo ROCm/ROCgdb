@@ -32,6 +32,8 @@ struct symtab_object : public PyObject
   struct symtab *symtab;
 };
 
+static_assert (gdb::is_python_allocatable_v<symtab_object>);
+
 extern PyTypeObject symtab_object_type;
 static const gdbpy_registry<gdbpy_memoizing_registry_storage<symtab_object,
   symtab, &symtab_object::symtab>> stpy_registry;
@@ -60,6 +62,8 @@ struct sal_object : public PyObject
   sal_object *prev;
   sal_object *next;
 };
+
+static_assert (gdb::is_python_allocatable_v<sal_object>);
 
 /* This is called when an objfile is about to be freed.  Invalidate
    the sal object as further actions on the sal would result in bad

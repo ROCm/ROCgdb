@@ -784,6 +784,8 @@ gdbpy_get_print_options (value_print_options *opts)
 struct printer_object : public PyObject
 {};
 
+static_assert (gdb::is_python_allocatable_v<printer_object>);
+
 /* The ValuePrinter type object.  */
 PyTypeObject printer_object_type =
 {

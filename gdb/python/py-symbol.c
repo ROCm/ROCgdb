@@ -31,6 +31,8 @@ struct symbol_object : public PyObject
   struct symbol *symbol;
 };
 
+static_assert (gdb::is_python_allocatable_v<symbol_object>);
+
 /* Require a valid symbol.  All access to symbol_object->symbol should be
    gated by this call.  */
 #define SYMPY_REQUIRE_VALID(symbol_obj, symbol)		\

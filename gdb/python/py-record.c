@@ -67,6 +67,8 @@ struct recpy_gap_object : public PyObject
   Py_ssize_t number;
 };
 
+static_assert (gdb::is_python_allocatable_v<recpy_gap_object>);
+
 /* Implementation of record.method.  */
 
 static PyObject *

@@ -42,6 +42,8 @@ struct connection_object : public PyObject
   struct process_stratum_target *target;
 };
 
+static_assert (gdb::is_python_allocatable_v<connection_object>);
+
 extern PyTypeObject connection_object_type;
 
 extern PyTypeObject remote_connection_object_type;

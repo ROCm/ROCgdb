@@ -44,6 +44,8 @@ struct frame_object : public PyObject
   int frame_id_is_next;
 };
 
+static_assert (gdb::is_python_allocatable_v<frame_object>);
+
 /* Require a valid frame.  This must be called inside a TRY_CATCH, or
    another context in which a gdb exception is allowed.  */
 #define FRAPY_REQUIRE_VALID(frame_obj, frame)		\

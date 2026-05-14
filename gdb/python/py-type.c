@@ -33,6 +33,8 @@ struct type_object : public PyObject
   struct type *type;
 };
 
+static_assert (gdb::is_python_allocatable_v<type_object>);
+
 extern PyTypeObject type_object_type;
 
 /* A Field object.  */
@@ -51,6 +53,8 @@ struct typy_iterator_object : public PyObject
   /* Pointer back to the original source type object.  */
   type_object *source;
 };
+
+static_assert (gdb::is_python_allocatable_v<typy_iterator_object>);
 
 extern PyTypeObject type_iterator_object_type;
 
