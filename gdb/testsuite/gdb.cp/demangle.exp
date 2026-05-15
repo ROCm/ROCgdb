@@ -156,6 +156,67 @@ proc test_gnuv3_style_demangling {} {
 	"List<VHDLEntity>::next(List<VHDLEntity>::Pix&&) const"
 }
 
+#
+# Test MSVC name demangling.
+#
+# These exercise libiberty's cplus_demangle dispatching to msvc_demangle,
+# which is registered by bfd_init when GDB is built with the MSVC
+# demangler enabled (auto-enabled for Windows/PE targets).  Symbols
+# starting with '?' are unambiguously MSVC-mangled.
+#
+
+proc test_msvc_demangling {} {
+    if {![gdb_msvc_demangler_built]} {
+	unsupported "MSVC demangler not built in"
+	return
+    }
+
+    # Switch to auto style so that '?'-prefixed names are dispatched
+    # to the MSVC handler.
+    with_test_prefix "msvc-auto" {
+	set_demangling_style "auto"
+
+	# Basic free function and template.
+	gdb_test_exact "demangle ?foo@@YAXXZ" "foo()"
+	gdb_test_exact "demangle ?bar@@YAHDH@Z" "bar(char, int)"
+	gdb_test_exact "demangle ??\$func@H@@YAHH@Z" "func<int>(int)"
+	gdb_test_exact "demangle ?v_int_typedef@@3HA" "v_int_typedef"
+
+	# Member function on class.
+	gdb_test_exact "demangle ?m1@C@@QAEXXZ" "C::m1()"
+
+	# Calling-convention variant (default formatting omits __stdcall).
+	gdb_test_exact "demangle ?stdcallFunc@@YGXXZ" "stdcallFunc()"
+
+	# Function-pointer parameter.
+	gdb_test_exact "demangle ?callback@Cb@@QEAAXP6AXH@Z@Z" \
+	    "Cb::callback(void ( *)(int))"
+    }
+
+    # Explicit "msvc" style: cplus_demangle passes DMGL_MSVC to the
+    # handler, which preserves MSVC-specific decorations (calling
+    # conventions, etc.) instead of stripping them.
+    with_test_prefix "msvc-style" {
+	set_demangling_style "msvc"
+
+	# __cdecl preserved on free functions.
+	gdb_test_exact "demangle ?foo@@YAXXZ" "void __cdecl foo(void)"
+	gdb_test_exact "demangle ?bar@@YAHDH@Z" \
+	    "int __cdecl bar(char, int)"
+	gdb_test_exact "demangle ??\$func@H@@YAHH@Z" \
+	    "int __cdecl func<int>(int)"
+	gdb_test_exact "demangle ?v_int_typedef@@3HA" "int v_int_typedef"
+
+	# __stdcall preserved on YG-encoded functions.
+	gdb_test_exact "demangle ?stdcallFunc@@YGXXZ" \
+	    "void __stdcall stdcallFunc(void)"
+
+	# __thiscall preserved on QAE member functions.
+	gdb_test_exact "demangle ?m1@C@@QAEXXZ" \
+	    "public: void __thiscall C::m1(void)"
+    }
+}
+
 proc catch_demangling_errors {command} {
     if {[catch {$command} result]} {
 	puts "ERROR: demangle.exp: while running $command: $result"
@@ -184,6 +245,7 @@ proc do_tests {} {
     # the functions raises a Tcl error, then it'll get reported, and
     # the rest of the functions will still run.
     catch_demangling_errors test_gnuv3_style_demangling
+    catch_demangling_errors test_msvc_demangling
 
     # Verify specifying demangle language.
     gdb_test_no_output "set language unknown"

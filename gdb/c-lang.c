@@ -920,7 +920,28 @@ public:
        (const char *mangled,
 	gdb::unique_xmalloc_ptr<char> *demangled) const override
   {
+    /* The Itanium demangler omits the return type except for function
+       templates, so without DMGL_RET_DROP the result depends on the
+       symbol.  The MSVC demangler cannot reproduce that without the
+       flag: in automatic mode it drops the return type of every
+       function, templates included.  Keeping it for templates when
+       DMGL_RET_DROP is absent is not done for now.  */
     *demangled = gdb_demangle (mangled, DMGL_PARAMS | DMGL_ANSI);
+
+    /* The LLVM MSVC demangler spells anonymous namespaces with backticks;
+       replace with the GDB canonical form.  Both strings are the same
+       length so memcpy suffices.  */
+    if (*demangled != nullptr)
+      {
+	static const char anon_bt[]  = "`anonymous namespace'";
+	static const char anon_gdb[] = "(anonymous namespace)";
+	char *p = demangled->get ();
+	while ((p = strstr (p, anon_bt)) != nullptr)
+	  {
+	    memcpy (p, anon_gdb, strlen (anon_gdb));
+	    p += strlen (anon_gdb);
+	  }
+      }
     return *demangled != NULL;
   }
 
