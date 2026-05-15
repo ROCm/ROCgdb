@@ -46,6 +46,7 @@ static const struct option long_options[] =
   {"recursion-limit", no_argument, NULL, 'R'},
   {"no-recurse-limit", no_argument, NULL, 'r'},
   {"no-recursion-limit", no_argument, NULL, 'r'},
+  {"msvc-full", no_argument, NULL, 'M'},
   {NULL, no_argument, NULL, 0}
 };
 
@@ -53,12 +54,24 @@ static void
 demangle_it (char *mangled_name)
 {
   char *result;
-  unsigned int skip_first = 0;
+  size_t skip_first = 0;
+
+#ifdef HAVE_MSVC_DEMANGLER
+  /* MSVC compiler-emitted wrappers have the shape '$<tag>$?...'
+     (e.g. $unwind$?, $pdata$?, $xdata$?, $LN<n>$?).  Peel the
+     '$<tag>$' so cplus_demangle sees the '?'-mangled core.  */
+  if (mangled_name[0] == '$')
+    {
+      const char *q = strchr (mangled_name + 1, '$');
+      if (q != NULL && q[1] == '?')
+	skip_first = (size_t) (q + 1 - mangled_name);
+    }
+#endif
 
   /* _ and $ are sometimes found at the start of function names
      in assembler sources in order to distinguish them from other
      names (eg register names).  So skip them here.  */
-  if (mangled_name[0] == '.' || mangled_name[0] == '$')
+  if (mangled_name[skip_first] == '.' || mangled_name[skip_first] == '$')
     ++skip_first;
   if (strip_underscore && mangled_name[skip_first] == '_')
     ++skip_first;
@@ -105,10 +118,31 @@ Options are:\n\
 	   TARGET_PREPENDS_UNDERSCORE ? "" : " (default)");
   fprintf (stream, "\
   [-p|--no-params]            Do not display function arguments\n\
-  [-i|--no-verbose]           Do not show implementation details (if any)\n\
-  [-R|--recurse-limit]        Enable a limit on recursion whilst demangling.  [Default]\n\
-  ]-r|--no-recurse-limit]     Disable a limit on recursion whilst demangling\n\
-  [-t|--types]                Also attempt to demangle type encodings\n\
+  [-i|--no-verbose]           Do not show implementation details (if any)\n");
+#ifdef HAVE_MSVC_DEMANGLER
+  fprintf (stream, "\
+			      (Ignored for MSVC demangling)\n\
+  [-M|--msvc-full]            Preserve MSVC keywords (__cdecl, etc.)\n");
+#endif
+  fprintf (stream, "\
+  [-R|--recurse-limit]        Enable a limit on recursion whilst demangling.  [Default]\n");
+#ifdef HAVE_MSVC_DEMANGLER
+  fprintf (stream, "\
+			      (Ignored for MSVC demangling)\n");
+#endif
+  fprintf (stream, "\
+  [-r|--no-recurse-limit]     Disable a limit on recursion whilst demangling\n");
+#ifdef HAVE_MSVC_DEMANGLER
+  fprintf (stream, "\
+			      (Always on for MSVC demangling)\n");
+#endif
+  fprintf (stream, "\
+  [-t|--types]                Also attempt to demangle type encodings\n");
+#ifdef HAVE_MSVC_DEMANGLER
+  fprintf (stream, "\
+			      (Always on for MSVC demangling)\n");
+#endif
+  fprintf (stream, "\
   [-s|--format ");
   print_demangler_list (stream);
   fprintf (stream, "]\n");
@@ -148,9 +182,14 @@ main (int argc, char **argv)
   xmalloc_set_program_name (program_name);
   bfd_set_error_program_name (program_name);
 
+  /* bfd_init installs the MSVC demangler handler into libiberty
+     (when binutils was configured with MSVC demangling enabled).  */
+  if (bfd_init () != BFD_INIT_MAGIC)
+    fatal (_("fatal error: libbfd ABI mismatch"));
+
   expandargv (&argc, &argv);
 
-  while ((c = getopt_long (argc, argv, "_hinprRs:tv", long_options, (int *) 0)) != EOF)
+  while ((c = getopt_long (argc, argv, "_hinMprRs:tv", long_options, (int *) 0)) != EOF)
     {
       switch (c)
 	{
@@ -164,6 +203,9 @@ main (int argc, char **argv)
 	  break;
 	case 'p':
 	  flags &= ~ DMGL_PARAMS;
+	  break;
+	case 'M':
+	  flags |= DMGL_MSVC;
 	  break;
 	case 'r':
 	  flags |= DMGL_NO_RECURSE_LIMIT;

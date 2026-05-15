@@ -119,6 +119,7 @@ BFDDIR = $(BASEDIR)/bfd
 INCDIR	= $(BASEDIR)/include
 
 AM_CPPFLAGS = -I. -I$(srcdir) -I../bfd -I$(BFDDIR) -I$(INCDIR) \
+	 @MSVC_DEMANGLER_INCLUDE@ \
 	 @HDEFINES@ \
 	 @INCINTL@ \
 	 @LARGEFILE_CPPFLAGS@ \
@@ -181,6 +182,50 @@ endif
 LIBSFRAME = ../libsframe/libsframe.la
 
 LIBIBERTY = ../libiberty/libiberty.a
+
+if ENABLE_MSVC_DEMANGLER
+LIBDEMANGLE_MSVC = ../libdemangle-msvc/libdemangle-msvc.a
+else
+LIBDEMANGLE_MSVC =
+endif
+
+# Fold libdemangle-msvc into BFDLIB so every tool that links libbfd
+# automatically picks up the MSVC demangler that bfd_init() registers.
+BFDLIB += $(LIBDEMANGLE_MSVC)
+
+# Every tool that links libbfd needs C++ linking when libdemangle-msvc
+# is enabled.  Override individual *_LINK for each program.
+if ENABLE_MSVC_DEMANGLER
+BINUTILS_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXX) $(AM_CXXFLAGS) $(CXXFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+else
+BINUTILS_LINK = $(LINK)
+endif
+
+objdump_LINK = $(BINUTILS_LINK)
+nm_new_LINK = $(BINUTILS_LINK)
+addr2line_LINK = $(BINUTILS_LINK)
+cxxfilt_LINK = $(BINUTILS_LINK)
+readelf_LINK = $(BINUTILS_LINK)
+size_LINK = $(BINUTILS_LINK)
+ar_LINK = $(BINUTILS_LINK)
+strings_LINK = $(BINUTILS_LINK)
+ranlib_LINK = $(BINUTILS_LINK)
+objcopy_LINK = $(BINUTILS_LINK)
+strip_new_LINK = $(BINUTILS_LINK)
+elfedit_LINK = $(BINUTILS_LINK)
+coremerge_LINK = $(BINUTILS_LINK)
+srconv_LINK = $(BINUTILS_LINK)
+sysdump_LINK = $(BINUTILS_LINK)
+coffdump_LINK = $(BINUTILS_LINK)
+dlltool_LINK = $(BINUTILS_LINK)
+windres_LINK = $(BINUTILS_LINK)
+windmc_LINK = $(BINUTILS_LINK)
+dllwrap_LINK = $(BINUTILS_LINK)
+bfdtest1_LINK = $(BINUTILS_LINK)
+bfdtest2_LINK = $(BINUTILS_LINK)
+testsuite_gentestdlls_LINK = $(BINUTILS_LINK)
 
 POTFILES = $(CFILES) $(DEBUG_SRCS) $(HFILES)
 po/POTFILES.in: @MAINT@ Makefile
@@ -247,7 +292,7 @@ dlltool_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 windres_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 windmc_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 addr2line_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
-readelf_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(LIBCTF_NOBFD) $(LIBSFRAME)
+readelf_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(LIBCTF_NOBFD) $(LIBSFRAME) $(LIBDEMANGLE_MSVC)
 elfedit_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY)
 dllwrap_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY)
 bfdtest1_DEPENDENCIES =  $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
@@ -263,7 +308,7 @@ objcopy_SOURCES = not-strip.c rename.c $(WRITE_DEBUG_SRCS) $(BULIBS)
 strings_SOURCES = strings.c $(BULIBS)
 
 readelf_SOURCES = readelf.c version.c unwind-ia64.c dwarf.c demanguse.c $(ELFLIBS)
-readelf_LDADD   = $(LIBCTF_NOBFD) $(LIBINTL) $(LIBIBERTY) $(ZLIB) $(ZSTD_LIBS) $(DEBUGINFOD_LIBS) $(MSGPACK_LIBS) $(LIBSFRAME)
+readelf_LDADD   = $(LIBCTF_NOBFD) $(LIBINTL) $(LIBIBERTY) $(ZLIB) $(ZSTD_LIBS) $(DEBUGINFOD_LIBS) $(MSGPACK_LIBS) $(LIBSFRAME) $(LIBDEMANGLE_MSVC)
 
 elfedit_SOURCES = elfedit.c version.c $(ELFLIBS)
 elfedit_LDADD = $(LIBINTL) $(LIBIBERTY)

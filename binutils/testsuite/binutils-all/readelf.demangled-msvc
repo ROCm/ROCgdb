@@ -1,0 +1,9 @@
+
+Symbol table '.symtab' contains .* entries:
+#...
+.*void foo\(void\)
+#...
+.*int bar\(char, int\)
+#...
+.*int func<int>\(int\)
+#pass

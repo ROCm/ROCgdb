@@ -206,11 +206,9 @@ am__objects_1 = bucomm.$(OBJEXT) version.$(OBJEXT) filemode.$(OBJEXT)
 am_addr2line_OBJECTS = addr2line.$(OBJEXT) $(am__objects_1)
 addr2line_OBJECTS = $(am_addr2line_OBJECTS)
 addr2line_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
+@ENABLE_MSVC_DEMANGLER_TRUE@am__DEPENDENCIES_1 = ../libdemangle-msvc/libdemangle-msvc.a
+am__DEPENDENCIES_2 = ../bfd/libbfd.la $(am__DEPENDENCIES_1)
+am__DEPENDENCIES_3 =
 am_ar_OBJECTS = arparse.$(OBJEXT) arlex.$(OBJEXT) not-ranlib.$(OBJEXT) \
 	arsup.$(OBJEXT) rename.$(OBJEXT) binemul.$(OBJEXT) \
 	emul_$(EMULATION).$(OBJEXT) $(am__objects_1)
@@ -253,7 +251,7 @@ am_objdump_OBJECTS = objdump.$(OBJEXT) dwarf.$(OBJEXT) prdbg.$(OBJEXT) \
 	demanguse.$(OBJEXT) $(am__objects_3) $(am__objects_1) \
 	$(am__objects_2)
 objdump_OBJECTS = $(am_objdump_OBJECTS)
-@ENABLE_LIBCTF_TRUE@am__DEPENDENCIES_2 = ../libctf/libctf.la
+@ENABLE_LIBCTF_TRUE@am__DEPENDENCIES_4 = ../libctf/libctf.la
 am_ranlib_OBJECTS = arparse.$(OBJEXT) arlex.$(OBJEXT) \
 	is-ranlib.$(OBJEXT) arsup.$(OBJEXT) rename.$(OBJEXT) \
 	binemul.$(OBJEXT) emul_$(EMULATION).$(OBJEXT) $(am__objects_1)
@@ -262,7 +260,7 @@ am_readelf_OBJECTS = readelf.$(OBJEXT) version.$(OBJEXT) \
 	unwind-ia64.$(OBJEXT) dwarf.$(OBJEXT) demanguse.$(OBJEXT) \
 	$(am__objects_2)
 readelf_OBJECTS = $(am_readelf_OBJECTS)
-@ENABLE_LIBCTF_TRUE@am__DEPENDENCIES_3 = ../libctf/libctf-nobfd.la
+@ENABLE_LIBCTF_TRUE@am__DEPENDENCIES_5 = ../libctf/libctf-nobfd.la
 am_size_OBJECTS = size.$(OBJEXT) $(am__objects_1)
 size_OBJECTS = $(am_size_OBJECTS)
 size_LDADD = $(LDADD)
@@ -284,8 +282,8 @@ testsuite_gentestdlls_SOURCES = testsuite/gentestdlls.c
 am__dirstamp = $(am__leading_dot)dirstamp
 testsuite_gentestdlls_OBJECTS = testsuite/gentestdlls.$(OBJEXT)
 testsuite_gentestdlls_LDADD = $(LDADD)
-testsuite_gentestdlls_DEPENDENCIES = $(BFDLIB) $(LIBIBERTY) \
-	$(am__DEPENDENCIES_1)
+testsuite_gentestdlls_DEPENDENCIES = $(am__DEPENDENCIES_2) \
+	$(LIBIBERTY) $(am__DEPENDENCIES_3)
 am_windmc_OBJECTS = windmc.$(OBJEXT) mcparse.$(OBJEXT) mclex.$(OBJEXT) \
 	winduni.$(OBJEXT) $(am__objects_1)
 windmc_OBJECTS = $(am_windmc_OBJECTS)
@@ -340,6 +338,10 @@ am__depfiles_maybe = depfiles
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 = 
 LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
 	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
@@ -493,6 +495,10 @@ CC_FOR_BUILD = @CC_FOR_BUILD@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DATADIRNAME = @DATADIRNAME@
 DEBUGINFOD_CFLAGS = @DEBUGINFOD_CFLAGS@
@@ -551,6 +557,7 @@ MSGFMT = @MSGFMT@
 MSGMERGE = @MSGMERGE@
 MSGPACK_CFLAGS = @MSGPACK_CFLAGS@
 MSGPACK_LIBS = @MSGPACK_LIBS@
+MSVC_DEMANGLER_INCLUDE = @MSVC_DEMANGLER_INCLUDE@
 NM = @NM@
 NMEDIT = @NMEDIT@
 NO_WERROR = @NO_WERROR@
@@ -594,6 +601,7 @@ abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
@@ -705,6 +713,7 @@ BASEDIR = $(srcdir)/..
 BFDDIR = $(BASEDIR)/bfd
 INCDIR = $(BASEDIR)/include
 AM_CPPFLAGS = -I. -I$(srcdir) -I../bfd -I$(BFDDIR) -I$(INCDIR) \
+	 @MSVC_DEMANGLER_INCLUDE@ \
 	 @HDEFINES@ \
 	 @INCINTL@ \
 	 @LARGEFILE_CPPFLAGS@ \
@@ -747,7 +756,10 @@ BULIBS = bucomm.c version.c filemode.c
 
 # Code shared by the ELF related programs.
 ELFLIBS = elfcomm.c
-BFDLIB = ../bfd/libbfd.la
+
+# Fold libdemangle-msvc into BFDLIB so every tool that links libbfd
+# automatically picks up the MSVC demangler that bfd_init() registers.
+BFDLIB = ../bfd/libbfd.la $(LIBDEMANGLE_MSVC)
 OPCODES = ../opcodes/libopcodes.la
 @ENABLE_LIBCTF_FALSE@LIBCTF = 
 @ENABLE_LIBCTF_TRUE@LIBCTF = ../libctf/libctf.la
@@ -755,6 +767,39 @@ OPCODES = ../opcodes/libopcodes.la
 @ENABLE_LIBCTF_TRUE@LIBCTF_NOBFD = ../libctf/libctf-nobfd.la
 LIBSFRAME = ../libsframe/libsframe.la
 LIBIBERTY = ../libiberty/libiberty.a
+@ENABLE_MSVC_DEMANGLER_FALSE@LIBDEMANGLE_MSVC = 
+@ENABLE_MSVC_DEMANGLER_TRUE@LIBDEMANGLE_MSVC = ../libdemangle-msvc/libdemangle-msvc.a
+@ENABLE_MSVC_DEMANGLER_FALSE@BINUTILS_LINK = $(LINK)
+
+# Every tool that links libbfd needs C++ linking when libdemangle-msvc
+# is in the mix.  Override individual *_LINK for each program.
+@ENABLE_MSVC_DEMANGLER_TRUE@BINUTILS_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+@ENABLE_MSVC_DEMANGLER_TRUE@	$(LIBTOOLFLAGS) --mode=link $(CXX) $(AM_CXXFLAGS) $(CXXFLAGS) \
+@ENABLE_MSVC_DEMANGLER_TRUE@	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+
+objdump_LINK = $(BINUTILS_LINK)
+nm_new_LINK = $(BINUTILS_LINK)
+addr2line_LINK = $(BINUTILS_LINK)
+cxxfilt_LINK = $(BINUTILS_LINK)
+readelf_LINK = $(BINUTILS_LINK)
+size_LINK = $(BINUTILS_LINK)
+ar_LINK = $(BINUTILS_LINK)
+strings_LINK = $(BINUTILS_LINK)
+ranlib_LINK = $(BINUTILS_LINK)
+objcopy_LINK = $(BINUTILS_LINK)
+strip_new_LINK = $(BINUTILS_LINK)
+elfedit_LINK = $(BINUTILS_LINK)
+coremerge_LINK = $(BINUTILS_LINK)
+srconv_LINK = $(BINUTILS_LINK)
+sysdump_LINK = $(BINUTILS_LINK)
+coffdump_LINK = $(BINUTILS_LINK)
+dlltool_LINK = $(BINUTILS_LINK)
+windres_LINK = $(BINUTILS_LINK)
+windmc_LINK = $(BINUTILS_LINK)
+dllwrap_LINK = $(BINUTILS_LINK)
+bfdtest1_LINK = $(BINUTILS_LINK)
+bfdtest2_LINK = $(BINUTILS_LINK)
+testsuite_gentestdlls_LINK = $(BINUTILS_LINK)
 POTFILES = $(CFILES) $(DEBUG_SRCS) $(HFILES)
 EXPECT = expect
 RUNTEST = runtest
@@ -793,7 +838,7 @@ dlltool_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 windres_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 windmc_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 addr2line_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
-readelf_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(LIBCTF_NOBFD) $(LIBSFRAME)
+readelf_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(LIBCTF_NOBFD) $(LIBSFRAME) $(LIBDEMANGLE_MSVC)
 elfedit_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY)
 dllwrap_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY)
 bfdtest1_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
@@ -804,7 +849,7 @@ size_SOURCES = size.c $(BULIBS)
 objcopy_SOURCES = not-strip.c rename.c $(WRITE_DEBUG_SRCS) $(BULIBS)
 strings_SOURCES = strings.c $(BULIBS)
 readelf_SOURCES = readelf.c version.c unwind-ia64.c dwarf.c demanguse.c $(ELFLIBS)
-readelf_LDADD = $(LIBCTF_NOBFD) $(LIBINTL) $(LIBIBERTY) $(ZLIB) $(ZSTD_LIBS) $(DEBUGINFOD_LIBS) $(MSGPACK_LIBS) $(LIBSFRAME)
+readelf_LDADD = $(LIBCTF_NOBFD) $(LIBINTL) $(LIBIBERTY) $(ZLIB) $(ZSTD_LIBS) $(DEBUGINFOD_LIBS) $(MSGPACK_LIBS) $(LIBSFRAME) $(LIBDEMANGLE_MSVC)
 elfedit_SOURCES = elfedit.c version.c $(ELFLIBS)
 elfedit_LDADD = $(LIBINTL) $(LIBIBERTY)
 strip_new_SOURCES = is-strip.c rename.c $(WRITE_DEBUG_SRCS) $(BULIBS)
@@ -1010,89 +1055,89 @@ clean-noinstPROGRAMS:
 
 addr2line$(EXEEXT): $(addr2line_OBJECTS) $(addr2line_DEPENDENCIES) $(EXTRA_addr2line_DEPENDENCIES) 
 	@rm -f addr2line$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(addr2line_OBJECTS) $(addr2line_LDADD) $(LIBS)
+	$(AM_V_GEN)$(addr2line_LINK) $(addr2line_OBJECTS) $(addr2line_LDADD) $(LIBS)
 arparse.h: arparse.c
 	@if test ! -f $@; then rm -f arparse.c; else :; fi
 	@if test ! -f $@; then $(MAKE) $(AM_MAKEFLAGS) arparse.c; else :; fi
 
 ar$(EXEEXT): $(ar_OBJECTS) $(ar_DEPENDENCIES) $(EXTRA_ar_DEPENDENCIES) 
 	@rm -f ar$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(ar_OBJECTS) $(ar_LDADD) $(LIBS)
+	$(AM_V_GEN)$(ar_LINK) $(ar_OBJECTS) $(ar_LDADD) $(LIBS)
 
 bfdtest1$(EXEEXT): $(bfdtest1_OBJECTS) $(bfdtest1_DEPENDENCIES) $(EXTRA_bfdtest1_DEPENDENCIES) 
 	@rm -f bfdtest1$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(bfdtest1_OBJECTS) $(bfdtest1_LDADD) $(LIBS)
+	$(AM_V_GEN)$(bfdtest1_LINK) $(bfdtest1_OBJECTS) $(bfdtest1_LDADD) $(LIBS)
 
 bfdtest2$(EXEEXT): $(bfdtest2_OBJECTS) $(bfdtest2_DEPENDENCIES) $(EXTRA_bfdtest2_DEPENDENCIES) 
 	@rm -f bfdtest2$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(bfdtest2_OBJECTS) $(bfdtest2_LDADD) $(LIBS)
+	$(AM_V_GEN)$(bfdtest2_LINK) $(bfdtest2_OBJECTS) $(bfdtest2_LDADD) $(LIBS)
 
 coffdump$(EXEEXT): $(coffdump_OBJECTS) $(coffdump_DEPENDENCIES) $(EXTRA_coffdump_DEPENDENCIES) 
 	@rm -f coffdump$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(coffdump_OBJECTS) $(coffdump_LDADD) $(LIBS)
+	$(AM_V_GEN)$(coffdump_LINK) $(coffdump_OBJECTS) $(coffdump_LDADD) $(LIBS)
 
 coremerge$(EXEEXT): $(coremerge_OBJECTS) $(coremerge_DEPENDENCIES) $(EXTRA_coremerge_DEPENDENCIES) 
 	@rm -f coremerge$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(coremerge_OBJECTS) $(coremerge_LDADD) $(LIBS)
+	$(AM_V_GEN)$(coremerge_LINK) $(coremerge_OBJECTS) $(coremerge_LDADD) $(LIBS)
 
 cxxfilt$(EXEEXT): $(cxxfilt_OBJECTS) $(cxxfilt_DEPENDENCIES) $(EXTRA_cxxfilt_DEPENDENCIES) 
 	@rm -f cxxfilt$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(cxxfilt_OBJECTS) $(cxxfilt_LDADD) $(LIBS)
+	$(AM_V_GEN)$(cxxfilt_LINK) $(cxxfilt_OBJECTS) $(cxxfilt_LDADD) $(LIBS)
 defparse.h: defparse.c
 	@if test ! -f $@; then rm -f defparse.c; else :; fi
 	@if test ! -f $@; then $(MAKE) $(AM_MAKEFLAGS) defparse.c; else :; fi
 
 dlltool$(EXEEXT): $(dlltool_OBJECTS) $(dlltool_DEPENDENCIES) $(EXTRA_dlltool_DEPENDENCIES) 
 	@rm -f dlltool$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(dlltool_OBJECTS) $(dlltool_LDADD) $(LIBS)
+	$(AM_V_GEN)$(dlltool_LINK) $(dlltool_OBJECTS) $(dlltool_LDADD) $(LIBS)
 
 dllwrap$(EXEEXT): $(dllwrap_OBJECTS) $(dllwrap_DEPENDENCIES) $(EXTRA_dllwrap_DEPENDENCIES) 
 	@rm -f dllwrap$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(dllwrap_OBJECTS) $(dllwrap_LDADD) $(LIBS)
+	$(AM_V_GEN)$(dllwrap_LINK) $(dllwrap_OBJECTS) $(dllwrap_LDADD) $(LIBS)
 
 elfedit$(EXEEXT): $(elfedit_OBJECTS) $(elfedit_DEPENDENCIES) $(EXTRA_elfedit_DEPENDENCIES) 
 	@rm -f elfedit$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(elfedit_OBJECTS) $(elfedit_LDADD) $(LIBS)
+	$(AM_V_GEN)$(elfedit_LINK) $(elfedit_OBJECTS) $(elfedit_LDADD) $(LIBS)
 
 nm-new$(EXEEXT): $(nm_new_OBJECTS) $(nm_new_DEPENDENCIES) $(EXTRA_nm_new_DEPENDENCIES) 
 	@rm -f nm-new$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(nm_new_OBJECTS) $(nm_new_LDADD) $(LIBS)
+	$(AM_V_GEN)$(nm_new_LINK) $(nm_new_OBJECTS) $(nm_new_LDADD) $(LIBS)
 
 objcopy$(EXEEXT): $(objcopy_OBJECTS) $(objcopy_DEPENDENCIES) $(EXTRA_objcopy_DEPENDENCIES) 
 	@rm -f objcopy$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(objcopy_OBJECTS) $(objcopy_LDADD) $(LIBS)
+	$(AM_V_GEN)$(objcopy_LINK) $(objcopy_OBJECTS) $(objcopy_LDADD) $(LIBS)
 
 objdump$(EXEEXT): $(objdump_OBJECTS) $(objdump_DEPENDENCIES) $(EXTRA_objdump_DEPENDENCIES) 
 	@rm -f objdump$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(objdump_OBJECTS) $(objdump_LDADD) $(LIBS)
+	$(AM_V_GEN)$(objdump_LINK) $(objdump_OBJECTS) $(objdump_LDADD) $(LIBS)
 
 ranlib$(EXEEXT): $(ranlib_OBJECTS) $(ranlib_DEPENDENCIES) $(EXTRA_ranlib_DEPENDENCIES) 
 	@rm -f ranlib$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(ranlib_OBJECTS) $(ranlib_LDADD) $(LIBS)
+	$(AM_V_GEN)$(ranlib_LINK) $(ranlib_OBJECTS) $(ranlib_LDADD) $(LIBS)
 
 readelf$(EXEEXT): $(readelf_OBJECTS) $(readelf_DEPENDENCIES) $(EXTRA_readelf_DEPENDENCIES) 
 	@rm -f readelf$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(readelf_OBJECTS) $(readelf_LDADD) $(LIBS)
+	$(AM_V_GEN)$(readelf_LINK) $(readelf_OBJECTS) $(readelf_LDADD) $(LIBS)
 
 size$(EXEEXT): $(size_OBJECTS) $(size_DEPENDENCIES) $(EXTRA_size_DEPENDENCIES) 
 	@rm -f size$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(size_OBJECTS) $(size_LDADD) $(LIBS)
+	$(AM_V_GEN)$(size_LINK) $(size_OBJECTS) $(size_LDADD) $(LIBS)
 
 srconv$(EXEEXT): $(srconv_OBJECTS) $(srconv_DEPENDENCIES) $(EXTRA_srconv_DEPENDENCIES) 
 	@rm -f srconv$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(srconv_OBJECTS) $(srconv_LDADD) $(LIBS)
+	$(AM_V_GEN)$(srconv_LINK) $(srconv_OBJECTS) $(srconv_LDADD) $(LIBS)
 
 strings$(EXEEXT): $(strings_OBJECTS) $(strings_DEPENDENCIES) $(EXTRA_strings_DEPENDENCIES) 
 	@rm -f strings$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(strings_OBJECTS) $(strings_LDADD) $(LIBS)
+	$(AM_V_GEN)$(strings_LINK) $(strings_OBJECTS) $(strings_LDADD) $(LIBS)
 
 strip-new$(EXEEXT): $(strip_new_OBJECTS) $(strip_new_DEPENDENCIES) $(EXTRA_strip_new_DEPENDENCIES) 
 	@rm -f strip-new$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(strip_new_OBJECTS) $(strip_new_LDADD) $(LIBS)
+	$(AM_V_GEN)$(strip_new_LINK) $(strip_new_OBJECTS) $(strip_new_LDADD) $(LIBS)
 
 sysdump$(EXEEXT): $(sysdump_OBJECTS) $(sysdump_DEPENDENCIES) $(EXTRA_sysdump_DEPENDENCIES) 
 	@rm -f sysdump$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(sysdump_OBJECTS) $(sysdump_LDADD) $(LIBS)
+	$(AM_V_GEN)$(sysdump_LINK) $(sysdump_OBJECTS) $(sysdump_LDADD) $(LIBS)
 testsuite/$(am__dirstamp):
 	@$(MKDIR_P) testsuite
 	@: > testsuite/$(am__dirstamp)
@@ -1104,21 +1149,21 @@ testsuite/gentestdlls.$(OBJEXT): testsuite/$(am__dirstamp) \
 
 testsuite/gentestdlls$(EXEEXT): $(testsuite_gentestdlls_OBJECTS) $(testsuite_gentestdlls_DEPENDENCIES) $(EXTRA_testsuite_gentestdlls_DEPENDENCIES) testsuite/$(am__dirstamp)
 	@rm -f testsuite/gentestdlls$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(testsuite_gentestdlls_OBJECTS) $(testsuite_gentestdlls_LDADD) $(LIBS)
+	$(AM_V_GEN)$(testsuite_gentestdlls_LINK) $(testsuite_gentestdlls_OBJECTS) $(testsuite_gentestdlls_LDADD) $(LIBS)
 mcparse.h: mcparse.c
 	@if test ! -f $@; then rm -f mcparse.c; else :; fi
 	@if test ! -f $@; then $(MAKE) $(AM_MAKEFLAGS) mcparse.c; else :; fi
 
 windmc$(EXEEXT): $(windmc_OBJECTS) $(windmc_DEPENDENCIES) $(EXTRA_windmc_DEPENDENCIES) 
 	@rm -f windmc$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(windmc_OBJECTS) $(windmc_LDADD) $(LIBS)
+	$(AM_V_GEN)$(windmc_LINK) $(windmc_OBJECTS) $(windmc_LDADD) $(LIBS)
 rcparse.h: rcparse.c
 	@if test ! -f $@; then rm -f rcparse.c; else :; fi
 	@if test ! -f $@; then $(MAKE) $(AM_MAKEFLAGS) rcparse.c; else :; fi
 
 windres$(EXEEXT): $(windres_OBJECTS) $(windres_DEPENDENCIES) $(EXTRA_windres_DEPENDENCIES) 
 	@rm -f windres$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(windres_OBJECTS) $(windres_LDADD) $(LIBS)
+	$(AM_V_GEN)$(windres_LINK) $(windres_OBJECTS) $(windres_LDADD) $(LIBS)
 install-binSCRIPTS: $(bin_SCRIPTS)
 	@$(NORMAL_INSTALL)
 	@list='$(bin_SCRIPTS)'; test -n "$(bindir)" || list=; \
