@@ -2245,14 +2245,14 @@ riscv_parse_check_conflicts (riscv_parse_subset_t *rps)
       && riscv_lookup_subset (rps->subset_list, "f", &subset))
     {
       rps->error_handler
-	(_("`zfinx' is conflict with the `f/d/q/zfh/zfhmin' extension"));
+	(_("`zfinx' conflicts with the `f/d/q/zfh/zfhmin' extension"));
       no_conflict = false;
     }
   if (riscv_lookup_subset (rps->subset_list, "xtheadvector", &subset)
       && riscv_lookup_subset (rps->subset_list, "zve32x", &subset))
     {
       rps->error_handler
-	(_("`xtheadvector' is conflict with the `v/zve32x' extension"));
+	(_("`xtheadvector' conflicts with the `v/zve32x' extension"));
       no_conflict = false;
     }
   if (riscv_lookup_subset (rps->subset_list, "zclsd", &subset)
@@ -2261,7 +2261,7 @@ riscv_parse_check_conflicts (riscv_parse_subset_t *rps)
 	  || riscv_lookup_subset (rps->subset_list, "zcf", &subset)))
     {
       rps->error_handler
-	(_("`zclsd' is conflict with the `c+f'/ `zcf' extension"));
+	(_("`zclsd' conflicts with the `c+f'/`zcf' extension"));
       no_conflict = false;
     }
   if (riscv_lookup_subset (rps->subset_list, "ssnpm", &subset) && xlen != 64)
