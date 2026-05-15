@@ -358,7 +358,7 @@ riscv_set_arch (const char *s)
   riscv_release_subset_list (riscv_rps_as.subset_list);
   riscv_parse_subset (&riscv_rps_as, s);
   riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
-  file_arch_str = strdup (riscv_rps_as.subset_list->arch_str);
+  file_arch_str = xstrdup (riscv_rps_as.subset_list->arch_str);
 
   riscv_set_rvc (riscv_subset_supports (&riscv_rps_as, "c")
 		 || riscv_subset_supports (&riscv_rps_as, "zca"));
@@ -1435,7 +1435,7 @@ static bool
 reglist_lookup (char **s, unsigned *reg_list)
 {
   *reg_list = 0;
-  char *reglist = strdup (*s);
+  char *reglist = xstrdup (*s);
   if (reglist != NULL)
     {
       char *token = strtok (reglist, "}");
