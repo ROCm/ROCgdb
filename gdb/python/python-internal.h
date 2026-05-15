@@ -1374,4 +1374,12 @@ py_notimplemented ()
   return gdbpy_ref<> (f ());
 }
 
+/* Undefine these to enforce using the refcount-safe wrappers py_none, py_true,
+   py_false and py_notimplemented.  */
+
+#undef Py_RETURN_NONE
+#undef Py_RETURN_TRUE
+#undef Py_RETURN_FALSE
+#undef Py_RETURN_NOTIMPLEMENTED
+
 #endif /* GDB_PYTHON_PYTHON_INTERNAL_H */
