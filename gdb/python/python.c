@@ -3274,10 +3274,9 @@ or None if not set." },
 Set the value of the convenience variable $NAME." },
 
 #ifdef TUI
-  { "register_window_type", (PyCFunction) gdbpy_register_tui_window,
-    METH_VARARGS | METH_KEYWORDS,
+  varargs_function<gdbpy_register_tui_window> ("register_window_type",
     "register_window_type (NAME, CONSTRUCTOR) -> None\n\
-Register a TUI window constructor." },
+Register a TUI window constructor."),
 #endif	/* TUI */
 
   { "architecture_names", gdbpy_all_architecture_names, METH_NOARGS,
