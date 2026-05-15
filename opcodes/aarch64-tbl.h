@@ -7999,24 +7999,24 @@ const struct aarch64_opcode aarch64_opcode_table[] =
    listed separately.  */
 
 #define AARCH64_OPERANDS						\
-    Y(INT_REG, regno, "Rd", 0, F(FLD_Rd), "an integer register")	\
-    Y(INT_REG, regno, "Rn", 0, F(FLD_Rn), "an integer register")	\
-    Y(INT_REG, regno, "Rm", 0, F(FLD_Rm), "an integer register")	\
-    Y(INT_REG, regno, "Rt", 0, F(FLD_Rt), "an integer register")	\
-    Y(INT_REG, regno, "Rt2", 0, F(FLD_Rt2), "an integer register")	\
+    Y(INT_REG, regno, "Rd", 0, F(FLD(0, 5)), "an integer register")	\
+    Y(INT_REG, regno, "Rn", 0, F(FLD(5, 5)), "an integer register")	\
+    Y(INT_REG, regno, "Rm", 0, F(FLD(16, 5)), "an integer register")	\
+    Y(INT_REG, regno, "Rt", 0, F(FLD(0, 5)), "an integer register")	\
+    Y(INT_REG, regno, "Rt2", 0, F(FLD(10, 5)), "an integer register")	\
     Y(INT_REG, none, "X16", 0, F(), "X16")	\
-    Y(INT_REG, regno, "Rt_LS64", 0, F(FLD_Rt), "an integer register")	\
-    Y(INT_REG, regno, "Rt_SP", OPD_F_MAYBE_SP, F(FLD_Rt),		\
+    Y(INT_REG, regno, "Rt_LS64", 0, F(FLD(0, 5)), "an integer register")	\
+    Y(INT_REG, regno, "Rt_SP", OPD_F_MAYBE_SP, F(FLD(0, 5)),		\
       "an integer or stack pointer register")				\
-    Y(INT_REG, regno, "Rs", 0, F(FLD_Rs), "an integer register")	\
-    Y(INT_REG, regno, "Ra", 0, F(FLD_Ra), "an integer register")	\
-    X(INT_REG, ins_regno, ext_regrt_sysins, "Rt_SYS", 0, F(FLD_Rt),	\
+    Y(INT_REG, regno, "Rs", 0, F(FLD(16, 5)), "an integer register")	\
+    Y(INT_REG, regno, "Ra", 0, F(FLD(10, 5)), "an integer register")	\
+    X(INT_REG, ins_regno, ext_regrt_sysins, "Rt_SYS", 0, F(FLD(0, 5)),	\
       "an integer register")						\
-    Y(INT_REG, regno, "Rd_SP", OPD_F_MAYBE_SP, F(FLD_Rd),		\
+    Y(INT_REG, regno, "Rd_SP", OPD_F_MAYBE_SP, F(FLD(0, 5)),		\
       "an integer or stack pointer register")				\
-    Y(INT_REG, regno, "Rn_SP", OPD_F_MAYBE_SP, F(FLD_Rn),		\
+    Y(INT_REG, regno, "Rn_SP", OPD_F_MAYBE_SP, F(FLD(5, 5)),		\
       "an integer or stack pointer register")				\
-    Y(INT_REG, regno, "Rm_SP", OPD_F_MAYBE_SP, F(FLD_Rm),		\
+    Y(INT_REG, regno, "Rm_SP", OPD_F_MAYBE_SP, F(FLD(16, 5)),		\
       "an integer or stack pointer register")				\
     X(INT_REG, 0, ext_regno_pair, "PAIRREG", 0, F(),			\
       "the second reg of a pair")					\
@@ -8028,59 +8028,59 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       "an integer register with optional shift")			\
     Y(MODIFIED_REG, reg_lsl_shifted, "Rm_LSL", 0, F(),			\
       "an integer register with optional LSL shift")			\
-    Y(FP_REG, regno, "Fd", 0, F(FLD_Rd), "a floating-point register")	\
-    Y(FP_REG, regno, "Fn", 0, F(FLD_Rn), "a floating-point register")	\
-    Y(FP_REG, regno, "Fm", 0, F(FLD_Rm), "a floating-point register")	\
-    Y(FP_REG, regno, "Fa", 0, F(FLD_Ra), "a floating-point register")	\
-    Y(FP_REG, ft, "Ft", 0, F(FLD_Rt), "a floating-point register")	\
-    Y(FP_REG, regno, "Ft2", 0, F(FLD_Rt2), "a floating-point register")	\
-    Y(SISD_REG, regno, "Sd", 0, F(FLD_Rd), "a SIMD scalar register")	\
-    Y(SISD_REG, regno, "Sn", 0, F(FLD_Rn), "a SIMD scalar register")	\
-    Y(SISD_REG, regno, "Sm", 0, F(FLD_Rm), "a SIMD scalar register")	\
-    Y(SIMD_REG, regno, "Va", 0, F(FLD_Ra), "a SIMD vector register")	\
-    Y(SIMD_REG, regno, "Vd", 0, F(FLD_Rd), "a SIMD vector register")	\
-    Y(SIMD_REG, regno, "Vn", 0, F(FLD_Rn), "a SIMD vector register")	\
-    Y(SIMD_REG, regno, "Vm", 0, F(FLD_Rm), "a SIMD vector register")	\
-    Y(FP_REG, regno, "VdD1", 0, F(FLD_Rd),				\
+    Y(FP_REG, regno, "Fd", 0, F(FLD(0, 5)), "a floating-point register")	\
+    Y(FP_REG, regno, "Fn", 0, F(FLD(5, 5)), "a floating-point register")	\
+    Y(FP_REG, regno, "Fm", 0, F(FLD(16, 5)), "a floating-point register")	\
+    Y(FP_REG, regno, "Fa", 0, F(FLD(10, 5)), "a floating-point register")	\
+    Y(FP_REG, ft, "Ft", 0, F(FLD(0, 5)), "a floating-point register")	\
+    Y(FP_REG, regno, "Ft2", 0, F(FLD(10, 5)), "a floating-point register")	\
+    Y(SISD_REG, regno, "Sd", 0, F(FLD(0, 5)), "a SIMD scalar register")	\
+    Y(SISD_REG, regno, "Sn", 0, F(FLD(5, 5)), "a SIMD scalar register")	\
+    Y(SISD_REG, regno, "Sm", 0, F(FLD(16, 5)), "a SIMD scalar register")	\
+    Y(SIMD_REG, regno, "Va", 0, F(FLD(10, 5)), "a SIMD vector register")	\
+    Y(SIMD_REG, regno, "Vd", 0, F(FLD(0, 5)), "a SIMD vector register")	\
+    Y(SIMD_REG, regno, "Vn", 0, F(FLD(5, 5)), "a SIMD vector register")	\
+    Y(SIMD_REG, regno, "Vm", 0, F(FLD(16, 5)), "a SIMD vector register")	\
+    Y(FP_REG, regno, "VdD1", 0, F(FLD(0, 5)),				\
       "the top half of a 128-bit FP/SIMD register")			\
-    Y(FP_REG, regno, "VnD1", 0, F(FLD_Rn),				\
+    Y(FP_REG, regno, "VnD1", 0, F(FLD(5, 5)),				\
       "the top half of a 128-bit FP/SIMD register")			\
-    Y(SIMD_ELEMENT, reglane, "Ed", 0, F(FLD_Rd),			\
+    Y(SIMD_ELEMENT, reglane, "Ed", 0, F(FLD(0, 5)),			\
       "a SIMD vector element")						\
-    Y(SIMD_ELEMENT, reglane, "En", 0, F(FLD_Rn),			\
+    Y(SIMD_ELEMENT, reglane, "En", 0, F(FLD(5, 5)),			\
       "a SIMD vector element")						\
-    Y(SIMD_ELEMENT, reglane, "Em", 0, F(FLD_Rm),			\
+    Y(SIMD_ELEMENT, reglane, "Em", 0, F(FLD(16, 5)),			\
       "a SIMD vector element")						\
-    Y(SIMD_ELEMENT, reglane, "Em16", 0, F(FLD_Rm),			\
+    Y(SIMD_ELEMENT, reglane, "Em16", 0, F(FLD(16, 5)),			\
       "a SIMD vector element limited to V0-V15")			\
-    Y(SIMD_ELEMENT, reglane, "Em8", 0, F(FLD_Rm),			\
+    Y(SIMD_ELEMENT, reglane, "Em8", 0, F(FLD(16, 5)),			\
       "a SIMD vector element limited to V0-V7")				\
     Y(SIMD_ELEMENT, simple_index, "Em_INDEX1_14", 0,			\
-      F(FLD_imm1_14, FLD_Rm),						\
+      F(FLD(14, 1), FLD(16, 5)),						\
       "a SIMD vector without a type qualifier encoding a bit index")	\
     Y(SIMD_ELEMENT, simple_index, "Em_INDEX2_13", 0,			\
-      F(FLD_imm2_13, FLD_Rm),						\
+      F(FLD(13, 2), FLD(16, 5)),						\
       "a SIMD vector without a type qualifier encoding a bit index")	\
     Y(SIMD_ELEMENT, simple_index, "Em_INDEX3_12", 0,			\
-      F(FLD_imm3_12, FLD_Rm),						\
+      F(FLD(12, 3), FLD(16, 5)),						\
       "a SIMD vector without a type qualifier encoding a bit index")	\
-    Y(SIMD_REGLIST, reglist, "LVn", 0, F(FLD_Rn),			\
+    Y(SIMD_REGLIST, reglist, "LVn", 0, F(FLD(5, 5)),			\
       "a SIMD vector register list")					\
     Y(SIMD_REGLIST, ldst_reglist, "LVt", 0, F(),			\
       "a SIMD vector register list")					\
     Y(SIMD_REGLIST, ldst_reglist_r, "LVt_AL", 0, F(),			\
       "a SIMD vector register list")					\
-    Y(SIMD_REGLIST, lut_reglist, "LVn_LUT", 0, F(FLD_Rn),		\
+    Y(SIMD_REGLIST, lut_reglist, "LVn_LUT", 0, F(FLD(5, 5)),		\
       "a SIMD vector register list")					\
     Y(SIMD_REGLIST, ldst_elemlist, "LEt", 0, F(),			\
       "a SIMD vector element list")					\
-    Y(IMMEDIATE, imm, "CRn", 0, F(FLD_CRn),				\
+    Y(IMMEDIATE, imm, "CRn", 0, F(FLD(12, 4)),				\
       "a 4-bit opcode field named for historical reasons C0 - C15")	\
-    Y(IMMEDIATE, imm, "CRm", 0, F(FLD_CRm),				\
+    Y(IMMEDIATE, imm, "CRm", 0, F(FLD(8, 4)),				\
       "a 4-bit opcode field named for historical reasons C0 - C15")	\
-    Y(IMMEDIATE, imm, "IDX", 0, F(FLD_imm4_11),				\
+    Y(IMMEDIATE, imm, "IDX", 0, F(FLD(11, 4)),				\
       "an immediate as the index of the least significant byte")	\
-    Y(IMMEDIATE, imm, "MASK", 0, F(FLD_imm4_0),				\
+    Y(IMMEDIATE, imm, "MASK", 0, F(FLD(0, 4)),				\
       "an immediate as the index of the least significant byte")	\
     Y(IMMEDIATE, advsimd_imm_shift, "IMM_VLSL", 0, F(),			\
       "a left shift amount for an AdvSIMD register")			\
@@ -8096,95 +8096,95 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       "an immediate shift amount of 8, 16 or 32")			\
     X(IMMEDIATE, 0, 0, "IMM0", 0, F(), "0")				\
     X(IMMEDIATE, 0, 0, "FPIMM0", 0, F(), "0.0")				\
-    Y(IMMEDIATE, fpimm, "FPIMM", 0, F(FLD_imm8),			\
+    Y(IMMEDIATE, fpimm, "FPIMM", 0, F(FLD(13, 8)),			\
       "an 8-bit floating-point constant")				\
-    Y(IMMEDIATE, imm, "IMMR", 0, F(FLD_immr),				\
+    Y(IMMEDIATE, imm, "IMMR", 0, F(FLD(16, 6)),				\
       "the right rotate amount")					\
-    Y(IMMEDIATE, imm, "IMMS", 0, F(FLD_imm6_10),			\
+    Y(IMMEDIATE, imm, "IMMS", 0, F(FLD(10, 6)),			\
       "the leftmost bit number to be moved from the source")		\
-    Y(IMMEDIATE, imm, "WIDTH", 0, F(FLD_imm6_10),			\
+    Y(IMMEDIATE, imm, "WIDTH", 0, F(FLD(10, 6)),			\
       "the width of the bit-field")					\
-    Y(IMMEDIATE, imm, "IMM", 0, F(FLD_imm6_10), "an immediate")         \
-    Y(IMMEDIATE, imm, "IMM_2", 0, F(FLD_imm6_15), "an immediate")       \
-    Y(IMMEDIATE, imm, "IMMP1_2", 0, F(FLD_imm6_15), "an immediate plus 1")       \
-    Y(IMMEDIATE, imm, "IMMS1_2", 0, F(FLD_imm6_15), "an immediate minus 1")       \
-    Y(IMMEDIATE, imm, "UIMM3_OP1", 0, F(FLD_op1),			\
+    Y(IMMEDIATE, imm, "IMM", 0, F(FLD(10, 6)), "an immediate")         \
+    Y(IMMEDIATE, imm, "IMM_2", 0, F(FLD(15, 6)), "an immediate")       \
+    Y(IMMEDIATE, imm, "IMMP1_2", 0, F(FLD(15, 6)), "an immediate plus 1")       \
+    Y(IMMEDIATE, imm, "IMMS1_2", 0, F(FLD(15, 6)), "an immediate minus 1")       \
+    Y(IMMEDIATE, imm, "UIMM3_OP1", 0, F(FLD(16, 3)),			\
       "a 3-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "UIMM3_OP2", 0, F(FLD_op2),			\
+    Y(IMMEDIATE, imm, "UIMM3_OP2", 0, F(FLD(5, 3)),			\
       "a 3-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "UIMM4", 0, F(FLD_CRm),				\
+    Y(IMMEDIATE, imm, "UIMM4", 0, F(FLD(8, 4)),				\
       "a 4-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "UIMM4_ADDG", 0, F(FLD_imm4_10),			\
+    Y(IMMEDIATE, imm, "UIMM4_ADDG", 0, F(FLD(10, 4)),			\
       "a 4-bit unsigned Logical Address Tag modifier")			\
-    Y(IMMEDIATE, imm, "UIMM7", 0, F(FLD_CRm, FLD_op2),			\
+    Y(IMMEDIATE, imm, "UIMM7", 0, F(FLD(8, 4), FLD(5, 3)),			\
       "a 7-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "UIMM10", OPD_F_SHIFT_BY_4, F(FLD_immr),		\
+    Y(IMMEDIATE, imm, "UIMM10", OPD_F_SHIFT_BY_4, F(FLD(16, 6)),		\
       "a 10-bit unsigned multiple of 16")				\
-    Y(IMMEDIATE, imm, "BIT_NUM", 0, F(FLD_b5, FLD_b40),			\
+    Y(IMMEDIATE, imm, "BIT_NUM", 0, F(FLD(31, 1), FLD(19, 5)),			\
       "the bit number to be tested")					\
-    Y(IMMEDIATE, imm, "EXCEPTION", 0, F(FLD_imm16_5),			\
+    Y(IMMEDIATE, imm, "EXCEPTION", 0, F(FLD(5, 16)),			\
       "a 16-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "UNDEFINED", 0, F(FLD_imm16_0),			\
+    Y(IMMEDIATE, imm, "UNDEFINED", 0, F(FLD(0, 16)),			\
       "a 16-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "CCMP_IMM", 0, F(FLD_imm5),			\
+    Y(IMMEDIATE, imm, "CCMP_IMM", 0, F(FLD(16, 5)),			\
       "a 5-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "SIMM5", OPD_F_SEXT, F(FLD_imm5),			\
+    Y(IMMEDIATE, imm, "SIMM5", OPD_F_SEXT, F(FLD(16, 5)),			\
       "a 5-bit signed immediate")					\
-    Y(IMMEDIATE, imm, "NOT_BALANCED_10", 0, F(FLD_imm1_10),		\
+    Y(IMMEDIATE, imm, "NOT_BALANCED_10", 0, F(FLD(10, 1)),		\
       "an optional not balanced indicator (NB)")			\
-    Y(IMMEDIATE, imm, "NOT_BALANCED_17", 0, F(FLD_imm17_1),		\
+    Y(IMMEDIATE, imm, "NOT_BALANCED_17", 0, F(FLD(17, 1)),		\
       "an optional not balanced indicator (NB)")			\
-    Y(IMMEDIATE, imm, "NZCV", 0, F(FLD_nzcv),				\
+    Y(IMMEDIATE, imm, "NZCV", 0, F(FLD(0, 4)),				\
       "a flag bit specifier giving an alternative value for each flag")	\
-    Y(IMMEDIATE, limm, "LIMM", 0, F(FLD_N,FLD_immr,FLD_imms),		\
+    Y(IMMEDIATE, limm, "LIMM", 0, F(FLD(22, 1), FLD(16, 6), FLD(10, 6)),		\
       "Logical immediate")						\
-    Y(IMMEDIATE, aimm, "AIMM", 0, F(FLD_shift,FLD_imm12),		\
+    Y(IMMEDIATE, aimm, "AIMM", 0, F(FLD(22, 2), FLD(10, 12)),		\
       "a 12-bit unsigned immediate with optional left shift of 12 bits")\
-    Y(IMMEDIATE, imm_half, "HALF", 0, F(FLD_imm16_5),			\
+    Y(IMMEDIATE, imm_half, "HALF", 0, F(FLD(5, 16)),			\
       "a 16-bit immediate with optional left shift")			\
-    Y(IMMEDIATE, fbits, "FBITS", 0, F(FLD_scale),			\
+    Y(IMMEDIATE, fbits, "FBITS", 0, F(FLD(10, 6)),			\
       "the number of bits after the binary point in the fixed-point value")\
     X(IMMEDIATE, 0, 0, "IMM_MOV", 0, F(), "an immediate")		\
-    Y(IMMEDIATE, imm_rotate2, "IMM_ROT1", 0, F(FLD_rotate1),		\
+    Y(IMMEDIATE, imm_rotate2, "IMM_ROT1", 0, F(FLD(11, 2)),		\
       "a 2-bit rotation specifier for complex arithmetic operations")	\
-    Y(IMMEDIATE, imm_rotate2, "IMM_ROT2", 0, F(FLD_rotate2),		\
+    Y(IMMEDIATE, imm_rotate2, "IMM_ROT2", 0, F(FLD(13, 2)),		\
       "a 2-bit rotation specifier for complex arithmetic operations")	\
-    Y(IMMEDIATE, imm_rotate1, "IMM_ROT3", 0, F(FLD_rotate3),		\
+    Y(IMMEDIATE, imm_rotate1, "IMM_ROT3", 0, F(FLD(12, 1)),		\
       "a 1-bit rotation specifier for complex arithmetic operations")	\
     Y(COND, cond, "COND", 0, F(), "a condition")			\
     Y(COND, cond, "COND1", 0, F(),					\
       "one of the standard conditions, excluding AL and NV.")		\
-    X(ADDRESS, 0, ext_imm, "ADDR_ADRP", OPD_F_SEXT, F(FLD_immhi, FLD_immlo),\
+    X(ADDRESS, 0, ext_imm, "ADDR_ADRP", OPD_F_SEXT, F(FLD(5, 19), FLD(29, 2)),\
       "21-bit PC-relative address of a 4KB page")			\
     Y(ADDRESS, imm, "ADDR_PCREL9", OPD_F_SEXT | OPD_F_SHIFT_BY_2,	\
-      F(FLD_imm9_5), "9-bit PC-relative address")			\
+      F(FLD(5, 9)), "9-bit PC-relative address")			\
     Y(ADDRESS, imm, "ADDR_PCREL14", OPD_F_SEXT | OPD_F_SHIFT_BY_2,	\
-      F(FLD_imm14), "14-bit PC-relative address")			\
+      F(FLD(5, 14)), "14-bit PC-relative address")			\
     Y(ADDRESS, imm, "ADDR_PCREL19", OPD_F_SEXT | OPD_F_SHIFT_BY_2,	\
-      F(FLD_imm19), "19-bit PC-relative address")			\
-    Y(ADDRESS, imm, "ADDR_PCREL21", OPD_F_SEXT, F(FLD_immhi,FLD_immlo),	\
+      F(FLD(5, 19)), "19-bit PC-relative address")			\
+    Y(ADDRESS, imm, "ADDR_PCREL21", OPD_F_SEXT, F(FLD(5, 19), FLD(29, 2)),	\
       "21-bit PC-relative address")					\
     Y(ADDRESS, imm, "ADDR_PCREL26", OPD_F_SEXT | OPD_F_SHIFT_BY_2,	\
-      F(FLD_imm26), "26-bit PC-relative address")			\
+      F(FLD(0, 26)), "26-bit PC-relative address")			\
     Y(ADDRESS, addr_simple, "ADDR_SIMPLE", 0, F(),			\
       "an address with base register (no offset)")			\
     Y(ADDRESS, addr_regoff, "ADDR_REGOFF", 0, F(),			\
       "an address with register offset")				\
-    Y(ADDRESS, addr_simm, "ADDR_SIMM7", 0, F(FLD_imm7,FLD_index2),	\
+    Y(ADDRESS, addr_simm, "ADDR_SIMM7", 0, F(FLD(15, 7), FLD(24, 1)),	\
       "an address with 7-bit signed immediate offset")			\
-    Y(ADDRESS, addr_simm, "ADDR_SIMM9", 0, F(FLD_imm9,FLD_index),	\
+    Y(ADDRESS, addr_simm, "ADDR_SIMM9", 0, F(FLD(12, 9), FLD(11, 1)),	\
       "an address with 9-bit signed immediate offset")			\
-    Y(ADDRESS, addr_simm10, "ADDR_SIMM10", 0, F(FLD_Rn,FLD_S_imm10,FLD_imm9,FLD_index),\
+    Y(ADDRESS, addr_simm10, "ADDR_SIMM10", 0, F(FLD(5, 5), FLD(22, 1), FLD(12, 9), FLD(11, 1)),\
       "an address with an optional 10-bit scaled, signed immediate offset")		\
-    Y(ADDRESS, addr_simm, "ADDR_SIMM11", 0, F(FLD_imm7,FLD_index2),\
+    Y(ADDRESS, addr_simm, "ADDR_SIMM11", 0, F(FLD(15, 7), FLD(24, 1)),\
       "an address with 11-bit signed immediate (multiple of 16) offset")\
-    Y(ADDRESS, addr_uimm12, "ADDR_UIMM12", 0, F(FLD_Rn,FLD_imm12),	\
+    Y(ADDRESS, addr_uimm12, "ADDR_UIMM12", 0, F(FLD(5, 5), FLD(10, 12)),	\
       "an address with scaled, unsigned immediate offset")		\
-    Y(ADDRESS, addr_simm, "ADDR_SIMM13", 0, F(FLD_imm9,FLD_index),\
+    Y(ADDRESS, addr_simm, "ADDR_SIMM13", 0, F(FLD(12, 9), FLD(11, 1)),\
       "an address with 13-bit signed immediate (multiple of 16) offset")\
     Y(ADDRESS, addr_simple, "SIMD_ADDR_SIMPLE", 0, F(),			\
       "an address with base register (no offset)")			\
-    Y(ADDRESS, addr_offset, "ADDR_OFFSET", 0, F(FLD_Rn,FLD_imm9,FLD_index),\
+    Y(ADDRESS, addr_offset, "ADDR_OFFSET", 0, F(FLD(5, 5), FLD(12, 9), FLD(11, 1)),\
       "an address with an optional 8-bit signed immediate offset")	\
     Y(ADDRESS, simd_addr_post, "SIMD_ADDR_POST", 0, F(),		\
       "a post-indexed address with immediate or register increment")	\
@@ -8215,532 +8215,532 @@ const struct aarch64_opcode aarch64_opcode_table[] =
     Y(SYSTEM, prfop, "PRFOP", 0, F(),					\
       "a prefetch operation specifier")					\
     Y(SYSTEM, imm, "RPRFMOP", 0,					\
-      F(FLD_imm1_15, FLD_imm2_12, FLD_imm3_0),	        		\
+      F(FLD(15, 1), FLD(12, 2), FLD(0, 3)),	        		\
       "a range prefetch operation specifier")				\
-    Y(SYSTEM, none, "BARRIER_PSB", 0, F (),				\
+    Y(SYSTEM, none, "BARRIER_PSB", 0, F(),				\
       "the PSB/TSB option name CSYNC")					\
-    Y(SYSTEM, none, "BARRIER_GCSB", 0, F (),				\
+    Y(SYSTEM, none, "BARRIER_GCSB", 0, F(),				\
       "the GCSB option name DSYNC")					\
-    Y(SYSTEM, hint, "BTI_TARGET", 0, F (),				\
+    Y(SYSTEM, hint, "BTI_TARGET", 0, F(),				\
       "BTI targets r/j/c/jc")						\
     Y(SYSTEM, hint, "STSHH_POLICY", 0, F(),				\
       "an STSHH policy (keep/strm)")					\
     Y(SYSTEM, hint, "SHUH_PHINT", 0, F(),				\
       "an optional priority hint (ph)")						\
-    Y(SYSTEM, imm, "BRBOP", 0, F(FLD_brbop),				\
+    Y(SYSTEM, imm, "BRBOP", 0, F(FLD(5, 1)),				\
       "Branch Record Buffer operation operand")				\
-    Y(INT_REG, regno, "Rt_IN_SYS_ALIASES", 0, F(FLD_Rt),		\
+    Y(INT_REG, regno, "Rt_IN_SYS_ALIASES", 0, F(FLD(0, 5)),		\
       "Rt register with defaults for SYS aliases")			\
-    Y(INT_REG, regno, "LSE128_Rt", 0, F(FLD_LSE128_Rt), "an integer register") \
-    Y(INT_REG, regno, "LSE128_Rt2", 0, F(FLD_LSE128_Rt2), "an integer register") \
+    Y(INT_REG, regno, "LSE128_Rt", 0, F(FLD(0, 5)), "an integer register") \
+    Y(INT_REG, regno, "LSE128_Rt2", 0, F(FLD(16, 5)), "an integer register") \
     Y(ADDRESS, sve_addr_ri_s4, "SVE_ADDR_RI_S4x16",			\
-      4 << OPD_F_OD_LSB, F(FLD_Rn),					\
+      4 << OPD_F_OD_LSB, F(FLD(5, 5)),					\
       "an address with a 4-bit signed offset, multiplied by 16")	\
     Y(ADDRESS, sve_addr_ri_s4, "SVE_ADDR_RI_S4x32",			\
-      5 << OPD_F_OD_LSB, F(FLD_Rn),					\
+      5 << OPD_F_OD_LSB, F(FLD(5, 5)),					\
       "an address with a 4-bit signed offset, multiplied by 32")	\
     Y(ADDRESS, sve_addr_ri_s4xvl, "SVE_ADDR_RI_S4xVL",			\
-      0 << OPD_F_OD_LSB, F(FLD_Rn),					\
+      0 << OPD_F_OD_LSB, F(FLD(5, 5)),					\
       "an address with a 4-bit signed offset, multiplied by VL")	\
     Y(ADDRESS, sve_addr_ri_s4xvl, "SVE_ADDR_RI_S4x2xVL",		\
-      1 << OPD_F_OD_LSB, F(FLD_Rn),					\
+      1 << OPD_F_OD_LSB, F(FLD(5, 5)),					\
       "an address with a 4-bit signed offset, multiplied by 2*VL")	\
     Y(ADDRESS, sve_addr_ri_s4xvl, "SVE_ADDR_RI_S4x3xVL",		\
-      2 << OPD_F_OD_LSB, F(FLD_Rn),					\
+      2 << OPD_F_OD_LSB, F(FLD(5, 5)),					\
       "an address with a 4-bit signed offset, multiplied by 3*VL")	\
     Y(ADDRESS, sve_addr_ri_s4xvl, "SVE_ADDR_RI_S4x4xVL",		\
-      3 << OPD_F_OD_LSB, F(FLD_Rn),					\
+      3 << OPD_F_OD_LSB, F(FLD(5, 5)),					\
       "an address with a 4-bit signed offset, multiplied by 4*VL")	\
     Y(ADDRESS, sve_addr_ri_s6xvl, "SVE_ADDR_RI_S6xVL",			\
-      0 << OPD_F_OD_LSB, F(FLD_Rn),					\
+      0 << OPD_F_OD_LSB, F(FLD(5, 5)),					\
       "an address with a 6-bit signed offset, multiplied by VL")	\
     Y(ADDRESS, sve_addr_ri_s9xvl, "SVE_ADDR_RI_S9xVL",			\
-      0 << OPD_F_OD_LSB, F(FLD_Rn),					\
+      0 << OPD_F_OD_LSB, F(FLD(5, 5)),					\
       "an address with a 9-bit signed offset, multiplied by VL")	\
     Y(ADDRESS, sve_addr_ri_u6, "SVE_ADDR_RI_U6", 0 << OPD_F_OD_LSB,	\
-      F(FLD_Rn), "an address with a 6-bit unsigned offset")		\
+      F(FLD(5, 5)), "an address with a 6-bit unsigned offset")		\
     Y(ADDRESS, sve_addr_ri_u6, "SVE_ADDR_RI_U6x2", 1 << OPD_F_OD_LSB,	\
-      F(FLD_Rn),							\
+      F(FLD(5, 5)),							\
       "an address with a 6-bit unsigned offset, multiplied by 2")	\
     Y(ADDRESS, sve_addr_ri_u6, "SVE_ADDR_RI_U6x4", 2 << OPD_F_OD_LSB,	\
-      F(FLD_Rn),							\
+      F(FLD(5, 5)),							\
       "an address with a 6-bit unsigned offset, multiplied by 4")	\
     Y(ADDRESS, sve_addr_ri_u6, "SVE_ADDR_RI_U6x8", 3 << OPD_F_OD_LSB,	\
-      F(FLD_Rn),							\
+      F(FLD(5, 5)),							\
       "an address with a 6-bit unsigned offset, multiplied by 8")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RR", 0 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_Rm), "an address with a scalar register offset")	\
+      F(FLD(5, 5), FLD(16, 5)), "an address with a scalar register offset")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RR_LSL1", 1 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_Rm), "an address with a scalar register offset")	\
+      F(FLD(5, 5), FLD(16, 5)), "an address with a scalar register offset")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RR_LSL2", 2 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_Rm), "an address with a scalar register offset")	\
+      F(FLD(5, 5), FLD(16, 5)), "an address with a scalar register offset")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RR_LSL3", 3 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_Rm), "an address with a scalar register offset")	\
+      F(FLD(5, 5), FLD(16, 5)), "an address with a scalar register offset")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RR_LSL4", 4 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_Rm), "an address with a scalar register offset")	\
+      F(FLD(5, 5), FLD(16, 5)), "an address with a scalar register offset")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RM", 0 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_Rm), "an address with a scalar register offset")	\
+      F(FLD(5, 5), FLD(16, 5)), "an address with a scalar register offset")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RM_LSL1", 1 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_Rm), "an address with a scalar register offset")	\
+      F(FLD(5, 5), FLD(16, 5)), "an address with a scalar register offset")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RM_LSL2", 2 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_Rm), "an address with a scalar register offset")	\
+      F(FLD(5, 5), FLD(16, 5)), "an address with a scalar register offset")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RM_LSL3", 3 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_Rm), "an address with a scalar register offset")	\
+      F(FLD(5, 5), FLD(16, 5)), "an address with a scalar register offset")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RM_LSL4", 4 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_Rm), "an address with a scalar register offset")	\
+      F(FLD(5, 5), FLD(16, 5)), "an address with a scalar register offset")	\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RX",				\
-      (0 << OPD_F_OD_LSB) | OPD_F_NO_ZR, F(FLD_Rn,FLD_Rm),		\
+      (0 << OPD_F_OD_LSB) | OPD_F_NO_ZR, F(FLD(5, 5), FLD(16, 5)),		\
       "an address with a scalar register offset")			\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RX_LSL1",			\
-      (1 << OPD_F_OD_LSB) | OPD_F_NO_ZR, F(FLD_Rn,FLD_Rm),		\
+      (1 << OPD_F_OD_LSB) | OPD_F_NO_ZR, F(FLD(5, 5), FLD(16, 5)),		\
       "an address with a scalar register offset")			\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RX_LSL2",			\
-      (2 << OPD_F_OD_LSB) | OPD_F_NO_ZR, F(FLD_Rn,FLD_Rm),		\
+      (2 << OPD_F_OD_LSB) | OPD_F_NO_ZR, F(FLD(5, 5), FLD(16, 5)),		\
       "an address with a scalar register offset")			\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RX_LSL3",			\
-      (3 << OPD_F_OD_LSB) | OPD_F_NO_ZR, F(FLD_Rn,FLD_Rm),		\
+      (3 << OPD_F_OD_LSB) | OPD_F_NO_ZR, F(FLD(5, 5), FLD(16, 5)),		\
       "an address with a scalar register offset")			\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RX_LSL4",			\
-      (4 << OPD_F_OD_LSB) | OPD_F_NO_ZR, F(FLD_Rn,FLD_Rm),		\
+      (4 << OPD_F_OD_LSB) | OPD_F_NO_ZR, F(FLD(5, 5), FLD(16, 5)),		\
       "an address with a scalar register offset")			\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_ZX",				\
-      0 << OPD_F_OD_LSB , F(FLD_SVE_Zn,FLD_Rm),				\
+      0 << OPD_F_OD_LSB , F(FLD(5, 5), FLD(16, 5)),				\
       "vector of address with a scalar register offset")		\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RZ", 0 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_SVE_Zm_16),						\
+      F(FLD(5, 5), FLD(16, 5)),						\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RZ_LSL1", 1 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_SVE_Zm_16),						\
+      F(FLD(5, 5), FLD(16, 5)),						\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RZ_LSL2", 2 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_SVE_Zm_16),						\
+      F(FLD(5, 5), FLD(16, 5)),						\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rr_lsl, "SVE_ADDR_RZ_LSL3", 3 << OPD_F_OD_LSB,	\
-      F(FLD_Rn,FLD_SVE_Zm_16),						\
+      F(FLD(5, 5), FLD(16, 5)),						\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rz_xtw, "SVE_ADDR_RZ_XTW_14",			\
-      0 << OPD_F_OD_LSB, F(FLD_Rn,FLD_SVE_Zm_16,FLD_SVE_xs_14),		\
+      0 << OPD_F_OD_LSB, F(FLD(5, 5), FLD(16, 5), FLD(14, 1)),		\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rz_xtw, "SVE_ADDR_RZ_XTW_22",			\
-      0 << OPD_F_OD_LSB, F(FLD_Rn,FLD_SVE_Zm_16,FLD_SVE_xs_22),		\
+      0 << OPD_F_OD_LSB, F(FLD(5, 5), FLD(16, 5), FLD(22, 1)),		\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rz_xtw, "SVE_ADDR_RZ_XTW1_14",			\
-      1 << OPD_F_OD_LSB, F(FLD_Rn,FLD_SVE_Zm_16,FLD_SVE_xs_14),		\
+      1 << OPD_F_OD_LSB, F(FLD(5, 5), FLD(16, 5), FLD(14, 1)),		\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rz_xtw, "SVE_ADDR_RZ_XTW1_22",			\
-      1 << OPD_F_OD_LSB, F(FLD_Rn,FLD_SVE_Zm_16,FLD_SVE_xs_22),		\
+      1 << OPD_F_OD_LSB, F(FLD(5, 5), FLD(16, 5), FLD(22, 1)),		\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rz_xtw, "SVE_ADDR_RZ_XTW2_14",			\
-      2 << OPD_F_OD_LSB, F(FLD_Rn,FLD_SVE_Zm_16,FLD_SVE_xs_14),		\
+      2 << OPD_F_OD_LSB, F(FLD(5, 5), FLD(16, 5), FLD(14, 1)),		\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rz_xtw, "SVE_ADDR_RZ_XTW2_22",			\
-      2 << OPD_F_OD_LSB, F(FLD_Rn,FLD_SVE_Zm_16,FLD_SVE_xs_22),		\
+      2 << OPD_F_OD_LSB, F(FLD(5, 5), FLD(16, 5), FLD(22, 1)),		\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rz_xtw, "SVE_ADDR_RZ_XTW3_14",			\
-      3 << OPD_F_OD_LSB, F(FLD_Rn,FLD_SVE_Zm_16,FLD_SVE_xs_14),		\
+      3 << OPD_F_OD_LSB, F(FLD(5, 5), FLD(16, 5), FLD(14, 1)),		\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_rz_xtw, "SVE_ADDR_RZ_XTW3_22",			\
-      3 << OPD_F_OD_LSB, F(FLD_Rn,FLD_SVE_Zm_16,FLD_SVE_xs_22),		\
+      3 << OPD_F_OD_LSB, F(FLD(5, 5), FLD(16, 5), FLD(22, 1)),		\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_zi_u5, "SVE_ADDR_ZI_U5", 0 << OPD_F_OD_LSB,	\
-      F(FLD_SVE_Zn), "an address with a 5-bit unsigned offset")		\
+      F(FLD(5, 5)), "an address with a 5-bit unsigned offset")		\
     Y(ADDRESS, sve_addr_zi_u5, "SVE_ADDR_ZI_U5x2", 1 << OPD_F_OD_LSB,	\
-      F(FLD_SVE_Zn),							\
+      F(FLD(5, 5)),							\
       "an address with a 5-bit unsigned offset, multiplied by 2")	\
     Y(ADDRESS, sve_addr_zi_u5, "SVE_ADDR_ZI_U5x4", 2 << OPD_F_OD_LSB,	\
-      F(FLD_SVE_Zn),							\
+      F(FLD(5, 5)),							\
       "an address with a 5-bit unsigned offset, multiplied by 4")	\
     Y(ADDRESS, sve_addr_zi_u5, "SVE_ADDR_ZI_U5x8", 3 << OPD_F_OD_LSB,	\
-      F(FLD_SVE_Zn),							\
+      F(FLD(5, 5)),							\
       "an address with a 5-bit unsigned offset, multiplied by 8")	\
     Y(ADDRESS, sve_addr_zz_lsl, "SVE_ADDR_ZZ_LSL", 0,			\
-      F(FLD_SVE_Zn,FLD_SVE_Zm_16),					\
+      F(FLD(5, 5), FLD(16, 5)),					\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_zz_sxtw, "SVE_ADDR_ZZ_SXTW", 0,			\
-      F(FLD_SVE_Zn,FLD_SVE_Zm_16),					\
+      F(FLD(5, 5), FLD(16, 5)),					\
       "an address with a vector register offset")			\
     Y(ADDRESS, sve_addr_zz_uxtw, "SVE_ADDR_ZZ_UXTW", 0,			\
-      F(FLD_SVE_Zn,FLD_SVE_Zm_16),					\
+      F(FLD(5, 5), FLD(16, 5)),					\
       "an address with a vector register offset")			\
-    Y(IMMEDIATE, sve_aimm, "SVE_AIMM", 0, F(FLD_SVE_imm9),		\
+    Y(IMMEDIATE, sve_aimm, "SVE_AIMM", 0, F(FLD(5, 9)),		\
       "a 9-bit unsigned arithmetic operand")				\
-    Y(IMMEDIATE, sve_asimm, "SVE_ASIMM", 0, F(FLD_SVE_imm9),		\
+    Y(IMMEDIATE, sve_asimm, "SVE_ASIMM", 0, F(FLD(5, 9)),		\
       "a 9-bit signed arithmetic operand")				\
-    Y(IMMEDIATE, fpimm, "SVE_FPIMM8", 0, F(FLD_SVE_imm8),		\
+    Y(IMMEDIATE, fpimm, "SVE_FPIMM8", 0, F(FLD(5, 8)),		\
       "an 8-bit floating-point immediate")				\
     Y(IMMEDIATE, sve_float_half_one, "SVE_I1_HALF_ONE", 0,		\
-      F(FLD_SVE_i1), "either 0.5 or 1.0")				\
+      F(FLD(5, 1)), "either 0.5 or 1.0")				\
     Y(IMMEDIATE, sve_float_half_two, "SVE_I1_HALF_TWO", 0,		\
-      F(FLD_SVE_i1), "either 0.5 or 2.0")				\
+      F(FLD(5, 1)), "either 0.5 or 2.0")				\
     Y(IMMEDIATE, sve_float_zero_one, "SVE_I1_ZERO_ONE", 0,		\
-      F(FLD_SVE_i1), "either 0.0 or 1.0")				\
-    Y(IMMEDIATE, imm_rotate1, "SVE_IMM_ROT1", 0, F(FLD_SVE_rot1),	\
+      F(FLD(5, 1)), "either 0.0 or 1.0")				\
+    Y(IMMEDIATE, imm_rotate1, "SVE_IMM_ROT1", 0, F(FLD(16, 1)),	\
       "a 1-bit rotation specifier for complex arithmetic operations")	\
-    Y(IMMEDIATE, imm_rotate2, "SVE_IMM_ROT2", 0, F(FLD_SVE_rot2),	\
+    Y(IMMEDIATE, imm_rotate2, "SVE_IMM_ROT2", 0, F(FLD(10, 2)),	\
       "a 2-bit rotation specifier for complex arithmetic operations")	\
-    Y(IMMEDIATE, imm_rotate1, "SVE_IMM_ROT3", 0, F(FLD_SVE_rot3),	\
+    Y(IMMEDIATE, imm_rotate1, "SVE_IMM_ROT3", 0, F(FLD(10, 1)),	\
       "a 1-bit rotation specifier for complex arithmetic operations")	\
     Y(IMMEDIATE, inv_limm, "SVE_INV_LIMM", 0,				\
-      F(FLD_SVE_N,FLD_SVE_immr,FLD_SVE_imms),				\
+      F(FLD(17, 1), FLD(11, 6), FLD(5, 6)),				\
       "an inverted 13-bit logical immediate")				\
     Y(IMMEDIATE, limm, "SVE_LIMM", 0,					\
-      F(FLD_SVE_N,FLD_SVE_immr,FLD_SVE_imms),				\
+      F(FLD(17, 1), FLD(11, 6), FLD(5, 6)),				\
       "a 13-bit logical immediate")					\
     Y(IMMEDIATE, sve_limm_mov, "SVE_LIMM_MOV", 0,			\
-      F(FLD_SVE_N,FLD_SVE_immr,FLD_SVE_imms),				\
+      F(FLD(17, 1), FLD(11, 6), FLD(5, 6)),				\
       "a 13-bit logical move immediate")				\
-    Y(IMMEDIATE, imm, "SVE_PATTERN", 0, F(FLD_SVE_pattern),		\
+    Y(IMMEDIATE, imm, "SVE_PATTERN", 0, F(FLD(5, 5)),		\
       "an enumeration value such as POW2")				\
     Y(IMMEDIATE, sve_scale, "SVE_PATTERN_SCALED", 0,			\
-      F(FLD_SVE_pattern), "an enumeration value such as POW2")		\
-    Y(IMMEDIATE, imm, "SVE_PRFOP", 0, F(FLD_SVE_prfop),			\
+      F(FLD(5, 5)), "an enumeration value such as POW2")		\
+    Y(IMMEDIATE, imm, "SVE_PRFOP", 0, F(FLD(0, 4)),			\
       "an enumeration value such as PLDL1KEEP")				\
-    Y(PRED_REG, regno, "SVE_Pd", 0, F(FLD_SVE_Pd),			\
+    Y(PRED_REG, regno, "SVE_Pd", 0, F(FLD(0, 4)),			\
       "an SVE predicate register")					\
-    Y(PRED_REG, regno, "SVE_PNd", 0, F(FLD_SVE_Pd),			\
+    Y(PRED_REG, regno, "SVE_PNd", 0, F(FLD(0, 4)),			\
       "an SVE predicate-as-counter register")				\
-    Y(PRED_REG, regno, "SVE_Pg3", 0, F(FLD_SVE_Pg3),			\
+    Y(PRED_REG, regno, "SVE_Pg3", 0, F(FLD(10, 3)),			\
       "an SVE predicate register")					\
-    Y(PRED_REG, regno, "SVE_Pg4_5", 0, F(FLD_SVE_Pg4_5),		\
+    Y(PRED_REG, regno, "SVE_Pg4_5", 0, F(FLD(5, 4)),		\
       "an SVE predicate register")					\
-    Y(PRED_REG, regno, "SVE_Pg4_10", 0, F(FLD_SVE_Pg4_10),		\
+    Y(PRED_REG, regno, "SVE_Pg4_10", 0, F(FLD(10, 4)),		\
       "an SVE predicate register")					\
-    Y(PRED_REG, regno, "SVE_PNg4_10", 0, F(FLD_SVE_Pg4_10),		\
+    Y(PRED_REG, regno, "SVE_PNg4_10", 0, F(FLD(10, 4)),		\
       "an SVE predicate-as-counter register")				\
-    Y(PRED_REG, regno, "SVE_Pg4_16", 0, F(FLD_SVE_Pg4_16),		\
+    Y(PRED_REG, regno, "SVE_Pg4_16", 0, F(FLD(16, 4)),		\
       "an SVE predicate register")					\
-    Y(PRED_REG, regno, "SVE_Pm", 0, F(FLD_SVE_Pm),			\
+    Y(PRED_REG, regno, "SVE_Pm", 0, F(FLD(16, 4)),			\
       "an SVE predicate register")					\
-    Y(PRED_REG, regno, "SVE_Pn", 0, F(FLD_SVE_Pn),			\
+    Y(PRED_REG, regno, "SVE_Pn", 0, F(FLD(5, 4)),			\
       "an SVE predicate register")					\
-    Y(PRED_REG, regno, "SVE_PNn", 0, F(FLD_SVE_Pn),			\
+    Y(PRED_REG, regno, "SVE_PNn", 0, F(FLD(5, 4)),			\
       "an SVE predicate register")					\
-    Y(PRED_REG, regno, "SVE_Pt", 0, F(FLD_SVE_Pt),			\
+    Y(PRED_REG, regno, "SVE_Pt", 0, F(FLD(0, 4)),			\
       "an SVE predicate register")					\
-    Y(PRED_REG, regno, "SVE_PNt", 0, F(FLD_SVE_Pt),			\
+    Y(PRED_REG, regno, "SVE_PNt", 0, F(FLD(0, 4)),			\
       "an SVE predicate register")					\
-    Y(INT_REG, regno, "SVE_Rm", 0, F(FLD_SVE_Rm),			\
+    Y(INT_REG, regno, "SVE_Rm", 0, F(FLD(5, 5)),			\
       "an integer register or zero")					\
-    Y(INT_REG, regno, "SVE_Rn_SP", OPD_F_MAYBE_SP, F(FLD_SVE_Rn),	\
+    Y(INT_REG, regno, "SVE_Rn_SP", OPD_F_MAYBE_SP, F(FLD(16, 5)),	\
       "an integer register or SP")					\
     Y(IMMEDIATE, sve_shlimm, "SVE_SHLIMM_PRED", 0,			\
-      F(FLD_SVE_tszh,FLD_SVE_imm5), "a shift-left immediate operand")	\
+      F(FLD(22, 2), FLD(5, 5)), "a shift-left immediate operand")	\
     Y(IMMEDIATE, sve_shlimm, "SVE_SHLIMM_UNPRED", 0,			\
-      F(FLD_SVE_tszh,FLD_imm5), "a shift-left immediate operand")	\
+      F(FLD(22, 2), FLD(16, 5)), "a shift-left immediate operand")	\
     Y(IMMEDIATE, sve_shlimm, "SVE_SHLIMM_UNPRED_22", 0,			\
-      F(FLD_SVE_sz, FLD_SVE_tszl_19, FLD_SVE_imm3),			\
+      F(FLD(22, 1), FLD(19, 2), FLD(16, 3)),			\
       "a shift-left immediate operand")					\
     Y(IMMEDIATE, sve_shrimm, "SVE_SHRIMM_PRED", 1 << OPD_F_OD_LSB,	\
-      F(FLD_SVE_tszh,FLD_SVE_imm5), "a shift-right immediate operand")	\
+      F(FLD(22, 2), FLD(5, 5)), "a shift-right immediate operand")	\
     Y(IMMEDIATE, sve_shrimm, "SVE_SHRIMM_UNPRED", 1 << OPD_F_OD_LSB,	\
-      F(FLD_SVE_tszh,FLD_imm5), "a shift-right immediate operand")	\
+      F(FLD(22, 2), FLD(16, 5)), "a shift-right immediate operand")	\
     Y(IMMEDIATE, sve_shrimm, "SVE_SHRIMM_UNPRED_22", 2 << OPD_F_OD_LSB,	\
-      F(FLD_SVE_sz, FLD_SVE_tszl_19, FLD_SVE_imm3),			\
+      F(FLD(22, 1), FLD(19, 2), FLD(16, 3)),			\
       "a shift-right immediate operand")				\
-    Y(IMMEDIATE, imm, "SVE_SIMM5", OPD_F_SEXT, F(FLD_SVE_imm5),		\
+    Y(IMMEDIATE, imm, "SVE_SIMM5", OPD_F_SEXT, F(FLD(5, 5)),		\
       "a 5-bit signed immediate")					\
-    Y(IMMEDIATE, imm, "SVE_SIMM5B", OPD_F_SEXT, F(FLD_SVE_imm5b),	\
+    Y(IMMEDIATE, imm, "SVE_SIMM5B", OPD_F_SEXT, F(FLD(16, 5)),	\
       "a 5-bit signed immediate")					\
-    Y(IMMEDIATE, imm, "SVE_SIMM6", OPD_F_SEXT, F(FLD_SVE_imms),		\
+    Y(IMMEDIATE, imm, "SVE_SIMM6", OPD_F_SEXT, F(FLD(5, 6)),		\
       "a 6-bit signed immediate")					\
-    Y(IMMEDIATE, imm, "SVE_SIMM8", OPD_F_SEXT, F(FLD_SVE_imm8),		\
+    Y(IMMEDIATE, imm, "SVE_SIMM8", OPD_F_SEXT, F(FLD(5, 8)),		\
       "an 8-bit signed immediate")					\
-    Y(IMMEDIATE, imm, "SVE_UIMM3", 0, F(FLD_SVE_imm3),			\
+    Y(IMMEDIATE, imm, "SVE_UIMM3", 0, F(FLD(16, 3)),			\
       "a 3-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "SVE_UIMM7", 0, F(FLD_SVE_imm7),			\
+    Y(IMMEDIATE, imm, "SVE_UIMM7", 0, F(FLD(14, 7)),			\
       "a 7-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "SVE_UIMM8", 0, F(FLD_SVE_imm8),			\
+    Y(IMMEDIATE, imm, "SVE_UIMM8", 0, F(FLD(5, 8)),			\
       "an 8-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "SVE_UIMM8_53", 0, F(FLD_imm5,FLD_imm3_10),		\
+    Y(IMMEDIATE, imm, "SVE_UIMM8_53", 0, F(FLD(16, 5), FLD(10, 3)),		\
       "an 8-bit unsigned immediate")					\
-    Y(IMMEDIATE, imm, "SVE_UIMM4", 0, F(FLD_SVE_imm4),			\
+    Y(IMMEDIATE, imm, "SVE_UIMM4", 0, F(FLD(16, 4)),			\
       "a 4-bit unsigned immediate")					\
-    Y(SIMD_REG, regno, "SVE_VZn", 0, F(FLD_SVE_Zn), "a SIMD register")	\
-    Y(SIMD_REG, regno, "SVE_Vd", 0, F(FLD_SVE_Vd), "a SIMD register")	\
-    Y(SIMD_REG, regno, "SVE_Vm", 0, F(FLD_SVE_Vm), "a SIMD register")	\
-    Y(SIMD_REG, regno, "SVE_Vn", 0, F(FLD_SVE_Vn), "a SIMD register")	\
+    Y(SIMD_REG, regno, "SVE_VZn", 0, F(FLD(5, 5)), "a SIMD register")	\
+    Y(SIMD_REG, regno, "SVE_Vd", 0, F(FLD(0, 5)), "a SIMD register")	\
+    Y(SIMD_REG, regno, "SVE_Vm", 0, F(FLD(5, 5)), "a SIMD register")	\
+    Y(SIMD_REG, regno, "SVE_Vn", 0, F(FLD(5, 5)), "a SIMD register")	\
     Y(ZA_ACCESS, sme_za_vrs1, "SME_ZA_array_vrsb_1", 0,			\
-      F(FLD_SME_V,FLD_SME_Rv,FLD_off3), "ZA0 tile")			\
+      F(FLD(15, 1), FLD(13, 2), FLD(5, 3)), "ZA0 tile")			\
     Y(ZA_ACCESS, sme_za_vrs1, "SME_ZA_array_vrsh_1", 0,			\
-      F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn_1,FLD_off2), "1 bit ZA tile")	\
+      F(FLD(15, 1), FLD(13, 2), FLD(7, 1), FLD(5, 2)), "1 bit ZA tile")	\
     Y(ZA_ACCESS, sme_za_vrs1, "SME_ZA_array_vrss_1", 0,			\
-      F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn_2,FLD_ol), "2 ZA tile")		\
+      F(FLD(15, 1), FLD(13, 2), FLD(6, 2), FLD(5, 1)), "2 ZA tile")		\
     Y(ZA_ACCESS, sme_za_vrs1, "SME_ZA_array_vrsd_1", 0,			\
-      F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn_3), "3 ZA tile")			\
+      F(FLD(15, 1), FLD(13, 2), FLD(5, 3)), "3 ZA tile")			\
     Y(ZA_ACCESS, sme_za_vrs2, "SME_ZA_array_vrsb_2", 0,			\
-      F(FLD_SME_V,FLD_SME_Rv,FLD_off2), "ZA0 tile")			\
+      F(FLD(15, 1), FLD(13, 2), FLD(5, 2)), "ZA0 tile")			\
     Y(ZA_ACCESS, sme_za_vrs2, "SME_ZA_array_vrsh_2", 0,			\
-      F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn,FLD_ol), "1 bit ZA tile")		\
+      F(FLD(15, 1), FLD(13, 2), FLD(6, 1), FLD(5, 1)), "1 bit ZA tile")		\
     Y(ZA_ACCESS, sme_za_vrs2, "SME_ZA_array_vrss_2", 0,			\
-      F(FLD_SME_V,FLD_SME_Rv,FLD_off2), "2 bit ZA tile")		\
+      F(FLD(15, 1), FLD(13, 2), FLD(5, 2)), "2 bit ZA tile")		\
     Y(ZA_ACCESS, sme_za_vrs2, "SME_ZA_array_vrsd_2", 0,			\
-      F(FLD_SME_V,FLD_SME_Rv,FLD_ZAn_3), "3 bit ZA tile")		\
+      F(FLD(15, 1), FLD(13, 2), FLD(5, 3)), "3 bit ZA tile")		\
     Y(ZA_ACCESS, sme_za_tile_to_vec, "SME_ZA_ARRAY4", 0,		\
-      F(FLD_SME_V,FLD_SME_Rv), "ZA tile to vector register")		\
-    Y(SVE_REG, regno, "SVE_Za_5", 0, F(FLD_SVE_Za_5),			\
+      F(FLD(15, 1), FLD(13, 2)), "ZA tile to vector register")		\
+    Y(SVE_REG, regno, "SVE_Za_5", 0, F(FLD(5, 5)),			\
       "an SVE vector register")						\
-    Y(SVE_REG, regno, "SVE_Za_16", 0, F(FLD_SVE_Za_16),			\
+    Y(SVE_REG, regno, "SVE_Za_16", 0, F(FLD(16, 5)),			\
       "an SVE vector register")						\
-    Y(SVE_REG, regno, "SVE_Zd", 0, F(FLD_SVE_Zd),			\
+    Y(SVE_REG, regno, "SVE_Zd", 0, F(FLD(0, 5)),			\
       "an SVE vector register")						\
-    Y(SVE_REG, regno, "SVE_Zm_5", 0, F(FLD_SVE_Zm_5),			\
+    Y(SVE_REG, regno, "SVE_Zm_5", 0, F(FLD(5, 5)),			\
       "an SVE vector register")						\
-    Y(SVE_REG, regno, "SVE_Zm_16", 0, F(FLD_SVE_Zm_16),			\
+    Y(SVE_REG, regno, "SVE_Zm_16", 0, F(FLD(16, 5)),			\
       "an SVE vector register")						\
     Y(SVE_REG, simple_index, "SVE_Zm1_23_INDEX",			\
-      0, F(FLD_SVE_i1_23, FLD_SVE_Zm_16),				\
+      0, F(FLD(23, 1), FLD(16, 5)),				\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SVE_Zm2_22_INDEX",			\
-      0, F(FLD_SVE_i2, FLD_SVE_Zm_16),					\
+      0, F(FLD(22, 2), FLD(16, 5)),					\
       "an indexed SVE vector register")					\
     Y(SVE_REG, sve_quad_index, "SVE_Zm3_INDEX",				\
-      3 << OPD_F_OD_LSB, F(FLD_SVE_Zm_16),				\
+      3 << OPD_F_OD_LSB, F(FLD(16, 5)),				\
       "an indexed SVE vector register")					\
     Y(SVE_REG, sve_quad_index, "SVE_Zm3_11_INDEX", 			\
-      3 << OPD_F_OD_LSB, F(FLD_SVE_i3h2, FLD_SVE_i3l, FLD_SVE_imm3),    \
+      3 << OPD_F_OD_LSB, F(FLD(19, 2), FLD(11, 1), FLD(16, 3)),    \
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SVE_Zm3_12_INDEX",			\
-      0, F(FLD_SVE_i3h3, FLD_SVE_i3l2, FLD_SVE_Zm_16),			\
+      0, F(FLD(22, 2), FLD(12, 1), FLD(16, 5)),			\
       "an indexed SVE vector register")					\
     Y(SVE_REG, sve_quad_index, "SVE_Zm3_19_INDEX", 			\
-      3 << OPD_F_OD_LSB, F(FLD_imm2_19, FLD_SVE_imm3),			\
+      3 << OPD_F_OD_LSB, F(FLD(19, 2), FLD(16, 3)),			\
       "an indexed SVE vector register")					\
     Y(SVE_REG, sve_quad_index, "SVE_Zm3_22_INDEX", 			\
-      3 << OPD_F_OD_LSB, F(FLD_SVE_i3h, FLD_SVE_Zm_16),			\
+      3 << OPD_F_OD_LSB, F(FLD(22, 1), FLD(16, 5)),			\
       "an indexed SVE vector register")					\
     Y(SVE_REG, sve_quad_index, "SVE_Zm3_10_INDEX", 			\
-      3 << OPD_F_OD_LSB, F(FLD_SVE_i3h2, FLD_SVE_i4l2, FLD_SVE_imm3),	\
+      3 << OPD_F_OD_LSB, F(FLD(19, 2), FLD(10, 2), FLD(16, 3)),	\
       "an indexed SVE vector register")					\
     Y(SVE_REG, sve_quad_index, "SVE_Zm4_11_INDEX", 			\
-      4 << OPD_F_OD_LSB, F(FLD_SVE_i2h, FLD_SVE_i3l, FLD_SVE_imm4),     \
+      4 << OPD_F_OD_LSB, F(FLD(20, 1), FLD(11, 1), FLD(16, 4)),     \
       "an indexed SVE vector register")					\
     Y(SVE_REG, sve_quad_index, "SVE_Zm4_INDEX", 			\
-      4 << OPD_F_OD_LSB, F(FLD_SVE_Zm_16),				\
+      4 << OPD_F_OD_LSB, F(FLD(16, 5)),				\
       "an indexed SVE vector register")					\
-    Y(SVE_REG, regno, "SVE_Zn", 0, F(FLD_SVE_Zn),			\
+    Y(SVE_REG, regno, "SVE_Zn", 0, F(FLD(5, 5)),			\
       "an SVE vector register")						\
     Y(SVE_REG, sve_index, "SVE_Zn_INDEX", 0,				\
-      F(FLD_SVE_Zn, FLD_SVE_tszh, FLD_imm5),				\
+      F(FLD(5, 5), FLD(22, 2), FLD(16, 5)),				\
       "an indexed SVE vector register")					\
     Y(SVE_REG, sve_index, "SVE_Zn_5_INDEX", 0,				\
-      F(FLD_SVE_Zn, FLD_imm5),						\
+      F(FLD(5, 5), FLD(16, 5)),						\
       "a 5 bit indexed SVE vector register")				\
-    Y(SVE_REGLIST, sve_reglist, "SVE_ZnxN", 0, F(FLD_SVE_Zn),		\
+    Y(SVE_REGLIST, sve_reglist, "SVE_ZnxN", 0, F(FLD(5, 5)),		\
       "a list of SVE vector registers")					\
-    Y(SVE_REG, regno, "SVE_Zt", 0, F(FLD_SVE_Zt),			\
+    Y(SVE_REG, regno, "SVE_Zt", 0, F(FLD(0, 5)),			\
       "an SVE vector register")						\
-    Y(SVE_REGLIST, sve_reglist, "SVE_ZtxN", 0, F(FLD_SVE_Zt),		\
+    Y(SVE_REGLIST, sve_reglist, "SVE_ZtxN", 0, F(FLD(0, 5)),		\
       "a list of SVE vector registers")					\
     Y(SVE_REGLIST, sve_aligned_reglist, "SME_Zdnx2", 2 << OPD_F_OD_LSB,	\
-      F(FLD_SME_Zdn2, FLD_CONST_0), "a list of SVE vector registers")	\
+      F(FLD(1, 4), FLD_CONST_0), "a list of SVE vector registers")	\
     Y(SVE_REGLIST, sve_aligned_reglist, "SME_Zdnx4", 4 << OPD_F_OD_LSB,	\
-      F(FLD_SME_Zdn4, FLD_CONST_00), "a list of SVE vector registers")	\
-    Y(SVE_REG, regno, "SME_Zm", 0, F(FLD_SME_Zm),			\
+      F(FLD(2, 3), FLD_CONST_00), "a list of SVE vector registers")	\
+    Y(SVE_REG, regno, "SME_Zm", 0, F(FLD(16, 4)),			\
       "an SVE vector register")						\
-    Y(SVE_REG, regno, "SME_Zm_17", 0, F(FLD_SME_Zm2),			\
+    Y(SVE_REG, regno, "SME_Zm_17", 0, F(FLD(17, 4)),			\
       "an SVE vector register")						\
     Y(SVE_REG, regno, "SME_Zn_6_3", 0,					\
-      F(FLD_CONST_0, FLD_SME_Zn6_3, FLD_CONST_0),			\
+      F(FLD_CONST_0, FLD(6, 3), FLD_CONST_0),			\
       "an SVE vector register")						\
     Y(SVE_REG, regno, "SME_Zm_17_3", 0,					\
-      F(FLD_CONST_1, FLD_SME_Zm17_3, FLD_CONST_0),			\
+      F(FLD_CONST_1, FLD(17, 3), FLD_CONST_0),			\
       "an SVE vector register")						\
     Y(SVE_REGLIST, sve_aligned_reglist, "SME_Znx2_6_3",			\
-      2 << OPD_F_OD_LSB, F(FLD_CONST_0, FLD_SME_Zn6_3, FLD_CONST_0),	\
+      2 << OPD_F_OD_LSB, F(FLD_CONST_0, FLD(6, 3), FLD_CONST_0),	\
       "a list of SVE vector registers")					\
     Y(SVE_REGLIST, sve_aligned_reglist, "SME_Zmx2_17_3",		\
-      2 << OPD_F_OD_LSB, F(FLD_CONST_1, FLD_SME_Zm17_3, FLD_CONST_0),	\
+      2 << OPD_F_OD_LSB, F(FLD_CONST_1, FLD(17, 3), FLD_CONST_0),	\
       "a list of SVE vector registers")					\
     Y(SVE_REGLIST, sve_reglist_index, "SME_Zmx2_INDEX_22", 2 << OPD_F_OD_LSB,	\
-      F(FLD_SVE_Zm_16, FLD_imm1_22), "a list of SVE vector registers with index")					\
+      F(FLD(16, 5), FLD(22, 1)), "a list of SVE vector registers with index")					\
     Y(SVE_REGLIST, sve_aligned_reglist, "SME_Zmx2", 2 << OPD_F_OD_LSB,	\
-      F(FLD_SME_Zm2, FLD_CONST_0), "a list of SVE vector registers")	\
+      F(FLD(17, 4), FLD_CONST_0), "a list of SVE vector registers")	\
     Y(SVE_REGLIST, sve_aligned_reglist, "SME_Zmx4", 4 << OPD_F_OD_LSB,	\
-      F(FLD_SME_Zm4, FLD_CONST_00), "a list of SVE vector registers")	\
+      F(FLD(18, 3), FLD_CONST_00), "a list of SVE vector registers")	\
     Y(SVE_REGLIST, sve_aligned_reglist, "SME_Znx2", 2 << OPD_F_OD_LSB,	\
-      F(FLD_SME_Zn2, FLD_CONST_0), "a list of SVE vector registers")	\
+      F(FLD(6, 4), FLD_CONST_0), "a list of SVE vector registers")	\
     Y(SVE_REGLIST, sve_aligned_reglist, "SME_Znx2_BIT_INDEX",		\
-      2 << OPD_F_OD_LSB, F(FLD_SME_Zn2, FLD_CONST_0),			\
+      2 << OPD_F_OD_LSB, F(FLD(6, 4), FLD_CONST_0),			\
       "a list of SVE vector registers")					\
     Y(SVE_REGLIST, sve_aligned_reglist, "SME_Znx4", 4 << OPD_F_OD_LSB,	\
-      F(FLD_SME_Zn4, FLD_CONST_00), "a list of SVE vector registers")	\
-    Y(SVE_REGLIST, sve_reglist, "SME_Zn7xN_UNTYPED", 0, F(FLD_SME_Zn4),	\
+      F(FLD(7, 3), FLD_CONST_00), "a list of SVE vector registers")	\
+    Y(SVE_REGLIST, sve_reglist, "SME_Zn7xN_UNTYPED", 0, F(FLD(7, 3)),	\
       "a list of untyped SVE vector registers")				\
     Y(SVE_REGLIST, sve_strided_reglist, "SME_Ztx2_STRIDED",		\
-      2 << OPD_F_OD_LSB, F(FLD_SME_ZtT, FLD_SME_Zt3),			\
+      2 << OPD_F_OD_LSB, F(FLD(4, 1), FLD(0, 3)),			\
       "a list of SVE vector registers")					\
     Y(SVE_REGLIST, sve_strided_reglist, "SME_Ztx4_STRIDED",		\
-      4 << OPD_F_OD_LSB, F(FLD_SME_ZtT, FLD_SME_Zt2),			\
+      4 << OPD_F_OD_LSB, F(FLD(4, 1), FLD(0, 2)),			\
       "a list of SVE vector registers")					\
-    Y(SVE_REG, regno, "SME_ZAda_1b", 0, F(FLD_SME_ZAda_1b),		\
+    Y(SVE_REG, regno, "SME_ZAda_1b", 0, F(FLD(0, 1)),		\
       "an SME ZA tile ZA0-ZA1")						\
-    Y(SVE_REG, regno, "SME_ZAda_2b", 0, F(FLD_SME_ZAda_2b),		\
+    Y(SVE_REG, regno, "SME_ZAda_2b", 0, F(FLD(0, 2)),		\
       "an SME ZA tile ZA0-ZA3")						\
-    Y(SVE_REG, regno, "SME_ZAda_3b", 0, F(FLD_SME_ZAda_3b),		\
+    Y(SVE_REG, regno, "SME_ZAda_3b", 0, F(FLD(0, 3)),		\
       "an SME ZA tile ZA0-ZA7")						\
     Y(ZA_ACCESS, sme_za_hv_tiles, "SME_ZA_HV_idx_src", 0,		\
-      F(FLD_SME_size_22,FLD_SME_Q,FLD_SME_V,FLD_SME_Rv,FLD_imm4_5),	\
+      F(FLD(22, 2), FLD(16, 1), FLD(15, 1), FLD(13, 2), FLD(5, 4)),	\
       "an SME horizontal or vertical vector access register")		\
     Y(ZA_ACCESS, sme_za_hv_tiles_range, "SME_ZA_HV_idx_srcxN", 0,	\
-      F(FLD_SME_V,FLD_SME_Rv,FLD_imm3_5),				\
+      F(FLD(15, 1), FLD(13, 2), FLD(5, 3)),				\
       "an SME horizontal or vertical vector access register")		\
     Y(ZA_ACCESS, sme_za_hv_tiles, "SME_ZA_HV_idx_dest", 0,		\
-      F(FLD_SME_size_22,FLD_SME_Q,FLD_SME_V,FLD_SME_Rv,FLD_imm4_0),	\
+      F(FLD(22, 2), FLD(16, 1), FLD(15, 1), FLD(13, 2), FLD(0, 4)),	\
       "an SME horizontal or vertical vector access register")		\
     Y(ZA_ACCESS, sme_za_hv_tiles_range, "SME_ZA_HV_idx_destxN", 0,	\
-      F(FLD_SME_V,FLD_SME_Rv,FLD_imm3_0),				\
+      F(FLD(15, 1), FLD(13, 2), FLD(0, 3)),				\
       "an SME horizontal or vertical vector access register")		\
     Y(SVE_REGLIST, sve_aligned_reglist, "SME_Pdx2", 2 << OPD_F_OD_LSB,	\
-      F(FLD_SME_Pdx2, FLD_CONST_0), "a list of SVE predicate registers")\
-    Y(SVE_REGLIST, sve_reglist, "SME_PdxN", 0, F(FLD_SVE_Pd),		\
+      F(FLD(1, 3), FLD_CONST_0), "a list of SVE predicate registers")\
+    Y(SVE_REGLIST, sve_reglist, "SME_PdxN", 0, F(FLD(0, 4)),		\
       "a list of SVE predicate registers")				\
-    Y(PRED_REG, regno, "SME_Pm", 0, F(FLD_SME_Pm),			\
+    Y(PRED_REG, regno, "SME_Pm", 0, F(FLD(13, 3)),			\
       "an SVE predicate register")					\
-    Y(PRED_REG, regno, "SME_PNd3", 0, F(FLD_CONST_1, FLD_SME_PNd3),	\
+    Y(PRED_REG, regno, "SME_PNd3", 0, F(FLD_CONST_1, FLD(0, 3)),	\
       "an SVE predicate-as-counter register")				\
-    Y(PRED_REG, regno, "SME_PNg3", 0, F(FLD_CONST_1, FLD_SVE_Pg3),	\
+    Y(PRED_REG, regno, "SME_PNg3", 0, F(FLD_CONST_1, FLD(10, 3)),	\
       "an SVE predicate-as-counter register")				\
-    Y(PRED_REG, regno, "SME_PNn", 0, F(FLD_SVE_Pn),			\
+    Y(PRED_REG, regno, "SME_PNn", 0, F(FLD(5, 4)),			\
       "an SVE predicate-as-counter register")				\
     Y(SVE_REG, simple_index, "SME_PNn3_INDEX1", 0,			\
-      F(FLD_imm1_8, FLD_CONST_01, FLD_SME_PNn3),			\
+      F(FLD(8, 1), FLD_CONST_01, FLD(5, 3)),			\
       "an indexed SVE predicate-as-counter register")			\
     Y(SVE_REG, simple_index, "SME_PNn3_INDEX2", 0,			\
-      F(FLD_imm2_8, FLD_CONST_01, FLD_SME_PNn3),			\
+      F(FLD(8, 2), FLD_CONST_01, FLD(5, 3)),			\
       "an indexed SVE predicate-as-counter register")			\
     Y(SVE_REG, imm, "SME_list_of_64bit_tiles", 0,			\
-      F(FLD_SME_zero_mask), "a list of 64-bit ZA element tiles")	\
+      F(FLD(0, 8)), "a list of 64-bit ZA element tiles")	\
     Y(ZA_ACCESS, sme_za_hv_tiles, "SME_ZA_HV_idx_ldstr", 0,		\
-      F(FLD_SME_size_22,FLD_index2,FLD_SME_V,FLD_SME_Rv,FLD_imm4_0),	\
+      F(FLD(22, 2), FLD(24, 1), FLD(15, 1), FLD(13, 2), FLD(0, 4)),	\
       "an SME horizontal or vertical vector access register")		\
     Y(ZA_ACCESS, sme_za_array, "SME_ZA_array_off1x4",			\
-      4 << OPD_F_OD_LSB, F(FLD_SME_Rv,FLD_imm1_0), "ZA array")		\
+      4 << OPD_F_OD_LSB, F(FLD(13, 2), FLD(0, 1)), "ZA array")		\
     Y(ZA_ACCESS, sme_za_array, "SME_ZA_array_off2x2",			\
-      2 << OPD_F_OD_LSB, F(FLD_SME_Rv,FLD_imm2_0), "ZA array")		\
+      2 << OPD_F_OD_LSB, F(FLD(13, 2), FLD(0, 2)), "ZA array")		\
     Y(ZA_ACCESS, sme_za_array, "SME_ZA_array_off2x4",			\
-      4 << OPD_F_OD_LSB, F(FLD_SME_Rv,FLD_imm2_0), "ZA array")		\
+      4 << OPD_F_OD_LSB, F(FLD(13, 2), FLD(0, 2)), "ZA array")		\
     Y(ZA_ACCESS, sme_za_array, "SME_ZA_array_off3_0", 0,		\
-      F(FLD_SME_Rv,FLD_imm3_0), "ZA array")				\
+      F(FLD(13, 2), FLD(0, 3)), "ZA array")				\
     Y(ZA_ACCESS, sme_za_array, "SME_ZA_array_off3_5", 0,		\
-      F(FLD_SME_Rv,FLD_imm3_5), "ZA array")				\
+      F(FLD(13, 2), FLD(5, 3)), "ZA array")				\
     Y(ZA_ACCESS, sme_za_array, "SME_ZA_array_off3x2",			\
-      2 << OPD_F_OD_LSB, F(FLD_SME_Rv,FLD_imm3_0), "ZA array")		\
+      2 << OPD_F_OD_LSB, F(FLD(13, 2), FLD(0, 3)), "ZA array")		\
     Y(ZA_ACCESS, sme_za_array, "SME_ZA_array_off4", 0,			\
-      F(FLD_SME_Rv,FLD_imm4_0), "ZA array")				\
+      F(FLD(13, 2), FLD(0, 4)), "ZA array")				\
     Y(ADDRESS, sme_addr_ri_u4xvl, "SME_ADDR_RI_U4xVL", 0 << OPD_F_OD_LSB, \
-      F(FLD_Rn,FLD_imm4_0), "memory offset")				\
+      F(FLD(5, 5), FLD(0, 4)), "memory offset")				\
     Y(ADDRESS, sme_sm_za, "SME_SM_ZA", 0,				\
-      F(FLD_CRm), "streaming mode")					\
+      F(FLD(8, 4)), "streaming mode")					\
     Y(SVE_REG, sme_pred_reg_with_index, "SME_PnT_Wm_imm", 0,		\
-      F(FLD_SME_Rm,FLD_SVE_Pn,FLD_SME_i1,FLD_SME_tszh,FLD_SME_tszl),	\
+      F(FLD(16, 2), FLD(5, 4), FLD(23, 1), FLD(22, 1), FLD(18, 3)),	\
       "Source scalable predicate register with index ")	\
-    Y(IMMEDIATE, plain_shrimm, "SME_SHRIMM3", 0, F(FLD_SVE_imm3), 	\
+    Y(IMMEDIATE, plain_shrimm, "SME_SHRIMM3", 0, F(FLD(16, 3)), 	\
       "a shift-right immediate operand")				\
-    Y(IMMEDIATE, plain_shrimm, "SME_SHRIMM4", 0, F(FLD_SVE_imm4), 	\
+    Y(IMMEDIATE, plain_shrimm, "SME_SHRIMM4", 0, F(FLD(16, 4)), 	\
       "a shift-right immediate operand")				\
     Y(IMMEDIATE, sve_shrimm, "SME_SHRIMM5", 1 << OPD_F_OD_LSB,		\
-      F(FLD_SVE_tszh,FLD_SVE_imm5b), "a shift-right immediate operand")	\
+      F(FLD(22, 2), FLD(16, 5)), "a shift-right immediate operand")	\
     Y(SVE_REG, simple_index, "SME_Zk_INDEX", 0,				\
-      F(FLD_imm2_4, FLD_CONST_1, FLD_SVE_i3l2, FLD_CONST_1, FLD_imm2_10),\
+      F(FLD(4, 2), FLD_CONST_1, FLD(12, 1), FLD_CONST_1, FLD(10, 2)),\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX1", 0,			\
-      F(FLD_imm1_10, FLD_CONST_0, FLD_SME_Zm),				\
+      F(FLD(10, 1), FLD_CONST_0, FLD(16, 4)),				\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX2", 0,			\
-      F(FLD_imm2_10, FLD_CONST_0, FLD_SME_Zm),				\
+      F(FLD(10, 2), FLD_CONST_0, FLD(16, 4)),				\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX2_3", 0,			\
-      F(FLD_imm1_10, FLD_imm1_3, FLD_CONST_0, FLD_SME_Zm),		\
+      F(FLD(10, 1), FLD(3, 1), FLD_CONST_0, FLD(16, 4)),		\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX3_1", 0,			\
-      F(FLD_imm1_10, FLD_imm2_1, FLD_CONST_0, FLD_SME_Zm),		\
+      F(FLD(10, 1), FLD(1, 2), FLD_CONST_0, FLD(16, 4)),		\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX3_2", 0,			\
-      F(FLD_imm2_10, FLD_imm1_2, FLD_CONST_0, FLD_SME_Zm),		\
+      F(FLD(10, 2), FLD(2, 1), FLD_CONST_0, FLD(16, 4)),		\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX3_3", 0,			\
-      F(FLD_imm2_10, FLD_imm1_3, FLD_CONST_0, FLD_SME_Zm),		\
+      F(FLD(10, 2), FLD(3, 1), FLD_CONST_0, FLD(16, 4)),		\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX3_10", 0,			\
-      F(FLD_imm1_15, FLD_imm2_10, FLD_CONST_0, FLD_SME_Zm),		\
+      F(FLD(15, 1), FLD(10, 2), FLD_CONST_0, FLD(16, 4)),		\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX4_1", 0,			\
-      F(FLD_imm2_10, FLD_imm2_1, FLD_CONST_0, FLD_SME_Zm),		\
+      F(FLD(10, 2), FLD(1, 2), FLD_CONST_0, FLD(16, 4)),		\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX4_2", 0,			\
-      F(FLD_imm2_10, FLD_imm2_2, FLD_CONST_0, FLD_SME_Zm),		\
+      F(FLD(10, 2), FLD(2, 2), FLD_CONST_0, FLD(16, 4)),		\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX4_3", 0,			\
-      F(FLD_imm1_15, FLD_imm2_10, FLD_imm1_3, FLD_CONST_0, FLD_SME_Zm),	\
+      F(FLD(15, 1), FLD(10, 2), FLD(3, 1), FLD_CONST_0, FLD(16, 4)),	\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zm_INDEX4_10", 0,			\
-      F(FLD_imm1_15, FLD_imm3_10, FLD_CONST_0, FLD_SME_Zm),		\
+      F(FLD(15, 1), FLD(10, 3), FLD_CONST_0, FLD(16, 4)),		\
       "an indexed SVE vector register")					\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX1_16", 0,			\
-      F(FLD_imm1_16, FLD_SVE_Zn), "an indexed SVE vector register")	\
+      F(FLD(16, 1), FLD(5, 5)), "an indexed SVE vector register")	\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX2_15", 0,			\
-      F(FLD_imm2_15, FLD_SVE_Zn), "an indexed SVE vector register")	\
+      F(FLD(15, 2), FLD(5, 5)), "an indexed SVE vector register")	\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX2_16", 0,			\
-      F(FLD_imm2_16, FLD_SVE_Zn), "an indexed SVE vector register")	\
+      F(FLD(16, 2), FLD(5, 5)), "an indexed SVE vector register")	\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX2_19", 0,			\
-      F(FLD_imm2_19, FLD_SVE_Zn), "an indexed SVE vector register")	\
+      F(FLD(19, 2), FLD(5, 5)), "an indexed SVE vector register")	\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX3_14", 0,			\
-      F(FLD_imm3_14, FLD_SVE_Zn), "an indexed SVE vector register")	\
+      F(FLD(14, 3), FLD(5, 5)), "an indexed SVE vector register")	\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX3_15", 0,			\
-      F(FLD_imm3_15, FLD_SVE_Zn), "an indexed SVE vector register")	\
+      F(FLD(15, 3), FLD(5, 5)), "an indexed SVE vector register")	\
     Y(SVE_REG, simple_index, "SME_Zn_INDEX4_14", 0,			\
-      F(FLD_imm4_14, FLD_SVE_Zn), "an indexed SVE vector register")	\
-    Y(SVE_REG, regno, "SVE_Zn0_INDEX", 0, F(FLD_SVE_Zn),		\
+      F(FLD(14, 4), FLD(5, 5)), "an indexed SVE vector register")	\
+    Y(SVE_REG, regno, "SVE_Zn0_INDEX", 0, F(FLD(5, 5)),		\
       "an SVE vector register with option zero index")			\
     Y(SVE_REG, simple_index, "SVE_Zn1_17_INDEX", 0,			\
-      F(FLD_imm17_1, FLD_SVE_Zn),					\
+      F(FLD(17, 1), FLD(5, 5)),					\
       "an SVE vector register with optional one bit index")		\
     Y(SVE_REG, simple_index, "SVE_Zn2_18_INDEX", 0,			\
-      F(FLD_imm17_2, FLD_SVE_Zn),					\
+      F(FLD(17, 2), FLD(5, 5)),					\
       "an SVE vector register with optional two bit index")		\
     Y(SVE_REG, simple_index, "SVE_Zn3_22_INDEX", 0,			\
-      F(FLD_SVE_i3h, FLD_imm17_2, FLD_SVE_Zn),				\
+      F(FLD(22, 1), FLD(17, 2), FLD(5, 5)),				\
       "an SVE vector register with optional three bit index")		\
-    Y(SVE_REG, regno, "SVE_Zd0_INDEX", 0, F(FLD_SVE_Zd),		\
+    Y(SVE_REG, regno, "SVE_Zd0_INDEX", 0, F(FLD(0, 5)),		\
       "an SVE vector register with option zero index")			\
     Y(SVE_REG, simple_index, "SVE_Zd1_17_INDEX", 0,			\
-      F(FLD_imm17_1, FLD_SVE_Zd),					\
+      F(FLD(17, 1), FLD(0, 5)),					\
       "an SVE vector register with optional one bit index")		\
     Y(SVE_REG, simple_index, "SVE_Zd2_18_INDEX", 0,			\
-      F(FLD_imm17_2, FLD_SVE_Zd),					\
+      F(FLD(17, 2), FLD(0, 5)),					\
       "an SVE vector register with optional two bit index")		\
     Y(SVE_REG, simple_index, "SVE_Zd3_22_INDEX", 0,			\
-      F(FLD_SVE_i3h, FLD_imm17_2, FLD_SVE_Zd),				\
+      F(FLD(22, 1), FLD(17, 2), FLD(0, 5)),				\
       "an SVE vector register with optional three bit index")		\
-    Y(IMMEDIATE, imm, "SME_VLxN_10", 0, F(FLD_SME_VL_10),		\
+    Y(IMMEDIATE, imm, "SME_VLxN_10", 0, F(FLD(10, 1)),		\
       "VLx2 or VLx4")							\
-    Y(IMMEDIATE, imm, "SME_VLxN_13", 0, F(FLD_SME_VL_13),		\
+    Y(IMMEDIATE, imm, "SME_VLxN_13", 0, F(FLD(13, 1)),		\
       "VLx2 or VLx4")							\
-    Y(SYSTEM, none, "SME_ZT0", 0, F (), "ZT0")				\
+    Y(SYSTEM, none, "SME_ZT0", 0, F(), "ZT0")				\
     Y(IMMEDIATE, imm, "SME_ZT0_INDEX", OPD_F_SHIFT_BY_3,		\
-      F (FLD_imm3_12), "a ZT0 index")					\
+      F(FLD(12, 3)), "a ZT0 index")					\
     Y(IMMEDIATE, imm, "SME_ZT0_INDEX_MUL_VL", 0,				\
-      F (FLD_imm3_12), "a ZT0 index")					\
-    Y(SYSTEM, none, "SME_ZT0_LIST", 0, F (), "{ ZT0 }")			\
-    Y(IMMEDIATE, imm, "TME_UIMM16", 0, F(FLD_imm16_5),			\
+      F(FLD(12, 3)), "a ZT0 index")					\
+    Y(SYSTEM, none, "SME_ZT0_LIST", 0, F(), "{ ZT0 }")			\
+    Y(IMMEDIATE, imm, "TME_UIMM16", 0, F(FLD(5, 16)),			\
       "a 16-bit unsigned immediate for TME tcancel")			\
     /* These next two are really register fields; the [...] notation	\
        is just syntactic sugar.  */					\
-    Y(INT_REG, x0_to_x30, "MOPS_ADDR_Rd", 0, F(FLD_Rd),			\
+    Y(INT_REG, x0_to_x30, "MOPS_ADDR_Rd", 0, F(FLD(0, 5)),			\
       "a register destination address with writeback")			\
-    Y(INT_REG, x0_to_x30, "MOPS_ADDR_Rs", 0, F(FLD_Rs),			\
+    Y(INT_REG, x0_to_x30, "MOPS_ADDR_Rs", 0, F(FLD(16, 5)),			\
       "a register source address with writeback")			\
-    Y(INT_REG, x0_to_x30, "MOPS_WB_Rn", 0, F(FLD_Rn),			\
+    Y(INT_REG, x0_to_x30, "MOPS_WB_Rn", 0, F(FLD(5, 5)),			\
       "an integer register with writeback")				\
-    Y(IMMEDIATE, imm, "CSSC_SIMM8", OPD_F_SEXT, F(FLD_CSSC_imm8),	\
+    Y(IMMEDIATE, imm, "CSSC_SIMM8", OPD_F_SEXT, F(FLD(10, 8)),	\
       "an 8-bit signed immediate")					\
-    Y(IMMEDIATE, imm, "CSSC_UIMM8", 0, F(FLD_CSSC_imm8),		\
+    Y(IMMEDIATE, imm, "CSSC_UIMM8", 0, F(FLD(10, 8)),		\
       "an 8-bit unsigned immediate")					\
     X(ADDRESS, ins_rcpc3_addr_opt_offset, ext_rcpc3_addr_opt_offset,		\
-      "RCPC3_ADDR_OPT_POSTIND", 0, F(FLD_opc2),				\
+      "RCPC3_ADDR_OPT_POSTIND", 0, F(FLD(12, 4)),				\
       "an address with post-incrementing by ammount of loaded bytes") \
     X(ADDRESS, ins_rcpc3_addr_opt_offset, ext_rcpc3_addr_opt_offset,	\
-      "RCPC3_ADDR_OPT_PREIND_WB", 0, F(FLD_opc2),			\
+      "RCPC3_ADDR_OPT_PREIND_WB", 0, F(FLD(12, 4)),			\
       "an address with pre-incrementing with write-back by ammount of stored bytes") \
     X(ADDRESS, ins_rcpc3_addr_opt_offset, ext_rcpc3_addr_opt_offset,	\
       "RCPC3_ADDR_POSTIND", 0, F(),					\
@@ -8748,7 +8748,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
     X(ADDRESS, ins_rcpc3_addr_opt_offset, ext_rcpc3_addr_opt_offset,	\
       "RCPC3_ADDR_PREIND_WB", 0, F(),					\
       "an address with pre-incrementing with write-back by ammount of stored bytes") \
-    Y(ADDRESS, rcpc3_addr_offset, "RCPC3_ADDR_OFFSET", 0, F(FLD_Rn,FLD_imm9), \
+    Y(ADDRESS, rcpc3_addr_offset, "RCPC3_ADDR_OFFSET", 0, F(FLD(5, 5), FLD(12, 9)), \
       "an address with an optional 8-bit signed immediate offset") \
     Y(SYSTEM, sysins_op, "GIC", 0, F(), \
       "Generic Interrupt Controller") \

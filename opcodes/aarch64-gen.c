@@ -994,6 +994,8 @@ typedef struct operand operand;
 #undef F
 #endif
 
+#define FLD AARCH64_FIELD
+
 /* The parentheses used when calling this macro ensure that the list of fields
    appears as a single argument to the X and Y macros.  */
 #define F(...) {__VA_ARGS__}
