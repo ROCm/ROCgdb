@@ -182,6 +182,22 @@ LIBSFRAME = ../libsframe/libsframe.la
 
 LIBIBERTY = ../libiberty/libiberty.a
 
+if ENABLE_MSVC_DEMANGLER
+LIBDEMANGLE_MSVC = ../libdemangle-msvc/libdemangle-msvc.a
+LIBDEMANGLE_MSVC_LDADD = $(LIBDEMANGLE_MSVC)
+else
+LIBDEMANGLE_MSVC =
+LIBDEMANGLE_MSVC_LDADD =
+endif
+
+# Enable C++ linking for tools that include libdemangle-msvc.
+# Simply include a non-existent C++ source in nodist_EXTRA_*_SOURCES
+# as that triggers automake to pick the C++ linker for these programs.
+nodist_EXTRA_nm_new_SOURCES = dummy.cxx
+nodist_EXTRA_objdump_SOURCES = dummy.cxx
+nodist_EXTRA_cxxfilt_SOURCES = dummy.cxx
+nodist_EXTRA_addr2line_SOURCES = dummy.cxx
+
 POTFILES = $(CFILES) $(DEBUG_SRCS) $(HFILES)
 po/POTFILES.in: @MAINT@ Makefile
 	for f in $(POTFILES); do echo $$f; done | LC_ALL=C sort > tmp \
@@ -232,13 +248,13 @@ installcheck-local:
 # which depends on libintl, since we don't know whether LIBINTL_DEP will be
 # non-empty until configure time.  Ugh!
 size_DEPENDENCIES =      $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
-objdump_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB) $(OPCODES) $(LIBCTF) $(OBJDUMP_PRIVATE_OFILES) $(LIBSFRAME)
-nm_new_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
+objdump_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB) $(OPCODES) $(LIBCTF) $(OBJDUMP_PRIVATE_OFILES) $(LIBSFRAME) $(LIBDEMANGLE_MSVC)
+nm_new_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB) $(LIBDEMANGLE_MSVC)
 ar_DEPENDENCIES =        $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 strings_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 strip_new_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 ranlib_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
-cxxfilt_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
+cxxfilt_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB) $(LIBDEMANGLE_MSVC)
 objcopy_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 srconv_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 sysdump_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
@@ -246,7 +262,7 @@ coffdump_DEPENDENCIES =  $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 dlltool_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 windres_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 windmc_DEPENDENCIES =    $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
-addr2line_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
+addr2line_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB) $(LIBDEMANGLE_MSVC)
 readelf_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY) $(LIBCTF_NOBFD) $(LIBSFRAME)
 elfedit_DEPENDENCIES = $(LIBINTL_DEP) $(LIBIBERTY)
 dllwrap_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY)
@@ -271,10 +287,11 @@ elfedit_LDADD = $(LIBINTL) $(LIBIBERTY)
 strip_new_SOURCES = is-strip.c rename.c $(WRITE_DEBUG_SRCS) $(BULIBS)
 
 nm_new_SOURCES = nm.c demanguse.c $(BULIBS)
+nm_new_LDADD = $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(LIBDEMANGLE_MSVC_LDADD)
 
 objdump_SOURCES = objdump.c dwarf.c prdbg.c demanguse.c $(DEBUG_SRCS) $(BULIBS) $(ELFLIBS)
 EXTRA_objdump_SOURCES = od-elf32_avr.c od-macho.c od-xcoff.c od-pe.c
-objdump_LDADD = $(OBJDUMP_PRIVATE_OFILES) $(OPCODES) $(LIBCTF) $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(DEBUGINFOD_LIBS) $(LIBSFRAME)
+objdump_LDADD = $(OBJDUMP_PRIVATE_OFILES) $(OPCODES) $(LIBCTF) $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(DEBUGINFOD_LIBS) $(LIBSFRAME) $(LIBDEMANGLE_MSVC_LDADD)
 
 objdump.@OBJEXT@:objdump.c
 if am__fastdepCC
@@ -289,6 +306,7 @@ endif
 endif
 
 cxxfilt_SOURCES = cxxfilt.c $(BULIBS)
+cxxfilt_LDADD = $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(LIBDEMANGLE_MSVC_LDADD)
 
 ar_SOURCES = arparse.y arlex.l not-ranlib.c arsup.c rename.c binemul.c \
 	emul_$(EMULATION).c $(BULIBS)
@@ -300,6 +318,7 @@ ranlib_SOURCES = arparse.y arlex.l is-ranlib.c arsup.c rename.c binemul.c \
 ranlib_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL)
 
 addr2line_SOURCES = addr2line.c $(BULIBS)
+addr2line_LDADD = $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(LIBDEMANGLE_MSVC_LDADD)
 
 coremerge_SOURCES = coremerge.c $(BULIBS)
 coremerge_LDADD = $(BFDLIB) $(LIBIBERTY)  $(LIBINTL) -lm

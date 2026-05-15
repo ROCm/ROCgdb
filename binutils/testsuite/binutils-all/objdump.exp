@@ -65,6 +65,69 @@ if { [istarget "*-*-vms"] } then {
 }
 set exe [exeext]
 
+# Test objdump with MSVC demangling
+# Uses CC_FOR_TARGET to compile a C++ file producing MSVC-mangled COFF.
+proc test_objdump_msvc_demangle {} {
+    global OBJDUMP
+    global OBJDUMPFLAGS
+    global srcdir
+    global subdir
+
+    set test "objdump --demangle with MSVC mangled symbols"
+
+    # Only run for MSVC targets that produce MSVC-mangled symbols.
+    if {![istarget "*-*-windows-msvc*"]} then {
+	unsupported "$test (not an MSVC target)"
+	return
+    }
+
+    set srcfile "$srcdir/$subdir/msvc-demangle.cpp"
+    set testfile "tmpdir/msvc-demangle-objdump.obj"
+
+    if { [target_compile $srcfile $testfile object \
+	      {debug additional_flags=-gdwarf-5}] != "" } then {
+	unsupported "$test (compilation failed)"
+	return
+    }
+
+    # Run objdump with demangling
+    set got [binutils_run $OBJDUMP "$OBJDUMPFLAGS --demangle --syms $testfile"]
+
+    # Check for demangled MSVC symbols
+    # The mangled symbol is: ?myMethod@MyClass@MyNamespace@@QEAAXHN@Z
+    # Should be demangled to: MyNamespace::MyClass::myMethod
+    # Also check for template: ??$templateMethod@H@MyClass@MyNamespace@@QEAAHH@Z
+
+    set found_mymethod 0
+    set found_template 0
+
+    if {[regexp {MyNamespace::MyClass::myMethod} $got]} then {
+	set found_mymethod 1
+    }
+    if {[regexp {MyNamespace::MyClass::templateMethod} $got]} then {
+	set found_template 1
+    }
+
+    if { $found_mymethod && $found_template } then {
+	pass $test
+    } else {
+	fail $test
+	if { !$found_mymethod } then {
+	    verbose "Failed to find MyNamespace::MyClass::myMethod"
+	}
+	if { !$found_template } then {
+	    verbose "Failed to find MyNamespace::MyClass::templateMethod"
+	}
+	verbose "Got: $got"
+    }
+
+    # Clean up
+    catch {file delete $testfile}
+}
+
+# Run MSVC demangling test
+test_objdump_msvc_demangle
+
 # The remaining tests require a test file.
 
 if {![binutils_assemble $srcdir/$subdir/bintest.s tmpdir/bintest.${obj}]} then {
