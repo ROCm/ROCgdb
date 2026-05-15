@@ -153,8 +153,7 @@ frapy_name (PyObject *self, PyObject *args)
     }
   else
     {
-      result = Py_None;
-      Py_INCREF (Py_None);
+      result = py_none ().release ();
     }
 
   return result;
@@ -724,10 +723,7 @@ frapy_richcompare (PyObject *self, PyObject *other, int op)
 
   if (!PyObject_TypeCheck (other, &frame_object_type)
       || (op != Py_EQ && op != Py_NE))
-    {
-      Py_INCREF (Py_NotImplemented);
-      return Py_NotImplemented;
-    }
+    return py_notimplemented ().release ();
 
   frame_object *self_frame = (frame_object *) self;
   frame_object *other_frame = (frame_object *) other;

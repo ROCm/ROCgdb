@@ -416,8 +416,7 @@ valpy_get_address (PyObject *self, void *closure)
 	}
       catch (const gdb_exception &except)
 	{
-	  val_obj->address = Py_None;
-	  Py_INCREF (Py_None);
+	  val_obj->address = py_none ().release ();
 	}
     }
 

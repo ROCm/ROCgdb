@@ -1118,10 +1118,7 @@ typy_richcompare (PyObject *self, PyObject *other, int op)
   /* We can only compare ourselves to another Type object, and only
      for equality or inequality.  */
   if (type2 == NULL || (op != Py_EQ && op != Py_NE))
-    {
-      Py_INCREF (Py_NotImplemented);
-      return Py_NotImplemented;
-    }
+    return py_notimplemented ().release ();
 
   if (type1 == type2)
     result = true;

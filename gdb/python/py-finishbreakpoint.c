@@ -127,10 +127,7 @@ bpfinishpy_pre_stop_hook (struct gdbpy_breakpoint_object *bp_obj)
 	      gdbpy_print_stack ();
 	}
       else
-	{
-	  Py_INCREF (Py_None);
-	  self_finishbp->return_value = Py_None;
-	}
+	self_finishbp->return_value = py_none ().release ();
     }
   catch (const gdb_exception &except)
     {

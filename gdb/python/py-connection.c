@@ -321,8 +321,7 @@ struct py_send_packet_callbacks : public send_remote_packet_callbacks
     else
       {
 	/* We didn't get back any result data; set the result to None.  */
-	Py_INCREF (Py_None);
-	m_result.reset (Py_None);
+	m_result = py_none ();
       }
   }
 

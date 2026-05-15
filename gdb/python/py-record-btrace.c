@@ -621,10 +621,7 @@ btpy_list_richcompare (PyObject *self, PyObject *other, int op)
   const btpy_list_object * const obj2 = (btpy_list_object *) other;
 
   if (Py_TYPE (self) != Py_TYPE (other))
-    {
-      Py_INCREF (Py_NotImplemented);
-      return Py_NotImplemented;
-    }
+    return py_notimplemented ().release ();
 
   switch (op)
   {
@@ -652,8 +649,7 @@ btpy_list_richcompare (PyObject *self, PyObject *other, int op)
       break;
   }
 
-  Py_INCREF (Py_NotImplemented);
-  return Py_NotImplemented;
+  return py_notimplemented ().release ();
 }
 
 /* Implementation of

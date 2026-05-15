@@ -72,10 +72,7 @@ stpy_get_encoding (PyObject *self, void *closure)
   if (self_string->encoding)
     result = PyUnicode_FromString (self_string->encoding);
   else
-    {
-      result = Py_None;
-      Py_INCREF (result);
-    }
+    result = py_none ().release ();
 
   return result;
 }

@@ -416,10 +416,7 @@ recpy_element_richcompare (PyObject *self, PyObject *other, int op)
   const recpy_element_object * const obj2 = (recpy_element_object *) other;
 
   if (Py_TYPE (self) != Py_TYPE (other))
-    {
-      Py_INCREF (Py_NotImplemented);
-      return Py_NotImplemented;
-    }
+    return py_notimplemented ().release ();
 
   switch (op)
   {
@@ -443,8 +440,7 @@ recpy_element_richcompare (PyObject *self, PyObject *other, int op)
       break;
   }
 
-  Py_INCREF (Py_NotImplemented);
-  return Py_NotImplemented;
+  return py_notimplemented ().release ();
 }
 
 /* Create a new gdb.RecordGap object.  */
