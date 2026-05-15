@@ -7,6 +7,10 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
+- Dumping core of AMD GPU programs with the "gcore" command is now
+  significantly faster, particularly for kernels that use small
+  amounts of VRAM.
+
 ## ROCgdb-16-3 for ROCm-7.13
 
 ### Added
