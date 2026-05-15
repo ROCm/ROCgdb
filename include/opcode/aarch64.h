@@ -1323,7 +1323,6 @@ enum aarch64_op
   OP_MOV_Z_P_Z,
   OP_MOV_Z_V,
   OP_MOV_Z_Z,
-  OP_MOV_Z_Zi,
   OP_MOVM_P_P_P,
   OP_MOVS_P_P,
   OP_MOVZS_P_P_P,

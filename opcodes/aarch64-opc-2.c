@@ -460,7 +460,6 @@ static const enum aarch64_opcode_idx op_enum_table [] =
   A64_OPID_0520c000_mov_SVE_Zd_SVE_Pg4_10_SVE_Zn,
   A64_OPID_05202000_mov_SVE_Zd_SVE_VZn,
   A64_OPID_04603000_mov_SVE_Zd_SVE_Zn,
-  A64_OPID_05202000_mov_SVE_Zd_SVE_Zn_INDEX,
   A64_OPID_25004210_mov_SVE_Pd_SVE_Pg4_10_SVE_Pn,
   A64_OPID_25c04000_movs_SVE_Pd_SVE_Pn,
   A64_OPID_25404000_movs_SVE_Pd_SVE_Pg4_10_SVE_Pn,

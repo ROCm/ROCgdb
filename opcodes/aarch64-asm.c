@@ -1968,8 +1968,6 @@ do_misc_encoding (aarch64_inst *inst)
       value = extract_field (FLD_SVE_Zn, inst->value, 0);
       insert_field (FLD_SVE_Zm_16, &inst->value, value, 0);
       break;
-    case OP_MOV_Z_Zi:
-      break;
     case OP_MOVM_P_P_P:
       /* Copy Pd to Pm.  */
       value = extract_field (FLD_SVE_Pd, inst->value, 0);

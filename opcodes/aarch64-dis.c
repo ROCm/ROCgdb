@@ -2728,11 +2728,6 @@ do_misc_decoding (aarch64_inst *inst)
       return (extract_field (FLD_SVE_Zn, inst->value, 0)
 	      == extract_field (FLD_SVE_Zm_16, inst->value, 0));
 
-    case OP_MOV_Z_Zi:
-      /* Index must be nonzero.  */
-      value = extract_fields (inst->value, 0, 2, FLD_SVE_tszh, FLD_imm5);
-      return value > 0 && value != (value & -value);
-
     case OP_MOVM_P_P_P:
       return (extract_field (FLD_SVE_Pd, inst->value, 0)
 	      == extract_field (FLD_SVE_Pm, inst->value, 0));
