@@ -88,7 +88,12 @@ gdb_test "" "$inferior_exited_re normally.*" "disable breakpoint: run to breakpo
 
 # Make sure breakpoint can be set on a specific instantion.
 delete_breakpoints
-gdb_test "break 'void foo<int>(int)'" ".*" \
+# Itanium keeps template return types; automatic MSVC demangling omits them.
+set template_name "void foo<int>(int)"
+if {[gdb_symbol_is_msvc foo]} {
+    set template_name "foo<int>(int)"
+}
+gdb_test "break '$template_name'" ".*" \
     "instantiation: set breakpoint"
 
 

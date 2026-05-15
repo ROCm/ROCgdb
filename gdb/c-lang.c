@@ -920,6 +920,12 @@ public:
        (const char *mangled,
 	gdb::unique_xmalloc_ptr<char> *demangled) const override
   {
+    /* The Itanium demangler omits the return type except for function
+       templates, so without DMGL_RET_DROP the result depends on the
+       symbol.  The MSVC demangler cannot reproduce that without the
+       flag: in automatic mode it drops the return type of every
+       function, templates included.  Keeping it for templates when
+       DMGL_RET_DROP is absent is not done for now.  */
     *demangled = gdb_demangle (mangled, DMGL_PARAMS | DMGL_ANSI);
     return *demangled != NULL;
   }
