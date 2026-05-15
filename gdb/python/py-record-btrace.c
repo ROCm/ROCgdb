@@ -824,7 +824,7 @@ recpy_call_filter (const uint64_t payload, std::optional<uint64_t> ip,
 
   gdbpy_ref<> py_ip;
   if (!ip.has_value ())
-    py_ip = gdbpy_ref<>::new_reference (Py_None);
+    py_ip = py_none ();
   else
     py_ip = gdb_py_object_from_ulongest (*ip);
 

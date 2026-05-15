@@ -86,7 +86,7 @@ search_pp_list (PyObject *list, PyObject *value)
 	return printer;
     }
 
-  return gdbpy_ref<>::new_reference (Py_None);
+  return py_none ();
 }
 
 /* Subroutine of find_pretty_printer to simplify it.
@@ -151,11 +151,11 @@ find_pretty_printer_from_gdb (PyObject *value)
   /* Fetch the global pretty printer list.  */
   if (gdb_python_module == NULL
       || ! PyObject_HasAttrString (gdb_python_module, "pretty_printers"))
-    return gdbpy_ref<>::new_reference (Py_None);
+    return py_none ();
   gdbpy_ref<> pp_list (PyObject_GetAttrString (gdb_python_module,
 					       "pretty_printers"));
   if (pp_list == NULL || ! PyList_Check (pp_list.get ()))
-    return gdbpy_ref<>::new_reference (Py_None);
+    return py_none ();
 
   return search_pp_list (pp_list.get (), value);
 }
@@ -199,7 +199,7 @@ pretty_print_one_value (PyObject *printer, struct value **out_value)
   try
     {
       if (!PyObject_HasAttr (printer, gdbpy_to_string_cst))
-	result = gdbpy_ref<>::new_reference (Py_None);
+	result = py_none ();
       else
 	{
 	  result.reset (PyObject_CallMethodObjArgs (printer, gdbpy_to_string_cst,

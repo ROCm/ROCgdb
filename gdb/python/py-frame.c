@@ -420,7 +420,7 @@ frapy_older (PyObject *self, PyObject *args)
   if (prev)
     prev_obj = frame_info_to_frame_object (prev);
   else
-    prev_obj = gdbpy_ref<>::new_reference (Py_None);
+    prev_obj = py_none ();
 
   return prev_obj.release ();
 }
@@ -449,7 +449,7 @@ frapy_newer (PyObject *self, PyObject *args)
   if (next)
     next_obj = frame_info_to_frame_object (next);
   else
-    next_obj = gdbpy_ref<>::new_reference (Py_None);
+    next_obj = py_none ();
 
   return next_obj.release ();
 }

@@ -186,7 +186,7 @@ cmdpy_completer_helper (struct cmd_list_element *command,
   if (word == NULL)
     {
       /* "brkchars" phase.  */
-      wordobj = gdbpy_ref<>::new_reference (Py_None);
+      wordobj = py_none ();
     }
   else
     {

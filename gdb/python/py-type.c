@@ -147,7 +147,7 @@ convert_field (struct type *type, int field)
       else
 	{
 	  if (type->field (field).loc_is_dwarf_block ())
-	    arg = gdbpy_ref<>::new_reference (Py_None);
+	    arg = py_none ();
 	  else
 	    arg = gdb_py_object_from_longest (type->field (field).loc_bitpos ());
 	  attrstring = "bitpos";
@@ -173,7 +173,7 @@ convert_field (struct type *type, int field)
 	}
     }
   if (arg == NULL)
-    arg = gdbpy_ref<>::new_reference (Py_None);
+    arg = py_none ();
 
   if (PyObject_SetAttrString (result.get (), "name", arg.get ()) < 0)
     return NULL;
@@ -185,7 +185,7 @@ convert_field (struct type *type, int field)
   if (type->code () == TYPE_CODE_STRUCT)
     arg.reset (PyBool_FromLong (field < TYPE_N_BASECLASSES (type)));
   else
-    arg = gdbpy_ref<>::new_reference (Py_False);
+    arg = py_false ();
   if (PyObject_SetAttrString (result.get (), "is_base_class", arg.get ()) < 0)
     return NULL;
 
@@ -197,7 +197,7 @@ convert_field (struct type *type, int field)
 
   /* A field can have a NULL type in some situations.  */
   if (type->field (field).type () == NULL)
-    arg = gdbpy_ref<>::new_reference (Py_None);
+    arg = py_none ();
   else
     arg = type_to_type_object (type->field (field).type ());
   if (arg == NULL)
@@ -219,7 +219,7 @@ field_name (struct type *type, int field)
   if (type->field (field).name ())
     result.reset (PyUnicode_FromString (type->field (field).name ()));
   else
-    result = gdbpy_ref<>::new_reference (Py_None);
+    result = py_none ();
 
   return result;
 }

@@ -1026,7 +1026,7 @@ python_context_changed (user_selected_what selection)
   if (has_stack_frames ())
     frame_obj = gdbpy_ref<> (gdbpy_selected_frame (nullptr, nullptr));
   else
-    frame_obj = gdbpy_ref<>::new_reference (Py_None);
+    frame_obj = py_none ();
 
   if (frame_obj == nullptr)
     {

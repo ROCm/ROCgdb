@@ -74,7 +74,7 @@ gdbpy_ref<>
 target_to_connection_object (process_stratum_target *target)
 {
   if (target == nullptr)
-    return gdbpy_ref<>::new_reference (Py_None);
+    return py_none ();
 
   gdbpy_ref <connection_object> conn_obj;
   auto conn_obj_iter = all_connection_objects.find (target);

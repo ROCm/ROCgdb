@@ -117,7 +117,7 @@ gdbpy_core_file_from_inferior (inferior *inf)
   gdb_assert (inf->pspace != nullptr);
 
   if (get_inferior_core_bfd (inf) == nullptr)
-    return gdbpy_ref<>::new_reference (Py_None);
+    return py_none ();
 
   PyObject *result = (PyObject *) cfpy_inferior_corefile_data_key.get (inf);
   if (result != nullptr)
@@ -265,7 +265,7 @@ cfpy_mapped_files (PyObject *self, PyObject *args)
 	    return nullptr;
 	}
       else
-	build_id = gdbpy_ref<>::new_reference (Py_None);
+	build_id = py_none ();
 
       /* List to hold all the gdb.CorefileMappedFileRegion objects.  */
       gdbpy_ref<> regions (PyTuple_New (file.regions.size ()));

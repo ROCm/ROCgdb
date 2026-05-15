@@ -450,7 +450,7 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
 	return nullptr;
     }
   else
-    sym_obj = gdbpy_ref<>::new_reference (Py_None);
+    sym_obj = py_none ();
 
   if (PyTuple_SetItem (ret_tuple.get (), 0, sym_obj.release ()) < 0)
     return nullptr;
@@ -495,7 +495,7 @@ gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
 	return nullptr;
     }
   else
-    sym_obj = gdbpy_ref<>::new_reference (Py_None);
+    sym_obj = py_none ();
 
   return sym_obj.release ();
 }
@@ -560,7 +560,7 @@ gdbpy_lookup_static_symbol (PyObject *self, PyObject *args, PyObject *kw)
 	return nullptr;
     }
   else
-    sym_obj = gdbpy_ref<>::new_reference (Py_None);
+    sym_obj = py_none ();
 
   return sym_obj.release ();
 }
