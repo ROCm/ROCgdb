@@ -1343,4 +1343,35 @@ protected:
 extern int eval_python_command (const char *command, int start_symbol,
 				const char *filename = nullptr);
 
+/* The following four functions are refcount-safe wrappers around
+   Py_RETURN_{NONE,TRUE,FALSE,NOTIMPLEMENTED}.  */
+
+static inline gdbpy_ref<>
+py_none ()
+{
+  auto f = [] { Py_RETURN_NONE; };
+  return gdbpy_ref<> (f ());
+}
+
+static inline gdbpy_ref<>
+py_true ()
+{
+  auto f = [] { Py_RETURN_TRUE; };
+  return gdbpy_ref<> (f ());
+}
+
+static inline gdbpy_ref<>
+py_false ()
+{
+  auto f = [] { Py_RETURN_FALSE; };
+  return gdbpy_ref<> (f ());
+}
+
+static inline gdbpy_ref<>
+py_notimplemented ()
+{
+  auto f = [] { Py_RETURN_NOTIMPLEMENTED; };
+  return gdbpy_ref<> (f ());
+}
+
 #endif /* GDB_PYTHON_PYTHON_INTERNAL_H */
