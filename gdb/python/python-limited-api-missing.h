@@ -19,8 +19,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDB_PYTHON_LIMITED_API_MISSING_H
-#define GDB_PYTHON_LIMITED_API_MISSING_H
+#ifndef GDB_PYTHON_PYTHON_LIMITED_API_MISSING_H
+#define GDB_PYTHON_PYTHON_LIMITED_API_MISSING_H
 
 #ifdef Py_LIMITED_API
 extern "C"
@@ -59,4 +59,4 @@ PyAPI_FUNC(int) PyRun_InteractiveLoop (FILE *f, const char *p);
 }
 #endif /* Py_LIMITED_API */
 
-#endif /* GDB_PYTHON_LIMITED_API_MISSING_H */
+#endif /* GDB_PYTHON_PYTHON_LIMITED_API_MISSING_H */
