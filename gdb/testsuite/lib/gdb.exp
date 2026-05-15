@@ -10683,6 +10683,43 @@ proc core_find {binfile {deletefiles {}} {arg ""} {output_file "/dev/null"}} {
 	    $output_file]
 }
 
+# Return whether a raw minimal-symbol name containing IDENTIFIER starts with ?.
+proc gdb_symbol_is_msvc {identifier} {
+    global gdb_prompt
+
+    set is_msvc 0
+    set symbol_re \
+	[format {^\[[0-9]+\] \S+ \S+ \?\S*%s\S* section [^\r\n]*\r?\n} \
+	     [string_to_regexp $identifier]]
+    gdb_test_multiple "maintenance print msymbols" \
+	"check MSVC mangling for $identifier" {
+	-re $symbol_re {
+	    set is_msvc 1
+	    exp_continue
+	}
+	-re {^[^\r\n]*\r?\n} {
+	    exp_continue
+	}
+	-re "$gdb_prompt $" {}
+    }
+    return $is_msvc
+}
+
+# Return whether GDB was configured with the MSVC demangler.
+proc gdb_msvc_demangler_built {} {
+    global gdb_prompt
+
+    set built 0
+    gdb_test_multiple "show configuration" "check MSVC demangler config" {
+	-re "--with-msvc-demangler(?:=yes)?\[ \t\]*\r\n.*$gdb_prompt $" {
+	    set built 1
+	}
+	-re "$gdb_prompt $" {
+	}
+    }
+    return $built
+}
+
 # gdb_target_symbol_prefix compiles a test program and then examines
 # the output from objdump to determine the prefix (such as underscore)
 # for linker symbol prefixes.
