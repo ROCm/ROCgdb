@@ -129,6 +129,9 @@
 /* Define to 1 if msgpack is available. */
 #undef HAVE_MSGPACK
 
+/* Defined if MSVC demangler was requested. */
+#undef HAVE_MSVC_DEMANGLER
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 

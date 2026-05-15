@@ -397,6 +397,13 @@ AS_IF([test "x$enable_jansson" != "xno"],
     [AC_MSG_ERROR([Cannot find jansson library])])
   ])
 
+AC_ARG_WITH([msvc-demangler],
+	    [AS_HELP_STRING([--with-msvc-demangler],
+			    [MSVC symbol demangling (default: enabled for Windows targets via top-level configure)])],
+	    [],
+	    [with_msvc_demangler=no])
+AM_CONDITIONAL(ENABLE_MSVC_DEMANGLER, test "x${with_msvc_demangler}" != "xno")
+
 AM_BINUTILS_WARNINGS
 
 AM_LC_MESSAGES
@@ -764,17 +771,23 @@ if test x${enable_static} = xno; then
   TESTBFDLIB="-Wl,--rpath,../bfd/.libs ../bfd/.libs/libbfd.so"
   TESTCTFLIB="-Wl,--rpath,../libctf/.libs ../libctf/.libs/libctf.so"
   TESTSFRAMELIB="-Wl,--rpath,../libsframe/.libs ../libsframe/.libs/libsframe.so"
+  TESTDEMANGLELIB="-Wl,--rpath,../libdemangle-msvc/.libs ../libdemangle-msvc/.libs/libdemangle-msvc.so"
 else
   TESTBFDLIB="../bfd/.libs/libbfd.a"
   TESTCTFLIB="../libctf/.libs/libctf.a"
   TESTSFRAMELIB="../libsframe/.libs/libsframe.a"
+  TESTDEMANGLELIB="../libdemangle-msvc/.libs/libdemangle-msvc.a"
 fi
 if test "${enable_libctf}" = no; then
     TESTCTFLIB=
 fi
+if test "x${with_msvc_demangler}" = xno; then
+    TESTDEMANGLELIB=
+fi
 AC_SUBST(TESTBFDLIB)
 AC_SUBST(TESTCTFLIB)
 AC_SUBST(TESTSFRAMELIB)
+AC_SUBST(TESTDEMANGLELIB)
 
 target_vendor=${target_vendor=$host_vendor}
 case "$target_vendor" in

@@ -145,6 +145,17 @@ AM_CPPFLAGS = -I. -I$(srcdir) -I../bfd -I$(BFDDIR) -I$(INCDIR) @zlibinc@ \
 
 BFDLIB = ../bfd/libbfd.la
 LIBIBERTY = ../libiberty/libiberty.a
+
+# libbfd links libdemangle-msvc, a C++ library, so ld needs C++ linking
+# when it is enabled.
+if ENABLE_MSVC_DEMANGLER
+ld_new_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXX) $(AM_CXXFLAGS) $(CXXFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+else
+ld_new_LINK = $(LINK)
+endif
+
 if ENABLE_LIBCTF
 LIBCTF = ../libctf/libctf.la
 else
@@ -660,12 +671,13 @@ EXTRA_ld_new_SOURCES += $(ALL_EMULATION_SOURCES) $(ALL_64_EMULATION_SOURCES)
 ld-new$(EXEEXT): $(ld_new_OBJECTS) $(ld_new_DEPENDENCIES) $(EXTRA_ld_new_DEPENDENCIES)
 	@rm -f ld-new$(EXEEXT)
 	$(AM_V_at)cd .libs; test -e ldscripts || $(LN_S) ../ldscripts .
-	$(AM_V_CCLD)$(LINK) $(ld_new_OBJECTS) $(ld_new_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(ld_new_LINK) $(ld_new_OBJECTS) $(ld_new_LDADD) $(LIBS)
 
 # This is the real libbfd.a and libctf.a created by libtool.
 TESTBFDLIB = @TESTBFDLIB@
 TESTCTFLIB = @TESTCTFLIB@
 TESTSFRAMELIB = @TESTSFRAMELIB@
+TESTDEMANGLELIB = @TESTDEMANGLELIB@
 
 check-DEJAGNU: site.exp
 	srcroot=`cd $(srcdir) && pwd`; export srcroot; \
@@ -682,7 +694,7 @@ check-DEJAGNU: site.exp
 		CXX_FOR_TARGET="$(CXX_FOR_TARGET)" \
 		CXXFLAGS_FOR_TARGET="$(filter-out -ffile-prefix-map=%,$(CXXFLAGS_FOR_TARGET))" \
 		OFILES="$(OFILES)" BFDLIB="$(TESTBFDLIB)" CTFLIB="$(TESTCTFLIB) $(ZLIB)" \
-		SFRAMELIB="$(TESTSFRAMELIB)" \
+		SFRAMELIB="$(TESTSFRAMELIB)" DEMANGLELIB="$(TESTDEMANGLELIB)" \
 		JANSSON_LIBS="$(JANSSON_LIBS)" ZSTD_LIBS="$(ZSTD_LIBS)" \
 		LIBIBERTY="$(LIBIBERTY) $(LIBINTL)" LIBS="$(LIBS)" \
 		DO_COMPARE="`echo '$(do_compare)' | sed -e 's,\\$$,,g'`" \

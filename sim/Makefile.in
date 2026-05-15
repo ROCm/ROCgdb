@@ -1235,9 +1235,6 @@ am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
 am__v_CC_0 = @echo "  CC      " $@;
 am__v_CC_1 = 
 CCLD = $(CC)
-LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
@@ -1629,6 +1626,10 @@ CGEN_MAINT = @CGEN_MAINT@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CPPFLAGS_FOR_BUILD = @CPPFLAGS_FOR_BUILD@
+CXX = @CXX@
+CXXCPP = @CXXCPP@
+CXXDEPMODE = @CXXDEPMODE@
+CXXFLAGS = @CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 C_DIALECT = @C_DIALECT@
 DEFS = @DEFS@
@@ -1754,6 +1755,7 @@ abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
@@ -1940,6 +1942,15 @@ SIM_COMMON_LIBS = \
 	$(LIBGNU) \
 	$(LIBGNU_EXTRA_LIBS)
 
+@ENABLE_MSVC_DEMANGLER_FALSE@SIM_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+@ENABLE_MSVC_DEMANGLER_FALSE@	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+@ENABLE_MSVC_DEMANGLER_FALSE@	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+
+@ENABLE_MSVC_DEMANGLER_TRUE@SIM_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+@ENABLE_MSVC_DEMANGLER_TRUE@	$(LIBTOOLFLAGS) --mode=link $(CXX) $(AM_CXXFLAGS) $(CXXFLAGS) \
+@ENABLE_MSVC_DEMANGLER_TRUE@	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+
+LINK = $(SIM_LINK)
 GUILE = guile
 CGEN = "$(GUILE) -l $(cgendir)/guile.scm -s"
 CGENFLAGS = -v

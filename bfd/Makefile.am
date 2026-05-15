@@ -675,7 +675,7 @@ TDEFAULTS = @tdefaults@
 HAVEVECS = @havevecs@
 
 AM_CPPFLAGS += @HDEFINES@ @COREFLAG@ @TDEFINES@ $(CSEARCH) $(CSWITCHES) \
-	$(HAVEVECS) @INCINTL@
+	$(HAVEVECS) @INCINTL@ @MSVC_DEMANGLER_INCLUDE@
 
 # C source files that correspond to .o's.
 SOURCE_CFILES = \
@@ -786,8 +786,18 @@ ofiles: stamp-ofiles ; @true
 # dependency tracking fragments are picked up in the Makefile.
 libbfd_la_SOURCES = $(BFD32_LIBS_CFILES)
 EXTRA_libbfd_la_SOURCES = $(CFILES)
-libbfd_la_DEPENDENCIES = $(OFILES) ofiles ../libsframe/libsframe.la
-libbfd_la_LIBADD = `cat ofiles` @SHARED_LIBADD@ $(LIBDL) $(ZLIB) $(ZSTD_LIBS) ../libsframe/libsframe.la
+
+# bfd_init() registers the MSVC demangler from libdemangle-msvc.
+if ENABLE_MSVC_DEMANGLER
+LIBDEMANGLE_MSVC = ../libdemangle-msvc/libdemangle-msvc.la
+else
+LIBDEMANGLE_MSVC =
+endif
+
+libbfd_la_DEPENDENCIES = $(OFILES) ofiles ../libsframe/libsframe.la \
+	$(LIBDEMANGLE_MSVC)
+libbfd_la_LIBADD = `cat ofiles` @SHARED_LIBADD@ $(LIBDL) $(ZLIB) $(ZSTD_LIBS) ../libsframe/libsframe.la \
+	$(LIBDEMANGLE_MSVC)
 libbfd_la_LDFLAGS += -release `cat libtool-soversion` @SHARED_LDFLAGS@
 
 # This file holds an array associating configuration triplets and
