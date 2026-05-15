@@ -490,6 +490,7 @@ dependencies = { module=all-bfd; on=all-libiberty; };
 dependencies = { module=all-bfd; on=all-gettext; };
 dependencies = { module=all-bfd; on=all-zlib; };
 dependencies = { module=all-bfd; on=all-libsframe; };
+dependencies = { module=all-bfd; on=all-libdemangle-msvc; };
 dependencies = { module=configure-opcodes; on=configure-libiberty; hard=true; };
 dependencies = { module=all-opcodes; on=all-libiberty; };
 
@@ -526,6 +527,9 @@ dependencies = { module=install-strip-ld; on=install-strip-libctf; };
 // libbfd depends on libsframe
 dependencies = { module=install-bfd; on=install-libsframe; };
 dependencies = { module=install-strip-bfd; on=install-strip-libsframe; };
+// libbfd depends on libdemangle-msvc
+dependencies = { module=install-bfd; on=install-libdemangle-msvc; };
+dependencies = { module=install-strip-bfd; on=install-strip-libdemangle-msvc; };
 
 // libopcodes depends on libbfd
 dependencies = { module=configure-opcodes; on=all-bfd; hard=true; };

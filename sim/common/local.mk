@@ -173,6 +173,19 @@ SIM_COMMON_LIBS = \
 	$(LIBGNU) \
 	$(LIBGNU_EXTRA_LIBS)
 
+## libbfd links libdemangle-msvc, a C++ library, so every program that
+## links libbfd needs C++ linking when it is enabled.
+if ENABLE_MSVC_DEMANGLER
+SIM_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXX) $(AM_CXXFLAGS) $(CXXFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+else
+SIM_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+endif
+LINK = $(SIM_LINK)
+
 ##
 ## CGEN support.
 ##
