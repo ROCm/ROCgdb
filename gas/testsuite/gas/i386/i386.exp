@@ -63,6 +63,7 @@ if [gas_32_check] then {
     run_dump_test "opcode-suffix"
     run_dump_test "intel"
     run_dump_test "intel-intel"
+    run_list_test "intel-equ-loop"
     run_dump_test "intel16"
     run_list_test "intelbad" ""
     run_dump_test "intelok"
