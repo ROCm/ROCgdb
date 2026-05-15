@@ -48,6 +48,16 @@ gprof_SOURCES = $(sources) flat_bl.c bsd_callg_bl.c fsf_callg_bl.c
 gprof_DEPENDENCIES = ../bfd/libbfd.la ../libiberty/libiberty.a $(LIBINTL_DEP)
 gprof_LDADD = ../bfd/libbfd.la ../libiberty/libiberty.a $(LIBINTL)
 
+# libbfd links libdemangle-msvc, a C++ library, so gprof needs C++
+# linking when it is enabled.
+if ENABLE_MSVC_DEMANGLER
+gprof_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXX) $(AM_CXXFLAGS) $(CXXFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+else
+gprof_LINK = $(LINK)
+endif
+
 noinst_HEADERS = \
 	basic_blocks.h call_graph.h cg_arcs.h cg_dfn.h cg_print.h \
 	corefile.h gmon.h gmon_io.h gmon_out.h gprof.h hertz.h hist.h \
