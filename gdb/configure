@@ -756,6 +756,7 @@ PKGVERSION
 CODESIGN_CERT
 DEBUGINFOD_LIBS
 DEBUGINFOD_CFLAGS
+LIBDEMANGLE_MSVC
 HAVE_NATIVE_GCORE_TARGET
 TARGET_OBS
 AMD_DBGAPI_LIBS
@@ -935,6 +936,7 @@ with_auto_load_safe_path
 enable_targets
 enable_binary_file_formats
 enable_gdb_dwarf_support
+with_msvc_demangler
 with_amd_dbgapi
 enable_tui
 enable_gdbtk
@@ -1713,6 +1715,8 @@ Optional Packages:
                           [--with-auto-load-dir]
   --without-auto-load-safe-path
                           do not restrict auto-loaded files locations
+  --with-msvc-demangler   MSVC symbol demangling (default: enabled for Windows
+                          targets via top-level configure)
   --with-amd-dbgapi       support for the amd-dbgapi target (yes / no / auto)
   --with-debuginfod       Enable debuginfo lookups with debuginfod
                           (auto/yes/no)
@@ -11878,7 +11882,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11881 "configure"
+#line 11885 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11984,7 +11988,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11987 "configure"
+#line 11991 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -25298,6 +25302,16 @@ if test $gdb_native = yes; then
    HAVE_GSTACK=1
 fi
 
+# MSVC demangler support.
+# Resolved by the top-level configure and forwarded as yes/no.
+
+# Check whether --with-msvc-demangler was given.
+if test "${with_msvc_demangler+set}" = set; then :
+  withval=$with_msvc_demangler;
+else
+  with_msvc_demangler=no
+fi
+
 
 # AMD debugger API support.
 
@@ -25460,6 +25474,18 @@ fi
 gdb_sim=
 gdb_osabi=
 targ=$target; . ${srcdir}/configure.tgt
+
+# --with-msvc-demangler is resolved by the top-level configure and
+# passed down explicitly as yes or no.
+if test "x${with_msvc_demangler}" != "xno"; then
+
+$as_echo "#define HAVE_MSVC_DEMANGLER 1" >>confdefs.h
+
+    LIBDEMANGLE_MSVC="../libdemangle-msvc/libdemangle-msvc.a"
+else
+    LIBDEMANGLE_MSVC=""
+fi
+
 
 # Fetch the default architecture and default target vector from BFD.
 targ=$target; . $srcdir/../bfd/config.bfd

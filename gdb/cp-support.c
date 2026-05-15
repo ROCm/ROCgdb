@@ -21,6 +21,9 @@
 #include "cp-support.h"
 #include "language.h"
 #include "demangle.h"
+#ifdef HAVE_MSVC_DEMANGLER
+#include "demangle-msvc.h"
+#endif
 #include "cli/cli-cmds.h"
 #include "dictionary.h"
 #include "objfiles.h"
@@ -730,6 +733,19 @@ cp_class_name_from_physname (const char *physname)
   std::unique_ptr<demangle_parse_info> info;
   int done;
 
+/* TODO: libiberty should offer a "name-from-physname" interface that
+   different demanglers can implement, so this function (and
+   method_name_from_physname below) need not know about MSVC.  If libiberty has
+   no "native" implementation registered, it returns NULL  and the code here
+   continues with the existing AST-walk and extraction.  This way, MSVC can be
+   registered w/ libiberty as a demangler with a native name-from-physname
+   helper, and the code here is used for the other demanglers.  */
+#ifdef HAVE_MSVC_DEMANGLER
+  char *msvc_result = msvc_class_name_from_physname (physname);
+  if (msvc_result != NULL)
+    return msvc_result;
+#endif
+
   info = mangled_name_to_comp (physname, DMGL_ANSI,
 			       &storage, &demangled_name);
   if (info == NULL)
@@ -875,6 +891,13 @@ method_name_from_physname (const char *physname)
   gdb::unique_xmalloc_ptr<char> ret;
   struct demangle_component *ret_comp;
   std::unique_ptr<demangle_parse_info> info;
+
+/* TODO: see msvc_class_name_from_physname TODO above.  */
+#ifdef HAVE_MSVC_DEMANGLER
+  char *msvc_result = msvc_method_name_from_physname (physname);
+  if (msvc_result != NULL)
+    return msvc_result;
+#endif
 
   info = mangled_name_to_comp (physname, DMGL_ANSI,
 			       &storage, &demangled_name);

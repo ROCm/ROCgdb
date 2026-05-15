@@ -302,6 +302,14 @@ if test $gdb_native = yes; then
 fi
 AC_SUBST(HAVE_GSTACK)
 
+# MSVC demangler support.
+# Resolved by the top-level configure and forwarded as yes/no.
+AC_ARG_WITH([msvc-demangler],
+	    [AS_HELP_STRING([--with-msvc-demangler],
+			    [MSVC symbol demangling (default: enabled for Windows targets via top-level configure)])],
+	    [],
+	    [with_msvc_demangler=no])
+
 # AMD debugger API support.
 
 AC_ARG_WITH([amd-dbgapi],
@@ -357,6 +365,17 @@ AC_SUBST(HAVE_NATIVE_GCORE_TARGET)
 gdb_sim=
 gdb_osabi=
 targ=$target; . ${srcdir}/configure.tgt
+
+# --with-msvc-demangler is resolved by the top-level configure and
+# passed down explicitly as yes or no.
+if test "x${with_msvc_demangler}" != "xno"; then
+    AC_DEFINE(HAVE_MSVC_DEMANGLER, 1,
+	      [Defined if MSVC demangler was requested.])
+    LIBDEMANGLE_MSVC="../libdemangle-msvc/libdemangle-msvc.a"
+else
+    LIBDEMANGLE_MSVC=""
+fi
+AC_SUBST(LIBDEMANGLE_MSVC)
 
 # Fetch the default architecture and default target vector from BFD.
 targ=$target; . $srcdir/../bfd/config.bfd

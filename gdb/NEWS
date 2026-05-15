@@ -81,11 +81,30 @@
 * The Windows native target now supports non-stop mode.  This feature
   requires Windows 10 or later.
 
+* GDB can now demangle MSVC-mangled C++ symbols (for example
+  "?foo@@YAXXZ") when built with the in-tree libdemangle-msvc
+  library.  This is controlled by the new top-level
+  --with-msvc-demangler configure option (auto-detected for
+  Windows/PE targets when omitted; pass =yes to force enable or
+  =no to disable).  When enabled, MSVC symbols are demangled
+  transparently wherever GDB prints symbol names.
+
+  libdemangle-msvc does not expose a demangle_component AST.  In
+  its place, the library provides direct equivalents for the gdb
+  functions that would otherwise consume that AST: when a mangled
+  name is recognised as MSVC-mangled, cp_class_name_from_physname
+  dispatches to msvc_class_name_from_physname, and
+  method_name_from_physname dispatches to
+  msvc_method_name_from_physname.
+
 * Configure changes
 
 ** --with-babeltrace has been removed.  The babeltrace library was
    only used to help GDB parse Common Trace Format (CTF) data.  The
    support for CTF has also been removed.
+
+** New --with-msvc-demangler option, enabling MSVC C++ symbol
+   demangling via the in-tree libdemangle-msvc library.
 
 * New targets
 
