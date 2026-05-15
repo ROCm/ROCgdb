@@ -163,6 +163,12 @@ AC_ARG_WITH(separate-debug-dir,
 [DEBUGDIR="${withval}"])
 AC_SUBST(DEBUGDIR)
 
+AC_ARG_WITH([msvc-demangler],
+  [AS_HELP_STRING([--with-msvc-demangler],
+    [MSVC symbol demangling (default: enabled for PE/COFF targets via top-level configure)])],
+  [],
+  [with_msvc_demangler=no])
+
 ACX_PKGVERSION([GNU Binutils])
 ACX_BUGURL([https://sourceware.org/bugzilla/])
 
@@ -690,6 +696,17 @@ done
 if test "$plugins" = "yes"; then
      tb="$tb plugin.lo"
 fi
+
+# --with-msvc-demangler is resolved by the top-level configure and
+# passed down explicitly as yes or no.
+if test "x${with_msvc_demangler}" != "xno"; then
+  AC_DEFINE(HAVE_MSVC_DEMANGLER, 1,
+    [Defined if MSVC demangler support is enabled.])
+  MSVC_DEMANGLER_INCLUDE='-I$(srcdir)/../libdemangle-msvc'
+else
+  MSVC_DEMANGLER_INCLUDE=
+fi
+AC_SUBST(MSVC_DEMANGLER_INCLUDE)
 
 # Target architecture .o files.
 # A couple of CPUs use shorter file names to avoid problems on DOS

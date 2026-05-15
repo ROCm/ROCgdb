@@ -740,6 +740,9 @@ EXTERNAL
 #include "bfdver.h"
 #include "libiberty.h"
 #include "demangle.h"
+#ifdef HAVE_MSVC_DEMANGLER
+#include "demangle-msvc.h"
+#endif
 #include "safe-ctype.h"
 #include "bfdlink.h"
 #include "libbfd.h"
@@ -2001,6 +2004,11 @@ bfd_init (void)
   _bfd_error_internal = error_handler_fprintf;
   _bfd_assert_handler = _bfd_default_assert_handler;
 
+#ifdef HAVE_MSVC_DEMANGLER
+  /* Use MSVC demangling for every libbfd consumer.  */
+  cplus_demangle_set_msvc_handler (msvc_demangle);
+#endif
+
   return BFD_INIT_MAGIC;
 }
 
@@ -3002,8 +3010,9 @@ DESCRIPTION
 	Wrapper around cplus_demangle.  Strips leading underscores and
 	other such chars that would otherwise confuse the demangler.
 	If passed a g++ v3 ABI mangled name, returns a buffer allocated
-	with malloc holding the demangled name.  Returns NULL otherwise
-	and on memory alloc failure.
+	with malloc holding the demangled name.  The same applies to
+	MSVC mangled names when libdemangle-msvc is linked in.  Returns
+	NULL otherwise and on memory alloc failure.
 */
 
 char *
@@ -3013,12 +3022,27 @@ bfd_demangle (bfd *abfd, const char *name, int options)
   const char *pre, *suf;
   size_t pre_len;
   bool skip_lead;
+  bool is_msvc = false;
 
   skip_lead = (abfd != NULL
 	       && *name != '\0'
 	       && bfd_get_symbol_leading_char (abfd) == *name);
   if (skip_lead)
     ++name;
+
+#ifdef HAVE_MSVC_DEMANGLER
+  /* MSVC compiler-emitted wrappers have the shape '$<tag>$?...'
+     (e.g. $unwind$?, $pdata$?, $xdata$?, $LN<n>$?).  Peel the
+     '$<tag>$' so cplus_demangle sees the '?'-mangled core.  Must run
+     before the '.'/'$' strip below, which would otherwise consume the
+     leading '$' and break the wrapper detection.  */
+  if (name[0] == '$')
+    {
+      const char *q = strchr (name + 1, '$');
+      if (q != NULL && q[1] == '?')
+	name = q + 1;
+    }
+#endif
 
   /* This is a hack for better error reporting on XCOFF, PowerPC64-ELF
      or the MS PE format.  These formats have a number of leading '.'s
@@ -3029,9 +3053,16 @@ bfd_demangle (bfd *abfd, const char *name, int options)
     ++name;
   pre_len = name - pre;
 
-  /* Strip off @plt and suchlike too.  */
+  is_msvc = (name[0] == '?');
+
+  /* Strip off @plt and suchlike too.  MSVC mangled names use '@' as
+     part of their syntax (e.g. ?foo@@YAXXZ), so skip this for them.  */
   alloc = NULL;
-  suf = strchr (name, '@');
+  suf = NULL;
+
+  if (!is_msvc)
+    suf = strchr (name, '@');
+
   if (suf != NULL)
     {
       alloc = (char *) bfd_malloc (suf - name + 1);

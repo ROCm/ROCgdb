@@ -675,7 +675,7 @@ TDEFAULTS = @tdefaults@
 HAVEVECS = @havevecs@
 
 AM_CPPFLAGS += @HDEFINES@ @COREFLAG@ @TDEFINES@ $(CSEARCH) $(CSWITCHES) \
-	$(HAVEVECS) @INCINTL@
+	$(HAVEVECS) @INCINTL@ @MSVC_DEMANGLER_INCLUDE@
 
 # C source files that correspond to .o's.
 SOURCE_CFILES = \
