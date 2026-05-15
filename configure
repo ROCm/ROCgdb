@@ -815,6 +815,7 @@ ac_user_opts='
 enable_option_checking
 with_build_libsubdir
 with_system_zlib
+with_msvc_demangler
 with_zstd
 enable_as_accelerator_for
 enable_offload_targets
@@ -1617,6 +1618,7 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-build-libsubdir=DIR  Directory where to find libraries for build system
   --with-system-zlib      use installed libz
+  --with-msvc-demangler   MSVC symbol demangling (yes / no / auto)
   --with-zstd             Support zstd compressed debug sections
                           (default=auto)
   --with-mpc=PATH         specify prefix directory for installed MPC package.
@@ -2885,7 +2887,7 @@ build_tools="build-texinfo build-flex build-bison build-m4 build-fixincludes"
 
 # these libraries are used by various programs built for the host environment
 #f
-host_libs="gettext libiberty opcodes bfd readline tcl tk itcl libgui zlib libbacktrace libcpp libcody libdecnumber gmp mpfr mpc isl libiconv libctf libsframe libgrust "
+host_libs="gettext libiberty opcodes bfd readline tcl tk itcl libgui zlib libbacktrace libcpp libcody libdecnumber gmp mpfr mpc isl libiconv libctf libsframe libgrust libdemangle-msvc "
 
 # these tools are built for the host environment
 # Note, the powerpc-eabi build depends on sim occurring before gdb in order to
@@ -3030,6 +3032,17 @@ fi
 # is provided.
 if test x$with_system_readline = xyes ; then
   noconfigdirs="$noconfigdirs readline"
+fi
+
+# Don't build libdemangle-msvc if explicitly disabled.
+
+# Check whether --with-msvc-demangler was given.
+if test "${with_msvc_demangler+set}" = set; then :
+  withval=$with_msvc_demangler;
+fi
+
+if test x$with_msvc_demangler = xno ; then
+  noconfigdirs="$noconfigdirs libdemangle-msvc"
 fi
 
 
