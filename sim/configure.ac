@@ -136,6 +136,17 @@ if test "${enable_sim}" != no; then
 fi
 AM_CONDITIONAL([ENABLE_SIM], [test "$ENABLE_SIM" = "yes"])
 
+AC_ARG_WITH([msvc-demangler],
+	    [AS_HELP_STRING([--with-msvc-demangler],
+			    [MSVC symbol demangling (default: enabled for Windows targets via top-level configure)])],
+	    [],
+	    [with_msvc_demangler=no])
+
+dnl The MSVC demangler is a C++ library.  AC_PROG_CXX must be called
+dnl unconditionally so automake always defines am__fastdepCXX.
+AC_PROG_CXX
+AM_CONDITIONAL(ENABLE_MSVC_DEMANGLER, test "x${with_msvc_demangler}" != "xno")
+
 dnl Standard (and optional) simulator options.
 dnl Eventually all simulators will support these.
 SIM_AC_OPTION_ALIGNMENT
