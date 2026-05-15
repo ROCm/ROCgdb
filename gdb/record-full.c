@@ -76,7 +76,7 @@
 #define DEFAULT_RECORD_FULL_INSN_MAX_NUM	200000
 
 #define RECORD_FULL_IS_REPLAY \
-  ((record_full_next_insn != record_full_list.size ()) \
+  ((record_full_next_insn != record_full_log.size ()) \
     || ::execution_direction == EXEC_REVERSE)
 
 #define RECORD_FULL_FILE_MAGIC_OLD	netorder32(0x20091016)
@@ -466,7 +466,7 @@ static struct record_full_core_buf_entry *record_full_core_buf_list = NULL;
 /* The following variables are used for managing the history of executed
    instructions from the inferior.
 
-   record_full_list contains all instructions that were fully executed and
+   record_full_log contains all instructions that were fully executed and
    saved to the log, so that we can replay the execution.
 
    record_full_next_insn always points to the next instruction that would
@@ -479,7 +479,7 @@ static struct record_full_core_buf_entry *record_full_core_buf_list = NULL;
    happening.  It is manipulated by the "arch list" functions for historical
    reasons.  */
 
-static std::deque<record_full_instruction> record_full_list;
+static std::deque<record_full_instruction> record_full_log;
 static record_full_instruction record_full_incomplete_instruction;
 static int record_full_next_insn;
 
@@ -687,19 +687,19 @@ record_full_reset_history ()
   record_full_insn_count = 0;
   record_full_next_insn = 0;
 
-  record_full_list.clear ();
+  record_full_log.clear ();
 }
 
 /* Release all record entries after the INDEXth entry in the log.  */
 
 static void
-record_full_list_release_following (int index)
+record_full_log_release_following (int index)
 {
-  if (record_full_list.empty ())
+  if (record_full_log.empty ())
     return;
 
-  for (int i = record_full_list.size () - 1; i > index; i--)
-    record_full_list.pop_back ();
+  for (int i = record_full_log.size () - 1; i > index; i--)
+    record_full_log.pop_back ();
   /* Set the next instruction to be past the end of the log so we
      start recording if the user moves forward again.  */
   record_full_next_insn = index;
@@ -713,7 +713,7 @@ record_full_save_instruction ()
   ++record_full_insn_count;
   record_full_incomplete_instruction.insn_num = record_full_insn_count;
   record_full_incomplete_instruction.effects.shrink_to_fit ();
-  record_full_list.push_back (std::move (record_full_incomplete_instruction));
+  record_full_log.push_back (std::move (record_full_incomplete_instruction));
   record_full_next_insn++;
 
   record_full_reset_incomplete ();
@@ -723,12 +723,12 @@ record_full_save_instruction ()
    room for adding a new instruction at the end of the log.  */
 
 static void
-record_full_list_release_first (void)
+record_full_log_release_first (void)
 {
-  if (record_full_list.empty ())
+  if (record_full_log.empty ())
     return;
 
-  record_full_list.pop_front ();
+  record_full_log.pop_front ();
   --record_full_next_insn;
 }
 
@@ -792,7 +792,7 @@ record_full_arch_list_add_mem (CORE_ADDR addr, int len)
 static void
 record_full_check_insn_num (void)
 {
-  if (record_full_list.size () == record_full_insn_max_num)
+  if (record_full_log.size () == record_full_insn_max_num)
     {
       /* Ask user what to do.  */
       if (record_full_stop_at_limit)
@@ -808,9 +808,9 @@ record_full_check_insn_num (void)
 
 /* Before inferior step (when GDB record the running message, inferior
    only can step), GDB will call this function to record the values to
-   record_full_list.  This function will call gdbarch_process_record to
+   record_full_log.  This function will call gdbarch_process_record to
    record the running message of inferior and set them to
-   record_full_arch_list, and add it to record_full_list.  */
+   record_full_arch_list, and add it to record_full_log.  */
 
 static void
 record_full_message (struct regcache *regcache, enum gdb_signal signal)
@@ -848,8 +848,8 @@ record_full_message (struct regcache *regcache, enum gdb_signal signal)
 	 if we delivered it during the recording.  Therefore we should
 	 record the signal during record_full_wait, not
 	 record_full_resume.  */
-      if (signal != GDB_SIGNAL_0 && !record_full_list.empty ())
-	record_full_list[record_full_next_insn - 1].sigval = signal;
+      if (signal != GDB_SIGNAL_0 && !record_full_log.empty ())
+	record_full_log[record_full_next_insn - 1].sigval = signal;
 
       if (signal == GDB_SIGNAL_0
 	  || !gdbarch_process_record_signal_p (gdbarch))
@@ -874,8 +874,8 @@ record_full_message (struct regcache *regcache, enum gdb_signal signal)
 
   record_full_save_instruction ();
 
-  if (record_full_list.size () == record_full_insn_max_num)
-    record_full_list_release_first ();
+  if (record_full_log.size () == record_full_insn_max_num)
+    record_full_log_release_first ();
 }
 
 static bool
@@ -1355,7 +1355,7 @@ record_full_wait_1 (struct target_ops *ops,
 	  if (execution_direction == EXEC_REVERSE)
 	    record_full_next_insn--;
 
-	  /* Loop over the record_full_list, looking for the next place to
+	  /* Loop over the record_full_log, looking for the next place to
 	     stop.  */
 	  do
 	    {
@@ -1369,14 +1369,14 @@ record_full_wait_1 (struct target_ops *ops,
 		  break;
 		}
 	      if (execution_direction != EXEC_REVERSE
-		  && record_full_next_insn == record_full_list.size ())
+		  && record_full_next_insn == record_full_log.size ())
 		{
 		  /* Hit end of record log going forward.  */
 		  status->set_no_history ();
 		  break;
 		}
 
-	      record_full_list[record_full_next_insn].exec_insn (regcache);
+	      record_full_log[record_full_next_insn].exec_insn (regcache);
 
 	      /* step */
 	      if (record_full_resume_step)
@@ -1410,7 +1410,7 @@ record_full_wait_1 (struct target_ops *ops,
 				"watchpoint.\n");
 		  continue_flag = 0;
 		}
-	      if (record_full_list[record_full_next_insn].sigval.has_value ())
+	      if (record_full_log[record_full_next_insn].sigval.has_value ())
 		continue_flag = 0;
 
 	      if (execution_direction == EXEC_REVERSE)
@@ -1425,10 +1425,10 @@ record_full_wait_1 (struct target_ops *ops,
 	      gdb_assert (execution_direction == EXEC_REVERSE);
 	      record_full_next_insn = 0;
 	    }
-	  else if (record_full_next_insn > record_full_list.size ())
+	  else if (record_full_next_insn > record_full_log.size ())
 	    {
 	      gdb_assert (execution_direction == EXEC_FORWARD);
-	      record_full_next_insn = record_full_list.size ();
+	      record_full_next_insn = record_full_log.size ();
 	    }
 	  /* Reset the current instruction to point to the one to be replayed
 	     moving forward.  */
@@ -1442,9 +1442,9 @@ record_full_wait_1 (struct target_ops *ops,
 			 ? record_full_next_insn - 1 : record_full_next_insn;
 	      if (record_full_get_sig)
 		status->set_stopped (GDB_SIGNAL_INT);
-	      else if (record_full_list[insn].sigval.has_value ())
+	      else if (record_full_log[insn].sigval.has_value ())
 		status->set_stopped
-		  (record_full_list[insn].sigval.value ());
+		  (record_full_log[insn].sigval.value ());
 	      else
 		status->set_stopped (GDB_SIGNAL_TRAP);
 	    }
@@ -1567,8 +1567,8 @@ record_full_registers_change (struct regcache *regcache, int regnum)
     }
   record_full_save_instruction ();
 
-  if (record_full_list.size () == record_full_insn_max_num)
-    record_full_list_release_first ();
+  if (record_full_log.size () == record_full_insn_max_num)
+    record_full_log_release_first ();
 }
 
 /* "store_registers" method for process record target.  */
@@ -1617,7 +1617,7 @@ record_full_target::store_registers (struct regcache *regcache, int regno)
 	    }
 
 	  /* Destroy the record from here forward.  */
-	  record_full_list_release_following (record_full_next_insn);
+	  record_full_log_release_following (record_full_next_insn);
 	}
 
       record_full_registers_change (regcache, regno);
@@ -1650,7 +1650,7 @@ record_full_target::xfer_partial (enum target_object object,
 	    error (_("Process record canceled the operation."));
 
 	  /* Destroy the record from here forward.  */
-	  record_full_list_release_following (record_full_next_insn);
+	  record_full_log_release_following (record_full_next_insn);
 	}
 
       /* Check record_full_insn_num */
@@ -1669,8 +1669,8 @@ record_full_target::xfer_partial (enum target_object object,
 	}
       record_full_save_instruction ();
 
-      if (record_full_list.size () == record_full_insn_max_num)
-	record_full_list_release_first ();
+      if (record_full_log.size () == record_full_insn_max_num)
+	record_full_log_release_first ();
     }
 
   return this->beneath ()->xfer_partial (object, annex, readbuf, writebuf,
@@ -1827,11 +1827,11 @@ record_full_base_target::get_bookmark (const char *args, int from_tty)
   char *ret = NULL;
   ULONGEST insn_num = 0;
 
-  if (record_full_list.empty ())
+  if (record_full_log.empty ())
     return (gdb_byte *) ret;
 
   if (record_full_next_insn > 0)
-    insn_num = record_full_list[record_full_next_insn - 1].insn_num;
+    insn_num = record_full_log[record_full_next_insn - 1].insn_num;
 
   /* Return stringified form of instruction count.  */
   ret = xstrdup (pulongest (insn_num));
@@ -1896,16 +1896,16 @@ record_full_base_target::info_record ()
     gdb_printf (_("Record mode:\n"));
 
   /* Do we have a log at all?  */
-  if (!record_full_list.empty ())
+  if (!record_full_log.empty ())
     {
       /* Display instruction number for first instruction in the log.  */
       gdb_printf (_("Lowest recorded instruction number is %u.\n"),
-		  record_full_list[0].insn_num);
+		  record_full_log[0].insn_num);
 
       /* If in replay mode, display where we are in the log.  */
       if (RECORD_FULL_IS_REPLAY)
 	gdb_printf (_("Current instruction number is %u.\n"),
-		    record_full_list[record_full_next_insn].insn_num);
+		    record_full_log[record_full_next_insn].insn_num);
 
       /* Display instruction number for last instruction in the log.  */
       gdb_printf (_("Highest recorded instruction number is %s.\n"),
@@ -1913,7 +1913,7 @@ record_full_base_target::info_record ()
 
       /* Display log count.  */
       gdb_printf (_("Log contains %lu instructions.\n"),
-		  (unsigned long int) record_full_list.size ());
+		  (unsigned long int) record_full_log.size ());
     }
   else
     gdb_printf (_("No instructions have been logged.\n"));
@@ -1962,14 +1962,14 @@ record_full_base_target::record_will_replay (ptid_t ptid, int dir)
 static void
 record_full_goto_entry (size_t target_insn)
 {
-  if (target_insn >= record_full_list.size ())
+  if (target_insn >= record_full_log.size ())
     error (_("Target insn not found."));
   else if (target_insn == record_full_next_insn)
     error (_("Already at target insn."));
   else if (target_insn > record_full_next_insn)
     {
       gdb_printf (_("Go forward to insn number %s\n"),
-		  pulongest (record_full_list[target_insn].insn_num));
+		  pulongest (record_full_log[target_insn].insn_num));
       record_full_goto_insn (target_insn, EXEC_FORWARD);
     }
   else
@@ -2000,7 +2000,7 @@ record_full_base_target::goto_record_begin ()
 void
 record_full_base_target::goto_record_end ()
 {
-  record_full_goto_entry (record_full_list.size () - 1);
+  record_full_goto_entry (record_full_log.size () - 1);
 }
 
 /* The "goto_record" target method.  */
@@ -2010,12 +2010,12 @@ record_full_base_target::goto_record (ULONGEST target_insn_num)
 {
   size_t target_insn;
   for (target_insn = 0;
-       target_insn < record_full_list.size ();
+       target_insn < record_full_log.size ();
        target_insn ++)
-    if (record_full_list[target_insn].insn_num == target_insn_num)
+    if (record_full_log[target_insn].insn_num == target_insn_num)
       break;
 
-  if (target_insn == record_full_list.size ())
+  if (target_insn == record_full_log.size ())
     error ("instruction number not available");
 
   record_full_goto_entry (target_insn);
@@ -2447,7 +2447,7 @@ record_full_restore (struct bfd &cbfd)
   int bfd_offset = 0;
 
   /* "record_full_restore" can only be called when record list is empty.  */
-  gdb_assert (record_full_list.empty ());
+  gdb_assert (record_full_log.empty ());
 
   if (record_debug)
     gdb_printf (gdb_stdlog, "Restoring recording from core file.\n");
@@ -2498,9 +2498,9 @@ record_full_restore (struct bfd &cbfd)
     }
 
   /* Update record_full_insn_max_num.  */
-  if (record_full_list.size () > record_full_insn_max_num)
+  if (record_full_log.size () > record_full_insn_max_num)
     {
-      record_full_insn_max_num = record_full_list.size ();
+      record_full_insn_max_num = record_full_log.size ();
       warning (_("Auto increase record/replay buffer limit to %u."),
 	       record_full_insn_max_num);
     }
@@ -2677,16 +2677,16 @@ record_full_base_target::save_record (const char *recfilename)
 
   /* Reverse execute to the begin of record list.  */
   for (int i = record_full_next_insn - 1; i >= 0; i--)
-    record_full_list[i].exec_insn (regcache);
+    record_full_log[i].exec_insn (regcache);
 
   /* Compute the size needed for the extra bfd section.  */
   save_size = 4;	/* magic cookie */
-  for (int i = record_full_list.size () - 1; i >= 0; i--)
+  for (int i = record_full_log.size () - 1; i >= 0; i--)
     {
       /* Number of effects of an instruction.  */
       save_size += sizeof (uint32_t) + sizeof (uint8_t) + sizeof (uint32_t);
-      save_size += 4 + record_full_list[i].pc.len;
-      for (auto &entry : record_full_list[i].effects)
+      save_size += 4 + record_full_log[i].pc.len;
+      for (auto &entry : record_full_log[i].effects)
 	switch (entry.type ())
 	  {
 	  case record_full_reg:
@@ -2725,12 +2725,12 @@ record_full_base_target::save_record (const char *recfilename)
 
   /* Save the entries to recfd and forward execute to the end of
      record list.  */
-  for (int i = 0; i < record_full_list.size (); i++)
+  for (int i = 0; i < record_full_log.size (); i++)
     {
-      record_full_list[i].to_bfd (obfd, osec, &bfd_offset, gdbarch);
+      record_full_log[i].to_bfd (obfd, osec, &bfd_offset, gdbarch);
       /* Execute entry.  */
       if (i < record_full_next_insn)
-	record_full_list[i].exec_insn (regcache);
+	record_full_log[i].exec_insn (regcache);
     }
 
   unlink_file.keep ();
@@ -2757,10 +2757,10 @@ record_full_goto_insn (size_t target_insn,
 
   if (dir == EXEC_REVERSE)
     for (int i = record_full_next_insn; i > target_insn; i--)
-      record_full_list[i - 1].exec_insn (regcache);
+      record_full_log[i - 1].exec_insn (regcache);
   else
     for (int i = record_full_next_insn; i < target_insn; i++)
-      record_full_list[i].exec_insn (regcache);
+      record_full_log[i].exec_insn (regcache);
 
   record_full_next_insn = target_insn;
 }
@@ -2777,10 +2777,10 @@ static void
 set_record_full_insn_max_num (const char *args, int from_tty,
 			      struct cmd_list_element *c)
 {
-  if (record_full_list.size () > record_full_insn_max_num)
+  if (record_full_log.size () > record_full_insn_max_num)
     {
-      while (record_full_list.size () > record_full_insn_max_num)
-	record_full_list_release_first ();
+      while (record_full_log.size () > record_full_insn_max_num)
+	record_full_log_release_first ();
     }
 }
 
@@ -2789,21 +2789,21 @@ set_record_full_insn_max_num (const char *args, int from_tty,
 static void
 maintenance_print_record_instruction (const char *args, int from_tty)
 {
-  if (record_full_list.empty ())
+  if (record_full_log.empty ())
     error (_("Not enough recorded history"));
 
   int offset = record_full_next_insn - 1;
   /* Reduce the offset by 1 if the record_full_next_insn is after the end
      so that we show the last recorded instruction instead of crashing.  */
-  if (offset == record_full_list.size ())
+  if (offset == record_full_log.size ())
     offset--;
   if (args != nullptr)
     {
       offset += value_as_long (parse_and_eval (args));
-      if (offset >= record_full_list.size () || offset < 0)
+      if (offset >= record_full_log.size () || offset < 0)
 	error (_("Not enough recorded history"));
     }
-  auto to_print = record_full_list.begin () + offset;
+  auto to_print = record_full_log.begin () + offset;
 
   gdbarch *arch = current_inferior ()->arch ();
   struct value_print_options opts;
