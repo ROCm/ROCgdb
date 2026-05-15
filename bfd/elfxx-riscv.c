@@ -2688,8 +2688,8 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
 	{
 	  *q = '\0';
 	  rps->error_handler
-	    (_("%sinvalid ISA extension ends with <number>p in %s `%s'"),
-	       errmsg_internal, errmsg_caller, implicit_exts);
+	    (_("%sinvalid ISA extension `%s' ends with <number>p in %s `%s'"),
+	       errmsg_internal, subset, errmsg_caller, implicit_exts);
 	  free (subset);
 	  return false;
 	}
