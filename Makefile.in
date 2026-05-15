@@ -1122,6 +1122,7 @@ configure-host:  \
     maybe-configure-zlib \
     maybe-configure-gnulib \
     maybe-configure-gdbsupport \
+    maybe-configure-libdemangle-msvc \
     maybe-configure-gdbserver \
     maybe-configure-gdb \
     maybe-configure-expect \
@@ -1299,6 +1300,7 @@ all-host: maybe-all-zlib
 @endif zlib-no-bootstrap
 all-host: maybe-all-gnulib
 all-host: maybe-all-gdbsupport
+all-host: maybe-all-libdemangle-msvc
 all-host: maybe-all-gdbserver
 all-host: maybe-all-gdb
 all-host: maybe-all-expect
@@ -1424,6 +1426,7 @@ info-host: maybe-info-texinfo
 info-host: maybe-info-zlib
 info-host: maybe-info-gnulib
 info-host: maybe-info-gdbsupport
+info-host: maybe-info-libdemangle-msvc
 info-host: maybe-info-gdbserver
 info-host: maybe-info-gdb
 info-host: maybe-info-expect
@@ -1518,6 +1521,7 @@ dvi-host: maybe-dvi-texinfo
 dvi-host: maybe-dvi-zlib
 dvi-host: maybe-dvi-gnulib
 dvi-host: maybe-dvi-gdbsupport
+dvi-host: maybe-dvi-libdemangle-msvc
 dvi-host: maybe-dvi-gdbserver
 dvi-host: maybe-dvi-gdb
 dvi-host: maybe-dvi-expect
@@ -1612,6 +1616,7 @@ pdf-host: maybe-pdf-texinfo
 pdf-host: maybe-pdf-zlib
 pdf-host: maybe-pdf-gnulib
 pdf-host: maybe-pdf-gdbsupport
+pdf-host: maybe-pdf-libdemangle-msvc
 pdf-host: maybe-pdf-gdbserver
 pdf-host: maybe-pdf-gdb
 pdf-host: maybe-pdf-expect
@@ -1706,6 +1711,7 @@ html-host: maybe-html-texinfo
 html-host: maybe-html-zlib
 html-host: maybe-html-gnulib
 html-host: maybe-html-gdbsupport
+html-host: maybe-html-libdemangle-msvc
 html-host: maybe-html-gdbserver
 html-host: maybe-html-gdb
 html-host: maybe-html-expect
@@ -1800,6 +1806,7 @@ TAGS-host: maybe-TAGS-texinfo
 TAGS-host: maybe-TAGS-zlib
 TAGS-host: maybe-TAGS-gnulib
 TAGS-host: maybe-TAGS-gdbsupport
+TAGS-host: maybe-TAGS-libdemangle-msvc
 TAGS-host: maybe-TAGS-gdbserver
 TAGS-host: maybe-TAGS-gdb
 TAGS-host: maybe-TAGS-expect
@@ -1894,6 +1901,7 @@ install-info-host: maybe-install-info-texinfo
 install-info-host: maybe-install-info-zlib
 install-info-host: maybe-install-info-gnulib
 install-info-host: maybe-install-info-gdbsupport
+install-info-host: maybe-install-info-libdemangle-msvc
 install-info-host: maybe-install-info-gdbserver
 install-info-host: maybe-install-info-gdb
 install-info-host: maybe-install-info-expect
@@ -1988,6 +1996,7 @@ install-dvi-host: maybe-install-dvi-texinfo
 install-dvi-host: maybe-install-dvi-zlib
 install-dvi-host: maybe-install-dvi-gnulib
 install-dvi-host: maybe-install-dvi-gdbsupport
+install-dvi-host: maybe-install-dvi-libdemangle-msvc
 install-dvi-host: maybe-install-dvi-gdbserver
 install-dvi-host: maybe-install-dvi-gdb
 install-dvi-host: maybe-install-dvi-expect
@@ -2082,6 +2091,7 @@ install-pdf-host: maybe-install-pdf-texinfo
 install-pdf-host: maybe-install-pdf-zlib
 install-pdf-host: maybe-install-pdf-gnulib
 install-pdf-host: maybe-install-pdf-gdbsupport
+install-pdf-host: maybe-install-pdf-libdemangle-msvc
 install-pdf-host: maybe-install-pdf-gdbserver
 install-pdf-host: maybe-install-pdf-gdb
 install-pdf-host: maybe-install-pdf-expect
@@ -2176,6 +2186,7 @@ install-html-host: maybe-install-html-texinfo
 install-html-host: maybe-install-html-zlib
 install-html-host: maybe-install-html-gnulib
 install-html-host: maybe-install-html-gdbsupport
+install-html-host: maybe-install-html-libdemangle-msvc
 install-html-host: maybe-install-html-gdbserver
 install-html-host: maybe-install-html-gdb
 install-html-host: maybe-install-html-expect
@@ -2270,6 +2281,7 @@ installcheck-host: maybe-installcheck-texinfo
 installcheck-host: maybe-installcheck-zlib
 installcheck-host: maybe-installcheck-gnulib
 installcheck-host: maybe-installcheck-gdbsupport
+installcheck-host: maybe-installcheck-libdemangle-msvc
 installcheck-host: maybe-installcheck-gdbserver
 installcheck-host: maybe-installcheck-gdb
 installcheck-host: maybe-installcheck-expect
@@ -2364,6 +2376,7 @@ mostlyclean-host: maybe-mostlyclean-texinfo
 mostlyclean-host: maybe-mostlyclean-zlib
 mostlyclean-host: maybe-mostlyclean-gnulib
 mostlyclean-host: maybe-mostlyclean-gdbsupport
+mostlyclean-host: maybe-mostlyclean-libdemangle-msvc
 mostlyclean-host: maybe-mostlyclean-gdbserver
 mostlyclean-host: maybe-mostlyclean-gdb
 mostlyclean-host: maybe-mostlyclean-expect
@@ -2458,6 +2471,7 @@ clean-host: maybe-clean-texinfo
 clean-host: maybe-clean-zlib
 clean-host: maybe-clean-gnulib
 clean-host: maybe-clean-gdbsupport
+clean-host: maybe-clean-libdemangle-msvc
 clean-host: maybe-clean-gdbserver
 clean-host: maybe-clean-gdb
 clean-host: maybe-clean-expect
@@ -2552,6 +2566,7 @@ distclean-host: maybe-distclean-texinfo
 distclean-host: maybe-distclean-zlib
 distclean-host: maybe-distclean-gnulib
 distclean-host: maybe-distclean-gdbsupport
+distclean-host: maybe-distclean-libdemangle-msvc
 distclean-host: maybe-distclean-gdbserver
 distclean-host: maybe-distclean-gdb
 distclean-host: maybe-distclean-expect
@@ -2646,6 +2661,7 @@ maintainer-clean-host: maybe-maintainer-clean-texinfo
 maintainer-clean-host: maybe-maintainer-clean-zlib
 maintainer-clean-host: maybe-maintainer-clean-gnulib
 maintainer-clean-host: maybe-maintainer-clean-gdbsupport
+maintainer-clean-host: maybe-maintainer-clean-libdemangle-msvc
 maintainer-clean-host: maybe-maintainer-clean-gdbserver
 maintainer-clean-host: maybe-maintainer-clean-gdb
 maintainer-clean-host: maybe-maintainer-clean-expect
@@ -2798,6 +2814,7 @@ check-host:  \
     maybe-check-zlib \
     maybe-check-gnulib \
     maybe-check-gdbsupport \
+    maybe-check-libdemangle-msvc \
     maybe-check-gdbserver \
     maybe-check-gdb \
     maybe-check-expect \
@@ -2939,6 +2956,7 @@ install-host-nogcc:  \
     maybe-install-zlib \
     maybe-install-gnulib \
     maybe-install-gdbsupport \
+    maybe-install-libdemangle-msvc \
     maybe-install-gdbserver \
     maybe-install-gdb \
     maybe-install-expect \
@@ -2996,6 +3014,7 @@ install-host:  \
     maybe-install-zlib \
     maybe-install-gnulib \
     maybe-install-gdbsupport \
+    maybe-install-libdemangle-msvc \
     maybe-install-gdbserver \
     maybe-install-gdb \
     maybe-install-expect \
@@ -3110,6 +3129,7 @@ install-strip-host:  \
     maybe-install-strip-zlib \
     maybe-install-strip-gnulib \
     maybe-install-strip-gdbsupport \
+    maybe-install-strip-libdemangle-msvc \
     maybe-install-strip-gdbserver \
     maybe-install-strip-gdb \
     maybe-install-strip-expect \
@@ -35516,6 +35536,474 @@ maintainer-clean-gdbsupport:
 	  || exit 1
 
 @endif gdbsupport
+
+
+
+.PHONY: configure-libdemangle-msvc maybe-configure-libdemangle-msvc
+maybe-configure-libdemangle-msvc:
+@if gcc-bootstrap
+configure-libdemangle-msvc: stage_current
+@endif gcc-bootstrap
+@if libdemangle-msvc
+maybe-configure-libdemangle-msvc: configure-libdemangle-msvc
+configure-libdemangle-msvc: 
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	test ! -f $(HOST_SUBDIR)/libdemangle-msvc/Makefile || exit 0; \
+	$(SHELL) $(srcdir)/mkinstalldirs $(HOST_SUBDIR)/libdemangle-msvc; \
+	$(HOST_EXPORTS)  \
+	echo Configuring in $(HOST_SUBDIR)/libdemangle-msvc; \
+	cd "$(HOST_SUBDIR)/libdemangle-msvc" || exit 1; \
+	case $(srcdir) in \
+	  /* | [A-Za-z]:[\\/]*) topdir=$(srcdir) ;; \
+	  *) topdir=`echo $(HOST_SUBDIR)/libdemangle-msvc/ | \
+		sed -e 's,\./,,g' -e 's,[^/]*/,../,g' `$(srcdir) ;; \
+	esac; \
+	module_srcdir=libdemangle-msvc; \
+	$(SHELL) \
+	  $$s/$$module_srcdir/configure \
+	  --srcdir=$${topdir}/$$module_srcdir \
+	  $(HOST_CONFIGARGS) --build=${build_alias} --host=${host_alias} \
+	  --target=${target_alias}  \
+	  || exit 1
+@endif libdemangle-msvc
+
+
+
+
+
+.PHONY: all-libdemangle-msvc maybe-all-libdemangle-msvc
+maybe-all-libdemangle-msvc:
+@if gcc-bootstrap
+all-libdemangle-msvc: stage_current
+@endif gcc-bootstrap
+@if libdemangle-msvc
+TARGET-libdemangle-msvc=all
+maybe-all-libdemangle-msvc: all-libdemangle-msvc
+all-libdemangle-msvc: configure-libdemangle-msvc
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS)  \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) $(EXTRA_HOST_FLAGS) $(STAGE1_FLAGS_TO_PASS)  \
+		$(TARGET-libdemangle-msvc))
+@endif libdemangle-msvc
+
+
+
+
+.PHONY: check-libdemangle-msvc maybe-check-libdemangle-msvc
+maybe-check-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-check-libdemangle-msvc: check-libdemangle-msvc
+
+check-libdemangle-msvc:
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS)  \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(FLAGS_TO_PASS)  check)
+
+@endif libdemangle-msvc
+
+.PHONY: install-libdemangle-msvc maybe-install-libdemangle-msvc
+maybe-install-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-libdemangle-msvc: install-libdemangle-msvc
+
+install-libdemangle-msvc: installdirs
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(FLAGS_TO_PASS)  install)
+
+@endif libdemangle-msvc
+
+.PHONY: install-strip-libdemangle-msvc maybe-install-strip-libdemangle-msvc
+maybe-install-strip-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-strip-libdemangle-msvc: install-strip-libdemangle-msvc
+
+install-strip-libdemangle-msvc: installdirs
+	@: $(MAKE); $(unstage)
+	@r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(FLAGS_TO_PASS)  install-strip)
+
+@endif libdemangle-msvc
+
+# Other targets (info, dvi, pdf, etc.)
+
+.PHONY: maybe-info-libdemangle-msvc info-libdemangle-msvc
+maybe-info-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-info-libdemangle-msvc: info-libdemangle-msvc
+
+info-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing info in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          info) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-dvi-libdemangle-msvc dvi-libdemangle-msvc
+maybe-dvi-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-dvi-libdemangle-msvc: dvi-libdemangle-msvc
+
+dvi-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing dvi in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          dvi) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-pdf-libdemangle-msvc pdf-libdemangle-msvc
+maybe-pdf-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-pdf-libdemangle-msvc: pdf-libdemangle-msvc
+
+pdf-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing pdf in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          pdf) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-html-libdemangle-msvc html-libdemangle-msvc
+maybe-html-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-html-libdemangle-msvc: html-libdemangle-msvc
+
+html-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing html in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          html) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-TAGS-libdemangle-msvc TAGS-libdemangle-msvc
+maybe-TAGS-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-TAGS-libdemangle-msvc: TAGS-libdemangle-msvc
+
+TAGS-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing TAGS in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          TAGS) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-install-info-libdemangle-msvc install-info-libdemangle-msvc
+maybe-install-info-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-info-libdemangle-msvc: install-info-libdemangle-msvc
+
+install-info-libdemangle-msvc: \
+    configure-libdemangle-msvc \
+    info-libdemangle-msvc 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing install-info in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          install-info) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-install-dvi-libdemangle-msvc install-dvi-libdemangle-msvc
+maybe-install-dvi-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-dvi-libdemangle-msvc: install-dvi-libdemangle-msvc
+
+install-dvi-libdemangle-msvc: \
+    configure-libdemangle-msvc \
+    dvi-libdemangle-msvc 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing install-dvi in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          install-dvi) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-install-pdf-libdemangle-msvc install-pdf-libdemangle-msvc
+maybe-install-pdf-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-pdf-libdemangle-msvc: install-pdf-libdemangle-msvc
+
+install-pdf-libdemangle-msvc: \
+    configure-libdemangle-msvc \
+    pdf-libdemangle-msvc 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing install-pdf in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          install-pdf) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-install-html-libdemangle-msvc install-html-libdemangle-msvc
+maybe-install-html-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-install-html-libdemangle-msvc: install-html-libdemangle-msvc
+
+install-html-libdemangle-msvc: \
+    configure-libdemangle-msvc \
+    html-libdemangle-msvc 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing install-html in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          install-html) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-installcheck-libdemangle-msvc installcheck-libdemangle-msvc
+maybe-installcheck-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-installcheck-libdemangle-msvc: installcheck-libdemangle-msvc
+
+installcheck-libdemangle-msvc: \
+    configure-libdemangle-msvc 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing installcheck in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          installcheck) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-mostlyclean-libdemangle-msvc mostlyclean-libdemangle-msvc
+maybe-mostlyclean-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-mostlyclean-libdemangle-msvc: mostlyclean-libdemangle-msvc
+
+mostlyclean-libdemangle-msvc: 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing mostlyclean in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          mostlyclean) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-clean-libdemangle-msvc clean-libdemangle-msvc
+maybe-clean-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-clean-libdemangle-msvc: clean-libdemangle-msvc
+
+clean-libdemangle-msvc: 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing clean in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          clean) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-distclean-libdemangle-msvc distclean-libdemangle-msvc
+maybe-distclean-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-distclean-libdemangle-msvc: distclean-libdemangle-msvc
+
+distclean-libdemangle-msvc: 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing distclean in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          distclean) \
+	  || exit 1
+
+@endif libdemangle-msvc
+
+.PHONY: maybe-maintainer-clean-libdemangle-msvc maintainer-clean-libdemangle-msvc
+maybe-maintainer-clean-libdemangle-msvc:
+@if libdemangle-msvc
+maybe-maintainer-clean-libdemangle-msvc: maintainer-clean-libdemangle-msvc
+
+maintainer-clean-libdemangle-msvc: 
+	@: $(MAKE); $(unstage)
+	@[ -f ./libdemangle-msvc/Makefile ] || exit 0; \
+	r=`${PWD_COMMAND}`; export r; \
+	s=`cd $(srcdir); ${PWD_COMMAND}`; export s; \
+	$(HOST_EXPORTS) \
+	for flag in $(EXTRA_HOST_FLAGS) ; do \
+	  eval `echo "$$flag" | sed -e "s|^\([^=]*\)=\(.*\)|\1='\2'; export \1|"`; \
+	done; \
+	echo "Doing maintainer-clean in libdemangle-msvc"; \
+	(cd $(HOST_SUBDIR)/libdemangle-msvc && \
+	  $(MAKE) $(BASE_FLAGS_TO_PASS) "AR=$${AR}" "AS=$${AS}" \
+	          "CC=$${CC}" "CXX=$${CXX}" "LD=$${LD}" "NM=$${NM}" \
+	          "RANLIB=$${RANLIB}" \
+	          "DLLTOOL=$${DLLTOOL}" "WINDRES=$${WINDRES}" "WINDMC=$${WINDMC}" \
+	          maintainer-clean) \
+	  || exit 1
+
+@endif libdemangle-msvc
 
 
 
@@ -68463,6 +68951,7 @@ configure-gdb: maybe-all-gnulib
 configure-gdb: maybe-all-gdbsupport
 all-gdb: maybe-all-gnulib
 all-gdb: maybe-all-gdbsupport
+all-gdb: maybe-all-libdemangle-msvc
 all-gdb: maybe-all-readline
 all-gdb: maybe-all-build-bison
 all-gdb: maybe-all-sim
@@ -68597,6 +69086,7 @@ all-stagetrain-binutils: maybe-all-stagetrain-bfd
 all-stagefeedback-binutils: maybe-all-stagefeedback-bfd
 all-stageautoprofile-binutils: maybe-all-stageautoprofile-bfd
 all-stageautofeedback-binutils: maybe-all-stageautofeedback-bfd
+all-binutils: maybe-all-libdemangle-msvc
 all-binutils: maybe-all-build-flex
 all-stage1-binutils: maybe-all-build-flex
 all-stage2-binutils: maybe-all-build-flex
