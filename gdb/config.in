@@ -331,6 +331,9 @@
 /* Define to 1 if you have the `monstartup' function. */
 #undef HAVE_MONSTARTUP
 
+/* defined if MSVC demangler is available. */
+#undef HAVE_MSVC_DEMANGLER
+
 /* Define to 1 if you have the <ncursesw/ncurses.h> header file. */
 #undef HAVE_NCURSESW_NCURSES_H
 

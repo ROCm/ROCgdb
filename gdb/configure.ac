@@ -302,6 +302,32 @@ if test $gdb_native = yes; then
 fi
 AC_SUBST(HAVE_GSTACK)
 
+# MSVC demangler support.
+# Enable if any Windows target is present or --enable-targets=all.
+AC_ARG_WITH([msvc-demangler],
+	    [AS_HELP_STRING([--with-msvc-demangler],
+			    [MSVC symbol demangling (yes / no / auto, default: enabled  for Windows targets)])],
+	    [GDB_CHECK_YES_NO_AUTO_VAL([$withval], [--with-msvc-demangler])],
+	    [with_msvc_demangler=auto])
+
+if test "x${with_msvc_demangler}" = "xauto"; then
+  if test x${all_targets} = xtrue \
+     || test x${gdb_windows_target} = xyes; then
+    with_msvc_demangler=yes
+  else
+    with_msvc_demangler=no
+  fi
+fi
+
+if test "x${with_msvc_demangler}" != "xno"; then
+    AC_DEFINE(HAVE_MSVC_DEMANGLER, 1,
+	      [defined if MSVC demangler is available.])
+    LIBDEMANGLE_MSVC="../libdemangle-msvc/libdemangle-msvc.a"
+else
+    LIBDEMANGLE_MSVC=""
+fi
+AC_SUBST(LIBDEMANGLE_MSVC)
+
 # AMD debugger API support.
 
 AC_ARG_WITH([amd-dbgapi],
@@ -356,6 +382,7 @@ AC_SUBST(HAVE_NATIVE_GCORE_TARGET)
 # For other settings, only the main target counts.
 gdb_sim=
 gdb_osabi=
+gdb_windows_target=
 targ=$target; . ${srcdir}/configure.tgt
 
 # Fetch the default architecture and default target vector from BFD.

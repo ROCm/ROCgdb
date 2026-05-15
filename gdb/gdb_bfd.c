@@ -36,6 +36,9 @@
 #include "gdbsupport/cxx-thread.h"
 #include "gdbsupport/unordered_map.h"
 #include "gdbsupport/unordered_set.h"
+#ifdef HAVE_MSVC_DEMANGLER
+#include "demangle.h"
+#endif
 
 /* Lock held when doing BFD operations.  A recursive mutex is used
    because we use this mutex internally and also for BFD, just to make
@@ -1298,7 +1301,12 @@ gdb_bfd_init ()
   if (bfd_init () == BFD_INIT_MAGIC)
     {
       if (bfd_thread_init (gdb_bfd_lock, gdb_bfd_unlock, nullptr))
-	return;
+	{
+#ifdef HAVE_MSVC_DEMANGLER
+	  bfd_set_msvc_demangler (msvc_demangle);
+#endif
+	  return;
+	}
     }
 
   error (_("fatal error: libbfd ABI mismatch"));
