@@ -369,7 +369,7 @@ unwind_infopy_add_saved_register (PyObject *self, PyObject *args, PyObject *kw)
 	     here and True otherwise, but again that might require changes in
 	     user code.  So, handle this with minimal impact for the user, while
 	     improving robustness: silently ignore the register/value pair.  */
-	  Py_RETURN_NONE;
+	  return py_none ().release ();
 	}
     }
   catch (const gdb_exception &except)
@@ -391,7 +391,7 @@ unwind_infopy_add_saved_register (PyObject *self, PyObject *args, PyObject *kw)
   if (!found)
     unwind_info->saved_regs->emplace_back (regnum, std::move (new_value));
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* UnwindInfo cleanup.  */
@@ -516,9 +516,9 @@ pending_framepy_is_valid (PyObject *self, PyObject *args)
   pending_frame_object *pending_frame = (pending_frame_object *) self;
 
   if (pending_frame->frame_info == nullptr)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Implement PendingFrame.name().  Return a string that is the name of the
@@ -549,7 +549,7 @@ pending_framepy_name (PyObject *self, PyObject *args)
     return PyUnicode_Decode (name.get (), strlen (name.get ()),
 			     host_charset (), nullptr);
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Implement gdb.PendingFrame.pc().  Returns an integer containing the
@@ -693,7 +693,7 @@ pending_framepy_function (PyObject *self, PyObject *args)
   if (sym != nullptr)
     return symbol_to_symbol_object (sym).release ();
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Implementation of

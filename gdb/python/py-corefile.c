@@ -199,9 +199,9 @@ cfpy_is_valid (PyObject *self, PyObject *args)
   corefile_object *obj = (corefile_object *) self;
 
   if (!cfpy_corefile_object_is_valid (obj))
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Implement gdb.Corefile.mapped_files ().  Return a List of
@@ -469,9 +469,9 @@ cfmf_is_main_exec (PyObject *self, void *closure)
     = (corefile_mapped_file_object *) self;
 
   if (obj->is_main_exec_p)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
   else
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 }
 
 

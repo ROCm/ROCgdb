@@ -119,9 +119,9 @@ frapy_is_valid (PyObject *self, PyObject *args)
     }
 
   if (frame == NULL)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Implementation of gdb.Frame.name (self) -> String.
@@ -354,7 +354,7 @@ frapy_function (PyObject *self, PyObject *args)
   if (sym)
     return symbol_to_symbol_object (sym).release ();
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Convert a frame_info struct to a Python Frame object.
@@ -583,7 +583,7 @@ frapy_select (PyObject *self, PyObject *args)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* The stack frame level for this frame.  */
@@ -645,7 +645,7 @@ frapy_static_link (PyObject *self, PyObject *args)
     }
 
   if (link == nullptr)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return frame_info_to_frame_object (link).release ();
 }
@@ -739,8 +739,8 @@ frapy_richcompare (PyObject *self, PyObject *other, int op)
     result = Py_NE;
 
   if (op == result)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+    return py_true ().release ();
+  return py_false ().release ();
 }
 
 /* Sets up the Frame API in the gdb module.  */

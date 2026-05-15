@@ -522,9 +522,9 @@ gdbpy_parameter_value (const setting &var)
     case var_boolean:
       {
 	if (var.get<bool> ())
-	  Py_RETURN_TRUE;
+	  return py_true ().release ();
 	else
-	  Py_RETURN_FALSE;
+	  return py_false ().release ();
       }
 
     case var_auto_boolean:
@@ -532,11 +532,11 @@ gdbpy_parameter_value (const setting &var)
 	enum auto_boolean ab = var.get<enum auto_boolean> ();
 
 	if (ab == AUTO_BOOLEAN_TRUE)
-	  Py_RETURN_TRUE;
+	  return py_true ().release ();
 	else if (ab == AUTO_BOOLEAN_FALSE)
-	  Py_RETURN_FALSE;
+	  return py_false ().release ();
 	else
-	  Py_RETURN_NONE;
+	  return py_none ().release ();
       }
 
     case var_uinteger:
@@ -562,7 +562,7 @@ gdbpy_parameter_value (const setting &var)
 			&& *l->val == -1)
 		      value = -1;
 		    else
-		      Py_RETURN_NONE;
+		      return py_none ().release ();
 		  }
 		else if (l->val.has_value ())
 		  value = *l->val;
@@ -801,7 +801,7 @@ execute_gdb_command (PyObject *self, PyObject *args, PyObject *kw)
   if (to_string)
     return PyUnicode_Decode (to_string_res.c_str (), to_string_res.size (),
 			     host_charset (), nullptr);
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Implementation of Python rbreak command.  Take a REGEX and
@@ -1106,7 +1106,7 @@ static PyObject *
 gdbpy_invalidate_cached_frames (PyObject *self, PyObject *args)
 {
   reinit_frame_cache ();
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Read a file as Python code.
@@ -1195,7 +1195,7 @@ gdbpy_post_event (PyObject *self, PyObject *args)
   gdbpy_event event (std::move (func_ref));
   run_on_main_thread (event);
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Interrupt the current operation on the main thread.  */
@@ -1219,7 +1219,7 @@ gdbpy_interrupt (PyObject *self, PyObject *args)
   }
 #endif
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 
@@ -1618,7 +1618,7 @@ gdbpy_write (PyObject *self, PyObject *args, PyObject *kw)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* A python function to flush a gdb stream.  The optional keyword
@@ -1654,7 +1654,7 @@ gdbpy_flush (PyObject *self, PyObject *args, PyObject *kw)
 	gdb_flush (gdb_stdout);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Implement gdb.warning().  Takes a single text string argument and emit a
@@ -1688,7 +1688,7 @@ gdbpy_warning (PyObject *self, PyObject *args, PyObject *kw)
       return gdbpy_handle_gdb_exception (nullptr, ex);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Return non-zero if print-stack is not "none".  */
@@ -1861,7 +1861,7 @@ static PyObject *
 gdbpy_get_current_objfile (PyObject *unused1, PyObject *unused2)
 {
   if (! gdbpy_current_objfile)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return objfile_to_objfile_object (gdbpy_current_objfile).release ();
 }

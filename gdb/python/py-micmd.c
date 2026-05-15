@@ -490,8 +490,8 @@ micmdpy_get_installed (PyObject *self, void *closure)
   struct micmdpy_object *micmd_obj = (struct micmdpy_object *) self;
 
   if (micmd_obj->mi_command == nullptr)
-    Py_RETURN_FALSE;
-  Py_RETURN_TRUE;
+    return py_false ().release ();
+  return py_true ().release ();
 }
 
 /* Set the gdb.MICommand.installed property.  The property can be set to

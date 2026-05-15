@@ -73,7 +73,7 @@ bpfinishpy_get_returnvalue (PyObject *self, void *closure)
       (struct finish_breakpoint_object *) self;
 
   if (!self_finishbp->return_value)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   Py_INCREF (self_finishbp->return_value);
   return self_finishbp->return_value;

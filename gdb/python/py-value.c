@@ -915,7 +915,7 @@ valpy_assign (PyObject *self_obj, PyObject *args)
   if (!valpy_assign_core (self, val))
     return nullptr;
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 static Py_ssize_t
@@ -1284,9 +1284,9 @@ valpy_get_is_optimized_out (PyObject *self, void *closure)
     }
 
   if (opt)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
 
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Implements gdb.Value.is_unavailable.  Return true if any part of the
@@ -1308,9 +1308,9 @@ valpy_get_is_unavailable (PyObject *self, void *closure)
     }
 
   if (!entirely_available)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
 
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Implements gdb.Value.is_lazy.  */
@@ -1330,9 +1330,9 @@ valpy_get_is_lazy (PyObject *self, void *closure)
     }
 
   if (opt)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
 
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Get gdb.Value.bytes attribute.  */
@@ -1403,7 +1403,7 @@ valpy_fetch_lazy (PyObject *self, PyObject *args)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Calculate and return the address of the PyObject as the value of
@@ -1830,11 +1830,11 @@ valpy_richcompare (PyObject *self, PyObject *other, int op)
       case Py_LT:
       case Py_LE:
       case Py_EQ:
-	Py_RETURN_FALSE;
+	return py_false ().release ();
       case Py_NE:
       case Py_GT:
       case Py_GE:
-	Py_RETURN_TRUE;
+	return py_true ().release ();
       default:
 	/* Can't happen.  */
 	PyErr_SetString (PyExc_NotImplementedError,
@@ -1856,9 +1856,9 @@ valpy_richcompare (PyObject *self, PyObject *other, int op)
     return NULL;
 
   if (result == 1)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
 
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Implements conversion to long.  */
@@ -2186,7 +2186,7 @@ gdbpy_convenience_variable (PyObject *self, PyObject *args)
     }
 
   if (result == nullptr && !found)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return result.release ();
 }
@@ -2231,7 +2231,7 @@ gdbpy_set_convenience_variable (PyObject *self, PyObject *args)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Returns 1 in OBJ is a gdb.Value object, 0 otherwise.  */

@@ -84,7 +84,7 @@ sympy_get_symtab (PyObject *self, void *closure)
   SYMPY_REQUIRE_VALID (self, symbol);
 
   if (!symbol->is_objfile_owned ())
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return symtab_to_symtab_object (symbol->symtab ()).release ();
 }
@@ -224,8 +224,8 @@ sympy_needs_frame (PyObject *self, void *closure)
     }
 
   if (result)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+    return py_true ().release ();
+  return py_false ().release ();
 }
 
 /* Implementation of gdb.Symbol.line -> int.
@@ -251,9 +251,9 @@ sympy_is_valid (PyObject *self, PyObject *args)
 
   symbol = symbol_object_to_symbol (self);
   if (symbol == NULL)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Implementation of gdb.Symbol.value (self[, frame]) -> gdb.Value.  Returns

@@ -262,9 +262,9 @@ recpy_bt_insn_is_speculative (PyObject *self, void *closure)
     return NULL;
 
   if (insn->flags & BTRACE_INSN_FLAG_SPECULATIVE)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
   else
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 }
 
 /* Implementation of RecordInstruction.data [buffer] for btrace.
@@ -352,7 +352,7 @@ recpy_bt_func_symbol (PyObject *self, void *closure)
     return NULL;
 
   if (func->sym == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return symbol_to_symbol_object (func->sym).release ();
 }
@@ -392,7 +392,7 @@ recpy_bt_func_up (PyObject *self, void *closure)
     return NULL;
 
   if (func->up == 0)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return recpy_func_new (((recpy_element_object *) self)->thread,
 			 RECORD_METHOD_BTRACE, func->up);
@@ -410,7 +410,7 @@ recpy_bt_func_prev (PyObject *self, void *closure)
     return NULL;
 
   if (func->prev == 0)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return recpy_func_new (((recpy_element_object *) self)->thread,
 			 RECORD_METHOD_BTRACE, func->prev);
@@ -428,7 +428,7 @@ recpy_bt_func_next (PyObject *self, void *closure)
     return NULL;
 
   if (func->next == 0)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return recpy_func_new (((recpy_element_object *) self)->thread,
 			 RECORD_METHOD_BTRACE, func->next);
@@ -634,9 +634,9 @@ btpy_list_richcompare (PyObject *self, PyObject *other, int op)
 	  && obj1->first == obj2->first
 	  && obj1->last == obj2->last
 	  && obj1->step == obj2->step)
-	Py_RETURN_TRUE;
+	return py_true ().release ();
       else
-	Py_RETURN_FALSE;
+	return py_false ().release ();
 
     case Py_NE:
       if (obj1->thread != obj2->thread
@@ -644,9 +644,9 @@ btpy_list_richcompare (PyObject *self, PyObject *other, int op)
 	  || obj1->first != obj2->first
 	  || obj1->last != obj2->last
 	  || obj1->step != obj2->step)
-	Py_RETURN_TRUE;
+	return py_true ().release ();
       else
-	Py_RETURN_FALSE;
+	return py_false ().release ();
 
     default:
       break;
@@ -676,12 +676,12 @@ recpy_bt_format (PyObject *self, void *closure)
   const struct btrace_config * config;
 
   if (tinfo == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   config = btrace_conf (&tinfo->btrace);
 
   if (config == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return PyUnicode_FromString (btrace_format_short_string (config->format));
 }
@@ -696,10 +696,10 @@ recpy_bt_replay_position (PyObject *self, void *closure)
   thread_info * tinfo = record->thread;
 
   if (tinfo == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   if (tinfo->btrace.replay == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return btpy_item_new (tinfo, btrace_insn_number (tinfo->btrace.replay));
 }
@@ -715,12 +715,12 @@ recpy_bt_begin (PyObject *self, void *closure)
   struct btrace_insn_iterator iterator;
 
   if (tinfo == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   btrace_fetch (tinfo, record_btrace_get_cpu ());
 
   if (btrace_is_empty (tinfo))
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   btrace_insn_begin (&iterator, &tinfo->btrace);
   return btpy_item_new (tinfo, btrace_insn_number (&iterator));
@@ -737,12 +737,12 @@ recpy_bt_end (PyObject *self, void *closure)
   struct btrace_insn_iterator iterator;
 
   if (tinfo == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   btrace_fetch (tinfo, record_btrace_get_cpu ());
 
   if (btrace_is_empty (tinfo))
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   btrace_insn_end (&iterator, &tinfo->btrace);
   return btpy_item_new (tinfo, btrace_insn_number (&iterator));
@@ -761,12 +761,12 @@ recpy_bt_instruction_history (PyObject *self, void *closure)
   unsigned long last = 0;
 
    if (tinfo == NULL)
-     Py_RETURN_NONE;
+     return py_none ().release ();
 
    btrace_fetch (tinfo, record_btrace_get_cpu ());
 
    if (btrace_is_empty (tinfo))
-     Py_RETURN_NONE;
+     return py_none ().release ();
 
    btrace_insn_begin (&iterator, &tinfo->btrace);
    first = btrace_insn_number (&iterator);
@@ -790,12 +790,12 @@ recpy_bt_function_call_history (PyObject *self, void *closure)
   unsigned long last = 0;
 
   if (tinfo == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   btrace_fetch (tinfo, record_btrace_get_cpu ());
 
   if (btrace_is_empty (tinfo))
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   btrace_call_begin (&iterator, &tinfo->btrace);
   first = btrace_call_number (&iterator);
@@ -943,7 +943,7 @@ recpy_bt_goto (PyObject *self, PyObject *args)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Implementation of BtraceRecord.clear (self) -> None.  */
@@ -956,7 +956,7 @@ recpy_bt_clear (PyObject *self, PyObject *args)
 
   btrace_clear (tinfo);
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* BtraceList methods.  */

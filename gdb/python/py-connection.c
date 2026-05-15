@@ -216,9 +216,9 @@ connpy_is_valid (PyObject *self, PyObject *args)
   connection_object *conn = (connection_object *) self;
 
   if (conn->target == nullptr)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Return the id number of this connection.  */
@@ -274,7 +274,7 @@ connpy_get_connection_details (PyObject *self, void *closure)
   if (details != nullptr)
     return host_string_to_python_string (details).release ();
   else
-    Py_RETURN_NONE;
+    return py_none ().release ();
 }
 
 /* Python specific initialization for this file.  */

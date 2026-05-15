@@ -76,7 +76,7 @@ static PyObject *
 cmdpy_dont_repeat (PyObject *self, PyObject *args)
 {
   dont_repeat ();
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 

@@ -124,7 +124,7 @@ build_line_table_tuple_from_entries
   int i;
 
   if (entries.size () < 1)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   gdbpy_ref<> tuple (PyTuple_New (entries.size ()));
 
@@ -204,10 +204,10 @@ ltpy_has_line (PyObject *self, PyObject *args)
     {
       const linetable_entry *item = &(symtab->linetable ()->item[index]);
       if (item->line == py_line)
-	  Py_RETURN_TRUE;
+	  return py_true ().release ();
     }
 
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Implementation of gdb.LineTable.source_lines (self) -> List.
@@ -266,9 +266,9 @@ ltpy_is_valid (PyObject *self, PyObject *args)
   symtab = symtab_object_to_symtab (get_symtab (self));
 
   if (symtab == NULL)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Deconstructor for the line table object.  Decrement the reference
@@ -427,9 +427,9 @@ ltpy_iter_is_valid (PyObject *self, PyObject *args)
   symtab = symtab_object_to_symtab (get_symtab (iter_obj->source));
 
   if (symtab == NULL)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 GDBPY_INITIALIZE_FILE (gdbpy_initialize_linetable);

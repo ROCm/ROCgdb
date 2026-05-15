@@ -94,7 +94,7 @@ invoke_match_method (PyObject *matcher, PyObject *py_obj_type,
   if (enabled == 0)
     {
       /* Return 'None' if the matcher is not enabled.  */
-      Py_RETURN_NONE;
+      return py_none ().release ();
     }
 
   gdbpy_ref<> match_method (PyObject_GetAttrString (matcher,

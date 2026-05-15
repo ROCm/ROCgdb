@@ -427,17 +427,17 @@ recpy_element_richcompare (PyObject *self, PyObject *other, int op)
       if (obj1->thread == obj2->thread
 	  && obj1->method == obj2->method
 	  && obj1->number == obj2->number)
-	Py_RETURN_TRUE;
+	return py_true ().release ();
       else
-	Py_RETURN_FALSE;
+	return py_false ().release ();
 
     case Py_NE:
       if (obj1->thread != obj2->thread
 	  || obj1->method != obj2->method
 	  || obj1->number != obj2->number)
-	Py_RETURN_TRUE;
+	return py_true ().release ();
       else
-	Py_RETURN_FALSE;
+	return py_false ().release ();
 
     default:
       break;
@@ -691,7 +691,7 @@ gdbpy_current_recording (PyObject *self, PyObject *args)
   recpy_record_object *ret = NULL;
 
   if (find_record_target () == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   ret = PyObject_New (recpy_record_object, &recpy_record_type);
   if (ret == nullptr)
@@ -717,7 +717,7 @@ gdbpy_stop_recording (PyObject *self, PyObject *args)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 GDBPY_INITIALIZE_FILE (gdbpy_initialize_record);

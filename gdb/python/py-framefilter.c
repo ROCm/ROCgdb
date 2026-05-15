@@ -279,7 +279,7 @@ get_py_iter_from_func (PyObject *filter, const char *func)
 	}
     }
   else
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return NULL;
 }

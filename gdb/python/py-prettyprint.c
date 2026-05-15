@@ -119,7 +119,7 @@ find_pretty_printer_from_objfiles (PyObject *value)
 	return function.release ();
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Subroutine of find_pretty_printer to simplify it.

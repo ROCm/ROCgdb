@@ -349,7 +349,7 @@ typy_get_name (PyObject *self, void *closure)
   struct type *type = ((type_object *) self)->type;
 
   if (type->name () == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
   /* Ada type names are encoded, but it is better for users to see the
      decoded form.  */
   if (ADA_TYPE_P (type))
@@ -374,7 +374,7 @@ typy_get_tag (PyObject *self, void *closure)
     tagname = type->name ();
 
   if (tagname == nullptr)
-    Py_RETURN_NONE;
+    return py_none ().release ();
   return PyUnicode_FromString (tagname);
 }
 
@@ -386,7 +386,7 @@ typy_get_objfile (PyObject *self, void *closure)
   struct objfile *objfile = type->objfile_owner ();
 
   if (objfile == nullptr)
-    Py_RETURN_NONE;
+    return py_none ().release ();
   return objfile_to_objfile_object (objfile).release ();
 }
 
@@ -398,9 +398,9 @@ typy_is_scalar (PyObject *self, void *closure)
   struct type *type = ((type_object *) self)->type;
 
   if (is_scalar_type (type))
-    Py_RETURN_TRUE;
+    return py_true ().release ();
   else
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 }
 
 /* Return true if this type is signed.  Raises a ValueError if this type
@@ -419,9 +419,9 @@ typy_is_signed (PyObject *self, void *closure)
     }
 
   if (type->is_unsigned ())
-    Py_RETURN_FALSE;
+    return py_false ().release ();
   else
-    Py_RETURN_TRUE;
+    return py_true ().release ();
 }
 
 /* Return true if this type is array-like.  */
@@ -443,9 +443,9 @@ typy_is_array_like (PyObject *self, void *closure)
     }
 
   if (result)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
   else
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 }
 
 /* Return true if this type is string-like.  */
@@ -467,9 +467,9 @@ typy_is_string_like (PyObject *self, void *closure)
     }
 
   if (result)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
   else
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 }
 
 /* Return the type, stripped of typedefs. */
@@ -777,7 +777,7 @@ typy_get_sizeof (PyObject *self, void *closure)
   /* Ignore exceptions.  */
 
   if (size_varies)
-    Py_RETURN_NONE;
+    return py_none ().release ();
   return gdb_py_object_from_longest (type->length ()).release ();
 }
 
@@ -819,8 +819,8 @@ typy_get_dynamic (PyObject *self, void *closure)
     }
 
   if (result)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+    return py_true ().release ();
+  return py_false ().release ();
 }
 
 static struct type *
@@ -1140,8 +1140,8 @@ typy_richcompare (PyObject *self, PyObject *other, int op)
     }
 
   if (op == (result ? Py_EQ : Py_NE))
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+    return py_true ().release ();
+  return py_false ().release ();
 }
 
 
@@ -1320,9 +1320,9 @@ typy_has_key (PyObject *self, PyObject *args)
       const char *t_field_name = field.name ();
 
       if (t_field_name && (strcmp_iw (t_field_name, field_name) == 0))
-	Py_RETURN_TRUE;
+	return py_true ().release ();
     }
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Make an iterator object to iterate over keys, values, or items.  */

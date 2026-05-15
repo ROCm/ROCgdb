@@ -45,7 +45,7 @@ evregpy_connect (PyObject *self, PyObject *function)
   if (PyList_Append (callback_list, func) < 0)
     return NULL;
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Implementation of EventRegistry.disconnect () -> NULL.
@@ -63,12 +63,12 @@ evregpy_disconnect (PyObject *self, PyObject *function)
 
   index = PySequence_Index (callback_list, func);
   if (index < 0)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   if (PySequence_DelItem (callback_list, index) < 0)
     return NULL;
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Create a new event registry.  This function uses PyObject_New
