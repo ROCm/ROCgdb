@@ -2711,36 +2711,46 @@ do_misc_decoding (aarch64_inst *inst)
 
     case OP_MOV_P_P:
     case OP_MOVS_P_P:
-      value = extract_field (FLD_SVE_Pn, inst->value, 0);
-      return (value == extract_field (FLD_SVE_Pm, inst->value, 0)
-	      && value == extract_field (FLD_SVE_Pg4_10, inst->value, 0));
+      /* ORR/ORRS alias with Pn == Pm == Pg.  */
+      value = extract_field (AARCH64_FIELD (5, 4), inst->value, 0);
+      return (value == extract_field (AARCH64_FIELD (16, 4), inst->value, 0)
+	      && value == extract_field (AARCH64_FIELD (10, 4),
+					 inst->value, 0));
 
     case OP_MOV_Z_P_Z:
-      return (extract_field (FLD_SVE_Zd, inst->value, 0)
-	      == extract_field (FLD_SVE_Zm_16, inst->value, 0));
+      /* SEL alias with Zd == Zm.  */
+      return (extract_field (AARCH64_FIELD (0, 5), inst->value, 0)
+	      == extract_field (AARCH64_FIELD (16, 5), inst->value, 0));
 
     case OP_MOV_Z_V:
-      /* Index must be zero.  */
-      value = extract_fields (inst->value, 0, 2, FLD_SVE_tszh, FLD_imm5);
-      return value > 0 && value <= 16 && value == (value & -value);
+      /* DUP alias with zero index.  Index and size use a triangle encoding,
+	 and we already know that one of the bottom 5 bits is nonzero, so we
+	 just need to check that the bitcount is at most 1.  */
+      value = extract_fields (inst->value, 0, 2, AARCH64_FIELD (22, 2),
+			      AARCH64_FIELD (16, 5));
+      return value == (value & -value);
 
     case OP_MOV_Z_Z:
-      return (extract_field (FLD_SVE_Zn, inst->value, 0)
-	      == extract_field (FLD_SVE_Zm_16, inst->value, 0));
+      /* ORR alias with Zn == Zm.  */
+      return (extract_field (AARCH64_FIELD (5, 5), inst->value, 0)
+	      == extract_field (AARCH64_FIELD (16, 5), inst->value, 0));
 
     case OP_MOVM_P_P_P:
-      return (extract_field (FLD_SVE_Pd, inst->value, 0)
-	      == extract_field (FLD_SVE_Pm, inst->value, 0));
+      /* SEL alias with Pd == Pm.  */
+      return (extract_field (AARCH64_FIELD (0, 4), inst->value, 0)
+	      == extract_field (AARCH64_FIELD (16, 4), inst->value, 0));
 
     case OP_MOVZS_P_P_P:
     case OP_MOVZ_P_P_P:
-      return (extract_field (FLD_SVE_Pn, inst->value, 0)
-	      == extract_field (FLD_SVE_Pm, inst->value, 0));
+      /* AND/ANDS alias with Pn == Pm.  */
+      return (extract_field (AARCH64_FIELD (5, 4), inst->value, 0)
+	      == extract_field (AARCH64_FIELD (16, 4), inst->value, 0));
 
     case OP_NOTS_P_P_P_Z:
     case OP_NOT_P_P_P_Z:
-      return (extract_field (FLD_SVE_Pm, inst->value, 0)
-	      == extract_field (FLD_SVE_Pg4_10, inst->value, 0));
+      /* EOR/EORS alias with Pm == Pg.  */
+      return (extract_field (AARCH64_FIELD (16, 4), inst->value, 0)
+	      == extract_field (AARCH64_FIELD (10, 4), inst->value, 0));
 
     default:
       return 0;

@@ -1948,42 +1948,42 @@ do_misc_encoding (aarch64_inst *inst)
     case OP_MOV_P_P:
     case OP_MOV_PN_PN:
     case OP_MOVS_P_P:
-      /* Copy Pn to Pm and Pg.  */
-      value = extract_field (FLD_SVE_Pn, inst->value, 0);
-      insert_field (FLD_SVE_Pm, &inst->value, value, 0);
-      insert_field (FLD_SVE_Pg4_10, &inst->value, value, 0);
+      /* ORR/ORRS alias.  Copy Pn to Pm and Pg.  */
+      value = extract_field (AARCH64_FIELD (5, 4), inst->value, 0);
+      insert_field (AARCH64_FIELD (16, 4), &inst->value, value, 0);
+      insert_field (AARCH64_FIELD (10, 4), &inst->value, value, 0);
       break;
     case OP_MOV_Z_P_Z:
-      /* Copy Zd to Zm.  */
-      value = extract_field (FLD_SVE_Zd, inst->value, 0);
-      insert_field (FLD_SVE_Zm_16, &inst->value, value, 0);
+      /* SEL alias.  Copy Zd to Zm.  */
+      value = extract_field (AARCH64_FIELD (0, 5), inst->value, 0);
+      insert_field (AARCH64_FIELD (16, 5), &inst->value, value, 0);
       break;
     case OP_MOV_Z_V:
-      /* Fill in the zero immediate.  */
+      /* DUP alias.  Fill in the zero index and element size.  */
       insert_fields (&inst->value, 1 << aarch64_get_variant (inst), 0,
-		     2, FLD_imm5, FLD_SVE_tszh);
+		     2, AARCH64_FIELD (16, 5), AARCH64_FIELD (22, 2));
       break;
     case OP_MOV_Z_Z:
-      /* Copy Zn to Zm.  */
-      value = extract_field (FLD_SVE_Zn, inst->value, 0);
-      insert_field (FLD_SVE_Zm_16, &inst->value, value, 0);
+      /* ORR alias.  Copy Zn to Zm.  */
+      value = extract_field (AARCH64_FIELD (5, 5), inst->value, 0);
+      insert_field (AARCH64_FIELD (16, 5), &inst->value, value, 0);
       break;
     case OP_MOVM_P_P_P:
-      /* Copy Pd to Pm.  */
-      value = extract_field (FLD_SVE_Pd, inst->value, 0);
-      insert_field (FLD_SVE_Pm, &inst->value, value, 0);
+      /* SEL alias.  Copy Pd to Pm.  */
+      value = extract_field (AARCH64_FIELD (0, 4), inst->value, 0);
+      insert_field (AARCH64_FIELD (16, 4), &inst->value, value, 0);
       break;
     case OP_MOVZS_P_P_P:
     case OP_MOVZ_P_P_P:
-      /* Copy Pn to Pm.  */
-      value = extract_field (FLD_SVE_Pn, inst->value, 0);
-      insert_field (FLD_SVE_Pm, &inst->value, value, 0);
+      /* AND/ANDS alias.  Copy Pn to Pm.  */
+      value = extract_field (AARCH64_FIELD (5, 4), inst->value, 0);
+      insert_field (AARCH64_FIELD (16, 4), &inst->value, value, 0);
       break;
     case OP_NOTS_P_P_P_Z:
     case OP_NOT_P_P_P_Z:
-      /* Copy Pg to Pm.  */
-      value = extract_field (FLD_SVE_Pg4_10, inst->value, 0);
-      insert_field (FLD_SVE_Pm, &inst->value, value, 0);
+      /* EOR/EORS alias.  Copy Pg to Pm.  */
+      value = extract_field (AARCH64_FIELD (10, 4), inst->value, 0);
+      insert_field (AARCH64_FIELD (16, 4), &inst->value, value, 0);
       break;
     default: break;
     }
