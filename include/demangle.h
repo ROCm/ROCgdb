@@ -57,6 +57,13 @@ extern "C" {
 #define DMGL_GNAT	 (1 << 15)
 #define DMGL_DLANG	 (1 << 16)
 #define DMGL_RUST	 (1 << 17)	/* Rust wraps GNU_V3 style mangling.  */
+#define DMGL_MSVC	 (1 << 19)	/* Demangle as MSVC (Microsoft Visual
+					   C++ ABI).  When set, MSVC-specific
+					   decorations (calling conventions,
+					   access specifiers, special symbols)
+					   are preserved in the output; under
+					   DMGL_AUTO they are stripped to match
+					   Itanium output style.  */
 
 /* If none of these are set, use 'current_demangling_style' as the default. */
 #define DMGL_STYLE_MASK (DMGL_AUTO|DMGL_GNU_V3|DMGL_JAVA|DMGL_GNAT|DMGL_DLANG|DMGL_RUST)
@@ -203,6 +210,22 @@ enum gnu_v3_dtor_kinds {
    it is.  */
 extern enum gnu_v3_dtor_kinds
 	is_gnu_v3_mangled_dtor (const char *name);
+
+/* Callbacks of an external MSVC demangler (libdemangle-msvc).  The
+   others are called only for names that MANGLED_START returns unchanged.
+   String results are malloc-allocated or NULL.  */
+
+struct msvc_demangler_ops
+{
+  /* Start of the MSVC-mangled part of NAME (NAME itself or a suffix
+     after a tag prefix), or NULL if NAME is not MSVC-mangled.  */
+  const char *(*mangled_start) (const char *name);
+  char *(*demangle) (const char *mangled, int options);
+  enum gnu_v3_ctor_kinds (*ctor_kind) (const char *mangled);
+  enum gnu_v3_dtor_kinds (*dtor_kind) (const char *mangled);
+  char *(*class_name_from_physname) (const char *physname);
+  char *(*method_name_from_physname) (const char *physname);
+};
 
 /* The V3 demangler works in two passes.  The first pass builds a tree
    representation of the mangled name, and the second pass turns the

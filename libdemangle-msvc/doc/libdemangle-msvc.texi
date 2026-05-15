@@ -1,0 +1,319 @@
+@setfilename libdemangle-msvc.info
+@settitle libdemangle-msvc
+
+@copying
+This file documents the libdemangle-msvc library.
+
+Copyright @copyright{} 2026 Advanced Micro Devices, Inc.
+
+Licensed under the Apache License v2.0 with LLVM Exceptions.
+See @url{https://llvm.org/LICENSE.txt} for license information.
+SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception.
+@end copying
+
+@titlepage
+@title libdemangle-msvc
+@subtitle Microsoft Visual C++ Demangling Library for ROCgdb
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top libdemangle-msvc
+
+Microsoft Visual C++ demangling library for ROCgdb.
+@end ifnottex
+
+@menu
+* Purpose::              What this library does.
+* Licensing::            License information.
+* API::                  Public API reference.
+* Integration::          How the library integrates with ROCgdb.
+* Building::             How to build the library.
+* Testing::              Running the test suite.
+@end menu
+
+@node Purpose
+@chapter Purpose
+
+This library provides MSVC symbol demangling functionality, currently
+using the existing LLVM's MSVC demangler code.  It can be used by BFD,
+GDB and binutils to demangle Microsoft Visual C++ symbols.
+
+@node Licensing
+@chapter Licensing
+
+This library is licensed under Apache 2.0 with LLVM Exception.
+
+@node API
+@chapter API
+
+The library exposes a C API compatible with libiberty's demangling
+interface.
+
+@section Core Demangling Functions
+
+@deftypefun {char *} msvc_demangle (const char *@var{mangled}, int @var{options})
+Demangle an MSVC symbol name.  Returns the demangled string, or
+@code{NULL} if demangling fails.  Takes the same options as libiberty's
+@code{cplus_demangle} for compatibility.  The caller must free the
+returned string.
+@end deftypefun
+
+@section MSVC-Specific Utility Functions
+
+The MSVC demangler does not provide an equivalent of libiberty's
+@code{cplus_demangle_v3_components}, which returns a structured AST
+from a mangled name.  Implementing one would require converting the
+LLVM demangler's AST into libiberty's @code{demangle_component} tree.
+Instead, an implementation is provided for the queries GDB would
+derive from libiberty's AST: @code{cp_class_name_from_physname},
+@code{method_name_from_physname} (defined in @file{gdb/cp-support.c})
+and the constructor/destructor tests.  They are reached through the
+libiberty entry points listed in the libiberty Registration section.
+
+@deftypefun {char *} llvm_msvc_class_name_from_physname (const char *@var{physname})
+Extract the qualified enclosing class name from an MSVC method
+physname.  Returns a malloc'd string (caller frees), or @code{NULL} if
+@var{physname} is not a recognised MSVC method physname.
+@end deftypefun
+
+@deftypefun {char *} llvm_msvc_method_name_from_physname (const char *@var{physname})
+Extract the bare (unqualified) method name from an MSVC method
+physname.  Returns a malloc'd string (caller frees), or @code{NULL} if
+@var{physname} is not a recognised MSVC method physname.
+@end deftypefun
+
+@deftypefun void llvm_msvc_structor_kind (const char *@var{mangled}, enum gnu_v3_ctor_kinds *@var{ctor_kind}, enum gnu_v3_dtor_kinds *@var{dtor_kind})
+The MSVC counterpart of libiberty's @code{is_ctor_or_dtor}.  Both
+results are 0 unless @var{mangled} is a function whose name is
+@samp{??0} (complete-object constructor, including templated
+constructors @samp{??$?0}), @samp{??1} (base-object destructor),
+@samp{??_D} (complete-object destructor of a class with virtual
+bases), or @samp{??_G} / @samp{??_E} (scalar / vector deleting
+destructor).
+@end deftypefun
+
+@section BFD Integration Functions
+
+@deftypefun {char *} bfd_demangle (bfd *@var{abfd}, const char *@var{mangled}, int @var{options})
+Unified BFD demangling function.  Automatically detects symbol type
+and uses the appropriate demangler.
+
+@table @var
+@item abfd
+BFD object context.
+@item mangled
+The mangled symbol name.
+@item options
+Demangling options (@code{DMGL_*} flags).
+@end table
+
+Returns the demangled string (caller must free), or @code{NULL} if
+demangling failed.
+@end deftypefun
+
+@section libiberty Registration
+
+@deftypefun void cplus_demangle_set_msvc_ops (const struct msvc_demangler_ops *@var{ops})
+Register the MSVC demangler's callbacks with libiberty.  Declared in
+@file{include/demangle.h}; libdemangle-msvc provides the table
+@code{msvc_demangler_ops}.  Its members are @code{mangled_start},
+@code{demangle}, @code{ctor_kind}, @code{dtor_kind},
+@code{class_name_from_physname} and @code{method_name_from_physname}.
+Once registered, @code{cplus_demangle} asks @code{mangled_start} about
+every name and dispatches those it returns unchanged to
+@code{demangle} whenever the current style is @code{auto_demangling}
+or @code{msvc_demangling}.  Passing
+@code{NULL} disables MSVC demangling.  This entry point is called from
+@code{bfd_init} when BFD is built with @code{HAVE_MSVC_DEMANGLER}
+defined.
+@end deftypefun
+
+@deftypefun {const char *} cplus_demangle_msvc_mangled_start (const char *@var{name})
+The registered @code{mangled_start}: where the MSVC-mangled part of
+@var{name} starts, or @code{NULL} (also when no table is registered).
+@code{bfd_demangle} and @command{c++filt} call it for every name; text
+before the returned position is printed in front of the demangled part,
+and @samp{@@} inside an MSVC name is not treated as a version or
+@samp{@@plt} suffix.
+@end deftypefun
+
+libiberty forwards the remaining callbacks, again only for names
+@code{mangled_start} returns unchanged, and returns 0 or @code{NULL}
+when no table is registered:
+
+@deftypefun {enum gnu_v3_ctor_kinds} is_msvc_mangled_ctor (const char *@var{name})
+@deftypefunx {enum gnu_v3_dtor_kinds} is_msvc_mangled_dtor (const char *@var{name})
+MSVC counterparts of @code{is_gnu_v3_mangled_ctor} and
+@code{is_gnu_v3_mangled_dtor}.
+@end deftypefun
+
+@deftypefun {char *} cplus_demangle_msvc_class_name (const char *@var{physname})
+@deftypefunx {char *} cplus_demangle_msvc_method_name (const char *@var{physname})
+Used by GDB's @code{cp_class_name_from_physname} and
+@code{method_name_from_physname} before their AST walk.
+@end deftypefun
+
+The MSVC style is also exposed in libiberty's
+@code{libiberty_demanglers[]} table as @samp{msvc}, so:
+
+@itemize @bullet
+@item
+@command{c++filt -s msvc} / @command{c++filt --format=msvc} selects
+the MSVC style explicitly.
+@item
+@command{(gdb) set demangle-style msvc} does the same in GDB.
+@end itemize
+
+When no handler is registered, an explicit MSVC style still parses,
+but @code{cplus_demangle} returns @code{NULL} for every input.
+
+@node Integration
+@chapter Integration
+
+The library is built with libtool as @code{libdemangle-msvc}, the way
+@code{libsframe} is.  When it is enabled, @code{bfd_init} refers to
+it, so @code{libbfd} links it, and it is installed along with
+@code{libbfd}.  A shared @code{libbfd} depends on the shared
+@code{libdemangle-msvc}; a program that links the static @code{libbfd}
+links @code{libdemangle-msvc} as well.  It is a C++ library, so GDB and
+every program that links @code{libbfd} (binutils, gas, ld, gprof,
+gprofng and the simulators) are linked with the C++ compiler.
+@code{libiberty} remains free of any dependency on it.
+
+Flow of control for a tool such as @command{c++filt} or @command{gdb}:
+
+@enumerate
+@item
+The tool calls @code{bfd_init} during start-up.
+@item
+When @code{libbfd} was configured with @code{HAVE_MSVC_DEMANGLER},
+@code{bfd_init} calls @code{cplus_demangle_set_msvc_ops
+(&msvc_demangler_ops)}, installing the MSVC callbacks into libiberty.
+@item
+The tool calls @code{bfd_demangle} (or @code{cplus_demangle} directly).
+@item
+@code{bfd_demangle} asks @code{cplus_demangle_msvc_mangled_start}
+where the mangled part starts, keeps any text before it aside and
+forwards the rest to @code{cplus_demangle}.
+@item
+@code{cplus_demangle} dispatches to the registered MSVC handler when
+the style is @code{auto}/@code{msvc} and @code{mangled_start} returns
+the symbol unchanged; otherwise it falls through to the Itanium / Rust /
+D / Ada demanglers.
+@end enumerate
+
+If a tool was not linked against @code{libdemangle-msvc}, no handler
+is registered and @code{cplus_demangle} simply returns @code{NULL} for
+MSVC-shaped names.
+
+@section Symbol Format Detection
+
+The single detection function is @code{msvc_mangled_start}, registered
+as @code{mangled_start}.  It returns @var{name} itself for names whose
+first character is @samp{?}, which no other supported scheme (Itanium,
+Rust legacy, D, GNAT, Java) produces, and for the exception-handling
+throw-info names @samp{_CT??_R0@dots{}}, @samp{_CTA@var{n}@dots{}} and
+@samp{_TI[C][V][U]@var{n}@dots{}}.  A throw-info name is a
+concatenation that LLVM's parser does not accept as a whole, so each
+mangled part is demangled separately: @samp{_CTA2?AVruntime_error@@std@@@@}
+becomes @samp{_CTA2 std::runtime_error}.
+
+MSVC EH and unwind tables are named @samp{$@var{tag}$?@var{mangled}},
+for example @samp{$cppxdata$?f@@@@YAXXZ},
+@samp{$handlerMap$0$?f@@@@YAXXZ} or @samp{$unwind$?f@@@@YAXXZ}.
+For these @code{msvc_mangled_start} returns the position of the
+@samp{?}; @code{bfd_demangle} and @command{c++filt} demangle from
+there and put the tag back, giving @samp{$cppxdata$f(void)}, so a table
+is never shown under its function's name.
+
+@section Registration Architecture
+
+To keep @code{libdemangle-msvc} out of @code{libiberty}, the MSVC
+callbacks are registered at run-time through libiberty's
+@code{cplus_demangle_set_msvc_ops}:
+
+@itemize @bullet
+@item
+When MSVC demangling is disabled, nothing links
+@code{libdemangle-msvc} and no handler is installed.
+@item
+When it is enabled, @code{bfd_init} calls
+@code{cplus_demangle_set_msvc_ops(&msvc_demangler_ops)}.
+@item
+@code{cplus_demangle} then dispatches based on the registered handler
+and the input symbol's shape.
+@end itemize
+
+@node Building
+@chapter Building
+
+@section Configure Options
+
+BFD, GDB and binutils all read the same @option{--with-msvc-demangler}
+flag passed to the top-level @command{configure}.  The top-level
+resolves the value once and forwards it explicitly (as @code{yes} or
+@code{no}) to every subdirectory.
+
+@table @option
+@item --with-msvc-demangler
+@itemx --with-msvc-demangler=yes
+Enable MSVC demangling.
+
+@item --with-msvc-demangler=no
+@itemx --without-msvc-demangler
+Disable MSVC demangling.  @file{libdemangle-msvc} is dropped from
+@code{configdirs} so it is not built.
+
+@item @r{(omitted)}
+Default.  Enabled when a Windows/PE target is configured
+(@code{*-*-mingw*}, @code{*-*-cygwin*}, @code{*-*-windows*},
+@code{*-*-pe} / @code{*-*-pe-*}, or @option{--enable-targets=all});
+disabled otherwise.
+@end table
+
+When enabled, each subdirectory's @command{configure} defines
+@code{HAVE_MSVC_DEMANGLER} in its own @file{config.h}.  Libiberty
+itself has no configure option: the MSVC entry in
+@code{libiberty_demanglers[]} is always present, and the dispatch
+simply becomes a no-op when no handler is registered.
+
+@section Standalone Build
+
+@example
+cd libdemangle-msvc
+make clean
+make
+# Creates libdemangle-msvc.la
+@end example
+
+@section Debugging
+
+Pass @option{--enable-msvc-demangle-debug} to @command{configure} to
+enable diagnostic output from the msvc demangler's.
+
+@example
+./configure --enable-msvc-demangle-debug
+@end example
+
+@section ROCgdb Build
+
+@example
+./configure --enable-targets=all --with-msvc-demangler
+make all-libdemangle-msvc
+@end example
+
+@node Testing
+@chapter Testing
+
+Run the test suite:
+
+@example
+cd libdemangle-msvc/testsuite
+make check
+@end example
+
+@bye
