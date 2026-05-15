@@ -344,9 +344,6 @@ extern void (*deprecated_readline_begin_hook) (const char *, ...)
 extern char *(*deprecated_readline_hook) (const char *);
 extern void (*deprecated_readline_end_hook) (void);
 extern void (*deprecated_context_hook) (int);
-extern ptid_t (*deprecated_target_wait_hook) (ptid_t ptid,
-					      struct target_waitstatus *status,
-					      int options);
 
 extern void (*deprecated_attach_hook) (void);
 extern void (*deprecated_detach_hook) (void);
