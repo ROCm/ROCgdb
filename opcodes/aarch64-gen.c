@@ -973,7 +973,7 @@ struct operand
   const char *extractor;
   const char *str;
   const char *flags;
-  const char *fields;
+  aarch64_field fields[6];
   const char *desc;
   unsigned processed : 1;
   unsigned has_inserter : 1;
@@ -994,18 +994,21 @@ typedef struct operand operand;
 #undef F
 #endif
 
+/* The parentheses used when calling this macro ensure that the list of fields
+   appears as a single argument to the X and Y macros.  */
+#define F(...) {__VA_ARGS__}
+
 /* Get the operand information in strings.  */
 
 static operand operands[] =
 {
-    {"NIL", "0", "0", "", "0", "{}", "<none>", 0, 0, 0},
-#define F(...)	#__VA_ARGS__
+    {"NIL", "0", "0", "", "0", {}, "<none>", 0, 0, 0},
 #define X(a,b,c,d,e,f,g)	\
-    {#a, #b, #c, d, #e, "{"f"}", g, 0, 0, 0},
+    {#a, #b, #c, d, #e, f, g, 0, 0, 0},
 #define Y(a,b,d,e,f,g)		\
-    {#a, "ins_"#b, "ext_"#b, d, #e, "{"f"}", g, 0, 0, 0},
+    {#a, "ins_"#b, "ext_"#b, d, #e, f, g, 0, 0, 0},
     AARCH64_OPERANDS
-    {"NIL", "0", "0", "", "0", "{}", "DUMMY", 0, 0, 0},
+    {"NIL", "0", "0", "", "0", {}, "DUMMY", 0, 0, 0},
 };
 
 #undef F
@@ -1064,8 +1067,21 @@ print_operand_table (void)
 	  flags[0] = '0';
 	  flags[1] = '\0';
 	}
-    printf ("  {AARCH64_OPND_CLASS_%s, \"%s\", %s, %s, \"%s\"},\n",
-	    opnd->class, opnd->str, flags, opnd->fields, opnd->desc);
+      char fields[256] = "";
+      char *str = fields;
+      for (int j = 0; j < 6; j++)
+	{
+	  aarch64_field field = opnd->fields[j];
+	  if (field.width == 0)
+	    continue;
+	  if (j != 0)
+	    str += sprintf (str, ", ");
+	  str += sprintf (str, "AARCH64_FIELD%s (%d, %d)",
+			  field.is_const ? "_CONST" : "",
+			  field.num, field.width);
+	}
+    printf ("  {AARCH64_OPND_CLASS_%s, \"%s\", %s, {%s}, \"%s\"},\n",
+	    opnd->class, opnd->str, flags, fields, opnd->desc);
     }
   printf ("};\n");
 }
