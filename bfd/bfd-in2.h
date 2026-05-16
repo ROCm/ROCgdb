@@ -1803,7 +1803,7 @@ enum bfd_architecture
 #define bfd_mach_loongarch32   1
 #define bfd_mach_loongarch64   2
   bfd_arch_amdgcn,     /* AMDGCN */
-#define bfd_mach_amdgcn_unknown         0x000
+#define bfd_mach_amdgcn_unknown 0x000
 #define bfd_mach_amdgcn_gfx9_generic    0x051
 #define bfd_mach_amdgcn_gfx900          0x02c
 #define bfd_mach_amdgcn_gfx904          0x02e
