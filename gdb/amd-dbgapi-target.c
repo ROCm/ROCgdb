@@ -398,6 +398,10 @@ struct amd_dbgapi_target final : public target_ops
   bool dump_thread_in_corefile (ptid_t ptid) override;
 
 private:
+  /* Stop THREAD, which must be a GPU thread.  This can delete THREAD
+     if it is detected to have terminated.  */
+  void stop_one_thread (thread_info *thread);
+
   /* True if we must report thread events.  */
   bool m_report_thread_events = false;
 
@@ -1693,6 +1697,72 @@ resume_mode_to_string (amd_dbgapi_resume_mode_t resume_mode)
 }
 
 void
+amd_dbgapi_target::stop_one_thread (thread_info *thread)
+{
+  gdb_assert (thread != nullptr);
+  gdb_assert (ptid_is_gpu (thread->ptid));
+
+  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
+  amd_dbgapi_wave_state_t state;
+  amd_dbgapi_status_t status
+    = amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STATE,
+				sizeof (state), &state);
+  if (status == AMD_DBGAPI_STATUS_SUCCESS)
+    {
+      /* If the wave is already known to be stopped then do nothing.  */
+      if (state == AMD_DBGAPI_WAVE_STATE_STOP)
+	return;
+
+      status = amd_dbgapi_wave_stop (wave_id);
+      if (status == AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  wave_info &wi = get_thread_wave_info (thread);
+	  wi.stopping = true;
+	  return;
+	}
+
+      if (status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
+	error (_("wave_stop for wave_%ld failed (%s)"), wave_id.handle,
+	       get_status_string (status));
+    }
+  else if (status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
+    error (_("wave_get_info for wave_%ld failed (%s)"), wave_id.handle,
+	   get_status_string (status));
+
+  /* The status is AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID.  The wave
+     could have terminated since the last time the wave list was
+     refreshed.  */
+
+  wave_info &wi = get_thread_wave_info (thread);
+  wi.stopping = true;
+
+  amd_dbgapi_debug_printf ("got AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID "
+			   "for wave_%ld, last_resume_mode=%s, "
+			   "report_thread_events=%d",
+			   wave_id.handle,
+			   resume_mode_to_string (wi.last_resume_mode),
+			   m_report_thread_events);
+
+  /* If the wave was stepping when it terminated, then it is
+     guaranteed that we will see a WAVE_COMMAND_TERMINATED event
+     for it.  Don't report a thread exit event or delete the
+     thread yet, until we see such event.  */
+  if (wi.last_resume_mode == AMD_DBGAPI_RESUME_MODE_SINGLE_STEP)
+    return;
+
+  if (m_report_thread_events)
+    {
+      get_amd_dbgapi_inferior_info (thread->inf).wave_events.emplace_back
+	(thread->ptid, target_waitstatus ().set_thread_exited (0));
+
+      if (target_is_async_p ())
+	async_event_handler_mark ();
+    }
+  else
+    delete_thread_silent (thread);
+}
+
+void
 amd_dbgapi_target::stop (ptid_t ptid)
 {
   amd_dbgapi_debug_printf ("ptid = %s", ptid.to_string ().c_str ());
@@ -1707,70 +1777,6 @@ amd_dbgapi_target::stop (ptid_t ptid)
       if (!many_threads)
 	return;
     }
-
-  auto stop_one_thread = [this] (thread_info *thread)
-    {
-      gdb_assert (thread != nullptr);
-
-      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (thread->ptid);
-      amd_dbgapi_wave_state_t state;
-      amd_dbgapi_status_t status
-	= amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_STATE,
-				    sizeof (state), &state);
-      if (status == AMD_DBGAPI_STATUS_SUCCESS)
-	{
-	  /* If the wave is already known to be stopped then do nothing.  */
-	  if (state == AMD_DBGAPI_WAVE_STATE_STOP)
-	    return;
-
-	  status = amd_dbgapi_wave_stop (wave_id);
-	  if (status == AMD_DBGAPI_STATUS_SUCCESS)
-	    {
-	      wave_info &wi = get_thread_wave_info (thread);
-	      wi.stopping = true;
-	      return;
-	    }
-
-	  if (status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
-	    error (_("wave_stop for wave_%ld failed (%s)"), wave_id.handle,
-		   get_status_string (status));
-	}
-      else if (status != AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID)
-	error (_("wave_get_info for wave_%ld failed (%s)"), wave_id.handle,
-	       get_status_string (status));
-
-      /* The status is AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID.  The wave
-	 could have terminated since the last time the wave list was
-	 refreshed.  */
-
-      wave_info &wi = get_thread_wave_info (thread);
-      wi.stopping = true;
-
-      amd_dbgapi_debug_printf ("got AMD_DBGAPI_STATUS_ERROR_INVALID_WAVE_ID "
-			       "for wave_%ld, last_resume_mode=%s, "
-			       "report_thread_events=%d",
-			       wave_id.handle,
-			       resume_mode_to_string (wi.last_resume_mode),
-			       m_report_thread_events);
-
-      /* If the wave was stepping when it terminated, then it is
-	 guaranteed that we will see a WAVE_COMMAND_TERMINATED event
-	 for it.  Don't report a thread exit event or delete the
-	 thread yet, until we see such event.  */
-      if (wi.last_resume_mode == AMD_DBGAPI_RESUME_MODE_SINGLE_STEP)
-	return;
-
-      if (m_report_thread_events)
-	{
-	  get_amd_dbgapi_inferior_info (thread->inf).wave_events.emplace_back
-	    (thread->ptid, target_waitstatus ().set_thread_exited (0));
-
-	  if (target_is_async_p ())
-	    async_event_handler_mark ();
-	}
-      else
-	delete_thread_silent (thread);
-    };
 
   process_stratum_target *proc_target = current_inferior ()->process_target ();
 
