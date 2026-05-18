@@ -86,3 +86,13 @@ gdb_test_multiple "maint print dummy-frames" \
 	pass $gdb_test_name
     }
 }
+
+# After the unwound infcall, the thread should be stopped, and a
+# subsequent resumption command should be accepted.  Regression test
+# for PR gdb/34148.
+
+gdb_test "info threads -running" \
+    "No threads matched\\." \
+    "thread is stopped"
+
+gdb_continue_to_end "after unwound infcall"

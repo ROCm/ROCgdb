@@ -64,6 +64,12 @@ gdb_test "p exceptions.throw_function()" \
     "The program being debugged entered a std::terminate call, .*" \
     "call a function that raises an exception without a handler."
 
+# Make sure that the thread is stopped.  Regression test for PR
+# gdb/34148.
+gdb_test "info threads -running" \
+    "No threads matched\\." \
+    "thread is stopped"
+
 # Make sure that after rewinding we are back at the call parent.
 gdb_test "bt" \
     "#0  main.*" \
