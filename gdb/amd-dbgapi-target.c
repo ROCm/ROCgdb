@@ -325,6 +325,7 @@ struct amd_dbgapi_target final : public target_ops
   void resume (ptid_t, int, enum gdb_signal) override;
   void commit_resumed () override;
   void stop (ptid_t ptid) override;
+  void interrupt () override;
 
   void fetch_registers (struct regcache *, int) override;
   void store_registers (struct regcache *, int) override;
@@ -1798,6 +1799,44 @@ amd_dbgapi_target::stop (ptid_t ptid)
       if (thread.state () != THREAD_EXITED && thread.ptid.matches (ptid)
 	  && ptid_is_gpu (thread.ptid))
 	stop_one_thread (&thread);
+}
+
+void
+amd_dbgapi_target::interrupt ()
+{
+  /* If there is a running thread in the host target, send an
+     interrupt to the host, so that the behavior is similar to
+     pressing Ctrl-C.  Otherwise, stop a GPU thread.  In either case,
+     stopping other threads would be handled by stop_all_threads.  */
+
+  process_stratum_target *proc_target = current_inferior ()->process_target ();
+
+  /* Find a running thread.  Prioritize a non-GPU thread.  */
+  thread_info *running_thread = nullptr;
+  for (inferior *inf : all_inferiors (proc_target))
+    for (thread_info &thread : inf->non_exited_threads ())
+      {
+	if (thread.state () == THREAD_RUNNING
+	    || thread.internal_state () == THREAD_INT_RUNNING)
+	  {
+	    running_thread = &thread;
+
+	    if (!ptid_is_gpu (thread.ptid))
+	      break;
+	  }
+      }
+
+  if (running_thread == nullptr)
+    return;
+
+  if (ptid_is_gpu (running_thread->ptid))
+    {
+      /* Disable forward progress requirement.  */
+      require_forward_progress (minus_one_ptid, proc_target, false);
+      stop_one_thread (running_thread);
+    }
+  else
+    beneath ()->interrupt ();
 }
 
 /* Callback for our async event handler.  */

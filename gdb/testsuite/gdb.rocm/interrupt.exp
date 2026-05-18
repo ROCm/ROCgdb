@@ -1,0 +1,48 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that a running thread can be stopped with the 'interrupt'
+# command.  This is done in all-stop mode to ensure the 'interrupt'
+# target op is used.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+with_rocm_gpu_lock {
+    if {![runto "loop" {allow-pending}]} {
+	return
+    }
+
+    # Resume a single GPU thread asynchronously to be able to use
+    # the interrupt command.
+    gdb_test_no_output "set scheduler-locking on"
+    gdb_test "continue &" "Continuing\." "continue async"
+
+    gdb_test_multiple "interrupt" "" {
+	-re "Thread $::decimal stopped" {
+	    pass $gdb_test_name
+	}
+	-re "$::gdb_prompt" {
+	    exp_continue
+	}
+    }
+}
