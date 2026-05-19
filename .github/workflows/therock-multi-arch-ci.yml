@@ -9,6 +9,20 @@
 # build_tools/github_actions/detect_external_repo_config.py in TheRock),
 # which injects -DTHEROCK_USE_EXTERNAL_ROCGDB=ON and
 # -DTHEROCK_ROCGDB_SOURCE_DIR=<checkout_path> at the debug-tools stage.
+#
+# Minimal build scope:
+# rocgdb only lives in the `debug-tools` stage, which depends on
+# `compiler-runtime` (which depends on `foundation`). All other sibling
+# stages are skipped via TheRock's `prebuilt_stages` input. Because we
+# pass no `baseline_run_id`, TheRock's `copy_prebuilt_stages` job is a
+# no-op (it requires both) and the listed stages are simply not built.
+#
+# NOTE: a few downstream jobs in TheRock's multi_arch_ci_linux.yml
+# (validate_artifact_structure, test_artifacts_per_family,
+# build_python_packages) run unconditionally and may fail when the
+# skipped stages' artifacts are absent. Narrowing test_labels to
+# 'test:rocgdb' avoids running unrelated tests; remaining failures from
+# missing artifacts must be addressed in TheRock itself.
 
 name: TheRock Multi-Arch CI
 
@@ -30,11 +44,11 @@ on:
       linux_test_labels:
         type: string
         description: "If set, reduce test set on Linux to the listed labels prefixed with 'test:'. ex: test:rocgdb"
-        default: ""
+        default: "test:rocgdb"
       prebuilt_stages:
         type: string
-        description: "Comma-separated build stages to skip (or 'all' for all stages); artifacts are copied from baseline_run_id instead"
-        default: ""
+        description: "Comma-separated build stages to skip. Defaults to skipping every stage not in debug-tools's dependency chain. If baseline_run_id is also set, artifacts for these stages are copied from that run instead."
+        default: "math-libs,comm-libs,dctools-core,profiler-apps,iree-compiler,fusilli-libs,media-libs"
       baseline_run_id:
         type: string
         description: "Workflow run ID to copy prebuilt stage artifacts from; required when prebuilt_stages is set"
@@ -60,9 +74,12 @@ jobs:
       # parity. Override at workflow_dispatch time to fan out wider.
       linux_amdgpu_families: ${{ inputs.linux_amdgpu_families || 'gfx94X' }}
       windows_amdgpu_families: ""
-      linux_test_labels: ${{ inputs.linux_test_labels || '' }}
+      # Defaults below are duplicated from the workflow_dispatch inputs:
+      # workflow_dispatch input defaults only apply on manual runs, so
+      # push/pull_request triggers need the same fallbacks here.
+      linux_test_labels: ${{ inputs.linux_test_labels || 'test:rocgdb' }}
       windows_test_labels: ""
-      prebuilt_stages: ${{ inputs.prebuilt_stages || '' }}
+      prebuilt_stages: ${{ inputs.prebuilt_stages || 'math-libs,comm-libs,dctools-core,profiler-apps,iree-compiler,fusilli-libs,media-libs' }}
       baseline_run_id: ${{ inputs.baseline_run_id || '' }}
       external_repo: '{"repository":"${{ github.repository }}","ref":"${{ github.sha }}"}'
       repository: ROCm/TheRock
