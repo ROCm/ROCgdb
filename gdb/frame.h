@@ -125,6 +125,11 @@ extern bool frame_debug;
 #define FRAME_SCOPED_DEBUG_ENTER_EXIT \
   scoped_debug_enter_exit (frame_debug, "frame")
 
+/* Print "frame" start/end debug statements.  */
+
+#define FRAME_SCOPED_DEBUG_START_END(fmt, ...) \
+  scoped_debug_start_end (frame_debug, "frame", fmt, ##__VA_ARGS__)
+
 /* Construct a frame ID.  The first parameter is the frame's constant
    stack address (typically the outer-bound), and the second the
    frame's constant code address (typically the entry point).

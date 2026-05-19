@@ -619,7 +619,7 @@ skip_tailcall_frames (const frame_info_ptr &initial_frame)
 static void
 compute_frame_id (const frame_info_ptr &fi)
 {
-  FRAME_SCOPED_DEBUG_ENTER_EXIT;
+  FRAME_SCOPED_DEBUG_START_END ("fi=%d", fi->level);
 
   gdb_assert (fi->this_id.p == frame_id_status::NOT_COMPUTED);
 
@@ -629,8 +629,6 @@ compute_frame_id (const frame_info_ptr &fi)
     {
       /* Mark this frame's id as "being computed.  */
       fi->this_id.p = frame_id_status::COMPUTING;
-
-      frame_debug_printf ("fi=%d", fi->level);
 
       /* Find the unwinder.  */
       if (fi->unwind == NULL)
@@ -2349,17 +2347,9 @@ get_prev_frame_maybe_check_cycle (const frame_info_ptr &this_frame)
 static frame_info_ptr
 get_prev_frame_always_1 (const frame_info_ptr &this_frame)
 {
-  FRAME_SCOPED_DEBUG_ENTER_EXIT;
+  FRAME_SCOPED_DEBUG_START_END ("fi=%d", this_frame->level);
 
   gdb_assert (this_frame != NULL);
-
-  if (frame_debug)
-    {
-      if (this_frame != NULL)
-	frame_debug_printf ("this_frame=%d", this_frame->level);
-      else
-	frame_debug_printf ("this_frame=nullptr");
-    }
 
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
 
@@ -2593,7 +2583,7 @@ get_prev_frame_always (const frame_info_ptr &this_frame)
 static frame_info_ptr
 get_prev_frame_raw (const frame_info_ptr &this_frame)
 {
-  frame_info *prev_frame;
+  FRAME_SCOPED_DEBUG_START_END ("fi=%d", this_frame->level);
 
   /* Allocate the new frame but do not wire it in to the frame chain.
      Some (bad) code in INIT_FRAME_EXTRA_INFO tries to look along
@@ -2605,7 +2595,7 @@ get_prev_frame_raw (const frame_info_ptr &this_frame)
      quickly reclaimed when the frame cache is flushed, and the `we've
      been here before' check above will stop repeated memory
      allocation calls.  */
-  prev_frame = frame_obstack_zalloc<frame_info> ();
+  frame_info *prev_frame = frame_obstack_zalloc<frame_info> ();
   prev_frame->level = this_frame->level + 1;
 
   /* For now, assume we don't have frame chains crossing address
@@ -2729,16 +2719,14 @@ inside_entry_func (const frame_info_ptr &this_frame)
 frame_info_ptr
 get_prev_frame (const frame_info_ptr &this_frame)
 {
-  FRAME_SCOPED_DEBUG_ENTER_EXIT;
-
-  std::optional<CORE_ADDR> frame_pc;
+  FRAME_SCOPED_DEBUG_START_END ("fi=%d", this_frame->level);
 
   /* There is always a frame.  If this assertion fails, suspect that
      something should be calling get_selected_frame() or
      get_current_frame().  */
   gdb_assert (this_frame != NULL);
 
-  frame_pc = get_frame_pc_if_available (this_frame);
+  std::optional<CORE_ADDR> frame_pc = get_frame_pc_if_available (this_frame);
 
   /* tausq/2004-12-07: Dummy frames are skipped because it doesn't make much
      sense to stop unwinding at a dummy frame.  One place where a dummy
