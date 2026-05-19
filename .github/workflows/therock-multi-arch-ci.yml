@@ -53,7 +53,7 @@ concurrency:
 
 jobs:
   setup:
-    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@main
+    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@users/lumachad/rocgdb/multi-arch
     with:
       build_variant: "release"
       # rocgdb's existing CI runs on gfx94X-dcgpu; default to gfx94X for
@@ -65,6 +65,8 @@ jobs:
       prebuilt_stages: ${{ inputs.prebuilt_stages || '' }}
       baseline_run_id: ${{ inputs.baseline_run_id || '' }}
       external_repo: '{"repository":"${{ github.repository }}","ref":"${{ github.sha }}"}'
+      repository: ROCm/TheRock
+      ref: users/lumachad/rocgdb/multi-arch
 
   linux_build_and_test:
     name: Linux::${{ fromJSON(needs.setup.outputs.linux_build_config || '{}').build_variant_label || 'skip' }}
@@ -74,7 +76,7 @@ jobs:
         needs.setup.outputs.linux_build_config != '' &&
         needs.setup.outputs.enable_build_jobs == 'true'
       }}
-    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@main
+    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@users/lumachad/rocgdb/multi-arch
     secrets: inherit
     with:
       build_config: ${{ needs.setup.outputs.linux_build_config }}
@@ -83,7 +85,7 @@ jobs:
       test_type: ${{ needs.setup.outputs.test_type }}
       external_repo_config: ${{ needs.setup.outputs.external_repo_config }}
       repository: ROCm/TheRock
-      ref: main
+      ref: users/lumachad/rocgdb/multi-arch
     permissions:
       contents: read
       id-token: write
@@ -100,7 +102,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: "ROCm/TheRock"
-          ref: main
+          ref: users/lumachad/rocgdb/multi-arch
           sparse-checkout: build_tools/github_actions
           sparse-checkout-cone-mode: true
 
