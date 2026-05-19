@@ -1,0 +1,29 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# A board that compiles with DWARF 5, split DWARF (fission) and type units,
+# and generates a .debug_names index using GDB.
+#
+# Example usage:
+# bash$ make check \
+#   RUNTESTFLAGS='--target_board=dwarf5-fission-debug-types-debug-names'
+
+set CC_WITH_TWEAKS_FLAGS "-n"
+load_board_description "cc-with-tweaks"
+
+set_board_info debug_flags \
+    [join { "-gdwarf-5" \
+	    "-gsplit-dwarf" \
+	    "-fdebug-types-section" }]

@@ -13797,7 +13797,8 @@ Visiting node of type NODE_INTEGER
 
 @findex $_mx_get_scaled_float@r{, convenience function}
 @item $_mx_get_scaled_float(@var{value}@r{[}, @var{scale}@r{]})
-Returns the scaled value(s) of an @acronym{AMD ROCm} microscaling object.
+Returns the scaled value(s) of an @acronym{AMD} @acronym{ROCm}
+microscaling object.
 
 If the optional argument @var{scale} is provided, it specifies the value
 by which the microscaling object should be scaled by.
@@ -24032,12 +24033,12 @@ implemented.  See @ref{AMD GPU} for the current support available.
 
 @cindex heterogeneous system
 @cindex heterogeneous program
-In some operating systems, such as Linux with the @acronym{AMD ROCm}
-platform installed, a single program may have multiple threads in the
-same process, executing on different devices which may have different
-target architectures.  Such a system is termed a @dfn{heterogeneous
-system} and a program that uses the multiple devices is termed a
-@dfn{heterogeneous program}.
+In some operating systems, such as Linux with the @acronym{AMD}
+@acronym{ROCm} platform installed, a single program may have multiple
+threads in the same process, executing on different devices which may
+have different target architectures.  Such a system is termed a
+@dfn{heterogeneous system} and a program that uses the multiple devices
+is termed a @dfn{heterogeneous program}.
 
 @cindex heterogeneous agent
 The multiple devices of a heterogeneous system are termed
@@ -24908,10 +24909,10 @@ expression support.
 
 As well as being the complement to the @code{lane name} command, this
 command also allows you to identify a heterogeneous lane by its target
-@var{lane_systag}.  For instance, on the @acronym{AMD ROCm} platform,
-the target @var{lane_systag} is the heterogeneous agent, heterogeneous
-queue, heterogeneous dispatch, heterogeneous work-group position and
-heterogeneous work-item position.
+@var{lane_systag}.  For instance, on the @acronym{AMD} @acronym{ROCm}
+platform, the target @var{lane_systag} is the heterogeneous agent,
+heterogeneous queue, heterogeneous dispatch, heterogeneous work-group
+position and heterogeneous work-item position.
 
 @smallexample
 (@value{GDBP}) lane find "work-group(2,3,4)"
@@ -28325,7 +28326,7 @@ all uses of @value{GDBN} with the architecture, both native and cross.
 * PowerPC::
 * Sparc64::
 * S12Z::
-* AMD GPU::            @acronym{AMD GPU} architectures
+* AMD GPU::            @acronym{AMD} @acronym{GPU} architectures
 * RISC-V::
 @end menu
 
@@ -29087,17 +29088,18 @@ BDCCSR register.
 @end table
 
 @node AMD GPU
-@subsection @acronym{AMD GPU}
-@cindex @acronym{AMD GPU} support
+@subsection @acronym{AMD} @acronym{GPU}
+@cindex @acronym{AMD} @acronym{GPU} support
 
-@value{GDBN} provides support for systems that have heterogeneous
-agents associated with commercially available @acronym{AMD GPU}
-devices (@pxref{Heterogeneous Debugging}) when the
-@url{https://docs.amd.com, @acronym{AMD ROCm}} platform is installed.
+@value{GDBN} supports debugging programs offloaded to @acronym{AMD}
+@acronym{GPU} devices using the
+@url{https://docs.amd.com/, @acronym{AMD} @acronym{ROCm}} platform.
+@value{GDBN} presents host threads alongside GPU wavefronts, allowing debugging
+both the host and device parts of the program simultaneously.
 
-@subsubsection @acronym{AMD GPU} Architectures
+@subsubsection @acronym{AMD} @acronym{GPU} Architectures
 
-The following @acronym{AMD GPU} architectures are supported:
+The following @acronym{AMD} @acronym{GPU} architectures are supported:
 
 @table @emph
 
@@ -29166,7 +29168,7 @@ Gfx1250 devices.
 
 @end table
 
-The following generic @acronym{AMD GPU} architectures are supported:
+The following generic @acronym{AMD} @acronym{GPU} architectures are supported:
 
 @table @emph
 
@@ -29176,6 +29178,7 @@ The following generic @acronym{AMD GPU} architectures are supported:
 @item @code{gfx10-3-generic}
 @item @code{gfx11-generic}
 @item @code{gfx12-generic}
+@item @code{gfx12-5-generic}
 
 @end table
 
@@ -29184,7 +29187,7 @@ You can consult the
 documentation} for the correspondence between architecture names and
 examples of product names.
 
-@subsubsection @acronym{AMD ROCm} Source Languages
+@subsubsection @acronym{AMD} @acronym{ROCm} Source Languages
 
 @value{GDBN} supports the following source languages:
 
@@ -29200,15 +29203,16 @@ debugging information suitable for use by @value{GDBN}.  The
 @w{@option{--offload-arch}} option is used to specify the @acronym{AMD
 GPU} chips that the executable is required to support.  For example,
 to compile a HIP program that can utilize ``Vega 10'' and ``Vega 7nm''
-@acronym{AMD GPU} devices, with no optimization:
+@acronym{AMD} @acronym{GPU} devices, with no optimization:
 
 @smallexample
 hipcc -O0 -g --offload-arch=gfx900 --offload-arch=gfx906 bit_extract.cpp -o bit_extract
 @end smallexample
 
-The @acronym{AMD ROCm} compiler maps HIP source language device
-function work-items to the lanes of an @acronym{AMD GPU} wavefront,
-which are represented in @value{GDBN} as heterogeneous lanes.
+The @acronym{AMD} @acronym{ROCm} compiler maps HIP source language
+device function work-items to the lanes of an @acronym{AMD}
+@acronym{GPU} wavefront, which are represented in @value{GDBN} as
+heterogeneous lanes.
 
 @item Assembly Code
 Assembly code kernels are supported.
@@ -29216,14 +29220,14 @@ Assembly code kernels are supported.
 @item Other Languages
 Other languages, including OpenCL and Fortran, are currently supported
 as the minimal pseudo-language, provided they are compiled specifying
-at least the @acronym{AMD GPU} Code Object V3 and DWARF 4 formats.
-@xref{Unsupported Languages}.
+at least the @acronym{AMD} @acronym{GPU} Code Object V3 and DWARF 4
+formats.  @xref{Unsupported Languages}.
 
 @end table
 
-@subsubsection @acronym{AMD GPU} Device Driver and @acronym{AMD ROCm} Runtime
+@subsubsection @acronym{AMD} @acronym{GPU} Device Driver and @acronym{AMD} @acronym{ROCm} Runtime
 
-@value{GDBN} requires a compatible @acronym{AMD GPU} device driver to
+@value{GDBN} requires a compatible @acronym{AMD} @acronym{GPU} device driver to
 be installed.  A warning message is displayed if either the device
 driver version or the version of the debug support it implements is
 unsupported.  For example,
@@ -29233,7 +29237,7 @@ amd-dbgapi: warning: AMD GPU driver's version 1.6 not supported (version 2.x whe
 amd-dbgapi: warning: AMD GPU driver's debug support version 9.0 not supported (version 10.x where x >= 1) required
 @end smallexample
 
-@value{GDBN} will continue to function except no @acronym{AMD GPU}
+@value{GDBN} will continue to function except no @acronym{AMD} @acronym{GPU}
 debugging will be possible.
 
 @value{GDBN} requires each agent to have compatible firmware installed
@@ -29244,36 +29248,36 @@ firmware is detected.  For example,
 amd-dbgapi: warning: AMD GPU gpu_id 17619's firmware version 458 not supported (version >= 555 required)
 @end smallexample
 
-@value{GDBN} will continue to function except no @acronym{AMD GPU}
+@value{GDBN} will continue to function except no @acronym{AMD} @acronym{GPU}
 debugging will be possible on the agent.
 
-@value{GDBN} requires a compatible @acronym{AMD ROCm} runtime to be
-loaded in order to detect @acronym{AMD GPU} code objects and
+@value{GDBN} requires a compatible @acronym{AMD} @acronym{ROCm} runtime to be
+loaded in order to detect @acronym{AMD} @acronym{GPU} code objects and
 wavefronts.  A warning message is displayed if an unsupported
-@acronym{AMD ROCm} runtime is detected, or there is an error or
+@acronym{AMD} @acronym{ROCm} runtime is detected, or there is an error or
 restriction that prevents debugging.  For example,
 
 @smallexample
 amd_dbgapi: warning: AMD GPU runtime's r_debug::r_version 5 not supported (r_debug::r_version >= 6 required)
 @end smallexample
 
-@value{GDBN} will continue to function except no @acronym{AMD GPU}
+@value{GDBN} will continue to function except no @acronym{AMD} @acronym{GPU}
 debugging will be possible.
 
-@subsubsection @acronym{AMD GPU} Heterogeneous Agents
+@subsubsection @acronym{AMD} @acronym{GPU} Heterogeneous Agents
 
-@acronym{AMD GPU} heterogeneous agents are not listed by the
-@samp{info agents} command until the inferior has started executing
-the program.
+@acronym{AMD} @acronym{GPU} heterogeneous agents are not listed by the
+@samp{info agents} command until the inferior has started executing the
+program.
 
 Debugging an agent is unsupported if it has an architecture that is
-not supported by @value{GDBN} or the @acronym{AMD GPU} device driver,
-or the firmware version is not supported by @value{GDBN}.
+not supported by @value{GDBN} or the @acronym{AMD} @acronym{GPU} device
+driver, or the firmware version is not supported by @value{GDBN}.
 
-@subsubsection @acronym{AMD GPU} Heterogeneous Queues
+@subsubsection @acronym{AMD} @acronym{GPU} Heterogeneous Queues
 
-The @acronym{AMD GPU} heterogeneous queue types reported by the
-@samp{info queues} command are:
+The @acronym{AMD} @acronym{GPU} heterogeneous queue types reported by
+the @samp{info queues} command are:
 
 @table @emph
 
@@ -29291,10 +29295,10 @@ An XGMI queue.
 
 @end table
 
-@subsubsection @acronym{AMD GPU} Heterogeneous Dispatches
+@subsubsection @acronym{AMD} @acronym{GPU} Heterogeneous Dispatches
 
-@acronym{AMD GPU} supports the following address spaces for the @samp{info
-dispatches} command:
+@acronym{AMD} @acronym{GPU} supports the following address spaces for the
+@samp{info dispatches} command:
 
 @table @emph
 
@@ -29307,7 +29311,7 @@ Per work-item storage.
 @end table
 
 The @samp{info dispatches} command uses the following BNF syntax for
-@acronym{AMD GPU} heterogeneous dispatch fences:
+@acronym{AMD} @acronym{GPU} heterogeneous dispatch fences:
 
 @smallexample
 fence     ::== [ barrier ] [ separator ] [ acquire ]  [ separator ] [ release ]
@@ -29348,9 +29352,9 @@ Indicates the memory fence is performed at the agent memory scope.
 
 @end table
 
-@subsubsection @acronym{AMD GPU} Wavefronts
+@subsubsection @acronym{AMD} @acronym{GPU} Wavefronts
 
-An @acronym{AMD GPU} wavefront is represented in @value{GDBN} as a
+An @acronym{AMD} @acronym{GPU} wavefront is represented in @value{GDBN} as a
 thread.
 
 @cindex AMD GPU thread names
@@ -29360,7 +29364,7 @@ its kernel function.  If the name would be longer than 16 characters,
 it is truncated and a hash of the non-truncated name is appended.  See
 @ref{thread name} and @ref{info dispatches}.
 
-An @acronym{AMD GPU} wavefront can enter the halt state by:
+An @acronym{AMD} @acronym{GPU} wavefront can enter the halt state by:
 
 @itemize @bullet{}
 
@@ -29369,35 +29373,35 @@ Executing a @code{S_SETHALT 1} instruction.
 
 @item
 Using the @samp{set $status} command to change the bit in the
-@acronym{AMD GPU} wavefront's register that controls the halt state.
+@acronym{AMD} @acronym{GPU} wavefront's register that controls the halt state.
 
 @item
 Delivering a signal to the wavefront (@pxref{AMD GPU Signals, ,
-@acronym{AMD GPU} Signals}).
+@acronym{AMD} @acronym{GPU} Signals}).
 
 @end itemize
 
 When a wavefront is in the halt state, it executes no further
 instructions.  In addition, a wavefront that is associated with a
 queue that is in the queue error state (@pxref{AMD GPU Signals, ,
-@acronym{AMD GPU} Signals}) is inhibited from executing further
-instructions.  Continuing such wavefronts will not hit any breakpoints
-nor report completion of a single step command.  If necessary,
-@samp{Ctrl-C} can be used to cancel the command.
+@acronym{AMD} @acronym{GPU} Signals}) is inhibited from executing
+further instructions.  Continuing such wavefronts will not hit any
+breakpoints nor report completion of a single step command.  If
+necessary, @samp{Ctrl-C} can be used to cancel the command.
 
-Note that some @acronym{AMD GPU} architectures may have restrictions
-on providing information about @acronym{AMD GPU} wavefronts created
-when @value{GDBN} is not attached (@pxref{AMD GPU Attaching
-Restrictions, , @acronym{AMD GPU} Attaching Restrictions}).
+Note that some @acronym{AMD} @acronym{GPU} architectures may have restrictions
+on providing information about @acronym{AMD} @acronym{GPU} wavefronts created
+when @value{GDBN} is not attached (@pxref{AMD GPU Attaching Restrictions, ,
+@acronym{AMD} @acronym{GPU} Attaching Restrictions}).
 
 When scheduler-locking is in effect (@pxref{set scheduler-locking}),
 new wavefronts created by the resumed thread (either CPU thread or GPU
 wavefront) are held in the halt state.
 
-@subsubsection @acronym{AMD GPU} Registers
+@subsubsection @acronym{AMD} @acronym{GPU} Registers
 
-@acronym{AMD GPU} supports the following @var{reggroup} values for the
-@samp{info registers @var{reggroup} @dots{}} command:
+@acronym{AMD} @acronym{GPU} supports the following @var{reggroup} values for
+the @samp{info registers @var{reggroup} @dots{}} command:
 
 @itemize @bullet
 
@@ -29448,10 +29452,11 @@ $3 = [ EXCP_CYCLE=0 DP_RATE=FULL ]
 
 Use the @samp{ptype} command to see the type of any register.
 
-@subsubsection @acronym{AMD GPU} Code Objects
+@subsubsection @acronym{AMD} @acronym{GPU} Code Objects
 
-The @samp{info sharedlibrary} command will show the @acronym{AMD GPU} code objects
-together with the CPU code objects.  For example:
+The @samp{info sharedlibrary} command will show the @acronym{AMD} @acronym{GPU}
+code objects as file or memory URIs, together with the host's shared
+libraries.  For example:
 
 @smallexample
 (@value{GDBP}) info sharedlibrary
@@ -29466,9 +29471,9 @@ From                To                  Syms Read   Shared Object Library
 (@value{GDBP})
 @end smallexample
 
-The code object path for @acronym{AMD GPU} code objects is shown as a
-@acronym{URI, Universal Location Identifier} with a syntax defined by
-the following BNF syntax:
+The code object path for @acronym{AMD} @acronym{GPU} code objects is
+shown as a @acronym{URI, Universal Location Identifier} with a syntax
+defined by the following BNF syntax:
 
 @smallexample
 code_object_uri ::== file_uri | memory_uri
@@ -29512,27 +29517,27 @@ unsigned integral decimal literal for the process @var{pid}.
 
 @end table
 
-@acronym{AMD GPU} code objects are loaded into each @acronym{AMD GPU}
-device separately.  The @samp{info sharedlibrary} command will
+@acronym{AMD} @acronym{GPU} code objects are loaded into each @acronym{AMD}
+@acronym{GPU} device separately.  The @samp{info sharedlibrary} command may
 therefore show the same code object loaded multiple times.  As a
-consequence, setting a breakpoint in @acronym{AMD GPU} code will
-result in multiple breakpoints if there are multiple @acronym{AMD GPU}
-devices.
+consequence, setting a breakpoint in @acronym{AMD} @acronym{GPU} code will
+result in multiple breakpoint locations if there are multiple
+@acronym{AMD} @acronym{GPU} devices.
 
 If the source language runtime defers loading code objects until
 kernels are launched, then setting breakpoints may result in pending
 breakpoints that will be set when the code object is finally loaded.
 
-@subsubsection @acronym{AMD GPU} Heterogeneous Entity Target Identifies and Convenience Variables
+@subsubsection @acronym{AMD} @acronym{GPU} Entity Target Identifiers and Convenience Variables
 
-The @acronym{AMD GPU} heterogeneous entities have the following target
+The @acronym{AMD} @acronym{GPU} entities have the following target
 identifier formats:
 
 @table @var
 
 @item Agent Target ID
-The @acronym{AMD GPU} agent target identifier @var{agent_systag} string has the
-following format:
+The @acronym{AMD} @acronym{GPU} agent target identifier @var{agent_systag}
+string has the following format:
 
 @smallexample
 AMDGPU Agent (GPUID @var{target-agent-id})
@@ -29542,8 +29547,8 @@ It is used in the @samp{Target ID} column of the @samp{info agents} command and
 is available using the @var{$_agent_systag} convenience variable.
 
 @item Queue Target ID
-The @acronym{AMD GPU} queue target identifier @var{queue_systag} string has the
-following format:
+The @acronym{AMD} @acronym{GPU} queue target identifier @var{queue_systag}
+string has the following format:
 
 @smallexample
 AMDGPU Queue @var{agent-id}:@var{queue-id} (QID @var{target-queue-id})
@@ -29553,8 +29558,8 @@ It is used in the @samp{Target ID} column of the @samp{info queues} command and
 is available using the @var{$_queue_systag} convenience variable.
 
 @item Dispatch Target ID
-The @acronym{AMD GPU} dispatch target identifier @var{dispatch_systag} string
-has the following format:
+The @acronym{AMD} @acronym{GPU} dispatch target identifier
+@var{dispatch_systag} string has the following format:
 
 @smallexample
 AMDGPU Dispatch @var{agent-id}:@var{queue-id}:@var{dispatch-id} (PKID @var{target-packet-id})
@@ -29566,8 +29571,8 @@ and is available using the @var{$_dispatch_systag} convenience variable.  The
 dispatch.
 
 @item Thread Target ID
-The @acronym{AMD GPU} thread target identifier (@var{systag}) string has the
-following format:
+The @acronym{AMD} @acronym{GPU} thread target identifier (@var{systag})
+string has the following format:
 
 @smallexample
 AMDGPU Wave @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id} (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
@@ -29577,8 +29582,8 @@ It is used in the @samp{Target ID} column of the @samp{info threads} command
 and is available using the @var{$_thread_systag} convenience variable.
 
 @item Lane Target ID
-The @acronym{AMD GPU} lane target identifier (@var{lane_systag}) string has the
-following format:
+The @acronym{AMD} @acronym{GPU} lane target identifier (@var{lane_systag})
+string has the following format:
 
 @smallexample
 AMDGPU Lane @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id}/@var{lane-index} (@var{work-group-x},@var{work-group-y},@var{work-group-z})[@var{work-item-x},@var{work-item-y},@var{work-item-z}]
@@ -29589,7 +29594,7 @@ is available using the @var{$_lane_systag} convenience variable.
 
 @end table
 
-The @acronym{AMD GPU} heterogeneous entities have the following
+The @acronym{AMD} @acronym{GPU} heterogeneous entities have the following
 convenience variables:
 
 @table @code
@@ -29629,18 +29634,18 @@ Where:
 @itemx queue-id
 @itemx dispatch-id
 @itemx wave-id
-The @acronym{AMD GPU} target agent identifier, queue identifier, dispatch
-identifier, and wave identifier respectively.  The identifiers are global across
-all inferiors.
+The @acronym{AMD} @acronym{GPU} target agent identifier, queue identifier,
+dispatch identifier, and wave identifier respectively.  The identifiers are
+global across all inferiors.
 
 @item target-agent-id
 @itemx target-queue-id
-The @acronym{AMD GPU} target driver agent identifier and queue identifier
-identifier respectively.  The identifiers are per process.
+The @acronym{AMD} @acronym{GPU} target driver agent identifier and queue
+identifier identifier respectively.  The identifiers are per process.
 
 @item target-packet-id
-The @acronym{AMD GPU} target driver packet identifier.  The identifier is per
-queue.
+The @acronym{AMD} @acronym{GPU} target driver packet identifier.  The
+identifier is per queue.
 
 @item work-group-x
 @itemx work-group-y
@@ -29661,9 +29666,9 @@ work-group.
 
 @end table
 
-@subsubsection @acronym{AMD GPU} Address Spaces
+@subsubsection @acronym{AMD} @acronym{GPU} Address Spaces
 
-@acronym{AMD GPU} heterogeneous agents support the following address
+@acronym{AMD} @acronym{GPU} heterogeneous agents support the following address
 spaces:
 
 @table @code
@@ -29688,17 +29693,18 @@ The generic address space that can access the @var{global},
 
 @end table
 
-The @acronym{AMD GPU} architecture default address space is @code{global}.
+The @acronym{AMD} @acronym{GPU} architecture default address space is
+@code{global}.
 
 The @ref{maint print address-spaces,, @code{maint print address-spaces}}
-command can be used to display the @acronym{AMD GPU} architecture address
-spaces.
+command can be used to display the @acronym{AMD} @acronym{GPU}
+architecture address spaces.
 
 @anchor{AMD GPU Signals}
-@subsubsection @acronym{AMD GPU} Signals
+@subsubsection @acronym{AMD} @acronym{GPU} Signals
 
-@acronym{AMD GPU} wavefronts can raise the following signals when
-executing instructions:
+For @acronym{AMD} @acronym{GPU} wavefronts, @value{GDBN} maps target
+conditions to stop signals in the following way:
 
 @table @code
 
@@ -29760,7 +29766,7 @@ Integer operation performed a division by zero.
 @end itemize
 
 By default, these conditions are not enabled to raise signals.  The
-@samp{set $mode} command can be used to change the @acronym{AMD GPU}
+@samp{set $mode} command can be used to change the @acronym{AMD} @acronym{GPU}
 wavefront's register that has bits controlling which conditions are
 enabled to raise signals.  The @samp{print $trapsts} command can be
 used to inspect which conditions have been detected even if they are
@@ -29779,15 +29785,15 @@ either not mapped or accessed with incompatible permissions.
 If a single instruction raises more than one signal, they will be
 reported one at a time each time the wavefront is continued.
 
-If any of these signals are delivered to the wavefront, it will cause
-the wavefront to enter the halt state and cause the @acronym{AMD ROCm}
-runtime to put the associated queue into the queue error state.  All
-wavefronts associated with a queue that is in the queue error state
-are inhibited from executing further instructions even if they are not
-in the halt state.  In addition, when the @acronym{AMD ROCm} runtime
-puts a queue into the queue error state it may invoke an application
-registered callback that could either abort the application or delete
-the queue which will delete any wavefronts associated with the queue.
+If any of these signals are delivered to the wavefront, it will cause the
+wavefront to enter the halt state and cause the @acronym{AMD} @acronym{ROCm}
+runtime to put the associated queue into the queue error state.  All wavefronts
+associated with a queue that is in the queue error state are inhibited from
+executing further instructions even if they are not in the halt state.  In
+addition, when the @acronym{AMD} @acronym{ROCm} runtime puts a queue into the
+queue error state it may invoke an application registered callback that could
+either abort the application or delete the queue which will delete any
+wavefronts associated with the queue.
 
 The @value{GDBN} signal-related commands (@pxref{Signals}) can be used
 to control when a signal is delivered to the inferior, what signal is
@@ -29795,8 +29801,8 @@ delivered to the inferior, and even if a signal should not be
 delivered to the inferior.
 
 If the @samp{signal} or @samp{queue-signal} commands are used to
-deliver a signal other than those listed above to an @acronym{AMD GPU}
-wavefront, then the following error will be displayed when the
+deliver a signal other than those listed above to an @acronym{AMD}
+@acronym{GPU} wavefront, then the following error will be displayed when the
 wavefront is resumed:
 
 @smallexample
@@ -29808,11 +29814,11 @@ Use the @samp{signal} or @samp{queue-signal} commands to change the
 signal to deliver, or use @samp{signal 0} or @samp{queue-signal 0} to
 suppress delivering a signal.
 
-Note that some @acronym{AMD GPU} architectures may have restrictions
+Note that some @acronym{AMD} @acronym{GPU} architectures may have restrictions
 on supressing delivering signals to a wavefront (@pxref{AMD GPU Signal
-Restrictions, , @acronym{AMD GPU} Signal Restrictions}).
+Restrictions, , @acronym{AMD} @acronym{GPU} Signal Restrictions}).
 
-@subsubsection @acronym{AMD GPU} Memory Violation Reporting
+@subsubsection @acronym{AMD} @acronym{GPU} Memory Violation Reporting
 @anchor{AMDGPU Memory Violation Reporting}
 
 A wavefront can report memory violation and address watch access
@@ -29826,8 +29832,9 @@ can be used to control this behavior:
 @kindex set amdgpu precise-memory
 @cindex AMD GPU precise memory event reporting
 @item set amdgpu precise-memory @var{mode}
-Controls how @acronym{AMD GPU} devices detect memory violations and address
-watch events, where @var{mode} can be:
+
+Controls how @acronym{AMD} @acronym{GPU} devices detect memory violations and
+address watch events, where @var{mode} can be:
 
 @table @code
 
@@ -29839,9 +29846,9 @@ default.
 @item on
 Requests that the program location will be immediately after the
 instruction that caused a memory violation or address watch event.
-Enabling this mode may make the @acronym{AMD GPU} device execution
-significantly slower as it has to wait for each memory operation to
-complete before executing the next instruction.
+Enabling this mode may make the @acronym{AMD} @acronym{GPU} device execution
+significantly slower as it has to wait for each memory operation to complete
+before executing the next instruction.
 
 @end table
 
@@ -29855,9 +29862,9 @@ AMDGPU precise memory access reporting is off
 @end smallexample
 
 If a memory violation or address watch access event is reported for an
-@acronym{AMD GPU} thread that supports controlling precise memory
-detection when the mode is @samp{off}, then the message includes an
-indication that the position may not be accurate.  For example:
+@acronym{AMD} @acronym{GPU} thread that supports controlling precise
+memory detection when the mode is @samp{off}, then the message includes
+an indication that the position may not be accurate.  For example:
 
 @smallexample
 (@value{GDBP}) run
@@ -29871,9 +29878,9 @@ Thread 6 "bit_extract" received signal SIGSEGV, Segmentation fault.
 @end smallexample
 
 The precise memory mode cannot be enabled until the inferior is
-started or attached.  If at that time all @acronym{AMD GPU} devices
-accessible to the inferior support the @samp{on} mode, then it is
-enabled.  For example:
+started or attached.  If at that time all @acronym{AMD} @acronym{GPU}
+devices accessible to the inferior support the @samp{on} mode, then it
+is enabled.  For example:
 
 @smallexample
 (@value{GDBP}) set amdgpu precise-memory on
@@ -29886,9 +29893,9 @@ AMDGPU precise memory access reporting is on (currently enabled)
 (@value{GDBP})
 @end smallexample
 
-Alternatively, if at that time any of the @acronym{AMD GPU} devices
-accessible to the inferior do not support the @samp{on} mode, then a
-warning is reported and the mode is not enabled.  For example:
+Alternatively, if at that time any of the @acronym{AMD} @acronym{GPU}
+devices accessible to the inferior do not support the @samp{on} mode,
+then a warning is reported and the mode is not enabled.  For example:
 
 @smallexample
 (@value{GDBP}) set amdgpu precise-memory on
@@ -29931,7 +29938,7 @@ Displays the currently requested AMD GPU precise memory setting.
 
 @end table
 
-@subsubsection @acronym{AMD GPU} ALU Exception Reporting
+@subsubsection @acronym{AMD} @acronym{GPU} ALU Exception Reporting
 
 A wavefront can report ALU exceptions.  However, the program location at
 which they are reported may be after the machine instruction that caused
@@ -29945,7 +29952,7 @@ precision:
 @kindex set amdgpu precise-alu-exceptions
 @cindex AMD GPU precise ALU exceptions reporting
 @item set amdgpu precise-alu-exceptions @var{mode}
-Controls how @acronym{AMD GPU} devices report ALU exceptions:
+Controls how @acronym{AMD} @acronym{GPU} devices report ALU exceptions:
 
 @table @code
 
@@ -29956,9 +29963,9 @@ caused the ALU exception.  This is the default.
 @item on
 Request that the program location will be immediately after the
 instruction that caused the ALU exception.  Enabling this mode may make
-the @acronym{AMD GPU} device execution significantly slower as it has
-to wait for the ALU instruction to complete before executing the next
-instruction.
+the @acronym{AMD} @acronym{GPU} device execution significantly slower as
+it has to wait for the ALU instruction to complete before executing the
+next instruction.
 
 The precise ALU exception reporting mode can be changed at any time in
 the life of the program.  If the precise ALU exception reporting mode is
@@ -29986,12 +29993,12 @@ AMDGPU precise ALU exceptions reporting is on (currently enabled).
 @kindex show amdgpu precise-alu-exceptions
 @cindex AMD GPU precise ALU exceptions reporting
 @item show amdgpu precise-alu-exceptions
-Display the currently requested and effective @acronym{AMD GPU} precise
-ALU exceptions setting.
+Display the currently requested and effective @acronym{AMD}
+@acronym{GPU} precise ALU exceptions setting.
 
 @end table
 
-@subsubsection @acronym{AMD GPU} Logging
+@subsubsection @acronym{AMD} @acronym{GPU} Logging
 
 The @samp{set debug amd-dbgapi-lib log-level @var{level}} command can be used
 to enable diagnostic messages from the @samp{amd-dbgapi} library.  The
@@ -30018,7 +30025,7 @@ the log to a new file:
 If you want to print the log to both the console and a file, omit the
 @samp{set logging debugredirect on} command.  @xref{Logging Output}.
 
-@subsubsection @acronym{AMD GPU} Version
+@subsubsection @acronym{AMD} @acronym{GPU} Version
 
 The @samp{show amdgpu version} command can be used to print the ROCdbgapi
 library version and file path.  For example:
@@ -30030,38 +30037,39 @@ Loaded from `/opt/rocm-4.5.0/lib/librocm-dbgapi.so.0'
 @end smallexample
 
 @anchor{AMD GPU core dumps}
-@subsubsection @acronym{AMD GPU} core dumps
+@subsubsection @acronym{AMD} @acronym{GPU} core dumps
 
 @value{GDBN} supports core files describing the state of a heterogeneous
 process including host (CPU) and device (GPU) threads.  Such file can be
 generated either by @value{GDBN} itself using the @command{gcore} command
-(@pxref{Core File Generation}) or by the @acronym{AMD ROCm} runtime and the
-Linux kernel.
+(@pxref{Core File Generation}) or by the @acronym{AMD} @acronym{ROCm}
+runtime and the Linux kernel.
 
 When the core dump is generated outside of @value{GDBN}, then two distinct
 files are produced:
 
 @table @asis
 @item GPU core dump
-@cindex @acronym{AMD GPU} core dump file
-This file is produced by the @acronym{AMD ROCm} runtime.  It contains
-the state of all the agents, queues and waves running on those agents
-when a fault occurred.  After this file has been generated, the
-@acronym{AMD ROCm} runtime aborts the host process so the Linux kernel
-can generate the host core file describing the state of the host
-threads, and the inferior memory.
+@cindex @acronym{AMD} @acronym{GPU} core dump file
+This file is produced by the @acronym{AMD} @acronym{ROCm} runtime.  It
+contains the state of all the agents, queues and waves running on those
+agents when a fault occurred.  After this file has been generated, the
+@acronym{AMD} @acronym{ROCm} runtime aborts the host process so the
+Linux kernel can generate the host core file describing the state of the
+host threads, and the inferior memory.
 
-The file produced by the @acronym{AMD GPU} runtime is named
+The file produced by the @acronym{AMD} @acronym{GPU} runtime is named
 @file{gpucore.@var{pid}} where @var{pid} is the process identifier of the host
 process.  The file is produced in the working directory of the process.
 
-By default, for some @acronym{AMD GPU} architectures, when the heterogeneous
-process is not executed under @value{GDBN}, the @acronym{AMD GPU} device driver
-does not initialize some metadata associated with the wavefronts (@pxref{AMD
-GPU Attaching Restrictions}).  In order to have the @acronym{AMD ROCm} runtime
-generate a core dump with wavefronts' positions in their dispatches, it is
-recommended to set the @env{HSA_ENABLE_DEBUG} environment variable to @samp{1}
-before the runtime is initialized.
+By default, for some @acronym{AMD} @acronym{GPU} architectures, when the
+heterogeneous process is not executed under @value{GDBN}, the
+@acronym{AMD} @acronym{GPU} device driver does not initialize some
+metadata associated with the wavefronts (@pxref{AMD GPU Attaching
+Restrictions}).  In order to have the @acronym{AMD} @acronym{ROCm}
+runtime generate a core dump with wavefronts' positions in their
+dispatches, it is recommended to set the @env{HSA_ENABLE_DEBUG}
+environment variable to @samp{1} before the runtime is initialized.
 
 @item Host core dump
 @cindex core dump file
@@ -30081,23 +30089,23 @@ sysctl kernel.core_pattern=/proc/%p/cwd/core.%p
 
 @end table
 
-Both the @acronym{AMD GPU} runtime and the Linux kernel obey the resource
-limitations set by the user via the shell's @kbd{ulimit} command.  The limit is
-per core file, so if a heterogeneous process generates two core files (one for
-the agents and one for the host), the total core size can be up to twice the
-limit set using @kbd{ulimit}.
+Both the @acronym{AMD} @acronym{GPU} runtime and the Linux kernel obey
+the resource limitations set by the user via the shell's @kbd{ulimit}
+command.  The limit is per core file, so if a heterogeneous process
+generates two core files (one for the agents and one for the host), the
+total core size can be up to twice the limit set using @kbd{ulimit}.
 
-A user can use the following command to prevent both the @acronym{AMD ROCm}
-runtime and the Linux kernel to generate an @acronym{AMD GPU} core dump if a
-fault occurs on a GPU agent:
+A user can use the following command to prevent both the @acronym{AMD}
+@acronym{ROCm} runtime and the Linux kernel to generate an @acronym{AMD}
+@acronym{GPU} core dump if a fault occurs on a GPU agent:
 
 @smallexample
 ulimit -c 0
 @end smallexample
 
-If however the user wants to ensure that the @acronym{AMD ROCm} runtime and the
-Linux kernel generate a core dump if a fault occurs on an agent, the following
-command can be used:
+If however the user wants to ensure that the @acronym{AMD}
+@acronym{ROCm} runtime and the Linux kernel generate a core dump if a
+fault occurs on an agent, the following command can be used:
 
 @smallexample
 ulimit -c unlimited
@@ -30105,7 +30113,7 @@ ulimit -c unlimited
 
 @value{GDBN} needs to be presented a unified core file to inspect the state of
 a heterogeneous process.  You can use the @value{COREMERGEN} utility
-program to merge the core files generated by the @acronym{AMD GPU}
+program to merge the core files generated by the @acronym{AMD} @acronym{GPU}
 runtime and the Linux kernel into a unified core file:
 
 @smallexample
@@ -30133,11 +30141,11 @@ in the @code{sysroot} (@pxref{set sysroot,,set sysroot}), or use the
 @code{shared-library-path} (@pxref{set solib-search-path,,set
 solib-search-path}).
 
-@subsubsection @acronym{AMD GPU} Restrictions
+@subsubsection @acronym{AMD} @acronym{GPU} Restrictions
 
-@value{GDBN} @acronym{AMD GPU} support is currently a prototype and
-has the following restrictions.  Future releases aim to address these
-restrictions.
+@value{GDBN} @acronym{AMD} @acronym{GPU} support is currently a
+prototype and has the following restrictions.  Future releases aim to
+address these restrictions.
 
 @enumerate
 
@@ -30174,7 +30182,7 @@ The thread's number within the heterogeneous work-group.
 @end table
 
 @item
-The @acronym{AMD ROCm} compiler currently has the following
+The @acronym{AMD} @acronym{ROCm} compiler currently has the following
 limitations:
 
 @itemize @bullet{}
@@ -30190,13 +30198,13 @@ variables are always reported with an address of 0x0 in the local
 address space.
 
 @item
-The @acronym{AMD ROCm} compiler currently adds the @w{@option{-mllvm
--amdgpu-spill-cfi-saved-regs}} option for @acronym{AMD GPU} when the
-@w{@option{-g}} option is specified.  This ensures registers not
-currently supported by the CFI generation are saved so the CFI
-information is correct.  If this option is not used, the invalid DWARF
-may cause @value{GDBN} to report that it is unable to read memory
-(such as when reading arguments in a backtrace).
+The @acronym{AMD} @acronym{ROCm} compiler currently adds the @w{@option{-mllvm
+-amdgpu-spill-cfi-saved-regs}} option for @acronym{AMD} @acronym{GPU} when the
+@w{@option{-g}} option is specified.  This ensures registers not currently
+supported by the CFI generation are saved so the CFI information is correct.
+If this option is not used, the invalid DWARF may cause @value{GDBN} to report
+that it is unable to read memory (such as when reading arguments in a
+backtrace).
 
 @end itemize
 
@@ -30211,9 +30219,9 @@ to the wave's physical PC.  This is the same PC address as the PC of
 the lanes that are active.
 
 @item
-Only @acronym{AMD GPU} Code Object V3 and above is supported.  This is
-the default for the @acronym{AMD ROCm} compiler.  The following error
-will be reported for incompatible code objects:
+Only @acronym{AMD} @acronym{GPU} Code Object V3 and above is supported.
+This is the default for the @acronym{AMD} @acronym{ROCm} compiler.  The
+following error will be reported for incompatible code objects:
 
 @smallexample
 Error while mapping shared library sections:
@@ -30230,15 +30238,20 @@ wavefronts may not be visible until the wavefront is next stopped.
 Single-stepping or resuming execution from an illegal instruction may
 execute differently in @value{GDBN} than on real hardware.
 
+@item The HIP runtime performs deferred code object loading by default.
+@acronym{AMD} @acronym{GPU} code objects are not loaded until the first kernel
+is launched.  Before then, all breakpoints have to be set as pending
+breakpoints.
+
 @item
-Halting @acronym{AMD GPU} wavefronts in an inferior can result in
-preventing other inferiors from executing @acronym{AMD GPU}
+Halting @acronym{AMD} @acronym{GPU} wavefronts in an inferior can result in
+preventing other inferiors from executing @acronym{AMD} @acronym{GPU}
 wavefronts.
 
 @item
 The performance of resuming from a breakpoint when a large number of
-threads have hit a breakpoint on a fully occupied single @acronym{AMD
-GPU} device is comparable to CPU debugging.  However, the techniques
+threads have hit a breakpoint on a fully occupied single @acronym{AMD}
+@acronym{GPU} device is comparable to CPU debugging.  However, the techniques
 described in @ref{Heterogeneous Debugging} can be used to improve
 responsiveness.  Other techniques that can improve responsiveness are:
 
@@ -30261,35 +30274,35 @@ Reduce the number of wavefronts when debugging if practical.
 @end itemize
 
 @item
-Some @acronym{AMD GPU} devices, such as @samp{gfx908}, cannot be in use by
-multiple processes that are being debugged by @value{GDBN}.  For such devices
-the following warning message may be displayed.
+Some @acronym{AMD} @acronym{GPU} devices, such as @samp{gfx908}, cannot be
+in use by multiple processes that are being debugged by @value{GDBN}.  For
+such devices the following warning message may be displayed.
 
 @smallexample
 amd-dbgapi: warning: At least one agent is busy (debugging may be enabled by another process)
 @end smallexample
 
-@value{GDBN} will continue to function except no @acronym{AMD GPU}
-debugging will be possible.
+@value{GDBN} will continue to function except no @acronym{AMD}
+@acronym{GPU} debugging will be possible.
 
-The Linux @emph{cgroups} facility can be used to limit which
-@acronym{AMD GPU} devices are used by a process.  In order for a
-@value{GDBN} process to access the @acronym{AMD GPU} devices of the
-process it is debugging, the @acronym{AMD GPU} devices must be
-included in the @value{GDBN} process @emph{cgroup}.
+The Linux @emph{cgroups} facility can be used to limit which @acronym{AMD}
+@acronym{GPU} devices are used by a process.  In order for a @value{GDBN}
+process to access the @acronym{AMD} @acronym{GPU} devices of the process it
+is debugging, the @acronym{AMD} @acronym{GPU} devices must be included in
+the @value{GDBN} process @emph{cgroup}.
 
 Therefore, multiple @value{GDBN} processes can each debug a process
-provided the @emph{cgroups} specify disjoint sets of @acronym{AMD GPU}
-devices.  However, a single @value{GDBN} process cannot debug multiple
-inferiors that use @acronym{AMD GPU} devices even if those inferiors
-have @emph{cgroups} that specify disjoint @acronym{AMD GPU} devices.
-This is because the @value{GDBN} process must have all the
-@acronym{AMD GPU} devices in its @emph{cgroups} and so will attempt to
-enable debugging for all AMD GPU devices for all inferiors it is
-debugging.
+provided the @emph{cgroups} specify disjoint sets of @acronym{AMD}
+@acronym{GPU} devices.  However, a single @value{GDBN} process cannot
+debug multiple inferiors that use @acronym{AMD} @acronym{GPU} devices
+even if those inferiors have @emph{cgroups} that specify disjoint
+@acronym{AMD} @acronym{GPU} devices.  This is because the @value{GDBN}
+process must have all the @acronym{AMD} @acronym{GPU} devices in its
+@emph{cgroups} and so will attempt to enable debugging for all AMD GPU
+devices for all inferiors it is debugging.
 
-It is suggested to use @emph{Docker} rather than @emph{cgroups}
-directly to limit the @acronym{AMD GPU} devices visible inside a
+It is suggested to use @emph{Docker} rather than @emph{cgroups} directly
+to limit the @acronym{AMD} @acronym{GPU} devices visible inside a
 container:
 
 @enumerate
@@ -30299,10 +30312,9 @@ container:
 
 @item
 The @samp{/dev/dri/renderD@var{<render-minor-number>}} and
-@samp{/dev/drm/card@var{<node-number>}} files corresponding to each
-AMD GPU device that is to be visible must be mapped into the
-container.  Note that non-@acronym{AMD GPU} devices may also be
-present.
+@samp{/dev/drm/card@var{<node-number>}} files corresponding to each AMD
+GPU device that is to be visible must be mapped into the container.
+Note that non-@acronym{AMD} @acronym{GPU} devices may also be present.
 
 The @var{render-minor-number} for a device can be obtained by looking
 at the @samp{drm_render_minor} field value from:
@@ -30321,7 +30333,7 @@ Specify the @samp{--cap-add=SYS_PTRACE} and
 @samp{--security-opt seccomp=unconfined} options.
 
 @item
-Install the @acronym{AMD ROCm} packages in the container.  See
+Install the @acronym{AMD} @acronym{ROCm} packages in the container.  See
 @uref{https://github.com/RadeonOpenCompute/ROCm-docker}.
 
 @end enumerate
@@ -30329,8 +30341,8 @@ Install the @acronym{AMD ROCm} packages in the container.  See
 All processes running in the container will see the same subset of
 devices.  By having two containers with non-overlapping sets of AMD
 GPUs, it is possible to use @value{GDBN} in both containers at the
-same time since each @acronym{AMD GPU} device will only have one
-@value{GDBN} process accessing it.
+same time since each @acronym{AMD} @acronym{GPU} device will only have
+one @value{GDBN} process accessing it.
 
 For example:
 
@@ -30342,9 +30354,9 @@ docker run -it --rm --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
 
 @item
 The HIP runtime currently performs deferred code object loading by
-default.  @acronym{AMD GPU} code objects are not loaded until the
-first kernel is launched.  Before then, all breakpoints have to be set
-as pending breakpoints.
+default.  @acronym{AMD} @acronym{GPU} code objects are not loaded until
+the first kernel is launched.  Before then, all breakpoints have to be
+set as pending breakpoints.
 
 If source line positions are used that only correspond to source lines
 in unloaded code objects, then @value{GDBN} may not set pending
@@ -30385,22 +30397,22 @@ software emulation is used.  Software emulation involves using-single
 stepping and reading memory to determine if values have changed, and
 as a result performs substantially slower than hardware watchpoints.
 
-The @acronym{AMD GPU} supported architectures provide a maximum of 4
-hardware write watchpoints.  Precise read watchpoints or access
-watchpoints are not supported.
+The @acronym{AMD} @acronym{GPU} supported architectures provide a
+maximum of 4 hardware write watchpoints.  Precise read watchpoints or
+access watchpoints are not supported.
 
 The x86 architecture provides 4 hardware watchpoints that can each
 monitor up to 8 bytes.
 
-When @value{GDBN} is used with x86 and @acronym{AMD GPU} devices,
-hardware watchpoints are therefore limited to at most 4 write
+When @value{GDBN} is used with x86 and @acronym{AMD} @acronym{GPU}
+devices, hardware watchpoints are therefore limited to at most 4 write
 watchpoints that have a collective size of up to 32 bytes.  The
 collective size is calculated by adding the size of each watchpoint
 rounded up to a multiple of 8 bytes.  Software emulation will be used
 for watchpoints that exceed the hardware limitations.
 
-Currently, watchpoints are only created on the CPU, and not the AMD
-GPU, until the @acronym{AMD ROCm} runtime is initialized.  With
+Currently, watchpoints are only created on the CPU, and not the AMD GPU,
+until the @acronym{AMD} @acronym{ROCm} runtime is initialized.  With
 deferred code object loading disabled this does not happen until the
 inferior reaches the beginning of the @code{main} function.  With
 deferred code object loading enabled this does not happen until the
@@ -30411,9 +30423,10 @@ GPU.
 @item
 Watchpoints are not reported for memory that is written by memory
 transfers performed by @acronym{DMA, Direct Memory Access} hardware.
-The @env{HSA_ENABLE_SDMA} environment variable can be set to @samp{0}
-to disable the @acronym{AMD ROCm} runtime from using @acronym{DMA} for
-transfers between the CPU and @acronym{AMD GPU}.
+The @env{HSA_ENABLE_SDMA} environment variable can be set to @samp{0} to
+disable the @acronym{AMD} @acronym{ROCm} runtime from using
+@acronym{DMA} for transfers between the CPU and @acronym{AMD}
+@acronym{GPU}.
 
 @item
 When single stepping there can be times when @value{GDBN} appears to
@@ -30423,9 +30436,9 @@ be tried again.
 
 @item
 If no CPU thread is running, then @samp{Ctrl-C} is not able to stop
-@acronym{AMD GPU} threads.  This can happen for example if you enable
-@code{scheduler-locking} after the whole program stopped, and then
-resume an @acronym{AMD GPU} thread.  For example:
+@acronym{AMD} @acronym{GPU} threads.  This can happen for example if you
+enable @code{scheduler-locking} after the whole program stopped, and
+then resume an @acronym{AMD} @acronym{GPU} thread.  For example:
 
 @smallexample
 Thread 6 hit Breakpoint 1, with lanes [0-63], kernel () at test.cpp:38
@@ -30453,9 +30466,9 @@ when loading modules from a file, which results in code object URIs
 being reported as @samp{memory://}.
 
 The @env{HSA_LOADER_ENABLE_MMAP_URI} environment variable can be used
-to request that the @acronym{AMD ROCm} runtime attempt to determine
-the file containing the code object memory so that @samp{file://} URIs
-can be reported.
+to request that the @acronym{AMD} @acronym{ROCm} runtime attempt to
+determine the file containing the code object memory so that
+@samp{file://} URIs can be reported.
 
 For example,
 
@@ -30464,8 +30477,8 @@ export HSA_LOADER_ENABLE_MMAP_URI=1
 @end smallexample
 
 @item
-@acronym{AMD GPU} target does not currently support calling inferior
-functions.
+@acronym{AMD} @acronym{GPU} target does not currently support calling
+inferior functions.
 
 @item
 The @code{gdbserver} is not supported.
@@ -30475,38 +30488,39 @@ No language specific support for Fortran or OpenCL.  No OpenMP
 language extension support for C, C++, or Fortran.
 
 @item
-Does not support the @acronym{AMD ROCm} HCC compiler or runtime
-available as part of releases before ROCm 3.5.
+Does not support the @acronym{AMD} @acronym{ROCm} HCC compiler or
+runtime available as part of releases before ROCm 3.5.
 
 @item
-@acronym{AMD GPU} target does not currently support the compiler
-address, memory, or thread sanitizers.
+@acronym{AMD} @acronym{GPU} target does not currently support the
+compiler address, memory, or thread sanitizers.
 
 @anchor{AMD GPU Signal Restrictions}
 @item
-Supressing delivering some signals to a wavefront for some
-@acronym{AMD GPU} architectures may not prevent the @acronym{AMD ROCm}
-runtime putting the associated queue into the queue error state.  For
-example, suppressing the @code{SIGSEGV} signal may prevent the
-wavefront from being put in the halt state, but the @acronym{AMD ROCm}
-runtime may still put the associated queue into the queue error state.
+Supressing delivering some signals to a wavefront for some @acronym{AMD}
+@acronym{GPU} architectures may not prevent the @acronym{AMD}
+@acronym{ROCm} runtime putting the associated queue into the queue error
+state.  For example, suppressing the @code{SIGSEGV} signal may prevent
+the wavefront from being put in the halt state, but the @acronym{AMD}
+@acronym{ROCm} runtime may still put the associated queue into the queue
+error state.
 
 Suppressing delivering some signals, such as @code{SIGSEGV}, for a
 wavefront may also suppress the same signal raised by other
-@acronym{AMD GPU} hardware such as from @acronym{DMA} or from the
-@acronym{packet processor}, preventing the @acronym{AMD ROCm} runtime
-being notified.
+@acronym{AMD} @acronym{GPU} hardware such as from @acronym{DMA} or from
+the @acronym{packet processor}, preventing the @acronym{AMD}
+@acronym{ROCm} runtime being notified.
 
-@xref{AMD GPU Signals, , @acronym{AMD GPU} Signals}.
+@xref{AMD GPU Signals, , @acronym{AMD} @acronym{GPU} Signals}.
 
 @anchor{AMD GPU Attaching Restrictions}
 @item
-By default, for some architectures, the @acronym{AMD GPU} device
-driver causes all @acronym{AMD GPU} wavefronts created when
-@value{GDBN} is not attached to be unable to report the heterogeneous
-dispatch associated with the wavefront, or the wavefront's
-heterogeneous work-group position.  The @samp{info threads} command
-will display this missing information with a @samp{?}.
+By default, for some architectures, the @acronym{AMD} @acronym{GPU}
+device driver causes all @acronym{AMD} @acronym{GPU} wavefronts created
+when @value{GDBN} is not attached to be unable to report the
+heterogeneous dispatch associated with the wavefront, or the wavefront's
+heterogeneous work-group position.  The @samp{info threads} command will
+display this missing information with a @samp{?}.
 
 For example,
 
@@ -30524,7 +30538,7 @@ This does not affect wavefronts created while @value{GDBN} is attached
 which are always capable of reporting this information.
 
 If the @env{HSA_ENABLE_DEBUG} environment variable is set to @samp{1}
-when the @acronym{AMD ROCm} runtime is initialized, then this
+when the @acronym{AMD} @acronym{ROCm} runtime is initialized, then this
 information will be available for all archiectures even for wavefronts
 created when @value{GDBN} was not attached.  Setting this environment
 variable may very marginally reduce wavefront launch latency for some
@@ -30555,34 +30569,36 @@ eight bits non-zero.
 @c without using the top eight bits of an address.
 
 @item
-If an @acronym{AMD GPU} wavefront has the @code{DX10_CLAMP} bit set in
-the @code{MODE} register, enabled arithmetic exceptions will not be
-reported as @code{SIGFPE} signals.  This happens if the
+If an @acronym{AMD} @acronym{GPU} wavefront has the @code{DX10_CLAMP}
+bit set in the @code{MODE} register, enabled arithmetic exceptions will
+not be reported as @code{SIGFPE} signals.  This happens if the
 @code{DX10_CLAMP} kernel descriptor field is enabled.
 
-@xref{AMD GPU Signals, , @acronym{AMD GPU} Signals}.
+@xref{AMD GPU Signals, , @acronym{AMD} @acronym{GPU} Signals}.
 
 @item
 @value{GDBN} does not support single root I/O virtualization (SR-IOV)
-on any @acronym{AMD GPU} architecture that supports it.  That includes
-@samp{gfx1030}, @samp{gfx1031}, and @samp{gfx1032}.
+on any @acronym{AMD} @acronym{GPU} architecture that supports it.  That
+includes @samp{gfx1030}, @samp{gfx1031}, and @samp{gfx1032}.
 
 @item
 @value{GDBN} does not support debugging programs that use cooperative
-groups or CU masking for @acronym{AMD GPU} architectures @samp{gfx1100},
-@samp{gfx1101}, and @samp{gfx11102}.  A restriction will be reported
-when attaching to a process that has already created cooperative group
-queues or CU masked queues.  Any attempt to create a cooperative queue
-or CU masked queue when @value{GDBN} is attached will fail.
+groups or CU masking for @acronym{AMD} @acronym{GPU} architectures
+@samp{gfx1100}, @samp{gfx1101}, and @samp{gfx11102}.  A restriction will
+be reported when attaching to a process that has already created
+cooperative group queues or CU masked queues.  Any attempt to create a
+cooperative queue or CU masked queue when @value{GDBN} is attached will
+fail.
 
 @item
-For @acronym{AMD GPU} architectures @samp{gfx1100}, @samp{gfx1101},
-@samp{gfx1102}, @samp{gfx1200} and @samp{gfx1201}, @value{GDBN} cannot
-debug a program past a @samp{s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)}
-instruction.  If an asynchronous exception is reported after this
-instruction has been executed and the debugger is attached, the wave is
-killed, and the exception is only reported by the @acronym{AMD ROCm}
-runtime.  Note that on @acronym{AMD GPU} devices, memory errors are
+For @acronym{AMD} @acronym{GPU} architectures @samp{gfx1100},
+@samp{gfx1101}, @samp{gfx1102}, @samp{gfx1200} and @samp{gfx1201},
+@value{GDBN} cannot debug a program past a
+@samp{s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)} instruction.  If an
+asynchronous exception is reported after this instruction has been
+executed and the debugger is attached, the wave is killed, and the
+exception is only reported by the @acronym{AMD} @acronym{ROCm} runtime.
+Note that on @acronym{AMD} @acronym{GPU} devices, memory errors are
 reported asynchronously so a memory fault caused by an instruction
 before the @samp{s_sendmsg} might be reported after it.  Enabling
 precise memory event reporting (@pxref{AMDGPU Memory Violation
@@ -30590,26 +30606,29 @@ Reporting}) ensures that such memory fault would be reported before the
 @samp{s_sendmsg} instruction is executed.
 
 @item
-The @acronym{AMD ROCm} runtime cannot generate an @acronym{AMD GPU} core dump
-(@pxref{AMD GPU core dumps}) when @value{GDBN} is attached to the process.
+The @acronym{AMD} @acronym{ROCm} runtime cannot generate an
+@acronym{AMD} @acronym{GPU} core dump (@pxref{AMD GPU core dumps}) when
+@value{GDBN} is attached to the process.
 
 @item
-If a fault on the host side of a heterogeneous application causes a core dump
-to be generated, then the @acronym{AMD ROCm} runtime does not produce the
-@acronym{AMD GPU} core file.  Only the host side of the process is captured in
-the file produced by the Linux kernel.
+If a fault on the host side of a heterogeneous application causes a core
+dump to be generated, then the @acronym{AMD} @acronym{ROCm} runtime does
+not produce the @acronym{AMD} @acronym{GPU} core file.  Only the host
+side of the process is captured in the file produced by the Linux
+kernel.
 
 @item
-For @acronym{AMD GPU} architectures @samp{gfx1100}, @samp{gfx1101} and
-@samp{gfx1102}, the @acronym{AMD ROCm} runtime cannot create a
-@acronym{AMD GPU} core dump (@pxref{AMD GPU core dumps}).
+For @acronym{AMD} @acronym{GPU} architectures @samp{gfx1100},
+@samp{gfx1101} and @samp{gfx1102}, the @acronym{AMD} @acronym{ROCm}
+runtime cannot create a @acronym{AMD} @acronym{GPU} core dump
+(@pxref{AMD GPU core dumps}).
 
 @item
-For @acronym{AMD GPU} architectures @samp{gfx10*}, @samp{gfx11*} and
-@samp{gx12*}, a watchpoint (@pxref{Set Watchpoints, ,Setting
-Watchpoints}) might not be reported to the debugger if the memory is
-modified by the last instruction of the shader when precise memory
-is not enabled (@pxref{AMDGPU Memory Violation Reporting}).
+For @acronym{AMD} @acronym{GPU} architectures @samp{gfx10*},
+@samp{gfx11*} and @samp{gx12*}, a watchpoint (@pxref{Set Watchpoints,
+,Setting Watchpoints}) might not be reported to the debugger if the
+memory is modified by the last instruction of the shader when precise
+memory is not enabled (@pxref{AMDGPU Memory Violation Reporting}).
 
 @item
 For architectures @samp{gfx10*}, @samp{gfx11*} and @samp{gfx12*}, a
