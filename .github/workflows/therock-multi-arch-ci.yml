@@ -21,8 +21,15 @@
 # (validate_artifact_structure, test_artifacts_per_family,
 # build_python_packages) run unconditionally and may fail when the
 # skipped stages' artifacts are absent. Narrowing test_labels to
-# 'test:rocgdb' avoids running unrelated tests; remaining failures from
+# 'test:sanity' avoids running unrelated tests; remaining failures from
 # missing artifacts must be addressed in TheRock itself.
+#
+# rocgdb testing: TheRock's built-in 'rocgdb' test component is
+# bypassed (linux_test_labels='test:sanity' excludes it). Instead, two
+# caller-side jobs (rocgdb_cpu, rocgdb_gpu) fetch the debug-tools
+# artifacts produced by this run and invoke test_rocgdb.py themselves,
+# split by testsuite (gdb.dwarf2 on CPU, gdb.rocm on GPU). This gives
+# us full control over the script's CLI per job.
 
 name: TheRock Multi-Arch CI
 
@@ -43,8 +50,8 @@ on:
         default: ""
       linux_test_labels:
         type: string
-        description: "If set, reduce test set on Linux to the listed labels prefixed with 'test:'. ex: test:rocgdb"
-        default: "test:rocgdb"
+        description: "Labels for TheRock's built-in test matrix. Default 'test:sanity' runs only sanity; rocgdb testing is handled by the caller-side rocgdb_cpu / rocgdb_gpu jobs below."
+        default: "test:sanity"
       prebuilt_stages:
         type: string
         description: "Comma-separated build stages to skip. Defaults to skipping every stage not in debug-tools's dependency chain. If baseline_run_id is also set, artifacts for these stages are copied from that run instead."
@@ -56,6 +63,16 @@ on:
 
 permissions:
   contents: read
+
+# Container option groups, layered per ROCm/TheRock#5132:
+#   BASE  — applied to every Linux container
+#   GPU   — appended on jobs that need GPU device access
+#   ROCGDB — rocgdb-specific (SYS_PTRACE for ptrace-based debugging)
+# Composed in each job's container.options below.
+env:
+  BASE_CONTAINER_OPTIONS: "--ipc host --user 0:0 --ulimit memlock=-1:-1 --security-opt seccomp=unconfined"
+  GPU_CONTAINER_OPTIONS: "--group-add video --device /dev/kfd --device /dev/dri --group-add 993 --group-add 992 --group-add 110 --env-file /etc/podinfo/gha-gpu-isolation-settings"
+  ROCGDB_CONTAINER_OPTIONS: "--cap-add=SYS_PTRACE"
 
 concurrency:
   # A PR number if a pull request and otherwise the commit hash. This
@@ -77,7 +94,7 @@ jobs:
       # Defaults below are duplicated from the workflow_dispatch inputs:
       # workflow_dispatch input defaults only apply on manual runs, so
       # push/pull_request triggers need the same fallbacks here.
-      linux_test_labels: ${{ inputs.linux_test_labels || 'test:rocgdb' }}
+      linux_test_labels: ${{ inputs.linux_test_labels || 'test:sanity' }}
       windows_test_labels: ""
       prebuilt_stages: ${{ inputs.prebuilt_stages || 'math-libs,comm-libs,dctools-core,profiler-apps,iree-compiler,fusilli-libs,media-libs' }}
       baseline_run_id: ${{ inputs.baseline_run_id || '' }}
@@ -107,12 +124,148 @@ jobs:
       contents: read
       id-token: write
 
+  # ==========================================================================
+  # Caller-side rocgdb test jobs.
+  #
+  # Both jobs pull the debug-tools + tests artifacts produced by this
+  # run and invoke test_rocgdb.py with a job-specific testsuite filter.
+  # Split mirrors ROCm/TheRock#5132: gdb.dwarf2 has no GPU dependency
+  # and runs on a CPU runner; gdb.rocm runs per GPU family.
+  # ==========================================================================
+  rocgdb_cpu:
+    name: rocgdb CPU tests (gdb.dwarf2)
+    needs: [setup, linux_build_and_test]
+    if: >-
+      ${{
+        !cancelled() && !failure() &&
+        needs.setup.outputs.linux_build_config != ''
+      }}
+    runs-on: azure-linux-scale-rocm
+    permissions:
+      contents: read
+      id-token: write
+    container:
+      image: ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb:latest
+      options: ${{ env.BASE_CONTAINER_OPTIONS }} ${{ env.ROCGDB_CONTAINER_OPTIONS }}
+    env:
+      # gdb.dwarf2 is GPU-independent; pick any family from the build matrix.
+      AMDGPU_FAMILY: ${{ fromJSON(needs.setup.outputs.linux_build_config).per_family_info[0].amdgpu_family }}
+      AMDGPU_TARGETS: ${{ fromJSON(needs.setup.outputs.linux_build_config).per_family_info[0].amdgpu_targets }}
+      THEROCK_REF: users/lumachad/rocgdb/multi-arch
+      OUTPUT_ARTIFACTS_DIR: ${{ github.workspace }}/build
+    steps:
+      # TEMPORARY: until ROCm/TheRock#4960 lands, test_rocgdb.py is not
+      # installed into <artifact-dir>/tests/rocgdb/. Sparse-clone
+      # ROCgdb@amd-staging for just the script. After #4960 is merged,
+      # drop this step and invoke the script directly from
+      # ${OUTPUT_ARTIFACTS_DIR}/tests/rocgdb/test_rocgdb.py.
+      - name: Checkout test_rocgdb.py (TEMP, see ROCm/TheRock#4960)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ROCm/ROCgdb
+          ref: amd-staging
+          path: rocgdb-src
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: true
+
+      - name: Sparse-checkout TheRock for install_rocm_from_artifacts.py
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ROCm/TheRock
+          ref: ${{ env.THEROCK_REF }}
+          path: therock
+          sparse-checkout: build_tools
+          sparse-checkout-cone-mode: true
+
+      - name: Install artifact-fetch dependencies
+        run: python3 -m pip install boto3
+
+      - name: Fetch debug-tools + tests artifacts
+        working-directory: therock
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 build_tools/install_rocm_from_artifacts.py \
+            --run-id=${{ github.run_id }} \
+            --artifact-group=${{ env.AMDGPU_FAMILY }} \
+            --amdgpu-targets=${{ env.AMDGPU_TARGETS }} \
+            --output-dir=${{ env.OUTPUT_ARTIFACTS_DIR }} \
+            --debug-tools --tests
+
+      - name: Run rocgdb CPU tests (gdb.dwarf2)
+        run: |
+          python3 rocgdb-src/.github/scripts/test_rocgdb.py --tests gdb.dwarf2
+
+  rocgdb_gpu:
+    name: rocgdb GPU tests (gdb.rocm, ${{ matrix.family_info.amdgpu_family }})
+    needs: [setup, linux_build_and_test]
+    if: >-
+      ${{
+        !cancelled() && !failure() &&
+        needs.setup.outputs.linux_build_config != '' &&
+        matrix.family_info.test-runs-on != ''
+      }}
+    strategy:
+      fail-fast: false
+      matrix:
+        family_info: ${{ fromJSON(needs.setup.outputs.linux_build_config).per_family_info }}
+    runs-on: ${{ matrix.family_info.test-runs-on }}
+    permissions:
+      contents: read
+      id-token: write
+    container:
+      image: ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb:latest
+      options: ${{ env.BASE_CONTAINER_OPTIONS }} ${{ env.GPU_CONTAINER_OPTIONS }} ${{ env.ROCGDB_CONTAINER_OPTIONS }}
+    env:
+      THEROCK_REF: users/lumachad/rocgdb/multi-arch
+      OUTPUT_ARTIFACTS_DIR: ${{ github.workspace }}/build
+    steps:
+      # TEMPORARY: see rocgdb_cpu / ROCm/TheRock#4960.
+      - name: Checkout test_rocgdb.py (TEMP, see ROCm/TheRock#4960)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ROCm/ROCgdb
+          ref: amd-staging
+          path: rocgdb-src
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: true
+
+      - name: Sparse-checkout TheRock for install_rocm_from_artifacts.py
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ROCm/TheRock
+          ref: ${{ env.THEROCK_REF }}
+          path: therock
+          sparse-checkout: build_tools
+          sparse-checkout-cone-mode: true
+
+      - name: Install artifact-fetch dependencies
+        run: python3 -m pip install boto3
+
+      - name: Fetch debug-tools + tests artifacts
+        working-directory: therock
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 build_tools/install_rocm_from_artifacts.py \
+            --run-id=${{ github.run_id }} \
+            --artifact-group=${{ matrix.family_info.amdgpu_family }} \
+            --amdgpu-targets=${{ matrix.family_info.amdgpu_targets }} \
+            --output-dir=${{ env.OUTPUT_ARTIFACTS_DIR }} \
+            --debug-tools --tests
+
+      - name: Run rocgdb GPU tests (gdb.rocm)
+        run: |
+          python3 rocgdb-src/.github/scripts/test_rocgdb.py --tests gdb.rocm
+
   multi_arch_ci_summary:
     name: Multi-Arch CI Summary
     if: always()
     needs:
       - setup
       - linux_build_and_test
+      - rocgdb_cpu
+      - rocgdb_gpu
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout TheRock repository
