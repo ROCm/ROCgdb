@@ -64,15 +64,16 @@ on:
 permissions:
   contents: read
 
-# Container option groups, layered per ROCm/TheRock#5132:
-#   BASE  — applied to every Linux container
-#   GPU   — appended on jobs that need GPU device access
-#   ROCGDB — rocgdb-specific (SYS_PTRACE for ptrace-based debugging)
-# Composed in each job's container.options below.
-env:
-  BASE_CONTAINER_OPTIONS: "--ipc host --user 0:0 --ulimit memlock=-1:-1 --security-opt seccomp=unconfined"
-  GPU_CONTAINER_OPTIONS: "--group-add video --device /dev/kfd --device /dev/dri --group-add 993 --group-add 992 --group-add 110 --env-file /etc/podinfo/gha-gpu-isolation-settings"
-  ROCGDB_CONTAINER_OPTIONS: "--cap-add=SYS_PTRACE"
+# Container option layering (kept in sync with ROCm/TheRock#5132):
+#   BASE   = --ipc host --user 0:0 --ulimit memlock=-1:-1
+#            --security-opt seccomp=unconfined
+#   GPU    = --group-add video --device /dev/kfd --device /dev/dri
+#            --group-add 993 --group-add 992 --group-add 110
+#            --env-file /etc/podinfo/gha-gpu-isolation-settings
+#   ROCGDB = --cap-add=SYS_PTRACE
+# rocgdb_cpu uses BASE + ROCGDB; rocgdb_gpu uses BASE + GPU + ROCGDB.
+# Inlined per-job because GHA's `env` context is not available in
+# `container.options` expressions.
 
 concurrency:
   # A PR number if a pull request and otherwise the commit hash. This
@@ -146,7 +147,9 @@ jobs:
       id-token: write
     container:
       image: ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb:latest
-      options: ${{ env.BASE_CONTAINER_OPTIONS }} ${{ env.ROCGDB_CONTAINER_OPTIONS }}
+      # BASE + ROCGDB (see comment near top of file). Inlined because
+      # GHA's `env` context is not available in `container.options`.
+      options: --ipc host --user 0:0 --ulimit memlock=-1:-1 --security-opt seccomp=unconfined --cap-add=SYS_PTRACE
     env:
       # gdb.dwarf2 is GPU-independent; pick any family from the build matrix.
       AMDGPU_FAMILY: ${{ fromJSON(needs.setup.outputs.linux_build_config).per_family_info[0].amdgpu_family }}
@@ -199,11 +202,14 @@ jobs:
   rocgdb_gpu:
     name: rocgdb GPU tests (gdb.rocm, ${{ matrix.family_info.amdgpu_family }})
     needs: [setup, linux_build_and_test]
+    # NOTE: cannot filter out matrix entries with empty `test-runs-on`
+    # at job level — GHA does not allow `matrix.*` in job-level `if:`.
+    # `runs-on: ''` will surface as a job-level error for those entries
+    # rather than silently skipping; revisit if it becomes noisy.
     if: >-
       ${{
         !cancelled() && !failure() &&
-        needs.setup.outputs.linux_build_config != '' &&
-        matrix.family_info.test-runs-on != ''
+        needs.setup.outputs.linux_build_config != ''
       }}
     strategy:
       fail-fast: false
@@ -215,7 +221,9 @@ jobs:
       id-token: write
     container:
       image: ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb:latest
-      options: ${{ env.BASE_CONTAINER_OPTIONS }} ${{ env.GPU_CONTAINER_OPTIONS }} ${{ env.ROCGDB_CONTAINER_OPTIONS }}
+      # BASE + GPU + ROCGDB (see comment near top of file). Inlined
+      # because GHA's `env` context is not available in `container.options`.
+      options: --ipc host --user 0:0 --ulimit memlock=-1:-1 --security-opt seccomp=unconfined --group-add video --device /dev/kfd --device /dev/dri --group-add 993 --group-add 992 --group-add 110 --env-file /etc/podinfo/gha-gpu-isolation-settings --cap-add=SYS_PTRACE
     env:
       THEROCK_REF: users/lumachad/rocgdb/multi-arch
       OUTPUT_ARTIFACTS_DIR: ${{ github.workspace }}/build
