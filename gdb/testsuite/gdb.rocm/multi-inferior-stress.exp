@@ -1,0 +1,186 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Stress test debugging many GPU programs at the same time.
+#
+# A HIP-aware parent process forks N children; each child re-execs
+# itself and launches its own GPU kernel.  GDB debugs all of them in
+# one session in non-stop mode.  Choosing N greater than the typical
+# per-device simultaneous-debug-process limit (around 8 or 16)
+# deliberately exercises the multi-process GPU debug stack -- the
+# kernel driver, the debug API, and GDB's multi-inferior plumbing --
+# under load, including any context-switching path that gets engaged
+# when the limit is exceeded.
+#
+# This test is gated on hip_devices_support_debug_multi_process, which
+# excludes targets that do not support multi-process GPU debugging.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+require allow_hipcc_tests
+require hip_devices_support_debug_multi_process
+require allow_fork_tests
+require allow_multi_inferior_tests
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+# Run one stress iteration with NUM_CHILDREN child inferiors.
+
+proc do_test { num_children } {
+    clean_restart
+    gdb_load $::binfile
+
+    gdb_test_no_output "set non-stop on"
+    gdb_test_no_output "set detach-on-fork off"
+    gdb_test_no_output "set follow-fork parent"
+    gdb_test_no_output "set args $num_children"
+
+    # Scale the timeout with N: every additional debugged process adds
+    # debug-attach setup cost, and once we cross the per-device limit
+    # we also pay for context switching.
+    set timeout_factor [expr { ($num_children + 3) / 4 }]
+
+    with_timeout_factor $timeout_factor {
+	with_rocm_gpu_lock {
+	    gdb_breakpoint [gdb_get_line_number "Break here"]
+	    gdb_breakpoint kern allow-pending
+	    gdb_breakpoint [gdb_get_line_number "Last break here"]
+
+	    # Run the parent up to the pre-fork sync point.  GDB prints the
+	    # source line of the stop on a second line, so the pattern must
+	    # account for breakpoint-hit + source-line before the prompt.
+	    set test "run to fork point"
+	    gdb_test_multiple "run" $test {
+		-re -wrap "At least one agent is busy.*" {
+		    fail "$test (agent busy before fork)"
+		    return
+		}
+		-re -wrap "hit Breakpoint\[^\r\n\]*parent\[^\r\n\]*\r\n\[^\r\n\]+" {
+		    pass $test
+		}
+	    }
+
+	    # Resume everything.  As children are forked and re-exec,
+	    # each launches its kernel and we expect one
+	    # "hit Breakpoint ..., kern ()" notification per child
+	    # inferior.
+	    gdb_test_multiple "continue -a &" "continue -a in non-stop" {
+		-re "Continuing\\.\r\n$::gdb_prompt " {
+		    pass $gdb_test_name
+		}
+	    }
+
+	    set test "wait for $num_children GPU stops"
+	    set seen_inferiors [list]
+	    set stopped_gpu_threads [list]
+
+	    gdb_test_multiple "" $test {
+		-re "Thread (\[0-9\]+)\\.(\[0-9\]+)\[^\r\n\]* hit Breakpoint\[^\r\n\]*, kern \\(\\)\[^\r\n\]*\r\n" {
+		    set inf $expect_out(1,string)
+		    set thr "$inf.$expect_out(2,string)"
+		    if {[lsearch -exact $seen_inferiors $inf] == -1} {
+			lappend seen_inferiors $inf
+			lappend stopped_gpu_threads $thr
+		    }
+		    if {[llength $seen_inferiors] < $num_children} {
+			exp_continue
+		    } else {
+			pass $test
+		    }
+		}
+		-re "At least one agent is busy" {
+		    fail "$test (agent busy -- multi-process debug attach\
+			    failed at N=$num_children)"
+		    return
+		}
+		timeout {
+		    fail "$test (only [llength $seen_inferiors] of\
+			    $num_children inferiors stopped before timeout)"
+		    return
+		}
+	    }
+
+	    # Diagnostic check: GDB should know about N child inferiors
+	    # plus the parent.  A mismatch here usually means a fork was
+	    # silently lost.  Each row in `info inferiors` contains a
+	    # "<num>... process <pid>" substring that the header line does
+	    # not, so we count rows by matching that substring.
+	    set inf_count 0
+	    gdb_test_multiple "info inferiors" "info inferiors shows N+1" {
+		-re "\[0-9\]+\\s+process\\s+\[0-9\]+\[^\r\n\]*\r\n" {
+		    incr inf_count
+		    exp_continue
+		}
+		-re "$::gdb_prompt $" {
+		    set expected [expr { $num_children + 1 }]
+		    if { $inf_count >= $expected } {
+			pass $gdb_test_name
+		    } else {
+			fail "$gdb_test_name (saw $inf_count, expected\
+				$expected)"
+		    }
+		}
+	    }
+
+	    # Continue every stopped GPU inferior to clean exit.  Failures
+	    # here would indicate cross-inferior state corruption (e.g. a
+	    # wrong dbgapi process handle being used for resume).
+	    foreach thread $stopped_gpu_threads {
+		set inf [lindex [split $thread .] 0]
+		gdb_test "thread $thread" "Switching to thread.*" \
+		    "switch to thread $thread"
+		gdb_test_multiple "continue" "continue inferior $inf to end" {
+		    -re "\\\[Inferior $inf \[^\r\n\]* exited normally\\\]\r\n$::gdb_prompt " {
+			pass $gdb_test_name
+		    }
+		    -re "\\\[Inferior $inf \[^\r\n\]* exited with code\[^\r\n\]*\\\]" {
+			fail "$gdb_test_name (non-zero exit)"
+		    }
+		}
+	    }
+
+	    # Once all children have exited, the parent's waitpid loop
+	    # falls through to the post-fork breakpoint.
+	    gdb_test_multiple "" "parent reached post-waitpid breakpoint" {
+		-re "hit Breakpoint\[^\r\n\]*parent\[^\r\n\]*" {
+		    pass $gdb_test_name
+		}
+		timeout {
+		    fail $gdb_test_name
+		}
+	    }
+
+	    gdb_test "inferior 1" "Switching to inferior 1.*"
+	    gdb_continue_to_end "" "continue -a" 1
+	}
+    }
+}
+
+# 16 reliably crosses the typical 8-process per-device debug limit; 24
+# also crosses the 16-process limit, so the lower layers of the stack
+# have to context-switch debugged processes in and out.  Both sizes are
+# kept modest enough to stay within reasonable test wall-clock and GPU
+# memory budgets while still giving the multi-process GPU debug stack
+# a real workout.
+foreach_with_prefix num_children { 16 24 } {
+    do_test $num_children
+}
