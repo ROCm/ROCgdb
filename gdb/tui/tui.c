@@ -428,6 +428,34 @@ require_tui_terminal ()
 #endif
 }
 
+/* Initialize ncurses, if necessary.  */
+
+static SCREEN *
+init_ncurses ()
+{
+  static SCREEN *tui_screen = nullptr;
+  if (tui_screen != nullptr)
+    {
+      /* Init ncurses only once.  */
+      return tui_screen;
+    }
+
+  tui_screen = newterm (nullptr, stdout, stdin);
+
+#ifdef __MINGW32__
+  /* The MinGW port of ncurses requires $TERM to be unset in order
+     to activate the Windows console driver.  */
+  if (tui_screen == nullptr)
+    tui_screen = newterm ((char *) "unknown", stdout, stdin);
+#endif
+
+  if (tui_screen == nullptr)
+    error (_("Cannot enable the TUI: error opening terminal [TERM=%s]"),
+	   gdb_getenv_term ());
+
+  return tui_screen;
+}
+
 /* Enter in the tui mode (curses).
    When in normal mode, it installs the tui hooks in gdb, redirects
    the gdb output, configures the readline to work in tui mode.
@@ -455,7 +483,6 @@ tui_enable (void)
   if (tui_finish_init == TRIBOOL_TRUE)
     {
       WINDOW *w;
-      SCREEN *s;
 
       /* If the top level interpreter is not the console/tui (e.g.,
 	 MI), enabling curses will certainly lose.  */
@@ -467,19 +494,9 @@ tui_enable (void)
       /* Don't try initialization again.  */
       tui_finish_init = TRIBOOL_UNKNOWN;
 
-      s = newterm (NULL, stdout, stdin);
-#ifdef __MINGW32__
-      /* The MinGW port of ncurses requires $TERM to be unset in order
-	 to activate the Windows console driver.  */
-      if (s == NULL)
-	s = newterm ((char *) "unknown", stdout, stdin);
-#endif
-      if (s == NULL)
-	{
-	  error (_("Cannot enable the TUI: error opening terminal [TERM=%s]"),
-		 gdb_getenv_term ());
-	}
+      SCREEN *s = init_ncurses ();
       w = stdscr;
+
       if (has_colors ())
 	{
 #ifdef HAVE_USE_DEFAULT_COLORS
