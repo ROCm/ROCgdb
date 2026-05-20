@@ -1,0 +1,190 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Setup a struct variable that is described by a multi-piece DWARF location.
+# One of the struct's fields is a C++ reference type implemented via
+# DW_OP_GNU_implicit_pointer.  At one time, attempting to print such a field
+# would trigger an assertion in GDB.
+#
+# The cause was that primitive_field extracts the reference field and
+# set_component_location copies the parent's entire piece_closure (just
+# incrementing its refcount).  Then coerce_pieced_ref would assert
+# closure->pieces.size() == 1, which failed because the closure still had
+# all the parent's pieces.
+#
+# This test confirms that this issue has now been fixed.
+
+require allow_cplus_tests
+
+load_lib dwarf.exp
+
+# This test can only be run on targets which support DWARF-2 and use gas.
+require dwarf2_support
+
+standard_testfile .c .S
+
+set asm_file [standard_output_file ${srcfile2}]
+
+# First compile the C file only, so we can query some type sizes.
+if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile}]} {
+    return
+}
+
+Dwarf::assemble ${asm_file} {
+    cu {} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_C_plus_plus
+	} {
+	    declare_labels int_label struct_label ref_type_label target_label \
+		first_label second_label derived_label
+	    set int_size [get_sizeof "int" -1]
+	    set addr_size [get_sizeof "void *" -1]
+	    set struct_size [expr {$int_size + $addr_size}]
+
+	    int_label: DW_TAG_base_type {
+		DW_AT_byte_size ${int_size} DW_FORM_udata
+		DW_AT_encoding @DW_ATE_signed
+		DW_AT_name "int"
+	    }
+
+	    ref_type_label: DW_TAG_reference_type {
+		DW_AT_byte_size ${addr_size} DW_FORM_udata
+		DW_AT_type :${int_label}
+	    }
+
+	    struct_label: DW_TAG_structure_type {
+		DW_AT_name "S"
+		DW_AT_byte_size ${struct_size} DW_FORM_udata
+	    } {
+		DW_TAG_member {
+		    DW_AT_name "x"
+		    DW_AT_type :${int_label}
+		    DW_AT_data_member_location 0 DW_FORM_udata
+		}
+
+		DW_TAG_member {
+		    DW_AT_name "ref"
+		    DW_AT_type :${ref_type_label}
+		    DW_AT_data_member_location ${int_size} DW_FORM_udata
+		}
+	    }
+
+	    first_label: DW_TAG_structure_type {
+		DW_AT_name "first"
+		DW_AT_byte_size ${int_size} DW_FORM_udata
+	    } {
+		DW_TAG_member {
+		    DW_AT_name "x"
+		    DW_AT_type :${int_label}
+		    DW_AT_data_member_location 0 DW_FORM_udata
+		}
+	    }
+
+	    second_label: DW_TAG_structure_type {
+		DW_AT_name "second"
+		DW_AT_byte_size ${addr_size} DW_FORM_udata
+	    } {
+		DW_TAG_member {
+		    DW_AT_name "ref"
+		    DW_AT_type :${ref_type_label}
+		    DW_AT_data_member_location 0 DW_FORM_udata
+		}
+	    }
+
+	    derived_label: DW_TAG_structure_type {
+		DW_AT_name "derived"
+		DW_AT_byte_size ${struct_size} DW_FORM_udata
+	    } {
+		DW_TAG_inheritance {
+		    DW_AT_type :${first_label}
+		    DW_AT_data_member_location 0 DW_FORM_udata
+		}
+
+		DW_TAG_inheritance {
+		    DW_AT_type :${second_label}
+		    DW_AT_data_member_location ${int_size} DW_FORM_udata
+		}
+	    }
+
+	    target_label: DW_TAG_variable {
+		DW_AT_name "target_var"
+		DW_AT_type :${int_label}
+		DW_AT_external 1 DW_FORM_flag
+		DW_AT_location {
+		    DW_OP_addr [gdb_target_symbol "target_var"]
+		} SPECIAL_expr
+	    }
+
+	    DW_TAG_subprogram {
+		MACRO_AT_func { "main" }
+		DW_AT_type :${int_label}
+		DW_AT_external 1 DW_FORM_flag
+	    } {
+		DW_TAG_variable {
+		    DW_AT_name "s"
+		    DW_AT_type :${struct_label}
+		    DW_AT_location {
+			DW_OP_const4u 123
+			DW_OP_stack_value
+			DW_OP_piece $int_size
+			DW_OP_GNU_implicit_pointer $target_label 0
+			DW_OP_piece $addr_size
+		    } SPECIAL_expr
+		}
+
+		DW_TAG_variable {
+		    DW_AT_name "d"
+		    DW_AT_type :${derived_label}
+		    DW_AT_location {
+			DW_OP_const4u 456
+			DW_OP_stack_value
+			DW_OP_piece $int_size
+			DW_OP_GNU_implicit_pointer $target_label 0
+			DW_OP_piece $addr_size
+		    } SPECIAL_expr
+		}
+	    }
+	}
+    }
+}
+
+# Now compile both C source and generated DWARF assembly.
+if {[prepare_for_testing "failed to prepare" ${testfile} \
+	 [list ${asm_file} ${srcfile}] {}]} {
+    return
+}
+
+# Start the inferior so that 's' is in scope.
+if {![runto_main]} {
+    return
+}
+
+# Printing `s` used to crash with an assertion failure in coerce_pieced_ref
+# because the ref field inherited the parent struct's multi-piece closure.
+gdb_test "print s" " = {x = 123, ref = @$hex}" \
+    "print multi-piece struct with implicit pointer reference field"
+
+gdb_test "print s.ref" " = \\(int &\\) @$hex: 42" \
+    "print ref member of multi-piece struct"
+
+# Same test but with inheritance.  The reference field is in the
+# second base class, so it reaches coerce_pieced_ref through a
+# different path to the above case.
+gdb_test "print d" \
+    " = {<first> = {x = 456}, <second> = {ref = @$hex}, <No data fields>}" \
+    "print inherited multi-piece struct with implicit pointer ref"
+
+gdb_test "print d.ref" " = \\(int &\\) @$hex: 42" \
+    "print ref member of inherited multi-piece struct"

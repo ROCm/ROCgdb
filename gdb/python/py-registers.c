@@ -45,6 +45,8 @@ struct register_descriptor_iterator_object : public PyObject
   struct gdbarch *gdbarch;
 };
 
+static_assert (gdb::is_python_allocatable_v<register_descriptor_iterator_object>);
+
 extern PyTypeObject register_descriptor_iterator_object_type;
 
 /* A register descriptor.  */
@@ -56,6 +58,8 @@ struct register_descriptor_object : public PyObject
   /* The architecture this is a register for.  */
   struct gdbarch *gdbarch;
 };
+
+static_assert (gdb::is_python_allocatable_v<register_descriptor_object>);
 
 extern PyTypeObject register_descriptor_object_type;
 
@@ -69,6 +73,8 @@ struct reggroup_iterator_object : public PyObject
   struct gdbarch *gdbarch;
 };
 
+static_assert (gdb::is_python_allocatable_v<reggroup_iterator_object>);
+
 extern PyTypeObject reggroup_iterator_object_type;
 
 /* A register group object.  */
@@ -77,6 +83,8 @@ struct reggroup_object : public PyObject
   /* The register group being described.  */
   const struct reggroup *reggroup;
 };
+
+static_assert (gdb::is_python_allocatable_v<reggroup_object>);
 
 extern PyTypeObject reggroup_object_type;
 
@@ -348,7 +356,7 @@ register_descriptor_iter_find (PyObject *self, PyObject *args, PyObject *kw)
 	return gdbpy_get_register_descriptor (gdbarch, regnum).release ();
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* See python-internal.h.  */

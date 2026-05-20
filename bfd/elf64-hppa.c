@@ -1017,10 +1017,6 @@ elf64_hppa_mark_exported_functions (struct elf_link_hash_entry *eh, void *data)
       && eh->root.u.def.section->output_section != NULL
       && eh->type == STT_FUNC)
     {
-      if (! hppa_info->opd_sec
-	  && ! get_opd (hppa_info->root.dynobj, info, hppa_info))
-	return false;
-
       hh->want_opd = 1;
 
       /* Put a flag here for output_symbol_hook.  */
@@ -1646,11 +1642,12 @@ elf64_hppa_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
 
      We have to traverse the main linker hash table since we have to
      find functions which may not have been mentioned in any relocs.  */
-  elf_link_hash_traverse (&hppa_info->root,
-			  (hppa_info->root.dynamic_sections_created
-			   ? elf64_hppa_mark_milli_and_exported_functions
-			   : elf64_hppa_mark_exported_functions),
-			  info);
+  if (hppa_info->opd_sec)
+    elf_link_hash_traverse (&hppa_info->root,
+			    (hppa_info->root.dynamic_sections_created
+			     ? elf64_hppa_mark_milli_and_exported_functions
+			     : elf64_hppa_mark_exported_functions),
+			    info);
 
   if (hppa_info->root.dynamic_sections_created)
     {
@@ -2479,7 +2476,8 @@ elf64_hppa_finalize_dynreloc (struct elf_link_hash_entry *eh,
   if (hppa_info == NULL)
     return false;
 
-  if (discarded_section (hppa_info->other_rel_sec))
+  if (hppa_info->other_rel_sec == NULL
+      || discarded_section (hppa_info->other_rel_sec))
     return true;
 
   if (hh->reloc_entries)

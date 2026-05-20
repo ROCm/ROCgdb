@@ -2245,14 +2245,14 @@ riscv_parse_check_conflicts (riscv_parse_subset_t *rps)
       && riscv_lookup_subset (rps->subset_list, "f", &subset))
     {
       rps->error_handler
-	(_("`zfinx' is conflict with the `f/d/q/zfh/zfhmin' extension"));
+	(_("`zfinx' conflicts with the `f/d/q/zfh/zfhmin' extension"));
       no_conflict = false;
     }
   if (riscv_lookup_subset (rps->subset_list, "xtheadvector", &subset)
       && riscv_lookup_subset (rps->subset_list, "zve32x", &subset))
     {
       rps->error_handler
-	(_("`xtheadvector' is conflict with the `v/zve32x' extension"));
+	(_("`xtheadvector' conflicts with the `v/zve32x' extension"));
       no_conflict = false;
     }
   if (riscv_lookup_subset (rps->subset_list, "zclsd", &subset)
@@ -2261,7 +2261,7 @@ riscv_parse_check_conflicts (riscv_parse_subset_t *rps)
 	  || riscv_lookup_subset (rps->subset_list, "zcf", &subset)))
     {
       rps->error_handler
-	(_("`zclsd' is conflict with the `c+f'/ `zcf' extension"));
+	(_("`zclsd' conflicts with the `c+f'/`zcf' extension"));
       no_conflict = false;
     }
   if (riscv_lookup_subset (rps->subset_list, "ssnpm", &subset) && xlen != 64)
@@ -2589,7 +2589,7 @@ riscv_copy_subset_list (riscv_subset_list_t *subset_list)
 {
   riscv_subset_list_t *new = xmalloc (sizeof *new);
   new->head = riscv_copy_subset (new, subset_list->head);
-  new->arch_str = strdup (subset_list->arch_str);
+  new->arch_str = xstrdup (subset_list->arch_str);
   return new;
 }
 
@@ -2688,8 +2688,8 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
 	{
 	  *q = '\0';
 	  rps->error_handler
-	    (_("%sinvalid ISA extension ends with <number>p in %s `%s'"),
-	       errmsg_internal, errmsg_caller, implicit_exts);
+	    (_("%sinvalid ISA extension `%s' ends with <number>p in %s `%s'"),
+	       errmsg_internal, subset, errmsg_caller, implicit_exts);
 	  free (subset);
 	  return false;
 	}

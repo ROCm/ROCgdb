@@ -42,6 +42,8 @@ struct connection_object : public PyObject
   struct process_stratum_target *target;
 };
 
+static_assert (gdb::is_python_allocatable_v<connection_object>);
+
 extern PyTypeObject connection_object_type;
 
 extern PyTypeObject remote_connection_object_type;
@@ -74,7 +76,7 @@ gdbpy_ref<>
 target_to_connection_object (process_stratum_target *target)
 {
   if (target == nullptr)
-    return gdbpy_ref<>::new_reference (Py_None);
+    return py_none ();
 
   gdbpy_ref <connection_object> conn_obj;
   auto conn_obj_iter = all_connection_objects.find (target);
@@ -216,9 +218,9 @@ connpy_is_valid (PyObject *self, PyObject *args)
   connection_object *conn = (connection_object *) self;
 
   if (conn->target == nullptr)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Return the id number of this connection.  */
@@ -274,7 +276,7 @@ connpy_get_connection_details (PyObject *self, void *closure)
   if (details != nullptr)
     return host_string_to_python_string (details).release ();
   else
-    Py_RETURN_NONE;
+    return py_none ().release ();
 }
 
 /* Python specific initialization for this file.  */
@@ -321,8 +323,7 @@ struct py_send_packet_callbacks : public send_remote_packet_callbacks
     else
       {
 	/* We didn't get back any result data; set the result to None.  */
-	Py_INCREF (Py_None);
-	m_result.reset (Py_None);
+	m_result = py_none ();
       }
   }
 

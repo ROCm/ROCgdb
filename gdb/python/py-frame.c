@@ -44,6 +44,8 @@ struct frame_object : public PyObject
   int frame_id_is_next;
 };
 
+static_assert (gdb::is_python_allocatable_v<frame_object>);
+
 /* Require a valid frame.  This must be called inside a TRY_CATCH, or
    another context in which a gdb exception is allowed.  */
 #define FRAPY_REQUIRE_VALID(frame_obj, frame)		\
@@ -119,9 +121,9 @@ frapy_is_valid (PyObject *self, PyObject *args)
     }
 
   if (frame == NULL)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Implementation of gdb.Frame.name (self) -> String.
@@ -153,8 +155,7 @@ frapy_name (PyObject *self, PyObject *args)
     }
   else
     {
-      result = Py_None;
-      Py_INCREF (Py_None);
+      result = py_none ().release ();
     }
 
   return result;
@@ -354,7 +355,7 @@ frapy_function (PyObject *self, PyObject *args)
   if (sym)
     return symbol_to_symbol_object (sym).release ();
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Convert a frame_info struct to a Python Frame object.
@@ -420,7 +421,7 @@ frapy_older (PyObject *self, PyObject *args)
   if (prev)
     prev_obj = frame_info_to_frame_object (prev);
   else
-    prev_obj = gdbpy_ref<>::new_reference (Py_None);
+    prev_obj = py_none ();
 
   return prev_obj.release ();
 }
@@ -449,7 +450,7 @@ frapy_newer (PyObject *self, PyObject *args)
   if (next)
     next_obj = frame_info_to_frame_object (next);
   else
-    next_obj = gdbpy_ref<>::new_reference (Py_None);
+    next_obj = py_none ();
 
   return next_obj.release ();
 }
@@ -583,7 +584,7 @@ frapy_select (PyObject *self, PyObject *args)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* The stack frame level for this frame.  */
@@ -645,7 +646,7 @@ frapy_static_link (PyObject *self, PyObject *args)
     }
 
   if (link == nullptr)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return frame_info_to_frame_object (link).release ();
 }
@@ -724,10 +725,7 @@ frapy_richcompare (PyObject *self, PyObject *other, int op)
 
   if (!PyObject_TypeCheck (other, &frame_object_type)
       || (op != Py_EQ && op != Py_NE))
-    {
-      Py_INCREF (Py_NotImplemented);
-      return Py_NotImplemented;
-    }
+    return py_notimplemented ().release ();
 
   frame_object *self_frame = (frame_object *) self;
   frame_object *other_frame = (frame_object *) other;
@@ -739,8 +737,8 @@ frapy_richcompare (PyObject *self, PyObject *other, int op)
     result = Py_NE;
 
   if (op == result)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+    return py_true ().release ();
+  return py_false ().release ();
 }
 
 /* Sets up the Frame API in the gdb module.  */

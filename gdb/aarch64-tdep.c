@@ -5827,6 +5827,11 @@ aarch64_record_load_store (aarch64_insn_decode_record *aarch64_insn_r)
       else
 	if (size_bits != 0x03)
 	  ld_flag = 0x01;
+	else if (size_bits == 0x3 && vector_flag == 0x0 && opc == 0x2)
+	  {
+	    /* PRFM (register) or RPRFM */
+	    return AARCH64_RECORD_SUCCESS;
+	  }
 	else
 	  return AARCH64_RECORD_UNKNOWN;
 
@@ -5857,7 +5862,7 @@ aarch64_record_load_store (aarch64_insn_decode_record *aarch64_insn_r)
 	  aarch64_insn_r->reg_rec_count = 1;
 	}
     }
-  /* Load/store register (immediate and unprivileged) instructions.  */
+  /* Load/store register (immediate and unprivileged) instructions and PRFUM.  */
   else if ((insn_bits24_27 & 0x0b) == 0x08 && insn_bits28_29 == 0x03
 	   && !insn_bit21)
     {
@@ -5876,7 +5881,11 @@ aarch64_record_load_store (aarch64_insn_decode_record *aarch64_insn_r)
 	if (size_bits != 0x03)
 	  ld_flag = 0x01;
 	else
-	  return AARCH64_RECORD_UNKNOWN;
+	  if (insn_bits10_11 == 0)
+	    /* PRFUM instruction.  */
+	    return AARCH64_RECORD_SUCCESS;
+      else
+	return AARCH64_RECORD_UNKNOWN;
 
       if (!ld_flag)
 	{

@@ -60,7 +60,6 @@ static void set_output_radix_1 (int, unsigned);
 
 static void val_print_type_code_flags (struct type *type,
 				       struct value *original_value,
-				       int embedded_offset,
 				       struct ui_file *stream);
 
 /* Start print_max at this value.  */
@@ -278,11 +277,9 @@ show_symbol_print (struct ui_file *file, int from_tty,
 
 
 
-/* A helper function for val_print.  When printing in "summary" mode,
-   we want to print scalar arguments, but not aggregate arguments.
-   This function distinguishes between the two.  */
+/* See valprint.h.  */
 
-int
+bool
 val_print_scalar_type_p (struct type *type)
 {
   type = check_typedef (type);
@@ -298,9 +295,9 @@ val_print_scalar_type_p (struct type *type)
     case TYPE_CODE_UNION:
     case TYPE_CODE_SET:
     case TYPE_CODE_STRING:
-      return 0;
+      return false;
     default:
-      return 1;
+      return true;
     }
 }
 
@@ -318,10 +315,10 @@ val_print_scalar_or_string_type_p (struct type *type,
 
 /* See valprint.h.  */
 
-int
+bool
 valprint_check_validity (struct ui_file *stream,
 			 struct type *type,
-			 LONGEST embedded_offset,
+			 LONGEST field_byte_offset,
 			 const struct value *val)
 {
   type = check_typedef (type);
@@ -329,31 +326,31 @@ valprint_check_validity (struct ui_file *stream,
   if (type_not_associated (type))
     {
       val_print_not_associated (stream);
-      return 0;
+      return false;
     }
 
   if (type_not_allocated (type))
     {
       val_print_not_allocated (stream);
-      return 0;
+      return false;
     }
 
   if (type->code () != TYPE_CODE_UNION
       && type->code () != TYPE_CODE_STRUCT
       && type->code () != TYPE_CODE_ARRAY)
     {
-      if (val->bits_any_optimized_out (TARGET_CHAR_BIT * embedded_offset,
+      if (val->bits_any_optimized_out (TARGET_CHAR_BIT * field_byte_offset,
 				       TARGET_CHAR_BIT * type->length ()))
 	{
 	  val_print_optimized_out (val, stream);
-	  return 0;
+	  return false;
 	}
 
-      if (val->bits_synthetic_pointer (TARGET_CHAR_BIT * embedded_offset,
+      if (val->bits_synthetic_pointer (TARGET_CHAR_BIT * field_byte_offset,
 				       TARGET_CHAR_BIT * type->length ()))
 	{
-	  const int is_ref = type->code () == TYPE_CODE_REF;
-	  int ref_is_addressable = 0;
+	  const bool is_ref = type->code () == TYPE_CODE_REF;
+	  bool ref_is_addressable = false;
 
 	  if (is_ref)
 	    {
@@ -371,14 +368,14 @@ valprint_check_validity (struct ui_file *stream,
 	  return is_ref;
 	}
 
-      if (!val->bytes_available (embedded_offset, type->length ()))
+      if (!val->bytes_available (field_byte_offset, type->length ()))
 	{
 	  val_print_unavailable (stream);
-	  return 0;
+	  return false;
 	}
     }
 
-  return 1;
+  return true;
 }
 
 void
@@ -564,14 +561,13 @@ generic_value_print_ptr (struct value *val, struct ui_file *stream,
 
 static void
 print_ref_address (struct type *type, const gdb_byte *address_buffer,
-		  int embedded_offset, struct ui_file *stream)
+		   struct ui_file *stream)
 {
   struct gdbarch *gdbarch = type->arch ();
 
   if (address_buffer != NULL)
     {
-      CORE_ADDR address
-	= extract_typed_address (address_buffer + embedded_offset, type);
+      CORE_ADDR address = extract_typed_address (address_buffer, type);
 
       gdb_printf (stream, "@");
       fputs_styled (paspace_and_addr (gdbarch, address).c_str (),
@@ -601,32 +597,27 @@ get_value_addr_contents (struct value *deref_val)
 
 static void
 generic_val_print_ref (struct type *type,
-		       int embedded_offset, struct ui_file *stream, int recurse,
+		       struct ui_file *stream, int recurse,
 		       struct value *original_value,
 		       const struct value_print_options *options)
 {
   struct type *elttype = check_typedef (type->target_type ());
   struct value *deref_val = NULL;
   const bool value_is_synthetic
-    = original_value->bits_synthetic_pointer (TARGET_CHAR_BIT * embedded_offset,
-					      TARGET_CHAR_BIT * type->length ());
-  const int must_coerce_ref = ((options->addressprint && value_is_synthetic)
-			       || options->deref_ref);
-  const int type_is_defined = elttype->code () != TYPE_CODE_UNDEF;
+    = original_value->bits_synthetic_pointer (0, (TARGET_CHAR_BIT
+						  * type->length ()));
+  const bool must_coerce_ref = ((options->addressprint && value_is_synthetic)
+				|| options->deref_ref);
+  const bool type_is_defined = elttype->code () != TYPE_CODE_UNDEF;
   const gdb_byte *valaddr = original_value->contents_for_printing ().data ();
 
   if (must_coerce_ref && type_is_defined)
     {
       deref_val = coerce_ref_if_computed (original_value);
 
-      if (deref_val != NULL)
-	{
-	  /* More complicated computed references are not supported.  */
-	  gdb_assert (embedded_offset == 0);
-	}
-      else
+      if (deref_val == nullptr)
 	deref_val = value_at (type->target_type (),
-			      unpack_pointer (type, valaddr + embedded_offset));
+			      unpack_pointer (type, valaddr));
     }
   /* Else, original_value isn't a synthetic reference or we don't have to print
      the reference's contents.
@@ -646,7 +637,7 @@ generic_val_print_ref (struct type *type,
 				 ? get_value_addr_contents (deref_val)
 				 : valaddr);
 
-      print_ref_address (type, address, embedded_offset, stream);
+      print_ref_address (type, address, stream);
 
       if (options->deref_ref)
 	gdb_puts (": ", stream);
@@ -688,7 +679,7 @@ generic_val_print_enum_1 (struct type *type, LONGEST val,
     }
   else if (type->is_flag_enum ())
     {
-      int first = 1;
+      bool first = true;
 
       /* We have a "flag" enum, so we try to decompose it into pieces as
 	 appropriate.  The enum may have multiple enumerators representing
@@ -708,7 +699,7 @@ generic_val_print_enum_1 (struct type *type, LONGEST val,
 	      if (first)
 		{
 		  gdb_puts ("(", stream);
-		  first = 0;
+		  first = false;
 		}
 	      else
 		gdb_puts (" | ", stream);
@@ -750,20 +741,15 @@ generic_val_print_enum_1 (struct type *type, LONGEST val,
 /* generic_val_print helper for TYPE_CODE_ENUM.  */
 
 static void
-generic_val_print_enum (struct type *type,
-			int embedded_offset, struct ui_file *stream,
+generic_val_print_enum (struct type *type, struct ui_file *stream,
 			struct value *original_value,
 			const struct value_print_options *options)
 {
-  LONGEST val;
-  struct gdbarch *gdbarch = type->arch ();
-  int unit_size = gdbarch_addressable_memory_unit_size (gdbarch);
-
   gdb_assert (!options->format);
 
   const gdb_byte *valaddr = original_value->contents_for_printing ().data ();
 
-  val = unpack_long (type, valaddr + embedded_offset * unit_size);
+  LONGEST val = unpack_long (type, valaddr);
 
   generic_val_print_enum_1 (type, val, stream);
 }
@@ -771,8 +757,7 @@ generic_val_print_enum (struct type *type,
 /* generic_val_print helper for TYPE_CODE_FUNC and TYPE_CODE_METHOD.  */
 
 static void
-generic_val_print_func (struct type *type,
-			int embedded_offset, CORE_ADDR address,
+generic_val_print_func (struct type *type, CORE_ADDR address,
 			struct ui_file *stream,
 			struct value *original_value,
 			const struct value_print_options *options)
@@ -983,7 +968,7 @@ generic_value_print (struct value *val, struct ui_file *stream, int recurse,
 
     case TYPE_CODE_REF:
     case TYPE_CODE_RVALUE_REF:
-      generic_val_print_ref (type, 0, stream, recurse,
+      generic_val_print_ref (type, stream, recurse,
 			     val, options);
       break;
 
@@ -991,14 +976,14 @@ generic_value_print (struct value *val, struct ui_file *stream, int recurse,
       if (options->format)
 	value_print_scalar_formatted (val, options, 0, stream);
       else
-	generic_val_print_enum (type, 0, stream, val, options);
+	generic_val_print_enum (type, stream, val, options);
       break;
 
     case TYPE_CODE_FLAGS:
       if (options->format)
 	value_print_scalar_formatted (val, options, 0, stream);
       else
-	val_print_type_code_flags (type, val, 0, stream);
+	val_print_type_code_flags (type, val, stream);
       break;
 
     case TYPE_CODE_FUNC:
@@ -1006,7 +991,7 @@ generic_value_print (struct value *val, struct ui_file *stream, int recurse,
       if (options->format)
 	value_print_scalar_formatted (val, options, 0, stream);
       else
-	generic_val_print_func (type, 0, val->address (), stream,
+	generic_val_print_func (type, val->address (), stream,
 				val, options);
       break;
 
@@ -1158,11 +1143,11 @@ val_print_check_max_depth (struct ui_file *stream, int recurse,
   return false;
 }
 
-/* Check whether the value VAL is printable.  Return 1 if it is;
-   return 0 and print an appropriate error message to STREAM according to
-   OPTIONS if it is not.  */
+/* Check whether the value VAL is printable.  Return true if it is;
+   return false and print an appropriate error message to STREAM
+   according to OPTIONS if it is not.  */
 
-static int
+static bool
 value_check_printable (struct value *val, struct ui_file *stream,
 		       const struct value_print_options *options)
 {
@@ -1170,7 +1155,7 @@ value_check_printable (struct value *val, struct ui_file *stream,
     {
       fprintf_styled (stream, metadata_style.style (),
 		      _("<address of value unknown>"));
-      return 0;
+      return false;
     }
 
   if (val->entirely_optimized_out ())
@@ -1179,7 +1164,7 @@ value_check_printable (struct value *val, struct ui_file *stream,
 	gdb_printf (stream, "...");
       else
 	val_print_optimized_out (val, stream);
-      return 0;
+      return false;
     }
 
   if (val->entirely_unavailable ())
@@ -1188,7 +1173,7 @@ value_check_printable (struct value *val, struct ui_file *stream,
 	gdb_printf (stream, "...");
       else
 	val_print_unavailable (stream);
-      return 0;
+      return false;
     }
 
   if (val->type ()->code () == TYPE_CODE_INTERNAL_FUNCTION)
@@ -1196,16 +1181,16 @@ value_check_printable (struct value *val, struct ui_file *stream,
       fprintf_styled (stream, metadata_style.style (),
 		      _("<internal function %s>"),
 		      value_internal_function_name (val));
-      return 0;
+      return false;
     }
 
   if (type_not_allocated (val->type ()))
     {
       val_print_not_allocated (stream);
-      return 0;
+      return false;
     }
 
-  return 1;
+  return true;
 }
 
 /* See valprint.h.  */
@@ -1260,10 +1245,9 @@ debug_val (struct value *val)
 
 static void
 val_print_type_code_flags (struct type *type, struct value *original_value,
-			   int embedded_offset, struct ui_file *stream)
+			   struct ui_file *stream)
 {
-  const gdb_byte *valaddr = (original_value->contents_for_printing ().data ()
-			     + embedded_offset);
+  const gdb_byte *valaddr = (original_value->contents_for_printing ().data ());
   ULONGEST val = unpack_long (type, valaddr);
   int field, nfields = type->num_fields ();
   struct gdbarch *gdbarch = type->arch ();
@@ -2629,7 +2613,7 @@ test_print_flags (gdbarch *arch)
   store_unsigned_integer (contents, 4, gdbarch_byte_order (arch), 0xaa);
 
   string_file out;
-  val_print_type_code_flags (flags_type, val, 0, &out);
+  val_print_type_code_flags (flags_type, val, &out);
   SELF_CHECK (out.string () == "[ A=2 B=1 C=5 ]");
 }
 

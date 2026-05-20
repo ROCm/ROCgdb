@@ -2676,7 +2676,7 @@ elf_cris_adjust_dynamic_symbol (struct bfd_link_info *info,
 		      && !h->def_regular)));
 
   plt_entry_size
-    = (bfd_get_mach (dynobj) == bfd_mach_cris_v32
+    = (bfd_get_mach (info->output_bfd) == bfd_mach_cris_v32
        ? PLT_ENTRY_SIZE_V32 : PLT_ENTRY_SIZE);
 
   /* If this is a function, put it in the procedure linkage table.  We
@@ -3033,22 +3033,7 @@ cris_elf_check_relocs (bfd *abfd,
 	case R_CRIS_16_GOTPLT:
 	case R_CRIS_32_GOTPLT:
 	  if (dynobj == NULL)
-	    {
-	      elf_hash_table (info)->dynobj = dynobj = abfd;
-
-	      /* We could handle this if we can get a handle on the
-		 output bfd in elf_cris_adjust_dynamic_symbol.  Failing
-		 that, we must insist on dynobj being a specific mach.  */
-	      if (bfd_get_mach (dynobj) == bfd_mach_cris_v10_v32)
-		{
-		  _bfd_error_handler
-		    /* xgettext:c-format */
-		    (_("%pB, section %pA: v10/v32 compatible object"
-		       " must not contain a PIC relocation"),
-		     abfd, sec);
-		  return false;
-		}
-	    }
+	    elf_hash_table (info)->dynobj = dynobj = abfd;
 
 	  if (sgot == NULL)
 	    {

@@ -31,6 +31,8 @@ struct membuf_object : public PyObject
   CORE_ADDR length;
 };
 
+static_assert (gdb::is_python_allocatable_v<membuf_object>);
+
 extern PyTypeObject membuf_object_type;
 
 /* Wrap BUFFER, ADDRESS, and LENGTH into a gdb.Membuf object.  ADDRESS is

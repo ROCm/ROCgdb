@@ -406,5 +406,5 @@ gdbpy_notify_mi (PyObject *self, PyObject *args, PyObject *kwargs)
       gdb_flush (mi->event_channel);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }

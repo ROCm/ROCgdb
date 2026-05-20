@@ -2735,6 +2735,8 @@ make_head (void)
   if (!no_idata5)
     {
       fprintf (f, "\t.section\t.idata$5\n");
+      fprintf (f, "\t.p2align %d\n", secdata_plain[IDATA5].align);
+
       if (use_nul_prefixed_import_tables)
 	{
 	  if (create_for_pep)
@@ -2828,6 +2830,8 @@ make_delay_head (void)
   if (!no_idata5)
     {
       fprintf (f, "\t.section\t.didat$5\n");
+      fprintf (f, "\t.p2align %d\n", secdata_delay[IDATA5].align);
+
       if (use_nul_prefixed_import_tables)
 	{
 	  if (create_for_pep)
@@ -4013,6 +4017,14 @@ main (int ac, char **av)
   /* Check if we generated PE+.  */
   create_for_pep = (strcmp (mname, "i386:x86-64") == 0
 		    || strcmp (mname, "arm64") == 0);
+  if (create_for_pep)
+    {
+      /* Update default 4 byte IAT (Import Address Table) alignment to 8 bytes
+	 for PE32+.
+	 https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#import-address-table.  */
+      secdata_plain[IDATA5].align = 3;
+      secdata_delay[IDATA5].align = 3;
+    }
 
   /* Check the default underscore */
   if (leading_underscore == NULL)

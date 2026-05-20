@@ -33,6 +33,8 @@ struct block_object : public PyObject
   struct objfile *objfile;
 };
 
+static_assert (gdb::is_python_allocatable_v<block_object>);
+
 struct block_syms_iterator_object : public PyObject
 {
   /* The block.  */
@@ -46,6 +48,8 @@ struct block_syms_iterator_object : public PyObject
      when an object file has been freed.  */
   block_object *source;
 };
+
+static_assert (gdb::is_python_allocatable_v<block_syms_iterator_object>);
 
 /* Require a valid block.  All access to block_object->block should be
    gated by this call.  */
@@ -166,7 +170,7 @@ blpy_get_function (PyObject *self, void *closure)
   if (sym)
     return symbol_to_symbol_object (sym).release ();
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 static PyObject *
@@ -182,7 +186,7 @@ blpy_get_superblock (PyObject *self, void *closure)
   if (super_block)
     return block_to_block_object (super_block, self_obj->objfile).release ();
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Implement gdb.Block.subblocks attribute.  Return a list of gdb.Block
@@ -245,7 +249,7 @@ blpy_get_static_block (PyObject *self, void *closure)
   BLPY_REQUIRE_VALID (self, block);
 
   if (block->superblock () == NULL)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   static_block = block->static_block ();
 
@@ -263,9 +267,9 @@ blpy_is_global (PyObject *self, void *closure)
   BLPY_REQUIRE_VALID (self, block);
 
   if (block->superblock ())
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Implementation of gdb.Block.is_static (self) -> Boolean.
@@ -280,9 +284,9 @@ blpy_is_static (PyObject *self, void *closure)
 
   if (block->superblock () != NULL
      && block->superblock ()->superblock () == NULL)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
 
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Given a string, returns the gdb.Symbol representing that symbol in this
@@ -465,9 +469,9 @@ blpy_is_valid (PyObject *self, PyObject *args)
 
   block = block_object_to_block (self);
   if (block == NULL)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Implementation of gdb.BlockIterator.is_valid (self) -> Boolean.
@@ -480,9 +484,9 @@ blpy_iter_is_valid (PyObject *self, PyObject *args)
     (block_syms_iterator_object *) self;
 
   if (iter_obj->source->block == NULL)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* __repr__ implementation for gdb.Block.  */
@@ -550,10 +554,7 @@ blpy_richcompare (PyObject *self, PyObject *other, int op)
 {
   if (!PyObject_TypeCheck (other, &block_object_type)
       || (op != Py_EQ && op != Py_NE))
-    {
-      Py_INCREF (Py_NotImplemented);
-      return Py_NotImplemented;
-    }
+    return py_notimplemented ().release ();
 
   bool expected = self == other;
   bool equal = op == Py_EQ;

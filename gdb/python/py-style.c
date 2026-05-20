@@ -46,6 +46,8 @@ struct style_object : public PyObject
   char *style_name;
 };
 
+static_assert (gdb::is_python_allocatable_v<style_object>);
+
 extern PyTypeObject style_object_type;
 
 /* Initialize the 'style' module.  */

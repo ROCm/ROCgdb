@@ -538,8 +538,6 @@ arm_elf_create_output_section_statements (void)
 	fatal (_("%P: %s: not a relocatable file: %E\n"), in_implib_filename);
     }
 
-  bfd_elf32_arm_set_target_params (link_info.output_bfd, &link_info, &params);
-
   stub_file = lang_add_input_file ("linker stubs",
 				   lang_input_file_is_fake_enum,
 				   NULL);
@@ -552,13 +550,9 @@ arm_elf_create_output_section_statements (void)
       fatal (_("%P: can not create BFD: %E\n"));
       return;
     }
-
-  stub_file->the_bfd->flags |= BFD_LINKER_CREATED;
   ldlang_add_file (stub_file);
 
-  /* Also use the stub file for stubs placed in a single output section.  */
-  bfd_elf32_arm_add_glue_sections_to_bfd (stub_file->the_bfd, &link_info);
-  bfd_elf32_arm_get_bfd_for_interworking (stub_file->the_bfd, &link_info);
+  bfd_elf32_arm_set_target_params (&link_info, &params, stub_file->the_bfd);
 }
 
 EOF

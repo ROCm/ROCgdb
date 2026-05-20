@@ -32,6 +32,8 @@ struct symtab_object : public PyObject
   struct symtab *symtab;
 };
 
+static_assert (gdb::is_python_allocatable_v<symtab_object>);
+
 extern PyTypeObject symtab_object_type;
 static const gdbpy_registry<gdbpy_memoizing_registry_storage<symtab_object,
   symtab, &symtab_object::symtab>> stpy_registry;
@@ -60,6 +62,8 @@ struct sal_object : public PyObject
   sal_object *prev;
   sal_object *next;
 };
+
+static_assert (gdb::is_python_allocatable_v<sal_object>);
 
 /* This is called when an objfile is about to be freed.  Invalidate
    the sal object as further actions on the sal would result in bad
@@ -146,7 +150,7 @@ stpy_get_producer (PyObject *self, void *closure)
       return host_string_to_python_string (producer).release ();
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 static PyObject *
@@ -172,9 +176,9 @@ stpy_is_valid (PyObject *self, PyObject *args)
 
   symtab = symtab_object_to_symtab (self);
   if (symtab == NULL)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Return the GLOBAL_BLOCK of the underlying symtab.  */
@@ -247,7 +251,7 @@ stpy_source_lines (PyObject *self, PyObject *args, PyObject *kw)
 
   std::optional<int> last_lineno = last_symtab_line (symtab);
   if (!last_lineno.has_value ())
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
 
   if (first < 1)
@@ -294,7 +298,7 @@ stpy_source_lines (PyObject *self, PyObject *args, PyObject *kw)
 	  = make_scoped_restore (&source_styling, required_styling);
 
 	if (!g_source_cache.get_source_lines (symtab, first, last, &lines))
-	  Py_RETURN_NONE;
+	  return py_none ().release ();
       }
 
       gdbpy_ref<> list (PyList_New (0));
@@ -387,7 +391,7 @@ salpy_get_last (PyObject *self, void *closure)
   if (sal->end > 0)
     return gdb_py_object_from_ulongest (sal->end - 1).release ();
   else
-    Py_RETURN_NONE;
+    return py_none ().release ();
 }
 
 static PyObject *
@@ -408,7 +412,7 @@ salpy_get_symtab (PyObject *self, void *closure)
   SALPY_REQUIRE_VALID (self, sal);
 
   if (sal->symtab == nullptr)
-    Py_RETURN_NONE;
+    return py_none ().release ();
   else
     return symtab_to_symtab_object (sal->symtab).release ();
 }
@@ -423,9 +427,9 @@ salpy_is_valid (PyObject *self, PyObject *args)
 
   sal = sal_object_to_symtab_and_line (self);
   if (sal == NULL)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 static void

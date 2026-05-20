@@ -1620,6 +1620,7 @@ HFILES_NO_SRCDIR = \
 	python/py-stopevent.h \
 	python/python.h \
 	python/python-internal.h \
+	python/python-limited-api-missing.h \
 	python/py-uiout.h \
 	quick-symbol.h \
 	ravenscar-thread.h \

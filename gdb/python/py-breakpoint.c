@@ -46,6 +46,8 @@ struct gdbpy_breakpoint_location_object : public PyObject
   gdbpy_breakpoint_object *owner;
 };
 
+static_assert (gdb::is_python_allocatable_v<gdbpy_breakpoint_location_object>);
+
 /* Require that BREAKPOINT and LOCATION->OWNER are the same; throw a Python
    exception if they are not.  */
 #define BPLOCPY_REQUIRE_VALID(Breakpoint, Location)                         \
@@ -139,8 +141,8 @@ bppy_is_valid (PyObject *self, PyObject *args)
   gdbpy_breakpoint_object *self_bp = (gdbpy_breakpoint_object *) self;
 
   if (self_bp->bp)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+    return py_true ().release ();
+  return py_false ().release ();
 }
 
 /* Python function to test whether or not the breakpoint is enabled.  */
@@ -151,10 +153,10 @@ bppy_get_enabled (PyObject *self, void *closure)
 
   BPPY_REQUIRE_VALID (self_bp);
   if (! self_bp->bp)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
   if (self_bp->bp->enable_state == bp_enabled)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+    return py_true ().release ();
+  return py_false ().release ();
 }
 
 /* Python function to test whether or not the breakpoint is silent.  */
@@ -165,8 +167,8 @@ bppy_get_silent (PyObject *self, void *closure)
 
   BPPY_REQUIRE_VALID (self_bp);
   if (self_bp->bp->silent)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+    return py_true ().release ();
+  return py_false ().release ();
 }
 
 /* Python function to set the enabled state of a breakpoint.  */
@@ -444,7 +446,7 @@ bppy_delete_breakpoint (PyObject *self, PyObject *args)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 
@@ -532,7 +534,7 @@ bppy_get_location (PyObject *self, void *closure)
 
   if (obj->bp->type != bp_breakpoint
       && obj->bp->type != bp_hardware_breakpoint)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   const char *str = obj->bp->locspec->to_string ();
   if (str == nullptr)
@@ -550,7 +552,7 @@ bppy_get_expression (PyObject *self, void *closure)
   BPPY_REQUIRE_VALID (obj);
 
   if (!is_watchpoint (obj->bp))
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   watchpoint *wp = gdb::checked_static_cast<watchpoint *> (obj->bp);
 
@@ -572,7 +574,7 @@ bppy_get_condition (PyObject *self, void *closure)
 
   str = obj->bp->cond_string.get ();
   if (! str)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return host_string_to_python_string (str).release ();
 }
@@ -627,7 +629,7 @@ bppy_get_commands (PyObject *self, void *closure)
   BPPY_REQUIRE_VALID (self_bp);
 
   if (! self_bp->bp->commands)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   string_file stb;
 
@@ -703,9 +705,9 @@ bppy_get_visibility (PyObject *self, void *closure)
   BPPY_REQUIRE_VALID (self_bp);
 
   if (user_breakpoint_p (self_bp->bp))
-    Py_RETURN_TRUE;
+    return py_true ().release ();
 
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Python function to determine if the breakpoint is a temporary
@@ -720,9 +722,9 @@ bppy_get_temporary (PyObject *self, void *closure)
 
   if (self_bp->bp->disposition == disp_del
       || self_bp->bp->disposition == disp_del_at_next_stop)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
 
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Python function to determine if the breakpoint is a pending
@@ -736,11 +738,11 @@ bppy_get_pending (PyObject *self, void *closure)
   BPPY_REQUIRE_VALID (self_bp);
 
   if (is_watchpoint (self_bp->bp))
-    Py_RETURN_FALSE;
+    return py_false ().release ();
   if (pending_breakpoint_p (self_bp->bp))
-    Py_RETURN_TRUE;
+    return py_true ().release ();
 
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Python function to get the breakpoint's number.  */
@@ -763,7 +765,7 @@ bppy_get_thread (PyObject *self, void *closure)
   BPPY_REQUIRE_VALID (self_bp);
 
   if (self_bp->bp->thread == -1)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return gdb_py_object_from_longest (self_bp->bp->thread).release ();
 }
@@ -777,7 +779,7 @@ bppy_get_inferior (PyObject *self, void *closure)
   BPPY_REQUIRE_VALID (self_bp);
 
   if (self_bp->bp->inferior == -1)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return gdb_py_object_from_longest (self_bp->bp->inferior).release ();
 }
@@ -791,7 +793,7 @@ bppy_get_task (PyObject *self, void *closure)
   BPPY_REQUIRE_VALID (self_bp);
 
   if (self_bp->bp->task == -1)
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return gdb_py_object_from_longest (self_bp->bp->task).release ();
 }
@@ -1598,9 +1600,9 @@ bplocpy_get_enabled (PyObject *py_self, void *closure)
   BPLOCPY_REQUIRE_VALID (self->owner, self);
 
   if (self->bp_loc->enabled)
-    Py_RETURN_TRUE;
+    return py_true ().release ();
   else
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 }
 
 /* Python function to get address of breakpoint location.  */
@@ -1673,7 +1675,7 @@ bplocpy_get_source_location (PyObject *py_self, void *closure)
       return tup.release ();
     }
   else
-    Py_RETURN_NONE;
+    return py_none ().release ();
 }
 
 /* Python function to get the function name of where this location was set.  */
@@ -1687,7 +1689,7 @@ bplocpy_get_function (PyObject *py_self, void *closure)
   const auto fn_name = self->bp_loc->function_name.get ();
   if (fn_name != nullptr)
     return host_string_to_python_string (fn_name).release ();
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 static PyObject *
@@ -1726,7 +1728,7 @@ bplocpy_get_fullname (PyObject *py_self, void *closure)
 	= host_string_to_python_string (symtab->fullname ());
       return fullname.release ();
     }
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* De-allocation function to be called for the Python object.  */

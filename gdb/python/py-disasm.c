@@ -50,6 +50,8 @@ struct disasm_info_object : public PyObject
   struct disasm_info_object *next;
 };
 
+static_assert (gdb::is_python_allocatable_v<disasm_info_object>);
+
 extern PyTypeObject disasm_info_object_type;
 
 /* Implement gdb.disassembler.DisassembleAddressPart type.  An object of
@@ -69,6 +71,8 @@ struct disasm_addr_part_object : public PyObject
   struct gdbarch *gdbarch;
 };
 
+static_assert (gdb::is_python_allocatable_v<disasm_addr_part_object>);
+
 extern PyTypeObject disasm_addr_part_object_type;
 
 /* Implement gdb.disassembler.DisassembleTextPart type.  An object of
@@ -83,6 +87,8 @@ struct disasm_text_part_object : public PyObject
   /* The style to use when displaying this part.  */
   enum disassembler_style style;
 };
+
+static_assert (gdb::is_python_allocatable_v<disasm_text_part_object>);
 
 extern PyTypeObject disasm_text_part_object_type;
 
@@ -102,6 +108,8 @@ struct disasm_result_object : public PyObject
      Each part will be a DisassemblerPart sub-class.  */
   std::vector<gdbpy_ref<>> *parts;
 };
+
+static_assert (gdb::is_python_allocatable_v<disasm_result_object>);
 
 extern PyTypeObject disasm_result_object_type;
 
@@ -318,9 +326,9 @@ disasmpy_info_is_valid (PyObject *self, PyObject *args)
   disasm_info_object *disasm_obj = (disasm_info_object *) self;
 
   if (disasm_info_object_is_valid (disasm_obj))
-    Py_RETURN_TRUE;
+    return py_true ().release ();
 
-  Py_RETURN_FALSE;
+  return py_false ().release ();
 }
 
 /* Set the Python exception to be a gdb.MemoryError object, with ADDRESS
@@ -625,7 +633,7 @@ disasmpy_set_enabled (PyObject *self, PyObject *args, PyObject *kw)
     return nullptr;
 
   python_print_insn_enabled = newstate == Py_True;
-  Py_RETURN_NONE;
+  return py_none ().release ();
 }
 
 /* Implement DisassembleInfo.read_memory(LENGTH, OFFSET).  Read LENGTH

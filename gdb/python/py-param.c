@@ -141,6 +141,8 @@ struct parmpy_object : public PyObject
   const char **enumeration;
 };
 
+static_assert (gdb::is_python_allocatable_v<parmpy_object>);
+
 /* Wraps a setting around an existing parmpy_object.  This abstraction
    is used to manipulate the value in S->VALUE in a type safe manner using
    the setting interface.  */

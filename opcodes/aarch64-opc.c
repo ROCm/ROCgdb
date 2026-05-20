@@ -173,8 +173,6 @@ get_data_pattern (const aarch64_opnd_qualifier_seq_t qualifiers)
       if (qualifiers[0] == qualifiers[1]
 	  && vector_qualifier_p (qualifiers[2])
 	  && (aarch64_get_qualifier_esize (qualifiers[0])
-	      == aarch64_get_qualifier_esize (qualifiers[1]))
-	  && (aarch64_get_qualifier_esize (qualifiers[0])
 	      == aarch64_get_qualifier_esize (qualifiers[2])))
 	return DP_VECTOR_3SAME;
       /* e.g. v.8h, v.8b, v.8b.
@@ -190,16 +188,14 @@ get_data_pattern (const aarch64_opnd_qualifier_seq_t qualifiers)
 	  && vector_qualifier_p (qualifiers[2])
 	  && aarch64_get_qualifier_esize (qualifiers[0]) != 0
 	  && (aarch64_get_qualifier_esize (qualifiers[0])
-	      == aarch64_get_qualifier_esize (qualifiers[2]) << 1)
-	  && (aarch64_get_qualifier_esize (qualifiers[0])
-	      == aarch64_get_qualifier_esize (qualifiers[1])))
+	      == aarch64_get_qualifier_esize (qualifiers[2]) << 1))
 	return DP_VECTOR_WIDE;
     }
   else if (fp_qualifier_p (qualifiers[0]))
     {
       /* e.g. SADDLV <V><d>, <Vn>.<T>.  */
       if (vector_qualifier_p (qualifiers[1])
-	  && qualifiers[2] == AARCH64_OPND_QLF_NIL)
+	  && (qualifiers[2] == AARCH64_OPND_QLF_UNUSED))
 	return DP_VECTOR_ACROSS_LANES;
     }
 
@@ -717,90 +713,6 @@ aarch64_zero_register_p (const aarch64_opnd_info *operand)
 	  && operand->reg.regno == 31);
 }
 
-/* Return true if the operand *OPERAND that has the operand code
-   OPERAND->TYPE and been qualified by OPERAND->QUALIFIER can be also
-   qualified by the qualifier TARGET.  */
-
-static inline bool
-operand_also_qualified_p (const struct aarch64_opnd_info *operand,
-			  aarch64_opnd_qualifier_t target)
-{
-  switch (operand->qualifier)
-    {
-    case AARCH64_OPND_QLF_W:
-      if (target == AARCH64_OPND_QLF_WSP && aarch64_stack_pointer_p (operand))
-	return true;
-      break;
-    case AARCH64_OPND_QLF_X:
-      if (target == AARCH64_OPND_QLF_SP && aarch64_stack_pointer_p (operand))
-	return true;
-      break;
-    case AARCH64_OPND_QLF_WSP:
-      if (target == AARCH64_OPND_QLF_W
-	  && operand_maybe_stack_pointer (aarch64_operands + operand->type))
-	return true;
-      break;
-    case AARCH64_OPND_QLF_SP:
-      if (target == AARCH64_OPND_QLF_X
-	  && operand_maybe_stack_pointer (aarch64_operands + operand->type))
-	return true;
-      break;
-    default:
-      break;
-    }
-
-  return false;
-}
-
-/* Given qualifier sequence list QSEQ_LIST and the known qualifier KNOWN_QLF
-   for operand KNOWN_IDX, return the expected qualifier for operand IDX.
-
-   Return NIL if more than one expected qualifiers are found.  */
-
-aarch64_opnd_qualifier_t
-aarch64_get_expected_qualifier (const aarch64_opnd_qualifier_seq_t *qseq_list,
-				int idx,
-				const aarch64_opnd_qualifier_t known_qlf,
-				int known_idx)
-{
-  int i, saved_i;
-
-  /* Special case.
-
-     When the known qualifier is NIL, we have to assume that there is only
-     one qualifier sequence in the *QSEQ_LIST and return the corresponding
-     qualifier directly.  One scenario is that for instruction
-	PRFM <prfop>, [<Xn|SP>, #:lo12:<symbol>]
-     which has only one possible valid qualifier sequence
-	NIL, S_D
-     the caller may pass NIL in KNOWN_QLF to obtain S_D so that it can
-     determine the correct relocation type (i.e. LDST64_LO12) for PRFM.
-
-     Because the qualifier NIL has dual roles in the qualifier sequence:
-     it can mean no qualifier for the operand, or the qualifer sequence is
-     not in use (when all qualifiers in the sequence are NILs), we have to
-     handle this special case here.  */
-  if (((enum aarch64_opnd) known_qlf) == AARCH64_OPND_NIL)
-    {
-      assert (((enum aarch64_opnd) qseq_list[0][known_idx]) == AARCH64_OPND_NIL);
-      return qseq_list[0][idx];
-    }
-
-  for (i = 0, saved_i = -1; i < AARCH64_MAX_QLF_SEQ_NUM; ++i)
-    {
-      if (qseq_list[i][known_idx] == known_qlf)
-	{
-	  if (saved_i != -1)
-	    /* More than one sequences are found to have KNOWN_QLF at
-	       KNOWN_IDX.  */
-	    return AARCH64_OPND_QLF_NIL;
-	  saved_i = i;
-	}
-    }
-
-  return qseq_list[saved_i][idx];
-}
-
 enum operand_qualifier_kind
 {
   OQK_NIL,
@@ -825,7 +737,9 @@ struct operand_qualifier_data
 /* Indexed by the operand qualifier enumerators.  */
 static const struct operand_qualifier_data aarch64_opnd_qualifiers[] =
 {
+  {0, 0, 0, "UNUSED", OQK_NIL},
   {0, 0, 0, "NIL", OQK_NIL},
+  {0, 0, 0, "UNKNOWN", OQK_NIL},
 
   /* Operand variant qualifiers.
      First 3 fields:
@@ -833,8 +747,6 @@ static const struct operand_qualifier_data aarch64_opnd_qualifiers[] =
 
   {4, 1, 0x0, "w", OQK_OPD_VARIANT},
   {8, 1, 0x1, "x", OQK_OPD_VARIANT},
-  {4, 1, 0x0, "wsp", OQK_OPD_VARIANT},
-  {8, 1, 0x1, "sp", OQK_OPD_VARIANT},
 
   {1, 1, 0x0, "b", OQK_OPD_VARIANT},
   {2, 1, 0x1, "h", OQK_OPD_VARIANT},
@@ -883,6 +795,9 @@ static const struct operand_qualifier_data aarch64_opnd_qualifiers[] =
   {0, 0, 0, "msl", 0},
 
   {0, 0, 0, "retrieving", 0},
+
+  /* This shouldn't ever be used.  */
+  {0, 0, 0, "ERR", OQK_NIL},
 };
 
 static inline bool
@@ -1074,37 +989,15 @@ aarch64_find_best_match (const aarch64_inst *inst,
 #endif
 
       /* The first entry should be taken literally, even if it's an empty
-	 qualifier sequence.  (This matters for strict testing.)  In other
-	 positions an empty sequence acts as a terminator.  */
+	 qualifier sequence.  In other positions an empty sequence acts as a
+	 terminator.  */
       if (i > 0 && empty_qualifier_sequence_p (qualifiers))
 	break;
 
       for (j = 0; j < num_opnds && j <= stop_at; ++j, ++qualifiers)
-	{
-	  if (inst->operands[j].qualifier == AARCH64_OPND_QLF_NIL
-	      && !(inst->opcode->flags & F_STRICT))
-	    {
-	      /* Either the operand does not have qualifier, or the qualifier
-		 for the operand needs to be deduced from the qualifier
-		 sequence.
-		 In the latter case, any constraint checking related with
-		 the obtained qualifier should be done later in
-		 operand_general_constraint_met_p.  */
-	      continue;
-	    }
-	  else if (*qualifiers != inst->operands[j].qualifier)
-	    {
-	      /* Unless the target qualifier can also qualify the operand
-		 (which has already had a non-nil qualifier), non-equal
-		 qualifiers are generally un-matched.  */
-	      if (operand_also_qualified_p (inst->operands + j, *qualifiers))
-		continue;
-	      else
-		invalid += 1;
-	    }
-	  else
-	    continue;	/* Equal qualifiers are certainly matched.  */
-	}
+	if (inst->operands[j].qualifier != *qualifiers
+	     && inst->operands[j].qualifier != AARCH64_OPND_QLF_UNKNOWN)
+	  invalid += 1;
 
       if (min_invalid > invalid)
 	min_invalid = invalid;
@@ -1130,7 +1023,7 @@ aarch64_find_best_match (const aarch64_inst *inst,
       for (j = 0; j <= stop_at; ++j, ++qualifiers)
 	ret[j] = *qualifiers;
       for (; j < AARCH64_MAX_OPND_NUM; ++j)
-	ret[j] = AARCH64_OPND_QLF_NIL;
+	ret[j] = AARCH64_OPND_QLF_UNKNOWN;
 
       DEBUG_TRACE ("SUCCESS");
       return 1;
@@ -1870,20 +1763,6 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 		}
 	   }
 	}
-      switch (qualifier)
-	{
-	case AARCH64_OPND_QLF_WSP:
-	case AARCH64_OPND_QLF_SP:
-	  if (!aarch64_stack_pointer_p (opnd))
-	    {
-	      set_other_error (mismatch_detail, idx,
-		       _("stack pointer register expected"));
-	      return false;
-	    }
-	  break;
-	default:
-	  break;
-	}
       break;
 
     case AARCH64_OPND_CLASS_SVE_REG:
@@ -2346,18 +2225,6 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	      return false;
 	    }
 	  break;
-
-	case AARCH64_OPND_ADDR_SIMM9_2:
-	  /* Unscaled signed 9 bits immediate offset, which has to be negative
-	     or unaligned.  */
-	  size = aarch64_get_qualifier_esize (qualifier);
-	  if ((value_in_range_p (opnd->addr.offset.imm, 0, 255)
-	       && !value_aligned_p (opnd->addr.offset.imm, size))
-	      || value_in_range_p (opnd->addr.offset.imm, -256, -1))
-	    return true;
-	  set_other_error (mismatch_detail, idx,
-			   _("negative or unaligned offset expected"));
-	  return false;
 
 	case AARCH64_OPND_ADDR_SIMM10:
 	  /* Scaled signed 10 bits immediate offset.  */
@@ -3640,6 +3507,29 @@ aarch64_match_operands_constraint (aarch64_inst *inst,
 	}
     }
 
+  /* Check constraints involving multiple operands.  */
+  if (inst->opcode->flags & F_REQUIRES_SP)
+    {
+      bool sp_found = false;
+      for (i = 0; i < AARCH64_MAX_OPND_NUM; ++i)
+	{
+	  enum aarch64_opnd type = inst->opcode->operands[i];
+	  if (type == AARCH64_OPND_NIL)
+	    break;
+	  if (aarch64_stack_pointer_p (&(inst->operands[i])))
+	    {
+	      sp_found = true;
+	      break;
+	    }
+	}
+      if (!sp_found)
+	{
+	  set_other_error (mismatch_detail, -1,
+			   _("expected at least one stack pointer operand"));
+	  return false;
+	}
+    }
+
   DEBUG_TRACE ("PASS");
 
   return true;
@@ -4220,9 +4110,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SVE_Rn_SP:
     case AARCH64_OPND_Rm_SP:
       assert (opnd->qualifier == AARCH64_OPND_QLF_W
-	      || opnd->qualifier == AARCH64_OPND_QLF_WSP
-	      || opnd->qualifier == AARCH64_OPND_QLF_X
-	      || opnd->qualifier == AARCH64_OPND_QLF_SP);
+	      || opnd->qualifier == AARCH64_OPND_QLF_X);
       snprintf (buf, size, "%s",
 		style_reg (styler, get_int_reg_name (opnd->reg.regno,
 						     opnd->qualifier, 1)));
@@ -4323,7 +4211,6 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_Em:
     case AARCH64_OPND_Em16:
     case AARCH64_OPND_Em8:
-    case AARCH64_OPND_SM3_IMM2:
       snprintf (buf, size, "%s[%s]",
 		style_reg (styler, "v%d.%s", opnd->reglane.regno,
 			   aarch64_get_qualifier_name (opnd->qualifier)),
@@ -4952,7 +4839,6 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 
     case AARCH64_OPND_ADDR_SIMM7:
     case AARCH64_OPND_ADDR_SIMM9:
-    case AARCH64_OPND_ADDR_SIMM9_2:
     case AARCH64_OPND_ADDR_SIMM10:
     case AARCH64_OPND_ADDR_SIMM11:
     case AARCH64_OPND_ADDR_SIMM13:
@@ -6180,8 +6066,8 @@ verify_constraints (const struct aarch64_inst *inst,
 
 	  /* Now the only thing left is the qualifiers checks.  The register
 	     must have the same maximum element size.  */
-	  if (inst_dest.qualifier
-	      && blk_dest.qualifier
+	  if (inst_dest.qualifier != AARCH64_OPND_QLF_NIL
+	      && blk_dest.qualifier != AARCH64_OPND_QLF_NIL
 	      && current_elem_size
 		 != aarch64_get_qualifier_esize (blk_dest.qualifier))
 	    {

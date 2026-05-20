@@ -2569,7 +2569,9 @@ static bool
 check_synthetic_pointer (const value *value, LONGEST bit_offset,
 			 int bit_length)
 {
-  LONGEST total_bit_offset = bit_offset + HOST_CHAR_BIT * value->offset ();
+  LONGEST total_bit_offset
+    = bit_offset + TARGET_CHAR_BIT * (value->offset ()
+				      + value->embedded_offset ());
 
   if (value->bitsize ())
     total_bit_offset += value->bitpos ();
@@ -2594,8 +2596,9 @@ indirect_closure_value (value *value)
   if (type->code () != TYPE_CODE_PTR)
     return NULL;
 
-  LONGEST bit_length = HOST_CHAR_BIT * type->length ();
-  LONGEST bit_offset = HOST_CHAR_BIT * value->offset ();
+  LONGEST bit_length = TARGET_CHAR_BIT * type->length ();
+  LONGEST bit_offset
+    = TARGET_CHAR_BIT * (value->offset () + value->embedded_offset ());
 
   if (value->bitsize ())
     bit_offset += value->bitpos ();
@@ -2629,14 +2632,18 @@ coerce_closure_ref (const value *value)
 {
   struct type *type = check_typedef (value->type ());
 
-  if (value->bits_synthetic_pointer (value->embedded_offset (),
-				     TARGET_CHAR_BIT * type->length ()))
+  if (value->bits_synthetic_pointer (0, TARGET_CHAR_BIT * type->length ()))
     {
       computed_closure *closure
 	= (computed_closure *) value->computed_closure ();
       frame_info_ptr frame = get_selected_frame (_("No frame selected."));
 
-      return closure->get_location ()->indirect_implicit_ptr (frame, type);
+      return closure
+	->get_location ()
+	->indirect_implicit_ptr (frame, type, 0,
+				 TARGET_CHAR_BIT * (value->embedded_offset ()
+						    + value->offset ()));
+
     }
   else
     {

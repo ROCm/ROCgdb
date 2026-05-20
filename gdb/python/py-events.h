@@ -32,6 +32,8 @@ struct eventregistry_object : public PyObject
   PyObject *callbacks;
 };
 
+static_assert (gdb::is_python_allocatable_v<eventregistry_object>);
+
 /* Struct holding references to event registries both in python and c.
    This is meant to be a singleton.  */
 

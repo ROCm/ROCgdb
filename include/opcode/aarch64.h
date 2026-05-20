@@ -738,13 +738,6 @@ enum aarch64_opnd
   AARCH64_OPND_ADDR_REGOFF,	/* Address of register offset.  */
   AARCH64_OPND_ADDR_SIMM7,	/* Address of signed 7-bit immediate.  */
   AARCH64_OPND_ADDR_SIMM9,	/* Address of signed 9-bit immediate.  */
-  AARCH64_OPND_ADDR_SIMM9_2,	/* Same as the above, but the immediate is
-				   negative or unaligned and there is
-				   no writeback allowed.  This operand code
-				   is only used to support the programmer-
-				   friendly feature of using LDR/STR as the
-				   the mnemonic name for LDUR/STUR instructions
-				   wherever there is no ambiguity.  */
   AARCH64_OPND_ADDR_SIMM10,	/* Address of signed 10-bit immediate.  */
   AARCH64_OPND_ADDR_SIMM11,	/* Address with a signed 11-bit (multiple of
 				   16) immediate.  */
@@ -994,7 +987,6 @@ enum aarch64_opnd
   AARCH64_OPND_SME_ZT0_INDEX_MUL_VL,/* ZT0[<imm>], bits [13:12].  */
   AARCH64_OPND_SME_ZT0_LIST,	/* { zt0/ZT0 } (not encoded).  */
   AARCH64_OPND_TME_UIMM16,	/* TME unsigned 16-bit immediate.  */
-  AARCH64_OPND_SM3_IMM2,	/* SM3 encodes lane in bits [13, 14].  */
   AARCH64_OPND_MOPS_ADDR_Rd,	/* [Rd]!, in bits [0, 4].  */
   AARCH64_OPND_MOPS_ADDR_Rs,	/* [Rs]!, in bits [16, 20].  */
   AARCH64_OPND_MOPS_WB_Rn,	/* Rn!, in bits [5, 9].  */
@@ -1018,15 +1010,23 @@ enum aarch64_opnd
 
 enum aarch64_opnd_qualifier
 {
+  /* Indicating an unused entry in a list of qualifier sequences (assigned via
+     empty initialization of unused array elements), or some other unused
+     value.  */
+  AARCH64_OPND_QLF_UNUSED,
+
   /* Indicating no further qualification on an operand.  */
   AARCH64_OPND_QLF_NIL,
+
+  /* Indicating that the qualifier on an operand is not yet known.  This could
+     arise during either disassembly or assembly, when a qualifier is
+     determined by referring to another operand's qualifier.  */
+  AARCH64_OPND_QLF_UNKNOWN,
 
   /* Qualifying an operand which is a general purpose (integer) register;
      indicating the operand data size or a specific register.  */
   AARCH64_OPND_QLF_W,	/* Wn, WZR or WSP.  */
   AARCH64_OPND_QLF_X,	/* Xn, XZR or XSP.  */
-  AARCH64_OPND_QLF_WSP,	/* WSP.  */
-  AARCH64_OPND_QLF_SP,	/* SP.  */
 
   /* Qualifying an operand which is a floating-point register, a SIMD
      vector element or a SIMD vector element list; indicating operand data
@@ -1358,15 +1358,10 @@ typedef enum aarch64_opnd_qualifier aarch64_opnd_qualifier_t;
 typedef aarch64_opnd_qualifier_t	\
 	  aarch64_opnd_qualifier_seq_t [AARCH64_MAX_OPND_NUM];
 
-/* FIXME: improve the efficiency.  */
 static inline bool
 empty_qualifier_sequence_p (const aarch64_opnd_qualifier_t *qualifiers)
 {
-  int i;
-  for (i = 0; i < AARCH64_MAX_OPND_NUM; ++i)
-    if (qualifiers[i] != AARCH64_OPND_QLF_NIL)
-      return false;
-  return true;
+  return qualifiers[0] == AARCH64_OPND_QLF_UNUSED;
 }
 
 /*  Forward declare error reporting type.  */
@@ -1485,8 +1480,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
 /* Instruction has the field of 'sz'.  */
 #define F_LSE_SZ (1 << 27)
 /* Require an exact qualifier match, even for NIL qualifiers.  */
-#define F_STRICT (1ULL << 28)
-/* This system instruction is used to read system registers.  */
+
 #define F_SYS_READ (1ULL << 29)
 /* This system instruction is used to write system registers.  */
 #define F_SYS_WRITE (1ULL << 30)
@@ -1497,7 +1491,10 @@ extern const aarch64_opcode aarch64_opcode_table[];
    to be optional, then we also implicitly specify (N+1)th operand to also be
    optional.  */
 #define F_OPD_PAIR_OPT (1ULL << 32)
-
+/* This instruction requires one of its operands to be a stack pointer.  This
+   is used for alias instructions that would otherwise overlap a different
+   instruction.  */
+#define F_REQUIRES_SP (1ULL << 44)
 /* For the instruction with size[22:23] field.  */
 #define F_OPD_SIZE (1ULL << 34)
 /* RCPC3 instruction has the field of 'size'.  */
@@ -1545,7 +1542,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
 /* As above, plus PN registers.  */
 #define F_INVALID_IMM_SYMS_3 (3ULL << 42)
 
-/* Next bit is 44, and 33 is also unused.  */
+/* Next bit is 44, and 28 is also unused.  */
 
 /* Instruction constraints.  */
 /* This instruction has a predication constraint on the instruction at PC+4.  */
@@ -2103,10 +2100,6 @@ aarch64_print_operand (char *, size_t, bfd_vma, const aarch64_opcode *,
 
 extern int
 aarch64_operand_index (const enum aarch64_opnd *, enum aarch64_opnd);
-
-extern aarch64_opnd_qualifier_t
-aarch64_get_expected_qualifier (const aarch64_opnd_qualifier_seq_t *, int,
-				const aarch64_opnd_qualifier_t, int);
 
 extern bool
 aarch64_is_destructive_by_operands (const aarch64_opcode *);

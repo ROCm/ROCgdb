@@ -57,6 +57,9 @@
    double quotes.  On case-insensitive filesystems, this prevents us
    from including our python/python.h header file.  */
 #include <Python.h>
+#ifdef Py_LIMITED_API
+#include "python-limited-api-missing.h"
+#endif
 #include <frameobject.h>
 #include "py-ref.h"
 #include "py-obj-type.h"
@@ -363,6 +366,8 @@ struct gdbpy_breakpoint_object : public PyObject
   /* 1 is this is a FinishBreakpoint object, 0 otherwise.  */
   int is_finish_bp;
 };
+
+static_assert (gdb::is_python_allocatable_v<gdbpy_breakpoint_object>);
 
 /* Require that BREAKPOINT be a valid breakpoint ID; throw a Python
    exception if it is invalid.  */
@@ -1339,5 +1344,44 @@ protected:
 
 extern int eval_python_command (const char *command, int start_symbol,
 				const char *filename = nullptr);
+
+/* The following four functions are refcount-safe wrappers around
+   Py_RETURN_{NONE,TRUE,FALSE,NOTIMPLEMENTED}.  */
+
+static inline gdbpy_ref<>
+py_none ()
+{
+  auto f = [] { Py_RETURN_NONE; };
+  return gdbpy_ref<> (f ());
+}
+
+static inline gdbpy_ref<>
+py_true ()
+{
+  auto f = [] { Py_RETURN_TRUE; };
+  return gdbpy_ref<> (f ());
+}
+
+static inline gdbpy_ref<>
+py_false ()
+{
+  auto f = [] { Py_RETURN_FALSE; };
+  return gdbpy_ref<> (f ());
+}
+
+static inline gdbpy_ref<>
+py_notimplemented ()
+{
+  auto f = [] { Py_RETURN_NOTIMPLEMENTED; };
+  return gdbpy_ref<> (f ());
+}
+
+/* Undefine these to enforce using the refcount-safe wrappers py_none, py_true,
+   py_false and py_notimplemented.  */
+
+#undef Py_RETURN_NONE
+#undef Py_RETURN_TRUE
+#undef Py_RETURN_FALSE
+#undef Py_RETURN_NOTIMPLEMENTED
 
 #endif /* GDB_PYTHON_PYTHON_INTERNAL_H */

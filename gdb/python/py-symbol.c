@@ -31,6 +31,8 @@ struct symbol_object : public PyObject
   struct symbol *symbol;
 };
 
+static_assert (gdb::is_python_allocatable_v<symbol_object>);
+
 /* Require a valid symbol.  All access to symbol_object->symbol should be
    gated by this call.  */
 #define SYMPY_REQUIRE_VALID(symbol_obj, symbol)		\
@@ -68,10 +70,7 @@ sympy_get_type (PyObject *self, void *closure)
   SYMPY_REQUIRE_VALID (self, symbol);
 
   if (symbol->type () == NULL)
-    {
-      Py_INCREF (Py_None);
-      return Py_None;
-    }
+    return py_none ().release ();
 
   return type_to_type_object (symbol->type ()).release ();
 }
@@ -84,7 +83,7 @@ sympy_get_symtab (PyObject *self, void *closure)
   SYMPY_REQUIRE_VALID (self, symbol);
 
   if (!symbol->is_objfile_owned ())
-    Py_RETURN_NONE;
+    return py_none ().release ();
 
   return symtab_to_symtab_object (symbol->symtab ()).release ();
 }
@@ -224,8 +223,8 @@ sympy_needs_frame (PyObject *self, void *closure)
     }
 
   if (result)
-    Py_RETURN_TRUE;
-  Py_RETURN_FALSE;
+    return py_true ().release ();
+  return py_false ().release ();
 }
 
 /* Implementation of gdb.Symbol.line -> int.
@@ -251,9 +250,9 @@ sympy_is_valid (PyObject *self, PyObject *args)
 
   symbol = symbol_object_to_symbol (self);
   if (symbol == NULL)
-    Py_RETURN_FALSE;
+    return py_false ().release ();
 
-  Py_RETURN_TRUE;
+  return py_true ().release ();
 }
 
 /* Implementation of gdb.Symbol.value (self[, frame]) -> gdb.Value.  Returns
@@ -450,7 +449,7 @@ gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
 	return nullptr;
     }
   else
-    sym_obj = gdbpy_ref<>::new_reference (Py_None);
+    sym_obj = py_none ();
 
   if (PyTuple_SetItem (ret_tuple.get (), 0, sym_obj.release ()) < 0)
     return nullptr;
@@ -495,7 +494,7 @@ gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
 	return nullptr;
     }
   else
-    sym_obj = gdbpy_ref<>::new_reference (Py_None);
+    sym_obj = py_none ();
 
   return sym_obj.release ();
 }
@@ -560,7 +559,7 @@ gdbpy_lookup_static_symbol (PyObject *self, PyObject *args, PyObject *kw)
 	return nullptr;
     }
   else
-    sym_obj = gdbpy_ref<>::new_reference (Py_None);
+    sym_obj = py_none ();
 
   return sym_obj.release ();
 }

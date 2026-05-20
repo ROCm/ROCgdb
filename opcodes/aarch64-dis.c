@@ -270,21 +270,21 @@ get_sreg_qualifier_from_value (aarch64_insn value)
 /* Given the instruction in *INST which is probably half way through the
    decoding and our caller wants to know the expected qualifier for operand
    I.  Return such a qualifier if we can establish it; otherwise return
-   AARCH64_OPND_QLF_NIL.  */
+   AARCH64_OPND_QLF_UNKNOWN.  */
 
 static aarch64_opnd_qualifier_t
 get_expected_qualifier (const aarch64_inst *inst, int i)
 {
   aarch64_opnd_qualifier_seq_t qualifiers;
   /* Should not be called if the qualifier is known.  */
-  if (inst->operands[i].qualifier == AARCH64_OPND_QLF_NIL)
+  if (inst->operands[i].qualifier == AARCH64_OPND_QLF_UNKNOWN)
     {
       int invalid_count;
       if (aarch64_find_best_match (inst, inst->opcode->qualifiers_list,
 				   i, qualifiers, &invalid_count))
 	return qualifiers[i];
       else
-	return AARCH64_OPND_QLF_NIL;
+	return AARCH64_OPND_QLF_UNKNOWN;
     }
   else
     return AARCH64_OPND_QLF_ERR;
@@ -1062,15 +1062,13 @@ aarch64_ext_ft (const aarch64_operand *self ATTRIBUTE_UNUSED,
       || inst->opcode->iclass == ldstpair_off
       || inst->opcode->iclass == loadlit)
     {
-      enum aarch64_opnd_qualifier qualifier;
       switch (value)
 	{
-	case 0: qualifier = AARCH64_OPND_QLF_S_S; break;
-	case 1: qualifier = AARCH64_OPND_QLF_S_D; break;
-	case 2: qualifier = AARCH64_OPND_QLF_S_Q; break;
+	case 0: info->qualifier = AARCH64_OPND_QLF_S_S; break;
+	case 1: info->qualifier = AARCH64_OPND_QLF_S_D; break;
+	case 2: info->qualifier = AARCH64_OPND_QLF_S_Q; break;
 	default: return false;
 	}
-      info->qualifier = qualifier;
     }
   else
     {
@@ -1117,8 +1115,7 @@ aarch64_ext_rcpc3_addr_opt_offset (const aarch64_operand *self ATTRIBUTE_UNUSED,
       enum aarch64_opnd type;
       for (int i = 0; i < AARCH64_MAX_OPND_NUM; i++)
 	{
-	  aarch64_opnd_info opnd = info[i];
-	  type = opnd.type;
+	  type = info[i].type;
 	  if (aarch64_operands[type].op_class == AARCH64_OPND_CLASS_ADDRESS)
 	    break;
 	}
@@ -1570,7 +1567,7 @@ aarch64_ext_reg_extended (const aarch64_operand *self ATTRIBUTE_UNUSED,
   info->shifter.operator_present = 1;
 
   /* Assume inst->operands[0].qualifier has been resolved.  */
-  assert (inst->operands[0].qualifier != AARCH64_OPND_QLF_NIL);
+  assert (inst->operands[0].qualifier != AARCH64_OPND_QLF_UNKNOWN);
   info->qualifier = AARCH64_OPND_QLF_W;
   if (inst->operands[0].qualifier == AARCH64_OPND_QLF_X
       && (info->shifter.kind == AARCH64_MOD_UXTX
@@ -2515,11 +2512,11 @@ aarch64_ext_plain_shrimm (const aarch64_operand *self, aarch64_opnd_info *info,
    constrained field(s).  Given the VALUE of such a field or fields, the
    qualifiers CANDIDATES and the MASK (indicating which bits are valid for
    operand encoding), the function returns the matching qualifier or
-   AARCH64_OPND_QLF_NIL if nothing matches.
+   AARCH64_OPND_QLF_ERR if nothing matches.
 
    N.B. CANDIDATES is a group of possible qualifiers that are valid for
    one operand; it has a maximum of AARCH64_MAX_QLF_SEQ_NUM qualifiers and
-   may end with AARCH64_OPND_QLF_NIL.  */
+   may end with AARCH64_OPND_QLF_UNUSED.  */
 
 static enum aarch64_opnd_qualifier
 get_qualifier_from_partial_encoding (aarch64_insn value,
@@ -2532,13 +2529,13 @@ get_qualifier_from_partial_encoding (aarch64_insn value,
   for (i = 0; i < AARCH64_MAX_QLF_SEQ_NUM; ++i)
     {
       aarch64_insn standard_value;
-      if (candidates[i] == AARCH64_OPND_QLF_NIL)
+      if (candidates[i] == AARCH64_OPND_QLF_UNUSED)
 	break;
       standard_value = aarch64_get_qualifier_standard_value (candidates[i]);
       if ((standard_value & mask) == (value & mask))
 	return candidates[i];
     }
-  return AARCH64_OPND_QLF_NIL;
+  return AARCH64_OPND_QLF_ERR;
 }
 
 /* Given a list of qualifier sequences, return all possible valid qualifiers
@@ -2552,7 +2549,7 @@ get_operand_possible_qualifiers (int idx,
 {
   int i;
   for (i = 0; i < AARCH64_MAX_QLF_SEQ_NUM; ++i)
-    if ((qualifiers[i] = list[i][idx]) == AARCH64_OPND_QLF_NIL)
+    if ((qualifiers[i] = list[i][idx]) == AARCH64_OPND_QLF_UNUSED)
       break;
 }
 
@@ -2565,7 +2562,6 @@ static int
 decode_sizeq (aarch64_inst *inst)
 {
   int idx;
-  enum aarch64_opnd_qualifier qualifier;
   aarch64_insn code;
   aarch64_insn value, mask;
   enum aarch64_field_kind fld_sz;
@@ -2608,7 +2604,7 @@ decode_sizeq (aarch64_inst *inst)
   if (debug_dump)
     {
       int i;
-      for (i = 0; candidates[i] != AARCH64_OPND_QLF_NIL
+      for (i = 0; candidates[i] != AARCH64_OPND_QLF_UNUSED
 	   && i < AARCH64_MAX_QLF_SEQ_NUM; ++i)
 	DEBUG_TRACE ("qualifier %d: %s", i,
 		     aarch64_get_qualifier_name(candidates[i]));
@@ -2616,9 +2612,10 @@ decode_sizeq (aarch64_inst *inst)
     }
 #endif /* DEBUG_AARCH64 */
 
-  qualifier = get_qualifier_from_partial_encoding (value, candidates, mask);
+  enum aarch64_opnd_qualifier qualifier
+    = get_qualifier_from_partial_encoding (value, candidates, mask);
 
-  if (qualifier == AARCH64_OPND_QLF_NIL)
+  if (qualifier == AARCH64_OPND_QLF_ERR)
     return 0;
 
   inst->operands[idx].qualifier = qualifier;
@@ -2762,7 +2759,7 @@ do_misc_decoding (aarch64_inst *inst)
    with flags.  In this function, we detect such flags, decode the related
    field(s) and store the information in one of the related operands.  The
    'one' operand is not any operand but one of the operands that can
-   accommadate all the information that has been decoded.  */
+   accommodate all the information that has been decoded.  */
 
 static int
 do_special_decoding (aarch64_inst *inst)
@@ -3743,13 +3740,14 @@ aarch64_opcode_decode (const aarch64_opcode *opcode, const aarch64_insn code,
   inst->opcode = opcode;
   inst->value = code;
 
-  /* Assign operand codes and indexes.  */
+  /* Assign operand codes and indexes, and set qualifiers to UNKNOWN.  */
   for (i = 0; i < AARCH64_MAX_OPND_NUM; ++i)
     {
       if (opcode->operands[i] == AARCH64_OPND_NIL)
 	break;
       inst->operands[i].type = opcode->operands[i];
       inst->operands[i].idx = i;
+      inst->operands[i].qualifier = AARCH64_OPND_QLF_UNKNOWN;
     }
 
   /* Call the opcode decoder indicated by flags.  */

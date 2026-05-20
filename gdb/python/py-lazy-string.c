@@ -51,6 +51,8 @@ struct lazy_string_object : public PyObject
   PyObject *type;
 };
 
+static_assert (gdb::is_python_allocatable_v<lazy_string_object>);
+
 extern PyTypeObject lazy_string_object_type;
 
 static PyObject *
@@ -72,10 +74,7 @@ stpy_get_encoding (PyObject *self, void *closure)
   if (self_string->encoding)
     result = PyUnicode_FromString (self_string->encoding);
   else
-    {
-      result = Py_None;
-      Py_INCREF (result);
-    }
+    result = py_none ().release ();
 
   return result;
 }
