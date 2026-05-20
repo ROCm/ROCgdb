@@ -100,6 +100,12 @@ const struct demangler_engine libiberty_demanglers[] =
   }
   ,
   {
+    MSVC_DEMANGLING_STYLE_STRING,
+    msvc_demangling,
+    "MSVC (Microsoft Visual C++ ABI) style demangling"
+  }
+  ,
+  {
     NULL, unknown_demangling, NULL
   }
 };
@@ -110,7 +116,7 @@ const struct demangler_engine libiberty_demanglers[] =
 enum demangling_styles
 cplus_demangle_set_style (enum demangling_styles style)
 {
-  const struct demangler_engine *demangler = libiberty_demanglers; 
+  const struct demangler_engine *demangler = libiberty_demanglers;
 
   for (; demangler->demangling_style != unknown_demangling; ++demangler)
     if (style == demangler->demangling_style)
@@ -122,12 +128,25 @@ cplus_demangle_set_style (enum demangling_styles style)
   return unknown_demangling;
 }
 
+/* Optional MSVC demangler, registered by tools that link an MSVC
+   demangling implementation (e.g. libdemangle-msvc).  When NULL,
+   cplus_demangle has no MSVC support and will return NULL for MSVC
+   mangled names.  */
+
+static char *(*msvc_demangler_fn) (const char *, int) = NULL;
+
+void
+cplus_demangle_set_msvc_handler (char *(*fn) (const char *, int))
+{
+  msvc_demangler_fn = fn;
+}
+
 /* Do string name to style translation */
 
 enum demangling_styles
 cplus_demangle_name_to_style (const char *name)
 {
-  const struct demangler_engine *demangler = libiberty_demanglers; 
+  const struct demangler_engine *demangler = libiberty_demanglers;
 
   for (; demangler->demangling_style != unknown_demangling; ++demangler)
     if (strcmp (name, demangler->demangling_style_name) == 0)
@@ -158,6 +177,17 @@ cplus_demangle (const char *mangled, int options)
 
   if ((options & DMGL_STYLE_MASK) == 0)
     options |= (int) current_demangling_style & DMGL_STYLE_MASK;
+
+  /* MSVC demangler handler itself is supplied externally,
+     registered via cplus_demangle_set_msvc_handler.  */
+  if ((MSVC_DEMANGLING || AUTO_DEMANGLING)
+      && msvc_demangler_fn != NULL
+      && mangled != NULL && mangled[0] == '?')
+    {
+      ret = (*msvc_demangler_fn) (mangled, options);
+      if (ret || MSVC_DEMANGLING)
+	return ret;
+    }
 
   /* The Rust demangling is implemented elsewhere.
      Legacy Rust symbols overlap with GNU_V3, so try Rust first.  */
