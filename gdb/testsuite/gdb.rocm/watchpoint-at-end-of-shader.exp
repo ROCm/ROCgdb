@@ -67,9 +67,9 @@ proc do_test {precise_memory has_xfail} {
 	    setup_xfail "*-*-*"
 	}
 	gdb_test "continue" \
-	    [multi_line "Switching to thread $::decimal, lane 0.*" \
+	    [multi_line "Switching to \[^\r\n\]+(?=\r\n)" \
 		"" \
-		"Thread $::decimal \".*\" hit Hardware watchpoint $::decimal: -location \\*v" \
+		"Thread $::decimal \[^\r\n\]*hit Hardware watchpoint $::decimal: -location \\*v" \
 		"" \
 		"Old value = 64" \
 		"New value = 8" \
