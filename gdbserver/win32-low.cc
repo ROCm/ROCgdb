@@ -448,15 +448,38 @@ static BOOL
 create_process (const char *program, char *args,
 		DWORD flags, PROCESS_INFORMATION *pi)
 {
-  const std::string &inferior_cwd = get_inferior_cwd ();
   BOOL ret;
   size_t argslen, proglen;
+#ifdef __CYGWIN__
+  char infcwd_buf[PATH_MAX];
+#endif
 
   proglen = strlen (program) + 1;
   argslen = strlen (args) + proglen;
 
   STARTUPINFOA si = { sizeof (STARTUPINFOA) };
   char *program_and_args = (char *) alloca (argslen + 1);
+
+  const char *inferior_cwd = get_inferior_cwd ().c_str ();
+  std::string expanded_infcwd;
+  if (*inferior_cwd == '\0')
+    inferior_cwd = nullptr;
+  else
+    {
+      expanded_infcwd = gdb_tilde_expand (inferior_cwd);
+      inferior_cwd = expanded_infcwd.c_str ();
+#ifndef __CYGWIN__
+      /* Mirror slashes on inferior's cwd.  */
+      std::replace (expanded_infcwd.begin (), expanded_infcwd.end (),
+		    '/', '\\');
+#else
+      if (cygwin_conv_path (CCP_POSIX_TO_WIN_A,
+			    inferior_cwd,
+			    infcwd_buf, sizeof (infcwd_buf)) < 0)
+	error (_("Error converting inferior cwd: %d"), errno);
+      inferior_cwd = infcwd_buf;
+#endif
+    }
 
   strcpy (program_and_args, program);
   strcat (program_and_args, " ");
@@ -465,10 +488,7 @@ create_process (const char *program, char *args,
 			program_and_args,  /* command line */
 			flags,             /* start flags */
 			NULL,              /* environment */
-			/* current directory */
-			(inferior_cwd.empty ()
-			 ? NULL
-			 : gdb_tilde_expand (inferior_cwd).c_str()),
+			inferior_cwd,      /* current directory */
 			get_client_state ().disable_randomization,
 			&si,               /* start info */
 			pi);               /* proc info */
