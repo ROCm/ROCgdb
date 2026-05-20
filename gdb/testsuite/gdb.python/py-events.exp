@@ -203,19 +203,7 @@ gdb_test_multiple "continue" $test {
 
 gdb_test_no_output "delete $second_breakpoint"
 
-#test exited event.
-proc get_process_id {test} {
-    global gdb_prompt
-    gdb_test_multiple "info proc" $test {
-	-re "process (\\d+).*$gdb_prompt $" {
-	    set process_id $expect_out(1,string)
-	    pass $gdb_test_name
-	}
-    }
-    return ${process_id}
-}
-
-set process_id [get_process_id "get inferior process id"]
+set process_id [get_inferior_pid]
 gdb_test "continue" ".*event type: continue.*
 .*event type: exit.*
 .*exit code: 12.*
