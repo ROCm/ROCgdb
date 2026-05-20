@@ -1036,7 +1036,7 @@ create_foreign_type_units_from_debug_names (dwarf2_per_bfd *per_bfd,
 
       map.foreign_type_units.emplace_back (sig_type.get ());
       per_bfd->signatured_types.emplace (sig_type.get ());
-      per_bfd->all_units.emplace_back (std::move (sig_type));
+      per_bfd->add_unit (std::move (sig_type));
     }
 }
 

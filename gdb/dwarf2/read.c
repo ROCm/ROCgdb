@@ -2247,7 +2247,7 @@ add_type_unit (dwarf2_per_bfd *per_bfd, dwarf2_section_info *section,
 					 false /* is_dwz */, sig);
 
   auto emplace_ret = per_bfd->signatured_types.emplace (sig_type.get ());
-  per_bfd->all_units.emplace_back (std::move (sig_type));
+  per_bfd->add_unit (std::move (sig_type));
 
   /* Assert that an insertion took place - that there wasn't a type unit with
      that signature already.  */
@@ -3390,7 +3390,7 @@ read_comp_units_from_section (dwarf2_per_objfile *per_objfile,
 	}
 
       info_ptr = info_ptr + this_cu->length ();
-      per_bfd->all_units.push_back (std::move (this_cu));
+      per_bfd->add_unit (std::move (this_cu));
     }
 }
 
@@ -3405,6 +3405,7 @@ dwarf2_per_bfd::sort_all_units ()
 		 return all_units_less_than (*a, { b->section (),
 						   b->sect_off () });
 	       });
+  this->all_units_sorted = true;
 }
 
 /* See read.h.  */
@@ -17909,6 +17910,27 @@ dwarf2_symbol_mark_computed (const struct attribute *attr, struct symbol *sym,
 /* See read.h.  */
 
 void
+dwarf2_per_cu::set_section (dwarf2_section_info *section)
+{
+  gdb_assert (section != nullptr);
+  gdb_assert (m_section == nullptr);
+  m_section = section;
+  m_per_bfd->all_units_sorted = false;
+}
+
+/* See read.h.  */
+
+void
+dwarf2_per_cu::set_sect_off (sect_offset sect_off)
+{
+  gdb_assert (m_sect_off == invalid_sect_offset);
+  m_sect_off = sect_off;
+  m_per_bfd->all_units_sorted = false;
+}
+
+/* See read.h.  */
+
+void
 dwarf2_per_cu::set_lang (enum language lang, dwarf_source_language dw_lang)
 {
   packed<language, LANGUAGE_BYTES> expected1 = language_unknown;
@@ -18067,6 +18089,8 @@ dwarf2_find_containing_unit (const section_and_offset &target,
 dwarf2_per_cu *
 dwarf2_find_unit (const section_and_offset &start, dwarf2_per_bfd *per_bfd)
 {
+  gdb_assert (per_bfd->all_units_sorted);
+
   auto it = std::lower_bound (per_bfd->all_units.begin (),
 			      per_bfd->all_units.end (), start,
 			      [] (const dwarf2_per_cu_up &per_cu,
