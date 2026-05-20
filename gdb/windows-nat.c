@@ -2925,7 +2925,7 @@ windows_nat_target::create_inferior (const char *exec_file,
 
   if (inferior_cwd != NULL
       && cygwin_conv_path (CCP_POSIX_TO_WIN_W, inferior_cwd,
-			   infcwd, strlen (inferior_cwd)) < 0)
+			   infcwd, sizeof (infcwd)) < 0)
     error (_("Error converting inferior cwd: %d"), errno);
 
   args = (wchar_t *) alloca ((wcslen (toexec) + wcslen (cygallargs) + 2)
