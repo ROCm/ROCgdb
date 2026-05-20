@@ -406,6 +406,28 @@ require_tui_interpreter ()
 	   interp);
 }
 
+/* Error out if the terminal doesn't support TUI.  */
+
+static void
+require_tui_terminal ()
+{
+  /* Don't try to setup curses (and print funny control
+     characters) if we're not outputting to a terminal.  */
+  if (!gdb_stderr->isatty ())
+    error (_("Cannot enable the TUI when output is not a terminal"));
+
+  /* Check required terminal capabilities.  The MinGW port of
+     ncurses does have them, but doesn't expose them through "cup".  */
+#ifndef __MINGW32__
+  const char *cap = tigetstr ((char *) "cup");
+  const char *not_a_string_capability = (char *) -1;
+  if (cap == nullptr || cap == not_a_string_capability || *cap == '\0')
+    error (_("Cannot enable the TUI: "
+	     "terminal doesn't support cursor addressing [TERM=%s]"),
+	   gdb_getenv_term ());
+#endif
+}
+
 /* Enter in the tui mode (curses).
    When in normal mode, it installs the tui hooks in gdb, redirects
    the gdb output, configures the readline to work in tui mode.
@@ -434,18 +456,13 @@ tui_enable (void)
     {
       WINDOW *w;
       SCREEN *s;
-#ifndef __MINGW32__
-       const char *cap;
-#endif
 
       /* If the top level interpreter is not the console/tui (e.g.,
 	 MI), enabling curses will certainly lose.  */
       require_tui_interpreter ();
 
-      /* Don't try to setup curses (and print funny control
-	 characters) if we're not outputting to a terminal.  */
-      if (!gdb_stderr->isatty ())
-	error (_("Cannot enable the TUI when output is not a terminal"));
+      /* Require a terminal that supports TUI.  */
+      require_tui_terminal ();
 
       /* Don't try initialization again.  */
       tui_finish_init = TRIBOOL_UNKNOWN;
@@ -472,20 +489,6 @@ tui_enable (void)
 #endif
 	  start_color ();
 	}
-
-      /* Check required terminal capabilities.  The MinGW port of
-	 ncurses does have them, but doesn't expose them through "cup".  */
-#ifndef __MINGW32__
-      cap = tigetstr ((char *) "cup");
-      if (cap == NULL || cap == (char *) -1 || *cap == '\0')
-	{
-	  endwin ();
-	  delscreen (s);
-	  error (_("Cannot enable the TUI: "
-		   "terminal doesn't support cursor addressing [TERM=%s]"),
-		 gdb_getenv_term ());
-	}
-#endif
 
       /* We must mark the tui sub-system active before trying to setup the
 	 current layout as tui windows defined by an extension language
