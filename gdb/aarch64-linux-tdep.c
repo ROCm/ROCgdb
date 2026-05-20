@@ -261,7 +261,7 @@ struct aarch64_linux_sigframe
   bool zt_available = false;
 
   /* True if we have a GCS entry in the signal context, false otherwise.  */
-  bool gcs_availabe = false;
+  bool gcs_available = false;
   /* The Guarded Control Stack Pointer Register.  */
   uint64_t gcspr;
   /* Flags indicating which GCS features are enabled for the thread.  */
@@ -584,7 +584,7 @@ aarch64_linux_read_signal_frame_info (const frame_info_ptr &this_frame,
 
 	    signal_frame.gcs_features_enabled
 	      = extract_unsigned_integer (buf, byte_order);
-	    signal_frame.gcs_availabe = true;
+	    signal_frame.gcs_available = true;
 	    section += size;
 	    break;
 	  }
@@ -787,7 +787,7 @@ aarch64_linux_sigframe_init (const struct tramp_frame *self,
 
   /* Restore the GCS registers, if the target supports it and if there is
      an entry for them.  */
-  if (signal_frame.gcs_availabe && tdep->has_gcs_linux ())
+  if (signal_frame.gcs_available && tdep->has_gcs_linux ())
     {
       /* Restore GCSPR.  */
       trad_frame_set_reg_value (this_cache, tdep->gcs_reg_base,
