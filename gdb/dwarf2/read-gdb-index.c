@@ -584,7 +584,7 @@ create_signatured_type_table_from_gdb_index
 
       sig_types_hash.emplace (sig_type.get ());
       units.emplace_back (sig_type.get ());
-      per_bfd->all_units.emplace_back (sig_type.release ());
+      per_bfd->all_units.emplace_back (std::move (sig_type));
     }
 
   per_bfd->signatured_types = std::move (sig_types_hash);

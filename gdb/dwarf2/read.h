@@ -504,7 +504,8 @@ struct signatured_type : public dwarf2_per_cu
   dwarf2_per_cu *hint_per_cu = nullptr;
 };
 
-using signatured_type_up = std::unique_ptr<signatured_type>;
+using signatured_type_up
+  = std::unique_ptr<signatured_type, dwarf2_per_cu_deleter>;
 
 /* See dwarf2_per_cu declaration.  */
 

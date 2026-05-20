@@ -1440,9 +1440,8 @@ dwarf2_per_bfd::allocate_signatured_type (dwarf2_section_info *section,
 					  ULONGEST signature)
 {
   gdb_assert (section != nullptr);
-  auto result
-    = std::make_unique<signatured_type> (this, section, sect_off, length,
-					 is_dwz, signature);
+  signatured_type_up result (new signatured_type (this, section, sect_off,
+						  length, is_dwz, signature));
   result->index = all_units.size ();
   this->num_type_units++;
   return result;
@@ -1453,10 +1452,9 @@ dwarf2_per_bfd::allocate_signatured_type (dwarf2_section_info *section,
 signatured_type_up
 dwarf2_per_bfd::allocate_signatured_type (ULONGEST signature)
 {
-  auto result
-    = std::make_unique<signatured_type> (this, nullptr,
-					 invalid_sect_offset,
-					 0, false, signature);
+  signatured_type_up result (new signatured_type (this, nullptr,
+						  invalid_sect_offset, 0,
+						  false, signature));
   result->index = all_units.size ();
   this->num_type_units++;
   return result;
@@ -2244,13 +2242,12 @@ add_type_unit (dwarf2_per_bfd *per_bfd, dwarf2_section_info *section,
   if (per_bfd->all_units.size () == per_bfd->all_units.capacity ())
     ++per_bfd->tu_stats.nr_all_type_units_reallocs;
 
-  signatured_type_up sig_type_holder
+  signatured_type_up sig_type
     = per_bfd->allocate_signatured_type (section, sect_off, length,
 					 false /* is_dwz */, sig);
-  signatured_type *sig_type = sig_type_holder.get ();
 
-  per_bfd->all_units.emplace_back (sig_type_holder.release ());
-  auto emplace_ret = per_bfd->signatured_types.emplace (sig_type);
+  auto emplace_ret = per_bfd->signatured_types.emplace (sig_type.get ());
+  per_bfd->all_units.emplace_back (std::move (sig_type));
 
   /* Assert that an insertion took place - that there wasn't a type unit with
      that signature already.  */
