@@ -76,17 +76,23 @@ delete_breakpoints
 # Test inferior call events
 
 set process_id "invalid"
+set thread_id "invalid"
 gdb_test_multiple "thread" "get current thread" {
     -re -wrap "process ($decimal).*" {
 	set process_id $expect_out(1,string)
+	set thread_id $process_id
 	pass $gdb_test_name
     }
     -re -wrap "Thread $hex \\(LWP ($decimal)\\).*" {
 	set process_id $expect_out(1,string)
+	set thread_id $process_id
 	pass $gdb_test_name
     }
-    -re -wrap "Thread $decimal\.($decimal).*" {
+    -re -wrap "Thread ($decimal)\.($hex|$decimal).*" {
 	set process_id $expect_out(1,string)
+	set thread_id $expect_out(2,string)
+	# Convert from hex to decimal.
+	set thread_id [expr {$thread_id}]
 	pass $gdb_test_name
     }
 }
@@ -99,9 +105,9 @@ gdb_test_multiple "print do_nothing" "get address of do_nothing" {
 }
 
 set expected [list "event type: pre-call"]
-lappend expected "ptid: \\($process_id, $process_id, 0\\)" "address: $addr"
+lappend expected "ptid: \\($process_id, $thread_id, 0\\)" "address: $addr"
 lappend expected "event type: post-call"
-lappend expected "ptid: \\($process_id, $process_id, 0\\)" "address: $addr"
+lappend expected "ptid: \\($process_id, $thread_id, 0\\)" "address: $addr"
 gdb_test_sequence "call do_nothing()" "" $expected
 
 # Test register changed event
