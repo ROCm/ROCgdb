@@ -1725,9 +1725,9 @@ dwarf2_base_index_functions::print_stats (struct objfile *objfile,
 
   for (int i = 0; i < total; ++i)
     {
-      dwarf2_per_cu *per_cu = per_objfile->per_bfd->get_unit (i);
+      dwarf2_per_cu &per_cu = per_objfile->per_bfd->get_unit (i);
 
-      if (!per_objfile->compunit_symtab_set_p (per_cu))
+      if (!per_objfile->compunit_symtab_set_p (&per_cu))
 	++count;
     }
   gdb_printf (_("  Number of read units: %d\n"), total - count);
@@ -1741,7 +1741,7 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
-  for (dwarf2_per_cu *per_cu : all_units_range (per_objfile->per_bfd))
+  for (dwarf2_per_cu &per_cu : all_units_range (per_objfile->per_bfd))
     {
       /* If a .debug_names index contains a foreign TU but no index entry
 	 references it, the TU won't have a hint CU.  This is a problem, because
@@ -1751,7 +1751,7 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 	    are unlikely to contain anything interesting, symbol-wise.
 	  - They are likely to be referred to by some other unit (otherwise,
 	    why does it exist?), so will get expanded anyway.  */
-      if (signatured_type *sig_type = per_cu->as_signatured_type ();
+      if (signatured_type *sig_type = per_cu.as_signatured_type ();
 	  (sig_type != nullptr
 	   && sig_type->section () == nullptr
 	   && sig_type->hint_per_cu == nullptr))
@@ -1762,7 +1762,7 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 	 be triggered later on.  See PR symtab/23010.  So, tell
 	 dw2_instantiate_symtab to skip partial CUs -- any important
 	 partial CU will be read via DW_TAG_imported_unit anyway.  */
-      dw2_instantiate_symtab (per_cu, per_objfile, true);
+      dw2_instantiate_symtab (&per_cu, per_objfile, true);
     }
 }
 
@@ -1981,16 +1981,16 @@ dwarf2_base_index_functions::map_symbol_filenames (objfile *objfile,
 	}
     }
 
-  for (dwarf2_per_cu *per_cu : all_units_range (per_objfile->per_bfd))
+  for (dwarf2_per_cu &per_cu : all_units_range (per_objfile->per_bfd))
     {
       /* We only need to look at symtabs not already expanded.  */
-      if (per_cu->is_debug_types ()
-	  || per_objfile->compunit_symtab_set_p (per_cu))
+      if (per_cu.is_debug_types ()
+	  || per_objfile->compunit_symtab_set_p (&per_cu))
 	continue;
 
-      if (per_cu->fnd != nullptr)
+      if (per_cu.fnd != nullptr)
 	{
-	  file_and_directory *fnd = per_cu->fnd.get ();
+	  file_and_directory *fnd = per_cu.fnd.get ();
 
 	  const char *filename = fnd->get_name ();
 	  const char *key = filename;
@@ -2006,7 +2006,7 @@ dwarf2_base_index_functions::map_symbol_filenames (objfile *objfile,
 	    fun (filename, fullname);
 	}
 
-      quick_file_names *file_data = dw2_get_file_names (per_cu, per_objfile);
+      quick_file_names *file_data = dw2_get_file_names (&per_cu, per_objfile);
       if (file_data == nullptr
 	  || qfn_cache.find (file_data) != qfn_cache.end ())
 	continue;
@@ -13885,11 +13885,11 @@ cooked_index_functions::search
   gdb_assert (lookup_name != nullptr || symbol_matcher == nullptr);
   if (lookup_name == nullptr)
     {
-      for (dwarf2_per_cu *per_cu : all_units_range (per_objfile->per_bfd))
+      for (dwarf2_per_cu &per_cu : all_units_range (per_objfile->per_bfd))
 	{
 	  QUIT;
 
-	  if (search_one (per_cu, per_objfile, cus_to_skip, compunit_callback,
+	  if (search_one (&per_cu, per_objfile, cus_to_skip, compunit_callback,
 			  lang_matcher)
 	      == iteration_status::stop)
 	    return iteration_status::stop;

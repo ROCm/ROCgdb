@@ -583,9 +583,9 @@ struct dwarf2_per_bfd
   { return bfd_get_filename (this->obfd); }
 
   /* Return the unit given its index.  */
-  dwarf2_per_cu *get_unit (int index) const
+  dwarf2_per_cu &get_unit (int index) const
   {
-    return this->all_units[index].get ();
+    return *this->all_units[index];
   }
 
   /* Ensure that the all_units vector is in the expected order for
@@ -813,7 +813,7 @@ public:
     return *this;
   }
 
-  dwarf2_per_cu *operator* () const
+  dwarf2_per_cu &operator* () const
   {
     return m_per_bfd->get_unit (m_index);
   }
