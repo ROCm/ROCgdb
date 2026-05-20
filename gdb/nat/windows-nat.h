@@ -315,6 +315,12 @@ struct windows_process_info
       });
   }
 
+  /* Convert an EXIT_PROCESS_DEBUG_EVENT payload to a target wait
+     status.  */
+
+  target_waitstatus exit_process_to_target_status
+    (const EXIT_PROCESS_DEBUG_INFO &info);
+
 private:
 
   /* Handle MS_VC_EXCEPTION when processing a stop.  MS_VC_EXCEPTION is

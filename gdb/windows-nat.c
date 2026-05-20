@@ -62,7 +62,6 @@
 #include "complaints.h"
 #include "gdbsupport/gdb_tilde_expand.h"
 #include "gdbsupport/pathstuff.h"
-#include "gdbsupport/gdb_wait.h"
 #include "gdbsupport/symbol.h"
 #include "inf-loop.h"
 
@@ -1610,17 +1609,9 @@ windows_nat_target::get_windows_debug_event
 	}
       else if (windows_process->saw_create == 1)
 	{
-	  DWORD exit_status = current_event->u.ExitProcess.dwExitCode;
-	  /* If the exit status looks like a fatal exception, but we
-	     don't recognize the exception's code, make the original
-	     exit status value available, to avoid losing
-	     information.  */
-	  int exit_signal
-	    = WIFSIGNALED (exit_status) ? WTERMSIG (exit_status) : -1;
-	  if (exit_signal == -1)
-	    ourstatus->set_exited (exit_status);
-	  else
-	    ourstatus->set_signalled (gdb_signal_from_host (exit_signal));
+	  *ourstatus
+	    = (windows_process->exit_process_to_target_status
+	       (current_event->u.ExitProcess));
 
 	  thread_id = current_event->dwThreadId;
 

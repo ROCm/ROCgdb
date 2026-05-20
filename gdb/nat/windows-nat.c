@@ -18,6 +18,8 @@
 
 #include "nat/windows-nat.h"
 #include "gdbsupport/common-debug.h"
+#include "gdbsupport/gdb_signals.h"
+#include "gdbsupport/gdb_wait.h"
 #include "target/target.h"
 
 #undef GetModuleFileNameEx
@@ -690,6 +692,28 @@ void
 windows_process_info::add_all_dlls ()
 {
   add_dll (nullptr);
+}
+
+/* See nat/windows-nat.h.  */
+
+target_waitstatus
+windows_process_info::exit_process_to_target_status
+  (const EXIT_PROCESS_DEBUG_INFO &info)
+{
+  DWORD exit_code = info.dwExitCode;
+  target_waitstatus tstatus;
+
+  /* If the exit status looks like a fatal exception, but we don't
+     recognize the exception's code, make the original exit status
+     value available, to avoid losing information.  */
+  int exit_signal
+    = WIFSIGNALED (exit_code) ? WTERMSIG (exit_code) : -1;
+  if (exit_signal == -1)
+    tstatus.set_exited (exit_code);
+  else
+    tstatus.set_signalled (gdb_signal_from_host (exit_signal));
+
+  return tstatus;
 }
 
 /* See nat/windows-nat.h.  */

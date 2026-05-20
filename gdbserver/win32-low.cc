@@ -33,7 +33,6 @@
 #include <process.h>
 #include "gdbsupport/gdb_tilde_expand.h"
 #include "gdbsupport/common-inferior.h"
-#include "gdbsupport/gdb_wait.h"
 
 using namespace windows_nat;
 
@@ -1061,18 +1060,9 @@ get_child_debug_event (DWORD *continue_status,
       break;
 
     case EXIT_PROCESS_DEBUG_EVENT:
-      {
-	DWORD exit_status = current_event->u.ExitProcess.dwExitCode;
-	/* If the exit status looks like a fatal exception, but we
-	   don't recognize the exception's code, make the original
-	   exit status value available, to avoid losing information.  */
-	int exit_signal
-	  = WIFSIGNALED (exit_status) ? WTERMSIG (exit_status) : -1;
-	if (exit_signal == -1)
-	  ourstatus->set_exited (exit_status);
-	else
-	  ourstatus->set_signalled (gdb_signal_from_host (exit_signal));
-      }
+      *ourstatus
+	= (windows_process.exit_process_to_target_status
+	   (current_event->u.ExitProcess));
       continue_last_debug_event (DBG_CONTINUE, debug_threads);
       break;
 
