@@ -3136,6 +3136,44 @@ linux_get_hwcap2 ()
 			   current_inferior ()->arch ());
 }
 
+/* See linux-tdep.h.  */
+
+CORE_ADDR
+linux_get_hwcap3 (const std::optional<gdb::byte_vector> &auxv,
+		  target_ops *target, gdbarch *gdbarch)
+{
+  return linux_get_hwcap_helper (auxv, target, gdbarch, AT_HWCAP3);
+}
+
+/* See linux-tdep.h.  */
+
+CORE_ADDR
+linux_get_hwcap3 ()
+{
+  return linux_get_hwcap3 (target_read_auxv (),
+			   current_inferior ()->top_target (),
+			   current_inferior ()->arch ());
+}
+
+/* See linux-tdep.h.  */
+
+CORE_ADDR
+linux_get_hwcap4 (const std::optional<gdb::byte_vector> &auxv,
+		  target_ops *target, gdbarch *gdbarch)
+{
+  return linux_get_hwcap_helper (auxv, target, gdbarch, AT_HWCAP4);
+}
+
+/* See linux-tdep.h.  */
+
+CORE_ADDR
+linux_get_hwcap4 ()
+{
+  return linux_get_hwcap4 (target_read_auxv (),
+			   current_inferior ()->top_target (),
+			   current_inferior ()->arch ());
+}
+
 /* Display whether the gcore command is using the
    /proc/PID/coredump_filter file.  */
 

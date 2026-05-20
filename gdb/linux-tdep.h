@@ -91,6 +91,28 @@ extern CORE_ADDR linux_get_hwcap2 (const std::optional<gdb::byte_vector> &auxv,
 
 extern CORE_ADDR linux_get_hwcap2 ();
 
+/* Fetch the AT_HWCAP3 entry from auxv data AUXV.  Use TARGET and GDBARCH to
+   parse auxv entries.
+
+   On error, 0 is returned.  */
+extern CORE_ADDR linux_get_hwcap3 (const std::optional<gdb::byte_vector> &auxv,
+				   struct target_ops *target, gdbarch *gdbarch);
+
+/* Same as the above, but obtain all the inputs from the current inferior.  */
+
+extern CORE_ADDR linux_get_hwcap3 ();
+
+/* Fetch the AT_HWCAP4 entry from auxv data AUXV.  Use TARGET and GDBARCH to
+   parse auxv entries.
+
+   On error, 0 is returned.  */
+extern CORE_ADDR linux_get_hwcap4 (const std::optional<gdb::byte_vector> &auxv,
+				   struct target_ops *target, gdbarch *gdbarch);
+
+/* Same as the above, but obtain all the inputs from the current inferior.  */
+
+extern CORE_ADDR linux_get_hwcap4 ();
+
 /* Returns true if ADDR belongs to a shadow stack memory range.  If this
    is the case, assign the shadow stack memory range to RANGE
    [start_address, end_address).  */
