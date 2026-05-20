@@ -494,7 +494,7 @@ tui_enable (void)
       /* Don't try initialization again.  */
       tui_finish_init = TRIBOOL_UNKNOWN;
 
-      SCREEN *s = init_ncurses ();
+      init_ncurses ();
       w = stdscr;
 
       if (has_colors ())
@@ -532,8 +532,13 @@ tui_enable (void)
       catch (const gdb_exception &)
 	{
 	  endwin ();
-	  delscreen (s);
+
+	  /* Initialization failed, so TUI is not active.  */
 	  tui_active = false;
+
+	  /* Allow trying to initialize TUI again.  */
+	  tui_finish_init = TRIBOOL_TRUE;
+
 	  throw;
 	}
 

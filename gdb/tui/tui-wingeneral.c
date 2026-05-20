@@ -46,7 +46,7 @@ tui_batch_rendering::tui_batch_rendering ()
 tui_batch_rendering::~tui_batch_rendering ()
 {
   suppress_output = m_saved_suppress;
-  if (!suppress_output)
+  if (!suppress_output && tui_active)
     doupdate ();
 }
 
