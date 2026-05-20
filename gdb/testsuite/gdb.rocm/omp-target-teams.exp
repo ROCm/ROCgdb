@@ -1,0 +1,93 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# This file is part of GDB.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# 'target teams distribute parallel for' should produce multiple GPU
+# waves all hitting the same breakpoint.
+
+load_lib rocm.exp
+
+require allow_omp_offload_tests
+
+standard_testfile .c
+
+set break_line [gdb_get_line_number "teams-line"]
+
+if {[gdb_compile_omp_offload [list $srcdir/$subdir/$srcfile] \
+	 [standard_output_file $testfile] executable {debug}] != ""} {
+    untested "failed to compile OpenMP-offload binary"
+    return -1
+}
+
+clean_restart $testfile
+
+with_rocm_omp_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+
+    gdb_breakpoint "$srcfile:$break_line" allow-pending
+
+    set saw_bp_hit 0
+    gdb_test_multiple "continue" "continue to teams breakpoint" {
+	-re "hit Breakpoint $::decimal" {
+	    set saw_bp_hit 1
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $saw_bp_hit } $gdb_test_name
+	}
+    }
+
+    # Verify multiple waves are present.  We don't need an exact wave
+    # count - it depends on the chosen num_teams / thread_limit and
+    # GPU architecture - but there must be at least one.
+    set wave_list [info_thread_get_wave_list]
+    gdb_assert {[llength $wave_list] >= 1} "saw at least one AMDGPU wave"
+
+    if {[llength $wave_list] >= 1} {
+	# Switch to one of the waves and confirm the kernel-local
+	# index 'i' is a sensible non-negative integer.
+	set first_wave [lindex $wave_list 0]
+	set saw_switch 0
+	gdb_test_multiple "thread $first_wave" "switch to first AMDGPU wave" {
+	    -re "Switching to thread $first_wave," {
+		set saw_switch 1
+		exp_continue
+	    }
+	    -re "$::gdb_prompt " {
+		gdb_assert { $saw_switch } $gdb_test_name
+	    }
+	}
+	gdb_test "print i >= 0" \
+	    "= (true|1)" \
+	    "loop index is non-negative"
+    }
+
+    delete_breakpoints
+
+    set saw_exit 0
+    gdb_test_multiple "continue" "continue to exit" {
+	-re "exited normally" {
+	    set saw_exit 1
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $saw_exit } $gdb_test_name
+	}
+    }
+}
