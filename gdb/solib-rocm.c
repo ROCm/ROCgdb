@@ -30,6 +30,7 @@
 #include "solib.h"
 #include "solib-svr4.h"
 #include "symfile.h"
+#include "filesystem.h"
 
 namespace {
 
@@ -586,6 +587,22 @@ rocm_bfd_iovec_open (bfd *abfd, inferior *inferior)
 
       if (protocol == "file")
 	{
+	  /* A Windows absolute file path is encoded in a file: URI with a
+	     leading "/" before the drive letter: "file:///C:/Users/foo/bar".
+	     See grammar in RFC 8089 Section 2, the path-absolute production
+	     requires the leading "/".  'path-absolute' is defined by RFC 3986
+	     Section 3.3.  After decoding, decoded_path would be
+	     "/C:/Users/foo/bar", which is not a valid Windows path.  Drop the
+	     leading "/" as a normalization step.  */
+	  if ((effective_target_file_system_kind ()
+	       == file_system_kind_dos_based)
+	      && decoded_path.length () >= 4
+	      && decoded_path[0] == '/'
+	      && c_isalpha (decoded_path[1])
+	      && decoded_path[2] == ':'
+	      && decoded_path[3] == '/')
+	    decoded_path.erase (0, 1);
+
 	  auto info = get_solib_info (inferior);
 	  fileio_error target_errno;
 	  target_fd fd = info->fd_cache.open (decoded_path, &target_errno);
