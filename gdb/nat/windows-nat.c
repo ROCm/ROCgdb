@@ -654,6 +654,7 @@ windows_process_info::add_dll (LPVOID load_addr)
 	 at which the DLL was loaded is equal to LOAD_ADDR.  */
       if (!(load_addr != nullptr && mi.lpBaseOfDll != load_addr))
 	{
+	  maybe_note_cygwin1_dll (name);
 	  handle_load_dll (name, mi.lpBaseOfDll);
 	  if (load_addr != nullptr)
 	    return;
@@ -681,7 +682,10 @@ windows_process_info::dll_loaded_event (const DEBUG_EVENT &current_event)
      by enumerating all the DLLs loaded into the inferior, looking for
      one that is loaded at base address = lpBaseOfDll. */
   if (dll_name != nullptr)
-    handle_load_dll (dll_name, event->lpBaseOfDll);
+    {
+      maybe_note_cygwin1_dll (dll_name);
+      handle_load_dll (dll_name, event->lpBaseOfDll);
+    }
   else if (event->lpBaseOfDll != nullptr)
     add_dll (event->lpBaseOfDll);
 }
@@ -694,6 +698,48 @@ windows_process_info::add_all_dlls ()
   add_dll (nullptr);
 }
 
+#ifdef __CYGWIN__
+
+/* See nat/windows-nat.h.  */
+
+void
+windows_process_info::maybe_note_cygwin1_dll (const char *dll_path)
+{
+  const char *base = dll_path + strlen (dll_path);
+  while (base > dll_path && base[-1] != '/' && base[-1] != '\\')
+    base--;
+  if (strcasecmp (base, "cygwin1.dll") == 0)
+    cygwin1_dll_loaded = true;
+}
+
+/* See nat/windows-nat.h.  */
+
+bool
+inferior_started_by_cygwin (DWORD winpid, bool attaching)
+{
+  /* In the run (non-attach) case this is called early when the
+     inferior has only just reached its first instruction and
+     cygwin1.dll hasn't initialized itself yet -- GDB launched the
+     inferior with raw CreateProcess, not through Cygwin's fork/spawn
+     path, so PID_CYGPARENT is necessarily false, so we can shortcut
+     without calling Cygwin.  */
+  if (!attaching)
+    return false;
+
+  /* Note CW_WINPID_TO_CYGWIN_PID never fails.  It returns a synthetic
+     pid for non-Cygwin or unknown winpids, in which case CW_GETPINFO
+     returns either a pinfo with PID_CYGPARENT unset, or NULL.  */
+  auto cygpid = (pid_t) cygwin_internal (CW_WINPID_TO_CYGWIN_PID, winpid);
+
+  auto *pinfo = (external_pinfo *) cygwin_internal (CW_GETPINFO, cygpid);
+  if (pinfo == nullptr)
+    return false;
+
+  return (pinfo->process_state & PID_CYGPARENT) != 0;
+}
+
+#endif /* __CYGWIN__.  */
+
 /* See nat/windows-nat.h.  */
 
 target_waitstatus
@@ -703,6 +749,112 @@ windows_process_info::exit_process_to_target_status
   DWORD exit_code = info.dwExitCode;
   target_waitstatus tstatus;
 
+#ifdef __CYGWIN__
+  /* A Cygwin parent waiting on a Cygwin child via waitpid doesn't go
+     through GetExitCodeProcess / the Win32 exit code at all.  It
+     reads the child's wait status directly out of the child's Cygwin
+     pinfo (shared memory), set by pinfo::exit in
+     winsup/cygwin/pinfo.cc.  So sys/wait.h macros apply to that value
+     verbatim.
+
+     GDB, however, even though it is itself a Cygwin program, drives
+     its inferiors via the native Win32 debugger API: it spawns them
+     with CreateProcess (DEBUG_PROCESS), not via Cygwin's
+     fork/spawn/posix_spawn, and consumes
+     EXIT_PROCESS_DEBUG_EVENT.dwExitCode from WaitForDebugEvent rather
+     than calling waitpid.  That dwExitCode value comes from the
+     inferior's ExitProcess call.
+
+     What that value means depends on two orthogonal things:
+
+     1. Is the inferior a Cygwin process at all?  If not, dwExitCode
+	is a raw Win32 exit value.
+
+     2. For a Cygwin inferior, was it created through Cygwin's spawn
+	path?
+
+	- If not, cygwin1.dll's pinfo::exit byte-swaps the wait status
+	  on the way out, so that the meaningful exit value lands in
+	  the low byte where native Win32 consumers (cmd.exe's "echo
+	  %errorlevel%", and bare GetExitCodeProcess readers) expect
+	  it.  This is the case for Cygwin inferiors that we run, via
+	  CreateProcess.
+
+	- If yes, cygwin1.dll does not swap.  We see this case if we
+	  attach to an already-running process with a Cygwin parent.
+
+	See winsup/cygwin/pinfo.cc:
+
+	 int exitcode = self->exitcode & 0xffff;
+	 if (!self->cygstarted)
+	   exitcode = ((exitcode & 0xff) << 8) | ((exitcode >> 8) & 0xff);
+	 ...
+	 ExitProcess (exitcode);
+  */
+
+  /* The inferior may also exit with a raw NTSTATUS error code, e.g.,
+     STATUS_ACCESS_VIOLATION (0xc0000005), without going through the
+     pinfo::exit at all -- for example, if the unhandled-exception
+     filter didn't run (e.g., the inferior was killed before
+     installing one), or for inferiors that don't link cygwin1.dll.
+     Detect those and map them the same way Cygwin's set_exit_code
+     does in winsup/cygwin/pinfo.cc, so Cygwin GDB sees the same
+     status a Cygwin parent's waitpid would.  */
+  if (exit_code >= 0xc0000000)
+    {
+      gdb_signal sig;
+      switch (exit_code)
+	{
+	case EXCEPTION_ACCESS_VIOLATION:
+	  sig = GDB_SIGNAL_SEGV;
+	  break;
+	case EXCEPTION_ILLEGAL_INSTRUCTION:
+	  sig = GDB_SIGNAL_ILL;
+	  break;
+	case STATUS_NO_MEMORY:
+	  sig = GDB_SIGNAL_BUS;
+	  break;
+	case STATUS_CONTROL_C_EXIT:
+	  sig = GDB_SIGNAL_INT;
+	  break;
+	default:
+	  /* Cygwin maps any other NTSTATUS to exit 127.  */
+	  tstatus.set_exited (127);
+	  return tstatus;
+	}
+      tstatus.set_signalled (sig);
+      return tstatus;
+    }
+
+  if (!this->cygwin1_dll_loaded)
+    {
+      /* Non-Cygwin inferior: dwExitCode is a raw Win32 exit value.
+	 Limit to 8 bits, like Cygwin does, matching what happens with
+	 Cygwin inferiors.  */
+      tstatus.set_exited (exit_code & 0xff);
+      return tstatus;
+    }
+
+  /* Note: when GDB attaches to a Cygwin inferior and the inferior is
+     then killed externally (e.g., taskkill /F with exit code 1), GDB
+     and Cygwin disagree.  Cygwin's parent waitpid reports WIFEXITED,
+     code=1; GDB reports SIGHUP (signal 1, no swap below because
+     started_by_cygwin).  Cygwin's parent distinguishes "pinfo::exit
+     ran" from "didn't run" via the child's wait pipe and only applies
+     the swap-undo for the former.  GDB has only dwExitCode and can't
+     tell.  This can't be solved without Cygwin's help.  However, such
+     an external termination steps out of Cygwin and falls outside
+     Cygwin's contract, so it matters less than the cases where the
+     inferior exits through Cygwin's own mechanisms.  */
+
+  int wstatus = exit_code & 0xffff;
+  if (!this->started_by_cygwin)
+    wstatus = ((wstatus & 0xff) << 8) | ((wstatus >> 8) & 0xff);
+  if (!WIFSIGNALED (wstatus))
+    tstatus.set_exited (WEXITSTATUS (wstatus));
+  else
+    tstatus.set_signalled (gdb_signal_from_host (WTERMSIG (wstatus)));
+#else
   /* If the exit status looks like a fatal exception, but we don't
      recognize the exception's code, make the original exit status
      value available, to avoid losing information.  */
@@ -712,6 +864,7 @@ windows_process_info::exit_process_to_target_status
     tstatus.set_exited (exit_code);
   else
     tstatus.set_signalled (gdb_signal_from_host (exit_signal));
+#endif
 
   return tstatus;
 }

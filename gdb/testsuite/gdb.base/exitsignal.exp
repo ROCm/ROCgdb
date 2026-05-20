@@ -37,6 +37,10 @@ set exec2 "normal"
 set srcfile2 ${exec2}.c
 set binfile2 [standard_output_file ${exec2}]
 
+set exec3 "segv-win32"
+set srcfile3 ${exec1}.c
+set binfile3 [standard_output_file ${exec3}]
+
 if { [build_executable "failed to build $exec1" ${exec1} "${srcfile1}" \
 	  {debug}] == -1 } {
     return
@@ -45,6 +49,16 @@ if { [build_executable "failed to build $exec1" ${exec1} "${srcfile1}" \
 if { [build_executable "failed to build $exec2" ${exec2} "${srcfile2}" \
 	  {debug}] == -1} {
     return
+}
+
+# On Cygwin, also build a pure-Win32 segv binary, used to test that
+# GDB extracts the terminating SIGSEGV out of the 0xc0000005
+# (STATUS_ACCESS_VIOLATION) Windows exit code.
+if {[istarget "*-*-cygwin*"]} {
+    if { [build_executable "failed to build $exec3" ${exec3} "${srcfile3}" \
+	      {debug win32}] == -1} {
+	return
+    }
 }
 
 # Get the inferior under GDB's control in mode HOW ("run" or
@@ -81,14 +95,14 @@ proc teardown {how} {
     }
 }
 
-proc test_signal {how} {
-    clean_restart $::exec1
+proc test_signal {how exec binfile} {
+    clean_restart $exec
 
     # Get the inferior under GDB's control.  But, before, change cwd
     # so the core file ends up in the output directory.
     set_inferior_cwd_to_output_dir
 
-    setup $how $::binfile1
+    setup $how $binfile
 
     # Get the inferior's PID for later.
     set pid [get_inferior_pid]
@@ -106,7 +120,8 @@ proc test_signal {how} {
     gdb_test "continue" "(Thread .*|Program) received signal SIGSEGV.*" \
 	"trigger SIGSEGV"
 
-    if {[istarget "*-*-mingw*"]} {
+    if {[istarget "*-*-mingw*"]
+	|| ([istarget "*-*-cygwin*"] && $binfile == $::binfile3)} {
 	# We're debugging a pure Win32 program with no SEH handler.  The
 	# previous continue caught the first-chance exception.  Now we
 	# catch the second-chance one.
@@ -140,7 +155,7 @@ proc test_signal {how} {
     } else {
 	with_test_prefix "reattach" {
 	    kill_wait_spawned_process $::test_spawn_id
-	    setup $how $::binfile1
+	    setup $how $binfile
 	}
     }
 
@@ -190,9 +205,14 @@ foreach_with_prefix how {"run" "attach"} {
     }
 
     with_test_prefix "signal" {
-	test_signal $how
+	test_signal $how $exec1 $binfile1
     }
     with_test_prefix "normal" {
 	test_normal $how
+    }
+    if {[istarget "*-*-cygwin*"]} {
+	with_test_prefix "signal, win32" {
+	    test_signal $how $exec3 $binfile3
+	}
     }
 }

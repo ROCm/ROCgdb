@@ -368,6 +368,11 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
      phase, and then process them all in one batch now.  */
   windows_process.add_all_dlls ();
 
+#ifdef __CYGWIN__
+  windows_process.started_by_cygwin
+    = inferior_started_by_cygwin (pid, attached);
+#endif
+
   windows_process.child_initialization_done = 1;
 }
 

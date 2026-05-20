@@ -1994,6 +1994,11 @@ windows_nat_target::do_initial_windows_stuff (DWORD pid, bool attaching)
      phase, and then process them all in one batch now.  */
   windows_process->add_all_dlls ();
 
+#ifdef __CYGWIN__
+  windows_process->started_by_cygwin
+    = inferior_started_by_cygwin (pid, attaching);
+#endif
+
   windows_process->windows_initialization_done = 1;
   return;
 }
