@@ -187,7 +187,12 @@ jobs:
           sparse-checkout-cone-mode: true
 
       - name: Install artifact-fetch dependencies
-        run: python3 -m pip install boto3
+        # The rocgdb container image ships Python without pip; install
+        # python3-pip from apt before pip-installing boto3.
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pip
+          python3 -m pip install boto3
 
       - name: Fetch debug-tools + tests artifacts
         working-directory: therock
@@ -205,23 +210,39 @@ jobs:
         run: |
           python3 rocgdb-src/.github/scripts/test_rocgdb.py --tests gdb.dwarf2
 
+  # Filter setup's per_family_info to entries with a non-empty
+  # test-runs-on. Without this, a family lacking a GPU runner would
+  # produce `runs-on: ''` and invalidate the whole rocgdb_gpu matrix
+  # (the parent job reports a single failure with no per-entry surfacing).
+  rocgdb_gpu_matrix:
+    name: Compute rocgdb GPU test matrix
+    needs: setup
+    if: needs.setup.outputs.linux_build_config != ''
+    runs-on: ubuntu-24.04
+    outputs:
+      family_info: ${{ steps.filter.outputs.family_info }}
+    steps:
+      - id: filter
+        env:
+          BUILD_CONFIG: ${{ needs.setup.outputs.linux_build_config }}
+        run: |
+          family_info=$(printf '%s' "$BUILD_CONFIG" \
+            | jq -c '[.per_family_info[] | select(."test-runs-on" != "")]')
+          printf 'family_info=%s\n' "$family_info" >> "$GITHUB_OUTPUT"
+
   rocgdb_gpu:
     name: rocgdb GPU tests (gdb.rocm, ${{ matrix.family_info.amdgpu_family }})
-    needs: [setup, linux_build_and_test]
-    # NOTE: cannot filter out matrix entries with empty `test-runs-on`
-    # at job level — GHA does not allow `matrix.*` in job-level `if:`.
-    # `runs-on: ''` will surface as a job-level error for those entries
-    # rather than silently skipping; revisit if it becomes noisy.
+    needs: [setup, linux_build_and_test, rocgdb_gpu_matrix]
     # See rocgdb_cpu for why !failure() is intentionally omitted.
     if: >-
       ${{
         !cancelled() &&
-        needs.setup.outputs.linux_build_config != ''
+        needs.rocgdb_gpu_matrix.outputs.family_info != '[]'
       }}
     strategy:
       fail-fast: false
       matrix:
-        family_info: ${{ fromJSON(needs.setup.outputs.linux_build_config).per_family_info }}
+        family_info: ${{ fromJSON(needs.rocgdb_gpu_matrix.outputs.family_info) }}
     runs-on: ${{ matrix.family_info.test-runs-on }}
     permissions:
       contents: read
@@ -255,7 +276,11 @@ jobs:
           sparse-checkout-cone-mode: true
 
       - name: Install artifact-fetch dependencies
-        run: python3 -m pip install boto3
+        # See rocgdb_cpu — image has no pip.
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pip
+          python3 -m pip install boto3
 
       - name: Fetch debug-tools + tests artifacts
         working-directory: therock
@@ -280,6 +305,7 @@ jobs:
       - setup
       - linux_build_and_test
       - rocgdb_cpu
+      - rocgdb_gpu_matrix
       - rocgdb_gpu
     runs-on: ubuntu-24.04
     steps:
