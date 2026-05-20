@@ -136,9 +136,15 @@ jobs:
   rocgdb_cpu:
     name: rocgdb CPU tests (gdb.dwarf2)
     needs: [setup, linux_build_and_test]
+    # Intentionally omit !failure(): TheRock's reusable workflow reports
+    # overall failure when its unconditional downstream jobs (deb/rpm
+    # packages, validate_artifact_structure, build_python_packages) fail
+    # due to skipped stages (see top-of-file note). The debug-tools
+    # artifacts we need are still produced; let the artifact-fetch step
+    # be the failure point if they are genuinely missing.
     if: >-
       ${{
-        !cancelled() && !failure() &&
+        !cancelled() &&
         needs.setup.outputs.linux_build_config != ''
       }}
     runs-on: azure-linux-scale-rocm
@@ -206,9 +212,10 @@ jobs:
     # at job level — GHA does not allow `matrix.*` in job-level `if:`.
     # `runs-on: ''` will surface as a job-level error for those entries
     # rather than silently skipping; revisit if it becomes noisy.
+    # See rocgdb_cpu for why !failure() is intentionally omitted.
     if: >-
       ${{
-        !cancelled() && !failure() &&
+        !cancelled() &&
         needs.setup.outputs.linux_build_config != ''
       }}
     strategy:
