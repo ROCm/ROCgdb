@@ -21,6 +21,7 @@
 #define GDBSUPPORT_GDB_REF_PTR_H
 
 #include <cstddef>
+#include "gdbsupport/traits.h"
 
 namespace gdb
 {
@@ -76,7 +77,7 @@ public:
 
   /* Copy another instance.  */
   template<typename U,
-	   typename = std::is_convertible<U *, T*>>
+	   typename = gdb::Requires<std::is_convertible<U *, T*>>>
   ref_ptr (const ref_ptr<U, Policy> &other)
     : m_obj (other.m_obj)
   {
@@ -93,7 +94,7 @@ public:
 
   /* Transfer ownership from OTHER.  */
   template<typename U,
-	   typename = std::is_convertible<U *, T*>>
+	   typename = gdb::Requires<std::is_convertible<U *, T*>>>
   ref_ptr (ref_ptr<U, Policy> &&other) noexcept
     : m_obj (other.m_obj)
   {
@@ -115,7 +116,7 @@ public:
 
   /* Copy another instance.  */
   template<typename U,
-	   typename = std::is_convertible<U *, T*>>
+	   typename = gdb::Requires<std::is_convertible<U *, T*>>>
   ref_ptr &operator= (const ref_ptr<U, Policy> &other)
   {
     /* Note that self-assignment is not checked here, as it isn't
@@ -141,7 +142,7 @@ public:
 
   /* Transfer ownership from OTHER.  */
   template<typename U,
-	   typename = std::is_convertible<U *, T*>>
+	   typename = gdb::Requires<std::is_convertible<U *, T*>>>
   ref_ptr &operator= (ref_ptr<U, Policy> &&other)
   {
     /* Note that self-assignment is not checked here, as it isn't
