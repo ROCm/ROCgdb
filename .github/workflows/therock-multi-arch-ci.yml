@@ -30,9 +30,13 @@ on:
         default: ""
         description: "Workflow run ID to copy prebuilt stage artifacts from"
   pull_request:
-    branches: [amd-staging]
+    branches:
+      - amd-staging
+      - amd-staging-rocgdb-*
   push:
-    branches: [amd-staging]
+    branches:
+      - amd-staging
+      - amd-staging-rocgdb-*
 
 permissions:
   contents: read
