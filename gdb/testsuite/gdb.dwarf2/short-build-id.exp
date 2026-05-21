@@ -68,7 +68,6 @@ proc run_test { buildid } {
 	}
 
 	aranges {} cu_start {
-	    arange {} 0 0
 	}
     }
 

@@ -57,7 +57,6 @@ proc write_just_debugaltlink {filename dwzname buildid} {
 	    }
 	}
 	aranges {} cu_start {
-	    arange {} 0 0
 	}
     }
 }
@@ -97,7 +96,6 @@ proc write_dwarf_file {filename buildid {value 99}} {
 	}
 
 	aranges {} cu_start {
-	    arange {} 0 0
 	}
     }
 }
