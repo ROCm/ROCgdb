@@ -47,8 +47,6 @@ concurrency:
 
 # TODO: once these changes land in ROCm/TheRock main, point the @ref
 # values below at the merged commit / main and drop this branch pin.
-env:
-  THEROCK_REF: users/lumachad/multi-arch-ci-rocgdb
 
 jobs:
   setup:
