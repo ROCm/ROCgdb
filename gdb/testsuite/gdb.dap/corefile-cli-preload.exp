@@ -1,0 +1,91 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Verify initialize succeeds when core is pre-loaded via CLI
+#
+# Two test scenarios are exercised:
+#  1. -ex "core-file <path>" — long-form CLI pre-load
+#  2. -c <path> — short-form CLI pre-load
+#
+# Bug being guarded against: When DAP initializes with an
+# already-attached core inferior, the state tracker thinks nothing is
+# stopped (despite the core being a stopped inferior), so initialize
+# itself is rejected.
+
+require allow_dap_tests
+
+load_lib dap-support.exp
+
+# Reuse the existing corefile.c source from gdb.dap.
+standard_testfile corefile.c
+
+if {[build_executable ${testfile}.exp $testfile $srcfile] == -1} {
+    return
+}
+
+set corefile [core_find $binfile {}]
+if {$corefile == ""} {
+    untested "unable to create or find corefile"
+    return
+}
+
+# A helper that runs one initialize attempt with the given pre-load flag
+# (either "-ex" with a core-file command, or "-c" with the core path).
+# After the attempt, cleanly shut gdb down.
+proc test_preload_initialize {prefix preload_flags} {
+    with_test_prefix $prefix {
+	save_vars ::GDBFLAGS {
+	    append ::GDBFLAGS " $preload_flags \"$::binfile\""
+
+	    if {[dap_gdb_start]} {
+		return
+	    }
+	}
+
+	# Send the initialize request manually so that we can inspect
+	# the response without forcing a pass/fail on success, like in
+	# the case of dap_initialize.
+	set seq [dap_send_request initialize \
+		     {o clientID [s "gdb testsuite"] \
+			  supportsVariableType [l true] \
+			  supportsVariablePaging [l true] \
+			  supportsMemoryReferences [l true]}]
+	set obj [dap_read_response initialize $seq]
+	set response [lindex $obj 0]
+
+	# Check if success comes back false with message "notStopped".
+	gdb_assert { [dict get $response success] } \
+	    "initialize succeeds with core pre-loaded"
+
+	if {![dict get $response success]} {
+	    set msg ""
+	    if {[dict exists $response message]} {
+		set msg [dict get $response message]
+	    }
+	    gdb_assert { $msg != "notStopped" } \
+		"initialize message is not notStopped"
+	}
+
+	dap_shutdown
+    }
+}
+
+# Scenario 1: pre-load via -ex "core-file <core>".
+test_preload_initialize "ex core-file" \
+    "-ex \"core-file $corefile\""
+
+# Scenario 2: pre-load via short form -c <core>
+test_preload_initialize "-c corefile" \
+    "-c \"$corefile\""
