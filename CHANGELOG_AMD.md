@@ -7,6 +7,18 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
+- Optional MSVC (Microsoft Visual C++) symbol demangler in `libdemangle-msvc`
+  (Apache-2.0 WITH LLVM-exception), linked into bfd / binutils / gdb.  Enables
+  demangling of `?`-mangled symbols in `objdump`, `nm`, `readelf`, `addr2line`,
+  `c++filt`, and `gdb`.  Controlled by `--with-msvc-demangler` to the
+  top-level `configure`:
+    - `--with-msvc-demangler` / `=yes` — force enable.
+    - `--with-msvc-demangler=no` — disable (skips the subdirectory build).
+    - omitted — enabled automatically when a Windows/PE target is configured.
+  The top-level resolves the value once and forwards explicit yes/no to all
+  subdirectories so bfd, binutils, gdb, and libdemangle-msvc agree.
+- `c++filt -M` / `--msvc-full` keeps MSVC keywords (`__cdecl`, `__fastcall`,
+  ...) in demangled output.
 - Support for the following architectures:
   - `gfx1170`
   - `gfx1171`
