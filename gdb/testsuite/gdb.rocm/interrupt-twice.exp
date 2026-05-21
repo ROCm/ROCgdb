@@ -1,0 +1,72 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that sending repeated stop requests to a running GPU thread
+# does not cause a failure.  This is done in non-stop mode because
+# "interrupt" command in this mode uses the 'stop' target op.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+with_rocm_gpu_lock {
+    save_vars { ::GDBFLAGS } {
+	append ::GDBFLAGS " -ex \"set non-stop on\""
+	clean_restart $::testfile
+    }
+
+    gdb_breakpoint "loop" {allow-pending} {temporary}
+    gdb_run_cmd
+
+    set gpu_thread "undefined"
+
+    gdb_test_multiple "" "hit breakpoint" {
+	-re -wrap "Thread ($decimal) \[^\r\n\]*hit Temporary breakpoint.*" {
+	    set gpu_thread $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+
+    gdb_test "thread $gpu_thread" "Switching to.*" "switch to gpu thread"
+
+    # Resume the thread in the background.  It will loop.  Then we
+    # interrupt twice.  To be able to run the "interrupt" command back
+    # to back, we define a user command.
+    gdb_test "continue &" "Continuing." "continue async"
+
+    gdb_test_multiple "define inttwice" "" {
+	-re "End with .*\r\n>$"  {
+	    gdb_test "interrupt\ninterrupt\nend" "" $gdb_test_name
+	}
+    }
+
+    gdb_test_multiple "inttwice" "interrupt twice" {
+	-re "wave_stop \[^\r\n\]+ failed \[^\r\n\]+ outstanding stop request\\)\r\n" {
+	    fail $gdb_test_name
+	}
+	-re "Thread $gpu_thread \[^\r\n\]*stopped" {
+	    pass $gdb_test_name
+	}
+	-re "$gdb_prompt" {
+	    exp_continue
+	}
+    }
+}
