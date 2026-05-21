@@ -50,7 +50,14 @@ gdb_test "print \$_exitcode" " = void" \
     "\$_exitcode is void before running"
 
 # Trigger SIGSEGV.
-gdb_test "continue" "Program received signal SIGSEGV.*" "trigger SIGSEGV"
+gdb_test "continue" "(Thread .*|Program) received signal SIGSEGV.*" \
+    "trigger SIGSEGV"
+
+if {[istarget "*-*-cygwin*"]} {
+    # Cygwin calls DebugBreak before it lets the process exit.
+    gdb_test "continue" "Thread .* received signal SIGTRAP.*" \
+	"trigger try_to_debug SIGTRAP"
+}
 
 # Continue until the end.
 gdb_test "continue" "Program terminated with signal SIGSEGV.*" \
