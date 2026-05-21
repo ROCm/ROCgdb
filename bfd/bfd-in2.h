@@ -2832,6 +2832,8 @@ bfd_vma bfd_emul_get_commonpagesize (const char *);
 
 char *bfd_demangle (bfd *, const char *, int);
 
+void bfd_set_msvc_demangler (char *(*)(const char *, int));
+
 asymbol *bfd_group_signature (asection *group, asymbol **isympp);
 
 /* Extracted from bfdio.c.  */

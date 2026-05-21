@@ -3981,6 +3981,7 @@ c++filt [@option{-_}|@option{--strip-underscore}]
         [@option{-p}|@option{--no-params}]
         [@option{-t}|@option{--types}]
         [@option{-i}|@option{--no-verbose}]
+        [@option{-M}|@option{--msvc-full}]
         [@option{-r}|@option{--no-recurse-limit}]
         [@option{-R}|@option{--recurse-limit}]
         [@option{-s} @var{format}|@option{--format=}@var{format}]
@@ -4002,6 +4003,10 @@ each different version.  This process is known as @dfn{mangling}. The
 MS-DOS this program is named @command{CXXFILT}.}
 program does the inverse mapping: it decodes (@dfn{demangles}) low-level
 names into user-level names so that they can be read.
+
+MSVC symbols (starting with @samp{?}) should be enclosed in single
+quotes when passed on the command line, to prevent shell
+interpretation of the @samp{?} character.
 
 Every alphanumeric word (consisting of letters, digits, underscores,
 dollars, or periods) seen in the input is a potential mangled name.
@@ -4080,12 +4085,19 @@ Attempt to demangle types as well as function names.  This is disabled
 by default since mangled types are normally only used internally in
 the compiler, and they can be confused with non-mangled names.  For example,
 a function called ``a'' treated as a mangled type name would be
-demangled to ``signed char''.
+demangled to ``signed char''.  This is always on for MSVC demangling.
 
 @item -i
 @itemx --no-verbose
 Do not include implementation details (if any) in the demangled
-output.
+output.  This option is ignored for MSVC demangling.
+
+@item -M
+@itemx --msvc-full
+When demangling MSVC symbols, preserve MSVC-specific calling
+convention keywords such as @code{__cdecl}, @code{__fastcall},
+and @code{__thiscall} in the output.  By default these keywords
+are stripped from the demangled output.
 
 @item -r
 @itemx -R
@@ -4104,6 +4116,8 @@ The default is for this limit to be enabled, but disabling it may be
 necessary in order to demangle truly complicated names.  Note however
 that if the recursion limit is disabled then stack exhaustion is
 possible and any bug reports about such an event will be rejected.
+
+The recursion limit is always on for MSVC demangling.
 
 The @option{-r} option is a synonym for the
 @option{--no-recurse-limit} option.  The @option{-R} option is a

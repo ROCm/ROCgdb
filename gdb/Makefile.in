@@ -160,6 +160,9 @@ INCLUDE_CFLAGS = -I$(INCLUDE_DIR)
 # Where is the "-liberty" library?  Typically in ../libiberty.
 LIBIBERTY = ../libiberty/libiberty.a
 
+# Where is the libdemangle-msvc library? Typically in ../libdemangle-msvc.
+LIBDEMANGLE_MSVC = @LIBDEMANGLE_MSVC@
+
 # Where is the CTF library?  Typically in ../libctf.
 LIBCTF = @LIBCTF@
 CTF_DEPS = @CTF_DEPS@
@@ -677,10 +680,11 @@ CLIBS = $(SIM) $(READLINE) $(OPCODES) $(LIBCTF) $(BFD) $(ZLIB) $(ZSTD_LIBS) \
 	$(LIBEXPAT) $(LIBLZMA) $(LIBIPT) \
 	$(WIN32LIBS) $(LIBGNU) $(LIBGNU_EXTRA_LIBS) $(LIBICONV) \
 	$(GMPLIBS) $(SRCHIGH_LIBS) $(LIBXXHASH) $(PTHREAD_LIBS) \
-	$(DEBUGINFOD_LIBS)
+	$(DEBUGINFOD_LIBS) $(LIBDEMANGLE_MSVC)
+
 CDEPS = $(NAT_CDEPS) $(SIM) $(BFD) $(READLINE_DEPS) $(CTF_DEPS) \
 	$(OPCODES) $(INTL_DEPS) $(LIBIBERTY) $(CONFIG_DEPS) $(LIBGNU) \
-	$(LIBSUPPORT)
+	$(LIBSUPPORT) $(LIBDEMANGLE_MSVC)
 
 DIST = gdb
 

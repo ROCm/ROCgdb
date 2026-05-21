@@ -135,7 +135,7 @@ build_tools="build-texinfo build-flex build-bison build-m4 build-fixincludes"
 
 # these libraries are used by various programs built for the host environment
 #f
-host_libs="gettext libiberty opcodes bfd readline tcl tk itcl libgui zlib libbacktrace libcpp libcody libdecnumber gmp mpfr mpc isl libiconv libctf libsframe libgrust "
+host_libs="gettext libiberty opcodes bfd readline tcl tk itcl libgui zlib libbacktrace libcpp libcody libdecnumber gmp mpfr mpc isl libiconv libctf libsframe libgrust libdemangle-msvc "
 
 # these tools are built for the host environment
 # Note, the powerpc-eabi build depends on sim occurring before gdb in order to
@@ -256,6 +256,14 @@ fi
 # is provided.
 if test x$with_system_readline = xyes ; then
   noconfigdirs="$noconfigdirs readline"
+fi
+
+# Don't build libdemangle-msvc if explicitly disabled.
+AC_ARG_WITH(msvc-demangler,
+[AS_HELP_STRING([--with-msvc-demangler],
+		[MSVC symbol demangling (yes / no / auto)])])
+if test x$with_msvc_demangler = xno ; then
+  noconfigdirs="$noconfigdirs libdemangle-msvc"
 fi
 
 AC_ARG_WITH(zstd,

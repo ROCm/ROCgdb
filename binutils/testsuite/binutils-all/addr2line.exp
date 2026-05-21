@@ -26,6 +26,122 @@ if { [istarget powerpc64-*-*] && ![istarget powerpc64-*-musl] } {
     set dot {\.}
 }
 
+# Test MSVC demangling in translate_addresses
+# Uses CC_FOR_TARGET to compile a C++ file producing MSVC-mangled COFF.
+
+proc test_addr2line_msvc_demangle_translate {} {
+    global ADDR2LINE
+    global srcdir
+    global subdir
+    global NM
+
+    set test "addr2line translate_addresses with MSVC mangled symbols"
+
+    # Only run for MSVC targets that produce MSVC-mangled symbols.
+    if {![istarget "*-*-windows-msvc*"]} then {
+	unsupported "$test (not an MSVC target)"
+	return
+    }
+
+    set srcfile "$srcdir/$subdir/msvc-demangle.cpp"
+    set testfile "tmpdir/msvc-demangle-addr2line.obj"
+
+    if { [target_compile $srcfile $testfile object \
+	      {debug additional_flags=-gdwarf-5}] != "" } then {
+	unsupported "$test (compilation failed)"
+	return
+    }
+
+    # Get the mangled symbol name for myMethod
+    set nm_output [binutils_run $NM "$testfile"]
+    if {![regexp -line {^[0-9a-fA-F]+\s+T\s+(\?myMethod[^\s]+)} $nm_output match mangled_name]} then {
+	fail "$test (could not find myMethod symbol)"
+	catch {file delete $testfile}
+	return
+    }
+
+    # Create input file with symbolic address to avoid shell interpretation of ? characters
+    set input_file "tmpdir/addr2line_input.txt"
+    set f [open $input_file w]
+    puts $f "$mangled_name+0"
+    close $f
+
+    # Run addr2line reading from stdin
+    set got [binutils_run $ADDR2LINE "-f -C -e $testfile < $input_file"]
+
+    if {[regexp {msvc-demangle\.cpp} $got]} then {
+	pass $test
+    } else {
+	fail $test
+	send_log "Expected to find source file msvc-demangle.cpp in output\n"
+	send_log "Got: $got\n"
+	send_log "Mangled name: $mangled_name\n"
+    }
+
+    catch {file delete $testfile}
+    catch {file delete $input_file}
+}
+
+# Test addr2line with MSVC demangling in lookup_symbol
+# This tests the lookup_symbol code path with --demangle option
+proc test_addr2line_msvc_demangle_lookup {} {
+    global ADDR2LINE
+    global srcdir
+    global subdir
+    global NM
+
+    set test "addr2line lookup_symbol with MSVC mangled symbols"
+
+    # Only run for MSVC targets that produce MSVC-mangled symbols.
+    if {![istarget "*-*-windows-msvc*"]} then {
+	unsupported "$test (not an MSVC target)"
+	return
+    }
+
+    set srcfile "$srcdir/$subdir/msvc-demangle.cpp"
+    set testfile "tmpdir/msvc-demangle-addr2line2.obj"
+
+    if { [target_compile $srcfile $testfile object \
+	      {debug additional_flags=-gdwarf-5}] != "" } then {
+	unsupported "$test (compilation failed)"
+	return
+    }
+
+    # Get the mangled symbol name for templateMethod
+    set nm_output [binutils_run $NM "$testfile"]
+    if {![regexp -line {^[0-9a-fA-F]+\s+T\s+(\?\?\$templateMethod[^\s]+)} $nm_output match mangled_name]} then {
+	fail "$test (could not find templateMethod symbol)"
+	catch {file delete $testfile}
+	return
+    }
+
+    # Create input file with symbolic address
+    set input_file "tmpdir/msvc-demangle-addr2line2.input"
+    set f [open $input_file w]
+    puts $f "$mangled_name+0"
+    close $f
+
+    # Run addr2line reading from stdin
+    set got [binutils_run $ADDR2LINE "-f -C -e $testfile < $input_file"]
+
+    if {[regexp {msvc-demangle\.cpp} $got]} then {
+	pass $test
+    } else {
+	fail $test
+	send_log "Expected to find source file msvc-demangle.cpp in output\n"
+	send_log "Got: $got\n"
+	send_log "Mangled name: $mangled_name\n"
+    }
+
+    # Clean up
+    catch {file delete $testfile}
+    catch {file delete $input_file}
+}
+
+# Run MSVC demangling tests for addr2line
+test_addr2line_msvc_demangle_translate
+test_addr2line_msvc_demangle_lookup
+
 if { [target_compile $srcdir/$subdir/testprog.c tmpdir/testprog executable debug] != "" } {
     verbose "Unable to compile test file."
     untested "$testname"

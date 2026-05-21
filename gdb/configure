@@ -760,6 +760,7 @@ HAVE_NATIVE_GCORE_TARGET
 TARGET_OBS
 AMD_DBGAPI_LIBS
 AMD_DBGAPI_CFLAGS
+LIBDEMANGLE_MSVC
 HAVE_GSTACK
 subdirs
 GDB_DATADIR
@@ -935,6 +936,7 @@ with_auto_load_safe_path
 enable_targets
 enable_binary_file_formats
 enable_gdb_dwarf_support
+with_msvc_demangler
 with_amd_dbgapi
 enable_tui
 enable_gdbtk
@@ -1713,6 +1715,8 @@ Optional Packages:
                           [--with-auto-load-dir]
   --without-auto-load-safe-path
                           do not restrict auto-loaded files locations
+  --with-msvc-demangler   MSVC symbol demangling (yes / no / auto, default:
+                          enabled for Windows targets)
   --with-amd-dbgapi       support for the amd-dbgapi target (yes / no / auto)
   --with-debuginfod       Enable debuginfo lookups with debuginfod
                           (auto/yes/no)
@@ -11878,7 +11882,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11881 "configure"
+#line 11885 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11984,7 +11988,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11987 "configure"
+#line 11991 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -25299,6 +25303,44 @@ if test $gdb_native = yes; then
 fi
 
 
+# MSVC demangler support.
+# Enable if any Windows target is present or --enable-targets=all.
+
+# Check whether --with-msvc-demangler was given.
+if test "${with_msvc_demangler+set}" = set; then :
+  withval=$with_msvc_demangler;
+	   case $withval in
+	     yes | no | auto)
+	       ;;
+	     *)
+	       as_fn_error $? "bad value $withval for --with-msvc-demangler" "$LINENO" 5
+	       ;;
+	   esac
+
+else
+  with_msvc_demangler=auto
+fi
+
+
+if test "x${with_msvc_demangler}" = "xauto"; then
+  if test x${all_targets} = xtrue \
+     || test x${gdb_windows_target} = xyes; then
+    with_msvc_demangler=yes
+  else
+    with_msvc_demangler=no
+  fi
+fi
+
+if test "x${with_msvc_demangler}" != "xno"; then
+
+$as_echo "#define HAVE_MSVC_DEMANGLER 1" >>confdefs.h
+
+    LIBDEMANGLE_MSVC="../libdemangle-msvc/libdemangle-msvc.a"
+else
+    LIBDEMANGLE_MSVC=""
+fi
+
+
 # AMD debugger API support.
 
 
@@ -25459,6 +25501,7 @@ fi
 # For other settings, only the main target counts.
 gdb_sim=
 gdb_osabi=
+gdb_windows_target=
 targ=$target; . ${srcdir}/configure.tgt
 
 # Fetch the default architecture and default target vector from BFD.

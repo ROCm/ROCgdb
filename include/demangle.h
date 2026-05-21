@@ -67,6 +67,8 @@ extern "C" {
    exhaustion when the option is enabled will be rejected.  */
 #define DMGL_NO_RECURSE_LIMIT (1 << 18)
 
+#define DMGL_MSVC	 (1 << 19)	/* Include MSVC-specific output formats.  */
+
 /* If DMGL_NO_RECURSE_LIMIT is not enabled, then this is the value used as
    the maximum depth of recursion allowed.  It should be enough for any
    real-world mangled name.  */
@@ -166,6 +168,21 @@ rust_demangle_callback (const char *mangled, int options,
 
 extern char *
 rust_demangle (const char *mangled, int options);
+
+#ifdef HAVE_MSVC_DEMANGLER
+/* MSVC-specific demangling function.
+   Returns demangled string or NULL.  */
+extern char *
+msvc_demangle (const char *mangled, int options);
+
+/* Return the class name from an MSVC-mangled physname.  */
+extern char *
+msvc_class_name_from_physname (const char *physname);
+
+/* Return the method name from an MSVC-mangled physname.  */
+extern char *
+msvc_method_name_from_physname (const char *physname);
+#endif
 
 enum gnu_v3_ctor_kinds {
   gnu_v3_complete_object_ctor = 1,

@@ -1,0 +1,262 @@
+@setfilename libdemangle-msvc.info
+@settitle libdemangle-msvc
+
+@copying
+This file documents the libdemangle-msvc library.
+
+Copyright @copyright{} 2026 Advanced Micro Devices, Inc.
+
+Licensed under the Apache License v2.0 with LLVM Exceptions.
+See @url{https://llvm.org/LICENSE.txt} for license information.
+SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception.
+@end copying
+
+@titlepage
+@title libdemangle-msvc
+@subtitle Microsoft Visual C++ Demangling Library for ROCgdb
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top libdemangle-msvc
+
+Microsoft Visual C++ demangling library for ROCgdb.
+@end ifnottex
+
+@menu
+* Purpose::              What this library does.
+* Licensing::            License information.
+* API::                  Public API reference.
+* Integration::          How the library integrates with ROCgdb.
+* Building::             How to build the library.
+* Testing::              Running the test suite.
+@end menu
+
+@node Purpose
+@chapter Purpose
+
+This library provides MSVC symbol demangling functionality, currently
+using the existing LLVM's MSVC demangler code.  It can be used by BFD,
+GDB and binutils to demangle Microsoft Visual C++ symbols.
+
+@node Licensing
+@chapter Licensing
+
+This library is licensed under Apache 2.0 with LLVM Exception.
+
+@node API
+@chapter API
+
+The library exposes a C API compatible with libiberty's demangling
+interface.
+
+@section Core Demangling Functions
+
+@deftypefun {char *} msvc_demangle (const char *@var{mangled}, int @var{options})
+Demangle an MSVC symbol name.  Returns the demangled string, or
+@code{NULL} if demangling fails.  Takes the same options as libiberty's
+@code{cplus_demangle} for compatibility.  The caller must free the
+returned string.
+@end deftypefun
+
+@section MSVC-Specific Utility Functions
+
+@deftypefun {char *} llvm_msvc_class_name_from_physname (const char *@var{physname})
+Extract the class name from an MSVC mangled physical name.
+@end deftypefun
+
+@deftypefun {char *} llvm_msvc_method_name_from_physname (const char *@var{physname})
+Extract the method name from an MSVC mangled physical name.
+@end deftypefun
+
+@section BFD Integration Functions
+
+@deftypefun {char *} bfd_demangle (bfd *@var{abfd}, const char *@var{mangled}, int @var{options})
+Unified BFD demangling function.  Automatically detects symbol type
+and uses the appropriate demangler.
+
+@table @var
+@item abfd
+BFD object context.
+@item mangled
+The mangled symbol name.
+@item options
+Demangling options (@code{DMGL_*} flags).
+@end table
+
+Returns the demangled string (caller must free), or @code{NULL} if
+demangling failed.  If an MSVC demangler has been registered via
+@code{bfd_set_msvc_demangler} and the symbol looks like an MSVC mangled
+name, the registered callback is used instead of @code{cplus_demangle}.
+@end deftypefun
+
+@deftypefun void bfd_set_msvc_demangler (char *(*@var{fn})(const char *, int))
+Register a callback for MSVC symbol demangling.  Call once after
+@code{bfd_init}.  Passing @code{NULL} disables MSVC demangling.
+@end deftypefun
+
+@node Integration
+@chapter Integration
+
+The library is built as a separate static library,
+@code{libdemangle_msvc}, which is then linked into GDB and binutils.
+
+@code{msvc_demangle} is invoked from within @code{bfd_demangle} by
+checking the mangled name prefix and determining whether the symbol is
+in MSVC format.  The MSVC demangler is registered once via
+@code{bfd_set_msvc_demangler} after @code{bfd_init}, avoiding mandatory
+linking of @code{libbfd} with @code{libdemangle_msvc}.  Only the tools
+that require @code{libdemangle_msvc} register the callback.
+
+@code{bfd_is_msvc_symbol} is an internal function that determines
+whether a mangled name is in MSVC format.  A symbol is considered
+MSVC-style if:
+
+@itemize @bullet
+@item
+It starts with @samp{?}.
+@item
+It starts with a combination of @samp{.} and/or @samp{$} characters
+followed by @samp{?} (follows the existing @code{bfd_demangle} behavior,
+which strips these characters).
+@item
+It matches @samp{$ANYTHING$?}, which represents MSVC compiler-generated
+prefixes.
+@end itemize
+
+The decision of whether a symbol is MSVC-style is kept inside BFD in
+case future logic needs to examine the binary further (for example,
+stripping additional prefixes or suffixes, or checking the target
+triplet).
+
+@section Architecture Overview
+
+@example
+@group
++-------------------+
+|  Binutils Tool    |  (nm, addr2line, objdump, etc.)
+|  or GDB           |
++--------+----------+
+         |
+         v
++-------------------+
+| bfd_demangle      |  Detects symbol type (MSVC vs Itanium)
++--------+----------+
+         |
+    +----+------+
+    v           v
++---------+  +----------------+
+|libiberty|  |libdemangle_msvc|
+|(Itanium)|  |(MSVC/LLVM)     |
++---------+  +----------------+
+@end group
+@end example
+
+@section Symbol Format Detection
+
+@code{bfd_is_msvc_symbol} identifies MSVC symbols by:
+
+@itemize @bullet
+@item
+Symbol starts with @samp{?} (standard MSVC mangling).
+@item
+Symbol starts with combination of @samp{.} and @samp{$} ending with
+@samp{?} (with prefix stripping).
+@item
+Symbol matches @samp{$ANYTHING$?} (compiler-generated prefixes).
+@end itemize
+
+The detection logic is kept in BFD to allow future enhancements like:
+
+@itemize @bullet
+@item
+Examining the binary's target triplet.
+@item
+Additional prefix/suffix stripping based on binary format.
+@item
+Platform-specific symbol recognition.
+@end itemize
+
+@section Registration Architecture
+
+To avoid mandatory linking of @code{libdemangle-msvc} into
+@code{libbfd}, @code{msvc_demangle} is registered once via
+@code{bfd_set_msvc_demangler}:
+
+@itemize @bullet
+@item
+Tools that don't use MSVC demangling don't link
+@code{libdemangle-msvc}.
+@item
+Tools that support MSVC demangling call
+@code{bfd_set_msvc_demangler(msvc_demangle)} after @code{bfd_init()}.
+@item
+@code{bfd_demangle} calls the appropriate demangler based on symbol
+format.
+@end itemize
+
+@section Binutils Tool Integration
+
+Tools call @code{bfd_set_msvc_demangler(msvc_demangle)} after
+@code{bfd_init()}.
+
+@node Building
+@chapter Building
+
+@section Configure Options
+
+Both GDB and binutils accept a @option{--with-msvc-demangler} flag:
+
+@table @option
+@item --with-msvc-demangler=auto
+Default.  Enables MSVC demangling if a Windows target is detected
+(i.e.@: @option{--enable-targets=all} or a @code{*-*-mingw*},
+@code{*-*-cygwin*}, or @code{*-*-pe*} target).
+
+@item --with-msvc-demangler=yes
+Force enable MSVC demangling regardless of target.
+
+@item --with-msvc-demangler=no
+@itemx --without-msvc-demangler
+Disable MSVC demangling even for Windows targets.
+@end table
+
+@section Standalone Build
+
+@example
+cd libdemangle-msvc
+make clean
+make
+# Creates libdemangle-msvc.a
+@end example
+
+@section Debugging
+
+Pass @option{--enable-msvc-demangle-debug} to @command{configure} to
+enable diagnostic output from the msvc demangler's.
+
+@example
+./configure --enable-msvc-demangle-debug
+@end example
+
+@section ROCgdb Build
+
+@example
+./configure --enable-targets=all --with-msvc-demangler
+make all-libdemangle-msvc
+@end example
+
+@node Testing
+@chapter Testing
+
+Run the test suite:
+
+@example
+cd libdemangle-msvc/testsuite
+make check
+@end example
+
+@bye
