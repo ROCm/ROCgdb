@@ -77,13 +77,8 @@ clear_complaints ()
 
 /* See complaints.h.  */
 
-thread_local complaint_interceptor *complaint_interceptor::g_complaint_interceptor;
-
-/* See complaints.h.  */
-
 complaint_interceptor::complaint_interceptor ()
-  : m_saved_complaint_interceptor (&g_complaint_interceptor, this),
-    m_saved_warning_hook (this)
+  : m_saved_warning_hook (this)
 {
 }
 
@@ -122,7 +117,7 @@ void
 complaint_interceptor::warn (const char *fmt, va_list args)
 {
   gdb::lock_guard<gdb::mutex> guard (complaint_mutex);
-  g_complaint_interceptor->m_complaints.insert (string_vprintf (fmt, args));
+  m_complaints.insert (string_vprintf (fmt, args));
 }
 
 static void
