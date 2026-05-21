@@ -26,7 +26,7 @@ set build_id [string repeat ff 20]
 
 # Make some DWARF for the dwz file.
 set asm_file [standard_output_file $srcfile2]
-Dwarf::assemble $asm_file {
+Dwarf::assemble [list filename $asm_file add_dummy_cus 0] {
     build_id $::build_id
 
     tu {} 0x0000000000000001 the_type_i {
