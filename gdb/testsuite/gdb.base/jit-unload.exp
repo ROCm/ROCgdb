@@ -1,0 +1,62 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This test checks that gdb does not assert when unloading a shared library
+# that defines a __jit_debug_register_code if `set debug breakpoint on` is set.
+
+require allow_shlib_tests
+
+standard_testfile .c -solib.c
+set lib_testfile ${testfile}-lib
+set lib_binfile [standard_output_file $lib_testfile]
+
+if { [build_executable "build shlib" $lib_testfile $srcfile2 \
+	{debug shlib}] == -1 } {
+    return
+}
+
+set lib_testfile_on_target [gdb_download_shlib $lib_binfile]
+
+set options [list \
+		debug \
+		shlib_load \
+		additional_flags=-DSHLIB_NAME=\"${lib_testfile_on_target}\"]
+
+if { [prepare_for_testing "build main file" $testfile $srcfile \
+	$options] == -1 } {
+    return
+}
+
+if { ![runto_main] } {
+    return
+}
+
+gdb_test_no_output "set debug breakpoint on"
+
+set saw_exit false
+gdb_test_multiple "continue" unload {
+    -re "^\\\[Inferior $decimal \[^\r\n\]+ exited normally\\\]\r\n" {
+	set saw_exit true
+	exp_continue
+    }
+
+    -re "^$gdb_prompt $" {
+	gdb_assert ${saw_exit} $gdb_test_name
+    }
+
+    -re "^\[^\r\n\]*\r\n" {
+	exp_continue
+    }
+}
