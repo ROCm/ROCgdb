@@ -50,7 +50,7 @@ concurrency:
 
 jobs:
   setup:
-    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@users/lumachad/multi-arch-ci-rocgdb
+    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@users/lumachad/multi-arch-ci-rocgdb # TheRock@users/lumachad/multi-arch-ci-rocgdb
     with:
       build_variant: "release"
       linux_amdgpu_families: ${{ inputs.linux_amdgpu_families || 'gfx94X,gfx950' }}
@@ -62,7 +62,7 @@ jobs:
       skip_stages: "wsl-rocdxg,math-libs,comm-libs,dctools-core,profiler-apps,iree-compiler,fusilli-libs,media-libs"
       build_python_packages: false
       repository: ROCm/TheRock
-      ref: users/lumachad/multi-arch-ci-rocgdb
+      ref: users/lumachad/multi-arch-ci-rocgdb # TheRock@users/lumachad/multi-arch-ci-rocgdb
       external_repo: '{"repository":"${{ github.repository }}","ref":"${{ github.sha }}"}'
 
   linux_build_and_test:
@@ -73,7 +73,7 @@ jobs:
         needs.setup.outputs.linux_build_config != '' &&
         needs.setup.outputs.enable_build_jobs == 'true'
       }}
-    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@users/lumachad/multi-arch-ci-rocgdb
+    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@users/lumachad/multi-arch-ci-rocgdb # TheRock@users/lumachad/multi-arch-ci-rocgdb
     secrets: inherit
     with:
       build_config: ${{ needs.setup.outputs.linux_build_config }}
@@ -82,7 +82,7 @@ jobs:
       test_type: ${{ needs.setup.outputs.test_type }}
       external_repo_config: ${{ needs.setup.outputs.external_repo_config }}
       repository: ROCm/TheRock
-      ref: users/lumachad/multi-arch-ci-rocgdb
+      ref: users/lumachad/multi-arch-ci-rocgdb # TheRock@users/lumachad/multi-arch-ci-rocgdb
     permissions:
       contents: read
       id-token: write
@@ -99,7 +99,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: "ROCm/TheRock"
-          ref: users/lumachad/multi-arch-ci-rocgdb
+          ref: users/lumachad/multi-arch-ci-rocgdb # TheRock@users/lumachad/multi-arch-ci-rocgdb
           sparse-checkout: build_tools/github_actions
           sparse-checkout-cone-mode: true
 
