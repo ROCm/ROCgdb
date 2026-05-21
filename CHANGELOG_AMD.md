@@ -7,6 +7,24 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
+- Optional MSVC (Microsoft Visual C++) symbol demangler in `libdemangle-msvc`
+  (Apache-2.0 WITH LLVM-exception), linked into bfd / binutils / gdb.  Enables
+  demangling of `?`-mangled symbols in `objdump`, `nm`, `readelf`, `addr2line`,
+  `c++filt`, and `gdb`.  Controlled by `--with-msvc-demangler` to the
+  top-level `configure`:
+    - `--with-msvc-demangler` / `=yes` — force enable.
+    - `--with-msvc-demangler=no` — disable (skips the subdirectory build).
+    - omitted — enabled automatically when a Windows/PE target is configured.
+  The top-level resolves the value once and forwards explicit yes/no to all
+  subdirectories so bfd, binutils, gdb, and libdemangle-msvc agree.
+- `c++filt -M` / `--msvc-full` keeps MSVC keywords (`__cdecl`, `__fastcall`,
+  ...) in demangled output.
+- libdemangle-msvc does not expose a `demangle_component` AST.  In its
+  place, the library provides direct equivalents for the GDB functions
+  that would otherwise consume that AST: when a mangled name is
+  recognised as MSVC-mangled, `cp_class_name_from_physname` dispatches
+  to `msvc_class_name_from_physname`, and `method_name_from_physname`
+  dispatches to `msvc_method_name_from_physname`.
 - GDB now determines the name of AMD GPU threads based on the name of
   their kernel function.
 - Support for the HIP language and its built-in variables:
