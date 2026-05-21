@@ -71,6 +71,7 @@ complaint_internal (const char *fmt, ...)
 void
 clear_complaints ()
 {
+  gdb::lock_guard<gdb::mutex> guard (complaint_mutex);
   counters.clear ();
 }
 
