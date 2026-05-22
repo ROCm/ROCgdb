@@ -285,22 +285,13 @@ public:
   { return m_section; }
 
   /* Set the section of this unit.  */
-  void set_section (dwarf2_section_info *section)
-  {
-    gdb_assert (section != nullptr);
-    gdb_assert (m_section == nullptr);
-    m_section = section;
-  }
+  void set_section (dwarf2_section_info *section);
 
   sect_offset sect_off () const
   { return m_sect_off; }
 
   /* Set the section offset of this unit.  */
-  void set_sect_off (sect_offset sect_off)
-  {
-    gdb_assert (m_sect_off == invalid_sect_offset);
-    m_sect_off = sect_off;
-  }
+  void set_sect_off (sect_offset sect_off);
 
   bool is_dwz () const
   { return m_is_dwz; }
@@ -504,7 +495,8 @@ struct signatured_type : public dwarf2_per_cu
   dwarf2_per_cu *hint_per_cu = nullptr;
 };
 
-using signatured_type_up = std::unique_ptr<signatured_type>;
+using signatured_type_up
+  = std::unique_ptr<signatured_type, dwarf2_per_cu_deleter>;
 
 /* See dwarf2_per_cu declaration.  */
 
@@ -591,14 +583,21 @@ struct dwarf2_per_bfd
   { return bfd_get_filename (this->obfd); }
 
   /* Return the unit given its index.  */
-  dwarf2_per_cu *get_unit (int index) const
+  dwarf2_per_cu &get_unit (int index) const
   {
-    return this->all_units[index].get ();
+    return *this->all_units[index];
   }
 
   /* Ensure that the all_units vector is in the expected order for
      dwarf2_find_containing_unit to be able to perform a binary search.  */
   void sort_all_units ();
+
+  /* Clear the all_units vector.  */
+  void clear_all_units ()
+  {
+    this->all_units.clear ();
+    this->all_units_sorted = true;
+  }
 
   /* Return the separate '.dwz' debug file.  If there is no
      .gnu_debugaltlink or .debug_sup section in the file, then the
@@ -639,6 +638,13 @@ struct dwarf2_per_bfd
 
      This one is used when only the signature is known at creation time.  */
   signatured_type_up allocate_signatured_type (ULONGEST signature);
+
+  /* Append UNIT to ALL_UNITS.  */
+  void add_unit (dwarf2_per_cu_up unit)
+  {
+    this->all_units_sorted = false;
+    this->all_units.emplace_back (std::move (unit));
+  }
 
   /* Map all the DWARF section data needed when scanning
      .debug_info.  */
@@ -689,6 +695,11 @@ public:
      The order of this vector matters, because it is used to locate targets of
      DW_FORM_ref_addr attributes (reference by section offset).  */
   std::vector<dwarf2_per_cu_up> all_units;
+
+  /* True if ALL_UNITS is currently sorted according to all_units_less_than.
+     Set by sort_all_units, cleared whenever a unit is added to ALL_UNITS or
+     a unit's sort key (section / sect_off) is modified.  */
+  bool all_units_sorted = false;
 
   /* Number of compilation and type units in the ALL_UNITS vector.  */
   unsigned int num_comp_units = 0;
@@ -768,7 +779,7 @@ struct scoped_remove_all_units
     if (m_per_bfd == nullptr)
       return;
 
-    m_per_bfd->all_units.clear ();
+    m_per_bfd->clear_all_units ();
     m_per_bfd->num_comp_units = 0;
     m_per_bfd->num_type_units = 0;
   }
@@ -802,7 +813,7 @@ public:
     return *this;
   }
 
-  dwarf2_per_cu *operator* () const
+  dwarf2_per_cu &operator* () const
   {
     return m_per_bfd->get_unit (m_index);
   }

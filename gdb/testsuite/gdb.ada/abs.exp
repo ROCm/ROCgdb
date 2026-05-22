@@ -1,4 +1,4 @@
-# Copyright 2008-2026 Free Software Foundation, Inc.
+# Copyright 2026 Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,39 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+# Simple tests of the 'abs' operator.
+
 load_lib "ada.exp"
 
 require allow_ada_tests
 
-standard_ada_testfile bar
+clean_restart
 
-if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-    return
-}
+gdb_test_no_output "set language ada"
 
-clean_restart ${testfile}
-
-set bp_location [gdb_get_line_number "START" ${testdir}/bar.adb]
-if {![runto "bar.adb:$bp_location"]} {
-    return
-}
-
-gdb_test "print itable'first" \
-    "= 2"
-gdb_test "print ivector'first" \
-    "= 2"
-
-gdb_test "print itable'last" \
-    "= 5"
-gdb_test "print ivector'last" \
-    "= 5"
-
-gdb_test "print table'first" \
-    "= zero"
-gdb_test "print vector'first" \
-    "= zero"
-
-gdb_test "print table'last" \
-    "= two"
-gdb_test "print vector'last" \
-    "= two"
+gdb_test "print abs -5" [quotemeta {@DECIMAL = 5}]
+gdb_test "print abs 5" [quotemeta {@DECIMAL = 5}]
+gdb_test "print abs(-5)" [quotemeta {@DECIMAL = 5}]
+gdb_test "print abs(5)" [quotemeta {@DECIMAL = 5}]

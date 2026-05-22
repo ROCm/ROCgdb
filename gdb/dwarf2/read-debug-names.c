@@ -1036,7 +1036,7 @@ create_foreign_type_units_from_debug_names (dwarf2_per_bfd *per_bfd,
 
       map.foreign_type_units.emplace_back (sig_type.get ());
       per_bfd->signatured_types.emplace (sig_type.get ());
-      per_bfd->all_units.emplace_back (sig_type.release ());
+      per_bfd->add_unit (std::move (sig_type));
     }
 }
 
@@ -1075,7 +1075,15 @@ dwarf2_read_debug_names (dwarf2_per_objfile *per_objfile)
 	}
     }
 
+  /* Populate the `all_units` vector.  */
   create_all_units (per_objfile);
+  create_foreign_type_units_from_debug_names (per_objfile->per_bfd, map);
+
+  /* Sort the `all_units` vector.  This must be done before the
+     `build_and_check_*` calls below, since they do binary search lookups in
+     that vector.  */
+  finalize_all_units (per_objfile->per_bfd);
+
   if (!build_and_check_cu_lists_from_debug_names (per_bfd, map, dwz_map))
     return false;
 
@@ -1096,12 +1104,6 @@ dwarf2_read_debug_names (dwarf2_per_objfile *per_objfile)
 						     section))
 	return false;
     }
-
-  create_foreign_type_units_from_debug_names (per_objfile->per_bfd, map);
-
-  /* create_foreign_type_units_from_debug_names may add more entries to the
-     ALL_UNITS vector, so it must be called before finalize_all_units.  */
-  finalize_all_units (per_objfile->per_bfd);
 
   per_bfd->debug_aranges.read (per_objfile->objfile);
 

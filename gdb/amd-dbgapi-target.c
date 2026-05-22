@@ -1719,14 +1719,16 @@ amd_dbgapi_target::stop (ptid_t ptid)
 				    sizeof (state), &state);
       if (status == AMD_DBGAPI_STATUS_SUCCESS)
 	{
-	  /* If the wave is already known to be stopped then do nothing.  */
-	  if (state == AMD_DBGAPI_WAVE_STATE_STOP)
+	  wave_info &wi = get_thread_wave_info (thread);
+
+	  /* If the wave is already known to be stopped or there is an
+	     outstanding stop request, then do nothing.  */
+	  if (state == AMD_DBGAPI_WAVE_STATE_STOP || wi.stopping)
 	    return;
 
 	  status = amd_dbgapi_wave_stop (wave_id);
 	  if (status == AMD_DBGAPI_STATUS_SUCCESS)
 	    {
-	      wave_info &wi = get_thread_wave_info (thread);
 	      wi.stopping = true;
 	      return;
 	    }

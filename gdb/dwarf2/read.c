@@ -1442,9 +1442,8 @@ dwarf2_per_bfd::allocate_signatured_type (dwarf2_section_info *section,
 					  ULONGEST signature)
 {
   gdb_assert (section != nullptr);
-  auto result
-    = std::make_unique<signatured_type> (this, section, sect_off, length,
-					 is_dwz, signature);
+  signatured_type_up result (new signatured_type (this, section, sect_off,
+						  length, is_dwz, signature));
   result->index = all_units.size ();
   this->num_type_units++;
   return result;
@@ -1455,10 +1454,9 @@ dwarf2_per_bfd::allocate_signatured_type (dwarf2_section_info *section,
 signatured_type_up
 dwarf2_per_bfd::allocate_signatured_type (ULONGEST signature)
 {
-  auto result
-    = std::make_unique<signatured_type> (this, nullptr,
-					 invalid_sect_offset,
-					 0, false, signature);
+  signatured_type_up result (new signatured_type (this, nullptr,
+						  invalid_sect_offset, 0,
+						  false, signature));
   result->index = all_units.size ();
   this->num_type_units++;
   return result;
@@ -1729,9 +1727,9 @@ dwarf2_base_index_functions::print_stats (struct objfile *objfile,
 
   for (int i = 0; i < total; ++i)
     {
-      dwarf2_per_cu *per_cu = per_objfile->per_bfd->get_unit (i);
+      dwarf2_per_cu &per_cu = per_objfile->per_bfd->get_unit (i);
 
-      if (!per_objfile->compunit_symtab_set_p (per_cu))
+      if (!per_objfile->compunit_symtab_set_p (&per_cu))
 	++count;
     }
   gdb_printf (_("  Number of read units: %d\n"), total - count);
@@ -1745,7 +1743,7 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 {
   dwarf2_per_objfile *per_objfile = get_dwarf2_per_objfile (objfile);
 
-  for (dwarf2_per_cu *per_cu : all_units_range (per_objfile->per_bfd))
+  for (dwarf2_per_cu &per_cu : all_units_range (per_objfile->per_bfd))
     {
       /* If a .debug_names index contains a foreign TU but no index entry
 	 references it, the TU won't have a hint CU.  This is a problem, because
@@ -1755,7 +1753,7 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 	    are unlikely to contain anything interesting, symbol-wise.
 	  - They are likely to be referred to by some other unit (otherwise,
 	    why does it exist?), so will get expanded anyway.  */
-      if (signatured_type *sig_type = per_cu->as_signatured_type ();
+      if (signatured_type *sig_type = per_cu.as_signatured_type ();
 	  (sig_type != nullptr
 	   && sig_type->section () == nullptr
 	   && sig_type->hint_per_cu == nullptr))
@@ -1766,7 +1764,7 @@ dwarf2_base_index_functions::expand_all_symtabs (struct objfile *objfile)
 	 be triggered later on.  See PR symtab/23010.  So, tell
 	 dw2_instantiate_symtab to skip partial CUs -- any important
 	 partial CU will be read via DW_TAG_imported_unit anyway.  */
-      dw2_instantiate_symtab (per_cu, per_objfile, true);
+      dw2_instantiate_symtab (&per_cu, per_objfile, true);
     }
 }
 
@@ -1985,16 +1983,16 @@ dwarf2_base_index_functions::map_symbol_filenames (objfile *objfile,
 	}
     }
 
-  for (dwarf2_per_cu *per_cu : all_units_range (per_objfile->per_bfd))
+  for (dwarf2_per_cu &per_cu : all_units_range (per_objfile->per_bfd))
     {
       /* We only need to look at symtabs not already expanded.  */
-      if (per_cu->is_debug_types ()
-	  || per_objfile->compunit_symtab_set_p (per_cu))
+      if (per_cu.is_debug_types ()
+	  || per_objfile->compunit_symtab_set_p (&per_cu))
 	continue;
 
-      if (per_cu->fnd != nullptr)
+      if (per_cu.fnd != nullptr)
 	{
-	  file_and_directory *fnd = per_cu->fnd.get ();
+	  file_and_directory *fnd = per_cu.fnd.get ();
 
 	  const char *filename = fnd->get_name ();
 	  const char *key = filename;
@@ -2010,7 +2008,7 @@ dwarf2_base_index_functions::map_symbol_filenames (objfile *objfile,
 	    fun (filename, fullname);
 	}
 
-      quick_file_names *file_data = dw2_get_file_names (per_cu, per_objfile);
+      quick_file_names *file_data = dw2_get_file_names (&per_cu, per_objfile);
       if (file_data == nullptr
 	  || qfn_cache.find (file_data) != qfn_cache.end ())
 	continue;
@@ -2246,13 +2244,12 @@ add_type_unit (dwarf2_per_bfd *per_bfd, dwarf2_section_info *section,
   if (per_bfd->all_units.size () == per_bfd->all_units.capacity ())
     ++per_bfd->tu_stats.nr_all_type_units_reallocs;
 
-  signatured_type_up sig_type_holder
+  signatured_type_up sig_type
     = per_bfd->allocate_signatured_type (section, sect_off, length,
 					 false /* is_dwz */, sig);
-  signatured_type *sig_type = sig_type_holder.get ();
 
-  per_bfd->all_units.emplace_back (sig_type_holder.release ());
-  auto emplace_ret = per_bfd->signatured_types.emplace (sig_type);
+  auto emplace_ret = per_bfd->signatured_types.emplace (sig_type.get ());
+  per_bfd->add_unit (std::move (sig_type));
 
   /* Assert that an insertion took place - that there wasn't a type unit with
      that signature already.  */
@@ -3395,7 +3392,7 @@ read_comp_units_from_section (dwarf2_per_objfile *per_objfile,
 	}
 
       info_ptr = info_ptr + this_cu->length ();
-      per_bfd->all_units.push_back (std::move (this_cu));
+      per_bfd->add_unit (std::move (this_cu));
     }
 }
 
@@ -3410,6 +3407,7 @@ dwarf2_per_bfd::sort_all_units ()
 		 return all_units_less_than (*a, { b->section (),
 						   b->sect_off () });
 	       });
+  this->all_units_sorted = true;
 }
 
 /* See read.h.  */
@@ -13895,11 +13893,11 @@ cooked_index_functions::search
   gdb_assert (lookup_name != nullptr || symbol_matcher == nullptr);
   if (lookup_name == nullptr)
     {
-      for (dwarf2_per_cu *per_cu : all_units_range (per_objfile->per_bfd))
+      for (dwarf2_per_cu &per_cu : all_units_range (per_objfile->per_bfd))
 	{
 	  QUIT;
 
-	  if (search_one (per_cu, per_objfile, cus_to_skip, compunit_callback,
+	  if (search_one (&per_cu, per_objfile, cus_to_skip, compunit_callback,
 			  lang_matcher)
 	      == iteration_status::stop)
 	    return iteration_status::stop;
@@ -17926,6 +17924,27 @@ dwarf2_symbol_mark_computed (const struct attribute *attr, struct symbol *sym,
 /* See read.h.  */
 
 void
+dwarf2_per_cu::set_section (dwarf2_section_info *section)
+{
+  gdb_assert (section != nullptr);
+  gdb_assert (m_section == nullptr);
+  m_section = section;
+  m_per_bfd->all_units_sorted = false;
+}
+
+/* See read.h.  */
+
+void
+dwarf2_per_cu::set_sect_off (sect_offset sect_off)
+{
+  gdb_assert (m_sect_off == invalid_sect_offset);
+  m_sect_off = sect_off;
+  m_per_bfd->all_units_sorted = false;
+}
+
+/* See read.h.  */
+
+void
 dwarf2_per_cu::set_lang (enum language lang, dwarf_source_language dw_lang)
 {
   packed<language, LANGUAGE_BYTES> expected1 = language_unknown;
@@ -18084,6 +18103,8 @@ dwarf2_find_containing_unit (const section_and_offset &target,
 dwarf2_per_cu *
 dwarf2_find_unit (const section_and_offset &start, dwarf2_per_bfd *per_bfd)
 {
+  gdb_assert (per_bfd->all_units_sorted);
+
   auto it = std::lower_bound (per_bfd->all_units.begin (),
 			      per_bfd->all_units.end (), start,
 			      [] (const dwarf2_per_cu_up &per_cu,

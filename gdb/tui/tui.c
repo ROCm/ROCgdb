@@ -406,6 +406,56 @@ require_tui_interpreter ()
 	   interp);
 }
 
+/* Error out if the terminal doesn't support TUI.  */
+
+static void
+require_tui_terminal ()
+{
+  /* Don't try to setup curses (and print funny control
+     characters) if we're not outputting to a terminal.  */
+  if (!gdb_stderr->isatty ())
+    error (_("Cannot enable the TUI when output is not a terminal"));
+
+  /* Check required terminal capabilities.  The MinGW port of
+     ncurses does have them, but doesn't expose them through "cup".  */
+#ifndef __MINGW32__
+  const char *cap = tigetstr ((char *) "cup");
+  const char *not_a_string_capability = (char *) -1;
+  if (cap == nullptr || cap == not_a_string_capability || *cap == '\0')
+    error (_("Cannot enable the TUI: "
+	     "terminal doesn't support cursor addressing [TERM=%s]"),
+	   gdb_getenv_term ());
+#endif
+}
+
+/* Initialize ncurses, if necessary.  */
+
+static SCREEN *
+init_ncurses ()
+{
+  static SCREEN *tui_screen = nullptr;
+  if (tui_screen != nullptr)
+    {
+      /* Init ncurses only once.  */
+      return tui_screen;
+    }
+
+  tui_screen = newterm (nullptr, stdout, stdin);
+
+#ifdef __MINGW32__
+  /* The MinGW port of ncurses requires $TERM to be unset in order
+     to activate the Windows console driver.  */
+  if (tui_screen == nullptr)
+    tui_screen = newterm ((char *) "unknown", stdout, stdin);
+#endif
+
+  if (tui_screen == nullptr)
+    error (_("Cannot enable the TUI: error opening terminal [TERM=%s]"),
+	   gdb_getenv_term ());
+
+  return tui_screen;
+}
+
 /* Enter in the tui mode (curses).
    When in normal mode, it installs the tui hooks in gdb, redirects
    the gdb output, configures the readline to work in tui mode.
@@ -433,36 +483,20 @@ tui_enable (void)
   if (tui_finish_init == TRIBOOL_TRUE)
     {
       WINDOW *w;
-      SCREEN *s;
-#ifndef __MINGW32__
-       const char *cap;
-#endif
 
       /* If the top level interpreter is not the console/tui (e.g.,
 	 MI), enabling curses will certainly lose.  */
       require_tui_interpreter ();
 
-      /* Don't try to setup curses (and print funny control
-	 characters) if we're not outputting to a terminal.  */
-      if (!gdb_stderr->isatty ())
-	error (_("Cannot enable the TUI when output is not a terminal"));
+      /* Require a terminal that supports TUI.  */
+      require_tui_terminal ();
 
       /* Don't try initialization again.  */
       tui_finish_init = TRIBOOL_UNKNOWN;
 
-      s = newterm (NULL, stdout, stdin);
-#ifdef __MINGW32__
-      /* The MinGW port of ncurses requires $TERM to be unset in order
-	 to activate the Windows console driver.  */
-      if (s == NULL)
-	s = newterm ((char *) "unknown", stdout, stdin);
-#endif
-      if (s == NULL)
-	{
-	  error (_("Cannot enable the TUI: error opening terminal [TERM=%s]"),
-		 gdb_getenv_term ());
-	}
+      init_ncurses ();
       w = stdscr;
+
       if (has_colors ())
 	{
 #ifdef HAVE_USE_DEFAULT_COLORS
@@ -472,20 +506,6 @@ tui_enable (void)
 #endif
 	  start_color ();
 	}
-
-      /* Check required terminal capabilities.  The MinGW port of
-	 ncurses does have them, but doesn't expose them through "cup".  */
-#ifndef __MINGW32__
-      cap = tigetstr ((char *) "cup");
-      if (cap == NULL || cap == (char *) -1 || *cap == '\0')
-	{
-	  endwin ();
-	  delscreen (s);
-	  error (_("Cannot enable the TUI: "
-		   "terminal doesn't support cursor addressing [TERM=%s]"),
-		 gdb_getenv_term ());
-	}
-#endif
 
       /* We must mark the tui sub-system active before trying to setup the
 	 current layout as tui windows defined by an extension language
@@ -512,8 +532,13 @@ tui_enable (void)
       catch (const gdb_exception &)
 	{
 	  endwin ();
-	  delscreen (s);
+
+	  /* Initialization failed, so TUI is not active.  */
 	  tui_active = false;
+
+	  /* Allow trying to initialize TUI again.  */
+	  tui_finish_init = TRIBOOL_TRUE;
+
 	  throw;
 	}
 

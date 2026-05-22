@@ -57,7 +57,6 @@ proc write_just_debugaltlink {filename dwzname buildid} {
 	    }
 	}
 	aranges {} cu_start {
-	    arange {} 0 0
 	}
     }
 }
@@ -66,7 +65,7 @@ proc write_just_debugaltlink {filename dwzname buildid} {
 proc write_dwarf_file {filename buildid {value 99}} {
     set asm_file [standard_output_file $filename]
 
-    Dwarf::assemble $asm_file {
+    Dwarf::assemble [list filename $asm_file add_dummy_cus 0] {
 	declare_labels int_label int_label2
 
 	upvar buildid buildid
@@ -97,7 +96,6 @@ proc write_dwarf_file {filename buildid {value 99}} {
 	}
 
 	aranges {} cu_start {
-	    arange {} 0 0
 	}
     }
 }

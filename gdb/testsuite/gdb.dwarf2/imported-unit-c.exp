@@ -35,26 +35,6 @@ Dwarf::assemble $asm_file {
 		DW_AT_name inty
 		DW_AT_type :$int_label
 	    }
-	    DW_TAG_typedef {
-		DW_AT_name inty_1
-		DW_AT_type :$int2_label
-	    }
-	    DW_TAG_typedef {
-		DW_AT_name inty_2
-		DW_AT_type :$int2_label
-	    }
-	    DW_TAG_typedef {
-		DW_AT_name inty_3
-		DW_AT_type :$int2_label
-	    }
-	    DW_TAG_typedef {
-		DW_AT_name inty_4
-		DW_AT_type :$int2_label
-	    }
-	    DW_TAG_typedef {
-		DW_AT_name inty_5
-		DW_AT_type :$int2_label
-	    }
 	}
     }
 
@@ -71,26 +51,6 @@ Dwarf::assemble $asm_file {
 	    }
 	    DW_TAG_typedef {
 		DW_AT_name inty
-		DW_AT_type :$int2_label
-	    }
-	    DW_TAG_typedef {
-		DW_AT_name inty_1
-		DW_AT_type :$int2_label
-	    }
-	    DW_TAG_typedef {
-		DW_AT_name inty_2
-		DW_AT_type :$int2_label
-	    }
-	    DW_TAG_typedef {
-		DW_AT_name inty_3
-		DW_AT_type :$int2_label
-	    }
-	    DW_TAG_typedef {
-		DW_AT_name inty_4
-		DW_AT_type :$int2_label
-	    }
-	    DW_TAG_typedef {
-		DW_AT_name inty_5
 		DW_AT_type :$int2_label
 	    }
 	}

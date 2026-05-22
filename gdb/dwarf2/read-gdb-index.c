@@ -526,7 +526,7 @@ create_cus_from_gdb_index_list (dwarf2_per_bfd *per_bfd,
       dwarf2_per_cu_up per_cu = per_bfd->allocate_per_cu (section, sect_off,
 							  length, is_dwz);
       units.emplace_back (per_cu.get ());
-      per_bfd->all_units.emplace_back (std::move (per_cu));
+      per_bfd->add_unit (std::move (per_cu));
     }
 }
 
@@ -584,7 +584,7 @@ create_signatured_type_table_from_gdb_index
 
       sig_types_hash.emplace (sig_type.get ());
       units.emplace_back (sig_type.get ());
-      per_bfd->all_units.emplace_back (sig_type.release ());
+      per_bfd->add_unit (std::move (sig_type));
     }
 
   per_bfd->signatured_types = std::move (sig_types_hash);

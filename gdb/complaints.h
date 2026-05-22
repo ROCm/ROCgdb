@@ -20,7 +20,6 @@
 #ifndef GDB_COMPLAINTS_H
 #define GDB_COMPLAINTS_H
 
-#include "gdbsupport/scoped_restore.h"
 #include "gdbsupport/unordered_set.h"
 
 /* Helper for complaint.  */
@@ -89,16 +88,10 @@ private:
   /* The issued complaints.  */
   complaint_collection m_complaints;
 
-  /* The saved value of g_complaint_interceptor.  */
-  scoped_restore_tmpl<complaint_interceptor *> m_saved_complaint_interceptor;
-
   /* A helper function that is used by the 'complaint' implementation
      to issue a complaint.  */
   void warn (const char *, va_list) override
     ATTRIBUTE_PRINTF (2, 0);
-
-  /* This object.  Used by the static callback function.  */
-  static thread_local complaint_interceptor *g_complaint_interceptor;
 
   /* Object to initialise the warning hook.  */
   scoped_restore_warning_hook m_saved_warning_hook;
