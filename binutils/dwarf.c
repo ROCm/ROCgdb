@@ -12132,6 +12132,12 @@ display_debug_names (struct dwarf_section *section, void *file)
 	      READ_ULEB (form, abbrevptr, abbrev_table_end);
 	      if (xindex == 0 && form == 0)
 		break;
+
+	      if (form == DW_FORM_implicit_const)
+		{
+		  int64_t implicit_const;
+		  READ_SLEB (implicit_const, abbrevptr, abbrev_table_end);
+		}
 	    }
 	}
 
@@ -12222,7 +12228,12 @@ display_debug_names (struct dwarf_section *section, void *file)
 
 		  if (tagno >= 0)
 		    printf (" %s", get_IDX_name (xindex));
-		  entryptr = read_and_display_attr_value (0, form, 0,
+
+		  int64_t implicit_const = 0;
+		  if (form == DW_FORM_implicit_const)
+		    READ_SLEB (implicit_const, abbrevptr, abbrev_table_end);
+
+		  entryptr = read_and_display_attr_value (0, form, implicit_const,
 							  unit_start, entryptr,
 							  unit_end, 0,
 							  offset_size,
