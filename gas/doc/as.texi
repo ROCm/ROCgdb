@@ -7121,9 +7121,10 @@ some targets extend this list with their own types
 Many targets only support the first three section types.  The type may be
 enclosed in double quotes if necessary.
 
-Note on targets where the @code{@@} character is the start of a comment (eg
-ARM) then another character is used instead.  For example the ARM port uses the
-@code{%} character.
+Note - certain targets treat @code{@@} as the start of a comment (e.g., ARM).
+On such platforms, @code{%} is used instead. On platforms where neither
+@code{@@} nor @code{%} indicate the start of a comment, @code{@@} and
+@code{%} may be used interchangeably.
 
 Note - some sections, eg @code{.text} and @code{.data} are considered to be
 special and have fixed types.  Any attempt to declare them with a different
