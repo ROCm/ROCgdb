@@ -3558,6 +3558,17 @@ bfd_section_is_ctf (const asection *sec)
   return startswith (name, ".ctf") && (name[4] == 0 || name[4] == '.');
 }
 
+/* Return true if H is local weak undefined.  */
+
+static inline bool
+elf_link_local_undefweak_p (struct elf_link_hash_entry *h,
+			    struct bfd_link_info *info)
+{
+  return (h != NULL
+	  && h->root.type == bfd_link_hash_undefweak
+	  && _bfd_elf_symbol_refs_local_p (h, info, false));
+}
+
 #ifdef __cplusplus
 }
 #endif
