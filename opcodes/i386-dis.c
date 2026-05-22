@@ -41,8 +41,6 @@
 
 typedef struct instr_info instr_info;
 
-static bool annotate_immediates = false;
-
 static bool dofloat (instr_info *, int);
 static int putop (instr_info *, const char *, int);
 static void oappend_with_style (instr_info *, const char *,
@@ -276,6 +274,8 @@ struct instr_info
   char close_char;
   char separator_char;
   char scale_char;
+
+  bool annotate_immediates;
 
   enum x86_64_isa isa64;
 };
@@ -9833,9 +9833,8 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	}
       else if (startswith (p, "suffix"))
 	priv.orig_sizeflag |= SUFFIX_ALWAYS;
-
       else if (startswith (p, "annotate"))
-	annotate_immediates = true;
+	ins.annotate_immediates = true;
 
       p = strchr (p, ',');
       if (p != NULL)
@@ -11680,7 +11679,7 @@ oappend_immediate (instr_info *ins, bfd_vma imm)
   print_operand_value (ins, imm, dis_style_immediate);
 
   /* Determine if we can display some more information about this immediate.  */
-  if (! annotate_immediates
+  if (! ins->annotate_immediates
       /* Don't bother with zero, even if there is symbol associated with it.  */
       || imm == 0
       /* For the next tests we need a BFD.  If we do not have one then do not proceed.  */
