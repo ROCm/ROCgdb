@@ -17,20 +17,56 @@ load_lib dwarf.exp
 # This test can only be run on targets which support DWARF-2 and use gas.
 require dwarf2_support
 
-standard_testfile .S
+standard_testfile main.c -debug.S
 
-if {[is_ilp32_target]} {
-    set ptrbits 32
-} else {
-    set ptrbits 64
+# Set up the DWARF for the test.
+
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    global srcdir subdir srcfile
+    declare_labels int int8 const_type const_type_2
+
+    cu {version 2 addr_size 8} {
+	DW_TAG_compile_unit {
+	    DW_AT_name file1.txt DW_FORM_string
+	    DW_AT_producer {GNU C 3.3.3} DW_FORM_string
+	    DW_AT_language @DW_LANG_C89
+	} {
+	    DW_TAG_constant {
+		DW_AT_name twelve DW_FORM_string
+		DW_AT_type :$const_type_2
+		DW_AT_const_value 12 DW_FORM_data1
+	    }
+	    const_type_2: DW_TAG_const_type {
+		DW_AT_type :$int
+	    }
+	    DW_TAG_variable {
+		DW_AT_name val8 DW_FORM_string
+		DW_AT_type :$const_type
+		DW_AT_location {
+		    DW_OP_consts -4294967296
+		    DW_OP_stack_value
+		} SPECIAL_expr
+	    }
+	    const_type: DW_TAG_const_type {
+		DW_AT_type :$int8
+	    }
+	    int: DW_TAG_base_type {
+		DW_AT_name int DW_FORM_string
+		DW_AT_byte_size 4 DW_FORM_data1
+		DW_AT_encoding @DW_ATE_signed
+	    }
+	    int8: DW_TAG_base_type {
+		DW_AT_name int8 DW_FORM_string
+		DW_AT_byte_size 8 DW_FORM_data1
+		DW_AT_encoding @DW_ATE_signed
+	    }
+	}
+    }
 }
 
-set srcfile_opts {}
-lappend srcfile_opts nodebug
-lappend srcfile_opts additional_flags=-DPTRBITS=$ptrbits
-
-if {[prepare_for_testing_full "failed to prepare" \
-	 [list $testfile debug main.c debug  $srcfile $srcfile_opts]]} {
+if {[prepare_for_testing "failed to prepare" ${testfile} \
+	 [list $srcfile $asm_file] nodebug]} {
     return
 }
 
