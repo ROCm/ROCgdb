@@ -28,6 +28,8 @@ foreach t $test_list {
     run_dump_test [file rootname $t]
 }
 
+set exe [exeext]
+
 set t $srcdir/$subdir/pr26808.dwp.bz2
 # We need to strip the ".bz2", but can leave the dirname.
 set test $subdir/[file tail $t]
