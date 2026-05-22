@@ -11697,14 +11697,13 @@ oappend_immediate (instr_info *ins, bfd_vma imm)
 
   char * annotation = NULL;
 
-  /* FIXME: Potential memory leak: strictly speaking asprintf()
-     can return 0 whilst also having allocated some memory.  */
   if (asprintf (& annotation, " [%s]", sym->name) > 0)
     {
       /* Display the symbol associated with address 'imm'.  */
       cappend_with_style (ins, annotation, dis_style_symbol);
-      free (annotation);
     }
+
+  free (annotation);
 }
 
 /* Put DISP in BUF as signed hex number.  */
