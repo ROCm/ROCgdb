@@ -23,6 +23,7 @@
 #include <list>
 #include <array>
 #include <cassert>
+#include <numeric>
 #include <stdio.h>
 #include <stdlib.h>
 #include "gdb_watchdog.h"
@@ -45,7 +46,7 @@ __device__ int some_global = 16;
    by the GPU, triggering a page fault.  */
 
 __global__ void
-pagefault_kernel (int *out)
+pagefault_kernel (int *out, int *data)
 {
   int local = 42;
   *out = 8;
@@ -55,14 +56,14 @@ pagefault_kernel (int *out)
    generate a core dump.  */
 
 __global__ void
-abort_kernel ()
+abort_kernel (int *data)
 {
   int local = 42;
   abort ();
 }
 
 __global__ void
-assert_kernel ()
+assert_kernel (int *data)
 {
   int local = 42;
   assert (false);
@@ -128,6 +129,21 @@ main (int argc, char **argv)
   hipStream_t st1;
   hipStream_t st2;
 
+  /* Allocate some data on the device.  This data is expected to not be
+     available in lightweight cores.  */
+  int *device_data;
+  {
+    constexpr int n_elements = 1000;
+
+    std::vector<int> host_data (n_elements);
+    std::iota (host_data.begin (), host_data.end (), 0);
+
+    CHECK (hipMalloc (&device_data, n_elements * sizeof (int)));
+    CHECK (hipMemcpy (device_data, host_data.data (), n_elements * sizeof (int),
+		      hipMemcpyHostToDevice));
+    CHECK (hipDeviceSynchronize ());
+  }
+
   CHECK (hipStreamCreate (&st1));
   CHECK (hipStreamCreate (&st2));
 
@@ -141,14 +157,14 @@ main (int argc, char **argv)
     case testcase_t::memfault:
       {
 	int *out = nullptr;
-	pagefault_kernel<<<1, 1, 0, st2>>> (out);
+	pagefault_kernel<<<1, 1, 0, st2>>> (out, device_data);
 	break;
       }
     case testcase_t::abort:
-      abort_kernel<<<1, 1, 0, st2>>> ();
+      abort_kernel<<<1, 1, 0, st2>>> (device_data);
       break;
     case testcase_t::assert:
-      assert_kernel<<<1, 1, 0, st2>>> ();
+      assert_kernel<<<1, 1, 0, st2>>> (device_data);
       break;
     };
 
