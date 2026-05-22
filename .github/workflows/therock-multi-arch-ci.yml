@@ -61,6 +61,11 @@ jobs:
       # Only foundation + compiler-runtime + debug-tools are needed for rocgdb.
       skip_stages: "wsl-rocdxg,math-libs,comm-libs,dctools-core,profiler-apps,iree-compiler,fusilli-libs,media-libs"
       build_python_packages: false
+      # rocgdb builds a subset of stages, so the native deb/rpm packaging jobs
+      # (which assume a full ROCm dist) and the artifact-structure validation
+      # (which expects every stage) would fail. Disable both.
+      build_packages: false
+      validate_artifacts: false
       repository: ROCm/TheRock
       ref: users/lumachad/multi-arch-ci-rocgdb # TheRock@users/lumachad/multi-arch-ci-rocgdb
       external_repo: '{"repository":"${{ github.repository }}","ref":"${{ github.sha }}"}'
