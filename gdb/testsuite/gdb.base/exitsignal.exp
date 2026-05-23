@@ -128,11 +128,11 @@ proc test_normal {} {
 	return
     }
 
-    gdb_continue_to_end
+    gdb_test "continue" " exited with code 01\\\].*" "continue to exit"
 
-    # Check $_exitcode.  It should be 0.
-    gdb_test "print \$_exitcode" " = 0" \
-	"\$_exitcode is zero after normal inferior is executed"
+    # Check $_exitcode.  It should be 1.
+    gdb_test "print \$_exitcode" " = 1" \
+	"\$_exitcode is one after normal inferior is executed"
 
     # Check $_exitsignal.  It should still be void, since the inferior
     # has not received any signal.

@@ -21,7 +21,7 @@
 # external tool, eu-unstrip, to verify if the corefile contains
 # build-ids.
 
-standard_testfile "normal.c"
+standard_testfile
 
 # This test is Linux x86_64 only.
 if { ![istarget *-*-linux*] } {

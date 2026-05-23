@@ -15,13 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* This test is just a normal return 1.  */
-
 int
-main (int argc, char *argv[])
+main ()
 {
-  /* Non-zero specifically, as it would be otherwise easier for a
-     buggy GDB to report exit code 0 when it shouldn't and that
-     wouldn't be noticed.  */
-  return 1;
+  return 0;
 }
