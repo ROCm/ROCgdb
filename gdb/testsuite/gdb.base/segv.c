@@ -17,9 +17,16 @@
 
 /* This test can be used just to generate a SIGSEGV.  */
 
+#include <unistd.h>
+
+volatile int wait_for_gdb = 1;
+
 int
 main (int argc, char *argv[])
 {
+  while (wait_for_gdb)
+    sleep (1);
+
   /* Generating a SIGSEGV.  */
   *(volatile int *) 0;
 

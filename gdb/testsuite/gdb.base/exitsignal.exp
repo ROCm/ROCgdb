@@ -21,6 +21,10 @@
 # killed by a signal.  However, if it was killed by an uncaught
 # signal, then there is no way for it to have exited.
 
+# On some targets, like Cygwin, extracting the exit code works
+# differently depending on whether the inferior was run by GDB, or GDB
+# attached to an existing process.  We exercise both cases.
+
 require {!target_info exists gdb,nosignals}
 
 set testfile "exitsignal"
@@ -43,16 +47,48 @@ if { [build_executable "failed to build $exec2" ${exec2} "${srcfile2}" \
     return
 }
 
-proc test_signal {} {
+# Get the inferior under GDB's control in mode HOW ("run" or
+# "attach"), using BINFILE.  In "attach" mode, spawn the binary and
+# attach to it; in "run" mode, run to main.  In both modes, clear the
+# inferior's wait_for_gdb flag so the spin loop in main exits when
+# execution continues.
+
+proc setup {how binfile} {
+    if {$how == "run"} {
+	if { ![runto_main] } {
+	    return
+	}
+    } else {
+	# Change directory so that the core file (for test_signal)
+	# doesn't end up outside the output directory.
+	with_cwd [standard_output_file {}] {
+	    set ::test_spawn_id [spawn_wait_for_attach $binfile]
+	}
+	set test_pid [spawn_id_get_pid $::test_spawn_id]
+	gdb_test "attach $test_pid" "Attaching to program.*" \
+	    "attach to process"
+    }
+
+    gdb_test "p wait_for_gdb = 0" " = 0"
+}
+
+# Counterpart to setup.  In "attach" mode, kill the spawned process
+# started by setup.  In "run" mode, nothing to do.
+
+proc teardown {how} {
+    if {$how == "attach"} {
+	kill_wait_spawned_process $::test_spawn_id
+    }
+}
+
+proc test_signal {how} {
     clean_restart $::exec1
 
-    # Run to main.  But, before, change cwd to get the core into the
-    # output directory.
+    # Get the inferior under GDB's control.  But, before, change cwd
+    # so the core file ends up in the output directory.
     set_inferior_cwd_to_output_dir
 
-    if { ![runto_main] } {
-	return
-    }
+    setup $how $::binfile1
 
     # Get the inferior's PID for later.
     set pid [get_inferior_pid]
@@ -98,8 +134,15 @@ proc test_signal {} {
     gdb_test "print \$_exitcode" " = void" \
 	"\$_exitcode is still void after SIGSEGV"
 
-    # Re-run to main, i.e., restart the executable.
-    rerun_to_main
+    # Start over.
+    if {$how == "run"} {
+	rerun_to_main
+    } else {
+	with_test_prefix "reattach" {
+	    kill_wait_spawned_process $::test_spawn_id
+	    setup $how $::binfile1
+	}
+    }
 
     # Print the $_exitsignal again.  Even in this normal scenario, it
     # should still contain the signal triggered in the other run.
@@ -109,11 +152,13 @@ proc test_signal {} {
     # And, again, print $_exitcode.
     gdb_test "print \$_exitcode" " = void" \
 	"\$_exitcode is still void after restarting the inferior"
+
+    teardown $how
 }
 
 # Test the behavior of $_exit{code,signal} during a normal inferior
 # execution.
-proc test_normal {} {
+proc test_normal {how} {
     clean_restart $::exec2
 
     # Check $_exitsignal and $_exitcode, both should be void before
@@ -124,10 +169,7 @@ proc test_normal {} {
 	"\$_exitcode is void before normal inferior is executed"
 
     # Run the inferior until the end.
-    if { ![runto_main] } {
-	return
-    }
-
+    setup $how $::binfile2
     gdb_test "continue" " exited with code 01\\\].*" "continue to exit"
 
     # Check $_exitcode.  It should be 1.
@@ -138,11 +180,19 @@ proc test_normal {} {
     # has not received any signal.
     gdb_test "print \$_exitsignal" " = void" \
 	"\$_exitsignal is still void after normal inferior is executed"
+
+    teardown $how
 }
 
-with_test_prefix "signal" {
-    test_signal
-}
-with_test_prefix "normal" {
-    test_normal
+foreach_with_prefix how {"run" "attach"} {
+    if {$how == "attach" && ![can_spawn_for_attach]} {
+	continue
+    }
+
+    with_test_prefix "signal" {
+	test_signal $how
+    }
+    with_test_prefix "normal" {
+	test_normal $how
+    }
 }
