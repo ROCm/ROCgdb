@@ -19,8 +19,18 @@ require dwarf2_support
 
 standard_testfile .S
 
+if {[is_ilp32_target]} {
+    set ptrbits 32
+} else {
+    set ptrbits 64
+}
+
+set srcfile_opts {}
+lappend srcfile_opts nodebug
+lappend srcfile_opts additional_flags=-DPTRBITS=$ptrbits
+
 if {[prepare_for_testing_full "failed to prepare" \
-	 [list $testfile debug main.c debug $srcfile nodebug]]} {
+	 [list $testfile debug main.c debug  $srcfile $srcfile_opts]]} {
     return
 }
 

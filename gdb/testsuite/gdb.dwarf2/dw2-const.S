@@ -15,6 +15,16 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#if PTRBITS == 64
+# define PTRBYTE .8byte
+# define PTRBYTES 8
+#elif PTRBITS == 32
+# define PTRBYTE .4byte
+# define PTRBYTES 4
+#else
+# error "Unsupported pointer size"
+#endif
+
 /* Dummy function to provide debug information for.  */
 
 	.text
@@ -228,9 +238,9 @@ func_cu1:
 
 .Lline1_lines:
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
-	.4byte		.Lbegin_func_cu1
+	PTRBYTE		.Lbegin_func_cu1
 
 	.byte		3	/* DW_LNS_advance_line */
 	.sleb128	3	/* ... to 4 */
@@ -240,9 +250,9 @@ func_cu1:
 	.byte		1	/* DW_LNS_copy (second time as an end-of-prologue marker) */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
-	.4byte		.Lend_func_cu1
+	PTRBYTE		.Lend_func_cu1
 
 	.byte		0	/* DW_LNE_end_of_sequence */
 	.uleb128	1
