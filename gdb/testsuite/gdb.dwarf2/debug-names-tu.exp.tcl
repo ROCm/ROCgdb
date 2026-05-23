@@ -39,6 +39,8 @@ Dwarf::assemble {
 	global $var
     }
 
+    declare_labels type_label
+
     cu { label cu_label version $dwarf_version } {
 	compile_unit {
 	    DW_AT_language @DW_LANG_C
@@ -52,13 +54,13 @@ Dwarf::assemble {
 	}
     }
 
-    tu { label tu_label version $dwarf_version } 0x8ece66f4224fddb3 "" {
+    tu { label tu_label version $dwarf_version } 0x8ece66f4224fddb3 type_label {
 	type_unit {
 	    DW_AT_language @DW_LANG_C
 	} {
 	    declare_labels int_type
 
-	    structure_type {
+	    type_label: structure_type {
 		DW_AT_name struct_with_int_member
 		DW_AT_byte_size 4 sdata
 	    } {
