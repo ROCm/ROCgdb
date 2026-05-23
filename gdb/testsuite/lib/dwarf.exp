@@ -3636,8 +3636,9 @@ namespace eval Dwarf {
 		    _op .uleb128 $_constants(DW_IDX_GNU_language) \
 			"DW_IDX_GNU_language"
 		    _op .uleb128 $_constants(DW_FORM_implicit_const) \
-			"DW_FORM_flag_present"
-		    _op .sleb128 $_constants($word) $word
+			"DW_FORM_implicit_const"
+		    _op .sleb128 $_constants($word) \
+			"DW_FORM_implicit_const value: $word"
 		} else {
 		    error "unrecognized extra keyword $word"
 		}
