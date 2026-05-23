@@ -23,103 +23,126 @@
 
 require {!target_info exists gdb,nosignals}
 
-standard_testfile segv.c
+set testfile "exitsignal"
 
-if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
+set exec1 "segv"
+set srcfile1 ${exec1}.c
+set binfile1 [standard_output_file ${exec1}]
+
+set exec2 "normal"
+set srcfile2 ${exec2}.c
+set binfile2 [standard_output_file ${exec2}]
+
+if { [build_executable "failed to build $exec1" ${exec1} "${srcfile1}" \
+	  {debug}] == -1 } {
     return
 }
 
-# Run to main.  But, before, change cwd to get the core into the
-# output directory.
-set_inferior_cwd_to_output_dir
-
-if { ![runto_main] } {
+if { [build_executable "failed to build $exec2" ${exec2} "${srcfile2}" \
+	  {debug}] == -1} {
     return
 }
 
-# Get the inferior's PID for later.
-set pid [get_inferior_pid]
+proc test_signal {} {
+    clean_restart $::exec1
 
-# Print $_exitsignal.  It should be void now, because nothing
-# happened.
-gdb_test "print \$_exitsignal" " = void" \
-    "\$_exitsignal is void before running"
+    # Run to main.  But, before, change cwd to get the core into the
+    # output directory.
+    set_inferior_cwd_to_output_dir
 
-# Just to guarantee, making sure that $_exitcode is also void.
-gdb_test "print \$_exitcode" " = void" \
-    "\$_exitcode is void before running"
+    if { ![runto_main] } {
+	return
+    }
 
-# Trigger SIGSEGV.
-gdb_test "continue" "(Thread .*|Program) received signal SIGSEGV.*" \
-    "trigger SIGSEGV"
+    # Get the inferior's PID for later.
+    set pid [get_inferior_pid]
 
-if {[istarget "*-*-mingw*"]} {
-    # We're debugging a pure Win32 program with no SEH handler.  The
-    # previous continue caught the first-chance exception.  Now we
-    # catch the second-chance.
-    gdb_test "continue" "Thread .* received signal SIGSEGV.*" \
-	"trigger SIGSEGV, second-chance"
-} elseif {[istarget "*-*-cygwin*"]} {
-    # Cygwin calls DebugBreak before it lets the process exit.
-    gdb_test "continue" "Thread .* received signal SIGTRAP.*" \
-	"trigger try_to_debug SIGTRAP"
+    # Print $_exitsignal.  It should be void now, because nothing
+    # happened.
+    gdb_test "print \$_exitsignal" " = void" \
+	"\$_exitsignal is void before running"
+
+    # Just to guarantee, making sure that $_exitcode is also void.
+    gdb_test "print \$_exitcode" " = void" \
+	"\$_exitcode is void before running"
+
+    # Trigger SIGSEGV.
+    gdb_test "continue" "(Thread .*|Program) received signal SIGSEGV.*" \
+	"trigger SIGSEGV"
+
+    if {[istarget "*-*-mingw*"]} {
+	# We're debugging a pure Win32 program with no SEH handler.  The
+	# previous continue caught the first-chance exception.  Now we
+	# catch the second-chance one.
+	gdb_test "continue" "Thread .* received signal SIGSEGV.*" \
+	    "trigger SIGSEGV, second-chance"
+    } elseif {[istarget "*-*-cygwin*"]} {
+	# Cygwin calls DebugBreak before it lets the process exit.
+	gdb_test "continue" "Thread .* received signal SIGTRAP.*" \
+	    "trigger try_to_debug SIGTRAP"
+    }
+
+    # Continue until the end.
+    gdb_test "continue" "Program terminated with signal SIGSEGV.*" \
+	"program terminated with SIGSEGV"
+
+    # We don't need the core file, remove it.
+    remove_core $pid
+
+    # Now, print $_exitsignal again.  It should be 11 (SIGSEGV).
+    gdb_test "print \$_exitsignal" " = 11" \
+	"\$_exitsignal is 11 (SIGSEGV) after SIGSEGV."
+
+    # And $_exitcode should still be void, since the inferior died
+    # because of a signal, and did not return.
+    gdb_test "print \$_exitcode" " = void" \
+	"\$_exitcode is still void after SIGSEGV"
+
+    # Re-run to main, i.e., restart the executable.
+    rerun_to_main
+
+    # Print the $_exitsignal again.  Even in this normal scenario, it
+    # should still contain the signal triggered in the other run.
+    gdb_test "print \$_exitsignal" " = 11" \
+	"\$_exitsignal is 11 (SIGSEGV) after restarting the inferior"
+
+    # And, again, print $_exitcode.
+    gdb_test "print \$_exitcode" " = void" \
+	"\$_exitcode is still void after restarting the inferior"
 }
 
-# Continue until the end.
-gdb_test "continue" "Program terminated with signal SIGSEGV.*" \
-    "program terminated with SIGSEGV"
+# Test the behavior of $_exit{code,signal} during a normal inferior
+# execution.
+proc test_normal {} {
+    clean_restart $::exec2
 
-# We don't need the core file, remove it.
-remove_core $pid
+    # Check $_exitsignal and $_exitcode, both should be void before
+    # the inferior is executed.
+    gdb_test "print \$_exitsignal" " = void" \
+	"\$_exitsignal is void before normal inferior is executed"
+    gdb_test "print \$_exitcode" " = void" \
+	"\$_exitcode is void before normal inferior is executed"
 
-# Now, print $_exitsignal again.  It should be 11 (SIGSEGV).
-gdb_test "print \$_exitsignal" " = 11" \
-    "\$_exitsignal is 11 (SIGSEGV) after SIGSEGV."
+    # Run the inferior until the end.
+    if { ![runto_main] } {
+	return
+    }
 
-# And $_exitcode should still be void, since the inferior died because
-# of a signal, and did not return.
-gdb_test "print \$_exitcode" " = void" \
-    "\$_exitcode is still void after SIGSEGV"
+    gdb_continue_to_end
 
-# Re-run to main, i.e., restart the executable.
-rerun_to_main
+    # Check $_exitcode.  It should be 0.
+    gdb_test "print \$_exitcode" " = 0" \
+	"\$_exitcode is zero after normal inferior is executed"
 
-# Print the $_exitsignal again.  Even in this normal scenario, it
-# should still contain the signal triggered in the other run.
-gdb_test "print \$_exitsignal" " = 11" \
-    "\$_exitsignal is 11 (SIGSEGV) after restarting the inferior"
-
-# And, again, print $_exitcode.
-gdb_test "print \$_exitcode" " = void" \
-    "\$_exitcode is still void after restarting the inferior"
-
-# Now we test the behavior of $_exit{code,signal} during a normal
-# inferior execution.
-standard_testfile normal.c
-
-if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return
+    # Check $_exitsignal.  It should still be void, since the inferior
+    # has not received any signal.
+    gdb_test "print \$_exitsignal" " = void" \
+	"\$_exitsignal is still void after normal inferior is executed"
 }
 
-# Checking $_exitsignal and $_exitcode, both should be void before the
-# inferior is executed.
-gdb_test "print \$_exitsignal" " = void" \
-    "\$_exitsignal is void before normal inferior is executed"
-gdb_test "print \$_exitcode" " = void" \
-    "\$_exitcode is void before normal inferior is executed"
-
-# Run the inferior until the end.
-if { ![runto_main] } {
-    return
+with_test_prefix "signal" {
+    test_signal
 }
-
-gdb_continue_to_end
-
-# Checking $_exitcode.  It should be 0.
-gdb_test "print \$_exitcode" " = 0" \
-    "\$_exitcode is zero after normal inferior is executed"
-
-# Checking $_exitsignal.  It should still be void, since the inferior
-# has not received any signal.
-gdb_test "print \$_exitsignal" " = void" \
-    "\$_exitsignal is still void after normal inferior is executed"
+with_test_prefix "normal" {
+    test_normal
+}
