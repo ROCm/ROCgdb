@@ -17,13 +17,11 @@
 
 /* This test can be used just to generate a SIGSEGV.  */
 
-#include <signal.h>
-
 int
 main (int argc, char *argv[])
 {
   /* Generating a SIGSEGV.  */
-  raise (SIGSEGV);
+  *(volatile int *) 0;
 
   return 0;
 }
