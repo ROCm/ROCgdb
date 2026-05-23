@@ -250,10 +250,6 @@ p__top:
 	.byte	0
 	.byte	0
 
-        .section .debug_line
-.Lline1_begin:
-        .byte   0
-
 #ifdef __arm__
 	.section	.note.GNU-stack,"",%progbits
 #else
