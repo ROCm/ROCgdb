@@ -53,7 +53,13 @@ gdb_test "print \$_exitcode" " = void" \
 gdb_test "continue" "(Thread .*|Program) received signal SIGSEGV.*" \
     "trigger SIGSEGV"
 
-if {[istarget "*-*-cygwin*"]} {
+if {[istarget "*-*-mingw*"]} {
+    # We're debugging a pure Win32 program with no SEH handler.  The
+    # previous continue caught the first-chance exception.  Now we
+    # catch the second-chance.
+    gdb_test "continue" "Thread .* received signal SIGSEGV.*" \
+	"trigger SIGSEGV, second-chance"
+} elseif {[istarget "*-*-cygwin*"]} {
     # Cygwin calls DebugBreak before it lets the process exit.
     gdb_test "continue" "Thread .* received signal SIGTRAP.*" \
 	"trigger try_to_debug SIGTRAP"
