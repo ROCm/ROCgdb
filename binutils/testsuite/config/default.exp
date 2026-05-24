@@ -120,6 +120,21 @@ proc link_or_copy { src dst } {
     catch "exec cp -fpu ../$src tmpdir/gas/$dst" status
 }
 
+if { [istarget hppa*64-*-hpux*] } {
+    verbose -log "creating dummy milli.a archive"
+    remote_exec host "mkdir -p tmpdir/hppa"
+    set src tmpdir/hppa/empty.s
+    set f [open $src "w"]
+    close $f
+    if [is_remote host] {
+	set src [remote_download host $src]
+    }
+    remote_exec host "$AS -o tmpdir/hppa/empty.o $src"
+    remote_exec host "$AR rc tmpdir/hppa/milli.a tmpdir/hppa/empty.o"
+    append LDFLAGS " -Ltmpdir/hppa"
+    unset f src
+}
+
 if {[file isfile gas/as-new[exe_ext]]} then {
     link_or_copy gas/as-new[exe_ext] as[exe_ext]
 } else {
