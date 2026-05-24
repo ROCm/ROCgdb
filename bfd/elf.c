@@ -6335,6 +6335,7 @@ assign_file_positions_for_load_sections (bfd *abfd,
 		{
 		  if (this_hdr->sh_type != SHT_NOBITS)
 		    {
+		      off -= off_adjust;
 		      off_adjust = 0;
 		      if (p->p_filesz + adjust < p->p_memsz)
 			{
