@@ -1,3 +1,4 @@
+#source: eqv-dot.s
 #objdump: -s -j .data
 #name: eqv involving dot (PDP11)
 # Special for PDP11 which is little-endian for octets in shorts
@@ -7,6 +8,6 @@
 .*: .*
 
 Contents of section \.data:
- 0000 0+0000 0+0100 0+0200 0+0c00  .*
- 0010 0+1000 140+ 0+1000 1c0+  .*
+ 0000 0+0000 0+0100 0+0200 0+0800  .*
+ 0010 0+0c00 0+1000 0+0c00 0+1800  .*
 #pass
