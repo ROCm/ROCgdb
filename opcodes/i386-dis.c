@@ -10388,7 +10388,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	sep = ", ";
 	i386_dis_printf (info, dis_style_symbol, "%s", ins.cm_out[i]);
       }
-  
+
   ret = ins.codep - priv.the_buffer;
  out:
   info->private_data = NULL;
