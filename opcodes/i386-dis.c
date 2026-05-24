@@ -10375,7 +10375,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
   for (i = 0; i < MAX_OPERANDS; i++)
     if (ins.op_index[i] != -1 && ins.op_riprel[i])
       {
-	i386_dis_printf (info, dis_style_comment_start, sep);
+	i386_dis_printf (info, dis_style_comment_start, "%s", sep);
 	sep = ", ";
 	(*info->print_address_func)
 	  ((bfd_vma)(ins.start_pc + (ins.codep - ins.start_codep)
@@ -10384,7 +10384,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
       }
     else if (*ins.cm_out[i])
       {
-	i386_dis_printf (info, dis_style_comment_start, sep);
+	i386_dis_printf (info, dis_style_comment_start, "%s", sep);
 	sep = ", ";
 	i386_dis_printf (info, dis_style_symbol, "%s", ins.cm_out[i]);
       }
