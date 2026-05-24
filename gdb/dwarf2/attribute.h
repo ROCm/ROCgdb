@@ -338,7 +338,7 @@ struct attribute
      will issue a complaint and return false.  */
   bool as_boolean () const;
 
-  ENUM_BITFIELD(dwarf_attribute) name : 15;
+  dwarf_attribute name : 15;
 
   /* A boolean that is used for forms that require reprocessing.  A
      form may require data not directly available in the attribute.
@@ -351,7 +351,7 @@ struct attribute
      forms.  */
   unsigned int requires_reprocessing : 1;
 
-  ENUM_BITFIELD(dwarf_form) form : 15;
+  dwarf_form form : 15;
 
   /* Has u.str already been updated by dwarf2_canonicalize_name?  This
      field should be in u.str but it is kept here for better struct

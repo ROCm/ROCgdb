@@ -177,7 +177,7 @@ struct cmd_list_element
 
   /* Type of "set" or "show" command (or SET_NOT_SET if not "set"
      or "show").  */
-  ENUM_BITFIELD (cmd_types) type : 2;
+  cmd_types type : 2;
 
   /* Function definition of this command.  NULL for command class
      names and for help topics that are not really commands.  NOTE:

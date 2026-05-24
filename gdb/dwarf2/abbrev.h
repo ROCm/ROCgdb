@@ -34,8 +34,8 @@
 
 struct attr_abbrev
 {
-  ENUM_BITFIELD(dwarf_attribute) name : 16;
-  ENUM_BITFIELD(dwarf_form) form : 16;
+  dwarf_attribute name : 16;
+  dwarf_form form : 16;
 
   /* It is valid only if FORM is DW_FORM_implicit_const.  */
   LONGEST implicit_const;
@@ -47,7 +47,7 @@ struct abbrev_info
   /* Number identifying abbrev.  */
   unsigned int number;
   /* DWARF tag.  */
-  ENUM_BITFIELD (dwarf_tag) tag : 16;
+  dwarf_tag tag : 16;
   /* True if the DIE has children.  */
   bool has_children;
   bool interesting;

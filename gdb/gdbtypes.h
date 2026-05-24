@@ -756,7 +756,7 @@ struct field
 
   /* * Discriminant for union field_location.  */
 
-  ENUM_BITFIELD(field_loc_kind) m_loc_kind : 3;
+  field_loc_kind m_loc_kind : 3;
 
   /* Accessibility of the field.  */
   enum accessibility m_accessibility;
@@ -902,7 +902,7 @@ struct main_type
 {
   /* * Code for kind of type.  */
 
-  ENUM_BITFIELD(type_code) code : 8;
+  type_code code : 8;
 
   /* * Flags about this type.  These fields appear at this location
      because they packs nicely here.  See the TYPE_* macros for
@@ -942,11 +942,11 @@ struct main_type
   /* * A discriminant telling us which field of the type_specific
      union is being used for this type, if any.  */
 
-  ENUM_BITFIELD(type_specific_kind) type_specific_field : 3;
+  type_specific_kind type_specific_field : 3;
 
   /* The language for this type.  */
 
-  ENUM_BITFIELD(language) m_lang : LANGUAGE_BITS;
+  language m_lang : LANGUAGE_BITS;
 
   /* * Number of fields described for this type.  This field appears
      at this location because it packs nicely here.  */
@@ -1667,7 +1667,7 @@ struct fn_field
   /* * DW_AT_defaulted attribute for this function.  The value is one
      of the DW_DEFAULTED constants.  */
 
-  ENUM_BITFIELD (dwarf_defaulted_attribute) defaulted : 2;
+  dwarf_defaulted_attribute defaulted : 2;
 
   /* Accessibility of the field.  */
   enum accessibility accessibility;
@@ -1745,7 +1745,7 @@ struct cplus_struct_type
        DW_AT_calling_convention attribute.  The value is one of the
        DW_CC constants.  */
 
-    ENUM_BITFIELD (dwarf_calling_convention) calling_convention : 8;
+    dwarf_calling_convention calling_convention : 8;
 
     /* * The base class which defined the virtual function table pointer.  */
 
@@ -1821,7 +1821,7 @@ struct func_type
        DW_AT_calling_convention attribute.  The value is one of the
        DW_CC constants.  */
 
-    ENUM_BITFIELD (dwarf_calling_convention) calling_convention : 8;
+    dwarf_calling_convention calling_convention : 8;
 
     /* * Whether this function normally returns to its caller.  It is
        set from the DW_AT_noreturn attribute if set on the

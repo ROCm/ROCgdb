@@ -152,7 +152,7 @@ struct call_site_parameter
   gdb::array_view<const gdb_byte> data_value_expr () const
   { return gdb::make_array_view (data_value, data_value_size); }
 
-  ENUM_BITFIELD (call_site_parameter_kind) kind : 2;
+  call_site_parameter_kind kind : 2;
 
   union call_site_parameter_u u;
 

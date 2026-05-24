@@ -291,7 +291,7 @@ struct macro_definition
   struct macro_table *table;
 
   /* What kind of macro it is.  */
-  ENUM_BITFIELD (macro_kind) kind : 1;
+  macro_kind kind : 1;
 
   /* If `kind' is `macro_function_like', the number of arguments it
      takes, and their names.  The names, and the array of pointers to
