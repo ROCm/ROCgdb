@@ -82,7 +82,7 @@ static const char *gdbpy_should_print_stack = python_excp_message;
 /* True if Python has been successfully initialized, false
    otherwise.  */
 
-int gdb_python_initialized;
+bool gdb_python_initialized;
 
 extern PyMethodDef python_GdbMethods[];
 
@@ -2796,7 +2796,7 @@ do_start_initialization ()
   PyEval_SaveThread ();
 
   /* Only set this when initialization has succeeded.  */
-  gdb_python_initialized = 1;
+  gdb_python_initialized = true;
   return true;
 }
 
@@ -2819,7 +2819,7 @@ test_python ()
   bool saw_exception = false;
   {
     scoped_restore reset_gdb_python_initialized
-      = make_scoped_restore (&gdb_python_initialized, 0);
+      = make_scoped_restore (&gdb_python_initialized, false);
     try
       {
 	CMD (output);
@@ -3123,7 +3123,7 @@ gdbpy_initialize (const struct extension_language_defn *extlang)
 static int
 gdbpy_initialized (const struct extension_language_defn *extlang)
 {
-  return gdb_python_initialized;
+  return gdb_python_initialized ? 1 : 0;
 }
 
 PyMethodDef python_GdbMethods[] =
