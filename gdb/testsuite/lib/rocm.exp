@@ -436,14 +436,20 @@ proc hip_device_is_less_than { version } {
 
 # Helper function for rocm_core_find.
 
-proc rocm_core_find_1 {coredir binfile {arg ""}} {
+proc rocm_core_find_1 {coredir binfile {arg ""} \
+		       {use_pipe false}} {
+    if { $use_pipe } {
+	set coredump_pattern "|tee $coredir/$binfile"
+    } else {
+	set coredump_pattern "gpucore.%p"
+    }
     # If we don't set the pattern here, on ROCm 7.3+ runtimes,
     # we will end up with "core.<pid>.gpu".  The "core_find {}"
     # procedure in "lib/gdb.exp" does not like that.  It expects
     # only one hit for the glob pattern "core.*".  Without this
     # pattern, there will be 2 hits: core.<pid> and core.<pid>.gpu
     save_vars { ::env(HSA_COREDUMP_PATTERN) } {
-	set ::env(HSA_COREDUMP_PATTERN) "gpucore.%p"
+	set ::env(HSA_COREDUMP_PATTERN) $coredump_pattern
 	set destcore [core_find_1 $coredir $binfile $arg]
     }
     set gpucore "$binfile.gpucore"
@@ -482,8 +488,10 @@ proc rocm_core_find_1 {coredir binfile {arg ""}} {
 # dump and merges it with the CPU core dump found by core_find.  If either
 # of the GPU and host core dump is missing, return an empty string.
 
-proc rocm_core_find {binfile {deletefiles {}} {arg ""}} {
-    return [with_tmpdir coredir $deletefiles rocm_core_find_1 $binfile $arg]
+proc rocm_core_find {binfile {deletefiles {}} {arg ""} \
+			      {use_pipe false}} {
+    return [with_tmpdir coredir $deletefiles rocm_core_find_1 $binfile $arg \
+	    $use_pipe]
 }
 
 # Helper function calling "generate-core-file COREFILE_PATH".
