@@ -2697,7 +2697,7 @@ nds32_elf_do_9_pcrel_reloc (bfd *               abfd,
   bfd_reloc_status_type status;
 
   /* Sanity check the address (offset in section).  */
-  bfd_vma octet = offset * bfd_octets_per_byte (abfd, input_section);
+  bfd_vma octet = offset * OCTETS_PER_BYTE (abfd, input_section);
   if (!bfd_reloc_offset_in_range (howto, abfd, input_section, octet))
     return bfd_reloc_outofrange;
 
@@ -2821,7 +2821,7 @@ nds32_elf_hi20_reloc (bfd *abfd,
 
   /* Sanity check the address (offset in section).  */
   bfd_vma octet = (reloc_entry->address
-		   * bfd_octets_per_byte (abfd, input_section));
+		   * OCTETS_PER_BYTE (abfd, input_section));
   if (!bfd_reloc_offset_in_range (reloc_entry->howto,
 				  abfd, input_section, octet))
     return bfd_reloc_outofrange;
@@ -2900,6 +2900,12 @@ nds32_elf_lo12_reloc (bfd *input_bfd, arelent *reloc_entry, asymbol *symbol,
       reloc_entry->address += input_section->output_offset;
       return bfd_reloc_ok;
     }
+
+  bfd_vma octet = (reloc_entry->address
+		   * OCTETS_PER_BYTE (input_bfd, input_section));
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, input_bfd, input_section,
+				  octet))
+    return bfd_reloc_outofrange;
 
   sdata = nds32_elf_section_data (input_section);
   if (sdata->nds32_hi20_list != NULL)
@@ -2992,7 +2998,7 @@ nds32_elf_generic_reloc (bfd *input_bfd, arelent *reloc_entry,
 
   /* Sanity check the address (offset in section).  */
   bfd_vma octet = (reloc_entry->address
-		   * bfd_octets_per_byte (input_bfd, input_section));
+		   * OCTETS_PER_BYTE (input_bfd, input_section));
   if (!bfd_reloc_offset_in_range (reloc_entry->howto, input_bfd, input_section,
 				  octet))
     return bfd_reloc_outofrange;
@@ -4753,7 +4759,7 @@ nds32_elf_final_link_relocate (reloc_howto_type *howto, bfd *input_bfd,
   bfd_vma relocation;
 
   /* Sanity check the address.  */
-  bfd_vma octet = address * bfd_octets_per_byte (input_bfd, input_section);
+  bfd_vma octet = address * OCTETS_PER_BYTE (input_bfd, input_section);
   if (!bfd_reloc_offset_in_range (howto, input_bfd, input_section, octet))
     return bfd_reloc_outofrange;
 
