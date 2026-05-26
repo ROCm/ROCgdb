@@ -88,11 +88,17 @@ proc test {schedlock interrupt_how} {
 	}
 	gdb_test_multiple "interrupt" "" {
 	    -re "$gdb_prompt " {
-		maybe_kfail $schedlock
-		gdb_test_multiple "" "interrupt" {
-		    -timeout $intr_timeout
-		    -re "Thread .* received signal SIGINT," {
-			pass $gdb_test_name
+		if {$schedlock == "off"} {
+		    gdb_test_multiple "" "interrupt" {
+			-re "Thread .* received signal SIGINT," {
+			    pass $gdb_test_name
+			}
+		    }
+		} else {
+		    gdb_test_multiple "" "interrupt" {
+			-re "Thread .* stopped" {
+			    pass $gdb_test_name
+			}
 		    }
 		}
 	    }
