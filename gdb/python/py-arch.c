@@ -343,7 +343,7 @@ archpy_repr (PyObject *self)
 
   auto arch_info = gdbarch_bfd_arch_info (gdbarch);
   return PyUnicode_FromFormat ("<%s arch_name=%s printable_name=%s>",
-			       gdbpy_py_obj_tp_name (self),
+			       gdbpy_py_obj_tp_name (self).c_str (),
 			       arch_info->arch_name,
 			       arch_info->printable_name);
 }

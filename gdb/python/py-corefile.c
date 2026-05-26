@@ -400,7 +400,7 @@ cfpy_repr (PyObject *self)
   bfd *core_bfd = get_inferior_core_bfd (obj->inferior);
   gdb_assert (core_bfd != nullptr);
   return PyUnicode_FromFormat ("<%s inferior=%d filename='%s'>",
-			       gdbpy_py_obj_tp_name (self),
+			       gdbpy_py_obj_tp_name (self).c_str (),
 			       obj->inferior->num,
 			       bfd_get_filename (core_bfd));
 }

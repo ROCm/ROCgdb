@@ -21,9 +21,9 @@
 #define GDB_PYTHON_PY_OBJ_TYPE_H
 
 /* Return the type's fully qualified name from a PyTypeObject.  */
-extern const char *gdb_py_tp_name (PyTypeObject *py_type) noexcept;
+extern std::string gdb_py_tp_name (PyTypeObject *py_type) noexcept;
 
 /* Return the type's fully qualified name from a PyObject.  */
-extern const char *gdbpy_py_obj_tp_name (PyObject *self) noexcept;
+extern std::string gdbpy_py_obj_tp_name (PyObject *self) noexcept;
 
 #endif /* GDB_PYTHON_PY_OBJ_TYPE_H */

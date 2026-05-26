@@ -1132,15 +1132,18 @@ gdbpy_type_ready (PyTypeObject *type, PyObject *mod = nullptr)
 {
   if (PyType_Ready (type) < 0)
     return -1;
-  const char *tp_name = gdb_py_tp_name (type);
+  const auto &tp_name = gdb_py_tp_name (type);
+  std::string_view tp_name_s = tp_name;
   if (mod == nullptr)
     {
-      gdb_assert (startswith (tp_name, "gdb."));
+      gdb_assert (startswith (tp_name_s, "gdb."));
       mod = gdb_module;
     }
-  const char *dot = strrchr (tp_name, '.');
-  gdb_assert (dot != nullptr);
-  return gdb_pymodule_addobject (mod, dot + 1, (PyObject *) type);
+  const auto pos_dot = tp_name_s.find_last_of ('.');
+  gdb_assert (pos_dot != tp_name_s.npos);
+  return gdb_pymodule_addobject (mod,
+				 tp_name_s.substr (pos_dot + 1).data (),
+				 (PyObject *) type);
 }
 
 /* Poison PyType_Ready.  Only gdbpy_type_ready should be used, to
