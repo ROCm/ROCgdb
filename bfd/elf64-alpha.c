@@ -4648,7 +4648,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		 input_bfd, h->root.root.root.string);
 	      ret_val = false;
 	    }
-	  else if (elf_link_local_undefweak_p (&h->root, info))
+	  else if (elf_link_local_undefweak_p (h ? &h->root : NULL, info))
 	    /* NB: The local undefined TLS symbol address isn't usable
 	       since it isn't mapped to any TLS storage.  Set it to 0
 	       to avoid relocation overflow.  */
@@ -4676,7 +4676,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		value = 0;
 	      else
 		{
-		  if (elf_link_local_undefweak_p (&h->root, info))
+		  if (elf_link_local_undefweak_p (h ? &h->root : NULL, info))
 		    /* NB: The local undefined TLS symbol address isn't
 		       usable since it isn't mapped to any TLS storage.
 		       Set it to 0 to avoid relocation overflow.  */
