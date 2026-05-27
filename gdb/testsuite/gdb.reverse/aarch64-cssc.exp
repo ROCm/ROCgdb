@@ -1,0 +1,139 @@
+# Copyright 2024-2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test instruction record for AArch64 FEAT_CSSC instructions.
+# Based on gdb.reverse/aarch64-mops.exp
+#
+# The basic flow of the record tests are:
+#    1) Stop before executing the instructions of interest.  Record
+#       the initial value of the registers that the instruction will
+#       change, i.e. the destination register.
+#    2) Execute the instructions.  Record the new value of the
+#       registers that changed.
+#    3) Reverse the direction of the execution and execute back to
+#       just before the instructions of interest.  Record the final
+#       value of the registers of interest.
+#    4) Check that the initial and new values of the registers are
+#       different, i.e. the instruction changed the registers as expected.
+#    5) Check that the initial and final values of the registers are
+#       the same, i.e. GDB record restored the registers to their
+#       original values.
+
+require allow_aarch64_cssc_tests
+standard_testfile
+
+if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
+	[list debug additional_flags=-march=armv8-a+cssc]] } {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+gdb_test_no_output "record full"
+
+proc test_single_asm { name } {
+    with_test_prefix $name {
+	set before_seq [gdb_get_line_number "Before ${name}"]
+	set after_seq [gdb_get_line_number "After ${name}"]
+	set regs { x19 x20 x21 }
+
+	set insn [lindex [split $name "-"] 0]
+
+	gdb_test "break $before_seq" \
+	    "Breakpoint ${::decimal} at ${::hex}: file .*/aarch64-cssc.c, line ${::decimal}\\." \
+	    "$insn: break before instruction sequence"
+	gdb_continue_to_breakpoint "$insn: about to execute instruction sequence" \
+	    [multi_line ".*/aarch64-cssc.c:${::decimal}" \
+		"${::decimal}\[ \t\]+__asm__ volatile \\(\"${insn} .*\".*"]
+
+	# Depending on the compiler, the line number information may put GDB a few
+	# instructions before the beginning of the asm statement.
+	arrive_at_instruction $insn
+	# Add a breakpoint that we're sure is at the prologue instruction.
+	gdb_test "break *\$pc" \
+	    "Breakpoint ${::decimal} at ${::hex}: file .*/aarch64-cssc.c, line ${::decimal}\\." \
+	    "$insn: break at prologue instruction"
+
+	# Record the initial register values.
+	foreach r $regs {
+	    set ${r}_initial [capture_command_output "info register $r" ""]
+	}
+
+	gdb_test "break $after_seq" \
+	    "Breakpoint ${::decimal} at ${::hex}: file .*/aarch64-cssc.c, line ${::decimal}\\." \
+	    "$insn: break after instruction sequence"
+	gdb_continue_to_breakpoint "$insn: executed instruction sequence" \
+	    [multi_line ".*/aarch64-cssc.c:${::decimal}" ".*"]
+
+	# Record the new register values.
+	foreach r $regs {
+	    set ${r}_new [capture_command_output "info register $r" ""]
+	}
+
+	# Execute in reverse to before the instruction sequence.
+	gdb_test_no_output "set exec-direction reverse"
+
+	gdb_continue_to_breakpoint "reversed execution of instruction sequence" \
+	    [multi_line ".*/aarch64-cssc.c:${::decimal}" \
+		"${::decimal}\[ \t\]+__asm__ volatile \\(\"${insn} .*\".*"]
+
+	# Record the final register values.
+	foreach r $regs {
+	    set ${r}_final [capture_command_output "info register $r" ""]
+	}
+
+	foreach v { x19 x20 x21 } {
+	    gdb_assert ![string compare [set ${v}_initial] [set ${v}_final]] \
+		"$insn: check $v initial value versus $v final value"
+	}
+
+	gdb_assert [string compare [set x19_initial] [set x19_new]] \
+		"$insn: check x19 initial value versus x19 new value"
+
+	foreach v { x20 x21 } {
+	    gdb_assert ![string compare [set ${v}_initial] [set ${v}_new]] \
+		"$insn: check $v initial value versus $v new value"
+	}
+
+	# Restore forward execution and go to end of recording.
+	gdb_test_no_output "set exec-direction forward"
+	gdb_test "record goto end" \
+	    [multi_line \
+		"Go forward to insn number ${::decimal}" \
+		"#0  main \\(\\) at .*/aarch64-cssc.c:${::decimal}" \
+		".*"]
+    }
+}
+
+set cases {
+	{ abs }
+	{ cnt }
+	{ ctz }
+	{ smax-1 }
+	{ smax-2 }
+	{ smin-1 }
+	{ smin-2 }
+	{ umax-1 }
+	{ umax-2 }
+	{ umin-1 }
+	{ umin-2 }
+}
+
+foreach c $cases {
+    lassign $c insn
+    test_single_asm $insn
+}
