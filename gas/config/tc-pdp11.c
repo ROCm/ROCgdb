@@ -287,7 +287,7 @@ md_apply_fix (fixS *fixP,
 
   code &= ~mask;
   code |= (val >> shift) & mask;
-  number_to_chars_littleendian (buf, code, size);
+  md_number_to_chars (buf, code, size);
 
   if (fixP->fx_addsy == NULL && fixP->fx_pcrel == 0)
     fixP->fx_done = 1;

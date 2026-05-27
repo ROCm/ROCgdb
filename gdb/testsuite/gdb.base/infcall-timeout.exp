@@ -86,6 +86,19 @@ proc run_test { target_async target_non_stop non_stop unwind } {
 	gdb_test "bt" \
 	    ".* function_that_never_returns .*<function called from gdb>.*"
     }
+
+    # After the infcall, the thread should be stopped.  Regression
+    # test for PR gdb/34148.
+    if {$non_stop} {
+	# Check the main thread only, in case we have system-spawned
+	# threads.
+	set thread_filter "1"
+    } else {
+	set thread_filter ""
+    }
+    gdb_test "info threads -running $thread_filter" \
+	"No threads matched\\." \
+	"thread is stopped"
 }
 
 foreach_with_prefix target_async { "on" "off" } {

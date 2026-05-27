@@ -54,6 +54,7 @@ static symbolS *def_symbol_in_progress;
 static const char weak_altprefix[] = ".weak.";
 #endif /* TE_PE */
 
+#include "obj-coff-seh-shared.c"
 #include "obj-coff-seh.c"
 
 typedef struct

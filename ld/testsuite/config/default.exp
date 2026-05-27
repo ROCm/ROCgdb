@@ -552,6 +552,22 @@ if { [istarget alpha*-*-*vms*] } {
     unset f src
 }
 
+# Provide dummy milli.a that hppa64-hpux-ld always loads
+if { [istarget hppa*64-*-hpux*] } {
+    verbose -log "creating dummy milli.a archive"
+    remote_exec host "mkdir -p tmpdir/hppa"
+    set src tmpdir/hppa/empty.s
+    set f [open $src "w"]
+    close $f
+    if [is_remote host] {
+	set src [remote_download host $src]
+    }
+    ld_assemble $as $src tmpdir/hppa/empty.o
+    ar_simple_create $ar {} tmpdir/hppa/milli.a tmpdir/hppa/empty.o
+    append LDFLAGS " -Ltmpdir/hppa"
+    unset f src
+}
+
 set plug_opt ""
 if { [check_compiler_available] } {
     set plugin_names {

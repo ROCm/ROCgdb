@@ -59,6 +59,9 @@
   .seh_code
 */
 
+#ifndef OBJ_COFF_SEH_H
+#define OBJ_COFF_SEH_H
+
 /* architecture specific pdata/xdata handling.  */
 #define SEH_CMDS \
         {"seh_proc", obj_coff_seh_proc, 0}, \
@@ -202,3 +205,5 @@ static void obj_coff_seh_code (int);
    PEX64_SCOPE_ENTRY_SIZE * (IDX))
 
 #endif
+
+#endif /* OBJ_COFF_SEH_H */

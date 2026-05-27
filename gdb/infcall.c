@@ -918,12 +918,20 @@ run_inferior_call (std::unique_ptr<call_thread_fsm> sm,
       current_ui->register_file_handler ();
     }
 
-  /* If the infcall does NOT succeed, normal_stop will have already
-     finished the thread states.  However, on success, normal_stop
-     defers here, so that we can set back the thread states to what
-     they were before the call.  Note that we must also finish the
-     state of new threads that might have spawned while the call was
-     running.  The main cases to handle are:
+  /* Sync the user/frontend thread states from the internal thread
+     states.  proceed marked threads in resume_ptid as THREAD_RUNNING
+     for this infcall; we must now sync them back, regardless of how
+     the call ended.  For the success path and for the unwind paths
+     (unwind-on-{signal,timeout,terminating-exception}),
+     call_thread_fsm::should_notify_stop returns false and normal_stop
+     is skipped -- this call is the canonical place to do the sync.
+     For other failure paths normal_stop does run and has already
+     finished the thread state; finish_thread_state is idempotent, so
+     calling it again here is harmless.  Note that we must also finish
+     the state of new threads that might have spawned while the call
+     was running.
+
+     The main cases to handle are:
 
      - "(gdb) print foo ()", or any other command that evaluates an
      expression at the prompt.  (The thread was marked stopped before.)
@@ -934,8 +942,7 @@ run_inferior_call (std::unique_ptr<call_thread_fsm> sm,
      evaluates true and thus we'll present a user-visible stop is
      decided elsewhere.  */
   if (!was_running
-      && call_thread_ptid == inferior_ptid
-      && stop_stack_dummy == STOP_STACK_DUMMY)
+      && call_thread_ptid == inferior_ptid)
     finish_thread_state (call_thread->inf->process_target (),
 			 user_visible_resume_ptid (0));
 

@@ -2881,10 +2881,17 @@ windows_nat_target::create_inferior (const char *exec_file,
   else
     {
       expanded_infcwd = gdb_tilde_expand (inferior_cwd);
+      inferior_cwd = expanded_infcwd.c_str ();
+#ifndef __CYGWIN__
       /* Mirror slashes on inferior's cwd.  */
       std::replace (expanded_infcwd.begin (), expanded_infcwd.end (),
 		    '/', '\\');
-      inferior_cwd = expanded_infcwd.c_str ();
+#else
+      if (cygwin_conv_path (CCP_POSIX_TO_WIN_W,
+			    inferior_cwd,
+			    infcwd, sizeof (infcwd)) < 0)
+	error (_("Error converting inferior cwd: %d"), errno);
+#endif
     }
 
   memset (&si, 0, sizeof (si));
@@ -2922,11 +2929,6 @@ windows_nat_target::create_inferior (const char *exec_file,
       toexec = shell;
       flags |= DEBUG_PROCESS;
     }
-
-  if (inferior_cwd != NULL
-      && cygwin_conv_path (CCP_POSIX_TO_WIN_W, inferior_cwd,
-			   infcwd, strlen (inferior_cwd)) < 0)
-    error (_("Error converting inferior cwd: %d"), errno);
 
   args = (wchar_t *) alloca ((wcslen (toexec) + wcslen (cygallargs) + 2)
 			     * sizeof (wchar_t));

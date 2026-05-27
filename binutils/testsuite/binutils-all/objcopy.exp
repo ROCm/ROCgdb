@@ -1570,6 +1570,11 @@ if { [istarget *-*-cygwin] || [istarget *-*-mingw*] } {
    append ldflags " --disable-reloc-section"
 }
 
+# Append LDFLAGS for milli.a archive
+if { [istarget hppa*64*-*-hpux*] } {
+   append ldflags " $LDFLAGS"
+}
+
 #xcoff doesn't support arbitrary sections
 if { ![is_xcoff_format] } {
     objcopy_test "pr25662" $src executable "" $ldflags

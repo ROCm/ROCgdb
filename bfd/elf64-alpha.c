@@ -3018,9 +3018,13 @@ elf64_alpha_relax_got_load (struct alpha_relax_info *info, bfd_vma symval,
     {
       bfd_vma dtp_base, tp_base;
 
-      BFD_ASSERT (elf_hash_table (info->link_info)->tls_sec != NULL);
-      dtp_base = alpha_get_dtprel_base (info->link_info);
-      tp_base = alpha_get_tprel_base (info->link_info);
+      if (elf_hash_table (info->link_info)->tls_sec != NULL)
+	{
+	  dtp_base = alpha_get_dtprel_base (info->link_info);
+	  tp_base = alpha_get_tprel_base (info->link_info);
+	}
+      else
+	dtp_base = tp_base = 0;
       disp = symval - (r_type == R_ALPHA_GOTDTPREL ? dtp_base : tp_base);
 
       insn = (OP_LDA << 26) | (insn & (31 << 21)) | (31 << 16);
@@ -4644,10 +4648,17 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		 input_bfd, h->root.root.root.string);
 	      ret_val = false;
 	    }
-	  BFD_ASSERT (elf_hash_table (info)->tls_sec != NULL);
-	  value -= tp_base;
-	  if (r_type == R_ALPHA_TPRELHI)
-	    value = ((bfd_signed_vma) value >> 16) + ((value >> 15) & 1);
+	  else if (elf_link_local_undefweak_p (&h->root, info))
+	    /* NB: The local undefined TLS symbol address isn't usable
+	       since it isn't mapped to any TLS storage.  Set it to 0
+	       to avoid relocation overflow.  */
+	    value = 0;
+	  else
+	    {
+	      value -= tp_base;
+	      if (r_type == R_ALPHA_TPRELHI)
+		value = ((bfd_signed_vma) value >> 16) + ((value >> 15) & 1);
+	    }
 	  goto default_reloc;
 
 	case R_ALPHA_GOTDTPREL:
@@ -4665,8 +4676,12 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		value = 0;
 	      else
 		{
-		  BFD_ASSERT (elf_hash_table (info)->tls_sec != NULL);
-		  if (r_type == R_ALPHA_GOTDTPREL)
+		  if (elf_link_local_undefweak_p (&h->root, info))
+		    /* NB: The local undefined TLS symbol address isn't
+		       usable since it isn't mapped to any TLS storage.
+		       Set it to 0 to avoid relocation overflow.  */
+		    value = 0;
+		  else if (r_type == R_ALPHA_GOTDTPREL)
 		    value -= dtp_base;
 		  else if (bfd_link_executable (info))
 		    value -= tp_base;

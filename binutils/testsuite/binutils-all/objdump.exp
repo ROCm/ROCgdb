@@ -622,26 +622,19 @@ proc test_build_id_debuglink {option} {
     global STRIP
     global OBJCOPY
     global OBJDUMP
-    global CFLAGS_FOR_TARGET
     global exe
     
     set test "build-id-debuglink ($option)"
 
     # Use a fixed build-id.
-    if { [info exists CFLAGS_FOR_TARGET] } {
-	set save_CFLAGS_FOR_TARGET $CFLAGS_FOR_TARGET
+    set xflags debug
+    foreach i "-Wl,--build-id=0x12345678abcdef01,--compress-debug-sections=$option -fPIC -shared -nostdlib" {
+	append xflags " additional_flags=$i"
     }
-    set CFLAGS_FOR_TARGET "-g -Wl,--build-id=0x12345678abcdef01,--compress-debug-sections=$option"
 
-    if { [target_compile $srcdir/$subdir/testprog.c tmpdir/testprog${exe} executable debug] != "" } {
+    if { [target_compile $srcdir/$subdir/testprog.c tmpdir/testprog${exe} executable $xflags] != "" } {
 	unsupported "$test (build)"
 	return
-    }
-
-    if { [info exists save_CFLAGS_FOR_TARGET] } {
-	set CFLAGS_FOR_TARGET $save_CFLAGS_FOR_TARGET
-    } else {
-	unset CFLAGS_FOR_TARGET
     }
 
     if { [binutils_run $STRIP "--strip-debug --remove-section=.comment tmpdir/testprog${exe} -o tmpdir/testprog.strip"] != "" } {

@@ -34,6 +34,8 @@ Dwarf::assemble {
 	global $var
     }
 
+    declare_labels type_offset
+
     cu { label cu_label } {
 	compile_unit {
 	    DW_AT_language @DW_LANG_C
@@ -47,11 +49,11 @@ Dwarf::assemble {
 	}
     }
 
-    tu { label tu_label } 0x8ece66f4224fddb3 "" {
+    tu { label tu_label } 0x8ece66f4224fddb3 type_offset {
 	type_unit {} {
 	    declare_labels int_type
 
-	    structure_type {
+	    type_offset: structure_type {
 		DW_AT_name struct_with_int_member
 		DW_AT_byte_size 4 sdata
 	    } {

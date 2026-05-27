@@ -62,6 +62,17 @@ run_ld_link_tests [list \
     ] \
 ]
 
+run_cc_link_tests [list \
+    [list \
+	"pr34165" \
+	"" \
+	"-O2 $NOSANITIZE_CFLAGS" \
+	{ pr34165.c } \
+	{} \
+	"pr34165" \
+    ] \
+]
+
 if [file exists tmpdir/pr22263-1] {
     run_ld_link_tests [list \
 	[list \

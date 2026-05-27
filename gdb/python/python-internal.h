@@ -330,7 +330,7 @@ struct program_space;
 struct bpstat;
 struct inferior;
 
-extern int gdb_python_initialized;
+extern bool gdb_python_initialized;
 
 extern PyObject *gdb_module;
 extern PyObject *gdb_python_module;

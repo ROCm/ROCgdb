@@ -17,8 +17,10 @@
 
 #if PTRBITS == 64
 # define PTRBYTE .8byte
+# define PTRBYTES 8
 #elif PTRBITS == 32
 # define PTRBYTE .4byte
+# define PTRBYTES 4
 #else
 # error "Unsupported pointer size"
 #endif
@@ -130,7 +132,7 @@ loclist:
 1:	.byte		0x50	/* DW_OP_reg0 */
 2:
 	/* Location list end.  */
-	.4byte	0, 0
+	PTRBYTE		0, 0
 
 /* Abbrev table */
 	.section .debug_abbrev
@@ -283,7 +285,7 @@ loclist:
 
 .Lline1_lines:
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		func_start
 	.byte		3	/* DW_LNS_advance_line */
@@ -291,7 +293,7 @@ loclist:
 	.byte		1	/* DW_LNS_copy */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		func0
 	.byte		4	/* DW_LNS_set_file */
@@ -301,7 +303,7 @@ loclist:
 	.byte		1	/* DW_LNS_copy */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		func1
 	.byte		4	/* DW_LNS_set_file */
@@ -311,7 +313,7 @@ loclist:
 	.byte		1	/* DW_LNS_copy */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		func2
 	.byte		4	/* DW_LNS_set_file */
@@ -321,7 +323,7 @@ loclist:
 	.byte		1	/* DW_LNS_copy */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		func3
 	.byte		4	/* DW_LNS_set_file */
@@ -331,14 +333,14 @@ loclist:
 	.byte		1	/* DW_LNS_copy */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		func_end
 
 /* Equivalent copy but renamed s/func/fund/.  */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		fund_start
 	.byte		3	/* DW_LNS_advance_line */
@@ -346,7 +348,7 @@ loclist:
 	.byte		1	/* DW_LNS_copy */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		fund0
 	.byte		4	/* DW_LNS_set_file */
@@ -356,7 +358,7 @@ loclist:
 	.byte		1	/* DW_LNS_copy */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		fund1
 	.byte		4	/* DW_LNS_set_file */
@@ -366,7 +368,7 @@ loclist:
 	.byte		1	/* DW_LNS_copy */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		fund2
 	.byte		4	/* DW_LNS_set_file */
@@ -376,7 +378,7 @@ loclist:
 	.byte		1	/* DW_LNS_copy */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		fund3
 	.byte		4	/* DW_LNS_set_file */
@@ -386,7 +388,7 @@ loclist:
 	.byte		1	/* DW_LNS_copy */
 
 	.byte		0	/* DW_LNE_set_address */
-	.uleb128	5
+	.uleb128	1 + PTRBYTES
 	.byte		2
 	PTRBYTE		fund_end
 

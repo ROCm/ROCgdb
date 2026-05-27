@@ -2496,7 +2496,8 @@ bfd_set_asymbol_name (asymbol *sy, const char *name)
 static inline bfd_size_type
 bfd_get_section_limit_octets (const bfd *abfd, const asection *sec)
 {
-  if (abfd->direction != write_direction && sec->rawsize != 0)
+  if (abfd->format != bfd_core && abfd->direction != write_direction
+      && sec->rawsize != 0)
     return sec->rawsize;
   return sec->size;
 }
@@ -2515,7 +2516,8 @@ bfd_get_section_limit (const bfd *abfd, const asection *sec)
 static inline bfd_size_type
 bfd_get_section_alloc_size (const bfd *abfd, const asection *sec)
 {
-  if (abfd->direction != write_direction && sec->rawsize > sec->size)
+  if (abfd->format != bfd_core && abfd->direction != write_direction
+      && sec->rawsize > sec->size)
     return sec->rawsize;
   return sec->size;
 }

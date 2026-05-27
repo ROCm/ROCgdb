@@ -41,8 +41,6 @@
 
 typedef struct instr_info instr_info;
 
-static bool annotate_immediates = false;
-
 static bool dofloat (instr_info *, int);
 static int putop (instr_info *, const char *, int);
 static void oappend_with_style (instr_info *, const char *,
@@ -181,8 +179,7 @@ struct instr_info
 
   char obuf[MAX_OPERAND_BUFFER_SIZE];
   char *obufp;
-  char cbuf[COMMENT_BUFFER_SIZE];
-  char * cbufp;
+  char *cbufp;
   char *mnemonicendp;
   const uint8_t *start_codep;
   uint8_t *codep;
@@ -260,6 +257,7 @@ struct instr_info
   signed char op_index[MAX_OPERANDS];
   bool op_riprel[MAX_OPERANDS];
   char *op_out[MAX_OPERANDS];
+  char *cm_out[MAX_OPERANDS];
   bfd_vma op_address[MAX_OPERANDS];
   bfd_vma start_pc;
 
@@ -276,6 +274,8 @@ struct instr_info
   char close_char;
   char separator_char;
   char scale_char;
+
+  bool annotate_immediates;
 
   enum x86_64_isa isa64;
 };
@@ -9749,7 +9749,6 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
     .start_codep = priv.the_buffer,
     .codep = priv.the_buffer,
     .obufp = ins.obuf,
-    .cbufp = ins.cbuf,
     .last_lock_prefix = -1,
     .last_repz_prefix = -1,
     .last_repnz_prefix = -1,
@@ -9761,6 +9760,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
     .fwait_prefix = -1,
   };
   char op_out[MAX_OPERANDS][MAX_OPERAND_BUFFER_SIZE];
+  char cm_out[MAX_OPERANDS][COMMENT_BUFFER_SIZE];
 
   priv.orig_sizeflag = AFLAG | DFLAG;
   if ((info->mach & bfd_mach_i386_i386) != 0)
@@ -9833,9 +9833,8 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	}
       else if (startswith (p, "suffix"))
 	priv.orig_sizeflag |= SUFFIX_ALWAYS;
-
       else if (startswith (p, "annotate"))
-	annotate_immediates = true;
+	ins.annotate_immediates = true;
 
       p = strchr (p, ',');
       if (p != NULL)
@@ -9875,6 +9874,8 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
     {
       op_out[i][0] = 0;
       ins.op_out[i] = op_out[i];
+      cm_out[i][0] = 0;
+      ins.cm_out[i] = cm_out[i];
     }
 
   sizeflag = priv.orig_sizeflag;
@@ -9993,6 +9994,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	  for (i = 0; i < MAX_OPERANDS; ++i)
 	    {
 	      ins.obufp = ins.op_out[i];
+	      ins.cbufp = ins.cm_out[i];
 	      ins.op_ad = MAX_OPERANDS - 1 - i;
 	      if (dp->op[i].rtn
 		  && !dp->op[i].rtn (&ins, dp->op[i].bytemode, sizeflag))
@@ -10318,6 +10320,10 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	  riprel = ins.op_riprel[i];
 	  ins.op_riprel[i] = ins.op_riprel[MAX_OPERANDS - 1 - i];
 	  ins.op_riprel[MAX_OPERANDS - 1 - i] = riprel;
+
+	  char *tmp = ins.cm_out[i];
+	  ins.cm_out[i] = ins.cm_out[MAX_OPERANDS - 1 - i];
+	  ins.cm_out[MAX_OPERANDS - 1 - i] = tmp;
 	}
     }
   else
@@ -10365,23 +10371,24 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	needcomma = 1;
       }
 
+  const char *sep = "        # ";
   for (i = 0; i < MAX_OPERANDS; i++)
     if (ins.op_index[i] != -1 && ins.op_riprel[i])
       {
-	i386_dis_printf (info, dis_style_comment_start, "        # ");
+	i386_dis_printf (info, dis_style_comment_start, "%s", sep);
+	sep = ", ";
 	(*info->print_address_func)
 	  ((bfd_vma)(ins.start_pc + (ins.codep - ins.start_codep)
 		     + ins.op_address[ins.op_index[i]]),
-	  info);
-	break;
+	   info);
       }
-  if (ins.cbufp != ins.cbuf)
-    {
-      if (i == MAX_OPERANDS)
-	i386_dis_printf (info, dis_style_comment_start, "        # ");
-      i386_dis_printf (info, dis_style_comment_start, "%s", ins.cbuf);
-    }
-  
+    else if (*ins.cm_out[i])
+      {
+	i386_dis_printf (info, dis_style_comment_start, "%s", sep);
+	sep = ", ";
+	i386_dis_printf (info, dis_style_symbol, "%s", ins.cm_out[i]);
+      }
+
   ret = ins.codep - priv.the_buffer;
  out:
   info->private_data = NULL;
@@ -10761,6 +10768,7 @@ dofloat (instr_info *ins, int sizeflag)
 
       putop (ins, float_mem[fp_indx], sizeflag);
       ins->obufp = ins->op_out[0];
+      ins->cbufp = ins->cm_out[0];
       ins->op_ad = 2;
       return OP_E (ins, float_mem_mode[fp_indx], sizeflag);
     }
@@ -10782,12 +10790,14 @@ dofloat (instr_info *ins, int sizeflag)
       putop (ins, dp->name, sizeflag);
 
       ins->obufp = ins->op_out[0];
+      ins->cbufp = ins->cm_out[0];
       ins->op_ad = 2;
       if (dp->op[0].rtn
 	  && !dp->op[0].rtn (ins, dp->op[0].bytemode, sizeflag))
 	return false;
 
       ins->obufp = ins->op_out[1];
+      ins->cbufp = ins->cm_out[1];
       ins->op_ad = 1;
       if (dp->op[1].rtn
 	  && !dp->op[1].rtn (ins, dp->op[1].bytemode, sizeflag))
@@ -11589,16 +11599,19 @@ static void
 cappend_with_style (instr_info *ins, const char *s,
 		    enum disassembler_style style)
 {
-  if (ins->cbufp + strlen (s) + 4 >= ins->cbuf + COMMENT_BUFFER_SIZE)
+  size_t len = strlen (ins->cbufp);
+
+  if (len + !!len + strlen (s) + 4 >= COMMENT_BUFFER_SIZE)
     return;
 
   unsigned num = (unsigned) style;
 
+  if (len)
+    *ins->cbufp++ = ' ';
   *ins->cbufp++ = STYLE_MARKER_CHAR;
   *ins->cbufp++ = (num < 10 ? ('0' + num)
 		   : ((num < 16) ? ('a' + (num - 10)) : '0'));
   *ins->cbufp++ = STYLE_MARKER_CHAR;
-  *ins->cbufp = '\0';
 
   ins->cbufp = stpcpy (ins->cbufp, s);
 }
@@ -11680,7 +11693,7 @@ oappend_immediate (instr_info *ins, bfd_vma imm)
   print_operand_value (ins, imm, dis_style_immediate);
 
   /* Determine if we can display some more information about this immediate.  */
-  if (! annotate_immediates
+  if (! ins->annotate_immediates
       /* Don't bother with zero, even if there is symbol associated with it.  */
       || imm == 0
       /* For the next tests we need a BFD.  If we do not have one then do not proceed.  */
@@ -11698,14 +11711,13 @@ oappend_immediate (instr_info *ins, bfd_vma imm)
 
   char * annotation = NULL;
 
-  /* FIXME: Potential memory leak: strictly speaking asprintf()
-     can return 0 whilst also having allocated some memory.  */
-  if (asprintf (& annotation, " [%s]", sym->name) > 0)
+  if (asprintf (& annotation, "[%s]", sym->name) > 0)
     {
       /* Display the symbol associated with address 'imm'.  */
       cappend_with_style (ins, annotation, dis_style_symbol);
-      free (annotation);
     }
+
+  free (annotation);
 }
 
 /* Put DISP in BUF as signed hex number.  */
@@ -14257,6 +14269,10 @@ OP_VexW (instr_info *ins, int bytemode, int sizeflag)
 
       ins->op_out[2] = ins->op_out[1];
       ins->op_out[1] = tmp;
+
+      tmp = ins->cm_out[2];
+      ins->cm_out[2] = ins->cm_out[1];
+      ins->cm_out[1] = tmp;
     }
   return true;
 }
@@ -14290,6 +14306,10 @@ OP_REG_VexI4 (instr_info *ins, int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 
       ins->op_out[3] = ins->op_out[2];
       ins->op_out[2] = tmp;
+
+      tmp = ins->cm_out[2];
+      ins->cm_out[3] = ins->cm_out[2];
+      ins->cm_out[2] = tmp;
     }
   return true;
 }
