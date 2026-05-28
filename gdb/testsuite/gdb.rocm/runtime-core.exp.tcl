@@ -20,13 +20,11 @@
 # on the GPU (pagefault, abort, or assert (false)) which triggers the
 # runtime to generate a core dump.  The test will find the host and GPU
 # core dumps, create a unified core using coremerge and open it in GDB.
+#
+# This file is sourced by the runtime-core-*.exp shards, each of which
+# sets $fault, $core_type and $output_type before sourcing.
 
 load_lib rocm.exp
-
-# Each instance writes its corefile under its own outputs/ directory
-# and only inspects per-inferior state, so allow it to run concurrently
-# with other gdb.rocm tests.
-set rocm_gpu_concurrency parallel
 
 require allow_rocm_core_tests
 require allow_hip_tests
@@ -35,7 +33,7 @@ require allow_hip_tests
 # code, so skip it for optimized builds.
 require no_optimized_code
 
-standard_testfile .cpp
+standard_testfile runtime-core.cpp
 
 if { [build_executable "failed to prepare" ${testfile} ${srcfile} \
       {debug hip}] } {
@@ -60,7 +58,7 @@ set success_count 0
 #
 # CORE_TYPE is one of "full" or "lightweight".
 #
-# OUTPUT_TYPE is one of "file" of "pipe".
+# OUTPUT_TYPE is one of "file" or "pipe".
 #
 proc do_test { fault core_type output_type } {
     incr ::total_count
@@ -166,19 +164,7 @@ proc do_test { fault core_type output_type } {
 }
 
 with_rocm_gpu_lock {
-    # Check the runtime can configure the core dump generation based
-    # on env variables.
-    foreach_with_prefix output_type { file pipe } {
-	foreach_with_prefix core_type {full lightweight} {
-	    do_test pagefault $core_type $output_type
-	}
-    }
-
-    # Check that various GPU events can cause a core dump.
-    # "pagefault" was covered by previous cases already.
-    foreach_with_prefix fault {abort assert} {
-      do_test $fault lightweight file
-    }
+    do_test $fault $core_type $output_type
 }
 
 gdb_assert {$::total_count == ($::untested_count + $::success_count)} "all tests accounted for"
