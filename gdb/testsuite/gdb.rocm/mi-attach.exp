@@ -17,6 +17,10 @@ load_lib rocm.exp
 load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
+# This test only exercises a small slice of the GPU; allow it to
+# run concurrently with other gdb.rocm tests.
+set rocm_gpu_concurrency parallel
+
 require can_spawn_for_attach allow_hipcc_tests
 
 standard_testfile .cpp
@@ -25,9 +29,11 @@ if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
     return
 }
 
-set spawn_id [spawn_wait_for_attach $::binfile]
-set prog_pid [spawn_id_get_pid $spawn_id]
+with_rocm_gpu_lock {
+    set spawn_id [spawn_wait_for_attach $::binfile]
+    set prog_pid [spawn_id_get_pid $spawn_id]
 
-mi_clean_restart
+    mi_clean_restart
 
-mi_gdb_test "-target-attach $prog_pid" ".*\\^done.*" "attach \$PROG_PID"
+    mi_gdb_test "-target-attach $prog_pid" ".*\\^done.*" "attach \$PROG_PID"
+}

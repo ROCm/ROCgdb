@@ -18,6 +18,10 @@
 
 load_lib rocm.exp
 
+# This test only exercises a small slice of the GPU; allow it to
+# run concurrently with other gdb.rocm tests.
+set rocm_gpu_concurrency parallel
+
 standard_testfile .cpp
 
 require allow_hipcc_tests
@@ -26,7 +30,7 @@ if {[build_executable "failed to prepare" $testfile $srcfile {hip}]} {
     return
 }
 
-# with_rocm_gpu_lock pins ROCR_VISIBLE_DEVICES to a single GPU per slot,
+# with_rocm_gpu_lock pins ROCR_VISIBLE_DEVICES to a single GPU per pool,
 # so the inferior sees exactly one device and the breakpoint resolves to
 # a single address.  GDB has to start inside the lock so it inherits the
 # pinned ROCR_VISIBLE_DEVICES from the environment.
