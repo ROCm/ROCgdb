@@ -354,6 +354,167 @@ by switching to a different user on the same machine.  These users
 will have random files copied into their $HOME directories, so it is a
 good idea to setup new users just for this purpose.
 
+ROCm GPU Parallel Testing
+*************************
+
+The gdb.rocm/ test suite runs GPU-bound tests under a file-based lock
+managed by with_rocm_gpu_lock (see lib/rocm.exp).  The lock layer keeps
+the suite safe to run with GDB_PARALLEL on multi-GPU nodes by gating
+how many tests may share a GPU at once and which physical GPU each
+test sees.
+
+Per-test concurrency marker
+---------------------------
+
+Each .exp file selects one of three modes by setting
+::rocm_gpu_concurrency near its load_lib rocm.exp, before any call to
+with_rocm_gpu_lock:
+
+	set rocm_gpu_concurrency parallel
+	set rocm_gpu_concurrency serial   ;# the default
+	set rocm_gpu_concurrency machine
+
+The three modes are:
+
+  parallel
+	Take one slot on any one GPU.  Multiple parallel-marked tests
+	may run simultaneously, spread across GPUs first and stacked on
+	the same GPU only once every GPU has at least one tenant.  Use
+	this for tests that launch a small kernel (typically one
+	workgroup with a handful of workitems) and only inspect
+	per-inferior state.  This is the only mode that allows more
+	than one test to share a single GPU.
+
+  serial (default)
+	Take every slot of one GPU.  No other test runs on that GPU
+	until this one releases it, but tests on other GPUs are
+	unaffected.  Use this for tests that touch device-wide state
+	(such as device-wide attach/interrupt or precise-memory
+	toggles) or that spawn multiple concurrent GPU inferiors
+	within a single test.  This is the historical "one rocm test
+	at a time" behaviour, except now scoped to a single GPU
+	instead of the whole machine.
+
+  machine
+	Take every slot of every active GPU.  No other rocm test runs
+	anywhere on the node until this one releases.  Use this only
+	for tests whose inferiors spawn sibling HIP processes whose
+	runtime initialisation does not tolerate concurrent ROCm
+	activity on neighbouring GPUs.  Note: the inferior under
+	machine mode still sees a single device via
+	ROCR_VISIBLE_DEVICES (the same first-pool pin as serial mode);
+	the exclusivity is about keeping other rocm tests off the node,
+	not about handing the body all GPUs.
+
+There is a failsafe: if any local device lacks multi-process debug
+support (per hip_devices_support_debug_multi_process), parallel mode
+is downgraded to serial regardless of the per-test marker.  This
+covers older gfx generations that cannot have two debugged processes
+on the GPU at once.
+
+ROCGDB_ROCM_PARALLEL_SLOTS
+
+Number of concurrent parallel-marked tests allowed on a single GPU.
+Must be a positive integer.  Default 1.
+
+  ROCGDB_ROCM_PARALLEL_SLOTS=1 (default)
+	Each GPU hosts at most one rocm test at any moment.  A
+	parallel-marked test takes the GPU's single slot for its
+	duration; a serial-marked test takes the GPU's single slot
+	(which is the same thing, since there is only one).  On an
+	N-GPU node this yields up to N concurrent rocm tests, each on
+	its own GPU.  Matches the historical "one rocm test per GPU"
+	behaviour.
+
+  ROCGDB_ROCM_PARALLEL_SLOTS=K (K > 1)
+	Up to K parallel-marked tests may share a GPU.  Serial-marked
+	tests still take all K slots of one GPU, so they fully
+	exclude parallel-marked siblings from that GPU.  On an N-GPU
+	node this raises the ceiling to N*K concurrent rocm tests.
+	Raise K only on hardware/stacks known to tolerate higher
+	kfd/dbgapi concurrency; can cause spurious "no ROCm-capable
+	device" failures if pushed past what the stack supports.
+
+ROCGDB_ROCM_GPU_MAX_PARALLEL
+
+Cap on the number of active GPU pools (i.e. distinct GPUs used by the
+test run).  Must be a positive integer.  Default is the number of
+eligible GPUs detected on the system (i.e. uncapped).
+
+The active pool count is set to:
+
+	min(eligible_gpus, ROCGDB_ROCM_GPU_MAX_PARALLEL)
+
+where eligible_gpus is the device set surviving any ROCR_VISIBLE_DEVICES
+or ROCM_TEST_ARCH filtering applied before the lock layer starts.  When
+the cap reduces the active set, the internal pool->physical device map
+is truncated to the first N eligible devices (preserving physical
+device indices, see ROCR_VISIBLE_DEVICES below); each test then sees
+the corresponding physical device through the per-slot
+ROCR_VISIBLE_DEVICES that with_rocm_gpu_lock sets around its body.
+
+  unset (default)
+	Use every eligible GPU on the node.  On an N-GPU node with no
+	ROCR_VISIBLE_DEVICES / ROCM_TEST_ARCH filtering this gives N
+	pools.
+
+  ROCGDB_ROCM_GPU_MAX_PARALLEL=1
+	Disables multi-GPU spread; the whole rocm suite shares one
+	GPU.  Equivalent to GDB_PARALLEL being unset for the purposes
+	of GPU selection.
+
+  ROCGDB_ROCM_GPU_MAX_PARALLEL=N
+	Cap the active pool count at N.  The effective ceiling is
+	min(N, eligible_gpus).  Lower this if kfd/dbgapi contention
+	from many simultaneous debug sessions is producing spurious
+	mid-run failures even in tests that only touch a small slice
+	of a single GPU.
+
+ROCR_VISIBLE_DEVICES
+
+Pre-set this in the environment before invoking the testsuite to
+restrict the rocm lock layer (and every GDB inferior it spawns) to a
+chosen subset of the node's physical GPUs.  Format is the standard
+HSA comma-separated list of physical device indices, for example:
+
+	ROCR_VISIBLE_DEVICES=4,5,6 make check TESTS=gdb.rocm/*.exp
+
+Effects:
+
+  - The lock layer enumerates only the listed devices, so
+    eligible_gpus (see ROCGDB_ROCM_GPU_MAX_PARALLEL above) is at most
+    the length of the list.
+
+  - Each pool's per-test GPU pin uses the physical index from the
+    list, not a renumbered 0..N-1 logical index.  In the example
+    above, pool 0 pins ROCR_VISIBLE_DEVICES=4, pool 1 pins =5, etc.,
+    so the inferiors actually run on physical devices 4, 5, 6.  This
+    is the property you want when sharing a node with other workloads
+    pinned to the lower-numbered GPUs.
+
+  - ROCM_TEST_ARCH filtering, if also set, is applied within the
+    pre-masked set and preserves the surviving physical indices.
+
+  - If the pre-set list's length does not match the number of devices
+    the HIP enumerator reports (typo, stale value, device the runtime
+    rejected), the lock layer logs a warning and falls back to an
+    identity 0..N-1 mapping for the surviving devices, so the run
+    still proceeds but on whichever devices HIP exposed.
+
+If ROCR_VISIBLE_DEVICES is unset the lock layer uses every physical
+GPU the HIP enumerator reports, subject to the cap.
+
+Combined ceiling
+
+The maximum number of concurrent rocm tests on a node is:
+
+	min(eligible_gpus, ROCGDB_ROCM_GPU_MAX_PARALLEL)
+	  * ROCGDB_ROCM_PARALLEL_SLOTS
+
+assuming every concurrent test is parallel-marked.  Serial- and
+machine-marked tests effectively reduce that ceiling for the duration
+of their lock hold.
+
 Testing All Simple Boards
 *************************
 
