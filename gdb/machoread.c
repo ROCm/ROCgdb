@@ -422,7 +422,7 @@ macho_add_oso_symfile (oso_el *oso, const gdb_bfd_ref_ptr &abfd,
 
   macho_debug (0, _("Loading debugging symbols from oso: %s\n"), oso->name);
 
-  if (!bfd_check_format (abfd.get (), bfd_object))
+  if (!gdb_bfd_check_format (abfd.get (), bfd_object))
     {
       warning (_("`%s': can't read symbols: %s."), oso->name,
 	       bfd_errmsg (bfd_get_error ()));
@@ -634,7 +634,7 @@ macho_symfile_read_all_oso (std::vector<oso_el> *oso_vector_ptr,
 	      ix = last_ix;
 	      continue;
 	    }
-	  if (!bfd_check_format (archive_bfd.get (), bfd_archive))
+	  if (!gdb_bfd_check_format (archive_bfd.get (), bfd_archive))
 	    {
 	      warning (_("OSO archive file \"%s\" not an archive."),
 		       archive_name.c_str ());
@@ -748,7 +748,7 @@ macho_check_dsym (struct objfile *objfile, std::string *filenamep)
       return NULL;
     }
 
-  if (!bfd_check_format (dsym_bfd.get (), bfd_object))
+  if (!gdb_bfd_check_format (dsym_bfd.get (), bfd_object))
     {
       warning (_("bad dsym file format: %s"), bfd_errmsg (bfd_get_error ()));
       return NULL;

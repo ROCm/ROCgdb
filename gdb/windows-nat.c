@@ -699,7 +699,7 @@ windows_make_so (const char *name, LPVOID load_addr)
       if (abfd == NULL)
 	return so;
 
-      if (bfd_check_format (abfd.get (), bfd_object))
+      if (gdb_bfd_check_format (abfd.get (), bfd_object))
 	text = bfd_get_section_by_name (abfd.get (), ".text");
 
       if (!text)

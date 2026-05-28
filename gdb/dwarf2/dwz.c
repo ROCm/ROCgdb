@@ -171,7 +171,7 @@ get_debug_sup_info (bfd *abfd,
 static bool
 verify_id (bfd *abfd, size_t len, const bfd_byte *buildid, bool dwarf5)
 {
-  if (!bfd_check_format (abfd, bfd_object))
+  if (!gdb_bfd_check_format (abfd, bfd_object))
     return false;
 
   if (dwarf5)

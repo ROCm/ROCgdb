@@ -6750,7 +6750,7 @@ try_open_dwop_file (dwarf2_per_bfd *per_bfd, const char *file_name, int is_dwp,
     static gdb::mutex mutex;
     gdb::lock_guard<gdb::mutex> lock (mutex);
 
-    if (!bfd_check_format (sym_bfd.get (), bfd_object))
+    if (!gdb_bfd_check_format (sym_bfd.get (), bfd_object))
       return NULL;
 
     /* Success.  Record the bfd as having been included by the objfile's bfd.

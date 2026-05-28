@@ -1200,6 +1200,22 @@ gdb_bfd_canonicalize_symtab (bfd *abfd, bool should_throw)
 			       symbol_table.size () - 1);
 }
 
+/* See gdb_bfd.h.  */
+
+bool
+gdb_bfd_check_format (bfd *abfd, bfd_format format)
+{
+  return bfd_check_format (abfd, format);
+}
+
+/* See gdb_bfd.h.  */
+
+bool
+gdb_bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
+{
+  return bfd_check_format_matches (abfd, format, matching);
+}
+
 /* Implement the 'maint info bfd' command.  */
 
 static void

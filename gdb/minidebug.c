@@ -251,7 +251,7 @@ find_separate_debug_file_in_section (struct objfile *objfile)
   if (abfd == NULL)
     return NULL;
 
-  if (!bfd_check_format (abfd.get (), bfd_object))
+  if (!gdb_bfd_check_format (abfd.get (), bfd_object))
     {
       warning (_("Cannot parse .gnu_debugdata section; not a BFD object"));
       return NULL;
