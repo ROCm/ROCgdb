@@ -144,6 +144,14 @@ def _with_lock(args, parser):
     return _script_last_arg("with_lock", 2, args, parser)
 
 
+def _with_shared_lock(args, parser):
+    return _script_last_arg("with_shared_lock", 4, args, parser)
+
+
+def _with_exclusive_lock(args, parser):
+    return _script_last_arg("with_exclusive_lock", 4, args, parser)
+
+
 def _with_rocm_gpu_lock(args, parser):
     return _script_last_arg("with_rocm_gpu_lock", 1, args, parser)
 
@@ -191,6 +199,8 @@ commands = commands_schema(
         "with_override": _with_override,
         "with_ansi_styling_terminal": _with_ansi_styling_terminal,
         "with_lock": _with_lock,
+        "with_shared_lock": _with_shared_lock,
+        "with_exclusive_lock": _with_exclusive_lock,
         "with_rocm_gpu_lock": _with_rocm_gpu_lock,
         "Term::_log_cur": _ns_term_log_cur,
         "Term::with_term": _ns_term_with_term,

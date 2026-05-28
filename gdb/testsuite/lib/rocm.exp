@@ -221,19 +221,272 @@ proc rocm_assemble {source dest {options ""}} {
     return [lindex $res 1]
 }
 
-# The lock file used to ensure that only one GDB has access to the GPU
-# at a time.
-set gpu_lock_filename gpu-parallel.lock
+# Names used for the rocm GPU lock pools.  One pool per visible GPU,
+# each with $gpu_slots_per_gpu slots.  Shared (parallel) tests take
+# one slot in any pool; exclusive (serial) tests take every slot of a
+# single pool (one whole GPU), leaving the other GPUs free.  A
+# per-pool barrier file gives writer priority on that pool.
+set gpu_slot_prefix gpu-parallel-slot
+set gpu_barrier_prefix gpu-parallel-barrier
 
-# Run body under the GPU lock.  Also calls gdb_exit before releasing
-# the GPU lock.
+# Per-GPU concurrency cap.  Configurable via ROCGDB_ROCM_PARALLEL_SLOTS.
+# Default 1 keeps the historical "one rocm test per GPU" behaviour; raise
+# it to let multiple parallel-marked tests share a GPU on hardware/stacks
+# known to tolerate higher kfd/dbgapi concurrency.
+if {[info exists ::env(ROCGDB_ROCM_PARALLEL_SLOTS)]
+    && [string is integer -strict $::env(ROCGDB_ROCM_PARALLEL_SLOTS)]
+    && $::env(ROCGDB_ROCM_PARALLEL_SLOTS) > 0} {
+    set gpu_slots_per_gpu $::env(ROCGDB_ROCM_PARALLEL_SLOTS)
+} else {
+    set gpu_slots_per_gpu 1
+}
+
+# Decide how many GPUs to spread tests across, and build the
+# rocm_pool_to_physical map so the per-body lock can translate a pool
+# index back to a physical device index (the actual ROCR_VISIBLE_DEVICES
+# masking happens inside with_rocm_gpu_lock, not here).
+#
+#   - GDB_PARALLEL unset: pin to one GPU (device 0).  Reproduces the
+#     pre-parallel single-tenant behaviour.
+#   - ROCM_TEST_ARCH set: keep only GPUs whose gfx name matches.
+#   - Heterogeneous fleet, no ROCM_TEST_ARCH: failsafe to one GPU,
+#     since a fat binary may not cover every arch present and per-arch
+#     dispatch is not yet implemented.
+#   - Homogeneous fleet: use every GPU.
+#
+# The eligible-GPU count may then be capped by
+# ROCGDB_ROCM_GPU_MAX_PARALLEL.  Default is uncapped (use every
+# eligible GPU); lower it if kfd/dbgapi contention from many concurrent
+# debug sessions on the same node starts producing spurious "no
+# ROCm-capable device" failures mid-run.
+#
+# The block is wrapped in an apply lambda so its helper variables stay
+# local and don't pollute the global namespace; gpu_pool_count and
+# rocm_pool_to_physical escape via ::.
+apply {{} {
+    set all_devices [find_amdgpu_devices]
+    set unique_archs [lsort -unique $all_devices]
+
+    # Build rocm_pool_to_physical: a list whose i-th element is the
+    # physical device index that lock pool i pins to.  Pool indices
+    # are an internal, dense 0..gpu_pool_count-1 numbering used by
+    # the lock layer; physical indices are what HSA / KFD see and
+    # what the user wrote in ROCR_VISIBLE_DEVICES.  Keeping the two
+    # spaces separate lets a user pre-mask the testsuite to a subset
+    # of the machine's GPUs (e.g. ROCR_VISIBLE_DEVICES=4,5,6 to stay
+    # off devices 0-3) without the lock layer silently rewriting the
+    # mask to 0,1,2.
+    #
+    # find_amdgpu_devices runs a HIP enumerator child that *inherits*
+    # our ROCR_VISIBLE_DEVICES, so $all_devices is already the
+    # post-filter view: one entry per device the user's mask exposed,
+    # numbered 0..N-1 from HIP's perspective.  We therefore start
+    # with an identity map (pool i -> physical i) sized to the
+    # surviving devices, which is correct when RVD is unset.
+    set ::rocm_pool_to_physical {}
+    for {set i 0} {$i < [llength $all_devices]} {incr i} {
+	lappend ::rocm_pool_to_physical $i
+    }
+
+    # If the user pre-set ROCR_VISIBLE_DEVICES, replace the identity
+    # map with the user's physical indices in order: the k-th
+    # surviving HIP device corresponds to the k-th entry of the user
+    # mask.  We only trust the mask if its length matches the
+    # enumeration; a mismatch (typo, stale value, device the runtime
+    # rejected) would misroute every per-test pin, so we log and
+    # fall back to identity instead.
+    if {[info exists ::env(ROCR_VISIBLE_DEVICES)]
+	&& $::env(ROCR_VISIBLE_DEVICES) ne ""} {
+	set user_rvd [split $::env(ROCR_VISIBLE_DEVICES) ","]
+	if {[llength $user_rvd] == [llength $all_devices]} {
+	    set ::rocm_pool_to_physical $user_rvd
+	} else {
+	    verbose -log "rocm: ROCR_VISIBLE_DEVICES=$::env(ROCR_VISIBLE_DEVICES)\
+			  does not match enumerated device count\
+			  ([llength $all_devices]); using identity mapping"
+	}
+    }
+
+    # Patch the degenerate no-GPU case up front so every branch below
+    # can assume rocm_pool_to_physical has at least one entry; without
+    # this, a branch that falls back to "first device" via
+    # [lrange ... 0 0] would silently produce an empty pool map and
+    # later set ROCR_VISIBLE_DEVICES to the empty string.
+    if {[llength $::rocm_pool_to_physical] == 0} {
+	set ::rocm_pool_to_physical {0}
+    }
+
+    # Now narrow rocm_pool_to_physical to the devices we actually
+    # intend to spread tests across, keeping pool indices contiguous
+    # from 0.  Each branch below sets gpu_pool_count and shrinks the
+    # map in lockstep so element i is always pool i's physical
+    # device.
+    if {![info exists ::GDB_PARALLEL]} {
+	# Non-parallel run: collapse to a single pool on the first
+	# available physical device (preserves the user's choice if
+	# RVD was pre-set, otherwise physical 0).
+	set ::gpu_pool_count 1
+	set ::rocm_pool_to_physical [lrange $::rocm_pool_to_physical 0 0]
+    } elseif {[info exists ::env(ROCM_TEST_ARCH)]} {
+	# Keep only devices matching the requested arch.  We index
+	# into rocm_pool_to_physical (not raw 0..N-1) so the surviving
+	# entries are physical indices, not HIP-renumbered ones.
+	set keep {}
+	for {set i 0} {$i < [llength $all_devices]} {incr i} {
+	    if {[lindex $all_devices $i] eq $::env(ROCM_TEST_ARCH)} {
+		lappend keep [lindex $::rocm_pool_to_physical $i]
+	    }
+	}
+	if {[llength $keep] == 0} {
+	    verbose -log "ROCM_TEST_ARCH=$::env(ROCM_TEST_ARCH) matched no GPU;\
+			  falling back to first eligible device\
+			  ([lindex $::rocm_pool_to_physical 0])"
+	    set ::gpu_pool_count 1
+	    set ::rocm_pool_to_physical [lrange $::rocm_pool_to_physical 0 0]
+	} else {
+	    set ::gpu_pool_count [llength $keep]
+	    set ::rocm_pool_to_physical $keep
+	}
+    } elseif {[llength $unique_archs] > 1} {
+	# Heterogeneous fleet, no arch picked: same single-pool
+	# fallback as the GDB_PARALLEL-unset branch.
+	verbose -log "rocm: heterogeneous arches ($unique_archs);\
+		      pinning to first eligible device\
+		      ([lindex $::rocm_pool_to_physical 0])\
+		      (set ROCM_TEST_ARCH to override)"
+	set ::gpu_pool_count 1
+	set ::rocm_pool_to_physical [lrange $::rocm_pool_to_physical 0 0]
+    } else {
+	# Homogeneous fleet: use every device.  rocm_pool_to_physical
+	# is already the right length and content from the identity /
+	# user mask step above.
+	set ::gpu_pool_count [llength $::rocm_pool_to_physical]
+    }
+
+    # Cap the active pool count.  Default is the full eligible set
+    # (every GPU surviving the ROCR_VISIBLE_DEVICES / ROCM_TEST_ARCH
+    # / arch homogeneity filtering above); users can lower it via
+    # the environment if kfd/dbgapi contention from many concurrent
+    # debug sessions starts producing spurious mid-run failures on
+    # their stack.
+    if {[info exists ::env(ROCGDB_ROCM_GPU_MAX_PARALLEL)]
+	&& [string is integer -strict $::env(ROCGDB_ROCM_GPU_MAX_PARALLEL)]
+	&& $::env(ROCGDB_ROCM_GPU_MAX_PARALLEL) > 0} {
+	set max_pools $::env(ROCGDB_ROCM_GPU_MAX_PARALLEL)
+    } else {
+	set max_pools $::gpu_pool_count
+    }
+    if {$::gpu_pool_count > $max_pools} {
+	verbose -log "rocm: capping pool count from $::gpu_pool_count to\
+		      $max_pools (ROCGDB_ROCM_GPU_MAX_PARALLEL)"
+	set ::gpu_pool_count $max_pools
+	set ::rocm_pool_to_physical \
+	    [lrange $::rocm_pool_to_physical 0 [expr {$::gpu_pool_count - 1}]]
+    }
+}}
+
+# Run BODY under the rocm GPU lock.  Three concurrency modes:
+#
+#   parallel  - takes one slot on any GPU.  Pick this for tests that
+#               only exercise a small slice of the GPU and have no
+#               device-wide state.
+#   serial    - (default) takes every slot of one GPU.  No other test
+#               runs on the assigned GPU during BODY, but other GPUs
+#               remain free.
+#   machine   - takes every slot of every GPU.  No other rocm test
+#               runs anywhere on the machine.  Pick this for tests
+#               that spawn additional HIP processes (hogs, helpers)
+#               or are otherwise sensitive to system-wide ROCm /
+#               dbgapi contention.
+#
+# Select non-default modes near the top of the .exp file, before
+# calling with_rocm_gpu_lock:
+#
+#     set rocm_gpu_concurrency parallel
+#     set rocm_gpu_concurrency machine
+#
+# BODY runs with ROCR_VISIBLE_DEVICES set to the assigned GPU index,
+# so the inferior launched by GDB sees only that device.  Also calls
+# gdb_exit before releasing the lock.
 
 proc with_rocm_gpu_lock { body } {
-    with_lock $::gpu_lock_filename {uplevel 1 $body}
+    set mode "serial"
+    if {[info exists ::rocm_gpu_concurrency]} {
+	set mode $::rocm_gpu_concurrency
+    }
 
-    # In case BODY returned early due to some testcase failing, and
-    # left GDB running, debugging the GPU.
-    gdb_exit
+    # Failsafe: on devices that do not support debugging multiple
+    # processes concurrently (older gfx generations), force serial
+    # execution regardless of the per-test marker.  Otherwise two
+    # rocm tests sharing the GPU would race.
+    if {$mode eq "parallel"
+	&& ![hip_devices_support_debug_multi_process]} {
+	verbose -log "with_rocm_gpu_lock: forcing serial mode\
+		      (device lacks multi-process debug support)"
+	set mode "serial"
+    }
+
+    # With only one pool there is no difference between serial and
+    # machine modes; collapse to serial so the lock helper is
+    # uniform.
+    if {$mode eq "machine" && $::gpu_pool_count <= 1} {
+	set mode "serial"
+    }
+
+    # Wrapper that pins the inferior to the GPU corresponding to the
+    # acquired pool, then runs the user body.  _lock_pool and
+    # _lock_slot are set by the with_*_lock_multi wrappers.
+    #
+    # Only ROCR_VISIBLE_DEVICES is set: it filters at the HSA layer
+    # and renumbers the surviving devices from 0, so HIP already sees
+    # the right view.  Setting HIP_VISIBLE_DEVICES to the same
+    # absolute index would re-filter the renumbered set and select a
+    # device that no longer exists for any pool other than 0.
+    set inner {
+	# Translate the dense pool index into the physical device index
+	# the user (or the startup auto-detect) selected.  Without this
+	# indirection a pre-set ROCR_VISIBLE_DEVICES=4,5,6 would still
+	# pin pool 0 to physical 0.
+	set _gpu [lindex $::rocm_pool_to_physical $_lock_pool]
+	set _had [info exists ::env(ROCR_VISIBLE_DEVICES)]
+	if {$_had} { set _saved_rvd $::env(ROCR_VISIBLE_DEVICES) }
+	set ::env(ROCR_VISIBLE_DEVICES) $_gpu
+	verbose -log "rocm: pool=$_lock_pool slot=$_lock_slot ->\
+		      ROCR_VISIBLE_DEVICES=$_gpu"
+	set _rc [catch {uplevel 1 $body} _res]
+	global errorInfo errorCode
+	set _einfo $errorInfo
+	set _ecode $errorCode
+	if {$_had} {
+	    set ::env(ROCR_VISIBLE_DEVICES) $_saved_rvd
+	} else {
+	    unset -nocomplain ::env(ROCR_VISIBLE_DEVICES)
+	}
+	# Tear GDB down while we still hold the slot, so the pinned GPU
+	# is fully released before the next test acquires this slot.  In
+	# case BODY returned early due to some testcase failing and left
+	# GDB running, debugging the GPU.
+	gdb_exit
+	if {$_rc == 1} {
+	    return -code $_rc -errorinfo $_einfo -errorcode $_ecode $_res
+	} elseif {$_rc} {
+	    return -code $_rc $_res
+	}
+    }
+
+    if {$mode eq "parallel"} {
+	with_shared_lock_multi $::gpu_slot_prefix \
+	    $::gpu_pool_count $::gpu_slots_per_gpu \
+	    $::gpu_barrier_prefix $inner
+    } elseif {$mode eq "machine"} {
+	with_machine_lock_multi $::gpu_slot_prefix \
+	    $::gpu_pool_count $::gpu_slots_per_gpu \
+	    $::gpu_barrier_prefix $inner
+    } else {
+	with_exclusive_lock_multi $::gpu_slot_prefix \
+	    $::gpu_pool_count $::gpu_slots_per_gpu \
+	    $::gpu_barrier_prefix $inner
+    }
 }
 
 # Build an OpenCL kernel library from SOURCES.
@@ -393,7 +646,7 @@ proc get_current_gpu_arch {} {
 # Return true if all the devices support debugging multiple processes
 # using the GPU.
 
-proc hip_devices_support_debug_multi_process {} {
+gdb_caching_proc hip_devices_support_debug_multi_process {} {
     set unsupported_targets {
 	gfx900 gfx906 gfx908
 	gfx1010 gfx1011 gfx1012 gfx1030 gfx1031 gfx1032
