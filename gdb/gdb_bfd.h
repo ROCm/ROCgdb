@@ -289,11 +289,11 @@ extern void gdb_bfd_init ();
 extern gdb::array_view<asymbol *> gdb_bfd_canonicalize_symtab
      (bfd *abfd, bool should_throw = true);
 
-/* A wrapper for bfd_check_format.  */
+/* A wrapper for bfd_check_format that acquires the BFD lock.  */
 
 extern bool gdb_bfd_check_format (bfd *abfd, bfd_format format);
 
-/* A wrapper for bfd_check_format_matches.  */
+/* A wrapper for bfd_check_format_matches that acquires the BFD lock.  */
 
 extern bool gdb_bfd_check_format_matches (bfd *abfd, bfd_format format,
 					  char ***matching);

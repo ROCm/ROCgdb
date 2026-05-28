@@ -6744,21 +6744,14 @@ try_open_dwop_file (dwarf2_per_bfd *per_bfd, const char *file_name, int is_dwp,
   if (sym_bfd == NULL)
     return NULL;
 
-  {
-    /* The operations below are not thread-safe, use a lock to synchronize
-       concurrent accesses.  */
-    static gdb::mutex mutex;
-    gdb::lock_guard<gdb::mutex> lock (mutex);
+  if (!gdb_bfd_check_format (sym_bfd.get (), bfd_object))
+    return NULL;
 
-    if (!gdb_bfd_check_format (sym_bfd.get (), bfd_object))
-      return NULL;
-
-    /* Success.  Record the bfd as having been included by the objfile's bfd.
+  /* Success.  Record the bfd as having been included by the objfile's bfd.
      This is important because things like demangled_names_hash lives in the
      objfile's per_bfd space and may have references to things like symbol
      names that live in the DWO/DWP file's per_bfd space.  PR 16426.  */
-    gdb_bfd_record_inclusion (per_bfd->obfd, sym_bfd.get ());
-  }
+  gdb_bfd_record_inclusion (per_bfd->obfd, sym_bfd.get ());
 
   return sym_bfd;
 }
