@@ -535,6 +535,15 @@ if { [istarget *-*-linux*]
 		"pr14525.out" \
 		"-fPIE" \
 	    ] \
+	    [list \
+		"Run PR ld/34184 test (static PIE)" \
+		"-pie -Wl,-z,max-page-size=0x800000" \
+		"" \
+		{pr34184.c} \
+		"pr34184-static-pie" \
+		"pass.out" \
+		"-fPIE" \
+	    ] \
 	]
     }
 
@@ -579,6 +588,33 @@ if { [istarget *-*-linux*]
 	    "C" \
 	    {} \
 	    "-Wl,-R,tmpdir tmpdir/pr32690.so" \
+	] \
+	[list \
+	    "Run PR ld/34184 test (PDE)" \
+	    "$NOPIE_LDFLAGS -Wl,-z,max-page-size=0x800000" \
+	    "" \
+	    {pr34184.c} \
+	    "pr34184-pde" \
+	    "pass.out" \
+	    "$NOPIE_CFLAGS" \
+	] \
+	[list \
+	    "Run PR ld/34184 test (static PDE)" \
+	    "-static $NOPIE_LDFLAGS -Wl,-z,max-page-size=0x800000" \
+	    "" \
+	    {pr34184.c} \
+	    "pr34184-static-pde" \
+	    "pass.out" \
+	    "$NOPIE_CFLAGS" \
+	] \
+	[list \
+	    "Run PR ld/34184 test (PIE)" \
+	    "-pie -Wl,-z,max-page-size=0x800000" \
+	    "" \
+	    {pr34184.c} \
+	    "pr34184-pie" \
+	    "pass.out" \
+	    "-fPIE" \
 	] \
     ]
 }
