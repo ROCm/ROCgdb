@@ -25,7 +25,14 @@ require allow_hipcc_tests
 
 standard_testfile .cpp
 
-if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile {debug hip}]} {
+# Don't use $testfile as the executable name, because Windows'
+# installer detection heuristic refuses to launch executables whose
+# name contains "update" (and a few other keywords like "setup",
+# "install", "patch") without elevation, failing with
+# ERROR_ELEVATION_REQUIRED (740).
+set executable "test"
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $executable $srcfile {debug hip}]} {
     return -1
 }
 
