@@ -197,6 +197,159 @@ proc lock_file_acquire {lockfile} {
     }
 }
 
+# Shared/exclusive file-lock layer
+# ================================
+#
+# The procs below build a reader/writer lock out of the existing
+# lock_file_acquire primitive.  Two API tiers are provided:
+#
+#   Single-pool: N slot files + 1 barrier file.  Shared callers grab
+#                one slot; exclusive callers grab all N.
+#   Multi-pool:  NPOOLS independent pools, each PER_POOL slots wide,
+#                with one barrier per pool.  Models "N independent
+#                resources with bounded concurrency each" (used by the
+#                rocm GPU lock to spread tests across GPUs).
+#
+# Layering:
+#
+#   open EXCL  --+--> lock_file_acquire        (blocking)
+#                +--> lock_file_try_acquire    (non-blocking)
+#                          |
+#                          v
+#   single-pool primitives:
+#       lock_file_acquire_shared       \
+#       lock_file_acquire_exclusive     >--> lock_file_release_shared
+#                          ^           /
+#                          |
+#       with_shared_lock      --+
+#       with_exclusive_lock   --+ (GDB_PARALLEL gate + uplevel body)
+#
+#   multi-pool primitives:
+#       lock_file_acquire_shared_multi      \
+#       lock_file_acquire_exclusive_multi    >--> lock_file_release_shared
+#       lock_file_acquire_machine_multi     /
+#                          ^
+#                          |
+#       with_shared_lock_multi      --+ (GDB_PARALLEL gate + uplevel body;
+#       with_exclusive_lock_multi   --+  also exposes _lock_pool /
+#       with_machine_lock_multi     --+  _lock_slot to the body)
+#
+# Writer-priority barrier: an exclusive (writer) acquirer creates the
+# barrier file before going after slots.  Shared (reader) acquirers
+# check the barrier each pass and yield while it exists, so a steady
+# stream of readers cannot starve a queued writer.  In the multi-pool
+# variant, writer-priority is scoped per pool: the writer first picks
+# a pool (by try-acquiring its barrier), and only once that barrier
+# is held are readers on *that* pool blocked -- readers can still
+# enter other pools.  A machine acquirer raises every pool's barrier
+# up-front, so it blocks readers everywhere.
+#
+# Mode summary (multi-pool, NPOOLS pools x PER_POOL slots each):
+#
+#                          slots held         other callers can run
+#   shared_multi           1 slot, 1 pool     shared (any pool, incl. same
+#                                             pool up to PER_POOL);
+#                                             exclusive on other pools only
+#   exclusive_multi        all slots, 1 pool  any mode on other pools
+#   machine_multi          all slots, all     nothing
+#                          pools
+#
+# When GDB_PARALLEL is unset (single-threaded test run), all with_*
+# wrappers skip locking entirely.
+
+# Try once to acquire LOCKFILE without blocking.  Returns the same
+# token shape as lock_file_acquire on success, or the empty string on
+# failure.
+
+proc lock_file_try_acquire {lockfile} {
+    if {[catch {open $lockfile {WRONLY CREAT EXCL}} rc]} {
+	return ""
+    }
+    set msg "locked by $::subdir/${::gdb_test_file_name}.exp"
+    puts $rc $msg
+    flush $rc
+    return [list $rc $lockfile]
+}
+
+# Acquire one of N slot files in SLOT_DIR named SLOT_PREFIX-0 ..
+# SLOT_PREFIX-(NSLOTS-1), implementing a shared (reader) lock with at
+# most NSLOTS concurrent holders.  BARRIER_FILE, if present, indicates
+# an exclusive (writer) waiter is queued; shared acquirers yield to it
+# to avoid writer starvation.  Returns a token for
+# lock_file_release_shared.
+
+proc lock_file_acquire_shared {slot_dir slot_prefix nslots barrier_file} {
+    verbose -log "acquiring shared lock ($slot_prefix x$nslots):\
+		  $::subdir/${::gdb_test_file_name}.exp"
+    while {true} {
+	# Yield to any pending exclusive waiter.
+	if {[file exists $barrier_file]} {
+	    after 10
+	    continue
+	}
+	for {set i 0} {$i < $nslots} {incr i} {
+	    set slot [file join $slot_dir "$slot_prefix-$i.lock"]
+	    set tok [lock_file_try_acquire $slot]
+	    if {$tok ne ""} {
+		verbose -log "shared lock: acquired slot $i"
+		return [list shared $tok]
+	    }
+	}
+	after 10
+    }
+}
+
+# Acquire an exclusive (writer) lock over the NSLOTS-slot set in
+# SLOT_DIR named SLOT_PREFIX-0 .. SLOT_PREFIX-(NSLOTS-1) -- the same
+# set used by lock_file_acquire_shared.  First creates BARRIER_FILE to
+# prevent new shared acquirers from grabbing slots, then waits to hold
+# all NSLOTS slots simultaneously.  Multiple exclusive waiters queue
+# on BARRIER_FILE.  Returns a token for lock_file_release_shared.
+
+proc lock_file_acquire_exclusive {slot_dir slot_prefix nslots barrier_file} {
+    verbose -log "acquiring exclusive lock ($slot_prefix x$nslots):\
+		  $::subdir/${::gdb_test_file_name}.exp"
+    # Queue on the barrier file: only one exclusive waiter is active
+    # at a time.
+    set barrier_tok [lock_file_acquire $barrier_file]
+    set slot_toks {}
+    for {set i 0} {$i < $nslots} {incr i} {
+	set slot [file join $slot_dir "$slot_prefix-$i.lock"]
+	lappend slot_toks [lock_file_acquire $slot]
+    }
+    verbose -log "exclusive lock: acquired all $nslots slots"
+    return [list exclusive $barrier_tok $slot_toks]
+}
+
+# Release a token returned by lock_file_acquire_shared,
+# lock_file_acquire_exclusive, or lock_file_acquire_machine_multi.
+# The token's first element tags which kind it is.
+
+proc lock_file_release_shared {info} {
+    set kind [lindex $info 0]
+    verbose -log "releasing $kind lock: $::subdir/${::gdb_test_file_name}.exp"
+    if {$kind eq "shared"} {
+	lock_file_release [lindex $info 1]
+    } elseif {$kind eq "exclusive"} {
+	foreach tok [lindex $info 2] {
+	    lock_file_release $tok
+	}
+	# Release the barrier last so queued shared acquirers don't
+	# race against slot release.
+	lock_file_release [lindex $info 1]
+    } elseif {$kind eq "machine"} {
+	# Release every slot, then every barrier, mirroring exclusive.
+	foreach tok [lindex $info 2] {
+	    lock_file_release $tok
+	}
+	foreach tok [lindex $info 1] {
+	    lock_file_release $tok
+	}
+    } else {
+	error "invalid shared/exclusive lock token: $info"
+    }
+}
+
 # Release a lock file.
 
 proc lock_file_release {info} {
@@ -241,6 +394,254 @@ proc with_lock { lock_file body } {
 	lock_file_release $lock_rc
     }
 
+    if {$code == 1} {
+	global errorInfo errorCode
+	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+    } else {
+	return -code $code $result
+    }
+}
+
+# Run BODY holding a shared (reader) slot in an NSLOTS-wide pool
+# named SLOT_PREFIX, with BARRIER_NAME as the writer-priority barrier
+# file.  All filenames are relative to [lock_dir].  When GDB_PARALLEL
+# is unset, BODY runs unlocked, matching with_lock.
+
+proc with_shared_lock { slot_prefix nslots barrier_name body } {
+    if {[info exists ::GDB_PARALLEL]} {
+	set dir [lock_dir]
+	set barrier_file [file join $dir $barrier_name]
+	set tok [lock_file_acquire_shared $dir $slot_prefix $nslots \
+		     $barrier_file]
+    }
+
+    set code [catch {uplevel 1 $body} result]
+
+    if {[info exists ::GDB_PARALLEL]} {
+	lock_file_release_shared $tok
+    }
+
+    if {$code == 1} {
+	global errorInfo errorCode
+	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+    } else {
+	return -code $code $result
+    }
+}
+
+# Run BODY holding all slots in the NSLOTS-wide pool named
+# SLOT_PREFIX (exclusive/writer access), with BARRIER_NAME as the
+# writer-priority barrier file.  All filenames are relative to
+# [lock_dir].  When GDB_PARALLEL is unset, BODY runs unlocked,
+# matching with_lock.
+
+proc with_exclusive_lock { slot_prefix nslots barrier_name body } {
+    if {[info exists ::GDB_PARALLEL]} {
+	set dir [lock_dir]
+	set barrier_file [file join $dir $barrier_name]
+	set tok [lock_file_acquire_exclusive $dir $slot_prefix $nslots \
+		     $barrier_file]
+    }
+
+    set code [catch {uplevel 1 $body} result]
+
+    if {[info exists ::GDB_PARALLEL]} {
+	lock_file_release_shared $tok
+    }
+
+    if {$code == 1} {
+	global errorInfo errorCode
+	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+    } else {
+	return -code $code $result
+    }
+}
+
+# Multi-pool variants of the slot-pool locks above.  These manage NPOOLS
+# independent pools, each PER_POOL slots wide, with a per-pool barrier
+# file.  A shared (reader) acquirer takes one slot in any pool whose
+# barrier is clear; an exclusive (writer) acquirer takes every slot in a
+# single pool while leaving the other pools available.  This models
+# "N independent resources, each with bounded concurrency" -- e.g. one
+# pool per GPU.
+#
+# Slot file name:    SLOT_PREFIX-<pool>-<slot>.lock
+# Barrier file name: BARRIER_PREFIX-<pool>.lock
+
+# Acquire one slot in one pool.  Fills slot 0 of every pool before
+# touching slot 1 of any pool (so on a multi-GPU box each GPU gets at
+# most one tenant before any GPU gets two).  Within a slot row, pools
+# are scanned starting at a random offset so concurrent acquirers
+# don't all land on pool 0.  Returns {shared <tok> <pool> <slot>}.
+
+proc lock_file_acquire_shared_multi {slot_dir slot_prefix npools per_pool \
+					 barrier_prefix} {
+    verbose -log "acquiring shared lock ($slot_prefix x$npools x$per_pool):\
+		  $::subdir/${::gdb_test_file_name}.exp"
+    while {true} {
+	# Outer loop walks slot rows (0 .. per_pool-1) and the inner
+	# loop sweeps every pool within a row -- this is what gives
+	# the row-major "fill slot 0 of every pool before slot 1 of
+	# any pool" property the multi-pool-spread self-test relies
+	# on.  Drawing a fresh random start per row (rather than per
+	# inner iteration) keeps that property while still spreading
+	# concurrent acquirers off pool 0.
+	for {set s 0} {$s < $per_pool} {incr s} {
+	    set start [expr {int(rand() * $npools)}]
+	    for {set i 0} {$i < $npools} {incr i} {
+		set pool [expr {($start + $i) % $npools}]
+		set barrier [file join $slot_dir \
+				 "$barrier_prefix-$pool.lock"]
+		if {[file exists $barrier]} {
+		    continue
+		}
+		set slot [file join $slot_dir \
+			      "$slot_prefix-$pool-$s.lock"]
+		set tok [lock_file_try_acquire $slot]
+		if {$tok ne ""} {
+		    verbose -log "shared lock: pool $pool slot $s"
+		    return [list shared $tok $pool $s]
+		}
+	    }
+	}
+	after 10
+    }
+}
+
+# Acquire all slots in one pool (writer access to that pool only).
+# Picks a pool by scanning from a random offset.  Returns
+# {exclusive <barrier_tok> <slot_toks> <pool> 0}.
+
+proc lock_file_acquire_exclusive_multi {slot_dir slot_prefix npools per_pool \
+					    barrier_prefix} {
+    verbose -log "acquiring exclusive lock ($slot_prefix x$npools x$per_pool):\
+		  $::subdir/${::gdb_test_file_name}.exp"
+    # First, claim a pool's barrier so we have a definite target.  Try
+    # pools in random order; if all barriers are held by other
+    # exclusive waiters, sleep and retry.
+    set barrier_tok ""
+    set pool -1
+    while {$barrier_tok eq ""} {
+	set start [expr {int(rand() * $npools)}]
+	for {set i 0} {$i < $npools} {incr i} {
+	    set p [expr {($start + $i) % $npools}]
+	    set barrier [file join $slot_dir "$barrier_prefix-$p.lock"]
+	    set tok [lock_file_try_acquire $barrier]
+	    if {$tok ne ""} {
+		set barrier_tok $tok
+		set pool $p
+		break
+	    }
+	}
+	if {$barrier_tok eq ""} { after 10 }
+    }
+    # Now block until we hold every slot in that pool.
+    set slot_toks {}
+    for {set s 0} {$s < $per_pool} {incr s} {
+	lappend slot_toks [lock_file_acquire \
+	    [file join $slot_dir "$slot_prefix-$pool-$s.lock"]]
+    }
+    verbose -log "exclusive lock: acquired pool $pool"
+    return [list exclusive $barrier_tok $slot_toks $pool 0]
+}
+
+# Wrappers matching with_shared_lock / with_exclusive_lock.  Before
+# evaluating BODY, set caller-visible variables _lock_pool and
+# _lock_slot to the acquired indices, so BODY can map them to a
+# resource (e.g. a GPU device).
+
+proc with_shared_lock_multi {slot_prefix npools per_pool barrier_prefix \
+				 body} {
+    set pool 0
+    set slot 0
+    if {[info exists ::GDB_PARALLEL]} {
+	set dir [lock_dir]
+	set tok [lock_file_acquire_shared_multi $dir $slot_prefix \
+		     $npools $per_pool $barrier_prefix]
+	set pool [lindex $tok 2]
+	set slot [lindex $tok 3]
+    }
+    uplevel 1 [list set _lock_pool $pool]
+    uplevel 1 [list set _lock_slot $slot]
+    set code [catch {uplevel 1 $body} result]
+    if {[info exists ::GDB_PARALLEL]} {
+	lock_file_release_shared $tok
+    }
+    if {$code == 1} {
+	global errorInfo errorCode
+	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+    } else {
+	return -code $code $result
+    }
+}
+
+proc with_exclusive_lock_multi {slot_prefix npools per_pool barrier_prefix \
+				    body} {
+    set pool 0
+    if {[info exists ::GDB_PARALLEL]} {
+	set dir [lock_dir]
+	set tok [lock_file_acquire_exclusive_multi $dir $slot_prefix \
+		     $npools $per_pool $barrier_prefix]
+	set pool [lindex $tok 3]
+    }
+    uplevel 1 [list set _lock_pool $pool]
+    uplevel 1 [list set _lock_slot 0]
+    set code [catch {uplevel 1 $body} result]
+    if {[info exists ::GDB_PARALLEL]} {
+	lock_file_release_shared $tok
+    }
+    if {$code == 1} {
+	global errorInfo errorCode
+	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+    } else {
+	return -code $code $result
+    }
+}
+
+# Acquire writer access to every pool at once (machine-wide
+# exclusive).  Barriers are taken in ascending pool order to avoid
+# deadlock between two machine acquirers; slots are then taken
+# everywhere.  Returns {machine <barrier_toks> <slot_toks>}.
+
+proc lock_file_acquire_machine_multi {slot_dir slot_prefix npools per_pool \
+					  barrier_prefix} {
+    verbose -log "acquiring machine lock ($slot_prefix x$npools x$per_pool):\
+		  $::subdir/${::gdb_test_file_name}.exp"
+    set barrier_toks {}
+    for {set p 0} {$p < $npools} {incr p} {
+	lappend barrier_toks [lock_file_acquire \
+	    [file join $slot_dir "$barrier_prefix-$p.lock"]]
+    }
+    set slot_toks {}
+    for {set p 0} {$p < $npools} {incr p} {
+	for {set s 0} {$s < $per_pool} {incr s} {
+	    lappend slot_toks [lock_file_acquire \
+		[file join $slot_dir "$slot_prefix-$p-$s.lock"]]
+	}
+    }
+    verbose -log "machine lock: acquired all $npools pools"
+    return [list machine $barrier_toks $slot_toks]
+}
+
+# Run BODY holding every slot in every pool.  No other shared,
+# exclusive, or machine acquirer can run anywhere during BODY.  Sets
+# _lock_pool / _lock_slot to 0 in the caller's frame.
+
+proc with_machine_lock_multi {slot_prefix npools per_pool barrier_prefix \
+				  body} {
+    set pool 0
+    set slot 0
+    if {[info exists ::GDB_PARALLEL]} {
+	set dir [lock_dir]
+	set tok [lock_file_acquire_machine_multi $dir $slot_prefix \
+		     $npools $per_pool $barrier_prefix]
+    }
+    uplevel 1 [list set _lock_pool $pool]
+    uplevel 1 [list set _lock_slot $slot]
+    set code [catch {uplevel 1 $body} result]
+    if {[info exists ::GDB_PARALLEL]} {
+	lock_file_release_shared $tok
+    }
     if {$code == 1} {
 	global errorInfo errorCode
 	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
