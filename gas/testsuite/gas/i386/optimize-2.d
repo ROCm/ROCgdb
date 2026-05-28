@@ -198,4 +198,5 @@ Disassembly of section .text:
  +[a-f0-9]+:	c5 .*	vpaddq %xmm2,%xmm2,%xmm3
  +[a-f0-9]+:	62 .*	vpaddq %zmm2,%zmm2,%zmm3
  +[a-f0-9]+:	c5 .*	vpunpcklqdq %xmm2,%xmm2,%xmm0
+ +[a-f0-9]+:	c4 .*	vpbroadcastq %xmm2,%ymm0
 #pass

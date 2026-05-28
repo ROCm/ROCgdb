@@ -3876,7 +3876,7 @@ using_thumb2 (struct elf32_arm_link_hash_table *globals)
   return (arch == TAG_CPU_ARCH_V6T2
 	  || arch == TAG_CPU_ARCH_V7
 	  || arch == TAG_CPU_ARCH_V7E_M
-	  || arch == TAG_CPU_ARCH_V8
+	  || arch == TAG_CPU_ARCH_V8A
 	  || arch == TAG_CPU_ARCH_V8R
 	  || arch == TAG_CPU_ARCH_V8M_MAIN
 	  || arch == TAG_CPU_ARCH_V8_1M_MAIN);
@@ -3891,7 +3891,7 @@ using_thumb2_bl (struct elf32_arm_link_hash_table *globals)
     bfd_elf_get_obj_attr_int (globals->obfd, OBJ_ATTR_PROC, Tag_CPU_arch);
 
   /* Force return logic to be reviewed for each new architecture.  */
-  BFD_ASSERT (arch <= TAG_CPU_ARCH_V9);
+  BFD_ASSERT (arch <= TAG_CPU_ARCH_V9A);
 
   /* Architecture was introduced after ARMv6T2 (eg. ARMv6-M).  */
   return (arch == TAG_CPU_ARCH_V6T2
@@ -4032,14 +4032,14 @@ arch_has_arm_nop (struct elf32_arm_link_hash_table *globals)
 					     Tag_CPU_arch);
 
   /* Force return logic to be reviewed for each new architecture.  */
-  BFD_ASSERT (arch <= TAG_CPU_ARCH_V9);
+  BFD_ASSERT (arch <= TAG_CPU_ARCH_V9A);
 
   return (arch == TAG_CPU_ARCH_V6T2
 	  || arch == TAG_CPU_ARCH_V6K
 	  || arch == TAG_CPU_ARCH_V7
-	  || arch == TAG_CPU_ARCH_V8
+	  || arch == TAG_CPU_ARCH_V8A
 	  || arch == TAG_CPU_ARCH_V8R
-	  || arch == TAG_CPU_ARCH_V9);
+	  || arch == TAG_CPU_ARCH_V9A);
 }
 
 static bool
@@ -13767,8 +13767,8 @@ bfd_arm_get_mach_from_attributes (bfd * abfd)
 	return bfd_mach_arm_6SM;
     case TAG_CPU_ARCH_V7E_M:
 	return bfd_mach_arm_7EM;
-    case TAG_CPU_ARCH_V8:
-	return bfd_mach_arm_8;
+    case TAG_CPU_ARCH_V8A:
+	return bfd_mach_arm_8A;
     case TAG_CPU_ARCH_V8R:
 	return bfd_mach_arm_8R;
     case TAG_CPU_ARCH_V8M_BASE:
@@ -13777,8 +13777,8 @@ bfd_arm_get_mach_from_attributes (bfd * abfd)
 	return bfd_mach_arm_8M_MAIN;
     case TAG_CPU_ARCH_V8_1M_MAIN:
 	return bfd_mach_arm_8_1M_MAIN;
-    case TAG_CPU_ARCH_V9:
-	return bfd_mach_arm_9;
+    case TAG_CPU_ARCH_V9A:
+	return bfd_mach_arm_9A;
 
     default:
       /* Force entry to be added for any new known Tag_CPU_arch value.  */
@@ -14111,28 +14111,28 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
     };
   static const int v8[] =
     {
-      T(V8),		/* PRE_V4.  */
-      T(V8),		/* V4.  */
-      T(V8),		/* V4T.  */
-      T(V8),		/* V5T.  */
-      T(V8),		/* V5TE.  */
-      T(V8),		/* V5TEJ.  */
-      T(V8),		/* V6.  */
-      T(V8),		/* V6KZ.  */
-      T(V8),		/* V6T2.  */
-      T(V8),		/* V6K.  */
-      T(V8),		/* V7.  */
-      T(V8),		/* V6_M.  */
-      T(V8),		/* V6S_M.  */
-      T(V8),		/* V7E_M.  */
-      T(V8),		/* V8.  */
-      T(V8),		/* V8-R.  */
-      T(V8),		/* V8-M.BASE.  */
-      T(V8),		/* V8-M.MAIN.  */
-      T(V8),		/* V8.1.  */
-      T(V8),		/* V8.2.  */
-      T(V8),		/* V8.3.  */
-      T(V8),		/* V8.1-M.MAIN.  */
+      T(V8A),		/* PRE_V4.  */
+      T(V8A),		/* V4.  */
+      T(V8A),		/* V4T.  */
+      T(V8A),		/* V5T.  */
+      T(V8A),		/* V5TE.  */
+      T(V8A),		/* V5TEJ.  */
+      T(V8A),		/* V6.  */
+      T(V8A),		/* V6KZ.  */
+      T(V8A),		/* V6T2.  */
+      T(V8A),		/* V6K.  */
+      T(V8A),		/* V7.  */
+      T(V8A),		/* V6_M.  */
+      T(V8A),		/* V6S_M.  */
+      T(V8A),		/* V7E_M.  */
+      T(V8A),		/* V8A.  */
+      T(V8A),		/* V8-R.  */
+      T(V8A),		/* V8-M.BASE.  */
+      T(V8A),		/* V8-M.MAIN.  */
+      T(V8A),		/* V8.1.  */
+      T(V8A),		/* V8.2.  */
+      T(V8A),		/* V8.3.  */
+      T(V8A),		/* V8.1-M.MAIN.  */
     };
   static const int v8r[] =
     {
@@ -14150,7 +14150,7 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
       T(V8R),		/* V6_M.  */
       T(V8R),		/* V6S_M.  */
       T(V8R),		/* V7E_M.  */
-      T(V8),		/* V8.  */
+      T(V8A),		/* V8A.  */
       T(V8R),		/* V8R.  */
     };
   static const int v8m_baseline[] =
@@ -14169,7 +14169,7 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
       T(V8M_BASE),	/* V6_M.  */
       T(V8M_BASE),	/* V6S_M.  */
       -1,		/* V7E_M.  */
-      -1,		/* V8.  */
+      -1,		/* V8A.  */
       -1,		/* V8R.  */
       T(V8M_BASE)	/* V8-M BASELINE.  */
     };
@@ -14189,7 +14189,7 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
       T(V8M_MAIN),	/* V6_M.  */
       T(V8M_MAIN),	/* V6S_M.  */
       T(V8M_MAIN),	/* V7E_M.  */
-      -1,		/* V8.  */
+      -1,		/* V8A.  */
       -1,		/* V8R.  */
       T(V8M_MAIN),	/* V8-M BASELINE.  */
       T(V8M_MAIN)	/* V8-M MAINLINE.  */
@@ -14210,7 +14210,7 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
       T(V8_1M_MAIN),	/* V6_M.  */
       T(V8_1M_MAIN),	/* V6S_M.  */
       T(V8_1M_MAIN),	/* V7E_M.  */
-      -1,		/* V8.  */
+      -1,		/* V8A.  */
       -1,		/* V8R.  */
       T(V8_1M_MAIN),	/* V8-M BASELINE.  */
       T(V8_1M_MAIN),	/* V8-M MAINLINE.  */
@@ -14221,29 +14221,29 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
     };
   static const int v9[] =
     {
-      T(V9),		/* PRE_V4.  */
-      T(V9),		/* V4.  */
-      T(V9),		/* V4T.  */
-      T(V9),		/* V5T.  */
-      T(V9),		/* V5TE.  */
-      T(V9),		/* V5TEJ.  */
-      T(V9),		/* V6.  */
-      T(V9),		/* V6KZ.  */
-      T(V9),		/* V6T2.  */
-      T(V9),		/* V6K.  */
-      T(V9),		/* V7.  */
-      T(V9),		/* V6_M.  */
-      T(V9),		/* V6S_M.  */
-      T(V9),		/* V7E_M.  */
-      T(V9),		/* V8.  */
-      T(V9),		/* V8-R.  */
-      T(V9),		/* V8-M.BASE.  */
-      T(V9),		/* V8-M.MAIN.  */
-      T(V9),		/* V8.1.  */
-      T(V9),		/* V8.2.  */
-      T(V9),		/* V8.3.  */
-      T(V9),		/* V8.1-M.MAIN.  */
-      T(V9),		/* V9.  */
+      T(V9A),		/* PRE_V4.  */
+      T(V9A),		/* V4.  */
+      T(V9A),		/* V4T.  */
+      T(V9A),		/* V5T.  */
+      T(V9A),		/* V5TE.  */
+      T(V9A),		/* V5TEJ.  */
+      T(V9A),		/* V6.  */
+      T(V9A),		/* V6KZ.  */
+      T(V9A),		/* V6T2.  */
+      T(V9A),		/* V6K.  */
+      T(V9A),		/* V7.  */
+      T(V9A),		/* V6_M.  */
+      T(V9A),		/* V6S_M.  */
+      T(V9A),		/* V7E_M.  */
+      T(V9A),		/* V8A.  */
+      T(V9A),		/* V8-R.  */
+      T(V9A),		/* V8-M.BASE.  */
+      T(V9A),		/* V8-M.MAIN.  */
+      T(V9A),		/* V8.1.  */
+      T(V9A),		/* V8.2.  */
+      T(V9A),		/* V8.3.  */
+      T(V9A),		/* V8.1-M.MAIN.  */
+      T(V9A),		/* V9A.  */
      };
   static const int v4t_plus_v6_m[] =
     {
@@ -14261,7 +14261,7 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
       T(V6_M),		/* V6_M.  */
       T(V6S_M),		/* V6S_M.  */
       T(V7E_M),		/* V7E_M.  */
-      T(V8),		/* V8.  */
+      T(V8A),		/* V8A.  */
       -1,		/* V8R.  */
       T(V8M_BASE),	/* V8-M BASELINE.  */
       T(V8M_MAIN),	/* V8-M MAINLINE.  */
@@ -14269,7 +14269,7 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
       -1,		/* Unused (19).  */
       -1,		/* Unused (20).  */
       T(V8_1M_MAIN),	/* V8.1-M MAINLINE.  */
-      T(V9),		/* V9.  */
+      T(V9A),		/* V9A.  */
       T(V4T_PLUS_V6_M)	/* V4T plus V6_M.  */
     };
   static const int *const comb[] =

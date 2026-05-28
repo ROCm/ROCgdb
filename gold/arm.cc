@@ -11065,21 +11065,21 @@ Target_arm<big_endian>::tag_cpu_arch_combine(
     };
   static const int v8[] =
     {
-      T(V8),   // PRE_V4.
-      T(V8),   // V4.
-      T(V8),   // V4T.
-      T(V8),   // V5T.
-      T(V8),   // V5TE.
-      T(V8),   // V5TEJ.
-      T(V8),   // V6.
-      T(V8),   // V6KZ.
-      T(V8),   // V6T2.
-      T(V8),   // V6K.
-      T(V8),   // V7.
-      T(V8),   // V6_M.
-      T(V8),   // V6S_M.
-      T(V8),   // V7E_M.
-      T(V8)    // V8.
+      T(V8A),   // PRE_V4.
+      T(V8A),   // V4.
+      T(V8A),   // V4T.
+      T(V8A),   // V5T.
+      T(V8A),   // V5TE.
+      T(V8A),   // V5TEJ.
+      T(V8A),   // V6.
+      T(V8A),   // V6KZ.
+      T(V8A),   // V6T2.
+      T(V8A),   // V6K.
+      T(V8A),   // V7.
+      T(V8A),   // V6_M.
+      T(V8A),   // V6S_M.
+      T(V8A),   // V7E_M.
+      T(V8A)    // V8.
     };
   static const int v4t_plus_v6_m[] =
     {
@@ -11097,7 +11097,7 @@ Target_arm<big_endian>::tag_cpu_arch_combine(
       T(V6_M),		// V6_M.
       T(V6S_M),		// V6S_M.
       T(V7E_M),		// V7E_M.
-      T(V8),		// V8.
+      T(V8A),		// V8.
       T(V4T_PLUS_V6_M)	// V4T plus V6_M.
     };
   static const int* comb[] =

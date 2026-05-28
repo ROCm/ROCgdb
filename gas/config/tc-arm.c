@@ -32100,26 +32100,26 @@ static const cpu_arch_ver_table cpu_arch_ver[] =
     {TAG_CPU_ARCH_V7,	      ARM_ARCH_V7M},
     {TAG_CPU_ARCH_V7,	      ARM_ARCH_V7VE},
     {TAG_CPU_ARCH_V7E_M,      ARM_ARCH_V7EM},
-    {TAG_CPU_ARCH_V8,	      ARM_ARCH_V8A},
-    {TAG_CPU_ARCH_V8,	      ARM_ARCH_V8_1A},
-    {TAG_CPU_ARCH_V8,	      ARM_ARCH_V8_2A},
-    {TAG_CPU_ARCH_V8,	      ARM_ARCH_V8_3A},
+    {TAG_CPU_ARCH_V8A,	      ARM_ARCH_V8A},
+    {TAG_CPU_ARCH_V8A,	      ARM_ARCH_V8_1A},
+    {TAG_CPU_ARCH_V8A,	      ARM_ARCH_V8_2A},
+    {TAG_CPU_ARCH_V8A,	      ARM_ARCH_V8_3A},
     {TAG_CPU_ARCH_V8M_BASE,   ARM_ARCH_V8M_BASE},
     {TAG_CPU_ARCH_V8M_MAIN,   ARM_ARCH_V8M_MAIN},
     {TAG_CPU_ARCH_V8R,	      ARM_ARCH_V8R},
-    {TAG_CPU_ARCH_V8,	      ARM_ARCH_V8_4A},
-    {TAG_CPU_ARCH_V8,	      ARM_ARCH_V8_5A},
+    {TAG_CPU_ARCH_V8A,	      ARM_ARCH_V8_4A},
+    {TAG_CPU_ARCH_V8A,	      ARM_ARCH_V8_5A},
     {TAG_CPU_ARCH_V8_1M_MAIN, ARM_ARCH_V8_1M_MAIN},
-    {TAG_CPU_ARCH_V8,	    ARM_ARCH_V8_6A},
-    {TAG_CPU_ARCH_V8,	    ARM_ARCH_V8_7A},
-    {TAG_CPU_ARCH_V8,	    ARM_ARCH_V8_8A},
-    {TAG_CPU_ARCH_V8,	    ARM_ARCH_V8_9A},
-    {TAG_CPU_ARCH_V9,	    ARM_ARCH_V9A},
-    {TAG_CPU_ARCH_V9,	    ARM_ARCH_V9_1A},
-    {TAG_CPU_ARCH_V9,	    ARM_ARCH_V9_2A},
-    {TAG_CPU_ARCH_V9,	    ARM_ARCH_V9_3A},
-    {TAG_CPU_ARCH_V9,	    ARM_ARCH_V9_4A},
-    {TAG_CPU_ARCH_V9,	    ARM_ARCH_V9_5A},
+    {TAG_CPU_ARCH_V8A,	    ARM_ARCH_V8_6A},
+    {TAG_CPU_ARCH_V8A,	    ARM_ARCH_V8_7A},
+    {TAG_CPU_ARCH_V8A,	    ARM_ARCH_V8_8A},
+    {TAG_CPU_ARCH_V8A,	    ARM_ARCH_V8_9A},
+    {TAG_CPU_ARCH_V9A,	    ARM_ARCH_V9A},
+    {TAG_CPU_ARCH_V9A,	    ARM_ARCH_V9_1A},
+    {TAG_CPU_ARCH_V9A,	    ARM_ARCH_V9_2A},
+    {TAG_CPU_ARCH_V9A,	    ARM_ARCH_V9_3A},
+    {TAG_CPU_ARCH_V9A,	    ARM_ARCH_V9_4A},
+    {TAG_CPU_ARCH_V9A,	    ARM_ARCH_V9_5A},
     {-1,		    ARM_ARCH_NONE}
 };
 
@@ -32207,9 +32207,9 @@ get_aeabi_cpu_arch_from_fset (const arm_feature_set *arch_ext_fset,
   if (ARM_FEATURE_EQUAL (*arch_ext_fset, arm_arch_any))
     {
       /* Force revisiting of decision for each new architecture.  */
-      gas_assert (MAX_TAG_CPU_ARCH <= TAG_CPU_ARCH_V9);
+      gas_assert (MAX_TAG_CPU_ARCH <= TAG_CPU_ARCH_V9A);
       *profile = 'A';
-      return TAG_CPU_ARCH_V9;
+      return TAG_CPU_ARCH_V9A;
     }
 
   ARM_CLEAR_FEATURE (arch_fset, *arch_ext_fset, *ext_fset);
@@ -32485,7 +32485,7 @@ aeabi_set_public_attributes (void)
      by the base architecture.
 
      For new architectures we will have to check these tests.  */
-  gas_assert (arch <= TAG_CPU_ARCH_V9);
+  gas_assert (arch <= TAG_CPU_ARCH_V9A);
   if (ARM_CPU_HAS_FEATURE (flags, arm_ext_v8)
       || ARM_CPU_HAS_FEATURE (flags, arm_ext_v8m))
     aeabi_set_attribute_int (Tag_DIV_use, 0);

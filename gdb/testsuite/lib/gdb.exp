@@ -5288,6 +5288,114 @@ gdb_caching_proc allow_aarch64_fpmr_tests {} {
     return $allow_fpmr_tests
 }
 
+# Run a test on the target to see if it supports the AArch64 CSSC feature.
+# Return 1 if so, 0 if it does not.  Note this causes a restart of GDB.
+
+gdb_caching_proc allow_aarch64_cssc_tests {} {
+    global srcdir subdir gdb_prompt inferior_exited_re
+
+    set me "allow_aarch64_cssc_tests"
+
+    if { ![is_aarch64_target]} {
+	return 0
+    }
+
+    set compile_flags "{additional_flags=-march=armv8-a+cssc}"
+
+    # Compile a test program reading CSSC.
+    set src {
+	int main() {
+	    asm volatile ("abs x0, x1" ::: "x0");
+	    return 0;
+	}
+    }
+
+    if {![gdb_simple_compile $me $src executable $compile_flags]} {
+	    return 0
+    }
+
+    # Compilation succeeded so now run it via gdb.
+    clean_restart
+    gdb_load $obj
+    gdb_run_cmd
+
+    gdb_expect {
+	-re ".*Illegal instruction.*${gdb_prompt} $" {
+	    verbose -log "\n$me cssc support not detected"
+	    set allow_cssc_tests 0
+	}
+	-re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	    verbose -log "\n$me: cssc support detected"
+	    set allow_cssc_tests 1
+	}
+	default {
+	  warning "\n$me: default case taken"
+	    set allow_cssc_tests 0
+	}
+    }
+    gdb_exit
+    remote_file build delete $obj
+
+    verbose "$me:  returning $allow_cssc_tests" 2
+    return $allow_cssc_tests
+}
+
+# Run a test on the target to see if it supports the AArch64 LSE128 feature.
+# Return 1 if so, 0 if it does not.  Note this causes a restart of GDB.
+
+gdb_caching_proc allow_aarch64_lse128_tests {} {
+    global srcdir subdir gdb_prompt inferior_exited_re
+
+    set me "allow_aarch64_lse128_tests"
+
+    if { ![is_aarch64_target]} {
+	return 0
+    }
+
+    set compile_flags "{additional_flags=-march=armv8-a+lse128}"
+
+    # Compile a test program reading LSE128.
+    set src {
+    #include <stdint.h>
+
+    int main() {
+	    __attribute__((aligned(16))) uint64_t mem[2] = { 0x0, 0x1 };
+	    uint64_t *ptr = mem;
+	    __asm__ volatile ("ldclrp x0, x1, [%0]\n" :: "r"(ptr) : "x0", "x1", "memory");
+	    return 0;
+	}
+    }
+
+    if {![gdb_simple_compile $me $src executable $compile_flags]} {
+	    return 0
+    }
+
+    # Compilation succeeded so now run it via gdb.
+    clean_restart
+    gdb_load $obj
+    gdb_run_cmd
+
+    gdb_expect {
+	-re ".*Illegal instruction.*${gdb_prompt} $" {
+	    verbose -log "\n$me lse128 support not detected"
+	    set allow_lse128_tests 0
+	}
+	-re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	    verbose -log "\n$me: lse128 support detected"
+	    set allow_lse128_tests 1
+	}
+	default {
+	  warning "\n$me: default case taken"
+	    set allow_lse128_tests 0
+	}
+    }
+    gdb_exit
+    remote_file build delete $obj
+
+    verbose "$me:  returning $allow_lse128_tests" 2
+    return $allow_lse128_tests
+}
+
 # Run a test on the target to see if it supports AArch64 MOPS (Memory
 # Operations) extensions.  Return 1 if so, 0 if it does not.  Note this
 # causes a restart of GDB.

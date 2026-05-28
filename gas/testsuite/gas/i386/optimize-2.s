@@ -233,3 +233,4 @@ _start:
 	vpsllq	$1, %zmm2, %zmm3
 
 	vpbroadcastq	%xmm2, %xmm0
+	vpbroadcastq	%xmm2, %ymm0

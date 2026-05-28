@@ -12301,7 +12301,7 @@ select_arm_features (unsigned long mach,
     case bfd_mach_arm_6M:	 ARM_SET_FEATURES (ARM_ARCH_V6M); break;
     case bfd_mach_arm_6SM:	 ARM_SET_FEATURES (ARM_ARCH_V6SM); break;
     case bfd_mach_arm_7EM:	 ARM_SET_FEATURES (ARM_ARCH_V7EM); break;
-    case bfd_mach_arm_8:
+    case bfd_mach_arm_8A:
 	{
 	  /* Add bits for extensions that Armv8.6-A recognizes.  */
 	  arm_feature_set armv8_6_ext_fset
@@ -12320,7 +12320,7 @@ select_arm_features (unsigned long mach,
       ARM_MERGE_FEATURE_SETS (arch_fset, arch_fset, mve_all);
       force_thumb = 1;
       break;
-    case bfd_mach_arm_9:         ARM_SET_FEATURES (ARM_ARCH_V9A); break;
+    case bfd_mach_arm_9A:         ARM_SET_FEATURES (ARM_ARCH_V9A); break;
       /* If the machine type is unknown allow all architecture types and all
 	 extensions, with the exception of MVE as that clashes with NEON.  */
     case bfd_mach_arm_unknown:

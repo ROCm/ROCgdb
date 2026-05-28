@@ -1571,12 +1571,12 @@ enum bfd_architecture
 #define bfd_mach_arm_6M        20
 #define bfd_mach_arm_6SM       21
 #define bfd_mach_arm_7EM       22
-#define bfd_mach_arm_8         23
+#define bfd_mach_arm_8A        23
 #define bfd_mach_arm_8R        24
 #define bfd_mach_arm_8M_BASE   25
 #define bfd_mach_arm_8M_MAIN   26
 #define bfd_mach_arm_8_1M_MAIN 27
-#define bfd_mach_arm_9         28
+#define bfd_mach_arm_9A        28
   bfd_arch_nds32,     /* Andes NDS32.  */
 #define bfd_mach_n1            1
 #define bfd_mach_n1h           2

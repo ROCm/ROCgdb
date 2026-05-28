@@ -5921,6 +5921,19 @@ aarch64_record_load_store (aarch64_insn_decode_record *aarch64_insn_r)
   else if ((insn_bits24_27 & 1) == 1 && insn_bits28_29 == 1
 	   && insn_bits10_11 == 1 && !insn_bit21)
     return aarch64_record_memcopy_memset (aarch64_insn_r);
+  /* Large System Extension 128 (LSE128) instructions.  */
+  else if (vector_flag == 0 && insn_bits10_11 == 0 && insn_bit21
+	   && size_bits == 0 && !bit (aarch64_insn_r->aarch64_insn, 29)
+	   && bits (aarch64_insn_r->aarch64_insn, 24, 25) == 0x1)
+    {
+      regcache_raw_read_unsigned (aarch64_insn_r->regcache, reg_rn, &address);
+      record_buf_mem[0] = 128 >> 3;
+      record_buf_mem[1] = address;
+      aarch64_insn_r->mem_rec_count = 1;
+      record_buf[0] = reg_rt;
+      record_buf[1] = bits (aarch64_insn_r->aarch64_insn, 16, 20);
+      aarch64_insn_r->reg_rec_count = 2;
+    }
   /* Advanced SIMD load/store instructions.  */
   else
     return aarch64_record_asimd_load_store (aarch64_insn_r);
