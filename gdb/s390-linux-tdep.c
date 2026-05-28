@@ -912,9 +912,6 @@ s390_linux_record_signal (struct gdbarch *gdbarch, struct regcache *regcache,
   if (record_full_arch_list_add_mem (sp, sizeof_rt_sigframe))
     return -1;
 
-  if (record_full_arch_list_add_end ())
-    return -1;
-
   return 0;
 }
 

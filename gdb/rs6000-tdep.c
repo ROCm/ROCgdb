@@ -7138,8 +7138,6 @@ UNKNOWN_PREFIX_OP:
   if (record_full_arch_list_add_reg (regcache, PPC_PC_REGNUM))
     return -1;
 
-  if (record_full_arch_list_add_end ())
-    return -1;
   return 0;
 }
 
@@ -7446,8 +7444,6 @@ UNKNOWN_OP:
     }
 
   if (record_full_arch_list_add_reg (regcache, PPC_PC_REGNUM))
-    return -1;
-  if (record_full_arch_list_add_end ())
     return -1;
   return 0;
 }

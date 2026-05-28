@@ -949,9 +949,6 @@ i386_linux_record_signal (struct gdbarch *gdbarch,
 				     I386_LINUX_xstate + I386_LINUX_frame_size))
     return -1;
 
-  if (record_full_arch_list_add_end ())
-    return -1;
-
   return 0;
 }
 

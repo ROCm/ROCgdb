@@ -41,7 +41,6 @@ enum record_result
 
 extern int record_full_arch_list_add_reg (struct regcache *regcache, int num);
 extern int record_full_arch_list_add_mem (CORE_ADDR addr, int len);
-extern int record_full_arch_list_add_end (void);
 
 /* Returns true if the process record target is open.  */
 extern int record_full_is_used (void);

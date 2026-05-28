@@ -5201,8 +5201,6 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
     }
 
   record_full_arch_list_add_reg (ir->regcache, ir->regmap[X86_RECORD_REIP_REGNUM]);
-  if (record_full_arch_list_add_end ())
-    return -1;
 
   return 0;
 }
@@ -8361,8 +8359,6 @@ reswitch_prefix_add:
 
   /* In the future, maybe still need to deal with need_dasm.  */
   I386_RECORD_FULL_ARCH_LIST_ADD_REG (X86_RECORD_REIP_REGNUM);
-  if (record_full_arch_list_add_end ())
-    return -1;
 
   return 0;
 

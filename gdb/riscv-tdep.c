@@ -5468,8 +5468,5 @@ riscv_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
   if (res != RECORD_SUCCESS)
     return res;
 
-  if (record_full_arch_list_add_end ())
-    return -1;
-
   return 0;
 }
