@@ -2203,6 +2203,83 @@ netorder32 (uint32_t input)
   return ret;
 }
 
+static void
+record_full_read_entry_from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
+{
+  uint8_t rectype;
+  uint32_t regnum, len;
+  uint64_t addr;
+  regcache *cache = get_thread_regcache (inferior_thread ());
+
+  bfdcore_read (cbfd, osec, &rectype, sizeof (rectype), bfd_offset);
+
+  switch (rectype)
+    {
+    case record_full_reg: /* reg */
+      {
+	/* Get register number to regnum.  */
+	bfdcore_read (cbfd, osec, &regnum, sizeof (regnum), bfd_offset);
+	regnum = netorder32 (regnum);
+
+	record_full_entry rec;
+
+	rec = record_full_reg_init (cache, regnum);
+
+	/* Get val.  */
+	bfdcore_read (cbfd, osec, record_full_get_loc (&rec),
+		      rec.u.reg.len, bfd_offset);
+
+	if (record_debug)
+	  gdb_printf (gdb_stdlog,
+		      "  Reading register %d (1 "
+		      "plus %lu plus %d bytes)\n",
+		      rec.u.reg.num,
+		      (unsigned long) sizeof (regnum),
+		      rec.u.reg.len);
+
+	record_full_arch_list_add (rec);
+	break;
+      }
+
+    case record_full_mem: /* mem */
+      {
+      /* Get len.  */
+	bfdcore_read (cbfd, osec, &len, sizeof (len), bfd_offset);
+	len = netorder32 (len);
+
+	/* Get addr.  */
+	bfdcore_read (cbfd, osec, &addr, sizeof (addr), bfd_offset);
+	addr = netorder64 (addr);
+
+	record_full_entry rec;
+	rec = record_full_mem_init (addr, len);
+
+	/* Get val.  */
+	bfdcore_read (cbfd, osec, record_full_get_loc (&rec),
+		      len, bfd_offset);
+
+	if (record_debug)
+	  gdb_printf (gdb_stdlog,
+		      "  Reading memory %s (1 plus "
+		      "%lu plus %lu plus %d bytes)\n",
+		      paddress (get_current_arch (),
+				rec.u.mem.addr),
+		      (unsigned long) sizeof (addr),
+		      (unsigned long) sizeof (len),
+		      rec.u.mem.len);
+
+	record_full_arch_list_add (rec);
+	break;
+      }
+
+    default:
+      error (_("Bad entry type in core file %ps."),
+	     styled_string (file_name_style.style (),
+			    bfd_get_filename (cbfd)));
+      break;
+    }
+}
+
 /* Restore the execution log from core file CBFD.  */
 
 static void
@@ -2246,13 +2323,10 @@ record_full_restore (struct bfd &cbfd)
 
   try
     {
-      regcache *regcache = get_thread_regcache (inferior_thread ());
-
       while (bfd_offset < osec_size)
 	{
-	  uint8_t rectype, sigval;
-	  uint32_t regnum, len, eff_count, insn_num;
-	  uint64_t addr;
+	  uint8_t sigval;
+	  uint32_t eff_count, insn_num;
 
 	  record_full_reset_incomplete ();
 
@@ -2273,76 +2347,7 @@ record_full_restore (struct bfd &cbfd)
 	    {
 	      eff_count--;
 
-	      bfdcore_read (&cbfd, osec, &rectype, sizeof (rectype), &bfd_offset);
-
-	      switch (rectype)
-		{
-		case record_full_reg: /* reg */
-		  {
-		    /* Get register number to regnum.  */
-		    bfdcore_read (&cbfd, osec, &regnum, sizeof (regnum),
-				  &bfd_offset);
-		    regnum = netorder32 (regnum);
-
-		    record_full_entry rec;
-
-		    rec = record_full_reg_init (regcache, regnum);
-
-		    /* Get val.  */
-		    bfdcore_read (&cbfd, osec, record_full_get_loc (&rec),
-				  rec.u.reg.len, &bfd_offset);
-
-		    if (record_debug)
-		      gdb_printf (gdb_stdlog,
-				  "  Reading register %d (1 "
-				  "plus %lu plus %d bytes)\n",
-				  rec.u.reg.num,
-				  (unsigned long) sizeof (regnum),
-				  rec.u.reg.len);
-
-		    record_full_arch_list_add (rec);
-		    break;
-		  }
-
-		case record_full_mem: /* mem */
-		  {
-		  /* Get len.  */
-		    bfdcore_read (&cbfd, osec, &len, sizeof (len),
-				  &bfd_offset);
-		    len = netorder32 (len);
-
-		    /* Get addr.  */
-		    bfdcore_read (&cbfd, osec, &addr, sizeof (addr),
-				  &bfd_offset);
-		    addr = netorder64 (addr);
-
-		    record_full_entry rec;
-		    rec = record_full_mem_init (addr, len);
-
-		    /* Get val.  */
-		    bfdcore_read (&cbfd, osec, record_full_get_loc (&rec),
-				  len, &bfd_offset);
-
-		    if (record_debug)
-		      gdb_printf (gdb_stdlog,
-				  "  Reading memory %s (1 plus "
-				  "%lu plus %lu plus %d bytes)\n",
-				  paddress (get_current_arch (),
-					    rec.u.mem.addr),
-				  (unsigned long) sizeof (addr),
-				  (unsigned long) sizeof (len),
-				  rec.u.mem.len);
-
-		    record_full_arch_list_add (rec);
-		    break;
-		  }
-
-		default:
-		  error (_("Bad entry type in core file %ps."),
-			 styled_string (file_name_style.style (),
-					bfd_get_filename (&cbfd)));
-		  break;
-		}
+	      record_full_read_entry_from_bfd (&cbfd, osec, &bfd_offset);
 	    }
 
 	  record_full_save_instruction ();
@@ -2397,6 +2402,71 @@ cmd_record_full_restore (const char *args, int from_tty)
 {
   core_file_command (args, from_tty);
   record_full_open (nullptr, from_tty);
+}
+
+static void
+record_full_write_entry_to_bfd (record_full_entry &entry,
+				const gdb_bfd_ref_ptr &obfd,
+				asection *osec, int *bfd_offset,
+				gdbarch *gdbarch)
+{
+  /* Save entry.  */
+  uint8_t type;
+  uint32_t regnum, len;
+  uint64_t addr;
+
+  type = entry.type;
+  bfdcore_write (obfd.get (), osec, &type, sizeof (type), bfd_offset);
+
+  switch (entry.type)
+    {
+    case record_full_reg: /* reg */
+      if (record_debug)
+	gdb_printf (gdb_stdlog,
+		    "  Writing register %d (1 "
+		    "plus %lu plus %d bytes)\n",
+		    entry.u.reg.num,
+		    (unsigned long) sizeof (regnum),
+		    entry.u.reg.len);
+
+      /* Write regnum.  */
+      regnum = netorder32 (entry.u.reg.num);
+      bfdcore_write (obfd.get (), osec, &regnum,
+		     sizeof (regnum), bfd_offset);
+
+      /* Write regval.  */
+      bfdcore_write (obfd.get (), osec,
+		     record_full_get_loc (&entry),
+		     entry.u.reg.len, bfd_offset);
+      break;
+
+    case record_full_mem: /* mem */
+      if (record_debug)
+	gdb_printf (gdb_stdlog,
+		    "  Writing memory %s (1 plus "
+		    "%lu plus %lu plus %d bytes)\n",
+		    paddress (gdbarch,
+			      entry.u.mem.addr),
+		    (unsigned long) sizeof (addr),
+		    (unsigned long) sizeof (len),
+		    entry.u.mem.len);
+
+      /* Write memlen.  */
+      len = netorder32 (entry.u.mem.len);
+      bfdcore_write (obfd.get (), osec, &len, sizeof (len),
+		     bfd_offset);
+
+      /* Write memaddr.  */
+      addr = netorder64 (entry.u.mem.addr);
+      bfdcore_write (obfd.get (), osec, &addr,
+		     sizeof (addr), bfd_offset);
+
+      /* Write memval.  */
+      bfdcore_write (obfd.get (), osec,
+		     record_full_get_loc (&entry),
+		     entry.u.mem.len, bfd_offset);
+      break;
+    }
 }
 
 /* Save the execution log to a file.  We use a modified elf corefile
@@ -2500,63 +2570,8 @@ record_full_base_target::save_record (const char *recfilename)
 
       for (auto &entry : record_full_list[i].effects)
 	{
-	  /* Save entry.  */
-	  uint8_t type;
-	  uint32_t regnum, len;
-	  uint64_t addr;
-
-	  type = entry.type;
-	  bfdcore_write (obfd.get (), osec, &type, sizeof (type), &bfd_offset);
-
-	  switch (entry.type)
-	    {
-	    case record_full_reg: /* reg */
-	      if (record_debug)
-		gdb_printf (gdb_stdlog,
-			    "  Writing register %d (1 "
-			    "plus %lu plus %d bytes)\n",
-			    entry.u.reg.num,
-			    (unsigned long) sizeof (regnum),
-			    entry.u.reg.len);
-
-	      /* Write regnum.  */
-	      regnum = netorder32 (entry.u.reg.num);
-	      bfdcore_write (obfd.get (), osec, &regnum,
-			     sizeof (regnum), &bfd_offset);
-
-	      /* Write regval.  */
-	      bfdcore_write (obfd.get (), osec,
-			     record_full_get_loc (&entry),
-			     entry.u.reg.len, &bfd_offset);
-	      break;
-
-	    case record_full_mem: /* mem */
-	      if (record_debug)
-		gdb_printf (gdb_stdlog,
-			    "  Writing memory %s (1 plus "
-			    "%lu plus %lu plus %d bytes)\n",
-			    paddress (gdbarch,
-				      entry.u.mem.addr),
-			    (unsigned long) sizeof (addr),
-			    (unsigned long) sizeof (len),
-			    entry.u.mem.len);
-
-	      /* Write memlen.  */
-	      len = netorder32 (entry.u.mem.len);
-	      bfdcore_write (obfd.get (), osec, &len, sizeof (len),
-			     &bfd_offset);
-
-	      /* Write memaddr.  */
-	      addr = netorder64 (entry.u.mem.addr);
-	      bfdcore_write (obfd.get (), osec, &addr,
-			     sizeof (addr), &bfd_offset);
-
-	      /* Write memval.  */
-	      bfdcore_write (obfd.get (), osec,
-			     record_full_get_loc (&entry),
-			     entry.u.mem.len, &bfd_offset);
-	      break;
-	    }
+	  record_full_write_entry_to_bfd (entry, obfd, osec, &bfd_offset,
+					  gdbarch);
 	}
 
       if (i < record_full_next_insn)
