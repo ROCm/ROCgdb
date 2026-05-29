@@ -1484,10 +1484,23 @@ amdgpu_segment_address_to_core_address (arch_addr_space_id address_space_id,
   const amd_dbgapi_segment_address_t significant_bits
     = amdgpu_get_segment_address_significant_bits (current_inferior ());
 
-  /* The address must not have bits set outside of the significant bits.  */
-  gdb_assert ((significant_bits & address) == address);
-
   const amd_dbgapi_segment_address_t aspace_id_mask = ~significant_bits;
+
+  /* Handle address_space_id 0 (default address space) as a special case here.
+     In the default (global) address space, high addresses are sign extended
+     (canonical addresses).  To support this, CORE_ADDR with the all-1 value
+     in the aspace_id is considered 0.  The following functions also follow
+     the same convention:
+     - amdgpu_segment_address_from_core_address
+     - amdgpu_address_space_id_from_core_address */
+  if ((aspace_id_mask & address) == aspace_id_mask
+      && address_space_id == ARCH_ADDR_SPACE_ID_DEFAULT)
+    return address;
+
+  if ((significant_bits & address) != address)
+    error (_("Invalid address for address space %s: %s"),
+	   pulongest (address_space_id),
+	   paddress (current_inferior ()->arch (), address));
 
   uint64_t id = address_space_id;
   uint64_t mask = aspace_id_mask;
