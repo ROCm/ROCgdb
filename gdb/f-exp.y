@@ -617,6 +617,13 @@ exp	:	SIZEOF '(' type ')'	%prec UNARY
 			}
 	;
 
+exp	:	name '#' exp %prec UNARY
+			{
+			  pstate->push_new<aspace_operation>
+			    (pstate->pop (), copy_name ($1));
+			}
+	;
+
 exp     :       BOOLEAN_LITERAL
 			{ pstate->push_new<bool_operation> ($1); }
 	;
@@ -1598,6 +1605,7 @@ yylex (void)
     case '?':
     case ':':
     case '=':
+    case '#':
     case '{':
     case '}':
     symbol:
