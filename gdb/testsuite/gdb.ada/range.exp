@@ -1,0 +1,70 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Simple tests of the 'abs' operator.
+
+load_lib "ada.exp"
+
+require allow_ada_tests
+
+standard_ada_testfile prog
+
+if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug ]] != "" } {
+    return
+}
+
+clean_restart ${testfile}
+
+set bp_location [gdb_get_line_number "START" ${testdir}/prog.adb]
+if {![runto "prog.adb:$bp_location"]} {
+    return
+}
+
+set is_true [quotemeta {$@DECIMAL = true}]
+set is_false [quotemeta {$@DECIMAL = false}]
+
+proc check_true {var expr} {
+    gdb_test "print $var in $expr" $::is_true
+    gdb_test "print $var not in $expr" $::is_false
+}
+
+proc check_false {var expr} {
+    gdb_test "print $var in $expr" $::is_false
+    gdb_test "print $var not in $expr" $::is_true
+}
+
+check_true se smaller_enum
+check_true se classic_enum
+check_false ce smaller_enum
+check_true ce classic_enum
+
+check_true gamma smaller_enum
+check_true gamma classic_enum
+check_false alpha smaller_enum
+check_true alpha classic_enum
+
+check_true gamma "alpha .. epsilon"
+check_false gamma "alpha .. beta"
+check_false alpha "gamma .. epsilon"
+
+check_true beta "a'range"
+check_false alpha "a'range"
+check_false epsilon "a'range"
+check_true beta "a'range(1)"
+check_false alpha "a'range(1)"
+check_false epsilon "a'range(1)"
+check_true beta "a'range(2)"
+check_true alpha "a'range(2)"
+check_true epsilon "a'range(2)"
