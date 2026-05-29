@@ -49,6 +49,9 @@ gdb_test "print private_lane#0xffffffff" " = \\(void \\*\\) private_lane#0xfffff
 gdb_test_no_output "set var \$addr = 0xffffffff"
 gdb_test "print private_lane#\$addr" " = \\(void \\*\\) private_lane#0xffffffff"
 
+gdb_test "print gibberish#0x123" \
+    "Address space gibberish not recognised by the architecture"
+
 # Save the register value, so we don't break the execution.
 gdb_test_no_output "set var \$temp = \$s32"
 
