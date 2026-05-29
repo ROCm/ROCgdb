@@ -2252,6 +2252,22 @@ public:
   { return OP_FUNCALL; }
 };
 
+/* The # address space conversion operator.  */
+class aspace_operation
+  : public tuple_holding_operation<operation_up, std::string>
+{
+public:
+
+  using tuple_holding_operation::tuple_holding_operation;
+
+  value *evaluate (struct type *expect_type,
+		   struct expression *exp,
+		   enum noside noside) override;
+
+  enum exp_opcode opcode () const override
+  { return OP_ASPACE; }
+};
+
 } /* namespace expr */
 
 #endif /* GDB_EXPOP_H */
