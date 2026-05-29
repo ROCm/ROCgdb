@@ -118,4 +118,16 @@ gdb_test "x/1wx private_lane#0x0" \
     "private_lane#0x0:\[ \t\]+$hex"
 gdb_test "with language fortran -- x/1wx private_lane#0x0" \
     "private_lane#0x0:\[ \t\]+$hex"
+
+if { [istarget "x86_64-*-*"] } {
+    # On x86_64, high address (with the MSB bit set - bit 47 for 4 level page
+    # tables and bit 56 for 5 level page table) are sign extended.
+
+    # Regular high address are correctly handled.
+    gdb_test "x/x ~0ull" ".*Cannot access memory at address 0xffffffffffffffff"
+
+    # However, addresses with inconsistent bit patterns past the MSB (not all-1
+    # nor all-0) are rejected as invalid addresses.
+    gdb_test "x/x (1ull << 63) - 1" ".*Invalid address for address space 0: 0x7fffffffffffffff"
+}
 }
