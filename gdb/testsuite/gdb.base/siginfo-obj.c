@@ -35,6 +35,7 @@ handler (int sig, siginfo_t *info, void *context)
   int ssi_signo = info->si_signo;
   int ssi_code = info->si_code;
   void *ssi_addr = info->si_addr;
+  unsigned int ssi_pkey = info->si_pkey;
 
   _exit (0); /* set breakpoint here */
 }

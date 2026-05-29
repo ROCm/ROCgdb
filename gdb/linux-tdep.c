@@ -272,10 +272,9 @@ static struct type *
 linux_get_siginfo_type (struct gdbarch *gdbarch)
 {
   struct linux_gdbarch_data *linux_gdbarch_data;
-  struct type *void_ptr_type;
   struct type *uid_type, *pid_type;
   struct type *sigval_type, *clock_type;
-  struct type *siginfo_type, *sifields_type;
+  struct type *siginfo_type, *sifields_type, *sigfault_union_type;
   struct type *type;
 
   linux_gdbarch_data = get_linux_gdbarch_data (gdbarch);
@@ -285,11 +284,22 @@ linux_get_siginfo_type (struct gdbarch *gdbarch)
   type_allocator alloc (gdbarch);
 
   const struct builtin_type *builtin_types = builtin_type (gdbarch);
+  struct type *short_type = builtin_types->builtin_short;
   struct type *int_type = builtin_types->builtin_int;
   struct type *uint_type = builtin_types->builtin_unsigned_int;
   struct type *long_type = builtin_types->builtin_long;
+  struct type *unsigned_long_type = builtin_types->builtin_unsigned_long;
+  struct type *uint32_type = builtin_types->builtin_uint32;
+  struct type *void_ptr_type
+    = lookup_pointer_type (builtin_type (gdbarch)->builtin_void);
 
-  void_ptr_type = lookup_pointer_type (builtin_type (gdbarch)->builtin_void);
+  /* Compute padding length, i.e. __ADDR_BND_PKEY_PAD.  */
+  unsigned alignof_void_ptr = type_align (void_ptr_type);
+  unsigned padding_size = (alignof_void_ptr < short_type->length ()
+			   ? short_type->length ()
+			   : alignof_void_ptr);
+  struct type *addr_bnd_pkey_padding_type
+    = init_vector_type (builtin_types->builtin_uint8, padding_size);
 
   /* sival_t */
   sigval_type = arch_composite_type (gdbarch, NULL, TYPE_CODE_UNION);
@@ -364,9 +374,40 @@ linux_get_siginfo_type (struct gdbarch *gdbarch)
   append_composite_type_field (type, "si_stime", clock_type);
   append_composite_type_field (sifields_type, "_sigchld", type);
 
-  /* _sigfault */
+  /* Begin _sigfault's anonymous union.  */
+  sigfault_union_type = arch_composite_type (gdbarch, NULL, TYPE_CODE_UNION);
+  /* used on alpha and sparc */
+  append_composite_type_field (sigfault_union_type, "si_trapno", int_type);
+  /* used when si_code is BUS_MCEERR_AR or BUS_MCEERR_AO.  */
+  append_composite_type_field (sigfault_union_type, "si_addr_lsb", short_type);
+
+  /* used when si_code=SEGV_BNDERR */
+  type = arch_composite_type (gdbarch, NULL, TYPE_CODE_STRUCT);
+  append_composite_type_field (type, "_dummy_bnd", addr_bnd_pkey_padding_type);
+  append_composite_type_field (type, "si_lower", void_ptr_type);
+  append_composite_type_field (type, "si_upper", void_ptr_type);
+  append_composite_type_field (sigfault_union_type, "_addr_bnd", type);
+
+  /* used when si_code=SEGV_PKUERR */
+  type = arch_composite_type (gdbarch, NULL, TYPE_CODE_STRUCT);
+  append_composite_type_field (type, "_dummy_pkey", addr_bnd_pkey_padding_type);
+  append_composite_type_field (type, "si_pkey", uint32_type);
+  append_composite_type_field (sigfault_union_type, "_addr_pkey", type);
+
+  /* used when si_code=TRAP_PERF */
+  type = arch_composite_type (gdbarch, NULL, TYPE_CODE_STRUCT);
+  append_composite_type_field (type, "si_perf_data", unsigned_long_type);
+  append_composite_type_field (type, "si_perf_type", uint32_type);
+  append_composite_type_field (type, "si_perf_flags", uint32_type);
+  append_composite_type_field (sigfault_union_type, "_perf", type);
+
+  /* End _sigfault's anonymous union.  */
+
+  /* _sigfault is set by SIGILL, SIGFPE, SIGSEGV, SIGBUS, SIGTRAP, SIGEMT */
   type = arch_composite_type (gdbarch, NULL, TYPE_CODE_STRUCT);
   append_composite_type_field (type, "si_addr", void_ptr_type);
+  /* Note: this is an anonymous union.  */
+  append_composite_type_field (type, "", sigfault_union_type);
   append_composite_type_field (sifields_type, "_sigfault", type);
 
   /* _sigpoll */

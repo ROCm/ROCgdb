@@ -2683,13 +2683,15 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 
   try
     {
+      using gdb_si = gdb::siginfo_type;
+      using si_key = gdb::siginfo_type::key;
       /* Sigcode tells us if the segfault is actually a memory tag
 	 violation.  */
-      si_code = parse_and_eval_long ("$_siginfo.si_code");
-      si_errno = parse_and_eval_long ("$_siginfo.si_errno");
+      si_code = parse_and_eval_long (gdb_si::get (si_key::siginfo_code));
+      si_errno = parse_and_eval_long (gdb_si::get (si_key::siginfo_errno));
 
       fault_addr
-	= parse_and_eval_long ("$_siginfo._sifields._sigfault.si_addr");
+	= parse_and_eval_long (gdb_si::get (si_key::siginfo_addr));
     }
   catch (const gdb_exception_error &exception)
     {

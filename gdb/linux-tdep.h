@@ -98,4 +98,64 @@ extern CORE_ADDR linux_get_hwcap2 ();
 extern bool linux_address_in_shadow_stack_mem_range
   (CORE_ADDR addr, std::pair<CORE_ADDR, CORE_ADDR> *range);
 
+namespace gdb {
+
+/* Maps each siginfo_type::key to the corresponding field-access expression
+   in $_siginfo.
+
+   Keep the order of key values synchronized with the entries in get()'s
+   paths array.  Each key is used directly as an array index.  */
+
+struct siginfo_type
+{
+  /* Identifies a field within siginfo_t that may be referenced by name.  */
+  enum class key
+  {
+    siginfo_signo = 0,
+    siginfo_errno,
+    siginfo_code,
+
+    /* SIGILL, SIGFPE, SIGSEGV, SIGBUS, SIGTRAP, SIGEMT */
+    siginfo_addr,
+    siginfo_trapno,
+    siginfo_addr_lsb,
+    siginfo_lower,
+    siginfo_upper,
+    siginfo_pkey,
+    siginfo_perf_data,
+    siginfo_perf_type,
+    siginfo_perf_flags,
+
+    /* Sentinel used to determine the number of mapped fields.  */
+    SIGINFO_ATTR_END
+  };
+
+  /* Return the $_siginfo access expression associated with ATTR_.
+
+     ATTR_ must be a valid si_* key other than SIGINFO_ATTR_END.  The array
+     order must exactly match the declaration order of the keys above.  */
+  static constexpr const char *get (key attr_)
+  {
+    const char *paths[static_cast<size_t> (key::SIGINFO_ATTR_END)] = {
+      "$_siginfo.si_signo",
+      "$_siginfo.si_errno",
+      "$_siginfo.si_code",
+
+      /* SIGILL, SIGFPE, SIGSEGV, SIGBUS, SIGTRAP, SIGEMT */
+      "$_siginfo._sifields._sigfault.si_addr",
+      "$_siginfo._sifields._sigfault.si_trapno",
+      "$_siginfo._sifields._sigfault.si_addr_lsb",
+      "$_siginfo._sifields._sigfault._addr_bnd.si_lower",
+      "$_siginfo._sifields._sigfault._addr_bnd.si_upper",
+      "$_siginfo._sifields._sigfault._addr_pkey.si_pkey",
+      "$_siginfo._sifields._sigfault._perf.si_perf_data",
+      "$_siginfo._sifields._sigfault._perf.si_perf_type",
+      "$_siginfo._sifields._sigfault._perf.si_perf_flags",
+    };
+    return paths[static_cast<size_t> (attr_)];
+  }
+};
+
+} /* namespace gdb */
+
 #endif /* GDB_LINUX_TDEP_H */
