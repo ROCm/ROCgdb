@@ -166,6 +166,35 @@ proc load_lib { file } {
     return $result
 }
 
+# Tcl 9.0 changed the default channel encoding profile to "strict".
+# When runtest sets LC_ALL=C the system encoding is iso8859-1, so file
+# channels opened by DejaGNU (gdb.sum, gdb.log) and spawn channels
+# (for GDB and subprocesses) default to iso8859-1 with strict profile.
+# Writing non-Latin-1 characters in test names then raises EILSEQ, and
+# sending them to GDB truncates the command at the unrepresentable
+# character.
+#
+# Fix this by:
+# 1. Overriding open_logs to reconfigure gdb.sum to UTF-8 after
+#    DejaGNU opens it with the system (iso8859-1) encoding.  Only
+#    "-encoding utf-8" is needed here, not "-profile replace".  The
+#    test names written to gdb.sum are Unicode strings, and since
+#    UTF-8 can represent every Unicode character, the encode
+#    operation cannot fail.  This use of "fconfigure" lacks a Tcl
+#    version guard since "-encoding utf-8" works in both Tcl 8 and
+#    Tcl 9.  (Use of "-profile replace" requires a guard, as that
+#    option did not exist before Tcl 9.)
+# 2. Reconfiguring each new spawn channel to UTF-8 and to also use
+#    "-profile replace" in spawn_capture_tty_name, which wraps every
+#    spawn call.
+# 3. Likewise for gdb_stdin_log_init.
+
+rename open_logs saved_open_logs
+proc open_logs {} {
+    saved_open_logs
+    fconfigure $::sum_file -encoding utf-8
+}
+
 load_lib libgloss.exp
 load_lib cache.exp
 load_lib gdb-utils.exp
@@ -2633,6 +2662,7 @@ proc gdb_file_cmd { arg {kill_flag 1} } {
 proc spawn_capture_tty_name { args } {
     set result [uplevel builtin_spawn $args]
     upvar spawn_out spawn_out
+    upvar spawn_id spawn_id
     if { [info exists spawn_out(slave,name)] } {
 	set ::last_spawn_tty_name $spawn_out(slave,name)
     } else {
@@ -2647,6 +2677,21 @@ proc spawn_capture_tty_name { args } {
 	# last_spawn_tty_name will already be unset, so, if we don't
 	# use -nocomplain here we would otherwise get an error.
 	unset -nocomplain ::last_spawn_tty_name
+    }
+    # Tcl 9.0 defaults spawn channels to iso8859-1/strict, which
+    # raises EILSEQ when non-Latin-1 characters (e.g. identifiers
+    # with UTF-8 letters) are written to or read from the channel.
+    # Use utf-8 instead.
+    #
+    # "catch" is used here because, unlike the other sites in this
+    # file where fconfigure is used, this use of fconfigure could
+    # attempt to modify channels which do not support these options.
+    # Those other sites use "fconfigure" on recently opened files
+    # where it will almost certainly work.  (And, for those other sites,
+    # if it doesn't work, we want to be notified of that fact via the
+    # normal Tcl error reporting mechanisms.)
+    if {[tcl_version_at_least 9 0 0]} {
+	catch {fconfigure $spawn_id -encoding utf-8 -profile replace}
     }
     return $result
 }
@@ -10526,6 +10571,11 @@ proc gdb_stdin_log_init { } {
 
     set logfile [standard_output_file_with_gdb_instance gdb.in]
     set in_file [open $logfile w]
+
+    if {[tcl_version_at_least 9 0 0]} {
+	# Tcl 9 strict profile: gdb.in must accept UTF-8 command strings.
+	fconfigure $in_file -encoding utf-8 -profile replace
+    }
 
     verbose -log ""
     verbose -log "Starting logfile: $logfile"
