@@ -419,7 +419,7 @@ solib_bfd_open (const char *pathname)
   gdb_bfd_ref_ptr abfd (solib_bfd_fopen (found_pathname.get (), found_file));
 
   /* Check bfd format.  */
-  if (!bfd_check_format (abfd.get (), bfd_object))
+  if (!gdb_bfd_check_format (abfd.get (), bfd_object))
     error (_("`%ps': not in executable format: %s"),
 	   styled_string (file_name_style.style (),
 			  bfd_get_filename (abfd.get ())),
@@ -1683,7 +1683,7 @@ gdb_bfd_read_elf_soname (const char *filename)
     return {};
 
   /* Check that ABFD is an ET_DYN ELF file.  */
-  if (!bfd_check_format (abfd.get (), bfd_object)
+  if (!gdb_bfd_check_format (abfd.get (), bfd_object)
       || !(bfd_get_file_flags (abfd.get ()) & DYNAMIC))
     return {};
 

@@ -108,7 +108,7 @@ symbol_file_add_from_memory (struct bfd *templ, CORE_ADDR addr,
     name = "shared object read from target memory";
   bfd_set_filename (nbfd, name);
 
-  if (!bfd_check_format (nbfd, bfd_object))
+  if (!gdb_bfd_check_format (nbfd, bfd_object))
     error (_("Got object file from memory but can't read symbols: %s."),
 	   bfd_errmsg (bfd_get_error ()));
 

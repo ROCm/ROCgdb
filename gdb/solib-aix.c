@@ -547,10 +547,10 @@ aix_solib_ops::bfd_open (const char *pathname) const
       return NULL;
     }
 
-  if (bfd_check_format (archive_bfd.get (), bfd_object))
+  if (gdb_bfd_check_format (archive_bfd.get (), bfd_object))
     return archive_bfd;
 
-  if (! bfd_check_format (archive_bfd.get (), bfd_archive))
+  if (! gdb_bfd_check_format (archive_bfd.get (), bfd_archive))
     {
       warning (_("\"%ps\": not in executable format: %s."),
 	       styled_string (file_name_style.style (), filename.c_str ()),
@@ -590,7 +590,7 @@ aix_solib_ops::bfd_open (const char *pathname) const
       return NULL;
     }
 
-  if (! bfd_check_format (object_bfd.get (), bfd_object))
+  if (! gdb_bfd_check_format (object_bfd.get (), bfd_object))
     {
       warning (_("%ps(%s): not in object format: %s."),
 	       styled_string (file_name_style.style (), filename.c_str ()),

@@ -621,7 +621,7 @@ compile_object_load (const compile_file_names &file_names,
 	   styled_string (file_name_style.style (), filename.get ()),
 	   bfd_errmsg (bfd_get_error ()));
 
-  if (!bfd_check_format_matches (abfd.get (), bfd_object, &matching))
+  if (!gdb_bfd_check_format_matches (abfd.get (), bfd_object, &matching))
     error (_("\"%ps\": not in loadable format: %s"),
 	   styled_string (file_name_style.style (), filename.get ()),
 	   gdb_bfd_errmsg (bfd_get_error (), matching).c_str ());

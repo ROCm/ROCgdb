@@ -782,7 +782,7 @@ jit_bfd_try_read_symtab (struct jit_code_entry *code_entry,
 
   /* Check the format.  NOTE: This initializes important data that GDB uses!
      We would segfault later without this line.  */
-  if (!bfd_check_format (nbfd.get (), bfd_object))
+  if (!gdb_bfd_check_format (nbfd.get (), bfd_object))
     {
       gdb_printf (gdb_stderr, _("\
 JITed symbol file is not an object file, ignoring it.\n"));

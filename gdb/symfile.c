@@ -1706,7 +1706,7 @@ symfile_bfd_open (const char *name)
 	   styled_string (file_name_style.style (), name),
 	   bfd_errmsg (bfd_get_error ()));
 
-  if (!bfd_check_format (sym_bfd.get (), bfd_object))
+  if (!gdb_bfd_check_format (sym_bfd.get (), bfd_object))
     error (_("`%ps': can't read symbols: %s."),
 	   styled_string (file_name_style.style (), name),
 	   bfd_errmsg (bfd_get_error ()));
@@ -2018,7 +2018,7 @@ generic_load (const char *args, int from_tty)
   if (loadfile_bfd == NULL)
     perror_with_name (filename.get ());
 
-  if (!bfd_check_format (loadfile_bfd.get (), bfd_object))
+  if (!gdb_bfd_check_format (loadfile_bfd.get (), bfd_object))
     error (_("\"%ps\" is not an object file: %s"),
 	   styled_string (file_name_style.style (), filename.get ()),
 	   bfd_errmsg (bfd_get_error ()));
@@ -2564,7 +2564,7 @@ reread_symbols (int from_tty)
 	  std::string original_name = objfile.original_name;
 
 	  /* bfd_openr sets cacheable to true, which is what we want.  */
-	  if (!bfd_check_format (objfile.obfd.get (), bfd_object))
+	  if (!gdb_bfd_check_format (objfile.obfd.get (), bfd_object))
 	    error (_("Can't read symbols from %ps: %s."),
 		   styled_string (file_name_style.style (),
 				  objfile_name (&objfile)),

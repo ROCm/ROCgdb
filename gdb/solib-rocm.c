@@ -696,7 +696,7 @@ rocm_solib_ops::bfd_open (const char *pathname) const
 	   bfd_errmsg (bfd_get_error ()));
 
   /* Check bfd format.  */
-  if (!bfd_check_format (abfd.get (), bfd_object))
+  if (!gdb_bfd_check_format (abfd.get (), bfd_object))
     error (_("`%s': not in executable format: %s"),
 	   bfd_get_filename (abfd.get ()), bfd_errmsg (bfd_get_error ()));
 

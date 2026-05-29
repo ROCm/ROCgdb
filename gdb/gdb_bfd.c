@@ -1026,9 +1026,9 @@ gdb_bfd_openr_next_archived_file (bfd *archive, bfd *previous)
 void
 gdb_bfd_record_inclusion (bfd *includer, bfd *includee)
 {
-  struct gdb_bfd_data *gdata;
+  gdb::lock_guard<gdb::recursive_mutex> guard (gdb_bfd_mutex);
 
-  gdata = (struct gdb_bfd_data *) bfd_usrdata (includer);
+  struct gdb_bfd_data *gdata = (struct gdb_bfd_data *) bfd_usrdata (includer);
   gdata->included_bfds.push_back (gdb_bfd_ref_ptr::new_reference (includee));
 }
 
@@ -1198,6 +1198,26 @@ gdb_bfd_canonicalize_symtab (bfd *abfd, bool should_throw)
   gdb_assert (symbol_table.back () == nullptr);
   return gdb::make_array_view (symbol_table.data (),
 			       symbol_table.size () - 1);
+}
+
+/* See gdb_bfd.h.  */
+
+bool
+gdb_bfd_check_format (bfd *abfd, bfd_format format)
+{
+  gdb::lock_guard<gdb::recursive_mutex> guard (gdb_bfd_mutex);
+
+  return bfd_check_format (abfd, format);
+}
+
+/* See gdb_bfd.h.  */
+
+bool
+gdb_bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
+{
+  gdb::lock_guard<gdb::recursive_mutex> guard (gdb_bfd_mutex);
+
+  return bfd_check_format_matches (abfd, format, matching);
 }
 
 /* Implement the 'maint info bfd' command.  */

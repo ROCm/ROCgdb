@@ -468,7 +468,7 @@ core_target::build_file_mappings ()
 	    = gdb_bfd_open (expanded_fname.get (), gnutarget);
 
 	  if (tmp_bfd != nullptr
-	      && bfd_check_format (tmp_bfd.get (), bfd_object)
+	      && gdb_bfd_check_format (tmp_bfd.get (), bfd_object)
 	      && build_id_bfd_get (tmp_bfd.get ()) != nullptr)
 	    {
 	      /* The newly opened TMP_BFD has a build-id, and this mapped
@@ -487,7 +487,7 @@ core_target::build_file_mappings ()
 
       if ((expanded_fname == nullptr
 	   || abfd == nullptr
-	   || !bfd_check_format (abfd.get (), bfd_object))
+	   || !gdb_bfd_check_format (abfd.get (), bfd_object))
 	  && file_data.build_id != nullptr)
 	{
 	  abfd = find_objfile_by_build_id (current_program_space,
@@ -510,7 +510,7 @@ core_target::build_file_mappings ()
 
       if (expanded_fname == nullptr
 	  || abfd == nullptr
-	  || !bfd_check_format (abfd.get (), bfd_object))
+	  || !gdb_bfd_check_format (abfd.get (), bfd_object))
 	{
 	  /* If ABFD was opened, but the wrong format, close it now.  */
 	  abfd = nullptr;
@@ -1089,7 +1089,7 @@ core_target_open (const char *arg, int from_tty)
   if (temp_bfd == NULL)
     perror_with_name (filename.c_str ());
 
-  if (!bfd_check_format (temp_bfd.get (), bfd_core))
+  if (!gdb_bfd_check_format (temp_bfd.get (), bfd_core))
     {
       /* Do it after the err msg */
       /* FIXME: should be checking for errors from bfd_close (for one

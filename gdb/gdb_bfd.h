@@ -268,7 +268,7 @@ extern long gdb_bfd_get_mtime (bfd *abfd)
 /* A wrapper for bfd_errmsg to produce a more helpful error message
    in the case of bfd_error_file_ambiguously recognized.
    MATCHING, if non-NULL, is the corresponding argument to
-   bfd_check_format_matches, and will be freed.  */
+   gdb_bfd_check_format_matches, and will be freed.  */
 
 extern std::string gdb_bfd_errmsg (bfd_error_type error_tag, char **matching);
 
@@ -288,5 +288,14 @@ extern void gdb_bfd_init ();
 
 extern gdb::array_view<asymbol *> gdb_bfd_canonicalize_symtab
      (bfd *abfd, bool should_throw = true);
+
+/* A wrapper for bfd_check_format that acquires the BFD lock.  */
+
+extern bool gdb_bfd_check_format (bfd *abfd, bfd_format format);
+
+/* A wrapper for bfd_check_format_matches that acquires the BFD lock.  */
+
+extern bool gdb_bfd_check_format_matches (bfd *abfd, bfd_format format,
+					  char ***matching);
 
 #endif /* GDB_GDB_BFD_H */

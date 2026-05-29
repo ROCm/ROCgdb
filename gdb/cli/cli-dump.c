@@ -89,7 +89,7 @@ bfd_openr_or_error (const char *filename, const char *target)
 	   styled_string (file_name_style.style (), filename),
 	   bfd_errmsg (bfd_get_error ()));
 
-  if (!bfd_check_format (ibfd.get (), bfd_object))
+  if (!gdb_bfd_check_format (ibfd.get (), bfd_object))
     error (_("'%ps' is not a recognized file format."),
 	   styled_string (file_name_style.style (), filename));
 

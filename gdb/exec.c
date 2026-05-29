@@ -478,7 +478,7 @@ exec_file_attach (const char *filename, int from_tty)
 	  (make_unique_xstrdup (gdb_realpath_keepfile
 				  (scratch_pathname).c_str ()));
 
-      if (!bfd_check_format_matches (current_program_space->exec_bfd (),
+      if (!gdb_bfd_check_format_matches (current_program_space->exec_bfd (),
 				     bfd_object, &matching))
 	{
 	  /* Make sure to close exec_bfd, or else "run" might try to use
