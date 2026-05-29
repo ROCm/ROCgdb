@@ -47,17 +47,17 @@ with_rocm_gpu_lock {
     gdb_test "continue" "Thread $decimal \"hip_deep\" hit Breakpoint $decimal.*"
     gdb_test "backtrace" \
 	[multi_line \
-	    "#0 .* base_case .*" \
-	    "#1 .* deep<0u> .*" \
-	    "#2 .* deep<1u> .*" \
-	    "#3 .* deep<2u> .*" \
-	    "#4 .* deep<3u> .*" \
-	    "#5 .* deep<4u> .*" \
-	    "#6 .* deep<5u> .*" \
-	    "#7 .* deep<6u> .*" \
-	    "#8 .* deep<7u> .*" \
-	    "#9 .* deep<8u> .*" \
-	    "#10 .* deep<9u> .*" \
-	    "#11 .* deep<10u> .*" \
-	    "#12 .* hip_deep .*"]
+	    "#0 +(($hex in )?base_case) .*" \
+	    "#1 +(($hex in )?deep<0u>) .*" \
+	    "#2 +(($hex in )?deep<1u>) .*" \
+	    "#3 +(($hex in )?deep<2u>) .*" \
+	    "#4 +(($hex in )?deep<3u>) .*" \
+	    "#5 +(($hex in )?deep<4u>) .*" \
+	    "#6 +(($hex in )?deep<5u>) .*" \
+	    "#7 +(($hex in )?deep<6u>) .*" \
+	    "#8 +(($hex in )?deep<7u>) .*" \
+	    "#9 +(($hex in )?deep<8u>) .*" \
+	    "#10 +(($hex in )?deep<9u>) .*" \
+	    "#11 +(($hex in )?deep<10u>) .*" \
+	    "#12 +(($hex in )?hip_deep) .*"]
 }
