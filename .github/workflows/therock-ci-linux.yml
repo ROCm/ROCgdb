@@ -123,5 +123,5 @@ jobs:
     with:
       amdgpu_families: ${{ inputs.amdgpu_families }}
       artifact_group: ${{ inputs.artifact_group }}
-      test_runs_on: linux-gfx942-1gpu-ossci-rocm
+      test_runs_on: linux-gfx942-1gpu-core42-ossci-rocm
       artifact_run_id: ${{ github.run_id }}
