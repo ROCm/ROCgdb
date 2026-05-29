@@ -52,6 +52,13 @@ gdb_test "print private_lane#\$addr" " = \\(void \\*\\) private_lane#0xffffffff"
 gdb_test "print gibberish#0x123" \
     "Address space gibberish not recognised by the architecture"
 
+# Fortran accepts the '#' operator.
+set f_ptr [string_to_regexp {(PTR TO -> ( void ))}]
+gdb_test "with language fortran -- print private_lane#0x0" \
+    " = $f_ptr private_lane#0x0\r\n.*"
+gdb_test "with language fortran -- print gibberish#0x123" \
+    "Address space gibberish not recognised by the architecture"
+
 # Save the register value, so we don't break the execution.
 gdb_test_no_output "set var \$temp = \$s32"
 
@@ -105,4 +112,10 @@ gdb_test "print \*\$generic_ptr" " = 2" "expect two in generic"
 gdb_test "print \*\$private_lane_ptr" " = 2" "expect two in private_lane"
 
 gdb_test "print \*\$generic_ptr == \*\$private_lane_ptr" "true"
+
+# Examine memory.
+gdb_test "x/1wx private_lane#0x0" \
+    "private_lane#0x0:\[ \t\]+$hex"
+gdb_test "with language fortran -- x/1wx private_lane#0x0" \
+    "private_lane#0x0:\[ \t\]+$hex"
 }
