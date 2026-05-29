@@ -42,6 +42,7 @@
 #include "c-exp.h"
 #include "inferior.h"
 #include "cli/cli-style.h"
+#include "arch-utils.h"
 
 
 /* Parse the string EXP as a C expression, evaluate it,
@@ -2547,6 +2548,39 @@ unop_extract_operation::evaluate (struct type *expect_type,
   struct value *result = value::allocate (type);
   old_value->contents_copy (result, 0, 0, 0, type->length ());
   return result;
+}
+
+value *
+aspace_operation::evaluate (struct type *expect_type,
+			    struct expression *exp,
+			    enum noside noside)
+{
+  value *val = std::get<0> (m_storage)->evaluate (nullptr, exp, noside);
+  if (!is_integral_type (val->type ()))
+    error (_("Non-integral right operand for \"#\" operator."));
+
+  if (!gdbarch_address_spaces_p (exp->gdbarch))
+    error (_("Address space conversion is not supported by the architecture"));
+
+  const std::string &name = std::get<1> (m_storage);
+  std::optional<arch_addr_space_id> address_space_id
+    = gdbarch_name_to_address_space_id (exp->gdbarch, name.c_str ());
+
+  if (!address_space_id.has_value ())
+    error (_("Address space %s not recognised by the architecture"),
+	name.c_str ());
+
+  CORE_ADDR address
+    = gdbarch_integer_to_address (exp->gdbarch, val->type (),
+				  val->contents ().data (), *address_space_id);
+
+  struct type *generic_ptr_type
+    = lookup_pointer_type (builtin_type (exp->gdbarch)->builtin_void);
+
+  val = value_from_pointer (generic_ptr_type, address);
+  val->set_scope (gdbarch_address_scope (exp->gdbarch, inferior_ptid,
+					 address));
+  return val;
 }
 
 }
