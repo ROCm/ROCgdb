@@ -25,12 +25,15 @@ load_lib "cp-support.exp"
 standard_testfile .cc
 
 set flags [list debug c++]
+
 set clang_used false
 if { [test_compiler_info "clang-*" "c++"] } {
     set clang_used true
-    if { [gcc_major_version "clang-*" "c++"] >= 11} {
-	lappend flags additional_flags=-Wno-non-c-typedef-for-linkage
-    }
+}
+
+if { [gcc_major_version "clang-*" "c++"] >= 11
+     || [gcc_major_version "gcc-*" "c++"] >= 16} {
+    lappend flags additional_flags=-Wno-non-c-typedef-for-linkage
 }
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $flags]} {
