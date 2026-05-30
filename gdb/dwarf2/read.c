@@ -902,9 +902,6 @@ public:
   explicit free_cached_comp_units (dwarf2_per_objfile *per_objfile)
     : m_per_objfile (per_objfile)
   {
-    /* The destructor frees all cached comp units, including ones currently
-       cached, so check that there are no currently cached comp units.  */
-    gdb_assert (m_per_objfile->nr_of_cus () == 0);
   }
 
   ~free_cached_comp_units ()

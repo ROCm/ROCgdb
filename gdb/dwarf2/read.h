@@ -969,12 +969,6 @@ struct dwarf2_per_objfile
   /* Free all cached compilation units.  */
   void remove_all_cus ();
 
-  /* Return the number of cached compilation units.  */
-  size_t nr_of_cus () const
-  {
-    return m_dwarf2_cus.size ();
-  }
-
   /* Increase the age counter on each CU compilation unit and free
      any that are too old.  */
   void age_comp_units ();
