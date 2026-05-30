@@ -26,7 +26,7 @@ struct ss
 
   unsigned char aa;
 
-  bool operator== (const ss &rhs)
+  bool operator== (const ss &rhs) const
   {
     return (memcmp (&this->static_field, &rhs.static_field,
 		    sizeof (this->static_field)) == 0

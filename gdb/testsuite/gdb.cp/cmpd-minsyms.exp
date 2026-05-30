@@ -48,7 +48,7 @@ gdb_test_no_output "set language c++"
 # of the minimal symbol.
 set min_syms [list \
 		  "GDB<int>::operator ==" \
-		  "GDB<int>::operator==(GDB<int> const&)" \
+		  "GDB<int>::operator==(GDB<int> const&) const" \
 		  "GDB<char>::harder(char)" \
 		  "GDB<int>::harder(int)" \
 		  {"int GDB<char>::even_harder<int>(char)"} \
