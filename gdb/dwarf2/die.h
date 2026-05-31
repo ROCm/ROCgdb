@@ -114,7 +114,7 @@ struct die_info
   }
 
   /* DWARF-2 tag for this DIE.  */
-  ENUM_BITFIELD(dwarf_tag) tag : 16;
+  dwarf_tag tag : 16;
 
   /* Number of attributes */
   unsigned char num_attrs;

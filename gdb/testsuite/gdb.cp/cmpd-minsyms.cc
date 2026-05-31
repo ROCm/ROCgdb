@@ -23,7 +23,7 @@ class GDB
    static int harder (T a) { return 1; }
    template <typename X>
    static X even_harder (T a) { return static_cast<X> (a); }
-   int operator == (GDB const& other)
+   int operator == (GDB const& other) const
    { return 1; }
   void a (void) const { }
   void b (void) volatile { }

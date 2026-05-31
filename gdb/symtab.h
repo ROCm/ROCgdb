@@ -404,11 +404,11 @@ typedef bool (symbol_name_matcher_ftype)
      struct partial_symbol
 
    These structures are laid out to encourage good packing.
-   They use ENUM_BITFIELD and short int fields, and they order the
+   They use bitfields and short int fields, and they order the
    structure members so that fields less than a word are next
    to each other so they can be packed together.  */
 
-/* Rearranged: used ENUM_BITFIELD and rearranged field order in
+/* Rearranged: used bitfields and rearranged field order in
    all the space critical structures (plus struct minimal_symbol).
    Memory usage dropped from 99360768 bytes to 90001408 bytes.
    I measured this with before-and-after tests of
@@ -586,7 +586,7 @@ struct general_symbol_info
      This is used to select one of the fields from the language specific
      union above.  */
 
-  ENUM_BITFIELD(language) m_language : LANGUAGE_BITS;
+  enum language m_language : LANGUAGE_BITS;
 
   /* This is only used by Ada.  If set, then the 'demangled_name' field
      of language_specific is valid.  Otherwise, the 'obstack' field is
@@ -815,7 +815,7 @@ struct minimal_symbol : public general_symbol_info
 
   /* Classification type for this minimal symbol.  */
 
-  ENUM_BITFIELD(minimal_symbol_type) m_type : MINSYM_TYPE_BITS;
+  minimal_symbol_type m_type : MINSYM_TYPE_BITS;
 
   /* Non-zero if this symbol was created by gdb.
      Such symbols do not appear in the output of "info var|fun".  */
@@ -1462,7 +1462,7 @@ struct symbol : public general_symbol_info, public allocate_on_obstack<symbol>
 
   /* Domain code.  */
 
-  ENUM_BITFIELD(domain_enum) m_domain : SYMBOL_DOMAIN_BITS;
+  domain_enum m_domain : SYMBOL_DOMAIN_BITS;
 
   /* Location class.  This holds an index into the 'symbol_impls'
      table.  The actual location_class value is stored there,
@@ -1492,7 +1492,7 @@ struct symbol : public general_symbol_info, public allocate_on_obstack<symbol>
 
   /* The concrete type of this symbol.  */
 
-  ENUM_BITFIELD (symbol_subclass_kind) subclass : 2;
+  symbol_subclass_kind subclass : 2;
 
   /* Whether this symbol is artificial.  */
 

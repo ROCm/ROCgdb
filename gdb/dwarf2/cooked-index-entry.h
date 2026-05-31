@@ -267,7 +267,7 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
      situation where the language is initially unknown, and then only
      filled in later.  In particular this can happen when using
      .gdb_index.  See also cooked_index_functions::search.  */
-  mutable ENUM_BITFIELD (language) lang : LANGUAGE_BITS;
+  mutable language lang : LANGUAGE_BITS;
   /* The offset of this DIE.  */
   sect_offset die_offset;
   /* The CU from which this entry originates.  This may point to a

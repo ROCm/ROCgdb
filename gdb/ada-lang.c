@@ -10059,24 +10059,6 @@ ada_value_cast (struct type *type, struct value *arg2)
     entity.  Results in this case are unpredictable, as we usually read
     past the buffer containing the data =:-o.  */
 
-/* A helper function for TERNOP_IN_RANGE.  */
-
-static value *
-eval_ternop_in_range (struct type *expect_type, struct expression *exp,
-		      enum noside noside,
-		      value *arg1, value *arg2, value *arg3)
-{
-  binop_promote (exp->language_defn, exp->gdbarch, &arg1, &arg2);
-  binop_promote (exp->language_defn, exp->gdbarch, &arg1, &arg3);
-  struct type *type = language_bool_type (exp->language_defn, exp->gdbarch);
-  return
-    value_from_longest (type,
-			(value_less (arg1, arg3)
-			 || value_equal (arg1, arg3))
-			&& (value_less (arg2, arg1)
-			    || value_equal (arg2, arg1)));
-}
-
 /* A helper function for UNOP_NEG.  */
 
 value *
@@ -10662,10 +10644,17 @@ ada_ternop_range_operation::evaluate (struct type *expect_type,
 				      struct expression *exp,
 				      enum noside noside)
 {
-  value *arg0 = std::get<0> (m_storage)->evaluate (nullptr, exp, noside);
-  value *arg1 = std::get<1> (m_storage)->evaluate (nullptr, exp, noside);
-  value *arg2 = std::get<2> (m_storage)->evaluate (nullptr, exp, noside);
-  return eval_ternop_in_range (expect_type, exp, noside, arg0, arg1, arg2);
+  value *arg1 = std::get<0> (m_storage)->evaluate (nullptr, exp, noside);
+  value *arg2 = std::get<1> (m_storage)->evaluate (nullptr, exp, noside);
+  value *arg3 = std::get<2> (m_storage)->evaluate (nullptr, exp, noside);
+  binop_promote (exp->language_defn, exp->gdbarch, &arg1, &arg2);
+  binop_promote (exp->language_defn, exp->gdbarch, &arg1, &arg3);
+  struct type *type = language_bool_type (exp->language_defn, exp->gdbarch);
+  return value_from_longest (type,
+			     (value_less (arg1, arg3)
+			      || value_equal (arg1, arg3))
+			     && (value_less (arg2, arg1)
+				 || value_equal (arg2, arg1)));
 }
 
 value *

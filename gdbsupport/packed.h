@@ -25,8 +25,8 @@
    defines a type that behaves like a given scalar type, but that has
    byte alignment, and, may optionally have a smaller size than the
    given scalar type.  This is typically used as alternative to
-   bit-fields (and ENUM_BITFIELD), when the fields must have separate
-   memory locations to avoid data races.  */
+   bit-fields, when the fields must have separate memory locations to
+   avoid data races.  */
 
 /* There are two implementations here -- one standard compliant, using
    a byte array for internal representation, and another that relies

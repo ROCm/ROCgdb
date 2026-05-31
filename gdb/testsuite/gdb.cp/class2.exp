@@ -19,9 +19,11 @@ require allow_cplus_tests
 standard_testfile .cc
 
 set flags [list debug c++]
-# When using recent Clangs, this test fails to compile without this warning
-# being disabled.  However, older Clangs fail to recognize the flag.
-if { [gcc_major_version "clang-*" "c++"] > 10 } {
+# When using recent Clangs/GCCs, this test fails to compile without this
+# warning being disabled.  However, older Clangs/GCCs fail to recognize the
+# flag.
+if { [gcc_major_version "clang-*" "c++"] > 10
+     || [gcc_major_version "gcc-*" "c++"] >= 16} {
     lappend flags additional_flags=-Wno-non-c-typedef-for-linkage
 }
 
