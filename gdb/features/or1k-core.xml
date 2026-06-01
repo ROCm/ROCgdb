@@ -42,6 +42,7 @@
   <reg name="ppc" bitsize="32" type="code_ptr"/>
   <reg name="npc" bitsize="32" type="code_ptr"/>
   <flags id="sr_flags" size="4">
+    <!-- codespell:ignore-begin -->
     <field name="SM" start="0" end="0"/>
     <field name="TEE" start="1" end="1"/>
     <field name="IEE" start="2" end="2"/>
@@ -60,6 +61,7 @@
     <field name="FO" start="15" end="15"/>
     <field name="SUMRA" start="16" end="16"/>
     <field name="CID" start="28" end="31"/>
+    <!-- codespell:ignore-end -->
   </flags>
   <reg name="sr" bitsize="32" type="sr_flags"/>
 </feature>

@@ -40,6 +40,7 @@
     </flags>
 
     <flags id="fpsw_flags" size="4">
+      <!-- codespell:ignore-begin -->
       <field name="RM0" start="0" end="0"/>
       <field name="RM1" start="1" end="1"/>
       <field name="CV" start="2" end="2"/>
@@ -60,6 +61,7 @@
       <field name="FU" start="29" end="29"/>
       <field name="FX" start="30" end="30"/>
       <field name="FS" start="31" end="31"/>
+      <!-- codespell:ignore-end -->
     </flags>
 
     <reg name="usp" bitsize="32" type="data_ptr"/>

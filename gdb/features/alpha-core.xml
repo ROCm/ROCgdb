@@ -21,6 +21,7 @@
 
   <!-- Floating-Point Control Register Flags -->
   <flags id="fpcr_flags" size="8">
+    <!-- codespell:ignore-begin -->
     <!-- Denormal Operand Exception Disable -->
     <field name="DNOD"   start="47" end="47"/>
     <!-- Denormal Operands to Zero -->
@@ -53,6 +54,7 @@
     <field name="INED"   start="62" end="62"/>
     <!-- Summary Bit -->
     <field name="SUM"    start="63" end="63"/>
+    <!-- codespell:ignore-end -->
   </flags>
 
   <!-- Integer Registers -->
