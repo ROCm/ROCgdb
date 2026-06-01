@@ -409,6 +409,10 @@ struct record_full_instruction
   uint32_t insn_num;
   std::optional<gdb_signal> sigval;
   std::vector<record_full_entry> effects;
+
+  /* Execute the full instruction.  As a side effect, set
+     record_full_stop_reason.  */
+  void exec_insn (regcache *regcache);
 };
 
 /* If true, query if PREC cannot record memory
@@ -873,12 +877,9 @@ static enum target_stop_reason record_full_stop_reason
 
 /* Execute one entry in the log by executing all the effects.  */
 
-static inline void
-record_full_exec_insn (regcache *regcache,
-		       gdbarch *gdbarch,
-		       record_full_instruction &insn)
+void record_full_instruction::exec_insn (regcache *regcache)
 {
-  for (auto &entry : insn.effects)
+  for (auto &entry : effects)
     if (entry.execute (regcache))
       record_full_stop_reason = TARGET_STOPPED_BY_WATCHPOINT;
 }
@@ -1339,9 +1340,7 @@ record_full_wait_1 (struct target_ops *ops,
 		  break;
 		}
 
-	      record_full_exec_insn
-		(regcache, gdbarch,
-		 record_full_list[record_full_next_insn]);
+	      record_full_list[record_full_next_insn].exec_insn (regcache);
 
 	      /* step */
 	      if (record_full_resume_step)
@@ -2545,8 +2544,7 @@ record_full_base_target::save_record (const char *recfilename)
 
   /* Reverse execute to the begin of record list.  */
   for (int i = record_full_next_insn - 1; i >= 0; i--)
-    record_full_exec_insn (regcache, gdbarch,
-			   record_full_list[i]);
+    record_full_list[i].exec_insn (regcache);
 
   /* Compute the size needed for the extra bfd section.  */
   save_size = 4;	/* magic cookie */
@@ -2617,8 +2615,9 @@ record_full_base_target::save_record (const char *recfilename)
 					  gdbarch);
 	}
 
+      /* Execute entry.  */
       if (i < record_full_next_insn)
-	record_full_exec_insn (regcache, gdbarch, record_full_list[i]);
+	record_full_list[i].exec_insn (regcache);
     }
 
   unlink_file.keep ();
@@ -2639,17 +2638,16 @@ record_full_goto_insn (size_t target_insn,
   scoped_restore restore_operation_disable
     = record_full_gdb_operation_disable_set ();
   regcache *regcache = get_thread_regcache (inferior_thread ());
-  struct gdbarch *gdbarch = regcache->arch ();
 
   /* Assume everything is valid: we will hit the entry,
      and we will not hit the end of the recording.  */
 
   if (dir == EXEC_REVERSE)
     for (int i = record_full_next_insn; i > target_insn; i--)
-      record_full_exec_insn (regcache, gdbarch, record_full_list[i - 1]);
+      record_full_list[i - 1].exec_insn (regcache);
   else
     for (int i = record_full_next_insn; i < target_insn; i++)
-      record_full_exec_insn (regcache, gdbarch, record_full_list[i]);
+      record_full_list[i].exec_insn (regcache);
 
   record_full_next_insn = target_insn;
 }
