@@ -1228,31 +1228,39 @@ install_reloc (asection *sec, arelent *reloc, fragS *fragp,
     }
 }
 
+fragS *
+get_frag_for_address (fragS *last_frag,
+		      const segment_info_type *seginfo,
+		      addressT addr)
+{
+  fragS *f;
+
+  for (f = last_frag; f != NULL; f = f->fr_next)
+    if (f->fr_address <= addr && addr < f->fr_address + f->fr_fix)
+      return f;
+
+  for (f = seginfo->frchainP->frch_root; f != NULL; f = f->fr_next)
+    if (f->fr_address <= addr && addr < f->fr_address + f->fr_fix)
+      return f;
+
+  for (f = seginfo->frchainP->frch_root; f != NULL; f = f->fr_next)
+    if (f->fr_address <= addr && addr <= f->fr_address + f->fr_fix)
+      return f;
+
+  return NULL;
+}
+
 static fragS *
 get_frag_for_reloc (fragS *last_frag,
 		    const segment_info_type *seginfo,
 		    const struct reloc_list *r)
 {
-  fragS *f;
+  fragS *f = get_frag_for_address (last_frag, seginfo, r->u.b.r.address);
 
-  for (f = last_frag; f != NULL; f = f->fr_next)
-    if (f->fr_address <= r->u.b.r.address
-	&& r->u.b.r.address < f->fr_address + f->fr_fix)
-      return f;
-
-  for (f = seginfo->frchainP->frch_root; f != NULL; f = f->fr_next)
-    if (f->fr_address <= r->u.b.r.address
-	&& r->u.b.r.address < f->fr_address + f->fr_fix)
-      return f;
-
-  for (f = seginfo->frchainP->frch_root; f != NULL; f = f->fr_next)
-    if (f->fr_address <= r->u.b.r.address
-	&& r->u.b.r.address <= f->fr_address + f->fr_fix)
-      return f;
-
-  as_bad_where (r->file, r->line,
-		_("reloc not within (fixed part of) section"));
-  return NULL;
+  if (f == NULL)
+    as_bad_where (r->file, r->line,
+		  _("reloc not within (fixed part of) section"));
+  return f;
 }
 
 static void

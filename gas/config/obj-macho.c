@@ -1864,7 +1864,8 @@ obj_mach_o_allow_local_subtract (expressionS * left ATTRIBUTE_UNUSED,
 }
 
 static bool
-obj_mach_o_in_different_subsection (symbolS *a, symbolS *b)
+obj_mach_o_in_different_subsection (symbolS *a, segT aseg, valueT offset,
+				    symbolS *b)
 {
   fragS *fa;
   fragS *fb;
@@ -1877,7 +1878,10 @@ obj_mach_o_in_different_subsection (symbolS *a, symbolS *b)
       return true;
     }
 
-  fa = symbol_get_frag (a);
+  if (symbol_section_p (a) && aseg != NULL)
+    fa = get_frag_for_address (NULL, seg_info (aseg), offset);
+  else
+    fa = symbol_get_frag (a);
   fb = symbol_get_frag (b);
   if (fa == NULL || fb == NULL)
     {
@@ -1893,7 +1897,8 @@ obj_mach_o_force_reloc_sub_same (fixS *fix, segT seg)
 {
   if (! SEG_NORMAL (seg))
     return true;
-  return obj_mach_o_in_different_subsection (fix->fx_addsy, fix->fx_subsy);
+  return obj_mach_o_in_different_subsection (fix->fx_addsy, seg,
+					     fix->fx_offset, fix->fx_subsy);
 }
 
 bool
@@ -1902,7 +1907,7 @@ obj_mach_o_force_reloc_sub_local (fixS *fix, segT seg ATTRIBUTE_UNUSED)
   symbolS *fragsym = fix->fx_frag->obj_frag_data.subsection;
   if (fragsym == NULL)
     return false;
-  return obj_mach_o_in_different_subsection (fix->fx_subsy, fragsym);
+  return obj_mach_o_in_different_subsection (fix->fx_subsy, NULL, 0, fragsym);
 }
 
 bool
@@ -1916,16 +1921,18 @@ obj_mach_o_force_reloc (fixS *fix)
   if (fix->fx_addsy != NULL)
     {
       symbolS *subsec = fix->fx_frag->obj_frag_data.subsection;
-      symbolS *targ = fix->fx_addsy;
 
       /* There might be no subsections at all.  */
       if (subsec == NULL)
 	return false;
 
-      if (S_GET_SEGMENT (targ) == absolute_section)
+      symbolS *targ = fix->fx_addsy;
+      segT targseg = S_GET_SEGMENT (targ);
+      if (targseg == absolute_section)
 	return false;
 
-      return obj_mach_o_in_different_subsection (targ, subsec);
+      return obj_mach_o_in_different_subsection (targ, targseg,
+						 fix->fx_offset, subsec);
     }
   return false;
 }
