@@ -506,8 +506,6 @@ void tc_pe_dwarf2_emit_offset (symbolS *, unsigned int);
 #define TC_FORCE_RELOCATION_SUB_LOCAL(FIX,SEG) \
 	(obj_mach_o_force_reloc_sub_local (FIX, SEG))
 
-#define TC_VALIDATE_FIX_SUB(FIX, SEG) 1
-
 #endif /* OBJ_MACH_O */
 
 #endif /* TC_I386 */

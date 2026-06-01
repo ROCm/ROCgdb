@@ -87,9 +87,6 @@ struct obj_mach_o_frag_data
 
 #define OBJ_FRAG_TYPE struct obj_mach_o_frag_data
 
-#define md_pre_output_hook obj_mach_o_pre_output_hook()
-extern void obj_mach_o_pre_output_hook(void);
-
 #define md_pre_relax_hook obj_mach_o_pre_relax_hook()
 extern void obj_mach_o_pre_relax_hook (void);
 
@@ -111,9 +108,8 @@ extern int obj_mach_o_allow_local_subtract (expressionS *, expressionS *,
 					    segT);
 
 struct fix;
-extern int obj_mach_o_in_different_subsection (symbolS *a, symbolS *b);
-extern int obj_mach_o_force_reloc (struct fix *fix);
-extern int obj_mach_o_force_reloc_sub_same (struct fix *fix, segT seg);
-extern int obj_mach_o_force_reloc_sub_local (struct fix *fix, segT seg);
+extern bool obj_mach_o_force_reloc (struct fix *);
+extern bool obj_mach_o_force_reloc_sub_same (struct fix *, segT);
+extern bool obj_mach_o_force_reloc_sub_local (struct fix *, segT);
 
 #endif /* _OBJ_MACH_O_H */
