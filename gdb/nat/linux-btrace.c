@@ -99,7 +99,7 @@ btrace_this_cpu (void)
   return cpu;
 }
 
-/* Return non-zero if there is new data in PEVENT; zero otherwise.  */
+/* Return non-zero if there is new data in PEV; zero otherwise.  */
 
 static int
 perf_event_new_data (const struct perf_event_buffer *pev)
