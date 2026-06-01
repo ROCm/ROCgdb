@@ -599,41 +599,34 @@ read_frame_register_value (value *value)
   gdb_assert (next_frame != nullptr);
 
   gdbarch *gdbarch = frame_unwind_arch (next_frame);
-  LONGEST offset = 0;
   LONGEST reg_offset = value->offset ();
   LONGEST bit_offset = value->bitpos ();
+  LONGEST reg_bit_offset = reg_offset * unit_size * HOST_CHAR_BIT + bit_offset;
   int regnum = value->regnum ();
-  int len = type_length_units (check_typedef (value->type ()));
+  LONGEST len = check_typedef (value->type ())->length () * HOST_CHAR_BIT;
 
-  /* Skip registers wholly inside of REG_OFFSET.  */
-  while (reg_offset >= register_size (gdbarch, regnum))
+  /* We try to read past the end of the register.  */
+  if (reg_bit_offset >= register_size (gdbarch, regnum) * HOST_CHAR_BIT)
     {
-      reg_offset -= register_size (gdbarch, regnum);
-      regnum++;
+      value->mark_bits_optimized_out (0, len);
+      return;
     }
 
-  /* Copy the data.  */
-  while (len > 0)
+  struct value *regval = frame_unwind_register_value (next_frame, regnum);
+  LONGEST reg_len
+    = regval->type ()->length () * HOST_CHAR_BIT - reg_bit_offset;
+
+  /* Truncate the read to not go past the end of the register.  */
+  if (reg_len > len)
+    reg_len = len;
+
+  if (len > reg_len)
     {
-      struct value *regval = frame_unwind_register_value (next_frame, regnum);
-      int reg_len = type_length_units (regval->type ()) - reg_offset;
-
-      /* If the register length is larger than the number of bytes
-	 remaining to copy, then only copy the appropriate bytes.  */
-      if (reg_len > len)
-	reg_len = len;
-
-      regval->contents_copy_bitwise (value,
-				     offset * unit_size * HOST_CHAR_BIT,
-				     (reg_offset * unit_size * HOST_CHAR_BIT
-				      + bit_offset),
-				     reg_len * unit_size * HOST_CHAR_BIT);
-
-      offset += reg_len;
-      len -= reg_len;
-      reg_offset = 0;
-      regnum++;
+      /* Mark bits past the end of the register as optimized out.  */
+      value->mark_bits_optimized_out (reg_len, len - reg_len);
     }
+
+  regval->contents_copy_bitwise (value, 0, reg_bit_offset, reg_len);
 }
 
 /* See value.h.  */
