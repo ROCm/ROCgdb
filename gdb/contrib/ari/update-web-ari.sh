@@ -877,12 +877,12 @@ EOF
 
     # Check for invalid categories
     for a in $all; do
-	alls="$alls all[$a] = 1 ;"
+	all2="$all2 all[$a] = 1 ;"
     done
     cat ari.*.doc | $AWK >> ${newari} '
 BEGIN {
     FS = ":"
-    '"$alls"'
+    '"$all2"'
 }
 {
     # ari.*.doc: <BUG>:<COUNT>:<CATEGORY>:<DOC>

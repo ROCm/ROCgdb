@@ -421,7 +421,7 @@ class DWARFCompileUnit(DWARFDIE):
         #     param_value = int(self.is_fission)
         #     cu_params += ["fission", str(param_value)]
 
-        # CU labels are not currently implemented, see commend above.
+        # CU labels are not currently implemented, see comment above.
         # if self.cu_label is not None:
         #     cu_params += ["label", self.cu_label]
 
