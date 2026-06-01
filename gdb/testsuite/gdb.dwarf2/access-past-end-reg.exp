@@ -47,7 +47,7 @@ Dwarf::assemble $dwarf_file {
 	    {DW_AT_name $::srcfile}
 	    {DW_AT_comp_dir /tmp}
 	} {
-	    declare_labels int_label foo_t_label
+	    declare_labels int_label foo_t_label bitfield_t_label
 
 	    int_label: DW_TAG_base_type {
 		{DW_AT_name int}
@@ -81,6 +81,42 @@ Dwarf::assemble $dwarf_file {
 		}
 	    }
 
+	    bitfield_t_label: DW_TAG_structure_type {
+		{DW_AT_name bitfield_t}
+		{DW_AT_byte_size 1 DW_FORM_sdata}
+	    } {
+		DW_TAG_member {
+		    {DW_AT_name a}
+		    {DW_AT_type :$int_label}
+		    {DW_AT_bit_size 1 DW_FORM_sdata}
+		    {DW_AT_data_bit_offset 0 DW_FORM_sdata}
+		}
+		DW_TAG_member {
+		    {DW_AT_name b}
+		    {DW_AT_type :$int_label}
+		    {DW_AT_bit_size 1 DW_FORM_sdata}
+		    {DW_AT_data_bit_offset 1 DW_FORM_sdata}
+		}
+		DW_TAG_member {
+		    {DW_AT_name c}
+		    {DW_AT_type :$int_label}
+		    {DW_AT_bit_size 1 DW_FORM_sdata}
+		    {DW_AT_data_bit_offset 2 DW_FORM_sdata}
+		}
+		DW_TAG_member {
+		    {DW_AT_name d}
+		    {DW_AT_type :$int_label}
+		    {DW_AT_bit_size 1 DW_FORM_sdata}
+		    {DW_AT_data_bit_offset 3 DW_FORM_sdata}
+		}
+		DW_TAG_member {
+		    {DW_AT_name e}
+		    {DW_AT_type :$int_label}
+		    {DW_AT_bit_size 1 DW_FORM_sdata}
+		    {DW_AT_data_bit_offset 4 DW_FORM_sdata}
+		}
+	    }
+
 	    DW_TAG_subprogram {
 		{DW_AT_name main}
 		{DW_AT_low_pc $main_start DW_FORM_addr}
@@ -93,6 +129,34 @@ Dwarf::assemble $dwarf_file {
 		    {DW_AT_location {
 			DW_OP_regx $::dwarf_regnum
 			DW_OP_piece 16
+		    } SPECIAL_expr}
+		}
+
+		DW_TAG_variable {
+		    {DW_AT_name var_reg}
+		    {DW_AT_type :$foo_t_label}
+		    {DW_AT_location {
+			DW_OP_regx $::dwarf_regnum
+		    } SPECIAL_expr}
+		}
+
+		DW_TAG_variable {
+		    {DW_AT_name var_reg_past_the_end}
+		    {DW_AT_type :$foo_t_label}
+		    {DW_AT_location {
+			DW_OP_regx $::dwarf_regnum
+			DW_OP_constu 8
+			DW_OP_LLVM_offset
+		    } SPECIAL_expr}
+		}
+
+		DW_TAG_variable {
+		    {DW_AT_name var_bitfield}
+		    {DW_AT_type :$bitfield_t_label}
+		    {DW_AT_location {
+			DW_OP_regx $::dwarf_regnum
+			DW_OP_constu 62
+			DW_OP_LLVM_bit_offset
 		    } SPECIAL_expr}
 		}
 	    }
@@ -113,3 +177,14 @@ if { ![runto_main] } {
 set regsize [get_sizeof "\$$regname" ""]
 gdb_assert {$regsize == 8} "ensure register size"
 gdb_test "p/x var_piece" "= {a = $::hex, b = $::hex, c = <optimized out>, d = <optimized out>}"
+
+# Read a variable larger than the register holding it, with a simple register
+# location description.
+gdb_test "p/x var_reg" "= {a = $::hex, b = $::hex, c = <optimized out>, d = <optimized out>}"
+
+# Read a value fully past the end of the register.
+gdb_test "p/x var_reg_past_the_end" "= <optimized out>"
+
+# Read a 1-byte value 2 bits away from the end of the register.  GDB needs
+# to be able to read less than one byte (2 bits), bits 2-7 are optimized out.
+gdb_test "p/x var_bitfield" "= {a = $::hex, b = $::hex, c = <optimized out>, d = <optimized out>, e = <optimized out>}"
