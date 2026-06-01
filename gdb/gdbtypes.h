@@ -63,7 +63,7 @@ struct dwarf2_property_baton;
 
 enum type_code
   {
-    TYPE_CODE_UNDEF = 0,	/**< Not used; catches errors */
+    TYPE_CODE_UNDEF = 0,	/* Not used; catches errors */
 
 #define OP(X) X,
 #include "type-codes.def"
@@ -483,12 +483,12 @@ struct dynamic_prop_list
 
 enum field_loc_kind
   {
-    FIELD_LOC_KIND_BITPOS,	/**< bitpos */
-    FIELD_LOC_KIND_ENUMVAL,	/**< enumval */
-    FIELD_LOC_KIND_PHYSADDR,	/**< physaddr */
-    FIELD_LOC_KIND_PHYSNAME,	/**< physname */
+    FIELD_LOC_KIND_BITPOS,	/* bitpos */
+    FIELD_LOC_KIND_ENUMVAL,	/* enumval */
+    FIELD_LOC_KIND_PHYSADDR,	/* physaddr */
+    FIELD_LOC_KIND_PHYSNAME,	/* physname */
     /* A DWARF block that computes the address of the field.  */
-    FIELD_LOC_KIND_DWARF_BLOCK_ADDR,	/**< dwarf_block */
+    FIELD_LOC_KIND_DWARF_BLOCK_ADDR,	/* dwarf_block */
     /* A DWARF block that computes the bit offset of the field.  */
     FIELD_LOC_KIND_DWARF_BLOCK_BITPOS,
   };

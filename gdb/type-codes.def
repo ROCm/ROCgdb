@@ -17,7 +17,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-OP (TYPE_CODE_PTR)		/**< Pointer type */
+OP (TYPE_CODE_PTR)		/* Pointer type */
 
 /* Array type with lower & upper bounds.
 
@@ -39,12 +39,12 @@ OP (TYPE_CODE_PTR)		/**< Pointer type */
    from right to left, not left to right.  */
 OP (TYPE_CODE_ARRAY)
 
-OP (TYPE_CODE_STRUCT)		/**< C struct or Pascal record */
-OP (TYPE_CODE_UNION)		/**< C union or Pascal variant part */
-OP (TYPE_CODE_ENUM)		/**< Enumeration type */
-OP (TYPE_CODE_FLAGS)		/**< Bit flags type */
-OP (TYPE_CODE_FUNC)		/**< Function type */
-OP (TYPE_CODE_INT)		/**< Integer type */
+OP (TYPE_CODE_STRUCT)		/* C struct or Pascal record */
+OP (TYPE_CODE_UNION)		/* C union or Pascal variant part */
+OP (TYPE_CODE_ENUM)		/* Enumeration type */
+OP (TYPE_CODE_FLAGS)		/* Bit flags type */
+OP (TYPE_CODE_FUNC)		/* Function type */
+OP (TYPE_CODE_INT)		/* Integer type */
 
 /* Floating type.  This is *NOT* a complex type.  */
 OP (TYPE_CODE_FLT)
@@ -57,8 +57,8 @@ OP (TYPE_CODE_FLT)
    type is a generic pointer.  */
 OP (TYPE_CODE_VOID)
 
-OP (TYPE_CODE_SET)		/**< Pascal sets */
-OP (TYPE_CODE_RANGE)		/**< Range (integers within spec'd bounds).  */
+OP (TYPE_CODE_SET)		/* Pascal sets */
+OP (TYPE_CODE_RANGE)		/* Range (integers within spec'd bounds).  */
 
 /* A string type which is like an array of character but prints
    differently.  It does not contain a length field as Pascal
@@ -72,7 +72,7 @@ OP (TYPE_CODE_STRING)
 OP (TYPE_CODE_ERROR)
 
 /* C++ */
-OP (TYPE_CODE_METHOD)		/**< Method type */
+OP (TYPE_CODE_METHOD)		/* Method type */
 
 /* Pointer-to-member-function type.  This describes how to access a
    particular member function of a class (possibly a virtual
@@ -87,26 +87,26 @@ OP (TYPE_CODE_METHODPTR)
    platforms).  */
 OP (TYPE_CODE_MEMBERPTR)
 
-OP (TYPE_CODE_REF)		/**< C++ Reference types */
+OP (TYPE_CODE_REF)		/* C++ Reference types */
 
-OP (TYPE_CODE_RVALUE_REF)	/**< C++ rvalue reference types */
+OP (TYPE_CODE_RVALUE_REF)	/* C++ rvalue reference types */
 
-OP (TYPE_CODE_CHAR)		/**< *real* character type */
+OP (TYPE_CODE_CHAR)		/* *real* character type */
 
 /* Boolean type.  0 is false, 1 is true, and other values are
    non-boolean (e.g. FORTRAN "logical" used as unsigned int).  */
 OP (TYPE_CODE_BOOL)
 
 /* Fortran */
-OP (TYPE_CODE_COMPLEX)		/**< Complex float */
+OP (TYPE_CODE_COMPLEX)		/* Complex float */
 
 OP (TYPE_CODE_TYPEDEF)
 
-OP (TYPE_CODE_NAMESPACE)	/**< C++ namespace.  */
+OP (TYPE_CODE_NAMESPACE)	/* C++ namespace.  */
 
-OP (TYPE_CODE_DECFLOAT)		/**< Decimal floating point.  */
+OP (TYPE_CODE_DECFLOAT)		/* Decimal floating point.  */
 
-OP (TYPE_CODE_MODULE)		/**< Fortran module.  */
+OP (TYPE_CODE_MODULE)		/* Fortran module.  */
 
 /* Internal function type.  */
 OP (TYPE_CODE_INTERNAL_FUNCTION)
