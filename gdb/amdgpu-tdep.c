@@ -74,6 +74,13 @@ amdgpu_get_segment_address_significant_bits (inferior *inf)
     {
       amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
 
+      if (process_id == AMD_DBGAPI_PROCESS_NONE)
+	{
+	  /* There is no process running for the current inferior, all bits
+	     of a given address are to be considered significant.  */
+	  return ~(amd_dbgapi_segment_address_t {0});
+	}
+
       amd_dbgapi_segment_address_t sb;
       if (amd_dbgapi_process_get_info
 	  (process_id, AMD_DBGAPI_PROCESS_INFO_SIGNIFICANT_ADDRESS_BITS,
