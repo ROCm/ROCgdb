@@ -204,8 +204,7 @@ gdb_test "python print(gdb.selected_frame().read_register(bad_object))" \
     "test Frame.read_register with bad_type object"
 
 # Compile again without debug info.
-gdb_exit
-if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {}] } {
+if { [prepare_for_testing "failed to prepare" ${testfile}-nodebug ${srcfile} {}] } {
     return
 }
 
