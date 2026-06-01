@@ -1383,7 +1383,8 @@ void obj_mach_o_frob_label (struct symbol *sp)
 
   s = (bfd_mach_o_asymbol *) symbol_get_bfdsym (sp);
   /* Leave debug symbols alone.  */
-  if ((s->n_type & BFD_MACH_O_N_STAB) != 0)
+  if ((s->n_type & BFD_MACH_O_N_STAB) != 0
+      || (s->symbol.section->flags & SEC_DEBUGGING) != 0)
     return;
 
   /* This is the base symbol type, that we mask in.  */
@@ -1433,7 +1434,8 @@ obj_mach_o_frob_symbol (struct symbol *sp)
 
   s = (bfd_mach_o_asymbol *) symbol_get_bfdsym (sp);
   /* Leave debug symbols alone.  */
-  if ((s->n_type & BFD_MACH_O_N_STAB) != 0)
+  if ((s->n_type & BFD_MACH_O_N_STAB) != 0
+      || (s->symbol.section->flags & SEC_DEBUGGING) != 0)
     return 0;
 
   base_type = obj_mach_o_type_for_symbol (s);
@@ -1569,6 +1571,10 @@ obj_mach_o_set_subsections (bfd *abfd ATTRIBUTE_UNUSED,
   struct obj_mach_o_symbol_data *cur_subsection_data = NULL;
   fragS *frag;
   frchainS *chain;
+
+  /* Don't waste time on debug sections.  */
+  if ((sec->flags & SEC_DEBUGGING) != 0)
+    return;
 
   /* Protect against sections not created by gas.  */
   if (seginfo == NULL)
@@ -1893,17 +1899,22 @@ obj_mach_o_in_different_subsection (symbolS *a, segT aseg, valueT offset,
 }
 
 bool
-obj_mach_o_force_reloc_sub_same (fixS *fix, segT seg)
+obj_mach_o_force_reloc_sub_same (segT seg, fixS *fix, segT addsymseg)
 {
-  if (! SEG_NORMAL (seg))
+  if (!SEG_NORMAL (addsymseg))
     return true;
-  return obj_mach_o_in_different_subsection (fix->fx_addsy, seg,
+  if ((seg->flags & SEC_DEBUGGING) != 0)
+    return false;
+  return obj_mach_o_in_different_subsection (fix->fx_addsy, addsymseg,
 					     fix->fx_offset, fix->fx_subsy);
 }
 
 bool
-obj_mach_o_force_reloc_sub_local (fixS *fix, segT seg ATTRIBUTE_UNUSED)
+obj_mach_o_force_reloc_sub_local (segT seg, fixS *fix,
+				  segT addsymseg ATTRIBUTE_UNUSED)
 {
+  if ((seg->flags & SEC_DEBUGGING) != 0)
+    return false;
   symbolS *fragsym = fix->fx_frag->obj_frag_data.subsection;
   if (fragsym == NULL)
     return false;
@@ -1911,10 +1922,13 @@ obj_mach_o_force_reloc_sub_local (fixS *fix, segT seg ATTRIBUTE_UNUSED)
 }
 
 bool
-obj_mach_o_force_reloc (fixS *fix)
+obj_mach_o_force_reloc (segT seg, fixS *fix)
 {
   if (generic_force_reloc (fix))
     return true;
+
+  if ((seg->flags & SEC_DEBUGGING) != 0)
+    return false;
 
   /* Force a reloc if the target is not in the same subsection.
      FIXME: handle (a - b) where a and b belongs to the same subsection ?  */

@@ -108,8 +108,8 @@ extern int obj_mach_o_allow_local_subtract (expressionS *, expressionS *,
 					    segT);
 
 struct fix;
-extern bool obj_mach_o_force_reloc (struct fix *);
-extern bool obj_mach_o_force_reloc_sub_same (struct fix *, segT);
-extern bool obj_mach_o_force_reloc_sub_local (struct fix *, segT);
+extern bool obj_mach_o_force_reloc (segT, struct fix *);
+extern bool obj_mach_o_force_reloc_sub_same (segT, struct fix *, segT);
+extern bool obj_mach_o_force_reloc_sub_local (segT, struct fix *, segT);
 
 #endif /* _OBJ_MACH_O_H */
