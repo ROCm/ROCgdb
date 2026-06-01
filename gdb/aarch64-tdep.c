@@ -5812,6 +5812,93 @@ aarch64_record_load_store (aarch64_insn_decode_record *aarch64_insn_r)
 	  aarch64_insn_r->reg_rec_count = 1;
 	}
     }
+  /* LRCPC3 instructions.  This covers ldiapp/stilp, ldapur/stlur (FP/SIMD),
+     ldapr/stlr.  */
+  else if ((insn_bits24_27 & 0x0b) == 0x09 && insn_bits28_29 == 0x01
+	   && insn_bits10_11 == 0x02 && !insn_bit21)
+    {
+      /* ldapur/stlur (FP/SIMD), ldapr/stlr.  We can differentiate between the
+	 2 types by checking the vector flag.  */
+      if (insn_bit23 || vector_flag)
+	{
+	  /* For the vector instruction, the offset comes from the imm9
+	     bitfield, whereas the other can only take possible values from the
+	     size bitfield.  */
+	  int16_t imm9_off = sbits (aarch64_insn_r->aarch64_insn, 12, 20);
+	  offset = vector_flag ? imm9_off : -(1 << size_bits);
+	  uint32_t regnum_offset = vector_flag ? AARCH64_V0_REGNUM : 0;
+	  if (ld_flag)
+	    {
+	      record_buf[0] = reg_rt + regnum_offset;
+	      aarch64_insn_r->reg_rec_count = 1;
+	      if (!vector_flag)
+		{
+		  /* The Rn register always has writeback in LRCPC3. This is
+		     not the case in LRCPC.  */
+		  record_buf[1] = reg_rn;
+		  aarch64_insn_r->reg_rec_count = 2;
+		}
+	    }
+	  else
+	    {
+	      regcache_raw_read_unsigned (aarch64_insn_r->regcache, reg_rn,
+					  &address);
+	      /* (vector_flag && insn_bit23) is the STLUR instruction with Q
+		 register.  */
+	      datasize = (vector_flag && insn_bit23) ? 128 : (8 << size_bits);
+	      /* LRCPC3 adds STLR with a pre-indexed offset. There is another
+		 STLR variant without offset but this has a different encoding.  */
+	      if (!vector_flag)
+		{
+		  record_buf[0] = reg_rn;
+		  aarch64_insn_r->reg_rec_count = 1;
+		}
+	      record_buf_mem[0] = datasize >> 3;
+	      record_buf_mem[1] = address + offset;
+	      aarch64_insn_r->mem_rec_count = 1;
+	    }
+	}
+      else
+	{
+	  /* ldiapp/stilp.  */
+	  uint8_t opc2 = bits (aarch64_insn_r->aarch64_insn, 12, 15);
+	  reg_rt2 = bits (aarch64_insn_r->aarch64_insn, 16, 20);
+	  if (ld_flag)
+	    {
+	      record_buf[0] = reg_rt;
+	      record_buf[1] = reg_rt2;
+	      aarch64_insn_r->reg_rec_count = 2;
+
+	      /* If the registers don't match and there's no offset then
+		 there's WB.  */
+	      if (reg_rn != reg_rt && reg_rn != reg_rt2 && opc2 == 0)
+		{
+		  record_buf[2] = reg_rn;
+		  aarch64_insn_r->reg_rec_count = 3;
+		}
+	    }
+	  else
+	    {
+	      datasize = 8 << size_bits;
+	      regcache_raw_read_unsigned (aarch64_insn_r->regcache, reg_rn,
+					  &address);
+	      offset = (opc2 == 0) ? (2 << size_bits) : 0;
+	      address -= offset;
+
+	      record_buf_mem[0] = datasize >> 3;
+	      record_buf_mem[1] = address;
+	      record_buf_mem[2] = datasize >> 3;
+	      record_buf_mem[3] = address + (datasize >> 3);
+	      aarch64_insn_r->mem_rec_count = 2;
+
+	      if (offset != 0)
+		{
+		  record_buf[0] = reg_rn;
+		  aarch64_insn_r->reg_rec_count = 1;
+		}
+	    }
+	}
+    }
   /* Load/store register (register offset) instructions.  */
   else if ((insn_bits24_27 & 0x0b) == 0x08 && insn_bits28_29 == 0x03
 	   && insn_bits10_11 == 0x02 && insn_bit21)

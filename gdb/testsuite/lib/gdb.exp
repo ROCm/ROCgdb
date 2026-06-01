@@ -5332,6 +5332,65 @@ gdb_caching_proc allow_aarch64_fpmr_tests {} {
     return $allow_fpmr_tests
 }
 
+# Run a test on the target to see if it supports AArch64 LRCPC3 (Load-Acquire
+# RCpc instructions) extensions.  Return 1 if so, 0 if it does not.  Note this
+# causes a restart of GDB.
+
+gdb_caching_proc allow_aarch64_lrcpc3_tests {} {
+    global srcdir subdir gdb_prompt inferior_exited_re
+
+    set me "allow_aarch64_lrcpc3_tests"
+
+    if { ![is_aarch64_target] } {
+	return 0
+    }
+
+    # Take the opportunity to check whether the toolchain knows about LRCPC3.
+    set compile_flags "{additional_flags=-march=armv8-a+rcpc3}"
+
+    # Compile a program that tests the LRCPC3 feature.
+    set src {
+	#include <stdbool.h>
+	#include <sys/auxv.h>
+
+	/* Feature check for LRCPC3.  */
+	#ifndef HWCAP2_LRCPC3
+	#define HWCAP2_LRCPC3 (1ULL << 46)
+	#endif
+
+	int main (void) {
+	    bool lrcpc3_supported = getauxval (AT_HWCAP2) & HWCAP2_LRCPC3;
+
+	    /* Return success if LRCPC3 is supported.  */
+	    return !lrcpc3_supported;
+	}
+    }
+
+    if {![gdb_simple_compile $me $src executable $compile_flags]} {
+	return 0
+    }
+
+    # Compilation succeeded so now run it via gdb.
+    clean_restart
+    gdb_load $obj
+    gdb_run_cmd
+    gdb_expect {
+    -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	    verbose -log "\n$me: lrcpc3 support detected"
+	    set allow_lrcpc3_tests 1
+	}
+	-re ".*$inferior_exited_re with code 01.*${gdb_prompt} $" {
+	    verbose -log "\n$me: lrcpc3 support not detected"
+	    set allow_lrcpc3_tests 0
+	}
+    }
+    gdb_exit
+    remote_file build delete $obj
+
+    verbose "$me:  returning $allow_lrcpc3_tests" 2
+    return $allow_lrcpc3_tests
+}
+
 # Run a test on the target to see if it supports the AArch64 CSSC feature.
 # Return 1 if so, 0 if it does not.  Note this causes a restart of GDB.
 
