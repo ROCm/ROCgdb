@@ -150,6 +150,14 @@ struct record_full_mem_entry
 
   DISABLE_COPY_AND_ASSIGN (record_full_mem_entry);
 
+  /* Create a mem_entry from a bfd file, when restoring a recording.  */
+  static record_full_mem_entry from_bfd (bfd *cbfd, asection* osec,
+					 int *bfd_offset);
+
+  /* Save this mem entry to a bfd file.  */
+  void to_bfd (const gdb_bfd_ref_ptr &obfd, asection *osec, int *bfd_offset,
+	       gdbarch *gdbarch);
+
   gdb_byte *get_loc ()
   {
     if (len > sizeof (u.buf))
@@ -273,6 +281,13 @@ struct record_full_reg_entry
 
   DISABLE_COPY_AND_ASSIGN (record_full_reg_entry);
 
+  /* Create a reg_entry from a bfd file, when restoring a recording.  */
+  static record_full_reg_entry from_bfd (bfd *cbfd, asection* osec,
+					 int *bfd_offset);
+
+  /* Save this reg entry to a bfd file.  */
+  void to_bfd (const gdb_bfd_ref_ptr &obfd, asection *osec, int *bfd_offset);
+
   gdb_byte *get_loc ()
   {
     if (len > sizeof (u.buf))
@@ -335,6 +350,13 @@ public:
 
   DISABLE_COPY_AND_ASSIGN (record_full_entry);
 
+  /* Create a generic entry from a bfd file, when restoring a recording.  */
+  static void from_bfd (bfd *cbfd, asection* osec, int *bfd_offset);
+
+  /* Save this entry to a bfd file.  */
+  void to_bfd (const gdb_bfd_ref_ptr &obfd, asection *osec, int *bfd_offset,
+	       gdbarch *gdbarch);
+
   record_full_reg_entry& reg ()
   {
     gdb_assert (type () == record_full_reg);
@@ -395,6 +417,7 @@ public:
      this one;
    * sigval: Whether the inferior received a signal while the following
      instruction was being recorded;
+   * pc: The Program Counter at the start of the instruction;
    * effects: A list of record_full_entry structures, each of which
      describing one effect that the instruction has on the inferior.
 
@@ -409,10 +432,18 @@ struct record_full_instruction
   uint32_t insn_num;
   std::optional<gdb_signal> sigval;
   std::vector<record_full_entry> effects;
+  record_full_reg_entry pc;
 
   /* Execute the full instruction.  As a side effect, set
      record_full_stop_reason.  */
   void exec_insn (regcache *regcache);
+
+  /* Create a full recorded instruction from a bfd.  */
+  static void from_bfd (bfd *cbfd, asection* osec, int *bfd_offset);
+
+  /* Save this instruction to a bfd file.  */
+  void to_bfd (gdb_bfd_ref_ptr &obfd, asection *osec, int *bfd_offset,
+	       gdbarch *gdbarch);
 };
 
 /* If true, query if PREC cannot record memory
@@ -723,7 +754,10 @@ record_full_arch_list_add_reg (struct regcache *regcache, int regnum)
 
   regcache->cooked_read (regnum, rec.get_loc ());
 
-  record_full_arch_list_add (rec);
+  if (regnum == gdbarch_pc_regnum (regcache->arch ()))
+      record_full_incomplete_instruction.pc = std::move (rec.reg ());
+  else
+      record_full_arch_list_add (rec);
 
   return 0;
 }
@@ -879,6 +913,7 @@ static enum target_stop_reason record_full_stop_reason
 
 void record_full_instruction::exec_insn (regcache *regcache)
 {
+  pc.execute (regcache);
   for (auto &entry : effects)
     if (entry.execute (regcache))
       record_full_stop_reason = TARGET_STOPPED_BY_WATCHPOINT;
@@ -2252,13 +2287,73 @@ netorder32 (uint32_t input)
   return ret;
 }
 
-static void
-record_full_read_entry_from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
+record_full_reg_entry
+record_full_reg_entry::from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
+{
+  uint32_t regnum;
+  regcache *cache = get_thread_regcache (inferior_thread ());
+
+  /* Get register number to regnum.  */
+  bfdcore_read (cbfd, osec, &regnum, sizeof (regnum),
+		bfd_offset);
+  regnum = netorder32 (regnum);
+
+  record_full_reg_entry reg (cache->arch (), regnum);
+
+  /* Get val.  */
+  bfdcore_read (cbfd, osec, reg.get_loc (),
+		reg.len, bfd_offset);
+
+  if (record_debug)
+    gdb_printf (gdb_stdlog,
+		"  Reading register %d (1 "
+		"plus %lu plus %d bytes)\n",
+		reg.num,
+		(unsigned long) sizeof (regnum),
+		reg.len);
+  return reg;
+
+}
+
+record_full_mem_entry
+record_full_mem_entry::from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
+{
+  uint32_t len;
+  uint64_t addr;
+
+  /* Get len.  */
+  bfdcore_read (cbfd, osec, &len, sizeof (len), bfd_offset);
+  len = netorder32 (len);
+
+  /* Get addr.  */
+  bfdcore_read (cbfd, osec, &addr, sizeof (addr),
+		bfd_offset);
+  addr = netorder64 (addr);
+
+  record_full_mem_entry mem (addr, len);
+
+  /* Get val.  */
+  bfdcore_read (cbfd, osec, mem.get_loc (),
+		len, bfd_offset);
+
+  if (record_debug)
+    gdb_printf (gdb_stdlog,
+		"  Reading memory %s (1 plus "
+		"%lu plus %lu plus %d bytes)\n",
+		paddress (get_current_arch (),
+			  mem.addr),
+		(unsigned long) sizeof (addr),
+		(unsigned long) sizeof (len),
+		len);
+
+  return mem;
+}
+
+void
+record_full_entry::from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
 {
   uint8_t rectype;
-  uint32_t regnum, len;
-  uint64_t addr;
-  regcache *cache = get_thread_regcache (inferior_thread ());
+  record_full_entry rec;
 
   bfdcore_read (cbfd, osec, &rectype, sizeof (rectype), bfd_offset);
 
@@ -2266,54 +2361,15 @@ record_full_read_entry_from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
     {
     case record_full_reg: /* reg */
       {
-	/* Get register number to regnum.  */
-	bfdcore_read (cbfd, osec, &regnum, sizeof (regnum), bfd_offset);
-	regnum = netorder32 (regnum);
-
-	record_full_entry rec (record_full_reg, cache->arch (), regnum);
-
-	/* Get val.  */
-	bfdcore_read (cbfd, osec, rec.get_loc (),
-		      rec.reg ().len, bfd_offset);
-
-	if (record_debug)
-	  gdb_printf (gdb_stdlog,
-		      "  Reading register %d (1 "
-		      "plus %lu plus %d bytes)\n",
-		      rec.reg ().num,
-		      (unsigned long) sizeof (regnum),
-		      rec.reg ().len);
-
-	record_full_arch_list_add (rec);
+	rec.entry = std::move (record_full_reg_entry::from_bfd
+				(cbfd, osec, bfd_offset));
 	break;
       }
 
     case record_full_mem: /* mem */
       {
-      /* Get len.  */
-	bfdcore_read (cbfd, osec, &len, sizeof (len), bfd_offset);
-	len = netorder32 (len);
-
-	/* Get addr.  */
-	bfdcore_read (cbfd, osec, &addr, sizeof (addr), bfd_offset);
-	addr = netorder64 (addr);
-
-	record_full_entry rec (record_full_mem, addr, len);
-
-	/* Get val.  */
-	bfdcore_read (cbfd, osec, rec.get_loc (), len, bfd_offset);
-
-	if (record_debug)
-	  gdb_printf (gdb_stdlog,
-		      "  Reading memory %s (1 plus "
-		      "%lu plus %lu plus %d bytes)\n",
-		      paddress (get_current_arch (),
-				rec.mem ().addr),
-		      (unsigned long) sizeof (addr),
-		      (unsigned long) sizeof (len),
-		      rec.mem ().len);
-
-	record_full_arch_list_add (rec);
+	rec.entry = std::move (record_full_mem_entry::from_bfd
+				(cbfd, osec, bfd_offset));
 	break;
       }
 
@@ -2322,6 +2378,39 @@ record_full_read_entry_from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
 	     styled_string (file_name_style.style (),
 			    bfd_get_filename (cbfd)));
       break;
+    }
+  record_full_arch_list_add (rec);
+}
+
+void
+record_full_instruction::from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
+{
+  uint32_t eff_count = 0;
+  uint8_t sigval;
+  uint32_t insn_num;
+
+  /* First read the generic information for an instruction.  */
+  bfdcore_read (cbfd, osec, &sigval, sizeof (uint8_t), bfd_offset);
+  bfdcore_read (cbfd, osec, &eff_count, sizeof (uint32_t),
+		bfd_offset);
+  bfdcore_read (cbfd, osec, &insn_num, sizeof (uint32_t),
+		bfd_offset);
+
+  record_full_incomplete_instruction.insn_num = netorder32 (insn_num);
+  if (sigval != GDB_SIGNAL_0)
+    record_full_incomplete_instruction.sigval = (gdb_signal) sigval;
+
+  record_full_incomplete_instruction.pc
+    = record_full_reg_entry::from_bfd (cbfd, osec, bfd_offset);
+
+  eff_count = netorder32 (eff_count);
+
+  /* This deals with all the side effects.  */
+  while (eff_count > 0)
+    {
+      eff_count--;
+
+      record_full_entry::from_bfd (cbfd, osec, bfd_offset);
     }
 }
 
@@ -2368,30 +2457,9 @@ record_full_restore (struct bfd &cbfd)
     {
       while (bfd_offset < osec_size)
 	{
-	  uint8_t sigval;
-	  uint32_t eff_count, insn_num;
-
 	  record_full_reset_incomplete ();
 
-	  /* Frst read the generic information for an instruction.  */
-	  bfdcore_read (&cbfd, osec, &sigval, sizeof (uint8_t), &bfd_offset);
-	  bfdcore_read (&cbfd, osec, &eff_count, sizeof (uint32_t),
-			&bfd_offset);
-	  bfdcore_read (&cbfd, osec, &insn_num, sizeof (uint32_t),
-			&bfd_offset);
-
-	  record_full_incomplete_instruction.insn_num = netorder32 (insn_num);
-	  if (sigval != GDB_SIGNAL_0)
-	    record_full_incomplete_instruction.sigval = (gdb_signal) sigval;
-	  eff_count = netorder32 (eff_count);
-
-	  /* This deals with all the side effects.  */
-	  while (eff_count > 0)
-	    {
-	      eff_count--;
-
-	      record_full_read_entry_from_bfd (&cbfd, osec, &bfd_offset);
-	    }
+	  record_full_instruction::from_bfd (&cbfd, osec, &bfd_offset);
 
 	  record_full_save_instruction ();
 	}
@@ -2447,67 +2515,105 @@ cmd_record_full_restore (const char *args, int from_tty)
   record_full_open (nullptr, from_tty);
 }
 
-static void
-record_full_write_entry_to_bfd (record_full_entry &entry,
-				const gdb_bfd_ref_ptr &obfd,
-				asection *osec, int *bfd_offset,
-				gdbarch *gdbarch)
+void
+record_full_reg_entry::to_bfd (const gdb_bfd_ref_ptr &obfd,
+			       asection *osec, int *bfd_offset)
+{
+  uint32_t regnum;
+
+  if (record_debug)
+    gdb_printf (gdb_stdlog,
+		"  Writing register %d (1 "
+		"plus %lu plus %d bytes)\n",
+		this->num,
+		(unsigned long) sizeof (regnum),
+		this->len);
+
+  /* Write regnum.  */
+  regnum = netorder32 (this->num);
+  bfdcore_write (obfd.get (), osec, &regnum, sizeof (regnum), bfd_offset);
+
+  /* Write regval.  */
+  bfdcore_write (obfd.get (), osec, this->get_loc (), this->len, bfd_offset);
+}
+
+void
+record_full_mem_entry::to_bfd (const gdb_bfd_ref_ptr &obfd,
+			       asection *osec, int *bfd_offset,
+			       gdbarch *gdbarch)
+{
+  uint32_t len;
+  uint64_t addr;
+
+  if (record_debug)
+    gdb_printf (gdb_stdlog,
+		"  Writing memory %s (1 plus "
+		"%lu plus %lu plus %d bytes)\n",
+		paddress (gdbarch, this->addr),
+		(unsigned long) sizeof (addr),
+		(unsigned long) sizeof (len),
+		this->len);
+
+  /* Write memlen.  */
+  len = netorder32 (this->len);
+  bfdcore_write (obfd.get (), osec, &len, sizeof (len), bfd_offset);
+
+  /* Write memaddr.  */
+  addr = netorder64 (this->addr);
+  bfdcore_write (obfd.get (), osec, &addr, sizeof (addr), bfd_offset);
+
+  /* Write memval.  */
+  bfdcore_write (obfd.get (), osec, this->get_loc (), this->len, bfd_offset);
+}
+
+void
+record_full_entry::to_bfd (const gdb_bfd_ref_ptr &obfd, asection *osec,
+			   int *bfd_offset, gdbarch *gdbarch)
 {
   /* Save entry.  */
   uint8_t type;
-  uint32_t regnum, len;
-  uint64_t addr;
 
-  type = entry.type ();
+  type = this->type ();
   bfdcore_write (obfd.get (), osec, &type, sizeof (type), bfd_offset);
 
   switch (type)
     {
     case record_full_reg: /* reg */
-      {
-	auto &reg = entry.reg ();
-	if (record_debug)
-	  gdb_printf (gdb_stdlog,
-		      "  Writing register %d (1 "
-		      "plus %lu plus %d bytes)\n",
-		      reg.num,
-		      (unsigned long) sizeof (regnum),
-		      reg.len);
-
-	/* Write regnum.  */
-	regnum = netorder32 (reg.num);
-	bfdcore_write (obfd.get (), osec, &regnum, sizeof (regnum), bfd_offset);
-
-	/* Write regval.  */
-	bfdcore_write (obfd.get (), osec, entry.get_loc (), reg.len, bfd_offset);
-	break;
-      }
+      reg ().to_bfd (obfd, osec, bfd_offset);
+      break;
 
     case record_full_mem: /* mem */
-      {
-	auto &mem = entry.mem ();
-	if (record_debug)
-	  gdb_printf (gdb_stdlog,
-		      "  Writing memory %s (1 plus "
-		      "%lu plus %lu plus %d bytes)\n",
-		      paddress (gdbarch, mem.addr),
-		      (unsigned long) sizeof (addr),
-		      (unsigned long) sizeof (len),
-		      mem.len);
+      mem ().to_bfd (obfd, osec, bfd_offset, gdbarch);
+      break;
+    }
+}
 
-	/* Write memlen.  */
-	len = netorder32 (mem.len);
-	bfdcore_write (obfd.get (), osec, &len, sizeof (len), bfd_offset);
+void
+record_full_instruction::to_bfd (gdb_bfd_ref_ptr &obfd, asection *osec,
+				 int *bfd_offset, gdbarch *gdbarch)
+{
+  uint32_t eff_count = (uint32_t) this->effects.size ();
+  uint32_t insn_num = this->insn_num;
+  uint8_t sigval = (this->sigval.has_value ())
+		     ? this->sigval.value ()
+		     : GDB_SIGNAL_0;
 
-	/* Write memaddr.  */
-	addr = netorder64 (mem.addr);
-	bfdcore_write (obfd.get (), osec, &addr, sizeof (addr), bfd_offset);
+  /* Signal.  */
+  bfdcore_write (obfd.get (), osec, &sigval, sizeof (sigval), bfd_offset);
+  eff_count = netorder32 (eff_count);
+  /* Number of effects.  */
+  insn_num = netorder32 (insn_num);
+  bfdcore_write (obfd.get (), osec, &eff_count, sizeof (eff_count),
+		 bfd_offset);
+  /* Instruction number.  */
+  bfdcore_write (obfd.get (), osec, &insn_num, sizeof (uint32_t),
+		 bfd_offset);
 
-	/* Write memval.  */
-	bfdcore_write (obfd.get (), osec, entry.get_loc (), mem.len,
-		       bfd_offset);
-	break;
-      }
+  this->pc.to_bfd (obfd, osec, bfd_offset);
+
+  for (auto &entry : this->effects)
+    {
+      entry.to_bfd (obfd, osec, bfd_offset, gdbarch);
     }
 }
 
@@ -2552,6 +2658,7 @@ record_full_base_target::save_record (const char *recfilename)
     {
       /* Number of effects of an instruction.  */
       save_size += sizeof (uint32_t) + sizeof (uint8_t) + sizeof (uint32_t);
+      save_size += 4 + record_full_list[i].pc.len;
       for (auto &entry : record_full_list[i].effects)
 	switch (entry.type ())
 	  {
@@ -2593,28 +2700,7 @@ record_full_base_target::save_record (const char *recfilename)
      record list.  */
   for (int i = 0; i < record_full_list.size (); i++)
     {
-      uint32_t eff_count = (uint32_t) record_full_list[i].effects.size ();
-      uint32_t insn_num = record_full_list[i].insn_num;
-      uint8_t sigval = (record_full_list[i].sigval.has_value ())
-			? record_full_list[i].sigval.value ()
-			: GDB_SIGNAL_0;
-
-      /* Signal.  */
-      bfdcore_write (obfd.get (), osec, &sigval, sizeof (sigval), &bfd_offset);
-      /* Number of effects.  */
-      eff_count = netorder32 (eff_count);
-      bfdcore_write (obfd.get (), osec, &eff_count, sizeof (eff_count),
-		     &bfd_offset);
-      /* Instruction number.  */
-      bfdcore_write (obfd.get (), osec, &insn_num, sizeof (insn_num),
-		     &bfd_offset);
-
-      for (auto &entry : record_full_list[i].effects)
-	{
-	  record_full_write_entry_to_bfd (entry, obfd, osec, &bfd_offset,
-					  gdbarch);
-	}
-
+      record_full_list[i].to_bfd (obfd, osec, &bfd_offset, gdbarch);
       /* Execute entry.  */
       if (i < record_full_next_insn)
 	record_full_list[i].exec_insn (regcache);
@@ -2693,6 +2779,9 @@ maintenance_print_record_instruction (const char *args, int from_tty)
   auto to_print = record_full_list.begin () + offset;
 
   gdbarch *arch = current_inferior ()->arch ();
+  struct value_print_options opts;
+  get_user_print_options (&opts);
+  opts.raw = true;
 
   for (auto &entry : to_print->effects)
     {
@@ -2706,9 +2795,6 @@ maintenance_print_record_instruction (const char *args, int from_tty)
 					 entry.get_loc ());
 	      gdb_printf ("Register %s changed: ",
 			  gdbarch_register_name (arch, entry.reg ().num));
-	      struct value_print_options opts;
-	      get_user_print_options (&opts);
-	      opts.raw = true;
 	      value_print (val, gdb_stdout, &opts);
 	      gdb_printf ("\n");
 	      break;
@@ -2727,6 +2813,12 @@ maintenance_print_record_instruction (const char *args, int from_tty)
 	    }
 	}
     }
+  type *regtype = gdbarch_register_type (arch, to_print->pc.num);
+  value *val = value_from_contents (regtype, to_print->pc.get_loc ());
+  gdb_printf ("Register %s changed: ",
+	      gdbarch_register_name (arch, to_print->pc.num));
+  value_print (val, gdb_stdout, &opts);
+  gdb_printf ("\n");
 }
 
 INIT_GDB_FILE (record_full)
