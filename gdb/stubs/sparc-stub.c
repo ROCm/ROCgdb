@@ -544,7 +544,7 @@ hexToInt(char **ptr, int *intValue)
 }
 
 /*
- * This function does all command procesing for interfacing to gdb.  It
+ * This function does all command processing for interfacing to gdb.  It
  * returns 1 if you should skip the instruction at the trap address, 0
  * otherwise.
  */

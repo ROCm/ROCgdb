@@ -810,7 +810,7 @@ hexToInt (char **ptr, int *intValue)
 }
 
 /*
- * This function does all command procesing for interfacing to gdb.
+ * This function does all command processing for interfacing to gdb.
  */
 void
 handle_exception (int exceptionVector)
@@ -995,7 +995,7 @@ handle_exception (int exceptionVector)
 			printf ("frame at 0x%x has pc=0x%x, except#=%d\n",
 				frame, frame->exceptionPC,
 				frame->exceptionVector);
-		      /* re-use the last frame, we're skipping it (longjump?) */
+		      /* reuse the last frame, we're skipping it (longjump?) */
 		      frame = (Frame *) 0;
 		      _returnFromException (frame);	/* this is a jump */
 		    }

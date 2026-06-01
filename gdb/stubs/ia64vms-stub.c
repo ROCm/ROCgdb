@@ -138,7 +138,7 @@ static struct debug_flag debug_flags[] =
   /* Disp packets exchanged with gdb.  */
   DEBUG_FLAG_ENTRY("packets"),
 #define trace_pkt (debug_flags[0].val)
-  /* Display entry point informations.  */
+  /* Display entry point information.  */
   DEBUG_FLAG_ENTRY("entry"),
 #define trace_entry (debug_flags[1].val)
   /* Be verbose about exceptions.  */
@@ -1254,7 +1254,7 @@ str2pkt (const char *str)
     gdb_buf[gdb_blen++] = *str++;
 }
 
-/* Extract a number fro the packet.  */
+/* Extract a number from the packet.  */
 
 static unsigned __int64
 pkt2val (const unsigned char *pkt, unsigned int *pos)
