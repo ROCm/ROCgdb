@@ -32,16 +32,6 @@ struct frame_object : public PyObject
 {
   struct frame_id frame_id;
   struct gdbarch *gdbarch;
-
-  /* Marks that the FRAME_ID member actually holds the ID of the frame next
-     to this, and not this frames' ID itself.  This is a hack to permit Python
-     frame objects which represent invalid frames (i.e., the last frame_info
-     in a corrupt stack).  The problem arises from the fact that this code
-     relies on FRAME_ID to uniquely identify a frame, which is not always true
-     for the last "frame" in a corrupt stack (it can have a null ID, or the same
-     ID as the  previous frame).  Whenever get_prev_frame returns NULL, we
-     record the frame_id of the next frame and set FRAME_ID_IS_NEXT to 1.  */
-  int frame_id_is_next;
 };
 
 static_assert (gdb::is_python_allocatable_v<frame_object>);
@@ -68,9 +58,6 @@ frame_object_to_frame_info (PyObject *obj)
   frame = frame_find_by_id (frame_obj->frame_id);
   if (frame == NULL)
     return NULL;
-
-  if (frame_obj->frame_id_is_next)
-    frame = get_prev_frame (frame);
 
   return frame;
 }
@@ -371,22 +358,7 @@ frame_info_to_frame_object (const frame_info_ptr &frame)
 
   try
     {
-
-      /* Try to get the previous frame, to determine if this is the last frame
-	 in a corrupt stack.  If so, we need to store the frame_id of the next
-	 frame and not of this one (which is possibly invalid).  */
-      if (get_prev_frame (frame) == NULL
-	  && get_frame_unwind_stop_reason (frame) != UNWIND_NO_REASON
-	  && get_next_frame (frame) != NULL)
-	{
-	  frame_obj->frame_id = get_frame_id (get_next_frame (frame));
-	  frame_obj->frame_id_is_next = 1;
-	}
-      else
-	{
-	  frame_obj->frame_id = get_frame_id (frame);
-	  frame_obj->frame_id_is_next = 0;
-	}
+      frame_obj->frame_id = get_frame_id (frame);
       frame_obj->gdbarch = get_frame_arch (frame);
     }
   catch (const gdb_exception &except)
@@ -730,8 +702,7 @@ frapy_richcompare (PyObject *self, PyObject *other, int op)
   frame_object *self_frame = (frame_object *) self;
   frame_object *other_frame = (frame_object *) other;
 
-  if (self_frame->frame_id_is_next == other_frame->frame_id_is_next
-      && self_frame->frame_id == other_frame->frame_id)
+  if (self_frame->frame_id == other_frame->frame_id)
     result = Py_EQ;
   else
     result = Py_NE;

@@ -51,8 +51,8 @@ gdb_test_no_output "source ${pyfile}"\
 # unwinder mixed in.
 gdb_test_sequence "bt"  "Backtrace with extra Python output" {
     "Func f0, Level 0"
-    "Func f1, Level 1"
     "\\r\\n#0 \[^\r\n\]* f0 \\(\\) at "
+    "Func f1, Level 1"
     "\\r\\n#1 \[^\r\n\]* f1 \\(\\) at "
     "Func f2, Level 2"
     "\\r\\n#2 \[^\r\n\]* f2 \\(\\) at "
