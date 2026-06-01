@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 54acd32c58aa0b5c2911b42b53bc23b0e0ddd6d6 # 05/05/2026
+  THEROCK_COMMIT_REF: 7b7b238e3e0c2e98436ea230b5114a5b6b946abf # 01/06/2026
   VENV_DIR: ${{ github.workspace }}/.venv
   OUTPUT_ARTIFACTS_DIR: "./build"
   THEROCK_BIN_DIR: "./build/bin"
