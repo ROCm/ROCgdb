@@ -22,9 +22,7 @@
 #ifndef GDB_GDBTYPES_H
 #define GDB_GDBTYPES_H
 
-/* \page gdbtypes GDB Types
-
-   GDB represents all the different kinds of types in programming
+/* GDB represents all the different kinds of types in programming
    languages using a common representation defined in gdbtypes.h.
 
    The main data structure is main_type; it consists of a code (such
