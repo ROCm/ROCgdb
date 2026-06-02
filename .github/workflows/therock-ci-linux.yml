@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 54acd32c58aa0b5c2911b42b53bc23b0e0ddd6d6 # 05/05/2026
+  THEROCK_COMMIT_REF: a9fd5ab0f5313ebccf599f3e198cb28b13233c84 # 2026-06-02
 
 jobs:
   therock-build-linux:
@@ -80,17 +80,14 @@ jobs:
       - name: Build therock-dist
         run: cmake --build build
 
-      - name: Build therock-archives
-        run: cmake --build build --target therock-archives
+      - name: Build therock-artifacts
+        run: cmake --build build --target therock-artifacts
 
       - name: Report
         run: |
           echo "Full SDK du:"
           echo "------------"
           du -h -d 1 build/dist/rocm
-          echo "Artifact Archives:"
-          echo "------------------"
-          ls -lh build/artifacts/*.tar.xz
           echo "Artifacts:"
           echo "----------"
           du -h -d 1 build/artifacts
@@ -105,6 +102,13 @@ jobs:
         with:
           aws-region: us-east-2
           role-to-assume: arn:aws:iam::692859939525:role/therock-ci-external
+
+      - name: Push artifacts
+        run: |
+          python3 build_tools/artifact_manager.py push \
+            --run-id ${{ github.run_id }} \
+            --build-dir build \
+            --stage all
 
       - name: Post Build Upload
         if: always()
