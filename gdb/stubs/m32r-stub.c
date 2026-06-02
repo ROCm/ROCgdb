@@ -202,7 +202,7 @@ static unsigned char *strcpy (unsigned char *, const unsigned char *);
 static int strlen (const unsigned char *);
 
 /*
- * This function does all command procesing for interfacing to gdb.
+ * This function does all command processing for interfacing to gdb.
  */
 
 void
@@ -699,7 +699,7 @@ set_mem_err (void)
 
 /* Check the address for safe access ranges.  As currently defined,
    this routine will reject the "expansion bus" address range(s).
-   To make those ranges useable, someone must implement code to detect
+   To make those ranges usable, someone must implement code to detect
    whether there's anything connected to the expansion bus. */
 
 static int

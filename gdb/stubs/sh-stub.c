@@ -1501,7 +1501,7 @@ init_serial (void)
 {
   int i;
 
-  /* Clear TE and RE in Channel 1's SCR   */
+  /* Clear TE and RE in Channel 1's SCR.  codespell:ignore.  */
   SCR1 &= ~(SCI_TE | SCI_RE);
 
   /* Set communication to be async, 8-bit data, no parity, 1 stop bit and use internal clock */

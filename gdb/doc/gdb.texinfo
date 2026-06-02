@@ -432,6 +432,7 @@ or your friends (or enemies, to be evenhanded) have been unfairly
 omitted from this list, we would like to add your names!
 @end quotation
 
+@c codespell:ignore-begin
 So that they may not regard their many labors as thankless, we
 particularly thank those who shepherded @sc{gdb} through major
 releases:
@@ -610,6 +611,7 @@ Stafford Horne.
 Weimin Pan, David Faust and Jose E. Marchesi contributed support for
 the Linux kernel BPF virtual architecture.  This work was sponsored by
 Oracle.
+@c codespell:ignore-end
 
 Initial support for heterogeneous program debugging and @acronym{AMD
 GPU} targets was developed by the following people at the Advanced
@@ -5056,11 +5058,14 @@ language of the breakpoint's function, other values mean to use
 the manually specified language (see @ref{Manually, ,Set Language Manually}).
 
 The syntax of the regular expression is the standard one used with tools
-like @file{grep}.  Note that this is different from the syntax used by
+like @file{grep}.
+@c codespell:ignore-begin
+Note that this is different from the syntax used by
 shells, so for instance @code{foo*} matches all functions that include
-an @code{fo} followed by zero or more @code{o}s.  There is an implicit
-@code{.*} leading and trailing the regular expression you supply, so to
-match only functions that begin with @code{foo}, use @code{^foo}.
+an @code{fo} followed by zero or more @code{o}s.
+@c codespell:ignore-end
+There is an implicit @code{.*} leading and trailing the regular expression you
+supply, so to match only functions that begin with @code{foo}, use @code{^foo}.
 
 @cindex non-member C@t{++} functions, set breakpoint in
 When debugging C@t{++} programs, @code{rbreak} is useful for setting
@@ -10099,7 +10104,9 @@ regular expression.
 @table @code
 @kindex search
 @kindex forward-search
+@c codespell:ignore-begin
 @kindex fo @r{(@code{forward-search})}
+@c codespell:ignore-end
 @cindex @code{$_} and commands that search source files
 @item forward-search @var{regexp}
 @itemx search @var{regexp}
@@ -10107,8 +10114,11 @@ The command @samp{forward-search @var{regexp}} checks each line,
 starting with the one following the last line listed, for a match for
 @var{regexp}.  It lists the line that is found and saves it in the
 convenience variable @code{$_} (@pxref{Convenience Vars, ,Convenience
-Variables}).  You can use the synonym @samp{search @var{regexp}}
-or abbreviate the command name as @code{fo}.
+Variables}).
+@c codespell:ignore-begin
+You can use the synonym @samp{search @var{regexp}} or abbreviate the command
+name as @code{fo}.
+@c codespell:ignore-end
 
 @kindex reverse-search
 @item reverse-search @var{regexp}
@@ -28801,7 +28811,7 @@ exception.
 When IBT is enabled, the CPU implements a state machine that tracks
 indirect @code{JMP} and @code{CALL} instructions.  The state machine can
 be either IDLE or WAIT_FOR_ENDBRANCH.  When a @code{JMP} or @code{CALL} is
-executed the state machine chages to the WAIT_FOR_ENDBRANCH state.  In
+executed the state machine changes to the WAIT_FOR_ENDBRANCH state.  In
 WAIT_FOR_ENDBRANCH state the next instruction in the program stream
 must be an @code{ENDBR} instruction, otherwise the processor signals a
 control protection exception.  After executing a @code{ENDBR} instruction
@@ -31175,7 +31185,7 @@ palette.  Integers 16-255 are the indexes into xterm extended 256-color palette
 dependent and sometimes can be changed with OSC 4 sequences, e.g.
 "\033]4;1;rgb:00/FF/00\033\\". A hexadecimal 24-bit TrueColor is specified in
 the format @samp{#RRGGBB} where RR, GG and BB are the 2-digit hexadecimal
-integers specifiing the intensity of the red, green and blue color components,
+integers specifying the intensity of the red, green and blue color components,
 respectively.
 
 It is the responsibility of the user to verify that the terminal supports
@@ -37255,12 +37265,14 @@ The corresponding @value{GDBN} command is @samp{cd}.
 
 @subsubheading Example
 
+@c codespell:ignore-begin
 @smallexample
 (gdb)
 -environment-cd /kwikemart/marge/ezannoni/flathead-dev/devo/gdb
 ^done
 (gdb)
 @end smallexample
+@c codespell:ignore-end
 
 
 @findex -environment-directory
@@ -37295,6 +37307,7 @@ The corresponding @value{GDBN} command is @samp{dir}.
 
 @subsubheading Example
 
+@c codespell:ignore-begin
 @smallexample
 (gdb)
 -environment-directory /kwikemart/marge/ezannoni/flathead-dev/devo/gdb
@@ -37310,6 +37323,7 @@ The corresponding @value{GDBN} command is @samp{dir}.
 ^done,source-path="$cdir:$cwd"
 (gdb)
 @end smallexample
+@c codespell:ignore-end
 
 
 @findex -environment-path
@@ -37346,6 +37360,7 @@ The corresponding @value{GDBN} command is @samp{path}.
 
 @subsubheading Example
 
+@c codespell:ignore-begin
 @smallexample
 (gdb)
 -environment-path
@@ -37358,6 +37373,7 @@ The corresponding @value{GDBN} command is @samp{path}.
 ^done,path="/usr/local/bin:/usr/bin"
 (gdb)
 @end smallexample
+@c codespell:ignore-end
 
 
 @findex -environment-pwd
@@ -37377,12 +37393,14 @@ The corresponding @value{GDBN} command is @samp{pwd}.
 
 @subsubheading Example
 
+@c codespell:ignore-begin
 @smallexample
 (gdb)
 -environment-pwd
 ^done,cwd="/kwikemart/marge/ezannoni/flathead-dev/devo/gdb"
 (gdb)
 @end smallexample
+@c codespell:ignore-end
 
 @c %%%%%%%%%%%%%%%%%%%%%%%%%%%% SECTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 @node GDB/MI Thread Commands
@@ -41555,12 +41573,14 @@ The corresponding @value{GDBN} command is @samp{file}.
 
 @subsubheading Example
 
+@c codespell:ignore-begin
 @smallexample
 (gdb)
 -file-exec-and-symbols /kwikemart/marge/ezannoni/TRUNK/mbx/hello.mbx
 ^done
 (gdb)
 @end smallexample
+@c codespell:ignore-end
 
 
 @findex -file-exec-file
@@ -41584,12 +41604,14 @@ The corresponding @value{GDBN} command is @samp{exec-file}.
 
 @subsubheading Example
 
+@c codespell:ignore-begin
 @smallexample
 (gdb)
 -file-exec-file /kwikemart/marge/ezannoni/TRUNK/mbx/hello.mbx
 ^done
 (gdb)
 @end smallexample
+@c codespell:ignore-end
 
 
 @ignore
@@ -41861,12 +41883,14 @@ The corresponding @value{GDBN} command is @samp{symbol-file}.
 
 @subsubheading Example
 
+@c codespell:ignore-begin
 @smallexample
 (gdb)
 -file-symbol-file /kwikemart/marge/ezannoni/TRUNK/mbx/hello.mbx
 ^done
 (gdb)
 @end smallexample
+@c codespell:ignore-end
 
 @ignore
 @c %%%%%%%%%%%%%%%%%%%%%%%%%%%% SECTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -45189,11 +45213,13 @@ This command is useful for debugging the Agent Expression mechanism
 (@pxref{Agent Expressions}).  The @samp{agent} version produces an
 expression useful for data collection, such as by tracepoints, while
 @samp{maint agent-eval} produces an expression that evaluates directly
-to a result.  For instance, a collection expression for @code{globa +
-globb} will include bytecodes to record four bytes of memory at each
-of the addresses of @code{globa} and @code{globb}, while discarding
-the result of the addition, while an evaluation expression will do the
-addition and return the sum.
+to a result.
+@c codespell:ignore-begin
+For instance, a collection expression for @code{globa + globb} will include
+bytecodes to record four bytes of memory at each of the addresses of
+@code{globa} and @code{globb}, while discarding the result of the addition,
+while an evaluation expression will do the addition and return the sum.
+@c codespell:ignore-end
 If @code{-at} is given, generate remote agent bytecode for all the
 addresses to which @var{linespec} resolves (@pxref{Linespec
 Locations}).
@@ -46526,7 +46552,7 @@ The two-digit @var{checksum} is computed as the modulo 256 sum of all
 characters between the leading @samp{$} and the trailing @samp{#} (an
 eight bit unsigned checksum).
 
-Implementors should note that prior to @value{GDBN} 5.0 the protocol
+Implementers should note that prior to @value{GDBN} 5.0 the protocol
 specification also included an optional two-digit @var{sequence-id}:
 
 @smallexample
@@ -46571,7 +46597,7 @@ Fields within the packet should be separated using @samp{,} @samp{;} or
 @samp{:}.  Except where otherwise noted all numbers are represented in
 @sc{hex} with leading zeros suppressed.
 
-Implementors should note that prior to @value{GDBN} 5.0, the character
+Implementers should note that prior to @value{GDBN} 5.0, the character
 @samp{:} could not appear as the third character in a packet (as it
 would potentially conflict with the @var{sequence-id}).
 
@@ -48554,7 +48580,7 @@ command (@pxref{Remote Configuration, set remote thread-options}).
 execution.  Invalid commands should be reported using the output
 string.  Before the final result packet, the target may also respond
 with a number of intermediate @samp{O@var{output}} console output
-packets.  @emph{Implementors should note that providing access to a
+packets.  @emph{Implementers should note that providing access to a
 stubs's interpreter may have security implications}.
 
 Reply:

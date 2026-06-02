@@ -1383,7 +1383,8 @@ void obj_mach_o_frob_label (struct symbol *sp)
 
   s = (bfd_mach_o_asymbol *) symbol_get_bfdsym (sp);
   /* Leave debug symbols alone.  */
-  if ((s->n_type & BFD_MACH_O_N_STAB) != 0)
+  if ((s->n_type & BFD_MACH_O_N_STAB) != 0
+      || (s->symbol.section->flags & SEC_DEBUGGING) != 0)
     return;
 
   /* This is the base symbol type, that we mask in.  */
@@ -1433,7 +1434,8 @@ obj_mach_o_frob_symbol (struct symbol *sp)
 
   s = (bfd_mach_o_asymbol *) symbol_get_bfdsym (sp);
   /* Leave debug symbols alone.  */
-  if ((s->n_type & BFD_MACH_O_N_STAB) != 0)
+  if ((s->n_type & BFD_MACH_O_N_STAB) != 0
+      || (s->symbol.section->flags & SEC_DEBUGGING) != 0)
     return 0;
 
   base_type = obj_mach_o_type_for_symbol (s);
@@ -1554,68 +1556,6 @@ obj_mach_o_process_stab (int what, const char *string,
   s->symbol.udata.i = SYM_MACHO_FIELDS_NOT_VALIDATED;
 }
 
-/* This is a place to check for any errors that we can't detect until we know
-   what remains undefined at the end of assembly.  */
-
-static void
-obj_mach_o_check_before_writing (bfd *abfd ATTRIBUTE_UNUSED,
-				 asection *sec,
-				 void *unused ATTRIBUTE_UNUSED)
-{
-  fixS *fixP;
-  struct frchain *frchp;
-  segment_info_type *seginfo = seg_info (sec);
-
-  if (seginfo == NULL)
-    return;
-
-  /* We are not allowed subtractions where either of the operands is
-     undefined.  So look through the frags for any fixes to check.  */
-  for (frchp = seginfo->frchainP; frchp != NULL; frchp = frchp->frch_next)
-   for (fixP = frchp->fix_root; fixP != NULL; fixP = fixP->fx_next)
-    {
-      if (fixP->fx_addsy != NULL
-	  && fixP->fx_subsy != NULL
-	  && (! S_IS_DEFINED (fixP->fx_addsy)
-	      || ! S_IS_DEFINED (fixP->fx_subsy)))
-	{
-	  segT add_symbol_segment = S_GET_SEGMENT (fixP->fx_addsy);
-	  segT sub_symbol_segment = S_GET_SEGMENT (fixP->fx_subsy);
-
-	  if (! S_IS_DEFINED (fixP->fx_addsy)
-	      && S_IS_DEFINED (fixP->fx_subsy))
-	    {
-	      as_bad_where (fixP->fx_file, fixP->fx_line,
-		_("`%s' can't be undefined in `%s' - `%s' {%s section}"),
-		S_GET_NAME (fixP->fx_addsy), S_GET_NAME (fixP->fx_addsy),
-		S_GET_NAME (fixP->fx_subsy), segment_name (sub_symbol_segment));
-	    }
-	  else if (! S_IS_DEFINED (fixP->fx_subsy)
-		   && S_IS_DEFINED (fixP->fx_addsy))
-	    {
-	      as_bad_where (fixP->fx_file, fixP->fx_line,
-		_("`%s' can't be undefined in `%s' {%s section} - `%s'"),
-		S_GET_NAME (fixP->fx_subsy), S_GET_NAME (fixP->fx_addsy),
-		segment_name (add_symbol_segment), S_GET_NAME (fixP->fx_subsy));
-	    }
-	  else
-	    {
-	      as_bad_where (fixP->fx_file, fixP->fx_line,
-		_("`%s' and `%s' can't be undefined in `%s' - `%s'"),
-		S_GET_NAME (fixP->fx_addsy), S_GET_NAME (fixP->fx_subsy),
-		S_GET_NAME (fixP->fx_addsy), S_GET_NAME (fixP->fx_subsy));
-	    }
-	}
-    }
-}
-
-/* Do any checks that we can't complete without knowing what's undefined.  */
-void
-obj_mach_o_pre_output_hook (void)
-{
-  bfd_map_over_sections (stdoutput, obj_mach_o_check_before_writing, NULL);
-}
-
 /* Here we count up frags in each subsection (where a sub-section is defined
    as starting with a non-local symbol).
    Note that, if there are no non-local symbols in a section, all the frags will
@@ -1631,6 +1571,10 @@ obj_mach_o_set_subsections (bfd *abfd ATTRIBUTE_UNUSED,
   struct obj_mach_o_symbol_data *cur_subsection_data = NULL;
   fragS *frag;
   frchainS *chain;
+
+  /* Don't waste time on debug sections.  */
+  if ((sec->flags & SEC_DEBUGGING) != 0)
+    return;
 
   /* Protect against sections not created by gas.  */
   if (seginfo == NULL)
@@ -1925,8 +1869,9 @@ obj_mach_o_allow_local_subtract (expressionS * left ATTRIBUTE_UNUSED,
   return obj_mach_o_is_frame_section (seg);
 }
 
-int
-obj_mach_o_in_different_subsection (symbolS *a, symbolS *b)
+static bool
+obj_mach_o_in_different_subsection (symbolS *a, segT aseg, valueT offset,
+				    symbolS *b)
 {
   fragS *fa;
   fragS *fb;
@@ -1936,55 +1881,72 @@ obj_mach_o_in_different_subsection (symbolS *a, symbolS *b)
       || !S_IS_DEFINED (b))
     {
       /* Not in the same segment, or undefined symbol.  */
-      return 1;
+      return true;
     }
 
-  fa = symbol_get_frag (a);
+  if (symbol_section_p (a) && aseg != NULL)
+    fa = get_frag_for_address (NULL, seg_info (aseg), offset);
+  else
+    fa = symbol_get_frag (a);
   fb = symbol_get_frag (b);
   if (fa == NULL || fb == NULL)
     {
       /* One of the symbols is not in a subsection.  */
-      return 1;
+      return true;
     }
 
   return fa->obj_frag_data.subsection != fb->obj_frag_data.subsection;
 }
 
-int
-obj_mach_o_force_reloc_sub_same (fixS *fix, segT seg)
+bool
+obj_mach_o_force_reloc_sub_same (segT seg, fixS *fix, segT addsymseg)
 {
-  if (! SEG_NORMAL (seg))
-    return 1;
-  return obj_mach_o_in_different_subsection (fix->fx_addsy, fix->fx_subsy);
+  if (!SEG_NORMAL (addsymseg))
+    return true;
+  if ((seg->flags & SEC_DEBUGGING) != 0)
+    return false;
+  return obj_mach_o_in_different_subsection (fix->fx_addsy, addsymseg,
+					     fix->fx_offset, fix->fx_subsy);
 }
 
-int
-obj_mach_o_force_reloc_sub_local (fixS *fix, segT seg ATTRIBUTE_UNUSED)
+bool
+obj_mach_o_force_reloc_sub_local (segT seg, fixS *fix,
+				  segT addsymseg ATTRIBUTE_UNUSED)
 {
-  return obj_mach_o_in_different_subsection (fix->fx_addsy, fix->fx_subsy);
+  if ((seg->flags & SEC_DEBUGGING) != 0)
+    return false;
+  symbolS *fragsym = fix->fx_frag->obj_frag_data.subsection;
+  if (fragsym == NULL)
+    return false;
+  return obj_mach_o_in_different_subsection (fix->fx_subsy, NULL, 0, fragsym);
 }
 
-int
-obj_mach_o_force_reloc (fixS *fix)
+bool
+obj_mach_o_force_reloc (segT seg, fixS *fix)
 {
   if (generic_force_reloc (fix))
-    return 1;
+    return true;
+
+  if ((seg->flags & SEC_DEBUGGING) != 0)
+    return false;
 
   /* Force a reloc if the target is not in the same subsection.
      FIXME: handle (a - b) where a and b belongs to the same subsection ?  */
   if (fix->fx_addsy != NULL)
     {
       symbolS *subsec = fix->fx_frag->obj_frag_data.subsection;
-      symbolS *targ = fix->fx_addsy;
 
       /* There might be no subsections at all.  */
       if (subsec == NULL)
-        return 0;
+	return false;
 
-      if (S_GET_SEGMENT (targ) == absolute_section)
-        return 0;
+      symbolS *targ = fix->fx_addsy;
+      segT targseg = S_GET_SEGMENT (targ);
+      if (targseg == absolute_section)
+	return false;
 
-      return obj_mach_o_in_different_subsection (targ, subsec);
+      return obj_mach_o_in_different_subsection (targ, targseg,
+						 fix->fx_offset, subsec);
     }
-  return 0;
+  return false;
 }

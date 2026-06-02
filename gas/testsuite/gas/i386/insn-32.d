@@ -1,7 +1,6 @@
 #as: --divide
 #objdump: -dw
 #name: .insn (32-bit code)
-#xfail: *-*-darwin*
 
 .*: +file format .*
 

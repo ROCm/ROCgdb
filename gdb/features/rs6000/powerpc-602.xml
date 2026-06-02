@@ -12,6 +12,7 @@
   <xi:include href="power-oea.xml"/>
 
   <feature name="602">
+    <!-- codespell:ignore-begin -->
     <reg name="hid0" bitsize="32"/>
     <reg name="hid1" bitsize="32"/>
     <reg name="iabr" bitsize="32"/>
@@ -22,5 +23,6 @@
     <reg name="ser" bitsize="32"/>
     <reg name="sp" bitsize="32"/>
     <reg name="lt" bitsize="32"/>
+    <!-- codespell:ignore-end -->
   </feature>
 </target>

@@ -738,7 +738,7 @@ hexToInt (char **ptr, int *intValue)
 }
 
 /*
- * This function does all command procesing for interfacing to gdb.
+ * This function does all command processing for interfacing to gdb.
  */
 void
 handle_exception (int exceptionVector)

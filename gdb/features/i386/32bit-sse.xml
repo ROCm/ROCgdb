@@ -27,6 +27,7 @@
     <field name="uint128" type="uint128"/>
   </union>
   <flags id="i386_mxcsr" size="4">
+    <!-- codespell:ignore-begin -->
     <field name="IE" start="0" end="0"/>
     <field name="DE" start="1" end="1"/>
     <field name="ZE" start="2" end="2"/>
@@ -41,6 +42,7 @@
     <field name="UM" start="11" end="11"/>
     <field name="PM" start="12" end="12"/>
     <field name="FZ" start="15" end="15"/>
+    <!-- codespell:ignore-end -->
   </flags>
 
   <reg name="xmm0" bitsize="128" type="vec128" regnum="32"/>

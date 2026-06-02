@@ -25,7 +25,7 @@
   3. Implement getDebugChar() and putDebugChar(), functions must not return
      until data received or sent.
   4. Implement all optional functions used to toggle breakpoints/watchpoints,
-     if supported. Do not write fuctions to toggle software breakpoints if
+     if supported. Do not write functions to toggle software breakpoints if
      you unsure (GDB will do itself).
   5. Implement serial port initialization routine called at program start.
   6. Add necessary debugger entry points to your program, for example:
@@ -68,13 +68,13 @@
 //#define DBG_SWBREAK_RST 0x08
 
 /* if platform supports hardware breakpoints then define following macro
-   by name of function. Fuction must have next prototype:
+   by name of function. Function must have next prototype:
      int toggle_hwbreak(int set, void *addr);
    function must return 0 on success. */
 //#define DBG_HWBREAK toggle_hwbreak
 
 /* if platform supports hardware watchpoints then define all or some of
-   following macros by names of functions. Fuctions prototypes:
+   following macros by names of functions. Functions prototypes:
      int toggle_watch(int set, void *addr, size_t size);  // memory write watch
      int toggle_rwatch(int set, void *addr, size_t size); // memory read watch
      int toggle_awatch(int set, void *addr, size_t size); // memory access watch
@@ -1074,7 +1074,7 @@ high_hex (byte v) FASTCALL
 static char
 low_hex (byte v) FASTCALL
 {
-/*
+/* codespell:ignore-begin
   __asm
 	ld	a, l
 	and	a, #0x0f
@@ -1084,6 +1084,7 @@ low_hex (byte v) FASTCALL
 	daa
 	ld	l, a
   __endasm;
+  codespell:ignore-end
   (void)v;
 */
   v &= 0x0f;
