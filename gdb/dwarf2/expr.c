@@ -1378,6 +1378,17 @@ dwarf_register::read (const frame_info_ptr &initial_frame, gdb_byte *buf,
   if (frame == NULL)
     internal_error (_("invalid frame information"));
 
+  /* Check that the read will not try to access past the end of the register.
+     If it does, consider that some bits of the read are optimized out.  Since
+     we do not have a better granularity during the register read, report the
+     entire read as optimized out even if we could read a few bits.  */
+  if (total_bits_to_skip + bit_size > reg_bits)
+    {
+      *optimized = true;
+      *unavailable = false;
+      return;
+    }
+
   /* Populate or refresh the cache if needed.  */
   if (m_storage->m_read_cache.has_value ()
       && m_storage->m_read_cache->outdated (frame))
