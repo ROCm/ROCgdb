@@ -583,10 +583,10 @@ spu_elf_create_sections (struct bfd_link_info *info)
       ibfd = info->input_bfds;
       /* This should really be SEC_LINKER_CREATED, but then we'd need
 	 to write out the section ourselves.  */
-      flags = SEC_LOAD | SEC_READONLY | SEC_HAS_CONTENTS | SEC_IN_MEMORY;
+      flags = SEC_READONLY | SEC_HAS_CONTENTS | SEC_IN_MEMORY;
       s = bfd_make_section_anyway_with_flags (ibfd, SPU_PTNOTE_SPUNAME, flags);
       if (s == NULL
-	  || !bfd_set_section_alignment (s, 4))
+	  || !bfd_set_section_alignment (s, 2))
 	return false;
       /* Because we didn't set SEC_LINKER_CREATED we need to set the
 	 proper section type.  */
@@ -5342,8 +5342,30 @@ spu_elf_fake_sections (bfd *obfd ATTRIBUTE_UNUSED,
 		       asection *sec)
 {
   if (strcmp (sec->name, SPU_PTNOTE_SPUNAME) == 0)
-    hdr->sh_type = SHT_NOTE;
+    {
+      hdr->sh_type = SHT_NOTE;
+      hdr->sh_addralign = 16;
+    }
   return true;
+}
+
+/* .note.spu_name is read by the PPU from the object, and possibly
+   needs the file offset to be aligned to 16 bytes.  We used to simply
+   call bfd_set_section_alignment to set the alignment to 16, but if
+   left like that it triggers a readelf warning.  Now for layout we
+   tweak the alignment to 16 in spu_elf_fake_sections, and restore it
+   to 4 here.  */
+
+static bool
+spu_elf_final_write_processing (bfd *abfd)
+{
+  asection *sec = bfd_get_section_by_name (abfd, SPU_PTNOTE_SPUNAME);
+  if (sec != NULL)
+    {
+      struct bfd_elf_section_data *esd = elf_section_data (sec);
+      esd->this_hdr.sh_addralign = 4;
+    }
+  return _bfd_elf_final_write_processing (abfd);
 }
 
 /* Tweak phdrs before writing them out.  */
@@ -5539,6 +5561,7 @@ spu_elf_size_sections (bfd *obfd ATTRIBUTE_UNUSED, struct bfd_link_info *info)
 #define elf_backend_modify_headers		spu_elf_modify_headers
 #define elf_backend_init_file_header		spu_elf_init_file_header
 #define elf_backend_fake_sections		spu_elf_fake_sections
+#define elf_backend_final_write_processing	spu_elf_final_write_processing
 #define elf_backend_special_sections		spu_elf_special_sections
 #define bfd_elf32_bfd_final_link		spu_elf_final_link
 

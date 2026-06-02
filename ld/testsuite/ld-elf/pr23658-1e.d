@@ -14,7 +14,7 @@
 #xfail: cr16-* crx-* visium-*
 # The following targets place .note.gnu.build-id in unusual places.
 #xfail: *-*-hpux*
-#xfail: arc*-* avr-* m68hc1*-* microblaze*-* nds32*-* spu-*-* xstormy16-*-*
+#xfail: arc*-* avr-* m68hc1*-* microblaze*-* nds32*-* xstormy16-*-*
 #noxfail: microblaze*-linux*
 
 #...
