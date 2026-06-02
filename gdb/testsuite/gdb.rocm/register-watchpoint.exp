@@ -20,6 +20,10 @@
 
 load_lib rocm.exp
 
+# This test only exercises a small slice of the GPU; allow it to
+# run concurrently with other gdb.rocm tests.
+set rocm_gpu_concurrency parallel
+
 require allow_hip_tests
 
 standard_testfile bit-extract.cpp
