@@ -21,6 +21,10 @@
 
 load_lib rocm.exp
 
+# This test only exercises a small slice of the GPU; allow it to
+# run concurrently with other gdb.rocm tests.
+set rocm_gpu_concurrency parallel
+
 require allow_hip_tests
 # The debug behavior this test checks is not reliable with
 # link-time optimization, so skip it for -flto builds.

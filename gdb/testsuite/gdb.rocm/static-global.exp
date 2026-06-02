@@ -38,6 +38,10 @@
 
 load_lib rocm.exp
 
+# This test only exercises a small slice of the GPU; allow it to
+# run concurrently with other gdb.rocm tests.
+set rocm_gpu_concurrency parallel
+
 require allow_hip_tests
 # The fgpu_rdc=1 variant fails to link under -flto because the per-TU
 # __hip_gpubin_handle / __hip_fatbin symbols emitted into the HIP
