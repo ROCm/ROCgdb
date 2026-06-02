@@ -1,0 +1,111 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This test exercises the case where a DWARF expression leads the dwarf
+# machinery to try to read past a given register's end.  This should be
+# handled gracefully by GDB.
+
+load_lib "dwarf.exp"
+
+require dwarf2_support
+
+# This test will store a 128 bits variable in a register too small to
+# contain the entire value.  Select a suitable register which is less
+# than 128 bits in size.
+if { [is_amd64_regs_target] } {
+    # Use RAX, a 64 bits register.
+    set dwarf_regnum 0
+} else {
+    verbose "Skipping ${gdb_test_file_name} for current architecture."
+    unsupported "$gdb_test_file_name"
+    return
+}
+
+standard_testfile main.c -dw.S
+set dwarf_file [standard_output_file $srcfile2]
+
+Dwarf::assemble $dwarf_file {
+    get_func_info main
+
+    cu {} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_C
+	    DW_AT_name $::srcfile
+	    DW_AT_comp_dir /tmp
+	} {
+	    declare_labels int_label foo_t_label
+
+	    int_label: DW_TAG_base_type {
+		DW_AT_name int
+		DW_AT_byte_size 4 DW_FORM_udata
+		DW_AT_encoding @DW_ATE_signed
+	    }
+
+	    foo_t_label: DW_TAG_structure_type {
+		DW_AT_name foo_t
+		DW_AT_byte_size 16 DW_FORM_sdata
+	    } {
+		DW_TAG_member {
+		    DW_AT_name a
+		    DW_AT_data_member_location 0 DW_FORM_data1
+		    DW_AT_type :$int_label
+		}
+		DW_TAG_member {
+		    DW_AT_name b
+		    DW_AT_data_member_location 4 DW_FORM_data1
+		    DW_AT_type :$int_label
+		}
+		DW_TAG_member {
+		    DW_AT_name c
+		    DW_AT_data_member_location 8 DW_FORM_data1
+		    DW_AT_type :$int_label
+		}
+		DW_TAG_member {
+		    DW_AT_name d
+		    DW_AT_data_member_location 12 DW_FORM_data1
+		    DW_AT_type :$int_label
+		}
+	    }
+
+	    DW_TAG_subprogram {
+		DW_AT_name main
+		DW_AT_low_pc $main_start DW_FORM_addr
+		DW_AT_high_pc $main_end DW_FORM_addr
+		DW_AT_type :$int_label
+	    } {
+		DW_TAG_variable {
+		    DW_AT_name foo
+		    DW_AT_type :$foo_t_label
+		    DW_AT_location {
+			DW_OP_regx $::dwarf_regnum
+			DW_OP_piece 16
+		    } SPECIAL_expr
+		}
+	    }
+	}
+    }
+}
+
+if { [prepare_for_testing "failed to prepare" $testfile \
+	[list $srcfile $dwarf_file] {nodebug}] } {
+    return
+}
+
+if { ![runto_main] } {
+    return
+}
+
+gdb_test "p/x foo" "= <optimized out>"
