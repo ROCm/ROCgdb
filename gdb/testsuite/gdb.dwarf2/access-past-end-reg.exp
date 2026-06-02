@@ -28,6 +28,7 @@ require dwarf2_support
 if { [is_amd64_regs_target] } {
     # Use RAX, a 64 bits register.
     set dwarf_regnum 0
+    set regname "rax"
 } else {
     verbose "Skipping ${gdb_test_file_name} for current architecture."
     unsupported "$gdb_test_file_name"
@@ -87,7 +88,7 @@ Dwarf::assemble $dwarf_file {
 		{DW_AT_type :$int_label}
 	    } {
 		DW_TAG_variable {
-		    DW_AT_name foo
+		    {DW_AT_name var_piece}
 		    {DW_AT_type :$foo_t_label}
 		    {DW_AT_location {
 			DW_OP_regx $::dwarf_regnum
@@ -108,4 +109,7 @@ if { ![runto_main] } {
     return
 }
 
-gdb_test "p/x foo" "= <optimized out>"
+# The test assumes a register size of 64 bits, ensure we have this.
+set regsize [get_sizeof "\$$regname" ""]
+gdb_assert {$regsize == 8} "ensure register size"
+gdb_test "p/x var_piece" "= {a = $::hex, b = $::hex, c = <optimized out>, d = <optimized out>}"
