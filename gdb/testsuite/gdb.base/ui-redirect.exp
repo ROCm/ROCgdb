@@ -135,6 +135,12 @@ with_test_prefix "redirect debugging" {
     "Copying output to /dev/null.*Redirecting debug output to /dev/null\\."
     gdb_test "continue" "Continuing.*((?!infrun).).*Breakpoint ${::decimal}, bar.*"
     gdb_test "set debug infrun 0"
+
+    # The trace should be sent to the log, not stdout.
+    gdb_test_no_output "set trace-commands on"
+    gdb_test_no_output {printf ""}
+    gdb_test_no_output "set trace-commands off"
+
     gdb_test "set logging enabled off" "Done logging to /dev/null\\."
     gdb_test "help" "List of classes of commands:.*"
 }

@@ -486,8 +486,6 @@ ATTRIBUTE_PRINTF (1, 2)
 void
 print_command_trace (const char *fmt, ...)
 {
-  int i;
-
   if (suppress_next_print_command_trace)
     {
       suppress_next_print_command_trace = false;
@@ -497,15 +495,15 @@ print_command_trace (const char *fmt, ...)
   if (!source_verbose && !trace_commands)
     return;
 
-  for (i=0; i < command_nest_depth; i++)
-    gdb_printf ("+");
+  for (int i = 0; i < command_nest_depth; ++i)
+    gdb_printf (gdb_stdlog, "+");
 
   va_list args;
 
   va_start (args, fmt);
-  gdb_vprintf (fmt, args);
+  gdb_vprintf (gdb_stdlog, fmt, args);
   va_end (args);
-  gdb_puts ("\n");
+  gdb_puts ("\n", gdb_stdlog);
 }
 
 /* Helper for execute_control_command.  */
