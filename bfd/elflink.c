@@ -1094,20 +1094,28 @@ _bfd_elf_link_renumber_dynsyms (bfd *output_bfd,
   return dynsymcount;
 }
 
-/* Merge st_other field.  */
+/* Merge st_other field.  Both the input bfd and output bfd are given
+   with IBFD reflecting where the ST_OTHER bits came from.  If they
+   were from a symbol already in the linker hash table then the proper
+   IBFD is the output bfd since symbols in the linker hash table
+   interpret their st_other bits according to OBFD.  */
 
 static void
-elf_merge_st_other (bfd *abfd, struct elf_link_hash_entry *h,
+elf_merge_st_other (bfd *obfd, bfd *ibfd,
+		    struct elf_link_hash_entry *h,
 		    unsigned int st_other, asection *sec,
 		    bool definition, bool dynamic)
 {
-  elf_backend_data *bed = get_elf_backend_data (abfd);
+  if (ibfd->xvec == obfd->xvec)
+    {
+      elf_backend_data *obed = get_elf_backend_data (obfd);
 
-  /* If st_other has a processor-specific meaning, specific
-     code might be needed here.  */
-  if (bed->elf_backend_merge_symbol_attribute)
-    (*bed->elf_backend_merge_symbol_attribute) (h, st_other, definition,
-						dynamic);
+      /* If st_other has a processor-specific meaning, specific
+	 code might be needed here.  */
+      if (obed->elf_backend_merge_symbol_attribute)
+	obed->elf_backend_merge_symbol_attribute (h, st_other,
+						  definition, dynamic);
+    }
 
   if (!dynamic)
     {
@@ -1815,7 +1823,8 @@ _bfd_elf_merge_symbol (bfd *abfd,
       /* Merge st_other.  If the symbol already has a dynamic index,
 	 but visibility says it should not be visible, turn it into a
 	 local symbol.  */
-      elf_merge_st_other (abfd, h, sym->st_other, sec, newdef, newdyn);
+      elf_merge_st_other (info->output_bfd, abfd, h, sym->st_other,
+			  sec, newdef, newdyn);
       if (h->dynindx != -1)
 	switch (ELF_ST_VISIBILITY (h->other))
 	  {
@@ -2144,7 +2153,8 @@ _bfd_elf_add_default_symbol (bfd *abfd,
 
       /* If we first saw a reference to SHORTNAME with non-default
 	 visibility, merge that visibility to the @@VER symbol.  */
-      elf_merge_st_other (abfd, ht, hi->other, sec, true, dynamic);
+      elf_merge_st_other (info->output_bfd, info->output_bfd, ht, hi->other,
+			  sec, true, dynamic);
 
       /* A reference to the SHORTNAME symbol from a dynamic library
 	 will be satisfied by the versioned symbol at runtime.  In
@@ -2246,7 +2256,8 @@ _bfd_elf_add_default_symbol (bfd *abfd,
       /* If we first saw a reference to @VER symbol with
 	 non-default visibility, merge that visibility to the
 	 @@VER symbol.  */
-      elf_merge_st_other (abfd, h, hi->other, sec, true, dynamic);
+      elf_merge_st_other (info->output_bfd, info->output_bfd, h, hi->other,
+			  sec, true, dynamic);
 
       /* See if the new flags lead us to realize that the symbol
 	 must be dynamic.  */
@@ -5640,8 +5651,8 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	    }
 
 	  /* Merge st_other field.  */
-	  elf_merge_st_other (abfd, h, isym->st_other, sec,
-			      definition, dynamic);
+	  elf_merge_st_other (info->output_bfd, abfd, h, isym->st_other,
+			      sec, definition, dynamic);
 
 	  /* We don't want to make debug symbol dynamic.  */
 	  if (definition
@@ -15651,13 +15662,12 @@ _bfd_elf_copy_link_hash_symbol_type (bfd *obfd,
 {
   struct elf_link_hash_entry *ehdest = (struct elf_link_hash_entry *) hdest;
   struct elf_link_hash_entry *ehsrc = (struct elf_link_hash_entry *) hsrc;
-  Elf_Internal_Sym isym;
 
   ehdest->type = ehsrc->type;
   ehdest->target_internal = ehsrc->target_internal;
 
-  isym.st_other = ehsrc->other;
-  elf_merge_st_other (obfd, ehdest, isym.st_other, NULL, true, false);
+  elf_merge_st_other (obfd, obfd, ehdest, ehsrc->other, NULL,
+		      true, false);
 }
 
 /* Append a RELA relocation REL to section S.  */
