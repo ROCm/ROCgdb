@@ -613,8 +613,11 @@ Oracle.
 
 Initial support for heterogeneous program debugging and @acronym{AMD
 GPU} targets was developed by the following people at the Advanced
-Micro Devices company: Scott Linder, Laurent Morichetti, Qingchuan
-Shi, Tony Tye, and Zoran Zaric.
+Micro Devices company:
+@c codespell:ignore-begin
+Scott Linder, Laurent Morichetti, Qingchuani Shi, Tony Tye, and
+Zoran Zaric.
+@c codespell:ignore-end
 
 @node Sample Session
 @chapter A Sample @value{GDBN} Session
@@ -23670,7 +23673,7 @@ associated with a heterogeneous agent.  The heterogeneous program can
 then place @dfn{heterogeneous packets} on a heterogeneous queue to
 control the actions of the associated heterogeneous agent.  A
 heterogeneous agent removes heterogeneous packets from the
-heterogeneous queues assocated with it and performs the requested
+heterogeneous queues associated with it and performs the requested
 actions.  The packet actions and scheduling of packet processing
 varies depending on the heterogeneous system and the target
 architecture of the heterogeneous agent.  @xref{Architectures}.
@@ -24125,7 +24128,7 @@ The target system's heterogeneous queue identifier.
 
 @item
 The type of the heterogeneous queue.  The meaning of the queue types is target
-architecture and operating system depentent.
+architecture and operating system dependent.
 
 @item
 The target system's heterogeneous packet identifier for the next packet that
@@ -24775,7 +24778,7 @@ lanes are inactive.
 
 @anchor{maint print address-spaces}
 @c FIXME-implementers!!  This is not a maintenance command as it is
-@c displaying imformation about available address spaces that can be
+@c displaying information about available address spaces that can be
 @c used.  It has been defined as a @code{maint} command only to match
 @c the @code{maint print reggroups} command which also should not be a
 @c maintenance command for the same reason.
@@ -24845,9 +24848,9 @@ is in progress by another thread and resuming it instead.
 @xref{Non-Stop Mode}.
 
 @c TODO:
-@c Change command parsing so convienence variable
+@c Change command parsing so convenience variable
 @c substitution will work as shown.  Investigate using tuples and
-@c lists the result of convienence variables and convienence
+@c lists the result of convenience variables and convenience
 @c functions.
 @c Update MI commands for heterogeneous commands.
 @c Update Python bindings for heterogeneous commands.
@@ -28991,7 +28994,7 @@ A C integral literal where hexadecimal values are prefixed by
 @item file_path
 The file's path specified as a URI encoded UTF-8 string.  In URI
 encoding, every character that is not in the regular expression
-@samp{[a-zA-Z0-9/_.~-]} is encoded as two uppercase hexidecimal digits
+@samp{[a-zA-Z0-9/_.~-]} is encoded as two uppercase hexadecimal digits
 proceeded by @samp{%}.  Directories in the path are separated by
 @samp{/}.
 
@@ -29308,7 +29311,7 @@ signal to deliver, or use @samp{signal 0} or @samp{queue-signal 0} to
 suppress delivering a signal.
 
 Note that some @acronym{AMD GPU} architectures may have restrictions
-on supressing delivering signals to a wavefront (@pxref{AMD GPU Signal
+on suppressing delivering signals to a wavefront (@pxref{AMD GPU Signal
 Restrictions, , @acronym{AMD GPU} Signal Restrictions}).
 
 @subsubsection @acronym{AMD GPU} Memory Violation Reporting
@@ -29983,11 +29986,11 @@ address, memory, or thread sanitizers.
 
 @anchor{AMD GPU Signal Restrictions}
 @item
-Supressing delivering some signals to a wavefront for some
-@acronym{AMD GPU} architectures may not prevent the @acronym{AMD ROCm}
-runtime putting the associated queue into the queue error state.  For
-example, suppressing the @code{SIGSEGV} signal may prevent the
-wavefront from being put in the halt state, but the @acronym{AMD ROCm}
+Suppressing delivering some signals to a wavefront for some @acronym{AMD GPU}
+architectures may not prevent the @acronym{AMD ROCm}
+runtime putting the associated queue into the queue error
+state.  For example, suppressing the @code{SIGSEGV} signal may prevent
+the wavefront from being put in the halt state, but the @acronym{AMD ROCm}
 runtime may still put the associated queue into the queue error state.
 
 Suppressing delivering some signals, such as @code{SIGSEGV}, for a
@@ -30024,7 +30027,7 @@ which are always capable of reporting this information.
 
 If the @env{HSA_ENABLE_DEBUG} environment variable is set to @samp{1}
 when the @acronym{AMD ROCm} runtime is initialized, then this
-information will be available for all archiectures even for wavefronts
+information will be available for all architectures even for wavefronts
 created when @value{GDBN} was not attached.  Setting this environment
 variable may very marginally reduce wavefront launch latency for some
 architectures for very short lived wavefronts.
@@ -34817,7 +34820,7 @@ There isn't enough history recorded to continue reverse execution.
 The @var{tid} field identifies the global thread ID of the thread
 that directly caused the stop -- for example by hitting a breakpoint.
 The @var{lane-id} field is present if the thread has multiple lanes,
-in which case @var{lid} indentifies the lane ID of the lane that
+in which case @var{lid} identifies the lane ID of the lane that
 @value{GDBN} is reporting the stop for, and thus gets the focus.  This
 lane is the one for which the arguments in the frame field are for.
 No stop record is reported for the other lanes in the thread.  Note
@@ -35337,7 +35340,7 @@ the frontend.  This field is optional.
 
 @item type
 The type of the heterogeneous queue.  The meaning of the queue types
-is target architecture and operating system dependant.
+is target architecture and operating system dependent.
 
 @item read
 The target system's heterogeneous packet identifier for the next
@@ -38248,7 +38251,7 @@ thread is not associated with a heterogeneous dispatch, or if a
 ^done,dispatches=[
 @{id="1.1",queue_id="1.1",target-id="AMDGPU Dispatch 1:1:1 (PKID 0)",
   grid="[1024,1,1]",workgroup="[256,1,1]",
-  fences=[@{name="Barrier", abbrev="B"@},@{name="Aquire", value="System", abbrev="As"@}],
+  fences=[@{name="Barrier", abbrev="B"@},@{name="Acquire", value="System", abbrev="As"@}],
   address-spaces=[@{name="Shared", size="0"@},@{name="Private", size="0"@}],
   kernel-desc="0x00007ffde7e00740",kernel-args="0x00007fffeff00000",
   completion="0x0000000000000000",kernel-function="0x00007ffde7e01000"@}​​​​​],
