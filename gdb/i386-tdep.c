@@ -5125,23 +5125,50 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
     case 0xe5:	/* VPMULHW  */
     case 0xe6:	/* VCVTDQ2PD, VCVTTPD2DQ and VCVTPD2DQ.  */
     case 0xf1:	/* VPSLLW, dynamic shift.  */
-    case 0xf2:	/* VPSLLD, dynamic shift.  */
-    case 0xf3:	/* VPSLLQ, dynamic shift.  */
+    case 0xf2:	/* VPSLLD, dynamic shift and ANDN.  */
+    case 0xf3:	/* VPSLLQ, dynamic shift and BLSI, BLSR and BLSMSK.  */
     case 0xf4:	/* VPMULUDQ  */
     case 0xf6:	/* VPSADBW.  */
     case 0xfc:	/* VPADDB  */
     case 0xfd:	/* VPADDW  */
     case 0xfe:	/* VPADDD  */
       {
-	/* This set of instructions all share the same exact way to encode
-	   the destination register, so there's no reason to try and
-	   differentiate them.  */
 	i386_record_modrm (ir);
 	int reg_offset = ir->reg + vex_r * 8;
-	gdb_assert (tdep->num_ymm_regs > reg_offset);
-	record_full_arch_list_add_reg (ir->regcache,
-				       tdep->ymm0_regnum + reg_offset);
+	if (opcode == 0xf2 && ir->map_select == 2) /* ANDN.  */
+	  {
+	    record_full_arch_list_add_reg (ir->regcache,
+					   ir->regmap[X86_RECORD_REAX_REGNUM
+						      + reg_offset]);
+	    record_full_arch_list_add_reg
+	      (ir->regcache, ir->regmap[X86_RECORD_EFLAGS_REGNUM]);
+	  }
+	else if (opcode == 0xf3 && ir->map_select == 2)
+	  {
+	    /* BLSI, BLSR and BLSMSK.  */
+	    record_full_arch_list_add_reg (ir->regcache,
+					   ir->regmap[X86_RECORD_REAX_REGNUM
+						      + ir->vvvv]);
+	    record_full_arch_list_add_reg
+	      (ir->regcache, ir->regmap[X86_RECORD_EFLAGS_REGNUM]);
+	  }
+	else
+	  {
+	    /* This set of instructions all share the same exact way to
+	       encode the destination register, so there's no reason to
+	       try and differentiate them.  */
+	    gdb_assert (tdep->num_ymm_regs > reg_offset);
+	    record_full_arch_list_add_reg (ir->regcache,
+					   tdep->ymm0_regnum + reg_offset);
+	  }
       }
+      break;
+
+    case 0xf7:	/* BEXTR.  */
+      i386_record_modrm (ir);
+      record_full_arch_list_add_reg (ir->regcache,
+				     ir->regmap[X86_RECORD_REAX_REGNUM
+						+ ir->reg + vex_r * 8]);
       break;
 
     case 0x2e: /* VUCOMIS[S|D].  */
@@ -7029,8 +7056,9 @@ Do you want to stop the program?"),
       I386_RECORD_FULL_ARCH_LIST_ADD_REG (X86_RECORD_EFLAGS_REGNUM);
       break;
 
-    case 0x0fbc:    /* bsf */
-    case 0x0fbd:    /* bsr */
+    case 0x0fbc:    /* bsf and tzcnt.  */
+    case 0x0fbd:    /* bsr and lzcnt.  */
+      i386_record_modrm (&ir);
       I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.reg | rex_r);
       I386_RECORD_FULL_ARCH_LIST_ADD_REG (X86_RECORD_EFLAGS_REGNUM);
       break;

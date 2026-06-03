@@ -23,6 +23,8 @@
 require supports_reverse
 require have_avx
 require have_avx2
+# This test also requires BMI1 support.  All real hardware in existence
+# that supports AVX2 also supports those though, so we don't check it.
 
 # TODO: this is the case because I used xmm15 all over the test.
 # Some parts of the test require xmm15 to validate some code paths, but
@@ -1195,3 +1197,42 @@ if {[record_full_function "convert"] == true} {
 }
 gdb_test "finish" "Run till exit from.*convert_test.*" \
     "leaving convert"
+
+
+# Preparation and testing BMI instructions.
+gdb_test_no_output \
+    "set \$r8 = 0" "set r8 for bmi test"
+gdb_test_no_output \
+    "set \$eax = 0x1312" "set eax for bmi test"
+gdb_test_no_output "set \$ebx = 0xdeadbeef" "set ebx for bmi test"
+gdb_test_no_output "set \$ecx = 0xcafeface" "set ecx for bmi test"
+
+if {[record_full_function "bmi"] == true} {
+
+    test_one_general_register "tzcnt" "r8" "0x3e"
+    test_one_general_register "tzcnt" "ebx" "0xe"
+    test_one_general_register "tzcnt" "ecx" "0x1e"
+
+    test_one_general_register "lzcnt" "ebx" "0x0"
+    test_one_general_register "lzcnt" "ecx" "0x0"
+    test_one_general_register "lzcnt" "r8" "0x0"
+
+    test_one_general_register "blsr" "ecx" "0x2"
+    test_one_general_register "blsr" "ebx" "0xffffffff"
+
+    test_one_general_register "blsmsk" "eax" "0x1312"
+    test_one_general_register "blsmsk" "ebx" "0x0"
+
+    test_one_general_register "blsi" "r8" "0x0"
+    test_one_general_register "blsi" "ecx" "0xdeadaced"
+
+    test_one_general_register "bextr" "eax" "0x1312"
+    test_one_general_register "bextr" "ebx" "0xdeadbeef"
+
+    test_one_general_register "andn" "ecx" "0xcafeface"
+    test_one_general_register "andn" "r8" "0x0"
+} else {
+    untested "couldn't run bmi tests"
+}
+gdb_test "finish" "Run till exit from.*bmi_test.*" \
+    "leaving bmi"
