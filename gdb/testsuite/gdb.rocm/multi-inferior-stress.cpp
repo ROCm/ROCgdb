@@ -16,11 +16,11 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* The parent process forks N children (N comes from argv[1], default
-   16).  Each child re-execs itself so that its GPU runtime is
-   initialized in a clean address space, then launches its own GPU
-   kernel.  Re-exec'ing makes each child a separate process from the
-   kernel-driver / debug API point of view, which is what exercises
+/* The parent process forks N children (N comes from argv[1], with a
+   default if absent).  Each child re-execs itself so that its GPU
+   runtime is initialized in a clean address space, then launches its
+   own GPU kernel.  Re-exec'ing makes each child a separate process
+   from the operating system's point of view, which is what exercises
    the multi-process GPU debug path under load.  */
 
 #include <sys/types.h>
@@ -31,12 +31,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 
 #include "rocm-test-utils.h"
 
-/* Default fan-out when no count is given on the command line.  Picked
-   so it crosses the typical 8-process threshold for simultaneous
-   debug-attached GPU processes.  */
+/* Default fan-out when no count is given on the command line.  Sized
+   to exercise multi-process GPU debug paths while staying within a
+   reasonable test wall-clock budget.  */
 #define DEFAULT_NUM_CHILDREN 16
 
 __global__ void
@@ -50,7 +51,7 @@ child (int argc, char **argv)
 {
   if (argc < 4)
     {
-      fprintf (stderr, "child: expected: %s child <idx> <num_devices>\n",
+      fprintf (stderr, "%s: expected: child <idx> <num_devices>\n",
 	       argv[0]);
       return -1;
     }
@@ -59,7 +60,8 @@ child (int argc, char **argv)
   int num_devices = atoi (argv[3]);
   if (num_devices <= 0)
     {
-      fprintf (stderr, "child %d: invalid num_devices %d\n", idx, num_devices);
+      fprintf (stderr, "child %d: invalid num_devices %d\n", idx,
+	       num_devices);
       return -1;
     }
 
@@ -70,7 +72,7 @@ child (int argc, char **argv)
 }
 
 static int
-parent (char **argv, int num_children)
+parent (const char *argv0, int num_children)
 {
   int num_devices;
   CHECK (hipGetDeviceCount (&num_devices));
@@ -84,10 +86,8 @@ parent (char **argv, int num_children)
 
   for (int i = 0; i < num_children; i++)
     {
-      char idx_buf[32] = {};
-      char ndev_buf[32] = {};
-      snprintf (idx_buf, sizeof (idx_buf), "%d", i);
-      snprintf (ndev_buf, sizeof (ndev_buf), "%d", num_devices);
+      std::string idx_str = std::to_string (i);
+      std::string ndev_str = std::to_string (num_devices);
 
       pid_t pid = fork ();
       if (pid == -1)
@@ -98,8 +98,8 @@ parent (char **argv, int num_children)
 
       if (pid == 0)
 	{
-	  if (execl (argv[0], argv[0], "child", idx_buf, ndev_buf,
-		     (char *) nullptr) == -1)
+	  if (execl (argv0, argv0, "child", idx_str.c_str (),
+		     ndev_str.c_str (), (char *) nullptr) == -1)
 	    {
 	      perror ("execl");
 	      _exit (127);
@@ -138,5 +138,5 @@ main (int argc, char **argv)
 	num_children = DEFAULT_NUM_CHILDREN;
     }
 
-  return parent (argv, num_children);
+  return parent (argv[0], num_children);
 }
