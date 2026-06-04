@@ -15,10 +15,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* All testing functions in this file are marked with the optnone
-   attribute so the compiler won't optimize the OCP MX values out of
-   existence.  */
-
 #include <hip/hip_runtime.h>
 #include <hip/hip_ext_ocp.h>
 #include <stdio.h>
@@ -35,7 +31,7 @@
     }                                                                        \
   }
 
-__host__ __device__ void __attribute__ ((optnone))
+__host__ __device__ void
 fp8e4m3_values ()
 {
   /* FP8 E4M3 format
@@ -86,7 +82,7 @@ fp8e4m3_values ()
   return;
 }
 
-__host__ __device__ void __attribute__ ((optnone))
+__host__ __device__ void
 fp8e5m2_values ()
 {
   /* FP8 E5M2 format
@@ -140,7 +136,7 @@ fp8e5m2_values ()
   return;
 }
 
-__host__ __device__ void __attribute__ ((optnone))
+__host__ __device__ void
 fp6e2m3_values ()
 {
   /* FP6 format
@@ -189,7 +185,7 @@ fp6e2m3_values ()
   return;
 }
 
-__host__ __device__ void __attribute__ ((optnone))
+__host__ __device__ void
 fp6e3m2_values ()
 {
   /* FP6 format
@@ -238,7 +234,7 @@ fp6e3m2_values ()
   return;
 }
 
-__host__ __device__ void __attribute__ ((optnone))
+__host__ __device__ void
 fp4e2m1_values ()
 {
   /* FP4 format

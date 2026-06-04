@@ -33,16 +33,18 @@
   }
 
 /* The kernel never returns, via this sleep, so that the .exp file can
-   test background execution (cont&).  Mark noreturn so callers do not
-   need a trailing observable side effect just to keep them alive.  */
+   test background execution (cont&).  The volatile loop guard keeps
+   the loop's observable behavior well-defined (an infinite loop
+   without side effects would otherwise be UB in C++); do not mark
+   the function noreturn, as that would license the compiler to
+   eliminate the very behavior the volatile is preserving.  */
 
-__device__ static void __attribute__ ((noinline, noreturn))
+__device__ static void __attribute__ ((noinline))
 sleep_forever ()
 {
   volatile bool keep_going = true;
   while (keep_going)
     __builtin_amdgcn_s_sleep (1);
-  __builtin_unreachable ();
 }
 
 /* foo() and bar() are non-static and marked noinline so each lane has
@@ -57,7 +59,7 @@ sleep_forever ()
 __device__ void __attribute__ ((noinline))
 foo ()
 {
-  asm volatile ("" : : : "memory");
+  asm volatile ("" ::: "memory");
 }
 
 __device__ void __attribute__ ((noinline, disable_tail_calls))

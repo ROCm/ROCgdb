@@ -32,10 +32,7 @@
       }									\
   }
 
-/* Non-static marker function used by the test as a stable pending
-   breakpoint target.  */
-
-__device__ void
+__device__ static void
 done ()
 {
 }
