@@ -1,3 +1,4 @@
+.text
 /* b16.  */
 jirl	  $r4,$r5,%b16(.L1)
 
@@ -61,9 +62,11 @@ lu12i.w	  $r4,%gd_hi20(TLSL1)
 
 /* Test insn relocs.  */
 .L1:
+call36 .L1
 /* 32-bit PC relative.  */
 .4byte	  .L2-.L1
 .L2:
+call36 .L1
 /* 64-bit PC relative.  */
 .8byte	  .L3-.L2
 

@@ -82,6 +82,9 @@ struct loongarch_cl_insn
      The macros or instructions expanded from macros do not output register
      deprecated warning.  */
   unsigned int expand_from_macro;
+
+  /* Whether the instruction is linker-relaxable.  */
+  bool linker_relax;
 };
 
 #ifndef DEFAULT_ARCH
@@ -816,6 +819,7 @@ loongarch_args_parser_can_match_arg_helper (char esc_ch1, char esc_ch2,
 	  ip->reloc_info[ip->reloc_num].type = BFD_RELOC_LARCH_RELAX;
 	  ip->reloc_info[ip->reloc_num].value = const_0;
 	  ip->reloc_num++;
+	  ip->linker_relax = true;
 	}
       else
 	ip->match_now = 0;
@@ -889,6 +893,7 @@ loongarch_args_parser_can_match_arg_helper (char esc_ch1, char esc_ch2,
 		  ip->reloc_info[ip->reloc_num].type = BFD_RELOC_LARCH_RELAX;
 		  ip->reloc_info[ip->reloc_num].value = const_0;
 		  ip->reloc_num++;
+		  ip->linker_relax = true;
 		}
 
 	      /* Only one register macros (used in normal code model)
@@ -896,8 +901,7 @@ loongarch_args_parser_can_match_arg_helper (char esc_ch1, char esc_ch2,
 		 LARCH_opts.ase_labs and LARCH_opts.ase_gabs are used
 		 to generate the code model of absolute addresses, and
 		 we do not relax this code model.  */
-	      if (LARCH_opts.relax && (ip->expand_from_macro & 1)
-		    && !(LARCH_opts.ase_labs | LARCH_opts.ase_gabs)
+	      if (LARCH_opts.relax
 		    && (BFD_RELOC_LARCH_PCALA_HI20 == reloc_type
 			|| BFD_RELOC_LARCH_PCALA_LO12 == reloc_type
 			|| BFD_RELOC_LARCH_GOT_PC_HI20 == reloc_type
@@ -917,9 +921,19 @@ loongarch_args_parser_can_match_arg_helper (char esc_ch1, char esc_ch2,
 			|| BFD_RELOC_LARCH_TLS_IE_PCADD_HI20 == reloc_type
 			|| BFD_RELOC_LARCH_TLS_IE_PCADD_LO12 == reloc_type))
 		{
-		  ip->reloc_info[ip->reloc_num].type = BFD_RELOC_LARCH_RELAX;
-		  ip->reloc_info[ip->reloc_num].value = const_0;
-		  ip->reloc_num++;
+		  /* R_LARCH_RELAX can be emitted by .reloc, so always set
+		     link_relax for instructions.
+		     For example:
+		     .reloc  .,R_LARCH_RELAX
+		     pcalau12i       $r12,%ie_pc_hi20(.LANCHOR0)  */
+		  ip->linker_relax = true;
+		  if ((ip->expand_from_macro & 1)
+		      && !(LARCH_opts.ase_labs | LARCH_opts.ase_gabs))
+		    {
+		      ip->reloc_info[ip->reloc_num].type = BFD_RELOC_LARCH_RELAX;
+		      ip->reloc_info[ip->reloc_num].value = const_0;
+		      ip->reloc_num++;
+		    }
 		}
 	      break;
 	    }
@@ -1179,7 +1193,14 @@ move_insn (struct loongarch_cl_insn *insn, fragS *frag, long where)
 static void
 append_fixed_insn (struct loongarch_cl_insn *insn)
 {
-  /* Ensure the jirl is emitted to the same frag as the pcaddu18i.  */
+  /* Start a new frag only used for relaxable instrucntions.  */
+  if (LARCH_opts.relax && insn->linker_relax)
+    {
+      frag_wane (frag_now);
+      frag_new (0);
+    }
+
+  /* Ensure pcaddu18i/pcaddu12i + jirl in the same frag.  */
   if (insn->reloc_info[0].type == BFD_RELOC_LARCH_CALL36
       || insn->reloc_info[0].type == BFD_RELOC_LARCH_CALL30)
     frag_grow (8);
@@ -1187,19 +1208,45 @@ append_fixed_insn (struct loongarch_cl_insn *insn)
   char *f = frag_more (insn->insn_length);
   move_insn (insn, frag_now, f - frag_now->fr_literal);
 
-  if (call_reloc)
+  /* We need to start a new frag after any instruction that can be
+     optimized away or compressed by the linker during relaxation, to prevent
+     the assembler from computing static offsets across such an instruction.
+
+     This is necessary to get correct .eh_frame FDE DW_CFA_advance_loc info.
+     If one cfi_insn_data's two symbols are not in the same frag, it will
+     generate ADD and SUB relocations pairs to calculate DW_CFA_advance_loc.
+     (gas/dw2gencfi.c: output_cfi_insn:
+     if (symbol_get_frag (to) == symbol_get_frag (from)))
+
+     Since the relocations of the normal code model and the extreme code model
+     of the old LE instruction sequence are the same, it is impossible to
+     distinguish which code model it is based on relocation alone, so the
+     extreme code model has to be relaxed.  */
+
+  /* End the frag to ensure it only used for relaxable instructions.  */
+  if (LARCH_opts.relax && insn->linker_relax
+      && insn->reloc_info[0].type != BFD_RELOC_LARCH_CALL36
+      && insn->reloc_info[0].type != BFD_RELOC_LARCH_CALL30)
+    {
+      frag_wane (frag_now);
+      frag_new (0);
+    }
+
+  /* To ensure pcaddu18i/pcaddu12i + jirl in the same frag.
+     End the frag after the jirl instruction.  */
+  if (LARCH_opts.relax && call_reloc)
     {
       if (strcmp (insn->name, "jirl") == 0)
 	{
-	  /* See comment at end of append_fixp_and_insn.  */
 	  frag_wane (frag_now);
 	  frag_new (0);
 	}
       call_reloc = 0;
     }
 
-  if (insn->reloc_info[0].type == BFD_RELOC_LARCH_CALL36
-      || insn->reloc_info[0].type == BFD_RELOC_LARCH_CALL30)
+  if (LARCH_opts.relax
+      && (insn->reloc_info[0].type == BFD_RELOC_LARCH_CALL36
+	  || insn->reloc_info[0].type == BFD_RELOC_LARCH_CALL30))
     call_reloc = 1;
 }
 
@@ -1269,43 +1316,6 @@ append_fixp_and_insn (struct loongarch_cl_insn *ip)
     as_fatal (_("Internal error: not support relax now"));
   else
     append_fixed_insn (ip);
-
-  /* We need to start a new frag after any instruction that can be
-     optimized away or compressed by the linker during relaxation, to prevent
-     the assembler from computing static offsets across such an instruction.
-
-     This is necessary to get correct .eh_frame FDE DW_CFA_advance_loc info.
-     If one cfi_insn_data's two symbols are not in the same frag, it will
-     generate ADD and SUB relocations pairs to calculate DW_CFA_advance_loc.
-     (gas/dw2gencfi.c: output_cfi_insn:
-     if (symbol_get_frag (to) == symbol_get_frag (from)))
-
-     For macro instructions, only the first instruction expanded from macro
-     need to start a new frag.
-     Since the relocations of the normal code model and the extreme code model
-     of the old LE instruction sequence are the same, it is impossible to
-     distinguish which code model it is based on relocation alone, so the
-     extreme code model has to be relaxed.  */
-  if (LARCH_opts.relax
-      && (BFD_RELOC_LARCH_PCALA_HI20 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_GOT_PC_HI20 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_LE_HI20_R == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_LE_ADD_R == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_LD_PC_HI20 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_GD_PC_HI20 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_DESC_PC_HI20 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_IE_PC_HI20 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_LE_HI20 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_LE_LO12 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_LE64_LO20 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_LE64_HI12 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_GOT_PCADD_HI20 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_IE_PCADD_HI20 == reloc_info[0].type
-	  || BFD_RELOC_LARCH_TLS_DESC_PCADD_HI20 == reloc_info[0].type))
-    {
-      frag_wane (frag_now);
-      frag_new (0);
-    }
 }
 
 /* Ask helper for returning a malloced c_str or NULL.  */
@@ -1588,11 +1598,18 @@ loongarch_force_relocation_sub_local (fixS *fixp, segT sec ATTRIBUTE_UNUSED)
 	       || (S_GET_SEGMENT (fixp->fx_subsy)->flags & SEC_CODE) == 0));
 }
 
-/* Postpone text-section label subtraction calculation until linking, since
-   linker relaxations might change the deltas.  */
+/* Postpone text-section label subtraction calculation until linking,
+   since linker relaxations might change the deltas.  */
 bool
 loongarch_force_relocation_sub_same(fixS *fixp ATTRIBUTE_UNUSED, segT sec)
 {
+  fragS *add_frag = symbol_get_frag (fixp->fx_addsy);
+  fragS *sub_frag = symbol_get_frag (fixp->fx_subsy);
+
+  /* Not emit relocation if addsy and subsy are in the same frag.  */
+  if (add_frag == sub_frag)
+    return false;
+
   return LARCH_opts.relax && (sec->flags & SEC_CODE) != 0;
 }
 
@@ -2117,6 +2134,10 @@ loongarch_frag_align_code (int n, int max)
   if (align_bytes <= 4)
     return true;
 
+  /* Start a new frag only used for alignment.  */
+  frag_wane (frag_now);
+  frag_new (0);
+
   /* If max <= 0, ignore max.
      If max >= worst_case_bytes, max has no effect.
      Similar to gas/write.c relax_segment function rs_align_code case:
@@ -2160,9 +2181,11 @@ loongarch_frag_align_code (int n, int max)
   /* Default write NOP for aligned bytes.  */
   loongarch_make_nops (nops, worst_case_bytes);
 
-  /* We need to start a new frag after the alignment which may be removed by
-     the linker, to prevent the assembler from computing static offsets.
-     This is necessary to get correct EH info.  */
+  /* We need to start a new frag after the alignment which may be
+     removed by the linker, to prevent the assembler from computing
+     static offsets.  This is necessary to get correct EH info.
+
+     End the frag to ensure it is only used for alignment.  */
   frag_wane (frag_now);
   frag_new (0);
 

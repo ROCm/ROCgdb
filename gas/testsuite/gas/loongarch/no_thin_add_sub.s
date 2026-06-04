@@ -1,5 +1,6 @@
   .section .text
 .L1:
+  call .text
   # add32+sub32
   .4byte .L3-.L1
   .4byte .L3-.L1

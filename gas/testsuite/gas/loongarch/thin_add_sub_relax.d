@@ -1,4 +1,4 @@
-#as: -mthin-add-sub
+#as: -mthin-add-sub -mrelax
 #objdump: -Dr
 
 .*:[    ]+file format .*
@@ -8,16 +8,16 @@ Disassembly of section .text:
 
 00000000.* <.L1>:
 [ 	]+...
-[ 	]+0:[ 	]+R_LARCH_32_PCREL[ 	]+.L3
-[ 	]+4:[ 	]+R_LARCH_ADD32[ 	]+.L3
-[ 	]+4:[ 	]+R_LARCH_SUB32[ 	]+.L1
-
-0*00000008[ 	]+<.L2>:
+.*R_LARCH_32_PCREL[ 	]+.L3
+.*R_LARCH_ADD32[ 	]+.L3
+.*R_LARCH_SUB32[ 	]+.L1
+#...
+.*<.L2>:
 [ 	]+...
-[ 	]+8:[ 	]+R_LARCH_64_PCREL[ 	]+.L3
-[ 	]+10:[ 	]+R_LARCH_ADD64[ 	]+.L3
-[ 	]+10:[ 	]+R_LARCH_SUB64[ 	]+.L2
-
+.*R_LARCH_64_PCREL[ 	]+.L3
+.*R_LARCH_ADD64[ 	]+.L3
+.*R_LARCH_SUB64[ 	]+.L2
+#...
 Disassembly[ 	]+of[ 	]+section[ 	]+sx:
 
 0*00000000[ 	]+<.L3>:
