@@ -1,0 +1,147 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Tests for debugging a multi-device cooperative kernel that uses
+# cooperative_groups::this_grid ().sync () within each device and
+# cooperative_groups::this_multi_grid ().sync () across devices.  Both
+# barriers are implemented on AMD GPUs using the GWS hardware
+# mechanism.
+#
+# The test verifies that GDB can:
+#   - read the number of participating GPUs from the inferior,
+#   - hit a kernel breakpoint inside the cooperative dispatch on
+#     *every* participating GPU (matched via the per-device
+#     "Breakpoint <id>.<instance>" subscript that hipLaunchCooperative
+#     KernelMultiDevice produces), and
+#   - resume the cross-device dispatch through both the intra-device
+#     this_grid ().sync () and the cross-device this_multi_grid ().sync ()
+#     to normal program completion.
+
+load_lib rocm.exp
+
+require allow_hipcc_tests
+require hip_devices_support_debug_multi_process
+require supports_cooperative_groups
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+# Test: hit a breakpoint inside the cooperative kernel on every
+# participating GPU, then resume the dispatch through both barriers
+# and to program completion.
+
+proc_with_prefix test_break_in_multi_coop_kernel {} {
+    # Multi-device cooperative dispatches involve waves on more than
+    # one device making forward progress before the multi-grid sync
+    # releases.  Run the inferior in non-stop mode so the debugger can
+    # observe per-device stops independently.
+    save_vars { ::GDBFLAGS } {
+	append ::GDBFLAGS " -ex \"set non-stop on\""
+	clean_restart $::testfile
+    }
+
+    with_rocm_gpu_lock {
+	if {![runto_main]} {
+	    return
+	}
+
+	# Advance to the point where the inferior has finalized "n_gpus"
+	# (the count of GPUs it will actually use for the cooperative
+	# dispatch) so we can read it from gdb.  The require gates above
+	# cover architecture-level support; per-device runtime gating
+	# (>= 2 devices that advertise cooperativeMultiDeviceLaunch) is
+	# done inside main () in the .cpp, which self-skips with a clean
+	# exit when those preconditions are not met.  Treat that clean
+	# exit as UNSUPPORTED rather than a FAIL.
+	gdb_breakpoint \
+	    [gdb_get_line_number "n-gpus-final line"] allow-pending
+
+	set eligible 0
+	gdb_test_multiple "continue" "advance to n-gpus-final" {
+	    -re "hit Breakpoint $::decimal,\[^\r\n\]*main \\(\\)\[^\r\n\]*\r\n\[^\r\n\]*\r\n$::gdb_prompt " {
+		set eligible 1
+		pass $gdb_test_name
+	    }
+	    -re "\\\[Inferior 1 \[^\r\n\]* exited normally\\\]\[^\r\n\]*\r\n$::gdb_prompt " {
+		unsupported "multi-device cooperative launch not available"
+	    }
+	}
+	if { !$eligible } {
+	    return
+	}
+
+	set n_gpus [get_integer_valueof "n_gpus" 0]
+	gdb_assert {$n_gpus >= 2} "n_gpus is at least 2"
+	if { $n_gpus < 2 } {
+	    return
+	}
+
+	# Replace the marker breakpoint with the kernel breakpoint and
+	# run all threads in the background so the host can finish
+	# launching kernels on every device.
+	delete_breakpoints
+	gdb_breakpoint \
+	    [gdb_get_line_number "before-grid-sync line"] allow-pending
+
+	gdb_test_multiple "continue -a &" "background continue" {
+	    -re "Continuing\\.\r\n$::gdb_prompt " {
+		pass $gdb_test_name
+	    }
+	}
+
+	# In non-stop mode, hipLaunchCooperativeKernelMultiDevice
+	# produces one child breakpoint instance per participating GPU
+	# ("Breakpoint <id>.<inst>").  Collect distinct <inst> values
+	# until we have observed a stop on every GPU; only then is it
+	# safe to delete the breakpoint and let the dispatch run
+	# through both grid syncs.
+	array unset gpu_seen
+	set distinct_gpus 0
+	gdb_test_multiple "" "breakpoint hit on every participating GPU" {
+	    -re "\r\nThread $::decimal\[^\r\n\]* hit Breakpoint $::decimal\\.($::decimal),\[^\r\n\]*\r\n" {
+		set inst $expect_out(1,string)
+		if {![info exists gpu_seen($inst)]} {
+		    set gpu_seen($inst) 1
+		    incr distinct_gpus
+		}
+		if {$distinct_gpus >= $n_gpus} {
+		    pass $gdb_test_name
+		} else {
+		    exp_continue
+		}
+	    }
+	}
+
+	# All participating GPUs have been observed stopping at the
+	# kernel breakpoint.  Remove the breakpoint and let the
+	# dispatch run through this_grid ().sync () and
+	# this_multi_grid ().sync () to clean program exit.
+	delete_breakpoints
+
+	gdb_test_multiple "continue -a" "continue all to end" {
+	    -re "\\\[Inferior 1 \[^\r\n\]* exited normally\\\]\[^\r\n\]*\r\n$::gdb_prompt " {
+		pass $gdb_test_name
+	    }
+	}
+    }
+}
+
+test_break_in_multi_coop_kernel
