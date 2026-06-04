@@ -629,10 +629,6 @@ core_target::build_file_mappings ()
 void
 core_target::exit_core_file_inferior ()
 {
-  /* Opening a core file ensures that some thread, even if it's just a
-     "fake" thread, will have been selected.  */
-  gdb_assert (inferior_ptid != null_ptid);
-
   /* Avoid confusion from thread stuff.  */
   switch_to_no_thread ();
 
@@ -665,10 +661,11 @@ core_target::close ()
      mostly harmless except it causes two 'exited' events to be emitted in
      the Python API, which isn't ideal.
 
-     As opening a core_target always ensures that some thread is selected,
-     then we can tell if exit_core_file_inferior has already been called by
-     checking if no thread is now selected.  */
-  if (inferior_ptid != null_ptid)
+     As opening a core_target always ensures that a pid is assigned to the
+     core file inferior, even if it is the fake CORELOW_PID, then we can
+     tell if exit_core_file_inferior has already been called by checking if
+     the inferior has a non-zero pid or not.  */
+  if (current_inferior ()->pid != 0)
     exit_core_file_inferior ();
 
   /* Core targets are heap-allocated (see core_target_open), so here

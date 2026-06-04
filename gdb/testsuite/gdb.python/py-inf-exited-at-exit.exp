@@ -1,0 +1,156 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check that the 'exited' event triggers when GDB exits.  Test for
+# both live inferiors, and for core files.
+
+require allow_python_tests
+
+load_lib gdb-python.exp
+
+standard_testfile
+
+if {[build_executable "build executable" $testfile $srcfile] == -1} {
+    return
+}
+
+set remote_python_file \
+    [gdb_remote_download host ${srcdir}/${subdir}/${testfile}.py]
+
+# Load the Python script for this test.  Record the string
+# representation of the current inferior.  Then exit GDB.  Ensure that
+# during the exit we see a single Python 'exited' event associated
+# with the expected inferior.
+proc source_py_script_and_exit_checking_event {} {
+    gdb_test_no_output "source $::remote_python_file" \
+	"load python script"
+
+    set expected_inferior_string \
+	[capture_command_output \
+	     "python print(str(gdb.selected_inferior()))" ""]
+
+    set inferior_string ""
+    set event_count 0
+    gdb_test_multiple "with confirm off -- exit" "exit gdb" -lbl {
+	-re "\r\nEVENT: inferior exited event\\.  Inferior is (\[^\r\n\]+)(?=\r\n)" {
+	    set inferior_string $expect_out(1,string)
+	    incr event_count
+	    exp_continue
+	}
+
+	eof {
+	    verbose -log "GDB has now exited"
+	    gdb_assert { $expected_inferior_string eq $inferior_string \
+			     && $event_count == 1 } $gdb_test_name
+
+	    # Clean up now that GDB has gone away.  This prevents the
+	    # generic support code from trying to shut down GDB again.
+	    catch {wait -nowait -i $::gdb_spawn_id}
+	    clean_up_spawn_id host $::gdb_spawn_id
+	    unset ::gdb_spawn_id
+	}
+    }
+}
+
+# Clean restart using global TESTFILE as the executable, then run to
+# 'foo'.  Return true on success, otherwise, return false.
+proc clean_restart_and_runto_foo {} {
+    if {[clean_restart $::testfile] == -1} {
+	return false
+    }
+
+    return [runto foo]
+}
+
+# Check that the current inferior's backtrace is 'main -> foo'.
+proc check_backtrace { testname } {
+    gdb_test "bt" \
+	[multi_line \
+	     "#0  (?:$::hex in )?foo \\(\\) at \[^\r\n\]+" \
+	     "#1  (?:$::hex in )?main \\(\\) at \[^\r\n\]+"] \
+	$testname
+}
+
+# Create a core file.  Start GDB and load the core file.  Exit GDB.
+# Check that we see an 'exited' event, and that it is associated with
+# the correct gdb.Inferior.
+proc_with_prefix check_with_corefile {} {
+    if {![clean_restart_and_runto_foo]} {
+	return
+    }
+
+    check_backtrace "backtrace before generating core file"
+
+    set corefile [host_standard_output_file $::testfile.core]
+    if {![gdb_gcore_cmd $corefile "dump core file"]} {
+	return
+    }
+
+    clean_restart $::testfile
+
+    gdb_core_cmd $corefile "load corefile"
+
+    check_backtrace "backtrace after loading core file"
+
+    source_py_script_and_exit_checking_event
+}
+
+# Start the test program, attach to it, and then exit GDB.  Check that
+# we see an 'exited' event, and that it is associated with the correct
+# gdb.Inferior.
+proc_with_prefix check_with_attach {} {
+    if {![can_spawn_for_attach]} {
+	return
+    }
+
+    set test_spawn_id [spawn_wait_for_attach $::binfile]
+    set testpid [spawn_id_get_pid $test_spawn_id]
+
+    clean_restart $::testfile
+
+    gdb_breakpoint [gdb_get_line_number "Break here."]
+
+    gdb_test "attach $testpid"
+
+    gdb_continue_to_breakpoint "continue to b/p in foo"
+
+    check_backtrace "backtrace after attaching"
+
+    # When GDB detaches on exit, this should ensure the test program
+    # runs to completion.
+    gdb_test "set global_var = 1"
+
+    source_py_script_and_exit_checking_event
+
+    # In case the test program doesn't self-terminate after detach,
+    # kill it.
+    kill_wait_spawned_process $test_spawn_id
+}
+
+# Start a running inferior.  Exit GDB.  Check that we see an 'exited'
+# event, and that it is associated with the correct gdb.Inferior.
+proc_with_prefix check_with_live {} {
+    if {![clean_restart_and_runto_foo]} {
+	return
+    }
+
+    check_backtrace "backtrace before exiting"
+
+    source_py_script_and_exit_checking_event
+}
+
+check_with_live
+check_with_corefile
+check_with_attach
