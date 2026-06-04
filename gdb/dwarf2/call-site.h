@@ -35,13 +35,13 @@ struct dwarf2_per_objfile;
 
 enum call_site_parameter_kind
 {
-  /* * Use field call_site_parameter.u.dwarf_reg.  */
+  /* Use field call_site_parameter.u.dwarf_reg.  */
   CALL_SITE_PARAMETER_DWARF_REG,
 
-  /* * Use field call_site_parameter.u.fb_offset.  */
+  /* Use field call_site_parameter.u.fb_offset.  */
   CALL_SITE_PARAMETER_FB_OFFSET,
 
-  /* * Use field call_site_parameter.u.param_offset.  */
+  /* Use field call_site_parameter.u.param_offset.  */
   CALL_SITE_PARAMETER_PARAM_OFFSET
 };
 
@@ -116,25 +116,25 @@ private:
     } addresses;
   } m_loc;
 
-  /* * Discriminant for union field_location.  */
+  /* Discriminant for union field_location.  */
   enum kind m_loc_kind;
 };
 
 union call_site_parameter_u
 {
-  /* * DW_TAG_formal_parameter's DW_AT_location's DW_OP_regX
+  /* DW_TAG_formal_parameter's DW_AT_location's DW_OP_regX
      as DWARF register number, for register passed
      parameters.  */
 
   int dwarf_reg;
 
-  /* * Offset from the callee's frame base, for stack passed
+  /* Offset from the callee's frame base, for stack passed
      parameters.  This equals offset from the caller's stack
      pointer.  */
 
   CORE_ADDR fb_offset;
 
-  /* * Offset relative to the start of this PER_CU to
+  /* Offset relative to the start of this PER_CU to
      DW_TAG_formal_parameter which is referenced by both
      caller and the callee.  */
 
@@ -156,19 +156,19 @@ struct call_site_parameter
 
   union call_site_parameter_u u;
 
-  /* * DW_TAG_formal_parameter's DW_AT_call_value.  It is never NULL.  */
+  /* DW_TAG_formal_parameter's DW_AT_call_value.  It is never NULL.  */
 
   const gdb_byte *value;
   size_t value_size;
 
-  /* * DW_TAG_formal_parameter's DW_AT_call_data_value.
+  /* DW_TAG_formal_parameter's DW_AT_call_data_value.
      It may be NULL if not provided by DWARF.  */
 
   const gdb_byte *data_value;
   size_t data_value_size;
 };
 
-/* * A place where a function gets called from, represented by
+/* A place where a function gets called from, represented by
    DW_TAG_call_site.  It can be looked up from symtab->call_site_htab.  */
 
 struct call_site
@@ -202,20 +202,20 @@ struct call_site
 					  caller_frame, callback);
   }
 
-  /* * List successor with head in FUNC_TYPE.TAIL_CALL_LIST.  */
+  /* List successor with head in FUNC_TYPE.TAIL_CALL_LIST.  */
 
   struct call_site *tail_call_next = nullptr;
 
-  /* * Describe DW_AT_call_target.  Missing attribute uses
+  /* Describe DW_AT_call_target.  Missing attribute uses
      m_loc_kind == DWARF_BLOCK with m_loc.dwarf_block == nullptr.  */
 
   struct call_site_target target {};
 
-  /* * Size of the PARAMETER array.  */
+  /* Size of the PARAMETER array.  */
 
   unsigned parameter_count = 0;
 
-  /* * CU of the function where the call is located.  It gets used
+  /* CU of the function where the call is located.  It gets used
      for DWARF blocks execution in the parameter array below.  */
 
   dwarf2_per_cu *const per_cu = nullptr;
@@ -229,7 +229,7 @@ private:
   const unrelocated_addr m_unrelocated_pc;
 
 public:
-  /* * Describe DW_TAG_call_site's DW_TAG_formal_parameter.  */
+  /* Describe DW_TAG_call_site's DW_TAG_formal_parameter.  */
 
   struct call_site_parameter parameter[];
 };

@@ -1,0 +1,190 @@
+# Copyright 2024-2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test instruction record for AArch64 FEAT_LRCPC3 instructions.
+# Based on gdb.reverse/aarch64-mops.exp
+#
+# The basic flow of the record tests are:
+#    1) Stop before executing the instructions of interest.  Record
+#       the initial value of the registers that the instruction will
+#       change, i.e. the destination register.
+#    2) Execute the instructions.  Record the new value of the
+#       registers that changed.
+#    3) Reverse the direction of the execution and execute back to
+#       just before the instructions of interest.  Record the final
+#       value of the registers of interest.
+#    4) Check that the initial and new values of the registers are
+#       different, i.e. the instruction changed the registers as expected.
+#    5) Check that the initial and final values of the registers are
+#       the same, i.e. GDB record restored the registers to their
+#       original values.
+
+require allow_aarch64_lrcpc3_tests
+
+standard_testfile
+
+if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
+	[list debug additional_flags=-march=armv8-a+rcpc3]]} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+gdb_test_no_output "record full"
+
+proc test_single_asm {name diff_reg diff_mem same_reg same_mem} {
+    with_test_prefix $name {
+
+	set before_seq [gdb_get_line_number "Before ${name}"]
+	set after_seq [gdb_get_line_number "After ${name}"]
+
+	set insn [lindex [split $name "-"] 0]
+
+	gdb_test "break $before_seq" \
+	    "Breakpoint ${::decimal} at ${::hex}: file .*/aarch64-lrcpc3.c, line ${::decimal}\\." \
+	    "$insn before instruction sequence"
+
+	gdb_continue_to_breakpoint "about to execute instruction sequence" \
+	    [multi_line ".*/aarch64-lrcpc3.c:${::decimal}" \
+		"${::decimal}\[ \t\]+__asm__ volatile \\(\"${insn} .*\".*"]
+
+	# Depending on the compiler, the line number information may put GDB a few
+	# instructions before the beginning of the asm statement.
+	arrive_at_instruction $insn
+	# Add a breakpoint that we're sure is at the prologue instruction.
+	gdb_test "break *\$pc" \
+	    "Breakpoint ${::decimal} at ${::hex}: file .*/aarch64-lrcpc3.c, line ${::decimal}\\." \
+	    "break at prologue instruction"
+
+	# Record the initial memory and register values.
+	set regs [concat $diff_reg $same_reg]
+	set mem [concat $diff_mem $same_mem]
+	foreach r $regs {
+	    set ${r}_initial [capture_command_output "info register $r" ""]
+	}
+	foreach m $mem {
+	    set ${m}_initial [capture_command_output "x/x $m" ""]
+	}
+
+	gdb_test "break $after_seq" \
+	    "Breakpoint ${::decimal} at ${::hex}: file .*/aarch64-lrcpc3.c, line ${::decimal}\\." \
+	    "$insn after instruction sequence"
+	gdb_continue_to_breakpoint "executed instruction sequence" \
+	    [multi_line ".*/aarch64-lrcpc3.c:${::decimal}" ".*"]
+
+	# Record the new memory and register values.
+	foreach r $regs {
+	    set ${r}_new [capture_command_output "info register $r" ""]
+	}
+	foreach m $mem {
+	    set ${m}_new [capture_command_output "x/x $m" ""]
+	}
+
+	# Execute in reverse to before the instruction sequence.
+	gdb_test_no_output "set exec-direction reverse"
+
+	gdb_continue_to_breakpoint "reversed execution of instruction sequence" \
+	    [multi_line ".*/aarch64-lrcpc3.c:${::decimal}" \
+		"${::decimal}\[ \t\]+__asm__ volatile \\(\"${insn} .*\".*"]
+
+	# Record the final memory and register values.
+	foreach r $regs {
+	    set ${r}_final [capture_command_output "info register $r" ""]
+	}
+	foreach m $mem {
+	    set ${m}_final [capture_command_output "x/x $m" ""]
+	}
+
+	foreach v [concat $same_reg $same_mem] {
+	    gdb_assert ![string compare [set ${v}_initial] [set ${v}_new]] \
+		"check $v initial value versus $v new value"
+	    gdb_assert ![string compare [set ${v}_initial] [set ${v}_final]] \
+		"check $v initial value versus $v final value"
+	}
+
+	foreach v [concat $diff_reg $diff_mem] {
+	    gdb_assert [string compare [set ${v}_initial] [set ${v}_new]] \
+		"check $v initial value versus $v new value"
+	    gdb_assert ![string compare [set ${v}_initial] [set ${v}_final]] \
+		"check $v initial value versus $v final value"
+	}
+
+	# Restore forward execution and go to end of recording.
+	gdb_test_no_output "set exec-direction forward"
+	gdb_test "record goto end" \
+	    [multi_line \
+		"Go forward to insn number ${::decimal}" \
+		"#0  main \\(\\) at .*/aarch64-lrcpc3.c:${::decimal}" \
+		".*"]
+    }
+}
+
+set ldiapp_cases {
+	{ ldiapp-0 { x19 x20     } { } { x21 } { src } }
+	{ ldiapp-1 { w19 w20     } { } { x21 } { src } }
+	{ ldiapp-2 { x19 x20 x21 } { } {     } { src } }
+	{ ldiapp-3 { w19 w20 x21 } { } {     } { src } }
+	{ ldiapp-4 { x21 x20     } { } {     } { src } }
+	{ ldiapp-5 { w21 w20     } { } {     } { src } }
+}
+
+set stilp_cases {
+	{ stilp-0  {     } { src } { x19 x20 x21 } { } }
+	{ stilp-1  {     } { src } { w19 w20 x21 } { } }
+	{ stilp-2  { x21 } { src } { x19 x20     } { } }
+	{ stilp-3  { x21 } { src } { x19 x20     } { } }
+	{ stilp-4  {     } { src } { x20     x21 } { } }
+	{ stilp-5  {     } { src } { w20     x21 } { } }
+}
+
+set ldapr_stlr_cases {
+	{ ldapr-0  { x19 x21 } {     } {     } { src } }
+	{ ldapr-1  { w19 x21 } {     } {     } { src } }
+	{ stlr-0   {     x21 } { src } { x19 } {     } }
+	{ stlr-1   {     x21 } { src } { w19 } {     } }
+}
+
+set ldap1_stl1_cases {
+	{ ldap1-0  { v22 } {     } { x21 } { src } }
+	{ stl1-0   {     } { src } { v22 } {     } }
+}
+
+set ldapur_stlur_cases {
+	{ ldapur-0 { v22 } {     } { x21     } { src } }
+	{ stlur-0  {     } { src } { x21 v22 } {     } }
+	{ ldapur-1 { v22 } {     } {     x21 } { src } }
+	{ stlur-1  {     } { src } { x21 v22 } {     } }
+	{ ldapur-2 { v22 } {     } {     x21 } { src } }
+	{ stlur-2  {     } { src } { x21 v22 } {     } }
+	{ ldapur-3 { v22 } {     } {     x21 } { src } }
+	{ stlur-3  {     } { src } { x21 v22 } {     } }
+	{ ldapur-4 { v22 } {     } {     x21 } { src } }
+	{ stlur-4  {     } { src } { x21 v22 } {     } }
+	{ ldapur-5 { v22 } {     } {     x21 } { src } }
+	{ stlur-5  {     } { src } { x21 v22 } {     } }
+	{ ldapur-6 { v22 } {     } {     x21 } { src } }
+	{ stlur-6  {     } { src } { x21 v22 } {     } }
+}
+
+set all_cases [concat \
+    $ldiapp_cases $stilp_cases $ldapr_stlr_cases \
+    $ldap1_stl1_cases $ldapur_stlur_cases]
+
+foreach c $all_cases {
+    lassign $c name diff_reg diff_mem same_reg same_mem
+    test_single_asm $name $diff_reg $diff_mem $same_reg $same_mem
+}

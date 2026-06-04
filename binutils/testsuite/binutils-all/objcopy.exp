@@ -1556,7 +1556,6 @@ run_dump_test "pr23633"
 run_dump_test "set-section-alignment"
 
 setup_xfail "hppa*-*-*"
-setup_xfail "spu-*-*"
 clear_xfail "hppa*64*-*-hpux*" "hppa*-*-linux*" "hppa*-*-lites*"
 clear_xfail "hppa*-*-*n*bsd*" "hppa*-*-*elf*"
 if { [istarget pdp11-*-*] } {

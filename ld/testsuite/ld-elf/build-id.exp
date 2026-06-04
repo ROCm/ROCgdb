@@ -19,22 +19,9 @@
 # MA 02110-1301, USA.
 #
 
-# Exclude non-ELF targets.
-
-if ![is_elf_format] {
+if { ![is_elf_format] || [uses_genelf] } {
     return
 }
-
-if { [istarget frv-*-*] || [istarget lm32-*-*] } {
-    return
-}
-
-if { !([istarget *-*-linux*]
-       || [istarget arm*-*-uclinuxfdpiceabi]
-       || [istarget *-*-gnu*]) } then {
-    return
-}
-
 
 set stylelist {"" "--build-id" "--build-id=none" "--build-id=md5"
     "--build-id=sha1" "--build-id=guid" "--build-id=0xdeadbeef"}

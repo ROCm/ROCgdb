@@ -23,10 +23,10 @@
 #include <inttypes.h>
 #include "gdbsupport/offset-type.h"
 
-/* * A byte from the program being debugged.  */
+/* A byte from the program being debugged.  */
 typedef unsigned char gdb_byte;
 
-/* * An address in the program being debugged.  Host byte order.  */
+/* An address in the program being debugged.  Host byte order.  */
 typedef uint64_t CORE_ADDR;
 
 /* Like a CORE_ADDR, but not directly convertible.  This is used to
@@ -38,16 +38,16 @@ DEFINE_OFFSET_TYPE (unrelocated_addr, CORE_ADDR);
 typedef int64_t LONGEST;
 typedef uint64_t ULONGEST;
 
-/* * The largest CORE_ADDR value.  */
+/* The largest CORE_ADDR value.  */
 #define CORE_ADDR_MAX (~(CORE_ADDR) 0)
 
-/* * The largest ULONGEST value, 0xFFFFFFFFFFFFFFFF for 64-bits.  */
+/* The largest ULONGEST value, 0xFFFFFFFFFFFFFFFF for 64-bits.  */
 #define ULONGEST_MAX (~(ULONGEST) 0)
 
-/* * The largest LONGEST value, 0x7FFFFFFFFFFFFFFF for 64-bits.  */
+/* The largest LONGEST value, 0x7FFFFFFFFFFFFFFF for 64-bits.  */
 #define LONGEST_MAX ((LONGEST) (ULONGEST_MAX >> 1))
 
-/* * The smallest LONGEST value, 0x8000000000000000 for 64-bits.  */
+/* The smallest LONGEST value, 0x8000000000000000 for 64-bits.  */
 #define LONGEST_MIN ((LONGEST) (~(LONGEST) 0 ^ LONGEST_MAX))
 
 enum tribool { TRIBOOL_UNKNOWN = -1, TRIBOOL_FALSE = 0, TRIBOOL_TRUE = 1 };

@@ -29,7 +29,7 @@ enum val_prettyformat
   {
     Val_no_prettyformat = 0,
     Val_prettyformat,
-    /* * Use the default setting which the user has specified.  */
+    /* Use the default setting which the user has specified.  */
     Val_prettyformat_default
   };
 

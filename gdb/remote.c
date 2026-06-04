@@ -12767,12 +12767,15 @@ cli_packet_command (const char *args, int from_tty)
    The split and joined arguments are printed out.  Additionally, the
    joined arguments are split and joined a second time, and compared to the
    result of the first join, this provides some basic validation that GDB
-   sess the joined arguments as equivalent to the original argument
+   sees the joined arguments as equivalent to the original argument
    string.  */
 
 static void
 test_remote_args_command (const char *args, int from_tty)
 {
+  if (args == nullptr)
+    error (_("missing argument string"));
+
   std::vector<std::string> split_args = gdb::remote_args::split (args);
 
   gdb_printf ("Input (%s)\n", args);

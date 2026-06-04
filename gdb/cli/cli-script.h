@@ -23,7 +23,7 @@
 struct ui_file;
 struct cmd_list_element;
 
-/* * Control types for commands.  */
+/* Control types for commands.  */
 
 enum misc_command_type
 {
@@ -70,7 +70,7 @@ typedef std::shared_ptr<command_line> counted_command_line;
 /* A unique_ptr specialization for command_line.  */
 typedef std::unique_ptr<command_line, command_lines_deleter> command_line_up;
 
-/* * Structure for saved commands lines (for breakpoints, defined
+/* Structure for saved commands lines (for breakpoints, defined
    commands, etc).  */
 
 struct command_line
@@ -97,7 +97,7 @@ struct command_line
       compile;
     }
   control_u;
-  /* * For composite commands, the nested lists of commands.  For
+  /* For composite commands, the nested lists of commands.  For
      example, for "if" command this will contain the then branch and
      the else branch, if that is available.  */
   counted_command_line body_list_0;

@@ -38,3 +38,6 @@ gdb_test "maint test-remote-args a b c" \
 	 "  \\(b\\)" \
 	 "  \\(c\\)" \
 	 "Output \\(a b c\\)"]
+
+gdb_test "maint test-remote-args" "^missing argument string" \
+    "command without an argument string"

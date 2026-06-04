@@ -22,9 +22,7 @@
 #ifndef GDB_GDBTYPES_H
 #define GDB_GDBTYPES_H
 
-/* * \page gdbtypes GDB Types
-
-   GDB represents all the different kinds of types in programming
+/* GDB represents all the different kinds of types in programming
    languages using a common representation defined in gdbtypes.h.
 
    The main data structure is main_type; it consists of a code (such
@@ -60,12 +58,12 @@ struct dwarf2_per_cu;
 struct dwarf2_per_objfile;
 struct dwarf2_property_baton;
 
-/* * Different kinds of data types are distinguished by the `code'
+/* Different kinds of data types are distinguished by the `code'
    field.  */
 
 enum type_code
   {
-    TYPE_CODE_UNDEF = 0,	/**< Not used; catches errors */
+    TYPE_CODE_UNDEF = 0,	/* Not used; catches errors */
 
 #define OP(X) X,
 #include "type-codes.def"
@@ -73,7 +71,7 @@ enum type_code
 
   };
 
-/* * Some bits for the type's instance_flags word.  See the macros
+/* Some bits for the type's instance_flags word.  See the macros
    below for documentation on each bit.  */
 
 enum type_instance_flag_value : unsigned
@@ -91,53 +89,53 @@ enum type_instance_flag_value : unsigned
 
 DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
 
-/* * Not textual.  By default, GDB treats all single byte integers as
+/* Not textual.  By default, GDB treats all single byte integers as
    characters (or elements of strings) unless this flag is set.  */
 
 #define TYPE_NOTTEXT(t)	(((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_NOTTEXT)
 
-/* * Constant type.  If this is set, the corresponding type has a
+/* Constant type.  If this is set, the corresponding type has a
    const modifier.  */
 
 #define TYPE_CONST(t) ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_CONST) != 0)
 
-/* * Volatile type.  If this is set, the corresponding type has a
+/* Volatile type.  If this is set, the corresponding type has a
    volatile modifier.  */
 
 #define TYPE_VOLATILE(t) \
   ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_VOLATILE) != 0)
 
-/* * Restrict type.  If this is set, the corresponding type has a
+/* Restrict type.  If this is set, the corresponding type has a
    restrict modifier.  */
 
 #define TYPE_RESTRICT(t) \
   ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_RESTRICT) != 0)
 
-/* * Atomic type.  If this is set, the corresponding type has an
+/* Atomic type.  If this is set, the corresponding type has an
    _Atomic modifier.  */
 
 #define TYPE_ATOMIC(t) \
   ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_ATOMIC) != 0)
 
-/* * True if this type represents either an lvalue or lvalue reference type.  */
+/* True if this type represents either an lvalue or lvalue reference type.  */
 
 #define TYPE_IS_REFERENCE(t) \
   ((t)->code () == TYPE_CODE_REF || (t)->code () == TYPE_CODE_RVALUE_REF)
 
-/* * True if this type is allocatable.  */
+/* True if this type is allocatable.  */
 #define TYPE_IS_ALLOCATABLE(t) \
   ((t)->dyn_prop (DYN_PROP_ALLOCATED) != NULL)
 
-/* * True if this type has variant parts.  */
+/* True if this type has variant parts.  */
 #define TYPE_HAS_VARIANT_PARTS(t) \
   ((t)->dyn_prop (DYN_PROP_VARIANT_PARTS) != nullptr)
 
-/* * True if this type has a dynamic length.  */
+/* True if this type has a dynamic length.  */
 #define TYPE_HAS_DYNAMIC_LENGTH(t)			\
   (((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)	\
    || ((t)->dyn_prop (DYN_PROP_BIT_SIZE) != nullptr))
 
-/* * Instruction-space delimited type.  This is for Harvard architectures
+/* Instruction-space delimited type.  This is for Harvard architectures
    which have separate instruction and data address spaces (and perhaps
    others).
 
@@ -162,7 +160,7 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
 #define TYPE_DATA_SPACE(t) \
   ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_DATA_SPACE) != 0)
 
-/* * Address class flags.  Some environments provide for pointers
+/* Address class flags.  Some environments provide for pointers
    whose size is different from that of a normal pointer or address
    types where the bits are interpreted differently than normal
    addresses.  The TYPE_INSTANCE_FLAG_ADDRESS_CLASS_n flags may be used in
@@ -178,15 +176,15 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
 #define TYPE_ADDRESS_CLASS_ALL(t) (((t)->instance_flags ()) \
 				   & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL)
 
-/* * Information about a single discriminant.  */
+/* Information about a single discriminant.  */
 
 struct discriminant_range
 {
-  /* * The range of values for the variant.  This is an inclusive
+  /* The range of values for the variant.  This is an inclusive
      range.  */
   ULONGEST low, high;
 
-  /* * Return true if VALUE is contained in this range.  IS_UNSIGNED
+  /* Return true if VALUE is contained in this range.  IS_UNSIGNED
      is true if this should be an unsigned comparison; false for
      signed.  */
   bool contains (ULONGEST value, bool is_unsigned) const
@@ -200,7 +198,7 @@ struct discriminant_range
 
 struct variant_part;
 
-/* * A single variant.  A variant has a list of discriminant values.
+/* A single variant.  A variant has a list of discriminant values.
    When the discriminator matches one of these, the variant is
    enabled.  Each variant controls zero or more fields; and may also
    control other variant parts as well.  This struct corresponds to
@@ -208,20 +206,20 @@ struct variant_part;
 
 struct variant : allocate_on_obstack<variant>
 {
-  /* * The discriminant ranges for this variant.  */
+  /* The discriminant ranges for this variant.  */
   gdb::array_view<discriminant_range> discriminants;
 
-  /* * The fields controlled by this variant.  This is inclusive on
+  /* The fields controlled by this variant.  This is inclusive on
      the low end and exclusive on the high end.  A variant may not
      control any fields, in which case the two values will be equal.
      These are indexes into the type's array of fields.  */
   int first_field;
   int last_field;
 
-  /* * Variant parts controlled by this variant.  */
+  /* Variant parts controlled by this variant.  */
   gdb::array_view<variant_part> parts;
 
-  /* * Return true if this is the default variant.  The default
+  /* Return true if this is the default variant.  The default
      variant can be recognized because it has no associated
      discriminants.  */
   bool is_default () const
@@ -229,28 +227,28 @@ struct variant : allocate_on_obstack<variant>
     return discriminants.empty ();
   }
 
-  /* * Return true if this variant matches VALUE.  IS_UNSIGNED is true
+  /* Return true if this variant matches VALUE.  IS_UNSIGNED is true
      if this should be an unsigned comparison; false for signed.  */
   bool matches (ULONGEST value, bool is_unsigned) const;
 };
 
-/* * A variant part.  Each variant part has an optional discriminant
+/* A variant part.  Each variant part has an optional discriminant
    and holds an array of variants.  This struct corresponds to
    DW_TAG_variant_part in DWARF.  */
 
 struct variant_part : allocate_on_obstack<variant_part>
 {
-  /* * The index of the discriminant field in the outer type.  This is
+  /* The index of the discriminant field in the outer type.  This is
      an index into the type's array of fields.  If this is -1, there
      is no discriminant, and only the default variant can be
      considered to be selected.  */
   int discriminant_index;
 
-  /* * True if this discriminant is unsigned; false if signed.  This
+  /* True if this discriminant is unsigned; false if signed.  This
      comes from the type of the discriminant.  */
   bool is_unsigned;
 
-  /* * The variants that are controlled by this variant part.  Note
+  /* The variants that are controlled by this variant part.  Note
      that these will always be sorted by field number.  */
   gdb::array_view<variant> variants;
 };
@@ -300,7 +298,7 @@ union dynamic_prop_data
   const char *variable_name;
 };
 
-/* * Used to store a dynamic property.  */
+/* Used to store a dynamic property.  */
 
 struct dynamic_prop
 {
@@ -430,7 +428,7 @@ static inline bool operator!= (const dynamic_prop &l, const dynamic_prop &r)
   return !(l == r);
 }
 
-/* * Define a type's dynamic property node kind.  */
+/* Define a type's dynamic property node kind.  */
 enum dynamic_prop_node_kind
 {
   /* A property providing a type's data location.
@@ -467,7 +465,7 @@ enum dynamic_prop_node_kind
   DYN_PROP_BIT_SIZE,
 };
 
-/* * List for dynamic type attributes.  */
+/* List for dynamic type attributes.  */
 struct dynamic_prop_list
 {
   /* The kind of dynamic prop in this node.  */
@@ -480,22 +478,22 @@ struct dynamic_prop_list
   struct dynamic_prop_list *next;
 };
 
-/* * Determine which field of the union main_type.fields[x].loc is
+/* Determine which field of the union main_type.fields[x].loc is
    used.  */
 
 enum field_loc_kind
   {
-    FIELD_LOC_KIND_BITPOS,	/**< bitpos */
-    FIELD_LOC_KIND_ENUMVAL,	/**< enumval */
-    FIELD_LOC_KIND_PHYSADDR,	/**< physaddr */
-    FIELD_LOC_KIND_PHYSNAME,	/**< physname */
+    FIELD_LOC_KIND_BITPOS,	/* bitpos */
+    FIELD_LOC_KIND_ENUMVAL,	/* enumval */
+    FIELD_LOC_KIND_PHYSADDR,	/* physaddr */
+    FIELD_LOC_KIND_PHYSNAME,	/* physname */
     /* A DWARF block that computes the address of the field.  */
-    FIELD_LOC_KIND_DWARF_BLOCK_ADDR,	/**< dwarf_block */
+    FIELD_LOC_KIND_DWARF_BLOCK_ADDR,	/* dwarf_block */
     /* A DWARF block that computes the bit offset of the field.  */
     FIELD_LOC_KIND_DWARF_BLOCK_BITPOS,
   };
 
-/* * A discriminant to determine which field in the
+/* A discriminant to determine which field in the
    main_type.type_specific union is being used, if any.
 
    For types such as TYPE_CODE_FLT, the use of this
@@ -527,17 +525,17 @@ union type_owner
 
 union field_location
 {
-  /* * Position of this field, counting in bits from start of
+  /* Position of this field, counting in bits from start of
      containing structure.  For big-endian targets, it is the bit
      offset to the MSB.  For little-endian targets, it is the bit
      offset to the LSB.  */
 
   LONGEST bitpos;
 
-  /* * Enum value.  */
+  /* Enum value.  */
   LONGEST enumval;
 
-  /* * For a static field, if TYPE_FIELD_STATIC_HAS_ADDR then
+  /* For a static field, if TYPE_FIELD_STATIC_HAS_ADDR then
      physaddr is the location (in the target) of the static
      field.  Otherwise, physname is the mangled label of the
      static field.  */
@@ -545,7 +543,7 @@ union field_location
   CORE_ADDR physaddr;
   const char *physname;
 
-  /* * The field location can be computed by evaluating the
+  /* The field location can be computed by evaluating the
      following DWARF block.  Its DATA is allocated on
      objfile_obstack - no CU load is needed to access it.  */
 
@@ -742,7 +740,7 @@ struct field
 
   union field_location m_loc;
 
-  /* * For a function or member type, this is 1 if the argument is
+  /* For a function or member type, this is 1 if the argument is
      marked artificial.  Artificial arguments should not be shown
      to the user.  For TYPE_CODE_RANGE it is set if the specific
      bound is not defined.  */
@@ -754,14 +752,14 @@ struct field
   /* Whether the field is 'ignored'.  */
   bool m_ignored : 1;
 
-  /* * Discriminant for union field_location.  */
+  /* Discriminant for union field_location.  */
 
   field_loc_kind m_loc_kind : 3;
 
   /* Accessibility of the field.  */
   enum accessibility m_accessibility;
 
-  /* * Size of this field, in bits, or zero if not packed.
+  /* Size of this field, in bits, or zero if not packed.
      If non-zero in an array type, indicates the element size in
      bits (used only in Ada at the moment).
      For an unpacked field, the field's type's length
@@ -769,13 +767,13 @@ struct field
 
   unsigned int m_bitsize;
 
-  /* * In a struct or union type, type of this field.
+  /* In a struct or union type, type of this field.
      - In a function or member type, type of this argument.
      - In an array type, the domain-type of the array.  */
 
   struct type *m_type;
 
-  /* * Name of field, value or argument.
+  /* Name of field, value or argument.
      NULL for range bounds, array domains, and member function
      arguments.  */
 
@@ -799,11 +797,11 @@ struct range_bounds
 	    || high.kind () == PROP_OPTIMIZED_OUT);
   }
 
-  /* * Low bound of range.  */
+  /* Low bound of range.  */
 
   struct dynamic_prop low;
 
-  /* * High bound of range.  */
+  /* High bound of range.  */
 
   struct dynamic_prop high;
 
@@ -814,7 +812,7 @@ struct range_bounds
 
   struct dynamic_prop stride;
 
-  /* * The bias.  Sometimes a range value is biased before storage.
+  /* The bias.  Sometimes a range value is biased before storage.
      The bias is added to the stored bits to form the true value.  */
 
   LONGEST bias;
@@ -846,65 +844,65 @@ static inline bool operator!= (const range_bounds &l, const range_bounds &r)
 
 union type_specific
 {
-  /* * CPLUS_STUFF is for TYPE_CODE_STRUCT.  It is initialized to
+  /* CPLUS_STUFF is for TYPE_CODE_STRUCT.  It is initialized to
      point to cplus_struct_default, a default static instance of a
      struct cplus_struct_type.  */
 
   struct cplus_struct_type *cplus_stuff;
 
-  /* * GNAT_STUFF is for types for which the GNAT Ada compiler
+  /* GNAT_STUFF is for types for which the GNAT Ada compiler
      provides additional information.  */
 
   struct gnat_aux_type *gnat_stuff;
 
-  /* * FLOATFORMAT is for TYPE_CODE_FLT.  It is a pointer to a
+  /* FLOATFORMAT is for TYPE_CODE_FLT.  It is a pointer to a
      floatformat object that describes the floating-point value
      that resides within the type.  */
 
   const struct floatformat *floatformat;
 
-  /* * For TYPE_CODE_FUNC and TYPE_CODE_METHOD types.  */
+  /* For TYPE_CODE_FUNC and TYPE_CODE_METHOD types.  */
 
   struct func_type *func_stuff;
 
-  /* * For types that are pointer to member types (TYPE_CODE_METHODPTR,
+  /* For types that are pointer to member types (TYPE_CODE_METHODPTR,
      TYPE_CODE_MEMBERPTR), SELF_TYPE is the type that this pointer
      is a member of.  */
 
   struct type *self_type;
 
-  /* * For TYPE_CODE_FIXED_POINT types, the info necessary to decode
+  /* For TYPE_CODE_FIXED_POINT types, the info necessary to decode
      values of that type.  */
   struct fixed_point_type_info *fixed_point_info;
 
-  /* * An integer-like scalar type may be stored in just part of its
+  /* An integer-like scalar type may be stored in just part of its
      enclosing storage bytes.  This structure describes this
      situation.  */
   struct
   {
-    /* * The bit size of the integer.  This can be 0.  For integers
+    /* The bit size of the integer.  This can be 0.  For integers
        that fill their storage (the ordinary case), this field holds
        the byte size times 8.  */
     unsigned short bit_size;
-    /* * The bit offset of the integer.  This is ordinarily 0, and can
+    /* The bit offset of the integer.  This is ordinarily 0, and can
        only be non-zero if the bit size is less than the storage
        size.  */
     unsigned short bit_offset;
   } int_stuff;
 };
 
-/* * Main structure representing a type in GDB.
+/* Main structure representing a type in GDB.
 
    This structure is space-critical.  Its layout has been tweaked to
    reduce the space used.  */
 
 struct main_type
 {
-  /* * Code for kind of type.  */
+  /* Code for kind of type.  */
 
   type_code code : 8;
 
-  /* * Flags about this type.  These fields appear at this location
+  /* Flags about this type.  These fields appear at this location
      because they packs nicely here.  See the TYPE_* macros for
      documentation about these fields.  */
 
@@ -920,17 +918,17 @@ struct main_type
   unsigned int m_flag_objfile_owned : 1;
   unsigned int m_flag_endianity_not_default : 1;
 
-  /* * True if this type was declared with "class" rather than
+  /* True if this type was declared with "class" rather than
      "struct".  */
 
   unsigned int m_flag_declared_class : 1;
 
-  /* * True if this is an enum type with disjoint values.  This
+  /* True if this is an enum type with disjoint values.  This
      affects how the enum is printed.  */
 
   unsigned int m_flag_flag_enum : 1;
 
-  /* * For TYPE_CODE_ARRAY, this is true if this type is part of a
+  /* For TYPE_CODE_ARRAY, this is true if this type is part of a
      multi-dimensional array.  Multi-dimensional arrays are
      represented internally as arrays of arrays, and this flag lets
      gdb distinguish between multiple dimensions and an ordinary array
@@ -939,7 +937,7 @@ struct main_type
 
   unsigned int m_multi_dimensional : 1;
 
-  /* * A discriminant telling us which field of the type_specific
+  /* A discriminant telling us which field of the type_specific
      union is being used for this type, if any.  */
 
   type_specific_kind type_specific_field : 3;
@@ -948,12 +946,12 @@ struct main_type
 
   language m_lang : LANGUAGE_BITS;
 
-  /* * Number of fields described for this type.  This field appears
+  /* Number of fields described for this type.  This field appears
      at this location because it packs nicely here.  */
 
   unsigned int m_nfields;
 
-  /* * Name of this type, or NULL if none.
+  /* Name of this type, or NULL if none.
 
      This is used for printing only.  For looking up a name, look for
      a symbol in the VAR_DOMAIN.  This is generally allocated in the
@@ -961,7 +959,7 @@ struct main_type
 
   const char *name;
 
-  /* * Every type is now associated with a particular objfile, and the
+  /* Every type is now associated with a particular objfile, and the
      type is allocated on the objfile_obstack for that objfile.  One
      problem however, is that there are times when gdb allocates new
      types while it is not in the process of reading symbols from a
@@ -975,7 +973,7 @@ struct main_type
 
   union type_owner m_owner;
 
-  /* * For a pointer type, describes the type of object pointed to.
+  /* For a pointer type, describes the type of object pointed to.
      - For an array type, describes the type of the elements.
      - For a function or method type, describes the type of the return value.
      - For a range type, describes the type of the full range.
@@ -987,7 +985,7 @@ struct main_type
 
   struct type *m_target_type;
 
-  /* * For structure and union types, a description of each field.
+  /* For structure and union types, a description of each field.
      For set and pascal array types, there is one "field",
      whose type is the domain type of the set or array.
      For range types, there are two "fields",
@@ -1007,7 +1005,7 @@ struct main_type
   {
     struct field *fields;
 
-    /* * Union member used for range types.  */
+    /* Union member used for range types.  */
 
     struct range_bounds *bounds;
 
@@ -1017,20 +1015,20 @@ struct main_type
 
   } flds_bnds;
 
-  /* * Slot to point to additional language-specific fields of this
+  /* Slot to point to additional language-specific fields of this
      type.  */
 
   union type_specific type_specific;
 
-  /* * Contains all dynamic type properties.  */
+  /* Contains all dynamic type properties.  */
   struct dynamic_prop_list *dyn_prop_list;
 };
 
-/* * Number of bits allocated for alignment.  */
+/* Number of bits allocated for alignment.  */
 
 #define TYPE_ALIGN_BITS 8
 
-/* * A ``struct type'' describes a particular instance of a type, with
+/* A ``struct type'' describes a particular instance of a type, with
    some particular qualification.  */
 
 struct type
@@ -1396,7 +1394,7 @@ struct type
     this->main_type->m_multi_dimensional = value;
   }
 
-  /* * Assuming that THIS is a TYPE_CODE_FIXED_POINT, return a reference
+  /* Assuming that THIS is a TYPE_CODE_FIXED_POINT, return a reference
      to this type's fixed_point_info.  */
 
   struct fixed_point_type_info &fixed_point_info () const
@@ -1407,7 +1405,7 @@ struct type
     return *this->main_type->type_specific.fixed_point_info;
   }
 
-  /* * Assuming that THIS is a TYPE_CODE_FIXED_POINT, set this type's
+  /* Assuming that THIS is a TYPE_CODE_FIXED_POINT, set this type's
      fixed_point_info to INFO.  */
 
   void set_fixed_point_info (struct fixed_point_type_info *info) const
@@ -1417,7 +1415,7 @@ struct type
     this->main_type->type_specific.fixed_point_info = info;
   }
 
-  /* * Assuming that THIS is a TYPE_CODE_FIXED_POINT, return its base type.
+  /* Assuming that THIS is a TYPE_CODE_FIXED_POINT, return its base type.
 
      In other words, this returns the type after having peeled all
      intermediate type layers (such as TYPE_CODE_RANGE, for instance).
@@ -1426,22 +1424,22 @@ struct type
 
   struct type *fixed_point_type_base_type ();
 
-  /* * Assuming that THIS is a TYPE_CODE_FIXED_POINT, return its scaling
+  /* Assuming that THIS is a TYPE_CODE_FIXED_POINT, return its scaling
      factor.  */
 
   const gdb_mpq &fixed_point_scaling_factor ();
 
-  /* * Return the dynamic property of the requested KIND from this type's
+  /* Return the dynamic property of the requested KIND from this type's
      list of dynamic properties.  */
   dynamic_prop *dyn_prop (dynamic_prop_node_kind kind) const;
 
-  /* * Given a dynamic property PROP of a given KIND, add this dynamic
+  /* Given a dynamic property PROP of a given KIND, add this dynamic
      property to this type.
 
      This function assumes that this type is objfile-owned.  */
   void add_dyn_prop (dynamic_prop_node_kind kind, dynamic_prop prop);
 
-  /* * Remove dynamic property of kind KIND from this type, if it exists.  */
+  /* Remove dynamic property of kind KIND from this type, if it exists.  */
   void remove_dyn_prop (dynamic_prop_node_kind kind);
 
   /* Return true if this type is owned by an objfile.  Return false if it is
@@ -1498,7 +1496,7 @@ struct type
      The return value is always non-nullptr.  */
   gdbarch *arch () const;
 
-  /* * Return true if this is an integer type whose logical (bit) size
+  /* Return true if this is an integer type whose logical (bit) size
      differs from its storage size; false otherwise.  Always return
      false for non-integer (i.e., non-TYPE_SPECIFIC_INT) types.  */
   bool bit_size_differs_p () const
@@ -1507,7 +1505,7 @@ struct type
 	    && main_type->type_specific.int_stuff.bit_size != 8 * length ());
   }
 
-  /* * Return the logical (bit) size for this integer type.  Only
+  /* Return the logical (bit) size for this integer type.  Only
      valid for integer (TYPE_SPECIFIC_INT) types.  */
   unsigned short bit_size () const
   {
@@ -1515,7 +1513,7 @@ struct type
     return main_type->type_specific.int_stuff.bit_size;
   }
 
-  /* * Return the bit offset for this integer type.  Only valid for
+  /* Return the bit offset for this integer type.  Only valid for
      integer (TYPE_SPECIFIC_INT) types.  */
   unsigned short bit_offset () const
   {
@@ -1542,22 +1540,22 @@ struct type
   enum language language () const
   { return main_type->m_lang; }
 
-  /* * Type that is a pointer to this type.
+  /* Type that is a pointer to this type.
      NULL if no such pointer-to type is known yet.
      The debugger may add the address of such a type
      if it has to construct one later.  */
 
   struct type *pointer_type;
 
-  /* * C++: also need a reference type.  */
+  /* C++: also need a reference type.  */
 
   struct type *reference_type;
 
-  /* * A C++ rvalue reference type added in C++11. */
+  /* A C++ rvalue reference type added in C++11. */
 
   struct type *rvalue_reference_type;
 
-  /* * Variant chain.  This points to a type that differs from this
+  /* Variant chain.  This points to a type that differs from this
      one only in qualifiers and length.  Currently, the possible
      qualifiers are const, volatile, code-space, data-space, and
      address class.  The length may differ only when one of the
@@ -1566,7 +1564,7 @@ struct type
 
   struct type *chain;
 
-  /* * The alignment for this type.  Zero means that the alignment was
+  /* The alignment for this type.  Zero means that the alignment was
      not specified in the debug info.  Note that this is stored in a
      funny way: as the log base 2 (plus 1) of the alignment; so a
      value of 1 means the alignment is 1, and a value of 9 means the
@@ -1574,7 +1572,7 @@ struct type
 
   unsigned align_log2 : TYPE_ALIGN_BITS;
 
-  /* * Flags specific to this instance of the type, indicating where
+  /* Flags specific to this instance of the type, indicating where
      on the ring we are.
 
      For TYPE_CODE_TYPEDEF the flags of the typedef type should be
@@ -1586,7 +1584,7 @@ struct type
      check_typedef.  */
   unsigned m_instance_flags : 9;
 
-  /* * Length of storage for a value of this type.  The value is the
+  /* Length of storage for a value of this type.  The value is the
      expression in host bytes of what sizeof(type) would return.  This
      size includes padding.  For example, an i386 extended-precision
      floating point value really only occupies ten bytes, but most
@@ -1604,7 +1602,7 @@ struct type
 
   ULONGEST m_length;
 
-  /* * Core type, shared by a group of qualified types.  */
+  /* Core type, shared by a group of qualified types.  */
 
   struct main_type *main_type;
 };
@@ -1612,17 +1610,17 @@ struct type
 struct fn_fieldlist
 {
 
-  /* * The overloaded name.
+  /* The overloaded name.
      This is generally allocated in the objfile's obstack.
      However stabsread.c sometimes uses malloc.  */
 
   const char *name;
 
-  /* * The number of methods with this name.  */
+  /* The number of methods with this name.  */
 
   int length;
 
-  /* * The list of methods.  */
+  /* The list of methods.  */
 
   struct fn_field *fn_fields;
 };
@@ -1631,13 +1629,13 @@ struct fn_fieldlist
 
 struct fn_field
 {
-  /* * This is the mangled name which we can look up to find the
+  /* This is the mangled name which we can look up to find the
      address of the method (FIXME: it would be cleaner to have a
      pointer to the struct symbol here instead).   */
 
   const char *physname;
 
-  /* * The function type for the method.
+  /* The function type for the method.
 
      (This comment used to say "The return value of the method", but
      that's wrong.  The function type is expected here, i.e. something
@@ -1645,7 +1643,7 @@ struct fn_field
 
   struct type *type;
 
-  /* * For virtual functions.  First baseclass that defines this
+  /* For virtual functions.  First baseclass that defines this
      virtual function.  */
 
   struct type *fcontext;
@@ -1656,15 +1654,15 @@ struct fn_field
   unsigned int is_volatile:1;
   unsigned int is_artificial:1;
 
-  /* * True if this function is a constructor, false otherwise.  */
+  /* True if this function is a constructor, false otherwise.  */
 
   unsigned int is_constructor : 1;
 
-  /* * True if this function is deleted, false otherwise.  */
+  /* True if this function is deleted, false otherwise.  */
 
   unsigned int is_deleted : 1;
 
-  /* * DW_AT_defaulted attribute for this function.  The value is one
+  /* DW_AT_defaulted attribute for this function.  The value is one
      of the DW_DEFAULTED constants.  */
 
   dwarf_defaulted_attribute defaulted : 2;
@@ -1672,7 +1670,7 @@ struct fn_field
   /* Accessibility of the field.  */
   enum accessibility accessibility;
 
-  /* * Index into that baseclass's virtual function table, minus 2;
+  /* Index into that baseclass's virtual function table, minus 2;
      else if static: VOFFSET_STATIC; else: 0.  */
 
   unsigned int voffset:16;
@@ -1683,12 +1681,12 @@ struct fn_field
 
 struct decl_field
 {
-  /* * Unqualified name to be prefixed by owning class qualified
+  /* Unqualified name to be prefixed by owning class qualified
      name.  */
 
   const char *name;
 
-  /* * Type this typedef named NAME represents.  */
+  /* Type this typedef named NAME represents.  */
 
   struct type *type;
 
@@ -1696,19 +1694,19 @@ struct decl_field
   enum accessibility accessibility;
 };
 
-/* * C++ language-specific information for TYPE_CODE_STRUCT and
+/* C++ language-specific information for TYPE_CODE_STRUCT and
    TYPE_CODE_UNION nodes.  */
 
 struct cplus_struct_type
   {
-    /* * Number of base classes this type derives from.  The
+    /* Number of base classes this type derives from.  The
        baseclasses are stored in the first N_BASECLASSES fields
        (i.e. the `fields' field of the struct type).  The only fields
        of struct field that are used are: type, name, loc.bitpos.  */
 
     short n_baseclasses;
 
-    /* * Field number of the virtual function table pointer in VPTR_BASETYPE.
+    /* Field number of the virtual function table pointer in VPTR_BASETYPE.
        All access to this field must be through TYPE_VPTR_FIELDNO as one
        thing it does is check whether the field has been initialized.
        Initially TYPE_RAW_CPLUS_SPECIFIC has the value of cplus_struct_default,
@@ -1724,16 +1722,16 @@ struct cplus_struct_type
 
     short vptr_fieldno;
 
-    /* * Number of methods with unique names.  All overloaded methods
+    /* Number of methods with unique names.  All overloaded methods
        with the same name count only once.  */
 
     short nfn_fields;
 
-    /* * Number of template arguments.  */
+    /* Number of template arguments.  */
 
     unsigned short n_template_arguments;
 
-    /* * One if this struct is a dynamic class, as defined by the
+    /* One if this struct is a dynamic class, as defined by the
        Itanium C++ ABI: if it requires a virtual table pointer,
        because it or any of its base classes have one or more virtual
        member functions or virtual base classes.  Minus one if not
@@ -1741,17 +1739,17 @@ struct cplus_struct_type
 
     int is_dynamic : 2;
 
-    /* * The calling convention for this type, fetched from the
+    /* The calling convention for this type, fetched from the
        DW_AT_calling_convention attribute.  The value is one of the
        DW_CC constants.  */
 
     dwarf_calling_convention calling_convention : 8;
 
-    /* * The base class which defined the virtual function table pointer.  */
+    /* The base class which defined the virtual function table pointer.  */
 
     struct type *vptr_basetype;
 
-    /* * For classes, structures, and unions, a description of each
+    /* For classes, structures, and unions, a description of each
        field, which consists of an overloaded name, followed by the
        types of arguments that the method expects, and then the name
        after it has been renamed to make it distinct.
@@ -1760,34 +1758,34 @@ struct cplus_struct_type
 
     struct fn_fieldlist *fn_fieldlists;
 
-    /* * typedefs defined inside this class.  typedef_field points to
+    /* typedefs defined inside this class.  typedef_field points to
        an array of typedef_field_count elements.  */
 
     struct decl_field *typedef_field;
 
     unsigned typedef_field_count;
 
-    /* * The nested types defined by this type.  nested_types points to
+    /* The nested types defined by this type.  nested_types points to
        an array of nested_types_count elements.  */
 
     struct decl_field *nested_types;
 
     unsigned nested_types_count;
 
-    /* * The template arguments.  This is an array with
+    /* The template arguments.  This is an array with
        N_TEMPLATE_ARGUMENTS elements.  This is NULL for non-template
        classes.  */
 
     struct symbol **template_arguments;
   };
 
-/* * Struct used to store conversion rankings.  */
+/* Struct used to store conversion rankings.  */
 
 struct rank
   {
     short rank;
 
-    /* * When two conversions are of the same type and therefore have
+    /* When two conversions are of the same type and therefore have
        the same rank, subrank is used to differentiate the two.
 
        Eg: Two derived-class-pointer to base-class-pointer conversions
@@ -1798,38 +1796,38 @@ struct rank
     short subrank;
   };
 
-/* * Used for ranking a function for overload resolution.  */
+/* Used for ranking a function for overload resolution.  */
 
 typedef std::vector<rank> badness_vector;
 
-/* * GNAT Ada-specific information for various Ada types.  */
+/* GNAT Ada-specific information for various Ada types.  */
 
 struct gnat_aux_type
   {
-    /* * Parallel type used to encode information about dynamic types
+    /* Parallel type used to encode information about dynamic types
        used in Ada (such as variant records, variable-size array,
        etc).  */
     struct type* descriptive_type;
   };
 
-/* * For TYPE_CODE_FUNC and TYPE_CODE_METHOD types.  */
+/* For TYPE_CODE_FUNC and TYPE_CODE_METHOD types.  */
 
 struct func_type
   {
-    /* * The calling convention for targets supporting multiple ABIs.
+    /* The calling convention for targets supporting multiple ABIs.
        Right now this is only fetched from the Dwarf-2
        DW_AT_calling_convention attribute.  The value is one of the
        DW_CC constants.  */
 
     dwarf_calling_convention calling_convention : 8;
 
-    /* * Whether this function normally returns to its caller.  It is
+    /* Whether this function normally returns to its caller.  It is
        set from the DW_AT_noreturn attribute if set on the
        DW_TAG_subprogram.  */
 
     unsigned int is_noreturn : 1;
 
-    /* * Only those DW_TAG_call_site's in this function that have
+    /* Only those DW_TAG_call_site's in this function that have
        DW_AT_call_tail_call set are linked in this list.  Function
        without its tail call list complete
        (DW_AT_call_all_tail_calls or its superset
@@ -1838,7 +1836,7 @@ struct func_type
 
     struct call_site *tail_call_list;
 
-    /* * For method types (TYPE_CODE_METHOD), the aggregate type that
+    /* For method types (TYPE_CODE_METHOD), the aggregate type that
        contains the method.  */
 
     struct type *self_type;
@@ -1852,7 +1850,7 @@ struct fixed_point_type_info
   gdb_mpq scaling_factor;
 };
 
-/* * The default value of TYPE_CPLUS_SPECIFIC(T) points to this shared
+/* The default value of TYPE_CPLUS_SPECIFIC(T) points to this shared
    static structure.  */
 
 extern const struct cplus_struct_type cplus_struct_default;
@@ -1878,12 +1876,12 @@ extern void allocate_gnat_aux_type (struct type *);
   (TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_GNAT_STUFF, \
    TYPE_GNAT_SPECIFIC (type) = (struct gnat_aux_type *) &gnat_aux_default)
 #define ALLOCATE_GNAT_AUX_TYPE(type) allocate_gnat_aux_type (type)
-/* * A macro that returns non-zero if the type-specific data should be
+/* A macro that returns non-zero if the type-specific data should be
    read as "gnat-stuff".  */
 #define HAVE_GNAT_AUX_INFO(type) \
   (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_GNAT_STUFF)
 
-/* * True if TYPE is known to be an Ada type of some kind.  */
+/* True if TYPE is known to be an Ada type of some kind.  */
 #define ADA_TYPE_P(type)					\
   (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_GNAT_STUFF	\
     || (TYPE_SPECIFIC_FIELD (type) == TYPE_SPECIFIC_NONE	\
@@ -1902,21 +1900,21 @@ extern void allocate_gnat_aux_type (struct type *);
   (TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_FIXED_POINT, \
    allocate_fixed_point_type_info (type))
 
-/* * Return the alignment of the type in target addressable memory
+/* Return the alignment of the type in target addressable memory
    units, or 0 if no alignment was specified.  */
 #define TYPE_RAW_ALIGN(thistype) type_raw_align (thistype)
 
-/* * Return the alignment of the type in target addressable memory
+/* Return the alignment of the type in target addressable memory
    units, or 0 if no alignment was specified.  */
 extern unsigned type_raw_align (struct type *);
 
-/* * Return the alignment of the type in target addressable memory
+/* Return the alignment of the type in target addressable memory
    units.  Return 0 if the alignment cannot be determined; but note
    that this makes an effort to compute the alignment even it it was
    not specified in the debug info.  */
 extern unsigned type_align (struct type *);
 
-/* * Set the alignment of the type.  The alignment must be a power of
+/* Set the alignment of the type.  The alignment must be a power of
    2.  Returns false if the given value does not fit in the available
    space in struct type.  */
 extern bool set_type_align (struct type *, ULONGEST);
@@ -2096,11 +2094,11 @@ struct builtin_type
 
   /* Pointer types.  */
 
-  /* * `pointer to data' type.  Some target platforms use an implicitly
+  /* `pointer to data' type.  Some target platforms use an implicitly
      {sign,zero} -extended 32-bit ABI pointer on a 64-bit ISA.  */
   struct type *builtin_data_ptr = nullptr;
 
-  /* * `pointer to function (returning void)' type.  Harvard
+  /* `pointer to function (returning void)' type.  Harvard
      architectures mean that ABI function and code pointers are not
      interconvertible.  Similarly, since ANSI, C standards have
      explicitly said that pointers to functions and pointers to data
@@ -2111,28 +2109,28 @@ struct builtin_type
 
   struct type *builtin_func_ptr = nullptr;
 
-  /* * `function returning pointer to function (returning void)' type.
+  /* `function returning pointer to function (returning void)' type.
      The final void return type is not significant for it.  */
 
   struct type *builtin_func_func = nullptr;
 
   /* Special-purpose types.  */
 
-  /* * This type is used to represent a GDB internal function.  */
+  /* This type is used to represent a GDB internal function.  */
 
   struct type *internal_fn = nullptr;
 
-  /* * This type is used to represent an xmethod.  */
+  /* This type is used to represent an xmethod.  */
   struct type *xmethod = nullptr;
 
-  /* * This type is used to represent symbol addresses.  */
+  /* This type is used to represent symbol addresses.  */
   struct type *builtin_core_addr = nullptr;
 
-  /* * This type represents a type that was unrecognized in symbol
+  /* This type represents a type that was unrecognized in symbol
      read-in.  */
   struct type *builtin_error = nullptr;
 
-  /* * Types used for symbols with no debug information.  */
+  /* Types used for symbols with no debug information.  */
   struct type *nodebug_text_symbol = nullptr;
   struct type *nodebug_text_gnu_ifunc_symbol = nullptr;
   struct type *nodebug_got_plt_symbol = nullptr;
@@ -2141,11 +2139,11 @@ struct builtin_type
   struct type *nodebug_tls_symbol = nullptr;
 };
 
-/* * Return the type table for the specified architecture.  */
+/* Return the type table for the specified architecture.  */
 
 extern const struct builtin_type *builtin_type (struct gdbarch *gdbarch);
 
-/* * Return the type table for the specified objfile.  */
+/* Return the type table for the specified objfile.  */
 
 extern const struct builtin_type *builtin_type (struct objfile *objfile);
 
@@ -2189,7 +2187,7 @@ extern const struct floatformat *floatformats_bfloat16[BFD_ENDIAN_UNKNOWN];
 
 #define TYPE_ZALLOC(t,size) (memset (TYPE_ALLOC (t, size), 0, size))
 
-/* * This returns the target type (or NULL) of TYPE, also skipping
+/* This returns the target type (or NULL) of TYPE, also skipping
    past typedefs.  */
 
 extern struct type *get_target_type (struct type *type);
@@ -2597,7 +2595,7 @@ extern void get_signed_type_minmax (struct type *, LONGEST *, LONGEST *);
 
 extern CORE_ADDR get_pointer_type_max (struct type *);
 
-/* * Resolve all dynamic values of a type e.g. array bounds to static values.
+/* Resolve all dynamic values of a type e.g. array bounds to static values.
    ADDR specifies the location of the variable the type is bound to.
    If TYPE has no dynamic properties return TYPE; otherwise a new type with
    static properties is returned.
@@ -2615,7 +2613,7 @@ extern struct type *resolve_dynamic_type
   (struct type *type, gdb::array_view<const gdb_byte> valaddr,
    CORE_ADDR addr, const frame_info_ptr *frame = nullptr);
 
-/* * Predicate if the type has dynamic values, which are not resolved yet.
+/* Predicate if the type has dynamic values, which are not resolved yet.
    See the caveat in 'resolve_dynamic_type' to understand a scenario
    where an apparently-resolved type may still be considered
    "dynamic".  */
@@ -2721,48 +2719,48 @@ extern int is_unique_ancestor (struct type *, struct value *);
 
 /* Overload resolution */
 
-/* * Badness if parameter list length doesn't match arg list length.  */
+/* Badness if parameter list length doesn't match arg list length.  */
 extern const struct rank LENGTH_MISMATCH_BADNESS;
 
-/* * Dummy badness value for nonexistent parameter positions.  */
+/* Dummy badness value for nonexistent parameter positions.  */
 extern const struct rank TOO_FEW_PARAMS_BADNESS;
-/* * Badness if no conversion among types.  */
+/* Badness if no conversion among types.  */
 extern const struct rank INCOMPATIBLE_TYPE_BADNESS;
 
-/* * Badness of an exact match.  */
+/* Badness of an exact match.  */
 extern const struct rank EXACT_MATCH_BADNESS;
 
-/* * Badness of integral promotion.  */
+/* Badness of integral promotion.  */
 extern const struct rank INTEGER_PROMOTION_BADNESS;
-/* * Badness of floating promotion.  */
+/* Badness of floating promotion.  */
 extern const struct rank FLOAT_PROMOTION_BADNESS;
-/* * Badness of converting a derived class pointer
+/* Badness of converting a derived class pointer
    to a base class pointer.  */
 extern const struct rank BASE_PTR_CONVERSION_BADNESS;
-/* * Badness of integral conversion.  */
+/* Badness of integral conversion.  */
 extern const struct rank INTEGER_CONVERSION_BADNESS;
-/* * Badness of floating conversion.  */
+/* Badness of floating conversion.  */
 extern const struct rank FLOAT_CONVERSION_BADNESS;
-/* * Badness of integer<->floating conversions.  */
+/* Badness of integer<->floating conversions.  */
 extern const struct rank INT_FLOAT_CONVERSION_BADNESS;
-/* * Badness of conversion of pointer to void pointer.  */
+/* Badness of conversion of pointer to void pointer.  */
 extern const struct rank VOID_PTR_CONVERSION_BADNESS;
-/* * Badness of conversion to boolean.  */
+/* Badness of conversion to boolean.  */
 extern const struct rank BOOL_CONVERSION_BADNESS;
-/* * Badness of converting derived to base class.  */
+/* Badness of converting derived to base class.  */
 extern const struct rank BASE_CONVERSION_BADNESS;
-/* * Badness of converting from non-reference to reference.  Subrank
+/* Badness of converting from non-reference to reference.  Subrank
    is the type of reference conversion being done.  */
 extern const struct rank REFERENCE_CONVERSION_BADNESS;
 extern const struct rank REFERENCE_SEE_THROUGH_BADNESS;
-/* * Conversion to rvalue reference.  */
+/* Conversion to rvalue reference.  */
 #define REFERENCE_CONVERSION_RVALUE 1
-/* * Conversion to const lvalue reference.  */
+/* Conversion to const lvalue reference.  */
 #define REFERENCE_CONVERSION_CONST_LVALUE 2
 
-/* * Badness of converting integer 0 to NULL pointer.  */
+/* Badness of converting integer 0 to NULL pointer.  */
 extern const struct rank NULL_POINTER_CONVERSION;
-/* * Badness of cv-conversion.  Subrank is a flag describing the conversions
+/* Badness of cv-conversion.  Subrank is a flag describing the conversions
    being done.  */
 extern const struct rank CV_CONVERSION_BADNESS;
 #define CV_CONVERSION_CONST 1
@@ -2770,10 +2768,10 @@ extern const struct rank CV_CONVERSION_BADNESS;
 
 /* Non-standard conversions allowed by the debugger */
 
-/* * Converting a pointer to an int is usually OK.  */
+/* Converting a pointer to an int is usually OK.  */
 extern const struct rank NS_POINTER_CONVERSION_BADNESS;
 
-/* * Badness of converting a (non-zero) integer constant
+/* Badness of converting a (non-zero) integer constant
    to a pointer.  */
 extern const struct rank NS_INTEGER_POINTER_CONVERSION_BADNESS;
 
@@ -2839,7 +2837,7 @@ extern bool is_fixed_point_type (struct type *type);
    called by INIT_FIXED_POINT_SPECIFIC.  */
 extern void allocate_fixed_point_type_info (struct type *type);
 
-/* * When the type includes explicit byte ordering, return that.
+/* When the type includes explicit byte ordering, return that.
    Otherwise, the byte ordering from gdbarch_byte_order for
    the type's arch is returned.  */
 
