@@ -234,7 +234,7 @@ with_rocm_gpu_lock {
 	# blockIdx observable at -O1/-O2/-O3) Clang merges the line
 	# entry of the "return;" with the function's closing brace,
 	# so "next" lands on the brace instead.  Either is fine for
-	# this test - the point is just to step past the local
+	# this test -- the point is just to step past the local
 	# initialization before reading blockIdx.
 	gdb_test "next" "$::decimal\[ \t\]+(return;|\})" \
 	    "let the initialization happen"

@@ -75,8 +75,9 @@ with_test_prefix "until without location; scheduler-locking on" {
     gdb_test "info line" "Line $breakpoint_loc.*"
     # Executables built with optimization may stop at a different line here.
     set pattern "([expr {$breakpoint_loc + 1}]|[expr {$breakpoint_loc + 2}])"
-    gdb_test "until" "\[^\r\n\]*$pattern.*"
-    gdb_test "info line" "Line $pattern.*" \
+    # Anchor with a non-digit so e.g. "Line 43" doesn't accept "Line 430".
+    gdb_test "until" "\[^\r\n\]*$pattern\[^0-9\].*"
+    gdb_test "info line" "Line $pattern\[^0-9\].*" \
 	"info line at breakpoint_loc + 1 or 2 lines"
     gdb_test_no_output "set scheduler-locking off"
     gdb_test "clear bit_extract_kernel"

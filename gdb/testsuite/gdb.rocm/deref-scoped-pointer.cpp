@@ -32,8 +32,8 @@
       }									\
   }
 
-/* Non-static so a line breakpoint at the "done ()" call site below
-   has a stable address at -O0.  */
+/* Non-static marker function used by the test as a stable pending
+   breakpoint target.  */
 
 __device__ void
 done ()

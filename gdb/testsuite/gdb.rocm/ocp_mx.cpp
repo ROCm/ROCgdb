@@ -15,6 +15,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+/* All testing functions in this file are marked with the optnone
+   attribute so the compiler won't optimize the OCP MX values out of
+   existence.  */
+
 #include <hip/hip_runtime.h>
 #include <hip/hip_ext_ocp.h>
 #include <stdio.h>
@@ -30,9 +34,6 @@
 	exit(EXIT_FAILURE);                                                  \
     }                                                                        \
   }
-
-/* We use the optnone attribute for all of the testing functions so the
-   compiler won't optimize values out of existence.  */
 
 __host__ __device__ void __attribute__ ((optnone))
 fp8e4m3_values ()

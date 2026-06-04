@@ -164,7 +164,8 @@ gdb_caching_proc allow_rocm_core_tests {} {
 
 # Check whether any of the given flags appear in GDB_TESTCASE_OPTIONS,
 # CFLAGS_FOR_TARGET or CXXFLAGS_FOR_TARGET.  Designed for flags
-# without whitespace, like -flto, -O2, etc.
+# without whitespace, like -flto, -O2, etc.  Matching is whole-token
+# only: e.g. "-O2" matches "-O2" but not "-O2=foo" or "-O20".
 # Usage example: check_for_any_flags {-flto -O2 -O3}
 
 proc check_for_any_flags {flags} {
@@ -204,7 +205,10 @@ proc check_for_any_flags {flags} {
     return 0
 }
 
-# Check for O1, O2, and O3 flags.
+# Predicate that succeeds (returns 1) when no -O1/-O2/-O3 flag is in
+# effect, and fails (returns 0) when one is present.  Use with
+# "require no_optimized_code" to gate tests that are not meaningful
+# under optimization.
 
 gdb_caching_proc no_optimized_code {} {
     if {[check_for_any_flags {-O1 -O2 -O3}]} {
@@ -214,7 +218,9 @@ gdb_caching_proc no_optimized_code {} {
     return 1
 }
 
-# Check for flto flag.
+# Predicate that succeeds (returns 1) when -flto is not in effect,
+# and fails (returns 0) when it is.  Use with "require no_lto" to
+# gate tests that are not meaningful under link-time optimization.
 
 gdb_caching_proc no_lto {} {
     if {[check_for_any_flags {-flto}]} {

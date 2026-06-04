@@ -36,7 +36,7 @@
    test background execution (cont&).  Mark noreturn so callers do not
    need a trailing observable side effect just to keep them alive.  */
 
-__device__ void __attribute__ ((noinline, noreturn))
+__device__ static void __attribute__ ((noinline, noreturn))
 sleep_forever ()
 {
   volatile bool keep_going = true;
