@@ -3399,7 +3399,7 @@ location may not be accurate.  See \"show amdgpu precise-memory\".\n"));
         {
        gdb_printf (_("\
 Warning: local memory out-of-address-range exception reporting is not enabled.\n\
-See \"show amdgpu lds-out-of-address-range-exception\".\n"));
+See \"show amdgpu lds-addr-range-exception\".\n"));
   
 	}
       return;
@@ -3744,10 +3744,10 @@ get_effective_precise_alu_exception_mode ()
   return info.precise_alu_exceptions.enabled;
 }
 
-/* Callback for "show amdgpu lds-out-of-address-range-exception".  */
+/* Callback for "show amdgpu lds-addr-range-exception".  */
 
 static void
-show_local_memory_out_of_addr_range_exception_mode (struct ui_file *file, int from_tty,
+show_lds_addr_range_excp_mode (struct ui_file *file, int from_tty,
 				  struct cmd_list_element *c, const char *value)
 {
   amd_dbgapi_inferior_info &info
@@ -3761,10 +3761,10 @@ show_local_memory_out_of_addr_range_exception_mode (struct ui_file *file, int fr
                "enabled" : "disabled");
 }
 
-/* Callback for "set amdgpu lds-out-of-address-range-exception".  */
+/* Callback for "set amdgpu lds-addr-range-exception".  */
 
 static void
-set_local_memory_out_of_addr_range_exception_mode (bool value)
+set_lds_addr_range_excp_mode (bool value)
 {
   amd_dbgapi_inferior_info &info
     = get_amd_dbgapi_inferior_info (current_inferior ());
@@ -3778,7 +3778,7 @@ set_local_memory_out_of_addr_range_exception_mode (bool value)
 /* Get the local memory out-of-address-range exception reporting requested mode.  */
 
 static bool
-get_local_memory_out_of_addr_range_exception_mode ()
+get_lds_addr_range_excp_mode ()
 {
   amd_dbgapi_inferior_info &info
     = get_amd_dbgapi_inferior_info (current_inferior ());
@@ -5138,15 +5138,15 @@ running.  If off (default), precise ALU exceptions reporting is disabled."),
   cmds.show->var->set_effective_value_getter<bool>
     (get_effective_precise_alu_exception_mode);
 
-  cmds = add_setshow_boolean_cmd ("lds-out-of-address-range-exception", no_class,
-                                 _("Set lds-out-of-address-range-exception mode."),
-                                 _("Show lds-out-of-address-range-exception mode."), _("\
+  cmds = add_setshow_boolean_cmd ("lds-addr-range-exception", no_class,
+                                 _("Set lds-addr-range-exception mode."),
+                                 _("Show lds-addr-range-exception mode."), _("\
 If on, local memory out-of-address-range exception reporting is enabled if/when\n\
 the inferior is running.  If off (default), local memory out-of-address-range\n\
 exception reporting is disabled."),
-                                 set_local_memory_out_of_addr_range_exception_mode,
-                                 get_local_memory_out_of_addr_range_exception_mode,
-                                 show_local_memory_out_of_addr_range_exception_mode,
+                                 set_lds_addr_range_excp_mode,
+                                 get_lds_addr_range_excp_mode,
+                                 show_lds_addr_range_excp_mode,
                                  &set_amdgpu_list, &show_amdgpu_list);
 
   cmds.show->var->set_effective_value_getter<bool>
