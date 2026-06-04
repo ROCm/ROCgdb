@@ -39,6 +39,10 @@
 load_lib rocm.exp
 
 require allow_hipcc_tests
+# The fgpu_rdc=1 variant fails to link under -flto because the per-TU
+# __hip_gpubin_handle / __hip_fatbin symbols emitted into the HIP
+# module ctor do not survive the LTO merge.
+require no_lto
 
 standard_testfile .cpp
 
