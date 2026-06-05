@@ -37,21 +37,48 @@ proc do_test { } {
 	if ![runto_main] {
 	    return
 	}
+	# Run with lds-addr-range-exception off, we should see an assertion failure
+    gdb_breakpoint "kern" "allow-pending" "qualified"
+    gdb_continue_to_breakpoint "Continue to kernel with Exceptions off"
+	gdb_test_no_output "set amdgpu lds-addr-range-exception off" "set LDS Exceptions off"
 
-	set any "\[^\r\n\]*"
+	delete_breakpoints
 
 	gdb_test "c" \
-	    [multi_line \
-		 "Thread $any received signal SIGSEGV, Segmentation fault\\." \
-		 "Warning: precise memory violation signal reporting is not enabled, reported" \
-		 "location may not be accurate.  See \"show amdgpu precise-memory\"\\." \
-		 "Warning: local memory out-of-address-range exception reporting is not enabled\\." \
-		 "See \"show amdgpu lds-addr-range-exception\"\\." \
-		 "\\\[Switching to thread $::decimal, lane 0 \\(AMDGPU Lane $any/0 \\(0,0,0\\)\\\[0,0,0\\\]\\)\\\]" \
-		 "0x0000000000000100 in \\?\\? \\(\\)"] \
-	    "continue to bad branch fault"
+		".*lds-addr-range-exception.cpp:51: void kern\\(size_t, size_t\\): Device-side assertion `arr\\\[idx\\\] == 8' failed\\..*" \
+	    "continue to assertion failure"
+	}
+	clean_restart
+    gdb_load $::binfile
 
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    return
+	}
+	# Run with lds-addr-range-exception on, we should see a seg-fault
+    gdb_breakpoint "kern" "allow-pending" "qualified"
+    gdb_continue_to_breakpoint "Continue to kernel with Exceptions on"
+	gdb_test_no_output "set amdgpu lds-addr-range-exception on" "set LDS Exceptions on"
+
+	delete_breakpoints
+	set any "\[^\r\n\]*"
+	gdb_test "c" \
+	    [multi_line \
+		"Thread $any received signal SIGSEGV, Segmentation fault\\." \
+		"Warning: precise memory violation signal reporting is not enabled, reported" \
+		"location may not be accurate.  See \"show amdgpu precise-memory\"\\." \
+		"Warning: local memory out-of-address-range exception reporting is not enabled\\." \
+		"See \"show amdgpu lds-addr-range-exception\"\\." \
+		"\\\[Switching to thread $::decimal, lane 0 \\(AMDGPU Lane $any/0 \\(0,0,0\\)\\\[0,0,0\\\]\\)\\\]" \
+		"0x0000000000000100 in \\?\\? \\(\\)"] \
+	    "continue to seg-fault"
     }
 }
 
-do_test
+set target [lindex  [find_amdgpu_devices] 0]
+set target_family [string range $target 0 end-2]
+if ([expr {[lsearch -exact {gfx12} $target_family] != -1}]) {
+	do_test
+} else {
+	unsupported "Skipping test, target family $target_family is not supported"
+}

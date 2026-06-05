@@ -18,31 +18,51 @@
 #include <hip/hip_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#define CHECK(cmd)                                                           \
-  {                                                                          \
-    hipError_t error = cmd;                                                  \
-    if (error != hipSuccess)                                                 \
-      {                                                                      \
-	fprintf (stderr, "error: '%s'(%d) at %s:%d\n",                       \
-		 hipGetErrorString (error), error, __FILE__, __LINE__);      \
-	exit (EXIT_FAILURE);                                                 \
-      }                                                                      \
-  }
-
-typedef void (*func_ptr) ();
+#include <cassert>
+#include "rocm-test-utils.h"
 
 __global__ void
-kernel ()
+kern (size_t dyn_alloc, size_t lds_size)
 {
-  __shared__ uint32_t shared_buffer[1024];
-  shared_buffer[1025] = 0;
+  extern __shared__ char arr[];
+
+  /* Access up to dyn_alloc should always work.  */
+  for (size_t i = 0; i < dyn_alloc; i++)
+    arr[i] = i;
+
+  __syncthreads ();
+
+  for (size_t i = 0; i < dyn_alloc; i++)
+    assert (arr[i] == i);
+
+  /* Use the last four bytes of the LDS  */
+  size_t idx = lds_size - 4;
+  if (threadIdx.x == 0)
+    {
+      assert (idx >= dyn_alloc);
+      arr[idx] = 8;
+    }
+  __syncthreads ();
+
+  /* This is expected to fail.
+     One could run this kernel once and expect to fail at the assert, then run
+     it again with the LDS reporting on, and check you receive the memviol.  */
+  if (threadIdx.x == 0)
+    assert (arr[idx] == 8);
+  __syncthreads ();
 }
 
 int
 main (int argc, char* argv[])
 {
-  hipLaunchKernelGGL (kernel, dim3 (1), dim3 (1), 0, 0);
+  hipDeviceProp_t props;
+  int deviceId;
+  CHECK (hipGetDevice (&deviceId));
+  CHECK (hipGetDeviceProperties(&props, deviceId));
+
+  constexpr size_t shared_mem_alloc = 64;
+  size_t lds_size = props.sharedMemPerBlock;
+  kern<<<1, 128, shared_mem_alloc, 0>>> (shared_mem_alloc, lds_size);
   CHECK (hipDeviceSynchronize ());
   return 0;
 }
