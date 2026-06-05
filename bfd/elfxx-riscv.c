@@ -2113,25 +2113,27 @@ riscv_parse_extensions (riscv_parse_subset_t *rps,
 		find_any_version = true;
 	      else if (find_any_version
 		       && !find_minor_version
+		       && q > subset
 		       && *q == 'p'
 		       && ISDIGIT (*(q - 1)))
-	      find_minor_version = true;
+		find_minor_version = true;
 	      else
 		break;
 	    }
-	  q++;
 
 	  /* Check if the end of extension is 'p' or not.  If yes, then
 	     the second letter from the end cannot be number.  */
-	  if (*(q - 1) == 'p' && ISDIGIT (*(q - 2)))
+	  if (q > subset && *q == 'p' && ISDIGIT (*(q - 1)))
 	    {
-	      *q = '\0';
+	      q[1] = '\0';
 	      rps->error_handler
 		(_("%s: invalid prefixed ISA extension `%s' ends with <number>p"),
 		 arch, subset);
 	      free (subset);
 	      return NULL;
 	    }
+
+	  q++;
 	}
 
       int major_version = RISCV_UNKNOWN_VERSION;
@@ -2672,26 +2674,28 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
 	    find_any_version = true;
 	  else if (find_any_version
 		   && !find_minor_version
+		   && q > subset
 		   && *q == 'p'
 		   && ISDIGIT (*(q - 1)))
 	    find_minor_version = true;
 	  else
 	    break;
 	}
-      if (len > 0)
-	q++;
 
       /* Check if the end of extension is 'p' or not.  If yes, then
 	 the second letter from the end cannot be number.  */
-      if (len > 1 && *(q - 1) == 'p' && ISDIGIT (*(q - 2)))
+      if (q > subset && *q == 'p' && ISDIGIT (*(q - 1)))
 	{
-	  *q = '\0';
+	  q[1] = '\0';
 	  rps->error_handler
 	    (_("%sinvalid ISA extension `%s' ends with <number>p in %s `%s'"),
 	       errmsg_internal, subset, errmsg_caller, implicit_exts);
 	  free (subset);
 	  return false;
 	}
+
+      if (len > 0)
+	q++;
 
       end_of_version =
 	riscv_parsing_subset_version (q, &major_version, &minor_version);
