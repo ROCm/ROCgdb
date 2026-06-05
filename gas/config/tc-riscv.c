@@ -1620,7 +1620,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	case 'O': /* Opcode for .insn directive.  */
 	  switch (*++oparg)
 	    {
-	    case '4': USE_BITS (OP_MASK_OP, OP_SH_OP); break;
+	    case '7': USE_BITS (OP_MASK_OP, OP_SH_OP); break;
 	    case '2': USE_BITS (OP_MASK_OP2, OP_SH_OP2); break;
 	    default:
 	      goto unknown_validate_operand;
@@ -3711,7 +3711,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	    case 'O':
 	      switch (*++oparg)
 		{
-		case '4':
+		case '7':
 		  if (my_getOpcodeExpression (imm_expr, imm_reloc, asarg)
 		      || imm_expr->X_op != O_constant
 		      || imm_expr->X_add_number < 0
