@@ -92,7 +92,7 @@ typedef struct
   void (*error_handler) (const char *,
 			 ...) ATTRIBUTE_PRINTF_1;
   unsigned *xlen;
-  enum riscv_spec_class *isa_spec;
+  const enum riscv_spec_class *isa_spec;
   bool check_unknown_prefixed_ext;
 } riscv_parse_subset_t;
 

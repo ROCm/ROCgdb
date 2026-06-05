@@ -1892,14 +1892,13 @@ riscv_add_subset (riscv_subset_list_t *subset_list,
 /* Get the default versions from the riscv_supported_*ext tables.  */
 
 static void
-riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
+riscv_get_default_ext_version (enum riscv_spec_class default_isa_spec,
 			       const char *name,
 			       int *major_version,
 			       int *minor_version)
 {
   if (name == NULL
-      || default_isa_spec == NULL
-      || *default_isa_spec == ISA_SPEC_CLASS_NONE)
+      || default_isa_spec == ISA_SPEC_CLASS_NONE)
     return;
 
   const struct riscv_supported_ext *table = NULL;
@@ -1919,7 +1918,7 @@ riscv_get_default_ext_version (enum riscv_spec_class *default_isa_spec,
     {
       if (strcmp (table[i].name, name) == 0
 	  && (table[i].isa_spec_class == ISA_SPEC_CLASS_DRAFT
-	      || table[i].isa_spec_class == *default_isa_spec))
+	      || table[i].isa_spec_class == default_isa_spec))
 	{
 	  *major_version = table[i].major_version;
 	  *minor_version = table[i].minor_version;
@@ -1945,7 +1944,7 @@ riscv_parse_add_subset (riscv_parse_subset_t *rps,
 
   if (major_version == RISCV_UNKNOWN_VERSION
        || minor_version == RISCV_UNKNOWN_VERSION)
-    riscv_get_default_ext_version (rps->isa_spec, subset,
+    riscv_get_default_ext_version (*rps->isa_spec, subset,
 				   &major_version, &minor_version);
 
   /* We don't care the versions of the implicit extensions.  */
