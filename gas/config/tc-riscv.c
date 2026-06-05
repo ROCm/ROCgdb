@@ -350,20 +350,38 @@ riscv_set_arch (const char *s)
       s = DEFAULT_RISCV_ARCH_WITH_EXT;
     }
 
-  if (riscv_rps_as.subset_list == NULL)
+  unsigned int newxlen = xlen;
+  riscv_parse_subset_t newrps = {
+    .subset_list = XCNEW (riscv_subset_list_t),
+    .error_handler = as_bad,
+    .xlen = &newxlen,
+    .isa_spec = &default_isa_spec,
+    .check_unknown_prefixed_ext = true,
+  };
+
+  if (!riscv_parse_subset (&newrps, s))
     {
-      riscv_rps_as.subset_list = XNEW (riscv_subset_list_t);
-      riscv_rps_as.subset_list->head = NULL;
-      riscv_rps_as.subset_list->tail = NULL;
-      riscv_rps_as.subset_list->arch_str = NULL;
+      riscv_release_subset_list (newrps.subset_list);
+      if (file_arch_str != NULL)
+	{
+	  free (newrps.subset_list);
+	  return;
+	}
+      if (!riscv_parse_subset (&newrps, DEFAULT_RISCV_ARCH_WITH_EXT))
+	abort ();
     }
-  riscv_release_subset_list (riscv_rps_as.subset_list);
-  riscv_parse_subset (&riscv_rps_as, s);
+  xlen = newxlen;
+  if (riscv_rps_as.subset_list != NULL)
+    {
+      riscv_release_subset_list (riscv_rps_as.subset_list);
+      free (riscv_rps_as.subset_list);
+    }
+  riscv_rps_as.subset_list = newrps.subset_list;
+
   riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
   file_arch_str = xstrdup (riscv_rps_as.subset_list->arch_str);
 
-  riscv_set_rvc (riscv_subset_supports (&riscv_rps_as, "c")
-		 || riscv_subset_supports (&riscv_rps_as, "zca"));
+  riscv_set_rvc (riscv_subset_supports (&riscv_rps_as, "zca"));
 
   if (riscv_subset_supports (&riscv_rps_as, "ztso"))
     riscv_set_tso ();
@@ -5037,13 +5055,16 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
 
   if (strcmp (name, "rvc") == 0)
     {
-      riscv_update_subset (&riscv_rps_as, "+c");
-      riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
-      riscv_set_rvc (true);
+      if (riscv_update_subset (&riscv_rps_as, "+c"))
+	{
+	  riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
+	  riscv_set_rvc (true);
+	}
     }
   else if (strcmp (name, "norvc") == 0)
     {
-      riscv_update_subset_norvc (&riscv_rps_as);
+      if (!riscv_update_subset_norvc (&riscv_rps_as))
+	abort ();
       riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
       riscv_set_rvc (false);
     }
@@ -5064,14 +5085,15 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
       name += 5;
       if (is_whitespace (*name) && *name != '\0')
 	name++;
-      riscv_update_subset (&riscv_rps_as, name);
-      riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
+      if (riscv_update_subset (&riscv_rps_as, name))
+	{
+	  riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
 
-      riscv_set_rvc (riscv_subset_supports (&riscv_rps_as, "c")
-		     || riscv_subset_supports (&riscv_rps_as, "zca"));
+	  riscv_set_rvc (riscv_subset_supports (&riscv_rps_as, "zca"));
 
-      if (riscv_subset_supports (&riscv_rps_as, "ztso"))
-	riscv_set_tso ();
+	  if (riscv_subset_supports (&riscv_rps_as, "ztso"))
+	    riscv_set_tso ();
+	}
     }
   else if (strcmp (name, "push") == 0)
     {

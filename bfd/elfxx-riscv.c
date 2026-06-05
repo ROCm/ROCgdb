@@ -2768,7 +2768,28 @@ bool
 riscv_update_subset (riscv_parse_subset_t *rps,
 		     const char *str)
 {
-  return riscv_update_subset1 (rps, NULL, str);
+  unsigned int newxlen = *rps->xlen;
+  riscv_parse_subset_t newrps = {
+    .subset_list = riscv_copy_subset_list (rps->subset_list),
+    .error_handler = rps->error_handler,
+    .xlen = &newxlen,
+    .isa_spec = rps->isa_spec,
+    .check_unknown_prefixed_ext = rps->check_unknown_prefixed_ext,
+  };
+
+  if (!riscv_update_subset1 (&newrps, NULL, str))
+    {
+      riscv_release_subset_list (newrps.subset_list);
+      free (newrps.subset_list);
+      return false;
+    }
+
+  *rps->xlen = newxlen;
+  riscv_release_subset_list (rps->subset_list);
+  *rps->subset_list = *newrps.subset_list;
+  free (newrps.subset_list);
+
+  return true;
 }
 
 /* Called from .option norvc directives.  */
