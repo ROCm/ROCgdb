@@ -345,7 +345,9 @@ riscv_set_arch (const char *s)
     {
       as_bad (_("the architecture string of -march and elf architecture "
 		"attributes cannot be empty"));
-      return;
+      if (file_arch_str != NULL)
+	return;
+      s = DEFAULT_RISCV_ARCH_WITH_EXT;
     }
 
   if (riscv_rps_as.subset_list == NULL)
