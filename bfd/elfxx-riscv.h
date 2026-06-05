@@ -27,6 +27,11 @@
 
 #define RISCV_UNKNOWN_VERSION -1
 
+#define is_riscv_elf(bfd)				\
+  (bfd_get_flavour (bfd) == bfd_target_elf_flavour	\
+   && elf_tdata (bfd) != NULL				\
+   && elf_object_id (bfd) == RISCV_ELF_DATA)
+
 typedef enum
 {
     PLT_NORMAL            = 0x0,  /* Normal plts.  */
@@ -137,6 +142,10 @@ extern void
 bfd_elf32_riscv_set_data_segment_info (struct bfd_link_info *, int *);
 extern void
 bfd_elf64_riscv_set_data_segment_info (struct bfd_link_info *, int *);
+
+extern bool
+_bfd_riscv_elf_merge_private_bfd_data (bfd *, struct bfd_link_info *,
+				       unsigned int) ATTRIBUTE_HIDDEN;
 
 extern bfd *
 _bfd_riscv_elf_link_setup_gnu_properties (struct bfd_link_info *, uint32_t *) ATTRIBUTE_HIDDEN;
