@@ -1071,7 +1071,7 @@ bppy_repr (PyObject *self)
 
   const auto bp = (struct gdbpy_breakpoint_object*) self;
   if (bp->bp == nullptr)
-    return PyUnicode_FromFormat ("<%s (invalid)>", tp_name);
+    return gdb_py_invalid_object_repr (self);
 
   std::string str = " ";
   if (bp->bp->thread != -1)
