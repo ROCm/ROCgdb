@@ -569,7 +569,7 @@ proc hip_device_is_less_than { version } {
 proc rocm_core_find_1 {coredir binfile arg output_file \
 		       {use_pipe false}} {
     if { $use_pipe } {
-	set coredump_pattern "|tee $coredir/$binfile"
+	set coredump_pattern "|tee $coredir/gpucore.%p"
     } else {
 	set coredump_pattern "gpucore.%p"
     }
