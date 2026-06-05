@@ -48,7 +48,7 @@ proc do_test { fault core_type output_type } {
     set use_pipe [expr {$output_type eq "pipe"}]
     save_vars { ::env(HSA_ENABLE_LIGHTWEIGHT_COREDUMP) } {
 	set ::env(HSA_ENABLE_LIGHTWEIGHT_COREDUMP) [expr {$core_type == "lightweight"}]
-	set coredump [rocm_core_find $::binfile {} $fault $use_pipe]
+	set coredump [rocm_core_find $::binfile {} $fault "/dev/null" $use_pipe]
     }
 
     if {$coredump eq ""} {
