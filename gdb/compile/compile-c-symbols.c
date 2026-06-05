@@ -147,7 +147,7 @@ convert_one_symbol (compile_c_instance *context,
 
 	    if (symbol_read_needs_frame (sym.symbol))
 	      {
-		frame = get_selected_frame (NULL);
+		frame = get_selected_frame ();
 		if (frame == NULL)
 		  error (_("Symbol \"%s\" cannot be used because "
 			   "there is no selected frame"),

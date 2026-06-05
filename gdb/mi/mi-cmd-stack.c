@@ -262,7 +262,7 @@ mi_cmd_stack_list_locals (const char *command, const char *const *argv,
     error (_("-stack-list-locals: Usage: [--no-frame-filters] "
 	     "[--skip-unavailable] PRINT_VALUES"));
 
-  frame = get_selected_frame (NULL);
+  frame = get_selected_frame ();
   print_value = mi_parse_print_values (argv[oind]);
 
    if (! raw_arg && frame_filters)
@@ -456,7 +456,7 @@ mi_cmd_stack_list_variables (const char *command, const char *const *argv,
     error (_("-stack-list-variables: Usage: [--no-frame-filters] " \
 	     "[--skip-unavailable] PRINT_VALUES"));
 
-   frame = get_selected_frame (NULL);
+   frame = get_selected_frame ();
    print_value = mi_parse_print_values (argv[oind]);
 
    if (! raw_arg && frame_filters)
@@ -762,5 +762,5 @@ mi_cmd_stack_info_frame (const char *command, const char *const *argv,
     error (_("-stack-info-frame: No arguments allowed"));
 
   print_frame_info (user_frame_print_options,
-		    get_selected_frame (NULL), 1, LOC_AND_ADDRESS, 0, 1);
+		    get_selected_frame (), 1, LOC_AND_ADDRESS, 0, 1);
 }

@@ -437,7 +437,7 @@ show_compile_gcc (struct ui_file *file, int from_tty,
 static const char *
 get_selected_pc_producer_options (void)
 {
-  CORE_ADDR pc = get_frame_pc (get_selected_frame (NULL));
+  CORE_ADDR pc = get_frame_pc (get_selected_frame ());
   struct compunit_symtab *symtab = find_compunit_symtab_for_pc (pc);
   const char *cs;
 
@@ -584,7 +584,7 @@ compile_to_object (struct command_line *cmd, const char *cmd_string,
 	     "work."));
 
   expr_block = get_expr_block_and_pc (&trash_pc);
-  expr_pc = get_frame_address_in_block (get_selected_frame (NULL));
+  expr_pc = get_frame_address_in_block (get_selected_frame ());
 
   /* Set up instance and context for the compiler.  */
   std::unique_ptr<compile_instance> compiler

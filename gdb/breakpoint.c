@@ -2295,7 +2295,7 @@ update_watchpoint (struct watchpoint *b, bool reparse)
       if (b->exp_valid_block == nullptr)
 	wp_pspace = current_program_space;
       else
-	wp_pspace = get_frame_program_space (get_selected_frame (NULL));
+	wp_pspace = get_frame_program_space (get_selected_frame ());
 
       /* Look at each value on the value chain.  */
       gdb_assert (!val_chain.empty ());
@@ -10981,7 +10981,7 @@ until_break_command (const char *arg, int from_tty, int anywhere)
      may need to switch threads), so do any frame handling before
      that.  */
 
-  frame = get_selected_frame (NULL);
+  frame = get_selected_frame ();
   frame_gdbarch = get_frame_arch (frame);
   stack_frame_id = get_stack_frame_id (frame);
   caller_frame_id = frame_unwind_caller_id (frame);

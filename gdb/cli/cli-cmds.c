@@ -1310,7 +1310,7 @@ list_command (const char *arg, int from_tty)
 	    {
 	      /* Find the current line by getting the PC of the currently
 		 selected frame, and finding the line associated to it.  */
-	      frame_info_ptr frame = get_selected_frame (nullptr);
+	      frame_info_ptr frame = get_selected_frame ();
 	      CORE_ADDR curr_pc = get_frame_pc (frame);
 	      cursal = find_sal_for_pc (curr_pc, 0);
 

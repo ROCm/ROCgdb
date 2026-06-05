@@ -1252,7 +1252,7 @@ core_target_open (const char *arg, int from_tty)
 
   /* Now, set up the frame cache, and print the top of stack.  */
   reinit_frame_cache ();
-  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
+  print_stack_frame (get_selected_frame (), 1, SRC_AND_LOC, 1);
 
   /* Current thread should be NUM 1 but the user does not know that.
      If a program is single threaded gdb in general does not mention

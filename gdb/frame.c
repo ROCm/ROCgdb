@@ -1975,7 +1975,7 @@ deprecated_safe_get_selected_frame (void)
 {
   if (!has_stack_frames ())
     return NULL;
-  return get_selected_frame (NULL);
+  return get_selected_frame ();
 }
 
 /* Invalidate the selected frame.  */

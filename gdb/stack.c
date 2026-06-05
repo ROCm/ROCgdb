@@ -2471,7 +2471,7 @@ get_selected_block (CORE_ADDR *addr_in_block)
   if (!has_stack_frames ())
     return 0;
 
-  return get_frame_block (get_selected_frame (NULL), addr_in_block);
+  return get_frame_block (get_selected_frame (), addr_in_block);
 }
 
 /* Find a frame a certain number of levels away from FRAME.
@@ -2702,7 +2702,7 @@ return_command (const char *retval_exp, int from_tty)
     }
 
   /* Discard the selected frame and all frames inner-to it.  */
-  frame_pop (get_selected_frame (NULL));
+  frame_pop (get_selected_frame ());
 
   /* Store RETURN_VALUE in the just-returned register set.  */
   if (return_value != NULL)
@@ -2726,7 +2726,7 @@ return_command (const char *retval_exp, int from_tty)
   select_frame (get_current_frame ());
   /* If interactive, print the frame that is now current.  */
   if (from_tty)
-    print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
+    print_stack_frame (get_selected_frame (), 1, SRC_AND_LOC, 1);
 }
 
 /* Find the most inner frame in the current stack for a function called

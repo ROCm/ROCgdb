@@ -2025,7 +2025,7 @@ record_full_goto_entry (struct record_full_entry *p)
 
   thread_info *thr = inferior_thread ();
   thr->set_stop_pc (regcache_read_pc (get_thread_regcache (thr)));
-  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
+  print_stack_frame (get_selected_frame (), 1, SRC_AND_LOC, 1);
 }
 
 /* The "goto_record_begin" target method.  */
@@ -2509,7 +2509,7 @@ record_full_restore (struct bfd &cbfd)
   gdb_printf (_("Restored records from core file %s.\n"),
 	      bfd_get_filename (&cbfd));
 
-  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
+  print_stack_frame (get_selected_frame (), 1, SRC_AND_LOC, 1);
 }
 
 /* bfdcore_write -- write bytes into a core file section.  */

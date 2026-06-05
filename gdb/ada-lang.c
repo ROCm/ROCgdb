@@ -13167,7 +13167,7 @@ ada_exceptions_list_1 (compiled_regex *preg)
   if (has_stack_frames ())
     {
       prev_len = result.size ();
-      ada_add_exceptions_from_frame (preg, get_selected_frame (NULL),
+      ada_add_exceptions_from_frame (preg, get_selected_frame (),
 				     &result);
       if (result.size () > prev_len)
 	sort_remove_dups_ada_exceptions_list (&result, prev_len);

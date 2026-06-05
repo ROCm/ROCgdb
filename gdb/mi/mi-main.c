@@ -225,7 +225,7 @@ mi_cmd_exec_return (const char *command, const char *const *argv, int argc)
 
   /* Because we have called return_command with from_tty = 0, we need
      to print the frame here.  */
-  print_stack_frame (get_selected_frame (NULL), 1, LOC_AND_ADDRESS, 1);
+  print_stack_frame (get_selected_frame (), 1, LOC_AND_ADDRESS, 1);
 }
 
 void
@@ -880,7 +880,7 @@ mi_cmd_data_list_changed_registers (const char *command,
      contents.  */
 
   prev_regs = std::move (this_regs);
-  this_regs = frame_save_as_regcache (get_selected_frame (NULL));
+  this_regs = frame_save_as_regcache (get_selected_frame ());
 
   /* Note that the test for a valid register must include checking the
      gdbarch_register_name because gdbarch_num_regs may be allocated
@@ -1014,7 +1014,7 @@ mi_cmd_data_list_register_values (const char *command, const char *const *argv,
 
   format = (int) argv[oind][0];
 
-  frame = get_selected_frame (NULL);
+  frame = get_selected_frame ();
   gdbarch = get_frame_arch (frame);
   numregs = gdbarch_num_cooked_regs (gdbarch);
 
@@ -2388,7 +2388,7 @@ mi_cmd_trace_find (const char *command, const char *const *argv, int argc)
     error (_("Invalid mode '%s'"), mode);
 
   if (has_stack_frames () || get_traceframe_number () >= 0)
-    print_stack_frame (get_selected_frame (NULL), 1, LOC_AND_ADDRESS, 1);
+    print_stack_frame (get_selected_frame (), 1, LOC_AND_ADDRESS, 1);
 }
 
 void
@@ -2630,7 +2630,7 @@ mi_cmd_trace_frame_collected (const char *command, const char *const *argv,
 
     ui_out_emit_list list_emitter (uiout, "registers");
 
-    frame = get_selected_frame (NULL);
+    frame = get_selected_frame ();
     gdbarch = get_frame_arch (frame);
     numregs = gdbarch_num_cooked_regs (gdbarch);
 

@@ -750,7 +750,7 @@ pc_prefix (CORE_ADDR addr)
       frame_info_ptr frame;
       std::optional<CORE_ADDR> pc;
 
-      frame = get_selected_frame (NULL);
+      frame = get_selected_frame ();
       if ((pc = get_frame_pc_if_available (frame)) && *pc == addr)
 	return "=> ";
     }

@@ -111,7 +111,7 @@ using_direct::valid_line (unsigned int boundary) const
 {
   try
     {
-      CORE_ADDR curr_pc = get_frame_pc (get_selected_frame (nullptr));
+      CORE_ADDR curr_pc = get_frame_pc (get_selected_frame ());
       symtab_and_line curr_sal = find_sal_for_pc (curr_pc, 0);
       return (decl_line <= curr_sal.line)
 	     || (decl_line >= boundary);

@@ -9457,7 +9457,7 @@ print_stop_location (const target_waitstatus &ws)
   /* Function bpstat_print selects the frame to print.  Typically, that is the
      stop frame, in other words get_current_frame ().  But bpstat_print may
      select a different frame, see for instance ada_catchpoint::print_it.  */
-  frame_info_ptr print_frame = get_selected_frame (nullptr);
+  frame_info_ptr print_frame = get_selected_frame ();
 
  switch (bpstat_ret)
     {
