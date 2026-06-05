@@ -22,6 +22,7 @@
 
 #include "sysdep.h"
 #include "opcode/riscv.h"
+#include <assert.h>
 #include <stdio.h>
 
 /* Register names used by gas and objdump.  */
@@ -210,14 +211,16 @@ static int
 match_rd_even (const struct riscv_opcode *op, insn_t insn)
 {
   int rd = (insn & MASK_RD) >> OP_SH_RD;
-  return ((rd & 1) == 0) && match_opcode (op, insn);
+  return ((rd & 1) == 0)
+         && (op->pinfo == INSN_MACRO || match_opcode (op, insn));
 }
 
 static int
 match_rs2_even (const struct riscv_opcode *op, insn_t insn)
 {
   int rs2 = (insn & MASK_RS2) >> OP_SH_RS2;
-  return ((rs2 & 1) == 0) && match_opcode (op, insn);
+  return ((rs2 & 1) == 0)
+         && (op->pinfo == INSN_MACRO || match_opcode (op, insn));
 }
 
 static int
@@ -236,11 +239,12 @@ match_rd_even_nonzero (const struct riscv_opcode *op, insn_t insn)
 static int
 match_rs1_nonzero (const struct riscv_opcode *op ATTRIBUTE_UNUSED, insn_t insn)
 {
+  assert (op->pinfo == INSN_MACRO);
   return (insn & MASK_RS1) != 0;
 }
 
 static int
-match_rs1_nonzero_rs2_even (const struct riscv_opcode *op ATTRIBUTE_UNUSED, insn_t insn)
+match_rs1_nonzero_rs2_even (const struct riscv_opcode *op, insn_t insn)
 {
   return match_rs1_nonzero (op, insn) && match_rs2_even (op, insn);
 }
