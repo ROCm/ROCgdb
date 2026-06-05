@@ -6737,12 +6737,25 @@ proc gdb_compile {source dest type options} {
     # DWARF line numbering.
     # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88432
     # This option defaults to on for Debian/Ubuntu.
+    #
+    # The bug is language-agnostic but the workaround is GCC-specific.
+    # Also skip -fno-stack-protector for non-GNU Fortran drivers, i.e.,
+    # "f90" with an F90 compiler that does not match gfortran-* (e.g.,
+    # flang, amdflang, ifx, ifort): such drivers reject the unknown
+    # argument even when test_compiler_info reports the host C compiler
+    # as GCC.  gfortran ("f90" with gfortran-*, as detected via
+    # lib/compiler.F90) keeps receiving the workaround.  The "f77" path
+    # is skipped unconditionally, since get_compiler_info has no entry
+    # for f77 and f77 is effectively unused in the modern testsuite.
     if { !$getting_compiler_info
 	 && [test_compiler_info {gcc-*-*}]
 	 && !([test_compiler_info {gcc-[0-3]-*}]
 	      || [test_compiler_info {gcc-4-0-*}])
 	 && [lsearch -exact $options rust] == -1
-	 && [lsearch -exact $options hip] == -1} {
+	 && [lsearch -exact $options hip] == -1
+	 && [lsearch -exact $options f77] == -1
+	 && !([lsearch -exact $options f90] != -1
+	      && ![test_compiler_info {gfortran-*} f90])} {
 	# Put it at the front to not override any user-provided value.
 	lappend new_options "early_flags=-fno-stack-protector"
     }
