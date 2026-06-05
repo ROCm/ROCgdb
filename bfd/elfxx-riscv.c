@@ -2141,11 +2141,6 @@ riscv_parse_extensions (riscv_parse_subset_t *rps,
       end_of_version =
 	riscv_parsing_subset_version (q, &major_version, &minor_version);
       *q = '\0';
-      if (end_of_version == NULL)
-	{
-	  free (subset);
-	  return NULL;
-	}
 
       /* Check if the prefixed extension name is well-formed.  */
       if (class != RV_ISA_CLASS_SINGLE
@@ -2700,11 +2695,6 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
       end_of_version =
 	riscv_parsing_subset_version (q, &major_version, &minor_version);
       *q = '\0';
-      if (end_of_version == NULL)
-	{
-	  free (subset);
-	  return false;
-	}
 
       if (strlen (subset) == 0
 	  || (strlen (subset) == 1
@@ -2725,8 +2715,8 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
 	  if (removed)
 	    {
 	      rps->error_handler
-		(_("%sdeprecated - extension `%s' in %s `%s'"),
-		   errmsg_internal, subset, errmsg_caller, implicit_exts);
+		(_("deprecated - extension `%s' in %s `%s'"),
+		   subset, errmsg_caller, implicit_exts);
 	      free (subset);
 	      return false;
 	    }
@@ -2735,8 +2725,8 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
 		   || strcmp (subset, "g") == 0)
 	    {
 	      rps->error_handler
-		(_("%scannot + base extension `%s' in %s `%s'"),
-		   errmsg_internal, subset, errmsg_caller, implicit_exts);
+		(_("cannot + base extension `%s' in %s `%s'"),
+		   subset, errmsg_caller, implicit_exts);
 	      free (subset);
 	      return false;
 	    }
