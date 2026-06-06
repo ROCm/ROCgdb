@@ -387,8 +387,7 @@ insert_rel_addend (bfd *abfd,
 /* Relocate a D10V ELF section.  */
 
 static int
-elf32_d10v_relocate_section (bfd *output_bfd,
-			     struct bfd_link_info *info,
+elf32_d10v_relocate_section (struct bfd_link_info *info,
 			     bfd *input_bfd,
 			     asection *input_section,
 			     bfd_byte *contents,
@@ -450,8 +449,8 @@ elf32_d10v_relocate_section (bfd *output_bfd,
 	      else
 		{
 		  asection *msec = sec;
-		  addend = _bfd_elf_rel_local_sym (output_bfd, sym, &msec,
-						   addend);
+		  addend = _bfd_elf_rel_local_sym (info->output_bfd,
+						   sym, &msec, addend);
 		  addend -= relocation;
 		  addend += msec->output_section->vma + msec->output_offset;
 		}

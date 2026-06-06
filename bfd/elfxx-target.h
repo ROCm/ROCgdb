@@ -495,7 +495,7 @@
 #define elf_backend_strip_zero_sized_dynamic_sections 0
 #endif
 #ifndef elf_backend_init_index_section
-#define elf_backend_init_index_section _bfd_void_bfd_link
+#define elf_backend_init_index_section _bfd_elf_init_0_index_sections
 #endif
 #ifndef elf_backend_relocate_section
 #define elf_backend_relocate_section	0

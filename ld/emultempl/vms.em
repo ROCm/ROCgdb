@@ -195,8 +195,7 @@ gld${EMULATION_NAME}_before_allocation (void)
      sections.  */
   elf_backend_data *bed = get_elf_backend_data (link_info.output_bfd);
   if (bed->elf_backend_late_size_sections
-      && !bed->elf_backend_late_size_sections (link_info.output_bfd,
-					       &link_info))
+      && !bed->elf_backend_late_size_sections (&link_info))
     fatal (_("%P: failed to set dynamic section sizes: %E\n"));
 
   before_allocation_default ();
@@ -205,7 +204,7 @@ gld${EMULATION_NAME}_before_allocation (void)
 static void
 gld${EMULATION_NAME}_after_allocation (void)
 {
-  int need_layout = bfd_elf_discard_info (link_info.output_bfd, &link_info);
+  int need_layout = bfd_elf_discard_info (&link_info);
 
   if (need_layout < 0)
     einfo (_("%X%P: .eh_frame/.stab edit: %E\n"));

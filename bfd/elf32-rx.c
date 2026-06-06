@@ -494,8 +494,7 @@ static unsigned int rx_stack_top;
 
 static int
 rx_elf_relocate_section
-    (bfd *		     output_bfd,
-     struct bfd_link_info *  info,
+    (struct bfd_link_info *  info,
      bfd *		     input_bfd,
      asection *		     input_section,
      bfd_byte *		     contents,
@@ -513,7 +512,7 @@ rx_elf_relocate_section
   bfd_vma table_start_cache = 0;
   bfd_vma table_end_cache = 0;
 
-  if (elf_elfheader (output_bfd)->e_flags & E_FLAG_RX_PID)
+  if (elf_elfheader (info->output_bfd)->e_flags & E_FLAG_RX_PID)
     pid_mode = true;
   else
     pid_mode = false;
@@ -550,7 +549,8 @@ rx_elf_relocate_section
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections [r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, & sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 
 	  name = bfd_elf_string_from_elf_section
 	    (input_bfd, symtab_hdr->sh_link, sym->st_name);
@@ -796,7 +796,7 @@ rx_elf_relocate_section
 	case R_RX_DIR16S:
 	  UNSAFE_FOR_PID;
 	  RANGE (-32768, 65535);
-	  if (BIGE (output_bfd) && !(input_section->flags & SEC_CODE))
+	  if (BIGE (info->output_bfd) && !(input_section->flags & SEC_CODE))
 	    {
 	      OP (1) = relocation;
 	      OP (0) = relocation >> 8;
@@ -886,7 +886,7 @@ rx_elf_relocate_section
 	case R_RX_DIR24S:
 	  UNSAFE_FOR_PID;
 	  RANGE (-0x800000, 0x7fffff);
-	  if (BIGE (output_bfd) && !(input_section->flags & SEC_CODE))
+	  if (BIGE (info->output_bfd) && !(input_section->flags & SEC_CODE))
 	    {
 	      OP (2) = relocation;
 	      OP (1) = relocation >> 8;
@@ -949,7 +949,7 @@ rx_elf_relocate_section
 	  break;
 
 	case R_RX_DIR32:
-	  if (BIGE (output_bfd) && !(input_section->flags & SEC_CODE))
+	  if (BIGE (info->output_bfd) && !(input_section->flags & SEC_CODE))
 	    {
 	      OP (3) = relocation;
 	      OP (2) = relocation >> 8;
@@ -966,7 +966,7 @@ rx_elf_relocate_section
 	  break;
 
 	case R_RX_DIR32_REV:
-	  if (BIGE (output_bfd))
+	  if (BIGE (info->output_bfd))
 	    {
 	      OP (0) = relocation;
 	      OP (1) = relocation >> 8;
@@ -986,9 +986,9 @@ rx_elf_relocate_section
 	  {
 	    bfd_vma val;
 	    WARN_REDHAT ("RX_RH_DIFF");
-	    val = bfd_get_32 (output_bfd, & OP (0));
+	    val = bfd_get_32 (info->output_bfd, & OP (0));
 	    val -= relocation;
-	    bfd_put_32 (output_bfd, val, & OP (0));
+	    bfd_put_32 (info->output_bfd, val, & OP (0));
 	  }
 	  break;
 
@@ -1149,7 +1149,7 @@ rx_elf_relocate_section
 	  UNSAFE_FOR_PID;
 	  RX_STACK_POP (relocation);
 	  RANGE (-0x800000, 0x7fffff);
-	  if (BIGE (output_bfd) && !(input_section->flags & SEC_CODE))
+	  if (BIGE (info->output_bfd) && !(input_section->flags & SEC_CODE))
 	    {
 	      OP (2) = relocation;
 	      OP (1) = relocation >> 8;
@@ -1193,7 +1193,7 @@ rx_elf_relocate_section
 	case R_RX_ABS16S:
 	  RX_STACK_POP (relocation);
 	  RANGE (-32768, 32767);
-	  if (BIGE (output_bfd) && !(input_section->flags & SEC_CODE))
+	  if (BIGE (info->output_bfd) && !(input_section->flags & SEC_CODE))
 	    {
 	      OP (1) = relocation;
 	      OP (0) = relocation >> 8;

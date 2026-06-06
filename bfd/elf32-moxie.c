@@ -198,8 +198,7 @@ moxie_final_link_relocate (reloc_howto_type *howto,
    accordingly.  */
 
 static int
-moxie_elf_relocate_section (bfd *output_bfd,
-			    struct bfd_link_info *info,
+moxie_elf_relocate_section (struct bfd_link_info *info,
 			    bfd *input_bfd,
 			    asection *input_section,
 			    bfd_byte *contents,
@@ -239,7 +238,8 @@ moxie_elf_relocate_section (bfd *output_bfd,
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections [r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 
 	  name = bfd_elf_string_from_elf_section
 	    (input_bfd, symtab_hdr->sh_link, sym->st_name);

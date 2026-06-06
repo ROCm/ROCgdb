@@ -706,8 +706,7 @@ xstormy16_elf_relax_section (bfd *dynobj,
 }
 
 static bool
-xstormy16_elf_early_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-				   struct bfd_link_info *info)
+xstormy16_elf_early_size_sections (struct bfd_link_info *info)
 {
   bfd *dynobj;
   asection *splt;
@@ -761,8 +760,7 @@ xstormy16_elf_early_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
    accordingly.  */
 
 static int
-xstormy16_elf_relocate_section (bfd *			output_bfd ATTRIBUTE_UNUSED,
-				struct bfd_link_info *	info,
+xstormy16_elf_relocate_section (struct bfd_link_info *	info,
 				bfd *			input_bfd,
 				asection *		input_section,
 				bfd_byte *		contents,
@@ -810,7 +808,8 @@ xstormy16_elf_relocate_section (bfd *			output_bfd ATTRIBUTE_UNUSED,
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections [r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 	}
       else
 	{
@@ -957,8 +956,7 @@ xstormy16_elf_relocate_section (bfd *			output_bfd ATTRIBUTE_UNUSED,
 /* This must exist if dynobj is ever set.  */
 
 static bool
-xstormy16_elf_finish_dynamic_sections (bfd *abfd ATTRIBUTE_UNUSED,
-				       struct bfd_link_info *info,
+xstormy16_elf_finish_dynamic_sections (struct bfd_link_info *info,
 				       bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj = elf_hash_table (info)->dynobj;

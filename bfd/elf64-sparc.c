@@ -597,8 +597,7 @@ elf64_sparc_add_symbol_hook (bfd *abfd, struct bfd_link_info *info,
    which we cannot easily keep in the symbol hash table.  */
 
 static bool
-elf64_sparc_output_arch_syms (bfd *output_bfd ATTRIBUTE_UNUSED,
-			      struct bfd_link_info *info,
+elf64_sparc_output_arch_syms (struct bfd_link_info *info,
 			      void * flaginfo,
 			      int (*func) (void *, const char *,
 					   Elf_Internal_Sym *,

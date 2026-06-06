@@ -1822,8 +1822,7 @@ enum dynobj_sframe_plt_type
    of type PLT_SEC_TYPE.  */
 
 static bool
-_bfd_x86_elf_create_sframe_plt (bfd *output_bfd,
-				struct bfd_link_info *info,
+_bfd_x86_elf_create_sframe_plt (struct bfd_link_info *info,
 				unsigned int plt_sec_type)
 {
   struct elf_x86_link_hash_table *htab;
@@ -1844,7 +1843,7 @@ _bfd_x86_elf_create_sframe_plt (bfd *output_bfd,
   unsigned int num_pltn_entries = 0;
   const sframe_frame_row_entry * const *pltn_fres;
 
-  bed = get_elf_backend_data (output_bfd);
+  bed = get_elf_backend_data (info->output_bfd);
   htab = elf_x86_hash_table (info, bed->target_id);
   /* Whether SFrame stack trace info for plt0 is to be generated.  */
   switch (plt_sec_type)
@@ -1972,8 +1971,7 @@ _bfd_x86_elf_create_sframe_plt (bfd *output_bfd,
    PLT_SEC_TYPE.  */
 
 static bool
-_bfd_x86_elf_write_sframe_plt (bfd *output_bfd,
-			       struct bfd_link_info *info,
+_bfd_x86_elf_write_sframe_plt (struct bfd_link_info *info,
 			       unsigned int plt_sec_type)
 {
   struct elf_x86_link_hash_table *htab;
@@ -1985,7 +1983,7 @@ _bfd_x86_elf_write_sframe_plt (bfd *output_bfd,
 
   int err = 0;
 
-  bed = get_elf_backend_data (output_bfd);
+  bed = get_elf_backend_data (info->output_bfd);
   htab = elf_x86_hash_table (info, bed->target_id);
   dynobj = htab->elf.dynobj;
 
@@ -2275,15 +2273,14 @@ _bfd_elf_x86_valid_reloc_p (asection *input_section,
 /* Set the sizes of the dynamic sections.  */
 
 bool
-_bfd_x86_elf_late_size_sections (bfd *output_bfd,
-				    struct bfd_link_info *info)
+_bfd_x86_elf_late_size_sections (struct bfd_link_info *info)
 {
   struct elf_x86_link_hash_table *htab;
   bfd *dynobj;
   asection *s;
   bool relocs;
   bfd *ibfd;
-  elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
 
   htab = elf_x86_hash_table (info, bed->target_id);
   if (htab == NULL)
@@ -2482,7 +2479,7 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 	  && (htab->elf.igotplt == NULL
 	      || htab->elf.igotplt->size == 0)
 	  && (!htab->elf.dynamic_sections_created
-	      || (eh_frame = bfd_get_section_by_name (output_bfd,
+	      || (eh_frame = bfd_get_section_by_name (info->output_bfd,
 						      ".eh_frame")) == NULL
 	      || eh_frame->rawsize == 0))
 	{
@@ -2539,7 +2536,7 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 	  && htab->elf.splt->size != 0
 	  && !bfd_is_abs_section (htab->elf.splt->output_section))
 	{
-	  _bfd_x86_elf_create_sframe_plt (output_bfd, info, SFRAME_PLT);
+	  _bfd_x86_elf_create_sframe_plt (info, SFRAME_PLT);
 	  /* FIXME - Dirty Hack.  Set the size to something non-zero for now,
 	     so that the section does not get stripped out below.  The precise
 	     size of this section is known only when the contents are
@@ -2552,7 +2549,7 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 	  && htab->plt_got->size != 0
 	  && !bfd_is_abs_section (htab->plt_got->output_section))
 	{
-	  _bfd_x86_elf_create_sframe_plt (output_bfd, info, SFRAME_PLT_GOT);
+	  _bfd_x86_elf_create_sframe_plt (info, SFRAME_PLT_GOT);
 	  /* FIXME - Dirty Hack.  Set the size to something non-zero for now,
 	     so that the section does not get stripped out below.  The precise
 	     size of this section is known only when the contents are
@@ -2566,7 +2563,7 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 	  && !bfd_is_abs_section (htab->plt_second->output_section))
 	{
 	  /* SFrame stack trace info for the second PLT.  */
-	  _bfd_x86_elf_create_sframe_plt (output_bfd, info, SFRAME_PLT_SEC);
+	  _bfd_x86_elf_create_sframe_plt (info, SFRAME_PLT_SEC);
 	  /* FIXME - Dirty Hack.  Set the size to something non-zero for now,
 	     so that the section does not get stripped out below.  The precise
 	     size of this section is known only when the contents are
@@ -2731,19 +2728,19 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 	  && htab->elf.splt != NULL
 	  && htab->elf.splt->size != 0
 	  && htab->plt_sframe->contents == NULL)
-	_bfd_x86_elf_write_sframe_plt (output_bfd, info, SFRAME_PLT);
+	_bfd_x86_elf_write_sframe_plt (info, SFRAME_PLT);
 
       if (htab->plt_second_sframe != NULL
 	  && htab->plt_second != NULL
 	  && htab->plt_second->size != 0
 	  && htab->plt_second_sframe->contents == NULL)
-	_bfd_x86_elf_write_sframe_plt (output_bfd, info, SFRAME_PLT_SEC);
+	_bfd_x86_elf_write_sframe_plt (info, SFRAME_PLT_SEC);
 
       if (htab->plt_got_sframe != NULL
 	  && htab->plt_got != NULL
 	  && htab->plt_got->size != 0
 	  && htab->plt_got_sframe->contents == NULL)
-	_bfd_x86_elf_write_sframe_plt (output_bfd, info, SFRAME_PLT_GOT);
+	_bfd_x86_elf_write_sframe_plt (info, SFRAME_PLT_GOT);
     }
 
   if (resolved_plt != NULL
@@ -2752,15 +2749,13 @@ _bfd_x86_elf_late_size_sections (bfd *output_bfd,
 	  || !_bfd_elf_add_dynamic_entry (info, DT_X86_64_PLTENT, 0)))
     return false;
 
-  return _bfd_elf_maybe_vxworks_add_dynamic_tags (output_bfd, info,
-						  relocs);
+  return _bfd_elf_maybe_vxworks_add_dynamic_tags (info, relocs);
 }
 
 /* Finish up the x86 dynamic sections.  */
 
 struct elf_x86_link_hash_table *
-_bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
-				      struct bfd_link_info *info,
+_bfd_x86_elf_finish_dynamic_sections (struct bfd_link_info *info,
 				      bfd_byte *buf)
 {
   struct elf_x86_link_hash_table *htab;
@@ -2770,7 +2765,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
   bfd_byte *dyncon, *dynconend;
   bfd_size_type sizeof_dyn;
 
-  bed = get_elf_backend_data (output_bfd);
+  bed = get_elf_backend_data (info->output_bfd);
   htab = elf_x86_hash_table (info, bed->target_id);
   if (htab == NULL)
     return htab;
@@ -2803,20 +2798,20 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 	 the dynamic linker.  */
       if (htab->got_entry_size == 8)
 	{
-	  bfd_put_64 (output_bfd, dynamic_addr,
+	  bfd_put_64 (info->output_bfd, dynamic_addr,
 		      htab->elf.sgotplt->contents);
-	  bfd_put_64 (output_bfd, (bfd_vma) 0,
+	  bfd_put_64 (info->output_bfd, 0,
 		      htab->elf.sgotplt->contents + 8);
-	  bfd_put_64 (output_bfd, (bfd_vma) 0,
+	  bfd_put_64 (info->output_bfd, 0,
 		      htab->elf.sgotplt->contents + 8*2);
 	}
       else
 	{
-	  bfd_put_32 (output_bfd, dynamic_addr,
+	  bfd_put_32 (info->output_bfd, dynamic_addr,
 		      htab->elf.sgotplt->contents);
-	  bfd_put_32 (output_bfd, 0,
+	  bfd_put_32 (info->output_bfd, 0,
 		      htab->elf.sgotplt->contents + 4);
-	  bfd_put_32 (output_bfd, 0,
+	  bfd_put_32 (info->output_bfd, 0,
 		      htab->elf.sgotplt->contents + 4*2);
 	}
     }
@@ -2848,7 +2843,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 	default:
 #ifdef OBJ_MAYBE_ELF_VXWORKS
 	  if (htab->elf.target_os == is_vxworks
-	      && elf_vxworks_finish_dynamic_entry (output_bfd, &dyn))
+	      && elf_vxworks_finish_dynamic_entry (info->output_bfd, &dyn))
 	    break;
 #endif /* OBJ_MAYBE_ELF_VXWORKS */
 	  continue;
@@ -2894,7 +2889,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 	  break;
 	}
 
-      (*bed->s->swap_dyn_out) (output_bfd, &dyn, dyncon);
+      (*bed->s->swap_dyn_out) (info->output_bfd, &dyn, dyncon);
     }
 
   if (htab->plt_got != NULL && htab->plt_got->size > 0)
@@ -2925,7 +2920,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 	}
 
       if (htab->plt_eh_frame->sec_info_type == SEC_INFO_TYPE_EH_FRAME
-	  && !_bfd_elf_write_linker_section_eh_frame (output_bfd, info,
+	  && !_bfd_elf_write_linker_section_eh_frame (info->output_bfd, info,
 						      htab->plt_eh_frame, buf))
 	return NULL;
     }
@@ -2949,7 +2944,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 			     + PLT_FDE_START_OFFSET);
 	}
       if (htab->plt_got_eh_frame->sec_info_type == SEC_INFO_TYPE_EH_FRAME
-	  && !_bfd_elf_write_linker_section_eh_frame (output_bfd, info,
+	  && !_bfd_elf_write_linker_section_eh_frame (info->output_bfd, info,
 						      htab->plt_got_eh_frame,
 						      buf))
 	return NULL;
@@ -2975,7 +2970,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 			     + PLT_FDE_START_OFFSET);
 	}
       if (htab->plt_second_eh_frame->sec_info_type == SEC_INFO_TYPE_EH_FRAME
-	  && !_bfd_elf_write_linker_section_eh_frame (output_bfd, info,
+	  && !_bfd_elf_write_linker_section_eh_frame (info->output_bfd, info,
 						      htab->plt_second_eh_frame,
 						      buf))
 	return NULL;
@@ -3009,7 +3004,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 	}
       if (htab->plt_sframe->sec_info_type == SEC_INFO_TYPE_SFRAME)
 	{
-	  if (! _bfd_elf_merge_section_sframe (output_bfd, info,
+	  if (! _bfd_elf_merge_section_sframe (info->output_bfd, info,
 					       htab->plt_sframe,
 					       htab->plt_sframe->contents))
 	    return NULL;
@@ -3043,7 +3038,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 	}
       if (htab->plt_second_sframe->sec_info_type == SEC_INFO_TYPE_SFRAME)
 	{
-	  if (! _bfd_elf_merge_section_sframe (output_bfd, info,
+	  if (! _bfd_elf_merge_section_sframe (info->output_bfd, info,
 					       htab->plt_second_sframe,
 					       htab->plt_second_sframe->contents))
 	    return NULL;
@@ -3070,7 +3065,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 	}
       if (htab->plt_got_sframe->sec_info_type == SEC_INFO_TYPE_SFRAME)
 	{
-	  if (! _bfd_elf_merge_section_sframe (output_bfd, info,
+	  if (! _bfd_elf_merge_section_sframe (info->output_bfd, info,
 					       htab->plt_got_sframe,
 					       htab->plt_got_sframe->contents))
 	    return NULL;
@@ -3086,8 +3081,7 @@ _bfd_x86_elf_finish_dynamic_sections (bfd *output_bfd,
 
 
 bool
-_bfd_x86_elf_early_size_sections (bfd *output_bfd,
-				  struct bfd_link_info *info)
+_bfd_x86_elf_early_size_sections (struct bfd_link_info *info)
 {
   asection *tls_sec = elf_hash_table (info)->tls_sec;
 
@@ -3103,14 +3097,14 @@ _bfd_x86_elf_early_size_sections (bfd *output_bfd,
 	{
 	  struct elf_x86_link_hash_table *htab;
 	  struct bfd_link_hash_entry *bh = NULL;
-	  elf_backend_data *bed = get_elf_backend_data (output_bfd);
+	  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
 
 	  htab = elf_x86_hash_table (info, bed->target_id);
 	  if (htab == NULL)
 	    return false;
 
 	  if (!(_bfd_generic_link_add_one_symbol
-		(info, output_bfd, "_TLS_MODULE_BASE_", BSF_LOCAL,
+		(info, info->output_bfd, "_TLS_MODULE_BASE_", BSF_LOCAL,
 		 tls_sec, 0, NULL, false,
 		 bed->collect, &bh)))
 	    return false;

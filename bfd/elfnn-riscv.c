@@ -1688,7 +1688,7 @@ allocate_local_ifunc_dynrelocs (void **slot, void *inf)
 }
 
 static bool
-riscv_elf_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
+riscv_elf_late_size_sections (struct bfd_link_info *info)
 {
   struct riscv_elf_link_hash_table *htab;
   bfd *dynobj;
@@ -1832,7 +1832,7 @@ riscv_elf_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
 	      || htab->elf.splt->size == 0)
 	  && (htab->elf.sgot == NULL
 	      || (htab->elf.sgot->size
-		  == get_elf_backend_data (output_bfd)->got_header_size)))
+		  == get_elf_backend_data (info->output_bfd)->got_header_size)))
 	htab->elf.sgotplt->size = 0;
     }
 
@@ -1901,7 +1901,7 @@ riscv_elf_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
   /* Add dynamic entries.  */
   if (elf_hash_table (info)->dynamic_sections_created)
     {
-      if (!_bfd_elf_add_dynamic_tags (output_bfd, info, true))
+      if (!_bfd_elf_add_dynamic_tags (info, true))
 	return false;
 
       if (htab->variant_cc
@@ -2415,8 +2415,7 @@ riscv_resolve_pcrel_lo_relocs (riscv_pcrel_relocs *p)
    accordingly.  */
 
 static int
-riscv_elf_relocate_section (bfd *output_bfd,
-			    struct bfd_link_info *info,
+riscv_elf_relocate_section (struct bfd_link_info *info,
 			    bfd *input_bfd,
 			    asection *input_section,
 			    bfd_byte *contents,
@@ -2472,7 +2471,8 @@ riscv_elf_relocate_section (bfd *output_bfd,
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 
 	  /* Relocate against local STT_GNU_IFUNC symbol.  */
 	  if (!bfd_link_relocatable (info)
@@ -2585,7 +2585,7 @@ riscv_elf_relocate_section (bfd *output_bfd,
 
 		    /* Need a dynamic relocation to get the real function
 		       address.  */
-		    outrel.r_offset = _bfd_elf_section_offset (output_bfd,
+		    outrel.r_offset = _bfd_elf_section_offset (info->output_bfd,
 							       info,
 							       input_section,
 							       rel->r_offset);
@@ -2622,11 +2622,11 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		       2. .rela.got section in dynamic executable.
 		       3. .rela.iplt section in static executable.  */
 		    if (bfd_link_pic (info))
-		      riscv_elf_append_rela (output_bfd, htab->elf.irelifunc,
-					     &outrel);
+		      riscv_elf_append_rela (info->output_bfd,
+					     htab->elf.irelifunc, &outrel);
 		    else if (htab->elf.splt != NULL)
-		      riscv_elf_append_rela (output_bfd, htab->elf.srelgot,
-					     &outrel);
+		      riscv_elf_append_rela (info->output_bfd,
+					     htab->elf.srelgot, &outrel);
 		    else
 		      {
 			/* Do not use riscv_elf_append_rela to add dynamic
@@ -2634,11 +2634,11 @@ riscv_elf_relocate_section (bfd *output_bfd,
 			   overwrite problems.  This is same as what we did
 			   in the riscv_elf_finish_dynamic_symbol.  */
 			elf_backend_data *bed
-			  = get_elf_backend_data (output_bfd);
+			  = get_elf_backend_data (info->output_bfd);
 			bfd_vma iplt_idx = htab->last_iplt_index--;
 			bfd_byte *loc = htab->elf.irelplt->contents
 					+ iplt_idx * sizeof (ElfNN_External_Rela);
-			bed->s->swap_reloca_out (output_bfd, &outrel, loc);
+			bed->s->swap_reloca_out (info->output_bfd, &outrel, loc);
 		      }
 
 		    /* If this reloc is against an external symbol, we
@@ -2696,7 +2696,7 @@ riscv_elf_relocate_section (bfd *output_bfd,
 			  off &= ~1;
 			else
 			  {
-			    bfd_put_NN (output_bfd, relocation,
+			    bfd_put_NN (info->output_bfd, relocation,
 					base_got->contents + off);
 			    /* Note that this is harmless for the case,
 			       as -1 | 1 still is -1.  */
@@ -2883,7 +2883,7 @@ riscv_elf_relocate_section (bfd *output_bfd,
 			  && !bfd_is_abs_section(h->root.u.def.section))
 			relative_got = true;
 
-		      bfd_put_NN (output_bfd, relocation,
+		      bfd_put_NN (info->output_bfd, relocation,
 				  htab->elf.sgot->contents + off);
 		      h->got.offset |= 1;
 		    }
@@ -2908,7 +2908,7 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		  if (bfd_link_pic (info))
 		    relative_got = true;
 
-		  bfd_put_NN (output_bfd, relocation,
+		  bfd_put_NN (info->output_bfd, relocation,
 			      htab->elf.sgot->contents + off);
 		  local_got_offsets[r_symndx] |= 1;
 		}
@@ -2926,7 +2926,7 @@ riscv_elf_relocate_section (bfd *output_bfd,
 	      outrel.r_offset = sec_addr (htab->elf.sgot) + off;
 	      outrel.r_info = ELFNN_R_INFO (0, R_RISCV_RELATIVE);
 	      outrel.r_addend = relocation;
-	      riscv_elf_append_rela (output_bfd, s, &outrel);
+	      riscv_elf_append_rela (info->output_bfd, s, &outrel);
 	    }
 
 	  if (rel->r_addend != 0)
@@ -3165,8 +3165,8 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		 time.  */
 
 	      outrel.r_offset =
-		_bfd_elf_section_offset (output_bfd, info, input_section,
-					 rel->r_offset);
+		_bfd_elf_section_offset (info->output_bfd, info,
+					 input_section, rel->r_offset);
 	      bool skip = false;
 	      bool relocate = false;
 	      if (outrel.r_offset == (bfd_vma) -1)
@@ -3203,7 +3203,7 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		}
 
 	      sreloc = elf_section_data (input_section)->sreloc;
-	      riscv_elf_append_rela (output_bfd, sreloc, &outrel);
+	      riscv_elf_append_rela (info->output_bfd, sreloc, &outrel);
 	      if (!relocate)
 		continue;
 	    }
@@ -3265,25 +3265,27 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		      outrel.r_offset = sec_addr (htab->elf.sgot) + off;
 		      outrel.r_addend = 0;
 		      outrel.r_info = ELFNN_R_INFO (indx, R_RISCV_TLS_DTPMODNN);
-		      bfd_put_NN (output_bfd, 0,
+		      bfd_put_NN (info->output_bfd, 0,
 				  htab->elf.sgot->contents + off);
-		      riscv_elf_append_rela (output_bfd, htab->elf.srelgot, &outrel);
+		      riscv_elf_append_rela (info->output_bfd,
+					     htab->elf.srelgot, &outrel);
 		      if (indx == 0)
 			{
 			  BFD_ASSERT (! unresolved_reloc);
-			  bfd_put_NN (output_bfd,
+			  bfd_put_NN (info->output_bfd,
 				      dtpoff (info, relocation),
 				      (htab->elf.sgot->contents
 				       + off + RISCV_ELF_WORD_BYTES));
 			}
 		      else
 			{
-			  bfd_put_NN (output_bfd, 0,
+			  bfd_put_NN (info->output_bfd, 0,
 				      (htab->elf.sgot->contents
 				       + off + RISCV_ELF_WORD_BYTES));
 			  outrel.r_info = ELFNN_R_INFO (indx, R_RISCV_TLS_DTPRELNN);
 			  outrel.r_offset += RISCV_ELF_WORD_BYTES;
-			  riscv_elf_append_rela (output_bfd, htab->elf.srelgot, &outrel);
+			  riscv_elf_append_rela (info->output_bfd,
+						 htab->elf.srelgot, &outrel);
 			}
 		    }
 		  else
@@ -3293,9 +3295,9 @@ riscv_elf_relocate_section (bfd *output_bfd,
 			 static link or an executable link with the
 			 symbol binding locally.  Mark it as belonging
 			 to module 1, the executable.  */
-		      bfd_put_NN (output_bfd, 1,
+		      bfd_put_NN (info->output_bfd, 1,
 				  htab->elf.sgot->contents + off);
-		      bfd_put_NN (output_bfd,
+		      bfd_put_NN (info->output_bfd,
 				  dtpoff (info, relocation),
 				  (htab->elf.sgot->contents
 				   + off + RISCV_ELF_WORD_BYTES));
@@ -3306,7 +3308,7 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		{
 		  if (need_relocs)
 		    {
-		      bfd_put_NN (output_bfd, 0,
+		      bfd_put_NN (info->output_bfd, 0,
 				  htab->elf.sgot->contents + off + ie_off);
 		      outrel.r_offset = sec_addr (htab->elf.sgot)
 					+ off + ie_off;
@@ -3314,11 +3316,12 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		      if (indx == 0)
 			outrel.r_addend = tpoff (info, relocation);
 		      outrel.r_info = ELFNN_R_INFO (indx, R_RISCV_TLS_TPRELNN);
-		      riscv_elf_append_rela (output_bfd, htab->elf.srelgot, &outrel);
+		      riscv_elf_append_rela (info->output_bfd,
+					     htab->elf.srelgot, &outrel);
 		    }
 		  else
 		    {
-		      bfd_put_NN (output_bfd, tpoff (info, relocation),
+		      bfd_put_NN (info->output_bfd, tpoff (info, relocation),
 				  htab->elf.sgot->contents + off + ie_off);
 		    }
 		}
@@ -3327,7 +3330,7 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		{
 		  /* TLSDESC is always handled by the dynamic linker and always need
 		   * a relocation.  */
-		  bfd_put_NN (output_bfd, 0,
+		  bfd_put_NN (info->output_bfd, 0,
 			      htab->elf.sgot->contents + off + desc_off);
 		  outrel.r_offset = sec_addr (htab->elf.sgot)
 				    + off + desc_off;
@@ -3335,7 +3338,8 @@ riscv_elf_relocate_section (bfd *output_bfd,
 		  if (indx == 0)
 		    outrel.r_addend = tlsdescoff (info, relocation);
 		  outrel.r_info = ELFNN_R_INFO (indx, R_RISCV_TLSDESC);
-		  riscv_elf_append_rela (output_bfd, htab->elf.srelgot, &outrel);
+		  riscv_elf_append_rela (info->output_bfd,
+					 htab->elf.srelgot, &outrel);
 		}
 	    }
 
@@ -3362,7 +3366,7 @@ riscv_elf_relocate_section (bfd *output_bfd,
       if (unresolved_reloc
 	  && !((input_section->flags & SEC_DEBUGGING) != 0
 	       && h->def_dynamic)
-	  && _bfd_elf_section_offset (output_bfd, info, input_section,
+	  && _bfd_elf_section_offset (info->output_bfd, info, input_section,
 				      rel->r_offset) != (bfd_vma) -1)
 	{
 	  msg = bfd_asprintf (_("%%X%%P: unresolvable %s relocation against "
@@ -3441,13 +3445,12 @@ riscv_elf_relocate_section (bfd *output_bfd,
    dynamic sections here.  */
 
 static bool
-riscv_elf_finish_dynamic_symbol (bfd *output_bfd,
-				 struct bfd_link_info *info,
+riscv_elf_finish_dynamic_symbol (struct bfd_link_info *info,
 				 struct elf_link_hash_entry *h,
 				 Elf_Internal_Sym *sym)
 {
   struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
-  elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
 
   if (h->plt.offset != (bfd_vma) -1)
     {
@@ -3502,14 +3505,14 @@ riscv_elf_finish_dynamic_symbol (bfd *output_bfd,
 
 
       /* Fill in the PLT entry itself.  */
-      if (! htab->make_plt_entry (output_bfd, gotplt, got_offset,
+      if (! htab->make_plt_entry (info->output_bfd, gotplt, got_offset,
 				  plt, h->plt.offset))
 	return false;
 
 
       /* Fill in the initial value of the .got.plt entry.  */
       loc = gotplt->contents + (got_address - sec_addr (gotplt));
-      bfd_put_NN (output_bfd, sec_addr (plt), loc);
+      bfd_put_NN (info->output_bfd, sec_addr (plt), loc);
 
       rela.r_offset = got_address;
 
@@ -3539,7 +3542,7 @@ riscv_elf_finish_dynamic_symbol (bfd *output_bfd,
 	}
 
       loc = relplt->contents + plt_idx * sizeof (ElfNN_External_Rela);
-      bed->s->swap_reloca_out (output_bfd, &rela, loc);
+      bed->s->swap_reloca_out (info->output_bfd, &rela, loc);
 
       if (!h->def_regular)
 	{
@@ -3624,9 +3627,9 @@ riscv_elf_finish_dynamic_symbol (bfd *output_bfd,
 		 contains the real function address if we need pointer
 		 equality.  We load the GOT entry with the PLT entry.  */
 	      plt = htab->elf.splt ? htab->elf.splt : htab->elf.iplt;
-	      bfd_put_NN (output_bfd, (plt->output_section->vma
-				       + plt->output_offset
-				       + h->plt.offset),
+	      bfd_put_NN (info->output_bfd, (plt->output_section->vma
+					     + plt->output_offset
+					     + h->plt.offset),
 			  htab->elf.sgot->contents
 			  + (h->got.offset & ~(bfd_vma) 1));
 	      return true;
@@ -3654,12 +3657,12 @@ riscv_elf_finish_dynamic_symbol (bfd *output_bfd,
 	  BFD_ASSERT (h->dynindx != -1);
 	  rela.r_info = ELFNN_R_INFO (h->dynindx, R_RISCV_NN);
 	  rela.r_addend = 0;
-	  bfd_put_NN (output_bfd, 0,
+	  bfd_put_NN (info->output_bfd, 0,
 		      sgot->contents + (h->got.offset & ~(bfd_vma) 1));
 	}
 
       if (use_elf_append_rela)
-	riscv_elf_append_rela (output_bfd, srela, &rela);
+	riscv_elf_append_rela (info->output_bfd, srela, &rela);
       else
 	{
 	  /* Use riscv_elf_append_rela to add the dynamic relocs into
@@ -3673,7 +3676,7 @@ riscv_elf_finish_dynamic_symbol (bfd *output_bfd,
 	  bfd_vma iplt_idx = htab->last_iplt_index--;
 	  bfd_byte *loc = srela->contents
 			  + iplt_idx * sizeof (ElfNN_External_Rela);
-	  bed->s->swap_reloca_out (output_bfd, &rela, loc);
+	  bed->s->swap_reloca_out (info->output_bfd, &rela, loc);
 	}
     }
 
@@ -3692,7 +3695,7 @@ riscv_elf_finish_dynamic_symbol (bfd *output_bfd,
 	s = htab->elf.sreldynrelro;
       else
 	s = htab->elf.srelbss;
-      riscv_elf_append_rela (output_bfd, s, &rela);
+      riscv_elf_append_rela (info->output_bfd, s, &rela);
     }
 
   /* Mark some specially defined symbols as absolute.  */
@@ -3712,17 +3715,17 @@ riscv_elf_finish_local_dynamic_symbol (void **slot, void *inf)
   struct elf_link_hash_entry *h = (struct elf_link_hash_entry *) *slot;
   struct bfd_link_info *info = (struct bfd_link_info *) inf;
 
-  return riscv_elf_finish_dynamic_symbol (info->output_bfd, info, h, NULL);
+  return riscv_elf_finish_dynamic_symbol (info, h, NULL);
 }
 
 /* Finish up the dynamic sections.  */
 
 static bool
-riscv_finish_dyn (bfd *output_bfd, struct bfd_link_info *info,
+riscv_finish_dyn (struct bfd_link_info *info,
 		  bfd *dynobj, asection *sdyn)
 {
   struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
-  elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
   size_t dynsize = bed->s->sizeof_dyn;
   bfd_byte *dyncon, *dynconend;
 
@@ -3752,14 +3755,13 @@ riscv_finish_dyn (bfd *output_bfd, struct bfd_link_info *info,
 	  continue;
 	}
 
-      bed->s->swap_dyn_out (output_bfd, &dyn, dyncon);
+      bed->s->swap_dyn_out (info->output_bfd, &dyn, dyncon);
     }
   return true;
 }
 
 static bool
-riscv_elf_finish_dynamic_sections (bfd *output_bfd,
-				   struct bfd_link_info *info,
+riscv_elf_finish_dynamic_sections (struct bfd_link_info *info,
 				   bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -3780,7 +3782,7 @@ riscv_elf_finish_dynamic_sections (bfd *output_bfd,
       splt = htab->elf.splt;
       BFD_ASSERT (splt != NULL && sdyn != NULL);
 
-      ret = riscv_finish_dyn (output_bfd, info, dynobj, sdyn);
+      ret = riscv_finish_dyn (info, dynobj, sdyn);
 
       if (!ret)
 	return ret;
@@ -3788,7 +3790,7 @@ riscv_elf_finish_dynamic_sections (bfd *output_bfd,
       /* Fill in the head and tail entries in the procedure linkage table.  */
       if (splt->size > 0)
 	{
-	  ret = htab->make_plt_header (output_bfd, htab);
+	  ret = htab->make_plt_header (info->output_bfd, htab);
 	  if (!ret)
 	    return ret;
 
@@ -3810,8 +3812,8 @@ riscv_elf_finish_dynamic_sections (bfd *output_bfd,
 
       /* Write the first two entries in .got.plt, needed for the dynamic
 	 linker.  */
-      bfd_put_NN (output_bfd, (bfd_vma) -1, htab->elf.sgotplt->contents);
-      bfd_put_NN (output_bfd, (bfd_vma) 0,
+      bfd_put_NN (info->output_bfd, -1, htab->elf.sgotplt->contents);
+      bfd_put_NN (info->output_bfd, 0,
 		  htab->elf.sgotplt->contents + GOT_ENTRY_SIZE);
 
       elf_section_data (output_section)->this_hdr.sh_entsize = GOT_ENTRY_SIZE;
@@ -3826,7 +3828,7 @@ riscv_elf_finish_dynamic_sections (bfd *output_bfd,
 	  /* Set the first entry in the global offset table to the address of
 	     the dynamic section.  */
 	  bfd_vma val = sdyn ? sec_addr (sdyn) : 0;
-	  bfd_put_NN (output_bfd, val, htab->elf.sgot->contents);
+	  bfd_put_NN (info->output_bfd, val, htab->elf.sgot->contents);
 
 	  elf_section_data (output_section)->this_hdr.sh_entsize = GOT_ENTRY_SIZE;
 	}

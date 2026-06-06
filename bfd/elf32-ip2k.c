@@ -1386,8 +1386,7 @@ ip2k_final_link_relocate (reloc_howto_type *  howto,
    accordingly.  */
 
 static int
-ip2k_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
-			   struct bfd_link_info *info,
+ip2k_elf_relocate_section (struct bfd_link_info *info,
 			   bfd *input_bfd,
 			   asection *input_section,
 			   bfd_byte *contents,

@@ -240,16 +240,16 @@ elf_vxworks_final_write_processing (bfd *abfd)
    tls sections.  */
 
 bool
-elf_vxworks_add_dynamic_entries (bfd *output_bfd, struct bfd_link_info *info)
+elf_vxworks_add_dynamic_entries (struct bfd_link_info *info)
 {
-  if (bfd_get_section_by_name (output_bfd, ".tls_data"))
+  if (bfd_get_section_by_name (info->output_bfd, ".tls_data"))
     {
       if (!_bfd_elf_add_dynamic_entry (info, DT_VX_WRS_TLS_DATA_START, 0)
 	  || !_bfd_elf_add_dynamic_entry (info, DT_VX_WRS_TLS_DATA_SIZE, 0)
 	  || !_bfd_elf_add_dynamic_entry (info, DT_VX_WRS_TLS_DATA_ALIGN, 0))
 	return false;
     }
-  if (bfd_get_section_by_name (output_bfd, ".tls_vars"))
+  if (bfd_get_section_by_name (info->output_bfd, ".tls_vars"))
     {
       if (!_bfd_elf_add_dynamic_entry (info, DT_VX_WRS_TLS_VARS_START, 0)
 	  || !_bfd_elf_add_dynamic_entry (info, DT_VX_WRS_TLS_VARS_SIZE, 0))
@@ -302,14 +302,12 @@ elf_vxworks_finish_dynamic_entry (bfd *output_bfd, Elf_Internal_Dyn *dyn)
 /* Add dynamic tags.  */
 
 bool
-_bfd_elf_maybe_vxworks_add_dynamic_tags (bfd *output_bfd,
-					 struct bfd_link_info *info,
+_bfd_elf_maybe_vxworks_add_dynamic_tags (struct bfd_link_info *info,
 					 bool need_dynamic_reloc)
 {
   struct elf_link_hash_table *htab = elf_hash_table (info);
-  return (_bfd_elf_add_dynamic_tags (output_bfd, info,
-				     need_dynamic_reloc)
+  return (_bfd_elf_add_dynamic_tags (info, need_dynamic_reloc)
 	  && (!htab->dynamic_sections_created
 	      || htab->target_os != is_vxworks
-	      || elf_vxworks_add_dynamic_entries (output_bfd, info)));
+	      || elf_vxworks_add_dynamic_entries (info)));
 }
