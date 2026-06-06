@@ -148,4 +148,15 @@ extern void loongarch_md_finish (void);
 /* The target supports Object Attributes v1.  */
 #define TC_OBJ_ATTR_v1 1
 
+
+/* Define target fragment type.  */
+#define TC_FRAG_TYPE struct loongarch_frag_type
+struct loongarch_frag_type
+{
+  bool linker_relax;
+};
+
+#define TC_FRAG_INIT(FRAGP, MAX_BYTES) \
+  do { (FRAGP)->tc_frag_data.linker_relax = false; } while (0)
+
 #endif

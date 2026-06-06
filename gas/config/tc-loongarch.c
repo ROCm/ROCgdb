@@ -1187,6 +1187,13 @@ move_insn (struct loongarch_cl_insn *insn, fragS *frag, long where)
 	}
     }
   install_insn (insn);
+
+  /* Mark the current section and frag as linker relaxable.  */
+  if (insn->linker_relax)
+    {
+      now_seg->sec_flg1 = true;
+      insn->frag->tc_frag_data.linker_relax = true;
+    }
 }
 
 /* Add INSN to the end of the output.  */
@@ -1598,20 +1605,56 @@ loongarch_force_relocation_sub_local (fixS *fixp, segT sec ATTRIBUTE_UNUSED)
 	       || (S_GET_SEGMENT (fixp->fx_subsy)->flags & SEC_CODE) == 0));
 }
 
+
+/* Whether emit relocations for label subtraction in same section.  */
+static bool
+_loongarch_force_relocation_sub_same (segT sec,
+				      fragS *addfrag,
+				      fragS *subfrag)
+{
+  if (!LARCH_opts.relax)
+    return false;
+
+  /* Not emit relocation if section has no relaxable frag.  */
+  if (!sec->sec_flg1)
+    return false;
+
+  /* Not emit relocation if addsy and subsy are in the same frag.  */
+  if (addfrag == subfrag)
+    return false;
+
+  /* Emit relocation if find a frag is relaxable from addsy to subsy.  */
+  fragS *s;
+  for (s = subfrag; s != NULL && s != addfrag; s = s->fr_next)
+    {
+      if (s->tc_frag_data.linker_relax)
+	return true;
+    }
+  if (s == addfrag)
+    return false;
+
+  for (s = addfrag; s != NULL && s != subfrag; s = s->fr_next)
+    {
+      if (s->tc_frag_data.linker_relax)
+	return true;
+    }
+  if (s == subfrag)
+    return false;
+
+  return true;
+}
+
+
 /* Postpone text-section label subtraction calculation until linking,
    since linker relaxations might change the deltas.  */
 bool
-loongarch_force_relocation_sub_same(fixS *fixp ATTRIBUTE_UNUSED, segT sec)
+loongarch_force_relocation_sub_same (fixS *fixp ATTRIBUTE_UNUSED, segT sec)
 {
-  fragS *add_frag = symbol_get_frag (fixp->fx_addsy);
-  fragS *sub_frag = symbol_get_frag (fixp->fx_subsy);
-
-  /* Not emit relocation if addsy and subsy are in the same frag.  */
-  if (add_frag == sub_frag)
-    return false;
-
-  return LARCH_opts.relax && (sec->flags & SEC_CODE) != 0;
+  fragS *addfrag = symbol_get_frag (fixp->fx_addsy);
+  fragS *subfrag = symbol_get_frag (fixp->fx_subsy);
+  return _loongarch_force_relocation_sub_same (sec, addfrag, subfrag);
 }
+
 
 static void fix_reloc_insn (fixS *fixP, bfd_vma reloc_val, char *buf)
 {
@@ -1840,6 +1883,16 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       break;
 
     case BFD_RELOC_LARCH_CFA:
+      unsigned int subtype;
+      fragS *opfrag = (fragS *) fixP->fx_frag->fr_opcode;
+      subtype = bfd_get_8 (NULL, opfrag->fr_literal + fixP->fx_where);
+
+      /* Update to the real size after relax_segment.  */
+      if (subtype == DW_CFA_advance_loc2)
+	fixP->fx_size = 2;
+      if (subtype == DW_CFA_advance_loc4)
+	fixP->fx_size = 4;
+
       if (fixP->fx_addsy && fixP->fx_subsy)
 	{
 	  fixP->fx_next = xmemdup (fixP, sizeof (*fixP), sizeof (*fixP));
@@ -1848,10 +1901,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  fixP->fx_next->fx_offset = 0;
 	  fixP->fx_subsy = NULL;
 
-	  unsigned int subtype;
 	  offsetT loc;
-	  fragS *opfrag = (fragS *) fixP->fx_frag->fr_opcode;
-	  subtype = bfd_get_8 (NULL, opfrag->fr_literal + fixP->fx_where);
 	  loc = fixP->fx_frag->fr_fix - (subtype & 7);
 	  switch (subtype)
 	    {
@@ -1864,8 +1914,6 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	      break;
 
 	    case DW_CFA_advance_loc2:
-	      fixP->fx_size = 2;
-	      fixP->fx_next->fx_size = 2;
 	      fixP->fx_where = loc + 1;
 	      fixP->fx_next->fx_where = loc + 1;
 	      fixP->fx_r_type = BFD_RELOC_LARCH_ADD16;
@@ -1874,8 +1922,6 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	      break;
 
 	    case DW_CFA_advance_loc4:
-	      fixP->fx_size = 4;
-	      fixP->fx_next->fx_size = 4;
 	      fixP->fx_where = loc;
 	      fixP->fx_next->fx_where = loc;
 	      fixP->fx_r_type = BFD_RELOC_LARCH_ADD32;
@@ -1898,6 +1944,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	      break;
 	    }
 	}
+
+      if (fixP->fx_addsy == NULL)
+	fixP->fx_done = 1;
       break;
 
     case BFD_RELOC_LARCH_B16:
@@ -1917,7 +1966,10 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 
 	  /* If relax, symbol value may change at link time, so reloc need to
 	     be saved.  */
-	  if (!LARCH_opts.relax)
+	  fragS *addfrag = symbol_get_frag (fixP->fx_addsy);
+	  if (! _loongarch_force_relocation_sub_same (seg,
+						      addfrag,
+						      fixP->fx_frag))
 	    fixP->fx_done = 1;
 	}
       break;
@@ -2074,6 +2126,8 @@ loongarch_pre_output_hook (void)
 		   frag chains have been chained together.  */
 		subseg_set (s, frch->frch_subseg);
 
+		/* Set the size to 1 temporary.  The size may change in
+		   relax_segment. Update to the real size in md_apply_fix.  */
 		fix_new_exp (frag, (int) frag->fr_offset, 1, &exp, 0,
 			     BFD_RELOC_LARCH_CFA);
 	      }
@@ -2137,6 +2191,10 @@ loongarch_frag_align_code (int n, int max)
   /* Start a new frag only used for alignment.  */
   frag_wane (frag_now);
   frag_new (0);
+
+  /* Mark the current section and frag as linker relaxable.  */
+  now_seg->sec_flg1 = true;
+  frag_now->tc_frag_data.linker_relax = true;
 
   /* If max <= 0, ignore max.
      If max >= worst_case_bytes, max has no effect.
@@ -2227,6 +2285,24 @@ loongarch_handle_align (fragS *fragp)
   fragp->fr_var = size;
 }
 
+
+/* Whether force relocation for label subtraction calculation,
+   sincc linker relaxation might change the deltas.  */
+
+static bool
+loongarch_force_reloc_sub (symbolS *addsy, symbolS *subsy)
+{
+  segT addsec = S_GET_SEGMENT (addsy);
+  segT subsec = S_GET_SEGMENT (subsy);
+  if (addsec != subsec)
+    return true;
+
+  fragS *addfrag = symbol_get_frag (addsy);
+  fragS *subfrag = symbol_get_frag (subsy);
+  return _loongarch_force_relocation_sub_same (addsec, addfrag, subfrag);
+}
+
+
 /* Scan uleb128 subtraction expressions and insert fixups for them.
    e.g., .uleb128 .L1 - .L0
    Because relaxation may change the value of the subtraction, we
@@ -2256,6 +2332,9 @@ loongarch_insert_uleb128_fixes (bfd *abfd ATTRIBUTE_UNUSED,
 
       /* FIXME: Skip for .sleb128.  */
       if (fragP->fr_subtype != 0)
+	continue;
+
+      if (! loongarch_force_reloc_sub (exp->X_add_symbol, exp->X_op_symbol))
 	continue;
 
       exp_dup = xmemdup (exp, sizeof (*exp), sizeof (*exp));
