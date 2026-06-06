@@ -1400,8 +1400,8 @@ struct elf_backend_data
 
   /* Filter what symbols of the output file to include in the import
      library if one is created.  */
-  unsigned int (*elf_backend_filter_implib_symbols)
-    (struct bfd_link_info *, asymbol **, long);
+  size_t (*elf_backend_filter_implib_symbols)
+    (struct bfd_link_info *, asymbol **, size_t);
 
   /* Copy any information related to dynamic linking from a pre-existing
      symbol to a newly created symbol.  Also called to copy flags and
@@ -2459,8 +2459,8 @@ extern bool _bfd_elf_section_already_linked
   (bfd *, asection *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern void bfd_elf_set_group_contents
   (bfd *, asection *, void *);
-extern unsigned int _bfd_elf_filter_global_symbols
-  (struct bfd_link_info *, asymbol **, long) ATTRIBUTE_HIDDEN;
+extern size_t _bfd_elf_filter_implib_symbols
+  (struct bfd_link_info *, asymbol **, size_t) ATTRIBUTE_HIDDEN;
 extern asection *_bfd_elf_check_kept_section
   (asection *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 #define _bfd_elf_link_just_syms _bfd_generic_link_just_syms

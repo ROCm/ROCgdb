@@ -12525,7 +12525,6 @@ elf_output_implib (bfd *obfd, struct bfd_link_info *info)
   long symcount;
   long src_count;
   elf_symbol_type *osymbuf;
-  size_t amt;
 
   implib_bfd = info->out_implib_bfd;
   obed = get_elf_backend_data (obfd);
@@ -12554,7 +12553,7 @@ elf_output_implib (bfd *obfd, struct bfd_link_info *info)
     return false;
 
   /* Read in the symbol table.  */
-  sympp = (asymbol **) bfd_malloc (symsize);
+  sympp = bfd_malloc (symsize);
   if (sympp == NULL)
     return false;
 
@@ -12568,10 +12567,7 @@ elf_output_implib (bfd *obfd, struct bfd_link_info *info)
     goto free_sym_buf;
 
   /* Filter symbols to appear in the import library.  */
-  if (obed->elf_backend_filter_implib_symbols)
-    symcount = obed->elf_backend_filter_implib_symbols (info, sympp, symcount);
-  else
-    symcount = _bfd_elf_filter_global_symbols (info, sympp, symcount);
+  symcount = obed->elf_backend_filter_implib_symbols (info, sympp, symcount);
   if (symcount == 0)
     {
       bfd_set_error (bfd_error_no_symbols);
@@ -12580,17 +12576,14 @@ elf_output_implib (bfd *obfd, struct bfd_link_info *info)
       goto free_sym_buf;
     }
 
-
   /* Make symbols absolute.  */
-  amt = symcount * sizeof (*osymbuf);
-  osymbuf = (elf_symbol_type *) bfd_alloc (implib_bfd, amt);
+  osymbuf = bfd_alloc (implib_bfd, symcount * sizeof (*osymbuf));
   if (osymbuf == NULL)
     goto free_sym_buf;
 
   for (src_count = 0; src_count < symcount; src_count++)
     {
-      memcpy (&osymbuf[src_count], (elf_symbol_type *) sympp[src_count],
-	      sizeof (*osymbuf));
+      memcpy (&osymbuf[src_count], sympp[src_count], sizeof (*osymbuf));
       osymbuf[src_count].symbol.section = bfd_abs_section_ptr;
       osymbuf[src_count].internal_elf_sym.st_shndx = SHN_ABS;
       osymbuf[src_count].symbol.value += sympp[src_count]->section->vma;

@@ -4462,16 +4462,16 @@ sym_is_global (bfd *abfd, asymbol *sym)
 
    Returns the number of symbols to keep.  */
 
-unsigned int
-_bfd_elf_filter_global_symbols (struct bfd_link_info *info,
-				asymbol **syms, long symcount)
+size_t
+_bfd_elf_filter_implib_symbols (struct bfd_link_info *info,
+				asymbol **syms, size_t symcount)
 {
-  long src_count, dst_count = 0;
+  size_t src_count, dst_count = 0;
 
   for (src_count = 0; src_count < symcount; src_count++)
     {
       asymbol *sym = syms[src_count];
-      char *name = (char *) bfd_asymbol_name (sym);
+      const char *name = bfd_asymbol_name (sym);
       struct bfd_link_hash_entry *h;
 
       if (!sym_is_global (info->output_bfd, sym))

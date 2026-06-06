@@ -620,7 +620,7 @@
 #define elf_backend_output_arch_syms		NULL
 #endif
 #ifndef elf_backend_filter_implib_symbols
-#define elf_backend_filter_implib_symbols	NULL
+#define elf_backend_filter_implib_symbols	_bfd_elf_filter_implib_symbols
 #endif
 #ifndef elf_backend_copy_indirect_symbol
 #define elf_backend_copy_indirect_symbol	_bfd_elf_link_hash_copy_indirect

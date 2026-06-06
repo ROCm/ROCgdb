@@ -18250,13 +18250,13 @@ elf32_arm_output_arch_local_syms (struct bfd_link_info *info,
 
    Returns the number of symbols to keep.  */
 
-static unsigned int
+static size_t
 elf32_arm_filter_cmse_symbols (struct bfd_link_info *info,
-			       asymbol **syms, long symcount)
+			       asymbol **syms, size_t symcount)
 {
   size_t maxnamelen;
   char *cmse_name;
-  long src_count, dst_count = 0;
+  size_t src_count, dst_count = 0;
   struct elf32_arm_link_hash_table *htab;
 
   htab = elf32_arm_hash_table (info);
@@ -18264,7 +18264,7 @@ elf32_arm_filter_cmse_symbols (struct bfd_link_info *info,
     symcount = 0;
 
   maxnamelen = 128;
-  cmse_name = (char *) bfd_malloc (maxnamelen);
+  cmse_name = bfd_malloc (maxnamelen);
   BFD_ASSERT (cmse_name);
 
   for (src_count = 0; src_count < symcount; src_count++)
@@ -18272,12 +18272,12 @@ elf32_arm_filter_cmse_symbols (struct bfd_link_info *info,
       struct elf32_arm_link_hash_entry *cmse_hash;
       asymbol *sym;
       flagword flags;
-      char *name;
+      const char *name;
       size_t namelen;
 
       sym = syms[src_count];
       flags = sym->flags;
-      name = (char *) bfd_asymbol_name (sym);
+      name = bfd_asymbol_name (sym);
 
       if ((flags & BSF_FUNCTION) != BSF_FUNCTION)
 	continue;
@@ -18287,8 +18287,7 @@ elf32_arm_filter_cmse_symbols (struct bfd_link_info *info,
       namelen = strlen (name) + sizeof (CMSE_PREFIX) + 1;
       if (namelen > maxnamelen)
 	{
-	  cmse_name = (char *)
-	    bfd_realloc (cmse_name, namelen);
+	  cmse_name = bfd_realloc (cmse_name, namelen);
 	  maxnamelen = namelen;
 	}
       snprintf (cmse_name, maxnamelen, "%s%s", CMSE_PREFIX, name);
@@ -18317,9 +18316,9 @@ elf32_arm_filter_cmse_symbols (struct bfd_link_info *info,
 
    Returns the number of symbols to keep.  */
 
-static unsigned int
+static size_t
 elf32_arm_filter_implib_symbols (struct bfd_link_info *info,
-				 asymbol **syms, long symcount)
+				 asymbol **syms, size_t symcount)
 {
   struct elf32_arm_link_hash_table *globals = elf32_arm_hash_table (info);
 
@@ -18330,7 +18329,7 @@ elf32_arm_filter_implib_symbols (struct bfd_link_info *info,
   if (globals->cmse_implib)
     return elf32_arm_filter_cmse_symbols (info, syms, symcount);
   else
-    return _bfd_elf_filter_global_symbols (info, syms, symcount);
+    return _bfd_elf_filter_implib_symbols (info, syms, symcount);
 }
 
 /* Allocate target specific section data.  */
