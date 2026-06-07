@@ -1942,8 +1942,9 @@ riscv_parse_add_subset (riscv_parse_subset_t *rps,
   int major_version = major;
   int minor_version = minor;
 
-  if (major_version == RISCV_UNKNOWN_VERSION
+  if ((major_version == RISCV_UNKNOWN_VERSION
        || minor_version == RISCV_UNKNOWN_VERSION)
+      && rps->isa_spec != NULL)
     riscv_get_default_ext_version (*rps->isa_spec, subset,
 				   &major_version, &minor_version);
 
