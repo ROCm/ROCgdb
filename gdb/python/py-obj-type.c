@@ -31,7 +31,6 @@ gdb_py_tp_name (PyTypeObject *py_type) noexcept
   auto handle_err = [&]() -> std::string
   {
     gdbpy_print_stack ();
-    PyErr_Clear ();
     return NO_TYPE_NAME;
   };
 
