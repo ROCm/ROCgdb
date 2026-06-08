@@ -29,7 +29,6 @@ env:
   THEROCK_COMMIT_REF: 25083b016c475a65cbea46ae7326104680bff1d5 # 2026-06-08
   VENV_DIR: ${{ github.workspace }}/.venv
   OUTPUT_ARTIFACTS_DIR: "./build"
-  THEROCK_BIN_DIR: "./build/bin"
 
 jobs:
   rocgdb-tests:
@@ -68,4 +67,4 @@ jobs:
 
       - name: Run rocgdb tests
         run: |
-          python build_tools/github_actions/test_executable_scripts/test_rocgdb.py
+          python ${{ env.OUTPUT_ARTIFACTS_DIR }}/tests/rocgdb/test_rocgdb.py
