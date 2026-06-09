@@ -6709,13 +6709,13 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
   else
     {
       if (lm_prev != 0)
-	warning ("ignoring prev=0x%s without start", paddress (lm_prev));
+	warning (_("ignoring prev=0x%s without start"), paddress (lm_prev));
 
       /* We could interpret LMID as 'provide only the libraries for this
 	 namespace' but GDB is currently only providing lmid, start, and
 	 prev, or nothing.  */
       if (lmid != 0)
-	warning ("ignoring lmid=0x%s without start", paddress (lmid));
+	warning (_("ignoring lmid=0x%s without start"), paddress (lmid));
 
       CORE_ADDR r_debug = priv->r_debug;
       if (r_debug == 0)

@@ -6182,7 +6182,7 @@ init_named_socket (const char *name)
   result = fd = socket (PF_UNIX, SOCK_STREAM, 0);
   if (result == -1)
     {
-      warning ("socket creation failed: %s", safe_strerror (errno));
+      warning (_("socket creation failed: %s"), safe_strerror (errno));
       return -1;
     }
 
@@ -6203,7 +6203,7 @@ init_named_socket (const char *name)
       result = unlink (name);
       if (result == -1)
 	{
-	  warning ("unlink failed: %s", safe_strerror (errno));
+	  warning (_("unlink failed: %s"), safe_strerror (errno));
 	  close (fd);
 	  return -1;
 	}
@@ -6213,7 +6213,7 @@ init_named_socket (const char *name)
   result = bind (fd, (struct sockaddr *) &addr, sizeof (addr));
   if (result == -1)
     {
-      warning ("bind failed: %s", safe_strerror (errno));
+      warning (_("bind failed: %s"), safe_strerror (errno));
       close (fd);
       return -1;
     }
@@ -6221,7 +6221,7 @@ init_named_socket (const char *name)
   result = listen (fd, 1);
   if (result == -1)
     {
-      warning ("listen: %s", safe_strerror (errno));
+      warning (_("listen: %s"), safe_strerror (errno));
       close (fd);
       return -1;
     }
