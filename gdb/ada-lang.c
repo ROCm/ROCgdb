@@ -569,7 +569,7 @@ coerce_unspec_val_to_type (struct value *val, struct type *type)
       else
 	{
 	  result = value::allocate (type);
-	  val->contents_copy (result, 0, 0, 0, type->length ());
+	  val->contents_copy (result, 0, 0, type->length ());
 	}
       result->set_component_location (val);
       result->set_bitsize (val->bitsize ());
