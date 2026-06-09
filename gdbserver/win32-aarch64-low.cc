@@ -175,7 +175,7 @@ aarch64_get_thread_context (windows_thread_info *th)
   if (!ret)
     {
       DWORD e = GetLastError ();
-      error ("GetThreadContext failure %ld\n", (long) e);
+      error (_("GetThreadContext failure %ld\n"), (long) e);
     }
 }
 

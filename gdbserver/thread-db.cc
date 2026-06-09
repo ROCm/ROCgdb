@@ -274,7 +274,7 @@ find_new_threads_callback (const td_thrhandle_t *th_p, void *data)
 
   err = thread_db->td_thr_get_info_p (th_p, &ti);
   if (err != TD_OK)
-    error ("Cannot get thread info: %s", thread_db_err_str (err));
+    error (_("Cannot get thread info: %s"), thread_db_err_str (err));
 
   if (ti.ti_lid == -1)
     {
@@ -343,7 +343,7 @@ thread_db_find_new_threads (void)
 	}
     }
   if (err != TD_OK)
-    error ("Cannot find new threads: %s", thread_db_err_str (err));
+    error (_("Cannot find new threads: %s"), thread_db_err_str (err));
 }
 
 /* Cache all future symbols that thread_db might request.  We can not

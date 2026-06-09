@@ -6016,7 +6016,7 @@ upload_fast_traceframes (void)
 
       if (read_inferior_memory (tf, (unsigned char *) &ipa_tframe,
 				offsetof (struct traceframe, data)))
-	error ("Uploading: couldn't read traceframe at %s\n", paddress (tf));
+	error (_("Uploading: couldn't read traceframe at %s\n"), paddress (tf));
 
       if (ipa_tframe.tpnum == 0)
 	{

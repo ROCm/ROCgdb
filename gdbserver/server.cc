@@ -1576,7 +1576,7 @@ parse_debug_options (const char *options)
 	  }
 
       if (!found)
-	error ("unknown debug option '%s'", opt.c_str ());
+	error (_("unknown debug option '%s'"), opt.c_str ());
 
       options = (*end == ',') ? end + 1 : end;
     }

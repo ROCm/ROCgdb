@@ -1173,7 +1173,7 @@ linux_process_target::attach (unsigned long pid)
       this->remove_linux_process (proc);
 
       std::string reason = linux_ptrace_attach_fail_reason_string (ptid, err);
-      error ("Cannot attach to process %ld: %s", pid, reason.c_str ());
+      error (_("Cannot attach to process %ld: %s"), pid, reason.c_str ());
     }
 
   open_proc_mem_file (proc);
@@ -5280,7 +5280,7 @@ linux_process_target::store_register (const usrregs_info *usrregs,
 
 
 	  if (!low_cannot_store_register (regno))
-	    error ("writing register %d: %s", regno, safe_strerror (errno));
+	    error (_("writing register %d: %s"), regno, safe_strerror (errno));
 	}
       regaddr += sizeof (PTRACE_XFER_TYPE);
     }
