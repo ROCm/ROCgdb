@@ -28,12 +28,12 @@
 template<typename T>
 struct next_iterator
 {
-  typedef next_iterator self_type;
-  typedef T *value_type;
-  typedef T *&reference;
-  typedef T **pointer;
-  typedef std::forward_iterator_tag iterator_category;
-  typedef int difference_type;
+  using self_type = next_iterator;
+  using value_type = T *;
+  using reference = T *&;
+  using pointer = T **;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type = int;
 
   explicit next_iterator (T *item)
     : m_item (item)
