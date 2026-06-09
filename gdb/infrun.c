@@ -5471,10 +5471,12 @@ wait_one ()
 	      || !target->threads_executing)
 	    continue;
 
-	  int fd = target->async_wait_fd ();
-	  FD_SET (fd, &readfds);
-	  if (nfds <= fd)
-	    nfds = fd + 1;
+	  for (int fd : target->async_wait_fds ())
+	    {
+	      FD_SET (fd, &readfds);
+	      if (nfds <= fd)
+		nfds = fd + 1;
+	    }
 	}
 
       if (nfds == 0)

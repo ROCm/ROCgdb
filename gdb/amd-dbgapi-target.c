@@ -319,6 +319,7 @@ struct amd_dbgapi_target final : public target_ops
   void detach (inferior *inf, int from_tty) override;
 
   void async (bool enable) override;
+  std::vector<int> async_wait_fds () override;
 
   bool has_pending_events () override;
   ptid_t wait (ptid_t, struct target_waitstatus *, target_wait_flags) override;
@@ -1943,6 +1944,28 @@ dbgapi_notifier_handler (int err, gdb_client_data client_data)
 	  break;
 	}
     }
+}
+
+std::vector<int>
+amd_dbgapi_target::async_wait_fds ()
+{
+  std::vector<int> vec = beneath ()->async_wait_fds ();
+
+  /* The library gives us one notifier file descriptor per inferior (even
+     the ones that have not yet loaded their runtime).  Register them
+     all with the event loop.  */
+  process_stratum_target *proc_target
+    = current_inferior ()->process_target ();
+
+  for (inferior *inf : all_non_exited_inferiors (proc_target))
+    {
+      auto &info = get_amd_dbgapi_inferior_info (inf);
+
+      if (info.notifier != -1)
+	vec.push_back (info.notifier);
+    }
+
+  return vec;
 }
 
 void
