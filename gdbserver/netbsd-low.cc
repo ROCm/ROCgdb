@@ -1029,7 +1029,7 @@ netbsd_qxfer_libraries_svr4 (const pid_t pid, const char *annex,
 	{
 	  CORE_ADDR map_offset = r_debug + lmo->r_map_offset;
 	  if (read_one_ptr (pid, map_offset, &lm_addr, ptr_size) != 0)
-	    warning ("unable to read r_map from %s",
+	    warning (_("unable to read r_map from %s"),
 		     core_addr_to_string (map_offset));
 	}
     }
@@ -1050,7 +1050,7 @@ netbsd_qxfer_libraries_svr4 (const pid_t pid, const char *annex,
     {
       if (lm_prev != l_prev)
 	{
-	  warning ("Corrupted shared library list: 0x%lx != 0x%lx",
+	  warning (_("Corrupted shared library list: 0x%lx != 0x%lx"),
 		   (long) lm_prev, (long) l_prev);
 	  break;
 	}

@@ -379,11 +379,11 @@ wait_for_single (HANDLE handle, DWORD howlong)
       if (r == WAIT_FAILED)
 	{
 	  unsigned err = (unsigned) GetLastError ();
-	  warning ("WaitForSingleObject failed (code %u): %s",
+	  warning (_("WaitForSingleObject failed (code %u): %s"),
 		   err, strwinerror (err));
 	}
       else
-	warning ("unexpected result from WaitForSingleObject: %u",
+	warning (_("unexpected result from WaitForSingleObject: %u"),
 		 (unsigned) r);
     }
 }

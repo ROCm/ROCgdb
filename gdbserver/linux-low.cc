@@ -4079,7 +4079,7 @@ linux_process_target::resume_one_lwp_throw (lwp_info *lwp, int step,
 	      if (step == 0)
 		warning (_("BAD - reinserting but not stepping."));
 	      if (lwp->suspended)
-		warning ("BAD - reinserting and suspended(%d).",
+		warning (_("BAD - reinserting and suspended(%d)."),
 				 lwp->suspended);
 	    }
 	}
@@ -6606,7 +6606,7 @@ read_link_map (std::string &document, CORE_ADDR lmid, CORE_ADDR lm_addr,
 
       if (lm_prev != l_prev)
 	{
-	  warning ("Corrupted shared library list: 0x%s != 0x%s",
+	  warning (_("Corrupted shared library list: 0x%s != 0x%s"),
 		   paddress (lm_prev), paddress (l_prev));
 	  break;
 	}
@@ -6738,7 +6738,7 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
 				 (unsigned char *) &r_version,
 				 sizeof (r_version)) != 0)
 	    {
-	      warning ("unable to read r_version from 0x%s",
+	      warning (_("unable to read r_version from 0x%s"),
 		       paddress (r_debug + lmo->r_version_offset));
 	      break;
 	    }
@@ -6752,7 +6752,7 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
 	  if (read_one_ptr (r_debug + lmo->r_map_offset, &lm_addr,
 			    ptr_size) != 0)
 	    {
-	      warning ("unable to read r_map from 0x%s",
+	      warning (_("unable to read r_map from 0x%s"),
 		       paddress (r_debug + lmo->r_map_offset));
 	      break;
 	    }
@@ -6776,7 +6776,7 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
 	      if (read_one_ptr (lm_addr + lmo->l_next_offset,
 				&lm_addr, ptr_size) != 0)
 		{
-		  warning ("unable to read l_next from 0x%s",
+		  warning (_("unable to read l_next from 0x%s"),
 			   paddress (lm_addr + lmo->l_next_offset));
 		  break;
 		}
@@ -6790,7 +6790,7 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
 	  if (read_one_ptr (r_debug + lmo->r_next_offset, &r_debug,
 			    ptr_size) != 0)
 	    {
-	      warning ("unable to read r_next from 0x%s",
+	      warning (_("unable to read r_next from 0x%s"),
 		       paddress (r_debug + lmo->r_next_offset));
 	      break;
 	    }

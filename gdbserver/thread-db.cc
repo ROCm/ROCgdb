@@ -192,7 +192,7 @@ find_one_thread (ptid_t ptid)
 
   if (lwpid != ti.ti_lid)
     {
-      warning ("PID mismatch!  Expected %ld, got %ld",
+      warning (_("PID mismatch!  Expected %ld, got %ld"),
 	       (long) lwpid, (long) ti.ti_lid);
       return 0;
     }
@@ -227,7 +227,7 @@ attach_thread (const td_thrhandle_t *th_p, td_thrinfo_t *ti_p)
     {
       std::string reason = linux_ptrace_attach_fail_reason_string (ptid, err);
 
-      warning ("Could not attach to thread %ld (LWP %d): %s",
+      warning (_("Could not attach to thread %ld (LWP %d): %s"),
 	       (unsigned long) ti_p->ti_tid, ti_p->ti_lid, reason.c_str ());
 
       return 0;

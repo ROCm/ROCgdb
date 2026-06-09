@@ -6303,7 +6303,7 @@ gdb_agent_helper_thread (void *arg)
 
 	  if (fd < 0)
 	    {
-	      warning ("Accept returned %d, error: %s",
+	      warning (_("Accept returned %d, error: %s"),
 		       fd, safe_strerror (errno));
 	      break;
 	    }
@@ -6315,7 +6315,7 @@ gdb_agent_helper_thread (void *arg)
 
 	  if (ret == -1)
 	    {
-	      warning ("reading socket (fd=%d) failed with %s",
+	      warning (_("reading socket (fd=%d) failed with %s"),
 		       fd, safe_strerror (errno));
 	      close (fd);
 	      break;

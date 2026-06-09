@@ -1751,14 +1751,14 @@ relocate_instruction (CORE_ADDR *to, CORE_ADDR oldloc)
 
   if (cs.own_buf[0] == 'E')
     {
-      warning ("An error occurred while relocating an instruction: %s",
+      warning (_("An error occurred while relocating an instruction: %s"),
 	       cs.own_buf);
       return -1;
     }
 
   if (!startswith (cs.own_buf, "qRelocInsn:"))
     {
-      warning ("Malformed response to qRelocInsn, ignoring: %s",
+      warning (_("Malformed response to qRelocInsn, ignoring: %s"),
 	       cs.own_buf);
       return -1;
     }

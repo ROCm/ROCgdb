@@ -589,7 +589,7 @@ static void
 proc_warn (procinfo *pi, const char *func, int line)
 {
   int saved_errno = errno;
-  warning ("procfs: %s line %d, %ps: %s",
+  warning (_("procfs: %s line %d, %ps: %s"),
 	   func, line, styled_string (file_name_style.style (),
 				      pi->pathname),
 	   safe_strerror (saved_errno));

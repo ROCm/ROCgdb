@@ -2976,7 +2976,7 @@ find_sal_for_pc_sect (CORE_ADDR pc, struct obj_section *section, int notcurrent)
 	   * so of course we can't find the real func/line info,
 	   * but the "break" still works, and the warning is annoying.
 	   * So I commented out the warning.  RT */
-	  /* warning ("In stub for %s; unable to find real function/line info",
+	  /* warning (_("In stub for %s; unable to find real function/line info"),
 	     msymbol->linkage_name ()); */
 	  ;
 	/* fall through */
@@ -2984,7 +2984,7 @@ find_sal_for_pc_sect (CORE_ADDR pc, struct obj_section *section, int notcurrent)
 		 == msymbol.value_address ())
 	  /* Avoid infinite recursion */
 	  /* See above comment about why warning is commented out.  */
-	  /* warning ("In stub for %s; unable to find real function/line info",
+	  /* warning (_("In stub for %s; unable to find real function/line info"),
 	     msymbol->linkage_name ()); */
 	  ;
 	/* fall through */
