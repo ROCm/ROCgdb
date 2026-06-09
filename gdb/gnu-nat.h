@@ -130,7 +130,7 @@ struct gnu_nat_target : public inf_child_target
 					ULONGEST offset, ULONGEST len,
 					ULONGEST *xfered_len) override;
 
-  bool find_memory_regions (find_memory_region_ftype func, void *data)
+  bool find_memory_regions (find_memory_region_ftype func)
     override;
   void kill () override;
 
