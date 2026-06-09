@@ -472,6 +472,7 @@ SELFTESTS_SRCS = \
 	unittests/lookup_name_info-selftests.c \
 	unittests/memory-map-selftests.c \
 	unittests/memrange-selftests.c \
+	unittests/next-iterator-selftests.c \
 	unittests/offset-type-selftests.c \
 	unittests/observable-selftests.c \
 	unittests/packed-selftests.c \
