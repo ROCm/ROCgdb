@@ -1,0 +1,81 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# This file is part of GDB.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Basic OpenMP-offload device-debugging checks, all sharing a single
+# '#pragma omp target' binary:
+#
+#   - "breakpoint": set a breakpoint inside the target region by
+#     file:line, hit it on the device, and observe an AMDGPU wave.
+#   - "locals": inspect variables in different data-sharing classes
+#     (map(to:), map(tofrom:), firstprivate).
+#   - "step": single-step through statements in the region, staying on
+#     the device.
+
+load_lib rocm.exp
+
+require allow_omp_offload_tests
+
+standard_testfile .c
+
+set first_line [gdb_get_line_number "first-target-line"]
+
+if {[gdb_compile_omp_offload [list $srcdir/$subdir/$srcfile] \
+	 [standard_output_file $testfile] executable {debug}] != ""} {
+    untested "failed to compile OpenMP-offload binary"
+    return -1
+}
+
+clean_restart $testfile
+
+with_rocm_omp_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+
+    gdb_breakpoint "$srcfile:$first_line" allow-pending
+
+    with_test_prefix "breakpoint" {
+	rocm_omp_continue_to_breakpoint "continue to device breakpoint"
+	rocm_omp_check_on_wave "AMDGPU wave at OMP-target stop"
+    }
+
+    # Still stopped at the first statement in the region (out_arr is
+    # not written yet), so the data-sharing values are deterministic.
+    with_test_prefix "locals" {
+	gdb_test "print firstpriv_val" "= 42" "firstprivate value"
+	gdb_test "print in_arr\[0\]" "= 100" "mapped-to in_arr\[0\]"
+	gdb_test "print in_arr\[7\]" "= 107" "mapped-to in_arr\[7\]"
+	gdb_test "print out_arr\[0\]" "= 0" \
+	    "mapped-tofrom out_arr\[0\] before fill"
+    }
+
+    # Step forward through a few statements; each step must stay on a
+    # GPU wave.  Line numbers are not pinned because OpenMP-offload
+    # line tables vary across compiler versions.
+    with_test_prefix "step" {
+	foreach which {1 2 3} {
+	    with_test_prefix "next-$which" {
+		rocm_omp_next "next inside target region"
+		rocm_omp_check_on_wave "still on AMDGPU wave"
+	    }
+	}
+    }
+
+    delete_breakpoints
+    rocm_omp_continue_to_exit "continue to exit"
+}

@@ -826,3 +826,102 @@ proc gdb_compile_omp_offload_fortran {source dest type options} {
 proc with_rocm_omp_gpu_lock { body } {
     with_rocm_gpu_lock {uplevel 1 $body}
 }
+
+# Helpers shared by the gdb.rocm/omp-target-*.exp tests.
+#
+# The stop report for an OpenMP-offload breakpoint can span several
+# lines (a "Switching to thread" notice, the "hit Breakpoint N.M"
+# line, the auto-generated __omp_offloading_* frame and the source
+# line), so these helpers accumulate the interesting bits with
+# exp_continue rather than matching a single line.
+
+# Continue the inferior and verify that a breakpoint is hit.
+
+proc rocm_omp_continue_to_breakpoint {testname} {
+    set saw_bp 0
+    gdb_test_multiple "continue" $testname {
+	-re "hit Breakpoint $::decimal" {
+	    set saw_bp 1
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $saw_bp } $testname
+	}
+    }
+}
+
+# Like rocm_omp_continue_to_breakpoint, but also verify that the stop
+# is reported in device function FUNC.  Used when a breakpoint is set
+# on a named '#pragma omp declare target' function.  TESTNAME defaults
+# to "continue to FUNC".
+
+proc rocm_omp_continue_to_function {func {testname ""}} {
+    if {$testname eq ""} {
+	set testname "continue to $func"
+    }
+    set saw_bp 0
+    set saw_func 0
+    set func_re "[string_to_regexp $func] \\("
+    gdb_test_multiple "continue" $testname {
+	-re "hit Breakpoint $::decimal" {
+	    set saw_bp 1
+	    exp_continue
+	}
+	-re $func_re {
+	    set saw_func 1
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $saw_bp && $saw_func } $testname
+	}
+    }
+}
+
+# Verify that GDB is currently stopped on an AMDGPU wave.
+
+proc rocm_omp_check_on_wave {testname} {
+    set saw_wave 0
+    gdb_test_multiple "info threads" $testname {
+	-re "AMDGPU Wave" {
+	    set saw_wave 1
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $saw_wave } $testname
+	}
+    }
+}
+
+# Continue the inferior and verify it runs to normal exit.
+
+proc rocm_omp_continue_to_exit {testname} {
+    set saw_exit 0
+    gdb_test_multiple "continue" $testname {
+	-re "exited normally" {
+	    set saw_exit 1
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $saw_exit } $testname
+	}
+    }
+}
+
+# Single-step one source line forward inside a device region and
+# verify the step did not error out.  The resulting line number is not
+# checked, since OpenMP-offload line tables vary across compiler
+# versions; callers typically follow this with rocm_omp_check_on_wave
+# to confirm execution stayed on the device.
+
+proc rocm_omp_next {testname} {
+    set ok 1
+    gdb_test_multiple "next" $testname {
+	-re "\[Cc\]annot \[^\r\n\]*\r\n" {
+	    set ok 0
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $ok } $testname
+	}
+    }
+}

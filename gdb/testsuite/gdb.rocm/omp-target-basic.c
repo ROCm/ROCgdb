@@ -16,40 +16,44 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* Minimal OpenMP "target" offload program used to exercise
-   breakpoints in a device kernel offloaded by an OpenMP application.  */
+/* Basic OpenMP "target" offload program shared by the breakpoint,
+   data-sharing (locals) and single-stepping checks in
+   omp-target-basic.exp.  It offloads a single '#pragma omp target'
+   region with a mapped input array (to:), a mapped output array
+   (tofrom:) and a firstprivate scalar, plus a few distinguishable
+   statements at the top of the region for single-stepping.  */
 
 #include <stdio.h>
-#include <stdlib.h>
 
-#define N 64
+#define N 8
 
 int
 main (void)
 {
-  int a[N];
-  int b[N];
-  int c[N];
+  int in_arr[N];
+  int out_arr[N];
 
   for (int i = 0; i < N; i++)
     {
-      a[i] = i;
-      b[i] = 2 * i;
-      c[i] = 0;
+      in_arr[i] = 100 + i;
+      out_arr[i] = 0;
     }
 
-  /* The map clauses move A and B onto the device, and C tofrom the
-     device.  The body of the target region is executed on the GPU.  */
-  #pragma omp target map(to:a[0:N], b[0:N]) map(tofrom:c[0:N])
+  int firstpriv_val = 42;
+
+  #pragma omp target						\
+	      map(to:in_arr[0:N]) map(tofrom:out_arr[0:N])	\
+	      firstprivate(firstpriv_val)
   {
+    int priv_val = 7;			/* first-target-line */
+    int step_two = priv_val + 1;
+    int step_three = step_two + 1;
+
     for (int i = 0; i < N; i++)
-      c[i] = a[i] + b[i];	/* break-target-line */
+      out_arr[i] = in_arr[i] + priv_val + firstpriv_val
+		   + step_two + step_three;
   }
 
-  int sum = 0;
-  for (int i = 0; i < N; i++)
-    sum += c[i];
-
-  printf ("sum=%d\n", sum);
-  return sum == (3 * (N - 1) * N / 2) ? 0 : 1;
+  printf ("out[0]=%d out[%d]=%d\n", out_arr[0], N - 1, out_arr[N - 1]);
+  return 0;
 }

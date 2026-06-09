@@ -37,33 +37,6 @@ if {[gdb_compile_omp_offload [list $srcdir/$subdir/$srcfile] \
 
 clean_restart $testfile
 
-# Common "continue and ensure we hit a breakpoint" helper.
-proc continue_to_bp {testname} {
-    set saw_bp_hit 0
-    gdb_test_multiple "continue" $testname {
-	-re "hit Breakpoint $::decimal" {
-	    set saw_bp_hit 1
-	    exp_continue
-	}
-	-re "$::gdb_prompt " {
-	    gdb_assert { $saw_bp_hit } $testname
-	}
-    }
-}
-
-proc check_on_amdgpu_wave {testname} {
-    set saw_wave 0
-    gdb_test_multiple "info threads" $testname {
-	-re "AMDGPU Wave" {
-	    set saw_wave 1
-	    exp_continue
-	}
-	-re "$::gdb_prompt " {
-	    gdb_assert { $saw_wave } $testname
-	}
-    }
-}
-
 with_rocm_omp_gpu_lock {
     if {![runto_main]} {
 	return
@@ -72,8 +45,8 @@ with_rocm_omp_gpu_lock {
     gdb_breakpoint "$srcfile:$k1_line" allow-pending
 
     with_test_prefix "first kernel" {
-	continue_to_bp "continue to first kernel"
-	check_on_amdgpu_wave "AMDGPU wave at first kernel"
+	rocm_omp_continue_to_breakpoint "continue to first kernel"
+	rocm_omp_check_on_wave "AMDGPU wave at first kernel"
 	gdb_test "print a\[0\]" "= 0"   "a\[0\] in first kernel"
 	gdb_test "print b\[0\]" "= 100" "b\[0\] in first kernel"
     }
@@ -84,8 +57,8 @@ with_rocm_omp_gpu_lock {
     gdb_breakpoint "$srcfile:$k2_line" allow-pending
 
     with_test_prefix "second kernel" {
-	continue_to_bp "continue to second kernel"
-	check_on_amdgpu_wave "AMDGPU wave at second kernel"
+	rocm_omp_continue_to_breakpoint "continue to second kernel"
+	rocm_omp_check_on_wave "AMDGPU wave at second kernel"
 	# After the first kernel ran to completion (no other bp now),
 	# c[0] = a[0] + b[0] = 0 + 100 = 100.  The 'target data'
 	# region preserves this on the device, so we observe it.
@@ -93,15 +66,5 @@ with_rocm_omp_gpu_lock {
     }
 
     delete_breakpoints
-
-    set saw_exit 0
-    gdb_test_multiple "continue" "continue to exit" {
-	-re "exited normally" {
-	    set saw_exit 1
-	    exp_continue
-	}
-	-re "$::gdb_prompt " {
-	    gdb_assert { $saw_exit } $gdb_test_name
-	}
-    }
+    rocm_omp_continue_to_exit "continue to exit"
 }

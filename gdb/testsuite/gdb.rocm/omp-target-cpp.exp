@@ -37,32 +37,6 @@ if {[gdb_compile_omp_offload_cpp [list $srcdir/$subdir/$srcfile] \
 
 clean_restart $testfile
 
-proc continue_to_bp {testname} {
-    set saw_bp_hit 0
-    gdb_test_multiple "continue" $testname {
-	-re "hit Breakpoint $::decimal" {
-	    set saw_bp_hit 1
-	    exp_continue
-	}
-	-re "$::gdb_prompt " {
-	    gdb_assert { $saw_bp_hit } $testname
-	}
-    }
-}
-
-proc check_on_amdgpu_wave {testname} {
-    set saw_wave 0
-    gdb_test_multiple "info threads" $testname {
-	-re "AMDGPU Wave" {
-	    set saw_wave 1
-	    exp_continue
-	}
-	-re "$::gdb_prompt " {
-	    gdb_assert { $saw_wave } $testname
-	}
-    }
-}
-
 with_rocm_omp_gpu_lock {
     if {![runto_main]} {
 	return
@@ -70,15 +44,15 @@ with_rocm_omp_gpu_lock {
 
     with_test_prefix "templated add_t" {
 	gdb_breakpoint "$srcfile:$tmpl_line" allow-pending
-	continue_to_bp "continue to add_t<int>"
-	check_on_amdgpu_wave "AMDGPU wave at add_t"
+	rocm_omp_continue_to_breakpoint "continue to add_t<int>"
+	rocm_omp_check_on_wave "AMDGPU wave at add_t"
 	delete_breakpoints
     }
 
     with_test_prefix "multiplier::operator()" {
 	gdb_breakpoint "$srcfile:$functor_line" allow-pending
-	continue_to_bp "continue to multiplier::operator()"
-	check_on_amdgpu_wave "AMDGPU wave at functor"
+	rocm_omp_continue_to_breakpoint "continue to multiplier::operator()"
+	rocm_omp_check_on_wave "AMDGPU wave at functor"
 
 	# 'this->factor' should be the value we set on the host (3),
 	# transferred via the implicit 'map(to:m)'.
@@ -88,14 +62,5 @@ with_rocm_omp_gpu_lock {
 	delete_breakpoints
     }
 
-    set saw_exit 0
-    gdb_test_multiple "continue" "continue to exit" {
-	-re "exited normally" {
-	    set saw_exit 1
-	    exp_continue
-	}
-	-re "$::gdb_prompt " {
-	    gdb_assert { $saw_exit } $gdb_test_name
-	}
-    }
+    rocm_omp_continue_to_exit "continue to exit"
 }
