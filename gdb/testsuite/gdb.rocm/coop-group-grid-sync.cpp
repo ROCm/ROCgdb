@@ -40,8 +40,9 @@ namespace cg = cooperative_groups;
    in the GWS barrier.  Two workgroups of 64 threads each give 128
    threads in total.
 
-   N is exactly one slot per thread so Phase 2 has no intra-thread race
-   and the host-side expected values can be computed straightforwardly.  */
+   N is exactly one slot per thread so Phase 2 has no inter-thread
+   write conflict and the host-side expected values can be computed
+   straightforwardly.  */
 
 constexpr unsigned int group_size = 64;
 constexpr unsigned int num_groups = 2;

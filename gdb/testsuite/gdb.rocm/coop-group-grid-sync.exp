@@ -55,10 +55,22 @@ proc_with_prefix test_break_around_grid_sync {} {
 	# Place a breakpoint before grid.sync ().  Use "allow-pending"
 	# because the kernel is loaded as device code at dispatch time.
 	gdb_breakpoint \
-	    [gdb_get_line_number "before-sync line"] allow-pending
+	    [gdb_get_line_number "before-sync line"] allow-pending temporary
 
-	# The kernel must hit the pre-sync breakpoint.
-	if {[gdb_continue_to_breakpoint "stop before grid.sync"] != 0} {
+	# Continue into the kernel.  If the program self-skips (no device
+	# advertises cooperativeLaunch) it exits cleanly; treat that as
+	# UNSUPPORTED rather than a FAIL.
+	set reached 0
+	gdb_test_multiple "continue" "stop before grid.sync" {
+	    -re -wrap "Temporary breakpoint $::decimal,\[^\r\n\]*coop_grid_sync_kernel .*" {
+		set reached 1
+		pass $gdb_test_name
+	    }
+	    -re -wrap "$::inferior_exited_re normally.*" {
+		unsupported "cooperative launch not available"
+	    }
+	}
+	if { !$reached } {
 	    return
 	}
 
@@ -90,27 +102,25 @@ proc_with_prefix test_break_around_grid_sync {} {
 	    ".*AMDGPU Dispatch\[^\r\n\]*coop_grid_sync_kernel.*" \
 	    "info dispatches lists cooperative dispatch"
 
-	# Replace the pre-sync breakpoint with one after grid.sync ().
-	# The after-sync breakpoint fires once all waves have crossed
-	# the GWS barrier, which proves GWS-protected code can be
-	# debugged across the barrier.
-	delete_breakpoints
+	# Place a breakpoint after grid.sync ().  It fires once all waves
+	# have crossed the GWS barrier, which proves GWS-protected code
+	# can be debugged across the barrier.
 	gdb_breakpoint \
-	    [gdb_get_line_number "after-sync line"] allow-pending
+	    [gdb_get_line_number "after-sync line"] allow-pending temporary
 
 	gdb_continue_to_breakpoint "stop after grid.sync"
 
 	# The kernel should be able to run to completion afterwards.
-	delete_breakpoints
 	gdb_continue_to_end "continue to program end" "continue" 1
     }
 }
 
-# Test: place a breakpoint inside the cooperative kernel, then iterate
-# over every stopped GPU wave and verify that each one has a backtrace
-# pointing into coop_grid_sync_kernel.  This exercises the wave
-# organization a debugger sees when several waves participate in a GWS
-# barrier.
+# Test: stop inside the cooperative kernel with several co-resident
+# waves parked at the barrier and check that gdb reports correct,
+# distinct per-wave and per-lane state.  This is the debugger
+# behaviour of interest: that gdb selects the right register context
+# per wave and the right SIMT state per lane, not merely that the
+# waves are in the kernel.
 
 proc_with_prefix test_threads_in_coop_kernel {} {
     clean_restart $::testfile
@@ -121,29 +131,56 @@ proc_with_prefix test_threads_in_coop_kernel {} {
 	}
 
 	gdb_breakpoint \
-	    [gdb_get_line_number "before-sync line"] allow-pending
+	    [gdb_get_line_number "before-sync line"] allow-pending temporary
 
-	if {[gdb_continue_to_breakpoint "stop in cooperative kernel"] != 0} {
+	# Continue into the kernel.  If the program self-skips (no device
+	# advertises cooperativeLaunch) it exits cleanly; treat that as
+	# UNSUPPORTED rather than a FAIL.
+	set reached 0
+	gdb_test_multiple "continue" "stop in cooperative kernel" {
+	    -re -wrap "Temporary breakpoint $::decimal,\[^\r\n\]*coop_grid_sync_kernel .*" {
+		set reached 1
+		pass $gdb_test_name
+	    }
+	    -re -wrap "$::inferior_exited_re normally.*" {
+		unsupported "cooperative launch not available"
+	    }
+	}
+	if { !$reached } {
 	    return
 	}
 
-	# Collect the list of AMDGPU waves and check that every one of
-	# them has a backtrace pointing into coop_grid_sync_kernel.
 	set waves [info_thread_get_wave_list]
 	gdb_assert {[llength $waves] >= 2} "multiple GPU waves listed"
 
+	# Per-wave register context: switching to each wave and reading
+	# blockIdx.x must yield that wave's owning workgroup, and across
+	# all waves we must observe more than one distinct workgroup.
+	set blocks {}
 	foreach wave $waves {
 	    with_test_prefix "wave $wave" {
 		gdb_test "thread $wave" "Switching to thread $wave.*" \
 		    "switch to wave $wave"
-		gdb_test "bt 1" \
-		    "#0\[^\r\n\]*coop_grid_sync_kernel\[^\r\n\]*" \
-		    "backtrace inside coop_grid_sync_kernel"
+		set bidx [get_integer_valueof "blockIdx.x" -1 "blockIdx.x"]
+		if {[lsearch -exact $blocks $bidx] == -1} {
+		    lappend blocks $bidx
+		}
 	    }
 	}
+	gdb_assert {[llength $blocks] >= 2} \
+	    "distinct workgroups observed across waves"
+
+	# Per-lane (SIMT) state: within a single wave, different lanes map
+	# to different threads, so threadIdx.x must differ between lanes.
+	gdb_test "thread [lindex $waves 0]" "Switching to thread .*" \
+	    "switch to first wave for lane inspection"
+	gdb_test "lane 0" ".*" "switch to lane 0"
+	set tid0 [get_integer_valueof "threadIdx.x" -1 "threadIdx.x at lane 0"]
+	gdb_test "lane 1" ".*" "switch to lane 1"
+	set tid1 [get_integer_valueof "threadIdx.x" -1 "threadIdx.x at lane 1"]
+	gdb_assert {$tid0 != $tid1} "distinct threadIdx.x across lanes"
 
 	# Resume to completion.
-	delete_breakpoints
 	gdb_continue_to_end "continue to program end" "continue" 1
     }
 }

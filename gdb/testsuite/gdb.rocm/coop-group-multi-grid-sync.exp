@@ -26,8 +26,8 @@
 #   - read the number of participating GPUs from the inferior,
 #   - hit a kernel breakpoint inside the cooperative dispatch on
 #     *every* participating GPU (matched via the per-device
-#     "Breakpoint <id>.<instance>" subscript that hipLaunchCooperative
-#     KernelMultiDevice produces), and
+#     "Breakpoint <id>.<instance>" subscript that
+#     hipLaunchCooperativeKernelMultiDevice produces), and
 #   - resume the cross-device dispatch through both the intra-device
 #     this_grid ().sync () and the cross-device this_multi_grid ().sync ()
 #     to normal program completion.
@@ -63,34 +63,19 @@ proc_with_prefix test_break_in_multi_coop_kernel {} {
 	    return
 	}
 
-	# Advance to the point where the inferior has finalized "n_gpus"
-	# (the count of GPUs it will actually use for the cooperative
-	# dispatch) so we can read it from gdb.  The require gates above
-	# cover architecture-level support; per-device runtime gating
-	# (>= 2 devices that advertise cooperativeMultiDeviceLaunch) is
-	# done inside main () in the .cpp, which self-skips with a clean
-	# exit when those preconditions are not met.  Treat that clean
-	# exit as UNSUPPORTED rather than a FAIL.
-	gdb_breakpoint \
-	    [gdb_get_line_number "n-gpus-final line"] allow-pending
-
-	set eligible 0
-	gdb_test_multiple "continue" "advance to n-gpus-final" {
-	    -re "hit Breakpoint $::decimal,\[^\r\n\]*main \\(\\)\[^\r\n\]*\r\n\[^\r\n\]*\r\n$::gdb_prompt " {
-		set eligible 1
-		pass $gdb_test_name
-	    }
-	    -re "\\\[Inferior 1 \[^\r\n\]* exited normally\\\]\[^\r\n\]*\r\n$::gdb_prompt " {
-		unsupported "multi-device cooperative launch not available"
-	    }
-	}
-	if { !$eligible } {
-	    return
-	}
+	# Break where the inferior has finalized "n_gpus" (the count of
+	# GPUs it will use for the cooperative dispatch).  This line runs
+	# on every execution, before the inferior's own eligibility
+	# check, so reading "n_gpus" from gdb lets us decide here whether
+	# to proceed.  The require gates above cover architecture-level
+	# support; per-device runtime gating (>= 2 devices that advertise
+	# cooperativeMultiDeviceLaunch) can only be known at this point.
+	gdb_breakpoint [gdb_get_line_number "n-gpus-final line"] temporary
+	gdb_continue_to_breakpoint "advance to n-gpus-final"
 
 	set n_gpus [get_integer_valueof "n_gpus" 0]
-	gdb_assert {$n_gpus >= 2} "n_gpus is at least 2"
 	if { $n_gpus < 2 } {
+	    unsupported "fewer than two cooperative-capable GPUs"
 	    return
 	}
 
@@ -107,12 +92,11 @@ proc_with_prefix test_break_in_multi_coop_kernel {} {
 	    }
 	}
 
-	# In non-stop mode, hipLaunchCooperativeKernelMultiDevice
-	# produces one child breakpoint instance per participating GPU
-	# ("Breakpoint <id>.<inst>").  Collect distinct <inst> values
-	# until we have observed a stop on every GPU; only then is it
-	# safe to delete the breakpoint and let the dispatch run
-	# through both grid syncs.
+	# Check that gdb resolves the single source breakpoint to one
+	# child location per participating GPU ("Breakpoint <id>.<inst>")
+	# and, in non-stop mode, reports each device-side stop
+	# independently.  Collect distinct <inst> values until a stop has
+	# been seen for every GPU.
 	array unset gpu_seen
 	set distinct_gpus 0
 	gdb_test_multiple "" "breakpoint hit on every participating GPU" {

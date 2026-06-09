@@ -62,7 +62,7 @@ coop_multi_grid_sync_kernel (int *data, unsigned int n_elements,
 
   /* Phase 1: each thread writes data into its slot.  */
   for (unsigned int i = tid; i < n_elements; i += stride)
-    data[i] = (int) ((grid_rank + 1) * (i + 1));   /* before-grid-sync line */
+    data[i] = (int) ((grid_rank + 1) * (i + 1));	/* before-grid-sync line */
 
   /* Intra-device grid sync (GWS).  */
   grid.sync ();			       /* grid-sync line */
@@ -97,17 +97,14 @@ main ()
 {
   int n_devices = 0;
   CHECK (hipGetDeviceCount (&n_devices));
-  if (n_devices < N_USED_GPUS)
-    {
-      printf ("Multi-device cooperative test needs >= %d GPUs"
-	      " (found %d), skipping.\n", N_USED_GPUS, n_devices);
-      return 0;
-    }
 
   /* Pick the first N_USED_GPUS devices that support
      cooperativeMultiDeviceLaunch.  In a mixed-architecture system not
      every GPU has GWS support, so we ignore unsupported ones rather
-     than failing the whole test.  */
+     than failing the whole test.  This loop runs unconditionally (it
+     is bounded by n_devices) so the marker below is always reached,
+     even when too few devices are available; the companion .exp reads
+     n_gpus there to decide whether to skip.  */
   int selected[N_USED_GPUS];
   int n_gpus = 0;
   for (int id = 0; id < n_devices && n_gpus < N_USED_GPUS; id++)
@@ -120,15 +117,14 @@ main ()
 	  n_gpus++;
 	}
     }
-  if (n_gpus < N_USED_GPUS)
+  if (n_gpus < N_USED_GPUS)	/* n-gpus-final line */
     {
-      printf ("Fewer than %d devices in 0..%d support cooperative"
+      printf ("Fewer than %d of the %d HIP device(s) support cooperative"
 	      " multi-device launch, skipping.\n",
-	      N_USED_GPUS, n_devices - 1);
+	      N_USED_GPUS, n_devices);
       return 0;
     }
 
-  /* n-gpus-final line.  */
   int *data_d[N_USED_GPUS] = {};
   hipStream_t stream[N_USED_GPUS] = {};
 
