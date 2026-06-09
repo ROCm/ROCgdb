@@ -1518,7 +1518,7 @@ dwarf_register::to_gdb_value (const frame_info_ptr &initial_frame,
 	 return a generic optimized out value instead, so that we show
 	 <optimized out> instead of <not saved>.  */
       value *temp = value::allocate (subobj_type);
-      retval->contents_copy (temp, 0, 0, 0, subobj_type->length ());
+      retval->contents_copy (temp, 0, 0, subobj_type->length ());
       retval = temp;
     }
 

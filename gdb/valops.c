@@ -1749,7 +1749,7 @@ value_array (int lowbound, gdb::array_view<struct value *> elemvec)
     {
       val = value::allocate (arraytype);
       for (idx = 0; idx < elemvec.size (); idx++)
-	elemvec[idx]->contents_copy (val, idx * typelength, 0, 0, typelength);
+	elemvec[idx]->contents_copy (val, idx * typelength, 0, typelength);
       return val;
     }
 
@@ -1758,7 +1758,7 @@ value_array (int lowbound, gdb::array_view<struct value *> elemvec)
 
   val = value::allocate (arraytype);
   for (idx = 0; idx < elemvec.size (); idx++)
-    elemvec[idx]->contents_copy (val, idx * typelength, 0, 0, typelength);
+    elemvec[idx]->contents_copy (val, idx * typelength, 0, typelength);
   return val;
 }
 
@@ -4103,7 +4103,7 @@ value_slice (struct value *array, LONGEST lowbound, LONGEST length)
     else
       {
 	slice = value::allocate (slice_type);
-	array->contents_copy (slice, 0, offset, 0,
+	array->contents_copy (slice, 0, offset,
 			     type_length_units (slice_type));
       }
 

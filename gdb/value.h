@@ -628,8 +628,19 @@ public:
      It is assumed the contents of DST in the [DST_OFFSET,
      DST_OFFSET+LENGTH) range are wholly available.  */
   void contents_copy (struct value *dst, LONGEST dst_offset,
-		      LONGEST src_offset, LONGEST src_bit_offset,
-		      LONGEST length);
+		      LONGEST src_offset, LONGEST length);
+
+  /* Copy BIT_LENGTH bits of this value's content starting at
+     SRC_BIT_OFFSET bits into DST value's contents, starting at
+     DST_BIT_OFFSET bits.  If unavailable contents are being copied
+     from this value, the corresponding DST contents are marked
+     unavailable accordingly.  DST must not be lazy.  If this value
+     is lazy, it will be fetched now.
+
+     It is assumed the contents of DST in the [DST_BIT_OFFSET,
+     DST_BIT_OFFSET+BIT_LENGTH) range are wholly available.  */
+  void contents_copy_bitwise (struct value *dst, LONGEST dst_bit_offset,
+			      LONGEST src_bit_offset, LONGEST bit_length);
 
   /* Given a value (offset by OFFSET bytes)
      of a struct or union type ARG_TYPE,
@@ -901,8 +912,7 @@ private:
      It is assumed the contents of DST in the [DST_OFFSET,
      DST_OFFSET+LENGTH) range are wholly available.  */
   void contents_copy_raw (struct value *dst, LONGEST dst_offset,
-			  LONGEST src_offset, LONGEST src_bit_offset,
-			  LONGEST length);
+			  LONGEST src_offset, LONGEST length);
 
   /* A helper for value_from_component_bitsize that copies bits from
      this value to DEST.  */

@@ -593,6 +593,7 @@ void
 read_frame_register_value (value *value)
 {
   gdb_assert (value->lval () == lval_register);
+  int unit_size = gdbarch_addressable_memory_unit_size (value->arch ());
 
   frame_info_ptr next_frame = frame_find_by_id (value->next_frame_id ());
   gdb_assert (next_frame != nullptr);
@@ -622,7 +623,11 @@ read_frame_register_value (value *value)
       if (reg_len > len)
 	reg_len = len;
 
-      regval->contents_copy (value, offset, reg_offset, bit_offset, reg_len);
+      regval->contents_copy_bitwise (value,
+				     offset * unit_size * HOST_CHAR_BIT,
+				     (reg_offset * unit_size * HOST_CHAR_BIT
+				      + bit_offset),
+				     reg_len * unit_size * HOST_CHAR_BIT);
 
       offset += reg_len;
       len -= reg_len;

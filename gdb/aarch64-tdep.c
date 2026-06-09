@@ -3283,7 +3283,7 @@ aarch64_sme_pseudo_register_read (gdbarch *gdbarch, const frame_info_ptr &next_f
     {
       int src_offset = offsets.starting_offset + chunks * offsets.stride_size;
       int dst_offset = chunks * offsets.chunk_size;
-      za_value->contents_copy (result, dst_offset, src_offset, 0,
+      za_value->contents_copy (result, dst_offset, src_offset,
 			       offsets.chunk_size);
     }
 
