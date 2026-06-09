@@ -599,7 +599,7 @@ static void
 proc_error (procinfo *pi, const char *func, int line)
 {
   int saved_errno = errno;
-  error ("procfs: %s line %d, %s: %s",
+  error (_("procfs: %s line %d, %s: %s"),
 	 func, line, pi->pathname, safe_strerror (saved_errno));
 }
 

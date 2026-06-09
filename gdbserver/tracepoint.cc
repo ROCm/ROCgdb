@@ -6047,7 +6047,7 @@ upload_fast_traceframes (void)
 	      if (read_inferior_memory (tf
 					+ offsetof (struct traceframe, data),
 					block, ipa_tframe.data_size))
-		error ("Uploading: Couldn't read traceframe data at %s\n",
+		error (_("Uploading: Couldn't read traceframe data at %s\n"),
 		       paddress (tf + offsetof (struct traceframe, data)));
 	    }
 
