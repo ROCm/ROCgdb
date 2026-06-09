@@ -796,8 +796,8 @@ resume_one_thread (thread_info *thread, bool step, gdb_signal sig,
 	  if (the_low_target.single_step != NULL)
 	    (*the_low_target.single_step) (th);
 	  else
-	    error ("Single stepping is not supported "
-		   "in this configuration.\n");
+	    error (_("Single stepping is not supported "
+		     "in this configuration.\n"));
 	}
 
       win32_set_thread_context (th);
