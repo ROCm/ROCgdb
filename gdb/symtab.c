@@ -4610,8 +4610,10 @@ symbol_search::compare_search_syms (const symbol_search &sym_a,
 {
   int c;
 
-  c = FILENAME_CMP (sym_a.symbol->symtab ()->filename (),
-		    sym_b.symbol->symtab ()->filename ());
+  /* The output is going to be displayed to the user, so sort the file
+     names according to how they will be shown.  */
+  c = FILENAME_CMP (symtab_to_filename_for_display (sym_a.symbol->symtab ()),
+		    symtab_to_filename_for_display (sym_b.symbol->symtab ()));
   if (c != 0)
     return c;
 
