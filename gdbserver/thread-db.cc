@@ -884,5 +884,5 @@ thread_db_notice_clone (thread_info *parent_thr, ptid_t child_ptid)
   switch_to_thread (parent_thr);
 
   if (!find_one_thread (child_ptid))
-    warning ("Cannot find thread after clone.");
+    warning (_("Cannot find thread after clone."));
 }

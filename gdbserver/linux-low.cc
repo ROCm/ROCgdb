@@ -4077,7 +4077,7 @@ linux_process_target::resume_one_lwp_throw (lwp_info *lwp, int step,
 	  if (fast_tp_collecting == fast_tpoint_collect_result::not_collecting)
 	    {
 	      if (step == 0)
-		warning ("BAD - reinserting but not stepping.");
+		warning (_("BAD - reinserting but not stepping."));
 	      if (lwp->suspended)
 		warning ("BAD - reinserting and suspended(%d).",
 				 lwp->suspended);
@@ -5894,7 +5894,7 @@ linux_process_target::async (bool enable)
 	    {
 	      gdb_sigmask (SIG_UNBLOCK, &mask, NULL);
 
-	      warning ("creating event pipe failed.");
+	      warning (_("creating event pipe failed."));
 	      return previous;
 	    }
 

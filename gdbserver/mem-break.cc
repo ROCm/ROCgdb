@@ -604,7 +604,7 @@ delete_fast_tracepoint_jump (struct fast_tracepoint_jump *todel)
 	}
     }
 
-  warning ("Could not find fast tracepoint jump in list.");
+  warning (_("Could not find fast tracepoint jump in list."));
   return ENOENT;
 }
 
@@ -902,7 +902,7 @@ delete_raw_breakpoint (struct process_info *proc, struct raw_breakpoint *todel)
 	}
     }
 
-  warning ("Could not find raw breakpoint in list.");
+  warning (_("Could not find raw breakpoint in list."));
   return ENOENT;
 }
 
@@ -956,7 +956,7 @@ delete_breakpoint_1 (struct process_info *proc, struct breakpoint *todel)
 	}
     }
 
-  warning ("Could not find breakpoint in list.");
+  warning (_("Could not find breakpoint in list."));
   return ENOENT;
 }
 
@@ -1206,7 +1206,7 @@ add_breakpoint_condition (struct gdb_breakpoint *bp, const char **condition)
 
   if (cond == NULL)
     {
-      warning ("Condition evaluation failed. Assuming unconditional.");
+      warning (_("Condition evaluation failed. Assuming unconditional."));
       return 0;
     }
 
@@ -1305,7 +1305,7 @@ add_breakpoint_commands (struct gdb_breakpoint *bp, const char **command,
 
   if (cmd == NULL)
     {
-      warning ("Command evaluation failed. Disabling.");
+      warning (_("Command evaluation failed. Disabling."));
       return 0;
     }
 
@@ -1653,7 +1653,7 @@ check_breakpoints (CORE_ADDR stop_pc)
 	{
 	  if (!raw->inserted)
 	    {
-	      warning ("Hit a removed breakpoint?");
+	      warning (_("Hit a removed breakpoint?"));
 	      return;
 	    }
 

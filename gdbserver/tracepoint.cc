@@ -5197,7 +5197,7 @@ fast_tracepoint_collecting (CORE_ADDR thread_area,
       tpoint = fast_tracepoint_from_jump_pad_address (stop_pc);
       if (tpoint == NULL)
 	{
-	  warning ("in jump pad, but no matching tpoint?");
+	  warning (_("in jump pad, but no matching tpoint?"));
 	  return fast_tpoint_collect_result::not_collecting;
 	}
       else
@@ -5225,7 +5225,7 @@ fast_tracepoint_collecting (CORE_ADDR thread_area,
       tpoint = fast_tracepoint_from_trampoline_address (stop_pc);
       if (tpoint == NULL)
 	{
-	  warning ("in trampoline, but no matching tpoint?");
+	  warning (_("in trampoline, but no matching tpoint?"));
 	  return fast_tpoint_collect_result::not_collecting;
 	}
       else
@@ -6279,7 +6279,7 @@ gdb_agent_helper_thread (void *arg)
 
       if (listen_fd == -1)
 	{
-	  warning ("could not create sync socket");
+	  warning (_("could not create sync socket"));
 	  break;
 	}
 
