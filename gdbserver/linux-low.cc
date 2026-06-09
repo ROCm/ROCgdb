@@ -532,9 +532,9 @@ linux_process_target::handle_extended_wait (lwp_info **orig_event_lwp,
 	  if (ret == -1)
 	    perror_with_name ("waiting for new child");
 	  else if (ret != new_pid)
-	    warning ("wait returned unexpected PID %d", ret);
+	    warning (_("wait returned unexpected PID %d"), ret);
 	  else if (!WIFSTOPPED (status))
-	    warning ("wait returned unexpected status 0x%x", status);
+	    warning (_("wait returned unexpected status 0x%x"), status);
 	}
 
       if (debug_threads)
@@ -6745,7 +6745,7 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
 
 	  if (r_version < 1)
 	    {
-	      warning ("unexpected r_debug version %d", r_version);
+	      warning (_("unexpected r_debug version %d"), r_version);
 	      break;
 	    }
 

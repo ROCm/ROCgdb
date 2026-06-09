@@ -368,7 +368,7 @@ fork_inferior (const char *exec_file, const std::string &allargs, char **env,
 
       /* If we get here, it's an error.  */
       save_errno = errno;
-      warning ("Cannot exec %s", argv[0]);
+      warning (_("Cannot exec %s"), argv[0]);
 
       for (i = 1; argv[i] != NULL; i++)
 	warning (" %s", argv[i]);

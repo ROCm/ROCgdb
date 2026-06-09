@@ -6190,7 +6190,7 @@ init_named_socket (const char *name)
 
   if (strlen (name) >= ARRAY_SIZE (addr.sun_path))
     {
-      warning ("socket name too long for sockaddr_un::sun_path field: %s", name);
+      warning (_("socket name too long for sockaddr_un::sun_path field: %s"), name);
       return -1;
     }
 
@@ -6207,7 +6207,7 @@ init_named_socket (const char *name)
 	  close (fd);
 	  return -1;
 	}
-      warning ("socket %s already exists; overwriting", name);
+      warning (_("socket %s already exists; overwriting"), name);
     }
 
   result = bind (fd, (struct sockaddr *) &addr, sizeof (addr));

@@ -1618,7 +1618,7 @@ look_up_one_symbol (const char *name, CORE_ADDR *addrp, int may_ask_gdb)
 
   if (!startswith (cs.own_buf, "qSymbol:"))
     {
-      warning ("Malformed response to qSymbol, ignoring: %s", cs.own_buf);
+      warning (_("Malformed response to qSymbol, ignoring: %s"), cs.own_buf);
       return -1;
     }
 
