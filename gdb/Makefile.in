@@ -2698,7 +2698,7 @@ po/$(PACKAGE).pot: force
 	-test -d po || mkdir po
 	sh -e $(srcdir)/po/gdbtext $(XGETTEXT) $(PACKAGE) . $(srcdir) \
 	  $(srcdir)/../gdbsupport $(srcdir)/../gdbserver \
-	  $(addprefix $(srcdir)/,$(CONFIG_SRC_SUBDIR))
+	  $(addprefix $(srcdir)/,$(filter-out gdbtk/generic, $(CONFIG_SRC_SUBDIR)))
 
 
 #
