@@ -2222,6 +2222,8 @@ process_one_event (amd_dbgapi_inferior_info &info,
 	  error (_("event_get_info for event_%ld failed (%s)"),
 		 event_id.handle, get_status_string (status));
 
+	/* Expect only "runtime unloaded" events here.  process_one_event is
+	   only called for inferiors that already have the runtime loaded.  */
 	gdb_assert (runtime_state == AMD_DBGAPI_RUNTIME_STATE_UNLOADED);
 	gdb_assert
 	  (info.runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS);
@@ -2283,6 +2285,7 @@ process_event_queue (amd_dbgapi_inferior_info &info,
   /* Pulling events with forward progress required may result in bad
      performance, make sure it is not required.  */
   gdb_assert (!info.forward_progress_required);
+  gdb_assert (info.process_id != AMD_DBGAPI_PROCESS_NONE);
 
   while (true)
     {
@@ -2406,11 +2409,20 @@ amd_dbgapi_target::wait (ptid_t ptid, struct target_waitstatus *ws,
   std::tie (event_ptid, gpu_waitstatus) = consume_one_event (ptid.pid ());
   if (event_ptid == minus_one_ptid)
     {
-      /* Drain the events for the current inferior from the amd_dbgapi and
-	 preserve the ordering.  */
-      amd_dbgapi_inferior_info &info
-	= get_amd_dbgapi_inferior_info (current_inferior ());
-      process_event_queue (info);
+      /* No event for inferiors matching PTID is readily available.  Pull
+	 events for for all inferiors with a runtime loaded that match PTID.  */
+      for (inferior *inf : all_non_exited_inferiors ())
+	{
+	  if (!ptid_t (inf->pid).matches (ptid))
+	    continue;
+
+	  auto &info = get_amd_dbgapi_inferior_info (inf);
+
+	  if (info.runtime_state != AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
+	    continue;
+
+	  process_event_queue (info);
+	}
 
       std::tie (event_ptid, gpu_waitstatus) = consume_one_event (ptid.pid ());
       if (event_ptid == minus_one_ptid)
