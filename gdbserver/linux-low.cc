@@ -6309,8 +6309,8 @@ get_phdr_phnum_from_proc_auxv (const int pid, const int is_elf64,
 
   if (*phdr_memaddr == 0 || *num_phdr == 0)
     {
-      warning ("Unexpected missing AT_PHDR and/or AT_PHNUM: "
-	       "phdr_memaddr = %ld, phdr_num = %d",
+      warning (_("Unexpected missing AT_PHDR and/or AT_PHNUM: "
+		 "phdr_memaddr = %ld, phdr_num = %d"),
 	       (long) *phdr_memaddr, *num_phdr);
       return 2;
     }

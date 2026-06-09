@@ -5006,8 +5006,8 @@ build_traceframe_info_xml (char blocktype, unsigned char *dataptr, void *data)
 	break;
       }
     default:
-      warning ("Unhandled trace block type (%d) '%c ' "
-	       "while building trace frame info.",
+      warning (_("Unhandled trace block type (%d) '%c ' "
+		 "while building trace frame info."),
 	       blocktype, blocktype);
       break;
     }
@@ -5281,8 +5281,8 @@ fast_tracepoint_collecting (CORE_ADDR thread_area,
 	= fast_tracepoint_from_ipa_tpoint_address (ipa_collecting_obj.tpoint);
       if (tpoint == NULL)
 	{
-	  warning ("fast_tracepoint_collecting: collecting, "
-		   "but tpoint %s not found?",
+	  warning (_("fast_tracepoint_collecting: collecting, "
+		     "but tpoint %s not found?"),
 		   paddress ((CORE_ADDR) ipa_collecting_obj.tpoint));
 	  return fast_tpoint_collect_result::not_collecting;
 	}
@@ -6246,9 +6246,9 @@ gdb_agent_socket_init (void)
 
   fd = init_named_socket (agent_socket_name);
   if (fd < 0)
-    warning ("Error initializing named socket (%s) for communication with the "
-	     "ust helper thread. Check that directory exists and that it "
-	     "is writable.", agent_socket_name);
+    warning (_("Error initializing named socket (%s) for communication with the "
+	       "ust helper thread. Check that directory exists and that it "
+	       "is writable."), agent_socket_name);
 
   return fd;
 }

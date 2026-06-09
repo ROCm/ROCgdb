@@ -2194,8 +2194,8 @@ s390_get_return_buf_addr (struct type *val_type,
 
   if (val_on_entry == nullptr)
     {
-      warning ("Cannot determine the function return value.\n"
-	       "Try compiling with -fvar-tracking.");
+      warning (_("Cannot determine the function return value.\n"
+		 "Try compiling with -fvar-tracking."));
       return 0;
     }
 

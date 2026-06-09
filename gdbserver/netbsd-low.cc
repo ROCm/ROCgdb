@@ -776,8 +776,8 @@ int get_phdr_phnum_from_proc_auxv (const pid_t pid,
 
   if (*phdr_memaddr == 0 || *num_phdr == 0)
     {
-      warning ("Unexpected missing AT_PHDR and/or AT_PHNUM: "
-	       "phdr_memaddr = %s, phdr_num = %d",
+      warning (_("Unexpected missing AT_PHDR and/or AT_PHNUM: "
+		 "phdr_memaddr = %s, phdr_num = %d"),
 	       core_addr_to_string (*phdr_memaddr), *num_phdr);
       return 2;
     }
