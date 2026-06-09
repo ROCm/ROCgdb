@@ -537,7 +537,7 @@ tracepoint_action_send (char *buffer, const struct tracepoint_action *action)
     case 'X':
       return x_tracepoint_action_send (buffer, action);
     }
-  error ("Unknown trace action '%c'.", action->type);
+  error (_("Unknown trace action '%c'."), action->type);
 }
 
 static CORE_ADDR
@@ -552,7 +552,7 @@ tracepoint_action_download (const struct tracepoint_action *action)
     case 'X':
       return x_tracepoint_action_download (action);
     }
-  error ("Unknown trace action '%c'.", action->type);
+  error (_("Unknown trace action '%c'."), action->type);
 }
 #endif
 

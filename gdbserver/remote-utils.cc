@@ -574,7 +574,7 @@ read_ptid (const char *buf, const char **obuf)
       /* Multi-process ptid.  */
       pp = unpack_varlen_hex (p + 1, &hex);
       if (pp == (p + 1) || *pp != '.')
-	error ("invalid remote ptid: %s\n", buf);
+	error (_("invalid remote ptid: %s\n"), buf);
 
       pid = (ptid_t::pid_type) (LONGEST) hex;
       if (hex != ((ULONGEST) pid))
@@ -583,7 +583,7 @@ read_ptid (const char *buf, const char **obuf)
       p = pp + 1;
       hex = hex_or_minus_one (p, &pp);
       if (pp == p)
-	error ("invalid remote ptid: %s\n", buf);
+	error (_("invalid remote ptid: %s\n"), buf);
 
       lwp = (ptid_t::lwp_type) (LONGEST) hex;
       if (hex != ((ULONGEST) lwp))

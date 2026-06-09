@@ -5182,7 +5182,7 @@ register_addr (const struct usrregs_info *usrregs, int regnum)
   int addr;
 
   if (regnum < 0 || regnum >= usrregs->num_regs)
-    error ("Invalid register number %d.", regnum);
+    error (_("Invalid register number %d."), regnum);
 
   addr = usrregs->regmap[regnum];
 

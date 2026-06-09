@@ -373,7 +373,7 @@ tic6x_target::low_arch_setup ()
       feature = C6X_C6XP;
       break;
     default:
-      error ("Unknown CPU ID 0x%02x", cpuid);
+      error (_("Unknown CPU ID 0x%02x"), cpuid);
     }
   tic6x_usrregs_info.regmap = tic6x_regmap;
 

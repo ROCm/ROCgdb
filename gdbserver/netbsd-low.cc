@@ -1134,13 +1134,13 @@ elf_64_file_p (const char *file)
     perror_with_name (("read"));
   gdb::close (fd);
   if (ret != sizeof (header))
-    error ("Cannot read ELF file header: %s", file);
+    error (_("Cannot read ELF file header: %s"), file);
 
   if (header.e_ident[EI_MAG0] != ELFMAG0
       || header.e_ident[EI_MAG1] != ELFMAG1
       || header.e_ident[EI_MAG2] != ELFMAG2
       || header.e_ident[EI_MAG3] != ELFMAG3)
-    error ("Unrecognized ELF file header: %s", file);
+    error (_("Unrecognized ELF file header: %s"), file);
 
   return header.e_ident[EI_CLASS] == ELFCLASS64;
 }
