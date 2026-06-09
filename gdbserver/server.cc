@@ -1252,7 +1252,7 @@ handle_search_memory (char *own_buf, int packet_len)
 
   pattern = (gdb_byte *) malloc (packet_len);
   if (pattern == NULL)
-    error ("Unable to allocate memory to perform the search");
+    error (_("Unable to allocate memory to perform the search"));
 
   if (decode_search_memory_packet (own_buf + cmd_name_len,
 				   packet_len - cmd_name_len,
@@ -1260,7 +1260,7 @@ handle_search_memory (char *own_buf, int packet_len)
 				   pattern, &pattern_len) < 0)
     {
       free (pattern);
-      error ("Error in parsing qSearch:memory packet");
+      error (_("Error in parsing qSearch:memory packet"));
     }
 
   auto read_memory = [] (CORE_ADDR addr, gdb_byte *result, size_t len)
@@ -1561,7 +1561,7 @@ parse_debug_options (const char *options)
       std::string opt (options, end - options);
 
       if (opt.size () == 0)
-	error ("invalid empty debug option");
+	error (_("invalid empty debug option"));
 
       bool is_opt_all = opt == "all";
 
@@ -4588,7 +4588,7 @@ captured_main (int argc, char *argv[])
   else if (pid != 0)
     {
       if (attach_inferior (pid) == -1)
-	error ("Attaching not supported on this target");
+	error (_("Attaching not supported on this target"));
 
       /* Otherwise succeeded.  */
     }
@@ -4614,7 +4614,7 @@ captured_main (int argc, char *argv[])
     was_running = true;
 
   if (!was_running && !multi_mode)
-    error ("No program to debug");
+    error (_("No program to debug"));
 
   while (1)
     {

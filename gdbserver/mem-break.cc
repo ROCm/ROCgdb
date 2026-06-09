@@ -751,7 +751,7 @@ reinsert_fast_tracepoint_jumps_at (CORE_ADDR where)
     }
 
   if (jp->inserted)
-    error ("Jump already inserted at reinsert time.");
+    error (_("Jump already inserted at reinsert time."));
 
   jp->inserted = 1;
 

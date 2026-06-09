@@ -319,7 +319,7 @@ remote_open (const char *name)
   port_str = strchr (name, ':');
 #ifdef USE_WIN32API
   if (port_str == NULL)
-    error ("Only HOST:PORT is supported on this platform.");
+    error (_("Only HOST:PORT is supported on this platform."));
 #endif
 
   if (streq (name, STDIO_CONNECTION_NAME))
@@ -1351,7 +1351,7 @@ prepare_resume_reply (char *buf, ptid_t ptid, const target_waitstatus &status)
       sprintf (buf, "N");
       break;
     default:
-      error ("unhandled waitkind");
+      error (_("unhandled waitkind"));
       break;
     }
 }

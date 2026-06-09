@@ -2910,7 +2910,7 @@ install_fast_tracepoint (struct tracepoint *tpoint, char *errbuf)
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_collect_ptr,
 				  &collect))
     {
-      error ("error extracting gdb_collect_ptr");
+      error (_("error extracting gdb_collect_ptr"));
       return 1;
     }
 
@@ -3026,7 +3026,7 @@ cmd_qtstart (char *packet)
       /* Tell IPA about the correct tdesc.  */
       if (write_inferior_integer (ipa_sym_addrs.addr_ipa_tdesc_idx,
 				  target_get_ipa_tdesc_idx ()))
-	error ("Error setting ipa_tdesc_idx variable in lib");
+	error (_("Error setting ipa_tdesc_idx variable in lib"));
     }
 
   /* Start out empty.  */
@@ -3152,13 +3152,13 @@ cmd_qtstart (char *packet)
       stop_tracing_bkpt = set_breakpoint_at (ipa_sym_addrs.addr_stop_tracing,
 					     stop_tracing_handler);
       if (stop_tracing_bkpt == NULL)
-	error ("Error setting stop_tracing breakpoint");
+	error (_("Error setting stop_tracing breakpoint"));
 
       flush_trace_buffer_bkpt
 	= set_breakpoint_at (ipa_sym_addrs.addr_flush_trace_buffer,
 			     flush_trace_buffer_handler);
       if (flush_trace_buffer_bkpt == NULL)
-	error ("Error setting flush_trace_buffer breakpoint");
+	error (_("Error setting flush_trace_buffer breakpoint"));
     }
 
   target_unpause_all (true);
@@ -5444,7 +5444,7 @@ get_raw_reg_func_addr (void)
   CORE_ADDR res;
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_get_raw_reg_ptr, &res))
     {
-      error ("error extracting get_raw_reg_ptr");
+      error (_("error extracting get_raw_reg_ptr"));
       return 0;
     }
   return res;
@@ -5457,7 +5457,7 @@ get_get_tsv_func_addr (void)
   if (read_inferior_data_pointer (
 	ipa_sym_addrs.addr_get_trace_state_variable_value_ptr, &res))
     {
-      error ("error extracting get_trace_state_variable_value_ptr");
+      error (_("error extracting get_trace_state_variable_value_ptr"));
       return 0;
     }
   return res;
@@ -5470,7 +5470,7 @@ get_set_tsv_func_addr (void)
   if (read_inferior_data_pointer (
 	ipa_sym_addrs.addr_set_trace_state_variable_value_ptr, &res))
     {
-      error ("error extracting set_trace_state_variable_value_ptr");
+      error (_("error extracting set_trace_state_variable_value_ptr"));
       return 0;
     }
   return res;

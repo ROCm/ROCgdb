@@ -437,28 +437,28 @@ mi_parse::mi_parse (gdb::unique_xmalloc_ptr<char> command,
 	{
 	  ++i;
 	  if (i == args.size ())
-	    error ("No argument to '--thread-group'");
+	    error (_("No argument to '--thread-group'"));
 	  this->set_thread_group (args[i].get (), nullptr);
 	}
       else if (streq (chp, "--thread"))
 	{
 	  ++i;
 	  if (i == args.size ())
-	    error ("No argument to '--thread'");
+	    error (_("No argument to '--thread'"));
 	  this->set_thread (args[i].get (), nullptr);
 	}
       else if (streq (chp, "--frame"))
 	{
 	  ++i;
 	  if (i == args.size ())
-	    error ("No argument to '--frame'");
+	    error (_("No argument to '--frame'"));
 	  this->set_frame (args[i].get (), nullptr);
 	}
       else if (streq (chp, "--language"))
 	{
 	  ++i;
 	  if (i == args.size ())
-	    error ("No argument to '--language'");
+	    error (_("No argument to '--language'"));
 	  this->set_language (args[i].get (), nullptr);
 	}
       else
