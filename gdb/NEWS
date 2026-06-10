@@ -116,9 +116,8 @@
   intent to remove it in a future release.
   The s390 64-bit target (s390x-*) remains supported.
 
-* GDB can now read OS-generated core files on systems with Intel AMX
-  support.  The AMX registers themselves are not yet readable, but
-  other xsave state can be read.
+* GDB now recognizes DWARF DW_AT_address_space attribute for pointer,
+  reference, and rvalue reference types.
 
 * Configure changes
 
