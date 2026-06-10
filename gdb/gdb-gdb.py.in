@@ -38,6 +38,8 @@ class StructTypeInstanceFlagsPrettyPrinter:
             fields.append("DATA_SPACE")
         if self.val["address_class"] != 0:
             fields.append("ADDRESS_CLASS(%d)" % self.val["address_class"])
+        if self.val["address_space"] != 0:
+            fields.append("ADDRESS_SPACE(%d)" % self.val["address_space"])
         if self.val["is_nottext"]:
             fields.append("NOTTEXT")
         if self.val["is_restrict"]:
