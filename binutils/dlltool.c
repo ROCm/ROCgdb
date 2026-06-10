@@ -789,7 +789,7 @@ export_type;
 struct string_list
 {
   struct string_list *next;
-  char *string;
+  char string[];
 };
 
 static struct string_list *excludes;
@@ -1460,21 +1460,35 @@ add_excludes (const char *new_excludes)
   exclude_string = strtok (local_copy, ",:");
   for (; exclude_string; exclude_string = strtok (NULL, ",:"))
     {
-      struct string_list *new_exclude = xmalloc (sizeof (*new_exclude));
-      /* Don't add a leading underscore for fastcall symbols.  */
-      if (*exclude_string == '@')
-	new_exclude->string = xstrdup (exclude_string);
-      else
-	new_exclude->string = xasprintf ("%s%s", leading_underscore,
-					 exclude_string);
+      size_t len = strlen (exclude_string);
+      /* Allocate extra byte for possible underscore.  */
+      struct string_list *new_exclude = xmalloc (sizeof (*new_exclude)
+						 + len + 2);
+      memcpy (new_exclude->string, exclude_string, len + 1);
       new_exclude->next = excludes;
       excludes = new_exclude;
-
-      /* xgettext:c-format */
-      inform (_("Excluding symbol: %s"), exclude_string);
     }
 
   free (local_copy);
+}
+
+/* Prefix symbols on the excludes list with an underscore.  */
+
+static void
+underscore_excludes (void)
+{
+  for (struct string_list *ex = excludes; ex; ex = ex->next)
+    {
+      /* Don't add a leading underscore for fastcall symbols.  */
+      if (*ex->string != '@' && *leading_underscore)
+	{
+	  size_t len = strlen (ex->string);
+	  memmove (ex->string + 1, ex->string, len + 1);
+	  *ex->string = *leading_underscore;
+	}
+      /* xgettext:c-format */
+      inform (_("Excluding symbol: %s"), ex->string);
+    }
 }
 
 /* See if STRING is on the list of symbols to exclude.  */
@@ -4064,6 +4078,8 @@ main (int ac, char **av)
 
   if (do_default_excludes)
     set_default_excludes ();
+
+  underscore_excludes ();
 
   if (def_file)
     process_def_file (def_file);
