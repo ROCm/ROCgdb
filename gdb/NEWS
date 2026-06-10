@@ -87,6 +87,9 @@
   record btrace pt event-tracing on) on a FRED-enabled system and from
   Trigger Tracing.
 
+* GDB now recognizes DWARF DW_AT_address_space attribute for pointer,
+  reference, and rvalue reference types.
+
 * Configure changes
 
 ** --with-babeltrace has been removed.  The babeltrace library was

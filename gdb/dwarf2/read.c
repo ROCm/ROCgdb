@@ -12001,6 +12001,30 @@ is_recursive_pointer (die_info *die, dwarf2_cu *cu)
   return true;
 }
 
+/* Helper function to read DW_AT_address_space attribute.  */
+
+static ULONGEST
+get_address_space (die_info *die, dwarf2_cu *cu)
+{
+  ULONGEST addr_space;
+  if (attribute *attr_aspace = dwarf2_attr (die, DW_AT_LLVM_address_space, cu);
+      attr_aspace != nullptr)
+    addr_space = (attr_aspace->unsigned_constant ()
+		  .value_or (DW_ASPACE_default));
+  else
+    addr_space = DW_ASPACE_default;
+
+  if (addr_space > TYPE_INSTANCE_FLAG_ADDRESS_SPACE_MAX)
+    {
+      warning (_("address space value (%s) obtained from DWARF exceeds maximum "
+		 "encodable value; using default address space"),
+	       pulongest (addr_space));
+      addr_space = DW_ASPACE_default;
+    }
+
+  return addr_space;
+}
+
 /* Extract all information from a DW_TAG_pointer_type DIE and add to
    the user defined type vector.  */
 
@@ -12046,13 +12070,18 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
   else
     addr_class = DW_ADDR_none;
 
+  ULONGEST addr_space = get_address_space (die, cu);
   ULONGEST alignment = get_alignment (cu, die);
 
-  /* If the pointer size, alignment, or address class is different
+  /* If the pointer size, alignment, or address class/space is different
      than the default, create a type variant marked as such and set
      the length accordingly.  */
-  if (addr_class != DW_ADDR_none)
+  if (addr_class != DW_ADDR_none || addr_space != DW_ASPACE_default)
     {
+      type_instance_flags instance_flags
+	= (type_instance_flag_value) (addr_space
+				      << TYPE_INSTANCE_FLAG_ADDRESS_SPACE_SHIFT);
+
       if (gdbarch_address_class_type_flags_p (gdbarch))
 	{
 	  type_instance_flags type_flags
@@ -12060,12 +12089,13 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 						addr_class);
 	  gdb_assert ((type_flags & ~TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL)
 		      == 0);
-	  type = make_type_with_address_space (type, type_flags);
+	  instance_flags |= type_flags;
 	}
       else
 	{
 	  /* Should we also complain about unhandled address classes?  */
 	}
+      type = make_type_with_address_space (type, instance_flags);
     }
   else if (type->length () != byte_size)
     complaint (_("invalid pointer size %s"), pulongest (byte_size));
@@ -12142,6 +12172,11 @@ read_tag_reference_type (struct die_info *die, struct dwarf2_cu *cu,
     return type;
 
   type = lookup_reference_type (target_type, refcode);
+
+  ULONGEST addr_space = get_address_space (die, cu);
+  if (addr_space != DW_ASPACE_default)
+    type = make_type_with_address_space (type, addr_space);
+
   attribute *attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr != nullptr)
     type->set_length (attr->unsigned_constant ()

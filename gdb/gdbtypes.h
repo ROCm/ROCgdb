@@ -82,9 +82,12 @@ enum type_instance_flag_value : unsigned
   TYPE_INSTANCE_FLAG_DATA_SPACE = (1 << 3),
   TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1 = (1 << 4),
   TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2 = (1 << 5),
-  TYPE_INSTANCE_FLAG_NOTTEXT = (1 << 6),
-  TYPE_INSTANCE_FLAG_RESTRICT = (1 << 7),
-  TYPE_INSTANCE_FLAG_ATOMIC = (1 << 8)
+  TYPE_INSTANCE_FLAG_ADDRESS_SPACE_1 = (1 << 6),
+  TYPE_INSTANCE_FLAG_ADDRESS_SPACE_2 = (1 << 7),
+  TYPE_INSTANCE_FLAG_ADDRESS_SPACE_3 = (1 << 8),
+  TYPE_INSTANCE_FLAG_NOTTEXT = (1 << 9),
+  TYPE_INSTANCE_FLAG_RESTRICT = (1 << 10),
+  TYPE_INSTANCE_FLAG_ATOMIC = (1 << 11)
 };
 
 DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
@@ -175,6 +178,14 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
   (TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1 | TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2)
 #define TYPE_ADDRESS_CLASS_ALL(t) (((t)->instance_flags ()) \
 				   & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL)
+
+#define TYPE_INSTANCE_FLAG_ADDRESS_SPACE_ALL \
+  (TYPE_INSTANCE_FLAG_ADDRESS_SPACE_1 \
+   | TYPE_INSTANCE_FLAG_ADDRESS_SPACE_2 \
+   | TYPE_INSTANCE_FLAG_ADDRESS_SPACE_3)
+
+#define TYPE_INSTANCE_FLAG_ADDRESS_SPACE_SHIFT 6
+#define TYPE_INSTANCE_FLAG_ADDRESS_SPACE_MAX 7 /* We used 3 bits.  */
 
 /* Information about a single discriminant.  */
 
@@ -1164,6 +1175,14 @@ struct type
     this->m_instance_flags = flags;
   }
 
+  /* Return the address space value encoded in instance flags.  */
+  const ULONGEST address_space () const
+  {
+    return ((ULONGEST) (this->instance_flags ()
+			& TYPE_INSTANCE_FLAG_ADDRESS_SPACE_ALL)
+	    >> TYPE_INSTANCE_FLAG_ADDRESS_SPACE_SHIFT);
+  }
+
   /* Get the bounds bounds of this type.  The type must be a range type.  */
   range_bounds *bounds () const
   {
@@ -1582,7 +1601,7 @@ struct type
      instance flags are completely inherited from the target type.  No
      qualifiers can be cleared by the typedef.  See also
      check_typedef.  */
-  unsigned m_instance_flags : 9;
+  unsigned m_instance_flags : 12;
 
   /* Length of storage for a value of this type.  The value is the
      expression in host bytes of what sizeof(type) would return.  This
@@ -2424,6 +2443,8 @@ extern const char *address_space_type_instance_flags_to_name
 
 extern struct type *make_type_with_address_space
   (struct type *type, type_instance_flags space_identifier);
+
+extern type *make_type_with_address_space (type *type, ULONGEST aspace);
 
 /* Implement direct support for MEMBER_TYPE in GNU C++.
    TO_TYPE is the type of the member.  DOMAIN is the type of the aggregate that

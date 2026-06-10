@@ -647,10 +647,23 @@ make_type_with_address_space (struct type *type,
   type_instance_flags new_flags = ((type->instance_flags ()
 				    & ~(TYPE_INSTANCE_FLAG_CODE_SPACE
 					| TYPE_INSTANCE_FLAG_DATA_SPACE
-					| TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL))
+					| TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL
+					| TYPE_INSTANCE_FLAG_ADDRESS_SPACE_ALL))
 				   | space_flag);
 
   return make_qualified_type (type, new_flags, NULL);
+}
+
+/* Make a variant of TYPE with ASPACE as the type's
+   DW_AT_address_space attribute.  */
+type *
+make_type_with_address_space (type *type, ULONGEST aspace)
+{
+  type_instance_flags instance_flags
+    = (type_instance_flag_value)
+	(aspace << TYPE_INSTANCE_FLAG_ADDRESS_SPACE_SHIFT);
+
+  return make_type_with_address_space (type, instance_flags);
 }
 
 /* See gdbtypes.h.  */
@@ -734,13 +747,15 @@ replace_type (struct type *ntype, struct type *type)
   chain = ntype;
   do
     {
-      /* Assert that this element of the chain has no address-class bits
-	 set in its flags.  Such type variants might have type lengths
-	 which are supposed to be different from the non-address-class
-	 variants.  This assertion shouldn't ever be triggered because
-	 symbol readers which do construct address-class variants don't
-	 call replace_type().  */
+      /* Assert that this element of the chain has no address-class
+	 and address-space bits set in its flags.  Such type variants
+	 might have type lengths which are supposed to be different
+	 from the non-address-class variants.  This assertion
+	 shouldn't ever be triggered because symbol readers which do
+	 construct address-class variants don't call
+	 replace_type().  */
       gdb_assert (TYPE_ADDRESS_CLASS_ALL (chain) == 0);
+      gdb_assert (chain->address_space () == 0);
 
       chain->set_length (type->length ());
       chain = chain->chain;
@@ -3091,19 +3106,24 @@ check_typedef (struct type *type)
 	 outer cast in a chain of casting win), instead of assuming
 	 "it can't happen".  */
       {
-	const type_instance_flags ALL_SPACES
+	const type_instance_flags ALL_HARVARD_SPACES
 	  = (TYPE_INSTANCE_FLAG_CODE_SPACE
 	     | TYPE_INSTANCE_FLAG_DATA_SPACE);
 	const type_instance_flags ALL_CLASSES
 	  = TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL;
+	const type_instance_flags ALL_SPACES
+	  = TYPE_INSTANCE_FLAG_ADDRESS_SPACE_ALL;
 
 	type_instance_flags new_instance_flags = type->instance_flags ();
 
-	/* Treat code vs data spaces and address classes separately.  */
-	if ((instance_flags & ALL_SPACES) != 0)
-	  new_instance_flags &= ~ALL_SPACES;
+	/* Treat code vs data spaces, address classes, and address spaces
+	   separately.  */
+	if ((instance_flags & ALL_HARVARD_SPACES) != 0)
+	  new_instance_flags &= ~ALL_HARVARD_SPACES;
 	if ((instance_flags & ALL_CLASSES) != 0)
 	  new_instance_flags &= ~ALL_CLASSES;
+	if ((instance_flags & ALL_SPACES) != 0)
+	  new_instance_flags &= ~ALL_SPACES;
 
 	instance_flags |= new_instance_flags;
       }
@@ -5081,6 +5101,11 @@ recursive_dump_type (struct type *type, int spaces)
   if (TYPE_ADDRESS_CLASS_2 (type))
     {
       gdb_puts (" TYPE_ADDRESS_CLASS_2");
+    }
+  if (type->address_space () != 0)
+    {
+      gdb_printf (" address-space(%s)",
+		  pulongest (type->address_space ()));
     }
   if (TYPE_RESTRICT (type))
     {
