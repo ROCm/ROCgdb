@@ -1,0 +1,18 @@
+{
+  "Generic": [
+    "gdb.rocm/multi-inferior-fork.exp",
+    "gdb.rocm/multi-inferior-gpu.exp"
+  ],
+  "GCC": [],
+  "LLVM": [
+    "gdb.dwarf2/dw2-case-insensitive.exp",
+    "gdb.dwarf2/dw2-cp-infcall-ref-static.exp",
+    "gdb.dwarf2/dw2-entry-value.exp",
+    "gdb.dwarf2/dw2-inline-param.exp",
+    "gdb.dwarf2/dw2-param-error.exp",
+    "gdb.dwarf2/dw2-skip-prologue.exp",
+    "gdb.dwarf2/dw2-unresolved.exp",
+    "gdb.dwarf2/fission-dw-form-strx.exp",
+    "gdb.dwarf2/pr13961.exp"
+  ]
+}
