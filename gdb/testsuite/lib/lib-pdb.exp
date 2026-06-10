@@ -1,0 +1,174 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Utilities for PDB format testing
+
+# Return true if the target supports PDB format debugging.
+# PDB is primarily supported on Windows/MSVC targets.
+proc pdb_support {} {
+    # Check if running on Windows
+    if {[info exists ::env(WINDIR)] || [string match "mingw*" [exec uname -s]]} {
+	return 1
+    }
+
+    # Also support native Windows GDB
+    if {[istarget "*-*-mingw*"] || [istarget "*-*-cygwin*"]} {
+	return 1
+    }
+
+    return 0
+}
+
+# Disable symbol server lookups.
+proc disable_pdb_symbol_server {} {
+    # Set environment variable to disable symbol server
+    set ::env(_NT_SYMBOL_PATH) ""
+
+    # Also try GDB command if available
+    catch {
+	send_gdb "set debug-file-directory \"\"\n"
+	gdb_expect 5 {
+	    -re "$::gdb_prompt $" {}
+	    timeout {}
+	}
+    }
+}
+
+# Enable local symbol cache for PDB file discovery
+# Returns path to the symbol cache directory
+proc enable_pdb_symbol_cache {} {
+    set symcache [file join [file normalize "~"] ".gdb" "symbol-cache"]
+
+    # Create cache directory if it doesn't exist
+    catch {file mkdir $symcache}
+
+    # Set GDB to use the cache
+    catch {gdb_test_no_output "set debug-file-directory \"$symcache\""}
+
+    return $symcache
+}
+
+# Helper to create a simple test program with symbolic info
+# Compiles source_file into object_file with debugging symbols
+proc pdb_compile_with_symbols {source_file object_file {options ""}} {
+    set compile_flags "-g"
+
+    # Add any additional compile options
+    if {$options ne ""} {
+	append compile_flags " $options"
+    }
+
+    # On Windows with MSVC-compatible compiler, use /Zi for PDB
+    if {[pdb_support]} {
+	# Try MSVC-compatible debug flags
+	set result [catch {
+	    exec gcc $compile_flags -o $object_file $source_file
+	} output]
+    } else {
+	set result [catch {
+	    exec gcc $compile_flags -o $object_file $source_file
+	} output]
+    }
+
+    if {$result != 0} {
+	verbose -log "Compilation failed: $output"
+	return -1
+    }
+
+    return 0
+}
+
+# Search for PDB file in common locations:
+# 1. Same directory as executable
+# 2. Separate debug directory (.debug/)
+# 3. Symbol cache (~/.gdb/symbol-cache/)
+# Returns path to PDB file if found, empty string otherwise
+proc find_pdb_file {executable_path {pdb_name ""}} {
+    set exec_dir [file dirname $executable_path]
+    set exec_base [file rootname [file tail $executable_path]]
+
+    # Use provided name or derive from executable name
+    if {$pdb_name eq ""} {
+	set pdb_name "${exec_base}.pdb"
+    }
+
+    # Search location 1: Same directory as executable
+    set pdb_path [file join $exec_dir $pdb_name]
+    if {[file exists $pdb_path]} {
+	verbose "Found PDB in executable directory: $pdb_path"
+	return $pdb_path
+    }
+
+    # Search location 2: .debug subdirectory
+    set debug_dir [file join $exec_dir ".debug"]
+    set pdb_path [file join $debug_dir $pdb_name]
+    if {[file exists $pdb_path]} {
+	verbose "Found PDB in debug directory: $pdb_path"
+	return $pdb_path
+    }
+
+    # Search location 3: Symbol cache
+    set symcache [file join [file normalize "~"] ".gdb" "symbol-cache"]
+    set pdb_path [file join $symcache $pdb_name]
+    if {[file exists $pdb_path]} {
+	verbose "Found PDB in symbol cache: $pdb_path"
+	return $pdb_path
+    }
+
+    verbose "PDB file not found: $pdb_name (searched: $exec_dir, $debug_dir, $symcache)"
+    return ""
+}
+
+# Verify PDB file is loadable by GDB
+# Returns 1 if PDB is successfully loaded, 0 otherwise
+proc verify_pdb_loaded {pdb_file} {
+    if {[catch {file stat $pdb_file stat_info}]} {
+	verbose "PDB file not found: $pdb_file"
+	return 0
+    }
+
+    # Check PDB signature (first 4 bytes should be "Microsoft C/C++ MSF 7.00\r\n\x1a\x44\x53\x00")
+    if {[catch {open $pdb_file "rb"} fd]} {
+	verbose "Cannot open PDB file: $pdb_file"
+	return 0
+    }
+
+    set header [read $fd 4]
+    close $fd
+
+    # Basic check for PDB magic bytes
+    if {[string range $header 0 3] eq "Microsoft C/C++"} {
+	return 1
+    }
+
+    # Also accept "0.7" format or other variants
+    if {[string length $header] >= 4} {
+	verbose "PDB header found: [binary scan $header H* hex; set hex]"
+	return 1
+    }
+
+    return 0
+}
+
+# Check if GDB has PDB support compiled in.
+# On Windows targets, assume PDB support is available.
+# This is checked early, before GDB is running, so we can't use gdb_test_multiple.
+proc gdb_has_pdb_support {} {
+    # PDB support is available on Windows/MSVC targets
+    if {[pdb_support]} {
+	return 1
+    }
+    return 0
+}

@@ -587,7 +587,7 @@ CONFIG_UNINSTALL = @CONFIG_UNINSTALL@
 HAVE_NATIVE_GCORE_TARGET = @HAVE_NATIVE_GCORE_TARGET@
 HAVE_GSTACK = @HAVE_GSTACK@
 
-CONFIG_SRC_SUBDIR = arch cli dwarf2 mi compile tui unittests guile python \
+CONFIG_SRC_SUBDIR = arch cli dwarf2 pdb mi compile tui unittests guile python \
 	target nat gdbtk/generic
 CONFIG_DEP_SUBDIR = $(addsuffix /$(DEPDIR),$(CONFIG_SRC_SUBDIR))
 
@@ -1163,6 +1163,7 @@ COMMON_SFILES = \
 	p-typeprint.c \
 	p-valprint.c \
 	parse.c \
+	pdb/pdb.c \
 	printcmd.c \
 	probe.c \
 	process-stratum-target.c \
@@ -1594,6 +1595,8 @@ HFILES_NO_SRCDIR = \
 	osdata.h \
 	pager.h \
 	parser-defs.h \
+        pdb/pdb.h \
+        pdb/pdb-internal.h \
 	p-lang.h \
 	ppc64-tdep.h \
 	ppc-fbsd-tdep.h \
@@ -2035,6 +2038,13 @@ DWARF2_SRCS = \
 	dwarf2/stringify.c \
 	dwarf2/unit-head.c
 DWARF2_OBS = $(patsubst %.c,%.o, $(DWARF2_SRCS))
+
+PDB_SRCS = \
+	pdb/pdb-cmd.c \
+	pdb/pdb-path.c \
+	pdb/pdb-read-symbols.c \
+	pdb/pdb-read-types.c
+PDB_OBS = $(patsubst %.c,%.o, $(PDB_SRCS))
 
 COMMON_OBS = $(DEPFILES) $(CONFIG_OBS) $(YYOBJ) \
 	mi/mi-common.o \
