@@ -12051,10 +12051,7 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
   /* If the pointer size, alignment, or address class is different
      than the default, create a type variant marked as such and set
      the length accordingly.  */
-  if (type->length () != byte_size
-      || (alignment != 0 && TYPE_RAW_ALIGN (type) != 0
-	  && alignment != TYPE_RAW_ALIGN (type))
-      || addr_class != DW_ADDR_none)
+  if (addr_class != DW_ADDR_none)
     {
       if (gdbarch_address_class_type_flags_p (gdbarch))
 	{
@@ -12065,22 +12062,19 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 		      == 0);
 	  type = make_type_with_address_space (type, type_flags);
 	}
-      else if (type->length () != byte_size)
-	{
-	  complaint (_("invalid pointer size %s"), pulongest (byte_size));
-	}
-      else if (TYPE_RAW_ALIGN (type) != alignment)
-	{
-	  complaint (_("Invalid DW_AT_alignment"
-		       " - DIE at %s [in module %s]"),
-		     sect_offset_str (die->sect_off),
-		     objfile_name (cu->per_objfile->objfile));
-	}
       else
 	{
 	  /* Should we also complain about unhandled address classes?  */
 	}
     }
+  else if (type->length () != byte_size)
+    complaint (_("invalid pointer size %s"), pulongest (byte_size));
+  else if (alignment != 0 && TYPE_RAW_ALIGN (type) != 0
+	   && TYPE_RAW_ALIGN (type) != alignment)
+    complaint (_("Invalid DW_AT_alignment"
+		 " - DIE at %s [in module %s]"),
+	       sect_offset_str (die->sect_off),
+	       objfile_name (cu->per_objfile->objfile));
 
   type->set_length (byte_size);
   set_type_align (type, alignment);
