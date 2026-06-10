@@ -76,10 +76,6 @@ while { $test_count < 500 } {
 	    error "failed to extract expected results for ubound"
 	}
 
-	verbose -log "APB: Run a test here"
-	verbose -log "APB: Expected lbound '$expected_lbound'"
-	verbose -log "APB: Expected ubound '$expected_ubound'"
-
 	# We want to take a look at the line in the previous frame that
 	# called the current function.  I couldn't find a better way of
 	# doing this than 'up', which will print the line, then 'down'

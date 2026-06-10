@@ -173,8 +173,6 @@ proc check_end_markers { expected_symtab test_spec } {
 	upvar 1 $varname upvar_addr
 	set addr [string range $upvar_addr 2 end]
 
-	verbose -log "APB: index: $index, addr: $addr"
-
 	set symtab ""
 	set saw_line false
 	gdb_test_multiple "maint info line-table" \

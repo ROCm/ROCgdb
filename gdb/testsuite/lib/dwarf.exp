@@ -143,8 +143,6 @@ proc build_executable_and_dwo_files { testname executable options args } {
 	    return -1
 	}
 
-	verbose -log "APB: SPEC: $spec"
-
 	set s [lindex $spec 0]
 	set local_options [lindex $spec 1]
 
@@ -181,8 +179,6 @@ proc build_executable_and_dwo_files { testname executable options args } {
 	    }
 	}
     }
-
-    verbose -log "APB: OBJECTS = $objects"
 
     set ret [$func $objects "${binfile}" executable $options]
     if  { $ret != "" } {
