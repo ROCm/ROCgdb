@@ -175,7 +175,7 @@ class DWARFAttribute:
             else:
                 return str(self.value)
         elif isinstance(self.value, bytes):
-            return self._format_str(self.value.decode("ascii"))
+            return self._format_str(self.value.decode("UTF-8", "backslashreplace"))
         elif isinstance(self.value, str):
             return self._format_str(self.value)
         elif isinstance(self.value, ListContainer):
