@@ -1,0 +1,227 @@
+name: Update TheRock Dependencies
+
+on:
+  schedule:
+    # Run every day at 00:00 UTC
+    - cron: '0 0 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dependencies:
+    name: Update TheRock and Container References
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: amd-staging
+          fetch-depth: 1
+
+      - name: Get latest TheRock commit
+        id: therock
+        run: |
+          # Clone TheRock repo and get HEAD commit
+          THEROCK_COMMIT=$(git ls-remote https://github.com/ROCm/TheRock.git HEAD | awk '{print $1}')
+
+          # Validate that the commit is a well-formed SHA (40 hex characters)
+          if ! [[ "${THEROCK_COMMIT}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Error: Invalid SHA format received: '${THEROCK_COMMIT}'" >&2
+            echo "Expected a 40-character hexadecimal string" >&2
+            exit 1
+          fi
+
+          THEROCK_DATE=$(date +%d/%m/%Y)
+          echo "commit=${THEROCK_COMMIT}" >> $GITHUB_OUTPUT
+          echo "date=${THEROCK_DATE}" >> $GITHUB_OUTPUT
+          echo "TheRock HEAD: ${THEROCK_COMMIT} (${THEROCK_DATE})"
+
+      - name: Get latest container image digests
+        id: containers
+        run: |
+          # Get latest therock_build_manylinux_x86_64 image digest
+          BUILD_IMAGE_DIGEST=$(skopeo inspect docker://ghcr.io/rocm/therock_build_manylinux_x86_64:latest \
+            | jq -r '.Digest')
+          BUILD_IMAGE_DATE=$(skopeo inspect docker://ghcr.io/rocm/therock_build_manylinux_x86_64:latest \
+            | jq -r '.Created')
+
+          # Validate build image digest format (sha256:64_hex_chars)
+          if ! [[ "${BUILD_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Error: Invalid build image digest format received: '${BUILD_IMAGE_DIGEST}'" >&2
+            echo "Expected format: sha256:<64-character hexadecimal string>" >&2
+            exit 1
+          fi
+
+          # Get latest no_rocm_image_ubuntu24_04_rocgdb image digest
+          TEST_IMAGE_DIGEST=$(skopeo inspect docker://ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb:latest \
+            | jq -r '.Digest')
+          TEST_IMAGE_DATE=$(skopeo inspect docker://ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb:latest \
+            | jq -r '.Created')
+
+          # Validate test image digest format (sha256:64_hex_chars)
+          if ! [[ "${TEST_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Error: Invalid test image digest format received: '${TEST_IMAGE_DIGEST}'" >&2
+            echo "Expected format: sha256:<64-character hexadecimal string>" >&2
+            exit 1
+          fi
+
+          echo "build_digest=${BUILD_IMAGE_DIGEST}" >> $GITHUB_OUTPUT
+          echo "build_date=${BUILD_IMAGE_DATE}" >> $GITHUB_OUTPUT
+          echo "test_digest=${TEST_IMAGE_DIGEST}" >> $GITHUB_OUTPUT
+          echo "test_date=${TEST_IMAGE_DATE}" >> $GITHUB_OUTPUT
+
+          echo "Build image: ${BUILD_IMAGE_DIGEST} (${BUILD_IMAGE_DATE})"
+          echo "Test image: ${TEST_IMAGE_DIGEST} (${TEST_IMAGE_DATE})"
+
+      - name: Update therock-ci-linux.yml
+        run: |
+          # Update THEROCK_COMMIT_REF
+          sed -i "s|THEROCK_COMMIT_REF: .* # .*|THEROCK_COMMIT_REF: ${{ steps.therock.outputs.commit }} # ${{ steps.therock.outputs.date }}|" \
+            .github/workflows/therock-ci-linux.yml
+
+          # Update therock_build_manylinux_x86_64 container image
+          sed -i "s|ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:[a-f0-9]* # .*|ghcr.io/rocm/therock_build_manylinux_x86_64@${{ steps.containers.outputs.build_digest }} # ${{ steps.containers.outputs.build_date }}|" \
+            .github/workflows/therock-ci-linux.yml
+
+      - name: Update therock-test-packages.yml
+        run: |
+          # Update THEROCK_COMMIT_REF
+          sed -i "s|THEROCK_COMMIT_REF: .* # .*|THEROCK_COMMIT_REF: ${{ steps.therock.outputs.commit }} # ${{ steps.therock.outputs.date }}|" \
+            .github/workflows/therock-test-packages.yml
+
+          # Update no_rocm_image_ubuntu24_04_rocgdb container image
+          sed -i "s|ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb@sha256:[a-f0-9]*|ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb@${{ steps.containers.outputs.test_digest }}|" \
+            .github/workflows/therock-test-packages.yml
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected:"
+            git diff
+          fi
+
+      - name: Create or Update Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check for existing PR with auto-update branch pattern
+          EXISTING_PR=$(gh pr list \
+            --base amd-staging \
+            --state open \
+            --search "head:auto-update/therock-deps" \
+            --json number,headRefName \
+            --jq '.[0] | select(.headRefName | startswith("auto-update/therock-deps")) | .headRefName' \
+          ) || true
+
+          if [ -n "${EXISTING_PR}" ]; then
+            echo "Found existing PR with branch: ${EXISTING_PR}"
+            BRANCH_NAME="${EXISTING_PR}"
+            ACTION="updated"
+          else
+            echo "No existing PR found, creating new one"
+            BRANCH_NAME="auto-update/therock-deps-$(date +%Y%m%d)"
+            ACTION="created"
+          fi
+
+          # Checkout or create branch
+          if git ls-remote --exit-code --heads origin "${BRANCH_NAME}" > /dev/null 2>&1; then
+            git fetch origin "${BRANCH_NAME}"
+            git checkout "${BRANCH_NAME}"
+          else
+            git checkout -b "${BRANCH_NAME}"
+          fi
+
+          # Stage and commit changes
+          git add .github/workflows/therock-ci-linux.yml .github/workflows/therock-test-packages.yml
+
+          git commit -m "$(cat <<'EOF'
+          Update TheRock dependencies and container images
+
+          Automated daily update:
+          - TheRock commit: ${{ steps.therock.outputs.commit }}
+          - Build container: ${{ steps.containers.outputs.build_digest }}
+          - Test container: ${{ steps.containers.outputs.test_digest }}
+
+          This PR was automatically generated by the update-therock-dependencies workflow.
+          EOF
+          )"
+
+          # Push branch (force push if updating existing PR)
+          if [ "${ACTION}" = "updated" ]; then
+            git push origin "${BRANCH_NAME}" --force
+          else
+            git push origin "${BRANCH_NAME}"
+          fi
+
+          # Create PR only if this is a new branch
+          if [ "${ACTION}" = "created" ]; then
+            gh pr create \
+              --title "Update TheRock dependencies and container images" \
+              --body "$(cat <<'EOF'
+          ## Automated Daily Update
+
+          This PR updates TheRock references and container images to their latest versions.
+
+          ### Changes
+
+          - **TheRock commit**: `${{ steps.therock.outputs.commit }}` (as of ${{ steps.therock.outputs.date }})
+          - **Build container**: `ghcr.io/rocm/therock_build_manylinux_x86_64@${{ steps.containers.outputs.build_digest }}`
+            - Created: ${{ steps.containers.outputs.build_date }}
+          - **Test container**: `ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb@${{ steps.containers.outputs.test_digest }}`
+            - Created: ${{ steps.containers.outputs.test_date }}
+
+          ### Files Updated
+
+          - `.github/workflows/therock-ci-linux.yml`
+          - `.github/workflows/therock-test-packages.yml`
+
+          ---
+
+          🤖 This PR was automatically generated by the [update-therock-dependencies workflow](https://github.com/${{ github.repository }}/actions/workflows/update-therock-dependencies.yml).
+
+          Please review and merge if the updates look correct.
+          EOF
+          )" \
+              --base amd-staging \
+              --head "${BRANCH_NAME}"
+          else
+            # Add a comment to the existing PR noting the update
+            PR_NUMBER=$(gh pr list --head "${BRANCH_NAME}" --json number --jq '.[0].number')
+            gh pr comment "${PR_NUMBER}" --body "$(cat <<'EOF'
+          ## Updated Dependencies
+
+          This PR has been updated with the latest versions:
+
+          - **TheRock commit**: `${{ steps.therock.outputs.commit }}` (as of ${{ steps.therock.outputs.date }})
+          - **Build container**: `ghcr.io/rocm/therock_build_manylinux_x86_64@${{ steps.containers.outputs.build_digest }}`
+            - Created: ${{ steps.containers.outputs.build_date }}
+          - **Test container**: `ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb@${{ steps.containers.outputs.test_digest }}`
+            - Created: ${{ steps.containers.outputs.test_date }}
+
+          🤖 Updated by the [update-therock-dependencies workflow](https://github.com/${{ github.repository }}/actions/workflows/update-therock-dependencies.yml).
+          EOF
+          )"
+          fi
+
+          echo "pr_action=${ACTION}" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ "${{ steps.changes.outputs.has_changes }}" = "true" ]; then
+            echo "✅ PR created with updated dependencies"
+          else
+            echo "ℹ️ No updates needed - dependencies are already current"
+          fi
