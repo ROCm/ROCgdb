@@ -33,13 +33,13 @@
 	}                                                                    \
     } while (0)
 
-__device__ int
+__device__ int __attribute__ ((optnone))
 bar ()
 {
   return threadIdx.x;
 }
 
-__device__ int
+__device__ int __attribute__ ((optnone))
 baz ()
 {
   return 0;

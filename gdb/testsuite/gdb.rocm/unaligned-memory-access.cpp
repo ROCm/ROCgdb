@@ -49,12 +49,12 @@ __device__ byte_array global = {
 /* An array in LDS.  */
 __shared__ byte_array shared;
 
-__device__ void
+__device__ void __attribute__ ((noinline))
 done ()
 {
 }
 
-__global__ void
+__global__ void __attribute__ ((optnone))
 kernel ()
 {
   /* An array in the private_lane (swizzled) address space.  */

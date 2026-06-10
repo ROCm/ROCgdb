@@ -35,15 +35,21 @@
     }								\
   while (0)
 
-/* Make sure the function isn't inlined, for the nexti test.  */
-__device__ static __attribute__ ((noinline))
+/* "noinline" so the nexti test can step into a real function call;
+   "optnone" so the body has stable instructions for stepi/nexti and
+   the locally-initialized value is not folded into the return.  */
+__device__ static __attribute__ ((noinline, optnone))
 int
 return_zero ()
 {
-  return 0;
+  int ret = 0;
+  return ret;
 }
 
-__global__ void
+/* "optnone" so each statement below maps to its own instruction
+   sequence and the "var += 1" lines are not folded together --
+   stepi/nexti rely on stepping through them one at a time.  */
+__global__ void __attribute__ ((optnone))
 kernel ()
 {
   int var = return_zero ();

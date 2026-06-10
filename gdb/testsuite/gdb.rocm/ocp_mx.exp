@@ -19,6 +19,9 @@
 load_lib rocm.exp
 
 require allow_hipcc_tests allow_python_tests
+# The fp8/6/4 testing helpers rely on observable locals and call
+# structure, so the test is not meaningful under optimization.
+require no_optimized_code
 
 standard_testfile .cpp
 

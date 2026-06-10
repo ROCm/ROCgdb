@@ -21,6 +21,8 @@ load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
 require allow_hipcc_tests
+require no_optimized_code
+require no_lto
 
 standard_testfile .cpp
 
