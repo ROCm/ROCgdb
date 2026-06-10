@@ -48,6 +48,7 @@ from io import BytesIO, IOBase
 from logging import getLogger
 from typing import Annotated, Optional
 
+from elftools.common.exceptions import ELFParseError
 from elftools.construct.lib.container import ListContainer
 from elftools.dwarf.compileunit import CompileUnit as RawCompileUnit
 from elftools.dwarf.die import DIE as RawDIE
@@ -238,6 +239,9 @@ class DWARFAttribute:
                     postfix = " # Failed to print op as DWARF expression: " + hex(
                         int(str(e))
                     )
+                except ELFParseError as e:
+                    # Fall through to basic printing.
+                    postfix = " # Failed to print DWARF expression: " + str(e)
             # Print the data as a string in "\x01\x02\x03\x04" format.
             result = ""
             for op in self.value:
