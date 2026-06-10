@@ -605,6 +605,18 @@ make_type_with_address_class (struct type *type,
   return make_qualified_type (type, new_flags, nullptr);
 }
 
+/* Make a variant of TYPE with ASPACE as the type's
+   DW_AT_address_space attribute.  */
+type *
+make_type_with_address_space (type *type, arch_addr_space_id aspace)
+{
+  gdb_assert (aspace <= type_instance_flags::ADDRESS_SPACE_MAX);
+  type_instance_flags new_flags = type->instance_flags ();
+  new_flags.address_space = aspace;
+
+  return make_qualified_type (type, new_flags, nullptr);
+}
+
 /* See gdbtypes.h.  */
 
 type *
@@ -687,6 +699,7 @@ replace_type (struct type *ntype, struct type *type)
 	 symbol readers which do construct address-class variants don't
 	 call replace_type().  */
       gdb_assert (chain->address_class () == 0);
+      gdb_assert (chain->address_space () == 0);
 
       chain->set_length (type->length ());
       chain = chain->chain;
@@ -4996,6 +5009,8 @@ recursive_dump_type (struct type *type, int spaces)
     gdb_puts (" TYPE_DATA_SPACE");
   if (type->address_class () != 0)
     gdb_printf (" TYPE_ADDRESS_CLASS(%u)", type->address_class ());
+  if (type->address_space () != 0)
+    gdb_printf (" TYPE_ADDRESS_SPACE(%s)", pulongest (type->address_space ()));
   if (type->is_restrict ())
     gdb_puts (" TYPE_RESTRICT");
   if (type->is_atomic ())
