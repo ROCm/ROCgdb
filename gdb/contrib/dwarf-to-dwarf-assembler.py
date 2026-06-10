@@ -226,9 +226,23 @@ class DWARFAttribute:
         elif self.name == "DW_AT_encoding" and isinstance(self.value, int):
             s += "@" + ATE_NAME[self.value]
         elif self.form in EXPR_ATTRIBUTE_FORMS:
-            # This returns a complete description that is already
-            # indented.
-            return self._format_expr_value(s, indent_count)
+            postfix = ""
+            if self.name not in ["DW_AT_const_value", "DW_AT_discr_list"]:
+                # Try to print as a DWARF expression.
+                try:
+                    # This returns a complete description that is already
+                    # indented.
+                    return self._format_expr_value(s, indent_count)
+                except KeyError as e:
+                    # Fall through to basic printing.
+                    postfix = " # Failed to print op as DWARF expression: " + hex(
+                        int(str(e))
+                    )
+            # Print the data as a string in "\x01\x02\x03\x04" format.
+            result = ""
+            for op in self.value:
+                result += f"\\x{op:02x}"
+            return indent(s, indent_count) + '"' + result + '" ' + self.form + postfix
         else:
             s += self._format_value(offset_die_lookup)
 
