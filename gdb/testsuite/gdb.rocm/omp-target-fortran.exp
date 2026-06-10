@@ -34,7 +34,7 @@ if {[gdb_compile_omp_offload_fortran [list $srcdir/$subdir/$srcfile] \
 
 clean_restart $testfile
 
-with_rocm_omp_gpu_lock {
+with_rocm_gpu_lock {
     if {![runto_main]} {
 	return
     }

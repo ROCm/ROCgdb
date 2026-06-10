@@ -24,7 +24,7 @@ load_lib rocm.exp
 
 require allow_omp_offload_tests
 
-standard_testfile .c
+standard_testfile
 
 set k1_line [gdb_get_line_number "data-k1"]
 set k2_line [gdb_get_line_number "data-k2"]
@@ -37,7 +37,7 @@ if {[gdb_compile_omp_offload [list $srcdir/$subdir/$srcfile] \
 
 clean_restart $testfile
 
-with_rocm_omp_gpu_lock {
+with_rocm_gpu_lock {
     if {![runto_main]} {
 	return
     }

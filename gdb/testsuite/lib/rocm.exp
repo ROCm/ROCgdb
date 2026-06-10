@@ -643,7 +643,7 @@ gdb_caching_proc compiler_dwarf_language {} {
 
 # OpenMP GPU offload support.
 #
-# The procs below extend the rocm test framework to support running
+# The procs below extend the ROCm test framework to support running
 # tests that use the OpenMP "target" construct to offload code to
 # the GPU.
 
@@ -752,6 +752,29 @@ proc rocm_omp_offload_flags {{lang "c"}} {
     return $flags
 }
 
+# Drop known-harmless stderr from OpenMP-offload links.  ROCm 7.14's
+# device ld.lld warns when the OpenMP runtime helper __keep_alive
+# references LDS from a non-kernel function; the link still succeeds.
+proc rocm_omp_prune_benign_warnings {output} {
+    regsub -all \
+	{ld\.lld: warning:[^\r\n]*__keep_alive[^\r\n]*local memory global used by non-kernel function[^\r\n]*[\r\n]*} \
+	$output "" output
+    regsub -all {^[\r\n]+|[\r\n]+$} $output "" output
+    return $output
+}
+
+# Compile via gdb_compile, prune known-harmless warnings, and log any
+# remaining output (gdb_compile is quiet so benign noise is suppressed).
+proc rocm_omp_compile {source dest type options} {
+    lappend options quiet
+    set result [rocm_omp_prune_benign_warnings \
+		    [gdb_compile $source $dest $type $options]]
+    if {$result ne ""} {
+	verbose -log "compile failed: $result"
+    }
+    return $result
+}
+
 # Compile a C OpenMP-offload program (SOURCE -> DEST) using amdclang.
 # Falls back to gdb_compile's error reporting on failure.
 #
@@ -768,7 +791,7 @@ proc gdb_compile_omp_offload {source dest type options} {
     save_vars {CC_FOR_TARGET} {
 	set CC_FOR_TARGET $amdclang
 	lappend options "early_flags=[rocm_omp_offload_flags c]"
-	set result [gdb_compile $source $dest $type $options]
+	set result [rocm_omp_compile $source $dest $type $options]
     }
     return $result
 }
@@ -789,7 +812,7 @@ proc gdb_compile_omp_offload_cpp {source dest type options} {
 	set CXX_FOR_TARGET $amdclangpp
 	lappend options c++
 	lappend options "early_flags=[rocm_omp_offload_flags c++]"
-	set result [gdb_compile $source $dest $type $options]
+	set result [rocm_omp_compile $source $dest $type $options]
     }
     return $result
 }
@@ -813,18 +836,9 @@ proc gdb_compile_omp_offload_fortran {source dest type options} {
 	set F77_FOR_TARGET $amdflang
 	lappend options f90
 	lappend options "early_flags=[rocm_omp_offload_flags fortran]"
-	set result [gdb_compile $source $dest $type $options]
+	set result [rocm_omp_compile $source $dest $type $options]
     }
     return $result
-}
-
-# Convenience wrapper: call BODY under both the GPU lock (so only one
-# GDB drives the device at a time) and with the rocm-specific cleanups.
-# This is identical to with_rocm_gpu_lock, but is named to make
-# OpenMP-offload tests read more naturally.
-
-proc with_rocm_omp_gpu_lock { body } {
-    with_rocm_gpu_lock {uplevel 1 $body}
 }
 
 # Helpers shared by the gdb.rocm/omp-target-*.exp tests.

@@ -40,12 +40,16 @@ main (void)
   #pragma omp target teams distribute parallel for	\
 	      map(to:a[0:N], b[0:N]) map(tofrom:c[0:N])
   for (int i = 0; i < N; i++)
-    c[i] = a[i] + b[i];		/* teams-line */
+    {
+      c[i] = a[i] + b[i];	/* teams-line */
+    }
 
   int correct = 1;
   for (int i = 0; i < N; i++)
-    if (c[i] != N)
-      correct = 0;
+    {
+      if (c[i] != N)
+	correct = 0;
+    }
 
   printf ("correct=%d\n", correct);
   return correct ? 0 : 1;

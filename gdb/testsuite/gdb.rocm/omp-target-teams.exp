@@ -16,14 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# 'target teams distribute parallel for' should produce multiple GPU
-# waves all hitting the same breakpoint.
+# 'target teams distribute parallel for' typically spreads the loop
+# across multiple GPU waves hitting the same breakpoint.  The number of
+# waves depends on num_teams / thread_limit and the GPU architecture
+# (some configurations expose only one), so this test requires at least
+# one AMDGPU wave rather than a specific count.
 
 load_lib rocm.exp
 
 require allow_omp_offload_tests
 
-standard_testfile .c
+standard_testfile
 
 set break_line [gdb_get_line_number "teams-line"]
 
@@ -35,7 +38,7 @@ if {[gdb_compile_omp_offload [list $srcdir/$subdir/$srcfile] \
 
 clean_restart $testfile
 
-with_rocm_omp_gpu_lock {
+with_rocm_gpu_lock {
     if {![runto_main]} {
 	return
     }
@@ -44,30 +47,16 @@ with_rocm_omp_gpu_lock {
 
     rocm_omp_continue_to_breakpoint "continue to teams breakpoint"
 
-    # Verify multiple waves are present.  We don't need an exact wave
-    # count - it depends on the chosen num_teams / thread_limit and
-    # GPU architecture - but there must be at least one.
+    # The breakpoint hit already selects an AMDGPU wave; confirm the
+    # teams-distributed loop produced at least one wave at the stop
+    # (see the note at the top of the file about not asserting an
+    # exact count).
     set wave_list [info_thread_get_wave_list]
-    gdb_assert {[llength $wave_list] >= 1} "saw at least one AMDGPU wave"
+    gdb_assert {[llength $wave_list] >= 1} "at least one AMDGPU wave at teams breakpoint"
 
-    if {[llength $wave_list] >= 1} {
-	# Switch to one of the waves and confirm the kernel-local
-	# index 'i' is a sensible non-negative integer.
-	set first_wave [lindex $wave_list 0]
-	set saw_switch 0
-	gdb_test_multiple "thread $first_wave" "switch to first AMDGPU wave" {
-	    -re "Switching to thread $first_wave," {
-		set saw_switch 1
-		exp_continue
-	    }
-	    -re "$::gdb_prompt " {
-		gdb_assert { $saw_switch } $gdb_test_name
-	    }
-	}
-	gdb_test "print i >= 0" \
-	    "= (true|1)" \
-	    "loop index is non-negative"
-    }
+    gdb_test "print i >= 0" \
+	"= (true|1)" \
+	"loop index is non-negative"
 
     delete_breakpoints
     rocm_omp_continue_to_exit "continue to exit"
