@@ -617,6 +617,22 @@ enum dwarf_sect_v5
   DW_SECT_MAX_V5 = 8
 };
 
+/* Codes for DW_AT_address_space attribute.
+   See https://dwarfstd.org/issues/260211.1.html.  */
+enum dwarf_address_space
+{
+  DW_ASPACE_default = 0,
+
+  /* AMD GPU address spaces.
+     See https://llvm.org/docs/AMDGPUUsage.html#address-space-identifier.  */
+  DW_ASPACE_LLVM_AMDGPU_generic = 1,
+  DW_ASPACE_LLVM_AMDGPU_region = 2,
+  DW_ASPACE_LLVM_AMDGPU_local = 3,
+  /* Reserved.  */
+  DW_ASPACE_LLVM_AMDGPU_private_lane = 5,
+  DW_ASPACE_LLVM_AMDGPU_private_wave = 6,
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
