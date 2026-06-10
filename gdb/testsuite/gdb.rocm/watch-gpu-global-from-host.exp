@@ -43,9 +43,14 @@ proc do_test {} {
 
 	gdb_test "watch global" "Hardware watchpoint $::decimal: global"
 
-	gdb_test "continue" \
-	    "Hardware watchpoint $::decimal: global.*Old value = 0\r\nNew value = 8\r\nmain.*" \
-	    "hit watchpoint in main"
+	gdb_test_multiple "continue" "hit watchpoint in main" {
+	    -re -wrap "Hardware watchpoint $::decimal: global.*Old value = 0\r\nNew value = 8\r\nmain.*" {
+		pass $gdb_test_name
+	    }
+	    -re -wrap "received signal SIGSEGV, .*\\*devGlobal = 8;.*" {
+		unsupported "$gdb_test_name (not mapped on cpu)"
+	    }
+	}
     }
 }
 
