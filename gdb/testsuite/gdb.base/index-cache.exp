@@ -266,7 +266,7 @@ if { $ret != 0 } {
     return
 }
 
-# The ouput of mktemp contains an end of line, remove it.
+# The output of mktemp contains an end of line, remove it.
 set cache_dir [string trimright $cache_dir \r\n]
 
 test_cache_disabled $cache_dir "before populate"

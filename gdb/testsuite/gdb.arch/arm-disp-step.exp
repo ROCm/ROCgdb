@@ -344,7 +344,7 @@ proc test_str_pc {} {
 	"Breakpoint.*at.* file .*$srcfile, line.*" \
 	"break test_str_pc_end"
 
-    # Set breakpoint on both lables pc_offset_right and pc_offset_wrong
+    # Set breakpoint on both labels pc_offset_right and pc_offset_wrong
     gdb_test "break *pc_offset_right" \
 	"Breakpoint.*at.* file .*$srcfile, line.*" \
 	"break pc_offset_right"
@@ -354,7 +354,7 @@ proc test_str_pc {} {
 
     gdb_continue_to_breakpoint "continue to test_str_pc" \
 	".*str.*pc\,.*\[sp, #-4\].*"
-    # If breakpoint on lable pc_offset_wrong is hit, that means the offset
+    # If breakpoint on label pc_offset_wrong is hit, that means the offset
     # computed in displaced stepping is different from offset computed
     # without displaced stepping.  Report a failure.
     gdb_continue_to_breakpoint "continue to pc_offset_right" \

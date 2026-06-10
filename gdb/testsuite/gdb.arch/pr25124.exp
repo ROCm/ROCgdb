@@ -27,7 +27,7 @@ if { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable debug
 
 clean_restart $testfile
 
-# Check if the disassemble ouput is correct.
+# Check if the disassemble output is correct.
 gdb_test "x /i main+8" \
 	"$hex <main\\+8>:\[ \t\]+bx\[ \t\]+lr" \
 	"disassemble thumb instruction, 1st try"

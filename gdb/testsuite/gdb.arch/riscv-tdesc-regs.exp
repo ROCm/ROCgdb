@@ -48,7 +48,7 @@ if { $xlen != 4 && $xlen != 8 } {
 # proceed if FLEN equals XLEN, otherwise we'd need more test XML
 # files.
 if { $flen != 1 && $flen != $xlen } {
-    unsupport "unknown xlen/flen combination"
+    unsupported "unknown xlen/flen combination"
     return
 }
 

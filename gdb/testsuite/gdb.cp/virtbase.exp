@@ -58,7 +58,7 @@ gdb_test "print/x b->mA" " = 0xaaaaaaaa"
 gdb_test "print rtti_data" " = .*, data = 1\}"
 
 # Printing a pointer into a virtual base of a larger object used to do
-# pointer adjusment directly into the value being printed, in-place
+# pointer adjustment directly into the value being printed, in-place
 # (and did it wrong, too).  Print the pointer, and then access the
 # value history to check the pointer value is not changed.  If it had
 # been changed, then we'd not be able to find the real type anymore.

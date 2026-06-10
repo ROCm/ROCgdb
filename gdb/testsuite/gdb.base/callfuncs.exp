@@ -183,7 +183,7 @@ proc do_function_calls {prototypes} {
 
     # GDB currently screws up the passing of function parameters for
     # ABIs that use function descriptors.  Instead of passing the
-    # address of te function descriptor, GDB passes the address of the
+    # address of the function descriptor, GDB passes the address of the
     # function body.  This results in the called function treating the
     # first few instructions of the function proper as a descriptor
     # and attempting a jump through that (a totally random address).

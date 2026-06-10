@@ -28,7 +28,7 @@
 # | 7    | 1    | END  | Y    |        |        |
 # |------|------|------|------|--------|--------|
 #
-# Places a brekpoint at file 2, line 22.  Previously GDB would discard
+# Places a breakpoint at file 2, line 22.  Previously GDB would discard
 # the line table entry for this line due to switching files for the
 # file 1, line 18 non-statement line.  After patching however, GDB now
 # discards the file 1, line 18 entry instead, and the breakpoint at
@@ -43,7 +43,7 @@
 #
 # Range 'A' is a hypothetical case of how the compiler might choose to
 # represent this range, this has never been seen in the wild, but is
-# an improved debug experiece over range 'B'.  However, if we ever run
+# an improved debug experience over range 'B'.  However, if we ever run
 # in to the situation where GDB can support the range 'A' test, or
 # support some real DWARF seen in the wild, then the range 'A' case
 # should be dropped in favour of supporting real world cases.  This is

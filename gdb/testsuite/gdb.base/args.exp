@@ -77,7 +77,7 @@ proc is_argument_splitting_on {} {
 
 proc args_test { name arglist {re_esc_list {}} {re_no_esc_list {}} } {
 
-    # If either of the two regexp lists are not specificed then we can
+    # If either of the two regexp lists are not specified then we can
     # use an earlier argument value instead.
     #
     # For the first regexp list, if this is missing then we use the

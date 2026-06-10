@@ -26,14 +26,14 @@
 # To be addressed or set in your baseboard config file:
 #
 #   set_board_info gdb_protocol "remote"
-#	Unles you have a gdbserver that uses a different protocol...
+#	Unless you have a gdbserver that uses a different protocol...
 #
 #   set_board_info use_gdb_stub 1
 #	This tells the rest of the test suite not to do things
 #	like "run" which don't work well on remote targets.
 #
 #   set_board_info gdb,do_reload_on_run 1
-#	Unles you have a gdbserver that can handle multiple sessions.
+#	Unless you have a gdbserver that can handle multiple sessions.
 #
 #   set_board_info noargs 1
 #	Set this if the board does not support passing arguments to the
@@ -43,11 +43,11 @@
 #	Neither the traditional gdbserver nor the one in libremote
 #	can presently capture stdout and relay it to GDB via the
 #	'O' packet.  This means that tests involving printf will
-#	fail unles you set this varibale in your baseboard
+#	fail unless you set this variable in your baseboard
 #	configuration file.
 #
 #   set_board_info gdb,no_hardware_watchpoints 1
-#	Unles you have a gdbserver that supports hardware watchpoints.
+#	Unless you have a gdbserver that supports hardware watchpoints.
 #	FIXME: gdb should detect if the target doesn't support them,
 #	and fall back to using software watchpoints.
 #

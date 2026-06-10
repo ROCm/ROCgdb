@@ -35,7 +35,7 @@ send_user "configuring for gdbserver local testing (extended-remote)\n"
 # override our definitions.
 load_lib mi-support.exp
 
-# Overriden in order to start a "gdbserver --multi" instance whenever
+# Overridden in order to start a "gdbserver --multi" instance whenever
 # GDB is started.  Note nothing is needed for gdb_exit, since
 # gdbserver is started with --once, causing it to exit once GDB
 # disconnects.
@@ -89,7 +89,7 @@ proc extended_gdbserver_load_last_file {} {
     return 0
 }
 
-# Overriden in order to set the remote exec-file whenever a file is
+# Overridden in order to set the remote exec-file whenever a file is
 # loaded to gdb.
 #
 if { [info procs extended_gdbserver_gdb_file_cmd] == "" } {

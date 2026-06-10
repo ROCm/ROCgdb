@@ -89,7 +89,7 @@ proc run_test { cond_eval access_type bpexpr nloc } {
     }
 }
 
-# If we're using a remote target then conditions could be evaulated
+# If we're using a remote target then conditions could be evaluated
 # locally on the host, or on the remote target.  Otherwise, conditions
 # are always evaluated locally.
 #

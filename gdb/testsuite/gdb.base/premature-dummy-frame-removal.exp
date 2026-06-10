@@ -32,7 +32,7 @@
 # When the inferior continued, and eventually returned to the dummy
 # frame, it would try to execute instruction from the dummy frame
 # (which for most, or even all, targets, is on the stack), and then
-# experience undefined behaviuor, often a SIGSEGV.
+# experience undefined behaviour, often a SIGSEGV.
 
 standard_testfile .c
 

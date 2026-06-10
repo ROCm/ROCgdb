@@ -106,7 +106,7 @@ gdb_test "ptype a1.getarrayind" \
 
 gdb_test "p a1\[6\]" ".*int &.*6" "after a1\[\]"
 gdb_test "p b1\[7\]" ".*const int &.*7" "after b1\[\]"
-# Note the following test.  Xmethods on dynamc types are not looked up
+# Note the following test.  Xmethods on dynamic types are not looked up
 # currently.  Hence, even though a_ptr points to a B object, the xmethod
 # defined for A objects is invoked.
 gdb_test "p a_ptr->geta()" "From Python <A_geta>.*30" "after: a_ptr->geta()"

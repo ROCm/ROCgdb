@@ -46,7 +46,7 @@ if {![runto abort {allow-pending}]} {
 # By the nature of the bug, it could pass if the C compiler is not smart
 # enough to implement 'abort' as a noreturn function.  This is okay.
 # The real point is that users often put breakpoints on noreturn
-# functions such as 'abort' or some kind of exitting function, and those
+# functions such as 'abort' or some kind of exiting function, and those
 # breakpoints should work.
 
 gdb_test_multiple "backtrace" "backtrace from abort" {

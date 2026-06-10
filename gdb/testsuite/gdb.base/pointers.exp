@@ -70,7 +70,7 @@ gdb_test "next " "more_code.*;" "continuing after dummy()"
 #        pass "illegal pointer assignment rejected"
 #      }
 #    -re ".*$gdb_prompt $" { fail "illegal pointer assignment rejected" }
-#    timeout           { fail "(timeout) ilegal pointer assignment rejected" }
+#    timeout           { fail "(timeout) illegal pointer assignment rejected" }
 #  }
 
 #send_gdb "print v_unsigned_int_pointer == v_double_pointer\n"
@@ -96,7 +96,7 @@ gdb_test "next " "more_code.*;" "continuing after dummy()"
 #send_gdb "print v_unsigned_int_pointer = v_double_pointer\n"
 #gdb_expect {
 #    -re ".*.*$gdb_prompt $" {
-#        pass "ilegal pointer assignment rejected"
+#        pass "illegal pointer assignment rejected"
 #      }
 #    -re ".*$gdb_prompt $" { fail "illegal pointer assignment rejected" }
 #    timeout           { fail "(timeout) illegal pointer assignment rejected" }

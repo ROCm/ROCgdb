@@ -235,7 +235,7 @@ proc_with_prefix test_color_parameter { } {
 	gdb_test_no_output "python test_color_param.value =  gdb.Color('#FED210')" \
 	    "assign test_color_param.value to #FED210"
 	gdb_test "python print (test_color_param.value.components)" "\\(254, 210, 16\\)" \
-	    "test color parameter components from RGB hex tripple value"
+	    "test color parameter components from RGB hex triple value"
 	gdb_test "set print test-color-param 256" \
 	    "integer 256 out of range.*" "set invalid color parameter"
 	gdb_test "python test_color_param.value = gdb.Color(256)" \

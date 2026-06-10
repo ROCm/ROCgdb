@@ -159,7 +159,7 @@ with_test_prefix "absolute path" {
 }
 
 with_test_prefix "relative path" {
-    # Generate a core file using relative a path.  We ned to work
+    # Generate a core file using relative a path.  We need to work
     # around the core_find proc a little here.  The core_find proc
     # creates a sub-directory using standard_output_file and runs the
     # test binary from inside that directory.

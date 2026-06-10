@@ -137,7 +137,7 @@ proc test {target-non-stop exit-threads-first schedlock} {
 
     if {${target-non-stop} == "on"} {
 	# With non-stop. GDB issues ContinueDebugEvent as soon as it
-	# seens a debug event, so after a bit, the windows backend
+	# sees a debug event, so after a bit, the windows backend
 	# will have seen all the thread and process exit events, even
 	# while the user has the prompt.  Give it a bit of time for
 	# that to happen, so we can tell which threads have exited by

@@ -2268,9 +2268,9 @@ namespace eval ::varobj_tree {
   # An index which is appended to root varobjs to ensure uniqueness.
   variable _root_idx 0
 
-  # A procedure to help with debuggging varobj trees.
+  # A procedure to help with debugging varobj trees.
   # VARIABLE_NAME is the name of the variable to dump.
-  # CMD, if present, is the name of the callback to output the contstructed
+  # CMD, if present, is the name of the callback to output the constructed
   #   strings. By default, it uses expect's "send_log" command.
   # TERM, if present, is a terminating character. By default it is the newline.
   #

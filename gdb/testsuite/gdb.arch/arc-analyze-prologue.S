@@ -118,7 +118,7 @@ fp_prologue_with_store:
 ; Verify that store of the non-callee saved registers is not part of prologue.
 ; Repeat this test for multiple registers, to check boundaries.  Also check
 ; with both ST and PUSH (aka ST.AW). We have to use multiple functions for
-; this, because GDB would stop analisys at the first instruction that is not
+; this, because GDB would stop analysis at the first instruction that is not
 ; part of prologue.
 
 .align 4
@@ -165,7 +165,7 @@ noncallee_saved_regs_lp_count:
 	add	sp,sp,8
 
 ; BLINK is saved, but after an instruction that is not part of prologue.
-; Currently arc_analyze_prologue stops analisys at the first intstruction
+; Currently arc_analyze_prologue stops analysis at the first instruction
 ; that is not a part of prologue.  This might be not the best way, but it is
 ; what it is right now, so this test confirms this.
 
@@ -789,7 +789,7 @@ unstored_reg:
 	add	sp,sp,12
 	j	[blink]
 
-; Two stores at the same adddress.  GDB should report only the R14.
+; Two stores at the same address.  GDB should report only the R14.
 
 .align 4
 double_store:

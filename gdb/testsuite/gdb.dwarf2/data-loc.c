@@ -16,7 +16,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 /* This C file provides some global variables laid out in a way
-   that mimicks what the GNAT Ada compiler calls "fat pointers".
+   that mimics what the GNAT Ada compiler calls "fat pointers".
    These fat pointers are the memory representation used by
    the compiler to handle dynamic arrays.
 

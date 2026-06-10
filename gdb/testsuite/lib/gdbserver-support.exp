@@ -20,7 +20,7 @@
 # To be addressed or set in your baseboard config file:
 #
 #   set_board_info gdb_protocol "remote"
-#	Unles you have a gdbserver that uses a different protocol...
+#	Unless you have a gdbserver that uses a different protocol...
 #	After GDB starts you should check global $gdbserver_protocol instead as
 #	the testfile may force a specific different target protocol itself.
 #

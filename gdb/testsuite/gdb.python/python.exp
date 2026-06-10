@@ -303,7 +303,7 @@ if {![gdb_debug_enabled]} {
 gdb_py_test_silent_cmd "set python print-stack full" \
     "Set print-stack full for prompt tests" 1
 
-# Test prompt substituion
+# Test prompt substitution
 
 gdb_test_multiline "prompt substitution" \
   "python" "" \
@@ -380,7 +380,7 @@ gdb_test_multiple "python gdb.prompt_hook = program_prompt" "set the programming
     }
 }
 
-gdb_test_multiple "python" "test we ignore substitution for seconday prompts" {
+gdb_test_multiple "python" "test we ignore substitution for secondary prompts" {
     -re "\r\n>$" {
 	pass $gdb_test_name
     }

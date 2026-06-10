@@ -334,7 +334,7 @@ gdb_test "python print(my_style_10)" \
 gdb_test_no_output "python input_text = \"this is a unique string that is unlikely to appear elsewhere 12345\"" \
     "setup an input string"
 gdb_test_no_output "with style enabled off -- python output_text = filename_style.apply(input_text)" \
-    "create an ouput string by applying filename_style"
+    "create an output string by applying filename_style"
 gdb_test_no_output "python input_text = \"a totally different string that is also, hopefully, unique\"" \
     "replace the input string"
 gdb_test "python print(output_text)" \

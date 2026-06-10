@@ -17,7 +17,7 @@ standard_testfile
 
 # Count the number of probes of TYPE (either 'stap' or 'dtrace'),
 # from provider matching PROVIDER, with a name matching NAME, and from
-# an objec file matching OBJECT.
+# an object file matching OBJECT.
 #
 # The OBJECT is optional, in which case all objects will be matched.
 #

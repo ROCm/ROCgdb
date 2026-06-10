@@ -68,7 +68,7 @@ gdb_test continue \
 
 gdb_test continue \
 "Continuing\\..*open 4:.*ENOENT$stop_msg" \
-"Opening nonexistant file returns ENOENT"
+"Opening nonexistent file returns ENOENT"
 
 gdb_test "continue" ".*" ""
 
@@ -137,7 +137,7 @@ gdb_test continue \
 
 gdb_test continue \
 "Continuing\\..*stat 4:.*ENOENT$stop_msg" \
-"Stat a nonexistant file returns ENOENT"
+"Stat a nonexistent file returns ENOENT"
 
 gdb_test continue \
 "Continuing\\..*fstat 1:.*OK$stop_msg" \
@@ -232,7 +232,7 @@ gdb_test continue \
 
 gdb_test continue \
 "Continuing\\..*rename 5:.*ENOENT$stop_msg" \
-"Renaming a nonexistant file returns ENOENT"
+"Renaming a nonexistent file returns ENOENT"
 
 gdb_test continue \
 "Continuing\\..*unlink 1:.*OK$stop_msg" \
@@ -253,7 +253,7 @@ gdb_test continue \
 
 gdb_test continue \
 "Continuing\\..*unlink 3:.*ENOENT$stop_msg" \
-"Unlinking a nonexistant file returns ENOENT"
+"Unlinking a nonexistent file returns ENOENT"
 
 gdb_test continue \
 "Continuing\\..*time 1:.*OK$stop_msg" \

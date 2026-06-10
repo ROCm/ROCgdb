@@ -184,9 +184,9 @@ proc test {always_inserted sw_watchpoint} {
 	gdb_test "print \$commands_ran" " = void" \
 	    "breakpoint commands didn't run"
 
-	# Reenable the breakpoint, and check that it gets hit and accounted
+	# Re-enable the breakpoint, and check that it gets hit and accounted
 	# for this time.
-	gdb_test "enable \$bpnum" "" "reenable breakpoint"
+	gdb_test "enable \$bpnum" "" "re-enable breakpoint"
 
 	gdb_test "continue" "Breakpoint .*" \
 	    "stop at permanent breakpoint thrice"

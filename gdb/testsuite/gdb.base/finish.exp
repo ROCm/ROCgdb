@@ -17,7 +17,7 @@
 
 set allow_float_test [allow_float_test]
 
-# re-use the program from the "return2" test.
+# reuse the program from the "return2" test.
 if { [prepare_for_testing "failed to prepare" finish return2.c] } {
     return
 }

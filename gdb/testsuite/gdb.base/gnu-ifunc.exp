@@ -240,7 +240,7 @@ proc misc_tests {resolver_attr resolver_debug final_debug} {
 
     if {!$resolver_debug && !$final_debug} {
 	# Do the test that is supposed to succeed first, to make sure
-	# elf_gnu_ifunc_record_cache is empty.  This excercises PR28224.
+	# elf_gnu_ifunc_record_cache is empty.  This exercises PR28224.
 	gdb_test "p (int) gnu_ifunc (3)" " = 4"
 
 	gdb_test "p gnu_ifunc()" \

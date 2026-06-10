@@ -236,12 +236,12 @@ proc generate_container_class { states } {
     template int cbv_container<$classname> ($classname arg);"
 }
 
-# Generate useful statements that use a class in the debugee program
+# Generate useful statements that use a class in the debuggee program
 
 proc generate_stmts { classprefix states {cbvfun "cbv"}} {
     set classname "${classprefix}_[join $states _]"
 
-    # Having an explicit call to the cbv function in the debugee program
+    # Having an explicit call to the cbv function in the debuggee program
     # ensures that the compiler will emit necessary function in the binary.
     if {[is_copy_constructible $states]} {
 	set cbvcall "$cbvfun<$classname> (${classname}_var);\n"
@@ -252,7 +252,7 @@ proc generate_stmts { classprefix states {cbvfun "cbv"}} {
     return "$cbvcall"
 }
 
-# Generate the complete debugee program
+# Generate the complete debuggee program
 
 proc generate_program { classes stmts } {
     global ADDED

@@ -1193,7 +1193,7 @@ proc Term::wait_for {wait_for} {
 }
 
 # Accept some output from gdb and update the screen.  Wait for the screen
-# region X/Y/WIDTH/HEIGTH to matches REGEXP.  Return 0 on timeout, 1 on
+# region X/Y/WIDTH/HEIGHT to matches REGEXP.  Return 0 on timeout, 1 on
 # success.
 proc Term::wait_for_region_contents {x y width height regexp} {
     while 1 {
@@ -1491,7 +1491,7 @@ proc Term::_check_box {x y width height} {
 	return "lr corner is $c, not +"
     }
 
-    # Note we do not check the full horizonal borders of the box.
+    # Note we do not check the full horizontal borders of the box.
     # The top will contain a title, and the bottom may as well, if
     # it is overlapped by some other border.  However, at most a
     # title should appear as '+-VERY LONG TITLE-+', so we can

@@ -249,7 +249,7 @@ proc node_result {result_var id limit parent_list indent_lvl log} {
 
 # Test nested type definitions.  LIMIT specifies how many nested levels
 # of definitions to test.  If LOG is true, output the tree to the log in
-# a human-readable format mimicing the source code.
+# a human-readable format mimicking the source code.
 #
 # Only test when not logging.  Generating source code usable by the
 # test is not quite the same as how GDB outputs it.

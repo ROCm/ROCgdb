@@ -367,7 +367,7 @@ proc gdb_collect_registers_test { myregs } {
     with_test_prefix "collect $myregs" {
 	prepare_for_trace_test
 
-	# We'll simply re-use the args_test_function for this test
+	# We'll simply reuse the args_test_function for this test
 	gdb_test "trace args_test_func" \
 	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
@@ -593,7 +593,7 @@ proc gdb_collect_return_test { } {
     with_test_prefix "collect \$_ret" {
 	prepare_for_trace_test
 
-	# We'll simply re-use the args_test_function for this test.
+	# We'll simply reuse the args_test_function for this test.
 	gdb_test "trace args_test_func" \
 	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"

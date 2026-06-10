@@ -143,7 +143,7 @@ proc write_asm_file { asm_file dwarf_version func_ranges entry_pc } {
     }
 }
 
-# Gobal used to give each generated binary a unique name.
+# Global used to give each generated binary a unique name.
 set test_id 0
 
 proc run_test { dwarf_version empty_loc entry_pc_type } {

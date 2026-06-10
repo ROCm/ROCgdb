@@ -29,7 +29,7 @@ if { [build_executable "failed to prepare" ${binfile} "${srcfile}" \
 # call that will never return.  GDB should eventually timeout and stop
 # the inferior.
 #
-# When UNWIND is "off" the inferior wil be left in the frame where the
+# When UNWIND is "off" the inferior will be left in the frame where the
 # timeout occurs, otherwise, when UNWIND is "on", GDB should unwind
 # back to the frame where the inferior call was made.
 proc run_test { target_async target_non_stop non_stop unwind } {

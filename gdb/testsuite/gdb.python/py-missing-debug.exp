@@ -92,7 +92,7 @@ with_test_prefix "handler in gnu_debuglink mode" {
     gdb_test_no_output "python handler_obj.set_mode(Mode.RETURN_TRUE, \
 						    \"$hidden_filename\", \
 						    \"$debug_filename\")" \
-	"confirgure handler"
+	"configure handler"
     gdb_file_cmd $binfile
     gdb_assert {$gdb_file_cmd_debug_info == "debug"} "debug info found"
 
@@ -124,7 +124,7 @@ with_test_prefix "handler in build-id mode" {
     gdb_test_no_output "python handler_obj.set_mode(Mode.RETURN_TRUE, \
 						    \"$hidden_filename\", \
 						    \"$build_id_filename\")" \
-	"confirgure handler"
+	"configure handler"
 
     # Reload the binary and check the debug information is found.
     gdb_file_cmd $binfile
@@ -144,7 +144,7 @@ with_test_prefix "handler returning a string" {
     # Configure the handler return a filename string.
     gdb_test_no_output "python handler_obj.set_mode(Mode.RETURN_STRING, \
 						    \"$hidden_filename\")" \
-	"confirgure handler"
+	"configure handler"
 
     # Reload the binary and check the debug information is found.
     gdb_file_cmd $binfile
@@ -157,7 +157,7 @@ with_test_prefix "handler returning a string" {
 
 # Register another global handler, this one raises an exception.  Reload the
 # debug information, the bad handler should be invoked first, which raises
-# an excetption, at which point GDB should skip further Python handlers.
+# an exception, at which point GDB should skip further Python handlers.
 with_test_prefix "handler raises an exception" {
     gdb_test_no_output \
 	"python gdb.missing_debug.register_handler(None, rhandler)"
@@ -387,7 +387,7 @@ with_test_prefix "return False handler in progspace list" {
 	     "  Foo"]
 
     gdb_test_no_output "python handler_obj.set_mode(Mode.RETURN_FALSE)" \
-	"confirgure handler"
+	"configure handler"
 
     gdb_file_cmd $binfile
     gdb_test "python print(handler_call_log)" \

@@ -249,9 +249,9 @@ gdb_tfind_test "8.25: tfind none" "none" "-1"
 gdb_test "tfind tracepoint 0" "failed to find.*" \
 	"8.25: tfind tracepoint rejects zero"
 gdb_test "tfind tracepoint 32767" "failed to find.*" \
-	"8.25: tfind tracepoint rejects nonexistant tracepoint"
+	"8.25: tfind tracepoint rejects nonexistent tracepoint"
 gdb_test "tfind tracepoint -1" "failed to find.*" \
-	"8.25: tfind tracepoint rejects nonexistant tracepoint of -1"
+	"8.25: tfind tracepoint rejects nonexistent tracepoint of -1"
 
 # 8.37 tfind tracepoint n where n no longer exists (but used to)
 gdb_test_no_output "delete trace $tdp2" ""
@@ -300,7 +300,7 @@ gdb_test "print \$trace_line" "$testline4" \
 	"8.14: tfind pc x has correct line"
 gdb_test "printf \"x \%d x\\n\", \$pc == \$test_pc" \
 	"x 1 x" \
-	"8.14: tfind pc x has corrrect address"
+	"8.14: tfind pc x has correct address"
 
 # 8.15 tfind pc <no arg>
 ## check pc same before and after, $trace_frame changed

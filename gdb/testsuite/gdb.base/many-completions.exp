@@ -14,13 +14,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Test the case where we have so many completions that we require the
-# completions hash table within GDB to grow.  Make sure that afte the
+# completions hash table within GDB to grow.  Make sure that after the
 # hash table has grown we try to add duplicate entries into the
 # hash. This checks that GDB doesn't corrupt the hash table when
 # resizing it.
 #
 # In this case we create a test with more functions than the default
-# number of entires in the completion hash table (which is 200), then
+# number of entries in the completion hash table (which is 200), then
 # complete on all function names.
 #
 # GDB will add all the function names from the DWARF, and then from
@@ -78,7 +78,7 @@ if {![runto_main]} {
 # We don't want to stop gathering completions too early.
 gdb_test_no_output "set max-completions unlimited"
 
-# Collect all possible completions, and check for duplictes.
+# Collect all possible completions, and check for duplicates.
 set completions [capture_command_output "complete break func_" ""]
 set duplicates 0
 foreach {-> name} [regexp -all -inline -line {^break (\w+\S*)} $completions] {

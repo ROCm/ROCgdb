@@ -194,7 +194,7 @@ proc valid_addr_p {cmd offset width} {
     return 1
 }
 
-# Watch WIDTH bytes at BASE + OFFSET.  CMD specifices the specific
+# Watch WIDTH bytes at BASE + OFFSET.  CMD specifies the specific
 # type of watchpoint to use.  If CMD is "hbreak", WIDTH is ignored.
 # The HW_WP_P flag tells us if hardware watchpoints are enabled or
 # not.

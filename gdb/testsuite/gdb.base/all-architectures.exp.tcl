@@ -263,7 +263,7 @@ with_test_prefix "tests" {
 			}
 		    }
 
-		    # Record what is the default endianess.  As an
+		    # Record what is the default endianness.  As an
 		    # optimization, we'll skip testing the manual "set
 		    # endian DEFAULT" case.
 		    set test "show endian"

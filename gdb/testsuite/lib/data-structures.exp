@@ -151,7 +151,7 @@ namespace eval ::Queue {
 	set data_($oid) [linsert $data_($oid) 0 $elem]
     }
 
-    # Re-use some common routines from the Stack implementation.
+    # Reuse some common routines from the Stack implementation.
     namespace import ::Stack::create ::Stack::new ::Stack::empty \
 	::Stack::delete ::Stack::push ::Stack::length ::Stack::error_if
 

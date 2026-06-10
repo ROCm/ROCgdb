@@ -40,7 +40,7 @@ gdb_test "list sep-proc.c:$location" \
 	 "list using location inside included file"
 
 # Try the same, but this time with a breakpoint.  We need to exit
-# GDB to make sure that we havn't loaded the full symbols yet when
+# GDB to make sure that we haven't loaded the full symbols yet when
 # we test the breakpoint insertion.
 clean_restart $testfile
 

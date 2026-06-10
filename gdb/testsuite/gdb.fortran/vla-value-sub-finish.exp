@@ -43,7 +43,7 @@ gdb_test "print array2" " = \\( *\\( *\\( *30, *3, *3,\[()3, .\]*\\)" \
 gdb_test "print array2(2,1,1)=20" " = 20" \
   "set array(2,2,2) to 20 in subroutine"
 gdb_test "print array2" " = \\( *\\( *\\( *30, *20, *3,\[()3, .\]*\\)" \
-  "print array2 in foo after it was mofified in debugger"
+  "print array2 in foo after it was modified in debugger"
 
 gdb_test "finish" \
   ".*(foo\\\(sub_arr1\\\(5:10, 5:10\\\), sub_arr2\\\(10:15,10:15,10:15\\\)\\\)|foo \\\(array1=..., array2=...\\\).*)" \
