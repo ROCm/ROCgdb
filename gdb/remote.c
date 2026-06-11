@@ -1092,7 +1092,7 @@ public:
 
   void async (bool) override;
 
-  int async_wait_fd () override;
+  std::vector<int> async_wait_fds () override;
 
   void thread_events (bool) override;
 
@@ -15975,11 +15975,11 @@ remote_async_serial_handler (struct serial *scb, void *context)
   inferior_event_handler (INF_REG_EVENT);
 }
 
-int
-remote_target::async_wait_fd ()
+std::vector<int>
+remote_target::async_wait_fds ()
 {
   struct remote_state *rs = get_remote_state ();
-  return rs->remote_desc->fd;
+  return {rs->remote_desc->fd};
 }
 
 void

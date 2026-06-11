@@ -782,7 +782,7 @@ struct target_ops
       TARGET_DEFAULT_RETURN (false);
     virtual void async (bool)
       TARGET_DEFAULT_NORETURN (tcomplain ());
-    virtual int async_wait_fd ()
+    virtual std::vector<int> async_wait_fds ()
       TARGET_DEFAULT_NORETURN (noprocess ());
     /* Return true if the target has pending events to report to the
        core.  If true, then GDB avoids resuming the target until all
