@@ -25,7 +25,7 @@
 #include "gdbsupport/unordered_map.h"
 
 /* Per-gdbarch data type.  */
-typedef std::vector<gdbpy_ref<>> gdbpy_register_type;
+using gdbpy_register_type = std::vector<gdbpy_ref<>>;
 
 /* Token to access per-gdbarch data related to register descriptors.  */
 static const registry<gdbarch>::key<gdbpy_register_type>

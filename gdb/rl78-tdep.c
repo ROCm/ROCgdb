@@ -799,7 +799,7 @@ rl78_pseudo_register_write (struct gdbarch *gdbarch,
    0xff is used when a one byte breakpoint instruction is required.  */
 constexpr gdb_byte rl78_break_insn[] = { 0xff };
 
-typedef BP_MANIPULATION (rl78_break_insn) rl78_breakpoint;
+using rl78_breakpoint = BP_MANIPULATION (rl78_break_insn);
 
 /* Define a "handle" struct for fetching the next opcode.  */
 

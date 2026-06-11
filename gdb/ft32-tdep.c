@@ -77,7 +77,7 @@ ft32_frame_align (struct gdbarch *gdbarch, CORE_ADDR sp)
 
 constexpr gdb_byte ft32_break_insn[] = { 0x02, 0x00, 0x34, 0x00 };
 
-typedef BP_MANIPULATION (ft32_break_insn) ft32_breakpoint;
+using ft32_breakpoint = BP_MANIPULATION (ft32_break_insn);
 
 /* FT32 register names.  */
 

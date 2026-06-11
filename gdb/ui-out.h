@@ -439,8 +439,8 @@ private:
   struct ui_out *m_uiout;
 };
 
-typedef ui_out_emit_type<ui_out_type_tuple> ui_out_emit_tuple;
-typedef ui_out_emit_type<ui_out_type_list> ui_out_emit_list;
+using ui_out_emit_tuple = ui_out_emit_type<ui_out_type_tuple>;
+using ui_out_emit_list = ui_out_emit_type<ui_out_type_list>;
 
 /* Start a new table on construction, and end the table on
    destruction.  */

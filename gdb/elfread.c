@@ -78,7 +78,7 @@ struct elfinfo
 
 /* Type for per-BFD data.  */
 
-typedef std::vector<std::unique_ptr<probe>> elfread_data;
+using elfread_data = std::vector<std::unique_ptr<probe>>;
 
 /* Per-BFD data for probe info.  */
 

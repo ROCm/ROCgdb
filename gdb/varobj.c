@@ -37,7 +37,7 @@
 #include "python/python.h"
 #include "python/python-internal.h"
 #else
-typedef int PyObject;
+using PyObject = int;
 #endif
 
 /* See varobj.h.  */

@@ -207,7 +207,7 @@ lm32_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 /* Create a breakpoint instruction.  */
 constexpr gdb_byte lm32_break_insn[4] = { OP_RAISE << 2, 0, 0, 2 };
 
-typedef BP_MANIPULATION (lm32_break_insn) lm32_breakpoint;
+using lm32_breakpoint = BP_MANIPULATION (lm32_break_insn);
 
 
 /* Setup registers and stack for faking a call to a function in the

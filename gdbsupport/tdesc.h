@@ -131,7 +131,7 @@ struct tdesc_reg : tdesc_element
   }
 };
 
-typedef std::unique_ptr<tdesc_reg> tdesc_reg_up;
+using tdesc_reg_up = std::unique_ptr<tdesc_reg>;
 
 /* Declaration of a structure that holds information about one
    "compatibility" entry within a target description.  */
@@ -140,7 +140,7 @@ struct tdesc_compatible_info;
 
 /* A pointer to a single piece of compatibility information.  */
 
-typedef std::unique_ptr<tdesc_compatible_info> tdesc_compatible_info_up;
+using tdesc_compatible_info_up = std::unique_ptr<tdesc_compatible_info>;
 
 /* Return a vector of compatibility information pointers from the target
    description TARGET_DESC.  */
@@ -212,7 +212,7 @@ struct tdesc_type : tdesc_element
   }
 };
 
-typedef std::unique_ptr<tdesc_type> tdesc_type_up;
+using tdesc_type_up = std::unique_ptr<tdesc_type>;
 
 struct tdesc_type_builtin : tdesc_type
 {
@@ -313,7 +313,7 @@ struct tdesc_feature : tdesc_element
   }
 };
 
-typedef std::unique_ptr<tdesc_feature> tdesc_feature_up;
+using tdesc_feature_up = std::unique_ptr<tdesc_feature>;
 
 /* A deleter adapter for a target_desc.  There are different
    implementations of this deleter class in gdb and gdbserver because even

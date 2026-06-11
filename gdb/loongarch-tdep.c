@@ -1905,7 +1905,7 @@ loongarch_dwarf2_reg_to_regnum (struct gdbarch *gdbarch, int regnum)
 }
 
 static constexpr gdb_byte loongarch_default_breakpoint[] = {0x05, 0x00, 0x2a, 0x00};
-typedef BP_MANIPULATION (loongarch_default_breakpoint) loongarch_breakpoint;
+using loongarch_breakpoint = BP_MANIPULATION (loongarch_default_breakpoint);
 
 /* Extract a set of required target features out of ABFD.  If ABFD is nullptr
    then a LOONGARCH_GDBARCH_FEATURES is returned in its default state.  */

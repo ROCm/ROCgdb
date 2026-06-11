@@ -108,7 +108,7 @@ struct protocol_feature;
 struct packet_reg;
 
 struct stop_reply;
-typedef std::unique_ptr<stop_reply> stop_reply_up;
+using stop_reply_up = std::unique_ptr<stop_reply>;
 
 /* Generic configuration support for packets the stub optionally
    supports.  Allows the user to specify the use of the packet as well
@@ -3633,7 +3633,7 @@ remote_target::thread_name (struct thread_info *info)
 /* Right now, the internal structure is int. We want it to be bigger.
    Plan to fix this.  */
 
-typedef int gdb_threadref;	/* Internal GDB thread reference.  */
+using gdb_threadref = int;	/* Internal GDB thread reference.  */
 
 /* gdb_ext_thread_info is an internal GDB data structure which is
    equivalent to the reply of the remote threadinfo packet.  */

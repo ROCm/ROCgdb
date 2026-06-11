@@ -542,7 +542,7 @@ struct procinfo_deleter
   }
 };
 
-typedef std::unique_ptr<procinfo, procinfo_deleter> procinfo_up;
+using procinfo_up = std::unique_ptr<procinfo, procinfo_deleter>;
 
 enum { NOKILL, KILL };
 

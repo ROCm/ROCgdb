@@ -456,7 +456,7 @@ static const struct frame_unwind_legacy s12z_frame_unwind (
 
 constexpr gdb_byte s12z_break_insn[] = {0x00};
 
-typedef BP_MANIPULATION (s12z_break_insn) s12z_breakpoint;
+using s12z_breakpoint = BP_MANIPULATION (s12z_break_insn);
 
 struct s12z_gdbarch_tdep : gdbarch_tdep_base
 {

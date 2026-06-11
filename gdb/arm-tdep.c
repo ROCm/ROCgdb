@@ -95,7 +95,7 @@ struct arm_mapping_symbol
   { return this->value < other.value; }
 };
 
-typedef std::vector<arm_mapping_symbol> arm_mapping_symbol_vec;
+using arm_mapping_symbol_vec = std::vector<arm_mapping_symbol>;
 
 struct arm_per_bfd
 {

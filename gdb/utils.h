@@ -429,7 +429,7 @@ struct warning_hook_handler_type
     = 0;
 };
 
-typedef warning_hook_handler_type *warning_hook_handler;
+using warning_hook_handler = warning_hook_handler_type *;
 
 /* Set the thread-local warning hook, and restore the old value when
    finished.  */

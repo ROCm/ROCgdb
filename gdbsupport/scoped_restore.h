@@ -42,7 +42,7 @@ protected:
 
 /* A convenience typedef.  Users of make_scoped_restore declare the
    local RAII object as having this type.  */
-typedef const scoped_restore_base &scoped_restore;
+using scoped_restore = const scoped_restore_base &;
 
 /* An RAII-based object that saves a variable's value, and then
    restores it again when this object is destroyed. */

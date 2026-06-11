@@ -281,7 +281,7 @@ msp430_register_sim_regno (struct gdbarch *gdbarch, int regnum)
 
 constexpr gdb_byte msp430_break_insn[] = { 0x43, 0x43 };
 
-typedef BP_MANIPULATION (msp430_break_insn) msp430_breakpoint;
+using msp430_breakpoint = BP_MANIPULATION (msp430_break_insn);
 
 /* Define a "handle" struct for fetching the next opcode.  */
 

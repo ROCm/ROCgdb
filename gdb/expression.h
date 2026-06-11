@@ -79,7 +79,7 @@ namespace expr
 {
 
 class operation;
-typedef std::unique_ptr<operation> operation_up;
+using operation_up = std::unique_ptr<operation>;
 
 /* Base class for an operation.  An operation is a single component of
    an expression.  */
@@ -248,7 +248,7 @@ struct expression
   expr::operation_up op;
 };
 
-typedef std::unique_ptr<expression> expression_up;
+using expression_up = std::unique_ptr<expression>;
 
 /* When parsing expressions we track the innermost block that was
    referenced.  */

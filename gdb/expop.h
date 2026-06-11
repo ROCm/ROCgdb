@@ -565,7 +565,7 @@ private:
 /* A floating-point constant.  The constant is encoded in the target
    format.  */
 
-typedef std::array<gdb_byte, 16> float_data;
+using float_data = std::array<gdb_byte, 16>;
 
 /* An operation that holds a floating-point constant of a given
    type.

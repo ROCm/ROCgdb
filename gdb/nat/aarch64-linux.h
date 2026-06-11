@@ -24,12 +24,12 @@
 /* Defines ps_err_e, struct ps_prochandle.  */
 #include "gdb_proc_service.h"
 
-typedef int compat_int_t;
-typedef unsigned int compat_uptr_t;
+using compat_int_t = int;
+using compat_uptr_t = unsigned int;
 
-typedef int compat_time_t;
-typedef int compat_timer_t;
-typedef int compat_clock_t;
+using compat_time_t = int;
+using compat_timer_t = int;
+using compat_clock_t = int;
 
 struct compat_timeval
 {

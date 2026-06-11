@@ -112,7 +112,7 @@ struct syscall_desc
   std::string alias;
 };
 
-typedef std::unique_ptr<syscall_desc> syscall_desc_up;
+using syscall_desc_up = std::unique_ptr<syscall_desc>;
 
 /* Structure of a syscall group.  */
 struct syscall_group_desc
@@ -131,7 +131,7 @@ struct syscall_group_desc
   std::vector<syscall_desc *> syscalls;
 };
 
-typedef std::unique_ptr<syscall_group_desc> syscall_group_desc_up;
+using syscall_group_desc_up = std::unique_ptr<syscall_group_desc>;
 
 /* Structure that represents syscalls information.  */
 struct syscalls_info
@@ -151,7 +151,7 @@ struct syscalls_info
   std::string my_gdb_datadir;
 };
 
-typedef std::unique_ptr<syscalls_info> syscalls_info_up;
+using syscalls_info_up = std::unique_ptr<syscalls_info>;
 
 /* Callback data for syscall information parsing.  */
 struct syscall_parsing_data

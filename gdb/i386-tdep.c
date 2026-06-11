@@ -515,7 +515,7 @@ static const char *disassembly_flavor = att_flavor;
 
 constexpr gdb_byte i386_break_insn[] = { 0xcc }; /* int 3 */
 
-typedef BP_MANIPULATION (i386_break_insn) i386_breakpoint;
+using i386_breakpoint = BP_MANIPULATION (i386_break_insn);
 
 
 /* Displaced instruction handling.  */

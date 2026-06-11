@@ -127,7 +127,7 @@ microblaze_fetch_instruction (CORE_ADDR pc)
 
 constexpr gdb_byte microblaze_break_insn[] = MICROBLAZE_BREAKPOINT;
 
-typedef BP_MANIPULATION (microblaze_break_insn) microblaze_breakpoint;
+using microblaze_breakpoint = BP_MANIPULATION (microblaze_break_insn);
 
 
 /* Allocate and initialize a frame cache.  */

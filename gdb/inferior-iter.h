@@ -28,12 +28,12 @@
 class all_inferiors_iterator
 {
 public:
-  typedef all_inferiors_iterator self_type;
-  typedef struct inferior *value_type;
-  typedef struct inferior *&reference;
-  typedef struct inferior **pointer;
-  typedef std::forward_iterator_tag iterator_category;
-  typedef int difference_type;
+  using self_type = all_inferiors_iterator;
+  using value_type = struct inferior *;
+  using reference = struct inferior *&;
+  using pointer = struct inferior **;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type = int;
 
   /* Create an iterator pointing at HEAD.  */
   all_inferiors_iterator (process_stratum_target *proc_target,

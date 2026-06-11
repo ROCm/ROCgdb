@@ -2698,7 +2698,7 @@ private:
    we return a vector of this type.  The first item in the pair is the
    module symbol, and the second item is the symbol for the function or
    variable we found.  */
-typedef std::pair<symbol_search, symbol_search> module_symbol_search;
+using module_symbol_search = std::pair<symbol_search, symbol_search>;
 
 /* Searches the symbols to find function and variables symbols (depending
    on KIND) within Fortran modules.  The MODULE_REGEXP matches against the

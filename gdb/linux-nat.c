@@ -500,7 +500,7 @@ struct lwp_deleter
 
 /* A unique_ptr specialisation for lwp_info.  */
 
-typedef std::unique_ptr<struct lwp_info, lwp_deleter> lwp_info_up;
+using lwp_info_up = std::unique_ptr<struct lwp_info, lwp_deleter>;
 
 /* Target hook for follow_fork.  */
 

@@ -1798,7 +1798,7 @@ struct rank
 
 /* Used for ranking a function for overload resolution.  */
 
-typedef std::vector<rank> badness_vector;
+using badness_vector = std::vector<rank>;
 
 /* GNAT Ada-specific information for various Ada types.  */
 

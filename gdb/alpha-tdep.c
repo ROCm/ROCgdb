@@ -622,7 +622,7 @@ alpha_return_in_memory_always (struct type *type)
 
 constexpr gdb_byte alpha_break_insn[] = { 0x80, 0, 0, 0 }; /* call_pal bpt */
 
-typedef BP_MANIPULATION (alpha_break_insn) alpha_breakpoint;
+using alpha_breakpoint = BP_MANIPULATION (alpha_break_insn);
 
 
 /* This returns the PC of the first insn after the prologue.

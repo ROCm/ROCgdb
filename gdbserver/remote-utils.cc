@@ -69,7 +69,7 @@
 #endif
 
 #ifndef HAVE_SOCKLEN_T
-typedef int socklen_t;
+using socklen_t = int;
 #endif
 
 #ifndef IN_PROCESS_AGENT

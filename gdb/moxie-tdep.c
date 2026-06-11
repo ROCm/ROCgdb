@@ -66,7 +66,7 @@ moxie_frame_align (struct gdbarch *gdbarch, CORE_ADDR sp)
 
 constexpr gdb_byte moxie_break_insn[] = { 0x35, 0x00 };
 
-typedef BP_MANIPULATION (moxie_break_insn) moxie_breakpoint;
+using moxie_breakpoint = BP_MANIPULATION (moxie_break_insn);
 
 /* Moxie register names.  */
 

@@ -239,8 +239,8 @@ extern int DBG_AWATCH(int set, void *addr, unsigned size);
 # define NULL (void*)0
 #endif
 
-typedef unsigned char byte;
-typedef unsigned short word;
+using byte = unsigned char;
+using word = unsigned short;
 
 /* CPU state */
 #ifdef __SDCC_ez80_adl

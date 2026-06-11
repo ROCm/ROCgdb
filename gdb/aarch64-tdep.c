@@ -2581,7 +2581,7 @@ aarch64_gdb_print_insn (bfd_vma memaddr, disassemble_info *info)
    1101.0100.0010.0000.0000.0000.0000.0000 = 0xd4200000.  */
 constexpr gdb_byte aarch64_default_breakpoint[] = {0x00, 0x00, 0x20, 0xd4};
 
-typedef BP_MANIPULATION (aarch64_default_breakpoint) aarch64_breakpoint;
+using aarch64_breakpoint = BP_MANIPULATION (aarch64_default_breakpoint);
 
 /* Extract from an array REGS containing the (raw) register state a
    function return value of type TYPE, and copy that, in virtual

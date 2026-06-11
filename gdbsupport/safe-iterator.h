@@ -108,7 +108,7 @@ class basic_safe_range
 {
 public:
 
-  typedef basic_safe_iterator<typename Range::iterator> iterator;
+  using iterator = basic_safe_iterator<typename Range::iterator>;
 
   explicit basic_safe_range (Range range)
     : m_range (range)

@@ -828,7 +828,7 @@ tilegx_write_pc (struct regcache *regcache, CORE_ADDR pc)
 constexpr gdb_byte tilegx_break_insn[] =
   { 0x00, 0x50, 0x48, 0x51, 0xae, 0x44, 0x6a, 0x28 };
 
-typedef BP_MANIPULATION (tilegx_break_insn) tilegx_breakpoint;
+using tilegx_breakpoint = BP_MANIPULATION (tilegx_break_insn);
 
 /* Normal frames.  */
 

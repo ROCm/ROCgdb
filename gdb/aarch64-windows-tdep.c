@@ -27,7 +27,7 @@
    and BRK #0xf000 triggers a breakpoint exception in the debugger.  */
 constexpr gdb_byte aarch64_windows_breakpoint[] = {0x00, 0x00, 0x3e, 0xd4};
 
-typedef BP_MANIPULATION (aarch64_windows_breakpoint) aarch64_w_breakpoint;
+using aarch64_w_breakpoint = BP_MANIPULATION (aarch64_windows_breakpoint);
 
 /* gdbarch initialization for Windows on AArch64.  */
 

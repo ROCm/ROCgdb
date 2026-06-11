@@ -27,11 +27,11 @@ struct dwarf2_cu;
 
 /* dir_index is 1-based in DWARF 4 and before, and is 0-based in DWARF 5 and
    later.  */
-typedef int dir_index;
+using dir_index = int;
 
 /* file_name_index is 1-based in DWARF 4 and before, and is 0-based in DWARF 5
    and later.  */
-typedef int file_name_index;
+using file_name_index = int;
 
 struct line_header;
 
