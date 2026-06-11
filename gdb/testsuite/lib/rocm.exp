@@ -647,21 +647,21 @@ gdb_caching_proc compiler_dwarf_language {} {
 # run the parent to the pre-fork breakpoint, resume everything in the
 # background, and wait for one "kern" breakpoint stop per child.
 #
-#   args_list  - arguments passed via "set args" ("" for none).
+#   arg_list   - arguments passed via "set args" ("" for none).
 #   expected   - number of child stops to wait for.  If "", it is read
 #                from the "num_devices" value at the pre-fork stop.
 #
 # Return the list of stopped GPU thread ids (one per child).
 
-proc rocm_multi_inferior_run_to_kernels { args_list expected } {
+proc rocm_multi_inferior_run_to_kernels { {arg_list ""} {expected ""} } {
     clean_restart
     gdb_load $::binfile
 
     gdb_test_no_output "set non-stop on"
     gdb_test_no_output "set detach-on-fork off"
     gdb_test_no_output "set follow-fork parent"
-    if { $args_list ne "" } {
-	gdb_test_no_output "set args $args_list"
+    if { $arg_list ne "" } {
+	gdb_test_no_output "set args $arg_list"
     }
 
     gdb_breakpoint [gdb_get_line_number "Break here"]
