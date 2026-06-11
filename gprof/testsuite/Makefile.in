@@ -898,9 +898,9 @@ uninstall-am:
 @NATIVE_TRUE@tst-gmon: tst-gmon.$(OBJEXT)
 @NATIVE_TRUE@	$(LINK) tst-gmon.$(OBJEXT)
 @NATIVE_TRUE@tst-gmon-gprof.out: tst-gmon$(EXEEXT) $(GPROF)
-@NATIVE_TRUE@	$(srcdir)/tst-gmon-gprof.sh $(GPROF) tst-gmon$(EXEEXT)
+@NATIVE_TRUE@	$(srcdir)/tst-gmon-gprof.sh $(GPROF) tst-gmon$(EXEEXT) $(target)
 @NATIVE_TRUE@tst-gmon-gprof-l.out: tst-gmon$(EXEEXT) $(GPROF)
-@NATIVE_TRUE@	$(srcdir)/tst-gmon-gprof-l.sh $(GPROF) tst-gmon$(EXEEXT)
+@NATIVE_TRUE@	$(srcdir)/tst-gmon-gprof-l.sh $(GPROF) tst-gmon$(EXEEXT) $(target)
 @NATIVE_TRUE@tst-gmon2$(EXEEXT) tst-gmon2.debug: tst-gmon$(EXEEXT)
 @NATIVE_TRUE@	cp -p tst-gmon$(EXEEXT) tst-gmon2$(EXEEXT)
 @NATIVE_TRUE@	objcopy --only-keep-debug tst-gmon2$(EXEEXT) tst-gmon2.debug
@@ -908,7 +908,7 @@ uninstall-am:
 @NATIVE_TRUE@	objcopy --add-gnu-debuglink=tst-gmon2.debug tst-gmon2$(EXEEXT)
 
 @NATIVE_TRUE@tst-gmon-gprof-l2.out: tst-gmon2$(EXEEXT) tst-gmon2.debug $(GPROF)
-@NATIVE_TRUE@	$(srcdir)/tst-gmon-gprof-l2.sh $(GPROF) tst-gmon2$(EXEEXT)
+@NATIVE_TRUE@	$(srcdir)/tst-gmon-gprof-l2.sh $(GPROF) tst-gmon2$(EXEEXT) $(target)
 
 # Run all tests in series, so they don't fight over the gmon.out file
 @NATIVE_TRUE@.NOTPARALLEL:

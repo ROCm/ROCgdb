@@ -33,12 +33,12 @@ tst-gmon.$(OBJEXT): tst-gmon.c
 tst-gmon: tst-gmon.$(OBJEXT)
 	$(LINK) tst-gmon.$(OBJEXT)
 tst-gmon-gprof.out: tst-gmon$(EXEEXT) $(GPROF)
-	$(srcdir)/tst-gmon-gprof.sh $(GPROF) tst-gmon$(EXEEXT)
+	$(srcdir)/tst-gmon-gprof.sh $(GPROF) tst-gmon$(EXEEXT) $(target)
 
 check_SCRIPTS += tst-gmon-gprof-l.sh
 check_DATA += tst-gmon-gprof-l.out
 tst-gmon-gprof-l.out: tst-gmon$(EXEEXT) $(GPROF)
-	$(srcdir)/tst-gmon-gprof-l.sh $(GPROF) tst-gmon$(EXEEXT)
+	$(srcdir)/tst-gmon-gprof-l.sh $(GPROF) tst-gmon$(EXEEXT) $(target)
 
 # Create a separated-debuginfo version of the initial binary 
 check_SCRIPTS += tst-gmon-gprof-l2.sh
@@ -49,7 +49,7 @@ tst-gmon2$(EXEEXT) tst-gmon2.debug: tst-gmon$(EXEEXT)
 	objcopy --add-gnu-debuglink=tst-gmon2.debug tst-gmon2$(EXEEXT)
 
 tst-gmon-gprof-l2.out: tst-gmon2$(EXEEXT) tst-gmon2.debug $(GPROF)
-	$(srcdir)/tst-gmon-gprof-l2.sh $(GPROF) tst-gmon2$(EXEEXT)
+	$(srcdir)/tst-gmon-gprof-l2.sh $(GPROF) tst-gmon2$(EXEEXT) $(target)
 check_DATA += tst-gmon-gprof-l2.out
 MOSTLYCLEANFILES += tst-gmon2$(EXEEXT) tst-gmon2.debug
 
