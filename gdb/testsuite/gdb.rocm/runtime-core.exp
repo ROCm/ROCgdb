@@ -134,10 +134,10 @@ proc do_test { fault core_type output_type } {
 	gdb_test "frame function ${fault}_kernel" ".* ${fault}_kernel \\(.*"
 	gdb_test "p local" "= 42"
 	if {$fault == "pagefault"} {
-	    gdb_test "p out == 0" " = true"
+	    gdb_test "p out" " generic#0x0"
 	}
 	gdb_test "p some_global" " = 16"
-	gdb_test "p data" " = \\(int \\*\\) $::hex"
+	gdb_test "p data" " = \\(int \\*\\) generic#$::hex"
 
 	if {$core_type == "lightweight"} {
 	    gdb_test "p data\[12\]" " = <unavailable>"
