@@ -1832,9 +1832,10 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
 			      ptid_t ptid, int simd_lane,
 			      addr_range range)
 {
-  CORE_ADDR addr = range.addr;
+  CORE_ADDR addr
+    = amdgpu_segment_address_from_core_address (range.addr);
   arch_addr_space_id addr_space_id
-    = amdgpu_address_space_id_from_core_address (addr);
+    = amdgpu_address_space_id_from_core_address (range.addr);
   size_t size = range.size;
 
   /* Addresses from the default address space are always watchable.  */
