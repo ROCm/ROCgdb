@@ -1901,6 +1901,18 @@ amdgpu_address_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address)
      watchpoint on such global GPU variable, a matching watchpoint is also
      added on the CPU side for the same address, so it is possible to call here
      with a ptid that belongs to a non-GPU thread.  */
+  if (!ptid_is_gpu (ptid))
+    {
+      process_stratum_target *proc_target = current_inferior ()->process_target ();
+      for (thread_info &thread : all_non_exited_threads (proc_target, minus_one_ptid))
+	{
+	  if (ptid_is_gpu (thread.ptid))
+	    {
+	      ptid = thread.ptid;
+	      break;
+	    }
+	}
+    }
   const amd_dbgapi_wave_id_t wave_id = (ptid_is_gpu (ptid)
 					? get_amd_dbgapi_wave_id (ptid)
 					: AMD_DBGAPI_WAVE_NONE);
@@ -1966,6 +1978,19 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
 
   if (size == 0)
     error (_("Watchpoint length must be non-zero number."));
+
+  if (ptid == null_ptid)
+    {
+      process_stratum_target *proc_target = current_inferior ()->process_target ();
+      for (thread_info &thread : all_non_exited_threads (proc_target, minus_one_ptid))
+	{
+	  if (ptid_is_gpu (thread.ptid))
+	    {
+	      ptid = thread.ptid;
+	      break;
+	    }
+	}
+    }
 
   std::vector<addr_range> aliases;
 
