@@ -806,6 +806,14 @@ async_event_handler_mark ()
   mark_async_event_handler (amd_dbgapi_async_event_handler);
 }
 
+/* Return true if the amd-dbgapi target is currently async.  */
+
+static bool
+amd_dbgapi_target_is_async ()
+{
+  return amd_dbgapi_async_event_handler != nullptr;
+}
+
 /* Set forward progress requirement to REQUIRE for inferior INFO.  */
 
 static void
@@ -1767,7 +1775,7 @@ amd_dbgapi_target::stop (ptid_t ptid)
 	  get_amd_dbgapi_inferior_info (thread->inf).wave_events.emplace_back
 	    (thread->ptid, target_waitstatus ().set_thread_exited (0));
 
-	  if (target_is_async_p ())
+	  if (amd_dbgapi_target_is_async ())
 	    async_event_handler_mark ();
 	}
       else
@@ -2352,7 +2360,7 @@ amd_dbgapi_target::wait (ptid_t ptid, struct target_waitstatus *ws,
     }
 
   /* Flush the async handler first.  */
-  if (target_is_async_p ())
+  if (amd_dbgapi_target_is_async ())
     async_event_handler_clear ();
 
   /* There may be more events to process (either already in `wave_events` or
@@ -2361,7 +2369,7 @@ amd_dbgapi_target::wait (ptid_t ptid, struct target_waitstatus *ws,
      returns minus_one_ptid.  */
   auto more_events = make_scope_exit ([] ()
     {
-      if (target_is_async_p ())
+      if (amd_dbgapi_target_is_async ())
 	async_event_handler_mark ();
     });
 
