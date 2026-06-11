@@ -68,29 +68,11 @@ proc do_test {} {
 		}
 	    }
 
-	    # N.B.:
-	    # At the time of writing this test, the compiler does not attach
-	    # the DWARF information (DW_AT_LLVM_address_space) to pointer or
-	    # reference DIEs.  Even if it would, rocgdb does not know how to
-	    # use it.  This imposes limitations as it cannot be determined
-	    # where the value of "gen_local_addr" points to or how to handle
-	    # a reference to "local" variable.
-
-	    # For future/backward compatibility, we try to accommodate both
-	    # cases where "gen_local_addr" is a basic global pointer or a
-	    # generic one.
 	    set addr ""
 	    gdb_test_multiple "p gen_local_addr" "extract address type" {
-		-re " = \\(volatile int \\*\\) (generic\\#$::hex)\r\n" {
+		-re -wrap " = \\(volatile int \\*\\) (generic#$::hex)" {
 		    set addr $expect_out(1,string)
-		    exp_continue
-		}
-		-re " = \\(volatile int \\*\\) ($::hex)\r\n" {
-		    set addr "generic#$expect_out(1,string)"
-		    exp_continue
-		}
-		-re "$::gdb_prompt $" {
-		    gdb_assert { $addr != "" } $gdb_test_name
+		    pass $gdb_test_name
 		}
 	    }
 
@@ -125,16 +107,9 @@ proc do_test {} {
 
 	    set addr ""
 	    gdb_test_multiple "p gen_arr1_addr" "extract address type" {
-		-re " = \\(volatile uint32_t \\*\\) (generic\\#$::hex)\r\n" {
+		-re -wrap " = \\(volatile uint32_t \\*\\) (generic#$::hex)" {
 		    set addr $expect_out(1,string)
-		    exp_continue
-		}
-		-re " = \\(volatile uint32_t \\*\\) ($::hex)\r\n" {
-		    set addr "generic#$expect_out(1,string)"
-		    exp_continue
-		}
-		-re "$::gdb_prompt $" {
-		    gdb_assert { $addr != "" } $gdb_test_name
+		    pass $gdb_test_name
 		}
 	    }
 
