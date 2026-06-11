@@ -2019,6 +2019,14 @@ obj_elf_get_vtable_inherit (void)
 void
 obj_elf_vtable_inherit (int ignore ATTRIBUTE_UNUSED)
 {
+  static bool warned = false;
+
+  if (!warned)
+    {
+      warned = true;
+      as_warn(".vtable_inherit has been deprecated");
+    }
+
   (void) obj_elf_get_vtable_inherit ();
 }
 
@@ -2061,6 +2069,14 @@ obj_elf_get_vtable_entry (void)
 void
 obj_elf_vtable_entry (int ignore ATTRIBUTE_UNUSED)
 {
+  static bool warned = false;
+
+  if (!warned)
+    {
+      warned = true;
+      as_warn("'.vtable_entry' has been deprecated");
+    }
+
   (void) obj_elf_get_vtable_entry ();
 }
 
