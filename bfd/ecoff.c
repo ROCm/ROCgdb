@@ -117,11 +117,18 @@ _bfd_ecoff_bfd_free_cached_info (bfd *abfd)
   if (bfd_get_format (abfd) == bfd_object
       && (tdata = ecoff_data (abfd)) != NULL)
     {
-      while (tdata->mips_refhi_list != NULL)
+      for (asection *sec = abfd->sections; sec != NULL; sec = sec->next)
 	{
-	  struct mips_hi *ref = tdata->mips_refhi_list;
-	  tdata->mips_refhi_list = ref->next;
-	  free (ref);
+	  struct ecoff_section_tdata *sdata = ecoff_section_data (sec);
+	  if (sdata != NULL)
+	    {
+	      while (sdata->mips_refhi_list != NULL)
+		{
+		  struct mips_hi *ref = sdata->mips_refhi_list;
+		  sdata->mips_refhi_list = ref->next;
+		  free (ref);
+		}
+	    }
 	}
       _bfd_ecoff_free_ecoff_debug_info (&tdata->debug_info);
     }

@@ -1445,7 +1445,7 @@ alpha_relocate_section (bfd *output_bfd,
 
       /* Make sure we have a section data structure to which we can
 	 hang on to the gp value we pick for the section.  */
-      lita_sec_data = ecoff_section_data (input_bfd, lita_sec);
+      lita_sec_data = ecoff_section_data (lita_sec);
       if (lita_sec_data == NULL)
 	{
 	  lita_sec_data = bfd_zalloc (input_bfd, sizeof (*lita_sec_data));
