@@ -27,9 +27,9 @@ standard_testfile .cpp
 
 # Don't use $testfile as the executable name, because Windows'
 # installer detection heuristic refuses to launch executables whose
-# name contains "update" (and a few other keywords like "setup",
-# "install", "patch") without elevation, failing with
-# ERROR_ELEVATION_REQUIRED (740).
+# name contains "update" (and a few other keywords like "setup" and
+# "install") without elevation, failing with ERROR_ELEVATION_REQUIRED
+# (740).
 set executable "test"
 
 if {[prepare_for_testing "failed to prepare ${testfile}" $executable $srcfile {debug hip}]} {
