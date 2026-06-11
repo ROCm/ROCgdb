@@ -14,3 +14,7 @@
 	d = 1
 	e = 2
 	mov eax, [x]
+
+	f = g + 1
+	g = f - 1
+	mov eax, [f]
