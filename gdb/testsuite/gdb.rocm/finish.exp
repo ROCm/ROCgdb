@@ -114,19 +114,19 @@ proc_with_prefix pointer {} {
     gdb_breakpoint "returnPtr if \$_lane == 4"
     gdb_continue_to_breakpoint "returnPtr"
     gdb_test "finish" \
-	"Value returned is \\\$$::decimal = \\(const Custom<char, 8> \\*\\) $::hex <returnPtr\\(\\)::vv>"
+	"Value returned is \\\$$::decimal = \\(const Custom<char, 8> \\*\\) generic#$::hex"
 
     gdb_breakpoint "returnPtr2 if \$_lane == 3"
     with_test_prefix "private address" {
 	gdb_continue_to_breakpoint "returnPtr2"
 	gdb_test "finish" \
-	    "Value returned is \\\$$::decimal = \\(int \\*\\) $::hex"
+	    "Value returned is \\\$$::decimal = \\(int \\*\\) generic#$::hex"
     }
 
     with_test_prefix "global address" {
 	gdb_continue_to_breakpoint "returnPtr2"
 	gdb_test "finish" \
-	    "Value returned is \\\$$::decimal = \\(int \\*\\) $::hex <someGlobal>"
+	    "Value returned is \\\$$::decimal = \\(int \\*\\) generic#$::hex"
     }
 
 }
@@ -135,20 +135,19 @@ proc_with_prefix reference {} {
     gdb_breakpoint "returnRef if \$_lane == 4"
     gdb_continue_to_breakpoint "returnRef"
     gdb_test "finish" \
-	"Value returned is \\\$$::decimal = \\(const Custom<char, 8> &\\) @$::hex: \\{data = \"abcdefgh\"\\}"
+	"Value returned is \\\$$::decimal = \\(const Custom<char, 8> &\\) @generic#$::hex: \\{data = \"abcdefgh\"\\}"
 
     gdb_breakpoint "returnRef2 if \$_lane == 4"
     with_test_prefix "private address" {
 	gdb_continue_to_breakpoint "returnRef2"
-	setup_xfail "*-*-*"
 	gdb_test "finish" \
-	    "Value returned is \\\$$::decimal = \\(int &\\) @$::hex: 4"
+	    "Value returned is \\\$$::decimal = \\(int &\\) @generic#$::hex: 4"
     }
 
     with_test_prefix "global_address" {
 	gdb_continue_to_breakpoint "returnRef2"
 	gdb_test "finish" \
-	    "Value returned is \\\$$::decimal = \\(int &\\) @$::hex: 42"
+	    "Value returned is \\\$$::decimal = \\(int &\\) @generic#$::hex: 42"
     }
 }
 

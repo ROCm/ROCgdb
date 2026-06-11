@@ -38,14 +38,10 @@ if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
 # the program; we only need to test more than one.  For each lane, the
 # value printed should be the same as the lane number.  If KFAIL is
 # true, expect a failure.
-proc test_print_each_lane {print_what {kfail 0}} {
+proc test_print_each_lane {print_what} {
     for {set i 0} {$i < 2} {incr i} {
 	with_test_prefix "lane $i" {
 	    gdb_test "lane $i" "Switching to .* lane $i .*" "switch lane"
-
-	    if {$kfail} {
-		setup_kfail "*-*-*" "xxxx"
-	    }
 	    gdb_test "print $print_what" " = $i"
 	}
     }
@@ -67,32 +63,9 @@ proc test {} {
     # dereferencing that pointer should print a different value per
     # lane, just like the program itself does with printf.
     with_test_prefix "global pointer set by program" {
-	# This currently yields:
-	#
-	#  (gdb) p global_ptr
-	#  $1 = (size_t *) 0x2000000000008
-	#
-	# But should instead yield:
-	#
-	#  (gdb) p global_ptr
-	#  $1 = (size_t *) generic#0x2000000000008
-	#
-	gdb_test_multiple "print global_ptr" "" {
-	    -re -wrap " = \\\(size_t \\\*\\\) generic#$::hex" {
-		pass $gdb_test_name
-	    }
-	    -re -wrap " = \\\(size_t \\\*\\\) $::hex" {
-		# GDB is printing the generic address bytes raw?
-		setup_kfail "*-*-*" "xxxx"
-		fail $gdb_test_name
-	    }
-	}
-
-	# This is kfailed because it currently fails with:
-	#  print *global_ptr
-	#  Cannot access memory at address 0x2000000000008
-	#  (gdb)
-	test_print_each_lane "*global_ptr" 1
+	gdb_test "print global_ptr" \
+	    " = \\\(size_t \\\*\\\) generic#$::hex"
+	test_print_each_lane "*global_ptr"
     }
 
     # Test the same, but write to a global pointer in GDB instead of
@@ -101,20 +74,8 @@ proc test {} {
 	# GDB here should understand that 'global_ptr2' is a pointer
 	# to a generic address, and convert appropriately if
 	# necessary.
-	gdb_test_multiple "print global_ptr2 = &local_var" "" {
-	    -re -wrap " = \\\(size_t \\\*\\\) private_lane#$::hex" {
-		# GDB is printing 'global_ptr2' as if it were a
-		# private_lane pointer, which indicates it has failed
-		# to convert to generic address, and likely wrote its
-		# internal representation of a private_lane pointer
-		# over the generic address pointer bytes.
-		setup_kfail "*-*-*" "xxxx"
-		fail $gdb_test_name
-	    }
-	    -re -wrap " = \\\(size_t \\\*\\\) generic#$::hex" {
-		pass $gdb_test_name
-	    }
-	}
+	gdb_test "print global_ptr2 = &local_var" \
+	    " = \\\(size_t \\\*\\\) generic#$::hex"
 	test_print_each_lane "*global_ptr2"
     }
 
@@ -129,8 +90,6 @@ proc test {} {
 
     # Both global_ptr and global_ptr2 should point to the same generic
     # address, and thus the assertion in the program should not fail.
-    # However, currently it does fail.
-    setup_kfail "*-*-*" "xxxx"
     gdb_continue_to_end "continue to end" "continue" 1
 }
 

@@ -1751,15 +1751,16 @@ amdgpu_address_class_type_flags_to_name (struct gdbarch *gdbarch,
 /* Form a core address from a TYPE pointer type information and BUF
    pointer value buffer.
 
-   TODO: The address class information belongs to a type, which means
-	 that an address class is a language based concept, so either
-	 the language should define the address class numbers and
-	 names or some kind of a language enumeration needs to be
-	 passed in.
-
-	 At the moment, we assume that the language is OpenCL and we
-	 apply 1-1 mapping between its address classes and the AMDGPU
-	 address spaces.  */
+   TODO: TYPE may contain address space (i.e. DW_AT_address_space)
+   information.  In that case, we use it.  If empty, it is possible
+   that TYPE has address class (i.e. DW_AT_address_class) information.
+   OpenCL currently encodes source language address space qualifiers
+   in DW_AT_address_class.  Therefore we cannot ignore address class
+   and we handle them as "best effort".  Based on the direction DWARF
+   6 is taking, it is expected that OpenCL would stop using
+   DW_AT_address_class and use a new attribute instead.  When that
+   happens, all address-class related code, including gdbarch methods,
+   can be removed.  We just need address space.  */
 static CORE_ADDR
 amdgpu_pointer_to_address (struct gdbarch *gdbarch,
 			   struct type *type, const gdb_byte *buf)
@@ -1767,23 +1768,75 @@ amdgpu_pointer_to_address (struct gdbarch *gdbarch,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR address
     = extract_unsigned_integer (buf, type->length (), byte_order);
-  unsigned int address_class
-    = amdgpu_type_flags_to_addr_class (type->instance_flags ());
 
-  /* Address might be in a converted format already, so even if the
-     class is global, the address might have the address space part
-     in it.  This happens in cases like 'p &local_array'."  */
-  if (address_class == DWARF_GLOBAL_ADDR_CLASS)
-    return address;
-
-  /* In the current implementation, we shouldn't have a case where we
-     have both type address class information as well as address
-     space information in a core address.  */
+  /* No address space information should be encoded in the pointer
+     value.  We use the pointer type for that purpose.  */
   gdb_assert (!amdgpu_address_space_id_from_core_address (address));
 
-  address = amdgpu_segment_address_from_core_address (address);
+  ULONGEST dw_address_space = type->address_space ();
+  if (dw_address_space == DW_ASPACE_default)
+    {
+      /* Try address class.  At the moment, we assume 1-1 mapping
+	 between address classes and AMDGPU address spaces.  */
+      dw_address_space
+	= amdgpu_type_flags_to_addr_class (type->instance_flags ());
+    }
 
-  return amdgpu_segment_address_to_core_address (address_class, address);
+  return amdgpu_segment_address_to_core_address (dw_address_space, address);
+}
+
+/* Store ADDRESS, which may have an address space id encoded in it, to
+   an address value of type TYPE, which also has address space
+   information.  */
+
+static void
+amdgpu_address_to_pointer (gdbarch *gdbarch, type *type,
+			   gdb_byte *buffer, CORE_ADDR address)
+{
+  arch_addr_space_id addr_aspace
+    = amdgpu_address_space_id_from_core_address (address);
+  /* There is 1-1 mapping between DWARF address spaces and GPU address
+     spaces.  */
+  arch_addr_space_id type_aspace
+    = (arch_addr_space_id) type->address_space ();
+
+  gdb_assert (addr_aspace == type_aspace);
+
+  address = amdgpu_segment_address_from_core_address (address);
+  unsigned_address_to_pointer (gdbarch, type, buffer, address);
+}
+
+/* Convert ADDRESS from one address space to another.  */
+static CORE_ADDR
+amdgpu_pointer_to_pointer (gdbarch *gdbarch, type *from_type,
+			   CORE_ADDR address, type *to_type)
+{
+  arch_addr_space_id from_type_aspace
+    = (arch_addr_space_id) from_type->address_space ();
+  arch_addr_space_id to_type_aspace
+    = (arch_addr_space_id) to_type->address_space ();
+
+  /* Strip address space info from the address.  */
+  CORE_ADDR from_address;
+  amdgpu_address_to_pointer (gdbarch, from_type,
+			     (gdb_byte *) &from_address, address);
+
+  /* Convert.  */
+  ptid_t ptid = inferior_thread ()->ptid;
+  gdb_assert (ptid_is_gpu (ptid));
+  int lane = inferior_thread ()->current_simd_lane ();
+
+  std::optional<addr_range> range
+    = amdgpu_convert_address (gdbarch, ptid, lane, from_address,
+			      from_type_aspace, to_type_aspace);
+  if (!range.has_value ())
+    error (_("cannot convert pointer-to-'%s' to a pointer-to-'%s'"),
+	   gdbarch_address_space_id_to_name (gdbarch, from_type_aspace),
+	   gdbarch_address_space_id_to_name (gdbarch, to_type_aspace));
+
+  /* Add address space info.  */
+  return amdgpu_pointer_to_address (gdbarch, to_type,
+				    (gdb_byte *) &(range.value ().addr));
 }
 
 static CORE_ADDR
@@ -2097,6 +2150,8 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_dummy_id (gdbarch, amdgpu_dummy_id);
 
   set_gdbarch_pointer_to_address (gdbarch, amdgpu_pointer_to_address);
+  set_gdbarch_address_to_pointer (gdbarch, amdgpu_address_to_pointer);
+  set_gdbarch_pointer_to_pointer (gdbarch, amdgpu_pointer_to_pointer);
   set_gdbarch_address_class_type_flags
     (gdbarch, amdgpu_address_class_type_flags);
   set_gdbarch_address_class_type_flags_to_name
