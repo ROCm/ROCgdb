@@ -172,7 +172,7 @@ proc gdb_backtrace_tdp_2 { msg } {
 
     # We are in a trace frame at which we collected only the registers
     # Therefore we expect to be able to identify stack frame #0, but
-    # we don't expect to be able to display its args unles they are
+    # we don't expect to be able to display its args unless they are
     # passed in registers (which isn't the case for m68k), and we
     # don't expect to be able to identify the caller's stack frame.
 

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test inappropriate offseting of multiple sections with the same name.
+# Test inappropriate offsetting of multiple sections with the same name.
 # When kept in object file (before final executable link) it still works.
 # When separate debug info file is not used it still works.
 # When the ELF symbol table is kept in the main binary it still works.

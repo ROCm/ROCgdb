@@ -116,7 +116,7 @@ proc get_functions {cmd} {
 
 # Some convenience variables for this test
 set DEC {[0-9]}; # a decimal number
-set HEX {[0-9a-fA-F]}; # a hexidecimal number
+set HEX {[0-9a-fA-F]}; # a hexadecimal number
 set CONVAR "\\\$$DEC+"; # convenience variable regexp
 set ADDR "0x$HEX+"; # address
 

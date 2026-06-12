@@ -33,7 +33,7 @@ proc test_trace_save_wrong_num_args { } {
 # Test with an unrecognized option.
 
 proc test_trace_save_wrong_opt { } {
-    set err_re [string_to_regexp "^error,msg=\"-trace-save: Unknown option ``hey''\""]
+    set err_re [string_to_regexp "^error,msg=\"-trace-save: Unknown option \\\"hey\\\"\""]
 
     mi_gdb_test "-trace-save -hey" "$err_re" "-trace-save with wrong option"
 }

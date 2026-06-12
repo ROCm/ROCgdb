@@ -113,7 +113,7 @@ set c_scopes_list {
     {"free_inline_func"			"FIF"		{= \{void \(void\)\} $hex <free_inline_func>}}
 }
 
-# A list of all the static varibles defined in each scope.  The first
+# A list of all the static variables defined in each scope.  The first
 # column is the name of the variable, without the prefix, and the
 # second column is a regex matching what printing the variable should
 # output.

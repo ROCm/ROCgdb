@@ -101,7 +101,7 @@ asm(".text\n"
     "    ret\n");
 
 /* The purpose of this function is to verify that, during prologue
-   skip, GDB does not follow a jump at the beginnning of the "real"
+   skip, GDB does not follow a jump at the beginning of the "real"
    code.  */
 
 asm(".text\n"

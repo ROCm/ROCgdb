@@ -31,7 +31,7 @@ static reloc_howto_type * m32c_reloc_type_lookup
 static bool m32c_info_to_howto_rela
   (bfd *, arelent *, Elf_Internal_Rela *);
 static int m32c_elf_relocate_section
-  (bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *, Elf_Internal_Rela *, Elf_Internal_Sym *, asection **);
+  (struct bfd_link_info *, bfd *, asection *, bfd_byte *, Elf_Internal_Rela *, Elf_Internal_Sym *, asection **);
 static bool m32c_elf_check_relocs
   (bfd *, struct bfd_link_info *, asection *, const Elf_Internal_Rela *);
 static bool m32c_elf_relax_delete_bytes (bfd *, asection *, bfd_vma, int);
@@ -390,8 +390,7 @@ static bfd_reloc_status_type m32c_apply_reloc_24 (bfd *abfd ATTRIBUTE_UNUSED,
 
 static int
 m32c_elf_relocate_section
-    (bfd *		     output_bfd ATTRIBUTE_UNUSED,
-     struct bfd_link_info *  info,
+    (struct bfd_link_info *  info,
      bfd *		     input_bfd,
      asection *		     input_section,
      bfd_byte *		     contents,
@@ -750,8 +749,7 @@ m32c_elf_check_relocs
 /* This must exist if dynobj is ever set.  */
 
 static bool
-m32c_elf_finish_dynamic_sections (bfd *abfd ATTRIBUTE_UNUSED,
-				  struct bfd_link_info *info,
+m32c_elf_finish_dynamic_sections (struct bfd_link_info *info,
 				  bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj = elf_hash_table (info)->dynobj;
@@ -775,8 +773,7 @@ m32c_elf_finish_dynamic_sections (bfd *abfd ATTRIBUTE_UNUSED,
 }
 
 static bool
-m32c_elf_early_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-			      struct bfd_link_info *info)
+m32c_elf_early_size_sections (struct bfd_link_info *info)
 {
   bfd *dynobj;
   asection *splt;

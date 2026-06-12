@@ -17,7 +17,7 @@
 
 */
 
-/* Useful abreviations.  */
+/* Useful abbreviations.  */
 typedef void t;
 typedef char tc;
 typedef short ts;

@@ -1360,8 +1360,7 @@ bfin_final_link_relocate (Elf_Internal_Rela *rel, reloc_howto_type *howto,
 }
 
 static int
-bfin_relocate_section (bfd * output_bfd,
-		       struct bfd_link_info *info,
+bfin_relocate_section (struct bfd_link_info *info,
 		       bfd * input_bfd,
 		       asection * input_section,
 		       bfd_byte * contents,
@@ -1425,7 +1424,8 @@ bfin_relocate_section (bfd * output_bfd,
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 	}
       else
 	{
@@ -1506,7 +1506,7 @@ bfin_relocate_section (bfd * output_bfd,
 		      off &= ~1;
 		    else
 		      {
-			bfd_put_32 (output_bfd, relocation,
+			bfd_put_32 (info->output_bfd, relocation,
 				    sgot->contents + off);
 			h->got.offset |= 1;
 		      }
@@ -1527,7 +1527,8 @@ bfin_relocate_section (bfd * output_bfd,
 		  off &= ~1;
 		else
 		  {
-		    bfd_put_32 (output_bfd, relocation, sgot->contents + off);
+		    bfd_put_32 (info->output_bfd, relocation,
+				sgot->contents + off);
 
 		    if (bfd_link_pic (info))
 		      {
@@ -1546,7 +1547,8 @@ bfin_relocate_section (bfd * output_bfd,
 			loc = s->contents;
 			loc +=
 			  s->reloc_count++ * sizeof (Elf32_External_Rela);
-			bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+			bfd_elf32_swap_reloca_out (info->output_bfd,
+						   &outrel, loc);
 		      }
 
 		    local_got_offsets[r_symndx] |= 1;
@@ -1573,7 +1575,7 @@ bfin_relocate_section (bfd * output_bfd,
 	 not process them.  */
       if (unresolved_reloc
 	  && !((input_section->flags & SEC_DEBUGGING) != 0 && h->def_dynamic)
-	  && _bfd_elf_section_offset (output_bfd, info, input_section,
+	  && _bfd_elf_section_offset (info->output_bfd, info, input_section,
 				      rel->r_offset) != (bfd_vma) -1)
 	r = bfd_reloc_undefined;
 
@@ -2483,8 +2485,7 @@ _bfinfdpic_emit_got_relocs_plt_entries (struct bfinfdpic_relocs_info *entry,
    accordingly.  */
 
 static int
-bfinfdpic_relocate_section (bfd * output_bfd,
-			    struct bfd_link_info *info,
+bfinfdpic_relocate_section (struct bfd_link_info *info,
 			    bfd * input_bfd,
 			    asection * input_section,
 			    bfd_byte * contents,
@@ -2504,16 +2505,17 @@ bfinfdpic_relocate_section (bfd * output_bfd,
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
 
-  isec_segment = _bfinfdpic_osec_to_segment (output_bfd,
+  isec_segment = _bfinfdpic_osec_to_segment (info->output_bfd,
 					     input_section->output_section);
-  if (IS_FDPIC (output_bfd) && bfinfdpic_got_section (info))
-    got_segment = _bfinfdpic_osec_to_segment (output_bfd,
+  if (IS_FDPIC (info->output_bfd) && bfinfdpic_got_section (info))
+    got_segment = _bfinfdpic_osec_to_segment (info->output_bfd,
 					      bfinfdpic_got_section (info)
 					      ->output_section);
   else
     got_segment = -1;
-  if (IS_FDPIC (output_bfd) && elf_hash_table (info)->dynamic_sections_created)
-    plt_segment = _bfinfdpic_osec_to_segment (output_bfd,
+  if (IS_FDPIC (info->output_bfd)
+      && elf_hash_table (info)->dynamic_sections_created)
+    plt_segment = _bfinfdpic_osec_to_segment (info->output_bfd,
 					      bfinfdpic_plt_section (info)
 					      ->output_section);
   else
@@ -2557,7 +2559,8 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	{
 	  sym = local_syms + r_symndx;
 	  osec = sec = local_sections [r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 
 	  name = bfd_elf_string_from_elf_section
 	    (input_bfd, symtab_hdr->sh_link, sym->st_name);
@@ -2597,7 +2600,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	case R_BFIN_PCREL24:
 	case R_BFIN_PCREL24_JUMP_L:
 	case R_BFIN_BYTE4_DATA:
-	  if (! IS_FDPIC (output_bfd))
+	  if (! IS_FDPIC (info->output_bfd))
 	    goto non_fdpic;
 	  /* Fall through.  */
 
@@ -2632,8 +2635,8 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	  if (! picrel)
 	    return false;
 
-	  if (!_bfinfdpic_emit_got_relocs_plt_entries (picrel, output_bfd, info,
-						       osec, sym,
+	  if (!_bfinfdpic_emit_got_relocs_plt_entries (picrel, info->output_bfd,
+						       info, osec, sym,
 						       rel->r_addend))
 	    {
 	      _bfd_error_handler
@@ -2651,7 +2654,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	non_fdpic:
 	  picrel = NULL;
 	  if (h && ! BFINFDPIC_SYM_LOCAL (info, h)
-	      && _bfd_elf_section_offset (output_bfd, info, input_section,
+	      && _bfd_elf_section_offset (info->output_bfd, info, input_section,
 					  rel->r_offset) != (bfd_vma) -1)
 	    {
 	      info->callbacks->warning
@@ -2667,7 +2670,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	case R_BFIN_PCREL24:
 	case R_BFIN_PCREL24_JUMP_L:
 	  check_segment[0] = isec_segment;
-	  if (! IS_FDPIC (output_bfd))
+	  if (! IS_FDPIC (info->output_bfd))
 	    check_segment[1] = isec_segment;
 	  else if (picrel->plt)
 	    {
@@ -2685,7 +2688,8 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	    check_segment[1] = check_segment[0];
 	  else
 	    check_segment[1] = sec
-	      ? _bfinfdpic_osec_to_segment (output_bfd, sec->output_section)
+	      ? _bfinfdpic_osec_to_segment (info->output_bfd,
+					    sec->output_section)
 	      : (unsigned)-1;
 	  break;
 
@@ -2711,7 +2715,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	    + bfinfdpic_got_initial_offset (info);
 	  check_segment[0] = got_segment;
 	  check_segment[1] = sec
-	    ? _bfinfdpic_osec_to_segment (output_bfd, sec->output_section)
+	    ? _bfinfdpic_osec_to_segment (info->output_bfd, sec->output_section)
 	    : (unsigned)-1;
 	  break;
 
@@ -2787,7 +2791,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 		      if ((bfd_section_flags (input_section->output_section)
 			   & (SEC_ALLOC | SEC_LOAD)) == (SEC_ALLOC | SEC_LOAD))
 			{
-			  if (_bfinfdpic_osec_readonly_p (output_bfd,
+			  if (_bfinfdpic_osec_readonly_p (info->output_bfd,
 							  input_section
 							  ->output_section))
 			    {
@@ -2798,12 +2802,13 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 			      return false;
 			    }
 
-			  offset = _bfd_elf_section_offset
-			    (output_bfd, info,
-			     input_section, rel->r_offset);
+			  offset = _bfd_elf_section_offset (info->output_bfd,
+							    info,
+							    input_section,
+							    rel->r_offset);
 
 			  if (offset != (bfd_vma)-1)
-			    _bfinfdpic_add_rofixup (output_bfd,
+			    _bfinfdpic_add_rofixup (info->output_bfd,
 						    bfinfdpic_gotfixup_section
 						    (info),
 						    offset + input_section
@@ -2817,7 +2822,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 		    {
 		      bfd_vma offset;
 
-		      if (_bfinfdpic_osec_readonly_p (output_bfd,
+		      if (_bfinfdpic_osec_readonly_p (info->output_bfd,
 						      input_section
 						      ->output_section))
 			{
@@ -2827,11 +2832,12 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 			     name, input_bfd, input_section, rel->r_offset);
 			  return false;
 			}
-		      offset = _bfd_elf_section_offset (output_bfd, info,
-							input_section, rel->r_offset);
+		      offset = _bfd_elf_section_offset (info->output_bfd, info,
+							input_section,
+							rel->r_offset);
 
 		      if (offset != (bfd_vma)-1)
-			_bfinfdpic_add_dyn_reloc (output_bfd,
+			_bfinfdpic_add_dyn_reloc (info->output_bfd,
 						  bfinfdpic_gotrel_section (info),
 						  offset + input_section
 						  ->output_section->vma
@@ -2852,7 +2858,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	  break;
 
 	case R_BFIN_BYTE4_DATA:
-	  if (! IS_FDPIC (output_bfd))
+	  if (! IS_FDPIC (info->output_bfd))
 	    {
 	      check_segment[0] = check_segment[1] = -1;
 	      break;
@@ -2863,7 +2869,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	    int dynindx;
 	    bfd_vma addend = rel->r_addend;
 	    bfd_vma offset;
-	    offset = _bfd_elf_section_offset (output_bfd, info,
+	    offset = _bfd_elf_section_offset (info->output_bfd, info,
 					      input_section, rel->r_offset);
 
 	    /* If the symbol is dynamic but binds locally, use
@@ -2908,7 +2914,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 		    && (bfd_section_flags (input_section->output_section)
 			& (SEC_ALLOC | SEC_LOAD)) == (SEC_ALLOC | SEC_LOAD))
 		  {
-		    if (_bfinfdpic_osec_readonly_p (output_bfd,
+		    if (_bfinfdpic_osec_readonly_p (info->output_bfd,
 						   input_section
 						   ->output_section))
 		      {
@@ -2922,7 +2928,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 		      {
 			if (offset != (bfd_vma)-1)
 			  {
-			    _bfinfdpic_add_rofixup (output_bfd,
+			    _bfinfdpic_add_rofixup (info->output_bfd,
 						    bfinfdpic_gotfixup_section
 						    (info),
 						    offset + input_section
@@ -2932,7 +2938,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 
 			    if (r_type == R_BFIN_FUNCDESC_VALUE)
 			      _bfinfdpic_add_rofixup
-				(output_bfd,
+				(info->output_bfd,
 				 bfinfdpic_gotfixup_section (info),
 				 offset + input_section->output_section->vma
 				 + input_section->output_offset + 4, picrel);
@@ -2945,7 +2951,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 		if ((bfd_section_flags (input_section->output_section)
 		     & (SEC_ALLOC | SEC_LOAD)) == (SEC_ALLOC | SEC_LOAD))
 		  {
-		    if (_bfinfdpic_osec_readonly_p (output_bfd,
+		    if (_bfinfdpic_osec_readonly_p (info->output_bfd,
 						   input_section
 						   ->output_section))
 		      {
@@ -2957,7 +2963,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 		      }
 
 		    if (offset != (bfd_vma)-1)
-		      _bfinfdpic_add_dyn_reloc (output_bfd,
+		      _bfinfdpic_add_dyn_reloc (info->output_bfd,
 						bfinfdpic_gotrel_section (info),
 						offset
 						+ input_section->output_section->vma
@@ -2979,7 +2985,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 		   GOT base offset.  */
 		if (bfd_link_pde (info)
 		    && (!h || BFINFDPIC_SYM_LOCAL (info, h)))
-		  bfd_put_32 (output_bfd,
+		  bfd_put_32 (info->output_bfd,
 			      bfinfdpic_got_section (info)->output_section->vma
 			      + bfinfdpic_got_section (info)->output_offset
 			      + bfinfdpic_got_initial_offset (info),
@@ -2991,10 +2997,10 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 		     PLT entries are located, and the low word
 		     contains the offset of the lazy PLT entry entry
 		     point into that section.  */
-		  bfd_put_32 (output_bfd,
+		  bfd_put_32 (info->output_bfd,
 			      h && ! BFINFDPIC_SYM_LOCAL (info, h)
 			      ? 0
-			      : _bfinfdpic_osec_to_segment (output_bfd,
+			      : _bfinfdpic_osec_to_segment (info->output_bfd,
 							    sec
 							    ->output_section),
 			      contents + rel->r_offset + 4);
@@ -3006,12 +3012,12 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	default:
 	  check_segment[0] = isec_segment;
 	  check_segment[1] = sec
-	    ? _bfinfdpic_osec_to_segment (output_bfd, sec->output_section)
+	    ? _bfinfdpic_osec_to_segment (info->output_bfd, sec->output_section)
 	    : (unsigned)-1;
 	  break;
 	}
 
-      if (check_segment[0] != check_segment[1] && IS_FDPIC (output_bfd))
+      if (check_segment[0] != check_segment[1] && IS_FDPIC (info->output_bfd))
 	{
 #if 1 /* If you take this out, remove the #error from fdpic-static-6.d
 	 in the ld testsuite.  */
@@ -3041,7 +3047,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	       name, input_bfd, input_section, rel->r_offset);
 	  if (!silence_segment_error && bfd_link_pic (info))
 	    return false;
-	  elf_elfheader (output_bfd)->e_flags |= EF_BFIN_PIC;
+	  elf_elfheader (info->output_bfd)->e_flags |= EF_BFIN_PIC;
 	}
 
       switch (r_type)
@@ -3072,7 +3078,7 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 	{
 	case R_BFIN_PCREL24:
 	case R_BFIN_PCREL24_JUMP_L:
-	  if (! IS_FDPIC (output_bfd) || ! picrel->plt)
+	  if (! IS_FDPIC (info->output_bfd) || ! picrel->plt)
 	    break;
 	  /* Fall through.  */
 
@@ -3152,9 +3158,8 @@ bfinfdpic_relocate_section (bfd * output_bfd,
 /* We need dynamic symbols for every section, since segments can
    relocate independently.  */
 static bool
-_bfinfdpic_link_omit_section_dynsym (bfd *output_bfd ATTRIBUTE_UNUSED,
-				    struct bfd_link_info *info ATTRIBUTE_UNUSED,
-				    asection *p)
+_bfinfdpic_link_omit_section_dynsym (struct bfd_link_info *info ATTRIBUTE_UNUSED,
+				     asection *p)
 {
   switch (elf_section_data (p)->this_hdr.sh_type)
     {
@@ -4026,8 +4031,7 @@ _bfinfdpic_size_got_plt (bfd *output_bfd,
 /* Set the sizes of the dynamic sections.  */
 
 static bool
-elf32_bfinfdpic_late_size_sections (bfd *output_bfd,
-				    struct bfd_link_info *info)
+elf32_bfinfdpic_late_size_sections (struct bfd_link_info *info)
 {
   struct elf_link_hash_table *htab;
   bfd *dynobj;
@@ -4072,7 +4076,7 @@ elf32_bfinfdpic_late_size_sections (bfd *output_bfd,
      use it if we're doing relaxations.  */
   bfinfdpic_dynamic_got_plt_info (info) = bfd_alloc (dynobj, sizeof (gpinfo.g));
 
-  if (!_bfinfdpic_size_got_plt (output_bfd, &gpinfo))
+  if (!_bfinfdpic_size_got_plt (info->output_bfd, &gpinfo))
       return false;
 
   s = bfd_get_linker_section (dynobj, ".dynbss");
@@ -4083,16 +4087,14 @@ elf32_bfinfdpic_late_size_sections (bfd *output_bfd,
   if (s && s->size == 0)
     s->flags |= SEC_EXCLUDE;
 
-  return _bfd_elf_add_dynamic_tags (output_bfd, info, true);
+  return _bfd_elf_add_dynamic_tags (info, true);
 }
 
 static bool
-elf32_bfinfdpic_early_size_sections (bfd *output_bfd,
-				     struct bfd_link_info *info)
+elf32_bfinfdpic_early_size_sections (struct bfd_link_info *info)
 {
   if (!bfd_link_relocatable (info)
-      && !bfd_elf_stack_segment_size (output_bfd, info,
-				      "__stacksize", DEFAULT_STACK_SIZE))
+      && !bfd_elf_stack_segment_size (info, "__stacksize", DEFAULT_STACK_SIZE))
     return false;
 
   return true;
@@ -4211,8 +4213,7 @@ bfinfdpic_elf_discard_info (bfd *ibfd,
 }
 
 static bool
-elf32_bfinfdpic_finish_dynamic_sections (bfd *output_bfd,
-					 struct bfd_link_info *info,
+elf32_bfinfdpic_finish_dynamic_sections (struct bfd_link_info *info,
 					 bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -4239,8 +4240,9 @@ elf32_bfinfdpic_finish_dynamic_sections (bfd *output_bfd,
 	    + hgot->root.u.def.section->output_section->vma
 	    + hgot->root.u.def.section->output_offset;
 
-	  _bfinfdpic_add_rofixup (output_bfd, bfinfdpic_gotfixup_section (info),
-				 got_value, 0);
+	  _bfinfdpic_add_rofixup (info->output_bfd,
+				  bfinfdpic_gotfixup_section (info),
+				  got_value, 0);
 
 	  if (bfinfdpic_gotfixup_section (info)->size
 	      != (bfinfdpic_gotfixup_section (info)->reloc_count * 4))
@@ -4285,19 +4287,19 @@ elf32_bfinfdpic_finish_dynamic_sections (bfd *output_bfd,
 	      dyn.d_un.d_ptr = bfinfdpic_got_section (info)->output_section->vma
 		+ bfinfdpic_got_section (info)->output_offset
 		+ bfinfdpic_got_initial_offset (info);
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_JMPREL:
 	      dyn.d_un.d_ptr = bfinfdpic_pltrel_section (info)
 		->output_section->vma
 		+ bfinfdpic_pltrel_section (info)->output_offset;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_PLTRELSZ:
 	      dyn.d_un.d_val = bfinfdpic_pltrel_section (info)->size;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 	    }
 	}
@@ -4342,8 +4344,7 @@ elf32_bfinfdpic_adjust_dynamic_symbol (struct bfd_link_info *info,
 
 static bool
 elf32_bfinfdpic_finish_dynamic_symbol
-(bfd *output_bfd ATTRIBUTE_UNUSED,
- struct bfd_link_info *info ATTRIBUTE_UNUSED,
+(struct bfd_link_info *info ATTRIBUTE_UNUSED,
  struct elf_link_hash_entry *h ATTRIBUTE_UNUSED,
  Elf_Internal_Sym *sym ATTRIBUTE_UNUSED)
 {
@@ -4855,8 +4856,7 @@ bfin_link_hash_table_create (bfd * abfd)
 /* Finish up the dynamic sections.  */
 
 static bool
-bfin_finish_dynamic_sections (bfd * output_bfd ATTRIBUTE_UNUSED,
-			      struct bfd_link_info *info,
+bfin_finish_dynamic_sections (struct bfd_link_info *info,
 			      bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -4890,8 +4890,7 @@ bfin_finish_dynamic_sections (bfd * output_bfd ATTRIBUTE_UNUSED,
    dynamic sections here.  */
 
 static bool
-bfin_finish_dynamic_symbol (bfd * output_bfd,
-			    struct bfd_link_info *info,
+bfin_finish_dynamic_symbol (struct bfd_link_info *info,
 			    struct elf_link_hash_entry *h,
 			    Elf_Internal_Sym * sym)
 {
@@ -4924,7 +4923,7 @@ bfin_finish_dynamic_symbol (bfd * output_bfd,
 	{
 	  _bfd_error_handler (_("*** check this relocation %s"), __func__);
 	  rela.r_info = ELF32_R_INFO (0, R_BFIN_PCREL24);
-	  rela.r_addend = bfd_get_signed_32 (output_bfd,
+	  rela.r_addend = bfd_get_signed_32 (info->output_bfd,
 					     (sgot->contents
 					      +
 					      (h->got.
@@ -4932,7 +4931,7 @@ bfin_finish_dynamic_symbol (bfd * output_bfd,
 	}
       else
 	{
-	  bfd_put_32 (output_bfd, (bfd_vma) 0,
+	  bfd_put_32 (info->output_bfd, 0,
 		      sgot->contents + (h->got.offset & ~(bfd_vma) 1));
 	  rela.r_info = ELF32_R_INFO (h->dynindx, R_BFIN_GOT);
 	  rela.r_addend = 0;
@@ -4940,7 +4939,7 @@ bfin_finish_dynamic_symbol (bfd * output_bfd,
 
       loc = srela->contents;
       loc += srela->reloc_count++ * sizeof (Elf32_External_Rela);
-      bfd_elf32_swap_reloca_out (output_bfd, &rela, loc);
+      bfd_elf32_swap_reloca_out (info->output_bfd, &rela, loc);
     }
 
   if (h->needs_copy)
@@ -5125,8 +5124,7 @@ bfin_discard_copies (struct elf_link_hash_entry *h, void * inf)
 }
 
 static bool
-bfin_late_size_sections (bfd * output_bfd ATTRIBUTE_UNUSED,
-			 struct bfd_link_info *info)
+bfin_late_size_sections (struct bfd_link_info *info)
 {
   bfd *dynobj;
   asection *s;

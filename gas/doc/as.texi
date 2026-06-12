@@ -4724,8 +4724,11 @@ Some machine configurations provide additional directives.
 
 @ifset ELF
 * Version::                     @code{.version "@var{string}"}
+@ignore
 * VTableEntry::                 @code{.vtable_entry @var{table}, @var{offset}}
 * VTableInherit::               @code{.vtable_inherit @var{child}, @var{parent}}
+@end ignore
+
 @end ifset
 
 * Warnif::			@code{.warnif @var{expression}}
@@ -7796,7 +7799,11 @@ This directive creates a @code{.note} section and places into it an ELF
 formatted note of type NT_VERSION.  The note's name is set to @code{string}.
 @end ifset
 
+@ignore
 @ifset ELF
+@c .vtable_entry and .vtable_inherit were for the C++ implementation
+@c that predated the generic C++ ABI.  They're obsolete now, so
+@c don't include them in the documentation.
 @node VTableEntry
 @section @code{.vtable_entry @var{table}, @var{offset}}
 
@@ -7813,6 +7820,7 @@ This directive finds the symbol @code{child} and finds or creates the symbol
 parent whose addend is the value of the child symbol.  As a special case the
 parent name of @code{0} is treated as referring to the @code{*ABS*} section.
 @end ifset
+@end ignore
 
 @node Warnif
 @section @code{.warnif "@var{expression}"}

@@ -252,7 +252,7 @@ vax_return_value (struct gdbarch *gdbarch, struct value *function,
 
 constexpr gdb_byte vax_break_insn[] = { 3 };
 
-typedef BP_MANIPULATION (vax_break_insn) vax_breakpoint;
+using vax_breakpoint = BP_MANIPULATION (vax_break_insn);
 
 /* Advance PC across any function entry prologue instructions
    to reach some "real" code.  */

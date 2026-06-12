@@ -593,7 +593,7 @@ hppa_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 constexpr gdb_byte hppa_break_insn[] = {0x00, 0x01, 0x00, 0x04};
 
-typedef BP_MANIPULATION (hppa_break_insn) hppa_breakpoint;
+using hppa_breakpoint = BP_MANIPULATION (hppa_break_insn);
 
 /* Return the name of a register.  */
 

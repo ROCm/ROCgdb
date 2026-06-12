@@ -46,7 +46,7 @@ if { ![runto_main] } {
     return
 }
 
-# Get endianess for the scalar->vector casts
+# Get endianness for the scalar->vector casts
 set endian [get_endianness]
 
 # Test printing of character vector types

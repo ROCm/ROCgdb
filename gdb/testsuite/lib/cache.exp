@@ -189,7 +189,7 @@ proc gdb_do_cache {name args} {
     # As with the exit tracking above we also need to track any nested
     # caching procs that this proc might call.  To do this we backup
     # the current global list of nested caching proc calls and reset
-    # the global back ot the empty list.  As nested caching procs are
+    # the global back to the empty list.  As nested caching procs are
     # called their names are added to the global list, see
     # gdb_cache_maybe_gdb_exit for where this is done.
     set old_gdb_nested_caching_proc_calls $::gdb_nested_caching_proc_calls

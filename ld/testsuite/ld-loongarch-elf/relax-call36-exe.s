@@ -1,10 +1,6 @@
 ldd: # local define default
 call36 ldd # ldd
 
-ldh: # local define hidden
-.hidden ldh
-call36 ldh # ldh
-
 gdd:
 .global gdd # global define default
 call36 gdd # gdd@plt

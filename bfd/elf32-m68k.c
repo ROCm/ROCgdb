@@ -2932,14 +2932,14 @@ elf_m68k_get_plt_info (bfd *output_bfd)
    It's a convenient place to determine the PLT style.  */
 
 static bool
-elf_m68k_early_size_sections (bfd *output_bfd, struct bfd_link_info *info)
+elf_m68k_early_size_sections (struct bfd_link_info *info)
 {
   /* Bind input BFDs to GOTs and calculate sizes of .got and .rela.got
      sections.  */
   if (!elf_m68k_partition_multi_got (info))
     return false;
 
-  elf_m68k_hash_table (info)->plt_info = elf_m68k_get_plt_info (output_bfd);
+  elf_m68k_hash_table (info)->plt_info = elf_m68k_get_plt_info (info->output_bfd);
   return true;
 }
 
@@ -3105,8 +3105,7 @@ elf_m68k_adjust_dynamic_symbol (struct bfd_link_info *info,
 /* Set the sizes of the dynamic sections.  */
 
 static bool
-elf_m68k_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-			     struct bfd_link_info *info)
+elf_m68k_late_size_sections (struct bfd_link_info *info)
 {
   bfd *dynobj;
   asection *s;
@@ -3219,7 +3218,7 @@ elf_m68k_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       s->alloced = 1;
     }
 
-  return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs);
+  return _bfd_elf_add_dynamic_tags (info, relocs);
 }
 
 /* This function is called via elf_link_hash_traverse if we are
@@ -3422,8 +3421,7 @@ elf_m68k_init_got_entry_local_shared (struct bfd_link_info *info,
 /* Relocate an M68K ELF section.  */
 
 static int
-elf_m68k_relocate_section (bfd *output_bfd,
-			   struct bfd_link_info *info,
+elf_m68k_relocate_section (struct bfd_link_info *info,
 			   bfd *input_bfd,
 			   asection *input_section,
 			   bfd_byte *contents,
@@ -3485,7 +3483,8 @@ elf_m68k_relocate_section (bfd *output_bfd,
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 	}
       else
 	{
@@ -3647,7 +3646,7 @@ elf_m68k_relocate_section (bfd *output_bfd,
 			   is done in the finish_dynamic_symbol routine.  */
 
 			elf_m68k_init_got_entry_static (info,
-							output_bfd,
+							info->output_bfd,
 							r_type,
 							sgot,
 							off,
@@ -3665,7 +3664,7 @@ elf_m68k_relocate_section (bfd *output_bfd,
 		    BFD_ASSERT (srela != NULL);
 
 		    elf_m68k_init_got_entry_local_shared (info,
-							  output_bfd,
+							  info->output_bfd,
 							  r_type,
 							  sgot,
 							  off,
@@ -3677,7 +3676,7 @@ elf_m68k_relocate_section (bfd *output_bfd,
 		else /* h == NULL && !bfd_link_pic (info) */
 		  {
 		    elf_m68k_init_got_entry_static (info,
-						    output_bfd,
+						    info->output_bfd,
 						    r_type,
 						    sgot,
 						    off,
@@ -3821,7 +3820,7 @@ elf_m68k_relocate_section (bfd *output_bfd,
 	      relocate = false;
 
 	      outrel.r_offset =
-		_bfd_elf_section_offset (output_bfd, info, input_section,
+		_bfd_elf_section_offset (info->output_bfd, info, input_section,
 					 rel->r_offset);
 	      if (outrel.r_offset == (bfd_vma) -1)
 		skip = true;
@@ -3896,7 +3895,7 @@ elf_m68k_relocate_section (bfd *output_bfd,
 
 	      loc = sreloc->contents;
 	      loc += sreloc->reloc_count++ * sizeof (Elf32_External_Rela);
-	      bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+	      bfd_elf32_swap_reloca_out (info->output_bfd, &outrel, loc);
 
 	      /* This reloc will be computed at runtime, so there's no
 		 need to do anything now, except for R_68K_32
@@ -3923,7 +3922,7 @@ elf_m68k_relocate_section (bfd *output_bfd,
       if (unresolved_reloc
 	  && !((input_section->flags & SEC_DEBUGGING) != 0
 	       && h->def_dynamic)
-	  && _bfd_elf_section_offset (output_bfd, info, input_section,
+	  && _bfd_elf_section_offset (info->output_bfd, info, input_section,
 				      rel->r_offset) != (bfd_vma) -1)
 	{
 	  _bfd_error_handler
@@ -4035,8 +4034,7 @@ elf_m68k_install_pc32 (asection *sec, bfd_vma offset, bfd_vma value)
    dynamic sections here.  */
 
 static bool
-elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
-				struct bfd_link_info *info,
+elf_m68k_finish_dynamic_symbol (struct bfd_link_info *info,
 				struct elf_link_hash_entry *h,
 				Elf_Internal_Sym *sym)
 {
@@ -4086,7 +4084,7 @@ elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
 			      + sgot->output_offset
 			      + got_offset));
 
-      bfd_put_32 (output_bfd, plt_index * sizeof (Elf32_External_Rela),
+      bfd_put_32 (info->output_bfd, plt_index * sizeof (Elf32_External_Rela),
 		  splt->contents
 		  + h->plt.offset
 		  + plt_info->symbol_resolve_entry + 2);
@@ -4095,7 +4093,7 @@ elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
 			     splt->output_section->vma);
 
       /* Fill in the entry in the global offset table.  */
-      bfd_put_32 (output_bfd,
+      bfd_put_32 (info->output_bfd,
 		  (splt->output_section->vma
 		   + splt->output_offset
 		   + h->plt.offset
@@ -4109,7 +4107,7 @@ elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
       rela.r_info = ELF32_R_INFO (h->dynindx, R_68K_JMP_SLOT);
       rela.r_addend = 0;
       loc = srela->contents + plt_index * sizeof (Elf32_External_Rela);
-      bfd_elf32_swap_reloca_out (output_bfd, &rela, loc);
+      bfd_elf32_swap_reloca_out (info->output_bfd, &rela, loc);
 
       if (!h->def_regular)
 	{
@@ -4152,7 +4150,7 @@ elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
 	    {
 	      bfd_vma relocation;
 
-	      relocation = bfd_get_signed_32 (output_bfd,
+	      relocation = bfd_get_signed_32 (info->output_bfd,
 					      (sgot->contents
 					       + got_entry_offset));
 
@@ -4166,7 +4164,7 @@ elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
 		case R_68K_TLS_GD32:
 		  /* The value for this relocation is actually put in
 		     the second GOT slot.  */
-		  relocation = bfd_get_signed_32 (output_bfd,
+		  relocation = bfd_get_signed_32 (info->output_bfd,
 						  (sgot->contents
 						   + got_entry_offset + 4));
 		  relocation += dtpoff_base (info);
@@ -4181,7 +4179,7 @@ elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
 		}
 
 	      elf_m68k_init_got_entry_local_shared (info,
-						    output_bfd,
+						    info->output_bfd,
 						    r_type,
 						    sgot,
 						    got_entry_offset,
@@ -4199,7 +4197,7 @@ elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
 
 		n_slots = elf_m68k_reloc_got_n_slots (got_entry->key_.type);
 		while (n_slots--)
-		  bfd_put_32 (output_bfd, (bfd_vma) 0,
+		  bfd_put_32 (info->output_bfd, 0,
 			      (sgot->contents + got_entry_offset
 			       + 4 * n_slots));
 	      }
@@ -4213,21 +4211,21 @@ elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
 		{
 		case R_68K_GOT32O:
 		  rela.r_info = ELF32_R_INFO (h->dynindx, R_68K_GLOB_DAT);
-		  elf_m68k_install_rela (output_bfd, srela, &rela);
+		  elf_m68k_install_rela (info->output_bfd, srela, &rela);
 		  break;
 
 		case R_68K_TLS_GD32:
 		  rela.r_info = ELF32_R_INFO (h->dynindx, R_68K_TLS_DTPMOD32);
-		  elf_m68k_install_rela (output_bfd, srela, &rela);
+		  elf_m68k_install_rela (info->output_bfd, srela, &rela);
 
 		  rela.r_offset += 4;
 		  rela.r_info = ELF32_R_INFO (h->dynindx, R_68K_TLS_DTPREL32);
-		  elf_m68k_install_rela (output_bfd, srela, &rela);
+		  elf_m68k_install_rela (info->output_bfd, srela, &rela);
 		  break;
 
 		case R_68K_TLS_IE32:
 		  rela.r_info = ELF32_R_INFO (h->dynindx, R_68K_TLS_TPREL32);
-		  elf_m68k_install_rela (output_bfd, srela, &rela);
+		  elf_m68k_install_rela (info->output_bfd, srela, &rela);
 		  break;
 
 		default:
@@ -4261,7 +4259,7 @@ elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
       rela.r_info = ELF32_R_INFO (h->dynindx, R_68K_COPY);
       rela.r_addend = 0;
       loc = s->contents + s->reloc_count++ * sizeof (Elf32_External_Rela);
-      bfd_elf32_swap_reloca_out (output_bfd, &rela, loc);
+      bfd_elf32_swap_reloca_out (info->output_bfd, &rela, loc);
     }
 
   return true;
@@ -4270,7 +4268,7 @@ elf_m68k_finish_dynamic_symbol (bfd *output_bfd,
 /* Finish up the dynamic sections.  */
 
 static bool
-elf_m68k_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
+elf_m68k_finish_dynamic_sections (struct bfd_link_info *info,
 				  bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -4312,13 +4310,13 @@ elf_m68k_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
 	      s = elf_hash_table (info)->srelplt;
 	    get_vma:
 	      dyn.d_un.d_ptr = s->output_section->vma + s->output_offset;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_PLTRELSZ:
 	      s = elf_hash_table (info)->srelplt;
 	      dyn.d_un.d_val = s->size;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 	    }
 	}
@@ -4350,13 +4348,13 @@ elf_m68k_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
   if (sgot->size > 0)
     {
       if (sdyn == NULL)
-	bfd_put_32 (output_bfd, (bfd_vma) 0, sgot->contents);
+	bfd_put_32 (info->output_bfd, 0, sgot->contents);
       else
-	bfd_put_32 (output_bfd,
+	bfd_put_32 (info->output_bfd,
 		    sdyn->output_section->vma + sdyn->output_offset,
 		    sgot->contents);
-      bfd_put_32 (output_bfd, (bfd_vma) 0, sgot->contents + 4);
-      bfd_put_32 (output_bfd, (bfd_vma) 0, sgot->contents + 8);
+      bfd_put_32 (info->output_bfd, 0, sgot->contents + 4);
+      bfd_put_32 (info->output_bfd, 0, sgot->contents + 8);
     }
 
   elf_section_data (sgot->output_section)->this_hdr.sh_entsize = 4;

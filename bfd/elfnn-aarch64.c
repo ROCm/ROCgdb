@@ -7033,8 +7033,7 @@ elfNN_aarch64_tls_relax (struct elf_aarch64_link_hash_table *globals,
 /* Relocate an AArch64 ELF section.  */
 
 static int
-elfNN_aarch64_relocate_section (bfd *output_bfd,
-				struct bfd_link_info *info,
+elfNN_aarch64_relocate_section (struct bfd_link_info *info,
 				bfd *input_bfd,
 				asection *input_section,
 				bfd_byte *contents,
@@ -7112,7 +7111,8 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 	       (input_bfd, symtab_hdr->sh_link, sym->st_name),
 	       input_bfd, input_section, rel->r_offset, true);
 
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 
 	  /* Relocate against local STT_GNU_IFUNC symbol.  */
 	  if (!bfd_link_relocatable (info)
@@ -7208,7 +7208,8 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 	save_addend = false;
 
       if (r == bfd_reloc_continue)
-	r = elfNN_aarch64_final_link_relocate (howto, input_bfd, output_bfd,
+	r = elfNN_aarch64_final_link_relocate (howto, input_bfd,
+					       info->output_bfd,
 					       input_section, contents, rel,
 					       relocation, info, sec,
 					       h, &unresolved_reloc,
@@ -7254,7 +7255,7 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 		  loc = globals->root.srelgot->contents;
 		  loc += globals->root.srelgot->reloc_count++
 		    * RELOC_SIZE (htab);
-		  bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
+		  bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
 
 		  bfd_reloc_code_real_type real_type =
 		    elfNN_aarch64_bfd_reloc_from_type (input_bfd, r_type);
@@ -7266,13 +7267,13 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 		      /* For local dynamic, don't generate DTPREL in any case.
 			 Initialize the DTPREL slot into zero, so we get module
 			 base address when invoke runtime TLS resolver.  */
-		      bfd_put_NN (output_bfd, 0,
+		      bfd_put_NN (info->output_bfd, 0,
 				  globals->root.sgot->contents + off
 				  + GOT_ENTRY_SIZE);
 		    }
 		  else if (indx == 0)
 		    {
-		      bfd_put_NN (output_bfd,
+		      bfd_put_NN (info->output_bfd,
 				  relocation - dtpoff_base (info),
 				  globals->root.sgot->contents + off
 				  + GOT_ENTRY_SIZE);
@@ -7293,17 +7294,17 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 		      loc = globals->root.srelgot->contents;
 		      loc += globals->root.srelgot->reloc_count++
 			* RELOC_SIZE (globals);
-		      bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
-		      bfd_put_NN (output_bfd, (bfd_vma) 0,
+		      bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
+		      bfd_put_NN (info->output_bfd, (bfd_vma) 0,
 				  globals->root.sgot->contents + off
 				  + GOT_ENTRY_SIZE);
 		    }
 		}
 	      else
 		{
-		  bfd_put_NN (output_bfd, (bfd_vma) 1,
+		  bfd_put_NN (info->output_bfd, 1,
 			      globals->root.sgot->contents + off);
-		  bfd_put_NN (output_bfd,
+		  bfd_put_NN (info->output_bfd,
 			      relocation - dtpoff_base (info),
 			      globals->root.sgot->contents + off
 			      + GOT_ENTRY_SIZE);
@@ -7354,13 +7355,13 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 		  loc += globals->root.srelgot->reloc_count++
 		    * RELOC_SIZE (htab);
 
-		  bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
+		  bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
 
-		  bfd_put_NN (output_bfd, rela.r_addend,
+		  bfd_put_NN (info->output_bfd, rela.r_addend,
 			      globals->root.sgot->contents + off);
 		}
 	      else
-		bfd_put_NN (output_bfd, relocation - tpoff_base (info),
+		bfd_put_NN (info->output_bfd, relocation - tpoff_base (info),
 			    globals->root.sgot->contents + off);
 
 	      symbol_got_offset_mark (input_bfd, h, r_symndx);
@@ -7413,12 +7414,12 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
 		  loc += globals->root.srelplt->reloc_count++
 		    * RELOC_SIZE (globals);
 
-		  bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
+		  bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
 
-		  bfd_put_NN (output_bfd, (bfd_vma) 0,
+		  bfd_put_NN (info->output_bfd, (bfd_vma) 0,
 			      globals->root.sgotplt->contents + off +
 			      globals->sgotplt_jump_table_size);
-		  bfd_put_NN (output_bfd, (bfd_vma) 0,
+		  bfd_put_NN (info->output_bfd, (bfd_vma) 0,
 			      globals->root.sgotplt->contents + off +
 			      globals->sgotplt_jump_table_size +
 			      GOT_ENTRY_SIZE);
@@ -7437,7 +7438,7 @@ elfNN_aarch64_relocate_section (bfd *output_bfd,
       if (unresolved_reloc
 	  && !((input_section->flags & SEC_DEBUGGING) != 0
 	       && h->def_dynamic)
-	  && _bfd_elf_section_offset (output_bfd, info, input_section,
+	  && _bfd_elf_section_offset (info->output_bfd, info, input_section,
 				      +rel->r_offset) != (bfd_vma) - 1)
 	{
 	  _bfd_error_handler
@@ -8707,8 +8708,7 @@ aarch64_map_one_stub (struct bfd_hash_entry *gen_entry, void *in_arg)
 /* Output mapping symbols for linker generated sections.  */
 
 static bool
-elfNN_aarch64_output_arch_local_syms (bfd *output_bfd,
-				      struct bfd_link_info *info,
+elfNN_aarch64_output_arch_local_syms (struct bfd_link_info *info,
 				      void *finfo,
 				      int (*func) (void *, const char *,
 						   Elf_Internal_Sym *,
@@ -8745,7 +8745,7 @@ elfNN_aarch64_output_arch_local_syms (bfd *output_bfd,
 	  osi.sec = stub_sec;
 
 	  osi.sec_shndx = _bfd_elf_section_from_bfd_section
-	    (output_bfd, osi.sec->output_section);
+	    (info->output_bfd, osi.sec->output_section);
 
 	  /* The first instruction in a stub is always a branch.  */
 	  if (!elfNN_aarch64_output_map_sym (&osi, AARCH64_MAP_INSN, 0))
@@ -8761,7 +8761,7 @@ elfNN_aarch64_output_arch_local_syms (bfd *output_bfd,
     return true;
 
   osi.sec_shndx = _bfd_elf_section_from_bfd_section
-    (output_bfd, htab->root.splt->output_section);
+    (info->output_bfd, htab->root.splt->output_section);
   osi.sec = htab->root.splt;
 
   elfNN_aarch64_output_map_sym (&osi, AARCH64_MAP_INSN, 0);
@@ -9550,8 +9550,7 @@ elfNN_aarch64_finish_relative_relocs (struct bfd_link_info *info)
    though !  */
 
 static bool
-elfNN_aarch64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-				  struct bfd_link_info *info)
+elfNN_aarch64_late_size_sections (struct bfd_link_info *info)
 {
   struct elf_aarch64_link_hash_table *htab;
   bfd *dynobj;
@@ -9839,7 +9838,7 @@ elfNN_aarch64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 #define add_dynamic_entry(TAG, VAL)			\
       _bfd_elf_add_dynamic_entry (info, TAG, VAL)
 
-      if (!_bfd_elf_add_dynamic_tags (output_bfd, info, relocs))
+      if (!_bfd_elf_add_dynamic_tags (info, relocs))
 	return false;
 
       if (htab->root.splt->size != 0)
@@ -9849,7 +9848,7 @@ elfNN_aarch64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	    return false;
 
 	  aarch64_plt_type plt_type
-	    = elf_aarch64_tdata (output_bfd)->sw_protections.plt_type;
+	    = elf_aarch64_tdata (info->output_bfd)->sw_protections.plt_type;
 	  if (plt_type == PLT_BTI_PAC
 	      && (!add_dynamic_entry (DT_AARCH64_BTI_PLT, 0)
 		  || !add_dynamic_entry (DT_AARCH64_PAC_PLT, 0)))
@@ -9864,13 +9863,13 @@ elfNN_aarch64_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	    return false;
 	}
 
-      if (is_aarch64_elf (output_bfd)
+      if (is_aarch64_elf (info->output_bfd)
 	  && htab->memtag_opts.memtag_mode != AARCH64_MEMTAG_MODE_NONE
 	  && !add_dynamic_entry (DT_AARCH64_MEMTAG_MODE,
 				 htab->memtag_opts.memtag_mode == AARCH64_MEMTAG_MODE_ASYNC))
 	return false;
 
-      if (is_aarch64_elf (output_bfd)
+      if (is_aarch64_elf (info->output_bfd)
 	  && htab->memtag_opts.memtag_stack == 1
 	  && !add_dynamic_entry (DT_AARCH64_MEMTAG_STACK,
 				 htab->memtag_opts.memtag_stack == 1))
@@ -10013,8 +10012,7 @@ elfNN_aarch64_create_small_pltn_entry (struct elf_link_hash_entry *h,
    _TLS_MODULE_BASE_, if needed.  */
 
 static bool
-elfNN_aarch64_early_size_sections (bfd *output_bfd,
-				   struct bfd_link_info *info)
+elfNN_aarch64_early_size_sections (struct bfd_link_info *info)
 {
   asection *tls_sec;
 
@@ -10033,10 +10031,10 @@ elfNN_aarch64_early_size_sections (bfd *output_bfd,
       if (tlsbase)
 	{
 	  struct bfd_link_hash_entry *h = NULL;
-	  elf_backend_data *bed = get_elf_backend_data (output_bfd);
+	  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
 
 	  if (!(_bfd_generic_link_add_one_symbol
-		(info, output_bfd, "_TLS_MODULE_BASE_", BSF_LOCAL,
+		(info, info->output_bfd, "_TLS_MODULE_BASE_", BSF_LOCAL,
 		 tls_sec, 0, NULL, false, bed->collect, &h)))
 	    return false;
 
@@ -10055,8 +10053,7 @@ elfNN_aarch64_early_size_sections (bfd *output_bfd,
    dynamic sections here.  */
 
 static bool
-elfNN_aarch64_finish_dynamic_symbol (bfd *output_bfd,
-				     struct bfd_link_info *info,
+elfNN_aarch64_finish_dynamic_symbol (struct bfd_link_info *info,
 				     struct elf_link_hash_entry *h,
 				     Elf_Internal_Sym *sym)
 {
@@ -10096,7 +10093,7 @@ elfNN_aarch64_finish_dynamic_symbol (bfd *output_bfd,
 	  || relplt == NULL)
 	abort ();
 
-      elfNN_aarch64_create_small_pltn_entry (h, htab, output_bfd, info);
+      elfNN_aarch64_create_small_pltn_entry (h, htab, info->output_bfd, info);
       if (!h->def_regular)
 	{
 	  /* Mark the symbol as undefined, rather than as defined in
@@ -10152,9 +10149,9 @@ elfNN_aarch64_finish_dynamic_symbol (bfd *output_bfd,
 		 contains the real function address if we need pointer
 		 equality.  We load the GOT entry with the PLT entry.  */
 	      plt = htab->root.splt ? htab->root.splt : htab->root.iplt;
-	      bfd_put_NN (output_bfd, (plt->output_section->vma
-				       + plt->output_offset
-				       + h->plt.offset),
+	      bfd_put_NN (info->output_bfd, (plt->output_section->vma
+					     + plt->output_offset
+					     + h->plt.offset),
 			  htab->root.sgot->contents
 			  + (h->got.offset & ~(bfd_vma) 1));
 	      return true;
@@ -10177,7 +10174,7 @@ elfNN_aarch64_finish_dynamic_symbol (bfd *output_bfd,
 	{
 	do_glob_dat:
 	  BFD_ASSERT ((h->got.offset & 1) == 0);
-	  bfd_put_NN (output_bfd, (bfd_vma) 0,
+	  bfd_put_NN (info->output_bfd, 0,
 		      htab->root.sgot->contents + h->got.offset);
 	  rela.r_info = ELFNN_R_INFO (h->dynindx, AARCH64_R (GLOB_DAT));
 	  rela.r_addend = 0;
@@ -10185,7 +10182,7 @@ elfNN_aarch64_finish_dynamic_symbol (bfd *output_bfd,
 
       loc = htab->root.srelgot->contents;
       loc += htab->root.srelgot->reloc_count++ * RELOC_SIZE (htab);
-      bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
+      bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
     }
 skip_got_reloc:
 
@@ -10212,7 +10209,7 @@ skip_got_reloc:
       else
 	s = htab->root.srelbss;
       loc = s->contents + s->reloc_count++ * RELOC_SIZE (htab);
-      bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
+      bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
     }
 
   /* Mark _DYNAMIC and _GLOBAL_OFFSET_TABLE_ as absolute.  SYM may
@@ -10236,8 +10233,7 @@ elfNN_aarch64_finish_local_dynamic_symbol (void **slot, void *inf)
   struct bfd_link_info *info
     = (struct bfd_link_info *) inf;
 
-  return elfNN_aarch64_finish_dynamic_symbol (info->output_bfd,
-					      info, h, NULL);
+  return elfNN_aarch64_finish_dynamic_symbol (info, h, NULL);
 }
 
 static void
@@ -10300,8 +10296,7 @@ elfNN_aarch64_init_small_plt0_entry (bfd *output_bfd ATTRIBUTE_UNUSED,
 }
 
 static bool
-elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
-				       struct bfd_link_info *info,
+elfNN_aarch64_finish_dynamic_sections (struct bfd_link_info *info,
 				       bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   struct elf_aarch64_link_hash_table *htab;
@@ -10362,7 +10357,7 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
 	      break;
 	    }
 
-	  bfd_elfNN_swap_dyn_out (output_bfd, &dyn, dyncon);
+	  bfd_elfNN_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	}
 
     }
@@ -10370,19 +10365,19 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
   /* Fill in the special first entry in the procedure linkage table.  */
   if (htab->root.splt && htab->root.splt->size > 0)
     {
-      elfNN_aarch64_init_small_plt0_entry (output_bfd, htab);
+      elfNN_aarch64_init_small_plt0_entry (info->output_bfd, htab);
 
       if (htab->root.tlsdesc_plt && !(info->flags & DF_BIND_NOW))
 	{
 	  BFD_ASSERT (htab->root.tlsdesc_got != (bfd_vma)-1);
-	  bfd_put_NN (output_bfd, (bfd_vma) 0,
+	  bfd_put_NN (info->output_bfd, 0,
 		      htab->root.sgot->contents + htab->root.tlsdesc_got);
 
 	  const bfd_byte *entry = elfNN_aarch64_tlsdesc_small_plt_entry;
 	  htab->tlsdesc_plt_entry_size = PLT_TLSDESC_ENTRY_SIZE;
 
 	  aarch64_plt_type plt_type
-	    = elf_aarch64_tdata (output_bfd)->sw_protections.plt_type;
+	    = elf_aarch64_tdata (info->output_bfd)->sw_protections.plt_type;
 	  if (plt_type & PLT_BTI)
 	    entry = elfNN_aarch64_tlsdesc_small_plt_bti_entry;
 
@@ -10420,27 +10415,27 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
 	      }
 
 	    /* adrp x2, DT_TLSDESC_GOT */
-	    elf_aarch64_update_plt_entry (output_bfd,
+	    elf_aarch64_update_plt_entry (info->output_bfd,
 					  BFD_RELOC_AARCH64_ADR_HI21_PCREL,
 					  plt_entry + 4,
 					  (PG (dt_tlsdesc_got)
 					   - PG (adrp1_addr)));
 
 	    /* adrp x3, 0 */
-	    elf_aarch64_update_plt_entry (output_bfd,
+	    elf_aarch64_update_plt_entry (info->output_bfd,
 					  BFD_RELOC_AARCH64_ADR_HI21_PCREL,
 					  plt_entry + 8,
 					  (PG (pltgot_addr)
 					   - PG (adrp2_addr)));
 
 	    /* ldr x2, [x2, #0] */
-	    elf_aarch64_update_plt_entry (output_bfd,
+	    elf_aarch64_update_plt_entry (info->output_bfd,
 					  BFD_RELOC_AARCH64_LDSTNN_LO12,
 					  plt_entry + 12,
 					  PG_OFFSET (dt_tlsdesc_got));
 
 	    /* add x3, x3, 0 */
-	    elf_aarch64_update_plt_entry (output_bfd,
+	    elf_aarch64_update_plt_entry (info->output_bfd,
 					  BFD_RELOC_AARCH64_ADD_LO12,
 					  plt_entry + 16,
 					  PG_OFFSET (pltgot_addr));
@@ -10460,14 +10455,12 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
       /* Fill in the first three entries in the global offset table.  */
       if (htab->root.sgotplt->size > 0)
 	{
-	  bfd_put_NN (output_bfd, (bfd_vma) 0, htab->root.sgotplt->contents);
+	  bfd_put_NN (info->output_bfd, 0, htab->root.sgotplt->contents);
 
 	  /* Write GOT[1] and GOT[2], needed for the dynamic linker.  */
-	  bfd_put_NN (output_bfd,
-		      (bfd_vma) 0,
+	  bfd_put_NN (info->output_bfd, 0,
 		      htab->root.sgotplt->contents + GOT_ENTRY_SIZE);
-	  bfd_put_NN (output_bfd,
-		      (bfd_vma) 0,
+	  bfd_put_NN (info->output_bfd, 0,
 		      htab->root.sgotplt->contents + GOT_ENTRY_SIZE * 2);
 	}
 
@@ -10477,7 +10470,7 @@ elfNN_aarch64_finish_dynamic_sections (bfd *output_bfd,
 	    {
 	      bfd_vma addr =
 		sdyn ? sdyn->output_section->vma + sdyn->output_offset : 0;
-	      bfd_put_NN (output_bfd, addr, htab->root.sgot->contents);
+	      bfd_put_NN (info->output_bfd, addr, htab->root.sgot->contents);
 	    }
 	}
 

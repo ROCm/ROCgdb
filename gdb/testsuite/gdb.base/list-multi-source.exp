@@ -72,7 +72,7 @@ proc copy_and_update_source_file { dest value } {
 }
 
 # Make three copies of the single source file in the build directory
-# based source tree.  Two of the source files are modified slighly to
+# based source tree.  Two of the source files are modified slightly to
 # make the output of 'list' unique for each copy.
 file copy "$srcdir/$subdir/$srcfile" "$file_main"
 copy_and_update_source_file $file_a "3"
@@ -110,7 +110,7 @@ gdb_test "list foo.c:$linenum" \
 	 ".*" \
 	 "$last_linenum\\s+\[^\r\n\]+"]
 
-# Now list using a more acurate filename, we should only get a single
+# Now list using a more accurate filename, we should only get a single
 # result.
 gdb_test "list a/foo.c:$linenum" \
     [multi_line \

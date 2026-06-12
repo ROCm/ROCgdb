@@ -28,7 +28,7 @@
 /* Default READMORE method.  */
 #define READMORE_METHOD_DEFAULT 2
 
-/* Default READMORE sleep time in miliseconds.  */
+/* Default READMORE sleep time in milliseconds.  */
 #define READMORE_SLEEP_DEFAULT 10
 
 /* Helper function.  Initialize *METHOD according to environment variable

@@ -55,15 +55,14 @@ tilegx_elf_adjust_dynamic_symbol (struct bfd_link_info *,
   ATTRIBUTE_HIDDEN;
 
 extern bool
-tilegx_elf_omit_section_dynsym (bfd *,
-				struct bfd_link_info *,
+tilegx_elf_omit_section_dynsym (struct bfd_link_info *,
 				asection *) ATTRIBUTE_HIDDEN;
 
 extern bool
-tilegx_elf_late_size_sections (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
+tilegx_elf_late_size_sections (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 
 extern int
-tilegx_elf_relocate_section (bfd *, struct bfd_link_info *,
+tilegx_elf_relocate_section (struct bfd_link_info *,
 			     bfd *, asection *,
 			     bfd_byte *, Elf_Internal_Rela *,
 			     Elf_Internal_Sym *,
@@ -89,13 +88,12 @@ tilegx_additional_program_headers (bfd *, struct bfd_link_info *)
   ATTRIBUTE_HIDDEN;
 
 extern bool
-tilegx_elf_finish_dynamic_symbol (bfd *,
-				  struct bfd_link_info *,
+tilegx_elf_finish_dynamic_symbol (struct bfd_link_info *,
 				  struct elf_link_hash_entry *,
 				  Elf_Internal_Sym *) ATTRIBUTE_HIDDEN;
 
 extern bool
-tilegx_elf_finish_dynamic_sections (bfd *, struct bfd_link_info *, bfd_byte *)
+tilegx_elf_finish_dynamic_sections (struct bfd_link_info *, bfd_byte *)
   ATTRIBUTE_HIDDEN;
 
 extern bool

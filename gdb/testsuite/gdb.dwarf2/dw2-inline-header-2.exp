@@ -28,7 +28,7 @@
 # |------|------|------|------|--------|
 #
 #
-# Place the first brekpoint at file 2, line 22 and a second breakpoint
+# Place the first breakpoint at file 2, line 22 and a second breakpoint
 # at file 1, line 19.  A third breakpoint is placed at file 1, line
 # 18, but as this line table entry will have been discarded[1] the
 # third breakpoint will actually be placed at the same location as the
@@ -178,6 +178,6 @@ gdb_test "info breakpoints" \
     "check for breakpoint at ${srcfile3}"
 
 # Line table entry for line 18 will have been discarded, so this
-# brekpoint will be at the same location as line 19.
+# breakpoint will be at the same location as line 19.
 gdb_test "break ${srcfile3}:18" \
     "Note: breakpoint $decimal also set at pc $hex.*"

@@ -390,8 +390,7 @@ mcore_elf_info_to_howto (bfd * abfd,
    accordingly.  */
 
 static int
-mcore_elf_relocate_section (bfd * output_bfd,
-			    struct bfd_link_info * info,
+mcore_elf_relocate_section (struct bfd_link_info * info,
 			    bfd * input_bfd,
 			    asection * input_section,
 			    bfd_byte * contents,
@@ -464,7 +463,8 @@ mcore_elf_relocate_section (bfd * output_bfd,
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections [r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 	  addend = rel->r_addend;
 	}
       else

@@ -80,7 +80,7 @@ struct elfinfo
 
 /* Type for per-BFD data.  */
 
-typedef std::vector<std::unique_ptr<probe>> elfread_data;
+using elfread_data = std::vector<std::unique_ptr<probe>>;
 
 /* Per-BFD data for probe info.  */
 
@@ -1285,10 +1285,10 @@ elf_symfile_read (struct objfile *objfile, symfile_add_flags symfile_flags)
      an included file XCOFF info is useless.  */
 
   if (ei.mdebugsect)
-    warning ("mdebug debug information is not supported.");
+    warning (_("mdebug debug information is not supported."));
 
   if (ei.stabsect)
-    warning ("stabs debug information is not supported.");
+    warning (_("stabs debug information is not supported."));
 
   /* Read the CTF section only if there is no DWARF info.  */
   if (always_read_ctf && ei.ctfsect)

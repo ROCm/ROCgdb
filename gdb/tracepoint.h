@@ -36,7 +36,7 @@ struct traceframe_info
   std::vector<int> tvars;
 };
 
-typedef std::unique_ptr<traceframe_info> traceframe_info_up;
+using traceframe_info_up = std::unique_ptr<traceframe_info>;
 
 /* A trace state variable is a value managed by a target being
    traced.  A trace state variable (or tsv for short) can be accessed

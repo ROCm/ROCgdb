@@ -58,7 +58,7 @@ extern void clear_complaints ();
 
 /* Type of collected complaints.  */
 
-typedef gdb::unordered_set<std::string> complaint_collection;
+using complaint_collection = gdb::unordered_set<std::string>;
 
 /* A class that can handle calls to complaint from multiple threads.
    When this is instantiated, it hooks into the complaint mechanism,

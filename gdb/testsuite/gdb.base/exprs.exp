@@ -227,7 +227,7 @@ if {!$ok} { setup_xfail "*-*-*" }
 gdb_test "print (void*) (~((long long)(unsigned long) -1) - 1)" \
 	"warning: value truncated.*" "truncate (void*) 0xffffffff00000000 - 1"
 
-# String concatentation.
+# String concatenation.
 test_expr "print \"x\" \"y\"" "${::valnum_re} = \"xy\""
 test_expr "print \"x\" \"y\" \"z\"" "${::valnum_re} = \"xyz\""
 

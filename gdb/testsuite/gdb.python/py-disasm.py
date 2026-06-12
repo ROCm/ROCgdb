@@ -80,7 +80,7 @@ class TestDisassembler(Disassembler):
 
 class ShowInfoRepr(TestDisassembler):
     """Call the __repr__ method on the DisassembleInfo, convert the result
-    to a string, and incude it in a comment in the disassembler output."""
+    to a string, and include it in a comment in the disassembler output."""
 
     def disassemble(self, info):
         comment = "\t## " + repr(info)
@@ -91,9 +91,9 @@ class ShowInfoRepr(TestDisassembler):
 
 
 class ShowInfoSubClassRepr(TestDisassembler):
-    """Create a sub-class of DisassembleInfo.  Create an instace of this
+    """Create a sub-class of DisassembleInfo.  Create an instance of this
     sub-class and call the __repr__ method on it.  Convert the result
-    to a string, and incude it in a comment in the disassembler
+    to a string, and include it in a comment in the disassembler
     output.  The DisassembleInfo sub-class does not override __repr__
     so we are calling the implementation on the parent class."""
 
@@ -116,7 +116,7 @@ class ShowInfoSubClassRepr(TestDisassembler):
 
 class ShowResultRepr(TestDisassembler):
     """Call the __repr__ method on the DisassemblerResult, convert the
-    result to a string, and incude it in a comment in the disassembler
+    result to a string, and include it in a comment in the disassembler
     output."""
 
     def disassemble(self, info):
@@ -128,7 +128,7 @@ class ShowResultRepr(TestDisassembler):
 
 
 class ShowResultStr(TestDisassembler):
-    """Call the __str__ method on a DisassemblerResult object, incude the
+    """Call the __str__ method on a DisassemblerResult object, include the
     resulting string in a comment within the disassembler output."""
 
     def disassemble(self, info):
@@ -728,7 +728,7 @@ class AnalyzingDisassembler(Disassembler):
         info = self.MyInfo(info, self._start, self._end, self._nop_bytes)
         result = builtin_disassemble_wrapper(info)
 
-        # Record some informaiton about the first 'nop' instruction we find.
+        # Record some information about the first 'nop' instruction we find.
         if self._nop_index is None and is_nop(result.string):
             self._nop_index = len(self._pass_1_length)
             # The offset in the following read_memory call defaults to 0.
@@ -772,7 +772,7 @@ class AnalyzingDisassembler(Disassembler):
                 break
 
         # If we still don't have a replacement candidate, then search again,
-        # this time looking for an instruciton that is the same length as a
+        # this time looking for an instruction that is the same length as a
         # nop instruction.
         if replace_idx is None:
             for idx in range(len(self._pass_1_length)):

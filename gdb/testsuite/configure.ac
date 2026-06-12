@@ -49,7 +49,7 @@ AC_SUBST(enable_libctf)
 
 # Enable shared libraries.
 AC_ARG_ENABLE(shared,
-[  --enable-shared         build shared libraries [deault=yes]],,
+[  --enable-shared         build shared libraries [default=yes]],,
   enable_shared=yes)
 
 # If we have shared libraries, try to set RPATH_ENVVAR reasonably,

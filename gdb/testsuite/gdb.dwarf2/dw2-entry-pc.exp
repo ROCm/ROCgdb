@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Test different ways in which DW_AT_entry_pc can be expressed in the
-# DWARF.  Also test with DWARF-4 and DWARF-5.  See the individule test
+# DWARF.  Also test with DWARF-4 and DWARF-5.  See the individual test
 # procs below precise details of what DW_AT_entry_pc forms are tested.
 
 load_lib dwarf.exp

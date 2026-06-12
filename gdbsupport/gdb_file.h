@@ -32,6 +32,6 @@ struct gdb_file_deleter
 
 /* A unique pointer to a FILE.  */
 
-typedef std::unique_ptr<FILE, gdb_file_deleter> gdb_file_up;
+using gdb_file_up = std::unique_ptr<FILE, gdb_file_deleter>;
 
 #endif /* GDBSUPPORT_GDB_FILE_H */

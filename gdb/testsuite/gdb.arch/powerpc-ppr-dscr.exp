@@ -17,7 +17,7 @@
 
 # Test access to special purpose registers PPR and DSCR.  The test
 # inferior writes to these registers, we check that GDB reads the same
-# values, then write to the registers trough GDB, step once, and check
+# values, then write to the registers through GDB, step once, and check
 # again if we read back the same values.
 
 require {istarget "powerpc*-*-linux*"}

@@ -167,7 +167,7 @@ bool elf32_m68hc11_check_relocs
   (bfd * abfd, struct bfd_link_info * info,
    asection * sec, const Elf_Internal_Rela * relocs) ATTRIBUTE_HIDDEN;
 int elf32_m68hc11_relocate_section
-  (bfd *output_bfd, struct bfd_link_info *info,
+  (struct bfd_link_info *info,
    bfd *input_bfd, asection *input_section,
    bfd_byte *contents, Elf_Internal_Rela *relocs,
    Elf_Internal_Sym *local_syms, asection **local_sections) ATTRIBUTE_HIDDEN;

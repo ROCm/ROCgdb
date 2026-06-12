@@ -82,7 +82,7 @@ template<typename... T>
 class observable
 {
 public:
-  typedef std::function<void (T...)> func_type;
+  using func_type = std::function<void (T...)>;
 
 private:
   struct observer

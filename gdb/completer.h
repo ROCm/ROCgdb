@@ -66,7 +66,7 @@ struct match_list_displayer
 /* A list of completion candidates.  Each element is a malloc string,
    because ownership of the strings is transferred to readline, which
    calls free on each element.  */
-typedef std::vector<gdb::unique_xmalloc_ptr<char>> completion_list;
+using completion_list = std::vector<gdb::unique_xmalloc_ptr<char>>;
 
 /* The result of a successful completion match.  When doing symbol
    comparison, we use the symbol search name for the symbol name match

@@ -395,7 +395,7 @@ proc test_ena_dis_br { what } {
     set p2 "fail"
 
     if { "$what" == "enable" } {
-	# Set varibale values for enable command.
+	# Set variable values for enable command.
 	set oppos "disable"
 	set oppos_res "n"
 	set what_res "y"

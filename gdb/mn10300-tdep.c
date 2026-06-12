@@ -308,7 +308,7 @@ mn10300_register_type (struct gdbarch *gdbarch, int reg)
    one, so we defined it ourselves.  */
 constexpr gdb_byte mn10300_break_insn[] = {0xff};
 
-typedef BP_MANIPULATION (mn10300_break_insn) mn10300_breakpoint;
+using mn10300_breakpoint = BP_MANIPULATION (mn10300_break_insn);
 
 /* Model the semantics of pushing a register onto the stack.  This
    is a helper function for mn10300_analyze_prologue, below.  */

@@ -1581,7 +1581,7 @@ gdbpy_write (PyObject *self, PyObject *args, PyObject *kw)
       PyErr_Format
 	(PyExc_TypeError,
 	 _("'style' argument must be gdb.Style or None, not %s."),
-	 gdbpy_py_obj_tp_name (style_obj));
+	 gdbpy_py_obj_tp_name (style_obj).c_str ());
       return nullptr;
     }
 

@@ -2652,8 +2652,7 @@ frv_final_link_relocate (reloc_howto_type *howto,
    accordingly.  */
 
 static int
-elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
-			    struct bfd_link_info *info,
+elf32_frv_relocate_section (struct bfd_link_info *info,
 			    bfd *input_bfd,
 			    asection *input_section,
 			    bfd_byte *contents,
@@ -2674,28 +2673,28 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
   sym_hashes = elf_sym_hashes (input_bfd);
   relend     = relocs + input_section->reloc_count;
 
-  isec_segment = _frvfdpic_osec_to_segment (output_bfd,
+  isec_segment = _frvfdpic_osec_to_segment (info->output_bfd,
 					    input_section->output_section);
-  if (IS_FDPIC (output_bfd) && frvfdpic_got_section (info))
-    got_segment = _frvfdpic_osec_to_segment (output_bfd,
+  if (IS_FDPIC (info->output_bfd) && frvfdpic_got_section (info))
+    got_segment = _frvfdpic_osec_to_segment (info->output_bfd,
 					     frvfdpic_got_section (info)
 					     ->output_section);
   else
     got_segment = -1;
-  if (IS_FDPIC (output_bfd) && frvfdpic_gotfixup_section (info))
-    gprel_segment = _frvfdpic_osec_to_segment (output_bfd,
+  if (IS_FDPIC (info->output_bfd) && frvfdpic_gotfixup_section (info))
+    gprel_segment = _frvfdpic_osec_to_segment (info->output_bfd,
 					       frvfdpic_gotfixup_section (info)
 					       ->output_section);
   else
     gprel_segment = -1;
-  if (IS_FDPIC (output_bfd) && frvfdpic_plt_section (info))
-    plt_segment = _frvfdpic_osec_to_segment (output_bfd,
+  if (IS_FDPIC (info->output_bfd) && frvfdpic_plt_section (info))
+    plt_segment = _frvfdpic_osec_to_segment (info->output_bfd,
 					     frvfdpic_plt_section (info)
 					     ->output_section);
   else
     plt_segment = -1;
   if (elf_hash_table (info)->tls_sec)
-    tls_segment = _frvfdpic_osec_to_segment (output_bfd,
+    tls_segment = _frvfdpic_osec_to_segment (info->output_bfd,
 					     elf_hash_table (info)->tls_sec);
   else
     tls_segment = -1;
@@ -2731,7 +2730,8 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	{
 	  sym = local_syms + r_symndx;
 	  osec = sec = local_sections [r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 
 	  name = bfd_elf_string_from_elf_section
 	    (input_bfd, symtab_hdr->sh_link, sym->st_name);
@@ -2773,7 +2773,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	{
 	case R_FRV_LABEL24:
 	case R_FRV_32:
-	  if (! IS_FDPIC (output_bfd))
+	  if (! IS_FDPIC (info->output_bfd))
 	    goto non_fdpic;
 	  /* Fall through.  */
 
@@ -2824,7 +2824,8 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	  if (! picrel)
 	    return false;
 
-	  if (!_frvfdpic_emit_got_relocs_plt_entries (picrel, output_bfd, info,
+	  if (!_frvfdpic_emit_got_relocs_plt_entries (picrel,
+						      info->output_bfd, info,
 						      osec, sym,
 						      rel->r_addend))
 	    {
@@ -2843,7 +2844,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	  picrel = NULL;
 	  if (h
 	      && ! FRVFDPIC_SYM_LOCAL (info, h)
-	      && _bfd_elf_section_offset (output_bfd, info, input_section,
+	      && _bfd_elf_section_offset (info->output_bfd, info, input_section,
 					  rel->r_offset) != (bfd_vma) -1)
 	    {
 	      info->callbacks->einfo
@@ -3454,7 +3455,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	{
 	case R_FRV_LABEL24:
 	  check_segment[0] = isec_segment;
-	  if (! IS_FDPIC (output_bfd))
+	  if (! IS_FDPIC (info->output_bfd))
 	    check_segment[1] = isec_segment;
 	  else if (picrel->plt)
 	    {
@@ -3472,7 +3473,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	    check_segment[1] = check_segment[0];
 	  else
 	    check_segment[1] = sec
-	      ? _frvfdpic_osec_to_segment (output_bfd, sec->output_section)
+	      ? _frvfdpic_osec_to_segment (info->output_bfd, sec->output_section)
 	      : (unsigned)-1;
 	  break;
 
@@ -3498,7 +3499,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	    + frvfdpic_got_initial_offset (info);
 	  check_segment[0] = got_segment;
 	  check_segment[1] = sec
-	    ? _frvfdpic_osec_to_segment (output_bfd, sec->output_section)
+	    ? _frvfdpic_osec_to_segment (info->output_bfd, sec->output_section)
 	    : (unsigned)-1;
 	  break;
 
@@ -3575,7 +3576,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		      {
 			bfd_vma offset;
 
-			if (_frvfdpic_osec_readonly_p (output_bfd,
+			if (_frvfdpic_osec_readonly_p (info->output_bfd,
 						       input_section
 						       ->output_section))
 			  {
@@ -3587,11 +3588,11 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 			  }
 
 			offset = _bfd_elf_section_offset
-			  (output_bfd, info,
+			  (info->output_bfd, info,
 			   input_section, rel->r_offset);
 
 			if (offset != (bfd_vma)-1)
-			  _frvfdpic_add_rofixup (output_bfd,
+			  _frvfdpic_add_rofixup (info->output_bfd,
 						 frvfdpic_gotfixup_section
 						 (info),
 						 offset + input_section
@@ -3605,7 +3606,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		  {
 		    bfd_vma offset;
 
-		    if (_frvfdpic_osec_readonly_p (output_bfd,
+		    if (_frvfdpic_osec_readonly_p (info->output_bfd,
 						   input_section
 						   ->output_section))
 		      {
@@ -3617,11 +3618,11 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		      }
 
 		    offset = _bfd_elf_section_offset
-		      (output_bfd, info,
+		      (info->output_bfd, info,
 		       input_section, rel->r_offset);
 
 		    if (offset != (bfd_vma)-1)
-		      _frvfdpic_add_dyn_reloc (output_bfd,
+		      _frvfdpic_add_dyn_reloc (info->output_bfd,
 					       frvfdpic_gotrel_section (info),
 					       offset + input_section
 					       ->output_section->vma
@@ -3641,7 +3642,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	  break;
 
 	case R_FRV_32:
-	  if (! IS_FDPIC (output_bfd))
+	  if (! IS_FDPIC (info->output_bfd))
 	    {
 	      check_segment[0] = check_segment[1] = -1;
 	      break;
@@ -3696,7 +3697,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		    && (bfd_section_flags (input_section->output_section)
 			& (SEC_ALLOC | SEC_LOAD)) == (SEC_ALLOC | SEC_LOAD))
 		  {
-		    if (_frvfdpic_osec_readonly_p (output_bfd,
+		    if (_frvfdpic_osec_readonly_p (info->output_bfd,
 						   input_section
 						   ->output_section))
 		      {
@@ -3708,12 +3709,12 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		    if (!h || h->root.type != bfd_link_hash_undefweak)
 		      {
 			bfd_vma offset = _bfd_elf_section_offset
-			  (output_bfd, info,
+			  (info->output_bfd, info,
 			   input_section, rel->r_offset);
 
 			if (offset != (bfd_vma)-1)
 			  {
-			    _frvfdpic_add_rofixup (output_bfd,
+			    _frvfdpic_add_rofixup (info->output_bfd,
 						   frvfdpic_gotfixup_section
 						   (info),
 						   offset + input_section
@@ -3722,7 +3723,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 						   picrel);
 			    if (r_type == R_FRV_FUNCDESC_VALUE)
 			      _frvfdpic_add_rofixup
-				(output_bfd,
+				(info->output_bfd,
 				 frvfdpic_gotfixup_section (info),
 				 offset
 				 + input_section->output_section->vma
@@ -3738,7 +3739,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		  {
 		    bfd_vma offset;
 
-		    if (_frvfdpic_osec_readonly_p (output_bfd,
+		    if (_frvfdpic_osec_readonly_p (info->output_bfd,
 						   input_section
 						   ->output_section))
 		      {
@@ -3750,11 +3751,11 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		      }
 
 		    offset = _bfd_elf_section_offset
-		      (output_bfd, info,
+		      (info->output_bfd, info,
 		       input_section, rel->r_offset);
 
 		    if (offset != (bfd_vma)-1)
-		      _frvfdpic_add_dyn_reloc (output_bfd,
+		      _frvfdpic_add_dyn_reloc (info->output_bfd,
 					       frvfdpic_gotrel_section (info),
 					       offset + input_section
 					       ->output_section->vma
@@ -3776,7 +3777,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		   GOT base offset.  */
 		if (bfd_link_pde (info)
 		    && (!h || FRVFDPIC_SYM_LOCAL (info, h)))
-		  bfd_put_32 (output_bfd,
+		  bfd_put_32 (info->output_bfd,
 			      frvfdpic_got_section (info)->output_section->vma
 			      + frvfdpic_got_section (info)->output_offset
 			      + frvfdpic_got_initial_offset (info),
@@ -3788,10 +3789,10 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 		     PLT entries are located, and the low word
 		     contains the offset of the lazy PLT entry entry
 		     point into that section.  */
-		  bfd_put_32 (output_bfd,
+		  bfd_put_32 (info->output_bfd,
 			      h && ! FRVFDPIC_SYM_LOCAL (info, h)
 			      ? 0
-			      : _frvfdpic_osec_to_segment (output_bfd,
+			      : _frvfdpic_osec_to_segment (info->output_bfd,
 							   sec
 							   ->output_section),
 			      contents + rel->r_offset + 4);
@@ -3807,7 +3808,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	case R_FRV_GPRELLO:
 	  check_segment[0] = gprel_segment;
 	  check_segment[1] = sec
-	    ? _frvfdpic_osec_to_segment (output_bfd, sec->output_section)
+	    ? _frvfdpic_osec_to_segment (info->output_bfd, sec->output_section)
 	    : (unsigned)-1;
 	  break;
 
@@ -3830,7 +3831,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	  check_segment[1] = sec
 	    && ! bfd_is_abs_section (sec)
 	    && ! bfd_is_und_section (sec)
-	    ? _frvfdpic_osec_to_segment (output_bfd, sec->output_section)
+	    ? _frvfdpic_osec_to_segment (info->output_bfd, sec->output_section)
 	    : tls_segment;
 	  break;
 
@@ -3850,8 +3851,8 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	  else if (sec->output_section)
 	    {
 	      relocation -= tls_biased_base (info);
-	      check_segment[1] =
-		_frvfdpic_osec_to_segment (output_bfd, sec->output_section);
+	      check_segment[1] = _frvfdpic_osec_to_segment (info->output_bfd,
+							    sec->output_section);
 	    }
 	  else
 	    check_segment[1] = -1;
@@ -3866,7 +3867,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	  check_segment[1] = sec
 	    && ! bfd_is_abs_section (sec)
 	    && ! bfd_is_und_section (sec)
-	    ? _frvfdpic_osec_to_segment (output_bfd, sec->output_section)
+	    ? _frvfdpic_osec_to_segment (info->output_bfd, sec->output_section)
 	    : tls_segment;
 	  break;
 
@@ -3886,12 +3887,12 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	default:
 	  check_segment[0] = isec_segment;
 	  check_segment[1] = sec
-	    ? _frvfdpic_osec_to_segment (output_bfd, sec->output_section)
+	    ? _frvfdpic_osec_to_segment (info->output_bfd, sec->output_section)
 	    : (unsigned)-1;
 	  break;
 	}
 
-      if (check_segment[0] != check_segment[1] && IS_FDPIC (output_bfd))
+      if (check_segment[0] != check_segment[1] && IS_FDPIC (info->output_bfd))
 	{
 	  /* If you take this out, remove the #error from fdpic-static-6.d
 	     in the ld testsuite.  */
@@ -3920,7 +3921,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	    }
 	  if (!silence_segment_error && bfd_link_pic (info))
 	    return false;
-	  elf_elfheader (output_bfd)->e_flags |= EF_FRV_PIC;
+	  elf_elfheader (info->output_bfd)->e_flags |= EF_FRV_PIC;
 	}
 
       switch (r_type)
@@ -3956,7 +3957,7 @@ elf32_frv_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
       switch (r_type)
 	{
 	case R_FRV_LABEL24:
-	  if (! IS_FDPIC (output_bfd) || ! picrel->plt)
+	  if (! IS_FDPIC (info->output_bfd) || ! picrel->plt)
 	    break;
 	  /* Fall through.  */
 
@@ -4139,8 +4140,7 @@ elf32_frv_add_symbol_hook (bfd *abfd,
 /* We need dynamic symbols for every section, since segments can
    relocate independently.  */
 static bool
-_frvfdpic_link_omit_section_dynsym (bfd *output_bfd ATTRIBUTE_UNUSED,
-				    struct bfd_link_info *info
+_frvfdpic_link_omit_section_dynsym (struct bfd_link_info *info
 				    ATTRIBUTE_UNUSED,
 				    asection *p ATTRIBUTE_UNUSED)
 {
@@ -5428,8 +5428,7 @@ _frvfdpic_size_got_plt (bfd *output_bfd,
 /* Set the sizes of the dynamic sections.  */
 
 static bool
-elf32_frvfdpic_late_size_sections (bfd *output_bfd,
-				   struct bfd_link_info *info)
+elf32_frvfdpic_late_size_sections (struct bfd_link_info *info)
 {
   bfd *dynobj;
   asection *s;
@@ -5472,19 +5471,17 @@ elf32_frvfdpic_late_size_sections (bfd *output_bfd,
   dynobj = elf_hash_table (info)->dynobj;
   frvfdpic_dynamic_got_plt_info (info) = bfd_alloc (dynobj, sizeof (gpinfo.g));
 
-  if (!_frvfdpic_size_got_plt (output_bfd, &gpinfo))
+  if (!_frvfdpic_size_got_plt (info->output_bfd, &gpinfo))
     return false;
 
-  return _bfd_elf_add_dynamic_tags (output_bfd, info, true);
+  return _bfd_elf_add_dynamic_tags (info, true);
 }
 
 static bool
-elf32_frvfdpic_early_size_sections (bfd *output_bfd,
-				    struct bfd_link_info *info)
+elf32_frvfdpic_early_size_sections (struct bfd_link_info *info)
 {
   if (!bfd_link_relocatable (info)
-      && !bfd_elf_stack_segment_size (output_bfd, info,
-				      "__stacksize", DEFAULT_STACK_SIZE))
+      && !bfd_elf_stack_segment_size (info, "__stacksize", DEFAULT_STACK_SIZE))
     return false;
 
   return true;
@@ -5684,8 +5681,7 @@ elf32_frvfdpic_relax_section (bfd *abfd ATTRIBUTE_UNUSED, asection *sec,
 /* Fill in code and data in dynamic sections.  */
 
 static bool
-elf32_frv_finish_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-				   struct bfd_link_info *info ATTRIBUTE_UNUSED,
+elf32_frv_finish_dynamic_sections (struct bfd_link_info *info ATTRIBUTE_UNUSED,
 				   bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   /* Nothing to be done for non-FDPIC.  */
@@ -5693,8 +5689,7 @@ elf32_frv_finish_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 }
 
 static bool
-elf32_frvfdpic_finish_dynamic_sections (bfd *output_bfd,
-					struct bfd_link_info *info,
+elf32_frvfdpic_finish_dynamic_sections (struct bfd_link_info *info,
 					bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -5720,7 +5715,8 @@ elf32_frvfdpic_finish_dynamic_sections (bfd *output_bfd,
 	    + hgot->root.u.def.section->output_offset;
 	  struct bfd_link_hash_entry *hend;
 
-	  _frvfdpic_add_rofixup (output_bfd, frvfdpic_gotfixup_section (info),
+	  _frvfdpic_add_rofixup (info->output_bfd,
+				 frvfdpic_gotfixup_section (info),
 				 got_value, 0);
 
 	  if (frvfdpic_gotfixup_section (info)->size
@@ -5786,19 +5782,19 @@ elf32_frvfdpic_finish_dynamic_sections (bfd *output_bfd,
 	      dyn.d_un.d_ptr = frvfdpic_got_section (info)->output_section->vma
 		+ frvfdpic_got_section (info)->output_offset
 		+ frvfdpic_got_initial_offset (info);
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_JMPREL:
 	      dyn.d_un.d_ptr = frvfdpic_pltrel_section (info)
 		->output_section->vma
 		+ frvfdpic_pltrel_section (info)->output_offset;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_PLTRELSZ:
 	      dyn.d_un.d_val = frvfdpic_pltrel_section (info)->size;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 	    }
 	}
@@ -5845,8 +5841,7 @@ elf32_frvfdpic_adjust_dynamic_symbol
 
 static bool
 elf32_frvfdpic_finish_dynamic_symbol
-(bfd *output_bfd ATTRIBUTE_UNUSED,
- struct bfd_link_info *info ATTRIBUTE_UNUSED,
+(struct bfd_link_info *info ATTRIBUTE_UNUSED,
  struct elf_link_hash_entry *h ATTRIBUTE_UNUSED,
  Elf_Internal_Sym *sym ATTRIBUTE_UNUSED)
 {

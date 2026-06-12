@@ -1330,7 +1330,7 @@ do_print_thread (ui_out *uiout, const char *requested_threads,
     {
       /* The switch above put us at the top of the stack (leaf
 	 frame).  */
-      print_stack_frame (get_selected_frame (NULL),
+      print_stack_frame (get_selected_frame (),
 			 /* For MI output, print frame level.  */
 			 uiout->is_mi_like_p (),
 			 LOCATION, 0);
@@ -2887,7 +2887,7 @@ print_selected_thread_frame (struct ui_out *uiout,
 	}
 
       if (has_stack_frames ())
-	print_stack_frame_to_uiout (uiout, get_selected_frame (NULL),
+	print_stack_frame_to_uiout (uiout, get_selected_frame (),
 				    1, SRC_AND_LOC, 1);
     }
 }

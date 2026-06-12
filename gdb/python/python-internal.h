@@ -91,11 +91,11 @@ static_assert (PY_VERSION_HEX >= 0x03040000);
 #define GDB_PY_LL_ARG "L"
 #define GDB_PY_LLU_ARG "K"
 #if PY_VERSION_HEX >= 0x03060000
-typedef long long gdb_py_longest;
-typedef unsigned long long gdb_py_ulongest;
+using gdb_py_longest = long long;
+using gdb_py_ulongest = unsigned long long;
 #else
-typedef PY_LONG_LONG gdb_py_longest;
-typedef unsigned PY_LONG_LONG gdb_py_ulongest;
+using gdb_py_longest = PY_LONG_LONG;
+using gdb_py_ulongest = unsigned PY_LONG_LONG;
 #endif
 #define gdb_py_long_as_ulongest PyLong_AsUnsignedLongLong
 #define gdb_py_long_as_long_and_overflow PyLong_AsLongLongAndOverflow
@@ -104,8 +104,8 @@ typedef unsigned PY_LONG_LONG gdb_py_ulongest;
 
 #define GDB_PY_LL_ARG "l"
 #define GDB_PY_LLU_ARG "k"
-typedef long gdb_py_longest;
-typedef unsigned long gdb_py_ulongest;
+using gdb_py_longest = long;
+using gdb_py_ulongest = unsigned long;
 #define gdb_py_long_as_ulongest PyLong_AsUnsignedLong
 #define gdb_py_long_as_long_and_overflow PyLong_AsLongAndOverflow
 
@@ -1047,7 +1047,7 @@ struct Py_buffer_deleter
 };
 
 /* A unique_ptr specialization for Py_buffer.  */
-typedef std::unique_ptr<Py_buffer, Py_buffer_deleter> Py_buffer_up;
+using Py_buffer_up = std::unique_ptr<Py_buffer, Py_buffer_deleter>;
 
 /* Parse a register number from PYO_REG_ID and place the register number
    into *REG_NUM.  The register is a register for GDBARCH.
@@ -1132,15 +1132,18 @@ gdbpy_type_ready (PyTypeObject *type, PyObject *mod = nullptr)
 {
   if (PyType_Ready (type) < 0)
     return -1;
-  const char *tp_name = gdb_py_tp_name (type);
+  const auto &tp_name = gdb_py_tp_name (type);
+  std::string_view tp_name_s = tp_name;
   if (mod == nullptr)
     {
-      gdb_assert (startswith (tp_name, "gdb."));
+      gdb_assert (startswith (tp_name_s, "gdb."));
       mod = gdb_module;
     }
-  const char *dot = strrchr (tp_name, '.');
-  gdb_assert (dot != nullptr);
-  return gdb_pymodule_addobject (mod, dot + 1, (PyObject *) type);
+  const auto pos_dot = tp_name_s.find_last_of ('.');
+  gdb_assert (pos_dot != tp_name_s.npos);
+  return gdb_pymodule_addobject (mod,
+				 tp_name_s.substr (pos_dot + 1).data (),
+				 (PyObject *) type);
 }
 
 /* Poison PyType_Ready.  Only gdbpy_type_ready should be used, to

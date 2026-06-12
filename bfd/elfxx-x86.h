@@ -884,13 +884,13 @@ extern bool _bfd_elf_x86_valid_reloc_p
    Elf_Internal_Sym *, Elf_Internal_Shdr *, bool *) ATTRIBUTE_HIDDEN;
 
 extern bool _bfd_x86_elf_late_size_sections
-  (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 
 extern struct elf_x86_link_hash_table *_bfd_x86_elf_finish_dynamic_sections
-  (bfd *, struct bfd_link_info *, bfd_byte *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *, bfd_byte *) ATTRIBUTE_HIDDEN;
 
 extern bool _bfd_x86_elf_early_size_sections
-  (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 
 extern void _bfd_x86_elf_merge_symbol_attribute
   (struct elf_link_hash_entry *, unsigned int, bool, bool)

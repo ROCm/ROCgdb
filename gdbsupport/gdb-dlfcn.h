@@ -29,7 +29,7 @@ struct dlclose_deleter
 
 /* A unique pointer that points to a dynamic library.  */
 
-typedef std::unique_ptr<void, dlclose_deleter> gdb_dlhandle_up;
+using gdb_dlhandle_up = std::unique_ptr<void, dlclose_deleter>;
 
 /* Load the dynamic library file named FILENAME, and return a handle
    for that dynamic library.  Throw an error if the loading fails for

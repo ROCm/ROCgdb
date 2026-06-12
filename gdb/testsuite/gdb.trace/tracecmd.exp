@@ -86,7 +86,7 @@ gdb_test "info trace" "in gdb_recursion_test.*$srcfile:$testline1.
 \[\t \]+not installed on target" \
 	"1.4b: trace function by name"
 
-# 1.5 trace non-existant function
+# 1.5 trace non-existent function
 gdb_delete_tracepoints
 gdb_test "trace NoSuChFuNc" "Function \"NoSuChFuNc\" not defined." \
 	"1.5a: trace invalid function"

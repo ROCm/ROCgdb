@@ -72,7 +72,7 @@ mi_getopt_1 (const char *prefix, int argc, const char *const *argv,
     }
 
   if (error_on_unknown)
-    error (_("%s: Unknown option ``%s''"), prefix, arg + 1);
+    error (_("%s: Unknown option \"%s\""), prefix, arg + 1);
   else
     return -1;
 }

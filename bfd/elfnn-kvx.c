@@ -2444,8 +2444,7 @@ elfNN_kvx_final_link_relocate (reloc_howto_type *howto,
 /* Relocate a KVX ELF section.  */
 
 static int
-elfNN_kvx_relocate_section (bfd *output_bfd,
-			    struct bfd_link_info *info,
+elfNN_kvx_relocate_section (struct bfd_link_info *info,
 			    bfd *input_bfd,
 			    asection *input_section,
 			    bfd_byte *contents,
@@ -2525,7 +2524,8 @@ elfNN_kvx_relocate_section (bfd *output_bfd,
 	       (input_bfd, symtab_hdr->sh_link, sym->st_name),
 	       input_bfd, input_section, rel->r_offset, true);
 
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 	}
       else
 	{
@@ -2589,7 +2589,7 @@ elfNN_kvx_relocate_section (bfd *output_bfd,
 	save_addend = false;
 
       if (r == bfd_reloc_continue)
-	r = elfNN_kvx_final_link_relocate (howto, input_bfd, output_bfd,
+	r = elfNN_kvx_final_link_relocate (howto, input_bfd, info->output_bfd,
 					   input_section, contents, rel,
 					   relocation, info, sec,
 					   h, &unresolved_reloc,
@@ -2640,7 +2640,7 @@ elfNN_kvx_relocate_section (bfd *output_bfd,
 		  loc = globals->root.srelgot->contents;
 		  loc += globals->root.srelgot->reloc_count++
 		    * RELOC_SIZE (htab);
-		  bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
+		  bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
 
 		  bfd_reloc_code_real_type real_type =
 		    elfNN_kvx_bfd_reloc_from_type (input_bfd, r_type);
@@ -2654,13 +2654,13 @@ elfNN_kvx_relocate_section (bfd *output_bfd,
 		      /* For local dynamic, don't generate DTPOFF in any case.
 			 Initialize the DTPOFF slot into zero, so we get module
 			 base address when invoke runtime TLS resolver.  */
-		      bfd_put_NN (output_bfd, 0,
+		      bfd_put_NN (info->output_bfd, 0,
 				  globals->root.sgot->contents + off
 				  + GOT_ENTRY_SIZE);
 		    }
 		  else if (indx == 0)
 		    {
-		      bfd_put_NN (output_bfd,
+		      bfd_put_NN (info->output_bfd,
 				  relocation - dtpoff_base (info),
 				  globals->root.sgot->contents + off
 				  + GOT_ENTRY_SIZE);
@@ -2681,17 +2681,17 @@ elfNN_kvx_relocate_section (bfd *output_bfd,
 		      loc = globals->root.srelgot->contents;
 		      loc += globals->root.srelgot->reloc_count++
 			* RELOC_SIZE (globals);
-		      bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
-		      bfd_put_NN (output_bfd, (bfd_vma) 0,
+		      bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
+		      bfd_put_NN (info->output_bfd, 0,
 				  globals->root.sgot->contents + off
 				  + GOT_ENTRY_SIZE);
 		    }
 		}
 	      else
 		{
-		  bfd_put_NN (output_bfd, (bfd_vma) 1,
+		  bfd_put_NN (info->output_bfd, (bfd_vma) 1,
 			      globals->root.sgot->contents + off);
-		  bfd_put_NN (output_bfd,
+		  bfd_put_NN (info->output_bfd,
 			      relocation - dtpoff_base (info),
 			      globals->root.sgot->contents + off
 			      + GOT_ENTRY_SIZE);
@@ -2743,13 +2743,13 @@ elfNN_kvx_relocate_section (bfd *output_bfd,
 		  loc += globals->root.srelgot->reloc_count++
 		    * RELOC_SIZE (htab);
 
-		  bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
+		  bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
 
-		  bfd_put_NN (output_bfd, rela.r_addend,
+		  bfd_put_NN (info->output_bfd, rela.r_addend,
 			      globals->root.sgot->contents + off);
 		}
 	      else
-		bfd_put_NN (output_bfd, relocation - tpoff_base (info),
+		bfd_put_NN (info->output_bfd, relocation - tpoff_base (info),
 			    globals->root.sgot->contents + off);
 
 	      symbol_got_offset_mark (input_bfd, h, r_symndx);
@@ -2766,7 +2766,7 @@ elfNN_kvx_relocate_section (bfd *output_bfd,
       if (unresolved_reloc
 	  && !((input_section->flags & SEC_DEBUGGING) != 0
 	       && h->def_dynamic)
-	  && _bfd_elf_section_offset (output_bfd, info, input_section,
+	  && _bfd_elf_section_offset (info->output_bfd, info, input_section,
 				      +rel->r_offset) != (bfd_vma) - 1)
 	{
 	  (*_bfd_error_handler)
@@ -3633,8 +3633,7 @@ kvx_map_one_stub (struct bfd_hash_entry *gen_entry, void *in_arg)
 /* Output mapping symbols for linker generated sections.  */
 
 static bool
-elfNN_kvx_output_arch_local_syms (bfd *output_bfd,
-				  struct bfd_link_info *info,
+elfNN_kvx_output_arch_local_syms (struct bfd_link_info *info,
 				  void *finfo,
 				  int (*func) (void *, const char *,
 					       Elf_Internal_Sym *,
@@ -3665,7 +3664,7 @@ elfNN_kvx_output_arch_local_syms (bfd *output_bfd,
 	  osi.sec = stub_sec;
 
 	  osi.sec_shndx = _bfd_elf_section_from_bfd_section
-	    (output_bfd, osi.sec->output_section);
+	    (info->output_bfd, osi.sec->output_section);
 
 	  bfd_hash_traverse (&htab->stub_hash_table, kvx_map_one_stub,
 			     &osi);
@@ -3677,7 +3676,7 @@ elfNN_kvx_output_arch_local_syms (bfd *output_bfd,
     return true;
 
   osi.sec_shndx = _bfd_elf_section_from_bfd_section
-    (output_bfd, htab->root.splt->output_section);
+    (info->output_bfd, htab->root.splt->output_section);
   osi.sec = htab->root.splt;
 
   return true;
@@ -4028,8 +4027,7 @@ kvx_readonly_dynrelocs (struct elf_link_hash_entry * h, void * inf)
 /* This is the most important function of all . Innocuosly named
    though !  */
 static bool
-elfNN_kvx_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-			      struct bfd_link_info *info)
+elfNN_kvx_late_size_sections (struct bfd_link_info *info)
 {
   struct elf_kvx_link_hash_table *htab;
   bfd *dynobj;
@@ -4356,7 +4354,7 @@ elfNN_kvx_create_small_pltn_entry (struct elf_link_hash_entry *h,
    _TLS_MODULE_BASE_, if needed.  */
 
 static bool
-elfNN_kvx_early_size_sections (bfd *output_bfd, struct bfd_link_info *info)
+elfNN_kvx_early_size_sections (struct bfd_link_info *info)
 {
   asection *tls_sec;
 
@@ -4375,10 +4373,10 @@ elfNN_kvx_early_size_sections (bfd *output_bfd, struct bfd_link_info *info)
       if (tlsbase)
 	{
 	  struct bfd_link_hash_entry *h = NULL;
-	  elf_backend_data *bed = get_elf_backend_data (output_bfd);
+	  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
 
 	  if (!(_bfd_generic_link_add_one_symbol
-		(info, output_bfd, "_TLS_MODULE_BASE_", BSF_LOCAL,
+		(info, info->output_bfd, "_TLS_MODULE_BASE_", BSF_LOCAL,
 		 tls_sec, 0, NULL, false, bed->collect, &h)))
 	    return false;
 
@@ -4396,8 +4394,7 @@ elfNN_kvx_early_size_sections (bfd *output_bfd, struct bfd_link_info *info)
 /* Finish up dynamic symbol handling.  We set the contents of various
    dynamic sections here.  */
 static bool
-elfNN_kvx_finish_dynamic_symbol (bfd *output_bfd,
-				 struct bfd_link_info *info,
+elfNN_kvx_finish_dynamic_symbol (struct bfd_link_info *info,
 				 struct elf_link_hash_entry *h,
 				 Elf_Internal_Sym *sym)
 {
@@ -4429,7 +4426,7 @@ elfNN_kvx_finish_dynamic_symbol (bfd *output_bfd,
 	  || relplt == NULL)
 	abort ();
 
-      elfNN_kvx_create_small_pltn_entry (h, htab, output_bfd);
+      elfNN_kvx_create_small_pltn_entry (h, htab, info->output_bfd);
       if (!h->def_regular)
 	{
 	  /* Mark the symbol as undefined, rather than as defined in
@@ -4491,7 +4488,7 @@ elfNN_kvx_finish_dynamic_symbol (bfd *output_bfd,
       else
 	{
 	  BFD_ASSERT ((h->got.offset & 1) == 0);
-	  bfd_put_NN (output_bfd, (bfd_vma) 0,
+	  bfd_put_NN (info->output_bfd, 0,
 		      htab->root.sgot->contents + h->got.offset);
 	  rela.r_info = ELFNN_R_INFO (h->dynindx, R_KVX_GLOB_DAT);
 	  rela.r_addend = 0;
@@ -4499,7 +4496,7 @@ elfNN_kvx_finish_dynamic_symbol (bfd *output_bfd,
 
       loc = htab->root.srelgot->contents;
       loc += htab->root.srelgot->reloc_count++ * RELOC_SIZE (htab);
-      bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
+      bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
     }
 
   if (h->needs_copy)
@@ -4522,7 +4519,7 @@ elfNN_kvx_finish_dynamic_symbol (bfd *output_bfd,
       rela.r_addend = 0;
       loc = htab->srelbss->contents;
       loc += htab->srelbss->reloc_count++ * RELOC_SIZE (htab);
-      bfd_elfNN_swap_reloca_out (output_bfd, &rela, loc);
+      bfd_elfNN_swap_reloca_out (info->output_bfd, &rela, loc);
     }
 
   /* Mark _DYNAMIC and _GLOBAL_OFFSET_TABLE_ as absolute.  SYM may
@@ -4546,8 +4543,7 @@ elfNN_kvx_init_small_plt0_entry (bfd *output_bfd ATTRIBUTE_UNUSED,
 }
 
 static bool
-elfNN_kvx_finish_dynamic_sections (bfd *output_bfd,
-				   struct bfd_link_info *info,
+elfNN_kvx_finish_dynamic_sections (struct bfd_link_info *info,
 				   bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   struct elf_kvx_link_hash_table *htab;
@@ -4610,7 +4606,7 @@ elfNN_kvx_finish_dynamic_sections (bfd *output_bfd,
 	      break;
 	    }
 
-	  bfd_elfNN_swap_dyn_out (output_bfd, &dyn, dyncon);
+	  bfd_elfNN_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	}
 
     }
@@ -4618,7 +4614,7 @@ elfNN_kvx_finish_dynamic_sections (bfd *output_bfd,
   /* Fill in the special first entry in the procedure linkage table.  */
   if (htab->root.splt && htab->root.splt->size > 0)
     {
-      elfNN_kvx_init_small_plt0_entry (output_bfd, htab);
+      elfNN_kvx_init_small_plt0_entry (info->output_bfd, htab);
 
       elf_section_data (htab->root.splt->output_section)->
 	this_hdr.sh_entsize = htab->plt_entry_size;
@@ -4636,14 +4632,12 @@ elfNN_kvx_finish_dynamic_sections (bfd *output_bfd,
       /* Fill in the first three entries in the global offset table.  */
       if (htab->root.sgotplt->size > 0)
 	{
-	  bfd_put_NN (output_bfd, (bfd_vma) 0, htab->root.sgotplt->contents);
+	  bfd_put_NN (info->output_bfd, 0, htab->root.sgotplt->contents);
 
 	  /* Write GOT[1] and GOT[2], needed for the dynamic linker.  */
-	  bfd_put_NN (output_bfd,
-		      (bfd_vma) 0,
+	  bfd_put_NN (info->output_bfd, 0,
 		      htab->root.sgotplt->contents + GOT_ENTRY_SIZE);
-	  bfd_put_NN (output_bfd,
-		      (bfd_vma) 0,
+	  bfd_put_NN (info->output_bfd, 0,
 		      htab->root.sgotplt->contents + GOT_ENTRY_SIZE * 2);
 	}
 
@@ -4653,7 +4647,7 @@ elfNN_kvx_finish_dynamic_sections (bfd *output_bfd,
 	    {
 	      bfd_vma addr =
 		sdyn ? sdyn->output_section->vma + sdyn->output_offset : 0;
-	      bfd_put_NN (output_bfd, addr, htab->root.sgot->contents);
+	      bfd_put_NN (info->output_bfd, addr, htab->root.sgot->contents);
 	    }
 	}
 

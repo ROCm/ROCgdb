@@ -187,13 +187,6 @@ static int elf64_hppa_link_output_symbol_hook
   (struct bfd_link_info *, const char *, Elf_Internal_Sym *,
    asection *, struct elf_link_hash_entry *);
 
-static bool elf64_hppa_finish_dynamic_symbol
-  (bfd *, struct bfd_link_info *,
-   struct elf_link_hash_entry *, Elf_Internal_Sym *);
-
-static bool elf64_hppa_finish_dynamic_sections
-  (bfd *, struct bfd_link_info *, bfd_byte *);
-
 static bool elf64_hppa_check_relocs
   (bfd *, struct bfd_link_info *,
    asection *, const Elf_Internal_Rela *);
@@ -1615,7 +1608,7 @@ elf64_hppa_mark_milli_and_exported_functions (struct elf_link_hash_entry *eh,
    the contents of our special sections.  */
 
 static bool
-elf64_hppa_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
+elf64_hppa_late_size_sections (struct bfd_link_info *info)
 {
   struct elf64_hppa_link_hash_table *hppa_info;
   struct elf64_hppa_allocate_data data;
@@ -2021,7 +2014,7 @@ elf64_hppa_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
       /* Force DT_FLAGS to always be set.
 	 Required by HPUX 11.00 patch PHSS_26559.
 	 PR 30743: But do not set them for non-HPUX targets.  */
-      if (output_bfd->xvec == & hppa_elf64_vec)
+      if (info->output_bfd->xvec == &hppa_elf64_vec)
 	{
 	  if (!add_dynamic_entry (DT_FLAGS, (info)->flags))
 	    return false;
@@ -2037,7 +2030,7 @@ elf64_hppa_late_size_sections (bfd *output_bfd, struct bfd_link_info *info)
     }
 #undef add_dynamic_entry
 
-  return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs);
+  return _bfd_elf_add_dynamic_tags (info, relocs);
 }
 
 /* Called after we have output the symbol into the dynamic symbol
@@ -2084,8 +2077,7 @@ elf64_hppa_link_output_symbol_hook (struct bfd_link_info *info ATTRIBUTE_UNUSED,
    dynamic sections here.  */
 
 static bool
-elf64_hppa_finish_dynamic_symbol (bfd *output_bfd,
-				  struct bfd_link_info *info,
+elf64_hppa_finish_dynamic_symbol (struct bfd_link_info *info,
 				  struct elf_link_hash_entry *eh,
 				  Elf_Internal_Sym *sym)
 {
@@ -2121,7 +2113,7 @@ elf64_hppa_finish_dynamic_symbol (bfd *output_bfd,
       sym->st_value = (hh->opd_offset
 		       + sopd->output_offset
 		       + sopd->output_section->vma);
-      sym->st_shndx = _bfd_elf_section_from_bfd_section (output_bfd,
+      sym->st_shndx = _bfd_elf_section_from_bfd_section (info->output_bfd,
 							 sopd->output_section);
     }
 
@@ -2209,7 +2201,7 @@ elf64_hppa_finish_dynamic_symbol (bfd *output_bfd,
       value = hh->plt_offset - hppa_info->gp_offset;
 
       insn = bfd_get_32 (stub->owner, stub->contents + hh->stub_offset);
-      if (output_bfd->arch_info->mach >= 25)
+      if (info->output_bfd->arch_info->mach >= 25)
 	{
 	  /* Wide mode allows 16 bit offsets.  */
 	  max_offset = 32768;
@@ -2238,7 +2230,7 @@ elf64_hppa_finish_dynamic_symbol (bfd *output_bfd,
       /* Fix up the second ldd instruction.  */
       value += 8;
       insn = bfd_get_32 (stub->owner, stub->contents + hh->stub_offset + 8);
-      if (output_bfd->arch_info->mach >= 25)
+      if (info->output_bfd->arch_info->mach >= 25)
 	{
 	  insn &= ~ 0xfff1;
 	  insn |= re_assemble_16 ((int) value);
@@ -2608,8 +2600,7 @@ elf64_hppa_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
 /* Finish up the dynamic sections.  */
 
 static bool
-elf64_hppa_finish_dynamic_sections (bfd *output_bfd,
-				    struct bfd_link_info *info,
+elf64_hppa_finish_dynamic_sections (struct bfd_link_info *info,
 				    bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -2668,33 +2659,33 @@ elf64_hppa_finish_dynamic_sections (bfd *output_bfd,
 		 In HPUX 11.11, HP ld now allocates the region at the end
 		 of the .bss section.  This avoids adding 16 bytes to the
 		 start of .data.  This may affect relocation offsets.  */
-	      if (output_bfd->xvec == & hppa_elf64_vec
+	      if (info->output_bfd->xvec == & hppa_elf64_vec
 	          && ! bfd_link_pic (info))
 		{
-		  s = bfd_get_section_by_name (output_bfd, ".bss");
+		  s = bfd_get_section_by_name (info->output_bfd, ".bss");
 		  if (!s)
 		    break;
 		  dyn.d_un.d_ptr = s->vma + s->size - 16;
-		  bfd_elf64_swap_dyn_out (output_bfd, &dyn, dyncon);
+		  bfd_elf64_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 		}
 	      break;
 
 	    case DT_PLTGOT:
 	      /* HP's use PLTGOT to set the GOT register.  */
-	      dyn.d_un.d_ptr = _bfd_get_gp_value (output_bfd);
-	      bfd_elf64_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      dyn.d_un.d_ptr = _bfd_get_gp_value (info->output_bfd);
+	      bfd_elf64_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_JMPREL:
 	      s = hppa_info->root.srelplt;
 	      dyn.d_un.d_ptr = s->output_section->vma + s->output_offset;
-	      bfd_elf64_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf64_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_PLTRELSZ:
 	      s = hppa_info->root.srelplt;
 	      dyn.d_un.d_val = s->size;
-	      bfd_elf64_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf64_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_RELA:
@@ -2704,7 +2695,7 @@ elf64_hppa_finish_dynamic_sections (bfd *output_bfd,
 	      if (! s || ! s->size)
 		s = hppa_info->opd_rel_sec;
 	      dyn.d_un.d_ptr = s->output_section->vma + s->output_offset;
-	      bfd_elf64_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf64_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_RELASZ:
@@ -2719,7 +2710,7 @@ elf64_hppa_finish_dynamic_sections (bfd *output_bfd,
 		 it, so we'll emulate them.  */
 	      s = hppa_info->root.srelplt;
 	      dyn.d_un.d_val += s->size;
-	      bfd_elf64_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf64_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    }
@@ -4305,14 +4296,13 @@ elf_hppa_final_link_relocate (Elf_Internal_Rela *rel,
 /* Relocate an HPPA ELF section.  */
 
 static int
-elf64_hppa_relocate_section (bfd *output_bfd,
-			   struct bfd_link_info *info,
-			   bfd *input_bfd,
-			   asection *input_section,
-			   bfd_byte *contents,
-			   Elf_Internal_Rela *relocs,
-			   Elf_Internal_Sym *local_syms,
-			   asection **local_sections)
+elf64_hppa_relocate_section (struct bfd_link_info *info,
+			     bfd *input_bfd,
+			     asection *input_section,
+			     bfd_byte *contents,
+			     Elf_Internal_Rela *relocs,
+			     Elf_Internal_Sym *local_syms,
+			     asection **local_sections)
 {
   Elf_Internal_Shdr *symtab_hdr;
   Elf_Internal_Rela *rel;
@@ -4358,7 +4348,8 @@ elf64_hppa_relocate_section (bfd *output_bfd,
 	  /* This is a local symbol, hh defaults to NULL.  */
 	  sym = local_syms + r_symndx;
 	  sym_sec = local_sections[r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sym_sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sym_sec, rel);
 	}
       else
 	{
@@ -4436,7 +4427,7 @@ elf64_hppa_relocate_section (bfd *output_bfd,
       if (bfd_link_relocatable (info))
 	continue;
 
-      r = elf_hppa_final_link_relocate (rel, input_bfd, output_bfd,
+      r = elf_hppa_final_link_relocate (rel, input_bfd, info->output_bfd,
 					input_section, contents,
 					relocation, info, sym, sym_sec,
 					eh);

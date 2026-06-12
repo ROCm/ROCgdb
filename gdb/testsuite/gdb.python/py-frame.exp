@@ -54,7 +54,7 @@ gdb_test "python print (bf1.read_var(variable = \"b\"))" "\"bar\"" \
     "test b using named arguments"
 
 # Test the read_var function in another block other than the current
-# block (in this case, the super block). Test thar read_var is reading
+# block (in this case, the super block). Test that read_var is reading
 # the correct variables of i and f but they are the correct value and type.
 gdb_py_test_silent_cmd "python sb = bf1.block().superblock" "get superblock" 0
 gdb_test "python print (bf1.read_var(\"i\", sb))" "1.1.*" "test i = 1.1"
@@ -64,7 +64,7 @@ gdb_test "python print (bf1.read_var(\"f\", sb).type)" "double" "test double f"
 
 # Now test read_var with a variable and block using named arguments.
 gdb_test "python print (bf1.read_var(block = sb, variable = \"i\"))" "1.1.*" \
-    "test i = 1.1 usign named arguments"
+    "test i = 1.1 using named arguments"
 gdb_test "python print (bf1.read_var(block = sb, variable = \"f\"))" "2.2.*" \
     "test f = 2.2 using named arguments"
 

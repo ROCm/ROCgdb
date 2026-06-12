@@ -20,6 +20,6 @@
 #ifndef GDB_CONFIG_DJGPP_NL_TYPES_H
 #define GDB_CONFIG_DJGPP_NL_TYPES_H
 
-typedef int nl_item;
+using nl_item = int;
 
 #endif /* GDB_CONFIG_DJGPP_NL_TYPES_H */

@@ -86,7 +86,7 @@ typedef enum
 /* Types of the debugging library.  */
 
 /* Handle for a process.  This type is opaque.  */
-typedef struct td_thragent td_thragent_t;
+using td_thragent_t = struct td_thragent;
 
 /* The actual thread handle type.  This is also opaque.  */
 typedef struct td_thrhandle
@@ -239,8 +239,8 @@ typedef struct td_ta_stats
 
 /* Since Sun's library is based on Solaris threads we have to define a few
    types to map them to POSIX threads.  */
-typedef pthread_t thread_t;
-typedef pthread_key_t thread_key_t;
+using thread_t = pthread_t;
+using thread_key_t = pthread_key_t;
 
 
 /* Callback for iteration over threads.  */

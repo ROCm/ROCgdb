@@ -97,8 +97,6 @@ if { [target_info gdb_protocol] == "extended-remote" } {
     set filename_re "\[^\r\n\]+/${testfile} \\(deleted\\)"
 }
 
-verbose -log "APB: warning: No executable has been specified, and target executable $filename_re could not be found\\.  Try using the \"file\" command\\."
-
 gdb_test "attach $testpid" \
     [multi_line \
 	 "Attaching to process $decimal" \

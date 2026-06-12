@@ -46,7 +46,7 @@ if {![runto_main]} {
     return
 }
 
-# Check we hace non-stop mode.  We do try to force this on above, but maybe
+# Check we have non-stop mode.  We do try to force this on above, but maybe
 # the target doesn't support non-stop mode, in which case (hopefully)
 # non-stop mode will still show as off, and this test should not be run.
 if {![is_target_non_stop]} {

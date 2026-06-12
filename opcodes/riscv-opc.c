@@ -22,6 +22,7 @@
 
 #include "sysdep.h"
 #include "opcode/riscv.h"
+#include <assert.h>
 #include <stdio.h>
 
 /* Register names used by gas and objdump.  */
@@ -210,14 +211,16 @@ static int
 match_rd_even (const struct riscv_opcode *op, insn_t insn)
 {
   int rd = (insn & MASK_RD) >> OP_SH_RD;
-  return ((rd & 1) == 0) && match_opcode (op, insn);
+  return ((rd & 1) == 0)
+         && (op->pinfo == INSN_MACRO || match_opcode (op, insn));
 }
 
 static int
 match_rs2_even (const struct riscv_opcode *op, insn_t insn)
 {
   int rs2 = (insn & MASK_RS2) >> OP_SH_RS2;
-  return ((rs2 & 1) == 0) && match_opcode (op, insn);
+  return ((rs2 & 1) == 0)
+         && (op->pinfo == INSN_MACRO || match_opcode (op, insn));
 }
 
 static int
@@ -236,11 +239,12 @@ match_rd_even_nonzero (const struct riscv_opcode *op, insn_t insn)
 static int
 match_rs1_nonzero (const struct riscv_opcode *op ATTRIBUTE_UNUSED, insn_t insn)
 {
+  assert (op->pinfo == INSN_MACRO);
   return (insn & MASK_RS1) != 0;
 }
 
 static int
-match_rs1_nonzero_rs2_even (const struct riscv_opcode *op ATTRIBUTE_UNUSED, insn_t insn)
+match_rs1_nonzero_rs2_even (const struct riscv_opcode *op, insn_t insn)
 {
   return match_rs1_nonzero (op, insn) && match_rs2_even (op, insn);
 }
@@ -3587,74 +3591,74 @@ const struct riscv_opcode riscv_opcodes[] =
 const struct riscv_opcode riscv_insn_types[] =
 {
 /* name, xlen, isa, operands, match, mask, match_func, pinfo.  */
-{"r",       0, INSN_CLASS_I,       "O4,F3,F7,d,s,t",    0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F7,D,s,t",    0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F7,d,S,t",    0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F7,D,S,t",    0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F7,d,s,T",    0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F7,D,s,T",    0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F7,d,S,T",    0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F7,D,S,T",    0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_I,       "O4,F3,F2,d,s,t,r",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,D,s,t,r",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,d,S,t,r",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,D,S,t,r",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,d,s,T,r",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,D,s,T,r",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,d,S,T,r",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,D,S,T,r",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,d,s,t,R",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,D,s,t,R",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,d,S,t,R",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,D,S,t,R",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,d,s,T,R",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,D,s,T,R",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,d,S,T,R",  0, 0, NULL, 0 },
-{"r",       0, INSN_CLASS_F,       "O4,F3,F2,D,S,T,R",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_I,       "O7,F3,F7,d,s,t",    0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F7,D,s,t",    0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F7,d,S,t",    0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F7,D,S,t",    0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F7,d,s,T",    0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F7,D,s,T",    0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F7,d,S,T",    0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F7,D,S,T",    0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_I,       "O7,F3,F2,d,s,t,r",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,D,s,t,r",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,d,S,t,r",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,D,S,t,r",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,d,s,T,r",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,D,s,T,r",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,d,S,T,r",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,D,S,T,r",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,d,s,t,R",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,D,s,t,R",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,d,S,t,R",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,D,S,t,R",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,d,s,T,R",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,D,s,T,R",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,d,S,T,R",  0, 0, NULL, 0 },
+{"r",       0, INSN_CLASS_F,       "O7,F3,F2,D,S,T,R",  0, 0, NULL, 0 },
 
-{"r4",      0, INSN_CLASS_I,       "O4,F3,F2,d,s,t,r",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,D,s,t,r",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,d,S,t,r",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,D,S,t,r",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,d,s,T,r",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,D,s,T,r",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,d,S,T,r",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,D,S,T,r",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,d,s,t,R",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,D,s,t,R",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,d,S,t,R",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,D,S,t,R",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,d,s,T,R",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,D,s,T,R",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,d,S,T,R",  0, 0, NULL, 0 },
-{"r4",      0, INSN_CLASS_F,       "O4,F3,F2,D,S,T,R",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_I,       "O7,F3,F2,d,s,t,r",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,D,s,t,r",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,d,S,t,r",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,D,S,t,r",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,d,s,T,r",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,D,s,T,r",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,d,S,T,r",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,D,S,T,r",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,d,s,t,R",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,D,s,t,R",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,d,S,t,R",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,D,S,t,R",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,d,s,T,R",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,D,s,T,R",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,d,S,T,R",  0, 0, NULL, 0 },
+{"r4",      0, INSN_CLASS_F,       "O7,F3,F2,D,S,T,R",  0, 0, NULL, 0 },
 
-{"i",       0, INSN_CLASS_I,       "O4,F3,d,s,j",       0, 0, NULL, 0 },
-{"i",       0, INSN_CLASS_F,       "O4,F3,D,s,j",       0, 0, NULL, 0 },
-{"i",       0, INSN_CLASS_F,       "O4,F3,d,S,j",       0, 0, NULL, 0 },
-{"i",       0, INSN_CLASS_F,       "O4,F3,D,S,j",       0, 0, NULL, 0 },
-{"i",       0, INSN_CLASS_I,       "O4,F3,d,o(s)",      0, 0, NULL, 0 },
-{"i",       0, INSN_CLASS_F,       "O4,F3,D,o(s)",      0, 0, NULL, 0 },
+{"i",       0, INSN_CLASS_I,       "O7,F3,d,s,j",       0, 0, NULL, 0 },
+{"i",       0, INSN_CLASS_F,       "O7,F3,D,s,j",       0, 0, NULL, 0 },
+{"i",       0, INSN_CLASS_F,       "O7,F3,d,S,j",       0, 0, NULL, 0 },
+{"i",       0, INSN_CLASS_F,       "O7,F3,D,S,j",       0, 0, NULL, 0 },
+{"i",       0, INSN_CLASS_I,       "O7,F3,d,o(s)",      0, 0, NULL, 0 },
+{"i",       0, INSN_CLASS_F,       "O7,F3,D,o(s)",      0, 0, NULL, 0 },
 
-{"s",       0, INSN_CLASS_I,       "O4,F3,t,q(s)",      0, 0, NULL, 0 },
-{"s",       0, INSN_CLASS_F,       "O4,F3,T,q(s)",      0, 0, NULL, 0 },
+{"s",       0, INSN_CLASS_I,       "O7,F3,t,q(s)",      0, 0, NULL, 0 },
+{"s",       0, INSN_CLASS_F,       "O7,F3,T,q(s)",      0, 0, NULL, 0 },
 
-{"sb",      0, INSN_CLASS_I,       "O4,F3,s,t,p",       0, 0, NULL, 0 },
-{"sb",      0, INSN_CLASS_F,       "O4,F3,S,t,p",       0, 0, NULL, 0 },
-{"sb",      0, INSN_CLASS_F,       "O4,F3,s,T,p",       0, 0, NULL, 0 },
-{"sb",      0, INSN_CLASS_F,       "O4,F3,S,T,p",       0, 0, NULL, 0 },
-{"b",       0, INSN_CLASS_I,       "O4,F3,s,t,p",       0, 0, NULL, 0 },
-{"b",       0, INSN_CLASS_F,       "O4,F3,S,t,p",       0, 0, NULL, 0 },
-{"b",       0, INSN_CLASS_F,       "O4,F3,s,T,p",       0, 0, NULL, 0 },
-{"b",       0, INSN_CLASS_F,       "O4,F3,S,T,p",       0, 0, NULL, 0 },
+{"sb",      0, INSN_CLASS_I,       "O7,F3,s,t,p",       0, 0, NULL, 0 },
+{"sb",      0, INSN_CLASS_F,       "O7,F3,S,t,p",       0, 0, NULL, 0 },
+{"sb",      0, INSN_CLASS_F,       "O7,F3,s,T,p",       0, 0, NULL, 0 },
+{"sb",      0, INSN_CLASS_F,       "O7,F3,S,T,p",       0, 0, NULL, 0 },
+{"b",       0, INSN_CLASS_I,       "O7,F3,s,t,p",       0, 0, NULL, 0 },
+{"b",       0, INSN_CLASS_F,       "O7,F3,S,t,p",       0, 0, NULL, 0 },
+{"b",       0, INSN_CLASS_F,       "O7,F3,s,T,p",       0, 0, NULL, 0 },
+{"b",       0, INSN_CLASS_F,       "O7,F3,S,T,p",       0, 0, NULL, 0 },
 
-{"u",       0, INSN_CLASS_I,       "O4,d,u",            0, 0, NULL, 0 },
-{"u",       0, INSN_CLASS_F,       "O4,D,u",            0, 0, NULL, 0 },
+{"u",       0, INSN_CLASS_I,       "O7,d,u",            0, 0, NULL, 0 },
+{"u",       0, INSN_CLASS_F,       "O7,D,u",            0, 0, NULL, 0 },
 
-{"uj",      0, INSN_CLASS_I,       "O4,d,a",            0, 0, NULL, 0 },
-{"uj",      0, INSN_CLASS_F,       "O4,D,a",            0, 0, NULL, 0 },
-{"j",       0, INSN_CLASS_I,       "O4,d,a",            0, 0, NULL, 0 },
-{"j",       0, INSN_CLASS_F,       "O4,D,a",            0, 0, NULL, 0 },
+{"uj",      0, INSN_CLASS_I,       "O7,d,a",            0, 0, NULL, 0 },
+{"uj",      0, INSN_CLASS_F,       "O7,D,a",            0, 0, NULL, 0 },
+{"j",       0, INSN_CLASS_I,       "O7,d,a",            0, 0, NULL, 0 },
+{"j",       0, INSN_CLASS_F,       "O7,D,a",            0, 0, NULL, 0 },
 
 {"cr",      0, INSN_CLASS_ZCA,       "O2,CF4,d,CV",       0, 0, NULL, 0 },
 {"cr",      0, INSN_CLASS_ZCF, "O2,CF4,D,CV",       0, 0, NULL, 0 },

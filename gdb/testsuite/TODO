@@ -15,7 +15,7 @@ arguments (PR 1714).  Test printing structure arguments of
 2,4,6,8,12,16,and 20 bytes.  Same for structure return of all those
 sizes ("return", "finish", and call function).
 
-Get crossload tests to use --enable-targets and reenable them.
+Get crossload tests to use --enable-targets and re-enable them.
 
 corefile.exp:
 Test ability to run program when there is a core target, then go

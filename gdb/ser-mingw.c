@@ -853,7 +853,7 @@ struct pipe_state_destroyer
   }
 };
 
-typedef std::unique_ptr<pipe_state, pipe_state_destroyer> pipe_state_up;
+using pipe_state_up = std::unique_ptr<pipe_state, pipe_state_destroyer>;
 
 static void
 pipe_windows_open (struct serial *scb, const char *name)

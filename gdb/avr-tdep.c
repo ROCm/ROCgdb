@@ -924,7 +924,7 @@ avr_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 constexpr gdb_byte avr_break_insn [] = { 0x98, 0x95 };
 
-typedef BP_MANIPULATION (avr_break_insn) avr_breakpoint;
+using avr_breakpoint = BP_MANIPULATION (avr_break_insn);
 
 /* Determine, for architecture GDBARCH, how a return value of TYPE
    should be returned.  If it is supposed to be returned in registers,

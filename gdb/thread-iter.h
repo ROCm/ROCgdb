@@ -34,12 +34,12 @@ using inf_threads_iterator = intrusive_list<thread_info>::iterator;
 class all_threads_iterator
 {
 public:
-  typedef all_threads_iterator self_type;
-  typedef struct thread_info value_type;
-  typedef struct thread_info &reference;
-  typedef struct thread_info *pointer;
-  typedef std::forward_iterator_tag iterator_category;
-  typedef int difference_type;
+  using self_type = all_threads_iterator;
+  using value_type = struct thread_info;
+  using reference = struct thread_info &;
+  using pointer = struct thread_info *;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type = int;
 
   /* Tag type.  */
   struct begin_t {};
@@ -83,12 +83,12 @@ private:
 class all_matching_threads_iterator
 {
 public:
-  typedef all_matching_threads_iterator self_type;
-  typedef struct thread_info value_type;
-  typedef struct thread_info &reference;
-  typedef struct thread_info *pointer;
-  typedef std::forward_iterator_tag iterator_category;
-  typedef int difference_type;
+  using self_type = all_matching_threads_iterator;
+  using value_type = struct thread_info;
+  using reference = struct thread_info &;
+  using pointer = struct thread_info *;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type = int;
 
   /* Creates an iterator that iterates over all threads that match
      FILTER_PTID.  */

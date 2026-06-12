@@ -384,7 +384,7 @@ sympy_repr (PyObject *self)
     return gdb_py_invalid_object_repr (self);
 
   return PyUnicode_FromFormat ("<%s print_name=%s>",
-			       gdbpy_py_obj_tp_name (self),
+			       gdbpy_py_obj_tp_name (self).c_str (),
 			       symbol->print_name ());
 }
 

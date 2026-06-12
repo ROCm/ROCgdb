@@ -422,7 +422,7 @@ frv_register_sim_regno (struct gdbarch *gdbarch, int reg)
 
 constexpr gdb_byte frv_break_insn[] = {0xc0, 0x70, 0x00, 0x01};
 
-typedef BP_MANIPULATION (frv_break_insn) frv_breakpoint;
+using frv_breakpoint = BP_MANIPULATION (frv_break_insn);
 
 /* Define the maximum number of instructions which may be packed into a
    bundle (VLIW instruction).  */

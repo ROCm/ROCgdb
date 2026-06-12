@@ -743,7 +743,7 @@ sparc32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
    location for inserting the breakpoint.  */
 constexpr gdb_byte sparc_break_insn[] = { 0x91, 0xd0, 0x20, 0x01 };
 
-typedef BP_MANIPULATION (sparc_break_insn) sparc_breakpoint;
+using sparc_breakpoint = BP_MANIPULATION (sparc_break_insn);
 
 
 /* Allocate and initialize a frame cache.  */

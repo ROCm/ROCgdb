@@ -14123,6 +14123,7 @@ fi
 # The options we'll try to enable.
 build_warnings=" \
 -Wall \
+-Wdangling-reference \
 -Wdeprecated-copy \
 -Wdeprecated-copy-dtor \
 -Wduplicated-cond \
@@ -14140,6 +14141,7 @@ build_warnings=" \
 -Wshadow=local \
 -Wstrict-null-sentinel \
 -Wsuggest-override \
+-Wunterminated-string-initialization \
 -Wunused-but-set-parameter \
 -Wunused-but-set-variable \
 -Wunused-const-variable=1 \

@@ -344,7 +344,7 @@ or1k_return_value (struct gdbarch *gdbarch, struct value *functype,
 
 constexpr gdb_byte or1k_break_insn[] = {0x21, 0x00, 0x00, 0x01};
 
-typedef BP_MANIPULATION (or1k_break_insn) or1k_breakpoint;
+using or1k_breakpoint = BP_MANIPULATION (or1k_break_insn);
 
 static bool
 or1k_delay_slot_p (struct gdbarch *gdbarch, CORE_ADDR pc)

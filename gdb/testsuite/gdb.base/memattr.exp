@@ -352,7 +352,7 @@ gdb_test_multiple "info mem" "mem 1 to 5 were enabled" {
 
 gdb_test "disable mem 7 8" \
     "No memory region number 7.*No memory region number 8." \
-    "disable non-existant regions"
+    "disable non-existent regions"
 
 #
 # Test delete
@@ -483,7 +483,7 @@ gdb_test_multiple "info mem" "mem 2-4 were deleted" {
 }
 
 gdb_test "delete mem 8" "No memory region number 8." \
-    "delete non-existant region"
+    "delete non-existent region"
 
 #
 # Test overlapping checking

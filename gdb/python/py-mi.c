@@ -379,7 +379,7 @@ gdbpy_notify_mi (PyObject *self, PyObject *args, PyObject *kwargs)
       PyErr_Format
 	(PyExc_ValueError,
 	 _("MI notification data must be either None or a dictionary, not %s"),
-	 gdbpy_py_obj_tp_name (data));
+	 gdbpy_py_obj_tp_name (data).c_str ());
       return nullptr;
     }
 

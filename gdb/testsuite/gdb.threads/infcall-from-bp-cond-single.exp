@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# This test reprocuces bug gdb/28942, performing an inferior function
+# This test reproduces bug gdb/28942, performing an inferior function
 # call from a breakpoint condition in a multi-threaded inferior.
 #
 # The important part of this test is that, when the conditional
@@ -53,7 +53,7 @@ proc start_gdb_and_runto_main { target_async target_non_stop } {
 #
 # TARGET_ASYNC and TARGET_NON_STOP are used when starting up GDB.
 #
-# When STOP_AT_COND is true the breakpoint condtion will evaluate to
+# When STOP_AT_COND is true the breakpoint condition will evaluate to
 # true, and GDB will stop at the breakpoint.  Otherwise, the
 # breakpoint condition will evaluate to false and GDB will not stop at
 # the breakpoint.

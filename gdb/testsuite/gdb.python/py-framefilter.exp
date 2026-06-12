@@ -259,7 +259,7 @@ gdb_test "bt no-filter 1" \
     "bt no-filter 1 no address"
 gdb_test "bt 1" \
     "#0  cnuf_dneThe End \\(foo=21, bar=\"Param\", fb=, bf=\{nothing = \"Foo Bar\", f = 42, s = 19\}\\) at .*py-framefilter.c.*" \
-    "bt 1 no addresss"
+    "bt 1 no address"
 
 gdb_test_no_output "set python print-stack message" \
     "Set python print-stack to message for Error filter"

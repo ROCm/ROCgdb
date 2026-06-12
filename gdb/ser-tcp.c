@@ -61,7 +61,7 @@
 #include <algorithm>
 
 #ifndef HAVE_SOCKLEN_T
-typedef int socklen_t;
+using socklen_t = int;
 #endif
 
 /* For "set tcp" and "show tcp".  */

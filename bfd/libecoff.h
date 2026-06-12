@@ -153,9 +153,6 @@ typedef struct ecoff_tdata
      particular ECOFF file.  This is not valid until
      ecoff_compute_section_file_positions is called.  */
   bool rdata_in_text;
-
-  /* Used by coff-mips.c to track REFHI relocs for pairing with REFLO.  */
-  struct mips_hi *mips_refhi_list;
 } ecoff_data_type;
 
 /* Each canonical asymbol really looks like this.  */
@@ -201,10 +198,13 @@ struct ecoff_section_tdata
      we need to keep track of the gp values that we picked for each
      input .lita section . */
   bfd_vma gp;
+
+  /* Used by coff-mips.c to track REFHI relocs for pairing with REFLO.  */
+  struct mips_hi *mips_refhi_list;
 };
 
 /* An accessor macro for the ecoff_section_tdata structure.  */
-#define ecoff_section_data(abfd, sec) \
+#define ecoff_section_data(sec) \
   ((struct ecoff_section_tdata *) (sec)->used_by_bfd)
 
 /* ECOFF linker hash table entries.  */

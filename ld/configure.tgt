@@ -128,7 +128,7 @@ aarch64-*-nto*)		targ_emul=aarch64nto
 aarch64-*-pe* | aarch64-*-mingw*)
 			targ_emul=aarch64pe
 			targ_extra_emuls="arm64pe"
-			targ_extra_ofiles="deffilep.o pep-dll-aarch64.o pe-dll.o pdb.o"
+			targ_extra_ofiles="deffilep.o pep-dll.o pe-dll.o pdb.o"
 			;;
 alpha*-*-freebsd* | alpha*-*-kfreebsd*-gnu)
 			targ_emul=elf64alpha_fbsd
@@ -991,7 +991,7 @@ x86_64-*-freebsd* | x86_64-*-kfreebsd*-gnu)
 			;;
 x86_64-*-pe | x86_64-*-pep) targ_emul=i386pep ;
 			targ_extra_emuls=i386pe ;
-			targ_extra_ofiles="deffilep.o pdb.o pep-dll-x86_64.o pe-dll.o"
+			targ_extra_ofiles="deffilep.o pdb.o pep-dll.o pe-dll.o"
 			;;
 x86_64-*-cygwin)	targ_emul=i386pep ;
 			targ_extra_emuls=i386pe
@@ -1024,8 +1024,10 @@ z8k-*-coff)		targ_emul=z8002
 			targ_extra_ofiles=
 			;;
 loongarch32-*)		targ_emul=elf32loongarch
+			targ_extra_libpath=elf64loongarch
 			;;
 loongarch64-*)		targ_emul=elf64loongarch
+			targ_extra_libpath=elf32loongarch
 			;;
 *-*-ieee*)		targ_emul=vanilla
 			targ_extra_ofiles=

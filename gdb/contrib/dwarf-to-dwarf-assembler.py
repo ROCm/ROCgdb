@@ -48,10 +48,12 @@ from io import BytesIO, IOBase
 from logging import getLogger
 from typing import Annotated, Optional
 
+from elftools.common.exceptions import ELFParseError
 from elftools.construct.lib.container import ListContainer
 from elftools.dwarf.compileunit import CompileUnit as RawCompileUnit
 from elftools.dwarf.die import DIE as RawDIE
 from elftools.dwarf.die import AttributeValue
+from elftools.dwarf.dwarf_expr import DWARFExprParser
 from elftools.dwarf.enums import ENUM_DW_ATE, ENUM_DW_LANG
 from elftools.elf.elffile import ELFFile
 
@@ -118,19 +120,27 @@ class DWARFAttribute:
 
     def __init__(
         self,
+        cu,
         die_offset: int,
         name: str,
         value: str | bytes | int | bool,
         form=None,
     ):
+        self.cu = cu
         self.die_offset = die_offset
         self.name = name
         self.value = value
         self.form = form
 
-    def _format_expr_value(self) -> str:
-        self.form = "SPECIAL_expr"
-        return "{ MANUAL: Fill expr list }"
+    def _format_expr_value(self, intro, indent_count: int) -> str:
+        result = indent(intro, indent_count) + "{\n"
+        parser = DWARFExprParser(self.cu.structs)
+        for op in parser.parse_expr(self.value):
+            result += indent(f"{op.op_name} 0x{op.op:02x}", indent_count + 1)
+            if op.args:
+                result += f" {op.args}"
+            result += "\n"
+        return result + indent("} SPECIAL_expr", indent_count)
 
     def _needs_escaping(self, str_value: str) -> bool:
         charset = set(str_value)
@@ -151,9 +161,7 @@ class DWARFAttribute:
     def _format_value(
         self, offset_die_lookup: dict[int, "DWARFDIE"], indent_count: int = 0
     ) -> str:
-        if self.form in EXPR_ATTRIBUTE_FORMS:
-            return self._format_expr_value()
-        elif isinstance(self.value, bool):
+        if isinstance(self.value, bool):
             return str(int(self.value))
         elif isinstance(self.value, int):
             if self.form == "DW_FORM_ref4":
@@ -167,7 +175,7 @@ class DWARFAttribute:
             else:
                 return str(self.value)
         elif isinstance(self.value, bytes):
-            return self._format_str(self.value.decode("ascii"))
+            return self._format_str(self.value.decode("UTF-8", "backslashreplace"))
         elif isinstance(self.value, str):
             return self._format_str(self.value)
         elif isinstance(self.value, ListContainer):
@@ -218,6 +226,27 @@ class DWARFAttribute:
                 s += "@" + LANG_NAME[self.value]
         elif self.name == "DW_AT_encoding" and isinstance(self.value, int):
             s += "@" + ATE_NAME[self.value]
+        elif self.form in EXPR_ATTRIBUTE_FORMS:
+            postfix = ""
+            if self.name not in ["DW_AT_const_value", "DW_AT_discr_list"]:
+                # Try to print as a DWARF expression.
+                try:
+                    # This returns a complete description that is already
+                    # indented.
+                    return self._format_expr_value(s, indent_count)
+                except KeyError as e:
+                    # Fall through to basic printing.
+                    postfix = " # Failed to print op as DWARF expression: " + hex(
+                        int(str(e))
+                    )
+                except ELFParseError as e:
+                    # Fall through to basic printing.
+                    postfix = " # Failed to print DWARF expression: " + str(e)
+            # Print the data as a string in "\x01\x02\x03\x04" format.
+            result = ""
+            for op in self.value:
+                result += f"\\x{op:02x}"
+            return indent(s, indent_count) + '"' + result + '" ' + self.form + postfix
         else:
             s += self._format_value(offset_die_lookup)
 
@@ -491,7 +520,7 @@ class DWARFParser:
                 self.referenced_offsets.add(referenced_die.offset)
 
             processed_attrs[attr_name] = DWARFAttribute(
-                raw_die.offset, attr_name, actual_value, attr_value.form
+                die_cu, raw_die.offset, attr_name, actual_value, attr_value.form
             )
 
         if raw_die.tag == DWARFCompileUnit.compile_unit_tag:

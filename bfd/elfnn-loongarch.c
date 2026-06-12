@@ -2543,8 +2543,7 @@ loongarch_elf_finish_relative_relocs (struct bfd_link_info *info)
 }
 
 static bool
-loongarch_elf_late_size_sections (bfd *output_bfd,
-				  struct bfd_link_info *info)
+loongarch_elf_late_size_sections (struct bfd_link_info *info)
 {
   struct loongarch_elf_link_hash_table *htab;
   bfd *dynobj;
@@ -2566,9 +2565,9 @@ loongarch_elf_late_size_sections (bfd *output_bfd,
 	  s = htab->elf.interp;
 	  BFD_ASSERT (s != NULL);
 
-	  if (elf_elfheader (output_bfd)->e_ident[EI_CLASS] == ELFCLASS32)
+	  if (elf_elfheader (info->output_bfd)->e_ident[EI_CLASS] == ELFCLASS32)
 	    interpreter = "/lib32/ld.so.1";
-	  else if (elf_elfheader (output_bfd)->e_ident[EI_CLASS] == ELFCLASS64)
+	  else if (elf_elfheader (info->output_bfd)->e_ident[EI_CLASS] == ELFCLASS64)
 	    interpreter = "/lib64/ld.so.1";
 	  else
 	    interpreter = "/lib/ld.so.1";
@@ -3495,7 +3494,7 @@ loongarch_resolve_pcrel_lo_relocs (loongarch_pcrel_relocs *p)
 }
 
 static int
-loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
+loongarch_elf_relocate_section (struct bfd_link_info *info,
 				bfd *input_bfd, asection *input_section,
 				bfd_byte *contents, Elf_Internal_Rela *relocs,
 				Elf_Internal_Sym *local_syms,
@@ -3555,7 +3554,8 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	  unresolved_reloc = false;
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 
 	  /* Relocate against local STT_GNU_IFUNC symbol.  */
 	  if (!bfd_link_relocatable (info)
@@ -3690,7 +3690,7 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	      /* When generating a shared object, these relocations are copied
 		 into the output file to be resolved at run time.  */
 
-	      outrel.r_offset = _bfd_elf_section_offset (output_bfd, info,
+	      outrel.r_offset = _bfd_elf_section_offset (info->output_bfd, info,
 							 input_section,
 							 rel->r_offset);
 
@@ -3766,8 +3766,8 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 					    relocation, input_bfd,
 					    contents);
 		  else
-		    loongarch_elf_append_rela (output_bfd, sreloc,
-					       &outrel);
+		    loongarch_elf_append_rela (info->output_bfd,
+					       sreloc, &outrel);
 		}
 	    }
 
@@ -3826,7 +3826,7 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	    {
 	      Elf_Internal_Rela outrel;
 
-	      outrel.r_offset = _bfd_elf_section_offset (output_bfd, info,
+	      outrel.r_offset = _bfd_elf_section_offset (info->output_bfd, info,
 							 input_section,
 							 rel->r_offset);
 	      unresolved_reloc = (!((bfd_vma) -2 <= outrel.r_offset)
@@ -3835,7 +3835,7 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	      outrel.r_offset += sec_addr (input_section);
 	      outrel.r_addend = rel->r_addend;
 	      if (unresolved_reloc)
-		loongarch_elf_append_rela (output_bfd, sreloc, &outrel);
+		loongarch_elf_append_rela (info->output_bfd, sreloc, &outrel);
 	      break;
 	    }
 
@@ -4131,9 +4131,9 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		      outrel.r_offset = sec_addr (got) + off;
 		      outrel.r_info = ELFNN_R_INFO (0, R_LARCH_RELATIVE);
 		      outrel.r_addend = relocation; /* Link-time addr.  */
-		      loongarch_elf_append_rela (output_bfd, s, &outrel);
+		      loongarch_elf_append_rela (info->output_bfd, s, &outrel);
 		    }
-		  bfd_put_NN (output_bfd, relocation, got->contents + off);
+		  bfd_put_NN (info->output_bfd, relocation, got->contents + off);
 		  h->got.offset |= 1;
 		}
 	    }
@@ -4183,10 +4183,10 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		      outrel.r_offset = sec_addr (got) + off;
 		      outrel.r_info = ELFNN_R_INFO (0, R_LARCH_RELATIVE);
 		      outrel.r_addend = relocation; /* Link-time addr.  */
-		      loongarch_elf_append_rela (output_bfd, s, &outrel);
+		      loongarch_elf_append_rela (info->output_bfd, s, &outrel);
 		    }
 
-		  bfd_put_NN (output_bfd, relocation, got->contents + off);
+		  bfd_put_NN (info->output_bfd, relocation, got->contents + off);
 		  local_got_offsets[r_symndx] |= 1;
 		}
 	    }
@@ -4238,34 +4238,38 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 			rela.r_offset = sec_addr (got) + got_off;
 			rela.r_addend = 0;
 			rela.r_info = ELFNN_R_INFO (indx, R_LARCH_TLS_DTPMODNN);
-			bfd_put_NN (output_bfd, 0, got->contents + got_off);
-			loongarch_elf_append_rela (output_bfd, srel, &rela);
+			bfd_put_NN (info->output_bfd, 0,
+				    got->contents + got_off);
+			loongarch_elf_append_rela (info->output_bfd,
+						   srel, &rela);
 
 			if (indx == 0)
 			  {
 			    /* Local symbol, tp offset has been known.  */
 			    BFD_ASSERT (! unresolved_reloc);
-			    bfd_put_NN (output_bfd,
+			    bfd_put_NN (info->output_bfd,
 				tlsoff (info, relocation),
 				(got->contents + got_off + GOT_ENTRY_SIZE));
 			  }
 			else
 			  {
 			    /* Dynamic resolved block offset.  */
-			    bfd_put_NN (output_bfd, 0,
+			    bfd_put_NN (info->output_bfd, 0,
 				got->contents + got_off + GOT_ENTRY_SIZE);
 			    rela.r_info = ELFNN_R_INFO (indx,
 						R_LARCH_TLS_DTPRELNN);
 			    rela.r_offset += GOT_ENTRY_SIZE;
-			    loongarch_elf_append_rela (output_bfd, srel, &rela);
+			    loongarch_elf_append_rela (info->output_bfd,
+						       srel, &rela);
 			  }
 		      }
 		    else
 		      {
 			/* In a static link or an executable link with the symbol
 			   binding locally.  Mark it as belonging to module 1.  */
-			bfd_put_NN (output_bfd, 1, got->contents + got_off);
-			bfd_put_NN (output_bfd, tlsoff (info, relocation),
+			bfd_put_NN (info->output_bfd, 1,
+				    got->contents + got_off);
+			bfd_put_NN (info->output_bfd, tlsoff (info, relocation),
 			    got->contents + got_off + GOT_ENTRY_SIZE);
 		      }
 		  }
@@ -4273,7 +4277,7 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		  {
 		    if (need_reloc)
 		      {
-			bfd_put_NN (output_bfd, 0,
+			bfd_put_NN (info->output_bfd, 0,
 			    got->contents + got_off + ie_off);
 			rela.r_offset = sec_addr (got) + got_off + ie_off;
 			rela.r_addend = 0;
@@ -4281,13 +4285,14 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 			if (indx == 0)
 			  rela.r_addend = tlsoff (info, relocation);
 			rela.r_info = ELFNN_R_INFO (indx, R_LARCH_TLS_TPRELNN);
-			loongarch_elf_append_rela (output_bfd, srel, &rela);
+			loongarch_elf_append_rela (info->output_bfd,
+						   srel, &rela);
 		      }
 		    else
 		      {
 			/* In a static link or an executable link with the symbol
 			   binding locally, compute offset directly.  */
-			bfd_put_NN (output_bfd, tlsoff (info, relocation),
+			bfd_put_NN (info->output_bfd, tlsoff (info, relocation),
 			    got->contents + got_off + ie_off);
 		      }
 		  }
@@ -4589,11 +4594,11 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 			  rela.r_offset = sec_addr (got) + got_off;
 			  rela.r_info = ELFNN_R_INFO (0, R_LARCH_RELATIVE);
 			  rela.r_addend = relocation;
-			  loongarch_elf_append_rela (output_bfd,
+			  loongarch_elf_append_rela (info->output_bfd,
 						     htab->elf.srelgot, &rela);
 			}
 		      h->got.offset |= 1;
-		      bfd_put_NN (output_bfd, relocation,
+		      bfd_put_NN (info->output_bfd, relocation,
 				  got->contents + got_off);
 		    }
 		}
@@ -4612,12 +4617,13 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 			  rela.r_offset = sec_addr (got) + got_off;
 			  rela.r_info = ELFNN_R_INFO (0, R_LARCH_RELATIVE);
 			  rela.r_addend = relocation;
-			  loongarch_elf_append_rela (output_bfd,
+			  loongarch_elf_append_rela (info->output_bfd,
 						     htab->elf.srelgot, &rela);
 			}
 		      local_got_offsets[r_symndx] |= 1;
 		    }
-		  bfd_put_NN (output_bfd, relocation, got->contents + got_off);
+		  bfd_put_NN (info->output_bfd, relocation,
+			      got->contents + got_off);
 		}
 
 	      relocation = got_off + sec_addr (got);
@@ -4773,34 +4779,36 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		      rela.r_offset = sec_addr (got) + got_off;
 		      rela.r_addend = 0;
 		      rela.r_info = ELFNN_R_INFO (indx,R_LARCH_TLS_DTPMODNN);
-		      bfd_put_NN (output_bfd, 0, got->contents + got_off);
-		      loongarch_elf_append_rela (output_bfd, relgot, &rela);
+		      bfd_put_NN (info->output_bfd, 0, got->contents + got_off);
+		      loongarch_elf_append_rela (info->output_bfd,
+						 relgot, &rela);
 
 		      if (indx == 0)
 			{
 			  /* Local symbol, tp offset has been known.  */
 			  BFD_ASSERT (! unresolved_reloc);
-			  bfd_put_NN (output_bfd,
+			  bfd_put_NN (info->output_bfd,
 			      tlsoff (info, relocation),
 			      (got->contents + got_off + GOT_ENTRY_SIZE));
 			}
 		      else
 			{
 			  /* Dynamic resolved block offset.  */
-			  bfd_put_NN (output_bfd, 0,
+			  bfd_put_NN (info->output_bfd, 0,
 			      got->contents + got_off + GOT_ENTRY_SIZE);
 			  rela.r_info = ELFNN_R_INFO (indx,
 						R_LARCH_TLS_DTPRELNN);
 			  rela.r_offset += GOT_ENTRY_SIZE;
-			  loongarch_elf_append_rela (output_bfd, relgot, &rela);
+			  loongarch_elf_append_rela (info->output_bfd,
+						     relgot, &rela);
 			}
 		    }
 		  else
 		    {
 		      /* In a static link or an executable link with the symbol
 			 binding locally.  Mark it as belonging to module 1.  */
-		      bfd_put_NN (output_bfd, 1, got->contents + got_off);
-		      bfd_put_NN (output_bfd, tlsoff (info, relocation),
+		      bfd_put_NN (info->output_bfd, 1, got->contents + got_off);
+		      bfd_put_NN (info->output_bfd, tlsoff (info, relocation),
 			  got->contents + got_off + GOT_ENTRY_SIZE);
 		    }
 		}
@@ -4815,15 +4823,15 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		    rela.r_addend = tlsoff (info, relocation);
 
 		  rela.r_info = ELFNN_R_INFO (indx, R_LARCH_TLS_DESCNN);
-		  loongarch_elf_append_rela (output_bfd, relgot, &rela);
-		  bfd_put_NN (output_bfd, 0,
+		  loongarch_elf_append_rela (info->output_bfd, relgot, &rela);
+		  bfd_put_NN (info->output_bfd, 0,
 			      got->contents + got_off + desc_off);
 		}
 	      if (tls_type & GOT_TLS_IE)
 		{
 		  if (need_reloc)
 		    {
-		      bfd_put_NN (output_bfd, 0,
+		      bfd_put_NN (info->output_bfd, 0,
 			  got->contents + got_off + ie_off);
 		      rela.r_offset = sec_addr (got) + got_off + ie_off;
 		      rela.r_addend = 0;
@@ -4831,13 +4839,14 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		      if (indx == 0)
 			rela.r_addend = tlsoff (info, relocation);
 		      rela.r_info = ELFNN_R_INFO (indx, R_LARCH_TLS_TPRELNN);
-		      loongarch_elf_append_rela (output_bfd, relgot, &rela);
+		      loongarch_elf_append_rela (info->output_bfd,
+						 relgot, &rela);
 		    }
 		  else
 		    {
 		      /* In a static link or an executable link with the symbol
 			 bindinglocally, compute offset directly.  */
-		      bfd_put_NN (output_bfd, tlsoff (info, relocation),
+		      bfd_put_NN (info->output_bfd, tlsoff (info, relocation),
 			  got->contents + got_off + ie_off);
 		    }
 		}
@@ -4953,7 +4962,7 @@ loongarch_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	  if (!unresolved_reloc)
 	    break;
 
-	  if (_bfd_elf_section_offset (output_bfd, info, input_section,
+	  if (_bfd_elf_section_offset (info->output_bfd, info, input_section,
 				       rel->r_offset) == MINUS_ONE)
 	    /* WHY? May because it's invalid so skip checking.
 	       But why dynamic reloc a invalid section?  */
@@ -6453,13 +6462,12 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
    dynamic sections here.  */
 
 static bool
-loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
-				     struct bfd_link_info *info,
+loongarch_elf_finish_dynamic_symbol (struct bfd_link_info *info,
 				     struct elf_link_hash_entry *h,
 				     Elf_Internal_Sym *sym)
 {
   struct loongarch_elf_link_hash_table *htab = loongarch_elf_hash_table (info);
-  elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
 
   if (h->plt.offset != MINUS_ONE)
     {
@@ -6508,11 +6516,11 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 	return false;
 
       for (i = 0; i < PLT_ENTRY_INSNS; i++)
-	bfd_put_32 (output_bfd, plt_entry[i], loc + 4 * i);
+	bfd_put_32 (info->output_bfd, plt_entry[i], loc + 4 * i);
 
       /* Fill in the initial value of the got.plt entry.  */
       loc = gotplt->contents + (got_address - sec_addr (gotplt));
-      bfd_put_NN (output_bfd, sec_addr (plt), loc);
+      bfd_put_NN (info->output_bfd, sec_addr (plt), loc);
 
       rela.r_offset = got_address;
 
@@ -6526,7 +6534,7 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 			       + h->root.u.def.section->output_section->vma
 			       + h->root.u.def.section->output_offset);
 
-	  loongarch_elf_append_rela (output_bfd, relplt, &rela);
+	  loongarch_elf_append_rela (info->output_bfd, relplt, &rela);
 	}
       else
 	{
@@ -6534,7 +6542,7 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 	  rela.r_info = ELFNN_R_INFO (h->dynindx, R_LARCH_JUMP_SLOT);
 	  rela.r_addend = 0;
 	  loc = relplt->contents + plt_idx * sizeof (ElfNN_External_Rela);
-	  bed->s->swap_reloca_out (output_bfd, &rela, loc);
+	  bed->s->swap_reloca_out (info->output_bfd, &rela, loc);
 	}
 
       if (!h->def_regular)
@@ -6587,21 +6595,21 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 		  rela.r_info = ELFNN_R_INFO (0, R_LARCH_IRELATIVE);
 		  rela.r_addend = h->root.u.def.value + sec->output_section->vma
 		    + sec->output_offset;
-		  bfd_put_NN (output_bfd, 0, sgot->contents + off);
+		  bfd_put_NN (info->output_bfd, 0, sgot->contents + off);
 		}
 	      else
 		{
 		  BFD_ASSERT (h->dynindx != -1);
 		  rela.r_info = ELFNN_R_INFO (h->dynindx, R_LARCH_NN);
 		  rela.r_addend = 0;
-		  bfd_put_NN (output_bfd, (bfd_vma) 0, sgot->contents + off);
+		  bfd_put_NN (info->output_bfd, 0, sgot->contents + off);
 		}
 	    }
 	  else if(bfd_link_pic (info))
 	    {
 	      rela.r_info = ELFNN_R_INFO (h->dynindx, R_LARCH_NN);
 	      rela.r_addend = 0;
-	      bfd_put_NN (output_bfd, rela.r_addend, sgot->contents + off);
+	      bfd_put_NN (info->output_bfd, rela.r_addend, sgot->contents + off);
 	    }
 	  else
 	    {
@@ -6614,7 +6622,7 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 		 contains the real function address if we need pointer
 		 equality.  We load the GOT entry with the PLT entry.  */
 	      plt = htab->elf.splt ? htab->elf.splt : htab->elf.iplt;
-	      bfd_put_NN (output_bfd,
+	      bfd_put_NN (info->output_bfd,
 			  (plt->output_section->vma
 			   + plt->output_offset
 			   + h->plt.offset),
@@ -6632,7 +6640,7 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 	     to write the addend (link-time addr) into the GOT then.  */
 	  if (info->enable_dt_relr)
 	    {
-	      bfd_put_NN (output_bfd, linkaddr, sgot->contents + off);
+	      bfd_put_NN (info->output_bfd, linkaddr, sgot->contents + off);
 	      goto skip_got_reloc;
 	    }
 	  rela.r_info = ELFNN_R_INFO (0, R_LARCH_RELATIVE);
@@ -6645,7 +6653,7 @@ loongarch_elf_finish_dynamic_symbol (bfd *output_bfd,
 	  rela.r_addend = 0;
 	}
 
-      loongarch_elf_append_rela (output_bfd, srela, &rela);
+      loongarch_elf_append_rela (info->output_bfd, srela, &rela);
     }
 skip_got_reloc:
 
@@ -6659,11 +6667,10 @@ skip_got_reloc:
 /* Finish up the dynamic sections.  */
 
 static bool
-loongarch_finish_dyn (bfd *output_bfd, struct bfd_link_info *info, bfd *dynobj,
-		      asection *sdyn)
+loongarch_finish_dyn (struct bfd_link_info *info, bfd *dynobj, asection *sdyn)
 {
   struct loongarch_elf_link_hash_table *htab = loongarch_elf_hash_table (info);
-  elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
   size_t dynsize = bed->s->sizeof_dyn, skipped_size = 0;
   bfd_byte *dyncon, *dynconend;
 
@@ -6702,7 +6709,7 @@ loongarch_finish_dyn (bfd *output_bfd, struct bfd_link_info *info, bfd *dynobj,
       if (skipped)
 	skipped_size += dynsize;
       else
-	bed->s->swap_dyn_out (output_bfd, &dyn, dyncon - skipped_size);
+	bed->s->swap_dyn_out (info->output_bfd, &dyn, dyncon - skipped_size);
     }
   /* Wipe out any trailing entries if we shifted down a dynamic tag.  */
   memset (dyncon - skipped_size, 0, skipped_size);
@@ -6718,7 +6725,7 @@ elfNN_loongarch_finish_local_dynamic_symbol (void **slot, void *inf)
   struct elf_link_hash_entry *h = (struct elf_link_hash_entry *) *slot;
   struct bfd_link_info *info = (struct bfd_link_info *) inf;
 
-  return loongarch_elf_finish_dynamic_symbol (info->output_bfd, info, h, NULL);
+  return loongarch_elf_finish_dynamic_symbol (info, h, NULL);
 }
 
 /* Value of struct elf_backend_data->elf_backend_output_arch_local_syms,
@@ -6728,8 +6735,7 @@ elfNN_loongarch_finish_local_dynamic_symbol (void **slot, void *inf)
 
 static bool
 elf_loongarch_output_arch_local_syms
-  (bfd *output_bfd ATTRIBUTE_UNUSED,
-   struct bfd_link_info *info,
+  (struct bfd_link_info *info,
    void *flaginfo ATTRIBUTE_UNUSED,
    int (*func) (void *, const char *,
 		Elf_Internal_Sym *,
@@ -6749,8 +6755,7 @@ elf_loongarch_output_arch_local_syms
 }
 
 static bool
-loongarch_elf_finish_dynamic_sections (bfd *output_bfd,
-				       struct bfd_link_info *info,
+loongarch_elf_finish_dynamic_sections (struct bfd_link_info *info,
 				       bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -6766,7 +6771,7 @@ loongarch_elf_finish_dynamic_sections (bfd *output_bfd,
     {
       BFD_ASSERT (htab->elf.splt && sdyn);
 
-      if (!loongarch_finish_dyn (output_bfd, info, dynobj, sdyn))
+      if (!loongarch_finish_dyn (info, dynobj, sdyn))
 	return false;
     }
 
@@ -6782,7 +6787,7 @@ loongarch_elf_finish_dynamic_sections (bfd *output_bfd,
 	return false;
 
       for (i = 0; i < PLT_HEADER_INSNS; i++)
-	bfd_put_32 (output_bfd, plt_header[i], plt->contents + 4 * i);
+	bfd_put_32 (info->output_bfd, plt_header[i], plt->contents + 4 * i);
 
       elf_section_data (plt->output_section)->this_hdr.sh_entsize =
 	PLT_ENTRY_SIZE;
@@ -6803,9 +6808,9 @@ loongarch_elf_finish_dynamic_sections (bfd *output_bfd,
 	{
 	  /* Write the first two entries in .got.plt, needed for the dynamic
 	     linker.  */
-	  bfd_put_NN (output_bfd, MINUS_ONE, htab->elf.sgotplt->contents);
+	  bfd_put_NN (info->output_bfd, MINUS_ONE, htab->elf.sgotplt->contents);
 
-	  bfd_put_NN (output_bfd, (bfd_vma) 0,
+	  bfd_put_NN (info->output_bfd, 0,
 		      htab->elf.sgotplt->contents + GOT_ENTRY_SIZE);
 	}
 
@@ -6821,7 +6826,7 @@ loongarch_elf_finish_dynamic_sections (bfd *output_bfd,
 	  /* Set the first entry in the global offset table to the address of
 	     the dynamic section.  */
 	  bfd_vma val = sdyn ? sec_addr (sdyn) : 0;
-	  bfd_put_NN (output_bfd, val, htab->elf.sgot->contents);
+	  bfd_put_NN (info->output_bfd, val, htab->elf.sgot->contents);
 	}
 
       elf_section_data (output_section)->this_hdr.sh_entsize = GOT_ENTRY_SIZE;

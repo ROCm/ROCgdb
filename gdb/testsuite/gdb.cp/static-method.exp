@@ -82,7 +82,7 @@ foreach test $methods {
     set result ".*// [string_to_regexp $expected]"
 
     # Test whether the function/method can be "list"ed
-    # with the filename pre-pended.
+    # with the filename prepended.
     if {[string compare $test "xxx::${ans}::A::func"] == 0
 	&& !$have_gcc_45682_fixed} {
 	setup_xfail gcc/45682 "*-*-*"

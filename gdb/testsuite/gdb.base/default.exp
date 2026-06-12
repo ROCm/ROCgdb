@@ -504,7 +504,7 @@ gdb_test "output" "Argument required .expression to compute.*"
 
 #test overlay
 gdb_test "overlay" "List of \"overlay\" subcommands:.*"
-#test a non-existant overlay subcommand
+#test a non-existent overlay subcommand
 gdb_test "overlay on"     "Undefined overlay command.* Try \"help overlay\"."
 gdb_test_no_output "overlay manual" "overlay manual #1"
 gdb_test_no_output "overlay auto"

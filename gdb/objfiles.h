@@ -151,12 +151,12 @@ extern void print_objfile_statistics (void);
 
 struct minimal_symbol_iterator
 {
-  typedef minimal_symbol_iterator self_type;
-  typedef struct minimal_symbol *value_type;
-  typedef struct minimal_symbol *&reference;
-  typedef struct minimal_symbol **pointer;
-  typedef std::forward_iterator_tag iterator_category;
-  typedef int difference_type;
+  using self_type = minimal_symbol_iterator;
+  using value_type = struct minimal_symbol *;
+  using reference = struct minimal_symbol *&;
+  using pointer = struct minimal_symbol **;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type = int;
 
   explicit minimal_symbol_iterator (struct minimal_symbol *msym)
     : m_msym (msym)
@@ -342,7 +342,7 @@ private:
 
 /* A range adapter wrapping separate_debug_iterator.  */
 
-typedef iterator_range<separate_debug_iterator> separate_debug_range;
+using separate_debug_range = iterator_range<separate_debug_iterator>;
 
 /* Sections in an objfile.  The section offsets are stored in the
    OBJFILE.  */
@@ -467,7 +467,7 @@ public:
   /* A range adapter that makes it possible to iterate over all
      minimal symbols of an objfile.  */
 
-  typedef iterator_range<minimal_symbol_iterator> msymbols_range;
+  using msymbols_range = iterator_range<minimal_symbol_iterator>;
 
   /* Return a range adapter for iterating over all minimal
      symbols.  */
@@ -875,7 +875,7 @@ struct objfile_unlinker
 
 /* A unique pointer that holds an objfile.  */
 
-typedef std::unique_ptr<objfile, objfile_unlinker> scoped_objfile_unlinker;
+using scoped_objfile_unlinker = std::unique_ptr<objfile, objfile_unlinker>;
 
 /* Relocation offset applied to the section.  */
 inline CORE_ADDR

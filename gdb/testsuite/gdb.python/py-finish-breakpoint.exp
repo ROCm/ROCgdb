@@ -76,7 +76,7 @@ with_test_prefix "normal conditions" {
     gdb_test "python print (finishbp_default.is_valid())" "False" \
 	"check finishBP on default frame has been hit"
     gdb_test "python print (finishbp.is_valid())" "False.*"\
-	"ensure that finish bp is invalid afer normal hit"
+	"ensure that finish bp is invalid after normal hit"
 
     # check FinishBreakpoint in main no allowed
 

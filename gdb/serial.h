@@ -32,7 +32,7 @@ struct ui_file;
 /* Terminal state pointer.  This is specific to each type of
    interface.  */
 
-typedef void *serial_ttystate;
+using serial_ttystate = void *;
 struct serial;
 struct serial_ops;
 

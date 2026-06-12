@@ -235,7 +235,7 @@ proc test {non_stop displaced third_thread} {
 				exp_continue
 			    }
 			} else {
-			    # All stop mode.  Something should have stoppped
+			    # All stop mode.  Something should have stopped
 			    # by now otherwise we shouldn't have a prompt, but
 			    # we can't know which thread will have stopped as
 			    # that is a race condition.
@@ -348,7 +348,7 @@ proc test {non_stop displaced third_thread} {
 			# We know that the thread shouldn't be stopped
 			# at _start, though.  This is the location of
 			# the scratch pad on Linux at the time of
-			# writting.
+			# writing.
 			verbose -log "XXX: thread 2 is bad, stuck in scratchpad"
 			incr thread_count
 			incr bad_threads

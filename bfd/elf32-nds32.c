@@ -4359,8 +4359,7 @@ elf32_nds32_add_dynreloc (bfd *output_bfd,
 /* Set the sizes of the dynamic sections.  */
 
 static bool
-nds32_elf_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-			      struct bfd_link_info *info)
+nds32_elf_late_size_sections (struct bfd_link_info *info)
 {
   struct elf_nds32_link_hash_table *htab;
   bfd *dynobj;
@@ -4587,7 +4586,7 @@ nds32_elf_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       s->alloced = 1;
     }
 
-  return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs);
+  return _bfd_elf_add_dynamic_tags (info, relocs);
 }
 
 static bfd_reloc_status_type
@@ -5045,8 +5044,7 @@ fls (register unsigned int x)
   (elf_nds32_tdata (bfd)->local_tlsdesc_gotent)
 
 static int
-nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
-			    struct bfd_link_info * info,
+nds32_elf_relocate_section (struct bfd_link_info * info,
 			    bfd *		   input_bfd,
 			    asection *		   input_section,
 			    bfd_byte *		   contents,
@@ -5096,7 +5094,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
   if ((!bfd_link_relocatable (info)))
     {
       is_SDA_BASE_set = 1;
-      r = nds32_elf_final_sda_base (output_bfd, info, &gp, true);
+      r = nds32_elf_final_sda_base (info->output_bfd, info, &gp, true);
       if (r != bfd_reloc_ok)
 	return false;
     }
@@ -5107,7 +5105,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
   /* Use gp as fp to prevent truncated fit.  Because in relaxation time
      the fp value is set as gp, and it has be reverted for instruction
      setting fp.  */
-  fpbase_addr = elf_gp (output_bfd);
+  fpbase_addr = elf_gp (info->output_bfd);
 
   /* Deal with (dynamic) relocations.  */
   for (rel = relocs; rel < relend; rel++)
@@ -5167,7 +5165,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
       else if (ELF32_R_TYPE (rel->r_info) == R_NDS32_RELAX_REGION_END
 	       && (rel->r_addend & R_NDS32_RELAX_REGION_OMIT_FP_FLAG))
 	{
-	  fpbase_addr = elf_gp (output_bfd);
+	  fpbase_addr = elf_gp (info->output_bfd);
 	}
 
       /* Skip the relocations used for relaxation.  */
@@ -5193,7 +5191,8 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
 
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 	  addend = rel->r_addend;
 
 	  /* keep symbol location for static TLS_IE GOT entry  */
@@ -5280,7 +5279,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 	case R_NDS32_GOTOFF_LO19:
 	  BFD_ASSERT (sgot != NULL);
 
-	  relocation -= elf_gp (output_bfd);
+	  relocation -= elf_gp (info->output_bfd);
 	  break;
 
 	case R_NDS32_9_PLTREL:
@@ -5324,14 +5323,14 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 		 using -Bsymbolic.  */
 	      if (h)
 		h->plt.offset = (bfd_vma) -1;   /* Cancel PLT trampoline.  */
-	      relocation -= elf_gp (output_bfd);
+	      relocation -= elf_gp (info->output_bfd);
 	      break;
 	    }
 
 	  relocation = (splt->output_section->vma
 			+ splt->output_offset + h->plt.offset);
 
-	  relocation -= elf_gp (output_bfd);
+	  relocation -= elf_gp (info->output_bfd);
 	  break;
 
 	case R_NDS32_PLTREL_HI20:
@@ -5370,7 +5369,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 	case R_NDS32_GOTPC20:
 	  /* .got(_GLOBAL_OFFSET_TABLE_) - pc relocation
 	     ld24 rx,#_GLOBAL_OFFSET_TABLE_  */
-	  relocation = elf_gp (output_bfd);
+	  relocation = elf_gp (info->output_bfd);
 	  break;
 
 	case R_NDS32_GOTPC_HI20:
@@ -5383,7 +5382,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 	     bl .+4
 	     seth rx,#shigh(_GLOBAL_OFFSET_TABLE_)
 	     add3 rx,rx,#low(_GLOBAL_OFFSET_TABLE_ +4)  */
-	  relocation = elf_gp (output_bfd);
+	  relocation = elf_gp (info->output_bfd);
 	  relocation -= (input_section->output_section->vma
 			 + input_section->output_offset + rel->r_offset);
 	  break;
@@ -5430,12 +5429,13 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 		    off &= ~1;
 		  else
 		    {
-		      bfd_put_32 (output_bfd, relocation, sgot->contents + off);
+		      bfd_put_32 (info->output_bfd, relocation,
+				  sgot->contents + off);
 		      h->got.offset |= 1;
 		    }
 		}
 	      relocation = sgot->output_section->vma + sgot->output_offset + off
-			   - elf_gp (output_bfd);
+			   - elf_gp (info->output_bfd);
 	    }
 	  else
 	    {
@@ -5454,7 +5454,8 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 		off &= ~1;
 	      else
 		{
-		  bfd_put_32 (output_bfd, relocation, sgot->contents + off);
+		  bfd_put_32 (info->output_bfd, relocation,
+			      sgot->contents + off);
 
 		  if (bfd_link_pic (info))
 		    {
@@ -5466,20 +5467,20 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 		      srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
 		      BFD_ASSERT (srelgot != NULL);
 
-		      outrel.r_offset = (elf_gp (output_bfd)
+		      outrel.r_offset = (elf_gp (info->output_bfd)
 					 + sgot->output_offset + off);
 		      outrel.r_info = ELF32_R_INFO (0, R_NDS32_RELATIVE);
 		      outrel.r_addend = relocation;
 		      loc = srelgot->contents;
 		      loc +=
 			srelgot->reloc_count * sizeof (Elf32_External_Rela);
-		      bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+		      bfd_elf32_swap_reloca_out (info->output_bfd, &outrel, loc);
 		      ++srelgot->reloc_count;
 		    }
 		  local_got_offsets[r_symndx] |= 1;
 		}
 	      relocation = sgot->output_section->vma + sgot->output_offset + off
-			   - elf_gp (output_bfd);
+			   - elf_gp (info->output_bfd);
 	    }
 
 	  break;
@@ -5546,7 +5547,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 	      skip = false;
 	      relocate = false;
 
-	      outrel.r_offset = _bfd_elf_section_offset (output_bfd,
+	      outrel.r_offset = _bfd_elf_section_offset (info->output_bfd,
 							 info,
 							 input_section,
 							 rel->r_offset);
@@ -5590,7 +5591,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 			  if (h->got.offset != (bfd_vma) -1
 			      && (h->got.offset & 1) == 0)
 			    {
-			      bfd_put_32 (output_bfd, outrel.r_addend,
+			      bfd_put_32 (info->output_bfd, outrel.r_addend,
 					  sgot->contents + h->got.offset);
 			    }
 			}
@@ -5614,7 +5615,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 
 	      loc = sreloc->contents;
 	      loc += sreloc->reloc_count * sizeof (Elf32_External_Rela);
-	      bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+	      bfd_elf32_swap_reloca_out (info->output_bfd, &outrel, loc);
 	      ++sreloc->reloc_count;
 
 	      /* If this reloc is against an external symbol, we do
@@ -5702,7 +5703,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 		    off &= ~1;
 		  else
 		    {
-		      bfd_put_32 (output_bfd, relocation,
+		      bfd_put_32 (info->output_bfd, relocation,
 				  sgot->contents + off);
 		      h->got.offset |= 1;
 		    }
@@ -5724,7 +5725,8 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 		off &= ~1;
 	      else
 		{
-		  bfd_put_32 (output_bfd, relocation, sgot->contents + off);
+		  bfd_put_32 (info->output_bfd, relocation,
+			      sgot->contents + off);
 
 		  if (bfd_link_pic (info))
 		    {
@@ -5736,21 +5738,21 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 		      srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
 		      BFD_ASSERT (srelgot != NULL);
 
-		      outrel.r_offset = (elf_gp (output_bfd)
+		      outrel.r_offset = (elf_gp (info->output_bfd)
 					 + sgot->output_offset + off);
 		      outrel.r_info = ELF32_R_INFO (0, R_NDS32_RELATIVE);
 		      outrel.r_addend = relocation;
 		      loc = srelgot->contents;
 		      loc +=
 			srelgot->reloc_count * sizeof (Elf32_External_Rela);
-		      bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+		      bfd_elf32_swap_reloca_out (info->output_bfd, &outrel, loc);
 		      ++srelgot->reloc_count;
 		    }
 		  local_got_offsets[r_symndx] |= 1;
 		}
 	    }
 	  relocation = sgot->output_section->vma + sgot->output_offset + off
-	    - elf_gp (output_bfd);
+	    - elf_gp (info->output_bfd);
 
 	  if (relocation & align)
 	    {
@@ -5793,7 +5795,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 
 	  /* If the symbol is in the abs section, the out_bfd will be null.
 	     This happens when the relocation has a symbol@GOTOFF.  */
-	  r = nds32_elf_final_sda_base (output_bfd, info, &gp, false);
+	  r = nds32_elf_final_sda_base (info->output_bfd, info, &gp, false);
 	  if (r != bfd_reloc_ok)
 	    {
 	      _bfd_error_handler
@@ -5921,7 +5923,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 
 		if (eff_tls_type & GOT_TLS_DESC)
 		  {
-		    relocation -= elf_gp (output_bfd);
+		    relocation -= elf_gp (info->output_bfd);
 		    if ((R_NDS32_TLS_DESC_HI20 == r_type) && (!need_relocs))
 		      {
 			/* TLS model shall be converted.  */
@@ -5930,7 +5932,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 		  }
 		else if (eff_tls_type & GOT_TLS_IEGP)
 		  {
-		    relocation -= elf_gp (output_bfd);
+		    relocation -= elf_gp (info->output_bfd);
 		  }
 	      }
 	    else
@@ -5943,7 +5945,7 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 		else if (eff_tls_type & (GOT_TLS_IE | GOT_TLS_IEGP))
 		  {
 		    if (eff_tls_type & GOT_TLS_IEGP)
-		      relocation -= elf_gp(output_bfd);
+		      relocation -= elf_gp(info->output_bfd);
 
 		    if (need_relocs)
 		      {
@@ -5955,18 +5957,19 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 					   + sgot->output_offset + off);
 			outrel.r_info = ELF32_R_INFO (indx, R_NDS32_TLS_TPOFF);
 
-			elf32_nds32_add_dynreloc (output_bfd, info, srelgot,
-						  &outrel);
+			elf32_nds32_add_dynreloc (info->output_bfd, info,
+						  srelgot, &outrel);
 		      }
 		    else
 		      {
-			bfd_put_32 (output_bfd, gottpoff (info, relocation_sym),
+			bfd_put_32 (info->output_bfd,
+				    gottpoff (info, relocation_sym),
 				    sgot->contents + off);
 		      }
 		  }
 		else if (eff_tls_type & GOT_TLS_DESC)
 		  {
-		    relocation -= elf_gp (output_bfd);
+		    relocation -= elf_gp (info->output_bfd);
 		    if (need_relocs)
 		      {
 			if (indx == 0)
@@ -5986,22 +5989,25 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
 			    BFD_ASSERT (loc + sizeof (Elf32_External_Rela)
 					<= srelplt->contents + srelplt->size);
 
-			    bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+			    bfd_elf32_swap_reloca_out (info->output_bfd,
+						       &outrel, loc);
 			  }
 			else
 			  {
 			    loc = srelgot->contents;
 			    loc += srelgot->reloc_count * sizeof (Elf32_External_Rela);
-			    bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+			    bfd_elf32_swap_reloca_out (info->output_bfd,
+						       &outrel, loc);
 			    ++srelgot->reloc_count;
 			  }
 		      }
 		    else
 		      {
 			/* feed me!  */
-			bfd_put_32 (output_bfd, 0xdeadbeef,
+			bfd_put_32 (info->output_bfd, 0xdeadbeef,
 				    sgot->contents + off);
-			bfd_put_32 (output_bfd, gottpoff (info, relocation_sym),
+			bfd_put_32 (info->output_bfd,
+				    gottpoff (info, relocation_sym),
 				    sgot->contents + off + 4);
 			patch_tls_desc_to_ie (contents, rel, input_bfd);
 			BFD_ASSERT(0);
@@ -6184,8 +6190,9 @@ nds32_elf_relocate_section (bfd *		   output_bfd ATTRIBUTE_UNUSED,
    dynamic sections here.  */
 
 static bool
-nds32_elf_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
-				 struct elf_link_hash_entry *h, Elf_Internal_Sym *sym)
+nds32_elf_finish_dynamic_symbol (struct bfd_link_info *info,
+				 struct elf_link_hash_entry *h,
+				 Elf_Internal_Sym *sym)
 {
   struct elf_link_hash_table *ehtab;
   struct elf_nds32_link_hash_entry *hent;
@@ -6259,7 +6266,7 @@ nds32_elf_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
 	  long offset;
 
 	  offset = sgot->output_section->vma + sgot->output_offset + got_offset
-		   - elf_gp (output_bfd);
+		   - elf_gp (info->output_bfd);
 	  insn = PLT_PIC_ENTRY_WORD0 + ((offset >> 12) & 0xfffff);
 	  bfd_putb32 (insn, splt->contents + h->plt.offset);
 
@@ -6284,7 +6291,7 @@ nds32_elf_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
 
       /* Fill in the entry in the global offset table,
 	 so it will fall through to the next instruction for the first time.  */
-      bfd_put_32 (output_bfd,
+      bfd_put_32 (info->output_bfd,
 		  (splt->output_section->vma + splt->output_offset
 		   + h->plt.offset + local_plt_offset),
 		  sgot->contents + got_offset);
@@ -6296,7 +6303,7 @@ nds32_elf_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
       rela.r_addend = 0;
       loc = srela->contents;
       loc += plt_index * sizeof (Elf32_External_Rela);
-      bfd_elf32_swap_reloca_out (output_bfd, &rela, loc);
+      bfd_elf32_swap_reloca_out (info->output_bfd, &rela, loc);
 
       if (!h->def_regular)
 	{
@@ -6342,14 +6349,14 @@ nds32_elf_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
 
 	  if ((h->got.offset & 1) == 0)
 	    {
-	      bfd_put_32 (output_bfd, rela.r_addend,
+	      bfd_put_32 (info->output_bfd, rela.r_addend,
 			  sgot->contents + h->got.offset);
 	    }
 	}
       else
 	{
 	  BFD_ASSERT ((h->got.offset & 1) == 0);
-	  bfd_put_32 (output_bfd, (bfd_vma) 0,
+	  bfd_put_32 (info->output_bfd, (bfd_vma) 0,
 		      sgot->contents + h->got.offset);
 	  rela.r_info = ELF32_R_INFO (h->dynindx, R_NDS32_GLOB_DAT);
 	  rela.r_addend = 0;
@@ -6357,7 +6364,7 @@ nds32_elf_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
 
       loc = srelagot->contents;
       loc += srelagot->reloc_count * sizeof (Elf32_External_Rela);
-      bfd_elf32_swap_reloca_out (output_bfd, &rela, loc);
+      bfd_elf32_swap_reloca_out (info->output_bfd, &rela, loc);
       ++srelagot->reloc_count;
       BFD_ASSERT (loc < (srelagot->contents + srelagot->size));
     }
@@ -6383,7 +6390,7 @@ nds32_elf_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
       rela.r_addend = 0;
       loc = s->contents;
       loc += s->reloc_count * sizeof (Elf32_External_Rela);
-      bfd_elf32_swap_reloca_out (output_bfd, &rela, loc);
+      bfd_elf32_swap_reloca_out (info->output_bfd, &rela, loc);
       ++s->reloc_count;
     }
 
@@ -6399,7 +6406,7 @@ nds32_elf_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
 /* Finish up the dynamic sections.  */
 
 static bool
-nds32_elf_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
+nds32_elf_finish_dynamic_sections (struct bfd_link_info *info,
 				   bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -6453,14 +6460,14 @@ nds32_elf_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
 	    get_vma:
 	      BFD_ASSERT (s != NULL);
 	      dyn.d_un.d_ptr = s->output_section->vma + s->output_offset;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_PLTRELSZ:
 	      s = ehtab->srelplt;
 	      BFD_ASSERT (s != NULL);
 	      dyn.d_un.d_val = s->size;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_RELASZ:
@@ -6478,21 +6485,21 @@ nds32_elf_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
 		  s = ehtab->srelplt;
 		  dyn.d_un.d_val -= s->size;
 		}
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_TLSDESC_PLT:
 	      s = htab->root.splt;
 	      dyn.d_un.d_ptr = (s->output_section->vma + s->output_offset
 				+ htab->root.tlsdesc_plt);
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_TLSDESC_GOT:
 	      s = htab->root.sgot;
 	      dyn.d_un.d_ptr = (s->output_section->vma + s->output_offset
 				+ htab->root.tlsdesc_got);
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 	    }
 	}
@@ -6507,7 +6514,7 @@ nds32_elf_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
 	      long offset;
 
 	      offset = sgotplt->output_section->vma + sgotplt->output_offset + 4
-		- elf_gp (output_bfd);
+		- elf_gp (info->output_bfd);
 	      insn = PLT0_PIC_ENTRY_WORD0 | ((offset >> 12) & 0xfffff);
 	      bfd_putb32 (insn, splt->contents);
 
@@ -6564,8 +6571,8 @@ nds32_elf_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
 	    + htab->root.tlsdesc_got;
 
 	  /* Get GP offset.  */
-	  pltgot -= elf_gp (output_bfd) - 4; /* PLTGOT[1]  */
-	  tlsdesc_got -= elf_gp (output_bfd);
+	  pltgot -= elf_gp (info->output_bfd) - 4; /* PLTGOT[1]  */
+	  tlsdesc_got -= elf_gp (info->output_bfd);
 
 	  /* Do relocation.  */
 	  dl_tlsdesc_lazy_trampoline[0] += ((1 << 20) - 1) & (tlsdesc_got >> 12);
@@ -6584,13 +6591,13 @@ nds32_elf_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *info,
   if (sgotplt && sgotplt->size > 0)
     {
       if (sdyn == NULL)
-	bfd_put_32 (output_bfd, (bfd_vma) 0, sgotplt->contents);
+	bfd_put_32 (info->output_bfd, 0, sgotplt->contents);
       else
-	bfd_put_32 (output_bfd,
+	bfd_put_32 (info->output_bfd,
 		    sdyn->output_section->vma + sdyn->output_offset,
 		    sgotplt->contents);
-      bfd_put_32 (output_bfd, (bfd_vma) 0, sgotplt->contents + 4);
-      bfd_put_32 (output_bfd, (bfd_vma) 0, sgotplt->contents + 8);
+      bfd_put_32 (info->output_bfd, 0, sgotplt->contents + 4);
+      bfd_put_32 (info->output_bfd, 0, sgotplt->contents + 8);
 
       elf_section_data (sgotplt->output_section)->this_hdr.sh_entsize = 4;
     }
@@ -12560,8 +12567,7 @@ nds32_elf_section_flags (const Elf_Internal_Shdr *hdr)
 }
 
 static bool
-nds32_elf_output_arch_syms (bfd *output_bfd ATTRIBUTE_UNUSED,
-			    struct bfd_link_info *info,
+nds32_elf_output_arch_syms (struct bfd_link_info *info,
 			    void *finfo ATTRIBUTE_UNUSED,
 			    int (*func) (void *, const char *,
 					 Elf_Internal_Sym *,

@@ -28,7 +28,7 @@ if {$tool == ""} {
     exit 2
 }
 
-# Add "convience abbreviation" for positive decimals, without leading zeros.
+# Add "convenience abbreviation" for positive decimals, without leading zeros.
 set positive {(?:[1-9][0-9]*)}
 
 # Dejagnu defines decimal as one of the "convenience abbreviations".
@@ -252,7 +252,7 @@ if {![info exists GCORE]} {
 }
 verbose "using GCORE = $GCORE" 2
 
-# Return 0 if the gcore scipt is missing.
+# Return 0 if the gcore script is missing.
 proc has_gcore_script {} {
     global GCORE
     if {$GCORE == ""} {
@@ -6917,7 +6917,7 @@ proc gdb_compile {source dest type options} {
 	      || [istarget "*-*-*djgpp"]
 	      || [istarget "*-*-cygwin*"])} {
 	    # Force output to unbuffered mode, by linking in an object file
-	    # with a global contructor that calls setvbuf.
+	    # with a global constructor that calls setvbuf.
 	    #
 	    # Compile the special object separately for two reasons:
 	    #  1) Insulate it from $options.
@@ -9789,7 +9789,7 @@ proc build_executable_from_specs {testname executable options args} {
 }
 
 # Build executable named EXECUTABLE, from SOURCES.  If SOURCES are not
-# provided, uses $EXECUTABLE.c.  The TESTNAME paramer is the name of test
+# provided, uses $EXECUTABLE.c.  The TESTNAME parameter is the name of test
 # to pass to untested, if something is wrong.  OPTIONS are passed
 # to gdb_compile directly.
 proc build_executable { testname executable {sources ""} {options {debug}} } {
@@ -11145,7 +11145,7 @@ proc get_index_type { objfile { testname "" } } {
     return $index_type
 }
 
-# Add a .gdb_index section to PROGRAM, unless it alread has an index
+# Add a .gdb_index section to PROGRAM, unless it already has an index
 # (.gdb_index/.debug_names).  Gdb doesn't support building an index from a
 # program already using one.  Return 1 if a .gdb_index was added, return 0
 # if it already contained an index, and -1 if an error occurred.
@@ -11625,7 +11625,7 @@ gdb_caching_proc has_hw_wp_support {} {
 	}
 	-re ".*$gdb_prompt $" {
 	    set has_hw_wp_support 0
-	    verbose -log "\n$me: Default, hardware watchpoint not deteced"
+	    verbose -log "\n$me: Default, hardware watchpoint not detected"
 	}
     }
 

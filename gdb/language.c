@@ -174,7 +174,7 @@ show_language_command (struct ui_file *file, int from_tty,
     {
       frame_info_ptr frame;
 
-      frame = get_selected_frame (NULL);
+      frame = get_selected_frame ();
       flang = get_frame_language (frame);
       if (flang != language_unknown
 	  && language_mode == language_mode_manual
@@ -200,7 +200,7 @@ set_language (const char *language)
 	{
 	  frame_info_ptr frame;
 
-	  frame = get_selected_frame (NULL);
+	  frame = get_selected_frame ();
 	  flang = get_frame_language (frame);
 	}
       catch (const gdb_exception_error &ex)

@@ -5463,7 +5463,7 @@ read_import_statement (struct die_info *die, struct dwarf2_cu *cu)
 	The import in the following code:
 	namespace A
 	  {
-	    typedef int B;
+	    using B = int;
 	  }
 
 	int main ()

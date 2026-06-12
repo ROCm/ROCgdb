@@ -38,10 +38,6 @@ static bfd_reloc_status_type mt_final_link_relocate
   (reloc_howto_type *, bfd *, asection *, bfd_byte *,
    Elf_Internal_Rela *, bfd_vma);
 
-static int mt_elf_relocate_section
-  (bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *,
-   Elf_Internal_Rela *, Elf_Internal_Sym *, asection **);
-
 /* Relocation tables.  */
 static reloc_howto_type mt_elf_howto_table [] =
 {
@@ -299,8 +295,7 @@ mt_final_link_relocate
 
 static int
 mt_elf_relocate_section
-    (bfd *		     output_bfd ATTRIBUTE_UNUSED,
-     struct bfd_link_info *  info,
+    (struct bfd_link_info *  info,
      bfd *		     input_bfd,
      asection *		     input_section,
      bfd_byte *		     contents,
@@ -342,7 +337,8 @@ mt_elf_relocate_section
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections [r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 
 	  name = bfd_elf_string_from_elf_section
 	    (input_bfd, symtab_hdr->sh_link, sym->st_name);

@@ -15,7 +15,7 @@ dummy ()
 }
 
 /* 1. A standard conversion sequence is better than a user-defined sequence
-      which is better than an elipses conversion sequence.  */
+      which is better than an ellipses conversion sequence.  */
 
 class A{};
 class B: public A {public: operator int (){ return 1;}};

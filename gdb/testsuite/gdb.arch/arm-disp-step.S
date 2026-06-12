@@ -294,7 +294,7 @@ test_pop_pc_3_start:
 #endif
 	push 	{r7}
 	push    {r1} /* Push the right address so that PC will get it.  */
-	/* Push the wrong address so r0-r7 will get the wrong a	ddress.  If PC
+	/* Push the wrong address so r0-r7 will get the wrong address.  If PC
 	is set from any of them, we can get a FAIL.  */
 	push	{r2}
 	push	{r2}

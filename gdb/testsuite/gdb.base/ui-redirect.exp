@@ -139,7 +139,7 @@ with_test_prefix "redirect debugging" {
     gdb_test "help" "List of classes of commands:.*"
 }
 
-with_test_prefix "redirect logging and debuging" {
+with_test_prefix "redirect logging and debugging" {
     gdb_test_no_output "set logging redirect on"
     gdb_test_no_output "set logging debugredirect on"
     gdb_test "set logging enabled on" \

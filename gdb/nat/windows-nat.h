@@ -485,7 +485,7 @@ extern GenerateConsoleCtrlEvent_ftype *GenerateConsoleCtrlEvent;
 
 /* We use a local typedef for this type to avoid depending on
    Windows 8.  */
-typedef void *gdb_lpproc_thread_attribute_list;
+using gdb_lpproc_thread_attribute_list = void *;
 
 typedef BOOL WINAPI (InitializeProcThreadAttributeList_ftype)
      (gdb_lpproc_thread_attribute_list lpAttributeList,

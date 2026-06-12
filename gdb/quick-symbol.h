@@ -202,6 +202,6 @@ struct quick_symbol_functions
   }
 };
 
-typedef std::unique_ptr<quick_symbol_functions> quick_symbol_functions_up;
+using quick_symbol_functions_up = std::unique_ptr<quick_symbol_functions>;
 
 #endif /* GDB_QUICK_SYMBOL_H */

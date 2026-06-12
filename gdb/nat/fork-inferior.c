@@ -368,12 +368,12 @@ fork_inferior (const char *exec_file, const std::string &allargs, char **env,
 
       /* If we get here, it's an error.  */
       save_errno = errno;
-      warning ("Cannot exec %s", argv[0]);
+      warning (_("Cannot exec %s"), argv[0]);
 
       for (i = 1; argv[i] != NULL; i++)
 	warning (" %s", argv[i]);
 
-      warning ("Error: %s", safe_strerror (save_errno));
+      warning (_("Error: %s"), safe_strerror (save_errno));
 
       _exit (0177);
     }
@@ -526,7 +526,7 @@ trace_start_error (const char *fmt, ...)
   va_list ap;
 
   va_start (ap, fmt);
-  warning ("Could not trace the inferior process.");
+  warning (_("Could not trace the inferior process."));
   vwarning (fmt, ap);
   va_end (ap);
 

@@ -53,7 +53,7 @@ gdb_test "print array2" " = \\( *\\( *\\( *30, *3, *3,\[()3, .\]*\\)" \
 gdb_test "print array2(2,1,1)=20" " = 20" \
   "set array(2,2,2) to 20 in subroutine (passed fixed array)"
 gdb_test "print array2" " = \\( *\\( *\\( *30, *20, *3,\[()3, .\]*\\)" \
-  "print array2 in foo after it was mofified in debugger (passed fixed array)"
+  "print array2 in foo after it was modified in debugger (passed fixed array)"
 
 
 # Try to access values from a fixed sub-array handled as VLA in subroutine.
@@ -73,7 +73,7 @@ gdb_test "print array2" " = \\( *\\( *\\( *30, *3, *3,\[()3, .\]*\\)" \
 gdb_test "print array2(2,1,1)=20" " = 20" \
   "set array(2,2,2) to 20 in subroutine, passed sub-array"
 gdb_test "print array2" " = \\( *\\( *\\( *30, *20, *3,\[()3, .\]*\\)" \
-  "print array2 in foo after it was mofified in debugger, passed sub-array"
+  "print array2 in foo after it was modified in debugger, passed sub-array"
 
 
 # Try to access values from a VLA passed to subroutine.
@@ -93,4 +93,4 @@ gdb_test "print array2" " = \\( *\\( *\\( *30, *3, *3,\[()3, .\]*\\)" \
 gdb_test "print array2(2,1,1)=20" " = 20" \
   "set array(2,2,2) to 20 in subroutine, passed vla"
 gdb_test "print array2" " = \\( *\\( *\\( *30, *20, *3,\[()3, .\]*\\)" \
-  "print array2 in foo after it was mofified in debugger, passed vla"
+  "print array2 in foo after it was modified in debugger, passed vla"

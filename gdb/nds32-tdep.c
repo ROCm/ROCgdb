@@ -283,7 +283,7 @@ nds32_frame_align (struct gdbarch *gdbarch, CORE_ADDR sp)
 /* The same insn machine code is used for little-endian and big-endian.  */
 constexpr gdb_byte nds32_break_insn[] = { 0xEA, 0x00 };
 
-typedef BP_MANIPULATION (nds32_break_insn) nds32_breakpoint;
+using nds32_breakpoint = BP_MANIPULATION (nds32_break_insn);
 
 /* Implement the "dwarf2_reg_to_regnum" gdbarch method.  */
 

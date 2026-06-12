@@ -333,9 +333,9 @@ proc test_list_filename_and_function {} {
 
     gdb_test "list list0.c:foo" "Function \"foo\" not defined in .*list0.c" "list filename:function; wrong filename rejected"
 
-    gdb_test "list foobar.c:main" "No source file named foobar.c.|Location not found" "list filename:function; nonexistant file"
+    gdb_test "list foobar.c:main" "No source file named foobar.c.|Location not found" "list filename:function; nonexistent file"
 
-    gdb_test "list list0.h:foobar" "Function \"foobar\" not defined in \"list0.h\"." "list filename:function; nonexistant function"
+    gdb_test "list list0.h:foobar" "Function \"foobar\" not defined in \"list0.h\"." "list filename:function; nonexistent function"
 
 }
 
@@ -460,7 +460,7 @@ if {[set_listsize 10]} {
 # Follows tests that require execution.
 
 # Build source listing pattern based on a line range spec string.  The
-# range can be specificed as "START-END" indicating all lines in range
+# range can be specified as "START-END" indicating all lines in range
 # (inclusive); or just "LINE", indicating just that line.
 
 proc build_pattern { range_spec } {
@@ -490,7 +490,7 @@ proc build_pattern { range_spec } {
 # COMMAND is the actual list command, including arguments.  LISTSIZE1
 # and LISTSIZE2 are the listsizes set just before and after running
 # the program to the stop point.  COMMAND is issued twice.  The first
-# time, the lines specificed by LINERANGE1 are expected; the second
+# time, the lines specified by LINERANGE1 are expected; the second
 # time, the lines specified by LINERANGE2 are expected.
 
 proc test_list {command listsize1 listsize2 linerange1 linerange2} {

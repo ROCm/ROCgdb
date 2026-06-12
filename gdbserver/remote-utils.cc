@@ -69,7 +69,7 @@
 #endif
 
 #ifndef HAVE_SOCKLEN_T
-typedef int socklen_t;
+using socklen_t = int;
 #endif
 
 #ifndef IN_PROCESS_AGENT
@@ -319,7 +319,7 @@ remote_open (const char *name)
   port_str = strchr (name, ':');
 #ifdef USE_WIN32API
   if (port_str == NULL)
-    error ("Only HOST:PORT is supported on this platform.");
+    error (_("Only HOST:PORT is supported on this platform."));
 #endif
 
   if (streq (name, STDIO_CONNECTION_NAME))
@@ -574,7 +574,7 @@ read_ptid (const char *buf, const char **obuf)
       /* Multi-process ptid.  */
       pp = unpack_varlen_hex (p + 1, &hex);
       if (pp == (p + 1) || *pp != '.')
-	error ("invalid remote ptid: %s\n", buf);
+	error (_("invalid remote ptid: %s\n"), buf);
 
       pid = (ptid_t::pid_type) (LONGEST) hex;
       if (hex != ((ULONGEST) pid))
@@ -583,7 +583,7 @@ read_ptid (const char *buf, const char **obuf)
       p = pp + 1;
       hex = hex_or_minus_one (p, &pp);
       if (pp == p)
-	error ("invalid remote ptid: %s\n", buf);
+	error (_("invalid remote ptid: %s\n"), buf);
 
       lwp = (ptid_t::lwp_type) (LONGEST) hex;
       if (hex != ((ULONGEST) lwp))
@@ -1351,7 +1351,7 @@ prepare_resume_reply (char *buf, ptid_t ptid, const target_waitstatus &status)
       sprintf (buf, "N");
       break;
     default:
-      error ("unhandled waitkind");
+      error (_("unhandled waitkind"));
       break;
     }
 }
@@ -1618,7 +1618,7 @@ look_up_one_symbol (const char *name, CORE_ADDR *addrp, int may_ask_gdb)
 
   if (!startswith (cs.own_buf, "qSymbol:"))
     {
-      warning ("Malformed response to qSymbol, ignoring: %s", cs.own_buf);
+      warning (_("Malformed response to qSymbol, ignoring: %s"), cs.own_buf);
       return -1;
     }
 
@@ -1751,14 +1751,14 @@ relocate_instruction (CORE_ADDR *to, CORE_ADDR oldloc)
 
   if (cs.own_buf[0] == 'E')
     {
-      warning ("An error occurred while relocating an instruction: %s",
+      warning (_("An error occurred while relocating an instruction: %s"),
 	       cs.own_buf);
       return -1;
     }
 
   if (!startswith (cs.own_buf, "qRelocInsn:"))
     {
-      warning ("Malformed response to qRelocInsn, ignoring: %s",
+      warning (_("Malformed response to qRelocInsn, ignoring: %s"),
 	       cs.own_buf);
       return -1;
     }

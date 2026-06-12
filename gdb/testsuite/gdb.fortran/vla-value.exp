@@ -112,7 +112,7 @@ gdb_test "print pvla(5, 45, 20)" \
   "print pvla(5, 45, 20) after deassociated"
 gdb_test "print pvla(7, 45, 14)" \
   "no such vector element \\\(vector not associated\\\)" \
-  "print pvla(7, 45, 14) after dissasociated"
+  "print pvla(7, 45, 14) after disassociated"
 gdb_test "print pvla" " = <not associated>" \
   "print vla1 after deassociated"
 

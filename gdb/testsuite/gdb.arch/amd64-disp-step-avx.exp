@@ -135,7 +135,7 @@ with_test_prefix "vex3" {
     disp_step_func "test_rip_vex3"
 
     # Confirm the instruction's expected side effects.  It should have
-    # modifed the 'var128' variable.
+    # modified the 'var128' variable.
     gdb_test "p /x (unsigned long long \[2\]) var128" \
 	" = \\{0x1122334455667788, 0x0\\}" \
 	"var128 has expected value after"

@@ -31,7 +31,7 @@ struct htab_deleter
 };
 
 /* A unique_ptr wrapper for htab_t.  */
-typedef std::unique_ptr<htab, htab_deleter> htab_up;
+using htab_up = std::unique_ptr<htab, htab_deleter>;
 
 /* A wrapper for 'delete' that can used as a hash table entry deletion
    function.  */

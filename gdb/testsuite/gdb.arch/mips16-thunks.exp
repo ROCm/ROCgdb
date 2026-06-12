@@ -223,7 +223,7 @@ proc step_through { id funcs } {
 
     set msg "single-stepping through \"${func}\" ($id)"
 
-    # Arbitrarily limit the maximium number of steps made to avoid looping
+    # Arbitrarily limit the maximum number of steps made to avoid looping
     # indefinitely in the case something goes wrong, increase as (if)
     # necessary.
     set count 8

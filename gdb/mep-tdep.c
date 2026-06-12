@@ -1906,7 +1906,7 @@ mep_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 /* Breakpoints.  */
 constexpr gdb_byte mep_break_insn[] = { 0x70, 0x32 };
 
-typedef BP_MANIPULATION (mep_break_insn) mep_breakpoint;
+using mep_breakpoint = BP_MANIPULATION (mep_break_insn);
 
 
 /* Frames and frame unwinding.  */

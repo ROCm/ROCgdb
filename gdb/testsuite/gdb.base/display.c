@@ -34,7 +34,7 @@ int do_vars()
     char      c = 'Q';
     int    *p_i = &i;
     float  *p_f = &f;
-    char   *p_c = "rubarb and fries";
+    char   *p_c = "rhubarb and fries";
 
     /* Need some code here to set breaks on.
      */

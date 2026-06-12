@@ -66,7 +66,7 @@ proc_with_prefix check_x87_regs_around_init {} {
     # instruction.  Executing this instruction will enable the x87 unit,
     # causing the kernel to place the default values into all registers.
     # After this GDB will no longer supply the default values itself but
-    # will instread read the values out of the xsave buffer.
+    # will instead read the values out of the xsave buffer.
     gdb_test "stepi" "fwait" "step to FWAIT instruction"
     gdb_test "stepi" "nop" "step past FWAIT instruction"
 

@@ -499,7 +499,7 @@ xstormy16_stack_frame_destroyed_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 constexpr gdb_byte xstormy16_break_insn[] = { 0x06, 0x0 };
 
-typedef BP_MANIPULATION (xstormy16_break_insn) xstormy16_breakpoint;
+using xstormy16_breakpoint = BP_MANIPULATION (xstormy16_break_insn);
 
 /* Given a pointer to a jump table entry, return the address
    of the function it jumps to.  Return 0 if not found.  */

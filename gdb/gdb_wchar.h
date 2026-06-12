@@ -61,8 +61,8 @@
   && (defined (__STDC_ISO_10646__) \
       || (defined (_LIBICONV_VERSION) && _LIBICONV_VERSION >= 0x108))
 
-typedef wchar_t gdb_wchar_t;
-typedef wint_t gdb_wint_t;
+using gdb_wchar_t = wchar_t;
+using gdb_wint_t = wint_t;
 
 #define gdb_wcslen wcslen
 #define gdb_iswprint iswprint
@@ -109,8 +109,8 @@ const char *intermediate_encoding (void);
 #define PHONY_ICONV
 #endif
 
-typedef char gdb_wchar_t;
-typedef int gdb_wint_t;
+using gdb_wchar_t = char;
+using gdb_wint_t = int;
 
 #define gdb_wcslen strlen
 #define gdb_iswprint c_isprint

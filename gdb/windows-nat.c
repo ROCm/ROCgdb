@@ -379,11 +379,11 @@ wait_for_single (HANDLE handle, DWORD howlong)
       if (r == WAIT_FAILED)
 	{
 	  unsigned err = (unsigned) GetLastError ();
-	  warning ("WaitForSingleObject failed (code %u): %s",
+	  warning (_("WaitForSingleObject failed (code %u): %s"),
 		   err, strwinerror (err));
 	}
       else
-	warning ("unexpected result from WaitForSingleObject: %u",
+	warning (_("unexpected result from WaitForSingleObject: %u"),
 		 (unsigned) r);
     }
 }
@@ -2076,8 +2076,8 @@ windows_nat_target::attach (const char *args, int from_tty)
   DWORD pid = parse_pid_to_attach (args);
 
   if (set_process_privilege (SE_DEBUG_NAME, TRUE) < 0)
-    warning ("Failed to get SE_DEBUG_NAME privilege\n"
-	     "This can cause attach to fail on Windows NT/2K/XP");
+    warning (_("Failed to get SE_DEBUG_NAME privilege\n"
+	       "This can cause attach to fail on Windows NT/2K/XP"));
 
   windows_process->saw_create = 0;
 

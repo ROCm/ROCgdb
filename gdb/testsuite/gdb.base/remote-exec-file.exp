@@ -32,7 +32,7 @@ with_test_prefix "set inf 2" {
     gdb_test_no_output "set remote exec-file prog2"
 }
 
-# Check that "show remote exec-file" diplays each inferior's
+# Check that "show remote exec-file" displays each inferior's
 # exec-file.
 
 with_test_prefix "show inf 1" {

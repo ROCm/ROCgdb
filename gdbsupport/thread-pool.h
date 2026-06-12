@@ -98,7 +98,7 @@ private:
   size_t m_thread_count = 0;
 
   /* A convenience typedef for the type of a task.  */
-  typedef std::packaged_task<void ()> task_t;
+  using task_t = std::packaged_task<void ()>;
 
   /* The tasks that have not been processed yet.  An optional is used
      to represent a task.  If the optional is empty, then this means

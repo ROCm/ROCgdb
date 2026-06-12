@@ -509,7 +509,7 @@ proc check_for_block_ranges_2 {} {
 	"block for foo has expected content"
 }
 
-# Buidl ASM_FILE, along with the global SRCFILE into an executable called
+# Build ASM_FILE, along with the global SRCFILE into an executable called
 # TESTFILE.  Place a breakpoint in 'foo', run to the breakpoint, and use
 # BLOCK_CHECK_FUNC to ensure the block for 'foo' is correct.
 #

@@ -1,5 +1,10 @@
 -*- text -*-
 
+* The legacy .vtable_entry and .vtable_inherit directives that were
+  needed for versions of GCC prior to gcc-3.0 (when the generic C++
+  ABI was adopted) are now considered obsolete.  They are now deprecated
+  and will be removed in a future release.
+
 Changes in 2.46:
 
 * Add support for AMD Zen6 processor.

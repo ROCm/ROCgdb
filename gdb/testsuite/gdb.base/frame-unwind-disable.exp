@@ -95,7 +95,7 @@ gdb_test "backtrace" \
     ".*Required frame unwinder may have been disabled, see 'maint info frame-unwinders'.*" \
     "no suitable unwinders should be found"
 
-# Reenable all unwinders.
+# Re-enable all unwinders.
 gdb_test_no_output "maint frame-unwinder enable -all"
 check_unwinder_class "\\w+" "Y" \
     "all unwinders should be re-enabled"

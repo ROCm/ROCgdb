@@ -206,7 +206,7 @@ expanded_tests_or_none := $(or $(expanded_tests),no-matching-tests-found)
 endif
 
 # With check-single, if TESTS was expanded to "no-matching-tests-found" then
-# this will be passed to DejaGnu, resuling in an error.  With check-parallel
+# this will be passed to DejaGnu, resulting in an error.  With check-parallel
 # in the same situation, we avoid invoking DejaGnu, and instead just call
 # the check/no-matching-tests-found rule (which prints a helpful message).
 #

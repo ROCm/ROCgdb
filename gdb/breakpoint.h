@@ -1548,7 +1548,7 @@ struct breakpoint_deleter
   }
 };
 
-typedef std::unique_ptr<struct breakpoint, breakpoint_deleter> breakpoint_up;
+using breakpoint_up = std::unique_ptr<struct breakpoint, breakpoint_deleter>;
 
 extern breakpoint_up set_momentary_breakpoint
   (struct gdbarch *, struct symtab_and_line, struct frame_id, enum bptype);

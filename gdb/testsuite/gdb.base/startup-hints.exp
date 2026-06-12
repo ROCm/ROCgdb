@@ -86,7 +86,7 @@ proc build_hint_re { width with_style } {
     # the contents of MSG, first, we need to calculate the total length of
     # each line, as seen in GDB's output.  For this we need to get the sum
     # of the lengths of each TEXT part.  With this length we can then
-    # calculate the ammount of padding needed for a given terminal width.
+    # calculate the amount of padding needed for a given terminal width.
     #
     # The second use of MSG is to build the regexp that is used to actually
     # match GDB's output.  For this we use STYLE to add escape sequences to

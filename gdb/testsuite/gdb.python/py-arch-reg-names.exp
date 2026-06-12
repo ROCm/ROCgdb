@@ -74,7 +74,7 @@ gdb_test_multiple "python print (\"\\n\".join (regs))" \
 gdb_assert {[llength $py_regs] > 0} \
     "Found at least one register from python"
 gdb_assert {[llength $py_regs] == [llength $regs]} \
-    "Same numnber of registers found"
+    "Same number of registers found"
 
 set found_non_match 0
 for { set i 0 } { $i < [llength $regs] } { incr i } {

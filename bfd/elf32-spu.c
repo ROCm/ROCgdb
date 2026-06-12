@@ -4823,8 +4823,7 @@ spu_elf_emit_fixup (bfd * output_bfd, struct bfd_link_info *info,
 /* Apply RELOCS to CONTENTS of INPUT_SECTION from INPUT_BFD.  */
 
 static int
-spu_elf_relocate_section (bfd *output_bfd,
-			  struct bfd_link_info *info,
+spu_elf_relocate_section (struct bfd_link_info *info,
 			  bfd *input_bfd,
 			  asection *input_section,
 			  bfd_byte *contents,
@@ -4847,7 +4846,7 @@ spu_elf_relocate_section (bfd *output_bfd,
   stubs = (htab->stub_sec != NULL
 	   && maybe_needs_stubs (input_section));
   iovl = overlay_index (input_section);
-  ea = bfd_get_section_by_name (output_bfd, "._ea");
+  ea = bfd_get_section_by_name (info->output_bfd, "._ea");
   symtab_hdr = &elf_symtab_hdr (input_bfd);
   sym_hashes = (struct elf_link_hash_entry **) (elf_sym_hashes (input_bfd));
 
@@ -4880,7 +4879,8 @@ spu_elf_relocate_section (bfd *output_bfd,
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
 	  sym_name = bfd_elf_sym_name (input_bfd, symtab_hdr, sym, sec);
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 	}
       else
 	{
@@ -5016,7 +5016,7 @@ spu_elf_relocate_section (bfd *output_bfd,
 	  bfd_vma offset;
 	  offset = rel->r_offset + input_section->output_section->vma
 		   + input_section->output_offset;
-	  spu_elf_emit_fixup (output_bfd, info, offset);
+	  spu_elf_emit_fixup (info->output_bfd, info, offset);
 	}
 
       if (unresolved_reloc)
@@ -5043,7 +5043,7 @@ spu_elf_relocate_section (bfd *output_bfd,
 	unresolved_reloc = true;
 
       if (unresolved_reloc
-	  && _bfd_elf_section_offset (output_bfd, info, input_section,
+	  && _bfd_elf_section_offset (info->output_bfd, info, input_section,
 				      rel->r_offset) != (bfd_vma) -1)
 	{
 	  _bfd_error_handler
@@ -5134,8 +5134,7 @@ spu_elf_relocate_section (bfd *output_bfd,
 }
 
 static bool
-spu_elf_finish_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-				 struct bfd_link_info *info ATTRIBUTE_UNUSED,
+spu_elf_finish_dynamic_sections (struct bfd_link_info *info ATTRIBUTE_UNUSED,
 				 bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   return true;

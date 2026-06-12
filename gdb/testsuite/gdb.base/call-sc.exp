@@ -88,7 +88,7 @@ proc start_scalars_test { type } {
 
 
 # Given N (0..25), return the corresponding alphabetic letter in lower
-# or upper case.  This is ment to be i18n proof.
+# or upper case.  This is meant to be i18n proof.
 
 proc i2a { n } {
     return [string range "abcdefghijklmnopqrstuvwxyz" $n $n]
@@ -168,7 +168,7 @@ proc test_scalar_returns { } {
     # Check that "return" works.
 
     # GDB must always force the return of a function that has
-    # a struct result.  Dependant on the ABI, it may, or may not be
+    # a struct result.  Dependent on the ABI, it may, or may not be
     # possible to store the return value in a register.
 
     # The relevant code looks like "L{n} = fun{n}()".  The test forces

@@ -2617,7 +2617,7 @@ gnu_nat_target::find_memory_regions (find_memory_region_ftype func)
 	  /* This region is distinct from the last one we saw, so report
 	     that previous one.  */
 	  if (last_protection != VM_PROT_NONE)
-	    (*func) (last_region_address,
+	    func (last_region_address,
 		     last_region_end - last_region_address,
 		     last_protection & VM_PROT_READ,
 		     last_protection & VM_PROT_WRITE,

@@ -540,8 +540,8 @@ and/or the trailing stdcall @samp{@@number} when applicable).
 Specifies a list of archive libraries from which symbols should not be automatically
 exported.  The library names may be delimited by commas or colons.  Specifying
 @code{--exclude-libs ALL} excludes symbols in all archive libraries from
-automatic export.  This option is available only for the i386 PE targeted
-port of the linker and for ELF targeted ports.  For i386 PE, symbols
+automatic export.  This option is available only for ELF and PE targeted
+ports of the linker.  For PE targets, symbols
 explicitly listed in a .def file are still exported, regardless of this
 option.  For ELF targeted ports, symbols affected by this option will
 be treated as hidden.
@@ -555,9 +555,9 @@ may be delimited by commas or colons, and must match exactly the filenames
 used by @command{ld} to open the files; for archive members, this is simply
 the member name, but for object files the name listed must include and
 match precisely any path used to specify the input file on the linker's
-command-line.  This option is available only for the i386 PE targeted port
-of the linker.  Symbols explicitly listed in a .def file are still exported,
+command-line. Symbols explicitly listed in a .def file are still exported,
 regardless of this option.
+[This option is specific to PE targeted ports of the linker]
 
 @cindex dynamic symbol table
 @kindex -E
@@ -2454,7 +2454,7 @@ library (which should be called @code{*.dll.a} or @code{*.a} for DLLs)
 may be used to link clients against the generated executable; this
 behaviour makes it possible to skip a separate import library creation
 step (eg. @code{dlltool} for DLLs).  This option is only available for
-the i386 PE and ELF targetted ports of the linker.
+the PE and ELF targetted ports of the linker.
 
 @kindex -pie
 @kindex --pic-executable
@@ -3447,11 +3447,11 @@ will be validated.
 
 @c man end
 
-@subsection Options Specific to i386 PE Targets
+@subsection Options Specific to PE Targets
 
 @c man begin OPTIONS
 
-The i386 PE linker supports the @option{-shared} option, which causes
+The PE linker supports the @option{-shared} option, which causes
 the output to be a dynamically linked library (DLL) instead of a
 normal executable.  You should name the output @code{*.dll} when you
 use this option.  In addition, the linker fully supports the standard
@@ -3460,8 +3460,8 @@ like an object file (in fact, it should precede archives it exports
 symbols from, to ensure that they get linked in, just like a normal
 object file).
 
-In addition to the options common to all targets, the i386 PE linker
-support additional command-line options that are specific to the i386
+In addition to the options common to all targets, the PE linker
+supports additional command-line options that are specific to the
 PE target.  Options that take values may be separated from their
 values by either a space or an equals sign.
 
@@ -3471,21 +3471,21 @@ values by either a space or an equals sign.
 @item --add-stdcall-alias
 If given, symbols with a stdcall suffix (@@@var{nn}) will be exported
 as-is and also with the suffix stripped.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --base-file
 @item --base-file @var{file}
 Use @var{file} as the name of a file in which to save the base
 addresses of all the relocations needed for generating DLLs with
 @file{dlltool}.
-[This is an i386 PE specific option]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --dll
 @item --dll
 Create a DLL instead of a regular executable.  You may also use
 @option{-shared} or specify a @code{LIBRARY} in a given @code{.def}
 file.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --enable-long-section-names
 @kindex --disable-long-section-names
@@ -3507,7 +3507,7 @@ option is specified on the command-line, @command{ld} will enable long
 section names, overriding the default and technically correct behaviour,
 when it finds the presence of debug information while linking an executable
 image and not stripping symbols.
-[This option is valid for all PE targeted ports of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --enable-stdcall-fixup
 @kindex --disable-stdcall-fixup
@@ -3526,7 +3526,7 @@ to be usable.  If you specify @option{--enable-stdcall-fixup}, this
 feature is fully enabled and warnings are not printed.  If you specify
 @option{--disable-stdcall-fixup}, this feature is disabled and such
 mismatches are considered to be errors.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --leading-underscore
 @kindex --no-leading-underscore
@@ -3535,6 +3535,7 @@ mismatches are considered to be errors.
 For most targets default symbol-prefix is an underscore and is defined
 in target's description. By this option it is possible to
 disable/enable the default underscore symbol-prefix.
+[This option is specific to PE targeted ports of the linker]
 
 @cindex DLLs, creating
 @kindex --export-all-symbols
@@ -3561,25 +3562,25 @@ These cygwin-excludes are: @code{_cygwin_dll_entry@@12},
 @code{_fmode}, @code{_impure_ptr}, @code{cygwin_attach_dll},
 @code{cygwin_premain0}, @code{cygwin_premain1}, @code{cygwin_premain2},
 @code{cygwin_premain3}, and @code{environ}.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --exclude-symbols
 @item --exclude-symbols @var{symbol},@var{symbol},...
 Specifies a list of symbols which should not be automatically
 exported.  The symbol names may be delimited by commas or colons.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --exclude-all-symbols
 @item --exclude-all-symbols
 Specifies no symbols should be automatically exported.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --file-alignment
 @item --file-alignment
 Specify the file alignment.  Sections in the file will always begin at
 file offsets which are multiples of this number.  This defaults to
 512.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @cindex heap size
 @kindex --heap
@@ -3588,13 +3589,13 @@ file offsets which are multiples of this number.  This defaults to
 Specify the number of bytes of memory to reserve (and optionally commit)
 to be used as heap for this program.  The default is 1MB reserved, 4K
 committed.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --kill-at
 @item --kill-at
 If given, the stdcall suffixes (@@@var{nn}) will be stripped from
 symbols before they are exported.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --large-address-aware
 @item --large-address-aware
@@ -3603,7 +3604,7 @@ header is set to indicate that this executable supports virtual addresses
 greater than 2 gigabytes.  This should be used in conjunction with the /3GB
 or /USERVA=@var{value} megabytes switch in the ``[operating systems]''
 section of the BOOT.INI.  Otherwise, this bit has no effect.
-[This option is specific to PE targeted ports of the linker]
+[This option is specific to the i386 PE targeted port of the linker]
 
 @kindex --disable-large-address-aware
 @item --disable-large-address-aware
@@ -3611,37 +3612,37 @@ Reverts the effect of a previous @samp{--large-address-aware} option.
 This is useful if @samp{--large-address-aware} is always set by the compiler
 driver (e.g. Cygwin gcc) and the executable does not support virtual
 addresses greater than 2 gigabytes.
-[This option is specific to PE targeted ports of the linker]
+[This option is specific to the i386 PE targeted port of the linker]
 
 @kindex --major-image-version
 @item --major-image-version @var{value}
 Sets the major number of the ``image version''.  Defaults to 1.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --major-os-version
 @item --major-os-version @var{value}
 Sets the major number of the ``os version''.  Defaults to 4.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --major-subsystem-version
 @item --major-subsystem-version @var{value}
 Sets the major number of the ``subsystem version''.  Defaults to 4.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --minor-image-version
 @item --minor-image-version @var{value}
 Sets the minor number of the ``image version''.  Defaults to 0.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --minor-os-version
 @item --minor-os-version @var{value}
 Sets the minor number of the ``os version''.  Defaults to 0.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --minor-subsystem-version
 @item --minor-subsystem-version @var{value}
 Sets the minor number of the ``subsystem version''.  Defaults to 0.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @cindex DEF files, creating
 @cindex DLLs, creating
@@ -3652,7 +3653,7 @@ file corresponding to the DLL the linker is generating.  This DEF file
 (which should be called @code{*.def}) may be used to create an import
 library with @code{dlltool} or may be used as a reference to
 automatically or implicitly exported symbols.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @cindex DLLs, creating
 @kindex --enable-auto-image-base
@@ -3663,14 +3664,14 @@ Automatically choose the image base for DLLs, optionally starting with base
 By using a hash generated from the dllname to create unique image bases
 for each DLL, in-memory collisions and relocations which can delay program
 execution are avoided.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --disable-auto-image-base
 @item --disable-auto-image-base
 Do not automatically generate a unique image base.  If there is no
 user-specified image base (@code{--image-base}) then use the platform
 default.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @cindex DLLs, linking to
 @kindex --dll-search-prefix
@@ -3681,14 +3682,14 @@ search for @code{<string><basename>.dll} in preference to
 between DLLs built for the various "subplatforms": native, cygwin,
 uwin, pw, etc.  For instance, cygwin DLLs typically use
 @code{--dll-search-prefix=cyg}.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --enable-auto-import
 @item --enable-auto-import
 Do sophisticated linking of @code{_symbol} to @code{__imp__symbol} for
 DATA imports from DLLs, thus making it possible to bypass the dllimport
 mechanism on the user side and to reference unmangled symbol names.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 The following remarks pertain to the original implementation of the
 feature and are obsolete nowadays for Cygwin and MinGW targets.
@@ -3822,7 +3823,7 @@ functions).
 @item --disable-auto-import
 Do not attempt to do sophisticated linking of @code{_symbol} to
 @code{__imp__symbol} for DATA imports from DLLs.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --enable-runtime-pseudo-reloc
 @item --enable-runtime-pseudo-reloc
@@ -3830,23 +3831,23 @@ If your code contains expressions described in --enable-auto-import section,
 that is, DATA imports from DLL with non-zero offset, this switch will create
 a vector of 'runtime pseudo relocations' which can be used by runtime
 environment to adjust references to such data in your client code.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --disable-runtime-pseudo-reloc
 @item --disable-runtime-pseudo-reloc
 Do not create pseudo relocations for non-zero offset DATA imports from DLLs.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --enable-extra-pe-debug
 @item --enable-extra-pe-debug
 Show additional debug info related to auto-import symbol thunking.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --section-alignment
 @item --section-alignment
 Sets the section alignment.  Sections in memory will always begin at
 addresses which are a multiple of this number.  Defaults to 0x1000.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @cindex stack size
 @kindex --stack
@@ -3855,7 +3856,7 @@ addresses which are a multiple of this number.  Defaults to 0x1000.
 Specify the number of bytes of memory to reserve (and optionally commit)
 to be used as stack for this program.  The default is 2MB reserved, 4K
 committed.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 @kindex --subsystem
 @item --subsystem @var{which}
@@ -3866,7 +3867,7 @@ legal values for @var{which} are @code{native}, @code{windows},
 @code{console}, @code{posix}, and @code{xbox}.  You may optionally set
 the subsystem version also.  Numeric values are also accepted for
 @var{which}.
-[This option is specific to the i386 PE targeted port of the linker]
+[This option is specific to PE targeted ports of the linker]
 
 The following options set flags in the @code{DllCharacteristics} field
 of the PE file header:
@@ -3881,15 +3882,16 @@ MinGW targets.
 
 This option also implies @option{--dynamicbase} and
 @option{--enable-reloc-section}.
+[This options is specific to 64-bit PE targeted ports of the linker]
 
 @kindex --dynamicbase
 @item --dynamicbase
 @itemx --disable-dynamicbase
 The image base address may be relocated using address space layout
 randomization (ASLR).  This feature was introduced with MS Windows
-Vista for i386 PE targets.  This option is enabled by default for MinGW
-targets but can be disabled via the @option{--disable-dynamicbase}
-option. This option also implies @option{--enable-reloc-section}.
+Vista.  This option is enabled by default for MinGW targets but can be
+disabled via the @option{--disable-dynamicbase} option. This option
+also implies @option{--enable-reloc-section}.
 
 @kindex --forceinteg
 @item --forceinteg
@@ -3901,8 +3903,8 @@ default.
 @item --nxcompat
 @item --disable-nxcompat
 The image is compatible with the Data Execution Prevention.
-This feature was introduced with MS Windows XP SP2 for i386 PE
-targets.  The option is enabled by default for MinGW targets.
+This feature was introduced with MS Windows XP SP2. The option is
+enabled by default for MinGW targets.
 
 @kindex --no-isolation
 @item --no-isolation

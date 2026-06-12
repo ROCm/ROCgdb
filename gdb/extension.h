@@ -232,7 +232,7 @@ private:
   const extension_language_defn *m_extlang;
 };
 
-typedef std::unique_ptr<xmethod_worker> xmethod_worker_up;
+using xmethod_worker_up = std::unique_ptr<xmethod_worker>;
 
 /* The interface for gdb's own extension(/scripting) language.  */
 extern const struct extension_language_defn extension_language_gdb;

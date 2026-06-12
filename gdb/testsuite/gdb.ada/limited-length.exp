@@ -183,7 +183,7 @@ with_test_prefix "with unlimited print elements" {
     gdb_test -nonl {output $$2[3]} $re \
 	"output partially available Large_3d_Array row from history"
 
-    # These go straigth to the inferior.
+    # These go straight to the inferior.
     set re \
 	[string_to_regexp \
 	     "((33, 34, 35, 36), (37, 38, 39, 40),\

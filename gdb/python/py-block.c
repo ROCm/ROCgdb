@@ -527,7 +527,7 @@ blpy_repr (PyObject *self)
 	str += ", ";
     }
   return PyUnicode_FromFormat ("<%s %s {%s}>",
-			       gdbpy_py_obj_tp_name (self),
+			       gdbpy_py_obj_tp_name (self).c_str (),
 			       name, str.c_str ());
 }
 

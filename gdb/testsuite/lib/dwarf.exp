@@ -145,8 +145,6 @@ proc build_executable_and_dwo_files { testname executable options args } {
 	    return -1
 	}
 
-	verbose -log "APB: SPEC: $spec"
-
 	set s [lindex $spec 0]
 	set local_options [lindex $spec 1]
 
@@ -183,8 +181,6 @@ proc build_executable_and_dwo_files { testname executable options args } {
 	    }
 	}
     }
-
-    verbose -log "APB: OBJECTS = $objects"
 
     set ret [$func $objects "${binfile}" executable $options]
     if  { $ret != "" } {
@@ -229,7 +225,7 @@ proc init_shared_gdb {} {
 #     if { $share } shared_gdb_disable
 #   }
 #
-# to write functionalty that could share ($share == 1) or could not
+# to write functionality that could share ($share == 1) or could not
 # share ($share == 0) a gdb session between two uses.
 
 proc shared_gdb_enable {} {
@@ -4113,7 +4109,7 @@ namespace eval Dwarf {
     #             added in the BODY.
     #             default = 1.
     # As a special case, if OPTIONS is a list of length 1, it's
-    # interpreted as specifing the filename.
+    # interpreted as specifying the filename.
     # BODY is Tcl code to emit the assembly.  It is evaluated via
     # "eval" -- not uplevel as you might expect, because it is
     # important to run the body in the Dwarf namespace.

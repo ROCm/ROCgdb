@@ -112,22 +112,22 @@ extern asection *_bfd_sparc_elf_gc_mark_hook
 extern bool _bfd_sparc_elf_adjust_dynamic_symbol
   (struct bfd_link_info *, struct elf_link_hash_entry *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_sparc_elf_omit_section_dynsym
-  (bfd *, struct bfd_link_info *, asection *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *, asection *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_sparc_elf_late_size_sections
-  (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_sparc_elf_new_section_hook
   (bfd *, asection *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_sparc_elf_relax_section
   (bfd *, struct bfd_section *, struct bfd_link_info *, bool *)
   ATTRIBUTE_HIDDEN;
 extern int _bfd_sparc_elf_relocate_section
-  (bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *,
+  (struct bfd_link_info *, bfd *, asection *, bfd_byte *,
    Elf_Internal_Rela *, Elf_Internal_Sym *, asection **) ATTRIBUTE_HIDDEN;
 extern bool _bfd_sparc_elf_finish_dynamic_symbol
-  (bfd *, struct bfd_link_info *, struct elf_link_hash_entry *,
+  (struct bfd_link_info *, struct elf_link_hash_entry *,
    Elf_Internal_Sym *sym) ATTRIBUTE_HIDDEN;
 extern bool _bfd_sparc_elf_finish_dynamic_sections
-  (bfd *, struct bfd_link_info *, bfd_byte *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *, bfd_byte *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_sparc_elf_fixup_symbol
   (struct bfd_link_info *, struct elf_link_hash_entry *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_sparc_elf_object_p

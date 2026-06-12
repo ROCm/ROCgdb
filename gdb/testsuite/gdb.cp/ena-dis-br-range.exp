@@ -131,7 +131,7 @@ gdb_test "info break" [make_info_breakpoint_reply_re y y y y y y] \
 # Check that disabling an invalid breakpoint location range does not
 # cause unexpected behavior.
 gdb_test "disable 2.6-7" "Bad breakpoint location number '6'" \
-    "disable an unvalid location breakpoint range"
+    "disable an invalid location breakpoint range"
 
 gdb_test "info break" [make_info_breakpoint_reply_re y y y y y y] \
     "breakpoint info disable 2.6-7"
