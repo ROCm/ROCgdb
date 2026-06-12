@@ -1,0 +1,63 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# This file is part of GDB.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# 'target teams distribute parallel for' typically spreads the loop
+# across multiple GPU waves hitting the same breakpoint.  The number of
+# waves depends on num_teams / thread_limit and the GPU architecture
+# (some configurations expose only one), so this test requires at least
+# one AMDGPU wave rather than a specific count.
+
+load_lib rocm.exp
+
+require allow_omp_offload_tests
+
+standard_testfile
+
+set break_line [gdb_get_line_number "teams-line"]
+
+if {[gdb_compile_omp_offload [list $srcdir/$subdir/$srcfile] \
+	 [standard_output_file $testfile] executable {debug}] != ""} {
+    untested "failed to compile OpenMP-offload binary"
+    return -1
+}
+
+clean_restart $testfile
+
+with_rocm_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+
+    gdb_breakpoint "$srcfile:$break_line" allow-pending
+
+    rocm_omp_continue_to_breakpoint "continue to teams breakpoint"
+
+    # The breakpoint hit already selects an AMDGPU wave; confirm the
+    # teams-distributed loop produced at least one wave at the stop
+    # (see the note at the top of the file about not asserting an
+    # exact count).
+    set wave_list [info_thread_get_wave_list]
+    gdb_assert {[llength $wave_list] >= 1} "at least one AMDGPU wave at teams breakpoint"
+
+    gdb_test "print i >= 0" \
+	"= (true|1)" \
+	"loop index is non-negative"
+
+    delete_breakpoints
+    rocm_omp_continue_to_exit "continue to exit"
+}

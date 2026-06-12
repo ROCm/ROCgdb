@@ -640,3 +640,302 @@ gdb_caching_proc compiler_dwarf_language {} {
 	return "others"
     }
 }
+
+# OpenMP GPU offload support.
+#
+# The procs below extend the ROCm test framework to support running
+# tests that use the OpenMP "target" construct to offload code to
+# the GPU.
+
+# Try to find PROG in $ROCM_PATH/llvm/bin, $ROCM_PATH/lib/llvm/bin,
+# and finally on the PATH.  Return the first one that responds to
+# "--version", or an empty string if none is found.
+
+proc rocm_find_llvm_tool {prog} {
+    global rocm_path
+
+    set candidates [list \
+	"${rocm_path}/llvm/bin/${prog}" \
+	"${rocm_path}/lib/llvm/bin/${prog}" \
+	"${prog}"]
+
+    foreach cand $candidates {
+	set res [catch {exec $cand --version} output]
+	if {$res == 0} {
+	    return $cand
+	}
+    }
+    return ""
+}
+
+# Find the AMD OpenMP-offload C compiler (amdclang).
+gdb_caching_proc find_amdclang {} {
+    return [rocm_find_llvm_tool amdclang]
+}
+
+# Find the AMD OpenMP-offload C++ compiler (amdclang++).
+gdb_caching_proc find_amdclangpp {} {
+    return [rocm_find_llvm_tool amdclang++]
+}
+
+# Find the AMD OpenMP-offload Fortran compiler (amdflang).
+gdb_caching_proc find_amdflang {} {
+    return [rocm_find_llvm_tool amdflang]
+}
+
+# Return 1 if the C/C++ OpenMP-offload toolchain and a usable AMD GPU
+# are both available; otherwise return a {0 reason} pair suitable for
+# 'require'.  Mirrors allow_hipcc_tests.
+
+gdb_caching_proc allow_omp_offload_tests {} {
+    if {[target_info gdb_protocol] != ""} {
+	return {0 "remote debugging"}
+    }
+    if {![istarget "*-linux*"]} {
+	return {0 "OpenMP offload is only tested on Linux"}
+    }
+
+    # Need amd-dbgapi support in GDB.
+    set output [remote_exec host $::GDB "$::INTERNAL_GDBFLAGS --configuration"]
+    if { [string first "--with-amd-dbgapi" $output] == -1 } {
+	return {0 "amd-dbgapi not supported"}
+    }
+
+    if {[find_amdclang] == ""} {
+	return {0 "amdclang not found in ROCM_PATH"}
+    }
+
+    set devices [find_amdgpu_devices]
+    if {[llength $devices] == 0} {
+	return {0 "no suitable amdgpu targets found"}
+    }
+
+    return 1
+}
+
+# Same as above, but also requires amdflang for Fortran tests.
+
+gdb_caching_proc allow_omp_offload_fortran_tests {} {
+    set base [allow_omp_offload_tests]
+    if {[lindex $base 0] == 0} {
+	return $base
+    }
+    if {[find_amdflang] == ""} {
+	return {0 "amdflang not found in ROCM_PATH"}
+    }
+    return 1
+}
+
+# Build the list of -fopenmp / --offload-arch flags used to target
+# AMD GPUs with amdclang / amdclang++ / amdflang.
+#
+# LANG selects the compiler-driver dialect.  It can be "c", "c++" or
+# "fortran".  Some clang-only diagnostic flags (e.g.
+# -Wno-unused-command-line-argument) are not understood by amdflang,
+# so they are only emitted for the C/C++ paths.
+
+proc rocm_omp_offload_flags {{lang "c"}} {
+    set flags "-fopenmp -fopenmp-targets=amdgcn-amd-amdhsa"
+
+    if { $lang ne "fortran" } {
+	append flags " -Wno-unused-command-line-argument"
+    }
+
+    # The -mllvm option mirrors what gdb_compile does for HIP: it makes
+    # AMDGPU backtraces actually work when -g is used.  amdflang
+    # accepts this option as well.
+    append flags " -mllvm -amdgpu-spill-cfi-saved-regs"
+
+    foreach gpu_target [hcc_amdgpu_targets] {
+	append flags " --offload-arch=${gpu_target}"
+    }
+    return $flags
+}
+
+# Drop known-harmless stderr from OpenMP-offload links.  ROCm 7.14's
+# device ld.lld warns when the OpenMP runtime helper __keep_alive
+# references LDS from a non-kernel function; the link still succeeds.
+proc rocm_omp_prune_benign_warnings {output} {
+    regsub -all \
+	{ld\.lld: warning:[^\r\n]*__keep_alive[^\r\n]*local memory global used by non-kernel function[^\r\n]*[\r\n]*} \
+	$output "" output
+    regsub -all {^[\r\n]+|[\r\n]+$} $output "" output
+    return $output
+}
+
+# Compile via gdb_compile, prune known-harmless warnings, and log any
+# remaining output (gdb_compile is quiet so benign noise is suppressed).
+proc rocm_omp_compile {source dest type options} {
+    lappend options quiet
+    set result [rocm_omp_prune_benign_warnings \
+		    [gdb_compile $source $dest $type $options]]
+    if {$result ne ""} {
+	verbose -log "compile failed: $result"
+    }
+    return $result
+}
+
+# Compile a C OpenMP-offload program (SOURCE -> DEST) using amdclang.
+# Falls back to gdb_compile's error reporting on failure.
+#
+# OPTIONS accepts the standard gdb_compile options.
+
+proc gdb_compile_omp_offload {source dest type options} {
+    global CC_FOR_TARGET
+
+    set amdclang [find_amdclang]
+    if {$amdclang == ""} {
+	return "amdclang not found"
+    }
+
+    save_vars {CC_FOR_TARGET} {
+	set CC_FOR_TARGET $amdclang
+	lappend options "early_flags=[rocm_omp_offload_flags c]"
+	set result [rocm_omp_compile $source $dest $type $options]
+    }
+    return $result
+}
+
+# Same as gdb_compile_omp_offload, but for C++ source files using
+# amdclang++.
+
+proc gdb_compile_omp_offload_cpp {source dest type options} {
+    global CXX_FOR_TARGET CC_FOR_TARGET
+
+    set amdclangpp [find_amdclangpp]
+    if {$amdclangpp == ""} {
+	return "amdclang++ not found"
+    }
+
+    save_vars {CC_FOR_TARGET CXX_FOR_TARGET} {
+	set CC_FOR_TARGET $amdclangpp
+	set CXX_FOR_TARGET $amdclangpp
+	lappend options c++
+	lappend options "early_flags=[rocm_omp_offload_flags c++]"
+	set result [rocm_omp_compile $source $dest $type $options]
+    }
+    return $result
+}
+
+# Compile a Fortran OpenMP-offload program (SOURCE -> DEST) using amdflang.
+#
+# Fortran has its own quirks: the compiler driver is amdflang (NOT
+# amdclang), and we drive it through gdb_compile with the f90 option so
+# DejaGnu picks the right command line.
+
+proc gdb_compile_omp_offload_fortran {source dest type options} {
+    global F90_FOR_TARGET F77_FOR_TARGET
+
+    set amdflang [find_amdflang]
+    if {$amdflang == ""} {
+	return "amdflang not found"
+    }
+
+    save_vars {F90_FOR_TARGET F77_FOR_TARGET} {
+	set F90_FOR_TARGET $amdflang
+	set F77_FOR_TARGET $amdflang
+	lappend options f90
+	lappend options "early_flags=[rocm_omp_offload_flags fortran]"
+	set result [rocm_omp_compile $source $dest $type $options]
+    }
+    return $result
+}
+
+# Helpers shared by the gdb.rocm/omp-target-*.exp tests.
+#
+# The stop report for an OpenMP-offload breakpoint can span several
+# lines (a "Switching to thread" notice, the "hit Breakpoint N.M"
+# line, the auto-generated __omp_offloading_* frame and the source
+# line), so these helpers accumulate the interesting bits with
+# exp_continue rather than matching a single line.
+
+# Continue the inferior and verify that a breakpoint is hit.
+
+proc rocm_omp_continue_to_breakpoint {testname} {
+    set saw_bp 0
+    gdb_test_multiple "continue" $testname {
+	-re "hit Breakpoint $::decimal" {
+	    set saw_bp 1
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $saw_bp } $testname
+	}
+    }
+}
+
+# Like rocm_omp_continue_to_breakpoint, but also verify that the stop
+# is reported in device function FUNC.  Used when a breakpoint is set
+# on a named '#pragma omp declare target' function.  TESTNAME defaults
+# to "continue to FUNC".
+
+proc rocm_omp_continue_to_function {func {testname ""}} {
+    if {$testname eq ""} {
+	set testname "continue to $func"
+    }
+    set saw_bp 0
+    set saw_func 0
+    set func_re "[string_to_regexp $func] \\("
+    gdb_test_multiple "continue" $testname {
+	-re "hit Breakpoint $::decimal" {
+	    set saw_bp 1
+	    exp_continue
+	}
+	-re $func_re {
+	    set saw_func 1
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $saw_bp && $saw_func } $testname
+	}
+    }
+}
+
+# Verify that GDB is currently stopped on an AMDGPU wave.
+
+proc rocm_omp_check_on_wave {testname} {
+    set saw_wave 0
+    gdb_test_multiple "info threads" $testname {
+	-re "AMDGPU Wave" {
+	    set saw_wave 1
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $saw_wave } $testname
+	}
+    }
+}
+
+# Continue the inferior and verify it runs to normal exit.
+
+proc rocm_omp_continue_to_exit {testname} {
+    set saw_exit 0
+    gdb_test_multiple "continue" $testname {
+	-re "exited normally" {
+	    set saw_exit 1
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $saw_exit } $testname
+	}
+    }
+}
+
+# Single-step one source line forward inside a device region and
+# verify the step did not error out.  The resulting line number is not
+# checked, since OpenMP-offload line tables vary across compiler
+# versions; callers typically follow this with rocm_omp_check_on_wave
+# to confirm execution stayed on the device.
+
+proc rocm_omp_next {testname} {
+    set ok 1
+    gdb_test_multiple "next" $testname {
+	-re "\[Cc\]annot \[^\r\n\]*\r\n" {
+	    set ok 0
+	    exp_continue
+	}
+	-re "$::gdb_prompt " {
+	    gdb_assert { $ok } $testname
+	}
+    }
+}

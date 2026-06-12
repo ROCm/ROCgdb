@@ -1,0 +1,49 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# This file is part of GDB.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Fortran OpenMP-offload test.
+
+load_lib rocm.exp
+
+require allow_omp_offload_fortran_tests
+
+standard_testfile .f90
+
+set ftarget_line [gdb_get_line_number "ftarget-line"]
+
+if {[gdb_compile_omp_offload_fortran [list $srcdir/$subdir/$srcfile] \
+	 [standard_output_file $testfile] executable {debug}] != ""} {
+    untested "failed to compile Fortran OpenMP-offload binary"
+    return -1
+}
+
+clean_restart $testfile
+
+with_rocm_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+
+    gdb_breakpoint "$srcfile:$ftarget_line" allow-pending
+
+    rocm_omp_continue_to_breakpoint "continue to Fortran OMP-target breakpoint"
+    rocm_omp_check_on_wave "AMDGPU wave at Fortran target"
+
+    delete_breakpoints
+    rocm_omp_continue_to_exit "continue to exit"
+}
