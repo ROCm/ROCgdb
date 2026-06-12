@@ -59,7 +59,7 @@ tui_register_changed (const frame_info_ptr &frame, int regno)
      And even if the frames differ a register change made in one can still show
      up in the other.  So we always use the selected frame here, and ignore
      FRAME.  */
-  fi = get_selected_frame (NULL);
+  fi = get_selected_frame ();
   tui_data_win ()->check_register_values (fi);
 }
 
@@ -114,7 +114,7 @@ tui_refresh_frame_and_register_information ()
       frame_info_ptr fi;
       if (has_stack_frames ())
 	{
-	  fi = get_selected_frame (NULL);
+	  fi = get_selected_frame ();
 
 	  /* Display the frame position (even if there is no symbols or
 	     the PC is not known).  */

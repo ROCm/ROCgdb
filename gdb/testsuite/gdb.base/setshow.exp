@@ -442,7 +442,7 @@ proc_with_prefix test_setshow_radix {} {
     clean_restart
 
     #test set radix 11
-    gdb_test "set radix 11" "Unsupported output radix ``decimal 11''; output radix unchanged..*"
+    gdb_test "set radix 11" "Unsupported output radix \"decimal 11\"; output radix unchanged..*"
 
     #test set radix 16
     gdb_test "set radix 16" "Input and output radices now set to decimal 16, hex 10, octal 20..*"

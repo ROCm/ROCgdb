@@ -20,7 +20,7 @@
    information describes a parameter as being in a register but a more
    recent (inner) frame marks the register as being undefined.
 
-   This can arrise if the dwarf producer has the location of a parameter in
+   This can arise if the dwarf producer has the location of a parameter in
    a callee clobbered register at the time of a call.  Older versions of
    gcc used to do this, newer versions seem to avoid this issue.
 

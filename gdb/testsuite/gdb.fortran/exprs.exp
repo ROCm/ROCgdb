@@ -158,7 +158,7 @@ proc test_value_history {} {
 	"Set value-history\[3\] using \$3"
 
     gdb_test "print \$\$"	"\\\$4 = 102" \
-	"Print value-history\[MAX-1\] using inplicit index \$\$"
+	"Print value-history\[MAX-1\] using implicit index \$\$"
 
     gdb_test "print \$\$"	"\\\$5 = 103" \
 	"Print value-history\[MAX-1\] again using implicit index \$\$"

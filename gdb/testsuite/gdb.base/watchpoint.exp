@@ -616,7 +616,7 @@ proc test_disable_enable_software_watchpoint {} {
     gdb_test {watch $pc} "^(?:Hardware w|W)atchpoint $::decimal: .pc"
 
     gdb_test_no_output "disable \$bpnum" "disable watchpoint `\$pc'"
-    gdb_test_no_output "enable \$bpnum" "reenable watchpoint `\$pc'"
+    gdb_test_no_output "enable \$bpnum" "re-enable watchpoint `\$pc'"
 
     gdb_test "info watchpoint \$bpnum" \
 	".*watchpoint\[ \t\]+keep\[ \t\]+y\[ \t\]+.pc.*" \

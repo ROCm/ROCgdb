@@ -2188,8 +2188,8 @@ ppc_sysv_get_return_buf_addr (struct type *val_type,
     }
   catch (const gdb_exception_error &e)
     {
-      warning ("Cannot determine the function return value.\n"
-	       "Try compiling with -fvar-tracking.");
+      warning (_("Cannot determine the function return value.\n"
+		 "Try compiling with -fvar-tracking."));
     }
   return return_val;
 }

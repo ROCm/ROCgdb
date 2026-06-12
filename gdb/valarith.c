@@ -691,7 +691,7 @@ value_concat (struct value *arg1, struct value *arg2)
   struct type *type2 = check_typedef (arg2->type ());
 
   if (type1->code () != TYPE_CODE_ARRAY && type2->code () != TYPE_CODE_ARRAY)
-    error ("no array provided to concatenation");
+    error (_("no array provided to concatenation"));
 
   LONGEST low1, high1;
   struct type *elttype1 = type1;

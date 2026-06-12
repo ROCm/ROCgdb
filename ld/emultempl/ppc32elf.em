@@ -145,7 +145,7 @@ ppc_before_allocation (void)
 	    einfo (_("%X%P: inline PLT: %E\n"));
 	}
 
-      if (ppc_elf_tls_setup (link_info.output_bfd, &link_info)
+      if (ppc_elf_tls_setup (&link_info)
 	  && !notlsopt)
 	{
 	  if (!ppc_elf_tls_optimize (link_info.output_bfd, &link_info))

@@ -75,7 +75,7 @@ public:
 
   DISABLE_COPY_AND_ASSIGN (format_pieces);
 
-  typedef std::vector<format_piece>::iterator iterator;
+  using iterator = std::vector<format_piece>::iterator;
 
   iterator begin ()
   {

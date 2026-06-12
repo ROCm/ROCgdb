@@ -1820,7 +1820,7 @@ finish_backward (struct finish_command_fsm *sm)
   CORE_ADDR func_addr;
   CORE_ADDR alt_entry_point;
   CORE_ADDR entry_point;
-  frame_info_ptr frame = get_selected_frame (nullptr);
+  frame_info_ptr frame = get_selected_frame ();
   struct gdbarch *gdbarch = get_frame_arch (frame);
 
   pc = get_frame_pc (get_current_frame ());
@@ -1986,7 +1986,7 @@ finish_command (const char *arg, int from_tty)
       if (from_tty)
 	{
 	  gdb_printf (_("Run till exit from "));
-	  print_stack_frame (get_selected_frame (nullptr), 1, LOCATION, 0);
+	  print_stack_frame (get_selected_frame (), 1, LOCATION, 0);
 	}
 
       proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
@@ -1994,7 +1994,7 @@ finish_command (const char *arg, int from_tty)
     }
 
   /* Find the function we will return from.  */
-  frame_info_ptr callee_frame = get_selected_frame (nullptr);
+  frame_info_ptr callee_frame = get_selected_frame ();
   sm->function = find_symbol_for_pc (get_frame_pc (callee_frame));
   sm->return_buf = 0;    /* Initialize buffer address is not available.  */
 
@@ -2526,7 +2526,7 @@ registers_info (const char *addr_exp, bool fpregs)
 
   if (!target_has_registers ())
     error (_("The program has no registers now."));
-  frame = get_selected_frame (nullptr);
+  frame = get_selected_frame ();
   gdbarch = get_frame_arch (frame);
 
   if (!addr_exp)
@@ -2663,7 +2663,7 @@ info_vector_command (const char *args, int from_tty)
   if (!target_has_registers ())
     error (_("The program has no registers now."));
 
-  print_vector_info (gdb_stdout, get_selected_frame (nullptr), args);
+  print_vector_info (gdb_stdout, get_selected_frame (), args);
 }
 
 /* Kill the inferior process.  Make us have no inferior.  */
@@ -3200,7 +3200,7 @@ info_float_command (const char *args, int from_tty)
   if (!target_has_registers ())
     error (_("The program has no registers now."));
 
-  frame = get_selected_frame (nullptr);
+  frame = get_selected_frame ();
   gdbarch_print_float_info (get_frame_arch (frame), gdb_stdout, frame, args);
 }
 

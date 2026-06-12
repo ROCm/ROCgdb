@@ -926,7 +926,7 @@ rx_return_value (struct gdbarch *gdbarch,
 
 constexpr gdb_byte rx_break_insn[] = { 0x00 };
 
-typedef BP_MANIPULATION (rx_break_insn) rx_breakpoint;
+using rx_breakpoint = BP_MANIPULATION (rx_break_insn);
 
 /* Implement the dwarf_reg_to_regnum" gdbarch method.  */
 

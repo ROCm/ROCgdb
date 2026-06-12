@@ -696,7 +696,7 @@ typedef enum
 } arm_hwbp_type;
 
 /* Type describing an ARM Hardware Breakpoint Control register value.  */
-typedef unsigned int arm_hwbp_control_t;
+using arm_hwbp_control_t = unsigned int;
 
 /* Structure used to keep track of hardware break-/watch-points.  */
 struct arm_linux_hw_breakpoint

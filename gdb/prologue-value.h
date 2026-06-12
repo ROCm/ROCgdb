@@ -149,7 +149,7 @@ struct prologue_value {
   CORE_ADDR k;
 };
 
-typedef struct prologue_value pv_t;
+using pv_t = struct prologue_value;
 
 
 /* Return the unknown prologue value --- { pvk_unknown, ?, ? }.  */

@@ -123,7 +123,7 @@ struct value_ref_policy
 
 /* A gdb:;ref_ptr pointer to a struct value.  */
 
-typedef gdb::ref_ptr<struct value, value_ref_policy> value_ref_ptr;
+using value_ref_ptr = gdb::ref_ptr<struct value, value_ref_policy>;
 
 /* Note that the fields in this structure are arranged to save a bit
    of memory.  */

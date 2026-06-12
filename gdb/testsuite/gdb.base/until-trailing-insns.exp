@@ -118,7 +118,7 @@ Dwarf::assemble $asm_file {
 	include_dir "${srcdir}/${subdir}"
 	file_name "$srcfile" 1
 
-	# Generate a line table program.  This mimicks clang-13's behavior
+	# Generate a line table program.  This mimics clang-13's behavior
 	# of adding some !is_stmt at the end of a loop line, making until
 	# not work properly.
 	program {

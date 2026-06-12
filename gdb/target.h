@@ -64,7 +64,7 @@ struct inferior;
 
 /* Define const gdb_byte using one identifier, to make it easy for
    make-target-delegates.py to parse.  */
-typedef const gdb_byte const_gdb_byte;
+using const_gdb_byte = const gdb_byte;
 
 #include "infrun.h"
 #include "breakpoint.h"
@@ -1473,7 +1473,7 @@ struct target_ops_deleter
 };
 
 /* A unique pointer for target_ops.  */
-typedef std::unique_ptr<target_ops, target_ops_deleter> target_ops_up;
+using target_ops_up = std::unique_ptr<target_ops, target_ops_deleter>;
 
 /* A policy class to interface gdb::ref_ptr with target_ops.  */
 
@@ -2578,7 +2578,7 @@ struct target_unpusher
 
 /* A unique_ptr that unpushes a target on destruction.  */
 
-typedef std::unique_ptr<struct target_ops, target_unpusher> target_unpush_up;
+using target_unpush_up = std::unique_ptr<struct target_ops, target_unpusher>;
 
 extern void target_pre_inferior ();
 

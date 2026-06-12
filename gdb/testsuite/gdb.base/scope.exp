@@ -321,7 +321,7 @@ proc_with_prefix test_at_localscopes {} {
 
 # Note, we don't pass a binfile to clean_restart because we need to
 # avoid gdb_load here.  With remote targets, gdb_load connects to the
-# remote target, and we specificaly want the following tests to run
+# remote target, and we specifically want the following tests to run
 # before the program is started.
 clean_restart
 gdb_file_cmd $binfile

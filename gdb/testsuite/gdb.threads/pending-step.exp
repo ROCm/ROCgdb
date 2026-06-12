@@ -43,7 +43,7 @@
 #    remembers from step 4 a pending SIGTRAP to report for thread 1,
 #    so reports it now.
 #
-# 6) From GDB's perpective, this SIGTRAP can't represent a finished
+# 6) From GDB's perspective, this SIGTRAP can't represent a finished
 #    single-step, since thread 1 was not single-stepping (it was
 #    continued in step 5).  Neither does this SIGTRAP correspond to a
 #    breakpoint hit.  GDB reports to the user a spurious SIGTRAP.

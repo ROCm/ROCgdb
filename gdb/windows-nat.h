@@ -425,12 +425,12 @@ extern const int amd64_mappings[];
 class all_windows_threads_iterator
 {
 public:
-  typedef all_windows_threads_iterator self_type;
-  typedef windows_thread_info value_type;
-  typedef windows_thread_info *&reference;
-  typedef windows_thread_info **pointer;
-  typedef std::forward_iterator_tag iterator_category;
-  typedef int difference_type;
+  using self_type = all_windows_threads_iterator;
+  using value_type = windows_thread_info;
+  using reference = windows_thread_info *&;
+  using pointer = windows_thread_info **;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type = int;
 
   explicit all_windows_threads_iterator (all_non_exited_threads_iterator base_iter)
     : m_base_iter (base_iter)

@@ -923,8 +923,7 @@ reloc_warning (struct bfd_link_info *info, const char *name, bfd *input_bfd,
 
 /* Relocate a 68hc11/68hc12 ELF section.  */
 int
-elf32_m68hc11_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
-				struct bfd_link_info *info,
+elf32_m68hc11_relocate_section (struct bfd_link_info *info,
 				bfd *input_bfd, asection *input_section,
 				bfd_byte *contents, Elf_Internal_Rela *relocs,
 				Elf_Internal_Sym *local_syms,

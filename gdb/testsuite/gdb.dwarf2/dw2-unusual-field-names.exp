@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test that GDB can support accesing fields of a structure if the
+# Test that GDB can support accessing fields of a structure if the
 # fields have non-standard names.  Specifically, if the names are
 # reserved C type names like 'double', 'float', 'int', etc.
 #

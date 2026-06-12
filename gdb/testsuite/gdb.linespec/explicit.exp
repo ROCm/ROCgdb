@@ -220,7 +220,7 @@ namespace eval $testfile {
 	    }
 	}
 
-	set tst "complete non-existant function name"
+	set tst "complete non-existent function name"
 	send_gdb "break -function foo\t"
 	gdb_test_multiple "" $tst {
 	    -re "break -function foo\\\x07" {
@@ -279,7 +279,7 @@ namespace eval $testfile {
 	    }
 	}
 
-	set tst "complete non-existant file name"
+	set tst "complete non-existent file name"
 	send_gdb "break -source foo\t"
 	gdb_test_multiple "" $tst {
 	    -re "break -source foo" {
@@ -319,7 +319,7 @@ namespace eval $testfile {
 	    }
 	}
 
-	set tst "complete filename and non-existant function name"
+	set tst "complete filename and non-existent function name"
 	send_gdb "break -sou 3explicit.c -fun foo\t"
 	gdb_test_multiple "" $tst {
 	    -re "break -sou 3explicit.c -fun foo\\\x07" {
@@ -610,7 +610,7 @@ namespace eval $testfile {
 	    "$tst resolved"
     }
 
-    # Test interaction of condition command and explicit linespec conditons.
+    # Test interaction of condition command and explicit linespec conditions.
     clean_restart $exefile
 
     set tst "condition_command overrides explicit linespec condition"

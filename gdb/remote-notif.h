@@ -34,7 +34,7 @@ struct notif_event
 
 /* A unique pointer holding a notif_event.  */
 
-typedef std::unique_ptr<notif_event> notif_event_up;
+using notif_event_up = std::unique_ptr<notif_event>;
 
 /* ID of the notif_client.  */
 

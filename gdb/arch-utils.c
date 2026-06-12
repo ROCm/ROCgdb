@@ -845,7 +845,7 @@ struct gdbarch *
 get_current_arch (void)
 {
   if (has_stack_frames ())
-    return get_frame_arch (get_selected_frame (NULL));
+    return get_frame_arch (get_selected_frame ());
   else
     return current_inferior ()->arch ();
 }

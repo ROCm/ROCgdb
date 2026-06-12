@@ -17,7 +17,7 @@
 #
 # This test should run on targets that don't support tracing, but for
 # which libinproctrace.so is built and helps catch some issues where
-# libinproctrace.so is so broken inferiors wont even start.
+# libinproctrace.so is so broken inferiors won't even start.
 
 load_lib "trace-support.exp"
 

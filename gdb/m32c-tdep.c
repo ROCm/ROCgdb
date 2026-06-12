@@ -991,7 +991,7 @@ make_regs (struct gdbarch *arch)
 /* Breakpoints.  */
 constexpr gdb_byte m32c_break_insn[] = { 0x00 };	/* brk */
 
-typedef BP_MANIPULATION (m32c_break_insn) m32c_breakpoint;
+using m32c_breakpoint = BP_MANIPULATION (m32c_break_insn);
 
 
 /* Prologue analysis.  */

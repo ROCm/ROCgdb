@@ -15,7 +15,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* Useful abreviations.  */
+/* Useful abbreviations.  */
 typedef void t;
 typedef char tc;
 typedef short ts;

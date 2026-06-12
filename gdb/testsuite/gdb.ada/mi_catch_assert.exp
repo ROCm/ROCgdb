@@ -29,7 +29,7 @@ set MIFLAGS "-i=mi"
 mi_clean_restart $::testfile
 
 ###################################################
-# 2. Try catching conditionnal failed assertion.  #
+# 2. Try catching conditional failed assertion.  #
 ###################################################
 
 # Here is the scenario:

@@ -315,7 +315,7 @@ with_test_prefix "handler points to lib objfile" {
 
 # Register another global handler, this one raises an exception.  Reload the
 # core-file, the bad handler should be invoked first, which raises an
-# excetption, at which point GDB should skip further Python handlers.
+# exception, at which point GDB should skip further Python handlers.
 with_test_prefix "handler raises an exception" {
     gdb_test_no_output \
 	"python gdb.missing_objfile.register_handler(None, rhandler)"
@@ -526,7 +526,7 @@ with_test_prefix "return False handler in global list" {
 	     "  Foo"]
 
     gdb_test_no_output "python handler_obj.set_mode(Mode.RETURN_FALSE)" \
-	"confirgure handler"
+	"configure handler"
 
     load_core_file
     gdb_test "python print(handler_call_log)" \

@@ -131,7 +131,7 @@ namespace eval ::CheckTestNames {
 	_check_well_formed_name $message
     }
 
-    # If COUNT is greater than zero, disply PREFIX followed by COUNT.
+    # If COUNT is greater than zero, display PREFIX followed by COUNT.
     proc maybe_show_count { prefix count } {
 	if { $count > 0 } {
 	    clone_output "$prefix$count"

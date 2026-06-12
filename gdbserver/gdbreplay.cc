@@ -59,7 +59,7 @@
 #include "getopt.h"
 
 #ifndef HAVE_SOCKLEN_T
-typedef int socklen_t;
+using socklen_t = int;
 #endif
 
 /* Sort of a hack... */

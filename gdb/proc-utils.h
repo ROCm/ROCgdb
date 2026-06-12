@@ -115,6 +115,6 @@ extern  void  procfs_note      (const char *, const char *, int);
 
 /* Define the type (and more importantly the width) of the control
    word used to write to the /proc/PID/ctl file.  */
-typedef long procfs_ctl_t;
+using procfs_ctl_t = long;
 
 #endif /* GDB_PROC_UTILS_H */

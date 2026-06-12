@@ -167,7 +167,7 @@ public:
 
   /* The iterator type.  */
 
-  typedef char **iterator;
+  using iterator = char **;
 
   /* Return an iterator pointing to the start of the array.  */
 

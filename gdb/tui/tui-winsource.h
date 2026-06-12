@@ -270,12 +270,12 @@ public:
 
   typedef std::vector<tui_win_info *>::iterator inner_iterator;
 
-  typedef tui_source_window_iterator self_type;
-  typedef struct tui_source_window_base *value_type;
-  typedef struct tui_source_window_base *&reference;
-  typedef struct tui_source_window_base **pointer;
-  typedef std::forward_iterator_tag iterator_category;
-  typedef int difference_type;
+  using self_type = tui_source_window_iterator;
+  using value_type = struct tui_source_window_base *;
+  using reference = struct tui_source_window_base *&;
+  using pointer = struct tui_source_window_base **;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type = int;
 
   explicit tui_source_window_iterator (const inner_iterator &it,
 				       const inner_iterator &end)

@@ -184,7 +184,7 @@ with_test_prefix "disconnect" {
     gdb_test "start" "Don't know how to run.*" "start no longer works"
 }
 
-# Reenable auto-connecting to the native target.  Plain "start" should
+# Re-enable auto-connecting to the native target.  Plain "start" should
 # start working again.
 gdb_test_no_output "set auto-connect-native-target on"
 

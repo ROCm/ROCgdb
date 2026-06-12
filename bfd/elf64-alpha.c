@@ -2560,8 +2560,7 @@ elf64_alpha_size_plt_section (struct bfd_link_info *info)
 }
 
 static bool
-elf64_alpha_early_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-				 struct bfd_link_info *info)
+elf64_alpha_early_size_sections (struct bfd_link_info *info)
 {
   bfd *i;
   struct alpha_elf_link_hash_table * htab;
@@ -2788,8 +2787,7 @@ elf64_alpha_size_rela_got_section (struct bfd_link_info *info)
 /* Set the sizes of the dynamic sections.  */
 
 static bool
-elf64_alpha_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-				struct bfd_link_info *info)
+elf64_alpha_late_size_sections (struct bfd_link_info *info)
 {
   bfd *dynobj;
   asection *s;
@@ -2898,8 +2896,7 @@ elf64_alpha_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 #define add_dynamic_entry(TAG, VAL) \
   _bfd_elf_add_dynamic_entry (info, TAG, VAL)
 
-      if (!_bfd_elf_add_dynamic_tags (output_bfd, info,
-				      relocs || relplt))
+      if (!_bfd_elf_add_dynamic_tags (info, relocs || relplt))
 	return false;
 
       if (relplt
@@ -4029,8 +4026,7 @@ elf64_alpha_emit_dynrel (bfd *abfd, struct bfd_link_info *info,
    symbol winds up in the output section.  */
 
 static int
-elf64_alpha_relocate_section_r (bfd *output_bfd ATTRIBUTE_UNUSED,
-				struct bfd_link_info *info ATTRIBUTE_UNUSED,
+elf64_alpha_relocate_section_r (struct bfd_link_info *info ATTRIBUTE_UNUSED,
 				bfd *input_bfd, asection *input_section,
 				bfd_byte *contents ATTRIBUTE_UNUSED,
 				Elf_Internal_Rela *relocs,
@@ -4111,7 +4107,7 @@ elf64_alpha_relocate_section_r (bfd *output_bfd ATTRIBUTE_UNUSED,
 /* Relocate an Alpha ELF section.  */
 
 static int
-elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
+elf64_alpha_relocate_section (struct bfd_link_info *info,
 			      bfd *input_bfd, asection *input_section,
 			      bfd_byte *contents, Elf_Internal_Rela *relocs,
 			      Elf_Internal_Sym *local_syms,
@@ -4130,7 +4126,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 
   /* Handle relocatable links with a smaller loop.  */
   if (bfd_link_relocatable (info))
-    return elf64_alpha_relocate_section_r (output_bfd, info, input_bfd,
+    return elf64_alpha_relocate_section_r (info, input_bfd,
 					   input_section, contents, relocs,
 					   local_syms, local_sections);
 
@@ -4216,7 +4212,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
 	  msec = sec;
-	  value = _bfd_elf_rela_local_sym (output_bfd, sym, &msec, rel);
+	  value = _bfd_elf_rela_local_sym (info->output_bfd, sym, &msec, rel);
 
 	  /* If this is a tp-relative relocation against sym STN_UNDEF (0),
 	     this is hackery from relax_section.  Force the value to
@@ -4252,7 +4248,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		    continue;
 		  msec = sec;
 		  ent->addend =
-		    _bfd_merged_section_offset (output_bfd, &msec,
+		    _bfd_merged_section_offset (info->output_bfd, &msec,
 						sym->st_value + ent->addend);
 		  ent->addend -= sym->st_value;
 		  ent->addend += msec->output_section->vma
@@ -4333,7 +4329,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	    {
 	      gotent->reloc_done = 1;
 
-	      bfd_put_64 (output_bfd, value,
+	      bfd_put_64 (info->output_bfd, value,
 			  sgot->contents + gotent->got_offset);
 
 	      /* If the symbol has been forced local, output a
@@ -4342,7 +4338,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	      if (bfd_link_pic (info)
 		  && !dynamic_symbol_p
 		  && !undef_weak_ref)
-		elf64_alpha_emit_dynrel (output_bfd, info, sgot, srelgot,
+		elf64_alpha_emit_dynrel (info->output_bfd, info, sgot, srelgot,
 					 gotent->got_offset, 0,
 					 R_ALPHA_RELATIVE, value);
 	    }
@@ -4509,7 +4505,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		     && (input_section->flags & SEC_ALLOC)
 		     && !undef_weak_ref
 		     && !(unresolved_reloc
-			  && (_bfd_elf_section_offset (output_bfd, info,
+			  && (_bfd_elf_section_offset (info->output_bfd, info,
 						       input_section,
 						       rel->r_offset)
 			      == (bfd_vma) -1)))
@@ -4531,7 +4527,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	      goto default_reloc;
 
 	    if (input_section->flags & SEC_ALLOC)
-	      elf64_alpha_emit_dynrel (output_bfd, info, input_section,
+	      elf64_alpha_emit_dynrel (info->output_bfd, info, input_section,
 				       srel, rel->r_offset, dynindx,
 				       dyntype, dynaddend);
 	  }
@@ -4564,7 +4560,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	     NULL to be encoded as 0 in any format, so this works here.  */
 	  if (r_symndx == STN_UNDEF
 	      || (unresolved_reloc
-		  && _bfd_elf_section_offset (output_bfd, info,
+		  && _bfd_elf_section_offset (info->output_bfd, info,
 					      input_section,
 					      rel->r_offset) == (bfd_vma) -1))
 	    howto = (elf64_alpha_howto_table
@@ -4583,7 +4579,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	      gotent->reloc_done = 1;
 
 	      /* Note that the module index for the main program is 1.  */
-	      bfd_put_64 (output_bfd,
+	      bfd_put_64 (info->output_bfd,
 			  !bfd_link_pic (info) && !dynamic_symbol_p,
 			  sgot->contents + gotent->got_offset);
 
@@ -4591,7 +4587,8 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		 DTPMOD64 reloc, otherwise it will be handled in
 		 finish_dynamic_symbol.  */
 	      if (bfd_link_pic (info) && !dynamic_symbol_p)
-		elf64_alpha_emit_dynrel (output_bfd, info, sgot, srelgot,
+		elf64_alpha_emit_dynrel (info->output_bfd, info,
+					 sgot, srelgot,
 					 gotent->got_offset, 0,
 					 R_ALPHA_DTPMOD64, 0);
 
@@ -4602,7 +4599,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		  BFD_ASSERT (elf_hash_table (info)->tls_sec != NULL);
 		  value -= dtp_base;
 		}
-	      bfd_put_64 (output_bfd, value,
+	      bfd_put_64 (info->output_bfd, value,
 			  sgot->contents + gotent->got_offset + 8);
 	    }
 
@@ -4687,14 +4684,15 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		    value -= tp_base;
 		  else
 		    {
-		      elf64_alpha_emit_dynrel (output_bfd, info, sgot, srelgot,
+		      elf64_alpha_emit_dynrel (info->output_bfd, info,
+					       sgot, srelgot,
 					       gotent->got_offset, 0,
 					       R_ALPHA_TPREL64,
 					       value - dtp_base);
 		      value = 0;
 		    }
 		}
-	      bfd_put_64 (output_bfd, value,
+	      bfd_put_64 (info->output_bfd, value,
 			  sgot->contents + gotent->got_offset);
 	    }
 
@@ -4759,7 +4757,7 @@ elf64_alpha_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
    dynamic sections here.  */
 
 static bool
-elf64_alpha_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
+elf64_alpha_finish_dynamic_symbol (struct bfd_link_info *info,
 				   struct elf_link_hash_entry *h,
 				   Elf_Internal_Sym *sym)
 {
@@ -4809,7 +4807,7 @@ elf64_alpha_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
 	      {
 		disp = (PLT_HEADER_SIZE - 4) - (gotent->plt_offset + 4);
 		insn = INSN_AD (INSN_BR, 31, disp);
-		bfd_put_32 (output_bfd, insn,
+		bfd_put_32 (info->output_bfd, insn,
 			    splt->contents + gotent->plt_offset);
 
 		plt_index = ((gotent->plt_offset - NEW_PLT_HEADER_SIZE)
@@ -4819,11 +4817,11 @@ elf64_alpha_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
 	      {
 		disp = -(gotent->plt_offset + 4);
 		insn = INSN_AD (INSN_BR, 28, disp);
-		bfd_put_32 (output_bfd, insn,
+		bfd_put_32 (info->output_bfd, insn,
 			    splt->contents + gotent->plt_offset);
-		bfd_put_32 (output_bfd, INSN_UNOP,
+		bfd_put_32 (info->output_bfd, INSN_UNOP,
 			    splt->contents + gotent->plt_offset + 4);
-		bfd_put_32 (output_bfd, INSN_UNOP,
+		bfd_put_32 (info->output_bfd, INSN_UNOP,
 			    splt->contents + gotent->plt_offset + 8);
 
 		plt_index = ((gotent->plt_offset - OLD_PLT_HEADER_SIZE)
@@ -4836,10 +4834,10 @@ elf64_alpha_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
 	    outrel.r_addend = 0;
 
 	    loc = srel->contents + plt_index * sizeof (Elf64_External_Rela);
-	    bfd_elf64_swap_reloca_out (output_bfd, &outrel, loc);
+	    bfd_elf64_swap_reloca_out (info->output_bfd, &outrel, loc);
 
 	    /* Fill in the entry in the .got.  */
-	    bfd_put_64 (output_bfd, plt_addr,
+	    bfd_put_64 (info->output_bfd, plt_addr,
 			sgot->contents + gotent->got_offset);
 	  }
     }
@@ -4884,12 +4882,12 @@ elf64_alpha_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
 	      abort ();
 	    }
 
-	  elf64_alpha_emit_dynrel (output_bfd, info, sgot, srel,
+	  elf64_alpha_emit_dynrel (info->output_bfd, info, sgot, srel,
 				   gotent->got_offset, h->dynindx,
 				   r_type, gotent->addend);
 
 	  if (gotent->reloc_type == R_ALPHA_TLSGD)
-	    elf64_alpha_emit_dynrel (output_bfd, info, sgot, srel,
+	    elf64_alpha_emit_dynrel (info->output_bfd, info, sgot, srel,
 				     gotent->got_offset + 8, h->dynindx,
 				     R_ALPHA_DTPREL64, gotent->addend);
 	}
@@ -4907,8 +4905,7 @@ elf64_alpha_finish_dynamic_symbol (bfd *output_bfd, struct bfd_link_info *info,
 /* Finish up the dynamic sections.  */
 
 static bool
-elf64_alpha_finish_dynamic_sections (bfd *output_bfd,
-				     struct bfd_link_info *info,
+elf64_alpha_finish_dynamic_sections (struct bfd_link_info *info,
 				     bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -4961,7 +4958,7 @@ elf64_alpha_finish_dynamic_sections (bfd *output_bfd,
 	      break;
 	    }
 
-	  bfd_elf64_swap_dyn_out (output_bfd, &dyn, dyncon);
+	  bfd_elf64_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	}
 
       /* Initialize the plt header.  */
@@ -4975,49 +4972,49 @@ elf64_alpha_finish_dynamic_sections (bfd *output_bfd,
 	      ofs = gotplt_vma - (plt_vma + PLT_HEADER_SIZE);
 
 	      insn = INSN_ABC (INSN_SUBQ, 27, 28, 25);
-	      bfd_put_32 (output_bfd, insn, splt->contents);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents);
 
 	      insn = INSN_ABO (INSN_LDAH, 28, 28, (ofs + 0x8000) >> 16);
-	      bfd_put_32 (output_bfd, insn, splt->contents + 4);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 4);
 
 	      insn = INSN_ABC (INSN_S4SUBQ, 25, 25, 25);
-	      bfd_put_32 (output_bfd, insn, splt->contents + 8);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 8);
 
 	      insn = INSN_ABO (INSN_LDA, 28, 28, ofs);
-	      bfd_put_32 (output_bfd, insn, splt->contents + 12);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 12);
 
 	      insn = INSN_ABO (INSN_LDQ, 27, 28, 0);
-	      bfd_put_32 (output_bfd, insn, splt->contents + 16);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 16);
 
 	      insn = INSN_ABC (INSN_ADDQ, 25, 25, 25);
-	      bfd_put_32 (output_bfd, insn, splt->contents + 20);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 20);
 
 	      insn = INSN_ABO (INSN_LDQ, 28, 28, 8);
-	      bfd_put_32 (output_bfd, insn, splt->contents + 24);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 24);
 
 	      insn = INSN_AB (INSN_JMP, 31, 27);
-	      bfd_put_32 (output_bfd, insn, splt->contents + 28);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 28);
 
 	      insn = INSN_AD (INSN_BR, 28, -PLT_HEADER_SIZE);
-	      bfd_put_32 (output_bfd, insn, splt->contents + 32);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 32);
 	    }
 	  else
 	    {
 	      insn = INSN_AD (INSN_BR, 27, 0);	/* br $27, .+4 */
-	      bfd_put_32 (output_bfd, insn, splt->contents);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents);
 
 	      insn = INSN_ABO (INSN_LDQ, 27, 27, 12);
-	      bfd_put_32 (output_bfd, insn, splt->contents + 4);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 4);
 
 	      insn = INSN_UNOP;
-	      bfd_put_32 (output_bfd, insn, splt->contents + 8);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 8);
 
 	      insn = INSN_AB (INSN_JMP, 27, 27);
-	      bfd_put_32 (output_bfd, insn, splt->contents + 12);
+	      bfd_put_32 (info->output_bfd, insn, splt->contents + 12);
 
 	      /* The next two words will be filled in by ld.so.  */
-	      bfd_put_64 (output_bfd, 0, splt->contents + 16);
-	      bfd_put_64 (output_bfd, 0, splt->contents + 24);
+	      bfd_put_64 (info->output_bfd, 0, splt->contents + 16);
+	      bfd_put_64 (info->output_bfd, 0, splt->contents + 24);
 	    }
 
 	  elf_section_data (splt->output_section)->this_hdr.sh_entsize = 0;

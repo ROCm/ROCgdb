@@ -59,7 +59,7 @@ main ()
   cl_int *data;
 
   /* In order to see which devices the OpenCL implementation on your platform
-     provides you may issue a call to the print_clinfo () fuction.  */
+     provides you may issue a call to the print_clinfo () function.  */
 
   /* Initialize the data the OpenCl program operates on.  */
   data = (cl_int*) calloc (1, size);

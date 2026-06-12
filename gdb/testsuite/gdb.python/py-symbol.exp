@@ -139,7 +139,7 @@ gdb_breakpoint "$srcfile:$linenum"
 gdb_continue_to_breakpoint "Break at end for variable a" ".*Break at end.*"
 gdb_py_test_silent_cmd "python frame = gdb.selected_frame()" "Get Frame" 0
 
-# Check that we find the static sybol local to this file over the
+# Check that we find the static symbol local to this file over the
 # static symbol from the second source file.
 gdb_test "python print (gdb.lookup_static_symbol ('rr').value ())" "42" \
     "print value of rr from main file"

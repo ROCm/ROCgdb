@@ -206,7 +206,7 @@ registers_from_string (struct regcache *regcache, char *buf)
 
   if (len != tdesc->registers_size * 2)
     {
-      warning ("Wrong sized register packet (expected %d bytes, got %d)",
+      warning (_("Wrong sized register packet (expected %d bytes, got %d)"),
 	       2 * tdesc->registers_size, len);
       if (len > tdesc->registers_size * 2)
 	len = tdesc->registers_size * 2;

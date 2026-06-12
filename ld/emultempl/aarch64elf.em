@@ -259,7 +259,7 @@ gld${EMULATION_NAME}_after_allocation (void)
      ie. doesn't affect any code, so we can delay resizing the
      sections.  It's likely we'll resize everything in the process of
      adding stubs.  */
-  ret = bfd_elf_discard_info (link_info.output_bfd, & link_info);
+  ret = bfd_elf_discard_info (&link_info);
   if (ret < 0)
     {
       einfo (_("%X%P: .eh_frame/.stab edit: %E\n"));

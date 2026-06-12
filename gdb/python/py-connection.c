@@ -203,7 +203,7 @@ connpy_repr (PyObject *obj)
     return gdb_py_invalid_object_repr (obj);
 
   return PyUnicode_FromFormat ("<%s num=%d, what=\"%s\">",
-			       gdbpy_py_obj_tp_name (obj),
+			       gdbpy_py_obj_tp_name (obj).c_str (),
 			       target->connection_number,
 			       make_target_connection_string (target).c_str ());
 }

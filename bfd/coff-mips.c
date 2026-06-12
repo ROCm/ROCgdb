@@ -460,17 +460,29 @@ mips_refhi_reloc (bfd *abfd,
   relocation += symbol->section->output_offset;
   relocation += reloc_entry->addend;
 
-  if (reloc_entry->address > bfd_get_section_limit (abfd, input_section))
+  bfd_size_type octet = (reloc_entry->address
+			 * OCTETS_PER_BYTE (abfd, input_section));
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, octet))
     return bfd_reloc_outofrange;
 
+  struct ecoff_section_tdata *sdata = ecoff_section_data (input_section);
+  if (sdata == NULL)
+    {
+      sdata = bfd_zalloc (abfd, sizeof (*sdata));
+      if (sdata == NULL)
+	return bfd_reloc_outofrange;
+      input_section->used_by_bfd = sdata;
+    }
+
   /* Save the information, and let REFLO do the actual relocation.  */
-  n = (struct mips_hi *) bfd_malloc ((bfd_size_type) sizeof *n);
+  n = bfd_malloc (sizeof (*n));
   if (n == NULL)
     return bfd_reloc_outofrange;
   n->addr = (bfd_byte *) data + reloc_entry->address;
   n->addend = relocation;
-  n->next = ecoff_data (abfd)->mips_refhi_list;
-  ecoff_data (abfd)->mips_refhi_list = n;
+  n->next = sdata->mips_refhi_list;
+  sdata->mips_refhi_list = n;
 
   if (output_bfd != (bfd *) NULL)
     reloc_entry->address += input_section->output_offset;
@@ -491,11 +503,11 @@ mips_reflo_reloc (bfd *abfd,
 		  bfd *output_bfd,
 		  char **error_message)
 {
-  if (ecoff_data (abfd)->mips_refhi_list != NULL)
+  struct ecoff_section_tdata *sdata = ecoff_section_data (input_section);
+  if (sdata != NULL)
     {
-      struct mips_hi *l;
+      struct mips_hi *l = sdata->mips_refhi_list;
 
-      l = ecoff_data (abfd)->mips_refhi_list;
       while (l != NULL)
 	{
 	  unsigned long insn;
@@ -537,8 +549,7 @@ mips_reflo_reloc (bfd *abfd,
 	  free (l);
 	  l = next;
 	}
-
-      ecoff_data (abfd)->mips_refhi_list = NULL;
+      sdata->mips_refhi_list = NULL;
     }
 
   /* Now do the REFLO reloc in the usual way.  */

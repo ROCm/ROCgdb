@@ -383,6 +383,9 @@ i386_intel_simplify_register (expressionS *e)
 static symbolS *
 i386_intel_simplify_symbol (symbolS *sym)
 {
+  if (symbol_resolving_p (sym))
+    return sym;
+
   symbolS *orig = sym;
   offsetT off;
   sym = symbol_equated_to (sym, &off);
@@ -405,7 +408,9 @@ i386_intel_simplify_symbol (symbolS *sym)
   expressionS *e = symbol_get_value_expression (sym);
   expressionS exp;
   memcpy (&exp, e, sizeof exp);
+  symbol_mark_resolving (sym);
   int ret = i386_intel_simplify (&exp);
+  symbol_clear_resolving (sym);
   if (ret == 0)
     return NULL;
 

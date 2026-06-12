@@ -17,7 +17,7 @@ standard_testfile
 
 # Count the number of probes of TYPE (either 'stap' or 'dtrace'),
 # from provider matching PROVIDER, with a name matching NAME, and from
-# an objec file matching OBJECT.
+# an object file matching OBJECT.
 #
 # The OBJECT is optional, in which case all objects will be matched.
 #
@@ -90,16 +90,16 @@ proc check_for_usable_xmm0_probe { binfile } {
     # First, look for the xmmreg probe, and if we find it, grab the
     # argument string.
     if {![regexp {\n\s+Provider: test\n\s+Name: xmmreg\n[^\n]+\n\s+Arguments: ([^\n]+)\n} $output ignore arguments]} {
-	verbose -log "APB: Couldn't find probe at all"
+	verbose -log "Couldn't find probe at all"
 	return false
     }
 
-    verbose -log "APB: Matched on '$ignore'"
-    verbose -log "APB: arguments: '$arguments'"
+    verbose -log "Matched on '$ignore'"
+    verbose -log "  arguments: '$arguments'"
 
     # Check the argument string mentions xmm0.
     if {![regexp {@%?xmm0} $arguments]} {
-	verbose -log "APB: Prove doesn't use xmm0 register"
+	verbose -log "Probe doesn't use xmm0 register"
 	return false
     }
 

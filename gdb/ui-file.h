@@ -147,7 +147,7 @@ private:
   void printchar (int c, int quoter, bool async_safe);
 };
 
-typedef std::unique_ptr<ui_file> ui_file_up;
+using ui_file_up = std::unique_ptr<ui_file>;
 
 /* A ui_file that writes to nowhere.  */
 
@@ -295,7 +295,7 @@ private:
   bool m_close_p;
 };
 
-typedef std::unique_ptr<stdio_file> stdio_file_up;
+using stdio_file_up = std::unique_ptr<stdio_file>;
 
 /* Like stdio_file, but specifically for stderr.
 

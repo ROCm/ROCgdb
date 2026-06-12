@@ -87,7 +87,7 @@ gdb_test "break keeper"
 gdb_test "handle SIGSEGV" "SIGSEGV.*Yes.*Yes.*Yes.*Segmentation fault"
 gdb_test "handle SIGBUS" "SIGBUS.*Yes.*Yes.*Yes.*Bus error"
 
-# For the given signal type, check that: the SIGSEGV occures; a
+# For the given signal type, check that: the SIGSEGV occurs; a
 # backtrace from the SEGV works; the sigsegv is delivered; a backtrace
 # through the SEGV works.
 

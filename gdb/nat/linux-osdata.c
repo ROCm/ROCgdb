@@ -43,12 +43,12 @@
    so that reading pid values embedded in /proc works
    consistently.  */
 
-typedef long long  PID_T;
+using PID_T = long long ;
 
 /* Define TIME_T to be at least as large as time_t, so that reading
    time values embedded in /proc works consistently.  */
 
-typedef long long TIME_T;
+using TIME_T = long long;
 
 #define MAX_PID_T_STRLEN  (sizeof ("-9223372036854775808") - 1)
 

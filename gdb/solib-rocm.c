@@ -750,8 +750,8 @@ rocm_solib_ops::bfd_open (const char *pathname) const
 	  if (amd_dbgapi_architecture_get_info
 	      (architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_NAME,
 	       sizeof (arch_name), &arch_name) != AMD_DBGAPI_STATUS_SUCCESS)
-	    error ("amd_dbgapi_architecture_get_info call failed for arch "
-		   "%#02x.", gfx_arch);
+	    error (_("amd_dbgapi_architecture_get_info call failed for arch "
+		     "%#02x."), gfx_arch);
 	  gdb::unique_xmalloc_ptr<char> arch_name_cleaner (arch_name);
 
 	  error (_("'%s': AMDGCN architecture %s not supported."),

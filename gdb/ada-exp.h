@@ -627,7 +627,7 @@ protected:
 };
 
 /* Unique pointer specialization for Ada assignment components.  */
-typedef std::unique_ptr<ada_component> ada_component_up;
+using ada_component_up = std::unique_ptr<ada_component>;
 
 /* An operation that holds a single component.  */
 class ada_aggregate_operation
@@ -760,7 +760,7 @@ protected:
 };
 
 /* Unique pointer specialization for Ada assignment associations.  */
-typedef std::unique_ptr<ada_association> ada_association_up;
+using ada_association_up = std::unique_ptr<ada_association>;
 
 /* A component that holds a vector of associations and an operation.
    The operation is re-evaluated for each choice.  */

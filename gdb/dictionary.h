@@ -167,8 +167,8 @@ extern int mdict_size (const struct multidictionary *mdict);
    C++.  */
 struct mdict_iterator_wrapper
 {
-  typedef mdict_iterator_wrapper self_type;
-  typedef struct symbol *value_type;
+  using self_type = mdict_iterator_wrapper;
+  using value_type = struct symbol *;
 
   explicit mdict_iterator_wrapper (const struct multidictionary *mdict)
     : m_sym (mdict_iterator_first (mdict, &m_iter))

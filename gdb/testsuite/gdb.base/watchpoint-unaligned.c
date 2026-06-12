@@ -84,7 +84,7 @@ read_size8twice (void)
 
   /* Setting a breakpoint on an instruction after an instruction triggering a
      watchpoint makes it ambiguous which one will be reported.
-     Insert a dummy instruction inbetween to make sure the watchpoint gets
+     Insert a dummy instruction in between to make sure the watchpoint gets
      reported.  */
   volatile_dummy = 1;
 

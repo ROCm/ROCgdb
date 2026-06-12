@@ -126,7 +126,7 @@
 #include <dos.h>
 #include <go32.h>
 #include <dpmi.h>
-typedef unsigned long u_long;
+using u_long = unsigned long;
 
 /* 16550 rx fifo trigger point */
 #define FIFO_TRIGGER	FIFO_TRIGGER_4

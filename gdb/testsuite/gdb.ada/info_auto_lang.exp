@@ -44,6 +44,8 @@ if {[gdb_compile_ada "${srcfile}" "${binfile}" executable [list debug]] != "" } 
 
 clean_restart ${testfile}
 
+gdb_test_no_output "set filename-display basename"
+
 set bp_location [gdb_get_line_number "STOP" ${testdir}/some_c.c]
 if {![runto "some_c.c:$bp_location"]} {
     return
@@ -119,10 +121,10 @@ foreach_with_prefix language_choice { "auto" "ada" "c" } {
 		[multi_line \
 		     "All functions matching regular expression \"proc_in_\":" \
 		     "" \
-		     "File .*proc_in_ada.adb:" \
+		     "File proc_in_ada.adb:" \
 		     $func_in_ada($ada_match) \
 		     "" \
-		     "File .*some_c.c:" \
+		     "File some_c.c:" \
 		     $func_in_c($c_match)
 		]
 
@@ -130,10 +132,10 @@ foreach_with_prefix language_choice { "auto" "ada" "c" } {
 		[multi_line \
 		     "All types matching regular expression \"some_type\":"  \
 		     "" \
-		     "File .*global_pack.ads:" \
+		     "File global_pack.ads:" \
 		     $type_in_ada($ada_match)\
 		     "" \
-		     "File .*some_c.c:" \
+		     "File some_c.c:" \
 		     $type_in_c($c_match)
 		]
 
@@ -141,18 +143,18 @@ foreach_with_prefix language_choice { "auto" "ada" "c" } {
 		[multi_line \
 		     "All variables matching regular expression \"some_struct\":" \
 		     "" \
-		     "File .*global_pack.ads:" \
+		     "File global_pack.ads:" \
 		     $var_in_ada($ada_match) \
 		     "" \
-		     "File .*some_c.c:" \
+		     "File some_c.c:" \
 		     $var_in_c($c_match)
 		]
 
 	    gdb_test "rbreak proc_in_" \
 		[multi_line \
-		     "Breakpoint.*file .*proc_in_ada.adb,.*" \
+		     "Breakpoint.*file proc_in_ada.adb,.*" \
 		     $rbreak_func_in_ada($ada_match) \
-		     "Breakpoint.*file .*some_c.c,.*" \
+		     "Breakpoint.*file some_c.c,.*" \
 		     $rbreak_func_in_c($c_match) \
 		     "Successfully created breakpoints $decimal-$decimal."
 		]

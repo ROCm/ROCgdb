@@ -35,8 +35,7 @@ s7_bfd_score_info_to_howto (bfd *, arelent *, Elf_Internal_Rela *)
   ATTRIBUTE_HIDDEN;
 
 extern int
-s7_bfd_score_elf_relocate_section (bfd *,
-				   struct bfd_link_info *,
+s7_bfd_score_elf_relocate_section (struct bfd_link_info *,
 				   bfd *,
 				   asection *,
 				   bfd_byte *,
@@ -81,11 +80,11 @@ s7_bfd_score_elf_adjust_dynamic_symbol (struct bfd_link_info *,
   ATTRIBUTE_HIDDEN;
 
 extern bool
-s7_bfd_score_elf_early_size_sections (bfd *, struct bfd_link_info *)
+s7_bfd_score_elf_early_size_sections (struct bfd_link_info *)
   ATTRIBUTE_HIDDEN;
 
 extern bool
-s7_bfd_score_elf_late_size_sections (bfd *, struct bfd_link_info *)
+s7_bfd_score_elf_late_size_sections (struct bfd_link_info *)
   ATTRIBUTE_HIDDEN;
 
 extern bool
@@ -93,13 +92,12 @@ s7_bfd_score_elf_create_dynamic_sections (bfd *, struct bfd_link_info *)
   ATTRIBUTE_HIDDEN;
 
 extern bool
-s7_bfd_score_elf_finish_dynamic_symbol (bfd *,
-					struct bfd_link_info *,
+s7_bfd_score_elf_finish_dynamic_symbol (struct bfd_link_info *,
 					struct elf_link_hash_entry *,
 					Elf_Internal_Sym *) ATTRIBUTE_HIDDEN;
 
 extern bool
-s7_bfd_score_elf_finish_dynamic_sections (bfd *, struct bfd_link_info *,
+s7_bfd_score_elf_finish_dynamic_sections (struct bfd_link_info *,
 					  bfd_byte *) ATTRIBUTE_HIDDEN;
 
 extern bool

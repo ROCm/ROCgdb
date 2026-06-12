@@ -69,18 +69,18 @@ extern bool _bfd_mips_elf_check_relocs
 extern bool _bfd_mips_elf_adjust_dynamic_symbol
   (struct bfd_link_info *, struct elf_link_hash_entry *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_mips_elf_late_size_sections
-  (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern int _bfd_mips_elf_relocate_section
-  (bfd *, struct bfd_link_info *, bfd *, asection *, bfd_byte *,
+  (struct bfd_link_info *, bfd *, asection *, bfd_byte *,
    Elf_Internal_Rela *, Elf_Internal_Sym *, asection **) ATTRIBUTE_HIDDEN;
 extern bool _bfd_mips_elf_finish_dynamic_symbol
-  (bfd *, struct bfd_link_info *, struct elf_link_hash_entry *,
+  (struct bfd_link_info *, struct elf_link_hash_entry *,
    Elf_Internal_Sym *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_mips_vxworks_finish_dynamic_symbol
-  (bfd *, struct bfd_link_info *, struct elf_link_hash_entry *,
+  (struct bfd_link_info *, struct elf_link_hash_entry *,
    Elf_Internal_Sym *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_mips_elf_finish_dynamic_sections
-  (bfd *, struct bfd_link_info *, bfd_byte *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *, bfd_byte *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_mips_elf_sort_relocs_p
   (asection *) ATTRIBUTE_HIDDEN;
 extern void _bfd_mips_final_write_processing

@@ -178,7 +178,8 @@ gdb_test "info tasks" \
 # running to completion.
 set bp_location [gdb_get_line_number "STOP_HERE_2" ${testdir}/foo.adb]
 gdb_breakpoint foo.adb:$bp_location
-gdb_continue_to_breakpoint second ".*foo.adb:$bp_location.*null; -- STOP_HERE_2"
+gdb_continue_to_breakpoint second \
+    ".*foo.adb:$bp_location.*Do_Nothing; -- STOP_HERE_2"
 
 # A regression test for a crash caused by trying to find the thread
 # for a terminated task.

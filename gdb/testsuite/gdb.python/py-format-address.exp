@@ -148,7 +148,7 @@ gdb_test "python print(\"Got: \" + gdb.format_address($foo_addr, inf.progspace, 
 
 # Grab the address of 'bar'.  Hopefully this will be the same address
 # as 'foo', but if not, that's not the end of the world, the test just
-# wont be quite as tough.
+# won't be quite as tough.
 set bar_addr [get_hexadecimal_valueof "&bar" "UNKNOWN"]
 
 # Now format the address of bar using the default inferior and
@@ -158,7 +158,7 @@ gdb_test "python print(\"Got: \" + gdb.format_address($bar_addr))" \
     "Got: $bar_addr <bar>" \
     "gdb.format_address for bar, while inferior 2 is selected"
 
-# And again, but this time, specificy the program space and
+# And again, but this time, specify the program space and
 # architecture.
 gdb_test "python print(\"Got: \" + gdb.format_address($bar_addr, inf2.progspace, inf2.architecture()))" \
     "Got: $bar_addr <bar>" \
@@ -170,7 +170,7 @@ gdb_test "python print(\"Got: \" + gdb.format_address($bar_addr, inf2.progspace,
     "Got: $bar_addr <bar>" \
     "gdb.format_address for bar, while inferior 1 is selected, pass progspace and architecture"
 
-# Try pasing incorrect object types for program space and architecture.
+# Try passing incorrect object types for program space and architecture.
 gdb_test "python print(\"Got: \" + gdb.format_address($bar_addr, inf2.progspace, inf2.progspace))" \
     [multi_line \
 	 "TypeError.*: The architecture argument is not a gdb.Architecture object" \

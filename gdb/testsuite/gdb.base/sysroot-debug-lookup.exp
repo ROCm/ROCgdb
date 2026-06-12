@@ -36,7 +36,7 @@ standard_testfile main.c
 # sysroot.
 #
 # Start GDB, set the sysroot, and then load the executable, ensure GDB
-# finds the debug information, which must have happened by lookin in
+# finds the debug information, which must have happened by looking in
 # the sysroot.
 proc_with_prefix lookup_via_build_id {} {
     set filename ${::binfile}_1
@@ -105,7 +105,7 @@ proc_with_prefix lookup_via_build_id {} {
 #
 # Copy the executable into the sysroot and then start GDB, set the
 # sysroot, and load the executable.  Check that GDB finds the debug
-# information, which must have happened by lookin in the sysroot.
+# information, which must have happened by looking in the sysroot.
 proc_with_prefix lookup_via_debuglink {} {
     set filename ${::binfile}_2
     if { [build_executable "build exec" ${filename} $::srcfile \

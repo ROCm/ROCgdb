@@ -202,7 +202,7 @@ proc test {dumper} {
 	# very large values.  Since GDB uses a 64-bit off_t (when
 	# possible) it shouldn't have this problem.  Assume that
 	# things are going to work.  Without this assumption the test
-	# is skiped on systems (such as i386 GNU/Linux with patched
+	# is skipped on systems (such as i386 GNU/Linux with patched
 	# kernel) which do pass.
 	pass "check core size"
 	set core_ok 1

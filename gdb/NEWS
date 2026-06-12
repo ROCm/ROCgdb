@@ -83,6 +83,10 @@
 
 * Support for native Thread Local Storage (TLS) variables on Windows.
 
+* GDB now supports libipt v2.2 events originating from Event Tracing (set
+  record btrace pt event-tracing on) on a FRED-enabled system and from
+  Trigger Tracing.
+
 * Configure changes
 
 ** --with-babeltrace has been removed.  The babeltrace library was

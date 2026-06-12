@@ -38,7 +38,7 @@
 #include "python/python.h"
 #include "python/python-internal.h"
 #else
-typedef int PyObject;
+using PyObject = int;
 #endif
 
 /* See varobj.h.  */
@@ -281,7 +281,7 @@ varobj_create (const char *objname,
 	{
 	  /* Allow creator to specify context of variable.  */
 	  if ((type == USE_CURRENT_FRAME) || (type == USE_SELECTED_FRAME))
-	    fi = get_selected_frame (NULL);
+	    fi = get_selected_frame ();
 	  else
 	    /* FIXME: cagney/2002-11-23: This code should be doing a
 	       lookup using the frame ID and not just the frame's
@@ -365,7 +365,7 @@ varobj_create (const char *objname,
 	  if (thr->has_simd_lanes ())
 	    var->root->lane = thr->current_simd_lane ();
 
-	  old_id = get_frame_id (get_selected_frame (NULL));
+	  old_id = get_frame_id (get_selected_frame ());
 	  select_frame (fi);
 	}
 

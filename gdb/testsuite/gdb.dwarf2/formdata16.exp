@@ -20,7 +20,7 @@ require dwarf2_support
 
 standard_testfile main.c -dw.S
 
-# We need to know the endianess in order
+# We need to know the endianness in order
 # to write some of the debugging info we'd like to generate.
 if {[prepare_for_testing "failed to prepare for endianness test" ${testfile} ${srcfile}]} {
     return

@@ -24,6 +24,7 @@ if test -z "$GPROF"; then
 fi
 
 program="$2"
+target="$3"
 # Generate gmon.out
 data=gmon.out
 rm -f $data
@@ -40,11 +41,9 @@ exec 2>&1
 
 actual=${program}.actual-l
 expected=${program}.expected-l
-expected_dot=${program}.expected_dot-l
 cleanup () {
     rm -f "$actual"
     rm -f "$expected"
-    rm -f "$expected_dot"
 }
 trap cleanup 0
 
@@ -54,19 +53,28 @@ cat > "$expected" <<EOF
 40 f3 1
 EOF
 
-# Special version for powerpc with function descriptors.
-cat > "$expected_dot" <<EOF
+case "$target" in
+    *-*-solaris2*)
+	# Solaris with the BSD gmon.out format includes main in the call graph.
+	cat >> $expected <<EOF
+51 main 1
+EOF
+	;;
+    powerpc-*-aix* | rs6000-*-aix*)
+	# Special version for powerpc with function descriptors.
+	cat > "$expected" <<EOF
 25 .f1 2000
 31 .f2 1000
 40 .f3 1
 EOF
+	;;
+esac
 
 "$GPROF" -l -C "$program" "$data" \
     | awk -F  '[(): ]' '/executions/{print $2, $5, $8}' \
     | sort > "$actual"
 
-if cmp -s "$actual" "$expected_dot" \
-   || diff -u --label expected "$expected" --label actual "$actual" ; then
+if diff -u --label expected "$expected" --label actual "$actual" ; then
     echo "PASS"
 else
     echo "FAIL"

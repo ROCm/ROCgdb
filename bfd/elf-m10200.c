@@ -336,8 +336,7 @@ mn10200_elf_final_link_relocate (reloc_howto_type *howto,
 
 /* Relocate an MN10200 ELF section.  */
 static int
-mn10200_elf_relocate_section (bfd *output_bfd,
-			      struct bfd_link_info *info,
+mn10200_elf_relocate_section (struct bfd_link_info *info,
 			      bfd *input_bfd,
 			      asection *input_section,
 			      bfd_byte *contents,
@@ -376,7 +375,8 @@ mn10200_elf_relocate_section (bfd *output_bfd,
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 	}
       else
 	{
@@ -396,7 +396,7 @@ mn10200_elf_relocate_section (bfd *output_bfd,
       if (bfd_link_relocatable (info))
 	continue;
 
-      r = mn10200_elf_final_link_relocate (howto, input_bfd, output_bfd,
+      r = mn10200_elf_final_link_relocate (howto, input_bfd, info->output_bfd,
 					   input_section,
 					   contents, rel->r_offset,
 					   relocation, rel->r_addend,
@@ -1349,9 +1349,9 @@ mn10200_elf_get_relocated_section_contents (bfd *output_bfd,
 	  *secpp = isec;
 	}
 
-      if (! mn10200_elf_relocate_section (output_bfd, link_info, input_bfd,
-				     input_section, data, internal_relocs,
-				     isymbuf, sections))
+      if (! mn10200_elf_relocate_section (link_info, input_bfd,
+					  input_section, data, internal_relocs,
+					  isymbuf, sections))
 	goto error_return;
 
       free (sections);

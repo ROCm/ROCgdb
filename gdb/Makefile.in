@@ -473,6 +473,7 @@ SELFTESTS_SRCS = \
 	unittests/lookup_name_info-selftests.c \
 	unittests/memory-map-selftests.c \
 	unittests/memrange-selftests.c \
+	unittests/next-iterator-selftests.c \
 	unittests/offset-type-selftests.c \
 	unittests/observable-selftests.c \
 	unittests/packed-selftests.c \
@@ -1523,6 +1524,7 @@ HFILES_NO_SRCDIR = \
 	memrange.h \
 	memtag.h \
 	microblaze-tdep.h \
+	microblaze-linux-tdep.h \
 	mi/mi-cmd-break.h \
 	mi/mi-cmds.h \
 	mi/mi-common.h \
@@ -1891,6 +1893,7 @@ ALLDEPFILES = \
 	m68k-linux-nat.c \
 	m68k-linux-tdep.c \
 	m68k-tdep.c \
+	microblaze-linux-nat.c \
 	microblaze-linux-tdep.c \
 	microblaze-tdep.c \
 	mingw-hdep.c \
@@ -2702,7 +2705,7 @@ po/$(PACKAGE).pot: force
 	-test -d po || mkdir po
 	sh -e $(srcdir)/po/gdbtext $(XGETTEXT) $(PACKAGE) . $(srcdir) \
 	  $(srcdir)/../gdbsupport $(srcdir)/../gdbserver \
-	  $(addprefix $(srcdir)/,$(CONFIG_SRC_SUBDIR))
+	  $(addprefix $(srcdir)/,$(filter-out gdbtk/generic, $(CONFIG_SRC_SUBDIR)))
 
 
 #

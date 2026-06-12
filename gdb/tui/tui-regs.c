@@ -143,7 +143,7 @@ tui_data_window::update_register_data (const reggroup *group)
   if (group == nullptr)
     group = general_reggroup;
 
-  frame_info_ptr frame = get_selected_frame (nullptr);
+  frame_info_ptr frame = get_selected_frame ();
   struct gdbarch *gdbarch = get_frame_arch (frame);
 
   if (m_current_group == group && m_gdbarch == gdbarch)

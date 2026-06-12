@@ -54,7 +54,7 @@ static std::string s390_disassembler_options;
 
 constexpr gdb_byte s390_break_insn[] = { 0x0, 0x1 };
 
-typedef BP_MANIPULATION (s390_break_insn) s390_breakpoint;
+using s390_breakpoint = BP_MANIPULATION (s390_break_insn);
 
 /* Types.  */
 
@@ -2195,8 +2195,8 @@ s390_get_return_buf_addr (struct type *val_type,
 
   if (val_on_entry == nullptr)
     {
-      warning ("Cannot determine the function return value.\n"
-	       "Try compiling with -fvar-tracking.");
+      warning (_("Cannot determine the function return value.\n"
+		 "Try compiling with -fvar-tracking."));
       return 0;
     }
 

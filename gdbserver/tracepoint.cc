@@ -537,7 +537,7 @@ tracepoint_action_send (char *buffer, const struct tracepoint_action *action)
     case 'X':
       return x_tracepoint_action_send (buffer, action);
     }
-  error ("Unknown trace action '%c'.", action->type);
+  error (_("Unknown trace action '%c'."), action->type);
 }
 
 static CORE_ADDR
@@ -552,7 +552,7 @@ tracepoint_action_download (const struct tracepoint_action *action)
     case 'X':
       return x_tracepoint_action_download (action);
     }
-  error ("Unknown trace action '%c'.", action->type);
+  error (_("Unknown trace action '%c'."), action->type);
 }
 #endif
 
@@ -2910,7 +2910,7 @@ install_fast_tracepoint (struct tracepoint *tpoint, char *errbuf)
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_gdb_collect_ptr,
 				  &collect))
     {
-      error ("error extracting gdb_collect_ptr");
+      error (_("error extracting gdb_collect_ptr"));
       return 1;
     }
 
@@ -3026,7 +3026,7 @@ cmd_qtstart (char *packet)
       /* Tell IPA about the correct tdesc.  */
       if (write_inferior_integer (ipa_sym_addrs.addr_ipa_tdesc_idx,
 				  target_get_ipa_tdesc_idx ()))
-	error ("Error setting ipa_tdesc_idx variable in lib");
+	error (_("Error setting ipa_tdesc_idx variable in lib"));
     }
 
   /* Start out empty.  */
@@ -3152,13 +3152,13 @@ cmd_qtstart (char *packet)
       stop_tracing_bkpt = set_breakpoint_at (ipa_sym_addrs.addr_stop_tracing,
 					     stop_tracing_handler);
       if (stop_tracing_bkpt == NULL)
-	error ("Error setting stop_tracing breakpoint");
+	error (_("Error setting stop_tracing breakpoint"));
 
       flush_trace_buffer_bkpt
 	= set_breakpoint_at (ipa_sym_addrs.addr_flush_trace_buffer,
 			     flush_trace_buffer_handler);
       if (flush_trace_buffer_bkpt == NULL)
-	error ("Error setting flush_trace_buffer breakpoint");
+	error (_("Error setting flush_trace_buffer breakpoint"));
     }
 
   target_unpause_all (true);
@@ -5006,8 +5006,8 @@ build_traceframe_info_xml (char blocktype, unsigned char *dataptr, void *data)
 	break;
       }
     default:
-      warning ("Unhandled trace block type (%d) '%c ' "
-	       "while building trace frame info.",
+      warning (_("Unhandled trace block type (%d) '%c ' "
+		 "while building trace frame info."),
 	       blocktype, blocktype);
       break;
     }
@@ -5197,7 +5197,7 @@ fast_tracepoint_collecting (CORE_ADDR thread_area,
       tpoint = fast_tracepoint_from_jump_pad_address (stop_pc);
       if (tpoint == NULL)
 	{
-	  warning ("in jump pad, but no matching tpoint?");
+	  warning (_("in jump pad, but no matching tpoint?"));
 	  return fast_tpoint_collect_result::not_collecting;
 	}
       else
@@ -5225,7 +5225,7 @@ fast_tracepoint_collecting (CORE_ADDR thread_area,
       tpoint = fast_tracepoint_from_trampoline_address (stop_pc);
       if (tpoint == NULL)
 	{
-	  warning ("in trampoline, but no matching tpoint?");
+	  warning (_("in trampoline, but no matching tpoint?"));
 	  return fast_tpoint_collect_result::not_collecting;
 	}
       else
@@ -5281,8 +5281,8 @@ fast_tracepoint_collecting (CORE_ADDR thread_area,
 	= fast_tracepoint_from_ipa_tpoint_address (ipa_collecting_obj.tpoint);
       if (tpoint == NULL)
 	{
-	  warning ("fast_tracepoint_collecting: collecting, "
-		   "but tpoint %s not found?",
+	  warning (_("fast_tracepoint_collecting: collecting, "
+		     "but tpoint %s not found?"),
 		   paddress ((CORE_ADDR) ipa_collecting_obj.tpoint));
 	  return fast_tpoint_collect_result::not_collecting;
 	}
@@ -5444,7 +5444,7 @@ get_raw_reg_func_addr (void)
   CORE_ADDR res;
   if (read_inferior_data_pointer (ipa_sym_addrs.addr_get_raw_reg_ptr, &res))
     {
-      error ("error extracting get_raw_reg_ptr");
+      error (_("error extracting get_raw_reg_ptr"));
       return 0;
     }
   return res;
@@ -5457,7 +5457,7 @@ get_get_tsv_func_addr (void)
   if (read_inferior_data_pointer (
 	ipa_sym_addrs.addr_get_trace_state_variable_value_ptr, &res))
     {
-      error ("error extracting get_trace_state_variable_value_ptr");
+      error (_("error extracting get_trace_state_variable_value_ptr"));
       return 0;
     }
   return res;
@@ -5470,7 +5470,7 @@ get_set_tsv_func_addr (void)
   if (read_inferior_data_pointer (
 	ipa_sym_addrs.addr_set_trace_state_variable_value_ptr, &res))
     {
-      error ("error extracting set_trace_state_variable_value_ptr");
+      error (_("error extracting set_trace_state_variable_value_ptr"));
       return 0;
     }
   return res;
@@ -6016,7 +6016,7 @@ upload_fast_traceframes (void)
 
       if (read_inferior_memory (tf, (unsigned char *) &ipa_tframe,
 				offsetof (struct traceframe, data)))
-	error ("Uploading: couldn't read traceframe at %s\n", paddress (tf));
+	error (_("Uploading: couldn't read traceframe at %s\n"), paddress (tf));
 
       if (ipa_tframe.tpnum == 0)
 	{
@@ -6047,7 +6047,7 @@ upload_fast_traceframes (void)
 	      if (read_inferior_memory (tf
 					+ offsetof (struct traceframe, data),
 					block, ipa_tframe.data_size))
-		error ("Uploading: Couldn't read traceframe data at %s\n",
+		error (_("Uploading: Couldn't read traceframe data at %s\n"),
 		       paddress (tf + offsetof (struct traceframe, data)));
 	    }
 
@@ -6182,7 +6182,7 @@ init_named_socket (const char *name)
   result = fd = socket (PF_UNIX, SOCK_STREAM, 0);
   if (result == -1)
     {
-      warning ("socket creation failed: %s", safe_strerror (errno));
+      warning (_("socket creation failed: %s"), safe_strerror (errno));
       return -1;
     }
 
@@ -6190,7 +6190,7 @@ init_named_socket (const char *name)
 
   if (strlen (name) >= ARRAY_SIZE (addr.sun_path))
     {
-      warning ("socket name too long for sockaddr_un::sun_path field: %s", name);
+      warning (_("socket name too long for sockaddr_un::sun_path field: %s"), name);
       return -1;
     }
 
@@ -6203,17 +6203,17 @@ init_named_socket (const char *name)
       result = unlink (name);
       if (result == -1)
 	{
-	  warning ("unlink failed: %s", safe_strerror (errno));
+	  warning (_("unlink failed: %s"), safe_strerror (errno));
 	  close (fd);
 	  return -1;
 	}
-      warning ("socket %s already exists; overwriting", name);
+      warning (_("socket %s already exists; overwriting"), name);
     }
 
   result = bind (fd, (struct sockaddr *) &addr, sizeof (addr));
   if (result == -1)
     {
-      warning ("bind failed: %s", safe_strerror (errno));
+      warning (_("bind failed: %s"), safe_strerror (errno));
       close (fd);
       return -1;
     }
@@ -6221,7 +6221,7 @@ init_named_socket (const char *name)
   result = listen (fd, 1);
   if (result == -1)
     {
-      warning ("listen: %s", safe_strerror (errno));
+      warning (_("listen: %s"), safe_strerror (errno));
       close (fd);
       return -1;
     }
@@ -6246,9 +6246,9 @@ gdb_agent_socket_init (void)
 
   fd = init_named_socket (agent_socket_name);
   if (fd < 0)
-    warning ("Error initializing named socket (%s) for communication with the "
-	     "ust helper thread. Check that directory exists and that it "
-	     "is writable.", agent_socket_name);
+    warning (_("Error initializing named socket (%s) for communication with the "
+	       "ust helper thread. Check that directory exists and that it "
+	       "is writable."), agent_socket_name);
 
   return fd;
 }
@@ -6279,7 +6279,7 @@ gdb_agent_helper_thread (void *arg)
 
       if (listen_fd == -1)
 	{
-	  warning ("could not create sync socket");
+	  warning (_("could not create sync socket"));
 	  break;
 	}
 
@@ -6303,7 +6303,7 @@ gdb_agent_helper_thread (void *arg)
 
 	  if (fd < 0)
 	    {
-	      warning ("Accept returned %d, error: %s",
+	      warning (_("Accept returned %d, error: %s"),
 		       fd, safe_strerror (errno));
 	      break;
 	    }
@@ -6315,7 +6315,7 @@ gdb_agent_helper_thread (void *arg)
 
 	  if (ret == -1)
 	    {
-	      warning ("reading socket (fd=%d) failed with %s",
+	      warning (_("reading socket (fd=%d) failed with %s"),
 		       fd, safe_strerror (errno));
 	      close (fd);
 	      break;

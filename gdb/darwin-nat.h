@@ -72,7 +72,7 @@ struct darwin_thread_info : public private_thread_info
   /* The last exception received.  */
   struct darwin_exception_msg event {};
 };
-typedef struct darwin_thread_info darwin_thread_t;
+using darwin_thread_t = struct darwin_thread_info;
 
 /* This needs to be overridden by the platform specific nat code.  */
 

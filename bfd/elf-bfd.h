@@ -1179,7 +1179,7 @@ struct elf_backend_data
   /* When creating a shared library, determine whether to omit the
      dynamic symbol for the section.  */
   bool (*elf_backend_omit_section_dynsym)
-    (bfd *output_bfd, struct bfd_link_info *info, asection *osec);
+    (struct bfd_link_info *info, asection *osec);
 
   /* Return TRUE if relocations of targets are compatible to the extent
      that CHECK_RELOCS will properly process them.  PR 4424.  */
@@ -1251,9 +1251,9 @@ struct elf_backend_data
      Besides those, these functions must handle the .interp section
      and any other sections created by CREATE_DYNAMIC_SECTIONS.  */
   bool (*elf_backend_early_size_sections)
-    (bfd *output_bfd, struct bfd_link_info *info);
+    (struct bfd_link_info *info);
   bool (*elf_backend_late_size_sections)
-    (bfd *output_bfd, struct bfd_link_info *info);
+    (struct bfd_link_info *info);
 
   /* The STRIP_ZERO_SIZED_DYNAMIC_SECTIONS function is called by the
      ELF backend linker to strip zero-sized dynamic sections after
@@ -1264,7 +1264,7 @@ struct elf_backend_data
   /* Set TEXT_INDEX_SECTION and DATA_INDEX_SECTION, the output sections
      we keep to use as a base for relocs and symbols.  */
   void (*elf_backend_init_index_section)
-    (bfd *output_bfd, struct bfd_link_info *info);
+    (struct bfd_link_info *info);
 
   /* The RELOCATE_SECTION function is called by the ELF backend linker
      to handle the relocations for a section.
@@ -1298,7 +1298,7 @@ struct elf_backend_data
      Returns FALSE on error, TRUE on success, 2 if successful and
      relocations should be written for this section.  */
   int (*elf_backend_relocate_section)
-    (bfd *output_bfd, struct bfd_link_info *info, bfd *input_bfd,
+    (struct bfd_link_info *info, bfd *input_bfd,
      asection *input_section, bfd_byte *contents, Elf_Internal_Rela *relocs,
      Elf_Internal_Sym *local_syms, asection **local_sections);
 
@@ -1310,7 +1310,7 @@ struct elf_backend_data
      all .dynsym symbols, while ADJUST_DYNAMIC_SYMBOL is only called
      on those symbols which are defined by a dynamic object.  */
   bool (*elf_backend_finish_dynamic_symbol)
-    (bfd *output_bfd, struct bfd_link_info *info,
+    (struct bfd_link_info *info,
      struct elf_link_hash_entry *h, Elf_Internal_Sym *sym);
 
   /* The FINISH_DYNAMIC_SECTIONS function is called by the ELF backend
@@ -1318,7 +1318,7 @@ struct elf_backend_data
      output file.  The FINISH_DYNAMIC_SYMBOL will have been called on
      all dynamic symbols.  */
   bool (*elf_backend_finish_dynamic_sections)
-    (bfd *output_bfd, struct bfd_link_info *info, bfd_byte *);
+    (struct bfd_link_info *info, bfd_byte *);
 
   /* A function to do any beginning processing needed for the ELF file
      before building the ELF headers and computing file positions.  */
@@ -1386,7 +1386,7 @@ struct elf_backend_data
      section.  It allows the backend to emit special local symbols
      not handled in the hash table.  */
   bool (*elf_backend_output_arch_local_syms)
-    (bfd *, struct bfd_link_info *, void *,
+    (struct bfd_link_info *, void *,
      int (*) (void *, const char *, Elf_Internal_Sym *, asection *,
 	      struct elf_link_hash_entry *));
 
@@ -1394,14 +1394,14 @@ struct elf_backend_data
      into the symtab section.  It allows the backend to emit special
      global symbols not handled in the hash table.  */
   bool (*elf_backend_output_arch_syms)
-    (bfd *, struct bfd_link_info *, void *,
+    (struct bfd_link_info *, void *,
      int (*) (void *, const char *, Elf_Internal_Sym *, asection *,
 	      struct elf_link_hash_entry *));
 
   /* Filter what symbols of the output file to include in the import
      library if one is created.  */
-  unsigned int (*elf_backend_filter_implib_symbols)
-    (bfd *, struct bfd_link_info *, asymbol **, long);
+  size_t (*elf_backend_filter_implib_symbols)
+    (struct bfd_link_info *, asymbol **, size_t);
 
   /* Copy any information related to dynamic linking from a pre-existing
      symbol to a newly created symbol.  Also called to copy flags and
@@ -1641,9 +1641,10 @@ struct elf_backend_data
 
   /* The size of the GOT entry for the symbol pointed to by H if non-NULL,
      otherwise by the local symbol with index SYMNDX in IBFD.  */
-  bfd_vma (*got_elt_size) (bfd *, struct bfd_link_info *,
+  bfd_vma (*got_elt_size) (struct bfd_link_info *,
 			   struct elf_link_hash_entry *h,
-			   bfd *ibfd, unsigned long symndx);
+			   bfd *ibfd,
+			   unsigned long symndx);
 
   /* The vendor name to use for a processor-standard attributes section.  */
   const char *obj_attrs_vendor;
@@ -2458,8 +2459,8 @@ extern bool _bfd_elf_section_already_linked
   (bfd *, asection *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern void bfd_elf_set_group_contents
   (bfd *, asection *, void *);
-extern unsigned int _bfd_elf_filter_global_symbols
-  (bfd *, struct bfd_link_info *, asymbol **, long) ATTRIBUTE_HIDDEN;
+extern size_t _bfd_elf_filter_implib_symbols
+  (struct bfd_link_info *, asymbol **, size_t) ATTRIBUTE_HIDDEN;
 extern asection *_bfd_elf_check_kept_section
   (asection *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 #define _bfd_elf_link_just_syms _bfd_generic_link_just_syms
@@ -2593,7 +2594,7 @@ extern void _bfd_elf_strtab_finalize
   (struct elf_strtab_hash *) ATTRIBUTE_HIDDEN;
 
 extern bool bfd_elf_parse_eh_frame_entries
-  (bfd *, struct bfd_link_info *);
+  (struct bfd_link_info *);
 extern bool _bfd_elf_parse_eh_frame_entry
   (struct bfd_link_info *, asection *, struct elf_reloc_cookie *)
   ATTRIBUTE_HIDDEN;
@@ -2701,19 +2702,18 @@ extern bool _bfd_elf_validate_reloc
   (bfd *, arelent *) ATTRIBUTE_HIDDEN;
 
 extern bool bfd_elf_record_link_assignment
-  (bfd *, struct bfd_link_info *, const char *, bool,
-   bool);
-extern bool bfd_elf_stack_segment_size (bfd *, struct bfd_link_info *,
+  (struct bfd_link_info *, const char *, bool, bool);
+extern bool bfd_elf_stack_segment_size (struct bfd_link_info *,
 					const char *, bfd_vma);
 extern bool bfd_elf_size_dynamic_sections
-  (bfd *, const char *, const char *, const char *, const char *, const char *,
-   const char * const *, struct bfd_link_info *, struct bfd_section **);
+  (struct bfd_link_info *, const char *, const char *, const char *,
+   const char *, const char *, const char * const *, struct bfd_section **);
 extern bool bfd_elf_size_dynsym_hash_dynstr
-  (bfd *, struct bfd_link_info *);
+  (struct bfd_link_info *);
 extern bool bfd_elf_get_bfd_needed_list
   (bfd *, struct bfd_link_needed_list **);
 extern struct bfd_link_needed_list *bfd_elf_get_needed_list
-  (bfd *, struct bfd_link_info *);
+  (struct bfd_link_info *);
 extern void bfd_elf_set_dt_needed_name
   (bfd *, const char *);
 extern const char *bfd_elf_get_dt_soname
@@ -2723,20 +2723,20 @@ extern void bfd_elf_set_dyn_lib_class
 extern int bfd_elf_get_dyn_lib_class
   (bfd *);
 extern struct bfd_link_needed_list *bfd_elf_get_runpath_list
-  (bfd *, struct bfd_link_info *);
+  (struct bfd_link_info *);
 extern int bfd_elf_discard_info
-  (bfd *, struct bfd_link_info *);
+  (struct bfd_link_info *);
 extern unsigned int _bfd_elf_default_action_discarded
   (struct bfd_section *) ATTRIBUTE_HIDDEN;
 extern struct bfd_section *bfd_elf_tls_setup
-  (bfd *, struct bfd_link_info *);
+  (struct bfd_link_info *);
 
 extern bool bfd_elf_link_create_dynamic_sections
   (bfd *, struct bfd_link_info *);
 extern bool _bfd_elf_omit_section_dynsym_default
-  (bfd *, struct bfd_link_info *, asection *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *, asection *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_omit_section_dynsym_all
-  (bfd *, struct bfd_link_info *, asection *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *, asection *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_create_dynamic_sections
   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_create_got_section
@@ -2745,10 +2745,12 @@ extern asection *_bfd_elf_section_for_symbol
   (struct elf_reloc_cookie *, unsigned long) ATTRIBUTE_HIDDEN;
 extern struct elf_link_hash_entry *_bfd_elf_define_linkage_sym
   (bfd *, struct bfd_link_info *, asection *, const char *) ATTRIBUTE_HIDDEN;
+extern void _bfd_elf_init_0_index_sections
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern void _bfd_elf_init_1_index_section
-  (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern void _bfd_elf_init_2_index_sections
-  (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 
 extern bool _bfd_elfcore_make_pseudosection
   (bfd *, char *, size_t, ufile_ptr) ATTRIBUTE_HIDDEN;
@@ -2942,7 +2944,7 @@ extern asection *_bfd_elf_common_section
   (asection *) ATTRIBUTE_HIDDEN;
 
 extern bfd_vma _bfd_elf_default_got_elt_size
-  (bfd *, struct bfd_link_info *, struct elf_link_hash_entry *, bfd *,
+  (struct bfd_link_info *, struct elf_link_hash_entry *, bfd *,
    unsigned long) ATTRIBUTE_HIDDEN;
 
 extern bfd_reloc_status_type _bfd_elf_rel_vtable_reloc_fn
@@ -2988,9 +2990,6 @@ extern bool _bfd_elf_gc_mark
 
 extern bool _bfd_elf_gc_mark_extra_sections
   (struct bfd_link_info *, elf_gc_mark_hook_fn) ATTRIBUTE_HIDDEN;
-
-extern bool bfd_elf_gc_common_finalize_got_offsets
-  (bfd *, struct bfd_link_info *);
 
 extern bool _bfd_elf_gc_common_final_link
   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
@@ -3387,7 +3386,7 @@ extern bool _bfd_elf_maybe_set_textrel
   (struct elf_link_hash_entry *, void *) ATTRIBUTE_HIDDEN;
 
 extern bool _bfd_elf_add_dynamic_tags
-  (bfd *, struct bfd_link_info *, bool) ATTRIBUTE_HIDDEN;
+  (struct bfd_link_info *, bool) ATTRIBUTE_HIDDEN;
 
 extern bool _bfd_elf_mmap_section_contents
   (bfd *abfd, asection *section, bfd_byte **buf) ATTRIBUTE_HIDDEN;

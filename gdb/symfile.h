@@ -69,7 +69,7 @@ struct other_sections
    to communicate the section addresses in shared objects to
    symbol_file_add ().  */
 
-typedef std::vector<other_sections> section_addr_info;
+using section_addr_info = std::vector<other_sections>;
 
 /* A table listing the load segments in a symfile, and which segment
    each BFD section belongs to.  */

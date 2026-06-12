@@ -29,7 +29,7 @@
 
 /* All offsets in the index are of this type.  It must be
    architecture-independent.  */
-typedef uint32_t offset_type;
+using offset_type = uint32_t;
 
 /* The hash function for strings in the mapped index.  This is the same as
    SYMBOL_HASH_NEXT, but we keep a separate copy to maintain control over the

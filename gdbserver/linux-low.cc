@@ -532,9 +532,9 @@ linux_process_target::handle_extended_wait (lwp_info **orig_event_lwp,
 	  if (ret == -1)
 	    perror_with_name ("waiting for new child");
 	  else if (ret != new_pid)
-	    warning ("wait returned unexpected PID %d", ret);
+	    warning (_("wait returned unexpected PID %d"), ret);
 	  else if (!WIFSTOPPED (status))
-	    warning ("wait returned unexpected status 0x%x", status);
+	    warning (_("wait returned unexpected status 0x%x"), status);
 	}
 
       if (debug_threads)
@@ -1173,7 +1173,7 @@ linux_process_target::attach (unsigned long pid)
       this->remove_linux_process (proc);
 
       std::string reason = linux_ptrace_attach_fail_reason_string (ptid, err);
-      error ("Cannot attach to process %ld: %s", pid, reason.c_str ());
+      error (_("Cannot attach to process %ld: %s"), pid, reason.c_str ());
     }
 
   open_proc_mem_file (proc);
@@ -4077,9 +4077,9 @@ linux_process_target::resume_one_lwp_throw (lwp_info *lwp, int step,
 	  if (fast_tp_collecting == fast_tpoint_collect_result::not_collecting)
 	    {
 	      if (step == 0)
-		warning ("BAD - reinserting but not stepping.");
+		warning (_("BAD - reinserting but not stepping."));
 	      if (lwp->suspended)
-		warning ("BAD - reinserting and suspended(%d).",
+		warning (_("BAD - reinserting and suspended(%d)."),
 				 lwp->suspended);
 	    }
 	}
@@ -5182,7 +5182,7 @@ register_addr (const struct usrregs_info *usrregs, int regnum)
   int addr;
 
   if (regnum < 0 || regnum >= usrregs->num_regs)
-    error ("Invalid register number %d.", regnum);
+    error (_("Invalid register number %d."), regnum);
 
   addr = usrregs->regmap[regnum];
 
@@ -5280,7 +5280,7 @@ linux_process_target::store_register (const usrregs_info *usrregs,
 
 
 	  if (!low_cannot_store_register (regno))
-	    error ("writing register %d: %s", regno, safe_strerror (errno));
+	    error (_("writing register %d: %s"), regno, safe_strerror (errno));
 	}
       regaddr += sizeof (PTRACE_XFER_TYPE);
     }
@@ -5894,7 +5894,7 @@ linux_process_target::async (bool enable)
 	    {
 	      gdb_sigmask (SIG_UNBLOCK, &mask, NULL);
 
-	      warning ("creating event pipe failed.");
+	      warning (_("creating event pipe failed."));
 	      return previous;
 	    }
 
@@ -6309,8 +6309,8 @@ get_phdr_phnum_from_proc_auxv (const int pid, const int is_elf64,
 
   if (*phdr_memaddr == 0 || *num_phdr == 0)
     {
-      warning ("Unexpected missing AT_PHDR and/or AT_PHNUM: "
-	       "phdr_memaddr = %ld, phdr_num = %d",
+      warning (_("Unexpected missing AT_PHDR and/or AT_PHNUM: "
+		 "phdr_memaddr = %ld, phdr_num = %d"),
 	       (long) *phdr_memaddr, *num_phdr);
       return 2;
     }
@@ -6606,7 +6606,7 @@ read_link_map (std::string &document, CORE_ADDR lmid, CORE_ADDR lm_addr,
 
       if (lm_prev != l_prev)
 	{
-	  warning ("Corrupted shared library list: 0x%s != 0x%s",
+	  warning (_("Corrupted shared library list: 0x%s != 0x%s"),
 		   paddress (lm_prev), paddress (l_prev));
 	  break;
 	}
@@ -6709,13 +6709,13 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
   else
     {
       if (lm_prev != 0)
-	warning ("ignoring prev=0x%s without start", paddress (lm_prev));
+	warning (_("ignoring prev=0x%s without start"), paddress (lm_prev));
 
       /* We could interpret LMID as 'provide only the libraries for this
 	 namespace' but GDB is currently only providing lmid, start, and
 	 prev, or nothing.  */
       if (lmid != 0)
-	warning ("ignoring lmid=0x%s without start", paddress (lmid));
+	warning (_("ignoring lmid=0x%s without start"), paddress (lmid));
 
       CORE_ADDR r_debug = priv->r_debug;
       if (r_debug == 0)
@@ -6738,21 +6738,21 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
 				 (unsigned char *) &r_version,
 				 sizeof (r_version)) != 0)
 	    {
-	      warning ("unable to read r_version from 0x%s",
+	      warning (_("unable to read r_version from 0x%s"),
 		       paddress (r_debug + lmo->r_version_offset));
 	      break;
 	    }
 
 	  if (r_version < 1)
 	    {
-	      warning ("unexpected r_debug version %d", r_version);
+	      warning (_("unexpected r_debug version %d"), r_version);
 	      break;
 	    }
 
 	  if (read_one_ptr (r_debug + lmo->r_map_offset, &lm_addr,
 			    ptr_size) != 0)
 	    {
-	      warning ("unable to read r_map from 0x%s",
+	      warning (_("unable to read r_map from 0x%s"),
 		       paddress (r_debug + lmo->r_map_offset));
 	      break;
 	    }
@@ -6776,7 +6776,7 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
 	      if (read_one_ptr (lm_addr + lmo->l_next_offset,
 				&lm_addr, ptr_size) != 0)
 		{
-		  warning ("unable to read l_next from 0x%s",
+		  warning (_("unable to read l_next from 0x%s"),
 			   paddress (lm_addr + lmo->l_next_offset));
 		  break;
 		}
@@ -6790,7 +6790,7 @@ linux_process_target::qxfer_libraries_svr4 (const char *annex,
 	  if (read_one_ptr (r_debug + lmo->r_next_offset, &r_debug,
 			    ptr_size) != 0)
 	    {
-	      warning ("unable to read r_next from 0x%s",
+	      warning (_("unable to read r_next from 0x%s"),
 		       paddress (r_debug + lmo->r_next_offset));
 	      break;
 	    }

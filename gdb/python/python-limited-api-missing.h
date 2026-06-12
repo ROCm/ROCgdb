@@ -29,7 +29,7 @@ extern "C"
 /* Symbols belonging to the configuration API introduced in PEP-741, and
    required in gdb_PyInitializer.  */
 
-typedef struct PyInitConfig PyInitConfig;
+using PyInitConfig = struct PyInitConfig;
 
 PyAPI_FUNC(PyInitConfig*) PyInitConfig_Create (void);
 PyAPI_FUNC(void) PyInitConfig_Free (PyInitConfig *config);

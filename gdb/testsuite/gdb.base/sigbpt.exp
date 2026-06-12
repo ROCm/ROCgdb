@@ -233,7 +233,7 @@ proc cont_out { name args } {
     gdb_test "continue" "Breakpoint.*pc(\r\n| *)=> [at_segv] .*" \
 	"${name}; continue to breakpoint at fault"
 
-    # Now single step the faulted instrction at that breakpoint.
+    # Now single step the faulted instruction at that breakpoint.
     gdb_test "stepi" \
 	"Program received signal ${signame}.*pc(\r\n| *)=> [at_segv] .*" \
 	"${name}; stepi fault"

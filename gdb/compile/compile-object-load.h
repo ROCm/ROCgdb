@@ -89,7 +89,7 @@ struct compile_module
 };
 
 /* A unique pointer for a compile_module.  */
-typedef std::unique_ptr<compile_module> compile_module_up;
+using compile_module_up = std::unique_ptr<compile_module>;
 
 extern compile_module_up compile_object_load
   (const compile_file_names &fnames,

@@ -63,7 +63,7 @@
 
 constexpr gdb_byte m68k_break_insn[] = {0x4e, (0x40 | BPT_VECTOR)};
 
-typedef BP_MANIPULATION (m68k_break_insn) m68k_breakpoint;
+using m68k_breakpoint = BP_MANIPULATION (m68k_break_insn);
 
 
 /* Construct types for ISA-specific registers.  */

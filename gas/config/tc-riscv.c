@@ -345,23 +345,43 @@ riscv_set_arch (const char *s)
     {
       as_bad (_("the architecture string of -march and elf architecture "
 		"attributes cannot be empty"));
-      return;
+      if (file_arch_str != NULL)
+	return;
+      s = DEFAULT_RISCV_ARCH_WITH_EXT;
     }
 
-  if (riscv_rps_as.subset_list == NULL)
+  unsigned int newxlen = xlen;
+  riscv_parse_subset_t newrps = {
+    .subset_list = XCNEW (riscv_subset_list_t),
+    .error_handler = as_bad,
+    .xlen = &newxlen,
+    .isa_spec = &default_isa_spec,
+    .check_unknown_prefixed_ext = true,
+  };
+
+  if (!riscv_parse_subset (&newrps, s))
     {
-      riscv_rps_as.subset_list = XNEW (riscv_subset_list_t);
-      riscv_rps_as.subset_list->head = NULL;
-      riscv_rps_as.subset_list->tail = NULL;
-      riscv_rps_as.subset_list->arch_str = NULL;
+      riscv_release_subset_list (newrps.subset_list);
+      if (file_arch_str != NULL)
+	{
+	  free (newrps.subset_list);
+	  return;
+	}
+      if (!riscv_parse_subset (&newrps, DEFAULT_RISCV_ARCH_WITH_EXT))
+	abort ();
     }
-  riscv_release_subset_list (riscv_rps_as.subset_list);
-  riscv_parse_subset (&riscv_rps_as, s);
+  xlen = newxlen;
+  if (riscv_rps_as.subset_list != NULL)
+    {
+      riscv_release_subset_list (riscv_rps_as.subset_list);
+      free (riscv_rps_as.subset_list);
+    }
+  riscv_rps_as.subset_list = newrps.subset_list;
+
   riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
   file_arch_str = xstrdup (riscv_rps_as.subset_list->arch_str);
 
-  riscv_set_rvc (riscv_subset_supports (&riscv_rps_as, "c")
-		 || riscv_subset_supports (&riscv_rps_as, "zca"));
+  riscv_set_rvc (riscv_subset_supports (&riscv_rps_as, "zca"));
 
   if (riscv_subset_supports (&riscv_rps_as, "ztso"))
     riscv_set_tso ();
@@ -1620,7 +1640,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	case 'O': /* Opcode for .insn directive.  */
 	  switch (*++oparg)
 	    {
-	    case '4': USE_BITS (OP_MASK_OP, OP_SH_OP); break;
+	    case '7': USE_BITS (OP_MASK_OP, OP_SH_OP); break;
 	    case '2': USE_BITS (OP_MASK_OP2, OP_SH_OP2); break;
 	    default:
 	      goto unknown_validate_operand;
@@ -3193,72 +3213,47 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  INSERT_OPERAND (CRS2, *ip, regno);
 		  continue;
 		case 'F':
-		  switch (*++oparg)
+		  if (!ISDIGIT (*++oparg))
+		    goto unknown_riscv_ip_operand;
+
+		  /* (Ab)use "regno" here.  */
+		  regno = *oparg - '0';
+		  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+		      || imm_expr->X_op != O_constant
+		      || imm_expr->X_add_number < 0
+		      || imm_expr->X_add_number >= (1U << regno))
 		    {
-		      case '6':
-		        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-			    || imm_expr->X_op != O_constant
-			    || imm_expr->X_add_number < 0
-			    || imm_expr->X_add_number >= 64)
-			  {
-			    as_bad (_("bad value for compressed funct6 "
-				      "field, value must be 0...63"));
-			    break;
-			  }
-			INSERT_OPERAND (CFUNCT6, *ip, imm_expr->X_add_number);
-			imm_expr->X_op = O_absent;
-			asarg = expr_parse_end;
-			continue;
-
-		      case '4':
-		        if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-			    || imm_expr->X_op != O_constant
-			    || imm_expr->X_add_number < 0
-			    || imm_expr->X_add_number >= 16)
-			  {
-			    as_bad (_("bad value for compressed funct4 "
-				      "field, value must be 0...15"));
-			    break;
-			  }
-			INSERT_OPERAND (CFUNCT4, *ip, imm_expr->X_add_number);
-			imm_expr->X_op = O_absent;
-			asarg = expr_parse_end;
-			continue;
-
-		      case '3':
-			if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-			    || imm_expr->X_op != O_constant
-			    || imm_expr->X_add_number < 0
-			    || imm_expr->X_add_number >= 8)
-			  {
-			    as_bad (_("bad value for compressed funct3 "
-				      "field, value must be 0...7"));
-			    break;
-			  }
-			INSERT_OPERAND (CFUNCT3, *ip, imm_expr->X_add_number);
-			imm_expr->X_op = O_absent;
-			asarg = expr_parse_end;
-			continue;
-
-		      case '2':
-			if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-			    || imm_expr->X_op != O_constant
-			    || imm_expr->X_add_number < 0
-			    || imm_expr->X_add_number >= 4)
-			  {
-			    as_bad (_("bad value for compressed funct2 "
-				      "field, value must be 0...3"));
-			    break;
-			  }
-			INSERT_OPERAND (CFUNCT2, *ip, imm_expr->X_add_number);
-			imm_expr->X_op = O_absent;
-			asarg = expr_parse_end;
-			continue;
-
-		      default:
-			goto unknown_riscv_ip_operand;
+		      as_bad (_("bad value for compressed funct%u "
+				"field, value must be 0...%u"),
+			      regno, (1U << regno) - 1);
+		      break;
 		    }
-		  break;
+
+		  switch (regno)
+		    {
+		    case 6:
+		      INSERT_OPERAND (CFUNCT6, *ip, imm_expr->X_add_number);
+		      break;
+
+		    case 4:
+		      INSERT_OPERAND (CFUNCT4, *ip, imm_expr->X_add_number);
+		      break;
+
+		    case 3:
+		      INSERT_OPERAND (CFUNCT3, *ip, imm_expr->X_add_number);
+		      break;
+
+		    case 2:
+		      INSERT_OPERAND (CFUNCT2, *ip, imm_expr->X_add_number);
+		      break;
+
+		    default:
+		      goto unknown_riscv_ip_operand;
+		    }
+
+		  imm_expr->X_op = O_absent;
+		  asarg = expr_parse_end;
+		  continue;
 
 		default:
 		  goto unknown_riscv_ip_operand;
@@ -3709,97 +3704,80 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	      continue;
 
 	    case 'O':
-	      switch (*++oparg)
+	      if (!ISDIGIT (*++oparg))
+		goto unknown_riscv_ip_operand;
+
+	      /* (Ab)use "regno" here.  */
+	      regno = *oparg - '0';
+	      if (my_getOpcodeExpression (imm_expr, imm_reloc, asarg)
+		  || imm_expr->X_op != O_constant
+		  || imm_expr->X_add_number < 0
+		  /* O2 encodes C opcodes, i.e. doesn't permit value 3.  */
+		  || imm_expr->X_add_number >= (1U << regno) - (regno == 2)
+		  || (regno > 2 && (imm_expr->X_add_number & 3) != 3))
 		{
-		case '4':
-		  if (my_getOpcodeExpression (imm_expr, imm_reloc, asarg)
-		      || imm_expr->X_op != O_constant
-		      || imm_expr->X_add_number < 0
-		      || imm_expr->X_add_number >= 128
-		      || (imm_expr->X_add_number & 0x3) != 3)
-		    {
-		      as_bad (_("bad value for opcode field, "
-				"value must be 0...127 and "
-				"lower 2 bits must be 0x3"));
-		      break;
-		    }
-		  INSERT_OPERAND (OP, *ip, imm_expr->X_add_number);
-		  imm_expr->X_op = O_absent;
-		  asarg = expr_parse_end;
-		  continue;
-
-		case '2':
-		  if (my_getOpcodeExpression (imm_expr, imm_reloc, asarg)
-		      || imm_expr->X_op != O_constant
-		      || imm_expr->X_add_number < 0
-		      || imm_expr->X_add_number >= 3)
-		    {
-		      as_bad (_("bad value for opcode field, "
-				"value must be 0...2"));
-		      break;
-		    }
-		  INSERT_OPERAND (OP2, *ip, imm_expr->X_add_number);
-		  imm_expr->X_op = O_absent;
-		  asarg = expr_parse_end;
-		  continue;
-
-		default:
-		  goto unknown_riscv_ip_operand;
+		  as_bad (_("bad value for opcode field, "
+			    "value must be 0...%u%s"),
+			  (1U << regno) - (regno == 2) - 1,
+			  regno > 2 ? _(" and lower 2 bits must be 0x3") : "");
+		  break;
 		}
-	      break;
 
-	    case 'F':
-	      switch (*++oparg)
+	      switch (*oparg)
 		{
 		case '7':
-		  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-		      || imm_expr->X_op != O_constant
-		      || imm_expr->X_add_number < 0
-		      || imm_expr->X_add_number >= 128)
-		    {
-		      as_bad (_("bad value for funct7 field, "
-				"value must be 0...127"));
-		      break;
-		    }
-		  INSERT_OPERAND (FUNCT7, *ip, imm_expr->X_add_number);
-		  imm_expr->X_op = O_absent;
-		  asarg = expr_parse_end;
-		  continue;
-
-		case '3':
-		  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-		      || imm_expr->X_op != O_constant
-		      || imm_expr->X_add_number < 0
-		      || imm_expr->X_add_number >= 8)
-		    {
-		      as_bad (_("bad value for funct3 field, "
-			        "value must be 0...7"));
-		      break;
-		    }
-		  INSERT_OPERAND (FUNCT3, *ip, imm_expr->X_add_number);
-		  imm_expr->X_op = O_absent;
-		  asarg = expr_parse_end;
-		  continue;
+		  INSERT_OPERAND (OP, *ip, imm_expr->X_add_number);
+		  break;
 
 		case '2':
-		  if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
-		      || imm_expr->X_op != O_constant
-		      || imm_expr->X_add_number < 0
-		      || imm_expr->X_add_number >= 4)
-		    {
-		      as_bad (_("bad value for funct2 field, "
-			        "value must be 0...3"));
-		      break;
-		    }
-		  INSERT_OPERAND (FUNCT2, *ip, imm_expr->X_add_number);
-		  imm_expr->X_op = O_absent;
-		  asarg = expr_parse_end;
-		  continue;
+		  INSERT_OPERAND (OP2, *ip, imm_expr->X_add_number);
+		  break;
 
 		default:
 		  goto unknown_riscv_ip_operand;
 		}
-	      break;
+
+	      imm_expr->X_op = O_absent;
+	      asarg = expr_parse_end;
+	      continue;
+
+	    case 'F':
+	      if (!ISDIGIT (*++oparg))
+		goto unknown_riscv_ip_operand;
+
+	      /* (Ab)use "regno" here.  */
+	      regno = *oparg - '0';
+	      if (my_getSmallExpression (imm_expr, imm_reloc, asarg, p)
+		  || imm_expr->X_op != O_constant
+		  || imm_expr->X_add_number < 0
+		  || imm_expr->X_add_number >= (1U << regno))
+		{
+		  as_bad (_("bad value for funct%u field, "
+			    "value must be 0...%u"),
+			  regno, (1U << regno) - 1);
+		  break;
+		}
+	      switch (regno)
+		{
+		case 7:
+		  INSERT_OPERAND (FUNCT7, *ip, imm_expr->X_add_number);
+		  break;
+
+		case 3:
+		  INSERT_OPERAND (FUNCT3, *ip, imm_expr->X_add_number);
+		  break;
+
+		case 2:
+		  INSERT_OPERAND (FUNCT2, *ip, imm_expr->X_add_number);
+		  break;
+
+		default:
+		  goto unknown_riscv_ip_operand;
+		}
+
+	      imm_expr->X_op = O_absent;
+	      asarg = expr_parse_end;
+	      continue;
 
 	    case 'y': /* bs immediate */
 	      my_getExpression (imm_expr, asarg, force_reloc);
@@ -5077,13 +5055,16 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
 
   if (strcmp (name, "rvc") == 0)
     {
-      riscv_update_subset (&riscv_rps_as, "+c");
-      riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
-      riscv_set_rvc (true);
+      if (riscv_update_subset (&riscv_rps_as, "+c"))
+	{
+	  riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
+	  riscv_set_rvc (true);
+	}
     }
   else if (strcmp (name, "norvc") == 0)
     {
-      riscv_update_subset_norvc (&riscv_rps_as);
+      if (!riscv_update_subset_norvc (&riscv_rps_as))
+	abort ();
       riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
       riscv_set_rvc (false);
     }
@@ -5104,14 +5085,15 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
       name += 5;
       if (is_whitespace (*name) && *name != '\0')
 	name++;
-      riscv_update_subset (&riscv_rps_as, name);
-      riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
+      if (riscv_update_subset (&riscv_rps_as, name))
+	{
+	  riscv_arch_str (xlen, riscv_rps_as.subset_list, true/* update */);
 
-      riscv_set_rvc (riscv_subset_supports (&riscv_rps_as, "c")
-		     || riscv_subset_supports (&riscv_rps_as, "zca"));
+	  riscv_set_rvc (riscv_subset_supports (&riscv_rps_as, "zca"));
 
-      if (riscv_subset_supports (&riscv_rps_as, "ztso"))
-	riscv_set_tso ();
+	  if (riscv_subset_supports (&riscv_rps_as, "ztso"))
+	    riscv_set_tso ();
+	}
     }
   else if (strcmp (name, "push") == 0)
     {

@@ -126,7 +126,7 @@ proc test_value_numeric_ops {} {
   gdb_test_no_output "python evalue = gdb.history (0)"
   gdb_test "python print (int (evalue))" "2"
 
-  # Test pointer arithmethic
+  # Test pointer arithmetic
 
   # First, obtain the pointers
   gdb_test "print (void *) 2" ".*" ""
@@ -652,7 +652,7 @@ proc test_value_sub_classes {} {
     gdb_test "python obj = MyValue(b\[size_a0:\],tp)" "In MyValue.__init__" \
 	"convert 2nd elem of buffer to a MyValue"
     gdb_test "python print(obj)" "2" \
-	"check printing of MyValue when initiaized with a type"
+	"check printing of MyValue when initialized with a type"
 }
 
 # Test the history count.  This must be the first thing called after

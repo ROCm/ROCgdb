@@ -384,8 +384,7 @@ z80_elf_final_link_relocate (unsigned long r_type,
 }
 
 static int
-z80_elf_relocate_section (bfd *output_bfd,
-			  struct bfd_link_info *info,
+z80_elf_relocate_section (struct bfd_link_info *info,
 			  bfd *input_bfd,
 			  asection *input_section,
 			  bfd_byte *contents,
@@ -421,7 +420,8 @@ z80_elf_relocate_section (bfd *output_bfd,
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 	}
       else
 	{
@@ -449,7 +449,7 @@ z80_elf_relocate_section (bfd *output_bfd,
 	continue;
 
 
-      z80_elf_final_link_relocate (r_type, input_bfd, output_bfd,
+      z80_elf_final_link_relocate (r_type, input_bfd, info->output_bfd,
 				   input_section,
 				   contents, rel->r_offset,
 				   relocation, rel->r_addend,

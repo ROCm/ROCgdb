@@ -147,7 +147,7 @@ namespace eval ::cp_support_internal {
 #
 # If you test the same class declaration more than once, you can specify
 # IN_CLASS_TABLE as "ibid".  "ibid" means: look for a previous class
-# table that had the same IN_KEY and IN_TAG, and re-use that table.
+# table that had the same IN_KEY and IN_TAG, and reuse that table.
 #
 # IN_TAIL is the expected text after the close brace, specifically the "*"
 # in "struct { ... } *".  This is an optional parameter.  The default

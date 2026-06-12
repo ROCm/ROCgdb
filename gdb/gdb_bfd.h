@@ -83,7 +83,7 @@ struct gdb_bfd_ref_policy
 };
 
 /* A gdb::ref_ptr that has been specialized for BFD objects.  */
-typedef gdb::ref_ptr<struct bfd, gdb_bfd_ref_policy> gdb_bfd_ref_ptr;
+using gdb_bfd_ref_ptr = gdb::ref_ptr<struct bfd, gdb_bfd_ref_policy>;
 
 /* Open a read-only (FOPEN_RB) BFD given arguments like bfd_fopen.
    If NAME starts with TARGET_SYSROOT_PREFIX then the BFD will be

@@ -47,7 +47,7 @@ proc_with_prefix test { non-stop threaded run-or-attach } {
 	# The test doesn't work when the remote target uses the
 	# synchronous remote protocol, because GDB can't kill the
 	# remote inferior while it is running, when we "run" or
-	# "attach" again.  When aswering "yes" to the "Start it from
+	# "attach" again.  When answering "yes" to the "Start it from
 	# the beginning?" question, we otherwise get:
 	#
 	#   Cannot execute this command while the target is running.  Use the

@@ -178,13 +178,13 @@ find_one_thread (ptid_t ptid)
   td_err_e err = thread_db->td_ta_map_lwp2thr_p (thread_db->thread_agent, lwpid,
 						 &th);
   if (err != TD_OK)
-    error ("Cannot get thread handle for LWP %d: %s",
+    error (_("Cannot get thread handle for LWP %d: %s"),
 	   lwpid, thread_db_err_str (err));
 
   td_thrinfo_t ti;
   err = thread_db->td_thr_get_info_p (&th, &ti);
   if (err != TD_OK)
-    error ("Cannot get thread info for LWP %d: %s",
+    error (_("Cannot get thread info for LWP %d: %s"),
 	   lwpid, thread_db_err_str (err));
 
   threads_debug_printf ("Found thread %ld (LWP %d)",
@@ -192,7 +192,7 @@ find_one_thread (ptid_t ptid)
 
   if (lwpid != ti.ti_lid)
     {
-      warning ("PID mismatch!  Expected %ld, got %ld",
+      warning (_("PID mismatch!  Expected %ld, got %ld"),
 	       (long) lwpid, (long) ti.ti_lid);
       return 0;
     }
@@ -227,7 +227,7 @@ attach_thread (const td_thrhandle_t *th_p, td_thrinfo_t *ti_p)
     {
       std::string reason = linux_ptrace_attach_fail_reason_string (ptid, err);
 
-      warning ("Could not attach to thread %ld (LWP %d): %s",
+      warning (_("Could not attach to thread %ld (LWP %d): %s"),
 	       (unsigned long) ti_p->ti_tid, ti_p->ti_lid, reason.c_str ());
 
       return 0;
@@ -274,7 +274,7 @@ find_new_threads_callback (const td_thrhandle_t *th_p, void *data)
 
   err = thread_db->td_thr_get_info_p (th_p, &ti);
   if (err != TD_OK)
-    error ("Cannot get thread info: %s", thread_db_err_str (err));
+    error (_("Cannot get thread info: %s"), thread_db_err_str (err));
 
   if (ti.ti_lid == -1)
     {
@@ -343,7 +343,7 @@ thread_db_find_new_threads (void)
 	}
     }
   if (err != TD_OK)
-    error ("Cannot find new threads: %s", thread_db_err_str (err));
+    error (_("Cannot find new threads: %s"), thread_db_err_str (err));
 }
 
 /* Cache all future symbols that thread_db might request.  We can not
@@ -884,5 +884,5 @@ thread_db_notice_clone (thread_info *parent_thr, ptid_t child_ptid)
   switch_to_thread (parent_thr);
 
   if (!find_one_thread (child_ptid))
-    warning ("Cannot find thread after clone.");
+    warning (_("Cannot find thread after clone."));
 }

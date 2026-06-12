@@ -861,7 +861,7 @@ proc previous_line_is_ok { str } {
 
     # Create a copy of STR with all the '\033' characters removed.
     # Then compare string lengths to get a count of the '\033'
-    # charactes present in STR.
+    # characters present in STR.
     regsub -all "\033" $str {} stripped
     set count [expr {[string length $str] - [string length $stripped]}]
 

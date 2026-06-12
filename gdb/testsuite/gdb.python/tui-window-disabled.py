@@ -59,7 +59,7 @@ class EventWindow:
 
         if cleanup_properly:
             # Disconnect the listeners and delete the lambda functions.
-            # This removes cyclic references to SELF, and so alows SELF to
+            # This removes cyclic references to SELF, and so allows SELF to
             # be deleted.
             gdb.events.stop.disconnect(self._stop_listener)
             gdb.events.exited.disconnect(self._exit_listener)

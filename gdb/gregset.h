@@ -31,8 +31,8 @@
 #define GDB_FPREGSET_T fpregset_t
 #endif
 
-typedef GDB_GREGSET_T gdb_gregset_t;
-typedef GDB_FPREGSET_T gdb_fpregset_t;
+using gdb_gregset_t = GDB_GREGSET_T;
+using gdb_fpregset_t = GDB_FPREGSET_T;
 
 struct regcache;
 

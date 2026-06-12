@@ -562,8 +562,7 @@ iq2000_elf_check_relocs (bfd *abfd,
    accordingly.	 */
 
 static int
-iq2000_elf_relocate_section (bfd *		     output_bfd ATTRIBUTE_UNUSED,
-			     struct bfd_link_info *  info,
+iq2000_elf_relocate_section (struct bfd_link_info *  info,
 			     bfd *		     input_bfd,
 			     asection *		     input_section,
 			     bfd_byte *		     contents,
@@ -616,8 +615,8 @@ iq2000_elf_relocate_section (bfd *		     output_bfd ATTRIBUTE_UNUSED,
 	    /* This relocation is relative to a section symbol that is
 	       going to be merged.  Change it so that it is relative
 	       to the merged section symbol.  */
-	    rel->r_addend = _bfd_elf_rel_local_sym (output_bfd, sym, &sec,
-						    rel->r_addend);
+	    rel->r_addend = _bfd_elf_rel_local_sym (info->output_bfd,
+						    sym, &sec, rel->r_addend);
 
 	  relocation = (sec->output_section->vma
 			+ sec->output_offset

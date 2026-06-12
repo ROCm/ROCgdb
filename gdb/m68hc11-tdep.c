@@ -403,7 +403,7 @@ m68hc11_register_name (struct gdbarch *gdbarch, int reg_nr)
 
 constexpr gdb_byte m68hc11_break_insn[] = {0x0};
 
-typedef BP_MANIPULATION (m68hc11_break_insn) m68hc11_breakpoint;
+using m68hc11_breakpoint = BP_MANIPULATION (m68hc11_break_insn);
 
 /* 68HC11 & 68HC12 prologue analysis.  */
 

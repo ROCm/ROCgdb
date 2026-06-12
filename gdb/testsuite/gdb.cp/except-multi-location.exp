@@ -16,7 +16,7 @@
 # "catch catch" catchpoint ended up with multiple locations.  This
 # testcase exercises that scenario by building the binary with
 # -static-libgcc/-static-libstdc++ and a shared library that depends
-# on the libstc++.so DSO (which is how GDB was built and revealed the
+# on the libstdc++.so DSO (which is how GDB was built and revealed the
 # bug), and vice versa.
 
 require allow_shlib_tests

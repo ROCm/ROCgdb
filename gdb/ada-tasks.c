@@ -1383,11 +1383,11 @@ task_command_1 (const char *taskno_str, int from_tty, struct inferior *inf)
 	   task_to_str (taskno, task_info).c_str ());
 
   switch_to_thread (tp);
-  ada_find_printable_frame (get_selected_frame (NULL));
+  ada_find_printable_frame (get_selected_frame ());
   gdb_printf (_("[Switching to task %s]\n"),
 	      task_to_str (taskno, task_info).c_str ());
-  print_stack_frame (get_selected_frame (NULL),
-		     frame_relative_level (get_selected_frame (NULL)),
+  print_stack_frame (get_selected_frame (),
+		     frame_relative_level (get_selected_frame ()),
 		     SRC_AND_LOC, 1);
 }
 

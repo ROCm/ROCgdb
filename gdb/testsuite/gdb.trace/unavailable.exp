@@ -328,7 +328,7 @@ proc gdb_unavailable_registers_test { } {
 
 	prepare_for_trace_test
 
-	# We'll simply re-use the globals_test_function for this test
+	# We'll simply reuse the globals_test_function for this test
 	gdb_test "trace globals_test_func" \
 	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
@@ -387,7 +387,7 @@ proc gdb_unavailable_floats { } {
 
 	prepare_for_trace_test
 
-	# We'll simply re-use the globals_test_function for this test
+	# We'll simply reuse the globals_test_function for this test
 	gdb_test "trace globals_test_func" \
 	    "Tracepoint ${::decimal} at .*" \
 	    "set tracepoint"
@@ -551,7 +551,7 @@ proc gdb_collect_globals_test_1 { } {
     # Note, depends on previous test.
     gdb_test "print \$\[1\]" \
 	" = <unavailable>" \
-	"subscript a non-memory rvalue array, accessing an unvailable element"
+	"subscript a non-memory rvalue array, accessing an unavailable element"
 
     # Access a field of a non-lazy value, making sure the
     # unavailable-ness is propagated.  History values are easy

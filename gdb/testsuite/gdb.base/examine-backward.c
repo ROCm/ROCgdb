@@ -19,7 +19,7 @@
 Define TestStrings, TestStringsH, and TestStringsW to test utf8, utf16,
 and utf32 strings respectively.
 To avoid compile errors due to old compiler mode, we don't use string
-literals.  The content of each array is the same as followings:
+literals.  The content of each array is the same as the following:
 
   const char TestStrings[] = {
       "ABCD"

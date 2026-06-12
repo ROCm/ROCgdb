@@ -265,7 +265,7 @@ i386_get_thread_context (windows_thread_info *th)
 	      goto again;
 	    }
 
-	  error ("GetThreadContext failure %ld\n", (long) e);
+	  error (_("GetThreadContext failure %ld\n"), (long) e);
 	}
     });
 }

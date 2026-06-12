@@ -2412,8 +2412,7 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
    omitted when creating a shared library.  */
 
 bool
-tilegx_elf_omit_section_dynsym (bfd *output_bfd,
-				struct bfd_link_info *info,
+tilegx_elf_omit_section_dynsym (struct bfd_link_info *info,
 				asection *p)
 {
   /* We keep the .got section symbol so that explicit relocations
@@ -2422,12 +2421,11 @@ tilegx_elf_omit_section_dynsym (bfd *output_bfd,
   if (strcmp (p->name, ".got") == 0)
     return false;
 
-  return _bfd_elf_omit_section_dynsym_default (output_bfd, info, p);
+  return _bfd_elf_omit_section_dynsym_default (info, p);
 }
 
 bool
-tilegx_elf_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-			       struct bfd_link_info *info)
+tilegx_elf_late_size_sections (struct bfd_link_info *info)
 {
   struct tilegx_elf_link_hash_table *htab;
   bfd *dynobj;
@@ -2555,7 +2553,7 @@ tilegx_elf_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	      || htab->elf.splt->size == 0)
 	  && (htab->elf.sgot == NULL
 	      || (htab->elf.sgot->size
-		  == get_elf_backend_data (output_bfd)->got_header_size)))
+		  == get_elf_backend_data (info->output_bfd)->got_header_size)))
 	htab->elf.sgotplt->size = 0;
     }
 
@@ -2618,7 +2616,7 @@ tilegx_elf_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
       s->alloced = 1;
     }
 
-  return _bfd_elf_add_dynamic_tags (output_bfd, info, true);
+  return _bfd_elf_add_dynamic_tags (info, true);
 }
 
 /* Return the base VMA address which should be subtracted from real addresses
@@ -2796,7 +2794,7 @@ static const bfd_byte *insn_addx_Y0Y1 = insn_tls_ie_addx_Y0Y1;
    accordingly.  */
 
 int
-tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
+tilegx_elf_relocate_section (struct bfd_link_info *info,
 			     bfd *input_bfd, asection *input_section,
 			     bfd_byte *contents, Elf_Internal_Rela *relocs,
 			     Elf_Internal_Sym *local_syms,
@@ -2866,7 +2864,8 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections[r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 	}
       else
 	{
@@ -2942,7 +2941,7 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	      else if (is_tls_iele)
 		{
 		  /* GD -> IE */
-		  if (ABI_64_P (output_bfd))
+		  if (ABI_64_P (info->output_bfd))
 		    tilegx_replace_insn (contents + rel->r_offset,
 					 insn_mask_X1, insn_tls_ie_ld_X1);
 		  else
@@ -3003,7 +3002,7 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		  /* 1. copy dest operand into the second source operand.
 		     2. change the opcode to "add".  */
 		  src_begin = is_pipe0 ? 12 : 43;
-		  if (ABI_64_P (output_bfd))
+		  if (ABI_64_P (info->output_bfd))
 		    insn = is_X0X1 ? insn_add_X0X1 : insn_add_Y0Y1;
 		  else
 		    insn = is_X0X1 ? insn_addx_X0X1 : insn_addx_Y0Y1;
@@ -3035,7 +3034,7 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	    {
 	      const bfd_byte *mask = NULL;
 	      const bfd_byte *add_insn = NULL;
-	      bool is_64bit = ABI_64_P (output_bfd);
+	      bool is_64bit = ABI_64_P (info->output_bfd);
 
 	      switch (r_type)
 		{
@@ -3083,7 +3082,7 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	  else
 	    {
 	      /* IE -> IE */
-	      if (ABI_64_P (output_bfd))
+	      if (ABI_64_P (info->output_bfd))
 		tilegx_replace_insn (contents + rel->r_offset,
 				     insn_mask_X1_no_dest_no_srca,
 				     insn_tls_ie_ld_X1);
@@ -3144,7 +3143,7 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		    off &= ~1;
 		  else
 		    {
-		      TILEGX_ELF_PUT_WORD (htab, output_bfd, relocation,
+		      TILEGX_ELF_PUT_WORD (htab, info->output_bfd, relocation,
 					   htab->elf.sgot->contents + off);
 		      h->got.offset |= 1;
 		    }
@@ -3183,10 +3182,10 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 			TILEGX_ELF_R_INFO (htab, NULL, 0, R_TILEGX_RELATIVE);
 		      outrel.r_addend = relocation;
 		      relocation = 0;
-		      tilegx_elf_append_rela (output_bfd, s, &outrel);
+		      tilegx_elf_append_rela (info->output_bfd, s, &outrel);
 		    }
 
-		  TILEGX_ELF_PUT_WORD (htab, output_bfd, relocation,
+		  TILEGX_ELF_PUT_WORD (htab, info->output_bfd, relocation,
 				       htab->elf.sgot->contents + off);
 		  local_got_offsets[r_symndx] |= 1;
 		}
@@ -3324,8 +3323,8 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	      skip = false;
 
 	      outrel.r_offset =
-		_bfd_elf_section_offset (output_bfd, info, input_section,
-					 rel->r_offset);
+		_bfd_elf_section_offset (info->output_bfd, info,
+					 input_section, rel->r_offset);
 	      if (outrel.r_offset == (bfd_vma) -1)
 		skip = true;
 	      else if (outrel.r_offset == (bfd_vma) -2)
@@ -3424,7 +3423,7 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		    }
 		}
 
-	      tilegx_elf_append_rela (output_bfd, sreloc, &outrel);
+	      tilegx_elf_append_rela (info->output_bfd, sreloc, &outrel);
 
 	      /* This reloc will be computed at runtime, so there's no
 		 need to do anything now.  */
@@ -3447,8 +3446,8 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	      BFD_ASSERT (sreloc != NULL);
 	      skip = false;
 	      outrel.r_offset =
-		_bfd_elf_section_offset (output_bfd, info, input_section,
-					 rel->r_offset);
+		_bfd_elf_section_offset (info->output_bfd, info,
+					 input_section, rel->r_offset);
 	      if (outrel.r_offset == (bfd_vma) -1)
 		skip = true;
 	      else if (outrel.r_offset == (bfd_vma) -2)
@@ -3464,7 +3463,7 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 				    + rel->r_addend;
 		}
 
-	      tilegx_elf_append_rela (output_bfd, sreloc, &outrel);
+	      tilegx_elf_append_rela (info->output_bfd, sreloc, &outrel);
 	      continue;
 	    }
 	  relocation = tpoff (info, relocation);
@@ -3571,7 +3570,7 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		  case R_TILEGX_IMM16_X0_HW1_LAST_TLS_IE:
 		  case R_TILEGX_IMM16_X1_HW1_LAST_TLS_IE:
 		    if (need_relocs) {
-		      TILEGX_ELF_PUT_WORD (htab, output_bfd, 0,
+		      TILEGX_ELF_PUT_WORD (htab, info->output_bfd, 0,
 					   htab->elf.sgot->contents + off);
 		      outrel.r_offset = (htab->elf.sgot->output_section->vma
 				       + htab->elf.sgot->output_offset + off);
@@ -3580,9 +3579,10 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 			outrel.r_addend = relocation - dtpoff_base (info);
 		      outrel.r_info = TILEGX_ELF_R_INFO (htab, NULL, indx,
 							 TILEGX_ELF_TPOFF_RELOC (htab));
-		      tilegx_elf_append_rela (output_bfd, htab->elf.srelgot, &outrel);
+		      tilegx_elf_append_rela (info->output_bfd,
+					      htab->elf.srelgot, &outrel);
 		    } else {
-		      TILEGX_ELF_PUT_WORD (htab, output_bfd,
+		      TILEGX_ELF_PUT_WORD (htab, info->output_bfd,
 					   tpoff (info, relocation),
 					   htab->elf.sgot->contents + off);
 		    }
@@ -3600,26 +3600,28 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 		      outrel.r_addend = 0;
 		      outrel.r_info = TILEGX_ELF_R_INFO (htab, NULL, indx,
 							 TILEGX_ELF_DTPMOD_RELOC (htab));
-		      TILEGX_ELF_PUT_WORD (htab, output_bfd, 0,
+		      TILEGX_ELF_PUT_WORD (htab, info->output_bfd, 0,
 					   htab->elf.sgot->contents + off);
-		      tilegx_elf_append_rela (output_bfd, htab->elf.srelgot, &outrel);
+		      tilegx_elf_append_rela (info->output_bfd,
+					      htab->elf.srelgot, &outrel);
 		      if (indx == 0)
 			{
 			  BFD_ASSERT (! unresolved_reloc);
-			  TILEGX_ELF_PUT_WORD (htab, output_bfd,
+			  TILEGX_ELF_PUT_WORD (htab, info->output_bfd,
 					       relocation - dtpoff_base (info),
 					       (htab->elf.sgot->contents + off +
 						TILEGX_ELF_WORD_BYTES (htab)));
 			}
 		      else
 			{
-			  TILEGX_ELF_PUT_WORD (htab, output_bfd, 0,
+			  TILEGX_ELF_PUT_WORD (htab, info->output_bfd, 0,
 					       (htab->elf.sgot->contents + off +
 						TILEGX_ELF_WORD_BYTES (htab)));
 			  outrel.r_info = TILEGX_ELF_R_INFO (htab, NULL, indx,
 							     TILEGX_ELF_DTPOFF_RELOC (htab));
 			  outrel.r_offset += TILEGX_ELF_WORD_BYTES (htab);
-			  tilegx_elf_append_rela (output_bfd, htab->elf.srelgot, &outrel);
+			  tilegx_elf_append_rela (info->output_bfd,
+						  htab->elf.srelgot, &outrel);
 			}
 		    }
 
@@ -3629,9 +3631,9 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 			 static link or an executable link with the
 			 symbol binding locally.  Mark it as belonging
 			 to module 1, the executable.  */
-		      TILEGX_ELF_PUT_WORD (htab, output_bfd, 1,
+		      TILEGX_ELF_PUT_WORD (htab, info->output_bfd, 1,
 					   htab->elf.sgot->contents + off );
-		      TILEGX_ELF_PUT_WORD (htab, output_bfd,
+		      TILEGX_ELF_PUT_WORD (htab, info->output_bfd,
 					   relocation - dtpoff_base (info),
 					   htab->elf.sgot->contents + off +
 					   TILEGX_ELF_WORD_BYTES (htab));
@@ -3658,7 +3660,7 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
       if (unresolved_reloc
 	  && !((input_section->flags & SEC_DEBUGGING) != 0
 	       && h->def_dynamic)
-	  && _bfd_elf_section_offset (output_bfd, info, input_section,
+	  && _bfd_elf_section_offset (info->output_bfd, info, input_section,
 				      rel->r_offset) != (bfd_vma) -1)
 	_bfd_error_handler
 	  /* xgettext:c-format */
@@ -3768,8 +3770,7 @@ tilegx_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
    dynamic sections here.  */
 
 bool
-tilegx_elf_finish_dynamic_symbol (bfd *output_bfd,
-				  struct bfd_link_info *info,
+tilegx_elf_finish_dynamic_symbol (struct bfd_link_info *info,
 				  struct elf_link_hash_entry *h,
 				  Elf_Internal_Sym *sym)
 {
@@ -3786,7 +3787,7 @@ tilegx_elf_finish_dynamic_symbol (bfd *output_bfd,
       Elf_Internal_Rela rela;
       bfd_byte *loc;
       bfd_vma r_offset;
-      elf_backend_data *bed = get_elf_backend_data (output_bfd);
+      elf_backend_data *bed = get_elf_backend_data (info->output_bfd);
 
 
       int rela_index;
@@ -3803,12 +3804,12 @@ tilegx_elf_finish_dynamic_symbol (bfd *output_bfd,
        abort ();
 
       /* Fill in the entry in the procedure linkage table.  */
-      rela_index = tilegx_plt_entry_build (output_bfd, htab, splt, sgotplt,
+      rela_index = tilegx_plt_entry_build (info->output_bfd, htab, splt, sgotplt,
 					   h->plt.offset, &r_offset);
 
       /* Fill in the entry in the global offset table, which initially points
 	 to the beginning of the plt.  */
-      TILEGX_ELF_PUT_WORD (htab, output_bfd,
+      TILEGX_ELF_PUT_WORD (htab, info->output_bfd,
 			   splt->output_section->vma + splt->output_offset,
 			   sgotplt->contents + r_offset);
 
@@ -3820,7 +3821,7 @@ tilegx_elf_finish_dynamic_symbol (bfd *output_bfd,
       rela.r_info = TILEGX_ELF_R_INFO (htab, NULL, h->dynindx, R_TILEGX_JMP_SLOT);
 
       loc = srela->contents + rela_index * TILEGX_ELF_RELA_BYTES (htab);
-      bed->s->swap_reloca_out (output_bfd, &rela, loc);
+      bed->s->swap_reloca_out (info->output_bfd, &rela, loc);
 
       if (!h->def_regular)
 	{
@@ -3875,9 +3876,9 @@ tilegx_elf_finish_dynamic_symbol (bfd *output_bfd,
 	  rela.r_addend = 0;
 	}
 
-      TILEGX_ELF_PUT_WORD (htab, output_bfd, 0,
+      TILEGX_ELF_PUT_WORD (htab, info->output_bfd, 0,
 			   sgot->contents + (h->got.offset & ~(bfd_vma) 1));
-      tilegx_elf_append_rela (output_bfd, srela, &rela);
+      tilegx_elf_append_rela (info->output_bfd, srela, &rela);
     }
 
   if (h->needs_copy)
@@ -3899,7 +3900,7 @@ tilegx_elf_finish_dynamic_symbol (bfd *output_bfd,
 		       + h->root.u.def.section->output_offset);
       rela.r_info = TILEGX_ELF_R_INFO (htab, NULL, h->dynindx, R_TILEGX_COPY);
       rela.r_addend = 0;
-      tilegx_elf_append_rela (output_bfd, s, &rela);
+      tilegx_elf_append_rela (info->output_bfd, s, &rela);
     }
 
   /* Mark some specially defined symbols as absolute. */
@@ -3913,7 +3914,7 @@ tilegx_elf_finish_dynamic_symbol (bfd *output_bfd,
 /* Finish up the dynamic sections.  */
 
 static bool
-tilegx_finish_dyn (bfd *output_bfd, struct bfd_link_info *info,
+tilegx_finish_dyn (struct bfd_link_info *info,
 		   bfd *dynobj, asection *sdyn,
 		   asection *splt ATTRIBUTE_UNUSED)
 {
@@ -3924,7 +3925,7 @@ tilegx_finish_dyn (bfd *output_bfd, struct bfd_link_info *info,
 
   htab = tilegx_elf_hash_table (info);
   BFD_ASSERT (htab != NULL);
-  bed = get_elf_backend_data (output_bfd);
+  bed = get_elf_backend_data (info->output_bfd);
   dynsize = bed->s->sizeof_dyn;
   dynconend = sdyn->contents + sdyn->size;
 
@@ -3953,14 +3954,13 @@ tilegx_finish_dyn (bfd *output_bfd, struct bfd_link_info *info,
 	  continue;
 	}
 
-      bed->s->swap_dyn_out (output_bfd, &dyn, dyncon);
+      bed->s->swap_dyn_out (info->output_bfd, &dyn, dyncon);
     }
   return true;
 }
 
 bool
-tilegx_elf_finish_dynamic_sections (bfd *output_bfd,
-				    struct bfd_link_info *info,
+tilegx_elf_finish_dynamic_sections (struct bfd_link_info *info,
 				    bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -3982,7 +3982,7 @@ tilegx_elf_finish_dynamic_sections (bfd *output_bfd,
       splt = htab->elf.splt;
       BFD_ASSERT (splt != NULL && sdyn != NULL);
 
-      ret = tilegx_finish_dyn (output_bfd, info, dynobj, sdyn, splt);
+      ret = tilegx_finish_dyn (info, dynobj, sdyn, splt);
 
       if (!ret)
 	return ret;
@@ -3991,13 +3991,13 @@ tilegx_elf_finish_dynamic_sections (bfd *output_bfd,
       if (splt->size > 0)
 	{
 	  memcpy (splt->contents,
-		  ABI_64_P (output_bfd) ?
+		  ABI_64_P (info->output_bfd) ?
 		    tilegx64_plt0_entry : tilegx32_plt0_entry,
 		  PLT_HEADER_SIZE);
 
 	  memcpy (splt->contents + splt->size
 		  - PLT_ENTRY_SIZE + PLT_HEADER_SIZE,
-		  ABI_64_P (output_bfd) ?
+		  ABI_64_P (info->output_bfd) ?
 		    tilegx64_plt_tail_entry : tilegx32_plt_tail_entry,
 		  PLT_TAIL_SIZE);
 	  /* Add padding so that the plt section is a multiple of its
@@ -4023,9 +4023,9 @@ tilegx_elf_finish_dynamic_sections (bfd *output_bfd,
 	{
 	  /* Write the first two entries in .got.plt, needed for the dynamic
 	     linker.  */
-	  TILEGX_ELF_PUT_WORD (htab, output_bfd, (bfd_vma) -1,
+	  TILEGX_ELF_PUT_WORD (htab, info->output_bfd, -1,
 			       htab->elf.sgotplt->contents);
-	  TILEGX_ELF_PUT_WORD (htab, output_bfd, (bfd_vma) 0,
+	  TILEGX_ELF_PUT_WORD (htab, info->output_bfd, 0,
 			       htab->elf.sgotplt->contents
 			       + GOT_ENTRY_SIZE (htab));
 
@@ -4043,7 +4043,7 @@ tilegx_elf_finish_dynamic_sections (bfd *output_bfd,
 	  bfd_vma val = (sdyn ?
 			 sdyn->output_section->vma + sdyn->output_offset :
 			 0);
-	  TILEGX_ELF_PUT_WORD (htab, output_bfd, val,
+	  TILEGX_ELF_PUT_WORD (htab, info->output_bfd, val,
 			       htab->elf.sgot->contents);
 
 	  elf_section_data (htab->elf.sgot->output_section)->this_hdr.sh_entsize =

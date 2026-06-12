@@ -23,7 +23,7 @@
 
 #include "target.h"
 
-typedef struct dcache_struct DCACHE;
+using DCACHE = struct dcache_struct;
 
 /* Invalidate DCACHE.  */
 void dcache_invalidate (DCACHE *dcache);

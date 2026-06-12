@@ -79,7 +79,7 @@ while { $test_count < 600 } {
 	    }
 	    -re -wrap "SIZE can only be applied to arrays" {
 		# Because of ifort's DWARF pointer representation we need to
-		# aditionally de-reference Fortran pointers.
+		# additionally de-reference Fortran pointers.
 		regsub -all "\\(" $command "\(\*" command_deref
 		gdb_test "p $command_deref" " = $answer"
 		pass $gdb_test_name
@@ -101,7 +101,7 @@ foreach var {array_1d_p array_2d_p allocatable_array_1d \
 	}
 	-re -wrap "SIZE can only be applied to arrays" {
 	    # Because of ifort's DWARF pointer representation we need to
-	    # aditionally de-reference Fortran pointers.
+	    # additionally de-reference Fortran pointers.
 	    gdb_test "p size (*$var, 3)" \
 		"DIM argument to SIZE must be between 1 and \[1-2\]"
 	    pass $gdb_test_name
@@ -135,7 +135,7 @@ foreach var {array_1d_p array_2d_p allocatable_array_1d \
 	}
 	-re -wrap "SIZE can only be applied to arrays" {
 	    # Because of ifort's DWARF pointer representation we need to
-	    # aditionally de-reference Fortran pointers.
+	    # additionally de-reference Fortran pointers.
 	    gdb_test "p size (*$var)" \
 		"Attempt to take contents of a not associated pointer\."
 	    pass $gdb_test_name

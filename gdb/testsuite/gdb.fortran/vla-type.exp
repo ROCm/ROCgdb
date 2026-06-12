@@ -64,7 +64,7 @@ gdb_test "print twov" " = \\\( ivla1 = \\\(\\\(\\\(1, 1, 1, 1, 1\\\)\
  \\\(1, 1, 321, 1, 1\\\)\
  \\\(1, 1, 1, 1, 1\\\) .*"
 
-# Check type with attribute at beginn of type
+# Check type with attribute at begin of type
 gdb_breakpoint [gdb_get_line_number "threev-filled"]
 gdb_continue_to_breakpoint "threev-filled"
 gdb_test "print threev%ivla(1)" " = 1"

@@ -1645,7 +1645,7 @@ dwarf2_evaluate_property (const dynamic_prop *prop,
   frame_info_ptr frame = initial_frame;
 
   if (frame == NULL && has_stack_frames ())
-    frame = get_selected_frame (NULL);
+    frame = get_selected_frame ();
 
   switch (prop->kind ())
     {

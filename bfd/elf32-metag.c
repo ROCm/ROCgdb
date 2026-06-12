@@ -1414,8 +1414,7 @@ section, which means that the addend must be adjusted
 accordingly.  */
 
 static int
-elf_metag_relocate_section (bfd *output_bfd,
-			    struct bfd_link_info *info,
+elf_metag_relocate_section (struct bfd_link_info *info,
 			    bfd *input_bfd,
 			    asection *input_section,
 			    bfd_byte *contents,
@@ -1470,7 +1469,8 @@ elf_metag_relocate_section (bfd *output_bfd,
 	{
 	  sym = local_syms + r_symndx;
 	  sec = local_sections [r_symndx];
-	  relocation = _bfd_elf_rela_local_sym (output_bfd, sym, &sec, rel);
+	  relocation = _bfd_elf_rela_local_sym (info->output_bfd,
+						sym, &sec, rel);
 
 	  name = bfd_elf_string_from_elf_section
 	    (input_bfd, symtab_hdr->sh_link, sym->st_name);
@@ -1533,7 +1533,7 @@ elf_metag_relocate_section (bfd *output_bfd,
 	      skip = false;
 	      relocate = false;
 
-	      outrel.r_offset = _bfd_elf_section_offset (output_bfd,
+	      outrel.r_offset = _bfd_elf_section_offset (info->output_bfd,
 							 info,
 							 input_section,
 							 rel->r_offset);
@@ -1577,7 +1577,7 @@ elf_metag_relocate_section (bfd *output_bfd,
 
 	      loc = sreloc->contents;
 	      loc += sreloc->reloc_count * sizeof(Elf32_External_Rela);
-	      bfd_elf32_swap_reloca_out (output_bfd, &outrel,loc);
+	      bfd_elf32_swap_reloca_out (info->output_bfd, &outrel,loc);
 	      ++sreloc->reloc_count;
 
 	      /* If this reloc is against an external symbol, we do
@@ -1701,10 +1701,10 @@ elf_metag_relocate_section (bfd *output_bfd,
 		    outrel.r_addend = relocation;
 		    loc = s->contents;
 		    loc += s->reloc_count++ * sizeof (Elf32_External_Rela);
-		    bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+		    bfd_elf32_swap_reloca_out (info->output_bfd, &outrel, loc);
 		  }
 		else
-		  bfd_put_32 (output_bfd, relocation,
+		  bfd_put_32 (info->output_bfd, relocation,
 			      htab->etab.sgot->contents + off);
 	      }
 
@@ -1789,23 +1789,25 @@ elf_metag_relocate_section (bfd *output_bfd,
 					   + htab->etab.sgot->output_offset);
 			outrel.r_info = ELF32_R_INFO (indx, R_METAG_TLS_DTPMOD);
 			outrel.r_addend = 0;
-			bfd_put_32 (output_bfd, 0, htab->etab.sgot->contents + cur_off);
+			bfd_put_32 (info->output_bfd, 0,
+				    htab->etab.sgot->contents + cur_off);
 
-			bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+			bfd_elf32_swap_reloca_out (info->output_bfd,
+						   &outrel, loc);
 			htab->etab.srelgot->reloc_count++;
 			loc += sizeof (Elf32_External_Rela);
 
 			if (indx == 0)
-			  bfd_put_32 (output_bfd, 0,
+			  bfd_put_32 (info->output_bfd, 0,
 				      htab->etab.sgot->contents + cur_off + 4);
 			else
 			  {
-			    bfd_put_32 (output_bfd, 0,
+			    bfd_put_32 (info->output_bfd, 0,
 					htab->etab.sgot->contents + cur_off + 4);
 			    outrel.r_info = ELF32_R_INFO (indx,
 						      R_METAG_TLS_DTPOFF);
 			    outrel.r_offset += 4;
-			    bfd_elf32_swap_reloca_out (output_bfd,
+			    bfd_elf32_swap_reloca_out (info->output_bfd,
 						       &outrel, loc);
 			    htab->etab.srelgot->reloc_count++;
 			    loc += sizeof (Elf32_External_Rela);
@@ -1841,12 +1843,13 @@ elf_metag_relocate_section (bfd *output_bfd,
 			else
 			  outrel.r_addend = 0;
 
-			bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+			bfd_elf32_swap_reloca_out (info->output_bfd,
+						   &outrel, loc);
 			htab->etab.srelgot->reloc_count++;
 			loc += sizeof (Elf32_External_Rela);
 		      }
 		    else
-		      bfd_put_32 (output_bfd, tpoff (info, relocation),
+		      bfd_put_32 (info->output_bfd, tpoff (info, relocation),
 				  htab->etab.sgot->contents + cur_off);
 
 		    cur_off += 4;
@@ -1910,7 +1913,7 @@ elf_metag_relocate_section (bfd *output_bfd,
 		outrel.r_info = ELF32_R_INFO (0, R_METAG_TLS_DTPMOD);
 		loc = htab->etab.srelgot->contents;
 		loc += htab->etab.srelgot->reloc_count++ * sizeof (Elf32_External_Rela);
-		bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+		bfd_elf32_swap_reloca_out (info->output_bfd, &outrel, loc);
 		htab->tls_ldm_got.offset |= 1;
 	      }
 
@@ -2679,8 +2682,7 @@ allocate_dynrelocs (struct elf_link_hash_entry *eh, void *inf)
 /* Set the sizes of the dynamic sections.  */
 
 static bool
-elf_metag_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
-			      struct bfd_link_info *info)
+elf_metag_late_size_sections (struct bfd_link_info *info)
 {
   struct elf_metag_link_hash_table *htab;
   bfd *dynobj;
@@ -2865,15 +2867,14 @@ elf_metag_late_size_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
 	}
     }
 
-  return _bfd_elf_add_dynamic_tags (output_bfd, info, relocs);
+  return _bfd_elf_add_dynamic_tags (info, relocs);
 }
 
 /* Finish up dynamic symbol handling.  We set the contents of various
    dynamic sections here.  */
 
 static bool
-elf_metag_finish_dynamic_symbol (bfd *output_bfd,
-				 struct bfd_link_info *info,
+elf_metag_finish_dynamic_symbol (struct bfd_link_info *info,
 				 struct elf_link_hash_entry *eh,
 				 Elf_Internal_Sym *sym)
 {
@@ -2924,20 +2925,20 @@ elf_metag_finish_dynamic_symbol (bfd *output_bfd,
       /* Fill in the entry in the procedure linkage table.  */
       if (! bfd_link_pic (info))
 	{
-	  bfd_put_32 (output_bfd,
+	  bfd_put_32 (info->output_bfd,
 		      (plt_entry[0]
 		       | (((got_entry >> 16) & 0xffff) << 3)),
 		      splt->contents + eh->plt.offset);
-	  bfd_put_32 (output_bfd,
+	  bfd_put_32 (info->output_bfd,
 		      (plt_entry[1]
 		       | ((got_entry & 0xffff) << 3)),
 		      splt->contents + eh->plt.offset + 4);
-	  bfd_put_32 (output_bfd, plt_entry[2],
+	  bfd_put_32 (info->output_bfd, plt_entry[2],
 		      splt->contents + eh->plt.offset + 8);
-	  bfd_put_32 (output_bfd,
+	  bfd_put_32 (info->output_bfd,
 		      (plt_entry[3] | (plt_index << 3)),
 		      splt->contents + eh->plt.offset + 12);
-	  bfd_put_32 (output_bfd,
+	  bfd_put_32 (info->output_bfd,
 		      (plt_entry[4]
 		       | ((((unsigned int) ((- (eh->plt.offset + 16)) >> 2)) & 0x7ffff) << 5)),
 		      splt->contents + eh->plt.offset + 16);
@@ -2947,25 +2948,25 @@ elf_metag_finish_dynamic_symbol (bfd *output_bfd,
 	  bfd_vma addr = got_entry - (splt->output_section->vma +
 				      splt->output_offset + eh->plt.offset);
 
-	  bfd_put_32 (output_bfd,
+	  bfd_put_32 (info->output_bfd,
 		      plt_pic_entry[0] | (((addr >> 16) & 0xffff) << 3),
 		      splt->contents + eh->plt.offset);
-	  bfd_put_32 (output_bfd,
+	  bfd_put_32 (info->output_bfd,
 		      plt_pic_entry[1] | ((addr & 0xffff) << 3),
 		      splt->contents + eh->plt.offset + 4);
-	  bfd_put_32 (output_bfd, plt_pic_entry[2],
+	  bfd_put_32 (info->output_bfd, plt_pic_entry[2],
 		      splt->contents + eh->plt.offset + 8);
-	  bfd_put_32 (output_bfd,
+	  bfd_put_32 (info->output_bfd,
 		      (plt_pic_entry[3] | (plt_index << 3)),
 		      splt->contents + eh->plt.offset + 12);
-	  bfd_put_32 (output_bfd,
+	  bfd_put_32 (info->output_bfd,
 		      (plt_pic_entry[4]
 		       + ((((unsigned int) ((- (eh->plt.offset + 16)) >> 2)) & 0x7ffff) << 5)),
 		      splt->contents + eh->plt.offset + 16);
 	}
 
       /* Fill in the entry in the global offset table.  */
-      bfd_put_32 (output_bfd,
+      bfd_put_32 (info->output_bfd,
 		  (splt->output_section->vma
 		   + splt->output_offset
 		   + eh->plt.offset
@@ -2980,7 +2981,7 @@ elf_metag_finish_dynamic_symbol (bfd *output_bfd,
       rel.r_addend = 0;
       loc = htab->etab.srelplt->contents;
       loc += plt_index * sizeof(Elf32_External_Rela);
-      bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
+      bfd_elf32_swap_reloca_out (info->output_bfd, &rel, loc);
 
       if (!eh->def_regular)
 	{
@@ -3019,14 +3020,15 @@ elf_metag_finish_dynamic_symbol (bfd *output_bfd,
 	{
 	  if ((eh->got.offset & 1) != 0)
 	    abort ();
-	  bfd_put_32 (output_bfd, 0, htab->etab.sgot->contents + eh->got.offset);
+	  bfd_put_32 (info->output_bfd, 0,
+		      htab->etab.sgot->contents + eh->got.offset);
 	  rel.r_info = ELF32_R_INFO (eh->dynindx, R_METAG_GLOB_DAT);
 	  rel.r_addend = 0;
 	}
 
       loc = htab->etab.srelgot->contents;
       loc += htab->etab.srelgot->reloc_count++ * sizeof (Elf32_External_Rela);
-      bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
+      bfd_elf32_swap_reloca_out (info->output_bfd, &rel, loc);
     }
 
   if (eh->needs_copy)
@@ -3050,7 +3052,7 @@ elf_metag_finish_dynamic_symbol (bfd *output_bfd,
       else
 	s = htab->etab.srelbss;
       loc = s->contents + s->reloc_count++ * sizeof (Elf32_External_Rela);
-      bfd_elf32_swap_reloca_out (output_bfd, &rel, loc);
+      bfd_elf32_swap_reloca_out (info->output_bfd, &rel, loc);
     }
 
   /* Mark _DYNAMIC and _GLOBAL_OFFSET_TABLE_ as absolute.  */
@@ -3103,8 +3105,7 @@ elf_metag_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
 /* Finish up the dynamic sections.  */
 
 static bool
-elf_metag_finish_dynamic_sections (bfd *output_bfd,
-				   struct bfd_link_info *info,
+elf_metag_finish_dynamic_sections (struct bfd_link_info *info,
 				   bfd_byte *buf ATTRIBUTE_UNUSED)
 {
   bfd *dynobj;
@@ -3141,19 +3142,19 @@ elf_metag_finish_dynamic_sections (bfd *output_bfd,
 	    case DT_PLTGOT:
 	      s = htab->etab.sgot;
 	      dyn.d_un.d_ptr = s->output_section->vma + s->output_offset;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_JMPREL:
 	      s = htab->etab.srelplt;
 	      dyn.d_un.d_ptr = s->output_section->vma + s->output_offset;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 
 	    case DT_PLTRELSZ:
 	      s = htab->etab.srelplt;
 	      dyn.d_un.d_val = s->size;
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      bfd_elf32_swap_dyn_out (info->output_bfd, &dyn, dyncon);
 	      break;
 	    }
 
@@ -3170,27 +3171,33 @@ elf_metag_finish_dynamic_sections (bfd *output_bfd,
 	  if (bfd_link_pic (info))
 	    {
 	      addr -= splt->output_section->vma + splt->output_offset;
-	      bfd_put_32 (output_bfd,
+	      bfd_put_32 (info->output_bfd,
 			  plt0_pic_entry[0] | (((addr >> 16) & 0xffff) << 3),
 			  splt->contents);
-	      bfd_put_32 (output_bfd,
+	      bfd_put_32 (info->output_bfd,
 			  plt0_pic_entry[1] | ((addr & 0xffff) << 3),
 			  splt->contents + 4);
-	      bfd_put_32 (output_bfd, plt0_pic_entry[2], splt->contents + 8);
-	      bfd_put_32 (output_bfd, plt0_pic_entry[3], splt->contents + 12);
-	      bfd_put_32 (output_bfd, plt0_pic_entry[4], splt->contents + 16);
+	      bfd_put_32 (info->output_bfd, plt0_pic_entry[2],
+			  splt->contents + 8);
+	      bfd_put_32 (info->output_bfd, plt0_pic_entry[3],
+			  splt->contents + 12);
+	      bfd_put_32 (info->output_bfd, plt0_pic_entry[4],
+			  splt->contents + 16);
 	    }
 	  else
 	    {
-	      bfd_put_32 (output_bfd,
+	      bfd_put_32 (info->output_bfd,
 			  plt0_entry[0] | (((addr >> 16) & 0xffff) << 3),
 			  splt->contents);
-	      bfd_put_32 (output_bfd,
+	      bfd_put_32 (info->output_bfd,
 			  plt0_entry[1] | ((addr & 0xffff) << 3),
 			  splt->contents + 4);
-	      bfd_put_32 (output_bfd, plt0_entry[2], splt->contents + 8);
-	      bfd_put_32 (output_bfd, plt0_entry[3], splt->contents + 12);
-	      bfd_put_32 (output_bfd, plt0_entry[4], splt->contents + 16);
+	      bfd_put_32 (info->output_bfd, plt0_entry[2],
+			  splt->contents + 8);
+	      bfd_put_32 (info->output_bfd, plt0_entry[3],
+			  splt->contents + 12);
+	      bfd_put_32 (info->output_bfd, plt0_entry[4],
+			  splt->contents + 16);
 	    }
 
 	  elf_section_data (splt->output_section)->this_hdr.sh_entsize =
@@ -3202,7 +3209,7 @@ elf_metag_finish_dynamic_sections (bfd *output_bfd,
     {
       /* Fill in the first entry in the global offset table.
 	 We use it to point to our dynamic section, if we have one.  */
-      bfd_put_32 (output_bfd,
+      bfd_put_32 (info->output_bfd,
 		  sdyn ? sdyn->output_section->vma + sdyn->output_offset : 0,
 		  htab->etab.sgot->contents);
 

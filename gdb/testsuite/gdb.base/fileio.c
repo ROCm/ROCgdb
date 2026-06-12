@@ -109,7 +109,7 @@ test_open (void)
   if (ret >= 0)
     close (ret);
   stop ();
-  /* Opening nonexistant file */
+  /* Opening nonexistent file */
   errno = 0;
   ret = open (NONEXISTENT, O_RDONLY);
   printf ("open 4: ret = %d, errno = %d %s\n", ret, errno,

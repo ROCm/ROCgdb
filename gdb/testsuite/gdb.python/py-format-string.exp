@@ -100,7 +100,7 @@ unset alphabet
 # Produces a potentially cut down version of $whole_big_string like GDB
 # would represent it.
 # $max is the maximum number of characters allowed in the string (but
-# the return value may contain more to accound for the extra quotes and
+# the return value may contain more to account for the extra quotes and
 # "..." added by GDB).
 proc get_cut_big_string { max } {
   global whole_big_string

@@ -310,7 +310,7 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
   if (windows_process.wow64_process
       && (Wow64GetThreadContext == nullptr
 	  || Wow64SetThreadContext == nullptr))
-    error ("WOW64 debugging is not supported on this system.\n");
+    error (_("WOW64 debugging is not supported on this system.\n"));
 
   windows_process.ignore_first_breakpoint
     = !attached && windows_process.wow64_process;
@@ -517,7 +517,7 @@ win32_process_target::create_inferior (const char *program,
   windows_process.attaching = 0;
 
   if (!program)
-    error ("No executable specified, specify executable to debug.\n");
+    error (_("No executable specified, specify executable to debug.\n"));
 
   flags = DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS;
 
@@ -796,8 +796,8 @@ resume_one_thread (thread_info *thread, bool step, gdb_signal sig,
 	  if (the_low_target.single_step != NULL)
 	    (*the_low_target.single_step) (th);
 	  else
-	    error ("Single stepping is not supported "
-		   "in this configuration.\n");
+	    error (_("Single stepping is not supported "
+		     "in this configuration.\n"));
 	}
 
       win32_set_thread_context (th);

@@ -54,8 +54,8 @@ set asm_file [standard_output_file "$::testfile-dw.S"]
 Dwarf::assemble $asm_file {
     global srcfile
 
-    # Create local varibles BAR_SRC_* containing the line number for
-    # the four souce lines of 'foo' and 'bar'.  These will be
+    # Create local variables BAR_SRC_* containing the line number for
+    # the four source lines of 'foo' and 'bar'.  These will be
     # referenced in the generated DWARF.
     for { set i 1 } { $i <= 4 } { incr i } {
 	set bar_src_$i [gdb_get_line_number "bar line $i"]

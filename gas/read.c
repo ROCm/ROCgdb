@@ -4101,8 +4101,10 @@ demand_empty_rest_of_line (void)
 /* Silently advance to the end of a statement.  Use this after already having
    issued an error about something bad.  Like demand_empty_rest_of_line,
    this function may leave input_line_pointer one after buffer_limit;
-   Don't call it from within expression parsing code in an attempt to
-   silence further errors.  */
+   Don't call it twice, and don't call both ignore_rest_of_line and
+   demand_empty_rest_of_line as that will consume two lines of input.
+   This rule leads to:  Don't call it from within expression parsing
+   code in an attempt to silence further errors.  */
 
 void
 ignore_rest_of_line (void)

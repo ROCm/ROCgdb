@@ -68,7 +68,7 @@ enum location_spec_type
 };
 
 /* A unique pointer for location_spec.  */
-typedef std::unique_ptr<location_spec> location_spec_up;
+using location_spec_up = std::unique_ptr<location_spec>;
 
 /* The base class for all location specs used to resolve actual
    locations in the inferior.  */

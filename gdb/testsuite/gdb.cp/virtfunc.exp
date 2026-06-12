@@ -242,8 +242,6 @@ proc make_one_vtable_result {name args} {
 	set result [string range $result 0 end-[string length $nls]]
     }
 
-    verbose -log "APB: result: '$result'"
-
     return $result
 }
 

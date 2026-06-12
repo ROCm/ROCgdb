@@ -59,7 +59,7 @@ fork_child (void)
 int
 main (void)
 {
-  pid_t childs[NFORKS];
+  pid_t children[NFORKS];
   int i;
   int status;
   int num_exited = 0;
@@ -76,7 +76,7 @@ main (void)
       if (pid > 0)
 	{
 	  /* Parent.  */
-	  childs[i] = pid;
+	  children[i] = pid;
 	}
       else if (pid == 0)
 	{

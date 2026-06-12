@@ -47,7 +47,7 @@ if {![runto "$srcfile:$line"]} {
 # watched (myrec.x) gets updated.  This is the instruction where we
 # expect to receive a watchpoint notification when we do the "stepi"
 # below.  However, having the breakpoint at the same location as this
-# intruction can possibly interfere with our testcase, as stepping
+# instruction can possibly interfere with our testcase, as stepping
 # over the breakpoint in order to get past it may incorrectly lead
 # to the debugger missing the watchpoint hit.  This would be a bug
 # in GDB, but this is not the bug that we are trying to test here.

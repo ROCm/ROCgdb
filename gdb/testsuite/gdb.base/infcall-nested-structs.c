@@ -35,7 +35,7 @@
 #include <string.h>
 #include "attributes.h"
 
-/* Useful abreviations.  */
+/* Useful abbreviations.  */
 typedef char tc;
 typedef short ts;
 typedef int ti;

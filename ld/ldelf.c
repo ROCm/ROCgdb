@@ -1037,7 +1037,7 @@ ldelf_handle_dt_needed (struct elf_link_hash_table *htab,
      needed list can actually grow while we are stepping through this
      loop.  */
   save_input_bfd_tail = link_info.input_bfds_tail;
-  needed = bfd_elf_get_needed_list (link_info.output_bfd, &link_info);
+  needed = bfd_elf_get_needed_list (&link_info);
   for (l = needed; l != NULL; l = l->next)
     {
       struct bfd_link_needed_list *ll;
@@ -1148,7 +1148,7 @@ ldelf_handle_dt_needed (struct elf_link_hash_table *htab,
 	  if (use_libpath)
 	    {
 	      found = 0;
-	      rp = bfd_elf_get_runpath_list (link_info.output_bfd, &link_info);
+	      rp = bfd_elf_get_runpath_list (&link_info);
 	      for (; !found && rp != NULL; rp = rp->next)
 		{
 		  path = ldelf_add_sysroot (rp->name);
@@ -1408,7 +1408,7 @@ ldelf_after_open (int use_libpath, int native, int is_linux, int is_freebsd,
     }
 
   if (link_info.eh_frame_hdr_type == COMPACT_EH_HDR)
-    if (!bfd_elf_parse_eh_frame_entries (NULL, &link_info))
+    if (!bfd_elf_parse_eh_frame_entries (&link_info))
       fatal (_("%P: failed to parse EH frame entries\n"));
 
   ldelf_handle_dt_needed (htab, use_libpath, native, is_linux,
@@ -1664,8 +1664,7 @@ ldelf_find_exp_assignment (etree_type *exp)
 	 will do no harm.  */
       if (strcmp (exp->assign.dst, ".") != 0)
 	{
-	  if (!bfd_elf_record_link_assignment (link_info.output_bfd,
-					       &link_info,
+	  if (!bfd_elf_record_link_assignment (&link_info,
 					       exp->assign.dst, provide,
 					       exp->assign.hidden))
 	    fatal (_("%P: failed to record assignment to %s: %E\n"),
@@ -1764,7 +1763,7 @@ ldelf_before_allocation (char **audit, char **depaudit,
 
   if (is_elf_hash_table (link_info.hash))
     {
-      bfd_elf_tls_setup (link_info.output_bfd, &link_info);
+      bfd_elf_tls_setup (&link_info);
 
       /* Make __ehdr_start hidden if it has been referenced, to
 	 prevent the symbol from being dynamic.  */
@@ -1839,10 +1838,10 @@ ldelf_before_allocation (char **audit, char **depaudit,
       }
 
   if (! (bfd_elf_size_dynamic_sections
-	 (link_info.output_bfd, command_line.soname, rpath,
+	 (&link_info, command_line.soname, rpath,
 	  command_line.filter_shlib, *audit, *depaudit,
 	  (const char * const *) command_line.auxiliary_filters,
-	  &link_info, &sinterp)))
+	  &sinterp)))
     fatal (_("%P: failed to set dynamic section sizes: %E\n"));
 
   if (sinterp != NULL)
@@ -1908,7 +1907,7 @@ ldelf_before_allocation (char **audit, char **depaudit,
 
   before_allocation_default ();
 
-  if (!bfd_elf_size_dynsym_hash_dynstr (link_info.output_bfd, &link_info))
+  if (!bfd_elf_size_dynsym_hash_dynstr (&link_info))
     fatal (_("%P: failed to set dynamic section sizes: %E\n"));
 
   if (ehdr_start != NULL)

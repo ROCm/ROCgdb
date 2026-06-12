@@ -3032,7 +3032,7 @@ value_static_field (struct type *type, int fieldno)
       const struct block *block =  nullptr;
       if (target_has_stack ())
 	block
-	  = get_frame_block (get_selected_frame (nullptr), 0)->static_block ();
+	  = get_frame_block (get_selected_frame (), 0)->static_block ();
 
       struct block_symbol sym = lookup_symbol (phys_name, block,
 					       SEARCH_VAR_DOMAIN, nullptr);

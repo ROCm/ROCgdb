@@ -13,7 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Tools which use the BFD library will output error messages of the
-# form "BFD: some messsage" when a problem with the file upon which it
+# form "BFD: some message" when a problem with the file upon which it
 # operating is found.  E.g. an actual message (modulo some shortening
 # of the pathname) from this test is:
 #

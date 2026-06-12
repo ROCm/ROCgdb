@@ -188,7 +188,7 @@ lappend test_desc_list $item
 # As with the previous test, the double quotes are lost when the
 # arguments are sent through gdbserver_start, as such, this test isn't
 # going to work when using the native-gdbserver board, hence we set
-# the second arguemnt to 'false'.
+# the second argument to 'false'.
 lappend test_desc_list [list "test three" \
 			    false \
 			    { "\&" "\<" "\#" "\^" "\>" "\$" "\`" } \

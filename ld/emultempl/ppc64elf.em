@@ -563,7 +563,7 @@ gld${EMULATION_NAME}_after_allocation (void)
      been generated.  Otherwise the glink .eh_frame CIE won't be
      merged with other CIEs, and worse, the glink .eh_frame FDEs won't
      be listed in .eh_frame_hdr.  */
-  ret = bfd_elf_discard_info (link_info.output_bfd, &link_info);
+  ret = bfd_elf_discard_info (&link_info);
   if (ret < 0)
     {
       einfo (_("%X%P: .eh_frame/.stab edit: %E\n"));

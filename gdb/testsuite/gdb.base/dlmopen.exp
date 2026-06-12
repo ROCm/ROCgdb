@@ -294,7 +294,7 @@ proc_with_prefix test_solib_unmap_events { } {
     # This test relies on finding the dynamic linker library, and is
     # currently written assuming Linux.
     if { ![istarget *-linux*] } {
-	unsupport "cannot find dynamic linker library on this target"
+	unsupported "cannot find dynamic linker library on this target"
 	return
     }
 

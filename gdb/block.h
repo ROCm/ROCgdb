@@ -611,8 +611,8 @@ extern struct symbol *block_iterator_next (struct block_iterator *iterator);
    C++.  */
 struct block_iterator_wrapper
 {
-  typedef block_iterator_wrapper self_type;
-  typedef struct symbol *value_type;
+  using self_type = block_iterator_wrapper;
+  using value_type = struct symbol *;
 
   explicit block_iterator_wrapper (const struct block *block,
 				   const lookup_name_info *name = nullptr)

@@ -17,7 +17,7 @@
 
 /* This tests that gdb can read compressed sections.  The contents
    are the same as dw2-basic.S, but the .debug_abbrev section has been
-   comrpessed using zlib.  */
+   compressed using zlib.  */
 
 /* Dummy function to provide debug information for.  */
 
