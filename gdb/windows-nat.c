@@ -2665,7 +2665,6 @@ windows_nat_target::do_initial_windows_stuff (DWORD pid, bool attaching)
   if (!inf->target_is_pushed (this))
     inf->push_target (this);
   windows_clear_solib ();
-  clear_proceed_status (0);
   init_wait_for_inferior ();
 
 #ifdef __x86_64__
