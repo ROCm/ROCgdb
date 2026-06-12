@@ -262,6 +262,33 @@ html:not(.js) .toc-sidebar-main { margin-left: 0; max-width: none; }
     max-width: calc(var(--toc-sidebar-content-max) + 6rem);
 }
 
+/* A draggable divider between the sidebar and the content.
+   toc-sidebar.js creates the handle and records the chosen width, so
+   the manual opens at the user's preferred sidebar width on every
+   page.  The handle sits on top of the sidebar's right border.  */
+.toc-sidebar-resizer {
+    position: fixed;
+    top: 0;
+    left: var(--toc-sidebar-width);
+    width: 6px;                /* a comfortable grab target */
+    height: 100vh;
+    margin-left: -3px;         /* half the width, to center it on the border */
+    cursor: col-resize;
+    z-index: 10;               /* above the content */
+}
+.toc-sidebar-resizer:hover,
+.toc-sidebar-resizer.toc-sidebar-dragging {
+    background: var(--toc-sidebar-accent);
+    opacity: 0.4;
+}
+
+/* While the divider is being dragged, don't let the mouse pointer
+   select text in either pane.  */
+body.toc-sidebar-resizing {
+    user-select: none;
+    cursor: col-resize;
+}
+
 /* Handle narrow screens.  Below the given width the fixed sidebar
    would take too much space relative to the content.  So unpin the
    sidebar and stack the content above it.  The threshold is a
@@ -279,4 +306,6 @@ html:not(.js) .toc-sidebar-main { margin-left: 0; max-width: none; }
 	margin-left: 0;
 	padding: 1.25rem;
     }
+    /* No need for resizer.  */
+    .toc-sidebar-resizer { display: none; }
 }

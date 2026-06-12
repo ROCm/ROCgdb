@@ -441,6 +441,130 @@
     });
   }
 
+  /* Let the user drag the divider between the sidebar and the content
+     to choose the sidebar width.  The width is written to the
+     --toc-sidebar-width custom property that both panes are laid out
+     from, and kept in sessionStorage so that every page opens at the
+     same width.  The bounds keep the sidebar from collapsing to
+     nothing or swallowing the contents page.  */
+  var WIDTH_KEY = "toc-sidebar-width";
+  var MIN_WIDTH = 12; /* rem  */
+  var MAX_WIDTH = 40; /* rem  */
+
+  /* The stored sidebar width as a string of rem, or null when there
+     is none yet or storage is unavailable.  */
+  function loadWidth ()
+  {
+    try
+      {
+        return window.sessionStorage.getItem (WIDTH_KEY);
+      }
+    catch (e)
+      {
+        return null;
+      }
+  }
+
+  /* Remember the sidebar width, given as a number of rem.  */
+  function saveWidth (rem)
+  {
+    try
+      {
+        window.sessionStorage.setItem (WIDTH_KEY, rem);
+      }
+    catch (e)
+      {
+        /* A stored width is a nice-to-have, so a failure here is
+	   fine.  */
+      }
+  }
+
+  /* Pixels in one rem, for turning a mouse position into rem.  */
+  function remPx ()
+  {
+    return parseFloat (getComputedStyle (document.documentElement).fontSize);
+  }
+
+  /* Lay both panes out at the given sidebar width, a number of
+     rem.  */
+  function applyWidth (rem)
+  {
+    document.documentElement.style.setProperty ("--toc-sidebar-width",
+                                                rem + "rem");
+  }
+
+  /* Add the divider handle and make it drag the sidebar width.  Apply
+     any width left over from an earlier page first, so the layout
+     does not change as the user moves through the manual.  */
+  function setupResizer ()
+  {
+    var handle = document.createElement ("div");
+    handle.className = "toc-sidebar-resizer";
+    handle.setAttribute ("role", "separator");
+    handle.setAttribute ("aria-orientation", "vertical");
+    document.body.appendChild (handle);
+
+    var width = parseFloat (loadWidth ());
+    if (width >= MIN_WIDTH && width <= MAX_WIDTH)
+      applyWidth (width);
+
+    var dragging = false;
+
+    /* Start a drag from a press on the handle.  */
+    function begin (event)
+    {
+      event.preventDefault ();
+      dragging = true;
+      handle.classList.add ("toc-sidebar-dragging");
+      document.body.classList.add ("toc-sidebar-resizing");
+    }
+
+    /* Resize to follow the mouse pointer, clamped to the allowed
+       range.  */
+    function moveTo (clientX)
+    {
+      if (!dragging)
+        return;
+      width = clientX / remPx ();
+      if (width < MIN_WIDTH)
+        width = MIN_WIDTH;
+      if (width > MAX_WIDTH)
+        width = MAX_WIDTH;
+      applyWidth (width);
+    }
+
+    /* Finish a drag and store the width it settled on.  */
+    function end ()
+    {
+      if (!dragging)
+        return;
+      dragging = false;
+      handle.classList.remove ("toc-sidebar-dragging");
+      document.body.classList.remove ("toc-sidebar-resizing");
+      saveWidth (width);
+    }
+
+    handle.addEventListener ("mousedown", begin);
+    document.addEventListener ("mousemove", function (event)
+    {
+      moveTo (event.clientX);
+    });
+    document.addEventListener ("mouseup", end);
+
+    /* Handle touch drags.  touchstart and touchmove made
+       passive:false so they can cancel the page scroll that would
+       otherwise fight the drag.  */
+    handle.addEventListener ("touchstart", begin, { passive: false });
+    document.addEventListener ("touchmove", function (event)
+    {
+      if (!dragging)
+        return;
+      event.preventDefault ();
+      moveTo (event.touches[0].clientX);
+    }, { passive: false });
+    document.addEventListener ("touchend", end);
+  }
+
   /* Build the sidebar now, as the script runs, rather than waiting
      for the DOMContentLoaded event that fires once the whole page has
      been parsed.  toc-sidebar.init loads this script parser-blocking
@@ -455,6 +579,7 @@
      can flash the page blank in the gap between the old page and the
      new one.  This is most visible on the big index pages, but seen
      now and then on smaller ones too.  */
+  setupResizer ();
   setTitle ();
   var ul = tocTree ();
   if (!ul)
