@@ -72,6 +72,7 @@
 	--toc-sidebar-border: #d4d4d4;       /* sidebar and field borders */
 	--toc-sidebar-bg: #fafafa;           /* sidebar background */
 	--toc-sidebar-hover-bg: #ececec;     /* entry hover background */
+	--toc-sidebar-search-bg: #ffffff;    /* search field background */
     }
 }
 
@@ -131,6 +132,28 @@ html:not(.js) .toc-sidebar-main { margin-left: 0; max-width: none; }
 }
 
 .toc-sidebar-title a { color: var(--toc-sidebar-text); text-decoration: none; }
+
+/* Search box.  Typing in it filters the tree below it to the sections
+   whose titles match.  */
+.toc-sidebar-search {
+    /* Spacing around the field.  */
+    padding: 0.5rem 0.5rem 0.75rem;
+}
+
+.toc-sidebar-search input {
+    width: 100%;
+    padding: 0.4rem 0.6rem;    /* field padding */
+    font-size: 0.9rem;         /* match the TOC entries below */
+    color: var(--toc-sidebar-text);
+    background: var(--toc-sidebar-search-bg);
+    border: 1px solid var(--toc-sidebar-border);
+    border-radius: 5px;        /* rounded field */
+}
+
+.toc-sidebar-search input:focus {
+    outline: none;
+    border-color: var(--toc-sidebar-accent);
+}
 
 /* Each nested level is indented by the padding-left, except the
    outermost list which has no indent.  */
@@ -202,6 +225,26 @@ html:not(.js) .toc-sidebar-main { margin-left: 0; max-width: none; }
 }
 .toc-sidebar-tree li.toc-sidebar-has-children:not(.toc-sidebar-open) > ul {
     display: none;
+}
+
+/* Filtering mode.  toc-sidebar.js adds toc-sidebar-filtering to the
+   tree while the search box has text in it, and marks the matching
+   entries plus their ancestors with toc-sidebar-show.  Hide
+   everything else, and force the kept branches open so that the path
+   to each match is visible, and put the toggles out of the way since
+   they would not do anything useful.  */
+.toc-sidebar-tree.toc-sidebar-filtering li:not(.toc-sidebar-show) {
+    display: none;
+}
+.toc-sidebar-tree.toc-sidebar-filtering li.toc-sidebar-show > ul {
+    display: block;
+}
+.toc-sidebar-tree.toc-sidebar-filtering .toc-sidebar-toggle {
+    visibility: hidden;
+}
+.toc-sidebar-tree.toc-sidebar-filtering li.toc-sidebar-match > a {
+    font-weight: var(--toc-sidebar-emphasis-weight);
+    color: var(--toc-sidebar-text);
 }
 
 /* Main content.  */

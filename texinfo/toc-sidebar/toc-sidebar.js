@@ -385,6 +385,62 @@
       link.innerHTML = window.TOC_SIDEBAR_TITLE;
   }
 
+  /* Wire up the filter box.  As the user types, keep only the entries
+     whose titles contain the query, along with the ancestors that
+     lead to them.  An empty box restores the normal tree.  */
+  function setupFilter (toc)
+  {
+    var input = document.getElementById ("toc-sidebar-search-input");
+    if (!input)
+      return;
+    var items = toc.querySelectorAll ("li");
+
+    /* Match the tree against the current query.  */
+    function apply ()
+    {
+      var query = input.value.trim ().toLowerCase ();
+
+      items.forEach (function (li)
+      {
+        li.classList.remove ("toc-sidebar-match", "toc-sidebar-show");
+      });
+
+      if (query === "")
+        {
+          toc.classList.remove ("toc-sidebar-filtering");
+          return;
+        }
+      toc.classList.add ("toc-sidebar-filtering");
+
+      items.forEach (function (li)
+      {
+        var link = li.querySelector (":scope > a");
+        var text = link ? link.textContent.toLowerCase () : "";
+        if (text.indexOf (query) < 0)
+          return;
+        li.classList.add ("toc-sidebar-match");
+        /* Reveal this entry and the whole chain of <li> above it.  */
+        var node = li;
+        while (node && node !== toc)
+          {
+            if (node.tagName === "LI")
+              node.classList.add ("toc-sidebar-show");
+            node = node.parentElement;
+          }
+      });
+    }
+
+    input.addEventListener ("input", apply);
+    input.addEventListener ("keydown", function (event)
+    {
+      if (event.key === "Escape")
+        {
+          input.value = "";
+          apply ();
+        }
+    });
+  }
+
   /* Build the sidebar now, as the script runs, rather than waiting
      for the DOMContentLoaded event that fires once the whole page has
      been parsed.  toc-sidebar.init loads this script parser-blocking
@@ -404,4 +460,5 @@
   if (!ul)
     return;
   inject (ul);
+  setupFilter (document.getElementById ("toc-sidebar-tree"));
 }) ();

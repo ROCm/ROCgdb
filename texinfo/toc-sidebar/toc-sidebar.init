@@ -187,6 +187,9 @@ texinfo_register_handler ('finish', \&toc_sidebar_write_data);
 my $sidebar = <<'END_SIDEBAR';
 <nav id="toc-sidebar" class="toc-sidebar" aria-label="Manual contents">
 <div class="toc-sidebar-title"><a href="index.html"></a></div>
+<div class="toc-sidebar-search">
+<input id="toc-sidebar-search-input" type="search" placeholder="Filter sections" aria-label="Filter sections">
+</div>
 <div id="toc-sidebar-tree" class="toc-sidebar-tree"></div>
 </nav>
 <script src="toc-sidebar-data.js"></script>
