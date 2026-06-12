@@ -1,0 +1,239 @@
+/* Copyright (C) 2026 Free Software Foundation, Inc.
+
+   This file is part of GDB.
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+
+/* Navigation-sidebar layout for the HTML manual.
+
+   Provides a fixed left sidebar holding the table of contents, with a
+   scrolling content pane beside it.
+
+   This file is paired with toc-sidebar.init and toc-sidebar.js.  This
+   one is the feature stylesheet: it lays the sidebar out and ships a
+   neutral default theme, so the manual is fully styled on its own,
+   with no theme loaded.
+
+   The style properties are read from CSS custom properties named
+   --toc-sidebar-foo.  A theme can set those same properties via CSS
+   files loaded using the MANUAL_CSS Makefile variable mechanism,
+   without having to edit this file.  Every --toc-sidebar-* property
+   is part of that contract; a theme may override any of them.  A
+   value meant to stay internal to this file, not something a theme
+   should set, is instead named --toc-sidebar-int-* to keep the
+   contract clear.  There are none at present, but the prefix is
+   reserved for when one is needed.
+
+   The defaults all sit in a cascade layer (see below) so a theme's
+   plain :root always wins, however the stylesheets happen to be
+   ordered when loaded.  */
+
+/* Neutral default theme.  These are the layout metrics and colors
+   the sidebar uses when no theme is loaded.  They sit in a cascade
+   layer so a theme that sets the same properties in a plain :root
+   overrides them regardless of stylesheet load order.  This matters
+   because this file is loaded after the theme, so an unlayered :root
+   here would win and the theme could not override anything.
+
+   The color values are kept in the spirit of texinfo's own default
+   HTML output so the sidebar fits naturaly in an unthemed manual.  */
+@layer toc-sidebar-default-theme {
+    :root {
+	/* Wide enough that the deepest table-of-contents titles sit on
+	   one line.  The size was arrived at by experimentation.  The
+	   resizer writes this as an inline style on :root at runtime,
+	   which beats any stylesheet, so a theme's value here is only
+	   the starting width.  */
+	--toc-sidebar-width: 19rem;
+
+	/* Keeps the text column near 60 to 80 characters for comfort.  */
+	--toc-sidebar-content-max: 52rem;
+
+	/* Weight that makes a table-of-contents entry stand out, such
+	   as the current page or a filter match.  Shared so those uses
+	   stay in sync.  */
+	--toc-sidebar-emphasis-weight: 600;
+
+	--toc-sidebar-accent: #3060a0;       /* current entry, focus ring, resizer */
+	--toc-sidebar-on-accent: #ffffff;    /* text on the accent background */
+	--toc-sidebar-text: #1a1a1a;         /* text brought to the foreground */
+	--toc-sidebar-muted: #555555;        /* table-of-contents entry text */
+	--toc-sidebar-border: #d4d4d4;       /* sidebar and field borders */
+	--toc-sidebar-bg: #fafafa;           /* sidebar background */
+	--toc-sidebar-hover-bg: #ececec;     /* entry hover background */
+    }
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+/* No-JavaScript fallback.  The sidebar is built and managed entirely
+   by toc-sidebar.js, and an inline script in the page head adds the
+   "js" class to <html> while the page loads.  When JavaScript is off,
+   that class is never added.  We hide the empty sidebar shell and let
+   the content use the full width.  */
+html:not(.js) .toc-sidebar { display: none; }
+html:not(.js) .toc-sidebar-main { margin-left: 0; max-width: none; }
+
+/* Sidebar.  */
+
+.toc-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--toc-sidebar-width);
+    height: 100vh;
+    overflow-y: auto;
+
+    /* Always reserve room for the vertical scrollbar, whether or not it
+       is currently showing.  The scrollbar comes and goes as sections
+       are expanded and collapsed, and without a reserved gutter its
+       appearance would narrow the text column, so a title that just fit
+       on one line at the chosen width would wrap, shifting every entry
+       below it down a line.  Reserving the gutter keeps the column width
+       fixed, so expanding a node never reflows the titles.  */
+    scrollbar-gutter: stable;
+
+    /* Confine wheel scrolling over the sidebar to the sidebar.  Without
+       this, if the sidebar fits without scrolling, or if the sidebar
+       is already at its top or bottom edge, the scroll would chain on
+       to the content pane.  */
+    overscroll-behavior: contain;
+
+    background: var(--toc-sidebar-bg);
+    border-right: 1px solid var(--toc-sidebar-border);
+
+    /* Larger bottom value keeps the last entry off the foot of a scrolled
+       sidebar.  */
+    padding: 1rem 0.75rem 2rem;
+}
+
+/* The manual title at the top of the sidebar.  Set a little bolder
+   and larger than the entries below it so it reads as a heading.  */
+.toc-sidebar-title {
+    font-weight: 600;
+    font-size: 1.05rem;
+    padding: 0.35rem 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--toc-sidebar-border);
+    margin-bottom: 0.5rem;
+}
+
+.toc-sidebar-title a { color: var(--toc-sidebar-text); text-decoration: none; }
+
+/* Each nested level is indented by the padding-left, except the
+   outermost list which has no indent.  */
+.toc-sidebar-tree ul { list-style: none; margin: 0; padding-left: 0.75rem; }
+.toc-sidebar-tree > ul { padding-left: 0; }
+
+.toc-sidebar-tree li { margin: 0; }
+
+.toc-sidebar-tree a {
+    display: block;
+
+    /* The left value leaves room for the [+]/[-] toggle box, so titles
+       with and without one line up vertically at the same indent.  */
+    padding: 0.2rem 0.5rem 0.2rem 1.5rem;
+
+    color: var(--toc-sidebar-muted);
+    text-decoration: none;
+
+    /* Rounds the hover and current-entry highlight.  */
+    border-radius: 4px;
+
+    /* Denser than the body text.  */
+    font-size: 0.9rem;
+}
+
+.toc-sidebar-tree a:hover {
+    background: var(--toc-sidebar-hover-bg);
+    color: var(--toc-sidebar-text);
+}
+
+/* The accent background and contrasting text already make the current
+   entry stand out, so it is not bolded -- a bolder line would be
+   wider, so a title that just fits on one line at normal weight would
+   wrap to two lines when it became current, growing the sidebar by a
+   line and nudging everything below it.  */
+.toc-sidebar-tree a.toc-sidebar-current {
+    background: var(--toc-sidebar-accent);
+    color: var(--toc-sidebar-on-accent);
+}
+
+/* Collapsible nodes.  For each parent <li>, toc-sidebar.js inserts a
+   toggle span as the first child, carrying the +/- control.  */
+.toc-sidebar-tree li {
+    position: relative;
+}
+
+.toc-sidebar-tree .toc-sidebar-toggle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1.3rem;             /* sits inside the 1.5rem link indent */
+    padding-top: 0.2rem;       /* line the glyph up with the link text */
+    font-size: 1.05rem;        /* size of the box glyph */
+    line-height: 1.2;          /* small, so the glyph aligns with the link text */
+    cursor: pointer;
+    user-select: none;
+    text-align: center;
+    color: var(--toc-sidebar-muted);
+}
+.toc-sidebar-tree .toc-sidebar-toggle::before {
+    content: "\229E";          /* closed: ⊞ squared plus */
+    display: inline-block;
+}
+.toc-sidebar-tree .toc-sidebar-toggle:hover {
+    color: var(--toc-sidebar-text);
+}
+.toc-sidebar-tree li.toc-sidebar-open > .toc-sidebar-toggle::before {
+    content: "\229F";          /* open: ⊟ squared minus */
+}
+.toc-sidebar-tree li.toc-sidebar-has-children:not(.toc-sidebar-open) > ul {
+    display: none;
+}
+
+/* Main content.  */
+
+.toc-sidebar-main {
+    margin-left: var(--toc-sidebar-width);
+
+    /* Some room around the content.  */
+    padding: 2rem 3rem;
+
+    /* The added 6rem is the 3rem horizontal padding on each side.  Adding
+       it back means the text column itself comes out
+       --toc-sidebar-content-max wide, instead of 6rem narrower once
+       the padding is subtracted.  */
+    max-width: calc(var(--toc-sidebar-content-max) + 6rem);
+}
+
+/* Handle narrow screens.  Below the given width the fixed sidebar
+   would take too much space relative to the content.  So unpin the
+   sidebar and stack the content above it.  The threshold is a
+   judgement call.  */
+@media (max-width: 60rem) {
+    .toc-sidebar {
+	position: static;
+	width: auto;
+	height: auto;
+	border-right: none;
+	border-bottom: 1px solid var(--toc-sidebar-border);
+    }
+    /* Tighter padding, no sidebar gutter.  */
+    .toc-sidebar-main {
+	margin-left: 0;
+	padding: 1.25rem;
+    }
+}
