@@ -5727,6 +5727,16 @@ However, whether the signal is still delivered to the inferior depends
 on the @code{pass} setting; this can be changed in the catchpoint's
 commands.
 
+@anchor{catch hiperr}
+@item hiperr
+@kindex catch hiperr
+The failure of a HIP API.  This catchpoint catches any HIP API error
+that is returned by the HIP runtime.  You can combine it with an
+@var{if condition@dots{}} clause that uses the @samp{$_hiperr}
+convenience variable to stop on specific HIP errors.
+@xref{Conditions,,Break Conditions}, and
+@ref{HIP error convenience variable}.
+
 @end table
 
 @item tcatch @var{event}
@@ -13130,6 +13140,9 @@ The heterogeneous work-group position string of the current thread or
 heterogeneous lane respectively, or the empty string if not associated
 with a heterogeneous dispatch.  @xref{Heterogeneous Debugging}.
 
+@item $_hiperr
+The current HIP API error.  @xref{HIP error convenience variable}.
+
 @end table
 
 @node Convenience Funs
@@ -19893,6 +19906,48 @@ The size of the wavefront for the dispatch that the current kernel
 belongs to.
 
 @end table
+
+@node HIP Runtime Errors
+@subsubsection HIP Runtime Errors
+@cindex HIP runtime error
+If the HIP runtime library provides the necessary means, @value{GDBN}
+can stop the program when a HIP API error is returned.  To catch such
+errors, use the @samp{catch hiperr} command.  @xref{catch hiperr},
+for details.
+
+@smallexample
+(@value{GDBP}) catch hiperr
+Catchpoint 1 (HIP error)
+
+(@value{GDBP}) run
+...
+Thread 1 "prog" hit Catchpoint 1 (HIP error)
+HIP API call failed with error hipErrorInvalidDevice (101): invalid device ordinal
+
+The $_hiperr convenience variable holds the error number.
+(@value{GDBP}) p $_hiperr
+$1 = hipErrorInvalidDevice
+(@value{GDBP}) p/d $_hiperr
+$2 = 101
+@end smallexample
+
+@anchor{HIP error convenience variable}
+@cindex HIP runtime error convenience variable
+@vindex $_hiperr@r{, convenience variable}
+There's also a convenience variable named @samp{$_hiperr} that represents
+the error.  If the @samp{hipError_t} type is known to @value{GDBN}, then
+@samp{$_hiperr} is printed as that type, else it is printed as a number.
+One common use-case of this convenience variable is to set conditional
+catchpoints.
+
+@smallexample
+(@value{GDBP}) catch hiperr if $_hiperr == hipErrorInvalidDevice
+Catchpoint 1 (HIP error)
+(@value{GDBP}) info breakpoints
+Num     Type           Disp Enb Address    What
+1       catchpoint     keep y              catch hiperr
+        stop only if $_hiperr == hipErrorInvalidDevice
+@end smallexample
 
 @c TODO: Add any language specific differences.
 

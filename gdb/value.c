@@ -1220,8 +1220,7 @@ value::ranges_copy_adjusted (struct value *dst, int dst_bit_offset,
 
 void
 value::contents_copy_raw (struct value *dst, LONGEST dst_offset,
-			  LONGEST src_offset, LONGEST src_bit_offset,
-			  LONGEST length)
+			  LONGEST src_offset, LONGEST length)
 {
   LONGEST src_total_bit_offset, dst_total_bit_offset, bit_length;
   int unit_size = gdbarch_addressable_memory_unit_size (arch ());
@@ -1257,19 +1256,10 @@ value::contents_copy_raw (struct value *dst, LONGEST dst_offset,
     = this->contents_all_raw ().slice (src_offset * unit_size,
 				       copy_length * unit_size);
 
-  if (src_bit_offset)
-    {
-      bool big_endian = type_byte_order (dst->type ()) == BFD_ENDIAN_BIG;
-
-      copy_bitwise (dst_contents.data (), 0, src_contents.data (),
-		    src_bit_offset, bit_length, big_endian);
-    }
-  else
-    gdb::copy (src_contents, dst_contents);
+  gdb::copy (src_contents, dst_contents);
 
   /* Copy the meta-data, adjusted.  */
-  src_total_bit_offset = src_offset * unit_size * HOST_CHAR_BIT
-			 + src_bit_offset;
+  src_total_bit_offset = src_offset * unit_size * HOST_CHAR_BIT;
   dst_total_bit_offset = dst_offset * unit_size * HOST_CHAR_BIT;
 
   ranges_copy_adjusted (dst, dst_total_bit_offset, src_total_bit_offset,
@@ -1320,12 +1310,24 @@ value::contents_copy_raw_bitwise (struct value *dst, LONGEST dst_bit_offset,
 
 void
 value::contents_copy (struct value *dst, LONGEST dst_offset, LONGEST src_offset,
-		      LONGEST src_bit_offset, LONGEST length)
+		      LONGEST length)
 {
   if (m_lazy)
     fetch_lazy ();
 
-  contents_copy_raw (dst, dst_offset, src_offset, src_bit_offset, length);
+  contents_copy_raw (dst, dst_offset, src_offset, length);
+}
+
+/* See value.h.  */
+
+void
+value::contents_copy_bitwise (struct value *dst, LONGEST dst_bit_offset,
+			      LONGEST src_bit_offset, LONGEST bit_length)
+{
+  if (m_lazy)
+    fetch_lazy ();
+
+  contents_copy_raw_bitwise (dst, dst_bit_offset, src_bit_offset, bit_length);
 }
 
 gdb::array_view<const gdb_byte>
@@ -3133,7 +3135,7 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
       else
 	{
 	  v = value::allocate (enclosing_type ());
-	  contents_copy_raw (v, 0, 0, 0, enclosing_type ()->length ());
+	  contents_copy_raw (v, 0, 0, enclosing_type ()->length ());
 	}
       v->deprecated_set_type (type);
       v->set_offset (this->offset ());
@@ -3166,7 +3168,7 @@ value::primitive_field (LONGEST offset, int fieldno, struct type *arg_type)
 	{
 	  v = value::allocate (type);
 	  contents_copy_raw (v, v->embedded_offset (),
-			     embedded_offset () + offset, 0,
+			     embedded_offset () + offset,
 			     type_length_units (type));
 	}
       v->set_offset (this->offset () + offset + embedded_offset ());
@@ -3806,7 +3808,7 @@ value_from_component (struct value *whole, struct type *type, LONGEST offset)
       v = value::allocate (type);
       whole->contents_copy (v, v->embedded_offset (),
 			    whole->embedded_offset () + offset,
-			    0, type_length_units (type));
+			    type_length_units (type));
     }
   v->set_offset (whole->offset () + offset + whole->embedded_offset ());
   v->set_component_location (whole);
@@ -4032,6 +4034,7 @@ value::fetch_lazy_register ()
 {
   struct type *type = check_typedef (this->type ());
   struct value *new_val = this;
+  int unit_size = gdbarch_addressable_memory_unit_size (arch ());
 
   scoped_value_mark mark;
 
@@ -4081,9 +4084,11 @@ value::fetch_lazy_register ()
   /* Copy the contents and the unavailability/optimized-out
      meta-data from NEW_VAL to VAL.  */
   set_lazy (false);
-  new_val->contents_copy (this, embedded_offset (),
-			  new_val->embedded_offset () + offset (),
-			  bitpos (), type_length_units (type));
+  new_val->contents_copy_bitwise
+    (this, embedded_offset () * unit_size * HOST_CHAR_BIT,
+     (((new_val->embedded_offset () + offset ()) * unit_size * HOST_CHAR_BIT)
+      + bitpos ()),
+     type_length_units (type) * unit_size * HOST_CHAR_BIT);
 
   if (frame_debug)
     {
@@ -4176,7 +4181,7 @@ pseudo_from_raw_part (const frame_info_ptr &next_frame, int pseudo_reg_num,
   value *pseudo_reg_val
     = value::allocate_register (next_frame, pseudo_reg_num);
   value *raw_reg_val = value_of_register (raw_reg_num, next_frame);
-  raw_reg_val->contents_copy (pseudo_reg_val, 0, raw_offset, 0,
+  raw_reg_val->contents_copy (pseudo_reg_val, 0, raw_offset,
 			      pseudo_reg_val->type ()->length ());
   return pseudo_reg_val;
 }
@@ -4209,12 +4214,12 @@ pseudo_from_concat_raw (const frame_info_ptr &next_frame, int pseudo_reg_num,
   int dst_offset = 0;
 
   value *raw_reg_1_val = value_of_register (raw_reg_1_num, next_frame);
-  raw_reg_1_val->contents_copy (pseudo_reg_val, dst_offset, 0,  0,
+  raw_reg_1_val->contents_copy (pseudo_reg_val, dst_offset, 0,
 				raw_reg_1_val->type ()->length ());
   dst_offset += raw_reg_1_val->type ()->length ();
 
   value *raw_reg_2_val = value_of_register (raw_reg_2_num, next_frame);
-  raw_reg_2_val->contents_copy (pseudo_reg_val, dst_offset, 0, 0,
+  raw_reg_2_val->contents_copy (pseudo_reg_val, dst_offset, 0,
 				raw_reg_2_val->type ()->length ());
   dst_offset += raw_reg_2_val->type ()->length ();
 
@@ -4258,17 +4263,17 @@ pseudo_from_concat_raw (const frame_info_ptr &next_frame, int pseudo_reg_num,
   int dst_offset = 0;
 
   value *raw_reg_1_val = value_of_register (raw_reg_1_num, next_frame);
-  raw_reg_1_val->contents_copy (pseudo_reg_val, dst_offset, 0, 0,
+  raw_reg_1_val->contents_copy (pseudo_reg_val, dst_offset, 0,
 				raw_reg_1_val->type ()->length ());
   dst_offset += raw_reg_1_val->type ()->length ();
 
   value *raw_reg_2_val = value_of_register (raw_reg_2_num, next_frame);
-  raw_reg_2_val->contents_copy (pseudo_reg_val, dst_offset, 0, 0,
+  raw_reg_2_val->contents_copy (pseudo_reg_val, dst_offset, 0,
 				raw_reg_2_val->type ()->length ());
   dst_offset += raw_reg_2_val->type ()->length ();
 
   value *raw_reg_3_val = value_of_register (raw_reg_3_num, next_frame);
-  raw_reg_3_val->contents_copy (pseudo_reg_val, dst_offset, 0, 0,
+  raw_reg_3_val->contents_copy (pseudo_reg_val, dst_offset, 0,
 				raw_reg_3_val->type ()->length ());
   dst_offset += raw_reg_3_val->type ()->length ();
 
