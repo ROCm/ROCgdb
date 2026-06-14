@@ -555,6 +555,9 @@ TOC_SIDEBAR_ASSETS = $(TOC_SIDEBAR_DIR)/toc-sidebar.css \
 		     $(TOC_SIDEBAR_DIR)/toc-sidebar.js
 TOC_SIDEBAR_INIT = $(TOC_SIDEBAR_DIR)/toc-sidebar.init
 
+# ROCm branding.
+MANUAL_CSS += $(srcdir)/../../rocm-theme.css
+
 gdb/index.html: ${GDB_DOC_FILES} $(TOC_SIDEBAR_INIT) $(TOC_SIDEBAR_ASSETS) $(MANUAL_CSS)
 	$(ECHO_GEN) $(MAKEHTML) $(MAKEHTMLFLAGS) \
 		--init-file=$(TOC_SIDEBAR_INIT) \
