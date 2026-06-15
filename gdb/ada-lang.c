@@ -9370,7 +9370,7 @@ ada_aggregate_component::dump (ui_file *stream, int depth)
   gdb_printf (stream, _("%*sAggregate\n"), depth, "");
   if (m_base != nullptr)
     {
-      gdb_printf (stream, _("%*swith delta\n"), depth + 1, "");
+      gdb_printf (stream, _("%*s" "with delta\n"), depth + 1, "");
       m_base->dump (stream, depth + 2);
     }
   for (const auto &item : m_components)
