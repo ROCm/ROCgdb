@@ -108,10 +108,12 @@
 #define P_RTS				0x0010
 /* MNOP  */
 #define P_MNOP				0xC803
+/* codespell:ignore-begin.  Ignore EXCPT.  */
 /* EXCPT, 16-bit, min  */
 #define P_EXCPT_MIN			0x00A0
 /* EXCPT, 16-bit, max  */
 #define P_EXCPT_MAX			0x00AF
+/* codespell:ignore-end.  */
 /* multi instruction mask 1, 16-bit  */
 #define P_BIT_MULTI_INS_1		0xC000
 /* multi instruction mask 2, 16-bit  */

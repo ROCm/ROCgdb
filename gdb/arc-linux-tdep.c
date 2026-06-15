@@ -337,6 +337,8 @@ arc_linux_sw_breakpoint_from_kind (struct gdbarch *gdbarch,
 	  : arc_linux_trap_s_le);
 }
 
+/* codespell:ignore-begin.  Ignore SCOND.  */
+
 /* Check for an atomic sequence of instructions beginning with an
    LLOCK instruction and ending with a SCOND instruction.
 
@@ -408,6 +410,8 @@ handle_atomic_sequence (arc_instruction insn, disassemble_info *di)
 
   return next_pcs;
 }
+
+/* codespell:ignore-end.  */
 
 /* Implement the "software_single_step" gdbarch method.  */
 

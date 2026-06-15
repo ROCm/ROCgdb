@@ -813,6 +813,7 @@ ada_main_name ()
    of NULLs.  */
 
 const struct ada_opname_map ada_opname_table[] = {
+  /* codespell:ignore-begin.  */
   {"Oadd", "\"+\"", BINOP_ADD},
   {"Osubtract", "\"-\"", BINOP_SUB},
   {"Omultiply", "\"*\"", BINOP_MUL},
@@ -834,6 +835,7 @@ const struct ada_opname_map ada_opname_table[] = {
   {"Onot", "\"not\"", UNOP_LOGICAL_NOT},
   {"Oadd", "\"+\"", UNOP_PLUS},
   {"Osubtract", "\"-\"", UNOP_NEG},
+  /* codespell:ignore-end.  */
   {NULL, NULL}
 };
 

@@ -1717,7 +1717,8 @@ value::record_latest ()
 
   /* We preserve VALUE_LVAL so that the user can find out where it was fetched
      from.  This is a bit dubious, because then *&$1 does not just return $1
-     but the current contents of that location.  c'est la vie...  */
+     but the current contents of that location.  <codespell:ignore-begin>
+     C'est la vie... <codespell:ignore-end>.  */
   set_modifiable (false);
 
   value_history.push_back (release_value (this));

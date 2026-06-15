@@ -203,7 +203,7 @@ private:
 
   /* The ignored substring ranges within M_MATCH.  E.g., if we were
      looking for completion matches for C++ functions starting with
-       "functio"
+       "functio"	codespell:ignore functio
      and successfully match:
        "function[abi:cxx11](int)"
      the ignored ranges vector will contain an entry that delimits the

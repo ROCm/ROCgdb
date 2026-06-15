@@ -2251,7 +2251,7 @@ test_cp_remove_params ()
   CHECK ("A::(anonymous namespace)",
 	 "A::(anonymous namespace)");
 
-  CHECK_INCOMPL ("A::(anonymou", "A");
+  CHECK_INCOMPL ("A::(anonymou", "A"); /* codespell:ignore anonymou.  */
 
   CHECK ("A::foo<int>()",
 	 "A::foo<int>");

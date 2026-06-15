@@ -1220,9 +1220,11 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
 	      d = value_as_long (val);
 	      xlen = size * 8;
 	      gdb_printf (file,
+			  /* codespell:ignore-begin.  */
 			  "\tSD:%X VM:%02X MXR:%X PUM:%X MPRV:%X XS:%X "
 			  "FS:%X MPP:%x HPP:%X SPP:%X MPIE:%X HPIE:%X "
 			  "SPIE:%X UPIE:%X MIE:%X HIE:%X SIE:%X UIE:%X",
+			  /* codespell:ignore-end.  */
 			  (int) ((d >> (xlen - 1)) & 0x1),
 			  (int) ((d >> 24) & 0x1f),
 			  (int) ((d >> 19) & 0x1),

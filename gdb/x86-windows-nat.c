@@ -418,6 +418,7 @@ display_selector (HANDLE thread, DWORD sel)
     {
       return get_thread_selector_entry (context, thread, sel, &info);
     });
+  /* codespell:ignore-begin.  */
   if (ret)
     {
       int base, limit;
@@ -490,6 +491,7 @@ display_selector (HANDLE thread, DWORD sel)
 	gdb_printf ("Invalid selector 0x%x.\n", (unsigned) sel);
       return 0;
     }
+  /* codespell:ignore-end.  */
 }
 
 static void

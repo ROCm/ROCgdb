@@ -329,6 +329,7 @@ static const reggroup *nds32_secur_reggroup;
 static void
 nds32_init_reggroups (void)
 {
+  /* codespell:ignore-begin.  */
   nds32_cr_reggroup = reggroup_new ("cr", USER_REGGROUP);
   nds32_ir_reggroup = reggroup_new ("ir", USER_REGGROUP);
   nds32_mr_reggroup = reggroup_new ("mr", USER_REGGROUP);
@@ -339,6 +340,7 @@ nds32_init_reggroups (void)
   nds32_racr_reggroup = reggroup_new ("racr", USER_REGGROUP);
   nds32_idr_reggroup = reggroup_new ("idr", USER_REGGROUP);
   nds32_secur_reggroup = reggroup_new ("secur", USER_REGGROUP);
+  /* codespell:ignore-end.  */
 }
 
 static void

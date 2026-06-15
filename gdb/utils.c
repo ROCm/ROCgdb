@@ -2937,7 +2937,9 @@ strncmp_iw_with_mode_tests ()
 	       "\tfoo\t<\tbar\t<\tbaz\t<\tquxi\t>\t>\t>\t(int)", NORMAL);
   CHECK_MATCH ("foo<bar<baz<quxi>>>(int)",
 	       " \tfoo \t< \tbar \t< \tbaz \t< \tquxi \t> \t> \t> \t( \tint \t)", NORMAL);
-  CHECK_MATCH ("foo<bar<baz>>::foo(quxi &)", "fo", NORMAL);
+  CHECK_MATCH ("foo<bar<baz>>::foo(quxi &)",
+	       "fo", /* codespell:ignore.  */
+	       NORMAL);
   CHECK_MATCH ("foo<bar<baz>>::foo(quxi &)", "foo", NORMAL);
   CHECK_MATCH ("foo<bar<baz>>::foo(quxi &)", "foo<bar<baz>>::", NORMAL);
   CHECK_MATCH ("foo<bar<baz>>::foo(quxi &)", "foo<bar<baz> >::foo", NORMAL);
