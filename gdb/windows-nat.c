@@ -2310,14 +2310,14 @@ windows_nat_target::detach (inferior *inf, int from_tty)
     {
       if (thr.internal_state () != THREAD_INT_RUNNING)
 	{
-	  windows_thread_info *wth = windows_process->find_thread (thr.ptid);
+	  windows_thread_info *w_th = windows_process->find_thread (thr.ptid);
 	  gdb_signal signo = get_detach_signal (this, thr.ptid);
 
-	  if (signo != wth->last_sig
+	  if (signo != w_th->last_sig
 	      || (signo != GDB_SIGNAL_0 && !signal_pass_state (signo)))
 	    signo = GDB_SIGNAL_0;
 
-	  DWORD cstatus = prepare_resume (wth, &thr, 0, signo);
+	  DWORD cstatus = prepare_resume (w_th, &thr, 0, signo);
 
 	  if (!m_continued && thr.ptid == get_last_debug_event_ptid ())
 	    continue_status = cstatus;

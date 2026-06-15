@@ -4944,8 +4944,8 @@ global_symbol_searcher::search () const
 	 This is just a courtesy to make the matching less sensitive
 	 to how many spaces the user leaves between 'operator'
 	 and <TYPENAME> or <OPERATOR>.  */
-      const char *opend;
-      const char *opname = operator_chars (symbol_name_regexp, &opend);
+      const char *op_end;
+      const char *opname = operator_chars (symbol_name_regexp, &op_end);
 
       if (*opname)
 	{

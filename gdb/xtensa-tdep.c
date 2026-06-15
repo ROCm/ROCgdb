@@ -2330,7 +2330,7 @@ call0_track_op (struct gdbarch *gdbarch, xtensa_c0reg_t dst[], xtensa_c0reg_t sr
 	      If 0, avoids infinite run-on in corrupt code memory by bounding
 	      the scan to the end of the function if that can be determined.
       nregs   Number of general registers to track.
-   InOut args:
+   In/Out args:
       cache   Xtensa frame cache.
 
       Note that these may produce useful results even if decoding fails

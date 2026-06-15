@@ -539,7 +539,7 @@ mips_show_dr (const char *func, CORE_ADDR addr,
 
 int
 mips_linux_nat_target::can_use_hw_breakpoint (enum bptype type,
-					      int cnt, int ot)
+					      int cnt, int othertype)
 {
   int i;
   uint32_t wanted_mask, irw_mask;

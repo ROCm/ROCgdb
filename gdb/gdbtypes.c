@@ -1641,14 +1641,14 @@ struct type *
 lookup_template_type (const char *name, struct type *type,
 		      const struct block *block)
 {
-  std::string nam;
-  nam.reserve (strlen (name) + strlen (type->name ()) + strlen ("< >"));
-  nam = name;
-  nam += "<";
-  nam += type->name ();
-  nam += " >"; /* FIXME, extra space still introduced in gcc?  */
+  std::string str;
+  str.reserve (strlen (name) + strlen (type->name ()) + strlen ("< >"));
+  str = name;
+  str += "<";
+  str += type->name ();
+  str += " >"; /* FIXME, extra space still introduced in gcc?  */
 
-  symbol *sym = lookup_symbol (nam.c_str (), block,
+  symbol *sym = lookup_symbol (str.c_str (), block,
 			       SEARCH_STRUCT_DOMAIN, 0).symbol;
 
   if (sym == NULL)

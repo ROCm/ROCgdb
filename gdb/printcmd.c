@@ -538,7 +538,7 @@ set_next_address (struct gdbarch *gdbarch, CORE_ADDR addr)
 }
 
 /* Optionally print address ADDR symbolically as <SYMBOL+OFFSET> on STREAM,
-   after LEADIN.  Print nothing if no symbolic name is found nearby.
+   after LEAD_IN.  Print nothing if no symbolic name is found nearby.
    Optionally also print source file and line number, if available.
    DO_DEMANGLE controls whether to print a symbol in its native "raw" form,
    or to interpret it as a possible C++ name and convert it back to source
@@ -549,7 +549,7 @@ set_next_address (struct gdbarch *gdbarch, CORE_ADDR addr)
 int
 print_address_symbolic (struct gdbarch *gdbarch, CORE_ADDR addr,
 			struct ui_file *stream,
-			int do_demangle, const char *leadin)
+			int do_demangle, const char *lead_in)
 {
   std::string name, filename;
   int unmapped = 0;
@@ -560,7 +560,7 @@ print_address_symbolic (struct gdbarch *gdbarch, CORE_ADDR addr,
 			      &offset, &filename, &line, &unmapped))
     return 0;
 
-  gdb_puts (leadin, stream);
+  gdb_puts (lead_in, stream);
   if (unmapped)
     gdb_puts ("<*", stream);
   else

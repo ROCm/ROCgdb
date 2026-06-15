@@ -3034,7 +3034,7 @@ gdb_fnwidth (const char *string)
 #if defined (HANDLE_MULTIBYTE)
   mbstate_t ps;
   int left, w;
-  size_t clen;
+  size_t c_len;
   wchar_t wc;
 
   left = strlen (string) + 1;
@@ -3052,18 +3052,18 @@ gdb_fnwidth (const char *string)
       else
 	{
 #if defined (HANDLE_MULTIBYTE)
-	  clen = mbrtowc (&wc, string + pos, left - pos, &ps);
-	  if (MB_INVALIDCH (clen))
+	  c_len = mbrtowc (&wc, string + pos, left - pos, &ps);
+	  if (MB_INVALIDCH (c_len))
 	    {
 	      width++;
 	      pos++;
 	      memset (&ps, 0, sizeof (mbstate_t));
 	    }
-	  else if (MB_NULLWCH (clen))
+	  else if (MB_NULLWCH (c_len))
 	    break;
 	  else
 	    {
-	      pos += clen;
+	      pos += c_len;
 	      w = wcwidth (wc);
 	      width += (w >= 0) ? w : 1;
 	    }

@@ -659,7 +659,7 @@ arm_linux_get_hw_watchpoint_count (void)
    there is not an appropriate resource available, otherwise returns 1.  */
 int
 arm_linux_nat_target::can_use_hw_breakpoint (enum bptype type,
-					     int cnt, int ot)
+					     int cnt, int othertype)
 {
   if (type == bp_hardware_watchpoint || type == bp_read_watchpoint
       || type == bp_access_watchpoint || type == bp_watchpoint)
@@ -668,7 +668,7 @@ arm_linux_nat_target::can_use_hw_breakpoint (enum bptype type,
 
       if (count == 0)
 	return 0;
-      else if (cnt + ot > count)
+      else if (cnt + othertype > count)
 	return -1;
     }
   else if (type == bp_hardware_breakpoint)

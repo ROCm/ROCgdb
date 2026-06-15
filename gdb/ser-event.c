@@ -167,9 +167,9 @@ make_serial_event (void)
 int
 serial_event_fd (struct serial_event *event)
 {
-  struct serial *ser = (struct serial *) event;
+  struct serial *serial = (struct serial *) event;
 
-  return ser->fd;
+  return serial->fd;
 }
 
 /* See ser-event.h.  */
@@ -177,8 +177,8 @@ serial_event_fd (struct serial_event *event)
 void
 serial_event_set (struct serial_event *event)
 {
-  struct serial *ser = (struct serial *) event;
-  struct serial_event_state *state = (struct serial_event_state *) ser->state;
+  struct serial *serial = (struct serial *) event;
+  struct serial_event_state *state = (struct serial_event_state *) serial->state;
 #ifndef USE_WIN32API
   char c = '+';		/* Anything.  */
 
@@ -193,7 +193,7 @@ serial_event_set (struct serial_event *event)
 void
 serial_event_clear (struct serial_event *event)
 {
-  struct serial *ser = (struct serial *) event;
+  struct serial *serial = (struct serial *) event;
 #ifndef USE_WIN32API
   int r;
 
@@ -201,11 +201,11 @@ serial_event_clear (struct serial_event *event)
     {
       char c;
 
-      r = gdb::read (ser->fd, &c, 1);
+      r = gdb::read (serial->fd, &c, 1);
     }
   while (r > 0);
 #else
-  struct serial_event_state *state = (struct serial_event_state *) ser->state;
+  struct serial_event_state *state = (struct serial_event_state *) serial->state;
   ResetEvent (state->event);
 #endif
 }

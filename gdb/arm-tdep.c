@@ -4450,7 +4450,7 @@ arm_vfp_cprc_sub_candidate (struct type *t,
       /* Arguments of complex T where T is one of the types float or
 	 double get treated as if they are implemented as:
 
-	 struct complexT
+	 struct complex_T
 	 {
 	   T real;
 	   T imag;
