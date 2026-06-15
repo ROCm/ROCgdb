@@ -34,7 +34,7 @@
 
 load_lib rocm.exp
 standard_testfile .cpp
-require allow_hipcc_tests
+require allow_hip_tests
 
 # Build the host executable.
 if { [build_executable "failed to prepare" \
@@ -47,7 +47,7 @@ set hipmodule_path [standard_output_file ${testfile}.co]
 # Build the kernel object file.
 if { [gdb_compile $srcdir/$subdir/$srcfile \
 	$hipmodule_path object \
-	{ debug hip additional_flags=--genco additional_flags=-DDEVICE } ] != "" } {
+	{ debug hip additional_flags=--cuda-device-only additional_flags=-DDEVICE } ] != "" } {
     return -1
 }
 

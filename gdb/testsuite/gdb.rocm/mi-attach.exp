@@ -17,7 +17,7 @@ load_lib rocm.exp
 load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
-require can_spawn_for_attach allow_hipcc_tests
+require can_spawn_for_attach allow_hip_tests
 
 standard_testfile .cpp
 
