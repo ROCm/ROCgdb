@@ -74,10 +74,6 @@ skip = [
 'gdbserver/aclocal.m4',
 'gdbsupport/aclocal.m4',
 # TODO:
-'gdb/testsuite/Makefile.in',
-'gdb/testsuite/TODO',
-'gdb/testsuite/configure.ac',
-'gdb/testsuite/boards/*',
 'gdb/testsuite/config/*',
 'gdb/testsuite/gdb.ada/*',
 'gdb/testsuite/gdb.arch/*',
