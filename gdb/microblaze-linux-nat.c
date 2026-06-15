@@ -94,7 +94,7 @@ fill_gregset (const struct regcache *regcache, prgregset_t *gregs, int regnum)
     regcache->raw_collect (regnum, regp + regnum);
 }
 
-/* Transfering floating-point registers between GDB, inferiors and cores.
+/* Transferring floating-point registers between GDB, inferiors and cores.
    Since MicroBlaze floating-point registers are the same as GPRs these do
    nothing.  */
 
