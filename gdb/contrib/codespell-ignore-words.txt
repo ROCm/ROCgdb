@@ -35,3 +35,21 @@ parm
 wither
 # SystemTap.
 stap
+# An includer includes an includee.
+includee
+# Stepping using next.
+nexting
+# Parameters.
+parms
+# System Object Model.
+SOM
+# Short for static variables and/or functions.
+statics
+# Structured Exception Handling.
+seh
+# Abbreviation for index.
+indx
+# Heterogeneous System Architecture.
+HSA
+# Grand Unified Debugger.
+GUD
