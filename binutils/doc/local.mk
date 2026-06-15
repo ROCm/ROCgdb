@@ -192,6 +192,9 @@ TOC_SIDEBAR_ASSETS = $(TOC_SIDEBAR_DIR)/toc-sidebar.css \
 # build can theme the manual without editing the sources.
 MANUAL_CSS =
 
+# ROCm branding.
+MANUAL_CSS += $(srcdir)/../rocm-theme.css
+
 # Unlike the ld and gas manuals, this rule passes no -o, so texi2any
 # derives the split output directory from binutils.texi's @setfilename
 # (binutils.info) and writes the manual to binutils_html; the copied
