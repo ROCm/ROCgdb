@@ -112,6 +112,11 @@ repos:
       additional_dependencies: ["pyyaml"]
       always_run: true
       require_serial: true
+    - id: check-file-mode
+      name: check-file-mode
+      language: script
+      entry: gdb/contrib/check-file-mode.sh
+      files: '^(gdb|gdbserver|gdbsupport)/.*$'
   - repo: https://github.com/nmoroze/tclint
     rev: v0.8.0
     hooks:
