@@ -1598,6 +1598,75 @@ amdgpu_segment_address_from_core_address (CORE_ADDR addr)
   return addr & significant_bits;
 }
 
+/* Convert a given address in the given address space to an address in
+   another address space.  This is essentially a wrapper for a dbgapi
+   function.  PTID and SIMD_LANE are the contexts for which the
+   conversion should be made.  PTID can be NULL_PTID when the address
+   does not necessarily depend on wave context.  */
+
+static std::optional<addr_range>
+amdgpu_convert_address (gdbarch *gdbarch, ptid_t ptid, int simd_lane,
+			CORE_ADDR from_address,
+			arch_addr_space_id from_aspace_id,
+			arch_addr_space_id to_aspace_id)
+{
+  /* Argument should be already stripped off its address space id.  */
+  gdb_assert (amdgpu_address_space_id_from_core_address (from_address)
+	      == ARCH_ADDR_SPACE_ID_DEFAULT);
+
+  /* We should never get a valid ptid here that is not a gpu
+     thread.  */
+  gdb_assert (ptid == null_ptid || ptid_is_gpu (ptid));
+
+  const amd_dbgapi_wave_id_t wave_id
+    = (ptid != null_ptid)
+    ? get_amd_dbgapi_wave_id (ptid)
+    : AMD_DBGAPI_WAVE_NONE;
+
+  amd_dbgapi_architecture_id_t architecture_id;
+  if (ptid == null_ptid)
+    {
+      simd_lane = 0;
+
+      if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
+				       &architecture_id)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_get_architecture failed"));
+    }
+  else
+    {
+      if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
+				    sizeof (architecture_id), &architecture_id)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_wave_get_info failed"));
+    }
+
+  /* Get a dbgapi address space id for the original address space.  */
+  amd_dbgapi_address_space_id_t dbgapi_from_addr_space_id;
+  if (amd_dbgapi_dwarf_address_space_to_address_space
+	(architecture_id, from_aspace_id, &dbgapi_from_addr_space_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
+
+  /* Get the dbgapi address space id for the default address space.  */
+  amd_dbgapi_address_space_id_t dbgapi_to_addr_space_id;
+  if (amd_dbgapi_dwarf_address_space_to_address_space
+	(architecture_id, to_aspace_id, &dbgapi_to_addr_space_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
+
+  CORE_ADDR converted_address;
+  size_t contiguous_size;
+
+  if (amd_dbgapi_convert_address_space
+	(wave_id, simd_lane, dbgapi_from_addr_space_id, from_address,
+	 dbgapi_to_addr_space_id, &converted_address, &contiguous_size)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return std::nullopt;
+
+  return addr_range {converted_address, contiguous_size};
+}
+
 /* Address class to address space mapping.
 
    TODO: This is just a quick fix to make the address class hand
@@ -1845,66 +1914,25 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
   if (size == 0)
     error (_("Watchpoint length must be non-zero number."));
 
-  /* We should never get a valid ptid here that is not a gpu
-     thread.  */
-  gdb_assert (ptid == null_ptid || ptid_is_gpu (ptid));
-
   std::vector<addr_range> aliases;
-  amd_dbgapi_architecture_id_t architecture_id;
-  /* If we have a wave, use the wave's arch, otherwise, use the arch matching
-     gdbarch.  */
-  if (ptid != null_ptid)
-    {
-      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (ptid);
-      if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
-				    sizeof (architecture_id), &architecture_id)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	error (_("amd_dbgapi_wave_get_info failed"));
-    }
-  else
-    {
-      if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
-				       &architecture_id)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	error (_("amd_dbgapi_get_architecture failed"));
-    }
-
-  /* Get a dbgapi address space id for the original address space.  */
-  amd_dbgapi_address_space_id_t dbgapi_from_addr_space_id;
-  if (amd_dbgapi_dwarf_address_space_to_address_space
-	(architecture_id, (uint64_t) addr_space_id,
-	 &dbgapi_from_addr_space_id)
-	!= AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
-
-  /* Get the dbgapi address space id for the default address space.  */
-  amd_dbgapi_address_space_id_t dbgapi_to_addr_space_id;
-  gdb_assert (amd_dbgapi_dwarf_address_space_to_address_space
-	       (architecture_id, (uint64_t) ARCH_ADDR_SPACE_ID_DEFAULT,
-		&dbgapi_to_addr_space_id)
-	       == AMD_DBGAPI_STATUS_SUCCESS);
-
-  amd_dbgapi_wave_id_t wave_id = AMD_DBGAPI_WAVE_NONE;
-
-  if (ptid != null_ptid)
-    wave_id = get_amd_dbgapi_wave_id (ptid);
 
   /* Aliasing address range might not have the same layout.  Because
      of that, when ever there is a gap between the aliasing addresses,
      create a new range.  */
   while (true)
     {
-      amd_dbgapi_size_t converted_size;
-      amd_dbgapi_segment_address_t to_offset;
-
       /* Try to convert the address to an address in the
 	 default address space.  */
-      if (amd_dbgapi_convert_address_space
-	    (wave_id, simd_lane, dbgapi_from_addr_space_id,
-	     (amd_dbgapi_segment_address_t) addr,
-	     dbgapi_to_addr_space_id, &to_offset, &converted_size)
-	    != AMD_DBGAPI_STATUS_SUCCESS)
+      std::optional<addr_range> converted_range
+	= amdgpu_convert_address (gdbarch, ptid, simd_lane, addr,
+				  addr_space_id,
+				  ARCH_ADDR_SPACE_ID_DEFAULT);
+
+      if (!converted_range.has_value ())
 	return {};
+
+      size_t converted_size = converted_range.value ().size;
+      CORE_ADDR to_offset = converted_range.value ().addr;
 
       if (converted_size == 0)
 	return {};
