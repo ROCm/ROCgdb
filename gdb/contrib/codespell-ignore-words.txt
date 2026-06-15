@@ -53,3 +53,5 @@ indx
 HSA
 # Grand Unified Debugger.
 GUD
+# Jargon for endianness.
+endianity
