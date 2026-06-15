@@ -711,7 +711,7 @@ struct arm_linux_hw_breakpoint
    for caching address and control information.
 
    The Linux ptrace interface to hardware break-/watch-points presents the
-   values in a vector centred around 0 (which is used fo generic information).
+   values in a vector centred around 0 (which is used for generic information).
    Positive indices refer to breakpoint addresses/control registers, negative
    indices to watchpoint addresses/control registers.
 

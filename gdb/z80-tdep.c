@@ -1427,7 +1427,7 @@ z80_get_insn_info (struct gdbarch *gdbarch, const gdb_byte *buf, int *size)
 	case insn_adl:
 	  info = &ez80_adl_main_insn_table[0];
 	  break;
-	/*  These two (for GameBoy Z80 & Z80 Next CPUs) haven't been tested.
+	/*  These two (for Game Boy Z80 & Z80 Next CPUs) haven't been tested.
 
 	case bfd_mach_gbz80:
 	  info = &gbz80_main_insn_table[0];

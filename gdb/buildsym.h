@@ -218,7 +218,7 @@ struct buildsym_compunit
     m_producer = producer;
   }
 
-  void push_context (CORE_ADDR valu);
+  void push_context (CORE_ADDR value);
 
   /* Pop a context and create the corresponding block.  Returns the
      block.  END_ADDR is the final address of the block.  STATIC_LINK,

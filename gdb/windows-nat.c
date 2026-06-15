@@ -132,7 +132,7 @@ the process.  In fact, it seldom is.  E.g., if the main thread calls
 ExitProcess (or returns from main, which ends up calling ExitProcess),
 then we typically see a EXIT_THREAD_DEBUG_EVENT event for the main
 thread first, followed by more EXIT_THREAD_DEBUG_EVENT events for
-other threads, and then finaly the EXIT_PROCESS_DEBUG_EVENT for
+other threads, and then finally the EXIT_PROCESS_DEBUG_EVENT for
 whatever thread happened to be the last one to exit.
 
 When a thread reports EXIT_THREAD_DEBUG_EVENT /
@@ -258,7 +258,7 @@ wants the "sig" thread to be running.
 This isn't ideal, since this means that with user-visible non-stop,
 the inferior will only be able to process and report one signal at a
 time (as the "sig" thread is responsible for that), but that seems
-like an acceptible compromise, better than not being able to have the
+like an acceptable compromise, better than not being able to have the
 target work in non-stop by default on Cygwin.  */
 
 using namespace windows_nat;
@@ -1268,7 +1268,7 @@ windows_nat_target::stop_one_thread (windows_thread_info *th,
 	      stop and calls windows_continue on this thread.  */
 	   && stopping_kind == SK_EXTERNAL)
     {
-      DEBUG_EVENTS ("explict stop for \"sig\" thread %s held for signal",
+      DEBUG_EVENTS ("explicit stop for \"sig\" thread %s held for signal",
 		    thr_ptid.to_string ().c_str ());
 
       th->stopping = stopping_kind;

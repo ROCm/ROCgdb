@@ -7006,7 +7006,7 @@ handle_signal_stop (struct execution_control_state *ecs)
 
 	  std::string addr_str;
 	  if (addr_list.empty ())
-	    addr_str = "(no data addressses available)";
+	    addr_str = "(no data addresses available)";
 	  else
 	    {
 	      for (const CORE_ADDR addr : addr_list)
