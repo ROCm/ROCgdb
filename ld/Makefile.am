@@ -828,6 +828,9 @@ TOC_SIDEBAR_ASSETS = $(TOC_SIDEBAR_DIR)/toc-sidebar.css \
 # build can theme the manual without editing the sources.
 MANUAL_CSS =
 
+# ROCm branding.
+MANUAL_CSS += $(srcdir)/../rocm-theme.css
+
 html-local: doc/ld/index.html
 doc/ld/index.html: ld.texi $(ld_TEXINFOS) $(MANUAL_CSS)
 	$(AM_V_at)$(MKDIR_P) doc
