@@ -5725,11 +5725,6 @@ loongarch_relax_pcala_addi (bfd *abfd, asection *sec, asection *sym_sec,
   uint32_t add = bfd_get (32, abfd, contents + rel_lo->r_offset);
   uint32_t rd = LARCH_GET_RD (pca);
 
-  /* This section's output_offset need to subtract the bytes of instructions
-     relaxed by the previous sections, so it needs to be updated beforehand.
-     size_input_section already took care of updating it after relaxation,
-     so we additionally update once here.  */
-  sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec)
 	       + loongarch_calc_relaxed_addr (info, rel_hi->r_offset);
   if (sym_sec == sec)
@@ -5790,11 +5785,6 @@ loongarch_relax_call36 (bfd *abfd, asection *sec, asection *sym_sec,
   uint32_t jirl = bfd_get (32, abfd, contents + rel->r_offset + 4);
   uint32_t rd = LARCH_GET_RD (jirl);
 
-  /* This section's output_offset need to subtract the bytes of instructions
-     relaxed by the previous sections, so it needs to be updated beforehand.
-     size_input_section already took care of updating it after relaxation,
-     so we additionally update once here.  */
-  sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec)
 	       + loongarch_calc_relaxed_addr (info, rel->r_offset);
   if (sym_sec == sec)
@@ -5851,11 +5841,6 @@ loongarch_relax_pcala_ld (bfd *abfd, asection *sec,
 			  bool *again ATTRIBUTE_UNUSED,
 			  bfd_vma max_alignment)
 {
-  /* This section's output_offset need to subtract the bytes of instructions
-     relaxed by the previous sections, so it needs to be updated beforehand.
-     size_input_section already took care of updating it after relaxation,
-     so we additionally update once here.  */
-  sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec)
 	       + loongarch_calc_relaxed_addr (info, rel_hi->r_offset);
   if (sym_sec == sec)
@@ -6008,11 +5993,6 @@ loongarch_relax_tls_ld_gd_desc (bfd *abfd, asection *sec, asection *sym_sec,
   uint32_t add = bfd_get (32, abfd, contents + rel_lo->r_offset);
   uint32_t rd = LARCH_GET_RD (pca);
 
-  /* This section's output_offset need to subtract the bytes of instructions
-     relaxed by the previous sections, so it needs to be updated beforehand.
-     size_input_section already took care of updating it after relaxation,
-     so we additionally update once here.  */
-  sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec)
 	       + loongarch_calc_relaxed_addr (info, rel_hi->r_offset);
   if (sym_sec == sec)
@@ -6187,7 +6167,9 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
      so we additionally update once here.  */
 
   /* update before tls trans and relax, or may cause same pcadd_hi20 address.  */
-  sec->output_offset = sec->output_section->size;
+
+  sec->output_offset = align_power (sec->output_section->size,
+				    sec->alignment_power);
 
   for (unsigned int i = 0; i < sec->reloc_count; i++)
     {

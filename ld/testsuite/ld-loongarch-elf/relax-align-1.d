@@ -1,0 +1,13 @@
+#source: relax-align-1a.s
+#source: relax-align-1b.s
+#ld: -e0
+#objdump: -d
+
+#...
+.*:	54000400 	bl          	4.*<f>
+#...
+.*[0|8]:	02c001ac 	addi.d      	\$t0, \$t1, 0
+#...
+.*0:	02c005ac 	addi.d      	\$t0, \$t1, 1
+#...
+.*0:	02c005ac 	addi.d      	\$t0, \$t1, 1
