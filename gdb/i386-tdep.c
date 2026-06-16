@@ -5128,7 +5128,7 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
     case 0xf2:	/* VPSLLD, dynamic shift and ANDN.  */
     case 0xf3:	/* VPSLLQ, dynamic shift and BLSI, BLSR and BLSMSK.  */
     case 0xf4:	/* VPMULUDQ  */
-    case 0xf6:	/* VPSADBW.  */
+    case 0xf6:	/* VPSADBW or MULX.  */
     case 0xfc:	/* VPADDB  */
     case 0xfd:	/* VPADDW  */
     case 0xfe:	/* VPADDD  */
@@ -5152,6 +5152,15 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 	    record_full_arch_list_add_reg
 	      (ir->regcache, ir->regmap[X86_RECORD_EFLAGS_REGNUM]);
 	  }
+	else if (opcode == 0xf6 && ir->map_select == 2)
+	  {
+	    record_full_arch_list_add_reg (ir->regcache,
+					   ir->regmap[X86_RECORD_REAX_REGNUM
+						      + ir->vvvv]);
+	    record_full_arch_list_add_reg (ir->regcache,
+					   ir->regmap[X86_RECORD_REAX_REGNUM
+						      + reg_offset]);
+	  }
 	else
 	  {
 	    /* This set of instructions all share the same exact way to
@@ -5164,11 +5173,16 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
       }
       break;
 
-    case 0xf7:	/* BEXTR.  */
+    case 0xf0:	/* RORX.  */
+    case 0xf5:	/* PDEP or PEXT or BZHI.  */
+    case 0xf7:	/* BEXTR or SARX or SHLX or SHRX.  */
       i386_record_modrm (ir);
       record_full_arch_list_add_reg (ir->regcache,
 				     ir->regmap[X86_RECORD_REAX_REGNUM
 						+ ir->reg + vex_r * 8]);
+      if (opcode == 0xf5 && ir->pp == 0)
+	record_full_arch_list_add_reg (ir->regcache,
+				       ir->regmap[X86_RECORD_EFLAGS_REGNUM]);
       break;
 
     case 0x2e: /* VUCOMIS[S|D].  */

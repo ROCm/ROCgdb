@@ -773,6 +773,7 @@ bmi_test ()
      eax = 0x1312
      ebx = 0xdeadbeef
      ecx = 0xcafeface
+     edx = 0x2337
      r8  = 0
      this way it's easy to confirm we're undoing things correctly.  */
 
@@ -798,6 +799,19 @@ bmi_test ()
   asm volatile ("tzcnt %rax, %rcx");
   asm volatile ("tzcnt %eax, %ebx");
   asm volatile ("tzcnt %ax, %r8w");
+
+  asm volatile ("mulx %eax, %ebx, %ecx");
+  asm volatile ("mulx %ebx, %ecx, %ebx");
+
+  asm volatile ("pdep %r8, %rcx, %rbx");
+  asm volatile ("pext %edx, %ecx, %ebx");
+  asm volatile ("rorx $10, %r8, %rbx");
+  asm volatile ("sarx %edx, %ebx, %eax");
+  asm volatile ("shlx %eax, %ecx, %ebx");
+  asm volatile ("shrx %r8d, %eax, %ecx");
+
+  asm volatile ("bzhi %edx, %ebx, %r8d");
+  asm volatile ("bzhi %rax, %rcx, %r8");
 
   return 0; /* end bmi_test  */
 }
