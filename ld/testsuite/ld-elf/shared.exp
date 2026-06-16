@@ -1878,6 +1878,8 @@ run_cc_link_tests [list \
 # PR 29655 (cont.): Check that in PIC code linked as PDE taking the address
 # of a function defined in a DSO results in the function address (from GOT)
 # and not the "canonical PLT" address from the PDE.
+# PR ld/34151
+setup_xfail sparc*-*-*
 run_cc_link_tests [list \
     [list \
 	"Build pr29655" \
