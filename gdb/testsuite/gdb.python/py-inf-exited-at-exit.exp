@@ -122,7 +122,10 @@ proc_with_prefix check_with_attach {} {
 
     gdb_breakpoint [gdb_get_line_number "Break here."]
 
-    gdb_test "attach $testpid"
+    if { ![gdb_attach $testpid] } {
+	kill_wait_spawned_process $test_spawn_id
+	return
+    }
 
     gdb_continue_to_breakpoint "continue to b/p in foo"
 
