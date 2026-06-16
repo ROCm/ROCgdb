@@ -84,7 +84,7 @@ repos:
     hooks:
     - id: check-include-guards
       name: check-include-guards
-      language: python
+      language: unsupported_script
       entry: gdb/check-include-guards.py
       # All gdb header files, but not headers in the test suite.
       files: '^(gdb(support|server)?)/.*\.h$'
@@ -100,7 +100,7 @@ repos:
       stages: [pre-commit]
     - id: check-whitespace
       name: check-whitespace
-      language: script
+      language: unsupported_script
       entry: gdb/contrib/check-whitespace-pre-commit.py
       files: '^(gdb(support|server)?)/.*$'
       pass_filenames: true
@@ -114,7 +114,7 @@ repos:
       require_serial: true
     - id: check-file-mode
       name: check-file-mode
-      language: script
+      language: unsupported_script
       entry: gdb/contrib/check-file-mode.sh
       files: '^(gdb|gdbserver|gdbsupport)/.*$'
   - repo: https://github.com/nmoroze/tclint
