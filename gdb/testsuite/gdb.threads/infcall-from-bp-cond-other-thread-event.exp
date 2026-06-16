@@ -132,7 +132,7 @@ proc run_condition_test { stop_at_cond other_thread_signal \
 		 "Continuing\\." \
 		 ".*" \
 		 "Thread ${::decimal} \"\[^\"\r\n\]+\" received signal SIGSEGV, Segmentation fault\\." \
-		 "\\\[Switching to Thread \[^\r\n\]+\\\]" \
+		 "\\\[Switching to thread \[^\r\n\]+\\\]" \
 		 "${::hex} in worker_func \[^\r\n\]+:${::signal_line}" \
 		 "${::decimal}\\s+\[^\r\n\]+Signal here\[^\r\n\]+"] \
 	    "received signal in other thread"

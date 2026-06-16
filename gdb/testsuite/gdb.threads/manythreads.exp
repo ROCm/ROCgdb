@@ -84,7 +84,7 @@ proc interrupt_and_wait { message } {
 	    #  [New Thread NNN]
 	    #  [New Thread NNN]
 	    #  ... pages of new threads output ...
-	    #  [Switching to Thread NNN]
+	    #  [Switching to thread NNN]
 	    #  foo () at foo.c:31
 	    #  31      bar ();
 	    #
