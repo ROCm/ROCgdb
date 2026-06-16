@@ -112,6 +112,7 @@ repos:
       additional_dependencies: ["pyyaml"]
       always_run: true
       require_serial: true
+      pass_filenames: false
     - id: check-file-mode
       name: check-file-mode
       language: unsupported_script
