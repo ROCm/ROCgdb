@@ -1343,7 +1343,9 @@ TOC_SIDEBAR_ASSETS = $(TOC_SIDEBAR_DIR)/toc-sidebar.css \
 # is referenced with --css-ref and copied into the output directory.
 # It is empty by default and can be set on the make command line, so a
 # build can theme the manual without editing the sources.
-MANUAL_CSS = 
+
+# ROCm branding.
+MANUAL_CSS = $(srcdir)/../rocm-theme.css
 all: $(BUILT_SOURCES) config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
