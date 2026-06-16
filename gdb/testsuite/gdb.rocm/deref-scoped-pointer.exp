@@ -62,10 +62,15 @@ proc test {} {
     # private_lane address space.  Iterating over lanes and
     # dereferencing that pointer should print a different value per
     # lane, just like the program itself does with printf.
+    #
+    # 'global_ptr2' is a generic null pointer.  Printing it should be
+    # fine.
     with_test_prefix "global pointer set by program" {
 	gdb_test "print global_ptr" \
 	    " = \\\(size_t \\\*\\\) generic#$::hex"
 	test_print_each_lane "*global_ptr"
+
+	gdb_test "print global_ptr2" "generic#0x0"
     }
 
     # Test the same, but write to a global pointer in GDB instead of
@@ -88,8 +93,32 @@ proc test {} {
 	test_print_each_lane "*\$conv_var"
     }
 
-    # Both global_ptr and global_ptr2 should point to the same generic
-    # address, and thus the assertion in the program should not fail.
+    # The contents of global pointers should be exactly the same.
+    # Compare the contents,then continue the program.  We should not
+    # hit the assertion.
+    #
+    # Do not use "print" to fetch the contents here, because address
+    # space may be encoded in pointer value, which is hidden by
+    # "print".  We want to check the raw contents.
+    set global_ptr_content "invalid"
+    gdb_test_multiple "x/1gx &global_ptr" "global_ptr contents" {
+	-re -wrap "$::hex <global_ptr>:\[ \t\]+($::hex)" {
+	    set global_ptr_content $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+
+    set global_ptr2_content "unset"
+    gdb_test_multiple "x/1gx &global_ptr2" "global_ptr2 contents" {
+	-re -wrap "$::hex <global_ptr2>:\[ \t\]+($::hex)" {
+	    set global_ptr2_content $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+
+    verbose -log "global_ptr=$global_ptr_content, global_ptr2=$global_ptr2_content"
+    gdb_assert {$global_ptr_content == $global_ptr2_content}
+
     gdb_continue_to_end "continue to end" "continue" 1
 }
 
