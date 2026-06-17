@@ -110,6 +110,7 @@ struct gdbarch
   gdbarch_dwarf2_reg_piece_offset_ftype *dwarf2_reg_piece_offset = default_dwarf2_reg_piece_offset;
   gdbarch_pointer_to_address_ftype *pointer_to_address = unsigned_pointer_to_address;
   gdbarch_address_to_pointer_ftype *address_to_pointer = unsigned_address_to_pointer;
+  gdbarch_pointer_to_pointer_ftype *pointer_to_pointer = nullptr;
   gdbarch_integer_to_address_ftype *integer_to_address = nullptr;
   gdbarch_address_spaces_ftype *address_spaces = nullptr;
   gdbarch_address_space_id_from_core_address_ftype *address_space_id_from_core_address = nullptr;
@@ -373,6 +374,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of dwarf2_reg_piece_offset, invalid_p == 0.  */
   /* Skip verify of pointer_to_address, invalid_p == 0.  */
   /* Skip verify of address_to_pointer, invalid_p == 0.  */
+  /* Skip verify of pointer_to_pointer, has predicate.  */
   /* Skip verify of integer_to_address, has predicate.  */
   /* Skip verify of address_spaces, has predicate.  */
   if (gdbarch->address_space_id_from_core_address == nullptr)
@@ -803,6 +805,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: address_to_pointer = <%s>\n",
 	      host_address_to_string (gdbarch->address_to_pointer));
+  gdb_printf (file,
+	      "gdbarch_dump: gdbarch_pointer_to_pointer_p() = %d\n",
+	      gdbarch_pointer_to_pointer_p (gdbarch));
+  gdb_printf (file,
+	      "gdbarch_dump: pointer_to_pointer = <%s>\n",
+	      host_address_to_string (gdbarch->pointer_to_pointer));
   gdb_printf (file,
 	      "gdbarch_dump: gdbarch_integer_to_address_p() = %d\n",
 	      gdbarch_integer_to_address_p (gdbarch));
@@ -2614,6 +2622,30 @@ set_gdbarch_address_to_pointer (struct gdbarch *gdbarch,
 				gdbarch_address_to_pointer_ftype address_to_pointer)
 {
   gdbarch->address_to_pointer = address_to_pointer;
+}
+
+bool
+gdbarch_pointer_to_pointer_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != nullptr);
+  return gdbarch->pointer_to_pointer != nullptr;
+}
+
+CORE_ADDR
+gdbarch_pointer_to_pointer (struct gdbarch *gdbarch, type *from_type, CORE_ADDR address, type *to_type)
+{
+  gdb_assert (gdbarch != nullptr);
+  gdb_assert (gdbarch->pointer_to_pointer != nullptr);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_pointer_to_pointer called\n");
+  return gdbarch->pointer_to_pointer (gdbarch, from_type, address, to_type);
+}
+
+void
+set_gdbarch_pointer_to_pointer (struct gdbarch *gdbarch,
+				gdbarch_pointer_to_pointer_ftype pointer_to_pointer)
+{
+  gdbarch->pointer_to_pointer = pointer_to_pointer;
 }
 
 bool
