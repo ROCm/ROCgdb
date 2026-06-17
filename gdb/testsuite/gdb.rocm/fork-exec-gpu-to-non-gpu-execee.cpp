@@ -15,9 +15,14 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-static void
+/* noinline so the breakpoint reliably fires; the asm gives the
+   function a side effect the optimizer cannot prove away.  */
+
+static void __attribute__ ((noinline))
 break_here_execee (void)
-{}
+{
+  asm volatile ("" ::: "memory");
+}
 
 int
 main (void)
