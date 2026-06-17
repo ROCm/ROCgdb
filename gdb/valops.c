@@ -289,6 +289,28 @@ value_cast_pointers (struct type *type, struct value *arg2,
 {
   struct type *type1 = check_typedef (type);
   struct type *type2 = check_typedef (arg2->type ());
+
+  ULONGEST aspace1 = type1->address_space ();
+  ULONGEST aspace2 = type2->address_space ();
+  if (aspace1 != aspace2
+      && gdbarch_pointer_to_pointer_p (type1->arch ()))
+    {
+      /* This happens when there is, say, a pointer PTR to generic
+	 address space and the user does
+
+	 (gdb) p ptr = private_lane#0x1234.
+
+	 Convert from one address space to the other.  */
+      CORE_ADDR from_addr = value_as_address (arg2);
+      CORE_ADDR to_addr = gdbarch_pointer_to_pointer (type1->arch (), type2,
+						      from_addr, type1);
+
+      /* Convert the pointer type by clearing the address space
+	 and then using the new one.  */
+      type2 = make_type_with_address_space (type2, aspace1);
+      arg2 = value_from_pointer (type2, to_addr);
+    }
+
   struct type *t1 = check_typedef (type1->target_type ());
   struct type *t2 = check_typedef (type2->target_type ());
 
