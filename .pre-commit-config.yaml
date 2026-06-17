@@ -103,7 +103,6 @@ repos:
       language: unsupported_script
       entry: gdb/contrib/check-whitespace-pre-commit.py
       files: '^(gdb(support|server)?)/.*$'
-      pass_filenames: true
       stages: [pre-commit]
     - id: pre-commit-setup
       name: pre-commit-setup
