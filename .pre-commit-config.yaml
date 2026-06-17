@@ -123,5 +123,4 @@ repos:
     hooks:
     - id: tclint
       args: [--trust-plugins]
-      types_or: [file]
       files: '^gdb/testsuite/.*\.(exp|tcl)$'
