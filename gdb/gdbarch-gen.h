@@ -443,6 +443,15 @@ using gdbarch_address_to_pointer_ftype = void (struct gdbarch *gdbarch, struct t
 void gdbarch_address_to_pointer (struct gdbarch *gdbarch, struct type *type, gdb_byte *buf, CORE_ADDR addr);
 void set_gdbarch_address_to_pointer (struct gdbarch *gdbarch, gdbarch_address_to_pointer_ftype *address_to_pointer);
 
+/* Convert an address of type FROM_TYPE to an address of type TO_TYPE.
+   This is particularly useful to convert between address spaces. */
+
+bool gdbarch_pointer_to_pointer_p (struct gdbarch *gdbarch);
+
+using gdbarch_pointer_to_pointer_ftype = CORE_ADDR (struct gdbarch *gdbarch, type *from_type, CORE_ADDR address, type *to_type);
+CORE_ADDR gdbarch_pointer_to_pointer (struct gdbarch *gdbarch, type *from_type, CORE_ADDR address, type *to_type);
+void set_gdbarch_pointer_to_pointer (struct gdbarch *gdbarch, gdbarch_pointer_to_pointer_ftype *pointer_to_pointer);
+
 bool gdbarch_integer_to_address_p (struct gdbarch *gdbarch);
 
 using gdbarch_integer_to_address_ftype = CORE_ADDR (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf, arch_addr_space_id address_space_id);
