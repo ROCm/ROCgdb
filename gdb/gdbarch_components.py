@@ -855,6 +855,18 @@ Method(
 )
 
 Method(
+    comment="""
+Convert an address of type FROM_TYPE to an address of type TO_TYPE.
+This is particularly useful to convert between address spaces.
+""",
+    type="CORE_ADDR",
+    name="pointer_to_pointer",
+    params=[("type *", "from_type"), ("CORE_ADDR", "address"), ("type *", "to_type")],
+    predicate=True,
+    invalid=True,
+)
+
+Method(
     type="CORE_ADDR",
     name="integer_to_address",
     params=[
