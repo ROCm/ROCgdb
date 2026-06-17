@@ -245,9 +245,12 @@ Eli Zaretskii			eliz@gnu.org
 			Release Manager
 			---------------
 
-The current release manager is: Joel Brobecker  <brobecker@adacore.com>
+The current release managers are:
 
-His responsibilities are:
+Andrew Burgess                  aburgess@redhat.com
+Simon Marchi                    simon.marchi@polymtl.ca
+
+Their responsibilities are:
 
     * organizing, scheduling, and managing releases of GDB.
 
