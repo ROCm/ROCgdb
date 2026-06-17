@@ -176,6 +176,81 @@ gdb_caching_proc allow_rocm_core_tests {} {
     return 1
 }
 
+# Check whether any of the given flag patterns appear in
+# GDB_TESTCASE_OPTIONS, CFLAGS_FOR_TARGET or CXXFLAGS_FOR_TARGET.
+# Each pattern is matched as a regular expression anchored against a
+# whole whitespace-separated token, so a single pattern can match a
+# family of flags: e.g. "-flto(=.*)?" matches both "-flto" and
+# "-flto=thin", while "-O2" still matches only "-O2" (not "-O20").
+# Usage example: check_for_any_flags {-flto(=.*)? -O[1-9]}
+
+proc check_for_any_flags {flags} {
+    global GDB_TESTCASE_OPTIONS CFLAGS_FOR_TARGET CXXFLAGS_FOR_TARGET
+
+    if {[llength $flags] == 0} {
+	return 0
+    }
+
+    # Sources of compile flags to check, in order:
+    #   - GDB_TESTCASE_OPTIONS (the standard testsuite override).
+    #   - CFLAGS_FOR_TARGET / CXXFLAGS_FOR_TARGET, in case the
+    #     caller injects optimization flags that way instead.
+    # These arrive as Tcl globals when set on the runtest command
+    # line; each is read only when present (see "info exists" below).
+    set sources [list]
+    foreach var {GDB_TESTCASE_OPTIONS CFLAGS_FOR_TARGET CXXFLAGS_FOR_TARGET} {
+	if {[info exists $var]} {
+	    set val [set $var]
+	    if {$val ne ""} {
+		lappend sources $val
+	    }
+	}
+    }
+
+    foreach src $sources {
+	# Split on whitespace so each flag is matched on its own; the
+	# anchored regexp below then keeps matching to a whole token
+	# (e.g. "-O2" does not match inside "-O20").
+	foreach tok [split $src] {
+	    foreach pat $flags {
+		if {[regexp -- "^(?:$pat)\$" $tok]} {
+		    return 1
+		}
+	    }
+	}
+    }
+
+    return 0
+}
+
+# Predicate that succeeds (returns 1) when no optimization flag is in
+# effect, and fails (returns 0) when one is present.  Any -O level
+# other than -O0 enables optimization (a bare -O means -O1).  Use with
+# "require no_optimized_code" to gate tests that are not meaningful
+# under optimization.
+
+gdb_caching_proc no_optimized_code {} {
+    if {[check_for_any_flags {-O([1-9][0-9]*|fast|s|z|g)?}]} {
+	verbose -log "Optimization flags are present."
+	return 0
+    }
+    return 1
+}
+
+# Predicate that succeeds (returns 1) when -flto is not in effect,
+# and fails (returns 0) when it is.  Matches -flto as well as its
+# moded forms (e.g. -flto=thin, -flto=full).  Use with "require
+# no_lto" to gate tests that are not meaningful under link-time
+# optimization.
+
+gdb_caching_proc no_lto {} {
+    if {[check_for_any_flags {-flto(=.*)?}]} {
+	verbose -log "Link-time optimization flags are present."
+	return 0
+    }
+    return 1
+}
+
 # The empty host object put in bundles when compiling assembly files.
 # As a speed optimization, avoid recompiling it over and over for each
 # testcase program.
