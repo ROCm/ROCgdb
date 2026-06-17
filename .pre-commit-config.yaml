@@ -77,7 +77,6 @@ repos:
       name: codespell-log
       entry: gdb/contrib/codespell-log.sh
       args: [--toml, gdb/pyproject.toml]
-      always_run: true
       verbose: true
       stages: [commit-msg]
   - repo: local
