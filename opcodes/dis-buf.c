@@ -32,18 +32,19 @@ buffer_read_memory (bfd_vma memaddr,
 		    struct disassemble_info *info)
 {
   unsigned int opb = info->octets_per_byte;
-  size_t end_addr_offset = length / opb;
-  size_t max_addr_offset = info->buffer_length / opb;
-  size_t octets = (memaddr - info->buffer_vma) * opb;
+  size_t addr_off, to_stop;
 
   if (memaddr < info->buffer_vma
-      || memaddr - info->buffer_vma > max_addr_offset
-      || memaddr - info->buffer_vma + end_addr_offset > max_addr_offset
-      || (info->stop_vma && (memaddr >= info->stop_vma
-			     || memaddr + end_addr_offset > info->stop_vma)))
+      || _bfd_mul_overflow (memaddr - info->buffer_vma, opb, &addr_off)
+      || addr_off > info->buffer_length
+      || length > info->buffer_length - addr_off
+      || (info->stop_vma
+	  && (memaddr >= info->stop_vma
+	      || _bfd_mul_overflow (info->stop_vma - memaddr, opb, &to_stop)
+	      || length > to_stop)))
     /* Out of bounds.  Use EIO because GDB uses it.  */
     return EIO;
-  memcpy (myaddr, info->buffer + octets, length);
+  memcpy (myaddr, info->buffer + addr_off, length);
 
   return 0;
 }
