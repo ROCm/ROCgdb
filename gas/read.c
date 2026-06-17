@@ -3222,7 +3222,7 @@ do_repeat (size_t count, const char *start, const char *end,
   sb_terminate (&one);
 
   limit = (size_t) LONG_MAX < 0xffffffff ? (size_t) LONG_MAX : 0xffffffff;
-  if (gas_mul_overflow (count, one.len, &total) || total > limit)
+  if (_bfd_mul_overflow (count, one.len, &total) || total > limit)
     {
       as_bad_where (file, line,
 		    _("excessive count %zu for %s - ignored"), count, start);
@@ -3580,7 +3580,7 @@ s_space (int mult)
 	    }
 	  if ((unsigned int) mult <= 1)
 	    total = repeat;
-	  else if (gas_mul_overflow (repeat, mult, &total)
+	  else if (_bfd_mul_overflow (repeat, mult, &total)
 		   || (offsetT) total < 0)
 	    {
 	      as_warn (_(".space repeat count overflow, ignored"));

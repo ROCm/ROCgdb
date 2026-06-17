@@ -41,6 +41,7 @@ extern "C" {
 #include <stdarg.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <inttypes.h>
 
 #if defined (__STDC__) || defined (ALMOST_STDC) || defined (HAVE_STRINGIZE)
 #ifndef SABER
@@ -70,10 +71,22 @@ extern "C" {
 /* The word size of the default bfd target.  */
 #define BFD_DEFAULT_TARGET_SIZE @bfd_default_target_size@
 
-#include <inttypes.h>
-
 #if BFD_ARCH_SIZE >= 64
 #define BFD64
+#endif
+
+#if GCC_VERSION >= 7000
+#define _bfd_mul_overflow(a, b, res) __builtin_mul_overflow (a, b, res)
+#else
+/* Assumes unsigned values.  Careful!  Args evaluated multiple times.  */
+#define _bfd_mul_overflow(a, b, res) \
+  ((*res) = (a), (*res) *= (b), (b) != 0 && (*res) / (b) != (a))
+#endif
+
+#ifdef __GNUC__
+#define _bfd_constant_p(v) __builtin_constant_p (v)
+#else
+#define _bfd_constant_p(v) 0
 #endif
 
 /* Silence "applying zero offset to null pointer" UBSAN warnings.  */

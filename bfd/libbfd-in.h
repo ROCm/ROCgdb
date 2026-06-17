@@ -840,20 +840,6 @@ extern uintptr_t _bfd_pagesize_m1 ATTRIBUTE_HIDDEN;
 extern uintptr_t _bfd_minimum_mmap_size ATTRIBUTE_HIDDEN;
 #endif
 
-#if GCC_VERSION >= 7000
-#define _bfd_mul_overflow(a, b, res) __builtin_mul_overflow (a, b, res)
-#else
-/* Assumes unsigned values.  Careful!  Args evaluated multiple times.  */
-#define _bfd_mul_overflow(a, b, res) \
-  ((*res) = (a), (*res) *= (b), (b) != 0 && (*res) / (b) != (a))
-#endif
-
-#ifdef __GNUC__
-#define _bfd_constant_p(v) __builtin_constant_p (v)
-#else
-#define _bfd_constant_p(v) 0
-#endif
-
 static inline void *
 _bfd_alloc_and_read (bfd *abfd, bfd_size_type asize, bfd_size_type rsize)
 {
