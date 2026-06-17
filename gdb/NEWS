@@ -149,6 +149,11 @@ disable skip
   These are new aliases for 'skip delete', 'skip enable', and 'skip
   disable' respectively.
 
+set print type address-space on|off
+show print type address-space
+  Turn on or off whether address-space information of types is
+  displayed when a type is printed.
+
 * MI changes
 
 ** The "-trace-save" command no longer supports the "-ctf" flag.

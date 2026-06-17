@@ -20413,6 +20413,23 @@ the @command{set print type hex} command.
 This command shows whether the sizes and offsets of struct members are
 printed in decimal or hexadecimal notation.
 
+@kindex set print type address-spaces
+@item set print type address-spaces
+@itemx set print type address-spaces on
+@itemx set print type address-spaces off
+
+A pointer or pointer-like type (e.g.@: reference or rvalue reference)
+may have address space information associated with it.  With this
+setting, you can control whether @value{GDBN} should display this
+information for a pointer or pointer-like type when the address-space
+information indicates that the type points to a non-default address
+space.
+
+@kindex show print type address-spaces
+@item show print type address-spaces
+This command shows whether address-space information of a type is
+displayed when the type is being printed.
+
 @kindex info address
 @cindex address of a symbol
 @item info address @var{symbol}

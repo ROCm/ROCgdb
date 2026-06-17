@@ -46,6 +46,9 @@ struct type_print_options
   /* True means to print offsets in hex, otherwise use decimal.  */
   unsigned int print_in_hex : 1;
 
+  /* True means to print address space information of types.  */
+  unsigned int print_address_spaces : 1;
+
   /* The number of nested type definitions to print.  -1 == all.  */
   int print_nested_type_limit;
 

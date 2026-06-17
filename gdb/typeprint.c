@@ -43,6 +43,7 @@ const struct type_print_options type_print_raw_options =
   1,				/* print_typedefs */
   0,				/* print_offsets */
   0,				/* print_in_hex */
+  0,				/* print_address_spaces */
   0,				/* print_nested_type_limit  */
   NULL,				/* local_typedefs */
   NULL,				/* global_table */
@@ -58,6 +59,7 @@ static struct type_print_options default_ptype_flags =
   1,				/* print_typedefs */
   0,				/* print_offsets */
   0,				/* print_in_hex */
+  0,				/* print_address_spaces */
   0,				/* print_nested_type_limit  */
   NULL,				/* local_typedefs */
   NULL,				/* global_table */
@@ -746,6 +748,32 @@ Display of struct members offsets and sizes in hexadecimal is %s\n"),
 	      value);
 }
 
+/* When printing pointer/ref/refvalue types, the address spaces
+   information (i.e. DW_AT_address_space) associated with the type can
+   be printed.  */
+
+static bool print_type_address_spaces = false;
+
+/* Set the flag that instructs if address space information is printed.  */
+
+static void
+set_print_type_address_spaces (const char *args,
+			       int from_tty, cmd_list_element *c)
+{
+  default_ptype_flags.print_address_spaces = print_type_address_spaces;
+}
+
+/* Display whether address space information of types is printed.  */
+
+static void
+show_print_type_address_spaces (ui_file *file, int from_tty,
+				cmd_list_element *c, const char *value)
+{
+  gdb_printf (file, _("\
+Display of address space information of types is %s.\n"),
+	      value);
+}
+
 INIT_GDB_FILE (typeprint)
 {
   struct cmd_list_element *c;
@@ -814,6 +842,15 @@ Set printing of struct members sizes and offsets using hex notation."), _("\
 Show whether sizes and offsets of struct members are printed using hex \
 notation."), nullptr, set_print_offsets_and_sizes_in_hex,
 			   show_print_offsets_and_sizes_in_hex,
+			   &setprinttypelist, &showprinttypelist);
+
+  add_setshow_boolean_cmd ("address-spaces", no_class,
+			   &print_type_address_spaces,
+			   _("\
+Set printing of address space information of types."), _("\
+Show whether address space information of types is printed."),
+			   nullptr, set_print_type_address_spaces,
+			   show_print_type_address_spaces,
 			   &setprinttypelist, &showprinttypelist);
 }
 

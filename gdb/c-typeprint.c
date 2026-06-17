@@ -31,6 +31,7 @@
 #include "typeprint.h"
 #include "cp-abi.h"
 #include "cp-support.h"
+#include "arch-utils.h"
 
 static void c_type_print_varspec_suffix (struct type *, struct ui_file *, int,
 					 int, int,
@@ -47,7 +48,8 @@ static void c_type_print_varspec_prefix (struct type *,
 /* Print "const", "volatile", or address space modifiers.  */
 static void c_type_print_modifier (struct type *,
 				   struct ui_file *,
-				   int, int, enum language);
+				   int, int, enum language,
+				   const struct type_print_options *);
 
 static void c_type_print_base_1 (struct type *type, struct ui_file *stream,
 				 int show, int level, enum language language,
@@ -108,7 +110,7 @@ c_print_type_1 (struct type *type,
   code = type->code ();
   if (local_name != NULL)
     {
-      c_type_print_modifier (type, stream, 0, 1, language);
+      c_type_print_modifier (type, stream, 0, 1, language, flags);
       gdb_puts (local_name, stream);
       if (varstring != NULL && *varstring != '\0')
 	gdb_puts (" ", stream);
@@ -365,7 +367,7 @@ c_type_print_varspec_prefix (struct type *type,
 				   stream, show, 1, 1, language, flags,
 				   podata);
       gdb_printf (stream, "*");
-      c_type_print_modifier (type, stream, 1, need_post_space, language);
+      c_type_print_modifier (type, stream, 1, need_post_space, language, flags);
       break;
 
     case TYPE_CODE_MEMBERPTR:
@@ -402,7 +404,8 @@ c_type_print_varspec_prefix (struct type *type,
 				   stream, show, 1, 0, language, flags,
 				   podata);
       gdb_printf (stream, type->code () == TYPE_CODE_REF ? "&" : "&&");
-      c_type_print_modifier (type, stream, 1, need_post_space, language);
+      c_type_print_modifier (type, stream, 1, need_post_space, language,
+			     flags);
       break;
 
     case TYPE_CODE_METHOD:
@@ -440,7 +443,8 @@ c_type_print_varspec_prefix (struct type *type,
 static void
 c_type_print_modifier (struct type *type, struct ui_file *stream,
 		       int need_pre_space, int need_post_space,
-		       enum language language)
+		       enum language language,
+		       const struct type_print_options *flags)
 {
   int did_print_modifier = 0;
   const char *address_space_id;
@@ -490,6 +494,19 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
       if (did_print_modifier || need_pre_space)
 	gdb_printf (stream, " ");
       gdb_printf (stream, "@%s", address_space_id);
+      did_print_modifier = 1;
+    }
+
+  if (flags->print_address_spaces
+      && type->address_space () != DW_ASPACE_default)
+    {
+      if (did_print_modifier || need_pre_space)
+	gdb_printf (stream, " ");
+      const char *name
+	= gdbarch_address_space_id_to_name (type->arch (),
+					    type->address_space ());
+      fprintf_styled (stream, metadata_style.style (),
+		      "%s#", name);
       did_print_modifier = 1;
     }
 
@@ -917,7 +934,7 @@ c_type_print_base_struct_union (struct type *type, struct ui_file *stream,
       hash_holder.reset (local_flags.local_typedefs);
     }
 
-  c_type_print_modifier (type, stream, 0, 1, language);
+  c_type_print_modifier (type, stream, 0, 1, language, flags);
   if (type->code () == TYPE_CODE_UNION)
     gdb_printf (stream, "union ");
   else if (type->is_declared_class ())
@@ -1272,7 +1289,7 @@ c_type_print_base_enum (struct type *type, struct ui_file *stream,
 			const struct type_print_options *flags,
 			struct print_offset_data *podata)
 {
-  c_type_print_modifier (type, stream, 0, 1, language);
+  c_type_print_modifier (type, stream, 0, 1, language, flags);
   gdb_printf (stream, "enum ");
   if (type->is_declared_class ())
     gdb_printf (stream, "class ");
@@ -1378,7 +1395,7 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
   if (show <= 0
       && type->name () != NULL)
     {
-      c_type_print_modifier (type, stream, 0, 1, language);
+      c_type_print_modifier (type, stream, 0, 1, language, flags);
 
       /* If we have "typedef struct foo {. . .} bar;" do we want to
 	 print it as "struct foo" or as "bar"?  Pick the latter for
@@ -1453,7 +1470,7 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
 
 	local_flags.local_typedefs = NULL;
 
-	c_type_print_modifier (type, stream, 0, 1, language);
+	c_type_print_modifier (type, stream, 0, 1, language, flags);
 	gdb_printf (stream, "flag ");
 	print_name_maybe_canonical (type->name (), flags, stream);
 	if (show > 0)
@@ -1533,7 +1550,7 @@ c_type_print_base_1 (struct type *type, struct ui_file *stream,
 	 type name, then complain.  */
       if (type->name () != NULL)
 	{
-	  c_type_print_modifier (type, stream, 0, 1, language);
+	  c_type_print_modifier (type, stream, 0, 1, language, flags);
 	  print_name_maybe_canonical (type->name (), flags, stream);
 	}
       else
