@@ -132,7 +132,6 @@ mep_print_vliw_insns (CGEN_CPU_DESC cd, bfd_vma pc, disassemble_info *info,
 {
   int i;
   int status = 0;
-  /* char insnbuf[CGEN_MAX_INSN_SIZE]; */
   bfd_byte insnbuf[64];
 
   /* If corelength > 0 then there is a core insn present. It
@@ -295,7 +294,7 @@ mep_examine_vliw32_insns (CGEN_CPU_DESC cd, bfd_vma pc, disassemble_info *info)
   int corebuflength;
   int cop1buflength;
   int cop2buflength;
-  bfd_byte buf[CGEN_MAX_INSN_SIZE];
+  bfd_byte buf[4];
   char indicator16[1];
   char indicatorcop32[2];
 
@@ -304,7 +303,7 @@ mep_examine_vliw32_insns (CGEN_CPU_DESC cd, bfd_vma pc, disassemble_info *info)
   cop2buflength = 0;
 
   /* Read in 32 bits.  */
-  buflength = 4; /* VLIW insn spans 4 bytes.  */
+  buflength = sizeof (buf);
   status = (*info->read_memory_func) (pc, buf, buflength, info);
 
   if (status != 0)
@@ -370,7 +369,7 @@ mep_examine_vliw64_insns (CGEN_CPU_DESC cd, bfd_vma pc, disassemble_info *info)
   int corebuflength;
   int cop1buflength;
   int cop2buflength;
-  bfd_byte buf[CGEN_MAX_INSN_SIZE];
+  bfd_byte buf[8];
   char indicator16[1];
   char indicator64[4];
 
@@ -379,7 +378,7 @@ mep_examine_vliw64_insns (CGEN_CPU_DESC cd, bfd_vma pc, disassemble_info *info)
   cop2buflength = 0;
 
   /* Read in 64 bits.  */
-  buflength = 8; /* VLIW insn spans 8 bytes.  */
+  buflength = sizeof (buf);
   status = (*info->read_memory_func) (pc, buf, buflength, info);
 
   if (status != 0)
@@ -536,7 +535,7 @@ mep_examine_ivc2_insns (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED, bfd_vma pc ATTRIBUTE_
   int e;
 
   /* Read in 64 bits.  */
-  buflength = 8; /* VLIW insn spans 8 bytes.  */
+  buflength = sizeof (buf);
   status = (*info->read_memory_func) (pc, buf, buflength, info);
 
   if (status != 0)
