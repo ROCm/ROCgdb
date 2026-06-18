@@ -27,7 +27,6 @@ todo_list = [
     "gdb/gdb-gdb.gdb.in",
     "gdb/configure.tgt",
     "gdb/doc/annotate.texinfo",
-    "gdb/exc_request.defs",
     "gdb/doc/refcard.tex",
     "gdb/doc/stack_frame.txt",
 ]
