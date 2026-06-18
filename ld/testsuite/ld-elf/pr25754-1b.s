@@ -1,3 +1,3 @@
 	.data
 	.global bar
-	bar = 42
+	bar = 0x10000
