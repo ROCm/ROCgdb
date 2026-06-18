@@ -105,8 +105,8 @@ proc test_one_memory {insn mem value {dynamic false} {prefix ""}} {
 proc record_full_function {function} {
     set end [gdb_get_line_number "end ${function}_test "]
     set start [gdb_get_line_number "start ${function}_test"]
-    gdb_breakpoint $start temporary
-    gdb_breakpoint $end temporary
+    gdb_breakpoint $start -temporary
+    gdb_breakpoint $end -temporary
     gdb_continue_to_breakpoint "start ${function}_test"
 
     if {[supports_process_record]} {

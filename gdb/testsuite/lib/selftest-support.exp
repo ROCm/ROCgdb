@@ -142,7 +142,7 @@ proc _selftest_setup { } {
 
     # Set a breakpoint at main
     set function main
-    if { [gdb_breakpoint $function "no-message"] != 1 } {
+    if { [gdb_breakpoint $function -no-message] != 1 } {
 	untested "Cannot set breakpoint at $function, skipping testcase."
 	return -2
     }

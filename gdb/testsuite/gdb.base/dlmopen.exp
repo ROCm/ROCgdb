@@ -194,7 +194,7 @@ proc test_dlmopen_no_attach {} {
 
     # Break in the to-be-loaded library and at the end of main.
     delete_breakpoints
-    gdb_breakpoint $::srcfile_lib:$::bp_inc allow-pending
+    gdb_breakpoint $::srcfile_lib:$::bp_inc -allow-pending
     gdb_breakpoint $::srcfile:$::bp_main
 
     test_dlmopen

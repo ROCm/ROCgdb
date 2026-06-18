@@ -233,7 +233,7 @@ proc_with_prefix local_url { } {
     gdb_breakpoint $lineno
 
     # Run to main, but don't delete all breakpoints.
-    if {![runto_main no-delete-breakpoints]} {
+    if {![runto_main -no-delete-breakpoints]} {
 	return
     }
 

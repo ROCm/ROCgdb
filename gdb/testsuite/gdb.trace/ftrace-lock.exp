@@ -68,8 +68,8 @@ if { [gdb_test "info sharedlibrary" ".*${remote_libipa}.*" "IPA loaded"] != 0 } 
     return 1
 }
 
-gdb_breakpoint "end" qualified
-gdb_breakpoint "fail" qualified
+gdb_breakpoint "end" -qualified
+gdb_breakpoint "fail" -qualified
 
 gdb_test "ftrace set_point" "Fast tracepoint .*" \
     "fast tracepoint at a long insn"

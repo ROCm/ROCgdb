@@ -69,4 +69,4 @@ if {[prepare_for_testing "failed to prepare" ${testfile} \
     return
 }
 
-gdb_breakpoint "the_type::method" message
+gdb_breakpoint "the_type::method" -message

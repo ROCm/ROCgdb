@@ -28,7 +28,7 @@ if { [prepare_for_testing "prepare" $testfile $srcfile] != 0 } {
     return
 }
 
-if {![runto abort {allow-pending}]} {
+if {![runto abort -allow-pending]} {
     return
 }
 

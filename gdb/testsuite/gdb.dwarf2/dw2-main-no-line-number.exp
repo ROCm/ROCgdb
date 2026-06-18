@@ -53,5 +53,5 @@ if {![runto_main]} {
     return
 }
 
-set breakpoint_at_missing_lineno_set [gdb_breakpoint "1" no-message]
+set breakpoint_at_missing_lineno_set [gdb_breakpoint "1" -no-message]
 gdb_assert { !$breakpoint_at_missing_lineno_set  }

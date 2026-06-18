@@ -54,7 +54,7 @@ gdb_test "print pkg.imported_var_ada" " = 42"
 gdb_test "print pkg.exported_var_ada" " = 99"
 gdb_test "print exported_var_ada" " = 99"
 
-gdb_breakpoint "local_imported_func" message
+gdb_breakpoint "local_imported_func" -message
 gdb_test "print copy" " = 42"
 
 # This passes with gcc 10 but fails with gcc 9.  With gcc 9, we have:
@@ -84,11 +84,11 @@ foreach func {"pkg.imported_func_ada" "imported_func"} {
     if { [gnat_version_compare < 10] } {
 	setup_xfail *-*-*
     }
-    gdb_breakpoint $func message
+    gdb_breakpoint $func -message
 }
 
 foreach func {"imported_func_ada" "pkg.exported_func_ada" \
 		  "exported_func_ada" "exported_func"} {
     clean_restart $testfile
-    gdb_breakpoint $func message
+    gdb_breakpoint $func -message
 }

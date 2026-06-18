@@ -87,7 +87,7 @@ with_test_prefix "check htm support" {
 
     # Displaced-stepping a tbegin. causes problems,
     # so we make the breakpoint temporary.
-    gdb_breakpoint [gdb_get_line_number "marker" "$gen_src"] temporary
+    gdb_breakpoint [gdb_get_line_number "marker" "$gen_src"] -temporary
 
     gdb_run_cmd
 
@@ -134,7 +134,7 @@ if {[build_executable "compile" $binfile $srcfile {debug}] == -1} {
 
 clean_restart $testfile
 
-gdb_breakpoint [gdb_get_line_number "first marker"] temporary
+gdb_breakpoint [gdb_get_line_number "first marker"] -temporary
 
 gdb_run_cmd
 

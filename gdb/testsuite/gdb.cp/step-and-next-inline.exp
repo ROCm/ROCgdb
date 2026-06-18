@@ -74,7 +74,7 @@ proc do_test { use_header } {
 
     clean_restart $executable
 
-    if {![runto $main_location qualified]} {
+    if {![runto $main_location -qualified]} {
 	return
     }
 

@@ -76,7 +76,7 @@ proc do_test { method startup_with_shell inferior_args expected_results \
 	gdb_test "" "" "stop at first instruction"
 
 	# Put a breakpoint and continue until main.
-	if { ![gdb_breakpoint "main" message] } {
+	if { ![gdb_breakpoint "main" -message] } {
 	    fail "could not set breakpoint on main"
 	    return -1
 	}
@@ -87,7 +87,7 @@ proc do_test { method startup_with_shell inferior_args expected_results \
 	}
 
     } elseif { $method == "run" } {
-	if { ![gdb_breakpoint "main" message] } {
+	if { ![gdb_breakpoint "main" -message] } {
 	    fail "could not set breakpoint on main"
 	    return -1
 	}
@@ -253,7 +253,7 @@ proc run_all_tests {} {
 	    }
 
 	    # Now place a breakpoint on main.
-	    if { ![gdb_breakpoint "main" message] } {
+	    if { ![gdb_breakpoint "main" -message] } {
 		fail "could not set breakpoint on main"
 		continue
 	    }

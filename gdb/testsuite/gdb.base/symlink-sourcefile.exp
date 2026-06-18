@@ -40,5 +40,5 @@ if {![runto_main]} {
 }
 
 # Using a line number ensures that the default symtab is used.
-gdb_breakpoint [gdb_get_line_number "break here" $srcfile] message
+gdb_breakpoint [gdb_get_line_number "break here" $srcfile] -message
 gdb_continue_to_breakpoint "run to breakpoint marker"

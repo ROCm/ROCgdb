@@ -192,7 +192,7 @@ proc_with_prefix test_conv_vars {} {
     gdb_test "print \$_linker_namespace" ".* = 0" \
 	"Still in the default namespace"
 
-    gdb_breakpoint "inc" allow-pending
+    gdb_breakpoint "inc" -allow-pending
     gdb_breakpoint [gdb_get_line_number "TAG: first dlclose"]
 
     foreach_with_prefix dl {3 2 1} {

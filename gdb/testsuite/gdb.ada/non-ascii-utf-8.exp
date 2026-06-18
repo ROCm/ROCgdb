@@ -49,10 +49,10 @@ gdb_test "print var_𐐩" " = 25"
 gdb_test "print VAR_Ż" " = 26"
 gdb_test "print var_ż" " = 26"
 
-gdb_breakpoint "FUNC_Ü" message
-gdb_breakpoint "func_ü" message
-gdb_breakpoint "FUNC_Ƹ" message
-gdb_breakpoint "func_ƹ" message
-gdb_breakpoint "FUNC_Ż" message
-gdb_breakpoint "func_ż" message
-gdb_breakpoint "FUNC_𐐁" message
+gdb_breakpoint "FUNC_Ü" -message
+gdb_breakpoint "func_ü" -message
+gdb_breakpoint "FUNC_Ƹ" -message
+gdb_breakpoint "func_ƹ" -message
+gdb_breakpoint "FUNC_Ż" -message
+gdb_breakpoint "func_ż" -message
+gdb_breakpoint "FUNC_𐐁" -message

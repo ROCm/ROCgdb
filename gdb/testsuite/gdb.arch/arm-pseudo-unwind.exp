@@ -35,7 +35,7 @@ if {![runto_main]} {
     return
 }
 
-gdb_breakpoint break_here_asm temporary
+gdb_breakpoint break_here_asm -temporary
 gdb_continue_to_breakpoint "continue to callee"
 
 # Verify the value of d8/s16 in the inner frame (callee).
@@ -83,6 +83,6 @@ with_test_prefix "callee, after change in caller" {
 
 # Verify that the value of the saved d8 we changed is correctly seen by the
 # inferior.
-gdb_breakpoint break_here_c temporary
+gdb_breakpoint break_here_c -temporary
 gdb_continue_to_breakpoint "continue to break_here_c"
 gdb_test "p/x value" " = 0x1011121340000000"

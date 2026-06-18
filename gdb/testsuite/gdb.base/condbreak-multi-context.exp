@@ -133,7 +133,7 @@ proc_with_prefix scenario_1 { start_before } {
     clean_restart $::testfile
 
     if { $start_before } {
-	if {![runto_main temporary]} {
+	if {![runto_main -temporary]} {
 	    return
 	}
     }
@@ -168,7 +168,7 @@ proc_with_prefix scenario_1 { start_before } {
     }
 
     if { !$start_before } {
-	if {![runto_main temporary no-delete-breakpoints]} {
+	if {![runto_main -temporary -no-delete-breakpoints]} {
 	    return
 	}
     }
@@ -245,7 +245,7 @@ proc_with_prefix scenario_2 { start_before } {
     clean_restart $::testfile
 
     if { $start_before } {
-	if {![runto_main temporary]} {
+	if {![runto_main -temporary]} {
 	    return
 	}
     }
@@ -258,7 +258,7 @@ proc_with_prefix scenario_2 { start_before } {
     }
 
     if { !$start_before } {
-	if {![runto_main temporary no-delete-breakpoints]} {
+	if {![runto_main -temporary -no-delete-breakpoints]} {
 	    return
 	}
     }
@@ -293,7 +293,7 @@ proc_with_prefix scenario_3 { start_before } {
     clean_restart $::testfile
 
     if { $start_before } {
-	if {![runto_main temporary]} {
+	if {![runto_main -temporary]} {
 	    return
 	}
     }
@@ -348,7 +348,7 @@ proc_with_prefix scenario_3 { start_before } {
 
     # Do not use runto_main, it deletes all breakpoints.
     if { !$start_before } {
-	if {![runto_main temporary no-delete-breakpoints]} {
+	if {![runto_main -temporary -no-delete-breakpoints]} {
 	    return
 	}
     }
@@ -370,7 +370,7 @@ proc_with_prefix scenario_4 { start_before } {
     clean_restart $::testfile
 
     if { $start_before } {
-	if {![runto_main temporary]} {
+	if {![runto_main -temporary]} {
 	    return
 	}
     }

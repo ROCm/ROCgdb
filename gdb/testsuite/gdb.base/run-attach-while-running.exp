@@ -68,7 +68,7 @@ proc_with_prefix test { non-stop threaded run-or-attach } {
 	return
     }
 
-    gdb_breakpoint "all_started" "temporary"
+    gdb_breakpoint "all_started" -temporary
     gdb_continue_to_breakpoint "continue to all_started"
 
     # If all-stop, everything stopped when we hit the all_started

@@ -46,7 +46,7 @@ proc run_tests {} {
 	# Set breakpoint at the line after the function calls.
 	set bp_start_reverse_test [gdb_get_line_number "START REVERSE TEST"]
 
-	gdb_breakpoint $bp_start_reverse_test temporary
+	gdb_breakpoint $bp_start_reverse_test -temporary
 
 	# Continue to break point for reverse-next test.
 	# Command definition:  reverse-next [count]
@@ -87,7 +87,7 @@ proc run_tests {} {
 
 	# Test 2, reverse-step command
 	# Set breakpoint at the line after the function calls.
-	gdb_breakpoint $bp_start_reverse_test temporary
+	gdb_breakpoint $bp_start_reverse_test -temporary
 
 	# Continue to the start of the reverse-step test.
 	# Command definition:  reverse-step [count]

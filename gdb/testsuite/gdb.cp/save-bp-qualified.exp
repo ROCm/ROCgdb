@@ -41,7 +41,7 @@ with_test_prefix "save" {
 	return
     }
 
-    gdb_breakpoint "function" qualified
+    gdb_breakpoint "function" -qualified
     gdb_breakpoint "function"
 
     # Save the breakpoints into a file.

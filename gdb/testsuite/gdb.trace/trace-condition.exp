@@ -73,9 +73,9 @@ proc test_tracepoints { trace_command condition num_frames { kfail_proc 0 } } {
 	return 0
     }
 
-    gdb_breakpoint "begin" qualified
+    gdb_breakpoint "begin" -qualified
 
-    gdb_breakpoint "end" qualified
+    gdb_breakpoint "end" -qualified
 
     with_test_prefix "${trace_command}: ${condition}" {
 

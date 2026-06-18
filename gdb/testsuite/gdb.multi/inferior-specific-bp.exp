@@ -187,7 +187,7 @@ check_info_breakpoints "first check for inferior specific breakpoint" \
     $bp_number 2
 
 # Create a multi-inferior breakpoint to stop at.
-gdb_breakpoint "stop_breakpt" message
+gdb_breakpoint "stop_breakpt" -message
 set stop_bp_num [get_integer_valueof "\$bpnum" "INVALID" \
 		    "get b/p number for stop_breakpt"]
 

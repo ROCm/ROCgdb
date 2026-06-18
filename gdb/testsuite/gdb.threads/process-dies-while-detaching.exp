@@ -127,7 +127,7 @@ proc detach_and_expect_exit {inf_output_re test} {
 # Run to _exit in the child.
 
 proc continue_to_exit_bp {} {
-    gdb_breakpoint "_exit" temporary
+    gdb_breakpoint "_exit" -temporary
     return [gdb_continue_to_breakpoint "_exit" ".*_exit.*"]
 }
 
@@ -254,7 +254,7 @@ proc test_detach_watch {wp multi_process cmd} {
 	    gdb_test_no_output "set detach-on-fork off"
 	    gdb_test_no_output "set follow-fork-mode child"
 
-	    gdb_breakpoint "child_function" temporary
+	    gdb_breakpoint "child_function" -temporary
 	    gdb_continue_to_breakpoint "child_function" ".*"
 	}
 

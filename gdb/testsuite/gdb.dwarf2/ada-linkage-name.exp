@@ -68,8 +68,8 @@ if { [prepare_for_testing "failed to prepare" ${testfile} \
 
 with_test_prefix "first first" {
     gdb_test_no_output "set language ada"
-    gdb_breakpoint "<__gnat_namefirst>" message
-    gdb_breakpoint "<__gnat_namesecond>" message
+    gdb_breakpoint "<__gnat_namefirst>" -message
+    gdb_breakpoint "<__gnat_namesecond>" -message
 }
 
 # Run the test again, but this time check the symbols in the other
@@ -80,6 +80,6 @@ clean_restart ${testfile}
 
 with_test_prefix "second first" {
     gdb_test_no_output "set language ada"
-    gdb_breakpoint "<__gnat_namesecond>" message
-    gdb_breakpoint "<__gnat_namefirst>" message
+    gdb_breakpoint "<__gnat_namesecond>" -message
+    gdb_breakpoint "<__gnat_namefirst>" -message
 }

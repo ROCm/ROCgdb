@@ -63,8 +63,8 @@ if { [prepare_for_testing "failed to prepare" ${testfile} \
 }
 
 gdb_test_no_output "set language ada"
-gdb_breakpoint "pck.xtra.function" message
-gdb_breakpoint "pck.xtra.function\[cold\]" message
+gdb_breakpoint "pck.xtra.function" -message
+gdb_breakpoint "pck.xtra.function\[cold\]" -message
 gdb_test "complete break pck.xtra.function\[co" \
     "break pck.xtra.function\\\[cold\\\]" \
     "test completion of cold function"

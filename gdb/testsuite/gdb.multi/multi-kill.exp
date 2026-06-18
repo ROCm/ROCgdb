@@ -60,7 +60,7 @@ proc start_inferior {num} {
 
 	gdb_load $binfile
 
-	gdb_breakpoint "initialized" {temporary}
+	gdb_breakpoint "initialized" -temporary
 	gdb_run_cmd
 	gdb_test "" ".*reakpoint .*, initialized .*${srcfile}.*" "run"
 

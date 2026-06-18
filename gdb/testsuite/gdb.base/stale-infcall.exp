@@ -23,7 +23,7 @@ if {![runto_main]} {
     return
 }
 
-gdb_breakpoint [gdb_get_line_number "test-next"] temporary
+gdb_breakpoint [gdb_get_line_number "test-next"] -temporary
 gdb_continue_to_breakpoint "test-next" ".* test-next .*"
 gdb_breakpoint [gdb_get_line_number "test-fail"]
 gdb_test_no_output {set $test_fail_bpnum=$bpnum}

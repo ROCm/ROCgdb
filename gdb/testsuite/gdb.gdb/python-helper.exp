@@ -66,8 +66,8 @@ proc test_python_helper {} {
     # (a) is easy to reach by issuing a simple gdb command, and
     # (b) is unlikely to be modified very often within gdb, and
     # (c) has a parameter that is either a 'struct type *' or a 'struct value *'.
-    gdb_breakpoint value_print qualified
-    gdb_breakpoint c_print_type qualified
+    gdb_breakpoint value_print -qualified
+    gdb_breakpoint c_print_type -qualified
 
     # With gdb build with -O2 -flto=auto and gcc 7.5.0, we can get the mangled
     # names due to a problem in the debug info, so we work around this by less

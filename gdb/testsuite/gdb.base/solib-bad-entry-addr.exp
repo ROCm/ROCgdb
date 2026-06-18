@@ -94,6 +94,6 @@ if { $load_segment_count <= 2 } {
 # then we will see an internal error once the inferior starts running.
 clean_restart $testfile
 
-if {![runto_main message]} {
-    return
+if {![runto_main -message]} {
+  return
 }

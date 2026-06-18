@@ -48,7 +48,7 @@ gdb_test "break foo" "Breakpoint $decimal at $hex"
 gdb_test "info breakpoints" "<foo\\(\\)@plt>"
 
 # Runto main, but don't delete all the breakpoints.
-if {![runto_main no-delete-breakpoints]} {
+if {![runto_main -no-delete-breakpoints]} {
     return
 }
 

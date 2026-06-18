@@ -102,7 +102,7 @@ with_test_prefix "first session" {
     gdb_load_shlib ${lib_so}
 
     # Run to foo to make sure foo refers to the function, and not foo@PLT.
-    if {![runto foo qualified]} {
+    if {![runto foo -qualified]} {
 	return
     }
 
@@ -370,5 +370,5 @@ with_test_prefix "third session" {
     # the same thing.  It's at this step that an internal error would
     # occur for PR28030.  The "message" argument tells runto to turn on
     # the printing of PASSes while runto is doing its job.
-    runto "bar" message
+    runto "bar" -message
 }

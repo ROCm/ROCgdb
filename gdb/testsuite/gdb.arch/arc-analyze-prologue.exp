@@ -72,7 +72,7 @@ proc saved_regs_to_str { savedregs funcname } {
 
 proc prologue_test {funcname {savedregs ""} {fp_offset ""} } {
     global hex
-    gdb_breakpoint $funcname temporary
+    gdb_breakpoint $funcname -temporary
     gdb_continue_to_breakpoint $funcname
     gdb_test "backtrace 10" \
 	"#0\[ \t\]*$hex in $funcname .*\r\n#1\[ \t\]*$hex in main.*" \
@@ -130,7 +130,7 @@ prologue_test "enter_s_all" { {r13 4} {r14 8} {r15 12} {r16 16} {r17 20} \
     {gp 56} {fp 60} {blink 0} } 0
 
 # Test more levels of backtrace.
-gdb_breakpoint nested_prologue_inner temporary
+gdb_breakpoint nested_prologue_inner -temporary
 gdb_continue_to_breakpoint nested_prologue_inner
 gdb_test "backtrace 10" \
     "#0\[ \t\]*$hex in nested_prologue_inner .*\r\n#1\[ \t\]*$hex in nested_prologue_outer .*\r\n#2\[ \t\]*$hex in main.*" \
@@ -189,7 +189,7 @@ prologue_test "unstored_reg" { {r13 0} {r14 4} }
 prologue_test "double_store" { {r14 0} }
 
 # alloca() tests
-gdb_breakpoint alloca_inner temporary
+gdb_breakpoint alloca_inner -temporary
 gdb_continue_to_breakpoint alloca_inner
 gdb_test "backtrace 3" \
     "#0\[ \t\]*$hex in alloca_inner .*\r\n#1\[ \t\]*$hex in alloca_outer .*\r\n#2\[ \t\]*$hex in main.*" \

@@ -55,9 +55,9 @@ foreach test $methods {
 
     gdb_test "list $test" $result
     gdb_test "list '$test'" $result
-    gdb_assert { [gdb_breakpoint $test no-message] } \
+    gdb_assert { [gdb_breakpoint $test -no-message] } \
 	"break $test, unquoted"
-    gdb_assert { [gdb_breakpoint '$test' no-message] } \
+    gdb_assert { [gdb_breakpoint '$test' -no-message] } \
 	"break $test, single-quoted"
 }
 

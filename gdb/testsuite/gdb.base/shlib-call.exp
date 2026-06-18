@@ -167,7 +167,7 @@ clean_restart $testfile
 
 # PR's 16495, 18213
 # test that we can re-set breakpoints in shared libraries
-gdb_breakpoint "shr1" "allow-pending"
+gdb_breakpoint "shr1" -allow-pending
 
 set test "run to bp in shared library"
 gdb_run_cmd

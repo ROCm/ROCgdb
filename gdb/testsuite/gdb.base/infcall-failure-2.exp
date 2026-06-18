@@ -23,7 +23,7 @@ if { ![runto_main] } {
     return
 }
 
-if { ![gdb_breakpoint "*0x1" message] } {
+if { ![gdb_breakpoint "*0x1" -message] } {
     return
 }
 

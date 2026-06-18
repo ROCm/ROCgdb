@@ -29,7 +29,7 @@ if {[gdb_compile_ada "${srcfile}" "${binfile}" executable debug] != "" } {
 clean_restart ${testfile}
 
 set bp_location [gdb_get_line_number "BREAKPOINT" ${testdir}/length_cond.adb]
-gdb_breakpoint length_cond.adb:$bp_location message
+gdb_breakpoint length_cond.adb:$bp_location -message
 
 # Resolving the conditional expression would cause a crash, so it's
 # enough to just set the conditions.

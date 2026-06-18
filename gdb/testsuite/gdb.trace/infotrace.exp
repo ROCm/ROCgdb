@@ -107,7 +107,7 @@ if {![gdb_target_supports_trace]} {
     return 1
 }
 
-gdb_breakpoint "end" qualified
+gdb_breakpoint "end" -qualified
 gdb_test_no_output "tstart"
 gdb_test "continue" "Continuing\\.\[ \r\n\]+Breakpoint.*" \
     "continue to end"

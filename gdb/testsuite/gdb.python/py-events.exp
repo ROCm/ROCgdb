@@ -41,7 +41,7 @@ gdb_test_no_output "source ${pyfile}" "load python file"
 
 gdb_test "test-objfile-events" "Object file events registered."
 
-gdb_breakpoint "main" {temporary}
+gdb_breakpoint "main" -temporary
 
 gdb_test "run" ".*event type: new_objfile.*new objfile name.*" "new objfile notification"
 

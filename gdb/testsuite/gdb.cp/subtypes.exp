@@ -70,14 +70,14 @@ foreach t { int char } {
     }
 }
 
-gdb_breakpoint "Outer::Inner::doit" message
+gdb_breakpoint "Outer::Inner::doit" -message
 
 foreach s { Foo Bar Baz } {
-    gdb_breakpoint "main::${s}::doit" message
+    gdb_breakpoint "main::${s}::doit" -message
 }
 
 foreach t { int char } {
     foreach s { Foo Bar Baz } {
-	gdb_breakpoint "foobar<$t>(int)::${s}::doit" message
+	gdb_breakpoint "foobar<$t>(int)::${s}::doit" -message
     }
 }

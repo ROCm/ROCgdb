@@ -128,7 +128,7 @@ with_test_prefix "no debug symbol" {
     }
 
     gdb_test "print do_nothing" "no debug info.*" "ensure that shared lib has no debug info"
-    gdb_breakpoint "do_nothing" {temporary}
+    gdb_breakpoint "do_nothing" -temporary
     gdb_test "continue" "Temporary breakpoint .*in \\.?do_nothing.*" \
 	"continue to do_nothing"
 

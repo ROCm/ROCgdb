@@ -53,7 +53,7 @@ proc do_test_setup { inf_1_stop inf_2_stop } {
 	return false
     }
 
-    gdb_breakpoint [gdb_get_line_number ${inf_1_stop}] temporary
+    gdb_breakpoint [gdb_get_line_number ${inf_1_stop}] -temporary
     gdb_continue_to_breakpoint "move inferior 1 into position"
 
     gdb_test "add-inferior -exec ${::binfile}" \
@@ -64,7 +64,7 @@ proc do_test_setup { inf_1_stop inf_2_stop } {
 	return false
     }
 
-    gdb_breakpoint [gdb_get_line_number ${inf_2_stop}] temporary
+    gdb_breakpoint [gdb_get_line_number ${inf_2_stop}] -temporary
     gdb_continue_to_breakpoint "move inferior 2 into position"
 
     gdb_test_no_output "set breakpoint pending on"
@@ -125,7 +125,7 @@ proc_with_prefix test_no_inf_display {} {
     # there will be no locations and the breakpoint will be created
     # pending.  Pass the 'allow-pending' flag so the gdb_breakpoint
     # correctly expects the new breakpoint to be pending.
-    gdb_breakpoint "foo" allow-pending
+    gdb_breakpoint "foo" -allow-pending
     set bpnum [get_integer_valueof "\$bpnum" "*INVALID*" \
 		   "get foo breakpoint number"]
 
@@ -138,7 +138,7 @@ proc_with_prefix test_no_inf_display {} {
     # Now select inferior 1 and allow the inferior to run forward to the
     # point where a breakpoint location for foo will have been created.
     gdb_test "inferior 1" "Switching to inferior 1 .*"
-    gdb_breakpoint [gdb_get_line_number "Break after open"] temporary
+    gdb_breakpoint [gdb_get_line_number "Break after open"] -temporary
     gdb_continue_to_breakpoint \
 	"move inferior 1 until a location has been added"
 
@@ -151,7 +151,7 @@ proc_with_prefix test_no_inf_display {} {
     # Continue inferior 1 until the shared library has been unloaded.  The
     # breakpoint on 'foo' will return to the pending state.  We will need to
     # 'continue' twice as the first time will hit the 'foo' breakpoint.
-    gdb_breakpoint [gdb_get_line_number "Break after close"] temporary
+    gdb_breakpoint [gdb_get_line_number "Break after close"] -temporary
     gdb_continue_to_breakpoint "hit the breakpoint in foo"
     gdb_continue_to_breakpoint "after close library"
 
@@ -195,7 +195,7 @@ proc_with_prefix test_pending_toggle { } {
 	     "\\s+breakpoint already hit 1 time"] \
 	"check thread-specific breakpoint is no longer pending"
 
-    gdb_breakpoint [gdb_get_line_number "Break after close"] temporary
+    gdb_breakpoint [gdb_get_line_number "Break after close"] -temporary
     gdb_continue_to_breakpoint "close library"
     gdb_test "info breakpoints $bpnum" \
 	[multi_line \
@@ -264,7 +264,7 @@ proc_with_prefix py_test_toggle_thread {} {
 	     "\\s+breakpoint already hit 1 time"] \
 	"check thread-specific breakpoint has returned to pending"
 
-    gdb_breakpoint [gdb_get_line_number "Break after close"] temporary
+    gdb_breakpoint [gdb_get_line_number "Break after close"] -temporary
     gdb_continue_to_breakpoint "stop after close in inferior 2" \
 	".* Break after close\\. .*"
 
@@ -315,7 +315,7 @@ proc_with_prefix py_test_clear_thread {} {
 	     "\\s+breakpoint already hit 2 times"] \
 	"check for a location only in inferior 2"
 
-    gdb_breakpoint [gdb_get_line_number "Break after close"] temporary
+    gdb_breakpoint [gdb_get_line_number "Break after close"] -temporary
     gdb_continue_to_breakpoint "stop after close in inferior 1" \
 	".* Break after close\\. .*"
 

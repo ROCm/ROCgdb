@@ -37,7 +37,7 @@ proc tbreak_and_cont {text} {
     global testfile
 
     set line [gdb_get_line_number $text $testfile.cc]
-    gdb_breakpoint "$testfile.cc:$line" temporary
+    gdb_breakpoint "$testfile.cc:$line" -temporary
     gdb_test "continue" "Temporary breakpoint.*" "continuing to $text"
 }
 

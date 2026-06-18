@@ -31,7 +31,7 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile $opts]} {
 }
 
 foreach ordinary {"outer<int>::fn" "outer<char>::fn<short>" "toplev<char>"} {
-    gdb_breakpoint $ordinary message
+    gdb_breakpoint $ordinary -message
     clean_restart $testfile
 }
 

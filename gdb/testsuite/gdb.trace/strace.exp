@@ -178,7 +178,7 @@ proc strace_probe_marker { } {
 	gdb_test "info static-tracepoint-markers" \
 	    "ust/bar\[\t \]+y\[\t \]+$hex .*ust/bar2\[\t \]+y\[\t \]+$hex.*"
 
-	gdb_breakpoint "end" qualified
+	gdb_breakpoint "end" -qualified
 
 	gdb_test_no_output "tstart"
 	gdb_test "continue" "Continuing\\.\[ \r\n\]+Breakpoint.*" \
@@ -266,7 +266,7 @@ proc strace_trace_on_same_addr { type } {
 	    }
 	}
 
-	gdb_breakpoint "end" qualified
+	gdb_breakpoint "end" -qualified
 
 	if {[string equal $type "break"]} {
 	    gdb_test "continue" "Continuing\\.\[ \r\n\]+Breakpoint.*" \
@@ -341,7 +341,7 @@ proc strace_trace_on_diff_addr { } {
 	gdb_test "trace *${marker_bar2_addr}" \
 	    "Tracepoint ${::decimal} at ${hex}: file.*"
 
-	gdb_breakpoint "end" qualified
+	gdb_breakpoint "end" -qualified
 
 	gdb_test_no_output "tstart"
 	gdb_test "continue" "Continuing\\.\[ \r\n\]+Breakpoint.*" \
