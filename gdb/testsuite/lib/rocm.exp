@@ -412,6 +412,45 @@ proc hip_devices_support_debug_multi_process {} {
     return 1
 }
 
+# Helpers below gate cooperative-group debugging tests, i.e. tests that
+# debug kernels launched with hipLaunchCooperativeKernel and
+# synchronized via cooperative_groups::this_grid ().sync ().
+#
+# This is a debugger-side gate, distinct from what the HIP runtime
+# advertises via hipDeviceProp_t::cooperativeLaunch: the Global Wave
+# Sync (GWS) hardware implementing the grid barrier exists on
+# architectures where the kernel runs correctly outside the debugger
+# but ROCgdb cannot yet step or breakpoint through the cooperative
+# dispatch.
+
+# Return true if TARGET (a gfx name like "gfx90a") is an architecture
+# where ROCgdb supports debugging cooperative-group kernels.
+
+proc target_supports_cooperative_groups { target } {
+    set unsupported_targets {
+	gfx1100 gfx1101 gfx1102 gfx1103
+    }
+
+    return [expr {[lsearch -exact $unsupported_targets $target] == -1}]
+}
+
+# Return true if every AMDGPU device on the system is an architecture
+# where ROCgdb supports debugging cooperative-group kernels.
+
+proc supports_cooperative_groups {} {
+    set targets [find_amdgpu_devices]
+    if { [llength $targets] == 0 } {
+	return 0
+    }
+
+    foreach target $targets {
+	if { ![target_supports_cooperative_groups $target] } {
+	    return 0
+	}
+    }
+    return 1
+}
+
 # Return true if the current device's version is less than VERSION.
 #
 # VERSION must be the "gfx" name of the device, such as gfx906 or gfx90a.
