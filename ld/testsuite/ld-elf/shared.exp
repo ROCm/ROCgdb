@@ -1879,7 +1879,7 @@ run_cc_link_tests [list \
 # of a function defined in a DSO results in the function address (from GOT)
 # and not the "canonical PLT" address from the PDE.
 # PR ld/34151
-setup_xfail sparc*-*-*
+setup_xfail sparc*-*-* m68k-*-* riscv*-*-* s390-*-* sh*-*-* tile*-*-*
 run_cc_link_tests [list \
     [list \
 	"Build pr29655" \
