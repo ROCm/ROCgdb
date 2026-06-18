@@ -23,12 +23,9 @@ re_ignore = re.compile("ChangeLog")
 
 # Files that are not clean, so they're only checked when changes.
 todo_list = [
-    "gdb/config/djgpp/fnchange.lst",
     "gdb/gdb-gdb.gdb.in",
-    "gdb/configure.tgt",
     "gdb/doc/annotate.texinfo",
     "gdb/doc/refcard.tex",
-    "gdb/doc/stack_frame.txt",
 ]
 
 clean = []

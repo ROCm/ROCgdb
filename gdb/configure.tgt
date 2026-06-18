@@ -366,8 +366,8 @@ iq2000-*-*)
 	gdb_target_obs="iq2000-tdep.o"
 	;;
 
-lm32-*-*)		
-	gdb_target_obs="lm32-tdep.o" 
+lm32-*-*)
+	gdb_target_obs="lm32-tdep.o"
 	;;
 
 loongarch*-*-linux*)
@@ -671,7 +671,7 @@ tic6x-*-*linux)
 	;;
 
 tic6x-*-*)
-	# Target: TI C6X 
+	# Target: TI C6X
 	gdb_target_obs="tic6x-tdep.o"
 	;;
 

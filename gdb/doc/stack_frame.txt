@@ -33,7 +33,7 @@ Number          - |   |  |============|       int fact (int n)
                |      |  |------------|                      |
                |       --+-----o      |<--------- SP         |
                 =        |============|                      |
-               |         |  Red Zone  |                      v  
+               |         |  Red Zone  |                      v
                |         \/\/\/\/\/\/\/                 Direction of
   #-1         <          \/\/\/\/\/\/\/                 stack growth
                |         |            |
