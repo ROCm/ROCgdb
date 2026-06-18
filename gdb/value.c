@@ -3656,6 +3656,11 @@ value_from_mpz (struct type *type, const gdb_mpz &v)
 struct value *
 value_from_pointer (struct type *type, CORE_ADDR addr)
 {
+  arch_addr_space_id aspace
+    = gdbarch_address_space_id_from_core_address (type->arch (), addr);
+  if (aspace != 0)
+    type = make_type_with_address_space (type, aspace);
+
   struct value *val = value::allocate (type);
 
   store_typed_address (val->contents_raw ().data (),
