@@ -24,10 +24,7 @@ re_ignore = re.compile("ChangeLog")
 # Files that are not clean, so they're only checked when changes.
 todo_list = [
     "gdb/config/djgpp/fnchange.lst",
-    "gdb/contrib/ari/create-web-ari-in-src.sh",
     "gdb/gdb-gdb.gdb.in",
-    "gdb/config/djgpp/djcheck.sh",
-    "gdb/contrib/ari/gdb_ari.sh",
     "gdb/features/sparc/sparc64-cp0.xml",
     "gdb/features/sparc/sparc64-fpu.xml",
     "gdb/configure.tgt",
