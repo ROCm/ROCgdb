@@ -386,7 +386,7 @@ parse_exp_in_context (const char **stringptr, CORE_ADDR pc,
 
 	  if (cursal.symtab)
 	    expression_context_block
-	      = cursal.symtab->compunit ()->blockvector ()->static_block ();
+	      = cursal.symtab->compunit ().blockvector ()->static_block ();
 
 	  if (expression_context_block)
 	    expression_context_pc = expression_context_block->entry_pc ();

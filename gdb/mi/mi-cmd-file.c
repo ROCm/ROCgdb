@@ -56,7 +56,7 @@ mi_cmd_file_list_exec_source_file (const char *command,
   uiout->field_string ("fullname", symtab_to_fullname (st.symtab));
 
   uiout->field_signed ("macro-info",
-		       st.symtab->compunit ()->macro_table () != NULL);
+		       st.symtab->compunit ().macro_table () != NULL);
 }
 
 /* Implement -file-list-exec-source-files command.  */

@@ -179,7 +179,7 @@ ltpy_get_pcs_for_line (PyObject *self, PyObject *args)
       return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
-  struct objfile *objfile = symtab->compunit ()->objfile ();
+  struct objfile *objfile = symtab->compunit ().objfile ();
   return build_line_table_tuple_from_entries (objfile, entries);
 }
 
@@ -413,7 +413,7 @@ ltpy_iternext (PyObject *self)
       item = &(symtab->linetable ()->item[iter_obj->current_index]);
     }
 
-  struct objfile *objfile = symtab->compunit ()->objfile ();
+  struct objfile *objfile = symtab->compunit ().objfile ();
   obj = build_linetable_entry (item->line, item->pc (objfile));
   iter_obj->current_index++;
 

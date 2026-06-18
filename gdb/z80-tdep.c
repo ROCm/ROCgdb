@@ -498,8 +498,8 @@ z80_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 
       if (prologue_sal.symtab != nullptr)
 	{
-	  struct compunit_symtab *compunit = prologue_sal.symtab->compunit ();
-	  const char *debug_format = compunit->debugformat ();
+	  const char *debug_format
+	    = prologue_sal.symtab->compunit ().debugformat ();
 
 	  if (debug_format != nullptr
 	      && !strncasecmp ("dwarf", debug_format, strlen ("dwarf")))

@@ -1149,7 +1149,7 @@ iterate_over_all_matching_symtabs
 		{
 		  const struct block *block;
 		  int i;
-		  const blockvector *bv = symtab->compunit ()->blockvector ();
+		  const blockvector *bv = symtab->compunit ().blockvector ();
 
 		  for (i = FIRST_LOCAL_BLOCK; i < bv->num_blocks (); i++)
 		    {
@@ -1197,7 +1197,7 @@ iterate_over_file_blocks
 {
   const struct block *block;
 
-  for (block = symtab->compunit ()->blockvector ()->static_block ();
+  for (block = symtab->compunit ().blockvector ()->static_block ();
        block != NULL;
        block = block->superblock ())
     current_language->for_each_symbol (block, name, domain, callback);
@@ -2198,7 +2198,7 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
       for (const auto &sym : ls->labels.label_symbols)
 	{
 	  struct program_space *pspace
-	    = sym.symbol->symtab ()->compunit ()->objfile ()->pspace ();
+	    = sym.symbol->symtab ()->compunit ().objfile ()->pspace ();
 	  std::optional<symtab_and_line> sal
 	    = symbol_to_sal (state->funfirstline, sym.symbol);
 
@@ -2221,7 +2221,7 @@ convert_linespec_to_sals (struct linespec_state *state, linespec *ls)
 	  for (const auto &sym : ls->function_symbols)
 	    {
 	      program_space *pspace
-		= sym.symbol->symtab ()->compunit ()->objfile ()->pspace ();
+		= sym.symbol->symtab ()->compunit ().objfile ()->pspace ();
 	      set_current_program_space (pspace);
 
 	      /* Don't skip to the first line of the function if we
@@ -3403,7 +3403,7 @@ lookup_prefix_sym (struct linespec_state *state,
 	{
 	  /* Program spaces that are executing startup should have
 	     been filtered out earlier.  */
-	  program_space *pspace = elt->compunit ()->objfile ()->pspace ();
+	  program_space *pspace = elt->compunit ().objfile ()->pspace ();
 
 	  gdb_assert (!pspace->executing_startup);
 	  set_current_program_space (pspace);
@@ -3452,8 +3452,8 @@ compare_symbols (const block_symbol &a, const block_symbol &b)
      which gives unstable sorting results.  While the assumption is that this
      doesn't matter, play it safe and compare program space IDs instead.  */
   int cmp
-    = compare_pspace (a.symbol->symtab ()->compunit ()->objfile ()->pspace (),
-		      b.symbol->symtab ()->compunit ()->objfile ()->pspace ());
+    = compare_pspace (a.symbol->symtab ()->compunit ().objfile ()->pspace (),
+		      b.symbol->symtab ()->compunit ().objfile ()->pspace ());
   if (cmp == -1)
     return true;
   if (cmp == 1)
@@ -3560,7 +3560,7 @@ find_method (struct linespec_state *self,
 
       /* Program spaces that are executing startup should have
 	 been filtered out earlier.  */
-      pspace = sym->symtab ()->compunit ()->objfile ()->pspace ();
+      pspace = sym->symtab ()->compunit ().objfile ()->pspace ();
       gdb_assert (!pspace->executing_startup);
       set_current_program_space (pspace);
       t = check_typedef (sym->type ());
@@ -3572,7 +3572,7 @@ find_method (struct linespec_state *self,
       if (ix == sym_classes->size () - 1
 	  || (pspace
 	      != (sym_classes->at (ix + 1).symbol->symtab ()
-		  ->compunit ()->objfile ()->pspace ())))
+		  ->compunit ().objfile ()->pspace ())))
 	{
 	  /* If we did not find a direct implementation anywhere in
 	     this program space, consider superclasses.  */
@@ -3891,7 +3891,7 @@ find_label_symbols (struct linespec_state *self,
 	{
 	  fn_sym = elt.symbol;
 	  set_current_program_space
-	    (fn_sym->symtab ()->compunit ()->objfile ()->pspace ());
+	    (fn_sym->symtab ()->compunit ().objfile ()->pspace ());
 	  block = fn_sym->value_block ();
 
 	  find_label_symbols_in_block (block, name, fn_sym, completion_mode,
@@ -3918,7 +3918,7 @@ decode_digits_list_mode (linespec_state *self, linespec *ls, int line)
       /* The logic above should ensure this.  */
       gdb_assert (elt != NULL);
 
-      program_space *pspace = elt->compunit ()->objfile ()->pspace ();
+      program_space *pspace = elt->compunit ().objfile ()->pspace ();
       set_current_program_space (pspace);
 
       /* Simplistic search just for the list command.  */
@@ -3955,7 +3955,7 @@ decode_digits_ordinary (struct linespec_state *self,
       /* The logic above should ensure this.  */
       gdb_assert (elt != NULL);
 
-      objfile *objfile = elt->compunit ()->objfile ();
+      objfile *objfile = elt->compunit ().objfile ();
       program_space *pspace = objfile->pspace ();
       set_current_program_space (pspace);
 
@@ -4166,7 +4166,7 @@ search_minsyms_for_name (struct collect_info *info,
     }
   else
     {
-      objfile &objfile = *symtab->compunit ()->objfile ();
+      objfile &objfile = *symtab->compunit ().objfile ();
       program_space *pspace = objfile.pspace ();
 
       if (search_pspace == NULL || pspace == search_pspace)
@@ -4264,13 +4264,14 @@ add_matching_symbols_to_info (const char *name,
 					     add_symbol);
 	  search_minsyms_for_name (info, lookup_name, pspace, NULL);
 	}
-      else if (pspace == NULL || pspace == elt->compunit ()->objfile ()->pspace ())
+      else if (pspace == NULL
+	       || pspace == elt->compunit ().objfile ()->pspace ())
 	{
 	  int prev_len = info->symbols->size ();
 
 	  /* Program spaces that are executing startup should have
 	     been filtered out earlier.  */
-	  program_space *elt_pspace = elt->compunit ()->objfile ()->pspace ();
+	  program_space *elt_pspace = elt->compunit ().objfile ()->pspace ();
 	  gdb_assert (!elt_pspace->executing_startup);
 	  set_current_program_space (elt_pspace);
 	  iterate_over_file_blocks (elt, lookup_name, SEARCH_VFT, add_symbol);
@@ -4305,7 +4306,7 @@ symbol_to_sal (bool funfirstline, symbol *sym)
 	  result.symbol = sym;
 	  result.line = sym->line ();
 	  result.pc = sym->value_address ();
-	  result.pspace = result.symtab->compunit ()->objfile ()->pspace ();
+	  result.pspace = result.symtab->compunit ().objfile ()->pspace ();
 	  result.explicit_pc = 1;
 	  return result;
 	}
@@ -4321,7 +4322,7 @@ symbol_to_sal (bool funfirstline, symbol *sym)
 	  result.symbol = sym;
 	  result.line = sym->line ();
 	  result.pc = sym->value_address ();
-	  result.pspace = result.symtab->compunit ()->objfile ()->pspace ();
+	  result.pspace = result.symtab->compunit ().objfile ()->pspace ();
 	  return result;
 	}
     }

@@ -553,7 +553,7 @@ do_mixed_source_and_assembly_deprecated
   mle = (struct deprecated_dis_line_entry *)
     alloca (nlines * sizeof (struct deprecated_dis_line_entry));
 
-  struct objfile *objfile = symtab->compunit ()->objfile ();
+  struct objfile *objfile = symtab->compunit ().objfile ();
 
   unrelocated_addr unrel_low
     = unrelocated_addr (low - objfile->text_section_offset ());
@@ -701,7 +701,7 @@ do_mixed_source_and_assembly (struct gdbarch *gdbarch,
 
   gdb::unordered_set<dis_line_entry, dis_line_entry_hash> dis_line_table;
 
-  struct objfile *objfile = main_symtab->compunit ()->objfile ();
+  struct objfile *objfile = main_symtab->compunit ().objfile ();
 
   unrelocated_addr unrel_low
     = unrelocated_addr (low - objfile->text_section_offset ());

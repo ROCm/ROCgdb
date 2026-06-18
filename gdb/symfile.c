@@ -2811,7 +2811,7 @@ allocate_symtab (struct compunit_symtab *cust, const char *filename,
   struct objfile *objfile = cust->objfile ();
   struct symtab *symtab
     = obstack_new<struct symtab> (&objfile->objfile_obstack,
-				  cust,
+				  *cust,
 				  objfile->intern (filename),
 				  objfile->intern (filename_for_id),
 				  deduce_language_from_filename (filename));

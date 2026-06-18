@@ -135,7 +135,7 @@ dump_objfile (struct objfile *objfile)
 		      styled_string (file_name_style.style (),
 				     symtab_to_filename_for_display (symtab)),
 		      host_address_to_string (symtab));
-	  if (symtab->compunit ()->objfile () != objfile)
+	  if (symtab->compunit ().objfile () != objfile)
 	    gdb_printf (_(", NOT ON CHAIN!"));
 	  gdb_printf ("\n");
 	}
@@ -244,7 +244,7 @@ dump_msymbols (struct objfile *objfile, struct ui_file *outfile)
 static void
 dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
 {
-  struct objfile *objfile = symtab->compunit ()->objfile ();
+  struct objfile *objfile = symtab->compunit ().objfile ();
   struct gdbarch *gdbarch = objfile->arch ();
   const struct linetable *l;
   int depth;
@@ -254,10 +254,10 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
 			     symtab_to_filename_for_display (symtab)),
 	      host_address_to_string (symtab));
 
-  if (symtab->compunit ()->dirname () != NULL)
+  if (symtab->compunit ().dirname () != NULL)
     gdb_printf (outfile, _("Compilation directory is %ps\n"),
 		styled_string (file_name_style.style (),
-			       symtab->compunit ()->dirname ()));
+			       symtab->compunit ().dirname ()));
   gdb_printf (outfile, _("Read from object file %ps (%s)\n"),
 	      styled_string (file_name_style.style (),
 			     objfile_name (objfile)),
@@ -288,7 +288,7 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
   if (is_main_symtab_of_compunit_symtab (symtab))
     {
       gdb_printf (outfile, _("\nBlockvector:\n\n"));
-      const blockvector *bv = symtab->compunit ()->blockvector ();
+      const blockvector *bv = symtab->compunit ().blockvector ();
       for (int i = 0; i < bv->num_blocks (); i++)
 	{
 	  const block *b = bv->block (i);
@@ -342,9 +342,9 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
     }
   else
     {
-      compunit_symtab *compunit = symtab->compunit ();
+      compunit_symtab &compunit = symtab->compunit ();
       const char *compunit_filename
-	= symtab_to_filename_for_display (compunit->primary_filetab ());
+	= symtab_to_filename_for_display (compunit.primary_filetab ());
 
       gdb_printf (outfile,
 		  _("\nBlockvector same as owning compunit: %ps\n\n"),
@@ -356,14 +356,14 @@ dump_symtab_1 (struct symtab *symtab, struct ui_file *outfile)
      compunit_symtabs included by this one. */
   if (is_main_symtab_of_compunit_symtab (symtab))
     {
-      struct compunit_symtab *cust = symtab->compunit ();
+      compunit_symtab &cust = symtab->compunit ();
 
-      if (cust->user != nullptr)
+      if (cust.user != nullptr)
 	gdb_printf (outfile, _("Compunit user: %s\n"),
-		    host_address_to_string (cust->user->primary_filetab ()));
+		    host_address_to_string (cust.user->primary_filetab ()));
 
 
-      for (compunit_symtab *include : cust->includes)
+      for (compunit_symtab *include : cust.includes)
 	gdb_printf (outfile, _("Compunit include: %s\n"),
 		    host_address_to_string (include->primary_filetab ()));
     }
@@ -978,14 +978,14 @@ maintenance_print_one_line_table (struct symtab *symtab, void *data)
   const struct linetable *linetable;
   struct objfile *objfile;
 
-  objfile = symtab->compunit ()->objfile ();
+  objfile = symtab->compunit ().objfile ();
   gdb_printf (_("objfile: %ps ((struct objfile *) %s)\n"),
 	      styled_string (file_name_style.style (),
 			     objfile_name (objfile)),
 	      host_address_to_string (objfile));
   gdb_printf (_("compunit_symtab: %s ((struct compunit_symtab *) %s)\n"),
-	      symtab->compunit ()->name,
-	      host_address_to_string (symtab->compunit ()));
+	      symtab->compunit ().name,
+	      host_address_to_string (&symtab->compunit ()));
   gdb_printf (_("symtab: %ps ((struct symtab *) %s)\n"),
 	      styled_string (file_name_style.style (),
 			     symtab_to_fullname (symtab)),

@@ -4806,7 +4806,7 @@ cache_symbol (const char *name, domain_search_flags domain,
      against the global and static blocks of its associated symtab.  */
   if (sym != nullptr)
     {
-      const blockvector &bv = *sym->symtab ()->compunit ()->blockvector ();
+      const blockvector &bv = *sym->symtab ()->compunit ().blockvector ();
 
       if (bv.global_block () != block && bv.static_block () != block)
 	return;
@@ -11869,8 +11869,8 @@ is_known_support_routine (const frame_info_ptr &frame)
       re_comp (known_runtime_file_name_patterns[i]);
       if (re_exec (lbasename (sal.symtab->filename ())))
 	return true;
-      if (sal.symtab->compunit ()->objfile () != NULL
-	  && re_exec (objfile_name (sal.symtab->compunit ()->objfile ())))
+      if (sal.symtab->compunit ().objfile () != NULL
+	  && re_exec (objfile_name (sal.symtab->compunit ().objfile ())))
 	return true;
     }
 
