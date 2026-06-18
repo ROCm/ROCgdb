@@ -23,7 +23,6 @@ re_ignore = re.compile("ChangeLog")
 
 # Files that are not clean, so they're only checked when changes.
 todo_list = [
-    "gdb/gdb-gdb.gdb.in",
     "gdb/doc/annotate.texinfo",
     "gdb/doc/refcard.tex",
 ]
