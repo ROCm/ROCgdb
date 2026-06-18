@@ -17404,7 +17404,7 @@ get_signatured_type (struct die_info *die, ULONGEST signature,
 
 static struct type *
 get_DW_AT_signature_type (struct die_info *die, const struct attribute *attr,
-			  struct dwarf2_cu *cu) /* ARI: editCase function */
+			  struct dwarf2_cu *cu)
 {
   /* Yes, DW_AT_signature can use a non-ref_sig8 reference.  */
   if (attr->form_is_ref ())

@@ -74,7 +74,7 @@ test_format_specifier ()
 {
   /* The format string here ends with a % sequence, to ensure we don't
      see a trailing empty literal piece.  */
-  check ("Hello\\t %d%llx%%d%d", /* ARI: %ll */
+  check ("Hello\\t %d%llx%%d%d",
     {
       {"Hello\t ", literal_piece, 0},
       {"%d", int_arg, 0},
@@ -105,7 +105,7 @@ test_gdb_formats ()
 static void
 test_format_int_sizes ()
 {
-  check ("Hello\\t %hu%lu%llu%zu%tu", /* ARI: %ll */
+  check ("Hello\\t %hu%lu%llu%zu%tu",
     {
       {"Hello\t ", literal_piece, 0},
       {"%hu", int_arg, 0},
@@ -115,7 +115,7 @@ test_format_int_sizes ()
       {"%tu", ptrdiff_t_arg, 0},
     });
 
-  check ("Hello\\t %hx%lx%llx%zx%tx", /* ARI: %ll */
+  check ("Hello\\t %hx%lx%llx%zx%tx",
     {
       {"Hello\t ", literal_piece, 0},
       {"%hx", int_arg, 0},
@@ -125,7 +125,7 @@ test_format_int_sizes ()
       {"%tx", ptrdiff_t_arg, 0},
     });
 
-  check ("Hello\\t %ho%lo%llo%zo%to", /* ARI: %ll */
+  check ("Hello\\t %ho%lo%llo%zo%to",
     {
       {"Hello\t ", literal_piece, 0},
       {"%ho", int_arg, 0},
@@ -135,7 +135,7 @@ test_format_int_sizes ()
       {"%to", ptrdiff_t_arg, 0},
     });
 
-  check ("Hello\\t %hd%ld%lld%zd%td", /* ARI: %ll */
+  check ("Hello\\t %hd%ld%lld%zd%td",
     {
       {"Hello\t ", literal_piece, 0},
       {"%hd", int_arg, 0},

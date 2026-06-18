@@ -81,7 +81,7 @@ static struct {
   int value;
 } parm_constants[] =
 {
-  { "PARAM_BOOLEAN", param_boolean }, /* ARI: param_boolean */
+  { "PARAM_BOOLEAN", param_boolean },
   { "PARAM_AUTO_BOOLEAN", param_auto_boolean },
   { "PARAM_UINTEGER", param_uinteger },
   { "PARAM_INTEGER", param_integer },
@@ -858,7 +858,7 @@ parmpy_init (PyObject *self, PyObject *args, PyObject *kwds)
       return -1;
     }
 
-  if (parmclass != param_boolean /* ARI: param_boolean */
+  if (parmclass != param_boolean
       && parmclass != param_auto_boolean
       && parmclass != param_uinteger && parmclass != param_integer
       && parmclass != param_string && parmclass != param_string_noescape
