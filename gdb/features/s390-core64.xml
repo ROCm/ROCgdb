@@ -42,4 +42,3 @@
   <reg name="r15h" bitsize="32" type="uint32" group="upper"/>
   <reg name="r15l" bitsize="32" type="uint32" group="lower"/>
 </feature>
-

@@ -57,4 +57,3 @@
   <reg name="f60" bitsize="64" type="ieee_double" regnum="78"/>
   <reg name="f62" bitsize="64" type="ieee_double" regnum="79"/>
 </feature>
-

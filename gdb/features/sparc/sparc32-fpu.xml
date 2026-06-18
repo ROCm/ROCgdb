@@ -40,4 +40,3 @@
   <reg name="f30" bitsize="32" type="ieee_single" regnum="62"/>
   <reg name="f31" bitsize="32" type="ieee_single" regnum="63"/>
 </feature>
-

@@ -25,18 +25,11 @@ re_ignore = re.compile("ChangeLog")
 todo_list = [
     "gdb/config/djgpp/fnchange.lst",
     "gdb/gdb-gdb.gdb.in",
-    "gdb/features/sparc/sparc64-cp0.xml",
-    "gdb/features/sparc/sparc64-fpu.xml",
     "gdb/configure.tgt",
     "gdb/doc/annotate.texinfo",
-    "gdb/features/aarch64-pauth.xml",
-    "gdb/features/sparc/sparc32-fpu.xml",
-    "gdb/features/s390-core64.xml",
-    "gdb/features/sparc/sparc32-cp0.xml",
     "gdb/exc_request.defs",
     "gdb/doc/refcard.tex",
     "gdb/doc/stack_frame.txt",
-    "gdb/features/library-list-aix.dtd",
 ]
 
 clean = []

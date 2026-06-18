@@ -14,4 +14,3 @@
   <reg name="fprs" bitsize="64" type="uint64" regnum="84"/>
   <reg name="y" bitsize="64" type="uint64" regnum="85"/>
 </feature>
-
