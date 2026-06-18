@@ -1,7 +1,7 @@
-# name: EABI attributes from directives
-# source: attr-cpu-directive.s
-# as:
-# readelf: -A
+#name: Cortex-A8 feat-simd
+#as: -mcpu=cortex-a8
+#source: feat-simd.s
+#readelf: -A
 # This test is only valid on EABI based ports.
 # target: *-*-*eabi*
 

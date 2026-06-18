@@ -1,7 +1,7 @@
-# name: EABI attributes from directives
-# source: attr-cpu-directive.s
-# as:
-# readelf: -A
+#name: Cortex-A8 Attributes
+#as: -mcpu=cortex-a8+nofp
+#source: nop-asm.s
+#readelf: -A
 # This test is only valid on EABI based ports.
 # target: *-*-*eabi*
 
@@ -12,6 +12,4 @@ File Attributes
   Tag_CPU_arch_profile: Application
   Tag_ARM_ISA_use: Yes
   Tag_THUMB_ISA_use: Thumb-2
-  Tag_FP_arch: VFPv3
-  Tag_Advanced_SIMD_arch: NEONv1
   Tag_Virtualization_use: TrustZone
