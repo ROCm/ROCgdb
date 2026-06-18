@@ -22,9 +22,7 @@ import sys
 re_ignore = re.compile("ChangeLog")
 
 # Files that are not clean, so they're only checked when changes.
-todo_list = [
-    "gdb/doc/refcard.tex",
-]
+todo_list = []
 
 clean = []
 other = []
