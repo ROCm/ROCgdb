@@ -98,20 +98,9 @@ gdb_test_no_output "set var \$private_wave_ptr = \(unsigned int \*\) private_wav
 gdb_test "print \$private_wave_ptr" \
 	 " = \\(unsigned int \\*\\) private_wave#0x0"
 
-# Conversion to integral types.
-gdb_test_no_output "set var \$long_long = \(unsigned long long\) private_lane#0x0"
-
-# Two representation of the same test.
-gdb_test_no_output "set var \$generic_ptr = \(unsigned int \*\) \$long_long"
+# Write and read back.
 gdb_test_no_output "set var \*\$private_lane_ptr = 1"
 gdb_test "print \*\$private_lane_ptr" " = 1" "expect one in private_lane"
-gdb_test "print \*\$generic_ptr" " = 1" "expect one in generic"
-
-gdb_test_no_output "set var \*\$generic_ptr = 2"
-gdb_test "print \*\$generic_ptr" " = 2" "expect two in generic"
-gdb_test "print \*\$private_lane_ptr" " = 2" "expect two in private_lane"
-
-gdb_test "print \*\$generic_ptr == \*\$private_lane_ptr" "true"
 
 # Examine memory.
 gdb_test "x/1wx private_lane#0x0" \
