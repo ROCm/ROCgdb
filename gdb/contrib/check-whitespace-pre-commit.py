@@ -36,7 +36,6 @@ todo_list = [
     "gdb/features/sparc/sparc32-fpu.xml",
     "gdb/features/s390-core64.xml",
     "gdb/features/sparc/sparc32-cp0.xml",
-    "gdb/config/djgpp/README",
     "gdb/exc_request.defs",
     "gdb/doc/refcard.tex",
     "gdb/doc/stack_frame.txt",
