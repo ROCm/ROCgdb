@@ -117,6 +117,7 @@ repos:
       language: unsupported_script
       entry: gdb/contrib/check-whitespace-pre-commit.py
       files: '^(gdb(support|server)?)/.*$'
+      types: ['text']
     - id: &id3 pre-commit-setup
       name: *id3
       language: python
