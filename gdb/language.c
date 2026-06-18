@@ -44,6 +44,7 @@
 #include "c-lang.h"
 #include <algorithm>
 #include "gdbarch.h"
+#include "arch-utils.h"
 
 static void set_range_case (void);
 
@@ -628,7 +629,21 @@ language_defn::watch_location_expression (struct type *type,
   /* Generates an expression that assumes a C like syntax is valid.  */
   type = check_typedef (check_typedef (type)->target_type ());
   std::string name = type_to_string (type);
-  return xstrprintf ("* (%s *) %s", name.c_str (), core_addr_to_string (addr));
+
+  const char *aspace_name = "";
+  const char *aspace_operator = "";
+  arch_addr_space_id aspace
+    = gdbarch_address_space_id_from_core_address (type->arch (), addr);
+
+  if (aspace != 0)
+    {
+      aspace_name = gdbarch_address_space_id_to_name (type->arch (), aspace);
+      aspace_operator = "#";
+      addr = gdbarch_segment_address_from_core_address (type->arch (), addr);
+    }
+
+  return xstrprintf ("* (%s *) %s%s%s", name.c_str (),
+		     aspace_name, aspace_operator, core_addr_to_string (addr));
 }
 
 /* See language.h.  */
