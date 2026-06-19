@@ -55,6 +55,7 @@ extern mi_cmd_argv_ftype mi_cmd_catch_unload;
 extern mi_cmd_argv_ftype mi_cmd_catch_throw;
 extern mi_cmd_argv_ftype mi_cmd_catch_rethrow;
 extern mi_cmd_argv_ftype mi_cmd_catch_catch;
+extern mi_cmd_argv_ftype mi_cmd_catch_hiperr;
 extern mi_cmd_argv_ftype mi_cmd_disassemble;
 extern mi_cmd_argv_ftype mi_cmd_data_evaluate_expression;
 extern mi_cmd_argv_ftype mi_cmd_data_list_register_names;
