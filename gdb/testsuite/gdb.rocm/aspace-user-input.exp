@@ -108,6 +108,10 @@ gdb_test "x/1wx private_lane#0x0" \
 gdb_test "with language fortran -- x/1wx private_lane#0x0" \
     "private_lane#0x0:\[ \t\]+$hex"
 
+# Address space propagates with casting.
+gdb_test "with print type address-spaces on -- print (int *) local#0x123" \
+    "\\(int \\* local#\\) local#0x123"
+
 if { [istarget "x86_64-*-*"] } {
     # On x86_64, high address (with the MSB bit set - bit 47 for 4 level page
     # tables and bit 56 for 5 level page table) are sign extended.

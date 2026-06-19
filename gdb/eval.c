@@ -2617,6 +2617,27 @@ operation::evaluate_for_cast (struct type *expect_type,
 			      enum noside noside)
 {
   value *val = evaluate (expect_type, exp, noside);
+
+  /* If the expression evaluated to a value whose type has adddress
+     space information, propagate that information to the result.
+     This allows doing things like
+
+       (int *) local#123
+       (int *) &a_var_in_local_address_space
+
+     which yield 'int *' with "local" as the address space.  */
+
+  type *rhs_type = val->type ();
+  if (rhs_type->address_space () != 0)
+    {
+      if (expect_type->code () != TYPE_CODE_PTR)
+	error (_("Address in non-default address space can be cast only "
+		 "to a pointer"));
+
+      expect_type = make_type_with_address_space (expect_type,
+						  rhs_type->address_space ());
+    }
+
   return value_cast (expect_type, val);
 }
 
