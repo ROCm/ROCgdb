@@ -13,6 +13,8 @@ on:
     branches:
       - amd-staging
       - amd-staging-rocgdb-*
+  pull_request:
+    types: [labeled]
   workflow_dispatch:
     inputs:
       linux_amdgpu_families:
@@ -41,6 +43,11 @@ concurrency:
 
 jobs:
   setup:
+    if: >-
+      ${{
+        github.event_name != 'pull_request' ||
+        contains(github.event.pull_request.labels.*.name, 'ci:multi-arch-asan')
+      }}
     uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@2d417fa49bc4e657bcbcf0ae549238784175f0fe # 2026-06-18
     with:
       build_variant: "host-asan"
