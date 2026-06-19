@@ -209,6 +209,17 @@ hiperr_catchpoint::print_it (const bpstat *bs) const
   return PRINT_NOTHING;
 }
 
+/* Instantiate a hiperr_catchpoint as the base of the two fuctions:
+   catch_hiperr_command () and catch_hiperr_mi ().  */
+
+static void
+catch_hiperr_core (const char *condition, bool tempflag)
+{
+  auto hcp = std::make_unique<hiperr_catchpoint> (get_current_arch (),
+						  tempflag, condition);
+  install_breakpoint (0, std::move (hcp), 1);
+}
+
 /* Implementation of "catch hiperr" command.  */
 
 static void
@@ -227,10 +238,15 @@ catch_hiperr_command (const char *arg,
   if ((*arg != '\0') && !c_isspace (*arg))
     error (_("Junk at the end of arguments."));
 
-  auto hcp = std::make_unique<hiperr_catchpoint> (get_current_arch (),
-						  tempflag, cond_string);
+  catch_hiperr_core (cond_string, tempflag);
+}
 
-  install_breakpoint (0, std::move (hcp), 1);
+/* A wrapper around "catch_hiperr_core ()" for handling MI.  */
+
+void
+catch_hiperr_mi (const char *condition, bool tempflag)
+{
+  catch_hiperr_core (condition, tempflag);
 }
 
 
