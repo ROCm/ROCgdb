@@ -15,6 +15,8 @@
 name: TheRock Multi-Arch CI
 
 on:
+  pull_request:
+    types: [labeled]
   workflow_dispatch:
     inputs:
       linux_amdgpu_families:
@@ -47,6 +49,11 @@ concurrency:
 
 jobs:
   setup:
+    if: >-
+      ${{
+        github.event_name != 'pull_request' ||
+        contains(github.event.pull_request.labels.*.name, 'ci:multi-arch')
+      }}
     uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@main
     with:
       build_variant: "release"
