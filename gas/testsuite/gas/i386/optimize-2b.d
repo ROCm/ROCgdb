@@ -49,6 +49,9 @@ Disassembly of section .text:
  +[a-f0-9]+:	66 01 d2             	add    %dx,%dx
  +[a-f0-9]+:	01 d2                	add    %edx,%edx
  +[a-f0-9]+:	01 d2                	add    %edx,%edx
+ +[a-f0-9]+:	00 c9                	add    %cl,%cl
+ +[a-f0-9]+:	66 01 d2             	add    %dx,%dx
+ +[a-f0-9]+:	01 ff                	add    %edi,%edi
  +[a-f0-9]+:	c5 f1 55 e9          	vandnpd %xmm1,%xmm1,%xmm5
  +[a-f0-9]+:	c5 f9 6f d1          	vmovdqa %xmm1,%xmm2
  +[a-f0-9]+:	c5 f9 6f d1          	vmovdqa %xmm1,%xmm2

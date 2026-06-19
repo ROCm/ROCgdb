@@ -59,6 +59,10 @@ _start:
 	sal	$1, %edx
 	sal	%edx
 
+	xadd	%cl, %cl
+	xadd	%dx, %dx
+	xadd	%edi, %edi
+
 	vandnpd	%zmm1, %zmm1, %zmm5
 
 	vmovdqa32	%xmm1, %xmm2

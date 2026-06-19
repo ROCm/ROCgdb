@@ -957,7 +957,7 @@ rex.wrxb, 0x4f, x64, NoSuf|IsPrefix, {}
 
 // 486 extensions (BSWAP moved elsewhere).
 
-xadd, 0xfc0, i486, W|CheckOperandSize|Modrm|No_sSuf|HLEPrefixLock, { Reg8|Reg16|Reg32|Reg64, Reg8|Reg16|Reg32|Reg64|Unspecified|BaseIndex }
+xadd, 0xfc0, i486, W|CheckOperandSize|Modrm|No_sSuf|HLEPrefixLock|Optimize, { Reg8|Reg16|Reg32|Reg64, Reg8|Reg16|Reg32|Reg64|Unspecified|BaseIndex }
 cmpxchg, 0xfb0, i486, W|CheckOperandSize|Modrm|No_sSuf|HLEPrefixLock, { Reg8|Reg16|Reg32|Reg64, Reg8|Reg16|Reg32|Reg64|Unspecified|BaseIndex }
 invd, 0xf08, i486, NoSuf, {}
 wbinvd, 0xf09, i486, NoSuf, {}

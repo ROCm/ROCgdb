@@ -60,6 +60,11 @@ _start:
 	movsx	rax, eax
 	.att_syntax prefix
 
+	xadd	%r17b, %r17b
+	xadd	%r8w, %r8w
+	xadd	%eax, %eax
+	xadd	%r15, %r15
+
 	vandnpd	%zmm1, %zmm1, %zmm5
 
 	vmovdqa32	%xmm1, %xmm2

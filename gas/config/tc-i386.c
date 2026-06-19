@@ -5187,6 +5187,17 @@ optimize_encoding (void)
       i.tm.base_opcode = pp.dir_encoding == dir_encoding_load ? 0x8a : 0x88;
     }
 
+  if (i.tm.mnem_off == MN_xadd
+      && i.reg_operands == 2
+      && i.op[0].regs == i.op[1].regs)
+    {
+      /* Optimize: -O:
+	   xadd %rN, %rN     -> add %rN, %rN
+       */
+      i.tm.opcode_space = SPACE_BASE;
+      i.tm.base_opcode = 0x00;
+    }
+
   if (((i.tm.opcode_space == SPACE_0F
         && (i.tm.base_opcode | 1) == 0xbf
         && (i.types[0].bitfield.byte

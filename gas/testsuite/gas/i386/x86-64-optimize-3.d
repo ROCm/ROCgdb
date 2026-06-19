@@ -94,6 +94,10 @@ Disassembly of section .text:
  +[a-f0-9]+:	66 98                	cbtw
  +[a-f0-9]+:	98                   	cwtl
  +[a-f0-9]+:	48 98                	cltq
+ +[a-f0-9]+:	d5 50 00 c9          	add    %r17b,%r17b
+ +[a-f0-9]+:	66 45 01 c0          	add    %r8w,%r8w
+ +[a-f0-9]+:	01 c0                	add    %eax,%eax
+ +[a-f0-9]+:	4d 01 ff             	add    %r15,%r15
  +[a-f0-9]+:	c5 f1 55 e9          	vandnpd %xmm1,%xmm1,%xmm5
  +[a-f0-9]+:	c5 f9 6f d1          	vmovdqa %xmm1,%xmm2
  +[a-f0-9]+:	c5 f9 6f d1          	vmovdqa %xmm1,%xmm2
