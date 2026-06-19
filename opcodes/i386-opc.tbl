@@ -537,7 +537,8 @@ leave, 0xc9, x64, ImplicitStackOp|DefaultSize|No_bSuf|No_lSuf|No_sSuf|NoRex64|In
          s:8, ns:9, p:a, pe:a, np:b, po:b, l:c, nge:c, nl:d, ge:d, le:e, ng:e, nle:f, g:f>
 
 // Conditional jumps.
-j<cc>, 0x7<cc:opc>, 0, Jump|NoSuf|BNDPrefixOk, { Disp8|Disp16|Disp32 }
+j<cc>, 0x7<cc:opc>, 0, Amd64|Jump|NoSuf|BNDPrefixOk, { Disp8|Disp16|Disp32 }
+j<cc>, 0x7<cc:opc>, x64, Intel64|Jump|NoSuf|BNDPrefixOk, { Disp8|Disp32 }
 
 // jcxz vs. jecxz is chosen on the basis of the address size prefix.
 jcxz, 0xe3, No64, JumpByte|Size16|NoSuf, { Disp8 }

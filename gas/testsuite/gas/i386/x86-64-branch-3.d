@@ -19,4 +19,6 @@ Disassembly of section .text:
 [ 	]*[a-f0-9]+:	66 48 c7 f8 00 00 00 00 	data16 rex\.W xbegin 29 <bar\+0x1c>	25: R_X86_64_PLT32	foo-0x4
 [ 	]*[a-f0-9]+:	48 ff 18             	lcallq \*\(%rax\)
 [ 	]*[a-f0-9]+:	48 ff 29             	ljmpq  \*\(%rcx\)
+[ 	]*[a-f0-9]+:	66 0f 84 00 00 00 00 	data16 je 36 <bar\+0x29>	32: R_X86_64_PLT32	foo-0x4
+[ 	]*[a-f0-9]+:	66 48 0f 85 00 00 00 00 	data16 rex\.W jne 3e <bar\+0x31>	3a: R_X86_64_PLT32	foo-0x4
 #pass

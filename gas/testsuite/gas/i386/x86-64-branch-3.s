@@ -13,3 +13,6 @@ bar:
 
 	lcallq *(%rax)
 	ljmpq *(%rcx)
+
+	data16 je foo
+	data16 rex.w jne foo
