@@ -59,7 +59,7 @@ jobs:
       baseline_run_id: ${{ inputs.baseline_run_id || '' }}
       repository: ROCm/TheRock
       ref: "2d417fa49bc4e657bcbcf0ae549238784175f0fe" # 2026-06-18
-      external_repo: '{"repository":"${{ github.repository }}","ref":"${{ github.sha }}"}'
+      external_repo: '{"repository":"${{ github.repository }}","ref":"${{ github.sha }}","extra_cmake_options":"-DTHEROCK_USE_EXTERNAL_ROCGDB=ON"}'
 
   linux_build_and_test:
     name: Linux::${{ fromJSON(needs.setup.outputs.linux_build_config || '{}').build_variant_label || 'skip' }}
