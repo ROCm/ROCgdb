@@ -22,6 +22,10 @@ _start:
 	lock xchg %ecx, (%edx)
 	lock xchg (%ecx), %edx
 
+	xchg	%cl, %cl
+	{load} xchg %dx, %dx
+	xchg	%edi, %edi
+
 	movsb	%al, %ax
 	movsbw	%al, %ax
 

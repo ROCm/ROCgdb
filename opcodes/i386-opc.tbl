@@ -269,7 +269,7 @@ popa, 0x61, i186&No64, ImplicitStackOp|DefaultSize|No_bSuf|No_sSuf|No_qSuf|Intel
 
 // In the 64bit code, xchg rax, rax is reused for new nop instruction.
 xchg, 0x90, 0, D|C|CheckOperandSize|No_bSuf|No_sSuf, { Reg16|Reg32|Reg64, Acc|Word|Dword|Qword }
-xchg, 0x86, 0, D|W|C|CheckOperandSize|Modrm|No_sSuf|HLEPrefixAny, { Reg8|Reg16|Reg32|Reg64, Reg8|Reg16|Reg32|Reg64|Unspecified|BaseIndex }
+xchg, 0x86, 0, D|W|C|CheckOperandSize|Modrm|No_sSuf|HLEPrefixAny|Optimize, { Reg8|Reg16|Reg32|Reg64, Reg8|Reg16|Reg32|Reg64|Unspecified|BaseIndex }
 
 // In/out from ports.
 in, 0xe4, 0, W|No_sSuf|No_qSuf, { Imm8, Acc|Byte|Word|Dword }
