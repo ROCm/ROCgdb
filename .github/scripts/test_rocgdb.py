@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
 # Copyright Advanced Micro Devices, Inc.
 # SPDX-License-Identifier: MIT
 
 import argparse
 import glob
+import json
 import logging
 import os
 import platform
@@ -10,13 +12,14 @@ import re
 import resource
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import sysconfig
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, NoReturn, Optional, Set, Tuple, Union
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s"
@@ -28,42 +31,6 @@ STATUS_PASS = "[✓]"
 STATUS_FAIL = "[X]"
 STATUS_WARN = "[!]"
 STATUS_FLAKY = "[~]"
-
-# A list of tests we know FAIL but we are OK with it.
-#
-# The "Generic" key tracks failures we should ignore for any compiler
-# label.
-#
-# Each compiler label key contains a list of tests for which failures should
-# be ignored.
-XFAILED_TESTS = {
-    "Generic": [
-        "gdb.rocm/corefile.exp",
-        "gdb.rocm/device-interrupt.exp",
-        "gdb.rocm/load-core-remote-system.exp",
-    ],
-    "GCC": [],
-    "LLVM": [
-        "gdb.dwarf2/ada-valprint-error.exp",
-        "gdb.dwarf2/dw2-case-insensitive.exp",
-        "gdb.dwarf2/dw2-cp-infcall-ref-static.exp",
-        "gdb.dwarf2/dw2-empty-inline-ranges.exp",
-        "gdb.dwarf2/dw2-entry-pc.exp",
-        # Testcase expects ASLR OFF and amd-llvm generates
-        # PIE executables by default.  Fix being pursued upstream.
-        # REMOVE when the fix makes its way to our branch.
-        "gdb.dwarf2/dw2-entry-value.exp",
-        "gdb.dwarf2/dw2-inline-param.exp",
-        "gdb.dwarf2/dw2-param-error.exp",
-        "gdb.dwarf2/dw2-skip-prologue.exp",
-        "gdb.dwarf2/dw2-undefined-ret-addr.exp",
-        "gdb.dwarf2/dw2-unresolved.exp",
-        "gdb.dwarf2/dw2-unexpected-entry-pc.exp",
-        "gdb.dwarf2/fission-base.exp",
-        "gdb.dwarf2/fission-dw-form-strx.exp",
-        "gdb.dwarf2/pr13961.exp",
-    ],
-}
 
 # Test result categories.
 TEST_CATEGORIES = [
@@ -79,22 +46,38 @@ TEST_CATEGORIES = [
     "FLAKY",  # Tests that failed initially but passed on retry.
 ]
 
-# Category display configuration: (prefix, suffix).
+# Default wall-clock timeout (seconds) for each `make check` invocation in
+# --one-by-one mode when --one-by-one-test-timeout is not provided.
+ONE_BY_ONE_DEFAULT_WALL_CLOCK_TIMEOUT = 3600
+
+# Sanitizers we pre-configure on every run. If rocgdb wasn't built with the
+# corresponding -fsanitize=..., the matching *_OPTIONS env var is silently
+# ignored at runtime, so listing extras here is harmless.
+SANITIZERS = ("asan", "tsan", "ubsan", "msan", "lsan", "hwasan")
+
+# Patterns for parsing DejaGnu .sum lines.
+RESULT_LINE_RE = re.compile(
+    r"^(PASS|FAIL|XFAIL|UNTESTED|UNSUPPORTED|KFAIL|UNRESOLVED): (.+)$"
+)
+TIMEOUT_RE = re.compile(r"\(timeout\)")
+RUNNING_EXP_RE = re.compile(r"Running\s+(\S+\.exp)")
+
+# Category display configuration: prefix symbol.
 CATEGORY_DISPLAY = {
-    "PASS": (STATUS_PASS, ""),
-    "FAIL": (STATUS_FAIL, ""),
-    "ERROR": (STATUS_FAIL, ""),
-    "UNRESOLVED": (STATUS_FAIL, ""),
-    "TIMEOUT": (STATUS_WARN, ""),
-    "UNTESTED": (STATUS_WARN, ""),
-    "UNSUPPORTED": (STATUS_WARN, ""),
-    "XFAIL": (STATUS_WARN, ""),
-    "KFAIL": (STATUS_WARN, ""),
-    "FLAKY": (STATUS_FLAKY, ""),
+    "PASS": STATUS_PASS,
+    "FAIL": STATUS_FAIL,
+    "ERROR": STATUS_FAIL,
+    "UNRESOLVED": STATUS_FAIL,
+    "TIMEOUT": STATUS_WARN,
+    "UNTESTED": STATUS_WARN,
+    "UNSUPPORTED": STATUS_WARN,
+    "XFAIL": STATUS_WARN,
+    "KFAIL": STATUS_WARN,
+    "FLAKY": STATUS_FLAKY,
 }
 
 
-def _log_error_and_exit(message: str, exit_code: int = 1) -> None:
+def _log_error_and_exit(message: str, exit_code: int = 1) -> NoReturn:
     """
     Log an error message and exit the program.
 
@@ -102,7 +85,7 @@ def _log_error_and_exit(message: str, exit_code: int = 1) -> None:
         message: Error message to log.
         exit_code: Exit code (default 1).
     """
-    logger.info(f"{STATUS_FAIL} Error: {message}")
+    logger.error(f"{STATUS_FAIL} Error: {message}")
     sys.exit(exit_code)
 
 
@@ -113,6 +96,8 @@ def _run_command(
     capture_output: bool = False,
     check: bool = True,
     error_msg: Optional[str] = None,
+    timeout: Optional[int] = None,
+    kill_process_group: bool = False,
 ) -> subprocess.CompletedProcess:
     """
     Run a command with consistent error handling.
@@ -124,26 +109,65 @@ def _run_command(
         capture_output: Whether to capture stdout/stderr.
         check: Whether to raise on non-zero exit.
         error_msg: Custom error message on failure.
+        timeout: Optional wall-clock timeout in seconds; raises
+            subprocess.TimeoutExpired if exceeded.
+        kill_process_group: Run the command in a new process group/session and,
+            on TimeoutExpired, SIGKILL the entire group so descendants
+            (e.g. runtest/expect/gdb spawned by `make`) are not orphaned.
 
     Returns:
         CompletedProcess result.
 
     Exits:
-        Code 1 if check=True and command fails.
+        Code 1 if check=True, command exits with non-zero status, and error_msg is provided.
+
+    Raises:
+        CalledProcessError if check=True, command exits with non-zero status, and error_msg is None.
+        TimeoutExpired if timeout is set and exceeded.
     """
+    stdout = subprocess.PIPE if capture_output else None
+    stderr = subprocess.PIPE if capture_output else None
     try:
-        return subprocess.run(
+        process = subprocess.Popen(
             cmd,
             cwd=str(cwd) if cwd else None,
-            check=check,
-            capture_output=capture_output,
             env=env,
             text=True,
+            stdout=stdout,
+            stderr=stderr,
+            start_new_session=kill_process_group,
         )
-    except subprocess.CalledProcessError as e:
+    except OSError as e:
         if error_msg:
             _log_error_and_exit(f"{error_msg}: {e}")
+        else:
+            _log_error_and_exit(f"Failed to execute {cmd[0]!r}: {e}")
+    try:
+        out, err = process.communicate(timeout=timeout)
+    except BaseException:
+        # Cover TimeoutExpired and any other escaping exception
+        # (KeyboardInterrupt, OSError mid-read, etc.) so the make /
+        # runtest / expect / gdb process tree is never orphaned. With a new
+        # session we can SIGKILL the whole group; otherwise just the child.
+        if kill_process_group:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        else:
+            process.kill()
+        try:
+            out, err = process.communicate()
+        except Exception:
+            out, err = None, None
         raise
+    result = subprocess.CompletedProcess(cmd, process.returncode, out, err)
+    if check and process.returncode != 0:
+        exc = subprocess.CalledProcessError(process.returncode, cmd, out, err)
+        if error_msg:
+            _log_error_and_exit(f"{error_msg}: {exc}")
+        raise exc
+    return result
 
 
 def _read_file_lines(file_path: Path, error_context: str = "") -> List[str]:
@@ -160,9 +184,10 @@ def _read_file_lines(file_path: Path, error_context: str = "") -> List[str]:
     try:
         with open(file_path, encoding="utf-8") as f:
             return [line.strip() for line in f]
-    except FileNotFoundError:
+    except OSError as e:
         _log_error_and_exit(
-            f"{file_path} not found{'. ' + error_context if error_context else ''}"
+            f"Failed to read {file_path}: {e}"
+            f"{'. ' + error_context if error_context else ''}"
         )
 
 
@@ -176,7 +201,115 @@ def _extract_test_file_from_name(test_name: str) -> str:
     Returns:
         Test file path without description (e.g., "gdb.rocm/foo.exp").
     """
-    return test_name.split(": ", 1)[0] if ": " in test_name else test_name
+    return test_name.split(": ", 1)[0]
+
+
+def load_ignore_list_from_json(json_path: Path) -> Dict[str, List[str]]:
+    """
+    Load test ignore list from JSON file.
+
+    Args:
+        json_path: Path to JSON file containing ignore list.
+
+    Returns:
+        Dictionary mapping compiler labels to lists of ignored test paths.
+        Returns empty dict if file doesn't exist.
+
+    Exits:
+        Code 1 if JSON file exists but is malformed.
+    """
+    if not json_path.exists():
+        logger.warning(
+            f"Ignore list file not found: {json_path}. Using empty ignore list."
+        )
+        return {}
+
+    try:
+        with open(json_path, encoding="utf-8") as f:
+            data = json.load(f)
+    except OSError as e:
+        _log_error_and_exit(f"Failed to read {json_path}: {e}")
+    except json.JSONDecodeError as e:
+        _log_error_and_exit(f"Failed to parse JSON from {json_path}: {e}")
+
+    if not isinstance(data, dict):
+        _log_error_and_exit(
+            f"Invalid ignore list format in {json_path}: expected a JSON object"
+        )
+
+    # Validate structure: each key should map to a list of strings.
+    for key, value in data.items():
+        if not isinstance(value, list):
+            _log_error_and_exit(
+                f"Invalid ignore list format in {json_path}: "
+                f"key '{key}' should map to a list"
+            )
+        if not all(isinstance(item, str) for item in value):
+            _log_error_and_exit(
+                f"Invalid ignore list format in {json_path}: "
+                f"all items in list for key '{key}' should be strings"
+            )
+
+    return data
+
+
+def _non_negative_int(value: str) -> int:
+    """
+    Validate argument is a non-negative integer.
+
+    Args:
+        value: String value from command line.
+
+    Returns:
+        Non-negative integer value.
+
+    Raises:
+        argparse.ArgumentTypeError: If value is negative.
+    """
+    ivalue = int(value)
+    if ivalue < 0:
+        raise argparse.ArgumentTypeError(f"{value} is not a non-negative integer")
+    return ivalue
+
+
+def _timeout_value(value: str) -> int:
+    """
+    Validate timeout is a positive integer (seconds).
+
+    Args:
+        value: String value from command line.
+
+    Returns:
+        Integer timeout value.
+
+    Raises:
+        argparse.ArgumentTypeError: If value is not a positive integer.
+    """
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(
+            f"timeout must be a positive integer (got {ivalue})"
+        )
+    return ivalue
+
+
+def _positive_nonzero_int(value: str) -> int:
+    """
+    Validate argument is a positive non-zero integer.
+
+    Args:
+        value: String value from command line.
+
+    Returns:
+        Positive non-zero integer value.
+
+    Raises:
+        argparse.ArgumentTypeError: If value is not positive and non-zero.
+    """
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(f"{value} is not a positive non-zero integer")
+    return ivalue
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -191,27 +324,36 @@ def parse_arguments() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(
         description="Run ROCgdb test suite with different compilers.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=lambda prog: argparse.RawDescriptionHelpFormatter(
+            prog, width=100
+        ),
         epilog="""Examples:
   python %(prog)s --testsuite-dir /path/to/testsuite --rocgdb-bin /path/to/rocgdb
+  python %(prog)s --rocgdb-bin /path/to/rocgdb
   python %(prog)s --tests gdb.base/break.exp gdb.base/call-ar-st.exp
+  python %(prog)s --gpu-tests
+  python %(prog)s --cpu-tests
   python %(prog)s --parallel
   python %(prog)s --group-results
-  python %(prog)s --timeout 600
+  python %(prog)s --default-timeout 300
+  python %(prog)s --retry-timeout 600
   python %(prog)s --max-failed-retries 2
   python %(prog)s --optimization="-O0"
   python %(prog)s --runtestflags="--target_board=hip -debug"
   python %(prog)s --no-xfail
   python %(prog)s --quiet
-  python %(prog)s --dump-failed-test-log
+  python %(prog)s --skip-failed-test-log
+  python %(prog)s --output-ignore-list-file custom_ignore_list.json
+  python %(prog)s --one-by-one --tests gdb.rocm/foo.exp
 
         """,
     )
 
     parser.add_argument(
-        "--dump-failed-test-log",
+        "--skip-failed-test-log",
         action="store_false",
-        help="For failed tests, dump gdb.log to the console at the end of the run. Default is on.",
+        dest="dump_failed_test_log",
+        help="Skip dumping gdb.log to the console for failed tests. Default is to dump the log.",
     )
     parser.add_argument(
         "--group-results",
@@ -220,7 +362,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--max-failed-retries",
-        type=int,
+        type=_non_negative_int,
         default=3,
         help="Maximum number of times to retry failed tests. Default is 3.",
     )
@@ -239,6 +381,15 @@ def parse_arguments() -> argparse.Namespace:
         "--parallel", action="store_true", help="Run tests in parallel. Default is off."
     )
     parser.add_argument(
+        "-j",
+        "--jobs",
+        type=_positive_nonzero_int,
+        default=None,
+        metavar="N",
+        help="Number of parallel jobs for make (e.g., -j4). Only valid with --parallel. "
+        "If --parallel is used without -j, defaults to os.cpu_count().",
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         help="Do not output configure/testsuite commands. Default is off.",
@@ -246,7 +397,9 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--rocgdb-bin",
         type=Path,
-        help="Path to ROCgdb executable. Default is to look for TheRock env variables.",
+        help="Path to the ROCgdb executable. Validated for existence when "
+        "supplied. Default: <rocm_dir>/bin/rocgdb, where rocm_dir is "
+        "auto-discovered (see --try-rocm-path).",
     )
     parser.add_argument(
         "--runtestflags",
@@ -254,22 +407,52 @@ def parse_arguments() -> argparse.Namespace:
         default="",
         help="Additional flags for RUNTESTFLAGS (e.g., '--target_board=hip -debug').",
     )
-    parser.add_argument(
+
+    # Create mutually exclusive group for test selection
+    test_group = parser.add_mutually_exclusive_group()
+    test_group.add_argument(
         "--tests",
         nargs="+",
-        default=["gdb.rocm", "gdb.dwarf2"],
-        help="List of tests to run. Default is gdb.rocm/*.exp and gdb.dwarf2/*.exp",
+        default=None,
+        help="List of tests to run (individual .exp files or directories). "
+        "For directories, the /*.exp suffix is automatically added. "
+        "Mutually exclusive with --gpu-tests and --cpu-tests. "
+        "Default (if no test option specified) is gdb.rocm/*.exp and gdb.dwarf2/*.exp",
     )
+    test_group.add_argument(
+        "--gpu-tests",
+        action="store_true",
+        help="Run GPU-specific tests (gdb.rocm directory only). "
+        "Mutually exclusive with --tests and --cpu-tests.",
+    )
+    test_group.add_argument(
+        "--cpu-tests",
+        action="store_true",
+        help="Run all CPU tests (all testsuite directories except gdb.rocm). "
+        "Automatically discovers all gdb.* directories with .exp files. "
+        "Mutually exclusive with --tests and --gpu-tests.",
+    )
+
     parser.add_argument(
         "--testsuite-dir",
         type=Path,
-        help="Path to GDB testsuite directory. Default is to look for TheRock env variables.",
+        help="Path to the GDB testsuite directory. Validated for existence "
+        "when supplied. Default: <rocm_dir>/tests/rocgdb/gdb/testsuite, "
+        "where rocm_dir is auto-discovered (see --try-rocm-path).",
     )
     parser.add_argument(
-        "--timeout",
-        type=int,
+        "--default-timeout",
+        type=_timeout_value,
+        default=None,
+        help="Default timeout in seconds for all test runs from the start. "
+        "If not specified, no timeout is set initially.",
+    )
+    parser.add_argument(
+        "--retry-timeout",
+        type=_timeout_value,
         default=100,
-        help="Timeout value in seconds for individual tests (max: 600). Default is 100.",
+        help="Timeout in seconds for timeout-based retry runs only. "
+        "Only applies when retrying tests that timed out. Default is 100.",
     )
     parser.add_argument(
         "--try-rocm-path",
@@ -284,38 +467,89 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         choices=["check", "check-read1", "check-readmore"],
         default="check",
-        help="Which GDB testsuite target to invoke. 'check' is the normal run."
-        "'check-read1' runs under an LD_PRELOAD shim that forces read(2) to"
-        "return 1 byte at a time (stress-tests GDB's incremental I/O parsing)."
-        "'check-readmore' forces large reads (the opposite extreme). These"
-        "are upstream GDB testsuite modes and can surface real GDB bugs that"
-        "'check' alone misses. Default: 'check'.",
+        help="Which GDB testsuite target to invoke. 'check' is the normal run. "
+        "'check-read1' runs under an LD_PRELOAD shim that forces read(2) to "
+        "return 1 byte at a time (stress-tests GDB's incremental I/O parsing). "
+        "'check-readmore' forces large reads (the opposite extreme). These "
+        "are upstream GDB testsuite modes and can surface latent testcase "
+        "regex bugs that 'check' alone misses. Default: 'check'.",
+    )
+    parser.add_argument(
+        "--ignore-list-file",
+        type=Path,
+        required=False,
+        metavar="PATH",
+        help="Path to JSON file containing test ignore lists. "
+        "If not specified, uses rocgdb_ignore_list.json in the same directory as this script. "
+        "This option requires a value.",
+    )
+    parser.add_argument(
+        "--output-ignore-list-file",
+        type=Path,
+        required=False,
+        metavar="PATH",
+        help="Path to output JSON file for generating a new ignore list from test failures. "
+        "When specified, the testsuite runs normally and all failures are written to this file "
+        "at the end of the run. Common failures go into 'Generic' category, compiler-specific "
+        "failures go into compiler-specific categories (e.g., 'GCC', 'LLVM'). "
+        "This option requires a value.",
+    )
+    parser.add_argument(
+        "--one-by-one",
+        action="store_true",
+        help="Run each test in its own `make check` invocation and save its gdb.log "
+        "under --one-by-one-log-dir. Each invocation is subject to a wall-clock limit; "
+        "see --one-by-one-test-timeout. Mutually exclusive with --parallel.",
+    )
+    parser.add_argument(
+        "--one-by-one-log-dir",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="Root directory for per-test gdb.log captures in --one-by-one mode. "
+        "Default: <testsuite_dir>/one_by_one_logs.",
+    )
+    parser.add_argument(
+        "--one-by-one-test-timeout",
+        type=_positive_nonzero_int,
+        default=None,
+        metavar="SECS",
+        help="Wall-clock timeout (seconds) per individual `make check` invocation "
+        "in --one-by-one mode. Defaults to 3600.",
     )
 
     args = parser.parse_args()
 
-    # Enforce both testsuite-dir and rocgdb-bin being provided together.
-    if (args.testsuite_dir is None) != (args.rocgdb_bin is None):
+    # Validate that -j/--jobs is only used with --parallel.
+    if args.jobs is not None and not args.parallel:
         _log_error_and_exit(
-            "Both --testsuite-dir and --rocgdb-bin must be provided together, or neither."
+            "-j/--jobs can only be specified when --parallel is provided."
         )
 
-    # Validate paths if provided.
+    # Validate --one-by-one constraints.
+    if args.one_by_one and args.parallel:
+        _log_error_and_exit("--one-by-one cannot be combined with --parallel.")
+    if (
+        args.one_by_one_log_dir is not None or args.one_by_one_test_timeout is not None
+    ) and not args.one_by_one:
+        _log_error_and_exit(
+            "--one-by-one-log-dir / --one-by-one-test-timeout require --one-by-one."
+        )
+
+    # Validate paths independently if provided. Either flag may be supplied
+    # alone; whichever is omitted is auto-discovered in _resolve_rocm_paths.
     if args.testsuite_dir is not None:
-        validate_path(args.testsuite_dir, is_dir=True)
-        validate_path(args.rocgdb_bin, is_file=True)
+        args.testsuite_dir = validate_path(args.testsuite_dir, is_dir=True)
+    if args.rocgdb_bin is not None:
+        args.rocgdb_bin = validate_path(args.rocgdb_bin, is_file=True)
 
-    # Validate timeout value.
-    if not (0 < args.timeout <= 600):
-        _log_error_and_exit(
-            f"Timeout must be between 1 and 600 seconds. Got {args.timeout}."
+    # Adjust retry-timeout if default-timeout is larger.
+    if args.default_timeout is not None and args.default_timeout > args.retry_timeout:
+        logger.warning(
+            f"--retry-timeout is being overridden from {args.retry_timeout}s to "
+            f"{args.default_timeout}s because --default-timeout is larger."
         )
-
-    # Validate max_failed_retries value.
-    if args.max_failed_retries < 0:
-        _log_error_and_exit(
-            f"Max failed retries must be non-negative. Got {args.max_failed_retries}."
-        )
+        args.retry_timeout = args.default_timeout
 
     return args
 
@@ -342,73 +576,55 @@ class TestResults:
         # Track flaky tests (failed initially but passed on retry) by compiler_label.
         self.flaky_tests: Dict[str, Set[str]] = defaultdict(set)
 
-    def cleanup_old_entries(self, compiler_label: str, tests: str) -> None:
+        # Track harness-level errors (ERROR lines with no preceding
+        # "Running ....exp") per compiler_label. Replaced on each
+        # update_results call so it reflects the most recent run's state.
+        self.harness_errors: Dict[str, List[str]] = defaultdict(list)
+
+    def cleanup_old_entries(self, compiler_label: str, tests: List[str]) -> None:
         """
         Remove stale test results before retry runs to prevent duplicate entries.
 
         Args:
             compiler_label: Compiler identifier (e.g., "GCC", "LLVM").
-            tests: Space-separated test file names to remove.
+            tests: List of test file names to remove.
 
         Returns:
             None
         """
-        # Case: first run for this compiler — nothing to clean.
-        if not self.test_data[compiler_label]:
+        # Case: first run for this compiler — nothing to clean. Use
+        # `in` rather than indexing to avoid the defaultdict factory
+        # materializing a phantom empty entry for the compiler.
+        if compiler_label not in self.test_data:
             return
 
-        logger.info(f"Retry run. Cleaning dictionary entries for {tests}.")
+        logger.info(f"Retry run. Cleaning dictionary entries for {' '.join(tests)}.")
 
         # Clear the failed tests set for this compiler label.
         self.failed_tests[compiler_label].clear()
 
         # Clear tests entries from the main test results database for this
         # compiler label.
-        for test in tests.split():
+        for test in tests:
             for category in TEST_CATEGORIES:
                 category_results = self.test_data[compiler_label].get(category)
                 if category_results and test in category_results:
                     del category_results[test]
 
-    def extract_errors(self, results_file: str) -> Dict[str, List[str]]:
-        """
-        Extract ERROR messages from test results, grouped by test file.
-
-        Args:
-            results_file: Path to the GDB test results file.
-
-        Returns:
-            Dictionary mapping test file names to lists of error messages.
-            Test paths are shortened to last two components (e.g., 'gdb.base/break.exp').
-        """
-        errors_dict = defaultdict(list)
-        current_test_file = None
-
-        for line in _read_file_lines(Path(results_file), "during error extraction"):
-            # Detect the start of a test case.
-            match = re.search(r"Running\s+(\S+\.exp)", line)
-            if match:
-                full_path = match.group(1).rstrip(":.")
-                segments = os.path.normpath(full_path).split(os.path.sep)
-                current_test_file = "/".join(segments[-2:])
-
-            # Detect ERROR lines.
-            if line.startswith("ERROR:"):
-                msg = line[len("ERROR:") :].strip()
-                test_file = current_test_file or "UNKNOWN"
-                errors_dict[test_file].append(f"{test_file}: {msg}")
-
-        return dict(errors_dict)
-
     def update_results(
-        self, compiler_label: str, tests: str, results_file: str
+        self, compiler_label: str, tests: List[str], results_file: Path
     ) -> None:
         """
         Parse and update test results from a DejaGnu results file.
 
+        A single pass over the file extracts both result lines (PASS/FAIL/...)
+        and ERROR lines, attributing each ERROR to the most recently seen
+        `Running ....exp` line. ERRORs without a preceding Running line are
+        recorded as harness-level errors.
+
         Args:
             compiler_label: Compiler name (e.g., "GCC", "LLVM").
-            tests: Space-separated test file names to clear before updating.
+            tests: List of test file names to clear before updating.
             results_file: Path to results file with lines like "STATUS: test_description".
 
         Returns:
@@ -416,20 +632,32 @@ class TestResults:
         """
         self.cleanup_old_entries(compiler_label, tests)
 
-        result_regex = re.compile(
-            r"^(PASS|FAIL|XFAIL|UNTESTED|UNSUPPORTED|KFAIL|UNRESOLVED): (.+)"
-        )
-        timeout_regex = re.compile(r"\(timeout\)")
+        new_errors: Dict[str, List[str]] = defaultdict(list)
+        orphan_errors: List[str] = []
+        current_test_file: Optional[str] = None
 
-        for line in _read_file_lines(Path(results_file), "during results update"):
+        for line in _read_file_lines(results_file, "during results update"):
             if not line:
                 continue
 
-            match = result_regex.match(line)
+            running_match = RUNNING_EXP_RE.search(line)
+            if running_match:
+                segments = os.path.normpath(running_match.group(1)).split(os.path.sep)
+                current_test_file = "/".join(segments[-2:])
+
+            if line.startswith("ERROR:"):
+                msg = line[len("ERROR:") :].strip()
+                if current_test_file is None:
+                    orphan_errors.append(msg)
+                else:
+                    new_errors[current_test_file].append(f"{current_test_file}: {msg}")
+                continue
+
+            match = RESULT_LINE_RE.match(line)
             if match:
                 status, test_name = match.groups()
                 test_file = _extract_test_file_from_name(test_name)
-                is_timeout = timeout_regex.search(test_name)
+                is_timeout = TIMEOUT_RE.search(test_name)
 
                 # Add the entry to our test results database.
                 self.test_data[compiler_label][status][test_file].append(test_name)
@@ -441,24 +669,22 @@ class TestResults:
                         test_name
                     )
 
-                # Ignore timeouts that happen on anything other than FAIL or
-                # UNRESOLVED. For instance, if we have a timeout for a KFAIL,
-                # we don't want to add it to the failed tests list since it is
-                # harmless.
-                if is_timeout and status not in ["FAIL", "UNRESOLVED"]:
-                    is_timeout = False
-
-                # Track the current list of failed tests.
-                if status in ["FAIL", "UNRESOLVED"] or is_timeout:
+                # Track the current list of failed tests. Timeouts on
+                # statuses other than FAIL/UNRESOLVED (e.g. a KFAIL that
+                # happened to time out) are harmless and intentionally
+                # excluded.
+                if status in ["FAIL", "UNRESOLVED"]:
                     self.failed_tests[compiler_label].add(test_file)
 
-        # Handle ERROR entries separately since we need to do extra work to
-        # find out the testcase information.
-        self.test_data[compiler_label]["ERROR"] = self.extract_errors(results_file)
-
-        # Update failed tests with ERROR entries.
-        for test_file in self.test_data[compiler_label]["ERROR"].keys():
+        # Merge ERROR entries into the existing dict so that ERRORs for tests
+        # not being rerun are preserved (cleanup_old_entries has already
+        # cleared the slots for the tests in the current run).
+        for test_file, messages in new_errors.items():
+            self.test_data[compiler_label]["ERROR"][test_file] = messages
             self.failed_tests[compiler_label].add(test_file)
+
+        # Replace harness errors with this run's orphans.
+        self.harness_errors[compiler_label] = orphan_errors
 
     def get_failed_tests(self, compiler_label: str) -> List[str]:
         """
@@ -470,7 +696,9 @@ class TestResults:
         Returns:
             List of failed test file paths.
         """
-        return list(self.failed_tests[compiler_label])
+        # Use .get to avoid materializing a phantom empty entry for
+        # compilers that ran without any failures.
+        return list(self.failed_tests.get(compiler_label, set()))
 
     def mark_flaky_tests(self, compiler_label: str, test_files: Set[str]) -> None:
         """
@@ -516,7 +744,9 @@ class TestResults:
 
         self.print_comparison()
 
-    def _print_summary(self, compiler_label: str, details: Dict[str, Set[str]]) -> None:
+    def _print_summary(
+        self, compiler_label: str, details: Dict[str, Dict[str, List[str]]]
+    ) -> None:
         """
         Print test summary for a single compiler.
 
@@ -528,11 +758,11 @@ class TestResults:
             None
         """
         print_section(f"{compiler_label}", border_char="-", inline=True)
-        for cat, (prefix_indicator, suffix_indicator) in CATEGORY_DISPLAY.items():
-            count = sum(len(tests) for tests in details[cat].values())
+        for cat, prefix_indicator in CATEGORY_DISPLAY.items():
+            count = sum(len(tests) for tests in details.get(cat, {}).values())
 
-            if prefix_indicator and count > 0:
-                header = f"  {prefix_indicator} {cat}: {count} {suffix_indicator}"
+            if count > 0:
+                header = f"  {prefix_indicator} {cat}: {count}"
                 logger.info(header)
 
             # Print details for non-PASS tests.
@@ -543,6 +773,12 @@ class TestResults:
                     for test_file in details[cat]:
                         for test_name in details[cat][test_file]:
                             logger.info(f"          {test_name}")
+
+        harness_errors = self.harness_errors.get(compiler_label, [])
+        if harness_errors:
+            logger.info(f"  {STATUS_FAIL} HARNESS ERRORS: {len(harness_errors)}")
+            for msg in harness_errors:
+                logger.info(f"          {msg}")
 
     def _print_grouped_tests(self, test_list: Dict[str, List[str]]) -> None:
         """
@@ -556,10 +792,11 @@ class TestResults:
         """
         grouped = defaultdict(lambda: defaultdict(list))
 
-        for file in test_list.keys():
-            for test_description in test_list[file]:
-                test_dir, test_file = os.path.split(file)
-                grouped[test_dir][test_file].append(test_description[len(file) + 2 :])
+        for file, descriptions in test_list.items():
+            test_dir, test_file = os.path.split(file)
+            prefix_len = len(file) + 2
+            for test_description in descriptions:
+                grouped[test_dir][test_file].append(test_description[prefix_len:])
 
         for directory in sorted(grouped.keys()):
             logger.info(f"     * {directory}")
@@ -625,14 +862,12 @@ class TestResults:
         details = {}
         generic_xfailed = set(xfailed_tests.get("Generic", []))
 
-        # Include all compilers that have either failed or flaky tests.
-        all_compilers = set(self.failed_tests.keys()) | set(self.flaky_tests.keys())
+        # Include all compilers that ran tests, so all-passing compilers also
+        # show up in the final status report.
+        all_compilers = set(self.test_data.keys())
 
         for compiler_label in all_compilers:
-            failed_test_files = {
-                _extract_test_file_from_name(test)
-                for test in self.failed_tests.get(compiler_label, set())
-            }
+            failed_test_files = set(self.failed_tests.get(compiler_label, set()))
             compiler_xfailed = set(xfailed_tests.get(compiler_label, []))
             all_xfailed = generic_xfailed | compiler_xfailed
 
@@ -641,7 +876,9 @@ class TestResults:
             expected_generic = failed_test_files & generic_xfailed
             expected_compiler_specific = failed_test_files & compiler_xfailed
 
-            compiler_pass = len(unexpected_failures) == 0
+            harness_errors = self.harness_errors.get(compiler_label, [])
+            has_harness_errors = bool(harness_errors)
+            compiler_pass = len(unexpected_failures) == 0 and not has_harness_errors
             overall_pass = overall_pass and compiler_pass
 
             flaky_count = len(self.flaky_tests.get(compiler_label, set()))
@@ -655,9 +892,46 @@ class TestResults:
                 "expected_compiler_specific": sorted(expected_compiler_specific),
                 "flaky_tests": sorted(self.flaky_tests.get(compiler_label, set())),
                 "flaky_count": flaky_count,
+                "harness_errors": list(harness_errors),
             }
 
         return overall_pass, details
+
+    def generate_ignore_list(self) -> Dict[str, List[str]]:
+        """
+        Generate ignore list from current test failures.
+
+        Analyzes failures across all compilers and categorizes them as:
+        - Generic: Tests that failed for all compilers
+        - Compiler-specific: Tests that failed only for specific compilers
+
+        Returns:
+            Dictionary with keys "Generic" and compiler labels (e.g., "GCC", "LLVM"),
+            each mapping to a sorted list of failed test file paths.
+        """
+        # Collect all failed test files per compiler that ran tests.
+        all_compiler_failures = {}
+
+        for compiler_label in sorted(self.test_data.keys()):
+            failed_test_files = set(self.failed_tests.get(compiler_label, set()))
+            all_compiler_failures[compiler_label] = failed_test_files
+
+        # Determine which failures are common to all compilers.
+        if len(all_compiler_failures) > 1:
+            generic_failures = set.intersection(*all_compiler_failures.values())
+        else:
+            # 0 compilers (no runs) or 1 compiler (all failures are compiler-specific).
+            generic_failures = set()
+
+        # Build the ignore list structure.
+        ignore_list = {"Generic": sorted(generic_failures)}
+
+        # Add compiler-specific failures.
+        for compiler_label in sorted(all_compiler_failures.keys()):
+            compiler_specific = all_compiler_failures[compiler_label] - generic_failures
+            ignore_list[compiler_label] = sorted(compiler_specific)
+
+        return ignore_list
 
     def print_final_status(
         self, xfailed_tests: Dict[str, List[str]], no_xfail: bool
@@ -672,10 +946,9 @@ class TestResults:
         Returns:
             True if all tests passed or are expected failures, False otherwise.
         """
-        if no_xfail:
-            xfailed_tests.clear()
-
-        overall_pass, details = self.check_all_pass_or_xfailed(xfailed_tests)
+        overall_pass, details = self.check_all_pass_or_xfailed(
+            {} if no_xfail else xfailed_tests
+        )
 
         print_section("FINAL TEST STATUS")
 
@@ -718,6 +991,13 @@ class TestResults:
                 )
                 for test in detail["unexpected_failures"]:
                     logger.info(f"       {test}")
+
+            if detail["harness_errors"]:
+                logger.info(
+                    f"{STATUS_FAIL} Harness Errors ({len(detail['harness_errors'])}):"
+                )
+                for msg in detail["harness_errors"]:
+                    logger.info(f"       {msg}")
 
             if detail["unused_xfails"]:
                 logger.info(
@@ -783,6 +1063,35 @@ def print_section(
         logger.info(apply_color(border))
 
 
+def _log_aligned_fields(
+    fields: List[Union[str, Tuple[str, str]]],
+    indent: str = "  ",
+) -> None:
+    """
+    Log (label, value) pairs with colons aligned to the longest label with an associated value.
+
+    Plain string entries are logged as-is (pass-through lines), skipping the
+    colon and padding — useful for pass-through lines mixed in with key/value rows.
+
+    Args:
+        fields: List of (label, value) tuples or plain strings for pass-through lines.
+        indent: Leading whitespace prefix for every row.
+
+    Returns:
+        None
+    """
+    if not fields:
+        return
+    labelled = [entry[0] for entry in fields if isinstance(entry, tuple)]
+    width = max(len(label) for label in labelled) if labelled else 0
+    for entry in fields:
+        if isinstance(entry, str):
+            logger.info(f"{indent}{entry}")
+        else:
+            label, value = entry
+            logger.info(f"{indent}{label:<{width}} : {value}")
+
+
 def validate_required_files(required_files: Dict[str, Path]) -> None:
     """
     Validate presence of required files and print status.
@@ -799,14 +1108,111 @@ def validate_required_files(required_files: Dict[str, Path]) -> None:
     print_section("Required files")
     all_valid = True
 
+    fields: List[Tuple[str, str]] = []
     for name, path in required_files.items():
-        status = STATUS_PASS if path.is_file() else STATUS_FAIL
-        logger.info(f"{status} {name}: {path}")
-        if not path.is_file():
+        present = path.is_file()
+        status = STATUS_PASS if present else STATUS_FAIL
+        fields.append((f"{status} {name}", str(path)))
+        if not present:
             all_valid = False
+    _log_aligned_fields(fields)
 
     if not all_valid:
         _log_error_and_exit("One or more required files are missing.")
+
+
+def _prepend_to_path_var(env_vars: Dict[str, str], name: str, parts: List[str]) -> None:
+    """
+    Prepend `parts` to a path-style env var in `env_vars`.
+
+    The caller is responsible for logging the change (so multiple env-var
+    updates can be printed as a single aligned block).
+
+    Args:
+        env_vars: Environment variable dictionary to mutate.
+        name: Name of the path-style variable (e.g., "PATH", "LD_LIBRARY_PATH").
+        parts: New entries to prepend, in order.
+
+    Returns:
+        None
+    """
+    existing = env_vars.get(name, "")
+    env_vars[name] = os.pathsep.join(parts + ([existing] if existing else []))
+
+
+def setup_sanitizer_environment(env_vars: Dict[str, str], testsuite_dir: Path) -> None:
+    """
+    Pre-configure *SAN_OPTIONS for every sanitizer we know about.
+
+    This runs unconditionally. When rocgdb is not sanitizer-instrumented,
+    the matching env vars are ignored by the (absent) sanitizer runtime,
+    so the only side effect of a normal run is the creation of an empty
+    sanitizer log directory.
+
+    For each sanitizer in SANITIZERS we set:
+        halt_on_error=0          - sanitizer findings do not abort the run
+        detect_leaks=0           - asan only. ASan ships LSan integrated;
+                                   silence leak reports by default. Override
+                                   with ASAN_OPTIONS=detect_leaks=1 for a
+                                   dedicated leak run.
+        log_path=<dir>/log       - reports go to <dir>/log.<pid>; the
+                                   sanitizer runtime appends .<pid> per
+                                   process, so one log file is produced
+                                   per process. All sanitizers share a
+                                   single directory because log_path lives
+                                   in the sanitizer common flags - in a
+                                   combined build (e.g. ASan + UBSan) the
+                                   last-initialized runtime would overwrite
+                                   any per-sanitizer log_path. Reports
+                                   self-identify in their content.
+        suppressions=<file>      - only when the .supp template exists;
+                                   empty suppression files are still
+                                   attached intentionally so users can
+                                   populate the templates without code
+                                   changes. suppressions is per-runtime
+                                   and does not collide.
+
+    If the shared log directory cannot be created (e.g. read-only
+    testsuite mount), the log_path option is omitted and the sanitizer
+    falls back to stderr - still non-fatal.
+    """
+    print_section("Sanitizer environment")
+
+    suppressions_dir = Path(__file__).resolve().parent / "sanitizers"
+    log_dir = testsuite_dir / "sanitizers_output"
+    log_dir_ready = True
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        log_dir_ready = False
+        logger.warning(
+            f"{STATUS_WARN} Could not create sanitizer log dir "
+            f"{log_dir}: {exc}. Sanitizer reports will go to stderr."
+        )
+
+    fields: List[Tuple[str, str]] = []
+    for sanitizer in SANITIZERS:
+        options = ["halt_on_error=0"]
+        if sanitizer == "asan":
+            options.append("detect_leaks=0")
+        if log_dir_ready:
+            options.append(f"log_path={log_dir}/log")
+
+        suppression_file = suppressions_dir / f"{sanitizer}.supp"
+        if suppression_file.is_file():
+            options.append(f"suppressions={suppression_file}")
+
+        env_var_name = f"{sanitizer.upper()}_OPTIONS"
+        # Preserve any pre-existing options from the caller's environment.
+        # Sanitizer option parsing is last-wins, so appending the existing
+        # value after our defaults lets the user override them.
+        existing = env_vars.get(env_var_name, "")
+        if existing:
+            options.append(existing)
+        env_vars[env_var_name] = ":".join(options)
+        fields.append((env_var_name, env_vars[env_var_name]))
+
+    _log_aligned_fields(fields)
 
 
 def setup_environment(artifacts_dir: Path) -> Dict[str, str]:
@@ -824,32 +1230,24 @@ def setup_environment(artifacts_dir: Path) -> Dict[str, str]:
     # Copy current environment.
     env_vars = os.environ.copy()
 
-    # Add ROCgdb and LLVM binaries to PATH.
+    # Add ROCgdb and LLVM binaries to PATH and libraries to LD_LIBRARY_PATH.
     #
-    # Please note LLVM has switched location for its executables. It used to
-    # be llvm/bin but now is lib/llvm/bin. A llvm -> lib/llvm symlink is kept
-    # for backwards compatibility, but the new path should be used moving
-    # forward.
-    path_entries = (
-        f"{artifacts_dir}/bin:{artifacts_dir}/llvm/bin:{artifacts_dir}/lib/llvm/bin:"
-    )
-    env_vars["PATH"] = path_entries + env_vars.get("PATH", "")
-    logger.info(f"PATH: {path_entries}")
-
-    # Add ROCgdb and LLVM libraries to LD_LIBRARY_PATH.
-    #
-    # See note above about LLVM's location change.
-    ld_library_path_entries = (
-        f"{artifacts_dir}/lib:{artifacts_dir}/llvm/lib:{artifacts_dir}/lib/llvm/lib:"
-    )
-    env_vars["LD_LIBRARY_PATH"] = ld_library_path_entries + env_vars.get(
-        "LD_LIBRARY_PATH", ""
-    )
-    logger.info(f"LD_LIBRARY_PATH: {ld_library_path_entries}")
-
-    # Configure GPU core dump pattern.
-    env_vars["HSA_COREDUMP_PATTERN"] = "gpucore.%p"
-    logger.info(f"HSA_COREDUMP_PATTERN: {env_vars['HSA_COREDUMP_PATTERN']}")
+    # Please note LLVM has switched location for its executables/libraries.
+    # It used to be llvm/bin (and llvm/lib) but now is lib/llvm/bin (and
+    # lib/llvm/lib). A llvm -> lib/llvm symlink is kept for backwards
+    # compatibility, but the new path should be used moving forward.
+    path_parts = [
+        f"{artifacts_dir}/bin",
+        f"{artifacts_dir}/llvm/bin",
+        f"{artifacts_dir}/lib/llvm/bin",
+    ]
+    ld_library_parts = [
+        f"{artifacts_dir}/lib",
+        f"{artifacts_dir}/llvm/lib",
+        f"{artifacts_dir}/lib/llvm/lib",
+    ]
+    _prepend_to_path_var(env_vars, "PATH", path_parts)
+    _prepend_to_path_var(env_vars, "LD_LIBRARY_PATH", ld_library_parts)
 
     # Check if we are running within a github actions context, where a
     # non-system version of Python is being used. If so, we have
@@ -857,24 +1255,28 @@ def setup_environment(artifacts_dir: Path) -> Dict[str, str]:
     if "pythonLocation" in env_vars:
         # Set PYTHONHOME so rocgdb can initialize Python properly.
         env_vars["PYTHONHOME"] = env_vars["pythonLocation"]
-        logger.info(
-            f"Found 'pythonLocation'. Setting 'PYTHONHOME' to {env_vars['pythonLocation']}"
-        )
+        pythonhome_value = env_vars["PYTHONHOME"]
     else:
-        logger.info("'pythonLocation' is not set. Using system defaults.")
+        pythonhome_value = "not set (no pythonLocation env var)"
 
-    # Apply settings to the current process.
-    os.environ.update(env_vars)
+    _log_aligned_fields(
+        [
+            ("PATH (prepended)", os.pathsep.join(path_parts)),
+            ("LD_LIBRARY_PATH (prepended)", os.pathsep.join(ld_library_parts)),
+            ("PYTHONHOME", pythonhome_value),
+        ]
+    )
 
     return env_vars
 
 
-def check_executables(executables: List[str]) -> None:
+def check_executables(executables: List[str], env_vars: Dict[str, str]) -> None:
     """
-    Verify required executables are in system PATH.
+    Verify required executables are in the prepared PATH.
 
     Args:
         executables: List of executable names to check.
+        env_vars: Prepared environment supplying the PATH used for the lookup.
 
     Returns:
         None
@@ -884,9 +1286,10 @@ def check_executables(executables: List[str]) -> None:
     """
     print_section("Required executables")
     missing = []
+    search_path = env_vars.get("PATH")
 
     for exe in executables:
-        path = shutil.which(exe)
+        path = shutil.which(exe, path=search_path)
         if path:
             logger.info(f"{STATUS_PASS} {exe:15} found at: {path}")
         else:
@@ -897,12 +1300,12 @@ def check_executables(executables: List[str]) -> None:
         _log_error_and_exit(f"Missing {len(missing)} executables required for testing.")
 
 
-def setup_core_file_info() -> bool:
+def setup_core_file_info() -> None:
     """
     Set system core file size limit to unlimited and display core file pattern.
 
-    Returns:
-        True if successfully set to unlimited, False otherwise.
+    The outcome is communicated to the user via logger.info / logger.warning
+    so the result is visible in the run banner.
     """
     print_section("Core file information")
 
@@ -914,8 +1317,8 @@ def setup_core_file_info() -> bool:
             logger.info(f"System core file pattern: {core_pattern}")
         else:
             logger.info("System core file pattern: N/A (file not found)")
-    except (PermissionError, IOError) as e:
-        logger.info(f"System core file pattern: N/A (unable to read: {e})")
+    except OSError as e:
+        logger.warning(f"System core file pattern: N/A (unable to read: {e})")
 
     try:
         resource.setrlimit(
@@ -925,16 +1328,13 @@ def setup_core_file_info() -> bool:
 
         if soft == resource.RLIM_INFINITY:
             logger.info(f"{STATUS_PASS} Core file size limit set to unlimited")
-            return True
         else:
-            logger.info(f"   Warning: Core file size limit is {soft}, not unlimited")
-            logger.info("   Core file tests may not execute properly")
-            return False
+            logger.warning(f"Core file size limit is {soft}, not unlimited")
+            logger.warning("Core file tests may not execute properly")
 
-    except (ValueError, Exception) as e:
-        logger.info(f"{STATUS_FAIL} Error: Unable to set core file size limit: {e}")
-        logger.info("   Warning: Core file tests will not be executed")
-        return False
+    except (OSError, ValueError) as e:
+        logger.error(f"{STATUS_FAIL} Unable to set core file size limit: {e}")
+        logger.warning("Core file tests will not be executed")
 
 
 def cleanup_test_suite(
@@ -971,7 +1371,7 @@ def cleanup_test_suite(
 
     logger.info("Creating site.exp...")
     cmd = ["make", "site.exp"]
-    logger.info(f"Executing cleanup: {shlex.join(cmd)}")
+    logger.info(f"Executing: {shlex.join(cmd)}")
     _run_command(
         cmd,
         cwd=test_suite_dir,
@@ -1026,59 +1426,83 @@ def set_test_timeout(test_suite_dir: Path, timeout_value: int) -> None:
         Code 1 if site.exp is missing or cannot be written.
     """
     site_exp_file = test_suite_dir / "site.exp"
+    if not site_exp_file.is_file():
+        _log_error_and_exit(f"site.exp not found at {site_exp_file}")
     try:
-        with open(site_exp_file, "a") as f:
+        with open(site_exp_file, "a", encoding="utf-8") as f:
             f.write(f"\nset gdb_test_timeout {timeout_value}\n")
         logger.info(
             f"{STATUS_PASS} Successfully set gdb_test_timeout to {timeout_value} in {site_exp_file}"
         )
-    except (FileNotFoundError, IOError) as e:
+    except OSError as e:
         _log_error_and_exit(f"Failed to write timeout to {site_exp_file}: {e}")
 
 
-def _extract_test_files(test_names: List[str]) -> List[str]:
+def discover_test_directories(
+    testsuite_dir: Path, exclude: Optional[List[str]] = None
+) -> List[str]:
     """
-    Extract unique test file paths from full test names.
+    Discover all test directories in the testsuite.
 
     Args:
-        test_names: Full test names (e.g., "gdb.rocm/foo.exp: description").
+        testsuite_dir: Path to testsuite directory.
+        exclude: List of directory names to exclude (default None).
 
     Returns:
-        Sorted list of unique test file paths without descriptions.
+        Sorted list of test directory names (e.g., ["gdb.base", "gdb.threads"]).
     """
-    return sorted(set(_extract_test_file_from_name(name) for name in test_names))
+    if exclude is None:
+        exclude = []
+
+    test_dirs = []
+    for item in testsuite_dir.iterdir():
+        if item.is_dir() and item.name.startswith("gdb.") and item.name not in exclude:
+            if any(item.glob("*.exp")):
+                test_dirs.append(item.name)
+
+    return sorted(test_dirs)
 
 
-def expand_test_paths(test_list: List[str], testsuite_dir: Path) -> str:
+def expand_test_paths(test_list: List[str], testsuite_dir: Path) -> List[str]:
     """
-    Expand test paths to space-separated .exp files, validating existence.
+    Expand test paths to a list of .exp files, validating existence.
 
     Args:
         test_list: Test paths (individual .exp files or directories).
         testsuite_dir: Base directory to resolve relative paths.
 
     Returns:
-        Space-separated list of .exp test file paths.
+        List of .exp test file paths.
 
     Exits:
         Code 1 if any test file is missing.
     """
-    expanded_tests = []
+    expanded_tests: List[str] = []
 
     for test_path in test_list:
         if not test_path.endswith(".exp"):
             pattern = f"{test_path}/*.exp"
-            matches = glob.glob(pattern, root_dir=str(testsuite_dir))
+            matches = sorted(glob.glob(pattern, root_dir=str(testsuite_dir)))
             if matches:
                 expanded_tests.extend(matches)
                 logger.info(
                     f"Expanded directory '{test_path}' to {len(matches)} test files"
                 )
             else:
-                logging.warning(f"No test files found matching pattern: {pattern}")
+                logger.warning(f"No test files found matching pattern: {pattern}")
         else:
             expanded_tests.append(test_path)
             logger.info(f"Added test file: {test_path}")
+
+    # Drop duplicates while preserving first-occurrence order so that
+    # overlapping --tests arguments do not silently run the same test twice.
+    deduped_tests = list(dict.fromkeys(expanded_tests))
+    if len(deduped_tests) != len(expanded_tests):
+        dropped = len(expanded_tests) - len(deduped_tests)
+        logger.warning(
+            f"Dropped {dropped} duplicate test path(s) from the expanded test list"
+        )
+    expanded_tests = deduped_tests
 
     # Verify that all expanded files exist.
     for file_path in expanded_tests:
@@ -1086,7 +1510,7 @@ def expand_test_paths(test_list: List[str], testsuite_dir: Path) -> str:
         if not abs_path.is_file():
             _log_error_and_exit(f"Missing or invalid test file: {file_path}")
 
-    return " ".join(expanded_tests)
+    return expanded_tests
 
 
 def print_env_variables() -> None:
@@ -1097,11 +1521,10 @@ def print_env_variables() -> None:
         None
     """
     print_section("Environment Variables")
-    for key, value in os.environ.items():
-        logger.info(f"{key}: {value}")
+    _log_aligned_fields([(key, value) for key, value in os.environ.items()])
 
 
-def validate_path(path: Path, is_dir: bool = False, is_file: bool = False) -> None:
+def validate_path(path: Path, is_dir: bool = False, is_file: bool = False) -> Path:
     """
     Validate path exists and matches expected type.
 
@@ -1111,7 +1534,7 @@ def validate_path(path: Path, is_dir: bool = False, is_file: bool = False) -> No
         is_file: Require file if True (default False).
 
     Returns:
-        None
+        The resolved (absolute, symlink-followed) path.
 
     Exits:
         Code 1 if path doesn't exist or is wrong type.
@@ -1123,27 +1546,31 @@ def validate_path(path: Path, is_dir: bool = False, is_file: bool = False) -> No
     if is_file and not resolved_path.is_file():
         _log_error_and_exit(f"File does not exist: {resolved_path}")
 
+    return resolved_path
 
-def validate_rocgdb(rocgdb_bin: Path) -> None:
+
+def validate_rocgdb(rocgdb_bin: Path, env_vars: Dict[str, str]) -> None:
     """
     Validate ROCgdb executable can run successfully.
 
     Args:
         rocgdb_bin: Path to ROCgdb executable.
+        env_vars: Prepared environment (PATH/LD_LIBRARY_PATH/sanitizer options)
+            to use for the validation subprocesses.
 
     Returns:
         None
 
-    Raises:
-        RuntimeError: If ROCgdb fails to execute.
+    Exits:
+        Code 1 if ROCgdb fails to execute or its python validation fails.
     """
     print_section("ROCgdb launcher data")
-    env = os.environ.copy()
-    env["ROCGDB_WRAPPER_DEBUG"] = "1"
 
     try:
         # First invoke the rocgdb launcher in debug mode.
         print_section("ROCgdb launcher start", border_char="-", inline=True)
+        env = env_vars.copy()
+        env["ROCGDB_WRAPPER_DEBUG"] = "1"
         result = _run_command(
             [str(rocgdb_bin), "--version"], env=env, capture_output=True
         )
@@ -1154,14 +1581,15 @@ def validate_rocgdb(rocgdb_bin: Path) -> None:
 
         # Now validate that we can launch rocgdb at all.
         print_section("ROCgdb executable start", border_char="-", inline=True)
-        result = _run_command([str(rocgdb_bin), "--version"], capture_output=True)
+        result = _run_command(
+            [str(rocgdb_bin), "--version"], env=env_vars, capture_output=True
+        )
 
         for line in result.stdout.splitlines():
             logger.info(line)
         logger.info("ROCgdb executable ran successfully.")
     except subprocess.CalledProcessError as e:
-        logger.error(f"Failed to run ROCgdb: {e.stderr}")
-        raise RuntimeError("ROCgdb did not run successfully.")
+        _log_error_and_exit(f"ROCgdb did not run successfully: {e.stderr}")
 
     # Validate internal Python environment.
     print_section("ROCgdb internal python data", border_char="-", inline=True)
@@ -1182,34 +1610,39 @@ def validate_rocgdb(rocgdb_bin: Path) -> None:
         "print(f'GDB python modules path: {gdb.PYTHONDIR}'); "
     )
 
-    try:
-        result = _run_command(
-            [str(rocgdb_bin), "-batch", "-ex", f"python {py_cmd}"],
-            capture_output=True,
-            check=False,
-        )
+    result = _run_command(
+        [str(rocgdb_bin), "-batch", "-ex", f"python {py_cmd}"],
+        env=env_vars,
+        capture_output=True,
+        check=False,
+    )
 
-        if result.returncode == 0:
-            for line in result.stdout.splitlines():
-                logger.info(line)
-            logger.info("ROCgdb internal python validation successful.")
-        elif "Python scripting is not supported in this copy of GDB" in result.stderr:
-            logger.warning(
-                "Python scripting is not supported in this copy of GDB. Testing will proceed without Python support."
-            )
-        else:
-            logger.error(f"Failed ROCgdb Python validation: {result.stderr}")
-            raise RuntimeError("ROCgdb did not run successfully.")
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Failed ROCgdb Python validation: {e.stderr}")
-        raise RuntimeError("ROCgdb did not run successfully.")
+    if result.returncode == 0:
+        # Parse "label: value" pairs printed by the embedded script and
+        # re-emit them with colons aligned, matching the surrounding
+        # banner blocks. Lines without a colon are passed through verbatim.
+        parsed: List[Union[str, Tuple[str, str]]] = []
+        for line in result.stdout.splitlines():
+            label, sep, value = line.partition(":")
+            if sep:
+                parsed.append((label.strip(), value.strip()))
+            else:
+                parsed.append(line)
+        _log_aligned_fields(parsed)
+        logger.info("ROCgdb internal python validation successful.")
+    elif "Python scripting is not supported in this copy of GDB" in result.stderr:
+        logger.warning(
+            "Python scripting is not supported in this copy of GDB. Testing will proceed without Python support."
+        )
+    else:
+        _log_error_and_exit(f"ROCgdb python validation failed: {result.stderr}")
 
 
 def run_tests(
     test_suite_dir: Path,
     rocgdb_bin: Path,
     env_vars: Dict[str, str],
-    tests: str,
+    tests: List[str],
     cc: str,
     cxx: str,
     fc: str,
@@ -1224,7 +1657,7 @@ def run_tests(
         test_suite_dir: Path to test suite directory.
         rocgdb_bin: Path to ROCgdb binary.
         env_vars: Environment variables for test execution.
-        tests: Space-separated test file names.
+        tests: Test file names to run.
         cc: C compiler command.
         cxx: C++ compiler command.
         fc: Fortran compiler command.
@@ -1240,16 +1673,24 @@ def run_tests(
 
     for iteration in range(1, max_iterations + 1):
         print_section(f"ROCgdb tests - {compiler_label} - Iteration {iteration}")
-        logger.info(f"Number of tests to run: {len(current_tests.split())}")
+        logger.info(f"Number of tests to run: {len(current_tests)}")
 
         # Track which tests we're running in this iteration (for flaky detection).
-        tests_in_iteration = set(current_tests.split())
+        tests_in_iteration = set(current_tests)
 
         configure_test_suite(test_suite_dir, env_vars, args.quiet)
 
-        # If re-running due to timeout failures, apply timeout.
-        if iteration != 1 and test_results.test_data[compiler_label].get("TIMEOUT"):
-            set_test_timeout(test_suite_dir, args.timeout)
+        # default_timeout applies on every iteration. On retry iterations
+        # following a TIMEOUT, use retry_timeout instead (parse_arguments
+        # guarantees it is >= default_timeout).
+        timeout_to_set = args.default_timeout
+        if iteration > 1 and test_results.test_data.get(compiler_label, {}).get(
+            "TIMEOUT"
+        ):
+            timeout_to_set = args.retry_timeout
+
+        if timeout_to_set is not None:
+            set_test_timeout(test_suite_dir, timeout_to_set)
 
         start_time = time.perf_counter()
 
@@ -1257,25 +1698,52 @@ def run_tests(
             rocgdb_bin, cc, cxx, fc, args.optimization, args.runtestflags
         )
 
-        cmd = [
-            "make",
-            args.check_type,
-            f"RUNTESTFLAGS={runtestflags_str}",
-            f"TESTS={current_tests}",
-        ]
-        if args.parallel:
-            cmd += ["FORCE_PARALLEL=1", "-j"]
+        if args.one_by_one:
+            if args.one_by_one_test_timeout is not None:
+                wall_clock = args.one_by_one_test_timeout
+            else:
+                # gdb_test_timeout is per-testcase, not per-.exp. Default
+                # generously and let the user override via --one-by-one-test-timeout.
+                wall_clock = ONE_BY_ONE_DEFAULT_WALL_CLOCK_TIMEOUT
+                logger.info(
+                    f"Using default one-by-one wall-clock timeout: {wall_clock}s "
+                    f"(override with --one-by-one-test-timeout)"
+                )
+            log_dir = args.one_by_one_log_dir or (test_suite_dir / "one_by_one_logs")
+            _execute_one_by_one(
+                test_suite_dir,
+                current_tests,
+                runtestflags_str,
+                args.check_type,
+                args.quiet,
+                env_vars,
+                log_dir,
+                compiler_label,
+                iteration,
+                wall_clock,
+            )
+        else:
+            cmd = [
+                "make",
+                args.check_type,
+                f"RUNTESTFLAGS={runtestflags_str}",
+                f"TESTS={' '.join(current_tests)}",
+            ]
+            if args.parallel:
+                jobs = args.jobs or os.cpu_count()
+                cmd += ["FORCE_PARALLEL=1", f"-j{jobs}"]
 
-        logger.info(
-            f"Executing tests with {compiler_label} - Iteration {iteration}: {shlex.join(cmd)}"
-        )
-        _run_command(
-            cmd,
-            cwd=test_suite_dir,
-            env=env_vars,
-            capture_output=args.quiet,
-            check=False,
-        )
+            logger.info(
+                f"Executing tests with {compiler_label} - Iteration {iteration}: {shlex.join(cmd)}"
+            )
+            _run_command(
+                cmd,
+                cwd=test_suite_dir,
+                env=env_vars,
+                capture_output=args.quiet,
+                check=False,
+                kill_process_group=True,
+            )
 
         duration = time.perf_counter() - start_time
 
@@ -1284,15 +1752,24 @@ def run_tests(
         )
 
         # Parse test results from gdb.sum.
-        results_file = f"{test_suite_dir}/gdb.sum"
+        results_file = test_suite_dir / "gdb.sum"
         test_results.update_results(compiler_label, current_tests, results_file)
 
         failed_tests = test_results.get_failed_tests(compiler_label)
 
-        # Detect flaky tests: tests that were failing in previous iteration but now pass.
+        # Detect flaky tests: tests we ran this iteration that now have PASS
+        # entries (and are no longer in failed_tests). Restrict to tests we
+        # actually ran so tests missing from gdb.sum aren't misreported as flaky.
         if iteration > 1:
-            failed_test_files = set(_extract_test_files(failed_tests))
-            newly_passed = tests_in_iteration - failed_test_files
+            passed_this_iteration = {
+                test_file
+                for test_file in test_results.test_data.get(compiler_label, {}).get(
+                    "PASS", {}
+                )
+                if test_file in tests_in_iteration
+            }
+            failed_test_files = set(failed_tests)
+            newly_passed = passed_this_iteration - failed_test_files
             if newly_passed:
                 test_results.mark_flaky_tests(compiler_label, newly_passed)
 
@@ -1303,23 +1780,109 @@ def run_tests(
             break
         elif iteration < max_iterations:
             # Only rerun failed tests next time.
-            current_tests = " ".join(_extract_test_files(failed_tests))
+            current_tests = sorted(set(failed_tests))
             logger.info(
-                f"{STATUS_FAIL}  {len(failed_tests)} failing test(s) found for {compiler_label}. "
+                f"{STATUS_FAIL} {len(failed_tests)} failing test(s) found for {compiler_label}. "
                 f"Proceeding to iteration {iteration + 1} with only failed tests."
             )
         else:
             logger.info(
-                f"{STATUS_FAIL}  {len(failed_tests)} failing test(s) remain for {compiler_label} "
+                f"{STATUS_FAIL} {len(failed_tests)} failing test(s) remain for {compiler_label} "
                 f"after {max_iterations} iterations."
             )
 
             # Print the contents of gdb.log in a visually uncluttered way.
-            if args.dump_failed_test_log:
+            # Skipped in --one-by-one mode since per-test logs are already on disk.
+            if args.dump_failed_test_log and not args.one_by_one:
                 gdb_log_file = test_suite_dir / "gdb.log"
-                print_section("Contents of gdb.log")
-                for line in _read_file_lines(gdb_log_file, "during gdb.log dump"):
-                    logger.info(line)
+                if gdb_log_file.is_file():
+                    print_section("Contents of gdb.log")
+                    # Read directly rather than via _read_file_lines: gdb.log
+                    # uses leading whitespace for nesting, which .strip() would
+                    # flatten and make the failure dump much harder to read.
+                    try:
+                        contents = gdb_log_file.read_text(
+                            encoding="utf-8", errors="replace"
+                        )
+                    except OSError as e:
+                        logger.warning(f"Failed to read {gdb_log_file}: {e}")
+                    else:
+                        for line in contents.splitlines():
+                            logger.info(line)
+                else:
+                    logger.warning(
+                        f"gdb.log not found at {gdb_log_file}; skipping dump."
+                    )
+
+
+def _resolve_rocm_paths(args: argparse.Namespace) -> Tuple[Path, Path, Path]:
+    """
+    Resolve the ROCm tree root, ROCgdb binary, and testsuite directory.
+
+    The ROCm tree root is always auto-discovered from:
+    ROCM_PATH (if --try-rocm-path) > OUTPUT_ARTIFACTS_DIR > script location.
+
+    The binary and testsuite paths are then derived from that root unless
+    the user overrode either with --rocgdb-bin / --testsuite-dir, in which
+    case the supplied path is honored verbatim. The two override flags are
+    independent — supplying one does not require the other.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        Tuple of (rocm_dir, rocgdb_bin, rocgdb_testsuite_dir).
+
+    Exits:
+        Code 1 if a configured environment-variable path does not exist.
+    """
+    rocm_dir = None
+
+    if args.try_rocm_path:
+        rocm_path_env = os.getenv("ROCM_PATH")
+        if rocm_path_env is not None:
+            tmp_dir = Path(rocm_path_env).resolve()
+            if not tmp_dir.is_dir():
+                _log_error_and_exit(
+                    f"ROCM_PATH is set to '{tmp_dir}' but the path does not exist"
+                )
+            rocm_dir = tmp_dir
+            logger.info(f"Using ROCM_PATH: {rocm_dir}")
+        else:
+            logger.info(
+                "--try-rocm-path flag set but ROCM_PATH environment variable is not set. "
+                "Falling back to OUTPUT_ARTIFACTS_DIR or script location."
+            )
+
+    if rocm_dir is None:
+        output_artifacts_dir = os.getenv("OUTPUT_ARTIFACTS_DIR")
+        if output_artifacts_dir is not None:
+            # OUTPUT_ARTIFACTS_DIR is set, verify it exists.
+            rocm_dir = Path(output_artifacts_dir).resolve()
+            if not rocm_dir.is_dir():
+                _log_error_and_exit(
+                    f"OUTPUT_ARTIFACTS_DIR is set to '{rocm_dir}' but the path does not exist"
+                )
+            logger.info(f"Using OUTPUT_ARTIFACTS_DIR: {rocm_dir}")
+        else:
+            # OUTPUT_ARTIFACTS_DIR is not set. Fall back to the script's own
+            # location: when installed, this file lives at
+            # <rocm_tree>/tests/rocgdb/test_rocgdb.py, so three .parent hops
+            # land on <rocm_tree>. This branch only produces a usable path
+            # when run from the installed location, not from the source repo.
+            script_path = Path(__file__).resolve()
+            rocm_dir = script_path.parent.parent.parent
+            logger.info(f"Using script-based path: {rocm_dir}")
+
+    rocgdb_bin = (
+        args.rocgdb_bin if args.rocgdb_bin is not None else rocm_dir / "bin" / "rocgdb"
+    )
+    rocgdb_testsuite_dir = (
+        args.testsuite_dir
+        if args.testsuite_dir is not None
+        else rocm_dir / "tests" / "rocgdb" / "gdb" / "testsuite"
+    )
+    return rocm_dir, rocgdb_bin, rocgdb_testsuite_dir
 
 
 def main() -> None:
@@ -1337,54 +1900,51 @@ def main() -> None:
     """
     args = parse_arguments()
 
+    # Determine ignore list file path.
+    if args.ignore_list_file is None:
+        # Default to rocgdb_ignore_list.json in the same directory as this script.
+        script_dir = Path(__file__).parent
+        args.ignore_list_file = script_dir / "rocgdb_ignore_list.json"
+    else:
+        # User explicitly supplied a path — it must exist.
+        args.ignore_list_file = validate_path(args.ignore_list_file, is_file=True)
+
+    # Determine ignore list file status for configuration display.
+    if args.ignore_list_file.exists():
+        ignore_list_file_status = f"Reading from {args.ignore_list_file}"
+    else:
+        ignore_list_file_status = "disabled"
+
+    # Determine output ignore list file status for configuration display.
+    if args.output_ignore_list_file is not None:
+        output_ignore_list_file_status = f"Outputting to {args.output_ignore_list_file}"
+    else:
+        output_ignore_list_file_status = "disabled"
+
     start_time = time.perf_counter()
 
-    # Determine paths either from arguments or environment variables.
-    if args.testsuite_dir is None:
-        # Determine the root of the ROCm tree.
-        # Priority: ROCM_PATH (if --try-rocm-path) > OUTPUT_ARTIFACTS_DIR > script location
-        rocm_dir = None
-
-        if args.try_rocm_path:
-            rocm_path_env = os.getenv("ROCM_PATH")
-            if rocm_path_env is not None:
-                tmp_dir = Path(rocm_path_env).resolve()
-                if not tmp_dir.is_dir():
-                    _log_error_and_exit(
-                        f"ROCM_PATH is set to '{tmp_dir}' but the path does not exist"
-                    )
-                rocm_dir = tmp_dir
-                logger.info(f"Using ROCM_PATH: {rocm_dir}")
-            else:
-                logger.info(
-                    "--try-rocm-path flag set but ROCM_PATH environment variable is not set. "
-                    "Falling back to OUTPUT_ARTIFACTS_DIR or script location."
-                )
-
-        if rocm_dir is None:
-            output_artifacts_dir = os.getenv("OUTPUT_ARTIFACTS_DIR")
-            if output_artifacts_dir is not None:
-                # OUTPUT_ARTIFACTS_DIR is set, verify it exists.
-                rocm_dir = Path(output_artifacts_dir).resolve()
-                if not rocm_dir.is_dir():
-                    _log_error_and_exit(
-                        f"OUTPUT_ARTIFACTS_DIR is set to '{rocm_dir}' but the path does not exist"
-                    )
-                logger.info(f"Using OUTPUT_ARTIFACTS_DIR: {rocm_dir}")
-            else:
-                # OUTPUT_ARTIFACTS_DIR is not set, use script location to find root.
-                script_path = Path(__file__).resolve()
-                rocm_dir = script_path.parent.parent.parent
-                logger.info(f"Using script-based path: {rocm_dir}")
-
-        rocgdb_bin = rocm_dir / "bin" / "rocgdb"
-        rocgdb_testsuite_dir = rocm_dir / "tests" / "rocgdb" / "gdb" / "testsuite"
-    else:
-        rocgdb_testsuite_dir = args.testsuite_dir
-        rocgdb_bin = args.rocgdb_bin
-        rocm_dir = rocgdb_testsuite_dir.parent.parent.parent
+    rocm_dir, rocgdb_bin, rocgdb_testsuite_dir = _resolve_rocm_paths(args)
 
     rocgdb_configure_script = rocgdb_testsuite_dir / "configure"
+
+    # Handle test selection based on command-line options.
+    # This must happen before print_configuration() since it displays args.tests.
+    if args.gpu_tests:
+        args.tests = ["gdb.rocm"]
+        logger.info("Using --gpu-tests: running gdb.rocm tests only")
+    elif args.cpu_tests:
+        args.tests = discover_test_directories(
+            rocgdb_testsuite_dir, exclude=["gdb.rocm"]
+        )
+        if not args.tests:
+            _log_error_and_exit("No CPU test directories found in testsuite")
+        logger.info(
+            f"Using --cpu-tests: discovered {len(args.tests)} CPU test directories"
+        )
+    elif args.tests is None:
+        # Default case: no test option was specified.
+        args.tests = ["gdb.rocm", "gdb.dwarf2"]
+        logger.info("Using default tests: gdb.rocm and gdb.dwarf2")
 
     # Print env variables.
     print_env_variables()
@@ -1393,7 +1953,18 @@ def main() -> None:
     print_python_info()
 
     # Show configuration summary.
-    print_configuration(rocgdb_bin, rocgdb_testsuite_dir, rocgdb_configure_script, rocm_dir, args)
+    print_configuration(
+        rocgdb_bin,
+        rocgdb_testsuite_dir,
+        rocgdb_configure_script,
+        rocm_dir,
+        args,
+        ignore_list_file_status,
+        output_ignore_list_file_status,
+    )
+
+    # Load ignore list from JSON file.
+    xfailed_tests = load_ignore_list_from_json(args.ignore_list_file)
 
     # Validate critical files exist.
     validate_required_files(
@@ -1409,13 +1980,25 @@ def main() -> None:
 
     # Prepare environment for tests.
     env_vars = setup_environment(rocm_dir)
+    setup_sanitizer_environment(env_vars, rocgdb_testsuite_dir)
 
     # Validate that we can run rocgdb.
-    validate_rocgdb(rocgdb_bin)
+    validate_rocgdb(rocgdb_bin, env_vars)
 
     # Verify executables presence.
     check_executables(
-        ["hipcc", "gcc", "g++", "gfortran", "clang", "clang++", "flang", "runtest"]
+        [
+            "make",
+            "amdclang++",
+            "gcc",
+            "g++",
+            "gfortran",
+            "clang",
+            "clang++",
+            "flang",
+            "runtest",
+        ],
+        env_vars,
     )
 
     print_section("Expanding test paths")
@@ -1451,31 +2034,33 @@ def main() -> None:
 
     # Final summaries.
     test_results.print_all_summaries()
-    overall_pass = test_results.print_final_status(XFAILED_TESTS, args.no_xfail)
+    overall_pass = test_results.print_final_status(xfailed_tests, args.no_xfail)
 
+    # Generate and write output ignore list if requested.
+    if args.output_ignore_list_file is not None:
+        ignore_list = test_results.generate_ignore_list()
+        try:
+            with open(args.output_ignore_list_file, "w", encoding="utf-8") as f:
+                json.dump(ignore_list, f, indent=2, ensure_ascii=False)
+                f.write("\n")  # Add trailing newline.
+            logger.info(
+                f"{STATUS_PASS} Generated ignore list written to {args.output_ignore_list_file}"
+            )
+        except OSError as e:
+            print_section("Generated ignore list (write failed)")
+            for line in json.dumps(
+                ignore_list, indent=2, ensure_ascii=False
+            ).splitlines():
+                logger.info(line)
+            _log_error_and_exit(
+                f"Failed to write ignore list to {args.output_ignore_list_file}: {e}"
+            )
+
+    logger.info("")
     duration = time.perf_counter() - start_time
     logger.info(f"Total test run duration: {duration:.4f} seconds.")
 
     sys.exit(0 if overall_pass else 1)
-
-
-def validate_env_var(var_name: str) -> Path:
-    """
-    Validate and resolve environment variable to Path.
-
-    Args:
-        var_name: Environment variable name.
-
-    Returns:
-        Resolved Path from environment variable.
-
-    Exits:
-        Code 1 if variable is not set.
-    """
-    value = os.getenv(var_name)
-    if value is None:
-        _log_error_and_exit(f"{var_name} environment variable is not set")
-    return Path(value).resolve()
 
 
 def _build_runtestflags(
@@ -1501,18 +2086,200 @@ def _build_runtestflags(
         Complete RUNTESTFLAGS string.
     """
     parts = [
-        f"GDB={rocgdb_bin}",
-        f"CC_FOR_TARGET={cc}",
-        f"CXX_FOR_TARGET={cxx}",
-        f"F77_FOR_TARGET={fc}",
-        f"F90_FOR_TARGET={fc}",
+        f"GDB={shlex.quote(str(rocgdb_bin))}",
+        f"CC_FOR_TARGET={shlex.quote(cc)}",
+        f"CXX_FOR_TARGET={shlex.quote(cxx)}",
+        f"F77_FOR_TARGET={shlex.quote(fc)}",
+        f"F90_FOR_TARGET={shlex.quote(fc)}",
+        "HIP_COMPILER_FOR_TARGET=amdclang++",
     ]
     if optimization:
-        parts.append(f"CFLAGS_FOR_TARGET={optimization}")
+        parts.append(f"CFLAGS_FOR_TARGET={shlex.quote(optimization)}")
     if runtestflags:
         parts.append(runtestflags)
 
     return " ".join(parts)
+
+
+def _execute_one_by_one(
+    test_suite_dir: Path,
+    tests: List[str],
+    runtestflags_str: str,
+    check_type: str,
+    quiet: bool,
+    env_vars: Dict[str, str],
+    log_dir: Path,
+    compiler_label: str,
+    iteration: int,
+    wall_clock_timeout: int,
+) -> None:
+    """
+    Run each test in its own `make check` invocation, capturing per-test
+    gdb.log under <log_dir>/<compiler>/{pass,fail}/<group>/ and writing a
+    sibling .status file with timing and iteration metadata. Per-test gdb.sum
+    content is aggregated into the canonical gdb.sum so the existing
+    result-parsing path consumes it unchanged.
+
+    A test is bucketed into "fail/" if its per-test gdb.sum contains any line
+    starting with FAIL:, UNRESOLVED:, or ERROR:, or if the wall-clock timeout
+    fires; otherwise "pass/".
+
+    Args:
+        test_suite_dir: Path to test suite directory.
+        tests: Test files to run individually (e.g. ["gdb.rocm/foo.exp"]).
+        runtestflags_str: RUNTESTFLAGS string built by _build_runtestflags.
+        check_type: GDB testsuite target to invoke (check / check-read1 / check-readmore).
+        quiet: Capture subprocess output if True.
+        env_vars: Environment variables for test execution.
+        log_dir: Root directory for per-test gdb.log captures.
+        compiler_label: Compiler identifier (e.g., "GCC").
+        iteration: Current retry iteration (1-based) — controls log filename suffix.
+        wall_clock_timeout: Wall-clock timeout (seconds) for each `make check`.
+
+    Returns:
+        None
+
+    Exits:
+        Code 1 if the aggregated gdb.sum cannot be written.
+    """
+    aggregated_lines: List[str] = []
+    retry_number = iteration - 1
+    base_suffix = "" if retry_number == 0 else f".retry-{retry_number}"
+
+    for test in tests:
+        cmd = [
+            "make",
+            check_type,
+            f"RUNTESTFLAGS={runtestflags_str}",
+            f"TESTS={test}",
+        ]
+        logger.info(f"[one-by-one] {compiler_label} - {test}: {shlex.join(cmd)}")
+
+        # Purge stale gdb.sum / gdb.log so a killed or failing `make` cannot
+        # cause this iteration to read the previous test's leftovers.
+        for stale in (test_suite_dir / "gdb.sum", test_suite_dir / "gdb.log"):
+            try:
+                stale.unlink()
+            except FileNotFoundError:
+                pass
+            except OSError as e:
+                logger.warning(
+                    f"{STATUS_WARN} {test}: failed to clear stale {stale.name}: {e}"
+                )
+
+        wall_clock_timed_out = False
+        start = time.perf_counter()
+        try:
+            _run_command(
+                cmd,
+                cwd=test_suite_dir,
+                env=env_vars,
+                capture_output=quiet,
+                check=False,
+                timeout=wall_clock_timeout,
+                kill_process_group=True,
+            )
+        except subprocess.TimeoutExpired:
+            wall_clock_timed_out = True
+            logger.warning(
+                f"{STATUS_WARN} {test}: wall-clock timeout after {wall_clock_timeout}s"
+            )
+        duration = time.perf_counter() - start
+
+        # Read per-test gdb.sum for both bucketing and aggregation.
+        gdb_sum = test_suite_dir / "gdb.sum"
+        per_test_lines: List[str] = []
+        if gdb_sum.is_file():
+            per_test_lines = _read_file_lines(
+                gdb_sum, f"during one-by-one aggregation of {test}"
+            )
+        elif not wall_clock_timed_out:
+            # `make` either exited before runtest could produce gdb.sum or
+            # runtest itself failed without writing one. Without this
+            # synthesized line the test would contribute nothing to the
+            # aggregated gdb.sum and silently count as a pass.
+            logger.warning(
+                f"{STATUS_WARN} {test}: gdb.sum not produced; "
+                f"recording as UNRESOLVED."
+            )
+            per_test_lines.append(
+                f"UNRESOLVED: {test}: one-by-one make produced no gdb.sum"
+            )
+
+        # On wall-clock timeout, synthesize a FAIL line so update_results
+        # tracks the timeout. The "(timeout)" suffix triggers the existing
+        # TIMEOUT classification via TIMEOUT_RE.
+        if wall_clock_timed_out:
+            per_test_lines.append(
+                f"FAIL: {test}: one-by-one wall-clock timeout (timeout)"
+            )
+
+        aggregated_lines.extend(per_test_lines)
+
+        # Determine pass/fail using the same definition as TestResults, and
+        # pick the most informative status label by scanning for the highest
+        # severity prefix present (TIMEOUT > ERROR > UNRESOLVED > FAIL > PASS).
+        has_error = has_unresolved = has_fail = False
+        for line in per_test_lines:
+            if line.startswith("ERROR:"):
+                has_error = True
+            elif line.startswith("UNRESOLVED:"):
+                has_unresolved = True
+            elif line.startswith("FAIL:"):
+                has_fail = True
+        test_failed = wall_clock_timed_out or has_fail or has_unresolved or has_error
+        status_dir = "fail" if test_failed else "pass"
+        if wall_clock_timed_out:
+            status_text = "TIMEOUT"
+        elif has_error:
+            status_text = "ERROR"
+        elif has_fail:
+            status_text = "FAIL"
+        elif has_unresolved:
+            status_text = "UNRESOLVED"
+        else:
+            status_text = "PASS"
+
+        test_path = Path(test)
+        target_dir = log_dir / compiler_label / status_dir / test_path.parent
+        target_dir.mkdir(parents=True, exist_ok=True)
+        log_target = target_dir / f"{test_path.stem}{base_suffix}.log"
+        status_target = target_dir / f"{test_path.stem}{base_suffix}.status"
+
+        gdb_log = test_suite_dir / "gdb.log"
+        if gdb_log.is_file():
+            try:
+                shutil.copy2(gdb_log, log_target)
+            except OSError as e:
+                logger.warning(
+                    f"{STATUS_WARN} {test}: failed to copy gdb.log to {log_target}: {e}"
+                )
+        else:
+            logger.warning(
+                f"{STATUS_WARN} {test}: gdb.log not produced; skipping log capture."
+            )
+
+        status_content = (
+            f"test: {test}\n"
+            f"compiler: {compiler_label}\n"
+            f"iteration: {iteration}\n"
+            f"retry_number: {retry_number}\n"
+            f"status: {status_text}\n"
+            f"duration_seconds: {duration:.3f}\n"
+            f"wall_clock_timeout: {bool(wall_clock_timed_out)}\n"
+        )
+        try:
+            status_target.write_text(status_content, encoding="utf-8")
+        except OSError as e:
+            logger.warning(
+                f"{STATUS_WARN} {test}: failed to write status file {status_target}: {e}"
+            )
+
+    aggregated_sum = test_suite_dir / "gdb.sum"
+    try:
+        aggregated_sum.write_text("\n".join(aggregated_lines) + "\n", encoding="utf-8")
+    except OSError as e:
+        _log_error_and_exit(f"Failed to write aggregated gdb.sum: {e}")
 
 
 def print_python_info() -> None:
@@ -1539,25 +2306,30 @@ def print_python_info() -> None:
             lib_path = os.path.join(lib_dir, ld_library)
         lib_version = str(sysconfig.get_config_var("VERSION") or "N/A")
 
-    logger.info(f"Executable: {sys.executable}")
-    logger.info(f"Version: {version}")
+    lib_path_exists = lib_path != "N/A" and os.path.exists(lib_path)
 
-    # Determine support status.
-    if supports_libpython:
-        if lib_path != "N/A" and os.path.exists(lib_path):
-            logger.info("Supports libpython: Yes")
-        else:
-            logger.info("Supports libpython: Supported but libpython is missing")
+    if not supports_libpython:
+        supports_value = "No"
+    elif lib_path_exists:
+        supports_value = "Yes"
     else:
-        logger.info("Supports libpython: No")
+        supports_value = "Supported but libpython is missing"
 
-    # Print library path with missing indicator if needed.
-    if lib_path != "N/A" and not os.path.exists(lib_path):
-        logger.info(f"libpython Path: {lib_path} (missing)")
-    else:
-        logger.info(f"libpython Path: {lib_path}")
+    lib_path_value = (
+        f"{lib_path} (missing)"
+        if lib_path != "N/A" and not lib_path_exists
+        else lib_path
+    )
 
-    logger.info(f"libpython Version: {lib_version}")
+    _log_aligned_fields(
+        [
+            ("Executable", sys.executable),
+            ("Version", version),
+            ("Supports libpython", supports_value),
+            ("libpython Path", lib_path_value),
+            ("libpython Version", lib_version),
+        ]
+    )
 
 
 def print_configuration(
@@ -1566,21 +2338,20 @@ def print_configuration(
     configure_script: Path,
     rocm_tree_root: Path,
     args: argparse.Namespace,
+    ignore_list_file_status: str,
+    output_ignore_list_file_status: str,
 ) -> None:
     """
     Display the ROCgdb test configuration in a formatted table.
 
     Args:
-        rocgdb_bin (Path):
-            Path to the ROCgdb binary.
-        testsuite_dir (Path):
-            Path to the test suite directory.
-        configure_script (Path):
-            Path to the configure script for the test suite.
-        rocm_tree_root (Path):
-            Path to the root of the ROCm tree.
-        args (argparse.Namespace):
-            Parsed command-line arguments containing additional configuration values.
+        rocgdb_bin: Path to the ROCgdb binary.
+        testsuite_dir: Path to the test suite directory.
+        configure_script: Path to the configure script for the test suite.
+        rocm_tree_root: Path to the root of the ROCm tree.
+        args: Parsed command-line arguments containing additional configuration values.
+        ignore_list_file_status: Status message for ignore list file.
+        output_ignore_list_file_status: Status message for output ignore list file.
 
     Returns:
         None
@@ -1591,27 +2362,59 @@ def print_configuration(
         - Fields come directly from parsed CLI arguments.
     """
 
+    if not args.parallel:
+        parallel_info = "Disabled"
+    elif args.jobs is None:
+        parallel_info = f"Enabled ({os.cpu_count()} jobs, from cpu_count)"
+    else:
+        parallel_info = f"Enabled ({args.jobs} jobs)"
+
+    default_timeout_display = (
+        f"{args.default_timeout} seconds"
+        if args.default_timeout is not None
+        else "Dejagnu's default"
+    )
+
+    one_by_one_timeout_display = (
+        f"{args.one_by_one_test_timeout} seconds"
+        if args.one_by_one_test_timeout is not None
+        else f"{ONE_BY_ONE_DEFAULT_WALL_CLOCK_TIMEOUT} seconds (auto)"
+    )
+
+    fields = [
+        ("OS", platform.system()),
+        ("ROCm Directory", rocm_tree_root),
+        ("ROCgdb Binary", rocgdb_bin),
+        ("Testsuite Directory", testsuite_dir),
+        ("Configure Script", configure_script),
+        ("Tests", " ".join(args.tests)),
+        ("Check Type", args.check_type),
+        ("Parallel Execution", parallel_info),
+        ("One-by-one Mode", "Enabled" if args.one_by_one else "Disabled"),
+    ]
+    if args.one_by_one:
+        fields.append(
+            (
+                "One-by-one Log Dir",
+                args.one_by_one_log_dir or (testsuite_dir / "one_by_one_logs"),
+            )
+        )
+        fields.append(("One-by-one Test Timeout", one_by_one_timeout_display))
+    fields.extend(
+        [
+            ("Use FAIL ignore list", "Not using" if args.no_xfail else "Using"),
+            ("Group Results", "Enabled" if args.group_results else "Disabled"),
+            ("Default Timeout", default_timeout_display),
+            ("Retry Timeout", f"{args.retry_timeout} seconds"),
+            ("Max Failed Retries", args.max_failed_retries),
+            ("Optimization", args.optimization or "None"),
+            ("Additional Runtest Flags", args.runtestflags or "None"),
+            ("Ignore List", ignore_list_file_status),
+            ("Output Ignore List", output_ignore_list_file_status),
+        ]
+    )
     print_section("ROCgdb Test Suite Configuration")
-    logger.info(f"  OS:                   {platform.system()}")
-    logger.info(f"  ROCm Directory:       {rocm_tree_root}")
-    logger.info(f"  ROCgdb Binary:        {rocgdb_bin}")
-    logger.info(f"  Testsuite Directory:  {testsuite_dir}")
-    logger.info(f"  Configure Script:     {configure_script}")
-    logger.info(f"  Tests:                {' '.join(args.tests)}")
-    logger.info(f"  Check Type:           {args.check_type}")
-    logger.info(f"  Parallel Execution:   {'Enabled' if args.parallel else 'Disabled'}")
-    logger.info(f"  Use FAIL ignore list: {'Not using' if args.no_xfail else 'Using'}")
-    logger.info(
-        f"  Group Results:        {'Enabled' if args.group_results else 'Disabled'}"
-    )
-    logger.info(f"  Timeout Value:        {args.timeout} seconds")
-    logger.info(f"  Max Failed Retries:   {args.max_failed_retries}")
-    logger.info(
-        f"  Optimization:         {args.optimization if args.optimization else 'None'}"
-    )
-    logger.info(
-        f"  Additional Runtest Flags: {args.runtestflags if args.runtestflags else 'None'}"
-    )
+    _log_aligned_fields([(label, str(value)) for label, value in fields])
 
 
 if __name__ == "__main__":
