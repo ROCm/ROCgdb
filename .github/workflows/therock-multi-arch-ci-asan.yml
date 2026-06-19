@@ -48,7 +48,7 @@ jobs:
         github.event_name != 'pull_request' ||
         contains(github.event.pull_request.labels.*.name, 'ci:multi-arch-asan')
       }}
-    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@65fae39974e65f6d60dc766a411960720967670a # users/lumachad/rocgdb/multi-arch-ci
+    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@101da5963752697ef42a52db9845cb0c2e18a219 # users/lumachad/rocgdb/multi-arch-ci
     with:
       build_variant: "host-asan"
       # targets gfx94X and gfx950 are selected to replicate the ASAN coverage in TheRock
@@ -69,7 +69,7 @@ jobs:
         needs.setup.outputs.linux_build_config != '' &&
         needs.setup.outputs.enable_build_jobs == 'true'
       }}
-    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@65fae39974e65f6d60dc766a411960720967670a # users/lumachad/rocgdb/multi-arch-ci
+    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@101da5963752697ef42a52db9845cb0c2e18a219 # users/lumachad/rocgdb/multi-arch-ci
     secrets: inherit
     with:
       build_config: ${{ needs.setup.outputs.linux_build_config }}
