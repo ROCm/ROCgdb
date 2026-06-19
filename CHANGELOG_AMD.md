@@ -7,6 +7,11 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
+- The "catch hiperr" feature is now exposed to MI too, with a new
+  `-catch-hiperr` command and related fields in `*stopped` records.
+  See the "HIP Runtime Error" subsection of the "GDB/MI Catchpoint
+  Commands" section in the ROCgdb manual.
+
 - Dumping core of AMD GPU programs with the "gcore" command is now
   significantly faster, particularly for kernels that use small
   amounts of VRAM.
