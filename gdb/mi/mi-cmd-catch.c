@@ -358,3 +358,48 @@ mi_cmd_catch_catch (const char *cmd, const char *const *argv, int argc)
 {
   mi_cmd_catch_exception_event (EX_EVENT_CATCH, cmd, argv, argc);
 }
+
+/* Handler for -catch-hiperr.  */
+
+void
+mi_cmd_catch_hiperr (const char *cmd, const char *const *argv, int argc)
+{
+  bool temp = false;
+  const char *condition = nullptr;
+
+  int oind = 0;
+  const char *oarg;
+
+  enum opt
+    {
+      OPT_CONDITION,
+      OPT_TEMP,
+    };
+  static const struct mi_opt opts[] =
+    {
+      { "c", OPT_CONDITION, 1 },
+      { "t", OPT_TEMP, 0 },
+      { 0, 0, 0 }
+    };
+
+  for (;;)
+    {
+      int opt = mi_getopt (cmd, argc, argv, opts, &oind, &oarg);
+
+      if (opt < 0)
+	break;
+
+      switch ((enum opt) opt)
+	{
+	case OPT_CONDITION:
+	  condition = oarg;
+	  break;
+	case OPT_TEMP:
+	  temp = true;
+	  break;
+	}
+    }
+
+  scoped_restore restore_breakpoint_reporting = setup_breakpoint_reporting ();
+  add_catch_hiperr (condition, temp);
+}

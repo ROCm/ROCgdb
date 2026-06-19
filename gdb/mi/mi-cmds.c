@@ -237,6 +237,8 @@ add_builtin_mi_commands ()
 		 &mi_suppress_notification.breakpoint),
   add_mi_cmd_mi ("catch-catch", mi_cmd_catch_catch,
 		 &mi_suppress_notification.breakpoint),
+  add_mi_cmd_mi ("catch-hiperr", mi_cmd_catch_hiperr,
+		 &mi_suppress_notification.breakpoint),
   add_mi_cmd_mi ("complete", mi_cmd_complete);
   add_mi_cmd_mi ("data-disassemble", mi_cmd_disassemble);
   add_mi_cmd_mi ("data-evaluate-expression", mi_cmd_data_evaluate_expression);
