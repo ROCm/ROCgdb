@@ -147,29 +147,6 @@ hiperr_frame_p (frame_info_ptr frame)
   return true;
 }
 
-/* Format the HIP error info as a string (with newline) for printing.
-   Returns an empty string if the parameters cannot be fetched.  */
-
-static std::string
-hiperr_info_string (struct gdbarch *gdbarch)
-{
-  frame_info_ptr frame = get_selected_frame (_("No frame selected"));
-
-  if (!hiperr_frame_p (frame) || !gdbarch_fetch_hiperr_parameters_p (gdbarch))
-    return std::string ();
-
-  std::optional<hiperr_parameters> err_params
-    = gdbarch_fetch_hiperr_parameters (gdbarch, frame);
-
-  if (!err_params.has_value ())
-    return std::string ();
-
-  return string_printf (_("HIP API call failed with error %s (%u): %s\n"),
-			err_params->err_name.get (),
-			err_params->err_no,
-			err_params->err_str.get ());
-}
-
 /* Message printed when the breakpoint is hit.  */
 
 enum print_stop_action
@@ -188,10 +165,19 @@ hiperr_catchpoint::print_it (const bpstat *bs) const
   print_num_locno (bs, uiout);
   uiout->text (" (HIP error)\n");
 
-  const std::string hiperr_info
-    = hiperr_info_string (bs->bp_location_at->gdbarch);
-  if (!hiperr_info.empty ())
+  std::optional<hiperr_parameters> err_params;
+  frame_info_ptr frame = get_selected_frame (_("No frame selected"));
+  struct gdbarch *barch = bs->bp_location_at->gdbarch;
+  if (hiperr_frame_p (frame) && gdbarch_fetch_hiperr_parameters_p (barch))
+    err_params = gdbarch_fetch_hiperr_parameters (barch, frame);
+
+  if (err_params.has_value ())
     {
+      const std::string hiperr_info
+	= string_printf (_("HIP API call failed with error %s (%u): %s\n"),
+			 err_params->err_name.get (),
+			 err_params->err_no,
+			 err_params->err_str.get ());
       uiout->text (hiperr_info.c_str ());
       uiout->text
 	("\nThe $_hiperr convenience variable holds the error number.\n");
@@ -204,9 +190,26 @@ hiperr_catchpoint::print_it (const bpstat *bs) const
       uiout->field_string ("reason",
 			   async_reason_lookup (EXEC_ASYNC_BREAKPOINT_HIT));
       uiout->field_string ("disp", bpdisp_text (disposition));
+
+      if (err_params.has_value ())
+	{
+	  uiout->field_unsigned ("hiperr-code", err_params->err_no);
+	  uiout->field_string ("hiperr-name", err_params->err_name.get ());
+	  uiout->field_string ("hiperr-text", err_params->err_str.get ());
+	}
     }
 
   return PRINT_NOTHING;
+}
+
+/* Instantiate a hiperr_catchpoint.  */
+
+void
+add_catch_hiperr (const char *condition, bool tempflag)
+{
+  auto hcp = std::make_unique<hiperr_catchpoint> (get_current_arch (),
+						  tempflag, condition);
+  install_breakpoint (0, std::move (hcp), 1);
 }
 
 /* Implementation of "catch hiperr" command.  */
@@ -227,10 +230,7 @@ catch_hiperr_command (const char *arg,
   if ((*arg != '\0') && !c_isspace (*arg))
     error (_("Junk at the end of arguments."));
 
-  auto hcp = std::make_unique<hiperr_catchpoint> (get_current_arch (),
-						  tempflag, cond_string);
-
-  install_breakpoint (0, std::move (hcp), 1);
+  add_catch_hiperr (cond_string, tempflag);
 }
 
 

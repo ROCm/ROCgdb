@@ -37262,6 +37262,56 @@ and @samp{tcatch catch} (@pxref{Set Catchpoints}).
 (gdb)
 @end smallexample
 
+@findex -catch-hiperr
+@subheading The @code{-catch-hiperr} Command
+
+@subsubheading Synopsis
+
+@smallexample
+ -catch-hiperr [ -c @var{condition} ] [ -t ]
+@end smallexample
+
+Stop when the debuggee catches a HIP runtime error.
+
+@table @samp
+@item -c @var{condition}
+Make the catchpoint conditional on @var{condition}.
+@item -t
+Create a temporary catchpoint.
+@end table
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} commands are @samp{catch hiperr} and
+@samp{tcatch hiperr} (@pxref{catch hiperr}).
+
+@subsubheading Example
+
+@smallexample
+-catch-hiperr -c $_hiperr==hipErrorInvalidDevice -t
+(gdb)
+-catch-hiperr -c $_hiperr==hipErrorInvalidDevice -t
+^done,bkpt=@{number="1",type="catchpoint",disp="del",enabled="y",
+  what="catch hiperr",catch-type="hiperr",
+  cond="$_hiperr==hipErrorInvalidDevice",times="0",
+  original-location="-function __hipOnError"@}
+(gdb)
+-exec-run
+^running
+(gdb)
+~"\n"
+~"Thread 1 \"hip\" hit Temporary catchpoint 1 (HIP error)\n"
+~"HIP API call failed with error hipErrorInvalidDevice (101):
+  invalid device ordinal\n"
+~"\n"
+~"The $_hiperr convenience variable holds the error number.\n"
+*stopped,bkptno="1",reason="breakpoint-hit",disp="del",
+  hiperr-code="101",hiperr-name="hipErrorInvalidDevice",
+  hiperr-text="invalid device ordinal",thread-id="1",
+  stopped-threads="all",core="0"
+=breakpoint-deleted,id="1"
+@end smallexample
+
 @c %%%%%%%%%%%%%%%%%%%%%%%%%%%% SECTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 @node GDB/MI Program Context
 @section @sc{gdb/mi}  Program Context
