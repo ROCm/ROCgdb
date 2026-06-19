@@ -1462,7 +1462,9 @@ pe_print_idata (bfd * abfd, void * vfile)
 	    }
 
 	  /* Print HintName vector entries.  */
-#ifdef COFF_WITH_pex64
+#if defined COFF_WITH_pep || defined COFF_WITH_pex64 \
+    || defined COFF_WITH_peAArch64 || defined COFF_WITH_peLoongArch64 \
+    || defined COFF_WITH_peRiscV64
 	  for (j = 0; idx + j + 8 <= datasize; j += 8)
 	    {
 	      bfd_size_type amt;
