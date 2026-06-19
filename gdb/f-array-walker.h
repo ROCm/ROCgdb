@@ -267,13 +267,16 @@ private:
 	  {
 	    LONGEST elt_off = offset + calc.index_offset (i);
 
-	    if (is_dynamic_type (elt_type))
+	    struct type *this_elt_type = elt_type;
+	    if (is_dynamic_type (this_elt_type))
 	      {
 		CORE_ADDR e_address = m_address + elt_off;
-		elt_type = resolve_dynamic_type (elt_type, {}, e_address);
+		this_elt_type = resolve_dynamic_type (this_elt_type, {},
+						      e_address);
 	      }
 
-	    m_impl.process_element (elt_type, elt_off, i, i == upperbound);
+	    m_impl.process_element (this_elt_type, elt_off, i,
+				    i == upperbound);
 	  }
       }
 
