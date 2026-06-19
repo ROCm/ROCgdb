@@ -119,8 +119,6 @@ proc gdb_do_cache {name args} {
     global gdb_data_cache objdir
     global GDB_PARALLEL
 
-    verbose -log "gdb_do_cache: $name ( $args )"
-
     # Normally, if we have a cached value, we skip computation and return
     # the cached value.  If set to 1, instead don't skip computation and
     # verify against the cached value.
@@ -211,6 +209,7 @@ proc gdb_do_cache {name args} {
     set old_gdb_nested_caching_proc_calls $::gdb_nested_caching_proc_calls
     set ::gdb_nested_caching_proc_calls {}
 
+    verbose -log "gdb_do_cache: $name ( $args )"
     set real_name gdb_real__$name
     set gdb_data_cache(${cache_name},value) [gdb_do_cache_wrap $real_name {*}$args]
     set gdb_data_cache(${cache_name},exit) $::gdb_exit_called
