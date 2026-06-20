@@ -959,16 +959,10 @@ frame_id_inner (struct gdbarch *gdbarch, struct frame_id l, struct frame_id r)
 frame_info_ptr
 frame_find_by_id (struct frame_id id)
 {
-  frame_info_ptr frame, prev_frame;
-
   /* ZERO denotes the null frame, let the caller decide what to do
      about it.  Should it instead return get_current_frame()?  */
   if (!frame_id_p (id))
     return NULL;
-
-  /* Check for the sentinel frame.  */
-  if (id == frame_id_build_sentinel (0, 0))
-    return frame_info_ptr (sentinel_frame);
 
   /* Try using the frame stash first.  Finding it there removes the need
      to perform the search by looping over all frames, which can be very
@@ -978,10 +972,11 @@ frame_find_by_id (struct frame_id id)
      is called from another function (such as value_fetch_lazy, case
      val->lval () == lval_register) which already loops over all frames,
      making the overall behavior O(n^2).  */
-  frame = frame_stash_find (id);
-  if (frame)
+  frame_info_ptr frame = frame_stash_find (id);
+  if (frame != nullptr)
     return frame;
 
+  frame_info_ptr prev_frame;
   for (frame = get_current_frame (); ; frame = prev_frame)
     {
       struct frame_id self = get_frame_id (frame);
@@ -991,7 +986,7 @@ frame_find_by_id (struct frame_id id)
 	return frame;
 
       prev_frame = get_prev_frame (frame);
-      if (!prev_frame)
+      if (prev_frame == nullptr)
 	return NULL;
 
       /* As a safety net to avoid unnecessary backtracing while trying
