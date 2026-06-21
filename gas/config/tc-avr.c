@@ -1900,8 +1900,8 @@ md_assemble (char *str)
 
           if (opcode->name && strcmp(op, opcode->name))
             {
-              as_bad (_("illegal opcode %s for mcu %s"),
-                      opcode->name, avr_mcu->name);
+              as_bad (_("illegal opcode `%s' for mcu %s"),
+                      (opcode - 1)->name, avr_mcu->name);
               return;
             }
         }
