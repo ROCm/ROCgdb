@@ -2275,6 +2275,17 @@
 #define MASK_VSM3C_VI 0xfe00707f
 #define MATCH_VSM3ME_VV 0x82002077
 #define MASK_VSM3ME_VV 0xfe00707f
+/* Zvabd instructions.  */
+#define MATCH_VABS_V 0x48082057
+#define MASK_VABS_V 0xfc0ff07f
+#define MATCH_VABD_VV 0x44002057
+#define MASK_VABD_VV 0xfc00707f
+#define MATCH_VABDU_VV 0x4c002057
+#define MASK_VABDU_VV 0xfc00707f
+#define MATCH_VWABDA_VV 0x54002057
+#define MASK_VWABDA_VV 0xfc00707f
+#define MATCH_VWABDAU_VV 0x58002057
+#define MASK_VWABDAU_VV 0xfc00707f
 /* Zcb instructions.  */
 #define MATCH_C_LBU 0x8000
 #define MASK_C_LBU 0xfc03
