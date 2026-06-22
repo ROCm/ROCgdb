@@ -8951,7 +8951,7 @@ handle_step_into_function (struct gdbarch *gdbarch,
       end_stepping_range (ecs);
       return;
     }
-  else
+  else if (ecs->event_thread->stop_pc () < ecs->stop_func_start)
     {
       /* Put the step-breakpoint there and go until there.  */
       symtab_and_line sr_sal;
