@@ -3907,6 +3907,47 @@
 #define MASK_SMT_VMADOT3SU 0x9e00f0ff
 #define MATCH_SMT_VMADOT3US 0x8600902b
 #define MASK_SMT_VMADOT3US 0x9e00f0ff
+/* Int Sparse Matrix Multi-Accumulation.  */
+#define MATCH_SMT_VMADOT_SP 0x8800302b
+#define MASK_SMT_VMADOT_SP 0x9c00707f
+#define MATCH_SMT_VMADOTSU_SP 0x8800202b
+#define MASK_SMT_VMADOTSU_SP 0x9c00707f
+#define MATCH_SMT_VMADOTU_SP 0x8800002b
+#define MASK_SMT_VMADOTU_SP 0x9c00707f
+#define MATCH_SMT_VMADOTUS_SP 0x8800102b
+#define MASK_SMT_VMADOTUS_SP 0x9c00707f
+/* Shaping High-Precision Matrix Multiplication Accumulation.  */
+#define MATCH_SMT_VMADOTU_HP 0x8c00002b
+#define MASK_SMT_VMADOTU_HP  0x9c00007f
+#define MATCH_SMT_VMADOT_HP  0x9000002b
+#define MASK_SMT_VMADOT_HP   0x9c00007f
+#define MATCH_SMT_VMADOTSU_HP 0x9400002b
+#define MASK_SMT_VMADOTSU_HP 0x9c00007f
+#define MATCH_SMT_VMADOTUS_HP 0x9800002b
+#define MASK_SMT_VMADOTUS_HP 0x9c00007f
+/* Floating-Point Expansion Matrix Multi-Accumulation.  */
+#define MATCH_SMT_VFWMADOT 0x9e00402b
+#define MASK_SMT_VFWMADOT 0xfe0070ff
+/* Floating-Point Sliding Window Expansion Multi-Accumulation.  */
+#define MATCH_SMT_VFWMADOT1 0x9e00502b
+#define MASK_SMT_VFWMADOT1  0xfe00f0ff
+#define MATCH_SMT_VFWMADOT2 0x9e00602b
+#define MASK_SMT_VFWMADOT2 0xfe00f0ff
+#define MATCH_SMT_VFWMADOT3 0x9e00702b
+#define MASK_SMT_VFWMADOT3 0xfe00f0ff
+/* Element Indentation Assembly.  */
+#define MATCH_SMT_VNPACK_VV 0x6200002b
+#define MASK_SMT_VNPACK_VV 0xfe00407f
+#define MATCH_SMT_VNSPACK_VV 0x6200402b
+#define MASK_SMT_VNSPACK_VV 0xfe00407f
+#define MATCH_SMT_VNPACK4_VV 0x4200002b
+#define MASK_SMT_VNPACK4_VV 0xfe00407f
+#define MATCH_SMT_VNSPACK4_VV 0x4200402b
+#define MASK_SMT_VNSPACK4_VV 0xfe00407f
+#define MATCH_SMT_VPACK_VV 0x6600002b
+#define MASK_SMT_VPACK_VV 0xfe0040ff
+#define MATCH_SMT_VUPACK_VV 0x6600402b
+#define MASK_SMT_VUPACK_VV 0xfe0040ff
 /* Unprivileged Counter/Timers CSR addresses.  */
 #define CSR_CYCLE 0xc00
 #define CSR_TIME 0xc01

@@ -1791,6 +1791,8 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		}
 		break;
 	    case 'p': /* Vendor-specific (SpacemiT) operands.  */
+	      size_t n;
+	      size_t s;
 	      switch (*++oparg)
 		{
 		case 'V':
@@ -1803,11 +1805,29 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		      USE_BITS (OP_MASK_SPACEMIT_IME_VS1,
 				OP_SH_SPACEMIT_IME_VS1);
 		      break;
+		    case 'm':
+		      USE_BITS (OP_MASK_SPACEMIT_IME_VMASK,
+				OP_SH_SPACEMIT_IME_VMASK);
+		      break;
 		    default:
 		      goto unknown_validate_operand;
 		    }
 		  break;
+		case 'u': /* Integer immediate, 'XpuN@S' ...
+			     N-bit unsigned immediate at bit S.  */
+		  n = strtol (oparg + 1, (char **)&oparg, 10);
+		  if (*oparg != '@')
+		    goto unknown_validate_operand;
+		  s = strtol (oparg + 1, (char **)&oparg, 10);
+		  oparg--;
+		  USE_IMM (n, s);
+		  break;
+		case 'n':
+		case 'b':
+		  used_bits |= ENCODE_SPACEMIT_IME_UIMM2_SP (-1U);
+		  break;
 		case 'w':
+		case 'x':
 		  USE_BITS (OP_MASK_SPACEMIT_IME_WI, OP_SH_SPACEMIT_IME_WI);
 		  break;
 		default:
@@ -4289,6 +4309,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  break;
 
 		case 'p': /* Vendor-specific (SpacemiT) operands.  */
+		  size_t n;
+		  size_t s;
 		  switch (*++oparg)
 		    {
 		    case 'V':
@@ -4318,10 +4340,66 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			    }
 			  INSERT_OPERAND (SPACEMIT_IME_VS1, *ip, regno>>1);
 			  continue;
+			case 'm':
+			  if (!reg_lookup (&asarg, RCLASS_VECR, &regno))
+			    break;
+			  if (regno >= 2)
+			    {
+			      error.msg
+				= _("illegal operands (mask must be v0/v1)");
+			      error.missing_ext = NULL;
+			      goto out;
+			    }
+			  INSERT_OPERAND (SPACEMIT_IME_VMASK, *ip, regno);
+			  continue;
 			default:
 			  goto unknown_riscv_ip_operand;
 			}
 		      break;
+		    case 'u': /* Integer immediate, 'XpuN@S' ...
+				 N-bit unsigned immediate at bit S.  */
+		      n = strtol (oparg + 1, (char **)&oparg, 10);
+		      if (*oparg != '@')
+			goto unknown_riscv_ip_operand;
+		      s = strtol (oparg + 1, (char **)&oparg, 10);
+		      oparg--;
+		      my_getExpression (imm_expr, asarg, force_reloc);
+		      check_absolute_expr (ip, imm_expr, false);
+		      if (!VALIDATE_U_IMM (imm_expr->X_add_number, n))
+			as_bad (_("improper immediate value (%"PRIu64")"),
+				imm_expr->X_add_number);
+		      INSERT_IMM (n, s, *ip, imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      asarg = expr_parse_end;
+		      continue;
+		    case 'n': /* Xpn: stride (0-1), paired with Xpx.  */
+		      my_getExpression (imm_expr, asarg, force_reloc);
+		      check_absolute_expr (ip, imm_expr, false);
+		      if (imm_expr->X_add_number < 0
+			  || imm_expr->X_add_number >= 2)
+			break;
+		      ip->insn_opcode
+			|= ENCODE_SPACEMIT_IME_UIMM2_SP
+			     (imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      asarg = expr_parse_end;
+		      continue;
+		    case 'b': /* Xpb: stride (0-3), paired with Xpw.  */
+		      my_getExpression (imm_expr, asarg, force_reloc);
+		      check_absolute_expr (ip, imm_expr, false);
+		      if (imm_expr->X_add_number < 0
+			  || imm_expr->X_add_number >= 4)
+			{
+			  as_bad (_("bad value for stride field,"
+				    " value must be 0..3"));
+			  break;
+			}
+		      ip->insn_opcode
+			|= ENCODE_SPACEMIT_IME_UIMM2_SP
+			     (imm_expr->X_add_number);
+		      imm_expr->X_op = O_absent;
+		      asarg = expr_parse_end;
+		      continue;
 		    case 'w':
 		      /* Xpw: optional data-width suffix, i8 only (WI=3).
 			 If omitted, defaults to i8.  */
@@ -4339,6 +4417,30 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      else if (*asarg != '\0')
 			goto unknown_riscv_ip_operand;
 		      regno = 3;
+		      INSERT_OPERAND (SPACEMIT_IME_WI, *ip, regno);
+		      continue;
+		    case 'x':
+		      /* Xpx: optional data-width suffix, i4 or i8 (WI=2/3).
+			 If omitted, defaults to i8.  */
+		      if (*asarg == ',')
+			{
+			  if (strcmp (asarg + 1, "i4") == 0)
+			    regno = 2;
+			  else if (strcmp (asarg + 1, "i8") == 0)
+			    regno = 3;
+			  else
+			    {
+			      error.msg
+				= _("illegal operands (invalid data type)");
+			      error.missing_ext = NULL;
+			      goto out;
+			    }
+			  asarg += 3;
+			}
+		      else if (*asarg != '\0')
+			goto unknown_riscv_ip_operand;
+		      else
+			regno = 3;
 		      INSERT_OPERAND (SPACEMIT_IME_WI, *ip, regno);
 		      continue;
 		    default:

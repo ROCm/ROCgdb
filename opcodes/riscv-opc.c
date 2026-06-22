@@ -3603,26 +3603,57 @@ const struct riscv_opcode riscv_opcodes[] =
 
 /* SpacemiT custom instructions.  */
 /* Int Matrix Multi-Accumulation.  */
-{"smt.vmadot",   0, INSN_CLASS_XSMTVDOT, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOT, MASK_SMT_VMADOT, match_opcode, 0 },
-{"smt.vmadotu",  0, INSN_CLASS_XSMTVDOT, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOTU, MASK_SMT_VMADOTU, match_opcode, 0 },
-{"smt.vmadotsu", 0, INSN_CLASS_XSMTVDOT, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOTSU, MASK_SMT_VMADOTSU, match_opcode, 0 },
-{"smt.vmadotus", 0, INSN_CLASS_XSMTVDOT, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOTUS, MASK_SMT_VMADOTUS, match_opcode, 0 },
+{"smt.vmadot",   0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,VtXpx", MATCH_SMT_VMADOT, MASK_SMT_VMADOT, match_opcode, 0 },
+{"smt.vmadot",   0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOT, MASK_SMT_VMADOT, match_opcode, 0 },
+{"smt.vmadotu",  0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,VtXpx", MATCH_SMT_VMADOTU, MASK_SMT_VMADOTU, match_opcode, 0 },
+{"smt.vmadotu",  0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOTU, MASK_SMT_VMADOTU, match_opcode, 0 },
+{"smt.vmadotsu", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,VtXpx", MATCH_SMT_VMADOTSU, MASK_SMT_VMADOTSU, match_opcode, 0 },
+{"smt.vmadotsu", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOTSU, MASK_SMT_VMADOTSU, match_opcode, 0 },
+{"smt.vmadotus", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,VtXpx", MATCH_SMT_VMADOTUS, MASK_SMT_VMADOTUS, match_opcode, 0 },
+{"smt.vmadotus", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOTUS, MASK_SMT_VMADOTUS, match_opcode, 0 },
 /* Int Sliding Window Multi-Accumulation.  */
 /* Sliding Value = 1.  */
-{"smt.vmadot1u",  0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1U, MASK_SMT_VMADOT1U, match_opcode, 0 },
-{"smt.vmadot1",   0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1, MASK_SMT_VMADOT1, match_opcode, 0 },
-{"smt.vmadot1su", 0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1SU, MASK_SMT_VMADOT1SU, match_opcode, 0 },
-{"smt.vmadot1us", 0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1US, MASK_SMT_VMADOT1US, match_opcode, 0 },
+{"smt.vmadot1u",  0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1U, MASK_SMT_VMADOT1U, match_opcode, 0 },
+{"smt.vmadot1",   0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1, MASK_SMT_VMADOT1, match_opcode, 0 },
+{"smt.vmadot1su", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1SU, MASK_SMT_VMADOT1SU, match_opcode, 0 },
+{"smt.vmadot1us", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1US, MASK_SMT_VMADOT1US, match_opcode, 0 },
 /* Sliding Value = 2.  */
-{"smt.vmadot2u",  0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2U, MASK_SMT_VMADOT2U, match_opcode, 0 },
-{"smt.vmadot2",   0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2, MASK_SMT_VMADOT2, match_opcode, 0 },
-{"smt.vmadot2su", 0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2SU, MASK_SMT_VMADOT2SU, match_opcode, 0 },
-{"smt.vmadot2us", 0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2US, MASK_SMT_VMADOT2US, match_opcode, 0 },
+{"smt.vmadot2u",  0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2U, MASK_SMT_VMADOT2U, match_opcode, 0 },
+{"smt.vmadot2",   0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2, MASK_SMT_VMADOT2, match_opcode, 0 },
+{"smt.vmadot2su", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2SU, MASK_SMT_VMADOT2SU, match_opcode, 0 },
+{"smt.vmadot2us", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2US, MASK_SMT_VMADOT2US, match_opcode, 0 },
 /* Sliding Value = 3.  */
-{"smt.vmadot3u",  0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3U, MASK_SMT_VMADOT3U, match_opcode, 0 },
-{"smt.vmadot3",   0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3, MASK_SMT_VMADOT3, match_opcode, 0 },
-{"smt.vmadot3su", 0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3SU, MASK_SMT_VMADOT3SU, match_opcode, 0 },
-{"smt.vmadot3us", 0, INSN_CLASS_XSMTVDOT, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3US, MASK_SMT_VMADOT3US, match_opcode, 0 },
+{"smt.vmadot3u",  0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3U, MASK_SMT_VMADOT3U, match_opcode, 0 },
+{"smt.vmadot3",   0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3, MASK_SMT_VMADOT3, match_opcode, 0 },
+{"smt.vmadot3su", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3SU, MASK_SMT_VMADOT3SU, match_opcode, 0 },
+{"smt.vmadot3us", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3US, MASK_SMT_VMADOT3US, match_opcode, 0 },
+/* Int Sparse Matrix Multi-Accumulation.  */
+{"smt.vmadotu.sp",  0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpnXpx", MATCH_SMT_VMADOTU_SP,  MASK_SMT_VMADOTU_SP,  match_opcode, 0 },
+{"smt.vmadotu.sp",  0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpbXpw", MATCH_SMT_VMADOTU_SP,  MASK_SMT_VMADOTU_SP,  match_opcode, 0 },
+{"smt.vmadot.sp",   0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpnXpx", MATCH_SMT_VMADOT_SP,   MASK_SMT_VMADOT_SP,   match_opcode, 0 },
+{"smt.vmadot.sp",   0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpbXpw", MATCH_SMT_VMADOT_SP,   MASK_SMT_VMADOT_SP,   match_opcode, 0 },
+{"smt.vmadotsu.sp", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpnXpx", MATCH_SMT_VMADOTSU_SP, MASK_SMT_VMADOTSU_SP, match_opcode, 0 },
+{"smt.vmadotsu.sp", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpbXpw", MATCH_SMT_VMADOTSU_SP, MASK_SMT_VMADOTSU_SP, match_opcode, 0 },
+{"smt.vmadotus.sp", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpnXpx", MATCH_SMT_VMADOTUS_SP, MASK_SMT_VMADOTUS_SP, match_opcode, 0 },
+{"smt.vmadotus.sp", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpbXpw", MATCH_SMT_VMADOTUS_SP, MASK_SMT_VMADOTUS_SP, match_opcode, 0 },
+/* Shaping High-Precision Matrix Multiplication Accumulation.  */
+{"smt.vmadotu.hp",  0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,XpVm,Xpu3@12Xpx", MATCH_SMT_VMADOTU_HP,  MASK_SMT_VMADOTU_HP,  match_opcode, 0 },
+{"smt.vmadot.hp",   0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,XpVm,Xpu3@12Xpx", MATCH_SMT_VMADOT_HP,   MASK_SMT_VMADOT_HP,   match_opcode, 0 },
+{"smt.vmadotsu.hp", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,XpVm,Xpu3@12Xpx", MATCH_SMT_VMADOTSU_HP, MASK_SMT_VMADOTSU_HP, match_opcode, 0 },
+{"smt.vmadotus.hp", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,XpVm,Xpu3@12Xpx", MATCH_SMT_VMADOTUS_HP, MASK_SMT_VMADOTUS_HP, match_opcode, 0 },
+/* Floating-Point Expansion Matrix Multi-Accumulation.  */
+{"smt.vfwmadot", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,Vt", MATCH_SMT_VFWMADOT, MASK_SMT_VFWMADOT, match_opcode, 0 },
+/* Floating-Point Sliding Window Expansion Multi-Accumulation.  */
+{"smt.vfwmadot1", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt", MATCH_SMT_VFWMADOT1, MASK_SMT_VFWMADOT1, match_opcode, 0 },
+{"smt.vfwmadot2", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt", MATCH_SMT_VFWMADOT2, MASK_SMT_VFWMADOT2, match_opcode, 0 },
+{"smt.vfwmadot3", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt", MATCH_SMT_VFWMADOT3, MASK_SMT_VFWMADOT3, match_opcode, 0 },
+/* Element Indentation Assembly.  */
+{"smt.vnpack.vv", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,Xpu2@12", MATCH_SMT_VNPACK_VV, MASK_SMT_VNPACK_VV, match_opcode, 0 },
+{"smt.vnspack.vv", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,Xpu2@12", MATCH_SMT_VNSPACK_VV, MASK_SMT_VNSPACK_VV, match_opcode, 0 },
+{"smt.vnpack4.vv", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,Xpu2@12", MATCH_SMT_VNPACK4_VV, MASK_SMT_VNPACK4_VV, match_opcode, 0 },
+{"smt.vnspack4.vv", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,Xpu2@12", MATCH_SMT_VNSPACK4_VV, MASK_SMT_VNSPACK4_VV, match_opcode, 0 },
+{"smt.vpack.vv", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,Vt,Xpu2@12", MATCH_SMT_VPACK_VV, MASK_SMT_VPACK_VV, match_opcode, 0 },
+{"smt.vupack.vv", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,Vt,Xpu2@12", MATCH_SMT_VUPACK_VV, MASK_SMT_VUPACK_VV, match_opcode, 0 },
 
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}

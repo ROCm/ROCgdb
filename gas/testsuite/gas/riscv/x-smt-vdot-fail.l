@@ -39,35 +39,35 @@
 .*:42: Error: illegal operands \(invalid data type\) `smt.vmadot1u v2,v4,v5,i2'
 .*:43: Error: illegal operands \(invalid data type\) `smt.vmadot2u v2,v4,v5,i4'
 .*:44: Error: illegal operands \(invalid data type\) `smt.vmadot3u v2,v4,v5,i16'
-.*:2: Error: unrecognized opcode `smt.vmadot v2,v3,v4', extension `xsmtvdot' required
-.*:3: Error: unrecognized opcode `smt.vmadotu v2,v3,v4', extension `xsmtvdot' required
-.*:4: Error: unrecognized opcode `smt.vmadotsu v2,v3,v4', extension `xsmtvdot' required
-.*:5: Error: unrecognized opcode `smt.vmadotus v2,v3,v4', extension `xsmtvdot' required
-.*:6: Error: unrecognized opcode `smt.vmadot1u v2,v4,v5', extension `xsmtvdot' required
-.*:7: Error: unrecognized opcode `smt.vmadot1 v2,v4,v5', extension `xsmtvdot' required
-.*:8: Error: unrecognized opcode `smt.vmadot1su v2,v4,v5', extension `xsmtvdot' required
-.*:9: Error: unrecognized opcode `smt.vmadot1us v2,v4,v5', extension `xsmtvdot' required
-.*:10: Error: unrecognized opcode `smt.vmadot2u v2,v4,v5', extension `xsmtvdot' required
-.*:11: Error: unrecognized opcode `smt.vmadot2 v2,v4,v5', extension `xsmtvdot' required
-.*:12: Error: unrecognized opcode `smt.vmadot2su v2,v4,v5', extension `xsmtvdot' required
-.*:13: Error: unrecognized opcode `smt.vmadot2us v2,v4,v5', extension `xsmtvdot' required
-.*:14: Error: unrecognized opcode `smt.vmadot3u v2,v4,v5', extension `xsmtvdot' required
-.*:15: Error: unrecognized opcode `smt.vmadot3 v2,v4,v5', extension `xsmtvdot' required
-.*:16: Error: unrecognized opcode `smt.vmadot3su v2,v4,v5', extension `xsmtvdot' required
-.*:17: Error: unrecognized opcode `smt.vmadot3us v2,v4,v5', extension `xsmtvdot' required
-.*:18: Error: unrecognized opcode `smt.vmadot v2,v3,v4,i8', extension `xsmtvdot' required
-.*:19: Error: unrecognized opcode `smt.vmadotu v2,v3,v4,i8', extension `xsmtvdot' required
-.*:20: Error: unrecognized opcode `smt.vmadotsu v2,v3,v4,i8', extension `xsmtvdot' required
-.*:21: Error: unrecognized opcode `smt.vmadotus v2,v3,v4,i8', extension `xsmtvdot' required
-.*:22: Error: unrecognized opcode `smt.vmadot1u v2,v4,v5,i8', extension `xsmtvdot' required
-.*:23: Error: unrecognized opcode `smt.vmadot1 v2,v4,v5,i8', extension `xsmtvdot' required
-.*:24: Error: unrecognized opcode `smt.vmadot1su v2,v4,v5,i8', extension `xsmtvdot' required
-.*:25: Error: unrecognized opcode `smt.vmadot1us v2,v4,v5,i8', extension `xsmtvdot' required
-.*:26: Error: unrecognized opcode `smt.vmadot2u v2,v4,v5,i8', extension `xsmtvdot' required
-.*:27: Error: unrecognized opcode `smt.vmadot2 v2,v4,v5,i8', extension `xsmtvdot' required
-.*:28: Error: unrecognized opcode `smt.vmadot2su v2,v4,v5,i8', extension `xsmtvdot' required
-.*:29: Error: unrecognized opcode `smt.vmadot2us v2,v4,v5,i8', extension `xsmtvdot' required
-.*:30: Error: unrecognized opcode `smt.vmadot3u v2,v4,v5,i8', extension `xsmtvdot' required
-.*:31: Error: unrecognized opcode `smt.vmadot3 v2,v4,v5,i8', extension `xsmtvdot' required
-.*:32: Error: unrecognized opcode `smt.vmadot3su v2,v4,v5,i8', extension `xsmtvdot' required
-.*:33: Error: unrecognized opcode `smt.vmadot3us v2,v4,v5,i8', extension `xsmtvdot' required
+.*:2: Error: unrecognized opcode `smt.vmadot v2,v3,v4', extension `xsmtvdot' or `xsmtvdotii' required
+.*:3: Error: unrecognized opcode `smt.vmadotu v2,v3,v4', extension `xsmtvdot' or `xsmtvdotii' required
+.*:4: Error: unrecognized opcode `smt.vmadotsu v2,v3,v4', extension `xsmtvdot' or `xsmtvdotii' required
+.*:5: Error: unrecognized opcode `smt.vmadotus v2,v3,v4', extension `xsmtvdot' or `xsmtvdotii' required
+.*:6: Error: unrecognized opcode `smt.vmadot1u v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:7: Error: unrecognized opcode `smt.vmadot1 v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:8: Error: unrecognized opcode `smt.vmadot1su v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:9: Error: unrecognized opcode `smt.vmadot1us v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:10: Error: unrecognized opcode `smt.vmadot2u v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:11: Error: unrecognized opcode `smt.vmadot2 v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:12: Error: unrecognized opcode `smt.vmadot2su v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:13: Error: unrecognized opcode `smt.vmadot2us v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:14: Error: unrecognized opcode `smt.vmadot3u v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:15: Error: unrecognized opcode `smt.vmadot3 v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:16: Error: unrecognized opcode `smt.vmadot3su v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:17: Error: unrecognized opcode `smt.vmadot3us v2,v4,v5', extension `xsmtvdot' or `xsmtvdotii' required
+.*:18: Error: unrecognized opcode `smt.vmadot v2,v3,v4,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:19: Error: unrecognized opcode `smt.vmadotu v2,v3,v4,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:20: Error: unrecognized opcode `smt.vmadotsu v2,v3,v4,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:21: Error: unrecognized opcode `smt.vmadotus v2,v3,v4,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:22: Error: unrecognized opcode `smt.vmadot1u v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:23: Error: unrecognized opcode `smt.vmadot1 v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:24: Error: unrecognized opcode `smt.vmadot1su v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:25: Error: unrecognized opcode `smt.vmadot1us v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:26: Error: unrecognized opcode `smt.vmadot2u v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:27: Error: unrecognized opcode `smt.vmadot2 v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:28: Error: unrecognized opcode `smt.vmadot2su v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:29: Error: unrecognized opcode `smt.vmadot2us v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:30: Error: unrecognized opcode `smt.vmadot3u v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:31: Error: unrecognized opcode `smt.vmadot3 v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:32: Error: unrecognized opcode `smt.vmadot3su v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required
+.*:33: Error: unrecognized opcode `smt.vmadot3us v2,v4,v5,i8', extension `xsmtvdot' or `xsmtvdotii' required

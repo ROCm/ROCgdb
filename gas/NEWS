@@ -9,7 +9,7 @@
   zalasr v1.0
 
 * Add support for RISC-V vendor extensions:
-  SpacemiT: xsmtvdot v1.0.
+  SpacemiT: xsmtvdot v1.0, xsmtvdotii v1.0.
 
 Changes in 2.46:
 
