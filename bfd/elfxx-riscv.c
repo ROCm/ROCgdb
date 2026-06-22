@@ -1230,6 +1230,8 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"xtheadvector", "+zicsr", check_implicit_always},
   {"xtheadzvamo", "+zaamo", check_implicit_always},
 
+  {"xsmtvdot", "+zve32x", check_implicit_always},
+
   {"v", "+zve64d,+zvl128b", check_implicit_always},
   {"zvfh", "+zvfhmin,+zfhmin", check_implicit_always},
   {"zvfhmin", "+zve32f", check_implicit_always},
@@ -1646,6 +1648,7 @@ static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xmipscmov",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xmipsexectl",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xmipslsp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsmtvdot",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -3081,6 +3084,8 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "xmipsexectl");
     case INSN_CLASS_XMIPSLSP:
       return riscv_subset_supports (rps, "xmipslsp");
+    case INSN_CLASS_XSMTVDOT:
+      return riscv_subset_supports (rps, "xsmtvdot");
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -3386,6 +3391,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xsfvqmaccdod";
     case INSN_CLASS_XSFVFNRCLIPXFQF:
       return "xsfvfnrclipxfqf";
+    case INSN_CLASS_XSMTVDOT:
+      return "xsmtvdot";
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));

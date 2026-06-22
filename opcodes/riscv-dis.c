@@ -917,6 +917,39 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  goto undefined_modifier;
 		}
 	      break;
+	    case 'p': /* Vendor-specific (SpacemiT) operands.  */
+	      switch (*++oparg)
+		{
+		case 'V':
+		  switch (*++oparg)
+		    {
+		    case 'd':
+		      unsigned vd = EXTRACT_OPERAND (SPACEMIT_IME_VD, l) * 2;
+		      print (info->stream, dis_style_register, "%s",
+			     riscv_vecr_names_numeric[vd]);
+		      break;
+		    case 's':
+		      unsigned vs = EXTRACT_OPERAND (SPACEMIT_IME_VS1, l) * 2;
+		      print (info->stream, dis_style_register, "%s",
+			     riscv_vecr_names_numeric[vs]);
+		      break;
+		    default:
+		      goto undefined_modifier;
+		    }
+		  break;
+		case 'w':
+		  /* Xpw: optional data-width suffix, i8 only.  WI==3 (i8)
+		     is the default and is omitted from the output.  */
+		  {
+		    unsigned wi = EXTRACT_OPERAND (SPACEMIT_IME_WI, l);
+		    if (wi != 3)
+		      goto undefined_modifier;
+		  }
+		  break;
+		default:
+		  goto undefined_modifier;
+		}
+	      break;
 	    default:
 	      goto undefined_modifier;
 	    }

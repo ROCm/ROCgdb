@@ -917,4 +917,12 @@ The XMipsSlsp extension provides instructions mips.ldp, mips.lwp, mips.sdp and m
 
 It is documented in @url{https://mips.com/wp-content/uploads/2025/03/P8700-F_Programmers_Reference_Manual_Rev1.82_3-19-2025.pdf}.
 
+@item XSmtVdot
+The XSmtVdot extension provides instructions for vector dot.
+
+SpacemiT defines Intrinsic Matrix Extension (IME) specification,
+documented in @url{https://github.com/spacemit-com/riscv-ime-extension-spec/releases/download/v1.0/spacemit-ime-asciidoc.pdf}.
+SpacemiT X60 implements version 1.0 of the SpacemiT Vector Dot Product Extension (XsmtVdot v1.0), a subset of the full IME specification,
+documented in @url{https://github.com/spacemit-com/docs-ai/blob/main/en/architecture/ime_extension.md}.
+
 @end table

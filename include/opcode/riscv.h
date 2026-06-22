@@ -419,6 +419,14 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #define OP_MASK_MIPS_SDP_OFFSET25   0x3
 #define OP_SH_MIPS_SDP_OFFSET25     25
 
+/* SpacemiT fields.  */
+#define OP_MASK_SPACEMIT_IME_VD		0xf
+#define OP_SH_SPACEMIT_IME_VD		8
+#define OP_MASK_SPACEMIT_IME_VS1	0xf
+#define OP_SH_SPACEMIT_IME_VS1		16
+#define OP_MASK_SPACEMIT_IME_WI		0x3
+#define OP_SH_SPACEMIT_IME_WI		29
+
 /* ABI names for selected x-registers.  */
 
 #define X_ZERO 0
@@ -607,6 +615,7 @@ enum riscv_insn_class
   INSN_CLASS_XMIPSCMOV,
   INSN_CLASS_XMIPSEXECTL,
   INSN_CLASS_XMIPSLSP,
+  INSN_CLASS_XSMTVDOT,
 };
 
 /* This structure holds information for a particular instruction.  */

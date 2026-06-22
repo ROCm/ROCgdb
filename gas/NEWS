@@ -8,6 +8,9 @@
 * Add support for RISC-V standard extensions:
   zalasr v1.0
 
+* Add support for RISC-V vendor extensions:
+  SpacemiT: xsmtvdot v1.0.
+
 Changes in 2.46:
 
 * Add support for AMD Zen6 processor.

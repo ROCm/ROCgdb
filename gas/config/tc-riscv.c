@@ -1790,6 +1790,30 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		    goto unknown_validate_operand;
 		}
 		break;
+	    case 'p': /* Vendor-specific (SpacemiT) operands.  */
+	      switch (*++oparg)
+		{
+		case 'V':
+		  switch (*++oparg)
+		    {
+		    case 'd':
+		      USE_BITS (OP_MASK_SPACEMIT_IME_VD, OP_SH_SPACEMIT_IME_VD);
+		      break;
+		    case 's':
+		      USE_BITS (OP_MASK_SPACEMIT_IME_VS1,
+				OP_SH_SPACEMIT_IME_VS1);
+		      break;
+		    default:
+		      goto unknown_validate_operand;
+		    }
+		  break;
+		case 'w':
+		  USE_BITS (OP_MASK_SPACEMIT_IME_WI, OP_SH_SPACEMIT_IME_WI);
+		  break;
+		default:
+		  goto unknown_validate_operand;
+		}
+	      break;
 	    default:
 	      goto unknown_validate_operand;
 	    }
@@ -4264,6 +4288,63 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    }
 		  break;
 
+		case 'p': /* Vendor-specific (SpacemiT) operands.  */
+		  switch (*++oparg)
+		    {
+		    case 'V':
+		      switch (*++oparg)
+			{
+			case 'd':
+			  if (!reg_lookup (&asarg, RCLASS_VECR, &regno))
+			    break;
+			  if ((regno & 0x1) != 0)
+			    {
+			      error.msg
+				= _("illegal operands (vd must be even)");
+			      error.missing_ext = NULL;
+			      goto out;
+			    }
+			  INSERT_OPERAND (SPACEMIT_IME_VD, *ip, regno>>1);
+			  continue;
+			case 's':
+			  if (!reg_lookup (&asarg, RCLASS_VECR, &regno))
+			    break;
+			  if ((regno & 0x1) != 0)
+			    {
+			      error.msg
+				= _("illegal operands (vs1 must be even)");
+			      error.missing_ext = NULL;
+			      goto out;
+			    }
+			  INSERT_OPERAND (SPACEMIT_IME_VS1, *ip, regno>>1);
+			  continue;
+			default:
+			  goto unknown_riscv_ip_operand;
+			}
+		      break;
+		    case 'w':
+		      /* Xpw: optional data-width suffix, i8 only (WI=3).
+			 If omitted, defaults to i8.  */
+		      if (*asarg == ',')
+			{
+			  if (strcmp (asarg + 1, "i8") != 0)
+			    {
+			      error.msg
+				= _("illegal operands (invalid data type)");
+			      error.missing_ext = NULL;
+			      goto out;
+			    }
+			  asarg += 3;
+			}
+		      else if (*asarg != '\0')
+			goto unknown_riscv_ip_operand;
+		      regno = 3;
+		      INSERT_OPERAND (SPACEMIT_IME_WI, *ip, regno);
+		      continue;
+		    default:
+		      goto unknown_riscv_ip_operand;
+		    }
+		  break;
 		default:
 		  goto unknown_riscv_ip_operand;
 		}

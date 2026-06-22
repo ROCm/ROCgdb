@@ -3869,6 +3869,44 @@
 #define MASK_MIPS_PAUSE  0xffffffff
 #define MATCH_MIPS_PREF 0x0000000b
 #define MASK_MIPS_PREF 0xe000707f
+/* SpacemiT custom instruction.  */
+/* Int Matrix Multiplicative Accumulation.  */
+#define MATCH_SMT_VMADOT   0x8200302b
+#define MASK_SMT_VMADOT    0x9e0070ff
+#define MATCH_SMT_VMADOTU  0x8200002b
+#define MASK_SMT_VMADOTU   0x9e0070ff
+#define MATCH_SMT_VMADOTSU 0x8200202b
+#define MASK_SMT_VMADOTSU  0x9e0070ff
+#define MATCH_SMT_VMADOTUS 0x8200102b
+#define MASK_SMT_VMADOTUS  0x9e0070ff
+/* Int Sliding Window Multiplicative Accumulation.  */
+/* Sliding Value = 1.  */
+#define MATCH_SMT_VMADOT1U 0x8600002b
+#define MASK_SMT_VMADOT1U  0x9e00f0ff
+#define MATCH_SMT_VMADOT1  0x8600302b
+#define MASK_SMT_VMADOT1   0x9e00f0ff
+#define MATCH_SMT_VMADOT1SU 0x8600202b
+#define MASK_SMT_VMADOT1SU 0x9e00f0ff
+#define MATCH_SMT_VMADOT1US 0x8600102b
+#define MASK_SMT_VMADOT1US 0x9e00f0ff
+/* Sliding Value = 2.  */
+#define MATCH_SMT_VMADOT2U 0x8600402b
+#define MASK_SMT_VMADOT2U 0x9e00f0ff
+#define MATCH_SMT_VMADOT2 0x8600702b
+#define MASK_SMT_VMADOT2 0x9e00f0ff
+#define MATCH_SMT_VMADOT2SU 0x8600602b
+#define MASK_SMT_VMADOT2SU 0x9e00f0ff
+#define MATCH_SMT_VMADOT2US 0x8600502b
+#define MASK_SMT_VMADOT2US 0x9e00f0ff
+/* Sliding Value = 3.  */
+#define MATCH_SMT_VMADOT3U 0x8600802b
+#define MASK_SMT_VMADOT3U 0x9e00f0ff
+#define MATCH_SMT_VMADOT3 0x8600b02b
+#define MASK_SMT_VMADOT3 0x9e00f0ff
+#define MATCH_SMT_VMADOT3SU 0x8600a02b
+#define MASK_SMT_VMADOT3SU 0x9e00f0ff
+#define MATCH_SMT_VMADOT3US 0x8600902b
+#define MASK_SMT_VMADOT3US 0x9e00f0ff
 /* Unprivileged Counter/Timers CSR addresses.  */
 #define CSR_CYCLE 0xc00
 #define CSR_TIME 0xc01
