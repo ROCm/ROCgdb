@@ -886,6 +886,24 @@ const struct riscv_opcode riscv_opcodes[] =
 {"amocas.d.aqrl",   64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_D|MASK_AQRL, MASK_AMOCAS_D|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
 {"amocas.q.aqrl",   64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_Q|MASK_AQRL, MASK_AMOCAS_Q|MASK_AQRL, match_rs2_rd_even, INSN_DREF|INSN_16_BYTE },
 
+/* Zalasr instruction subset.  */
+{"lb.aq",         0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LBA|MASK_AQ, MASK_LBA|MASK_AQRL, match_opcode, INSN_DREF|INSN_1_BYTE },
+{"lb.aqrl",       0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LBA|MASK_AQRL, MASK_LBA|MASK_AQRL, match_opcode, INSN_DREF|INSN_1_BYTE },
+{"lh.aq",         0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LHA|MASK_AQ, MASK_LHA|MASK_AQRL, match_opcode, INSN_DREF|INSN_2_BYTE },
+{"lh.aqrl",       0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LHA|MASK_AQRL, MASK_LHA|MASK_AQRL, match_opcode, INSN_DREF|INSN_2_BYTE },
+{"lw.aq",         0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LWA|MASK_AQ, MASK_LWA|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"lw.aqrl",       0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LWA|MASK_AQRL, MASK_LWA|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"ld.aq",        64, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LDA|MASK_AQ, MASK_LDA|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"ld.aqrl",      64, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LDA|MASK_AQRL, MASK_LDA|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"sb.rl",         0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SBR|MASK_RL, MASK_SBR|MASK_AQRL, match_opcode, INSN_DREF|INSN_1_BYTE },
+{"sb.aqrl",       0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SBR|MASK_AQRL, MASK_SBR|MASK_AQRL, match_opcode, INSN_DREF|INSN_1_BYTE },
+{"sh.rl",         0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SHR|MASK_RL, MASK_SHR|MASK_AQRL, match_opcode, INSN_DREF|INSN_2_BYTE },
+{"sh.aqrl",       0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SHR|MASK_AQRL, MASK_SHR|MASK_AQRL, match_opcode, INSN_DREF|INSN_2_BYTE },
+{"sw.rl",         0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SWR|MASK_RL, MASK_SWR|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"sw.aqrl",       0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SWR|MASK_AQRL, MASK_SWR|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"sd.rl",        64, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SDR|MASK_RL, MASK_SDR|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"sd.aqrl",      64, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SDR|MASK_AQRL, MASK_SDR|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+
 /* Multiply/Divide instruction subset.  */
 {"mul",        0, INSN_CLASS_ZCB_AND_ZMMUL, "Cs,Cw,Ct",  MATCH_C_MUL, MASK_C_MUL, match_opcode, INSN_ALIAS },
 {"mul",        0, INSN_CLASS_ZMMUL, "d,s,t",     MATCH_MUL, MASK_MUL, match_opcode, 0 },
