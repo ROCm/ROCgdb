@@ -14,7 +14,10 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 2d417fa49bc4e657bcbcf0ae549238784175f0fe # 2026-06-18
+  # WIP: paired with the TheRock branch users/dravindr/tr_rocgdb (ROCm/TheRock#5917,
+  # test-filter standardization for rocgdb). Revert to a pinned ROCm/TheRock SHA
+  # before merge once that PR lands.
+  THEROCK_COMMIT_REF: users/dravindr/tr_rocgdb
 
 jobs:
   therock-build-linux:
