@@ -924,14 +924,18 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  switch (*++oparg)
 		    {
 		    case 'd':
-		      unsigned vd = EXTRACT_OPERAND (SPACEMIT_IME_VD, l) * 2;
-		      print (info->stream, dis_style_register, "%s",
-			     riscv_vecr_names_numeric[vd]);
+		      {
+			unsigned vd = EXTRACT_OPERAND (SPACEMIT_IME_VD, l) * 2;
+			print (info->stream, dis_style_register, "%s",
+			       riscv_vecr_names_numeric[vd]);
+		      }
 		      break;
 		    case 's':
-		      unsigned vs = EXTRACT_OPERAND (SPACEMIT_IME_VS1, l) * 2;
-		      print (info->stream, dis_style_register, "%s",
-			     riscv_vecr_names_numeric[vs]);
+		      {
+			unsigned vs = EXTRACT_OPERAND (SPACEMIT_IME_VS1, l) * 2;
+			print (info->stream, dis_style_register, "%s",
+			       riscv_vecr_names_numeric[vs]);
+		      }
 		      break;
 		    case 'm':
 		      {
