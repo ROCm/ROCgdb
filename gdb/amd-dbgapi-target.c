@@ -2455,7 +2455,9 @@ amd_dbgapi_target::stopped_by_sw_breakpoint ()
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     return false;
 
-  return (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT) != 0;
+  return (stop_reason
+	  & (AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT
+	     | AMD_DBGAPI_WAVE_STOP_REASON_DEBUG_TRAP)) != 0;
 }
 
 bool

@@ -2019,6 +2019,34 @@ amdgpu_supports_arch_info (const struct bfd_arch_info *info)
   return status == AMD_DBGAPI_STATUS_SUCCESS;
 }
 
+static bool
+amdgpu_program_breakpoint_here_p (gdbarch *gdbarch, CORE_ADDR address)
+{
+  scoped_restore restore_memory
+    = make_scoped_restore_show_memory_breakpoints (0);
+
+  amd_dbgapi_architecture_id_t architecture_id;
+  if (amd_dbgapi_get_architecture
+      (gdbarch_bfd_arch_info (gdbarch)->mach, &architecture_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_get_architecture failed"));
+
+  size_t len = gdbarch_max_insn_length (gdbarch);
+  gdb::byte_vector buffer (len);
+
+  if (target_read_memory (address, buffer.data (), len) != 0)
+    error (_("target_read_memory failed"));
+
+  amd_dbgapi_instruction_kind_t insn_kind;
+  if (amd_dbgapi_classify_instruction (architecture_id,
+				       address, &len, buffer.data (),
+				       &insn_kind, nullptr, nullptr)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return false;  /* Treat unclassifiable instructions as non-traps.  */
+
+  return insn_kind == AMD_DBGAPI_INSTRUCTION_KIND_TRAP;
+}
+
 static struct gdbarch *
 amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
@@ -2234,6 +2262,8 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     error (_("amd_dbgapi_architecture_get_info failed"));
 
   set_gdbarch_max_insn_length (gdbarch, max_insn_length);
+  set_gdbarch_program_breakpoint_here_p (gdbarch,
+					 amdgpu_program_breakpoint_here_p);
 
   /* Lane debugging.  */
   set_gdbarch_active_lanes_mask (gdbarch, amdgpu_active_lanes_mask);
