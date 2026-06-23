@@ -40,7 +40,7 @@ proc set_tracepoint_and_collect { } {
     if {![runto_main]} {
 	return -1
     }
-    gdb_breakpoint "end" qualified
+    gdb_breakpoint "end" -qualified
     gdb_test "trace start" "Tracepoint \[0-9\] at .*"
     gdb_trace_setactions "set action for tracepoint"  "" \
 	"collect testglob" "^$" \

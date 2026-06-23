@@ -38,7 +38,7 @@ set ws "\[ \t\]"
 gdb_test "info queues" "No queues are currently active\\." "info queues, no queues"
 
 # Set breakpoint in device code.
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_breakpoint "bit_extract_kernel" -allow-pending
 gdb_continue_to_breakpoint "bit_extract_kernel"
 
 #Test0

@@ -23,7 +23,6 @@
 #include "ld.h"
 #include "ldmain.h"
 #include "ldmisc.h"
-#include "libbfd.h"
 #include "libiberty.h"
 #include "coff/i386.h"
 #include "coff/external.h"

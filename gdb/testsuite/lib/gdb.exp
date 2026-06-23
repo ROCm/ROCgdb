@@ -726,44 +726,58 @@ proc gdb_starti_cmd { {inferior_args {}} } {
 # Set a breakpoint using LINESPEC.
 #
 # If there is an additional argument it is a list of options; the supported
-# options are allow-pending, temporary, message, no-message and qualified.
+# options are -allow-pending, -temporary, -message, -no-message and -qualified.
 #
 # The result is 1 for success, 0 for failure.
 #
 # Note: The handling of message vs no-message is messed up, but it's based
 # on historical usage.  By default this function does not print passes,
 # only fails.
-# no-message: turns off printing of fails (and passes, but they're already off)
-# message: turns on printing of passes (and fails, but they're already on)
+# -no-message: turns off printing of fails (and passes, but they're already off)
+# -message: turns on printing of passes (and fails, but they're already on)
 
 proc gdb_breakpoint { linespec args } {
     global gdb_prompt
     global decimal
 
+    parse_args {
+	{allow-pending}
+	{temporary}
+	{qualified}
+	{message}
+	{no-message}
+    }
+
     set pending_response n
-    if {[lsearch -exact $args allow-pending] != -1} {
+
+    if {${allow-pending}} {
 	set pending_response y
     }
 
     set break_command "break"
     set break_message "Breakpoint"
-    if {[lsearch -exact $args temporary] != -1} {
+
+    if {$temporary} {
 	set break_command "tbreak"
 	set break_message "Temporary breakpoint"
     }
 
-    if {[lsearch -exact $args qualified] != -1} {
+    if {$qualified} {
 	append break_command " -qualified"
+    }
+
+    if {$message && ${no-message}} {
+	error "gdb_breakpoint: -message and -no-message are mutually exclusive"
     }
 
     set print_pass 0
     set print_fail 1
-    set no_message_loc [lsearch -exact $args no-message]
-    set message_loc [lsearch -exact $args message]
-    # The last one to appear in args wins.
-    if { $no_message_loc > $message_loc } {
+
+    if {${no-message}} {
 	set print_fail 0
-    } elseif { $message_loc > $no_message_loc } {
+    }
+
+    if {$message} {
 	set print_pass 1
     }
 
@@ -804,44 +818,68 @@ proc gdb_breakpoint { linespec args } {
 # just compare to "function" because it might be a fully qualified,
 # single quoted C++ function specifier.
 #
-# If there are additional arguments, pass them to gdb_breakpoint.
-# We recognize no-message/message ourselves as well as no-delete-brekpoints.
+# This proc recognizes the -no-message/-message, -no-delete-breakpoints
+# and -inferior-args options.  If there are additional arguments, pass
+# them to gdb_breakpoint.
 #
-# no-message is messed up here, like gdb_breakpoint: to preserve
+# -no-message is messed up here, like gdb_breakpoint: to preserve
 # historical usage fails are always printed by default.
-# no-message: turns off printing of fails (and passes, but they're already off)
-# message: turns on printing of passes (and fails, but they're already on)
+# -no-message: turns off printing of fails (and passes, but they're already off)
+# -message: turns on printing of passes (and fails, but they're already on)
 #
-# The 'no-delete-brekpoints' option stops this proc from deleting all
+# The -no-delete-breakpoints option stops this proc from deleting all
 # breakpoints.
+#
+# The -inferior-args option allows to specify arguments to pass to the
+# inferior.  For example, this would pass three arguments:
+#
+#     runto func -inferior-args "one two three"
 
 proc runto { linespec args } {
     global gdb_prompt
     global bkptno_numopt_re
     global decimal
 
-    if {[lsearch -exact $args no-delete-breakpoints] == -1} {
+    # Parse our own option only, forward the rest to gdb_breakpoint.
+    parse_some_args {
+	{no-delete-breakpoints}
+	{message}
+	{no-message}
+	{inferior-args ""}
+    }
+
+    if {!${no-delete-breakpoints}} {
 	delete_breakpoints
+    }
+
+    if {$message && ${no-message}} {
+	error "runto: -message and -no-message are mutually exclusive"
     }
 
     set print_pass 0
     set print_fail 1
-    set no_message_loc [lsearch -exact $args no-message]
-    set message_loc [lsearch -exact $args message]
-    # The last one to appear in args wins.
-    if { $no_message_loc > $message_loc } {
+
+    # Re-insert -message or -no-message into the args we pass to gdb_breakpoint,
+    # since it uses them as well.
+    set gdb_breakpoint_args $args
+
+    if {${no-message}} {
 	set print_fail 0
-    } elseif { $message_loc > $no_message_loc } {
+	lappend gdb_breakpoint_args -no-message
+    }
+
+    if {$message} {
 	set print_pass 1
+	lappend gdb_breakpoint_args -message
     }
 
     set test_name "runto: run to $linespec"
 
-    if {![gdb_breakpoint $linespec {*}$args]} {
+    if {![gdb_breakpoint $linespec {*}$gdb_breakpoint_args]} {
 	return 0
     }
 
-    gdb_run_cmd
+    gdb_run_cmd ${inferior-args}
 
     # the "at foo.c:36" output we get with -g.
     # the "in func" output we get without -g.
@@ -903,7 +941,7 @@ proc runto { linespec args } {
 # you don't want that then pass the 'no-delete-breakpoints' argument.
 
 proc runto_main { args } {
-    return [runto main qualified {*}$args]
+    return [runto main -qualified {*}$args]
 }
 
 ### Continue, and expect to hit a breakpoint.

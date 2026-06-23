@@ -30495,6 +30495,14 @@ const struct arm_legacy_option_table arm_legacy_opts[] =
   {NULL, NULL, ARM_ARCH_NONE, NULL}
 };
 
+struct arm_ext_table
+{
+  const char *		  name;
+  size_t		  name_len;
+  const arm_feature_set	  merge;
+  const arm_feature_set	  clear;
+};
+
 struct arm_cpu_option_table
 {
   const char *           name;
@@ -30507,11 +30515,339 @@ struct arm_cpu_option_table
   /* The canonical name of the CPU, or NULL to use NAME converted to upper
      case.  */
   const char *           canonical_name;
+  const struct arm_ext_table *	ext_table;
+};
+
+/* Used to add support for +E and +noE extension.  */
+#define ARM_EXT(E, M, C) { E, sizeof (E) - 1, M, C }
+/* Used to add support for a +E extension.  */
+#define ARM_ADD(E, M) { E, sizeof(E) - 1, M, ARM_ARCH_NONE }
+/* Used to add support for a +noE extension.  */
+#define ARM_REMOVE(E, C) { E, sizeof(E) -1, ARM_ARCH_NONE, C }
+
+#define ALL_FP ARM_FEATURE (0, ARM_EXT2_FP16_INST | ARM_EXT2_FP16_FML, \
+			    ~0 & ~FPU_ENDIAN_PURE)
+#define ALL_FP_MVE_FP ARM_FEATURE (0, (ARM_EXT2_FP16_INST		   \
+					| ARM_EXT2_FP16_FML		   \
+					| ARM_EXT2_MVE_FP),		   \
+				   ~0 & ~FPU_ENDIAN_PURE)
+#define ALL_SIMD ARM_FEATURE_COPROC (FPU_NEON_EXT_V1 | FPU_NEON_EXT_FMA       \
+				     | FPU_NEON_EXT_ARMV8 | FPU_NEON_EXT_RDMA \
+				     | FPU_NEON_EXT_DOTPROD)
+
+#define CDE_EXTENSIONS \
+  ARM_ADD ("cdecp0", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE0)), \
+  ARM_ADD ("cdecp1", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE1)), \
+  ARM_ADD ("cdecp2", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE2)), \
+  ARM_ADD ("cdecp3", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE3)), \
+  ARM_ADD ("cdecp4", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE4)), \
+  ARM_ADD ("cdecp5", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE5)), \
+  ARM_ADD ("cdecp6", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE6)), \
+  ARM_ADD ("cdecp7", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE7))
+
+/* -mcpu extensions.  */
+static const struct arm_ext_table cortex_a5_ext_table[] =
+{
+  ARM_REMOVE ("fp", ALL_FP),
+  ARM_REMOVE ("simd", ALL_SIMD),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a7_ext_table[] =
+{
+  ARM_REMOVE ("fp", ALL_FP),
+  ARM_REMOVE ("simd", ALL_SIMD),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a8_ext_table[] =
+{
+  ARM_REMOVE ("fp", ALL_FP),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a9_ext_table[] =
+{
+  ARM_REMOVE ("fp", ALL_FP),
+  ARM_REMOVE ("simd", ALL_SIMD),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a12_ext_table[] =
+{
+  ARM_REMOVE ("fp", ALL_FP),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a15_ext_table[] =
+{
+  ARM_REMOVE ("fp", ALL_FP),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a17_ext_table[] =
+{
+  ARM_REMOVE ("fp", ALL_FP),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_r5_ext_table[] =
+{
+  ARM_REMOVE ("fp",    ALL_FP),
+  ARM_REMOVE ("fp.dp", ARM_FEATURE_COPROC (FPU_VFP_EXT_V1 | FPU_VFP_EXT_V3
+					   | FPU_VFP_EXT_ARMV8)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_r7_ext_table[] =
+{
+  ARM_REMOVE ("fp",    ALL_FP),
+  ARM_REMOVE ("fp.dp", ARM_FEATURE_COPROC (FPU_VFP_EXT_V1 | FPU_VFP_EXT_V3
+					   | FPU_VFP_EXT_ARMV8)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_r8_ext_table[] =
+{
+  ARM_REMOVE ("fp",    ALL_FP),
+  ARM_REMOVE ("fp.dp", ARM_FEATURE_COPROC (FPU_VFP_EXT_V1 | FPU_VFP_EXT_V3
+					   | FPU_VFP_EXT_ARMV8)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_m4_ext_table[] =
+{
+  ARM_REMOVE ("fp",    ALL_FP),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_m7_ext_table[] =
+{
+  ARM_REMOVE ("fp",    ALL_FP),
+  ARM_REMOVE ("fp.dp", ARM_FEATURE_COPROC (FPU_VFP_EXT_V1 | FPU_VFP_EXT_V3
+					   | FPU_VFP_EXT_ARMV8)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a32_ext_table[] =
+{
+  ARM_REMOVE ("fp",     ALL_FP),
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a35_ext_table[] =
+{
+  ARM_REMOVE ("fp",     ALL_FP),
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a53_ext_table[] =
+{
+  ARM_REMOVE ("fp",     ALL_FP),
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a57_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a72_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a73_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table exynos_m1_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_r52_ext_table[] =
+{
+  ARM_REMOVE ("fp.dp", ARM_FEATURE_COPROC (FPU_VFP_EXT_D32 | FPU_VFP_EXT_ARMV8
+					   | FPU_NEON_EXT_V1 | FPU_NEON_EXT_FMA
+					   | FPU_NEON_EXT_ARMV8 | FPU_NEON_EXT_RDMA
+					   | FPU_NEON_EXT_DOTPROD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_r52plus_ext_table[] =
+{
+  ARM_REMOVE ("fp.dp", ARM_FEATURE_COPROC (FPU_VFP_EXT_D32 | FPU_VFP_EXT_ARMV8
+					   | FPU_NEON_EXT_V1 | FPU_NEON_EXT_FMA
+					   | FPU_NEON_EXT_ARMV8 | FPU_NEON_EXT_RDMA
+					   | FPU_NEON_EXT_DOTPROD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_m33_ext_table[] =
+{
+  ARM_REMOVE ("fp",  ALL_FP),
+  ARM_REMOVE ("dsp", ARM_FEATURE_CORE_LOW (ARM_AEXT_V8M_MAIN_DSP)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_m35p_ext_table[] =
+{
+  ARM_REMOVE ("fp",  ALL_FP),
+  ARM_REMOVE ("dsp", ARM_FEATURE_CORE_LOW (ARM_AEXT_V8M_MAIN_DSP)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_m52_ext_table[] =
+{
+  ARM_REMOVE ("pacbti", ARM_FEATURE_CORE_HIGH_HIGH (ARM_EXT3_PACBTI)),
+  ARM_REMOVE ("mve.fp", ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE_FP)),
+  ARM_REMOVE ("mve",    ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE | ARM_EXT2_MVE_FP)),
+  ARM_REMOVE ("fp",     ALL_FP_MVE_FP),
+  ARM_REMOVE ("dsp",    ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE | ARM_EXT2_MVE_FP)),
+  CDE_EXTENSIONS,
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_m55_ext_table[] =
+{
+  ARM_REMOVE ("mve.fp", ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE_FP)),
+  ARM_REMOVE ("mve",    ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE | ARM_EXT2_MVE_FP)),
+  ARM_REMOVE ("fp",     ALL_FP_MVE_FP),
+  ARM_REMOVE ("dsp",    ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE | ARM_EXT2_MVE_FP)),
+  CDE_EXTENSIONS,
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_m85_ext_table[] =
+{
+  ARM_REMOVE ("pacbti", ARM_FEATURE_CORE_HIGH_HIGH (ARM_EXT3_PACBTI)),
+  ARM_REMOVE ("mve.fp", ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE_FP)),
+  ARM_REMOVE ("mve",    ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE | ARM_EXT2_MVE_FP)),
+  ARM_REMOVE ("fp",     ALL_FP_MVE_FP),
+  ARM_REMOVE ("dsp",    ARM_FEATURE_CORE_HIGH (ARM_EXT2_MVE | ARM_EXT2_MVE_FP)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a55_ext_table[] =
+{
+  ARM_REMOVE ("fp", ALL_FP),
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a75_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a76_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a76ae_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a77_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a78_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a78ae_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a78c_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_x1_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_x1c_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table neoverse_n1_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table neoverse_v1_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table cortex_a710_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
+};
+
+static const struct arm_ext_table neoverse_n2_ext_table[] =
+{
+  ARM_ADD ("crypto", ARM_FEATURE_COPROC (FPU_CRYPTO_EXT_ARMV8
+					 | FPU_VFP_EXT_ARMV8 | FPU_VFP_EXT_ARMV8xD)),
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE }
 };
 
 /* This list should, at a minimum, contain all the cpu names
    recognized by GCC.  */
-#define ARM_CPU_OPT(N, CN, V, E, DF) { N, sizeof (N) - 1, V, E, DF, CN }
+#define ARM_CPU_OPT(N, CN, V, E, DF) { N, sizeof (N) - 1, V, E, DF, CN, NULL }
+#define ARM_CPU_OPT2(N, CN, V, E, DF, ext) \
+  { N, sizeof (N) - 1, V, E, DF, CN, ext##_ext_table }
 
 static const struct arm_cpu_option_table arm_cpus[] =
 {
@@ -30764,113 +31100,171 @@ static const struct arm_cpu_option_table arm_cpus[] =
   ARM_CPU_OPT ("arm1176jzf-s",	  NULL,		       ARM_ARCH_V6KZ,
 	       ARM_ARCH_NONE,
 	       FPU_ARCH_VFP_V2),
-  ARM_CPU_OPT ("cortex-a5",	  "Cortex-A5",	       ARM_ARCH_V7A,
-	       ARM_FEATURE_CORE_LOW (ARM_EXT_MP | ARM_EXT_SEC),
-	       FPU_ARCH_SOFTVFP),
-  ARM_CPU_OPT ("cortex-a7",	  "Cortex-A7",	       ARM_ARCH_V7VE,
-	       ARM_ARCH_NONE,
-	       FPU_ARCH_NEON_VFP_V4),
-  ARM_CPU_OPT ("cortex-a8",	  "Cortex-A8",	       ARM_ARCH_V7A,
-	       ARM_FEATURE_CORE_LOW (ARM_EXT_SEC),
-	       ARM_FEATURE_COPROC (FPU_VFP_V3 | FPU_NEON_EXT_V1)),
-  ARM_CPU_OPT ("cortex-a9",	  "Cortex-A9",	       ARM_ARCH_V7A,
-	       ARM_FEATURE_CORE_LOW (ARM_EXT_MP | ARM_EXT_SEC),
-	       ARM_FEATURE_COPROC (FPU_VFP_V3 | FPU_NEON_EXT_V1)),
-  ARM_CPU_OPT ("cortex-a12",	  "Cortex-A12",	       ARM_ARCH_V7VE,
-	       ARM_ARCH_NONE,
-	       FPU_ARCH_NEON_VFP_V4),
-  ARM_CPU_OPT ("cortex-a15",	  "Cortex-A15",	       ARM_ARCH_V7VE,
-	       ARM_ARCH_NONE,
-	       FPU_ARCH_NEON_VFP_V4),
-  ARM_CPU_OPT ("cortex-a17",	  "Cortex-A17",	       ARM_ARCH_V7VE,
-	       ARM_ARCH_NONE,
-	       FPU_ARCH_NEON_VFP_V4),
-  ARM_CPU_OPT ("cortex-a32",	  "Cortex-A32",	       ARM_ARCH_V8A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_CRC),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-a35",	  "Cortex-A35",	       ARM_ARCH_V8A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_CRC),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-a53",	  "Cortex-A53",	       ARM_ARCH_V8A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_CRC),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-a55",    "Cortex-A55",	       ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8_DOTPROD),
-  ARM_CPU_OPT ("cortex-a57",	  "Cortex-A57",	       ARM_ARCH_V8A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_CRC),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-a72",	  "Cortex-A72",	       ARM_ARCH_V8A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_CRC),
-	      FPU_ARCH_CRYPTO_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-a73",	  "Cortex-A73",	       ARM_ARCH_V8A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_CRC),
-	      FPU_ARCH_CRYPTO_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-a75",    "Cortex-A75",	       ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8_DOTPROD),
-  ARM_CPU_OPT ("cortex-a76",    "Cortex-A76",	       ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8_DOTPROD),
-  ARM_CPU_OPT ("cortex-a76ae",    "Cortex-A76AE",      ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8_DOTPROD),
-  ARM_CPU_OPT ("cortex-a77",    "Cortex-A77",	       ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8_DOTPROD),
-  ARM_CPU_OPT ("cortex-a78",   "Cortex-A78",	       ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST | ARM_EXT2_SB),
-	       FPU_ARCH_DOTPROD_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-a78ae",   "Cortex-A78AE",	   ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST | ARM_EXT2_SB),
-	       FPU_ARCH_DOTPROD_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-a78c",   "Cortex-A78C",	   ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST | ARM_EXT2_SB),
-	       FPU_ARCH_DOTPROD_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-a710",   "Cortex-A710",	   ARM_ARCH_V9A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST
-				    | ARM_EXT2_BF16
-				    | ARM_EXT2_I8MM),
-	       FPU_ARCH_DOTPROD_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("ares",    "Ares",	       ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8_DOTPROD),
+  ARM_CPU_OPT2 ("cortex-a5",	  "Cortex-A5",	       ARM_ARCH_V7A,
+		ARM_FEATURE ((ARM_EXT_MP | ARM_EXT_SEC),
+			     ARM_EXT2_FP16_INST,
+			     (FPU_VFP_V4 | FPU_NEON_EXT_V1
+			      | FPU_NEON_EXT_FMA)),
+		FPU_ARCH_NEON_VFP_V4,
+		cortex_a5),
+  ARM_CPU_OPT2 ("cortex-a7",	  "Cortex-A7",	       ARM_ARCH_V7VE,
+		ARM_FEATURE_COPROC (FPU_VFP_V4 | FPU_NEON_EXT_V1
+				    | FPU_NEON_EXT_FMA),
+		FPU_ARCH_NEON_VFP_V4,
+		cortex_a7),
+  ARM_CPU_OPT2 ("cortex-a8",	  "Cortex-A8",	       ARM_ARCH_V7A,
+		ARM_FEATURE_LOW (ARM_EXT_SEC, FPU_VFP_V3 | FPU_NEON_EXT_V1),
+		ARM_FEATURE_COPROC (FPU_VFP_V3 | FPU_NEON_EXT_V1),
+		cortex_a8),
+  ARM_CPU_OPT2 ("cortex-a9",	  "Cortex-A9",	       ARM_ARCH_V7A,
+		ARM_FEATURE ((ARM_EXT_MP | ARM_EXT_SEC),
+			     ARM_EXT2_FP16_INST,
+			     (FPU_VFP_V4 | FPU_NEON_EXT_V1
+			      | FPU_NEON_EXT_FMA)),
+		FPU_ARCH_NEON_VFP_V4,
+		cortex_a9),
+  ARM_CPU_OPT2 ("cortex-a12",	  "Cortex-A12",	       ARM_ARCH_V7VE,
+		ARM_FEATURE_COPROC (FPU_VFP_V4 | FPU_NEON_EXT_V1
+				    | FPU_NEON_EXT_FMA),
+		FPU_ARCH_NEON_VFP_V4,
+		cortex_a12),
+  ARM_CPU_OPT2 ("cortex-a15",	  "Cortex-A15",	       ARM_ARCH_V7VE,
+		ARM_FEATURE_COPROC (FPU_VFP_V4 | FPU_NEON_EXT_V1
+				    | FPU_NEON_EXT_FMA),
+		FPU_ARCH_NEON_VFP_V4,
+		cortex_a15),
+  ARM_CPU_OPT2 ("cortex-a17",	  "Cortex-A17",	       ARM_ARCH_V7VE,
+		ARM_FEATURE_COPROC (FPU_VFP_V4 | FPU_NEON_EXT_V1
+				    | FPU_NEON_EXT_FMA),
+		FPU_ARCH_NEON_VFP_V4,
+		cortex_a17),
+  ARM_CPU_OPT2 ("cortex-a32",	  "Cortex-A32",	       ARM_ARCH_V8A,
+		ARM_FEATURE(0, ARM_EXT2_CRC, FPU_NEON_ARMV8 | FPU_VFP_ARMV8),
+		FPU_ARCH_NEON_VFP_ARMV8,
+		cortex_a32),
+  ARM_CPU_OPT2 ("cortex-a35",	  "Cortex-A35",	       ARM_ARCH_V8A,
+		ARM_FEATURE(0, ARM_EXT2_CRC, FPU_NEON_ARMV8 | FPU_VFP_ARMV8),
+		FPU_ARCH_NEON_VFP_ARMV8,
+		cortex_a35),
+  ARM_CPU_OPT2 ("cortex-a53",	  "Cortex-A53",	       ARM_ARCH_V8A,
+		ARM_FEATURE(0, ARM_EXT2_CRC, FPU_NEON_ARMV8 | FPU_VFP_ARMV8),
+		FPU_ARCH_NEON_VFP_ARMV8,
+		cortex_a53),
+  ARM_CPU_OPT2 ("cortex-a55",    "Cortex-A55",	       ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		cortex_a55),
+  ARM_CPU_OPT2 ("cortex-a57",	  "Cortex-A57",	       ARM_ARCH_V8A,
+		ARM_FEATURE(0, ARM_EXT2_CRC, FPU_NEON_ARMV8 | FPU_VFP_ARMV8),
+		FPU_ARCH_NEON_VFP_ARMV8,
+		cortex_a57),
+  ARM_CPU_OPT2 ("cortex-a72",	  "Cortex-A72",	       ARM_ARCH_V8A,
+		ARM_FEATURE(0, ARM_EXT2_CRC, FPU_NEON_ARMV8 | FPU_VFP_ARMV8),
+		FPU_ARCH_NEON_VFP_ARMV8,
+		cortex_a72),
+  ARM_CPU_OPT2 ("cortex-a73",	  "Cortex-A73",	       ARM_ARCH_V8A,
+		ARM_FEATURE(0, ARM_EXT2_CRC, FPU_NEON_ARMV8 | FPU_VFP_ARMV8),
+		FPU_ARCH_NEON_VFP_ARMV8,
+		cortex_a73),
+  ARM_CPU_OPT2 ("cortex-a75",    "Cortex-A75",	       ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		cortex_a75),
+  ARM_CPU_OPT2 ("cortex-a76",    "Cortex-A76",	       ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_VFP_V5_SP_D16,
+		cortex_a76),
+  ARM_CPU_OPT2 ("cortex-a76ae",    "Cortex-A76AE",      ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_VFP_V5_SP_D16,
+		cortex_a76ae),
+  ARM_CPU_OPT2 ("cortex-a77",    "Cortex-A77",	       ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_VFP_V5_SP_D16,
+		cortex_a77),
+  ARM_CPU_OPT2 ("cortex-a78",   "Cortex-A78",	       ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_VFP_V5_SP_D16,
+		cortex_a78),
+  ARM_CPU_OPT2 ("cortex-a78ae",   "Cortex-A78AE",	   ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_VFP_V5_SP_D16,
+		cortex_a78ae),
+  ARM_CPU_OPT2 ("cortex-a78c",   "Cortex-A78C",	   ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_VFP_V5_SP_D16,
+		cortex_a78c),
   ARM_CPU_OPT ("cortex-r4",	  "Cortex-R4",	       ARM_ARCH_V7R,
 	       ARM_ARCH_NONE,
 	       FPU_ARCH_SOFTVFP),
   ARM_CPU_OPT ("cortex-r4f",	  "Cortex-R4F",	       ARM_ARCH_V7R,
-	       ARM_ARCH_NONE,
+	       FPU_ARCH_VFP_V3D16,
 	       FPU_ARCH_VFP_V3D16),
-  ARM_CPU_OPT ("cortex-r5",	  "Cortex-R5",	       ARM_ARCH_V7R,
-	       ARM_FEATURE_CORE_LOW (ARM_EXT_ADIV),
-	       FPU_ARCH_SOFTVFP),
-  ARM_CPU_OPT ("cortex-r7",	  "Cortex-R7",	       ARM_ARCH_V7R,
-	       ARM_FEATURE_CORE_LOW (ARM_EXT_ADIV),
-	       FPU_ARCH_VFP_V3D16),
-  ARM_CPU_OPT ("cortex-r8",	  "Cortex-R8",	       ARM_ARCH_V7R,
-	       ARM_FEATURE_CORE_LOW (ARM_EXT_ADIV),
-	       FPU_ARCH_VFP_V3D16),
-  ARM_CPU_OPT ("cortex-r52",	  "Cortex-R52",	       ARM_ARCH_V8R,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_CRC),
-	      FPU_ARCH_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-r52plus",	  "Cortex-R52+",	       ARM_ARCH_V8R,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_CRC),
-	      FPU_ARCH_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-m35p",	  "Cortex-M35P",       ARM_ARCH_V8M_MAIN,
-	       ARM_FEATURE_CORE_LOW (ARM_EXT_V5ExP | ARM_EXT_V6_DSP),
-	       FPU_ARCH_SOFTVFP),
-  ARM_CPU_OPT ("cortex-m33",	  "Cortex-M33",	       ARM_ARCH_V8M_MAIN,
-	       ARM_FEATURE_CORE_LOW (ARM_EXT_V5ExP | ARM_EXT_V6_DSP),
-	       FPU_ARCH_SOFTVFP),
+  ARM_CPU_OPT2 ("cortex-r5",	  "Cortex-R5",	       ARM_ARCH_V7R,
+		ARM_FEATURE (ARM_EXT_ADIV, 0, FPU_VFP_V3),
+		FPU_ARCH_VFP_V3,
+		cortex_r5),
+  ARM_CPU_OPT2 ("cortex-r7",	  "Cortex-R7",	       ARM_ARCH_V7R,
+		ARM_FEATURE (ARM_EXT_ADIV, 0, FPU_VFP_V3D16 | FPU_VFP_EXT_FP16),
+		FPU_ARCH_VFP_V3D16_FP16,
+		cortex_r7),
+  ARM_CPU_OPT2 ("cortex-r8",	  "Cortex-R8",	       ARM_ARCH_V7R,
+		ARM_FEATURE (ARM_EXT_ADIV, 0, FPU_VFP_V3D16 | FPU_VFP_EXT_FP16),
+		FPU_ARCH_VFP_V3D16_FP16,
+		cortex_r8),
+  ARM_CPU_OPT2 ("cortex-r52",	  "Cortex-R52",	       ARM_ARCH_V8R,
+		ARM_FEATURE(0, ARM_EXT2_CRC, FPU_NEON_ARMV8 | FPU_VFP_ARMV8),
+		FPU_ARCH_NEON_VFP_ARMV8,
+		cortex_r52),
+  ARM_CPU_OPT2 ("cortex-r52plus",	  "Cortex-R52+",	ARM_ARCH_V8R,
+		ARM_FEATURE(0, ARM_EXT2_CRC, FPU_NEON_ARMV8 | FPU_VFP_ARMV8),
+		FPU_ARCH_NEON_VFP_ARMV8,
+		cortex_r52plus),
+  ARM_CPU_OPT2 ("cortex-m85",	 "Cortex-M85",	       ARM_ARCH_V8_1M_MAIN,
+		ARM_FEATURE_ALL(ARM_AEXT_V8M_MAIN_DSP,
+				(ARM_EXT2_FP16_INST | ARM_EXT2_MVE
+				 | ARM_EXT2_MVE_FP),
+				ARM_EXT3_PACBTI,
+				(FPU_VFP_V5D16 | FPU_VFP_EXT_FP16
+				 | FPU_VFP_EXT_FMA)),
+		FPU_ARCH_SOFTVFP,
+		cortex_m85),
+  ARM_CPU_OPT2 ("cortex-m55",	 "Cortex-M55",	       ARM_ARCH_V8_1M_MAIN,
+		ARM_FEATURE_ALL(ARM_AEXT_V8M_MAIN_DSP,
+				(ARM_EXT2_FP16_INST | ARM_EXT2_MVE
+				 | ARM_EXT2_MVE_FP),
+				0,
+				(FPU_VFP_V5D16 | FPU_VFP_EXT_FP16
+				 | FPU_VFP_EXT_FMA)),
+		FPU_ARCH_SOFTVFP,
+		cortex_m55),
+  ARM_CPU_OPT2 ("cortex-m52",	 "Cortex-M52",	       ARM_ARCH_V8_1M_MAIN,
+		ARM_FEATURE_ALL (ARM_AEXT_V8M_MAIN_DSP,
+				 (ARM_EXT2_FP16_INST | ARM_EXT2_MVE
+				  | ARM_EXT2_MVE_FP),
+				 ARM_EXT3_PACBTI,
+				 (FPU_VFP_V5D16 | FPU_VFP_EXT_FP16
+				  | FPU_VFP_EXT_FMA)),
+		FPU_ARCH_SOFTVFP,
+		cortex_m52),
+  ARM_CPU_OPT2 ("cortex-m35p",	  "Cortex-M35P",       ARM_ARCH_V8M_MAIN,
+		ARM_FEATURE_LOW (ARM_EXT_V5ExP | ARM_EXT_V6_DSP, FPU_VFP_V4D16),
+		FPU_ARCH_VFP_V3D16,
+		cortex_m35p),
+  ARM_CPU_OPT2 ("cortex-m33",	  "Cortex-M33",	       ARM_ARCH_V8M_MAIN,
+		ARM_FEATURE_LOW (ARM_EXT_V5ExP | ARM_EXT_V6_DSP, FPU_VFP_V4D16),
+		FPU_ARCH_VFP_V3D16, cortex_m33),
   ARM_CPU_OPT ("cortex-m23",	  "Cortex-M23",	       ARM_ARCH_V8M_BASE,
 	       ARM_ARCH_NONE,
 	       FPU_ARCH_SOFTVFP),
-  ARM_CPU_OPT ("cortex-m7",	  "Cortex-M7",	       ARM_ARCH_V7EM,
-	       ARM_ARCH_NONE,
-	       FPU_ARCH_SOFTVFP),
-  ARM_CPU_OPT ("cortex-m4",	  "Cortex-M4",	       ARM_ARCH_V7EM,
-	       ARM_ARCH_NONE,
-	       FPU_ARCH_SOFTVFP),
+  ARM_CPU_OPT2 ("cortex-m7",	  "Cortex-M7",	       ARM_ARCH_V7EM,
+		ARM_FEATURE_COPROC (FPU_VFP_V5D16),
+		FPU_ARCH_VFP_V5D16,
+		cortex_m7),
+  ARM_CPU_OPT2 ("cortex-m4",	  "Cortex-M4",	       ARM_ARCH_V7EM,
+		ARM_FEATURE_COPROC (FPU_VFP_V4_SP_D16),
+		FPU_ARCH_VFP_V4_SP_D16,
+		cortex_m4),
   ARM_CPU_OPT ("cortex-m3",	  "Cortex-M3",	       ARM_ARCH_V7M,
 	       ARM_ARCH_NONE,
 	       FPU_ARCH_SOFTVFP),
@@ -30883,28 +31277,50 @@ static const struct arm_cpu_option_table arm_cpus[] =
   ARM_CPU_OPT ("cortex-m0plus",	  "Cortex-M0+",	       ARM_ARCH_V6SM,
 	       ARM_ARCH_NONE,
 	       FPU_ARCH_SOFTVFP),
-  ARM_CPU_OPT ("cortex-x1",   "Cortex-X1",	       ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST | ARM_EXT2_SB),
-	       FPU_ARCH_DOTPROD_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("cortex-x1c",   "Cortex-X1C",	       ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST | ARM_EXT2_SB),
-	       FPU_ARCH_DOTPROD_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("exynos-m1",	  "Samsung Exynos M1", ARM_ARCH_V8A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_CRC),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8),
-  ARM_CPU_OPT ("neoverse-n1",    "Neoverse N1",	       ARM_ARCH_V8_2A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8_DOTPROD),
-  ARM_CPU_OPT ("neoverse-n2",	 "Neoverse N2",	       ARM_ARCH_V8_5A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST
-				    | ARM_EXT2_BF16
-				    | ARM_EXT2_I8MM),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8_4),
-  ARM_CPU_OPT ("neoverse-v1", "Neoverse V1", ARM_ARCH_V8_4A,
-	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_FP16_INST
-				    | ARM_EXT2_BF16
-				    | ARM_EXT2_I8MM),
-	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8_4),
+  ARM_CPU_OPT2 ("cortex-x1",   "Cortex-X1",	       ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_VFP_V5_SP_D16,
+		cortex_x1),
+  ARM_CPU_OPT2 ("cortex-x1c",   "Cortex-X1C",	       ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_VFP_V5_SP_D16,
+		cortex_x1c),
+  ARM_CPU_OPT2 ("exynos-m1",	  "Samsung Exynos M1", ARM_ARCH_V8A,
+		ARM_FEATURE (0, ARM_EXT2_CRC, FPU_NEON_ARMV8 | FPU_VFP_ARMV8),
+		FPU_ARCH_NEON_VFP_ARMV8,
+		exynos_m1),
+  ARM_CPU_OPT2 ("neoverse-n1",	 "Neoverse N1",	       ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_VFP_V5_SP_D16,
+		neoverse_n1),
+  ARM_CPU_OPT2 ("ares",    "Ares",	       ARM_ARCH_V8_2A,
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		FPU_ARCH_VFP_V5_SP_D16,
+		neoverse_n1),
+  ARM_CPU_OPT2 ("neoverse-n2",	 "Neoverse N2",	       ARM_ARCH_V9A,
+		ARM_FEATURE(0,
+			    (ARM_EXT2_FP16_INST | ARM_EXT2_FP16_FML
+			     | ARM_EXT2_BF16 | ARM_EXT2_I8MM),
+			    (FPU_NEON_ARMV8_1 | FPU_VFP_ARMV8
+			     | FPU_NEON_EXT_DOTPROD | FPU_NEON_EXT_RDMA)),
+		FPU_ARCH_VFP_V5_SP_D16,
+		neoverse_n2),
+  ARM_CPU_OPT2 ("cortex-a710",	 "Cortex-A710",	   ARM_ARCH_V9A,
+		ARM_FEATURE(0,
+			    (ARM_EXT2_FP16_INST | ARM_EXT2_FP16_FML
+			     | ARM_EXT2_BF16 | ARM_EXT2_I8MM),
+			    (FPU_NEON_ARMV8_1 | FPU_VFP_ARMV8
+			     | FPU_NEON_EXT_DOTPROD | FPU_NEON_EXT_RDMA)),
+		FPU_ARCH_VFP_V5_SP_D16,
+		cortex_a710),
+  ARM_CPU_OPT2 ("neoverse-v1",	 "Neoverse V1",	       ARM_ARCH_V8_4A,
+		ARM_FEATURE(0,
+			    (ARM_EXT2_FP16_INST | ARM_EXT2_FP16_FML
+			     | ARM_EXT2_BF16 | ARM_EXT2_I8MM),
+			    (FPU_NEON_ARMV8_1 | FPU_VFP_ARMV8
+			     | FPU_NEON_EXT_DOTPROD)),
+		FPU_ARCH_NEON_VFP_ARMV8_4_FP16FML,
+		neoverse_v1),
   /* ??? XSCALE is really an architecture.  */
   ARM_CPU_OPT ("xscale",	  NULL,		       ARM_ARCH_XSCALE,
 	       ARM_ARCH_NONE,
@@ -30928,31 +31344,24 @@ static const struct arm_cpu_option_table arm_cpus[] =
 
   /* Marvell processors.  */
   ARM_CPU_OPT ("marvell-pj4",	  NULL,		       ARM_ARCH_V7A,
-	       ARM_FEATURE_CORE_LOW (ARM_EXT_MP | ARM_EXT_SEC),
-	       FPU_ARCH_VFP_V3D16),
+	       ARM_FEATURE (ARM_EXT_MP | ARM_EXT_SEC, 0, FPU_VFP_V3),
+	       FPU_ARCH_VFP_V3),
   ARM_CPU_OPT ("marvell-whitney", NULL,		       ARM_ARCH_V7A,
 	       ARM_FEATURE_CORE_LOW (ARM_EXT_MP | ARM_EXT_SEC),
 	       FPU_ARCH_NEON_VFP_V4),
 
   /* APM X-Gene family.  */
   ARM_CPU_OPT ("xgene1",	  "APM X-Gene 1",      ARM_ARCH_V8A,
-	       ARM_ARCH_NONE,
+	       ARM_FEATURE (0, 0, FPU_NEON_ARMV8 | FPU_VFP_ARMV8),
 	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8),
   ARM_CPU_OPT ("xgene2",	  "APM X-Gene 2",      ARM_ARCH_V8A,
 	       ARM_FEATURE_CORE_HIGH (ARM_EXT2_CRC),
 	       FPU_ARCH_CRYPTO_NEON_VFP_ARMV8),
 
-  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE, ARM_ARCH_NONE, NULL }
+  { NULL, 0, ARM_ARCH_NONE, ARM_ARCH_NONE, ARM_ARCH_NONE, NULL, NULL }
 };
 #undef ARM_CPU_OPT
-
-struct arm_ext_table
-{
-  const char *		  name;
-  size_t		  name_len;
-  const arm_feature_set	  merge;
-  const arm_feature_set	  clear;
-};
+#undef ARM_CPU_OPT2
 
 struct arm_arch_option_table
 {
@@ -30962,16 +31371,6 @@ struct arm_arch_option_table
   const arm_feature_set		default_fpu;
   const struct arm_ext_table *	ext_table;
 };
-
-/* Used to add support for +E and +noE extension.  */
-#define ARM_EXT(E, M, C) { E, sizeof (E) - 1, M, C }
-/* Used to add support for a +E extension.  */
-#define ARM_ADD(E, M) { E, sizeof(E) - 1, M, ARM_ARCH_NONE }
-/* Used to add support for a +noE extension.  */
-#define ARM_REMOVE(E, C) { E, sizeof(E) -1, ARM_ARCH_NONE, C }
-
-#define ALL_FP ARM_FEATURE (0, ARM_EXT2_FP16_INST | ARM_EXT2_FP16_FML, \
-			    ~0 & ~FPU_ENDIAN_PURE)
 
 static const struct arm_ext_table armv5te_ext_table[] =
 {
@@ -31168,16 +31567,6 @@ static const struct arm_ext_table armv9a_ext_table[] =
 #define armv93a_ext_table armv92a_ext_table
 #define armv94a_ext_table armv93a_ext_table
 #define armv95a_ext_table armv94a_ext_table
-
-#define CDE_EXTENSIONS \
-  ARM_ADD ("cdecp0", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE0)), \
-  ARM_ADD ("cdecp1", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE1)), \
-  ARM_ADD ("cdecp2", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE2)), \
-  ARM_ADD ("cdecp3", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE3)), \
-  ARM_ADD ("cdecp4", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE4)), \
-  ARM_ADD ("cdecp5", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE5)), \
-  ARM_ADD ("cdecp6", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE6)), \
-  ARM_ADD ("cdecp7", ARM_FEATURE_CORE_HIGH (ARM_EXT2_CDE | ARM_EXT2_CDE7))
 
 static const struct arm_ext_table armv8m_main_ext_table[] =
 {
@@ -31755,7 +32144,7 @@ arm_parse_cpu (const char *str)
 	  }
 
 	if (ext != NULL)
-	  return arm_parse_extension (ext, mcpu_cpu_opt, mcpu_ext_opt, NULL);
+	  return arm_parse_extension (ext, mcpu_cpu_opt, mcpu_ext_opt, opt->ext_table);
 
 	return true;
       }

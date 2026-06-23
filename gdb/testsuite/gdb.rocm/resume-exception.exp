@@ -122,7 +122,7 @@ proc interrupt_running_threads { } {
 
 with_rocm_gpu_lock {
     # Run to GPU thread.
-    gdb_breakpoint "raise_fpe" "allow-pending"
+    gdb_breakpoint "raise_fpe" -allow-pending
     gdb_test_multiple "run" "" {
 	-re -wrap ".*Thread ($::decimal) \[^\r\n]* hit Breakpoint .*" {
 	    set gpu_thread $expect_out(1,string)

@@ -364,7 +364,7 @@ get_expr_block_and_pc (CORE_ADDR *pc)
 	= get_current_source_symtab_and_line (current_program_space);
 
       if (cursal.symtab)
-	block = cursal.symtab->compunit ()->blockvector ()->static_block ();
+	block = cursal.symtab->compunit ().blockvector ()->static_block ();
 
       if (block != NULL)
 	*pc = block->entry_pc ();

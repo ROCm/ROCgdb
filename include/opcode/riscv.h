@@ -141,6 +141,9 @@ static inline unsigned int riscv_insn_length (insn_t insn)
   ((RV_X(x, 25, 2) << 5) | (RV_X(x, 9, 3) << 2))
 #define EXTRACT_MIPS_SDP_IMM(x) \
   ((RV_X(x, 25, 2) << 5) | (RV_X(x, 10, 2) << 3))
+/* Vendor-specific (SPACEMIT) encode macros.  */
+#define ENCODE_SPACEMIT_IME_UIMM2_SP(x) \
+  ((RV_X (x, 0, 1) << 7) | (RV_X (x, 1, 1) << 15))
 
 #define ENCODE_ITYPE_IMM(x) \
   (RV_X(x, 0, 12) << 20)
@@ -419,6 +422,16 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 #define OP_MASK_MIPS_SDP_OFFSET25   0x3
 #define OP_SH_MIPS_SDP_OFFSET25     25
 
+/* SpacemiT fields.  */
+#define OP_MASK_SPACEMIT_IME_VD		0xf
+#define OP_SH_SPACEMIT_IME_VD		8
+#define OP_MASK_SPACEMIT_IME_VS1	0xf
+#define OP_SH_SPACEMIT_IME_VS1		16
+#define OP_MASK_SPACEMIT_IME_WI		0x3
+#define OP_SH_SPACEMIT_IME_WI		29
+#define OP_MASK_SPACEMIT_IME_VMASK	0x1
+#define OP_SH_SPACEMIT_IME_VMASK	25
+
 /* ABI names for selected x-registers.  */
 
 #define X_ZERO 0
@@ -509,6 +522,7 @@ enum riscv_insn_class
   INSN_CLASS_ZIMOP,
   INSN_CLASS_ZMMUL,
   INSN_CLASS_ZAAMO,
+  INSN_CLASS_ZALASR,
   INSN_CLASS_ZALRSC,
   INSN_CLASS_ZAWRS,
   INSN_CLASS_F_INX,
@@ -552,6 +566,7 @@ enum riscv_insn_class
   INSN_CLASS_ZVKNHA_OR_ZVKNHB,
   INSN_CLASS_ZVKSED,
   INSN_CLASS_ZVKSH,
+  INSN_CLASS_ZVABD,
   INSN_CLASS_ZICFISS,
   INSN_CLASS_ZICFISS_AND_ZCMOP,
   INSN_CLASS_ZICFILP,
@@ -606,6 +621,9 @@ enum riscv_insn_class
   INSN_CLASS_XMIPSCMOV,
   INSN_CLASS_XMIPSEXECTL,
   INSN_CLASS_XMIPSLSP,
+  INSN_CLASS_XSMTVDOT,
+  INSN_CLASS_XSMTVDOTII,
+  INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII,
 };
 
 /* This structure holds information for a particular instruction.  */

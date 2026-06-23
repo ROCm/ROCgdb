@@ -133,7 +133,7 @@ proc reach_1 {func command displacement} {
 	# Breakpoint on _dl_debug_state can have problems due to its overlap
 	# with the existing internal breakpoint from GDB.
 	gdb_test_no_output "set stop-on-solib-events 1"
-    } elseif {! [gdb_breakpoint $func allow-pending]} {
+    } elseif {! [gdb_breakpoint $func -allow-pending]} {
 	return
     }
 

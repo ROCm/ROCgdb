@@ -200,9 +200,9 @@ foreach_with_prefix cmd [list "break" "tbreak"] {
 
     # Assemble flags to pass to gdb_breakpoint.  Lame but this is just
     # a test suite!
-    set break_flags "message"
+    set break_flags "-message"
     if {[string match $cmd "tbreak"]} {
-	lappend break_flags "temporary"
+	lappend break_flags "-temporary"
     }
 
     # Insert breakpoints for all inline_func? and not_inline_func? and check

@@ -111,7 +111,7 @@ proc test {mode} {
     set any "\[^\r\n\]*"
     set bp_hit_re "hit Breakpoint $::decimal, with lanes \\\[$any\\\], bit_extract_kernel \\\($any\\\)\\\sat"
 
-    gdb_breakpoint "bit_extract_kernel" "allow-pending"
+    gdb_breakpoint "bit_extract_kernel" -allow-pending
 
     run_and_wait_break_hits $mode "run" $bp_hit_re
 

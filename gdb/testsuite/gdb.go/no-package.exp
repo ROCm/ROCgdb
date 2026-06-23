@@ -28,4 +28,4 @@ if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug go}]}
 }
 
 # The bug was that stopping in _start would crash.
-runto "*_start" message
+runto "*_start" -message

@@ -73,7 +73,7 @@ proc test_info_shared {} {
 }
 
 with_rocm_gpu_lock {
-    if {![runto kern allow-pending message]} {
+    if {![runto kern -allow-pending -message]} {
 	return
     }
 

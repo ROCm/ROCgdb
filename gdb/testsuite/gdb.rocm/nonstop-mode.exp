@@ -75,7 +75,7 @@ if {![runto_main]} {
 # Fetch the thread id of the first wave and the number of available GPUs.
 
 # Set breakpoint in device code.
-gdb_breakpoint "VectorAdd" "allow-pending"
+gdb_breakpoint "VectorAdd" -allow-pending
 gdb_continue_to_breakpoint "continue to VectorAdd"
 set threadid [get_valueof "" "\$_thread" 0]
 
@@ -92,7 +92,7 @@ gdb_load ${binfile}
 with_test_prefix "non-stop" {
     gdb_test_no_output "set non-stop on"
     gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
-    gdb_breakpoint "VectorAdd" "allow-pending"
+    gdb_breakpoint "VectorAdd" -allow-pending
 
     run_and_wait "run to VectorAdd Breakpoint"
 
@@ -182,7 +182,7 @@ gdb_test "start" {.+hit\sTemporary\sbreakpoint\s[\d].*}
 gdb_test "continue" {.+Inferior\s[\d].+\sexited\snormally.+} \
     "continue after start"
 
-gdb_breakpoint "VectorAdd" "allow-pending"
+gdb_breakpoint "VectorAdd" -allow-pending
 run_and_wait "Again setting Breakpoint and running to Breakpoint after inferior exit"
 
 gdb_test "continue -a" {.+Inferior\s[\d].+\sexited\snormally.+} \

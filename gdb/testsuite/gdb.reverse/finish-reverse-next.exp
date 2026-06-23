@@ -64,7 +64,7 @@ if {[supports_process_record]} {
 
 # Set breakpoint at call to function1 in main.
 set bp_LEP_test [gdb_get_line_number "CALL VIA LEP" $srcfile]
-gdb_breakpoint $srcfile:$bp_LEP_test temporary
+gdb_breakpoint $srcfile:$bp_LEP_test -temporary
 
 # Continue to break point at function1 call in main.
 gdb_continue_to_breakpoint \
@@ -93,7 +93,7 @@ gdb_test_no_output "record" "turn on process record for test2"
 ### TEST 2: reverse finish from the body of function1.
 
 # Set breakpoint at call to function1 in main.
-gdb_breakpoint $srcfile:$bp_LEP_test temporary
+gdb_breakpoint $srcfile:$bp_LEP_test -temporary
 
 # Continue to break point at function1 call in main.
 gdb_continue_to_breakpoint \
@@ -124,7 +124,7 @@ gdb_test_no_output "record" "turn on process record for test3"
 
 # Set breakpoint at call to funp in main.
 set bp_GEP_test  [gdb_get_line_number "CALL VIA GEP" $srcfile]
-gdb_breakpoint $srcfile:$bp_GEP_test temporary
+gdb_breakpoint $srcfile:$bp_GEP_test -temporary
 
 # Continue to break point at funp call in main.
 gdb_continue_to_breakpoint \
@@ -153,7 +153,7 @@ gdb_test_no_output "record" "turn on process record for test4"
 
 # Set breakpoint at call to funp in main.
 set bp_GEP_test  [gdb_get_line_number "CALL VIA GEP" $srcfile]
-gdb_breakpoint $srcfile:$bp_GEP_test temporary
+gdb_breakpoint $srcfile:$bp_GEP_test -temporary
 
 # Continue to break point at funp call in main.
 gdb_continue_to_breakpoint \
@@ -184,7 +184,7 @@ gdb_test_no_output "record" "turn on process record for test5"
 
 ### TEST 5: reverse finish from the body of function 1 when calling using the
 ### alternate entrypoint (GEP).
-gdb_breakpoint $srcfile:$bp_GEP_test temporary
+gdb_breakpoint $srcfile:$bp_GEP_test -temporary
 
 # Continue to break point at funp call.
 gdb_continue_to_breakpoint \

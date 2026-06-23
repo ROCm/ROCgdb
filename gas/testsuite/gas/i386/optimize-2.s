@@ -22,6 +22,10 @@ _start:
 	lock xchg %ecx, (%edx)
 	lock xchg (%ecx), %edx
 
+	xchg	%cl, %cl
+	{load} xchg %dx, %dx
+	xchg	%edi, %edi
+
 	movsb	%al, %ax
 	movsbw	%al, %ax
 
@@ -54,6 +58,10 @@ _start:
 
 	sal	$1, %edx
 	sal	%edx
+
+	xadd	%cl, %cl
+	xadd	%dx, %dx
+	xadd	%edi, %edi
 
 	vandnpd	%zmm1, %zmm1, %zmm5
 

@@ -61,7 +61,7 @@ proc run_test {megs max_mem} {
 
 	gdb_test "attach $inferior_pid" "Attaching to.*" attach
 	set line [gdb_get_line_number "TAG: BREAK HERE" $::testfile.c]
-	gdb_breakpoint "${::srcfile}:$line" "break at to known line"
+	gdb_breakpoint "${::srcfile}:$line"
 	gdb_continue_to_breakpoint "continue to known line"
 
 	# Get the important info.

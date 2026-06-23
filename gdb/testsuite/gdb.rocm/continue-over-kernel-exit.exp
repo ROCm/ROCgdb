@@ -74,10 +74,10 @@ proc do_test { step_over_mode finish_how } {
 	# breakpoint inserted after the initial hit to force a
 	# step-over.
 	if { $step_over_mode != "none" } {
-	    gdb_breakpoint "s_endpgm_insn" allow-pending
+	    gdb_breakpoint "s_endpgm_insn" -allow-pending
 	    set bp_hits 10
 	} else {
-	    gdb_breakpoint "s_endpgm_insn" allow-pending temporary
+	    gdb_breakpoint "s_endpgm_insn" -allow-pending -temporary
 	    set bp_hits 0
 	}
 	gdb_continue_to_breakpoint "s_endpgm_insn"

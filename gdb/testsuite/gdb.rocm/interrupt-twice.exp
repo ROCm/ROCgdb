@@ -33,7 +33,7 @@ with_rocm_gpu_lock {
 	clean_restart $::testfile
     }
 
-    gdb_breakpoint "loop" {allow-pending} {temporary}
+    gdb_breakpoint "loop" -allow-pending -temporary
     gdb_run_cmd
 
     set gpu_thread "undefined"

@@ -1498,7 +1498,7 @@ block_lookup (const struct block *context, const char *raw_name)
     symtab = NULL;
 
   if (symtab != NULL)
-    result = symtab->compunit ()->blockvector ()->static_block ();
+    result = symtab->compunit ().blockvector ()->static_block ();
   else if (syms.empty () || syms[0].symbol->loc_class () != LOC_BLOCK)
     {
       if (context == NULL)

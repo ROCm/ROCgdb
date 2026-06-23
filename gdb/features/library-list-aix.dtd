@@ -15,4 +15,3 @@
 <!ATTLIST library  text_size  CDATA   #REQUIRED>
 <!ATTLIST library  data_addr  CDATA   #REQUIRED>
 <!ATTLIST library  data_size  CDATA   #REQUIRED>
-

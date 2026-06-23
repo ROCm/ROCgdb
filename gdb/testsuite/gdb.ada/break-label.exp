@@ -26,5 +26,5 @@ if {[gdb_compile_ada "${srcfile}" "${binfile}" executable debug] != ""} {
 # Ada is case-insensitive, so both of these should work.
 foreach_with_prefix name {break_here Break_Here} {
     clean_restart ${testfile}
-    runto "proc:$name" message
+    runto "proc:$name" -message
 }

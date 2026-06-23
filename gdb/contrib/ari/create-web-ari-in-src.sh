@@ -79,4 +79,3 @@ if [ -f "${webdir}/index.html" ] ; then
 else
   echo "ARI script failed to generate file \"${webdir}/index.html\""
 fi
-

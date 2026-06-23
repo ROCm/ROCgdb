@@ -18,15 +18,20 @@ import re
 import subprocess
 import sys
 
-re_clean = re.compile(
-    "(^(gdb/testsuite/|gdbsupport/|gdbserver/)|[.](m4|ac|def|[chly])$|NEWS)"
-)
+# Files to completely ignore.
+re_ignore = re.compile("ChangeLog")
+
+# Files that are not clean, so they're only checked when changes.
+todo_list = []
 
 clean = []
 other = []
 for f in sys.argv[1:]:
-    m = re_clean.search(f)
+    m = re_ignore.search(f)
     if m:
+        continue
+
+    if f not in todo_list:
         clean.append(f)
     else:
         other.append(f)

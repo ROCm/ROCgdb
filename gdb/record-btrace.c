@@ -729,7 +729,7 @@ btrace_find_line_range (CORE_ADDR pc)
   if (nlines <= 0)
     return btrace_mk_line_range (symtab, 0, 0);
 
-  struct objfile *objfile = symtab->compunit ()->objfile ();
+  struct objfile *objfile = symtab->compunit ().objfile ();
   unrelocated_addr unrel_pc
     = unrelocated_addr (pc - objfile->text_section_offset ());
 

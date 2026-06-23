@@ -44,7 +44,7 @@ sal_macro_scope (struct symtab_and_line sal)
   if (sal.symtab == NULL)
     return result;
 
-  cust = sal.symtab->compunit ();
+  cust = &sal.symtab->compunit ();
   if (cust->macro_table () == NULL)
     return result;
 

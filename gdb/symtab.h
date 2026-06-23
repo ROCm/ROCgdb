@@ -1665,21 +1665,20 @@ struct linetable
 
 struct symtab
 {
-  symtab (struct compunit_symtab *cust, const char *filename,
+  symtab (struct compunit_symtab &cust, const char *filename,
 	  const char *filename_for_id, enum language language)
     : m_filename (filename),
       m_filename_for_id (filename_for_id),
-      m_compunit (cust),
+      m_compunit (&cust),
       m_language (language)
   {
     gdb_assert (m_filename != nullptr);
     gdb_assert (m_filename_for_id != nullptr);
-    gdb_assert (m_compunit != nullptr);
   }
 
-  struct compunit_symtab *compunit () const
+  struct compunit_symtab &compunit () const
   {
-    return m_compunit;
+    return *m_compunit;
   }
 
   const struct linetable *linetable () const
@@ -2022,7 +2021,7 @@ struct compunit_symtab : intrusive_list_node<compunit_symtab>
 static inline bool
 is_main_symtab_of_compunit_symtab (struct symtab *symtab)
 {
-  return symtab == symtab->compunit ()->primary_filetab ();
+  return symtab == symtab->compunit ().primary_filetab ();
 }
 
 /* Return true if epilogue unwind info of CUST is valid.  */

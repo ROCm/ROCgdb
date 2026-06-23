@@ -40,25 +40,29 @@
 minimum_pre_commit_version: 4.5.1
 default_install_hook_types: [pre-commit, commit-msg]
 default_stages: [pre-commit]
+
 repos:
+  # Python hooks.  Run these for (in glob notation):
+  #
+  #  - gdb/gdb-gdb.py.in
+  #  - gdb/*.py
+  #  - gdb/python/**/*.py
+  #  - gdb/testsuite/*.py
+  #
+  # Because gdb/gdb-gdb.py.in is not classified as python, we use
+  # 'types_or: [file]' to override the default type for these hooks.
+  #
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 26.5.1
     hooks:
-      - id: black
-        types_or: [file]
-        files: '^gdb/.*\.py(\.in)?$'
+    - id: black
+      types_or: [file]
+      files: '^gdb/.*\.py(\.in)?$'
   - repo:  https://github.com/pycqa/flake8
     rev: 7.3.0
     hooks:
     - id: flake8
       types_or: [file]
-      # Run this for (in glob notation):
-      #
-      #  - gdb/gdb-gdb.py.in
-      #  - gdb/*.py
-      #  - gdb/python/**/*.py
-      #  - gdb/testsuite/*.py
-      #
       files: '^gdb/.*\.py(\.in)?$'
       args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
@@ -67,6 +71,8 @@ repos:
     - id: isort
       types_or: [file]
       files: '^gdb/.*\.py(\.in)?$'
+
+  # Codespell hooks.
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.2
     hooks:
@@ -77,50 +83,50 @@ repos:
       name: codespell-log
       entry: gdb/contrib/codespell-log.sh
       args: [--toml, gdb/pyproject.toml]
-      always_run: true
       verbose: true
       stages: [commit-msg]
+
+  # Tclint hooks.
+  - repo: https://github.com/nmoroze/tclint
+    rev: v0.8.0
+    hooks:
+    - id: tclint
+      args: [--trust-plugins]
+      files: '^gdb/testsuite/.*\.(exp|tcl)$'
+
+  # Local hooks.
   - repo: local
     hooks:
-    - id: check-include-guards
-      name: check-include-guards
-      language: python
+    - id: &id0 check-include-guards
+      name: *id0
+      language: unsupported_script
       entry: gdb/check-include-guards.py
       # All gdb header files, but not headers in the test suite.
       files: '^(gdb(support|server)?)/.*\.h$'
       exclude: '.*/testsuite/.*'
-    - id: check-gnu-style
-      name: check-gnu-style
+    - id: &id1 check-gnu-style
+      name: *id1
       language: python
       additional_dependencies: ['termcolor', 'unidiff']
       entry: gdb/contrib/check-gnu-style-pre-commit.sh
       files: '^(gdb(support|server)?)/.*\.(c|h|cc)$'
       exclude: '.*/testsuite/.*'
       verbose: true
-      stages: [pre-commit]
-    - id: check-whitespace
-      name: check-whitespace
-      language: script
+    - id: &id2 check-whitespace
+      name: *id2
+      language: unsupported_script
       entry: gdb/contrib/check-whitespace-pre-commit.py
       files: '^(gdb(support|server)?)/.*$'
-      pass_filenames: true
-      stages: [pre-commit]
-    - id: pre-commit-setup
-      name: pre-commit-setup
+      types: ['text']
+    - id: &id3 pre-commit-setup
+      name: *id3
       language: python
       entry: gdb/contrib/pre-commit-setup.py
       additional_dependencies: ["pyyaml"]
       always_run: true
-      require_serial: true
-    - id: check-file-mode
-      name: check-file-mode
-      language: script
+      pass_filenames: false
+    - id: &id4 check-file-mode
+      name: *id4
+      language: unsupported_script
       entry: gdb/contrib/check-file-mode.sh
       files: '^(gdb|gdbserver|gdbsupport)/.*$'
-  - repo: https://github.com/nmoroze/tclint
-    rev: v0.8.0
-    hooks:
-    - id: tclint
-      args: [--trust-plugins]
-      types_or: [file]
-      files: '^gdb/testsuite/.*\.(exp|tcl)$'

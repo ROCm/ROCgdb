@@ -71,4 +71,4 @@ if {![runto_main]} {
     return
 }
 
-gdb_breakpoint "$srcfile:27" message
+gdb_breakpoint "$srcfile:27" -message

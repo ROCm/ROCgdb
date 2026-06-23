@@ -35,7 +35,7 @@ if { [vgdb_start] == -1 } {
 }
 
 gdb_test_no_output "set displaced-stepping off"
-gdb_breakpoint "main" "breakpoint at main"
+gdb_breakpoint "main"
 gdb_test "continue" " stop 0 .*" "continue to main"
 delete_breakpoints
 

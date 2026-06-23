@@ -324,7 +324,7 @@ proc_with_prefix do_attach_tests {} {
 
     # Verify that the modification really happened.
 
-    gdb_breakpoint [gdb_get_line_number "postloop"] temporary
+    gdb_breakpoint [gdb_get_line_number "postloop"] -temporary
     gdb_continue_to_breakpoint "postloop" ".* postloop .*"
 
     # Allow the test process to exit, to cleanup after ourselves.

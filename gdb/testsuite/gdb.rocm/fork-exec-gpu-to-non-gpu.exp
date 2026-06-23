@@ -65,7 +65,7 @@ proc do_test { detach-on-fork follow-fork-mode fork_func } {
 	gdb_test_no_output "set follow-fork-mode ${follow-fork-mode}"
 
 	if { ${follow-fork-mode} == "parent" } {
-	    runto break_here_execer allow-pending message
+	    runto break_here_execer -allow-pending -message
 	    gdb_continue_to_end "continue parent to end" "continue" 1
 
 	    if { ${detach-on-fork} == "off" } {
@@ -73,7 +73,7 @@ proc do_test { detach-on-fork follow-fork-mode fork_func } {
 		gdb_continue_to_end "continue child to end" "continue" 1
 	    }
 	} elseif { ${follow-fork-mode} == "child" } {
-	    runto break_here_execee allow-pending message
+	    runto break_here_execee -allow-pending -message
 	    gdb_continue_to_end "continue child to end" "continue" 1
 
 	    if { ${detach-on-fork} == "off" } {

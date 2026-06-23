@@ -41,7 +41,7 @@ if {![runto_main]} {
     return
 }
 
-gdb_breakpoint func message
+gdb_breakpoint func -message
 
 gdb_test_no_output "set annotate 1"
 

@@ -28,10 +28,7 @@ if { [prepare_for_testing "prepare" $filename $srcfile] != 0 } {
     return
 }
 
-gdb_test_no_output "set args ${pattern}"	\
-    "set buffer exceeding arguments"
-
-if {![runto_main]} {
+if {![runto_main -inferior-args $pattern]} {
     return
 }
 

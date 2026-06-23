@@ -36,13 +36,13 @@ runto_main
 gdb_test_no_output "set print repeats unlimited"
 
 proc_with_prefix emptyStruct {} {
-    gdb_breakpoint "returnEmpty" "allow-pending"
+    gdb_breakpoint "returnEmpty" -allow-pending
     with_test_prefix "empty struct" {
 	gdb_continue_to_breakpoint "returnEmpty"
 	gdb_test "finish" "Value returned is \\\$$::decimal = \\{<No data fields>\\}"
     }
 
-    gdb_breakpoint "returnEmptyWithStatic" "allow-pending"
+    gdb_breakpoint "returnEmptyWithStatic" -allow-pending
     with_test_prefix "ignore static values" {
 	gdb_continue_to_breakpoint "returnEmpty"
 	gdb_test "finish" "Value returned is \\\$$::decimal = \\{static something = 56\\}"
@@ -50,7 +50,7 @@ proc_with_prefix emptyStruct {} {
 }
 
 proc_with_prefix mixedSmallStruct {} {
-    gdb_breakpoint "returnMixedSmallSruct" "allow-pending"
+    gdb_breakpoint "returnMixedSmallSruct" -allow-pending
     gdb_continue_to_breakpoint "returnMixedSmallSruct"
     gdb_test "finish" "Value returned is \\\$$::decimal = \\{a = 3.1400001, b = \\{4, 7\\}\\}"
 }
@@ -60,7 +60,7 @@ proc_with_prefix structWithCharArray {} {
     # in registers (V0 and V1).  Above that, we allocate one register per element
     # in the struct (recursively), up to 32 registers.
     foreach_with_prefix size { 1 2 4 8 9 16 32 } {
-	gdb_breakpoint "returnSized<${size}> if \$_lane == 3" "allow-pending"
+	gdb_breakpoint "returnSized<${size}> if \$_lane == 3" -allow-pending
 	gdb_continue_to_breakpoint "returnSized<${size}>"
 	gdb_test "finish" \
 	    "Value returned is \\\$$::decimal = \\{data = \"d{$size}\"\\}"
@@ -70,7 +70,7 @@ proc_with_prefix structWithCharArray {} {
     # ref.  Since the hidden first parameter is not returned available when the
     # function returns, GDB cannot print the actual value.
     foreach_with_prefix size { 64 128 } {
-	gdb_breakpoint "returnSized<${size}> if \$_lane == 3" "allow-pending"
+	gdb_breakpoint "returnSized<${size}> if \$_lane == 3" -allow-pending
 	gdb_continue_to_breakpoint "returnSized<${size}>"
 	gdb_test "finish" \
 	    "Value returned has type: Custom<char, ${size}>. Cannot determine contents"
@@ -79,7 +79,7 @@ proc_with_prefix structWithCharArray {} {
 
 proc_with_prefix unionMember {} {
     foreach_with_prefix size  { 2 4 6 8 16 } {
-	gdb_breakpoint "returnCustomWithUnion<${size}>" "allow-pending"
+	gdb_breakpoint "returnCustomWithUnion<${size}>" -allow-pending
 	gdb_continue_to_breakpoint "returnCustomWithUnion<${size}>"
 	gdb_test "finish" \
 	    "Value returned is \\\$$::decimal = \\{data = \\{(\\{as_int = 1633771873, as_chars = \"aaaa\"\\}(, )?)\{$size\}\\}\\}"
@@ -87,7 +87,7 @@ proc_with_prefix unionMember {} {
 }
 
 proc_with_prefix flexibleAraryMember {} {
-    gdb_breakpoint "returnFlexibleArrayMember" "allow-pending"
+    gdb_breakpoint "returnFlexibleArrayMember" -allow-pending
     gdb_continue_to_breakpoint "returnFlexibleArrayMember"
     gdb_test "finish" \
 	"Value returned has type: FlexibleArrayMember. Cannot determine contents"

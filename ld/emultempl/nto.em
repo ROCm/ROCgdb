@@ -29,7 +29,6 @@ cat >>e${EMULATION_NAME}.c <<EOF
 #include "elf/internal.h"
 #include "elf/common.h"
 #include "elf-bfd.h"
-#include "../bfd/libbfd.h"
 
 bool nto_lazy_stack = false;
 struct nto_stack_note

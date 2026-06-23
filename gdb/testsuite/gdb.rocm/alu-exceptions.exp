@@ -66,13 +66,12 @@ proc do_test { exception_name precise_alu_exceptions_supported } {
 		return
 	    }
 
-	    gdb_breakpoint "enable_alu_exceptions" "allow-pending"
+	    gdb_breakpoint "enable_alu_exceptions" -allow-pending
 	    gdb_continue_to_breakpoint "enable_alu_exceptions"
 	    enable_alu_exception $exception_name
 
 	    set bp_line [gdb_get_line_number "Break here for $exception_name"]
-	    gdb_breakpoint $bp_line \
-		"break before exception"
+	    gdb_breakpoint $bp_line
 	    gdb_continue_to_breakpoint "$exception_name"
 
 	    set pc "invalid"
@@ -141,7 +140,7 @@ proc do_test { exception_name precise_alu_exceptions_supported } {
 		return
 	    }
 
-	    gdb_breakpoint "enable_alu_exceptions" "allow-pending"
+	    gdb_breakpoint "enable_alu_exceptions" -allow-pending
 	    gdb_continue_to_breakpoint "enable_alu_exceptions"
 	    enable_alu_exception $exception_name
 

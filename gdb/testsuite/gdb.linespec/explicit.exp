@@ -580,7 +580,7 @@ namespace eval $testfile {
 
     set tst "pending invalid conditional explicit breakpoint"
     if {![gdb_breakpoint "-func myfunction if foofoofoo == 1" \
-	      allow-pending]} {
+	      -allow-pending]} {
 	fail "set $tst"
     } else {
 	gdb_test "info break" ".*PENDING.*myfunction\r\n\\s+stop only if foofoofoo == 1.*" $tst
@@ -597,7 +597,7 @@ namespace eval $testfile {
 
     set tst "pending valid conditional explicit breakpoint"
     if {![gdb_breakpoint "-func myfunction if arg == 0" \
-	      allow-pending]} {
+	      -allow-pending]} {
 	fail "set $tst"
     } else {
 	gdb_test "info break" \

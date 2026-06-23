@@ -118,7 +118,7 @@ proc_with_prefix test_watchpoint_inside_kernel {} {
 	    return
 	}
 
-	gdb_breakpoint "kernel" allow-pending temporary
+	gdb_breakpoint "kernel" -allow-pending -temporary
 	gdb_test "continue" \
 	    "hit Temporary breakpoint.*, kernel .*" \
 	    "continue to kernel"

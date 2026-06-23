@@ -31,11 +31,14 @@
 # gdb/contrib/spellcheck.sh: no longer in repo?
 # gdbsupport/unordered_dense.h: MIT
 
+import argparse
 import os
 import sys
-import argparse
 from pathlib import PurePath
+
 from git import Repo
+from git.exc import NoSuchPathError
+from gitdb.exc import BadName
 from scancode import api
 
 # A list of "common" licenses. If "--skip" is used, any file
@@ -55,7 +58,7 @@ DEFAULT_SCAN_DIRS = "gdb*"
 def get_commit(repo, cstr):
     try:
         return repo.commit(cstr)
-    except:
+    except BadName:
         print(f'unknown commit "{cstr}"')
         sys.exit(2)
 
@@ -103,7 +106,7 @@ def main(argv):
         try:
             repo = Repo(dir)
             break
-        except:
+        except NoSuchPathError:
             pass
 
     if dir == path.parents[-1]:

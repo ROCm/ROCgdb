@@ -39,6 +39,11 @@ _start:
 	or	%edi, %edi
 	or	%r8, %r8
 
+	xchg	%r17b, %r17b
+	{load} xchg %r8w, %r8w
+	xchg	%eax, %eax
+	xchg	%r15, %r15
+
 	movsb	%al, %ax
 	movsbw	%al, %ax
 
@@ -54,6 +59,11 @@ _start:
 	movsx	eax, ax
 	movsx	rax, eax
 	.att_syntax prefix
+
+	xadd	%r17b, %r17b
+	xadd	%r8w, %r8w
+	xadd	%eax, %eax
+	xadd	%r15, %r15
 
 	vandnpd	%zmm1, %zmm1, %zmm5
 

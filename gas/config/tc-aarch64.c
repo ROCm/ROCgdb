@@ -10389,6 +10389,19 @@ aarch64_fix_adjustable (fixS *fixp)
   if (symbol_get_bfdsym (fixp->fx_addsy)->flags & BSF_FUNCTION)
     return false;
 
+  /* GOT relocations cannot have an offset or use section-relative symbols.  */
+  if (fixp->fx_r_type == BFD_RELOC_AARCH64_ADR_GOT_PAGE
+      || fixp->fx_r_type == BFD_RELOC_AARCH64_GOT_LD_PREL19
+      || fixp->fx_r_type == BFD_RELOC_AARCH64_LD_GOT_LO12_NC
+      || fixp->fx_r_type == BFD_RELOC_AARCH64_LD32_GOT_LO12_NC
+      || fixp->fx_r_type == BFD_RELOC_AARCH64_LD32_GOTPAGE_LO14
+      || fixp->fx_r_type == BFD_RELOC_AARCH64_LD64_GOTOFF_LO15
+      || fixp->fx_r_type == BFD_RELOC_AARCH64_LD64_GOTPAGE_LO15
+      || fixp->fx_r_type == BFD_RELOC_AARCH64_LD64_GOT_LO12_NC
+      || fixp->fx_r_type == BFD_RELOC_AARCH64_MOVW_GOTOFF_G0_NC
+      || fixp->fx_r_type == BFD_RELOC_AARCH64_MOVW_GOTOFF_G1)
+    return false;
+
   return true;
 }
 

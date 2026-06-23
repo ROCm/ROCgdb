@@ -255,7 +255,7 @@ proc test {} {
     }
 
     # Set breakpoint in device code, past array initialization.
-    gdb_breakpoint [gdb_get_line_number "break here"] allow-pending
+    gdb_breakpoint [gdb_get_line_number "break here"] -allow-pending
     gdb_continue_to_breakpoint "done" ".*break here.*"
 
     test_array "local"

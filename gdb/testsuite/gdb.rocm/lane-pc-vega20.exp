@@ -1357,7 +1357,7 @@ if {![runto_main]} {
     return -1
 }
 
-gdb_breakpoint "AddrClassTest" "allow-pending"
+gdb_breakpoint "AddrClassTest" -allow-pending
 
 gdb_test_multiple "c" "continue to AddrClassTest" {
     -wrap -re "exited with code .*" {

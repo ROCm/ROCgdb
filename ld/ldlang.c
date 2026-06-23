@@ -21,7 +21,6 @@
 #include "sysdep.h"
 #include <limits.h>
 #include "bfd.h"
-#include "libbfd.h"
 #include "libiberty.h"
 #include "filenames.h"
 #include "safe-ctype.h"

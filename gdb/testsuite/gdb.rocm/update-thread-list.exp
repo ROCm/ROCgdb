@@ -44,7 +44,7 @@ if {![runto_main]} {
 }
 
 # Set breakpoing in device code.
-gdb_breakpoint "kern" "allow-pending"
+gdb_breakpoint "kern" -allow-pending
 
 # Continue to the first dispatch.
 gdb_continue_to_breakpoint "dispatch 1"

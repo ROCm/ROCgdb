@@ -34,7 +34,7 @@ proc get_shared_size {} {
 
     set bploc [gdb_get_line_number "Break here\." $::srcfile2]
     with_rocm_gpu_lock {
-	if {![runto "$bploc" {message "runto end"}]} {
+	if {![runto "$bploc" -message]} {
 	    return 0
 	}
 	set shared_size [get_valueof "" "props.sharedMemPerBlock" "0"]
@@ -72,7 +72,7 @@ proc do_test {shared_size nonstop} {
 	# Other work-groups can run freely (but still need to report the
 	# breakpoint).  Other threads in the work-group can also run freely.
 	gdb_breakpoint "$bploc if \$_streq(\$_dispatch_pos, \"(23,0,0)/1\")" \
-	    allow-pending
+	    -allow-pending
 
 	set thread_num 0
 	gdb_test_multiple "continue" "continue to breakpoint" {

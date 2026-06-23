@@ -7934,7 +7934,7 @@ get_sal_arch (struct symtab_and_line sal)
   if (sal.section != nullptr)
     return sal.section->objfile->arch ();
   if (sal.symtab != nullptr)
-    return sal.symtab->compunit ()->objfile ()->arch ();
+    return sal.symtab->compunit ().objfile ()->arch ();
 
   return nullptr;
 }
@@ -9669,13 +9669,13 @@ resolve_sal_pc (struct symtab_and_line *sal)
       struct symbol *sym;
 
       bv = blockvector_for_pc_sect (sal->pc, 0, &b,
-				    sal->symtab->compunit ());
+				    &sal->symtab->compunit ());
       if (bv != NULL)
 	{
 	  sym = b->linkage_function ();
 	  if (sym != NULL)
 	    sal->section
-	      = sym->obj_section (sal->symtab->compunit ()->objfile ());
+	      = sym->obj_section (sal->symtab->compunit ().objfile ());
 	  else
 	    {
 	      /* It really is worthwhile to have the section, so we'll
@@ -14886,7 +14886,7 @@ breakpoint_free_objfile (struct objfile *objfile)
   for (bp_location *loc : all_bp_locations ())
     {
       if (loc->symtab != nullptr
-	  && loc->symtab->compunit ()->objfile () == objfile)
+	  && loc->symtab->compunit ().objfile () == objfile)
 	{
 	  loc->symtab = nullptr;
 	  loc->symbol = nullptr;

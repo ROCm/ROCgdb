@@ -173,7 +173,7 @@ proc test {non_stop displaced third_thread} {
 		    incr stepi_new_thread_count
 		    exp_continue
 		}
-		-re "^\\\[Switching to Thread\[^\r\n\]+\\\]\r\n" {
+		-re "^\\\[Switching to thread\[^\r\n\]+\\\]\r\n" {
 		    verbose -log "XXX: Consume switching to thread line"
 		    exp_continue
 		}

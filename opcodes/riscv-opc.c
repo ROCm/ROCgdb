@@ -886,6 +886,24 @@ const struct riscv_opcode riscv_opcodes[] =
 {"amocas.d.aqrl",   64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_D|MASK_AQRL, MASK_AMOCAS_D|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
 {"amocas.q.aqrl",   64, INSN_CLASS_ZACAS, "d,t,0(s)", MATCH_AMOCAS_Q|MASK_AQRL, MASK_AMOCAS_Q|MASK_AQRL, match_rs2_rd_even, INSN_DREF|INSN_16_BYTE },
 
+/* Zalasr instruction subset.  */
+{"lb.aq",         0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LBA|MASK_AQ, MASK_LBA|MASK_AQRL, match_opcode, INSN_DREF|INSN_1_BYTE },
+{"lb.aqrl",       0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LBA|MASK_AQRL, MASK_LBA|MASK_AQRL, match_opcode, INSN_DREF|INSN_1_BYTE },
+{"lh.aq",         0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LHA|MASK_AQ, MASK_LHA|MASK_AQRL, match_opcode, INSN_DREF|INSN_2_BYTE },
+{"lh.aqrl",       0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LHA|MASK_AQRL, MASK_LHA|MASK_AQRL, match_opcode, INSN_DREF|INSN_2_BYTE },
+{"lw.aq",         0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LWA|MASK_AQ, MASK_LWA|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"lw.aqrl",       0, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LWA|MASK_AQRL, MASK_LWA|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"ld.aq",        64, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LDA|MASK_AQ, MASK_LDA|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"ld.aqrl",      64, INSN_CLASS_ZALASR, "d,0(s)", MATCH_LDA|MASK_AQRL, MASK_LDA|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"sb.rl",         0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SBR|MASK_RL, MASK_SBR|MASK_AQRL, match_opcode, INSN_DREF|INSN_1_BYTE },
+{"sb.aqrl",       0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SBR|MASK_AQRL, MASK_SBR|MASK_AQRL, match_opcode, INSN_DREF|INSN_1_BYTE },
+{"sh.rl",         0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SHR|MASK_RL, MASK_SHR|MASK_AQRL, match_opcode, INSN_DREF|INSN_2_BYTE },
+{"sh.aqrl",       0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SHR|MASK_AQRL, MASK_SHR|MASK_AQRL, match_opcode, INSN_DREF|INSN_2_BYTE },
+{"sw.rl",         0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SWR|MASK_RL, MASK_SWR|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"sw.aqrl",       0, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SWR|MASK_AQRL, MASK_SWR|MASK_AQRL, match_opcode, INSN_DREF|INSN_4_BYTE },
+{"sd.rl",        64, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SDR|MASK_RL, MASK_SDR|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+{"sd.aqrl",      64, INSN_CLASS_ZALASR, "t,0(s)", MATCH_SDR|MASK_AQRL, MASK_SDR|MASK_AQRL, match_opcode, INSN_DREF|INSN_8_BYTE },
+
 /* Multiply/Divide instruction subset.  */
 {"mul",        0, INSN_CLASS_ZCB_AND_ZMMUL, "Cs,Cw,Ct",  MATCH_C_MUL, MASK_C_MUL, match_opcode, INSN_ALIAS },
 {"mul",        0, INSN_CLASS_ZMMUL, "d,s,t",     MATCH_MUL, MASK_MUL, match_opcode, 0 },
@@ -2281,6 +2299,13 @@ const struct riscv_opcode riscv_opcodes[] =
 {"vsm3c.vi",     0, INSN_CLASS_ZVKSH, "Vd,Vt,Vj", MATCH_VSM3C_VI, MASK_VSM3C_VI, match_opcode, 0},
 {"vsm3me.vv",    0, INSN_CLASS_ZVKSH, "Vd,Vt,Vs", MATCH_VSM3ME_VV, MASK_VSM3ME_VV, match_opcode, 0},
 
+/* Zvabd instructions.  */
+{"vabs.v",       0, INSN_CLASS_ZVABD, "Vd,VtVm",    MATCH_VABS_V,     MASK_VABS_V,     match_opcode, 0},
+{"vabd.vv",      0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VABD_VV,    MASK_VABD_VV,    match_opcode, 0},
+{"vabdu.vv",     0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VABDU_VV,   MASK_VABDU_VV,   match_opcode, 0},
+{"vwabda.vv",    0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VWABDA_VV,  MASK_VWABDA_VV,  match_opcode, 0},
+{"vwabdau.vv",   0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VWABDAU_VV, MASK_VWABDAU_VV, match_opcode, 0},
+
 /* ZCB instructions.  */
 {"c.lbu",      0, INSN_CLASS_ZCB, "Ct,Wcb(Cs)", MATCH_C_LBU, MASK_C_LBU, match_opcode, INSN_DREF|INSN_1_BYTE },
 {"c.lhu",      0, INSN_CLASS_ZCB, "Ct,Wch(Cs)", MATCH_C_LHU, MASK_C_LHU, match_opcode, INSN_DREF|INSN_2_BYTE },
@@ -3582,6 +3607,60 @@ const struct riscv_opcode riscv_opcodes[] =
 {"mips.pref", 0, INSN_CLASS_XMIPSCBOP, "Xm@,Xm#(s)", MATCH_MIPS_PREF, MASK_MIPS_PREF, match_opcode, 0 },
 {"mips.sdp", 0, INSN_CLASS_XMIPSLSP, "t,r,Xm^(s)", MATCH_MIPS_SDP, MASK_MIPS_SDP, match_opcode, 0 },
 {"mips.swp", 0, INSN_CLASS_XMIPSLSP, "t,r,Xm&(s)", MATCH_MIPS_SWP, MASK_MIPS_SWP, match_opcode, 0 },
+
+/* SpacemiT custom instructions.  */
+/* Int Matrix Multi-Accumulation.  */
+{"smt.vmadot",   0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,VtXpx", MATCH_SMT_VMADOT, MASK_SMT_VMADOT, match_opcode, 0 },
+{"smt.vmadot",   0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOT, MASK_SMT_VMADOT, match_opcode, 0 },
+{"smt.vmadotu",  0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,VtXpx", MATCH_SMT_VMADOTU, MASK_SMT_VMADOTU, match_opcode, 0 },
+{"smt.vmadotu",  0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOTU, MASK_SMT_VMADOTU, match_opcode, 0 },
+{"smt.vmadotsu", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,VtXpx", MATCH_SMT_VMADOTSU, MASK_SMT_VMADOTSU, match_opcode, 0 },
+{"smt.vmadotsu", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOTSU, MASK_SMT_VMADOTSU, match_opcode, 0 },
+{"smt.vmadotus", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,VtXpx", MATCH_SMT_VMADOTUS, MASK_SMT_VMADOTUS, match_opcode, 0 },
+{"smt.vmadotus", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOTUS, MASK_SMT_VMADOTUS, match_opcode, 0 },
+/* Int Sliding Window Multi-Accumulation.  */
+/* Sliding Value = 1.  */
+{"smt.vmadot1u",  0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1U, MASK_SMT_VMADOT1U, match_opcode, 0 },
+{"smt.vmadot1",   0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1, MASK_SMT_VMADOT1, match_opcode, 0 },
+{"smt.vmadot1su", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1SU, MASK_SMT_VMADOT1SU, match_opcode, 0 },
+{"smt.vmadot1us", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT1US, MASK_SMT_VMADOT1US, match_opcode, 0 },
+/* Sliding Value = 2.  */
+{"smt.vmadot2u",  0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2U, MASK_SMT_VMADOT2U, match_opcode, 0 },
+{"smt.vmadot2",   0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2, MASK_SMT_VMADOT2, match_opcode, 0 },
+{"smt.vmadot2su", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2SU, MASK_SMT_VMADOT2SU, match_opcode, 0 },
+{"smt.vmadot2us", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT2US, MASK_SMT_VMADOT2US, match_opcode, 0 },
+/* Sliding Value = 3.  */
+{"smt.vmadot3u",  0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3U, MASK_SMT_VMADOT3U, match_opcode, 0 },
+{"smt.vmadot3",   0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3, MASK_SMT_VMADOT3, match_opcode, 0 },
+{"smt.vmadot3su", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3SU, MASK_SMT_VMADOT3SU, match_opcode, 0 },
+{"smt.vmadot3us", 0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,XpVs,VtXpw", MATCH_SMT_VMADOT3US, MASK_SMT_VMADOT3US, match_opcode, 0 },
+/* Int Sparse Matrix Multi-Accumulation.  */
+{"smt.vmadotu.sp",  0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpnXpx", MATCH_SMT_VMADOTU_SP,  MASK_SMT_VMADOTU_SP,  match_opcode, 0 },
+{"smt.vmadotu.sp",  0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpbXpw", MATCH_SMT_VMADOTU_SP,  MASK_SMT_VMADOTU_SP,  match_opcode, 0 },
+{"smt.vmadot.sp",   0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpnXpx", MATCH_SMT_VMADOT_SP,   MASK_SMT_VMADOT_SP,   match_opcode, 0 },
+{"smt.vmadot.sp",   0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpbXpw", MATCH_SMT_VMADOT_SP,   MASK_SMT_VMADOT_SP,   match_opcode, 0 },
+{"smt.vmadotsu.sp", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpnXpx", MATCH_SMT_VMADOTSU_SP, MASK_SMT_VMADOTSU_SP, match_opcode, 0 },
+{"smt.vmadotsu.sp", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpbXpw", MATCH_SMT_VMADOTSU_SP, MASK_SMT_VMADOTSU_SP, match_opcode, 0 },
+{"smt.vmadotus.sp", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpnXpx", MATCH_SMT_VMADOTUS_SP, MASK_SMT_VMADOTUS_SP, match_opcode, 0 },
+{"smt.vmadotus.sp", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt,XpVm,XpbXpw", MATCH_SMT_VMADOTUS_SP, MASK_SMT_VMADOTUS_SP, match_opcode, 0 },
+/* Shaping High-Precision Matrix Multiplication Accumulation.  */
+{"smt.vmadotu.hp",  0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,XpVm,Xpu3@12Xpx", MATCH_SMT_VMADOTU_HP,  MASK_SMT_VMADOTU_HP,  match_opcode, 0 },
+{"smt.vmadot.hp",   0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,XpVm,Xpu3@12Xpx", MATCH_SMT_VMADOT_HP,   MASK_SMT_VMADOT_HP,   match_opcode, 0 },
+{"smt.vmadotsu.hp", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,XpVm,Xpu3@12Xpx", MATCH_SMT_VMADOTSU_HP, MASK_SMT_VMADOTSU_HP, match_opcode, 0 },
+{"smt.vmadotus.hp", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,XpVm,Xpu3@12Xpx", MATCH_SMT_VMADOTUS_HP, MASK_SMT_VMADOTUS_HP, match_opcode, 0 },
+/* Floating-Point Expansion Matrix Multi-Accumulation.  */
+{"smt.vfwmadot", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,Vt", MATCH_SMT_VFWMADOT, MASK_SMT_VFWMADOT, match_opcode, 0 },
+/* Floating-Point Sliding Window Expansion Multi-Accumulation.  */
+{"smt.vfwmadot1", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt", MATCH_SMT_VFWMADOT1, MASK_SMT_VFWMADOT1, match_opcode, 0 },
+{"smt.vfwmadot2", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt", MATCH_SMT_VFWMADOT2, MASK_SMT_VFWMADOT2, match_opcode, 0 },
+{"smt.vfwmadot3", 0, INSN_CLASS_XSMTVDOTII, "XpVd,XpVs,Vt", MATCH_SMT_VFWMADOT3, MASK_SMT_VFWMADOT3, match_opcode, 0 },
+/* Element Indentation Assembly.  */
+{"smt.vnpack.vv", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,Xpu2@12", MATCH_SMT_VNPACK_VV, MASK_SMT_VNPACK_VV, match_opcode, 0 },
+{"smt.vnspack.vv", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,Xpu2@12", MATCH_SMT_VNSPACK_VV, MASK_SMT_VNSPACK_VV, match_opcode, 0 },
+{"smt.vnpack4.vv", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,Xpu2@12", MATCH_SMT_VNPACK4_VV, MASK_SMT_VNPACK4_VV, match_opcode, 0 },
+{"smt.vnspack4.vv", 0, INSN_CLASS_XSMTVDOTII, "Vd,Vs,Vt,Xpu2@12", MATCH_SMT_VNSPACK4_VV, MASK_SMT_VNSPACK4_VV, match_opcode, 0 },
+{"smt.vpack.vv", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,Vt,Xpu2@12", MATCH_SMT_VPACK_VV, MASK_SMT_VPACK_VV, match_opcode, 0 },
+{"smt.vupack.vv", 0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,Vt,Xpu2@12", MATCH_SMT_VUPACK_VV, MASK_SMT_VUPACK_VV, match_opcode, 0 },
 
 /* Terminate the list.  */
 {0, 0, INSN_CLASS_NONE, 0, 0, 0, 0, 0}

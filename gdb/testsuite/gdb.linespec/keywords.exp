@@ -32,16 +32,16 @@ gdb_test_no_output "set breakpoint pending off"
 # The linespec lexer ignores the language setting when lexing
 # keywords.
 gdb_test "break if" "Function \"if\" not defined."
-gdb_breakpoint "thread" "message"
-gdb_breakpoint "task" "message"
+gdb_breakpoint "thread" -message
+gdb_breakpoint "task" -message
 
 # The lexer should prune any trailing whitesapce, so the expected
 # outcome of the following tests should be the same as the previous
 # tests.
 with_test_prefix "trailing whitespace" {
     gdb_test "break if " "Function \"if\" not defined."
-    gdb_breakpoint "thread " "message"
-    gdb_breakpoint "task " "message"
+    gdb_breakpoint "thread " -message
+    gdb_breakpoint "task " -message
 }
 
 # With a single keyword specified first in the location,
@@ -56,7 +56,7 @@ gdb_test "break thread 123" "Unknown thread 123\\."
 gdb_test "break thread foo" "Invalid thread ID: foo"
 gdb_test "break task 123" "Unknown task 123\\."
 gdb_test "break task foo" "Junk 'foo' after task keyword\\."
-gdb_breakpoint "thread if 0" "message"
+gdb_breakpoint "thread if 0" -message
 
 # These are also NULL locations, but using a subsequent keyword
 # as the "junk".
@@ -86,7 +86,7 @@ foreach prefix {"" "thread 1 "} {
 			"You can specify only one thread\\."
 		} else {
 		    gdb_breakpoint "main ${prefix}-force-condition${suffix}${cond}"\
-			"message"
+			-message
 		}
 	    }
 	}

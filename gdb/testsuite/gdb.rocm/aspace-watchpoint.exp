@@ -41,7 +41,7 @@ with_test_prefix "private lane watchpoints" {
     }
 
     # Set breakpoint in device code.
-    gdb_breakpoint "kernel" "allow-pending" "qualified"
+    gdb_breakpoint "kernel" -allow-pending -qualified
     gdb_continue_to_breakpoint "kernel" ".*char array.*"
 
     delete_breakpoints
@@ -96,7 +96,7 @@ with_test_prefix "private lane watchpoints" {
     gdb_test "bt" "${bt_pattern}kernel.*" "inside kernel"
 
 
-    gdb_breakpoint "change_memory" "allow-pending" "qualified"
+    gdb_breakpoint "change_memory" -allow-pending -qualified
     gdb_test "continue" "Breakpoint \[0-9a-fA-F\]+, with lane 0, change_memory.*" \
 			"continue to change_memory function breakpoint"
 
@@ -151,7 +151,7 @@ with_test_prefix "global memory watchpoint" {
     }
 
     # Set breakpoint in device code.
-    gdb_breakpoint "kernel" "allow-pending" "qualified"
+    gdb_breakpoint "kernel" -allow-pending -qualified
     gdb_continue_to_breakpoint "kernel" ".*char array.*"
 
     delete_breakpoints
@@ -196,7 +196,7 @@ with_test_prefix "Watchpoint and thread scope change " {
     }
 
     # Set breakpoint in device code.
-    gdb_breakpoint "kernel" "allow-pending" "qualified"
+    gdb_breakpoint "kernel" -allow-pending -qualified
     gdb_continue_to_breakpoint "kernel" ".*char array.*"
 
     delete_breakpoints

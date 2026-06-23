@@ -162,7 +162,7 @@ proc_with_prefix replay_with_log { remote_log expect_error non_stop } {
 		 "warning: command aborted, Thread \[^\r\n\]+ unexpectedly exited after signal stop event"]
 
 	if { !$non_stop } {
-	    lappend expected_output "\\\[Switching to Thread \[^\r\n\]+\\\]"
+	    lappend expected_output "\\\[Switching to thread \[^\r\n\]+\\\]"
 	}
 
 	gdb_test "continue" [multi_line {*}$expected_output]

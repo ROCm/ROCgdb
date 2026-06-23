@@ -130,7 +130,7 @@ stpy_get_objfile (PyObject *self, void *closure)
 
   STPY_REQUIRE_VALID (self, symtab);
 
-  return objfile_to_objfile_object (symtab->compunit ()->objfile ()).release ();
+  return objfile_to_objfile_object (symtab->compunit ().objfile ()).release ();
 }
 
 /* Getter function for symtab.producer.  */
@@ -139,13 +139,13 @@ static PyObject *
 stpy_get_producer (PyObject *self, void *closure)
 {
   struct symtab *symtab = NULL;
-  struct compunit_symtab *cust;
 
   STPY_REQUIRE_VALID (self, symtab);
-  cust = symtab->compunit ();
-  if (cust->producer () != nullptr)
+  compunit_symtab &cust = symtab->compunit ();
+
+  if (cust.producer () != nullptr)
     {
-      const char *producer = cust->producer ();
+      const char *producer = cust.producer ();
 
       return host_string_to_python_string (producer).release ();
     }
@@ -191,11 +191,11 @@ stpy_global_block (PyObject *self, PyObject *args)
 
   STPY_REQUIRE_VALID (self, symtab);
 
-  blockvector = symtab->compunit ()->blockvector ();
+  blockvector = symtab->compunit ().blockvector ();
   const struct block *block = blockvector->global_block ();
 
   return block_to_block_object (block,
-				symtab->compunit ()->objfile ()).release ();
+				symtab->compunit ().objfile ()).release ();
 }
 
 /* Return the STATIC_BLOCK of the underlying symtab.  */
@@ -208,11 +208,11 @@ stpy_static_block (PyObject *self, PyObject *args)
 
   STPY_REQUIRE_VALID (self, symtab);
 
-  blockvector = symtab->compunit ()->blockvector ();
+  blockvector = symtab->compunit ().blockvector ();
   const struct block *block = blockvector->static_block ();
 
   return block_to_block_object (block,
-				symtab->compunit ()->objfile ()).release ();
+				symtab->compunit ().objfile ()).release ();
 }
 
 /* Implementation of gdb.Symtab.linetable (self) -> gdb.LineTable.
@@ -361,7 +361,7 @@ stpy_dealloc (PyObject *obj)
   symtab_object *symtab_obj = (symtab_object *) obj;
 
   if (symtab_obj->symtab != nullptr)
-    stpy_registry.remove (symtab_obj->symtab->compunit ()->objfile(),
+    stpy_registry.remove (symtab_obj->symtab->compunit ().objfile (),
 			  symtab_obj);
 
   Py_TYPE (obj)->tp_free (obj);
@@ -438,7 +438,7 @@ salpy_dealloc (PyObject *self)
   sal_object *self_sal = (sal_object *) self;
 
   if (self_sal->sal != nullptr && self_sal->sal->symtab != nullptr)
-    salpy_registry.remove (self_sal->sal->symtab->compunit ()->objfile (),
+    salpy_registry.remove (self_sal->sal->symtab->compunit ().objfile (),
 			   self_sal);
 
   xfree (self_sal->sal);
@@ -463,7 +463,7 @@ set_sal (sal_object *sal_obj, struct symtab_and_line sal)
      objfile cleanup observer linked list.  */
   symtab *symtab = sal_obj->sal->symtab;
   if (symtab != nullptr)
-    salpy_registry.add (symtab->compunit ()->objfile (), sal_obj);
+    salpy_registry.add (symtab->compunit ().objfile (), sal_obj);
 }
 
 /* Given a symtab, and a symtab_object that has previously been
@@ -476,7 +476,7 @@ set_symtab (symtab_object *obj, struct symtab *symtab)
 {
   obj->symtab = symtab;
   if (symtab != nullptr)
-    stpy_registry.add (symtab->compunit ()->objfile (), obj);
+    stpy_registry.add (symtab->compunit ().objfile (), obj);
 }
 
 /* Create a new symbol table (gdb.Symtab) object that encapsulates the
@@ -491,7 +491,7 @@ symtab_to_symtab_object (struct symtab *symtab)
   if (symtab != nullptr)
     {
       gdbpy_ref<> result
-	= stpy_registry.lookup (symtab->compunit ()->objfile (), symtab);
+	= stpy_registry.lookup (symtab->compunit ().objfile (), symtab);
       if (result != nullptr)
 	return result;
     }

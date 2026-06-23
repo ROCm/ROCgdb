@@ -75,7 +75,7 @@ foreach_with_prefix pie { "nopie" "pie" } {
     # Instead of trying to cater for all these possibilities in a controlled
     # fashion, make the breakpoint temporary, ensuring that there will just be
     # one stop.
-    gdb_breakpoint "*_start" temporary
+    gdb_breakpoint "*_start" -temporary
 
     gdb_run_cmd
 

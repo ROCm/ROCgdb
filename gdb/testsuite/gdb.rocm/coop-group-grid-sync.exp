@@ -55,10 +55,10 @@ proc_with_prefix test_coop_grid_sync {} {
 	    return
 	}
 
-	# Place a breakpoint after grid.sync ().  Use "allow-pending"
+	# Place a breakpoint after grid.sync ().  Use -allow-pending
 	# because the kernel is loaded as device code at dispatch time.
 	gdb_breakpoint \
-	    [gdb_get_line_number "after-sync line"] allow-pending temporary
+	    [gdb_get_line_number "after-sync line"] -allow-pending -temporary
 
 	# Continue into the kernel.  If the program self-skips (no device
 	# advertises cooperativeLaunch) it exits cleanly; treat that as

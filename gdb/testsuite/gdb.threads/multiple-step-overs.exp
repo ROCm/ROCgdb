@@ -101,7 +101,7 @@ foreach displaced { "off" "on" } {
 
 		# Switch back to thread 1, and continue.
 		gdb_test "thread 1" "Switching.*" "switch back to thread 1"
-		gdb_breakpoint "sigusr1_handler" "set break at sigusr1_handler"
+		gdb_breakpoint "sigusr1_handler"
 
 		set msg "continue to sigusr1_handler"
 		gdb_test_multiple "continue" $msg {

@@ -244,7 +244,7 @@
 @V@/gdb/features/i386/i386-mmx.c @V@/gdb/features/i386/i32-m.c
 @V@/gdb/features/i386/i386-mmx-linux.xml @V@/gdb/features/i386/i32-ml.xml
 @V@/gdb/features/i386/i386-mmx.xml @V@/gdb/features/i386/i32-m.xml
-@V@/gdb/features/tic6x-core.xml @V@/gdb/features/c6x-core.xml 
+@V@/gdb/features/tic6x-core.xml @V@/gdb/features/c6x-core.xml
 @V@/gdb/features/tic6x-gp.xml @V@/gdb/features/c6x-gp.xml
 @V@/gdb/features/tic6x-c6xp.xml @V@/gdb/features/c6x-c6xp.xml
 @V@/gdb/features/tic6x-c62x.xml @V@/gdb/features/c6x-62x.xml

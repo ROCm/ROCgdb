@@ -83,7 +83,7 @@ proc do_test { remove_expr } {
     gdb_continue_to_breakpoint gdb_add_symbol_file
 
     # 2) Set a pending breakpoint at bar in $srcfile3.
-    set result [gdb_breakpoint bar allow-pending]
+    set result [gdb_breakpoint bar -allow-pending]
     if {!$result} {
 	return
     }

@@ -16,4 +16,3 @@
   <reg name="fsr" bitsize="32" type="uint32" regnum="70"/>
   <reg name="csr" bitsize="32" type="uint32" regnum="71"/>
 </feature>
-

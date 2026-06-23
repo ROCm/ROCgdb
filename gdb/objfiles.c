@@ -463,7 +463,7 @@ objfile::~objfile ()
      and if so, call clear_last_displayed_sal.  */
   if (symtab *last_displayed_symtab = get_last_displayed_symtab ();
       last_displayed_symtab != nullptr
-      && last_displayed_symtab->compunit ()->objfile () == this)
+      && last_displayed_symtab->compunit ().objfile () == this)
     clear_last_displayed_sal ();
 
   /* Rebuild section map next time we need it.  */

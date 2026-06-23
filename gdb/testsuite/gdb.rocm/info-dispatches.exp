@@ -47,8 +47,8 @@ with_rocm_gpu_lock {
     gdb_test "info dispatches" "No dispatches are currently active\\."  \
 	     "info dispatches, no dispatches"
 
-    gdb_breakpoint "single_wave_kernel1" "allow-pending"
-    gdb_breakpoint "single_wave_kernel2" "allow-pending"
+    gdb_breakpoint "single_wave_kernel1" -allow-pending
+    gdb_breakpoint "single_wave_kernel2" -allow-pending
 
     set kernel1_thread 0
     set kernel2_thread 0

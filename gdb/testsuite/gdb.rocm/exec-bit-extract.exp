@@ -52,7 +52,7 @@ if {![runto_main]} {
 delete_breakpoints
 
 # Set breakpoing in device code.
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_breakpoint "bit_extract_kernel" -allow-pending
 gdb_continue_to_breakpoint "bit_extract_kernel"
 
 }

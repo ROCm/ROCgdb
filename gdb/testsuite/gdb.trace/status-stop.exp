@@ -50,7 +50,7 @@ proc test_tstart_tstop_tstart { } {
 	gdb_test_no_output "tstart" \
 	    "first tstart"
 
-	gdb_breakpoint "end" qualified
+	gdb_breakpoint "end" -qualified
 	gdb_test "continue" "Continuing\\.\[ \r\n\]+Breakpoint.*" \
 	    "continue to end"
 
@@ -107,7 +107,7 @@ proc test_buffer_full_tstart { } {
 
 	gdb_test_no_output "tstart" \
 	    "first tstart"
-	gdb_breakpoint "end" qualified
+	gdb_breakpoint "end" -qualified
 	gdb_test "continue" "Continuing\\.\[ \r\n\]+Breakpoint.*" "continue to end"
 
 	gdb_test "tstatus" ".*buffer was full.*"

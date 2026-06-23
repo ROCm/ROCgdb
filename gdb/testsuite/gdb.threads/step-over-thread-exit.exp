@@ -71,9 +71,7 @@ proc test {step_over_mode non-stop target-non-stop schedlock cmd ns_stop_all} {
     if {$schedlock
 	|| (${non-stop} == "on" && $ns_stop_all)} {
 
-	gdb_test_no_output "set args 1"
-
-	if { ![runto my_exit_syscall] } {
+	if { ![runto my_exit_syscall -inferior-args 1] } {
 	    return
 	}
 
@@ -148,9 +146,7 @@ proc test {step_over_mode non-stop target-non-stop schedlock cmd ns_stop_all} {
 	    set n_threads 100
 	}
 
-	gdb_test_no_output "set args $n_threads"
-
-	if { ![runto_main] } {
+	if { ![runto_main -inferior-args $n_threads] } {
 	    return
 	}
 

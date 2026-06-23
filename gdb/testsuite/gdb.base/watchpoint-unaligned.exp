@@ -28,7 +28,7 @@ if {![runto_main]} {
     return
 }
 
-gdb_breakpoint [gdb_get_line_number "start_again"] "Breakpoint $decimal at $hex" "start_again"
+gdb_breakpoint [gdb_get_line_number "start_again"]
 
 set sizes {1 2 4 8}
 array set alignedend {1 1  2 2  3 4  4 4  5 8  6 8  7 8  8 8}
@@ -164,8 +164,7 @@ proc size8twice { function cmd offset index } {
     # Set a breakpoint.
     set bp_src_string "${function}_return"
     set bp_loc [gdb_get_line_number $bp_src_string]
-    gdb_breakpoint $bp_loc \
-	"Breakpoint $::decimal at $::hex" "$bp_src_string"
+    gdb_breakpoint $bp_loc
 
     # Set a hardware watchpoint.
     set watch_index [expr {$offset + $index}]

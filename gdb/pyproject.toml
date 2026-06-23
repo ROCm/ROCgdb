@@ -149,3 +149,7 @@ uri-ignore-words-list = '*'
 
 # How to ignore blocks of code.
 ignore-multiline-regex = 'codespell:ignore-begin.*?codespell:ignore-end'
+
+# Add 1 (disable warnings about wrong encoding) in addition to the default
+# 2+32 to skip warnings about iso-8859-1 encoded files.
+quiet-level = 35 # 1+2+32

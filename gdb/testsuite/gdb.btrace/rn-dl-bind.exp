@@ -53,7 +53,7 @@ with_test_prefix "main" {
 # debug information we may stop at the closing brace or at the return.
 #
 # instead, run to test
-gdb_breakpoint test {temporary}
+gdb_breakpoint test -temporary
 gdb_test "reverse-continue" ".*test\.1.*"
 
 with_test_prefix "test" {

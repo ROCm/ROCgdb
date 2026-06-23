@@ -13,7 +13,7 @@ get_bar (void)
 int
 main ()
 {
-  if ((uintptr_t) get_bar () == 42)
+  if ((uintptr_t) get_bar () == 0x10000)
     printf ("PASS\n");
   return 0;
 }

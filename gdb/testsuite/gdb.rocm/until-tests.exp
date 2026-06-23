@@ -49,7 +49,7 @@ if {![runto_main]} {
 }
 
 # Set breakpoint in device code function in hip.
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_breakpoint "bit_extract_kernel" -allow-pending
 gdb_test "c" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
 
 # Until tests and other tests after turning on scheduler-locking.
@@ -69,7 +69,7 @@ with_test_prefix "until with scheduler-locking on" {
 with_test_prefix "until without location; scheduler-locking on" {
     clean_restart
     gdb_load ${binfile}
-    gdb_breakpoint "bit_extract_kernel" "allow-pending"
+    gdb_breakpoint "bit_extract_kernel" -allow-pending
     gdb_test "run" {.+hit\sBreakpoint\s[\d].+\sbit_extract_kernel\s\(.*\)\sat.*}
     gdb_test_no_output "set scheduler-locking on"
     gdb_test "info line" "Line $breakpoint_loc.*"
@@ -85,7 +85,7 @@ with_test_prefix "until without location; scheduler-locking on" {
 with_test_prefix "until after conditional breakpoint" {
     clean_restart
     gdb_load ${binfile}
-    gdb_breakpoint "$srcfile:$breakpoint_loc if \$_thread==$threadid" allow-pending
+    gdb_breakpoint "$srcfile:$breakpoint_loc if \$_thread==$threadid" -allow-pending
     gdb_test "run" \
 	".+Thread.+$threadid.+hit.+Breakpoint.+${testfile}.cpp:$breakpoint_loc.*"
     gdb_test "info line" "Line $breakpoint_loc.*"
@@ -126,7 +126,7 @@ with_test_prefix "until with non-stop on" {
     clean_restart
     gdb_load ${binfile}
     gdb_test_no_output "set non-stop on"
-    gdb_breakpoint "bit_extract_kernel" "allow-pending"
+    gdb_breakpoint "bit_extract_kernel" -allow-pending
     run_and_wait "run to bit_extract_kernel Breakpoint"
 
     gdb_test "thread $threadid" \

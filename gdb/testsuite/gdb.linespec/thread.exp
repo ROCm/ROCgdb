@@ -35,6 +35,6 @@ gdb_test "break $srcfile:$bp_location1" \
 
 gdb_continue_to_breakpoint "$bp_location1"
 
-gdb_breakpoint "thread" "message"
+gdb_breakpoint "thread" -message
 
 gdb_continue_to_breakpoint "thread function"

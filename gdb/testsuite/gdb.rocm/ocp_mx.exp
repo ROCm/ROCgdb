@@ -39,7 +39,7 @@ proc test_mx_function {mx_args result_re vector_size_re} {
 }
 
 proc_with_prefix ocp_mx_fp8e4m3 {} {
-    gdb_breakpoint [gdb_get_line_number "break here 1"] allow-pending
+    gdb_breakpoint [gdb_get_line_number "break here 1"] -allow-pending
     gdb_test "continue" "Thread .* hit Breakpoint .* with lane 0, fp8e4m3_values.*|Breakpoint .*, fp8e4m3_values.* at .*"
     with_test_prefix "encoding" {
 	gdb_test "p fp8e4m3zero.e" "\\\{0.0, 0.0\\\}"
@@ -68,7 +68,7 @@ proc_with_prefix ocp_mx_fp8e4m3 {} {
 }
 
 proc_with_prefix ocp_mx_fp8e5m2 {} {
-    gdb_breakpoint [gdb_get_line_number "break here 2"] allow-pending
+    gdb_breakpoint [gdb_get_line_number "break here 2"] -allow-pending
     gdb_test "continue" "Thread .* hit Breakpoint .* with lane 0, fp8e5m2_values.*|Breakpoint .*, fp8e5m2_values.* at .*"
     with_test_prefix "encoding" {
 	gdb_test "p fp8e5m2zero.e" "\\\{0.0, 0.0\\\}"
@@ -100,7 +100,7 @@ proc_with_prefix ocp_mx_fp8e5m2 {} {
 }
 
 proc_with_prefix ocp_mx_fp6e2m3 {} {
-    gdb_breakpoint [gdb_get_line_number "break here 3"] allow-pending
+    gdb_breakpoint [gdb_get_line_number "break here 3"] -allow-pending
     gdb_test "continue" "Thread .* hit Breakpoint .* with lane 0, fp6e2m3_values.*|Breakpoint .*, fp6e2m3_values.* at .*"
     with_test_prefix "encoding" {
 	gdb_test "p fp6e2m3zero.e" "\\\{0.0, 0.0, .*\\\}"
@@ -124,7 +124,7 @@ proc_with_prefix ocp_mx_fp6e2m3 {} {
 }
 
 proc_with_prefix ocp_mx_fp6e3m2 {} {
-    gdb_breakpoint [gdb_get_line_number "break here 4"] allow-pending
+    gdb_breakpoint [gdb_get_line_number "break here 4"] -allow-pending
     gdb_test "continue" "Thread .* hit Breakpoint .* with lane 0, fp6e3m2_values.*|Breakpoint .*, fp6e3m2_values.* at .*"
     with_test_prefix "encoding" {
 	gdb_test "p fp6e3m2zero.e" "\\\{0.0, 0.0, .*\\\}"
@@ -148,7 +148,7 @@ proc_with_prefix ocp_mx_fp6e3m2 {} {
 }
 
 proc_with_prefix ocp_mx_fp4e2m1 {} {
-    gdb_breakpoint [gdb_get_line_number "break here 5"] allow-pending
+    gdb_breakpoint [gdb_get_line_number "break here 5"] -allow-pending
     gdb_test "continue" "Thread .* hit Breakpoint .* with lane 0, fp4e2m1_values.*|Breakpoint .*, fp4e2m1_values.* at .*"
     with_test_prefix "encoding" {
 	gdb_test "p fp4e2m1zero.e" "\\\{0.0, 0.0\\\}"

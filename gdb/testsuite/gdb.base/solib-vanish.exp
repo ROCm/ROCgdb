@@ -104,7 +104,7 @@ delete_breakpoints
 
 set lib2_lineno [gdb_get_line_number "break here" ${srcfile_lib2}]
 
-gdb_breakpoint "${lib2name}.c:${lib2_lineno}" {allow-pending}
+gdb_breakpoint "${lib2name}.c:${lib2_lineno}" -allow-pending
 
 # Verify that both the location and source code are displayed
 gdb_continue_to_breakpoint "bar" \

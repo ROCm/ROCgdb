@@ -426,7 +426,7 @@ get_out_value_type (struct symbol *func_sym, struct objfile *objfile,
   lookup_name_info i_ptr_matcher (COMPILE_I_EXPR_PTR_TYPE,
 				  symbol_name_match_type::SEARCH_NAME);
 
-  bv = func_sym->symtab ()->compunit ()->blockvector ();
+  bv = func_sym->symtab ()->compunit ().blockvector ();
   nblocks = bv->num_blocks ();
 
   gdb_ptr_type_sym = NULL;

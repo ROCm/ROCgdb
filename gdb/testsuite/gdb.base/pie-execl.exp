@@ -20,21 +20,13 @@ global inferior_spawn_id
 global gdb_spawn_id
 
 require {istarget *-linux*}
-
-# In remote mode we cannot use the 'set args' command, and this
-# test requires it.
-if {[target_info exists gdb_protocol]} {
-    if {[target_info gdb_protocol] == "remote"} {
-	return
-    }
-}
+require {!target_info exists noargs}
 
 standard_testfile .c
 set executable1 ${testfile}1
 set executable2 ${testfile}2
 set binfile1 ${binfile}1
 set binfile2 ${binfile}2
-set binfile2_test_msg OBJDIR/${subdir}/${executable2}
 
 # Use conditional compilation according to `BIN' as GDB remembers the source
 # file name of the breakpoint.
@@ -47,9 +39,7 @@ if {[build_executable ${testfile}.exp $executable1 $srcfile [concat $opts {addit
 
 clean_restart ${executable1}
 
-gdb_test_no_output "set args ${binfile2}" "set args ${binfile2_test_msg}"
-
-if {![runto_main]} {
+if {![runto_main -inferior-args $binfile2]} {
     return
 }
 

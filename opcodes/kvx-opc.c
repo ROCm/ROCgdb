@@ -22,7 +22,6 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "bfd.h"
-#include "libbfd.h"
 #include <elf/kvx.h>
 #include <opcode/kvx.h>
 

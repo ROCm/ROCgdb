@@ -5,6 +5,12 @@
   ABI was adopted) are now considered obsolete.  They are now deprecated
   and will be removed in a future release.
 
+* Add support for RISC-V standard extensions:
+  zalasr v1.0, svrsw60t59b v1.0, zvabd v1.0.
+
+* Add support for RISC-V vendor extensions:
+  SpacemiT: xsmtvdot v1.0, xsmtvdotii v1.0.
+
 Changes in 2.46:
 
 * Add support for AMD Zen6 processor.

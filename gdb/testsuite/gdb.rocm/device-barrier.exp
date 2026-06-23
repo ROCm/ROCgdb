@@ -36,7 +36,7 @@ proc do_test {} {
 	    return
 	}
 
-	gdb_breakpoint [gdb_get_line_number "Break here"] allow-pending
+	gdb_breakpoint [gdb_get_line_number "Break here"] -allow-pending
 
 	gdb_test "continue" \
 	    "Thread $::decimal \[^\r\n\]* hit Breakpoint 2.*"

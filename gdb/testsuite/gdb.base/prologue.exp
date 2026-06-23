@@ -29,7 +29,7 @@ if {![runto_main]} {
 proc find_breakpoint_pc { sym } {
     global decimal hex gdb_prompt
 
-    if { [gdb_breakpoint $sym temporary] } {
+    if { [gdb_breakpoint $sym -temporary] } {
 	pass "setting breakpoint at $sym"
     }
 

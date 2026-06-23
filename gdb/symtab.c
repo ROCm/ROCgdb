@@ -3390,7 +3390,7 @@ find_pc_for_line (struct symtab *symtab, int line, CORE_ADDR *pc)
   if (symtab != NULL)
     {
       l = symtab->linetable ();
-      *pc = l->item[ind].pc (symtab->compunit ()->objfile ());
+      *pc = l->item[ind].pc (symtab->compunit ().objfile ());
       return true;
     }
   else
@@ -3512,10 +3512,10 @@ find_function_start_sal_1 (CORE_ADDR func_addr, obj_section *section,
   symtab_and_line sal = find_sal_for_pc_sect (func_addr, section, 0);
 
   if (funfirstline && sal.symtab != NULL
-      && (sal.symtab->compunit ()->locations_valid ()
+      && (sal.symtab->compunit ().locations_valid ()
 	  || sal.symtab->language () == language_asm))
     {
-      struct gdbarch *gdbarch = sal.symtab->compunit ()->objfile ()->arch ();
+      struct gdbarch *gdbarch = sal.symtab->compunit ().objfile ()->arch ();
 
       sal.pc = func_addr;
       if (gdbarch_skip_entrypoint_p (gdbarch))
@@ -3593,7 +3593,7 @@ skip_prologue_using_lineinfo (CORE_ADDR func_addr, struct symtab *symtab)
   if (!find_pc_partial_function (func_addr, NULL, &func_start, &func_end))
     return func_addr;
 
-  struct objfile *objfile = symtab->compunit ()->objfile ();
+  struct objfile *objfile = symtab->compunit ().objfile ();
 
   /* Linetable entries are ordered by PC values, see the commentary in
      symtab.h where `struct linetable' is defined.  Thus, the first
@@ -3635,7 +3635,7 @@ skip_prologue_using_linetable (CORE_ADDR func_addr)
     {
       const linetable *linetable = prologue_sal.symtab->linetable ();
 
-      struct objfile *objfile = prologue_sal.symtab->compunit ()->objfile ();
+      struct objfile *objfile = prologue_sal.symtab->compunit ().objfile ();
 
       unrelocated_addr unrel_start
 	= unrelocated_addr (start_pc - objfile->text_section_offset ());
@@ -3728,7 +3728,7 @@ skip_prologue_sal (struct symtab_and_line *sal)
      have proven the CU (Compilation Unit) supports it.  sal->SYMTAB does not
      have to be set by the caller so we use SYM instead.  */
   if (sym != NULL
-      && sym->symtab ()->compunit ()->locations_valid ())
+      && sym->symtab ()->compunit ().locations_valid ())
     force_skip = 0;
 
   symtab_and_line start_sal;
@@ -3886,7 +3886,7 @@ skip_prologue_using_sal (struct gdbarch *gdbarch, CORE_ADDR func_addr)
       if (prologue_sal.symtab->language () != language_asm)
 	{
 	  struct objfile *objfile
-	    = prologue_sal.symtab->compunit ()->objfile ();
+	    = prologue_sal.symtab->compunit ().objfile ();
 	  const linetable *linetable = prologue_sal.symtab->linetable ();
 	  gdb_assert (linetable->nitems > 0);
 	  int idx = 0;
@@ -3987,7 +3987,7 @@ find_epilogue_using_linetable (CORE_ADDR func_addr)
   const struct symtab_and_line sal = find_sal_for_pc (end_pc - 1, 0);
   if (sal.symtab != nullptr && sal.symtab->language () != language_asm)
     {
-      struct objfile *objfile = sal.symtab->compunit ()->objfile ();
+      struct objfile *objfile = sal.symtab->compunit ().objfile ();
       unrelocated_addr unrel_start
 	= unrelocated_addr (start_pc - objfile->text_section_offset ());
       unrelocated_addr unrel_end
@@ -6156,7 +6156,7 @@ collect_file_symbol_completion_matches (completion_tracker &tracker,
      for symbols which match.  */
   for_each_symtab (current_program_space, srcfile, [&] (symtab *s)
     {
-      add_symtab_completions (s->compunit (),
+      add_symtab_completions (&s->compunit (),
 			      tracker, mode, lookup_name,
 			      sym_text, word, TYPE_CODE_UNDEF);
     });
@@ -6560,7 +6560,7 @@ struct objfile *
 symbol::objfile () const
 {
   gdb_assert (is_objfile_owned ());
-  return owner.symtab->compunit ()->objfile ();
+  return owner.symtab->compunit ().objfile ();
 }
 
 /* See symtab.h.  */
@@ -6570,7 +6570,7 @@ symbol::arch () const
 {
   if (!is_objfile_owned ())
     return owner.arch;
-  return owner.symtab->compunit ()->objfile ()->arch ();
+  return owner.symtab->compunit ().objfile ()->arch ();
 }
 
 /* See symtab.h.  */

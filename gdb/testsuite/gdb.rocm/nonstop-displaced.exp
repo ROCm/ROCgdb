@@ -42,7 +42,7 @@ if {![runto_main]} {
     return -1
 }
 
-gdb_breakpoint "foo" allow-pending
+gdb_breakpoint "foo" -allow-pending
 
 set threadnum -1
 gdb_test_multiple "continue" "" {

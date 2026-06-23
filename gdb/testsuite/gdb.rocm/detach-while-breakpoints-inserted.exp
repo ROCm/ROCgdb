@@ -58,7 +58,7 @@ proc do_test { } {
 
 	gdb_test_no_output "set breakpoint always-inserted"
 
-	gdb_breakpoint "add_one" allow-pending
+	gdb_breakpoint "add_one" -allow-pending
 	gdb_continue_to_breakpoint "add_one"
 
 	gdb_test "detach"

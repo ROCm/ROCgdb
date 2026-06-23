@@ -29,7 +29,7 @@ if {![runto_main]} {
 
 gdb_test_no_output "set follow-fork-mode child" "1, set follow-fork-mode child"
 gdb_test "catch fork" "Catchpoint \[0-9\]* \\(fork\\)" "1, insert fork catchpoint"
-gdb_breakpoint "start" "" "1, set breakpoint at start"
+gdb_breakpoint "start"
 
 gdb_test "continue" "Catchpoint.*" "1, get to the fork event"
 

@@ -38,7 +38,7 @@ proc do_test { } {
 
     with_rocm_gpu_lock {
 	# Stop somwewhere in the kernel.
-	if { ![runto the_kernel allow-pending message] } {
+	if { ![runto the_kernel -allow-pending -message] } {
 	    return
 	}
 

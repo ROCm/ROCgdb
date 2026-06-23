@@ -745,7 +745,8 @@ fetch_indexed_addr (uint64_t offset, uint32_t num_bytes)
       return 0;
     }
 
-  if (offset + num_bytes > section->size)
+  if (offset > section->size
+      || num_bytes > section->size - offset)
     {
       warn (_("Offset into section %s too big: %#" PRIx64 "\n"),
 	    section->name, offset);
@@ -770,7 +771,7 @@ fetch_indexed_offset (uint64_t                         idx,
 		      uint64_t                         base_address,
 		      uint64_t                         offset_size)
 {
-  uint64_t offset_of_offset = base_address + idx * offset_size;
+  uint64_t offset_of_offset;
   struct dwarf_section *section = &debug_displays [sec_enum].section;
 
   if (section->start == NULL)
@@ -779,17 +780,13 @@ fetch_indexed_offset (uint64_t                         idx,
       return -1;
     }
 
-  if (section->size < 4)
+  if (_bfd_mul_overflow (idx, offset_size, &offset_of_offset)
+      || (offset_of_offset += base_address) < base_address
+      || offset_of_offset > section->size
+      || offset_size > section->size - offset_of_offset)
     {
-      warn (_("Section %s is too small to contain an value indexed from another section!\n"),
-	    section->name);
-      return -1;
-    }
-
-  if (offset_of_offset + offset_size >= section->size)
-    {
-      warn (_("Offset of %#" PRIx64 " is too big for section %s\n"),
-	    offset_of_offset, section->name);
+      warn (_("Base %#" PRIx64 " with index %#" PRIx64 " is too big for section %s\n"),
+	    base_address, idx, section->name);
       return -1;
     }
 

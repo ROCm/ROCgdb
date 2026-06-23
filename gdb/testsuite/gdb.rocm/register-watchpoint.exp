@@ -38,7 +38,7 @@ if {![runto_main]} {
 set timeout 60
 
 # Set breakpoint in device code.
-gdb_breakpoint "bit_extract_kernel" "allow-pending"
+gdb_breakpoint "bit_extract_kernel" -allow-pending
 gdb_continue_to_breakpoint "bit_extract_kernel"
 
 # Set watchpoint on a stack pointer.

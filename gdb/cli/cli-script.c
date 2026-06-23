@@ -62,7 +62,7 @@ static int control_level;
 static int command_nest_depth = 1;
 
 /* This is to prevent certain commands being printed twice.  */
-static int suppress_next_print_command_trace = 0;
+static bool suppress_next_print_command_trace = false;
 
 /* Command element for the 'while' command.  */
 static cmd_list_element *while_cmd_element = nullptr;
@@ -471,7 +471,7 @@ reset_command_nest_depth (void)
   command_nest_depth = 1;
 
   /* Just in case.  */
-  suppress_next_print_command_trace = 0;
+  suppress_next_print_command_trace = false;
 }
 
 /* Print the command, prefixed with '+' to represent the call depth.
@@ -486,26 +486,24 @@ ATTRIBUTE_PRINTF (1, 2)
 void
 print_command_trace (const char *fmt, ...)
 {
-  int i;
-
   if (suppress_next_print_command_trace)
     {
-      suppress_next_print_command_trace = 0;
+      suppress_next_print_command_trace = false;
       return;
     }
 
   if (!source_verbose && !trace_commands)
     return;
 
-  for (i=0; i < command_nest_depth; i++)
-    gdb_printf ("+");
+  for (int i = 0; i < command_nest_depth; ++i)
+    gdb_printf (gdb_stdlog, "+");
 
   va_list args;
 
   va_start (args, fmt);
-  gdb_vprintf (fmt, args);
+  gdb_vprintf (gdb_stdlog, fmt, args);
   va_end (args);
-  gdb_puts ("\n");
+  gdb_puts ("\n", gdb_stdlog);
 }
 
 /* Helper for execute_control_command.  */
@@ -720,7 +718,7 @@ execute_control_command (struct command_line *cmd, int from_tty)
 enum command_control_type
 execute_control_command_untraced (struct command_line *cmd)
 {
-  suppress_next_print_command_trace = 1;
+  suppress_next_print_command_trace = true;
   return execute_control_command (cmd);
 }
 

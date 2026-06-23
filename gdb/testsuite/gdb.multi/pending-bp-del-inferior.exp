@@ -107,7 +107,7 @@ proc do_bp_test { bp_type bp_pending } {
 	set bp_restriction "inferior 1"
     }
 
-    gdb_breakpoint "$bp_func $bp_restriction" allow-pending
+    gdb_breakpoint "$bp_func $bp_restriction" -allow-pending
     set bp_number [get_integer_valueof "\$bpnum" "INVALID" \
 		       "get b/p number for previous breakpoint"]
 

@@ -39,8 +39,8 @@ proc do_test {option} {
 	return
     }
 
-    gdb_breakpoint "bar" allow-pending
-    gdb_breakpoint "baz" allow-pending
+    gdb_breakpoint "bar" -allow-pending
+    gdb_breakpoint "baz" -allow-pending
 
     gdb_continue_to_breakpoint "break in device"
 

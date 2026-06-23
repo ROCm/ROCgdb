@@ -106,7 +106,7 @@ with_rocm_gpu_lock {
 
     # Set a breakpoint in device code.
     set bp_line [gdb_get_line_number "Break here."]
-    gdb_breakpoint "$bp_line" "allow-pending" "temporary"
+    gdb_breakpoint "$bp_line" -allow-pending -temporary
     gdb_continue_to_breakpoint "kern"
 
     with_test_prefix "hip language" {

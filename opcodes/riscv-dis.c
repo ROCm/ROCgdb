@@ -917,6 +917,75 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		  goto undefined_modifier;
 		}
 	      break;
+	    case 'p': /* Vendor-specific (SpacemiT) operands.  */
+	      switch (*++oparg)
+		{
+		case 'V':
+		  switch (*++oparg)
+		    {
+		    case 'd':
+		      unsigned vd = EXTRACT_OPERAND (SPACEMIT_IME_VD, l) * 2;
+		      print (info->stream, dis_style_register, "%s",
+			     riscv_vecr_names_numeric[vd]);
+		      break;
+		    case 's':
+		      unsigned vs = EXTRACT_OPERAND (SPACEMIT_IME_VS1, l) * 2;
+		      print (info->stream, dis_style_register, "%s",
+			     riscv_vecr_names_numeric[vs]);
+		      break;
+		    case 'm':
+		      {
+			unsigned vm = EXTRACT_OPERAND (SPACEMIT_IME_VMASK, l);
+			print (info->stream, dis_style_register, "%s",
+			       riscv_vecr_names_numeric[vm]);
+		      }
+		      break;
+		    default:
+		      goto undefined_modifier;
+		    }
+		  break;
+		case 'n': /* Xpn/Xpb: uimm2 stride, encoded across bits 7,15.  */
+		case 'b':
+		  {
+		    unsigned sp = ((l >> 7) & 1) | (((l >> 15) & 1) << 1);
+		    print (info->stream, dis_style_immediate, "%u", sp);
+		  }
+		  break;
+		case 'u': /* XpuN@S: N-bit unsigned immediate at bit S.  */
+		  {
+		    long n = strtol (oparg + 1, (char **)&oparg, 10);
+		    if (*oparg != '@')
+		      goto undefined_modifier;
+		    long s = strtol (oparg + 1, (char **)&oparg, 10);
+		    oparg--;
+		    unsigned val = (l >> s) & ((1U << n) - 1);
+		    print (info->stream, dis_style_immediate, "%u", val);
+		  }
+		  break;
+		case 'w':
+		  /* Xpw: optional data-width suffix, i8 only.  WI==3 (i8)
+		     is the default and is omitted from the output.  */
+		  {
+		    unsigned wi = EXTRACT_OPERAND (SPACEMIT_IME_WI, l);
+		    if (wi != 3)
+		      goto undefined_modifier;
+		  }
+		  break;
+		case 'x':
+		  /* Xpx: optional data-width suffix, i4 or i8.  WI==3 (i8)
+		     is the default and is omitted from the output.  */
+		  {
+		    unsigned wi = EXTRACT_OPERAND (SPACEMIT_IME_WI, l);
+		    if (wi == 2)
+		      print (info->stream, dis_style_text, ",i4");
+		    else if (wi != 3)
+		      goto undefined_modifier;
+		  }
+		  break;
+		default:
+		  goto undefined_modifier;
+		}
+	      break;
 	    default:
 	      goto undefined_modifier;
 	    }

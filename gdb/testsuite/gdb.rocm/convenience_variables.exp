@@ -44,7 +44,7 @@ gdb_breakpoint \
   [concat "$bp_line if " \
 	"thread_idx_x == 7 && thread_idx_y == 3 && thread_idx_z == 1 " \
 	"&& group_idx_x == 2 && group_idx_y == 1 && group_idx_z == 3" ] \
-  "allow-pending"
+  -allow-pending
 gdb_continue_to_breakpoint "kern"
 
 set lane_num [get_integer_valueof lane_num INVALID]

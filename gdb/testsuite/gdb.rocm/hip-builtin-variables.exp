@@ -200,7 +200,7 @@ with_rocm_gpu_lock {
 	[concat "$bp_line if " \
 	    "threadIdx.x == 7 && threadIdx.y == 3 && threadIdx.z == 1 " \
 	    "&& blockIdx.x == 2 && blockIdx.y == 1 && blockIdx.z == 3" ] \
-	"allow-pending"
+	-allow-pending
     gdb_continue_to_breakpoint "kern"
 
     # After hitting the breakpoint, record the reference values.

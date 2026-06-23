@@ -65,7 +65,7 @@ proc do_test { step_over_mode schedlock } {
 
 	# Put a breakpoint on the instruction before s_endpgm,
 	# continue to it.
-	gdb_breakpoint "before_s_endpgm_insn" allow-pending
+	gdb_breakpoint "before_s_endpgm_insn" -allow-pending
 	gdb_continue_to_breakpoint "before_s_endpgm_insn"
 
 	gdb_test_no_output "set scheduler-locking $schedlock"

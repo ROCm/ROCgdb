@@ -302,7 +302,7 @@ proc jit_reader_test {} {
 	# Check that the DWARF unwinder does not crash in presence of
 	# JIT objfiles.
 	gdb_test "up"
-	gdb_breakpoint "*function_add" temporary
+	gdb_breakpoint "*function_add" -temporary
 	gdb_test "cont" ".*Temporary breakpoint ${any} in jit_function_add .*"
 	gdb_test "bt" \
 	    [multi_line \

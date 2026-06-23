@@ -2275,6 +2275,17 @@
 #define MASK_VSM3C_VI 0xfe00707f
 #define MATCH_VSM3ME_VV 0x82002077
 #define MASK_VSM3ME_VV 0xfe00707f
+/* Zvabd instructions.  */
+#define MATCH_VABS_V 0x48082057
+#define MASK_VABS_V 0xfc0ff07f
+#define MATCH_VABD_VV 0x44002057
+#define MASK_VABD_VV 0xfc00707f
+#define MATCH_VABDU_VV 0x4c002057
+#define MASK_VABDU_VV 0xfc00707f
+#define MATCH_VWABDA_VV 0x54002057
+#define MASK_VWABDA_VV 0xfc00707f
+#define MATCH_VWABDAU_VV 0x58002057
+#define MASK_VWABDAU_VV 0xfc00707f
 /* Zcb instructions.  */
 #define MATCH_C_LBU 0x8000
 #define MASK_C_LBU 0xfc03
@@ -2529,6 +2540,23 @@
 #define MASK_AMOCAS_D 0xf800707f
 #define MATCH_AMOCAS_Q 0x2800402f
 #define MASK_AMOCAS_Q 0xf800707f
+/* Zalasr instructions.  */
+#define MATCH_LBA 0x3000002f
+#define MASK_LBA 0xf9f0707f
+#define MATCH_LHA 0x3000102f
+#define MASK_LHA 0xf9f0707f
+#define MATCH_LWA 0x3000202f
+#define MASK_LWA 0xf9f0707f
+#define MATCH_LDA 0x3000302f
+#define MASK_LDA 0xf9f0707f
+#define MATCH_SBR 0x3800002f
+#define MASK_SBR 0xf8007fff
+#define MATCH_SHR 0x3800102f
+#define MASK_SHR 0xf8007fff
+#define MATCH_SWR 0x3800202f
+#define MASK_SWR 0xf8007fff
+#define MATCH_SDR 0x3800302f
+#define MASK_SDR 0xf8007fff
 /* Zawrs instructions.  */
 #define MATCH_WRS_NTO 0x00d00073
 #define MASK_WRS_NTO 0xffffffff
@@ -3852,6 +3880,85 @@
 #define MASK_MIPS_PAUSE  0xffffffff
 #define MATCH_MIPS_PREF 0x0000000b
 #define MASK_MIPS_PREF 0xe000707f
+/* SpacemiT custom instruction.  */
+/* Int Matrix Multiplicative Accumulation.  */
+#define MATCH_SMT_VMADOT   0x8200302b
+#define MASK_SMT_VMADOT    0x9e0070ff
+#define MATCH_SMT_VMADOTU  0x8200002b
+#define MASK_SMT_VMADOTU   0x9e0070ff
+#define MATCH_SMT_VMADOTSU 0x8200202b
+#define MASK_SMT_VMADOTSU  0x9e0070ff
+#define MATCH_SMT_VMADOTUS 0x8200102b
+#define MASK_SMT_VMADOTUS  0x9e0070ff
+/* Int Sliding Window Multiplicative Accumulation.  */
+/* Sliding Value = 1.  */
+#define MATCH_SMT_VMADOT1U 0x8600002b
+#define MASK_SMT_VMADOT1U  0x9e00f0ff
+#define MATCH_SMT_VMADOT1  0x8600302b
+#define MASK_SMT_VMADOT1   0x9e00f0ff
+#define MATCH_SMT_VMADOT1SU 0x8600202b
+#define MASK_SMT_VMADOT1SU 0x9e00f0ff
+#define MATCH_SMT_VMADOT1US 0x8600102b
+#define MASK_SMT_VMADOT1US 0x9e00f0ff
+/* Sliding Value = 2.  */
+#define MATCH_SMT_VMADOT2U 0x8600402b
+#define MASK_SMT_VMADOT2U 0x9e00f0ff
+#define MATCH_SMT_VMADOT2 0x8600702b
+#define MASK_SMT_VMADOT2 0x9e00f0ff
+#define MATCH_SMT_VMADOT2SU 0x8600602b
+#define MASK_SMT_VMADOT2SU 0x9e00f0ff
+#define MATCH_SMT_VMADOT2US 0x8600502b
+#define MASK_SMT_VMADOT2US 0x9e00f0ff
+/* Sliding Value = 3.  */
+#define MATCH_SMT_VMADOT3U 0x8600802b
+#define MASK_SMT_VMADOT3U 0x9e00f0ff
+#define MATCH_SMT_VMADOT3 0x8600b02b
+#define MASK_SMT_VMADOT3 0x9e00f0ff
+#define MATCH_SMT_VMADOT3SU 0x8600a02b
+#define MASK_SMT_VMADOT3SU 0x9e00f0ff
+#define MATCH_SMT_VMADOT3US 0x8600902b
+#define MASK_SMT_VMADOT3US 0x9e00f0ff
+/* Int Sparse Matrix Multi-Accumulation.  */
+#define MATCH_SMT_VMADOT_SP 0x8800302b
+#define MASK_SMT_VMADOT_SP 0x9c00707f
+#define MATCH_SMT_VMADOTSU_SP 0x8800202b
+#define MASK_SMT_VMADOTSU_SP 0x9c00707f
+#define MATCH_SMT_VMADOTU_SP 0x8800002b
+#define MASK_SMT_VMADOTU_SP 0x9c00707f
+#define MATCH_SMT_VMADOTUS_SP 0x8800102b
+#define MASK_SMT_VMADOTUS_SP 0x9c00707f
+/* Shaping High-Precision Matrix Multiplication Accumulation.  */
+#define MATCH_SMT_VMADOTU_HP 0x8c00002b
+#define MASK_SMT_VMADOTU_HP  0x9c00007f
+#define MATCH_SMT_VMADOT_HP  0x9000002b
+#define MASK_SMT_VMADOT_HP   0x9c00007f
+#define MATCH_SMT_VMADOTSU_HP 0x9400002b
+#define MASK_SMT_VMADOTSU_HP 0x9c00007f
+#define MATCH_SMT_VMADOTUS_HP 0x9800002b
+#define MASK_SMT_VMADOTUS_HP 0x9c00007f
+/* Floating-Point Expansion Matrix Multi-Accumulation.  */
+#define MATCH_SMT_VFWMADOT 0x9e00402b
+#define MASK_SMT_VFWMADOT 0xfe0070ff
+/* Floating-Point Sliding Window Expansion Multi-Accumulation.  */
+#define MATCH_SMT_VFWMADOT1 0x9e00502b
+#define MASK_SMT_VFWMADOT1  0xfe00f0ff
+#define MATCH_SMT_VFWMADOT2 0x9e00602b
+#define MASK_SMT_VFWMADOT2 0xfe00f0ff
+#define MATCH_SMT_VFWMADOT3 0x9e00702b
+#define MASK_SMT_VFWMADOT3 0xfe00f0ff
+/* Element Indentation Assembly.  */
+#define MATCH_SMT_VNPACK_VV 0x6200002b
+#define MASK_SMT_VNPACK_VV 0xfe00407f
+#define MATCH_SMT_VNSPACK_VV 0x6200402b
+#define MASK_SMT_VNSPACK_VV 0xfe00407f
+#define MATCH_SMT_VNPACK4_VV 0x4200002b
+#define MASK_SMT_VNPACK4_VV 0xfe00407f
+#define MATCH_SMT_VNSPACK4_VV 0x4200402b
+#define MASK_SMT_VNSPACK4_VV 0xfe00407f
+#define MATCH_SMT_VPACK_VV 0x6600002b
+#define MASK_SMT_VPACK_VV 0xfe0040ff
+#define MATCH_SMT_VUPACK_VV 0x6600402b
+#define MASK_SMT_VUPACK_VV 0xfe0040ff
 /* Unprivileged Counter/Timers CSR addresses.  */
 #define CSR_CYCLE 0xc00
 #define CSR_TIME 0xc01
@@ -4876,6 +4983,15 @@ DECLARE_INSN(cm_mva01s, MATCH_CM_MVA01S, MASK_CM_MVA01S)
 /* Zcmt instructions.  */
 DECLARE_INSN(cm_jt, MATCH_CM_JT, MASK_CM_JT)
 DECLARE_INSN(cm_jalt, MATCH_CM_JALT, MASK_CM_JALT)
+/* Zalasr instructions.  */
+DECLARE_INSN(lb_aq, MATCH_LBA, MASK_LBA)
+DECLARE_INSN(lh_aq, MATCH_LHA, MASK_LHA)
+DECLARE_INSN(lw_aq, MATCH_LWA, MASK_LWA)
+DECLARE_INSN(ld_aq, MATCH_LDA, MASK_LDA)
+DECLARE_INSN(sb_rl, MATCH_SBR, MASK_SBR)
+DECLARE_INSN(sh_rl, MATCH_SHR, MASK_SHR)
+DECLARE_INSN(sw_rl, MATCH_SWR, MASK_SWR)
+DECLARE_INSN(sd_rl, MATCH_SDR, MASK_SDR)
 /* Smctr/Ssctr instruction.  */
 DECLARE_INSN(sctrclr, MATCH_SCTRCLR, MASK_SCTRCLR)
 /* Smrnmi instruction */

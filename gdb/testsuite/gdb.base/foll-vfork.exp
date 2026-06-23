@@ -57,7 +57,7 @@ proc setup_gdb { binfile srcfile } {
 	return -code return
     }
 
-    gdb_breakpoint [gdb_get_line_number " VFORK " $srcfile] temporary
+    gdb_breakpoint [gdb_get_line_number " VFORK " $srcfile] -temporary
     gdb_continue_to_breakpoint "at VFORK"
 }
 

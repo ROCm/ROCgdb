@@ -93,7 +93,7 @@ proc start_nested_structs_test { lang types } {
     # Some targets only enable the FPU on first use, so ensure that we
     # have used the FPU before we make calls from GDB to code that
     # could use the FPU.
-    gdb_breakpoint [gdb_get_line_number "Break Here"] temporary
+    gdb_breakpoint [gdb_get_line_number "Break Here"] -temporary
     gdb_continue_to_breakpoint "breakpt" ".* Break Here\\. .*"
 
     return 1

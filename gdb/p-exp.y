@@ -615,7 +615,7 @@ block	:	BLOCKNAME
 			      struct symtab *tem =
 				  lookup_symtab (current_program_space, copy.c_str ());
 			      if (tem)
-				$$ = (tem->compunit ()->blockvector ()
+				$$ = (tem->compunit ().blockvector ()
 				      ->static_block ());
 			      else
 				error (_("No file or function \"%s\"."),

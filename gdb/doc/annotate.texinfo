@@ -124,12 +124,12 @@ for details.
 This GDB was configured as "sparc-sun-sunos4.1.3"
 
 ^Z^Zpre-prompt
-(gdb) 
+(gdb)@w{ }
 ^Z^Zprompt
 quit
 
 ^Z^Zpost-prompt
-$ 
+$@w{ }
 @end smallexample
 
 Here @samp{quit} is input to @value{GDBN}; the rest is output from
@@ -729,13 +729,13 @@ deleted a breakpoint.
 @findex starting
 @findex stopping
 When the program starts executing due to a @value{GDBN} command such as
-@code{step} or @code{continue}, 
+@code{step} or @code{continue},
 
 @smallexample
 ^Z^Zstarting
 @end smallexample
 
-is output.  When the program stops, 
+is output.  When the program stops,
 
 @smallexample
 ^Z^Zstopped

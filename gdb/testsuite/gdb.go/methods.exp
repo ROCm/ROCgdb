@@ -72,7 +72,7 @@ if { $found_wrong_foo } {
     #    <6c46c>   DW_AT_name        : main.T.Foo
 }
 
-if { [gdb_breakpoint ${bp_location1} message]} {
+if { [gdb_breakpoint ${bp_location1} -message]} {
     gdb_test "cont" "Breakpoint .*, ${bp_location1}.*" \
 	"going to first breakpoint"
 }
@@ -96,7 +96,7 @@ if { $found_wrong_bar == 1 } {
     # diverge between gc and gccgo.  So, we accept the main.T.Bar as valid.
 }
 
-if { [gdb_breakpoint ${bp_location2} message] } {
+if { [gdb_breakpoint ${bp_location2} -message] } {
     gdb_test "cont" "Breakpoint .*, ${bp_location2}.*" \
 	"going to second breakpoint"
 }

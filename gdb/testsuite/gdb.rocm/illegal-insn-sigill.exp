@@ -39,7 +39,7 @@ proc do_test { } {
 	    return
 	}
 
-	gdb_breakpoint "illegal_insn" "allow-pending"
+	gdb_breakpoint "illegal_insn" -allow-pending
 	gdb_continue_to_breakpoint "illegal_insn"
 
 	# Check that the disassembler recognises the next instruction as

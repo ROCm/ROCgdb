@@ -259,7 +259,7 @@ notes_calloc (size_t n, size_t size)
 {
   size_t amt;
   void *ret;
-  if (gas_mul_overflow (n, size, &amt))
+  if (_bfd_mul_overflow (n, size, &amt))
     {
       obstack_alloc_failed_handler ();
       abort ();
