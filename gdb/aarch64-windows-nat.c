@@ -136,12 +136,17 @@ const int aarch64_mappings[] =
 std::vector<CORE_ADDR>
 aarch64_windows_nat_target::stopped_data_addresses ()
 {
-  if (aarch64_windows_process.siginfo_er.ExceptionCode != EXCEPTION_BREAKPOINT
-      || aarch64_windows_process.siginfo_er.NumberParameters != 2)
+  windows_thread_info *th = aarch64_windows_process.find_thread (inferior_ptid);
+  if (th == nullptr
+      || th->last_event.dwDebugEventCode != EXCEPTION_DEBUG_EVENT)
     return {};
 
-  const CORE_ADDR addr_trap
-    = (CORE_ADDR) aarch64_windows_process.siginfo_er.ExceptionInformation[1];
+  EXCEPTION_RECORD &er = th->last_event.u.Exception.ExceptionRecord;
+  if (er.ExceptionCode != EXCEPTION_BREAKPOINT
+      || er.NumberParameters != 2)
+    return {};
+
+  const CORE_ADDR addr_trap = (CORE_ADDR) er.ExceptionInformation[1];
 
   struct aarch64_debug_reg_state *state
     = aarch64_get_debug_reg_state (inferior_ptid.pid ());
