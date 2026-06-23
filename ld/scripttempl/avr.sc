@@ -271,6 +271,8 @@ cat <<EOF
     *(.fini0)  /* Infinite loop after program termination.  */
     KEEP (*(.fini0))
 
+    *(.gnu.linkonce.t*)
+
     /* For code that needs not to reside in the lower progmem.  */
     *(.hightext)
     *(.hightext*)
@@ -336,6 +338,7 @@ cat <<EOF
     ${RELOCATING+ PROVIDE (__bss_start = .) ; }
     *(.bss)
     ${RELOCATING+ *(.bss*)}
+    ${RELOCATING+ *(.gnu.linkonce.b*)}
     ${RELOCATING+ *(COMMON)}
     ${RELOCATING+ PROVIDE (__bss_end = .) ; }
   } ${RELOCATING+ > data}
