@@ -297,7 +297,7 @@ struct gdb_exception_error : public gdb_exception
   explicit gdb_exception_error (gdb_exception &&ex) noexcept
     : gdb_exception (std::move (ex))
   {
-    gdb_assert (ex.reason == RETURN_ERROR);
+    gdb_assert (reason == RETURN_ERROR);
   }
 };
 
@@ -312,7 +312,7 @@ struct gdb_exception_quit : public gdb_exception
   explicit gdb_exception_quit (gdb_exception &&ex) noexcept
     : gdb_exception (std::move (ex))
   {
-    gdb_assert (ex.reason == RETURN_QUIT);
+    gdb_assert (reason == RETURN_QUIT);
   }
 };
 
@@ -327,7 +327,7 @@ struct gdb_exception_forced_quit : public gdb_exception
   explicit gdb_exception_forced_quit (gdb_exception &&ex) noexcept
     : gdb_exception (std::move (ex))
   {
-    gdb_assert (ex.reason == RETURN_FORCED_QUIT);
+    gdb_assert (reason == RETURN_FORCED_QUIT);
   }
 };
 
