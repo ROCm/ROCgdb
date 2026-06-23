@@ -91,9 +91,20 @@ gdb_caching_proc find_amdgpu_devices {} {
 
     set result [log_host_exec "$obj"]
     if {[lindex $result 0] == 0} {
-	set targets [lindex $result 1]
-	# Convert newline-separated string to a list.
-	return [list {*}$targets]
+	# Keep only lines that look like a concrete gfx target
+	# (e.g. gfx906, gfx1151).  Some HIP runtime builds print
+	# diagnostic banners to stdout (e.g. "HIP Library Path:
+	# C:\WINDOWS\SYSTEM32\amdhip64_7.dll") which would otherwise be
+	# mis-parsed as GPU targets and fed to HIPCC as bogus
+	# --offload-arch values.
+	set targets {}
+	foreach line [split [lindex $result 1] "\n"] {
+	    set line [string trim $line]
+	    if {[regexp {^gfx[0-9a-f]+$} $line]} {
+		lappend targets $line
+	    }
+	}
+	return $targets
     }
 
     return {}
