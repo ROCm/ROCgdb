@@ -321,7 +321,7 @@ private:
   DWORD continue_status_for_event_detaching
     (const DEBUG_EVENT &event, size_t *reply_later_events_left = nullptr);
 
-  DWORD prepare_resume (windows_thread_info *wth,
+  DWORD prepare_resume (windows_thread_info *th,
 			thread_info *tp,
 			int step, gdb_signal sig);
 

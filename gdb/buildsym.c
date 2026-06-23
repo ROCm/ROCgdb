@@ -924,15 +924,15 @@ buildsym_compunit::augment_type_symtab ()
     }
 }
 
-/* Push a context block.  VALU is the starting PC address of this
+/* Push a context block.  VALUE is the starting PC address of this
    context.  */
 
 void
-buildsym_compunit::push_context (CORE_ADDR valu)
+buildsym_compunit::push_context (CORE_ADDR value)
 {
   m_context_stack.emplace_back (std::move (m_local_symbols),
 				m_local_using_directives,
-				m_pending_blocks, valu);
+				m_pending_blocks, value);
   m_local_using_directives = nullptr;
 }
 

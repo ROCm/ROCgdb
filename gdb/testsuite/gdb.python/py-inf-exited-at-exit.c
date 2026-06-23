@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2010-2026 Free Software Foundation, Inc.
+   Copyright 2026 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,24 +13,32 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see  <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-extern void do_nothing (void);
+#include <unistd.h>
+#include "gdb_watchdog.h"
 
-int second(){
-  return 12;
+/* GDB can set GLOBAL_VAR to non-zero to cause the inferior to exit.  */
+volatile int global_var = 0;
+
+/* This is used just to create some content that GDB can break on.  */
+volatile int other_var = 0;
+
+void
+foo (void)
+{
+  while (global_var == 0)
+    {
+      sleep (1);
+      other_var = 42;	/* Break here.  */
+    }
 }
 
-int first(){
-  int i;
+int
+main (void)
+{
+  gdb_watchdog (300);
 
-  for (i = 0; i < 2; i++)
-    do_nothing ();
-
-  return second();
-}
-
-int main (){
-  do_nothing();
-  return first();
+  foo ();
+  return 0;
 }

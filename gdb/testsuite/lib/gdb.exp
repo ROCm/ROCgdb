@@ -6357,6 +6357,10 @@ proc gdb_can_simple_compile_nodebug {name code {type object} {compile_flags ""}
 # compiling the special object for that language yet.
 global gdb_saved_set_unbuffered_mode_obj
 
+# The name of the set_unbuffered_mode_saved.o object.  Stored in a
+# global variable so it can be overridden in some cases.
+set gdb_saved_set_unbuffered_mode_obj_name set_unbuffered_mode_saved.o
+
 # Escape STR sufficiently for use on host commandline.
 
 proc escape_for_host { str } {
@@ -6431,6 +6435,7 @@ proc quote_for_host { args } {
 #     Fortran 90, Go or Rust.
 #   - debug: Build with debug information.
 #   - optimize: Build with optimization.
+#   - win32: Build a native Windows program.  Cygwin only.
 
 proc gdb_compile {source dest type options} {
     global GDB_TESTCASE_OPTIONS
@@ -6461,6 +6466,11 @@ proc gdb_compile {source dest type options} {
     }
 
     set outdir [file dirname $dest]
+
+    # Handle compiling native Windows programs when testing Cygwin.
+    if { [istarget *-*-cygwin*] && [lsearch -exact $options win32] != -1} {
+	return [gdb_compile_win32 $source $dest $type $options]
+    }
 
     # GDB doesn't support minimal symbols in AIX, so fail the compilation
     # if nodebug is requested for an AIX target.
@@ -6961,7 +6971,9 @@ proc gdb_compile {source dest type options} {
 		# This gives us a per-expect-instance unique filename,
 		# which is important for GDB_PARALLEL.  See comments
 		# above.
-		set unbuf_obj_basename set_unbuffered_mode-$unbuf_obj_lang.o
+		set unbuf_obj_basename \
+		    [file rootname $::gdb_saved_set_unbuffered_mode_obj_name \
+		    ]-$unbuf_obj_lang.o
 		set unbuf_obj [standard_temp_file $unbuf_obj_basename]
 
 		set unbuf_obj_options {nowarnings}
@@ -7383,6 +7395,38 @@ proc gdb_compile_objc {source dest type options} {
 proc gdb_compile_openmp {source dest type options} {
     lappend options "additional_flags=-fopenmp"
     return [gdb_compile $source $dest $type $options]
+}
+
+# Build a native Windows program from SOURCE.  See prefatory comment
+# for gdb_compile, above, for discussion of the parameters to this
+# proc.  This is meant to be used on Cygwin, to smoke test debugging
+# native Windows programs with the Cygwin native backend.
+
+proc gdb_compile_win32 {source dest type options} {
+    if {![istarget *-*-cygwin*]} {
+	error "cygwin procedure called on non-cygwin target"
+    }
+
+    save_vars {
+	::target_triplet
+	::CC_FOR_TARGET
+	::gdb_saved_set_unbuffered_mode_obj
+	::gdb_saved_set_unbuffered_mode_obj_name
+    } {
+	# So we trigger the set_unbuffered_mode_obj paths.
+	set ::target_triplet "x86_64-w64-mingw32"
+
+	# We need a Win32-specific compilation of the
+	# set_unbuffered_mode object.
+	set ::gdb_saved_set_unbuffered_mode_obj ""
+	set ::gdb_saved_set_unbuffered_mode_obj_name \
+	    set_unbuffered_mode_saved_win32.o
+
+	# Do this last, as this tries compiling internally.
+	set ::CC_FOR_TARGET [win32_cc_for_target]
+
+	return [gdb_compile $source $dest $type $options]
+    }
 }
 
 # Send a command to GDB.
@@ -11737,6 +11781,62 @@ gdb_caching_proc arm_cc_for_target {} {
 
 	    if { $output == "" && $status == 0} {
 		return $compiler
+	    }
+	}
+    }
+
+    return ""
+}
+
+# Return the compiler that can generate native Windows executables.
+# Used when testing basic native Windows support on Cygwin.  If
+# WIN32_CC_FOR_TARGET is set, use that.  If not, try a few common
+# compiler names, making sure that the executable they produce can
+# run.  Note, this assumes global state has been set to target native
+# Windows programs.  See gdb_compile_win32.
+
+gdb_caching_proc win32_cc_for_target {} {
+    if {[info exists ::WIN32_CC_FOR_TARGET]} {
+	# If the user specified the compiler explicitly, then don't
+	# check whether the resulting binary runs outside GDB.  Assume
+	# that it does, and if it turns out it doesn't, then the user
+	# should get loud FAILs, instead of UNSUPPORTED.
+	return $::WIN32_CC_FOR_TARGET
+    }
+
+    # Fallback to a few common compiler names.  Also confirm the
+    # produced binary actually runs on the system before declaring
+    # we've found the right compiler.
+
+    # Only one compiler for now.
+    set compilers {
+	x86_64-w64-mingw32-gcc
+    }
+
+    save_vars {
+	::CC_FOR_TARGET
+    } {
+	foreach compiler $compilers {
+	    if {![is_remote host] && [which $compiler] == 0} {
+		# Avoid "default_target_compile: Can't find
+		# $compiler." warning issued from gdb_compile.
+		continue
+	    }
+
+	    set ::CC_FOR_TARGET $compiler
+
+	    set src { int main() { return 0; } }
+	    if {[gdb_simple_compile win32-test-prog $src executable]} {
+		set target_obj [gdb_remote_download target $obj]
+		set result [remote_exec target $target_obj]
+		set status [lindex $result 0]
+		set output [lindex $result 1]
+
+		file delete $obj
+
+		if { $output == "" && $status == 0} {
+		    return $compiler
+		}
 	    }
 	}
     }

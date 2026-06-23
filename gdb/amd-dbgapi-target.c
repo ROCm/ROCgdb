@@ -20,6 +20,7 @@
 
 
 #include "amd-dbgapi-target.h"
+#include "amd-dbgapi-hdep.h"
 #include "amdgpu-tdep.h"
 #include "arch-utils.h"
 #include "async-event.h"
@@ -222,7 +223,7 @@ struct amd_dbgapi_inferior_info
   amd_dbgapi_process_id_t process_id = AMD_DBGAPI_PROCESS_NONE;
 
   /* The amd_dbgapi_notifier_t for this inferior.  */
-  amd_dbgapi_notifier_t notifier = -1;
+  amd_dbgapi_notifier_t notifier = null_amd_dbgapi_notifier;
 
   /* The status of the inferior's runtime support.  */
   amd_dbgapi_runtime_state_t runtime_state = AMD_DBGAPI_RUNTIME_STATE_UNLOADED;
@@ -991,7 +992,7 @@ amd_dbgapi_target::thread_name (thread_info *tp)
 
      Some kernel entry point functions have very long names, so we
      have a hardcoded length limit.  Very long names are not really
-     useful to users, and would make "info threads" output unuseable
+     useful to users, and would make "info threads" output unusable
      otherwise.  If the function name is longer than the limit, we
      trim it and append a 4-characters hash of the trimmed function
      name so that two trimmed function names with the same prefix
@@ -1303,9 +1304,32 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 {
   std::optional<scoped_restore_current_thread> maybe_restore_thread;
 
-  if (!ptid_is_gpu (inferior_ptid) || object == TARGET_OBJECT_AUXV)
-    return beneath ()->xfer_partial (object, annex, readbuf, writebuf, offset,
-				     requested_len, xfered_len);
+  /* We want to handle most of the memory requests using amd_dbgapi.
+     This is because on Windows, memory allocated on the GPUs cannot
+     be accessed using the Win32 ReadProcessMemory/WriteProcessMemory
+     calls, in the Windows native target (windows_nat_target).  Even
+     if the current thread is a host thread, we might still need to
+     access some memory on the GPU, for example to access code objects
+     loaded on the device to place breakpoints.
+
+     For everything that is available on the host address space,
+     amd_dbgapi uses the amd_dbgapi_xfer_global_memory_callback
+     callback to do the xfer operation, which calls into whatever is
+     beneath us on the target stack.
+
+     There is one case where we do not want to use dbgapi to perform
+     the memory operations: when removing breakpoints from the child
+     process after a fork.  When this happens, the child does not have
+     an inferior of its own, so instead current_inferior() refers to
+     the parent, and inferior_ptid has the child's PTID.  We can use
+     the parent's process_stratum_target (the one below us) to do the
+     memory operation, but dbgapi knows nothing about the child and
+     would try to update the parent's memory.  */
+  if ((!ptid_is_gpu (inferior_ptid) && object != TARGET_OBJECT_MEMORY)
+      || inferior_ptid.pid () != current_inferior ()->pid
+      || object == TARGET_OBJECT_AUXV)
+    return beneath ()->xfer_partial (object, annex, readbuf, writebuf,
+				     offset, requested_len, xfered_len);
 
   gdb_assert (requested_len > 0);
   gdb_assert (xfered_len != nullptr);
@@ -1323,7 +1347,9 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 
   amd_dbgapi_process_id_t process_id
     = get_amd_dbgapi_process_id (current_inferior ());
-  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
+  amd_dbgapi_wave_id_t wave_id = (ptid_is_gpu (inferior_ptid)
+				  ? get_amd_dbgapi_wave_id (inferior_ptid)
+				  : AMD_DBGAPI_WAVE_NONE);
 
   amd_dbgapi_architecture_id_t architecture_id;
   amd_dbgapi_address_space_id_t address_space_id;
@@ -1852,15 +1878,8 @@ dbgapi_notifier_handler (int err, gdb_client_data client_data)
 {
   amd_dbgapi_inferior_info &info
     = *static_cast<amd_dbgapi_inferior_info *> (client_data);
-  int ret;
 
-  /* Drain the notifier pipe.  */
-  do
-    {
-      char buf;
-      ret = read (info.notifier, &buf, 1);
-    }
-  while (ret >= 0 || (ret == -1 && errno == EINTR));
+  amd_dbgapi_notifier_clear (info.notifier);
 
   if (info.inf->target_is_pushed (&the_amd_dbgapi_target))
     {
@@ -1970,8 +1989,9 @@ amd_dbgapi_target::async (bool enable)
 	{
 	  amd_dbgapi_inferior_info &info = get_amd_dbgapi_inferior_info (inf);
 
-	  if (info.notifier != -1)
-	    add_file_handler (info.notifier, dbgapi_notifier_handler, &info,
+	  if (info.notifier != null_amd_dbgapi_notifier)
+	    add_file_handler (amd_dbgapi_notifier_get_fd (info.notifier),
+			      dbgapi_notifier_handler, &info,
 			      string_printf ("amd-dbgapi notifier for pid %d",
 					     inf->pid));
 	}
@@ -1994,8 +2014,8 @@ amd_dbgapi_target::async (bool enable)
 	  const amd_dbgapi_inferior_info &info
 	    = get_amd_dbgapi_inferior_info (inf);
 
-	  if (info.notifier != -1)
-	    delete_file_handler (info.notifier);
+	  if (info.notifier != null_amd_dbgapi_notifier)
+	    delete_file_handler (amd_dbgapi_notifier_get_fd (info.notifier));
 	}
 
       delete_async_event_handler (&amd_dbgapi_async_event_handler);
@@ -2615,7 +2635,8 @@ attach_amd_dbgapi (inferior *inf)
     }
 
   amd_dbgapi_debug_printf ("process_id = %" PRIu64 ", notifier fd = %d",
-			   info.process_id.handle, info.notifier);
+			   info.process_id.handle,
+			   amd_dbgapi_notifier_get_fd (info.notifier));
 
   set_process_memory_precision (info);
   set_process_alu_exceptions_precision (info);
@@ -2625,8 +2646,8 @@ attach_amd_dbgapi (inferior *inf)
      target.  */
   dbgapi_notifier_handler (0, &info);
 
-  add_file_handler (info.notifier, dbgapi_notifier_handler, &info,
-		    "amd-dbgapi notifier");
+  add_file_handler (amd_dbgapi_notifier_get_fd (info.notifier),
+		    dbgapi_notifier_handler, &info, "amd-dbgapi notifier");
 }
 
 static void maybe_reset_amd_dbgapi ();
@@ -2655,10 +2676,10 @@ detach_amd_dbgapi (inferior *inf)
 	     inf->pid, get_status_string (status));
 
   /* When debugging a corefile, the notifier is not initialized.  */
-  if (info.notifier != -1)
+  if (info.notifier != null_amd_dbgapi_notifier)
     {
-      delete_file_handler (info.notifier);
-      info.notifier = -1;
+      delete_file_handler (amd_dbgapi_notifier_get_fd (info.notifier));
+      amd_dbgapi_notifier_release (info.notifier);
     }
 
   /* This is a noop if the target is not pushed.  */
@@ -3331,9 +3352,16 @@ amd_dbgapi_xfer_global_memory_callback
   set_current_inferior (inf);
   set_current_program_space (inf->pspace);
 
+  /* To ensure that the callback request is not routed back to dbgapi,
+     route the request to whichever target sits below the amd-dbgapi
+     target on the target stack.  */
+  target_ops *handler = (inf->target_is_pushed (&the_amd_dbgapi_target)
+			 ? inf->find_target_beneath (&the_amd_dbgapi_target)
+			 : inf->top_target ());
+
   target_xfer_status status
-    = target_xfer_partial (inf->top_target (), TARGET_OBJECT_RAW_MEMORY,
-			   nullptr, static_cast<gdb_byte *> (read_buffer),
+    = target_xfer_partial (handler, TARGET_OBJECT_RAW_MEMORY, nullptr,
+			   static_cast<gdb_byte *> (read_buffer),
 			   static_cast<const gdb_byte *> (write_buffer),
 			   global_address, *value_size, value_size);
 

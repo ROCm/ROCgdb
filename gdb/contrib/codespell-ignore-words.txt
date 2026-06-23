@@ -19,13 +19,42 @@
 #
 # [1] https://github.com/codespell-project/codespell/issues/2063
 
+# Autoconf related things, like tools and files.
 configury
+# Scalable Matrix Extension.
 sme
+# Company name.
 Synopsys
+# As in DWARF section .debug_aranges.
+aranges
+# Floating Point Register.
+fpr
+# Parameter.
+parm
+# As in "wither away".
+wither
+# SystemTap.
+stap
+# An includer includes an includee.
+includee
+# Stepping using next.
+nexting
+# Parameters.
+parms
+# System Object Model.
+SOM
+# Short for static variables and/or functions.
+statics
+# Structured Exception Handling.
+seh
+# Abbreviation for index.
+indx
+# Heterogeneous System Architecture.
+HSA
+# Grand Unified Debugger.
+GUD
+# Jargon for endianness.
+endianity
+# Downstream ROCgdb lingo.
 HSA
 offen
-aranges
-fpr
-parm
-wither
-stap

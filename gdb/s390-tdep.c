@@ -301,6 +301,7 @@ s390_is_partial_instruction (struct gdbarch *gdbarch, CORE_ADDR loc, int *len)
       break;
     }
 
+  /* codespell:ignore-begin.  */
   switch (insn)
     {
     case 0xb255: /* MVST */
@@ -325,6 +326,7 @@ s390_is_partial_instruction (struct gdbarch *gdbarch, CORE_ADDR loc, int *len)
       *len = 4;
       return 1;
     }
+  /* codespell:ignore-end.  */
 
   return 0;
 }
@@ -3373,6 +3375,7 @@ ex:
 	return -1;
       break;
 
+    /* codespell:ignore-begin.  */
     case 0x20: /* LPDR - load positive */
     case 0x30: /* LPER - load positive */
     case 0x21: /* LNDR - load negative */
@@ -3397,6 +3400,7 @@ ex:
     case 0x3f: /* SUR - subtract unnormalized */
     case 0x6f: /* SW - subtract unnormalized */
     case 0x7f: /* SU - subtract unnormalized */
+    /* codespell:ignore-end.  */
       /* float destination + flags */
       if (record_full_arch_list_add_reg (regcache, S390_F0_REGNUM + inib[2]))
 	return -1;
@@ -3923,7 +3927,9 @@ ex:
 
 	/* 0xb29e-0xb2a4 undefined */
 
+	/* codespell:ignore-begin.  */
 	case 0xb2a5: /* TRE - translate extended [partial] */
+	/* codespell:ignore-end.  */
 	  regcache_raw_read_unsigned (regcache, S390_R0_REGNUM + inib[6], &tmp);
 	  oaddr = s390_record_address_mask (gdbarch, regcache, tmp);
 	  regcache_raw_read_unsigned (regcache, S390_R0_REGNUM + (inib[6] | 1), &tmp);

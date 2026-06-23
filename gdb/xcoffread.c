@@ -235,7 +235,7 @@ xcoff_get_toc_offset (objfile *objfile)
   return 0;
 }
 
-/* This function is used to read minimal sysmbols from the XCOFF STABS
+/* This function is used to read minimal symbols from the XCOFF STABS
    symbol table. This function needs to be called when a library (like
    libc) in AIX is compiled using xlc whose debug format is STABS.
    When STABS debug information is not available, then in the backtrace

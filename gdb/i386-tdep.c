@@ -4399,7 +4399,7 @@ struct i386_record_s
   int override;
   uint8_t modrm;
   uint8_t mod, reg, rm;
-  int ot;
+  int operand_type;  /* OT_BYTE/OT_WORD/OT_LONG/OT_QUAD/OT_DQUAD.  */
   uint8_t rex_x;
   uint8_t rex_b;
   int rip_offset;
@@ -4657,7 +4657,7 @@ Do you want to stop the program?"),
   if (i386_record_lea_modrm_addr (irp, &addr))
     return -1;
 
-  if (record_full_arch_list_add_mem (addr, 1 << irp->ot))
+  if (record_full_arch_list_add_mem (addr, 1 << irp->operand_type))
     return -1;
 
   return 0;
@@ -4807,9 +4807,9 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 	     latter works exactly like 0x29, but the former encodes the size
 	     on VEX.pp itself.  */
 	  if (opcode == 0x11 && (ir->pp & 2) != 0)
-	    ir->ot = ir->pp;
+	    ir->operand_type = ir->pp;
 	  else
-	    ir->ot = 4 + ir->l;
+	    ir->operand_type = 4 + ir->l;
 	  i386_record_lea_modrm (ir);
 	}
       break;
@@ -4848,15 +4848,15 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 	  else
 	    {
 	      /* Calculate the size of memory that will be modified
-		 and store it in the form of 1 << ir->ot, since that
+		 and store it in the form of 1 << ir->operand_type, since that
 		 is how the function uses it.  In theory, VEX.W is supposed
 		 to indicate the size of the memory. In practice, I only
 		 ever seen it set to 0, and for 16 bytes, 0xD6 opcode
 		 is used.  */
 	      if (vex_w)
-		ir->ot = 4;
+		ir->operand_type = 4;
 	      else
-		ir->ot = 3;
+		ir->operand_type = 3;
 
 	      i386_record_lea_modrm (ir);
 	    }
@@ -4888,7 +4888,7 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
       else
 	{
 	  /* We know that this operation is always 64 bits.  */
-	  ir->ot = 4;
+	  ir->operand_type = 4;
 	  i386_record_lea_modrm (ir);
 	}
       break;
@@ -4936,7 +4936,7 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 	  else
 	    {
 	      /* We're writing 256 bits, so 1<<8.  */
-	      ir->ot = 8;
+	      ir->operand_type = 8;
 	      i386_record_lea_modrm (ir);
 	    }
 	}
@@ -5008,9 +5008,9 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
 		   address, so all of them are passed along.  */
 		/* Size is mostly based on the opcode, except for
 		   double/quadword difference.  */
-		ir->ot = opcode - 0x14;
+		ir->operand_type = opcode - 0x14;
 		if (opcode == 0x16 && vex_w == 1)
-		  ir->ot ++;
+		  ir->operand_type ++;
 		/* I'm not sure if this is the original use, but in here
 		   rip_offset is used to indicate that the RIP pointer will
 		   be 1 byte away from where the instruction expects it to
@@ -5068,7 +5068,7 @@ i386_record_vex (struct i386_record_s *ir, uint8_t vex_w, uint8_t vex_r,
       i386_record_modrm (ir);
       if (ir->map_select == 1) /* This is the VMOV family.  */
 	{
-	  ir->ot = 3;
+	  ir->operand_type = 3;
 	  i386_record_lea_modrm (ir);
 	}
       else
@@ -5455,9 +5455,9 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
       if (((opcode >> 3) & 7) != OP_CMPL)
 	{
 	  if ((opcode & 1) == 0)
-	    ir.ot = OT_BYTE;
+	    ir.operand_type = OT_BYTE;
 	  else
-	    ir.ot = ir.dflag + OT_WORD;
+	    ir.operand_type = ir.dflag + OT_WORD;
 
 	  switch ((opcode >> 1) & 3)
 	    {
@@ -5472,7 +5472,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	      else
 		{
 		  ir.rm |= ir.rex_b;
-		  if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+		  if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 		    ir.rm &= 0x3;
 		  I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.rm);
 		}
@@ -5481,7 +5481,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	      if (i386_record_modrm (&ir))
 		return -1;
 	      ir.reg |= rex_r;
-	      if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+	      if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 		ir.reg &= 0x3;
 	      I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.reg);
 	      break;
@@ -5503,16 +5503,16 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
       if (ir.reg != OP_CMPL)
 	{
 	  if ((opcode & 1) == 0)
-	    ir.ot = OT_BYTE;
+	    ir.operand_type = OT_BYTE;
 	  else
-	    ir.ot = ir.dflag + OT_WORD;
+	    ir.operand_type = ir.dflag + OT_WORD;
 
 	  if (ir.mod != 3)
 	    {
 	      if (opcode == 0x83)
 		ir.rip_offset = 1;
 	      else
-		ir.rip_offset = (ir.ot > OT_LONG) ? 4 : (1 << ir.ot);
+		ir.rip_offset = (ir.operand_type > OT_LONG) ? 4 : (1 << ir.operand_type);
 	      if (i386_record_lea_modrm (&ir))
 		return -1;
 	    }
@@ -5547,14 +5547,14 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 0xf6:    /* GRP3 */
     case 0xf7:
       if ((opcode & 1) == 0)
-	ir.ot = OT_BYTE;
+	ir.operand_type = OT_BYTE;
       else
-	ir.ot = ir.dflag + OT_WORD;
+	ir.operand_type = ir.dflag + OT_WORD;
       if (i386_record_modrm (&ir))
 	return -1;
 
       if (ir.mod != 3 && ir.reg == 0)
-	ir.rip_offset = (ir.ot > OT_LONG) ? 4 : (1 << ir.ot);
+	ir.rip_offset = (ir.operand_type > OT_LONG) ? 4 : (1 << ir.operand_type);
 
       switch (ir.reg)
 	{
@@ -5571,7 +5571,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	  else
 	    {
 	      ir.rm |= ir.rex_b;
-	      if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+	      if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 		ir.rm &= 0x3;
 	      I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.rm);
 	    }
@@ -5583,7 +5583,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	case 6:    /* div  */
 	case 7:    /* idiv */
 	  I386_RECORD_FULL_ARCH_LIST_ADD_REG (X86_RECORD_REAX_REGNUM);
-	  if (ir.ot != OT_BYTE)
+	  if (ir.operand_type != OT_BYTE)
 	    I386_RECORD_FULL_ARCH_LIST_ADD_REG (X86_RECORD_REDX_REGNUM);
 	  I386_RECORD_FULL_ARCH_LIST_ADD_REG (X86_RECORD_EFLAGS_REGNUM);
 	  break;
@@ -5610,9 +5610,9 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	case 0:    /* inc */
 	case 1:    /* dec */
 	  if ((opcode & 1) == 0)
-	    ir.ot = OT_BYTE;
+	    ir.operand_type = OT_BYTE;
 	  else
-	    ir.ot = ir.dflag + OT_WORD;
+	    ir.operand_type = ir.dflag + OT_WORD;
 	  if (ir.mod != 3)
 	    {
 	      if (i386_record_lea_modrm (&ir))
@@ -5621,7 +5621,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	  else
 	    {
 	      ir.rm |= ir.rex_b;
-	      if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+	      if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 		ir.rm &= 0x3;
 	      I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.rm);
 	    }
@@ -5677,15 +5677,15 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 0x0faf:  /* imul */
     case 0x69:
     case 0x6b:
-      ir.ot = ir.dflag + OT_WORD;
+      ir.operand_type = ir.dflag + OT_WORD;
       if (i386_record_modrm (&ir))
 	return -1;
       if (opcode == 0x69)
-	ir.rip_offset = (ir.ot > OT_LONG) ? 4 : (1 << ir.ot);
+	ir.rip_offset = (ir.operand_type > OT_LONG) ? 4 : (1 << ir.operand_type);
       else if (opcode == 0x6b)
 	ir.rip_offset = 1;
       ir.reg |= rex_r;
-      if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+      if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	ir.reg &= 0x3;
       I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.reg);
       I386_RECORD_FULL_ARCH_LIST_ADD_REG (X86_RECORD_EFLAGS_REGNUM);
@@ -5694,18 +5694,18 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 0x0fc0:  /* xadd */
     case 0x0fc1:
       if ((opcode & 1) == 0)
-	ir.ot = OT_BYTE;
+	ir.operand_type = OT_BYTE;
       else
-	ir.ot = ir.dflag + OT_WORD;
+	ir.operand_type = ir.dflag + OT_WORD;
       if (i386_record_modrm (&ir))
 	return -1;
       ir.reg |= rex_r;
       if (ir.mod == 3)
 	{
-	  if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+	  if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	    ir.reg &= 0x3;
 	  I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.reg);
-	  if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+	  if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	    ir.rm &= 0x3;
 	  I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.rm);
 	}
@@ -5713,7 +5713,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	{
 	  if (i386_record_lea_modrm (&ir))
 	    return -1;
-	  if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+	  if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	    ir.reg &= 0x3;
 	  I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.reg);
 	}
@@ -5723,16 +5723,16 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 0x0fb0:  /* cmpxchg */
     case 0x0fb1:
       if ((opcode & 1) == 0)
-	ir.ot = OT_BYTE;
+	ir.operand_type = OT_BYTE;
       else
-	ir.ot = ir.dflag + OT_WORD;
+	ir.operand_type = ir.dflag + OT_WORD;
       if (i386_record_modrm (&ir))
 	return -1;
       if (ir.mod == 3)
 	{
 	  ir.reg |= rex_r;
 	  I386_RECORD_FULL_ARCH_LIST_ADD_REG (X86_RECORD_REAX_REGNUM);
-	  if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+	  if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	    ir.reg &= 0x3;
 	  I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.reg);
 	}
@@ -5859,16 +5859,16 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 
     case 0x8f:    /* pop */
       if (ir.regmap[X86_RECORD_R8_REGNUM])
-	ir.ot = ir.dflag ? OT_QUAD : OT_WORD;
+	ir.operand_type = ir.dflag ? OT_QUAD : OT_WORD;
       else
-	ir.ot = ir.dflag + OT_WORD;
+	ir.operand_type = ir.dflag + OT_WORD;
       if (i386_record_modrm (&ir))
 	return -1;
       if (ir.mod == 3)
 	I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.rm | ir.rex_b);
       else
 	{
-	  ir.popl_esp_hack = 1 << ir.ot;
+	  ir.popl_esp_hack = 1 << ir.operand_type;
 	  if (i386_record_lea_modrm (&ir))
 	    return -1;
 	}
@@ -5938,9 +5938,9 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 0xc6:
     case 0xc7:
       if ((opcode & 1) == 0)
-	ir.ot = OT_BYTE;
+	ir.operand_type = OT_BYTE;
       else
-	ir.ot = ir.dflag + OT_WORD;
+	ir.operand_type = ir.dflag + OT_WORD;
 
       if (i386_record_modrm (&ir))
 	return -1;
@@ -5948,7 +5948,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
       if (ir.mod != 3)
 	{
 	  if (opcode == 0xc6 || opcode == 0xc7)
-	    ir.rip_offset = (ir.ot > OT_LONG) ? 4 : (1 << ir.ot);
+	    ir.rip_offset = (ir.operand_type > OT_LONG) ? 4 : (1 << ir.operand_type);
 	  if (i386_record_lea_modrm (&ir))
 	    return -1;
 	}
@@ -5956,7 +5956,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	{
 	  if (opcode == 0xc6 || opcode == 0xc7)
 	    ir.rm |= ir.rex_b;
-	  if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+	  if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	    ir.rm &= 0x3;
 	  I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.rm);
 	}
@@ -5965,13 +5965,13 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
     case 0x8a:    /* mov */
     case 0x8b:
       if ((opcode & 1) == 0)
-	ir.ot = OT_BYTE;
+	ir.operand_type = OT_BYTE;
       else
-	ir.ot = ir.dflag + OT_WORD;
+	ir.operand_type = ir.dflag + OT_WORD;
       if (i386_record_modrm (&ir))
 	return -1;
       ir.reg |= rex_r;
-      if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+      if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	ir.reg &= 0x3;
       I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.reg);
       break;
@@ -5990,7 +5990,7 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.rm);
       else
 	{
-	  ir.ot = OT_WORD;
+	  ir.operand_type = OT_WORD;
 	  if (i386_record_lea_modrm (&ir))
 	    return -1;
 	}
@@ -6044,9 +6044,9 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	  opcode = opcode << 8 | ir.modrm;
 	  goto no_support;
 	}
-      ir.ot = ir.dflag;
+      ir.operand_type = ir.dflag;
       ir.reg |= rex_r;
-      if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+      if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	ir.reg &= 0x3;
       I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.reg);
       break;
@@ -6075,9 +6075,9 @@ Do you want to stop the program?"),
       else
 	{
 	  if ((opcode & 1) == 0)
-	    ir.ot = OT_BYTE;
+	    ir.operand_type = OT_BYTE;
 	  else
-	    ir.ot = ir.dflag + OT_WORD;
+	    ir.operand_type = ir.dflag + OT_WORD;
 	  if (ir.aflag == 2)
 	    {
 	      if (record_read_memory (gdbarch, ir.addr, buf, 8))
@@ -6099,7 +6099,7 @@ Do you want to stop the program?"),
 	      ir.addr += 2;
 	      addr = extract_unsigned_integer (buf, 2, byte_order);
 	    }
-	  if (record_full_arch_list_add_mem (addr, 1 << ir.ot))
+	  if (record_full_arch_list_add_mem (addr, 1 << ir.operand_type))
 	    return -1;
 	}
       break;
@@ -6142,15 +6142,15 @@ Do you want to stop the program?"),
     case 0x86:    /* xchg Ev, Gv */
     case 0x87:
       if ((opcode & 1) == 0)
-	ir.ot = OT_BYTE;
+	ir.operand_type = OT_BYTE;
       else
-	ir.ot = ir.dflag + OT_WORD;
+	ir.operand_type = ir.dflag + OT_WORD;
       if (i386_record_modrm (&ir))
 	return -1;
       if (ir.mod == 3)
 	{
 	  ir.rm |= ir.rex_b;
-	  if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+	  if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	    ir.rm &= 0x3;
 	  I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.rm);
 	}
@@ -6160,7 +6160,7 @@ Do you want to stop the program?"),
 	    return -1;
 	}
       ir.reg |= rex_r;
-      if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+      if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	ir.reg &= 0x3;
       I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.reg);
       break;
@@ -6217,9 +6217,9 @@ Do you want to stop the program?"),
     case 0xd2:
     case 0xd3:
       if ((opcode & 1) == 0)
-	ir.ot = OT_BYTE;
+	ir.operand_type = OT_BYTE;
       else
-	ir.ot = ir.dflag + OT_WORD;
+	ir.operand_type = ir.dflag + OT_WORD;
       if (i386_record_modrm (&ir))
 	return -1;
       if (ir.mod != 3 && (opcode == 0xd2 || opcode == 0xd3))
@@ -6230,7 +6230,7 @@ Do you want to stop the program?"),
       else
 	{
 	  ir.rm |= ir.rex_b;
-	  if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
+	  if (ir.operand_type == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	    ir.rm &= 0x3;
 	  I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.rm);
 	}
@@ -6715,9 +6715,9 @@ Do you want to stop the program?"),
 	  ULONGEST es, ds;
 
 	  if ((opcode & 1) == 0)
-	    ir.ot = OT_BYTE;
+	    ir.operand_type = OT_BYTE;
 	  else
-	    ir.ot = ir.dflag + OT_WORD;
+	    ir.operand_type = ir.dflag + OT_WORD;
 	  regcache_raw_read_unsigned (ir.regcache,
 				      ir.regmap[X86_RECORD_REDI_REGNUM],
 				      &addr);
@@ -6743,7 +6743,7 @@ Do you want to stop the program?"),
 	    }
 	  else
 	    {
-	      if (record_full_arch_list_add_mem (addr, 1 << ir.ot))
+	      if (record_full_arch_list_add_mem (addr, 1 << ir.operand_type))
 		return -1;
 	    }
 
@@ -6891,7 +6891,7 @@ Do you want to stop the program?"),
     case 0x0f9e:
     case 0x0f9f:
       I386_RECORD_FULL_ARCH_LIST_ADD_REG (X86_RECORD_EFLAGS_REGNUM);
-      ir.ot = OT_BYTE;
+      ir.operand_type = OT_BYTE;
       if (i386_record_modrm (&ir))
 	return -1;
       if (ir.mod == 3)
@@ -6969,7 +6969,7 @@ Do you want to stop the program?"),
 
       /* bit operations */
     case 0x0fba:    /* bt/bts/btr/btc Gv, im */
-      ir.ot = ir.dflag + OT_WORD;
+      ir.operand_type = ir.dflag + OT_WORD;
       if (i386_record_modrm (&ir))
 	return -1;
       if (ir.reg < 4)
@@ -6998,7 +6998,7 @@ Do you want to stop the program?"),
     case 0x0fab:    /* bts */
     case 0x0fb3:    /* btr */
     case 0x0fbb:    /* btc */
-      ir.ot = ir.dflag + OT_WORD;
+      ir.operand_type = ir.dflag + OT_WORD;
       if (i386_record_modrm (&ir))
 	return -1;
       if (ir.mod == 3)
@@ -7023,7 +7023,7 @@ Do you want to stop the program?"),
 	      addr64 += ((int64_t) addr >> 6) << 6;
 	      break;
 	    }
-	  if (record_full_arch_list_add_mem (addr64, 1 << ir.ot))
+	  if (record_full_arch_list_add_mem (addr64, 1 << ir.operand_type))
 	    return -1;
 	  if (i386_record_lea_modrm (&ir))
 	    return -1;
@@ -7038,12 +7038,14 @@ Do you want to stop the program?"),
       break;
 
       /* bcd */
+    /* codespell:ignore-begin.  */
     case 0x27:    /* daa */
     case 0x2f:    /* das */
     case 0x37:    /* aaa */
     case 0x3f:    /* aas */
     case 0xd4:    /* aam */
     case 0xd5:    /* aad */
+    /* codespell:ignore-end.  */
       if (ir.regmap[X86_RECORD_R8_REGNUM])
 	{
 	  ir.addr -= 1;
@@ -7258,7 +7260,7 @@ Do you want to stop the program?"),
 	    I386_RECORD_FULL_ARCH_LIST_ADD_REG (ir.rm | ir.rex_b);
 	  else
 	    {
-	      ir.ot = OT_WORD;
+	      ir.operand_type = OT_WORD;
 	      if (i386_record_lea_modrm (&ir))
 		return -1;
 	    }
@@ -7415,7 +7417,7 @@ Do you want to stop the program?"),
 	    }
 	  else
 	    {
-	      ir.ot = OT_WORD;
+	      ir.operand_type = OT_WORD;
 	      if (i386_record_lea_modrm (&ir))
 		return -1;
 	    }
@@ -7461,7 +7463,7 @@ Do you want to stop the program?"),
 	}
       else
 	{
-	  ir.ot = ir.dflag ? OT_LONG : OT_WORD;
+	  ir.operand_type = ir.dflag ? OT_LONG : OT_WORD;
 	  if (i386_record_lea_modrm (&ir))
 	    return -1;
 	}
@@ -7670,7 +7672,7 @@ no_support_3dnow_data:
 	  break;
 
 	case 3:    /* stmxcsr */
-	  ir.ot = OT_LONG;
+	  ir.operand_type = OT_LONG;
 	  if (i386_record_lea_modrm (&ir))
 	    return -1;
 	  break;
@@ -7688,7 +7690,7 @@ no_support_3dnow_data:
       break;
 
     case 0x0fc3:    /* movnti */
-      ir.ot = (ir.dflag == 2) ? OT_QUAD : OT_LONG;
+      ir.operand_type = (ir.dflag == 2) ? OT_QUAD : OT_LONG;
       if (i386_record_modrm (&ir))
 	return -1;
       if (ir.mod == 3)
@@ -8086,19 +8088,19 @@ reswitch_prefix_add:
 	      switch (opcode)
 		{
 		  case 0x660f3a14:
-		    ir.ot = OT_BYTE;
+		    ir.operand_type = OT_BYTE;
 		    break;
 		  case 0x660f3a15:
-		    ir.ot = OT_WORD;
+		    ir.operand_type = OT_WORD;
 		    break;
 		  case 0x660f3a16:
-		    ir.ot = OT_LONG;
+		    ir.operand_type = OT_LONG;
 		    break;
 		  case 0x660f3a17:
-		    ir.ot = OT_QUAD;
+		    ir.operand_type = OT_QUAD;
 		    break;
 		  default:
-		    ir.ot = OT_DQUAD;
+		    ir.operand_type = OT_DQUAD;
 		    break;
 		}
 	      if (i386_record_lea_modrm (&ir))
@@ -8113,9 +8115,9 @@ reswitch_prefix_add:
 	  if (ir.mod == 3)
 	    goto no_support;
 	  if (opcode == 0x0fe7)
-	    ir.ot = OT_QUAD;
+	    ir.operand_type = OT_QUAD;
 	  else
-	    ir.ot = OT_DQUAD;
+	    ir.operand_type = OT_DQUAD;
 	  if (i386_record_lea_modrm (&ir))
 	    return -1;
 	  break;
@@ -8269,9 +8271,9 @@ reswitch_prefix_add:
 	  else
 	    {
 	      if (ir.dflag == 2)
-		ir.ot = OT_QUAD;
+		ir.operand_type = OT_QUAD;
 	      else
-		ir.ot = OT_LONG;
+		ir.operand_type = OT_LONG;
 	      if (i386_record_lea_modrm (&ir))
 		return -1;
 	    }
@@ -8289,7 +8291,7 @@ reswitch_prefix_add:
 	    }
 	  else
 	    {
-	      ir.ot = OT_QUAD;
+	      ir.operand_type = OT_QUAD;
 	      if (i386_record_lea_modrm (&ir))
 		return -1;
 	    }
@@ -8316,7 +8318,7 @@ reswitch_prefix_add:
 	    }
 	  else
 	    {
-	      ir.ot = OT_QUAD;
+	      ir.operand_type = OT_QUAD;
 	      if (i386_record_lea_modrm (&ir))
 		return -1;
 	    }

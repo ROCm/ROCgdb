@@ -653,6 +653,8 @@ bfd_elf_link_record_dynamic_symbol (struct bfd_link_info *info,
       if (p != NULL)
 	{
 	  unversioned_name = bfd_malloc (p - name + 1);
+	  if (unversioned_name == NULL)
+	    return false;
 	  memcpy (unversioned_name, name, p - name);
 	  unversioned_name[p - name] = 0;
 	  name = unversioned_name;
@@ -15569,16 +15571,16 @@ get_dynamic_reloc_section_name (bfd *       abfd,
 				asection *  sec,
 				bool is_rela)
 {
-  char *name;
-  const char *old_name = bfd_section_name (sec);
   const char *prefix = is_rela ? ".rela" : ".rel";
-
-  if (old_name == NULL)
+  size_t plen = is_rela ? 5 : 4;
+  const char *old_name = bfd_section_name (sec);
+  size_t nlen = strlen (old_name);
+  char *name = bfd_alloc (abfd, plen + nlen + 1);
+  if (name == NULL)
     return NULL;
 
-  name = bfd_alloc (abfd, strlen (prefix) + strlen (old_name) + 1);
-  sprintf (name, "%s%s", prefix, old_name);
-
+  memcpy (name, prefix, plen);
+  memcpy (name + plen, old_name, nlen + 1);
   return name;
 }
 

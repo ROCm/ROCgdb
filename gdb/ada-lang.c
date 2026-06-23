@@ -815,6 +815,7 @@ ada_main_name ()
    of NULLs.  */
 
 const struct ada_opname_map ada_opname_table[] = {
+  /* codespell:ignore-begin.  */
   {"Oadd", "\"+\"", BINOP_ADD},
   {"Osubtract", "\"-\"", BINOP_SUB},
   {"Omultiply", "\"*\"", BINOP_MUL},
@@ -836,6 +837,7 @@ const struct ada_opname_map ada_opname_table[] = {
   {"Onot", "\"not\"", UNOP_LOGICAL_NOT},
   {"Oadd", "\"+\"", UNOP_PLUS},
   {"Osubtract", "\"-\"", UNOP_NEG},
+  /* codespell:ignore-end.  */
   {NULL, NULL}
 };
 
@@ -9371,7 +9373,7 @@ ada_aggregate_component::dump (ui_file *stream, int depth)
   gdb_printf (stream, _("%*sAggregate\n"), depth, "");
   if (m_base != nullptr)
     {
-      gdb_printf (stream, _("%*swith delta\n"), depth + 1, "");
+      gdb_printf (stream, _("%*s" "with delta\n"), depth + 1, "");
       m_base->dump (stream, depth + 2);
     }
   for (const auto &item : m_components)

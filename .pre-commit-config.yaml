@@ -71,7 +71,7 @@ repos:
     rev: v2.4.2
     hooks:
     - id: codespell
-      files: '^(gdbsupport|gdbserver|gdb/(doc|stubs|features|nat|contrib|dwarf2|tui|target|data-directory|po|system-gdbinit|mi|syscalls|arch|regformats|compile|python|guile|config|unittests|cli|testsuite/gdb.(ctf|dap|debuginfod|gdb|go|guile|mi|modula2|objc|opencl|opt|pascal|perf|replay|reverse|rocm|server|stabs|testsuite|tui|xml)))/'
+      files: '^(gdb|gdbserver|gdbsupport)/'
       args: [--toml, gdb/pyproject.toml]
     - id: codespell
       name: codespell-log
@@ -112,6 +112,11 @@ repos:
       additional_dependencies: ["pyyaml"]
       always_run: true
       require_serial: true
+    - id: check-file-mode
+      name: check-file-mode
+      language: script
+      entry: gdb/contrib/check-file-mode.sh
+      files: '^(gdb|gdbserver|gdbsupport)/.*$'
   - repo: https://github.com/nmoroze/tclint
     rev: v0.8.0
     hooks:

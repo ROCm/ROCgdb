@@ -62,7 +62,6 @@
 #include "complaints.h"
 #include "gdbsupport/gdb_tilde_expand.h"
 #include "gdbsupport/pathstuff.h"
-#include "gdbsupport/gdb_wait.h"
 #include "gdbsupport/symbol.h"
 #include "inf-loop.h"
 
@@ -133,7 +132,7 @@ the process.  In fact, it seldom is.  E.g., if the main thread calls
 ExitProcess (or returns from main, which ends up calling ExitProcess),
 then we typically see a EXIT_THREAD_DEBUG_EVENT event for the main
 thread first, followed by more EXIT_THREAD_DEBUG_EVENT events for
-other threads, and then finaly the EXIT_PROCESS_DEBUG_EVENT for
+other threads, and then finally the EXIT_PROCESS_DEBUG_EVENT for
 whatever thread happened to be the last one to exit.
 
 When a thread reports EXIT_THREAD_DEBUG_EVENT /
@@ -259,7 +258,7 @@ wants the "sig" thread to be running.
 This isn't ideal, since this means that with user-visible non-stop,
 the inferior will only be able to process and report one signal at a
 time (as the "sig" thread is responsible for that), but that seems
-like an acceptible compromise, better than not being able to have the
+like an acceptable compromise, better than not being able to have the
 target work in non-stop by default on Cygwin.  */
 
 using namespace windows_nat;
@@ -1269,7 +1268,7 @@ windows_nat_target::stop_one_thread (windows_thread_info *th,
 	      stop and calls windows_continue on this thread.  */
 	   && stopping_kind == SK_EXTERNAL)
     {
-      DEBUG_EVENTS ("explict stop for \"sig\" thread %s held for signal",
+      DEBUG_EVENTS ("explicit stop for \"sig\" thread %s held for signal",
 		    thr_ptid.to_string ().c_str ());
 
       th->stopping = stopping_kind;
@@ -1610,17 +1609,9 @@ windows_nat_target::get_windows_debug_event
 	}
       else if (windows_process->saw_create == 1)
 	{
-	  DWORD exit_status = current_event->u.ExitProcess.dwExitCode;
-	  /* If the exit status looks like a fatal exception, but we
-	     don't recognize the exception's code, make the original
-	     exit status value available, to avoid losing
-	     information.  */
-	  int exit_signal
-	    = WIFSIGNALED (exit_status) ? WTERMSIG (exit_status) : -1;
-	  if (exit_signal == -1)
-	    ourstatus->set_exited (exit_status);
-	  else
-	    ourstatus->set_signalled (gdb_signal_from_host (exit_signal));
+	  *ourstatus
+	    = (windows_process->exit_process_to_target_status
+	       (current_event->u.ExitProcess));
 
 	  thread_id = current_event->dwThreadId;
 
@@ -2003,6 +1994,11 @@ windows_nat_target::do_initial_windows_stuff (DWORD pid, bool attaching)
      phase, and then process them all in one batch now.  */
   windows_process->add_all_dlls ();
 
+#ifdef __CYGWIN__
+  windows_process->started_by_cygwin
+    = inferior_started_by_cygwin (pid, attaching);
+#endif
+
   windows_process->windows_initialization_done = 1;
   return;
 }
@@ -2314,14 +2310,14 @@ windows_nat_target::detach (inferior *inf, int from_tty)
     {
       if (thr.internal_state () != THREAD_INT_RUNNING)
 	{
-	  windows_thread_info *wth = windows_process->find_thread (thr.ptid);
+	  windows_thread_info *w_th = windows_process->find_thread (thr.ptid);
 	  gdb_signal signo = get_detach_signal (this, thr.ptid);
 
-	  if (signo != wth->last_sig
+	  if (signo != w_th->last_sig
 	      || (signo != GDB_SIGNAL_0 && !signal_pass_state (signo)))
 	    signo = GDB_SIGNAL_0;
 
-	  DWORD cstatus = prepare_resume (wth, &thr, 0, signo);
+	  DWORD cstatus = prepare_resume (w_th, &thr, 0, signo);
 
 	  if (!m_continued && thr.ptid == get_last_debug_event_ptid ())
 	    continue_status = cstatus;

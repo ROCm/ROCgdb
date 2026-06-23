@@ -3,8 +3,10 @@
    Copyright (C) 1988-2026 Free Software Foundation, Inc.
    Copyright (C) 2021-2026 Advanced Micro Devices, Inc. All rights reserved.
 
+   codespell:ignore-begin
    Contributed by Alessandro Forin(af@cs.cmu.edu) at CMU
    and by Per Bothner(bothner@cs.wisc.edu) at U.Wisconsin.
+   codespell:ignore-end
 
    This file is part of GDB.
 

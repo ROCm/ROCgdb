@@ -11853,7 +11853,7 @@ remote_target::region_ok_for_hw_watchpoint (CORE_ADDR addr, int len)
 }
 
 int
-remote_target::can_use_hw_breakpoint (enum bptype type, int cnt, int ot)
+remote_target::can_use_hw_breakpoint (enum bptype type, int cnt, int othertype)
 {
   if (type == bp_hardware_breakpoint)
     {
@@ -11870,7 +11870,7 @@ remote_target::can_use_hw_breakpoint (enum bptype type, int cnt, int ot)
 	return 0;
       else if (remote_hw_watchpoint_limit < 0)
 	return 1;
-      else if (ot)
+      else if (othertype)
 	return -1;
       else if (cnt <= remote_hw_watchpoint_limit)
 	return 1;

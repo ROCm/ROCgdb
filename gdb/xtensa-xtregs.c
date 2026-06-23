@@ -33,7 +33,9 @@ typedef struct
 
 const xtensa_regtable_t xtensa_regmap_table[] =
 {
+  /* codespell:ignore-begin.  */
   /* gnum,gofs,cpofs,ofs,siz,cp, dbnum,  name */
+  /* codespell:ignore-end.  */
   {   44, 176,   0,   0,  4, -1, 0x020c, "scompare1" },
   { 0 }
 };

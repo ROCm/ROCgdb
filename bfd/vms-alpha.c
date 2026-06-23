@@ -1603,7 +1603,8 @@ image_write_section (bfd *abfd)
 {
   asection *sec = PRIV (image_section);
 
-  if ((sec->flags & SEC_IN_MEMORY) != 0 && sec->contents == NULL)
+  if (sec == NULL
+      || ((sec->flags & SEC_IN_MEMORY) != 0 && sec->contents == NULL))
     return NULL;
   return sec;
 }

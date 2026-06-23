@@ -45,8 +45,6 @@ gdb_breakpoint "main" {temporary}
 
 gdb_test "run" ".*event type: new_objfile.*new objfile name.*" "new objfile notification"
 
-gdb_test_no_output "set detach-on-fork off" ""
-
 gdb_test "test-events" "Event testers registered."
 
 gdb_breakpoint "first"
@@ -76,17 +74,23 @@ delete_breakpoints
 # Test inferior call events
 
 set process_id "invalid"
+set thread_id "invalid"
 gdb_test_multiple "thread" "get current thread" {
     -re -wrap "process ($decimal).*" {
 	set process_id $expect_out(1,string)
+	set thread_id $process_id
 	pass $gdb_test_name
     }
     -re -wrap "Thread $hex \\(LWP ($decimal)\\).*" {
 	set process_id $expect_out(1,string)
+	set thread_id $process_id
 	pass $gdb_test_name
     }
-    -re -wrap "Thread $decimal\.($decimal).*" {
+    -re -wrap "Thread ($decimal)\.($hex|$decimal).*" {
 	set process_id $expect_out(1,string)
+	set thread_id $expect_out(2,string)
+	# Convert from hex to decimal.
+	set thread_id [expr {$thread_id}]
 	pass $gdb_test_name
     }
 }
@@ -99,9 +103,9 @@ gdb_test_multiple "print do_nothing" "get address of do_nothing" {
 }
 
 set expected [list "event type: pre-call"]
-lappend expected "ptid: \\($process_id, $process_id, 0\\)" "address: $addr"
+lappend expected "ptid: \\($process_id, $thread_id, 0\\)" "address: $addr"
 lappend expected "event type: post-call"
-lappend expected "ptid: \\($process_id, $process_id, 0\\)" "address: $addr"
+lappend expected "ptid: \\($process_id, $thread_id, 0\\)" "address: $addr"
 gdb_test_sequence "call do_nothing()" "" $expected
 
 # Test register changed event
@@ -199,36 +203,13 @@ gdb_test_multiple "continue" $test {
 
 gdb_test_no_output "delete $second_breakpoint"
 
-#test exited event.
-proc get_process_id {test} {
-    global gdb_prompt
-    gdb_test_multiple "info proc" $test {
-	-re "process (\\d+).*$gdb_prompt $" {
-	    set process_id $expect_out(1,string)
-	    pass $gdb_test_name
-	}
-    }
-    return ${process_id}
-}
-
-set process_id [get_process_id "get inferior 1 process id"]
+set process_id [get_inferior_pid]
 gdb_test "continue" ".*event type: continue.*
-.*clear_objfiles\[\r\n\]*progspace: .*py-events.*
 .*event type: exit.*
 .*exit code: 12.*
 .*exit inf: 1.*
 .*exit pid: $process_id.*
-dir ok: True.*" "Inferior 1 terminated."
-
-gdb_test "inferior 2" ".*Switching to inferior 2.*"
-set process_id [get_process_id "get inferior 2 process id"]
-gdb_test "continue" ".*event type: continue.*
-.*event type: exit.*
-.*exit code: 12.*
-.*exit inf: 2.*
-.*exit pid: $process_id.*
-dir ok: True.*" "Inferior 2 terminated."
-
+dir ok: True.*" "inferior terminated"
 
 # Test before_prompt event.
 gdb_test_multiline "define new user command" \
@@ -280,29 +261,30 @@ with_test_prefix "inferior continue exit" {
     gdb_test "print \$_foo" "= 2" "check foo after start continue"
 }
 
-# Check that when GDB exits, we see gdb.ExitedEvent objects with no
-# 'exit_code' attribute, and that a gdb.GdbExitingEvent is emitted.
-with_test_prefix "gdb exiting: normal" {
+# Check that when GDB kills an inferior, we see gdb.ExitedEvent
+# objects with no 'exit_code' attribute.
+with_test_prefix "kill inferior" {
+    if {![runto_main]} {
+	return
+    }
     gdb_test "test-exiting-event normal" "GDB exiting event registered\\."
 
+    gdb_test "with confirm off -- kill" \
+	"event type: exit\r\nexit code: not-present\r\nexit inf: $decimal\r\nexit pid: $decimal\r\ndir ok: False\r\n.*" \
+	"exit code not present"
+}
+
+# Check that when GDB exits, we see that a gdb.GdbExitingEvent is
+# emitted.
+with_test_prefix "gdb exiting: normal" {
     set saw_exiting_event 0
-    set saw_inferior_exit 0
-    gdb_test_multiple "quit" "" {
-	-re "Quit anyway\\? \\(y or n\\) $" {
-	    send_gdb "y\n"
-	    exp_continue
-	}
+    gdb_test_multiple "with confirm off -- quit" "quit" {
 	-re "event type: gdb-exiting\r\nexit code: $decimal" {
 	    incr saw_exiting_event
 	    exp_continue
 	}
-	-re "event type: exit\r\nexit code: not-present\r\nexit inf: $decimal\r\nexit pid: $decimal\r\ndir ok: False\r\n" {
-	    incr saw_inferior_exit
-	    exp_continue
-	}
 	eof {
 	    gdb_assert { $saw_exiting_event == 1 }
-	    gdb_assert { $saw_inferior_exit == 2 }
 	    pass $gdb_test_name
 	}
     }
@@ -347,4 +329,17 @@ with_test_prefix "gdb exiting: error" {
 	    pass $gdb_test_name
 	}
     }
+}
+
+# Test clear_objfiles event.
+
+with_test_prefix "clear_objfiles" {
+    clean_restart ${testfile}
+
+    gdb_test_no_output "source ${pyfile}" "load python file"
+    gdb_test "test-objfile-events" "Object file events registered."
+
+    gdb_test "with confirm off -- file" \
+	"event type: clear_objfiles\r\nprogspace: None\r\n.*" \
+	"file cleared"
 }

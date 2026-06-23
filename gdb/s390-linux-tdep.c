@@ -336,6 +336,7 @@ s390_core_read_description (struct gdbarch *gdbarch,
   asection *section = bfd_get_section_by_name (abfd, ".reg");
   std::optional<gdb::byte_vector> auxv = target_read_auxv_raw (target);
   CORE_ADDR hwcap = linux_get_hwcap (auxv, target, gdbarch);
+  /* codespell:ignore-begin.  */
   bool high_gprs, v1, v2, te, vx, gs;
 
   if (!section)
@@ -370,6 +371,7 @@ s390_core_read_description (struct gdbarch *gdbarch,
 	      te ? tdesc_s390x_te_linux64 :
 	      v2 ? tdesc_s390x_linux64v2 :
 	      v1 ? tdesc_s390x_linux64v1 : tdesc_s390x_linux64).get ();
+  /* codespell:ignore-end.  */
 
     default:
       return NULL;

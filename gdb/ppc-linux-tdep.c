@@ -574,7 +574,7 @@ static const struct regset ppc32_linux_vsxregset = {
   regcache_collect_regset
 };
 
-/* Program Priorty Register regmap.  */
+/* Program Priority Register regmap.  */
 
 static const struct regcache_map_entry ppc32_regmap_ppr[] =
   {
@@ -582,7 +582,7 @@ static const struct regcache_map_entry ppc32_regmap_ppr[] =
       { 0 }
   };
 
-/* Program Priorty Register regset.  */
+/* Program Priority Register regset.  */
 
 const struct regset ppc32_linux_pprregset = {
   ppc32_regmap_ppr,
@@ -2064,7 +2064,7 @@ linux_dwarf2_omit_typedef_p (struct type *target_type,
 static const char *
 ppc64le_gnu_triplet_regexp (struct gdbarch *gdbarch)
 {
-  return "p(ower)?pc64le";
+  return "p(ower)?pc64le"; /* codespell:ignore.  */
 }
 
 /* Specify the powerpc64 target triplet.
@@ -2076,7 +2076,7 @@ ppc64le_gnu_triplet_regexp (struct gdbarch *gdbarch)
 static const char *
 ppc64_gnu_triplet_regexp (struct gdbarch *gdbarch)
 {
-  return "p(ower)?pc64";
+  return "p(ower)?pc64"; /* codespell:ignore.  */
 }
 
 /* Implement the linux_gcc_target_options method.  */

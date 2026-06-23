@@ -114,6 +114,7 @@ print_i387_status_word (int status_p,
 
   gdb_printf (file, "%s", hex_string_custom (status, 4));
   gdb_puts ("  ", file);
+  /* codespell:ignore-begin.  */
   gdb_printf (file, " %s", (status & 0x0001) ? "IE" : "  ");
   gdb_printf (file, " %s", (status & 0x0002) ? "DE" : "  ");
   gdb_printf (file, " %s", (status & 0x0004) ? "ZE" : "  ");
@@ -129,6 +130,7 @@ print_i387_status_word (int status_p,
   gdb_printf (file, " %s", (status & 0x0200) ? "C1" : "  ");
   gdb_printf (file, " %s", (status & 0x0400) ? "C2" : "  ");
   gdb_printf (file, " %s", (status & 0x4000) ? "C3" : "  ");
+  /* codespell:ignore-end.  */
 
   gdb_puts ("\n", file);
 

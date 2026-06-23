@@ -659,7 +659,7 @@ arm_linux_get_hw_watchpoint_count (void)
    there is not an appropriate resource available, otherwise returns 1.  */
 int
 arm_linux_nat_target::can_use_hw_breakpoint (enum bptype type,
-					     int cnt, int ot)
+					     int cnt, int othertype)
 {
   if (type == bp_hardware_watchpoint || type == bp_read_watchpoint
       || type == bp_access_watchpoint || type == bp_watchpoint)
@@ -668,7 +668,7 @@ arm_linux_nat_target::can_use_hw_breakpoint (enum bptype type,
 
       if (count == 0)
 	return 0;
-      else if (cnt + ot > count)
+      else if (cnt + othertype > count)
 	return -1;
     }
   else if (type == bp_hardware_breakpoint)
@@ -711,7 +711,7 @@ struct arm_linux_hw_breakpoint
    for caching address and control information.
 
    The Linux ptrace interface to hardware break-/watch-points presents the
-   values in a vector centred around 0 (which is used fo generic information).
+   values in a vector centred around 0 (which is used for generic information).
    Positive indices refer to breakpoint addresses/control registers, negative
    indices to watchpoint addresses/control registers.
 

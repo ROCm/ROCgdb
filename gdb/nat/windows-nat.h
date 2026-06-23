@@ -224,6 +224,23 @@ struct windows_process_info
   DWORD process_id = 0;
   DWORD main_thread_id = 0;
 
+#ifdef __CYGWIN__
+  /* True if the inferior was created through Cygwin's spawn path
+     (i.e., its Cygwin pinfo has PID_CYGPARENT set).  We need this at
+     exit time, but we cache it early when we start debugging the
+     inferior, because by exit time the inferior's Cygwin pinfo may
+     have been torn down (CW_GETPINFO returns NULL).  */
+  bool started_by_cygwin = false;
+
+  /* True if cygwin1.dll is loaded into the inferior.  */
+  bool cygwin1_dll_loaded = false;
+
+  /* If DLL_PATH is cygwin1.dll, set cygwin1_dll_loaded to true.  */
+  void maybe_note_cygwin1_dll (const char *dll_path);
+#else
+  void maybe_note_cygwin1_dll (const char *) {}
+#endif
+
 #ifdef __x86_64__
   /* The target is a WOW64 process */
   bool wow64_process = false;
@@ -315,6 +332,12 @@ struct windows_process_info
       });
   }
 
+  /* Convert an EXIT_PROCESS_DEBUG_EVENT payload to a target wait
+     status.  */
+
+  target_waitstatus exit_process_to_target_status
+    (const EXIT_PROCESS_DEBUG_INFO &info);
+
 private:
 
   /* Handle MS_VC_EXCEPTION when processing a stop.  MS_VC_EXCEPTION is
@@ -346,6 +369,18 @@ private:
 
   int get_exec_module_filename (char *exe_name_ret, size_t exe_name_max_len);
 };
+
+#ifdef __CYGWIN__
+/* Return true if the process with native Windows pid WINPID was
+   started by a Cygwin parent -- that is, its Cygwin pinfo exists and
+   has PID_CYGPARENT set.  Returns false if the process is not a
+   Cygwin process at all, or if its parent is not a Cygwin process.
+
+   ATTACHING indicates whether GDB is attaching to an already-running
+   inferior (true) or has just launched it via CreateProcess
+   (false).  */
+extern bool inferior_started_by_cygwin (DWORD winpid, bool attaching);
+#endif
 
 /* Return a string version of EVENT_CODE.  */
 

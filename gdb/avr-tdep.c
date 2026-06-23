@@ -749,12 +749,13 @@ avr_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR pc_beg, CORE_ADDR pc_end,
 
   gdb_assert (vpc < AVR_MAX_PROLOGUE_SIZE);
 
-  /* Handle static small stack allocation using rcall or push.  */
+  /* Handle static small stack allocation using
+     rcall or push.  codespell:ignore rcall */
   avr_gdbarch_tdep *tdep = gdbarch_tdep<avr_gdbarch_tdep> (gdbarch);
   while (scan_stage == 1 && vpc < len)
     {
       insn = extract_unsigned_integer (&prologue[vpc], 2, byte_order);
-      if (insn == 0xd000)	/* rcall .+0 */
+      if (insn == 0xd000)	/* rcall .+0.  codespell:ignore rcall.  */
 	{
 	  info->size += tdep->call_length;
 	  vpc += 2;

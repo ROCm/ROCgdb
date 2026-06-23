@@ -734,7 +734,7 @@ loongarch_frame_prev_register (const frame_info_ptr &this_frame,
 
   /* If we are asked to unwind the PC, then we need to return the RA
      instead.  The prologue may save PC, but it will point into this
-     frame's prologue, not the previou frame's resume location.  */
+     frame's prologue, not the previous frame's resume location.  */
   if (regnum == LOONGARCH_PC_REGNUM)
     {
       CORE_ADDR ra;

@@ -2044,7 +2044,7 @@ ppc_linux_nat_target::read_description ()
 
 int
 ppc_linux_nat_target::can_use_hw_breakpoint (enum bptype type, int cnt,
-					     int ot)
+					     int othertype)
 {
   int total_hw_wp, total_hw_bp;
 
@@ -2076,7 +2076,7 @@ ppc_linux_nat_target::can_use_hw_breakpoint (enum bptype type, int cnt,
     {
       if (total_hw_wp == 0)
 	return 0;
-      else if (cnt + ot > total_hw_wp)
+      else if (cnt + othertype > total_hw_wp)
 	return -1;
       else
 	return 1;

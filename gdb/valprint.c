@@ -1335,10 +1335,10 @@ value_print_scalar_formatted (struct value *val,
 }
 
 /* Print a number according to FORMAT which is one of d,u,x,o,b,h,w,g.
-   The raison d'etre of this function is to consolidate printing of
-   LONG_LONG's into this one function.  The format chars b,h,w,g are
-   from print_scalar_formatted().  Numbers are printed using C
-   format.
+   The <codespell:ignore-begin> raison d'etre <codespell:ignore-end> of this
+   function is to consolidate printing of LONG_LONG's into this one function.
+   The format chars b,h,w,g are from print_scalar_formatted().  Numbers are
+   printed using C format.
 
    USE_C_FORMAT means to use C format in all cases.  Without it,
    'o' and 'x' format do not include the standard C radix prefix

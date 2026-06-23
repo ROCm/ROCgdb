@@ -630,7 +630,7 @@ darwin_debug_regions_recurse (task_t task)
     }
   uiout->table_header (3, ui_left, "min-prot", "Min");
   uiout->table_header (3, ui_left, "max-prot", "Max");
-  uiout->table_header (5, ui_left, "inheritance", "Inh");
+  uiout->table_header (5, ui_left, "inheritance", "Inh"); /* codespell:ignore inh.  */
   uiout->table_header (9, ui_left, "share-mode", "Shr");
   uiout->table_header (1, ui_left, "depth", "D");
   uiout->table_header (3, ui_left, "submap", "Sm");

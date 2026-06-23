@@ -15,10 +15,20 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* This test is just a normal return 0.  */
+/* This test is just a normal return 1.  */
+
+#include <unistd.h>
+
+volatile int wait_for_gdb = 1;
 
 int
 main (int argc, char *argv[])
 {
-  return 0;
+  while (wait_for_gdb)
+    sleep (1);
+
+  /* Non-zero specifically, as it would be otherwise easier for a
+     buggy GDB to report exit code 0 when it shouldn't and that
+     wouldn't be noticed.  */
+  return 1;
 }
