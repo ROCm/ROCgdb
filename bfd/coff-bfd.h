@@ -81,5 +81,8 @@ extern bool bfd_coff_get_syment
 extern bool bfd_coff_get_auxent
   (bfd *, struct bfd_symbol *, int, union internal_auxent *);
 
+extern bool bfd_coff_pe_weak_external_has_real_fallback
+  (bfd *, struct bfd_symbol *);
+
 extern bool bfd_coff_set_symbol_class
   (bfd *, struct bfd_symbol *, unsigned int);

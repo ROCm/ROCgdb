@@ -36,6 +36,45 @@ static bool coff_link_check_archive_element
    bool *);
 static bool coff_link_add_symbols (bfd *, struct bfd_link_info *);
 
+static bool
+coff_link_hash_pe_weak_external_has_real_fallback
+  (struct coff_link_hash_entry *h)
+{
+  struct coff_link_hash_entry *h2;
+  unsigned long symndx;
+
+  if (h->symbol_class != C_NT_WEAK
+      || h->numaux != 1
+      || h->aux == NULL
+      || h->auxbfd == NULL
+      || ! obj_pe (h->auxbfd)
+      || obj_coff_sym_hashes (h->auxbfd) == NULL)
+    return false;
+
+  /* The PE weak-external aux entry names the fallback symbol by raw
+     symbol index.  Look up the corresponding link hash entry so we can
+     test the fallback's resolved state, not just its object-file entry.  */
+  symndx = h->aux->x_sym.x_tagndx.u32;
+  if (symndx >= obj_raw_syment_count (h->auxbfd))
+    return false;
+
+  h2 = obj_coff_sym_hashes (h->auxbfd)[symndx];
+  if (h2 == NULL)
+    return false;
+
+  while (h2->root.type == bfd_link_hash_indirect
+	 || h2->root.type == bfd_link_hash_warning)
+    h2 = (struct coff_link_hash_entry *) h2->root.u.i.link;
+
+  /* A weak declaration with no fallback uses the absolute-zero null
+     symbol.  Only a defined real fallback means this archive member has
+     already satisfied the weak external.  */
+  return ((h2->root.type == bfd_link_hash_defined
+	   || h2->root.type == bfd_link_hash_defweak)
+	  && !(bfd_is_abs_section (h2->root.u.def.section)
+	       && h2->root.u.def.value == 0));
+}
+
 /* Return TRUE if SYM is a weak, external symbol.  */
 #define IS_WEAK_EXTERNAL(abfd, sym)			\
   ((sym).n_sclass == C_WEAKEXT				\
@@ -253,6 +292,13 @@ coff_link_check_archive_element (bfd *abfd,
      of the symbols defined by that element might have been
      made undefined due to being in a discarded section.  */
   if (((struct coff_link_hash_entry *) h)->indx == -3)
+    return true;
+
+  /* A PE weak external can stay undefined even after its fallback has
+     been defined by this archive member.  Avoid extracting the member
+     again if the same archive is searched more than once.  */
+  if (coff_link_hash_pe_weak_external_has_real_fallback
+      ((struct coff_link_hash_entry *) h))
     return true;
 
   /* Include this element?  */
