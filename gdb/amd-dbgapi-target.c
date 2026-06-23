@@ -2584,10 +2584,24 @@ attach_amd_dbgapi (inferior *inf)
       return;
     }
 
+#if AMD_DBGAPI_VERSION_MAJOR == 0 && AMD_DBGAPI_VERSION_MINOR >= 81
+  /* When attaching, commit_resumed_state is expected to be false.  Starting
+     dbgapi-0.81, we can have dbgapi attach with forward progress requirement
+     disabled.  */
+  info.forward_progress_required
+    = info.inf->process_target ()->commit_resumed_state;
+#endif
+
   amd_dbgapi_status_t status
     = amd_dbgapi_process_attach
 	(reinterpret_cast<amd_dbgapi_client_process_id_t> (inf),
-	 &info.process_id);
+	 &info.process_id
+#if AMD_DBGAPI_VERSION_MAJOR == 0 && AMD_DBGAPI_VERSION_MINOR >= 81
+	 , (!info.forward_progress_required
+	    ? AMD_DBGAPI_PROCESS_ATTACH_FLAGS_NO_FORWARD_PROGRESS
+	    : amd_dbgapi_process_attach_flags {})
+#endif
+	 );
   if (status == AMD_DBGAPI_STATUS_ERROR_RESTRICTION)
     {
       warning (_("amd-dbgapi: unable to enable GPU debugging due to a "
