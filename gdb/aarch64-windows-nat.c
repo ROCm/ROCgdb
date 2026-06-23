@@ -262,7 +262,6 @@ aarch64_windows_nat_target::fetch_one_register (struct regcache *regcache,
 						windows_thread_info *th, int r)
 {
   gdb_assert (r >= 0);
-  gdb_assert (!th->reload_context);
 
   char *context_ptr = (char *) &th->context;
   char *context_offset = context_ptr + aarch64_windows_process.mappings[r];
