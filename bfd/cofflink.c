@@ -542,6 +542,88 @@ coff_link_add_symbols (bfd *abfd,
 		      (*sym_hash)->aux = alloc;
 		    }
 		}
+
+	      /* When two PE COFF weak externals meet (both with aux
+		 records specifying fallback aliases), prefer the one
+		 whose fallback resolves to a defined symbol over one
+		 whose fallback is undefined or NULL.  This
+		 handles the case where a weak declaration (with a
+		 fallback of NULL) is seen before a weak
+		 definition (with a fallback of the actual function
+		 body).  */
+	      else if (IS_WEAK_EXTERNAL (abfd, sym)
+		       && sym.n_numaux > 0
+		       && (*sym_hash)->root.type == bfd_link_hash_undefweak
+		       && (*sym_hash)->symbol_class == C_NT_WEAK
+		       && (*sym_hash)->numaux == 1)
+		{
+		  /* Parse the incoming aux to get the fallback tagndx.  */
+		  union internal_auxent new_aux;
+		  unsigned long new_tagndx;
+		  unsigned long old_tagndx;
+		  struct coff_link_hash_entry *h2_new = NULL;
+		  struct coff_link_hash_entry *h2_old = NULL;
+		  bool new_is_real_fallback;
+		  bool old_is_unresolved_fallback;
+
+		  bfd_coff_swap_aux_in (abfd, esym + symesz, sym.n_type,
+					sym.n_sclass, 0, sym.n_numaux,
+					&new_aux);
+		  new_tagndx = new_aux.x_sym.x_tagndx.u32;
+
+		  if (new_tagndx < obj_raw_syment_count (abfd))
+		    h2_new = obj_coff_sym_hashes (abfd)[new_tagndx];
+
+		  old_tagndx = (*sym_hash)->aux->x_sym.x_tagndx.u32;
+		  if (old_tagndx
+		      < obj_raw_syment_count ((*sym_hash)->auxbfd))
+		    h2_old = obj_coff_sym_hashes
+		      ((*sym_hash)->auxbfd)[old_tagndx];
+
+		  /* Update if the new fallback is a real definition but
+		     the old one is not.  A weak declaration with no
+		     definition uses the COFF null symbol as its fallback.
+		     In the hash table that fallback looks like a defined
+		     absolute symbol with value zero, so treat that case as
+		     unresolved here.  */
+		  new_is_real_fallback
+		    = (h2_new != NULL
+		       && (h2_new->root.type == bfd_link_hash_defined
+			   || h2_new->root.type == bfd_link_hash_defweak)
+		       && !(bfd_is_abs_section (h2_new->root.u.def.section)
+			    && h2_new->root.u.def.value == 0));
+		  old_is_unresolved_fallback
+		    = (h2_old == NULL
+		       || h2_old->root.type == bfd_link_hash_undefined
+		       || h2_old->root.type == bfd_link_hash_undefweak
+		       || (h2_old->root.type == bfd_link_hash_defined
+			   && bfd_is_abs_section (h2_old->root.u.def.section)
+			   && h2_old->root.u.def.value == 0));
+
+		  if (new_is_real_fallback && old_is_unresolved_fallback)
+		    {
+		      union internal_auxent *alloc;
+		      unsigned int i;
+		      bfd_byte *eaux;
+		      union internal_auxent *iaux;
+
+		      (*sym_hash)->symbol_class = sym.n_sclass;
+		      (*sym_hash)->auxbfd = abfd;
+		      (*sym_hash)->numaux = sym.n_numaux;
+		      alloc = bfd_hash_allocate (&info->hash->table,
+						 (sym.n_numaux
+						  * sizeof (*alloc)));
+		      if (alloc == NULL)
+			goto error_return;
+		      for (i = 0, eaux = esym + symesz, iaux = alloc;
+			   i < sym.n_numaux;
+			   i++, eaux += symesz, iaux++)
+			bfd_coff_swap_aux_in (abfd, eaux, sym.n_type,
+					      sym.n_sclass, (int) i,
+					      sym.n_numaux, iaux);
+		      (*sym_hash)->aux = alloc;
+		    }
+		}
 	    }
 
 	  if (classification == COFF_SYMBOL_PE_SECTION
