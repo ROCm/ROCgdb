@@ -2178,6 +2178,11 @@ loongarch_frag_align_code (int n, int max)
   if (!LARCH_opts.relax)
     return false;
 
+  /* Only create an alignment frag if the current section already
+     has relaxed instructions.  */
+  if (!now_seg->sec_flg1)
+    return false;
+
   bfd_vma align_bytes = (bfd_vma) 1 << n;
   bfd_vma worst_case_bytes = align_bytes - 4;
   bfd_vma addend = worst_case_bytes;
@@ -2192,8 +2197,7 @@ loongarch_frag_align_code (int n, int max)
   frag_wane (frag_now);
   frag_new (0);
 
-  /* Mark the current section and frag as linker relaxable.  */
-  now_seg->sec_flg1 = true;
+  /* Mark the current frag as linker relaxable.  */
   frag_now->tc_frag_data.linker_relax = true;
 
   /* If max <= 0, ignore max.
