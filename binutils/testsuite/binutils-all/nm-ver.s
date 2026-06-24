@@ -1,7 +1,5 @@
 	.symver foo_old,foo@VER_1
-	.global "foo@VER_1"
 	.hidden foo_old
-	.global foo_old
 foo_old:
 	.dc.b 0
 

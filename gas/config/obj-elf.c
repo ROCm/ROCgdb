@@ -2756,9 +2756,12 @@ elf_adjust_symtab (void)
 	  const asymbol *bfdsym = symbol_get_bfdsym (symp);
 	  elf_symbol_type *elfsym = elf_symbol_from (bfdsym);
 
-	  if (ELF_ST_VISIBILITY (elfsym->internal_elf_sym.st_other)
+	  /* Allow local symbol with non-protected visibility:
+	     https://sourceware.org/bugzilla/show_bug.cgi?id=34312 */
+	  if ((ELF_ST_VISIBILITY (elfsym->internal_elf_sym.st_other)
+	       == STV_PROTECTED)
 	      && !(bfdsym->flags & (BSF_GLOBAL | BSF_WEAK | BSF_GNU_UNIQUE)))
-	    as_warn (_("local symbol `%s' has non-default visibility"),
+	    as_warn (_("local symbol `%s' has protected visibility"),
 		     S_GET_NAME (symp));
 	}
 

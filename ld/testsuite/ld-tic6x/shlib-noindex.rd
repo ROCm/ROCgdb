@@ -17,7 +17,7 @@ Section Headers:
   \[12\] \.neardata         PROGBITS        10000128 002128 000008 00  WA  0   0  4
   \[13\] \.bss              NOBITS          10000130 002130 000004 00  WA  0   0  4
   \[14\] \.c6xabi\.attributes C6000_ATTRIBUTES 00000000 002130 000019 00      0   0  1
-  \[15\] \.symtab           SYMTAB          00000000 00214c 0001a0 10     16  20  4
+  \[15\] \.symtab           SYMTAB          00000000 00214c 0001c0 10     16  22  4
   \[16\] \.strtab           STRTAB .*
   \[17\] \.shstrtab         STRTAB .*
 Key to Flags:
@@ -96,7 +96,7 @@ Symbol table '\.dynsym' contains 12 entries:
     10: 10000128     4 OBJECT  GLOBAL DEFAULT   12 a
     11: 100000c0    52 FUNC    GLOBAL DEFAULT   10 sub
 
-Symbol table '\.symtab' contains 26 entries:
+Symbol table '\.symtab' contains 28 entries:
    Num:    Value  Size Type    Bind   Vis      Ndx Name
      0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
      1: 00008000     0 SECTION LOCAL  DEFAULT    1.*
@@ -113,14 +113,16 @@ Symbol table '\.symtab' contains 26 entries:
     12: 10000128     0 SECTION LOCAL  DEFAULT   12.*
     13: 10000130     0 SECTION LOCAL  DEFAULT   13.*
     14: 00000000     0 SECTION LOCAL  DEFAULT   14.*
-    15: 10000080     0 FUNC    LOCAL  DEFAULT   10 sub1
-    16: 00008160     0 OBJECT  LOCAL  DEFAULT  ABS _DYNAMIC
-    17: 10000130     4 OBJECT  LOCAL  DEFAULT   13 c
-    18: 1000010c     0 OBJECT  LOCAL  DEFAULT  ABS _GLOBAL_OFFSET_TABLE_
-    19: 10000100     0 NOTYPE  LOCAL  DEFAULT   11 __c6xabi_DSBT_BASE
-    20: 00000000     0 NOTYPE  WEAK   DEFAULT  UND b
-    21: 00000000     0 NOTYPE  WEAK   DEFAULT  UND g1
-    22: 1000012c     4 OBJECT  GLOBAL DEFAULT   12 g2
-    23: 10000088    52 FUNC    GLOBAL DEFAULT   10 sub0
-    24: 10000128     4 OBJECT  GLOBAL DEFAULT   12 a
-    25: 100000c0    52 FUNC    GLOBAL DEFAULT   10 sub
+    15: 00000000     0 FILE    LOCAL  DEFAULT  ABS .*shlib-1\.o
+    16: 10000080     0 FUNC    LOCAL  HIDDEN    10 sub1
+    17: 00000000     0 FILE    LOCAL  DEFAULT  ABS 
+    18: 00008160     0 OBJECT  LOCAL  DEFAULT  ABS _DYNAMIC
+    19: 10000130     4 OBJECT  LOCAL  DEFAULT   13 c
+    20: 1000010c     0 OBJECT  LOCAL  DEFAULT  ABS _GLOBAL_OFFSET_TABLE_
+    21: 10000100     0 NOTYPE  LOCAL  DEFAULT   11 __c6xabi_DSBT_BASE
+    22: 00000000     0 NOTYPE  WEAK   DEFAULT  UND b
+    23: 00000000     0 NOTYPE  WEAK   DEFAULT  UND g1
+    24: 1000012c     4 OBJECT  GLOBAL DEFAULT   12 g2
+    25: 10000088    52 FUNC    GLOBAL DEFAULT   10 sub0
+    26: 10000128     4 OBJECT  GLOBAL DEFAULT   12 a
+    27: 100000c0    52 FUNC    GLOBAL DEFAULT   10 sub

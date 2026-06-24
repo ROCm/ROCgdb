@@ -14,7 +14,7 @@ Section Headers:
   \[ 9\] \.neardata         PROGBITS        [0-9a-f]* [0-9a-f]* 00000c 00  WA  0   0  4
   \[10\] \.bss              NOBITS          [0-9a-f]* [0-9a-f]* 000004 00  WA  0   0  4
   \[11\] \.c6xabi\.attributes C6000_ATTRIBUTES 00000000 [0-9a-f]* 000019 00      0   0  1
-  \[12\] \.symtab           SYMTAB          00000000 [0-9a-f]* 0001a0 10     13  19  4
+  \[12\] \.symtab           SYMTAB          00000000 [0-9a-f]* 0001b0 10     13  21  4
   \[13\] \.strtab           STRTAB .*
   \[14\] \.shstrtab         STRTAB .*
 Key to Flags:
@@ -76,7 +76,7 @@ Symbol table '\.dynsym' contains 8 entries:
      6: 00000000     0 NOTYPE  WEAK   DEFAULT  UND g1
      7: [0-9a-f]*     4 OBJECT  GLOBAL DEFAULT    9 a
 
-Symbol table '\.symtab' contains 26 entries:
+Symbol table '\.symtab' contains 27 entries:
    Num:    Value  Size Type    Bind   Vis      Ndx Name
      0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND 
      1: [0-9a-f]*     0 SECTION LOCAL  DEFAULT    1.*
@@ -90,17 +90,18 @@ Symbol table '\.symtab' contains 26 entries:
      9: [0-9a-f]*     0 SECTION LOCAL  DEFAULT    9.*
     10: [0-9a-f]*     0 SECTION LOCAL  DEFAULT   10.*
     11: [0-9a-f]*     0 SECTION LOCAL  DEFAULT   11.*
-    12: [0-9a-f]*     0 FILE    LOCAL  DEFAULT  ABS .*shlib-app-1r\.o
-    13: [0-9a-f]*     0 NOTYPE  LOCAL  DEFAULT    7 fish
-    14: [0-9a-f]*     0 FILE    LOCAL  DEFAULT  ABS ?
-    15: [0-9a-f]*     0 OBJECT  LOCAL  DEFAULT    6 _DYNAMIC
-    16: [0-9a-f]*     4 OBJECT  LOCAL  DEFAULT   10 c
-    17: [0-9a-f]*     0 OBJECT  LOCAL  DEFAULT    8 _GLOBAL_OFFSET_TABLE_
-    18: [0-9a-f]*     0 NOTYPE  LOCAL  DEFAULT    8 __c6xabi_DSBT_BASE
-    19: [0-9a-f]*     4 OBJECT  GLOBAL DEFAULT    9 b
-    20: [0-9a-f]*     0 FUNC    GLOBAL HIDDEN     7 sub1
-    21: [0-9a-f]*     0 NOTYPE  WEAK   DEFAULT  UND g1
-    22: [0-9a-f]*     4 OBJECT  GLOBAL DEFAULT    9 g2
-    23: [0-9a-f]*    52 FUNC    GLOBAL DEFAULT    7 sub0
-    24: [0-9a-f]*     4 OBJECT  GLOBAL DEFAULT    9 a
-    25: [0-9a-f]*    52 FUNC    GLOBAL DEFAULT    7 sub
+    12: [0-9a-f]*     0 FILE    LOCAL  DEFAULT  ABS .*shlib-1\.o
+    13: [0-9a-f]*     0 FUNC    LOCAL  HIDDEN     7 sub1
+    14: [0-9a-f]*     0 FILE    LOCAL  DEFAULT  ABS .*shlib-app-1r\.o
+    15: [0-9a-f]*     0 NOTYPE  LOCAL  DEFAULT    7 fish
+    16: [0-9a-f]*     0 FILE    LOCAL  DEFAULT  ABS 
+    17: [0-9a-f]*     0 OBJECT  LOCAL  DEFAULT    6 _DYNAMIC
+    18: [0-9a-f]*     4 OBJECT  LOCAL  DEFAULT   10 c
+    19: [0-9a-f]*     0 OBJECT  LOCAL  DEFAULT    8 _GLOBAL_OFFSET_TABLE_
+    20: [0-9a-f]*     0 NOTYPE  LOCAL  DEFAULT    8 __c6xabi_DSBT_BASE
+    21: [0-9a-f]*     4 OBJECT  GLOBAL DEFAULT    9 b
+    22: [0-9a-f]*     0 NOTYPE  WEAK   DEFAULT  UND g1
+    23: [0-9a-f]*     4 OBJECT  GLOBAL DEFAULT    9 g2
+    24: [0-9a-f]*    52 FUNC    GLOBAL DEFAULT    7 sub0
+    25: [0-9a-f]*     4 OBJECT  GLOBAL DEFAULT    9 a
+    26: [0-9a-f]*    52 FUNC    GLOBAL DEFAULT    7 sub
