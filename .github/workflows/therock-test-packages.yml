@@ -26,9 +26,16 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 2d417fa49bc4e657bcbcf0ae549238784175f0fe # 2026-06-18
+  # WIP: paired with the TheRock branch users/dravindr/tr_rocgdb (ROCm/TheRock#5917),
+  # which adds the generic, component-agnostic rocgdb entry to test_runner.py's
+  # COMPONENT_OVERRIDES and the optional install of the test-filter files.
+  # Revert to a pinned ROCm/TheRock SHA before merge once that PR lands.
+  THEROCK_COMMIT_REF: users/dravindr/tr_rocgdb
   VENV_DIR: ${{ github.workspace }}/.venv
   OUTPUT_ARTIFACTS_DIR: "./build"
+  # Consumed by TheRock's test_runner.py to derive ROCM_PATH and the ctest
+  # --test-dir. Artifacts unpack into ./build, with binaries under ./build/bin.
+  THEROCK_BIN_DIR: "./build/bin"
 
 jobs:
   rocgdb-tests:
@@ -66,5 +73,18 @@ jobs:
           IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
 
       - name: Run rocgdb tests
+        env:
+          # Drives TheRock's generic, component-agnostic test_runner.py.
+          # It runs `ctest -L $TEST_TYPE` in the installed testsuite tree
+          # (tests/rocgdb/gdb/testsuite, selected via COMPONENT_OVERRIDES on
+          # the TheRock side). The CTestTestfile.cmake there maps each tier to
+          # `../../test_rocgdb.py --tier <name>`, which expands test_patterns
+          # from test_categories.yaml and drives the GCC/LLVM DejaGnu matrix.
+          # All rocgdb-specific logic lives in this repo; TheRock stays generic.
+          TEST_COMPONENT: rocgdb
+          # Use the curated `quick` smoke tier for PR CI: it finishes within the
+          # job timeout. The broader standard/comprehensive/full tiers run the
+          # full DejaGnu matrix and are intended for nightly/extended pipelines.
+          TEST_TYPE: quick
         run: |
-          python ${{ env.OUTPUT_ARTIFACTS_DIR }}/tests/rocgdb/test_rocgdb.py
+          python build_tools/github_actions/test_executable_scripts/test_runner.py
