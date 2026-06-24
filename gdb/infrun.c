@@ -7906,11 +7906,37 @@ process_event_stop_test (struct execution_control_state *ecs)
       && (!ecs->event_thread->is_simd_lane_active
 	  (ecs->event_thread->current_simd_lane ())))
     {
-      infrun_debug_printf
-	("stepping divergent lane %s",
-	 target_lane_to_str (ecs->event_thread,
-			     ecs->event_thread->current_simd_lane ()).c_str ());
+      if (execution_direction == EXEC_FORWARD
+	  && (get_stack_frame_id (frame)
+	      != ecs->event_thread->control.step_stack_frame_id)
+	  && (frame_unwind_caller_id (frame)
+	      == ecs->event_thread->control.step_stack_frame_id)
+	  && !ecs->event_thread->control.in_step_start_function (frame))
+	{
+	  /* We just stepped inside a new function, but the current lane
+	     is inactive.  None of the architectures we support can jump to a
+	     new frame while changing the active lanes, so the current lane
+	     was inactive on the call site.
 
+	     Because the lane was inactive on the call site, we expect that
+	     lane to remain inactive for the entire frame.  Therefore, even if
+	     we issued a next, the current lane should ont become active until
+	     we return from the current frame.  We can return directly to
+	     the caller.  */
+	  infrun_debug_printf
+	    ("stepping into subroutine with divergent lane %s",
+	     target_lane_to_str (ecs->event_thread,
+				 ecs->event_thread->current_simd_lane ()
+				 ).c_str ());
+	  insert_step_resume_breakpoint_at_caller (frame);
+	}
+      else
+	{
+	  infrun_debug_printf
+	    ("stepping divergent lane %s",
+	     target_lane_to_str (ecs->event_thread,
+				 ecs->event_thread->current_simd_lane ()).c_str ());
+	}
       keep_going (ecs);
       return;
     }
@@ -8951,7 +8977,7 @@ handle_step_into_function (struct gdbarch *gdbarch,
       end_stepping_range (ecs);
       return;
     }
-  else
+  else if (ecs->event_thread->stop_pc () < ecs->stop_func_start)
     {
       /* Put the step-breakpoint there and go until there.  */
       symtab_and_line sr_sal;
