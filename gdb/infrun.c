@@ -5430,27 +5430,41 @@ poll_one_curr_target (struct target_waitstatus *ws)
 static wait_one_event
 wait_one ()
 {
+  /* Skip INF if it can't report events.  That is:
+
+      - it has no process target or...
+      - it has no threads executing or...
+      - it is currently not async */
+  const auto skip_inferior = [] (inferior *inf)
+    {
+      process_stratum_target *target = inf->process_target ();
+      if (target == nullptr || !target->threads_executing)
+	return true;
+
+      switch_to_inferior_no_thread (inf);
+
+      return !inf->top_target ()->is_async_p ();
+    };
+
   while (1)
     {
       for (inferior *inf : all_inferiors ())
 	{
-	  process_stratum_target *target = inf->process_target ();
-	  if (target == nullptr
-	      || !target->is_async_p ()
-	      || !target->threads_executing)
+	  if (skip_inferior (inf))
 	    continue;
 
-	  switch_to_inferior_no_thread (inf);
+	  /* skip_inferior leaves INF as the current inferior, necessary for
+	     the target call below.  */
 
 	  wait_one_event event;
-	  event.target = target;
+	  event.target = inf->process_target ();
 	  event.ptid = poll_one_curr_target (&event.ws);
 
 	  if (event.ws.kind () == TARGET_WAITKIND_NO_RESUMED)
 	    {
 	      /* If nothing is resumed, remove the target from the
 		 event loop.  */
-	      target_async (false);
+	      inf->top_target ()->async (false);
 	    }
 	  else if (event.ws.kind () != TARGET_WAITKIND_IGNORE)
 	    return event;
@@ -5465,16 +5479,18 @@ wait_one ()
 
       for (inferior *inf : all_inferiors ())
 	{
-	  process_stratum_target *target = inf->process_target ();
-	  if (target == nullptr
-	      || !target->is_async_p ()
-	      || !target->threads_executing)
+	  if (skip_inferior (inf))
 	    continue;
 
-	  int fd = target->async_wait_fd ();
-	  FD_SET (fd, &readfds);
-	  if (nfds <= fd)
-	    nfds = fd + 1;
+	  /* skip_inferior leaves INF as the current inferior, necessary for
+	     the target call below.  */
+
+	  for (int fd : inf->top_target ()->async_wait_fds ())
+	    {
+	      FD_SET (fd, &readfds);
+	      if (nfds <= fd)
+		nfds = fd + 1;
+	    }
 	}
 
       if (nfds == 0)
@@ -5803,14 +5819,19 @@ reenable_target_async ()
   for (inferior *inf : all_inferiors ())
     {
       process_stratum_target *target = inf->process_target ();
-      if (target != nullptr
-	  && target->threads_executing
-	  && target->can_async_p ()
-	  && !target->is_async_p ())
-	{
-	  switch_to_inferior_no_thread (inf);
-	  target_async (1);
-	}
+
+      if (target == nullptr || !target->threads_executing)
+	continue;
+
+      switch_to_inferior_no_thread (inf);
+
+      /* If the target can't async or is already async, no need to call
+	 `async (true)`.  */
+      if (!inf->top_target ()->can_async_p ()
+	  || inf->top_target ()->is_async_p ())
+	continue;
+
+      inf->top_target ()->async (true);
     }
 }
 
@@ -5888,12 +5909,12 @@ stop_all_threads (const char *reason, inferior *inf)
 	{
 	  int waits_needed = 0;
 
-	  for (auto *target : all_non_exited_process_targets ())
+	  for (auto *this_inf : all_non_exited_inferiors ())
 	    {
-	      if (inf != nullptr && inf->process_target () != target)
+	      if (inf != nullptr && inf != this_inf)
 		continue;
 
-	      switch_to_target_no_thread (target);
+	      switch_to_inferior_no_thread (this_inf);
 	      update_thread_list ();
 	    }
 

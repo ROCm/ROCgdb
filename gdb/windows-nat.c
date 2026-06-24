@@ -348,14 +348,14 @@ windows_nat_target::async (bool enable)
     return;
 
   if (enable)
-    add_file_handler (async_wait_fd (),
+    add_file_handler (serial_event_fd (m_wait_event),
 		      [] (int, gdb_client_data)
 		      {
 			inferior_event_handler (INF_REG_EVENT);
 		      },
 		      nullptr, "windows_nat_target");
   else
-    delete_file_handler (async_wait_fd ());
+    delete_file_handler (serial_event_fd (m_wait_event));
 
   m_is_async = enable;
 }
