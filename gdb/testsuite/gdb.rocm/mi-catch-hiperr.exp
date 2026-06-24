@@ -1,0 +1,146 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test different combinations of "-catch-hiperr [ -c <condition>] [ -t ]"
+#
+# 1. -catch-hiperr
+# 2. -catch-hiperr -t
+# 3. -catch-hiperr -c $_hiperr==123
+# 4. -catch-hiperr -c $_hiperr==321 -t
+#
+# Only check the MI output and if the breakpoints are inserted correctly.
+# For checking the functionality of "catch hiperr" there's another test
+# called hip-catch-errors.exp.
+
+load_lib mi-support.exp
+
+# Execute CMD that is a form of "-catch-hiperr [-c COND] [-t]", and
+# test it against a regex that is constructed from BP_NUM, DISP, and
+# COND (if not "").
+#
+# -catch-hiperr [-c COND] [-t]
+#
+# ^done,bkpt={number="BP_NUM",type="catchpoint",disp="DISP",enabled="y",
+#	      what="catch hiperr",catch-type="hiperr",cond="COND",
+#	      times="[0-9]+",original-location="-function __hipOnError"}
+#
+# The 'cond=...' field is added to the expected output only if the
+# provided COND is not an empty string.
+proc chk_mi_catch_hiperr {cmd bp_num disp cond msg} {
+    set line "\\^done,bkpt=\{"
+    append line "number=\"$bp_num\","
+    append line "type=\"catchpoint\","
+    append line "disp=\"$disp\","
+    append line "enabled=\"y\","
+    append line "what=\"catch hiperr\","
+    append line "catch-type=\"hiperr\","
+    if {$cond != ""} {
+	append line "cond=\"$cond\","
+    }
+    append line "times=\"$::decimal\","
+    append line "original-location=\"-function __hipOnError\"\}"
+    verbose -log $line
+    mi_gdb_test $cmd $line $msg
+}
+
+# Execute a "-break-info BP_NUM" and test it against a regex that
+# is constructed from BP_NUM, DISP, and COND (if not "").
+#
+# -break-info BP_NUM
+#
+# ...bkpt={number="BP_NUM",type="catchpoint",disp="DISP",enabled="y",
+#	   what="catch hiperr",catch-type="hiperr",cond="COND",
+#	   times="[0-9]+",original-location="-function __hipOnError"}...
+#
+# The 'cond=...' field is added to the expected output only if the
+# provided COND is not an empty string.
+proc chk_mi_bkpt {bp_num disp cond msg} {
+    set bpkt ""
+    append bkpt "number=\"$bp_num\","
+    append bkpt "type=\"catchpoint\","
+    append bkpt "disp=\"$disp\","
+    append bkpt "enabled=\"y\","
+    append bkpt "what=\"catch hiperr\","
+    append bkpt "catch-type=\"hiperr\","
+    if {$cond != ""} {
+	append bkpt "cond=\"$cond\","
+    }
+    append bkpt "times=\"$::decimal\","
+    append bkpt "original-location=\"-function __hipOnError\""
+    mi_gdb_test "-break-info $bp_num" ".*\{$bkpt\}.*" $msg
+}
+
+proc do_test {} {
+    mi_clean_restart
+
+    # (1)
+    # -catch-hiperr
+    # ^done,bkpt={number="1",...,disp="keep",...}
+    #
+    # -break-info 1
+    # ...bkpt={number="1",...,disp="keep",...}
+    set bp_num "1"
+    set test "simple catch"
+    set disp "keep"
+    chk_mi_catch_hiperr "-catch-hiperr" $bp_num $disp "" "$test"
+    chk_mi_bkpt $bp_num $disp "" "breakpoint info of $test"
+
+    # (2)
+    # -catch-hiperr -t
+    # ^done,bkpt={number="2",...,disp="del",...}
+    #
+    # -break-info 2
+    # ...bkpt={number="2",...,disp="del",...}
+    set bp_num "2"
+    set test "temporary catch"
+    set disp "del"
+    chk_mi_catch_hiperr "-catch-hiperr -t" $bp_num $disp "" "$test"
+    chk_mi_bkpt $bp_num $disp "" "breakpoint info of $test"
+
+    # (3)
+    # -catch-hiperr -c $_hiperr == 123
+    # ^done,bkpt={number="3",...,disp="keep",...,cond="$_hiperr == 123",...}
+    #
+    # -break-info 3
+    # ...bkpt={number="3",...,disp="keep",...,cond="$_hiperr == 123",...}
+    set bp_num "3"
+    set test "conditional catch"
+    set disp "keep"
+    set cond "\$_hiperr == 123"
+    chk_mi_catch_hiperr "-catch-hiperr -c \"$cond\"" \
+	$bp_num $disp [string_to_regexp "$cond"] "$test"
+    chk_mi_bkpt $bp_num $disp [string_to_regexp $cond] "breakpoint info of $test"
+
+    # (4)
+    # -catch-hiperr -c "$_hiperr == hipErrorInvalidDevice -t" -t
+    # ^done,bkpt={number="4",...,disp="del",...,
+    #		  cond="$_hiperr == hipErrorInvalidDeivce -t",...}
+    #
+    # -break-info 4
+    # ...bkpt={number="4",...,disp="del",...,
+    #	       cond="$_hiperr == hipErrorInvalidDevice -t",...}
+    set bp_num "4"
+    set test "temporary conditional catch"
+    set disp "del"
+    set cond "\$_hiperr == hipErrorInvalidDevice -t"
+    chk_mi_catch_hiperr "-catch-hiperr -c \"$cond\" -t" \
+	$bp_num $disp [string_to_regexp "$cond"] "$test"
+    chk_mi_bkpt $bp_num $disp [string_to_regexp $cond] "breakpoint info of $test"
+}
+
+do_test
