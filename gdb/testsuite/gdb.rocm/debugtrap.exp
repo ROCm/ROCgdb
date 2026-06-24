@@ -49,18 +49,17 @@ proc_with_prefix do_test_under_debugger {} {
 	    "Thread $::decimal.*received signal SIGTRAP, Trace/breakpoint trap\..*" \
 	    "raises SIGTRAP"
 
-	# The __builtin_debugtrap intrinsic  is implemented using the
-	# 's_trap 3' instruction.  When SIGTRAP is raised, the PC should point
-	# to the instruction just after the s_trap, and not the s_trap
-	# directly.  This is so we can "continue" execution past this
-	# instruction.  Note that we know that 's_trap 3' is encoded as a
-	# 4 byte instruction which is the smallest encoding of the ISA (s_trap
-	# is also used to implement software breakpoints).
-	gdb_test "x/2i \$pc - 4" \
-	    [multi_line \
-		"   ${::hex}\[^\r\n\]*s_trap 3" \
-		"=> ${::hex}\[^\r\n\]*"]
+	# The __builtin_debugtrap intrinsic is implemented using the
+	# 's_trap 3' instruction.  With the new trap handler ABI (version 12),
+	# when SIGTRAP is raised, the PC points AT the s_trap instruction
+	# (not after it).  GDB will automatically advance PC when continuing.
+	# Note that 's_trap 3' is encoded as a 4 byte instruction which is
+	# the smallest encoding of the ISA (s_trap is also used to implement
+	# software breakpoints).
+	gdb_test "x/i \$pc" \
+	    "=> ${::hex}\[^\r\n\]*s_trap 3"
 
+	# GDB should be able to continue past the debugtrap.
 	gdb_continue_to_end "continue until exit" continue 1
     }
 }
