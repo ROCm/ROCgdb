@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 2d417fa49bc4e657bcbcf0ae549238784175f0fe # 2026-06-18
+  THEROCK_COMMIT_REF: f1e3fc2311fde45bf3e17b0e3349200be9caa4b4 # 2026-06-23
 
 jobs:
   therock-build-linux:
@@ -22,6 +22,8 @@ jobs:
     runs-on: azure-linux-scale-rocm
     permissions:
       id-token: write
+    outputs:
+      therock_ref: ${{ steps.export-ref.outputs.therock_ref }}
     container:
       image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:a382085df3ba2419b58aa9051350883a0d0b732a4bc0a4ef60458f8161bb08c6 # 2026-06-11
       options: -v /runner/config:/home/awsconfig/
@@ -33,11 +35,23 @@ jobs:
       CCACHE_CONFIGPATH: ${{ github.workspace }}/.ccache/ccache.conf
 
     steps:
+      - name: Export TheRock ref
+        id: export-ref
+        run: echo "therock_ref=${{ env.THEROCK_COMMIT_REF }}" >> $GITHUB_OUTPUT
+
       - name: Checkout TheRock repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: "ROCm/TheRock"
           ref: ${{ env.THEROCK_COMMIT_REF }}
+
+      - name: Checkout CI config
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ROCm/therock-ci-config
+          ref: main
+          path: ci-config
+        continue-on-error: true
 
       - name: Checkout rocGDB repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -74,6 +88,7 @@ jobs:
           package_version: ADHOCBUILD
           extra_cmake_options: ${{ inputs.extra_cmake_options }}
           BUILD_DIR: build
+          CI_CONFIG_PATH: ci-config
         run: |
           python3 build_tools/github_actions/build_configure.py
 
@@ -124,8 +139,9 @@ jobs:
     if: ${{ inputs.amdgpu_families == 'gfx94X-dcgpu' }}
     needs: [therock-build-linux]
     uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
     with:
       amdgpu_families: ${{ inputs.amdgpu_families }}
       artifact_group: ${{ inputs.artifact_group }}
-      test_runs_on: linux-gfx942-1gpu-core42-ossci-rocm
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
       artifact_run_id: ${{ github.run_id }}
