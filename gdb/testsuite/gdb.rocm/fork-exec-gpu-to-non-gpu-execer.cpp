@@ -26,9 +26,13 @@ __global__ static void
 kernel1 ()
 {}
 
-__device__ static void
+/* noinline so the breakpoint reliably fires; the asm gives the
+   function a side effect the optimizer cannot prove away.  */
+
+__device__ static void __attribute__ ((noinline))
 break_here_execer ()
 {
+  asm volatile ("" ::: "memory");
 }
 
 __global__ static void

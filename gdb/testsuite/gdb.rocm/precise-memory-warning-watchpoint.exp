@@ -19,6 +19,7 @@
 load_lib rocm.exp
 
 require allow_hip_tests
+require no_optimized_code
 
 if { ![istarget "*-linux*"] } then {
     continue

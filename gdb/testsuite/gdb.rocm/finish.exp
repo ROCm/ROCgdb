@@ -23,6 +23,7 @@
 load_lib rocm.exp
 
 require allow_hip_tests
+require no_optimized_code
 
 standard_testfile .cpp
 
@@ -50,8 +51,8 @@ proc_with_prefix emptyStruct {} {
 }
 
 proc_with_prefix mixedSmallStruct {} {
-    gdb_breakpoint "returnMixedSmallSruct" -allow-pending
-    gdb_continue_to_breakpoint "returnMixedSmallSruct"
+    gdb_breakpoint "returnMixedSmallStruct" -allow-pending
+    gdb_continue_to_breakpoint "returnMixedSmallStruct"
     gdb_test "finish" "Value returned is \\\$$::decimal = \\{a = 3.1400001, b = \\{4, 7\\}\\}"
 }
 

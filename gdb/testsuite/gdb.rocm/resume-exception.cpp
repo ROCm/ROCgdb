@@ -22,7 +22,7 @@ __global__ void
 raise_fpe ()
 {
   volatile float a = 1, b = 0;
-  float c = a / b;		/* Raise an exception.  */
+  volatile float c = a / b;	/* Raise an exception.  */
   __builtin_debugtrap ();	/* A trap that mustn't be reached.  */
 }
 

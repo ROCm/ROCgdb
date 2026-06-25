@@ -21,6 +21,7 @@ load_lib rocm.exp
 
 # Python support is required to use $_streq.
 require allow_hip_tests allow_python_tests
+require no_optimized_code
 
 standard_testfile .cpp -size.cpp
 

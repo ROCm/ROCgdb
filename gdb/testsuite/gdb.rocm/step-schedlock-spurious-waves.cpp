@@ -23,10 +23,13 @@ THE SOFTWARE.
 #include <hip/hip_runtime.h>
 
 /* Helper function where the debugger places a breakpoint to be sure no wave
-   can run to completion without the debugger noticing.  */
-__device__ void
+   can run to completion without the debugger noticing.  noinline keeps the
+   breakpoint reliable, and the empty volatile asm gives the function an
+   observable side effect so the optimizer cannot prove the call away.  */
+__device__ void __attribute__ ((noinline))
 end_of_kernel ()
 {
+  asm volatile ("" ::: "memory");
 }
 
 __global__ void

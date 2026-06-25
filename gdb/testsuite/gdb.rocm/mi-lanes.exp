@@ -21,6 +21,7 @@ load_lib mi-support.exp
 set MIFLAGS "-i=mi"
 
 require allow_hip_tests
+require no_optimized_code
 
 standard_testfile lane-execution.cpp
 

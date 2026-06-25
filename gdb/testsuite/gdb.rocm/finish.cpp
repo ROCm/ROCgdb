@@ -217,8 +217,8 @@ returnEmptyWithStatic ()
   return {};
 }
 
-__device__ static __attribute__((noinline)) MixedSmallStruct
-returnMixedSmallSruct ()
+__device__ static __attribute__ ((noinline)) MixedSmallStruct
+returnMixedSmallStruct ()
 {
   MixedSmallStruct var;
   var.b[0] = 4;
@@ -236,7 +236,7 @@ kernel ()
   returnEmpty ();
   returnEmptyWithStatic ();
 
-  returnMixedSmallSruct ();
+  returnMixedSmallStruct ();
 
   returnSized<1> ();
   returnSized<2> ();

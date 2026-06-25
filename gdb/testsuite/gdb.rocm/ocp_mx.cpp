@@ -31,7 +31,6 @@
     }                                                                        \
   }
 
-
 __host__ __device__ void
 fp8e4m3_values ()
 {
