@@ -1479,7 +1479,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
 #define F_OD(X) (((X) & 0x7) << 24)
 /* Instruction has the field of 'sz'.  */
 #define F_LSE_SZ (1 << 27)
-/* Require an exact qualifier match, even for NIL qualifiers.  */
+
 
 #define F_SYS_READ (1ULL << 29)
 /* This system instruction is used to write system registers.  */
