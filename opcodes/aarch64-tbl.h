@@ -3374,7 +3374,7 @@ static const aarch64_feature_set aarch64_feature_mpamv2 =
 #define MEMTAG_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, 0, MEMTAG, OPS, QUALS, FLAGS | F_INVALID_IMM_SYMS_1, 0, 0, NULL }
 #define _TME_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS) \
-  { NAME, OPCODE, MASK, CLASS, OP, TME, OPS, QUALS, FLAGS | F_INVALID_IMM_SYMS_1, 0, 0, NULL }
+  { NAME, OPCODE, MASK, CLASS, OP, TME, OPS, QUALS, FLAGS | F_INVALID_IMM_SYMS_1 | F_DEPRECATED_INSN, 0, 0, NULL }
 #define SVE2_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS,TIED) \
   { NAME, OPCODE, MASK, CLASS, OP, SVE2, OPS, QUALS, \
     FLAGS | F_INVALID_IMM_SYMS_2, 0, TIED, NULL }
@@ -5154,10 +5154,10 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   CORE_INSN ("adr",  0x10000000, 0x9f000000, pcreladdr, 0, OP2 (Rd, ADDR_PCREL21), QL_ADRP, 0),
   CORE_INSN ("adrp", 0x90000000, 0x9f000000, pcreladdr, 0, OP2 (Rd, ADDR_ADRP), QL_ADRP, 0),
   /* TME Instructions.  */
-  _TME_INSN ("tstart", 0xd5233060, 0xffffffe0, 0, 0, OP1 (Rd), QL_I1X, 0),
-  _TME_INSN ("tcommit", 0xd503307f, 0xffffffff, 0, 0, OP0 (), QL_0, 0),
-  _TME_INSN ("ttest", 0xd5233160, 0xffffffe0, 0, 0, OP1 (Rd), QL_I1X, 0),
-  _TME_INSN ("tcancel", 0xd4600000, 0xffe0001f, 0, 0, OP1 (TME_UIMM16), QL_IMM_NIL, 0),
+  _TME_INSN ("tstart", 0xd5233060, 0xffffffe0, tme, 0, OP1 (Rd), QL_I1X, 0),
+  _TME_INSN ("tcommit", 0xd503307f, 0xffffffff, tme, 0, OP0 (), QL_0, 0),
+  _TME_INSN ("ttest", 0xd5233160, 0xffffffe0, tme, 0, OP1 (Rd), QL_I1X, 0),
+  _TME_INSN ("tcancel", 0xd4600000, 0xffe0001f, tme, 0, OP1 (TME_UIMM16), QL_IMM_NIL, 0),
   /* SME instructions (aliases for MSR <sysreg> operations.  */
   SME_INSN ("smstart", 0xd503477f, 0xffffffff, sme_start, 0, OP0 (), QL_0, F_SYS_WRITE, 0),
   SME_INSN ("smstop",  0xd503467f, 0xffffffff, sme_stop,  0, OP0 (), QL_0, F_SYS_WRITE, 0),

@@ -1,5 +1,9 @@
 -*- text -*-
 
+* The aarch64 TME extension has never been implemented in any products.  Arm
+  has withdrawn it from the architecture.  The assembler will now warn if
+  instructions from the extension are detected during assembly.
+
 * The legacy .vtable_entry and .vtable_inherit directives that were
   needed for versions of GCC prior to gcc-3.0 (when the generic C++
   ABI was adopted) are now considered obsolete.  They are now deprecated

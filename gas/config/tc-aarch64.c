@@ -8743,9 +8743,9 @@ programmer_friendly_fixup (aarch64_instruction *instr)
 /* Check for loads and stores that will cause unpredictable behavior.  */
 
 static void
-warn_unpredictable_ldst (aarch64_instruction *instr, char *str)
+warn_unpredictable_ldst (const aarch64_instruction *instr, const char *str)
 {
-  aarch64_inst *base = &instr->base;
+  const aarch64_inst *base = &instr->base;
   const aarch64_opcode *opcode = base->opcode;
   const aarch64_opnd_info *opnds = base->operands;
   switch (opcode->iclass)
@@ -8838,6 +8838,25 @@ warn_unpredictable_ldst (aarch64_instruction *instr, char *str)
 
     default:
       break;
+    }
+}
+
+static void
+warn_deprecated (const aarch64_instruction *instr, const char *str)
+{
+  const aarch64_inst *base = &instr->base;
+  const aarch64_opcode *opcode = base->opcode;
+  if (!(opcode->flags & F_DEPRECATED_INSN))
+    return;
+  switch (opcode->iclass)
+    {
+    case tme:
+      as_warn (_("the TME feature has been deprecated -- `%s'"), str);
+      break;
+    default:
+      /* Instruction marked as deprecated, but a suitable warning not
+	 added above.  */
+      abort();
     }
 }
 
@@ -9019,6 +9038,7 @@ md_assemble (char *str)
 	    }
 
 	  warn_unpredictable_ldst (&inst, str);
+	  warn_deprecated (&inst, str);
 
 	  if (inst.reloc.type == BFD_RELOC_UNUSED
 	      || !inst.reloc.need_libopcodes_p)
