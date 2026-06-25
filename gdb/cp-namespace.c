@@ -559,7 +559,7 @@ cp_lookup_symbol_imports (const char *scope,
 	{
 	  struct type *context;
 	  std::string name_copy (function->natural_name ());
-	  const struct language_defn *lang = language_def (language_cplus);
+	  const struct language_defn *lang = language_def (language_cplus_);
 	  const struct block *parent = block->superblock ();
 	  struct symbol *sym;
 

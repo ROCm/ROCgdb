@@ -153,7 +153,7 @@ get_language_name (enum language lang)
     case language_objc:
       return "c.lang";
 
-    case language_cplus:
+    case language_cplus_:
       return "cpp.lang";
 
     case language_d:
