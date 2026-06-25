@@ -302,6 +302,14 @@ if test $gdb_native = yes; then
 fi
 AC_SUBST(HAVE_GSTACK)
 
+# PDB debug format support.
+# Enable PDB if any Windows target is present or --enable-targets=all.
+AC_ARG_ENABLE(gdb-pdb-support,
+	      [AS_HELP_STRING([--enable-gdb-pdb-support],
+			      [PDB debuginfo format (yes / no / auto, default: enabled for Windows targets)])],
+	      [GDB_CHECK_YES_NO_AUTO_VAL([$enableval], [--enable-gdb-pdb-support])],
+	      [enable_gdb_pdb_support=auto])
+
 # AMD debugger API support.
 
 AC_ARG_WITH([amd-dbgapi],
@@ -369,7 +377,26 @@ AC_SUBST(HAVE_NATIVE_GCORE_TARGET)
 # For other settings, only the main target counts.
 gdb_sim=
 gdb_osabi=
+gdb_windows_target=
 targ=$target; . ${srcdir}/configure.tgt
+
+# Resolve --enable-gdb-pdb-support=auto now that configure.tgt has set
+# gdb_windows_target.
+if test "x${enable_gdb_pdb_support}" = "xauto"; then
+  if test x${all_targets} = xtrue \
+     || test x${gdb_windows_target} = xyes; then
+    enable_gdb_pdb_support=yes
+  else
+    enable_gdb_pdb_support=no
+  fi
+fi
+
+if test "x${enable_gdb_pdb_support}" != "xno"; then
+    AC_DEFINE(PDB_FORMAT_AVAILABLE, 1,
+	      [Defined if PDB format was requested.])
+    CONFIG_SRCS="$CONFIG_SRCS \$(PDB_SRCS)"
+    CONFIG_OBS="$CONFIG_OBS \$(PDB_OBS)"
+fi
 
 # Fetch the default architecture and default target vector from BFD.
 targ=$target; . $srcdir/../bfd/config.bfd

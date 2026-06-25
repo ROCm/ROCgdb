@@ -1,0 +1,257 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# "print" sibling of pdb-compound-types.exp.  For every compound type
+# whose declaration is verified by ptype in pdb-compound-types.exp,
+# this file verifies that GDB can read and print the value of a variable
+# of that type — global, file-static, and function local
+# (where present in the test program).
+#
+# Coverage:
+#   enum (Color), scoped enum (Direction), large enum (BigValues),
+#   struct (SimpleStruct), bitfield struct (PackedFlags), union
+#   (MultiValue), single-inheritance class (Base/Derived), abstract
+#   class + concrete (AbstractShape/Circle), virtual / diamond
+#   inheritance (VBase/Left/Right/Diamond), nested types + access
+#   sections (Container), and the LF_INDEX continuation struct
+#   (HugeStruct).
+#
+# Tests for "maintenance info pdb-symbols" / "maintenance info pdb-gsi" live in
+# pdb-info-cmd.exp — do not duplicate them here.
+#
+# Uses precompiled pdb-compound-test-Od.exe + .pdb (no compiler needed).
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+# --- Set up file paths ---
+standard_testfile pdb-compound-test.cpp
+
+set exe ${binfile}.exe
+set pdb ${binfile}.pdb
+
+set src_dir_exe $srcdir/$subdir/pdb-compound-test-Od.exe
+set src_dir_pdb $srcdir/$subdir/pdb-compound-test-Od.pdb
+
+if {![file exists $src_dir_exe]} {
+    unsupported "prebuilt exe not found: $src_dir_exe"
+    return
+}
+if {![file exists $src_dir_pdb]} {
+    unsupported "prebuilt pdb not found: $src_dir_pdb"
+    return
+}
+
+catch {file mkdir [file dirname $exe]}
+# Make sure no leftover GDB from a previous testcase is still holding
+# the output exe (Windows: file copy fails with EBUSY otherwise).
+catch {gdb_exit}
+file copy -force $src_dir_exe $exe
+file copy -force $src_dir_pdb $pdb
+
+if {![file exists $exe]} {
+    fail "failed to copy exe to $exe"
+    return
+}
+
+verbose -log "Using prebuilt exe: $src_dir_exe"
+verbose -log "Copied to: $exe"
+
+# ===================================================================
+# Load executable and stop at compound_marker so that locals exist.
+# ===================================================================
+clean_restart $exe
+disable_pdb_symbol_server
+match_max 131072
+
+gdb_test "break pdb-compound-test.cpp:511" \
+    "Breakpoint.*at.*" \
+    "set breakpoint at compound_marker call site in main"
+
+gdb_test "run" \
+    "Breakpoint.*main.*" \
+    "hit breakpoint inside main with locals live"
+
+# ===================================================================
+# Globals — one print per compound type whose ptype is checked in
+# pdb-compound-types.exp.
+# ===================================================================
+
+# enum Color — initialized to Green.
+gdb_test "print g_color" \
+    "= Green" \
+    "print g_color (enum value)"
+
+# scoped enum Direction — initialised to Direction::East.
+gdb_test "print g_dir" \
+    "= (Direction::)?East" \
+    "print g_dir (scoped enum value)"
+
+# enum BigValues — initialised to BV_LARGE.
+gdb_test "print g_bv" \
+    "= BV_LARGE" \
+    "print g_bv (large enum value)"
+
+# struct SimpleStruct — field-by-field plus whole struct.
+gdb_test "print g_simple" \
+    "= \\{x = 10, y = 20, value = 3\\.14.*, tag = 65 'A', name = .*\"hello\".*\\}" \
+    "print g_simple (whole struct)"
+
+gdb_test "print g_simple.x"     "= 10"          "print g_simple.x"
+gdb_test "print g_simple.y"     "= 20"          "print g_simple.y"
+gdb_test "print g_simple.value" "= 3\\.14.*"    "print g_simple.value"
+gdb_test "print g_simple.tag"   "= 65 'A'"      "print g_simple.tag"
+
+# struct PackedFlags — bitfield reads (LF_BITFIELD width + position).
+gdb_test "print g_flags.visible" "= 1"     "print g_flags.visible (bitfield 1)"
+gdb_test "print g_flags.enabled" "= 1"     "print g_flags.enabled (bitfield 1)"
+gdb_test "print g_flags.mode"    "= 5"     "print g_flags.mode (bitfield 4)"
+gdb_test "print g_flags.level"   "= 200"   "print g_flags.level (bitfield 8)"
+gdb_test "print g_flags.id"      "= 12345" "print g_flags.id (bitfield 18)"
+
+# union MultiValue — main() sets g_union.as_int = 0x12345678.
+gdb_test "print g_union.as_int" \
+    "= 305419896" \
+    "print g_union.as_int (union member)"
+
+gdb_test "print/x g_union.as_int" \
+    "= 0x12345678" \
+    "print/x g_union.as_int"
+
+# class Base — main() sets g_base.base_id = 10.
+gdb_test "print g_base.base_id" \
+    "= 10" \
+    "print g_base.base_id"
+
+# class Derived : public Base.
+gdb_test "print g_derived.extra" \
+    "= 42\\.5.*" \
+    "print g_derived.extra"
+
+gdb_test "print g_derived.base_id" \
+    "= .*" \
+    "print g_derived.base_id (inherited)"
+
+gdb_test "print Derived::instance_count" \
+    "= .*" \
+    "print Derived::instance_count (static member)"
+
+# class Circle : public AbstractShape.
+gdb_test "print g_circle.radius" \
+    "= 5.*" \
+    "print g_circle.radius (concrete-from-abstract)"
+
+# Diamond inheritance.  diamond_val (Diamond's own member) works.
+# Member access through any virtual base (vb_data directly, or any
+# Left/Right field reached via the diamond's virtual VBase path)
+# requires MS C++ ABI vbase-offset support, which the PDB reader does
+# not implement.  These are tracked as expected failures (KFAIL) until
+# MS ABI support is added.
+gdb_test "print g_diamond.diamond_val" \
+    "= .*" \
+    "print g_diamond.diamond_val"
+
+setup_xfail *-*-*
+gdb_test "print g_diamond.vb_data" \
+    "= .*" \
+    "print g_diamond.vb_data (through virtual base)"
+
+# Container — nested types, default-constructed.
+gdb_test "print g_container.size_" \
+    "= 0" \
+    "print g_container.size_ (private field)"
+
+# HugeStruct — first/last fields exercise LF_INDEX continuation.
+# main() sets f000=100, f499=200.
+gdb_test "print g_huge.f000" \
+    "= 100" \
+    "print g_huge.f000 (first field of HugeStruct)"
+
+gdb_test "print g_huge.f499" \
+    "= 200" \
+    "print g_huge.f499 (last field of HugeStruct, post-LF_INDEX)"
+
+# File-static struct — must be reachable by name.
+gdb_test "print s_struct.x"     "= 100"        "print s_struct.x (file-static)"
+gdb_test "print s_struct.y"     "= 200"        "print s_struct.y (file-static)"
+gdb_test "print s_struct.tag"   "= 90 'Z'"     "print s_struct.tag (file-static)"
+
+# ===================================================================
+# Locals at compound_marker — every compound-type local variable.
+# ===================================================================
+
+gdb_test "print local_color" \
+    "= Blue" \
+    "print local_color (local enum)"
+
+gdb_test "print local_dir" \
+    "= (Direction::)?West" \
+    "print local_dir (local scoped enum)"
+
+gdb_test "print local_struct" \
+    "= \\{x = 1, y = 2, value = 0\\.5.*, tag = 76 'L', name = .*\"local\".*\\}" \
+    "print local_struct (local struct)"
+
+gdb_test "print local_union.as_double" \
+    "= 99\\.9.*" \
+    "print local_union.as_double (local union member)"
+
+gdb_test "print local_derived.extra" \
+    "= 7\\.7.*" \
+    "print local_derived.extra (local derived)"
+
+gdb_test "print local_circle.radius" \
+    "= 3.*" \
+    "print local_circle.radius (local concrete-from-abstract)"
+
+# Diamond access — see comment near g_diamond above.  vb_data, left_val
+# and right_val all need MS ABI vbase-offset support and are tracked as
+# expected failures (KFAIL) until that support is added.
+setup_xfail *-*-*
+gdb_test "print local_diamond.vb_data" \
+    "= 42" \
+    "print local_diamond.vb_data (virtual base via diamond)"
+
+setup_xfail *-*-*
+gdb_test "print local_diamond.left_val" \
+    "= 10" \
+    "print local_diamond.left_val"
+
+setup_xfail *-*-*
+gdb_test "print local_diamond.right_val" \
+    "= 20" \
+    "print local_diamond.right_val"
+
+gdb_test "print local_diamond.diamond_val" \
+    "= 30" \
+    "print local_diamond.diamond_val"
+
+# main() runs use_container(local_container) before reaching the
+# compound_marker call site, which calls add() a second time —
+# size_ ends up at 2.
+gdb_test "print local_container.size_" \
+    "= 2" \
+    "print local_container.size_ (after add)"
+
+gdb_test "print local_huge.f000" "= 1" "print local_huge.f000"
+gdb_test "print local_huge.f099" "= 2" "print local_huge.f099"
+gdb_test "print local_huge.f199" "= 3" "print local_huge.f199 (double field)"
+gdb_test "print local_huge.f299" "= 4 '\\\\004'" "print local_huge.f299 (char field)"
+gdb_test "print local_huge.f399" "= 5" "print local_huge.f399 (long long field)"
+gdb_test "print local_huge.f499" "= 6" "print local_huge.f499 (float field, post-LF_INDEX)"
