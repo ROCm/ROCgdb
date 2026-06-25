@@ -3265,6 +3265,10 @@ aarch64_build_one_stub (struct bfd_hash_entry *gen_entry,
   info = (struct bfd_link_info *) in_arg;
   htab = elf_aarch64_hash_table (info);
 
+  if (stub_entry->stub_type == aarch64_stub_erratum_843419_veneer
+      && stub_entry->stub_sec == NULL)
+    return true;
+
   /* Fail if the target section could not be assigned to an output
      section.  The user should fix his linker script.  */
   if (stub_entry->target_section->output_section == NULL
@@ -3410,7 +3414,7 @@ static bool
 aarch64_size_one_stub (struct bfd_hash_entry *gen_entry, void *in_arg)
 {
   struct elf_aarch64_stub_hash_entry *stub_entry;
-  struct elf_aarch64_link_hash_table *htab;
+  struct elf_aarch64_link_hash_table *htab ATTRIBUTE_UNUSED;
   int size;
 
   /* Massage our args to the form they really have.  */
@@ -3433,7 +3437,7 @@ aarch64_size_one_stub (struct bfd_hash_entry *gen_entry, void *in_arg)
       break;
     case aarch64_stub_erratum_843419_veneer:
       {
-	if (htab->fix_erratum_843419 == ERRAT_ADR)
+	if (stub_entry->stub_sec == NULL)
 	  return true;
 	size = sizeof (aarch64_erratum_843419_stub);
       }
