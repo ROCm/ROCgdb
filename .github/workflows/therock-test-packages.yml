@@ -38,7 +38,7 @@ jobs:
 
     container:
       image: ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb@sha256:7063e922b4b9145c92f20011674571f1c97b8fad6faaeb0b7d2d165b0bd9ae8b
-      options: "--cap-add=SYS_PTRACE --ipc host --group-add video --device /dev/kfd --device /dev/dri --group-add 110 --ulimit memlock=-1:-1 --security-opt seccomp=unconfined --env-file /etc/podinfo/gha-gpu-isolation-settings --user 0:0"
+      options: "--cap-add=SYS_PTRACE --cap-add=SYSLOG --ipc host --group-add video --device /dev/kfd --device /dev/dri --group-add 110 --ulimit memlock=-1:-1 --security-opt seccomp=unconfined --env-file /etc/podinfo/gha-gpu-isolation-settings --user 0:0"
 
     defaults:
       run:
@@ -65,6 +65,54 @@ jobs:
           FETCH_ARTIFACT_ARGS: "--debug-tools --tests"
           IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
 
+      - name: GPU hang diagnostics
+        env:
+          AMD_SMI: ${{ env.OUTPUT_ARTIFACTS_DIR }}/bin/amd-smi
+          ROCM_SMI: ${{ env.OUTPUT_ARTIFACTS_DIR }}/bin/rocm-smi
+        run: |
+          echo "==== dmesg ===="
+          dmesg || echo "dmesg unavailable"
+
+          echo ""
+          echo "==== amd-smi static ===="
+          "$AMD_SMI" static 2>/dev/null || echo "amd-smi static unavailable"
+
+          echo ""
+          echo "==== amd-smi process ===="
+          "$AMD_SMI" process 2>/dev/null || echo "amd-smi process unavailable"
+
+          echo ""
+          echo "==== amd-smi metric ===="
+          "$AMD_SMI" metric 2>/dev/null || echo "amd-smi metric unavailable"
+
+          echo ""
+          echo "==== amd-smi topology ===="
+          "$AMD_SMI" topology 2>/dev/null || echo "amd-smi topology unavailable"
+
+          echo ""
+          echo "==== rocm-smi ===="
+          "$ROCM_SMI" 2>/dev/null || echo "rocm-smi unavailable"
+
+          echo ""
+          echo "==== rocm-smi --showpids ===="
+          "$ROCM_SMI" --showpids 2>/dev/null || echo "rocm-smi --showpids unavailable"
+
+          echo ""
+          echo "==== rocm-smi --showmeminfo vram ===="
+          "$ROCM_SMI" --showmeminfo vram 2>/dev/null || echo "rocm-smi --showmeminfo unavailable"
+
+          echo ""
+          echo "==== rocm-smi --showuse ===="
+          "$ROCM_SMI" --showuse 2>/dev/null || echo "rocm-smi --showuse unavailable"
+
+          echo ""
+          echo "==== rocm-smi --showclkfrq ===="
+          "$ROCM_SMI" --showclkfrq 2>/dev/null || echo "rocm-smi --showclkfrq unavailable"
+
+          echo ""
+          echo "==== rocm-smi --showerrors ===="
+          "$ROCM_SMI" --showerrors 2>/dev/null || echo "rocm-smi --showerrors unavailable"
+
       - name: Run rocgdb tests
         run: |
-          python ${{ env.OUTPUT_ARTIFACTS_DIR }}/tests/rocgdb/test_rocgdb.py
+          python ${{ env.OUTPUT_ARTIFACTS_DIR }}/tests/rocgdb/test_rocgdb.py --tests gdb.rocm/simple.exp --max-failed-retries 0
