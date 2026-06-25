@@ -7,8 +7,9 @@ on:
         type: string
       artifact_group:
         type: string
-      test_runs_on:
+      therock_ref:
         type: string
+        required: true
       artifact_run_id:
         type: string
   workflow_dispatch:
@@ -17,8 +18,9 @@ on:
         type: string
       artifact_group:
         type: string
-      test_runs_on:
+      therock_ref:
         type: string
+        required: true
       artifact_run_id:
         type: string
 
@@ -26,45 +28,82 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 2d417fa49bc4e657bcbcf0ae549238784175f0fe # 2026-06-18
   VENV_DIR: ${{ github.workspace }}/.venv
   OUTPUT_ARTIFACTS_DIR: "./build"
 
 jobs:
-  rocgdb-tests:
-    name: 'rocgdb'
-    runs-on: ${{ inputs.test_runs_on }}
-    timeout-minutes: 45
-
-    container:
-      image: ghcr.io/rocm/no_rocm_image_ubuntu24_04_rocgdb@sha256:7063e922b4b9145c92f20011674571f1c97b8fad6faaeb0b7d2d165b0bd9ae8b
-      options: "--cap-add=SYS_PTRACE --ipc host --group-add video --device /dev/kfd --device /dev/dri --group-add 110 --ulimit memlock=-1:-1 --security-opt seccomp=unconfined --env-file /etc/podinfo/gha-gpu-isolation-settings --user 0:0"
-
-    defaults:
-      run:
-        shell: bash
-
-    env:
-      ARTIFACT_RUN_ID: "${{ inputs.artifact_run_id }}"
-
+  configure_test_matrix:
+    name: "Configure test matrix"
+    runs-on: ubuntu-24.04
+    outputs:
+      components: ${{ steps.patch-scripts.outputs.components }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Checkout TheRock repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: "ROCm/TheRock"
-          ref: ${{ env.THEROCK_COMMIT_REF }}
+          ref: ${{ inputs.therock_ref }}
 
-      - name: Run setup test environment workflow
-        uses: './.github/actions/setup_test_environment'
+      - name: Checkout CI config
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ARTIFACT_RUN_ID: ${{ env.ARTIFACT_RUN_ID }}
-          AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
-          ARTIFACT_GROUP: ${{ inputs.artifact_group }}
-          OUTPUT_ARTIFACTS_DIR: ${{ env.OUTPUT_ARTIFACTS_DIR }}
-          VENV_DIR: ${{ env.VENV_DIR }}
-          FETCH_ARTIFACT_ARGS: "--debug-tools --tests"
-          IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+          repository: ROCm/therock-ci-config
+          ref: main
+          path: ci-config
+        continue-on-error: true
 
-      - name: Run rocgdb tests
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Configure test matrix
+        env:
+          PROJECTS_TO_TEST: "rocgdb-cpu,rocgdb-gpu"
+          AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
+          CI_CONFIG_PATH: ci-config
+        id: configure
+        run: python ./build_tools/github_actions/fetch_test_configurations.py
+
+      - name: Override rocgdb test_script to use artifact-installed script
+        # TheRock's fetch_test_configurations.py points test_rocgdb.py at its own
+        # build_tools copy. Rewrite to the script installed in the artifacts at
+        # OUTPUT_ARTIFACTS_DIR/tests/rocgdb/test_rocgdb.py.
+        id: patch-scripts
         run: |
-          python ${{ env.OUTPUT_ARTIFACTS_DIR }}/tests/rocgdb/test_rocgdb.py
+          components='${{ steps.configure.outputs.components }}'
+          script_path="${{ env.OUTPUT_ARTIFACTS_DIR }}/tests/rocgdb/test_rocgdb.py"
+          updated=$(echo "$components" | jq -c --arg s "$script_path" '
+            map(
+              .test_script |= gsub(
+                "build_tools/github_actions/test_executable_scripts/test_rocgdb\\.py";
+                $s
+              )
+            )
+          ')
+          echo "components=$updated" >> $GITHUB_OUTPUT
+
+  test_components:
+    name: "Test ${{ matrix.components.job_name }}"
+    needs: [configure_test_matrix]
+    if: ${{ needs.configure_test_matrix.outputs.components != '[]' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        components: ${{ fromJSON(needs.configure_test_matrix.outputs.components) }}
+    uses: ./.github/workflows/therock-test-component.yml
+    with:
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      therock_ref: ${{ inputs.therock_ref }}
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      # Per-component runner selection:
+      #   1. CPU-only components use a standard Linux scale runner
+      #   2. Per-component GPU runner (set by fetch_test_configurations.py)
+      test_runs_on: >-
+        ${{
+          (matrix.components.linux_cpu_runner == true &&
+            'aws-linux-scale-rocm-prod') ||
+          matrix.components.test_runner
+        }}
+      component: ${{ toJSON(matrix.components) }}
+    secrets: inherit
