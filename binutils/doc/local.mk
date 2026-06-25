@@ -180,10 +180,32 @@ MAINTAINERCLEANFILES += $(man_MANS) %D%/binutils.info %D%/cxxfilt.man
 	sed -e 's/cxxfilt/$(DEMANGLER_NAME)/' < $$man \
 		> %D%/$(DEMANGLER_NAME).1
 
+# Wire in the TOC navigation sidebar with the HTML manual.
+#
+TOC_SIDEBAR_DIR = $(srcdir)/../texinfo/toc-sidebar
+TOC_SIDEBAR_ASSETS = $(TOC_SIDEBAR_DIR)/toc-sidebar.css \
+		     $(TOC_SIDEBAR_DIR)/toc-sidebar.js
+
+# List of extra stylesheets to brand the HTML manual.  Each stylesheet
+# is referenced with --css-ref and copied into the output directory.
+# It is empty by default and can be set on the make command line, so a
+# build can theme the manual without editing the sources.
+MANUAL_CSS =
+
+# ROCm branding.
+MANUAL_CSS += $(srcdir)/../rocm-theme.css
+
+# Unlike the ld and gas manuals, this rule passes no -o, so texi2any
+# derives the split output directory from binutils.texi's @setfilename
+# (binutils.info) and writes the manual to binutils_html; the copied
+# assets must land in that same directory.
 html-local: %D%/binutils/index.html
-%D%/binutils/index.html: %D%/binutils.texi $(binutils_TEXINFOS)
+%D%/binutils/index.html: %D%/binutils.texi $(binutils_TEXINFOS) $(MANUAL_CSS)
 	$(AM_V_GEN)$(MAKEINFOHTML) $(AM_MAKEINFOHTMLFLAGS) $(MAKEINFOFLAGS) \
+	  --init-file=$(TOC_SIDEBAR_DIR)/toc-sidebar.init \
+	  $(foreach css,$(MANUAL_CSS),--css-ref=$(notdir $(css))) \
 	  --split=node -I$(srcdir) $(srcdir)/%D%/binutils.texi
+	$(AM_V_at)cp $(TOC_SIDEBAR_ASSETS) $(MANUAL_CSS) binutils_html
 
 # Maintenance
 
