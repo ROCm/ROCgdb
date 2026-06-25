@@ -116,13 +116,14 @@ extern void avr_cons_fix_new (fragS *,int, int, expressionS *,
 
 /* If defined, this macro allows control over whether fixups for a
    given section will be processed when the linkrelax variable is
-   set. Define it to zero and handle things in md_apply_fix instead.*/
+   set. Define it to zero and handle things in md_apply_fix instead.  */
 #define TC_LINKRELAX_FIXUP(SEG) 0
 
-/* If this macro returns non-zero, it guarantees that a relocation will be emitted
-   even when the value can be resolved locally. Do that if linkrelax is turned on */
+/* If this macro returns non-zero, it guarantees that a relocation will
+   be emitted even when the value can be resolved locally. Do that if
+   linkrelax is turned on.  */
 #define TC_FORCE_RELOCATION(fix)	avr_force_relocation (fix)
-#define TC_FORCE_RELOCATION_SUB_SAME(fix, seg) \
+#define TC_FORCE_RELOCATION_SUB_SAME(fix, seg)	\
   (GENERIC_FORCE_RELOCATION_SUB_SAME (fix, seg)	\
    || avr_force_relocation (fix))
 extern int avr_force_relocation (struct fix *);
@@ -161,21 +162,21 @@ extern int avr_force_relocation (struct fix *);
    However, there is no serious performance penalty when making the linker
    make the fixup work.  Check also that fx_addsy is not NULL, in order to make
    sure that the fixup refers to some sort of label.  */
-#define TC_VALIDATE_FIX(FIXP,SEG,SKIP)                       \
-  if (   (FIXP->fx_r_type == BFD_RELOC_AVR_7_PCREL           \
-       || FIXP->fx_r_type == BFD_RELOC_AVR_13_PCREL          \
-       || FIXP->fx_r_type == BFD_RELOC_AVR_LO8_LDI_PM        \
-       || FIXP->fx_r_type == BFD_RELOC_AVR_LO8_LDI_GS        \
-       || FIXP->fx_r_type == BFD_RELOC_AVR_HI8_LDI_PM        \
-       || FIXP->fx_r_type == BFD_RELOC_AVR_HI8_LDI_GS        \
-       || FIXP->fx_r_type == BFD_RELOC_AVR_HH8_LDI_PM        \
+#define TC_VALIDATE_FIX(FIXP,SEG,SKIP)			     \
+  if ((FIXP->fx_r_type == BFD_RELOC_AVR_7_PCREL		     \
+       || FIXP->fx_r_type == BFD_RELOC_AVR_13_PCREL	     \
+       || FIXP->fx_r_type == BFD_RELOC_AVR_LO8_LDI_PM	     \
+       || FIXP->fx_r_type == BFD_RELOC_AVR_LO8_LDI_GS	     \
+       || FIXP->fx_r_type == BFD_RELOC_AVR_HI8_LDI_PM	     \
+       || FIXP->fx_r_type == BFD_RELOC_AVR_HI8_LDI_GS	     \
+       || FIXP->fx_r_type == BFD_RELOC_AVR_HH8_LDI_PM	     \
        || FIXP->fx_r_type == BFD_RELOC_AVR_LO8_LDI_PM_NEG    \
        || FIXP->fx_r_type == BFD_RELOC_AVR_HI8_LDI_PM_NEG    \
        || FIXP->fx_r_type == BFD_RELOC_AVR_HH8_LDI_PM_NEG    \
-       || FIXP->fx_r_type == BFD_RELOC_AVR_8_LO              \
-       || FIXP->fx_r_type == BFD_RELOC_AVR_8_HI              \
-       || FIXP->fx_r_type == BFD_RELOC_AVR_8_HLO             \
-       || FIXP->fx_r_type == BFD_RELOC_AVR_16_PM)            \
+       || FIXP->fx_r_type == BFD_RELOC_AVR_8_LO		     \
+       || FIXP->fx_r_type == BFD_RELOC_AVR_8_HI		     \
+       || FIXP->fx_r_type == BFD_RELOC_AVR_8_HLO	     \
+       || FIXP->fx_r_type == BFD_RELOC_AVR_16_PM)	     \
       && FIXP->fx_addsy != NULL				     \
       && FIXP->fx_subsy == NULL)			     \
     {							     \
