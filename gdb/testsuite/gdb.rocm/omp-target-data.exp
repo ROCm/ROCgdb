@@ -1,0 +1,64 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# This file is part of GDB.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# 'target data' region with two nested 'target' regions that reuse
+# the same device buffer.  Verify GDB can break inside both kernels
+# in sequence.
+
+load_lib rocm.exp
+
+require allow_omp_offload_tests
+
+standard_testfile
+
+set k1_line [gdb_get_line_number "data-k1"]
+set k2_line [gdb_get_line_number "data-k2"]
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug omp-rocm}] == -1} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+
+    gdb_breakpoint "$srcfile:$k1_line" -temporary -allow-pending
+
+    with_test_prefix "first kernel" {
+	gdb_continue_to_breakpoint "first kernel"
+	gdb_test "print a\[0\]" "= 0"   "a\[0\] in first kernel"
+	gdb_test "print b\[0\]" "= 100" "b\[0\] in first kernel"
+    }
+
+    gdb_breakpoint "$srcfile:$k2_line" -temporary -allow-pending
+
+    with_test_prefix "second kernel" {
+	gdb_continue_to_breakpoint "second kernel"
+	# After the first kernel ran to completion (its temporary
+	# breakpoint already auto-deleted), c[0] = a[0] + b[0]
+	# = 0 + 100 = 100.  The 'target data' region preserves this on
+	# the device, so we observe it.
+	gdb_test "print c\[0\]" "= 100" "c\[0\] in second kernel"
+    }
+
+    # The OpenMP runtime's host threads emit "[Thread ... exited]"
+    # lines before the program exits, so allow extra output.
+    gdb_continue_to_end "" "continue" 1
+}

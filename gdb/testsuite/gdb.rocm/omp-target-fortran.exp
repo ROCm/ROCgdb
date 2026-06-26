@@ -1,0 +1,72 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# This file is part of GDB.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Fortran OpenMP-offload test: stop in the offloaded loop and read the
+# loop index, then stop inside a '!$omp declare target' function and
+# check the device-side call stack.
+
+load_lib rocm.exp
+
+require allow_omp_offload_fortran_tests
+
+standard_testfile .f90
+
+set add_line [gdb_get_line_number "fadd-line"]
+
+# Build with -O0 so device locals (e.g. the loop index) stay visible:
+# amdflang optimizes the offloaded code by default, dropping their
+# debug info.  This is amdflang-specific (amdclang already defaults to
+# -O0) and is tracked upstream as ROCM-19898, so keep the workaround
+# local to this test rather than in the shared compile flags.
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug f90 omp-rocm additional_flags=-O0}] == -1} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+
+    # Stop inside the '!$omp declare target' function and confirm the
+    # device call stack shows it called from the offloaded kernel.
+    gdb_breakpoint "$srcfile:$add_line" -temporary -allow-pending
+    gdb_continue_to_breakpoint "add_vals"
+    gdb_test "backtrace 2" \
+	"#0 .*add_vals .*\r\n#1 .*__omp_offloading.*" \
+	"add_vals called from the kernel"
+
+    # a(i) == i and b(i) == 2 * i, so the arguments satisfy y == 2 * x.
+    # Use distinct failure defaults so the relationship can't trivially
+    # hold if a read fails.
+    set x [get_integer_valueof "x" -1 "device function arg x"]
+    set y [get_integer_valueof "y" -2 "device function arg y"]
+    gdb_assert {$x >= 1 && $y == 2 * $x} "b(i) == 2 * a(i)"
+
+    # Read the device-local loop index in the kernel (caller) frame.
+    # 'i' is only visible because amdflang is built with -O0 (see
+    # ROCM-19898 for the default-optimization debug-info limitation).
+    gdb_test "frame 1" "__omp_offloading\[^\r\n\]*\r\n$::decimal\[^\r\n\]*" \
+	"select kernel frame"
+    set i [get_integer_valueof "i" 0 "loop index"]
+    gdb_assert {$i >= 1 && $i <= 32} "loop index is in range"
+
+    # The OpenMP runtime's host threads emit "[Thread ... exited]"
+    # lines before the program exits, so allow extra output.
+    gdb_continue_to_end "" "continue" 1
+}
