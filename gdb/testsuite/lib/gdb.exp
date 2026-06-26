@@ -6458,6 +6458,9 @@ proc quote_for_host { args } {
 #     information.
 #   - dwarf5: Force compilation with dwarf-5 debug information.
 #   - hip_no_offload_arch: Do not pass --offload-arch to the HIP compiler.
+#   - omp-rocm: Build an OpenMP-offload program for AMD GPUs.  Selects
+#     the AMD compiler driver (amdclang/amdclang++/amdflang, per the
+#     language option) and adds the -fopenmp offload flags.
 #
 # And here are some of the not too obscure options understood by DejaGnu that
 # influence the compilation:
@@ -6783,12 +6786,25 @@ proc gdb_compile {source dest type options} {
     # DWARF line numbering.
     # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=88432
     # This option defaults to on for Debian/Ubuntu.
+    #
+    # The bug is language-agnostic but the workaround is GCC-specific.
+    # Also skip -fno-stack-protector for non-GNU Fortran drivers, i.e.,
+    # "f90" with an F90 compiler that does not match gfortran-* (e.g.,
+    # flang, amdflang, ifx, ifort): such drivers reject the unknown
+    # argument even when test_compiler_info reports the host C compiler
+    # as GCC.  gfortran ("f90" with gfortran-*, as detected via
+    # lib/compiler.F90) keeps receiving the workaround.  Likewise skip
+    # it for "omp-rocm", which always uses an amdclang/amdflang driver
+    # (selected by default_target_compile), never GCC.
     if { !$getting_compiler_info
 	 && [test_compiler_info {gcc-*-*}]
 	 && !([test_compiler_info {gcc-[0-3]-*}]
 	      || [test_compiler_info {gcc-4-0-*}])
 	 && [lsearch -exact $options rust] == -1
-	 && [lsearch -exact $options hip] == -1} {
+	 && [lsearch -exact $options hip] == -1
+	 && [lsearch -exact $options "omp-rocm"] == -1
+	 && !([lsearch -exact $options f90] != -1
+	      && ![test_compiler_info {gfortran-*} f90])} {
 	# Put it at the front to not override any user-provided value.
 	lappend new_options "early_flags=-fno-stack-protector"
     }
@@ -6867,6 +6883,32 @@ proc gdb_compile {source dest type options} {
 	# don't do it if the testcase explicitly used --offload-arch.
 	if {[lsearch -exact $options hip_no_offload_arch] == -1
 	    && [lsearch -regexp $options "--offload-arch="] == -1} {
+	    foreach gpu_target [hcc_amdgpu_targets] {
+		lappend new_options "early_flags=--offload-arch=$gpu_target"
+	    }
+	}
+    }
+
+    if {[lsearch -exact $options "omp-rocm"] != -1 && !$getting_compiler_info} {
+	# OpenMP offload to AMD GPUs.  Enable the offload target and,
+	# like the HIP path above, the -mllvm option that makes AMDGPU
+	# backtraces work under -g (without hardcoding -g, which the
+	# "debug" option still controls).  The compiler driver itself
+	# (amdclang / amdclang++ / amdflang) is selected by
+	# default_target_compile based on the language option.
+	set omp_early_flags "-fopenmp -fopenmp-targets=amdgcn-amd-amdhsa\
+			     -mllvm=-amdgpu-spill-cfi-saved-regs"
+
+	# amdflang does not understand some clang-only diagnostic
+	# flags, so only pass them on the C/C++ (non-f90) paths.
+	if {[lsearch -exact $options f90] == -1} {
+	    append omp_early_flags " -Wno-unused-command-line-argument"
+	}
+	lappend new_options "early_flags=$omp_early_flags"
+
+	# amdclang/amdflang require explicit --offload-arch; pass one
+	# per available device, unless the testcase set it itself.
+	if {[lsearch -regexp $options "--offload-arch="] == -1} {
 	    foreach gpu_target [hcc_amdgpu_targets] {
 		lappend new_options "early_flags=--offload-arch=$gpu_target"
 	    }
@@ -7107,6 +7149,30 @@ proc gdb_compile {source dest type options} {
 
     # Prune uninteresting compiler (and linker) output.
     regsub "Creating library file: \[^\r\n\]*\[\r\n\]+" $result "" result
+
+    # ROCm's device ld.lld can warn that the OpenMP runtime helper
+    # __keep_alive references LDS from a non-kernel function; the link
+    # still succeeds.  Drop that benign warning (and any immediately
+    # following ">>>" note lines) so the testcase isn't marked
+    # UNTESTED.  Anchored to that single warning, so genuine "error:"
+    # diagnostics are never pruned.
+    #
+    # Also drop benign "-Wunused-command-line-argument" warnings on the
+    # omp-rocm path.  build_executable compiles and links in two steps,
+    # so the offload/-mllvm flags (and the framework's -J module dir)
+    # are unused on the link step.  amdclang/amdclang++ silence these
+    # via -Wno-unused-command-line-argument, but amdflang does not
+    # accept that flag, so prune the resulting warnings here instead.
+    # Scoped to omp-rocm builds, whose flags we control, and to the
+    # unused-argument warning specifically (errors are never matched).
+    if {[lsearch -exact $options "omp-rocm"] != -1} {
+	regsub -all \
+	    {ld\.lld: warning:[^\r\n]*__keep_alive[^\r\n]*local memory global used by non-kernel function[^\r\n]*[\r\n]*(?:[ \t]*>>>[^\r\n]*[\r\n]*)*} \
+	    $result "" result
+	regsub -all \
+	    {[^\r\n]*: warning: argument unused during compilation:[^\r\n]*\[-Wunused-command-line-argument\][^\r\n]*[\r\n]*} \
+	    $result "" result
+    }
 
     # Starting with 2021.7.0 icc and icpc are marked as deprecated and both
     # compilers emit a remark #10441.  To let GDB still compile successfully,

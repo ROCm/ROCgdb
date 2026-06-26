@@ -1,0 +1,59 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# This file is part of GDB.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Two '#pragma omp declare target' device functions (square_dev and
+# cube_dev) launched from two separate target regions in a single
+# binary.  Verify breakpoints set on each named device function are
+# hit by their corresponding kernel only.
+
+load_lib rocm.exp
+
+require allow_omp_offload_tests
+
+standard_testfile
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug omp-rocm}] == -1} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+
+    # This is a serial 'omp target' loop, so the first iteration
+    # (i == 0) handles in[0] == 1; the device argument x is therefore 1
+    # in both kernels.  Reading it confirms we stopped in the right
+    # device function with a live argument (which also implies a wave).
+    with_test_prefix "square kernel" {
+	gdb_breakpoint "square_dev" -temporary -allow-pending
+	gdb_continue_to_breakpoint "square_dev"
+	gdb_test "print x" "= 1" "square_dev argument x"
+    }
+
+    with_test_prefix "cube kernel" {
+	gdb_breakpoint "cube_dev" -temporary -allow-pending
+	gdb_continue_to_breakpoint "cube_dev"
+	gdb_test "print x" "= 1" "cube_dev argument x"
+    }
+
+    # The OpenMP runtime's host threads emit "[Thread ... exited]"
+    # lines before the program exits, so allow extra output.
+    gdb_continue_to_end "" "continue" 1
+}

@@ -1,0 +1,65 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# This file is part of GDB.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# 'target teams distribute parallel for' spreads the loop across GPU
+# lanes, with consecutive iterations on consecutive lanes.  Verify this
+# by reading the loop index on two different lanes (the difference must
+# match the lane distance) and checking a per-lane computed value.
+
+load_lib rocm.exp
+
+require allow_omp_offload_tests
+
+standard_testfile
+
+set break_line [gdb_get_line_number "teams-line"]
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug omp-rocm}] == -1} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+
+    gdb_breakpoint "$srcfile:$break_line" -allow-pending
+
+    gdb_continue_to_breakpoint "teams breakpoint"
+
+    # 'distribute parallel for' runs consecutive iterations on
+    # consecutive lanes, so lane L sees loop index i = i0 + L.  Switch
+    # to lane 0 explicitly (rather than relying on which lane the stop
+    # selected), read i, then read it on lane 7, and check the two
+    # lanes are 7 iterations apart.
+    gdb_test "lane 0" "Switching to .*lane 0 .*" "switch to lane 0"
+    set i0 [get_integer_valueof "i" -1 "loop index on lane 0"]
+    gdb_test "lane 7" "Switching to .*lane 7 .*" "switch to lane 7"
+    set i7 [get_integer_valueof "i" -1 "loop index on lane 7"]
+    gdb_assert {$i7 - $i0 == 7} "lane 7 runs 7 iterations past lane 0"
+
+    # a[i] == i and b[i] == N - i, so a[i] + b[i] == N (256) on any
+    # lane (evaluated here on lane 7).
+    gdb_test "print a\[i\] + b\[i\]" "= 256" "a\[i\] + b\[i\] == N"
+
+    delete_breakpoints
+    # The OpenMP runtime's host threads emit "[Thread ... exited]"
+    # lines before the program exits, so allow extra output.
+    gdb_continue_to_end "" "continue" 1
+}
