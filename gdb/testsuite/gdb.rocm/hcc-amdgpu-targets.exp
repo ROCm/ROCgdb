@@ -1,0 +1,99 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Unit tests for hcc_amdgpu_targets.  These exercise the deduplication
+# logic across both the env-var and device-enumeration code paths, and
+# do not require a GPU or a running GDB instance.
+
+load_lib rocm.exp
+
+# Run BODY with find_amdgpu_devices stubbed to return DEVICES, then
+# restore the original proc.
+proc with_stub_devices {devices body} {
+    rename find_amdgpu_devices __saved_find_amdgpu_devices
+    # tclint-disable-next-line command-args
+    proc find_amdgpu_devices {} [list return $devices]
+    set code [catch {uplevel 1 $body} result]
+    rename find_amdgpu_devices {}
+    rename __saved_find_amdgpu_devices find_amdgpu_devices
+    return -code $code $result
+}
+
+# Tests using find_amdgpu_devices (no HCC_AMDGPU_TARGET env var).
+
+save_vars { env(HCC_AMDGPU_TARGET) } {
+    unset -nocomplain ::env(HCC_AMDGPU_TARGET)
+
+    with_stub_devices {gfx942 gfx942 gfx942} {
+	set result [hcc_amdgpu_targets]
+	if {$result eq {gfx942}} {
+	    pass "duplicates removed: 3x gfx942 produces single entry"
+	} else {
+	    fail "duplicates not removed: got $result"
+	}
+    }
+
+    with_stub_devices {gfx942 gfx942 gfx1100 gfx1100 gfx942} {
+	set result [hcc_amdgpu_targets]
+	if {$result eq {gfx942 gfx1100}} {
+	    pass "duplicates removed, order preserved: mixed list"
+	} else {
+	    fail "wrong result for mixed list: got $result"
+	}
+    }
+
+    with_stub_devices {gfx906 gfx90a} {
+	set result [hcc_amdgpu_targets]
+	if {$result eq {gfx906 gfx90a}} {
+	    pass "no duplicates: distinct devices unchanged"
+	} else {
+	    fail "distinct devices altered: got $result"
+	}
+    }
+
+    with_stub_devices {} {
+	set result [hcc_amdgpu_targets]
+	if {$result eq {}} {
+	    pass "empty device list returned as-is"
+	} else {
+	    fail "empty device list: got $result"
+	}
+    }
+}
+
+# Tests using HCC_AMDGPU_TARGET env var.
+
+save_vars { env(HCC_AMDGPU_TARGET) } {
+    set ::env(HCC_AMDGPU_TARGET) "gfx942,gfx942,gfx942"
+    set result [hcc_amdgpu_targets]
+    if {$result eq {gfx942}} {
+	pass "env var: duplicates removed"
+    } else {
+	fail "env var: duplicates not removed: got $result"
+    }
+}
+
+save_vars { env(HCC_AMDGPU_TARGET) } {
+    set ::env(HCC_AMDGPU_TARGET) "gfx906,gfx90a,gfx906"
+    set result [hcc_amdgpu_targets]
+    if {$result eq {gfx906 gfx90a}} {
+	pass "env var: order preserved when deduplicating"
+    } else {
+	fail "env var: wrong result: got $result"
+    }
+}
