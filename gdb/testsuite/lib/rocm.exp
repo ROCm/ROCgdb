@@ -537,7 +537,7 @@ proc rocm_core_find {binfile {deletefiles {}} {arg ""} \
 
 # Helper function calling "generate-core-file COREFILE_PATH".
 #
-# If an AMDGPU core dump is successfuly generated, issue a PASS and return 1.
+# If an AMDGPU core dump is successfully generated, issue a PASS and return 1.
 # If a configuration limitation is detected preventing the creation of an
 # AMDGPU core dump, issue an UNSUPPORTED, and return 0.  If any other error is
 # detected, issue a FAIL and return 0.
