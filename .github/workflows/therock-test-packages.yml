@@ -113,6 +113,25 @@ jobs:
           echo "==== rocm-smi --showerrors ===="
           "$ROCM_SMI" --showerrors 2>/dev/null || echo "rocm-smi --showerrors unavailable"
 
+      - name: Reset GPU(s) in ROCR_VISIBLE_DEVICES
+        env:
+          AMD_SMI: ${{ env.OUTPUT_ARTIFACTS_DIR }}/bin/amd-smi
+        run: |
+          if [ -z "${ROCR_VISIBLE_DEVICES}" ]; then
+            echo "ROCR_VISIBLE_DEVICES is not set; skipping GPU reset"
+          else
+            echo "Resetting GPU(s): ${ROCR_VISIBLE_DEVICES}"
+            IFS=',' read -ra GPUS <<< "${ROCR_VISIBLE_DEVICES}"
+            for gpu in "${GPUS[@]}"; do
+              echo "  amd-smi reset --gpureset --gpu ${gpu}"
+              "$AMD_SMI" reset --gpureset --gpu "${gpu}" \
+                || echo "WARNING: amd-smi reset failed for GPU ${gpu}"
+            done
+          fi
+
+      - name: Post-reset dmesg
+        run: dmesg | tail -n 400 || echo "dmesg unavailable"
+
       - name: Run rocgdb tests
         run: |
           python ${{ env.OUTPUT_ARTIFACTS_DIR }}/tests/rocgdb/test_rocgdb.py --tests gdb.rocm/simple.exp --max-failed-retries 0
