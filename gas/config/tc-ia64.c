@@ -4990,6 +4990,11 @@ dot_pred_rel (int type)
 	{
 	  int len;
 	  char *form = demand_copy_C_string (&len);
+	  if (form == NULL)
+	    {
+	      ignore_rest_of_line ();
+	      return;
+	    }
 
 	  if (strcmp (form, "mutex") == 0)
 	    type = 'm';

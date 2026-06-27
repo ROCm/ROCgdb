@@ -3086,6 +3086,11 @@ ecoff_directive_file (int ignore ATTRIBUTE_UNUSED)
 
   /* FIXME: we don't have to save the name here.  */
   name = demand_copy_C_string (&len);
+  if (name == NULL)
+    {
+      ignore_rest_of_line ();
+      return;
+    }
 
   add_file (name, indx - 1, 0);
 

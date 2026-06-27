@@ -4785,6 +4785,7 @@ static void
 s_alpha_file (int ignore ATTRIBUTE_UNUSED)
 {
   symbolS *s;
+  char *name;
   int length;
   static char case_hack[32];
 
@@ -4795,7 +4796,13 @@ s_alpha_file (int ignore ATTRIBUTE_UNUSED)
   symbol_get_bfdsym (s)->flags |= BSF_FILE;
 
   get_absolute_expression ();
-  s = symbol_find_or_make (demand_copy_string (&length));
+  name = demand_copy_string (&length);
+  if (name == NULL)
+    {
+      ignore_rest_of_line ();
+      return;
+    }
+  s = symbol_find_or_make (name);
   symbol_get_bfdsym (s)->flags |= BSF_FILE;
   demand_empty_rest_of_line ();
 }

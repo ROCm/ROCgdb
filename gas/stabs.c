@@ -259,7 +259,10 @@ s_stab_generic (int what,
 
       string = demand_copy_C_string (&length);
       if (string == NULL)
-	goto out2;
+	{
+	  ignore_rest_of_line ();
+	  goto out2;
+	}
       /* FIXME: We should probably find some other temporary storage
 	 for string, rather than leaking memory if someone else
 	 happens to use the notes obstack.  */
@@ -399,8 +402,10 @@ s_xstab (int what)
 
   stab_secname = demand_copy_C_string (&length);
   if (stab_secname == NULL)
-    /* as_bad error has been reported.  */
-    return;
+    {
+      ignore_rest_of_line ();
+      return;
+    }
   SKIP_WHITESPACE ();
   if (*input_line_pointer == ',')
     {

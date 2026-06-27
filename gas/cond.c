@@ -460,6 +460,11 @@ s_ifeqs (int arg)
   struct conditional_frame cframe;
 
   s1 = demand_copy_C_string (&len1);
+  if (s1 == NULL)
+    {
+      ignore_rest_of_line ();
+      return;
+    }
 
   SKIP_WHITESPACE ();
   if (*input_line_pointer != ',')
@@ -472,6 +477,11 @@ s_ifeqs (int arg)
   ++input_line_pointer;
 
   s2 = demand_copy_C_string (&len2);
+  if (s2 == NULL)
+    {
+      ignore_rest_of_line ();
+      return;
+    }
 
   res = len1 == len2 && strncmp (s1, s2, len1) == 0;
 

@@ -5059,8 +5059,14 @@ ppc_rename (int ignore ATTRIBUTE_UNUSED)
     }
   ++input_line_pointer;
 
-  symbol_get_tc (sym)->real_name = demand_copy_C_string (&len);
+  name = demand_copy_C_string (&len);
+  if (name == NULL)
+    {
+      ignore_rest_of_line ();
+      return;
+    }
 
+  symbol_get_tc (sym)->real_name = name;
   demand_empty_rest_of_line ();
 }
 
@@ -5080,6 +5086,11 @@ ppc_stabx (int ignore ATTRIBUTE_UNUSED)
   expressionS exp;
 
   name = demand_copy_C_string (&len);
+  if (name == NULL)
+    {
+      ignore_rest_of_line ();
+      return;
+    }
 
   if (*input_line_pointer != ',')
     {
@@ -5199,56 +5210,75 @@ ppc_file (int ignore ATTRIBUTE_UNUSED)
 {
   char *sfname, *s1 = NULL, *s2 = NULL, *s3 = NULL;
   int length, auxnb = 1;
+  coff_symbol_type *coffsym;
 
   /* Some assemblers tolerate immediately following '"'.  */
-  if ((sfname = demand_copy_string (&length)) != 0)
+  sfname = demand_copy_string (&length);
+  if (sfname == NULL)
     {
-      coff_symbol_type *coffsym;
+      ignore_rest_of_line ();
+      return;
+    }
+
+  if (*input_line_pointer == ',')
+    {
+      ++input_line_pointer;
+      s1 = demand_copy_string (&length);
+      if (s1 == NULL)
+	{
+	  ignore_rest_of_line ();
+	  return;
+	}
+      auxnb++;
+
       if (*input_line_pointer == ',')
 	{
 	  ++input_line_pointer;
-	  s1 = demand_copy_string (&length);
+	  s2 = demand_copy_string (&length);
+	  if (s2 == NULL)
+	    {
+	      ignore_rest_of_line ();
+	      return;
+	    }
 	  auxnb++;
 
 	  if (*input_line_pointer == ',')
 	    {
 	      ++input_line_pointer;
-	      s2 = demand_copy_string (&length);
-	      auxnb++;
-
-	      if (*input_line_pointer == ',')
+	      s3 = demand_copy_string (&length);
+	      if (s3 == NULL)
 		{
-		  ++input_line_pointer;
-		  s3 = demand_copy_string (&length);
-		  auxnb++;
+		  ignore_rest_of_line ();
+		  return;
 		}
+	      auxnb++;
 	    }
 	}
-
-      /* Use coff dot_file creation and adjust auxiliary entries.  */
-      c_dot_file_symbol (sfname);
-      S_SET_NUMBER_AUXILIARY (symbol_rootP, auxnb);
-      coffsym = coffsymbol (symbol_get_bfdsym (symbol_rootP));
-      coffsym->native[1].u.auxent.x_file.x_ftype = XFT_FN;
-
-      if (s1)
-	{
-	  coffsym->native[2].u.auxent.x_file.x_ftype = XFT_CT;
-	  coffsym->native[2].extrap = s1;
-	}
-      if (s2)
-	{
-	  coffsym->native[3].u.auxent.x_file.x_ftype = XFT_CV;
-	  coffsym->native[3].extrap = s2;
-	}
-      if (s3)
-	{
-	  coffsym->native[4].u.auxent.x_file.x_ftype = XFT_CD;
-	  coffsym->native[4].extrap = s3;
-	}
-
-      demand_empty_rest_of_line ();
     }
+
+  /* Use coff dot_file creation and adjust auxiliary entries.  */
+  c_dot_file_symbol (sfname);
+  S_SET_NUMBER_AUXILIARY (symbol_rootP, auxnb);
+  coffsym = coffsymbol (symbol_get_bfdsym (symbol_rootP));
+  coffsym->native[1].u.auxent.x_file.x_ftype = XFT_FN;
+
+  if (s1)
+    {
+      coffsym->native[2].u.auxent.x_file.x_ftype = XFT_CT;
+      coffsym->native[2].extrap = s1;
+    }
+  if (s2)
+    {
+      coffsym->native[3].u.auxent.x_file.x_ftype = XFT_CV;
+      coffsym->native[3].extrap = s2;
+    }
+  if (s3)
+    {
+      coffsym->native[4].u.auxent.x_file.x_ftype = XFT_CD;
+      coffsym->native[4].extrap = s3;
+    }
+
+  demand_empty_rest_of_line ();
 }
 
 /* The .function pseudo-op.  This takes several arguments.  The first
@@ -5414,6 +5444,11 @@ ppc_biei (int ei)
   symbolS *look;
 
   name = demand_copy_C_string (&len);
+  if (name == NULL)
+    {
+      ignore_rest_of_line ();
+      return;
+    }
 
   /* The value of these symbols is actually file offset.  Here we set
      the value to the index into the line number entries.  In
@@ -5573,6 +5608,12 @@ ppc_bc (int ignore ATTRIBUTE_UNUSED)
   symbolS *sym;
 
   name = demand_copy_C_string (&len);
+  if (name == NULL)
+    {
+      ignore_rest_of_line ();
+      return;
+    }
+
   sym = symbol_make (name);
   S_SET_SEGMENT (sym, ppc_coff_debug_section);
   symbol_get_bfdsym (sym)->flags |= BSF_DEBUGGING;
