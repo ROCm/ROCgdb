@@ -98,7 +98,7 @@ m32r_elf_do_10_pcrel_reloc (bfd *abfd,
   bfd_reloc_status_type status;
 
   /* Sanity check the address (offset in section).  */
-  if (offset > bfd_get_section_limit (abfd, input_section))
+  if (!bfd_reloc_offset_in_range (howto, abfd, input_section, offset))
     return bfd_reloc_outofrange;
 
   relocation = symbol_value + addend;
@@ -192,7 +192,8 @@ m32r_elf_generic_reloc (bfd *input_bfd,
      a section relative addend which is wrong.  */
 
   /* Sanity check the address (offset in section).  */
-  if (reloc_entry->address > bfd_get_section_limit (input_bfd, input_section))
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, input_bfd,
+				  input_section, reloc_entry->address))
     return bfd_reloc_outofrange;
 
   ret = bfd_reloc_ok;
