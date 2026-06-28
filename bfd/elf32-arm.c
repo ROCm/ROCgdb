@@ -20062,7 +20062,7 @@ elf32_arm_copy_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSED,
 	    && iheaders[isection->sh_link]->bfd_section->output_section != NULL
 	    )
 	  {
-	    for (i = elf_numsections (obfd); i-- > 0;)
+	    for (i = elf_numsections (obfd); --i != 0;)
 	      if (oheaders[i]->bfd_section
 		  == iheaders[isection->sh_link]->bfd_section->output_section)
 		break;
@@ -20075,16 +20075,16 @@ elf32_arm_copy_special_section_fields (const bfd *ibfd ATTRIBUTE_UNUSED,
 	       with input section names.  Unfortunately we don't.  So instead
 	       we use a simple heuristic and look for the nearest executable
 	       section before this one.  */
-	    for (i = elf_numsections (obfd); i-- > 0;)
+	    for (i = elf_numsections (obfd); --i != 0;)
 	      if (oheaders[i] == osection)
 		break;
 	    if (i == 0)
 	      break;
 
-	    while (i-- > 0)
+	    while (--i != 0)
 	      if (oheaders[i]->sh_type == SHT_PROGBITS
-		  && (oheaders[i]->sh_flags & (SHF_ALLOC | SHF_EXECINSTR))
-		  == (SHF_ALLOC | SHF_EXECINSTR))
+		  && ((oheaders[i]->sh_flags & (SHF_ALLOC | SHF_EXECINSTR))
+		      == (SHF_ALLOC | SHF_EXECINSTR)))
 		break;
 	  }
 
