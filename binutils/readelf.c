@@ -24938,7 +24938,8 @@ process_object (Filedata * filedata)
   if (! process_section_headers (filedata))
     {
       /* Without loaded section headers we cannot process lots of things.  */
-      do_unwind = do_version = do_dump = do_arch = false;
+      do_unwind = do_version = do_dump = do_arch
+	= do_got_section_contents = false;
 
       if (! do_using_dynamic)
 	do_syms = do_dyn_syms = do_reloc = false;
