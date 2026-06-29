@@ -1,8 +1,10 @@
 -*- text -*-
 
-* The aarch64 TME extension has never been implemented in any products.  Arm
-  has withdrawn it from the architecture.  The assembler will now warn if
-  instructions from the extension are detected during assembly.
+* The aarch64 extensions TME and MPAMv2_VID have never been implemented in any
+  products.  Arm has withdrawn them from the architecture.  The assembler will
+  now warn if instructions or system registers from either extension are
+  detected during assembly.  The architecture sub-option +mpamv2 has also
+  been withdrawn as the feature no-longer has instructions to enable.
 
 * The legacy .vtable_entry and .vtable_inherit directives that were
   needed for versions of GCC prior to gcc-3.0 (when the generic C++
