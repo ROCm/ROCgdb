@@ -929,9 +929,6 @@
   SYSREG ("mpamhcr_el2",	CPENC (3,4,10,4,0),	0,		AARCH64_FEATURE (V8_2A)) /* MPAM */
   SYSREG ("mpamidr_el1",	CPENC (3,0,10,4,4),	F_REG_READ,	AARCH64_FEATURE (V8_2A)) /* MPAM */
   SYSREG ("mpamsm_el1",		CPENC (3,0,10,5,3),	0,		AARCH64_FEATURES (2, SME, V8_2A)) /* SME && MPAM */
-  SYSREG ("mpamvidcr_el2",	CPENC (3,4,10,7,0),	0,		AARCH64_FEATURE (MPAMv2))
-  SYSREG ("mpamvidsr_el2",	CPENC (3,4,10,7,1),	0,		AARCH64_FEATURE (MPAMv2))
-  SYSREG ("mpamvidsr_el3",	CPENC (3,6,10,7,1),	0,		AARCH64_FEATURE (MPAMv2))
   SYSREG ("mpamvpm0_el2",	CPENC (3,4,10,6,0),	0,		AARCH64_FEATURE (V8_2A)) /* MPAM */
   SYSREG ("mpamvpm1_el2",	CPENC (3,4,10,6,1),	0,		AARCH64_FEATURE (V8_2A)) /* MPAM */
   SYSREG ("mpamvpm2_el2",	CPENC (3,4,10,6,2),	0,		AARCH64_FEATURE (V8_2A)) /* MPAM */
