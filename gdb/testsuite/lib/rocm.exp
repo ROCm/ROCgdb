@@ -80,20 +80,34 @@ gdb_caching_proc find_amdgpu_devices {} {
     return $hip_gpu_devices
 }
 
-# Get the list of GPU targets to compile for.
+# Get the list of unique GPU targets to compile for.
 #
 # If HCC_AMDGPU_TARGET is set in the environment, use it.
 # Otherwise, consider the devices available on the system.
+#
+# Duplicates are removed so that systems with multiple identical
+# GPUs do not produce redundant --offload-arch flags.
 
 proc hcc_amdgpu_targets {} {
     # First, look for HCC_AMDGPU_TARGET (same env var hipcc uses).
     if {[info exists ::env(HCC_AMDGPU_TARGET)]} {
 	# We don't verify the contents of HCC_AMDGPU_TARGET.
 	# That's the toolchain's job.
-	return [split $::env(HCC_AMDGPU_TARGET) ","]
+	set targets [split $::env(HCC_AMDGPU_TARGET) ","]
+    } else {
+	set targets [find_amdgpu_devices]
     }
 
-    return [find_amdgpu_devices]
+    # Remove duplicates while preserving order.
+    array set seen {}
+    set unique {}
+    foreach t $targets {
+	if {![info exists seen($t)]} {
+	    set seen($t) 1
+	    lappend unique $t
+	}
+    }
+    return $unique
 }
 
 gdb_caching_proc allow_hipcc_tests {} {
