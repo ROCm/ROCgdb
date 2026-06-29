@@ -360,6 +360,10 @@ CODE_FRAGMENT
 #include "coffswap.h"
 #endif
 
+#ifdef COFF_WITH_PE_BIGOBJ
+extern const bfd_target TARGET_SYM_BIG;
+#endif
+
 #define STRING_SIZE_SIZE 4
 
 #define DOT_DEBUG	".debug"
@@ -3154,6 +3158,16 @@ coff_compute_section_file_positions (bfd * abfd)
 
   if (target_index >= bfd_coff_max_nscns (abfd))
     {
+#if defined(COFF_WITH_PE_BIGOBJ) && !defined(COFF_IMAGE_WITH_PE)
+      if (abfd->xvec != &TARGET_SYM_BIG)
+	{
+	  /* Regular PE/COFF uses 16-bit section numbers in symbols.
+	     Promote oversized objects to the matching bigobj target
+	     before any headers or symbols are finalized.  */
+	  abfd->xvec = &TARGET_SYM_BIG;
+	  return coff_compute_section_file_positions (abfd);
+	}
+#endif
       bfd_set_error (bfd_error_file_too_big);
       _bfd_error_handler
 	/* xgettext:c-format */

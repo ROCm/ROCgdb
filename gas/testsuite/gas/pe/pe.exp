@@ -68,6 +68,9 @@ if {[istarget "aarch64-*-pe*"] || [istarget "aarch64-*-mingw*"]} {
 # Big obj
 
 
-if ([istarget "*-*-mingw*"]) then {
+if { [istarget "aarch64-*-*"]
+     || ([istarget "i*86-*-*"] && ![istarget "*-*-interix*"])
+     || [istarget "x86_64-*-*"] } then {
 	run_dump_test "big-obj"
+	run_dump_test "big-obj-auto"
 }
