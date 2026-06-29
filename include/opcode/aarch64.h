@@ -284,8 +284,6 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_POE2,
   /* TEV instructions.  */
   AARCH64_FEATURE_TEV,
-  /* MPAMv2.  */
-  AARCH64_FEATURE_MPAMv2,
   /* MTETC.  */
   AARCH64_FEATURE_MTETC,
   /* TLBI Domains.  */

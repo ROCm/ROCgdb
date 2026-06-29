@@ -1,4 +1,4 @@
-#as: -menable-sysreg-checking -march=armv8-a+mpamv2 -I$srcdir/$subdir
+#as: -menable-sysreg-checking -march=armv9.4-a -I$srcdir/$subdir
 #objdump: -dr
 
 .*:     file format .*

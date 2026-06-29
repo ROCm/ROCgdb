@@ -268,8 +268,6 @@ automatically cause those extensions to be disabled.
  @tab Enable Armv8.8-A memcpy and memset acceleration instructions.
 @item @code{mops-go} @tab @code{mops}, @code{memtag}
  @tab Enable tag only variants of MOPS instructions.
-@item @code{mpamv2} @tab
- @tab Enable MPAMv2 system registers.
 @item @code{mtetc} @tab @code{memtag}
  @tab Enable Data cache tag block operations.
 @item @code{occmo} @tab
