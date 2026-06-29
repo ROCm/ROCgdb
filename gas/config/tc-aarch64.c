@@ -559,7 +559,6 @@ static htab_t aarch64_sys_regs_dc_hsh;
 static htab_t aarch64_sys_regs_at_hsh;
 static htab_t aarch64_sys_regs_tlbi_hsh;
 static htab_t aarch64_sys_regs_plbi_hsh;
-static htab_t aarch64_sys_regs_mlbi_hsh;
 static htab_t aarch64_sys_regs_sr_hsh;
 static htab_t aarch64_reg_hsh;
 static htab_t aarch64_barrier_opt_hsh;
@@ -8202,11 +8201,6 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_plbi_hsh, false);
 	  goto sys_reg_ins;
 
-	case AARCH64_OPND_SYSREG_MLBI:
-	  inst.base.operands[i].sysins_op =
-	    parse_sys_ins_reg (&str, aarch64_sys_regs_mlbi_hsh, false);
-	  goto sys_reg_ins;
-
 	case AARCH64_OPND_SYSREG_TLBIP:
 	  info->sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh, true);
@@ -10648,7 +10642,6 @@ md_begin (void)
   aarch64_sys_regs_at_hsh = str_htab_create ();
   aarch64_sys_regs_tlbi_hsh = str_htab_create ();
   aarch64_sys_regs_plbi_hsh = str_htab_create ();
-  aarch64_sys_regs_mlbi_hsh = str_htab_create ();
   aarch64_sys_regs_sr_hsh = str_htab_create ();
   aarch64_reg_hsh = str_htab_create ();
   aarch64_barrier_opt_hsh = str_htab_create ();
@@ -10694,11 +10687,6 @@ md_begin (void)
     sysreg_hash_insert (aarch64_sys_regs_plbi_hsh,
 			aarch64_sys_regs_plbi[i].name,
 			aarch64_sys_regs_plbi + i);
-
-  for (i = 0; aarch64_sys_regs_mlbi[i].name != NULL; i++)
-    sysreg_hash_insert (aarch64_sys_regs_mlbi_hsh,
-			aarch64_sys_regs_mlbi[i].name,
-			aarch64_sys_regs_mlbi + i);
 
   for (i = 0; aarch64_sys_regs_sr[i].name != NULL; i++)
     sysreg_hash_insert (aarch64_sys_regs_sr_hsh,

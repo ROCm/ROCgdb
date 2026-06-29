@@ -757,7 +757,6 @@ enum aarch64_opnd
   AARCH64_OPND_SYSREG_TLBI,	/* System register <tlbi_op> operand.  */
   AARCH64_OPND_SYSREG_TLBIP,	/* System register <tlbip_op> operand.  */
   AARCH64_OPND_SYSREG_PLBI,	/* System register <plbi_op> operand.  */
-  AARCH64_OPND_SYSREG_MLBI,	/* System register <mlbi_op> operand.  */
   AARCH64_OPND_SYSREG_SR,	/* System register RCTX operand.  */
   AARCH64_OPND_BARRIER,		/* Barrier operand.  */
   AARCH64_OPND_BARRIER_DSB_NXS,	/* Barrier operand for DSB nXS variant.  */
@@ -1684,7 +1683,6 @@ extern const aarch64_sys_ins_reg aarch64_sys_regs_dc [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_at [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_tlbi [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_plbi [];
-extern const aarch64_sys_ins_reg aarch64_sys_regs_mlbi [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gic [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gicr [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gsb [];
