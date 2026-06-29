@@ -1,0 +1,72 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+#
+# This file is part of GDB.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# C++-specific OpenMP-offload tests.  Verify that GDB can break
+# inside a templated device function and a struct member function
+# used in a target region.
+
+load_lib rocm.exp
+
+require allow_omp_offload_tests
+
+standard_testfile .cpp
+
+set tmpl_line    [gdb_get_line_number "tmpl-line"]
+set functor_line [gdb_get_line_number "functor-line"]
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug c++ omp-rocm}] == -1} {
+    return -1
+}
+
+with_rocm_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+
+    with_test_prefix "templated add_t" {
+	gdb_breakpoint "$srcfile:$tmpl_line" -allow-pending
+	gdb_continue_to_breakpoint "add_t<int>"
+	# The kernel reaches add_t through sum_pair, so the device call
+	# stack shows both frames.
+	gdb_test "backtrace 2" \
+	    "#0 .*add_t<int> .*\r\n#1 .*sum_pair<int> .*" \
+	    "add_t called from sum_pair"
+	delete_breakpoints
+    }
+
+    with_test_prefix "multiplier::operator()" {
+	gdb_breakpoint "$srcfile:$functor_line" -allow-pending
+	gdb_continue_to_breakpoint "multiplier::operator()"
+	# Likewise, the functor is reached through scale.
+	gdb_test "backtrace 2" \
+	    "#0 .*multiplier::operator\\(\\) .*\r\n#1 .*scale .*" \
+	    "functor called from scale"
+
+	# 'this->factor' should be the value we set on the host (3),
+	# transferred via the implicit 'map(to:m)'.
+	gdb_test "print this->factor" \
+	    "= 3" \
+	    "factor visible via 'this'"
+	delete_breakpoints
+    }
+
+    # The OpenMP runtime's host threads emit "[Thread ... exited]"
+    # lines before the program exits, so allow extra output.
+    gdb_continue_to_end "" "continue" 1
+}
