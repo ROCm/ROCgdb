@@ -693,3 +693,52 @@ gdb_caching_proc compiler_dwarf_language {} {
 	return "others"
     }
 }
+
+# OpenMP GPU offload support.
+#
+# The procs below extend the ROCm test framework to support running
+# tests that use the OpenMP "target" construct to offload code to
+# the GPU.
+
+# Return 1 if the C/C++ OpenMP-offload toolchain and a usable AMD GPU
+# are both available; otherwise return a {0 reason} pair suitable for
+# 'require'.
+#
+# The actual OpenMP-offload compile is driven by gdb_compile's
+# "omp-rocm" option, which selects the AMD compiler (amdclang /
+# amdclang++ / amdflang) and adds the offload flags.
+
+gdb_caching_proc allow_omp_offload_tests {} {
+    # Reuse the shared ROCm gate (native target, amd-dbgapi support and
+    # a usable AMD GPU device); the device check compiles a HIP program
+    # with amdclang++, proving the AMD LLVM toolchain that ships
+    # amdclang / amdclang++ is present.  OpenMP offload only adds a
+    # Linux-only restriction on top.
+    set base [allow_hip_tests]
+    if {[lindex $base 0] == 0} {
+	return $base
+    }
+
+    if {![istarget "*-linux*"]} {
+	return {0 "OpenMP offload is only tested on Linux"}
+    }
+
+    return 1
+}
+
+# Same as above, but also requires amdflang for Fortran tests.
+
+gdb_caching_proc allow_omp_offload_fortran_tests {} {
+    set base [allow_omp_offload_tests]
+    if {[lindex $base 0] == 0} {
+	return $base
+    }
+
+    # Fortran offload needs amdflang specifically.  Resolve it through
+    # the same discovery default_target_compile uses, and confirm it
+    # actually runs.
+    if {[catch {exec [gdb_find_amd_omp_compiler amdflang] --version}]} {
+	return {0 "amdflang not available"}
+    }
+    return 1
+}

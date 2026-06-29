@@ -137,6 +137,26 @@ proc gdb_find_hip_compiler {} {
     return $compiler
 }
 
+# Find the AMD OpenMP-offload compiler driver TOOL (amdclang for C,
+# amdflang for Fortran).  Mirrors gdb_find_hip_compiler: look under the
+# tool root, then under $ROCM_PATH/lib/llvm/bin, then fall back on the
+# bare name (relying on PATH).  C++ reuses gdb_find_hip_compiler, which
+# already returns amdclang++.
+proc gdb_find_amd_omp_compiler {tool} {
+    global tool_root_dir
+    if {[is_remote host]} {
+	return ""
+    }
+    set compiler [lookfor_file $tool_root_dir $tool]
+    if {$compiler eq "" && [info exists ::env(ROCM_PATH)]} {
+	set compiler [lookfor_file $::env(ROCM_PATH)/lib/llvm/bin $tool]
+    }
+    if {$compiler eq ""} {
+	set compiler $tool
+    }
+    return $compiler
+}
+
 proc gdb_find_ldd {} {
     global LDD_FOR_TARGET
     if [info exists LDD_FOR_TARGET] {
@@ -234,6 +254,7 @@ proc gdb_default_target_compile_1 {source destfile type options} {
     set libs ""
     set compiler_type "c"
     set compiler ""
+    set is_omp_rocm 0
     set linker ""
     # linker_opts_order is one of "sources-then-flags", "flags-then-sources".
     # The order matters for things like -Wl,--as-needed.  The default is to
@@ -345,6 +366,15 @@ proc gdb_default_target_compile_1 {source destfile type options} {
 	    } else {
 		set compiler [find_hip_compiler]
 	    }
+	}
+
+	if { $i == "omp-rocm" } {
+	    # OpenMP offload to AMD GPUs.  The actual compiler driver
+	    # depends on the source language and is selected after this
+	    # loop (see below), once the language options have been
+	    # processed.  The offload compile/link flags are added by
+	    # gdb_compile.
+	    set is_omp_rocm 1
 	}
 
 	if {[regexp "^dest=" $i]} {
@@ -459,6 +489,18 @@ proc gdb_default_target_compile_1 {source destfile type options} {
     if {[info exists HIP_COMPILER_FOR_TARGET]} {
 	if {$compiler_type == "hip"} {
 	    set compiler $HIP_COMPILER_FOR_TARGET
+	}
+    }
+
+    # OpenMP offload to AMD GPUs.  The compiler driver depends on the
+    # source language: amdclang for C, amdclang++ for C++ and amdflang
+    # for Fortran.  Override whatever language default was selected
+    # above.  C++ reuses find_hip_compiler, which returns amdclang++.
+    if { $is_omp_rocm } {
+	switch -- $compiler_type {
+	    "c++"   { set compiler [find_hip_compiler] }
+	    "f90"   { set compiler [gdb_find_amd_omp_compiler amdflang] }
+	    default { set compiler [gdb_find_amd_omp_compiler amdclang] }
 	}
     }
 
