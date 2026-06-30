@@ -1239,8 +1239,13 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zvfhmin", "+zve32f", check_implicit_always},
   {"zvfbfwma", "+zve32f,+zfbfmin", check_implicit_always},
   {"zvfbfmin", "+zve32f", check_implicit_always},
+  {"zvfbdota32f", "+zve32f", check_implicit_always},
+  {"zvfqwbdota8f", "+zve32f", check_implicit_always},
   {"zvfqwdota8f", "+zve32f", check_implicit_always},
+  {"zvfwbdota16bf", "+zve32f", check_implicit_always},
   {"zvfwdota16bf", "+zve32f", check_implicit_always},
+  {"zvqwbdota8i", "+zve32x", check_implicit_always},
+  {"zvqwbdota16i", "+zve64x", check_implicit_always},
   {"zvqwdota8i", "+zve32x", check_implicit_always},
   {"zvqwdota16i", "+zve64x", check_implicit_always},
   {"zve64d", "+d,+zve64f", check_implicit_always},
@@ -1524,11 +1529,14 @@ static const struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"zvabd",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvbb",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvbc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"zvfbdota32f",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvfbfmin",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvfbfwma",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvfh",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvfhmin",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"zvfqwbdota8f",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvfqwdota8f",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"zvfwbdota16bf",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvfwdota16bf",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvkb",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvkg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -1544,6 +1552,8 @@ static const struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"zvksg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvksc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvkt",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"zvqwbdota8i",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"zvqwbdota16i",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvqwdota8i",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvqwdota16i",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvl32b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -2993,8 +3003,14 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "zvfbfmin");
     case INSN_CLASS_ZVFBFWMA:
       return riscv_subset_supports (rps, "zvfbfwma");
+    case INSN_CLASS_ZVFBDOTA32F:
+      return riscv_subset_supports (rps, "zvfbdota32f");
+    case INSN_CLASS_ZVFQWBDOTA8F:
+      return riscv_subset_supports (rps, "zvfqwbdota8f");
     case INSN_CLASS_ZVFQWDOTA8F:
       return riscv_subset_supports (rps, "zvfqwdota8f");
+    case INSN_CLASS_ZVFWBDOTA16BF:
+      return riscv_subset_supports (rps, "zvfwbdota16bf");
     case INSN_CLASS_ZVFWDOTA16BF:
       return riscv_subset_supports (rps, "zvfwdota16bf");
     case INSN_CLASS_ZVKB:
@@ -3010,6 +3026,13 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "zvksed");
     case INSN_CLASS_ZVKSH:
       return riscv_subset_supports (rps, "zvksh");
+    case INSN_CLASS_ZVQWBDOTA8I:
+      return riscv_subset_supports (rps, "zvqwbdota8i");
+    case INSN_CLASS_ZVQWBDOTA16I:
+      return riscv_subset_supports (rps, "zvqwbdota16i");
+    case INSN_CLASS_ZVQWBDOTA8I_OR_ZVQWBDOTA16I:
+      return (riscv_subset_supports (rps, "zvqwbdota8i")
+	      || riscv_subset_supports (rps, "zvqwbdota16i"));
     case INSN_CLASS_ZVQWDOTA8I:
       return riscv_subset_supports (rps, "zvqwdota8i");
     case INSN_CLASS_ZVQWDOTA16I:
@@ -3331,8 +3354,14 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "zvfbfmin";
     case INSN_CLASS_ZVFBFWMA:
       return "zvfbfwma";
+    case INSN_CLASS_ZVFBDOTA32F:
+      return "zvfbdota32f";
+    case INSN_CLASS_ZVFQWBDOTA8F:
+      return "zvfqwbdota8f";
     case INSN_CLASS_ZVFQWDOTA8F:
       return "zvfqwdota8f";
+    case INSN_CLASS_ZVFWBDOTA16BF:
+      return "zvfwbdota16bf";
     case INSN_CLASS_ZVFWDOTA16BF:
       return "zvfwdota16bf";
     case INSN_CLASS_ZVKB:
@@ -3347,6 +3376,12 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return _("zvksed");
     case INSN_CLASS_ZVKSH:
       return _("zvksh");
+    case INSN_CLASS_ZVQWBDOTA8I:
+      return "zvqwbdota8i";
+    case INSN_CLASS_ZVQWBDOTA16I:
+      return "zvqwbdota16i";
+    case INSN_CLASS_ZVQWBDOTA8I_OR_ZVQWBDOTA16I:
+      return _("zvqwbdota8i' or `zvqwbdota16i");
     case INSN_CLASS_ZVQWDOTA8I:
       return "zvqwdota8i";
     case INSN_CLASS_ZVQWDOTA16I:

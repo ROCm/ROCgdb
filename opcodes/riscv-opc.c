@@ -2257,6 +2257,14 @@ const struct riscv_opcode riscv_opcodes[] =
 {"vfqwdota.vv", 0, INSN_CLASS_ZVFQWDOTA8F, "Vd,Vt,VsVm", MATCH_VFQWDOTA_VV, MASK_VFQWDOTA_VV, match_opcode, 0},
 {"vfqwdota.alt.vv", 0, INSN_CLASS_ZVFQWDOTA8F, "Vd,Vt,VsVm", MATCH_VFQWDOTA_ALT_VV, MASK_VFQWDOTA_ALT_VV, match_opcode, 0},
 
+/* Zvbdota instructions.  */
+{"vqwbdotau.vv", 0, INSN_CLASS_ZVQWBDOTA8I_OR_ZVQWBDOTA16I, "Vd,Vq,Vs,VrVm", MATCH_VQWBDOTAU_VV, MASK_VQWBDOTAU_VV, match_opcode, 0},
+{"vqwbdotas.vv", 0, INSN_CLASS_ZVQWBDOTA8I_OR_ZVQWBDOTA16I, "Vd,Vq,Vs,VrVm", MATCH_VQWBDOTAS_VV, MASK_VQWBDOTAS_VV, match_opcode, 0},
+{"vfwbdota.vv",  0, INSN_CLASS_ZVFWBDOTA16BF, "Vd,Vq,Vs,VrVm", MATCH_VFWBDOTA_VV, MASK_VFWBDOTA_VV, match_opcode, 0},
+{"vfqwbdota.vv", 0, INSN_CLASS_ZVFQWBDOTA8F, "Vd,Vq,Vs,VrVm", MATCH_VFQWBDOTA_VV, MASK_VFQWBDOTA_VV, match_opcode, 0},
+{"vfqwbdota.alt.vv", 0, INSN_CLASS_ZVFQWBDOTA8F, "Vd,Vq,Vs,VrVm", MATCH_VFQWBDOTA_ALT_VV, MASK_VFQWBDOTA_ALT_VV, match_opcode, 0},
+{"vfbdota.vv",   0, INSN_CLASS_ZVFBDOTA32F, "Vd,Vq,Vs,VrVm", MATCH_VFBDOTA_VV, MASK_VFBDOTA_VV, match_opcode, 0},
+
 /* Zvbb/Zvkb instructions.  */
 {"vandn.vv",   0, INSN_CLASS_ZVKB, "Vd,Vt,VsVm", MATCH_VANDN_VV, MASK_VANDN_VV, match_opcode, 0},
 {"vandn.vx",   0, INSN_CLASS_ZVKB, "Vd,Vt,sVm", MATCH_VANDN_VX, MASK_VANDN_VX, match_opcode, 0},

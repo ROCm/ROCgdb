@@ -440,6 +440,17 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	      print (info->stream, dis_style_register, "%s",
 		     riscv_vecr_names_numeric[EXTRACT_OPERAND (VS2, l)]);
 	      break;
+	    case 'q':
+	      {
+		unsigned int vs2 = EXTRACT_OPERAND (VS2, l);
+		print (info->stream, dis_style_register, "%s",
+		       riscv_vecr_names_numeric[vs2 & 0x18]);
+	      }
+	      break;
+	    case 'r':
+	      print (info->stream, dis_style_immediate, "%u",
+		     (unsigned int) (EXTRACT_OPERAND (VS2, l) & 0x7) * 8);
+	      break;
 	    case '0':
 	      print (info->stream, dis_style_register, "%s",
 		     riscv_vecr_names_numeric[0]);

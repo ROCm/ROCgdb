@@ -1568,6 +1568,8 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	    case 'e': USE_BITS (OP_MASK_VWD, OP_SH_VWD); break;
 	    case 's': USE_BITS (OP_MASK_VS1, OP_SH_VS1); break;
 	    case 't': USE_BITS (OP_MASK_VS2, OP_SH_VS2); break;
+	    case 'q': USE_BITS (0x3, OP_SH_VS2 + 3); break;
+	    case 'r': USE_BITS (0x7, OP_SH_VS2); break;
 	    case 'u': USE_BITS (OP_MASK_VS1, OP_SH_VS1);
 		      USE_BITS (OP_MASK_VS2, OP_SH_VS2); break;
 	    case 'v': USE_BITS (OP_MASK_VD, OP_SH_VD);
@@ -2697,8 +2699,12 @@ riscv_vtype_altfmt_supported (void)
 {
   return (riscv_subset_supports (&riscv_rps_as, "zvfbfa")
 	  || riscv_subset_supports (&riscv_rps_as, "zvfofp8min")
+	  || riscv_subset_supports (&riscv_rps_as, "zvfqwbdota8f")
 	  || riscv_subset_supports (&riscv_rps_as, "zvfqwdota8f")
+	  || riscv_subset_supports (&riscv_rps_as, "zvfwbdota16bf")
 	  || riscv_subset_supports (&riscv_rps_as, "zvfwdota16bf")
+	  || riscv_subset_supports (&riscv_rps_as, "zvqwbdota8i")
+	  || riscv_subset_supports (&riscv_rps_as, "zvqwbdota16i")
 	  || riscv_subset_supports (&riscv_rps_as, "zvqwdota8i")
 	  || riscv_subset_supports (&riscv_rps_as, "zvqwdota16i"));
 }
@@ -2720,7 +2726,7 @@ my_getVsetvliExpression (expressionS *ep, char *str)
 	as_bad (_("multiple vsew constants"));
       if (!riscv_vtype_altfmt_supported ())
 	as_bad (_("symbolic vtype altfmt requires `zvfbfa', "
-		  "`zvfofp8min' or a `zvdota' extension"));
+		  "`zvfofp8min' or an altfmt dot-product extension"));
       altfmt_value = 1 << OP_SH_VTYPE_ALTFMT;
       vsew_found = true;
     }
@@ -3375,6 +3381,35 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		    break;
 		  INSERT_OPERAND (VS2, *ip, regno);
 		  continue;
+
+		case 'q': /* Zvbdota VS2 group base.  */
+		  if (!reg_lookup (&asarg, RCLASS_VECR, &regno))
+		    break;
+		  if (regno & 0x7)
+		    as_bad (_("vector register must be aligned to an "
+			      "EMUL=8 group"));
+		  INSERT_BITS (ip->insn_opcode, regno & 0x18, 0x18,
+			       OP_SH_VS2);
+		  continue;
+
+		case 'r': /* Zvbdota ci immediate in VS2.  */
+		  {
+		    offsetT ci;
+
+		    my_getExpression (imm_expr, asarg, force_reloc);
+		    check_absolute_expr (ip, imm_expr, false);
+		    ci = imm_expr->X_add_number;
+		    if (ci < 0 || ci > 56 || (ci & 0x7))
+		      {
+			as_bad (_("bad value for Zvbdota ci immediate field, "
+				  "value must be a multiple of 8 in 0..56"));
+			ci = 0;
+		      }
+		    INSERT_BITS (ip->insn_opcode, ci / 8, 0x7, OP_SH_VS2);
+		    imm_expr->X_op = O_absent;
+		    asarg = expr_parse_end;
+		    continue;
+		  }
 
 		case 'u': /* VS1 == VS2 */
 		  if (!reg_lookup (&asarg, RCLASS_VECR, &regno))

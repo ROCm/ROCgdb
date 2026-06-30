@@ -7,7 +7,9 @@
 
 * Add support for RISC-V standard extensions:
   zalasr v1.0, svrsw60t59b v1.0, zvabd v1.0, smpmpmt v1.0,
-  zvqwdota8i, zvqwdota16i, zvfwdota16bf and zvfqwdota8f v1.0.
+  zvqwdota8i, zvqwdota16i, zvfwdota16bf and zvfqwdota8f v1.0,
+  zvqwbdota8i, zvqwbdota16i, zvfwbdota16bf, zvfqwbdota8f and
+  zvfbdota32f v1.0.
 
 * Add support for RISC-V vendor extensions:
   SpacemiT: xsmtvdot v1.0, xsmtvdotii v1.0.
