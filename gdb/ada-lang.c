@@ -2177,20 +2177,35 @@ ada_type_of_array (struct value *arr, bool bounds)
       descriptor = desc_bounds (arr);
       /* In the extended access case, the bounds struct is "inline" so
 	 the pointer cannot be NULL.  */
-      if (ada_check_typedef (descriptor->type ())->code () == TYPE_CODE_PTR
-	  && value_as_long (descriptor) == 0)
-	return NULL;
+      const bool has_descriptor
+	= (ada_check_typedef (descriptor->type ())->code () != TYPE_CODE_PTR
+	   || value_as_long (descriptor) != 0);
       while (arity > 0)
 	{
 	  type_allocator alloc (arr->type ());
-	  struct value *low = desc_one_bound (descriptor, arity, 0);
-	  struct value *high = desc_one_bound (descriptor, arity, 1);
+	  LONGEST low = 0, high = 0;
+	  type *bound_type;
+
+	  if (has_descriptor)
+	    {
+	      struct value *low_v = desc_one_bound (descriptor, arity, 0);
+	      struct value *high_v = desc_one_bound (descriptor, arity, 1);
+	      low = value_as_long (low_v);
+	      high = value_as_long (high_v);
+	      bound_type = low_v->type ();
+	    }
+	  else
+	    {
+	      /* We don't have the bounds, but we can still find the
+		 type of each index.  */
+	      bound_type
+		= desc_index_type (descriptor->type ()->target_type (),
+				   arity);
+	    }
 
 	  arity -= 1;
 	  struct type *range_type
-	    = create_static_range_type (alloc, low->type (),
-					value_as_long (low),
-					value_as_long (high));
+	    = create_static_range_type (alloc, bound_type, low, high);
 	  elt_type = create_array_type (alloc, elt_type, range_type);
 	  INIT_GNAT_SPECIFIC (elt_type);
 
@@ -2199,18 +2214,15 @@ ada_type_of_array (struct value *arr, bool bounds)
 	      /* We need to store the element packed bitsize, as well as
 		 recompute the array size, because it was previously
 		 computed based on the unpacked element size.  */
-	      LONGEST lo = value_as_long (low);
-	      LONGEST hi = value_as_long (high);
-
 	      elt_type->field (0).set_bitsize
 		(decode_packed_array_bitsize (arr->type ()));
 
 	      /* If the array has no element, then the size is already
 		 zero, and does not need to be recomputed.  */
-	      if (lo < hi)
+	      if (low < high)
 		{
-		  int array_bitsize =
-			(hi - lo + 1) * elt_type->field (0).bitsize ();
+		  int array_bitsize = ((high - low + 1)
+				       * elt_type->field (0).bitsize ());
 
 		  elt_type->set_length ((array_bitsize + 7) / 8);
 		}
