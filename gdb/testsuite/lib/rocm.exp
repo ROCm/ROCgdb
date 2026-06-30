@@ -110,7 +110,7 @@ proc hcc_amdgpu_targets {} {
     return $unique
 }
 
-gdb_caching_proc allow_hipcc_tests {} {
+gdb_caching_proc allow_hip_tests {} {
     # Only the native target supports ROCm debugging.  E.g., when
     # testing against GDBserver, there's no point in running the ROCm
     # tests.

@@ -20,7 +20,7 @@ load_lib rocm.exp
 
 standard_testfile .cpp
 
-require allow_hipcc_tests
+require allow_hip_tests
 
 # We want to have a small kernel as we are going to single step all the way
 # to our abort instruction (s_trap 2).  Using -O1 allows the compiler to inline
