@@ -25,7 +25,7 @@ load_lib rocm.exp
 
 standard_testfile .cpp
 
-require allow_hipcc_tests
+require allow_hip_tests
 
 # Build for hip, explicitly without debug infos
 if {[build_executable "failed to prepare" $testfile $srcfile {hip nodebug}]} {

@@ -6766,14 +6766,46 @@ proc gdb_compile {source dest type options} {
 	#    '-mllvm=-amdgpu-spill-cfi-saved-regs' [-Wunused-command-line-argument]
 	#
 	# These happen when we're compiling an executable _and_ all
-	# the input files are .o files, like: hipcc foo.o -o foo ...
+	# the input files are .o files, like: amdclang++ foo.o -o foo ...
 	#
-	# HIPCC defaults to -O2, so add -O0 to early flags for the HIP
-	# language.  If "optimize" is also requested, another -O flag
-	# (e.g. -O2) will be added to the flags, overriding this -O0.
-	lappend new_options "early_flags=-O0\
-			     -mllvm=-amdgpu-spill-cfi-saved-regs\
+	# amdclang++ infers the input language from the file extension,
+	# and compiles .cpp files as C++, not HIP.  The HIP testcases
+	# are named .cpp (renaming them all to .hip would be unusual, so
+	# we keep them as .cpp), so they must be compiled with an
+	# explicit "-x hip".  Rather than passing a single global
+	# "-x hip" in early_flags (which would also be applied to any .o
+	# inputs, e.g. set_unbuffered_mode.o injected via ldflags,
+	# causing amdclang++ to try to parse the object as HIP source),
+	# we tag each input individually just before target_compile:
+	# "-x hip" before .cpp/.c sources and "-x none" before .o/.a
+	# files.  --hip-link is still required when linking to bring in
+	# the HIP runtime.
+	set hip_early_flags "-mllvm=-amdgpu-spill-cfi-saved-regs\
 			     -Wno-unused-command-line-argument"
+	if {$type eq "executable"} {
+	    set hip_early_flags "--hip-link $hip_early_flags"
+	}
+	# When ROCM_PATH is set in the environment, pass --rocm-path
+	# so amdclang++ uses that specific ROCm install for HIP
+	# headers and device libraries.  When ROCM_PATH is not set,
+	# defer to amdclang++'s own HIP discovery, which looks under
+	# the parent of its own LLVM directory and falls back on
+	# /opt/rocm; overriding that here would silently mask the
+	# user's actual compiler-side install.
+	if {[info exists ::env(ROCM_PATH)] && $::env(ROCM_PATH) ne ""} {
+	    set hip_early_flags "--rocm-path=$::env(ROCM_PATH) $hip_early_flags"
+	}
+	lappend new_options "early_flags=$hip_early_flags"
+
+	# amdclang++ requires explicit --offload-arch.  Explicitly
+	# pass one --offload-arch for each available device.  But
+	# don't do it if the testcase explicitly used --offload-arch.
+	if {[lsearch -exact $options hip_no_offload_arch] == -1
+	    && [lsearch -regexp $options "--offload-arch="] == -1} {
+	    foreach gpu_target [hcc_amdgpu_targets] {
+		lappend new_options "early_flags=--offload-arch=$gpu_target"
+	    }
+	}
     }
 
     # Because we link with libraries using their basename, we may need
@@ -6944,6 +6976,28 @@ proc gdb_compile {source dest type options} {
 
     # Automatically handle includes in testsuite/lib/.
     auto_lappend_include_files options $source
+
+    # amdclang++ infers the input language from the file extension and
+    # compiles .cpp as C++, not HIP.  Since the HIP testcases are named
+    # .cpp, explicitly tag each input: "-x hip" before C/C++/HIP source
+    # files, and "-x none" before everything else (object files,
+    # archives, shared libraries), so the compiler does not try to
+    # parse those as HIP source.  This lets a single amdclang++
+    # invocation correctly handle a mix of sources and non-source
+    # inputs (e.g. when set_unbuffered_mode.o is appended via ldflags
+    # later in the command line).
+    if {[lsearch -exact $options hip] != -1 && !$getting_compiler_info} {
+	set new_source {}
+	foreach src $source {
+	    set ext [string tolower [file extension $src]]
+	    if {$ext in {".c" ".cc" ".cp" ".cxx" ".cpp" ".c++" ".hip"}} {
+		lappend new_source "-x" "hip" $src
+	    } else {
+		lappend new_source "-x" "none" $src
+	    }
+	}
+	set source $new_source
+    }
 
     cond_wrap [expr {$pie != -1 || $nopie != -1}] \
 	with_PIE_multilib_flags_filtered {
