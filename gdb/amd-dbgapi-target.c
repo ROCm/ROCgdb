@@ -1666,6 +1666,28 @@ amd_dbgapi_target::resume (ptid_t scope_ptid, int step, enum gdb_signal signo)
       wave_info &wi = get_thread_wave_info (&thread);
       amd_dbgapi_resume_mode_t &resume_mode = wi.last_resume_mode;
       amd_dbgapi_exceptions_t wave_exception;
+
+      /* If this thread is stopped at a program breakpoint (e.g., debugtrap),
+	 advance PC past the trap instruction before resuming.  This prevents
+	 hitting the same trap instruction again immediately after resuming.  */
+      if (thread.ptid == inferior_ptid)
+	{
+	  regcache *regcache = get_thread_regcache (&thread);
+	  gdbarch *gdbarch = regcache->arch ();
+	  CORE_ADDR pc = regcache_read_pc (regcache);
+
+	  if (gdbarch_program_breakpoint_here_p (gdbarch, pc))
+	    {
+	      amd_dbgapi_debug_printf ("advancing PC past program breakpoint at %s",
+				       paddress (gdbarch, pc));
+
+	      int bp_len;
+	      gdbarch_breakpoint_from_pc (gdbarch, &pc, &bp_len);
+	      pc += bp_len;
+	      regcache_write_pc (regcache, pc);
+	    }
+	}
+
       if (thread.ptid == inferior_ptid)
 	{
 	  resume_mode = (step
