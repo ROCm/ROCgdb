@@ -2136,14 +2136,14 @@ ada_is_array_descriptor_type (struct type *type)
 
 /* If ARR has a record type in the form of a standard GNAT array descriptor,
    (fat pointer) returns the type of the array data described---specifically,
-   a pointer-to-array type.  If BOUNDS is non-zero, the bounds data are filled
+   a pointer-to-array type.  If BOUNDS is true, the bounds data are filled
    in from the descriptor; otherwise, they are left unspecified.  If
    the ARR denotes a null array descriptor and BOUNDS is non-zero,
    returns NULL.  The result is simply the type of ARR if ARR is not
    a descriptor.  */
 
 static struct type *
-ada_type_of_array (struct value *arr, int bounds)
+ada_type_of_array (struct value *arr, bool bounds)
 {
   if (ada_is_constrained_packed_array_type (arr->type ()))
     return decode_constrained_packed_array_type (arr->type ());
@@ -2231,7 +2231,7 @@ ada_coerce_to_simple_array_ptr (struct value *arr)
 {
   if (ada_is_array_descriptor_type (arr->type ()))
     {
-      struct type *arrType = ada_type_of_array (arr, 1);
+      struct type *arrType = ada_type_of_array (arr, true);
 
       if (arrType == NULL)
 	return NULL;
@@ -10268,7 +10268,7 @@ ada_ternop_slice_operation::evaluate (struct type *expect_type,
   if (noside == EVAL_AVOID_SIDE_EFFECTS
       && ada_is_array_descriptor_type (ada_check_typedef
 				       (array->type ())))
-    return empty_array (ada_type_of_array (array, 0), low_bound,
+    return empty_array (ada_type_of_array (array, false), low_bound,
 			high_bound);
 
   array = ada_coerce_to_simple_array_ptr (array);
@@ -11047,7 +11047,7 @@ ada_unop_ind_operation::evaluate (struct type *expect_type,
 	     "dereference" a thick pointer here -- that will end up
 	     giving us an array with (1 .. 0) for bounds, which is
 	     less clear than (<>).  */
-	  struct type *arrType = ada_type_of_array (arg1, 0);
+	  struct type *arrType = ada_type_of_array (arg1, false);
 
 	  if (arrType == NULL)
 	    error (_("Attempt to dereference null array pointer."));
