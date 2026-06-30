@@ -9,6 +9,7 @@ _start:
 	ttmmultf32ps	%tmm1, %tmm2, %tmm3
 
 	.arch .amx_transpose
+	.arch .amx_tf32
 _transpose:
 	ttdpbf16ps	%tmm1, %tmm1, %tmm2
 	ttdpbf16ps	%tmm1, %tmm2, %tmm1

@@ -1,6 +1,7 @@
 # Check 64bit AMX-TRANSPOSE instructions
 
 	.arch .amx_transpose
+	.arch .amx_tf32
 	.text
 _start:
 	ttdpbf16ps	%tmm4, %tmm5, %tmm6

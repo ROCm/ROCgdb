@@ -1,6 +1,7 @@
 # Check Illegal 64bit AMX-TF32 instructions
 
 	.text
+	.arch .amx_tf32
 _start:
 	tmmultf32ps	%tmm1, %tmm1, %tmm2
 	tmmultf32ps	%tmm1, %tmm2, %tmm1
