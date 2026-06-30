@@ -635,12 +635,11 @@ agent_target_id_string (amd_dbgapi_agent_id_t agent_id)
 static std::string
 thread_workgroup_pos_string (thread_info *tp)
 {
-  uint32_t wave_in_group;
-  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
-		     wave_in_group) != AMD_DBGAPI_STATUS_SUCCESS)
+  wave_info &info = get_thread_wave_info (tp);
+  if (info.coords.wave_in_group == UINT32_MAX)
     return "?";
 
-  return string_printf ("%u", wave_in_group);
+  return string_printf ("%s", pulongest (info.coords.wave_in_group));
 }
 
 /* Return the coordinates for flat ID FLATID.
@@ -716,8 +715,8 @@ struct work_item_info
 static bool
 make_work_item_info (thread_info *tp, work_item_info *wi)
 {
-  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_DISPATCH, wi->dispatch_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  wave_info &info = get_thread_wave_info (tp);
+  if (info.coords.dispatch_id == AMD_DBGAPI_DISPATCH_NONE)
     {
       /* The dispatch associated with a wave is not available.  A wave
 	 may not have an associated dispatch if attaching to a process
@@ -725,8 +724,10 @@ make_work_item_info (thread_info *tp, work_item_info *wi)
       return false;
     }
 
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_QUEUE, wi->queue_id);
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_AGENT, wi->agent_id);
+  wi->dispatch_id = info.coords.dispatch_id;
+  wi->queue_id = info.coords.queue_id;
+  wi->agent_id = info.coords.agent_id;
+
   dispatch_get_info_throw (wi->dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
 			   wi->grid_sizes);
 
@@ -734,11 +735,8 @@ make_work_item_info (thread_info *tp, work_item_info *wi)
 			   AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 			   wi->work_group_sizes);
 
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
-		       wi->work_group_ids);
-
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
-		       wi->wave_in_group);
+  wi->work_group_ids = info.coords.group_ids;
+  wi->wave_in_group = info.coords.wave_in_group;
 
   wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, wi->lane_count);
 
@@ -1017,18 +1015,13 @@ amd_dbgapi_target::thread_name (thread_info *tp)
      Note: we use a hash instead of the entry point address so that
      the number is stable across runs.  */
 
-  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (tp->ptid);
-
-  amd_dbgapi_dispatch_id_t dispatch_id;
-  if (amd_dbgapi_wave_get_info (wave_id,
-				AMD_DBGAPI_WAVE_INFO_DISPATCH,
-				sizeof (dispatch_id), &dispatch_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  wave_info &info = get_thread_wave_info (tp);
+  if (info.coords.dispatch_id == AMD_DBGAPI_DISPATCH_NONE)
     return nullptr;
 
   amd_dbgapi_global_address_t kernel_addr;
   if (amd_dbgapi_dispatch_get_info
-      (dispatch_id,
+      (info.coords.dispatch_id,
        AMD_DBGAPI_DISPATCH_INFO_KERNEL_CODE_ENTRY_ADDRESS,
        sizeof (kernel_addr), &kernel_addr)
       != AMD_DBGAPI_STATUS_SUCCESS)
@@ -1185,15 +1178,11 @@ amd_dbgapi_target::workgroup_grid_pos (thread_info *thr)
   if (!ptid_is_gpu (thr->ptid))
     return beneath ()->workgroup_grid_pos (thr);
 
-  vec3_u32_t group_ids;
-  if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (thr->ptid),
-				AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
-				sizeof (group_ids),
-				group_ids.data ())
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  wave_info &info = get_thread_wave_info (thr);
+  if (info.coords.group_ids[0] == UINT32_MAX)
     return std::nullopt;
 
-  return group_ids;
+  return info.coords.group_ids;
 }
 
 /* Implementation of target_ops::workgroup_sizes.  */
@@ -1204,18 +1193,13 @@ amd_dbgapi_target::workgroup_sizes (thread_info *thr)
   if (!ptid_is_gpu (thr->ptid))
     return beneath ()->workgroup_sizes (thr);
 
-  /* Get the current dispatch ID.  */
-  amd_dbgapi_dispatch_id_t dispatch_id;
-  if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (thr->ptid),
-				AMD_DBGAPI_WAVE_INFO_DISPATCH,
-				sizeof (dispatch_id),
-				&dispatch_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  wave_info &info = get_thread_wave_info (thr);
+  if (info.coords.dispatch_id == AMD_DBGAPI_DISPATCH_NONE)
     return std::nullopt;
 
   /* Now that we have a dispatch ID, get the group sizes.  */
   std::array<uint16_t, 3> group_sizes_16b;
-  if (amd_dbgapi_dispatch_get_info (dispatch_id,
+  if (amd_dbgapi_dispatch_get_info (info.coords.dispatch_id,
 				    AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 				    sizeof (group_sizes_16b),
 				    group_sizes_16b.data ())
@@ -1238,18 +1222,13 @@ amd_dbgapi_target::grid_sizes (thread_info *thr)
   if (!ptid_is_gpu (thr->ptid))
     return beneath ()->grid_sizes (thr);
 
-  /* Get the current dispatch ID.  */
-  amd_dbgapi_dispatch_id_t dispatch_id;
-  if (amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (thr->ptid),
-				AMD_DBGAPI_WAVE_INFO_DISPATCH,
-				sizeof (dispatch_id),
-				&dispatch_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
+  wave_info &info = get_thread_wave_info (thr);
+  if (info.coords.dispatch_id == AMD_DBGAPI_DISPATCH_NONE)
     return std::nullopt;
 
   /* Now that we have a dispatch ID, get the group sizes.  */
   std::array<uint16_t, 3> group_sizes;
-  if (amd_dbgapi_dispatch_get_info (dispatch_id,
+  if (amd_dbgapi_dispatch_get_info (info.coords.dispatch_id,
 				    AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 				    sizeof (group_sizes),
 				    group_sizes.data ())
@@ -1257,7 +1236,7 @@ amd_dbgapi_target::grid_sizes (thread_info *thr)
     return std::nullopt;
 
   vec3_u32_t grid_sizes;
-  if (amd_dbgapi_dispatch_get_info (dispatch_id,
+  if (amd_dbgapi_dispatch_get_info (info.coords.dispatch_id,
 				    AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
 				    sizeof (grid_sizes),
 				    grid_sizes.data ())
@@ -3827,13 +3806,13 @@ info_agents_command (const char *args, int from_tty)
 
   amd_dbgapi_agent_id_t current_agent_id;
   if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0')
-      || !ptid_is_gpu (inferior_ptid)
-      || amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
-				   AMD_DBGAPI_WAVE_INFO_AGENT,
-				   sizeof (current_agent_id),
-				   &current_agent_id)
-	   != AMD_DBGAPI_STATUS_SUCCESS)
+      || !ptid_is_gpu (inferior_ptid))
     current_agent_id = AMD_DBGAPI_AGENT_NONE;
+  else
+    {
+      wave_info &info = get_thread_wave_info (inferior_thread ());
+      current_agent_id = info.coords.agent_id;
+    }
 
   {
     std::optional<ui_out_emit_list> list_emitter;
@@ -4141,13 +4120,13 @@ info_queues_command (const char *args, int from_tty)
 
   amd_dbgapi_queue_id_t current_queue_id;
   if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0')
-      || !ptid_is_gpu (inferior_ptid)
-      || amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
-				   AMD_DBGAPI_WAVE_INFO_QUEUE,
-				   sizeof (current_queue_id),
-				   &current_queue_id)
-	   != AMD_DBGAPI_STATUS_SUCCESS)
+      || !ptid_is_gpu (inferior_ptid))
     current_queue_id = AMD_DBGAPI_QUEUE_NONE;
+  else
+    {
+      wave_info &info = get_thread_wave_info (inferior_thread ());
+      current_queue_id = info.coords.queue_id;
+    }
 
   {
     std::optional<ui_out_emit_list> list_emitter;
@@ -4498,13 +4477,13 @@ info_dispatches_command (const char *args, int from_tty)
 
   amd_dbgapi_dispatch_id_t current_dispatch_id;
   if ((uiout->is_mi_like_p () && args != nullptr && *args != '\0')
-      || !ptid_is_gpu (inferior_ptid)
-      || amd_dbgapi_wave_get_info (get_amd_dbgapi_wave_id (inferior_ptid),
-				   AMD_DBGAPI_WAVE_INFO_DISPATCH,
-				   sizeof (current_dispatch_id),
-				   &current_dispatch_id)
-	   != AMD_DBGAPI_STATUS_SUCCESS)
+      || !ptid_is_gpu (inferior_ptid))
     current_dispatch_id = AMD_DBGAPI_DISPATCH_NONE;
+  else
+    {
+      wave_info &info = get_thread_wave_info (inferior_thread ());
+      current_dispatch_id = info.coords.dispatch_id;
+    }
 
   {
     std::optional<ui_out_emit_list> list_emitter;
