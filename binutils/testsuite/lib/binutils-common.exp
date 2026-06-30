@@ -1242,9 +1242,6 @@ proc run_dump_test { name {extra_options {}} } {
 	lappend as_final_flags $x
     }
 
-    regsub {\[big_or_little_endian\]} $opts(ld) \
-	[big_or_little_endian] opts(ld)
-
     if { $opts(name) == "" } {
 	set base_testname "$subdir/$name"
     } else {

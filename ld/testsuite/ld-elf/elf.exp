@@ -51,11 +51,15 @@ if [istarget "*-*-hpux*"] {
     set ASFLAGS "$ASFLAGS --defsym HPUX=1"
 }
 
+# Some tests expect 32-bit addresses.  Force the executable to low addresses.
+proc alpha_ld_flags { } {
+    if { [istarget alpha*-*-* ] } {
+	return "-Ttext-segment 0x1000000"
+    }
+    return ""
+}
+
 if { [istarget alpha*-*-* ] } {
-    # The compress1 test is written expecting 32-bit addresses; force the
-    # executable down into the low address space to match.
-    # ??? How can we adjust just the one testcase?
-    set LDFLAGS "$LDFLAGS -Ttext-segment 0x1000000"
     set ASFLAGS "$ASFLAGS --defsym NO_SET=1"
 }
 
