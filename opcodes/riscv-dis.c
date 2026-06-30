@@ -107,6 +107,22 @@ parse_riscv_dis_option_without_args (const char *option,
   return true;
 }
 
+static bool
+riscv_vtype_altfmt_supported (struct riscv_private_data *pd)
+{
+  return (pd->all_ext
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfbfa")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfofp8min")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfqwbdota8f")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfqwdota8f")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfwbdota16bf")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfwdota16bf")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvqwbdota8i")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvqwbdota16i")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvqwdota8i")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvqwdota16i"));
+}
+
 /* Parse RISC-V disassembler option (possibly with arguments).  */
 
 static void
@@ -466,6 +482,9 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		unsigned int imm_vma = EXTRACT_OPERAND (VMA, imm);
 		unsigned int imm_vtype_altfmt
 		  = EXTRACT_OPERAND (VTYPE_ALTFMT, imm);
+		bool imm_vtype_altfmt_supported
+		  = (imm_vtype_altfmt
+		     && riscv_vtype_altfmt_supported (pd));
 		unsigned int imm_vtype_res = (imm >> 9);
 
 		if (imm_vsew < ARRAY_SIZE (riscv_vsew)
@@ -474,7 +493,8 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		    && imm_vma < ARRAY_SIZE (riscv_vma)
 		    && !imm_vtype_res
 		    && (imm_vtype_altfmt == 0
-			|| imm_vsew < ARRAY_SIZE (riscv_vsew_altfmt))
+			|| (imm_vtype_altfmt_supported
+			    && imm_vsew < ARRAY_SIZE (riscv_vsew_altfmt)))
 		    && riscv_vsew[imm_vsew] != NULL
 		    && riscv_vlmul[imm_vlmul] != NULL)
 		  print (info->stream, dis_style_text, "%s,%s,%s,%s",
