@@ -683,53 +683,41 @@ struct work_item_info
   }
 };
 
-/* Populate WI, a work_item_info object.
-   Returns true on success, false if info is not available.  */
-
-static bool
-make_work_item_info (thread_info *tp, work_item_info *wi)
-{
-  wave_info &info = get_thread_wave_info (tp);
-  if (info.coords.dispatch_id == AMD_DBGAPI_DISPATCH_NONE)
-    {
-      /* The dispatch associated with a wave is not available.  A wave
-	 may not have an associated dispatch if attaching to a process
-	 with already existing waves.  */
-      return false;
-    }
-
-  wi->dispatch_id = info.coords.dispatch_id;
-  wi->queue_id = info.coords.queue_id;
-  wi->agent_id = info.coords.agent_id;
-
-  dispatch_get_info_throw (wi->dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
-			   wi->grid_sizes);
-
-  dispatch_get_info_throw (wi->dispatch_id,
-			   AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
-			   wi->work_group_sizes);
-
-  wi->work_group_ids = info.coords.group_ids;
-  wi->wave_in_group = info.coords.wave_in_group;
-
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, wi->lane_count);
-
-  return true;
-}
-
 /* Return the work-group position of the work-item assigned to lane LANE.  */
 
 static opt_vec3_u32_t
 lane_workgroup_pos (thread_info *tp, int lane)
 {
   work_item_info wi;
-  if (make_work_item_info (tp, &wi))
+
+  wave_info &info = get_thread_wave_info (tp);
+  if (info.coords.dispatch_id == AMD_DBGAPI_DISPATCH_NONE)
     {
-      vec3_t<size_t> partial_wg_sizes;
-      wi.partial_work_group_sizes (partial_wg_sizes);
-      return flatid_to_id (wi.flatid (lane), partial_wg_sizes);
+      /* The dispatch associated with a wave is not available.  A wave
+	 may not have an associated dispatch if attaching to a process
+	 with already existing waves.  */
+      return std::nullopt;
     }
-  return std::nullopt;
+
+  wi.dispatch_id = info.coords.dispatch_id;
+  wi.queue_id = info.coords.queue_id;
+  wi.agent_id = info.coords.agent_id;
+
+  dispatch_get_info_throw (wi.dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
+			   wi.grid_sizes);
+
+  dispatch_get_info_throw (wi.dispatch_id,
+			   AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
+			   wi.work_group_sizes);
+
+  wi.work_group_ids = info.coords.group_ids;
+  wi.wave_in_group = info.coords.wave_in_group;
+
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, wi.lane_count);
+
+  vec3_t<size_t> partial_wg_sizes;
+  wi.partial_work_group_sizes (partial_wg_sizes);
+  return flatid_to_id (wi.flatid (lane), partial_wg_sizes);
 }
 
 /* Return the lane's work-group position as a string.  */
