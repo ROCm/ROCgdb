@@ -10080,8 +10080,9 @@ process_relocs (Filedata * filedata)
 
 	  switch (rel_type)
 	    {
-	    default:
-	      abort ();
+	    case reltype_unknown:
+	      error (_("missing DT_REL and DT_RELA dynamic tags\n"));
+	      return false;
 	    case reltype_rel:
 	      rel_entsz = filedata->dynamic_info[DT_RELENT];
 	      entsz_name = "DT_RELENT";
