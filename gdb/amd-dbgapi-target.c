@@ -659,28 +659,6 @@ struct work_item_info
 
   /* Lane count per wave.  */
   size_t lane_count;
-
-  /* Return the flat work-item id of the lane at index LANE_INDEX.  */
-  size_t flatid (int lane_index) const
-  {
-    return wave_in_group * lane_count + lane_index;
-  }
-
-  /* Store in PARTIAL_WORKGROUP_SIZES the work-group item sizes for
-     each axis, taking into account the work-items that actually fit
-     in the grid.  */
-  void partial_work_group_sizes (vec3_t<size_t> &partial_wg_sizes) const
-  {
-    for (int i = 0; i < 3; i++)
-      {
-	size_t work_item_start
-	  = static_cast<size_t> (work_group_ids[i]) * work_group_sizes[i];
-	size_t work_item_end = work_item_start + work_group_sizes[i];
-	if (work_item_end > grid_sizes[i])
-	  work_item_end = grid_sizes[i];
-	partial_wg_sizes[i] = work_item_end - work_item_start;
-      }
-  }
 };
 
 /* Return the work-group position of the work-item assigned to lane LANE.  */
@@ -715,9 +693,22 @@ lane_workgroup_pos (thread_info *tp, int lane)
 
   wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, wi.lane_count);
 
+  /* Find the work-group item sizes for each axis, taking into account
+     the work-items that actually fit in the grid.  */
   vec3_t<size_t> partial_wg_sizes;
-  wi.partial_work_group_sizes (partial_wg_sizes);
-  return flatid_to_id (wi.flatid (lane), partial_wg_sizes);
+  for (int i = 0; i < 3; i++)
+    {
+      size_t work_item_start
+	= static_cast<size_t> (wi.work_group_ids[i]) * wi.work_group_sizes[i];
+      size_t work_item_end = work_item_start + wi.work_group_sizes[i];
+      if (work_item_end > wi.grid_sizes[i])
+	work_item_end = wi.grid_sizes[i];
+      partial_wg_sizes[i] = work_item_end - work_item_start;
+    }
+
+  size_t flatid = wi.wave_in_group * wi.lane_count + lane;
+
+  return flatid_to_id (flatid, partial_wg_sizes);
 }
 
 /* Return the lane's work-group position as a string.  */
