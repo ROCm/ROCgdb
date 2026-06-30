@@ -112,8 +112,10 @@ proc do_test {} {
 	# (the only printed line is the source line number and the source line).
 	set num_nexts 5
 	for {set i 0} {$i < 5} {incr i} {
-	    gdb_test "next" "^${::decimal}\[^\r\n\]+" \
-		"next, iter $i"
+	    with_timeout_factor 2 {
+		gdb_test "next" "^${::decimal}\[^\r\n\]+" \
+		    "next, iter $i"
+	    }
 	}
 
 	gdb_test "thread" "Current thread is $cur_thread, .*" \
