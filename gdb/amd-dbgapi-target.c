@@ -635,39 +635,11 @@ flatid_to_id (size_t flatid, const vec3_t<size_t> &sizes)
   return coord_id;
 }
 
-/* Object used to collect information about all the work-items
-   handled by a wave.  Used to compute work-item coordinates
-   taking into account partial work-groups.  */
-
-struct work_item_info
-{
-  amd_dbgapi_dispatch_id_t dispatch_id;
-  amd_dbgapi_queue_id_t queue_id;
-  amd_dbgapi_agent_id_t agent_id;
-
-  /* Grid sizes in work-items.  */
-  vec3_u32_t grid_sizes;
-
-  /* Grid's work-group sizes in work-items.  */
-  vec3_t<uint16_t> work_group_sizes;
-
-  /* Grid work-group coordinates.  */
-  vec3_u32_t work_group_ids;
-
-  /* Wave in work-group.  */
-  uint32_t wave_in_group;
-
-  /* Lane count per wave.  */
-  size_t lane_count;
-};
-
 /* Return the work-group position of the work-item assigned to lane LANE.  */
 
 static opt_vec3_u32_t
 lane_workgroup_pos (thread_info *tp, int lane)
 {
-  work_item_info wi;
-
   wave_info &info = get_thread_wave_info (tp);
   if (info.coords.dispatch_id == AMD_DBGAPI_DISPATCH_NONE)
     {
@@ -677,21 +649,18 @@ lane_workgroup_pos (thread_info *tp, int lane)
       return std::nullopt;
     }
 
-  wi.dispatch_id = info.coords.dispatch_id;
-  wi.queue_id = info.coords.queue_id;
-  wi.agent_id = info.coords.agent_id;
+  vec3_u32_t grid_sizes;
+  dispatch_get_info_throw (info.coords.dispatch_id,
+			   AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
+			   grid_sizes);
 
-  dispatch_get_info_throw (wi.dispatch_id, AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
-			   wi.grid_sizes);
-
-  dispatch_get_info_throw (wi.dispatch_id,
+  vec3_t<uint16_t> work_group_sizes;
+  dispatch_get_info_throw (info.coords.dispatch_id,
 			   AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
-			   wi.work_group_sizes);
+			   work_group_sizes);
 
-  wi.work_group_ids = info.coords.group_ids;
-  wi.wave_in_group = info.coords.wave_in_group;
-
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, wi.lane_count);
+  size_t lane_count;
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, lane_count);
 
   /* Find the work-group item sizes for each axis, taking into account
      the work-items that actually fit in the grid.  */
@@ -699,14 +668,14 @@ lane_workgroup_pos (thread_info *tp, int lane)
   for (int i = 0; i < 3; i++)
     {
       size_t work_item_start
-	= static_cast<size_t> (wi.work_group_ids[i]) * wi.work_group_sizes[i];
-      size_t work_item_end = work_item_start + wi.work_group_sizes[i];
-      if (work_item_end > wi.grid_sizes[i])
-	work_item_end = wi.grid_sizes[i];
+	= static_cast<size_t> (info.coords.group_ids[i]) * work_group_sizes[i];
+      size_t work_item_end = work_item_start + work_group_sizes[i];
+      if (work_item_end > grid_sizes[i])
+	work_item_end = grid_sizes[i];
       partial_wg_sizes[i] = work_item_end - work_item_start;
     }
 
-  size_t flatid = wi.wave_in_group * wi.lane_count + lane;
+  size_t flatid = info.coords.wave_in_group * lane_count + lane;
 
   return flatid_to_id (flatid, partial_wg_sizes);
 }
