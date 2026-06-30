@@ -93,6 +93,12 @@ const char * const riscv_vsew[8] =
   "e8", "e16", "e32", "e64", NULL, NULL, NULL, NULL
 };
 
+/* The vsetvli/vsetivli vsew altfmt constants.  */
+const char * const riscv_vsew_altfmt[2] =
+{
+  "e8alt", "e16alt"
+};
+
 /* The vsetvli vlmul constants.  */
 const char * const riscv_vlmul[8] =
 {
@@ -2243,6 +2249,13 @@ const struct riscv_opcode riscv_opcodes[] =
 /* Zvfbfwma instructions.  */
 {"vfwmaccbf16.vf",  0, INSN_CLASS_ZVFBFWMA, "Vd,S,VtVm",  MATCH_VFWMACCBF16_VF, MASK_VFWMACCBF16_VF, match_opcode, 0},
 {"vfwmaccbf16.vv",  0, INSN_CLASS_ZVFBFWMA, "Vd,Vs,VtVm", MATCH_VFWMACCBF16_VV, MASK_VFWMACCBF16_VV, match_opcode, 0},
+
+/* Zvdota instructions.  */
+{"vqwdotau.vv", 0, INSN_CLASS_ZVQWDOTA8I_OR_ZVQWDOTA16I, "Vd,Vt,VsVm", MATCH_VQWDOTAU_VV, MASK_VQWDOTAU_VV, match_opcode, 0},
+{"vqwdotas.vv", 0, INSN_CLASS_ZVQWDOTA8I_OR_ZVQWDOTA16I, "Vd,Vt,VsVm", MATCH_VQWDOTAS_VV, MASK_VQWDOTAS_VV, match_opcode, 0},
+{"vfwdota.vv",  0, INSN_CLASS_ZVFWDOTA16BF, "Vd,Vt,VsVm", MATCH_VFWDOTA_VV, MASK_VFWDOTA_VV, match_opcode, 0},
+{"vfqwdota.vv", 0, INSN_CLASS_ZVFQWDOTA8F, "Vd,Vt,VsVm", MATCH_VFQWDOTA_VV, MASK_VFQWDOTA_VV, match_opcode, 0},
+{"vfqwdota.alt.vv", 0, INSN_CLASS_ZVFQWDOTA8F, "Vd,Vt,VsVm", MATCH_VFQWDOTA_ALT_VV, MASK_VFQWDOTA_ALT_VV, match_opcode, 0},
 
 /* Zvbb/Zvkb instructions.  */
 {"vandn.vv",   0, INSN_CLASS_ZVKB, "Vd,Vt,VsVm", MATCH_VANDN_VV, MASK_VANDN_VV, match_opcode, 0},
