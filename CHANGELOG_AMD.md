@@ -7,7 +7,12 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
-- Add support for the gfx1250-strict architecture variant.
+- Support for the following architectures:
+  - `gfx1170`
+  - `gfx1171`
+  - `gfx1172`
+  - `gfx11-7-generic`
+  - `gfx1250-strict`
 
 ## ROCgdb-16.3 for ROCm-10.1
 

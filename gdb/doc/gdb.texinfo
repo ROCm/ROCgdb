@@ -29099,6 +29099,15 @@ Gfx1151 devices.
 @item @code{gfx1153}
 Gfx1153 devices.
 
+@item @code{gfx1170}
+Gfx1170 devices.
+
+@item @code{gfx1171}
+Gfx1171 devices.
+
+@item @code{gfx1172}
+Gfx1172 devices.
+
 @item @code{gfx1200}
 Gfx1200 devices.
 
@@ -29119,6 +29128,7 @@ The following generic @acronym{AMD} @acronym{GPU} architectures are supported:
 @item @code{gfx10-1-generic}
 @item @code{gfx10-3-generic}
 @item @code{gfx11-generic}
+@item @code{gfx11-7-generic}
 @item @code{gfx12-generic}
 @item @code{gfx12-5-generic}
 
