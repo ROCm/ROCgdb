@@ -41,6 +41,19 @@ if [ld_supports_emul "elf_x86_64"] {
 	    {{readelf {-rW --got-contents} libgot-1.rd}} \
 	    "libgot-1-x64.so" \
 	] \
+	[list \
+	    "Build libgot-2-x64.so" \
+	    "-shared -melf_x86_64 --no-ld-generated-unwind-info \
+	     -z noseparate-code -z max-page-size=0x200000 \
+	     --hash-style=sysv -z nomark-plt $DT_RELR_LDFLAGS \
+	     --rosegment" \
+	    "" \
+	    "--64 -mx86-used-note=no --generate-missing-build-notes=no" \
+	    {got-2.s} \
+	    {{readelf {--got-contents} libgot-2.rd} \
+	     {readelf {-D --got-contents} libgot-2.rd}} \
+	    "libgot-2-x64.so" \
+	] \
     ]
 }
 
@@ -57,6 +70,19 @@ if [ld_supports_emul "elf32_x86_64"] {
 	    {got-1.s} \
 	    {{readelf {-rW --got-contents} libgot-1-x32.rd}} \
 	    "libgot-1-x32.so" \
+	] \
+	[list \
+	    "Build libgot-2-x32.so" \
+	    "-shared -melf32_x86_64 --no-ld-generated-unwind-info \
+	     -z noseparate-code -z max-page-size=0x200000 \
+	     --hash-style=sysv -z nomark-plt $DT_RELR_LDFLAGS \
+	     --rosegment" \
+	    "" \
+	    "--x32 -mx86-used-note=no --generate-missing-build-notes=no" \
+	    {got-2.s} \
+	    {{readelf {--got-contents} libgot-2.rd} \
+	     {readelf {-D --got-contents} libgot-2.rd}} \
+	    "libgot-2-x32.so" \
 	] \
     ]
 }
