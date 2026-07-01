@@ -3266,7 +3266,7 @@ d_compact_number (struct d_info *di)
   else if (d_peek_char (di) == 'n')
     return -1;
   else
-    num = d_number (di) + 1;
+    num = d_number (di) + 1u;
 
   if (num < 0 || ! d_check_char (di, '_'))
     return -1;
