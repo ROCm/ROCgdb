@@ -5396,8 +5396,8 @@ aarch64_tls_transition (bfd *input_bfd,
 static bfd_vma
 dtpoff_base (struct bfd_link_info *info)
 {
-  /* If tls_sec is NULL, we should have signalled an error already.  */
-  BFD_ASSERT (elf_hash_table (info)->tls_sec != NULL);
+  if (elf_hash_table (info)->tls_sec == NULL)
+    return 0;
   return elf_hash_table (info)->tls_sec->vma;
 }
 
@@ -5409,8 +5409,8 @@ tpoff_base (struct bfd_link_info *info)
 {
   struct elf_link_hash_table *htab = elf_hash_table (info);
 
-  /* If tls_sec is NULL, we should have signalled an error already.  */
-  BFD_ASSERT (htab->tls_sec != NULL);
+  if (htab->tls_sec == NULL)
+    return 0;
 
   bfd_vma base = align_power ((bfd_vma) TCB_SIZE,
 			      htab->tls_sec->alignment_power);
