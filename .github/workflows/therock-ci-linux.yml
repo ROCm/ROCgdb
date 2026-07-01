@@ -14,7 +14,10 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 80e744323d4ebc08b6ea2d31c378fa48c70729fa # 2026-06-26
+  # TEMPORARY (do not merge): point at the paired TheRock branch to validate
+  # test-filter tier standardization end-to-end (TheRock#5917). Revert to a
+  # pinned ROCm/TheRock SHA before merge once that PR lands.
+  THEROCK_COMMIT_REF: users/dravindr/tr_rocgdb
 
 jobs:
   therock-build-linux:
