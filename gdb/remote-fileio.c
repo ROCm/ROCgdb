@@ -31,6 +31,7 @@
 #include "target.h"
 #include "filenames.h"
 #include "gdbsupport/filestuff.h"
+#include "gdbsupport/selftest.h"
 
 #include <fcntl.h>
 #include "gdbsupport/gdb_sys_time.h"
@@ -194,7 +195,8 @@ remote_fileio_extract_int (char **buf, long *retint)
 }
 
 static int
-remote_fileio_extract_ptr_w_len (char **buf, CORE_ADDR *ptrval, int *length)
+remote_fileio_extract_ptr_w_len (char **buf, CORE_ADDR *ptrval, int *length,
+				  bool allow_zero_length = false)
 {
   char *c;
   LONGEST retlong;
@@ -210,6 +212,11 @@ remote_fileio_extract_ptr_w_len (char **buf, CORE_ADDR *ptrval, int *length)
   *ptrval = (CORE_ADDR) retlong;
   *buf = c;
   if (remote_fileio_extract_long (buf, &retlong))
+    return -1;
+  /* Reject negative lengths, values that would overflow the int length and
+     zero (unless the caller permits it for the Fsystem NULL-cmdline sentinel).
+     Oversized names are caught by the syscall.  */
+  if (retlong < 0 || retlong > INT_MAX || (!allow_zero_length && retlong == 0))
     return -1;
   *length = (int) retlong;
   return 0;
@@ -305,7 +312,6 @@ remote_fileio_func_open (remote_target *remote, char *buf)
   long num;
   int flags, fd;
   mode_t mode;
-  char *pathname;
   struct stat st;
 
   /* 1. Parameter: Ptr to pathname / length incl. trailing zero.  */
@@ -339,8 +345,8 @@ remote_fileio_func_open (remote_target *remote, char *buf)
     }
 
   /* Request pathname.  */
-  pathname = (char *) alloca (length);
-  if (target_read_memory (ptrval, (gdb_byte *) pathname, length) != 0)
+  gdb::unique_xmalloc_ptr<char> pathname ((char *) xmalloc (length));
+  if (target_read_memory (ptrval, (gdb_byte *) pathname.get (), length) != 0)
     {
       remote_fileio_ioerror (remote);
       return;
@@ -349,7 +355,7 @@ remote_fileio_func_open (remote_target *remote, char *buf)
   /* Check if pathname exists and is not a regular file or directory.  If so,
      return an appropriate error code.  Same for trying to open directories
      for writing.  */
-  if (!stat (pathname, &st))
+  if (!stat (pathname.get (), &st))
     {
       if (!S_ISREG (st.st_mode) && !S_ISDIR (st.st_mode))
 	{
@@ -364,7 +370,7 @@ remote_fileio_func_open (remote_target *remote, char *buf)
 	}
     }
 
-  fd = gdb_open_cloexec (pathname, flags, mode).release ();
+  fd = gdb_open_cloexec (pathname.get (), flags, mode).release ();
   if (fd < 0)
     {
       remote_fileio_return_errno (remote, -1);
@@ -659,7 +665,6 @@ remote_fileio_func_rename (remote_target *remote, char *buf)
 {
   CORE_ADDR old_ptr, new_ptr;
   int old_len, new_len;
-  char *oldpath, *newpath;
   int ret, of, nf;
   struct stat ost, nst;
 
@@ -678,24 +683,24 @@ remote_fileio_func_rename (remote_target *remote, char *buf)
     }
 
   /* Request oldpath using 'm' packet */
-  oldpath = (char *) alloca (old_len);
-  if (target_read_memory (old_ptr, (gdb_byte *) oldpath, old_len) != 0)
+  gdb::unique_xmalloc_ptr<char> oldpath ((char *) xmalloc (old_len));
+  if (target_read_memory (old_ptr, (gdb_byte *) oldpath.get (), old_len) != 0)
     {
       remote_fileio_ioerror (remote);
       return;
     }
 
   /* Request newpath using 'm' packet */
-  newpath = (char *) alloca (new_len);
-  if (target_read_memory (new_ptr, (gdb_byte *) newpath, new_len) != 0)
+  gdb::unique_xmalloc_ptr<char> newpath ((char *) xmalloc (new_len));
+  if (target_read_memory (new_ptr, (gdb_byte *) newpath.get (), new_len) != 0)
     {
       remote_fileio_ioerror (remote);
       return;
     }
 
   /* Only operate on regular files and directories.  */
-  of = stat (oldpath, &ost);
-  nf = stat (newpath, &nst);
+  of = stat (oldpath.get (), &ost);
+  nf = stat (newpath.get (), &nst);
   if ((!of && !S_ISREG (ost.st_mode) && !S_ISDIR (ost.st_mode))
       || (!nf && !S_ISREG (nst.st_mode) && !S_ISDIR (nst.st_mode)))
     {
@@ -703,7 +708,7 @@ remote_fileio_func_rename (remote_target *remote, char *buf)
       return;
     }
 
-  ret = rename (oldpath, newpath);
+  ret = rename (oldpath.get (), newpath.get ());
 
   if (ret == -1)
     {
@@ -726,10 +731,10 @@ remote_fileio_func_rename (remote_target *remote, char *buf)
 		  char newfullpath[PATH_MAX];
 		  int len;
 
-		  cygwin_conv_path (CCP_WIN_A_TO_POSIX, oldpath, oldfullpath,
-				    PATH_MAX);
-		  cygwin_conv_path (CCP_WIN_A_TO_POSIX, newpath, newfullpath,
-				    PATH_MAX);
+		  cygwin_conv_path (CCP_WIN_A_TO_POSIX, oldpath.get (),
+				    oldfullpath, PATH_MAX);
+		  cygwin_conv_path (CCP_WIN_A_TO_POSIX, newpath.get (),
+				    newfullpath, PATH_MAX);
 		  len = strlen (oldfullpath);
 		  if (IS_DIR_SEPARATOR (newfullpath[len])
 		      && !filename_ncmp (oldfullpath, newfullpath, len))
@@ -752,7 +757,6 @@ remote_fileio_func_unlink (remote_target *remote, char *buf)
 {
   CORE_ADDR ptrval;
   int length;
-  char *pathname;
   int ret;
   struct stat st;
 
@@ -763,8 +767,8 @@ remote_fileio_func_unlink (remote_target *remote, char *buf)
       return;
     }
   /* Request pathname using 'm' packet */
-  pathname = (char *) alloca (length);
-  if (target_read_memory (ptrval, (gdb_byte *) pathname, length) != 0)
+  gdb::unique_xmalloc_ptr<char> pathname ((char *) xmalloc (length));
+  if (target_read_memory (ptrval, (gdb_byte *) pathname.get (), length) != 0)
     {
       remote_fileio_ioerror (remote);
       return;
@@ -772,13 +776,14 @@ remote_fileio_func_unlink (remote_target *remote, char *buf)
 
   /* Only operate on regular files (and directories, which allows to return
      the correct return code).  */
-  if (!stat (pathname, &st) && !S_ISREG (st.st_mode) && !S_ISDIR (st.st_mode))
+  if (!stat (pathname.get (), &st) && !S_ISREG (st.st_mode)
+      && !S_ISDIR (st.st_mode))
     {
       remote_fileio_reply (remote, -1, FILEIO_ENODEV);
       return;
     }
 
-  ret = unlink (pathname);
+  ret = unlink (pathname.get ());
 
   if (ret == -1)
     remote_fileio_return_errno (remote, -1);
@@ -791,7 +796,6 @@ remote_fileio_func_stat (remote_target *remote, char *buf)
 {
   CORE_ADDR statptr, nameptr;
   int ret, namelength;
-  char *pathname;
   LONGEST lnum;
   struct stat st;
   struct fio_stat fst;
@@ -812,14 +816,15 @@ remote_fileio_func_stat (remote_target *remote, char *buf)
   statptr = (CORE_ADDR) lnum;
 
   /* Request pathname using 'm' packet */
-  pathname = (char *) alloca (namelength);
-  if (target_read_memory (nameptr, (gdb_byte *) pathname, namelength) != 0)
+  gdb::unique_xmalloc_ptr<char> pathname ((char *) xmalloc (namelength));
+  if (target_read_memory (nameptr, (gdb_byte *) pathname.get (),
+			  namelength) != 0)
     {
       remote_fileio_ioerror (remote);
       return;
     }
 
-  ret = stat (pathname, &st);
+  ret = stat (pathname.get (), &st);
 
   if (ret == -1)
     {
@@ -997,24 +1002,28 @@ remote_fileio_func_system (remote_target *remote, char *buf)
 {
   CORE_ADDR ptrval;
   int ret, length;
-  char *cmdline = NULL;
 
   /* Parameter: Ptr to commandline / length incl. trailing zero */
-  if (remote_fileio_extract_ptr_w_len (&buf, &ptrval, &length))
+  if (remote_fileio_extract_ptr_w_len (&buf, &ptrval, &length, true))
     {
       remote_fileio_ioerror (remote);
       return;
     }
 
+  gdb::unique_xmalloc_ptr<char> cmdline_buf;
+  const char *cmdline = nullptr;
+
   if (length)
     {
       /* Request commandline using 'm' packet */
-      cmdline = (char *) alloca (length);
-      if (target_read_memory (ptrval, (gdb_byte *) cmdline, length) != 0)
+      cmdline_buf.reset ((char *) xmalloc (length));
+      if (target_read_memory (ptrval, (gdb_byte *) cmdline_buf.get (),
+			      length) != 0)
 	{
 	  remote_fileio_ioerror (remote);
 	  return;
 	}
+      cmdline = cmdline_buf.get ();
     }
 
   /* Check if system(3) has been explicitly allowed using the
@@ -1244,6 +1253,73 @@ show_system_call_allowed (const char *args, int from_tty)
 	      remote_fio_system_call_allowed ? "" : "not ");
 }
 
+#if GDB_SELF_TEST
+
+namespace selftests {
+
+/* Verify that remote_fileio_extract_ptr_w_len rejects negative and zero
+   lengths, and accepts valid ones.  The packet buffer format is
+   "ptr/len[,...]" with both fields as hex integers.  */
+
+static void
+test_remote_fileio_extract_ptr_w_len ()
+{
+  CORE_ADDR ptrval;
+  int length;
+
+  /* Build a writable "ptr/len" buffer and parse it, with and without
+     the Fsystem zero-length allowance.  */
+  auto parse = [&] (const char *s) -> int
+    {
+      std::string buf (s);
+      char *p = buf.data ();
+      return remote_fileio_extract_ptr_w_len (&p, &ptrval, &length);
+    };
+  auto parse_allow_zero = [&] (const char *s) -> int
+    {
+      std::string buf (s);
+      char *p = buf.data ();
+      return remote_fileio_extract_ptr_w_len (&p, &ptrval, &length, true);
+    };
+
+  /* Valid: length 1 (minimum positive).  Verify both fields are parsed.  */
+  SELF_CHECK (parse ("deadbeef/1") == 0);
+  SELF_CHECK (ptrval == 0xdeadbeef);
+  SELF_CHECK (length == 1);
+
+  /* Valid: packet with trailing fields.  */
+  SELF_CHECK (parse ("deadbeef/4,0,1a4") == 0);
+  SELF_CHECK (ptrval == 0xdeadbeef);
+  SELF_CHECK (length == 4);
+
+  /* Valid: length 0 with allow_zero_length (Fsystem).  */
+  SELF_CHECK (parse_allow_zero ("0/0") == 0);
+  SELF_CHECK (length == 0);
+
+  /* Invalid: length 0 without allow_zero_length (pathname handlers).  */
+  SELF_CHECK (parse ("0/0") == -1);
+
+  /* Valid: largest positive length accepted (technically INT_MAX).  */
+  SELF_CHECK (parse ("1/7fffffff") == 0);
+  SELF_CHECK (length == 0x7fffffff);
+
+  /* Invalid: one past INT_MAX overflows the int length.  */
+  SELF_CHECK (parse ("1/80000000") == -1);
+
+  /* Invalid: a length whose 64-bit value is negative is rejected.  */
+  SELF_CHECK (parse ("1/8000000000000000") == -1);
+
+  /* Invalid: negative length.  */
+  SELF_CHECK (parse ("1/-1") == -1);
+
+  /* Invalid: missing '/' separator.  */
+  SELF_CHECK (parse ("deadbeef") == -1);
+}
+
+} /* namespace selftests */
+
+#endif /* GDB_SELF_TEST */
+
 void
 initialize_remote_fileio (struct cmd_list_element **remote_set_cmdlist,
 			  struct cmd_list_element **remote_show_cmdlist)
@@ -1256,4 +1332,8 @@ initialize_remote_fileio (struct cmd_list_element **remote_set_cmdlist,
 	   show_system_call_allowed,
 	   _("Show if the host system(3) call is allowed for the target."),
 	   remote_show_cmdlist);
+#if GDB_SELF_TEST
+  selftests::register_test ("remote_fileio_extract_ptr_w_len",
+			    selftests::test_remote_fileio_extract_ptr_w_len);
+#endif
 }
