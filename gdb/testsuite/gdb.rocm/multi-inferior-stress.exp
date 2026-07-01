@@ -1,0 +1,161 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Stress test debugging many GPU programs on a single GPU at once.
+#
+# GDB creates N inferiors of a simple kernel-launcher program, all
+# pinned to the same GPU device, runs them concurrently in non-stop
+# mode, and drives every one to a kernel breakpoint and then to exit.
+# Running enough programs on one device exercises the multi-process GPU
+# debug path, including the firmware context switching that kicks in
+# once the number of simultaneously debugged processes crosses the
+# hardware limit, as well as GDB's multi-inferior plumbing.
+#
+# Inferiors are created with "add-inferior" rather than fork, so the
+# test does not depend on fork being available.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+require allow_hip_tests
+require hip_devices_support_debug_multi_process
+require allow_multi_inferior_tests
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+# Run one stress iteration with NUM_INFERIORS inferiors, all on a
+# single GPU.
+
+proc do_test { num_inferiors } {
+    clean_restart
+    gdb_load $::binfile
+
+    gdb_test_no_output "set non-stop on"
+
+    with_rocm_gpu_lock {
+	# Create NUM_INFERIORS inferiors of the same program and run
+	# each to main.  Every inferior uses the default device (device
+	# 0), which is the first ROCR_VISIBLE_DEVICES-visible GPU, so
+	# they all run on the same single GPU.  Running that many
+	# programs on one device is what saturates it past the per-device
+	# limit and exercises the firmware context switching.
+	for {set i 1} {$i <= $num_inferiors} {incr i} {
+	    if { $i > 1 } {
+		gdb_test "add-inferior" "Added inferior $i.*" \
+		    "add inferior $i"
+		gdb_test "inferior $i" "Switching to inferior $i.*" \
+		    "switch to inferior $i"
+		gdb_load $::binfile
+	    }
+	    gdb_test "start" "Temporary breakpoint $::decimal, main .*" \
+		"start inferior $i"
+	}
+
+	# Plant a breakpoint on the kernel and resume every inferior.
+	gdb_breakpoint kern -allow-pending
+
+	gdb_test_multiple "continue -a &" "continue -a to kernel" {
+	    -re "Continuing\\.\r\n$::gdb_prompt " {
+		pass $gdb_test_name
+	    }
+	}
+
+	# Collect one kernel stop per inferior.
+	set seen [list]
+	set test "wait for all GPU stops"
+	gdb_test_multiple "" $test {
+	    -re "Thread ($::decimal)\\.$::decimal\[^\r\n\]* hit Breakpoint\[^\r\n\]*, kern \\(\\)\[^\r\n\]*\r\n" {
+		set inf $expect_out(1,string)
+		if { [lsearch -exact $seen $inf] == -1 } {
+		    lappend seen $inf
+		}
+		if { [llength $seen] < $num_inferiors } {
+		    exp_continue
+		} else {
+		    pass $test
+		}
+	    }
+	    -re "\\\[Inferior $::decimal \[^\r\n\]* exited\[^\r\n\]*\\\]\r\n" {
+		fail "$test (inferior exited before hitting the kernel)"
+		return
+	    }
+	    timeout {
+		fail $test
+		verbose -log "only [llength $seen] of $num_inferiors\
+			inferiors stopped before timeout"
+		return
+	    }
+	}
+
+	# Resume everything again.  Every inferior should run to a clean
+	# exit.
+	gdb_test_multiple "continue -a &" "continue -a to exit" {
+	    -re "Continuing\\.\r\n$::gdb_prompt " {
+		pass $gdb_test_name
+	    }
+	}
+
+	set exited [list]
+	set test "wait for all inferiors to exit"
+	gdb_test_multiple "" $test {
+	    -re "\\\[Inferior ($::decimal) \[^\r\n\]* exited normally\\\]\r\n" {
+		set inf $expect_out(1,string)
+		if { [lsearch -exact $exited $inf] == -1 } {
+		    lappend exited $inf
+		}
+		if { [llength $exited] < $num_inferiors } {
+		    exp_continue
+		} else {
+		    pass $test
+		}
+	    }
+	    -re "\\\[Inferior $::decimal \[^\r\n\]* exited with code\[^\r\n\]*\\\]\r\n" {
+		fail "$test (non-zero exit)"
+		return
+	    }
+	    timeout {
+		fail $test
+		verbose -log "only [llength $exited] of $num_inferiors\
+			inferiors exited before timeout"
+		return
+	    }
+	}
+    }
+}
+
+# The hardware allows a limited number of processes (around 8 to 16) to
+# be debugged simultaneously on a GPU.  Beyond that the firmware does
+# transparent context switching.  Use N as a count that reaches that
+# limit and run N/2 and N*2 processes: N*2 is comfortably above the
+# limit and drives the context switching, while N/2 is a lighter
+# baseline.  N is kept modest to keep the test practical.  Empirically
+# higher counts work too but mainly cost wall-clock, as bringing up that
+# many GPU runtimes on one device serializes.
+set n 16
+
+foreach_with_prefix num_inferiors [list [expr { $n / 2 }] [expr { $n * 2 }]] {
+    # Bringing up many GPU runtimes concurrently on one device
+    # serializes, so scale the timeout to roughly one unit per 8
+    # inferiors.
+    with_timeout_factor [expr { ($num_inferiors + 7) / 8 }] {
+	do_test $num_inferiors
+    }
+}
