@@ -282,6 +282,7 @@ typedef struct filedata
   uint64_t             archive_file_size;
   /* Everything below this point is cleared out by free_filedata.  */
   Elf_Internal_Shdr *  section_headers;
+  Elf_Internal_Shdr ** orig_section_headers;
   Elf_Internal_Phdr *  program_headers;
   char *               string_table;
   uint64_t             string_table_length;
@@ -7848,11 +7849,42 @@ offset_from_vma (Filedata * filedata, uint64_t vma, uint64_t size)
   return vma;
 }
 
+/* Save the original section header values.  */
+
+static void
+save_original_section_header_values (Elf_Internal_Shdr *internal,
+				     Elf_Internal_Shdr **orig_internal,
+				     const char *dynamic_tag,
+				     unsigned int i)
+{
+  /* Return if the original section header values have been saved.  */
+  if (*orig_internal != NULL)
+    return;
+
+  *orig_internal = (Elf_Internal_Shdr *)
+    malloc (sizeof (Elf_Internal_Shdr));
+  if (*orig_internal == NULL)
+    {
+      if (dynamic_tag)
+	error (_("Out of memory reading dynamic tag %s\n"),
+	       dynamic_tag);
+      else
+	error (_("Out of memory reading %u section headers\n"), i);
+      return;
+    }
+
+  /* Save the original section header values.  */
+  **orig_internal = *internal;
+}
+
+
 /* Valid section info and clear the invalid fields.  */
 
 static void
-validate_section_info (Elf_Internal_Shdr *internal, unsigned int i,
-		       Filedata *filedata, bool dynamic, bool probe)
+validate_section_info (Elf_Internal_Shdr *internal,
+		       Elf_Internal_Shdr **orig_internal,
+		       unsigned int i, Filedata *filedata, bool dynamic,
+		       bool probe)
 {
   const char *dynamic_tag = NULL;
   const char *dynamicsz_tag = NULL;
@@ -7880,6 +7912,10 @@ validate_section_info (Elf_Internal_Shdr *internal, unsigned int i,
 	{
 	  warn (_("Ignore the out of range sh_link value of %u for "
 		  "section %u\n"), internal->sh_link, i);
+	  /* Save the original section header values before garbage
+	     values are cleared.  */
+	  save_original_section_header_values (internal, orig_internal,
+					       NULL, i);
 	  internal->sh_link = 0;
 	}
 
@@ -7888,6 +7924,8 @@ validate_section_info (Elf_Internal_Shdr *internal, unsigned int i,
 	{
 	  warn (_("Ignore the out of range sh_info value of %u for "
 		  "section %u\n"), internal->sh_info, i);
+	  save_original_section_header_values (internal, orig_internal,
+					       NULL, i);
 	  internal->sh_info = 0;
 	}
     }
@@ -7902,6 +7940,8 @@ validate_section_info (Elf_Internal_Shdr *internal, unsigned int i,
 	warn (_("Ignore the out of range sh_entsize value of %"
 		PRIu64 " for section %u\n"),
 	      (uint64_t) internal->sh_entsize, i);
+      save_original_section_header_values (internal, orig_internal,
+					   dynamicent_tag, i);
       internal->sh_entsize = 0;
     }
 
@@ -7916,6 +7956,8 @@ validate_section_info (Elf_Internal_Shdr *internal, unsigned int i,
 	  else
 	    warn (_("Ignore the out of range sh_offset value of %"
 		    PRId64 " for section %u\n"), sh_offset, i);
+	  save_original_section_header_values (internal, orig_internal,
+					       dynamic_tag, i);
 	  internal->sh_offset = 0;
 	}
 
@@ -7930,6 +7972,8 @@ validate_section_info (Elf_Internal_Shdr *internal, unsigned int i,
 		    PRIu64 " for section %u with sh_offset value of %"
 		    PRId64 "\n"), (uint64_t) internal->sh_size, i,
 		  sh_offset);
+	  save_original_section_header_values (internal, orig_internal,
+					       dynamicsz_tag, i);
 	  internal->sh_size = 0;
 	}
     }
@@ -7944,6 +7988,7 @@ get_32bit_section_headers (Filedata * filedata, bool probe)
 {
   Elf32_External_Shdr * shdrs;
   Elf_Internal_Shdr *   internal;
+  Elf_Internal_Shdr **  orig_internal;
   unsigned int          i;
   unsigned int          size = filedata->file_header.e_shentsize;
   unsigned int          num = probe ? 1 : filedata->file_header.e_shnum;
@@ -7983,9 +8028,13 @@ get_32bit_section_headers (Filedata * filedata, bool probe)
       return false;
     }
 
+  filedata->orig_section_headers = (Elf_Internal_Shdr **)
+    xcalloc2 (num, sizeof (Elf_Internal_Shdr *));
+
+  orig_internal = filedata->orig_section_headers;
   for (i = 0, internal = filedata->section_headers;
        i < num;
-       i++, internal++)
+       i++, internal++, orig_internal++)
     {
       internal->sh_name      = BYTE_GET (shdrs[i].sh_name);
       internal->sh_type      = BYTE_GET (shdrs[i].sh_type);
@@ -7997,7 +8046,8 @@ get_32bit_section_headers (Filedata * filedata, bool probe)
       internal->sh_info      = BYTE_GET (shdrs[i].sh_info);
       internal->sh_addralign = BYTE_GET (shdrs[i].sh_addralign);
       internal->sh_entsize   = BYTE_GET (shdrs[i].sh_entsize);
-      validate_section_info (internal, i, filedata, false, probe);
+      validate_section_info (internal, orig_internal, i, filedata,
+			     false, probe);
     }
 
   free (shdrs);
@@ -8011,6 +8061,7 @@ get_64bit_section_headers (Filedata * filedata, bool probe)
 {
   Elf64_External_Shdr *  shdrs;
   Elf_Internal_Shdr *    internal;
+  Elf_Internal_Shdr **   orig_internal;
   unsigned int           i;
   unsigned int           size = filedata->file_header.e_shentsize;
   unsigned int           num = probe ? 1 : filedata->file_header.e_shnum;
@@ -8052,9 +8103,13 @@ get_64bit_section_headers (Filedata * filedata, bool probe)
       return false;
     }
 
+  filedata->orig_section_headers = (Elf_Internal_Shdr **)
+    xcalloc2 (num, sizeof (Elf_Internal_Shdr *));
+
+  orig_internal = filedata->orig_section_headers;
   for (i = 0, internal = filedata->section_headers;
        i < num;
-       i++, internal++)
+       i++, internal++, orig_internal++)
     {
       internal->sh_name      = BYTE_GET (shdrs[i].sh_name);
       internal->sh_type      = BYTE_GET (shdrs[i].sh_type);
@@ -8066,7 +8121,8 @@ get_64bit_section_headers (Filedata * filedata, bool probe)
       internal->sh_info      = BYTE_GET (shdrs[i].sh_info);
       internal->sh_offset    = BYTE_GET (shdrs[i].sh_offset);
       internal->sh_addralign = BYTE_GET (shdrs[i].sh_addralign);
-      validate_section_info (internal, i, filedata, false, probe);
+      validate_section_info (internal, orig_internal, i, filedata,
+			     false, probe);
     }
 
   free (shdrs);
@@ -9016,10 +9072,18 @@ process_section_headers (Filedata * filedata)
   if (do_section_details)
     printf (_("       Flags\n"));
 
-  for (i = 0, section = filedata->section_headers;
+  Elf_Internal_Shdr **orig_section = filedata->orig_section_headers;
+  Elf_Internal_Shdr *sec;
+  for (i = 0, sec = filedata->section_headers;
        i < filedata->file_header.e_shnum;
-       i++, section++)
+       i++, sec++, orig_section++)
     {
+      /* Dump the original section header values if they exist.  */
+      if (*orig_section)
+	section = *orig_section;
+      else
+	section = sec;
+
       /* Run some sanity checks on the section header.  */
 
       /* Check the sh_link field.  */
@@ -10197,16 +10261,18 @@ process_relocs (Filedata * filedata)
 		  uint64_t num_reloc;
 		  uint64_t *relrs = NULL;
 		  Elf_Internal_Shdr section = {};
+		  Elf_Internal_Shdr *orig_section = NULL;
 		  section.sh_offset
 		    = filedata->dynamic_info[DT_RELR];
 		  section.sh_size = rel_size;
 		  section.sh_entsize = rel_entsz;
 		  section.sh_type = SHT_RELR;
-		  validate_section_info (&section, DT_RELR, filedata,
-					 true, false);
+		  validate_section_info (&section, &orig_section, DT_RELR,
+					 filedata, true, false);
 		  num_reloc = count_relr_relocations (filedata,
 						      &section,
 						      &relrs);
+		  free (orig_section);
 		  free (relrs);
 		  if (num_reloc == 0)
 		    continue;
@@ -24847,6 +24913,12 @@ free_filedata (Filedata *filedata)
   free (filedata->program_interpreter);
   free (filedata->program_headers);
   free (filedata->section_headers);
+  if (filedata->orig_section_headers)
+    {
+      for (unsigned int i = 0; i < filedata->file_header.e_shnum; i++)
+	free (filedata->orig_section_headers[i]);
+      free (filedata->orig_section_headers);
+    }
   free (filedata->string_table);
   free (filedata->dump.dump_sects);
   free (filedata->dynamic_strings);
