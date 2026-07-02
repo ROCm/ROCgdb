@@ -44,7 +44,8 @@ xstormy16_elf_24_reloc (bfd *abfd,
       return bfd_reloc_ok;
     }
 
-  if (reloc_entry->address > bfd_get_section_limit (abfd, input_section))
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, reloc_entry->address))
     return bfd_reloc_outofrange;
 
   if (bfd_is_com_section (symbol->section))

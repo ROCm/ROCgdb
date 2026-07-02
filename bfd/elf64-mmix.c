@@ -703,16 +703,14 @@ static reloc_howto_type elf_mmix_howto_table[] =
 	 0xff,			/* dst_mask */
 	 false),		/* pcrel_offset */
 
-  /* A register plus an index, corresponding to the relocation expression.
-     The sizes must correspond to the valid range of the expression, while
-     the bitmasks correspond to what we store in the image.  */
+  /* A register plus an index, corresponding to the relocation expression.  */
   HOWTO (R_MMIX_BASE_PLUS_OFFSET,	/* type */
 	 0,			/* rightshift */
-	 8,			/* size */
-	 64,			/* bitsize */
+	 2,			/* size */
+	 16,			/* bitsize */
 	 false,			/* pc_relative */
 	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
+	 complain_overflow_dont, /* complain_on_overflow */
 	 mmix_elf_reloc,	/* special_function */
 	 "R_MMIX_BASE_PLUS_OFFSET", /* name */
 	 false,			/* partial_inplace */
@@ -1282,8 +1280,7 @@ mmix_elf_reloc (bfd *abfd,
   bfd_vma relocation;
   bfd_reloc_status_type r;
   asection *reloc_target_output_section;
-  bfd_reloc_status_type flag = bfd_reloc_ok;
-  bfd_vma output_base = 0;
+  bfd_vma output_base;
 
   r = bfd_elf_generic_reloc (abfd, reloc_entry, symbol, data,
 			     input_section, output_bfd, error_message);
@@ -1295,12 +1292,8 @@ mmix_elf_reloc (bfd *abfd,
 
   if (bfd_is_und_section (symbol->section)
       && (symbol->flags & BSF_WEAK) == 0
-      && output_bfd == (bfd *) NULL)
+      && output_bfd == NULL)
     return bfd_reloc_undefined;
-
-  /* Is the address of the relocation really within the section?  */
-  if (reloc_entry->address > bfd_get_section_limit (abfd, input_section))
-    return bfd_reloc_outofrange;
 
   /* Work out which section the relocation is targeted at and the
      initial relocation command value.  */
@@ -1322,7 +1315,7 @@ mmix_elf_reloc (bfd *abfd,
 
   relocation += output_base + symbol->section->output_offset;
 
-  if (output_bfd != (bfd *) NULL)
+  if (output_bfd != NULL)
     {
       /* Add in supplied addend.  */
       relocation += reloc_entry->addend;
@@ -1332,8 +1325,12 @@ mmix_elf_reloc (bfd *abfd,
 	 Modify the reloc inplace to reflect what we now know.  */
       reloc_entry->addend = relocation;
       reloc_entry->address += input_section->output_offset;
-      return flag;
+      return bfd_reloc_ok;
     }
+
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, reloc_entry->address))
+    return bfd_reloc_outofrange;
 
   return mmix_final_link_relocate (reloc_entry->howto, input_section,
 				   data, reloc_entry->address,
