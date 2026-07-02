@@ -43463,7 +43463,8 @@ Several packets and replies include a @var{thread-id} field to identify
 a thread.  Normally these are positive numbers with a target-specific
 interpretation, formatted as big-endian hex strings.  A @var{thread-id}
 can also be a literal @samp{-1} to indicate all threads, or @samp{0} to
-pick any thread.
+pick any thread.  @value{GDBN} guarantees that values of up to 32 bits
+will work here.
 
 In addition, the remote protocol supports a multiprocess feature in
 which the @var{thread-id} syntax is extended to optionally include both
@@ -43475,9 +43476,11 @@ to indicate all processes or threads (respectively), or @samp{0} to
 indicate an arbitrary process or thread.  Specifying just a process, as
 @samp{p@var{pid}}, is equivalent to @samp{p@var{pid}.-1}.  It is an
 error to specify all processes but a specific thread, such as
-@samp{p-1.@var{tid}}.  Note that the @samp{p} prefix is @emph{not} used
-for those packets and replies explicitly documented to include a process
-ID, rather than a @var{thread-id}.
+@samp{p-1.@var{tid}}.  @value{GDBN} guarantees that values of up to 32
+bits will work for both @var{pid} and @var{tid}.  Note that the
+@samp{p} prefix is @emph{not} used for those packets and replies
+explicitly documented to include a process ID, rather than a
+@var{thread-id}.
 
 The multiprocess @var{thread-id} syntax extensions are only used if both
 @value{GDBN} and the stub report support for the @samp{multiprocess}
