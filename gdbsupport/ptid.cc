@@ -109,7 +109,7 @@ ptid_t::parse (const char *buf, const char **obuf, bool for_remote,
 	error (_("invalid remote ptid: %s"), buf);
 
       lwp = (ptid_t::lwp_type) hex;
-      if (hex != ((unsigned_lwp_type) lwp))
+      if (hex != ((unsigned_lwp_type) lwp) && hex != (ULONGEST) -1)
 	error (_("invalid remote ptid: %s"), buf);
 
       if (obuf != nullptr)
