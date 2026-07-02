@@ -21919,6 +21919,8 @@ get_note_type (Filedata * filedata, unsigned e_type)
 	return _("NT_ARM_PAC_ENABLED_KEYS (AArch64 pointer authentication enabled keys)");
       case NT_ARM_FPMR:
 	return _("NT_ARM_FPMR (AArch64 Floating Point Mode Register)");
+      case NT_ARM_POE:
+	return _("NT_ARM_POE (AArch64 Permission Overlay Extension Register)");
       case NT_ARC_V2:
 	return _("NT_ARC_V2 (ARC HS accumulator/extra registers)");
       case NT_RISCV_CSR:

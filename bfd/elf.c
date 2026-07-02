@@ -64,6 +64,7 @@ SECTION
 /* Names of a pseudo-section which represent core notes.  */
 #define NOTE_PSEUDO_SECTION_AARCH_FPMR		".reg-aarch-fpmr"
 #define NOTE_PSEUDO_SECTION_AARCH_GCS		".reg-aarch-gcs"
+#define NOTE_PSEUDO_SECTION_AARCH_POE		".reg-aarch-poe"
 #define NOTE_PSEUDO_SECTION_AARCH_HW_BREAK	".reg-aarch-hw-break"
 #define NOTE_PSEUDO_SECTION_AARCH_HW_WATCH	".reg-aarch-hw-watch"
 #define NOTE_PSEUDO_SECTION_AARCH_MTE		".reg-aarch-mte"
@@ -10735,6 +10736,15 @@ elfcore_grok_aarch_gcs (bfd *abfd, Elf_Internal_Note *note)
   return elfcore_make_note_pseudosection (abfd, NOTE_PSEUDO_SECTION_AARCH_GCS, note);
 }
 
+/* Convert NOTE into a bfd_section called ".reg-aarch-poe".  Return TRUE if
+   successful, otherwise return FALSE.  */
+
+static bool
+elfcore_grok_aarch_poe (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, NOTE_PSEUDO_SECTION_AARCH_POE, note);
+}
+
 /* Convert NOTE into the appropriate note pseudo-section for the AArch64 FPMR.
  * Return TRUE if successful, otherwise return FALSE.  */
 
@@ -11179,6 +11189,7 @@ elfcore_grok_note (bfd *abfd, Elf_Internal_Note *note)
 	case NT_ARC_V2:		return elfcore_grok_arc_v2 (abfd, note);
 	case NT_ARM_FPMR:	return elfcore_grok_aarch_fpmr (abfd, note);
 	case NT_ARM_GCS:	return elfcore_grok_aarch_gcs (abfd, note);
+	case NT_ARM_POE:	return elfcore_grok_aarch_poe (abfd, note);
 	case NT_ARM_HW_BREAK:	return elfcore_grok_aarch_hw_break (abfd, note);
 	case NT_ARM_HW_WATCH:	return elfcore_grok_aarch_hw_watch (abfd, note);
 	case NT_ARM_PAC_MASK:	return elfcore_grok_aarch_pauth (abfd, note);
@@ -12900,6 +12911,19 @@ elfcore_write_aarch_gcs (bfd *abfd, char *buf, int *bufsiz,
 			     aarch_gcs, size);
 }
 
+/* Write the buffer of POE register values in AARCH_POE (length SIZE) into
+   the note buffer BUF and update *BUFSIZ.  ABFD is the bfd the note is being
+   written into.  Return a pointer to the new start of the note buffer, to
+   replace BUF which may no longer be valid.  */
+
+static char *
+elfcore_write_aarch_poe (bfd *abfd, char *buf, int *bufsiz,
+			 const void *aarch_poe, int size)
+{
+  return elfcore_write_note (abfd, buf, bufsiz, NOTE_NAME_LINUX, NT_ARM_POE,
+			     aarch_poe, size);
+}
+
 /* Write the buffer of FPMR value in AARCH_FPMR (length SIZE) into
    the note buffer BUF and update *BUFSIZ.  ABFD is the bfd the note is being
    written into.  Return a pointer to the new start of the note buffer, to
@@ -13024,6 +13048,7 @@ elfcore_write_register_note (bfd *abfd,
     {
       { NOTE_PSEUDO_SECTION_AARCH_FPMR,       elfcore_write_aarch_fpmr},
       { NOTE_PSEUDO_SECTION_AARCH_GCS,        elfcore_write_aarch_gcs},
+      { NOTE_PSEUDO_SECTION_AARCH_POE,        elfcore_write_aarch_poe},
       { NOTE_PSEUDO_SECTION_AARCH_HW_BREAK,   elfcore_write_aarch_hw_break},
       { NOTE_PSEUDO_SECTION_AARCH_HW_WATCH,   elfcore_write_aarch_hw_watch},
       { NOTE_PSEUDO_SECTION_AARCH_MTE,        elfcore_write_aarch_mte},
