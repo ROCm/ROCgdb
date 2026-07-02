@@ -154,7 +154,7 @@ static_assert (!ptid_t (2, 2, 2).matches (both),
 static ptid_t
 parse_one (const char *str, bool for_remote)
 {
-  const char *out;
+  const char *out = nullptr;
   ptid_t result = ptid_t::parse (str, &out, for_remote,
     [] ()
       {

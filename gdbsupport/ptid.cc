@@ -119,7 +119,7 @@ ptid_t::parse (const char *buf, const char **obuf, bool for_remote,
     }
 
   /* No multi-process.  Just a thread id.  */
-  hex = hex_or_minus_one (p, &pp, for_remote);
+  hex = hex_or_minus_one (p, obuf, for_remote);
 
   /* Handle special thread ids.  */
   if (hex == (ULONGEST) -1)
@@ -133,9 +133,6 @@ ptid_t::parse (const char *buf, const char **obuf, bool for_remote,
     error (_("invalid remote ptid: %s"), buf);
 
   pid = default_pid ();
-
-  if (obuf != nullptr)
-    *obuf = pp;
 
   return ptid_t (pid, lwp);
 }
