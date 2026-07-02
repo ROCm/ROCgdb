@@ -403,7 +403,7 @@ mips_generic_reloc (bfd *abfd ATTRIBUTE_UNUSED,
 		    bfd *output_bfd,
 		    char **error_message ATTRIBUTE_UNUSED)
 {
-  if (output_bfd != (bfd *) NULL
+  if (output_bfd != NULL
       && (symbol->flags & BSF_SECTION_SYM) == 0
       && reloc_entry->addend == 0)
     {
@@ -438,7 +438,7 @@ mips_refhi_reloc (bfd *abfd,
 
   /* If we're relocating, and this an external symbol, we don't want
      to change anything.  */
-  if (output_bfd != (bfd *) NULL
+  if (output_bfd != NULL
       && (symbol->flags & BSF_SECTION_SYM) == 0
       && reloc_entry->addend == 0)
     {
@@ -448,7 +448,7 @@ mips_refhi_reloc (bfd *abfd,
 
   ret = bfd_reloc_ok;
   if (bfd_is_und_section (symbol->section)
-      && output_bfd == (bfd *) NULL)
+      && output_bfd == NULL)
     ret = bfd_reloc_undefined;
 
   if (bfd_is_com_section (symbol->section))
@@ -484,7 +484,7 @@ mips_refhi_reloc (bfd *abfd,
   n->next = sdata->mips_refhi_list;
   sdata->mips_refhi_list = n;
 
-  if (output_bfd != (bfd *) NULL)
+  if (output_bfd != NULL)
     reloc_entry->address += input_section->output_offset;
 
   return ret;
@@ -561,7 +561,7 @@ mips_reflo_reloc (bfd *abfd,
    the offset from the gp register.  */
 
 static bfd_reloc_status_type
-mips_gprel_reloc (bfd *abfd ATTRIBUTE_UNUSED,
+mips_gprel_reloc (bfd *abfd,
 		  arelent *reloc_entry,
 		  asymbol *symbol,
 		  void * data,
@@ -579,7 +579,7 @@ mips_gprel_reloc (bfd *abfd ATTRIBUTE_UNUSED,
      addend, we don't want to change anything.  We will only have an
      addend if this is a newly created reloc, not read from an ECOFF
      file.  */
-  if (output_bfd != (bfd *) NULL
+  if (output_bfd != NULL
       && (symbol->flags & BSF_SECTION_SYM) == 0
       && reloc_entry->addend == 0)
     {
@@ -587,7 +587,7 @@ mips_gprel_reloc (bfd *abfd ATTRIBUTE_UNUSED,
       return bfd_reloc_ok;
     }
 
-  if (output_bfd != (bfd *) NULL)
+  if (output_bfd != NULL)
     relocatable = true;
   else
     {
@@ -660,7 +660,8 @@ mips_gprel_reloc (bfd *abfd ATTRIBUTE_UNUSED,
   relocation += symbol->section->output_section->vma;
   relocation += symbol->section->output_offset;
 
-  if (reloc_entry->address > bfd_get_section_limit (abfd, input_section))
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, reloc_entry->address))
     return bfd_reloc_outofrange;
 
   insn = bfd_get_32 (abfd, (bfd_byte *) data + reloc_entry->address);

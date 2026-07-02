@@ -543,8 +543,6 @@ score_elf_got_lo16_reloc (bfd *abfd,
   addend = bfd_get_32 (abfd, (bfd_byte *) data + reloc_entry->address);
   offset = ((((addend >> 16) & 0x3) << 15) | (addend & 0x7fff)) >> 1;
   val = reloc_entry->addend;
-  if (reloc_entry->address > input_section->size)
-    return bfd_reloc_outofrange;
   uvalue = ((hi16_offset << 16) | (offset & 0xffff)) + val;
   if (hi16_rel_addr)
     {

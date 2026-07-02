@@ -470,8 +470,7 @@ pru_elf32_do_s10_pcrel_relocate (bfd *input_bfd, reloc_howto_type *howto,
   bfd_vma qboff;
   bfd_reloc_status_type flag = bfd_reloc_ok;
 
-  /* Sanity check the address.  */
-  if (address > bfd_get_section_limit (input_bfd, input_section))
+  if (!bfd_reloc_offset_in_range (howto, input_bfd, input_section, address))
     return bfd_reloc_outofrange;
 
   BFD_ASSERT (howto->pc_relative);
@@ -546,9 +545,7 @@ pru_elf32_do_ldi32_relocate (bfd *abfd, reloc_howto_type *howto,
 
   /* A hacked-up version of _bfd_final_link_relocate() follows.  */
 
-  /* Sanity check the address.  */
-  if (octets + bfd_get_reloc_size (howto)
-      > bfd_get_section_limit_octets (abfd, input_section))
+  if (!bfd_reloc_offset_in_range (howto, abfd, input_section, octets))
     return bfd_reloc_outofrange;
 
   /* This function assumes that we are dealing with a basic relocation

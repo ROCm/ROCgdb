@@ -58,6 +58,10 @@ pj_elf_reloc (bfd *abfd,
       && bfd_is_und_section (symbol_in->section))
     return bfd_reloc_undefined;
 
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, reloc_entry->address))
+    return bfd_reloc_outofrange;
+
   if (bfd_is_com_section (symbol_in->section))
     sym_value = 0;
   else

@@ -814,7 +814,7 @@ m68hc11_elf_ignore_reloc (bfd *abfd ATTRIBUTE_UNUSED,
 }
 
 bfd_reloc_status_type
-m68hc11_elf_special_reloc (bfd *abfd ATTRIBUTE_UNUSED,
+m68hc11_elf_special_reloc (bfd *abfd,
 			   arelent *reloc_entry,
 			   asymbol *symbol,
 			   void *data ATTRIBUTE_UNUSED,
@@ -822,7 +822,7 @@ m68hc11_elf_special_reloc (bfd *abfd ATTRIBUTE_UNUSED,
 			   bfd *output_bfd,
 			   char **error_message ATTRIBUTE_UNUSED)
 {
-  if (output_bfd != (bfd *) NULL
+  if (output_bfd != NULL
       && (symbol->flags & BSF_SECTION_SYM) == 0
       && (! reloc_entry->howto->partial_inplace
 	  || reloc_entry->addend == 0))
@@ -834,10 +834,11 @@ m68hc11_elf_special_reloc (bfd *abfd ATTRIBUTE_UNUSED,
   if (output_bfd != NULL)
     return bfd_reloc_continue;
 
-  if (reloc_entry->address > bfd_get_section_limit (abfd, input_section))
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, reloc_entry->address))
     return bfd_reloc_outofrange;
 
-  abort();
+  return bfd_reloc_notsupported;
 }
 
 /* Look through the relocs for a section during the first phase.

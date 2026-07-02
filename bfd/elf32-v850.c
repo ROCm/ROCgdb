@@ -813,7 +813,7 @@ v850_elf_perform_relocation (bfd *abfd,
 /* Insert the addend into the instruction.  */
 
 static bfd_reloc_status_type
-v850_elf_reloc (bfd *abfd ATTRIBUTE_UNUSED,
+v850_elf_reloc (bfd *abfd,
 		arelent *reloc,
 		asymbol *symbol,
 		void * data ATTRIBUTE_UNUSED,
@@ -845,8 +845,8 @@ v850_elf_reloc (bfd *abfd ATTRIBUTE_UNUSED,
 
   /* We handle final linking of some relocs ourselves.  */
 
-  /* Is the address of the relocation really within the section?  */
-  if (reloc->address > bfd_get_section_limit (abfd, isection))
+  if (!bfd_reloc_offset_in_range (reloc->howto, abfd,
+				  isection, reloc->address))
     return bfd_reloc_outofrange;
 
   /* Work out which section the relocation is targeted at and the

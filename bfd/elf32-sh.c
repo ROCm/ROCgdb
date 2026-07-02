@@ -256,8 +256,8 @@ sh_elf_reloc (bfd *abfd, arelent *reloc_entry, asymbol *symbol_in,
     return bfd_reloc_undefined;
 
   /* PR 17512: file: 9891ca98.  */
-  if (octets + bfd_get_reloc_size (reloc_entry->howto)
-      > bfd_get_section_limit_octets (abfd, input_section))
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, octets))
     return bfd_reloc_outofrange;
 
   if (bfd_is_com_section (symbol_in->section))
