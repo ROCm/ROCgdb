@@ -456,7 +456,6 @@ print_frame_arg (const frame_print_options &fp_opts,
 	  try
 	    {
 	      const struct language_defn *language;
-	      struct value_print_options vp_opts;
 
 	      /* Avoid value_print because it will deref ref parameters.  We
 		 just want to print their addresses.  Print ??? for args whose
@@ -473,7 +472,8 @@ print_frame_arg (const frame_print_options &fp_opts,
 	      else
 		language = current_language;
 
-	      get_no_prettyformat_print_options (&vp_opts);
+	      value_print_options vp_opts
+		= get_no_prettyformat_print_options ();
 	      vp_opts.deref_ref = true;
 	      vp_opts.raw = fp_opts.print_raw_frame_arguments;
 

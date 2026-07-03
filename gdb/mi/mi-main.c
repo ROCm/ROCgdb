@@ -2468,9 +2468,7 @@ print_variable_or_computed (const char *expression, enum print_values values)
       uiout->field_stream ("type", stb);
       if (mi_simple_type_p (val->type ()))
 	{
-	  struct value_print_options opts;
-
-	  get_no_prettyformat_print_options (&opts);
+	  value_print_options opts = get_no_prettyformat_print_options ();
 	  opts.deref_ref = true;
 	  common_val_print (val, &stb, 0, &opts, current_language);
 	  uiout->field_stream ("value", stb);
@@ -2478,9 +2476,7 @@ print_variable_or_computed (const char *expression, enum print_values values)
       break;
     case PRINT_ALL_VALUES:
       {
-	struct value_print_options opts;
-
-	get_no_prettyformat_print_options (&opts);
+	value_print_options opts = get_no_prettyformat_print_options ();
 	opts.deref_ref = true;
 	common_val_print (val, &stb, 0, &opts, current_language);
 	uiout->field_stream ("value", stb);

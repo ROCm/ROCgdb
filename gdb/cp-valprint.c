@@ -797,8 +797,7 @@ test_print_fields (gdbarch *arch)
 			  gdbarch_byte_order (arch), 0xe9);
 
   string_file out;
-  struct value_print_options opts;
-  get_no_prettyformat_print_options (&opts);
+  value_print_options opts = get_no_prettyformat_print_options ();
   cp_print_value_fields(val, &out, 0, &opts, NULL, 0);
   SELF_CHECK (out.string () == "{A = false, B = 5, C = true}");
 

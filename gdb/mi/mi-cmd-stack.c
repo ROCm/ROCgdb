@@ -560,9 +560,7 @@ list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
 	{
 	  try
 	    {
-	      struct value_print_options opts;
-
-	      get_no_prettyformat_print_options (&opts);
+	      value_print_options opts = get_no_prettyformat_print_options ();
 	      opts.deref_ref = true;
 	      if (arg->sym->is_argument ())
 		opts.raw = fp_opts.print_raw_frame_arguments;

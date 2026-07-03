@@ -104,13 +104,14 @@ get_user_print_options (struct value_print_options *opts)
   *opts = user_print_options;
 }
 
-/* Initialize *OPTS to be a copy of the user print options, but with
-   pretty-formatting disabled.  */
-void
-get_no_prettyformat_print_options (struct value_print_options *opts)
+/* See valprint.h.  */
+
+value_print_options
+get_no_prettyformat_print_options ()
 {
-  *opts = user_print_options;
-  opts->prettyformat = Val_no_prettyformat;
+  value_print_options opts = user_print_options;
+  opts.prettyformat = Val_no_prettyformat;
+  return opts;
 }
 
 /* See valprint.h.  */

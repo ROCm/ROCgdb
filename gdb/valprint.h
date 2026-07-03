@@ -147,9 +147,9 @@ extern struct value_print_options user_print_options;
 /* Initialize *OPTS to be a copy of the user print options.  */
 extern void get_user_print_options (struct value_print_options *opts);
 
-/* Initialize *OPTS to be a copy of the user print options, but with
-   pretty-formatting disabled.  */
-extern void get_no_prettyformat_print_options (struct value_print_options *);
+/* Return a copy of the user print options, but with pretty-formatting
+   disabled.  */
+extern value_print_options get_no_prettyformat_print_options ();
 
 /* Return a copy of the user print options, but using FORMAT as the
    formatting option.  */
