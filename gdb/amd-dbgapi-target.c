@@ -556,18 +556,8 @@ dispatch_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
 static std::string
 dispatch_pos_string (thread_info *tp)
 {
-  vec3_u32_t group_ids;
-  if (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD, group_ids)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    return "(?,?,?)/?";
-
-  uint32_t wave_in_group;
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
-		       wave_in_group);
-
-  return string_printf ("(%d,%d,%d)/%d",
-			group_ids[0], group_ids[1], group_ids[2],
-			wave_in_group);
+  wave_info &info = get_thread_wave_info (tp);
+  return info.coords.dispatch_pos_str ();
 }
 
 /* Return the target id string for a given queue.  */
@@ -759,40 +749,12 @@ lane_workgroup_pos_string (thread_info *tp, int lane)
 static std::string
 lane_target_id_string (thread_info *tp, int lane)
 {
-  amd_dbgapi_dispatch_id_t dispatch_id;
-  amd_dbgapi_queue_id_t queue_id;
-  amd_dbgapi_agent_id_t agent_id;
-  vec3_u32_t group_ids;
+  wave_info &info = get_thread_wave_info (tp);
 
   std::string str = "AMDGPU Lane ";
-
-  str += (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_AGENT, agent_id)
-	  == AMD_DBGAPI_STATUS_SUCCESS)
-	   ? string_printf ("%ld", agent_id.handle)
-	   : " ?";
-
-  str += (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_QUEUE, queue_id)
-	  == AMD_DBGAPI_STATUS_SUCCESS)
-	   ? string_printf (":%ld", queue_id.handle)
-	   : ":?";
-
-  str += (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_DISPATCH,
-			 dispatch_id)
-	  == AMD_DBGAPI_STATUS_SUCCESS)
-	   ? string_printf (":%ld", dispatch_id.handle)
-	   : ":?";
-
-  amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (tp->ptid);
-
-  str += string_printf (":%ld/%d", wave_id.handle, lane);
-
-  str += (wave_get_info (tp, AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
-			 group_ids)
-	  == AMD_DBGAPI_STATUS_SUCCESS
-	  ? string_printf (" (%d,%d,%d)", group_ids[0], group_ids[1],
-			   group_ids[2])
-	  : " (?,?,?)");
-
+  str += info.coords.hierarchy_str ();
+  str += string_printf ("/%d ", lane);
+  str += info.coords.workgroup_coord_str ();
   str += lane_workgroup_pos_string (tp, lane);
 
   return str;
@@ -3562,26 +3524,11 @@ amd_dbgapi_wave_id_make_value (struct gdbarch *gdbarch, struct internalvar *var,
 {
   if (ptid_is_gpu (inferior_ptid))
     {
-      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (inferior_ptid);
-      vec3_u32_t group_ids;
-      uint32_t wave_in_group;
+      wave_info &info = get_thread_wave_info (inferior_thread ());
+      std::string wave_id_str = info.coords.dispatch_pos_str ();
 
-      if (amd_dbgapi_wave_get_info (wave_id,
-				    AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
-				    sizeof (group_ids), &group_ids)
-	    == AMD_DBGAPI_STATUS_SUCCESS
-	  && amd_dbgapi_wave_get_info (
-	       wave_id, AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
-	       sizeof (wave_in_group), &wave_in_group)
-	       == AMD_DBGAPI_STATUS_SUCCESS)
-	{
-	  std::string wave_id_str
-	    = string_printf ("(%d,%d,%d)/%d", group_ids[0], group_ids[1],
-			     group_ids[2], wave_in_group);
-
-	  return value_cstring (wave_id_str.data (), wave_id_str.length (),
-				builtin_type (gdbarch)->builtin_char);
-	}
+      return value_cstring (wave_id_str.data (), wave_id_str.length (),
+			    builtin_type (gdbarch)->builtin_char);
     }
 
   return value::allocate (builtin_type (gdbarch)->builtin_void);
