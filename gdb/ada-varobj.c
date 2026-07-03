@@ -807,7 +807,7 @@ ada_varobj_get_type_of_child (struct value *parent_value,
 
 static std::string
 ada_varobj_get_value_image (struct value *value,
-			    struct value_print_options *opts)
+			    const value_print_options *opts)
 {
   string_file buffer;
 
@@ -826,7 +826,7 @@ ada_varobj_get_value_image (struct value *value,
 static std::string
 ada_varobj_get_value_of_array_variable (struct value *value,
 					struct type *type,
-					struct value_print_options *opts)
+					const value_print_options *opts)
 {
   const int numchild = ada_varobj_get_array_number_of_children (value, type);
 
@@ -851,7 +851,7 @@ ada_varobj_get_value_of_array_variable (struct value *value,
 static std::string
 ada_varobj_get_value_of_variable (struct value *value,
 				  struct type *type,
-				  struct value_print_options *opts)
+				  const value_print_options *opts)
 {
   ada_varobj_decode_var (&value, &type);
 
