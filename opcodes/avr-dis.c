@@ -38,29 +38,29 @@ struct avr_opcodes_s
 };
 
 #define AVR_INSN(NAME, CONSTR, OPCODE, SIZE, ISA, BIN) \
-{#NAME, CONSTR, OPCODE, SIZE, ISA, BIN},
+  { #NAME, CONSTR, OPCODE, SIZE, ISA, BIN },
 
 const struct avr_opcodes_s avr_opcodes[] =
 {
   #include "opcode/avr.h"
-  {NULL, NULL, NULL, 0, 0, 0}
+  { NULL, NULL, NULL, 0, 0, 0 }
 };
 
 static const char * comment_start = "0x";
 
 static int
-avr_operand (unsigned int        insn,
-	     unsigned int        insn2,
-	     unsigned int        pc,
-	     int                 constraint,
-             char *              opcode_str,
-	     char *              buf,
-	     char *              comment,
-	     enum disassembler_style *  style,
-	     int                 regs,
-	     int *               sym,
-	     bfd_vma *           sym_addr,
-	     disassemble_info *  info)
+avr_operand (unsigned int	 insn,
+	     unsigned int	 insn2,
+	     unsigned int	 pc,
+	     int		 constraint,
+	     char *		 opcode_str,
+	     char *		 buf,
+	     char *		 comment,
+	     enum disassembler_style *	style,
+	     int		 regs,
+	     int *		 sym,
+	     bfd_vma *		 sym_addr,
+	     disassemble_info *	 info)
 {
   int ok = 1;
   *sym = 0;
@@ -138,14 +138,14 @@ avr_operand (unsigned int        insn,
       /* Check for post-increment. */
       char *s;
       for (s = opcode_str; *s; ++s)
-        {
-          if (*s == '+')
-            {
+	{
+	  if (*s == '+')
+	    {
 	      if (insn & (1 << (15 - (s - opcode_str))))
 		*buf++ = '+';
-              break;
-            }
-        }
+	      break;
+	    }
+	}
 
       *buf = '\0';
       if (AVR_UNDEF_P (insn))
@@ -174,7 +174,7 @@ avr_operand (unsigned int        insn,
     case 'h':
       *sym = 1;
       *sym_addr = ((((insn & 1) | ((insn & 0x1f0) >> 3)) << 16) | insn2) * 2;
-      /* See PR binutils/2454.  Ideally we would like to display the hex
+      /* See PR binutils/2454.	Ideally we would like to display the hex
 	 value of the address only once, but this would mean recoding
 	 objdump_print_address() which would affect many targets.  */
       sprintf (buf, "%#lx", (unsigned long) *sym_addr);
@@ -189,12 +189,12 @@ avr_operand (unsigned int        insn,
       {
 	int rel_addr = (((insn & 0xfff) ^ 0x800) - 0x800) * 2;
 	sprintf (buf, ".%+-8d", rel_addr);
-        *sym = 1;
-        *sym_addr = pc + 2 + rel_addr;
+	*sym = 1;
+	*sym_addr = pc + 2 + rel_addr;
 	strcpy (comment, comment_start);
-        info->insn_info_valid = 1;
-        info->insn_type = dis_branch;
-        info->target = *sym_addr;
+	info->insn_info_valid = 1;
+	info->insn_type = dis_branch;
+	info->target = *sym_addr;
 	*style = dis_style_address_offset;
       }
       break;
@@ -204,37 +204,37 @@ avr_operand (unsigned int        insn,
 	int rel_addr = ((((insn >> 3) & 0x7f) ^ 0x40) - 0x40) * 2;
 
 	sprintf (buf, ".%+-8d", rel_addr);
-        *sym = 1;
-        *sym_addr = pc + 2 + rel_addr;
+	*sym = 1;
+	*sym_addr = pc + 2 + rel_addr;
 	strcpy (comment, comment_start);
-        info->insn_info_valid = 1;
-        info->insn_type = dis_condbranch;
-        info->target = *sym_addr;
+	info->insn_info_valid = 1;
+	info->insn_type = dis_condbranch;
+	info->target = *sym_addr;
 	*style = dis_style_address_offset;
       }
       break;
 
     case 'i':
       {
-        unsigned int val = insn2 | 0x800000;
-        *sym = 1;
-        *sym_addr = val;
-        sprintf (buf, "0x%04X", insn2);
-        strcpy (comment, comment_start);
+	unsigned int val = insn2 | 0x800000;
+	*sym = 1;
+	*sym_addr = val;
+	sprintf (buf, "0x%04X", insn2);
+	strcpy (comment, comment_start);
 	*style = dis_style_immediate;
       }
       break;
 
     case 'j':
       {
-        unsigned int val = ((insn & 0xf) | ((insn & 0x600) >> 5)
-                                         | ((insn & 0x100) >> 2));
+	unsigned int val = ((insn & 0xf) | ((insn & 0x600) >> 5)
+					 | ((insn & 0x100) >> 2));
 	if ((insn & 0x100) == 0)
 	  val |= 0x80;
-        *sym = 1;
-        *sym_addr = val | 0x800000;
-        sprintf (buf, "0x%02x", val);
-        strcpy (comment, comment_start);
+	*sym = 1;
+	*sym_addr = val | 0x800000;
+	sprintf (buf, "0x%02x", val);
+	strcpy (comment, comment_start);
 	*style = dis_style_immediate;
       }
       break;

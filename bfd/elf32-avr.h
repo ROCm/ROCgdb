@@ -21,20 +21,13 @@
    Boston, MA 02110-1301, USA.  */
 
 
-/* These four functions will be called from the ld back-end.  */
+/* These four functions will be called from the ld back end.  */
 
-extern void
-elf32_avr_setup_params (struct bfd_link_info *, bfd *, asection *,
-			bool, bool, bool, bfd_vma, bool);
-
-extern int
-elf32_avr_setup_section_lists (bfd *, struct bfd_link_info *);
-
-extern bool
-elf32_avr_size_stubs (bfd *, struct bfd_link_info *, bool);
-
-extern bool
-elf32_avr_build_stubs (struct bfd_link_info *);
+extern void elf32_avr_setup_params (struct bfd_link_info *, bfd *, asection *,
+				    bool, bool, bool, bfd_vma, bool);
+extern int elf32_avr_setup_section_lists (bfd *, struct bfd_link_info *);
+extern bool elf32_avr_size_stubs (bfd *, struct bfd_link_info *, bool);
+extern bool elf32_avr_build_stubs (struct bfd_link_info *);
 
 /* The name of the section into which the property records are stored.  */
 #define AVR_PROPERTY_RECORD_SECTION_NAME ".avr.prop"
@@ -56,12 +49,13 @@ struct avr_property_record
   bfd_vma offset;
 
   /* The type of this record.  */
-  enum {
-    RECORD_ORG = 0,
-    RECORD_ORG_AND_FILL = 1,
-    RECORD_ALIGN = 2,
-    RECORD_ALIGN_AND_FILL = 3
-  } type;
+  enum
+    {
+      RECORD_ORG = 0,
+      RECORD_ORG_AND_FILL = 1,
+      RECORD_ALIGN = 2,
+      RECORD_ALIGN_AND_FILL = 3
+    } type;
 
   /* Type specific data.  */
   union
@@ -117,5 +111,5 @@ struct avr_property_record_list
 
 extern struct avr_property_record_list *avr_elf32_load_property_records (bfd *abfd);
 
-/* Return a string that is the name of the property record pointed to by REC.  */
+/* Return a string that's the name of the property record pointed to by REC.  */
 extern const char *avr_elf32_property_record_name (struct avr_property_record *rec);
