@@ -1061,7 +1061,7 @@ struct value *value_vector_widen (struct value *scalar_value,
 class frame_info_ptr;
 struct fn_field;
 
-extern int print_address_demangle (const struct value_print_options *,
+extern int print_address_demangle (const value_print_options *,
 				   struct gdbarch *, CORE_ADDR,
 				   struct ui_file *, int);
 
@@ -1567,7 +1567,7 @@ extern void print_floating (const gdb_byte *valaddr, struct type *type,
 			    struct ui_file *stream);
 
 extern void value_print (struct value *val, struct ui_file *stream,
-			 const struct value_print_options *options);
+			 const value_print_options *options);
 
 /* Release values from the value chain and return them.  Values
    created after MARK are released.  If MARK is nullptr, or if MARK is
@@ -1580,13 +1580,13 @@ extern std::vector<value_ref_ptr> value_release_to_mark
 
 extern void common_val_print (struct value *val,
 			      struct ui_file *stream, int recurse,
-			      const struct value_print_options *options,
+			      const value_print_options *options,
 			      const struct language_defn *language);
 
 extern int val_print_string (struct type *elttype, const char *encoding,
 			     CORE_ADDR addr, int len,
 			     struct ui_file *stream,
-			     const struct value_print_options *options);
+			     const value_print_options *options);
 
 /* Track the shadowing status of a variable.  */
 enum class var_shadowing

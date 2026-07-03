@@ -160,7 +160,7 @@ public:
 
   void value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const struct value_print_options *options) const override
+	 const value_print_options *options) const override
   {
     return d_value_print_inner (val, stream, recurse, options);
   }

@@ -435,7 +435,7 @@ extern enum ext_lang_rc gdbpy_apply_val_pretty_printer
   (const struct extension_language_defn *,
    struct value *value,
    struct ui_file *stream, int recurse,
-   const struct value_print_options *options,
+   const value_print_options *options,
    const struct language_defn *language);
 extern void gdbpy_load_ptwrite_filter
   (const struct extension_language_defn *extlang,
@@ -977,7 +977,7 @@ PyObject *gdbpy_default_visualizer (PyObject *self, PyObject *args);
 
 PyObject *gdbpy_print_options (PyObject *self, PyObject *args);
 const value_print_options &gdbpy_get_print_options ();
-extern const struct value_print_options *gdbpy_current_print_options;
+extern const value_print_options *gdbpy_current_print_options;
 
 void bpfinishpy_pre_stop_hook (struct gdbpy_breakpoint_object *bp_obj);
 void bpfinishpy_post_stop_hook (struct gdbpy_breakpoint_object *bp_obj);

@@ -13814,7 +13814,7 @@ public:
   /* See language.h.  */
 
   void value_print (struct value *val, struct ui_file *stream,
-		    const struct value_print_options *options) const override
+		    const value_print_options *options) const override
   {
     return ada_value_print (val, stream, options);
   }
@@ -13823,7 +13823,7 @@ public:
 
   void value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const struct value_print_options *options) const override
+	 const value_print_options *options) const override
   {
     return ada_value_print_inner (val, stream, recurse, options);
   }
@@ -13894,7 +13894,7 @@ public:
   void printstr (struct ui_file *stream, struct type *elttype,
 		 const gdb_byte *string, unsigned int length,
 		 const char *encoding, int force_ellipses,
-		 const struct value_print_options *options) const override
+		 const value_print_options *options) const override
   {
     /* ada_printstr doesn't handle UTF-8 too well, but we want this
        for lazy-string printing.  Defer this case to the generic

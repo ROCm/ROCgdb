@@ -323,7 +323,7 @@ wchar_printer::count_next_character (wchar_iterator *iter,
 void
 wchar_printer::print_converted_chars_to_obstack
      (const std::vector<converted_character> &chars,
-      const struct value_print_options *options,
+      const value_print_options *options,
       int *finished)
 {
   unsigned int idx, num_elements;
@@ -479,7 +479,7 @@ void
 wchar_printer::print (struct ui_file *stream, const gdb_byte *string,
 		      unsigned int length, int force_ellipses,
 		      int c_style_terminator,
-		      const struct value_print_options *options)
+		      const value_print_options *options)
 {
   unsigned int i;
   int finished = 0;

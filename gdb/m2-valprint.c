@@ -31,12 +31,12 @@
 
 static int print_unpacked_pointer (struct type *type,
 				   CORE_ADDR address, CORE_ADDR addr,
-				   const struct value_print_options *options,
+				   const value_print_options *options,
 				   struct ui_file *stream);
 static void
 m2_print_array_contents (struct value *val,
 			 struct ui_file *stream, int recurse,
-			 const struct value_print_options *options,
+			 const value_print_options *options,
 			 int len);
 
 
@@ -157,7 +157,7 @@ m2_print_long_set (struct type *type, const gdb_byte *valaddr,
 static void
 m2_print_unbounded_array (struct value *value,
 			  struct ui_file *stream, int recurse,
-			  const struct value_print_options *options)
+			  const value_print_options *options)
 {
   CORE_ADDR addr;
   LONGEST len;
@@ -182,7 +182,7 @@ m2_print_unbounded_array (struct value *value,
 static int
 print_unpacked_pointer (struct type *type,
 			CORE_ADDR address, CORE_ADDR addr,
-			const struct value_print_options *options,
+			const value_print_options *options,
 			struct ui_file *stream)
 {
   struct gdbarch *gdbarch = type->arch ();
@@ -226,7 +226,7 @@ print_variable_at_address (struct type *type,
 			   const gdb_byte *valaddr,
 			   struct ui_file *stream,
 			   int recurse,
-			   const struct value_print_options *options)
+			   const value_print_options *options)
 {
   struct gdbarch *gdbarch = type->arch ();
   CORE_ADDR addr = unpack_pointer (type, valaddr);
@@ -257,7 +257,7 @@ print_variable_at_address (struct type *type,
 static void
 m2_print_array_contents (struct value *val,
 			 struct ui_file *stream, int recurse,
-			 const struct value_print_options *options,
+			 const value_print_options *options,
 			 int len)
 {
   struct type *type = check_typedef (val->type ());
@@ -300,7 +300,7 @@ static const struct generic_val_print_decorations m2_decorations =
 void
 m2_language::value_print_inner (struct value *val, struct ui_file *stream,
 				int recurse,
-				const struct value_print_options *options) const
+				const value_print_options *options) const
 {
   unsigned len;
   struct type *elttype;

@@ -48,10 +48,10 @@ static struct obstack dont_print_stat_array_obstack;
 
 static void cp_print_static_field (struct type *, struct value *,
 				   struct ui_file *, int,
-				   const struct value_print_options *);
+				   const value_print_options *);
 
 static void cp_print_value (struct value *, struct ui_file *,
-			    int, const struct value_print_options *,
+			    int, const value_print_options *,
 			    struct type **);
 
 
@@ -122,7 +122,7 @@ cp_is_vtbl_member (struct type *type)
 
 void
 cp_print_value_fields (struct value *val, struct ui_file *stream,
-		       int recurse, const struct value_print_options *options,
+		       int recurse, const value_print_options *options,
 		       struct type **dont_print_vb,
 		       int dont_print_statmem)
 {
@@ -403,7 +403,7 @@ static void
 cp_print_value_fields_pp (struct value *val,
 			  struct ui_file *stream,
 			  int recurse,
-			  const struct value_print_options *options,
+			  const value_print_options *options,
 			  struct type **dont_print_vb,
 			  int dont_print_statmem)
 {
@@ -427,7 +427,7 @@ cp_print_value_fields_pp (struct value *val,
 
 static void
 cp_print_value (struct value *val, struct ui_file *stream,
-		int recurse, const struct value_print_options *options,
+		int recurse, const value_print_options *options,
 		struct type **dont_print_vb)
 {
   struct type *type = check_typedef (val->type ());
@@ -580,9 +580,9 @@ cp_print_static_field (struct type *type,
 		       struct value *val,
 		       struct ui_file *stream,
 		       int recurse,
-		       const struct value_print_options *options)
+		       const value_print_options *options)
 {
-  struct value_print_options opts;
+  value_print_options opts;
 
   if (val->entirely_optimized_out ())
     {

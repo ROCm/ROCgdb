@@ -84,10 +84,10 @@ extern void c_print_typedef (struct type *,
 /* Implement la_value_print_inner for the C family of languages.  */
 
 extern void c_value_print_inner (struct value *, struct ui_file *, int,
-				 const struct value_print_options *);
+				 const value_print_options *);
 
 extern void c_value_print (struct value *, struct ui_file *,
-			   const struct value_print_options *);
+			   const value_print_options *);
 
 /* These are in c-lang.c: */
 
@@ -107,7 +107,7 @@ extern void cp_print_class_memberptr (struct value *, struct ui_file *);
 
 extern void cp_print_value_fields (struct value *,
 				   struct ui_file *, int,
-				   const struct value_print_options *,
+				   const value_print_options *,
 				   struct type **, int);
 
 /* gcc-2.6 or later (when using -fvtable-thunks)

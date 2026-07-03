@@ -70,7 +70,7 @@ static void val_print_type_code_flags (struct type *type,
 /* Start print_max_depth at this value. */
 #define PRINT_MAX_DEPTH_DEFAULT 20
 
-struct value_print_options user_print_options =
+value_print_options user_print_options =
 {
   Val_prettyformat_default,	/* prettyformat */
   false,			/* prettyformat_arrays */
@@ -409,7 +409,7 @@ val_print_invalid_address (struct ui_file *stream)
 static void
 print_unpacked_pointer (struct type *type, struct type *elttype,
 			CORE_ADDR address, struct ui_file *stream,
-			const struct value_print_options *options)
+			const value_print_options *options)
 {
   struct gdbarch *gdbarch = type->arch ();
 
@@ -432,7 +432,7 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
 static void
 generic_val_print_array (struct value *val,
 			 struct ui_file *stream, int recurse,
-			 const struct value_print_options *options,
+			 const value_print_options *options,
 			 const struct
 			     generic_val_print_decorations *decorations)
 {
@@ -465,7 +465,7 @@ generic_val_print_array (struct value *val,
 static void
 generic_val_print_string (struct value *val,
 			  struct ui_file *stream, int recurse,
-			  const struct value_print_options *options,
+			  const value_print_options *options,
 			  const struct generic_val_print_decorations
 			    *decorations)
 {
@@ -534,7 +534,7 @@ generic_val_print_string (struct value *val,
 
 static void
 generic_value_print_ptr (struct value *val, struct ui_file *stream,
-			 const struct value_print_options *options)
+			 const value_print_options *options)
 {
 
   if (options->format && options->format != 's')
@@ -593,7 +593,7 @@ static void
 generic_val_print_ref (struct type *type,
 		       struct ui_file *stream, int recurse,
 		       struct value *original_value,
-		       const struct value_print_options *options)
+		       const value_print_options *options)
 {
   struct type *elttype = check_typedef (type->target_type ());
   struct value *deref_val = NULL;
@@ -737,7 +737,7 @@ generic_val_print_enum_1 (struct type *type, LONGEST val,
 static void
 generic_val_print_enum (struct type *type, struct ui_file *stream,
 			struct value *original_value,
-			const struct value_print_options *options)
+			const value_print_options *options)
 {
   gdb_assert (!options->format);
 
@@ -754,7 +754,7 @@ static void
 generic_val_print_func (struct type *type, CORE_ADDR address,
 			struct ui_file *stream,
 			struct value *original_value,
-			const struct value_print_options *options)
+			const value_print_options *options)
 {
   struct gdbarch *gdbarch = type->arch ();
 
@@ -775,12 +775,12 @@ generic_val_print_func (struct type *type, CORE_ADDR address,
 static void
 generic_value_print_bool
   (struct value *value, struct ui_file *stream,
-   const struct value_print_options *options,
+   const value_print_options *options,
    const struct generic_val_print_decorations *decorations)
 {
   if (options->format || options->output_format)
     {
-      struct value_print_options opts = *options;
+      value_print_options opts = *options;
       opts.format = (options->format ? options->format
 		     : options->output_format);
       value_print_scalar_formatted (value, &opts, 0, stream);
@@ -803,9 +803,9 @@ generic_value_print_bool
 
 static void
 generic_value_print_int (struct value *val, struct ui_file *stream,
-			 const struct value_print_options *options)
+			 const value_print_options *options)
 {
-  struct value_print_options opts = *options;
+  value_print_options opts = *options;
 
   opts.format = (options->format ? options->format
 		 : options->output_format);
@@ -816,11 +816,11 @@ generic_value_print_int (struct value *val, struct ui_file *stream,
 
 static void
 generic_value_print_char (struct value *value, struct ui_file *stream,
-			  const struct value_print_options *options)
+			  const value_print_options *options)
 {
   if (options->format || options->output_format)
     {
-      struct value_print_options opts = *options;
+      value_print_options opts = *options;
 
       opts.format = (options->format ? options->format
 		     : options->output_format);
@@ -847,7 +847,7 @@ generic_value_print_char (struct value *value, struct ui_file *stream,
 static void
 generic_val_print_float (struct type *type, struct ui_file *stream,
 			 struct value *original_value,
-			 const struct value_print_options *options)
+			 const value_print_options *options)
 {
   gdb_assert (!options->format);
 
@@ -860,7 +860,7 @@ generic_val_print_float (struct type *type, struct ui_file *stream,
 
 static void
 generic_val_print_fixed_point (struct value *val, struct ui_file *stream,
-			       const struct value_print_options *options)
+			       const value_print_options *options)
 {
   if (options->format)
     value_print_scalar_formatted (val, options, 0, stream);
@@ -885,7 +885,7 @@ generic_val_print_fixed_point (struct value *val, struct ui_file *stream,
 
 static void
 generic_value_print_complex (struct value *val, struct ui_file *stream,
-			     const struct value_print_options *options,
+			     const value_print_options *options,
 			     const struct generic_val_print_decorations
 			       *decorations)
 {
@@ -906,7 +906,7 @@ static void
 generic_value_print_memberptr
   (struct value *val, struct ui_file *stream,
    int recurse,
-   const struct value_print_options *options,
+   const value_print_options *options,
    const struct generic_val_print_decorations *decorations)
 {
   if (!options->format)
@@ -923,7 +923,7 @@ generic_value_print_memberptr
 
 void
 generic_value_print (struct value *val, struct ui_file *stream, int recurse,
-		     const struct value_print_options *options,
+		     const value_print_options *options,
 		     const struct generic_val_print_decorations *decorations)
 {
   struct type *type = val->type ();
@@ -1053,7 +1053,7 @@ generic_value_print (struct value *val, struct ui_file *stream, int recurse,
 
 void
 common_val_print (struct value *value, struct ui_file *stream, int recurse,
-		  const struct value_print_options *options,
+		  const value_print_options *options,
 		  const struct language_defn *language)
 {
   if (language->la_language == language_ada)
@@ -1066,7 +1066,7 @@ common_val_print (struct value *value, struct ui_file *stream, int recurse,
   if (value->lazy ())
     value->fetch_lazy ();
 
-  struct value_print_options local_opts = *options;
+  value_print_options local_opts = *options;
   struct type *type = value->type ();
   struct type *real_type = check_typedef (type);
 
@@ -1124,7 +1124,7 @@ common_val_print (struct value *value, struct ui_file *stream, int recurse,
 
 bool
 val_print_check_max_depth (struct ui_file *stream, int recurse,
-			   const struct value_print_options *options,
+			   const value_print_options *options,
 			   const struct language_defn *language)
 {
   if (options->max_depth > -1 && recurse >= options->max_depth)
@@ -1143,7 +1143,7 @@ val_print_check_max_depth (struct ui_file *stream, int recurse,
 
 static bool
 value_check_printable (struct value *val, struct ui_file *stream,
-		       const struct value_print_options *options)
+		       const value_print_options *options)
 {
   if (val == 0)
     {
@@ -1192,7 +1192,7 @@ value_check_printable (struct value *val, struct ui_file *stream,
 void
 common_val_print_checked (struct value *val, struct ui_file *stream,
 			  int recurse,
-			  const struct value_print_options *options,
+			  const value_print_options *options,
 			  const struct language_defn *language)
 {
   if (!value_check_printable (val, stream, options))
@@ -1205,7 +1205,7 @@ common_val_print_checked (struct value *val, struct ui_file *stream,
 
 void
 value_print (struct value *val, struct ui_file *stream,
-	     const struct value_print_options *options)
+	     const value_print_options *options)
 {
   scoped_value_mark free_values;
 
@@ -1292,7 +1292,7 @@ val_print_type_code_flags (struct type *type, struct value *original_value,
 
 void
 value_print_scalar_formatted (struct value *val,
-			      const struct value_print_options *options,
+			      const value_print_options *options,
 			      int size,
 			      struct ui_file *stream)
 {
@@ -1305,7 +1305,7 @@ value_print_scalar_formatted (struct value *val,
      again.  */
   if (options->format == 's')
     {
-      struct value_print_options opts = *options;
+      value_print_options opts = *options;
       opts.format = 0;
       opts.deref_ref = false;
       common_val_print (val, stream, 0, &opts, current_language);
@@ -1415,7 +1415,7 @@ print_floating (const gdb_byte *valaddr, struct type *type,
 void
 print_binary_chars (struct ui_file *stream, const gdb_byte *valaddr,
 		    unsigned len, enum bfd_endian byte_order, bool zero_pad,
-		    const struct value_print_options *options)
+		    const value_print_options *options)
 {
   const gdb_byte *p;
   unsigned int i;
@@ -1917,7 +1917,7 @@ print_hex_chars (struct ui_file *stream, const gdb_byte *valaddr,
    stream STREAM.  */
 
 void
-print_function_pointer_address (const struct value_print_options *options,
+print_function_pointer_address (const value_print_options *options,
 				struct gdbarch *gdbarch,
 				CORE_ADDR address,
 				struct ui_file *stream)
@@ -1944,7 +1944,7 @@ print_function_pointer_address (const struct value_print_options *options,
 void
 maybe_print_array_index (struct type *index_type, LONGEST index,
 			 struct ui_file *stream,
-			 const struct value_print_options *options)
+			 const value_print_options *options)
 {
   if (!options->print_array_indexes)
     return;
@@ -1957,7 +1957,7 @@ maybe_print_array_index (struct type *index_type, LONGEST index,
 void
 value_print_array_elements (struct value *val, struct ui_file *stream,
 			    int recurse,
-			    const struct value_print_options *options,
+			    const value_print_options *options,
 			    unsigned int i)
 {
   unsigned int things_printed = 0;
@@ -2113,7 +2113,7 @@ generic_printstr (struct ui_file *stream, struct type *type,
 		  const gdb_byte *string, unsigned int length,
 		  const char *encoding, int force_ellipses,
 		  int quote_char, int c_style_terminator,
-		  const struct value_print_options *options)
+		  const value_print_options *options)
 {
   wchar_printer printer (type, quote_char, encoding);
   printer.print (stream, string, length, force_ellipses,
@@ -2132,7 +2132,7 @@ int
 val_print_string (struct type *elttype, const char *encoding,
 		  CORE_ADDR addr, int len,
 		  struct ui_file *stream,
-		  const struct value_print_options *options)
+		  const value_print_options *options)
 {
   int force_ellipsis = 0;	/* Force ellipsis to be printed if nonzero.  */
   int err;			/* Non-zero if we got a bad read.  */

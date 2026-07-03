@@ -221,7 +221,7 @@ py_print_type (struct ui_out *out, struct value *val)
 
 static void
 py_print_value (struct ui_out *out, struct value *val,
-		const struct value_print_options *opts,
+		const value_print_options *opts,
 		int indent,
 		enum ext_lang_frame_args args_type,
 		const struct language_defn *language)
@@ -304,7 +304,7 @@ py_print_single_arg (struct ui_out *out,
 		     const char *sym_name,
 		     struct frame_arg *fa,
 		     struct value *fv,
-		     const struct value_print_options *opts,
+		     const value_print_options *opts,
 		     enum ext_lang_frame_args args_type,
 		     int print_args_field,
 		     const struct language_defn *language)

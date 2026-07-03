@@ -645,7 +645,7 @@ ppscm_print_exception_unless_memory_error (SCM exception,
 static enum guile_string_repr_result
 ppscm_print_string_repr (SCM printer, enum display_hint hint,
 			 struct ui_file *stream, int recurse,
-			 const struct value_print_options *options,
+			 const value_print_options *options,
 			 struct gdbarch *gdbarch,
 			 const struct language_defn *language)
 {
@@ -661,7 +661,7 @@ ppscm_print_string_repr (SCM printer, enum display_hint hint,
     }
   else if (scm_is_eq (str_scm, SCM_BOOL_T))
     {
-      struct value_print_options opts = *options;
+      value_print_options opts = *options;
 
       gdb_assert (replacement != NULL);
       opts.addressprint = false;
@@ -700,7 +700,7 @@ ppscm_print_string_repr (SCM printer, enum display_hint hint,
     }
   else if (lsscm_is_lazy_string (str_scm))
     {
-      struct value_print_options local_opts = *options;
+      value_print_options local_opts = *options;
 
       local_opts.addressprint = false;
       lsscm_val_print_lazy_string (str_scm, stream, &local_opts);
@@ -725,7 +725,7 @@ ppscm_print_string_repr (SCM printer, enum display_hint hint,
 static void
 ppscm_print_children (SCM printer, enum display_hint hint,
 		      struct ui_file *stream, int recurse,
-		      const struct value_print_options *options,
+		      const value_print_options *options,
 		      struct gdbarch *gdbarch,
 		      const struct language_defn *language,
 		      int printed_nothing)
@@ -885,7 +885,7 @@ ppscm_print_children (SCM printer, enum display_hint hint,
 
       if (lsscm_is_lazy_string (v_scm))
 	{
-	  struct value_print_options local_opts = *options;
+	  value_print_options local_opts = *options;
 
 	  local_opts.addressprint = false;
 	  lsscm_val_print_lazy_string (v_scm, stream, &local_opts);
@@ -914,7 +914,7 @@ ppscm_print_children (SCM printer, enum display_hint hint,
 	      /* When printing the key of a map we allow one additional
 		 level of depth.  This means the key will print before the
 		 value does.  */
-	      struct value_print_options opt = *options;
+	      value_print_options opt = *options;
 	      if (is_map && i % 2 == 0
 		  && opt.max_depth != -1
 		  && opt.max_depth < INT_MAX)
@@ -957,7 +957,7 @@ enum ext_lang_rc
 gdbscm_apply_val_pretty_printer (const struct extension_language_defn *extlang,
 				 struct value *value,
 				 struct ui_file *stream, int recurse,
-				 const struct value_print_options *options,
+				 const value_print_options *options,
 				 const struct language_defn *language)
 {
   struct type *type = value->type ();

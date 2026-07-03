@@ -42,7 +42,7 @@ enum gdbpy_string_repr_result
 
 /* If non-null, points to options that are in effect while
    printing.  */
-const struct value_print_options *gdbpy_current_print_options;
+const value_print_options *gdbpy_current_print_options;
 
 /* Helper function for find_pretty_printer which iterates over a list,
    calls each function and inspects output.  This will return a
@@ -281,7 +281,7 @@ print_stack_unless_memory_error (struct ui_file *stream)
 static enum gdbpy_string_repr_result
 print_string_repr (PyObject *printer, const char *hint,
 		   struct ui_file *stream, int recurse,
-		   const struct value_print_options *options,
+		   const value_print_options *options,
 		   const struct language_defn *language,
 		   struct gdbarch *gdbarch)
 {
@@ -299,7 +299,7 @@ print_string_repr (PyObject *printer, const char *hint,
 	  long length;
 	  struct type *type;
 	  gdb::unique_xmalloc_ptr<char> encoding;
-	  struct value_print_options local_opts = *options;
+	  value_print_options local_opts = *options;
 
 	  gdbpy_extract_lazy_string (py_str.get (), &addr, &type,
 				     &length, &encoding);
@@ -338,7 +338,7 @@ print_string_repr (PyObject *printer, const char *hint,
     }
   else if (replacement)
     {
-      struct value_print_options opts = *options;
+      value_print_options opts = *options;
 
       opts.addressprint = false;
       common_val_print (replacement, stream, recurse, &opts, language);
@@ -358,7 +358,7 @@ print_string_repr (PyObject *printer, const char *hint,
 static void
 print_children (PyObject *printer, const char *hint,
 		struct ui_file *stream, int recurse,
-		const struct value_print_options *options,
+		const value_print_options *options,
 		const struct language_defn *language,
 		int is_py_none)
 {
@@ -504,7 +504,7 @@ print_children (PyObject *printer, const char *hint,
 	  struct type *type;
 	  long length;
 	  gdb::unique_xmalloc_ptr<char> encoding;
-	  struct value_print_options local_opts = *options;
+	  value_print_options local_opts = *options;
 
 	  gdbpy_extract_lazy_string (py_v, &addr, &type, &length, &encoding);
 
@@ -536,7 +536,7 @@ print_children (PyObject *printer, const char *hint,
 	      /* When printing the key of a map we allow one additional
 		 level of depth.  This means the key will print before the
 		 value does.  */
-	      struct value_print_options opt = *options;
+	      value_print_options opt = *options;
 	      if (is_map && i % 2 == 0
 		  && opt.max_depth != -1
 		  && opt.max_depth < INT_MAX)
@@ -573,7 +573,7 @@ enum ext_lang_rc
 gdbpy_apply_val_pretty_printer (const struct extension_language_defn *extlang,
 				struct value *value,
 				struct ui_file *stream, int recurse,
-				const struct value_print_options *options,
+				const value_print_options *options,
 				const struct language_defn *language)
 {
   struct type *type = value->type ();

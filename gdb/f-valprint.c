@@ -121,7 +121,7 @@ public:
 				       struct value *val,
 				       struct ui_file *stream,
 				       int recurse,
-				       const struct value_print_options *options)
+				       const value_print_options *options)
     : m_elts (0),
       m_val (val),
       m_stream (stream),
@@ -401,7 +401,7 @@ private:
 
   /* The print control options.  Gives us the maximum number of elements to
      print, and is passed through to each element that we print.  */
-  const struct value_print_options *m_options = nullptr;
+  const value_print_options *m_options = nullptr;
 
   /* The number of the current dimension being handled.  */
   LONGEST m_dimension;
@@ -424,7 +424,7 @@ static void
 fortran_print_array (struct type *type, CORE_ADDR address,
 		     struct ui_file *stream, int recurse,
 		     const struct value *val,
-		     const struct value_print_options *options)
+		     const value_print_options *options)
 {
   fortran_array_walker<fortran_array_printer_impl> p
     (type, address, (struct value *) val, stream, recurse, options);
@@ -451,7 +451,7 @@ static const struct generic_val_print_decorations f_decorations =
 void
 f_language::value_print_inner (struct value *val, struct ui_file *stream,
 			       int recurse,
-			       const struct value_print_options *options) const
+			       const value_print_options *options) const
 {
   struct type *type = check_typedef (val->type ());
   struct gdbarch *gdbarch = type->arch ();
@@ -583,7 +583,7 @@ f_language::value_print_inner (struct value *val, struct ui_file *stream,
     case TYPE_CODE_BOOL:
       if (options->format || options->output_format)
 	{
-	  struct value_print_options opts = *options;
+	  value_print_options opts = *options;
 	  opts.format = (options->format ? options->format
 			 : options->output_format);
 	  value_print_scalar_formatted (val, &opts, 0, stream);

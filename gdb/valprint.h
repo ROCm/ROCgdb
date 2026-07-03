@@ -128,7 +128,7 @@ struct value_print_options
 /* Return the character count limit for printing strings.  */
 
 static inline unsigned int
-get_print_max_chars (const struct value_print_options *options)
+get_print_max_chars (const value_print_options *options)
 {
   return (options->print_max_chars != PRINT_MAX_CHARS_ELEMENTS
 	  ? options->print_max_chars : options->print_max);
@@ -142,7 +142,7 @@ extern gdb::option::option_def_group make_value_print_options_def_group
 /* The global print options set by the user.  In general this should
    not be directly accessed, except by set/show commands.  Ordinary
    code should call get_user_print_options instead.  */
-extern struct value_print_options user_print_options;
+extern value_print_options user_print_options;
 
 /* Accessor for the user print options.  */
 
@@ -163,13 +163,13 @@ extern value_print_options get_formatted_print_options (char format);
 
 extern void maybe_print_array_index (struct type *index_type, LONGEST index,
 				     struct ui_file *stream,
-				     const struct value_print_options *);
+				     const value_print_options *);
 
 
 /* Print elements of an array.  */
 
 extern void value_print_array_elements (struct value *, struct ui_file *, int,
-					const struct value_print_options *,
+					const value_print_options *,
 					unsigned int);
 
 /* Print a scalar according to OPTIONS and SIZE on STREAM.  Format 'i'
@@ -179,12 +179,12 @@ extern void value_print_array_elements (struct value *, struct ui_file *, int,
    with a format.  */
 
 extern void value_print_scalar_formatted
-  (struct value *val, const struct value_print_options *options,
+  (struct value *val, const value_print_options *options,
    int size, struct ui_file *stream);
 
 extern void print_binary_chars (struct ui_file *, const gdb_byte *,
 				unsigned int, enum bfd_endian, bool,
-				const struct value_print_options *options);
+				const value_print_options *options);
 
 extern void print_octal_chars (struct ui_file *, const gdb_byte *,
 			       unsigned int, enum bfd_endian);
@@ -195,7 +195,7 @@ extern void print_decimal_chars (struct ui_file *, const gdb_byte *,
 extern void print_hex_chars (struct ui_file *, const gdb_byte *,
 			     unsigned int, enum bfd_endian, bool);
 
-extern void print_function_pointer_address (const struct value_print_options *options,
+extern void print_function_pointer_address (const value_print_options *options,
 					    struct gdbarch *gdbarch,
 					    CORE_ADDR address,
 					    struct ui_file *stream);
@@ -259,7 +259,7 @@ struct generic_val_print_decorations
 
 extern void generic_value_print (struct value *val, struct ui_file *stream,
 				 int recurse,
-				 const struct value_print_options *options,
+				 const value_print_options *options,
 				 const struct generic_val_print_decorations *d);
 
 extern void generic_emit_char (int c, struct type *type, struct ui_file *stream,
@@ -269,7 +269,7 @@ extern void generic_printstr (struct ui_file *stream, struct type *type,
 			      const gdb_byte *string, unsigned int length,
 			      const char *encoding, int force_ellipses,
 			      int quote_char, int c_style_terminator,
-			      const struct value_print_options *options);
+			      const value_print_options *options);
 
 /* Run the "output" command.  ARGS and FROM_TTY are the usual
    arguments passed to all command implementations, except ARGS is
@@ -335,7 +335,7 @@ extern int build_address_symbolic (struct gdbarch *,
    LANGUAGE determines what type of ellipsis expression is printed.  */
 
 extern bool val_print_check_max_depth (struct ui_file *stream, int recurse,
-				       const struct value_print_options *opts,
+				       const value_print_options *opts,
 				       const struct language_defn *language);
 
 /* Like common_val_print, but call value_check_printable first.  */
@@ -343,7 +343,7 @@ extern bool val_print_check_max_depth (struct ui_file *stream, int recurse,
 extern void common_val_print_checked
   (struct value *val,
    struct ui_file *stream, int recurse,
-   const struct value_print_options *options,
+   const value_print_options *options,
    const struct language_defn *language);
 
 #endif /* GDB_VALPRINT_H */

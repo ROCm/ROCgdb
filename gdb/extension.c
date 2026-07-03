@@ -468,7 +468,7 @@ ext_lang_type_printers::~ext_lang_type_printers ()
 int
 apply_ext_lang_val_pretty_printer (struct value *val,
 				   struct ui_file *stream, int recurse,
-				   const struct value_print_options *options,
+				   const value_print_options *options,
 				   const struct language_defn *language)
 {
   for (const struct extension_language_defn *extlang : extension_languages)

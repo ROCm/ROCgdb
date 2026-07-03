@@ -461,7 +461,7 @@ void
 rust_language::printstr (struct ui_file *stream, struct type *type,
 			 const gdb_byte *string, unsigned int length,
 			 const char *user_encoding, int force_ellipses,
-			 const struct value_print_options *options) const
+			 const value_print_options *options) const
 {
   /* Rust always uses UTF-8, but let the caller override this if need
      be.  */
@@ -518,7 +518,7 @@ rust_slice_to_array (struct value *val)
 void
 rust_language::val_print_slice
      (struct value *val, struct ui_file *stream, int recurse,
-      const struct value_print_options *options) const
+      const value_print_options *options) const
 {
   struct type *orig_type = check_typedef (val->type ());
 
@@ -558,7 +558,7 @@ rust_language::val_print_slice
 void
 rust_language::val_print_struct
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const struct value_print_options *options) const
+	 const value_print_options *options) const
 {
   int first_field;
   struct type *type = check_typedef (val->type ());
@@ -571,7 +571,7 @@ rust_language::val_print_struct
 
   bool is_tuple = rust_tuple_type_p (type);
   bool is_tuple_struct = !is_tuple && rust_tuple_struct_type_p (type);
-  struct value_print_options opts;
+  value_print_options opts;
 
   if (!is_tuple)
     {
@@ -640,9 +640,9 @@ rust_language::val_print_struct
 void
 rust_language::print_enum (struct value *val, struct ui_file *stream,
 			   int recurse,
-			   const struct value_print_options *options) const
+			   const value_print_options *options) const
 {
-  struct value_print_options opts = *options;
+  value_print_options opts = *options;
   struct type *type = check_typedef (val->type ());
 
   opts.deref_ref = false;
@@ -714,9 +714,9 @@ rust_language::print_enum (struct value *val, struct ui_file *stream,
 void
 rust_language::value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const struct value_print_options *options) const
+	 const value_print_options *options) const
 {
-  struct value_print_options opts = *options;
+  value_print_options opts = *options;
   opts.deref_ref = true;
 
   if (opts.prettyformat == Val_prettyformat_default)
@@ -826,7 +826,7 @@ rust_language::value_print_inner
 void
 rust_language::value_print
 	(struct value *val, struct ui_file *stream,
-	 const struct value_print_options *options) const
+	 const value_print_options *options) const
 {
   value_print_options opts = *options;
   opts.deref_ref = true;

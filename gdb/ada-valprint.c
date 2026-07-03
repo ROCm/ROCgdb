@@ -32,7 +32,7 @@
 
 static bool print_field_values (struct value *, struct value *,
 				struct ui_file *, int,
-				const struct value_print_options *,
+				const value_print_options *,
 				bool, const struct language_defn *);
 
 
@@ -43,7 +43,7 @@ static bool print_field_values (struct value *, struct value *,
 
 static void
 print_optional_low_bound (struct ui_file *stream, struct type *type,
-			  const struct value_print_options *options)
+			  const value_print_options *options)
 {
   struct type *index_type;
   LONGEST low_bound;
@@ -109,7 +109,7 @@ static void
 val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
 				 int offset, struct ui_file *stream,
 				 int recurse,
-				 const struct value_print_options *options)
+				 const value_print_options *options)
 {
   unsigned int i;
   unsigned int things_printed = 0;
@@ -204,7 +204,7 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
 
       if (i - i0 > options->repeat_count_threshold)
 	{
-	  struct value_print_options opts = *options;
+	  value_print_options opts = *options;
 
 	  opts.deref_ref = false;
 	  common_val_print (v0, stream, recurse + 1, &opts, current_language);
@@ -217,7 +217,7 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
       else
 	{
 	  int j;
-	  struct value_print_options opts = *options;
+	  value_print_options opts = *options;
 
 	  opts.deref_ref = false;
 	  for (j = i0; j < i; j += 1)
@@ -398,7 +398,7 @@ static bool
 print_variant_part (struct value *value, int field_num,
 		    struct value *outer_value,
 		    struct ui_file *stream, int recurse,
-		    const struct value_print_options *options,
+		    const value_print_options *options,
 		    bool comma_needed,
 		    const struct language_defn *language)
 {
@@ -432,7 +432,7 @@ print_variant_part (struct value *value, int field_num,
 static bool
 print_field_values (struct value *value, struct value *outer_value,
 		    struct ui_file *stream, int recurse,
-		    const struct value_print_options *options,
+		    const value_print_options *options,
 		    bool comma_needed,
 		    const struct language_defn *language)
 {
@@ -500,7 +500,7 @@ print_field_values (struct value *value, struct value *outer_value,
 	      struct value *v;
 	      int bit_pos = type->field (i).loc_bitpos ();
 	      int bit_size = type->field (i).bitsize ();
-	      struct value_print_options opts;
+	      value_print_options opts;
 
 	      v = ada_value_primitive_packed_val
 		    (value, nullptr,
@@ -514,7 +514,7 @@ print_field_values (struct value *value, struct value *outer_value,
 	}
       else
 	{
-	  struct value_print_options opts = *options;
+	  value_print_options opts = *options;
 
 	  opts.deref_ref = false;
 
@@ -534,7 +534,7 @@ static void
 ada_val_print_string (struct type *type, const gdb_byte *valaddr,
 		      int offset_aligned,
 		      struct ui_file *stream, int recurse,
-		      const struct value_print_options *options)
+		      const value_print_options *options)
 {
   enum bfd_endian byte_order = type_byte_order (type);
   struct type *elttype = type->target_type ();
@@ -578,7 +578,7 @@ ada_val_print_string (struct type *type, const gdb_byte *valaddr,
 static void
 ada_value_print_ptr (struct value *val,
 		     struct ui_file *stream, int recurse,
-		     const struct value_print_options *options)
+		     const value_print_options *options)
 {
   if (!options->format
       && val->type ()->target_type ()->code () == TYPE_CODE_INT
@@ -605,7 +605,7 @@ ada_value_print_ptr (struct value *val,
 
 static void
 ada_value_print_num (struct value *val, struct ui_file *stream, int recurse,
-		     const struct value_print_options *options)
+		     const value_print_options *options)
 {
   struct type *type = ada_check_typedef (val->type ());
   const gdb_byte *valaddr = val->contents_for_printing ().data ();
@@ -632,7 +632,7 @@ ada_value_print_num (struct value *val, struct ui_file *stream, int recurse,
 
       if (format)
 	{
-	  struct value_print_options opts = *options;
+	  value_print_options opts = *options;
 
 	  opts.format = format;
 	  value_print_scalar_formatted (val, &opts, 0, stream);
@@ -676,7 +676,7 @@ ada_value_print_num (struct value *val, struct ui_file *stream, int recurse,
 
 static void
 ada_val_print_enum (struct value *value, struct ui_file *stream, int recurse,
-		    const struct value_print_options *options)
+		    const value_print_options *options)
 {
   LONGEST val;
 
@@ -714,7 +714,7 @@ static void
 ada_val_print_struct_union (struct value *value,
 			    struct ui_file *stream,
 			    int recurse,
-			    const struct value_print_options *options)
+			    const value_print_options *options)
 {
   gdb_printf (stream, "(");
 
@@ -734,7 +734,7 @@ ada_val_print_struct_union (struct value *value,
 
 static void
 ada_value_print_array (struct value *val, struct ui_file *stream, int recurse,
-		       const struct value_print_options *options)
+		       const value_print_options *options)
 {
   struct type *type = ada_check_typedef (val->type ());
 
@@ -775,7 +775,7 @@ ada_val_print_ref (struct type *type, const gdb_byte *valaddr,
 		   int offset, int offset_aligned, CORE_ADDR address,
 		   struct ui_file *stream, int recurse,
 		   struct value *original_value,
-		   const struct value_print_options *options)
+		   const value_print_options *options)
 {
   /* For references, the debugger is expected to print the value as
      an address if DEREF_REF is null.  But printing an address in place
@@ -830,7 +830,7 @@ ada_val_print_ref (struct type *type, const gdb_byte *valaddr,
 
 void
 ada_value_print_inner (struct value *val, struct ui_file *stream, int recurse,
-		       const struct value_print_options *options)
+		       const value_print_options *options)
 {
   struct type *type = ada_check_typedef (val->type ());
 
@@ -920,11 +920,11 @@ ada_value_print_inner (struct value *val, struct ui_file *stream, int recurse,
 
 void
 ada_value_print (struct value *val0, struct ui_file *stream,
-		 const struct value_print_options *options)
+		 const value_print_options *options)
 {
   struct value *val = ada_to_fixed_value (val0);
   struct type *type = ada_check_typedef (val->type ());
-  struct value_print_options opts;
+  value_print_options opts;
 
   /* If it is a pointer, indicate what it points to; but not for
      "void *" pointers.  */

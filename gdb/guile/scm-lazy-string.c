@@ -349,7 +349,7 @@ lsscm_safe_lazy_string_to_value (SCM string, int arg_pos,
 
 void
 lsscm_val_print_lazy_string (SCM string, struct ui_file *stream,
-			     const struct value_print_options *options)
+			     const value_print_options *options)
 {
   lazy_string_smob *ls_smob;
   struct type *elt_type;

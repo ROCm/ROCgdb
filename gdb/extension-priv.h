@@ -165,7 +165,7 @@ struct extension_language_ops
   enum ext_lang_rc (*apply_val_pretty_printer)
     (const struct extension_language_defn *,
      struct value *val, struct ui_file *stream, int recurse,
-     const struct value_print_options *options,
+     const value_print_options *options,
      const struct language_defn *language);
 
   /* GDB access to the "frame filter" feature.

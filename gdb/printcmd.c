@@ -287,7 +287,7 @@ decode_format (const char **string_ptr, int oformat, int osize)
 
 static void
 print_formatted (struct value *val, int size,
-		 const struct value_print_options *options,
+		 const value_print_options *options,
 		 struct ui_file *stream)
 {
   struct type *type = check_typedef (val->type ());
@@ -363,7 +363,7 @@ float_type_from_length (struct type *type)
 
 void
 print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
-			const struct value_print_options *options,
+			const value_print_options *options,
 			int size, struct ui_file *stream)
 {
   struct gdbarch *gdbarch = type->arch ();
@@ -493,7 +493,7 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
       break;
     case 'c':
       {
-	struct value_print_options opts = *options;
+	value_print_options opts = *options;
 
 	if (!val_long.has_value ())
 	  val_long.emplace (unpack_long (type, valaddr));
@@ -762,7 +762,7 @@ pc_prefix (CORE_ADDR addr)
    Return non-zero if anything was printed; zero otherwise.  */
 
 int
-print_address_demangle (const struct value_print_options *opts,
+print_address_demangle (const value_print_options *opts,
 			struct gdbarch *gdbarch, CORE_ADDR addr,
 			struct ui_file *stream, int do_demangle)
 {
@@ -933,7 +933,7 @@ integer_is_zero (const gdb_byte *x, int len)
 static CORE_ADDR
 find_string_backward (struct gdbarch *gdbarch,
 		      CORE_ADDR addr, int count, int char_size,
-		      const struct value_print_options *options,
+		      const value_print_options *options,
 		      int *strings_counted)
 {
   const int chunk_size = 0x20;

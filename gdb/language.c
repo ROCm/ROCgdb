@@ -635,7 +635,7 @@ language_defn::watch_location_expression (struct type *type,
 
 void
 language_defn::value_print (struct value *val, struct ui_file *stream,
-	       const struct value_print_options *options) const
+	       const value_print_options *options) const
 {
   return c_value_print (val, stream, options);
 }
@@ -653,7 +653,7 @@ language_defn::parser (struct parser_state *ps) const
 void
 language_defn::value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const struct value_print_options *options) const
+	 const value_print_options *options) const
 {
   return c_value_print_inner (val, stream, recurse, options);
 }
@@ -774,7 +774,7 @@ public:
   /* See language.h.  */
 
   void value_print (struct value *val, struct ui_file *stream,
-		    const struct value_print_options *options) const override
+		    const value_print_options *options) const override
   {
     error (_("value printing not implemented for language \"%s\""),
 	   natural_name ());
@@ -784,7 +784,7 @@ public:
 
   void value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const struct value_print_options *options) const override
+	 const value_print_options *options) const override
   {
     error (_("inner value printing not implemented for language \"%s\""),
 	   natural_name ());
@@ -812,7 +812,7 @@ public:
   void printstr (struct ui_file *stream, struct type *elttype,
 		 const gdb_byte *string, unsigned int length,
 		 const char *encoding, int force_ellipses,
-		 const struct value_print_options *options) const override
+		 const value_print_options *options) const override
   {
     error (_("print string not implemented for language \"%s\""),
 	   natural_name ());

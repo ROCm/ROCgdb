@@ -142,7 +142,7 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
 			struct type *unresolved_elttype,
 			const gdb_byte *valaddr, int embedded_offset,
 			CORE_ADDR address, struct ui_file *stream, int recurse,
-			const struct value_print_options *options)
+			const value_print_options *options)
 {
   int want_space = 0;
   struct gdbarch *gdbarch = type->arch ();
@@ -234,7 +234,7 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
 static void
 c_value_print_array (struct value *val,
 		     struct ui_file *stream, int recurse,
-		     const struct value_print_options *options)
+		     const value_print_options *options)
 {
   struct type *type = check_typedef (val->type ());
   CORE_ADDR address = val->address ();
@@ -326,7 +326,7 @@ c_value_print_array (struct value *val,
 
 static void
 c_value_print_ptr (struct value *val, struct ui_file *stream, int recurse,
-		   const struct value_print_options *options)
+		   const value_print_options *options)
 {
   if (options->format && options->format != 's')
     {
@@ -362,7 +362,7 @@ c_value_print_ptr (struct value *val, struct ui_file *stream, int recurse,
 
 static void
 c_value_print_struct (struct value *val, struct ui_file *stream, int recurse,
-		      const struct value_print_options *options)
+		      const value_print_options *options)
 {
   struct type *type = check_typedef (val->type ());
 
@@ -389,11 +389,11 @@ c_value_print_struct (struct value *val, struct ui_file *stream, int recurse,
 
 static void
 c_value_print_int (struct value *val, struct ui_file *stream,
-		   const struct value_print_options *options)
+		   const value_print_options *options)
 {
   if (options->format || options->output_format)
     {
-      struct value_print_options opts = *options;
+      value_print_options opts = *options;
 
       opts.format = (options->format ? options->format
 		     : options->output_format);
@@ -421,7 +421,7 @@ c_value_print_int (struct value *val, struct ui_file *stream,
 
 void
 c_value_print_inner (struct value *val, struct ui_file *stream, int recurse,
-		     const struct value_print_options *options)
+		     const value_print_options *options)
 {
   struct type *type = val->type ();
 
@@ -471,12 +471,12 @@ c_value_print_inner (struct value *val, struct ui_file *stream, int recurse,
 
 void
 c_value_print (struct value *val, struct ui_file *stream,
-	       const struct value_print_options *options)
+	       const value_print_options *options)
 {
   struct type *type, *real_type;
   int full, using_enc;
   LONGEST top;
-  struct value_print_options opts = *options;
+  value_print_options opts = *options;
 
   opts.deref_ref = true;
 

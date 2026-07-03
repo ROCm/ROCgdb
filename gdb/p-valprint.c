@@ -44,7 +44,7 @@
 
 static void pascal_object_print_value_fields (struct value *, struct ui_file *,
 					      int,
-					      const struct value_print_options *,
+					      const value_print_options *,
 					      struct type **, int);
 
 /* Decorations for Pascal.  */
@@ -66,7 +66,7 @@ static const struct generic_val_print_decorations p_decorations =
 void
 pascal_language::value_print_inner (struct value *val,
 				    struct ui_file *stream, int recurse,
-				    const struct value_print_options *options) const
+				    const value_print_options *options) const
 
 {
   struct type *type = check_typedef (val->type ());
@@ -407,10 +407,10 @@ pascal_language::value_print_inner (struct value *val,
 
 void
 pascal_language::value_print (struct value *val, struct ui_file *stream,
-			      const struct value_print_options *options) const
+			      const value_print_options *options) const
 {
   struct type *type = val->type ();
-  struct value_print_options opts = *options;
+  value_print_options opts = *options;
 
   opts.deref_ref = true;
 
@@ -456,10 +456,10 @@ static struct obstack dont_print_statmem_obstack;
 
 static void pascal_object_print_static_field (struct value *,
 					      struct ui_file *, int,
-					      const struct value_print_options *);
+					      const value_print_options *);
 
 static void pascal_object_print_value (struct value *, struct ui_file *, int,
-				       const struct value_print_options *,
+				       const value_print_options *,
 				       struct type **);
 
 /* It was changed to this after 2.4.5.  */
@@ -513,7 +513,7 @@ pascal_object_is_vtbl_member (struct type *type)
 static void
 pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 				  int recurse,
-				  const struct value_print_options *options,
+				  const value_print_options *options,
 				  struct type **dont_print_vb,
 				  int dont_print_statmem)
 {
@@ -618,7 +618,7 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 		}
 	      else
 		{
-		  struct value_print_options opts = *options;
+		  value_print_options opts = *options;
 
 		  v = value_field_bitfield (type, i, valaddr, 0, val);
 
@@ -650,7 +650,7 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 		}
 	      else
 		{
-		  struct value_print_options opts = *options;
+		  value_print_options opts = *options;
 
 		  opts.deref_ref = false;
 
@@ -686,7 +686,7 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 static void
 pascal_object_print_value (struct value *val, struct ui_file *stream,
 			   int recurse,
-			   const struct value_print_options *options,
+			   const value_print_options *options,
 			   struct type **dont_print_vb)
 {
   struct type **last_dont_print
@@ -813,10 +813,10 @@ static void
 pascal_object_print_static_field (struct value *val,
 				  struct ui_file *stream,
 				  int recurse,
-				  const struct value_print_options *options)
+				  const value_print_options *options)
 {
   struct type *type = val->type ();
-  struct value_print_options opts;
+  value_print_options opts;
 
   if (val->entirely_optimized_out ())
     {

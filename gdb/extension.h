@@ -296,7 +296,7 @@ extern gdb::unique_xmalloc_ptr<char> apply_ext_lang_type_printers
 
 extern int apply_ext_lang_val_pretty_printer
   (struct value *value, struct ui_file *stream, int recurse,
-   const struct value_print_options *options,
+   const value_print_options *options,
    const struct language_defn *language);
 
 extern enum ext_lang_bt_status apply_ext_lang_frame_filter

@@ -500,7 +500,7 @@ extern struct value *lsscm_safe_lazy_string_to_value (SCM string,
 
 extern void lsscm_val_print_lazy_string
   (SCM string, struct ui_file *stream,
-   const struct value_print_options *options);
+   const value_print_options *options);
 
 /* scm-objfile.c */
 
@@ -612,7 +612,7 @@ extern enum ext_lang_rc gdbscm_apply_val_pretty_printer
   (const struct extension_language_defn *,
    struct value *val,
    struct ui_file *stream, int recurse,
-   const struct value_print_options *options,
+   const value_print_options *options,
    const struct language_defn *language);
 
 extern int gdbscm_breakpoint_has_cond (const struct extension_language_defn *,
