@@ -195,10 +195,10 @@ public:
      template parameter class IMPL.  */
   template <typename ...Args>
   fortran_array_walker (struct type *type, CORE_ADDR address,
-			Args... args)
+			Args&&... args)
     : m_type (type),
       m_address (address),
-      m_impl (type, address, args...),
+      m_impl (type, address, std::forward<Args> (args)...),
       m_ndimensions (calc_f77_array_dims (m_type)),
       m_nss (0)
   { /* Nothing.  */ }
