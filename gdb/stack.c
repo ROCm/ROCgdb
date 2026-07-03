@@ -1082,9 +1082,7 @@ do_print_frame_info (struct ui_out *uiout, const frame_print_options &fp_opts,
 						  sal.line + 1, 0);
       else
 	{
-	  struct value_print_options opts;
-
-	  get_user_print_options (&opts);
+	  const value_print_options &opts = get_user_print_options ();
 	  /* We used to do this earlier, but that is clearly
 	     wrong.  This function is used by many different
 	     parts of gdb, including normal_stop in infrun.c,
@@ -1268,7 +1266,6 @@ print_frame (struct ui_out *uiout,
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   enum language funlang = language_unknown;
-  struct value_print_options opts;
   struct symbol *func;
   std::optional <CORE_ADDR> pc;
 
@@ -1289,7 +1286,7 @@ print_frame (struct ui_out *uiout,
 	uiout->field_fmt_signed (2, ui_left, "level",
 				 frame_relative_level (frame));
       }
-    get_user_print_options (&opts);
+    const value_print_options &opts = get_user_print_options ();
     if (opts.addressprint)
       if (!sal.symtab
 	  || frame_show_address (frame, sal)

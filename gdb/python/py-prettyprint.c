@@ -776,7 +776,7 @@ gdbpy_get_print_options (value_print_options *opts)
   if (gdbpy_current_print_options != nullptr)
     *opts = *gdbpy_current_print_options;
   else
-    get_user_print_options (opts);
+    *opts = get_user_print_options ();
 }
 
 /* A ValuePrinter is just a "tag", so it has no state other than that

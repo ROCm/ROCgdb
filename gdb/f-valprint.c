@@ -622,9 +622,7 @@ static void
 info_common_command_for_block (const struct block *block, const char *comname,
 			       int *any_printed)
 {
-  struct value_print_options opts;
-
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   for (struct symbol *sym : block_iterator_range (block))
     if (sym->domain () == COMMON_BLOCK_DOMAIN)

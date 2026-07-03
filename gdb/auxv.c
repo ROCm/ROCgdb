@@ -442,9 +442,7 @@ fprint_auxv_entry (struct ui_file *file, const char *name,
       break;
     case AUXV_FORMAT_STR:
       {
-	struct value_print_options opts;
-
-	get_user_print_options (&opts);
+	const value_print_options &opts = get_user_print_options ();
 	if (opts.addressprint)
 	  gdb_printf (file, ("%s "), paddress (arch, val));
 	val_print_string (builtin_type (arch)->builtin_char,

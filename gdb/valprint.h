@@ -144,8 +144,14 @@ extern gdb::option::option_def_group make_value_print_options_def_group
    code should call get_user_print_options instead.  */
 extern struct value_print_options user_print_options;
 
-/* Initialize *OPTS to be a copy of the user print options.  */
-extern void get_user_print_options (struct value_print_options *opts);
+/* Accessor for the user print options.  */
+
+static inline
+const value_print_options &
+get_user_print_options ()
+{
+  return user_print_options;
+}
 
 /* Return a copy of the user print options, but with pretty-formatting
    disabled.  */

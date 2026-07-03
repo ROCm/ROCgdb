@@ -210,9 +210,8 @@ unwind_infopy_str (PyObject *self)
   stb.printf ("Frame ID: %s", unwind_info->frame_id.to_string ().c_str ());
   {
     const char *sep = "";
-    struct value_print_options opts;
 
-    get_user_print_options (&opts);
+    const value_print_options &opts = get_user_print_options ();
     stb.printf ("\nSaved registers: (");
     for (const saved_reg &reg : *unwind_info->saved_regs)
       {

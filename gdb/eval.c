@@ -1250,9 +1250,8 @@ eval_op_structop_ptr (struct type *expect_type, struct expression *exp,
     struct type *real_type;
     int full, using_enc;
     LONGEST top;
-    struct value_print_options opts;
 
-    get_user_print_options (&opts);
+    const value_print_options &opts = get_user_print_options ();
     if (opts.objectprint && arg_type->target_type ()
 	&& (arg_type->target_type ()->code () == TYPE_CODE_STRUCT))
       {

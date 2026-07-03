@@ -1667,9 +1667,7 @@ print_return_value_1 (struct ui_out *uiout, struct return_value_info *rv)
 
       if (finish_print)
 	{
-	  struct value_print_options opts;
-	  get_user_print_options (&opts);
-
+	  const value_print_options opts = get_user_print_options ();
 	  string_file stb;
 	  value_print (rv->value, &stb, &opts);
 	  uiout->field_stream ("return-value", stb);
@@ -2436,11 +2434,10 @@ default_print_one_register_info (struct ui_file *file,
   if (regtype->code () == TYPE_CODE_FLT
       || regtype->code () == TYPE_CODE_DECFLOAT)
     {
-      struct value_print_options opts;
       const gdb_byte *valaddr = val->contents_for_printing ().data ();
       enum bfd_endian byte_order = type_byte_order (regtype);
 
-      get_user_print_options (&opts);
+      value_print_options opts = get_user_print_options ();
       opts.deref_ref = true;
 
       common_val_print (val, &format_stream, 0, &opts, current_language);
@@ -2465,7 +2462,7 @@ default_print_one_register_info (struct ui_file *file,
       if (print_raw_format && regtype->is_vector () == 0)
 	{
 	  pad_to_column (format_stream, value_column_2);
-	  get_user_print_options (&opts);
+	  opts = get_user_print_options ();
 	  opts.deref_ref = true;
 	  common_val_print (val, &format_stream, 0, &opts, current_language);
 	}

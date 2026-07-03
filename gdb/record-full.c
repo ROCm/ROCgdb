@@ -2804,8 +2804,7 @@ maintenance_print_record_instruction (const char *args, int from_tty)
   auto to_print = record_full_log.begin () + offset;
 
   gdbarch *arch = current_inferior ()->arch ();
-  struct value_print_options opts;
-  get_user_print_options (&opts);
+  value_print_options opts = get_user_print_options ();
   opts.raw = true;
 
   for (auto &entry : to_print->effects)

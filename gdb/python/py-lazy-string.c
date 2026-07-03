@@ -305,8 +305,7 @@ stpy_str (PyObject *self)
 {
   lazy_string_object *str = (lazy_string_object *) self;
 
-  struct value_print_options opts;
-  get_user_print_options (&opts);
+  value_print_options opts = get_user_print_options ();
   opts.addressprint = false;
 
   string_file stream;

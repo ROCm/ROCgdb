@@ -5037,8 +5037,7 @@ watchpoint_value_print (struct value *val, struct ui_file *stream)
     fprintf_styled (stream, metadata_style.style (), _("<unreadable>"));
   else
     {
-      struct value_print_options opts;
-      get_user_print_options (&opts);
+      const value_print_options &opts = get_user_print_options ();
       value_print (val, stream, &opts);
     }
 }
@@ -6590,9 +6589,7 @@ print_one_breakpoint_location (struct breakpoint *b,
   struct ui_out *uiout = current_uiout;
   bool header_of_multiple = false;
   bool part_of_multiple = (loc != NULL);
-  struct value_print_options opts;
-
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   gdb_assert (!loc || loc_number != 0);
   /* See comment in print_one_breakpoint concerning treatment of
@@ -7080,13 +7077,11 @@ breakpoint_1 (const char *bp_num_list, bool show_internal,
 {
   const bp_location *last_loc = nullptr;
   int nr_printable_breakpoints;
-  struct value_print_options opts;
   int print_address_bits = 0;
   int print_type_col_width = 14;
   struct ui_out *uiout = current_uiout;
   bool has_disabled_by_cond_location = false;
-
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   /* Compute the number of rows in the table, as well as the size
      required for address fields.  */
@@ -9652,13 +9647,12 @@ ranged_breakpoint::print_it (const bpstat *bs) const
 bool
 ranged_breakpoint::print_one (const bp_location **last_loc) const
 {
-  struct value_print_options opts;
   struct ui_out *uiout = current_uiout;
 
   /* Ranged breakpoints have only one location.  */
   gdb_assert (this->has_single_location ());
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   if (opts.addressprint)
     /* We don't print the address range here, it will be printed later
@@ -11839,9 +11833,7 @@ bpstat_remove_bp_location (bpstat *bps, struct breakpoint *bpt)
 void
 code_breakpoint::say_where () const
 {
-  struct value_print_options opts;
-
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   /* i18n: cagney/2005-02-11: Below needs to be merged into a
      single string.  */

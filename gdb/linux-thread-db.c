@@ -698,9 +698,7 @@ check_thread_db_callback (const td_thrhandle_t *th, void *arg)
 
       if (tdb_testinfo->log_progress)
 	{
-	  struct value_print_options opts;
-
-	  get_user_print_options (&opts);
+	  const value_print_options &opts = get_user_print_options ();
 	  LOG (" = ");
 	  value_print (val, gdb_stdlog, &opts);
 	}

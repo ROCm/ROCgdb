@@ -523,8 +523,6 @@ teval_pseudocommand (const char *args, int from_tty)
 const char *
 decode_agent_options (const char *exp, int *trace_string)
 {
-  struct value_print_options opts;
-
   *trace_string = 0;
 
   if (*exp != '/')
@@ -532,7 +530,7 @@ decode_agent_options (const char *exp, int *trace_string)
 
   /* Call this to borrow the print elements default for collection
      size.  */
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   exp++;
   if (*exp == 's')

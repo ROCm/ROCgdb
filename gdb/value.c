@@ -1083,10 +1083,8 @@ struct type *
 value_actual_type (struct value *value, int resolve_simple_types,
 		   int *real_type_found)
 {
-  struct value_print_options opts;
   struct type *result;
-
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   if (real_type_found)
     *real_type_found = 0;
@@ -1787,11 +1785,9 @@ show_values (const char *num_exp, int from_tty)
 
   for (i = num; i < num + 10 && i <= value_history.size (); i++)
     {
-      struct value_print_options opts;
-
       val = access_value_history (i);
       gdb_printf (("$%d = "), i);
-      get_user_print_options (&opts);
+      const value_print_options &opts = get_user_print_options ();
       value_print (val, gdb_stdout, &opts);
       gdb_printf (("\n"));
     }
@@ -2565,9 +2561,8 @@ show_convenience (const char *ignore, int from_tty)
 {
   struct gdbarch *gdbarch = get_current_arch ();
   int varseen = 0;
-  struct value_print_options opts;
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
   for (auto &pair : internalvars)
     {
       internalvar &var = pair.second;

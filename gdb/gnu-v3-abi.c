@@ -683,9 +683,7 @@ gnuv3_print_method_ptr (const gdb_byte *contents,
     }
   else
     {
-      struct value_print_options opts;
-
-      get_user_print_options (&opts);
+      const value_print_options &opts = get_user_print_options ();
       print_address_demangle (&opts, gdbarch, ptr_value, stream, demangle);
     }
 
@@ -872,7 +870,7 @@ compute_vtable_size (vtable_hash_t &offset_hash, struct value *value)
 static void
 print_one_vtable (struct gdbarch *gdbarch, struct value *value,
 		  int max_voffset,
-		  struct value_print_options *opts)
+		  const value_print_options *opts)
 {
   int i;
   struct type *type = check_typedef (value->type ());
@@ -930,7 +928,6 @@ gnuv3_print_vtable (struct value *value)
   struct gdbarch *gdbarch;
   struct type *type;
   struct value *vtable;
-  struct value_print_options opts;
   int count;
 
   value = coerce_ref (value);
@@ -941,7 +938,7 @@ gnuv3_print_vtable (struct value *value)
       type = check_typedef (value->type ());
     }
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   /* Respect 'set print object'.  */
   if (opts.objectprint)

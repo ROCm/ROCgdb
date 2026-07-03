@@ -417,9 +417,7 @@ enumerate_args (PyObject *iter,
 		int print_args_field,
 		const frame_info_ptr &frame)
 {
-  struct value_print_options opts;
-
-  get_user_print_options (&opts);
+  value_print_options opts = get_user_print_options ();
   opts.raw = raw_frame_args;
 
   if (args_type == CLI_SCALAR_VALUES)
@@ -549,9 +547,7 @@ enumerate_locals (PyObject *iter,
 		  int print_args_field,
 		  const frame_info_ptr &frame)
 {
-  struct value_print_options opts;
-
-  get_user_print_options (&opts);
+  value_print_options opts = get_user_print_options ();
   opts.deref_ref = true;
 
   while (true)
@@ -633,7 +629,6 @@ enumerate_locals (PyObject *iter,
 
 static enum ext_lang_bt_status
 py_mi_print_variables (PyObject *filter, struct ui_out *out,
-		       struct value_print_options *opts,
 		       enum ext_lang_frame_args args_type,
 		       const frame_info_ptr &frame,
 		       bool raw_frame_args_p)
@@ -767,7 +762,6 @@ py_print_frame (PyObject *filter, frame_filter_flags flags,
   CORE_ADDR address = 0;
   struct gdbarch *gdbarch = NULL;
   frame_info_ptr frame = NULL;
-  struct value_print_options opts;
 
   int print_level, print_frame_info, print_args, print_locals;
   /* Note that the below default in non-mi mode is the same as the
@@ -786,7 +780,7 @@ py_print_frame (PyObject *filter, frame_filter_flags flags,
   print_args = (flags & PRINT_ARGS) ? 1 : 0;
   print_locals = (flags & PRINT_LOCALS) ? 1 : 0;
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
   if (print_frame_info)
     {
       std::optional<enum print_what> user_frame_info_print_what;
@@ -818,7 +812,7 @@ py_print_frame (PyObject *filter, frame_filter_flags flags,
   if (print_locals && print_args && ! print_frame_info)
     {
       bool raw_frame_args = (flags & PRINT_RAW_FRAME_ARGUMENTS) != 0;
-      if (py_mi_print_variables (filter, out, &opts, args_type, frame,
+      if (py_mi_print_variables (filter, out, args_type, frame,
 				 raw_frame_args) == EXT_LANG_BT_ERROR)
 	return EXT_LANG_BT_ERROR;
       return EXT_LANG_BT_OK;

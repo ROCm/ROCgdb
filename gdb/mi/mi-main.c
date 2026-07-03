@@ -1122,7 +1122,6 @@ mi_cmd_data_evaluate_expression (const char *command, const char *const *argv,
 				 int argc)
 {
   struct value *val;
-  struct value_print_options opts;
   struct ui_out *uiout = current_uiout;
 
   if (argc != 1)
@@ -1136,7 +1135,7 @@ mi_cmd_data_evaluate_expression (const char *command, const char *const *argv,
   string_file stb;
 
   /* Print the result of the expression evaluation.  */
-  get_user_print_options (&opts);
+  value_print_options opts = get_user_print_options ();
   opts.deref_ref = false;
   common_val_print (val, &stb, 0, &opts, current_language);
 

@@ -12414,9 +12414,8 @@ bool
 ada_catchpoint::print_one (const bp_location **last_loc) const
 {
   struct ui_out *uiout = current_uiout;
-  struct value_print_options opts;
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   if (opts.addressprint)
     uiout->field_skip ("addr");

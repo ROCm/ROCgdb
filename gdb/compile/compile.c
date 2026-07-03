@@ -271,11 +271,10 @@ static void
 compile_print_command (const char *arg, int from_tty)
 {
   enum compile_i_scope_types scope = COMPILE_I_PRINT_ADDRESS_SCOPE;
-  value_print_options print_opts;
 
   scoped_restore save_async = make_scoped_restore (&current_ui->async, 0);
 
-  get_user_print_options (&print_opts);
+  value_print_options print_opts = get_user_print_options ();
   /* Override global settings with explicit options, if any.  */
   auto group = make_value_print_options_def_group (&print_opts);
   gdb::option::process_options

@@ -1129,9 +1129,7 @@ update_type_if_necessary (struct varobj *var, struct value *new_value)
 {
   if (new_value)
     {
-      struct value_print_options opts;
-
-      get_user_print_options (&opts);
+      const value_print_options &opts = get_user_print_options ();
       if (opts.objectprint)
 	{
 	  struct type *new_type = value_actual_type (new_value, 0, 0);

@@ -1340,7 +1340,7 @@ static struct value *
 process_print_command_args (const char *args, value_print_options *print_opts,
 			    bool voidprint)
 {
-  get_user_print_options (print_opts);
+  *print_opts = get_user_print_options ();
   /* Override global settings with explicit options, if any.  */
   auto group = make_value_print_options_def_group (print_opts);
   gdb::option::process_options
@@ -2385,14 +2385,13 @@ print_variable_value (symbol *var, const frame_info_ptr &frame,
   try
     {
       struct value *val;
-      struct value_print_options opts;
 
       /* READ_VAR_VALUE needs a block in order to deal with non-local
 	 references (i.e. to handle nested functions).  In this context, we
 	 print variables that are local to this frame, so we can avoid passing
 	 a block to it.  */
       val = read_var_value (var, NULL, frame);
-      get_user_print_options (&opts);
+      value_print_options opts = get_user_print_options ();
       opts.deref_ref = true;
       common_val_print_checked (val, stream, indent, &opts, language);
 
@@ -2932,8 +2931,7 @@ ui_printf (const char *arg, struct ui_file *stream)
 	    break;
 	  case value_arg:
 	    {
-	      value_print_options print_opts;
-	      get_user_print_options (&print_opts);
+	      value_print_options print_opts = get_user_print_options ();
 
 	      if (current_substring[2] == '[')
 		{

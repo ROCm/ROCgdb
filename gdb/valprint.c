@@ -97,13 +97,6 @@ struct value_print_options user_print_options =
   PRINT_MAX_DEPTH_DEFAULT,	/* max_depth */
 };
 
-/* Initialize *OPTS to be a copy of the user print options.  */
-void
-get_user_print_options (struct value_print_options *opts)
-{
-  *opts = user_print_options;
-}
-
 /* See valprint.h.  */
 
 value_print_options

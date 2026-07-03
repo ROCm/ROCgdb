@@ -255,10 +255,9 @@ exception_catchpoint::print_it (const bpstat *bs) const
 bool
 exception_catchpoint::print_one (const bp_location **last_loc) const
 {
-  struct value_print_options opts;
   struct ui_out *uiout = current_uiout;
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   if (opts.addressprint)
     uiout->field_skip ("addr");
