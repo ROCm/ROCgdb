@@ -2327,15 +2327,19 @@ extern LONGEST target_fileio_read_alloc (struct inferior *inf,
 					 const char *filename,
 					 gdb_byte **buf_p);
 
-/* Read target file FILENAME, in the filesystem as seen by INF.  If
-   INF is NULL, use the filesystem seen by the debugger (GDB or, for
-   remote targets, the remote stub).  The result is NUL-terminated and
-   returned as a string, allocated using xmalloc.  If an error occurs
-   or the transfer is unsupported, NULL is returned.  Empty objects
-   are returned as allocated but empty strings.  A warning is issued
-   if the result contains any embedded NUL bytes.  */
+/* Read the content of the target file FILENAME from the filesystem as
+   seen by INF.  If INF is NULL, use the filesystem seen by the debugger
+   (GDB or, for remote targets, the remote stub).
+
+   If LEN is not NULL, store the number of bytes read, excluding the
+   terminating NUL byte.
+
+   The returned buffer is NUL-terminated and allocated using xmalloc.
+   On error, or if the transfer is unsupported, return NULL and set
+   LEN to -1.  Empty files are returned as allocated but empty strings.
+   A warning is issued if the file content contains embedded NUL bytes.  */
 extern gdb::unique_xmalloc_ptr<char> target_fileio_read_stralloc
-    (struct inferior *inf, const char *filename);
+    (struct inferior *inf, const char *filename, LONGEST *len = nullptr);
 
 /* Invalidate the target associated with open handles that were open
    on target TARG, since we're about to close (and maybe destroy) the
