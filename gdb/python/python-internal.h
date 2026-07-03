@@ -976,7 +976,7 @@ gdb::unique_xmalloc_ptr<char> gdbpy_get_display_hint (PyObject *printer);
 PyObject *gdbpy_default_visualizer (PyObject *self, PyObject *args);
 
 PyObject *gdbpy_print_options (PyObject *self, PyObject *args);
-void gdbpy_get_print_options (value_print_options *opts);
+const value_print_options &gdbpy_get_print_options ();
 extern const struct value_print_options *gdbpy_current_print_options;
 
 void bpfinishpy_pre_stop_hook (struct gdbpy_breakpoint_object *bp_obj);

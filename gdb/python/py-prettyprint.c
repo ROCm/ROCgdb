@@ -718,8 +718,7 @@ gdbpy_print_options (PyObject *unused1, PyObject *unused2)
   if (result == nullptr)
     return nullptr;
 
-  value_print_options opts;
-  gdbpy_get_print_options (&opts);
+  const value_print_options &opts = gdbpy_get_print_options ();
 
   if (set_boolean (result.get (), "raw",
 		   opts.raw) < 0
@@ -770,13 +769,13 @@ gdbpy_print_options (PyObject *unused1, PyObject *unused2)
 
 /* Helper function that either finds the prevailing print options, or
    calls get_user_print_options.  */
-void
-gdbpy_get_print_options (value_print_options *opts)
+const value_print_options &
+gdbpy_get_print_options ()
 {
   if (gdbpy_current_print_options != nullptr)
-    *opts = *gdbpy_current_print_options;
+    return *gdbpy_current_print_options;
   else
-    *opts = get_user_print_options ();
+    return get_user_print_options ();
 }
 
 /* A ValuePrinter is just a "tag", so it has no state other than that
