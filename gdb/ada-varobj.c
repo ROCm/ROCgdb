@@ -922,10 +922,7 @@ static std::string
 ada_value_of_variable (const struct varobj *var,
 		       enum varobj_display_formats format)
 {
-  struct value_print_options opts;
-
-  varobj_formatted_print_options (&opts, format);
-
+  value_print_options opts = varobj_formatted_print_options (format);
   return ada_varobj_get_value_of_variable (var->value.get (), var->type,
 					   &opts);
 }

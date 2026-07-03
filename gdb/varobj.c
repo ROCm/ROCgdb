@@ -642,8 +642,7 @@ varobj_get_iterator (struct varobj *var)
 #if HAVE_PYTHON
   if (var->dynamic->pretty_printer)
     {
-      value_print_options opts;
-      varobj_formatted_print_options (&opts, var->format);
+      value_print_options opts = varobj_formatted_print_options (var->format);
       return py_varobj_get_iterator (var, var->dynamic->pretty_printer, &opts);
     }
 #endif
@@ -2093,13 +2092,14 @@ my_value_of_variable (struct varobj *var, enum varobj_display_formats format)
     return std::string ();
 }
 
-void
-varobj_formatted_print_options (struct value_print_options *opts,
-				enum varobj_display_formats format)
+value_print_options
+varobj_formatted_print_options (enum varobj_display_formats format)
 {
-  *opts = get_formatted_print_options (format_code[(int) format]);
-  opts->deref_ref = false;
-  opts->raw = !pretty_printing;
+  value_print_options opts
+    = get_formatted_print_options (format_code[(int) format]);
+  opts.deref_ref = false;
+  opts.raw = !pretty_printing;
+  return opts;
 }
 
 std::string
@@ -2107,7 +2107,6 @@ varobj_value_get_print_value (struct value *value,
 			      enum varobj_display_formats format,
 			      const struct varobj *var)
 {
-  struct value_print_options opts;
   struct type *type = NULL;
   long len = 0;
   gdb::unique_xmalloc_ptr<char> encoding;
@@ -2121,7 +2120,7 @@ varobj_value_get_print_value (struct value *value,
   string_file stb;
   std::string thevalue;
 
-  varobj_formatted_print_options (&opts, format);
+  value_print_options opts = varobj_formatted_print_options (format);
 
 #if HAVE_PYTHON
   if (gdb_python_initialized)

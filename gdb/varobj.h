@@ -347,8 +347,8 @@ extern std::string
 				enum varobj_display_formats format,
 				const struct varobj *var);
 
-extern void varobj_formatted_print_options (struct value_print_options *opts,
-					    enum varobj_display_formats format);
+extern value_print_options
+  varobj_formatted_print_options (enum varobj_display_formats format);
 
 extern void varobj_restrict_range (const std::vector<varobj *> &children,
 				   int *from, int *to);
