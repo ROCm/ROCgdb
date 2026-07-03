@@ -458,12 +458,13 @@ upgrade_types_v1 (ctf_dict_t *fp, ctf_header_t *cth)
       size = get_ctt_size_v1 (fp, (const ctf_type_t *) tp, NULL, &increment);
       vbytes = get_vbytes_v1 (fp, kind, size, vlen);
 
+      if (vbytes < 0
+	  || (uintptr_t) tend - (uintptr_t) tp < (size_t) increment + vbytes)
+	return ECTF_CORRUPT;
+
       get_ctt_size_v2_unconverted (fp, (const ctf_type_t *) tp, NULL,
 				   &v2increment);
       v2bytes = get_vbytes_v2 (fp, kind, size, vlen);
-
-      if ((vbytes < 0) || (size < 0))
-	return ECTF_CORRUPT;
 
       increase += v2increment - increment;	/* May be negative.  */
       increase += v2bytes - vbytes;
@@ -748,7 +749,8 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
       (void) ctf_get_ctt_size (fp, tp, &size, &increment);
       vbytes = LCTF_VBYTES (fp, kind, size, vlen);
 
-      if (vbytes < 0)
+      if (vbytes < 0
+	  || (uintptr_t) tend - (uintptr_t) tp < (size_t) increment + vbytes)
 	return ECTF_CORRUPT;
 
       /* For forward declarations, ctt_type is the CTF_K_* kind for the tag,
