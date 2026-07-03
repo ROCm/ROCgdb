@@ -13957,6 +13957,11 @@ public:
   const struct lang_varobj_ops *varobj_ops () const override
   { return &ada_varobj_ops; }
 
+  /* See language.h.  */
+
+  frame_info_ptr follow_static_link (const frame_info_ptr &frame) const
+    override;
+
 protected:
   /* See language.h.  */
 
@@ -13966,6 +13971,84 @@ protected:
     return ada_get_symbol_name_matcher (lookup_name);
   }
 };
+
+frame_info_ptr
+ada_language::follow_static_link (const frame_info_ptr &frame) const
+{
+  const block *frame_block = get_frame_block (frame, nullptr);
+  if (frame_block == nullptr)
+    return {};
+  frame_block = frame_block->function_block ();
+
+  /* LLVM doesn't implement DW_AT_static_link, but for Ada we can
+     search for the pointer to the activation record.  Then, we can go
+     up the stack and find the frame where this activation record is
+     defined.  Note that we don't use the activation record directly,
+     because that is type-erased and just holds pointers.  */
+  symbol *arec = nullptr;
+  for (symbol *iter : block_iterator_range (frame_block))
+    {
+      /* The activation record argument is an artificial argument
+	 whose name starts with "AREC".  */
+      if (iter->is_argument () && iter->is_artificial ()
+	  && startswith (iter->linkage_name (), "AREC"))
+	{
+	  arec = iter;
+	  break;
+	}
+    }
+
+  if (arec == nullptr)
+    return {};
+
+  /* We aren't interested in ordinary (non-quit) exceptions that might
+     occur here -- we just want to return an empty frame if something
+     goes wrong.  */
+  try
+    {
+      value *val = read_var_value (arec, frame_block, frame);
+      CORE_ADDR arec_address = value_as_address (val);
+
+      for (frame_info_ptr frame_iter = get_prev_frame (frame);
+	   frame_iter != nullptr;
+	   frame_iter = get_prev_frame (frame_iter))
+	{
+	  /* Stacks can be quite deep: give the user a chance to stop
+	     this.  */
+	  QUIT;
+
+	  frame_block = get_frame_block (frame_iter, nullptr);
+	  if (frame_block == nullptr)
+	    continue;
+	  frame_block = frame_block->function_block ();
+
+	  for (symbol *iter : block_iterator_range (frame_block))
+	    {
+	      /* The activation record itself is an artificial
+		 non-argument of record type, whose name starts with
+		 "AREC", and that has the same address as the argument
+		 passed down to the callee.  */
+	      if (!iter->is_argument () && iter->is_artificial ()
+		  && startswith (iter->linkage_name (), "AREC")
+		  && iter->type ()->code () == TYPE_CODE_STRUCT)
+		{
+		  value *outer = read_var_value (iter, frame_block,
+						 frame_iter);
+		  CORE_ADDR outer_address = outer->address ();
+		  if (outer_address == arec_address)
+		    return frame_iter;
+		}
+	    }
+	}
+    }
+  catch (const gdb_exception_error &ex)
+    {
+      /* Ignore.  */
+    }
+
+  return {};
+}
+
 
 /* Single instance of the Ada language class.  */
 

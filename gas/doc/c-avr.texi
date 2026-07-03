@@ -30,7 +30,7 @@
 
 @cindex @code{-mmcu=} command-line option, AVR
 @item -mmcu=@var{mcu}
-Specify ATMEL AVR instruction set or MCU type.
+Specify AVR instruction set or MCU type.
 
 Instruction set avr1 is for the minimal AVR core, not supported by the C
 compiler, only for assembler programs (MCU types: at90s1200,
@@ -162,8 +162,7 @@ Enable the @code{__gcc_isr} pseudo instruction.
 @cindex @code{-mno-dollar-line-separator} command line option, AVR
 @item -mno-dollar-line-separator
 Do not treat the @code{$} character as a line separator character.
-This is for languages where @code{$} is valid character inside symbol
-names.
+This is for languages where @code{$} is valid in symbol names.
 
 @end table
 
@@ -181,6 +180,7 @@ names.
 
 @cindex line comment character, AVR
 @cindex AVR line comment character
+@cindex ;, AVR
 
 The presence of a @samp{;} anywhere on a line indicates the start of a
 comment that extends to the end of that line.
@@ -193,10 +193,10 @@ control command (@pxref{Preprocessing}).
 @cindex line separator, AVR
 @cindex statement separator, AVR
 @cindex AVR line separator
+@cindex $, AVR
 
-The @samp{$} character can be used instead of a newline to separate
-statements.  Note: the @option{-mno-dollar-line-separator} option
-disables this behaviour.
+The @samp{$} character can be used instead of a newline to separate statements.
+A @samp{$} does not terminate a @samp{;} single-line comment.
 
 @node AVR-Regs
 @subsection Register Names
@@ -205,18 +205,29 @@ disables this behaviour.
 @cindex register names, AVR
 
 The AVR has 32 x 8-bit general purpose working registers @samp{r0},
-@samp{r1}, ... @samp{r31}.
-Six of the 32 registers can be used as three 16-bit indirect address
-register pointers for Data Space addressing. One of the these address
-pointers can also be used as an address pointer for look up tables in
-Flash program memory. These added function registers are the 16-bit
-@samp{X}, @samp{Y} and @samp{Z} - registers.
+@samp{r1}, ... @samp{r31} (@samp{r16}, ... @samp{r31} on the Reduced Core).
+Six of these registers can be used as three 16-bit address registers for
+data addressing.  One of the these address
+registers can also be used as an address pointer for lookup tables in
+Flash memory. These added function registers are the 16-bit
+@samp{X}, @samp{Y} and @samp{Z} registers.
 
 @smallexample
 X = @r{r26:r27}
 Y = @r{r28:r29}
 Z = @r{r30:r31}
 @end smallexample
+
+@itemize
+@item The low part of the @code{X} register, @code{r26}, can be written
+as @samp{XL}. The high part can be written as @samp{XH}.  Similar notations
+exist for the parts of the @code{Y} and @code{Z} registers.
+
+@item Registers can be accessed by their register number and without
+the @samp{r} register prefix.  For example, @samp{20+1} denotes @code{r21}.
+
+@item Both lowercase and uppercase register names are recognized.
+@end itemize
 
 @node AVR-Modifiers
 @subsection Relocatable Expression Modifiers
@@ -231,84 +242,137 @@ in AVR instruction operands.  The general syntax is the following:
 modifier(relocatable-expression)
 @end smallexample
 
+When the argument of a modifier is not computable at assemble time,
+then the assembler has to encode the expression in an abstract form
+using some target-specific @emph{reloc}. The consequence is that only
+a very limited number of argument expressions is supported when they
+are not computable at assemble time.
+
+@cindex symbol modifiers, AVR
 @table @code
-@cindex symbol modifiers
 
+@cindex lo8, AVR
 @item lo8
+Bits 0 through 7 of an expression as an 8-bit relocatable expression.
 
-This modifier allows you to use bits 0 through 7 of
-an address expression as an 8 bit relocatable expression.
-
+@cindex hi8, AVR
 @item hi8
-
-This modifier allows you to use bits 7 through 15 of an address expression
-as an 8 bit relocatable expression. This is useful with, for example, the
-AVR @samp{ldi} instruction and @samp{lo8} modifier.
-
-For example
+Bits 8 through 15 of an expression as an 8-bit relocatable expression.
+This is useful with instructions that have an immediate operand, for example:
 
 @smallexample
-ldi r26, lo8(sym+10)
-ldi r27, hi8(sym+10)
+;; my_array is an array of 8-bit values in RAM.
+;; Load the N-th element to R24 where the 16-bit
+;; value N is provided in the Z register (r30 and r31).
+subi r30, lo8(-(my_array))
+sbci r31, hi8(-(my_array))
+ld   r24, Z
 @end smallexample
 
-@item hh8
-
-This modifier allows you to use bits 16 through 23 of
-an address expression as an 8 bit relocatable expression.
-Also, can be useful for loading 32 bit constants.
-
+@cindex hlo8, AVR
+@cindex hh8, AVR
 @item hlo8
+@itemx hh8
+Bits 16 through 23 of an expression as an 8-bit relocatable expression.
 
-Synonym of @samp{hh8}.
-
+@cindex hhi8, AVR
 @item hhi8
+Bits 24 through 31 of an expression as an 8-bit relocatable expression.
 
-This modifier allows you to use bits 24 through 31 of
-an expression as an 8 bit expression. This is useful with, for example, the
-AVR @samp{ldi} instruction and @samp{lo8}, @samp{hi8}, @samp{hlo8},
-@samp{hhi8}, modifier.
+@cindex gs, AVR
+@item gs
+A function address divided by 2 in order to get a word address.
+@b{G}enerate a @b{s}tub (linker trampoline) as needed.
+This is required to handle function pointers on devices with more
+than 128 KiB of program memory without the need for function pointers
+wider than 16 bits. For the rationale, see the
+@uref{https://gcc.gnu.org/onlinedocs/gcc/AVR-Options.html#eind,,GCC documentation}.
 
-For example
+On devices with less program memory, @code{gs()} behaves like @code{pm()}.
+
+The following example loads a 16-bit address related to @samp{func} and
+calls it:
 
 @smallexample
-ldi r26, lo8(285774925)
-ldi r27, hi8(285774925)
-ldi r28, hlo8(285774925)
-ldi r29, hhi8(285774925)
-; r29,r28,r27,r26 = 285774925
+;; Invoke func by means of an indirect call.
+ldi r30, lo8(gs(func))
+ldi r31, hi8(gs(func))
+#idef __AVR_HAVE_EIJMP_EICALL__
+   eicall
+#else
+   icall
+#endif
 @end smallexample
 
+This will always be a 16-bit address, even on devices with a 3-byte PC.
+With a 3-byte PC and when the target address is not reachable by an
+@code{EICALL}, the linker will @b{g}enerate a @b{s}tub with a single
+@samp{JMP func} instruction that @emph{is} reachable by @code{EIND}.
+@code{gs()} evaluates to the lower 16 bits of the word address of that stub.
+
+Notice that @code{EIND} is set by the
+@uref{https://github.com/avrdudes/avr-libc/blob/main/crt1/gcrt1.S,,startup code}
+and never read or changed by the compiler.  The default linker script locates
+the stubs such that they are in the reach of @code{EIND} as set by the
+startup code, so that the code above works in all situations and without the
+need to touch @code{EIND}.
+
+@cindex pm, AVR
+@cindex pm_lo8, AVR
 @item pm_lo8
+Bits 1 through 8 of an expression as an 8-bit relocatable expression.
+This modifier is useful for accessing code from @b{p}rogram @b{m}emory
+with a word address.
 
-This modifier allows you to use bits 0 through 7 of
-an address expression as an 8 bit relocatable expression.
-This modifier is useful for addressing data or code from
-Flash/Program memory by two-byte words. The use of @samp{pm_lo8}
-is similar to @samp{lo8}.
-
+@cindex pm_hi8, AVR
 @item pm_hi8
+Bits 9 through 16 of an expression as an 8-bit relocatable expression.
+This modifier is useful for accessing code from @b{p}rogram @b{m}emory
+with a word address.
 
-This modifier allows you to use bits 8 through 15 of
-an address expression as an 8 bit relocatable expression.
-This modifier is useful for addressing data or code from
-Flash/Program memory by two-byte words.
+@cindex pm_hh8, AVR
+@item pm_hh8
+Bits 17 through 24 of an expression as an 8-bit relocatable expression.
+This modifier is useful for accessing code from @b{p}rogram @b{m}emory
+with a word address.
 
-For example, when setting the AVR @samp{Z} register with the @samp{ldi}
-instruction for subsequent use by the @samp{ijmp} instruction:
+The code below performs an indirect call by hand to function @samp{func}
+using the following steps:
+
+@enumerate
+@item
+Put the word address of the @samp{1:} label on the stack.
+This is the return address.
+@item
+Put the word address of @samp{func} on the stack.
+@item
+Invoke @samp{func} by means of a @code{RET} instruction.
+@item
+The @code{RET} instruction at the end of @samp{func} will
+jump to the @samp{1:} label.
+@end enumerate
 
 @smallexample
-ldi r30, pm_lo8(sym)
-ldi r31, pm_hi8(sym)
-ijmp
+;; Push the word address of the return location.
+ldi r24, pm_lo8(1f)  $  push r24
+ldi r24, pm_hi8(1f)  $  push r24
+#ifdef __AVR_3_BYTE_PC__
+ldi r24, pm_hh8(1f)  $  push r24
+#endif
+
+;; Push the word address of func using alternative syntax.
+ldi r24, lo8(pm(func))  $  push r24
+ldi r24, hi8(pm(func))  $  push r24
+#ifdef __AVR_3_BYTE_PC__
+ldi r24, hh8(pm(func))  $  push r24
+#endif
+
+;; Indirect jump to the word address on the stack
+ret
+
+;; The location to which func will return.
+1:
 @end smallexample
-
-@item pm_hh8
-
-This modifier allows you to use bits 15 through 23 of
-an address expression as an 8 bit relocatable expression.
-This modifier is useful for addressing data or code from
-Flash/Program memory by two-byte words.
 
 @end table
 
@@ -320,10 +384,11 @@ Flash/Program memory by two-byte words.
 @cindex mnemonics, AVR
 @cindex instruction summary, AVR
 For detailed information on the AVR machine instruction set, see
-@url{www.atmel.com/products/AVR}.
+@url{www.atmel.com/products/AVR}
+(@uref{https://ww1.microchip.com/downloads/en/DeviceDoc/AVR-InstructionSet-Manual-DS40002198.pdf,,pdf}).
 
-@code{@value{AS}} implements all the standard AVR opcodes.
-The following table summarizes the AVR opcodes, and their arguments.
+The GNU assembler implements all the standard AVR opcodes.
+The following table summarizes the AVR opcodes and their arguments.
 
 @smallexample
 @i{Legend:}
@@ -331,21 +396,24 @@ The following table summarizes the AVR opcodes, and their arguments.
    d   @r{`ldi' register (r16-r31)}
    v   @r{`movw' even register (r0, r2, ..., r28, r30)}
    a   @r{`fmul' register (r16-r23)}
-   w   @r{`adiw' register (r24,r26,r28,r30)}
-   e   @r{pointer registers (X,Y,Z)}
-   b   @r{base pointer register and displacement ([YZ]+disp)}
-   z   @r{Z pointer register (for [e]lpm Rd,Z[+])}
+   w   @r{`adiw' register (r24, r26, r28, r30)}
+   e   @r{pointer registers (X, Y, Z)}
+   b   @r{base-pointer register and displacement ([YZ]+disp)}
+   z   @r{Z pointer register}
    M   @r{immediate value from 0 to 255}
-   n   @r{immediate value from 0 to 255 ( n = ~M ). Relocation impossible}
+   n   @r{immediate value from 0 to 255 (n = ~M). Relocation impossible}
+   N   @r{immediate value from 0 to 255. Relocation impossible}
    s   @r{immediate value from 0 to 7}
-   P   @r{Port address value from 0 to 63. (in, out)}
-   p   @r{Port address value from 0 to 31. (cbi, sbi, sbic, sbis)}
-   K   @r{immediate value from 0 to 63 (used in `adiw', `sbiw')}
+   P   @r{port address from 0 to 63 (in, out)}
+   p   @r{port address from 0 to 31 (cbi, sbi, sbic, sbis)}
+   K   @r{immediate value from 0 to 63 (adiw, sbiw)}
    i   @r{immediate value}
-   l   @r{signed pc relative offset from -64 to 63}
-   L   @r{signed pc relative offset from -2048 to 2047}
+   j   @r{7-bit immediate value from 0x40 to 0xBF (16-bit lds, sts)}
+   l   @r{PC-relative offset from -64 to 63}
+   L   @r{PC-relative offset from -2048 to 2047}
    h   @r{absolute code address (call, jmp)}
    S   @r{immediate value from 0 to 7 (S = s << 4)}
+   E   @r{immediate value from 0 to 15, shifted left by 4 (des)}
    ?   @r{use this opcode entry if no parameters, else use next opcode entry}
 
 1001010010001000   clc
@@ -378,7 +446,8 @@ The following table summarizes the AVR opcodes, and their arguments.
 1001010110001000   sleep
 1001010110011000   break
 1001010110101000   wdr
-1001010111101000   spm
+1001010111101000   spm     ?
+10010101111+1000   spm     z
 000111rdddddrrrr   adc     r,r
 000011rdddddrrrr   add     r,r
 001000rdddddrrrr   and     r,r
@@ -450,20 +519,27 @@ The following table summarizes the AVR opcodes, and their arguments.
 1001001rrrrr1111   push    r
 1001010rrrrr0111   ror     r
 1001010rrrrr0010   swap    r
+1001001rrrrr0100   xch     z,r
+1001001rrrrr0101   las     z,r
+1001001rrrrr0110   lac     z,r
+1001001rrrrr0111   lat     z,r
 00000001ddddrrrr   movw    v,v
 00000010ddddrrrr   muls    d,d
 000000110ddd0rrr   mulsu   a,a
 000000110ddd1rrr   fmul    a,a
 000000111ddd0rrr   fmuls   a,a
 000000111ddd1rrr   fmulsu  a,a
-1001001ddddd0000   sts     i,r
-1001000ddddd0000   lds     r,i
+1001001ddddd0000   sts     i,r   32-bit opcode
+1001000ddddd0000   lds     r,i   32-bit opcode
+10101kkkddddkkkk   sts     j,d   16-bit AVRrc opcode
+10100kkkddddkkkk   lds     d,j   16-bit AVRrc opcode
 10o0oo0dddddbooo   ldd     r,b
 100!000dddddee-+   ld      r,e
 10o0oo1rrrrrbooo   std     b,r
 100!001rrrrree-+   st      e,r
 1001010100011001   eicall
 1001010000011001   eijmp
+10010100EEEE1011   des     E
 @end smallexample
 
 @node AVR Pseudo Instructions
@@ -482,7 +558,7 @@ push and clear of @code{zero_reg}, push of @var{Reg}.
 
 @item __gcc_isr 2
 Emit code chunk to be used in an avr-gcc ISR epilogue.
-It will expand to at most five 1-word instructions, all optional: 
+It will expand to at most five 1-word instructions, all optional:
 pop of @var{Reg}, pop of @code{zero_reg},
 pop of @code{SREG}, pop of @code{tmp_reg}.
 

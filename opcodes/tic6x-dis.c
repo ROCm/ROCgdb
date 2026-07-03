@@ -264,21 +264,19 @@ print_insn_tic6x (bfd_vma addr, struct disassemble_info *info)
     {
       if (fp_offset & 0x1)
 	bad_offset = true;
-      if ((fp_offset & 0x3) && (fp_offset >= 28
-				|| !header.word_compact[fp_offset >> 2]))
+      else if ((fp_offset & 0x3) && (fp_offset >= 28
+				     || !header.word_compact[fp_offset >> 2]))
 	bad_offset = true;
-      if (fp_offset == 28)
+      else if (fp_offset == 28)
 	{
 	  info->bytes_per_chunk = 4;
 	  info->fprintf_func (info->stream, "<fetch packet header 0x%.8x>",
 			      header.header);
 	  return 4;
 	}
-      num_bits = (header.word_compact[fp_offset >> 2] ? 16 : 32);
     }
   else
     {
-      num_bits = 32;
       if (fp_offset & 0x3)
 	bad_offset = true;
     }
@@ -289,6 +287,10 @@ print_insn_tic6x (bfd_vma addr, struct disassemble_info *info)
       info->fprintf_func (info->stream, ".byte 0x%.2x", fp[fp_offset]);
       return 1;
     }
+
+  num_bits = 32;
+  if (fetch_packet_header_based && header.word_compact[fp_offset >> 2])
+    num_bits = 16;
 
   if (num_bits == 16)
     {

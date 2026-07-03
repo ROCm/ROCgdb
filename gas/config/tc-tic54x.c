@@ -353,6 +353,11 @@ tic54x_asg (int x ATTRIBUTE_UNUSED)
     {
       int len;
       str = demand_copy_C_string (&len);
+      if (str == NULL)
+	{
+	  ignore_rest_of_line ();
+	  return;
+	}
       c = *input_line_pointer;
     }
   else
@@ -1227,6 +1232,11 @@ tic54x_sect (int arg)
       if (*input_line_pointer == '"')
 	{
 	  name = demand_copy_C_string (&len);
+	  if (name == NULL)
+	    {
+	      ignore_rest_of_line ();
+	      return;
+	    }
 	  demand_empty_rest_of_line ();
 	  name = concat (name, flags, (char *) NULL);
 	}
@@ -1946,6 +1956,11 @@ tic54x_include (int ignored ATTRIBUTE_UNUSED)
   if (*input_line_pointer == '"')
     {
       filename = demand_copy_C_string (&len);
+      if (filename == NULL)
+	{
+	  ignore_rest_of_line ();
+	  return;
+	}
       demand_empty_rest_of_line ();
     }
   else
@@ -1983,7 +1998,14 @@ tic54x_message (int type)
   ILLEGAL_WITHIN_STRUCT ();
 
   if (*input_line_pointer == '"')
-    msg = demand_copy_C_string (&len);
+    {
+      msg = demand_copy_C_string (&len);
+      if (msg == NULL)
+	{
+	  ignore_rest_of_line ();
+	  return;
+	}
+    }
   else
     {
       msg = input_line_pointer;
@@ -2152,6 +2174,11 @@ tic54x_sblock (int ignore ATTRIBUTE_UNUSED)
 	  int len;
 
 	  name = demand_copy_C_string (&len);
+	  if (name == NULL)
+	    {
+	      ignore_rest_of_line ();
+	      return;
+	    }
 	}
       else
 	{
@@ -2313,7 +2340,10 @@ tic54x_mlib (int ignore ATTRIBUTE_UNUSED)
   if (*input_line_pointer == '"')
     {
       if ((filename = demand_copy_C_string (&len)) == NULL)
-	return;
+	{
+	  ignore_rest_of_line ();
+	  return;
+	}
     }
   else
     {
@@ -4307,11 +4337,13 @@ subsym_get_arg (char *line, const char *terminators, char **str, int nosub)
 
       input_line_pointer = ptr;
       *str = demand_copy_C_string (&len);
+      if (*str == NULL)
+	ignore_rest_of_line ();
       endp = input_line_pointer;
       input_line_pointer = savedp;
 
       /* Do forced substitutions if requested.  */
-      if (!nosub && **str == ':')
+      if (!nosub && *str && **str == ':')
 	*str = subsym_substitute (*str, 1);
     }
   else

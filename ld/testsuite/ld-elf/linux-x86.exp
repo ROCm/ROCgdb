@@ -288,7 +288,7 @@ proc elfedit_test { options test output } {
 	send_log "$got\n"
 	fail "$test_name"
     }
-    send_log "$READELF -n $options tmpdir/$test > tmpdir/$output.out\n"
+    send_log "$READELF -n tmpdir/$test > tmpdir/$output.out\n"
     set got [remote_exec host "$READELF -n tmpdir/$test" "" "/dev/null" "tmpdir/$output.out"]
     if { [lindex $got 0] != 0 || ![string match "" [lindex $got 1]] } then {
 	send_log "$got\n"

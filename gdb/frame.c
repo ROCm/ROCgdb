@@ -46,6 +46,46 @@
 #include "cli/cli-option.h"
 #include "dwarf2/loc.h"
 
+/* Number of calls to reinit_frame_cache.  */
+static unsigned int frame_cache_generation = 0;
+
+/* The "selected" stack frame is used by default for local and arg
+   access.
+
+   The "single source of truth" for the selected frame is the
+   SELECTED_FRAME_ID / SELECTED_FRAME_LEVEL pair.
+
+   Frame IDs can be saved/restored across reinitializing the frame
+   cache, while frame_info pointers can't (frame_info objects are
+   invalidated).  If we know the corresponding frame_info object, it
+   is cached in SELECTED_FRAME.
+
+   If SELECTED_FRAME_ID / SELECTED_FRAME_LEVEL are null_frame_id / -1,
+   and the target has stack and is stopped, the selected frame is the
+   current (innermost) target frame.  SELECTED_FRAME_ID is never the ID
+   of the current (innermost) target frame.  SELECTED_FRAME_LEVEL may
+   only be 0 if the selected frame is a user-created one (created and
+   selected through the "select-frame view" command), in which case
+   SELECTED_FRAME_ID is the frame id derived from the user-provided
+   addresses.
+
+   If SELECTED_FRAME_ID / SELECTED_FRAME_LEVEL are null_frame_id / -1,
+   and the target has no stack or is executing, then there's no
+   selected frame.  */
+static frame_id selected_frame_id = null_frame_id;
+static int selected_frame_level = -1;
+
+/* See frame.h.  This definition should come before any definition of a static
+   frame_info_ptr, to ensure that frame_list is destroyed after any static
+   frame_info_ptr.  This is necessary because the destructor of frame_info_ptr
+   uses frame_list.  */
+
+intrusive_list<frame_info_ptr> frame_info_ptr::frame_list;
+
+/* The cached frame_info object pointing to the selected frame.
+   Looked up on demand by get_selected_frame.  */
+static frame_info_ptr selected_frame;
+
 /* The sentinel frame terminates the innermost end of the frame chain.
    If unwound, it returns the information needed to construct an
    innermost frame.
@@ -56,10 +96,7 @@
    This is an optimization to be able to find the sentinel frame quickly,
    it could otherwise be found in the frame cache.  */
 
-static frame_info *sentinel_frame;
-
-/* Number of calls to reinit_frame_cache.  */
-static unsigned int frame_cache_generation = 0;
+static frame_info_ptr sentinel_frame;
 
 /* See frame.h.  */
 
@@ -960,16 +997,10 @@ frame_id_inner (struct gdbarch *gdbarch, struct frame_id l, struct frame_id r)
 frame_info_ptr
 frame_find_by_id (struct frame_id id)
 {
-  frame_info_ptr frame, prev_frame;
-
   /* ZERO denotes the null frame, let the caller decide what to do
      about it.  Should it instead return get_current_frame()?  */
   if (!frame_id_p (id))
     return NULL;
-
-  /* Check for the sentinel frame.  */
-  if (id == frame_id_build_sentinel (0, 0))
-    return frame_info_ptr (sentinel_frame);
 
   /* Try using the frame stash first.  Finding it there removes the need
      to perform the search by looping over all frames, which can be very
@@ -979,10 +1010,11 @@ frame_find_by_id (struct frame_id id)
      is called from another function (such as value_fetch_lazy, case
      val->lval () == lval_register) which already loops over all frames,
      making the overall behavior O(n^2).  */
-  frame = frame_stash_find (id);
-  if (frame)
+  frame_info_ptr frame = frame_stash_find (id);
+  if (frame != nullptr)
     return frame;
 
+  frame_info_ptr prev_frame;
   for (frame = get_current_frame (); ; frame = prev_frame)
     {
       struct frame_id self = get_frame_id (frame);
@@ -992,7 +1024,7 @@ frame_find_by_id (struct frame_id id)
 	return frame;
 
       prev_frame = get_prev_frame (frame);
-      if (!prev_frame)
+      if (prev_frame == nullptr)
 	return NULL;
 
       /* As a safety net to avoid unnecessary backtracing while trying
@@ -1765,12 +1797,12 @@ get_current_frame (void)
   if (get_traceframe_number () < 0)
     validate_registers_access ();
 
-  if (sentinel_frame == NULL)
-    sentinel_frame =
-      create_sentinel_frame (current_program_space,
-			     current_inferior ()->aspace.get (),
-			     get_thread_regcache (inferior_thread ()),
-			     0, 0).get ();
+  if (sentinel_frame == nullptr)
+    sentinel_frame
+      = create_sentinel_frame (current_program_space,
+			       current_inferior ()->aspace.get (),
+			       get_thread_regcache (inferior_thread ()),
+			       0, 0);
 
   /* Set the current frame before computing the frame id, to avoid
      recursion inside compute_frame_id, in case the frame's
@@ -1783,48 +1815,11 @@ get_current_frame (void)
      want to leave with the current frame created and linked in --
      we should never end up with the sentinel frame as outermost
      frame.  */
-  current_frame = get_prev_frame_always_1 (frame_info_ptr (sentinel_frame));
+  current_frame = get_prev_frame_always_1 (sentinel_frame);
   gdb_assert (current_frame != NULL);
 
   return current_frame;
 }
-
-/* The "selected" stack frame is used by default for local and arg
-   access.
-
-   The "single source of truth" for the selected frame is the
-   SELECTED_FRAME_ID / SELECTED_FRAME_LEVEL pair.
-
-   Frame IDs can be saved/restored across reinitializing the frame
-   cache, while frame_info pointers can't (frame_info objects are
-   invalidated).  If we know the corresponding frame_info object, it
-   is cached in SELECTED_FRAME.
-
-   If SELECTED_FRAME_ID / SELECTED_FRAME_LEVEL are null_frame_id / -1,
-   and the target has stack and is stopped, the selected frame is the
-   current (innermost) target frame.  SELECTED_FRAME_ID is never the ID
-   of the current (innermost) target frame.  SELECTED_FRAME_LEVEL may
-   only be 0 if the selected frame is a user-created one (created and
-   selected through the "select-frame view" command), in which case
-   SELECTED_FRAME_ID is the frame id derived from the user-provided
-   addresses.
-
-   If SELECTED_FRAME_ID / SELECTED_FRAME_LEVEL are null_frame_id / -1,
-   and the target has no stack or is executing, then there's no
-   selected frame.  */
-static frame_id selected_frame_id = null_frame_id;
-static int selected_frame_level = -1;
-
-/* See frame.h.  This definition should come before any definition of a static
-   frame_info_ptr, to ensure that frame_list is destroyed after any static
-   frame_info_ptr.  This is necessary because the destructor of frame_info_ptr
-   uses frame_list.  */
-
-intrusive_list<frame_info_ptr> frame_info_ptr::frame_list;
-
-/* The cached frame_info object pointing to the selected frame.
-   Looked up on demand by get_selected_frame.  */
-static frame_info_ptr selected_frame;
 
 /* See frame.h.  */
 
@@ -3274,7 +3269,11 @@ frame_follow_static_link (const frame_info_ptr &initial_frame)
 
   const struct dynamic_prop *static_link = frame_block->static_link ();
   if (static_link == nullptr)
-    return {};
+    {
+      const language_defn *lang
+	= language_def (get_frame_language (initial_frame));
+      return lang->follow_static_link (initial_frame);
+    }
 
   CORE_ADDR upper_frame_base;
 

@@ -292,6 +292,14 @@ gdb_caching_proc ada_minimal_encodings {} {
 		additional_flags=-fgnat-encodings=minimal]
 }
 
+# Return 1 if GNAT is based on LLVM.
+gdb_caching_proc using_gnat_llvm {} {
+    # Whether or not gnatmake will use LLVM can't be determined from
+    # the command line -- e.g., --version doesn't provide any
+    # indication.  So for now use a proxy.
+    return [expr {![ada_minimal_encodings]}]
+}
+
 # Return 1 if GNAT supports -Og.
 gdb_caching_proc ada_og {} {
     return [ada_simple_compile gnat_og additional_flags=-Og]

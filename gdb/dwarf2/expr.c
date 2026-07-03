@@ -3552,7 +3552,7 @@ dwarf_block_to_dwarf_reg_deref (gdb::array_view<const gdb_byte> block,
       if (buf == NULL)
 	return -1;
       if ((int) dwarf_reg != dwarf_reg)
-       return -1;
+	return -1;
     }
   else
     return -1;
@@ -3572,7 +3572,7 @@ dwarf_block_to_dwarf_reg_deref (gdb::array_view<const gdb_byte> block,
     {
       buf++;
       if (buf >= buf_end)
-       return -1;
+	return -1;
       *deref_size_return = *buf++;
     }
   else
@@ -3634,7 +3634,7 @@ dwarf_block_to_sp_offset (struct gdbarch *gdbarch,
   else
     {
       if (*buf != DW_OP_bregx)
-       return false;
+	return false;
 
       buf++;
       buf = gdb_read_uleb128 (buf, buf_end, &dwarf_reg);

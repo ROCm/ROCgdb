@@ -133,12 +133,17 @@ aarch64_remove_point (enum raw_bkpt_type type, CORE_ADDR addr,
 static std::vector<CORE_ADDR>
 aarch64_stopped_data_addresses ()
 {
-  if (windows_process.siginfo_er.ExceptionCode != EXCEPTION_BREAKPOINT ||
-      windows_process.siginfo_er.NumberParameters != 2)
+  windows_thread_info *th = windows_process.find_thread (current_thread->id);
+  if (th == nullptr
+      || th->last_event.dwDebugEventCode != EXCEPTION_DEBUG_EVENT)
     return {};
 
-  const CORE_ADDR addr_trap
-    = (CORE_ADDR) windows_process.siginfo_er.ExceptionInformation[1];
+  EXCEPTION_RECORD &er = th->last_event.u.Exception.ExceptionRecord;
+  if (er.ExceptionCode != EXCEPTION_BREAKPOINT ||
+      er.NumberParameters != 2)
+    return {};
+
+  const CORE_ADDR addr_trap = (CORE_ADDR) er.ExceptionInformation[1];
 
   return aarch64_stopped_data_addresses (&debug_reg_state, addr_trap);
 }

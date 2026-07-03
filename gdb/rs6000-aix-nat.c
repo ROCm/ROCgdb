@@ -101,6 +101,11 @@ public:
      support.  */
   void follow_fork (inferior *, ptid_t, target_waitkind, bool, bool) override;
 
+  /* Keep AIX as well sharable across inferiors while following fork()
+     like child process in sync with Linux.  */
+  bool is_shareable () override
+  { return true; }
+
   const struct target_desc *read_description ()  override;
 
   int insert_fork_catchpoint (int) override;

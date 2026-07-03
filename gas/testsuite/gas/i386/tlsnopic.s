@@ -2,7 +2,6 @@
 	.globl baz
 	.hidden baz
 	.globl var
-	.globl var2
 	.hidden var2
 bar:	.long 27
 baz:	.long 29

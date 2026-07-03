@@ -1038,7 +1038,7 @@ handle_fatal_signal (int sig)
 #ifdef SIGABRT
   signal (SIGABRT, SIG_DFL);
 #endif
-  abort ();		/* ARI: abort */
+  abort ();
 }
 
 /* The SIGSEGV handler for this thread, or NULL if there is none.  GDB

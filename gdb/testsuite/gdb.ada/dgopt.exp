@@ -19,6 +19,14 @@ load_lib "ada.exp"
 
 require allow_ada_tests
 
+# Despite appearances, this is not really an "Ada" test -- instead the
+# scenario here is that GNAT ends up putting one reference to x.adb
+# into the DWARF (whereas it mostly refers to x.adb.dg); and this
+# reference was being incorrectly omitted from .debug_names.
+# gnat-llvm does not have this bug, so the test does not make sense
+# there.
+require !using_gnat_llvm
+
 standard_ada_testfile x
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable \

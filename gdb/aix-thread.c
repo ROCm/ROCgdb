@@ -974,7 +974,12 @@ pd_enable (inferior *inf)
     = lookup_minimal_symbol (current_program_space, stub_name);
   if (ms.minsym == NULL)
     return;
-  data->pd_brk_addr = ms.value_address ();
+
+  /* On AIX, symbols can be function descriptors, so we need to resolve
+     them to get the actual code address.  */
+  if (!msymbol_is_function (ms.objfile, ms.minsym, &data->pd_brk_addr))
+    return;
+
   if (!create_thread_event_breakpoint (current_inferior ()->arch (),
 				       data->pd_brk_addr))
     return;

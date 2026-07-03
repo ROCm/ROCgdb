@@ -1791,8 +1791,6 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		}
 		break;
 	    case 'p': /* Vendor-specific (SpacemiT) operands.  */
-	      size_t n;
-	      size_t s;
 	      switch (*++oparg)
 		{
 		case 'V':
@@ -1815,12 +1813,14 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 		  break;
 		case 'u': /* Integer immediate, 'XpuN@S' ...
 			     N-bit unsigned immediate at bit S.  */
-		  n = strtol (oparg + 1, (char **)&oparg, 10);
-		  if (*oparg != '@')
-		    goto unknown_validate_operand;
-		  s = strtol (oparg + 1, (char **)&oparg, 10);
-		  oparg--;
-		  USE_IMM (n, s);
+		  {
+		    size_t n = strtol (oparg + 1, (char **)&oparg, 10);
+		    if (*oparg != '@')
+		      goto unknown_validate_operand;
+		    size_t s = strtol (oparg + 1, (char **)&oparg, 10);
+		    oparg--;
+		    USE_IMM (n, s);
+		  }
 		  break;
 		case 'n':
 		case 'b':
@@ -4309,8 +4309,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  break;
 
 		case 'p': /* Vendor-specific (SpacemiT) operands.  */
-		  size_t n;
-		  size_t s;
 		  switch (*++oparg)
 		    {
 		    case 'V':
@@ -4358,19 +4356,21 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      break;
 		    case 'u': /* Integer immediate, 'XpuN@S' ...
 				 N-bit unsigned immediate at bit S.  */
-		      n = strtol (oparg + 1, (char **)&oparg, 10);
-		      if (*oparg != '@')
-			goto unknown_riscv_ip_operand;
-		      s = strtol (oparg + 1, (char **)&oparg, 10);
-		      oparg--;
-		      my_getExpression (imm_expr, asarg, force_reloc);
-		      check_absolute_expr (ip, imm_expr, false);
-		      if (!VALIDATE_U_IMM (imm_expr->X_add_number, n))
-			as_bad (_("improper immediate value (%"PRIu64")"),
-				imm_expr->X_add_number);
-		      INSERT_IMM (n, s, *ip, imm_expr->X_add_number);
-		      imm_expr->X_op = O_absent;
-		      asarg = expr_parse_end;
+		      {
+			size_t n = strtol (oparg + 1, (char **)&oparg, 10);
+			if (*oparg != '@')
+			  goto unknown_riscv_ip_operand;
+			size_t s = strtol (oparg + 1, (char **)&oparg, 10);
+			oparg--;
+			my_getExpression (imm_expr, asarg, force_reloc);
+			check_absolute_expr (ip, imm_expr, false);
+			if (!VALIDATE_U_IMM (imm_expr->X_add_number, n))
+			  as_bad (_("improper immediate value (%"PRIu64")"),
+				  imm_expr->X_add_number);
+			INSERT_IMM (n, s, *ip, imm_expr->X_add_number);
+			imm_expr->X_op = O_absent;
+			asarg = expr_parse_end;
+		      }
 		      continue;
 		    case 'n': /* Xpn: stride (0-1), paired with Xpx.  */
 		      my_getExpression (imm_expr, asarg, force_reloc);

@@ -732,6 +732,40 @@ linux_process_target::handle_extended_wait (lwp_info **orig_event_lwp,
       event_ptid = event_thr->id;
       event_pid = event_ptid.pid ();
 
+      /* If GDBserver had sent the exec'ing thread a SIGSTOP and the thread
+	 exec'ed before consuming it, the SIGSTOP stays pending across the exec.
+	 The pending SIGSTOP is reported once the post-exec thread is resumed.
+	 Carry the expectation over to the new lwp_info below, so that it is
+	 filtered out instead of being reported to GDB.
+
+	 Things get interesting if a non-leader thread does the exec.  The
+	 kernel deletes the other threads, changes the exec'ing thread's id
+	 so it matches the tgid (becomes the new leader), and reports the
+	 PTRACE_EVENT_EXEC for that leader id.  If a SIGSTOP was pending on
+	 the exec'ing non-leader as the exec happened, it will still be pending
+	 post-exec, but it will be reported under leader id.
+
+	 Since EVENT_LWP was looked up using the leader id, it represents the
+	 former leader, not necessarily the exec'ing thread.  To properly carry
+	 the stop expectation from the exec'ing thread's lwp_info to the new
+	 lwp_info, use PTRACE_GETEVENTMSG to obtain the exec'ing thread's former
+	 id, and look up the lwp_info from that.
+
+	 If a SIGSTOP is pending (in the kernel) on the leader when a non-leader
+	 execs, then that SIGSTOP disappears with the thread.  */
+      unsigned long execing_tid;
+      if (ptrace (PTRACE_GETEVENTMSG, event_ptid.lwp (), (PTRACE_TYPE_ARG3) 0,
+		  &execing_tid) != 0)
+	{
+	  /* If ptrace fails, fall back to using the leader.  */
+	  execing_tid = event_ptid.lwp ();
+	}
+
+      lwp_info *execing_lwp
+	= find_lwp_pid (ptid_t (event_pid, execing_tid));
+      bool stop_expected
+	= execing_lwp != nullptr && execing_lwp->stop_expected;
+
       /* Save the syscall list from the execing process.  */
       process_info *proc = event_thr->process ();
       syscalls_to_catch = std::move (proc->syscalls_to_catch);
@@ -746,6 +780,9 @@ linux_process_target::handle_extended_wait (lwp_info **orig_event_lwp,
       event_thr = event_lwp->thread;
       gdb_assert (current_thread == event_thr);
       arch_setup_thread (event_thr);
+
+      /* Carry over a possible SIGSTOP expectation.  */
+      event_lwp->stop_expected = stop_expected;
 
       /* Set the event status.  */
       event_lwp->waitstatus.set_execd

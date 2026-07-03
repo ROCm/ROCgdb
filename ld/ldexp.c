@@ -552,20 +552,54 @@ fold_binary (etree_type *tree)
       /* Check to see if the user has overridden the default
 	 value.  */
       segment_name = tree->binary.rhs->name.name;
+
+      bool update_image_base
+	= ((bfd_get_flavour (link_info.output_bfd)
+	    == bfd_target_elf_flavour)
+	   && bfd_link_pde (&link_info)
+	   && link_info.maxpagesize_is_set);
+
       for (seg = segments; seg; seg = seg->next)
 	if (strcmp (seg->name, segment_name) == 0)
 	  {
 	    if (!seg->used
 		&& config.magic_demand_paged
-		&& link_info.maxpagesize != 0
-		&& (seg->value % link_info.maxpagesize) != 0)
-	      einfo (_("%P: warning: address of `%s' "
-		       "isn't multiple of maximum page size\n"),
-		     segment_name);
+		&& link_info.maxpagesize != 0)
+	      {
+		if (seg->value < link_info.maxpagesize)
+		  {
+		    if (update_image_base)
+		      einfo (_("%P: warning: image base (0x%llx) < "
+			       "maximum page size (0x%llx)\n"),
+			     (unsigned long long) seg->value,
+			     (unsigned long long) link_info.maxpagesize);
+		  }
+		else if ((seg->value % link_info.maxpagesize) != 0)
+		  einfo (_("%P: warning: address of `%s' "
+			   "isn't multiple of maximum page size\n"),
+			 segment_name);
+
+		/* Don't override image base from command-line.  */
+		if (strcmp (segment_name, "text-segment") == 0)
+		  update_image_base = false;
+
+	      }
 	    seg->used = true;
 	    value = seg->value;
 	    break;
 	  }
+
+      /* When generating Position Dependent Executable for ELF with the
+	 maximum page size set on command-line, if image base address
+	 is lower than the maximum page size, set image base address
+	 to the maximum page size to avoid segfault.  NB: For ELF,
+	 -Ttext-segment=ADDR is an alias of --image-base=ADDR, which
+	 sets the base address of the ELF executable.  */
+      if (update_image_base
+	  && link_info.maxpagesize > value
+	  && strcmp (segment_name, "text-segment") == 0)
+	value = link_info.maxpagesize;
+
       new_rel_from_abs (value);
       return;
     }

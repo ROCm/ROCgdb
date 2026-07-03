@@ -369,10 +369,6 @@ i[3-7]86-*-solaris2*)
 			targ64_extra_libpath=elf_x86_64_sol2
 			targ64_extra_emuls=elf_x86_64
 			;;
-i[3-7]86-*-solaris*)
-			targ_emul=elf_i386_sol2
-			targ_extra_emuls=elf_i386
-			;;
 i[3-7]86-*-netbsd* | \
 i[3-7]86-*-netbsd*-gnu* | \
 i[3-7]86-*-knetbsd*-gnu | \
@@ -897,10 +893,6 @@ sparc-*-solaris2*)
 			targ_extra_emuls=elf32_sparc
 			targ64_extra_libpath=elf64_sparc_sol2
 			targ64_extra_emuls=elf64_sparc
-			;;
-sparc*-*-solaris*)
-			targ_emul=elf32_sparc_sol2
-			targ_extra_emuls=elf32_sparc
 			;;
 sparc*-*-vxworks*)	targ_emul=elf32_sparc_vxworks
 			;;

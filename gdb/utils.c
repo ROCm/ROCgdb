@@ -216,7 +216,7 @@ abort_with_message (const char *msg)
   else
     gdb_puts (msg, gdb_stderr);
 
-  abort ();		/* ARI: abort */
+  abort ();
 }
 
 /* Dump core trying to increase the core soft limit to hard limit first.  */
@@ -235,7 +235,7 @@ dump_core (void)
      a backtrace to the console here.  */
   signal (SIGABRT, SIG_DFL);
 
-  abort ();		/* ARI: abort */
+  abort ();
 }
 
 /* Check whether GDB will be able to dump core using the dump_core
@@ -385,7 +385,7 @@ internal_vproblem (struct internal_problem *problem,
 	   does not fix this problem.  This is the solution suggested
 	   at http://gcc.gnu.org/bugzilla/show_bug.cgi?id=25509.  */
 	if (write (STDERR_FILENO, msg, sizeof (msg)) != sizeof (msg))
-	  abort (); /* ARI: abort */
+	  abort ();
 	exit (1);
       }
   }
