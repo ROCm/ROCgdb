@@ -2456,10 +2456,8 @@ default_print_one_register_info (struct ui_file *file,
     }
   else
     {
-      struct value_print_options opts;
-
       /* Print the register in hex.  */
-      get_formatted_print_options (&opts, 'x');
+      value_print_options opts = get_formatted_print_options ('x');
       opts.deref_ref = true;
       common_val_print (val, &format_stream, 0, &opts, current_language);
       /* If not a vector register, print it also according to its

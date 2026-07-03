@@ -6340,15 +6340,13 @@ mips_print_fp_register (struct ui_file *file, const frame_info_ptr &frame,
 
   if (register_size (gdbarch, regnum) == 4 || mips2_fp_compat (frame))
     {
-      struct value_print_options opts;
-
       /* 4-byte registers: Print hex and floating.  Also print even
 	 numbered registers as doubles.  */
       mips_read_fp_register_single (frame, regnum, raw_buffer);
       flt_str = target_float_to_string (raw_buffer.data (), flt_type,
 					"%-17.9g");
 
-      get_formatted_print_options (&opts, 'x');
+      value_print_options opts = get_formatted_print_options ('x');
       print_scalar_formatted (raw_buffer.data (),
 			      builtin_type (gdbarch)->builtin_uint32,
 			      &opts, 'w', file);
@@ -6366,8 +6364,6 @@ mips_print_fp_register (struct ui_file *file, const frame_info_ptr &frame,
     }
   else
     {
-      struct value_print_options opts;
-
       /* Eight byte registers: print each one as hex, float and double.  */
       mips_read_fp_register_single (frame, regnum, raw_buffer);
       flt_str = target_float_to_string (raw_buffer.data (), flt_type,
@@ -6377,7 +6373,7 @@ mips_print_fp_register (struct ui_file *file, const frame_info_ptr &frame,
       dbl_str = target_float_to_string (raw_buffer.data (), dbl_type,
 					"%-24.17g");
 
-      get_formatted_print_options (&opts, 'x');
+      value_print_options opts = get_formatted_print_options ('x');
       print_scalar_formatted (raw_buffer.data (),
 			      builtin_type (gdbarch)->builtin_uint64,
 			      &opts, 'g', file);
@@ -6392,7 +6388,6 @@ mips_print_register (struct ui_file *file, const frame_info_ptr &frame,
 		     int regnum)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
-  struct value_print_options opts;
   struct value *val;
 
   if (mips_float_register_p (gdbarch, regnum))
@@ -6414,7 +6409,7 @@ mips_print_register (struct ui_file *file, const frame_info_ptr &frame,
   else
     gdb_printf (file, ": ");
 
-  get_formatted_print_options (&opts, 'x');
+  value_print_options opts = get_formatted_print_options ('x');
   value_print_scalar_formatted (val, &opts, 0, file);
 }
 

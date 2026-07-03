@@ -1036,7 +1036,6 @@ output_register (const frame_info_ptr &frame, int regnum, int format,
   struct ui_out *uiout = current_uiout;
   value *val
     = value_of_register (regnum, get_next_frame_sentinel_okay (frame));
-  struct value_print_options opts;
 
   if (skip_unavailable && !val->entirely_available ())
     return;
@@ -1052,7 +1051,7 @@ output_register (const frame_info_ptr &frame, int regnum, int format,
 
   string_file stb;
 
-  get_formatted_print_options (&opts, format);
+  value_print_options opts = get_formatted_print_options (format);
   opts.deref_ref = true;
   common_val_print (val, &stb, 0, &opts, current_language);
   uiout->field_stream ("value", stb);
@@ -1292,7 +1291,6 @@ mi_cmd_data_read_memory (const char *command, const char *const *argv,
       {
 	int col;
 	int col_byte;
-	struct value_print_options print_opts;
 
 	ui_out_emit_tuple tuple_emitter (uiout);
 	uiout->field_core_addr ("addr", gdbarch, addr + row_byte);
@@ -1300,7 +1298,8 @@ mi_cmd_data_read_memory (const char *command, const char *const *argv,
 	   row_byte); */
 	{
 	  ui_out_emit_list list_data_emitter (uiout, "data");
-	  get_formatted_print_options (&print_opts, word_format);
+	  value_print_options print_opts
+	    = get_formatted_print_options (word_format);
 	  for (col = 0, col_byte = row_byte;
 	       col < nr_cols;
 	       col++, col_byte += word_size)

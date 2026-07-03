@@ -113,14 +113,14 @@ get_no_prettyformat_print_options (struct value_print_options *opts)
   opts->prettyformat = Val_no_prettyformat;
 }
 
-/* Initialize *OPTS to be a copy of the user print options, but using
-   FORMAT as the formatting option.  */
-void
-get_formatted_print_options (struct value_print_options *opts,
-			     char format)
+/* See valprint.h.  */
+
+value_print_options
+get_formatted_print_options (char format)
 {
-  *opts = user_print_options;
-  opts->format = format;
+  value_print_options opts = user_print_options;
+  opts.format = format;
+  return opts;
 }
 
 /* Implement 'show print elements'.  */

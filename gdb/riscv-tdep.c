@@ -1199,11 +1199,10 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
     }
   else
     {
-      struct value_print_options opts;
       riscv_gdbarch_tdep *tdep = gdbarch_tdep<riscv_gdbarch_tdep> (gdbarch);
 
       /* Print the register in hex.  */
-      get_formatted_print_options (&opts, 'x');
+      value_print_options opts = get_formatted_print_options ('x');
       opts.deref_ref = true;
       common_val_print (val, file, 0, &opts, current_language);
 

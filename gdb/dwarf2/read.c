@@ -5120,8 +5120,6 @@ dwarf2_compute_name (const char *name,
 		    cu->language_defn->printchar (value, type, &buf);
 		  else
 		    {
-		      struct value_print_options opts;
-
 		      if (baton != NULL)
 			v = dwarf2_evaluate_loc_desc (type, NULL,
 						      baton->expr (),
@@ -5138,7 +5136,8 @@ dwarf2_compute_name (const char *name,
 
 		      /* Specify decimal so that we do not depend on
 			 the radix.  */
-		      get_formatted_print_options (&opts, 'd');
+		      value_print_options opts
+			= get_formatted_print_options ('d');
 		      opts.raw = true;
 		      value_print (v, &buf, &opts);
 		      release_value (v);

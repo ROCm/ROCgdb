@@ -1107,8 +1107,7 @@ do_examine_next_address (struct format_data fmt)
   if (format == 's' || format == 'i')
     maxelts = 1;
 
-  value_print_options opts;
-  get_formatted_print_options (&opts, format);
+  value_print_options opts = get_formatted_print_options (format);
 
   bool need_to_update_next_address = false;
   CORE_ADDR addr_rewound = 0;
@@ -1464,7 +1463,6 @@ output_command (const char *exp, int from_tty)
   char format = 0;
   struct value *val;
   struct format_data fmt;
-  struct value_print_options opts;
 
   fmt.size = 0;
   fmt.raw = 0;
@@ -1483,7 +1481,7 @@ output_command (const char *exp, int from_tty)
 
   annotate_value_begin (val->type ());
 
-  get_formatted_print_options (&opts, format);
+  value_print_options opts = get_formatted_print_options (format);
   opts.raw = fmt.raw;
 
   /* This setting allows large arrays to be printed by limiting the
@@ -2198,8 +2196,6 @@ do_one_display (struct display *d)
     }
   else
     {
-      struct value_print_options opts;
-
       annotate_display_format ();
 
       if (d->format.format)
@@ -2214,7 +2210,7 @@ do_one_display (struct display *d)
 
       annotate_display_expression ();
 
-      get_formatted_print_options (&opts, d->format.format);
+      value_print_options opts = get_formatted_print_options (d->format.format);
       opts.raw = d->format.raw;
 
       try

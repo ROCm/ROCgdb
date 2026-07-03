@@ -151,10 +151,9 @@ extern void get_user_print_options (struct value_print_options *opts);
    pretty-formatting disabled.  */
 extern void get_no_prettyformat_print_options (struct value_print_options *);
 
-/* Initialize *OPTS to be a copy of the user print options, but using
-   FORMAT as the formatting option.  */
-extern void get_formatted_print_options (struct value_print_options *opts,
-					 char format);
+/* Return a copy of the user print options, but using FORMAT as the
+   formatting option.  */
+extern value_print_options get_formatted_print_options (char format);
 
 extern void maybe_print_array_index (struct type *index_type, LONGEST index,
 				     struct ui_file *stream,
