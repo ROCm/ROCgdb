@@ -2706,7 +2706,7 @@ shell_internal_fn (struct gdbarch *gdbarch,
   value_print_options opts = get_no_prettyformat_print_options ();
 
   string_file stream;
-  value_print (val, &stream, &opts);
+  value_print (val, &stream, opts);
 
   /* We should always have two quote chars, which we'll strip.  */
   gdb_assert (stream.size () >= 2);

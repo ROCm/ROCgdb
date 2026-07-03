@@ -807,7 +807,7 @@ ada_varobj_get_type_of_child (struct value *parent_value,
 
 static std::string
 ada_varobj_get_value_image (struct value *value,
-			    const value_print_options *opts)
+			    const value_print_options &opts)
 {
   string_file buffer;
 
@@ -826,7 +826,7 @@ ada_varobj_get_value_image (struct value *value,
 static std::string
 ada_varobj_get_value_of_array_variable (struct value *value,
 					struct type *type,
-					const value_print_options *opts)
+					const value_print_options &opts)
 {
   const int numchild = ada_varobj_get_array_number_of_children (value, type);
 
@@ -836,7 +836,7 @@ ada_varobj_get_value_of_array_variable (struct value *value,
      which is not very convenient...  */
   if (value
       && ada_is_string_type (type)
-      && (opts->format == 0 || opts->format == 's'))
+      && (opts.format == 0 || opts.format == 's'))
     {
       std::string str = ada_varobj_get_value_image (value, opts);
       return string_printf ("[%d] %s", numchild, str.c_str ());
@@ -851,7 +851,7 @@ ada_varobj_get_value_of_array_variable (struct value *value,
 static std::string
 ada_varobj_get_value_of_variable (struct value *value,
 				  struct type *type,
-				  const value_print_options *opts)
+				  const value_print_options &opts)
 {
   ada_varobj_decode_var (&value, &type);
 
@@ -924,7 +924,7 @@ ada_value_of_variable (const struct varobj *var,
 {
   value_print_options opts = varobj_formatted_print_options (format);
   return ada_varobj_get_value_of_variable (var->value.get (), var->type,
-					   &opts);
+					   opts);
 }
 
 /* Implement the "value_is_changeable_p" routine for Ada.  */

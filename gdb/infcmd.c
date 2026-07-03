@@ -1669,7 +1669,7 @@ print_return_value_1 (struct ui_out *uiout, struct return_value_info *rv)
 	{
 	  const value_print_options opts = get_user_print_options ();
 	  string_file stb;
-	  value_print (rv->value, &stb, &opts);
+	  value_print (rv->value, &stb, opts);
 	  uiout->field_stream ("return-value", stb);
 	}
       else
@@ -2440,7 +2440,7 @@ default_print_one_register_info (struct ui_file *file,
       value_print_options opts = get_user_print_options ();
       opts.deref_ref = true;
 
-      common_val_print (val, &format_stream, 0, &opts, current_language);
+      common_val_print (val, &format_stream, 0, opts, current_language);
 
       if (print_raw_format)
 	{
@@ -2456,7 +2456,7 @@ default_print_one_register_info (struct ui_file *file,
       /* Print the register in hex.  */
       value_print_options opts = get_formatted_print_options ('x');
       opts.deref_ref = true;
-      common_val_print (val, &format_stream, 0, &opts, current_language);
+      common_val_print (val, &format_stream, 0, opts, current_language);
       /* If not a vector register, print it also according to its
 	 natural format.  */
       if (print_raw_format && regtype->is_vector () == 0)
@@ -2464,7 +2464,7 @@ default_print_one_register_info (struct ui_file *file,
 	  pad_to_column (format_stream, value_column_2);
 	  opts = get_user_print_options ();
 	  opts.deref_ref = true;
-	  common_val_print (val, &format_stream, 0, &opts, current_language);
+	  common_val_print (val, &format_stream, 0, opts, current_language);
 	}
     }
 

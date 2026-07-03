@@ -44,7 +44,7 @@
 
 static void pascal_object_print_value_fields (struct value *, struct ui_file *,
 					      int,
-					      const value_print_options *,
+					      const value_print_options &,
 					      struct type **, int);
 
 /* Decorations for Pascal.  */
@@ -66,7 +66,7 @@ static const struct generic_val_print_decorations p_decorations =
 void
 pascal_language::value_print_inner (struct value *val,
 				    struct ui_file *stream, int recurse,
-				    const value_print_options *options) const
+				    const value_print_options &options) const
 
 {
   struct type *type = check_typedef (val->type ());
@@ -96,14 +96,14 @@ pascal_language::value_print_inner (struct value *val,
 	    /* If 's' format is used, try to print out as string.
 	       If no format is given, print as string if element type
 	       is of TYPE_CODE_CHAR and element size is 1,2 or 4.  */
-	    if (options->format == 's'
+	    if (options.format == 's'
 		|| ((eltlen == 1 || eltlen == 2 || eltlen == 4)
 		    && elttype->code () == TYPE_CODE_CHAR
-		    && options->format == 0))
+		    && options.format == 0))
 	      {
 		/* If requested, look for the first null char and only print
 		   elements up to it.  */
-		if (options->stop_print_at_null)
+		if (options.stop_print_at_null)
 		  {
 		    unsigned int print_max_chars
 		      = get_print_max_chars (options);
@@ -148,12 +148,12 @@ pascal_language::value_print_inner (struct value *val,
       goto print_unpacked_pointer;
 
     case TYPE_CODE_PTR:
-      if (options->format && options->format != 's')
+      if (options.format && options.format != 's')
 	{
 	  value_print_scalar_formatted (val, options, 0, stream);
 	  break;
 	}
-      if (options->vtblprint && pascal_object_is_vtbl_ptr_type (type))
+      if (options.vtblprint && pascal_object_is_vtbl_ptr_type (type))
 	{
 	  /* Print the unmangled name if desired.  */
 	  /* Print vtable entry - we only get here if we ARE using
@@ -177,7 +177,7 @@ pascal_language::value_print_inner (struct value *val,
 	  return;
 	}
 
-      if (options->addressprint && options->format != 's')
+      if (options.addressprint && options.format != 's')
 	{
 	  fputs_styled (paddress (gdbarch, addr), address_style.style (),
 			stream);
@@ -191,7 +191,7 @@ pascal_language::value_print_inner (struct value *val,
 	       || elttype->code () == TYPE_CODE_CHAR))
 	   || ((elttype->length () == 2 || elttype->length () == 4)
 	       && elttype->code () == TYPE_CODE_CHAR))
-	  && (options->format == 0 || options->format == 's')
+	  && (options.format == 0 || options.format == 's')
 	  && addr != 0)
 	{
 	  if (want_space)
@@ -230,7 +230,7 @@ pascal_language::value_print_inner (struct value *val,
 	    = lookup_minimal_symbol_by_pc (vt_address);
 
 	  /* If 'symbol_print' is set, we did the work above.  */
-	  if (!options->symbol_print
+	  if (!options.symbol_print
 	      && (msymbol.minsym != NULL)
 	      && (vt_address == msymbol.value_address ()))
 	    {
@@ -241,7 +241,7 @@ pascal_language::value_print_inner (struct value *val,
 	      gdb_puts (">", stream);
 	      want_space = 1;
 	    }
-	  if (vt_address && options->vtblprint)
+	  if (vt_address && options.vtblprint)
 	    {
 	      struct value *vt_val;
 	      struct symbol *wsym = NULL;
@@ -268,7 +268,7 @@ pascal_language::value_print_inner (struct value *val,
 	      vt_val = value_at (wtype, vt_address);
 	      common_val_print (vt_val, stream, recurse + 1, options,
 				current_language);
-	      if (options->prettyformat)
+	      if (options.prettyformat)
 		{
 		  gdb_printf (stream, "\n");
 		  print_spaces (2 + 2 * recurse, stream);
@@ -294,14 +294,14 @@ pascal_language::value_print_inner (struct value *val,
       break;
 
     case TYPE_CODE_UNION:
-      if (recurse && !options->unionprint)
+      if (recurse && !options.unionprint)
 	{
 	  gdb_printf (stream, "{...}");
 	  break;
 	}
       [[fallthrough]];
     case TYPE_CODE_STRUCT:
-      if (options->vtblprint && pascal_object_is_vtbl_ptr_type (type))
+      if (options.vtblprint && pascal_object_is_vtbl_ptr_type (type))
 	{
 	  /* Print the unmangled name if desired.  */
 	  /* Print vtable entry - we only get here if NOT using
@@ -407,10 +407,10 @@ pascal_language::value_print_inner (struct value *val,
 
 void
 pascal_language::value_print (struct value *val, struct ui_file *stream,
-			      const value_print_options *options) const
+			      const value_print_options &options) const
 {
   struct type *type = val->type ();
-  value_print_options opts = *options;
+  value_print_options opts = options;
 
   opts.deref_ref = true;
 
@@ -439,7 +439,7 @@ pascal_language::value_print (struct value *val, struct ui_file *stream,
 	  gdb_printf (stream, ") ");
 	}
     }
-  common_val_print (val, stream, 0, &opts, current_language);
+  common_val_print (val, stream, 0, opts, current_language);
 }
 
 
@@ -456,10 +456,10 @@ static struct obstack dont_print_statmem_obstack;
 
 static void pascal_object_print_static_field (struct value *,
 					      struct ui_file *, int,
-					      const value_print_options *);
+					      const value_print_options &);
 
 static void pascal_object_print_value (struct value *, struct ui_file *, int,
-				       const value_print_options *,
+				       const value_print_options &,
 				       struct type **);
 
 /* It was changed to this after 2.4.5.  */
@@ -513,7 +513,7 @@ pascal_object_is_vtbl_member (struct type *type)
 static void
 pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 				  int recurse,
-				  const value_print_options *options,
+				  const value_print_options &options,
 				  struct type **dont_print_vb,
 				  int dont_print_statmem)
 {
@@ -552,14 +552,14 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
       for (i = n_baseclasses; i < len; i++)
 	{
 	  /* If requested, skip printing of static fields.  */
-	  if (!options->pascal_static_field_print
+	  if (!options.pascal_static_field_print
 	      && type->field (i).is_static ())
 	    continue;
 	  if (fields_seen)
 	    gdb_printf (stream, ", ");
 	  else if (n_baseclasses > 0)
 	    {
-	      if (options->prettyformat)
+	      if (options.prettyformat)
 		{
 		  gdb_printf (stream, "\n");
 		  print_spaces (2 + 2 * recurse, stream);
@@ -570,7 +570,7 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 	    }
 	  fields_seen = 1;
 
-	  if (options->prettyformat)
+	  if (options.prettyformat)
 	    {
 	      gdb_printf (stream, "\n");
 	      print_spaces (2 + 2 * recurse, stream);
@@ -618,12 +618,12 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 		}
 	      else
 		{
-		  value_print_options opts = *options;
+		  value_print_options opts = options;
 
 		  v = value_field_bitfield (type, i, valaddr, 0, val);
 
 		  opts.deref_ref = false;
-		  common_val_print (v, stream, recurse + 1, &opts,
+		  common_val_print (v, stream, recurse + 1, opts,
 				    current_language);
 		}
 	    }
@@ -650,13 +650,13 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 		}
 	      else
 		{
-		  value_print_options opts = *options;
+		  value_print_options opts = options;
 
 		  opts.deref_ref = false;
 
 		  struct value *v = val->primitive_field (0, i,
 							  val->type ());
-		  common_val_print (v, stream, recurse + 1, &opts,
+		  common_val_print (v, stream, recurse + 1, opts,
 				    current_language);
 		}
 	    }
@@ -671,7 +671,7 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 	  dont_print_statmem_obstack = tmp_obstack;
 	}
 
-      if (options->prettyformat)
+      if (options.prettyformat)
 	{
 	  gdb_printf (stream, "\n");
 	  print_spaces (2 * recurse, stream);
@@ -686,7 +686,7 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 static void
 pascal_object_print_value (struct value *val, struct ui_file *stream,
 			   int recurse,
-			   const value_print_options *options,
+			   const value_print_options &options,
 			   struct type **dont_print_vb)
 {
   struct type **last_dont_print
@@ -762,7 +762,7 @@ pascal_object_print_value (struct value *val, struct ui_file *stream,
 	    }
 	}
 
-      if (options->prettyformat)
+      if (options.prettyformat)
 	{
 	  gdb_printf (stream, "\n");
 	  print_spaces (2 * recurse, stream);
@@ -813,7 +813,7 @@ static void
 pascal_object_print_static_field (struct value *val,
 				  struct ui_file *stream,
 				  int recurse,
-				  const value_print_options *options)
+				  const value_print_options &options)
 {
   struct type *type = val->type ();
   value_print_options opts;
@@ -855,9 +855,9 @@ pascal_object_print_static_field (struct value *val,
       return;
     }
 
-  opts = *options;
+  opts = options;
   opts.deref_ref = false;
-  common_val_print (val, stream, recurse, &opts, current_language);
+  common_val_print (val, stream, recurse, opts, current_language);
 }
 
 INIT_GDB_FILE (pascal_valprint)

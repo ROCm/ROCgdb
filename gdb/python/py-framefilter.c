@@ -221,7 +221,7 @@ py_print_type (struct ui_out *out, struct value *val)
 
 static void
 py_print_value (struct ui_out *out, struct value *val,
-		const value_print_options *opts,
+		const value_print_options &opts,
 		int indent,
 		enum ext_lang_frame_args args_type,
 		const struct language_defn *language)
@@ -304,7 +304,7 @@ py_print_single_arg (struct ui_out *out,
 		     const char *sym_name,
 		     struct frame_arg *fa,
 		     struct value *fv,
-		     const value_print_options *opts,
+		     const value_print_options &opts,
 		     enum ext_lang_frame_args args_type,
 		     int print_args_field,
 		     const struct language_defn *language)
@@ -485,7 +485,7 @@ enumerate_args (PyObject *iter,
 	  if (arg.entry_kind != print_entry_values_only)
 	    {
 	      py_print_single_arg (out, NULL, &arg,
-				   NULL, &opts,
+				   NULL, opts,
 				   args_type,
 				   print_args_field,
 				   NULL);
@@ -499,7 +499,7 @@ enumerate_args (PyObject *iter,
 		  out->wrap_hint (4);
 		}
 
-	      py_print_single_arg (out, NULL, &entryarg, NULL, &opts,
+	      py_print_single_arg (out, NULL, &entryarg, NULL, opts,
 				   args_type, print_args_field, NULL);
 	    }
 	}
@@ -507,7 +507,7 @@ enumerate_args (PyObject *iter,
 	{
 	  /* If the object has provided a value, we just print that.  */
 	  if (val != NULL)
-	    py_print_single_arg (out, sym_name.get (), NULL, val, &opts,
+	    py_print_single_arg (out, sym_name.get (), NULL, val, opts,
 				 args_type, print_args_field,
 				 language);
 	}
@@ -605,13 +605,13 @@ enumerate_locals (PyObject *iter,
 	{
 	  int val_indent = (indent + 1) * 4;
 
-	  py_print_value (out, val, &opts, val_indent, args_type,
+	  py_print_value (out, val, opts, val_indent, args_type,
 			  language);
 	}
       else
 	{
 	  if (args_type != NO_VALUES)
-	    py_print_value (out, val, &opts, 0, args_type,
+	    py_print_value (out, val, opts, 0, args_type,
 			    language);
 	}
 

@@ -789,7 +789,7 @@ valpy_format_string (PyObject *self, PyObject *args, PyObject *kw)
   try
     {
       common_val_print (((value_object *) self)->value, &stb, 0,
-			&opts, current_language);
+			opts, current_language);
     }
   catch (const gdb_exception &except)
     {
@@ -1255,7 +1255,7 @@ valpy_str (PyObject *self)
   try
     {
       common_val_print (((value_object *) self)->value, &stb, 0,
-			&opts, current_language);
+			opts, current_language);
     }
   catch (const gdb_exception &except)
     {

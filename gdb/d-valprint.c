@@ -31,7 +31,7 @@ dynamic_array_type (struct type *type,
 		    LONGEST embedded_offset, CORE_ADDR address,
 		    struct ui_file *stream, int recurse,
 		    struct value *val,
-		    const value_print_options *options)
+		    const value_print_options &options)
 {
   if (type->num_fields () == 2
       && type->field (0).type ()->code () == TYPE_CODE_INT
@@ -71,7 +71,7 @@ dynamic_array_type (struct type *type,
 
 void
 d_value_print_inner (struct value *val, struct ui_file *stream, int recurse,
-		     const value_print_options *options)
+		     const value_print_options &options)
 {
   int ret;
 

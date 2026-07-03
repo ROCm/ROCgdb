@@ -32,7 +32,7 @@
 
 static bool print_field_values (struct value *, struct value *,
 				struct ui_file *, int,
-				const value_print_options *,
+				const value_print_options &,
 				bool, const struct language_defn *);
 
 
@@ -43,13 +43,13 @@ static bool print_field_values (struct value *, struct value *,
 
 static void
 print_optional_low_bound (struct ui_file *stream, struct type *type,
-			  const value_print_options *options)
+			  const value_print_options &options)
 {
   struct type *index_type;
   LONGEST low_bound;
   LONGEST high_bound;
 
-  if (options->print_array_indexes)
+  if (options.print_array_indexes)
     return;
 
   if (!get_array_bounds (type, &low_bound, &high_bound))
@@ -109,7 +109,7 @@ static void
 val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
 				 int offset, struct ui_file *stream,
 				 int recurse,
-				 const value_print_options *options)
+				 const value_print_options &options)
 {
   unsigned int i;
   unsigned int things_printed = 0;
@@ -146,7 +146,7 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
   i = 0;
   annotate_array_section_begin (i, elttype);
 
-  while (i < len && things_printed < options->print_max)
+  while (i < len && things_printed < options.print_max)
     {
       /* Both this outer loop and the inner loop that checks for
 	 duplicates may allocate many values.  To avoid using too much
@@ -158,7 +158,7 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
 
       if (i != 0)
 	{
-	  if (options->prettyformat_arrays)
+	  if (options.prettyformat_arrays)
 	    {
 	      gdb_printf (stream, ",\n");
 	      print_spaces (2 + 2 * recurse, stream);
@@ -168,7 +168,7 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
 	      gdb_printf (stream, ", ");
 	    }
 	}
-      else if (options->prettyformat_arrays)
+      else if (options.prettyformat_arrays)
 	{
 	  gdb_printf (stream, "\n");
 	  print_spaces (2 + 2 * recurse, stream);
@@ -202,12 +202,12 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
 	    break;
 	}
 
-      if (i - i0 > options->repeat_count_threshold)
+      if (i - i0 > options.repeat_count_threshold)
 	{
-	  value_print_options opts = *options;
+	  value_print_options opts = options;
 
 	  opts.deref_ref = false;
-	  common_val_print (v0, stream, recurse + 1, &opts, current_language);
+	  common_val_print (v0, stream, recurse + 1, opts, current_language);
 	  annotate_elt_rep (i - i0);
 	  gdb_printf (stream, _(" %p[<repeats %u times>%p]"),
 		      metadata_style.style ().ptr (), i - i0, nullptr);
@@ -217,14 +217,14 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
       else
 	{
 	  int j;
-	  value_print_options opts = *options;
+	  value_print_options opts = options;
 
 	  opts.deref_ref = false;
 	  for (j = i0; j < i; j += 1)
 	    {
 	      if (j > i0)
 		{
-		  if (options->prettyformat_arrays)
+		  if (options.prettyformat_arrays)
 		    {
 		      gdb_printf (stream, ",\n");
 		      print_spaces (2 + 2 * recurse, stream);
@@ -237,7 +237,7 @@ val_print_packed_array_elements (struct type *type, const gdb_byte *valaddr,
 		  maybe_print_array_index (index_type, j + low,
 					   stream, options);
 		}
-	      common_val_print (v0, stream, recurse + 1, &opts,
+	      common_val_print (v0, stream, recurse + 1, opts,
 				current_language);
 	      annotate_elt ();
 	    }
@@ -398,7 +398,7 @@ static bool
 print_variant_part (struct value *value, int field_num,
 		    struct value *outer_value,
 		    struct ui_file *stream, int recurse,
-		    const value_print_options *options,
+		    const value_print_options &options,
 		    bool comma_needed,
 		    const struct language_defn *language)
 {
@@ -432,7 +432,7 @@ print_variant_part (struct value *value, int field_num,
 static bool
 print_field_values (struct value *value, struct value *outer_value,
 		    struct ui_file *stream, int recurse,
-		    const value_print_options *options,
+		    const value_print_options &options,
 		    bool comma_needed,
 		    const struct language_defn *language)
 {
@@ -468,7 +468,7 @@ print_field_values (struct value *value, struct value *outer_value,
 	gdb_printf (stream, ", ");
       comma_needed = true;
 
-      if (options->prettyformat)
+      if (options.prettyformat)
 	{
 	  gdb_printf (stream, "\n");
 	  print_spaces (2 + 2 * recurse, stream);
@@ -507,19 +507,19 @@ print_field_values (struct value *value, struct value *outer_value,
 		     bit_pos / HOST_CHAR_BIT,
 		     bit_pos % HOST_CHAR_BIT,
 		     bit_size, type->field (i).type ());
-	      opts = *options;
+	      opts = options;
 	      opts.deref_ref = false;
-	      common_val_print (v, stream, recurse + 1, &opts, language);
+	      common_val_print (v, stream, recurse + 1, opts, language);
 	    }
 	}
       else
 	{
-	  value_print_options opts = *options;
+	  value_print_options opts = options;
 
 	  opts.deref_ref = false;
 
 	  struct value *v = value->field (i);
-	  common_val_print (v, stream, recurse + 1, &opts, language);
+	  common_val_print (v, stream, recurse + 1, opts, language);
 	}
       annotate_field_end ();
     }
@@ -534,7 +534,7 @@ static void
 ada_val_print_string (struct type *type, const gdb_byte *valaddr,
 		      int offset_aligned,
 		      struct ui_file *stream, int recurse,
-		      const value_print_options *options)
+		      const value_print_options &options)
 {
   enum bfd_endian byte_order = type_byte_order (type);
   struct type *elttype = type->target_type ();
@@ -553,7 +553,7 @@ ada_val_print_string (struct type *type, const gdb_byte *valaddr,
 
   /* If requested, look for the first null char and only print
      elements up to it.  */
-  if (options->stop_print_at_null)
+  if (options.stop_print_at_null)
     {
       unsigned int print_max_chars = get_print_max_chars (options);
       int temp_len;
@@ -578,9 +578,9 @@ ada_val_print_string (struct type *type, const gdb_byte *valaddr,
 static void
 ada_value_print_ptr (struct value *val,
 		     struct ui_file *stream, int recurse,
-		     const value_print_options *options)
+		     const value_print_options &options)
 {
-  if (!options->format
+  if (!options.format
       && val->type ()->target_type ()->code () == TYPE_CODE_INT
       && val->type ()->target_type ()->length () == 0)
     {
@@ -605,7 +605,7 @@ ada_value_print_ptr (struct value *val,
 
 static void
 ada_value_print_num (struct value *val, struct ui_file *stream, int recurse,
-		     const value_print_options *options)
+		     const value_print_options &options)
 {
   struct type *type = ada_check_typedef (val->type ());
   const gdb_byte *valaddr = val->contents_for_printing ().data ();
@@ -627,15 +627,15 @@ ada_value_print_num (struct value *val, struct ui_file *stream, int recurse,
     }
   else
     {
-      int format = (options->format ? options->format
-		    : options->output_format);
+      int format = (options.format ? options.format
+		    : options.output_format);
 
       if (format)
 	{
-	  value_print_options opts = *options;
+	  value_print_options opts = options;
 
 	  opts.format = format;
-	  value_print_scalar_formatted (val, &opts, 0, stream);
+	  value_print_scalar_formatted (val, opts, 0, stream);
 	}
       else if (ada_is_system_address_type (type))
 	{
@@ -676,11 +676,11 @@ ada_value_print_num (struct value *val, struct ui_file *stream, int recurse,
 
 static void
 ada_val_print_enum (struct value *value, struct ui_file *stream, int recurse,
-		    const value_print_options *options)
+		    const value_print_options &options)
 {
   LONGEST val;
 
-  if (options->format)
+  if (options.format)
     {
       value_print_scalar_formatted (value, options, 0, stream);
       return;
@@ -714,13 +714,13 @@ static void
 ada_val_print_struct_union (struct value *value,
 			    struct ui_file *stream,
 			    int recurse,
-			    const value_print_options *options)
+			    const value_print_options &options)
 {
   gdb_printf (stream, "(");
 
   if (print_field_values (value, value, stream, recurse, options,
 			  false, language_def (language_ada))
-      && options->prettyformat)
+      && options.prettyformat)
     {
       gdb_printf (stream, "\n");
       print_spaces (2 * recurse, stream);
@@ -734,13 +734,13 @@ ada_val_print_struct_union (struct value *value,
 
 static void
 ada_value_print_array (struct value *val, struct ui_file *stream, int recurse,
-		       const value_print_options *options)
+		       const value_print_options &options)
 {
   struct type *type = ada_check_typedef (val->type ());
 
   /* For an array of characters, print with string syntax.  */
   if (ada_is_string_type (type)
-      && (options->format == 0 || options->format == 's'))
+      && (options.format == 0 || options.format == 's'))
     {
       const gdb_byte *valaddr = val->contents_for_printing ().data ();
       int offset_aligned = ada_aligned_value_addr (type, valaddr) - valaddr;
@@ -775,7 +775,7 @@ ada_val_print_ref (struct type *type, const gdb_byte *valaddr,
 		   int offset, int offset_aligned, CORE_ADDR address,
 		   struct ui_file *stream, int recurse,
 		   struct value *original_value,
-		   const value_print_options *options)
+		   const value_print_options &options)
 {
   /* For references, the debugger is expected to print the value as
      an address if DEREF_REF is null.  But printing an address in place
@@ -830,7 +830,7 @@ ada_val_print_ref (struct type *type, const gdb_byte *valaddr,
 
 void
 ada_value_print_inner (struct value *val, struct ui_file *stream, int recurse,
-		       const value_print_options *options)
+		       const value_print_options &options)
 {
   struct type *type = ada_check_typedef (val->type ());
 
@@ -891,7 +891,7 @@ ada_value_print_inner (struct value *val, struct ui_file *stream, int recurse,
       break;
 
     case TYPE_CODE_FLT:
-      if (options->format)
+      if (options.format)
 	{
 	  common_val_print (val, stream, recurse, options,
 			    language_def (language_c));
@@ -920,7 +920,7 @@ ada_value_print_inner (struct value *val, struct ui_file *stream, int recurse,
 
 void
 ada_value_print (struct value *val0, struct ui_file *stream,
-		 const value_print_options *options)
+		 const value_print_options &options)
 {
   struct value *val = ada_to_fixed_value (val0);
   struct type *type = ada_check_typedef (val->type ());
@@ -956,7 +956,7 @@ ada_value_print (struct value *val0, struct ui_file *stream,
 	}
     }
 
-  opts = *options;
+  opts = options;
   opts.deref_ref = true;
-  common_val_print (val, stream, 0, &opts, current_language);
+  common_val_print (val, stream, 0, opts, current_language);
 }

@@ -1788,7 +1788,7 @@ show_values (const char *num_exp, int from_tty)
       val = access_value_history (i);
       gdb_printf (("$%d = "), i);
       const value_print_options &opts = get_user_print_options ();
-      value_print (val, gdb_stdout, &opts);
+      value_print (val, gdb_stdout, opts);
       gdb_printf (("\n"));
     }
 
@@ -2578,7 +2578,7 @@ show_convenience (const char *ignore, int from_tty)
 	  struct value *val;
 
 	  val = value_of_internalvar (gdbarch, &var);
-	  value_print (val, gdb_stdout, &opts);
+	  value_print (val, gdb_stdout, opts);
 	}
       catch (const gdb_exception_error &ex)
 	{

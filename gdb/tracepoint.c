@@ -540,7 +540,7 @@ decode_agent_options (const char *exp, int *trace_string)
 	  /* Allow an optional decimal number giving an explicit maximum
 	     string length, defaulting it to the "print characters" value;
 	     so "collect/s80 mystr" gets at most 80 bytes of string.  */
-	  *trace_string = get_print_max_chars (&opts);
+	  *trace_string = get_print_max_chars (opts);
 	  exp++;
 	  if (*exp >= '0' && *exp <= '9')
 	    *trace_string = atoi (exp);

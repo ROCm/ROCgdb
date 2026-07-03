@@ -1186,7 +1186,7 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
       value_print_options opts = get_user_print_options ();
       opts.deref_ref = true;
 
-      common_val_print (val, file, 0, &opts, current_language);
+      common_val_print (val, file, 0, opts, current_language);
 
       if (print_raw_format)
 	{
@@ -1203,7 +1203,7 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
       /* Print the register in hex.  */
       value_print_options opts = get_formatted_print_options ('x');
       opts.deref_ref = true;
-      common_val_print (val, file, 0, &opts, current_language);
+      common_val_print (val, file, 0, opts, current_language);
 
       if (print_raw_format)
 	{
@@ -1339,7 +1339,7 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
 		  opts = get_user_print_options ();
 		  opts.deref_ref = true;
 		  gdb_printf (file, "\t");
-		  common_val_print (val, file, 0, &opts, current_language);
+		  common_val_print (val, file, 0, opts, current_language);
 		}
 	    }
 	}

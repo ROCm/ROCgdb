@@ -165,10 +165,10 @@ extern void ada_print_typedef (struct type *type, struct symbol *new_symbol,
 /* Implement la_value_print_inner for Ada.  */
 
 extern void ada_value_print_inner (struct value *, struct ui_file *, int,
-				   const value_print_options *);
+				   const value_print_options &);
 
 extern void ada_value_print (struct value *, struct ui_file *,
-			     const value_print_options *);
+			     const value_print_options &);
 
 				/* Defined in ada-lang.c */
 

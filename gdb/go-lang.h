@@ -123,7 +123,7 @@ public:
 
   void value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const value_print_options *options) const override;
+	 const value_print_options &options) const override;
 
   /* See language.h.  */
 

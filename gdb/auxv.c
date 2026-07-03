@@ -446,7 +446,7 @@ fprint_auxv_entry (struct ui_file *file, const char *name,
 	if (opts.addressprint)
 	  gdb_printf (file, ("%s "), paddress (arch, val));
 	val_print_string (builtin_type (arch)->builtin_char,
-			  NULL, val, -1, file, &opts);
+			  NULL, val, -1, file, opts);
 	gdb_printf (file, ("\n"));
       }
       break;

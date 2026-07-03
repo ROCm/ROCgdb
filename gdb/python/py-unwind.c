@@ -222,7 +222,7 @@ unwind_infopy_str (PyObject *self)
 	  {
 	    try
 	      {
-		value_print (value, &stb, &opts);
+		value_print (value, &stb, opts);
 		stb.puts (")");
 	      }
 	    catch (const gdb_exception &except)

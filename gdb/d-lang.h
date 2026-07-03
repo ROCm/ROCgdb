@@ -82,6 +82,6 @@ extern struct block_symbol d_lookup_nested_symbol (struct type *, const char *,
 
 extern void d_value_print_inner (struct value *val,
 				 struct ui_file *stream, int recurse,
-				 const value_print_options *options);
+				 const value_print_options &options);
 
 #endif /* GDB_D_LANG_H */

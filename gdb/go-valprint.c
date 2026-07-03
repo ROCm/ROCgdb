@@ -40,7 +40,7 @@ print_go_string (struct type *type,
 		 LONGEST embedded_offset, CORE_ADDR address,
 		 struct ui_file *stream, int recurse,
 		 struct value *val,
-		 const value_print_options *options)
+		 const value_print_options &options)
 {
   struct gdbarch *gdbarch = type->arch ();
   struct type *elt_ptr_type = type->field (0).type ();
@@ -63,7 +63,7 @@ print_go_string (struct type *type,
     error (_("Unable to read string length"));
 
   /* TODO(dje): Print address of struct or actual string?  */
-  if (options->addressprint)
+  if (options.addressprint)
     {
       fputs_styled (paddress (gdbarch, addr), address_style.style (), stream);
       gdb_puts (" ", stream);
@@ -88,7 +88,7 @@ print_go_string (struct type *type,
 void
 go_language::value_print_inner (struct value *val, struct ui_file *stream,
 				int recurse,
-				const value_print_options *options) const
+				const value_print_options &options) const
 {
   struct type *type = check_typedef (val->type ());
 
@@ -101,7 +101,7 @@ go_language::value_print_inner (struct value *val, struct ui_file *stream,
 	  switch (go_type)
 	    {
 	    case GO_TYPE_STRING:
-	      if (! options->raw)
+	      if (! options.raw)
 		{
 		  print_go_string (type, val->embedded_offset (),
 				   val->address (),

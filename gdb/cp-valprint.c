@@ -48,10 +48,10 @@ static struct obstack dont_print_stat_array_obstack;
 
 static void cp_print_static_field (struct type *, struct value *,
 				   struct ui_file *, int,
-				   const value_print_options *);
+				   const value_print_options &);
 
 static void cp_print_value (struct value *, struct ui_file *,
-			    int, const value_print_options *,
+			    int, const value_print_options &,
 			    struct type **);
 
 
@@ -122,7 +122,7 @@ cp_is_vtbl_member (struct type *type)
 
 void
 cp_print_value_fields (struct value *val, struct ui_file *stream,
-		       int recurse, const value_print_options *options,
+		       int recurse, const value_print_options &options,
 		       struct type **dont_print_vb,
 		       int dont_print_statmem)
 {
@@ -166,7 +166,7 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
   /* If there are no data fields, skip this part */
   if (len == n_baseclasses || !len)
     {
-      if (options->prettyformat && n_baseclasses > 0)
+      if (options.prettyformat && n_baseclasses > 0)
 	{
 	  gdb_printf (stream, "\n");
 	  print_spaces (2 + 2 * recurse, stream);
@@ -174,7 +174,7 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
 
       fprintf_styled (stream, metadata_style.style (), "<No data fields>");
 
-      if (options->prettyformat && n_baseclasses > 0)
+      if (options.prettyformat && n_baseclasses > 0)
 	{
 	  gdb_printf (stream, "\n");
 	  print_spaces (2 * recurse, stream);
@@ -207,19 +207,19 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
 	  const gdb_byte *valaddr = val->contents_for_printing ().data ();
 
 	  /* If requested, skip printing of static fields.  */
-	  if (!options->static_field_print
+	  if (!options.static_field_print
 	      && type->field (i).is_static ())
 	    continue;
 
 	  if (fields_seen)
 	    {
 	      gdb_puts (",", stream);
-	      if (!options->prettyformat)
+	      if (!options.prettyformat)
 		gdb_puts (" ", stream);
 	    }
 	  else if (n_baseclasses > 0)
 	    {
-	      if (options->prettyformat)
+	      if (options.prettyformat)
 		{
 		  gdb_printf (stream, "\n");
 		  print_spaces (2 + 2 * recurse, stream);
@@ -230,7 +230,7 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
 	    }
 	  fields_seen = 1;
 
-	  if (options->prettyformat)
+	  if (options.prettyformat)
 	    {
 	      gdb_printf (stream, "\n");
 	      print_spaces (2 + 2 * recurse, stream);
@@ -256,8 +256,7 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
 	  annotate_field_name_end ();
 
 	  /* We tweak various options in a few cases below.  */
-	  value_print_options options_copy = *options;
-	  value_print_options *opts = &options_copy;
+	  value_print_options opts = options;
 
 	  /* Do not print leading '=' in case of anonymous
 	     unions.  */
@@ -268,8 +267,8 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
 	      /* If this is an anonymous field then we want to consider it
 		 as though it is at its parent's depth when it comes to the
 		 max print depth.  */
-	      if (opts->max_depth != -1 && opts->max_depth < INT_MAX)
-		++opts->max_depth;
+	      if (opts.max_depth != -1 && opts.max_depth < INT_MAX)
+		++opts.max_depth;
 	    }
 	  annotate_field_value ();
 
@@ -294,7 +293,7 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
 		}
 	      else
 		{
-		  opts->deref_ref = false;
+		  opts.deref_ref = false;
 
 		  v = value_field_bitfield (type, i, valaddr,
 					    val->embedded_offset (), val);
@@ -346,7 +345,7 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
 	      else
 		{
 		  struct value *v = val->primitive_field (0, i, type);
-		  opts->deref_ref = false;
+		  opts.deref_ref = false;
 		  common_val_print (v, stream, recurse + 1, opts,
 				    current_language);
 		}
@@ -386,7 +385,7 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
 	    }
 	}
 
-      if (options->prettyformat)
+      if (options.prettyformat)
 	{
 	  gdb_printf (stream, "\n");
 	  print_spaces (2 * recurse, stream);
@@ -403,7 +402,7 @@ static void
 cp_print_value_fields_pp (struct value *val,
 			  struct ui_file *stream,
 			  int recurse,
-			  const value_print_options *options,
+			  const value_print_options &options,
 			  struct type **dont_print_vb,
 			  int dont_print_statmem)
 {
@@ -411,7 +410,7 @@ cp_print_value_fields_pp (struct value *val,
 
   /* Attempt to run an extension language pretty-printer if
      possible.  */
-  if (!options->raw)
+  if (!options.raw)
     result
       = apply_ext_lang_val_pretty_printer (val, stream,
 					   recurse, options,
@@ -427,7 +426,7 @@ cp_print_value_fields_pp (struct value *val,
 
 static void
 cp_print_value (struct value *val, struct ui_file *stream,
-		int recurse, const value_print_options *options,
+		int recurse, const value_print_options &options,
 		struct type **dont_print_vb)
 {
   struct type *type = check_typedef (val->type ());
@@ -517,7 +516,7 @@ cp_print_value (struct value *val, struct ui_file *stream,
 	}
 
       /* Now do the printing.  */
-      if (options->prettyformat)
+      if (options.prettyformat)
 	{
 	  gdb_printf (stream, "\n");
 	  print_spaces (2 * recurse, stream);
@@ -549,7 +548,7 @@ cp_print_value (struct value *val, struct ui_file *stream,
 
       gdb_puts (",", stream);
 
-      if (!options->prettyformat)
+      if (!options.prettyformat)
 	gdb_puts (" ", stream);
 
     flush_it:
@@ -580,7 +579,7 @@ cp_print_static_field (struct type *type,
 		       struct value *val,
 		       struct ui_file *stream,
 		       int recurse,
-		       const value_print_options *options)
+		       const value_print_options &options)
 {
   value_print_options opts;
 
@@ -646,9 +645,9 @@ cp_print_static_field (struct type *type,
 		    sizeof (struct type *));
     }
 
-  opts = *options;
+  opts = options;
   opts.deref_ref = false;
-  common_val_print (val, stream, recurse, &opts, current_language);
+  common_val_print (val, stream, recurse, opts, current_language);
 }
 
 /* Find the field in *SELF, or its non-virtual base classes, with
@@ -798,12 +797,12 @@ test_print_fields (gdbarch *arch)
 
   string_file out;
   value_print_options opts = get_no_prettyformat_print_options ();
-  cp_print_value_fields(val, &out, 0, &opts, NULL, 0);
+  cp_print_value_fields (val, &out, 0, opts, NULL, 0);
   SELF_CHECK (out.string () == "{A = false, B = 5, C = true}");
 
   out.clear();
   opts.format = 'x';
-  cp_print_value_fields(val, &out, 0, &opts, NULL, 0);
+  cp_print_value_fields (val, &out, 0, opts, NULL, 0);
   SELF_CHECK (out.string () == "{A = 0x0, B = 0x5, C = 0x1}");
 }
 

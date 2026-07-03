@@ -5038,7 +5038,7 @@ watchpoint_value_print (struct value *val, struct ui_file *stream)
   else
     {
       const value_print_options &opts = get_user_print_options ();
-      value_print (val, stream, &opts);
+      value_print (val, stream, opts);
     }
 }
 

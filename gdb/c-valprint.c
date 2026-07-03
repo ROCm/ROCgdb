@@ -142,7 +142,7 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
 			struct type *unresolved_elttype,
 			const gdb_byte *valaddr, int embedded_offset,
 			CORE_ADDR address, struct ui_file *stream, int recurse,
-			const value_print_options *options)
+			const value_print_options &options)
 {
   int want_space = 0;
   struct gdbarch *gdbarch = type->arch ();
@@ -154,10 +154,10 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
       return;
     }
 
-  if (options->symbol_print)
+  if (options.symbol_print)
     want_space = print_address_demangle (options, gdbarch, address, stream,
 					 demangle);
-  else if (options->addressprint)
+  else if (options.addressprint)
     {
       fputs_styled (paddress (gdbarch, address), address_style.style (),
 		    stream);
@@ -167,7 +167,7 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
   /* For a pointer to a textual type, also print the string
      pointed to, unless pointer is null.  */
 
-  if (c_textual_element_type (unresolved_elttype, options->format)
+  if (c_textual_element_type (unresolved_elttype, options.format)
       && address != 0)
     {
       if (want_space)
@@ -181,7 +181,7 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
       bound_minimal_symbol msymbol = lookup_minimal_symbol_by_pc (vt_address);
 
       /* If 'symbol_print' is set, we did the work above.  */
-      if (!options->symbol_print
+      if (!options.symbol_print
 	  && (msymbol.minsym != NULL)
 	  && (vt_address == msymbol.value_address ()))
 	{
@@ -193,7 +193,7 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
 	  want_space = 1;
 	}
 
-      if (vt_address && options->vtblprint)
+      if (vt_address && options.vtblprint)
 	{
 	  struct value *vt_val;
 	  struct symbol *wsym = NULL;
@@ -220,7 +220,7 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
 	  vt_val = value_at (wtype, vt_address);
 	  common_val_print (vt_val, stream, recurse + 1, options,
 			    current_language);
-	  if (options->prettyformat)
+	  if (options.prettyformat)
 	    {
 	      gdb_printf (stream, "\n");
 	      print_spaces (2 + 2 * recurse, stream);
@@ -234,7 +234,7 @@ print_unpacked_pointer (struct type *type, struct type *elttype,
 static void
 c_value_print_array (struct value *val,
 		     struct ui_file *stream, int recurse,
-		     const value_print_options *options)
+		     const value_print_options &options)
 {
   struct type *type = check_typedef (val->type ());
   CORE_ADDR address = val->address ();
@@ -257,7 +257,7 @@ c_value_print_array (struct value *val,
       /* Print arrays of textual chars with a string syntax, as
 	 long as the entire array is valid.  */
       if (c_textual_element_type (unresolved_elttype,
-				  options->format)
+				  options.format)
 	  && val->bytes_available (0, type->length ())
 	  && !val->bits_any_optimized_out (0,
 					   TARGET_CHAR_BIT * type->length ()))
@@ -266,7 +266,7 @@ c_value_print_array (struct value *val,
 
 	  /* If requested, look for the first null char and only
 	     print elements up to it.  */
-	  if (options->stop_print_at_null)
+	  if (options.stop_print_at_null)
 	    {
 	      unsigned int print_max_chars = get_print_max_chars (options);
 	      unsigned int temp_len;
@@ -326,9 +326,9 @@ c_value_print_array (struct value *val,
 
 static void
 c_value_print_ptr (struct value *val, struct ui_file *stream, int recurse,
-		   const value_print_options *options)
+		   const value_print_options &options)
 {
-  if (options->format && options->format != 's')
+  if (options.format && options.format != 's')
     {
       value_print_scalar_formatted (val, options, 0, stream);
       return;
@@ -337,7 +337,7 @@ c_value_print_ptr (struct value *val, struct ui_file *stream, int recurse,
   struct type *type = check_typedef (val->type ());
   const gdb_byte *valaddr = val->contents_for_printing ().data ();
 
-  if (options->vtblprint && cp_is_vtbl_ptr_type (type))
+  if (options.vtblprint && cp_is_vtbl_ptr_type (type))
     {
       /* Print the unmangled name if desired.  */
       /* Print vtable entry - we only get here if we ARE using
@@ -362,13 +362,13 @@ c_value_print_ptr (struct value *val, struct ui_file *stream, int recurse,
 
 static void
 c_value_print_struct (struct value *val, struct ui_file *stream, int recurse,
-		      const value_print_options *options)
+		      const value_print_options &options)
 {
   struct type *type = check_typedef (val->type ());
 
-  if (type->code () == TYPE_CODE_UNION && recurse && !options->unionprint)
+  if (type->code () == TYPE_CODE_UNION && recurse && !options.unionprint)
     gdb_printf (stream, "{...}");
-  else if (options->vtblprint && cp_is_vtbl_ptr_type (type))
+  else if (options.vtblprint && cp_is_vtbl_ptr_type (type))
     {
       /* Print the unmangled name if desired.  */
       /* Print vtable entry - we only get here if NOT using
@@ -389,15 +389,15 @@ c_value_print_struct (struct value *val, struct ui_file *stream, int recurse,
 
 static void
 c_value_print_int (struct value *val, struct ui_file *stream,
-		   const value_print_options *options)
+		   const value_print_options &options)
 {
-  if (options->format || options->output_format)
+  if (options.format || options.output_format)
     {
-      value_print_options opts = *options;
+      value_print_options opts = options;
 
-      opts.format = (options->format ? options->format
-		     : options->output_format);
-      value_print_scalar_formatted (val, &opts, 0, stream);
+      opts.format = (options.format ? options.format
+		     : options.output_format);
+      value_print_scalar_formatted (val, opts, 0, stream);
     }
   else
     {
@@ -408,7 +408,7 @@ c_value_print_int (struct value *val, struct ui_file *stream,
 	 the character equivalent as well.  */
       struct type *type = val->type ();
       const gdb_byte *valaddr = val->contents_for_printing ().data ();
-      if (c_textual_element_type (type, options->format))
+      if (c_textual_element_type (type, options.format))
 	{
 	  gdb_puts (" ", stream);
 	  current_language->printchar (unpack_long (type, valaddr), type,
@@ -421,7 +421,7 @@ c_value_print_int (struct value *val, struct ui_file *stream,
 
 void
 c_value_print_inner (struct value *val, struct ui_file *stream, int recurse,
-		     const value_print_options *options)
+		     const value_print_options &options)
 {
   struct type *type = val->type ();
 
@@ -471,12 +471,12 @@ c_value_print_inner (struct value *val, struct ui_file *stream, int recurse,
 
 void
 c_value_print (struct value *val, struct ui_file *stream,
-	       const value_print_options *options)
+	       const value_print_options &options)
 {
   struct type *type, *real_type;
   int full, using_enc;
   LONGEST top;
-  value_print_options opts = *options;
+  value_print_options opts = options;
 
   opts.deref_ref = true;
 
@@ -505,7 +505,7 @@ c_value_print (struct value *val, struct ui_file *stream,
 	{
 	  /* Print nothing.  */
 	}
-      else if (options->objectprint
+      else if (options.objectprint
 	       && (type->target_type ()->code () == TYPE_CODE_STRUCT))
 	{
 	  int is_ref = TYPE_IS_REFERENCE (type);
@@ -557,7 +557,7 @@ c_value_print (struct value *val, struct ui_file *stream,
   if (!val->initialized ())
     gdb_printf (stream, " [uninitialized] ");
 
-  if (options->objectprint && (type->code () == TYPE_CODE_STRUCT))
+  if (options.objectprint && (type->code () == TYPE_CODE_STRUCT))
     {
       /* Attempt to determine real type of object.  */
       real_type = value_rtti_type (val, &full, &top, &using_enc);
@@ -586,5 +586,5 @@ c_value_print (struct value *val, struct ui_file *stream,
 	}
     }
 
-  common_val_print (val, stream, 0, &opts, current_language);
+  common_val_print (val, stream, 0, opts, current_language);
 }

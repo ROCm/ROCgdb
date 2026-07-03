@@ -700,7 +700,7 @@ check_thread_db_callback (const td_thrhandle_t *th, void *arg)
 	{
 	  const value_print_options &opts = get_user_print_options ();
 	  LOG (" = ");
-	  value_print (val, gdb_stdlog, &opts);
+	  value_print (val, gdb_stdlog, opts);
 	}
     }
 

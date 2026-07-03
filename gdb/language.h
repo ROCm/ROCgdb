@@ -319,7 +319,7 @@ struct language_defn
   virtual void print_array_index (struct type *index_type,
 				  LONGEST index_value,
 				  struct ui_file *stream,
-				  const value_print_options *options) const;
+				  const value_print_options &options) const;
 
   /* Given a symbol VAR, the corresponding block VAR_BLOCK (if any) and a
      stack frame id FRAME, read the value of the variable and return (pointer
@@ -513,13 +513,13 @@ struct language_defn
 
   /* Print a top-level value using syntax appropriate for this language.  */
   virtual void value_print (struct value *val, struct ui_file *stream,
-			    const value_print_options *options) const;
+			    const value_print_options &options) const;
 
   /* Print a value using syntax appropriate for this language.  RECURSE is
      the recursion depth.  It is zero-based.  */
   virtual void value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const value_print_options *options) const;
+	 const value_print_options &options) const;
 
   /* Parser function.  */
 
@@ -536,7 +536,7 @@ struct language_defn
   virtual void printstr (struct ui_file *stream, struct type *elttype,
 			 const gdb_byte *string, unsigned int length,
 			 const char *encoding, int force_ellipses,
-			 const value_print_options *options) const;
+			 const value_print_options &options) const;
 
 
   /* Print a typedef using syntax appropriate for this language.

@@ -121,7 +121,7 @@ public:
 				       struct value *val,
 				       struct ui_file *stream,
 				       int recurse,
-				       const value_print_options *options)
+				       const value_print_options &options)
     : m_elts (0),
       m_val (val),
       m_stream (stream),
@@ -139,7 +139,7 @@ public:
      cases, return true.  */
   bool continue_walking (bool should_continue)
   {
-    bool cont = should_continue && (m_elts < m_options->print_max);
+    bool cont = should_continue && (m_elts < m_options.print_max);
     if (!cont && should_continue)
       gdb_puts ("...", m_stream);
     return cont;
@@ -191,11 +191,11 @@ public:
     size_t dim_indx = m_dimension - 1;
     struct type *elt_type_prev = m_elt_type_prev;
     LONGEST elt_off_prev = m_elt_off_prev;
-    bool repeated = (m_options->repeat_count_threshold < UINT_MAX
+    bool repeated = (m_options.repeat_count_threshold < UINT_MAX
 		     && elt_type_prev != nullptr
 		     && (m_elts + ((m_nrepeats + 1)
 				   * m_stats[dim_indx + 1].nelts)
-			 <= m_options->print_max)
+			 <= m_options.print_max)
 		     && dimension_contents_eq (m_val, elt_type,
 					       elt_off_prev, elt_off));
 
@@ -206,7 +206,7 @@ public:
 	LONGEST nrepeats = m_nrepeats;
 
 	m_nrepeats = 0;
-	if (nrepeats >= m_options->repeat_count_threshold)
+	if (nrepeats >= m_options.repeat_count_threshold)
 	  {
 	    annotate_elt_rep (nrepeats + 1);
 	    gdb_printf (m_stream, "%p[<repeats %s times>%p]",
@@ -234,7 +234,7 @@ public:
 	       And we need to print `...' by hand if the skipped element
 	       would be the last one processed, because the subsequent call
 	       to `continue_walking' from our caller won't do that.  */
-	    if (m_elts < m_options->print_max)
+	    if (m_elts < m_options.print_max)
 	      {
 		maybe_print_array_index (m_stats[dim_indx].index_type, index,
 					 m_stream, m_options);
@@ -262,7 +262,7 @@ public:
     LONGEST elt_off_prev = m_elt_off_prev;
     bool repeated = false;
 
-    if (m_options->repeat_count_threshold < UINT_MAX
+    if (m_options.repeat_count_threshold < UINT_MAX
 	&& elt_type_prev != nullptr)
       {
 	/* When printing large arrays this spot is called frequently, so clean
@@ -281,7 +281,7 @@ public:
 
     if (repeated)
       m_nrepeats++;
-    if (!repeated || last_p || m_elts + 1 == m_options->print_max)
+    if (!repeated || last_p || m_elts + 1 == m_options.print_max)
       {
 	LONGEST nrepeats = m_nrepeats;
 	bool printed = false;
@@ -289,7 +289,7 @@ public:
 	if (nrepeats != 0)
 	  {
 	    m_nrepeats = 0;
-	    if (nrepeats >= m_options->repeat_count_threshold)
+	    if (nrepeats >= m_options.repeat_count_threshold)
 	      {
 		annotate_elt_rep (nrepeats + 1);
 		gdb_printf (m_stream, "%p[<repeats %s times>%p]",
@@ -401,7 +401,7 @@ private:
 
   /* The print control options.  Gives us the maximum number of elements to
      print, and is passed through to each element that we print.  */
-  const value_print_options *m_options = nullptr;
+  const value_print_options &m_options;
 
   /* The number of the current dimension being handled.  */
   LONGEST m_dimension;
@@ -424,7 +424,7 @@ static void
 fortran_print_array (struct type *type, CORE_ADDR address,
 		     struct ui_file *stream, int recurse,
 		     const struct value *val,
-		     const value_print_options *options)
+		     const value_print_options &options)
 {
   fortran_array_walker<fortran_array_printer_impl> p
     (type, address, (struct value *) val, stream, recurse, options);
@@ -451,7 +451,7 @@ static const struct generic_val_print_decorations f_decorations =
 void
 f_language::value_print_inner (struct value *val, struct ui_file *stream,
 			       int recurse,
-			       const value_print_options *options) const
+			       const value_print_options &options) const
 {
   struct type *type = check_typedef (val->type ());
   struct gdbarch *gdbarch = type->arch ();
@@ -485,7 +485,7 @@ f_language::value_print_inner (struct value *val, struct ui_file *stream,
       break;
 
     case TYPE_CODE_PTR:
-      if (options->format && options->format != 's')
+      if (options.format && options.format != 's')
 	{
 	  value_print_scalar_formatted (val, options, 0, stream);
 	  break;
@@ -504,10 +504,10 @@ f_language::value_print_inner (struct value *val, struct ui_file *stream,
 	      return;
 	    }
 
-	  if (options->symbol_print)
+	  if (options.symbol_print)
 	    want_space = print_address_demangle (options, gdbarch, addr,
 						 stream, demangle);
-	  else if (options->addressprint && options->format != 's')
+	  else if (options.addressprint && options.format != 's')
 	    {
 	      fputs_styled (paddress (gdbarch, addr), address_style.style (),
 			    stream);
@@ -518,7 +518,7 @@ f_language::value_print_inner (struct value *val, struct ui_file *stream,
 	     pointed to, unless pointer is null.  */
 	  if (elttype->length () == 1
 	      && elttype->code () == TYPE_CODE_INT
-	      && (options->format == 0 || options->format == 's')
+	      && (options.format == 0 || options.format == 's')
 	      && addr != 0)
 	    {
 	      if (want_space)
@@ -581,12 +581,12 @@ f_language::value_print_inner (struct value *val, struct ui_file *stream,
       break;
 
     case TYPE_CODE_BOOL:
-      if (options->format || options->output_format)
+      if (options.format || options.output_format)
 	{
-	  value_print_options opts = *options;
-	  opts.format = (options->format ? options->format
-			 : options->output_format);
-	  value_print_scalar_formatted (val, &opts, 0, stream);
+	  value_print_options opts = options;
+	  opts.format = (options.format ? options.format
+			 : options.output_format);
+	  value_print_scalar_formatted (val, opts, 0, stream);
 	}
       else
 	{
@@ -657,7 +657,7 @@ info_common_command_for_block (const struct block *block, const char *comname,
 	    try
 	      {
 		val = value_of_variable (common->contents[index], block);
-		value_print (val, gdb_stdout, &opts);
+		value_print (val, gdb_stdout, opts);
 	      }
 
 	    catch (const gdb_exception_error &except)

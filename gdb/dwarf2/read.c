@@ -5139,7 +5139,7 @@ dwarf2_compute_name (const char *name,
 		      value_print_options opts
 			= get_formatted_print_options ('d');
 		      opts.raw = true;
-		      value_print (v, &buf, &opts);
+		      value_print (v, &buf, opts);
 		      release_value (v);
 		    }
 		}

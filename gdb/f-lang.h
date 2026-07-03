@@ -64,7 +64,7 @@ public:
   void print_array_index (struct type *index_type,
 			  LONGEST index,
 			  struct ui_file *stream,
-			  const value_print_options *options) const override;
+			  const value_print_options &options) const override;
 
   /* See language.h.  */
   void language_arch_info (struct gdbarch *gdbarch,
@@ -137,7 +137,7 @@ public:
 
   void value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const value_print_options *options) const override;
+	 const value_print_options &options) const override;
 
   /* See language.h.  */
 
@@ -170,7 +170,7 @@ public:
   void printstr (struct ui_file *stream, struct type *elttype,
 		 const gdb_byte *string, unsigned int length,
 		 const char *encoding, int force_ellipses,
-		 const value_print_options *options) const override
+		 const value_print_options &options) const override
   {
     if (elttype->length () == 4)
       gdb_puts ("4_", stream);

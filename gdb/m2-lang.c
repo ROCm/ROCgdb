@@ -179,7 +179,7 @@ void
 m2_language::printstr (struct ui_file *stream, struct type *elttype,
 			const gdb_byte *string, unsigned int length,
 			const char *encoding, int force_ellipses,
-			const value_print_options *options) const
+			const value_print_options &options) const
 {
   m2_wchar_printer printer (elttype, '"', encoding);
   printer.print (stream, string, length, force_ellipses, 0, options);

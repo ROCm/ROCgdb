@@ -461,7 +461,7 @@ void
 rust_language::printstr (struct ui_file *stream, struct type *type,
 			 const gdb_byte *string, unsigned int length,
 			 const char *user_encoding, int force_ellipses,
-			 const value_print_options *options) const
+			 const value_print_options &options) const
 {
   /* Rust always uses UTF-8, but let the caller override this if need
      be.  */
@@ -518,7 +518,7 @@ rust_slice_to_array (struct value *val)
 void
 rust_language::val_print_slice
      (struct value *val, struct ui_file *stream, int recurse,
-      const value_print_options *options) const
+      const value_print_options &options) const
 {
   struct type *orig_type = check_typedef (val->type ());
 
@@ -558,7 +558,7 @@ rust_language::val_print_slice
 void
 rust_language::val_print_struct
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const value_print_options *options) const
+	 const value_print_options &options) const
 {
   int first_field;
   struct type *type = check_typedef (val->type ());
@@ -590,7 +590,7 @@ rust_language::val_print_struct
   else
     gdb_puts ("{", stream);
 
-  opts = *options;
+  opts = options;
   opts.deref_ref = false;
 
   first_field = 1;
@@ -602,7 +602,7 @@ rust_language::val_print_struct
       if (!first_field)
 	gdb_puts (",", stream);
 
-      if (options->prettyformat)
+      if (options.prettyformat)
 	{
 	  gdb_puts ("\n", stream);
 	  print_spaces (2 + 2 * recurse, stream);
@@ -619,11 +619,11 @@ rust_language::val_print_struct
 	  gdb_puts (": ", stream);
 	}
 
-      common_val_print (val->field (i), stream, recurse + 1, &opts,
+      common_val_print (val->field (i), stream, recurse + 1, opts,
 			this);
     }
 
-  if (options->prettyformat)
+  if (options.prettyformat)
     {
       gdb_puts ("\n", stream);
       print_spaces (2 * recurse, stream);
@@ -640,9 +640,9 @@ rust_language::val_print_struct
 void
 rust_language::print_enum (struct value *val, struct ui_file *stream,
 			   int recurse,
-			   const value_print_options *options) const
+			   const value_print_options &options) const
 {
-  value_print_options opts = *options;
+  value_print_options opts = options;
   struct type *type = check_typedef (val->type ());
 
   opts.deref_ref = false;
@@ -699,7 +699,7 @@ rust_language::print_enum (struct value *val, struct ui_file *stream,
 		    styled_string (variable_name_style.style (),
 				   variant_type->field (j).name ()));
 
-      common_val_print (val->field (j), stream, recurse + 1, &opts,
+      common_val_print (val->field (j), stream, recurse + 1, opts,
 			this);
     }
 
@@ -714,9 +714,9 @@ rust_language::print_enum (struct value *val, struct ui_file *stream,
 void
 rust_language::value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const value_print_options *options) const
+	 const value_print_options &options) const
 {
-  value_print_options opts = *options;
+  value_print_options opts = options;
   opts.deref_ref = true;
 
   if (opts.prettyformat == Val_prettyformat_default)
@@ -751,7 +751,7 @@ rust_language::value_print_inner
 	    gdb_puts ("b", stream);
 	    val_print_string (elttype->target_type (), "ASCII", addr,
 			      high_bound - low_bound + 1, stream,
-			      &opts);
+			      opts);
 	    break;
 	  }
       }
@@ -782,7 +782,7 @@ rust_language::value_print_inner
 	gdb_puts ("b", stream);
 	printstr (stream, type->target_type (),
 		  val->contents_for_printing ().data (),
-		  high_bound - low_bound + 1, "ASCII", 0, &opts);
+		  high_bound - low_bound + 1, "ASCII", 0, opts);
       }
       break;
 
@@ -804,20 +804,20 @@ rust_language::value_print_inner
 	 for printing a union is same as that for a struct, the only
 	 difference is that the input type will have overlapping
 	 fields.  */
-      val_print_struct (val, stream, recurse, &opts);
+      val_print_struct (val, stream, recurse, opts);
       break;
 
     case TYPE_CODE_STRUCT:
       if (rust_enum_p (type))
-	print_enum (val, stream, recurse, &opts);
+	print_enum (val, stream, recurse, opts);
       else
-	val_print_struct (val, stream, recurse, &opts);
+	val_print_struct (val, stream, recurse, opts);
       break;
 
     default:
     generic_print:
       /* Nothing special yet.  */
-      generic_value_print (val, stream, recurse, &opts, &rust_decorations);
+      generic_value_print (val, stream, recurse, opts, &rust_decorations);
     }
 }
 
@@ -826,9 +826,9 @@ rust_language::value_print_inner
 void
 rust_language::value_print
 	(struct value *val, struct ui_file *stream,
-	 const value_print_options *options) const
+	 const value_print_options &options) const
 {
-  value_print_options opts = *options;
+  value_print_options opts = options;
   opts.deref_ref = true;
 
   struct type *type = check_typedef (val->type ());
@@ -839,7 +839,7 @@ rust_language::value_print
       gdb_printf (stream, ") ");
     }
 
-  return common_val_print (val, stream, 0, &opts, this);
+  return common_val_print (val, stream, 0, opts, this);
 }
 
 

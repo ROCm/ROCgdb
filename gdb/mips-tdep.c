@@ -6349,7 +6349,7 @@ mips_print_fp_register (struct ui_file *file, const frame_info_ptr &frame,
       value_print_options opts = get_formatted_print_options ('x');
       print_scalar_formatted (raw_buffer.data (),
 			      builtin_type (gdbarch)->builtin_uint32,
-			      &opts, 'w', file);
+			      opts, 'w', file);
 
       gdb_printf (file, " flt: %s", flt_str.c_str ());
 
@@ -6376,7 +6376,7 @@ mips_print_fp_register (struct ui_file *file, const frame_info_ptr &frame,
       value_print_options opts = get_formatted_print_options ('x');
       print_scalar_formatted (raw_buffer.data (),
 			      builtin_type (gdbarch)->builtin_uint64,
-			      &opts, 'g', file);
+			      opts, 'g', file);
 
       gdb_printf (file, " flt: %s", flt_str.c_str ());
       gdb_printf (file, " dbl: %s", dbl_str.c_str ());
@@ -6410,7 +6410,7 @@ mips_print_register (struct ui_file *file, const frame_info_ptr &frame,
     gdb_printf (file, ": ");
 
   value_print_options opts = get_formatted_print_options ('x');
-  value_print_scalar_formatted (val, &opts, 0, file);
+  value_print_scalar_formatted (val, opts, 0, file);
 }
 
 /* Print IEEE exception condition bits in FLAGS.  */

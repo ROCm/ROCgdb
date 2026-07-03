@@ -257,9 +257,9 @@ compile_code_command_completer (struct cmd_list_element *ignore,
 void
 compile_print_value (struct value *val, void *data_voidp)
 {
-  const value_print_options *print_opts = (value_print_options *) data_voidp;
+  const value_print_options &print_opts = * (value_print_options *) data_voidp;
 
-  print_value (val, *print_opts);
+  print_value (val, print_opts);
 }
 
 /* Handle the input from the 'compile print' command.  The "compile
@@ -280,7 +280,7 @@ compile_print_command (const char *arg, int from_tty)
   gdb::option::process_options
     (&arg, gdb::option::PROCESS_OPTIONS_REQUIRE_DELIMITER, group);
 
-  print_command_parse_format (&arg, "compile print", &print_opts);
+  print_command_parse_format (&arg, "compile print", print_opts);
 
   /* Passing &PRINT_OPTS as SCOPE_DATA is safe as do_module_cleanup
      will not touch the stale pointer if compile_object_run has

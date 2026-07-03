@@ -323,15 +323,15 @@ wchar_printer::count_next_character (wchar_iterator *iter,
 void
 wchar_printer::print_converted_chars_to_obstack
      (const std::vector<converted_character> &chars,
-      const value_print_options *options,
+      const value_print_options &options,
       int *finished)
 {
   unsigned int idx, num_elements;
   const converted_character *elem;
   enum {START, SINGLE, REPEAT, INCOMPLETE, FINISH} state, last;
   gdb_wchar_t wide_quote_char = gdb_btowc (m_quoter);
-  const int print_max = options->print_max_chars > 0
-      ? options->print_max_chars : options->print_max;
+  const int print_max = options.print_max_chars > 0
+      ? options.print_max_chars : options.print_max;
 
   /* Set the start state.  */
   idx = num_elements = 0;
@@ -351,7 +351,7 @@ wchar_printer::print_converted_chars_to_obstack
 	    int j;
 
 	    /* We are outputting a single character
-	       (< options->repeat_count_threshold).  */
+	       (< options.repeat_count_threshold).  */
 
 	    if (last != SINGLE)
 	      {
@@ -385,7 +385,7 @@ wchar_printer::print_converted_chars_to_obstack
 	    int j;
 
 	    /* We are outputting a character with a repeat count
-	       greater than options->repeat_count_threshold.  */
+	       greater than options.repeat_count_threshold.  */
 
 	    if (last == SINGLE)
 	      {
@@ -455,7 +455,7 @@ wchar_printer::print_converted_chars_to_obstack
 	    {
 	    case wchar_iterate_ok:
 	    case wchar_iterate_invalid:
-	      if (elem->repeat_count > options->repeat_count_threshold)
+	      if (elem->repeat_count > options.repeat_count_threshold)
 		state = REPEAT;
 	      else
 		state = SINGLE;
@@ -479,7 +479,7 @@ void
 wchar_printer::print (struct ui_file *stream, const gdb_byte *string,
 		      unsigned int length, int force_ellipses,
 		      int c_style_terminator,
-		      const value_print_options *options)
+		      const value_print_options &options)
 {
   unsigned int i;
   int finished = 0;

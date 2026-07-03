@@ -106,7 +106,7 @@ public:
   void print (struct ui_file *stream, const gdb_byte *string,
 	      unsigned int length, int force_ellipses,
 	      int c_style_terminator,
-	      const value_print_options *options);
+	      const value_print_options &options);
 
 protected:
 
@@ -165,7 +165,7 @@ protected:
      elements in CHARS.  */
   void print_converted_chars_to_obstack
        (const std::vector<converted_character> &chars,
-	const value_print_options *options,
+	const value_print_options &options,
 	int *finished);
 
 private:

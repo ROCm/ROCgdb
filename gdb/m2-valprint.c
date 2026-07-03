@@ -31,12 +31,12 @@
 
 static int print_unpacked_pointer (struct type *type,
 				   CORE_ADDR address, CORE_ADDR addr,
-				   const value_print_options *options,
+				   const value_print_options &options,
 				   struct ui_file *stream);
 static void
 m2_print_array_contents (struct value *val,
 			 struct ui_file *stream, int recurse,
-			 const value_print_options *options,
+			 const value_print_options &options,
 			 int len);
 
 
@@ -157,7 +157,7 @@ m2_print_long_set (struct type *type, const gdb_byte *valaddr,
 static void
 m2_print_unbounded_array (struct value *value,
 			  struct ui_file *stream, int recurse,
-			  const value_print_options *options)
+			  const value_print_options &options)
 {
   CORE_ADDR addr;
   LONGEST len;
@@ -182,7 +182,7 @@ m2_print_unbounded_array (struct value *value,
 static int
 print_unpacked_pointer (struct type *type,
 			CORE_ADDR address, CORE_ADDR addr,
-			const value_print_options *options,
+			const value_print_options &options,
 			struct ui_file *stream)
 {
   struct gdbarch *gdbarch = type->arch ();
@@ -197,7 +197,7 @@ print_unpacked_pointer (struct type *type,
       return 0;
     }
 
-  if (options->addressprint && options->format != 's')
+  if (options.addressprint && options.format != 's')
     {
       fputs_styled (paddress (gdbarch, address), address_style.style (),
 		    stream);
@@ -209,7 +209,7 @@ print_unpacked_pointer (struct type *type,
 
   if (elttype->length () == 1
       && elttype->code () == TYPE_CODE_INT
-      && (options->format == 0 || options->format == 's')
+      && (options.format == 0 || options.format == 's')
       && addr != 0)
     {
       if (want_space)
@@ -226,7 +226,7 @@ print_variable_at_address (struct type *type,
 			   const gdb_byte *valaddr,
 			   struct ui_file *stream,
 			   int recurse,
-			   const value_print_options *options)
+			   const value_print_options &options)
 {
   struct gdbarch *gdbarch = type->arch ();
   CORE_ADDR addr = unpack_pointer (type, valaddr);
@@ -257,7 +257,7 @@ print_variable_at_address (struct type *type,
 static void
 m2_print_array_contents (struct value *val,
 			 struct ui_file *stream, int recurse,
-			 const value_print_options *options,
+			 const value_print_options &options,
 			 int len)
 {
   struct type *type = check_typedef (val->type ());
@@ -269,7 +269,7 @@ m2_print_array_contents (struct value *val,
 	  ((type->code () == TYPE_CODE_INT)
 	   || ((current_language->la_language == language_m2)
 	       && (type->code () == TYPE_CODE_CHAR)))
-	  && (options->format == 0 || options->format == 's'))
+	  && (options.format == 0 || options.format == 's'))
 	val_print_string (type, NULL, val->address (), len+1, stream,
 			  options);
       else
@@ -300,7 +300,7 @@ static const struct generic_val_print_decorations m2_decorations =
 void
 m2_language::value_print_inner (struct value *val, struct ui_file *stream,
 				int recurse,
-				const value_print_options *options) const
+				const value_print_options &options) const
 {
   unsigned len;
   struct type *elttype;
@@ -321,11 +321,11 @@ m2_language::value_print_inner (struct value *val, struct ui_file *stream,
 	      ((elttype->code () == TYPE_CODE_INT)
 	       || ((current_language->la_language == language_m2)
 		   && (elttype->code () == TYPE_CODE_CHAR)))
-	      && (options->format == 0 || options->format == 's'))
+	      && (options.format == 0 || options.format == 's'))
 	    {
 	      /* If requested, look for the first null char and only print
 		 elements up to it.  */
-	      if (options->stop_print_at_null)
+	      if (options.stop_print_at_null)
 		{
 		  unsigned int print_max_chars = get_print_max_chars (options);
 		  unsigned int temp_len;
@@ -358,7 +358,7 @@ m2_language::value_print_inner (struct value *val, struct ui_file *stream,
     case TYPE_CODE_PTR:
       if (type->is_const ())
 	print_variable_at_address (type, valaddr, stream, recurse, options);
-      else if (options->format && options->format != 's')
+      else if (options.format && options.format != 's')
 	value_print_scalar_formatted (val, options, 0, stream);
       else
 	{
@@ -368,7 +368,7 @@ m2_language::value_print_inner (struct value *val, struct ui_file *stream,
       break;
 
     case TYPE_CODE_UNION:
-      if (recurse && !options->unionprint)
+      if (recurse && !options.unionprint)
 	{
 	  gdb_printf (stream, "{...}");
 	  break;

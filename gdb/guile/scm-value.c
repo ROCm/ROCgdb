@@ -161,7 +161,7 @@ vlscm_print_value_smob (SCM self, SCM port, scm_print_state *pstate)
     {
       string_file stb;
 
-      common_val_print (v_smob->value, &stb, 0, &opts, current_language);
+      common_val_print (v_smob->value, &stb, 0, opts, current_language);
       scm_puts (stb.c_str (), port);
     }
   catch (const gdb_exception &except)
@@ -1274,7 +1274,7 @@ gdbscm_value_print (SCM self)
   gdbscm_gdb_exception exc {};
   try
     {
-      common_val_print (value, &stb, 0, &opts, current_language);
+      common_val_print (value, &stb, 0, opts, current_language);
     }
   catch (const gdb_exception &except)
     {

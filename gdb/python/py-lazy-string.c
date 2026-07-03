@@ -313,7 +313,7 @@ stpy_str (PyObject *self)
     {
       struct type *type = stpy_lazy_string_elt_type (str);
       val_print_string (type, str->encoding, str->address, str->length,
-			&stream, &opts);
+			&stream, opts);
     }
   catch (const gdb_exception &exc)
     {

@@ -643,7 +643,7 @@ varobj_get_iterator (struct varobj *var)
   if (var->dynamic->pretty_printer)
     {
       value_print_options opts = varobj_formatted_print_options (var->format);
-      return py_varobj_get_iterator (var, var->dynamic->pretty_printer, &opts);
+      return py_varobj_get_iterator (var, var->dynamic->pretty_printer, opts);
     }
 #endif
 
@@ -2138,7 +2138,7 @@ varobj_value_get_print_value (struct value *value,
 	      gdbpy_ref<> output = apply_varobj_pretty_printer (value_formatter,
 								&replacement,
 								&stb,
-								&opts);
+								opts);
 
 	      /* If we have string like output ...  */
 	      if (output != nullptr && output != Py_None)
@@ -2213,14 +2213,14 @@ varobj_value_get_print_value (struct value *value,
   /* If the THEVALUE has contents, it is a regular string.  */
   if (!thevalue.empty ())
     current_language->printstr (&stb, type, (gdb_byte *) thevalue.c_str (),
-				len, encoding.get (), 0, &opts);
+				len, encoding.get (), 0, opts);
   else if (string_print)
     /* Otherwise, if string_print is set, and it is not a regular
        string, it is a lazy string.  */
-    val_print_string (type, encoding.get (), str_addr, len, &stb, &opts);
+    val_print_string (type, encoding.get (), str_addr, len, &stb, opts);
   else
     /* All other cases.  */
-    common_val_print (value, &stb, 0, &opts, current_language);
+    common_val_print (value, &stb, 0, opts, current_language);
 
   return stb.release ();
 }

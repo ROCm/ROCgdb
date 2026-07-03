@@ -2819,7 +2819,7 @@ maintenance_print_record_instruction (const char *args, int from_tty)
 					 entry.get_loc ());
 	      gdb_printf ("Register %s changed: ",
 			  gdbarch_register_name (arch, entry.reg ().num));
-	      value_print (val, gdb_stdout, &opts);
+	      value_print (val, gdb_stdout, opts);
 	      gdb_printf ("\n");
 	      break;
 	    }
@@ -2841,7 +2841,7 @@ maintenance_print_record_instruction (const char *args, int from_tty)
   value *val = value_from_contents (regtype, to_print->pc.get_loc ());
   gdb_printf ("Register %s changed: ",
 	      gdbarch_register_name (arch, to_print->pc.num));
-  value_print (val, gdb_stdout, &opts);
+  value_print (val, gdb_stdout, opts);
   gdb_printf ("\n");
 }
 

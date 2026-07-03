@@ -564,7 +564,7 @@ list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
 	      opts.deref_ref = true;
 	      if (arg->sym->is_argument ())
 		opts.raw = fp_opts.print_raw_frame_arguments;
-	      common_val_print (arg->val, &stb, 0, &opts,
+	      common_val_print (arg->val, &stb, 0, opts,
 				language_def (arg->sym->language ()));
 	    }
 	  catch (const gdb_exception_error &except)

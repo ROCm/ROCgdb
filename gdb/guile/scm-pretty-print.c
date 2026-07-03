@@ -645,7 +645,7 @@ ppscm_print_exception_unless_memory_error (SCM exception,
 static enum guile_string_repr_result
 ppscm_print_string_repr (SCM printer, enum display_hint hint,
 			 struct ui_file *stream, int recurse,
-			 const value_print_options *options,
+			 const value_print_options &options,
 			 struct gdbarch *gdbarch,
 			 const struct language_defn *language)
 {
@@ -661,11 +661,11 @@ ppscm_print_string_repr (SCM printer, enum display_hint hint,
     }
   else if (scm_is_eq (str_scm, SCM_BOOL_T))
     {
-      value_print_options opts = *options;
+      value_print_options opts = options;
 
       gdb_assert (replacement != NULL);
       opts.addressprint = false;
-      common_val_print (replacement, stream, recurse, &opts, language);
+      common_val_print (replacement, stream, recurse, opts, language);
       result = STRING_REPR_OK;
     }
   else if (scm_is_string (str_scm))
@@ -700,10 +700,10 @@ ppscm_print_string_repr (SCM printer, enum display_hint hint,
     }
   else if (lsscm_is_lazy_string (str_scm))
     {
-      value_print_options local_opts = *options;
+      value_print_options local_opts = options;
 
       local_opts.addressprint = false;
-      lsscm_val_print_lazy_string (str_scm, stream, &local_opts);
+      lsscm_val_print_lazy_string (str_scm, stream, local_opts);
       result = STRING_REPR_OK;
     }
   else
@@ -725,7 +725,7 @@ ppscm_print_string_repr (SCM printer, enum display_hint hint,
 static void
 ppscm_print_children (SCM printer, enum display_hint hint,
 		      struct ui_file *stream, int recurse,
-		      const value_print_options *options,
+		      const value_print_options &options,
 		      struct gdbarch *gdbarch,
 		      const struct language_defn *language,
 		      int printed_nothing)
@@ -774,17 +774,17 @@ ppscm_print_children (SCM printer, enum display_hint hint,
   /* Use the prettyformat_arrays option if we are printing an array,
      and the pretty option otherwise.  */
   if (is_array)
-    pretty = options->prettyformat_arrays;
+    pretty = options.prettyformat_arrays;
   else
     {
-      if (options->prettyformat == Val_prettyformat)
+      if (options.prettyformat == Val_prettyformat)
 	pretty = 1;
       else
-	pretty = options->prettyformat_structs;
+	pretty = options.prettyformat_structs;
     }
 
   done_flag = 0;
-  for (i = 0; i < options->print_max; ++i)
+  for (i = 0; i < options.print_max; ++i)
     {
       SCM scm_name, v_scm;
       SCM item = itscm_safe_call_next_x (iter, gdbscm_memory_error_p);
@@ -847,7 +847,7 @@ ppscm_print_children (SCM printer, enum display_hint hint,
 
       /* In summary mode, we just want to print "= {...}" if there is
 	 a value.  */
-      if (options->summary)
+      if (options.summary)
 	{
 	  /* This increment tricks the post-loop logic to print what
 	     we want.  */
@@ -874,7 +874,7 @@ ppscm_print_children (SCM printer, enum display_hint hint,
 	{
 	  /* We print the index, not whatever the child method
 	     returned as the name.  */
-	  if (options->print_array_indexes)
+	  if (options.print_array_indexes)
 	    gdb_printf (stream, "[%d] = ", i);
 	}
       else if (! is_map)
@@ -885,10 +885,10 @@ ppscm_print_children (SCM printer, enum display_hint hint,
 
       if (lsscm_is_lazy_string (v_scm))
 	{
-	  value_print_options local_opts = *options;
+	  value_print_options local_opts = options;
 
 	  local_opts.addressprint = false;
-	  lsscm_val_print_lazy_string (v_scm, stream, &local_opts);
+	  lsscm_val_print_lazy_string (v_scm, stream, local_opts);
 	}
       else if (scm_is_string (v_scm))
 	{
@@ -914,12 +914,12 @@ ppscm_print_children (SCM printer, enum display_hint hint,
 	      /* When printing the key of a map we allow one additional
 		 level of depth.  This means the key will print before the
 		 value does.  */
-	      value_print_options opt = *options;
+	      value_print_options opt = options;
 	      if (is_map && i % 2 == 0
 		  && opt.max_depth != -1
 		  && opt.max_depth < INT_MAX)
 		++opt.max_depth;
-	      common_val_print (value, stream, recurse + 1, &opt, language);
+	      common_val_print (value, stream, recurse + 1, opt, language);
 	    }
 	}
 
@@ -957,7 +957,7 @@ enum ext_lang_rc
 gdbscm_apply_val_pretty_printer (const struct extension_language_defn *extlang,
 				 struct value *value,
 				 struct ui_file *stream, int recurse,
-				 const value_print_options *options,
+				 const value_print_options &options,
 				 const struct language_defn *language)
 {
   struct type *type = value->type ();

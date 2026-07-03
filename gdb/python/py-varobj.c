@@ -24,7 +24,7 @@
 struct py_varobj_iter : public varobj_iter
 {
   py_varobj_iter (struct varobj *var, gdbpy_ref<> &&pyiter,
-		  const value_print_options *opts);
+		  const value_print_options &opts);
   ~py_varobj_iter () override;
 
   std::unique_ptr<varobj_item> next () override;
@@ -132,10 +132,10 @@ py_varobj_iter::next ()
    python iterator actually responsible for the iteration.  */
 
 py_varobj_iter::py_varobj_iter (struct varobj *var, gdbpy_ref<> &&pyiter,
-				const value_print_options *opts)
+				const value_print_options &opts)
   : m_var (var),
     m_iter (pyiter.release ()),
-    m_opts (*opts)
+    m_opts (opts)
 {
 }
 
@@ -144,7 +144,7 @@ py_varobj_iter::py_varobj_iter (struct varobj *var, gdbpy_ref<> &&pyiter,
 
 std::unique_ptr<varobj_iter>
 py_varobj_get_iterator (struct varobj *var, PyObject *printer,
-			const value_print_options *opts)
+			const value_print_options &opts)
 {
   gdbpy_enter_varobj enter_py (var);
 
@@ -152,7 +152,7 @@ py_varobj_get_iterator (struct varobj *var, PyObject *printer,
     return NULL;
 
   scoped_restore set_options = make_scoped_restore (&gdbpy_current_print_options,
-						    opts);
+						    &opts);
 
   gdbpy_ref<> children (PyObject_CallMethodObjArgs (printer, gdbpy_children_cst,
 						    NULL));
