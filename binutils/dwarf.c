@@ -2919,7 +2919,8 @@ display_member_type (const member_type mt)
 static member_type *
 get_or_create_member_type (member_parent *parent, uint64_t die_offset)
 {
-  assert (parent != NULL);
+  if (parent == NULL)
+    return NULL;
   if (parent->member_tail == NULL
       || parent->member_tail->die_offset != die_offset)
     {
@@ -3371,6 +3372,8 @@ insert_element_in_list (enum dwarf_tag dw_tag,
 	  mt = get_or_create_member_type (union_type_list.tail, die_offset);
 	else
 	  mt = get_or_create_member_type (struct_type_list.tail, die_offset);
+	if (mt == NULL)
+	  break;
 
 	if (dw_attr == DW_AT_name)
 	  {
