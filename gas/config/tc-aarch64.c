@@ -2244,15 +2244,13 @@ s_aarch64_cons (int nbytes)
 		  return;
 		}
 
-	      addressT where = frag_now_fix ();
-	      fix_new_exp (frag_now, where, nbytes, &exp, 0,
-			   BFD_RELOC_AARCH64_TLS_DTPREL);
-
 	      char *dest = frag_more (nbytes);
 	      memset (dest, 0, nbytes);
+
+	      fix_new_exp (frag_now, dest - frag_now->fr_literal, nbytes,
+			   &exp, 0, BFD_RELOC_AARCH64_TLS_DTPREL);
 	      continue;
 	    }
-
 	  else
 	    {
 	      as_bad (_("unknown relocation operator"));
