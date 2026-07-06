@@ -91,6 +91,15 @@
   record btrace pt event-tracing on) on a FRED-enabled system and from
   Trigger Tracing.
 
+* The s390 32-bit target (s390-*) is deprecated and planned for
+  removal in a future release, along with the elf32-s390 target
+  format.  configure now emits an error for this target, which can be
+  overridden using --enable-obsolete.
+  Linux Kernel 6.19 removed s390 32-bit compatibility support.
+  Glibc 2.43 and GCC 16.1 have deprecated s390 32-bit, both with the
+  intent to remove it in a future release.
+  The s390 64-bit target (s390x-*) remains supported.
+
 * Configure changes
 
 ** --with-babeltrace has been removed.  The babeltrace library was
@@ -102,6 +111,10 @@
 GNU/Linux/MicroBlaze (gdbserver) microblazeel-*linux*
 
 AArch64 MinGW                   aarch64-*-mingw*
+
+* Deprecated targets
+
+GNU/Linux/S390 32-bit		s390-*-*
 
 * New commands
 
