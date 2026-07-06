@@ -36,6 +36,45 @@ static bool coff_link_check_archive_element
    bool *);
 static bool coff_link_add_symbols (bfd *, struct bfd_link_info *);
 
+static bool
+coff_link_hash_pe_weak_external_has_real_fallback
+  (struct coff_link_hash_entry *h)
+{
+  struct coff_link_hash_entry *h2;
+  unsigned long symndx;
+
+  if (h->symbol_class != C_NT_WEAK
+      || h->numaux != 1
+      || h->aux == NULL
+      || h->auxbfd == NULL
+      || ! obj_pe (h->auxbfd)
+      || obj_coff_sym_hashes (h->auxbfd) == NULL)
+    return false;
+
+  /* The PE weak-external aux entry names the fallback symbol by raw
+     symbol index.  Look up the corresponding link hash entry so we can
+     test the fallback's resolved state, not just its object-file entry.  */
+  symndx = h->aux->x_sym.x_tagndx.u32;
+  if (symndx >= obj_raw_syment_count (h->auxbfd))
+    return false;
+
+  h2 = obj_coff_sym_hashes (h->auxbfd)[symndx];
+  if (h2 == NULL)
+    return false;
+
+  while (h2->root.type == bfd_link_hash_indirect
+	 || h2->root.type == bfd_link_hash_warning)
+    h2 = (struct coff_link_hash_entry *) h2->root.u.i.link;
+
+  /* A weak declaration with no fallback uses the absolute-zero null
+     symbol.  Only a defined real fallback means this archive member has
+     already satisfied the weak external.  */
+  return ((h2->root.type == bfd_link_hash_defined
+	   || h2->root.type == bfd_link_hash_defweak)
+	  && !(bfd_is_abs_section (h2->root.u.def.section)
+	       && h2->root.u.def.value == 0));
+}
+
 /* Return TRUE if SYM is a weak, external symbol.  */
 #define IS_WEAK_EXTERNAL(abfd, sym)			\
   ((sym).n_sclass == C_WEAKEXT				\
@@ -253,6 +292,13 @@ coff_link_check_archive_element (bfd *abfd,
      of the symbols defined by that element might have been
      made undefined due to being in a discarded section.  */
   if (((struct coff_link_hash_entry *) h)->indx == -3)
+    return true;
+
+  /* A PE weak external can stay undefined even after its fallback has
+     been defined by this archive member.  Avoid extracting the member
+     again if the same archive is searched more than once.  */
+  if (coff_link_hash_pe_weak_external_has_real_fallback
+      ((struct coff_link_hash_entry *) h))
     return true;
 
   /* Include this element?  */
@@ -477,13 +523,20 @@ coff_link_add_symbols (bfd *abfd,
 	      /* If we don't have any symbol information currently in
 		 the hash table, or if we are looking at a symbol
 		 definition, then update the symbol class and type in
-		 the hash table.  */
+		 the hash table.  Also update if the incoming symbol is
+		 a weak external with an aux record (PE COFF weak alias)
+		 and the existing symbol is still undefined, so the
+		 fallback alias information is preserved for the linker's
+		 relocation resolution.  */
 	      if (((*sym_hash)->symbol_class == C_NULL
 		   && (*sym_hash)->type == T_NULL)
 		  || sym.n_scnum != 0
 		  || (sym.n_value != 0
 		      && (*sym_hash)->root.type != bfd_link_hash_defined
-		      && (*sym_hash)->root.type != bfd_link_hash_defweak))
+		      && (*sym_hash)->root.type != bfd_link_hash_defweak)
+		  || (IS_WEAK_EXTERNAL (abfd, sym)
+		      && sym.n_numaux > 0
+		      && (*sym_hash)->root.type == bfd_link_hash_undefined))
 		{
 		  (*sym_hash)->symbol_class = sym.n_sclass;
 		  if (sym.n_type != T_NULL)
@@ -521,10 +574,91 @@ coff_link_add_symbols (bfd *abfd,
 		      union internal_auxent *iaux;
 
 		      (*sym_hash)->numaux = sym.n_numaux;
-		      alloc = ((union internal_auxent *)
-			       bfd_hash_allocate (&info->hash->table,
-						  (sym.n_numaux
-						   * sizeof (*alloc))));
+		      alloc = bfd_hash_allocate (&info->hash->table,
+						 (sym.n_numaux
+						  * sizeof (*alloc)));
+		      if (alloc == NULL)
+			goto error_return;
+		      for (i = 0, eaux = esym + symesz, iaux = alloc;
+			   i < sym.n_numaux;
+			   i++, eaux += symesz, iaux++)
+			bfd_coff_swap_aux_in (abfd, eaux, sym.n_type,
+					      sym.n_sclass, (int) i,
+					      sym.n_numaux, iaux);
+		      (*sym_hash)->aux = alloc;
+		    }
+		}
+
+	      /* When two PE COFF weak externals meet (both with aux
+		 records specifying fallback aliases), prefer the one
+		 whose fallback resolves to a defined symbol over one
+		 whose fallback is undefined or NULL.  This
+		 handles the case where a weak declaration (with a
+		 fallback of NULL) is seen before a weak
+		 definition (with a fallback of the actual function
+		 body).  */
+	      else if (IS_WEAK_EXTERNAL (abfd, sym)
+		       && sym.n_numaux > 0
+		       && (*sym_hash)->root.type == bfd_link_hash_undefweak
+		       && (*sym_hash)->symbol_class == C_NT_WEAK
+		       && (*sym_hash)->numaux == 1)
+		{
+		  /* Parse the incoming aux to get the fallback tagndx.  */
+		  union internal_auxent new_aux;
+		  unsigned long new_tagndx;
+		  unsigned long old_tagndx;
+		  struct coff_link_hash_entry *h2_new = NULL;
+		  struct coff_link_hash_entry *h2_old = NULL;
+		  bool new_is_real_fallback;
+		  bool old_is_unresolved_fallback;
+
+		  bfd_coff_swap_aux_in (abfd, esym + symesz, sym.n_type,
+					sym.n_sclass, 0, sym.n_numaux,
+					&new_aux);
+		  new_tagndx = new_aux.x_sym.x_tagndx.u32;
+
+		  if (new_tagndx < obj_raw_syment_count (abfd))
+		    h2_new = obj_coff_sym_hashes (abfd)[new_tagndx];
+
+		  old_tagndx = (*sym_hash)->aux->x_sym.x_tagndx.u32;
+		  if (old_tagndx
+		      < obj_raw_syment_count ((*sym_hash)->auxbfd))
+		    h2_old = obj_coff_sym_hashes
+		      ((*sym_hash)->auxbfd)[old_tagndx];
+
+		  /* Update if the new fallback is a real definition but
+		     the old one is not.  A weak declaration with no
+		     definition uses the COFF null symbol as its fallback.
+		     In the hash table that fallback looks like a defined
+		     absolute symbol with value zero, so treat that case as
+		     unresolved here.  */
+		  new_is_real_fallback
+		    = (h2_new != NULL
+		       && (h2_new->root.type == bfd_link_hash_defined
+			   || h2_new->root.type == bfd_link_hash_defweak)
+		       && !(bfd_is_abs_section (h2_new->root.u.def.section)
+			    && h2_new->root.u.def.value == 0));
+		  old_is_unresolved_fallback
+		    = (h2_old == NULL
+		       || h2_old->root.type == bfd_link_hash_undefined
+		       || h2_old->root.type == bfd_link_hash_undefweak
+		       || (h2_old->root.type == bfd_link_hash_defined
+			   && bfd_is_abs_section (h2_old->root.u.def.section)
+			   && h2_old->root.u.def.value == 0));
+
+		  if (new_is_real_fallback && old_is_unresolved_fallback)
+		    {
+		      union internal_auxent *alloc;
+		      unsigned int i;
+		      bfd_byte *eaux;
+		      union internal_auxent *iaux;
+
+		      (*sym_hash)->symbol_class = sym.n_sclass;
+		      (*sym_hash)->auxbfd = abfd;
+		      (*sym_hash)->numaux = sym.n_numaux;
+		      alloc = bfd_hash_allocate (&info->hash->table,
+						 (sym.n_numaux
+						  * sizeof (*alloc)));
 		      if (alloc == NULL)
 			goto error_return;
 		      for (i = 0, eaux = esym + symesz, iaux = alloc;
@@ -3065,14 +3199,24 @@ _bfd_coff_generic_relocate_section (bfd *output_bfd,
 		     + sec->output_offset);
 	    }
 
-	  else if (h->root.type == bfd_link_hash_undefweak)
+	  else if (h->root.type == bfd_link_hash_undefweak
+		   || (h->root.type == bfd_link_hash_undefined
+		       && h->symbol_class == C_NT_WEAK && h->numaux == 1))
 	    {
-	      if (h->symbol_class == C_NT_WEAK && h->numaux == 1)
+	      /* Weak undefined symbol: either GNU weak (no aux record) or
+		 PE COFF weak external (C_NT_WEAK with aux record).
+		 Also handles strong undefined symbols that carry PE weak
+		 external metadata (when strong undef is seen before weak def,
+		 the hash type stays bfd_link_hash_undefined but we preserve
+		 the weak external class and aux for later resolution).  */
+
+	      bool is_pe_weak = (h->symbol_class == C_NT_WEAK && h->numaux == 1);
+
+	      if (is_pe_weak)
 		{
-		  /* See _Microsoft Portable Executable and Common Object
+		  /* PE COFF weak external: resolve via fallback alias.
+		     See _Microsoft Portable Executable and Common Object
 		     File Format Specification_, section 5.5.3.
-		     Note that weak symbols without aux records are a GNU
-		     extension.
 		     FIXME: All weak externals are treated as having
 		     characteristic IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY (1).
 		     These behave as per SVR4 ABI:  A library member
@@ -3081,24 +3225,37 @@ _bfd_coff_generic_relocate_section (bfd *output_bfd,
 		     See also linker.c: generic_link_check_archive_element. */
 		  struct coff_link_hash_entry *h2 = NULL;
 		  unsigned long symndx2 = h->aux->x_sym.x_tagndx.u32;
+
 		  if (symndx2 < obj_raw_syment_count (h->auxbfd))
 		    h2 = obj_coff_sym_hashes (h->auxbfd)[symndx2];
 
 		  if (!h2 || h2->root.type == bfd_link_hash_undefined)
 		    {
+		      /* Fallback alias not found or still undefined.
+			 Resolve to NULL.  */
 		      sec = bfd_abs_section_ptr;
 		      val = 0;
 		    }
 		  else
 		    {
+		      /* Use fallback alias target.  */
 		      sec = h2->root.u.def.section;
 		      val = h2->root.u.def.value
 			+ sec->output_section->vma + sec->output_offset;
 		    }
 		}
 	      else
-		/* This is a GNU extension.  */
-		val = 0;
+		{
+		  /* GNU extension: ELF-style weak symbol in COFF without
+		     PE weak external aux record.  COFF has no native support
+		     for weak symbols (unlike ELF where they're part of the
+		     format).  PE COFF adds them via C_NT_WEAK storage class
+		     with an aux record pointing to a fallback symbol.  GNU ld
+		     extends this by allowing __attribute__((weak)) in COFF
+		     objects even without the PE aux structure, treating them
+		     like ELF weak symbols: resolve to NULL if not defined.  */
+		  val = 0;
+		}
 	    }
 
 	  else if (! bfd_link_relocatable (info))

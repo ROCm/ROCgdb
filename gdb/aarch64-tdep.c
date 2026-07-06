@@ -6319,8 +6319,6 @@ aarch64_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	       aarch64_record.aarch64_mems[rec_no].len))
 	    ret = -1;
 
-      if (record_full_arch_list_add_end ())
-	ret = -1;
     }
 
   deallocate_reg_mem (&aarch64_record);

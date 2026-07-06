@@ -138,3 +138,170 @@ set align_tests {
 }
 
 run_ld_link_tests $align_tests
+
+# Test PE COFF weak external symbol resolution.
+# These tests cover the full matrix of weak/strong interactions to verify
+# that the linker correctly resolves weak externals in PE COFF objects.
+# Based on testcases by Martin Storsjo.
+
+proc weak_ext_test { testname sources } {
+    global CC_FOR_TARGET
+    global srcdir
+    global subdir
+
+    set objfiles {}
+    foreach src $sources {
+	set fileroot [file rootname [file tail $src]]
+	set obj "tmpdir/$fileroot.o"
+	if ![ld_compile $CC_FOR_TARGET $srcdir/$subdir/$src $obj] {
+	    fail "$testname (compile $src)"
+	    return
+	}
+	lappend objfiles $obj
+    }
+
+    set output "tmpdir/weak-ext-test.exe"
+    if ![ld_link $CC_FOR_TARGET $output $objfiles] {
+	fail "$testname (link)"
+	return
+    }
+
+    if ![isnative] {
+	pass "$testname (link only)"
+	return
+    }
+
+    catch "exec $output" prog_output
+    if { $prog_output eq "" } {
+	pass $testname
+    } else {
+	verbose $prog_output
+	fail "$testname ($prog_output)"
+    }
+}
+
+proc weak_ext_archive_test { } {
+    global CC_FOR_TARGET
+    global ar
+    global nm
+    global srcdir
+    global subdir
+
+    set testname "weak external: archive strong undef + weak def"
+    set main_obj "tmpdir/weak-ext-main.o"
+    set weak_decl_obj "tmpdir/weak-ext-main-weak.o"
+    set weak_obj "tmpdir/weak-ext-add1-weak-chained.o"
+    set expected_obj "tmpdir/weak-ext-expected3.o"
+    set weak_decl_archive "tmpdir/weak-ext-decl-archive.a"
+    set archive "tmpdir/weak-ext-archive.a"
+    set output "tmpdir/weak-ext-archive-test.exe"
+
+    set sources {weak-ext-main.c weak-ext-main-weak.c \
+	weak-ext-add1-weak-chained.c weak-ext-expected3.c}
+    set objects [list $main_obj $weak_decl_obj $weak_obj $expected_obj]
+    foreach src $sources obj $objects {
+	if ![ld_compile $CC_FOR_TARGET $srcdir/$subdir/$src $obj] {
+	    fail "$testname (compile $src)"
+	    return
+	}
+    }
+
+    set got [run_host_cmd "$ar" "rcs $weak_decl_archive $weak_decl_obj"]
+    if ![string match "" $got] {
+	fail "$testname (weak decl archive)"
+	return
+    }
+
+    # A weak declaration with the null fallback must not advertise its
+    # public name as an archive-map provider.
+    set got [run_host_cmd "$nm" "--print-armap $weak_decl_archive"]
+    if [regexp "(^|\n)_?func in weak-ext-main-weak\\.o" $got] {
+	verbose -log $got
+	fail "$testname (weak decl armap)"
+	return
+    }
+
+    set got [run_host_cmd "$ar" "rcs $archive $weak_obj"]
+    if ![string match "" $got] {
+	fail "$testname (archive)"
+	return
+    }
+
+    # A weak external with a real fallback should advertise the public
+    # alias, so a strong undefined reference can extract the member.
+    set got [run_host_cmd "$nm" "--print-armap $archive"]
+    if ![regexp "(^|\n)_?func in weak-ext-add1-weak-chained\\.o" $got] {
+	verbose -log $got
+	fail "$testname (armap)"
+	return
+    }
+
+    # Search the archive twice to cover command lines where the driver
+    # adds a library implicitly and the user also names it explicitly.
+    if ![ld_link $CC_FOR_TARGET $output \
+	     [list $main_obj $expected_obj $archive $archive]] {
+	fail "$testname (link)"
+	return
+    }
+
+    if ![isnative] {
+	pass "$testname (link only)"
+	return
+    }
+
+    catch "exec $output" prog_output
+    if { $prog_output eq "" } {
+	pass $testname
+    } else {
+	verbose $prog_output
+	fail "$testname ($prog_output)"
+    }
+}
+
+# Strong undefined reference + strong definition: basic sanity check.
+weak_ext_test "weak external: normal (strong undef + strong def)" \
+    {weak-ext-main.c weak-ext-add2.c weak-ext-expected3.c weak-ext-dummy.c}
+
+# Weak declaration with no definition available: func remains NULL,
+# never called.
+weak_ext_test "weak external: weak undef (no def)" \
+    {weak-ext-main-weak.c weak-ext-expected1.c weak-ext-dummy.c}
+
+# Weak declaration resolved by a strong definition in another object.
+weak_ext_test "weak external: weak decl + strong def" \
+    {weak-ext-main-weak.c weak-ext-add2.c weak-ext-expected3.c weak-ext-dummy.c}
+
+# Two weak externals for the same symbol meet: the one whose fallback
+# alias points to an actual function body should win over the one whose
+# fallback is NULL.
+weak_ext_test "weak external: weak decl + weak def" \
+    {weak-ext-main-weak.c weak-ext-add1-weak-chained.c weak-ext-expected3.c}
+
+# Strong undefined reference is seen before the weak definition: the
+# linker must still store the weak external's aux record so the fallback
+# alias can be resolved later.
+weak_ext_test "weak external: strong undef + weak def" \
+    {weak-ext-main.c weak-ext-add1-weak-chained.c weak-ext-expected3.c}
+
+weak_ext_archive_test
+
+# Strong definition overrides a weak definition: both call sites (in
+# main and in dummy) should resolve to the strong def.
+weak_ext_test "weak external: strong override of weak" \
+    {weak-ext-main.c weak-ext-add1-weak-chained.c weak-ext-add2.c \
+     weak-ext-expected5.c}
+
+# Two identical weak definitions for the same symbol: no conflict,
+# the linker picks one (first wins) and discards the duplicate.
+weak_ext_test "weak external: duplicate weak defs" \
+    {weak-ext-main.c weak-ext-add1-weak-chained.c \
+     weak-ext-expected3-add1-weak.c}
+
+# Weak definition in main overridden by a strong definition elsewhere.
+weak_ext_test "weak external: weak def overridden by strong" \
+    {weak-ext-main-weak-def.c weak-ext-add2.c weak-ext-expected3.c \
+     weak-ext-dummy.c}
+
+# Weak definition in main used directly when no strong definition exists.
+weak_ext_test "weak external: weak def used (no strong)" \
+    {weak-ext-main-weak-def.c weak-ext-expected5.c weak-ext-dummy.c}

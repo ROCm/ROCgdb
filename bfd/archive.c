@@ -142,6 +142,7 @@ SUBSECTION
 #include "filenames.h"
 #include "bfdlink.h"
 #include "plugin.h"
+#include "coff-bfd.h"
 
 #ifndef errno
 extern int errno;
@@ -2535,12 +2536,21 @@ _bfd_compute_and_push_armap
 		  flagword flags = (syms[src_count])->flags;
 		  asection *sec = syms[src_count]->section;
 
-		  if (((flags & (BSF_GLOBAL
-				 | BSF_WEAK
-				 | BSF_INDIRECT
-				 | BSF_GNU_UNIQUE)) != 0
-		       || bfd_is_com_section (sec))
-		      && ! bfd_is_und_section (sec))
+		  /* Include symbols that normally define archive-map entries, plus
+		     PE weak externals whose fallback is a real definition.  Those
+		     weak externals are canonicalized as undefined symbols, but their
+		     public names can still be needed to pull the archive member.  */
+		  bool include_in_armap
+		    = ((((flags & (BSF_GLOBAL
+			      | BSF_WEAK
+			      | BSF_INDIRECT
+			      | BSF_GNU_UNIQUE)) != 0
+			 || bfd_is_com_section (sec))
+			&& ! bfd_is_und_section (sec))
+		       || bfd_coff_pe_weak_external_has_real_fallback
+			    (bfd_asymbol_bfd (syms[src_count]), syms[src_count]));
+
+		  if (include_in_armap)
 		    {
 		      bfd_size_type namelen;
 		      struct orl *new_map;

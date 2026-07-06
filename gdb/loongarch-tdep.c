@@ -2789,8 +2789,6 @@ loongarch_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 					 LOONGARCH_PC_REGNUM))
 	return -1;
 
-      if (record_full_arch_list_add_end ())
-	return -1;
     }
 
   return ret;

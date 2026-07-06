@@ -1831,7 +1831,7 @@ update_all_relocations (size_t nentries)
 {
   size_t sz;
 
-  if (!do_got_section_contents)
+  if (nentries == 0 || !do_got_section_contents)
     return;
 
   if (!all_relocations_root)
@@ -7848,6 +7848,92 @@ offset_from_vma (Filedata * filedata, uint64_t vma, uint64_t size)
   return vma;
 }
 
+/* Valid section info and clear the invalid fields.  */
+
+static void
+validate_section_info (Elf_Internal_Shdr *internal, unsigned int i,
+		       Filedata *filedata, bool dynamic, bool probe)
+{
+  const char *dynamic_tag = NULL;
+  const char *dynamicsz_tag = NULL;
+  const char *dynamicent_tag = NULL;
+  if (probe)
+    return;
+
+  if (dynamic)
+    switch (i)
+      {
+      case DT_RELR:
+	dynamic_tag = "DT_RELR";
+	dynamicsz_tag = "DT_RELRSZ";
+	dynamicent_tag = "DT_RELRENT";
+	break;
+
+      default:
+	abort ();
+      }
+  else
+    {
+      if (internal->sh_link >= filedata->file_header.e_shnum
+	  && !special_defined_section_index (filedata,
+					     internal->sh_link))
+	{
+	  warn (_("Ignore the out of range sh_link value of %u for "
+		  "section %u\n"), internal->sh_link, i);
+	  internal->sh_link = 0;
+	}
+
+      if ((internal->sh_flags & SHF_INFO_LINK) != 0
+	  && internal->sh_info > filedata->file_header.e_shnum)
+	{
+	  warn (_("Ignore the out of range sh_info value of %u for "
+		  "section %u\n"), internal->sh_info, i);
+	  internal->sh_info = 0;
+	}
+    }
+
+  if (internal->sh_entsize > filedata->file_size)
+    {
+      if (dynamic)
+	warn (_("Ignore the out of range value of %" PRIu64 " for "
+		"dynamic tag %s\n"), (uint64_t) internal->sh_entsize,
+	      dynamicent_tag);
+      else
+	warn (_("Ignore the out of range sh_entsize value of %"
+		PRIu64 " for section %u\n"),
+	      (uint64_t) internal->sh_entsize, i);
+      internal->sh_entsize = 0;
+    }
+
+  if (internal->sh_type != SHT_NOBITS)
+    {
+      int64_t sh_offset = internal->sh_offset;
+      if (sh_offset < 0 || (uint64_t) sh_offset > filedata->file_size)
+	{
+	  if (dynamic)
+	    warn (_("Ignore the out of range value of %" PRId64 " for "
+		    "dynamic tag %s\n"), sh_offset, dynamic_tag);
+	  else
+	    warn (_("Ignore the out of range sh_offset value of %"
+		    PRId64 " for section %u\n"), sh_offset, i);
+	  internal->sh_offset = 0;
+	}
+
+      if (sh_offset + internal->sh_size > filedata->file_size)
+	{
+	  if (dynamic)
+	    warn (_("Ignore the out of range value of %" PRIu64 " for "
+		    "dynamic tag %s\n"), (uint64_t) internal->sh_size,
+		  dynamicsz_tag);
+	  else
+	    warn (_("Ignore the out of range sh_size value of %"
+		    PRIu64 " for section %u with sh_offset value of %"
+		    PRId64 "\n"), (uint64_t) internal->sh_size, i,
+		  sh_offset);
+	  internal->sh_size = 0;
+	}
+    }
+}
 
 /* Allocate memory and load the sections headers into FILEDATA->filedata->section_headers.
    If PROBE is true, this is just a probe and we do not generate any error
@@ -7911,13 +7997,7 @@ get_32bit_section_headers (Filedata * filedata, bool probe)
       internal->sh_info      = BYTE_GET (shdrs[i].sh_info);
       internal->sh_addralign = BYTE_GET (shdrs[i].sh_addralign);
       internal->sh_entsize   = BYTE_GET (shdrs[i].sh_entsize);
-      if (!probe
-	  && internal->sh_link >= num
-	  && !special_defined_section_index (filedata,
-					     internal->sh_link))
-	warn (_("Section %u has an out of range sh_link value of %u\n"), i, internal->sh_link);
-      if (!probe && internal->sh_flags & SHF_INFO_LINK && internal->sh_info > num)
-	warn (_("Section %u has an out of range sh_info value of %u\n"), i, internal->sh_info);
+      validate_section_info (internal, i, filedata, false, probe);
     }
 
   free (shdrs);
@@ -7986,13 +8066,7 @@ get_64bit_section_headers (Filedata * filedata, bool probe)
       internal->sh_info      = BYTE_GET (shdrs[i].sh_info);
       internal->sh_offset    = BYTE_GET (shdrs[i].sh_offset);
       internal->sh_addralign = BYTE_GET (shdrs[i].sh_addralign);
-      if (!probe
-	  && internal->sh_link >= num
-	  && !special_defined_section_index (filedata,
-					     internal->sh_link))
-	warn (_("Section %u has an out of range sh_link value of %u\n"), i, internal->sh_link);
-      if (!probe && internal->sh_flags & SHF_INFO_LINK && internal->sh_info > num)
-	warn (_("Section %u has an out of range sh_info value of %u\n"), i, internal->sh_info);
+      validate_section_info (internal, i, filedata, false, probe);
     }
 
   free (shdrs);
@@ -10081,7 +10155,11 @@ process_relocs (Filedata * filedata)
 	  switch (rel_type)
 	    {
 	    default:
-	      abort ();
+	      error (_("missing DT_REL and DT_RELA dynamic tags\n"));
+	      /* Avoid may be used uninitialized warning from GCC 14.  */
+	      rel_entsz = 0;
+	      entsz_name = NULL;
+	      return false;
 	    case reltype_rel:
 	      rel_entsz = filedata->dynamic_info[DT_RELENT];
 	      entsz_name = "DT_RELENT";
@@ -10111,19 +10189,43 @@ process_relocs (Filedata * filedata)
 	    }
 
 	  if (rel_type == reltype_relr)
-	    dump_relr_relocations (filedata,
-				   filedata->dynamic_info[DT_RELRSZ],
-				   filedata->dynamic_info[DT_RELRENT],
-				   filedata->dynamic_info[DT_RELR],
-				   NULL,
-				   filedata->dynamic_symbols,
-				   filedata->num_dynamic_syms,
-				   filedata->dynamic_strings,
-				   filedata->dynamic_strings_length,
-				   do_reloc);
+	    {
+	      if (all_relocations_count == 0)
+		{
+		  /* Count DT_RELR relocations when "-D --got-contents"
+		     is passed to readelf.  */
+		  uint64_t num_reloc;
+		  uint64_t *relrs = NULL;
+		  Elf_Internal_Shdr section = {};
+		  section.sh_offset
+		    = filedata->dynamic_info[DT_RELR];
+		  section.sh_size = rel_size;
+		  section.sh_entsize = rel_entsz;
+		  section.sh_type = SHT_RELR;
+		  validate_section_info (&section, DT_RELR, filedata,
+					 true, false);
+		  num_reloc = count_relr_relocations (filedata,
+						      &section,
+						      &relrs);
+		  free (relrs);
+		  if (num_reloc == 0)
+		    continue;
+		  update_all_relocations (num_reloc);
+		}
+	      dump_relr_relocations (filedata,
+				     filedata->dynamic_info[DT_RELRSZ],
+				     filedata->dynamic_info[DT_RELRENT],
+				     filedata->dynamic_info[DT_RELR],
+				     NULL,
+				     filedata->dynamic_symbols,
+				     filedata->num_dynamic_syms,
+				     filedata->dynamic_strings,
+				     filedata->dynamic_strings_length,
+				     do_reloc);
+	    }
 	  else
 	    {
-	      if (rel_entsz == 0)
+	      if (rel_entsz == 0 || rel_entsz > rel_size)
 		{
 		  printf (_("<missing or corrupt dynamic tag: %s>\n"),
 			  entsz_name);
@@ -21533,7 +21635,7 @@ process_got_section_contents (Filedata * filedata)
   bool res = true;
   bool found = false;
 
-  if (!do_got_section_contents)
+  if (!do_got_section_contents || all_relocations_count == 0)
     return res;
 
   switch (filedata->file_header.e_type)
@@ -21915,6 +22017,8 @@ get_note_type (Filedata * filedata, unsigned e_type)
 	return _("NT_ARM_PAC_ENABLED_KEYS (AArch64 pointer authentication enabled keys)");
       case NT_ARM_FPMR:
 	return _("NT_ARM_FPMR (AArch64 Floating Point Mode Register)");
+      case NT_ARM_POE:
+	return _("NT_ARM_POE (AArch64 Permission Overlay Extension Register)");
       case NT_ARC_V2:
 	return _("NT_ARC_V2 (ARC HS accumulator/extra registers)");
       case NT_RISCV_CSR:

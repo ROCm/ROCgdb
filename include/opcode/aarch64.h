@@ -284,8 +284,6 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_POE2,
   /* TEV instructions.  */
   AARCH64_FEATURE_TEV,
-  /* MPAMv2.  */
-  AARCH64_FEATURE_MPAMv2,
   /* MTETC.  */
   AARCH64_FEATURE_MTETC,
   /* TLBI Domains.  */
@@ -757,7 +755,6 @@ enum aarch64_opnd
   AARCH64_OPND_SYSREG_TLBI,	/* System register <tlbi_op> operand.  */
   AARCH64_OPND_SYSREG_TLBIP,	/* System register <tlbip_op> operand.  */
   AARCH64_OPND_SYSREG_PLBI,	/* System register <plbi_op> operand.  */
-  AARCH64_OPND_SYSREG_MLBI,	/* System register <mlbi_op> operand.  */
   AARCH64_OPND_SYSREG_SR,	/* System register RCTX operand.  */
   AARCH64_OPND_BARRIER,		/* Barrier operand.  */
   AARCH64_OPND_BARRIER_DSB_NXS,	/* Barrier operand for DSB nXS variant.  */
@@ -1219,6 +1216,7 @@ enum aarch64_insn_class
   sve_shift_tsz_bhsd,
   sve_size_tsz_bhs,
   testbranch,
+  tme,
   cryptosm3,
   cryptosm4,
   dotproduct,
@@ -1479,8 +1477,9 @@ extern const aarch64_opcode aarch64_opcode_table[];
 #define F_OD(X) (((X) & 0x7) << 24)
 /* Instruction has the field of 'sz'.  */
 #define F_LSE_SZ (1 << 27)
-/* Require an exact qualifier match, even for NIL qualifiers.  */
-
+/* The instruction has been deprecated.  */
+#define F_DEPRECATED_INSN (1 << 28)
+/* This system instruction is used to read system registers.  */
 #define F_SYS_READ (1ULL << 29)
 /* This system instruction is used to write system registers.  */
 #define F_SYS_WRITE (1ULL << 30)
@@ -1542,7 +1541,7 @@ extern const aarch64_opcode aarch64_opcode_table[];
 /* As above, plus PN registers.  */
 #define F_INVALID_IMM_SYMS_3 (3ULL << 42)
 
-/* Next bit is 44, and 28 is also unused.  */
+/* Next bit is 44.  */
 
 /* Instruction constraints.  */
 /* This instruction has a predication constraint on the instruction at PC+4.  */
@@ -1682,7 +1681,6 @@ extern const aarch64_sys_ins_reg aarch64_sys_regs_dc [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_at [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_tlbi [];
 extern const aarch64_sys_ins_reg aarch64_sys_regs_plbi [];
-extern const aarch64_sys_ins_reg aarch64_sys_regs_mlbi [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gic [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gicr [];
 extern const aarch64_sys_ins_reg aarch64_sys_ins_gsb [];

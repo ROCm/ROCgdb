@@ -3932,6 +3932,7 @@ const type_names[] =
   { { .bitfield = { .class = RegSIMD, .zmmword = 1 } }, "rZMM" },
   { { .bitfield = { .class = RegSIMD, .tmmword = 1 } }, "rTMM" },
   { { .bitfield = { .class = RegMask } }, "Mask reg" },
+  { { .bitfield = { .class = RegBND } }, "rBND" },
 };
 
 static void

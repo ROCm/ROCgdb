@@ -48,6 +48,9 @@ opru18_reloc (bfd *abfd, arelent *reloc_entry, struct bfd_symbol *symbol,
 
   bfd_size_type octets = (reloc_entry->address
 			  * OCTETS_PER_BYTE (abfd, input_section));
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, octets))
+    return bfd_reloc_outofrange;
   bfd_vma result = bfd_get_24 (abfd, (unsigned char *) data + octets);
   bfd_vma val = bfd_asymbol_value (symbol);
 

@@ -143,7 +143,6 @@ const struct aarch64_operand aarch64_operands[] =
   {AARCH64_OPND_CLASS_SYSTEM, "SYSREG_TLBI", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "a TBL invalidation operation specifier"},
   {AARCH64_OPND_CLASS_SYSTEM, "SYSREG_TLBIP", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "a 128-bit TBL invalidation operation specifier"},
   {AARCH64_OPND_CLASS_SYSTEM, "SYSREG_PLBI", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "a PLB invalidation operation specifier"},
-  {AARCH64_OPND_CLASS_SYSTEM, "SYSREG_MLBI", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "a MLB invalidation operation specifier"},
   {AARCH64_OPND_CLASS_SYSTEM, "SYSREG_SR", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "a Speculation Restriction option name (RCTX)"},
   {AARCH64_OPND_CLASS_SYSTEM, "BARRIER", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "a barrier option name"},
   {AARCH64_OPND_CLASS_SYSTEM, "BARRIER_DSB_NXS", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "the DSB nXS option qualifier name SY, ISH, NSH, OSH or an optional 5-bit unsigned immediate"},

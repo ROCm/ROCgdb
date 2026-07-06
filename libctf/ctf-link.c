@@ -1187,10 +1187,7 @@ ctf_link_deduplicating_per_cu (ctf_dict_t *fp)
 
       if ((inputs = ctf_link_deduplicating_open_inputs (fp, in, ninputs,
 							&parents)) == NULL)
-	{
-	  ctf_next_destroy (i);
-	  goto err_open_inputs;
-	}
+	goto err_open_inputs;
 
       if ((out = ctf_create (&err)) == NULL)
 	{

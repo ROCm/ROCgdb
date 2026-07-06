@@ -4982,7 +4982,6 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_SYSREG_TLBI:
     case AARCH64_OPND_SYSREG_TLBIP:
     case AARCH64_OPND_SYSREG_PLBI:
-    case AARCH64_OPND_SYSREG_MLBI:
     case AARCH64_OPND_SYSREG_SR:
       snprintf (buf, size, "%s", style_reg (styler, opnd->sysins_op->name));
       break;
@@ -5447,15 +5446,6 @@ const aarch64_sys_ins_reg aarch64_sys_regs_plbi[] =
 #undef PLBI_XS_OP
 
     { 0,	CPENS (0,0,0,0), 0, AARCH64_NO_FEATURES }
-};
-
-const aarch64_sys_ins_reg aarch64_sys_regs_mlbi[] =
-{
-    { "alle1",    CPENS (4, C7, C0, 4), 0, AARCH64_FEATURE (MPAMv2)},
-    { "vmalle1",  CPENS (4, C7, C0, 5), 0, AARCH64_FEATURE (MPAMv2)},
-    { "vpide1",   CPENS (4, C7, C0, 6), F_HASXT, AARCH64_FEATURE (MPAMv2)},
-    { "vpmge1",   CPENS (4, C7, C0, 7), F_HASXT, AARCH64_FEATURE (MPAMv2)},
-    { 0,       CPENS(0,0,0,0), 0, AARCH64_NO_FEATURES }
 };
 
 const aarch64_sys_ins_reg aarch64_sys_ins_gic[] =

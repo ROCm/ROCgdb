@@ -559,7 +559,6 @@ static htab_t aarch64_sys_regs_dc_hsh;
 static htab_t aarch64_sys_regs_at_hsh;
 static htab_t aarch64_sys_regs_tlbi_hsh;
 static htab_t aarch64_sys_regs_plbi_hsh;
-static htab_t aarch64_sys_regs_mlbi_hsh;
 static htab_t aarch64_sys_regs_sr_hsh;
 static htab_t aarch64_reg_hsh;
 static htab_t aarch64_barrier_opt_hsh;
@@ -8202,11 +8201,6 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_plbi_hsh, false);
 	  goto sys_reg_ins;
 
-	case AARCH64_OPND_SYSREG_MLBI:
-	  inst.base.operands[i].sysins_op =
-	    parse_sys_ins_reg (&str, aarch64_sys_regs_mlbi_hsh, false);
-	  goto sys_reg_ins;
-
 	case AARCH64_OPND_SYSREG_TLBIP:
 	  info->sysins_op =
 	    parse_sys_ins_reg (&str, aarch64_sys_regs_tlbi_hsh, true);
@@ -8743,9 +8737,9 @@ programmer_friendly_fixup (aarch64_instruction *instr)
 /* Check for loads and stores that will cause unpredictable behavior.  */
 
 static void
-warn_unpredictable_ldst (aarch64_instruction *instr, char *str)
+warn_unpredictable_ldst (const aarch64_instruction *instr, const char *str)
 {
-  aarch64_inst *base = &instr->base;
+  const aarch64_inst *base = &instr->base;
   const aarch64_opcode *opcode = base->opcode;
   const aarch64_opnd_info *opnds = base->operands;
   switch (opcode->iclass)
@@ -8838,6 +8832,25 @@ warn_unpredictable_ldst (aarch64_instruction *instr, char *str)
 
     default:
       break;
+    }
+}
+
+static void
+warn_deprecated (const aarch64_instruction *instr, const char *str)
+{
+  const aarch64_inst *base = &instr->base;
+  const aarch64_opcode *opcode = base->opcode;
+  if (!(opcode->flags & F_DEPRECATED_INSN))
+    return;
+  switch (opcode->iclass)
+    {
+    case tme:
+      as_warn (_("the TME feature has been deprecated -- `%s'"), str);
+      break;
+    default:
+      /* Instruction marked as deprecated, but a suitable warning not
+	 added above.  */
+      abort();
     }
 }
 
@@ -9019,6 +9032,7 @@ md_assemble (char *str)
 	    }
 
 	  warn_unpredictable_ldst (&inst, str);
+	  warn_deprecated (&inst, str);
 
 	  if (inst.reloc.type == BFD_RELOC_UNUSED
 	      || !inst.reloc.need_libopcodes_p)
@@ -10628,7 +10642,6 @@ md_begin (void)
   aarch64_sys_regs_at_hsh = str_htab_create ();
   aarch64_sys_regs_tlbi_hsh = str_htab_create ();
   aarch64_sys_regs_plbi_hsh = str_htab_create ();
-  aarch64_sys_regs_mlbi_hsh = str_htab_create ();
   aarch64_sys_regs_sr_hsh = str_htab_create ();
   aarch64_reg_hsh = str_htab_create ();
   aarch64_barrier_opt_hsh = str_htab_create ();
@@ -10674,11 +10687,6 @@ md_begin (void)
     sysreg_hash_insert (aarch64_sys_regs_plbi_hsh,
 			aarch64_sys_regs_plbi[i].name,
 			aarch64_sys_regs_plbi + i);
-
-  for (i = 0; aarch64_sys_regs_mlbi[i].name != NULL; i++)
-    sysreg_hash_insert (aarch64_sys_regs_mlbi_hsh,
-			aarch64_sys_regs_mlbi[i].name,
-			aarch64_sys_regs_mlbi + i);
 
   for (i = 0; aarch64_sys_regs_sr[i].name != NULL; i++)
     sysreg_hash_insert (aarch64_sys_regs_sr_hsh,
@@ -11130,7 +11138,6 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"f16f32mm",		AARCH64_FEATURE (F16F32MM), AARCH64_FEATURES (2, SIMD, F16)},
   {"f16mm",		AARCH64_FEATURE (F16MM), AARCH64_FEATURES (2, SIMD, F16)},
   {"sve-b16mm",		AARCH64_FEATURE (SVE_B16MM), AARCH64_FEATURE (SVE)},
-  {"mpamv2",		AARCH64_FEATURE (MPAMv2), AARCH64_NO_FEATURES},
   {"mtetc",		AARCH64_FEATURE (MTETC), AARCH64_FEATURE (MEMTAG)},
   {"tlbid",		AARCH64_FEATURE (TLBID), AARCH64_NO_FEATURES},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},

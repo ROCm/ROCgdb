@@ -51,6 +51,10 @@
 
 * Support for the binary file format dbx has been removed.
 
+* The format for a saved execution record, created when the command
+  'record save' is used, has been updated, and previous formats are
+  no longer supported.
+
 * When connected to an extended-remote target GDB can now
   automatically set the 'remote exec-file' in some cases.  GDB will
   auto set the remote exec-file only if the remote wasn't started with

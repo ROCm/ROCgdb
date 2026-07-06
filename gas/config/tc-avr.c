@@ -1,4 +1,4 @@
-/* tc-avr.c -- Assembler code for the ATMEL AVR
+/* tc-avr.c -- Assembler code for the AVR 8-bit micro controllers.
 
    Copyright (C) 1999-2026 Free Software Foundation, Inc.
    Contributed by Denis Chertykov <denisc@overta.ru>
@@ -998,8 +998,8 @@ avr_ldi_expression (expressionS *exp)
 		}
 	      while (closes--);
 
-	      reloc_to_return =
-		neg_p ? EXP_MOD_NEG_RELOC (mod) : EXP_MOD_RELOC (mod);
+	      reloc_to_return
+		= neg_p ? EXP_MOD_NEG_RELOC (mod) : EXP_MOD_RELOC (mod);
 	      if (linker_stubs_should_be_generated)
 		{
 		  switch (reloc_to_return)
@@ -1545,24 +1545,24 @@ md_apply_fix (fixS *fixP, valueT * valP, segT seg)
 	 but leave fx_offset as is - during relaxation,
 	 fx_offset - value gives sym1's value.  */
 
-       switch (fixP->fx_r_type)
-	 {
-	   case BFD_RELOC_8:
-	     fixP->fx_r_type = BFD_RELOC_AVR_DIFF8;
-	     break;
-	   case BFD_RELOC_16:
-	     fixP->fx_r_type = BFD_RELOC_AVR_DIFF16;
-	     break;
-	   case BFD_RELOC_32:
-	     fixP->fx_r_type = BFD_RELOC_AVR_DIFF32;
-	     break;
-	   default:
-	     as_bad_subtract (fixP);
-	     break;
-	 }
+      switch (fixP->fx_r_type)
+	{
+	case BFD_RELOC_8:
+	  fixP->fx_r_type = BFD_RELOC_AVR_DIFF8;
+	  break;
+	case BFD_RELOC_16:
+	  fixP->fx_r_type = BFD_RELOC_AVR_DIFF16;
+	  break;
+	case BFD_RELOC_32:
+	  fixP->fx_r_type = BFD_RELOC_AVR_DIFF32;
+	  break;
+	default:
+	  as_bad_subtract (fixP);
+	  break;
+	}
 
-      value = S_GET_VALUE (fixP->fx_addsy) +
-	  fixP->fx_offset - S_GET_VALUE (fixP->fx_subsy);
+      value = (S_GET_VALUE (fixP->fx_addsy)
+	       + fixP->fx_offset - S_GET_VALUE (fixP->fx_subsy));
       *valP = value;
 
       fixP->fx_subsy = NULL;
@@ -2417,8 +2417,7 @@ avr_create_and_fill_property_section (void)
   subseg_set (prop_sec, 0);
   frag_base = frag_more (sec_size);
 
-  frag_ptr =
-    avr_output_property_section_header (frag_base, record_count);
+  frag_ptr = avr_output_property_section_header (frag_base, record_count);
 
   for (rec = r_list; rec != NULL; rec = rec->next)
     frag_ptr = avr_output_property_record (frag_base, frag_ptr, &rec->record);
@@ -2773,14 +2772,12 @@ avr_gccisr_operands (struct avr_opcodes_s *opcode, char **line)
   if (!had_errors())
     {
       /* The longest sequence (prologue) might have up to 6 insns (words):
-
-	 push  R0
-	 in    R0, SREG
-	 push  R0
-	 push  R1
-	 clr   R1
-	 push  Rx
-      */
+	    push  R0
+	    in    R0, SREG
+	    push  R0
+	    push  R1
+	    clr   R1
+	    push  Rx  */
       unsigned int size = 2 * 6;
       fragS *fr;
 

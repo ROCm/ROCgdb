@@ -765,6 +765,57 @@ convert_test ()
   return 0; /* end convert_test  */
 }
 
+int
+bmi_test ()
+{
+  /* start bmi_test.  */
+  /* Using GDB, load these values onto registers for testing.
+     eax = 0x1312
+     ebx = 0xdeadbeef
+     ecx = 0xcafeface
+     edx = 0x2337
+     r8  = 0
+     this way it's easy to confirm we're undoing things correctly.  */
+
+  asm volatile ("andn %rbx, %rax, %r8");
+  asm volatile ("andn %ebx, %eax, %ecx");
+
+  asm volatile ("bextr %rcx, %r8, %rbx");
+  asm volatile ("bextr %ebx, %ecx, %r8d");
+
+  asm volatile ("blsi %rax, %rcx");
+  asm volatile ("blsi %ebx, %r8d");
+
+  asm volatile ("blsmsk %r8, %rbx");
+  asm volatile ("blsmsk %eax, %eax");
+
+  asm volatile ("blsr %rcx, %rbx");
+  asm volatile ("blsr %r8d, %ecx");
+
+  asm volatile ("lzcnt %rax, %r8");
+  asm volatile ("lzcnt %eax, %ecx");
+  asm volatile ("lzcnt %ax, %bx");
+
+  asm volatile ("tzcnt %rax, %rcx");
+  asm volatile ("tzcnt %eax, %ebx");
+  asm volatile ("tzcnt %ax, %r8w");
+
+  asm volatile ("mulx %eax, %ebx, %ecx");
+  asm volatile ("mulx %ebx, %ecx, %ebx");
+
+  asm volatile ("pdep %r8, %rcx, %rbx");
+  asm volatile ("pext %edx, %ecx, %ebx");
+  asm volatile ("rorx $10, %r8, %rbx");
+  asm volatile ("sarx %edx, %ebx, %eax");
+  asm volatile ("shlx %eax, %ecx, %ebx");
+  asm volatile ("shrx %r8d, %eax, %ecx");
+
+  asm volatile ("bzhi %edx, %ebx, %r8d");
+  asm volatile ("bzhi %rax, %rcx, %r8");
+
+  return 0; /* end bmi_test  */
+}
+
 /* This include is used to allocate the dynamic buffer and have
    the pointers aligned to a 32-bit boundary, so we can test instructions
    that require aligned memory.  */
@@ -806,5 +857,6 @@ main ()
   compare_test ();
   pack_test ();
   convert_test ();
+  bmi_test ();
   return 0;	/* end of main */
 }

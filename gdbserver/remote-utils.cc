@@ -519,43 +519,9 @@ char *
 write_ptid (char *buf, ptid_t ptid)
 {
   client_state &cs = get_client_state ();
-  ptid_t::pid_type pid;
-  ptid_t::lwp_type lwp;
-
-  if (cs.multi_process)
-    {
-      pid = ptid.pid ();
-      if (pid < 0)
-	buf += sprintf (buf, "p-%x.", -pid);
-      else
-	buf += sprintf (buf, "p%x.", pid);
-    }
-  lwp = ptid.lwp ();
-  if (lwp < 0)
-    buf += sprintf (buf, "-%lx", -lwp);
-  else
-    buf += sprintf (buf, "%lx", lwp);
-
-  return buf;
-}
-
-static ULONGEST
-hex_or_minus_one (const char *buf, const char **obuf)
-{
-  ULONGEST ret;
-
-  if (startswith (buf, "-1"))
-    {
-      ret = (ULONGEST) -1;
-      buf += 2;
-    }
-  else
-    buf = unpack_varlen_hex (buf, &ret);
-
-  if (obuf)
-    *obuf = buf;
-
-  return ret;
+  std::string repr = ptid.to_rsp_string (cs.multi_process);
+  strcpy (buf, repr.c_str ());
+  return buf + repr.length ();
 }
 
 /* Extract a PTID from BUF.  If non-null, OBUF is set to one past the last
@@ -563,61 +529,14 @@ hex_or_minus_one (const char *buf, const char **obuf)
 ptid_t
 read_ptid (const char *buf, const char **obuf)
 {
-  const char *p = buf;
-  const char *pp;
-  ptid_t::pid_type pid = 0;
-  ptid_t::lwp_type lwp = 0;
-  ULONGEST hex;
-
-  if (*p == 'p')
-    {
-      /* Multi-process ptid.  */
-      pp = unpack_varlen_hex (p + 1, &hex);
-      if (pp == (p + 1) || *pp != '.')
-	error (_("invalid remote ptid: %s\n"), buf);
-
-      pid = (ptid_t::pid_type) (LONGEST) hex;
-      if (hex != ((ULONGEST) pid))
-	error (_("invalid remote ptid: %s"), buf);
-
-      p = pp + 1;
-      hex = hex_or_minus_one (p, &pp);
-      if (pp == p)
-	error (_("invalid remote ptid: %s\n"), buf);
-
-      lwp = (ptid_t::lwp_type) (LONGEST) hex;
-      if (hex != ((ULONGEST) lwp))
-	error (_("invalid remote ptid: %s"), buf);
-
-      if (obuf)
-	*obuf = pp;
-
-      return ptid_t (pid, lwp);
-    }
-
-  /* No multi-process.  Just a thread id.  */
-  hex = hex_or_minus_one (p, &pp);
-
-  /* Handle special thread ids.  */
-  if (hex == (ULONGEST) -1)
-    return minus_one_ptid;
-
-  if (hex == 0)
-    return null_ptid;
-
-  lwp = (ptid_t::lwp_type) (LONGEST) hex;
-  if (hex != ((ULONGEST) lwp))
-    error (_("invalid remote ptid: %s"), buf);
-
-  /* Since GDB is not sending a process id (multi-process extensions
-     are off), then there's only one process.  Default to the first in
-     the list.  */
-  pid = get_first_process ()->pid;
-
-  if (obuf)
-    *obuf = pp;
-
-  return ptid_t (pid, lwp);
+  return ptid_t::parse (buf, obuf, true,
+    [] ()
+      {
+	/* Since GDB is not sending a process id (multi-process
+	   extensions are off), then there's only one process.
+	   Default to the first in the list.  */
+	return get_first_process ()->pid;
+      });
 }
 
 /* Write COUNT bytes in BUF to the client.  Returns true if all bytes

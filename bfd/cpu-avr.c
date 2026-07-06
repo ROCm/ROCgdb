@@ -52,10 +52,10 @@ compatible (const bfd_arch_info_type * a,
        return NULL;
 
       if (a->mach <= b->mach)
-       return b;
+	return b;
 
       if (a->mach >= b->mach)
-       return a;
+	return a;
     }
 
   if (a->mach == bfd_mach_avr2 && b->mach == bfd_mach_avr25)

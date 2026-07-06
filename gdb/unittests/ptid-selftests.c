@@ -18,6 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "gdbsupport/ptid.h"
+#include "gdbsupport/selftest.h"
 #include <type_traits>
 
 namespace selftests {
@@ -149,6 +150,51 @@ static_assert (both.matches (both), "both matches both");
 static_assert (!ptid_t (2, 2, 2).matches (both),
 	       "other both doesn't match both");
 
+/* Helper function to parse and return a single PTID.  */
+static ptid_t
+parse_one (const char *str, bool for_remote)
+{
+  const char *out = nullptr;
+  ptid_t result = ptid_t::parse (str, &out, for_remote,
+    [] ()
+      {
+	return ptid_t::pid_type (23);
+      });
+  SELF_CHECK (*out == '\0');
+  return result;
+}
+
+/* Test ptid_t reading and writing.  */
+static void
+test ()
+{
+  SELF_CHECK (minus_one_ptid.to_rsp_string (false) == "0");
+  SELF_CHECK (minus_one_ptid.to_rsp_string (true) == "p-1.0");
+
+  SELF_CHECK (lwp.to_rsp_string (false) == "2");
+  SELF_CHECK (lwp.to_rsp_string (true) == "p1.2");
+
+  ptid_t negative (-57, -32);
+  /* This is kind of lame but currently the types are host-dependent
+     so we have to adapt to those here.  */
+  std::string the_pid = string_printf ("%x", (unsigned) -57);
+  std::string the_lwp = string_printf ("%lx", (unsigned long) -32);
+  std::string full = "p" + the_pid + "." + the_lwp;
+  SELF_CHECK (negative.to_rsp_string (false) == the_lwp);
+  SELF_CHECK (negative.to_rsp_string (true) == full);
+
+  SELF_CHECK (parse_one ("p1.2", false) == lwp);
+  SELF_CHECK (parse_one ("p1.-1", true) == ptid_t (1, -1));
+  SELF_CHECK (parse_one ("-1", true) == minus_one_ptid);
+  SELF_CHECK (parse_one ("0", false) == null_ptid);
+  SELF_CHECK (parse_one (full.c_str (), false) == negative);
+  SELF_CHECK (parse_one (full.c_str (), true) == negative);
+}
 
 } /* namespace ptid */
 } /* namespace selftests */
+
+INIT_GDB_FILE (ptid_selftests)
+{
+  selftests::register_test ("ptid_t", selftests::ptid::test);
+}

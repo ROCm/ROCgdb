@@ -107,6 +107,22 @@ parse_riscv_dis_option_without_args (const char *option,
   return true;
 }
 
+static bool
+riscv_vtype_altfmt_supported (struct riscv_private_data *pd)
+{
+  return (pd->all_ext
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfbfa")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfofp8min")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfqwbdota8f")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfqwdota8f")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfwbdota16bf")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvfwdota16bf")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvqwbdota8i")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvqwbdota16i")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvqwdota8i")
+	  || riscv_subset_supports (&pd->riscv_rps_dis, "zvqwdota16i"));
+}
+
 /* Parse RISC-V disassembler option (possibly with arguments).  */
 
 static void
@@ -440,6 +456,17 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	      print (info->stream, dis_style_register, "%s",
 		     riscv_vecr_names_numeric[EXTRACT_OPERAND (VS2, l)]);
 	      break;
+	    case 'q':
+	      {
+		unsigned int vs2 = EXTRACT_OPERAND (VS2, l);
+		print (info->stream, dis_style_register, "%s",
+		       riscv_vecr_names_numeric[vs2 & 0x18]);
+	      }
+	      break;
+	    case 'r':
+	      print (info->stream, dis_style_immediate, "%u",
+		     (unsigned int) (EXTRACT_OPERAND (VS2, l) & 0x7) * 8);
+	      break;
 	    case '0':
 	      print (info->stream, dis_style_register, "%s",
 		     riscv_vecr_names_numeric[0]);
@@ -453,17 +480,27 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		unsigned int imm_vsew = EXTRACT_OPERAND (VSEW, imm);
 		unsigned int imm_vta = EXTRACT_OPERAND (VTA, imm);
 		unsigned int imm_vma = EXTRACT_OPERAND (VMA, imm);
-		unsigned int imm_vtype_res = (imm >> 8);
+		unsigned int imm_vtype_altfmt
+		  = EXTRACT_OPERAND (VTYPE_ALTFMT, imm);
+		bool imm_vtype_altfmt_supported
+		  = (imm_vtype_altfmt
+		     && riscv_vtype_altfmt_supported (pd));
+		unsigned int imm_vtype_res = (imm >> 9);
 
 		if (imm_vsew < ARRAY_SIZE (riscv_vsew)
 		    && imm_vlmul < ARRAY_SIZE (riscv_vlmul)
 		    && imm_vta < ARRAY_SIZE (riscv_vta)
 		    && imm_vma < ARRAY_SIZE (riscv_vma)
 		    && !imm_vtype_res
+		    && (imm_vtype_altfmt == 0
+			|| (imm_vtype_altfmt_supported
+			    && imm_vsew < ARRAY_SIZE (riscv_vsew_altfmt)))
 		    && riscv_vsew[imm_vsew] != NULL
 		    && riscv_vlmul[imm_vlmul] != NULL)
 		  print (info->stream, dis_style_text, "%s,%s,%s,%s",
-			 riscv_vsew[imm_vsew],
+			 imm_vtype_altfmt
+			 ? riscv_vsew_altfmt[imm_vsew]
+			 : riscv_vsew[imm_vsew],
 			 riscv_vlmul[imm_vlmul], riscv_vta[imm_vta],
 			 riscv_vma[imm_vma]);
 		else

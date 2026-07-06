@@ -37594,9 +37594,6 @@ aarch64_find_next_alias_opcode (const aarch64_opcode *opcode)
       value = A64_OPID_d5080000_at_SYSREG_AT_Rt;
       break;
     case A64_OPID_d5080000_at_SYSREG_AT_Rt:
-      value = A64_OPID_d5080000_mlbi_SYSREG_MLBI_Rt_SYS;
-      break;
-    case A64_OPID_d5080000_mlbi_SYSREG_MLBI_Rt_SYS:
       value = A64_OPID_d5080000_sys_UIMM3_OP1_CRn_CRm_UIMM3_OP2_Rt;
       break;
     case A64_OPID_d5480000_tlbip_SYSREG_TLBIP_Rt_SYS_PAIRREG_OR_XZR:
@@ -38010,7 +38007,6 @@ aarch64_extract_operand (const aarch64_operand *self,
     case AARCH64_OPND_SYSREG_TLBI:
     case AARCH64_OPND_SYSREG_TLBIP:
     case AARCH64_OPND_SYSREG_PLBI:
-    case AARCH64_OPND_SYSREG_MLBI:
     case AARCH64_OPND_SYSREG_SR:
     case AARCH64_OPND_GIC:
     case AARCH64_OPND_GICR:

@@ -1398,7 +1398,6 @@ enum aarch64_opcode_idx
   A64_OPID_d503349f_pssbb,
   A64_OPID_d50330bf_dmb_BARRIER,
   A64_OPID_d50330df_isb_BARRIER_ISB,
-  A64_OPID_d5080000_mlbi_SYSREG_MLBI_Rt_SYS,
   A64_OPID_d50330ff_sb,
   A64_OPID_d508779f_gcspushx,
   A64_OPID_d50877df_gcspopx,

@@ -110,3 +110,50 @@ bfd_coff_get_auxent (bfd *abfd,
 
   return true;
 }
+
+/* Return TRUE if SYMBOL is a PE weak external whose fallback symbol is
+   a real definition.  A weak declaration with no fallback uses the COFF
+   null symbol as its fallback; do not treat that as an archive provider.  */
+
+bool
+bfd_coff_pe_weak_external_has_real_fallback (bfd *abfd,
+					    asymbol *symbol)
+{
+  coff_symbol_type *csym;
+  combined_entry_type *aux;
+  combined_entry_type *fallback;
+
+  if (bfd_get_flavour (abfd) != bfd_target_coff_flavour
+      || coff_data (abfd) == NULL
+      || ! obj_pe (abfd))
+    return false;
+
+  csym = coff_symbol_from (symbol);
+  if (csym == NULL
+      || csym->native == NULL
+      || ! csym->native->is_sym
+      || csym->native->u.syment.n_sclass != C_NT_WEAK
+      || csym->native->u.syment.n_numaux != 1)
+    return false;
+
+  aux = csym->native + 1;
+  if (aux->is_sym)
+    return false;
+
+  if (aux->fix_tag)
+    fallback = (combined_entry_type *) aux->u.auxent.x_sym.x_tagndx.p;
+  else
+    {
+      uint32_t tagndx = aux->u.auxent.x_sym.x_tagndx.u32;
+
+      if (tagndx >= obj_raw_syment_count (abfd))
+	return false;
+      fallback = obj_raw_syments (abfd) + tagndx;
+    }
+
+  return (fallback != NULL
+	  && fallback->is_sym
+	  && fallback->u.syment.n_scnum != N_UNDEF
+	  && !(fallback->u.syment.n_scnum == N_ABS
+	       && fallback->u.syment.n_value == 0));
+}

@@ -7026,8 +7026,6 @@ UNKNOWN_OP:
 
   if (record_full_arch_list_add_reg (regcache, S390_PSWA_REGNUM))
     return -1;
-  if (record_full_arch_list_add_end ())
-    return -1;
   return 0;
 }
 

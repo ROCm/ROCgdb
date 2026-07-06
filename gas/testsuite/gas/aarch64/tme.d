@@ -1,4 +1,5 @@
 #as: -march=armv8-a+tme
+#warning_output: tme-warn.l
 #objdump: -dr
 
 .* file format .*

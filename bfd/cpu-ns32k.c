@@ -163,7 +163,7 @@ do_ns32k_reloc (bfd *      abfd,
   bfd_byte *location;
 
   if (bfd_is_abs_section (symbol->section)
-      && output_bfd != (bfd *) NULL)
+      && output_bfd != NULL)
     {
       reloc_entry->address += input_section->output_offset;
       return bfd_reloc_ok;
@@ -174,11 +174,11 @@ do_ns32k_reloc (bfd *      abfd,
      considered to have a value of zero (SVR4 ABI, p. 4-27).  */
   if (bfd_is_und_section (symbol->section)
       && (symbol->flags & BSF_WEAK) == 0
-      && output_bfd == (bfd *) NULL)
+      && output_bfd == NULL)
     flag = bfd_reloc_undefined;
 
-  /* Is the address of the relocation really within the section?  */
-  if (reloc_entry->address > bfd_get_section_limit (abfd, input_section))
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, reloc_entry->address))
     return bfd_reloc_outofrange;
 
   /* Work out which section the relocation is targeted at and the
@@ -242,7 +242,7 @@ do_ns32k_reloc (bfd *      abfd,
 	relocation -= reloc_entry->address;
     }
 
-  if (output_bfd != (bfd *) NULL)
+  if (output_bfd != NULL)
     {
       if (! howto->partial_inplace)
 	{

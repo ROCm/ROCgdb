@@ -1,4 +1,4 @@
-/* Opcode table for the Atmel AVR micro controllers.
+/* Opcode table for the AVR 8-bit micro controllers.
 
    Copyright (C) 2000-2026 Free Software Foundation, Inc.
    Contributed by Denis Chertykov <denisc@overta.ru>
@@ -86,14 +86,18 @@
 /* Undefined combination of operands - does the register
    operand overlap with pre-decremented or post-incremented
    pointer register (like ld r31,Z+)?  */
-#define AVR_UNDEF_P(x) (((x) & 0xFFED) == 0x91E5 ||		\
-  ((x) & 0xFDEF) == 0x91AD || ((x) & 0xFDEF) == 0x91AE ||	\
-  ((x) & 0xFDEF) == 0x91C9 || ((x) & 0xFDEF) == 0x91CA ||	\
-  ((x) & 0xFDEF) == 0x91E1 || ((x) & 0xFDEF) == 0x91E2)
+#define AVR_UNDEF_P(x) (((x) & 0xFFED) == 0x91E5	\
+			|| ((x) & 0xFDEF) == 0x91AD	\
+			|| ((x) & 0xFDEF) == 0x91AE	\
+			|| ((x) & 0xFDEF) == 0x91C9	\
+			|| ((x) & 0xFDEF) == 0x91CA	\
+			|| ((x) & 0xFDEF) == 0x91E1	\
+			|| ((x) & 0xFDEF) == 0x91E2)
 
 /* Is this a skip instruction {cpse,sbic,sbis,sbrc,sbrs}?  */
-#define AVR_SKIP_P(x) (((x) & 0xFC00) == 0x1000 ||		\
-  ((x) & 0xFD00) == 0x9900 || ((x) & 0xFC08) == 0xFC00)
+#define AVR_SKIP_P(x) (((x) & 0xFC00) == 0x1000		\
+		       || ((x) & 0xFD00) == 0x9900	\
+		       || ((x) & 0xFC08) == 0xFC00)
 
 /* Is this `ldd r,b+0' or `std b+0,r' (b={Y,Z}, disassembled as
    `ld r,b' or `st b,r' respectively - next opcode entry)?  */
@@ -143,7 +147,7 @@
    "1001010110111000"    (1) 0x95b8
    "1001010111111000"    (1) 0x95f8 (`espm' removed in databook update)
    "11111xxxxxxx1xxx" (1024) 0xf[8-9a-f][0-9a-f][8-9a-f]
- */
+*/
 
 AVR_INSN (clc,  "",    "1001010010001000", 1, AVR_ISA_1200, 0x9488)
 AVR_INSN (clh,  "",    "1001010011011000", 1, AVR_ISA_1200, 0x94d8)

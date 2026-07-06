@@ -775,6 +775,10 @@ if [is_elf_format] then {
 	run_dump_test "x86-64-align-branch-3"
     }
     run_dump_test ehinterp
+
+    run_dump_test "reloc-section-sym-all"
+    run_dump_test "reloc-section-sym-internal"
+    run_dump_test "reloc-section-sym-none"
 }
 run_dump_test pr27198
 run_dump_test pr29483

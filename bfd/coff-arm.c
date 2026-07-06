@@ -603,7 +603,7 @@ aoutarm_fix_pcrel_26 (bfd *abfd,
 {
   bfd_vma relocation;
   bfd_size_type addr = reloc_entry->address;
-  long target = bfd_get_32 (abfd, (bfd_byte *) data + addr);
+  long target;
   bfd_reloc_status_type flag = bfd_reloc_ok;
 
   /* If this is an undefined symbol, return error.  */
@@ -614,9 +614,14 @@ aoutarm_fix_pcrel_26 (bfd *abfd,
   /* If the sections are different, and we are doing a partial relocation,
      just ignore it for now.  */
   if (symbol->section->name != input_section->name
-      && output_bfd != (bfd *)NULL)
+      && output_bfd != NULL)
     return bfd_reloc_continue;
 
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, addr))
+    return bfd_reloc_outofrange;
+
+  target = bfd_get_32 (abfd, (bfd_byte *) data + addr);
   relocation = (target & 0x00ffffff) << 2;
   relocation = (relocation ^ 0x02000000) - 0x02000000; /* Sign extend.  */
   relocation += symbol->value;
@@ -662,7 +667,7 @@ coff_thumb_pcrel_common (bfd *abfd,
 {
   bfd_vma relocation = 0;
   bfd_size_type addr = reloc_entry->address;
-  long target = bfd_get_32 (abfd, (bfd_byte *) data + addr);
+  long target;
   bfd_reloc_status_type flag = bfd_reloc_ok;
   bfd_vma dstmsk;
   bfd_vma offmsk;
@@ -702,8 +707,14 @@ coff_thumb_pcrel_common (bfd *abfd,
   /* If the sections are different, and we are doing a partial relocation,
      just ignore it for now.  */
   if (symbol->section->name != input_section->name
-      && output_bfd != (bfd *)NULL)
+      && output_bfd != NULL)
     return bfd_reloc_continue;
+
+  if (!bfd_reloc_offset_in_range (reloc_entry->howto, abfd,
+				  input_section, addr))
+    return bfd_reloc_outofrange;
+
+  target = bfd_get_32 (abfd, (bfd_byte *) data + addr);
 
   switch (btype)
     {
