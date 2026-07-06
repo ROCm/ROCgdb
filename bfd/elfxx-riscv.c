@@ -3814,6 +3814,14 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch,
       goto cleanup;
     }
 
+  /* Add the implicit subsets implied by the merged subset list, then
+     check if the result is conflicting.  */
+  riscv_parse_subset_t riscv_rps_ld_merged =
+    {&merged_subsets, _bfd_error_handler, &xlen_in, NULL, false};
+  riscv_parse_add_implicit_subsets (&riscv_rps_ld_merged);
+  if (!riscv_parse_check_conflicts (&riscv_rps_ld_merged))
+    goto cleanup;
+
   /* Free the previous merged_arch_str which called xmalloc.  */
   free (merged_arch_str);
 
