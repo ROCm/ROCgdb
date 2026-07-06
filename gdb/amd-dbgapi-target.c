@@ -145,6 +145,17 @@ struct wave_coordinates
     : wave_id (wave_id)
   {}
 
+  /* Return the string showing the agent -> queue -> dispatch -> wave
+     hierarchy.  */
+  std::string hierarchy_str () const;
+
+  /* Return the workgroup coordinates as a string.  */
+  std::string workgroup_coord_str () const;
+
+  /* Return the dispatch position string for the wave this
+     wave_coordinates is for.  */
+  std::string dispatch_pos_str () const;
+
   /* Return the target ID string for the wave this wave_coordinates is
      for.  */
   std::string to_string () const;
@@ -410,13 +421,12 @@ get_amd_dbgapi_inferior_info (struct inferior *inferior)
 static async_event_handler *amd_dbgapi_async_event_handler = nullptr;
 
 std::string
-wave_coordinates::to_string () const
+wave_coordinates::hierarchy_str () const
 {
-  std::string str = "AMDGPU Wave";
-
-  str += (agent_id != AMD_DBGAPI_AGENT_NONE
-	  ? string_printf (" %s", pulongest (agent_id.handle))
-	  : " ?");
+  std::string str
+    = (agent_id != AMD_DBGAPI_AGENT_NONE
+       ? string_printf (" %s", pulongest (agent_id.handle))
+       : "?");
 
   str += (queue_id != AMD_DBGAPI_QUEUE_NONE
 	  ? string_printf (":%s", pulongest (queue_id.handle))
@@ -428,15 +438,39 @@ wave_coordinates::to_string () const
 
   str += string_printf (":%s", pulongest (wave_id.handle));
 
-  str += (group_ids[0] != UINT32_MAX
-	  ? string_printf (" (%s,%s,%s)", pulongest (group_ids[0]),
-			   pulongest (group_ids[1]),
-			   pulongest (group_ids[2]))
-	  : " (?,?,?)");
+  return str;
+}
 
+std::string
+wave_coordinates::workgroup_coord_str () const
+{
+  std::string str
+    = (group_ids[0] != UINT32_MAX
+       ? string_printf (" (%s,%s,%s)", pulongest (group_ids[0]),
+			pulongest (group_ids[1]), pulongest (group_ids[2]))
+       : "(?,?,?)");
+
+  return str;
+}
+
+std::string
+wave_coordinates::dispatch_pos_str () const
+{
+  std::string str = workgroup_coord_str ();
   str += (wave_in_group != UINT32_MAX
 	  ? string_printf ("/%s", pulongest (wave_in_group))
 	  : "/?");
+
+  return str;
+}
+
+std::string
+wave_coordinates::to_string () const
+{
+  std::string str = "AMDGPU Wave";
+
+  str += " " + hierarchy_str ();
+  str += " " + dispatch_pos_str ();
 
   return str;
 }
