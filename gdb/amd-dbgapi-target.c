@@ -429,12 +429,13 @@ wave_coordinates::to_string () const
   str += string_printf (":%s", pulongest (wave_id.handle));
 
   str += (group_ids[0] != UINT32_MAX
-	  ? string_printf (" (%d,%d,%d)", group_ids[0], group_ids[1],
-			   group_ids[2])
+	  ? string_printf (" (%s,%s,%s)", pulongest (group_ids[0]),
+			   pulongest (group_ids[1]),
+			   pulongest (group_ids[2]))
 	  : " (?,?,?)");
 
   str += (wave_in_group != UINT32_MAX
-	  ? string_printf ("/%d", wave_in_group)
+	  ? string_printf ("/%s", pulongest (wave_in_group))
 	  : "/?");
 
   return str;
