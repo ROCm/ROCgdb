@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import fnmatch
 import glob
 import json
 import logging
@@ -25,6 +26,15 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Valid tier names recognised by --tier. Mirrors VALID_TEST_CATEGORIES in
+# TheRock's test_runner.py and the tiers in .github/test-runner/
+# test_categories.yaml (from which gen_ctestfile.py builds CTestTestfile.cmake).
+VALID_TIERS = ("quick", "standard", "comprehensive", "full")
+
+# The GPU testsuite lives under gdb.rocm/; everything else is CPU-only. Used by
+# --domain to split a tier into its rocgdb-gpu / rocgdb-cpu CI slices.
+GPU_TEST_SUBDIR = "gdb.rocm/"
 
 # Status symbols used throughout.
 STATUS_PASS = "[✓]"
@@ -432,6 +442,33 @@ def parse_arguments() -> argparse.Namespace:
         "Automatically discovers all gdb.* directories with .exp files. "
         "Mutually exclusive with --tests and --gpu-tests.",
     )
+    test_group.add_argument(
+        "--tier",
+        type=str,
+        default=os.environ.get("TEST_TYPE"),
+        choices=list(VALID_TIERS) + [None],
+        help="Test tier to run (quick/standard/comprehensive/full). When set, "
+        "loads test_patterns from <testsuite-dir>/test_categories.yaml and "
+        "uses them in place of the other selection flags. Falls back to the "
+        "TEST_TYPE env var when unset. This is the primary entry point used by "
+        "TheRock's CI matrix (fetch_test_configurations.py drives the installed "
+        "tests/rocgdb/test_rocgdb.py with --tier <tier> --domain cpu|gpu). "
+        "Combine with --domain to restrict a tier to its CPU or GPU tests. "
+        "Mutually exclusive with --tests, --gpu-tests and --cpu-tests.",
+    )
+    # --domain is a modifier for --tier (not part of the mutually-exclusive
+    # selection group): it narrows a resolved tier to CPU-only or GPU-only
+    # tests so the CI matrix can keep its rocgdb-cpu / rocgdb-gpu split while
+    # both jobs share the same tier definition in test_categories.yaml.
+    parser.add_argument(
+        "--domain",
+        type=str,
+        choices=["cpu", "gpu", "all"],
+        default="all",
+        help="Restrict a --tier expansion to CPU-only ('cpu': everything "
+        "except gdb.rocm/*), GPU-only ('gpu': gdb.rocm/* only), or both "
+        "('all', the default). Only meaningful together with --tier.",
+    )
 
     parser.add_argument(
         "--testsuite-dir",
@@ -525,6 +562,10 @@ def parse_arguments() -> argparse.Namespace:
         _log_error_and_exit(
             "-j/--jobs can only be specified when --parallel is provided."
         )
+
+    # --domain only makes sense as a modifier of --tier.
+    if args.domain != "all" and not args.tier:
+        _log_error_and_exit("--domain requires --tier.")
 
     # Validate --one-by-one constraints.
     if args.one_by_one and args.parallel:
@@ -1463,6 +1504,129 @@ def discover_test_directories(
     return sorted(test_dirs)
 
 
+def _load_test_categories_yaml(testsuite_dir: Path) -> dict:
+    """
+    Load test_categories.yaml from an installed testsuite tree.
+
+    ROCgdb's source copy lives in .github/test-runner/; TheRock installs it
+    next to the testsuite at <testsuite_dir>/test_categories.yaml.
+
+    Args:
+        testsuite_dir: Path to the GDB testsuite directory.
+
+    Returns:
+        Parsed YAML config as a dict.
+
+    Exits:
+        Code 1 if the YAML file is missing or PyYAML is unavailable.
+    """
+    yaml_path = testsuite_dir / "test_categories.yaml"
+    if not yaml_path.is_file():
+        _log_error_and_exit(
+            f"--tier was provided but {yaml_path} does not exist. "
+            "The installed ROCgdb testsuite is missing test_categories.yaml; "
+            "use one of --tests/--gpu-tests/--cpu-tests instead, or rebuild "
+            "against a ROCgdb that ships it."
+        )
+
+    try:
+        import yaml
+    except ImportError:
+        _log_error_and_exit(
+            "PyYAML is required to use --tier. Install it via `pip install pyyaml`."
+        )
+
+    with yaml_path.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def _resolve_tier_tests(
+    tier: str,
+    testsuite_dir: Path,
+    fallback_tests: List[str],
+    domain: str = "all",
+) -> List[str]:
+    """
+    Expand a tier name to the underlying list of .exp file paths.
+
+    Reads test_patterns + exclude from test_categories.yaml for the requested
+    tier, globs the patterns relative to testsuite_dir, applies fnmatch-based
+    exclude filtering, optionally narrows to a CPU/GPU domain, and returns a
+    sorted, de-duplicated path list ready to be used as the --tests value.
+
+    Args:
+        tier: One of VALID_TIERS.
+        testsuite_dir: Path to the GDB testsuite directory.
+        fallback_tests: Tests to use if the tier expands to nothing (logged as
+            a warning, not an error).
+        domain: 'all' (default), 'gpu' (only gdb.rocm/* tests) or 'cpu'
+            (everything except gdb.rocm/*). Lets the CI matrix keep its
+            rocgdb-cpu / rocgdb-gpu split while sharing one tier definition.
+
+    Returns:
+        List of .exp paths relative to testsuite_dir.
+
+    Exits:
+        Code 1 if tier is missing from the YAML.
+    """
+    cfg = _load_test_categories_yaml(testsuite_dir)
+    categories = cfg.get("test_categories") or {}
+    tier_cfg = categories.get(tier)
+    if not tier_cfg:
+        _log_error_and_exit(
+            f"--tier '{tier}' not found in test_categories.yaml "
+            f"(known tiers: {sorted(categories.keys())})."
+        )
+
+    patterns = tier_cfg.get("test_patterns") or []
+    excludes = tier_cfg.get("exclude") or []
+
+    matched: Set[str] = set()
+    for pattern in patterns:
+        if not isinstance(pattern, str):
+            continue
+        if any(ch in pattern for ch in ("*", "?", "[")):
+            for hit in testsuite_dir.glob(pattern):
+                if hit.is_file() and hit.suffix == ".exp":
+                    matched.add(str(hit.relative_to(testsuite_dir)))
+        else:
+            candidate = testsuite_dir / pattern
+            if candidate.is_file():
+                matched.add(pattern)
+            else:
+                logger.warning(
+                    f"Tier '{tier}' references {pattern}, but it does not exist "
+                    f"under {testsuite_dir}. Skipping."
+                )
+
+    filtered: List[str] = []
+    for rel_path in sorted(matched):
+        if any(fnmatch.fnmatch(rel_path, pat) for pat in excludes):
+            continue
+        # Normalize to forward slashes so the domain check is OS-independent.
+        is_gpu = rel_path.replace(os.sep, "/").startswith(GPU_TEST_SUBDIR)
+        if domain == "gpu" and not is_gpu:
+            continue
+        if domain == "cpu" and is_gpu:
+            continue
+        filtered.append(rel_path)
+
+    if not filtered:
+        logger.warning(
+            f"Tier '{tier}' (domain '{domain}') expanded to an empty test list "
+            f"(patterns: {patterns}, excludes: {excludes}). Falling back to: "
+            f"{fallback_tests}."
+        )
+        return list(fallback_tests)
+
+    logger.info(
+        f"Tier '{tier}' (domain '{domain}') expanded to {len(filtered)} test "
+        f"file(s) (from {len(patterns)} pattern(s), after {len(excludes)} "
+        f"exclude(s))."
+    )
+    return filtered
+
+
 def expand_test_paths(test_list: List[str], testsuite_dir: Path) -> List[str]:
     """
     Expand test paths to a list of .exp files, validating existence.
@@ -1929,7 +2093,28 @@ def main() -> None:
 
     # Handle test selection based on command-line options.
     # This must happen before print_configuration() since it displays args.tests.
-    if args.gpu_tests:
+    if args.tier:
+        # Primary entry point for TheRock's CI matrix: expand the tier from
+        # test_categories.yaml into a concrete .exp list, optionally narrowed
+        # to the CPU or GPU domain (rocgdb-cpu / rocgdb-gpu matrix jobs).
+        logger.info(
+            f"Resolving --tier '{args.tier}' (domain '{args.domain}') "
+            "against test_categories.yaml"
+        )
+        # Domain-appropriate fallback if the tier expands to nothing.
+        if args.domain == "gpu":
+            tier_fallback = ["gdb.rocm"]
+        elif args.domain == "cpu":
+            tier_fallback = ["gdb.dwarf2"]
+        else:
+            tier_fallback = ["gdb.rocm", "gdb.dwarf2"]
+        args.tests = _resolve_tier_tests(
+            args.tier,
+            rocgdb_testsuite_dir,
+            fallback_tests=tier_fallback,
+            domain=args.domain,
+        )
+    elif args.gpu_tests:
         args.tests = ["gdb.rocm"]
         logger.info("Using --gpu-tests: running gdb.rocm tests only")
     elif args.cpu_tests:
