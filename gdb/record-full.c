@@ -2383,15 +2383,13 @@ record_full_entry::from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
     {
     case record_full_reg: /* reg */
       {
-	rec.entry = std::move (record_full_reg_entry::from_bfd
-				(cbfd, osec, bfd_offset));
+	rec.entry = record_full_reg_entry::from_bfd (cbfd, osec, bfd_offset);
 	break;
       }
 
     case record_full_mem: /* mem */
       {
-	rec.entry = std::move (record_full_mem_entry::from_bfd
-				(cbfd, osec, bfd_offset));
+	rec.entry = record_full_mem_entry::from_bfd (cbfd, osec, bfd_offset);
 	break;
       }
 
