@@ -111,7 +111,7 @@ do_compare update-1.o update-4.o
 # Check that --update-section on an unknown section will fail.
 if { ![do_objcopy update-2.o \
            "--update-section .bar=tmpdir/dumped-contents" \
-           "error: .bar not found, can't be updated"] } then {
+           "error: .bar can't be updated"] } then {
     return
 }
 
