@@ -991,6 +991,10 @@ b9a2 ptf RRE_R0 "perform topology function" z10 zarch
 b9af pfmf RRE_RR "perform frame management function" z10 zarch
 b9bf trte RRF_U0RER "translate and test extended" z10 zarch optparm
 b9bd trtre RRF_U0RER "translate and test reverse extended" z10 zarch optparm
+
+# CPUMF: CPU-Measurement Counter Facility, CPU-Measurement Sampling Facility,
+# Load-Program-Parameter Facility
+
 b2ed ecpga RRE_RR "extract coprocessor-group address" z10 zarch
 b2e4 ecctr RRE_RR "extract cpu counter" z10 zarch
 b2e5 epctr RRE_RR "extract peripheral counter" z10 zarch
@@ -1712,6 +1716,10 @@ e70000000006 vl VRX_VRRDU "vector memory load" z13 zarch optparm,vx
 e70000000036 vlm VRS_VVRDU "vector load multiple" z13 zarch optparm,vx
 e7000000000e vst VRX_VRRDU "vector store" z13 zarch optparm,vx
 e7000000003e vstm VRS_VVRDU "vector store multiple" z13 zarch optparm,vx
+
+# CPUMF: Store-CPU-Counter-Multiple Facility
+
+eb0000000017 stcctm RSY_RURD "store cpu counter multiple" z13 zarch
 
 # arch12 instructions
 
