@@ -735,7 +735,7 @@ record_full_log_release_first (void)
 /* Add a struct record_full_entry to record_full_arch_list.  */
 
 static void
-record_full_arch_list_add (record_full_entry &rec)
+record_full_arch_list_add (record_full_entry &&rec)
 {
   record_full_incomplete_instruction.effects.push_back (std::move (rec));
 }
@@ -758,7 +758,7 @@ record_full_arch_list_add_reg (struct regcache *regcache, int regnum)
   if (regnum == gdbarch_pc_regnum (regcache->arch ()))
       record_full_incomplete_instruction.pc = std::move (rec.reg ());
   else
-      record_full_arch_list_add (rec);
+      record_full_arch_list_add (std::move (rec));
 
   return 0;
 }
@@ -784,7 +784,7 @@ record_full_arch_list_add_mem (CORE_ADDR addr, int len)
 			  rec.get_loc (), len))
     return -1;
 
-  record_full_arch_list_add (rec);
+  record_full_arch_list_add (std::move (rec));
 
   return 0;
 }
@@ -2399,7 +2399,7 @@ record_full_entry::from_bfd (bfd *cbfd, asection *osec, int *bfd_offset)
 			    bfd_get_filename (cbfd)));
       break;
     }
-  record_full_arch_list_add (rec);
+  record_full_arch_list_add (std::move (rec));
 }
 
 void
