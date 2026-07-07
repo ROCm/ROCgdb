@@ -1,0 +1,9 @@
+#as:
+#ld: -r
+#objdump: -Dr
+
+#...
+.*R_LARCH_ALIGN.*
+#...
+.*R_LARCH_ALIGN.*
+#...

@@ -5725,11 +5725,6 @@ loongarch_relax_pcala_addi (bfd *abfd, asection *sec, asection *sym_sec,
   uint32_t add = bfd_get (32, abfd, contents + rel_lo->r_offset);
   uint32_t rd = LARCH_GET_RD (pca);
 
-  /* This section's output_offset need to subtract the bytes of instructions
-     relaxed by the previous sections, so it needs to be updated beforehand.
-     size_input_section already took care of updating it after relaxation,
-     so we additionally update once here.  */
-  sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec)
 	       + loongarch_calc_relaxed_addr (info, rel_hi->r_offset);
   if (sym_sec == sec)
@@ -5790,11 +5785,6 @@ loongarch_relax_call36 (bfd *abfd, asection *sec, asection *sym_sec,
   uint32_t jirl = bfd_get (32, abfd, contents + rel->r_offset + 4);
   uint32_t rd = LARCH_GET_RD (jirl);
 
-  /* This section's output_offset need to subtract the bytes of instructions
-     relaxed by the previous sections, so it needs to be updated beforehand.
-     size_input_section already took care of updating it after relaxation,
-     so we additionally update once here.  */
-  sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec)
 	       + loongarch_calc_relaxed_addr (info, rel->r_offset);
   if (sym_sec == sec)
@@ -5851,11 +5841,6 @@ loongarch_relax_pcala_ld (bfd *abfd, asection *sec,
 			  bool *again ATTRIBUTE_UNUSED,
 			  bfd_vma max_alignment)
 {
-  /* This section's output_offset need to subtract the bytes of instructions
-     relaxed by the previous sections, so it needs to be updated beforehand.
-     size_input_section already took care of updating it after relaxation,
-     so we additionally update once here.  */
-  sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec)
 	       + loongarch_calc_relaxed_addr (info, rel_hi->r_offset);
   if (sym_sec == sec)
@@ -6008,11 +5993,6 @@ loongarch_relax_tls_ld_gd_desc (bfd *abfd, asection *sec, asection *sym_sec,
   uint32_t add = bfd_get (32, abfd, contents + rel_lo->r_offset);
   uint32_t rd = LARCH_GET_RD (pca);
 
-  /* This section's output_offset need to subtract the bytes of instructions
-     relaxed by the previous sections, so it needs to be updated beforehand.
-     size_input_section already took care of updating it after relaxation,
-     so we additionally update once here.  */
-  sec->output_offset = sec->output_section->size;
   bfd_vma pc = sec_addr (sec)
 	       + loongarch_calc_relaxed_addr (info, rel_hi->r_offset);
   if (sym_sec == sec)
@@ -6187,7 +6167,9 @@ loongarch_elf_relax_section (bfd *abfd, asection *sec,
      so we additionally update once here.  */
 
   /* update before tls trans and relax, or may cause same pcadd_hi20 address.  */
-  sec->output_offset = sec->output_section->size;
+
+  sec->output_offset = align_power (sec->output_section->size,
+				    sec->alignment_power);
 
   for (unsigned int i = 0; i < sec->reloc_count; i++)
     {
@@ -7070,6 +7052,149 @@ elf_loongarch64_hash_symbol (struct elf_link_hash_entry *h)
     return false;
 
   return _bfd_elf_hash_symbol (h);
+}
+
+/* Write nops to align section.  */
+
+static bool
+loongarch_build_align_nops (asection *align_section)
+{
+  bfd_byte *loc = align_section->contents;
+  for (bfd_size_type i = 0; i < (align_section->size / 4); i++)
+    {
+      bfd_putl32 (LARCH_NOP, loc);
+      loc += 4;
+    }
+
+  return true;
+}
+
+/* Emit an align relocation and a related undefined symbol.  */
+
+static bool
+loongarch_add_align_relocs (asection *align_sec, bfd* align_bfd)
+{
+  elf_backend_data *bed = get_elf_backend_data (align_bfd);
+
+  if (elf_section_data (align_sec)->relocs == NULL)
+    {
+      align_sec->reloc_count = 1;
+      align_sec->flags |= SEC_RELOC;
+
+      Elf_Internal_Rela *rela = (Elf_Internal_Rela *)
+	bfd_malloc (sizeof (Elf_Internal_Rela));
+      if (rela == NULL)
+	return false;
+
+      rela->r_offset = 0;
+      rela->r_addend = align_sec->size;
+      rela->r_info = ELFNN_R_INFO (0, R_LARCH_ALIGN);
+      elf_section_data (align_sec)->relocs = rela;
+
+      Elf_Internal_Shdr *rela_hdr = (Elf_Internal_Shdr *)
+	bfd_zalloc (align_bfd, sizeof (Elf_Internal_Shdr));
+      if (rela_hdr == NULL)
+       return false;
+
+      rela_hdr->sh_size = sizeof (Elf_Internal_Rela);
+      rela_hdr->sh_entsize = sizeof (Elf_Internal_Rela);
+      rela_hdr->sh_type = SHT_RELA;
+      rela_hdr->sh_addralign = (bfd_vma) 1 << bed->s->log_file_align;
+      elf_section_data (align_sec)->rela.hdr = rela_hdr;
+    }
+
+  /* Used in loongarch_elf_relax_section for align relocations.  */
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (align_bfd);
+  if (symtab_hdr->contents == NULL)
+    {
+      Elf_Internal_Sym *sym = (Elf_Internal_Sym *)
+	bfd_zmalloc (sizeof (Elf_Internal_Sym));
+      if (sym == NULL)
+	return false;
+
+      /* Match if (r_symndx < symtab_hdr->sh_info) branch in
+	 loongarch_elf_relocate_section to avoid find link failed.  */
+      symtab_hdr->sh_info = 1;
+      symtab_hdr->contents = (unsigned char *) sym;
+    }
+
+  return true;
+}
+
+/* Section name for aligns is the associated section name plus this
+   string.  */
+#define ALIGN_SUFFIX ".align"
+
+/* Determine and set the size of the align section for a final link.  */
+
+bool
+elfNN_loongarch_size_aligns (bfd *output_bfd,
+			     bfd *align_bfd,
+			     struct bfd_link_info *info,
+			     asection * (*add_align_section)
+					  (const char *, asection *),
+			     void (*layout_sections_again) (void))
+{
+  bool need_laying_out = false;
+  for (bfd *input_bfd = info->input_bfds; input_bfd != NULL;
+       input_bfd = input_bfd->link.next)
+    {
+      asection *sec;
+      asection *align_sec;
+
+      if (!is_loongarch_elf (input_bfd)
+	  || (input_bfd->flags & BFD_LINKER_CREATED) != 0)
+	continue;
+
+      for (sec = input_bfd->sections; sec != NULL; sec = sec->next)
+	{
+	  /* If this section is not a code section, do nothing.  */
+	  if ((sec->flags & SEC_CODE) == 0)
+	    continue;
+
+	  /* If this section is a link-once section that will be
+	     discarded, then don't create any stubs.  */
+	  if (sec->output_section == NULL
+	      || sec->output_section->owner != output_bfd)
+	    continue;
+
+	  if (sec->alignment_power > 2)
+	    {
+	      char *s_name;
+	      size_t namelen;
+	      bfd_size_type len;
+	      namelen = strlen (sec->name);
+	      len = namelen + sizeof (ALIGN_SUFFIX);
+	      s_name = bfd_alloc (align_bfd, len);
+	      if (s_name == NULL)
+		return false;
+	      memcpy (s_name, sec->name, namelen);
+	      memcpy (s_name + namelen, ALIGN_SUFFIX, sizeof (ALIGN_SUFFIX));
+
+	      align_sec = add_align_section (s_name, sec);
+
+	      if (align_sec == NULL)
+		return false;
+
+	      if (! loongarch_build_align_nops (align_sec))
+		return false;
+
+	      if (! loongarch_add_align_relocs (align_sec, align_bfd))
+		return false;
+
+	      /* Change the section alignment to 4 to disable the default
+		 behavior of "dot += alignment_needed" in ldlang.c.  */
+	      bfd_set_section_alignment (sec, 2);
+
+	      need_laying_out = true;
+	    }
+	}
+    }
+
+  if (need_laying_out)
+    layout_sections_again ();
+
+  return true;
 }
 
 #define TARGET_LITTLE_SYM loongarch_elfNN_vec
