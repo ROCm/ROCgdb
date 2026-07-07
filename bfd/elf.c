@@ -562,7 +562,7 @@ bfd_elf_get_elf_syms (bfd *ibfd,
 	  bfd_set_error (bfd_error_file_too_big);
 	  goto out1;
 	}
-      alloc_intsym = (Elf_Internal_Sym *) bfd_malloc (amt);
+      alloc_intsym = bfd_malloc (amt);
       intsym_buf = alloc_intsym;
       if (intsym_buf == NULL)
 	goto out1;
@@ -1836,7 +1836,7 @@ get_hash_table_data (bfd *abfd, bfd_size_type number,
   if (e_data == NULL)
     return NULL;
 
-  i_data = (bfd_vma *) bfd_malloc (number * sizeof (*i_data));
+  i_data = bfd_malloc (number * sizeof (*i_data));
   if (i_data == NULL)
     {
       _bfd_munmap_temporary (e_data_addr, e_data_size);
@@ -2195,7 +2195,7 @@ _bfd_elf_get_dynamic_symbols (bfd *abfd, Elf_Internal_Phdr *phdr,
     }
 
   /* Dynamic symbol table must be valid until ABFD is closed.  */
-  isymbuf = (Elf_Internal_Sym *) bfd_alloc (abfd, amt);
+  isymbuf = bfd_alloc (abfd, amt);
   if (isymbuf == NULL)
     goto error_return;
 
@@ -2892,7 +2892,7 @@ bfd_section_from_shdr (bfd *abfd, unsigned int shindex)
 	    goto success;
 	  }
 
-	hdr2 = (Elf_Internal_Shdr *) bfd_alloc (abfd, sizeof (*hdr2));
+	hdr2 = bfd_alloc (abfd, sizeof (*hdr2));
 	if (hdr2 == NULL)
 	  goto fail;
 	*hdr2 = *hdr;
@@ -3320,11 +3320,10 @@ _bfd_elf_new_section_hook (bfd *abfd, asection *sec)
   elf_backend_data *bed;
   const struct bfd_elf_special_section *ssect;
 
-  sdata = (struct bfd_elf_section_data *) sec->used_by_bfd;
+  sdata = sec->used_by_bfd;
   if (sdata == NULL)
     {
-      sdata = (struct bfd_elf_section_data *) bfd_zalloc (abfd,
-							  sizeof (*sdata));
+      sdata = bfd_zalloc (abfd, sizeof (*sdata));
       if (sdata == NULL)
 	return false;
       sec->used_by_bfd = sdata;
@@ -3387,7 +3386,7 @@ _bfd_elf_make_section_from_phdr (bfd *abfd,
     {
       sprintf (namebuf, "%s%d%s", type_name, hdr_index, split ? "a" : "");
       len = strlen (namebuf) + 1;
-      name = (char *) bfd_alloc (abfd, len);
+      name = bfd_alloc (abfd, len);
       if (!name)
 	return false;
       memcpy (name, namebuf, len);
@@ -3423,7 +3422,7 @@ _bfd_elf_make_section_from_phdr (bfd *abfd,
 
       sprintf (namebuf, "%s%d%s", type_name, hdr_index, split ? "b" : "");
       len = strlen (namebuf) + 1;
-      name = (char *) bfd_alloc (abfd, len);
+      name = bfd_alloc (abfd, len);
       if (!name)
 	return false;
       memcpy (name, namebuf, len);
@@ -3540,8 +3539,7 @@ _bfd_elf_set_reloc_sh_name (bfd *abfd,
 			    const char *sec_name,
 			    bool use_rela_p)
 {
-  char *name = (char *) bfd_alloc (abfd,
-				   sizeof ".rela" + strlen (sec_name));
+  char *name = bfd_alloc (abfd, sizeof ".rela" + strlen (sec_name));
   if (name == NULL)
     return false;
 
@@ -3975,7 +3973,7 @@ bfd_elf_set_group_contents (bfd *abfd, asection *sec, void *failedptrarg)
   if (sec->contents == NULL)
     {
       gas = false;
-      sec->contents = (unsigned char *) bfd_alloc (abfd, sec->size);
+      sec->contents = bfd_alloc (abfd, sec->size);
 
       /* Arrange for the section to be written out.  */
       elf_section_data (sec)->this_hdr.contents = sec->contents;
@@ -4124,7 +4122,6 @@ assign_section_numbers (bfd *abfd, struct bfd_link_info *link_info)
   Elf_Internal_Shdr **i_shdrp;
   struct bfd_elf_section_data *d;
   bool need_symtab;
-  size_t amt;
 
   section_number = 1;
 
@@ -4205,12 +4202,13 @@ assign_section_numbers (bfd *abfd, struct bfd_link_info *link_info)
 	  BFD_ASSERT (elf_symtab_shndx_list (abfd) == NULL);
 
 	  entry = bfd_zalloc (abfd, sizeof (*entry));
+	  if (entry == NULL)
+	    return false;
 	  entry->ndx = section_number++;
 	  elf_symtab_shndx_list (abfd) = entry;
-	  entry->hdr.sh_name
-	    = (unsigned int) _bfd_elf_strtab_add (elf_shstrtab (abfd),
-						  ".symtab_shndx", false);
-	  if (entry->hdr.sh_name == (unsigned int) -1)
+	  entry->hdr.sh_name = _bfd_elf_strtab_add (elf_shstrtab (abfd),
+						    ".symtab_shndx", false);
+	  if (entry->hdr.sh_name == -1u)
 	    return false;
 	}
       elf_strtab_sec (abfd) = section_number++;
@@ -4234,13 +4232,11 @@ assign_section_numbers (bfd *abfd, struct bfd_link_info *link_info)
 
   /* Set up the list of section header pointers, in agreement with the
      indices.  */
-  amt = section_number * sizeof (Elf_Internal_Shdr *);
-  i_shdrp = (Elf_Internal_Shdr **) bfd_zalloc (abfd, amt);
+  i_shdrp = bfd_zalloc (abfd, section_number * sizeof (*i_shdrp));
   if (i_shdrp == NULL)
     return false;
 
-  i_shdrp[0] = (Elf_Internal_Shdr *) bfd_zalloc (abfd,
-						 sizeof (Elf_Internal_Shdr));
+  i_shdrp[0] = bfd_zalloc (abfd, sizeof (*i_shdrp[0]));
   if (i_shdrp[0] == NULL)
     {
       bfd_release (abfd, i_shdrp);
@@ -4382,7 +4378,7 @@ assign_section_numbers (bfd *abfd, struct bfd_link_info *link_info)
 	      char *alc;
 
 	      len = strlen (sec->name);
-	      alc = (char *) bfd_malloc (len - 2);
+	      alc = bfd_malloc (len - 2);
 	      if (alc == NULL)
 		return false;
 	      memcpy (alc, sec->name, len - 3);
@@ -4537,7 +4533,6 @@ elf_map_symbols (bfd *abfd, unsigned int *pnum_locals)
   unsigned int idx;
   asection *asect;
   asymbol **new_syms;
-  size_t amt;
 
 #ifdef DEBUG
   fprintf (stderr, "elf_map_symbols\n");
@@ -4551,8 +4546,7 @@ elf_map_symbols (bfd *abfd, unsigned int *pnum_locals)
     }
 
   max_index++;
-  amt = max_index * sizeof (asymbol *);
-  sect_syms = (asymbol **) bfd_zalloc (abfd, amt);
+  sect_syms = bfd_zalloc (abfd, max_index * sizeof (*sect_syms));
   if (sect_syms == NULL)
     return false;
   elf_section_syms (abfd) = sect_syms;
@@ -4612,8 +4606,7 @@ elf_map_symbols (bfd *abfd, unsigned int *pnum_locals)
     }
 
   /* Now sort the symbols so the local symbols are first.  */
-  amt = (num_locals + num_globals) * sizeof (asymbol *);
-  new_syms = (asymbol **) bfd_alloc (abfd, amt);
+  new_syms = bfd_alloc (abfd, (num_locals + num_globals) * sizeof (*new_syms));
   if (new_syms == NULL)
     return false;
 
@@ -4990,7 +4983,7 @@ make_mapping (bfd *abfd,
 
   amt = sizeof (struct elf_segment_map) - sizeof (asection *);
   amt += (to - from) * sizeof (asection *);
-  m = (struct elf_segment_map *) bfd_zalloc (abfd, amt);
+  m = bfd_zalloc (abfd, amt);
   if (m == NULL)
     return NULL;
   m->next = NULL;
@@ -5017,8 +5010,7 @@ _bfd_elf_make_dynamic_segment (bfd *abfd, asection *dynsec)
 {
   struct elf_segment_map *m;
 
-  m = (struct elf_segment_map *) bfd_zalloc (abfd,
-					     sizeof (struct elf_segment_map));
+  m = bfd_zalloc (abfd, sizeof (*m));
   if (m == NULL)
     return NULL;
   m->next = NULL;
@@ -5138,8 +5130,7 @@ bfd_elf_map_sections_to_segments (bfd *abfd,
 
       /* Select the allocated sections, and sort them.  */
 
-      amt = bfd_count_sections (abfd) * sizeof (asection *);
-      sections = (asection **) bfd_malloc (amt);
+      sections = bfd_malloc (bfd_count_sections (abfd) * sizeof (*sections));
       if (sections == NULL)
 	goto error_return;
 
@@ -5201,8 +5192,7 @@ bfd_elf_map_sections_to_segments (bfd *abfd,
       s = bfd_get_section_by_name (abfd, ".interp");
       if (s != NULL && (s->flags & SEC_LOAD) != 0 && s->size != 0)
 	{
-	  amt = sizeof (struct elf_segment_map);
-	  m = (struct elf_segment_map *) bfd_zalloc (abfd, amt);
+	  m = bfd_zalloc (abfd, sizeof (*m));
 	  if (m == NULL)
 	    goto error_return;
 	  m->next = NULL;
@@ -5214,8 +5204,7 @@ bfd_elf_map_sections_to_segments (bfd *abfd,
 	  *pm = m;
 	  pm = &m->next;
 
-	  amt = sizeof (struct elf_segment_map);
-	  m = (struct elf_segment_map *) bfd_zalloc (abfd, amt);
+	  m = bfd_zalloc (abfd, sizeof (*m));
 	  if (m == NULL)
 	    goto error_return;
 	  m->next = NULL;
@@ -5488,7 +5477,7 @@ bfd_elf_map_sections_to_segments (bfd *abfd,
 		}
 	      amt = sizeof (struct elf_segment_map) - sizeof (asection *);
 	      amt += count * sizeof (asection *);
-	      m = (struct elf_segment_map *) bfd_zalloc (abfd, amt);
+	      m = bfd_zalloc (abfd, amt);
 	      if (m == NULL)
 		goto error_return;
 	      m->next = NULL;
@@ -5521,7 +5510,7 @@ bfd_elf_map_sections_to_segments (bfd *abfd,
 	{
 	  amt = sizeof (struct elf_segment_map) - sizeof (asection *);
 	  amt += tls_count * sizeof (asection *);
-	  m = (struct elf_segment_map *) bfd_zalloc (abfd, amt);
+	  m = bfd_zalloc (abfd, amt);
 	  if (m == NULL)
 	    goto error_return;
 	  m->next = NULL;
@@ -5615,8 +5604,7 @@ bfd_elf_map_sections_to_segments (bfd *abfd,
       if (eh_frame_hdr != NULL
 	  && (eh_frame_hdr->output_section->flags & SEC_LOAD) != 0)
 	{
-	  amt = sizeof (struct elf_segment_map);
-	  m = (struct elf_segment_map *) bfd_zalloc (abfd, amt);
+	  m = bfd_zalloc (abfd, sizeof (*m));
 	  if (m == NULL)
 	    goto error_return;
 	  m->next = NULL;
@@ -5635,8 +5623,7 @@ bfd_elf_map_sections_to_segments (bfd *abfd,
 	  && (sframe->output_section->flags & SEC_LOAD) != 0
 	  && sframe->size != 0)
 	{
-	  amt = sizeof (struct elf_segment_map);
-	  m = (struct elf_segment_map *) bfd_zalloc (abfd, amt);
+	  m = bfd_zalloc (abfd, sizeof (*m));
 	  if (m == NULL)
 	    goto error_return;
 	  m->next = NULL;
@@ -5650,8 +5637,7 @@ bfd_elf_map_sections_to_segments (bfd *abfd,
 
       if (elf_stack_flags (abfd))
 	{
-	  amt = sizeof (struct elf_segment_map);
-	  m = (struct elf_segment_map *) bfd_zalloc (abfd, amt);
+	  m = bfd_zalloc (abfd, sizeof (*m));
 	  if (m == NULL)
 	    goto error_return;
 	  m->next = NULL;
@@ -5696,8 +5682,7 @@ bfd_elf_map_sections_to_segments (bfd *abfd,
 	  /* Make a PT_GNU_RELRO segment only when it isn't empty.  */
 	  if (m != NULL)
 	    {
-	      amt = sizeof (struct elf_segment_map);
-	      m = (struct elf_segment_map *) bfd_zalloc (abfd, amt);
+	      m = bfd_zalloc (abfd, sizeof (*m));
 	      if (m == NULL)
 		goto error_return;
 	      m->next = NULL;
@@ -7697,7 +7682,7 @@ rewrite_elf_program_header (bfd *ibfd, bfd *obfd, bfd_vma maxpagesize)
 	 all of the sections we have selected.  */
       amt = sizeof (struct elf_segment_map) - sizeof (asection *);
       amt += section_count * sizeof (asection *);
-      map = (struct elf_segment_map *) bfd_zalloc (obfd, amt);
+      map = bfd_zalloc (obfd, amt);
       if (map == NULL)
 	return false;
 
@@ -7801,8 +7786,7 @@ rewrite_elf_program_header (bfd *ibfd, bfd *obfd, bfd_vma maxpagesize)
 	 pointers that we are interested in.  As these sections get assigned
 	 to a segment, they are removed from this array.  */
 
-      amt = section_count * sizeof (asection *);
-      sections = (asection **) bfd_malloc (amt);
+      sections = bfd_malloc (section_count * sizeof (*sections));
       if (sections == NULL)
 	return false;
 
@@ -8033,7 +8017,7 @@ rewrite_elf_program_header (bfd *ibfd, bfd *obfd, bfd_vma maxpagesize)
 		 and carry on looping.  */
 	      amt = sizeof (struct elf_segment_map) - sizeof (asection *);
 	      amt += section_count * sizeof (asection *);
-	      map = (struct elf_segment_map *) bfd_zalloc (obfd, amt);
+	      map = bfd_zalloc (obfd, amt);
 	      if (map == NULL)
 		{
 		  free (sections);
@@ -8198,7 +8182,7 @@ copy_elf_program_header (bfd *ibfd, bfd *obfd)
 	 all of the sections we have selected.  */
       amt = sizeof (struct elf_segment_map) - sizeof (asection *);
       amt += section_count * sizeof (asection *);
-      map = (struct elf_segment_map *) bfd_zalloc (obfd, amt);
+      map = bfd_zalloc (obfd, amt);
       if (map == NULL)
 	return false;
 
@@ -8767,7 +8751,7 @@ swap_out_syms (bfd *abfd,
 
   /* Allocate buffer to swap out the .strtab section.  */
   if (_bfd_mul_overflow (symcount + 1, sizeof (*symstrtab), &amt)
-      || (symstrtab = (struct elf_sym_strtab *) bfd_malloc (amt)) == NULL)
+      || (symstrtab = bfd_malloc (amt)) == NULL)
     {
       bfd_set_error (bfd_error_no_memory);
       _bfd_elf_strtab_free (stt);
@@ -8797,7 +8781,7 @@ swap_out_syms (bfd *abfd,
 	  if (_bfd_mul_overflow (symcount + 1,
 				 sizeof (Elf_External_Sym_Shndx), &amt))
 	    goto error_no_mem;
-	  outbound_shndx =  (bfd_byte *) bfd_zalloc (abfd, amt);
+	  outbound_shndx = bfd_zalloc (abfd, amt);
 	  if (outbound_shndx == NULL)
 	    goto error_return;
 
@@ -9411,7 +9395,7 @@ _bfd_elf_slurp_version_tables (bfd *abfd, bool default_imported_symver)
 	}
       if (amt == 0)
 	goto error_return_verref;
-      elf_tdata (abfd)->verref = (Elf_Internal_Verneed *) bfd_zalloc (abfd, amt);
+      elf_tdata (abfd)->verref = bfd_zalloc (abfd, amt);
       if (elf_tdata (abfd)->verref == NULL)
 	goto error_return_verref;
 
@@ -9458,8 +9442,7 @@ _bfd_elf_slurp_version_tables (bfd *abfd, bool default_imported_symver)
 		  bfd_set_error (bfd_error_file_too_big);
 		  goto error_return_verref;
 		}
-	      iverneed->vn_auxptr = (struct elf_internal_vernaux *)
-		bfd_alloc (abfd, amt);
+	      iverneed->vn_auxptr = bfd_alloc (abfd, amt);
 	      if (iverneed->vn_auxptr == NULL)
 		goto error_return_verref;
 	    }
@@ -9629,7 +9612,7 @@ _bfd_elf_slurp_version_tables (bfd *abfd, bool default_imported_symver)
 
       if (amt == 0)
 	goto error_return_verdef;
-      elf_tdata (abfd)->verdef = (Elf_Internal_Verdef *) bfd_zalloc (abfd, amt);
+      elf_tdata (abfd)->verdef = bfd_zalloc (abfd, amt);
       if (elf_tdata (abfd)->verdef == NULL)
 	goto error_return_verdef;
 
@@ -9663,8 +9646,7 @@ _bfd_elf_slurp_version_tables (bfd *abfd, bool default_imported_symver)
 		  bfd_set_error (bfd_error_file_too_big);
 		  goto error_return_verdef;
 		}
-	      iverdef->vd_auxptr = (struct elf_internal_verdaux *)
-		bfd_alloc (abfd, amt);
+	      iverdef->vd_auxptr = bfd_alloc (abfd, amt);
 	      if (iverdef->vd_auxptr == NULL)
 		goto error_return_verdef;
 	    }
@@ -9745,7 +9727,7 @@ _bfd_elf_slurp_version_tables (bfd *abfd, bool default_imported_symver)
 	}
       if (amt == 0)
 	goto error_return;
-      elf_tdata (abfd)->verdef = (Elf_Internal_Verdef *) bfd_zalloc (abfd, amt);
+      elf_tdata (abfd)->verdef = bfd_zalloc (abfd, amt);
       if (elf_tdata (abfd)->verdef == NULL)
 	goto error_return;
 
@@ -9771,8 +9753,7 @@ _bfd_elf_slurp_version_tables (bfd *abfd, bool default_imported_symver)
       if (iverdef->vd_nodename == NULL)
 	goto error_return_verdef;
       iverdef->vd_nextdef = NULL;
-      iverdef->vd_auxptr = ((struct elf_internal_verdaux *)
-			    bfd_zalloc (abfd, sizeof (Elf_Internal_Verdaux)));
+      iverdef->vd_auxptr = bfd_zalloc (abfd, sizeof (Elf_Internal_Verdaux));
       if (iverdef->vd_auxptr == NULL)
 	goto error_return_verdef;
 
@@ -9794,7 +9775,7 @@ _bfd_elf_make_empty_symbol (bfd *abfd)
 {
   elf_symbol_type *newsym;
 
-  newsym = (elf_symbol_type *) bfd_zalloc (abfd, sizeof (*newsym));
+  newsym = bfd_zalloc (abfd, sizeof (*newsym));
   if (!newsym)
     return NULL;
   newsym->symbol.the_bfd = abfd;
@@ -10323,7 +10304,7 @@ _bfd_elfcore_make_pseudosection (bfd *abfd,
 
   sprintf (buf, "%s/%d", name, elfcore_make_pid (abfd));
   len = strlen (buf) + 1;
-  threaded_name = (char *) bfd_alloc (abfd, len);
+  threaded_name = bfd_alloc (abfd, len);
   if (threaded_name == NULL)
     return false;
   memcpy (threaded_name, buf, len);
@@ -10839,7 +10820,7 @@ _bfd_elfcore_strndup (bfd *abfd, char *start, size_t max)
   else
     len = end - start;
 
-  dups = (char *) bfd_alloc (abfd, len + 1);
+  dups = bfd_alloc (abfd, len + 1);
   if (dups == NULL)
     return NULL;
 
@@ -11098,7 +11079,7 @@ elfcore_grok_win32pstatus (bfd *abfd, Elf_Internal_Note *note)
       sprintf (buf, NOTE_PSEUDO_SECTION_REG "/%ld", (long) bfd_get_32 (abfd, note->descdata + 4));
 
       len = strlen (buf) + 1;
-      name = (char *) bfd_alloc (abfd, len);
+      name = bfd_alloc (abfd, len);
       if (name == NULL)
 	return false;
 
@@ -11143,7 +11124,7 @@ elfcore_grok_win32pstatus (bfd *abfd, Elf_Internal_Note *note)
 	}
 
       len = strlen (buf) + 1;
-      name = (char *) bfd_alloc (abfd, len);
+      name = bfd_alloc (abfd, len);
       if (name == NULL)
 	return false;
 
@@ -11345,12 +11326,12 @@ elfobj_grok_gnu_note (bfd *abfd, Elf_Internal_Note *note)
 static bool
 elfobj_grok_stapsdt_note_1 (bfd *abfd, Elf_Internal_Note *note)
 {
-  struct sdt_note *cur =
-    (struct sdt_note *) bfd_alloc (abfd,
-				   sizeof (struct sdt_note) + note->descsz);
+  struct sdt_note *cur = bfd_alloc (abfd, sizeof (*cur) + note->descsz);
 
+  if (cur == NULL)
+    return false;
   cur->next = (struct sdt_note *) (elf_tdata (abfd))->sdt_note_head;
-  cur->size = (bfd_size_type) note->descsz;
+  cur->size = note->descsz;
   memcpy (cur->data, note->descdata, note->descsz);
 
   elf_tdata (abfd)->sdt_note_head = cur;
@@ -11971,7 +11952,7 @@ elfcore_grok_nto_status (bfd *abfd, Elf_Internal_Note *note, long *tid)
   /* Make a ".qnx_core_status/%d" section.  */
   sprintf (buf, ".qnx_core_status/%ld", *tid);
 
-  name = (char *) bfd_alloc (abfd, strlen (buf) + 1);
+  name = bfd_alloc (abfd, strlen (buf) + 1);
   if (name == NULL)
     return false;
   strcpy (name, buf);
@@ -12000,7 +11981,7 @@ elfcore_grok_nto_regs (bfd *abfd,
   /* Make a "(base)/%d" section.  */
   sprintf (buf, "%s/%ld", base, tid);
 
-  name = (char *) bfd_alloc (abfd, strlen (buf) + 1);
+  name = bfd_alloc (abfd, strlen (buf) + 1);
   if (name == NULL)
     return false;
   strcpy (name, buf);
@@ -12052,7 +12033,7 @@ elfcore_grok_spu_note (bfd *abfd, Elf_Internal_Note *note)
 
   /* Use note name as section name.  */
   len = note->namesz;
-  name = (char *) bfd_alloc (abfd, len);
+  name = bfd_alloc (abfd, len);
   if (name == NULL)
     return false;
   memcpy (name, note->namedata, len);
@@ -12106,7 +12087,7 @@ elfcore_write_note (bfd *abfd,
 
   newspace = 12 + ((namesz + 3) & -4) + ((size + 3) & -4);
 
-  buf = (char *) realloc (buf, *bufsiz + newspace);
+  buf = realloc (buf, *bufsiz + newspace);
   if (buf == NULL)
     return buf;
   dest = buf + *bufsiz;
@@ -13234,7 +13215,7 @@ _bfd_elf_read_notes (bfd *abfd, file_ptr offset, bfd_size_type size,
   if (bfd_seek (abfd, offset, SEEK_SET) != 0)
     return false;
 
-  buf = (char *) _bfd_malloc_and_read (abfd, size + 1, size);
+  buf = _bfd_malloc_and_read (abfd, size + 1, size);
   if (buf == NULL)
     return false;
 
@@ -13465,7 +13446,7 @@ _bfd_elf_get_synthetic_symtab (bfd *abfd,
 	}
     }
 
-  s = *ret = (asymbol *) bfd_malloc (size);
+  s = *ret = bfd_malloc (size);
   if (s == NULL)
     return -1;
 
@@ -13713,7 +13694,7 @@ _bfd_elf_slurp_secondary_reloc_section (bfd *       abfd,
 	      continue;
 	    }
 
-	  internal_relocs = (arelent *) bfd_alloc (abfd, amt);
+	  internal_relocs = bfd_alloc (abfd, amt);
 	  if (internal_relocs == NULL)
 	    {
 	      free (native_relocs);
