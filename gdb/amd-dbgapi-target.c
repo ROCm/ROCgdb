@@ -525,8 +525,8 @@ dispatch_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
 				    sizeof (queue_id), &queue_id);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_dispatch_get_info failed to get queue id for "
-	     "dispatch_%ld: %s"),
-	   dispatch_id.handle, get_status_string (status));
+	     "dispatch_%s: %s"),
+	   pulongest (dispatch_id.handle), get_status_string (status));
 
   amd_dbgapi_agent_id_t agent_id;
   status = amd_dbgapi_dispatch_get_info (dispatch_id,
@@ -534,8 +534,8 @@ dispatch_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
 					 sizeof (agent_id), &agent_id);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_dispatch_get_info failed to get agent id for "
-	     "dispatch_%ld: %s"),
-	   dispatch_id.handle, get_status_string (status));
+	     "dispatch_%s: %s"),
+	   pulongest (dispatch_id.handle), get_status_string (status));
 
   amd_dbgapi_os_queue_packet_id_t os_id;
   status = amd_dbgapi_dispatch_get_info
@@ -543,12 +543,14 @@ dispatch_target_id_string (amd_dbgapi_dispatch_id_t dispatch_id)
      sizeof (os_id), &os_id);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_dispatch_get_info failed to get OS queue packet id "
-	     "for dispatch_%ld: %s"),
-	   dispatch_id.handle, get_status_string (status));
+	     "for dispatch_%s: %s"),
+	   pulongest (dispatch_id.handle), get_status_string (status));
 
-  return string_printf ("AMDGPU Dispatch %ld:%ld:%ld (PKID %ld)",
-			agent_id.handle, queue_id.handle, dispatch_id.handle,
-			os_id);
+  return string_printf ("AMDGPU Dispatch %s:%s:%s (PKID %s)",
+			pulongest (agent_id.handle),
+			pulongest (queue_id.handle),
+			pulongest (dispatch_id.handle),
+			pulongest (os_id));
 }
 
 /* Return the dispatch position string for a given thread.  */
@@ -570,19 +572,20 @@ queue_target_id_string (amd_dbgapi_queue_id_t queue_id)
 				 sizeof (agent_id), &agent_id);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_queue_get_info failed to get agent id for "
-	     "queue_%ld: %s"),
-	   queue_id.handle, get_status_string (status));
+	     "queue_%s: %s"),
+	   pulongest (queue_id.handle), get_status_string (status));
 
   amd_dbgapi_os_queue_id_t os_id;
   status = amd_dbgapi_queue_get_info (queue_id, AMD_DBGAPI_QUEUE_INFO_OS_ID,
 				      sizeof (os_id), &os_id);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_queue_get_info failed to get OS queue id for "
-	     "queue_%ld: %s"),
-	   queue_id.handle, get_status_string (status));
+	     "queue_%s: %s"),
+	   pulongest (queue_id.handle), get_status_string (status));
 
-  return string_printf ("AMDGPU Queue %ld:%ld (QID %ld)", agent_id.handle,
-			queue_id.handle, os_id);
+  return string_printf ("AMDGPU Queue %s:%s (QID %s)",
+			pulongest (agent_id.handle),
+			pulongest (queue_id.handle), pulongest (os_id));
 }
 
 /* Return the target id string for a given agent.  */
@@ -595,10 +598,10 @@ agent_target_id_string (amd_dbgapi_agent_id_t agent_id)
 				 sizeof (os_id), &os_id);
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_agent_get_info failed to get OS agent id for "
-	     "agent_%ld: %s"),
-	   agent_id.handle, get_status_string (status));
+	     "agent_%s: %s"),
+	   pulongest (agent_id.handle), get_status_string (status));
 
-  return string_printf ("AMDGPU Agent (GPUID %ld)", os_id);
+  return string_printf ("AMDGPU Agent (GPUID %s)", pulongest (os_id));
 }
 
 /* Return the thread/wave's workgroup position as a string.  */
@@ -738,8 +741,9 @@ lane_workgroup_pos_string (thread_info *tp, int lane)
 {
   if (auto wi_ids = lane_workgroup_pos (tp, lane);
       wi_ids.has_value ())
-    return string_printf ("[%d,%d,%d]",
-			  (*wi_ids)[0], (*wi_ids)[1], (*wi_ids)[2]);
+    return string_printf ("[%s,%s,%s]", pulongest ((*wi_ids)[0]),
+			  pulongest ((*wi_ids)[1]),
+			  pulongest ((*wi_ids)[2]));
   else
     return "[?,?,?]";
 }
@@ -3788,10 +3792,11 @@ info_agents_command (const char *args, int from_tty)
 		  = std::max (max_id_width,
 			      (show_inferior_qualified_tids ()
 				   || uiout->is_mi_like_p ()
-				 ? string_printf ("%d.%ld", inf->num,
-						  agent_id.handle)
-				 : string_printf ("%ld", agent_id.handle))
-				.size ());
+			       ? string_printf ("%d.%s", inf->num,
+						pulongest (agent_id.handle))
+			       : string_printf ("%s",
+						pulongest (agent_id.handle)))
+			      .size ());
 
 		/* target id  */
 		max_target_id_width
@@ -3898,10 +3903,11 @@ info_agents_command (const char *args, int from_tty)
 	    uiout->field_string ("id",
 				 (show_inferior_qualified_tids ()
 				      || uiout->is_mi_like_p ()
-				    ? string_printf ("%d.%ld", inf->num,
-						     agent_id.handle)
-				    : string_printf ("%ld", agent_id.handle))
-				   .c_str ());
+				  ? string_printf ("%d.%s", inf->num,
+						   pulongest (agent_id.handle))
+				  : string_printf ("%s",
+						   pulongest (agent_id.handle)))
+				 .c_str ());
 
 	    /* supported  */
 	    amd_dbgapi_agent_state_t agent_state;
@@ -4155,10 +4161,11 @@ info_queues_command (const char *args, int from_tty)
 	    uiout->field_string ("id",
 				 (show_inferior_qualified_tids ()
 				      || uiout->is_mi_like_p ()
-				    ? string_printf ("%d.%ld", inf->num,
-						     queue_id.handle)
-				    : string_printf ("%ld", queue_id.handle))
-				   .c_str ());
+				  ? string_printf ("%d.%s", inf->num,
+						   pulongest (queue_id.handle))
+				  : string_printf ("%s",
+						   pulongest (queue_id.handle)))
+				 .c_str ());
 
 	    /* target-id  */
 	    uiout->field_string ("target-id",
@@ -4291,8 +4298,8 @@ queue_find_command (const char *arg, int from_tty)
 	  std::string target_id = queue_target_id_string (queue_id);
 	  if (re_exec (target_id.c_str ()))
 	    {
-	      gdb_printf (_("Queue %ld has Target Id '%s'\n"),
-			  queue_id.handle, target_id.c_str ());
+	      gdb_printf (_("Queue %s has Target Id '%s'\n"),
+			  pulongest (queue_id.handle), target_id.c_str ());
 	      ++matches;
 	    }
 	}
@@ -4514,8 +4521,9 @@ info_dispatches_command (const char *args, int from_tty)
 
 		max_address_spaces_width
 		  = std::max (max_address_spaces_width,
-			      string_printf ("Shared(%ld), Private(%ld)",
-					     shared_size, private_size)
+			      string_printf ("Shared(%s), Private(%s)",
+					     pulongest (shared_size),
+					     pulongest (private_size))
 				.size ());
 
 		++n_dispatches;
@@ -4591,13 +4599,14 @@ info_dispatches_command (const char *args, int from_tty)
 	      }
 
 	    /* id  */
-	    uiout->field_string ("id", (show_inferior_qualified_tids ()
-					    || uiout->is_mi_like_p ()
-					  ? string_printf ("%d.%ld", inf->num,
-							   dispatch_id.handle)
-					  : string_printf ("%ld",
-							   dispatch_id.handle))
-					 .c_str ());
+	    const char *dispatch_id_str = pulongest (dispatch_id.handle);
+	    uiout->field_string ("id",
+				 ((show_inferior_qualified_tids ()
+				   || uiout->is_mi_like_p ())
+				  ? string_printf ("%d.%s", inf->num,
+						   dispatch_id_str)
+				  : string_printf ("%s",
+						   dispatch_id_str)).c_str ());
 
 	    /* target-id  */
 	    uiout->field_string ("target-id",
@@ -4703,8 +4712,9 @@ info_dispatches_command (const char *args, int from_tty)
 
 		uiout
 		  ->field_string ("address-spaces",
-				  string_printf ("Shared(%ld), Private(%ld)",
-						 shared_size, private_size));
+				  string_printf ("Shared(%s), Private(%s)",
+						 pulongest (shared_size),
+						 pulongest (private_size)));
 
 		/* kernel-desc  */
 		amd_dbgapi_global_address_t kernel_desc;
@@ -4848,8 +4858,8 @@ dispatch_find_command (const char *arg, int from_tty)
 	  std::string target_id = dispatch_target_id_string (dispatch_id);
 	  if (re_exec (target_id.c_str ()))
 	    {
-	      gdb_printf (_("Dispatch %ld has Target Id '%s'\n"),
-			  dispatch_id.handle, target_id.c_str ());
+	      gdb_printf (_("Dispatch %s has Target Id '%s'\n"),
+			  pulongest (dispatch_id.handle), target_id.c_str ());
 	      ++matches;
 	    }
 
@@ -4866,8 +4876,8 @@ dispatch_find_command (const char *arg, int from_tty)
 	    = lookup_minimal_symbol_by_pc_section (kernel_code, nullptr);
 	  if (msymbol.minsym && re_exec (msymbol.minsym->print_name ()))
 	    {
-	      gdb_printf (_("Dispatch %ld has Kernel Function '%s'\n"),
-			  dispatch_id.handle,
+	      gdb_printf (_("Dispatch %s has Kernel Function '%s'\n"),
+			  pulongest (dispatch_id.handle),
 			  msymbol.minsym->print_name ());
 	      ++matches;
 	    }
