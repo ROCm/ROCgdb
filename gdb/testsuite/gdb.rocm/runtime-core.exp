@@ -86,15 +86,15 @@ proc do_test { fault core_type output_type } {
     set faulty_wave 0
     set aux_wave 0
     gdb_test_multiple "info thread" "identify waves" -lbl {
-	-re "($::decimal) *AMDGPU Wave \[^\r\n\]*$fault_loc \[^\\n\]*" {
+	-re "^\r\n\[^\r\n\]+($::decimal) *AMDGPU Wave \[^\r\n\]*$fault_loc \[^\r\n\]*(?=\r\n)" {
 	    set faulty_wave $expect_out(1,string)
 	    exp_continue
 	}
-	-re "($::decimal) *AMDGPU Wave \[^\r\n\]* aux_kernel \[^\\n\]*" {
+	-re "^\r\n\[^\r\n\]+($::decimal) *AMDGPU Wave \[^\r\n\]* aux_kernel \[^\r\n\]*(?=\r\n)" {
 	    set aux_wave $expect_out(1,string)
 	    exp_continue
 	}
-	-re "$::gdb_prompt $" {
+	-re "^\r\n$::gdb_prompt $" {
 	    gdb_assert {($faulty_wave != 0) && ($aux_wave != 0)} $gdb_test_name
 	}
     }
