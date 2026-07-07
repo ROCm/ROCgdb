@@ -41,31 +41,31 @@ enum s390_linux_tdesc {
 
 /* Defined in auto-generated file s390x-linux64.c.  */
 void init_registers_s390x_linux64 (void);
-extern const struct target_desc *tdesc_s390x_linux64;
+extern const_target_desc_up tdesc_s390x_linux64;
 
 /* Defined in auto-generated file s390x-linux64v1.c.  */
 void init_registers_s390x_linux64v1 (void);
-extern const struct target_desc *tdesc_s390x_linux64v1;
+extern const_target_desc_up tdesc_s390x_linux64v1;
 
 /* Defined in auto-generated file s390x-linux64v2.c.  */
 void init_registers_s390x_linux64v2 (void);
-extern const struct target_desc *tdesc_s390x_linux64v2;
+extern const_target_desc_up tdesc_s390x_linux64v2;
 
 /* Defined in auto-generated file s390x-te-linux64.c.  */
 void init_registers_s390x_te_linux64 (void);
-extern const struct target_desc *tdesc_s390x_te_linux64;
+extern const_target_desc_up tdesc_s390x_te_linux64;
 
 /* Defined in auto-generated file s390x-vx-linux64.c.  */
 void init_registers_s390x_vx_linux64 (void);
-extern const struct target_desc *tdesc_s390x_vx_linux64;
+extern const_target_desc_up tdesc_s390x_vx_linux64;
 
 /* Defined in auto-generated file s390x-tevx-linux64.c.  */
 void init_registers_s390x_tevx_linux64 (void);
-extern const struct target_desc *tdesc_s390x_tevx_linux64;
+extern const_target_desc_up tdesc_s390x_tevx_linux64;
 
 /* Defined in auto-generated file s390x-gs-linux64.c.  */
 void init_registers_s390x_gs_linux64 (void);
-extern const struct target_desc *tdesc_s390x_gs_linux64;
+extern const_target_desc_up tdesc_s390x_gs_linux64;
 
 #endif
 
@@ -73,43 +73,43 @@ extern const struct target_desc *tdesc_s390x_gs_linux64;
 
 /* Defined in auto-generated file s390-linux32.c.  */
 void init_registers_s390_linux32 (void);
-extern const struct target_desc *tdesc_s390_linux32;
+extern const_target_desc_up tdesc_s390_linux32;
 
 /* Defined in auto-generated file s390-linux32v1.c.  */
 void init_registers_s390_linux32v1 (void);
-extern const struct target_desc *tdesc_s390_linux32v1;
+extern const_target_desc_up tdesc_s390_linux32v1;
 
 /* Defined in auto-generated file s390-linux32v2.c.  */
 void init_registers_s390_linux32v2 (void);
-extern const struct target_desc *tdesc_s390_linux32v2;
+extern const_target_desc_up tdesc_s390_linux32v2;
 
 /* Defined in auto-generated file s390-linux64.c.  */
 void init_registers_s390_linux64 (void);
-extern const struct target_desc *tdesc_s390_linux64;
+extern const_target_desc_up tdesc_s390_linux64;
 
 /* Defined in auto-generated file s390-linux64v1.c.  */
 void init_registers_s390_linux64v1 (void);
-extern const struct target_desc *tdesc_s390_linux64v1;
+extern const_target_desc_up tdesc_s390_linux64v1;
 
 /* Defined in auto-generated file s390-linux64v2.c.  */
 void init_registers_s390_linux64v2 (void);
-extern const struct target_desc *tdesc_s390_linux64v2;
+extern const_target_desc_up tdesc_s390_linux64v2;
 
 /* Defined in auto-generated file s390-te-linux64.c.  */
 void init_registers_s390_te_linux64 (void);
-extern const struct target_desc *tdesc_s390_te_linux64;
+extern const_target_desc_up tdesc_s390_te_linux64;
 
 /* Defined in auto-generated file s390-vx-linux64.c.  */
 void init_registers_s390_vx_linux64 (void);
-extern const struct target_desc *tdesc_s390_vx_linux64;
+extern const_target_desc_up tdesc_s390_vx_linux64;
 
 /* Defined in auto-generated file s390-tevx-linux64.c.  */
 void init_registers_s390_tevx_linux64 (void);
-extern const struct target_desc *tdesc_s390_tevx_linux64;
+extern const_target_desc_up tdesc_s390_tevx_linux64;
 
 /* Defined in auto-generated file s390-gs-linux64.c.  */
 void init_registers_s390_gs_linux64 (void);
-extern const struct target_desc *tdesc_s390_gs_linux64;
+extern const_target_desc_up tdesc_s390_gs_linux64;
 
 #endif
 

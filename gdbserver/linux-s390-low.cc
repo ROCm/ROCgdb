@@ -30,6 +30,7 @@
 #include <elf.h>
 #include <inttypes.h>
 
+#include "tdesc.h"
 #include "linux-s390-tdesc.h"
 
 #ifndef HWCAP_S390_HIGH_GPRS
@@ -615,18 +616,18 @@ s390_target::low_arch_setup ()
     if (wordsize == 8)
       {
 	if (have_regset_gs)
-	  tdesc = tdesc_s390x_gs_linux64;
+	  tdesc = tdesc_s390x_gs_linux64.get ();
 	else if (have_regset_vxrs)
-	  tdesc = (have_regset_tdb ? tdesc_s390x_tevx_linux64 :
-		   tdesc_s390x_vx_linux64);
+	  tdesc = (have_regset_tdb ? tdesc_s390x_tevx_linux64.get () :
+		   tdesc_s390x_vx_linux64.get ());
 	else if (have_regset_tdb)
-	  tdesc = tdesc_s390x_te_linux64;
+	  tdesc = tdesc_s390x_te_linux64.get ();
 	else if (have_regset_system_call)
-	  tdesc = tdesc_s390x_linux64v2;
+	  tdesc = tdesc_s390x_linux64v2.get ();
 	else if (have_regset_last_break)
-	  tdesc = tdesc_s390x_linux64v1;
+	  tdesc = tdesc_s390x_linux64v1.get ();
 	else
-	  tdesc = tdesc_s390x_linux64;
+	  tdesc = tdesc_s390x_linux64.get ();
       }
 
     /* For a 31-bit inferior, check whether the kernel supports
@@ -637,28 +638,28 @@ s390_target::low_arch_setup ()
       {
 	have_hwcap_s390_high_gprs = 1;
 	if (have_regset_gs)
-	  tdesc = tdesc_s390_gs_linux64;
+	  tdesc = tdesc_s390_gs_linux64.get ();
 	else if (have_regset_vxrs)
-	  tdesc = (have_regset_tdb ? tdesc_s390_tevx_linux64 :
-		   tdesc_s390_vx_linux64);
+	  tdesc = (have_regset_tdb ? tdesc_s390_tevx_linux64.get () :
+		   tdesc_s390_vx_linux64.get ());
 	else if (have_regset_tdb)
-	  tdesc = tdesc_s390_te_linux64;
+	  tdesc = tdesc_s390_te_linux64.get ();
 	else if (have_regset_system_call)
-	  tdesc = tdesc_s390_linux64v2;
+	  tdesc = tdesc_s390_linux64v2.get ();
 	else if (have_regset_last_break)
-	  tdesc = tdesc_s390_linux64v1;
+	  tdesc = tdesc_s390_linux64v1.get ();
 	else
-	  tdesc = tdesc_s390_linux64;
+	  tdesc = tdesc_s390_linux64.get ();
       }
     else
       {
 	/* Assume 31-bit inferior process.  */
 	if (have_regset_system_call)
-	  tdesc = tdesc_s390_linux32v2;
+	  tdesc = tdesc_s390_linux32v2.get ();
 	else if (have_regset_last_break)
-	  tdesc = tdesc_s390_linux32v1;
+	  tdesc = tdesc_s390_linux32v1.get ();
 	else
-	  tdesc = tdesc_s390_linux32;
+	  tdesc = tdesc_s390_linux32.get ();
       }
 
     have_hwcap_s390_vx = have_regset_vxrs;
@@ -1451,41 +1452,41 @@ s390_target::get_ipa_tdesc_idx ()
   const target_desc *tdesc = current_process ()->tdesc;
 
 #ifdef __s390x__
-  if (tdesc == tdesc_s390x_linux64)
+  if (tdesc == tdesc_s390x_linux64.get ())
     return S390_TDESC_64;
-  if (tdesc == tdesc_s390x_linux64v1)
+  if (tdesc == tdesc_s390x_linux64v1.get ())
     return S390_TDESC_64V1;
-  if (tdesc == tdesc_s390x_linux64v2)
+  if (tdesc == tdesc_s390x_linux64v2.get ())
     return S390_TDESC_64V2;
-  if (tdesc == tdesc_s390x_te_linux64)
+  if (tdesc == tdesc_s390x_te_linux64.get ())
     return S390_TDESC_TE;
-  if (tdesc == tdesc_s390x_vx_linux64)
+  if (tdesc == tdesc_s390x_vx_linux64.get ())
     return S390_TDESC_VX;
-  if (tdesc == tdesc_s390x_tevx_linux64)
+  if (tdesc == tdesc_s390x_tevx_linux64.get ())
     return S390_TDESC_TEVX;
-  if (tdesc == tdesc_s390x_gs_linux64)
+  if (tdesc == tdesc_s390x_gs_linux64.get ())
     return S390_TDESC_GS;
 #endif
 
-  if (tdesc == tdesc_s390_linux32)
+  if (tdesc == tdesc_s390_linux32.get ())
     return S390_TDESC_32;
-  if (tdesc == tdesc_s390_linux32v1)
+  if (tdesc == tdesc_s390_linux32v1.get ())
     return S390_TDESC_32V1;
-  if (tdesc == tdesc_s390_linux32v2)
+  if (tdesc == tdesc_s390_linux32v2.get ())
     return S390_TDESC_32V2;
-  if (tdesc == tdesc_s390_linux64)
+  if (tdesc == tdesc_s390_linux64.get ())
     return S390_TDESC_64;
-  if (tdesc == tdesc_s390_linux64v1)
+  if (tdesc == tdesc_s390_linux64v1.get ())
     return S390_TDESC_64V1;
-  if (tdesc == tdesc_s390_linux64v2)
+  if (tdesc == tdesc_s390_linux64v2.get ())
     return S390_TDESC_64V2;
-  if (tdesc == tdesc_s390_te_linux64)
+  if (tdesc == tdesc_s390_te_linux64.get ())
     return S390_TDESC_TE;
-  if (tdesc == tdesc_s390_vx_linux64)
+  if (tdesc == tdesc_s390_vx_linux64.get ())
     return S390_TDESC_VX;
-  if (tdesc == tdesc_s390_tevx_linux64)
+  if (tdesc == tdesc_s390_tevx_linux64.get ())
     return S390_TDESC_TEVX;
-  if (tdesc == tdesc_s390_gs_linux64)
+  if (tdesc == tdesc_s390_gs_linux64.get ())
     return S390_TDESC_GS;
 
   return 0;

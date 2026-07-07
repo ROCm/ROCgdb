@@ -20,6 +20,7 @@
 
 #include <sys/mman.h>
 #include "tracepoint.h"
+#include "tdesc.h"
 #include "linux-s390-tdesc.h"
 #include <elf.h>
 #ifdef HAVE_GETAUXVAL
@@ -319,63 +320,63 @@ get_ipa_tdesc (int idx)
     case S390_TDESC_64:
       /* Subtract number of VX regs.  */
       SET_REGMAP(s390x_ft_collect_regmap, 32);
-      return tdesc_s390x_linux64;
+      return tdesc_s390x_linux64.get ();
     case S390_TDESC_64V1:
       SET_REGMAP(s390x_ft_collect_regmap, 32);
-      return tdesc_s390x_linux64v1;
+      return tdesc_s390x_linux64v1.get ();
     case S390_TDESC_64V2:
       SET_REGMAP(s390x_ft_collect_regmap, 32);
-      return tdesc_s390x_linux64v2;
+      return tdesc_s390x_linux64v2.get ();
     case S390_TDESC_TE:
       SET_REGMAP(s390x_te_ft_collect_regmap, 32);
-      return tdesc_s390x_te_linux64;
+      return tdesc_s390x_te_linux64.get ();
     case S390_TDESC_VX:
       SET_REGMAP(s390x_ft_collect_regmap, 0);
-      return tdesc_s390x_vx_linux64;
+      return tdesc_s390x_vx_linux64.get ();
     case S390_TDESC_TEVX:
       SET_REGMAP(s390x_te_ft_collect_regmap, 0);
-      return tdesc_s390x_tevx_linux64;
+      return tdesc_s390x_tevx_linux64.get ();
     case S390_TDESC_GS:
       SET_REGMAP(s390x_te_ft_collect_regmap, 0);
-      return tdesc_s390x_gs_linux64;
+      return tdesc_s390x_gs_linux64.get ();
 #else
     case S390_TDESC_32:
       SET_REGMAP(s390_linux32_ft_collect_regmap, 0);
-      return tdesc_s390_linux32;
+      return tdesc_s390_linux32.get ();
     case S390_TDESC_32V1:
       SET_REGMAP(s390_linux32_ft_collect_regmap, 0);
-      return tdesc_s390_linux32v1;
+      return tdesc_s390_linux32v1.get ();
     case S390_TDESC_32V2:
       SET_REGMAP(s390_linux32_ft_collect_regmap, 0);
-      return tdesc_s390_linux32v2;
+      return tdesc_s390_linux32v2.get ();
     case S390_TDESC_64:
       SET_REGMAP(s390_linux64_ft_collect_regmap, 32);
-      return tdesc_s390_linux64;
+      return tdesc_s390_linux64.get ();
     case S390_TDESC_64V1:
       SET_REGMAP(s390_linux64_ft_collect_regmap, 32);
-      return tdesc_s390_linux64v1;
+      return tdesc_s390_linux64v1.get ();
     case S390_TDESC_64V2:
       SET_REGMAP(s390_linux64_ft_collect_regmap, 32);
-      return tdesc_s390_linux64v2;
+      return tdesc_s390_linux64v2.get ();
     case S390_TDESC_TE:
       SET_REGMAP(s390_te_linux64_ft_collect_regmap, 32);
-      return tdesc_s390_te_linux64;
+      return tdesc_s390_te_linux64.get ();
     case S390_TDESC_VX:
       SET_REGMAP(s390_linux64_ft_collect_regmap, 0);
-      return tdesc_s390_vx_linux64;
+      return tdesc_s390_vx_linux64.get ();
     case S390_TDESC_TEVX:
       SET_REGMAP(s390_te_linux64_ft_collect_regmap, 0);
-      return tdesc_s390_tevx_linux64;
+      return tdesc_s390_tevx_linux64.get ();
     case S390_TDESC_GS:
       SET_REGMAP(s390_te_linux64_ft_collect_regmap, 0);
-      return tdesc_s390_gs_linux64;
+      return tdesc_s390_gs_linux64.get ();
 #endif
     default:
       internal_error ("unknown ipa tdesc index: %d", idx);
 #ifdef __s390x__
-      return tdesc_s390x_linux64;
+      return tdesc_s390x_linux64.get ();
 #else
-      return tdesc_s390_linux32;
+      return tdesc_s390_linux32.get ();
 #endif
     }
 }

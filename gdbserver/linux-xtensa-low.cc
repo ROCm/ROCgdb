@@ -18,6 +18,7 @@
 
 
 #include "linux-low.h"
+#include "tdesc.h"
 
 /* Linux target op definitions for the Xtensa architecture.  */
 
@@ -84,7 +85,7 @@ xtensa_target::low_set_pc (regcache *regcache, CORE_ADDR pc)
 
 /* Defined in auto-generated file reg-xtensa.c.  */
 void init_registers_xtensa (void);
-extern const struct target_desc *tdesc_xtensa;
+extern const_target_desc_up tdesc_xtensa;
 
 #include <asm/ptrace.h>
 #include <xtensa-config.h>
@@ -310,7 +311,7 @@ static struct regs_info myregs_info =
 void
 xtensa_target::low_arch_setup ()
 {
-  current_process ()->tdesc = tdesc_xtensa;
+  current_process ()->tdesc = tdesc_xtensa.get ();
 }
 
 const regs_info *
