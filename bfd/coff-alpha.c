@@ -1128,7 +1128,10 @@ alpha_ecoff_get_relocated_section_contents (bfd *abfd,
 		break;
 	      }
 
-	    stack[tos - 1] >>= relocation;
+	    if (relocation >= 64)
+	      stack[tos - 1] = 0;
+	    else
+	      stack[tos - 1] >>= relocation;
 	  }
 	  break;
 
@@ -1755,7 +1758,10 @@ alpha_relocate_section (bfd *output_bfd,
 		      r = bfd_reloc_notsupported;
 		      break;
 		    }
-		  stack[tos - 1] >>= addend;
+		  if (addend >= 64)
+		    stack[tos - 1] = 0;
+		  else
+		    stack[tos - 1] >>= addend;
 		  break;
 		}
 	    }

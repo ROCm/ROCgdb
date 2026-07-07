@@ -442,14 +442,14 @@ rl78_compute_complex_reloc (unsigned long  r_type,
 
     case R_RL78_OPneg:
       tmp1 = rl78_stack_pop (&status);
-      tmp1 = - tmp1;
+      tmp1 = -(uint32_t) tmp1;
       rl78_stack_push (tmp1, &status);
       break;
 
     case R_RL78_OPadd:
       tmp2 = rl78_stack_pop (&status);
       tmp1 = rl78_stack_pop (&status);
-      tmp1 += tmp2;
+      tmp1 += (uint32_t) tmp2;
       rl78_stack_push (tmp1, &status);
       break;
 
@@ -458,41 +458,51 @@ rl78_compute_complex_reloc (unsigned long  r_type,
 	 then B, then OPSUB.  So the first op we pop is B, not A.  */
       tmp2 = rl78_stack_pop (&status);	/* B */
       tmp1 = rl78_stack_pop (&status);	/* A */
-      tmp1 -= tmp2;		/* A - B */
+      tmp1 -= (uint32_t) tmp2;		/* A - B */
       rl78_stack_push (tmp1, &status);
       break;
 
     case R_RL78_OPmul:
       tmp2 = rl78_stack_pop (&status);
       tmp1 = rl78_stack_pop (&status);
-      tmp1 *= tmp2;
+      tmp1 *= (uint32_t) tmp2;
       rl78_stack_push (tmp1, &status);
       break;
 
     case R_RL78_OPdiv:
       tmp2 = rl78_stack_pop (&status);
       tmp1 = rl78_stack_pop (&status);
-      if (tmp2 != 0)
-	tmp1 /= tmp2;
-      else
+      if (tmp2 == 0)
 	{
 	  tmp1 = 0;
 	  status = bfd_reloc_overflow;
 	}
+      else if (tmp2 == 1)
+	;
+      else if (tmp2 == -1)
+	tmp1 = -(uint32_t) tmp1;
+      else
+	tmp1 /= tmp2;
       rl78_stack_push (tmp1, &status);
       break;
 
     case R_RL78_OPshla:
       tmp2 = rl78_stack_pop (&status);
       tmp1 = rl78_stack_pop (&status);
-      tmp1 <<= tmp2;
+      if ((uint32_t) tmp2 >= 32)
+	tmp1 = 0;
+      else
+	tmp1 = (uint32_t) tmp1 << tmp2;
       rl78_stack_push (tmp1, &status);
       break;
 
     case R_RL78_OPshra:
       tmp2 = rl78_stack_pop (&status);
       tmp1 = rl78_stack_pop (&status);
-      tmp1 >>= tmp2;
+      if ((uint32_t) tmp2 >= 31)
+	tmp1 = tmp1 < 0 ? -1 : 1;
+      else
+	tmp1 >>= tmp2;
       rl78_stack_push (tmp1, &status);
       break;
 
@@ -534,13 +544,15 @@ rl78_compute_complex_reloc (unsigned long  r_type,
     case R_RL78_OPmod:
       tmp2 = rl78_stack_pop (&status);
       tmp1 = rl78_stack_pop (&status);
-      if (tmp2 != 0)
-	tmp1 %= tmp2;
-      else
+      if (tmp2 == 0)
 	{
 	  tmp1 = 0;
 	  status = bfd_reloc_overflow;
 	}
+      else if (tmp2 == 1 || tmp2 == -1)
+	tmp1 = 0;
+      else
+	tmp1 %= tmp2;
       rl78_stack_push (tmp1, &status);
       break;
     }
