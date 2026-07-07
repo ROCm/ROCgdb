@@ -3822,48 +3822,11 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 
 	case R_LARCH_TLS_DTPREL32:
 	case R_LARCH_TLS_DTPREL64:
-	  if (resolved_dynly)
-	    {
-	      Elf_Internal_Rela outrel;
-
-	      outrel.r_offset = _bfd_elf_section_offset (info->output_bfd, info,
-							 input_section,
-							 rel->r_offset);
-	      unresolved_reloc = (!((bfd_vma) -2 <= outrel.r_offset)
-				  && (input_section->flags & SEC_ALLOC));
-	      outrel.r_info = ELFNN_R_INFO (h->dynindx, r_type);
-	      outrel.r_offset += sec_addr (input_section);
-	      outrel.r_addend = rel->r_addend;
-	      if (unresolved_reloc)
-		loongarch_elf_append_rela (info->output_bfd, sreloc, &outrel);
-	      break;
-	    }
-
-	  if (resolved_to_const)
-	    fatal = loongarch_reloc_is_fatal (info, input_bfd, input_section,
-					      rel, howto,
-					      bfd_reloc_notsupported,
-					      is_undefweak, name,
-					      "Internal:");
-	  if (resolved_local)
-	    {
-	      if (!elf_hash_table (info)->tls_sec)
-		{
-		fatal = loongarch_reloc_is_fatal (info, input_bfd,
-			  input_section, rel, howto, bfd_reloc_notsupported,
-			  is_undefweak, name, "TLS section not be created");
-		}
-	      else
-		relocation = tlsoff (info, relocation);
-	    }
-	  else
-	    {
-	    fatal = loongarch_reloc_is_fatal (info, input_bfd,
-		      input_section, rel, howto, bfd_reloc_undefined,
-		      is_undefweak, name,
-		      "TLS LE just can be resolved local only.");
-	    }
-
+	  /* GCC version <= 16.1 output extra addend 0x8000 in
+	     loongarch_output_dwarf_dtprel.  Add the addend here
+	     wuold cause problems for TLS debug info.  */
+	  relocation = tlsoff (info, relocation);
+	  unresolved_reloc = false;
 	  break;
 
 	case R_LARCH_SOP_PUSH_TLS_TPREL:

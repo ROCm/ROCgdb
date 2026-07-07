@@ -219,7 +219,7 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
 	 complain_overflow_dont,	  /* complain_on_overflow */
 	 bfd_elf_generic_reloc,		  /* special_function */
 	 "R_LARCH_TLS_DTPREL32",	  /* name */
-	 true,				  /* partial_inplace */
+	 false,				  /* partial_inplace */
 	 0,				  /* src_mask */
 	 ALL_ONES,			  /* dst_mask */
 	 false,				  /* pcrel_offset */
@@ -236,7 +236,7 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
 	 complain_overflow_dont,	  /* complain_on_overflow */
 	 bfd_elf_generic_reloc,		  /* special_function */
 	 "R_LARCH_TLS_DTPREL64",	  /* name */
-	 true,				  /* partial_inplace */
+	 false,				  /* partial_inplace */
 	 0,				  /* src_mask */
 	 ALL_ONES,			  /* dst_mask */
 	 false,				  /* pcrel_offset */
