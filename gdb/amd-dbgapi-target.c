@@ -402,7 +402,7 @@ wave_coordinates::hierarchy_str () const
 {
   std::string str
     = (agent_id != AMD_DBGAPI_AGENT_NONE
-       ? string_printf (" %s", pulongest (agent_id.handle))
+       ? string_printf ("%s", pulongest (agent_id.handle))
        : "?");
 
   str += (queue_id != AMD_DBGAPI_QUEUE_NONE
@@ -423,7 +423,7 @@ wave_coordinates::workgroup_coord_str () const
 {
   std::string str
     = (group_ids[0] != UINT32_MAX
-       ? string_printf (" (%s,%s,%s)", pulongest (group_ids[0]),
+       ? string_printf ("(%s,%s,%s)", pulongest (group_ids[0]),
 			pulongest (group_ids[1]), pulongest (group_ids[2]))
        : "(?,?,?)");
 
