@@ -46,6 +46,11 @@ proc run_partial_linking_align_test {} {
   }
 }
 
+if [istarget loongarch*-*-*] {
+  run_dump_test "relax-align-1"
+  run_dump_test "relax-align-ld-r"
+}
+
 if [istarget loongarch64-*-*] {
   if [isbuild loongarch64-*-*] {
     run_dump_test "relax-align-ignore-start"
