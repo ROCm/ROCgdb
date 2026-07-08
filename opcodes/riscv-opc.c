@@ -3519,6 +3519,38 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vmaqasu.vx",      0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQASU_VX, MASK_TH_VMAQASU_VX, match_opcode, 0},
 {"th.vmaqaus.vx",      0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQAUS_VX, MASK_TH_VMAQAUS_VX, match_opcode, 0},
 
+/* Vendor-specific (XuanTie) XXTVarith instructions.  */
+{"xt.vile.vv",      0, INSN_CLASS_XXTVARITH,  "Vd,Vt,Vs",   MATCH_XT_VILE_VV,      MASK_XT_VILE_VV,      match_opcode, 0 },
+{"xt.vilo.vv",      0, INSN_CLASS_XXTVARITH,  "Vd,Vt,Vs",   MATCH_XT_VILO_VV,      MASK_XT_VILO_VV,      match_opcode, 0 },
+{"xt.vcrcfoldr.vv", 0, INSN_CLASS_XXTVARITH,  "Vd,Vt,Vs",   MATCH_XT_VCRCFOLDR_VV, MASK_XT_VCRCFOLDR_VV, match_opcode, 0 },
+{"xt.vcrcfoldn.vv", 0, INSN_CLASS_XXTVARITH,  "Vd,Vt,Vs",   MATCH_XT_VCRCFOLDN_VV, MASK_XT_VCRCFOLDN_VV, match_opcode, 0 },
+{"xt.vgmulxor.vv",  0, INSN_CLASS_XXTVARITH,  "Vd,Vt,Vs",   MATCH_XT_VGMULXOR_VV,  MASK_XT_VGMULXOR_VV,  match_opcode, 0 },
+
+/* Vendor-specific (XuanTie) XXTVcoder instructions.  */
+{"xt.vabd.vv",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VABD_VV,      MASK_XT_VABD_VV,      match_opcode, 0 },
+{"xt.vabd.vx",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VABD_VX,      MASK_XT_VABD_VX,      match_opcode, 0 },
+{"xt.vabd.vi",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,ViVm", MATCH_XT_VABD_VI,      MASK_XT_VABD_VI,      match_opcode, 0 },
+{"xt.vabdu.vv",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VABDU_VV,     MASK_XT_VABDU_VV,     match_opcode, 0 },
+{"xt.vabdu.vx",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VABDU_VX,     MASK_XT_VABDU_VX,     match_opcode, 0 },
+{"xt.vabdu.vi",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VjVm", MATCH_XT_VABDU_VI,     MASK_XT_VABDU_VI,     match_opcode, 0 },
+{"xt.vaba.vv",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VABA_VV,      MASK_XT_VABA_VV,      match_opcode, 0 },
+{"xt.vaba.vx",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VABA_VX,      MASK_XT_VABA_VX,      match_opcode, 0 },
+{"xt.vaba.vi",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,ViVm", MATCH_XT_VABA_VI,      MASK_XT_VABA_VI,      match_opcode, 0 },
+{"xt.vabau.vv",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VABAU_VV,     MASK_XT_VABAU_VV,     match_opcode, 0 },
+{"xt.vabau.vx",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VABAU_VX,     MASK_XT_VABAU_VX,     match_opcode, 0 },
+{"xt.vabau.vi",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VjVm", MATCH_XT_VABAU_VI,     MASK_XT_VABAU_VI,     match_opcode, 0 },
+{"xt.vwabd.vv",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VWABD_VV,     MASK_XT_VWABD_VV,     match_opcode, 0 },
+{"xt.vwabd.vx",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VWABD_VX,     MASK_XT_VWABD_VX,     match_opcode, 0 },
+{"xt.vwaba.vv",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VWABA_VV,     MASK_XT_VWABA_VV,     match_opcode, 0 },
+{"xt.vwaba.vx",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VWABA_VX,     MASK_XT_VWABA_VX,     match_opcode, 0 },
+{"xt.vwabau.vv",    0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VWABAU_VV,    MASK_XT_VWABAU_VV,    match_opcode, 0 },
+{"xt.vwabau.vx",    0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VWABAU_VX,    MASK_XT_VWABAU_VX,    match_opcode, 0 },
+{"xt.vwabdu.vv",    0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VWABDU_VV,    MASK_XT_VWABDU_VV,    match_opcode, 0 },
+{"xt.vwabdu.vx",    0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VWABDU_VX,    MASK_XT_VWABDU_VX,    match_opcode, 0 },
+{"xt.vfabd.vv",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VFABD_VV,     MASK_XT_VFABD_VV,     match_opcode, 0 },
+{"xt.vfabd.vf",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,SVm",  MATCH_XT_VFABD_VF,     MASK_XT_VFABD_VF,     match_opcode, 0 },
+{"xt.vabsmax.vv",   0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VABSMAX_VV,   MASK_XT_VABSMAX_VV,   match_opcode, 0 },
+
 /* Vendor-specific (Ventana Microsystems) XVentanaCondOps instructions */
 {"vt.maskc",   64, INSN_CLASS_XVENTANACONDOPS, "d,s,t", MATCH_VT_MASKC, MASK_VT_MASKC, match_opcode, 0 },
 {"vt.maskcn",  64, INSN_CLASS_XVENTANACONDOPS, "d,s,t", MATCH_VT_MASKCN, MASK_VT_MASKCN, match_opcode, 0 },

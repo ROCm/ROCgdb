@@ -195,6 +195,8 @@ All available -march extensions for RISC-V:
 	xtheadvector                            1.0
 	xtheadvdot                              1.0
 	xtheadzvamo                             1.0
+	xxtvarith                               1.0
+	xxtvcoder                               1.0
 	xventanacondops                         1.0
 	xsfvcp                                  1.0
 	xsfcease                                1.0
