@@ -7096,8 +7096,8 @@ loongarch_add_align_relocs (asection *align_sec, bfd* align_bfd)
       if (rela_hdr == NULL)
        return false;
 
-      rela_hdr->sh_size = sizeof (Elf_Internal_Rela);
-      rela_hdr->sh_entsize = sizeof (Elf_Internal_Rela);
+      rela_hdr->sh_size = sizeof (ElfNN_External_Rela);
+      rela_hdr->sh_entsize = sizeof (ElfNN_External_Rela);
       rela_hdr->sh_type = SHT_RELA;
       rela_hdr->sh_addralign = (bfd_vma) 1 << bed->s->log_file_align;
       elf_section_data (align_sec)->rela.hdr = rela_hdr;

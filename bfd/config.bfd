@@ -48,6 +48,7 @@ targ_underscore=no
 
 # Catch obsolete configurations.
 case $targ in
+ s390-* | \
  null)
     if test "x$enable_obsolete" != xyes; then
       echo "*** Configuration $targ is obsolete." >&2

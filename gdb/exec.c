@@ -38,6 +38,7 @@
 #include "gcore.h"
 #include "source.h"
 #include "build-id.h"
+#include "filesystem.h"
 
 #include <fcntl.h>
 #include "gdbcore.h"
@@ -229,6 +230,8 @@ validate_exec_file (int from_tty)
   if (pid_exec_file == nullptr)
     return;
 
+  scoped_normalized_path path_storage (&pid_exec_file);
+
   /* In case current_exec_file was changed, reopen_exec_file ensures an up
      to date build_id (will do nothing if the file timestamp did not
      change).  If exec file changed, reopen_exec_file has allocated another
@@ -332,6 +335,8 @@ exec_file_locate_attach (int pid, int defer_bp_reset, int from_tty)
 	       styled_string (command_style.style (), "file"));
       return;
     }
+
+  scoped_normalized_path path_storage (&exec_file_target);
 
   gdb::unique_xmalloc_ptr<char> exec_file_host
     = exec_file_find (exec_file_target);

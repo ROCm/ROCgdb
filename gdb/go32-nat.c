@@ -101,6 +101,7 @@
 #include "top.h"
 #include "cli/cli-utils.h"
 #include "inf-child.h"
+#include "filesystem.h"
 
 #include <unistd.h>
 #include <sys/utsname.h>
@@ -478,7 +479,7 @@ go32_nat_target::wait (ptid_t ptid, struct target_waitstatus *status,
      set with the gdb-command "cd ..."  */
   if (!*child_cwd)
     /* Initialize child's cwd with the current one.  */
-    getcwd (child_cwd, sizeof (child_cwd));
+    gdb_getcwd (child_cwd, sizeof (child_cwd));
 
   chdir (child_cwd);
 
@@ -501,7 +502,7 @@ go32_nat_target::wait (ptid_t ptid, struct target_waitstatus *status,
       a_tss.tss_eflags |= 0x0100;
     }
 
-  getcwd (child_cwd, sizeof (child_cwd)); /* in case it has changed */
+  gdb_getcwd (child_cwd, sizeof (child_cwd)); /* in case it has changed */
   if (current_directory != NULL)
     chdir (current_directory);
 

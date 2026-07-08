@@ -343,15 +343,15 @@ set pagination_prompt [string_to_regexp $pagination_prompt_str]
 # absolute path ie. "/foo/".
 set fullname_syntax_POSIX {/[^\n]*/}
 # The variable fullname_syntax_UNC is a regexp which matches a Windows
-# UNC path ie. "\\D\foo\".
-set fullname_syntax_UNC {\\\\[^\\]+\\[^\n]+\\}
+# UNC path ie. "//D/foo/".
+set fullname_syntax_UNC {//[^/]+/[^\n]+/}
 # The variable fullname_syntax_DOS_CASE is a regexp which matches a
 # particular DOS case that GDB most likely will output
-# ie. "\foo\", but don't match "\\.*\".
-set fullname_syntax_DOS_CASE {\\[^\\][^\n]*\\}
+# ie. "/foo/", but don't match "//.*/".
+set fullname_syntax_DOS_CASE {/[^/][^\n]*/}
 # The variable fullname_syntax_DOS is a regexp which matches a DOS path
-# ie. "a:\foo\" && "a:foo\".
-set fullname_syntax_DOS {[a-zA-Z]:[^\n]*\\}
+# ie. "a:/foo/" && "a:foo/".
+set fullname_syntax_DOS {[a-zA-Z]:[^\n]*/}
 # The variable fullname_syntax is a regexp which matches what GDB considers
 # an absolute path. It is currently debatable if the Windows style paths
 # "d:foo" and "\abc" should be considered valid as an absolute path.
@@ -2322,22 +2322,13 @@ gdb_caching_proc get_mount_point_map {} {
     return [list $sorted_win $sorted_unix]
 }
 
-# Normalize backward slashes to forward slashes.
-
-proc normalize_slashes {filename} {
-    return [string map {\\ /} $filename]
-}
-
 # Sanitize a host file name, without making it absolute or resolving
-# symlinks.  On native Windows, this normalizes slashes to forward
-# slashes, and makes sure that if the file name starts with a drive
-# letter, it is upper case.  On other systems, it just returns the
-# file name unmodified.
+# symlinks.  On native Windows, this makes sure that if the file name
+# starts with a drive letter, it is upper case.  On other systems, it
+# just returns the file name unmodified.
 
 proc host_file_sanitize {filename} {
     if {[ishost *-*-mingw*]} {
-	set filename [normalize_slashes $filename]
-
 	# If the file name starts with a drive letter, uppercase it.
 	if {[regexp {^([a-zA-Z]):(/.*)?} $filename -> drive rest]} {
 	    set filename "[string toupper $drive]:$rest"

@@ -23,6 +23,7 @@
 
 #include "nat/mips-linux-watch.h"
 #include "gdb_proc_service.h"
+#include "tdesc.h"
 
 /* Linux target op definitions for the MIPS architecture.  */
 
@@ -89,19 +90,19 @@ static mips_target the_mips_target;
 
 /* Defined in auto-generated file mips-linux.c.  */
 void init_registers_mips_linux (void);
-extern const struct target_desc *tdesc_mips_linux;
+extern const_target_desc_up tdesc_mips_linux;
 
 /* Defined in auto-generated file mips-dsp-linux.c.  */
 void init_registers_mips_dsp_linux (void);
-extern const struct target_desc *tdesc_mips_dsp_linux;
+extern const_target_desc_up tdesc_mips_dsp_linux;
 
 /* Defined in auto-generated file mips64-linux.c.  */
 void init_registers_mips64_linux (void);
-extern const struct target_desc *tdesc_mips64_linux;
+extern const_target_desc_up tdesc_mips64_linux;
 
 /* Defined in auto-generated file mips64-dsp-linux.c.  */
 void init_registers_mips64_dsp_linux (void);
-extern const struct target_desc *tdesc_mips64_dsp_linux;
+extern const_target_desc_up tdesc_mips64_dsp_linux;
 
 #ifdef __mips64
 #define tdesc_mips_linux tdesc_mips64_linux
@@ -206,7 +207,7 @@ mips_read_description (void)
 	}
     }
 
-  return have_dsp ? tdesc_mips_dsp_linux : tdesc_mips_linux;
+  return have_dsp ? tdesc_mips_dsp_linux.get () : tdesc_mips_linux.get ();
 }
 
 void

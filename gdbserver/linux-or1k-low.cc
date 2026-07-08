@@ -21,6 +21,7 @@
 #include "nat/gdb_ptrace.h"
 #include <endian.h>
 #include "gdb_proc_service.h"
+#include "tdesc.h"
 #include <asm/ptrace.h>
 
 #ifndef PTRACE_GET_THREAD_AREA
@@ -86,7 +87,7 @@ or1k_target::low_set_pc (regcache *regcache, CORE_ADDR pc)
 /* Defined in auto-generated file or1k-linux.c.  */
 
 void init_registers_or1k_linux (void);
-extern const struct target_desc *tdesc_or1k_linux;
+extern const_target_desc_up tdesc_or1k_linux;
 
 /* This union is used to convert between int and byte buffer
    representations of register contents.  */
@@ -114,7 +115,7 @@ static int or1k_regmap[] = {
 void
 or1k_target::low_arch_setup ()
 {
-  current_process ()->tdesc = tdesc_or1k_linux;
+  current_process ()->tdesc = tdesc_or1k_linux.get ();
 }
 
 /* Implement the low_cannot_fetch_register linux target ops method.  */

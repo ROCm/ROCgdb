@@ -684,3 +684,5 @@ Disassembly of section .text:
 .*:	e7 f6 9f a0 d0 0e [	]*vst	%v15,4000\(%r6,%r9\),13
 .*:	e7 f1 6f a0 04 3e [	]*vstm	%v15,%v17,4000\(%r6\)
 .*:	e7 f1 6f a0 d4 3e [	]*vstm	%v15,%v17,4000\(%r6\),13
+.*:	eb 13 26 ce 05 17 [	 ]*stcctm	%r1,3,22222\(%r2\)
+#?.*:	07 07 [	 ]*nopr	%r7

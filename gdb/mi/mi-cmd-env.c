@@ -29,6 +29,7 @@
 #include "top.h"
 #include <sys/stat.h>
 #include "source.h"
+#include "filesystem.h"
 
 static const char path_var_name[] = "PATH";
 static char *orig_path = NULL;
@@ -62,7 +63,7 @@ mi_cmd_env_pwd (const char *command, const char *const *argv, int argc)
   if (argc > 0)
     error (_("-environment-pwd: No arguments allowed"));
 
-  gdb::unique_xmalloc_ptr<char> cwd (getcwd (NULL, 0));
+  gdb::unique_xmalloc_ptr<char> cwd (gdb_getcwd (NULL, 0));
   if (cwd == NULL)
     error (_("-environment-pwd: error finding name of working directory: %s"),
 	   safe_strerror (errno));

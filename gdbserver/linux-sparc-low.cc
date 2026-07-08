@@ -21,6 +21,7 @@
 #include "nat/gdb_ptrace.h"
 
 #include "gdb_proc_service.h"
+#include "tdesc.h"
 
 /* The stack pointer is offset from the stack frame by a BIAS of 2047
    (0x7ff) for 64-bit code.  BIAS is likely to be defined on SPARC
@@ -142,7 +143,7 @@ static const struct regs_range_t fpregs_ranges[] = {
 
 /* Defined in auto-generated file reg-sparc64.c.  */
 void init_registers_sparc64 (void);
-extern const struct target_desc *tdesc_sparc64;
+extern const_target_desc_up tdesc_sparc64;
 
 bool
 sparc_target::low_cannot_store_register (int regno)
@@ -298,7 +299,7 @@ sparc_target::low_breakpoint_at (CORE_ADDR where)
 void
 sparc_target::low_arch_setup ()
 {
-  current_process ()->tdesc = tdesc_sparc64;
+  current_process ()->tdesc = tdesc_sparc64.get ();
 }
 
 static struct regset_info sparc_regsets[] = {

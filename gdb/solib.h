@@ -62,12 +62,7 @@ struct solib : intrusive_list_node<solib>
 
      OPS is the solib_ops implementation providing this solib.  */
   explicit solib (lm_info_up lm_info, std::string original_name,
-		  std::string name, const solib_ops &ops)
-    : lm_info (std::move (lm_info)),
-      original_name (std::move (original_name)),
-      name (std::move (name)),
-      m_ops (&ops)
-  {}
+		  std::string name, const solib_ops &ops);
 
   /* Return the solib_ops implementation providing this solib.  */
   const solib_ops &ops () const

@@ -31,6 +31,7 @@
 #include "value.h"
 #include "language.h"
 #include "filenames.h"
+#include "filesystem.h"
 #include "objfiles.h"
 #include "source.h"
 #include "disasm.h"
@@ -495,7 +496,7 @@ pwd_command (const char *args, int from_tty)
 	   styled_string (command_style.style (), "pwd"),
 	   args);
 
-  gdb::unique_xmalloc_ptr<char> cwd (getcwd (NULL, 0));
+  gdb::unique_xmalloc_ptr<char> cwd (gdb_getcwd (NULL, 0));
 
   if (cwd == NULL)
     error (_("Error finding name of working directory: %s"),
@@ -535,7 +536,7 @@ cd_command (const char *dir, int from_tty)
   /* There's too much mess with DOSish names like "d:", "d:.",
      "d:./foo" etc.  Instead of having lots of special #ifdef'ed code,
      simply get the canonicalized name of the current directory.  */
-  gdb::unique_xmalloc_ptr<char> cwd (getcwd (NULL, 0));
+  gdb::unique_xmalloc_ptr<char> cwd (gdb_getcwd (NULL, 0));
   dir = cwd.get ();
 #endif
 

@@ -17,6 +17,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "linux-low.h"
+#include "tdesc.h"
 
 #ifdef HAVE_SYS_REG_H
 #include <sys/reg.h>
@@ -65,7 +66,7 @@ ia64_target::low_breakpoint_at (CORE_ADDR pc)
 
 /* Defined in auto-generated file reg-ia64.c.  */
 void init_registers_ia64 (void);
-extern const struct target_desc *tdesc_ia64;
+extern const_target_desc_up tdesc_ia64;
 
 #define ia64_num_regs 462
 
@@ -381,7 +382,7 @@ ia64_target::get_regs_info ()
 void
 ia64_target::low_arch_setup ()
 {
-  current_process ()->tdesc = tdesc_ia64;
+  current_process ()->tdesc = tdesc_ia64.get ();
 }
 
 /* The linux target ops object.  */

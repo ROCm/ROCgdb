@@ -1308,7 +1308,7 @@ rx_elf_relocate_section
 
 	case R_RX_OPneg:
 	  {
-	    int32_t tmp;
+	    uint32_t tmp;
 
 	    saw_subtract = true;
 	    RX_STACK_POP (tmp);
@@ -1319,7 +1319,7 @@ rx_elf_relocate_section
 
 	case R_RX_OPadd:
 	  {
-	    int32_t tmp1, tmp2;
+	    uint32_t tmp1, tmp2;
 
 	    RX_STACK_POP (tmp1);
 	    RX_STACK_POP (tmp2);
@@ -1330,7 +1330,7 @@ rx_elf_relocate_section
 
 	case R_RX_OPsub:
 	  {
-	    int32_t tmp1, tmp2;
+	    uint32_t tmp1, tmp2;
 
 	    saw_subtract = true;
 	    RX_STACK_POP (tmp1);
@@ -1342,7 +1342,7 @@ rx_elf_relocate_section
 
 	case R_RX_OPmul:
 	  {
-	    int32_t tmp1, tmp2;
+	    uint32_t tmp1, tmp2;
 
 	    RX_STACK_POP (tmp1);
 	    RX_STACK_POP (tmp2);
@@ -1357,29 +1357,46 @@ rx_elf_relocate_section
 
 	    RX_STACK_POP (tmp1);
 	    RX_STACK_POP (tmp2);
-	    tmp1 /= tmp2;
+	    if (tmp2 == 0)
+	      {
+		tmp1 = 0;
+		r = bfd_reloc_overflow;
+	      }
+	    else if (tmp2 == 1)
+	      ;
+	    else if (tmp2 == -1)
+	      tmp1 = - (uint32_t) tmp1;
+	    else
+	      tmp1 /= tmp2;
 	    RX_STACK_PUSH (tmp1);
 	  }
 	  break;
 
 	case R_RX_OPshla:
 	  {
-	    int32_t tmp1, tmp2;
+	    uint32_t tmp1, tmp2;
 
 	    RX_STACK_POP (tmp1);
 	    RX_STACK_POP (tmp2);
-	    tmp1 <<= tmp2;
+	    if (tmp2 >= 32)
+	      tmp1 = 0;
+	    else
+	      tmp1 <<= tmp2;
 	    RX_STACK_PUSH (tmp1);
 	  }
 	  break;
 
 	case R_RX_OPshra:
 	  {
-	    int32_t tmp1, tmp2;
+	    int32_t tmp1;
+	    uint32_t tmp2;
 
 	    RX_STACK_POP (tmp1);
 	    RX_STACK_POP (tmp2);
-	    tmp1 >>= tmp2;
+	    if (tmp2 >= 31)
+	      tmp1 = tmp1 < 0 ? -1 : 1;
+	    else
+	      tmp1 >>= tmp2;
 	    RX_STACK_PUSH (tmp1);
 	  }
 	  break;
@@ -1441,7 +1458,15 @@ rx_elf_relocate_section
 
 	    RX_STACK_POP (tmp1);
 	    RX_STACK_POP (tmp2);
-	    tmp1 %= tmp2;
+	    if (tmp2 == 0)
+	      {
+		tmp1 = 0;
+		r = bfd_reloc_overflow;
+	      }
+	    else if (tmp2 == 1 || tmp2 == -1)
+	      tmp1 = 0;
+	    else
+	      tmp1 %= tmp2;
 	    RX_STACK_PUSH (tmp1);
 	  }
 	  break;
@@ -1853,49 +1878,62 @@ rx_offset_for_reloc (bfd *		      abfd,
 
 	case R_RX_OPneg:
 	  RX_STACK_POP (tmp1);
-	  tmp1 = - tmp1;
+	  tmp1 = - (uint32_t) tmp1;
 	  RX_STACK_PUSH (tmp1);
 	  break;
 
 	case R_RX_OPadd:
 	  RX_STACK_POP (tmp1);
 	  RX_STACK_POP (tmp2);
-	  tmp1 += tmp2;
+	  tmp1 += (uint32_t) tmp2;
 	  RX_STACK_PUSH (tmp1);
 	  break;
 
 	case R_RX_OPsub:
 	  RX_STACK_POP (tmp1);
 	  RX_STACK_POP (tmp2);
-	  tmp2 -= tmp1;
+	  tmp2 -= (uint32_t) tmp1;
 	  RX_STACK_PUSH (tmp2);
 	  break;
 
 	case R_RX_OPmul:
 	  RX_STACK_POP (tmp1);
 	  RX_STACK_POP (tmp2);
-	  tmp1 *= tmp2;
+	  tmp1 *= (uint32_t) tmp2;
 	  RX_STACK_PUSH (tmp1);
 	  break;
 
 	case R_RX_OPdiv:
 	  RX_STACK_POP (tmp1);
 	  RX_STACK_POP (tmp2);
-	  tmp1 /= tmp2;
+	  if (tmp2 == 0)
+	    tmp1 = 0;
+	  else if (tmp2 == 1)
+	    ;
+	  else if (tmp2 == -1)
+	    tmp1 = - (uint32_t) tmp1;
+	  else
+	    tmp1 /= tmp2;
 	  RX_STACK_PUSH (tmp1);
 	  break;
 
 	case R_RX_OPshla:
 	  RX_STACK_POP (tmp1);
 	  RX_STACK_POP (tmp2);
-	  tmp1 <<= tmp2;
+	  if ((uint32_t) tmp2 >= 32)
+	    tmp1 = 0;
+	  else
+	    tmp1 = (uint32_t) tmp1 << tmp2;
 	  RX_STACK_PUSH (tmp1);
 	  break;
 
 	case R_RX_OPshra:
 	  RX_STACK_POP (tmp1);
 	  RX_STACK_POP (tmp2);
-	  tmp1 >>= tmp2;
+	  if ((uint32_t) tmp2 >= 31)
+	    tmp1 = tmp1 < 0 ? -1 : 1;
+	  else
+	    tmp1 >>= tmp2;
 	  RX_STACK_PUSH (tmp1);
 	  break;
 
@@ -1937,7 +1975,12 @@ rx_offset_for_reloc (bfd *		      abfd,
 	case R_RX_OPmod:
 	  RX_STACK_POP (tmp1);
 	  RX_STACK_POP (tmp2);
-	  tmp1 %= tmp2;
+	  if (tmp2 == 0)
+	    tmp1 = 0;
+	  else if (tmp2 == -1 || tmp2 == 1)
+	    tmp1 = 0;
+	  else
+	    tmp1 %= tmp2;
 	  RX_STACK_PUSH (tmp1);
 	  break;
 

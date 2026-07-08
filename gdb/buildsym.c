@@ -18,6 +18,8 @@
 
 #include "buildsym.h"
 #include "gdbsupport/gdb_obstack.h"
+#include "gdbsupport/pathstuff.h"
+#include "filesystem.h"
 #include "symtab.h"
 #include "symfile.h"
 #include "objfiles.h"
@@ -53,6 +55,9 @@ buildsym_compunit::buildsym_compunit (struct objfile *objfile_,
     m_language (language_),
     m_last_source_start_addr (last_addr)
 {
+  if (should_normalize_slashes ())
+    normalize_slashes (&m_comp_dir[0]);
+
   /* Build the subfile for NAME (the main source file) so that we can record
      a pointer to it for later.
      IMPORTANT: Do not allocate a struct symtab for NAME here.

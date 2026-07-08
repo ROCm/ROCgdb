@@ -218,7 +218,7 @@ struct rocm_solib_ops : public solib_ops
   { return m_host_ops->find_solib_addr (so); }
 
   bool supports_namespaces () const override
-  { return true; }
+  { return m_host_ops->supports_namespaces (); }
 
   int find_solib_ns (const solib &so) const override
   { return m_host_ops->find_solib_ns (so); }

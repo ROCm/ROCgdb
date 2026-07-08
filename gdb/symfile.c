@@ -53,6 +53,7 @@
 #include "cli/cli-style.h"
 #include "gdbsupport/forward-scope-exit.h"
 #include "gdbsupport/buildargv.h"
+#include "filesystem.h"
 
 #include <sys/types.h>
 #include <fcntl.h>
@@ -2809,6 +2810,9 @@ allocate_symtab (struct compunit_symtab *cust, const char *filename,
 		 const char *filename_for_id)
 {
   struct objfile *objfile = cust->objfile ();
+
+  scoped_normalized_path path_storage (&filename);
+
   struct symtab *symtab
     = obstack_new<struct symtab> (&objfile->objfile_obstack,
 				  *cust,

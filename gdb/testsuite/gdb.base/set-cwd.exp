@@ -72,6 +72,29 @@ proc_with_prefix test_tilde_expansion { } {
 # The temporary directory that we will use to start the inferior.
 set tmpdir [standard_output_file ""]
 
+# Check that the 'dir' variable in the inferior is set to
+# EXPECTED_DIR.  Use MESSAGE as test message.
+
+proc test_dir {expected_dir message} {
+    set dir "UNSET"
+    gdb_test_multiple "print dir" "$message: extract dir" {
+	-re -wrap " = \"(.*)\", .*" {
+	    set dir $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+    }
+
+    if {[istarget "*-*-mingw*"]} {
+	# getcwd on native Windows uses backslashes.  Convert to
+	# forward slashes.  We look for pairs of backslashes as DIR
+	# comes from a C string printed by GDB, which escapes
+	# backslashes.
+	set dir [string map {\\\\ /} $dir]
+    }
+
+    gdb_assert [string equal $expected_dir $dir] $message
+}
+
 # Test that when we "set cwd" the inferior will be started under the
 # correct working directory and GDB will not be affected by this.
 
@@ -107,8 +130,7 @@ proc_with_prefix test_cd_into_dir { } {
     gdb_breakpoint [gdb_get_line_number "break-here"]
     gdb_continue_to_breakpoint "break-here" ".* break-here .*"
 
-    gdb_test "print dir" "${::valnum_re} = \"$tmpdir\", .*" \
-	"inferior cwd is correctly set"
+    test_dir $tmpdir "inferior cwd is correctly set"
 
     set gdb_cwd_after_run ""
     set test "pwd after run"
@@ -164,8 +186,7 @@ proc_with_prefix test_cwd_reset { } {
     gdb_breakpoint [gdb_get_line_number "break-here"]
     gdb_continue_to_breakpoint "break-here" ".* break-here .*"
 
-    gdb_test "print dir" "${::valnum_re} = \"$tmpdir\", .*" \
-	"inferior cwd is correctly set"
+    test_dir $tmpdir "inferior cwd is correctly set"
 
     # Reset the inferior's cwd.
     gdb_test_no_output "set cwd" "resetting inferior cwd"
@@ -178,8 +199,7 @@ proc_with_prefix test_cwd_reset { } {
 	gdb_breakpoint [gdb_get_line_number "break-here"]
 	gdb_continue_to_breakpoint "break-here" ".* break-here .*"
 
-	gdb_test "print dir" "${::valnum_re} = \"$gdb_cwd\", .*" \
-	    "inferior cwd got reset correctly"
+	test_dir $gdb_cwd "inferior cwd got reset correctly"
     }
 }
 

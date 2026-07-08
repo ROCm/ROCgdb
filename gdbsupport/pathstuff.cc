@@ -32,6 +32,17 @@ char *current_directory;
 
 /* See gdbsupport/pathstuff.h.  */
 
+char *
+normalize_slashes (char *path)
+{
+  for (char *p = path; *p != '\0'; ++p)
+    if (*p == '\\')
+      *p = '/';
+  return path;
+}
+
+/* See gdbsupport/pathstuff.h.  */
+
 gdb::unique_xmalloc_ptr<char>
 gdb_realpath (const char *filename)
 {
@@ -56,7 +67,8 @@ gdb_realpath (const char *filename)
    Since the simplification would be useful even if the path is not
    valid (one can always set a breakpoint on a file, even if the file
    does not exist locally), we rely instead on GetFullPathName to
-   perform the canonicalization.  */
+   perform the canonicalization.  And then, we normalize backslashes
+   to forward slashes.  */
 
 #if defined (_WIN32)
   {
@@ -68,7 +80,7 @@ gdb_realpath (const char *filename)
        we might not be able to display the original casing in a given
        path.  */
     if (len > 0 && len < MAX_PATH)
-      return make_unique_xstrdup (buf);
+      return make_unique_xstrdup (normalize_slashes (buf));
   }
 #else
   {

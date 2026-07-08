@@ -17,6 +17,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "linux-low.h"
+#include "tdesc.h"
 
 /* Linux target op definitions for the m68k architecture.  */
 
@@ -77,7 +78,7 @@ m68k_target::low_decr_pc_after_break ()
 
 /* Defined in auto-generated file reg-m68k.c.  */
 void init_registers_m68k (void);
-extern const struct target_desc *tdesc_m68k;
+extern const_target_desc_up tdesc_m68k;
 
 #ifdef HAVE_SYS_REG_H
 #include <sys/reg.h>
@@ -252,7 +253,7 @@ m68k_target::get_regs_info ()
 void
 m68k_target::low_arch_setup ()
 {
-  current_process ()->tdesc = tdesc_m68k;
+  current_process ()->tdesc = tdesc_m68k.get ();
 }
 
 /* The linux target ops object.  */

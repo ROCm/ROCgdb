@@ -3072,13 +3072,13 @@ copy_object (bfd *ibfd, bfd *obfd, const bfd_arch_info_type *input_arch)
 	   pupdate = pupdate->next)
 	{
 	  pupdate->section = bfd_get_section_by_name (ibfd, pupdate->name);
-	  if (pupdate->section == NULL)
+	  if (pupdate->section == NULL
+	      || (osec = pupdate->section->output_section) == NULL)
 	    {
-	      non_fatal (_("error: %s not found, can't be updated"), pupdate->name);
+	      non_fatal (_("error: %s can't be updated"), pupdate->name);
 	      return false;
 	    }
 
-	  osec = pupdate->section->output_section;
 	  if (!bfd_set_section_size (osec, pupdate->size))
 	    {
 	      bfd_nonfatal_message (NULL, obfd, osec, NULL);

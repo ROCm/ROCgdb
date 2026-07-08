@@ -44,6 +44,7 @@
 #include "gdb_bfd.h"
 #include "gdbsupport/filestuff.h"
 #include "gdbsupport/scoped_fd.h"
+#include "gdbsupport/pathstuff.h"
 #include "source.h"
 #include "cli/cli-style.h"
 
@@ -566,6 +567,22 @@ solib_map_sections (solib &so)
   current_program_space->add_target_sections (&so, so.sections);
 
   return 1;
+}
+
+/* See solib.h.  */
+
+solib::solib (lm_info_up lm_info, std::string original_name_,
+	      std::string name_, const solib_ops &ops)
+  : lm_info (std::move (lm_info)),
+    original_name (std::move (original_name_)),
+    name (std::move (name_)),
+    m_ops (&ops)
+{
+  if (should_normalize_slashes ())
+    {
+      normalize_slashes (&name[0]);
+      normalize_slashes (&original_name[0]);
+    }
 }
 
 /* See solib.h.  */
