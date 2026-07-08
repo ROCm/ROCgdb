@@ -1,0 +1,94 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test debugging kernels launched through a HIP graph (graph replay).
+#
+# The program captures two kernels (add_one then times_three) from a stream
+# into a single graph, instantiates it, and replays it NUM_REPLAYS times with
+# hipGraphLaunch.  Because the kernels reach the GPU through a graph launch
+# (the host submits a whole pre-recorded graph with hipGraphLaunch, which
+# dispatches the kernels) rather than a direct kernel<<<>>>() call, this
+# checks that the debugger still:
+#
+#   - resolves pending breakpoints in graph-launched kernels
+#   - associates each stop with the right kernel and source line
+#   - stops in each graph node, in order, on every replay (dispatch
+#     numbering / re-dispatch)
+#   - observes the correct per-replay data produced by each node
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+# Number of times the graph is replayed.  Passed to the C source via
+# -DNUM_REPLAYS so the source and test always stay in sync.
+set num_replays 3
+
+if {[build_executable "failed to prepare" $testfile $srcfile \
+	 [list debug hip additional_flags=-DNUM_REPLAYS=$num_replays]]} {
+    return
+}
+
+set add_one_line [gdb_get_line_number "break add_one"]
+set times_three_line [gdb_get_line_number "break times_three"]
+
+# Both kernel nodes are hit, in order, on every graph replay, and each
+# observes the value expected for that replay.
+proc_with_prefix test_replays_and_ordering {} {
+    with_rocm_gpu_lock {
+	clean_restart $::testfile
+
+	if {![runto_main]} {
+	    return
+	}
+
+	gdb_breakpoint "$::srcfile:$::add_one_line" allow-pending
+	gdb_breakpoint "$::srcfile:$::times_three_line" allow-pending
+
+	# out starts at 0.  Each replay computes out = (out + 1) * 3, so at the
+	# add_one stop out holds the value from the previous replay, and at the
+	# times_three stop it holds that value + 1.
+	set val 0
+	for {set i 1} {$i <= $::num_replays} {incr i} {
+	    with_test_prefix "replay $i" {
+		gdb_test "continue" \
+		    "Breakpoint .* add_one .*$::srcfile:$::add_one_line.*" \
+		    "stop in add_one"
+		gdb_test "print out\[0\]" " = $val" \
+		    "add_one sees value from previous replay"
+
+		gdb_test "continue" \
+		    "Breakpoint .* times_three .*$::srcfile:$::times_three_line.*" \
+		    "stop in times_three"
+		gdb_test "print out\[0\]" " = [expr {$val + 1}]" \
+		    "times_three sees add_one result"
+
+		set val [expr {($val + 1) * 3}]
+	    }
+	}
+
+	# After all replays the program prints the final result and exits.
+	gdb_test "continue" \
+	    "result is $val.*$::inferior_exited_re normally.*" \
+	    "continue to end, result $val"
+    }
+}
+
+test_replays_and_ordering
