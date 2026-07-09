@@ -2076,14 +2076,18 @@ process_one_event (amd_dbgapi_inferior_info &info,
 	    if (thread == nullptr)
 	      thread = add_gpu_thread (info.inf, event_ptid);
 
-	    /* If the wave is stopped because of a software breakpoint, the
-	       program counter needs to be adjusted so that it points to the
-	       breakpoint instruction.
+	    /* If the wave is stopped because of a software breakpoint or an abort
+	       trap (s_trap 2, used by __builtin_verbose_trap), the program counter
+	       needs to be adjusted so that it points to the trap instruction.
+
+	       For abort traps, this ensures the PC remains in the inlined frame
+	       containing DWARF debug info for verbose trap messages.
 
 	       When dealing with a corefile, it is expected that the PC has
 	       been adjusted before generating the corefile, so no need to
 	       re-do it now.  */
-	    if ((stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT) != 0
+	    if (((stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT) != 0
+		|| (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_ASSERT_TRAP) != 0)
 		&& get_inferior_core_bfd (info.inf) == nullptr)
 	      {
 		regcache *regcache = get_thread_regcache (thread);
