@@ -203,9 +203,41 @@ gdb_test "python print(gdb.selected_frame().read_register(bad_object))" \
     ".*Invalid type for register.*" \
     "test Frame.read_register with bad_type object"
 
+# Load the Python script, this includes a frame unwinder which can be
+# used to "corrupt" the backtrace by introducing a cycle.
+set remote_python_file [gdb_remote_download host ${srcdir}/${subdir}/${testfile}.py]
+gdb_test_no_output "source ${remote_python_file}" "load python file"
+
+# Check that the frame-id as read by Python is correct for each frame
+# in the backtrace.  When STOP_AT_LEVEL is None then the stack is not
+# corrupted.  For other STOP_AT_LEVEL values a cycle is introduced
+# into the stack after the numbered level.  E.g. for STOP_AT_LEVEL 0,
+# frame #1 will appear to have the same frame-id as #0, which
+# terminates the unwind.
+foreach_with_prefix stop_at_level { None 0 1 2 } {
+    gdb_test_no_output "python global_unwinder.stop_at_level = $stop_at_level"
+
+    if { $stop_at_level eq "None" } {
+	set frame_limit 3
+    } else {
+	set frame_limit [expr {$stop_at_level + 1}]
+    }
+
+    for { set i 0 } { $i < $frame_limit } { incr i } {
+	gdb_test "frame $i" ".*" "select frame $i"
+
+	set expected_output [capture_command_output "maint print frame-id" \
+				 [string_to_regexp "frame-id for frame #$i: "]]
+	set python_output [capture_command_output \
+			       "python print(gdb.selected_frame())" ""]
+
+	gdb_assert { $python_output eq $expected_output } \
+	    "frame-id for frame $i"
+    }
+}
+
 # Compile again without debug info.
-gdb_exit
-if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {}] } {
+if { [prepare_for_testing "failed to prepare" ${testfile}-nodebug ${srcfile} {}] } {
     return
 }
 

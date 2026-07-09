@@ -2234,6 +2234,13 @@ s_aarch64_cons (int nbytes)
 
 	      expression (&exp);
 
+	      if (nbytes != 8)
+		{
+		  as_bad (_("%%dtprel relocation requires .xword or .dword"));
+		  ignore_rest_of_line ();
+		  return;
+		}
+
 	      /* Ensure we have a closing parenthesis */
 	      if (*input_line_pointer == ')')
 		input_line_pointer++;
