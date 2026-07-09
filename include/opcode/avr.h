@@ -2,7 +2,7 @@
 
    Copyright (C) 2000-2026 Free Software Foundation, Inc.
    Contributed by Denis Chertykov <denisc@overta.ru>
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3, or (at your option)
@@ -311,7 +311,6 @@ AVR_INSN (eijmp, "",   "1001010000011001", 1, AVR_ISA_EIND, 0x9419)
 /* DES instruction for encryption and decryption.  */
 AVR_INSN (des,  "E",   "10010100EEEE1011", 1, AVR_ISA_DES,  0x940B)
 
-/* Operands are evaluated by hand and won't pop new fux-ups.
+/* Operands are evaluated by hand and won't pop new fix-ups.
    The pseudo-insn is hidden behind NOP so that avr-dis.c don't see it. */
 AVR_INSN (__gcc_isr, "", "0000000000000000", 1, AVR_ISA_1200,  0x0)
-
