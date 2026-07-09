@@ -3607,7 +3607,7 @@ const struct riscv_opcode riscv_opcodes[] =
 /* Vendor-specific (SiFive) cease instruction.  */
 {"sf.cease", 0, INSN_CLASS_XSFCEASE, "", MATCH_SF_CEASE, MASK_SF_CEASE, match_opcode, 0 },
 
-/* SiFive custom int8 matrix-multiply instructions.  */
+/* Vendor-specific (SiFive) int8 matrix-multiply instructions.  */
 {"sf.vqmaccu.4x8x4",  0, INSN_CLASS_XSFVQMACCQOQ, "Vd,Vs,Vt", MATCH_SFVQMACCU4X8X4, MASK_SFVQMACCU4X8X4, match_opcode, 0},
 {"sf.vqmacc.4x8x4",   0, INSN_CLASS_XSFVQMACCQOQ, "Vd,Vs,Vt", MATCH_SFVQMACC4X8X4, MASK_SFVQMACC4X8X4, match_opcode, 0},
 {"sf.vqmaccus.4x8x4", 0, INSN_CLASS_XSFVQMACCQOQ, "Vd,Vs,Vt", MATCH_SFVQMACCUS4X8X4, MASK_SFVQMACCUS4X8X4, match_opcode, 0},
@@ -3617,11 +3617,11 @@ const struct riscv_opcode riscv_opcodes[] =
 {"sf.vqmaccus.2x8x2", 0, INSN_CLASS_XSFVQMACCDOD, "Vd,Vs,Vt", MATCH_SFVQMACCUS2X8X2, MASK_SFVQMACCUS2X8X2, match_opcode, 0},
 {"sf.vqmaccsu.2x8x2", 0, INSN_CLASS_XSFVQMACCDOD, "Vd,Vs,Vt", MATCH_SFVQMACCSU2X8X2, MASK_SFVQMACCSU2X8X2, match_opcode, 0},
 
-/* SiFive FP32-to-int8 ranged clip instructions (Xsfvfnrclipxfqf).  */
+/* Vendor-specific (SiFive) FP32-to-int8 ranged clip instructions (Xsfvfnrclipxfqf).  */
 {"sf.vfnrclip.xu.f.qf", 0, INSN_CLASS_XSFVFNRCLIPXFQF, "Vd,Vt,S", MATCH_SFVFNRCLIPXUFQF, MASK_SFVFNRCLIPXUFQF, match_opcode, 0},
 {"sf.vfnrclip.x.f.qf",  0, INSN_CLASS_XSFVFNRCLIPXFQF, "Vd,Vt,S", MATCH_SFVFNRCLIPXFQF, MASK_SFVFNRCLIPXFQF, match_opcode, 0},
 
-/* MIPS custom instructions.  */
+/* Vendor-specific (MIPS) instructions.  */
 {"mips.ccmov", 0, INSN_CLASS_XMIPSCMOV, "d,t,s,r", MATCH_MIPS_CCMOV, MASK_MIPS_CCMOV, match_opcode, 0},
 {"mips.ldp", 0, INSN_CLASS_XMIPSLSP, "d,r,Xm$(s)", MATCH_MIPS_LDP, MASK_MIPS_LDP, match_opcode, 0 },
 {"mips.lwp", 0, INSN_CLASS_XMIPSLSP, "d,r,Xm%(s)", MATCH_MIPS_LWP, MASK_MIPS_LWP, match_opcode, 0 },
@@ -3629,7 +3629,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"mips.sdp", 0, INSN_CLASS_XMIPSLSP, "t,r,Xm^(s)", MATCH_MIPS_SDP, MASK_MIPS_SDP, match_opcode, 0 },
 {"mips.swp", 0, INSN_CLASS_XMIPSLSP, "t,r,Xm&(s)", MATCH_MIPS_SWP, MASK_MIPS_SWP, match_opcode, 0 },
 
-/* SpacemiT custom instructions.  */
+/* Vendor-specific (SpacemiT) instructions.  */
 /* Int Matrix Multi-Accumulation.  */
 {"smt.vmadot",   0, INSN_CLASS_XSMTVDOTII, "XpVd,Vs,VtXpx", MATCH_SMT_VMADOT, MASK_SMT_VMADOT, match_opcode, 0 },
 {"smt.vmadot",   0, INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII, "XpVd,Vs,VtXpw", MATCH_SMT_VMADOT, MASK_SMT_VMADOT, match_opcode, 0 },
