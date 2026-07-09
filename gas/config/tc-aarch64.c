@@ -11154,6 +11154,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sve-b16mm",		AARCH64_FEATURE (SVE_B16MM), AARCH64_FEATURE (SVE)},
   {"mtetc",		AARCH64_FEATURE (MTETC), AARCH64_FEATURE (MEMTAG)},
   {"tlbid",		AARCH64_FEATURE (TLBID), AARCH64_NO_FEATURES},
+  {"sme-fa64",		AARCH64_FEATURE (SME_FA64), AARCH64_FEATURES (2, SVE2, SME)},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 

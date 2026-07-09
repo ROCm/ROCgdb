@@ -288,6 +288,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_MTETC,
   /* TLBI Domains.  */
   AARCH64_FEATURE_TLBID,
+  /* SME_FA64.  */
+  AARCH64_FEATURE_SME_FA64,
 
   /* Virtual features.  These are used to gate instructions that are enabled
      by either of two (or more) sets of command line flags.  */
