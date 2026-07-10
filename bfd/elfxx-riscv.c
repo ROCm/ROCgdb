@@ -3755,10 +3755,9 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch,
 {
   riscv_subset_t *in, *out;
   static char *merged_arch_str = NULL;
+  char *result = NULL;
 
   unsigned xlen_in, xlen_out;
-  merged_subsets.head = NULL;
-  merged_subsets.tail = NULL;
 
   riscv_parse_subset_t riscv_rps_ld_in =
     {&in_subsets, _bfd_error_handler, &xlen_in, NULL, false};
@@ -3774,9 +3773,9 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch,
 
   /* Parse subset from ISA string.  */
   if (!riscv_parse_subset (&riscv_rps_ld_in, in_arch))
-    return NULL;
+    goto cleanup;
   if (!riscv_parse_subset (&riscv_rps_ld_out, out_arch))
-    return NULL;
+    goto cleanup;
 
   /* Checking XLEN.  */
   if (xlen_out != xlen_in)
@@ -3784,7 +3783,7 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch,
       _bfd_error_handler
 	(_("error: %pB: ISA string of input (%s) doesn't match "
 	   "output (%s)"), ibfd, in_arch, out_arch);
-      return NULL;
+      goto cleanup;
     }
 
   /* Merge subset list.  */
@@ -3793,18 +3792,18 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch,
 
   /* Merge standard extension.  */
   if (!riscv_merge_std_ext (ibfd, in_arch, out_arch, &in, &out))
-    return NULL;
+    goto cleanup;
 
   /* Merge all non-single letter extensions with single call.  */
   if (!riscv_merge_multi_letter_ext (&in, &out))
-    return NULL;
+    goto cleanup;
 
   if (xlen_in != xlen_out)
     {
       _bfd_error_handler
 	(_("error: %pB: XLEN of input (%u) doesn't match "
 	   "output (%u)"), ibfd, xlen_in, xlen_out);
-      return NULL;
+      goto cleanup;
     }
 
   if (xlen_in != arch_size)
@@ -3812,21 +3811,31 @@ riscv_merge_arch_attr_info (bfd *ibfd, char *in_arch, char *out_arch,
       _bfd_error_handler
 	(_("error: %pB: unsupported XLEN (%u), you might be "
 	   "using wrong emulation"), ibfd, xlen_in);
-      return NULL;
+      goto cleanup;
     }
+
+  /* Add the implicit subsets implied by the merged subset list, then
+     check if the result is conflicting.  */
+  riscv_parse_subset_t riscv_rps_ld_merged =
+    {&merged_subsets, _bfd_error_handler, &xlen_in, NULL, false};
+  riscv_parse_add_implicit_subsets (&riscv_rps_ld_merged);
+  if (!riscv_parse_check_conflicts (&riscv_rps_ld_merged))
+    goto cleanup;
 
   /* Free the previous merged_arch_str which called xmalloc.  */
   free (merged_arch_str);
 
   merged_arch_str = riscv_arch_str (arch_size, &merged_subsets,
 				    false/* update */);
+  result = merged_arch_str;
 
+ cleanup:
   /* Release the subset lists.  */
   riscv_release_subset_list (&in_subsets);
   riscv_release_subset_list (&out_subsets);
   riscv_release_subset_list (&merged_subsets);
 
-  return merged_arch_str;
+  return result;
 }
 
 /* Merge object attributes from IBFD into output_bfd of INFO.

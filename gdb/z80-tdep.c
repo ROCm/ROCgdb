@@ -595,17 +595,27 @@ z80_frame_unwind_cache (const frame_info_ptr &this_frame,
     {
       CORE_ADDR addr;
       CORE_ADDR sp;
-      CORE_ADDR sp_mask = (1 << gdbarch_ptr_bit(gdbarch)) - 1;
+      CORE_ADDR addr_space_max = (1 << gdbarch_ptr_bit(gdbarch)) - 1;
       enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+      int loop_count = 0;
       /* Assume that the FP is this frame's SP but with that pushed
 	 stack space added back.  */
       this_base = get_frame_register_unsigned (this_frame, Z80_SP_REGNUM);
       sp = this_base + info->size;
       for (;; ++sp)
 	{
-	  sp &= sp_mask;
-	  if (sp < this_base)
-	    { /* overflow, looks like end of stack */
+	  /* Limit the scan to 2 * addr_len iterations.  If the unwinder's
+	     frame size calculation is slightly off (e.g. due to unpopped
+	     arguments or temporary pushes), the return address might be
+	     hidden a few bytes deeper.  Scanning up to 2 * addr_len bytes
+	     comfortably covers two misplaced pointer-sized values.
+	     Scanning further drastically increases the risk of false
+	     positives: we might wander into the caller's local variables,
+	     hit a random CALL or conditional CALL opcode, and generate a
+	     corrupted backtrace.  It also prevents massive slow-downs on
+	     remote serial targets if the stack is severely corrupted.  */
+	  if (++loop_count > 2 * addr_len || sp > addr_space_max)
+	    { /* Limit reached or end of address space, assume end of stack.  */
 	      sp = this_base + info->size;
 	      break;
 	    }
@@ -644,9 +654,14 @@ z80_frame_unwind_cache (const frame_info_ptr &this_frame,
   /* Adjust all the saved registers so that they contain addresses and not
      offsets.  */
   for (i = 0; i < gdbarch_num_regs (gdbarch) - 1; i++)
-    if (info->saved_regs[i].addr () > 0)
-      info->saved_regs[i].set_addr
-	(info->prev_sp - info->saved_regs[i].addr () * addr_len);
+    {
+      if (info->saved_regs[i].is_addr ())
+	{
+	  if (info->saved_regs[i].addr () > 0)
+	    info->saved_regs[i].set_addr
+	      (info->prev_sp - info->saved_regs[i].addr () * addr_len);
+	}
+    }
 
   /* Except for the startup code, the return PC is always saved on
      the stack and is at the base of the frame.  */

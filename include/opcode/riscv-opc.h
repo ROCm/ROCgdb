@@ -2396,6 +2396,22 @@
 #define MASK_HSV_W 0xfe007fff
 #define MATCH_HSV_D 0x6e004073
 #define MASK_HSV_D 0xfe007fff
+/* Zicbop hint instructions. */
+#define MATCH_PREFETCH_I 0x6013
+#define MASK_PREFETCH_I 0x1f07fff
+#define MATCH_PREFETCH_R 0x106013
+#define MASK_PREFETCH_R 0x1f07fff
+#define MATCH_PREFETCH_W 0x306013
+#define MASK_PREFETCH_W 0x1f07fff
+/* Zicbom/Zicboz instructions. */
+#define MATCH_CBO_CLEAN 0x10200f
+#define MASK_CBO_CLEAN 0xfff07fff
+#define MATCH_CBO_FLUSH 0x20200f
+#define MASK_CBO_FLUSH 0xfff07fff
+#define MATCH_CBO_INVAL 0x200f
+#define MASK_CBO_INVAL 0xfff07fff
+#define MATCH_CBO_ZERO 0x40200f
+#define MASK_CBO_ZERO 0xfff07fff
 /* Zicfiss instructions.  */
 #define MATCH_SSPUSH 0xce004073
 #define MASK_SSPUSH 0xfe0fffff
@@ -2414,22 +2430,6 @@
 /* Zicfilp instructions.  */
 #define MATCH_LPAD 0x17
 #define MASK_LPAD  0xfff
-/* Zicbop hint instructions. */
-#define MATCH_PREFETCH_I 0x6013
-#define MASK_PREFETCH_I 0x1f07fff
-#define MATCH_PREFETCH_R 0x106013
-#define MASK_PREFETCH_R 0x1f07fff
-#define MATCH_PREFETCH_W 0x306013
-#define MASK_PREFETCH_W 0x1f07fff
-/* Zicbom/Zicboz instructions. */
-#define MATCH_CBO_CLEAN 0x10200f
-#define MASK_CBO_CLEAN 0xfff07fff
-#define MATCH_CBO_FLUSH 0x20200f
-#define MASK_CBO_FLUSH 0xfff07fff
-#define MATCH_CBO_INVAL 0x200f
-#define MASK_CBO_INVAL 0xfff07fff
-#define MATCH_CBO_ZERO 0x40200f
-#define MASK_CBO_ZERO 0xfff07fff
 /* Zicond instructions. */
 #define MATCH_CZERO_EQZ 0xe005033
 #define MASK_CZERO_EQZ 0xfe00707f
@@ -3863,7 +3863,7 @@
 /* Vendor-specific (SiFive) cease instruction.  */
 #define MATCH_SF_CEASE 0x30500073
 #define MASK_SF_CEASE 0xffffffff
-/* SiFive custom int8 matrix-multiply instruction.  */
+/* Vendor-specific (SiFive) int8 matrix-multiply instruction.  */
 #define MATCH_SFVQMACCU4X8X4 0xf200205b
 #define MASK_SFVQMACCU4X8X4 0xfe00707f
 #define MATCH_SFVQMACC4X8X4 0xf600205b
@@ -3880,12 +3880,12 @@
 #define MASK_SFVQMACCUS2X8X2 0xfe00707f
 #define MATCH_SFVQMACCSU2X8X2 0xbe00205b
 #define MASK_SFVQMACCSU2X8X2 0xfe00707f
-/* FP32-to-int8 Ranged Clip Instructions (Xsfvfnrclipxfqf).  */
+/* Vendor-specific (SiFive) FP32-to-int8 Ranged Clip Instructions (Xsfvfnrclipxfqf).  */
 #define MATCH_SFVFNRCLIPXUFQF 0x8a00505b
 #define MASK_SFVFNRCLIPXUFQF 0xfe00707f
 #define MATCH_SFVFNRCLIPXFQF 0x8e00505b
 #define MASK_SFVFNRCLIPXFQF 0xfe00707f
-/* MIPS custom instruction.  */
+/* Vendor-specific (MIPS) instruction.  */
 #define MATCH_MIPS_CCMOV 0x600300b
 #define MASK_MIPS_CCMOV 0x600707f
 #define MATCH_MIPS_LWP 0x0010400b
@@ -3904,7 +3904,7 @@
 #define MASK_MIPS_PAUSE  0xffffffff
 #define MATCH_MIPS_PREF 0x0000000b
 #define MASK_MIPS_PREF 0xe000707f
-/* SpacemiT custom instruction.  */
+/* Vendor-specific (SpacemiT) instruction.  */
 /* Int Matrix Multiplicative Accumulation.  */
 #define MATCH_SMT_VMADOT   0x8200302b
 #define MASK_SMT_VMADOT    0x9e0070ff
@@ -4857,6 +4857,16 @@ DECLARE_INSN(cbo_clean, MATCH_CBO_CLEAN, MASK_CBO_CLEAN)
 DECLARE_INSN(cbo_flush, MATCH_CBO_FLUSH, MASK_CBO_FLUSH)
 DECLARE_INSN(cbo_inval, MATCH_CBO_INVAL, MASK_CBO_INVAL)
 DECLARE_INSN(cbo_zero, MATCH_CBO_ZERO, MASK_CBO_ZERO)
+/* Zicfiss instructions.  */
+DECLARE_INSN(sspush, MATCH_SSPUSH, MASK_SSPUSH)
+DECLARE_INSN(sspopchk, MATCH_SSPOPCHK, MASK_SSPOPCHK)
+DECLARE_INSN(c_sspush, MATCH_C_SSPUSH, MASK_C_SSPUSH)
+DECLARE_INSN(c_sspopchk, MATCH_C_SSPOPCHK, MASK_C_SSPOPCHK)
+DECLARE_INSN(ssrdp, MATCH_SSRDP, MASK_SSRDP)
+DECLARE_INSN(ssamoswap_w, MATCH_SSAMOSWAP_W, MASK_SSAMOSWAP_W)
+DECLARE_INSN(ssamoswap_d, MATCH_SSAMOSWAP_D, MASK_SSAMOSWAP_D)
+/* Zicfilp instructions.  */
+DECLARE_INSN(lpad, MATCH_LPAD, MASK_LPAD)
 /* Zicond instructions. */
 DECLARE_INSN(czero_eqz, MATCH_CZERO_EQZ, MASK_CZERO_EQZ)
 DECLARE_INSN(czero_nez, MATCH_CZERO_NEZ, MASK_CZERO_NEZ)
@@ -5151,21 +5161,10 @@ DECLARE_INSN(th_sync, MATCH_TH_SYNC, MASK_TH_SYNC)
 DECLARE_INSN(th_sync_i, MATCH_TH_SYNC_I, MASK_TH_SYNC_I)
 DECLARE_INSN(th_sync_is, MATCH_TH_SYNC_IS, MASK_TH_SYNC_IS)
 DECLARE_INSN(th_sync_s, MATCH_TH_SYNC_S, MASK_TH_SYNC_S)
-/* XVentanaCondOps instructions. */
+/* Vendor-specific (Ventana Microsystems) XVentanaCondOps instructions. */
 DECLARE_INSN(vt_maskc, MATCH_VT_MASKC, MASK_VT_MASKC)
 DECLARE_INSN(vt_maskcn, MATCH_VT_MASKCN, MASK_VT_MASKCN)
-
-/* Zicfiss instructions.  */
-DECLARE_INSN(sspush, MATCH_SSPUSH, MASK_SSPUSH)
-DECLARE_INSN(sspopchk, MATCH_SSPOPCHK, MASK_SSPOPCHK)
-DECLARE_INSN(c_sspush, MATCH_C_SSPUSH, MASK_C_SSPUSH)
-DECLARE_INSN(c_sspopchk, MATCH_C_SSPOPCHK, MASK_C_SSPOPCHK)
-DECLARE_INSN(ssrdp, MATCH_SSRDP, MASK_SSRDP)
-DECLARE_INSN(ssamoswap_w, MATCH_SSAMOSWAP_W, MASK_SSAMOSWAP_W)
-DECLARE_INSN(ssamoswap_d, MATCH_SSAMOSWAP_D, MASK_SSAMOSWAP_D)
-/* Zicfilp instructions.  */
-DECLARE_INSN(lpad, MATCH_LPAD, MASK_LPAD)
-/* MIPS custom instructions.  */
+/* Vendor-specific (MIPS) instructions.  */
 DECLARE_INSN(mips_ccmov, MATCH_MIPS_CCMOV, MASK_MIPS_CCMOV)
 DECLARE_INSN(mips_lwp, MATCH_MIPS_LWP, MASK_MIPS_LWP)
 DECLARE_INSN(mips_ldp, MATCH_MIPS_LDP, MASK_MIPS_LDP)
