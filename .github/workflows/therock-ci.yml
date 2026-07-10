@@ -1,14 +1,8 @@
 name: TheRock CI for rocgdb
 
+# Temporarily disabled: using multi-arch CI only (therock-multi-arch-ci.yml).
+# Re-enable by restoring push/pull_request triggers.
 on:
-  push:
-    branches:
-      - amd-staging
-      - amd-staging-rocgdb-*
-  pull_request:
-    branches:
-      - amd-staging
-      - amd-staging-rocgdb-*
   workflow_dispatch:
 
 permissions:
