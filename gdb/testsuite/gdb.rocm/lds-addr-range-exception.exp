@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test debugging a program that branches to a bad address.  Check that
-# when GDB catches the fault, the PC points to the branch destination
-# address.
+# Test reporting out of range LDS access on supported architecture.
+# SIGBUS is expected when lds-addr-range-exception is on, 
+# and an assertion failure is expected when it is off.
 
 load_lib rocm.exp
 
@@ -61,7 +61,7 @@ proc do_test { } {
 	gdb_test_no_output "set amdgpu lds-addr-range-exception on" "set LDS Exceptions on"
 
 	delete_breakpoints
-	
+
 	gdb_test "continue" "Thread ${::decimal}\[^\r\n\]* received signal SIGBUS, Bus error.*" \
 	    "continue to Bus error"
     }

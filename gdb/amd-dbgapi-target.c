@@ -2534,22 +2534,22 @@ static void
 set_process_local_memory_out_of_addr_range_exception (amd_dbgapi_inferior_info &info)
 {
   auto mode = (info.local_memory_out_of_addr_range_exception.requested
-              ? AMD_DBGAPI_GROUP_SEGMENT_EXCEPTIONS_OUT_OF_ADDR_RANGE
-              : AMD_DBGAPI_GROUP_SEGMENT_EXCEPTIONS_NONE);
+			? AMD_DBGAPI_GROUP_SEGMENT_EXCEPTIONS_OUT_OF_ADDR_RANGE
+			: AMD_DBGAPI_GROUP_SEGMENT_EXCEPTIONS_NONE);
 
   amd_dbgapi_status_t status
     = amd_dbgapi_set_group_segment_out_of_addr_range_exception
-        (info.process_id, mode);
+		(info.process_id, mode);
 
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
-    info.local_memory_out_of_addr_range_exception.enabled =
-     info.local_memory_out_of_addr_range_exception.requested;
+    info.local_memory_out_of_addr_range_exception.enabled
+		= info.local_memory_out_of_addr_range_exception.requested;
   else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
     warning (_("AMDGPU local memory out-of-address-range exception reporting could not "
-               "be enabled."));
+			"be enabled."));
   else if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_set_local_memory_out_of_addr_range_exception failed (%s)"),
-          get_status_string (status));
+		get_status_string (status));
 }
 
 /* Handle extra initialisation after we have attached to a AMDGPU corefile.  */
@@ -2728,8 +2728,8 @@ detach_amd_dbgapi (inferior *inf)
   /* Reset the amd_dbgapi_inferior_info, except for precise_memory_mode and
      precise_alu_exceptions.  */
   info = amd_dbgapi_inferior_info (inf, info.precise_memory.requested,
-                   info.precise_alu_exceptions.requested,
-                   info.local_memory_out_of_addr_range_exception.requested);
+				info.precise_alu_exceptions.requested,
+				info.local_memory_out_of_addr_range_exception.requested);
 
   maybe_reset_amd_dbgapi ();
 }
@@ -3178,7 +3178,7 @@ amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
      the new process image.  */
   detach_amd_dbgapi (exec_inf);
 
-  /* If using "follow-exec-mode new", carry over the precise-memory and local-memory 
+  /* If using "follow-exec-mode new", carry over the precise-memory and local-memory
      settings to the new inferior (otherwise, FOLLOW_INF and ORIG_INF point to
      the same inferior, so this is a no-op).  */
   get_amd_dbgapi_inferior_info (follow_inf).precise_memory.requested
@@ -3187,8 +3187,8 @@ amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
     = get_amd_dbgapi_inferior_info (exec_inf)
 	.precise_alu_exceptions.requested;
   get_amd_dbgapi_inferior_info (follow_inf).local_memory_out_of_addr_range_exception
-    .requested = get_amd_dbgapi_inferior_info (exec_inf)
-        .local_memory_out_of_addr_range_exception.requested;
+	.requested = get_amd_dbgapi_inferior_info (exec_inf)
+	.local_memory_out_of_addr_range_exception.requested;
 
   attach_amd_dbgapi (follow_inf);
 }
@@ -3211,7 +3211,7 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
       child_info.precise_alu_exceptions.requested
 	= parent_info.precise_alu_exceptions.requested;
       child_info.local_memory_out_of_addr_range_exception.requested
-        = parent_info.local_memory_out_of_addr_range_exception.requested;
+	= parent_info.local_memory_out_of_addr_range_exception.requested;
 
       if (fork_kind != TARGET_WAITKIND_VFORKED)
 	{
@@ -3432,7 +3432,7 @@ amd_dbgapi_target_signal_received (gdb_signal sig)
     return;
 
   switch (sig)
-    {
+	{
     case GDB_SIGNAL_FPE:
       if (!info.precise_alu_exceptions.enabled)
 	{
@@ -3450,11 +3450,10 @@ Warning: precise memory violation signal reporting is not enabled, reported\n\
 location may not be accurate.  See \"show amdgpu precise-memory\".\n"));
 	}
       if (!info.local_memory_out_of_addr_range_exception.enabled)
-        {
-       gdb_printf (_("\
+	{
+	gdb_printf (_("\
 Warning: local memory out-of-address-range exception reporting is not enabled.\n\
 See \"show amdgpu lds-addr-range-exception\".\n"));
-  
 	}
       return;
     default:
@@ -5196,15 +5195,15 @@ running.  If off (default), precise ALU exceptions reporting is disabled."),
     (get_effective_precise_alu_exception_mode);
 
   cmds = add_setshow_boolean_cmd ("lds-addr-range-exception", no_class,
-                                 _("Set lds-addr-range-exception mode."),
-                                 _("Show lds-addr-range-exception mode."), _("\
+				  _("Set lds-addr-range-exception mode."),
+				  _("Show lds-addr-range-exception mode."), _("\
 If on, local memory out-of-address-range exception reporting is enabled when\n\
 the inferior is running.  If off (default), local memory out-of-address-range\n\
 exception reporting is disabled."),
-                                 set_lds_addr_range_excp_mode,
-                                 get_lds_addr_range_excp_mode,
-                                 show_lds_addr_range_excp_mode,
-                                 &set_amdgpu_list, &show_amdgpu_list);
+				  set_lds_addr_range_excp_mode,
+				  get_lds_addr_range_excp_mode,
+				  show_lds_addr_range_excp_mode,
+				  &set_amdgpu_list, &show_amdgpu_list);
 
   cmds.show->var->set_effective_value_getter<bool>
     (get_effective_local_memory_out_of_addr_range_exception_mode);
