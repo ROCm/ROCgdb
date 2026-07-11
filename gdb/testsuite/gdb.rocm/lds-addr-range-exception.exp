@@ -21,7 +21,7 @@
 
 load_lib rocm.exp
 
-require allow_hipcc_tests
+require allow_hip_tests
 
 standard_testfile .cpp
 
@@ -38,7 +38,7 @@ proc do_test { } {
 	    return
 	}
 	# Run with lds-addr-range-exception off, we should see an assertion failure
-    gdb_breakpoint "kern" "allow-pending" "qualified"
+    gdb_breakpoint "kern" -allow-pending -qualified
     gdb_continue_to_breakpoint "Continue to kernel with Exceptions off"
 	gdb_test_no_output "set amdgpu lds-addr-range-exception off" "set LDS Exceptions off"
 
@@ -56,28 +56,20 @@ proc do_test { } {
 	    return
 	}
 	# Run with lds-addr-range-exception on, we should see a seg-fault
-    gdb_breakpoint "kern" "allow-pending" "qualified"
+    gdb_breakpoint "kern" -allow-pending -qualified
     gdb_continue_to_breakpoint "Continue to kernel with Exceptions on"
 	gdb_test_no_output "set amdgpu lds-addr-range-exception on" "set LDS Exceptions on"
 
 	delete_breakpoints
-	set any "\[^\r\n\]*"
-	gdb_test "c" \
-	    [multi_line \
-		"Thread $any received signal SIGSEGV, Segmentation fault\\." \
-		"Warning: precise memory violation signal reporting is not enabled, reported" \
-		"location may not be accurate.  See \"show amdgpu precise-memory\"\\." \
-		"Warning: local memory out-of-address-range exception reporting is not enabled\\." \
-		"See \"show amdgpu lds-addr-range-exception\"\\." \
-		"\\\[Switching to thread $::decimal, lane 0 \\(AMDGPU Lane $any/0 \\(0,0,0\\)\\\[0,0,0\\\]\\)\\\]" \
-		"0x0000000000000100 in \\?\\? \\(\\)"] \
-	    "continue to seg-fault"
+	
+	gdb_test "continue" "Thread ${::decimal}\[^\r\n\]* received signal SIGBUS, Bus error.*" \
+	    "continue to Bus error"
     }
 }
 
 set target [lindex  [find_amdgpu_devices] 0]
 set target_family [string range $target 0 end-2]
-if {[lsearch -exact {gfx12} $target_family] != -1} {
+if {[lsearch -exact {gfx12 gfx13} $target_family] != -1} {
 	do_test
 } else {
 	unsupported "Skipping test, target family $target_family is not supported"
