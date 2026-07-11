@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Test reporting out of range LDS access on supported architecture.
-# SIGBUS is expected when lds-addr-range-exception is on, 
+# SIGBUS is expected when lds-addr-range-exception is on,
 # and an assertion failure is expected when it is off.
 
 load_lib rocm.exp
