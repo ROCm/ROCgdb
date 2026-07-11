@@ -313,12 +313,12 @@ ft32-*-*)		targ_emul=elf32ft32
 			targ_extra_ofiles=ldelfgen.o
 			;;
 h8300-*-elf* | h8300-*-rtems*)
-			targ_emul=h8300elf;
-			targ_extra_emuls="h8300helf h8300self h8300hnelf h8300snelf h8300sxelf h8300sxnelf"
+			targ_emul=h8300helf;
+			targ_extra_emuls="h8300self h8300hnelf h8300snelf h8300sxelf h8300sxnelf h8300elf"
 			;;
 h8300-*-linux*)
-			targ_emul=h8300elf_linux;
-			targ_extra_emuls="h8300helf_linux h8300self_linux h8300sxelf_linux"
+			targ_emul=h8300helf_linux;
+			targ_extra_emuls="h8300self_linux h8300sxelf_linux h8300elf_linux"
 			;;
 hppa*64*-*-linux-*)	targ_emul=hppa64linux
 			;;

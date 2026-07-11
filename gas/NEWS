@@ -24,6 +24,10 @@
 * Add support for RISC-V vendor extensions:
   SpacemiT: xsmtvdot v1.0, xsmtvdotii v1.0.
 
+* Change the default architecture for H8 family from H8/300 to H8/300H.
+  Support for H8/300 was removed from gcc in 2020, making H8/300H the
+  default architecture.
+
 Changes in 2.46:
 
 * Add support for AMD Zen6 processor.
