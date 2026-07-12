@@ -1,5 +1,7 @@
 -*- text -*-
 
+Changes in 2.47:
+
 * New command line option --reloc-section-sym=[all|internal|none]
   controls whether relocations referencing local binding symbols are adjusted
   to use section symbols.
