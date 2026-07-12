@@ -848,6 +848,9 @@ static int optimize = 0;
  */
 static int optimize_for_space = 0;
 
+/* Disabled optimizations.  */
+static int optimize_for_disabled_optimizations = 0;
+
 /* Register prefix used for error message.  */
 static const char *register_prefix = "%";
 
@@ -5177,7 +5180,7 @@ optimize_encoding (void)
       i.seg[0] = NULL;
     }
 
-  if (!optimize_for_space
+  if (optimize_for_disabled_optimizations
       && i.tm.mnem_off == MN_xchg
       && i.reg_operands == 2
       && i.op[0].regs == i.op[1].regs)
