@@ -80,7 +80,7 @@ proc test {target-non-stop displaced-stepping} {
     # fail an assertion that checks that we never ask the target to
     # hardware single-step a thread when we have a software
     # single-step breakpoint set for that thread.
-    gdb_breakpoint [gdb_get_line_number "break here end"]
+    gdb_breakpoint $::srcfile:[gdb_get_line_number "break here end"]
     gdb_continue_to_breakpoint "end"
 }
 
