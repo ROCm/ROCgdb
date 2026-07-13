@@ -17,6 +17,7 @@
 
 #include "windows-tdep.h"
 #include "extract-store-integer.h"
+#include "gdbtypes.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "xml-support.h"
 #include "gdbarch.h"
@@ -1028,6 +1029,14 @@ windows_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* On Windows, "long"s are only 32bit.  */
   set_gdbarch_long_bit (gdbarch, 32);
+
+  /* With the MSVC ABI, "long double" is just an IEEE 64-bit double,
+     the same as "double".  */
+  if (info.osabi == GDB_OSABI_WINDOWS_MSVC)
+    {
+      set_gdbarch_long_double_bit (gdbarch, 64);
+      set_gdbarch_long_double_format (gdbarch, floatformats_ieee_double);
+    }
 
   /* Enable TLS support.  */
   set_gdbarch_fetch_tls_load_module_address (gdbarch,
