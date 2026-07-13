@@ -26,7 +26,7 @@ require {is_any_target "*-*-linux*"}
 
 set internal_tls_linux_targets {"x86_64-*-linux*" "aarch64-*-linux*"
 				"riscv*-*-linux*" "powerpc64*-*-linux*"
-				"s390x*-*-linux*"}
+				"s390x*-*-linux*" "loongarch*-*-linux*"}
 
 # The "maint set force-internal-tls-address-lookup" command is only
 # available for certain Linux architectures.  Don't attempt to force
