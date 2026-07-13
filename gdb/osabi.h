@@ -38,6 +38,14 @@ void gdbarch_register_osabi (enum bfd_architecture, unsigned long,
 			     void (*)(struct gdbarch_info,
 				      struct gdbarch *));
 
+/* Make OSABI selectable via the "set osabi" command without
+   registering a handler for it.  This is for an OS ABI that is never
+   the final ABI of a gdbarch, but that a user may still want to
+   select -- it is resolved to a concrete ABI elsewhere.  The generic
+   "Windows" OS ABI is one example: it stands for "let GDB pick the
+   GNU or MSVC flavor".  */
+void gdbarch_add_osabi_name (enum gdb_osabi osabi);
+
 /* Lookup the OS ABI corresponding to the specified BFD.  */
 enum gdb_osabi gdbarch_lookup_osabi (bfd *);
 
