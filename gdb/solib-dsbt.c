@@ -42,9 +42,9 @@ enum { TIC6X_PTR_SIZE = 4 };
 /* External versions; the size and alignment of the fields should be
    the same as those on the target.  When loaded, the placement of
    the bits in each field will be the same as on the target.  */
-typedef gdb_byte ext_Elf32_Half[2];
-typedef gdb_byte ext_Elf32_Addr[4];
-typedef gdb_byte ext_Elf32_Word[4];
+using ext_Elf32_Half = gdb_byte[2];
+using ext_Elf32_Addr = gdb_byte[4];
+using ext_Elf32_Word = gdb_byte[4];
 
 struct ext_elf32_dsbt_loadseg
 {
@@ -99,7 +99,7 @@ struct int_elf32_dsbt_loadmap
 
 /* External link_map and elf32_dsbt_loadaddr struct definitions.  */
 
-typedef gdb_byte ext_ptr[4];
+using ext_ptr = gdb_byte[4];
 
 struct ext_elf32_dsbt_loadaddr
 {

@@ -113,12 +113,12 @@ enum fileio_error
 #define FIO_LONG_LEN  8
 #define FIO_ULONG_LEN 8
 
-typedef char fio_int_t[FIO_INT_LEN];
-typedef char fio_uint_t[FIO_UINT_LEN];
-typedef char fio_mode_t[FIO_MODE_LEN];
-typedef char fio_time_t[FIO_TIME_LEN];
-typedef char fio_long_t[FIO_LONG_LEN];
-typedef char fio_ulong_t[FIO_ULONG_LEN];
+using fio_int_t = char[FIO_INT_LEN];
+using fio_uint_t = char[FIO_UINT_LEN];
+using fio_mode_t = char[FIO_MODE_LEN];
+using fio_time_t = char[FIO_TIME_LEN];
+using fio_long_t = char[FIO_LONG_LEN];
+using fio_ulong_t = char[FIO_ULONG_LEN];
 
 /* Struct stat as used in protocol.  For complete independence
    of host/target systems, it's defined as an array with offsets

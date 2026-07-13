@@ -99,7 +99,7 @@ bool remote_debug = false;
 #define OPAQUETHREADBYTES 8
 
 /* a 64 bit opaque identifier */
-typedef unsigned char threadref[OPAQUETHREADBYTES];
+using threadref = unsigned char[OPAQUETHREADBYTES];
 
 struct gdb_ext_thread_info;
 struct threads_listing_context;

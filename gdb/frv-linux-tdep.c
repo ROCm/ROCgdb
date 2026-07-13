@@ -346,10 +346,10 @@ static const struct frame_unwind_legacy frv_linux_sigtramp_frame_unwind (
 /* The FRV kernel defines ELF_NGREG as 46.  We add 2 in order to include
    the loadmap addresses in the register set.  (See below for more info.)  */
 #define FRV_ELF_NGREG (46 + 2)
-typedef unsigned char frv_elf_greg_t[4];
+using frv_elf_greg_t = unsigned char[4];
 typedef struct { frv_elf_greg_t reg[FRV_ELF_NGREG]; } frv_elf_gregset_t;
 
-typedef unsigned char frv_elf_fpreg_t[4];
+using frv_elf_fpreg_t = unsigned char[4];
 typedef struct
 {
   frv_elf_fpreg_t fr[64];

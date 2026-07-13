@@ -36,10 +36,10 @@
 #define MN10300_ELF_NGREG 28
 #define MN10300_ELF_NFPREG 32
 
-typedef gdb_byte   mn10300_elf_greg_t[4];
-typedef mn10300_elf_greg_t mn10300_elf_gregset_t[MN10300_ELF_NGREG];
+using mn10300_elf_greg_t = gdb_byte  [4];
+using mn10300_elf_gregset_t = mn10300_elf_greg_t[MN10300_ELF_NGREG];
 
-typedef gdb_byte   mn10300_elf_fpreg_t[4];
+using mn10300_elf_fpreg_t = gdb_byte  [4];
 typedef struct
 {
   mn10300_elf_fpreg_t fpregs[MN10300_ELF_NFPREG];
