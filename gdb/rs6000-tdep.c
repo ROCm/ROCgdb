@@ -4182,7 +4182,7 @@ bfd_uses_spe_extensions (bfd *abfd)
 #define P_PPC_D(insn_prefix, insn_suffix) \
   PPC_SEXT (PPC_FIELD (insn_prefix, 14, 18) << 16 \
 	    | PPC_FIELD (insn_suffix, 16, 16), 34)
-#define P_PPC_TX5(insn_sufix)	PPC_BIT (insn_suffix, 5)
+#define P_PPC_TX5(insn_suffix)	PPC_BIT (insn_suffix, 5)
 #define P_PPC_TX15(insn_suffix) PPC_BIT (insn_suffix, 15)
 #define P_PPC_XT(insn_suffix)	((PPC_TX (insn_suffix) << 5) \
 				 | PPC_T (insn_suffix))

@@ -594,7 +594,7 @@ extern struct value *vlscm_convert_value_from_scheme
   (const char *func_name, int obj_arg_pos, SCM obj, SCM *except_scmp,
    struct gdbarch *gdbarch, const struct language_defn *language);
 
-/* stript_lang methods */
+/* script_lang methods */
 
 extern objfile_script_sourcer_func gdbscm_source_objfile_script;
 extern objfile_script_executor_func gdbscm_execute_objfile_script;

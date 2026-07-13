@@ -5738,7 +5738,7 @@ handle_one (const wait_one_event &event)
    the expected stops.  */
 
 static void
-reenable_target_async ()
+re_enable_target_async ()
 {
   for (inferior *inf : all_inferiors ())
     {
@@ -5882,7 +5882,7 @@ stop_all_threads (const char *reason, inferior *inf)
 	  if (pass > 0)
 	    pass = -1;
 
-	  reenable_target_async ();
+	  re_enable_target_async ();
 
 	  for (int i = 0; i < waits_needed; i++)
 	    {

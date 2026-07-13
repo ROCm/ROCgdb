@@ -462,7 +462,7 @@ field_name_match (const char *field_name, const char *target)
 }
 
 
-/* Assuming TYPE is a TYPE_CODE_STRUCT or a TYPE_CODE_TYPDEF to
+/* Assuming TYPE is a TYPE_CODE_STRUCT or a TYPE_CODE_TYPEDEF to
    a TYPE_CODE_STRUCT, find the field whose name matches FIELD_NAME,
    and return its index.  This function also handles fields whose name
    have ___ suffixes because the compiler sometimes alters their name
@@ -8610,7 +8610,7 @@ ada_check_typedef (struct type *type)
 
   /* If our type is an access to an unconstrained array, which is encoded
      as a TYPE_CODE_TYPEDEF of a fat pointer, then we're done.
-     We don't want to strip the TYPE_CODE_TYPDEF layer, because this is
+     We don't want to strip the TYPE_CODE_TYPEDEF layer, because this is
      what allows us to distinguish between fat pointers that represent
      array types, and fat pointers that represent array access types
      (in both cases, the compiler implements them as fat pointers).  */

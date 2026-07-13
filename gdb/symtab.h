@@ -619,7 +619,7 @@ struct general_symbol_info
   struct obj_section *obj_section (const struct objfile *objfile) const;
 };
 
-extern CORE_ADDR symbol_overlayed_address (CORE_ADDR, struct obj_section *);
+extern CORE_ADDR symbol_overlaid_address (CORE_ADDR, struct obj_section *);
 
 /* Try to determine the demangled name for a symbol, based on the
    language of that symbol.  If the language is set to language_auto,

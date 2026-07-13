@@ -1072,7 +1072,7 @@ go32_sysinfo (const char *arg, int from_tty)
   char cpuid_vendor[13];
   unsigned cpuid_max = 0, cpuid_eax, cpuid_ebx, cpuid_ecx, cpuid_edx;
   unsigned true_dos_version = _get_dos_version (1);
-  unsigned advertized_dos_version = ((unsigned int)_osmajor << 8) | _osminor;
+  unsigned advertised_dos_version = ((unsigned int)_osmajor << 8) | _osminor;
   int dpmi_flags;
   char dpmi_vendor_info[129];
   int dpmi_vendor_available;
@@ -1279,7 +1279,7 @@ go32_sysinfo (const char *arg, int from_tty)
   gdb_puts ("\n");
   gdb_printf ("DOS Version....................%s %s.%s",
 	      _os_flavor, u.release, u.version);
-  if (true_dos_version != advertized_dos_version)
+  if (true_dos_version != advertised_dos_version)
     gdb_printf (" (disguised as v%d.%d)", _osmajor, _osminor);
   gdb_puts ("\n");
   if (!windows_major)
@@ -1321,7 +1321,7 @@ go32_sysinfo (const char *arg, int from_tty)
 	}
       gdb_printf ("%s)\n", windows_flavor);
     }
-  else if (true_dos_version == 0x532 && advertized_dos_version == 0x500)
+  else if (true_dos_version == 0x532 && advertised_dos_version == 0x500)
     gdb_printf ("Windows Version................"
 		"Windows NT family (W2K/XP/W2K3/Vista/W2K8)\n");
   gdb_puts ("\n");

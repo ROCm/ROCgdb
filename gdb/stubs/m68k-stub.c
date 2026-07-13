@@ -330,7 +330,7 @@ asm("
 	movew   sp@,d1          /* get status register          */
 	movew   d1,a5@(66)      /* save sr		 	*/
 	movel   sp@(2),a4       /* save pc in a4 for later use  */
-	movel   a4,a5@(68)      /* save pc in _regisers[]      	*/
+	movel   a4,a5@(68)      /* save pc in _registers[]      	*/
 
 #
 # figure out how many bytes in the stack frame
@@ -430,7 +430,7 @@ normal:
 	movew   sp@+,d1         /* pop status register          */
 	movel   sp@+,a4         /* pop program counter          */
 	movew   d1,a5@(66)      /* save sr		 	*/
-	movel   a4,a5@(68)      /* save pc in _regisers[]      	*/
+	movel   a4,a5@(68)      /* save pc in _registers[]      	*/
 	movel   a4,a0@-         /* copy pc to frame buffer      */
 	movew   d1,a0@-         /* copy sr to frame buffer      */
 

@@ -188,7 +188,7 @@ queue_stop_reply (ptid_t ptid, const target_waitstatus &status)
   new_notif->ptid = ptid;
   new_notif->status = status;
 
-  notif_event_enque (&notif_stop, new_notif);
+  notif_event_enqueue (&notif_stop, new_notif);
 }
 
 static bool
@@ -3707,7 +3707,7 @@ queue_stop_reply_callback (thread_info *thread)
       new_notif->status = thread->last_status;
       /* Pass the last stop reply back to GDB, but don't notify
 	 yet.  */
-      notif_event_enque (&notif_stop, new_notif);
+      notif_event_enqueue (&notif_stop, new_notif);
     }
   else
     {

@@ -870,7 +870,7 @@ output_access_specifier (struct ui_file *stream,
 }
 
 /* Helper function that temporarily disables FLAGS->PRINT_OFFSETS,
-   calls 'c_print_type_1', and then reenables FLAGS->PRINT_OFFSETS if
+   calls 'c_print_type_1', and then re-enables FLAGS->PRINT_OFFSETS if
    applicable.  */
 
 static void

@@ -81,7 +81,7 @@ iterations will be run.
 
 After running the tests, you shall see a file name 'racy.sum' in the
 gdb/testsuite directory.  You can also inspect the generated *.log and
-*.sum files by looking into the gdb/testsuite/racy_ouputs directory.
+*.sum files by looking into the gdb/testsuite/racy_outputs directory.
 
 If you already have *.sum files generated from previous testsuite runs
 and you would like to analyze them without having to run the testsuite
