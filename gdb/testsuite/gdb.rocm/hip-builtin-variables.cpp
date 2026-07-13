@@ -34,7 +34,7 @@
 /* A function to be called by "kern ()", without any references to
    threadIdx, blockIdx, blockDim, gridDim, or warpSize variables.  */
 
-__device__ void
+__device__ void __attribute__ ((optnone))
 inner_func1 ()
 {
   return;
@@ -42,14 +42,14 @@ inner_func1 ()
 
 /* A function to be called by "kern ()", with its own "blockIdx".  */
 
-__device__ void
+__device__ void __attribute__ ((optnone))
 inner_func2 ()
 {
   int blockIdx = 0x42424242;
   return;
 }
 
-__global__ void
+__global__ void __attribute__ ((optnone))
 kern ()
 {
   const int thread_idx_x = threadIdx.x;

@@ -24,7 +24,7 @@
 __global__ void
 kernel ()
 {
-  int *p = nullptr;
+  volatile int *p = nullptr;
   *p = 1;
 }
 

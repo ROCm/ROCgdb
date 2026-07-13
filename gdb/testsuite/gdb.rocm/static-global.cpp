@@ -34,7 +34,12 @@
 __device__ int extern_global;
 __device__ static int static_global;
 
-__device__ static void
+/* Non-static so a line breakpoint set on "done" before launch has a
+   stable, externally visible symbol to resolve to.  optnone keeps the
+   call to done() under -O1/-O2/-O3: it implies noinline and makes the
+   body opaque to IPO, so the pending breakpoint resolves.  */
+
+__device__ void __attribute__ ((optnone))
 done ()
 {
 }

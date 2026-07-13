@@ -23,8 +23,10 @@ THE SOFTWARE.
 #include <hip/hip_runtime.h>
 
 /* Helper function where the debugger places a breakpoint to be sure no wave
-   can run to completion without the debugger noticing.  */
-__device__ void
+   can run to completion without the debugger noticing.  optnone implies
+   noinline and keeps the body opaque to the optimizer, so the breakpoint is
+   reliable and the call is not proven away under -O1/-O2/-O3.  */
+__device__ void __attribute__ ((optnone))
 end_of_kernel ()
 {
 }

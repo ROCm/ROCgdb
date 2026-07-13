@@ -22,9 +22,13 @@ parent (void)
 {
 }
 
-static void
+/* noinline so the breakpoint reliably fires; the asm gives the
+   function a side effect the optimizer cannot prove away.  */
+
+static void __attribute__ ((noinline))
 child (void)
 {
+  asm volatile ("" ::: "memory");
 }
 
 int

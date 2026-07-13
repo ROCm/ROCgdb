@@ -36,8 +36,8 @@ base_case ()
 {
   /* That printf is necessary to reproduce the exact failure as initially
      seen.  */
-  printf ("Hello device\n");
-  return; /* break here */
+  printf ("Hello device\n"); /* break here */
+  return;
 }
 
 template <unsigned int N>
