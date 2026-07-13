@@ -58,8 +58,7 @@ spaces-in-braces = false
 [tool.codespell]
 
 skip = [
-# Skip ChangeLogs and generated files.
-'*/ChangeLog*',
+# Skip generated files.
 '*/configure',
 'gdbsupport/Makefile.in',
 '*.dat',
