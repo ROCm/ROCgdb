@@ -37,11 +37,11 @@
 
 /* Types of the libthread_db functions.  */
 
-typedef td_err_e (td_init_ftype) (void);
+using td_init_ftype = td_err_e (void);
 
 typedef td_err_e (td_ta_new_ftype) (struct ps_prochandle * ps,
 				    td_thragent_t **ta);
-typedef td_err_e (td_ta_delete_ftype) (td_thragent_t *ta_p);
+using td_ta_delete_ftype = td_err_e (td_thragent_t *ta_p);
 typedef td_err_e (td_ta_map_lwp2thr_ftype) (const td_thragent_t *ta,
 					    lwpid_t lwpid, td_thrhandle_t *th);
 typedef td_err_e (td_ta_thr_iter_ftype) (const td_thragent_t *ta,
@@ -70,7 +70,7 @@ typedef td_err_e (td_thr_tlsbase_ftype) (const td_thrhandle_t *th,
 					 unsigned long int modid,
 					 psaddr_t *base);
 
-typedef const char ** (td_symbol_list_ftype) (void);
-typedef td_err_e (td_ta_delete_ftype) (td_thragent_t *);
+using td_symbol_list_ftype = const char ** (void);
+using td_ta_delete_ftype = td_err_e (td_thragent_t *);
 
 #endif /* GDB_NAT_GDB_THREAD_DB_H */

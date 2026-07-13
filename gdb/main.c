@@ -492,7 +492,7 @@ handle_command_errors (const struct gdb_exception &e)
 /* Type of the command callback passed to the const
    catch_command_errors.  */
 
-typedef void (catch_command_errors_const_ftype) (const char *, int);
+using catch_command_errors_const_ftype = void (const char *, int);
 
 /* Wrap calls to commands run before the event loop is started.  */
 

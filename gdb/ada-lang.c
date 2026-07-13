@@ -11641,7 +11641,7 @@ static const char * const standard_exc[] = {
   "tasking_error"
 };
 
-typedef CORE_ADDR (ada_unhandled_exception_name_addr_ftype) (void);
+using ada_unhandled_exception_name_addr_ftype = CORE_ADDR (void);
 
 /* A structure that describes how to support exception catchpoints
    for a given executable.  */

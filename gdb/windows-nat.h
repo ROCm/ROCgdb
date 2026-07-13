@@ -47,7 +47,7 @@ using windows_nat::windows_thread_info;
 
 /* A pointer to a function that should return non-zero iff REGNUM
    corresponds to one of the segment registers.  */
-typedef int (segment_register_p_ftype) (int regnum);
+using segment_register_p_ftype = int (int regnum);
 
 /* Maintain a linked list of "so" information.  */
 struct windows_solib

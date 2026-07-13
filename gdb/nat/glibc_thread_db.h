@@ -244,10 +244,10 @@ using thread_key_t = pthread_key_t;
 
 
 /* Callback for iteration over threads.  */
-typedef int td_thr_iter_f (const td_thrhandle_t *, void *);
+using td_thr_iter_f = int (const td_thrhandle_t *, void *);
 
 /* Callback for iteration over thread local data.  */
-typedef int td_key_iter_f (thread_key_t, void (*) (void *), void *);
+using td_key_iter_f = int (thread_key_t, void (*) (void *), void *);
 
 
 

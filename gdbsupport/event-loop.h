@@ -71,8 +71,8 @@
    Corollary tasks are the creation and deletion of event sources.  */
 
 using gdb_client_data = void *;
-typedef void (handler_func) (int, gdb_client_data);
-typedef void (timer_handler_func) (gdb_client_data);
+using handler_func = void (int, gdb_client_data);
+using timer_handler_func = void (gdb_client_data);
 
 /* Exported functions from event-loop.c */
 

@@ -189,7 +189,7 @@
 /*
  * typedef
  */
-typedef void (*Function) ();
+using Function = void (*) ();
 
 /*
  * Forward declarations

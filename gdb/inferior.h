@@ -173,7 +173,7 @@ extern tribool sharing_input_terminal (int pid);
 
 /* The type of the function that is called when SIGINT is handled.  */
 
-typedef void c_c_handler_ftype (int);
+using c_c_handler_ftype = void (int);
 
 /* Install a new SIGINT handler in a host-dependent way.  The previous
    handler is returned.  It is fine to pass SIG_IGN for FN, but not

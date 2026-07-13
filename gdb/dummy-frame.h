@@ -58,7 +58,7 @@ extern const struct frame_unwind_legacy dummy_frame_unwind;
 
 /* Destructor for dummy_frame.  DATA is supplied by registrant.
    REGISTERS_VALID is 1 for dummy_frame_pop, 0 for dummy_frame_discard.  */
-typedef void (dummy_frame_dtor_ftype) (void *data, int registers_valid);
+using dummy_frame_dtor_ftype = void (void *data, int registers_valid);
 
 /* Call DTOR with DTOR_DATA when DUMMY_ID frame of thread THREAD gets
    discarded.  Dummy frame with DUMMY_ID must exist.  Multiple

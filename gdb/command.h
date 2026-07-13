@@ -396,7 +396,7 @@ struct cmd_list_element;
 /* The "simple" signature of command callbacks, which doesn't include a
    cmd_list_element parameter.  */
 
-typedef void cmd_simple_func_ftype (const char *args, int from_tty);
+using cmd_simple_func_ftype = void (const char *args, int from_tty);
 
 /* This structure specifies notifications to be suppressed by a cli
    command interpreter.  */

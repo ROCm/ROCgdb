@@ -764,7 +764,7 @@ extern void language_info ();
 
 extern void set_language (enum language lang);
 
-typedef void lazily_set_language_ftype ();
+using lazily_set_language_ftype = void ();
 extern void lazily_set_language (lazily_set_language_ftype *fun);
 
 

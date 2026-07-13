@@ -242,9 +242,9 @@ struct gdbarch_info
   const struct target_desc *target_desc = nullptr;
 };
 
-typedef struct gdbarch *(gdbarch_init_ftype) (struct gdbarch_info info, struct gdbarch_list *arches);
-typedef void (gdbarch_dump_tdep_ftype) (struct gdbarch *gdbarch, struct ui_file *file);
-typedef bool (gdbarch_supports_arch_info_ftype) (const struct bfd_arch_info *);
+using gdbarch_init_ftype = struct gdbarch * (struct gdbarch_info info, struct gdbarch_list *arches);
+using gdbarch_dump_tdep_ftype = void (struct gdbarch *gdbarch, struct ui_file *file);
+using gdbarch_supports_arch_info_ftype = bool (const struct bfd_arch_info *);
 
 extern void gdbarch_register (enum bfd_architecture architecture,
 			      gdbarch_init_ftype *init,

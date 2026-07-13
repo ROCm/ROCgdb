@@ -132,11 +132,11 @@ static int sol_thread_active = 0;
 
 /* Types of the libthread_db functions.  */
 
-typedef void (td_log_ftype)(const int on_off);
+using td_log_ftype = void (const int on_off);
 typedef td_err_e (td_ta_new_ftype)(const struct ps_prochandle *ph_p,
 				   td_thragent_t **ta_pp);
-typedef td_err_e (td_ta_delete_ftype)(td_thragent_t *ta_p);
-typedef td_err_e (td_init_ftype)(void);
+using td_ta_delete_ftype = td_err_e (td_thragent_t *ta_p);
+using td_init_ftype = td_err_e (void);
 typedef td_err_e (td_ta_get_ph_ftype)(const td_thragent_t *ta_p,
 				      struct ps_prochandle **ph_pp);
 typedef td_err_e (td_ta_get_nthreads_ftype)(const td_thragent_t *ta_p,
@@ -148,7 +148,7 @@ typedef td_err_e (td_ta_thr_iter_ftype)(const td_thragent_t *ta_p,
 					td_thr_state_e state, int ti_pri,
 					sigset_t *ti_sigmask_p,
 					unsigned ti_user_flags);
-typedef td_err_e (td_thr_validate_ftype)(const td_thrhandle_t *th_p);
+using td_thr_validate_ftype = td_err_e (const td_thrhandle_t *th_p);
 typedef td_err_e (td_thr_tsd_ftype)(const td_thrhandle_t * th_p,
 				    const thread_key_t key, void **data_pp);
 typedef td_err_e (td_thr_get_info_ftype)(const td_thrhandle_t *th_p,

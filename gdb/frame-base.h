@@ -68,7 +68,7 @@ struct frame_base
 /* Given THIS frame, return the frame base methods for THIS frame,
    or NULL if it can't handle THIS frame.  */
 
-typedef const struct frame_base *(frame_base_sniffer_ftype) (const frame_info_ptr &this_frame);
+using frame_base_sniffer_ftype = const struct frame_base * (const frame_info_ptr &this_frame);
 
 /* Append a frame base sniffer to the list.  The sniffers are polled
    in the order that they are appended.  */
