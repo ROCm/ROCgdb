@@ -393,7 +393,7 @@ run_one_inferior (inferior *inf, bool start_p)
 
   if (inf->pid != 0)
     {
-      thread_info *tp = any_thread_of_inferior (inf);
+      thread_info *tp = any_non_exited_thread_of_inferior (inf);
       if (tp == NULL)
 	error (_("Inferior has no threads."));
 
@@ -1736,7 +1736,7 @@ mi_cmd_remove_inferior (const char *command, const char *const *argv, int argc)
 
       set_current_inferior (new_inferior);
       if (new_inferior->pid != 0)
-	tp = any_thread_of_inferior (new_inferior);
+	tp = any_non_exited_thread_of_inferior (new_inferior);
       if (tp != NULL)
 	switch_to_thread (tp);
       else

@@ -666,7 +666,7 @@ first_thread_of_inferior (inferior *inf)
 }
 
 thread_info *
-any_thread_of_inferior (inferior *inf)
+any_non_exited_thread_of_inferior (inferior *inf)
 {
   gdb_assert (inf->pid != 0);
 
