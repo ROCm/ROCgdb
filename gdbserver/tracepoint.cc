@@ -5094,7 +5094,7 @@ fast_tracepoint_from_ipa_tpoint_address (CORE_ADDR ipa_tpoint_obj)
 /* The type of the object that is used to synchronize fast tracepoint
    collection.  */
 
-typedef struct collecting_t
+struct collecting_t
 {
   /* The fast tracepoint number currently collecting.  */
   uintptr_t tpoint;
@@ -5107,7 +5107,7 @@ typedef struct collecting_t
      register, which is readable with a single insn on several
      architectures.  */
   uintptr_t thread_area;
-} collecting_t;
+};
 
 #ifndef IN_PROCESS_AGENT
 
