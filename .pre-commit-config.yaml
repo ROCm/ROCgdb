@@ -40,6 +40,7 @@
 minimum_pre_commit_version: 4.5.1
 default_install_hook_types: [pre-commit, commit-msg]
 default_stages: [pre-commit]
+files: '^(gdb|gdbserver|gdbsupport)/'
 
 repos:
   # Python hooks.  Run these for (in glob notation):
@@ -56,33 +57,32 @@ repos:
     rev: 26.5.1
     hooks:
     - id: black
-      types_or: [file]
-      files: '^gdb/.*\.py(\.in)?$'
+      types_or: &gdb_python_types [file]
+      files: &gdb_python_files '^gdb/.*\.py(\.in)?$'
   - repo:  https://github.com/pycqa/flake8
     rev: 7.3.0
     hooks:
     - id: flake8
-      types_or: [file]
-      files: '^gdb/.*\.py(\.in)?$'
+      types_or: *gdb_python_types
+      files: *gdb_python_files
       args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
     rev: 9.0.0b1
     hooks:
     - id: isort
-      types_or: [file]
-      files: '^gdb/.*\.py(\.in)?$'
+      types_or: *gdb_python_types
+      files: *gdb_python_files
 
   # Codespell hooks.
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.2
     hooks:
     - id: codespell
-      files: '^(gdb|gdbserver|gdbsupport)/'
-      args: [--toml, gdb/pyproject.toml]
+      args: &codespell_args [--toml, gdb/pyproject.toml]
     - id: codespell
       name: codespell-log
       entry: gdb/contrib/codespell-log.sh
-      args: [--toml, gdb/pyproject.toml]
+      args: *codespell_args
       verbose: true
       stages: [commit-msg]
 
@@ -116,7 +116,6 @@ repos:
       name: *id2
       language: unsupported_script
       entry: gdb/contrib/check-whitespace-pre-commit.py
-      files: '^(gdb(support|server)?)/.*$'
       types: ['text']
     - id: &id3 pre-commit-setup
       name: *id3
@@ -129,4 +128,3 @@ repos:
       name: *id4
       language: unsupported_script
       entry: gdb/contrib/check-file-mode.sh
-      files: '^(gdb|gdbserver|gdbsupport)/.*$'
