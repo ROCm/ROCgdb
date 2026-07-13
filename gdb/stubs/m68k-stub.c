@@ -113,8 +113,8 @@
  *
  * external low-level support routines
  */
-typedef void (*ExceptionHook)(int);   /* pointer to function with int parm */
-typedef void (*Function)();           /* pointer to a function */
+using ExceptionHook = void (*) (int);	/* Pointer to function with int parm.  */
+using Function = void (*) ();		/* Pointer to a function.  */
 
 extern void putDebugChar();	/* write a single character      */
 extern int getDebugChar();	/* read and return a single char */

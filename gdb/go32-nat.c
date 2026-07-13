@@ -220,7 +220,7 @@ redir_debug_init (cmdline_t *ptr)
 }
 #endif /* __DJGPP_MINOR < 3 */
 
-typedef enum { wp_insert, wp_remove, wp_count } wp_op;
+enum wp_op { wp_insert, wp_remove, wp_count };
 
 /* This holds the current reference counts for each debug register.  */
 static int dr_ref_count[4];

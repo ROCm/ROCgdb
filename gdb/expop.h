@@ -2094,7 +2094,7 @@ protected:
     override;
 };
 
-typedef value *cxx_cast_ftype (struct type *, value *);
+using cxx_cast_ftype = value * (struct type *, value *);
 
 /* This implements dynamic_cast and reinterpret_cast.  static_cast and
    const_cast are handled by the ordinary case operations.  */
