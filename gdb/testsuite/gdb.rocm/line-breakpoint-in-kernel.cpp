@@ -31,7 +31,7 @@
       }                                                                      \
   }
 
-__global__ void
+__global__ void __attribute__ ((optnone))
 kernel ()
 {
   int x = 0;

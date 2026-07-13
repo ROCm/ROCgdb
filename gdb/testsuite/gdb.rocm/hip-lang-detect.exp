@@ -22,6 +22,9 @@
 load_lib rocm.exp
 
 require allow_hip_tests
+# The debug behavior this test checks is not reliable with
+# link-time optimization, so skip it for -flto builds.
+require no_lto
 
 standard_testfile hip-builtin-variables.cpp
 
