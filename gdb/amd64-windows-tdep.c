@@ -1392,8 +1392,12 @@ amd64_cygwin_core_osabi_sniffer (bfd *abfd)
 
 INIT_GDB_FILE (amd64_windows_tdep)
 {
-  gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64, GDB_OSABI_WINDOWS,
+  gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64, GDB_OSABI_WINDOWS_GNU,
 			  amd64_windows_init_abi);
+  gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64, GDB_OSABI_WINDOWS_MSVC,
+			  amd64_windows_init_abi);
+  gdbarch_add_osabi_name (GDB_OSABI_WINDOWS);
+
   gdbarch_register_osabi (bfd_arch_i386, bfd_mach_x86_64, GDB_OSABI_CYGWIN,
 			  amd64_cygwin_init_abi);
 

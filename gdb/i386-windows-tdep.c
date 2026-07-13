@@ -230,8 +230,12 @@ INIT_GDB_FILE (i386_windows_tdep)
   gdbarch_register_osabi_sniffer (bfd_arch_i386, bfd_target_elf_flavour,
 				  i386_cygwin_core_osabi_sniffer);
 
-  gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_WINDOWS,
+  gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_WINDOWS_GNU,
 			  i386_windows_init_abi);
+  gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_WINDOWS_MSVC,
+			  i386_windows_init_abi);
+  gdbarch_add_osabi_name (GDB_OSABI_WINDOWS);
+
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_CYGWIN,
 			  i386_cygwin_init_abi);
 }

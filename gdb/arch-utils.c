@@ -825,6 +825,24 @@ gdbarch_info_fill (struct gdbarch_info *info)
   if (info->osabi == GDB_OSABI_UNKNOWN)
     info->osabi = GDB_OSABI_DEFAULT;
 #endif
+
+  /* A generic "Windows" OS ABI means a PE binary whose flavor --
+     GNU (MinGW) or MSVC -- could not be determined.  The osabi
+     sniffers and gdbserver's target description both report the
+     generic "Windows" OS ABI, because neither can tell the two
+     flavors apart from the binary alone.  Resolve it here to a
+     concrete flavor: use the configured default if that is itself a
+     Windows flavor, otherwise assume GNU.  */
+  if (info->osabi == GDB_OSABI_WINDOWS)
+    {
+      info->osabi = GDB_OSABI_WINDOWS_GNU;
+#ifdef GDB_OSABI_DEFAULT
+      if (GDB_OSABI_DEFAULT == GDB_OSABI_WINDOWS_GNU
+	  || GDB_OSABI_DEFAULT == GDB_OSABI_WINDOWS_MSVC)
+	info->osabi = GDB_OSABI_DEFAULT;
+#endif
+    }
+
   /* If we still don't know which osabi to pick, pick none.  */
   if (info->osabi == GDB_OSABI_UNKNOWN)
     info->osabi = GDB_OSABI_NONE;

@@ -28706,6 +28706,15 @@ When @value{GDBN} is debugging the AArch64 architecture, it provides a
 @code{longjmp} when debugging binaries that use the @sc{newlib} C library.
 The ``Newlib'' OS ABI can be selected by @code{set osabi Newlib}.
 
+On Windows, the GNU (MinGW) and MSVC toolchains use different ABIs.
+For example, they disagree on the size of @code{long double}.
+@value{GDBN} provides a separate OS ABI for each: ``Windows-GNU'' and
+``Windows-MSVC''.  A generic ``Windows'' OS ABI is also available.  It
+does not select a flavor directly, but asks @value{GDBN} to pick one:
+@value{GDBN} uses the OS ABI it was configured with by default (from
+the @code{--target} configure option) when that is a Windows flavor,
+and otherwise assumes the GNU flavor.  @xref{Configure Options}.
+
 @table @code
 @item show osabi
 Show the OS ABI currently in use.
@@ -49491,6 +49500,12 @@ An @samp{<osabi>} element has this form:
 
 @var{abi-name} is an OS ABI name from the same selection accepted by
 @w{@code{set osabi}} (@pxref{ABI, ,Configuring the Current ABI}).
+
+For Windows targets, a stub should report the generic ``Windows'' OS
+ABI rather than ``Windows-GNU'' or ``Windows-MSVC'', as the running
+program does not record which toolchain's ABI it follows.
+@value{GDBN} resolves the generic name to a flavor itself (@pxref{ABI,
+,Configuring the Current ABI}).
 
 @subsection Compatible Architecture
 @cindex @code{<compatible>}

@@ -819,10 +819,14 @@ case "${targ}" in
 m68*-*-openbsd* | m88*-*-openbsd* | vax-*-openbsd*) ;;
 *-*-openbsd*)	gdb_osabi=GDB_OSABI_OPENBSD ;;
 *-*-solaris*)	gdb_osabi=GDB_OSABI_SOLARIS ;;
+# Match the Windows OS ABIs before the non-GNU-kernel guard below,
+# which would otherwise swallow the "-gnu" of a windows-gnu (MinGW)
+# triplet and leave gdb_osabi unset.
+*-*-mingw32ce*)	gdb_osabi=GDB_OSABI_WINCE ;;
+*-*-mingw* | *-*-windows*gnu*)	gdb_osabi=GDB_OSABI_WINDOWS_GNU ;;
+*-*-windows*)	gdb_osabi=GDB_OSABI_WINDOWS_MSVC ;;
 *-*-*-gnu*)	;; # prevent non-GNU kernels to match the Hurd rule below
 *-*-gnu*)	gdb_osabi=GDB_OSABI_HURD ;;
-*-*-mingw32ce*)	gdb_osabi=GDB_OSABI_WINCE ;;
-*-*-mingw* | *-*-windows*)	gdb_osabi=GDB_OSABI_WINDOWS ;;
 *-*-cygwin*)	gdb_osabi=GDB_OSABI_CYGWIN ;;
 *-*-dicos*)	gdb_osabi=GDB_OSABI_DICOS ;;
 powerpc-*-aix* | rs6000-*-* | powerpc64-*-aix*)
