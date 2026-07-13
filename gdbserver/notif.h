@@ -38,7 +38,7 @@ struct notif_event
 /* A type notification to GDB.  An object of 'struct notif_server'
    represents a type of notification.  */
 
-typedef struct notif_server
+struct notif_server
 {
   /* The name of ack packet, for example, 'vStopped'.  */
   const char *ack_name;
@@ -54,7 +54,8 @@ typedef struct notif_server
 
   /* Write event EVENT to OWN_BUF.  */
   void (*write) (struct notif_event *event, char *own_buf);
-} *notif_server_p;
+};
+using notif_server_p = struct notif_server *;
 
 extern struct notif_server notif_stop;
 
