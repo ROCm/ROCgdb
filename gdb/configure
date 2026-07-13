@@ -25118,10 +25118,25 @@ CPPFLAGS=$OLD_CPPFLAGS
 # configuration.
 gdb_host_obs=posix-hdep.o
 
+# Check whether the configuration is native -- i.e., whether GDB will
+# debug processes running on the same machine it runs on.  If so, we
+# let configure.host and configure.nat pull in the native-debug
+# support.
+gdb_native=no
 if test "${target}" = "${host}"; then
   gdb_native=yes
-else
-  gdb_native=no
+elif test "${host_cpu}" = "${target_cpu}"; then
+  # Debugging Windows binaries on a Windows host is native even when
+  # the host and target triplets differ across the mingw/cygwin/msvc
+  # ABI boundary.  E.g., a mingw32-hosted GDB targeting binaries
+  # produced by a compiler defaulting to windows-msvc.
+  case ${host_os} in
+    mingw* | cygwin*)
+      case ${target_os} in
+	mingw* | cygwin* | windows*)
+	  gdb_native=yes ;;
+      esac ;;
+  esac
 fi
 
 . $srcdir/configure.host
