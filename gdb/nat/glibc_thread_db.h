@@ -89,11 +89,11 @@ enum td_thr_type_e
 using td_thragent_t = struct td_thragent;
 
 /* The actual thread handle type.  This is also opaque.  */
-typedef struct td_thrhandle
+using td_thrhandle_t = struct td_thrhandle
 {
   td_thragent_t *th_ta_p;
   psaddr_t th_unique;
-} td_thrhandle_t;
+};
 
 
 /* Forward declaration of a type defined by and for the dynamic linker.  */
@@ -112,10 +112,10 @@ struct link_map;
 #define BT_UIMASK	(BT_NBIPUI - 1)         /* to extract bit index */
 
 /* Bitmask of enabled events. */
-typedef struct td_thr_events
+using td_thr_events_t = struct td_thr_events
 {
   uint32_t event_bits[TD_EVENTSIZE];
-} td_thr_events_t;
+};
 
 /* Event set manipulation macros. */
 #define __td_eventmask(n) \
@@ -184,7 +184,7 @@ enum td_notify_e
 };
 
 /* Description how event type is reported.  */
-typedef struct td_notify
+using td_notify_t = struct td_notify
 {
   td_notify_e type;		/* Way the event is reported.  */
   union
@@ -192,10 +192,10 @@ typedef struct td_notify
     psaddr_t bptaddr;		/* Address of breakpoint.  */
     int syscallno;		/* Number of system call used.  */
   } u;
-} td_notify_t;
+};
 
 /* Structure used to report event.  */
-typedef struct td_event_msg
+using td_event_msg_t = struct td_event_msg
 {
   td_event_e event;		/* Event type being reported.  */
   const td_thrhandle_t *th_p;	/* Thread reporting the event.  */
@@ -206,7 +206,7 @@ typedef struct td_event_msg
 #endif
     uintptr_t data;		/* Event specific data.  */
   } msg;
-} td_event_msg_t;
+};
 
 /* Structure containing event data available in each thread structure.  */
 struct td_eventbuf_t
@@ -218,7 +218,7 @@ struct td_eventbuf_t
 
 
 /* Gathered statistics about the process.  */
-typedef struct td_ta_stats
+using td_ta_stats_t = struct td_ta_stats
 {
   int nthreads;       		/* Total number of threads in use.  */
   int r_concurrency;		/* Concurrency level requested by user.  */
@@ -234,7 +234,7 @@ typedef struct td_ta_stats
 				   numerator.  */
   int nidle_den;		/* Average number of idling processes,
 				   denominator.  */
-} td_ta_stats_t;
+};
 
 
 /* Since Sun's library is based on Solaris threads we have to define a few
@@ -256,7 +256,7 @@ struct ps_prochandle;
 
 
 /* Information about the thread.  */
-typedef struct td_thrinfo
+using td_thrinfo_t = struct td_thrinfo
 {
   td_thragent_t *ti_ta_p;		/* Process handle.  */
   unsigned int ti_user_flags;		/* Unused.  */
@@ -285,7 +285,7 @@ typedef struct td_thrinfo
   unsigned char ti_pirecflag;		/* Unused.  */
   sigset_t ti_pending;			/* Set of pending signals.  */
   td_thr_events_t ti_events;		/* Set of enabled events.  */
-} td_thrinfo_t;
+};
 
 
 
