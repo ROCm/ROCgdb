@@ -24,7 +24,7 @@ kern ()
 {
 }
 
-int
+int __attribute__ ((optnone))
 main (int argc, char* argv[])
 {
   kern<<<1, 1>>> ();
@@ -35,7 +35,10 @@ main (int argc, char* argv[])
   if (hipGetSymbolAddress (reinterpret_cast<void **> (&devGlobal), global))
     return 2;
 
-  /* Now update the device global from a CPU thread.  */
-  *devGlobal = 8;
+  /* Now update the device global from a CPU thread.  Use a volatile
+     pointer at the access site so the store survives optimization
+     without forcing devGlobal itself to be volatile (which would
+     require dropping the qualifier with a C-style cast above).  */
+  *static_cast<volatile int *> (devGlobal) = 8;
   return 0;
 }

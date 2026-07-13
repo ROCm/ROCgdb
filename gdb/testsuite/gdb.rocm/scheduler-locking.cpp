@@ -33,7 +33,7 @@
       }									      \
   }
 
-__global__ void
+__global__ void __attribute__ ((optnone))
 bit_extract_kernel (uint32_t *C_d, const uint32_t *A_d, size_t N)
 {
   size_t offset = (blockIdx.x * blockDim.x + threadIdx.x); /* location line */

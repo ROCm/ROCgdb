@@ -26,7 +26,10 @@ __global__ static void
 kernel1 ()
 {}
 
-__device__ static void
+/* optnone implies noinline and keeps the body opaque to the optimizer,
+   so the breakpoint reliably fires and the call is not proven away.  */
+
+__device__ static void __attribute__ ((optnone))
 break_here_execer ()
 {
 }

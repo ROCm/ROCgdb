@@ -19,9 +19,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static void
+/* noinline so the breakpoint reliably fires; the asm gives the
+   function a side effect the optimizer cannot prove away.  */
+
+static void __attribute__ ((noinline))
 second (void)
 {
+  asm volatile ("" ::: "memory");
 }
 
 int

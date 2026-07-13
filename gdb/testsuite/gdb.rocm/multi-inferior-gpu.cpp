@@ -32,7 +32,7 @@ kern ()
 
 /* Spawn one child process per detected GPU.  */
 
-static int
+static int __attribute__ ((optnone))
 parent (int argc, char **argv)
 {
   /* Identify how many GPUs we have, and spawn one child for each.  */
@@ -73,7 +73,8 @@ parent (int argc, char **argv)
     }
 
   /* Last break here.  */
-  return 0;
+  int ret = 0;
+  return ret;
 }
 
 static int

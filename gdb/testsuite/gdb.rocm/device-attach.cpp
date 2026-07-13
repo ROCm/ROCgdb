@@ -37,7 +37,7 @@ bit_extract_kernel (uint32_t *C_d, const uint32_t *A_d, size_t N)
 {
   size_t offset = (blockIdx.x * blockDim.x + threadIdx.x);
   size_t stride = blockDim.x * gridDim.x;
-  int loop_forever = 1;
+  volatile int loop_forever = 1;
   int a = 9;
   while (loop_forever)
     a = 8;

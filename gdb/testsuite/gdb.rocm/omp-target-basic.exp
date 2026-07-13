@@ -30,6 +30,11 @@ load_lib rocm.exp
 
 require allow_omp_offload_tests
 
+# Reading OpenMP mapped/firstprivate data inside a target region
+# (and single-stepping it) requires unoptimized device code; those
+# values are optimized out at -O1 and above.  Skip under optimization.
+require no_optimized_code
+
 standard_testfile
 
 set first_line [gdb_get_line_number "first-target-line"]

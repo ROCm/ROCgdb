@@ -36,9 +36,11 @@ __global__ void
 kernel ()
 {}
 
-static void
+static void __attribute__ ((noinline))
 child_after_fork ()
-{}
+{
+  asm volatile ("" ::: "memory");
+}
 
 int
 main ()
