@@ -1,0 +1,40 @@
+name: GDB Automerge
+on:
+  schedule: # runs every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  pull_request:
+    types: [closed]
+    branches: [amd-staging]
+
+concurrency:
+  group: gdb-automerge
+  cancel-in-progress: false
+
+jobs:
+  automerge-to-staging:
+    runs-on: ubuntu-latest
+    if: false
+    # Remove the above and uncomment below to activate:
+    # if: |
+    #   github.event_name != 'pull_request' ||
+    #   (github.event.pull_request.merged == true &&
+    #    (contains(github.event.pull_request.labels.*.name, 'merge-testing') ||
+    #     contains(github.event.pull_request.labels.*.name, 'merge-conflict')))
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      WORKSPACE: ${{ github.workspace }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+      - name: Configure git identity and credentials
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global credential.helper "!gh auth git-credential"
+      - name: Trigger Automerge Job
+        run: |
+          python3 .github/scripts/automerge.py
