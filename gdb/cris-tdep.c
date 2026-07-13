@@ -470,8 +470,7 @@ crisv32_single_step_through_delay (struct gdbarch *gdbarch,
 
 /* The instruction environment needed to find single-step breakpoints.  */
 
-typedef
-struct instruction_environment
+using inst_env_type = struct instruction_environment
 {
   unsigned long reg[NUM_GENREGS];
   unsigned long preg[NUM_SPECREGS];
@@ -486,7 +485,7 @@ struct instruction_environment
   int   xflag_found;
   int   disable_interrupt;
   enum bfd_endian byte_order;
-} inst_env_type;
+};
 
 /* Machine-dependencies in CRIS for opcodes.  */
 
