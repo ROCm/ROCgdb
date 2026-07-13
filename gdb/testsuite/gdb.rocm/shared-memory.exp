@@ -21,6 +21,10 @@ load_lib rocm.exp
 
 # Python support is required to use $_streq.
 require allow_hip_tests allow_python_tests
+# The debug behavior this test checks (inspecting device locals
+# and/or single-stepping) is not reliable on optimized device
+# code, so skip it for optimized builds.
+require no_optimized_code
 
 standard_testfile .cpp -size.cpp
 

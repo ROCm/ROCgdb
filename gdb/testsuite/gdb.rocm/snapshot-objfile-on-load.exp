@@ -66,10 +66,15 @@ with_rocm_gpu_lock {
 	gdb_test_no_output "set args $mode $hipmodule_path" "set args"
 
 	runto "printId" -allow-pending
+	# Frame #1 normally looks like "#1  0x... in kernel () at ...",
+	# but under -O1/-O2/-O3 the return address can fall on the
+	# entry instruction of kernel(), in which case GDB omits the
+	# leading "0x... in " prefix and prints just "#1  kernel () at
+	# ...".  Accept either form.
 	gdb_test "bt" \
 	    [multi_line \
 		 "#0\[ \t\]*printId \\(\\) at \[^\r\n\]+" \
-		 "#1\[ \t\]*${::hex} in kernel \\(\\) at \[^\r\n\]+"]
+		 "#1\[ \t\]*(${::hex} in )?kernel \\(\\) at \[^\r\n\]+"]
 
 	# Now force GDB to reload the shared library, to make sure it
 	# doesn't crash when it finds the corrupted code object image.

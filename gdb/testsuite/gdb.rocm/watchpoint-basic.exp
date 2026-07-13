@@ -273,6 +273,19 @@ proc_with_prefix test_non_write_watchpoint_rejected { wp_cmd } {
 # write watchpoints.  WP_CMD must either be "rwatch" or "awatch".
 
 proc_with_prefix test_non_write_watchpoint_before_runtime_load { wp_cmd } {
+    if {![no_optimized_code]} {
+	# Under optimization the HIP runtime is initialized before
+	# main() reaches "Break before runtime load", so amd-dbgapi
+	# is already attached and rejects the host-side read/access
+	# watchpoint at insert time.  Only this sub-test depends on
+	# the "before runtime load" premise; the other procs in this
+	# file still work under optimization, so skip just this
+	# sub-test rather than gating the whole file with
+	# "require no_optimized_code".
+	unsupported "$wp_cmd before runtime load (optimized code)"
+	return
+    }
+
     clean_restart $::testfile
 
     with_rocm_gpu_lock {

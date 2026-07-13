@@ -21,11 +21,15 @@
 #include <limits>
 #include <cstdlib>
 
-__device__ void
+/* The debugger sets a breakpoint on this function and uses an inferior
+   call to enable ALU exceptions before each kernel launches.  optnone
+   implies noinline (so the breakpoint reliably fires at each call site)
+   and keeps the body opaque to the optimizer, so IPO cannot prove the
+   call away and dead-strip the function.  */
+
+__device__ __attribute__ ((optnone)) void
 enable_alu_exceptions ()
 {
-  /* By default, ALU exceptions are not enabled.  Break here and use the
-     debugger to enable exceptions.  */
 }
 
 __global__ void
@@ -33,7 +37,7 @@ raise_invalid ()
 {
   enable_alu_exceptions ();
   volatile float a = -1;
-  float b = sqrt (a); /* Break here for invalid.  */
+  volatile float b = sqrt (a); /* Break here for invalid.  */
 }
 
 __global__ void
@@ -41,7 +45,7 @@ raise_denorm ()
 {
   enable_alu_exceptions ();
   volatile float inp = std::numeric_limits<float>::denorm_min ();
-  float b = inp * inp; /* Break here for denorm.  */
+  volatile float b = inp * inp; /* Break here for denorm.  */
 }
 
 __global__ void
@@ -49,7 +53,7 @@ raise_float_div0 ()
 {
   enable_alu_exceptions ();
   volatile float a = 1, b = 0;
-  float c = a / b; /* Break here for float_div0.  */
+  volatile float c = a / b; /* Break here for float_div0.  */
 }
 
 __global__ void
@@ -57,7 +61,7 @@ raise_overflow ()
 {
   enable_alu_exceptions ();
   volatile float max = std::numeric_limits<float>::max ();
-  float b = max * 2.0f; /* Break here for overflow.  */
+  volatile float b = max * 2.0f; /* Break here for overflow.  */
 }
 
 __global__ void
@@ -65,7 +69,7 @@ raise_underflow ()
 {
   enable_alu_exceptions ();
   volatile float min = std::numeric_limits<float>::min ();
-  float c = min * min; /* Break here for underflow.  */
+  volatile float c = min * min; /* Break here for underflow.  */
 }
 
 __global__ void
@@ -73,7 +77,7 @@ raise_inexact ()
 {
   enable_alu_exceptions ();
   volatile float f = 1.1f;
-  float r = f * f; /* Break here for inexact.  */
+  volatile float r = f * f; /* Break here for inexact.  */
 }
 
 __global__ void
@@ -81,7 +85,7 @@ raise_int_div0 ()
 {
   enable_alu_exceptions ();
   volatile int a = 1, b = 0;
-  int c = a / b; /* Break here for int_div0.  */
+  volatile int c = a / b; /* Break here for int_div0.  */
 }
 
 int
