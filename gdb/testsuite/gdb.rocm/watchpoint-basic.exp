@@ -26,14 +26,25 @@ if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
 }
 
 proc continue_to_watchpoint_hit { old_value new_value test } {
-    gdb_test "continue" \
-	[multi_line \
-	    "hit Hardware watchpoint $::decimal:.*" \
-	    "" \
-	    "Old value = $old_value" \
-	    "New value = $new_value" \
-	    ".*"] \
-	$test
+    set hit_re [multi_line \
+		   "hit Hardware watchpoint $::decimal:.*" \
+		   "" \
+		   "Old value = $old_value" \
+		   "New value = $new_value" \
+		   ".*"]
+
+    set ret false
+    gdb_test_multiple "continue" "$test" {
+	-re -wrap $hit_re {
+	    pass "$gdb_test_name"
+	    set ret true
+	}
+	-re -wrap ".*$::inferior_exited_re.*" {
+	    fail "$gdb_test_name"
+	    set ret false
+	}
+    }
+    return $ret
 }
 
 # Test inserting a watchpoint on a host variable before the runtime loads, and
@@ -78,6 +89,37 @@ proc_with_prefix test_host_watchpoint_after_runtime_load {} {
     }
 }
 
+# On some systems, KFD corrupts the watchpoint configurations
+# during the first dispatch's queue mapping.  This leads to
+# watchpoints not being triggered, if they were set before the
+# first dispatch.  As a result, those test scenarios run to the
+# end and exit prematurely.
+
+gdb_caching_proc target_has_xfail {} {
+    set xfail_arches {gfx1201}
+
+    set targets [find_amdgpu_devices]
+    if {[llength $targets] == 0} {
+	# Can't determine GPU type, don't set up xfail.  The test will probably
+	# not run correctly anyway.
+	return 0
+    }
+
+    # The test will run on GPU-0, so it should be the first of the list.
+    set target [lindex $targets 0]
+
+    return [expr {[lsearch -exact $xfail_arches $target] != -1}]
+}
+
+# This is used when dealing with the first watchpoints that are
+# set before the first dispatch.
+
+proc maybe_xfail {} {
+    if {[target_has_xfail]} {
+	setup_xfail "*-*-*" "watchpoint configuration corruption in kfd."
+    }
+}
+
 # Test inserting a watchpoint before the kernel is launched, then hitting
 # it when the kernel runs.
 
@@ -93,7 +135,10 @@ proc_with_prefix test_watchpoint_before_kernel {} {
 	    "Hardware watchpoint $::decimal: .*" \
 	    "set watchpoint on *ptr1"
 
-	continue_to_watchpoint_hit 0 10 "continue to watchpoint hit 1"
+	maybe_xfail
+	if {![continue_to_watchpoint_hit 0 10 "continue to watchpoint hit 1"]} {
+	    return
+	}
 	continue_to_watchpoint_hit 10 30 "continue to watchpoint hit 2"
 	continue_to_watchpoint_hit 30 40 "continue to watchpoint hit 3"
 	continue_to_watchpoint_hit 40 60 "continue to watchpoint hit 4"
@@ -145,7 +190,10 @@ proc_with_prefix test_remove_watchpoint_inside_kernel {} {
 	    "Hardware watchpoint $::decimal: .*" \
 	    "set watchpoint"
 
-	continue_to_watchpoint_hit 0 10 "continue to watchpoint hit"
+	maybe_xfail
+	if {![continue_to_watchpoint_hit 0 10 "continue to watchpoint hit"]} {
+	    return
+	}
 	gdb_test "with confirm off -- delete" "" "delete all breakpoints"
 
 	gdb_continue_to_end "" continue 1
@@ -170,7 +218,10 @@ proc_with_prefix test_multiple_watchpoints {} {
 	    "Hardware watchpoint $::decimal: .*" \
 	    "set watchpoint on *ptr2"
 
-	continue_to_watchpoint_hit 0 10 "continue to watchpoint hit 1"
+	maybe_xfail
+	if {![continue_to_watchpoint_hit 0 10 "continue to watchpoint hit 1"]} {
+	    return
+	}
 	continue_to_watchpoint_hit 0 100 "continue to watchpoint hit 2"
 	continue_to_watchpoint_hit 10 30 "continue to watchpoint hit 3"
 	continue_to_watchpoint_hit 100 300 "continue to watchpoint hit 4"
@@ -210,7 +261,10 @@ proc_with_prefix test_disable_enable_watchpoint {} {
 	    }
 	}
 
-	continue_to_watchpoint_hit 0 10 "continue to watchpoint hit 1"
+	maybe_xfail
+	if {![continue_to_watchpoint_hit 0 10 "continue to watchpoint hit 1"]} {
+	    return
+	}
 
 	gdb_test_no_output "disable $wp1_num" "disable watchpoint"
 
