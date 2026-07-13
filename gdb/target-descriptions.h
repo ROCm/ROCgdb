@@ -93,8 +93,8 @@ struct tdesc_arch_data_deleter
 
 /* A unique pointer specialization that holds a target_desc.  */
 
-typedef std::unique_ptr<tdesc_arch_data, tdesc_arch_data_deleter>
-  tdesc_arch_data_up;
+using tdesc_arch_data_up
+  = std::unique_ptr<tdesc_arch_data, tdesc_arch_data_deleter>;
 
 /* Update GDBARCH to use the TARGET_DESC for registers.  TARGET_DESC
    may be GDBARCH's target description or (if GDBARCH does not have

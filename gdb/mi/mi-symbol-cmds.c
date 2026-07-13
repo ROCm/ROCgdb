@@ -241,8 +241,8 @@ mi_info_functions_or_variables (domain_search_flags kind,
 }
 
 /* Type for an iterator over a vector of module_symbol_search results.  */
-typedef std::vector<module_symbol_search>::const_iterator
-	module_symbol_search_iterator;
+using module_symbol_search_iterator
+  = std::vector<module_symbol_search>::const_iterator;
 
 /* Helper for mi_info_module_functions_or_variables.  Display the results
    from ITER up to END or until we find a symbol that is in a different

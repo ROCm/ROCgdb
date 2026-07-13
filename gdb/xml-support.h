@@ -142,9 +142,9 @@ enum gdb_xml_element_flag
    fixed offsets can be used to find any non-optional attributes as
    long as no optional attributes precede them.  */
 
-typedef void (gdb_xml_element_start_handler)
-     (struct gdb_xml_parser *parser, const struct gdb_xml_element *element,
-      void *user_data, std::vector<gdb_xml_value> &attributes);
+using gdb_xml_element_start_handler
+  = void (struct gdb_xml_parser *parser, const struct gdb_xml_element *element,
+	  void *user_data, std::vector<gdb_xml_value> &attributes);
 
 /* A handler called at the end of an element.
 

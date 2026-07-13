@@ -92,8 +92,8 @@ struct infcall_suspend_state_deleter
 };
 
 /* A unique_ptr specialization for infcall_suspend_state.  */
-typedef std::unique_ptr<infcall_suspend_state, infcall_suspend_state_deleter>
-    infcall_suspend_state_up;
+using infcall_suspend_state_up
+  = std::unique_ptr<infcall_suspend_state, infcall_suspend_state_deleter>;
 
 extern infcall_suspend_state_up save_infcall_suspend_state ();
 
@@ -108,8 +108,8 @@ struct infcall_control_state_deleter
 };
 
 /* A unique_ptr specialization for infcall_control_state.  */
-typedef std::unique_ptr<infcall_control_state, infcall_control_state_deleter>
-    infcall_control_state_up;
+using infcall_control_state_up
+  = std::unique_ptr<infcall_control_state, infcall_control_state_deleter>;
 
 extern infcall_control_state_up save_infcall_control_state ();
 
