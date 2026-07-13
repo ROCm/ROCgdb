@@ -133,53 +133,53 @@ static int sol_thread_active = 0;
 /* Types of the libthread_db functions.  */
 
 using td_log_ftype = void (const int on_off);
-typedef td_err_e (td_ta_new_ftype)(const struct ps_prochandle *ph_p,
-				   td_thragent_t **ta_pp);
+using td_ta_new_ftype = td_err_e (const struct ps_prochandle *ph_p,
+				  td_thragent_t **ta_pp);
 using td_ta_delete_ftype = td_err_e (td_thragent_t *ta_p);
 using td_init_ftype = td_err_e (void);
-typedef td_err_e (td_ta_get_ph_ftype)(const td_thragent_t *ta_p,
-				      struct ps_prochandle **ph_pp);
-typedef td_err_e (td_ta_get_nthreads_ftype)(const td_thragent_t *ta_p,
-					    int *nthread_p);
-typedef td_err_e (td_ta_tsd_iter_ftype)(const td_thragent_t *ta_p,
-					td_key_iter_f *cb, void *cbdata_p);
-typedef td_err_e (td_ta_thr_iter_ftype)(const td_thragent_t *ta_p,
-					td_thr_iter_f *cb, void *cbdata_p,
-					td_thr_state_e state, int ti_pri,
-					sigset_t *ti_sigmask_p,
-					unsigned ti_user_flags);
+using td_ta_get_ph_ftype = td_err_e (const td_thragent_t *ta_p,
+				     struct ps_prochandle **ph_pp);
+using td_ta_get_nthreads_ftype = td_err_e (const td_thragent_t *ta_p,
+					   int *nthread_p);
+using td_ta_tsd_iter_ftype = td_err_e (const td_thragent_t *ta_p,
+				       td_key_iter_f *cb, void *cbdata_p);
+using td_ta_thr_iter_ftype = td_err_e (const td_thragent_t *ta_p,
+				       td_thr_iter_f *cb, void *cbdata_p,
+				       td_thr_state_e state, int ti_pri,
+				       sigset_t *ti_sigmask_p,
+				       unsigned ti_user_flags);
 using td_thr_validate_ftype = td_err_e (const td_thrhandle_t *th_p);
-typedef td_err_e (td_thr_tsd_ftype)(const td_thrhandle_t * th_p,
-				    const thread_key_t key, void **data_pp);
-typedef td_err_e (td_thr_get_info_ftype)(const td_thrhandle_t *th_p,
-					 td_thrinfo_t *ti_p);
-typedef td_err_e (td_thr_getfpregs_ftype)(const td_thrhandle_t *th_p,
-					  prfpregset_t *fpregset);
-typedef td_err_e (td_thr_getxregsize_ftype)(const td_thrhandle_t *th_p,
-					    int *xregsize);
-typedef td_err_e (td_thr_getxregs_ftype)(const td_thrhandle_t *th_p,
-					 const caddr_t xregset);
-typedef td_err_e (td_thr_sigsetmask_ftype)(const td_thrhandle_t *th_p,
-					   const sigset_t ti_sigmask);
-typedef td_err_e (td_thr_setprio_ftype)(const td_thrhandle_t *th_p,
-					const int ti_pri);
-typedef td_err_e (td_thr_setsigpending_ftype)(const td_thrhandle_t *th_p,
-					      const uchar_t ti_pending_flag,
-					      const sigset_t ti_pending);
-typedef td_err_e (td_thr_setfpregs_ftype)(const td_thrhandle_t *th_p,
-					  const prfpregset_t *fpregset);
-typedef td_err_e (td_thr_setxregs_ftype)(const td_thrhandle_t *th_p,
-					 const caddr_t xregset);
-typedef td_err_e (td_ta_map_id2thr_ftype)(const td_thragent_t *ta_p,
-					  thread_t tid,
+using td_thr_tsd_ftype = td_err_e (const td_thrhandle_t * th_p,
+				   const thread_key_t key, void **data_pp);
+using td_thr_get_info_ftype = td_err_e (const td_thrhandle_t *th_p,
+					td_thrinfo_t *ti_p);
+using td_thr_getfpregs_ftype = td_err_e (const td_thrhandle_t *th_p,
+					 prfpregset_t *fpregset);
+using td_thr_getxregsize_ftype = td_err_e (const td_thrhandle_t *th_p,
+					   int *xregsize);
+using td_thr_getxregs_ftype = td_err_e (const td_thrhandle_t *th_p,
+					const caddr_t xregset);
+using td_thr_sigsetmask_ftype = td_err_e (const td_thrhandle_t *th_p,
+					  const sigset_t ti_sigmask);
+using td_thr_setprio_ftype = td_err_e (const td_thrhandle_t *th_p,
+				       const int ti_pri);
+using td_thr_setsigpending_ftype
+  = td_err_e (const td_thrhandle_t *th_p, const uchar_t ti_pending_flag,
+	      const sigset_t ti_pending);
+using td_thr_setfpregs_ftype = td_err_e (const td_thrhandle_t *th_p,
+					 const prfpregset_t *fpregset);
+using td_thr_setxregs_ftype = td_err_e (const td_thrhandle_t *th_p,
+					const caddr_t xregset);
+using td_ta_map_id2thr_ftype = td_err_e (const td_thragent_t *ta_p,
+					 thread_t tid,
+					 td_thrhandle_t *th_p);
+using td_ta_map_lwp2thr_ftype = td_err_e (const td_thragent_t *ta_p,
+					  lwpid_t lwpid,
 					  td_thrhandle_t *th_p);
-typedef td_err_e (td_ta_map_lwp2thr_ftype)(const td_thragent_t *ta_p,
-					   lwpid_t lwpid,
-					   td_thrhandle_t *th_p);
-typedef td_err_e (td_thr_getgregs_ftype)(const td_thrhandle_t *th_p,
-					 prgregset_t regset);
-typedef td_err_e (td_thr_setgregs_ftype)(const td_thrhandle_t *th_p,
-					 const prgregset_t regset);
+using td_thr_getgregs_ftype = td_err_e (const td_thrhandle_t *th_p,
+					prgregset_t regset);
+using td_thr_setgregs_ftype = td_err_e (const td_thrhandle_t *th_p,
+					const prgregset_t regset);
 
 /* Pointers to routines from libthread_db resolved by dlopen().  */
 

@@ -39,36 +39,36 @@
 
 using td_init_ftype = td_err_e (void);
 
-typedef td_err_e (td_ta_new_ftype) (struct ps_prochandle * ps,
-				    td_thragent_t **ta);
+using td_ta_new_ftype = td_err_e (struct ps_prochandle * ps,
+				  td_thragent_t **ta);
 using td_ta_delete_ftype = td_err_e (td_thragent_t *ta_p);
-typedef td_err_e (td_ta_map_lwp2thr_ftype) (const td_thragent_t *ta,
-					    lwpid_t lwpid, td_thrhandle_t *th);
-typedef td_err_e (td_ta_thr_iter_ftype) (const td_thragent_t *ta,
-					 td_thr_iter_f *callback, void *cbdata_p,
-					 td_thr_state_e state, int ti_pri,
-					 sigset_t *ti_sigmask_p,
-					 unsigned int ti_user_flags);
-typedef td_err_e (td_ta_event_addr_ftype) (const td_thragent_t *ta,
-					   td_event_e event, td_notify_t *ptr);
-typedef td_err_e (td_ta_set_event_ftype) (const td_thragent_t *ta,
+using td_ta_map_lwp2thr_ftype = td_err_e (const td_thragent_t *ta,
+					  lwpid_t lwpid, td_thrhandle_t *th);
+using td_ta_thr_iter_ftype = td_err_e (const td_thragent_t *ta,
+				       td_thr_iter_f *callback, void *cbdata_p,
+				       td_thr_state_e state, int ti_pri,
+				       sigset_t *ti_sigmask_p,
+				       unsigned int ti_user_flags);
+using td_ta_event_addr_ftype = td_err_e (const td_thragent_t *ta,
+					 td_event_e event, td_notify_t *ptr);
+using td_ta_set_event_ftype = td_err_e (const td_thragent_t *ta,
+					td_thr_events_t *event);
+using td_ta_clear_event_ftype = td_err_e (const td_thragent_t *ta,
 					  td_thr_events_t *event);
-typedef td_err_e (td_ta_clear_event_ftype) (const td_thragent_t *ta,
-					    td_thr_events_t *event);
-typedef td_err_e (td_ta_event_getmsg_ftype) (const td_thragent_t *ta,
-					     td_event_msg_t *msg);
+using td_ta_event_getmsg_ftype = td_err_e (const td_thragent_t *ta,
+					   td_event_msg_t *msg);
 
-typedef td_err_e (td_thr_get_info_ftype) (const td_thrhandle_t *th,
-					  td_thrinfo_t *infop);
-typedef td_err_e (td_thr_event_enable_ftype) (const td_thrhandle_t *th,
-					      int event);
+using td_thr_get_info_ftype = td_err_e (const td_thrhandle_t *th,
+					td_thrinfo_t *infop);
+using td_thr_event_enable_ftype = td_err_e (const td_thrhandle_t *th,
+					    int event);
 
-typedef td_err_e (td_thr_tls_get_addr_ftype) (const td_thrhandle_t *th,
-					      psaddr_t map_address,
-					      size_t offset, psaddr_t *address);
-typedef td_err_e (td_thr_tlsbase_ftype) (const td_thrhandle_t *th,
-					 unsigned long int modid,
-					 psaddr_t *base);
+using td_thr_tls_get_addr_ftype = td_err_e (const td_thrhandle_t *th,
+					    psaddr_t map_address,
+					    size_t offset, psaddr_t *address);
+using td_thr_tlsbase_ftype = td_err_e (const td_thrhandle_t *th,
+				       unsigned long int modid,
+				       psaddr_t *base);
 
 using td_symbol_list_ftype = const char ** (void);
 using td_ta_delete_ftype = td_err_e (td_thragent_t *);

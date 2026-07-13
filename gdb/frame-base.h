@@ -42,18 +42,18 @@ struct regcache;
 
 /* A generic base address.  */
 
-typedef CORE_ADDR (frame_this_base_ftype) (const frame_info_ptr &this_frame,
-					   void **this_base_cache);
+using frame_this_base_ftype = CORE_ADDR (const frame_info_ptr &this_frame,
+					 void **this_base_cache);
 
 /* The base address of the frame's local variables.  */
 
-typedef CORE_ADDR (frame_this_locals_ftype) (const frame_info_ptr &this_frame,
-					     void **this_base_cache);
+using frame_this_locals_ftype = CORE_ADDR (const frame_info_ptr &this_frame,
+					   void **this_base_cache);
 
 /* The base address of the frame's arguments / parameters.  */
 
-typedef CORE_ADDR (frame_this_args_ftype) (const frame_info_ptr &this_frame,
-					   void **this_base_cache);
+using frame_this_args_ftype = CORE_ADDR (const frame_info_ptr &this_frame,
+					 void **this_base_cache);
 
 struct frame_base
 {

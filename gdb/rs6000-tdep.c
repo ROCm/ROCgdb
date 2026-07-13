@@ -822,8 +822,8 @@ rs6000_fetch_pointer_argument (const frame_info_ptr &frame, int argi,
 constexpr gdb_byte big_breakpoint[] = { 0x7f, 0xe0, 0x00, 0x08 };
 constexpr gdb_byte little_breakpoint[] = { 0x08, 0x00, 0xe0, 0x7f };
 
-typedef BP_MANIPULATION_ENDIAN (little_breakpoint, big_breakpoint)
-  rs6000_breakpoint;
+using rs6000_breakpoint
+  = BP_MANIPULATION_ENDIAN (little_breakpoint, big_breakpoint);
 
 /* Instruction masks for displaced stepping.  */
 #define OP_MASK 0xfc000000

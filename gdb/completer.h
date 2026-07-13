@@ -26,7 +26,7 @@ struct match_list_displayer;
 
 using mld_crlf_ftype = void (const struct match_list_displayer *);
 using mld_putch_ftype = void (const struct match_list_displayer *, int);
-typedef void mld_puts_ftype (const struct match_list_displayer *,
+using mld_puts_ftype = void (const struct match_list_displayer *,
 			     const char *);
 using mld_flush_ftype = void (const struct match_list_displayer *);
 using mld_erase_entire_line_ftype = void (const struct match_list_displayer *);

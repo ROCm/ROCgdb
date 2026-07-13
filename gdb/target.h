@@ -237,9 +237,8 @@ enum target_xfer_status
 extern const char *
   target_xfer_status_to_string (enum target_xfer_status status);
 
-typedef enum target_xfer_status
-  target_xfer_partial_ftype (struct target_ops *ops,
-			     enum target_object object,
+using target_xfer_partial_ftype
+  = enum target_xfer_status (struct target_ops *ops, enum target_object object,
 			     const char *annex,
 			     gdb_byte *readbuf,
 			     const gdb_byte *writebuf,

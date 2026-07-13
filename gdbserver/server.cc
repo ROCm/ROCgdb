@@ -3129,8 +3129,8 @@ static void gdb_wants_all_threads_stopped (void);
 static void resume (struct thread_resume *actions, size_t n);
 
 /* The callback that is passed to visit_actioned_threads.  */
-typedef int (visit_actioned_threads_callback_ftype)
-  (const struct thread_resume *, thread_info *);
+using visit_actioned_threads_callback_ftype
+  = int (const struct thread_resume *, thread_info *);
 
 /* Call CALLBACK for any thread to which ACTIONS applies to.  Returns
    true if CALLBACK returns true.  Returns false if no matching thread

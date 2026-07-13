@@ -507,7 +507,7 @@ extern struct cmd_list_element *add_abbrev_prefix_cmd (const char *,
 						       struct cmd_list_element
 						       **);
 
-typedef void cmd_func_ftype (const char *args, int from_tty,
+using cmd_func_ftype = void (const char *args, int from_tty,
 			     cmd_list_element *c);
 
 /* A completion routine.  Add possible completions to tracker.
@@ -519,14 +519,14 @@ typedef void cmd_func_ftype (const char *args, int from_tty,
    relative to this position.  For example, suppose TEXT is "foo" and
    we want to complete to "foobar".  If WORD is "oo", return "oobar";
    if WORD is "baz/foo", return "baz/foobar".  */
-typedef void completer_ftype (struct cmd_list_element *,
+using completer_ftype = void (struct cmd_list_element *,
 			      completion_tracker &tracker,
 			      const char *text, const char *word);
 
 /* Same, but for set_cmd_completer_handle_brkchars.  */
-typedef void completer_handle_brkchars_ftype (struct cmd_list_element *,
-					      completion_tracker &tracker,
-					      const char *text, const char *word);
+using completer_handle_brkchars_ftype
+  = void (struct cmd_list_element *, completion_tracker &tracker,
+	  const char *text, const char *word);
 
 extern void set_cmd_completer (struct cmd_list_element *, completer_ftype *);
 
@@ -668,10 +668,10 @@ extern void help_list (struct cmd_list_element *, const char *,
 		       command_classes, struct ui_file *);
 
 /* Method for show a set/show variable's VALUE on FILE.  */
-typedef void (show_value_ftype) (struct ui_file *file,
-				 int from_tty,
-				 struct cmd_list_element *cmd,
-				 const char *value);
+using show_value_ftype = void (struct ui_file *file,
+			       int from_tty,
+			       struct cmd_list_element *cmd,
+			       const char *value);
 
 /* Various sets of extra literals accepted.  */
 extern const literal_def integer_unlimited_literals[];

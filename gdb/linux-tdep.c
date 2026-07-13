@@ -1439,8 +1439,8 @@ using linux_find_memory_region_ftype
 			     bool /* hole */,
 			     const std::string & /* filename */)>;
 
-typedef bool linux_dump_mapping_p_ftype (filter_flags filterflags,
-					 const smaps_data &map);
+using linux_dump_mapping_p_ftype
+  = bool (filter_flags filterflags, const smaps_data &map);
 
 /* Parse a KEY value out of a /proc/pid/smaps line.  KEYWORD is the
    keyword that was extracted out of the LINE we're considering.

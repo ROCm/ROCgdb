@@ -391,10 +391,9 @@ private:
    LOOKUP_NAME.  E.g., in C++, in linespec/wild mode, if the symbol is
    "foo::function()" and LOOKUP_NAME is "function(", MATCH_FOR_LCD
    points to "function()" inside SYMBOL_SEARCH_NAME.  */
-typedef bool (symbol_name_matcher_ftype)
-  (const char *symbol_search_name,
-   const lookup_name_info &lookup_name,
-   completion_match_result *comp_match_res);
+using symbol_name_matcher_ftype
+  = bool (const char *symbol_search_name, const lookup_name_info &lookup_name,
+	  completion_match_result *comp_match_res);
 
 /* Some of the structures in this file are space critical.
    The space-critical structures are:
