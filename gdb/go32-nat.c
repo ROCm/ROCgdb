@@ -121,7 +121,7 @@
 #if __DJGPP_MINOR__ < 3
 /* This code will be provided from DJGPP 2.03 on.  Until then I code it
    here.  */
-typedef struct
+struct NPXREG
   {
     unsigned short sig0;
     unsigned short sig1;
@@ -129,10 +129,9 @@ typedef struct
     unsigned short sig3;
     unsigned short exponent:15;
     unsigned short sign:1;
-  }
-NPXREG;
+  };
 
-typedef struct
+struct NPX
   {
     unsigned int control;
     unsigned int status;
@@ -142,8 +141,7 @@ typedef struct
     unsigned int dataptr;
     unsigned int datasel;
     NPXREG reg[8];
-  }
-NPX;
+  };
 
 static NPX npx;
 
@@ -184,10 +182,10 @@ load_npx (void)
 }
 /* ------------------------------------------------------------------------- */
 /* Stubs for the missing redirection functions.  */
-typedef struct {
+struct cmdline_t {
   char *command;
   int redirected;
-} cmdline_t;
+};
 
 void
 redir_cmdline_delete (cmdline_t *ptr)

@@ -350,7 +350,7 @@ using frv_elf_greg_t = unsigned char[4];
 using frv_elf_gregset_t = struct { frv_elf_greg_t reg[FRV_ELF_NGREG]; };
 
 using frv_elf_fpreg_t = unsigned char[4];
-typedef struct
+struct frv_elf_fpregset_t
 {
   frv_elf_fpreg_t fr[64];
   frv_elf_fpreg_t fner[2];
@@ -358,7 +358,7 @@ typedef struct
   frv_elf_fpreg_t acc[8];
   unsigned char accg[8];
   frv_elf_fpreg_t fsr[1];
-} frv_elf_fpregset_t;
+};
 
 /* Register maps.  */
 

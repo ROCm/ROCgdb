@@ -40,11 +40,11 @@ using mn10300_elf_greg_t = gdb_byte  [4];
 using mn10300_elf_gregset_t = mn10300_elf_greg_t[MN10300_ELF_NGREG];
 
 using mn10300_elf_fpreg_t = gdb_byte  [4];
-typedef struct
+struct mn10300_elf_fpregset_t
 {
   mn10300_elf_fpreg_t fpregs[MN10300_ELF_NFPREG];
   gdb_byte    fpcr[4];
-} mn10300_elf_fpregset_t;
+};
 
 /* elf_gregset_t register indices stolen from include/asm-mn10300/ptrace.h.  */
 #define MN10300_ELF_GREGSET_T_REG_INDEX_A3	0
