@@ -2769,8 +2769,8 @@ rs6000_value_from_register (gdbarch *gdbarch, type *type, int regnum,
 
  /* The type of a function that moves the value of REG between CACHE
     or BUF --- in either direction.  */
-typedef enum register_status (*move_ev_register_func) (struct regcache *,
-						       int, void *);
+using move_ev_register_func = enum register_status (*) (struct regcache *,
+							int, void *);
 
 /* Move SPE vector register values between a 64-bit buffer and the two
    32-bit raw register halves in a regcache.  This function handles

@@ -3984,8 +3984,8 @@ delete_thread_infrun_breakpoints (struct thread_info *tp)
    just stopped.  In all-stop, that's all the non-exited threads; in
    non-stop, that's the current thread, only.  */
 
-typedef void (*for_each_just_stopped_thread_callback_func)
-  (struct thread_info *tp);
+using for_each_just_stopped_thread_callback_func
+  = void (*) (struct thread_info *tp);
 
 static void
 for_each_just_stopped_thread (for_each_just_stopped_thread_callback_func func)

@@ -585,8 +585,8 @@ enum tracepoint_type
   fast_tracepoint,
 };
 
-typedef enum eval_result_type (*condfn) (unsigned char *,
-					 ULONGEST *);
+using condfn = enum eval_result_type (*) (unsigned char *,
+					  ULONGEST *);
 
 /* The definition of a tracepoint.  */
 

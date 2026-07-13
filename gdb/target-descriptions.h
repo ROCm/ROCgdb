@@ -80,9 +80,9 @@ void set_tdesc_pseudo_register_reggroup_p
    appear in the target description.  This means all unknown registers
    within a single feature will be called one after another.  */
 
-typedef int (*tdesc_unknown_register_ftype)
-	(struct gdbarch *gdbarch, tdesc_feature *feature,
-	 const char *reg_name, int possible_regnum);
+using tdesc_unknown_register_ftype
+  = int (*) (struct gdbarch *gdbarch, tdesc_feature *feature,
+	     const char *reg_name, int possible_regnum);
 
 /* A deleter adapter for a target arch data.  */
 
