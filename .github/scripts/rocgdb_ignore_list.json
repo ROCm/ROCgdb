@@ -1,5 +1,6 @@
 {
   "Generic": [
+    "gdb.rocm/deep-stack.exp",
     "gdb.rocm/lane-execution.exp",
     "gdb.rocm/multi-inferior-fork.exp",
     "gdb.rocm/multi-inferior-gpu.exp"
