@@ -10,7 +10,6 @@ on:
         default: false
   pull_request:
     types: [closed]
-    branches: [amd-staging]
 
 concurrency:
   group: gdb-automerge
@@ -19,13 +18,12 @@ concurrency:
 jobs:
   automerge-to-staging:
     runs-on: ubuntu-latest
-    if: false
-    # Remove the above and uncomment below to activate:
-    # if: |
-    #   github.event_name != 'pull_request' ||
-    #   (github.event.pull_request.merged == true &&
-    #    (contains(github.event.pull_request.labels.*.name, 'merge-testing') ||
-    #     contains(github.event.pull_request.labels.*.name, 'merge-conflict')))
+    if: |
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.base.ref == vars.AUTOMERGE_TARGET_BRANCH &&
+       (contains(github.event.pull_request.labels.*.name, 'merge-testing') ||
+        contains(github.event.pull_request.labels.*.name, 'merge-conflict')))
     permissions:
       contents: write
       pull-requests: write
