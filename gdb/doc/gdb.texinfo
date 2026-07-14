@@ -3844,14 +3844,10 @@ program's ``main thread'' even if the program is not multi-threaded.
 
 @vindex $_thread@r{, convenience variable}
 @vindex $_gthread@r{, convenience variable}
-@vindex $_thread_systag@r{, convenience variable}
-@vindex $_thread_name@r{, convenience variable}
 @vindex $_inferior_thread_count@r{, convenience variable}
-The debugger convenience variables @samp{$_thread}, @samp{$_gthread},
-@samp{$_thread_systag}, and @samp{$_thread_name} contain,
-respectively, the per-inferior thread number, the global thread
-number, the target system's thread identifier (@var{systag}) string,
-and the thread name string of the current thread.  You may find this
+The debugger convenience variables @samp{$_thread} and
+@samp{$_gthread} contain, respectively, the per-inferior thread number
+and the global thread number of the current thread.  You may find this
 useful in writing breakpoint conditional expressions, command scripts,
 and so forth.  The convenience variable @samp{$_inferior_thread_count}
 contains the number of live threads in the current inferior.
@@ -13043,14 +13039,6 @@ The thread number of the current thread.  @xref{thread numbers}.
 @item $_gthread
 The global number of the current thread.  @xref{global thread number}.
 
-@item $_thread_systag
-The target system's thread identifier (@var{systag}) string of the
-current thread.  @xref{target system thread identifier}.
-
-@item $_thread_name
-The thread name string of the current thread, or the empty string if
-no name has been assigned.  @xref{thread name}.
-
 @item $_inferior_thread_count
 The number of live threads in the current inferior.  @xref{Threads}.
 
@@ -13080,32 +13068,6 @@ and @code{$_shell_exitsignal} according to the exit status of the last
 launched command.  These variables are set and used similarly to
 the variables @code{$_exitcode} and @code{$_exitsignal}.
 
-@item $_agent
-The per-inferior heterogeneous agent number of the current thread, or 0
-if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
-Debugging}.
-
-@item $_agent_systag
-The target system's heterogeneous agent identifier (@var{agent_systag}) string
-of the heterogeneous agent of the current thread.
-
-@item $_queue
-The per-inferior heterogeneous queue number of the current thread, or 0
-if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
-Debugging}.
-
-@item $_queue_systag
-The target system's heterogeneous queue identifier (@var{queue_systag}) string
-of the heterogeneous queue of the current thread.
-
-@item $_dispatch
-The per-inferior heterogeneous dispatch number of the current thread, or
-0 if not associated with a heterogeneous dispatch.  @xref{Heterogeneous
-Debugging}.
-
-@item $_dispatch_systag
-The target system's heterogeneous dispatch identifier (@var{disatch_systag})
-string of the heterogeneous dispatch of the current thread.
 
 @item $_lane
 The per-thread lane index of the current heterogeneous lane of the
@@ -13118,16 +13080,6 @@ lanes which have not been assigned to a heterogeneous work-group.
 
 @c FIXME-implementors!!  Should there be a @code{$_lane_active}
 @c convenience variable?
-
-@item $_lane_systag
-The target system's heterogeneous lane identifier (@var{lane_systag}) string of
-the current heterogeneous lane in the current thread.  @xref{target system lane
-identifier}.
-
-@item $_lane_name
-The heterogeneous lane name string of the current heterogeneous lane, or
-the empty string if no name has been assigned by the @samp{lane name}
-command.  @xref{Heterogeneous Debugging}.
 
 @item $_dispatch_pos
 The heterogeneous dispatch position string of the current thread, or the
@@ -13496,55 +13448,6 @@ the complex number @var{value}.
 The type of the imaginary or real part depends on the type of the
 complex number, e.g., using @code{$_cimag} on a @code{float complex}
 will return an imaginary part of type @code{float}.
-
-@item $_thread_find(@var{regex})
-@findex $_thread_find@r{, convenience function}
-Searches for threads whose name or @var{systag} matches the supplied
-regular expression.  The syntax of the regular expression is that
-specified by Python's regular expression support.
-
-Returns a string that is the space separated list of per-inferior
-thread numbers of the found threads.  If debugging multiple inferiors,
-the thread numbers are qualified with the inferior number.  If no
-threads are found, the empty string is returned.  The string can be
-used in commands that accept a thread ID list.  @xref{thread ID
-list}.
-
-@c FIXME-implementors!!  Should this convenience function return a
-@c tuple rather than a string?
-
-For example, the following command lists all threads that are part of
-the heterogeneous work-group with dispatch position @samp{[1,2,3]}
-(@pxref{Heterogeneous Debugging}):
-
-@smallexample
-(@value{GDBP}) info threads $_thread_find ("[1,2,3]")
-@end smallexample
-
-@item $_thread_find_first_gid(@var{regex})
-@findex $_thread_find_first_gid@r{, convenience function}
-Similar to the @code{$_thread_find} convenience function, except it
-returns a number that is the global thread number of one of the
-threads found, or 0 if no threads were found.  The number can be used
-in commands that accept a global thread number.  @xref{global thread
-number}.
-
-@c FIXME-implementors!!  If @code{$_thread_find} returns a tuple then
-@c this convenience function may not be necessary as one can simply
-@c add @samp{[0]} to access the first element of a tuple.
-
-For example, the following command sets the current thread to one of
-the threads that are part of the heterogeneous work-group with
-dispatch position @samp{[1,2,3]} (@pxref{Heterogeneous Debugging}):
-
-@smallexample
-(@value{GDBP}) thread -gid $_thread_find_first_gid ("[1,2,3]")
-@end smallexample
-
-@item $_lane_find(@var{regex})
-@itemx $_lane_find_first_gid(@var{regex})
-Similar to @samp{$_thread_find} and @samp{$_thread_find_first_gid}
-except for heterogeneous lanes.  @xref{Heterogeneous Debugging}.
 
 @end table
 
@@ -23844,11 +23747,6 @@ entities
 @item @code{info lanes}, @code{lane}, commands support source language
 threads of execution that are mapped to SIMD-like lanes of a thread
 
-@item @code{$_thread_find}, @code{$_thread_find_first_gid},
-@code{$_lane_find}, @code{$_lane_find_first_gid} debugger convenience
-functions can find threads and heterogeneous lanes associated with
-specific heterogeneous entities
-
 @item @code{maint print address-spaces}, command together with address
 qualifiers supports multiple address spaces
 
@@ -23967,21 +23865,7 @@ expressions, command scripts, and so forth.
 
 @item $_thread
 @itemx $_gthread
-@itemx $_thread_systag
-@itemx $_thread_name
 @xref{Convenience Vars,,Convenience Variables}.
-
-@vindex $_agent@r{, convenience variable}
-@vindex $_queue@r{, convenience variable}
-@vindex $_dispatch@r{, convenience variable}
-@item $_agent
-@itemx $_queue
-@itemx $_dispatch
-There are debugger convenience variables that contain the number of
-each heterogeneous entity associated with the current thread if it was
-created by a heterogeneous dispatch, or 0 otherwise.  @code{$_agent},
-@code{$_queue}, and @code{$_dispatch} contain the corresponding
-per-inferior heterogeneous entity number.
 
 @vindex $_lane@r{, convenience variable}
 @item $_lane
@@ -23997,12 +23881,6 @@ heterogeneous dispatch, or the empty string otherwise.  The format
 varies depending on the heterogeneous system and target architecture
 of the heterogeneous agent.  @xref{Architectures}.
 
-@vindex $_lane_name@r{, convenience variable}
-@item $_lane_name
-The heterogeneous lane name string of the current heterogeneous lane, or
-the empty string if no name has been assigned by the @code{lane name}
-command.
-
 @vindex $_thread_workgroup_pos@r{, convenience variable}
 @vindex $_lane_workgroup_pos@r{, convenience variable}
 @item $_thread_workgroup_pos
@@ -24013,83 +23891,6 @@ is was created by a heterogeneous dispatch, or the empty string
 otherwise.  The format varies depending on the heterogeneous system
 and target architecture of the heterogeneous agent.
 @xref{Architectures}.
-
-@vindex $_lane_systag@r{, convenience variable}
-@item $_lane_systag
-The target system's heterogeneous lane identifier (@var{lane_systag})
-string of the current heterogeneous lane.  @xref{target system lane
-identifier}.
-
-@vindex $_agent_systag@r{, convenience variable}
-The target system's heterogeneous agent identifier (@var{agent_systag}) string
-of the heterogeneous agent of the current thread.
-
-@vindex $_queue_systag@r{, convenience variable}
-The target system's heterogeneous queue identifier (@var{queue_systag}) string
-of the heterogeneous queue of the current thread.
-
-@vindex $_dispatch_systag@r{, convenience variable}
-@item $_dispatch_systag
-The target system's heterogeneous dispatch identifier (@var{dispatch_systag})
-string of the heterogeneous dispatch of the current thread.
-
-@end table
-
-The following debugger convenience functions (@pxref{Convenience
-Funs,,Convenience Functions}) are related to heterogeneous debugging.
-Given the very large number of threads on heterogeneous systems, these
-may be very useful.  They allow threads or thread lists to be
-specified based on the target system's thread identifier
-(@var{systag}) or thread name, and allow heterogeneous lanes or
-heterogeneous lane lists to be specified based on the target system's
-heterogeneous lane identifier (@var{lane_systag}) or heterogeneous
-lane name.
-
-@table @code
-
-@item $_thread_find
-@itemx $_thread_find_first_gid
-@xref{Convenience Funs,,Convenience Functions}.
-
-@findex $_lane_find@r{, convenience function}
-@item $_lane_find(@var{regex})
-Searches for heterogeneous lanes whose name or @var{lane_systag}
-matches the supplied regular expression.  The syntax of the regular
-expression is that specified by @code{Python}'s regular expression
-support.
-
-Returns a string that is the space separated list of per-inferior
-heterogeneous lane numbers of the found heterogeneous lanes.  If
-debugging multiple inferiors, the heterogeneous lane numbers are
-qualified with the inferior number.  If no heterogeneous lane are
-found, the empty string is returned.  The string can be used in
-commands that accept a heterogeneous lane ID list.
-@xref{heterogeneous entity ID list}.
-
-For example, the following command lists all heterogeneous lanes that
-are part of a heterogeneous work-group with work-group position
-@samp{(1,2,3)} (@pxref{Heterogeneous Debugging}):
-
-@smallexample
-(@value{GDBP}) info lanes $_thread_find ("(1,2,3)")
-@end smallexample
-
-@item $_lane_find_first_gid(@var{regex})
-@findex $_lane_find_first_gid@r{, convenience function}
-Similar to the @code{$_lane_find} convenience function, except it
-returns a number that is the global heterogeneous lane number of one
-of the heterogeneous lanes found, or 0 if no heterogeneous lanes were
-found.  The number can be used in commands that accept a global
-heterogeneous lane number.  @xref{global heterogeneous entity
-numbers}.
-
-For example, the following command sets the current heterogeneous lane
-to one of the heterogeneous lanes that are part of a heterogeneous
-work-group with work-item position @samp{[1,2,3]}:
-
-@smallexample
-(@value{GDBP}) lane -gid $_lane_find_first_gid ("[1,2,3]")
-@end smallexample
 
 @end table
 
@@ -29103,8 +28904,7 @@ following format:
 AMDGPU Agent (GPUID @var{target-agent-id})
 @end smallexample
 
-It is used in the @samp{Target ID} column of the @samp{info agents} command and
-is available using the @var{$_agent_systag} convenience variable.
+It is used in the @samp{Target ID} column of the @samp{info agents} command.
 
 @item Queue Target ID
 The @acronym{AMD GPU} queue target identifier @var{queue_systag} string has the
@@ -29114,8 +28914,7 @@ following format:
 AMDGPU Queue @var{agent-id}:@var{queue-id} (QID @var{target-queue-id})
 @end smallexample
 
-It is used in the @samp{Target ID} column of the @samp{info queues} command and
-is available using the @var{$_queue_systag} convenience variable.
+It is used in the @samp{Target ID} column of the @samp{info queues} command.
 
 @item Dispatch Target ID
 The @acronym{AMD GPU} dispatch target identifier @var{dispatch_systag} string
@@ -29125,9 +28924,8 @@ has the following format:
 AMDGPU Dispatch @var{agent-id}:@var{queue-id}:@var{dispatch-id} (PKID @var{target-packet-id})
 @end smallexample
 
-It is used in the @samp{Target ID} column of the @samp{info dispatches} command
-and is available using the @var{$_dispatch_systag} convenience variable.  The
-@var{target-packet-id} corresponds to the dispatch packet that initiated the
+It is used in the @samp{Target ID} column of the @samp{info dispatches} command.
+The @var{target-packet-id} corresponds to the dispatch packet that initiated the
 dispatch.
 
 @item Thread Target ID
@@ -29138,8 +28936,7 @@ following format:
 AMDGPU Wave @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id} (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
 @end smallexample
 
-It is used in the @samp{Target ID} column of the @samp{info threads} command
-and is available using the @var{$_thread_systag} convenience variable.
+It is used in the @samp{Target ID} column of the @samp{info threads} command.
 
 @item Lane Target ID
 The @acronym{AMD GPU} lane target identifier (@var{lane_systag}) string has the
@@ -29149,8 +28946,7 @@ following format:
 AMDGPU Lane @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id}/@var{lane-index} (@var{work-group-x},@var{work-group-y},@var{work-group-z})[@var{work-item-x},@var{work-item-y},@var{work-item-z}]
 @end smallexample
 
-It is used in the @samp{Target ID} column of the @samp{info lanes} command and
-is available using the @var{$_lane_systag} convenience variable.
+It is used in the @samp{Target ID} column of the @samp{info lanes} command.
 
 @end table
 
