@@ -334,11 +334,17 @@ proc fetch_all_registers {test} {
 # Global used by RERUN_AND_PREPARE to make test names unique.
 set rerun_count 0
 
-proc rerun_and_prepare {} {
+proc rerun_and_prepare {prototypes} {
     global rerun_count
+
+    clean_restart $::testfile-$prototypes
 
     incr rerun_count
     with_test_prefix "rerun number ${rerun_count}" {
+
+	gdb_test_no_output "set print sevenbit-strings"
+	gdb_test_no_output "set print address off"
+	gdb_test_no_output "set width 0"
 
 	if { ![runto_main] } {
 	    return
@@ -359,11 +365,7 @@ proc rerun_and_prepare {} {
 }
 
 proc perform_all_tests {prototypes} {
-    gdb_test_no_output "set print sevenbit-strings"
-    gdb_test_no_output "set print address off"
-    gdb_test_no_output "set width 0"
-
-    rerun_and_prepare
+    rerun_and_prepare $prototypes
 
     # Save all register contents.
     set old_reg_content \
@@ -382,7 +384,7 @@ proc perform_all_tests {prototypes} {
 	fail "gdb function calls preserve register contents"
     }
 
-    rerun_and_prepare
+    rerun_and_prepare $prototypes
     # Save all register contents.
     set old_reg_content \
 	[fetch_all_registers "retrieve original register contents 2"]
@@ -408,7 +410,7 @@ proc perform_all_tests {prototypes} {
 		 }
 	     }
 
-    rerun_and_prepare
+    rerun_and_prepare $prototypes
     # Set breakpoint at a function we will call from gdb.
     gdb_breakpoint add
     # Save all register contents.
@@ -434,7 +436,7 @@ proc perform_all_tests {prototypes} {
 		 }
 	     }
 
-    rerun_and_prepare
+    rerun_and_prepare $prototypes
     # Set breakpoint at a function we will call from gdb.
     gdb_breakpoint add
     # Save all register contents.
@@ -459,7 +461,7 @@ proc perform_all_tests {prototypes} {
 		 }
 	     }
 
-    rerun_and_prepare
+    rerun_and_prepare $prototypes
     # Set breakpoint at a function we will call from gdb.
     gdb_breakpoint add
     set old_reg_content \
@@ -547,12 +549,12 @@ proc perform_all_tests {prototypes} {
 
 # Perform all tests with and without function prototypes.
 
-if { ![prepare_for_testing "failed to prepare" $testfile $srcfile "$compile_flags additional_flags=-DPROTOTYPES"] } {
+if { ![build_executable "failed to build" $testfile-1 $srcfile "$compile_flags additional_flags=-DPROTOTYPES"] } {
     perform_all_tests 1
 }
 
 with_test_prefix "noproto" {
-    if { ![prepare_for_testing "failed to prepare" $testfile $srcfile \
+    if { ![build_executable "failed to build" $testfile-0 $srcfile \
 	       "$compile_flags additional_flags=-DNO_PROTOTYPES"] } {
 	perform_all_tests 0
     }
