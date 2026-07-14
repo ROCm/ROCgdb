@@ -372,6 +372,12 @@ def parse_arguments() -> argparse.Namespace:
         help="Do not use ignore lists for failed tests. Default is to use the ignore lists.",
     )
     parser.add_argument(
+        "--retry-ignored-tests",
+        action="store_true",
+        help="Retry tests that are on the ignore list when they fail. "
+        "Default is off: ignored tests that fail on the first run are not retried.",
+    )
+    parser.add_argument(
         "--optimization",
         type=str,
         default="",
@@ -1649,6 +1655,7 @@ def run_tests(
     compiler_label: str,
     test_results: "TestResults",
     args: argparse.Namespace,
+    xfailed_tests: Optional[Dict[str, List[str]]] = None,
 ) -> None:
     """
     Run ROCgdb test suite with retry logic for failed tests.
@@ -1664,6 +1671,8 @@ def run_tests(
         compiler_label: Compiler identifier (e.g., "GCC").
         test_results: TestResults object for storing results.
         args: Parsed command-line arguments.
+        xfailed_tests: Compiler labels mapped to expected failing test paths.
+            Used to skip retrying ignored tests when --retry-ignored-tests is off.
 
     Returns:
         None
@@ -1779,10 +1788,35 @@ def run_tests(
             )
             break
         elif iteration < max_iterations:
-            # Only rerun failed tests next time.
-            current_tests = sorted(set(failed_tests))
+            # Collect the failed tests for the next iteration.  By default,
+            # tests on the ignore list are not retried: they are known failures
+            # and re-running them (potentially many times, for two compilers)
+            # adds significant wall-clock time for no diagnostic value.
+            # --retry-ignored-tests or --no-xfail restore the old behaviour.
+            retry_candidates = set(failed_tests)
+            if not args.retry_ignored_tests and not args.no_xfail and xfailed_tests:
+                all_xfailed = (
+                    set(xfailed_tests.get("Generic", []))
+                    | set(xfailed_tests.get(compiler_label, []))
+                )
+                skipped = retry_candidates & all_xfailed
+                retry_candidates -= all_xfailed
+                if skipped:
+                    logger.info(
+                        f"{STATUS_WARN} Skipping retry of {len(skipped)} ignored test(s) "
+                        f"for {compiler_label} (use --retry-ignored-tests to retry them):"
+                    )
+                    for t in sorted(skipped):
+                        logger.info(f"       {t}")
+            if not retry_candidates:
+                logger.info(
+                    f"{STATUS_PASS} All remaining failures for {compiler_label} are on the "
+                    f"ignore list. Stopping iterations."
+                )
+                break
+            current_tests = sorted(retry_candidates)
             logger.info(
-                f"{STATUS_FAIL} {len(failed_tests)} failing test(s) found for {compiler_label}. "
+                f"{STATUS_FAIL} {len(current_tests)} failing test(s) found for {compiler_label}. "
                 f"Proceeding to iteration {iteration + 1} with only failed tests."
             )
         else:
@@ -2030,6 +2064,7 @@ def main() -> None:
             compiler_label,
             test_results,
             args,
+            xfailed_tests,
         )
 
     # Final summaries.
@@ -2403,6 +2438,7 @@ def print_configuration(
     fields.extend(
         [
             ("Use FAIL ignore list", "Not using" if args.no_xfail else "Using"),
+            ("Retry ignored tests", "Enabled" if args.retry_ignored_tests else "Disabled"),
             ("Group Results", "Enabled" if args.group_results else "Disabled"),
             ("Default Timeout", default_timeout_display),
             ("Retry Timeout", f"{args.retry_timeout} seconds"),
