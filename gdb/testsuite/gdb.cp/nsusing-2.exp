@@ -1,0 +1,75 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test recursive "using namespace".  Regression test for PR34034 and PR34051.
+
+standard_testfile .cc
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug c++}]} {
+    return
+}
+
+with_test_prefix pre-main {
+    gdb_test "print mod_a::xxx" " = 10"
+    gdb_test "print mod_b::yyy" " = 20"
+
+    # Namespace mod_b is using namespace mod_a, so mod_a::xxx is available as
+    # mod_b::xxx.  This is not available here though, but later, at
+    # start-of-main.  I wonder if this should also be available here.
+    gdb_test "print mod_b::xxx" \
+	[string_to_regexp {No symbol "xxx" in namespace "mod_b".}]
+}
+
+set line_main_entry [gdb_get_line_number main-entry]
+if {![runto $srcfile:$line_main_entry]} {
+    return
+}
+
+# Start of main.  Function main is not yet using namespace mod_b.
+with_test_prefix start-of-main {
+    # Namespace mod_b is using namespace mod_a, so mod_a::xxx is available as
+    # mod_b::xxx.  See also the note at the identical command in pre-main.
+    gdb_test "print mod_b::xxx" " = 10"
+
+    # Same command as in end-of-main, but not a regression test for PR34034.
+    gdb_test "print xxx" \
+	[string_to_regexp {No symbol "xxx" in current context.}]
+
+    # Same test as in end-of-main, but not a regression test for PR34051.
+    gdb_test "print mod_a::yyy" \
+	[string_to_regexp {No symbol "yyy" in namespace "mod_a".}]
+}
+
+# After start of main.  Function main is using namespace mod_b.  Check 4 variants.
+foreach_with_prefix n {1 2 3 4} {
+    set line_main_n [gdb_get_line_number "main-$n"]
+    gdb_test "next" \
+	[subst_vars {$line_main_n\t[^\r\n]+}]
+
+    # Function main is using namespace mod_b, so mod_b::yyy is available as
+    # yyy.
+    gdb_test "print yyy" " = 20"
+
+    # Function main is using namespace mod_b, and namespace mod_b is using
+    # namespace mod_a, so mod_a::xxx is available as xxx.  Regression test for
+    # PR34034.
+    setup_kfail exp/34034 *-*-*
+    gdb_test "print xxx" " = 10"
+
+    # This used to print " $<n> = 20".  Regression test for PR34051.
+    gdb_test "print mod_a::yyy" \
+	[string_to_regexp {No symbol "yyy" in namespace "mod_a".}]
+}
