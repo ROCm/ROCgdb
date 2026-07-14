@@ -72,6 +72,24 @@ double double_val13 = 10.25;
 double double_val14 = 11.25;
 double double_val15 = 12.25;
 
+/* "long double" cannot be pasted into a "long_double_val1"
+   identifier, so the long double globals use an "ldouble" prefix.  */
+long double ldouble_val1 = 45.654;
+long double ldouble_val2 = -67.66;
+long double ldouble_val3 = 0.25;
+long double ldouble_val4 = 1.25;
+long double ldouble_val5 = 2.25;
+long double ldouble_val6 = 3.25;
+long double ldouble_val7 = 4.25;
+long double ldouble_val8 = 5.25;
+long double ldouble_val9 = 6.25;
+long double ldouble_val10 = 7.25;
+long double ldouble_val11 = 8.25;
+long double ldouble_val12 = 9.25;
+long double ldouble_val13 = 10.25;
+long double ldouble_val14 = 11.25;
+long double ldouble_val15 = 12.25;
+
 #ifdef TEST_COMPLEX
 extern float crealf (float _Complex);
 extern float cimagf (float _Complex);
@@ -359,20 +377,23 @@ float float_arg1, float_arg2;
 #endif
 
 /* Define a function NAME comparing its two TYPE arguments against the
-   TYPE_val1 and TYPE_val2 globals.  */
+   TYPE_val1 and TYPE_val2 globals.  PREFIX is passed separately
+   because "long double" cannot be pasted into a "long_double_val1"
+   identifier.  */
 
-#define DEFINE_T_FLOAT_VALUES(TYPE, NAME)			\
+#define DEFINE_T_FLOAT_VALUES(TYPE, NAME, PREFIX)		\
 int								\
 NAME T_VALUES_PARAMS (TYPE)					\
 {								\
-  return ((arg1 - TYPE##_val1) < DELTA				\
-	  && (arg1 - TYPE##_val1) > -DELTA			\
-	  && (arg2 - TYPE##_val2) < DELTA			\
-	  && (arg2 - TYPE##_val2) > -DELTA);			\
+  return ((arg1 - PREFIX##_val1) < DELTA			\
+	  && (arg1 - PREFIX##_val1) > -DELTA			\
+	  && (arg2 - PREFIX##_val2) < DELTA			\
+	  && (arg2 - PREFIX##_val2) > -DELTA);			\
 }
 
-DEFINE_T_FLOAT_VALUES (float, t_float_values2)
-DEFINE_T_FLOAT_VALUES (double, t_double_values)
+DEFINE_T_FLOAT_VALUES (float, t_float_values2, float)
+DEFINE_T_FLOAT_VALUES (double, t_double_values, double)
+DEFINE_T_FLOAT_VALUES (long double, t_long_double_values, ldouble)
 
 /* The parameter list of a t_TYPE_many_args function.  Split out into
    prototyped vs non-prototyped variants because a macro body cannot
@@ -394,9 +415,11 @@ DEFINE_T_FLOAT_VALUES (double, t_double_values)
    test that GDB can construct the parameter save area correctly.
    Note that Linux/ppc32 has 8 float registers to use for float
    parameter passing and Linux/ppc64 has 13, so the number of
-   arguments has to be at least 14 to contemplate these platforms.  */
+   arguments has to be at least 14 to contemplate these platforms.
+   PREFIX is passed separately because "long double" cannot be pasted
+   into a "long_double_val1" identifier.  */
 
-#define DEFINE_T_MANY_ARGS(TYPE, NAME)					\
+#define DEFINE_T_MANY_ARGS(TYPE, NAME, PREFIX)				\
 TYPE									\
 NAME T_MANY_ARGS_PARAMS (TYPE)						\
 {									\
@@ -405,18 +428,19 @@ NAME T_MANY_ARGS_PARAMS (TYPE)						\
 									\
   sum_args = (f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10 + f11	\
 	      + f12 + f13 + f14 + f15);					\
-  sum_values = (TYPE##_val1 + TYPE##_val2 + TYPE##_val3			\
-		+ TYPE##_val4 + TYPE##_val5 + TYPE##_val6		\
-		+ TYPE##_val7 + TYPE##_val8 + TYPE##_val9		\
-		+ TYPE##_val10 + TYPE##_val11 + TYPE##_val12		\
-		+ TYPE##_val13 + TYPE##_val14 + TYPE##_val15);		\
+  sum_values = (PREFIX##_val1 + PREFIX##_val2 + PREFIX##_val3		\
+		+ PREFIX##_val4 + PREFIX##_val5 + PREFIX##_val6		\
+		+ PREFIX##_val7 + PREFIX##_val8 + PREFIX##_val9		\
+		+ PREFIX##_val10 + PREFIX##_val11 + PREFIX##_val12	\
+		+ PREFIX##_val13 + PREFIX##_val14 + PREFIX##_val15);	\
 									\
   return ((sum_args - sum_values) < DELTA				\
 	  && (sum_args - sum_values) > -DELTA);				\
 }
 
-DEFINE_T_MANY_ARGS (float, t_float_many_args)
-DEFINE_T_MANY_ARGS (double, t_double_many_args)
+DEFINE_T_MANY_ARGS (float, t_float_many_args, float)
+DEFINE_T_MANY_ARGS (double, t_double_many_args, double)
+DEFINE_T_MANY_ARGS (long double, t_long_double_many_args, ldouble)
 
 /* Various functions for _Complex types.  */
 
