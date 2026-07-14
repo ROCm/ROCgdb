@@ -25242,19 +25242,49 @@ lanes are inactive.
 @c the @code{maint print reggroups} command which also should not be a
 @c maintenance command for the same reason.
 @item maint print address-spaces
-@code{maint print address-spaces} displays the address space names
-supported by the current architecture.
+@code{maint print address-spaces} displays the properties of all address
+spaces supported by the current architecture.  For each address space the
+following columns are shown:
 
-The address spaces info looks like this:
+@table @asis
+@item Name
+The address-space name as returned by the architecture support library.
+
+@item DWARF
+The DWARF address-space number used to qualify addresses in DWARF debug
+information.
+
+@item Addr Bits
+The size of an address in this address space, in bits.
+
+@item Null Address
+The null (invalid) segment address for this address space, printed in
+hexadecimal.
+
+@item Access
+The access class for this address space.  One of:
+@table @code
+@item all
+The address space supports all accesses (reads and writes).
+@item program-constant
+The address space is read-only; its contents are constant for the lifetime
+of the program execution.
+@item dispatch-constant
+The address space is read-only for the waves of a kernel dispatch; its
+contents are constant for the lifetime of a single dispatch.
+@end table
+@end table
+
+The address spaces table looks like this:
 
 @smallexample
 (@value{GDBP}) @kbd{maint print address-spaces}
- Name
- global
- generic
- local
- private_lane
- private_wave
+Name              DWARF  Addr Bits    Null Address  Access
+global                0         64             0x0     all
+generic               1         64             0x0     all
+local                 3         32      0xffffffff     all
+private_lane          5         32      0xffffffff     all
+private_wave          6         32      0xffffffff     all
 @end smallexample
 
 Any expression that evaluates to an integral value, can be used
