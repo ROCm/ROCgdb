@@ -1,0 +1,57 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Baseline test for "maintenance print address-spaces".
+
+clean_restart
+
+gdb_test_multiple "set architecture amdgcn:gfx90a" "set arch" {
+    -re -wrap "The target architecture is set to \"amdgcn:gfx90a\"." {
+	pass $gdb_test_name
+    }
+
+    -re -wrap "Undefined item: \"amdgcng:fx90a\"." {
+	untested $gdb_test_name
+	return
+    }
+}
+
+set seen_header 0
+set seen_address 0
+
+# The actual output isn't very important, we want to verify that GDB
+# doesn't have any latent error.  Morevover, the number of address
+# spaces can vary, if one is setting a different architecture.
+gdb_test_multiple "maintenance print address-spaces" "" -lbl {
+    -re "Name\[ \t\]+DWARF\[ \t\]+Addr Bits\[ \t\]+Null Address\[ \t\]+Access\[ \t]*" {
+	# Match the header.
+	incr seen_header
+	exp_continue
+    }
+
+    -re "\[a-z_\]+\[ \t\]+$::decimal\[ \t\]+$::decimal\[ \t\]+$::hex\[ \t\]+(all|program-constant|dispatch-constant)" {
+	# Match the address space
+	incr seen_address
+	exp_continue
+    }
+
+    -re "$::gdb_prompt $" {
+	# Done
+	gdb_assert { $seen_header == 1 && $seen_address > 0 } $gdb_test_name
+    }
+}

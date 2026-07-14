@@ -4811,21 +4811,156 @@ info_dispatches_command (const char *args, int from_tty)
   gdb_flush (gdb_stdout);
 }
 
+
+/* Helper for decoding and pretty printing the address space access
+   modifiers.  */
+
+static const char *
+address_space_access_to_string (uint32_t access)
+{
+  switch (access)
+    {
+    case AMD_DBGAPI_ADDRESS_SPACE_ACCESS_ALL:
+      return "all";
+    case AMD_DBGAPI_ADDRESS_SPACE_ACCESS_PROGRAM_CONSTANT:
+      return "program-constant";
+    case AMD_DBGAPI_ADDRESS_SPACE_ACCESS_DISPATCH_CONSTANT:
+      return "dispatch-constant";
+    default:
+      return "unknown";
+    }
+}
+
 /* Dump out a table of address spaces for the current architecture.  */
 
 static void
-address_spaces_dump (struct gdbarch *gdbarch, struct ui_file *file)
+address_spaces_dump (struct gdbarch *gdbarch)
 {
   if (!gdbarch_address_spaces_p (gdbarch))
     return;
 
-  auto address_spaces = gdbarch_address_spaces (gdbarch);
+  /* Get the architecture id.  */
+  amd_dbgapi_architecture_id_t architecture_id;
+  if (amd_dbgapi_get_architecture
+      (gdbarch_bfd_arch_info (gdbarch)->mach, &architecture_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_get_architecture failed"));
+  /* Get info about address spaces.  */
+  size_t address_space_count;
+  amd_dbgapi_address_space_id_t *address_spaces;
 
-  gdb_printf (file, " Name\n");
+  if (amd_dbgapi_architecture_address_space_list (architecture_id,
+						  &address_space_count,
+						  &address_spaces)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_architecture_address_space_list failed"));
 
-  for (const auto &address_space : address_spaces)
+  /* Wrap the returned array.  */
+  gdb::unique_xmalloc_ptr<amd_dbgapi_address_space_id_t[]> address_spaces_holder
+    (address_spaces);
+
+  /* "0x", a little whitespace, and two hex digits per byte of pointers.  */
+  int addr_width = 4 + (gdbarch_ptr_bit (gdbarch) / 4);
+
+  /* First pass: compute the maximum name length for column sizing.
+     Initialise with the header string width so the column is never
+     narrower than the title.  */
+  size_t max_name_len = strlen ("Name");
+  size_t max_access_len = strlen ("Access");
+  for (size_t i = 0; i < address_space_count; i++)
     {
-      gdb_printf (file, " %-10s\n", address_space.name.get ());
+      char *address_space_name;
+      if (amd_dbgapi_address_space_get_info
+	  (address_spaces[i], AMD_DBGAPI_ADDRESS_SPACE_INFO_NAME,
+	   sizeof (address_space_name), &address_space_name)
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  gdb::unique_xmalloc_ptr<char> name_holder (address_space_name);
+	  max_name_len = std::max (max_name_len, strlen (address_space_name));
+	}
+
+      amd_dbgapi_address_space_access_t address_access;
+      if (amd_dbgapi_address_space_get_info
+	  (address_spaces[i], AMD_DBGAPI_ADDRESS_SPACE_INFO_ACCESS,
+	   sizeof (address_access), &address_access)
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  max_access_len = std::max
+	    (max_access_len,
+	     strlen (address_space_access_to_string (address_access)));
+	}
+
+    }
+
+  /* Use UI to output.  */
+  struct ui_out *ui_out = current_uiout;
+  ui_out_emit_table table_emitter (ui_out, 5, address_space_count,
+				   "AddressSpacesTable");
+
+  ui_out->table_header (max_name_len, ui_left, "name", _("Name"));
+  ui_out->table_header (5, ui_right, "dwarf", _("DWARF"));
+  ui_out->table_header (9, ui_right, "addr", _("Addr Bits"));
+  /* The "- 1" is because ui_out adds one space between columns.  */
+  ui_out->table_header (addr_width - 1, ui_right, "nulladdr",
+			_("Null Address"));
+  ui_out->table_header (max_access_len, ui_right, "access", _("Access"));
+  ui_out->table_body ();
+
+  /* Query all address-space fields exposed by dbgapi:
+     NAME, ADDRESS_SIZE, NULL_ADDRESS, ACCESS, and DWARF.  */
+  for (size_t i = 0; i < address_space_count; i++)
+    {
+      char *address_space_name;
+
+      if (amd_dbgapi_address_space_get_info
+	    (address_spaces[i], AMD_DBGAPI_ADDRESS_SPACE_INFO_NAME,
+	     sizeof (address_space_name), &address_space_name)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_address_space_get_info (name) failed"));
+
+      address_space_name =
+	address_space_name != nullptr ? address_space_name : _("<null>");
+      gdb::unique_xmalloc_ptr<char> address_space_name_holder
+	(address_space_name);
+
+      arch_addr_space_id address_space_dwarf_num;
+      if (amd_dbgapi_address_space_get_info
+	    (address_spaces[i], AMD_DBGAPI_ADDRESS_SPACE_INFO_DWARF,
+	     sizeof (address_space_dwarf_num), &address_space_dwarf_num)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_address_space_get_info (dwarf) failed"));
+
+      amd_dbgapi_size_t address_byte_size;
+      if (amd_dbgapi_address_space_get_info
+	  (address_spaces[i], AMD_DBGAPI_ADDRESS_SPACE_INFO_ADDRESS_SIZE,
+	   sizeof (address_byte_size), &address_byte_size)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_address_space_get_info (address_size) failed"));
+
+      amd_dbgapi_segment_address_t null_address;
+      if (amd_dbgapi_address_space_get_info
+	  (address_spaces[i], AMD_DBGAPI_ADDRESS_SPACE_INFO_NULL_ADDRESS,
+	   sizeof (null_address), &null_address)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_address_space_get_info (null_address) failed"));
+
+      amd_dbgapi_address_space_access_t address_access;
+      if (amd_dbgapi_address_space_get_info
+	  (address_spaces[i], AMD_DBGAPI_ADDRESS_SPACE_INFO_ACCESS,
+	   sizeof (address_access), &address_access)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_address_space_get_info (access) failed"));
+
+      /* We have all the info, print it.  */
+      ui_out_emit_tuple tuple_emitter (ui_out, "space");
+
+      ui_out->field_string ("name", address_space_name_holder.get ());
+      ui_out->field_fmt ("dwarf", "%lu", (unsigned long) address_space_dwarf_num);
+      ui_out->field_fmt ("addr", "%lu", (unsigned long) address_byte_size);
+      ui_out->field_fmt ("nulladdr", "0x%s", phex_nz (null_address, 0));
+      ui_out->field_string ("access",
+			    address_space_access_to_string (address_access));
+      ui_out->text ("\n");
     }
 }
 
@@ -4834,7 +4969,7 @@ address_spaces_dump (struct gdbarch *gdbarch, struct ui_file *file)
 static void
 maintenance_print_address_spaces (const char *args, int from_tty)
 {
-  address_spaces_dump (get_current_arch (), gdb_stdout);
+  address_spaces_dump (get_current_arch ());
 }
 
 static void
@@ -5113,6 +5248,7 @@ Otherwise, all dispatches are displayed."),
 
   add_cmd ("address-spaces", class_maintenance,
 	   maintenance_print_address_spaces, _("\
-Displays the address space names supported by the current architecture."),
+Displays address-space properties (name, DWARF id, address size, \n\
+null address, and access) supported by the current architecture."),
 	   &maintenanceprintlist);
 }
