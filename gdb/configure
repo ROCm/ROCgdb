@@ -25437,6 +25437,22 @@ $as_echo "#define HAVE_AMD_DBGAPI 1" >>confdefs.h
 
     TARGET_OBS="$TARGET_OBS amd-dbgapi-target.o"
 
+    save_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $AMD_DBGAPI_CFLAGS"
+    ac_fn_c_check_decl "$LINENO" "amd_dbgapi_process_enable_traps" "ac_cv_have_decl_amd_dbgapi_process_enable_traps" "#include <amd-dbgapi/amd-dbgapi.h>
+"
+if test "x$ac_cv_have_decl_amd_dbgapi_process_enable_traps" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_AMD_DBGAPI_PROCESS_ENABLE_TRAPS $ac_have_decl
+_ACEOF
+
+    CPPFLAGS="$save_CPPFLAGS"
+
     # If --enable-targets=all was provided, use the list of all files depending
     # on amd-dbgapi that is hardcoded in the Makefile.  Else, the appropriate
     # architecture entry in configure.tgt will have added the files to
