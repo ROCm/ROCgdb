@@ -6821,6 +6821,7 @@ proc gdb_compile {source dest type options} {
 	#    '-mllvm=-amdgpu-spill-cfi-saved-regs' [-Wunused-command-line-argument]
 	#
 	# These happen when we're compiling an executable _and_ all
+<<<<<<< HEAD
 	# the input files are .o files, like: amdclang++ foo.o -o foo ...
 	#
 	# amdclang++ does not infer the input language from the file
@@ -6904,6 +6905,16 @@ proc gdb_compile {source dest type options} {
 		lappend new_options "early_flags=--offload-arch=$gpu_target"
 	    }
 	}
+=======
+	# the input files are .o files, like: hipcc foo.o -o foo ...
+	#
+	# HIPCC defaults to -O2, so add -O0 to early flags for the HIP
+	# language.  If "optimize" is also requested, another -O flag
+	# (e.g. -O2) will be added to the flags, overriding this -O0.
+	lappend new_options "early_flags=-O0\
+			     -mllvm=-amdgpu-spill-cfi-saved-regs\
+			     -Wno-unused-command-line-argument"
+>>>>>>> b43c744924b3f5df3677dbe97d12608e63ca5a4d
     }
 
     # Because we link with libraries using their basename, we may need
