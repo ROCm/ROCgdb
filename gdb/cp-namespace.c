@@ -395,7 +395,6 @@ cp_lookup_symbol_via_imports (const char *scope,
 {
   struct block_symbol sym = {};
   int len;
-  int directive_match;
 
   /* All the symbols we found will be kept in this relational map between
      the mangled name and the block_symbol found.  We do this so that GDB
@@ -443,13 +442,21 @@ cp_lookup_symbol_via_imports (const char *scope,
 	 do not use this directive.  */
       if (!current->valid_line (boundary_line))
 	continue;
+
       len = strlen (current->import_dest);
-      directive_match = (search_parents
-			 ? (startswith (scope, current->import_dest)
-			    && (len == 0
-				|| scope[len] == ':'
-				|| scope[len] == '\0'))
-			 : streq (scope, current->import_dest));
+
+      bool directive_match;
+      if (search_parents)
+	{
+	  if (len == 0)
+	    directive_match = true;
+	  else
+	    directive_match = (startswith (scope, current->import_dest)
+			       && (scope[len] == ':'
+				   || scope[len] == '\0'));
+	}
+      else
+	directive_match = streq (scope, current->import_dest);
 
       /* If the import destination is the current scope or one of its
 	 ancestors then it is applicable.  */
