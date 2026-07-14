@@ -1,0 +1,93 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Baseline test for "maintenance print address-spaces".
+# For each known amdgcn architecture, verify the command runs without error
+# and produces a header row and at least one data row.
+
+clean_restart
+
+# Collect all amdgcn:gfx* architecture names that GDB knows about.
+set all_archs {}
+gdb_test_multiple "complete set architecture amdgcn:" "" {
+    -re "set architecture (amdgcn:\[^\r\n\]+)\r\n" {
+	lappend all_archs $expect_out(1,string)
+	exp_continue
+    }
+    -re "$::gdb_prompt $" {
+	pass $gdb_test_name
+    }
+}
+
+set all_archs [lsort -unique $all_archs]
+
+if {[llength $all_archs] == 0} {
+    unsupported "no amdgcn architectures found"
+    return
+}
+
+set asname "\[^ \t\r\n\]+\[ \t\]+"
+set asdec "$::decimal\[ \t\]+"
+set ashex "$::hex\[ \t\]+"
+set asaccess "(all|program-constant|dispatch-constant|unknown \\($::hex\\))"
+set trailer "\[^\r\n\]*(?=\r\n)"
+
+foreach_with_prefix arch $all_archs {
+    clean_restart
+
+    set arch_supported 0
+
+    gdb_test_multiple "set architecture $arch" "set arch" {
+	-re -wrap "The target architecture is set to \"$arch\"\\." {
+	    pass $gdb_test_name
+	    set arch_supported 1
+	}
+	-re -wrap "Undefined item: \"$arch\"\\." {
+	    untested $gdb_test_name
+	}
+    }
+
+    if {!$arch_supported} {
+	continue
+    }
+
+    set seen_header 0
+    set seen_address 0
+
+    # The actual values aren't very important here; we want to verify that GDB
+    # doesn't crash or error on any supported architecture.
+    gdb_test_multiple "maintenance print address-spaces" "" -lbl {
+	-re "Name\[ \t\]+DWARF\[ \t\]+Addr Bits\[ \t\]+Null Address\[ \t\]+Access${trailer}" {
+	    # Match the header line (anchored to start of line via -lbl).
+	    incr seen_header
+	    exp_continue
+	}
+
+	-re "\r\n${asname}${asdec}${asdec}${ashex}${asaccess}${trailer}" {
+	    # Match a data row.
+	    incr seen_address
+	    exp_continue
+	}
+
+	-re -wrap "" {
+	    # Done.
+	    gdb_assert { $seen_header == 1 } "$gdb_test_name: seen header"
+	    gdb_assert { $seen_address > 0 } "$gdb_test_name: seen address"
+	}
+    }
+}
