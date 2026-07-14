@@ -520,9 +520,13 @@ cp_lookup_symbol_via_imports (const char *scope,
 	      /* If this import statement creates no alias, pass
 		 current->inner as NAMESPACE to direct the search
 		 towards the imported namespace.  */
-	      cp_lookup_symbol_via_imports (current->import_src, name,
-					    block, domain, 1, 0, 0,
-					    found_symbols);
+	      for (const struct block *b = block; b != nullptr;
+		   b = ((b->is_static_block () || b->is_global_block ())
+			? b->superblock ()
+			: b->static_block ()))
+		cp_lookup_symbol_via_imports (current->import_src, name,
+					      b, domain, 1, 0, 0,
+					      found_symbols);
 	    }
 
 	}

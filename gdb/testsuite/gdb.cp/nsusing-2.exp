@@ -22,6 +22,11 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
     return
 }
 
+# Xfail for incorrect decl_line on DW_TAG_imported_module,
+# GCC PR debug/108716.
+set have_gcc108716_xfail \
+    [expr {[test_compiler_info gcc-*] && [gcc_major_version] < 13}]
+
 with_test_prefix pre-main {
     gdb_test "print mod_a::xxx" " = 10"
     gdb_test "print mod_b::yyy" " = 20"
@@ -45,8 +50,19 @@ with_test_prefix start-of-main {
     gdb_test "print mod_b::xxx" " = 10"
 
     # Same command as in end-of-main, but not a regression test for PR34034.
-    gdb_test "print xxx" \
-	[string_to_regexp {No symbol "xxx" in current context.}]
+    set re_pass [string_to_regexp {No symbol "xxx" in current context.}]
+    set re_xfail "$valnum_re = 10"
+    gdb_test_multiple "print xxx" "" {
+	-re -wrap $re_pass {
+	    pass $gdb_test_name
+	}
+	-re -wrap $re_xfail {
+	    if {$have_gcc108716_xfail} {
+		setup_xfail *-*-* gcc/108716
+	    }
+	    fail $gdb_test_name
+	}
+    }
 
     # Same test as in end-of-main, but not a regression test for PR34051.
     gdb_test "print mod_a::yyy" \
@@ -66,7 +82,6 @@ foreach_with_prefix n {1 2 3 4} {
     # Function main is using namespace mod_b, and namespace mod_b is using
     # namespace mod_a, so mod_a::xxx is available as xxx.  Regression test for
     # PR34034.
-    setup_kfail exp/34034 *-*-*
     gdb_test "print xxx" " = 10"
 
     # This used to print " $<n> = 20".  Regression test for PR34051.
