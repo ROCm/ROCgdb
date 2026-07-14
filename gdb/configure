@@ -25437,6 +25437,24 @@ $as_echo "#define HAVE_AMD_DBGAPI 1" >>confdefs.h
 
     TARGET_OBS="$TARGET_OBS amd-dbgapi-target.o"
 
+    # The wave launch trap-on-entry API was added in amd-dbgapi 0.81.
+    # Detect it rather than gating on a version number.
+    save_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $AMD_DBGAPI_CFLAGS"
+    ac_fn_c_check_decl "$LINENO" "amd_dbgapi_process_set_wave_launch_trap_on_entry" "ac_cv_have_decl_amd_dbgapi_process_set_wave_launch_trap_on_entry" "#include <amd-dbgapi/amd-dbgapi.h>
+"
+if test "x$ac_cv_have_decl_amd_dbgapi_process_set_wave_launch_trap_on_entry" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_AMD_DBGAPI_PROCESS_SET_WAVE_LAUNCH_TRAP_ON_ENTRY $ac_have_decl
+_ACEOF
+
+    CPPFLAGS="$save_CPPFLAGS"
+
     # If --enable-targets=all was provided, use the list of all files depending
     # on amd-dbgapi that is hardcoded in the Makefile.  Else, the appropriate
     # architecture entry in configure.tgt will have added the files to
