@@ -1,0 +1,107 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test showing cluster coordinates.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+if {[hip_device_is_less_than gfx1250]} {
+    unsupported "not testing clusters on device older than gfx1250"
+    return
+}
+
+# First, build without clusters and check the dimensions in "info
+# dispatch".
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+clean_restart $testfile
+
+with_rocm_gpu_lock {
+    with_test_prefix "without-cluster" {
+	if {![runto_main]} {
+	    return
+	}
+
+	set bp_line [gdb_get_line_number "break-here"]
+	gdb_breakpoint "$bp_line" -allow-pending -temporary
+	gdb_continue_to_breakpoint "break-here"
+
+	# Expect grid and workgroup dimensions.
+	# Cluster dimensions is "-".
+	gdb_test "info dispatches" \
+	    "\\\[270,20,2\\\].*\-.*\\\[30,5,1\\\].*"
+    }
+}
+
+# Now build with clusters, check the coordinates and dimensions.
+
+if {[build_executable "failed to prepare" $testfile $srcfile \
+	 {debug hip additional_flags=-DWITH_CLUSTER=1}]} {
+    return
+}
+
+clean_restart $testfile
+
+with_rocm_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+
+    set bp_line [gdb_get_line_number "break-here"]
+    gdb_breakpoint "$bp_line" -allow-pending -temporary
+    gdb_continue_to_breakpoint "break-here"
+
+    set dispatch_pos "$decimal:$decimal:$decimal:$decimal"
+    set triple "\\(($decimal),($decimal),($decimal)\\)"
+    foreach_with_prefix wave [info_thread_get_wave_list] {
+	gdb_test "thread $wave" "Switching.*" "switch wave"
+
+	gdb_test_multiple "info thread $wave" "capture coord" {
+	    -re -wrap "AMDGPU Wave $dispatch_pos $triple/$triple/$decimal.*" {
+		set cluster_x $expect_out(1,string)
+		set cluster_y $expect_out(2,string)
+		set cluster_z $expect_out(3,string)
+		set wg_x $expect_out(4,string)
+		set wg_y $expect_out(5,string)
+		set wg_z $expect_out(6,string)
+		verbose -log "cluster: {$cluster_x,$cluster_y,$cluster_z}"
+		verbose -log "workgroup: {$wg_x,$wg_y,$wg_z}"
+
+		gdb_test "print \$ttmp9" "= $cluster_x" "ttmp9 is cluster x"
+		gdb_test "print \$ttmp7 & 0xFFFF" "= $cluster_y" \
+		    "ttmp7 lo is cluster y"
+		gdb_test "print \$ttmp7 >> 16" "= $cluster_z" \
+		    "ttmp7 lo is cluster z"
+
+		gdb_test "print block_in_cluster" \
+		    "= \{x = $wg_x, y = $wg_y, z = $wg_z\}"
+	    }
+	}
+    }
+
+    # Expect grid, cluster, and workgroup dimensions.
+    gdb_test "info dispatches" \
+	"\\\[270,20,2\\\].*\\\[90,10,1\\\].*\\\[30,5,1\\\].*"
+}
