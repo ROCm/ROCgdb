@@ -10226,12 +10226,12 @@ process_relocs (Filedata * filedata)
 		     is passed to readelf.  */
 		  uint64_t num_reloc;
 		  uint64_t *relrs = NULL;
-		  Elf_Internal_Shdr section = {};
-		  section.sh_offset
-		    = filedata->dynamic_info[DT_RELR];
-		  section.sh_size = rel_size;
-		  section.sh_entsize = rel_entsz;
-		  section.sh_type = SHT_RELR;
+		  Elf_Internal_Shdr section = {
+		    .sh_type = SHT_RELR,
+		    .sh_offset = filedata->dynamic_info[DT_RELR],
+		    .sh_size = rel_size,
+		    .sh_entsize = rel_entsz
+		  };
 		  validate_section_info (&section, NULL, 0, filedata);
 		  num_reloc = count_relr_relocations (filedata,
 						      &section,
