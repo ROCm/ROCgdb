@@ -661,10 +661,10 @@ flatid_to_id (size_t flatid, const vec3_t<size_t> &sizes)
   return coord_id;
 }
 
-/* Return the work-group position of the work-item assigned to lane LANE.  */
+/* See amd-dbgapi-target.h.  */
 
-static opt_vec3_u32_t
-lane_workgroup_pos (thread_info *tp, int lane)
+std::optional<std::array<size_t, 3>>
+partial_workgroup_sizes (thread_info *tp)
 {
   wave_info &info = get_thread_wave_info (tp);
   if (info.coords.dispatch_id == AMD_DBGAPI_DISPATCH_NONE)
@@ -685,9 +685,6 @@ lane_workgroup_pos (thread_info *tp, int lane)
 			   AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 			   work_group_sizes);
 
-  size_t lane_count;
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, lane_count);
-
   /* Find the work-group item sizes for each axis, taking into account
      the work-items that actually fit in the grid.  */
   vec3_t<size_t> partial_wg_sizes;
@@ -701,9 +698,25 @@ lane_workgroup_pos (thread_info *tp, int lane)
       partial_wg_sizes[i] = work_item_end - work_item_start;
     }
 
+  return partial_wg_sizes;
+}
+
+/* Return the work-group position of the work-item assigned to lane LANE.  */
+
+static opt_vec3_u32_t
+lane_workgroup_pos (thread_info *tp, int lane)
+{
+  auto partial_wg_sizes = partial_workgroup_sizes (tp);
+  if (!partial_wg_sizes.has_value ())
+    return std::nullopt;
+
+  size_t lane_count;
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, lane_count);
+
+  wave_info &info = get_thread_wave_info (tp);
   size_t flatid = info.coords.wave_in_group * lane_count + lane;
 
-  return flatid_to_id (flatid, partial_wg_sizes);
+  return flatid_to_id (flatid, partial_wg_sizes.value ());
 }
 
 /* Return the lane's work-group position as a string.  */
