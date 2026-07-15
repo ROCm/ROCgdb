@@ -1,0 +1,66 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test debuggability in the existence of cluster barriers.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+if {[hip_device_is_less_than gfx1250]} {
+    unsupported "not testing clusters on device older than gfx1250"
+    return
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+# Test that we can stop at particular scenarios and then resume the
+# program successfully from those points.  This shows that barrier
+# state is saved and restored correctly.
+#
+# Scenarios:
+#
+#  - BP1: Some threads have not executed barrier arrive yet.  By the
+#    time we stop, others should have already arrived and started
+#    waiting on the barrier.
+#
+#  - BP2: Some threads have arrived but not started waiting on the
+#    barrier.  By the time we stop, others must have already arrived
+#    and started waiting on the barrier.
+#
+#  - BP3: Threads have arrived at the barrier but none of them have
+#    started waiting.
+foreach_with_prefix bp {BP1 BP2 BP3} {
+    clean_restart $testfile
+
+    with_rocm_gpu_lock {
+	if {![runto_main]} {
+	    return
+	}
+
+	set bp_line [gdb_get_line_number "$bp"]
+	gdb_breakpoint "$bp_line" -allow-pending -temporary
+	gdb_continue_to_breakpoint "$bp"
+
+	gdb_continue_to_end "" continue 1
+    }
+}
