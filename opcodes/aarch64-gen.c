@@ -1078,9 +1078,9 @@ print_operand_table (void)
 	    continue;
 	  if (j != 0)
 	    str += sprintf (str, ", ");
-	  str += sprintf (str, "AARCH64_FIELD%s (%d, %d)",
-			  field.is_const ? "_CONST" : "",
-			  field.num, field.width);
+	  str += sprintf (str, "{%d, %d, %s}",
+			  field.width, field.num,
+			  field.is_const ? "true" : "false");
 	}
     printf ("  {AARCH64_OPND_CLASS_%s, \"%s\", %s, {%s}, \"%s\"},\n",
 	    opnd->class, opnd->str, flags, fields, opnd->desc);
