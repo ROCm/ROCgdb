@@ -816,11 +816,29 @@ diststuff: info $(EXTRA_DIST)
 # ld.1 to support parallel build.
 info-recursive: ld.1
 
+# Wire in the TOC navigation sidebar with the HTML manual.
+#
+TOC_SIDEBAR_DIR = $(srcdir)/../texinfo/toc-sidebar
+TOC_SIDEBAR_ASSETS = $(TOC_SIDEBAR_DIR)/toc-sidebar.css \
+		     $(TOC_SIDEBAR_DIR)/toc-sidebar.js
+
+# List of extra stylesheets to brand the HTML manual.  Each stylesheet
+# is referenced with --css-ref and copied into the output directory.
+# It is empty by default and can be set on the make command line, so a
+# build can theme the manual without editing the sources.
+MANUAL_CSS =
+
+# ROCm branding.
+MANUAL_CSS += $(srcdir)/../rocm-theme.css
+
 html-local: doc/ld/index.html
-doc/ld/index.html: ld.texi $(ld_TEXINFOS)
+doc/ld/index.html: ld.texi $(ld_TEXINFOS) $(MANUAL_CSS)
 	$(AM_V_at)$(MKDIR_P) doc
 	$(AM_V_GEN)$(MAKEINFOHTML) $(AM_MAKEINFOHTMLFLAGS) $(MAKEINFOFLAGS) \
+	  --init-file=$(TOC_SIDEBAR_DIR)/toc-sidebar.init \
+	  $(foreach css,$(MANUAL_CSS),--css-ref=$(notdir $(css))) \
 	  --split=node -I$(srcdir) $(srcdir)/ld.texi -o doc/ld
+	$(AM_V_at)cp $(TOC_SIDEBAR_ASSETS) $(MANUAL_CSS) doc/ld
 
 DISTCLEANFILES = site.exp development.exp enablings.exp site.bak
 distclean-local:
