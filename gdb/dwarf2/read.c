@@ -825,7 +825,9 @@ dwarf2_per_bfd::dwarf2_per_bfd (bfd *obfd, const dwarf2_debug_sections *names,
 				bool can_copy_)
   : obfd (obfd),
     can_copy (can_copy_),
-    captured_cwd (current_directory),
+    captured_cwd (current_directory != nullptr
+		    ? std::optional<std::string> (current_directory)
+		    : std::nullopt),
     captured_debug_dir (debug_file_directory)
 {
   if (names == NULL)
@@ -6701,7 +6703,10 @@ try_open_dwop_file (dwarf2_per_bfd *per_bfd, const char *file_name, int is_dwp,
 
   gdb::unique_xmalloc_ptr<char> absolute_name;
   desc = openp (search_path, flags, file_name, O_RDONLY | O_BINARY,
-		&absolute_name, per_bfd->captured_cwd.c_str ());
+		&absolute_name,
+		(per_bfd->captured_cwd.has_value ()
+		   ? per_bfd->captured_cwd->c_str ()
+		   : nullptr));
   if (desc < 0)
     return NULL;
 

@@ -761,8 +761,11 @@ public:
     abstract_to_concrete;
 
   /* Current directory, captured at the moment that object this was
-     created.  */
-  std::string captured_cwd;
+     created.  If nullopt, the working directory was unavailable
+     which means getcwd failed either due to directory deletion or
+     permission issues. So paths should be treated as absolute.  */
+  std::optional<std::string> captured_cwd;
+
   /* Captured copy of debug_file_directory.  */
   std::string captured_debug_dir;
 };
