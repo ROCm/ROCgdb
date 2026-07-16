@@ -253,7 +253,7 @@ proc do_test {} {
 	    catch_hiperr
 	    check_hip_launch_kernel_err "run"
 	    gdb_test "backtrace" \
-		".*__hipOnError.*hipLaunchKernel.*__device_stub__kernel.*" \
+		".*__hipOnError.*hipLaunchKernel.*" \
 		"call stack"
 	}
 

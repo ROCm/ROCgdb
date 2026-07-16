@@ -54,4 +54,9 @@
 
 #define NOP(N) asm volatile ("s_nop " #N)
 
+/* Insert x86 "nop" into the code.  It's useful for adding pieces of code
+   that we can set breakpoint on without getting optimized away.  */
+
+#define X86_NOP asm volatile ("nop")
+
 #endif /* ROCM_TEST_UTILS_H */
