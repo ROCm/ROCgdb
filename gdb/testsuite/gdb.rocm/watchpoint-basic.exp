@@ -53,9 +53,7 @@ proc_with_prefix test_host_watchpoint_before_runtime_load {} {
 
 	continue_to_watchpoint_hit 5 17 "continue to watchpoint hit"
 
-	gdb_test "continue" \
-	    "Inferior 1 .* exited normally.*" \
-	    "continue to end"
+	gdb_continue_to_end "" continue 1
     }
 }
 
@@ -76,9 +74,7 @@ proc_with_prefix test_host_watchpoint_after_runtime_load {} {
 
 	continue_to_watchpoint_hit 5 17 "continue to watchpoint hit"
 
-	gdb_test "continue" \
-	    "Inferior 1 .* exited normally.*" \
-	    "continue to end"
+	gdb_continue_to_end "" continue 1
     }
 }
 
@@ -102,9 +98,7 @@ proc_with_prefix test_watchpoint_before_kernel {} {
 	continue_to_watchpoint_hit 30 40 "continue to watchpoint hit 3"
 	continue_to_watchpoint_hit 40 60 "continue to watchpoint hit 4"
 
-	gdb_test "continue" \
-	    "Inferior 1 .* exited normally.*" \
-	    "continue to end"
+	gdb_continue_to_end "" continue 1
     }
 }
 
@@ -132,9 +126,7 @@ proc_with_prefix test_watchpoint_inside_kernel {} {
 	continue_to_watchpoint_hit 300 400 "continue to watchpoint hit 3"
 	continue_to_watchpoint_hit 400 600 "continue to watchpoint hit 4"
 
-	gdb_test "continue" \
-	    "Inferior 1 .* exited normally.*" \
-	    "continue to end"
+	gdb_continue_to_end "" continue 1
     }
 }
 
@@ -156,9 +148,7 @@ proc_with_prefix test_remove_watchpoint_inside_kernel {} {
 	continue_to_watchpoint_hit 0 10 "continue to watchpoint hit"
 	gdb_test "with confirm off -- delete" "" "delete all breakpoints"
 
-	gdb_test "continue" \
-	    "Inferior 1 .* exited normally.*" \
-	    "continue to end"
+	gdb_continue_to_end "" continue 1
     }
 }
 
@@ -189,9 +179,7 @@ proc_with_prefix test_multiple_watchpoints {} {
 	continue_to_watchpoint_hit 40 60 "continue to watchpoint hit 7"
 	continue_to_watchpoint_hit 400 600 "continue to watchpoint hit 8"
 
-	gdb_test "continue" \
-	    "Inferior 1 .* exited normally.*" \
-	    "continue to end"
+	gdb_continue_to_end "" continue 1
     }
 }
 
@@ -239,9 +227,7 @@ proc_with_prefix test_disable_enable_watchpoint {} {
 
 	continue_to_watchpoint_hit 400 600 "continue to watchpoint hit 6"
 
-	gdb_test "continue" \
-	    "Inferior 1 .* exited normally.*" \
-	    "continue to end"
+	gdb_continue_to_end "" continue 1
     }
 }
 
