@@ -3340,11 +3340,6 @@ ada_index_type (struct type *type, int n, const char *name)
 	  type = type->target_type ();
 	}
       result_type = ada_check_typedef (type)->index_type ()->target_type ();
-      /* FIXME: The stabs type r(0,0);bound;bound in an array type
-	 has a target type of TYPE_CODE_UNDEF.  We compensate here, but
-	 perhaps stabsread.c would make more sense.  */
-      if (result_type && result_type->code () == TYPE_CODE_UNDEF)
-	result_type = NULL;
     }
   else
     {

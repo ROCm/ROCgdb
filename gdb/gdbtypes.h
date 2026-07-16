@@ -1681,8 +1681,8 @@ struct fn_fieldlist
 {
 
   /* The overloaded name.
-     This is generally allocated in the objfile's obstack.
-     However stabsread.c sometimes uses malloc.  */
+     This is generally allocated in the objfile's obstack, but it
+     could also be statically allocated.  */
 
   const char *name;
 
