@@ -30,7 +30,7 @@ struct hiperr_info_ref
   const char *name;
   const char *str;
 
-  void save (hipError_t err_no)
+  void save (hipError_t err_no) volatile
   {
     no = static_cast <int> (err_no);
     name = hipGetErrorName (err_no);
@@ -39,9 +39,9 @@ struct hiperr_info_ref
 };
 
 /* Reference values for the test.  */
-static hiperr_info_ref hip_set_device_err;
-static hiperr_info_ref hip_get_device_err;
-static hiperr_info_ref hip_launch_kernel_err;
+volatile static hiperr_info_ref hip_set_device_err;
+volatile static hiperr_info_ref hip_get_device_err;
+volatile static hiperr_info_ref hip_launch_kernel_err;
 
 /* Get the maximum number of threads per block.  */
 
@@ -130,7 +130,8 @@ main (int argc, const char **argv)
       hip_set_device ();
       hip_get_device ();
       hip_launch_kernel ();
-      asm volatile ("" ::: "memory"); /* Break after reference initialization.  */
+      /* Break after reference initialization.  */
+      HOST_NOP;
     }
   else if (test == "one")
     hip_set_device ();
