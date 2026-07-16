@@ -42,4 +42,9 @@
 
 #define NOP(N) asm volatile ("s_nop " #N)
 
+/* Insert host "nop" into the code.  It's useful for adding pieces of code
+   that we can set a breakpoint on without getting optimized away.  */
+
+#define HOST_NOP asm volatile ("nop")
+
 #endif /* ROCM_TEST_UTILS_H */
