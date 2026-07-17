@@ -707,35 +707,7 @@ do_scrub_chars (size_t (*get) (char *, size_t), char *tostart, size_t tolen,
 	      PUT (quotechar);
 	      continue;
 
-	      /* These two are used inside macros.  */
-	    case '@':
-	    case '+':
-	      break;
-
-	    case '"':
-	    case '\\':
-	    case 'b':
-	    case 'f':
-	    case 'n':
-	    case 'r':
-	    case 't':
-	    case 'v':
-	    case 'x':
-	    case 'X':
-	    case '0':
-	    case '1':
-	    case '2':
-	    case '3':
-	    case '4':
-	    case '5':
-	    case '6':
-	    case '7':
-	      break;
-
 	    default:
-#ifdef ONLY_STANDARD_ESCAPES
-	      as_warn (_("unknown escape '\\%c' in string; ignored"), ch);
-#endif
 	      break;
 	    }
 	  PUT (ch);

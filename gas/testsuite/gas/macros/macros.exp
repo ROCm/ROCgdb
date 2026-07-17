@@ -53,13 +53,9 @@ switch -glob $target_triplet {
 }
 
 if { ![istarget hppa*-*-*] || [istarget *-*-linux*] } {
-    # FIXME: Due to macro mishandling of ONLY_STANDARD_ESCAPES.
-    setup_xfail "avr-*" "cris-*" "crisv32-*" "msp430-*"
-
-    # These fail due to NO_STRING_ESCAPES
+    # These fail due to !TC_STRING_ESCAPES
     setup_xfail "powerpc*-*-aix*" "powerpc*-*-beos*" "powerpc*-*-macos*"
     setup_xfail "rs6000-*-*"
-    setup_xfail "z80-*-*"
 
     # FIXME: Due to difference in what "consecutive octets" means.
     setup_xfail "*c4x*-*-*" "*c54x*-*"
