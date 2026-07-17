@@ -392,6 +392,7 @@ static bitfield cpu_flags[] =
   BITFIELD (TBM),
   BITFIELD (Movbe),
   BITFIELD (CX16),
+  BITFIELD (AltMovCr8),
   BITFIELD (LAHF_SAHF),
   BITFIELD (EPT),
   BITFIELD (Rdtscp),
