@@ -40,7 +40,9 @@
 minimum_pre_commit_version: 4.5.1
 default_install_hook_types: [pre-commit, commit-msg]
 default_stages: [pre-commit]
-files: '^(gdb|gdbserver|gdbsupport)/'
+# A default files setting like "files: '^(gdb|gdbserver|gdbsupport)/" would be
+# nice, but that disables commit-msg hooks.  See this pre-commit issue (
+# https://github.com/pre-commit/pre-commit/issues/3720 ).
 
 repos:
   # Python hooks.  Run these for (in glob notation):
@@ -79,6 +81,7 @@ repos:
     hooks:
     - id: codespell
       args: &codespell_args [--toml, gdb/pyproject.toml]
+      files: &gdb_files '^(gdb|gdbserver|gdbsupport)/'
     - id: codespell
       name: codespell-log
       entry: gdb/contrib/codespell-log.sh
@@ -117,6 +120,7 @@ repos:
       language: unsupported_script
       entry: gdb/contrib/check-whitespace-pre-commit.py
       types: ['text']
+      files: *gdb_files
     - id: &id3 pre-commit-setup
       name: *id3
       language: python
@@ -128,3 +132,4 @@ repos:
       name: *id4
       language: unsupported_script
       entry: gdb/contrib/check-file-mode.sh
+      files: *gdb_files

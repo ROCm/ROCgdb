@@ -39,4 +39,28 @@ with_cwd $repodir {
     set status [lindex $result 0]
     gdb_assert {$status == 0} "pre-commit checks"
 
+    with_test_prefix commit-msg {
+	set commit_msg [build_standard_output_file "commit-msg.txt"]
+
+	# codespell:ignore-begin.
+	gdb_produce_source $commit_msg {
+	    This should aways produce a codespell warning.
+	}
+	# codespell:ignore-end.
+
+	set result \
+	    [remote_exec build \
+		 "pre-commit run --hook-stage commit-msg --commit-msg-filename $commit_msg -v"]
+	set status [lindex $result 0]
+	set output [lindex $result 1]
+	gdb_assert {$status == 0} "run"
+
+	with_test_prefix codespell-log {
+	    # codespell:ignore-begin.
+	    set re [string_to_regexp "aways ==> "]
+	    # codespell:ignore-end.
+
+	    gdb_assert {[regexp $re $output]} "output"
+	}
+    }
 }
