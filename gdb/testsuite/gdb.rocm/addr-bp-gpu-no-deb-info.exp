@@ -18,6 +18,10 @@
 
 load_lib rocm.exp
 
+# This test only exercises a small slice of the GPU; allow it to
+# run concurrently with other gdb.rocm tests.
+set rocm_gpu_concurrency parallel
+
 standard_testfile .cpp
 
 require allow_hip_tests
@@ -26,17 +30,18 @@ if {[build_executable "failed to prepare" $testfile $srcfile {hip}]} {
     return
 }
 
-clean_restart $::testfile
-
-# We may have multiple GPUs, resulting in many possible locations.  This is
-# needed to ensure we get a single address to break on, so make device 0 the
-# only visible one.
-gdb_test_no_output "set environment ROCR_VISIBLE_DEVICES=0"
-
-# Make the HIP runtime load all the GPU code objects during initialization.
-gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+# with_rocm_gpu_lock pins ROCR_VISIBLE_DEVICES to a single GPU per pool,
+# so the inferior sees exactly one device and the breakpoint resolves to
+# a single address.  GDB has to start inside the lock so it inherits the
+# pinned ROCR_VISIBLE_DEVICES from the environment.
 
 with_rocm_gpu_lock {
+    clean_restart $::testfile
+
+    # Make the HIP runtime load all the GPU code objects during
+    # initialization.
+    gdb_test_no_output "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+
     if { ![runto_main] } {
 	return
     }
