@@ -274,6 +274,7 @@ struct gdbarch
   gdbarch_use_target_description_from_corefile_notes_ftype *use_target_description_from_corefile_notes = default_use_target_description_from_corefile_notes;
   gdbarch_core_parse_exec_context_ftype *core_parse_exec_context = default_core_parse_exec_context;
   gdbarch_should_show_inline_frame_ftype *should_show_inline_frame = default_should_show_inline_frame;
+  bool imprecise_pagefault_reporting = false;
 };
 
 /* Create a new ``struct gdbarch'' based on information provided by
@@ -569,6 +570,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of use_target_description_from_corefile_notes, invalid_p == 0.  */
   /* Skip verify of core_parse_exec_context, invalid_p == 0.  */
   /* Skip verify of should_show_inline_frame, invalid_p == 0.  */
+  /* Skip verify of imprecise_pagefault_reporting, invalid_p == 0.  */
   if (!log.empty ())
     internal_error (_("verify_gdbarch: the following are invalid ...%s"),
 		    log.c_str ());
@@ -1488,6 +1490,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: should_show_inline_frame = <%s>\n",
 	      host_address_to_string (gdbarch->should_show_inline_frame));
+  gdb_printf (file,
+	      "gdbarch_dump: imprecise_pagefault_reporting = %s\n",
+	      plongest (gdbarch->imprecise_pagefault_reporting));
   if (gdbarch->dump_tdep != NULL)
     gdbarch->dump_tdep (gdbarch, file);
 }
@@ -5864,4 +5869,21 @@ set_gdbarch_should_show_inline_frame (struct gdbarch *gdbarch,
 				      gdbarch_should_show_inline_frame_ftype should_show_inline_frame)
 {
   gdbarch->should_show_inline_frame = should_show_inline_frame;
+}
+
+bool
+gdbarch_imprecise_pagefault_reporting (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  /* Skip verify of imprecise_pagefault_reporting, invalid_p == 0.  */
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_imprecise_pagefault_reporting called\n");
+  return gdbarch->imprecise_pagefault_reporting;
+}
+
+void
+set_gdbarch_imprecise_pagefault_reporting (struct gdbarch *gdbarch,
+					   bool imprecise_pagefault_reporting)
+{
+  gdbarch->imprecise_pagefault_reporting = imprecise_pagefault_reporting;
 }
