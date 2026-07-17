@@ -414,11 +414,6 @@ i[3-7]86-*-mingw32*)	targ_emul=i386pe ;
 i[3-7]86-*-interix*)	targ_emul=i386pe_posix;
 			targ_extra_ofiles="deffilep.o pe-dll.o"
 			;;
-i[3-7]86-*-beospe*)	targ_emul=i386beos
-			targ_extra_ofiles=
-			;;
-i[3-7]86-*-beos*)	targ_emul=elf_i386_be
-			;;
 i[3-7]86-*-haiku*)	targ_emul=elf_i386_haiku
 			;;
 i[3-7]86-*-vxworks*)	targ_emul=elf_i386_vxworks
@@ -756,9 +751,6 @@ powerpc-*-aix[5-9]*)	targ_emul=aix5ppc
 			targ_extra_ofiles=
 			;;
 powerpc-*-aix*)		targ_emul=aixppc
-			targ_extra_ofiles=
-			;;
-powerpc-*-beos*)	targ_emul=aixppc
 			targ_extra_ofiles=
 			;;
 powerpc-*-haiku*)	targ_emul=elf32ppchaiku

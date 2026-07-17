@@ -225,8 +225,6 @@ case ${generic_target} in
   h8300-*-elf)				fmt=elf ;;
   h8300-*-linux*)			fmt=elf em=linux ;;
 
-  i386-*-beospe*)			fmt=coff em=pe ;;
-  i386-*-beos*)				fmt=elf ;;
   i386-*-elfiamcu)			fmt=elf arch=iamcu ;;
   i386-*-elf*)				fmt=elf ;;
   i386-*-fuchsia*)			fmt=elf ;;
@@ -361,7 +359,6 @@ case ${generic_target} in
   ppc-*-aix5.[01])			fmt=coff em=aix5 ;;
   ppc-*-aix[5-9].*)			fmt=coff em=aix5 ;;
   ppc-*-aix*)				fmt=coff em=aix ;;
-  ppc-*-beos*)				fmt=coff ;;
   ppc-*-*n*bsd* | ppc-*-elf*)		fmt=elf ;;
   ppc-*-eabi* | ppc-*-sysv4*)		fmt=elf ;;
   ppc-*-haiku*)				fmt=elf em=haiku ;;
