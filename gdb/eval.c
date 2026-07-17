@@ -753,7 +753,7 @@ scope_operation::evaluate_funcall (struct type *expect_type,
     {
       function = cp_lookup_symbol_namespace (type->name (),
 					     name.c_str (),
-					     get_selected_block (0),
+					     get_selected_block (),
 					     SEARCH_FUNCTION_DOMAIN).symbol;
       if (function == NULL)
 	error (_("No symbol \"%s\" in namespace \"%s\"."),
@@ -799,7 +799,7 @@ scope_operation::evaluate_funcall (struct type *expect_type,
       find_overload_match (arg_view, nullptr,
 			   NON_METHOD, nullptr, function,
 			   nullptr, &symp, nullptr, 1, noside);
-      callee = value_of_variable (symp, get_selected_block (0));
+      callee = value_of_variable (symp, get_selected_block ());
     }
 
   return evaluate_subexp_do_call (exp, noside, callee, arg_view,

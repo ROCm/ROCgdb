@@ -3813,7 +3813,7 @@ value_maybe_namespace_elt (const struct type *curtype,
   struct value *result;
 
   sym = cp_lookup_symbol_namespace (namespace_name, name,
-				    get_selected_block (0), SEARCH_VFT);
+				    get_selected_block (), SEARCH_VFT);
 
   if (sym.symbol == NULL)
     return NULL;

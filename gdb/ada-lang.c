@@ -7424,7 +7424,7 @@ field_alignment (struct type *type, int f)
 static struct symbol *
 ada_find_any_type_symbol (const char *name)
 {
-  return standard_lookup (name, get_selected_block (nullptr),
+  return standard_lookup (name, get_selected_block (),
 			  SEARCH_TYPE_DOMAIN);
 }
 
@@ -11437,7 +11437,7 @@ get_var_value (const char *name, const char *err_msg)
 
   std::vector<struct block_symbol> syms
     = ada_lookup_symbol_list_worker (lookup_name,
-				     get_selected_block (0),
+				     get_selected_block (),
 				     SEARCH_VFT, true);
 
   if (syms.size () != 1)
@@ -13753,7 +13753,7 @@ public:
     /* Search upwards from currently selected frame (so that we can
        complete on local vars.  */
 
-    for (const block *b = get_selected_block (0);
+    for (const block *b = get_selected_block ();
 	 b != nullptr;
 	 b = b->superblock ())
       {

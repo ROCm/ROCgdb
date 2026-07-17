@@ -881,7 +881,8 @@ extern const struct block *get_frame_block (const frame_info_ptr &,
    it occurs in the CLI code and makes it possible for commands to
    work, even when the inferior has no state.  */
 
-extern const struct block *get_selected_block (CORE_ADDR *addr_in_block);
+extern const struct block *get_selected_block
+  (CORE_ADDR *addr_in_block = nullptr);
 
 extern struct symbol *get_frame_function (const frame_info_ptr &);
 

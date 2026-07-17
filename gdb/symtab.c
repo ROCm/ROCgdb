@@ -5979,7 +5979,7 @@ default_collect_symbol_completion_matches_break_on
      this places which match our text string.  Only complete on types
      visible from current context.  */
 
-  b = get_selected_block (0);
+  b = get_selected_block ();
   surrounding_static_block = b == nullptr ? nullptr : b->static_block ();
   surrounding_global_block = b == nullptr ? nullptr : b->global_block ();
   if (surrounding_static_block != NULL)

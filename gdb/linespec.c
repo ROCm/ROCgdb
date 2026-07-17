@@ -1184,7 +1184,7 @@ get_current_search_block (void)
   /* get_selected_block can change the current language when there is
      no selected frame yet.  */
   scoped_restore_current_language save_language;
-  return get_selected_block (0);
+  return get_selected_block ();
 }
 
 /* Iterate over static and global blocks.  */
