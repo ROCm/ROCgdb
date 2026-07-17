@@ -363,16 +363,15 @@ buildsym_compunit::make_blockvector ()
       gdb_assert (num_blocks > 1);
 
       /* Assert our understanding of how the blocks are laid out.  */
-      gdb_assert (blockvector->block (0)->is_global_block ());
-      gdb_assert (blockvector->block (1)->is_static_block ());
+      gdb_assert (blockvector->block (GLOBAL_BLOCK)->is_global_block ());
+      gdb_assert (blockvector->block (STATIC_BLOCK)->is_static_block ());
 
-      /* The 'J > 1' here is so that we don't place the global block into
-	 the map.  For CU with gaps, the static block will reflect the
-	 gaps, while the global block will just reflect the full extent of
+      /* The 'J > GLOBAL_BLOCK' here is so that we don't place the global
+	 block into the map.  For CU with gaps, the static block will reflect
+	 the gaps, while the global block will just reflect the full extent of
 	 the range.  */
-      for (int j = num_blocks; j > 1; )
+      for (int j = num_blocks - 1; j > GLOBAL_BLOCK; --j)
 	{
-	  --j;
 	  struct block *b = blockvector->block (j);
 
 	  gdb_assert (!b->is_global_block ());
