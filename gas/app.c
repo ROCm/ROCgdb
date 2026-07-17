@@ -694,12 +694,12 @@ do_scrub_chars (size_t (*get) (char *, size_t), char *tostart, size_t tolen,
 	  ch = GET ();
 	  switch (ch)
 	    {
-	      /* Handle strings broken across lines, by turning '\n' into
-		 '\\' and 'n'.  */
+	      /* Handle strings broken across lines, by turning '\\' followed
+		 by '\n' into '\\' (already emitted when state moved to 6) and
+		 'n'.  */
 	    case '\n':
-	      UNGET ('n');
 	      add_newlines++;
-	      PUT ('\\');
+	      PUT ('n');
 	      continue;
 
 	    case EOF:
