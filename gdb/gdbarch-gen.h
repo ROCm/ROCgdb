@@ -1758,3 +1758,26 @@ void set_gdbarch_shadow_stack_push (struct gdbarch *gdbarch, gdbarch_shadow_stac
 using gdbarch_get_shadow_stack_pointer_ftype = std::optional<CORE_ADDR> (struct gdbarch *gdbarch, regcache *regcache, bool &shadow_stack_enabled);
 std::optional<CORE_ADDR> gdbarch_get_shadow_stack_pointer (struct gdbarch *gdbarch, regcache *regcache, bool &shadow_stack_enabled);
 void set_gdbarch_get_shadow_stack_pointer (struct gdbarch *gdbarch, gdbarch_get_shadow_stack_pointer_ftype *get_shadow_stack_pointer);
+
+/* True if architecture has imprecise page fault reporting, where a
+   memory access violation may be reported several instructions after the
+   faulting instruction.
+
+   On such architectures, if an instruction causes a memory access violation,
+   the backend may report the stop at a later instruction where a breakpoint
+   happens to be installed.  GDB's normal logic would incorrectly assume that
+   the SIGSEGV was caused by hitting the breakpoint and convert it to SIGTRAP.
+
+   However, if an architecture never reports breakpoints via SIGSEGV (e.g.,
+   breakpoints are always reported via a dedicated mechanism), then receiving
+   a SIGSEGV at a breakpoint location means we have a genuine SIGSEGV, not a
+   breakpoint hit.
+
+   Set to true for architectures with imprecise fault reporting to disable the
+   SIGSEGV-to-SIGTRAP conversion.  The default is false (conversion enabled)
+   to preserve existing behavior for architectures where breakpoints may be
+   reported as SIGSEGV (e.g., executing a breakpoint instruction on a
+   non-executable stack). */
+
+bool gdbarch_imprecise_pagefault_reporting (struct gdbarch *gdbarch);
+void set_gdbarch_imprecise_pagefault_reporting (struct gdbarch *gdbarch, bool imprecise_pagefault_reporting);

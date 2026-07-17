@@ -6332,7 +6332,9 @@ handle_inferior_event (struct execution_control_state *ecs)
      stack.  */
   if (ecs->ws.kind () == TARGET_WAITKIND_STOPPED
       && (ecs->ws.sig () == GDB_SIGNAL_ILL
-	  || ecs->ws.sig () == GDB_SIGNAL_SEGV
+	  || (ecs->ws.sig () == GDB_SIGNAL_SEGV
+	      && !(gdbarch_imprecise_pagefault_reporting
+		   (target_thread_architecture (ecs->event_thread->ptid))))
 	  || ecs->ws.sig () == GDB_SIGNAL_EMT))
     {
       struct regcache *regcache = get_thread_regcache (ecs->event_thread);
