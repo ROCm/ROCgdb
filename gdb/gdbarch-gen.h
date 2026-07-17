@@ -1880,3 +1880,26 @@ void set_gdbarch_get_shadow_stack_pointer (struct gdbarch *gdbarch, gdbarch_get_
 using gdbarch_should_show_inline_frame_ftype = bool (struct gdbarch *gdbarch, const struct symbol *func, enum gdb_signal stop_signal);
 bool gdbarch_should_show_inline_frame (struct gdbarch *gdbarch, const struct symbol *func, enum gdb_signal stop_signal);
 void set_gdbarch_should_show_inline_frame (struct gdbarch *gdbarch, gdbarch_should_show_inline_frame_ftype *should_show_inline_frame);
+
+/* True if architecture has imprecise page fault reporting, where a
+   memory access violation may be reported several instructions after the
+   faulting instruction.
+
+   On such architectures, if an instruction causes a memory access violation,
+   the backend may report the stop at a later instruction where a breakpoint
+   happens to be installed.  GDB's normal logic would incorrectly assume that
+   the SIGSEGV was caused by hitting the breakpoint and convert it to SIGTRAP.
+
+   However, if an architecture never reports breakpoints via SIGSEGV (e.g.,
+   breakpoints are always reported via a dedicated mechanism), then receiving
+   a SIGSEGV at a breakpoint location means we have a genuine SIGSEGV, not a
+   breakpoint hit.
+
+   Set to true for architectures with imprecise fault reporting to disable the
+   SIGSEGV-to-SIGTRAP conversion.  The default is false (conversion enabled)
+   to preserve existing behavior for architectures where breakpoints may be
+   reported as SIGSEGV (e.g., executing a breakpoint instruction on a
+   non-executable stack). */
+
+bool gdbarch_imprecise_pagefault_reporting (struct gdbarch *gdbarch);
+void set_gdbarch_imprecise_pagefault_reporting (struct gdbarch *gdbarch, bool imprecise_pagefault_reporting);
