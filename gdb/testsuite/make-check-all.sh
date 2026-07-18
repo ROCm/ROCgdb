@@ -320,7 +320,7 @@ main ()
     for b in "${target_boards[@]}"; do
 	echo "TARGET BOARD: $b"
 	rtf=(
-	    --target_board="$b"
+	    "--target_board=$b"
 	)
 	rtf_for_board "$b"
 	maketarget_for_board "$b"
@@ -332,7 +332,7 @@ main ()
     for b in "${gdbserver_boards[@]}" "${remote_gdbserver_boards[@]}"; do
 	echo "TARGET BOARD: $b"
 	rtf=(
-	    --target_board="$b"
+	    "--target_board=$b"
 	)
 	rtf_for_board "$b"
 	maketarget_for_board "$b"
@@ -345,8 +345,8 @@ main ()
 	for b in "${remote_gdbserver_boards[@]}"; do
 	    echo "HOST BOARD: $h, TARGET BOARD: $b"
 	    rtf=(
-		--host_board="$h"
-		--target_board="$b"
+		"--host_board=$h"
+		"--target_board=$b"
 	    )
 	    rtf_for_board "$h"
 	    rtf_for_board "$b"
@@ -360,8 +360,8 @@ main ()
     for b in "${host_target_boards[@]}"; do
 	echo "HOST/TARGET BOARD: $b"
 	rtf=(
-	    --host_board="$b"
-	    --target_board="$b"
+	    "--host_board=$b"
+	    "--target_board=$b"
 	)
 	rtf_for_board "$b"
 	maketarget_for_board "$b"
