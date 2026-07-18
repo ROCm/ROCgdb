@@ -215,8 +215,14 @@ do_tests ()
 	cp gdb.sum gdb.log "$dir"
 
 	# Record the 'make check' command to enable easy re-running.
-	echo "make $maketarget RUNTESTFLAGS=\"${rtf[*]}\" TESTS=\"${tests[*]}\"" \
-	     > "$dir/make-check.sh"
+	make_check_script="$dir/make-check.sh"
+	cat <<-EOF > "$make_check_script"
+	#!/bin/sh
+
+	cd "$PWD" && \\
+	  make $maketarget RUNTESTFLAGS="${rtf[*]}" TESTS="${tests[*]}"
+	EOF
+	chmod +x "$make_check_script"
     fi
 }
 
