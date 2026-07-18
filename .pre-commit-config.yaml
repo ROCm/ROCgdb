@@ -74,6 +74,9 @@ repos:
     - id: isort
       types_or: *gdb_python_types
       files: *gdb_python_files
+      # Isort's .pre-commit-hooks.yaml sets stages, overriding default_stages,
+      # so this hook needs an explicit setting.
+      stages: [pre-commit]
 
   # Codespell hooks.
   - repo: https://github.com/codespell-project/codespell
