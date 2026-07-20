@@ -28,12 +28,14 @@ SOURCEWARE_URL = "https://sourceware.org/git/binutils-gdb.git"
 
 
 def _parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Sync sourceware/master into origin/amd-staging.")
+    p = argparse.ArgumentParser(
+        description="Sync sourceware/master into origin/amd-staging."
+    )
     p.add_argument(
         "--workspace",
         metavar="DIR",
         help="Root directory for the working clone (overrides $WORKSPACE). "
-             "The clone is created at DIR/rocgdb_sync/binutils-gdb.",
+        "The clone is created at DIR/rocgdb_sync/binutils-gdb.",
     )
     p.add_argument(
         "--dry-run",
@@ -533,7 +535,10 @@ def main() -> None:
             run(["git", "add", "-A"], cwd=repo)
             run(
                 [
-                    "git", "commit", "--no-verify", "-m",
+                    "git",
+                    "commit",
+                    "--no-verify",
+                    "-m",
                     f"Merge {first_conflict[:12]} into amd-staging (unresolved conflicts)",
                 ],
                 cwd=repo,
