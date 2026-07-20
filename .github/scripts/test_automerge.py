@@ -80,7 +80,9 @@ class TestRun(unittest.TestCase):
 class TestRunNet(unittest.TestCase):
     @patch("time.sleep")
     def test_retries_on_network_error_then_succeeds(self, mock_sleep):
-        network_err = subprocess.CalledProcessError(128, ["git"], "", "could not resolve host")
+        network_err = subprocess.CalledProcessError(
+            128, ["git"], "", "could not resolve host"
+        )
         ok = _completed()
 
         call_count = 0
@@ -99,7 +101,9 @@ class TestRunNet(unittest.TestCase):
 
     @patch("time.sleep")
     def test_raises_connectivity_error_after_all_retries(self, mock_sleep):
-        network_err = subprocess.CalledProcessError(128, ["git"], "", "could not resolve host")
+        network_err = subprocess.CalledProcessError(
+            128, ["git"], "", "could not resolve host"
+        )
 
         with patch.object(am, "run", side_effect=network_err):
             with self.assertRaises(am.ConnectivityError):
@@ -123,7 +127,11 @@ class TestRunNet(unittest.TestCase):
 
 class TestFindOpenPr(unittest.TestCase):
     def test_returns_url_when_present(self):
-        with patch.object(am, "run", return_value=_completed(stdout="https://github.com/ROCm/ROCgdb/pull/42\n")):
+        with patch.object(
+            am,
+            "run",
+            return_value=_completed(stdout="https://github.com/ROCm/ROCgdb/pull/42\n"),
+        ):
             url = am.find_open_conflict_pr()
         self.assertEqual(url, "https://github.com/ROCm/ROCgdb/pull/42")
 
@@ -233,18 +241,22 @@ class TestEarlyExitGate(unittest.TestCase):
         return patches
 
     def test_skips_when_conflict_pr_open(self):
-        patches = self._patch_main_deps(conflict_pr="https://github.com/ROCm/ROCgdb/pull/1")
+        patches = self._patch_main_deps(
+            conflict_pr="https://github.com/ROCm/ROCgdb/pull/1"
+        )
         # Also patch repo/.git exists check so clone is skipped.
-        with patch("pathlib.Path.exists", return_value=True), \
-             patches[0], patches[1], patches[2], patches[3], patches[4]:
+        with patch("pathlib.Path.exists", return_value=True), patches[0], patches[
+            1
+        ], patches[2], patches[3], patches[4]:
             with patch.object(am, "probe_clean_prefix") as mock_probe:
                 am.main()
                 mock_probe.assert_not_called()
 
     def test_skips_when_ff_pr_open(self):
         patches = self._patch_main_deps(ff_pr="https://github.com/ROCm/ROCgdb/pull/2")
-        with patch("pathlib.Path.exists", return_value=True), \
-             patches[0], patches[1], patches[2], patches[3], patches[4]:
+        with patch("pathlib.Path.exists", return_value=True), patches[0], patches[
+            1
+        ], patches[2], patches[3], patches[4]:
             with patch.object(am, "probe_clean_prefix") as mock_probe:
                 am.main()
                 mock_probe.assert_not_called()
@@ -287,17 +299,25 @@ class TestDryRun(unittest.TestCase):
             run_net_calls.append(list(cmd))
             return _completed()
 
-        with patch("pathlib.Path.mkdir"), \
-             patch("pathlib.Path.exists", return_value=True), \
-             patch.object(am, "run", side_effect=fake_run), \
-             patch.object(am, "run_net", side_effect=fake_run_net), \
-             patch.object(am, "find_open_conflict_pr", return_value=None), \
-             patch.object(am, "find_open_ff_pr", return_value=None), \
-             patch.object(am, "probe_clean_prefix", return_value=probe_result), \
-             patch.object(am, "open_ff_pr") as mock_ff_pr, \
-             patch.object(am, "open_conflict_pr") as mock_conflict_pr, \
-             patch.object(am, "push_master_mirror") as mock_mirror, \
-             patch.object(am, "DRY_RUN", True):
+        with patch("pathlib.Path.mkdir"), patch(
+            "pathlib.Path.exists", return_value=True
+        ), patch.object(am, "run", side_effect=fake_run), patch.object(
+            am, "run_net", side_effect=fake_run_net
+        ), patch.object(
+            am, "find_open_conflict_pr", return_value=None
+        ), patch.object(
+            am, "find_open_ff_pr", return_value=None
+        ), patch.object(
+            am, "probe_clean_prefix", return_value=probe_result
+        ), patch.object(
+            am, "open_ff_pr"
+        ) as mock_ff_pr, patch.object(
+            am, "open_conflict_pr"
+        ) as mock_conflict_pr, patch.object(
+            am, "push_master_mirror"
+        ) as mock_mirror, patch.object(
+            am, "DRY_RUN", True
+        ):
             am.main()
 
         return run_net_calls, mock_ff_pr, mock_conflict_pr, mock_mirror
