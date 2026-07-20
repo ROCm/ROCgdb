@@ -254,16 +254,23 @@ check-single-racy:
 	  `ls racy_outputs/*/gdb.sum` > racy.sum; \
 	sed -n '/=== gdb Summary ===/,$$ p' racy.sum
 
+# Combine the individual gdb.sum / gdb.log files found anywhere under
+# directory $(1) into a single gdb.sum / gdb.log pair in directory
+# $(2), using contrib/dg-extract-results.sh.
+define DG_EXTRACT_RESULTS
+	$(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh \
+	  `find $(1) -name gdb.sum -print` > $(2)/gdb.sum; \
+	$(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -L \
+	  `find $(1) -name gdb.log -print` > $(2)/gdb.log
+endef
+
 check-parallel:
 	-rm -f *core*
 	-rm -rf cache outputs temp
 	$(MAKE) -k do-check-parallel; \
 	result=$$?; \
 	if test -d outputs; then \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh \
-	    `find outputs -name gdb.sum -print` > gdb.sum; \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -L \
-	    `find outputs -name gdb.log -print` > gdb.log; \
+	  $(call DG_EXTRACT_RESULTS,outputs,.); \
 	  $(SHELL) $(srcdir)/lib/dg-add-core-file-count.sh; \
 	  sed -n '/=== gdb Summary ===/,$$ p' gdb.sum; \
 	fi; \
@@ -282,12 +289,7 @@ check-parallel-racy:
 	for n in `seq $$racyiter` ; do \
 	  $(MAKE) -k do-check-parallel-racy \
 	    RACY_OUTPUT_N=$$n; \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh \
-	    `find racy_outputs/$$n -name gdb.sum -print` > \
-	    racy_outputs/$$n/gdb.sum; \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -L \
-	    `find racy_outputs/$$n -name gdb.log -print` > \
-	    racy_outputs/$$n/gdb.log; \
+	  $(call DG_EXTRACT_RESULTS,racy_outputs/$$n,racy_outputs/$$n); \
 	  sed -n '/=== gdb Summary ===/,$$ p' racy_outputs/$$n/gdb.sum; \
 	done; \
 	$(srcdir)/analyze-racy-logs.py \
@@ -389,10 +391,7 @@ check-all-boards: all $(abs_builddir)/site.exp
 		"$(TESTS)"; \
 	result=$$?; \
 	if test -d check-all; then \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh \
-	    `find check-all -name gdb.sum -print` > check-all/gdb.sum; \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -L \
-	    `find check-all -name gdb.log -print` > check-all/gdb.log; \
+	  $(call DG_EXTRACT_RESULTS,check-all,check-all); \
 	  sed -n '/=== gdb Summary ===/,$$ p' check-all/gdb.sum; \
 	fi; \
 	exit $$result
