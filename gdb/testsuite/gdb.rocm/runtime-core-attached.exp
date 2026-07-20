@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Test core dump generation while GDB is attached.
-# Verify that running a program under GDB with signal passthrough 
+# Verify that running a program under GDB with signal passthrough
 # generates both host and GPU core dumps.
 
 load_lib rocm.exp
@@ -38,11 +38,42 @@ proc do_attached_test { fault } {
     remote_exec build "mkdir -p $coredir"
     remote_exec build "rm -f $coredir/core.*"
 
-    set cmd "(cd $coredir && ulimit -c unlimited && $::GDB -batch -ex 'handle SIGABRT nostop pass' -ex 'handle SIGSEGV nostop pass' -ex 'run' -args $::binfile $fault; true)"
-    catch {system "$cmd"} result
+    save_vars { ::GDBFLAGS } {
+	set ::GDBFLAGS "-batch -ex 'handle SIGABRT nostop pass' -ex 'handle SIGSEGV nostop pass' -ex 'run' -args $::binfile $fault"
 
-    verbose "GDB batch command: $cmd" 2
-    verbose "GDB batch result: $result" 2
+	set gdb_cmd "$::GDB $::INTERNAL_GDBFLAGS $::GDBFLAGS"
+	set wrapper_cmd "cd $coredir && ulimit -c unlimited && $gdb_cmd"
+
+	verbose "Spawning GDB with ulimit wrapper: $wrapper_cmd" 2
+
+	set res [remote_spawn host "sh -c {$wrapper_cmd}"]
+	if {$res < 0 || $res == ""} {
+	    unsupported "Failed to spawn GDB"
+	    return
+	}
+
+	set ::gdb_spawn_id $res
+
+	expect {
+	    -i $::gdb_spawn_id
+	    -re ".+" {
+		exp_continue
+	    }
+	    eof {
+		verbose "GDB exited" 2
+	    }
+	    timeout {
+		verbose "Timeout waiting for GDB to exit" 2
+	    }
+	}
+
+	catch {
+	    set result [wait -i $::gdb_spawn_id]
+	    verbose "GDB exit status: [lindex $result 3]" 2
+	}
+	remote_close host
+	clear_gdb_spawn_id
+    }
 
     set hostcore_list [glob -nocomplain -directory $coredir "core.*"]
     set gpucore_list {}
