@@ -84,7 +84,8 @@ Approx time to complete from here: 2 hours ...
         $ crontab crontab
 
      If you do not have access to this account, please feel free to
-     ask Joel Brobecker <brobecker AT adacore DOT com>.
+     ask Andrew Burgess <aburgess@redhat.com> or Simon Marchi
+     <simon.marchi@polymtl.ca> to do it for you.
 
   7. Rename the current HEAD version entry in Bugzilla, and create a
      new one.  E.g. rename "2.47 (HEAD)" to 2.47, and create
