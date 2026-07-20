@@ -1795,9 +1795,8 @@ def run_tests(
             # --retry-ignored-tests or --no-xfail restore the old behaviour.
             retry_candidates = set(failed_tests)
             if not args.retry_ignored_tests and not args.no_xfail and xfailed_tests:
-                all_xfailed = (
-                    set(xfailed_tests.get("Generic", []))
-                    | set(xfailed_tests.get(compiler_label, []))
+                all_xfailed = set(xfailed_tests.get("Generic", [])) | set(
+                    xfailed_tests.get(compiler_label, [])
                 )
                 skipped = retry_candidates & all_xfailed
                 retry_candidates -= all_xfailed
@@ -2438,7 +2437,10 @@ def print_configuration(
     fields.extend(
         [
             ("Use FAIL ignore list", "Not using" if args.no_xfail else "Using"),
-            ("Retry ignored tests", "Enabled" if args.retry_ignored_tests else "Disabled"),
+            (
+                "Retry ignored tests",
+                "Enabled" if args.retry_ignored_tests else "Disabled",
+            ),
             ("Group Results", "Enabled" if args.group_results else "Disabled"),
             ("Default Timeout", default_timeout_display),
             ("Retry Timeout", f"{args.retry_timeout} seconds"),
