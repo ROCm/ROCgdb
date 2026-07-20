@@ -1252,6 +1252,28 @@ def setup_environment(artifacts_dir: Path) -> Dict[str, str]:
         f"{artifacts_dir}/llvm/lib",
         f"{artifacts_dir}/lib/llvm/lib",
     ]
+
+    # Determine target triple
+    target_triple = None
+    amdclang_path = artifacts_dir / "lib" / "llvm" / "bin" / "amdclang++"
+    if amdclang_path.exists():
+        try:
+            target_triple = subprocess.run(
+                [str(amdclang_path), "--print-target-triple"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=True,
+            ).stdout.strip()
+        except (subprocess.SubprocessError, OSError) as exc:
+            raise RuntimeError(
+                f"'{amdclang_path} --print-target-triple' failed; "
+                "this suggests a broken toolchain."
+            ) from exc
+
+    if target_triple:
+        ld_library_parts += [f"{artifacts_dir}/lib/llvm/lib/{target_triple}"]
+
     _prepend_to_path_var(env_vars, "PATH", path_parts)
     _prepend_to_path_var(env_vars, "LD_LIBRARY_PATH", ld_library_parts)
 
