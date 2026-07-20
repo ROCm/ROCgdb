@@ -38,6 +38,7 @@
 #include "gdbthread.h"
 #include "inf-loop.h"
 #include "inferior.h"
+#include "inline-frame.h"
 #include "location.h"
 #include "objfiles.h"
 #include "observable.h"
@@ -2098,7 +2099,17 @@ process_one_event (amd_dbgapi_inferior_info &info,
 		  = pc - gdbarch_decr_pc_after_break (gdbarch);
 
 		if (adjusted_pc != pc)
-		  regcache_write_pc (regcache, adjusted_pc);
+		  {
+		    regcache_write_pc (regcache, adjusted_pc);
+
+		    /* For s_trap 2 (assert/abort), clear inline frame state
+		       to ensure __builtin_verbose_trap messages are visible
+		       in backtraces.  The PC change invalidates any cached
+		       skipped_frames state from before the adjustment.  */
+		    if ((stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_ASSERT_TRAP)
+			!= 0)
+		      clear_inline_frame_state (thread);
+		  }
 	      }
 	  }
 	else
