@@ -157,6 +157,7 @@ struct wave_coordinates
   amd_dbgapi_dispatch_id_t dispatch_id = AMD_DBGAPI_DISPATCH_NONE;
   amd_dbgapi_queue_id_t queue_id = AMD_DBGAPI_QUEUE_NONE;
   amd_dbgapi_agent_id_t agent_id = AMD_DBGAPI_AGENT_NONE;
+  vec3_u32_t cluster_ids {UINT32_MAX, UINT32_MAX, UINT32_MAX};
   vec3_u32_t group_ids {UINT32_MAX, UINT32_MAX, UINT32_MAX};
   uint32_t wave_in_group = UINT32_MAX;
 
@@ -476,6 +477,12 @@ wave_coordinates::workgroup_coord_str () const
 			pulongest (group_ids[1]), pulongest (group_ids[2]))
        : "(?,?,?)");
 
+  if (cluster_ids[0] != UINT32_MAX)
+    str = string_printf ("(%s,%s,%s)/%s", pulongest (cluster_ids[0]),
+			 pulongest (cluster_ids[1]),
+			 pulongest (cluster_ids[2]),
+			 str.c_str ());
+
   return str;
 }
 
@@ -519,6 +526,10 @@ wave_coordinates::fetch ()
   amd_dbgapi_wave_get_info (wave_id,
 			    AMD_DBGAPI_WAVE_INFO_WORKGROUP_COORD,
 			    sizeof (group_ids), &group_ids);
+
+  amd_dbgapi_wave_get_info (wave_id,
+			    AMD_DBGAPI_WAVE_INFO_CLUSTER_COORD,
+			    sizeof (cluster_ids), &cluster_ids);
 
   amd_dbgapi_wave_get_info (wave_id,
 			    AMD_DBGAPI_WAVE_INFO_WAVE_NUMBER_IN_WORKGROUP,
@@ -661,10 +672,10 @@ flatid_to_id (size_t flatid, const vec3_t<size_t> &sizes)
   return coord_id;
 }
 
-/* Return the work-group position of the work-item assigned to lane LANE.  */
+/* See amd-dbgapi-target.h.  */
 
-static opt_vec3_u32_t
-lane_workgroup_pos (thread_info *tp, int lane)
+std::optional<std::array<size_t, 3>>
+partial_workgroup_sizes (thread_info *tp)
 {
   wave_info &info = get_thread_wave_info (tp);
   if (info.coords.dispatch_id == AMD_DBGAPI_DISPATCH_NONE)
@@ -676,17 +687,18 @@ lane_workgroup_pos (thread_info *tp, int lane)
     }
 
   vec3_u32_t grid_sizes;
-  dispatch_get_info_throw (info.coords.dispatch_id,
-			   AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
-			   grid_sizes);
+  /* If in cluster mode, use cluster sizes instead of the grid,
+     because the cluster in this case becomes the workgroup
+     container.  */
+  auto query = ((info.coords.cluster_ids[0] == UINT32_MAX)
+		? AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES
+		: AMD_DBGAPI_DISPATCH_INFO_CLUSTER_SIZES);
+  dispatch_get_info_throw (info.coords.dispatch_id, query, grid_sizes);
 
   vec3_t<uint16_t> work_group_sizes;
   dispatch_get_info_throw (info.coords.dispatch_id,
 			   AMD_DBGAPI_DISPATCH_INFO_WORKGROUP_SIZES,
 			   work_group_sizes);
-
-  size_t lane_count;
-  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, lane_count);
 
   /* Find the work-group item sizes for each axis, taking into account
      the work-items that actually fit in the grid.  */
@@ -701,9 +713,25 @@ lane_workgroup_pos (thread_info *tp, int lane)
       partial_wg_sizes[i] = work_item_end - work_item_start;
     }
 
+  return partial_wg_sizes;
+}
+
+/* Return the work-group position of the work-item assigned to lane LANE.  */
+
+static opt_vec3_u32_t
+lane_workgroup_pos (thread_info *tp, int lane)
+{
+  auto partial_wg_sizes = partial_workgroup_sizes (tp);
+  if (!partial_wg_sizes.has_value ())
+    return std::nullopt;
+
+  size_t lane_count;
+  wave_get_info_throw (tp, AMD_DBGAPI_WAVE_INFO_LANE_COUNT, lane_count);
+
+  wave_info &info = get_thread_wave_info (tp);
   size_t flatid = info.coords.wave_in_group * lane_count + lane;
 
-  return flatid_to_id (flatid, partial_wg_sizes);
+  return flatid_to_id (flatid, partial_wg_sizes.value ());
 }
 
 /* Return the lane's work-group position as a string.  */
@@ -1183,6 +1211,21 @@ amd_dbgapi_target::grid_sizes (thread_info *thr)
       != AMD_DBGAPI_STATUS_SUCCESS)
     return std::nullopt;
 
+  std::array<uint32_t, 3> cluster_sizes;
+  if (info.coords.cluster_ids[0] == UINT32_MAX
+      || (amd_dbgapi_dispatch_get_info (info.coords.dispatch_id,
+					AMD_DBGAPI_DISPATCH_INFO_CLUSTER_SIZES,
+					sizeof (cluster_sizes),
+					cluster_sizes.data ())
+	  != AMD_DBGAPI_STATUS_SUCCESS))
+    {
+      /* If cluster info is not available, in the 3D hierarchy, the
+	 "unit" under the grid is workgroup.  */
+      cluster_sizes[0] = group_sizes[0];
+      cluster_sizes[1] = group_sizes[1];
+      cluster_sizes[2] = group_sizes[2];
+    }
+
   vec3_u32_t grid_sizes;
   if (amd_dbgapi_dispatch_get_info (info.coords.dispatch_id,
 				    AMD_DBGAPI_DISPATCH_INFO_GRID_SIZES,
@@ -1193,7 +1236,7 @@ amd_dbgapi_target::grid_sizes (thread_info *thr)
 
   /* Convert GRID_SIZES from "work-item" unit to "work-group" unit.  */
   for (size_t i = 0; i < 3; ++i)
-    grid_sizes[i] /= group_sizes[i];
+    grid_sizes[i] /= cluster_sizes[i];
 
   return grid_sizes;
 }
@@ -4478,7 +4521,7 @@ info_dispatches_command (const char *args, int from_tty)
       {
 	size_t n_dispatches{ 0 }, max_target_id_width{ 0 },
 	  max_grid_width{ 0 }, max_workgroup_width{ 0 },
-	  max_address_spaces_width{ 0 };
+	  max_cluster_width { 0 }, max_address_spaces_width{ 0 };
 
 	for (auto &&value : all_filtered_dispatches)
 	  {
@@ -4511,6 +4554,16 @@ info_dispatches_command (const char *args, int from_tty)
 		max_grid_width
 		  = std::max (max_grid_width,
 			      ndim_string (dims, grid_sizes).size ());
+
+		/* Clusters are optional, depending on architecture support.  */
+		vec3_u32_t cluster_sizes;
+		if ((status = amd_dbgapi_dispatch_get_info (
+		       dispatch_id, AMD_DBGAPI_DISPATCH_INFO_CLUSTER_SIZES,
+		       sizeof (cluster_sizes), &cluster_sizes[0]))
+		    == AMD_DBGAPI_STATUS_SUCCESS)
+		  max_cluster_width
+		    = std::max (max_cluster_width,
+				ndim_string (dims, cluster_sizes).size ());
 
 		/* workgroup  */
 		vec3_t<uint16_t> work_group_sizes;
@@ -4563,7 +4616,7 @@ info_dispatches_command (const char *args, int from_tty)
 	  }
 
 	/* Header:  */
-	table_emitter.emplace (uiout, opts.full ? 11 : 7, n_dispatches,
+	table_emitter.emplace (uiout, opts.full ? 12 : 8, n_dispatches,
 			       "InfoRocmDispatchesTable");
 	size_t addr_width = 2 + (gdbarch_ptr_bit (gdbarch) / 4);
 
@@ -4574,6 +4627,8 @@ info_dispatches_command (const char *args, int from_tty)
 			     ui_left, "target-id", "Target Id");
 	uiout->table_header (std::max<size_t> (4, max_grid_width), ui_left,
 			     "grid", "Grid");
+	uiout->table_header (std::max<size_t> (7, max_cluster_width),
+			     ui_left, "cluster", "Cluster");
 	uiout->table_header (std::max<size_t> (9, max_workgroup_width),
 			     ui_left, "workgroup", "Workgroup");
 	uiout->table_header (7, ui_left, "fence", "Fence");
@@ -4653,6 +4708,17 @@ info_dispatches_command (const char *args, int from_tty)
 		     get_status_string (status));
 
 	    uiout->field_string ("grid", ndim_string (dims, grid_sizes));
+
+	    /* cluster  */
+	    vec3_u32_t cluster_sizes;
+	    if ((status = amd_dbgapi_dispatch_get_info (
+		   dispatch_id, AMD_DBGAPI_DISPATCH_INFO_CLUSTER_SIZES,
+		   sizeof (cluster_sizes), &cluster_sizes[0]))
+		!= AMD_DBGAPI_STATUS_SUCCESS)
+	      uiout->field_string ("cluster", "-");
+	    else
+	      uiout->field_string ("cluster",
+				   ndim_string (dims, cluster_sizes));
 
 	    /* workgroup  */
 	    vec3_t<uint16_t> work_group_sizes;
