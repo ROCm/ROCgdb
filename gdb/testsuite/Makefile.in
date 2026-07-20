@@ -276,6 +276,19 @@ check-parallel:
 	fi; \
 	exit $$result
 
+# Regenerate the combined gdb.sum / gdb.log from an existing outputs/
+# directory, without re-running any tests.  Handy after a "make check"
+# parallel run to rebuild the combined results by hand -- for example
+# after tweaking contrib/dg-extract-results.sh.
+extract-results:
+	@if test ! -d outputs; then \
+	  echo "No outputs/ directory found; run a parallel \"make check\" first."; \
+	  exit 1; \
+	fi
+	$(call DG_EXTRACT_RESULTS,outputs,.)
+	$(SHELL) $(srcdir)/lib/dg-add-core-file-count.sh
+	sed -n '/=== gdb Summary ===/,$$ p' gdb.sum
+
 check-parallel-racy:
 	-rm -rf cache racy_outputs temp
 	racyiter="$(RACY_ITER)"; \
