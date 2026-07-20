@@ -1,4 +1,4 @@
-/* Copyright (C) 2021-2026 Advanced Micro Devices, Inc. All rights reserved.
+/* Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
 
    This file is part of GDB.
 
@@ -18,13 +18,15 @@
 
 #include <hip/hip_runtime.h>
 
-__global__ void test_trap_kernel()
+__global__ void
+test_trap_kernel ()
 {
-    __builtin_verbose_trap("check verbose", "This is verbose trap!");
+  __builtin_verbose_trap ("check verbose", "This is verbose trap!");
 }
 
-int main()
+int
+main ()
 {
-    test_trap_kernel<<<1, 1>>>();
-    return hipDeviceSynchronize() != hipSuccess;
+  test_trap_kernel<<<1, 1>>> ();
+  return hipDeviceSynchronize () != hipSuccess;
 }

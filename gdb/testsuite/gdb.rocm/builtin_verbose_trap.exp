@@ -1,4 +1,4 @@
-# Copyright (C) 2021-2026 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
 
 # This file is part of GDB.
 
@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test that __builtin_trap PC is correctly adjusted
+# Test that __builtin_verbose_trap PC is correctly adjusted.
 
 load_lib rocm.exp
 require allow_hip_tests
@@ -25,23 +25,26 @@ if {[build_executable "failed to build" $testfile $srcfile {debug hip}]} {
     return
 }
 
-clean_restart
-gdb_load $::binfile
+clean_restart $::testfile
 
 with_rocm_gpu_lock {
     if {![runto_main]} {
-	fail "cannot run to main"
 	return
     }
 
-    # Continue to the trap.
+    # Continue to the trap and verify verbose message appears.
     gdb_test "continue" \
-	".*received signal SIGABRT.*" \
-	"received trap signal"
+	".*received signal SIGABRT.*This is verbose trap.*" \
+	"received trap signal with verbose message"
 
     # Check PC points to trap instruction.
     # If PC adjustment is working, PC should be at the s_trap instruction.
     gdb_test "x/i \$pc" \
 	".*s_trap.*" \
 	"PC points to trap instruction"
+
+    # Verify message appears in backtrace.
+    gdb_test "bt" \
+	".*This is verbose trap.*" \
+	"verbose trap message appears in backtrace"
 }
