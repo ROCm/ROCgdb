@@ -19,6 +19,12 @@ import importlib
 import importlib.util
 import os
 
+_TEST_ENV = {
+    "GITHUB_REPOSITORY": "ROCm/ROCgdb",
+    "AUTOMERGE_TARGET_BRANCH": "amd-staging",
+    "AUTOMERGE_UPSTREAM_BRANCH": "master",
+}
+
 
 def _load_automerge():
     """Load automerge as a module, neutralising its module-level side-effects."""
@@ -27,7 +33,8 @@ def _load_automerge():
         Path(__file__).parent / "automerge.py",
     )
     # Patch sys.argv so argparse doesn't see pytest/unittest args.
-    with patch("sys.argv", ["automerge.py"]):
+    # Inject required env vars so module-level validation doesn't call sys.exit.
+    with patch("sys.argv", ["automerge.py"]), patch.dict(os.environ, _TEST_ENV):
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
     return mod
@@ -121,7 +128,7 @@ class TestRunNet(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# find_open_conflict_pr / find_open_ff_pr
+# find_open_conflict_pr / find_open_conflict_free_pr
 # ---------------------------------------------------------------------------
 
 
@@ -151,7 +158,7 @@ class TestFindOpenPr(unittest.TestCase):
 
     def test_ff_returns_none_when_no_pr(self):
         with patch.object(am, "run", return_value=_completed(stdout="")):
-            url = am.find_open_ff_pr()
+            url = am.find_open_conflict_free_pr()
         self.assertIsNone(url)
 
 
@@ -200,8 +207,8 @@ class TestProbeCleanPrefix(unittest.TestCase):
         self.assertEqual(last_clean, "aaa")
         self.assertEqual(first_conflict, "bbb")
 
-    def test_cleanup_runs_even_when_abort_raises(self):
-        """Branch cleanup (checkout --detach + branch -D) must run even if merge --abort raises."""
+    def test_cleanup_runs_even_when_abort_fails(self):
+        """Branch cleanup (checkout --detach + branch -D) must run even if merge --abort fails."""
         cleanup_calls = []
 
         def fake_subproc(cmd, **kwargs):
@@ -209,17 +216,17 @@ class TestProbeCleanPrefix(unittest.TestCase):
                 return _completed(returncode=1, stderr="conflict")
             if "--abort" in cmd:
                 # Simulate merge --abort failing (e.g. no merge in progress).
+                # probe_clean_prefix calls this with check=False so it doesn't raise.
                 return _completed(returncode=1, stderr="cannot abort")
             if "--detach" in cmd or "-D" in cmd:
                 cleanup_calls.append(list(cmd))
             return _completed()
 
         with patch("subprocess.run", side_effect=fake_subproc):
-            # merge --abort returns non-zero; run() with check=True will raise.
-            # probe_clean_prefix calls merge --abort with check=True, so it raises.
-            with self.assertRaises(subprocess.CalledProcessError):
-                am.probe_clean_prefix(Path("/repo"), ["aaa"])
+            last_clean, first_conflict = am.probe_clean_prefix(Path("/repo"), ["aaa"])
 
+        self.assertIsNone(last_clean)
+        self.assertEqual(first_conflict, "aaa")
         self.assertEqual(len(cleanup_calls), 2)
 
 
@@ -236,7 +243,7 @@ class TestEarlyExitGate(unittest.TestCase):
             patch.object(am, "run_net", return_value=_completed()),
             patch.object(am, "run", return_value=_completed(stdout="")),
             patch.object(am, "find_open_conflict_pr", return_value=conflict_pr),
-            patch.object(am, "find_open_ff_pr", return_value=ff_pr),
+            patch.object(am, "find_open_conflict_free_pr", return_value=ff_pr),
         ]
         return patches
 
@@ -306,15 +313,15 @@ class TestDryRun(unittest.TestCase):
         ), patch.object(
             am, "find_open_conflict_pr", return_value=None
         ), patch.object(
-            am, "find_open_ff_pr", return_value=None
+            am, "find_open_conflict_free_pr", return_value=None
         ), patch.object(
             am, "probe_clean_prefix", return_value=probe_result
         ), patch.object(
-            am, "open_ff_pr"
+            am, "open_conflict_free_pr"
         ) as mock_ff_pr, patch.object(
             am, "open_conflict_pr"
         ) as mock_conflict_pr, patch.object(
-            am, "push_master_mirror"
+            am, "push_upstream_mirror"
         ) as mock_mirror, patch.object(
             am, "DRY_RUN", True
         ):
@@ -348,6 +355,7 @@ class TestDryRun(unittest.TestCase):
         push_calls = [c for c in run_net_calls if "push" in c]
         self.assertEqual(push_calls, [])
         mock_ff_pr.assert_not_called()
+        mock_conflict_pr.assert_not_called()
         mock_mirror.assert_not_called()
 
 
