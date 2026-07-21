@@ -57,6 +57,18 @@ reencode_add_imm (uint32_t insn, uint32_t imm)
   return (insn & ~(MASK (12) << 10)) | ((imm & MASK (12)) << 10);
 }
 
+/* Base encoding for MOV Wd, Wm (ORR Wd, WZR, Wm).  */
+#define AARCH64_MOV_REG_OPCODE 0x2a0003e0U
+/* NOP encoding  */
+#define AARCH64_NOP_OPCODE 0xd503201fU
+
+/* Reencode ADD immediate as MOV-register (ORR Rd, ZR, Rm).  */
+static inline uint32_t
+reencode_add_to_mov (uint32_t insn, unsigned int rd, unsigned int rn)
+{
+  return ((insn & (1U << 31)) | AARCH64_MOV_REG_OPCODE | (rn << 16) | rd);
+}
+
 /* Reencode the IMM field of ADR.  */
 
 uint32_t
@@ -161,7 +173,8 @@ aarch64_signed_overflow (bfd_vma value, unsigned int bits)
 bfd_reloc_status_type
 _bfd_aarch64_elf_put_addend (bfd *abfd,
 			     bfd_byte *address, bfd_reloc_code_real_type r_type,
-			     reloc_howto_type *howto, bfd_signed_vma addend)
+			     reloc_howto_type *howto, bfd_signed_vma addend,
+			     bool optimize_relocations)
 {
   bfd_reloc_status_type status = bfd_reloc_ok;
   bfd_signed_vma old_addend = addend;
@@ -261,12 +274,25 @@ _bfd_aarch64_elf_put_addend (bfd *abfd,
     case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_HI12:
     case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
     case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-      /* Corresponds to: add rd, rn, #uimm12 to provide the low order
-	 12 bits of the page offset following
-	 BFD_RELOC_AARCH64_ADR_HI21_PCREL which computes the
-	 (pc-relative) page base.  */
-      contents = reencode_add_imm (contents, addend);
-      break;
+      /* Optimize an ADD whose relocated 12-bit immediate is zero.  */
+      {
+	unsigned int rd = contents & MASK (5);
+	unsigned int rn = (contents >> 5) & MASK (5);
+
+	if (optimize_relocations && (addend & MASK (12)) == 0
+	    && (contents & 0x7f800000) == 0x11000000
+	    && rd != 31
+	    && rn != 31)
+	  {
+	    if (rd == rn && (contents & (1U << 31)) != 0)
+	      contents = AARCH64_NOP_OPCODE;
+	    else
+	      contents = reencode_add_to_mov (contents, rd, rn);
+	  }
+	else
+	  contents = reencode_add_imm (contents, addend);
+	break;
+      }
 
     case BFD_RELOC_AARCH64_LD32_GOTPAGE_LO14:
     case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:

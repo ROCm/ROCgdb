@@ -2967,7 +2967,7 @@ elfNN_aarch64_link_hash_table_create (bfd *abfd)
 
 static bool
 aarch64_relocate (unsigned int r_type, bfd *input_bfd, asection *input_section,
-		  bfd_vma offset, bfd_vma value)
+		  bfd_vma offset, bfd_vma value, bool optimize_relocations)
 {
   reloc_howto_type *howto;
   bfd_vma place;
@@ -2981,7 +2981,7 @@ aarch64_relocate (unsigned int r_type, bfd *input_bfd, asection *input_section,
 					       value, 0, false);
   return _bfd_aarch64_elf_put_addend (input_bfd,
 				      input_section->contents + offset, r_type,
-				      howto, value) == bfd_reloc_ok;
+				      howto, value, optimize_relocations) == bfd_reloc_ok;
 }
 
 /* Determine the type of stub needed, if any, for a call.  */
@@ -3256,6 +3256,7 @@ aarch64_build_one_stub (struct bfd_hash_entry *gen_entry,
   unsigned int pad_size = 0;
   const uint32_t *template;
   unsigned int i;
+  bool optimize_relocations;
   struct bfd_link_info *info;
   struct elf_aarch64_link_hash_table *htab;
 
@@ -3349,17 +3350,18 @@ aarch64_build_one_stub (struct bfd_hash_entry *gen_entry,
   template_size = (template_size + 7) & ~7;
   stub_sec->size += template_size;
 
+  optimize_relocations = info->disable_target_specific_optimizations <= 1;
   switch (stub_entry->stub_type)
     {
     case aarch64_stub_adrp_branch:
       if (!aarch64_relocate (AARCH64_R (ADR_PREL_PG_HI21), stub_bfd, stub_sec,
-			     stub_entry->stub_offset, sym_value))
+			     stub_entry->stub_offset, sym_value, optimize_relocations))
 	/* The stub would not have been relaxed if the offset was out
 	   of range.  */
 	BFD_FAIL ();
 
       if (!aarch64_relocate (AARCH64_R (ADD_ABS_LO12_NC), stub_bfd, stub_sec,
-			     stub_entry->stub_offset + 4, sym_value))
+			     stub_entry->stub_offset + 4, sym_value, optimize_relocations))
 	BFD_FAIL ();
       break;
 
@@ -3367,13 +3369,14 @@ aarch64_build_one_stub (struct bfd_hash_entry *gen_entry,
       /* We want the value relative to the address 12 bytes back from the
 	 value itself.  */
       if (!aarch64_relocate (AARCH64_R (PRELNN), stub_bfd, stub_sec,
-			     stub_entry->stub_offset + 16, sym_value + 12))
+			     stub_entry->stub_offset + 16, sym_value + 12,
+			     optimize_relocations))
 	BFD_FAIL ();
       break;
 
     case aarch64_stub_bti_direct_branch:
       if (!aarch64_relocate (AARCH64_R (JUMP26), stub_bfd, stub_sec,
-			     stub_entry->stub_offset + 4, sym_value))
+			     stub_entry->stub_offset + 4, sym_value, optimize_relocations))
 	BFD_FAIL ();
       break;
 
@@ -3395,7 +3398,8 @@ aarch64_build_one_stub (struct bfd_hash_entry *gen_entry,
 
     case aarch64_stub_erratum_843419_veneer:
       if (!aarch64_relocate (AARCH64_R (JUMP26), stub_bfd, stub_sec,
-			     stub_entry->stub_offset + 4, sym_value + 4))
+			     stub_entry->stub_offset + 4, sym_value + 4,
+			     optimize_relocations))
 	BFD_FAIL ();
       break;
 
@@ -5769,6 +5773,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
   bfd_vma orig_value = value;
   bool resolved_to_zero;
   bool abs_symbol_p;
+  bool optimize_relocations;
 
   globals = elf_aarch64_hash_table (info);
 
@@ -5790,6 +5795,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
 		  : bfd_is_und_section (sym_sec));
   abs_symbol_p = h != NULL && bfd_is_abs_symbol (&h->root);
 
+  optimize_relocations = info->disable_target_specific_optimizations <= 1;
 
   /* Since STT_GNU_IFUNC symbol must go through PLT, we handle
      it here if it is defined in a non-shared object.  */
@@ -5922,7 +5928,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
 						       signed_addend,
 						       weak_undef_p);
 	  return _bfd_aarch64_elf_put_addend (input_bfd, hit_data, bfd_r_type,
-					      howto, value);
+					      howto, value, optimize_relocations);
 	case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
 	case BFD_RELOC_AARCH64_GOT_LD_PREL19:
 	case BFD_RELOC_AARCH64_LD32_GOTPAGE_LO14:
@@ -5998,7 +6004,9 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
 	  value = _bfd_aarch64_elf_resolve_relocation (input_bfd, bfd_r_type,
 						       place, value,
 						       addend, weak_undef_p);
-	  return _bfd_aarch64_elf_put_addend (input_bfd, hit_data, bfd_r_type, howto, value);
+	  return _bfd_aarch64_elf_put_addend (input_bfd, hit_data,
+					      bfd_r_type, howto, value,
+					      optimize_relocations);
 	case BFD_RELOC_AARCH64_ADD_LO12:
 	case BFD_RELOC_AARCH64_ADR_HI21_PCREL:
 	  break;
@@ -6547,7 +6555,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
     return bfd_reloc_continue;
 
   return _bfd_aarch64_elf_put_addend (input_bfd, hit_data, bfd_r_type,
-				      howto, value);
+				      howto, value, optimize_relocations);
 }
 
 /* LP64 and ILP32 operates on x- and w-registers respectively.
@@ -9900,7 +9908,10 @@ elf_aarch64_update_plt_entry (bfd *output_bfd,
   reloc_howto_type *howto = elfNN_aarch64_howto_from_bfd_reloc (r_type);
 
   /* FIXME: We should check the return value from this function call.  */
-  (void) _bfd_aarch64_elf_put_addend (output_bfd, plt_entry, r_type, howto, value);
+  /* PLT entries are linker generated and have no retained input
+     relocations.  */
+  (void) _bfd_aarch64_elf_put_addend (output_bfd, plt_entry, r_type,
+				      howto, value, true);
 }
 
 static void
