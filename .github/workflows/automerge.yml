@@ -3,6 +3,11 @@ on:
   schedule: # runs every 6 hours
     - cron: '0 */6 * * *'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (fetch and probe, but skip pushes and PR creation)'
+        type: boolean
+        default: false
   pull_request:
     types: [closed]
     branches: [amd-staging]
@@ -27,6 +32,8 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       WORKSPACE: ${{ github.workspace }}
+      AUTOMERGE_TARGET_BRANCH: ${{ vars.AUTOMERGE_TARGET_BRANCH }}
+      AUTOMERGE_UPSTREAM_BRANCH: ${{ vars.AUTOMERGE_UPSTREAM_BRANCH }}
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -37,4 +44,5 @@ jobs:
           git config --global credential.helper "!gh auth git-credential"
       - name: Trigger Automerge Job
         run: |
-          python3 .github/scripts/automerge.py
+          python3 .github/scripts/automerge.py \
+            ${{ inputs.dry_run == true && '--dry-run' || '' }}
