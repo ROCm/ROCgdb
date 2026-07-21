@@ -252,10 +252,27 @@ get_color (const ui_file_style::color &color, int *result)
 	  if (next >= COLORS)
 	    return false;
 	  rgb_color rgb = color.get_rgb ();
+
 	  /* We store RGB as 0..255, but curses wants 0..1000.  */
-	  if (init_color (next, rgb[0] * 1000 / 255, rgb[1] * 1000 / 255,
-			  rgb[2] * 1000 / 255) == ERR)
+	  short r = rgb[0] * 1000 / 255;
+	  short g = rgb[1] * 1000 / 255;
+	  short b = rgb[2] * 1000 / 255;
+
+	  /* If init_extended_pair is not available then we fallback to
+	     using init_pair.  However, init_pair can only handle 'short'
+	     color indices so there is no point using init_extended_color
+	     to allow for the generation of longer 'int' color indices.  */
+#if defined HAVE_INIT_EXTENDED_COLOR && defined HAVE_INIT_EXTENDED_PAIR
+	  if (init_extended_color (next, r, g, b) == ERR)
 	    return false;
+#else
+	  /* NEXT is an int, but is passed as a short.  If COLORS is
+	     more than SHRT_MAX then NEXT will be truncated and end up
+	     redefining a color entry that we don't expect.  */
+	  if (next > SHRT_MAX
+	      || init_color (next, r, g, b) == ERR)
+	    return false;
+#endif
 	  color_map[color] = next;
 	  *result = next;
 	}
