@@ -35,13 +35,13 @@
 
 
 /* Meant to be used in debug sessions, so don't export it in a header file.  */
-extern void ATTRIBUTE_USED debug_exp (struct expression *exp);
+extern void ATTRIBUTE_USED debug (struct expression *exp);
 
 /* Print EXP.  */
 
 void
 ATTRIBUTE_USED
-debug_exp (struct expression *exp)
+debug (struct expression *exp)
 {
   exp->dump (gdb_stdlog);
   gdb_flush (gdb_stdlog);
