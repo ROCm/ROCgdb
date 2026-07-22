@@ -262,7 +262,7 @@ proc gdb_do_cache {name args} {
 	puts $fd $gdb_data_cache(${cache_name},exit)
 	puts $fd $gdb_data_cache(${cache_name},also_called)
 	close $fd
-	file rename -force -- $cache_filename.[pid] $cache_filename
+	file_rename_atomic $cache_filename.[pid] $cache_filename
     }
     gdb_cache_maybe_gdb_exit $name $gdb_data_cache(${cache_name},exit) \
 	$gdb_data_cache(${cache_name},also_called)
