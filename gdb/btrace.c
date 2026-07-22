@@ -3546,10 +3546,14 @@ maint_info_btrace_cmd (const char *args, int from_tty)
 		    version.minor, version.build,
 		    version.ext != NULL ? version.ext : "");
 
-	btrace_maint_update_pt_packets (btinfo);
+	if (btinfo->maint.variant.pt.packets == nullptr)
+	  btinfo->maint.variant.pt.packets = new std::vector<btrace_pt_packet>;
+
+	if (btinfo->maint.variant.pt.packets->empty ())
+	  btrace_maint_update_pt_packets (btinfo);
+
 	gdb_printf (_("Number of packets: %zu.\n"),
-		    ((btinfo->maint.variant.pt.packets == nullptr)
-		     ? 0 : btinfo->maint.variant.pt.packets->size ()));
+		    btinfo->maint.variant.pt.packets->size ());
       }
       break;
 #endif /* defined (HAVE_LIBIPT)  */
