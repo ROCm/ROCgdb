@@ -672,6 +672,9 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* Defined if PDB format was requested. */
+#undef PDB_FORMAT_AVAILABLE
+
 /* Additional package description */
 #undef PKGVERSION
 
