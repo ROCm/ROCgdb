@@ -516,14 +516,15 @@ ptype_command (const char *type_name, int from_tty)
 }
 
 /* Meant to be used in debug sessions, so don't export it in a header file.  */
-extern void ATTRIBUTE_UNUSED debug_type (struct type *type);
+extern void ATTRIBUTE_USED debug (struct type *type);
 
 /* Print TYPE.  */
 
-void ATTRIBUTE_UNUSED
-debug_type (struct type *type)
+void ATTRIBUTE_USED
+debug (struct type *type)
 {
   type_print (type, "", gdb_stdlog, 1);
+  gdb_printf (gdb_stdlog, "\n");
   gdb_flush (gdb_stdlog);
 }
 

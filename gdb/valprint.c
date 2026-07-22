@@ -1232,14 +1232,15 @@ value_print (struct value *val, struct ui_file *stream,
 }
 
 /* Meant to be used in debug sessions, so don't export it in a header file.  */
-extern void ATTRIBUTE_UNUSED debug_val (struct value *val);
+extern void ATTRIBUTE_USED debug (struct value *val);
 
 /* Print VAL.  */
 
-void ATTRIBUTE_UNUSED
-debug_val (struct value *val)
+void ATTRIBUTE_USED
+debug (struct value *val)
 {
   value_print (val, gdb_stdlog, &user_print_options);
+  gdb_printf (gdb_stdlog, "\n");
   gdb_flush (gdb_stdlog);
 }
 
