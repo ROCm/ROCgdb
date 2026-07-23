@@ -6832,7 +6832,9 @@ proc gdb_compile {source dest type options} {
 	# before .cpp/.c sources and "-x none" before .o/.a files.
 	# --hip-link is still required when linking to bring in the HIP
 	# runtime.
-	set hip_early_flags "-mllvm=-amdgpu-spill-cfi-saved-regs\
+	# amdclang++ does not always default to -O0 for -x hip device compiles;
+	# omitting -O0 can emit DW_CC_nocall and break gdb.rocm finish tests.
+	set hip_early_flags "-O0 -mllvm=-amdgpu-spill-cfi-saved-regs\
 			     -Wno-unused-command-line-argument"
 	if {$type eq "executable"} {
 	    set hip_early_flags "--hip-link $hip_early_flags"
