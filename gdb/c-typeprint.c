@@ -492,7 +492,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
   else if (gdbarch_address_class_id_to_name_p (type->arch ()))
     address_space_id
       = gdbarch_address_class_id_to_name (type->arch (),
-					  TYPE_ADDRESS_CLASS (type));
+					  type->address_class ());
 
   if (address_space_id != nullptr)
     {

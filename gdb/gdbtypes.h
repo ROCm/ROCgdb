@@ -186,9 +186,6 @@ struct type_instance_flags
   (((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)	\
    || ((t)->dyn_prop (DYN_PROP_BIT_SIZE) != nullptr))
 
-#define TYPE_ADDRESS_CLASS(t) \
-  (((t)->instance_flags ()).address_class)
-
 /* Information about a single discriminant.  */
 
 struct discriminant_range
@@ -1229,6 +1226,12 @@ struct type
   bool is_atomic () const
   {
     return this->m_instance_flags.is_atomic;
+  }
+
+  /* Return the address class of this type.  */
+  unsigned int address_class () const
+  {
+    return this->m_instance_flags.address_class;
   }
 
   /* Get the bounds bounds of this type.  The type must be a range type.  */

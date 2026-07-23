@@ -710,7 +710,7 @@ replace_type (struct type *ntype, struct type *type)
 	 variants.  This assertion shouldn't ever be triggered because
 	 symbol readers which do construct address-class variants don't
 	 call replace_type().  */
-      gdb_assert (TYPE_ADDRESS_CLASS (chain) == 0);
+      gdb_assert (chain->address_class () == 0);
 
       chain->set_length (type->length ());
       chain = chain->chain;
@@ -5029,10 +5029,8 @@ recursive_dump_type (struct type *type, int spaces)
     gdb_puts (" TYPE_CODE_SPACE");
   if (type->is_data_space ())
     gdb_puts (" TYPE_DATA_SPACE");
-  if (TYPE_ADDRESS_CLASS (type) != 0)
-    {
-      gdb_printf (" TYPE_ADDRESS_CLASS(%u)", TYPE_ADDRESS_CLASS (type));
-    }
+  if (type->address_class () != 0)
+    gdb_printf (" TYPE_ADDRESS_CLASS(%u)", type->address_class ());
   if (type->is_restrict ())
     gdb_puts (" TYPE_RESTRICT");
   if (type->is_atomic ())

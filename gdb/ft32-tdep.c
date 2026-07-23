@@ -332,7 +332,7 @@ ft32_pointer_to_address (struct gdbarch *gdbarch,
   CORE_ADDR addr
     = extract_unsigned_integer (buf, type->length (), byte_order);
 
-  if (TYPE_ADDRESS_CLASS (type) == 1)
+  if (type->address_class () == 1)
     return addr;
   else
     return addr | RAM_BIAS;

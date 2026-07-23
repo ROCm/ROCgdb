@@ -305,7 +305,7 @@ avr_address_to_pointer (struct gdbarch *gdbarch,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   /* Is it a data address in flash?  */
-  if (TYPE_ADDRESS_CLASS (type) == AVR_ADDRESS_CLASS_FLASH)
+  if (type->address_class () == AVR_ADDRESS_CLASS_FLASH)
     {
       /* A data pointer in flash is byte addressed.  */
       store_unsigned_integer (buf, type->length (), byte_order,
@@ -337,7 +337,7 @@ avr_pointer_to_address (struct gdbarch *gdbarch,
     = extract_unsigned_integer (buf, type->length (), byte_order);
 
   /* Is it a data address in flash?  */
-  if (TYPE_ADDRESS_CLASS (type) == AVR_ADDRESS_CLASS_FLASH)
+  if (type->address_class () == AVR_ADDRESS_CLASS_FLASH)
     {
       /* A data pointer in flash is already byte addressed.  */
       return avr_make_iaddr (addr);
