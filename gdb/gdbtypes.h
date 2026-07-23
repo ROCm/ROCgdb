@@ -168,7 +168,6 @@ struct type_instance_flags
   bool is_atomic : 1;
 };
 
-#define TYPE_NOTTEXT(t)	(((t)->instance_flags ()).is_nottext)
 #define TYPE_CONST(t) (((t)->instance_flags ()).is_const)
 #define TYPE_VOLATILE(t) (((t)->instance_flags ()).is_volatile)
 #define TYPE_RESTRICT(t) (((t)->instance_flags ()).is_restrict)
@@ -1199,6 +1198,12 @@ struct type
   void set_nottext (bool flag)
   {
     this->m_instance_flags.is_nottext = flag;
+  }
+
+  /* Return if this type is nottext.  */
+  bool is_nottext () const
+  {
+    return this->m_instance_flags.is_nottext;
   }
 
   /* Get the bounds bounds of this type.  The type must be a range type.  */

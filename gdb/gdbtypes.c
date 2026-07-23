@@ -4126,7 +4126,7 @@ check_types_equal (struct type *type1, struct type *type2,
       || type1->endianity_is_not_default () != type2->endianity_is_not_default ()
       || type1->has_varargs () != type2->has_varargs ()
       || type1->is_vector () != type2->is_vector ()
-      || TYPE_NOTTEXT (type1) != TYPE_NOTTEXT (type2)
+      || type1->is_nottext () != type2->is_nottext ()
       || type1->instance_flags () != type2->instance_flags ()
       || type1->num_fields () != type2->num_fields ())
     return false;
@@ -5091,10 +5091,8 @@ recursive_dump_type (struct type *type, int spaces)
     {
       gdb_puts (" TYPE_FIXED_INSTANCE");
     }
-  if (TYPE_NOTTEXT (type))
-    {
-      gdb_puts (" TYPE_NOTTEXT");
-    }
+  if (type->is_nottext ())
+    gdb_puts (" TYPE_NOTTEXT");
   gdb_puts ("\n");
   gdb_printf ("%*snfields %d ", spaces, "", type->num_fields ());
   if (type->dyn_prop (DYN_PROP_ASSOCIATED) != nullptr
