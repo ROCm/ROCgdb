@@ -238,12 +238,26 @@ public:
 private:
 
   /* A helper function for the insert methods.  This does work of
-     expanding the type stack and inserting the new element, ELEMENT,
+     expanding the type stack and inserting the new element, TP,
      into the stack at location SLOT.  */
 
-  void insert_into (int slot, union type_stack_elt element)
+  void insert_into (int slot, enum type_pieces tp)
   {
     gdb_assert (slot <= m_elements.size ());
+    union type_stack_elt element;
+    element.piece = tp;
+    m_elements.insert (m_elements.begin () + slot, element);
+  }
+
+  /* A helper function for the insert methods.  This does work of
+     expanding the type stack and inserting the new element, VAL,
+     into the stack at location SLOT.  */
+
+  void insert_into (int slot, int val)
+  {
+    gdb_assert (slot <= m_elements.size ());
+    union type_stack_elt element;
+    element.int_val = val;
     m_elements.insert (m_elements.begin () + slot, element);
   }
 

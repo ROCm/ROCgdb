@@ -26,9 +26,6 @@
 void
 type_stack::insert (enum type_pieces tp)
 {
-  union type_stack_elt element;
-  int slot;
-
   gdb_assert (tp == tp_pointer || tp == tp_reference
 	      || tp == tp_rvalue_reference || tp == tp_const
 	      || tp == tp_volatile || tp == tp_restrict
@@ -39,12 +36,9 @@ type_stack::insert (enum type_pieces tp)
      push this on the top of the stack.  */
   if (!m_elements.empty () && (tp == tp_const || tp == tp_volatile
 			       || tp == tp_restrict))
-    slot = 1;
+    insert_into (1, tp);
   else
-    slot = 0;
-
-  element.piece = tp;
-  insert_into (slot, element);
+    insert_into (0, tp);
 }
 
 /* See type-stack.h.  */
@@ -52,22 +46,15 @@ type_stack::insert (enum type_pieces tp)
 void
 type_stack::insert (struct gdbarch *gdbarch, const char *string)
 {
-  union type_stack_elt element;
-  int slot;
-
   /* If there is anything on the stack (we know it will be a
      tp_pointer), insert the address space qualifier above it.
      Otherwise, simply push this on the top of the stack.  */
-  if (!m_elements.empty ())
-    slot = 1;
-  else
-    slot = 0;
+  int slot = (!m_elements.empty ()) ? 1 : 0;
 
-  element.piece = tp_space_identifier;
-  insert_into (slot, element);
-  element.int_val
-    = address_space_name_to_type_instance_flags (gdbarch, string);
-  insert_into (slot, element);
+  insert_into (slot, tp_space_identifier);
+  insert_into (slot,
+	       address_space_name_to_type_instance_flags (gdbarch,
+							  string));
 }
 
 /* See type-stack.h.  */
