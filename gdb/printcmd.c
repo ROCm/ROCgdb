@@ -1055,7 +1055,18 @@ format_to_type (format_data fmt, gdbarch *gdbarch, type_instance_flags flags)
     }
 
   gdb_assert (val_type != nullptr);
-  val_type = make_type_with_address_space (val_type, flags);
+
+  if ((flags & TYPE_INSTANCE_FLAG_CODE_SPACE) != 0)
+    val_type = make_type_with_harvard_address_space (val_type,
+						     HARVARD_ASPACE_CODE);
+  else if ((flags & TYPE_INSTANCE_FLAG_DATA_SPACE) != 0)
+    val_type = make_type_with_harvard_address_space (val_type,
+						     HARVARD_ASPACE_DATA);
+
+  unsigned int aclass
+    = (unsigned int) (flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL) >> 4;
+  if (aclass != 0)
+    val_type = make_type_with_address_class (val_type, aclass);
 
   return val_type;
 }

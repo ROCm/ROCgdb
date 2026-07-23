@@ -57,12 +57,12 @@ type_stack::insert (struct gdbarch *gdbarch, const char *string)
   if (streq (string, "code"))
     {
       insert_into (slot, tp_harvard_aspace_identifier);
-      insert_into (slot, TYPE_INSTANCE_FLAG_CODE_SPACE);
+      insert_into (slot, HARVARD_ASPACE_CODE);
     }
   else if (streq (string, "data"))
     {
       insert_into (slot, tp_harvard_aspace_identifier);
-      insert_into (slot, TYPE_INSTANCE_FLAG_DATA_SPACE);
+      insert_into (slot, HARVARD_ASPACE_DATA);
     }
   else if (unsigned int aclass = 0;
 	   gdbarch_address_class_name_to_id_p (gdbarch)
@@ -71,7 +71,7 @@ type_stack::insert (struct gdbarch *gdbarch, const char *string)
 						aclass))
     {
       insert_into (slot, tp_aclass_identifier);
-      insert_into (slot, (enum type_instance_flag_value) (aclass << 4));
+      insert_into (slot, aclass);
     }
   else
     error (_("Unknown address space/class specifier: \"%s\""), string);
@@ -114,7 +114,8 @@ type_stack::follow_types (struct type *follow_type)
   int done = 0;
   int make_const = 0;
   int make_volatile = 0;
-  type_instance_flags make_addr_space = 0;
+  harvard_address_space make_harvard_aspace = HARVARD_ASPACE_NONE;
+  int make_address_class = 0;
   bool make_restrict = false;
   bool make_atomic = false;
   int array_size;
@@ -133,10 +134,10 @@ type_stack::follow_types (struct type *follow_type)
 	make_volatile = 1;
 	break;
       case tp_harvard_aspace_identifier:
-	make_addr_space = (enum type_instance_flag_value) pop_int ();
+	make_harvard_aspace = (harvard_address_space) pop_int ();
 	break;
       case tp_aclass_identifier:
-	make_addr_space = (enum type_instance_flag_value) pop_int ();
+	make_address_class = pop_int ();
 	break;
       case tp_atomic:
 	make_atomic = true;
@@ -161,15 +162,21 @@ type_stack::follow_types (struct type *follow_type)
 	  follow_type = make_cv_type (TYPE_CONST (follow_type),
 				      make_volatile,
 				      follow_type);
-	if (make_addr_space)
-	  follow_type = make_type_with_address_space (follow_type,
-						      make_addr_space);
+	if (make_harvard_aspace != HARVARD_ASPACE_NONE)
+	  follow_type
+	    = make_type_with_harvard_address_space (follow_type,
+						    make_harvard_aspace);
+	if (make_address_class != 0)
+	  follow_type
+	    = make_type_with_address_class (follow_type,
+					    make_address_class);
 	if (make_restrict)
 	  follow_type = make_restrict_type (follow_type);
 	if (make_atomic)
 	  follow_type = make_atomic_type (follow_type);
 	make_const = make_volatile = 0;
-	make_addr_space = 0;
+	make_harvard_aspace = HARVARD_ASPACE_NONE;
+	make_address_class = 0;
 	make_restrict = make_atomic = false;
 	break;
       case tp_array:

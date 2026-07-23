@@ -590,7 +590,7 @@ make_qualified_type (struct type *type, type_instance_flags new_flags,
   return ntype;
 }
 
-/* Make an address-space-delimited variant of a type -- a type that
+/* Make a Harvard-address-space-delimited variant of a type -- a type that
    is identical to the one supplied except that it has an address
    space attribute attached to it (such as "code" or "data").
 
@@ -600,16 +600,40 @@ make_qualified_type (struct type *type, type_instance_flags new_flags,
    representations.  */
 
 struct type *
-make_type_with_address_space (struct type *type,
-			      type_instance_flags space_flag)
+make_type_with_harvard_address_space (struct type *type,
+				      enum harvard_address_space aspace)
 {
-  type_instance_flags new_flags = ((type->instance_flags ()
-				    & ~(TYPE_INSTANCE_FLAG_CODE_SPACE
-					| TYPE_INSTANCE_FLAG_DATA_SPACE
-					| TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL))
-				   | space_flag);
+  type_instance_flags new_flags
+    = (enum type_instance_flag_value) (aspace << 2);
 
-  return make_qualified_type (type, new_flags, NULL);
+  gdb_assert ((new_flags & ~(TYPE_INSTANCE_FLAG_CODE_SPACE
+			     | TYPE_INSTANCE_FLAG_DATA_SPACE)) == 0);
+  new_flags |= (type->instance_flags ()
+		& ~(TYPE_INSTANCE_FLAG_CODE_SPACE
+		    | TYPE_INSTANCE_FLAG_DATA_SPACE));
+
+  return make_qualified_type (type, new_flags, nullptr);
+}
+
+/* Make an address-class-delimited variant of a type -- a type that is
+   identical to the one supplied except that it has an address class
+   attribute attached to it.  The address class attribute is
+   architecture specific.  It may denote an alternately sized pointer
+   or a pointer with alternate representation.  */
+
+struct type *
+make_type_with_address_class (struct type *type,
+			      unsigned int address_class)
+{
+  type_instance_flags new_flags
+    = (enum type_instance_flag_value) (address_class << 4);
+
+  gdb_assert ((new_flags & ~TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL) == 0);
+
+  new_flags |= (type->instance_flags ()
+		& ~TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL);
+
+  return make_qualified_type (type, new_flags, nullptr);
 }
 
 /* See gdbtypes.h.  */

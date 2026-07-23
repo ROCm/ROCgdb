@@ -71,6 +71,34 @@ enum type_code
 
   };
 
+/* Enum encoded in instance flags of a type to denote which Harvard
+   address space the type refers to.
+
+   Harvard architectures have separate instruction and data address
+   spaces (and perhaps others).  GDB usually defines a flat address
+   space that is a superset of the architecture's two (or more)
+   address spaces, but this is an extension of the architecture's
+   model.
+
+   If using HARVARD_ASPACE_CODE, an object of the corresponding type
+   resides in instruction memory, even if its address (in the extended
+   flat address space) does not reflect this.
+
+   Similarly, if using HARVARD_ASPACE_DATA, then an object of the
+   corresponding type resides in the data memory space, even if this
+   is not indicated by its (flat address space) address.
+
+   If using HARVARD_ASPACE_NONE, the default space for functions /
+   methods is instruction space, and for data objects is data
+   memory.  */
+
+enum harvard_address_space
+{
+  HARVARD_ASPACE_NONE = 0,
+  HARVARD_ASPACE_CODE = 1,
+  HARVARD_ASPACE_DATA = 2,
+};
+
 /* Some bits for the type's instance_flags word.  See the macros
    below for documentation on each bit.  */
 
@@ -135,24 +163,7 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
   (((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)	\
    || ((t)->dyn_prop (DYN_PROP_BIT_SIZE) != nullptr))
 
-/* Instruction-space delimited type.  This is for Harvard architectures
-   which have separate instruction and data address spaces (and perhaps
-   others).
-
-   GDB usually defines a flat address space that is a superset of the
-   architecture's two (or more) address spaces, but this is an extension
-   of the architecture's model.
-
-   If TYPE_INSTANCE_FLAG_CODE_SPACE is set, an object of the corresponding type
-   resides in instruction memory, even if its address (in the extended
-   flat address space) does not reflect this.
-
-   Similarly, if TYPE_INSTANCE_FLAG_DATA_SPACE is set, then an object of the
-   corresponding type resides in the data memory space, even if
-   this is not indicated by its (flat address space) address.
-
-   If neither flag is set, the default space for functions / methods
-   is instruction space, and for data objects is data memory.  */
+/* See enum harvard_address_space above.  */
 
 #define TYPE_CODE_SPACE(t) \
   ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_CODE_SPACE) != 0)
@@ -2420,8 +2431,11 @@ extern struct type *make_atomic_type (struct type *);
 
 extern void replace_type (struct type *, struct type *);
 
-extern struct type *make_type_with_address_space
-  (struct type *type, type_instance_flags space_identifier);
+extern struct type *make_type_with_harvard_address_space
+  (struct type *type, enum harvard_address_space aspace);
+
+extern struct type *make_type_with_address_class
+  (struct type *type, unsigned int address_class);
 
 /* Implement direct support for MEMBER_TYPE in GNU C++.
    TO_TYPE is the type of the member.  DOMAIN is the type of the aggregate that

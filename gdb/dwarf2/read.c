@@ -12056,11 +12056,7 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 	  unsigned int aclass
 	    = gdbarch_address_class_dwarf_to_id (gdbarch, byte_size,
 						 addr_class);
-	  type_instance_flags type_flags
-	    = (enum type_instance_flag_value) (aclass << 4);
-	  gdb_assert ((type_flags & ~TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL)
-		      == 0);
-	  type = make_type_with_address_space (type, type_flags);
+	  type = make_type_with_address_class (type, aclass);
 	}
       else if (type->length () != byte_size)
 	{
