@@ -5011,9 +5011,8 @@ recursive_dump_type (struct type *type, int spaces)
   gdb_printf ("%*starget_type %s\n", spaces, "",
 	      host_address_to_string (type->target_type ()));
   if (type->target_type () != NULL)
-    {
-      recursive_dump_type (type->target_type (), spaces + 2);
-    }
+    recursive_dump_type (type->target_type (), spaces + 2);
+
   gdb_printf ("%*spointer_type %s\n", spaces, "",
 	      host_address_to_string (type->pointer_type));
   gdb_printf ("%*sreference_type %s\n", spaces, "",
@@ -5039,44 +5038,27 @@ recursive_dump_type (struct type *type, int spaces)
 
   gdb_printf ("%*sflags", spaces, "");
   if (type->is_unsigned ())
-    {
-      gdb_puts (" TYPE_UNSIGNED");
-    }
+    gdb_puts (" TYPE_UNSIGNED");
   if (type->has_no_signedness ())
-    {
-      gdb_puts (" TYPE_NOSIGN");
-    }
+    gdb_puts (" TYPE_NOSIGN");
   if (type->endianity_is_not_default ())
-    {
-      gdb_puts (" TYPE_ENDIANITY_NOT_DEFAULT");
-    }
+    gdb_puts (" TYPE_ENDIANITY_NOT_DEFAULT");
   if (type->is_stub ())
-    {
-      gdb_puts (" TYPE_STUB");
-    }
+    gdb_puts (" TYPE_STUB");
   if (type->target_is_stub ())
-    {
-      gdb_puts (" TYPE_TARGET_STUB");
-    }
+    gdb_puts (" TYPE_TARGET_STUB");
   if (type->is_prototyped ())
-    {
-      gdb_puts (" TYPE_PROTOTYPED");
-    }
+    gdb_puts (" TYPE_PROTOTYPED");
   if (type->has_varargs ())
-    {
-      gdb_puts (" TYPE_VARARGS");
-    }
+    gdb_puts (" TYPE_VARARGS");
+
   /* This is used for things like AltiVec registers on ppc.  Gcc emits
      an attribute for the array type, which tells whether or not we
      have a vector, instead of a regular array.  */
   if (type->is_vector ())
-    {
-      gdb_puts (" TYPE_VECTOR");
-    }
+    gdb_puts (" TYPE_VECTOR");
   if (type->is_fixed_instance ())
-    {
-      gdb_puts (" TYPE_FIXED_INSTANCE");
-    }
+    gdb_puts (" TYPE_FIXED_INSTANCE");
   if (type->is_nottext ())
     gdb_puts (" TYPE_NOTTEXT");
   gdb_puts ("\n");
@@ -5128,9 +5110,7 @@ recursive_dump_type (struct type *type, int spaces)
 
       gdb_printf ("\n");
       if (fld.type () != NULL)
-	{
-	  recursive_dump_type (fld.type (), spaces + 4);
-	}
+	recursive_dump_type (fld.type (), spaces + 4);
     }
   if (type->code () == TYPE_CODE_RANGE)
     {
