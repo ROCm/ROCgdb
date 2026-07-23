@@ -75,7 +75,7 @@ gdb_test "continue" \
 #    We'll catch unhandled exceptions
 #  - continue, we should see the first Program_Error exception
 #  - continue, we should see the failed assertion
-#  - continue, we should see the unhandled Constrait_Error exception
+#  - continue, we should see the unhandled Constraint_Error exception
 #  - continue, the program exits.
 
 if {![runto_main]} {

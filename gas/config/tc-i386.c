@@ -848,6 +848,9 @@ static int optimize = 0;
  */
 static int optimize_for_space = 0;
 
+/* Disabled optimizations.  */
+static int optimize_for_disabled_optimizations = 0;
+
 /* Register prefix used for error message.  */
 static const char *register_prefix = "%";
 
@@ -1147,6 +1150,7 @@ static const arch_entry cpu_arch[] =
   SUBARCH (lwp, LWP, ANY_LWP, false),
   SUBARCH (movbe, MOVBE, MOVBE, false),
   SUBARCH (cx16, CX16, CX16, false),
+  SUBARCH (altmovcr8, ALTMOVCR8, ALTMOVCR8, false),
   SUBARCH (lahf_sahf, LAHF_SAHF, LAHF_SAHF, false),
   SUBARCH (ept, EPT, ANY_EPT, false),
   SUBARCH (lzcnt, LZCNT, LZCNT, false),
@@ -5177,7 +5181,7 @@ optimize_encoding (void)
       i.seg[0] = NULL;
     }
 
-  if (!optimize_for_space
+  if (optimize_for_disabled_optimizations
       && i.tm.mnem_off == MN_xchg
       && i.reg_operands == 2
       && i.op[0].regs == i.op[1].regs)
@@ -11655,6 +11659,7 @@ build_modrm_byte (void)
   if (flag_code != CODE_64BIT && (i.rex & REX_R))
     {
       gas_assert (i.types[!i.tm.opcode_modifier.regmem].bitfield.class == RegCR);
+      gas_assert (i.op[!i.tm.opcode_modifier.regmem].regs->reg_num == 0);
       i.rex &= ~REX_R;
       add_prefix (LOCK_PREFIX_OPCODE);
     }
@@ -17001,10 +17006,11 @@ static bool check_register (const reg_entry *r)
     }
 
   if (((r->reg_flags & (RegRex64 | RegRex)) || r->reg_type.bitfield.qword)
-      && (!cpu_arch_flags.bitfield.cpu64
+      && flag_code != CODE_64BIT
+      && (!cpu_arch_flags.bitfield.cpualtmovcr8
 	  || r->reg_type.bitfield.class != RegCR
-	  || dot_insn ())
-      && flag_code != CODE_64BIT)
+	  || r->reg_num != 0
+	  || dot_insn ()))
     return false;
 
   if (r->reg_type.bitfield.class == SReg && r->reg_num == RegFlat

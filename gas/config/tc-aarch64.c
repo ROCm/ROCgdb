@@ -1595,7 +1595,7 @@ parse_simd_vector_with_bit_index (char **ccp, struct vector_type_el *typeinfo)
 /* Directives: register aliases.  */
 
 static reg_entry *
-insert_reg_alias (char *str, int number, aarch64_reg_type type)
+insert_reg_alias (const char *str, int number, aarch64_reg_type type)
 {
   reg_entry *new;
   const char *name;
@@ -10699,8 +10699,17 @@ md_begin (void)
 			aarch64_sys_regs_sr + i);
 
   for (i = 0; i < ARRAY_SIZE (reg_names); i++)
-    checked_hash_insert (aarch64_reg_hsh, reg_names[i].name,
-			 reg_names + i);
+    {
+      if (reg_names[i].builtin)
+	checked_hash_insert (aarch64_reg_hsh, reg_names[i].name,
+			     reg_names + i);
+      else
+	/* Aliases need to be safely removable, so create a copy of
+	   the reg_entry data.  */
+	insert_reg_alias (reg_names[i].name, reg_names[i].number,
+			  reg_names[i].type);
+    }
+
 
   for (i = 0; i < ARRAY_SIZE (nzcv_names); i++)
     checked_hash_insert (aarch64_nzcv_hsh, nzcv_names[i].template,
@@ -10773,15 +10782,15 @@ md_begin (void)
   for (i = 0; aarch64_hint_options[i].name != NULL; i++)
     {
       const char* name = aarch64_hint_options[i].name;
-      const char* upper_name = get_upper_str(name);
-
+      /* Empty strings represent an absent optional operand, so won't be looked
+	 up in the hash table.  */
+      if (*name == '\0')
+	continue;
       checked_hash_insert (aarch64_hint_opt_hsh, name,
 			   aarch64_hint_options + i);
-
-      /* Also hash the name in the upper case if not the same.  */
-      if (strcmp (name, upper_name) != 0)
-	checked_hash_insert (aarch64_hint_opt_hsh, upper_name,
-			     aarch64_hint_options + i);
+      /* Also hash the name in the upper case.  */
+      checked_hash_insert (aarch64_hint_opt_hsh, get_upper_str (name),
+			   aarch64_hint_options + i);
     }
 
   for (i = 0; aarch64_sys_ins_gic[i].name != NULL; i++)
@@ -11145,6 +11154,7 @@ static const struct aarch64_option_cpu_value_table aarch64_features[] = {
   {"sve-b16mm",		AARCH64_FEATURE (SVE_B16MM), AARCH64_FEATURE (SVE)},
   {"mtetc",		AARCH64_FEATURE (MTETC), AARCH64_FEATURE (MEMTAG)},
   {"tlbid",		AARCH64_FEATURE (TLBID), AARCH64_NO_FEATURES},
+  {"sme-fa64",		AARCH64_FEATURE (SME_FA64), AARCH64_FEATURES (2, SVE2, SME)},
   {NULL,		AARCH64_NO_FEATURES, AARCH64_NO_FEATURES},
 };
 

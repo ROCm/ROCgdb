@@ -1271,10 +1271,10 @@ protected:
   }
 };
 
-typedef struct value *binary_ftype (struct type *expect_type,
-				    struct expression *exp,
-				    enum noside noside, enum exp_opcode op,
-				    struct value *arg1, struct value *arg2);
+using binary_ftype = struct value * (struct type *expect_type,
+				     struct expression *exp,
+				     enum noside noside, enum exp_opcode op,
+				     struct value *arg1, struct value *arg2);
 
 template<enum exp_opcode OP, binary_ftype FUNC>
 class binop_operation
@@ -1450,10 +1450,10 @@ protected:
     override;
 };
 
-typedef struct value *unary_ftype (struct type *expect_type,
-				   struct expression *exp,
-				   enum noside noside, enum exp_opcode op,
-				   struct value *arg1);
+using unary_ftype = struct value * (struct type *expect_type,
+				    struct expression *exp,
+				    enum noside noside, enum exp_opcode op,
+				    struct value *arg1);
 
 /* Base class for unary operations.  */
 template<enum exp_opcode OP, unary_ftype FUNC>
@@ -2094,7 +2094,7 @@ protected:
     override;
 };
 
-typedef value *cxx_cast_ftype (struct type *, value *);
+using cxx_cast_ftype = value * (struct type *, value *);
 
 /* This implements dynamic_cast and reinterpret_cast.  static_cast and
    const_cast are handled by the ordinary case operations.  */

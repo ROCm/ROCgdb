@@ -39,13 +39,13 @@ static const reggroup *m32c_dma_reggroup;
 
 /* The type of a function that moves the value of REG between CACHE or
    BUF --- in either direction.  */
-typedef enum register_status (m32c_write_reg_t) (struct m32c_reg *reg,
-						 struct regcache *cache,
-						 const gdb_byte *buf);
+using m32c_write_reg_t = enum register_status (struct m32c_reg *reg,
+					       struct regcache *cache,
+					       const gdb_byte *buf);
 
-typedef enum register_status (m32c_read_reg_t) (struct m32c_reg *reg,
-						readable_regcache *cache,
-						gdb_byte *buf);
+using m32c_read_reg_t = enum register_status (struct m32c_reg *reg,
+					      readable_regcache *cache,
+					      gdb_byte *buf);
 
 struct m32c_reg
 {

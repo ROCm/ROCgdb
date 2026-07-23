@@ -539,8 +539,8 @@ struct bp_location_ref_policy
 };
 
 /* A gdb::ref_ptr that has been specialized for bp_location.  */
-typedef gdb::ref_ptr<bp_location, bp_location_ref_policy>
-     bp_location_ref_ptr;
+using bp_location_ref_ptr
+  = gdb::ref_ptr<bp_location, bp_location_ref_policy>;
 
 /* The possible return values for print_bpstat, print_it_normal,
    print_it_done, print_it_noop.  */

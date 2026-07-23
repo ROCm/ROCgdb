@@ -111,10 +111,15 @@ using_direct::valid_line (unsigned int boundary) const
 {
   try
     {
-      CORE_ADDR curr_pc = get_frame_pc (get_selected_frame ());
-      symtab_and_line curr_sal = find_sal_for_pc (curr_pc, 0);
-      return (decl_line <= curr_sal.line)
-	     || (decl_line >= boundary);
+      frame_info_ptr frame = get_selected_frame ();
+      symtab_and_line curr_sal = find_frame_sal (frame);
+
+      /* Apply GCC PR debug/108716 workaround.  */
+      if (boundary != 0
+	  && decl_line >= boundary)
+	return true;
+
+      return decl_line <= curr_sal.line;
     }
   catch (const gdb_exception &ex)
     {

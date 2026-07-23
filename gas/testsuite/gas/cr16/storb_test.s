@@ -1,8 +1,8 @@
-        .text
-        .global main
+	.text
+	.global main
 main:
 	######################
-	#  storb reg abs20/24 
+	#  storb reg abs20/24
 	######################
 	storb r0,0x0
 	storb r1,0xff
@@ -28,7 +28,7 @@ main:
 	storb r2,[r12]0x4567
 	storb r2,[r13]0xA1234
 	###################################
-	#  storb reg rbase(disp20/-disp20) 
+	#  storb reg rbase(disp20/-disp20)
 	###################################
 	storb r1,0x4(r1,r0)
 	storb r3,0x4(r3,r2)
@@ -41,7 +41,7 @@ main:
 	storb r5,-0x1234(r3,r2)
 	storb r6,-0xA1234(r1,r0)
 	#################################################
-	#  storb reg rpbase(disp4/disp16/disp20/-disp20) 
+	#  storb reg rpbase(disp4/disp16/disp20/-disp20)
 	#################################################
 	storb r0,0x0(r1,r0)
 	storb r0,0x0(r1,r0)

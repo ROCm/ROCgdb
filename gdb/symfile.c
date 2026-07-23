@@ -2927,7 +2927,7 @@ clear_symtab_users (symfile_add_flags add_flags)
    sections_overlap(sec1, sec2):  true if mapped sec1 and sec2 ranges overlap
    overlay_mapped_address(...):   map an address from section's LMA to VMA
    overlay_unmapped_address(...): map an address from section's VMA to LMA
-   symbol_overlayed_address(...): Return a "current" address for symbol:
+   symbol_overlaid_address(...): Return a "current" address for symbol:
    either in VMA or LMA depending on whether
    the symbol's section is currently mapped.  */
 
@@ -3096,12 +3096,12 @@ overlay_mapped_address (CORE_ADDR pc, struct obj_section *section)
   return pc;
 }
 
-/* Function: symbol_overlayed_address
+/* Function: symbol_overlaid_address
    Return one of two addresses (relative to the VMA or to the LMA),
    depending on whether the section is mapped or not.  */
 
 CORE_ADDR
-symbol_overlayed_address (CORE_ADDR address, struct obj_section *section)
+symbol_overlaid_address (CORE_ADDR address, struct obj_section *section)
 {
   if (overlay_debugging)
     {

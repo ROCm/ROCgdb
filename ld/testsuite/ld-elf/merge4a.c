@@ -1,8 +1,8 @@
 extern const char * getstr3(int);
 extern int printf (const char *, ...);
 
-extern const char *addr_of_str;
-extern const char *addr_of_str2;
+extern const char *addr_of_str asm("addr_of_str");
+extern const char *addr_of_str2 asm("addr_of_str2");
 
 /* "foobar" needs to be a string literal, so that it's put into
    a mergable string section, then merged with the "foobar" from merge4b.s

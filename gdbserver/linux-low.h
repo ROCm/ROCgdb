@@ -36,8 +36,8 @@
 #define PTRACE_XFER_TYPE long
 
 #ifdef HAVE_LINUX_REGSETS
-typedef void (*regset_fill_func) (struct regcache *, void *);
-typedef void (*regset_store_func) (struct regcache *, const void *);
+using regset_fill_func = void (*) (struct regcache *, void *);
+using regset_store_func = void (*) (struct regcache *, const void *);
 enum regset_type {
   GENERAL_REGS,
   FP_REGS,

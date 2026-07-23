@@ -58,32 +58,32 @@ static int libunwind_initialized;
 static const registry<gdbarch>::key<libunwind_descr> libunwind_descr_handle;
 
 /* Required function pointers from libunwind.  */
-typedef int (unw_get_reg_p_ftype) (unw_cursor_t *, unw_regnum_t, unw_word_t *);
+using unw_get_reg_p_ftype = int (unw_cursor_t *, unw_regnum_t, unw_word_t *);
 static unw_get_reg_p_ftype *unw_get_reg_p;
-typedef int (unw_get_fpreg_p_ftype) (unw_cursor_t *, unw_regnum_t,
-				     unw_fpreg_t *);
+using unw_get_fpreg_p_ftype = int (unw_cursor_t *, unw_regnum_t,
+				   unw_fpreg_t *);
 static unw_get_fpreg_p_ftype *unw_get_fpreg_p;
-typedef int (unw_get_saveloc_p_ftype) (unw_cursor_t *, unw_regnum_t,
-				       unw_save_loc_t *);
+using unw_get_saveloc_p_ftype = int (unw_cursor_t *, unw_regnum_t,
+				     unw_save_loc_t *);
 static unw_get_saveloc_p_ftype *unw_get_saveloc_p;
-typedef int (unw_is_signal_frame_p_ftype) (unw_cursor_t *);
+using unw_is_signal_frame_p_ftype = int (unw_cursor_t *);
 static unw_is_signal_frame_p_ftype *unw_is_signal_frame_p;
-typedef int (unw_step_p_ftype) (unw_cursor_t *);
+using unw_step_p_ftype = int (unw_cursor_t *);
 static unw_step_p_ftype *unw_step_p;
-typedef int (unw_init_remote_p_ftype) (unw_cursor_t *, unw_addr_space_t,
-				       void *);
+using unw_init_remote_p_ftype = int (unw_cursor_t *, unw_addr_space_t,
+				     void *);
 static unw_init_remote_p_ftype *unw_init_remote_p;
-typedef unw_addr_space_t (unw_create_addr_space_p_ftype) (unw_accessors_t *,
-							  int);
+using unw_create_addr_space_p_ftype
+  = unw_addr_space_t (unw_accessors_t *, int);
 static unw_create_addr_space_p_ftype *unw_create_addr_space_p;
-typedef void (unw_destroy_addr_space_p_ftype) (unw_addr_space_t);
+using unw_destroy_addr_space_p_ftype = void (unw_addr_space_t);
 static unw_destroy_addr_space_p_ftype *unw_destroy_addr_space_p;
-typedef int (unw_search_unwind_table_p_ftype) (unw_addr_space_t, unw_word_t,
-					       unw_dyn_info_t *,
-					       unw_proc_info_t *, int, void *);
+using unw_search_unwind_table_p_ftype
+  = int (unw_addr_space_t, unw_word_t, unw_dyn_info_t *,
+	 unw_proc_info_t *, int, void *);
 static unw_search_unwind_table_p_ftype *unw_search_unwind_table_p;
-typedef unw_word_t (unw_find_dyn_list_p_ftype) (unw_addr_space_t,
-						unw_dyn_info_t *, void *);
+using unw_find_dyn_list_p_ftype = unw_word_t (unw_addr_space_t,
+					      unw_dyn_info_t *, void *);
 static unw_find_dyn_list_p_ftype *unw_find_dyn_list_p;
 
 

@@ -26,6 +26,7 @@
 enum loongarch_regnum
 {
   LOONGARCH_RA_REGNUM = 1,		/* Return Address.  */
+  LOONGARCH_TP_REGNUM = 2,		/* Thread Pointer.  */
   LOONGARCH_SP_REGNUM = 3,		/* Stack Pointer.  */
   LOONGARCH_A0_REGNUM = 4,		/* First Argument/Return Value.  */
   LOONGARCH_A7_REGNUM = 11,		/* Seventh Argument/Syscall Number.  */

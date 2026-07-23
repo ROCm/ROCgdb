@@ -108,6 +108,8 @@ with_test_prefix "frame movement down" {
 with_test_prefix "frame movement up" {
     if { [start_test "TAG: final frame"] == 0 } {
 	gdb_test "up" [multi_line "#1 .*in g \\(mt=mytype is .*\\, depth=1\\).*" ".*first frame.*"]
+	gdb_test "p f ()" " = 2"
+	gdb_test "frame" [multi_line "#1 .*in g \\(mt=mytype is .*\\, depth=1\\).*" ".*first frame.*"]
     }
 }
 

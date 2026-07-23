@@ -1,5 +1,6 @@
 #name: SME extension
 #as: -march=armv8-a+sme
+#as: -march=armv8-a+sme-fa64
 #objdump: -dr
 
 .*:     file format .*

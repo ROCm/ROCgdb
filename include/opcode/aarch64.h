@@ -288,6 +288,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_MTETC,
   /* TLBI Domains.  */
   AARCH64_FEATURE_TLBID,
+  /* SME_FA64.  */
+  AARCH64_FEATURE_SME_FA64,
 
   /* Virtual features.  These are used to gate instructions that are enabled
      by either of two (or more) sets of command line flags.  */
@@ -1323,7 +1325,6 @@ enum aarch64_op
   OP_MOV_Z_P_Z,
   OP_MOV_Z_V,
   OP_MOV_Z_Z,
-  OP_MOV_Z_Zi,
   OP_MOVM_P_P_P,
   OP_MOVS_P_P,
   OP_MOVZS_P_P_P,

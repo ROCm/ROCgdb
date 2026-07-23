@@ -188,7 +188,7 @@ queue_stop_reply (ptid_t ptid, const target_waitstatus &status)
   new_notif->ptid = ptid;
   new_notif->status = status;
 
-  notif_event_enque (&notif_stop, new_notif);
+  notif_event_enqueue (&notif_stop, new_notif);
 }
 
 static bool
@@ -3129,8 +3129,8 @@ static void gdb_wants_all_threads_stopped (void);
 static void resume (struct thread_resume *actions, size_t n);
 
 /* The callback that is passed to visit_actioned_threads.  */
-typedef int (visit_actioned_threads_callback_ftype)
-  (const struct thread_resume *, thread_info *);
+using visit_actioned_threads_callback_ftype
+  = int (const struct thread_resume *, thread_info *);
 
 /* Call CALLBACK for any thread to which ACTIONS applies to.  Returns
    true if CALLBACK returns true.  Returns false if no matching thread
@@ -3707,7 +3707,7 @@ queue_stop_reply_callback (thread_info *thread)
       new_notif->status = thread->last_status;
       /* Pass the last stop reply back to GDB, but don't notify
 	 yet.  */
-      notif_event_enque (&notif_stop, new_notif);
+      notif_event_enqueue (&notif_stop, new_notif);
     }
   else
     {

@@ -24,14 +24,14 @@
 
 struct match_list_displayer;
 
-typedef void mld_crlf_ftype (const struct match_list_displayer *);
-typedef void mld_putch_ftype (const struct match_list_displayer *, int);
-typedef void mld_puts_ftype (const struct match_list_displayer *,
+using mld_crlf_ftype = void (const struct match_list_displayer *);
+using mld_putch_ftype = void (const struct match_list_displayer *, int);
+using mld_puts_ftype = void (const struct match_list_displayer *,
 			     const char *);
-typedef void mld_flush_ftype (const struct match_list_displayer *);
-typedef void mld_erase_entire_line_ftype (const struct match_list_displayer *);
-typedef void mld_beep_ftype (const struct match_list_displayer *);
-typedef int mld_read_key_ftype (const struct match_list_displayer *);
+using mld_flush_ftype = void (const struct match_list_displayer *);
+using mld_erase_entire_line_ftype = void (const struct match_list_displayer *);
+using mld_beep_ftype = void (const struct match_list_displayer *);
+using mld_read_key_ftype = int (const struct match_list_displayer *);
 
 /* Interface between CLI/TUI and gdb_match_list_displayer.  */
 

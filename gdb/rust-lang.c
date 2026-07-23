@@ -1746,7 +1746,7 @@ rust_structop::evaluate_funcall (struct type *expect_type,
   std::string name = (std::string (type->name ()) + "::"
 		      + std::get<1> (m_storage));
 
-  const struct block *block = get_selected_block (0);
+  const struct block *block = get_selected_block ();
   struct block_symbol sym = lookup_symbol (name.c_str (), block,
 					   SEARCH_FUNCTION_DOMAIN,
 					   nullptr);

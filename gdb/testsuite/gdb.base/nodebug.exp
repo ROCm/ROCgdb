@@ -25,6 +25,15 @@ if {[have_compile_flag -std=c99]} {
     lappend exec_opts additional_flags=-std=c99
 }
 
+if {[test_compiler_info "clang-*"]} {
+    # Even with -std=c99, Clang warns like so:
+    #
+    #  warning: a function definition without a prototype is deprecated
+    #  in all versions of C and is not supported in C23
+    #  [-Wdeprecated-non-prototype]
+    lappend exec_opts additional_flags=-Wno-deprecated-non-prototype
+}
+
 if {[test_compiler_info "xlc-*"]} {
     # By default, IBM's xlc compiler doesn't add static variables into the symtab.
     # Use "-qstatsym" to do so.
@@ -51,8 +60,8 @@ proc nodebug_runto {func} {
 }
 
 # Test calling no-debug functions involving argument types that may
-# require coercion/promotion, both prototyped and unprototyped, both
-# return-type-cast style, and function-pointer-cast styles.
+# require coercion or promotion, both prototyped and unprototyped,
+# both return-type-cast style, and function-pointer-cast styles.
 proc test_call_promotion {} {
     if {[target_info exists gdb,cannot_call_functions]} {
 	return
@@ -60,14 +69,15 @@ proc test_call_promotion {} {
 
     # Call prototyped function with float parameters via both
     # return-type cast and function-pointer cast.  This checks that
-    # GDB doesn't do float->double coercion.
+    # GDB doesn't do float->double promotion.
     gdb_test "p (float) multf(2.0f, 3.0f)" " = 6"
-    gdb_test "p ((float (*) (float, float)) multf)(2, 3)" " = 6"
     gdb_test "p ((float (*) (float, float)) multf)(2.0f, 3.0f)" " = 6"
+    # This tests int->float coercion.
+    gdb_test "p ((float (*) (float, float)) multf)(2, 3)" " = 6"
 
     # Call unprototyped function with float parameters via
     # function-pointer cast, only.  return-type cast assumes
-    # protototyped.  Check that GDB does float->double coercion.
+    # prototyped.  Check that GDB does float->double promotion.
     gdb_test "p ((float (*) ()) multf_noproto)(2.0f, 3.0f)" " = 6"
     gdb_test "p ((float (*) ()) multf_noproto)(2.0, 3.0)" " = 6"
 
@@ -77,6 +87,16 @@ proc test_call_promotion {} {
     gdb_test "p ((double (*) (double, double)) mult)(2, 3)" " = 6"
     gdb_test "p ((double (*) ()) mult_noproto)(2.0f, 3.0f)" " = 6"
     gdb_test "p ((double (*) ()) mult_noproto)(2.0, 3.0)" " = 6"
+
+    # Same, but for long double.
+    gdb_test "p (long double) mult_long_double(2.0L, 3.0L)" " = 6"
+    gdb_test "p ((long double (*) (long double, long double)) mult_long_double)(2.0L, 3.0L)" " = 6"
+    gdb_test "p ((long double (*) (long double, long double)) mult_long_double)(2, 3)" " = 6"
+    # For unprototyped calls, the standard C default argument
+    # promotion (for floating point) applies only to float and
+    # promotes to double, so test only with the expected type, using
+    # L-suffixed literals to pass long doubles.
+    gdb_test "p ((long double (*) ()) mult_long_double_noproto)(2.0L, 3.0L)" " = 6"
 
     # Check that GDB promotes char->int correctly.
     gdb_test "p /d (uint8) add8((uint8) 2, (uint8) 3)" " = 5"

@@ -26,11 +26,11 @@
 #define ELF_NGREG       45
 #define ELF_NFPREG      33
 
-typedef unsigned char mips_elf_greg_t[4];
-typedef mips_elf_greg_t mips_elf_gregset_t[ELF_NGREG];
+using mips_elf_greg_t = unsigned char[4];
+using mips_elf_gregset_t = mips_elf_greg_t[ELF_NGREG];
 
-typedef unsigned char mips_elf_fpreg_t[8];
-typedef mips_elf_fpreg_t mips_elf_fpregset_t[ELF_NFPREG];
+using mips_elf_fpreg_t = unsigned char[8];
+using mips_elf_fpregset_t = mips_elf_fpreg_t[ELF_NFPREG];
 
 /* 0 - 31 are integer registers, 32 - 63 are fp registers.  */
 #define FPR_BASE	32
@@ -64,11 +64,11 @@ void mips_fill_gregset (const struct regcache *, mips_elf_gregset_t *, int);
 #define MIPS64_ELF_NGREG       45
 #define MIPS64_ELF_NFPREG      33
 
-typedef unsigned char mips64_elf_greg_t[8];
-typedef mips64_elf_greg_t mips64_elf_gregset_t[MIPS64_ELF_NGREG];
+using mips64_elf_greg_t = unsigned char[8];
+using mips64_elf_gregset_t = mips64_elf_greg_t[MIPS64_ELF_NGREG];
 
-typedef unsigned char mips64_elf_fpreg_t[8];
-typedef mips64_elf_fpreg_t mips64_elf_fpregset_t[MIPS64_ELF_NFPREG];
+using mips64_elf_fpreg_t = unsigned char[8];
+using mips64_elf_fpregset_t = mips64_elf_fpreg_t[MIPS64_ELF_NFPREG];
 
 /* 0 - 31 are integer registers, 32 - 63 are fp registers.  */
 #define MIPS64_FPR_BASE                 32

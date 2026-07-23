@@ -224,7 +224,7 @@ procfs_target::auxv_parse (const gdb_byte **readptr,
 #define STATUS_PROC_NAME_FMT "/proc/%d/status"
 #define MAX_PROC_NAME_SIZE sizeof("/proc/999999/lwp/0123456789/lwpstatus")
 
-typedef struct procinfo {
+struct procinfo {
   struct procinfo *next;
   int pid;			/* Process ID    */
   int tid;			/* Thread/LWP id */
@@ -253,7 +253,7 @@ typedef struct procinfo {
   int gregs_valid  : 1;
   int fpregs_valid : 1;
   int threads_valid: 1;
-} procinfo;
+};
 
 /* Function prototypes for procinfo module: */
 

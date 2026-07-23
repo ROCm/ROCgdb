@@ -19,7 +19,7 @@
 # When kept in object file (before final executable link) it still works.
 # When separate debug info file is not used it still works.
 # When the ELF symbol table is kept in the main binary it still works.
-# Used .S file as in .c file we would need __attriute__((section)) which is
+# Used .S file as in .c file we would need __attribute__((section)) which is
 # a GCC extension.
 
 # This test can only be run on targets which support ELF and use gas.

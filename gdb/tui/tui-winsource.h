@@ -268,7 +268,7 @@ struct tui_source_window_iterator
 {
 public:
 
-  typedef std::vector<tui_win_info *>::iterator inner_iterator;
+  using inner_iterator = std::vector<tui_win_info *>::iterator;
 
   using self_type = tui_source_window_iterator;
   using value_type = struct tui_source_window_base *;

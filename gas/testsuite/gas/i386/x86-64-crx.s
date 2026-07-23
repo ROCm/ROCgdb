@@ -5,6 +5,9 @@ _start:
 	movq	%rax, %cr8
 	movq	%rdi, %cr8
 
+	lock; mov %cr0, %rcx
+	lock; mov %cr8, %rcx
+
 .att_syntax noprefix
 	movq	cr8, rax
 	movq	cr8, rdi

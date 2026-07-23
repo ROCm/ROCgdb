@@ -118,8 +118,11 @@ compatible (const bfd_arch_info_type *in, const bfd_arch_info_type *out)
   { word, addr, 8, bfd_arch_h8300, number, name, print, 1, default, \
     compatible, h8300_scan, bfd_arch_default_fill, next, 0 }
 
+static const bfd_arch_info_type h8300_info_struct =
+  N (16, 16, bfd_mach_h8300, "h8300", "h8300", false, NULL);
+
 static const bfd_arch_info_type h8300sxn_info_struct =
-  N (32, 16, bfd_mach_h8300sxn, "h8300sxn", "h8300sxn", false, NULL);
+  N (32, 16, bfd_mach_h8300sxn, "h8300sxn", "h8300sxn", false, &h8300_info_struct);
 
 static const bfd_arch_info_type h8300sx_info_struct =
   N (32, 32, bfd_mach_h8300sx, "h8300sx", "h8300sx", false, &h8300sxn_info_struct);
@@ -133,11 +136,8 @@ static const bfd_arch_info_type h8300hn_info_struct =
 static const bfd_arch_info_type h8300s_info_struct =
   N (32, 32, bfd_mach_h8300s, "h8300s", "h8300s", false, & h8300hn_info_struct);
 
-static const bfd_arch_info_type h8300h_info_struct =
-  N (32, 32, bfd_mach_h8300h, "h8300h", "h8300h", false, &h8300s_info_struct);
-
 const bfd_arch_info_type bfd_h8300_arch =
-  N (16, 16, bfd_mach_h8300, "h8300", "h8300", true, &h8300h_info_struct);
+  N (32, 32, bfd_mach_h8300h, "h8300h", "h8300h", true, &h8300s_info_struct);
 
 /* Pad the given address to 32 bits, converting 16-bit and 24-bit
    addresses into the values they would have had on a h8s target.  */

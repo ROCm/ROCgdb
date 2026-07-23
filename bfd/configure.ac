@@ -926,7 +926,6 @@ changequote([,])dnl
   powerpc64-*-aix*)	COREFILE=rs6000-core.lo ;;
   powerpc-*-aix4*)	COREFILE=rs6000-core.lo ;;
   powerpc-*-aix*)	COREFILE=rs6000-core.lo ;;
-  powerpc-*-beos*)	;;
   powerpc-*-freebsd* | powerpc-*-kfreebsd*-gnu)
 		        COREFILE='' ;;
   powerpc-*-netbsd*)	COREFILE=netbsd-core.lo ;;

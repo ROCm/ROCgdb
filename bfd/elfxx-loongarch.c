@@ -219,7 +219,7 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
 	 complain_overflow_dont,	  /* complain_on_overflow */
 	 bfd_elf_generic_reloc,		  /* special_function */
 	 "R_LARCH_TLS_DTPREL32",	  /* name */
-	 true,				  /* partial_inplace */
+	 false,				  /* partial_inplace */
 	 0,				  /* src_mask */
 	 ALL_ONES,			  /* dst_mask */
 	 false,				  /* pcrel_offset */
@@ -236,7 +236,7 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
 	 complain_overflow_dont,	  /* complain_on_overflow */
 	 bfd_elf_generic_reloc,		  /* special_function */
 	 "R_LARCH_TLS_DTPREL64",	  /* name */
-	 true,				  /* partial_inplace */
+	 false,				  /* partial_inplace */
 	 0,				  /* src_mask */
 	 ALL_ONES,			  /* dst_mask */
 	 false,				  /* pcrel_offset */
@@ -1642,7 +1642,7 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
   /* TLS_DESC64 LARGE PCREL.  */
   LOONGARCH_HOWTO (R_LARCH_TLS_DESC64_PC_LO20, /* type (113).  */
 	32,				       /* rightshift.  */
-	8,				       /* size.  */
+	4,				       /* size.  */
 	20,				       /* bitsize.  */
 	true,				       /* pc_relative.  */
 	5,				       /* bitpos.  */
@@ -1659,7 +1659,7 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
 
   LOONGARCH_HOWTO (R_LARCH_TLS_DESC64_PC_HI12, /* type (114).  */
 	52,				       /* rightshift.  */
-	8,				       /* size.  */
+	4,				       /* size.  */
 	12,				       /* bitsize.  */
 	true,				       /* pc_relative.  */
 	10,				       /* bitpos.  */
@@ -1712,7 +1712,7 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
   /* TLS_DESC64 LARGE ABS.  */
   LOONGARCH_HOWTO (R_LARCH_TLS_DESC64_LO20,    /* type (117).  */
 	32,				       /* rightshift.  */
-	8,				       /* size.  */
+	4,				       /* size.  */
 	20,				       /* bitsize.  */
 	false,				       /* pc_relative.  */
 	5,				       /* bitpos.  */
@@ -1729,7 +1729,7 @@ static loongarch_reloc_howto_type loongarch_howto_table[] =
 
   LOONGARCH_HOWTO (R_LARCH_TLS_DESC64_HI12,    /* type (118).  */
 	52,				       /* rightshift.  */
-	8,				       /* size.  */
+	4,				       /* size.  */
 	12,				       /* bitsize.  */
 	false,				       /* pc_relative.  */
 	10,				       /* bitpos.  */

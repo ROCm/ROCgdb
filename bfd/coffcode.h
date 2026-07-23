@@ -376,6 +376,12 @@ extern const bfd_target TARGET_SYM_BIG;
 # define COFF_WITH_EXTENDED_RELOC_COUNTER
 #endif
 
+#if defined(COFF_WITH_PE) && !defined(COFF_IMAGE_WITH_PE)
+# define COFF_DEFAULT_MAX_NSCNS (IMAGE_SYM_SECTION_MAX + 1)
+#else
+# define COFF_DEFAULT_MAX_NSCNS 32768
+#endif
+
 #if defined (COFF_LONG_SECTION_NAMES)
 /* Needed to expand the inputs to BLANKOR1TOODD.  */
 #define COFFLONGSECTIONCATHELPER(x,y)    x ## y
@@ -5615,7 +5621,7 @@ static const bfd_coff_backend_data bfd_coff_std_swap_table ATTRIBUTE_UNUSED =
 #else
   2,
 #endif
-  32768,
+  COFF_DEFAULT_MAX_NSCNS,
   coff_SWAP_filehdr_in, coff_SWAP_aouthdr_in, coff_SWAP_scnhdr_in,
   coff_SWAP_reloc_in, coff_bad_format_hook, coff_set_arch_mach_hook,
   coff_mkobject_hook, styp_to_sec_flags, coff_set_alignment_hook,
@@ -5656,7 +5662,7 @@ static const bfd_coff_backend_data ticoff0_swap_table =
 #else
   2,
 #endif
-  32768,
+  COFF_DEFAULT_MAX_NSCNS,
   coff_SWAP_filehdr_in, coff_SWAP_aouthdr_in, coff_SWAP_scnhdr_in,
   coff_swap_reloc_v0_in, ticoff0_bad_format_hook, coff_set_arch_mach_hook,
   coff_mkobject_hook, styp_to_sec_flags, coff_set_alignment_hook,
@@ -5698,7 +5704,7 @@ static const bfd_coff_backend_data ticoff1_swap_table =
 #else
   2,
 #endif
-  32768,
+  COFF_DEFAULT_MAX_NSCNS,
   coff_SWAP_filehdr_in, coff_SWAP_aouthdr_in, coff_SWAP_scnhdr_in,
   coff_SWAP_reloc_in, ticoff1_bad_format_hook, coff_set_arch_mach_hook,
   coff_mkobject_hook, styp_to_sec_flags, coff_set_alignment_hook,

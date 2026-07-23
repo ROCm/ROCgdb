@@ -4,11 +4,13 @@
   .4byte .L3-.L1
   # add32+sub32
   .4byte .L3-.L1
+  call36 .L1
 .L2:
   # 64_pcrel
   .8byte .L3-.L2
   # add64+sub64
   .8byte .L3-.L2
+  call36 .L1
 
   .section sx
 .L3:

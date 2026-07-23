@@ -374,7 +374,7 @@ loongarch*-*-linux*)
 	# Target: LoongArch running Linux
 	gdb_target_obs="loongarch-linux-tdep.o glibc-tdep.o \
 			linux-tdep.o solib-svr4.o solib-svr4-linux.o \
-			linux-record.o"
+			linux-record.o svr4-tls-tdep.o"
 	;;
 
 m32c-*-*)

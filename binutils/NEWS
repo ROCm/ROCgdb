@@ -1,5 +1,7 @@
 -*- text -*-
 
+Changes in 2.47:
+
 * The s390 32-bit target (s390-*) is deprecated and planned for removal in a
   future release, along with the elf32-s390 target format.  configure emits
   an error for this target, which can be overridden using --enable-obsolete.

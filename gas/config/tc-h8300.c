@@ -52,7 +52,7 @@ int Smode;
 int Nmode;
 int SXmode;
 
-static int default_mach = bfd_mach_h8300;
+static int default_mach = bfd_mach_h8300h;
 
 #define PSIZE (Hmode && !Nmode ? L_32 : L_16)
 

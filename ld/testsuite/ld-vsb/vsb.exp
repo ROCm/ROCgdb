@@ -360,7 +360,6 @@ proc visibility_run {visibility} {
 	    if { [ string match $visibility "hidden_weak" ]
 		 || [ string match $visibility "protected_weak" ] } {
 		setup_xfail "*-*-aix*"
-		setup_xfail "*-*-beos*"
 	    }
 
 	    visibility_test $visibility vnp "visibility ($visibility) (non PIC)" mainnp.o sh1np.o sh2np.o $datfile "" $NOPIE_LDFLAGS
@@ -409,7 +408,6 @@ proc visibility_run {visibility} {
 	    if { [ string match $visibility "hidden_weak" ]
 		 || [ string match $visibility "protected_weak" ] } {
 		setup_xfail "*-*-aix*"
-		setup_xfail "*-*-beos*"
 	    }
 
 	    if { ![is_xcoff_format] } {
@@ -483,7 +481,6 @@ proc visibility_run {visibility} {
 	    if { [ string match $visibility "hidden_weak" ]
 		 || [ string match $visibility "protected_weak" ] } {
 		setup_xfail "*-*-aix*"
-		setup_xfail "*-*-beos*"
 	    }
 
 	    visibility_test $visibility vmpnp "visibility ($visibility) (PIC main, non PIC so)" mainp.o sh1np.o sh2np.o $datfile "" $NOPIE_LDFLAGS
@@ -505,7 +502,6 @@ proc visibility_run {visibility} {
 	    if { [ string match $visibility "hidden_weak" ]
 		 || [ string match $visibility "protected_weak" ] } {
 		setup_xfail "*-*-aix*"
-		setup_xfail "*-*-beos*"
 	    }
 
 	    visibility_test $visibility vmpp "visibility ($visibility) (PIC main)" mainp.o sh1p.o sh2p.o $datfile "" $NOPIE_LDFLAGS

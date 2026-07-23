@@ -363,7 +363,7 @@ extern void tui_adjust_window_width (struct tui_win_info *win,
 
 /* The type of a function that is used to create a TUI window.  */
 
-typedef std::function<tui_win_info * (const char *name)> window_factory;
+using window_factory = std::function<tui_win_info * (const char *name)>;
 
 /* The type for a data structure that maps a window name to that window's
    factory function.  */

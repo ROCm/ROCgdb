@@ -142,9 +142,9 @@ proc all_immediate_tests { } {
 .*ldo 5\\(r26\\),r26.*
 .*ldil -21524800,r26.*
 .*addil -21524800,r5.*
-.*$gdb_prompt $" { pass "immedate_tests" }
-	-re "$gdb_prompt $" { fail "immedate_tests" }
-	timeout { fail "(timeout) immedate_tests " }
+.*$gdb_prompt $" { pass "immediate_tests" }
+	-re "$gdb_prompt $" { fail "immediate_tests" }
+	timeout { fail "(timeout) immediate_tests " }
     }
 }
 
@@ -849,7 +849,7 @@ proc all_system_control_tests { } {
 .*sync.*
 .*syncdma.*
 .*diag 4d2.*
-.*$gdb_prompt $" { pass "system_constrol_tests" }
+.*$gdb_prompt $" { pass "system_control_tests" }
 	-re "$gdb_prompt $" { fail "system_control_tests" }
 	timeout { file "(timeout) system_control_tests" }
     }
