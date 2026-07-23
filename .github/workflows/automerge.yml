@@ -3,9 +3,13 @@ on:
   schedule: # runs every 6 hours
     - cron: '0 */6 * * *'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (fetch and probe, but skip pushes and PR creation)'
+        type: boolean
+        default: false
   pull_request:
     types: [closed]
-    branches: [amd-staging]
 
 concurrency:
   group: gdb-automerge
@@ -14,19 +18,20 @@ concurrency:
 jobs:
   automerge-to-staging:
     runs-on: ubuntu-latest
-    if: false
-    # Remove the above and uncomment below to activate:
-    # if: |
-    #   github.event_name != 'pull_request' ||
-    #   (github.event.pull_request.merged == true &&
-    #    (contains(github.event.pull_request.labels.*.name, 'merge-testing') ||
-    #     contains(github.event.pull_request.labels.*.name, 'merge-conflict')))
+    if: |
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.base.ref == vars.AUTOMERGE_TARGET_BRANCH &&
+       (contains(github.event.pull_request.labels.*.name, 'merge-testing') ||
+        contains(github.event.pull_request.labels.*.name, 'merge-conflict')))
     permissions:
       contents: write
       pull-requests: write
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       WORKSPACE: ${{ github.workspace }}
+      AUTOMERGE_TARGET_BRANCH: ${{ vars.AUTOMERGE_TARGET_BRANCH }}
+      AUTOMERGE_UPSTREAM_BRANCH: ${{ vars.AUTOMERGE_UPSTREAM_BRANCH }}
     steps:
       - name: Check out repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -37,4 +42,5 @@ jobs:
           git config --global credential.helper "!gh auth git-credential"
       - name: Trigger Automerge Job
         run: |
-          python3 .github/scripts/automerge.py
+          python3 .github/scripts/automerge.py \
+            ${{ inputs.dry_run == true && '--dry-run' || '' }}
