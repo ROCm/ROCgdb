@@ -20,86 +20,32 @@ import os.path
 import gdb
 
 
-class TypeFlag:
-    """A class that allows us to store a flag name, its short name,
-    and its value.
-
-    In the GDB sources, struct type has a component called instance_flags
-    in which the value is the addition of various flags.  These flags are
-    defined by the enumerates type_instance_flag_value.  This class helps us
-    recreate a list with all these flags that is easy to manipulate and sort.
-    Because all flag names start with TYPE_INSTANCE_FLAG_, a short_name
-    attribute is provided that strips this prefix.
-
-    ATTRIBUTES
-      name:  The enumeration name (eg: "TYPE_INSTANCE_FLAG_CONST").
-      value: The associated value.
-      short_name: The enumeration name, with the suffix stripped.
-    """
-
-    def __init__(self, name, value):
-        self.name = name
-        self.value = value
-        self.short_name = name.replace("TYPE_INSTANCE_FLAG_", "")
-
-    def __lt__(self, other):
-        """Sort by value order."""
-        return self.value < other.value
-
-
-# A list of all existing TYPE_INSTANCE_FLAGS_* enumerations,
-# stored as TypeFlags objects.  Lazy-initialized.
-TYPE_FLAGS = None
-
-
-class TypeFlagsPrinter:
-    """A class that prints a decoded form of an instance_flags value.
-
-    This class uses a global named TYPE_FLAGS, which is a list of
-    all defined TypeFlag values.  Using a global allows us to compute
-    this list only once.
-
-    This class relies on a couple of enumeration types being defined.
-    If not, then printing of the instance_flag is going to be degraded,
-    but it's not a fatal error.
-    """
+class StructTypeInstanceFlagsPrettyPrinter:
+    """Pretty-print an object of type struct type_instance_flags"""
 
     def __init__(self, val):
         self.val = val
 
     def __str__(self):
-        global TYPE_FLAGS
-        if TYPE_FLAGS is None:
-            self.init_TYPE_FLAGS()
-        if not self.val:
-            return "0"
-        if TYPE_FLAGS:
-            flag_list = [
-                flag.short_name for flag in TYPE_FLAGS if self.val & flag.value
-            ]
-        else:
-            flag_list = ["???"]
-        return "0x%x [%s]" % (self.val, "|".join(flag_list))
+        fields = []
+        if self.val["is_const"]:
+            fields.append("CONST")
+        if self.val["is_volatile"]:
+            fields.append("VOLATILE")
+        if self.val["harvard_aspace"] == 1:  # HARVARD_ASPACE_CODE
+            fields.append("CODE_SPACE")
+        elif self.val["harvard_aspace"] == 2:  # HARVARD_ASPACE_DATA
+            fields.append("DATA_SPACE")
+        if self.val["address_class"] != 0:
+            fields.append("ADDRESS_CLASS(%d)" % self.val["address_class"])
+        if self.val["is_nottext"]:
+            fields.append("NOTTEXT")
+        if self.val["is_restrict"]:
+            fields.append("RESTRICT")
+        if self.val["is_atomic"]:
+            fields.append("ATOMIC")
 
-    def init_TYPE_FLAGS(self):
-        """Initialize the TYPE_FLAGS global as a list of TypeFlag objects.
-        This operation requires the search of a couple of enumeration types.
-        If not found, a warning is printed on stdout, and TYPE_FLAGS is
-        set to the empty list.
-
-        The resulting list is sorted by increasing value, to facilitate
-        printing of the list of flags used in an instance_flags value.
-        """
-        global TYPE_FLAGS
-        TYPE_FLAGS = []
-        try:
-            iflags = gdb.lookup_type("enum type_instance_flag_value")
-        except:
-            print("Warning: Cannot find enum type_instance_flag_value type.")
-            print("         `struct type' pretty-printer will be degraded")
-            return
-        TYPE_FLAGS = [TypeFlag(field.name, field.enumval) for field in iflags.fields()]
-        TYPE_FLAGS.sort()
+        return "[" + "|".join(fields) + "]"
 
 
 class StructTypePrettyPrinter:
@@ -114,7 +60,8 @@ class StructTypePrettyPrinter:
         fields.append("reference_type = %s" % self.val["reference_type"])
         fields.append("chain = %s" % self.val["reference_type"])
         fields.append(
-            "instance_flags = %s" % TypeFlagsPrinter(self.val["m_instance_flags"])
+            "instance_flags = %s"
+            % StructTypeInstanceFlagsPrettyPrinter(self.val["m_instance_flags"])
         )
         fields.append("length = %d" % self.val["m_length"])
         fields.append("main_type = %s" % self.val["main_type"])

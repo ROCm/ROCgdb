@@ -99,51 +99,80 @@ enum harvard_address_space
   HARVARD_ASPACE_DATA = 2,
 };
 
-/* Some bits for the type's instance_flags word.  See the macros
-   below for documentation on each bit.  */
+/* A type's instance_flags.  */
 
-enum type_instance_flag_value : unsigned
+struct type_instance_flags
 {
-  TYPE_INSTANCE_FLAG_CONST = (1 << 0),
-  TYPE_INSTANCE_FLAG_VOLATILE = (1 << 1),
-  TYPE_INSTANCE_FLAG_CODE_SPACE = (1 << 2),
-  TYPE_INSTANCE_FLAG_DATA_SPACE = (1 << 3),
-  TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1 = (1 << 4),
-  TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2 = (1 << 5),
-  TYPE_INSTANCE_FLAG_NOTTEXT = (1 << 6),
-  TYPE_INSTANCE_FLAG_RESTRICT = (1 << 7),
-  TYPE_INSTANCE_FLAG_ATOMIC = (1 << 8)
+  bool operator== (const type_instance_flags &other) const
+  {
+    return (is_const == other.is_const
+	    && is_volatile == other.is_volatile
+	    && harvard_aspace == other.harvard_aspace
+	    && address_class == other.address_class
+	    && is_nottext == other.is_nottext
+	    && is_restrict == other.is_restrict
+	    && is_atomic == other.is_atomic);
+  }
+
+  bool operator!= (const type_instance_flags &other) const
+  {
+    return !(*this == other);
+  }
+
+  type_instance_flags &operator|= (const type_instance_flags &other)
+  {
+    is_const = is_const || other.is_const;
+    is_volatile = is_volatile || other.is_volatile;
+
+    gdb_assert (harvard_aspace == 0);
+    harvard_aspace = other.harvard_aspace;
+
+    gdb_assert (address_class == 0);
+    address_class = other.address_class;
+
+    is_nottext = is_nottext || other.is_nottext;
+    is_restrict = is_restrict || other.is_restrict;
+    is_atomic = is_atomic || other.is_atomic;
+    return *this;
+  }
+
+  /* Constant type.  If this is set, the corresponding type has a
+     const modifier.  */
+  bool is_const : 1;
+
+  /* Volatile type.  If this is set, the corresponding type has a
+     volatile modifier.  */
+  bool is_volatile : 1;
+
+  /* See enum harvard_address_space above.  */
+  harvard_address_space harvard_aspace : 2;
+
+  /* Address class field.  Some environments provide for pointers
+     whose size is different from that of a normal pointer or address
+     types where the bits are interpreted differently than normal
+     addresses.  The ADDRESS_CLASS field may be used in target
+     specific ways to represent these different types of address
+     classes.  */
+  unsigned int address_class : 2;
+
+  /* Not textual.  By default, GDB treats all single byte integers as
+     characters (or elements of strings) unless this flag is set.  */
+  bool is_nottext : 1;
+
+  /* Restrict type.  If this is set, the corresponding type has a
+     restrict modifier.  */
+  bool is_restrict : 1;
+
+  /* Atomic type.  If this is set, the corresponding type has an
+     _Atomic modifier.  */
+  bool is_atomic : 1;
 };
 
-DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
-
-/* Not textual.  By default, GDB treats all single byte integers as
-   characters (or elements of strings) unless this flag is set.  */
-
-#define TYPE_NOTTEXT(t)	(((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_NOTTEXT)
-
-/* Constant type.  If this is set, the corresponding type has a
-   const modifier.  */
-
-#define TYPE_CONST(t) ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_CONST) != 0)
-
-/* Volatile type.  If this is set, the corresponding type has a
-   volatile modifier.  */
-
-#define TYPE_VOLATILE(t) \
-  ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_VOLATILE) != 0)
-
-/* Restrict type.  If this is set, the corresponding type has a
-   restrict modifier.  */
-
-#define TYPE_RESTRICT(t) \
-  ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_RESTRICT) != 0)
-
-/* Atomic type.  If this is set, the corresponding type has an
-   _Atomic modifier.  */
-
-#define TYPE_ATOMIC(t) \
-  ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_ATOMIC) != 0)
+#define TYPE_NOTTEXT(t)	(((t)->instance_flags ()).is_nottext)
+#define TYPE_CONST(t) (((t)->instance_flags ()).is_const)
+#define TYPE_VOLATILE(t) (((t)->instance_flags ()).is_volatile)
+#define TYPE_RESTRICT(t) (((t)->instance_flags ()).is_restrict)
+#define TYPE_ATOMIC(t) (((t)->instance_flags ()).is_atomic)
 
 /* True if this type represents either an lvalue or lvalue reference type.  */
 
@@ -163,33 +192,14 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
   (((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)	\
    || ((t)->dyn_prop (DYN_PROP_BIT_SIZE) != nullptr))
 
-/* See enum harvard_address_space above.  */
-
 #define TYPE_CODE_SPACE(t) \
-  ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_CODE_SPACE) != 0)
+  (((t)->instance_flags ()).harvard_aspace == HARVARD_ASPACE_CODE)
 
 #define TYPE_DATA_SPACE(t) \
-  ((((t)->instance_flags ()) & TYPE_INSTANCE_FLAG_DATA_SPACE) != 0)
+  (((t)->instance_flags ()).harvard_aspace == HARVARD_ASPACE_DATA)
 
-/* Address class flags.  Some environments provide for pointers
-   whose size is different from that of a normal pointer or address
-   types where the bits are interpreted differently than normal
-   addresses.  The TYPE_INSTANCE_FLAG_ADDRESS_CLASS_n flags may be used in
-   target specific ways to represent these different types of address
-   classes.  */
-
-#define TYPE_ADDRESS_CLASS_1(t) (((t)->instance_flags ()) \
-				 & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
-#define TYPE_ADDRESS_CLASS_2(t) (((t)->instance_flags ()) \
-				 & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2)
-#define TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL \
-  (TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1 | TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2)
-#define TYPE_ADDRESS_CLASS_ALL(t) (((t)->instance_flags ()) \
-				   & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL)
-#define TYPE_ADDRESS_CLASS_FROM_INSTANCE_FLAGS(t) \
-  ((unsigned int) ((t) & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL) >> 4)
 #define TYPE_ADDRESS_CLASS(t) \
-  (TYPE_ADDRESS_CLASS_FROM_INSTANCE_FLAGS ((t)->instance_flags ()))
+  (((t)->instance_flags ()).address_class)
 
 /* Information about a single discriminant.  */
 
@@ -1167,16 +1177,28 @@ struct type
     this->field (0).set_type (index_type);
   }
 
-  /* Return the instance flags converted to the correct type.  */
+  /* Return the instance flags.  */
   const type_instance_flags instance_flags () const
   {
-    return (enum type_instance_flag_value) this->m_instance_flags;
+    return this->m_instance_flags;
   }
 
   /* Set the instance flags.  */
   void set_instance_flags (type_instance_flags flags)
   {
     this->m_instance_flags = flags;
+  }
+
+  /* Set the address class id.  */
+  void set_address_class (unsigned int address_class)
+  {
+    this->m_instance_flags.address_class = address_class;
+  }
+
+  /* Set the is_nottext flag.  */
+  void set_nottext (bool flag)
+  {
+    this->m_instance_flags.is_nottext = flag;
   }
 
   /* Get the bounds bounds of this type.  The type must be a range type.  */
@@ -1597,7 +1619,7 @@ struct type
      instance flags are completely inherited from the target type.  No
      qualifiers can be cleared by the typedef.  See also
      check_typedef.  */
-  unsigned m_instance_flags : 9;
+  type_instance_flags m_instance_flags;
 
   /* Length of storage for a value of this type.  The value is the
      expression in host bytes of what sizeof(type) would return.  This

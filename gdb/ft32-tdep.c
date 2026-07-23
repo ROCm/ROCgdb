@@ -332,7 +332,7 @@ ft32_pointer_to_address (struct gdbarch *gdbarch,
   CORE_ADDR addr
     = extract_unsigned_integer (buf, type->length (), byte_order);
 
-  if (TYPE_ADDRESS_CLASS_1 (type))
+  if (TYPE_ADDRESS_CLASS (type) == 1)
     return addr;
   else
     return addr | RAM_BIAS;
@@ -579,8 +579,7 @@ ft32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   func_void_type = lookup_function_type (void_type);
   tdep->pc_type = init_pointer_type (alloc, 4 * TARGET_CHAR_BIT, NULL,
 				     func_void_type);
-  tdep->pc_type->set_instance_flags (tdep->pc_type->instance_flags ()
-				     | TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1);
+  tdep->pc_type->set_address_class (1);
 
   set_gdbarch_num_regs (gdbarch, FT32_NUM_REGS);
   set_gdbarch_sp_regnum (gdbarch, FT32_SP_REGNUM);

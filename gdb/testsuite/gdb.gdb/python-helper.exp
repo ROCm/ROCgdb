@@ -151,7 +151,7 @@ proc test_python_helper {} {
 		    "\{pointer_type = 0x0," \
 		    " reference_type = 0x0," \
 		    " chain = 0x0," \
-		    " instance_flags = 0," \
+		    " instance_flags = \\\[\\\]," \
 		    " length = $decimal," \
 		    " main_type = $hex\}"]
     gdb_test -prompt $outer_prompt_re "print *val->m_type" $answer "pretty print type"
@@ -165,6 +165,12 @@ proc test_python_helper {} {
 		    " target_type = 0x0," \
 		    " int_stuff = \{ bit_size = $decimal, bit_offset = $decimal \}\}"]
     gdb_test -prompt $outer_prompt_re "print *val->m_type->main_type" $answer "pretty print type->main_type"
+
+    # Test printing instance flags using an artificial type.
+    set answer [string_to_regexp {instance_flags = [VOLATILE|DATA_SPACE|ADDRESS_CLASS(3)]}]
+    gdb_test -prompt $outer_prompt_re \
+	"print *make_type_with_harvard_address_space (make_cv_type (0, 1, make_type_with_address_class (val->m_type, 3)), 2)" \
+	"${answer}.*" "pretty print type instance flags"
 
     # Send the continue to the outer GDB, which resumes the inner GDB,
     # we then detect the prompt from the inner GDB, hence the use of

@@ -82,7 +82,7 @@ type_stack::insert (struct gdbarch *gdbarch, const char *string)
 type_instance_flags
 type_stack::follow_type_instance_flags ()
 {
-  type_instance_flags flags = 0;
+  type_instance_flags flags {};
 
   for (;;)
     switch (pop ())
@@ -90,16 +90,16 @@ type_stack::follow_type_instance_flags ()
       case tp_end:
 	return flags;
       case tp_const:
-	flags |= TYPE_INSTANCE_FLAG_CONST;
+	flags.is_const = true;
 	break;
       case tp_volatile:
-	flags |= TYPE_INSTANCE_FLAG_VOLATILE;
+	flags.is_volatile = true;
 	break;
       case tp_atomic:
-	flags |= TYPE_INSTANCE_FLAG_ATOMIC;
+	flags.is_atomic = true;
 	break;
       case tp_restrict:
-	flags |= TYPE_INSTANCE_FLAG_RESTRICT;
+	flags.is_restrict = true;
 	break;
       default:
 	gdb_assert_not_reached ("unrecognized tp_ value in follow_types");

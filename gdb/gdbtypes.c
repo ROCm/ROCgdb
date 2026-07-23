@@ -603,14 +603,11 @@ struct type *
 make_type_with_harvard_address_space (struct type *type,
 				      enum harvard_address_space aspace)
 {
-  type_instance_flags new_flags
-    = (enum type_instance_flag_value) (aspace << 2);
-
-  gdb_assert ((new_flags & ~(TYPE_INSTANCE_FLAG_CODE_SPACE
-			     | TYPE_INSTANCE_FLAG_DATA_SPACE)) == 0);
-  new_flags |= (type->instance_flags ()
-		& ~(TYPE_INSTANCE_FLAG_CODE_SPACE
-		    | TYPE_INSTANCE_FLAG_DATA_SPACE));
+  gdb_assert (aspace == HARVARD_ASPACE_NONE
+	      || aspace == HARVARD_ASPACE_CODE
+	      || aspace == HARVARD_ASPACE_DATA);
+  type_instance_flags new_flags = type->instance_flags ();
+  new_flags.harvard_aspace = aspace;
 
   return make_qualified_type (type, new_flags, nullptr);
 }
@@ -625,13 +622,9 @@ struct type *
 make_type_with_address_class (struct type *type,
 			      unsigned int address_class)
 {
-  type_instance_flags new_flags
-    = (enum type_instance_flag_value) (address_class << 4);
-
-  gdb_assert ((new_flags & ~TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL) == 0);
-
-  new_flags |= (type->instance_flags ()
-		& ~TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL);
+  gdb_assert (address_class < 4); /* We use two bits for this field.  */
+  type_instance_flags new_flags = type->instance_flags ();
+  new_flags.address_class = address_class;
 
   return make_qualified_type (type, new_flags, nullptr);
 }
@@ -641,15 +634,9 @@ make_type_with_address_class (struct type *type,
 type *
 make_cv_type (int cnst, int voltl, type *type)
 {
-  type_instance_flags new_flags = (type->instance_flags ()
-				   & ~(TYPE_INSTANCE_FLAG_CONST
-				       | TYPE_INSTANCE_FLAG_VOLATILE));
-
-  if (cnst)
-    new_flags |= TYPE_INSTANCE_FLAG_CONST;
-
-  if (voltl)
-    new_flags |= TYPE_INSTANCE_FLAG_VOLATILE;
+  type_instance_flags new_flags = type->instance_flags ();
+  new_flags.is_const = cnst;
+  new_flags.is_volatile = voltl;
 
   return make_qualified_type (type, new_flags, nullptr);
 }
@@ -659,10 +646,10 @@ make_cv_type (int cnst, int voltl, type *type)
 struct type *
 make_restrict_type (struct type *type)
 {
-  return make_qualified_type (type,
-			      (type->instance_flags ()
-			       | TYPE_INSTANCE_FLAG_RESTRICT),
-			      NULL);
+  type_instance_flags new_flags = type->instance_flags ();
+  new_flags.is_restrict = true;
+
+  return make_qualified_type (type, new_flags, nullptr);
 }
 
 /* Make a type without const, volatile, or restrict.  */
@@ -670,12 +657,12 @@ make_restrict_type (struct type *type)
 struct type *
 make_unqualified_type (struct type *type)
 {
-  return make_qualified_type (type,
-			      (type->instance_flags ()
-			       & ~(TYPE_INSTANCE_FLAG_CONST
-				   | TYPE_INSTANCE_FLAG_VOLATILE
-				   | TYPE_INSTANCE_FLAG_RESTRICT)),
-			      NULL);
+  type_instance_flags new_flags = type->instance_flags ();
+  new_flags.is_const = false;
+  new_flags.is_volatile = false;
+  new_flags.is_restrict = false;
+
+  return make_qualified_type (type, new_flags, nullptr);
 }
 
 /* Make a '_Atomic'-qualified version of TYPE.  */
@@ -683,10 +670,10 @@ make_unqualified_type (struct type *type)
 struct type *
 make_atomic_type (struct type *type)
 {
-  return make_qualified_type (type,
-			      (type->instance_flags ()
-			       | TYPE_INSTANCE_FLAG_ATOMIC),
-			      NULL);
+  type_instance_flags new_flags = type->instance_flags ();
+  new_flags.is_atomic = true;
+
+  return make_qualified_type (type, new_flags, nullptr);
 }
 
 /* Replace the contents of ntype with the type *type.  This changes the
@@ -723,7 +710,7 @@ replace_type (struct type *ntype, struct type *type)
 	 variants.  This assertion shouldn't ever be triggered because
 	 symbol readers which do construct address-class variants don't
 	 call replace_type().  */
-      gdb_assert (TYPE_ADDRESS_CLASS_ALL (chain) == 0);
+      gdb_assert (TYPE_ADDRESS_CLASS (chain) == 0);
 
       chain->set_length (type->length ());
       chain = chain->chain;
@@ -1362,8 +1349,8 @@ make_vector_type (struct type *array_type)
   elt_type = inner_array->target_type ();
   if (elt_type->code () == TYPE_CODE_INT)
     {
-      type_instance_flags flags
-	= elt_type->instance_flags () | TYPE_INSTANCE_FLAG_NOTTEXT;
+      type_instance_flags flags = elt_type->instance_flags ();
+      flags.is_nottext = true;
       elt_type = make_qualified_type (elt_type, flags, NULL);
       inner_array->set_target_type (elt_type);
     }
@@ -3074,19 +3061,13 @@ check_typedef (struct type *type)
 	 outer cast in a chain of casting win), instead of assuming
 	 "it can't happen".  */
       {
-	const type_instance_flags ALL_SPACES
-	  = (TYPE_INSTANCE_FLAG_CODE_SPACE
-	     | TYPE_INSTANCE_FLAG_DATA_SPACE);
-	const type_instance_flags ALL_CLASSES
-	  = TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL;
-
 	type_instance_flags new_instance_flags = type->instance_flags ();
 
 	/* Treat code vs data spaces and address classes separately.  */
-	if ((instance_flags & ALL_SPACES) != 0)
-	  new_instance_flags &= ~ALL_SPACES;
-	if ((instance_flags & ALL_CLASSES) != 0)
-	  new_instance_flags &= ~ALL_CLASSES;
+	if (instance_flags.harvard_aspace != HARVARD_ASPACE_NONE)
+	  new_instance_flags.harvard_aspace = HARVARD_ASPACE_NONE;
+	if (instance_flags.address_class != 0)
+	  new_instance_flags.address_class = 0;
 
 	instance_flags |= new_instance_flags;
       }
@@ -5039,8 +5020,7 @@ recursive_dump_type (struct type *type, int spaces)
 	      host_address_to_string (type->reference_type));
   gdb_printf ("%*stype_chain %s\n", spaces, "",
 	      host_address_to_string (type->chain));
-  gdb_printf ("%*sinstance_flags 0x%x", spaces, "",
-	      (unsigned) type->instance_flags ());
+  gdb_printf ("%*sinstance_flags [", spaces, "");
   if (TYPE_CONST (type))
     {
       gdb_puts (" TYPE_CONST");
@@ -5057,13 +5037,9 @@ recursive_dump_type (struct type *type, int spaces)
     {
       gdb_puts (" TYPE_DATA_SPACE");
     }
-  if (TYPE_ADDRESS_CLASS_1 (type))
+  if (TYPE_ADDRESS_CLASS (type) != 0)
     {
-      gdb_puts (" TYPE_ADDRESS_CLASS_1");
-    }
-  if (TYPE_ADDRESS_CLASS_2 (type))
-    {
-      gdb_puts (" TYPE_ADDRESS_CLASS_2");
+      gdb_printf (" TYPE_ADDRESS_CLASS(%u)", TYPE_ADDRESS_CLASS (type));
     }
   if (TYPE_RESTRICT (type))
     {
@@ -5073,7 +5049,7 @@ recursive_dump_type (struct type *type, int spaces)
     {
       gdb_puts (" TYPE_ATOMIC");
     }
-  gdb_puts ("\n");
+  gdb_puts ("]\n");
 
   gdb_printf ("%*sflags", spaces, "");
   if (type->is_unsigned ())
@@ -5875,13 +5851,8 @@ create_gdbtypes_data (struct gdbarch *gdbarch)
   builtin_type->builtin_uint128
     = init_integer_type (alloc, 128, 1, "uint128_t");
 
-  builtin_type->builtin_int8->set_instance_flags
-    (builtin_type->builtin_int8->instance_flags ()
-     | TYPE_INSTANCE_FLAG_NOTTEXT);
-
-  builtin_type->builtin_uint8->set_instance_flags
-    (builtin_type->builtin_uint8->instance_flags ()
-     | TYPE_INSTANCE_FLAG_NOTTEXT);
+  builtin_type->builtin_int8->set_nottext (true);
+  builtin_type->builtin_uint8->set_nottext (true);
 
   /* Wide character types.  */
   builtin_type->builtin_char16
