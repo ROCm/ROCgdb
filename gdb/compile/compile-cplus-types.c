@@ -673,7 +673,7 @@ compile_cplus_convert_method (compile_cplus_instance *instance,
     quals |= GCC_CP_QUALIFIER_CONST;
   if (method_type->is_volatile ())
     quals |= GCC_CP_QUALIFIER_VOLATILE;
-  if (TYPE_RESTRICT (method_type))
+  if (method_type->is_restrict ())
     quals |= GCC_CP_QUALIFIER_RESTRICT;
 
   /* Not yet implemented.  */
@@ -1070,7 +1070,7 @@ compile_cplus_convert_qualified (compile_cplus_instance *instance,
     quals |= GCC_CP_QUALIFIER_CONST;
   if (type->is_volatile ())
     quals |= GCC_CP_QUALIFIER_VOLATILE;
-  if (TYPE_RESTRICT (type))
+  if (type->is_restrict ())
     quals |= GCC_CP_QUALIFIER_RESTRICT;
 
   return instance->convert_qualified_base (unqual_converted, quals);
@@ -1126,7 +1126,7 @@ convert_type_cplus_basic (compile_cplus_instance *instance,
 {
   /* If we are converting a qualified type, first convert the
      unqualified type and then apply the qualifiers.  */
-  if (type->is_const () || type->is_volatile () || TYPE_RESTRICT (type))
+  if (type->is_const () || type->is_volatile () || type->is_restrict ())
     return compile_cplus_convert_qualified (instance, type);
 
   switch (type->code ())

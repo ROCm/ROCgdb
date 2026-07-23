@@ -5033,10 +5033,8 @@ recursive_dump_type (struct type *type, int spaces)
     {
       gdb_printf (" TYPE_ADDRESS_CLASS(%u)", TYPE_ADDRESS_CLASS (type));
     }
-  if (TYPE_RESTRICT (type))
-    {
-      gdb_puts (" TYPE_RESTRICT");
-    }
+  if (type->is_restrict ())
+    gdb_puts (" TYPE_RESTRICT");
   if (TYPE_ATOMIC (type))
     {
       gdb_puts (" TYPE_ATOMIC");

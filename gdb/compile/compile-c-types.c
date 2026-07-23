@@ -251,7 +251,7 @@ convert_qualified (compile_c_instance *context, struct type *type)
     quals |= GCC_QUALIFIER_CONST;
   if (type->is_volatile ())
     quals |= GCC_QUALIFIER_VOLATILE;
-  if (TYPE_RESTRICT (type))
+  if (type->is_restrict ())
     quals |= GCC_QUALIFIER_RESTRICT;
 
   return context->plugin ().build_qualified_type (unqual_converted,
@@ -278,7 +278,7 @@ convert_type_basic (compile_c_instance *context, struct type *type)
 {
   /* If we are converting a qualified type, first convert the
      unqualified type and then apply the qualifiers.  */
-  if (type->is_const () || type->is_volatile () || TYPE_RESTRICT (type))
+  if (type->is_const () || type->is_volatile () || type->is_restrict ())
     return convert_qualified (context, type);
 
   switch (type->code ())

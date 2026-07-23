@@ -317,7 +317,7 @@ cp_type_print_method_args (struct type *mtype,
       if (domain->is_volatile ())
 	gdb_printf (stream, " volatile");
 
-      if (TYPE_RESTRICT (domain))
+      if (domain->is_restrict ())
 	gdb_printf (stream, (language == language_cplus
 			     ? " __restrict__"
 			     : " restrict"));
@@ -465,7 +465,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
       did_print_modifier = 1;
     }
 
-  if (TYPE_RESTRICT (type))
+  if (type->is_restrict ())
     {
       if (did_print_modifier || need_pre_space)
 	gdb_printf (stream, " ");

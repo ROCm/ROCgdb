@@ -168,7 +168,6 @@ struct type_instance_flags
   bool is_atomic : 1;
 };
 
-#define TYPE_RESTRICT(t) (((t)->instance_flags ()).is_restrict)
 #define TYPE_ATOMIC(t) (((t)->instance_flags ()).is_atomic)
 
 /* True if this type represents either an lvalue or lvalue reference type.  */
@@ -1220,6 +1219,12 @@ struct type
   bool is_data_space () const
   {
     return this->m_instance_flags.harvard_aspace == HARVARD_ASPACE_DATA;
+  }
+
+  /* Return if this type is restrict.  */
+  bool is_restrict () const
+  {
+    return this->m_instance_flags.is_restrict;
   }
 
   /* Get the bounds bounds of this type.  The type must be a range type.  */
