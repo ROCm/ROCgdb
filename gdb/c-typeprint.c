@@ -19,6 +19,7 @@
 #include "event-top.h"
 #include "bfd.h"
 #include "symtab.h"
+#include "gdbarch.h"
 #include "gdbtypes.h"
 #include "expression.h"
 #include "value.h"
@@ -482,10 +483,18 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
       did_print_modifier = 1;
     }
 
-  address_space_id
-    = address_space_type_instance_flags_to_name (type->arch (),
-						 type->instance_flags ());
-  if (address_space_id)
+  address_space_id = nullptr;
+
+  if (TYPE_CODE_SPACE (type))
+    address_space_id = "code";
+  else if (TYPE_DATA_SPACE (type))
+    address_space_id = "data";
+  else if (gdbarch_address_class_id_to_name_p (type->arch ()))
+    address_space_id
+      = gdbarch_address_class_id_to_name (type->arch (),
+					  TYPE_ADDRESS_CLASS (type));
+
+  if (address_space_id != nullptr)
     {
       if (did_print_modifier || need_pre_space)
 	gdb_printf (stream, " ");

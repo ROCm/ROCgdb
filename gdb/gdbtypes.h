@@ -2420,12 +2420,6 @@ extern struct type *make_atomic_type (struct type *);
 
 extern void replace_type (struct type *, struct type *);
 
-extern type_instance_flags address_space_name_to_type_instance_flags
-  (struct gdbarch *, const char *);
-
-extern const char *address_space_type_instance_flags_to_name
-  (struct gdbarch *, type_instance_flags);
-
 extern struct type *make_type_with_address_space
   (struct type *type, type_instance_flags space_identifier);
 

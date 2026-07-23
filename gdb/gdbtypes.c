@@ -536,51 +536,6 @@ lookup_function_type_with_arguments (struct type *return_type,
   return create_function_type (return_type, nparams, param_types);
 }
 
-/* Identify address space identifier by name -- return a
-   type_instance_flags.  */
-
-type_instance_flags
-address_space_name_to_type_instance_flags (struct gdbarch *gdbarch,
-					   const char *space_identifier)
-{
-  /* Check for known address space delimiters.  */
-  if (streq (space_identifier, "code"))
-    return TYPE_INSTANCE_FLAG_CODE_SPACE;
-  else if (streq (space_identifier, "data"))
-    return TYPE_INSTANCE_FLAG_DATA_SPACE;
-
-  unsigned int aclass;
-  if (gdbarch_address_class_name_to_id_p (gdbarch)
-      && gdbarch_address_class_name_to_id (gdbarch,
-					   space_identifier,
-					   aclass))
-    {
-      return (enum type_instance_flag_value) (aclass << 4);
-    }
-  else
-    error (_("Unknown address space specifier: \"%s\""), space_identifier);
-}
-
-/* Identify address space identifier by type_instance_flags and return
-   the string version of the address space name.  */
-
-const char *
-address_space_type_instance_flags_to_name (struct gdbarch *gdbarch,
-					   type_instance_flags space_flag)
-{
-  if (space_flag & TYPE_INSTANCE_FLAG_CODE_SPACE)
-    return "code";
-  else if (space_flag & TYPE_INSTANCE_FLAG_DATA_SPACE)
-    return "data";
-
-  unsigned int aclass = TYPE_ADDRESS_CLASS_FROM_INSTANCE_FLAGS (space_flag);
-
-  if (gdbarch_address_class_id_to_name_p (gdbarch))
-    return gdbarch_address_class_id_to_name (gdbarch, aclass);
-  else
-    return NULL;
-}
-
 /* Create a new type with instance flags NEW_FLAGS, based on TYPE.
 
    If STORAGE is non-NULL, create the new type instance there.

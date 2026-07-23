@@ -20,6 +20,7 @@
 #include "type-stack.h"
 
 #include "gdbtypes.h"
+#include "gdbarch.h"
 
 /* See type-stack.h.  */
 
@@ -51,10 +52,29 @@ type_stack::insert (struct gdbarch *gdbarch, const char *string)
      Otherwise, simply push this on the top of the stack.  */
   int slot = (!m_elements.empty ()) ? 1 : 0;
 
-  insert_into (slot, tp_space_identifier);
-  insert_into (slot,
-	       address_space_name_to_type_instance_flags (gdbarch,
-							  string));
+  /* Check for Harvard address space delimiters and
+     architecture-specific address classes.  */
+  if (streq (string, "code"))
+    {
+      insert_into (slot, tp_harvard_aspace_identifier);
+      insert_into (slot, TYPE_INSTANCE_FLAG_CODE_SPACE);
+    }
+  else if (streq (string, "data"))
+    {
+      insert_into (slot, tp_harvard_aspace_identifier);
+      insert_into (slot, TYPE_INSTANCE_FLAG_DATA_SPACE);
+    }
+  else if (unsigned int aclass = 0;
+	   gdbarch_address_class_name_to_id_p (gdbarch)
+	   && gdbarch_address_class_name_to_id (gdbarch,
+						string,
+						aclass))
+    {
+      insert_into (slot, tp_aclass_identifier);
+      insert_into (slot, (enum type_instance_flag_value) (aclass << 4));
+    }
+  else
+    error (_("Unknown address space/class specifier: \"%s\""), string);
 }
 
 /* See type-stack.h.  */
@@ -112,7 +132,10 @@ type_stack::follow_types (struct type *follow_type)
       case tp_volatile:
 	make_volatile = 1;
 	break;
-      case tp_space_identifier:
+      case tp_harvard_aspace_identifier:
+	make_addr_space = (enum type_instance_flag_value) pop_int ();
+	break;
+      case tp_aclass_identifier:
 	make_addr_space = (enum type_instance_flag_value) pop_int ();
 	break;
       case tp_atomic:

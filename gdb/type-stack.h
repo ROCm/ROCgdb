@@ -45,9 +45,12 @@ enum type_pieces
   tp_function_with_arguments,
   tp_const,
   tp_volatile,
-  /* An address space identifier.  The address space is also pushed on
+  /* An Harvard address space identifier (i.e. "code" or "data").  The
+     address space is also pushed on the stack.  */
+  tp_harvard_aspace_identifier,
+  /* An address class identifier.  The address class is also pushed on
      the stack.  */
-  tp_space_identifier,
+  tp_aclass_identifier,
   tp_atomic,
   tp_restrict,
   /* A separate type stack, which is also pushed onto this type
@@ -114,7 +117,8 @@ public:
      accept an integer argument are allowed.  */
   void push (enum type_pieces tp, int n)
   {
-    gdb_assert (tp == tp_array || tp == tp_space_identifier || tp == tp_kind);
+    gdb_assert (tp == tp_array || tp == tp_harvard_aspace_identifier
+		|| tp == tp_aclass_identifier || tp == tp_kind);
     type_stack_elt elt;
     elt.int_val = n;
     m_elements.push_back (elt);
@@ -172,7 +176,8 @@ public:
     type_stack_elt elt = m_elements.back ();
     m_elements.pop_back ();
     type_pieces tp = elt.piece;
-    gdb_assert (tp == tp_array || tp == tp_space_identifier || tp == tp_kind);
+    gdb_assert (tp == tp_array || tp == tp_harvard_aspace_identifier
+		|| tp == tp_aclass_identifier || tp == tp_kind);
     elt = m_elements.back ();
     m_elements.pop_back ();
     return elt.int_val;
@@ -204,13 +209,14 @@ public:
     return elt.stack_val;
   }
 
-  /* Insert a tp_space_identifier and the corresponding address space
-     value into the stack.  STRING is the name of an address space, as
-     recognized by address_space_name_to_type_instance_flags.  If the
-     stack is empty, the new elements are simply pushed.  If the stack
-     is not empty, this function assumes that the first item on the
-     stack is a tp_pointer, and the new values are inserted above the
-     first item.  */
+  /* Insert an address space or address class identifier and the
+     corresponding id value into the stack.  STRING is the name of a
+     Harvard address space ("code" or "data"), or the name of an
+     address class as recognized by gdbarch_address_class_name_to_id.
+     If the stack is empty, the new elements are simply pushed.  If
+     the stack is not empty, this function assumes that the first item
+     on the stack is a tp_pointer, and the new values are inserted
+     above the first item.  */
 
   void insert (struct gdbarch *gdbarch, const char *string);
 
@@ -266,7 +272,8 @@ private:
   {
     return (tp == tp_array || tp == tp_kind || tp == tp_type_stack
 	    || tp == tp_function_with_arguments
-	    || tp == tp_space_identifier);
+	    || tp == tp_harvard_aspace_identifier
+	    || tp == tp_aclass_identifier);
   }
 
 
