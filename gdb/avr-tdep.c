@@ -361,7 +361,7 @@ avr_integer_to_address (struct gdbarch *gdbarch,
 {
   ULONGEST addr = unpack_long (type, buf);
 
-  if (TYPE_DATA_SPACE (type))
+  if (type->is_data_space ())
     return avr_make_saddr (addr);
   else
     return avr_make_iaddr (addr);

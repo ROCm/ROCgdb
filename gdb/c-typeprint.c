@@ -487,7 +487,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
 
   if (type->is_code_space ())
     address_space_id = "code";
-  else if (TYPE_DATA_SPACE (type))
+  else if (type->is_data_space ())
     address_space_id = "data";
   else if (gdbarch_address_class_id_to_name_p (type->arch ()))
     address_space_id

@@ -189,9 +189,6 @@ struct type_instance_flags
   (((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)	\
    || ((t)->dyn_prop (DYN_PROP_BIT_SIZE) != nullptr))
 
-#define TYPE_DATA_SPACE(t) \
-  (((t)->instance_flags ()).harvard_aspace == HARVARD_ASPACE_DATA)
-
 #define TYPE_ADDRESS_CLASS(t) \
   (((t)->instance_flags ()).address_class)
 
@@ -1217,6 +1214,12 @@ struct type
   bool is_code_space () const
   {
     return this->m_instance_flags.harvard_aspace == HARVARD_ASPACE_CODE;
+  }
+
+  /* Return if this type is in the data space.  */
+  bool is_data_space () const
+  {
+    return this->m_instance_flags.harvard_aspace == HARVARD_ASPACE_DATA;
   }
 
   /* Get the bounds bounds of this type.  The type must be a range type.  */
