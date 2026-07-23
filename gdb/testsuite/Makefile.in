@@ -257,11 +257,18 @@ check-single-racy:
 # Combine the individual gdb.sum / gdb.log files found anywhere under
 # directory $(1) into a single gdb.sum / gdb.log pair in directory
 # $(2), using contrib/dg-extract-results.sh.
+#
+# The file list is piped in via "-f -" rather than expanded onto the
+# command line: a parallel run writes one gdb.sum/gdb.log per .exp, so
+# the list can hold thousands of paths and overflow the command-line
+# length limit (notably on Windows, where the limit is ~32 KB).
 define DG_EXTRACT_RESULTS
-	$(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh \
-	  `find $(1) -name gdb.sum -print` > $(2)/gdb.sum; \
-	$(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -L \
-	  `find $(1) -name gdb.log -print` > $(2)/gdb.log
+	find $(1) -name gdb.sum -print \
+	  | $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -f - \
+	  > $(2)/gdb.sum; \
+	find $(1) -name gdb.log -print \
+	  | $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -L -f - \
+	  > $(2)/gdb.log
 endef
 
 check-parallel:
