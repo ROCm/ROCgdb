@@ -1,0 +1,47 @@
+# Copyright (C) 2021-2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that __builtin_trap PC is correctly adjusted
+
+load_lib rocm.exp
+require allow_hip_tests
+standard_testfile .cpp
+
+if {[build_executable "failed to build" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+clean_restart
+gdb_load $::binfile
+
+with_rocm_gpu_lock {
+    if {![runto_main]} {
+	fail "cannot run to main"
+	return
+    }
+
+    # Continue to the trap.
+    gdb_test "continue" \
+	".*received signal SIGABRT.*" \
+	"received trap signal"
+
+    # Check PC points to trap instruction.
+    # If PC adjustment is working, PC should be at the s_trap instruction.
+    gdb_test "x/i \$pc" \
+	".*s_trap.*" \
+	"PC points to trap instruction"
+}
