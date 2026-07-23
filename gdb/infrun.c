@@ -7955,11 +7955,37 @@ process_event_stop_test (struct execution_control_state *ecs)
       && (!ecs->event_thread->is_simd_lane_active
 	  (ecs->event_thread->current_simd_lane ())))
     {
-      infrun_debug_printf
-	("stepping divergent lane %s",
-	 target_lane_to_str (ecs->event_thread,
-			     ecs->event_thread->current_simd_lane ()).c_str ());
+      if (execution_direction == EXEC_FORWARD
+	  && stepped_into_subroutine (ecs->event_thread, frame))
+	{
+	  /* We just stepped inside a new function, and the current
+	     lane is inactive.  None of the architectures we support
+	     can atomically jump to a new frame while changing the set
+	     of active lanes, so the current lane was inactive at the
+	     call site.
 
+	     Because the lane is already inactive on entry, we expect
+	     it to remain logically inactive for the entire frame.
+	     The function may still activate the lane transiently,
+	     e.g., for a whole-wave vector register spill, but that's
+	     an implementation detail that the user should not see.
+	     Therefore, even if we issued a step rather than a next,
+	     there is nothing to stop for in this frame, so we can
+	     return directly to the caller.  */
+	  infrun_debug_printf
+	    ("stepping into subroutine with divergent lane %s",
+	     target_lane_to_str (ecs->event_thread,
+				 ecs->event_thread->current_simd_lane ()
+				 ).c_str ());
+	  insert_step_resume_breakpoint_at_caller (frame);
+	}
+      else
+	{
+	  infrun_debug_printf
+	    ("stepping divergent lane %s",
+	     target_lane_to_str (ecs->event_thread,
+				 ecs->event_thread->current_simd_lane ()).c_str ());
+	}
       keep_going (ecs);
       return;
     }
