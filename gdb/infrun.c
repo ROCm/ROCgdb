@@ -7624,6 +7624,55 @@ private:
 
 }
 
+/* Return true if THREAD, currently stopped at FRAME, has stepped into
+   a subroutine call relative to the frame the step operation started
+   in (THREAD->control.step_stack_frame_id).  */
+
+static bool
+stepped_into_subroutine (thread_info *thread, const frame_info_ptr &frame)
+{
+  /* This is not really necessary -- the check of the previous frame's
+     ID is sufficient -- but this is a common case and cheaper than
+     checking the previous frame's ID.  */
+  if (get_stack_frame_id (frame) == thread->control.step_stack_frame_id)
+    return false;
+
+  /* We want "nexti" to step into, not over, signal handlers invoked
+     by the kernel, therefore this subroutine check should not trigger
+     for a signal handler invocation.  On most platforms, this is
+     already not the case, as the kernel puts a signal trampoline
+     frame onto the stack to handle proper return after the handler,
+     and therefore at this point, the current frame is a grandchild of
+     the step frame, not a child.  However, on some platforms, the
+     kernel actually uses a trampoline to handle *invocation* of the
+     handler.  In that case, when executing the first instruction of
+     the trampoline, this check would erroneously detect the
+     trampoline invocation as a subroutine call.  Fix this by checking
+     for SIGTRAMP_FRAME.  */
+  if (get_frame_type (frame) == SIGTRAMP_FRAME)
+    return false;
+
+  /* NOTE: frame_id::operator== will never report two invalid frame
+     IDs as being equal, so for this to return true, both the current
+     and previous frame must have valid frame IDs.  */
+  if (frame_unwind_caller_id (frame) != thread->control.step_stack_frame_id)
+    return false;
+
+  /* Heuristic to detect stepping through startup code.  If we step
+     over an instruction that sets the stack pointer from an invalid
+     value to a valid value, we may detect that as a subroutine call
+     from the mythical "outermost" function.  This could be fixed by
+     marking outermost frames as !stack_p,code_p,special_p.  Then the
+     initial outermost frame, before sp was valid, would have
+     code_addr == &_start.  See the comment in frame_id::operator==
+     for more.  */
+  if (thread->control.step_stack_frame_id == outer_frame_id
+      && thread->control.in_step_start_function (frame))
+    return false;
+
+  return true;
+}
+
 /* Come here when we've got some debug event / signal we can explain
    (IOW, not a random signal), and test whether it should cause a
    stop, or whether we should resume the inferior (transparently).
@@ -7906,11 +7955,37 @@ process_event_stop_test (struct execution_control_state *ecs)
       && (!ecs->event_thread->is_simd_lane_active
 	  (ecs->event_thread->current_simd_lane ())))
     {
-      infrun_debug_printf
-	("stepping divergent lane %s",
-	 target_lane_to_str (ecs->event_thread,
-			     ecs->event_thread->current_simd_lane ()).c_str ());
+      if (execution_direction == EXEC_FORWARD
+	  && stepped_into_subroutine (ecs->event_thread, frame))
+	{
+	  /* We just stepped inside a new function, and the current
+	     lane is inactive.  None of the architectures we support
+	     can atomically jump to a new frame while changing the set
+	     of active lanes, so the current lane was inactive at the
+	     call site.
 
+	     Because the lane is already inactive on entry, we expect
+	     it to remain logically inactive for the entire frame.
+	     The function may still activate the lane transiently,
+	     e.g., for a whole-wave vector register spill, but that's
+	     an implementation detail that the user should not see.
+	     Therefore, even if we issued a step rather than a next,
+	     there is nothing to stop for in this frame, so we can
+	     return directly to the caller.  */
+	  infrun_debug_printf
+	    ("stepping into subroutine with divergent lane %s",
+	     target_lane_to_str (ecs->event_thread,
+				 ecs->event_thread->current_simd_lane ()
+				 ).c_str ());
+	  insert_step_resume_breakpoint_at_caller (frame);
+	}
+      else
+	{
+	  infrun_debug_printf
+	    ("stepping divergent lane %s",
+	     target_lane_to_str (ecs->event_thread,
+				 ecs->event_thread->current_simd_lane ()).c_str ());
+	}
       keep_going (ecs);
       return;
     }
@@ -8063,43 +8138,8 @@ process_event_stop_test (struct execution_control_state *ecs)
 	}
     }
 
-  /* Check for subroutine calls.  The check for the current frame
-     equalling the step ID is not necessary - the check of the
-     previous frame's ID is sufficient - but it is a common case and
-     cheaper than checking the previous frame's ID.
-
-     NOTE: frame_id::operator== will never report two invalid frame IDs as
-     being equal, so to get into this block, both the current and
-     previous frame must have valid frame IDs.  */
-  /* The outer_frame_id check is a heuristic to detect stepping
-     through startup code.  If we step over an instruction which
-     sets the stack pointer from an invalid value to a valid value,
-     we may detect that as a subroutine call from the mythical
-     "outermost" function.  This could be fixed by marking
-     outermost frames as !stack_p,code_p,special_p.  Then the
-     initial outermost frame, before sp was valid, would
-     have code_addr == &_start.  See the comment in frame_id::operator==
-     for more.  */
-
-  /* We want "nexti" to step into, not over, signal handlers invoked
-     by the kernel, therefore this subroutine check should not trigger
-     for a signal handler invocation.  On most platforms, this is already
-     not the case, as the kernel puts a signal trampoline frame onto the
-     stack to handle proper return after the handler, and therefore at this
-     point, the current frame is a grandchild of the step frame, not a
-     child.  However, on some platforms, the kernel actually uses a
-     trampoline to handle *invocation* of the handler.  In that case,
-     when executing the first instruction of the trampoline, this check
-     would erroneously detect the trampoline invocation as a subroutine
-     call.  Fix this by checking for SIGTRAMP_FRAME.  */
-  if ((get_stack_frame_id (frame)
-       != ecs->event_thread->control.step_stack_frame_id)
-      && get_frame_type (frame) != SIGTRAMP_FRAME
-      && ((frame_unwind_caller_id (frame)
-	   == ecs->event_thread->control.step_stack_frame_id)
-	  && ((ecs->event_thread->control.step_stack_frame_id
-	       != outer_frame_id)
-	      || !ecs->event_thread->control.in_step_start_function (frame))))
+  /* Check for subroutine calls.  */
+  if (stepped_into_subroutine (ecs->event_thread, frame))
     {
       CORE_ADDR stop_pc = ecs->event_thread->stop_pc ();
       CORE_ADDR real_stop_pc;
