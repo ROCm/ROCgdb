@@ -792,6 +792,8 @@ if [gas_32_check] then {
 
 	run_dump_test "no-got"
 
+	run_dump_test "plt"
+
 	run_dump_test "gotx-default"
 	run_dump_test "no-gotx-default"
 

@@ -13553,10 +13553,20 @@ x86_cons (expressionS *exp, int size)
 		    || got_reloc == BFD_RELOC_32_PLT_PCREL)
 		   && exp->X_op != O_symbol)
 	    {
-	      char c = *input_line_pointer;
-	      *input_line_pointer = 0;
-	      as_bad (_("invalid PLT expression `%s'"), save);
-	      *input_line_pointer = c;
+	    /* Allow directives like ".long foo@PLT - .L4".
+	       BFD_RELOC_X86_64_PC32_TO_PLT32 has an explicit addend and
+	       BFD_RELOC_386_PC32_TO_PLT32 has an implicit addend.  */
+	      if (size == 4 && exp->X_op == O_subtract)
+		got_reloc = (object_64bit
+			     ? BFD_RELOC_X86_64_PC32_TO_PLT32
+			     : BFD_RELOC_386_PC32_TO_PLT32);
+	      else
+		{
+		  char c = *input_line_pointer;
+		  *input_line_pointer = 0;
+		  as_bad (_("invalid PLT expression `%s'"), save);
+		  *input_line_pointer = c;
+		}
 	    }
 	}
     }
@@ -16781,6 +16791,12 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  value = -4;
 	break;
 
+      case BFD_RELOC_386_PC32_TO_PLT32:
+	/* Set the implicit addend.  */
+	value = (seg->vma - fixP->fx_size + fixP->fx_addnumber
+		 + md_pcrel_from (fixP));
+	break;
+
       case BFD_RELOC_386_TLS_GD:
       case BFD_RELOC_386_TLS_LDM:
       case BFD_RELOC_386_TLS_IE_32:
@@ -18586,6 +18602,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
     case BFD_RELOC_386_TLS_LE:
     case BFD_RELOC_386_TLS_GOTDESC:
     case BFD_RELOC_386_TLS_DESC_CALL:
+    case BFD_RELOC_386_PC32_TO_PLT32:
     case BFD_RELOC_X86_64_TLSGD:
     case BFD_RELOC_X86_64_TLSLD:
     case BFD_RELOC_X86_64_DTPOFF32:
@@ -18608,6 +18625,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
     case BFD_RELOC_X86_64_CODE_5_GOTPC32_TLSDESC:
     case BFD_RELOC_X86_64_CODE_6_GOTPC32_TLSDESC:
     case BFD_RELOC_X86_64_TLSDESC_CALL:
+    case BFD_RELOC_X86_64_PC32_TO_PLT32:
     case BFD_RELOC_RVA:
     case BFD_RELOC_VTABLE_ENTRY:
     case BFD_RELOC_VTABLE_INHERIT:
@@ -18751,6 +18769,13 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 	  case BFD_RELOC_X86_64_TLSDESC_CALL:
 	    rel->addend = fixp->fx_offset - fixp->fx_size;
 	    break;
+	  case BFD_RELOC_X86_64_PC32_TO_PLT32:
+	    /* This came from a directive like ".long foo@PLT - .L4".
+	       Generate R_X86_64_PLT32 with addend computed like
+	       R_X86_64_PC32 so that PLT entry is used to resolve
+	       this PC32 relocation.   */
+	    code = BFD_RELOC_32_PLT_PCREL;
+	    /* Fall through.  */
 	  default:
 	    rel->addend = (section->vma
 			   - fixp->fx_size

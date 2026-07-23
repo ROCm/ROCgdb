@@ -163,5 +163,4 @@
 .*:219:  Info: .*
 .*:3: Error: .*
 .*:220:  Info: .*
-.*:3: Error: .*
-.*:227:  Info: .*
+.*:227: Error: can't resolve xtrn - ptr
