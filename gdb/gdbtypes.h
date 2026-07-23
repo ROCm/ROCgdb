@@ -168,8 +168,6 @@ struct type_instance_flags
   bool is_atomic : 1;
 };
 
-#define TYPE_ATOMIC(t) (((t)->instance_flags ()).is_atomic)
-
 /* True if this type represents either an lvalue or lvalue reference type.  */
 
 #define TYPE_IS_REFERENCE(t) \
@@ -1225,6 +1223,12 @@ struct type
   bool is_restrict () const
   {
     return this->m_instance_flags.is_restrict;
+  }
+
+  /* Return if this type is atomic.  */
+  bool is_atomic () const
+  {
+    return this->m_instance_flags.is_atomic;
   }
 
   /* Get the bounds bounds of this type.  The type must be a range type.  */

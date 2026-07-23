@@ -322,7 +322,7 @@ cp_type_print_method_args (struct type *mtype,
 			     ? " __restrict__"
 			     : " restrict"));
 
-      if (TYPE_ATOMIC (domain))
+      if (domain->is_atomic ())
 	gdb_printf (stream, " _Atomic");
     }
 }
@@ -475,7 +475,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
       did_print_modifier = 1;
     }
 
-  if (TYPE_ATOMIC (type))
+  if (type->is_atomic ())
     {
       if (did_print_modifier || need_pre_space)
 	gdb_printf (stream, " ");

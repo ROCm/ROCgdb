@@ -5035,10 +5035,8 @@ recursive_dump_type (struct type *type, int spaces)
     }
   if (type->is_restrict ())
     gdb_puts (" TYPE_RESTRICT");
-  if (TYPE_ATOMIC (type))
-    {
-      gdb_puts (" TYPE_ATOMIC");
-    }
+  if (type->is_atomic ())
+    gdb_puts (" TYPE_ATOMIC");
   gdb_puts ("]\n");
 
   gdb_printf ("%*sflags", spaces, "");
