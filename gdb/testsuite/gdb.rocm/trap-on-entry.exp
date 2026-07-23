@@ -1,0 +1,99 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Exercise the `trap-on-entry` feature. Attempt to make the debugger break
+# when a kernel runs, then verify that it disables cleanly.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc do_test {} {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	if {![runto_main]} {
+	    return
+	}
+
+	# The feature must be disabled by default.
+	gdb_test "show amdgpu trap-on-entry" \
+	    "AMDGPU wave launch trap-on-entry is off \\(currently disabled\\)\\." \
+	    "trap-on-entry off by default"
+
+	# Let the dry run complete so that all runtime-internal kernels (heap
+	# setup, etc.) have executed.  Enabling trap-on-entry before that would
+	# trap on entry to those internal kernels instead of do_an_addition.
+	gdb_breakpoint "enable_trap_on_entry"
+	gdb_continue_to_breakpoint "after dry run"
+
+	gdb_test_no_output "set amdgpu trap-on-entry on" "trap-on-entry enabled at runtime"
+	gdb_test "show amdgpu trap-on-entry" \
+	    "AMDGPU wave launch trap-on-entry is on \\(currently enabled\\)\\." \
+	    "trap-on-entry shown enabled"
+
+	# With the feature enabled, the next dispatch traps on entry.
+	gdb_test "continue" \
+	    "Thread $::decimal \"do_an_addition\" received signal SIGTRAP, Trace/breakpoint trap.*"
+
+	# Disable the feature while stopped in the trapped kernel.
+	gdb_test_no_output "set amdgpu trap-on-entry off" "trap-on-entry disabled at runtime"
+	gdb_test "show amdgpu trap-on-entry" \
+	    "AMDGPU wave launch trap-on-entry is off \\(currently disabled\\)\\." \
+	    "trap-on-entry shown disabled"
+
+	# The remaining dispatch must not trap; the program runs to completion.
+	gdb_test "continue" \
+	    "Inferior 1 .* exited normally.*" \
+	    "continue to end"
+    }
+}
+
+# Not every architecture supports trap-on-entry.  Request the feature before
+# the process starts, then let the process attach apply it and report through
+# "show" whether it actually became effective.
+set trap_on_entry_supported false
+with_test_prefix "check_trap_on_entry_support" {
+    clean_restart $::testfile
+
+    with_rocm_gpu_lock {
+	gdb_test_no_output "set amdgpu trap-on-entry on"
+	if {![runto_main]} {
+	    return
+	}
+
+	gdb_test_multiple "show amdgpu trap-on-entry" "" {
+	    -re -wrap "AMDGPU wave launch trap-on-entry is on \\(currently (enabled|disabled)\\).*" {
+		if {$expect_out(1,string) == "enabled"} {
+		    set trap_on_entry_supported true
+		}
+		pass $gdb_test_name
+	    }
+	}
+    }
+}
+
+if {!$trap_on_entry_supported} {
+    unsupported "trap-on-entry not supported"
+    return
+}
+
+do_test
