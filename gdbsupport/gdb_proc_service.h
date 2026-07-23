@@ -72,7 +72,7 @@ extern "C" {
 extern "C" {
 
 /* Functions in this interface return one of these status codes.  */
-typedef enum
+enum ps_err_e
 {
   PS_OK,		/* Generic "call succeeded".  */
   PS_ERR,		/* Generic error.  */
@@ -81,7 +81,7 @@ typedef enum
   PS_BADADDR,		/* Bad address.  */
   PS_NOSYM,		/* Could not find given symbol.  */
   PS_NOFREGS		/* FPU register set not available for given LWP.  */
-} ps_err_e;
+};
 
 #ifndef HAVE_LWPID_T
 using lwpid_t = unsigned int;

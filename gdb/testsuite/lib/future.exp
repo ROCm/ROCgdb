@@ -198,6 +198,16 @@ proc gdb_find_readelf {} {
     return $readelf
 }
 
+proc gdb_find_windres {} {
+    global WINDRES_FOR_TARGET
+    if {[info exists WINDRES_FOR_TARGET]} {
+	set windres $WINDRES_FOR_TARGET
+    } else {
+	set windres [transform windres]
+    }
+    return $windres
+}
+
 proc gdb_find_eu-unstrip {} {
     global EU_UNSTRIP_FOR_TARGET
     if {[info exists EU_UNSTRIP_FOR_TARGET]} {

@@ -6221,14 +6221,12 @@ next_char_of_string (void)
 	case '5':
 	case '6':
 	case '7':
-	case '8':
-	case '9':
 	  {
 	    unsigned number;
 	    int i;
 
 	    for (i = 0, number = 0;
-		 ISDIGIT (c) && i < 3;
+		 i < 3 && c >= '0' && c <= '7';
 		 c = *input_line_pointer++, i++)
 	      {
 		number = number * 8 + c - '0';

@@ -1,5 +1,5 @@
 .L1:
-nop
+call36 .L1
 bgtz  $r4,.L1
 bgez  $r4,.L1
 blez  $r4,.L1

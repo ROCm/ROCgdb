@@ -1,9 +1,12 @@
-directives:
+.text
+call .text
+
+directives: # unsigned shift
 .align	  -1>>62
 .word	  -1>>63
 .4byte	  -1>>63
 
-insns:
+insns: #signed left shift
 addi.w	  $t0, $t1, -1<<1
 addi.d	  $t0, $t1, -1<<1
 addu16i.d $t0, $t1, -1<<1
@@ -17,7 +20,7 @@ pcaddu12i $t0, -1<<1
 pcaddu18i $t0, -1<<1
 pcalau12i $t0, -1<<1
 
-# warn
+# warn signed right shift
 addi.w	  $t0, $t1, -1>>63
 addi.d	  $t0, $t1, -1>>63
 addu16i.d $t0, $t1, -1>>63

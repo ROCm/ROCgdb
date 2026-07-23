@@ -1,7 +1,7 @@
 *
 * String substitution symbol recursion
-*			
-* Recursive substitution symbols	
+*
+* Recursive substitution symbols
 	; recursion should stop at x
 	.asg	"x",z
 	.asg	"z",y

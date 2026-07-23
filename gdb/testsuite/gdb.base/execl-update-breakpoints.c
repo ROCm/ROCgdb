@@ -34,11 +34,21 @@ main (int argc, char **argv)
   len = strlen (argv[0]);
   bin = malloc (len + 1);
   memcpy (bin, argv[0], len + 1);
-  if (bin[len - 1] == '1')
-    bin[len - 1] = '2';
 
-  execl (bin, bin, (char *) NULL);
-  perror ("execl failed");
-  some_function ();
-  exit (1);
+  /* Account for the extension on Windows.  */
+  if (len > 4 && strcmp (bin + len - 4, ".exe") == 0)
+    len -= 4;
+
+  if (bin[len - 1] == '1')
+    {
+      bin[len - 1] = '2';
+      execl (bin, bin, (char *) NULL);
+      perror ("execl failed");
+      some_function ();
+      exit (1);
+    }
+  else if (bin[len - 1] == '2')
+    exit (0);
+  else
+    exit (1);
 }

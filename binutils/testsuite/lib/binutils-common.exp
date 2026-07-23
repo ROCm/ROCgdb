@@ -53,12 +53,7 @@ proc is_elf_format {} {
 	 && ![istarget *-*-wasm32*]
 	 && ![istarget avr-*-*]
 	 && ![istarget hppa*64*-*-hpux*]
-	 && ![istarget i?86-*-beos*]
 	 && ![istarget ia64-*-hpux*] } {
-	return 0
-    }
-
-    if { [istarget i?86-*-beospe*] } {
 	return 0
     }
 
@@ -100,8 +95,7 @@ proc is_pecoff_format args {
     } else {
 	set m_os *-*
     }
-    if { [istarget $m_os-beospe*]
-	 || [istarget $m_os-cegcc*]
+    if { [istarget $m_os-cegcc*]
 	 || [istarget $m_os-cygwin*]
 	 || [istarget $m_os-interix*]
 	 || [istarget $m_os-mingw*]
@@ -143,7 +137,6 @@ proc is_som_format {} {
 proc is_xcoff_format {} {
     if { [istarget rs6000-*-*]
 	 || [istarget powerpc*-*-aix*]
-	 || [istarget powerpc*-*-beos*]
 	 || [istarget powerpc*-*-macos*] } {
 	return 1;
     }

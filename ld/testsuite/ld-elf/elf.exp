@@ -103,7 +103,6 @@ if [is_elf64 tmpdir/symbol3w.a] {
     set ASFLAGS "$ASFLAGS --defsym ALIGN=2"
     set pr23900_1_exp "pr23900-1-32.rd"
     if {    [istarget avr-*-*]
-	 || [istarget h8300-*-*]
 	 || [istarget ip2k-*-*]
 	 || [istarget m68hc11-*]
 	 || [istarget "z80-*-*"] } {

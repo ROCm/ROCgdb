@@ -3,14 +3,14 @@
 #include <stdlib.h>
 
 #ifdef HAVE_INITFINI_ARRAY
-static int count;
+static int order;
 
 static void
 init1005 ()
 {
-  if (count != 0)
+  if (order != 0)
     abort ();
-  count = 1005;
+  order = 1;
 }
 void (*const init_array1005[]) ()
   __attribute__ ((section (".init_array.01005"), aligned (sizeof (void *))))
@@ -18,7 +18,7 @@ void (*const init_array1005[]) ()
 static void
 fini1005 ()
 {
-  if (count != 1005)
+  if (order != 1)
     abort ();
 }
 void (*const fini_array1005[]) ()
@@ -28,16 +28,16 @@ void (*const fini_array1005[]) ()
 static void
 ctor1007a ()
 {
-  if (count != 1005)
+  if (order != 1)
     abort ();
-  count = 1006;
+  order = 2;
 }
 static void
 ctor1007b ()
 {
-  if (count != 1006)
+  if (order != 2)
     abort ();
-  count = 1007;
+  order = 3;
 }
 void (*const ctors1007[]) ()
   __attribute__ ((section (".ctors.64528"), aligned (sizeof (void *))))
@@ -45,16 +45,16 @@ void (*const ctors1007[]) ()
 static void
 dtor1007a ()
 {
-  if (count != 1006)
+  if (order != 2)
     abort ();
-  count = 1005;
+  order = 1;
 }
 static void
 dtor1007b ()
 {
-  if (count != 1007)
+  if (order != 3)
     abort ();
-  count = 1006;
+  order = 2;
 }
 void (*const dtors1007[]) ()
   __attribute__ ((section (".dtors.64528"), aligned (sizeof (void *))))
@@ -63,9 +63,9 @@ void (*const dtors1007[]) ()
 static void
 init65530 ()
 {
-  if (count != 1007)
+  if (order != 3)
     abort ();
-  count = 65530;
+  order = 4;
 }
 void (*const init_array65530[]) ()
   __attribute__ ((section (".init_array.65530"), aligned (sizeof (void *))))
@@ -73,9 +73,9 @@ void (*const init_array65530[]) ()
 static void
 fini65530 ()
 {
-  if (count != 65530)
+  if (order != 4)
     abort ();
-  count = 1007;
+  order = 3;
 }
 void (*const fini_array65530[]) ()
   __attribute__ ((section (".fini_array.65530"), aligned (sizeof (void *))))
@@ -84,16 +84,16 @@ void (*const fini_array65530[]) ()
 static void
 ctor65535a ()
 {
-  if (count != 65530)
+  if (order != 4)
     abort ();
-  count = 65535;
+  order = 5;
 }
 static void
 ctor65535b ()
 {
-  if (count != 65535)
+  if (order != 5)
     abort ();
-  count = 65536;
+  order = 6;
 }
 void (*const ctors65535[]) ()
   __attribute__ ((section (".ctors"), aligned (sizeof (void *))))
@@ -101,16 +101,16 @@ void (*const ctors65535[]) ()
 static void
 dtor65535b ()
 {
-  if (count != 65536)
+  if (order != 6)
     abort ();
-  count = 65535;
+  order = 5;
 }
 static void
 dtor65535a ()
 {
-  if (count != 65535)
+  if (order != 5)
     abort ();
-  count = 65530;
+  order = 4;
 }
 void (*const dtors65535[]) ()
   __attribute__ ((section (".dtors"), aligned (sizeof (void *))))

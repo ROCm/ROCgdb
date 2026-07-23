@@ -463,7 +463,7 @@ field_name_match (const char *field_name, const char *target)
 }
 
 
-/* Assuming TYPE is a TYPE_CODE_STRUCT or a TYPE_CODE_TYPDEF to
+/* Assuming TYPE is a TYPE_CODE_STRUCT or a TYPE_CODE_TYPEDEF to
    a TYPE_CODE_STRUCT, find the field whose name matches FIELD_NAME,
    and return its index.  This function also handles fields whose name
    have ___ suffixes because the compiler sometimes alters their name
@@ -2138,14 +2138,14 @@ ada_is_array_descriptor_type (struct type *type)
 
 /* If ARR has a record type in the form of a standard GNAT array descriptor,
    (fat pointer) returns the type of the array data described---specifically,
-   a pointer-to-array type.  If BOUNDS is non-zero, the bounds data are filled
+   a pointer-to-array type.  If BOUNDS is true, the bounds data are filled
    in from the descriptor; otherwise, they are left unspecified.  If
    the ARR denotes a null array descriptor and BOUNDS is non-zero,
    returns NULL.  The result is simply the type of ARR if ARR is not
    a descriptor.  */
 
 static struct type *
-ada_type_of_array (struct value *arr, int bounds)
+ada_type_of_array (struct value *arr, bool bounds)
 {
   if (ada_is_constrained_packed_array_type (arr->type ()))
     return decode_constrained_packed_array_type (arr->type ());
@@ -2179,20 +2179,35 @@ ada_type_of_array (struct value *arr, int bounds)
       descriptor = desc_bounds (arr);
       /* In the extended access case, the bounds struct is "inline" so
 	 the pointer cannot be NULL.  */
-      if (ada_check_typedef (descriptor->type ())->code () == TYPE_CODE_PTR
-	  && value_as_long (descriptor) == 0)
-	return NULL;
+      const bool has_descriptor
+	= (ada_check_typedef (descriptor->type ())->code () != TYPE_CODE_PTR
+	   || value_as_long (descriptor) != 0);
       while (arity > 0)
 	{
 	  type_allocator alloc (arr->type ());
-	  struct value *low = desc_one_bound (descriptor, arity, 0);
-	  struct value *high = desc_one_bound (descriptor, arity, 1);
+	  LONGEST low = 0, high = 0;
+	  type *bound_type;
+
+	  if (has_descriptor)
+	    {
+	      struct value *low_v = desc_one_bound (descriptor, arity, 0);
+	      struct value *high_v = desc_one_bound (descriptor, arity, 1);
+	      low = value_as_long (low_v);
+	      high = value_as_long (high_v);
+	      bound_type = low_v->type ();
+	    }
+	  else
+	    {
+	      /* We don't have the bounds, but we can still find the
+		 type of each index.  */
+	      bound_type
+		= desc_index_type (descriptor->type ()->target_type (),
+				   arity);
+	    }
 
 	  arity -= 1;
 	  struct type *range_type
-	    = create_static_range_type (alloc, low->type (),
-					value_as_long (low),
-					value_as_long (high));
+	    = create_static_range_type (alloc, bound_type, low, high);
 	  elt_type = create_array_type (alloc, elt_type, range_type);
 	  INIT_GNAT_SPECIFIC (elt_type);
 
@@ -2201,18 +2216,15 @@ ada_type_of_array (struct value *arr, int bounds)
 	      /* We need to store the element packed bitsize, as well as
 		 recompute the array size, because it was previously
 		 computed based on the unpacked element size.  */
-	      LONGEST lo = value_as_long (low);
-	      LONGEST hi = value_as_long (high);
-
 	      elt_type->field (0).set_bitsize
 		(decode_packed_array_bitsize (arr->type ()));
 
 	      /* If the array has no element, then the size is already
 		 zero, and does not need to be recomputed.  */
-	      if (lo < hi)
+	      if (low < high)
 		{
-		  int array_bitsize =
-			(hi - lo + 1) * elt_type->field (0).bitsize ();
+		  int array_bitsize = ((high - low + 1)
+				       * elt_type->field (0).bitsize ());
 
 		  elt_type->set_length ((array_bitsize + 7) / 8);
 		}
@@ -2233,7 +2245,7 @@ ada_coerce_to_simple_array_ptr (struct value *arr)
 {
   if (ada_is_array_descriptor_type (arr->type ()))
     {
-      struct type *arrType = ada_type_of_array (arr, 1);
+      struct type *arrType = ada_type_of_array (arr, true);
 
       if (arrType == NULL)
 	return NULL;
@@ -7415,7 +7427,7 @@ field_alignment (struct type *type, int f)
 static struct symbol *
 ada_find_any_type_symbol (const char *name)
 {
-  return standard_lookup (name, get_selected_block (nullptr),
+  return standard_lookup (name, get_selected_block (),
 			  SEARCH_TYPE_DOMAIN);
 }
 
@@ -8613,7 +8625,7 @@ ada_check_typedef (struct type *type)
 
   /* If our type is an access to an unconstrained array, which is encoded
      as a TYPE_CODE_TYPEDEF of a fat pointer, then we're done.
-     We don't want to strip the TYPE_CODE_TYPDEF layer, because this is
+     We don't want to strip the TYPE_CODE_TYPEDEF layer, because this is
      what allows us to distinguish between fat pointers that represent
      array types, and fat pointers that represent array access types
      (in both cases, the compiler implements them as fat pointers).  */
@@ -10271,7 +10283,7 @@ ada_ternop_slice_operation::evaluate (struct type *expect_type,
   if (noside == EVAL_AVOID_SIDE_EFFECTS
       && ada_is_array_descriptor_type (ada_check_typedef
 				       (array->type ())))
-    return empty_array (ada_type_of_array (array, 0), low_bound,
+    return empty_array (ada_type_of_array (array, false), low_bound,
 			high_bound);
 
   array = ada_coerce_to_simple_array_ptr (array);
@@ -11050,7 +11062,7 @@ ada_unop_ind_operation::evaluate (struct type *expect_type,
 	     "dereference" a thick pointer here -- that will end up
 	     giving us an array with (1 .. 0) for bounds, which is
 	     less clear than (<>).  */
-	  struct type *arrType = ada_type_of_array (arg1, 0);
+	  struct type *arrType = ada_type_of_array (arg1, false);
 
 	  if (arrType == NULL)
 	    error (_("Attempt to dereference null array pointer."));
@@ -11428,7 +11440,7 @@ get_var_value (const char *name, const char *err_msg)
 
   std::vector<struct block_symbol> syms
     = ada_lookup_symbol_list_worker (lookup_name,
-				     get_selected_block (0),
+				     get_selected_block (),
 				     SEARCH_VFT, true);
 
   if (syms.size () != 1)
@@ -11644,7 +11656,7 @@ static const char * const standard_exc[] = {
   "tasking_error"
 };
 
-typedef CORE_ADDR (ada_unhandled_exception_name_addr_ftype) (void);
+using ada_unhandled_exception_name_addr_ftype = CORE_ADDR (void);
 
 /* A structure that describes how to support exception catchpoints
    for a given executable.  */
@@ -13744,7 +13756,7 @@ public:
     /* Search upwards from currently selected frame (so that we can
        complete on local vars.  */
 
-    for (const block *b = get_selected_block (0);
+    for (const block *b = get_selected_block ();
 	 b != nullptr;
 	 b = b->superblock ())
       {

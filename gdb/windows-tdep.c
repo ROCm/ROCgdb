@@ -110,7 +110,7 @@ static constexpr unsigned int NOTE_INFO_MODULE64 = 4;
 
 struct cmd_list_element *info_w32_cmdlist;
 
-typedef struct thread_information_block_32
+using thread_information_32 = struct thread_information_block_32
   {
     uint32_t current_seh;			/* %fs:0x0000 */
     uint32_t current_top_of_stack; 		/* %fs:0x0004 */
@@ -126,10 +126,9 @@ typedef struct thread_information_block_32
     uint32_t thread_local_storage;		/* %fs:0x002c */
     uint32_t process_environment_block;		/* %fs:0x0030 */
     uint32_t last_error_number;			/* %fs:0x0034 */
-  }
-thread_information_32;
+  };
 
-typedef struct thread_information_block_64
+using thread_information_64 = struct thread_information_block_64
   {
     uint64_t current_seh;			/* %gs:0x0000 */
     uint64_t current_top_of_stack; 		/* %gs:0x0008 */
@@ -145,8 +144,7 @@ typedef struct thread_information_block_64
     uint64_t thread_local_storage;		/* %gs:0x0058 */
     uint64_t process_environment_block;		/* %gs:0x0060 */
     uint64_t last_error_number;			/* %gs:0x0068 */
-  }
-thread_information_64;
+  };
 
 
 static const char* TIB_NAME[] =

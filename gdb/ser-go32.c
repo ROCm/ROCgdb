@@ -353,7 +353,7 @@ dos_comisr (int irq)
 ISR (0) ISR (1) ISR (2) ISR (3) /* OK */
 ISR (4) ISR (5) ISR (6) ISR (7) /* OK */
 
-typedef void (*isr_t) (void);
+using isr_t = void (*) (void);
 
 static isr_t isrs[NINTR] =
   {

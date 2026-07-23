@@ -2366,7 +2366,16 @@ get_prev_frame_maybe_check_cycle (const frame_info_ptr &this_frame)
       throw;
     }
 
-  return prev_frame;
+  /* When PREV_FRAME was initially created it had no cached frame_id as the
+     frame_id had not yet been computed.  Without a frame_id however
+     PREV_FRAME will not be able to reinflate.  Recreate the frame_info_ptr
+     now that the frame_id is known, this new frame_info_ptr will have a
+     cached frame_id.
+
+     You might wonder about the earlier return of PREV_FRAME within the
+     function.  That is fine as reinflating a frame_info_ptr at level 0
+     doesn't require a cached frame_id.  */
+  return frame_info_ptr (prev_frame.get ());
 }
 
 /* Helper function for get_prev_frame_always, this is called inside a

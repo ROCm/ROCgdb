@@ -429,7 +429,7 @@ stap_get_opcode (const char **s)
   return op;
 }
 
-typedef expr::operation_up binop_maker_ftype (expr::operation_up &&,
+using binop_maker_ftype = expr::operation_up (expr::operation_up &&,
 					      expr::operation_up &&);
 /* Map from an expression opcode to a function that can create a
    binary operation of that type.  */

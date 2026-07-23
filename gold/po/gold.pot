@@ -8,11 +8,10 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: https://sourceware.org/bugzilla/\n"
-"POT-Creation-Date: 2026-01-28 09:57+1030\n"
+"POT-Creation-Date: 2026-07-12 10:40+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -402,9 +401,9 @@ msgstr ""
 
 #. These are relocations which should only be seen by the
 #. dynamic linker, and should never be seen here.
-#: arm.cc:8751 arm.cc:9232 i386.cc:1949 i386.cc:2435 mips.cc:11295 s390.cc:2468
-#: s390.cc:2902 sparc.cc:2553 sparc.cc:3033 tilegx.cc:3584 tilegx.cc:4139
-#: x86_64.cc:3364 x86_64.cc:3906
+#: arm.cc:8751 arm.cc:9232 i386.cc:1949 i386.cc:2435 mips.cc:11295
+#: s390.cc:2468 s390.cc:2902 sparc.cc:2553 sparc.cc:3033 tilegx.cc:3584
+#: tilegx.cc:4139 x86_64.cc:3364 x86_64.cc:3906
 #, c-format
 msgid "%s: unexpected reloc %u in object file"
 msgstr ""
@@ -4194,8 +4193,8 @@ msgstr ""
 #: symtab.cc:2687
 #, c-format
 msgid ""
-"discarding version information for %s@%s, defined in unused shared library "
-"%s (linked with --as-needed)"
+"discarding version information for %s@%s, defined in unused shared library %"
+"s (linked with --as-needed)"
 msgstr ""
 
 #: symtab.cc:3049 symtab.cc:3195

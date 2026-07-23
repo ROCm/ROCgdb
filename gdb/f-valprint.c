@@ -551,7 +551,7 @@ f_language::value_print_inner (struct value *val, struct ui_file *stream,
 		  /* While printing namelist items, fetch the appropriate
 		     value field before printing its value.  */
 		  struct block_symbol sym
-		    = lookup_symbol (field_name, get_selected_block (nullptr),
+		    = lookup_symbol (field_name, get_selected_block (),
 				     SEARCH_VFT, nullptr);
 		  if (sym.symbol == nullptr)
 		    error (_("failed to find symbol for name list component %s"),

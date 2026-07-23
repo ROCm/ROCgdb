@@ -355,7 +355,7 @@ language_defn::read_var_value (struct symbol *var,
 	if (overlay_debugging)
 	  {
 	    struct objfile *var_objfile = var->objfile ();
-	    addr = symbol_overlayed_address (var->value_address (),
+	    addr = symbol_overlaid_address (var->value_address (),
 					     var->obj_section (var_objfile));
 	  }
 	else
@@ -395,7 +395,7 @@ language_defn::read_var_value (struct symbol *var,
     case LOC_STATIC:
       if (overlay_debugging)
 	addr
-	  = symbol_overlayed_address (var->value_address (),
+	  = symbol_overlaid_address (var->value_address (),
 				      var->obj_section (var->objfile ()));
       else
 	addr = var->value_address ();
@@ -436,7 +436,7 @@ language_defn::read_var_value (struct symbol *var,
 
     case LOC_BLOCK:
       if (overlay_debugging)
-	addr = symbol_overlayed_address
+	addr = symbol_overlaid_address
 	  (var->value_block ()->entry_pc (),
 	   var->obj_section (var->objfile ()));
       else
@@ -504,7 +504,7 @@ language_defn::read_var_value (struct symbol *var,
 	else
 	  addr = bmsym.value_address ();
 	if (overlay_debugging)
-	  addr = symbol_overlayed_address (addr, obj_section);
+	  addr = symbol_overlaid_address (addr, obj_section);
 	/* Determine address of TLS variable. */
 	if (obj_section
 	    && (obj_section->the_bfd_section->flags & SEC_THREAD_LOCAL) != 0)

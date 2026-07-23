@@ -69,7 +69,7 @@ proc test_mi_interpreter_selection {} {
     return 0
 }
 
-proc test_exec_and_symbol_mi_operatons {} {
+proc test_exec_and_symbol_mi_operations {} {
     global mi_gdb_prompt
     global binfile testfile
 
@@ -261,7 +261,7 @@ proc test_setshow_inferior_tty {} {
 }
 
 if { [test_mi_interpreter_selection]
-      && [test_exec_and_symbol_mi_operatons] } {
+      && [test_exec_and_symbol_mi_operations] } {
   test_breakpoints_deletion
   test_dir_specification
   test_cwd_specification

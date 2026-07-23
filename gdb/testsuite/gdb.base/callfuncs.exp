@@ -136,6 +136,32 @@ proc do_function_calls {prototypes} {
 
 	gdb_test "p t_double_many_args (double_val1, double_val2, double_val3, double_val4, double_val5, double_val6, double_val7, double_val8, double_val9, double_val10, double_val11, double_val12, double_val13, double_val14, double_val15)" " = 1" "call function with many double arguments."
 
+	gdb_test "p t_long_double_values(0.0,0.0)" " = 0"
+	# Same, via function pointer.  When the pointer type is
+	# unprototyped, GDB has no parameter type to coerce the
+	# arguments to, so the literals must carry the "L" suffix to
+	# be passed as long double rather than double.
+	if {$prototypes} {
+	    gdb_test "p ((int (*) (long double, long double)) t_long_double_values)(0.0,0.0)" " = 0"
+	} else {
+	    gdb_test "p ((int (*) ()) t_long_double_values)(0.0L,0.0L)" " = 0"
+	}
+
+	gdb_test "p t_long_double_values(45.654,-67.66)" " = 1"
+	if {$prototypes} {
+	    gdb_test "p ((int (*) (long double, long double)) t_long_double_values)(45.654,-67.66)" " = 1"
+	} else {
+	    gdb_test "p ((int (*) ()) t_long_double_values)(45.654L,-67.66L)" " = 1"
+	}
+
+	gdb_test "p t_long_double_values(ldouble_val1,ldouble_val2)" " = 1"
+	gdb_test "p t_long_double_values(45.654,ldouble_val2)" " = 1"
+	gdb_test "p t_long_double_values(ldouble_val1,-67.66)" " = 1"
+
+	gdb_test "p t_long_double_many_args (ldouble_val1, ldouble_val2, ldouble_val3, ldouble_val4, ldouble_val5, ldouble_val6, ldouble_val7, ldouble_val8, ldouble_val9, ldouble_val10, ldouble_val11, ldouble_val12, ldouble_val13, ldouble_val14, ldouble_val15)" \
+	    " = 1" \
+	    "call function with many long double arguments"
+
 	gdb_test "p t_double_int(99.0, 1)" " = 0"
 	gdb_test "p t_double_int(99.0, 99)" " = 1"
 	gdb_test "p t_int_double(99, 1.0)" " = 0"
@@ -334,11 +360,17 @@ proc fetch_all_registers {test} {
 # Global used by RERUN_AND_PREPARE to make test names unique.
 set rerun_count 0
 
-proc rerun_and_prepare {} {
+proc rerun_and_prepare {prototypes} {
     global rerun_count
+
+    clean_restart $::testfile-$prototypes
 
     incr rerun_count
     with_test_prefix "rerun number ${rerun_count}" {
+
+	gdb_test_no_output "set print sevenbit-strings"
+	gdb_test_no_output "set print address off"
+	gdb_test_no_output "set width 0"
 
 	if { ![runto_main] } {
 	    return
@@ -359,11 +391,7 @@ proc rerun_and_prepare {} {
 }
 
 proc perform_all_tests {prototypes} {
-    gdb_test_no_output "set print sevenbit-strings"
-    gdb_test_no_output "set print address off"
-    gdb_test_no_output "set width 0"
-
-    rerun_and_prepare
+    rerun_and_prepare $prototypes
 
     # Save all register contents.
     set old_reg_content \
@@ -382,7 +410,7 @@ proc perform_all_tests {prototypes} {
 	fail "gdb function calls preserve register contents"
     }
 
-    rerun_and_prepare
+    rerun_and_prepare $prototypes
     # Save all register contents.
     set old_reg_content \
 	[fetch_all_registers "retrieve original register contents 2"]
@@ -408,7 +436,7 @@ proc perform_all_tests {prototypes} {
 		 }
 	     }
 
-    rerun_and_prepare
+    rerun_and_prepare $prototypes
     # Set breakpoint at a function we will call from gdb.
     gdb_breakpoint add
     # Save all register contents.
@@ -434,7 +462,7 @@ proc perform_all_tests {prototypes} {
 		 }
 	     }
 
-    rerun_and_prepare
+    rerun_and_prepare $prototypes
     # Set breakpoint at a function we will call from gdb.
     gdb_breakpoint add
     # Save all register contents.
@@ -459,7 +487,7 @@ proc perform_all_tests {prototypes} {
 		 }
 	     }
 
-    rerun_and_prepare
+    rerun_and_prepare $prototypes
     # Set breakpoint at a function we will call from gdb.
     gdb_breakpoint add
     set old_reg_content \
@@ -547,12 +575,12 @@ proc perform_all_tests {prototypes} {
 
 # Perform all tests with and without function prototypes.
 
-if { ![prepare_for_testing "failed to prepare" $testfile $srcfile "$compile_flags additional_flags=-DPROTOTYPES"] } {
+if { ![build_executable "failed to build" $testfile-1 $srcfile "$compile_flags additional_flags=-DPROTOTYPES"] } {
     perform_all_tests 1
 }
 
 with_test_prefix "noproto" {
-    if { ![prepare_for_testing "failed to prepare" $testfile $srcfile \
+    if { ![build_executable "failed to build" $testfile-0 $srcfile \
 	       "$compile_flags additional_flags=-DNO_PROTOTYPES"] } {
 	perform_all_tests 0
     }

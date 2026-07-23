@@ -1,0 +1,144 @@
+# Copyright 2023-2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib mi-support.exp
+set MIFLAGS "-i=mi"
+
+gdb_exit
+if {[mi_gdb_start]} {
+    continue
+}
+
+standard_testfile
+
+set opts {debug}
+if {[build_executable ${testfile}.exp ${testfile} ${srcfile} $opts]} {
+    return
+}
+
+mi_delete_breakpoints
+mi_gdb_reinitialize_dir $srcdir/$subdir
+mi_gdb_load ${binfile}
+mi_runto main
+
+set bp_line1 [gdb_get_line_number "bp for locals 1"]
+set bp_line2 [gdb_get_line_number "bp for locals 2"]
+set bp_line3 [gdb_get_line_number "bp for locals 3"]
+set bp_line4 [gdb_get_line_number "bp for locals 4"]
+set bp_line5 [gdb_get_line_number "bp for locals 5"]
+
+set val1_d1 [gdb_get_line_number "val1-d1"]
+set val1_d2 [gdb_get_line_number "val1-d2"]
+set val1_d3 [gdb_get_line_number "val1-d3"]
+set val2_d1 [gdb_get_line_number "val2-d1"]
+set val2_d2 [gdb_get_line_number "val2-d2"]
+set val2_d3 [gdb_get_line_number "val2-d3"]
+set val3_d1 [gdb_get_line_number "val3-d1"]
+set val3_d2 [gdb_get_line_number "val3-d2"]
+set a_line [gdb_get_line_number "entry bp"]
+
+set fullname "${fullname_syntax}$srcfile"
+set filename "\[^\r\n\]+$srcfile"
+
+set stack_test1_regx "\\^done,(locals|variables)=\\\[\{name=\"a\",type=\"int\",value=\"$decimal\"\},\{name=\"val1\",type=\"unsigned int\",value=\"1\"\},{name=\"val2\",type=\"unsigned int\",value=\"2\"\}\\\]"
+set stack_test2_regx "\\^done,(locals|variables)=\\\[\{name=\"val2\",type=\"unsigned int\",value=\"3\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d2\"\},\{name=\"val3\",type=\"unsigned int\",value=\"4\"\},\{name=\"a\",type=\"int\",value=\"101\"\},\{name=\"val1\",type=\"unsigned int\",value=\"1\"\},\{name=\"val2\",type=\"unsigned int\",value=\"2\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d1\",shadowed=\"true\"\}\\\]"
+set stack_test3_regx "\\^done,(locals|variables)=\\\[\{name=\"val1\",type=\"unsigned int\",value=\"5\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val1_d2\"\},\{name=\"val2\",type=\"unsigned int\",value=\"3\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d2\"\},\{name=\"val3\",type=\"unsigned int\",value=\"4\"\},\{name=\"a\",type=\"int\",value=\"102\"\},\{name=\"val1\",type=\"unsigned int\",value=\"1\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val1_d1\",shadowed=\"true\"\},\{name=\"val2\",type=\"unsigned int\",value=\"2\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d1\",shadowed=\"true\"\}\\\]"
+set stack_test4_regx "\\^done,(locals|variables)=\\\[\{name=\"val1\",type=\"unsigned int\",value=\"6\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val1_d3\"\},\{name=\"val2\",type=\"unsigned int\",value=\"7\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d3\"\},\{name=\"val3\",type=\"unsigned int\",value=\"8\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val3_d2\"\},\{name=\"val1\",type=\"unsigned int\",value=\"5\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val1_d2\",shadowed=\"true\"\},\{name=\"val2\",type=\"unsigned int\",value=\"3\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d2\",shadowed=\"true\"\},\{name=\"val3\",type=\"unsigned int\",value=\"4\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val3_d1\",shadowed=\"true\"\},\{name=\"a\",type=\"int\",value=\"103\"\},\{name=\"val1\",type=\"unsigned int\",value=\"1\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val1_d1\",shadowed=\"true\"\},\{name=\"val2\",type=\"unsigned int\",value=\"2\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d1\",shadowed=\"true\"\}\\\]"
+set stack_test5_regx "\\^done,(locals|variables)=\\\[\{name=\"a\",type=\"int\",value=\"105\"\},\{name=\"val1\",type=\"unsigned int\",value=\"1\"\},\{name=\"val2\",type=\"unsigned int\",value=\"2\"\}\\\]"
+
+mi_gdb_test \
+    "-break-insert --source ${srcfile} --line ${bp_line1}"  \
+    "\\^done.*source ${srcfile} \\-line ${bp_line1}.*"  \
+    "bp at outermost level"
+mi_execute_to "exec-continue" "breakpoint-hit" ".*" ".*" ".*" "${bp_line1}"  \
+    { "" "disp=\"keep\"" } "continue to outermost level"
+mi_gdb_test "-stack-list-locals 0" \
+    "\\^done,locals=\\\[name=\"a\",name=\"val1\",name=\"val2\"\\\]" \
+    "-stack-list-locals 0 at outermost level"
+mi_gdb_test "-stack-list-variables 0" \
+    "\\^done,variables=\\\[{name=\"a\"},{name=\"val1\"},{name=\"val2\"}\\\]" \
+    "-stack-list-variables 0 at outermost level"
+mi_gdb_test "-stack-list-locals 2" "${stack_test1_regx}"  \
+    "-stack-list-locals 2 at outermost level"
+mi_gdb_test "-stack-list-variables 2" "${stack_test1_regx}"  \
+    "-stack-list-variables 2 at outermost level"
+
+mi_gdb_test  \
+    "-break-insert --source ${srcfile} --line ${bp_line2}"  \
+    "\\^done.*source ${srcfile} \\-line ${bp_line2}.*"  \
+    "bp at first level"
+mi_execute_to "exec-continue" "breakpoint-hit" ".*" ".*" ".*" "${bp_line2}"  \
+    { "" "disp=\"keep\"" } "continue to first level"
+mi_gdb_test "-stack-list-locals 0"  \
+    "\\^done,locals=\\\[name=\"val2\",name=\"val3\",name=\"a\",name=\"val1\",name=\"val2\"\\\]"  \
+    "-stack-list-locals 0 at first level"
+mi_gdb_test "-stack-list-variables 0" \
+    "\\^done,variables=\\\[{name=\"val2\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d2\"},{name=\"val3\"},{name=\"a\"},{name=\"val1\"},{name=\"val2\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d1\",shadowed=\"true\"\}\\\]"  \
+    "-stack-list-variables 0 at first level"
+mi_gdb_test "-stack-list-locals 2" "${stack_test2_regx}"  \
+    "-stack-list-locals 2 at first level"
+mi_gdb_test "-stack-list-variables 2" "${stack_test2_regx}"  \
+    "-stack-list-variables 2 at first level"
+
+mi_gdb_test  \
+    "-break-insert --source ${srcfile} --line ${bp_line3}"  \
+    "\\^done.*source ${srcfile} \\-line ${bp_line3}.*"  \
+    "bp at second level"
+mi_execute_to "exec-continue" "breakpoint-hit" ".*" ".*" ".*" "${bp_line3}"  \
+    { "" "disp=\"keep\"" } "continue to second level"
+mi_gdb_test "-stack-list-locals 0"  \
+     "\\^done,locals=\\\[name=\"val1\",name=\"val2\",name=\"val3\",name=\"a\",name=\"val1\",name=\"val2\"\\\]"  \
+    "-stack-list-locals 0 at second level"
+mi_gdb_test "-stack-list-variables 0"  \
+     "\\^done,variables=\\\[{name=\"val1\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val1_d2\"},{name=\"val2\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d2\"},{name=\"val3\"},{name=\"a\"},{name=\"val1\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val1_d1\",shadowed=\"true\"\},{name=\"val2\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d1\",shadowed=\"true\"\}\\\]"  \
+    "-stack-list-variables 0 at second level"
+mi_gdb_test "-stack-list-locals 2" "${stack_test3_regx}"  \
+     "-stack-list-locals 2 at second level"
+mi_gdb_test "-stack-list-variables 2" "${stack_test3_regx}"  \
+     "-stack-list-variables 2 at second level"
+
+mi_gdb_test  \
+    "-break-insert --source ${srcfile} --line ${bp_line4}"  \
+    "\\^done.*source ${srcfile} \\-line ${bp_line4}.*"  \
+    "bp at third level"
+mi_execute_to "exec-continue" "breakpoint-hit" ".*" ".*" ".*" "${bp_line4}"  \
+    { "" "disp=\"keep\"" } "continue to third level"
+mi_gdb_test "-stack-list-locals 0"  \
+    "\\^done,locals=\\\[name=\"val1\",name=\"val2\",name=\"val3\",name=\"val1\",name=\"val2\",name=\"val3\",name=\"a\",name=\"val1\",name=\"val2\"\\\]"  \
+    "-stack-list-locals 0 at third level"
+mi_gdb_test "-stack-list-variables 0" \
+    "\\^done,variables=\\\[{name=\"val1\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val1_d3\"},{name=\"val2\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d3\"},{name=\"val3\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val3_d2\"},{name=\"val1\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val1_d2\",shadowed=\"true\"\},\{name=\"val2\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d2\",shadowed=\"true\"\},\{name=\"val3\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val3_d1\",shadowed=\"true\"\},{name=\"a\"},{name=\"val1\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val1_d1\",shadowed=\"true\"\},{name=\"val2\",filename=\"$filename\",fullname=\"$fullname\",line=\"$val2_d1\",shadowed=\"true\"\}\\\]"  \
+    "-stack-list-variables 0 at third level"
+mi_gdb_test "-stack-list-locals 2" "${stack_test4_regx}"  \
+    "-stack-list-locals 2 at third level"
+mi_gdb_test "-stack-list-variables 2" "${stack_test4_regx}"  \
+    "-stack-list-variables 2 at third level"
+
+mi_gdb_test  \
+    "-break-insert --source ${srcfile} --line ${bp_line5}"  \
+    "\\^done.*source ${srcfile} \\-line ${bp_line5}.*"  \
+    "bp at outermost level last"
+mi_execute_to "exec-continue" "breakpoint-hit" ".*" ".*" ".*" "${bp_line5}"  \
+    { "" "disp=\"keep\"" } "continue to outermost level last"
+mi_gdb_test "-stack-list-locals 0"  \
+    "\\^done,locals=\\\[name=\"a\",name=\"val1\",name=\"val2\"\\\]"  \
+    "-stack-list-locals 0 at outermost level last"
+mi_gdb_test "-stack-list-variables 0"  \
+    "\\^done,variables=\\\[{name=\"a\"},{name=\"val1\"},{name=\"val2\"}\\\]"  \
+    "-stack-list-variables at outermost level last"
+mi_gdb_test "-stack-list-locals 2" "${stack_test5_regx}"  \
+    "-stack-list-locals 2 at outermost level last"
+mi_gdb_test "-stack-list-variables 2" "${stack_test5_regx}"  \
+    "-stack-list-variables 2 at outermost level last"

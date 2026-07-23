@@ -3271,7 +3271,7 @@ extern int _rl_completion_prefix_display_length;
 extern int _rl_print_completions_horizontally;
 
 extern "C" int _rl_qsort_string_compare (const void *, const void *);
-typedef int QSFUNC (const void *, const void *);
+using QSFUNC = int (const void *, const void *);
 
 /* GDB version of readline/complete.c:rl_display_match_list.
    See gdb_display_match_list for a description of MATCHES, LEN, MAX.

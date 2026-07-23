@@ -71,6 +71,7 @@ if {[istarget "aarch64-*-pe*"] || [istarget "aarch64-*-mingw*"]} {
 if { [istarget "aarch64-*-*"]
      || ([istarget "i*86-*-*"] && ![istarget "*-*-interix*"])
      || [istarget "x86_64-*-*"] } then {
+	run_dump_test "large-obj-normal"
 	run_dump_test "big-obj"
 	run_dump_test "big-obj-auto"
 }

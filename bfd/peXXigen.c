@@ -109,6 +109,48 @@
 #define SetHighBit(val)      ((val) | 0x80000000)
 #define WithoutHighBit(val)  ((val) & 0x7fffffff)
 
+static int
+pe_decode_sym_section_number (bfd *abfd, const char *raw_scnum)
+{
+  unsigned int scnum = H_GET_16 (abfd, raw_scnum);
+
+  switch (scnum)
+    {
+    case IMAGE_SYM_UNDEFINED:
+      return N_UNDEF;
+    case IMAGE_SYM_ABSOLUTE:
+      return N_ABS;
+    case IMAGE_SYM_DEBUG:
+      return N_DEBUG;
+    default:
+      return scnum;
+    }
+}
+
+static void
+pe_encode_sym_section_number (bfd *abfd, int scnum, char *raw_scnum)
+{
+  unsigned int encoded_scnum;
+
+  switch (scnum)
+    {
+    case N_UNDEF:
+      encoded_scnum = IMAGE_SYM_UNDEFINED;
+      break;
+    case N_ABS:
+      encoded_scnum = IMAGE_SYM_ABSOLUTE;
+      break;
+    case N_DEBUG:
+      encoded_scnum = IMAGE_SYM_DEBUG;
+      break;
+    default:
+      encoded_scnum = scnum;
+      break;
+    }
+
+  H_PUT_16 (abfd, encoded_scnum, raw_scnum);
+}
+
 void
 _bfd_XXi_swap_sym_in (bfd * abfd, void * ext1, void * in1)
 {
@@ -124,7 +166,7 @@ _bfd_XXi_swap_sym_in (bfd * abfd, void * ext1, void * in1)
     memcpy (in->_n._n_name, ext->e.e_name, SYMNMLEN);
 
   in->n_value = H_GET_32 (abfd, ext->e_value);
-  in->n_scnum = (short) H_GET_16 (abfd, ext->e_scnum);
+  in->n_scnum = pe_decode_sym_section_number (abfd, ext->e_scnum);
 
   if (sizeof (ext->e_type) == 2)
     in->n_type = H_GET_16 (abfd, ext->e_type);
@@ -262,7 +304,7 @@ _bfd_XXi_swap_sym_out (bfd * abfd, void * inp, void * extp)
     }
 
   H_PUT_32 (abfd, in->n_value, ext->e_value);
-  H_PUT_16 (abfd, in->n_scnum, ext->e_scnum);
+  pe_encode_sym_section_number (abfd, in->n_scnum, ext->e_scnum);
 
   if (sizeof (ext->e_type) == 2)
     H_PUT_16 (abfd, in->n_type, ext->e_type);

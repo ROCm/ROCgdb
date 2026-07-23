@@ -1,4 +1,5 @@
 int (*p)(void);
+int main(void) asm("main");
 
 int
 main ()

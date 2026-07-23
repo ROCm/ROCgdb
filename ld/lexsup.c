@@ -1527,7 +1527,7 @@ parse_args (unsigned argc, char **argv)
 	  break;
 	case OPTION_IMAGE_BASE:
 	  /* Unless PE, --image-base and -Ttext-segment behavior is the same
-	     PE-specific functionality is implemented in emultempl/{pe, pep, beos}.em  */
+	     PE-specific functionality is implemented in emultempl/{pe, pep}.em  */
 	case OPTION_TTEXT_SEGMENT:
 	  set_segment_start (".text-segment", optarg);
 	  break;

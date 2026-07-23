@@ -754,9 +754,15 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 	return ECTF_CORRUPT;
 
       /* For forward declarations, ctt_type is the CTF_K_* kind for the tag,
-	 so bump that population count too.  */
+	 so bump that population count too.  A corrupt dict may store an
+	 out-of-range kind here, so guard against indexing pop[] out of
+	 bounds.  */
       if (kind == CTF_K_FORWARD)
-	pop[tp->ctt_type]++;
+	{
+	  if (tp->ctt_type > CTF_K_MAX)
+	    return ECTF_CORRUPT;
+	  pop[tp->ctt_type]++;
+	}
 
       tp = (ctf_type_t *) ((uintptr_t) tp + increment + vbytes);
       pop[kind]++;

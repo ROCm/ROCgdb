@@ -135,6 +135,8 @@ enum i386_cpu
   CpuMovbe,
   /* CMPXCHG16B instruction support required.  */
   CpuCX16,
+  /* MOV to/from %cr8 instruction support required (in 32-bit mode).  */
+  CpuAltMovCr8,
   /* LAHF/SAHF instruction support required (in 64-bit mode).  */
   CpuLAHF_SAHF,
   /* EPT Instructions required */
@@ -470,6 +472,7 @@ typedef union i386_cpu_flags
       unsigned int cputbm:1;
       unsigned int cpumovbe:1;
       unsigned int cpucx16:1;
+      unsigned int cpualtmovcr8:1;
       unsigned int cpulahf_sahf:1;
       unsigned int cpuept:1;
       unsigned int cpurdtscp:1;

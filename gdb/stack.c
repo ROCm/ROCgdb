@@ -60,6 +60,7 @@
 #include "cli/cli-option.h"
 #include "cli/cli-style.h"
 #include "gdbsupport/buildargv.h"
+#include "gdbsupport/unordered_set.h"
 
 /* The possible choices of "set print frame-arguments", and the value
    of this setting.  */
@@ -2141,8 +2142,9 @@ backtrace_command_completer (struct cmd_list_element *ignore,
 /* Iterate over the local variables of a block B, calling CB.  */
 
 static void
-iterate_over_block_locals (const struct block *b,
-			   iterate_over_block_arg_local_vars_cb cb)
+iterate_over_block_locals
+  (const struct block *b,
+   gdb::function_view <void (const char *, struct symbol *)> cb)
 {
   for (struct symbol *sym : block_iterator_range (b))
     {
@@ -2188,6 +2190,71 @@ iterate_over_block_local_vars (const struct block *block,
     }
 }
 
+/* See stack.h.  */
+
+void
+iterate_over_block_local_vars_printing
+  (const struct block *block,
+   iterate_over_block_arg_local_vars_cb_printing cb)
+{
+  gdb::unordered_set<std::string> collected_vars, shadowed_vars, printed_vars;
+
+  /* Phase one: iterate over all locals within the block, and every parent
+     block up to the enclosing function block.  Record all of the locals
+     seen, this allows us to know which locals are shadowing locals from a
+     more outer scope.  */
+  iterate_over_block_local_vars
+    (block, [&] (const char *print_name, struct symbol *sym)
+    {
+      if (!sym->is_argument ())
+	{
+	  if (!collected_vars.insert (print_name).second)
+	    shadowed_vars.insert (print_name);
+	}
+    });
+
+  /* Phase two: iterate over all locals within the block, and every parent
+     block up to the enclosing function block.  Print all the locals seen
+     by calling CB.  Depending on the current language we vary the
+     arguments to CB to indicate shadowing.  Or in some cases, we don't
+     print the local at all.  */
+  iterate_over_block_local_vars
+    (block, [&] (const char *print_name, struct symbol *sym)
+    {
+      bool already_printed = !printed_vars.insert (print_name).second;
+      bool shadowed = shadowed_vars.find (print_name) != shadowed_vars.end ();
+
+      enum var_shadowing shadowing_status;
+      if (already_printed && shadowed)
+	shadowing_status = var_shadowing::SHADOWED;
+      else if (!already_printed && shadowed)
+	shadowing_status = var_shadowing::SHADOWING;
+      else
+	shadowing_status = var_shadowing::NONE;
+
+      /* Only for C/C++/Fortran/Ada languages, in case of variables
+	 shadowing print <file:line, shadowed> annotation after
+	 the superblock variable.  Iteration of block starts from inner
+	 block which is printed only with location information.  */
+      if (get_lang_vars_shadowing_option (current_language->la_language)
+	  == lang_vars_shadowing::PRINT
+	  && shadowing_status != var_shadowing::NONE)
+	cb (print_name, sym, shadowing_status);
+      /* In case of Rust language it is possible to declare variable with
+	 same name multiple times and only innermost instance of variable
+	 is accessible.  So print only the innermost instance and there is
+	 no need of printing duplicates.  */
+      else if (get_lang_vars_shadowing_option (current_language->la_language)
+	       == lang_vars_shadowing::HIDE
+	       && shadowing_status == var_shadowing::SHADOWED)
+	{
+	  /* Nothing.  */
+	}
+      else
+	cb (print_name, sym, var_shadowing::NONE);
+    });
+}
+
 /* Data to be passed around in the calls to the locals and args
    iterators.  */
 
@@ -2200,14 +2267,16 @@ struct print_variable_and_value_data
   struct ui_file *stream;
   int values_printed;
 
-  void operator() (const char *print_name, struct symbol *sym);
+  void operator() (const char *print_name, struct symbol *sym,
+		   var_shadowing shadow_status);
 };
 
 /* The callback for the locals and args iterators.  */
 
 void
 print_variable_and_value_data::operator() (const char *print_name,
-					   struct symbol *sym)
+					   struct symbol *sym,
+					   var_shadowing shadow_status)
 {
   frame_info_ptr frame;
 
@@ -2227,7 +2296,8 @@ print_variable_and_value_data::operator() (const char *print_name,
       return;
     }
 
-  print_variable_and_value (print_name, sym, frame, stream, num_tabs);
+  print_variable_and_value (print_name, sym, frame, stream, num_tabs,
+			    shadow_status);
 
   values_printed = 1;
 }
@@ -2296,7 +2366,7 @@ print_frame_local_vars (const frame_info_ptr &frame,
   scoped_restore_selected_frame restore_selected_frame;
   select_frame (frame);
 
-  iterate_over_block_local_vars (block, cb_data);
+  iterate_over_block_local_vars_printing (block, cb_data);
 
   if (!cb_data.values_printed && !quiet)
     {
@@ -2394,6 +2464,37 @@ iterate_over_block_arg_vars (const struct block *b,
     }
 }
 
+/* See stack.h.  */
+
+void
+iterate_over_block_arg_vars_printing
+  (const struct block *b,
+   iterate_over_block_arg_local_vars_cb_printing cb)
+{
+  for (struct symbol *sym : block_iterator_range (b))
+    {
+      /* Don't worry about things which aren't arguments.  */
+      if (sym->is_argument ())
+	{
+	  /* We have to look up the symbol because arguments can have
+	     two entries (one a parameter, one a local) and the one we
+	     want is the local, which lookup_symbol will find for us.
+	     This includes gcc1 (not gcc2) on the sparc when passing a
+	     small structure and gcc2 when the argument type is float
+	     and it is passed as a double and converted to float by
+	     the prologue (in the latter case the type of the LOC_ARG
+	     symbol is double and the type of the LOC_LOCAL symbol is
+	     float).  There are also LOC_ARG/LOC_REGISTER pairs which
+	     are not combined in symbol-reading.  */
+
+	  struct symbol *sym2
+	    = lookup_symbol_search_name (sym->search_name (),
+					 b, SEARCH_VAR_DOMAIN).symbol;
+	  cb (sym->print_name (), sym2, var_shadowing::NONE);
+	}
+    }
+}
+
 /* Print all argument variables of the function of FRAME.
    Print them with values to STREAM.
    If REGEXP is not NULL, only print argument variables whose name
@@ -2436,7 +2537,7 @@ print_frame_arg_vars (const frame_info_ptr &frame,
   cb_data.stream = stream;
   cb_data.values_printed = 0;
 
-  iterate_over_block_arg_vars (func->value_block (), cb_data);
+  iterate_over_block_arg_vars_printing (func->value_block (), cb_data);
 
   if (!cb_data.values_printed && !quiet)
     {

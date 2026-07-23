@@ -4218,6 +4218,12 @@ proc is_aarch64_target {} {
     return [expr {![is_aarch32_target]}]
 }
 
+# Return true if the target is Windows-based.
+
+proc is_windows_based_target {} {
+    return [expr {[istarget *-*-cygwin*] || [istarget *-*-mingw*]}]
+}
+
 # Return 1 if displaced stepping is supported on target, otherwise, return 0.
 proc support_displaced_stepping {} {
 
@@ -6419,6 +6425,116 @@ proc quote_for_host { args } {
     return $str
 }
 
+# Rename SRC to DST, ignoring EBUSY.  This is used when multiple
+# parallel workers all want to rename their copy of SRC to DST, as an
+# atomic commit, and it doesn't matter which one wins, as all the
+# copies are identical.
+proc file_rename_atomic {src dst} {
+    set rc [catch { file rename -force -- $src $dst } err opts]
+
+    if {$rc} {
+	set code [dict get $opts -errorcode]
+	if {[llength $code] >= 2 && [lindex $code 1] eq "EBUSY"} {
+	    # Normal parallel race loss.
+	} else {
+	    error $err $opts
+	}
+    }
+
+    return $rc
+}
+
+# Set while linker_supports_manifest_embed is running its test link,
+# so that the inner gdb_compile that link goes through skips the
+# manifest-embedding logic and doesn't recurse back into the probe.
+set gdb_probing_manifest_embed 0
+
+# Return the ldflags (as a list of "ldflags=..." options) that make
+# lld-link embed our application manifest into the executable.
+
+proc gdb_windows_manifest_embed_lld_link_ldflags {} {
+    global srcdir
+
+    set ldflags {}
+
+    # Turn on embedding (off by default).
+    lappend ldflags ldflags=-Wl,/manifest:embed
+
+    # Stop lld-link from also generating its own UAC block.  With
+    # this, lld-link embeds our input as-is, while without it lld-link
+    # runs its manifest merger, which before LLVM 21 reprefixes
+    # trustInfo into the asm.v1 namespace and produces a manifest the
+    # Windows loader rejects.  See
+    # <https://github.com/llvm/llvm-project/issues/120394>.
+    lappend ldflags ldflags=-Wl,/manifestuac:no
+
+    # Embed our manifest file.  Pass it in Windows-native form.
+    # MSYS2's argument conversion treats a "/foo:/bar" argument as a
+    # colon-separated list of POSIX paths and mistakenly rewrites it
+    # to a semicolon-separated list of Windows paths.  E.g.:
+    #
+    #  "/manifestinput:/c/gdb/.../windows.manifest"
+    #    =>
+    #  "C:\msys64\manifestinput;C:\gdb\...\windows.manifest"
+    #
+    # I.e., the flag name itself gets converted as if it were a path,
+    # and the ":" becomes ";".
+    #
+    # What triggers the conversion is the value after the colon looking
+    # like an absolute POSIX path (a leading "/").  "/manifest:embed"
+    # above is left alone because "embed" doesn't.  Passing the value
+    # as a native "C:/..." path likewise avoids it.
+    set manifest [host_file_normalize ${srcdir}/lib/windows.manifest]
+    lappend ldflags ldflags=-Wl,/manifestinput:${manifest}
+
+    return $ldflags
+}
+
+# Compile lib/windows.rc into an object embedding our application
+# manifest and return the object path, so that gdb_compile can link it
+# into every Windows test executable.  The result is cached.  Returns
+# the empty string on failure.  This is used when linking with GNU ld,
+# which cannot embed a manifest by itself.
+
+proc gdb_windows_manifest_obj {} {
+    global srcdir objdir
+    global gdb_saved_windows_manifest_obj
+
+    if {[info exists gdb_saved_windows_manifest_obj]} {
+	return $gdb_saved_windows_manifest_obj
+    }
+
+    set rc_src ${srcdir}/lib/windows.rc
+    set obj_basename windows-manifest.o
+    set obj [standard_temp_file $obj_basename]
+
+    set windres [gdb_find_windres]
+    set cmd [list $windres -I [file dirname $rc_src] \
+		 -i $rc_src -o $obj -O coff]
+    verbose -log "Executing $cmd"
+    if {[catch {exec {*}$cmd} output]} {
+	verbose -log "gdb_windows_manifest_obj: windres failed: $output"
+	return ""
+    }
+
+    if {[is_remote host]} {
+	set saved $obj_basename
+    } else {
+	set saved ${objdir}/$obj_basename
+    }
+    # Link a copy of the output object, because the original may be
+    # automatically deleted.
+    if {[info exists ::GDB_PARALLEL]} {
+	# Make sure to write the .o file atomically.  (Note
+	# GDB_PARALLEL mode does not support remote host testing.)
+	file_rename_atomic $obj $saved
+    } else {
+	remote_download host $obj $saved
+    }
+    set gdb_saved_windows_manifest_obj $saved
+    return $saved
+}
+
 # Compile source files specified by SOURCE into a binary of type TYPE at path
 # DEST.  gdb_compile is implemented using DejaGnu's target_compile, so the type
 # parameter and most options are passed directly to it.
@@ -6834,6 +6950,7 @@ proc gdb_compile {source dest type options} {
 	# runtime.
 	set hip_early_flags "-mllvm=-amdgpu-spill-cfi-saved-regs\
 			     -Wno-unused-command-line-argument"
+
 	if {$type eq "executable"} {
 	    set hip_early_flags "--hip-link $hip_early_flags"
 	}
@@ -7077,7 +7194,7 @@ proc gdb_compile {source dest type options} {
 		    # Make sure to write the .o file atomically.
 		    # (Note GDB_PARALLEL mode does not support remote
 		    # host testing.)
-		    file rename -force -- \
+		    file_rename_atomic \
 			$unbuf_obj \
 			$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)
 		} else {
@@ -7105,6 +7222,40 @@ proc gdb_compile {source dest type options} {
 		    lappend options \
 			"ldflags=$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)"
 		}
+	    }
+	}
+    }
+
+    # On Windows, embed an "asInvoker" application manifest, so that
+    # Windows doesn't refuse to launch executables (with
+    # ERROR_ELEVATION_REQUIRED/740) whose file name happens to contain
+    # an installer-detection keyword such as "update", "setup" or
+    # "install".
+    #
+    # There are two ways to get the manifest in, depending on the
+    # linker:
+    #
+    #  - GNU ld can't embed a manifest by itself, so compile the
+    #    manifest into a resource object with windres and link that
+    #    in.
+    #
+    #  - lld-link can embed a manifest by itself, no resource compiler
+    #    needed.  Note that the LLVM toolchain has llvm-windres and
+    #    llvm-rc, but not all LLVM-based toolchain distributions ship
+    #    them.
+    #
+    # Probe whether the linker supports embedding a manifest rather
+    # than trying to guess which linker is in use from the compiler or
+    # target.
+    if { $type == "executable"
+	 && [is_windows_based_target]
+	 && !$::gdb_probing_manifest_embed } {
+	if { [linker_supports_manifest_embed] } {
+	    lappend options {*}[gdb_windows_manifest_embed_lld_link_ldflags]
+	} else {
+	    set manifest_obj [gdb_windows_manifest_obj]
+	    if { $manifest_obj != "" } {
+		lappend options "ldflags=$manifest_obj"
 	    }
 	}
     }
@@ -11522,6 +11673,25 @@ gdb_caching_proc linker_supports_image_base_flag {} {
     set flags ldflags=[quote_for_host -Wl,--image-base=0x7000000]
     set src { int main() { return 0; } }
     return [gdb_simple_compile $me $src executable $flags]
+}
+
+# Return 1 if the linker is lld-link which can embed our application
+# manifest by itself, otherwise 0.  Probes the exact flag combination
+# gdb_compile uses.
+gdb_caching_proc linker_supports_manifest_embed {} {
+    set me "linker_supports_manifest_embed"
+    set flags [gdb_windows_manifest_embed_lld_link_ldflags]
+    set src { int main() { return 0; } }
+
+    # Guard against infinite recursion: the test link below itself
+    # goes through gdb_compile, which consults this proc to decide
+    # whether to embed the manifest.  The guard makes that inner
+    # gdb_compile skip the manifest logic.
+    set ::gdb_probing_manifest_embed 1
+    set result [gdb_simple_compile $me $src executable $flags]
+    set ::gdb_probing_manifest_embed 0
+
+    return $result
 }
 
 

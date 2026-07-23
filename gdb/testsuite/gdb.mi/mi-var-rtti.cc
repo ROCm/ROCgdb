@@ -193,14 +193,14 @@ struct MultipleDerived : public First, Base {
 };
 
 
-void use_rtti_with_multiple_inheritence_test ()
+void use_rtti_with_multiple_inheritance_test ()
 {
-  /*: BEGIN: use_rtti_with_multiple_inheritence :*/
+  /*: BEGIN: use_rtti_with_multiple_inheritance :*/
 	MultipleDerived d;
 	Base* ptr = &d;
 	Base& ref = d;
   /*:
-	set testname use_rtti_with_multiple_inheritence
+	set testname use_rtti_with_multiple_inheritance
 	set_print_object off $testname
 	check_new_derived_without_rtti ptr {Base \*} $testname
 	check_new_derived_without_rtti ref {Base \&} $testname
@@ -234,7 +234,7 @@ void use_rtti_with_multiple_inheritence_test ()
 	    "delete varobj for ptr (with RTTI) in $testname"
   :*/
 	return;
-  /*: END: use_rtti_with_multiple_inheritence :*/
+  /*: END: use_rtti_with_multiple_inheritance :*/
 }
 
 
@@ -362,7 +362,7 @@ int main ()
 	use_rtti_for_ref_test();
 	use_rtti_for_ptr_child_test();
 	use_rtti_for_ref_child_test();
-	use_rtti_with_multiple_inheritence_test();
+	use_rtti_with_multiple_inheritance_test();
 	type_update_when_use_rtti_test();
 	skip_type_update_when_not_use_rtti_test();
 	return 0;

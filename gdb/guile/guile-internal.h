@@ -51,7 +51,7 @@ struct symbol;
 
 /* A function to pass to the safe-call routines to ignore things like
    memory errors.  */
-typedef int excp_matcher_func (SCM key);
+using excp_matcher_func = int (SCM key);
 
 /* Scheme variables to define during initialization.  */
 
@@ -278,7 +278,7 @@ struct objfile;
 
 /* A predicate that returns non-zero if an object is a particular kind
    of gsmob.  */
-typedef int (gsmob_pred_func) (SCM);
+using gsmob_pred_func = int (SCM);
 
 extern scm_t_bits gdbscm_make_smob_type (const char *name, size_t size);
 
@@ -594,7 +594,7 @@ extern struct value *vlscm_convert_value_from_scheme
   (const char *func_name, int obj_arg_pos, SCM obj, SCM *except_scmp,
    struct gdbarch *gdbarch, const struct language_defn *language);
 
-/* stript_lang methods */
+/* script_lang methods */
 
 extern objfile_script_sourcer_func gdbscm_source_objfile_script;
 extern objfile_script_executor_func gdbscm_execute_objfile_script;

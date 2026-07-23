@@ -137,7 +137,7 @@ struct dwarf2_fde
   unsigned char eh_frame_p;
 };
 
-typedef std::vector<dwarf2_fde *> dwarf2_fde_table;
+using dwarf2_fde_table = std::vector<dwarf2_fde *>;
 
 /* A minimal decoding of DWARF2 compilation units.  We only decode
    what's needed to get to the call frame information.  */
