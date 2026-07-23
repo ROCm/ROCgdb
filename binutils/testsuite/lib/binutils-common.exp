@@ -308,7 +308,7 @@ proc is_elf_unused_section_symbols {} {
 # This require ELFOSABI_GNU, and `bfd_elf_final_link'.
 #
 proc supports_gnu_unique {} {
-    if { [istarget *-*-freebsd*] } {
+    if { [istarget *-*-freebsd*] || [istarget *-*-kfreebsd*-gnu] } {
 	return 0
     }
     if { [supports_gnu_osabi] && ![is_generic] } {
