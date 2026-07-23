@@ -511,7 +511,6 @@ proc ar_simple_create { ar aropts target objects } {
 #
 proc run_ld_link_tests { ldtests args } {
     global ld
-    global LDFLAGS
     global as
     global nm
     global ar
@@ -524,7 +523,7 @@ proc run_ld_link_tests { ldtests args } {
     global runtests
     global exec_output
 
-    set ld_extra_opt $LDFLAGS
+    set ld_extra_opt ""
     if [check_relro_support] {
 	append ld_extra_opt " -z norelro"
     }
