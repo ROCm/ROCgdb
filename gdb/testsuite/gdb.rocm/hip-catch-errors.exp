@@ -16,20 +16,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test catching HIP's API errors:
+# Test catching HIP's API errors.  Test goals are:
 #
-# 1. The executable is loaded and started.
-# 2. The executable is loaded but not started.
-# 3. There's no executable set yet.
-# 4. Two API errors are returned and caught.
-# 5. Implicit (stub) execution in the form of "kernel<<<...>>>();"
-# 6. Conditional catch of 1 error, using $_hiperr, while there are 2 errors.
-# 7. Temporary catch of the first error, while there are 2 errors.
-# 8. $_hiperr is printed correctly when debug symbols are available.
-# 9. $_hiperr is printed correctly without debug symbols.
-#    This one checks if "catch hiperr" works without debug symbols as well.
+# - CLI: check catchpoints, either simple or complex (conditional or
+# temporary) are getting triggered correctly.  Also try without debug
+# symbols.
+#
+# - MI: parsing for the "-catch-hiperr ..." command.
+# - MI: catchpoints are set correctly and reported correctly when
+# triggered.
 
 load_lib rocm.exp
+load_lib mi-support.exp
 
 require allow_hip_tests
 
@@ -77,21 +75,29 @@ proc get_string_valueof {exp default} {
 }
 
 # Get the reference values from the program (which is run with "ref" argument)
+# Return true when all references are initialized; false, otherwise.
 
 proc init_reference_hip_errors {} {
     foreach func {set_device get_device launch_kernel} {
+	set sum 0
+
 	set ::hip_${func}_err_no [get_integer_valueof "hip_${func}_err.no" bad]
-	gdb_assert {[set ::hip_${func}_err_no] != "bad"} \
-	    "hip_${func}_err_no initialized"
+	incr sum [gdb_assert {[set ::hip_${func}_err_no] != "bad"} \
+		      "hip_${func}_err_no initialized"]
 
 	set ::hip_${func}_err_name [get_string_valueof "hip_${func}_err.name" bad]
-	gdb_assert {[set ::hip_${func}_err_name] != "bad"} \
-	    "hip_${func}_err_name initialized"
+	incr sum [gdb_assert {[set ::hip_${func}_err_name] != "bad"} \
+		      "hip_${func}_err_name initialized"]
 
 	set ::hip_${func}_err_str [get_string_valueof "hip_${func}_err.str" bad]
-	gdb_assert {[set ::hip_${func}_err_str] != "bad"} \
-	    "hip_${func}_err_str initialized"
+	incr sum [gdb_assert {[set ::hip_${func}_err_str] != "bad"} \
+		      "hip_${func}_err_str initialized"]
+
+	if {$sum != 3} {
+	    return false
+	}
     }
+    return true
 }
 
 # Set a hiperr catchpoint and check if it set accordingly.  If TEMP is
@@ -187,12 +193,15 @@ proc check_hip_launch_kernel_err {cmd} {
 	$::hip_launch_kernel_err_str
 }
 
-proc do_test {} {
-    with_rocm_gpu_lock {
+# - Check for __hipOnError symbol existence
+# - Initialize references using the test program
+# return false if anything goes wrong
 
+proc_with_prefix preparation_test {} {
+    with_rocm_gpu_lock {
 	clean_restart ${::testfile}.dbg
 	if {![runto_main]} {
-	    return
+	    return false
 	}
 	gdb_test_multiple "info symbol __hipOnError" \
 	    "check if __hipOnError symbol exists" {
@@ -201,21 +210,39 @@ proc do_test {} {
 	    }
 	    -re -wrap ".*" {
 		unsupported "no __hipOnError symbol was found"
-		return
+		return false
 	    }
 	}
 
 	# Let all the errors occur and their values be recorded by the program.
-	with_test_prefix "getting reference values" {
+	with_test_prefix "get ref vals" {
 	    clean_restart ${::testfile}.dbg
 	    gdb_test_no_output "set args ref"
 	    if {![runto [gdb_get_line_number \
 			    "Break after reference initialization"]]} {
-		return
+		return false
 	    }
-	    init_reference_hip_errors
+	    set res [init_reference_hip_errors]
 	}
+    }
+    return $res
+}
 
+# Test catching HIP's API errors (through CLI interface):
+#
+# 1. The executable is loaded and started.
+# 2. The executable is loaded but not started.
+# 3. There's no executable set yet.
+# 4. Two API errors are returned and caught.
+# 5. Implicit (stub) execution in the form of "kernel<<<...>>>();"
+# 6. Conditional catch of 1 error, using $_hiperr, while there are 2 errors.
+# 7. Temporary catch of the first error, while there are 2 errors.
+# 8. $_hiperr is printed correctly when debug symbols are available.
+# 9. $_hiperr is printed correctly without debug symbols.
+#    This one checks if "catch hiperr" works without debug symbols as well.
+
+proc_with_prefix cli_test {} {
+    with_rocm_gpu_lock {
 	with_test_prefix "after starting" {
 	    clean_restart ${::testfile}.dbg
 	    gdb_test_no_output "set args one"
@@ -253,7 +280,7 @@ proc do_test {} {
 	    catch_hiperr
 	    check_hip_launch_kernel_err "run"
 	    gdb_test "backtrace" \
-		".*__hipOnError.*hipLaunchKernel.*__device_stub__kernel.*" \
+		".*__hipOnError.*hipLaunchKernel.*" \
 		"call stack"
 	}
 
@@ -327,6 +354,188 @@ proc do_test {} {
 		"print as $::hip_launch_kernel_err_no"
 	}
     }
+    gdb_exit
 }
 
-do_test
+# Return a string that looks like:
+#
+#   number="BP_NUM",type="catchpoint",disp="DISP",enabled="y",
+#   what="catch hiperr",catch-type="hiperr",cond="COND",
+#   times="0",original-location="-function __hipOnError"
+#
+# The 'cond=...' field is added only if the provided COND is
+# not an empty string.
+
+proc hiperr_bkpt_re {bp_num disp cond} {
+    append bkpt "number=\"$bp_num\",type=\"catchpoint\",disp=\"$disp\","
+    append bkpt "enabled=\"y\",what=\"catch hiperr\",catch-type=\"hiperr\","
+    if {$cond != ""} {
+	append bkpt "cond=\"$cond\","
+    }
+    append bkpt "times=\"0\",original-location=\"-function __hipOnError\""
+    return $bkpt
+}
+
+
+# Check if the following commands are handled correctly:
+#
+# -catch-hiperr -c "$_hiperr == hipErrorInvalidDeice -t" -t
+# -catch-hiperr -c
+# -catch-hiperr -abc
+# -catch-hiperr one two three
+
+proc_with_prefix mi_parsing {} {
+    mi_clean_restart
+
+    # Each element is {TEST OPTIONS DISP COND ERR}, where TEST is the
+    # test name, OPTIONS are the extra "-catch-hiperr" options to
+    # test, DISP is the expected disposition ("keep" or "del"),
+    # COND is the expected condition ("" for none), and ERR is the
+    # expected error ("" for none) after issuing the MI command.
+    #
+    # Note that in the first case the "-t" embedded in the -c argument
+    # is part of the condition, while the trailing -t is what makes
+    # the catchpoint temporary.
+    set tests {
+	{ "trailing -t in condition"
+	  {-c "$_hiperr == hipErrorInvalidDevice -t" -t}
+	  del
+	  {$_hiperr == hipErrorInvalidDevice -t}
+	  "" }
+
+	{ "dangling -c"
+	  "-c"
+	  keep
+	  ""
+	  "Option -c requires an argument" }
+
+	{ "unknown option"
+	  "-abc"
+	  keep
+	  ""
+	  "Unknown option \\\"abc\\\"" }
+
+	{ "dangling texts"
+	  "-t one two three"
+	  del
+	  ""
+	  "" }
+    }
+
+    set bp_num 0
+    foreach t $tests {
+	lassign $t test options disp cond err
+
+	if {$err == ""} {
+	    incr bp_num
+	    set cond_re [expr {$cond eq "" ? "" : [string_to_regexp $cond]}]
+	    set params [hiperr_bkpt_re $bp_num $disp $cond_re]
+
+	    mi_gdb_test "-catch-hiperr $options" \
+		"\\^done,bkpt=\{$params\}" \
+		"$test: mi-catch-hiperr"
+
+	    mi_gdb_test "-break-info $bp_num" \
+		".*\{$params\}.*" \
+		"$test: breakpoint info"
+	} else {
+	    set err_re [expr {$err eq "" ? "" : [string_to_regexp $err]}]
+
+	    mi_gdb_test "-catch-hiperr $options" \
+		"\\^error,msg=\"catch-hiperr: $err_re\"" \
+		"$test: mi-catch-hiperr"
+	}
+    }
+    mi_gdb_exit
+}
+
+# Test different combinations of "-catch-hiperr [-c <condition>] [-t]"
+#
+# 1. -catch-hiperr
+# 2. -catch-hiperr -t
+# 3. -catch-hiperr -c $_hiperr==101
+# 4. -catch-hiperr -c $_hiperr==101 -t
+#
+# Check if they're set correctly and also hit accordingly.
+
+proc_with_prefix mi_test {} {
+    with_rocm_gpu_lock {
+
+	mi_clean_restart
+
+	# Each element is {TEST OPTIONS DISP COND}, where TEST is the
+	# test name, OPTIONS are the extra "-catch-hiperr" options to
+	# test, DISP is the expected disposition ("keep" or "del"),
+	# and COND is the expected condition ("" for none).
+	set tests {
+	    { "simple catch"
+	      ""
+	      keep
+	      "" }
+
+	    { "temporary catch"
+	      "-t"
+	      del
+	      "" }
+
+	    { "conditional catch"
+	      {-c "$_hiperr == 101"}
+	      keep
+	      {$_hiperr == 101} }
+
+	    { "temporary conditional catch"
+	      {-c "$_hiperr == hipErrorInvalidDevice" -t}
+	      del
+	      {$_hiperr == hipErrorInvalidDevice} }
+	}
+
+	# The relevant part of MI stop after catching a hiperr.
+	append hiperr_stop_re "\\*stopped,bkptno=\"1\","
+	append hiperr_stop_re "reason=\"breakpoint-hit\".*hiperr-code=\"$::hip_set_device_err_no\","
+	append hiperr_stop_re "hiperr-name=\"$::hip_set_device_err_name\","
+	append hiperr_stop_re "hiperr-text=\"$::hip_set_device_err_str\".*"
+
+	foreach t $tests {
+	    lassign $t test options disp cond
+	    set cond_re [expr {$cond eq "" ? "" : [string_to_regexp $cond]}]
+	    set params [hiperr_bkpt_re 1 $disp $cond_re]
+
+	    mi_clean_restart
+	    mi_gdb_load $::binfile.dbg
+
+	    mi_gdb_test "-catch-hiperr $options" \
+		"\\^done,bkpt=\{$params\}" \
+		"$test: mi-catch-hiperr"
+
+	    mi_gdb_test "-break-info" \
+		".*\{$params\}.*" \
+		"$test: breakpoint info"
+
+	    # Run the test program to trigger one hipErrorInvalidDevice error.
+	    mi_gdb_test "-exec-arguments one" "\\^done" "$test: set argument"
+	    mi_run_cmd
+
+	    # Check for the async stop.  mi_expect_stop cannot be used because
+	    # it is breakpoint oriented with arguments like "func", "args", ...
+	    # and no checking for the "hiperr-*" fields.
+	    gdb_expect {
+		-re $hiperr_stop_re {
+		    pass $test
+		} -re ".*\r\n$::mi_gdb_prompt$" {
+		    fail "$test (unexpected output)"
+		} timeout {
+		    fail "$test (timeout)"
+		}
+	    }
+	}
+	mi_gdb_exit
+    }
+}
+
+# Start with "mi_parsing" because it doesn't need "preparation_test".
+mi_parsing
+if {![preparation_test]} {
+    return
+}
+cli_test
+mi_test

@@ -2099,6 +2099,13 @@ extern void catch_exception_event (enum exception_event_kind ex_event,
 				   const char *regex, bool tempflag,
 				   int from_tty);
 
+/* Catch a HIP error according to the input arguments.  If CONDITION is
+   provided, only failures that satisfy it will trigger the catchpoint.
+   if TEMPFLAG is set, the catchpoint is triggered once and then it
+   is removed.  */
+
+extern void add_catch_hiperr (const char *condition, bool tempflag);
+
 /* Return true if BPT is of any hardware watchpoint kind.  */
 
 bool is_hardware_watchpoint (const struct breakpoint *bpt);
