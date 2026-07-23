@@ -338,19 +338,19 @@ ft32_pointer_to_address (struct gdbarch *gdbarch,
     return addr | RAM_BIAS;
 }
 
-/* Implementation of `address_class_type_flags' gdbarch method.
+/* Implementation of `address_class_dwarf_to_id' gdbarch method.
 
-   This method maps DW_AT_address_class attributes to a
-   type_instance_flag_value.  */
+   This method maps a DW_AT_address_class attribute to an address
+   class id.  */
 
-static type_instance_flags
-ft32_address_class_type_flags (int byte_size, int dwarf2_addr_class)
+static unsigned int
+ft32_address_class_dwarf_to_id (int byte_size, int dwarf2_addr_class)
 {
   /* The value 1 of the DW_AT_address_class attribute corresponds to the
      __flash__ qualifier, meaning pointer to data in FT32 program memory.
    */
   if (dwarf2_addr_class == 1)
-    return TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1;
+    return 1;
   return 0;
 }
 
@@ -609,7 +609,8 @@ ft32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Support simple overlay manager.  */
   set_gdbarch_overlay_update (gdbarch, simple_overlay_update);
 
-  set_gdbarch_address_class_type_flags (gdbarch, ft32_address_class_type_flags);
+  set_gdbarch_address_class_dwarf_to_id
+    (gdbarch, ft32_address_class_dwarf_to_id);
   set_gdbarch_address_class_name_to_id
     (gdbarch, ft32_address_class_name_to_id);
   set_gdbarch_address_class_id_to_name

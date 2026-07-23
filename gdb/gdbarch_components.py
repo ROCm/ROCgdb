@@ -1539,8 +1539,12 @@ non-steppable watchpoints.
 )
 
 Function(
-    type="type_instance_flags",
-    name="address_class_type_flags",
+    comment="""
+Given the DWARF identifier for an architecture-specific address class,
+return the id of that address class.
+""",
+    type="unsigned int",
+    name="address_class_dwarf_to_id",
     params=[("int", "byte_size"), ("int", "dwarf2_addr_class")],
     predicate=True,
 )

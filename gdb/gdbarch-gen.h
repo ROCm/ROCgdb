@@ -896,11 +896,14 @@ void set_gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch, bool cannot_st
 bool gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch);
 void set_gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch, bool have_nonsteppable_watchpoint);
 
-bool gdbarch_address_class_type_flags_p (struct gdbarch *gdbarch);
+/* Given the DWARF identifier for an architecture-specific address class,
+   return the id of that address class. */
 
-using gdbarch_address_class_type_flags_ftype = type_instance_flags (int byte_size, int dwarf2_addr_class);
-type_instance_flags gdbarch_address_class_type_flags (struct gdbarch *gdbarch, int byte_size, int dwarf2_addr_class);
-void set_gdbarch_address_class_type_flags (struct gdbarch *gdbarch, gdbarch_address_class_type_flags_ftype *address_class_type_flags);
+bool gdbarch_address_class_dwarf_to_id_p (struct gdbarch *gdbarch);
+
+using gdbarch_address_class_dwarf_to_id_ftype = unsigned int (int byte_size, int dwarf2_addr_class);
+unsigned int gdbarch_address_class_dwarf_to_id (struct gdbarch *gdbarch, int byte_size, int dwarf2_addr_class);
+void set_gdbarch_address_class_dwarf_to_id (struct gdbarch *gdbarch, gdbarch_address_class_dwarf_to_id_ftype *address_class_dwarf_to_id);
 
 /* Given an architecture-specific address class identifier, return the
    name of that address class. */

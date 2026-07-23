@@ -163,7 +163,7 @@ struct gdbarch
   gdbarch_adjust_dwarf2_line_ftype *adjust_dwarf2_line = default_adjust_dwarf2_line;
   bool cannot_step_breakpoint = false;
   bool have_nonsteppable_watchpoint = false;
-  gdbarch_address_class_type_flags_ftype *address_class_type_flags = nullptr;
+  gdbarch_address_class_dwarf_to_id_ftype *address_class_dwarf_to_id = nullptr;
   gdbarch_address_class_id_to_name_ftype *address_class_id_to_name = nullptr;
   gdbarch_execute_dwarf_cfa_vendor_op_ftype *execute_dwarf_cfa_vendor_op = default_execute_dwarf_cfa_vendor_op;
   gdbarch_address_class_name_to_id_ftype *address_class_name_to_id = nullptr;
@@ -418,7 +418,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of adjust_dwarf2_line, invalid_p == 0.  */
   /* Skip verify of cannot_step_breakpoint, invalid_p == 0.  */
   /* Skip verify of have_nonsteppable_watchpoint, invalid_p == 0.  */
-  /* Skip verify of address_class_type_flags, has predicate.  */
+  /* Skip verify of address_class_dwarf_to_id, has predicate.  */
   /* Skip verify of address_class_id_to_name, has predicate.  */
   /* Skip verify of execute_dwarf_cfa_vendor_op, invalid_p == 0.  */
   /* Skip verify of address_class_name_to_id, has predicate.  */
@@ -959,11 +959,11 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
 	      "gdbarch_dump: have_nonsteppable_watchpoint = %s\n",
 	      plongest (gdbarch->have_nonsteppable_watchpoint));
   gdb_printf (file,
-	      "gdbarch_dump: gdbarch_address_class_type_flags_p() = %d\n",
-	      gdbarch_address_class_type_flags_p (gdbarch));
+	      "gdbarch_dump: gdbarch_address_class_dwarf_to_id_p() = %d\n",
+	      gdbarch_address_class_dwarf_to_id_p (gdbarch));
   gdb_printf (file,
-	      "gdbarch_dump: address_class_type_flags = <%s>\n",
-	      host_address_to_string (gdbarch->address_class_type_flags));
+	      "gdbarch_dump: address_class_dwarf_to_id = <%s>\n",
+	      host_address_to_string (gdbarch->address_class_dwarf_to_id));
   gdb_printf (file,
 	      "gdbarch_dump: gdbarch_address_class_id_to_name_p() = %d\n",
 	      gdbarch_address_class_id_to_name_p (gdbarch));
@@ -3496,27 +3496,27 @@ set_gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch,
 }
 
 bool
-gdbarch_address_class_type_flags_p (struct gdbarch *gdbarch)
+gdbarch_address_class_dwarf_to_id_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != nullptr);
-  return gdbarch->address_class_type_flags != nullptr;
+  return gdbarch->address_class_dwarf_to_id != nullptr;
 }
 
-type_instance_flags
-gdbarch_address_class_type_flags (struct gdbarch *gdbarch, int byte_size, int dwarf2_addr_class)
+unsigned int
+gdbarch_address_class_dwarf_to_id (struct gdbarch *gdbarch, int byte_size, int dwarf2_addr_class)
 {
   gdb_assert (gdbarch != nullptr);
-  gdb_assert (gdbarch->address_class_type_flags != nullptr);
+  gdb_assert (gdbarch->address_class_dwarf_to_id != nullptr);
   if (gdbarch_debug >= 2)
-    gdb_printf (gdb_stdlog, "gdbarch_address_class_type_flags called\n");
-  return gdbarch->address_class_type_flags (byte_size, dwarf2_addr_class);
+    gdb_printf (gdb_stdlog, "gdbarch_address_class_dwarf_to_id called\n");
+  return gdbarch->address_class_dwarf_to_id (byte_size, dwarf2_addr_class);
 }
 
 void
-set_gdbarch_address_class_type_flags (struct gdbarch *gdbarch,
-				      gdbarch_address_class_type_flags_ftype address_class_type_flags)
+set_gdbarch_address_class_dwarf_to_id (struct gdbarch *gdbarch,
+				       gdbarch_address_class_dwarf_to_id_ftype address_class_dwarf_to_id)
 {
-  gdbarch->address_class_type_flags = address_class_type_flags;
+  gdbarch->address_class_dwarf_to_id = address_class_dwarf_to_id;
 }
 
 bool

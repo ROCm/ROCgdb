@@ -75,8 +75,6 @@
 /* We are assigning the id 1 to the flash address space.  */
 
 #define AVR_ADDRESS_CLASS_FLASH 1
-#define AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH	\
-  TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1
 
 
 enum
@@ -1370,20 +1368,20 @@ avr_dwarf_reg_to_regnum (struct gdbarch *gdbarch, int reg)
   return -1;
 }
 
-/* Implementation of `address_class_type_flags' gdbarch method.
+/* Implementation of `address_class_dwarf_to_id' gdbarch method.
 
-   This method maps DW_AT_address_class attributes to a
-   type_instance_flag_value.  */
+   This method maps a DW_AT_address_class attribute to an address
+   class id.  */
 
-static type_instance_flags
-avr_address_class_type_flags (int byte_size, int dwarf2_addr_class)
+static unsigned int
+avr_address_class_dwarf_to_id (int byte_size, int dwarf2_addr_class)
 {
   /* The value 1 of the DW_AT_address_class attribute corresponds to the
      __flash qualifier.  Note that this attribute is only valid with
      pointer types and therefore the flag is set to the pointer type and
      not its target type.  */
   if (dwarf2_addr_class == 1 && byte_size == 2)
-    return AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH;
+    return AVR_ADDRESS_CLASS_FLASH;
   return 0;
 }
 
@@ -1534,7 +1532,8 @@ avr_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_unwind_pc (gdbarch, avr_unwind_pc);
   set_gdbarch_unwind_sp (gdbarch, avr_unwind_sp);
 
-  set_gdbarch_address_class_type_flags (gdbarch, avr_address_class_type_flags);
+  set_gdbarch_address_class_dwarf_to_id
+    (gdbarch, avr_address_class_dwarf_to_id);
   set_gdbarch_address_class_name_to_id
     (gdbarch, avr_address_class_name_to_id);
   set_gdbarch_address_class_id_to_name

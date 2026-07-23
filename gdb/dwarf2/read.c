@@ -12051,11 +12051,13 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 	  && alignment != TYPE_RAW_ALIGN (type))
       || addr_class != DW_ADDR_none)
     {
-      if (gdbarch_address_class_type_flags_p (gdbarch))
+      if (gdbarch_address_class_dwarf_to_id_p (gdbarch))
 	{
+	  unsigned int aclass
+	    = gdbarch_address_class_dwarf_to_id (gdbarch, byte_size,
+						 addr_class);
 	  type_instance_flags type_flags
-	    = gdbarch_address_class_type_flags (gdbarch, byte_size,
-						addr_class);
+	    = (enum type_instance_flag_value) (aclass << 4);
 	  gdb_assert ((type_flags & ~TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL)
 		      == 0);
 	  type = make_type_with_address_space (type, type_flags);
