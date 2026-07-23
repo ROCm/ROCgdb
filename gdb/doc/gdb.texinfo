@@ -45198,6 +45198,19 @@ packet history.
 @item maint info jit
 Print information about JIT code objects loaded in the current inferior.
 
+@kindex maint info amdgpu address-aliases
+@item maint info amdgpu address-aliases @var{expression}
+Evaluate @var{expression} to an address, and show the address it
+aliases to in every other address space known to the current
+@acronym{AMD} @acronym{GPU} architecture, along with how many
+consecutive bytes each alias stays valid for.
+
+This only works while stopped in an @acronym{AMD} @acronym{GPU} thread.
+Some address spaces are private to a wave or a lane of a wave, and
+@value{GDBN} converts using whichever wave and lane are currently
+selected.  Not every address is reachable from every space: if it isn't,
+the row for that space reads @samp{<not reachable>}.
+
 @anchor{maint info python-disassemblers}
 @kindex maint info python-disassemblers
 @item maint info python-disassemblers
