@@ -733,7 +733,7 @@ typy_volatile (PyObject *self, PyObject *args)
 
   try
     {
-      type = make_cv_type (TYPE_CONST (type), 1, type);
+      type = make_cv_type (type->is_const (), 1, type);
     }
   catch (const gdb_exception &except)
     {
@@ -894,7 +894,7 @@ typy_lookup_type (struct demangle_component *demangled,
 	      rtype = make_cv_type (1, TYPE_VOLATILE (type), type);
 	      break;
 	    case DEMANGLE_COMPONENT_VOLATILE:
-	      rtype = make_cv_type (TYPE_CONST (type), 1, type);
+	      rtype = make_cv_type (type->is_const (), 1, type);
 	      break;
 	    }
 	}

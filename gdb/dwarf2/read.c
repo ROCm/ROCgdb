@@ -5178,7 +5178,7 @@ dwarf2_compute_name (const char *name,
 		  if (type->num_fields () > 0
 		      && type->field (0).is_artificial ()
 		      && type->field (0).type ()->code () == TYPE_CODE_PTR
-		      && TYPE_CONST (type->field (0).type ()->target_type ()))
+		      && type->field (0).type ()->target_type ()->is_const ())
 		    buf.puts (" const");
 		}
 	    }
@@ -12176,7 +12176,7 @@ add_array_cv_type (struct die_info *die, struct dwarf2_cu *cu,
     }
 
   el_type = inner_array->target_type ();
-  cnst |= TYPE_CONST (el_type);
+  cnst |= el_type->is_const ();
   voltl |= TYPE_VOLATILE (el_type);
   inner_array->set_target_type (make_cv_type (cnst, voltl, el_type));
 
@@ -12222,7 +12222,7 @@ read_tag_volatile_type (struct die_info *die, struct dwarf2_cu *cu)
   if (base_type->code () == TYPE_CODE_ARRAY)
     return add_array_cv_type (die, cu, base_type, 0, 1);
 
-  cv_type = make_cv_type (TYPE_CONST (base_type), 1, base_type);
+  cv_type = make_cv_type (base_type->is_const (), 1, base_type);
   return set_die_type (die, cv_type, cu);
 }
 
@@ -12521,7 +12521,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 		 expects.  GCC marks THIS as const in method definitions,
 		 but not in the class specifications (GCC PR 43053).  */
 	      if (cu->lang () == language_cplus
-		  && !TYPE_CONST (arg_type)
+		  && !arg_type->is_const ()
 		  && ftype->field (iparams).is_artificial ())
 		{
 		  int is_this = 0;

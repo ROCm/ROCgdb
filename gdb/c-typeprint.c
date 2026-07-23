@@ -311,7 +311,7 @@ cp_type_print_method_args (struct type *mtype,
       gdb_assert (args[0].type ()->code () == TYPE_CODE_PTR);
       domain = args[0].type ()->target_type ();
 
-      if (TYPE_CONST (domain))
+      if (domain->is_const ())
 	gdb_printf (stream, " const");
 
       if (TYPE_VOLATILE (domain))
@@ -449,7 +449,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
   /* We don't print `const' qualifiers for references --- since all
      operators affect the thing referenced, not the reference itself,
      every reference is `const'.  */
-  if (TYPE_CONST (type) && !TYPE_IS_REFERENCE (type))
+  if (type->is_const () && !TYPE_IS_REFERENCE (type))
     {
       if (need_pre_space)
 	gdb_printf (stream, " ");

@@ -159,7 +159,7 @@ type_stack::follow_types (struct type *follow_type)
 				      TYPE_VOLATILE (follow_type),
 				      follow_type);
 	if (make_volatile)
-	  follow_type = make_cv_type (TYPE_CONST (follow_type),
+	  follow_type = make_cv_type (follow_type->is_const (),
 				      make_volatile,
 				      follow_type);
 	if (make_harvard_aspace != HARVARD_ASPACE_NONE)
