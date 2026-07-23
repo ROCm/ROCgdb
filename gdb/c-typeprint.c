@@ -485,7 +485,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
 
   address_space_id = nullptr;
 
-  if (TYPE_CODE_SPACE (type))
+  if (type->is_code_space ())
     address_space_id = "code";
   else if (TYPE_DATA_SPACE (type))
     address_space_id = "data";

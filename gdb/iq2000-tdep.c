@@ -95,7 +95,7 @@ iq2000_pointer_to_address (struct gdbarch *gdbarch,
 
   if (target == TYPE_CODE_FUNC
       || target == TYPE_CODE_METHOD
-      || TYPE_CODE_SPACE (type->target_type ()))
+      || type->target_type ()->is_code_space ())
     addr = insn_addr_from_ptr (addr);
 
   return addr;

@@ -5025,10 +5025,8 @@ recursive_dump_type (struct type *type, int spaces)
     gdb_puts (" TYPE_CONST");
   if (type->is_volatile ())
     gdb_puts (" TYPE_VOLATILE");
-  if (TYPE_CODE_SPACE (type))
-    {
-      gdb_puts (" TYPE_CODE_SPACE");
-    }
+  if (type->is_code_space ())
+    gdb_puts (" TYPE_CODE_SPACE");
   if (TYPE_DATA_SPACE (type))
     {
       gdb_puts (" TYPE_DATA_SPACE");

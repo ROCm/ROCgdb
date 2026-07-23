@@ -189,9 +189,6 @@ struct type_instance_flags
   (((t)->dyn_prop (DYN_PROP_BYTE_SIZE) != nullptr)	\
    || ((t)->dyn_prop (DYN_PROP_BIT_SIZE) != nullptr))
 
-#define TYPE_CODE_SPACE(t) \
-  (((t)->instance_flags ()).harvard_aspace == HARVARD_ASPACE_CODE)
-
 #define TYPE_DATA_SPACE(t) \
   (((t)->instance_flags ()).harvard_aspace == HARVARD_ASPACE_DATA)
 
@@ -1214,6 +1211,12 @@ struct type
   bool is_volatile () const
   {
     return this->m_instance_flags.is_volatile;
+  }
+
+  /* Return if this type is in the code space.  */
+  bool is_code_space () const
+  {
+    return this->m_instance_flags.harvard_aspace == HARVARD_ASPACE_CODE;
   }
 
   /* Get the bounds bounds of this type.  The type must be a range type.  */

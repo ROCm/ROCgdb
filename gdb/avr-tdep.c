@@ -345,7 +345,7 @@ avr_pointer_to_address (struct gdbarch *gdbarch,
   /* Is it a code address?  */
   else if (type->target_type ()->code () == TYPE_CODE_FUNC
 	   || type->target_type ()->code () == TYPE_CODE_METHOD
-	   || TYPE_CODE_SPACE (type->target_type ()))
+	   || type->target_type ()->is_code_space ())
     {
       /* A code pointer is word (16 bits) addressed so we shift it up
 	 by 1 bit to convert it to an address.  */

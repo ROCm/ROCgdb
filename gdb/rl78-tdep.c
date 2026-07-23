@@ -1052,7 +1052,7 @@ rl78_pointer_to_address (struct gdbarch *gdbarch,
   /* Is it a code address?  */
   if (type->target_type ()->code () == TYPE_CODE_FUNC
       || type->target_type ()->code () == TYPE_CODE_METHOD
-      || TYPE_CODE_SPACE (type->target_type ())
+      || type->target_type ()->is_code_space ()
       || type->length () == 4)
     return rl78_make_instruction_address (addr);
   else
