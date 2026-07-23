@@ -758,7 +758,7 @@ add_array_cv_type (struct ctf_context *ccp,
 
   el_type = inner_array->target_type ();
   cnst |= el_type->is_const ();
-  voltl |= TYPE_VOLATILE (el_type);
+  voltl |= el_type->is_volatile ();
   inner_array->set_target_type (make_cv_type (cnst, voltl, el_type));
 
   return set_tid_type (ccp, tid, base_type);
@@ -830,7 +830,7 @@ read_const_type (struct ctf_context *ccp, ctf_id_t tid, ctf_id_t btid)
 	  base_type = builtin_type (objfile)->builtin_error;
 	}
     }
-  cv_type = make_cv_type (1, TYPE_VOLATILE (base_type), base_type);
+  cv_type = make_cv_type (1, base_type->is_volatile (), base_type);
 
   return set_tid_type (ccp, tid, cv_type);
 }

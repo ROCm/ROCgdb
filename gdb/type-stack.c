@@ -156,7 +156,7 @@ type_stack::follow_types (struct type *follow_type)
       process_qualifiers:
 	if (make_const)
 	  follow_type = make_cv_type (make_const,
-				      TYPE_VOLATILE (follow_type),
+				      follow_type->is_volatile (),
 				      follow_type);
 	if (make_volatile)
 	  follow_type = make_cv_type (follow_type->is_const (),

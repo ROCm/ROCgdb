@@ -4316,7 +4316,7 @@ rank_one_type_parm_ptr (struct type *parm, struct type *arg, struct value *value
 	    /* Make sure they are CV equal.  */
 	    if (t1->is_const () != t2->is_const ())
 	      rank.subrank |= CV_CONVERSION_CONST;
-	    if (TYPE_VOLATILE (t1) != TYPE_VOLATILE (t2))
+	    if (t1->is_volatile () != t2->is_volatile ())
 	      rank.subrank |= CV_CONVERSION_VOLATILE;
 	    if (rank.subrank != 0)
 	      return sum_ranks (CV_CONVERSION_BADNESS, rank);
@@ -4729,7 +4729,7 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
       /* Make sure they are CV equal, too.  */
       if (t1->is_const () != t2->is_const ())
 	rank.subrank |= CV_CONVERSION_CONST;
-      if (TYPE_VOLATILE (t1) != TYPE_VOLATILE (t2))
+      if (t1->is_volatile () != t2->is_volatile ())
 	rank.subrank |= CV_CONVERSION_VOLATILE;
       if (rank.subrank != 0)
 	return sum_ranks (CV_CONVERSION_BADNESS, rank);
@@ -5023,10 +5023,8 @@ recursive_dump_type (struct type *type, int spaces)
   gdb_printf ("%*sinstance_flags [", spaces, "");
   if (type->is_const ())
     gdb_puts (" TYPE_CONST");
-  if (TYPE_VOLATILE (type))
-    {
-      gdb_puts (" TYPE_VOLATILE");
-    }
+  if (type->is_volatile ())
+    gdb_puts (" TYPE_VOLATILE");
   if (TYPE_CODE_SPACE (type))
     {
       gdb_puts (" TYPE_CODE_SPACE");
