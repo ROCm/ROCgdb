@@ -543,18 +543,20 @@ type_instance_flags
 address_space_name_to_type_instance_flags (struct gdbarch *gdbarch,
 					   const char *space_identifier)
 {
-  type_instance_flags type_flags;
-
   /* Check for known address space delimiters.  */
   if (streq (space_identifier, "code"))
     return TYPE_INSTANCE_FLAG_CODE_SPACE;
   else if (streq (space_identifier, "data"))
     return TYPE_INSTANCE_FLAG_DATA_SPACE;
-  else if (gdbarch_address_class_name_to_type_flags_p (gdbarch)
-	   && gdbarch_address_class_name_to_type_flags (gdbarch,
-							space_identifier,
-							&type_flags))
-    return type_flags;
+
+  unsigned int aclass;
+  if (gdbarch_address_class_name_to_id_p (gdbarch)
+      && gdbarch_address_class_name_to_id (gdbarch,
+					   space_identifier,
+					   aclass))
+    {
+      return (enum type_instance_flag_value) (aclass << 4);
+    }
   else
     error (_("Unknown address space specifier: \"%s\""), space_identifier);
 }

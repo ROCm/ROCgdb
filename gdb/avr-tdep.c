@@ -1401,18 +1401,18 @@ avr_address_class_id_to_name (struct gdbarch *gdbarch,
     return NULL;
 }
 
-/* Implementation of `address_class_name_to_type_flags' gdbarch method.
+/* Implementation of `address_class_name_to_id' gdbarch method.
 
-   Convert an address space qualifier to a type_instance_flag_value.  */
+   Convert an address class name to an address class id.  */
 
 static bool
-avr_address_class_name_to_type_flags (struct gdbarch *gdbarch,
-				      const char* name,
-				      type_instance_flags *type_flags_ptr)
+avr_address_class_name_to_id (struct gdbarch *gdbarch,
+			      const char* name,
+			      unsigned int &address_class)
 {
   if (streq (name, "flash"))
     {
-      *type_flags_ptr = AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH;
+      address_class = AVR_ADDRESS_CLASS_FLASH;
       return true;
     }
   else
@@ -1535,8 +1535,8 @@ avr_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_unwind_sp (gdbarch, avr_unwind_sp);
 
   set_gdbarch_address_class_type_flags (gdbarch, avr_address_class_type_flags);
-  set_gdbarch_address_class_name_to_type_flags
-    (gdbarch, avr_address_class_name_to_type_flags);
+  set_gdbarch_address_class_name_to_id
+    (gdbarch, avr_address_class_name_to_id);
   set_gdbarch_address_class_id_to_name
     (gdbarch, avr_address_class_id_to_name);
 

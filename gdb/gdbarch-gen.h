@@ -918,15 +918,15 @@ using gdbarch_execute_dwarf_cfa_vendor_op_ftype = bool (struct gdbarch *gdbarch,
 bool gdbarch_execute_dwarf_cfa_vendor_op (struct gdbarch *gdbarch, gdb_byte op, struct dwarf2_frame_state *fs);
 void set_gdbarch_execute_dwarf_cfa_vendor_op (struct gdbarch *gdbarch, gdbarch_execute_dwarf_cfa_vendor_op_ftype *execute_dwarf_cfa_vendor_op);
 
-/* Return the appropriate type_flags for the supplied address class.
+/* Return the appropriate address class id for the supplied address class name.
    This function should return true if the address class was recognized and
-   type_flags was set, false otherwise. */
+   address_class was set, false otherwise. */
 
-bool gdbarch_address_class_name_to_type_flags_p (struct gdbarch *gdbarch);
+bool gdbarch_address_class_name_to_id_p (struct gdbarch *gdbarch);
 
-using gdbarch_address_class_name_to_type_flags_ftype = bool (struct gdbarch *gdbarch, const char *name, type_instance_flags *type_flags_ptr);
-bool gdbarch_address_class_name_to_type_flags (struct gdbarch *gdbarch, const char *name, type_instance_flags *type_flags_ptr);
-void set_gdbarch_address_class_name_to_type_flags (struct gdbarch *gdbarch, gdbarch_address_class_name_to_type_flags_ftype *address_class_name_to_type_flags);
+using gdbarch_address_class_name_to_id_ftype = bool (struct gdbarch *gdbarch, const char *name, unsigned int &address_class);
+bool gdbarch_address_class_name_to_id (struct gdbarch *gdbarch, const char *name, unsigned int &address_class);
+void set_gdbarch_address_class_name_to_id (struct gdbarch *gdbarch, gdbarch_address_class_name_to_id_ftype *address_class_name_to_id);
 
 /* Is a register in a group */
 

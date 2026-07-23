@@ -1570,13 +1570,13 @@ FS are passed from the generic execute_cfa_program function.
 
 Method(
     comment="""
-Return the appropriate type_flags for the supplied address class.
+Return the appropriate address class id for the supplied address class name.
 This function should return true if the address class was recognized and
-type_flags was set, false otherwise.
+address_class was set, false otherwise.
 """,
     type="bool",
-    name="address_class_name_to_type_flags",
-    params=[("const char *", "name"), ("type_instance_flags *", "type_flags_ptr")],
+    name="address_class_name_to_id",
+    params=[("const char *", "name"), ("unsigned int &", "address_class")],
     predicate=True,
 )
 
