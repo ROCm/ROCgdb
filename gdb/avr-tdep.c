@@ -72,13 +72,10 @@
 
 /* Constants: prefixed with AVR_ to avoid name space clashes */
 
-/* Address space flags */
+/* We are assigning the id 1 to the flash address space.  */
 
-/* We are assigning the TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1 to the flash address
-   space.  */
-
-#define AVR_TYPE_ADDRESS_CLASS_FLASH TYPE_ADDRESS_CLASS_1
-#define AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH  \
+#define AVR_ADDRESS_CLASS_FLASH 1
+#define AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH	\
   TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1
 
 
@@ -310,7 +307,7 @@ avr_address_to_pointer (struct gdbarch *gdbarch,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   /* Is it a data address in flash?  */
-  if (AVR_TYPE_ADDRESS_CLASS_FLASH (type))
+  if (TYPE_ADDRESS_CLASS (type) == AVR_ADDRESS_CLASS_FLASH)
     {
       /* A data pointer in flash is byte addressed.  */
       store_unsigned_integer (buf, type->length (), byte_order,
@@ -342,7 +339,7 @@ avr_pointer_to_address (struct gdbarch *gdbarch,
     = extract_unsigned_integer (buf, type->length (), byte_order);
 
   /* Is it a data address in flash?  */
-  if (AVR_TYPE_ADDRESS_CLASS_FLASH (type))
+  if (TYPE_ADDRESS_CLASS (type) == AVR_ADDRESS_CLASS_FLASH)
     {
       /* A data pointer in flash is already byte addressed.  */
       return avr_make_iaddr (addr);
@@ -1390,15 +1387,15 @@ avr_address_class_type_flags (int byte_size, int dwarf2_addr_class)
   return 0;
 }
 
-/* Implementation of `address_class_type_flags_to_name' gdbarch method.
+/* Implementation of `address_class_id_to_name' gdbarch method.
 
-   Convert a type_instance_flag_value to an address space qualifier.  */
+   Convert an address class id to an address class qualifier.  */
 
 static const char*
-avr_address_class_type_flags_to_name (struct gdbarch *gdbarch,
-				      type_instance_flags type_flags)
+avr_address_class_id_to_name (struct gdbarch *gdbarch,
+			      unsigned int address_class)
 {
-  if (type_flags & AVR_TYPE_INSTANCE_FLAG_ADDRESS_CLASS_FLASH)
+  if (address_class == AVR_ADDRESS_CLASS_FLASH)
     return "flash";
   else
     return NULL;
@@ -1540,8 +1537,8 @@ avr_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_address_class_type_flags (gdbarch, avr_address_class_type_flags);
   set_gdbarch_address_class_name_to_type_flags
     (gdbarch, avr_address_class_name_to_type_flags);
-  set_gdbarch_address_class_type_flags_to_name
-    (gdbarch, avr_address_class_type_flags_to_name);
+  set_gdbarch_address_class_id_to_name
+    (gdbarch, avr_address_class_id_to_name);
 
   return gdbarch;
 }

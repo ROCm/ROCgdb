@@ -570,9 +570,11 @@ address_space_type_instance_flags_to_name (struct gdbarch *gdbarch,
     return "code";
   else if (space_flag & TYPE_INSTANCE_FLAG_DATA_SPACE)
     return "data";
-  else if ((space_flag & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL)
-	   && gdbarch_address_class_type_flags_to_name_p (gdbarch))
-    return gdbarch_address_class_type_flags_to_name (gdbarch, space_flag);
+
+  unsigned int aclass = TYPE_ADDRESS_CLASS_FROM_INSTANCE_FLAGS (space_flag);
+
+  if (gdbarch_address_class_id_to_name_p (gdbarch))
+    return gdbarch_address_class_id_to_name (gdbarch, aclass);
   else
     return NULL;
 }

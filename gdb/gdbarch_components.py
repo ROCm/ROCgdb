@@ -1546,9 +1546,13 @@ Function(
 )
 
 Method(
+    comment="""
+Given an architecture-specific address class identifier, return the
+name of that address class.
+""",
     type="const char *",
-    name="address_class_type_flags_to_name",
-    params=[("type_instance_flags", "type_flags")],
+    name="address_class_id_to_name",
+    params=[("unsigned int", "address_class")],
     predicate=True,
 )
 

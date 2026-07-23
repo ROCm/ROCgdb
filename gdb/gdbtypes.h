@@ -175,6 +175,10 @@ DEF_ENUM_FLAGS_TYPE (enum type_instance_flag_value, type_instance_flags);
   (TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1 | TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2)
 #define TYPE_ADDRESS_CLASS_ALL(t) (((t)->instance_flags ()) \
 				   & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL)
+#define TYPE_ADDRESS_CLASS_FROM_INSTANCE_FLAGS(t) \
+  ((unsigned int) ((t) & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL) >> 4)
+#define TYPE_ADDRESS_CLASS(t) \
+  (TYPE_ADDRESS_CLASS_FROM_INSTANCE_FLAGS ((t)->instance_flags ()))
 
 /* Information about a single discriminant.  */
 

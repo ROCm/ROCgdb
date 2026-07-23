@@ -354,15 +354,15 @@ ft32_address_class_type_flags (int byte_size, int dwarf2_addr_class)
   return 0;
 }
 
-/* Implementation of `address_class_type_flags_to_name' gdbarch method.
+/* Implementation of `address_class_id_to_name' gdbarch method.
 
-   Convert a type_instance_flag_value to an address space qualifier.  */
+   Convert an address class id to an address space qualifier.  */
 
 static const char*
-ft32_address_class_type_flags_to_name (struct gdbarch *gdbarch,
-				       type_instance_flags type_flags)
+ft32_address_class_id_to_name (struct gdbarch *gdbarch,
+			       unsigned int address_class)
 {
-  if (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
+  if (address_class == 1)
     return "flash";
   else
     return NULL;
@@ -612,8 +612,8 @@ ft32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_address_class_type_flags (gdbarch, ft32_address_class_type_flags);
   set_gdbarch_address_class_name_to_type_flags
     (gdbarch, ft32_address_class_name_to_type_flags);
-  set_gdbarch_address_class_type_flags_to_name
-    (gdbarch, ft32_address_class_type_flags_to_name);
+  set_gdbarch_address_class_id_to_name
+    (gdbarch, ft32_address_class_id_to_name);
 
   return gdbarch;
 }

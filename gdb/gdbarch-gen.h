@@ -902,11 +902,14 @@ using gdbarch_address_class_type_flags_ftype = type_instance_flags (int byte_siz
 type_instance_flags gdbarch_address_class_type_flags (struct gdbarch *gdbarch, int byte_size, int dwarf2_addr_class);
 void set_gdbarch_address_class_type_flags (struct gdbarch *gdbarch, gdbarch_address_class_type_flags_ftype *address_class_type_flags);
 
-bool gdbarch_address_class_type_flags_to_name_p (struct gdbarch *gdbarch);
+/* Given an architecture-specific address class identifier, return the
+   name of that address class. */
 
-using gdbarch_address_class_type_flags_to_name_ftype = const char *(struct gdbarch *gdbarch, type_instance_flags type_flags);
-const char *gdbarch_address_class_type_flags_to_name (struct gdbarch *gdbarch, type_instance_flags type_flags);
-void set_gdbarch_address_class_type_flags_to_name (struct gdbarch *gdbarch, gdbarch_address_class_type_flags_to_name_ftype *address_class_type_flags_to_name);
+bool gdbarch_address_class_id_to_name_p (struct gdbarch *gdbarch);
+
+using gdbarch_address_class_id_to_name_ftype = const char *(struct gdbarch *gdbarch, unsigned int address_class);
+const char *gdbarch_address_class_id_to_name (struct gdbarch *gdbarch, unsigned int address_class);
+void set_gdbarch_address_class_id_to_name (struct gdbarch *gdbarch, gdbarch_address_class_id_to_name_ftype *address_class_id_to_name);
 
 /* Execute vendor-specific DWARF Call Frame Instruction.  OP is the instruction.
    FS are passed from the generic execute_cfa_program function. */
