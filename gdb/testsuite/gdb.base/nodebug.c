@@ -79,6 +79,19 @@ mult_noproto (v1, v2)
   return v1 * v2;
 }
 
+long double
+mult_long_double (long double v1, long double v2)
+{
+  return v1 * v2;
+}
+
+long double
+mult_long_double_noproto (v1, v2)
+  long double v1, v2;
+{
+  return v1 * v2;
+}
+
 uint8_t
 add8 (uint8_t v1, uint8_t v2)
 {

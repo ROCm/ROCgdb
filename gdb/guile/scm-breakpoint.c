@@ -42,7 +42,7 @@
    any side-effects.  This means that the smob needs to store everything
    that was passed to make-breakpoint.  */
 
-typedef struct gdbscm_breakpoint_object
+using breakpoint_smob = struct gdbscm_breakpoint_object
 {
   /* This always appears first.  */
   gdb_smob base;
@@ -90,7 +90,7 @@ typedef struct gdbscm_breakpoint_object
 
   /* A stop condition or #f.  */
   SCM stop;
-} breakpoint_smob;
+};
 
 static const char breakpoint_smob_name[] = "gdb:breakpoint";
 

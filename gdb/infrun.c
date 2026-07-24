@@ -4044,8 +4044,8 @@ delete_thread_infrun_breakpoints (struct thread_info *tp)
    just stopped.  In all-stop, that's all the non-exited threads; in
    non-stop, that's the current thread, only.  */
 
-typedef void (*for_each_just_stopped_thread_callback_func)
-  (struct thread_info *tp);
+using for_each_just_stopped_thread_callback_func
+  = void (*) (struct thread_info *tp);
 
 static void
 for_each_just_stopped_thread (for_each_just_stopped_thread_callback_func func)
@@ -5798,7 +5798,7 @@ handle_one (const wait_one_event &event)
    the expected stops.  */
 
 static void
-reenable_target_async ()
+re_enable_target_async ()
 {
   for (inferior *inf : all_inferiors ())
     {
@@ -5955,7 +5955,7 @@ stop_all_threads (const char *reason, inferior *inf)
 	  if (pass > 0)
 	    pass = -1;
 
-	  reenable_target_async ();
+	  re_enable_target_async ();
 
 	  for (int i = 0; i < waits_needed; i++)
 	    {

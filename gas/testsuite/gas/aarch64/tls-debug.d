@@ -1,6 +1,6 @@
 #as:
 #objdump: -r
-#target: aarch64*-*-*
+#target: [is_elf_format]
 
 #...
 RELOCATION RECORDS FOR \[\.debug_info\]:

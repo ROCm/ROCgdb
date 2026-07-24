@@ -555,7 +555,7 @@ ada_get_tcb_types_info (void)
   /* Get the type for Ada_Task_Control_Block.Common.  */
   common_type = common_atcb_sym->type ();
 
-  /* Get the type for Ada_Task_Control_Bloc.Common.Call.LL.  */
+  /* Get the type for Ada_Task_Control_Block.Common.Call.LL.  */
   ll_type = private_data_sym->type ();
 
   /* Get the type for Common_ATCB.Call.all.  */

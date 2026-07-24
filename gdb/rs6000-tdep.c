@@ -822,8 +822,8 @@ rs6000_fetch_pointer_argument (const frame_info_ptr &frame, int argi,
 constexpr gdb_byte big_breakpoint[] = { 0x7f, 0xe0, 0x00, 0x08 };
 constexpr gdb_byte little_breakpoint[] = { 0x08, 0x00, 0xe0, 0x7f };
 
-typedef BP_MANIPULATION_ENDIAN (little_breakpoint, big_breakpoint)
-  rs6000_breakpoint;
+using rs6000_breakpoint
+  = BP_MANIPULATION_ENDIAN (little_breakpoint, big_breakpoint);
 
 /* Instruction masks for displaced stepping.  */
 #define OP_MASK 0xfc000000
@@ -2755,8 +2755,8 @@ rs6000_value_from_register (gdbarch *gdbarch, type *type, int regnum,
 
  /* The type of a function that moves the value of REG between CACHE
     or BUF --- in either direction.  */
-typedef enum register_status (*move_ev_register_func) (struct regcache *,
-						       int, void *);
+using move_ev_register_func = enum register_status (*) (struct regcache *,
+							int, void *);
 
 /* Move SPE vector register values between a 64-bit buffer and the two
    32-bit raw register halves in a regcache.  This function handles
@@ -4168,7 +4168,7 @@ bfd_uses_spe_extensions (bfd *abfd)
 #define P_PPC_D(insn_prefix, insn_suffix) \
   PPC_SEXT (PPC_FIELD (insn_prefix, 14, 18) << 16 \
 	    | PPC_FIELD (insn_suffix, 16, 16), 34)
-#define P_PPC_TX5(insn_sufix)	PPC_BIT (insn_suffix, 5)
+#define P_PPC_TX5(insn_suffix)	PPC_BIT (insn_suffix, 5)
 #define P_PPC_TX15(insn_suffix) PPC_BIT (insn_suffix, 15)
 #define P_PPC_XT(insn_suffix)	((PPC_TX (insn_suffix) << 5) \
 				 | PPC_T (insn_suffix))

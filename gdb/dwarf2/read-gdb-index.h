@@ -43,12 +43,11 @@ struct objfile;
 
 /* Callback types for dwarf2_read_gdb_index.  */
 
-typedef gdb::function_view
-    <gdb::array_view<const gdb_byte>(objfile *, dwarf2_per_bfd *)>
-    get_gdb_index_contents_ftype;
-typedef gdb::function_view
-    <gdb::array_view<const gdb_byte>(objfile *, dwz_file *)>
-    get_gdb_index_contents_dwz_ftype;
+using get_gdb_index_contents_ftype
+  = gdb::function_view<gdb::array_view<const gdb_byte>(objfile *,
+						       dwarf2_per_bfd *)>;
+using get_gdb_index_contents_dwz_ftype
+  = gdb::function_view<gdb::array_view<const gdb_byte>(objfile *, dwz_file *)>;
 
 /* Read .gdb_index.  If everything went ok, initialize the "quick"
    elements of all the CUs and return true.  Otherwise, return

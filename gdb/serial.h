@@ -214,7 +214,7 @@ extern int serial_is_async_p (struct serial *scb);
    asynchronous mode.  To disable asynchronous mode, register a NULL
    callback.  */
 
-typedef void (serial_event_ftype) (struct serial *scb, void *context);
+using serial_event_ftype = void (struct serial *scb, void *context);
 extern void serial_async (struct serial *scb,
 			  serial_event_ftype *handler, void *context);
 

@@ -125,7 +125,7 @@ struct dcache_struct
   process_stratum_target *proc_target;
 };
 
-typedef void (block_func) (struct dcache_block *block, void *param);
+using block_func = void (struct dcache_block *block, void *param);
 
 static struct dcache_block *dcache_hit (DCACHE *dcache, CORE_ADDR addr);
 

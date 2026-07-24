@@ -153,6 +153,7 @@ accept various extension mnemonics.  For example,
 @code{sse4},
 @code{avx},
 @code{avx2},
+@code{altmovcr8},
 @code{lahf_sahf},
 @code{monitor},
 @code{adx},
@@ -1708,9 +1709,9 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.rdrnd} @tab @samp{.f16c} @tab @samp{.avx2} @tab @samp{.bmi2}
 @item @samp{.lzcnt} @tab @samp{.popcnt} @tab @samp{.invpcid} @tab @samp{.vmfunc}
 @item @samp{.monitor} @tab @samp{.hle} @tab @samp{.rtm} @tab @samp{.tsx}
-@item @samp{.lahf_sahf} @tab @samp{.adx} @tab @samp{.rdseed} @tab @samp{.prfchw}
-@item @samp{.smap} @tab @samp{.mpx} @tab @samp{.sha} @tab @samp{.prefetchwt1}
-@item @samp{.clflushopt} @tab @samp{.xsavec} @tab @samp{.xsaves} @tab @samp{.se1}
+@item @samp{.altmovcr8} @tab @samp{.lahf_sahf} @tab @samp{.adx} @tab @samp{.rdseed}
+@item @samp{.smap} @tab @samp{.mpx} @tab @samp{.sha} @tab @samp{.prfchw}
+@item @samp{.prefetchwt1} @tab @samp{.clflushopt} @tab @samp{.xsavec} @tab @samp{.xsaves}
 @item @samp{.avx512f} @tab @samp{.avx512cd} @tab @samp{.avx512er} @tab @samp{.avx512pf}
 @item @samp{.avx512vl} @tab @samp{.avx512bw} @tab @samp{.avx512dq} @tab @samp{.avx512ifma}
 @item @samp{.avx512vbmi} @tab @samp{.avx512_4fmaps} @tab @samp{.avx512_4vnniw}
@@ -1719,7 +1720,7 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.tdx} @tab @samp{.avx_vnni} @tab @samp{.avx512_fp16} @tab @samp{avx512_bmm}
 @item @samp{.avx10.1} @tab @samp{.clwb} @tab @samp{.rdpid} @tab @samp{.ptwrite}
 @item @samp{.ibt} @tab @samp{.prefetchi} @tab @samp{.avx_ifma} @tab @samp{.avx_vnni_int8}
-@item @samp{.cmpccxadd} @tab @samp{.wrmsrns} @tab @samp{.msrlist}
+@item @samp{.cmpccxadd} @tab @samp{.wrmsrns} @tab @samp{.msrlist} @tab @samp{.se1}
 @item @samp{.avx_ne_convert} @tab @samp{.rao_int} @tab @samp{.fred} @tab @samp{.lkgs}
 @item @samp{.avx_vnni_int16} @tab @samp{.sha512} @tab @samp{.sm3} @tab @samp{.sm4}
 @item @samp{.pbndkb} @tab @samp{.user_msr} @tab @samp{.msr_imm} @tab @samp{.avx10.2}

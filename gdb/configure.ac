@@ -1520,6 +1520,7 @@ AC_CHECK_FUNCS([ \
   getrlimit \
   getuid \
   iconvlist \
+  init_extended_pair \
   libiconvlist \
   posix_madvise \
   pread \

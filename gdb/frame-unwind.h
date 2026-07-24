@@ -49,12 +49,13 @@ struct value;
    cases (0 return) is invalid.  In case of exception, the caller has
    to set *THIS_PROLOGUE_CACHE to NULL.  */
 
-typedef int (frame_sniffer_ftype) (const struct frame_unwind *self,
-				   const frame_info_ptr &this_frame,
-				   void **this_prologue_cache);
+using frame_sniffer_ftype = int (const struct frame_unwind *self,
+				 const frame_info_ptr &this_frame,
+				 void **this_prologue_cache);
 
-typedef unwind_stop_reason (frame_unwind_stop_reason_ftype)
-  (const frame_info_ptr &this_frame, void **this_prologue_cache);
+using frame_unwind_stop_reason_ftype
+  = unwind_stop_reason (const frame_info_ptr &this_frame,
+			void **this_prologue_cache);
 
 /* A default frame sniffer which always accepts the frame.  Used by
    fallback prologue unwinders.  */
@@ -105,9 +106,9 @@ extern CORE_ADDR default_unwind_sp (struct gdbarch *gdbarch,
    with the other unwind methods.  Memory for that cache should be
    allocated using frame_obstack_zalloc.  */
 
-typedef void (frame_this_id_ftype) (const frame_info_ptr &this_frame,
-				    void **this_prologue_cache,
-				    struct frame_id *this_id);
+using frame_this_id_ftype = void (const frame_info_ptr &this_frame,
+				  void **this_prologue_cache,
+				  struct frame_id *this_id);
 
 /* Assuming the frame chain: (outer) prev <-> this <-> next (inner);
    use THIS frame, and implicitly the NEXT frame's register unwind
@@ -146,8 +147,8 @@ typedef value *(frame_prev_register_ftype) (const frame_info_ptr &this_frame,
 
 /* Deallocate extra memory associated with the frame cache if any.  */
 
-typedef void (frame_dealloc_cache_ftype) (frame_info *self,
-					  void *this_cache);
+using frame_dealloc_cache_ftype = void (frame_info *self,
+					void *this_cache);
 
 /* Assuming the frame chain: (outer) prev <-> this <-> next (inner);
    use THIS frame, and implicitly the NEXT frame's register unwind

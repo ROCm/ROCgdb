@@ -1,5 +1,5 @@
-        .text
-        .global main
+	.text
+	.global main
 main:
 	######################
 	#  loadb abs20/24 reg

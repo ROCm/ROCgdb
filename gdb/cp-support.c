@@ -1322,7 +1322,7 @@ add_symbol_overload_list_namespace (const char *func_name,
     }
 
   /* Look in the static block.  */
-  block = get_selected_block (0);
+  block = get_selected_block ();
   block = block == nullptr ? nullptr : block->static_block ();
   if (block != nullptr)
     {
@@ -1414,7 +1414,7 @@ add_symbol_overload_list_using (const char *func_name,
      look in the appropriate namespaces for new functions to match
      on.  */
 
-  for (block = get_selected_block (0);
+  for (block = get_selected_block ();
        block != NULL;
        block = block->superblock ())
     for (using_direct *current : block->get_using ())
@@ -1454,7 +1454,7 @@ static void
 add_symbol_overload_list_qualified (const char *func_name,
 				    std::vector<symbol *> *overload_list)
 {
-  const block *selected_block = get_selected_block (0);
+  const block *selected_block = get_selected_block ();
 
   /* Search upwards from currently selected frame (so that we can
      complete on local vars.  */

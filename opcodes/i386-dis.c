@@ -13297,7 +13297,11 @@ OP_C (instr_info *ins, int dummy ATTRIBUTE_UNUSED,
       USED_REX (REX_R);
       add = 8;
     }
-  else if (ins->address_mode != mode_64bit && (ins->prefixes & PREFIX_LOCK))
+  else if (/* Only %cr0 -> %cr8 is dealt with this way (and also really only on
+	      most AMD hardware).  */
+	   ins->modrm.reg == 0
+	   && (ins->prefixes & PREFIX_LOCK)
+	   && ins->isa64 != intel64)
     {
       ins->all_prefixes[ins->last_lock_prefix] = 0;
       ins->used_prefixes |= PREFIX_LOCK;

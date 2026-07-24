@@ -14,12 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import subprocess
 import sys
-
-# Files to completely ignore.
-re_ignore = re.compile("ChangeLog")
 
 # Files that are not clean, so they're only checked when changes.
 todo_list = []
@@ -27,10 +23,6 @@ todo_list = []
 clean = []
 other = []
 for f in sys.argv[1:]:
-    m = re_ignore.search(f)
-    if m:
-        continue
-
     if f not in todo_list:
         clean.append(f)
     else:

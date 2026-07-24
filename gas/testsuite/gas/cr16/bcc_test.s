@@ -1,5 +1,5 @@
-        .text
-        .global main
+	.text
+	.global main
 main:
 	###################
 	# bcc disp9/disp17/disp25

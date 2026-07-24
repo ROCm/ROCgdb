@@ -301,7 +301,7 @@ extern CORE_ADDR overlay_mapped_address (CORE_ADDR, struct obj_section *);
 extern CORE_ADDR overlay_unmapped_address (CORE_ADDR, struct obj_section *);
 
 /* Convert an address in an overlay section (force into VMA range).  */
-extern CORE_ADDR symbol_overlayed_address (CORE_ADDR, struct obj_section *);
+extern CORE_ADDR symbol_overlaid_address (CORE_ADDR, struct obj_section *);
 
 /* Load symbols from a file.  */
 extern void symbol_file_add_main (const char *args,

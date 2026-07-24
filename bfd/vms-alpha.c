@@ -5281,7 +5281,7 @@ alpha_vms_canonicalize_symtab (bfd *abfd, asymbol **symbols)
 static bool
 alpha_vms_slurp_relocs (bfd *abfd)
 {
-  int cur_psect = -1;
+  unsigned int cur_psect = -1u;
 
   vms_debug2 ((3, "alpha_vms_slurp_relocs\n"));
 
@@ -5525,7 +5525,7 @@ alpha_vms_slurp_relocs (bfd *abfd)
 	    bfd_size_type size;
 
 	    /* Get section to which the relocation applies.  */
-	    if (cur_psect < 0 || cur_psect > (int)PRIV (section_count))
+	    if (cur_psect >= PRIV (section_count))
 	      {
 		_bfd_error_handler (_("invalid section index in ETIR"));
 		goto fail;

@@ -104,7 +104,7 @@
 
 #ifndef HAVE_ELF32_AUXV_T
 /* Copied from glibc's elf.h.  */
-typedef struct
+struct Elf32_auxv_t
 {
   uint32_t a_type;		/* Entry type */
   union
@@ -114,12 +114,12 @@ typedef struct
 	 though, since it does not work when using 32-bit definitions
 	 on 64-bit platforms and vice versa.  */
     } a_un;
-} Elf32_auxv_t;
+};
 #endif
 
 #ifndef HAVE_ELF64_AUXV_T
 /* Copied from glibc's elf.h.  */
-typedef struct
+struct Elf64_auxv_t
 {
   uint64_t a_type;		/* Entry type */
   union
@@ -129,7 +129,7 @@ typedef struct
 	 though, since it does not work when using 32-bit definitions
 	 on 64-bit platforms and vice versa.  */
     } a_un;
-} Elf64_auxv_t;
+};
 #endif
 
 /* See nat/linux-nat.h.  */

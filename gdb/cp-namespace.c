@@ -35,6 +35,7 @@
 #include "namespace.h"
 #include "inferior.h"
 #include "gdbsupport/unordered_map.h"
+#include "producer.h"
 #include <string>
 #include <string.h>
 
@@ -396,7 +397,6 @@ cp_lookup_symbol_via_imports (const char *scope,
 {
   struct block_symbol sym = {};
   int len;
-  int directive_match;
 
   /* All the symbols we found will be kept in this relational map between
      the mangled name and the block_symbol found.  We do this so that GDB
@@ -412,9 +412,26 @@ cp_lookup_symbol_via_imports (const char *scope,
 	found_symbols[sym.symbol->m_name] = sym;
     }
 
-  /* Due to a GCC bug, we need to know the boundaries of the current block
-     to know if a certain using directive is valid.  */
-  symtab_and_line boundary_sal = find_sal_for_pc (block->end () - 1, 0);
+  unsigned boundary_line = 0;
+  {
+    struct symbol *fn = block->containing_function ();
+    int major, minor;
+    if (fn != nullptr
+	&& producer_is_gcc (fn->symtab ()->compunit ().producer (),
+			    &major, &minor)
+	&& (major <= 9
+	    || (major == 10 && minor < 5)
+	    || (major == 11 && minor < 4)
+	    || (major == 12 && minor < 3)
+	    || (major == 13 && minor < 1)))
+      {
+	/* Due to a GCC bug (PR debug/108716, fixed in 10.5, 11.4, 12.3, 13.1),
+	   we need to know the boundaries of the current block to know if a
+	   certain using directive is valid.  */
+	symtab_and_line boundary_sal = find_sal_for_pc (block->end () - 1, 0);
+	boundary_line = boundary_sal.line;
+      }
+  }
 
   /* Go through the using directives.  If any of them add new names to
      the namespace we're searching in, see if we can find a match by
@@ -425,15 +442,30 @@ cp_lookup_symbol_via_imports (const char *scope,
 
       /* If the using directive was below the place we are stopped at,
 	 do not use this directive.  */
-      if (!current->valid_line (boundary_sal.line))
+      if (!current->valid_line (boundary_line))
 	continue;
+
       len = strlen (current->import_dest);
-      directive_match = (search_parents
-			 ? (startswith (scope, current->import_dest)
-			    && (len == 0
-				|| scope[len] == ':'
-				|| scope[len] == '\0'))
-			 : streq (scope, current->import_dest));
+
+      bool directive_match;
+      if (search_parents)
+	{
+	  if (len == 0)
+	    {
+	      const char *current_scope = (block->function_block () != nullptr
+					   ? block->scope ()
+					   : nullptr /* Don't know.  */);
+	      directive_match = (current_scope != nullptr
+				 ? streq (scope, current_scope)
+				 : true /* Assume there's a match.  */);
+	    }
+	  else
+	    directive_match = (startswith (scope, current->import_dest)
+			       && (scope[len] == ':'
+				   || scope[len] == '\0'));
+	}
+      else
+	directive_match = streq (scope, current->import_dest);
 
       /* If the import destination is the current scope or one of its
 	 ancestors then it is applicable.  */
@@ -490,9 +522,13 @@ cp_lookup_symbol_via_imports (const char *scope,
 	      /* If this import statement creates no alias, pass
 		 current->inner as NAMESPACE to direct the search
 		 towards the imported namespace.  */
-	      cp_lookup_symbol_via_imports (current->import_src, name,
-					    block, domain, 1, 0, 0,
-					    found_symbols);
+	      for (const struct block *b = block; b != nullptr;
+		   b = ((b->is_static_block () || b->is_global_block ())
+			? b->superblock ()
+			: b->static_block ()))
+		cp_lookup_symbol_via_imports (current->import_src, name,
+					      b, domain, 1, 0, 0,
+					      found_symbols);
 	    }
 
 	}

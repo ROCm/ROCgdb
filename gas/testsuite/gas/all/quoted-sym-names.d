@@ -1,7 +1,7 @@
 #nm: --extern-only --numeric-sort
 #name: quoted symbol names
 # No quoted strings handling (TC_STRING_ESCAPES set to 0):
-#notarget: powerpc*-*-aix* powerpc*-*-beos* powerpc-*-macos* rs6000-*-*
+#notarget: powerpc*-*-aix* powerpc-*-macos* rs6000-*-*
 # Explicitly no escapes in quoted strings:
 #notarget: z80-*-*
 

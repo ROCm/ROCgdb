@@ -26,6 +26,7 @@
 #include "linux-record.h"
 #include "linux-tdep.h"
 #include "solib-svr4-linux.h"
+#include "svr4-tls-tdep.h"
 #include "loongarch-tdep.h"
 #include "record-full.h"
 #include "regset.h"
@@ -1137,6 +1138,56 @@ init_loongarch_linux_record_tdep (struct gdbarch *gdbarch)
   loongarch_linux_record_tdep.arg7 = LOONGARCH_A0_REGNUM + 6;
 }
 
+/* Fetch and return the TLS DTV (dynamic thread vector) address for PTID.
+   Throw a suitable TLS error if something goes wrong.  */
+
+static CORE_ADDR
+loongarch_linux_get_tls_dtv_addr (struct gdbarch *gdbarch, ptid_t ptid,
+				  svr4_tls_libc libc)
+{
+  /* On LoongArch, the thread pointer is found in TP.  */
+  regcache *regcache
+    = get_thread_arch_regcache (current_inferior (), ptid, gdbarch);
+  target_fetch_registers (regcache, LOONGARCH_TP_REGNUM);
+  ULONGEST thr_ptr;
+  if (regcache->cooked_read (LOONGARCH_TP_REGNUM, &thr_ptr) != REG_VALID)
+    throw_error (TLS_GENERIC_ERROR, _("Unable to fetch thread pointer"));
+
+  CORE_ADDR dtv_ptr_addr;
+  switch (libc)
+    {
+      case svr4_tls_libc_musl:
+	/* MUSL: The DTV pointer is found at the very end of the pthread
+	   struct which is located *before* the thread pointer.  I.e.
+	   the thread pointer will be just beyond the end of the struct,
+	   so the address of the DTV pointer is found one pointer-size
+	   before the thread pointer.  */
+	dtv_ptr_addr = thr_ptr - (gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT);
+	break;
+      case svr4_tls_libc_glibc:
+	/* GLIBC:  The thread pointer (TP) points just beyond the end of
+	   the TCB (thread control block).  On LoongArch, this struct
+	   (tcbhead_t) is defined to contain two pointers.  The first is
+	   a pointer to the DTV and the second is a pointer to private
+	   data.  So the DTV pointer address is found two pointer-size
+	   before thread pointer.  */
+	dtv_ptr_addr = thr_ptr - 2 * (gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT);
+	break;
+      default:
+	throw_error (TLS_GENERIC_ERROR, _("Unknown LoongArch C library"));
+	break;
+    }
+
+  gdb::byte_vector buf (gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT);
+  if (target_read_memory (dtv_ptr_addr, buf.data (), buf.size ()) != 0)
+    throw_error (TLS_GENERIC_ERROR, _("Unable to fetch DTV address"));
+
+  const struct builtin_type *builtin = builtin_type (gdbarch);
+  CORE_ADDR dtv_addr = gdbarch_pointer_to_address
+			 (gdbarch, builtin->builtin_data_ptr, buf.data ());
+  return dtv_addr;
+}
+
 /* Initialize LoongArch Linux ABI info.  */
 
 static void
@@ -1158,6 +1209,8 @@ loongarch_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* Enable TLS support.  */
   set_gdbarch_fetch_tls_load_module_address (gdbarch, svr4_fetch_objfile_link_map);
+  set_gdbarch_get_thread_local_address (gdbarch, svr4_tls_get_thread_local_address);
+  svr4_tls_register_tls_methods (info, gdbarch, loongarch_linux_get_tls_dtv_addr);
 
   /* Prepend tramp frame unwinder for signal.  */
   tramp_frame_prepend_unwinder (gdbarch, &loongarch_linux_rt_sigframe);

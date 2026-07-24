@@ -1,4 +1,4 @@
 #as:
 #objdump: -r
-#target: aarch64*-*-*
+#target: [is_elf_format]
 #error_output: tls-debug-bad.l

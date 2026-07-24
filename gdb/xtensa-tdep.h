@@ -89,23 +89,23 @@ enum xtensa_target_flags_t
 
 /*  Mask.  */
 
-typedef struct
+struct xtensa_reg_mask_t
 {
   int reg_num;
   int bit_start;
   int bit_size;
-} xtensa_reg_mask_t;
+};
 
-typedef struct
+struct xtensa_mask_t
 {
   int count;
   xtensa_reg_mask_t *mask;
-} xtensa_mask_t;
+};
 
 
 /*  Xtensa register representation.  */
 
-typedef struct
+struct xtensa_register_t
 {
   const char *name;            	/* Register name.  */
   int offset;             	/* Offset.  */
@@ -124,7 +124,7 @@ typedef struct
   const xtensa_mask_t *mask;	/* Register is a compilation of other regs.  */
   const char *fetch;		/* Instruction sequence to fetch register.  */
   const char *store;		/* Instruction sequence to store register.  */
-} xtensa_register_t;
+};
 
 /*  For xtensa-config.c to expand to the structure above.  */
 #define XTREG(index,ofs,bsz,sz,al,tnum,flg,cp,ty,gr,name,fet,sto,mas,ct,x,y) \

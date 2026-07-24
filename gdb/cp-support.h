@@ -81,7 +81,7 @@ extern gdb::unique_xmalloc_ptr<char> cp_canonicalize_string
 extern gdb::unique_xmalloc_ptr<char> cp_canonicalize_string_no_typedefs
   (const char *string);
 
-typedef const char *(canonicalization_ftype) (struct type *, void *);
+using canonicalization_ftype = const char * (struct type *, void *);
 
 extern gdb::unique_xmalloc_ptr<char> cp_canonicalize_string_full
   (const char *string, canonicalization_ftype *finder, void *data);

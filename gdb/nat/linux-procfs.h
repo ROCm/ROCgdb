@@ -75,7 +75,7 @@ extern const char *linux_proc_tid_get_name (ptid_t ptid);
 /* Callback function for linux_proc_attach_tgid_threads.  If the PTID
    thread is not yet known, try to attach to it and return true,
    otherwise return false.  */
-typedef int (*linux_proc_attach_lwp_func) (ptid_t ptid);
+using linux_proc_attach_lwp_func = int (*) (ptid_t ptid);
 
 /* If PID is a tgid, scan the /proc/PID/task/ directory for existing
    threads, and call FUNC for each thread found.  */

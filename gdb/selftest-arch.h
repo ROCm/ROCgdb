@@ -19,7 +19,7 @@
 #ifndef GDB_SELFTEST_ARCH_H
 #define GDB_SELFTEST_ARCH_H
 
-typedef void self_test_foreach_arch_function (struct gdbarch *);
+using self_test_foreach_arch_function = void (struct gdbarch *);
 
 namespace selftests
 {

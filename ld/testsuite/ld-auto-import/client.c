@@ -47,7 +47,7 @@ main (void)
   printf ("Calling dllimported function pointer\n");
   func_ptr ();
 
-  printf ("Calling functions using global structure\n"); 
+  printf ("Calling functions using global structure\n");
   xyz.func_ptr ();
   * xyz.var = 40;
   xyz.func_ptr ();

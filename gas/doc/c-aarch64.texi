@@ -324,6 +324,8 @@ automatically cause those extensions to be disabled.
  @tab Enable the SME2 F16F16 Extension.
 @item @code{sme-f64f64} @tab @code{sme}
  @tab Enable SME F64F64 Extension.
+@item @code{sme-fa64} @tab @code{sme}, @code{sve2}
+ @tab Enable SME F64F64 Extension.
 @item @code{sme-i16i64} @tab @code{sme}
  @tab Enable SME I16I64 Extension.
 @item @code{sme-lutv2} @tab
@@ -692,9 +694,10 @@ This undefines a register alias which was previously defined using the
         .unreq foo
 @end smallexample
 
-An error occurs if the name is undefined.  Note - this pseudo op can
-be used to delete builtin in register name aliases (eg 'w0').  This
-should only be done if it is really necessary.
+An error occurs if the name was not defined.  This directive can be used to
+undefine the built-in register aliases @code{ip0}, @code{ip1}, @code{lr} and
+@code{fp}, but this should only be done if it is really necessary.  Other
+built-in register names cannot be undefined.
 
 @c VVVVVVVVVVVVVVVVVVVVVVVVVV
 

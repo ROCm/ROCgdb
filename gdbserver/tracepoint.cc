@@ -585,8 +585,8 @@ enum tracepoint_type
   fast_tracepoint,
 };
 
-typedef enum eval_result_type (*condfn) (unsigned char *,
-					 ULONGEST *);
+using condfn = enum eval_result_type (*) (unsigned char *,
+					  ULONGEST *);
 
 /* The definition of a tracepoint.  */
 
@@ -5094,7 +5094,7 @@ fast_tracepoint_from_ipa_tpoint_address (CORE_ADDR ipa_tpoint_obj)
 /* The type of the object that is used to synchronize fast tracepoint
    collection.  */
 
-typedef struct collecting_t
+struct collecting_t
 {
   /* The fast tracepoint number currently collecting.  */
   uintptr_t tpoint;
@@ -5107,7 +5107,7 @@ typedef struct collecting_t
      register, which is readable with a single insn on several
      architectures.  */
   uintptr_t thread_area;
-} collecting_t;
+};
 
 #ifndef IN_PROCESS_AGENT
 
@@ -5420,10 +5420,10 @@ gdb_collect (struct tracepoint *tpoint, unsigned char *regs)
    results in returning the actual code pointer, instead of the descriptor
    pointer.  */
 
-typedef void (*gdb_collect_ptr_type) (struct tracepoint *, unsigned char *);
-typedef ULONGEST (*get_raw_reg_ptr_type) (const unsigned char *, int);
-typedef LONGEST (*get_trace_state_variable_value_ptr_type) (int);
-typedef void (*set_trace_state_variable_value_ptr_type) (int, LONGEST);
+using gdb_collect_ptr_type = void (*) (struct tracepoint *, unsigned char *);
+using get_raw_reg_ptr_type = ULONGEST (*) (const unsigned char *, int);
+using get_trace_state_variable_value_ptr_type = LONGEST (*) (int);
+using set_trace_state_variable_value_ptr_type = void (*) (int, LONGEST);
 
 extern "C" {
 IP_AGENT_EXPORT_VAR gdb_collect_ptr_type gdb_collect_ptr = gdb_collect;

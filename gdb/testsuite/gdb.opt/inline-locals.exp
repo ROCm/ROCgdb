@@ -42,9 +42,11 @@ if { ! $no_frames } {
 	"backtrace from bar 2"
     gdb_test "up" "#1  .*func1 .* at .*" "up from bar 2"
     gdb_test "info frame" ".*inlined into frame.*" "func1 inlined 2"
-    set pass_re "array = \\{0 <repeats 64 times>\\}"
+    set shadowed_pass_re "\t<$srcfile:$decimal>"
+    set shadowed_fail_re "\t<$srcfile:$decimal, shadowed>"
+    set pass_re "array = \\{0 <repeats 64 times>\\}($shadowed_pass_re)?"
     set kfail_re [multi_line $pass_re \
-		      "array = <optimized out>"]
+		      "array = <optimized out>$shadowed_fail_re"]
     gdb_test_multiple "info locals" "info locals above bar 2" {
 	-re -wrap $pass_re {
 	    pass $gdb_test_name
@@ -91,9 +93,9 @@ if { ! $no_frames } {
 	"backtrace from bar 3"
     gdb_test "up" "#1  .*func1 .* at .*" "up from bar 3"
     gdb_test "info frame" ".*inlined into frame.*" "func1 inlined 3"
-    set pass_re "array = {$decimal, \[^\r\n\]*}"
+    set pass_re "array = {$decimal, \[^\r\n\]*}($shadowed_pass_re)?"
     set kfail_re [multi_line $pass_re \
-		      "array = <optimized out>"]
+		      "array = <optimized out>$shadowed_fail_re"]
     gdb_test_multiple "info locals" "info locals above bar 3" {
 	-re -wrap $pass_re {
 	    pass $gdb_test_name
@@ -133,7 +135,8 @@ proc check_scoped_locals {bp_label pass_re} {
     gdb_breakpoint $srcfile:$locals_bp
 
     gdb_continue_to_breakpoint "$bp_label" ".*$srcfile:$locals_bp.*"
-    set kfail_re [multi_line $pass_re ".*<optimized out>"]
+    set kfail_re [multi_line $pass_re \
+		      ".*<optimized out>(.*<$srcfile:$::decimal, shadowed>)?"]
     gdb_test_multiple "info locals" "scoped info locals at $bp_label" {
 	-re -wrap $pass_re {
 	    pass $gdb_test_name
@@ -149,7 +152,9 @@ proc check_scoped_locals {bp_label pass_re} {
 }
 
 if {! $no_frames } {
-    check_scoped_locals "bp for locals 1" "loc2 = 20\r\nloc1 = 10"
-    check_scoped_locals "bp for locals 2" "loc3 = 30\r\nloc2 = 20\r\nloc1 = 10"
-    check_scoped_locals "bp for locals 3" "loc1 = 10"
+    check_scoped_locals "bp for locals 1" \
+	"loc2 = 20(\t<$srcfile:$decimal>)?\r\nloc1 = 10(\t<$srcfile:$decimal>)?"
+    check_scoped_locals "bp for locals 2" \
+	"loc3 = 30(\t<$srcfile:$decimal>)?\r\nloc2 = 20(\t<$srcfile:$decimal>)?\r\nloc1 = 10(\t<$srcfile:$decimal>)?"
+    check_scoped_locals "bp for locals 3" "loc1 = 10(\t<$srcfile:$decimal>)?"
 }

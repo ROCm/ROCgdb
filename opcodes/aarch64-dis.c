@@ -162,7 +162,6 @@ aarch64_insn
 extract_fields (aarch64_insn code, aarch64_insn mask, ...)
 {
   uint32_t num;
-  enum aarch64_field_kind kind;
   va_list va;
 
   va_start (va, mask);
@@ -171,9 +170,9 @@ extract_fields (aarch64_insn code, aarch64_insn mask, ...)
   aarch64_insn value = 0x0;
   while (num--)
     {
-      kind = va_arg (va, enum aarch64_field_kind);
-      value <<= aarch64_fields[kind].width;
-      value |= extract_field (kind, code, mask);
+      aarch64_field field = va_arg (va, aarch64_field);
+      value <<= field.width;
+      value |= extract_field (field, code, mask);
     }
   va_end (va);
   return value;
@@ -188,15 +187,14 @@ extract_all_fields_after (const aarch64_operand *self, unsigned int start,
 {
   aarch64_insn value;
   unsigned int i;
-  enum aarch64_field_kind kind;
 
   value = 0;
   for (i = start;
-       i < ARRAY_SIZE (self->fields) && self->fields[i] != FLD_NIL; ++i)
+       i < ARRAY_SIZE (self->fields) && self->fields[i].width != 0; ++i)
     {
-      kind = self->fields[i];
-      value <<= aarch64_fields[kind].width;
-      value |= extract_field (kind, code, 0);
+      aarch64_field field = self->fields[i];
+      value <<= field.width;
+      value |= extract_field (field, code, 0);
     }
   return value;
 }
@@ -607,7 +605,7 @@ aarch64_ext_ldst_elemlist (const aarch64_operand *self ATTRIBUTE_UNUSED,
 
   /* Decode the index, opcode<2:1> and size.  */
   gen_sub_field (FLD_asisdlso_opcode, 1, 2, &field);
-  opcodeh2 = extract_field_2 (&field, code, 0);
+  opcodeh2 = extract_field (field, code, 0);
   QSsize = extract_fields (code, 0, 3, FLD_Q, FLD_S, FLD_vldst_size);
   switch (opcodeh2)
     {
@@ -855,13 +853,13 @@ aarch64_ext_advsimd_imm_modified (const aarch64_operand *self ATTRIBUTE_UNUSED,
 	default: return false;
 	}
       /* 00: 0; 01: 8; 10:16; 11:24.  */
-      info->shifter.amount = extract_field_2 (&field, code, 0) << 3;
+      info->shifter.amount = extract_field (field, code, 0) << 3;
       break;
     case AARCH64_OPND_QLF_MSL:
       /* shift ones */
       info->shifter.kind = AARCH64_MOD_MSL;
       gen_sub_field (FLD_cmode, 0, 1, &field);		/* per word */
-      info->shifter.amount = extract_field_2 (&field, code, 0) ? 16 : 8;
+      info->shifter.amount = extract_field (field, code, 0) ? 16 : 8;
       break;
     default:
       return false;
@@ -1250,8 +1248,8 @@ aarch64_ext_addr_simm (const aarch64_operand *self, aarch64_opnd_info *info,
   /* simm (imm9 or imm7)  */
   imm = extract_field (self->fields[0], code, 0);
   info->addr.offset.imm
-    = sign_extend (imm, aarch64_fields[self->fields[0]].width - 1);
-  if (self->fields[0] == FLD_imm7
+    = sign_extend (imm, self->fields[0].width - 1);
+  if (self->fields[0].width == 7
       || info->qualifier == AARCH64_OPND_QLF_imm_tag)
     /* scaled immediate in ld/st pair instructions.  */
     info->addr.offset.imm *= aarch64_get_qualifier_esize (info->qualifier);
@@ -2563,7 +2561,7 @@ decode_sizeq (aarch64_inst *inst)
   int idx;
   aarch64_insn code;
   aarch64_insn value, mask;
-  enum aarch64_field_kind fld_sz;
+  aarch64_field fld_sz;
   enum aarch64_opnd_qualifier candidates[AARCH64_MAX_QLF_SEQ_NUM];
 
   if (inst->opcode->iclass == asisdlse
@@ -2632,7 +2630,7 @@ decode_asimd_fcvt (aarch64_inst *inst)
   enum aarch64_opnd_qualifier qualifier;
 
   gen_sub_field (FLD_size, 0, 1, &field);
-  value = extract_field_2 (&field, inst->value, 0);
+  value = extract_field (field, inst->value, 0);
   qualifier = value == 0 ? AARCH64_OPND_QLF_V_4S
     : AARCH64_OPND_QLF_V_2D;
   switch (inst->opcode->op)
@@ -2662,7 +2660,7 @@ decode_asisd_fcvtxn (aarch64_inst *inst)
 {
   aarch64_field field = AARCH64_FIELD_NIL;
   gen_sub_field (FLD_size, 0, 1, &field);
-  if (!extract_field_2 (&field, inst->value, 0))
+  if (!extract_field (field, inst->value, 0))
     return 0;
   inst->operands[0].qualifier = AARCH64_OPND_QLF_S_S;
   return 1;
@@ -2677,7 +2675,7 @@ decode_fcvt (aarch64_inst *inst)
   const aarch64_field field = AARCH64_FIELD (15, 2);
 
   /* opc dstsize */
-  value = extract_field_2 (&field, inst->value, 0);
+  value = extract_field (field, inst->value, 0);
   switch (value)
     {
     case 0: qualifier = AARCH64_OPND_QLF_S_S; break;
@@ -2713,41 +2711,46 @@ do_misc_decoding (aarch64_inst *inst)
 
     case OP_MOV_P_P:
     case OP_MOVS_P_P:
-      value = extract_field (FLD_SVE_Pn, inst->value, 0);
-      return (value == extract_field (FLD_SVE_Pm, inst->value, 0)
-	      && value == extract_field (FLD_SVE_Pg4_10, inst->value, 0));
+      /* ORR/ORRS alias with Pn == Pm == Pg.  */
+      value = extract_field (AARCH64_FIELD (5, 4), inst->value, 0);
+      return (value == extract_field (AARCH64_FIELD (16, 4), inst->value, 0)
+	      && value == extract_field (AARCH64_FIELD (10, 4),
+					 inst->value, 0));
 
     case OP_MOV_Z_P_Z:
-      return (extract_field (FLD_SVE_Zd, inst->value, 0)
-	      == extract_field (FLD_SVE_Zm_16, inst->value, 0));
+      /* SEL alias with Zd == Zm.  */
+      return (extract_field (AARCH64_FIELD (0, 5), inst->value, 0)
+	      == extract_field (AARCH64_FIELD (16, 5), inst->value, 0));
 
     case OP_MOV_Z_V:
-      /* Index must be zero.  */
-      value = extract_fields (inst->value, 0, 2, FLD_SVE_tszh, FLD_imm5);
-      return value > 0 && value <= 16 && value == (value & -value);
+      /* DUP alias with zero index.  Index and size use a triangle encoding,
+	 and we already know that one of the bottom 5 bits is nonzero, so we
+	 just need to check that the bitcount is at most 1.  */
+      value = extract_fields (inst->value, 0, 2, AARCH64_FIELD (22, 2),
+			      AARCH64_FIELD (16, 5));
+      return value == (value & -value);
 
     case OP_MOV_Z_Z:
-      return (extract_field (FLD_SVE_Zn, inst->value, 0)
-	      == extract_field (FLD_SVE_Zm_16, inst->value, 0));
-
-    case OP_MOV_Z_Zi:
-      /* Index must be nonzero.  */
-      value = extract_fields (inst->value, 0, 2, FLD_SVE_tszh, FLD_imm5);
-      return value > 0 && value != (value & -value);
+      /* ORR alias with Zn == Zm.  */
+      return (extract_field (AARCH64_FIELD (5, 5), inst->value, 0)
+	      == extract_field (AARCH64_FIELD (16, 5), inst->value, 0));
 
     case OP_MOVM_P_P_P:
-      return (extract_field (FLD_SVE_Pd, inst->value, 0)
-	      == extract_field (FLD_SVE_Pm, inst->value, 0));
+      /* SEL alias with Pd == Pm.  */
+      return (extract_field (AARCH64_FIELD (0, 4), inst->value, 0)
+	      == extract_field (AARCH64_FIELD (16, 4), inst->value, 0));
 
     case OP_MOVZS_P_P_P:
     case OP_MOVZ_P_P_P:
-      return (extract_field (FLD_SVE_Pn, inst->value, 0)
-	      == extract_field (FLD_SVE_Pm, inst->value, 0));
+      /* AND/ANDS alias with Pn == Pm.  */
+      return (extract_field (AARCH64_FIELD (5, 4), inst->value, 0)
+	      == extract_field (AARCH64_FIELD (16, 4), inst->value, 0));
 
     case OP_NOTS_P_P_P_Z:
     case OP_NOT_P_P_P_Z:
-      return (extract_field (FLD_SVE_Pm, inst->value, 0)
-	      == extract_field (FLD_SVE_Pg4_10, inst->value, 0));
+      /* EOR/EORS alias with Pm == Pg.  */
+      return (extract_field (AARCH64_FIELD (16, 4), inst->value, 0)
+	      == extract_field (AARCH64_FIELD (10, 4), inst->value, 0));
 
     default:
       return 0;
@@ -2957,7 +2960,7 @@ do_special_decoding (aarch64_inst *inst)
       assert (aarch64_get_operand_class (inst->opcode->operands[0])
 	      == AARCH64_OPND_CLASS_INT_REG);
       gen_sub_field (FLD_opc, 0, 1, &field);
-      value = extract_field_2 (&field, inst->value, 0);
+      value = extract_field (field, inst->value, 0);
       inst->operands[0].qualifier
 	= value ? AARCH64_OPND_QLF_W : AARCH64_OPND_QLF_X;
     }

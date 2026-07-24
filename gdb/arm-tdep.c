@@ -14537,7 +14537,7 @@ class instruction_reader : public abstract_instruction_reader
 
 } // namespace
 
-typedef int (*sti_arm_hdl_fp_t) (arm_insn_decode_record*);
+using sti_arm_hdl_fp_t = int (*) (arm_insn_decode_record*);
 
 /* Decode arm/thumb insn depending on condition cods and opcodes; and
    dispatch it.  */

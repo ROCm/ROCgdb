@@ -5618,8 +5618,8 @@ append_composite_type_field (struct type *t, const char *name,
    hash the contents of an mpq_t; so it's a bit of a pain to hash-cons
    them.  If we did do this, they could be moved to the per-BFD and
    shared across objfiles.  */
-typedef std::vector<std::unique_ptr<fixed_point_type_info>>
-    fixed_point_type_storage;
+using fixed_point_type_storage
+  = std::vector<std::unique_ptr<fixed_point_type_info>>;
 
 /* Key used for managing the storage of fixed-point type info.  */
 static const struct registry<objfile>::key<fixed_point_type_storage>

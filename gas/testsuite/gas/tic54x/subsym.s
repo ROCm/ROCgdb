@@ -1,6 +1,6 @@
 *
 * String substitution symbols
-*			
+*
 	; if no quotes, interpret as subsymbol
 	; if quotes, interpret as string, and do forced substitution
 	.sslist
@@ -10,17 +10,17 @@
 	.global label, x
 	.word	x
 
-* Substitution symbol functions	
+* Substitution symbol functions
 label:	.word	$symlen(SYMBOL)		; 5, substitutes string for symbol
 	.word	$symlen(":SYMBOL:")	; 5, forced substitution
 	.word	$symlen("SYMBOL")	; 6, uses string directly
 
 	.word	$symcmp(SYMBOL,"value")		; 0
-	
+
 	; requires 2nd arg to be a character; zero if not found
 	.word	$firstch(":SYMBOL:",'a')	; 2
 	.word	$lastch(SYMBOL,'a')		; 2
-	
+
 	.word	$isdefed(SYMBOL)		; 0 (value not in symtab)
 	.word	$isdefed("label")		; 1 (string contents in symtab)
 	.word	$isdefed("unknown")		; 0
@@ -38,15 +38,15 @@ label:	.word	$symlen(SYMBOL)		; 5, substitutes string for symbol
 	.word	$iscons("'a'")			; 4
 	.word	$iscons(SYMBOL)			; 5 ("1")
 	.word	$iscons("SYMBOL")		; 0
-	
+
 	.word	$isname(SYMBOL)			; 0
 
 	.word	$isreg(SYMBOL)			; 0
 	.word	$isreg("AR0")			;
-;	.word	$isreg("AG")			; should be 0, but we always 
-						; use mmregs 
+;	.word	$isreg("AG")			; should be 0, but we always
+						; use mmregs
 	.mmregs
-x       .word   $isreg("AG")                    ; 1 if .mmregs, 0 otherwise
+x       .word   $isreg("AG")			; 1 if .mmregs, 0 otherwise
 tag	.struct 10
 	.word	1
 	.endstruct

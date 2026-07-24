@@ -2,7 +2,7 @@
 .*:[0-9]+: Error: .\(%cr0\). is not a valid base/index expression
 .*:[0-9]+: Error: .\(%cr7\). is not a valid base/index expression
 .*:[0-9]+: Error: .\(%cr8\). is not a valid base/index expression
-.*:[0-9]+: Error: .\(%cr15\). is not a valid base/index expression
+.*:[0-9]+: Error: bad register name `%cr15.*'
 .*:[0-9]+: Error: .\(%db0\). is not a valid base/index expression
 .*:[0-9]+: Error: .\(%db7\). is not a valid base/index expression
 .*:[0-9]+: Error: .\(%dr0\). is not a valid base/index expression
@@ -12,7 +12,6 @@
 .*:[0-9]+: Error: .\(cr0\). is not a valid base/index expression
 .*:[0-9]+: Error: .\(cr7\). is not a valid base/index expression
 .*:[0-9]+: Error: .\(cr8\). is not a valid base/index expression
-.*:[0-9]+: Error: .\(cr15\). is not a valid base/index expression
 .*:[0-9]+: Error: .\(db0\). is not a valid base/index expression
 .*:[0-9]+: Error: .\(db7\). is not a valid base/index expression
 .*:[0-9]+: Error: .\(dr0\). is not a valid base/index expression
@@ -22,7 +21,6 @@
 .*:[0-9]+: Error: .\[cr0\]. is not a valid base/index expression
 .*:[0-9]+: Error: .\[cr7\]. is not a valid base/index expression
 .*:[0-9]+: Error: .\[cr8\]. is not a valid base/index expression
-.*:[0-9]+: Error: .\[cr15\]. is not a valid base/index expression
 .*:[0-9]+: Error: .\[dr0\]. is not a valid base/index expression
 .*:[0-9]+: Error: .\[dr7\]. is not a valid base/index expression
 .*:[0-9]+: Error: .\[tr0\]. is not a valid base/index expression

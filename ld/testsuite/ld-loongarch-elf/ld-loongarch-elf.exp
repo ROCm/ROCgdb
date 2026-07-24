@@ -19,8 +19,11 @@
 # MA 02110-1301, USA.
 #
 
+if [istarget loongarch*-*-*] {
+  run_dump_test "dtprel"
+}
+
 if [istarget "loongarch64-*-*"] {
-    run_dump_test "jmp_op"
     run_dump_test "macro_op"
     run_dump_test "syscall"
     run_dump_test "disas-jirl"
@@ -58,7 +61,6 @@ if [istarget "loongarch64-*-*"] {
 }
 
 if [istarget "loongarch32-*-*"] {
-    run_dump_test "jmp_op"
     run_dump_test "macro_op_32"
     run_dump_test "syscall"
     run_dump_test "disas-jirl-32"

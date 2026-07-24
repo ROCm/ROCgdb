@@ -189,7 +189,7 @@ Little-Endian:
      VR0           VR31     VSCR    VRSAVE
 */
 
-typedef char gdb_vrregset_t[PPC_LINUX_SIZEOF_VRREGSET];
+using gdb_vrregset_t = char[PPC_LINUX_SIZEOF_VRREGSET];
 
 /* This is the layout of the POWER7 VSX registers and the way they overlap
    with the existing FPR and VMX registers.
@@ -223,7 +223,7 @@ typedef char gdb_vrregset_t[PPC_LINUX_SIZEOF_VRREGSET];
    the FP registers (doubleword 0) and hence extend them with additional
    64 bits (doubleword 1).  The other 32 regs overlap with the VMX
    registers.  */
-typedef char gdb_vsxregset_t[PPC_LINUX_SIZEOF_VSXREGSET];
+using gdb_vsxregset_t = char[PPC_LINUX_SIZEOF_VSXREGSET];
 
 /* On PPC processors that support the Signal Processing Extension
    (SPE) APU, the general-purpose registers are 64 bits long.

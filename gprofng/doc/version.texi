@@ -1,4 +1,4 @@
-@set UPDATED 1 January 2026
-@set UPDATED-MONTH January 2026
-@set EDITION 2.46.50
-@set VERSION 2.46.50
+@set UPDATED 9 February 2026
+@set UPDATED-MONTH February 2026
+@set EDITION 2.47.50
+@set VERSION 2.47.50

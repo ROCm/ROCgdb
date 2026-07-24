@@ -361,11 +361,11 @@ tui_data_window::check_register_values (const frame_info_ptr &frame)
     {
       for (tui_register_info &data_item_win : m_regs_content)
 	{
-	  bool was_hilighted = data_item_win.highlighted ();
+	  bool was_highlighted = data_item_win.highlighted ();
 
 	  data_item_win.update (frame);
 
-	  if ((data_item_win.highlighted () || was_hilighted)
+	  if ((data_item_win.highlighted () || was_highlighted)
 	      && data_item_win.visible ())
 	    data_item_win.rerender (handle.get (), m_item_width);
 	}

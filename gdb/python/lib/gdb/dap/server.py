@@ -213,7 +213,7 @@ class CancellationHandler:
                 heapq.heappush(self._reqs, req)
 
     @contextmanager
-    def interruptable_region(self, req):
+    def interruptible_region(self, req):
         """Return a new context manager that sets in_flight_gdb_thread to
         REQ."""
         if req is None:
@@ -672,7 +672,7 @@ class Cancellable(object):
     @in_gdb_thread
     def __call__(self):
         try:
-            with _server.canceller.interruptable_region(self.req):
+            with _server.canceller.interruptible_region(self.req):
                 val = self._fn()
                 if self._result_q is not None:
                     self._result_q.put(val)

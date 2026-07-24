@@ -470,8 +470,7 @@ crisv32_single_step_through_delay (struct gdbarch *gdbarch,
 
 /* The instruction environment needed to find single-step breakpoints.  */
 
-typedef
-struct instruction_environment
+using inst_env_type = struct instruction_environment
 {
   unsigned long reg[NUM_GENREGS];
   unsigned long preg[NUM_SPECREGS];
@@ -486,7 +485,7 @@ struct instruction_environment
   int   xflag_found;
   int   disable_interrupt;
   enum bfd_endian byte_order;
-} inst_env_type;
+};
 
 /* Machine-dependencies in CRIS for opcodes.  */
 
@@ -3750,14 +3749,14 @@ cris_gdb_func (struct gdbarch *gdbarch, enum cris_op_type op_type,
 }
 
 /* Originally from <asm/elf.h>.  */
-typedef unsigned char cris_elf_greg_t[4];
+using cris_elf_greg_t = unsigned char[4];
 
 /* Same as user_regs_struct struct in <asm/user.h>.  */
 #define CRISV10_ELF_NGREG 35
-typedef cris_elf_greg_t cris_elf_gregset_t[CRISV10_ELF_NGREG];
+using cris_elf_gregset_t = cris_elf_greg_t[CRISV10_ELF_NGREG];
 
 #define CRISV32_ELF_NGREG 32
-typedef cris_elf_greg_t crisv32_elf_gregset_t[CRISV32_ELF_NGREG];
+using crisv32_elf_gregset_t = cris_elf_greg_t[CRISV32_ELF_NGREG];
 
 /* Unpack a cris_elf_gregset_t into GDB's register cache.  */
 

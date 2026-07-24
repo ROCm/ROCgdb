@@ -42,18 +42,18 @@ struct regcache;
 
 /* A generic base address.  */
 
-typedef CORE_ADDR (frame_this_base_ftype) (const frame_info_ptr &this_frame,
-					   void **this_base_cache);
+using frame_this_base_ftype = CORE_ADDR (const frame_info_ptr &this_frame,
+					 void **this_base_cache);
 
 /* The base address of the frame's local variables.  */
 
-typedef CORE_ADDR (frame_this_locals_ftype) (const frame_info_ptr &this_frame,
-					     void **this_base_cache);
+using frame_this_locals_ftype = CORE_ADDR (const frame_info_ptr &this_frame,
+					   void **this_base_cache);
 
 /* The base address of the frame's arguments / parameters.  */
 
-typedef CORE_ADDR (frame_this_args_ftype) (const frame_info_ptr &this_frame,
-					   void **this_base_cache);
+using frame_this_args_ftype = CORE_ADDR (const frame_info_ptr &this_frame,
+					 void **this_base_cache);
 
 struct frame_base
 {
@@ -68,7 +68,7 @@ struct frame_base
 /* Given THIS frame, return the frame base methods for THIS frame,
    or NULL if it can't handle THIS frame.  */
 
-typedef const struct frame_base *(frame_base_sniffer_ftype) (const frame_info_ptr &this_frame);
+using frame_base_sniffer_ftype = const struct frame_base * (const frame_info_ptr &this_frame);
 
 /* Append a frame base sniffer to the list.  The sniffers are polled
    in the order that they are appended.  */

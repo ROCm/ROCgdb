@@ -335,10 +335,10 @@ struct macro_source_file *macro_definition_location
    is the name of the macro, and DEFINITION is the definition.  SOURCE
    is the file at the start of the include path, and LINE is the line
    number of the SOURCE file where the macro was defined.  */
-typedef void (macro_callback_fn) (const char *name,
-				  const struct macro_definition *definition,
-				  struct macro_source_file *source,
-				  int line);
+using macro_callback_fn = void (const char *name,
+				const struct macro_definition *definition,
+				struct macro_source_file *source,
+				int line);
 
 /* Call the callable FN for each macro in the macro table TABLE.  */
 void macro_for_each (struct macro_table *table,

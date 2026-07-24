@@ -199,7 +199,7 @@ public:
 private:
 
   /* Registry callbacks have this type.  */
-  typedef void (*registry_data_callback) (void *);
+  using registry_data_callback = void (*) (void *);
 
   /* Get a new key for this particular registry.  FREE is a callback.
      When the container object is destroyed, all FREE functions are

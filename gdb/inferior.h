@@ -92,8 +92,8 @@ struct infcall_suspend_state_deleter
 };
 
 /* A unique_ptr specialization for infcall_suspend_state.  */
-typedef std::unique_ptr<infcall_suspend_state, infcall_suspend_state_deleter>
-    infcall_suspend_state_up;
+using infcall_suspend_state_up
+  = std::unique_ptr<infcall_suspend_state, infcall_suspend_state_deleter>;
 
 extern infcall_suspend_state_up save_infcall_suspend_state ();
 
@@ -108,8 +108,8 @@ struct infcall_control_state_deleter
 };
 
 /* A unique_ptr specialization for infcall_control_state.  */
-typedef std::unique_ptr<infcall_control_state, infcall_control_state_deleter>
-    infcall_control_state_up;
+using infcall_control_state_up
+  = std::unique_ptr<infcall_control_state, infcall_control_state_deleter>;
 
 extern infcall_control_state_up save_infcall_control_state ();
 
@@ -173,7 +173,7 @@ extern tribool sharing_input_terminal (int pid);
 
 /* The type of the function that is called when SIGINT is handled.  */
 
-typedef void c_c_handler_ftype (int);
+using c_c_handler_ftype = void (int);
 
 /* Install a new SIGINT handler in a host-dependent way.  The previous
    handler is returned.  It is fine to pass SIG_IGN for FN, but not
@@ -225,7 +225,7 @@ extern void attach_command (const char *, int);
 
 extern void registers_info (const char *, bool);
 
-extern void continue_1 (int all_threads);
+extern void continue_1 (bool all_threads_p);
 
 extern void interrupt_target_1 (bool all_threads);
 

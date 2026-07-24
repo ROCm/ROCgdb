@@ -890,7 +890,7 @@ xtensa_iterate_over_regset_sections (struct gdbarch *gdbarch,
 #define XTENSA_NUM_SAVED_AREGS		12
 
 /* Frame cache part for Windowed ABI.  */
-typedef struct xtensa_windowed_frame_cache
+using xtensa_windowed_frame_cache_t = struct xtensa_windowed_frame_cache
 {
   int wb;		/* WINDOWBASE of the previous frame.  */
   int callsize;		/* Call size of this frame.  */
@@ -902,7 +902,7 @@ typedef struct xtensa_windowed_frame_cache
    /* Addresses of spilled A-registers.
       AREGS[i] == -1, if corresponding AR is alive.  */
   CORE_ADDR aregs[XTENSA_NUM_SAVED_AREGS];
-} xtensa_windowed_frame_cache_t;
+};
 
 /* Call0 ABI Definitions.  */
 
@@ -928,17 +928,17 @@ typedef struct xtensa_windowed_frame_cache
 
 extern xtensa_isa xtensa_default_isa;
 
-typedef struct xtensa_c0reg
+using xtensa_c0reg_t = struct xtensa_c0reg
 {
   int fr_reg;  /* original register from which register content
 		  is derived, or C0_CONST, or C0_INEXP.  */
   int fr_ofs;  /* constant offset from reg, or immediate value.  */
   int to_stk;  /* offset from original SP to register (4-byte aligned),
 		  or C0_NOSTK if register has not been saved.  */
-} xtensa_c0reg_t;
+};
 
 /* Frame cache part for Call0 ABI.  */
-typedef struct xtensa_call0_frame_cache
+using xtensa_call0_frame_cache_t = struct xtensa_call0_frame_cache
 {
   int c0_frmsz;			   /* Stack frame size.  */
   int c0_hasfp;			   /* Current frame uses frame pointer.  */
@@ -954,9 +954,9 @@ typedef struct xtensa_call0_frame_cache
 				      stack offset. C0_NOSTK otherwise.  */
 
   xtensa_c0reg_t c0_rt[C0_NREGS];  /* Register tracking information.  */
-} xtensa_call0_frame_cache_t;
+};
 
-typedef struct xtensa_frame_cache
+using xtensa_frame_cache_t = struct xtensa_frame_cache
 {
   CORE_ADDR base;	/* Stack pointer of this frame.  */
   CORE_ADDR pc;		/* PC of this frame at the function entry point.  */
@@ -969,7 +969,7 @@ typedef struct xtensa_frame_cache
       xtensa_windowed_frame_cache_t	wd;	/* call0 == false.  */
       xtensa_call0_frame_cache_t       	c0;	/* call0 == true.  */
     };
-} xtensa_frame_cache_t;
+};
 
 
 static struct xtensa_frame_cache *

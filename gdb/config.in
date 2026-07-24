@@ -250,6 +250,9 @@
 /* Define to 1 if you have the `iconvlist' function. */
 #undef HAVE_ICONVLIST
 
+/* Define to 1 if you have the `init_extended_pair' function. */
+#undef HAVE_INIT_EXTENDED_PAIR
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 

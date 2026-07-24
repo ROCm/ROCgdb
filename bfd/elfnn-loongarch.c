@@ -139,6 +139,10 @@ struct loongarch_elf_link_hash_table
   /* Pending relaxation (byte deletion) operations meant for roughly
      sequential access.  */
   splay_tree pending_delete_ops;
+
+  /* If any input contains a reloc potentially removing bytes, i.e.
+     R_LARCH_ALIGN or R_LARCH_RELAX.  */
+  bool reloc_may_remove_bytes;
 };
 
 struct loongarch_elf_section_data
@@ -1109,10 +1113,26 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
   const Elf_Internal_Rela *rel;
   asection *sreloc = NULL;
 
-  if (bfd_link_relocatable (info))
-    return true;
-
   htab = loongarch_elf_hash_table (info);
+
+  if (bfd_link_relocatable (info))
+    {
+      if (!htab->reloc_may_remove_bytes)
+	for (rel = relocs; rel < relocs + sec->reloc_count; rel++)
+	  switch (ELFNN_R_TYPE (rel->r_info))
+	    {
+	    case R_LARCH_ALIGN:
+	    case R_LARCH_RELAX:
+	      htab->reloc_may_remove_bytes = true;
+	      return true;
+	    default:
+	      continue;
+	    }
+
+      /* No need for more checks with ld -r.  */
+      return true;
+    }
+
   symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
@@ -3822,48 +3842,11 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 
 	case R_LARCH_TLS_DTPREL32:
 	case R_LARCH_TLS_DTPREL64:
-	  if (resolved_dynly)
-	    {
-	      Elf_Internal_Rela outrel;
-
-	      outrel.r_offset = _bfd_elf_section_offset (info->output_bfd, info,
-							 input_section,
-							 rel->r_offset);
-	      unresolved_reloc = (!((bfd_vma) -2 <= outrel.r_offset)
-				  && (input_section->flags & SEC_ALLOC));
-	      outrel.r_info = ELFNN_R_INFO (h->dynindx, r_type);
-	      outrel.r_offset += sec_addr (input_section);
-	      outrel.r_addend = rel->r_addend;
-	      if (unresolved_reloc)
-		loongarch_elf_append_rela (info->output_bfd, sreloc, &outrel);
-	      break;
-	    }
-
-	  if (resolved_to_const)
-	    fatal = loongarch_reloc_is_fatal (info, input_bfd, input_section,
-					      rel, howto,
-					      bfd_reloc_notsupported,
-					      is_undefweak, name,
-					      "Internal:");
-	  if (resolved_local)
-	    {
-	      if (!elf_hash_table (info)->tls_sec)
-		{
-		fatal = loongarch_reloc_is_fatal (info, input_bfd,
-			  input_section, rel, howto, bfd_reloc_notsupported,
-			  is_undefweak, name, "TLS section not be created");
-		}
-	      else
-		relocation = tlsoff (info, relocation);
-	    }
-	  else
-	    {
-	    fatal = loongarch_reloc_is_fatal (info, input_bfd,
-		      input_section, rel, howto, bfd_reloc_undefined,
-		      is_undefweak, name,
-		      "TLS LE just can be resolved local only.");
-	    }
-
+	  /* GCC version <= 16.1 output extra addend 0x8000 in
+	     loongarch_output_dwarf_dtprel.  Add the addend here
+	     wuold cause problems for TLS debug info.  */
+	  relocation = tlsoff (info, relocation);
+	  unresolved_reloc = false;
 	  break;
 
 	case R_LARCH_SOP_PUSH_TLS_TPREL:
@@ -7135,7 +7118,14 @@ elfNN_loongarch_size_aligns (bfd *output_bfd,
 					  (const char *, asection *),
 			     void (*layout_sections_again) (void))
 {
+
+  struct loongarch_elf_link_hash_table *htab;
   bool need_laying_out = false;
+
+  htab = loongarch_elf_hash_table (info);
+  if (!htab->reloc_may_remove_bytes)
+    return true;
+
   for (bfd *input_bfd = info->input_bfds; input_bfd != NULL;
        input_bfd = input_bfd->link.next)
     {

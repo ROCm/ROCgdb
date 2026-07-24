@@ -31,15 +31,15 @@ enum svr4_tls_libc
 
 /* Function type for "get_tls_dtv_addr" method.  */
 
-typedef CORE_ADDR (get_tls_dtv_addr_ftype) (struct gdbarch *gdbarch,
-					    ptid_t ptid,
-					    enum svr4_tls_libc libc);
+using get_tls_dtv_addr_ftype = CORE_ADDR (struct gdbarch *gdbarch,
+					  ptid_t ptid,
+					  enum svr4_tls_libc libc);
 
 /* Function type for "get_tls_dtp_offset" method.  */
 
-typedef CORE_ADDR (get_tls_dtp_offset_ftype) (struct gdbarch *gdbarch,
-					      ptid_t ptid,
-					      enum svr4_tls_libc libc);
+using get_tls_dtp_offset_ftype = CORE_ADDR (struct gdbarch *gdbarch,
+					    ptid_t ptid,
+					    enum svr4_tls_libc libc);
 
 /* Register architecture specific methods for fetching the TLS DTV
    and TLS DTP, used by linux_get_thread_local_address.  */

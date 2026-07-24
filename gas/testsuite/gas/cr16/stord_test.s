@@ -1,5 +1,5 @@
-        .text
-        .global main
+	.text
+	.global main
 main:
 	######################
 	#  stord abs20/24 regp
@@ -28,7 +28,7 @@ main:
 	stord (r2,r1),[r12]0x4567
 	stord (r2,r1),[r13]0xA1234
 	###################################
-	#  stord regp rbase(disp20/-disp20)  
+	#  stord regp rbase(disp20/-disp20)
 	###################################
 	stord (r2,r1),0x4(r1,r0)
 	stord (r3,r2),0x4(r3,r2)
@@ -41,7 +41,7 @@ main:
 	stord (r5,r4),-0x1234(r3,r2)
 	stord (r6,r5),-0xA1234(r1,r0)
 	#################################################
-	#  stord regp rpbase(disp4/disp16/disp20/-disp20) 
+	#  stord regp rpbase(disp4/disp16/disp20/-disp20)
 	#################################################
 	stord (r1,r0),0x0(r1,r0)
 	stord (r1,r0),0x0(r1,r0)

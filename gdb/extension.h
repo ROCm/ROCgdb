@@ -41,21 +41,21 @@ struct program_space;
 /* A function to load and process a script file.
    The file has been opened and is ready to be read from the beginning.
    Any exceptions are not caught, and are passed to the caller.  */
-typedef void script_sourcer_func (const struct extension_language_defn *,
+using script_sourcer_func = void (const struct extension_language_defn *,
 				  FILE *stream, const char *filename);
 
 /* A function to load and process a script for an objfile.
    The file has been opened and is ready to be read from the beginning.
    Any exceptions are not caught, and are passed to the caller.  */
-typedef void objfile_script_sourcer_func
-  (const struct extension_language_defn *,
-   struct objfile *, FILE *stream, const char *filename);
+using objfile_script_sourcer_func
+  = void (const struct extension_language_defn *,
+	  struct objfile *, FILE *stream, const char *filename);
 
 /* A function to execute a script for an objfile.
    Any exceptions are not caught, and are passed to the caller.  */
-typedef void objfile_script_executor_func
-  (const struct extension_language_defn *,
-   struct objfile *, const char *name, const char *script);
+using objfile_script_executor_func
+  = void (const struct extension_language_defn *,
+	  struct objfile *, const char *name, const char *script);
 
 /* Enum of each extension(/scripting) language.  */
 

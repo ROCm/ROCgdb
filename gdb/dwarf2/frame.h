@@ -67,8 +67,8 @@ enum dwarf2_frame_reg_rule
 
 /* Register state.  */
 
-typedef struct value *(*fn_prev_register) (const frame_info_ptr &this_frame,
-					   void **this_cache, int regnum);
+using fn_prev_register = struct value *(*) (const frame_info_ptr &this_frame,
+					    void **this_cache, int regnum);
 
 struct dwarf2_frame_state_reg
 {

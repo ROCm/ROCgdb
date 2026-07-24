@@ -1,11 +1,11 @@
-*	
+*
 * Math built-in functions
 *
 	.float	$acos(0.0)
 	.float	$asin(0.0)
 	.float	$atan(0.0)
 	.float	$atan2(1.0,2.0)
-        .float  $ceil(1.5)
+	.float	$ceil(1.5)
 	.float	$cosh(0.0)
 	.float	$cos(0.0)
 	.float	$cvf(1)
@@ -13,8 +13,8 @@
 	.int	$cvi(-2.5)
 	.float	$exp(1.0)
 	.float	$fabs(-2.5)
-        .float  $floor(3.4)
-        .float  $fmod(10,4)
+	.float	$floor(3.4)
+	.float	$fmod(10,4)
 	.int	$int(1.2)
 	.float	$ldexp(1,2)
 	.float	$log10(1.0)
@@ -22,8 +22,8 @@
 	.float	$max(1.0,2.0)
 	.float	$min(1.0,2.0)
 	.float	$pow(2.0,3.0)
-        .float  $round(4.5)
-        .float  $round(-4.5)
+	.float	$round(4.5)
+	.float	$round(-4.5)
 	.int	$sgn(-1.0)
 	.int	$sgn(0)
 	.int	$sgn(1)
@@ -32,6 +32,6 @@
 	.float	$sqrt(1.0)
 	.float	$tan(0.0)
 	.float	$tanh(0.0)
-        .float  $trunc(-1.5)
-        .float  $trunc(1.5)
+	.float	$trunc(-1.5)
+	.float	$trunc(1.5)
 	.end

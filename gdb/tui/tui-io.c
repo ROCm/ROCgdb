@@ -265,10 +265,6 @@ get_color (const ui_file_style::color &color, int *result)
   return true;
 }
 
-/* The most recently emitted color pair.  */
-
-static int last_color_pair = -1;
-
 /* The most recently applied style.  */
 
 static ui_file_style last_style;
@@ -299,7 +295,11 @@ get_color_pair (int fg, int bg)
 	 back to the default if we've used too many.  */
       if (next >= COLOR_PAIRS)
 	return 0;
+#ifdef HAVE_INIT_EXTENDED_PAIR
+      init_extended_pair (next, fg, bg);
+#else
       init_pair (next, fg, bg);
+#endif
       color_pair_map[c] = next;
       return next;
     }
@@ -320,9 +320,8 @@ tui_apply_style (WINDOW *w, ui_file_style style)
 #endif
   wattroff (w, A_UNDERLINE);
   wattroff (w, A_REVERSE);
-  if (last_color_pair != -1)
-    wattroff (w, COLOR_PAIR (last_color_pair));
-  wattron (w, COLOR_PAIR (0));
+
+  wcolor_set (w, 0, nullptr);
 
   const ui_file_style::color &fg = style.get_foreground ();
   const ui_file_style::color &bg = style.get_background ();
@@ -342,10 +341,11 @@ tui_apply_style (WINDOW *w, ui_file_style style)
 	    bgi = (ncurses_norm_attr >> 4) & 15;
 #endif
 	  int pair = get_color_pair (fgi, bgi);
-	  if (last_color_pair != -1)
-	    wattroff (w, COLOR_PAIR (last_color_pair));
-	  wattron (w, COLOR_PAIR (pair));
-	  last_color_pair = pair;
+#ifdef HAVE_INIT_EXTENDED_PAIR
+	  wcolor_set (w, 0, &pair);
+#else
+	  wcolor_set (w, pair, nullptr);
+#endif
 	}
     }
 
@@ -907,7 +907,6 @@ tui_setup_io (int mode)
       savetty ();
 
       /* Clean up color information.  */
-      last_color_pair = -1;
       last_style = ui_file_style ();
       color_map.clear ();
       color_pair_map.clear ();

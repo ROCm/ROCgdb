@@ -36944,7 +36944,7 @@ aarch64_find_alias_opcode (const aarch64_opcode *opcode)
       value = A64_OPID_05203800_mov_SVE_Zd_Rn_SP;
       break;
     case A64_OPID_05202000_dup_SVE_Zd_SVE_Zn_INDEX:
-      value = A64_OPID_05202000_mov_SVE_Zd_SVE_Zn_INDEX;
+      value = A64_OPID_05202000_mov_SVE_Zd_SVE_VZn;
       break;
     case A64_OPID_2538c000_dup_SVE_Zd_SVE_ASIMM:
       value = A64_OPID_2538c000_fmov_SVE_Zd_FPIMM0;
@@ -37635,10 +37635,10 @@ aarch64_find_next_alias_opcode (const aarch64_opcode *opcode)
     case A64_OPID_05203800_mov_SVE_Zd_Rn_SP:
       value = A64_OPID_05203800_dup_SVE_Zd_Rn_SP;
       break;
-    case A64_OPID_05202000_mov_SVE_Zd_SVE_Zn_INDEX:
-      value = A64_OPID_05202000_mov_SVE_Zd_SVE_VZn;
-      break;
     case A64_OPID_05202000_mov_SVE_Zd_SVE_VZn:
+      value = A64_OPID_05202000_mov_SVE_Zd_SVE_Zn_INDEX;
+      break;
+    case A64_OPID_05202000_mov_SVE_Zd_SVE_Zn_INDEX:
       value = A64_OPID_05202000_dup_SVE_Zd_SVE_Zn_INDEX;
       break;
     case A64_OPID_2538c000_fmov_SVE_Zd_FPIMM0:

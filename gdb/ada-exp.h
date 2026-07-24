@@ -372,10 +372,10 @@ protected:
   using operation::do_generate_ax;
 };
 
-typedef struct value *ada_atr_ftype (struct expression *exp,
-				     enum noside noside,
-				     struct type *type,
-				     struct value *arg);
+using ada_atr_ftype = struct value * (struct expression *exp,
+				      enum noside noside,
+				      struct type *type,
+				      struct value *arg);
 
 /* Implement several Ada attributes.  */
 template<ada_atr_ftype FUNC>

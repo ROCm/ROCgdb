@@ -32,6 +32,8 @@
 #include "mi-parse.h"
 #include <optional>
 #include "inferior.h"
+#include "source.h"
+#include "gdbsupport/unordered_map.h"
 
 enum what_to_list { locals, arguments, all };
 
@@ -490,7 +492,9 @@ mi_cmd_stack_list_variables (const char *command, const char *const *argv,
 static void
 list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
 		   enum print_values values, int skip_unavailable,
-		   const frame_print_options &fp_opts)
+		   const frame_print_options &fp_opts,
+		   const gdb::unordered_set<std::string> *shadowed_vars,
+		   gdb::unordered_set<std::string> &printed_vars)
 {
   struct ui_out *uiout = current_uiout;
 
@@ -514,11 +518,24 @@ list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
 					     arg->val->type ()->length ()))))
     return;
 
+  string_file stb;
+  const char *name = arg->sym->print_name ();
+  /* To distinguish innermost variable from the rest in the shadowed_vars
+     this boolean is needed.  */
+  bool already_printed = !printed_vars.insert (name).second;
+  bool shadowed = shadowed_vars->find (name) != shadowed_vars->end ();
+
+  /* In case of Rust language it is possible to declare variable with
+     same name multiple times and only latest declaration of variable
+     is accessible.  So print only the first instance and there is no
+     need of printing duplicates.  */
+  if (get_lang_vars_shadowing_option (current_language->la_language)
+      == lang_vars_shadowing::HIDE && shadowed && already_printed)
+    return;
+
   std::optional<ui_out_emit_tuple> tuple_emitter;
   if (values != PRINT_NO_VALUES || what == all)
     tuple_emitter.emplace (uiout, nullptr);
-
-  string_file stb;
 
   stb.puts (arg->sym->print_name ());
   if (arg->entry_kind == print_entry_values_only)
@@ -560,6 +577,67 @@ list_arg_or_local (const struct frame_arg *arg, enum what_to_list what,
 	}
       uiout->field_stream ("value", stb);
     }
+
+  /* Only for C/C++/Fortran/Ada languages, in case of variables shadowing
+     print shadowed field after the superblock variable and only location
+     of the variables in the innerblock.  */
+  if (get_lang_vars_shadowing_option (current_language->la_language)
+      == lang_vars_shadowing::PRINT && shadowed
+      && !(values == PRINT_NO_VALUES && what == locals))
+    {
+      if (arg->sym->symtab () != nullptr)
+	{
+	  symtab *symtab = arg->sym->symtab ();
+
+	  uiout->field_string ("filename",
+			       symtab_to_filename_for_display (symtab));
+	  uiout->field_string ("fullname", symtab_to_fullname (symtab));
+	  uiout->field_unsigned ("line", arg->sym->line ());
+	}
+
+      if (already_printed)
+	uiout->field_string ("shadowed", "true");
+    }
+}
+
+/* Returns true if address_class can be printed, otherwise returns false.  */
+
+static bool
+can_print_aclass (struct symbol *sym, enum what_to_list what)
+{
+  bool print_me = false;
+
+  switch (sym->loc_class ())
+    {
+    default:
+    case LOC_UNDEF:     /* catches errors        */
+    case LOC_CONST:     /* constant              */
+    case LOC_TYPEDEF:   /* local typedef         */
+    case LOC_LABEL:     /* local label           */
+    case LOC_BLOCK:     /* local function        */
+    case LOC_CONST_BYTES:       /* loc. byte seq.        */
+    case LOC_UNRESOLVED:        /* unresolved static     */
+    case LOC_OPTIMIZED_OUT:     /* optimized out         */
+      print_me = false;
+      break;
+
+    case LOC_ARG:       /* argument              */
+    case LOC_REF_ARG:   /* reference arg         */
+    case LOC_REGPARM_ADDR:      /* indirect register arg */
+    case LOC_LOCAL:     /* stack local           */
+    case LOC_STATIC:    /* static                */
+    case LOC_REGISTER:  /* register              */
+    case LOC_COMPUTED:  /* computed location     */
+      if (what == all)
+	print_me = true;
+      else if (what == locals)
+	print_me = !sym->is_argument ();
+      else
+	print_me = sym->is_argument ();
+      break;
+    }
+
+  return print_me;
 }
 
 /* Print a list of the objects for the frame FI in a certain form,
@@ -573,9 +651,10 @@ list_args_or_locals (const frame_print_options &fp_opts,
 		     enum what_to_list what, enum print_values values,
 		     const frame_info_ptr &fi, int skip_unavailable)
 {
-  const struct block *block;
+  const struct block *block, *orig_block;
   const char *name_of_result;
   struct ui_out *uiout = current_uiout;
+  gdb::unordered_set<std::string> collected_vars, shadowed_vars, printed_vars;
 
   block = get_frame_block (fi, 0);
 
@@ -596,42 +675,31 @@ list_args_or_locals (const frame_print_options &fp_opts,
 
   ui_out_emit_list list_emitter (uiout, name_of_result);
 
+  orig_block = block;
+  /* Stored list of shadowed variables later help in identifying them
+     from the rest.  */
+  while (block != nullptr)
+    {
+      for (struct symbol *sym : block_iterator_range (block))
+	{
+	  if (can_print_aclass (sym, what))
+	    {
+	      const char *name = sym->print_name ();
+	      if (!collected_vars.insert (name).second)
+		shadowed_vars.insert (name);
+	    }
+	}
+      if (block->function ())
+	break;
+      block = block->superblock ();
+    }
+
+  block = orig_block;
   while (block != 0)
     {
       for (struct symbol *sym : block_iterator_range (block))
 	{
-	  int print_me = 0;
-
-	  switch (sym->loc_class ())
-	    {
-	    default:
-	    case LOC_UNDEF:	/* catches errors        */
-	    case LOC_CONST:	/* constant              */
-	    case LOC_TYPEDEF:	/* local typedef         */
-	    case LOC_LABEL:	/* local label           */
-	    case LOC_BLOCK:	/* local function        */
-	    case LOC_CONST_BYTES:	/* loc. byte seq.        */
-	    case LOC_UNRESOLVED:	/* unresolved static     */
-	    case LOC_OPTIMIZED_OUT:	/* optimized out         */
-	      print_me = 0;
-	      break;
-
-	    case LOC_ARG:	/* argument              */
-	    case LOC_REF_ARG:	/* reference arg         */
-	    case LOC_REGPARM_ADDR:	/* indirect register arg */
-	    case LOC_LOCAL:	/* stack local           */
-	    case LOC_STATIC:	/* static                */
-	    case LOC_REGISTER:	/* register              */
-	    case LOC_COMPUTED:	/* computed location     */
-	      if (what == all)
-		print_me = 1;
-	      else if (what == locals)
-		print_me = !sym->is_argument ();
-	      else
-		print_me = sym->is_argument ();
-	      break;
-	    }
-	  if (print_me)
+	  if (can_print_aclass (sym, what))
 	    {
 	      struct frame_arg arg, entryarg;
 
@@ -657,10 +725,10 @@ list_args_or_locals (const frame_print_options &fp_opts,
 
 	      if (arg.entry_kind != print_entry_values_only)
 		list_arg_or_local (&arg, what, values, skip_unavailable,
-				   fp_opts);
+				   fp_opts, &shadowed_vars, printed_vars);
 	      if (entryarg.entry_kind != print_entry_values_no)
 		list_arg_or_local (&entryarg, what, values, skip_unavailable,
-				   fp_opts);
+				   fp_opts, &shadowed_vars, printed_vars);
 	    }
 	}
 

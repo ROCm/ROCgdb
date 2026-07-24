@@ -44,13 +44,13 @@ enum return_reason
 
 #define RETURN_MASK(reason)	(1 << (int)(-reason))
 
-typedef enum
+enum return_mask
 {
   RETURN_MASK_FORCED_QUIT = RETURN_MASK (RETURN_FORCED_QUIT),
   RETURN_MASK_QUIT = RETURN_MASK (RETURN_QUIT),
   RETURN_MASK_ERROR = RETURN_MASK (RETURN_ERROR),
   RETURN_MASK_ALL = (RETURN_MASK_FORCED_QUIT | RETURN_MASK_QUIT | RETURN_MASK_ERROR)
-} return_mask;
+};
 
 /* Describe all exceptions.  */
 

@@ -388,6 +388,11 @@ struct external_SYMBOL_EX
   char e_numaux[1];
 } ATTRIBUTE_PACKED ;
 
+#define IMAGE_SYM_UNDEFINED      0
+#define IMAGE_SYM_ABSOLUTE       0xffff
+#define IMAGE_SYM_DEBUG          0xfffe
+#define IMAGE_SYM_SECTION_MAX    0xfeff
+
 #define	SYMENT_BIGOBJ	struct external_SYMBOL_EX
 #define	SYMESZ_BIGOBJ	20
 

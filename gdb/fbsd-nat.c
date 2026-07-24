@@ -1925,7 +1925,7 @@ fbsd_nat_target::detach_fork_children (inferior *inf)
    true to terminate the iteration early.  This function returns true
    if the callback returned true, otherwise it returns false.  */
 
-typedef bool (ptrace_event_ftype) (const struct ptrace_lwpinfo &pl);
+using ptrace_event_ftype = bool (const struct ptrace_lwpinfo &pl);
 
 static bool
 iterate_other_ptrace_events (pid_t pid,

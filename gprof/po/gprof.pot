@@ -8,11 +8,10 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: https://sourceware.org/bugzilla/\n"
-"POT-Creation-Date: 2026-01-28 09:57+1030\n"
+"POT-Creation-Date: 2026-07-12 10:43+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -211,47 +210,47 @@ msgstr ""
 msgid "<cycle %d>"
 msgstr ""
 
-#: corefile.c:63
+#: corefile.c:64
 #, c-format
 msgid "%s: unable to parse mapping file %s.\n"
 msgstr ""
 
-#: corefile.c:91 corefile.c:532
+#: corefile.c:92 corefile.c:595
 #, c-format
 msgid "%s: could not open %s.\n"
 msgstr ""
 
-#: corefile.c:195
+#: corefile.c:248
 #, c-format
 msgid "%s: %s: not in executable format\n"
 msgstr ""
 
-#: corefile.c:206
+#: corefile.c:264
 #, c-format
 msgid "%s: can't find .text section in %s\n"
 msgstr ""
 
-#: corefile.c:287
+#: corefile.c:348
 #, c-format
 msgid "%s: ran out room for %lu bytes of text space\n"
 msgstr ""
 
-#: corefile.c:301
+#: corefile.c:362
 #, c-format
 msgid "%s: can't do -c\n"
 msgstr ""
 
-#: corefile.c:340
+#: corefile.c:401
 #, c-format
 msgid "%s: -c not supported on architecture %s\n"
 msgstr ""
 
-#: corefile.c:543 corefile.c:647
+#: corefile.c:606 corefile.c:710
 #, c-format
 msgid "%s: file `%s' has no symbols\n"
 msgstr ""
 
-#: corefile.c:548
+#: corefile.c:611
 #, c-format
 msgid "%s: file `%s' has too many symbols\n"
 msgstr ""
@@ -530,12 +529,12 @@ msgstr ""
 msgid "[find_call] 0x%lx: jalr\n"
 msgstr ""
 
-#: source.c:166
+#: source.c:167
 #, c-format
 msgid "%s: could not locate `%s'\n"
 msgstr ""
 
-#: source.c:244
+#: source.c:245
 #, c-format
 msgid "*** File %s:\n"
 msgstr ""

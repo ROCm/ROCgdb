@@ -1934,7 +1934,11 @@ static void
 aarch64_shadow_stack_push (gdbarch *gdbarch, CORE_ADDR new_addr,
 			   regcache *regcache)
 {
-  aarch64_push_gcs_entry (regcache, new_addr);
+  bool gcs_is_enabled;
+
+  (void) gdbarch_get_shadow_stack_pointer (gdbarch, regcache, gcs_is_enabled);
+  if (gcs_is_enabled)
+    aarch64_push_gcs_entry (regcache, new_addr);
 }
 
 /* Implement the "push_dummy_call" gdbarch method.  */

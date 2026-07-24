@@ -189,7 +189,7 @@
 /*
  * typedef
  */
-typedef void (*Function) ();
+using Function = void (*) ();
 
 /*
  * Forward declarations
@@ -266,12 +266,11 @@ enum regnames
     TICKS, STALLS, CYCLES, INSTS, PLR
   };
 
-typedef struct
+struct stepData
   {
     short *memAddr;
     short oldInstr;
-  }
-stepData;
+  };
 
 int registers[NUMREGBYTES / 4];
 stepData instrBuffer;
@@ -841,15 +840,14 @@ breakpoint (void)
 
 /* SH1/SH2 exception vector table format */
 
-typedef struct
+struct vec_type
   {
     void (*func_cold) ();
     int *stack_cold;
     void (*func_warm) ();
     int *stack_warm;
     void (*(handler[256 - 4])) ();
-  }
-vec_type;
+  };
 
 /* vectable is the SH1/SH2 vector table. It must be at address 0
    or wherever your vbr points. */

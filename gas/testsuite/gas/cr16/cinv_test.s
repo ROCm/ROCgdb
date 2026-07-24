@@ -1,5 +1,5 @@
-        .text
-        .global main
+	.text
+	.global main
 main:
 	##############################
 	# cin [i/i,u/d/d,u/d,i/d,i,u]

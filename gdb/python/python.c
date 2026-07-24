@@ -1824,7 +1824,7 @@ gdbpy_source_objfile_script (const struct extension_language_defn *extlang,
     return;
 
   gdbpy_enter enter_py (objfile->arch ());
-  scoped_restore restire_current_objfile
+  scoped_restore restore_current_objfile
     = make_scoped_restore (&gdbpy_current_objfile, objfile);
 
   int result = python_run_simple_file (file, filename);
@@ -1847,7 +1847,7 @@ gdbpy_execute_objfile_script (const struct extension_language_defn *extlang,
     return;
 
   gdbpy_enter enter_py (objfile->arch ());
-  scoped_restore restire_current_objfile
+  scoped_restore restore_current_objfile
     = make_scoped_restore (&gdbpy_current_objfile, objfile);
 
   int ret = eval_python_command (script, Py_file_input);

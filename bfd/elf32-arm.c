@@ -10548,7 +10548,7 @@ elf32_arm_final_link_relocate (reloc_howto_type *	    howto,
 		 instruction instead ?  */
 	      if (branch_type != ST_BRANCH_TO_THUMB)
 		_bfd_error_handler
-		  (_("\%pB: warning: %s BLX instruction targets"
+		  (_("%pB: warning: %s BLX instruction targets"
 		     " %s function '%s'"),
 		   input_bfd, "ARM",
 		   "ARM", h ? h->root.root.string : "(local)");

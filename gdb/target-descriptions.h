@@ -80,9 +80,9 @@ void set_tdesc_pseudo_register_reggroup_p
    appear in the target description.  This means all unknown registers
    within a single feature will be called one after another.  */
 
-typedef int (*tdesc_unknown_register_ftype)
-	(struct gdbarch *gdbarch, tdesc_feature *feature,
-	 const char *reg_name, int possible_regnum);
+using tdesc_unknown_register_ftype
+  = int (*) (struct gdbarch *gdbarch, tdesc_feature *feature,
+	     const char *reg_name, int possible_regnum);
 
 /* A deleter adapter for a target arch data.  */
 
@@ -93,8 +93,8 @@ struct tdesc_arch_data_deleter
 
 /* A unique pointer specialization that holds a target_desc.  */
 
-typedef std::unique_ptr<tdesc_arch_data, tdesc_arch_data_deleter>
-  tdesc_arch_data_up;
+using tdesc_arch_data_up
+  = std::unique_ptr<tdesc_arch_data, tdesc_arch_data_deleter>;
 
 /* Update GDBARCH to use the TARGET_DESC for registers.  TARGET_DESC
    may be GDBARCH's target description or (if GDBARCH does not have

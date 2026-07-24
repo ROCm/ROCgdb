@@ -1,0 +1,92 @@
+# Copyright 2023-2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+standard_testfile
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile]} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+set bp_line1 [gdb_get_line_number "bp for locals 1"]
+set bp_line2 [gdb_get_line_number "bp for locals 2"]
+set bp_line3 [gdb_get_line_number "bp for locals 3"]
+set bp_line4 [gdb_get_line_number "bp for locals 4"]
+set bp_line5 [gdb_get_line_number "bp for locals 5"]
+
+set val1_d1 [gdb_get_line_number "val1-d1"]
+set val1_d2 [gdb_get_line_number "val1-d2"]
+set val1_d3 [gdb_get_line_number "val1-d3"]
+set val2_d1 [gdb_get_line_number "val2-d1"]
+set val2_d2 [gdb_get_line_number "val2-d2"]
+set val2_d3 [gdb_get_line_number "val2-d3"]
+set val3_d1 [gdb_get_line_number "val3-d1"]
+set val3_d2 [gdb_get_line_number "val3-d2"]
+set a_line [gdb_get_line_number "bp for entry"]
+
+gdb_breakpoint $srcfile:$bp_line1
+gdb_continue_to_breakpoint "continue to outermost level" \
+    ".*$srcfile:$bp_line1.*"
+gdb_test "info locals"  [multi_line \
+    "val1 = 1"  \
+    "val2 = 2"  \
+    ] "info locals at outermost level"
+
+gdb_breakpoint $srcfile:$bp_line2
+gdb_continue_to_breakpoint "continue to first level" ".*$srcfile:$bp_line2.*"
+gdb_test "info locals"  [multi_line \
+    "val2 = 3\t<$srcfile:$val2_d2>"  \
+    "val3 = 4"  \
+    "a = 101"   \
+    "val1 = 1"  \
+    "val2 = 2\t<$srcfile:$val2_d1, shadowed>"  \
+    ] "info locals first level"
+
+gdb_breakpoint $srcfile:$bp_line3
+gdb_continue_to_breakpoint "continue to second level" ".*$srcfile:$bp_line3.*"
+gdb_test "info locals" [multi_line \
+    "val1 = 5\t<$srcfile:$val1_d2>"  \
+    "val2 = 3\t<$srcfile:$val2_d2>"  \
+    "val3 = 4"  \
+    "a = 102"   \
+    "val1 = 1\t<$srcfile:$val1_d1, shadowed>"  \
+    "val2 = 2\t<$srcfile:$val2_d1, shadowed>"  \
+    ] "info locals second level"
+
+gdb_breakpoint $srcfile:$bp_line4
+gdb_continue_to_breakpoint "continue to innermost level" ".*$srcfile:$bp_line4.*"
+gdb_test "info locals" [multi_line \
+    "a = 999\t<${testfile}2.c:16>" \
+    "val1 = 6\t<$srcfile:$val1_d3>"  \
+    "val2 = 7\t<$srcfile:$val2_d3>"  \
+    "val3 = 8\t<$srcfile:$val3_d2>"  \
+    "val1 = 5\t<$srcfile:$val1_d2, shadowed>" \
+    "val2 = 3\t<$srcfile:$val2_d2, shadowed>" \
+    "val3 = 4\t<$srcfile:$val3_d1, shadowed>" \
+    "a = 103\t<$srcfile:$a_line, shadowed>"   \
+    "val1 = 1\t<$srcfile:$val1_d1, shadowed>" \
+    "val2 = 2\t<$srcfile:$val2_d1, shadowed>" \
+    ] "info locals at innermost level"
+
+gdb_breakpoint $srcfile:$bp_line5
+gdb_continue_to_breakpoint "continue to outermost level last" \
+    ".*$srcfile:$bp_line5.*"
+gdb_test "info locals" [multi_line \
+    "a = 105" \
+    "val1 = 1"  \
+    "val2 = 2"  \
+    ] "info locals at outermost level last"

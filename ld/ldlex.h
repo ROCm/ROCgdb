@@ -190,8 +190,7 @@ enum option_values
   /* Used by emultempl/elf.em, emultempl/pe.em and emultempl/pep.em.  */
   OPTION_BUILD_ID,
   OPTION_EXCLUDE_LIBS,
-  /* Used by emulparams/elf32mcore.sh, emultempl/beos.em, emultempl/pe.em
-     and emultempl/pep.em.  */
+  /* Used by emulparams/elf32mcore.sh, emultempl/pe.em and emultempl/pep.em.  */
   OPTION_BASE_FILE,
   /* Used by emultempl/ppc32elf.em and emultempl/ppc64elf.em.  */
   OPTION_NO_INLINE_OPT,
@@ -209,8 +208,7 @@ enum option_values
   OPTION_NO_WCHAR_SIZE_WARNING,
   /* Used by emultempl/armelf.em and emultempl/pe.em.  */
   OPTION_THUMB_ENTRY,
-  /* Used by emultempl/beos.em, emultempl/nto.em, emultempl/pe.em and
-     emultempl/pep.em.  */
+  /* Used by emultempl/nto.em, emultempl/pe.em and emultempl/pep.em.  */
   OPTION_STACK,
   /* Used by emultempl/aarch64elf.em, emultempl/armelf.em,
      emultempl/cskyelf.em, emultempl/hppaelf.em, emultempl/metagelf.em
@@ -327,7 +325,7 @@ enum option_values
   OPTION_NO_TLSDESC_TRAMPOLINE,
   /* Used by emultempl/nto.em.  */
   OPTION_LAZY_STACK,
-  /* Used by emultempl/pe.em, emultempl/pep.em and emultempl/beos.em.  */
+  /* Used by emultempl/pe.em and emultempl/pep.em.  */
   OPTION_DLL,
   OPTION_FILE_ALIGNMENT,
   OPTION_MAJOR_IMAGE_VERSION,

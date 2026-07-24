@@ -649,15 +649,17 @@ private:
 
 /* The types used for C and C++ program computations.  */
 
-typedef compile_program<compile_c_instance,
-			c_push_user_expression, pop_user_expression_nop,
-			c_add_code_header, c_add_code_footer,
-			c_add_input> c_compile_program;
+using c_compile_program
+  = compile_program<compile_c_instance, c_push_user_expression,
+		    pop_user_expression_nop,
+		    c_add_code_header, c_add_code_footer,
+		    c_add_input>;
 
-typedef compile_program<compile_cplus_instance,
-			cplus_push_user_expression, cplus_pop_user_expression,
-			cplus_add_code_header, c_add_code_footer,
-			cplus_add_input> cplus_compile_program;
+using cplus_compile_program
+  = compile_program<compile_cplus_instance, cplus_push_user_expression,
+		    cplus_pop_user_expression,
+		    cplus_add_code_header, c_add_code_footer,
+		    cplus_add_input>;
 
 /* The compute_program method for C.  */
 

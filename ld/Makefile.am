@@ -299,7 +299,6 @@ ALL_EMULATION_SOURCES = \
 	ehppanbsd.c \
 	ehppaobsd.c \
 	ei386aout.c \
-	ei386beos.c \
 	ei386bsd.c \
 	ei386go32.c \
 	ei386lynx.c \

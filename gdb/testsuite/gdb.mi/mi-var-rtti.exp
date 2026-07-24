@@ -111,7 +111,7 @@ set inline_tests {
     use_rtti_for_ref
     use_rtti_for_ptr_child
     use_rtti_for_ref_child
-    use_rtti_with_multiple_inheritence
+    use_rtti_with_multiple_inheritance
     type_update_when_use_rtti
     skip_type_update_when_not_use_rtti
 }

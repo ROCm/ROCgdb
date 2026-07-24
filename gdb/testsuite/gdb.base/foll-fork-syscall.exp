@@ -97,7 +97,7 @@ proc_with_prefix test_catch_syscall {follow-fork-mode detach-on-fork} {
     if {${follow-fork-mode} == "parent"} {
 	set following_inf 1
     } else {
-	set followin_inf 2
+	set following_inf 2
     }
     # Next stop should be the fork catchpoint.
     set expected_re ""

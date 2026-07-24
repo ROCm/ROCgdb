@@ -741,8 +741,8 @@ template <typename T>
 int get_phdr_phnum_from_proc_auxv (const pid_t pid,
 				   CORE_ADDR *phdr_memaddr, int *num_phdr)
 {
-  typedef typename std::conditional<sizeof(T) == sizeof(int64_t),
-				    Aux64Info, Aux32Info>::type auxv_type;
+  using auxv_type = typename std::conditional<sizeof(T) == sizeof(int64_t),
+					      Aux64Info, Aux32Info>::type;
   const size_t auxv_size = sizeof (auxv_type);
   const size_t auxv_buf_size = 128 * sizeof (auxv_type);
 
@@ -791,8 +791,8 @@ template <typename T>
 static CORE_ADDR
 get_dynamic (const pid_t pid)
 {
-  typedef typename std::conditional<sizeof(T) == sizeof(int64_t),
-				    Elf64_Phdr, Elf32_Phdr>::type phdr_type;
+  using phdr_type = typename std::conditional<sizeof(T) == sizeof(int64_t),
+					      Elf64_Phdr, Elf32_Phdr>::type;
   const int phdr_size = sizeof (phdr_type);
 
   CORE_ADDR phdr_memaddr;
@@ -853,8 +853,8 @@ template <typename T>
 static CORE_ADDR
 get_r_debug (const pid_t pid)
 {
-  typedef typename std::conditional<sizeof(T) == sizeof(int64_t),
-				    Elf64_Dyn, Elf32_Dyn>::type dyn_type;
+  using dyn_type = typename std::conditional<sizeof(T) == sizeof(int64_t),
+					     Elf64_Dyn, Elf32_Dyn>::type;
   const int dyn_size = sizeof (dyn_type);
   unsigned char buf[sizeof (dyn_type)];  /* The larger of the two.  */
   CORE_ADDR map = -1;

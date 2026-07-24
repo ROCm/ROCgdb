@@ -17,7 +17,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 
-typedef struct {
+struct xtensa_regtable_t {
   int   gdb_regnum;
   int   gdb_offset;
   int   ptrace_cp_offset;
@@ -26,7 +26,7 @@ typedef struct {
   int   coproc;
   int   dbnum;
   char* name
-;} xtensa_regtable_t;
+;};
 
 #define XTENSA_ELF_XTREG_SIZE	4
 

@@ -52,8 +52,8 @@ struct trace_file_writer_deleter
 
 /* A unique_ptr specialization for trace_file_writer.  */
 
-typedef std::unique_ptr<trace_file_writer, trace_file_writer_deleter>
-    trace_file_writer_up;
+using trace_file_writer_up
+  = std::unique_ptr<trace_file_writer, trace_file_writer_deleter>;
 
 /* Save tracepoint data to file named FILENAME through WRITER.  WRITER
    determines the trace file format.  If TARGET_DOES_SAVE is non-zero,

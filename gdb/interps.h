@@ -35,7 +35,7 @@ struct inferior;
 struct solib;
 struct trace_state_variable;
 
-typedef struct interp *(*interp_factory_func) (const char *name);
+using interp_factory_func = struct interp * (*) (const char *name);
 
 /* Each interpreter kind (CLI, MI, etc.) registers itself with a call
    to this function, passing along its name, and a pointer to a

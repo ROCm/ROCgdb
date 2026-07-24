@@ -239,9 +239,8 @@ enum target_xfer_status
 extern const char *
   target_xfer_status_to_string (enum target_xfer_status status);
 
-typedef enum target_xfer_status
-  target_xfer_partial_ftype (struct target_ops *ops,
-			     enum target_object object,
+using target_xfer_partial_ftype
+  = enum target_xfer_status (struct target_ops *ops, enum target_object object,
 			     const char *annex,
 			     gdb_byte *readbuf,
 			     const gdb_byte *writebuf,
@@ -2552,7 +2551,7 @@ int target_verify_memory (const gdb_byte *data,
    "target TARGET_NAME".  The callback routine takes the rest of the
    parameters from the command, and (if successful) pushes a new
    target onto the stack.  */
-typedef void target_open_ftype (const char *args, int from_tty);
+using target_open_ftype = void (const char *args, int from_tty);
 
 /* Add the target described by INFO to the list of possible targets
    and add a new command 'target $(INFO->shortname)'.  Set COMPLETER

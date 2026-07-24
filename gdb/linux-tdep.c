@@ -1439,8 +1439,8 @@ using linux_find_memory_region_ftype
 			     bool /* hole */,
 			     const std::string & /* filename */)>;
 
-typedef bool linux_dump_mapping_p_ftype (filter_flags filterflags,
-					 const smaps_data &map);
+using linux_dump_mapping_p_ftype
+  = bool (filter_flags filterflags, const smaps_data &map);
 
 /* Parse a KEY value out of a /proc/pid/smaps line.  KEYWORD is the
    keyword that was extracted out of the LINE we're considering.
@@ -2239,13 +2239,13 @@ linux_corefile_parse_exec_context (struct gdbarch *gdbarch, bfd *cbfd)
 }
 
 /* Fill the PRPSINFO structure with information about the process being
-   debugged.  Returns 1 in case of success, 0 for failures.  Please note that
-   even if the structure cannot be entirely filled (e.g., GDB was unable to
-   gather information about the process UID/GID), this function will still
-   return 1 since some information was already recorded.  It will only return
-   0 iff nothing can be gathered.  */
+   debugged.  Returns TRUE in case of success, FALSE for failures.  Please note
+   that even if the structure cannot be entirely filled (e.g., GDB was unable
+   to gather information about the process UID/GID), this function will still
+   return TRUE since some information was already recorded.  It will only return
+   FALSE if nothing can be gathered.  */
 
-static int
+static bool
 linux_fill_prpsinfo (struct elf_internal_linux_prpsinfo *p)
 {
   /* The filename which we will use to obtain some info about the process.
@@ -2284,14 +2284,14 @@ linux_fill_prpsinfo (struct elf_internal_linux_prpsinfo *p)
     {
       /* No program name was read, so we won't be able to retrieve more
 	 information about the process.  */
-      return 0;
+      return false;
     }
   if (fname.get ()[buf_len - 1] != '\0')
     {
       warning (_("target file %s "
 		 "does not contain a trailing null character"),
 	       filename);
-      return 0;
+      return false;
     }
 
   memset (p, 0, sizeof (*p));
@@ -2323,9 +2323,9 @@ linux_fill_prpsinfo (struct elf_internal_linux_prpsinfo *p)
   if (proc_stat == NULL || *proc_stat == '\0')
     {
       /* Despite being unable to read more information about the
-	 process, we return 1 here because at least we have its
+	 process, we return true here because at least we have its
 	 command line, PID and arguments.  */
-      return 1;
+      return true;
     }
 
   /* Ok, we have the stats.  It's time to do a little parsing of the
@@ -2346,7 +2346,7 @@ linux_fill_prpsinfo (struct elf_internal_linux_prpsinfo *p)
   /* ps command also relies on no trailing fields ever contain ')'.  */
   proc_stat = strrchr (proc_stat, ')');
   if (proc_stat == NULL)
-    return 1;
+    return true;
   proc_stat++;
 
   proc_stat = skip_spaces (proc_stat);
@@ -2371,8 +2371,8 @@ linux_fill_prpsinfo (struct elf_internal_linux_prpsinfo *p)
     {
       /* Again, we couldn't read the complementary information about
 	 the process state.  However, we already have minimal
-	 information, so we just return 1 here.  */
-      return 1;
+	 information, so we just return true here.  */
+      return true;
     }
 
   /* Filling the structure fields.  */
@@ -2400,8 +2400,8 @@ linux_fill_prpsinfo (struct elf_internal_linux_prpsinfo *p)
 
   if (proc_status == NULL || *proc_status == '\0')
     {
-      /* Returning 1 since we already have a bunch of information.  */
-      return 1;
+      /* Returning true since we already have a bunch of information.  */
+      return true;
     }
 
   /* Extracting the UID.  */
@@ -2430,7 +2430,7 @@ linux_fill_prpsinfo (struct elf_internal_linux_prpsinfo *p)
 	p->pr_gid = strtol (tmpstr, &tmpstr, 10);
     }
 
-  return 1;
+  return true;
 }
 
 /* Build the note section for a corefile, and return it in a malloc

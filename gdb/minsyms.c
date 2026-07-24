@@ -1618,7 +1618,7 @@ find_minsym_type_and_address (minimal_symbol *msymbol,
     addr = bound_msym.value_address ();
 
   if (overlay_debugging)
-    addr = symbol_overlayed_address (addr, section);
+    addr = symbol_overlaid_address (addr, section);
 
   if (is_tls)
     {

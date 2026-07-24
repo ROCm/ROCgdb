@@ -23,7 +23,7 @@
 
 struct async_signal_handler;
 struct async_event_handler;
-typedef void (sig_handler_func) (gdb_client_data);
+using sig_handler_func = void (gdb_client_data);
 
 /* Type of async event handler callbacks.
 
@@ -33,7 +33,7 @@ typedef void (sig_handler_func) (gdb_client_data);
    is responsible for clearing the async event handler if it no longer needs
    to be called.  */
 
-typedef void (async_event_handler_func) (gdb_client_data);
+using async_event_handler_func = void (gdb_client_data);
 
 extern struct async_signal_handler *
   create_async_signal_handler (sig_handler_func *proc,

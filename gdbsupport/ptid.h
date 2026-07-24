@@ -44,6 +44,10 @@ public:
   using lwp_type = long;
   using tid_type = ULONGEST;
 
+  /* These limits are documented in the manual.  */
+  static_assert (sizeof (pid_type) >= 4);
+  static_assert (sizeof (lwp_type) >= 4);
+
   /* Must have a trivial defaulted default constructor so that the
      type remains POD.  */
   ptid_t () noexcept = default;

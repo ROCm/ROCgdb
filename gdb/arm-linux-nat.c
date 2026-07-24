@@ -687,13 +687,13 @@ arm_linux_nat_target::can_use_hw_breakpoint (enum bptype type,
 }
 
 /* Enum describing the different types of ARM hardware break-/watch-points.  */
-typedef enum
+enum arm_hwbp_type
 {
   arm_hwbp_break = 0,
   arm_hwbp_load = 1,
   arm_hwbp_store = 2,
   arm_hwbp_access = 3
-} arm_hwbp_type;
+};
 
 /* Type describing an ARM Hardware Breakpoint Control register value.  */
 using arm_hwbp_control_t = unsigned int;

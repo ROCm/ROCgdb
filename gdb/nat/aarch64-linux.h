@@ -37,13 +37,13 @@ struct compat_timeval
   int tv_usec;
 };
 
-typedef union compat_sigval
+using compat_sigval_t = union compat_sigval
 {
   compat_int_t sival_int;
   compat_uptr_t sival_ptr;
-} compat_sigval_t;
+};
 
-typedef struct compat_siginfo
+using compat_siginfo_t = struct compat_siginfo
 {
   int si_signo;
   int si_errno;
@@ -99,7 +99,7 @@ typedef struct compat_siginfo
       int _fd;
     } _sigpoll;
   } _sifields;
-} compat_siginfo_t;
+};
 
 #define cpt_si_pid _sifields._kill._pid
 #define cpt_si_uid _sifields._kill._uid

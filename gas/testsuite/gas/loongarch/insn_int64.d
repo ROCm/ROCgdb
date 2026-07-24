@@ -411,20 +411,19 @@ Disassembly of section .text:
  640:	385f94c4 	amadd_db.h  	\$a0, \$a1, \$a2
  644:	385f98a4 	amadd_db.h  	\$a0, \$a2, \$a1
 
-0+648 <.L1>:
  648:	03400000 	andi        	\$zero, \$zero, 0x0
- 64c:	43fffc9f 	beqz        	\$a0, -4	# 648 <.L1>
- 650:	47fff89f 	bnez        	\$a0, -8	# 648 <.L1>
- 654:	53fff7ff 	b           	-12	# 648 <.L1>
- 658:	57fff3ff 	bl          	-16	# 648 <.L1>
- 65c:	5bffec85 	beq         	\$a0, \$a1, -20	# 648 <.L1>
- 660:	5fffe885 	bne         	\$a0, \$a1, -24	# 648 <.L1>
- 664:	63ffe485 	blt         	\$a0, \$a1, -28	# 648 <.L1>
- 668:	63ffe0a4 	blt         	\$a1, \$a0, -32	# 648 <.L1>
- 66c:	67ffdc85 	bge         	\$a0, \$a1, -36	# 648 <.L1>
- 670:	67ffd8a4 	bge         	\$a1, \$a0, -40	# 648 <.L1>
- 674:	6bffd485 	bltu        	\$a0, \$a1, -44	# 648 <.L1>
- 678:	6bffd0a4 	bltu        	\$a1, \$a0, -48	# 648 <.L1>
- 67c:	6fffcc85 	bgeu        	\$a0, \$a1, -52	# 648 <.L1>
- 680:	6fffc8a4 	bgeu        	\$a1, \$a0, -56	# 648 <.L1>
+ 64c:	43fffc9f 	beqz        	\$a0, -4.*
+ 650:	47fff89f 	bnez        	\$a0, -8.*
+ 654:	53fff7ff 	b           	-12.*
+ 658:	57fff3ff 	bl          	-16.*
+ 65c:	5bffec85 	beq         	\$a0, \$a1, -20.*
+ 660:	5fffe885 	bne         	\$a0, \$a1, -24.*
+ 664:	63ffe485 	blt         	\$a0, \$a1, -28.*
+ 668:	63ffe0a4 	blt         	\$a1, \$a0, -32.*
+ 66c:	67ffdc85 	bge         	\$a0, \$a1, -36.*
+ 670:	67ffd8a4 	bge         	\$a1, \$a0, -40.*
+ 674:	6bffd485 	bltu        	\$a0, \$a1, -44.*
+ 678:	6bffd0a4 	bltu        	\$a1, \$a0, -48.*
+ 67c:	6fffcc85 	bgeu        	\$a0, \$a1, -52.*
+ 680:	6fffc8a4 	bgeu        	\$a1, \$a0, -56.*
  684:	4c000080 	jirl        	\$zero, \$a0, 0

@@ -1,8 +1,10 @@
 # Instruction and Relocation generating tests
 
+.text
 .L1:
   .fill 0x123456, 4, 0x0
 
+  call .L1
 # R_LARCH_B16
   beq $r12, $r13, .L1
   bne $r12, $r13, .L1

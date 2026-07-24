@@ -201,6 +201,10 @@ New command class for help
   commands that we, as developers, believe would be close to a minimal
   set of commands for a new user of GDB.
 
+info locals
+  GDB now shows the "shadowed" annotation and the location information
+  for variables that are shadowed, or which are shadowing.
+
 * Removed commands
 
 target ctf
@@ -588,6 +592,10 @@ multi-wp-addr in qSupported
    inferior's address space is retained, as the library was mapped
    multiple times, and the same mapping was being reused.  In all
    other cases, this field will have the value 'false'.
+
+** GDB now shows the "shadowed", "filename", "fullname" and "line"
+   fields in the output of '-stack-list-locals/variables' mi
+   commands for variables that are shadowed, or which are shadowing.
 
 * Support for stabs debugging format and the a.out/dbx object format is
   deprecated, and will be removed in GDB 18.

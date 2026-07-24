@@ -65,8 +65,8 @@ public:
   friend class cooked_index;
 
   /* A simple range over part of m_entries.  */
-  typedef iterator_range<std::vector<cooked_index_entry *>::const_iterator>
-       range;
+  using range
+    = iterator_range<std::vector<cooked_index_entry *>::const_iterator>;
 
   /* Return a range of all the entries.  */
   range all_entries () const

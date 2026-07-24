@@ -42,8 +42,9 @@
 
 
 import re
+
 import gdb
-from gdb.unwinder import Unwinder, FrameId
+from gdb.unwinder import FrameId, Unwinder
 
 
 class corrupt_stack_unwinder(Unwinder):

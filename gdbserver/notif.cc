@@ -115,7 +115,7 @@ handle_notif_ack (char *own_buf, int packet_len)
 /* Put EVENT to the queue of NOTIF.  */
 
 void
-notif_event_enque (struct notif_server *notif,
+notif_event_enqueue (struct notif_server *notif,
 		   struct notif_event *event)
 {
   notif->queue.push_back (event);
@@ -133,7 +133,7 @@ notif_push (struct notif_server *np, struct notif_event *new_event)
   bool is_first_event = np->queue.empty ();
 
   /* Something interesting.  Tell GDB about it.  */
-  notif_event_enque (np, new_event);
+  notif_event_enqueue (np, new_event);
 
   /* If this is the first stop reply in the queue, then inform GDB
      about it, by sending a corresponding notification.  */

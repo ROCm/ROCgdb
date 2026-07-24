@@ -1,3 +1,8 @@
+.L1:
+/* LA32S/R medium call.  */
+call30	  .L1
+tail30	  $r1, .L1
+
 /* b16.  */
 jirl	  $r4,$r5,%b16(.L1)
 
@@ -39,7 +44,6 @@ pcalau12i $r4,%gd_pc_hi20(TLSL1)
 lu12i.w	  $r4,%gd_hi20(TLSL1)
 
 /* Test insn relocs.  */
-.L1:
 /* 32-bit PC relative.  */
 .4byte	  .L2-.L1
 .L2:
@@ -59,11 +63,6 @@ lu12i.w	  $r4,%desc_hi20(TLSL1)
 ori	  $r4,$r4,%desc_lo12(TLSL1)
 ld.w	  $r1,$r4,%desc_ld(TLSL1)
 jirl	  $r1,$r1,%desc_call(TLSL1)
-
-NEW:
-/* LA32S/R medium call.  */
-call30	  .L1
-tail30	  $r1, .L1
 
 /* LA32R PCREL.  */
 .Lpcadd_hi0:
