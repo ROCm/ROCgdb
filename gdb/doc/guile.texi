@@ -55,7 +55,7 @@ the Guile interpreter to locate all scripts installed at this location.
 
 @value{GDBN} provides two commands for accessing the Guile interpreter:
 
-@table @code
+@table @kbd
 @kindex guile-repl
 @kindex gr
 @item guile-repl
@@ -104,7 +104,7 @@ containing @code{end}.  For example:
 It is also possible to execute a Guile script from the @value{GDBN}
 interpreter:
 
-@table @code
+@table @kbd
 @item source @file{script-name}
 The script name must end with @samp{.scm} and @value{GDBN} must be configured
 to recognize the script language based on filename extension using
@@ -3920,7 +3920,7 @@ debugging commands and scripts.
 Auto-loading can be enabled or disabled,
 and the list of auto-loaded scripts can be printed.
 
-@table @code
+@table @kbd
 @anchor{set auto-load guile-scripts}
 @kindex set auto-load guile-scripts
 @item set auto-load guile-scripts [on|off]

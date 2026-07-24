@@ -48,7 +48,7 @@ automatically imported when @value{GDBN} starts.
 @value{GDBN} provides two commands for accessing the Python interpreter,
 and one related setting:
 
-@table @code
+@table @kbd
 @kindex python-interactive
 @kindex pi
 @item python-interactive @r{[}@var{command}@r{]}
@@ -150,7 +150,7 @@ This option is equivalent to passing @option{-B} to the real
 It is also possible to execute a Python script from the @value{GDBN}
 interpreter:
 
-@table @code
+@table @kbd
 @item source @file{script-name}
 The script name must end with @samp{.py} and @value{GDBN} must be configured
 to recognize the script language based on filename extension using
@@ -159,7 +159,7 @@ the @code{script-extension} setting.  @xref{Extending GDB, ,Extending GDB}.
 
 The following commands are intended to help debug @value{GDBN} itself:
 
-@table @code
+@table @kbd
 @kindex set debug py-breakpoint
 @kindex show debug py-breakpoint
 @item set debug py-breakpoint on@r{|}off
@@ -3174,7 +3174,7 @@ gdb.unwinder.register_unwinder(<locus>, MyUnwinder(), <replace>)
 @value{GDBN} defines 3 commands to manage registered unwinders.  These
 are:
 
-@table @code
+@table @kbd
 @item info unwinder @r{[} @var{locus} @r{[} @var{name-regexp} @r{]} @r{]}
 Lists all registered unwinders.  Arguments @var{locus} and
 @var{name-regexp} are both optional and can be used to filter which
@@ -3949,7 +3949,7 @@ this emits an event of type @code{gdb.InferiorCallPostEvent}.
 
 @table @code
 @tindex gdb.InferiorCallPreEvent
-@item @code{gdb.InferiorCallPreEvent}
+@item gdb.InferiorCallPreEvent
 Indicates that a function in the inferior is about to be called.
 
 @defvar InferiorCallPreEvent.ptid
@@ -3961,7 +3961,7 @@ The location of the function to be called.
 @end defvar
 
 @tindex gdb.InferiorCallPostEvent
-@item @code{gdb.InferiorCallPostEvent}
+@item gdb.InferiorCallPostEvent
 Indicates that a function in the inferior has just been called.
 
 @defvar InferiorCallPostEvent.ptid
@@ -8949,7 +8949,7 @@ called.
 @value{GDBN} defines the following commands to manage registered
 missing-objfile handlers:
 
-@table @code
+@table @kbd
 
 @kindex info missing-objfile-handlers
 @item info missing-objfile-handlers @r{[} @var{locus} @r{[} @var{name-regexp} @r{]} @r{]}
@@ -9099,7 +9099,7 @@ debugging commands and scripts.
 Auto-loading can be enabled or disabled,
 and the list of auto-loaded scripts can be printed.
 
-@table @code
+@table @kbd
 @anchor{set auto-load python-scripts}
 @kindex set auto-load python-scripts
 @item set auto-load python-scripts [on|off]
