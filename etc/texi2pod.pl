@@ -6,7 +6,7 @@
 
 # GCC is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2, or (at your option)
+# the Free Software Foundation; either version 3, or (at your option)
 # any later version.
 
 # GCC is distributed in the hope that it will be useful,
@@ -166,6 +166,7 @@ while(<$inf>) {
 	    $ic = pop @icstack;
 	} elsif ($ended eq "multitable") {
 	    $_ = "\n=back\n";
+	    $ic = pop @icstack;
 	} else {
 	    die "unknown command \@end $ended at line $.\n";
 	}
@@ -211,18 +212,23 @@ while(<$inf>) {
     s/\@TeX\{\}/TeX/g;
     s/\@pounds\{\}/\#/g;
     s/\@minus(?:\{\})?/-/g;
+    s/\@tie\{\}/ /g;
     s/\\,/,/g;
 
     # Now the ones that have to be replaced by special escapes
     # (which will be turned back into text by unmunge())
+    # Replace @@ before @{ and @} in order to parse @samp{@@} correctly.
     s/&/&amp;/g;
+    s/\@\@/&at;/g;
     s/\@\{/&lbrace;/g;
     s/\@\}/&rbrace;/g;
-    s/\@\@/&at;/g;
+    s/\@`\{(.)\}/&$1grave;/g;
 
-    # Inside a verbatim block, handle @var specially.
+    # Inside a verbatim block, handle @var, @samp and @url specially.
     if ($shift ne "") {
 	s/\@var\{([^\}]*)\}/<$1>/g;
+	s/\@samp\{([^\}]*)\}/"$1"/g;
+	s/\@url\{([^\}]*)\}/<$1>/g;
     }
 
     # POD doesn't interpret E<> inside a verbatim block.
@@ -252,7 +258,7 @@ while(<$inf>) {
 	next;
     };
 
-    /^\@(?:section|unnumbered|unnumberedsec|center)\s+(.+)$/
+    /^\@(?:section|unnumbered|unnumberedsec|center|heading)\s+(.+)$/
 	and $_ = "\n=head2 $1\n";
     /^\@subsection\s+(.+)$/
 	and $_ = "\n=head3 $1\n";
@@ -286,7 +292,9 @@ while(<$inf>) {
 
     /^\@multitable\s.*/ and do {
 	push @endwstack, $endw;
+	push @icstack, $ic;
 	$endw = "multitable";
+	$ic = "";
 	$_ = "\n=over 4\n";
     };
 
@@ -295,10 +303,11 @@ while(<$inf>) {
 	push @icstack, $ic;
 	$endw = $1;
 	$ic = $2;
-	$ic =~ s/\@(?:samp|strong|key|gcctabopt|env)/B/;
+	$ic =~ s/\@(?:samp|strong|key|option|gcctabopt|env)/B/;
 	$ic =~ s/\@(?:code|kbd)/C/;
 	$ic =~ s/\@(?:dfn|var|emph|cite|i)/I/;
 	$ic =~ s/\@(?:file)/F/;
+	$ic =~ s/\@(?:asis)//;
 	$_ = "\n=over 4\n";
     };
 
@@ -309,11 +318,13 @@ while(<$inf>) {
 	$_ = "";	# need a paragraph break
     };
 
-    /^\@item\s+(.*\S)\s*$/ and $endw eq "multitable" and do {
+    /^\@(headitem|item)\s+(.*\S)\s*$/ and $endw eq "multitable" and do {
 	@columns = ();
-	for $column (split (/\s*\@tab\s*/, $1)) {
+	$item = $1;
+	for $column (split (/\s*\@tab\s*/, $2)) {
 	    # @strong{...} is used a @headitem work-alike
 	    $column =~ s/^\@strong\{(.*)\}$/$1/;
+	    $column = "I<$column>" if $item eq "headitem";
 	    push @columns, $column;
 	}
 	$_ = "\n=item ".join (" : ", @columns)."\n";
@@ -321,8 +332,18 @@ while(<$inf>) {
 
     /^\@itemx?\s*(.+)?$/ and do {
 	if (defined $1) {
-	    # Entity escapes prevent munging by the <> processing below.
-	    $_ = "\n=item $ic\&LT;$1\&GT;\n";
+	    if ($ic) {
+		if ($endw eq "enumerate") {
+		    $_ = "\n=item $ic $1\n";
+		    $ic =~ s/(\d+)/$1 + 1/eg;
+		} else {
+		    # Entity escapes prevent munging by the <>
+		    # processing below.
+		    $_ = "\n=item $ic\&LT;$1\&GT;\n";
+		}
+	    } else {
+		$_ = "\n=item $1\n";
+	    }
 	} else {
 	    $_ = "\n=item $ic\n";
 	    $ic =~ y/A-Ya-y/B-Zb-z/;
@@ -376,13 +397,15 @@ sub postprocess
     # Formatting commands.
     # Temporary escape for @r.
     s/\@r\{([^\}]*)\}/R<$1>/g;
+    s/\@sc\{([^\}]*)\}/\U$1/g;
     s/\@(?:dfn|var|emph|cite|i)\{([^\}]*)\}/I<$1>/g;
     s/\@(?:code|kbd)\{([^\}]*)\}/C<$1>/g;
-    s/\@(?:gccoptlist|samp|strong|key|option|env|command|b)\{([^\}]*)\}/B<$1>/g;
-    s/\@sc\{([^\}]*)\}/\U$1/g;
+    s/\@(?:samp|strong|key|option|env|command|b)\{([^\}]*)\}/B<$1>/g;
+    s/\@acronym\{([^\}]*)\}/\U$1/g;
     s/\@file\{([^\}]*)\}/F<$1>/g;
     s/\@w\{([^\}]*)\}/S<$1>/g;
     s/\@(?:dmn|math)\{([^\}]*)\}/$1/g;
+    s/\@\///g;
     s/\@t\{([^\}]*)\}/$1/g;
 
     # keep references of the form @ref{...}, print them bold
@@ -395,14 +418,13 @@ sub postprocess
     # Cross references are thrown away, as are @noindent and @refill.
     # (@noindent is impossible in .pod, and @refill is unnecessary.)
     # @* is also impossible in .pod; we discard it and any newline that
-    # follows it.  Similarly, our macro @gol must be discarded.
+    # follows it.
 
     s/\(?\@xref\{(?:[^\}]*)\}(?:[^.<]|(?:<[^<>]*>))*\.\)?//g;
     s/\s+\(\@pxref\{(?:[^\}]*)\}\)//g;
     s/;\s+\@pxref\{(?:[^\}]*)\}//g;
     s/\@noindent\s*//g;
     s/\@refill//g;
-    s/\@gol//g;
     s/\@\*\s*\n?//g;
 
     # Anchors are thrown away
@@ -414,6 +436,10 @@ sub postprocess
     s/\@(?:uref|url|email)\{([^\},]*)\}/&lt;B<$1>&gt;/g;
     s/\@uref\{([^\},]*),([^\},]*)\}/$2 (C<$1>)/g;
     s/\@uref\{([^\},]*),([^\},]*),([^\},]*)\}/$3/g;
+
+    # Handle gccoptlist here, so it can contain the above formatting
+    # commands.
+    s/\@gccoptlist\{([^\}]*)\}/B<$1>/g;
 
     # Un-escape <> at this point.
     s/&LT;/</g;
@@ -448,6 +474,7 @@ sub unmunge
     # Replace escaped symbols with their equivalents.
     local $_ = $_[0];
 
+    s/&(.)grave;/E<$1grave>/g;
     s/&lt;/E<lt>/g;
     s/&gt;/E<gt>/g;
     s/&lbrace;/\{/g;
