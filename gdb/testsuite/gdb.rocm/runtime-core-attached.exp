@@ -48,28 +48,46 @@ proc do_attached_test { fault } {
     remote_exec build "mkdir -p $coredir"
     remote_exec build "rm -f $coredir/core.*"
 
-    set cmd "(cd $coredir && ulimit -c unlimited && $::GDB -batch -ex 'handle SIGABRT nostop pass' -ex 'handle SIGSEGV nostop pass' -ex 'run' -args $::binfile $fault; true)"
-    catch {system "$cmd"} result
+    save_vars { ::env(HSA_COREDUMP_PATTERN) } {
+	set ::env(HSA_COREDUMP_PATTERN) "gpucore.%p"
 
-    verbose "GDB batch command: $cmd" 2
-    verbose "GDB batch result: $result" 2
+	clean_restart $::testfile
+	gdb_test "handle SIGABRT nostop pass" ".*"
+	gdb_test "handle SIGSEGV nostop pass" ".*"
+	gdb_test_no_output "set cwd $coredir"
+	gdb_test "set args $fault" ".*"
 
-    set hostcore_list [glob -nocomplain -directory $coredir "core.*"]
-    set gpucore_list {}
+	gdb_run_cmd
 
-    set filtered_hostcore_list {}
-
-    foreach core $hostcore_list {
-	if {[string match "*.gpu" $core]} {
-	    lappend gpucore_list $core
-	}
-
-	if {![string match "*.gpu" $core]} {
-	    lappend filtered_hostcore_list $core
+	set test "wait for crash"
+	gdb_test_multiple "" $test {
+	    -re "Thread .* received signal SIG(ABRT|SEGV)" {
+		exp_continue
+	    }
+	    -re "(Program terminated with signal|exited with code)" {
+		pass $test
+	    }
+	    -re "The program no longer exists" {
+		exp_continue
+	    }
+	    timeout {
+		fail "$test (timeout)"
+		return
+	    }
 	}
     }
 
-    set hostcore_list $filtered_hostcore_list
+    set all_cores [glob -nocomplain -directory $coredir "core*"]
+    set gpucore_list {}
+    set hostcore_list {}
+
+    foreach core $all_cores {
+	if {[string match "*.gpu" $core]} {
+	    lappend gpucore_list $core
+	} else {
+	    lappend hostcore_list $core
+	}
+    }
 
     if {[llength $gpucore_list] != 1} {
 	unsupported "GPU core not found (found [llength $gpucore_list])"
@@ -102,8 +120,6 @@ proc do_attached_test { fault } {
     "load $fault merged corefile"
 
     gdb_test "info threads" ".*AMDGPU Wave.*" "verify GPU threads"
-
-    gdb_exit
 }
 
 with_rocm_gpu_lock {
