@@ -75,6 +75,9 @@ proc do_attached_test { fault } {
 		return
 	    }
 	}
+
+	# Give the kernel time to finish writing cores.
+	sleep 2
     }
 
     set all_cores [glob -nocomplain -directory $coredir "core*"]
