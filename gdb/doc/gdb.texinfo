@@ -29869,6 +29869,77 @@ Display the currently requested and effective @acronym{AMD}
 
 @end table
 
+@subsubsection @acronym{AMD GPU} Local Memory Address Range Exception Reporting
+
+A wavefront can report local memory (LDS) out-of-address-range exceptions
+when accessing local memory beyond the allocated range.  This feature helps
+detect bugs where GPU code attempts to access local memory at invalid
+addresses.  The following commands can be used to control this behavior:
+
+@table @code
+
+@kindex set amdgpu lds-addr-range-exception
+@cindex AMD GPU local memory address range exception reporting
+@item set amdgpu lds-addr-range-exception @var{mode}
+Controls whether @acronym{AMD GPU} devices report local memory
+out-of-address-range exceptions, where @var{mode} can be:
+
+@table @code
+
+@item off
+Local memory out-of-address-range exception reporting is disabled.
+This is the default.
+
+@item on
+Requests that the @acronym{AMD GPU} device report exceptions when local
+memory accesses are outside the allocated address range.  This feature is
+only supported on certain @acronym{AMD GPU} architectures (such as
+@code{gfx12} and later).
+
+@end table
+
+The local memory address range exception mode cannot be enabled until the
+inferior is started or attached.  If at that time all @acronym{AMD GPU}
+devices accessible to the inferior support the @samp{on} mode, then it is
+enabled.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu lds-addr-range-exception on
+(@value{GDBP}) show amdgpu lds-addr-range-exception
+AMDGPU local memory out-of-address-range exception reporting is on (currently disabled).
+(@value{GDBP}) run
+...
+(@value{GDBP}) show amdgpu lds-addr-range-exception
+AMDGPU local memory out-of-address-range exception reporting is on (currently enabled).
+(@value{GDBP})
+@end smallexample
+
+If any of the @acronym{AMD GPU} devices accessible to the inferior do not
+support the @samp{on} mode, then a warning is reported and the mode is not
+enabled.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu lds-addr-range-exception on
+(@value{GDBP}) show amdgpu lds-addr-range-exception
+AMDGPU local memory out-of-address-range exception reporting is on (currently disabled).
+(@value{GDBP}) run
+AMDGPU local memory out-of-address-range exception reporting could not be enabled
+(@value{GDBP})
+@end smallexample
+
+The @code{amdgpu lds-addr-range-exception} parameter is per-inferior.  When
+an inferior forks or execs, or the user uses the @code{clone-inferior}
+command, and an inferior is created as a result, the newly created inferior
+inherits the parameter value of the original inferior.
+
+@kindex show amdgpu lds-addr-range-exception
+@cindex AMD GPU local memory address range exception reporting
+@item show amdgpu lds-addr-range-exception
+Displays the currently requested @acronym{AMD GPU} local memory address
+range exception setting, and whether it is currently enabled or disabled.
+
+@end table
+
 @subsubsection @acronym{AMD} @acronym{GPU} Logging
 
 The @samp{set debug amd-dbgapi-lib log-level @var{level}} command can be used
