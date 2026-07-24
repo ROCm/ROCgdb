@@ -275,7 +275,7 @@ class lookup_name_info final
       {
       case language_ada:
 	return ada ().lookup_name ().c_str ();
-      case language_cplus:
+      case language_cplus_:
 	return cplus ().lookup_name ().c_str ();
       case language_d:
 	return d ().lookup_name ().c_str ();
@@ -295,7 +295,7 @@ class lookup_name_info final
     split_style style = split_style::NONE;
     switch (strip_cplus_dialect (lang))
       {
-      case language_cplus:
+      case language_cplus_:
       case language_rust:
 	style = split_style::CXX;
 	break;
@@ -317,7 +317,7 @@ class lookup_name_info final
   /* Get the C++-specific lookup info.  */
   const demangle_for_lookup_info &cplus () const
   {
-    maybe_init (m_cplus, language_cplus);
+    maybe_init (m_cplus, language_cplus_);
     return *m_cplus;
   }
 

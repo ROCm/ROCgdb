@@ -256,7 +256,7 @@ cp_type_print_method_args (struct type *mtype,
   int i;
 
   fprintf_symbol (stream, varstring,
-		  language_cplus, DMGL_ANSI);
+		  language_cplus_, DMGL_ANSI);
   gdb_puts ("(", stream);
 
   int printed_args = 0;
