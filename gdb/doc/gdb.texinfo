@@ -883,7 +883,7 @@ specified:
 @end smallexample
 
 You can, instead, specify a process ID as a second argument or use option
-@code{-p}, if you want to debug a running process:
+@option{-p}, if you want to debug a running process:
 
 @smallexample
 @value{GDBP} @var{program} 1234
@@ -901,20 +901,20 @@ debugger attached to a bare board, there may not be any notion of
 will warn you if it is unable to attach or to read core dumps.
 
 You can optionally have @code{@value{GDBP}} pass any arguments after
-the executable file to the inferior using @code{--args} or
-@code{--no-escape-args}.  These options stop option processing.
+the executable file to the inferior using @option{--args} or
+@option{--no-escape-args}.  These options stop option processing.
 @smallexample
 @value{GDBP} --args gcc -O2 -c foo.c
 @end smallexample
 This will cause @code{@value{GDBP}} to debug @code{gcc}, and to set
 @code{gcc}'s command-line arguments (@pxref{Arguments}) to @samp{-O2
--c foo.c}.  For the differences between @code{--args} and
-@code{--no-escape-args}, see @ref{--args and --no-escape-args options,
-,@code{--args} and @code{--no-escape-args}}.
+-c foo.c}.  For the differences between @option{--args} and
+@option{--no-escape-args}, see @ref{--args and --no-escape-args options,
+,@option{--args} and @option{--no-escape-args}}.
 
 You can run @code{@value{GDBP}} without printing the front material, which describes
-@value{GDBN}'s non-warranty, by specifying @code{--silent}
-(or @code{-q}/@code{--quiet}):
+@value{GDBN}'s non-warranty, by specifying @option{--silent}
+(or @option{-q}/@option{--quiet}):
 
 @smallexample
 @value{GDBP} --silent
@@ -937,7 +937,7 @@ to display all available options and briefly describe their use
 
 All options and command line arguments you give are processed
 in sequential order.  The order makes a difference when the
-@samp{-x} option is used.
+@option{-x} option is used.
 
 
 @menu
@@ -952,12 +952,12 @@ in sequential order.  The order makes a difference when the
 
 When @value{GDBN} starts, it reads any arguments other than options as
 specifying an executable file and core file (or process ID).  This is
-the same as if the arguments were specified by the @samp{-se} and
-@samp{-c} (or @samp{-p}) options respectively.  (@value{GDBN} reads the
+the same as if the arguments were specified by the @option{-se} and
+@option{-c} (or @option{-p}) options respectively.  (@value{GDBN} reads the
 first argument that does not have an associated option flag as
-equivalent to the @samp{-se} option followed by that argument; and the
+equivalent to the @option{-se} option followed by that argument; and the
 second argument that does not have an associated option flag, if any, as
-equivalent to the @samp{-c}/@samp{-p} option followed by that argument.)
+equivalent to the @option{-c}/@option{-p} option followed by that argument.)
 If the second argument begins with a decimal digit, @value{GDBN} will
 first attempt to attach to it as a process, and if that fails, attempt
 to open it as a corefile.  If you have a corefile whose name begins with
@@ -968,7 +968,7 @@ If @value{GDBN} has not been configured to included core file support,
 such as for most embedded targets, then it will complain about a second
 argument and ignore it.
 
-For the @samp{-s}, @samp{-e}, and @samp{-se} options, and their long
+For the @option{-s}, @option{-e}, and @option{-se} options, and their long
 form equivalents, the method used to search the file system for the
 symbol and/or executable file is the same as that used by the
 @code{file} command.  @xref{Files, ,file}.
@@ -986,50 +986,50 @@ than @samp{-}, though we illustrate the more usual convention.)
 @table @option
 @item -symbols @var{file}
 @itemx -s @var{file}
-@cindex @code{--symbols}
-@cindex @code{-s}
+@cindex @option{--symbols}
+@cindex @option{-s}
 Read symbol table from file @var{file}.
 
 @item -exec @var{file}
 @itemx -e @var{file}
-@cindex @code{--exec}
-@cindex @code{-e}
+@cindex @option{--exec}
+@cindex @option{-e}
 Use file @var{file} as the executable file to execute when appropriate,
 and for examining pure data in conjunction with a core dump.
 
 @item -se @var{file}
-@cindex @code{--se}
+@cindex @option{--se}
 Read symbol table from file @var{file} and use it as the executable
 file.
 
 @item -core @var{file}
 @itemx -c @var{file}
-@cindex @code{--core}
-@cindex @code{-c}
+@cindex @option{--core}
+@cindex @option{-c}
 Use file @var{file} as a core dump to examine.
 
 @item -pid @var{number}
 @itemx -p @var{number}
-@cindex @code{--pid}
-@cindex @code{-p}
+@cindex @option{--pid}
+@cindex @option{-p}
 Connect to process ID @var{number}, as with the @code{attach} command.
 
 @item -command @var{file}
 @itemx -x @var{file}
-@cindex @code{--command}
-@cindex @code{-x}
+@cindex @option{--command}
+@cindex @option{-x}
 Execute commands from file @var{file}.  The contents of this file is
 evaluated exactly as the @code{source} command would.
 @xref{Command Files,, Command files}.
 
 @item -eval-command @var{command}
 @itemx -ex @var{command}
-@cindex @code{--eval-command}
-@cindex @code{-ex}
+@cindex @option{--eval-command}
+@cindex @option{-ex}
 Execute a single @value{GDBN} command.
 
 This option may be used multiple times to call multiple commands.  It may
-also be interleaved with @samp{-command} as required.
+also be interleaved with @option{-command} as required.
 
 @smallexample
 @value{GDBP} -ex 'target sim' -ex 'load' \
@@ -1038,51 +1038,51 @@ also be interleaved with @samp{-command} as required.
 
 @item -init-command @var{file}
 @itemx -ix @var{file}
-@cindex @code{--init-command}
-@cindex @code{-ix}
+@cindex @option{--init-command}
+@cindex @option{-ix}
 Execute commands from file @var{file} before loading the inferior (but
 after loading gdbinit files).
 @xref{Startup}.
 
 @item -init-eval-command @var{command}
 @itemx -iex @var{command}
-@cindex @code{--init-eval-command}
-@cindex @code{-iex}
+@cindex @option{--init-eval-command}
+@cindex @option{-iex}
 Execute a single @value{GDBN} command before loading the inferior (but
 after loading gdbinit files).
 @xref{Startup}.
 
 @item -early-init-command @var{file}
 @itemx -eix @var{file}
-@cindex @code{--early-init-command}
-@cindex @code{-eix}
+@cindex @option{--early-init-command}
+@cindex @option{-eix}
 Execute commands from @var{file} very early in the initialization
 process, before any output is produced.  @xref{Startup}.
 
 @item -early-init-eval-command @var{command}
 @itemx -eiex @var{command}
-@cindex @code{--early-init-eval-command}
-@cindex @code{-eiex}
+@cindex @option{--early-init-eval-command}
+@cindex @option{-eiex}
 Execute a single @value{GDBN} command very early in the initialization
 process, before any output is produced.
 
 @item -directory @var{directory}
 @itemx -d @var{directory}
-@cindex @code{--directory}
-@cindex @code{-d}
+@cindex @option{--directory}
+@cindex @option{-d}
 Add @var{directory} to the path to search for source and script files.
 
 @item -r
 @itemx -readnow
-@cindex @code{--readnow}
-@cindex @code{-r}
+@cindex @option{--readnow}
+@cindex @option{-r}
 Read each symbol file's entire symbol table immediately, rather than
 the default, which is to read it incrementally as it is needed.
 This makes startup slower, but makes future operations faster.
 
 @item --readnever
 @anchor{--readnever}
-@cindex @code{--readnever}, command-line option
+@cindex @option{--readnever}, command-line option
 Do not read each symbol file's symbolic debug information.  This makes
 startup faster but at the expense of not being able to perform
 symbolic debugging.  DWARF unwind information is also not read,
@@ -1102,14 +1102,14 @@ batch mode or quiet mode.
 @anchor{-nx}
 @item -nx
 @itemx -n
-@cindex @code{--nx}
-@cindex @code{-n}
+@cindex @option{--nx}
+@cindex @option{-n}
 Do not execute commands found in any initialization files
 (@pxref{Initialization Files}).
 
 @anchor{-nh}
 @item -nh
-@cindex @code{--nh}
+@cindex @option{--nh}
 Do not execute commands found in any home directory initialization
 file (@pxref{Initialization Files,,Home directory initialization
 file}).  The system wide and current directory initialization files
@@ -1118,9 +1118,9 @@ are still loaded.
 @item -quiet
 @itemx -silent
 @itemx -q
-@cindex @code{--quiet}
-@cindex @code{--silent}
-@cindex @code{-q}
+@cindex @option{--quiet}
+@cindex @option{--silent}
+@cindex @option{-q}
 ``Quiet''.  Do not print the introductory and copyright messages.  These
 messages are also suppressed in batch mode.
 
@@ -1133,10 +1133,10 @@ initialization file (@pxref{Initialization Files,,Initialization
 Files}) to have future @value{GDBN} sessions startup quietly.
 
 @item -batch
-@cindex @code{--batch}
+@cindex @option{--batch}
 Run in batch mode.  Exit with status @code{0} after processing all the
-command files specified with @samp{-x} (and all commands from
-initialization files, if not inhibited with @samp{-n}).  Exit with
+command files specified with @option{-x} (and all commands from
+initialization files, if not inhibited with @option{-n}).  Exit with
 nonzero status if an error occurs in executing the @value{GDBN} commands
 in the command files.  Batch mode also disables pagination, sets unlimited
 terminal width and height @pxref{Screen Size}, and acts as if @kbd{set confirm
@@ -1156,10 +1156,10 @@ Program exited normally.
 mode.
 
 @item -batch-silent
-@cindex @code{--batch-silent}
-Run in batch mode exactly like @samp{-batch}, but totally silently.  All
+@cindex @option{--batch-silent}
+Run in batch mode exactly like @option{-batch}, but totally silently.  All
 @value{GDBN} output to @code{stdout} is prevented (@code{stderr} is
-unaffected).  This is much quieter than @samp{-silent} and would be useless
+unaffected).  This is much quieter than @option{-silent} and would be useless
 for an interactive session.
 
 This is particularly useful when using targets that give @samp{Loading section}
@@ -1169,7 +1169,7 @@ Note that targets that give their output via @value{GDBN}, as opposed to
 writing directly to @code{stdout}, will also be made silent.
 
 @item -return-child-result
-@cindex @code{--return-child-result}
+@cindex @option{--return-child-result}
 The return code from @value{GDBN} will be the return code from the child
 process (the process being debugged), with the following exceptions:
 
@@ -1177,7 +1177,7 @@ process (the process being debugged), with the following exceptions:
 @item
 @value{GDBN} exits abnormally.  E.g., due to an incorrect argument or an
 internal error.  In this case the exit code is the same as it would have been
-without @samp{-return-child-result}.
+without @option{-return-child-result}.
 @item
 The user quits with an explicit value.  E.g., @samp{quit 1}.
 @item
@@ -1185,40 +1185,40 @@ The child process never runs, or is not allowed to terminate, in which case
 the exit code will be -1.
 @end itemize
 
-This option is useful in conjunction with @samp{-batch} or @samp{-batch-silent},
+This option is useful in conjunction with @option{-batch} or @option{-batch-silent},
 when @value{GDBN} is being used as a remote program loader or simulator
 interface.
 
 @item -nowindows
 @itemx -nw
-@cindex @code{--nowindows}
-@cindex @code{-nw}
+@cindex @option{--nowindows}
+@cindex @option{-nw}
 ``No windows''.  If @value{GDBN} comes with a graphical user interface
 (GUI) built in, then this option tells @value{GDBN} to only use the command-line
 interface.  If no GUI is available, this option has no effect.
 
 @item -windows
 @itemx -w
-@cindex @code{--windows}
-@cindex @code{-w}
+@cindex @option{--windows}
+@cindex @option{-w}
 If @value{GDBN} includes a GUI, then this option requires it to be
 used if possible.
 
 @item -cd @var{directory}
-@cindex @code{--cd}
+@cindex @option{--cd}
 Run @value{GDBN} using @var{directory} as its working directory,
 instead of the current directory.
 
 @item -data-directory @var{directory}
 @itemx -D @var{directory}
-@cindex @code{--data-directory}
-@cindex @code{-D}
+@cindex @option{--data-directory}
+@cindex @option{-D}
 Run @value{GDBN} using @var{directory} as its data directory.
 The data directory is where @value{GDBN} searches for its
 auxiliary files.  @xref{Data Files}.
 
 @item -binary-output
-@cindex @code{--binary-output}
+@cindex @option{--binary-output}
 
 Instructs @value{GDBN} to set the translation mode of its
 @code{stdout}/@code{stderr} to binary.  MS-Windows only.  Useful for
@@ -1230,8 +1230,8 @@ is done.
 
 @item -fullname
 @itemx -f
-@cindex @code{--fullname}
-@cindex @code{-f}
+@cindex @option{--fullname}
+@cindex @option{-f}
 @sc{gnu} Emacs sets this option when it runs @value{GDBN} as a
 subprocess.  It tells @value{GDBN} to output the full file name and line
 number in a standard, recognizable fashion each time a stack frame is
@@ -1243,7 +1243,7 @@ and a newline.  The Emacs-to-@value{GDBN} interface program uses the two
 frame.
 
 @item -annotate @var{level}
-@cindex @code{--annotate}
+@cindex @option{--annotate}
 This option sets the @dfn{annotation level} inside @value{GDBN}.  Its
 effect is identical to using @samp{set annotate @var{level}}
 (@pxref{Annotations}).  The annotation @var{level} controls how much
@@ -1258,12 +1258,12 @@ The annotation mechanism has largely been superseded by @sc{gdb/mi}
 
 @anchor{--args and --no-escape-args options}
 @item --args
-@cindex @code{--args}
+@cindex @option{--args}
 Change interpretation of command line so that arguments following the
 executable file are passed as command line arguments to the inferior.
 This option stops option processing.
 
-Arguments supplied using @code{--args} will have backslashes applied
+Arguments supplied using @option{--args} will have backslashes applied
 to escape any special shell characters.  This ensures that when the
 inferior starts it is passed arguments exactly as @value{GDBN}
 receives them.
@@ -1297,15 +1297,15 @@ Argument list to give program being debugged when it is started is "\*.log".
 
 @noindent
 If this quoting behaviour does not meet your needs, then you could use
-@code{--no-escape-args} instead, which is described below.
+@option{--no-escape-args} instead, which is described below.
 
 @item --no-escape-args
-@cindex @code{--no-escape-args}
+@cindex @option{--no-escape-args}
 Change interpretation of command line so that arguments following the
 executable file are passed as command line arguments to the inferior.
 This option stops option processing.
 
-Unlike @code{--args}, arguments after the executable name will not
+Unlike @option{--args}, arguments after the executable name will not
 have any escaping applied to them.  As a result, any special shell
 characters that are not expanded by the shell that invokes
 @value{GDBN} will be expanded by the shell that @value{GDBN} uses to
@@ -1319,26 +1319,26 @@ Argument list to give program being debugged when it is started is "*.log".
 
 @item -baud @var{bps}
 @itemx -b @var{bps}
-@cindex @code{--baud}
-@cindex @code{-b}
+@cindex @option{--baud}
+@cindex @option{-b}
 Set the line speed (baud rate or bits per second) of any serial
 interface used by @value{GDBN} for remote debugging.
 
 @item -l @var{timeout}
-@cindex @code{-l}
+@cindex @option{-l}
 Set the timeout (in seconds) of any communication used by @value{GDBN}
 for remote debugging.
 
 @item -tty @var{device}
 @itemx -t @var{device}
-@cindex @code{--tty}
-@cindex @code{-t}
+@cindex @option{--tty}
+@cindex @option{-t}
 Run using @var{device} for your program's standard input and output.
 @c FIXME: kingdon thinks there is more to -tty.  Investigate.
 
 @c resolve the situation of these eventually
 @item -tui
-@cindex @code{--tui}
+@cindex @option{--tui}
 Activate the @dfn{Text User Interface} when starting.  The Text User
 Interface manages several text windows on the terminal, showing
 source, assembly, registers and @value{GDBN} command outputs
@@ -1347,13 +1347,13 @@ option if you run @value{GDBN} from Emacs (@pxref{Emacs, ,
 Using @value{GDBN} under @sc{gnu} Emacs}).
 
 @item -interpreter @var{interp}
-@cindex @code{--interpreter}
+@cindex @option{--interpreter}
 Use the interpreter @var{interp} for interface with the controlling
 program or device.  This option is meant to be set by programs which
 communicate with @value{GDBN} using it as a back end.
 @xref{Interpreters, , Command Interpreters}.
 
-@samp{--interpreter=mi} (or @samp{--interpreter=mi3}) causes
+@option{--interpreter=mi} (or @option{--interpreter=mi3}) causes
 @value{GDBN} to use the @dfn{@sc{gdb/mi} interface} version 3 (@pxref{GDB/MI, ,
 The @sc{gdb/mi} Interface}) included since @value{GDBN} version 9.1.  @sc{gdb/mi}
 version 2 (@code{mi2}), included in @value{GDBN} 6.0 and version 1 (@code{mi1}),
@@ -1361,23 +1361,23 @@ included in @value{GDBN} 5.3, are also available.  Earlier @sc{gdb/mi}
 interfaces are no longer supported.
 
 @item -write
-@cindex @code{--write}
+@cindex @option{--write}
 Open the executable and core files for both reading and writing.  This
 is equivalent to the @samp{set write on} command inside @value{GDBN}
 (@pxref{Patching}).
 
 @item -statistics
-@cindex @code{--statistics}
+@cindex @option{--statistics}
 This option causes @value{GDBN} to print statistics about time and
 memory usage after it completes each command and returns to the prompt.
 
 @item -version
-@cindex @code{--version}
+@cindex @option{--version}
 This option causes @value{GDBN} to print its version number and
 no-warranty blurb, and exit.
 
 @item -configuration
-@cindex @code{--configuration}
+@cindex @option{--configuration}
 This option causes @value{GDBN} to print details about its build-time
 configuration parameters, and then exit.  These details can be
 important when reporting @value{GDBN} bugs (@pxref{GDB Bugs}).
@@ -1403,10 +1403,10 @@ an early initialization file, see @ref{Initialization Files}, for
 details.
 
 @item
-Executes commands and command files specified by the @samp{-eiex} and
-@samp{-eix} command line options in their specified order.  Only a
-restricted set of commands can be used with @samp{-eiex} and
-@samp{eix}, see @ref{Initialization Files}, for details.
+Executes commands and command files specified by the @option{-eiex} and
+@option{-eix} command line options in their specified order.  Only a
+restricted set of commands can be used with @option{-eiex} and
+@option{-eix}, see @ref{Initialization Files}, for details.
 
 @item
 Sets up the command interpreter as specified by the command line
@@ -1424,9 +1424,9 @@ File}.
 
 @anchor{Option -init-eval-command}
 @item
-Executes commands and command files specified by the @samp{-iex} and
-@samp{-ix} options in their specified order.  Usually you should use the
-@samp{-ex} and @samp{-x} options instead, but this way you can apply
+Executes commands and command files specified by the @option{-iex} and
+@option{-ix} options in their specified order.  Usually you should use the
+@option{-ex} and @option{-x} options instead, but this way you can apply
 settings before @value{GDBN} init files get executed and before inferior
 gets loaded.
 
@@ -1457,12 +1457,12 @@ you must do something like the following:
 $ gdb -iex "set auto-load python-scripts off" myprogram
 @end smallexample
 
-Option @samp{-ex} does not work because the auto-loading is then turned
+Option @option{-ex} does not work because the auto-loading is then turned
 off too late.
 
 @item
-Executes commands and command files specified by the @samp{-ex} and
-@samp{-x} options in their specified order.  @xref{Command Files}, for
+Executes commands and command files specified by the @option{-ex} and
+@option{-x} options in their specified order.  @xref{Command Files}, for
 more details about @value{GDBN} command files.
 
 @item
@@ -1497,10 +1497,10 @@ Commands that can be placed into an early initialization file will be
 documented as such throughout this manual.  Any command that is not
 documented as being suitable for an early initialization file should
 instead be placed into a general initialization file.  Command files
-passed to @code{--early-init-command} or @code{-eix} are also early
+passed to @option{--early-init-command} or @option{-eix} are also early
 initialization files, with the same command restrictions.  Only
 commands that can appear in an early initialization file should be
-passed to @code{--early-init-eval-command} or @code{-eiex}.
+passed to @option{--early-init-eval-command} or @option{-eiex}.
 
 @cindex general initialization
 In contrast, the @dfn{general initialization} files are processed
@@ -1558,7 +1558,7 @@ environment variable @env{HOME}, if it is defined.
 @end itemize
 
 It is possible to prevent the home directory early initialization file
-from being loaded using the @samp{-nx} or @samp{-nh} command line
+from being loaded using the @option{-nx} or @option{-nh} command line
 options, @pxref{Mode Options,,Choosing Modes}.
 
 @anchor{System Wide Init Files}
@@ -1571,13 +1571,13 @@ initialization files.  Both of these locations are always checked:
 
 @item system.gdbinit
 This is a single system-wide initialization file.  Its location is
-specified with the @code{--with-system-gdbinit} configure option
+specified with the @option{--with-system-gdbinit} configure option
 (@pxref{System-wide configuration}).  It is loaded first when
 @value{GDBN} starts, before command line options have been processed.
 
 @item system.gdbinit.d
 This is the system-wide initialization directory.  Its location is
-specified with the @code{--with-system-gdbinit-dir} configure option
+specified with the @option{--with-system-gdbinit-dir} configure option
 (@pxref{System-wide configuration}).  Files in this directory are
 loaded in alphabetical order immediately after @file{system.gdbinit}
 (if enabled) when @value{GDBN} starts, before command line options
@@ -1590,7 +1590,7 @@ this directory.
 @end table
 
 It is possible to prevent the system wide initialization files from
-being loaded using the @samp{-nx} command line option, @pxref{Mode
+being loaded using the @option{-nx} command line option, @pxref{Mode
 Options,,Choosing Modes}.
 
 @anchor{Home Directory Init File}
@@ -1622,7 +1622,7 @@ While on Apple hosts the locations searched are:
 @end table
 
 It is possible to prevent the home directory initialization file from
-being loaded using the @samp{-nx} or @samp{-nh} command line options,
+being loaded using the @option{-nx} or @option{-nh} command line options,
 @pxref{Mode Options,,Choosing Modes}.
 
 The DJGPP port of @value{GDBN} uses the name @file{gdb.ini} instead of
@@ -1637,8 +1637,8 @@ file to the standard name.
 
 @value{GDBN} will check the current directory for a file called
 @file{.gdbinit}.  It is loaded last, after command line options
-other than @samp{-x} and @samp{-ex} have been processed.  The command
-line options @samp{-x} and @samp{-ex} are processed last, after
+other than @option{-x} and @option{-ex} have been processed.  The command
+line options @option{-x} and @option{-ex} are processed last, after
 @file{.gdbinit} has been loaded, @pxref{File Options,,Choosing
 Files}.
 
@@ -1647,7 +1647,7 @@ directory initialization file then it will not be loaded a second
 time.
 
 It is possible to prevent the local directory initialization file from
-being loaded using the @samp{-nx} command line option, @pxref{Mode
+being loaded using the @option{-nx} command line option, @pxref{Mode
 Options,,Choosing Modes}.
 
 @node Quitting GDB
@@ -2616,23 +2616,23 @@ is stored in the object file; it describes the data type of each
 variable or function and the correspondence between source line numbers
 and addresses in the executable code.
 
-To request debugging information, specify the @samp{-g} option when you run
+To request debugging information, specify the @option{-g} option when you run
 the compiler.
 
 Programs that are to be shipped to your customers are compiled with
-optimizations, using the @samp{-O} compiler option.  However, some
-compilers are unable to handle the @samp{-g} and @samp{-O} options
+optimizations, using the @option{-O} compiler option.  However, some
+compilers are unable to handle the @option{-g} and @option{-O} options
 together.  Using those compilers, you cannot generate optimized
 executables containing debugging information.
 
-@value{NGCC}, the @sc{gnu} C/C@t{++} compiler, supports @samp{-g} with or
-without @samp{-O}, making it possible to debug optimized code.  We
-recommend that you @emph{always} use @samp{-g} whenever you compile a
+@value{NGCC}, the @sc{gnu} C/C@t{++} compiler, supports @option{-g} with or
+without @option{-O}, making it possible to debug optimized code.  We
+recommend that you @emph{always} use @option{-g} whenever you compile a
 program.  You may think your program is correct, but there is no sense
 in pushing your luck.  For more information, see @ref{Optimized Code}.
 
 Older versions of the @sc{gnu} C compiler permitted a variant option
-@w{@samp{-gg}} for debugging information.  @value{GDBN} no longer supports this
+@option{-gg} for debugging information.  @value{GDBN} no longer supports this
 format; if your @sc{gnu} C compiler has this option, do not use it.
 
 @value{GDBN} knows about preprocessor macros and can show you their
@@ -5827,7 +5827,7 @@ Catchpoint 2 (syscall 764)
 (@value{GDBP})
 @end smallexample
 
-If you configure @value{GDBN} using the @samp{--without-expat} option,
+If you configure @value{GDBN} using the @option{--without-expat} option,
 it will not be able to display syscall names.  Also, if your
 architecture does not have an XML file describing its system calls,
 you will not be able to see the syscall names.  It is important to
@@ -8713,7 +8713,7 @@ describe this number.
 Some compilers provide a way to compile functions so that they operate
 without stack frames.  (For example, the @value{NGCC} option
 @smallexample
-@samp{-fomit-frame-pointer}
+@option{-fomit-frame-pointer}
 @end smallexample
 generates functions without a frame.)
 This is occasionally done with heavily used library functions to save
@@ -10241,7 +10241,7 @@ and @samp{$cwd}, in that order.
 To add other directories, use the @code{directory} command.
 
 The search path is used to find both program source files and @value{GDBN}
-script files (read using the @samp{-command} option and @samp{source} command).
+script files (read using the @option{-command} option and @samp{source} command).
 
 @cindex substitution rules, for source search path
 @cindex source directories, substitution rules
@@ -10292,13 +10292,13 @@ for any reason a source file that is not relevant to your executable is
 located at the original location, a substitution rule is the only
 method available to point @value{GDBN} at the new location.
 
-@cindex @samp{--with-relocated-sources}
+@cindex @option{--with-relocated-sources}
 @cindex default source path substitution
 You can configure a default source path substitution rule by
 configuring @value{GDBN} with the
-@samp{--with-relocated-sources=@var{dir}} option.  The @var{dir}
+@option{--with-relocated-sources=@var{dir}} option.  The @var{dir}
 should be the name of a directory under @value{GDBN}'s configured
-prefix (set with @samp{--prefix} or @samp{--exec-prefix}), and
+prefix (set with @option{--prefix} or @option{--exec-prefix}), and
 directory names in debug information under @var{dir} will be adjusted
 automatically if the installed @value{GDBN} is moved to a new
 location.  This is useful if @value{GDBN}, libraries or executables
@@ -10607,7 +10607,7 @@ The @code{/s} option is the preferred choice.
 Here is an example for AMD x86-64 showing the difference between
 @code{/m} output and @code{/s} output.
 This example has one inline function defined in a header file,
-and the code is compiled with @samp{-O2} optimization.
+and the code is compiled with @option{-O2} optimization.
 Note how the @code{/m} output is missing the disassembly of
 several instructions that are present in the @code{/s} output.
 
@@ -10725,7 +10725,7 @@ might be able to resolve these to actual function names.
 @item set disassembler-options @var{option1}[,@var{option2}@dots{}]
 This command controls the passing of target specific information to
 the disassembler.  For a list of valid options, please refer to the
-@code{-M}/@code{--disassembler-options} section of the @samp{objdump}
+@option{-M}/@option{--disassembler-options} section of the @samp{objdump}
 manual and/or the output of @kbd{objdump --help}
 (@pxref{objdump,,objdump,binutils,The GNU Binary Utilities}).
 The default value is the empty string.
@@ -10970,7 +10970,7 @@ Table}.
 @kindex explore
 Another way of examining values of expressions and type information is
 through the Python extension command @code{explore} (available only if
-the @value{GDBN} build is configured with @code{--with-python}).  It
+the @value{GDBN} build is configured with @option{--with-python}).  It
 offers an interactive way to start at the highest level (or, the most
 abstract level) of the data type of an expression (or, the data type
 itself) and explore all the way down to leaf scalar values/fields
@@ -11498,8 +11498,8 @@ $2 = 30
 
 Strings are identified as arrays of @code{char} values without specified
 signedness.  Arrays of either @code{signed char} or @code{unsigned char} get
-printed as arrays of 1 byte sized integers.  @code{-fsigned-char} or
-@code{-funsigned-char} @value{NGCC} options have no effect as @value{GDBN}
+printed as arrays of 1 byte sized integers.  @option{-fsigned-char} or
+@option{-funsigned-char} @value{NGCC} options have no effect as @value{GDBN}
 defines literal string type @code{"char"} as @code{char} without a sign.
 For program code
 
@@ -14884,8 +14884,8 @@ variable, but never use it, @value{GDBN} never sees that
 variable---because the compiler optimizes it out of existence.
 
 Some things do not work as well with @samp{-g -O} as with just
-@samp{-g}, particularly on machines with instruction scheduling.  If in
-doubt, recompile with @samp{-g} alone, and if this fixes the problem,
+@option{-g}, particularly on machines with instruction scheduling.  If in
+doubt, recompile with @option{-g} alone, and if this fixes the problem,
 please report it to us as a bug (including a test case!).
 @xref{Variables}, for more information about debugging optimized code.
 
@@ -21786,17 +21786,17 @@ The options used, in increasing precedence:
 @table @asis
 @item target architecture and OS options (@code{gdbarch})
 These options depend on target processor type and target operating
-system, usually they specify at least 32-bit (@code{-m32}) or 64-bit
-(@code{-m64}) compilation option.
+system, usually they specify at least 32-bit (@option{-m32}) or 64-bit
+(@option{-m64}) compilation option.
 
 @item compilation options recorded in the target
 @value{NGCC} (since version 4.7) stores the options used for compilation
 into @code{DW_AT_producer} part of DWARF debugging information according
-to the @value{NGCC} option @code{-grecord-gcc-switches}.  One has to
-explicitly specify @code{-g} during inferior compilation otherwise
+to the @value{NGCC} option @option{-grecord-gcc-switches}.  One has to
+explicitly specify @option{-g} during inferior compilation otherwise
 @value{NGCC} produces no DWARF.  This feature is only relevant for
-platforms where @code{-g} produces DWARF by default, otherwise one may
-try to enforce DWARF by using @code{-gdwarf-4}.
+platforms where @option{-g} produces DWARF by default, otherwise one may
+try to enforce DWARF by using @option{-gdwarf-4}.
 
 @item compilation options set by @code{set compile-args}
 @end table
@@ -22651,11 +22651,11 @@ The @code{set solib-absolute-prefix} command is an alias for @code{set
 sysroot}.
 
 @cindex default system root
-@cindex @samp{--with-sysroot}
+@cindex @option{--with-sysroot}
 You can set the default system root by using the configure-time
-@samp{--with-sysroot} option.  If the system root is inside
-@value{GDBN}'s configured binary prefix (set with @samp{--prefix} or
-@samp{--exec-prefix}), then the default system root will be updated
+@option{--with-sysroot} option.  If the system root is inside
+@value{GDBN}'s configured binary prefix (set with @option{--prefix} or
+@option{--exec-prefix}), then the default system root will be updated
 automatically if the installed @value{GDBN} is moved to a new
 location.
 
@@ -23220,7 +23220,7 @@ $ objcopy --add-section .gdb_index=symfile.gdb-index \
     --set-section-flags .gdb_index=readonly symfile symfile
 @end smallexample
 
-Or for @code{-dwarf-5}:
+Or for @option{-dwarf-5}:
 
 @smallexample
 $ objcopy --dump-section .debug_str=symfile.debug_str.new symfile
@@ -23523,16 +23523,16 @@ Show the directory @value{GDBN} searches for auxiliary data files.
 @end table
 
 @cindex default data directory
-@cindex @samp{--with-gdb-datadir}
+@cindex @option{--with-gdb-datadir}
 You can set the default data directory by using the configure-time
-@samp{--with-gdb-datadir} option.  If the data directory is inside
-@value{GDBN}'s configured binary prefix (set with @samp{--prefix} or
-@samp{--exec-prefix}), then the default data directory will be updated
+@option{--with-gdb-datadir} option.  If the data directory is inside
+@value{GDBN}'s configured binary prefix (set with @option{--prefix} or
+@option{--exec-prefix}), then the default data directory will be updated
 automatically if the installed @value{GDBN} is moved to a new
 location.
 
 The data directory may also be specified with the
-@code{--data-directory} command line option.
+@option{--data-directory} command line option.
 @xref{Mode Options}.
 
 @node Targets
@@ -23990,7 +23990,7 @@ program file access, start up @value{GDBN} using the name of the local
 unstripped copy of your program as the first argument, or use the
 @code{file} command.  Use @code{set sysroot} to specify the location (on
 the host) of target libraries (unless your @value{GDBN} was compiled with
-the correct sysroot using @code{--with-sysroot}).  Alternatively, you
+the correct sysroot using @option{--with-sysroot}).  Alternatively, you
 may use @code{set solib-search-path} to specify how @value{GDBN} locates
 target libraries.
 
@@ -24026,7 +24026,7 @@ target remote /dev/ttyb
 @end smallexample
 
 If you're using a serial line, you may want to give @value{GDBN} the
-@samp{--baud} option, or use the @code{set serial baud} command
+@option{--baud} option, or use the @code{set serial baud} command
 (@pxref{Remote Configuration, set serial baud}) before the
 @code{target} command.
 
@@ -24330,7 +24330,7 @@ with ssh:
 (@value{GDBP}) target remote | ssh -T hostname gdbserver - hello
 @end smallexample
 
-The @samp{-T} option to ssh is provided because we don't need a remote pty,
+The @option{-T} option to ssh is provided because we don't need a remote pty,
 and we don't want escape-character handling.  Ssh does this by default when
 a command is provided, the flag is provided to make it explicit.
 You could elide it if you want to.
@@ -24346,7 +24346,7 @@ Both @code{stdout} and @code{stderr} use the same pipe.
 @cindex @option{--attach}, @code{gdbserver} option
 
 On some targets, @code{gdbserver} can also attach to running programs.
-This is accomplished via the @code{--attach} argument.  The syntax is:
+This is accomplished via the @option{--attach} argument.  The syntax is:
 
 @smallexample
 target> gdbserver --attach @var{comm} @var{pid}
@@ -24518,7 +24518,7 @@ Make sure you have the necessary symbol files
 Load symbols for your application using the @code{file} command before you
 connect.  Use @code{set sysroot} to locate target libraries (unless your
 @value{GDBN} was compiled with the correct sysroot using
-@code{--with-sysroot}).
+@option{--with-sysroot}).
 
 @item
 Connect to your target (@pxref{Connecting,,Connecting to a Remote Target}).
@@ -28225,7 +28225,7 @@ is not set.
 The @env{GDBHISTFILE} environment variable is read after processing
 any @value{GDBN} initialization files (@pxref{Startup}) and after
 processing any commands passed using command line options (for
-example, @code{-ex}).
+example, @option{-ex}).
 
 If the @var{fname} argument is not given, or if the @env{GDBHISTFILE}
 is the empty string then @value{GDBN} will neither try to load an
@@ -28261,7 +28261,7 @@ either a negative number or the empty string, then the number of commands
 The @env{GDBHISTSIZE} environment variable is read after processing
 any @value{GDBN} initialization files (@pxref{Startup}) and after
 processing any commands passed using command line options (for
-example, @code{-ex}).
+example, @option{-ex}).
 
 @cindex remove duplicate history
 @kindex set history remove-duplicates
@@ -28883,7 +28883,7 @@ control when to auto-load files and which files should be auto-loaded.
 @kindex set auto-load off
 @item set auto-load off
 Globally disable loading of all auto-loaded files.
-You may want to use this command with the @samp{-iex} option
+You may want to use this command with the @option{-iex} option
 (@pxref{Option -init-eval-command}) such as:
 @smallexample
 $ @kbd{gdb -iex "set auto-load off" untrusted-executable corefile}
@@ -29129,7 +29129,7 @@ automatic loading and execution of scripts.  Multiple entries may be delimited
 by the host platform path separator in use.
 @end table
 
-This variable defaults to what @code{--with-auto-load-dir} has been configured
+This variable defaults to what @option{--with-auto-load-dir} has been configured
 to (@pxref{with-auto-load-dir}).  @file{$debugdir} and @file{$datadir}
 substitution applies the same as for @ref{set auto-load scripts-directory}.
 The default @code{set auto-load safe-path} value can be also overridden by
@@ -32447,9 +32447,9 @@ will be increased by one.  The new versions of the MI protocol are not compatibl
 with the old versions.  Old versions of MI remain available, allowing front ends
 to keep using them until they are modified to use the latest MI version.
 
-Since @code{--interpreter=mi} always points to the latest MI version, it is
+Since @option{--interpreter=mi} always points to the latest MI version, it is
 recommended that front ends request a specific version of MI when launching
-@value{GDBN} (e.g.@: @code{--interpreter=mi2}) to make sure they get an
+@value{GDBN} (e.g.@: @option{--interpreter=mi2}) to make sure they get an
 interpreter with the MI version they expect.
 
 The following table gives a summary of the released versions of the MI
@@ -40532,7 +40532,7 @@ request.  (In fact, @code{cancel} should work for any request, but it
 is unlikely to be useful for most of them.)
 
 @value{GDBN} provides a couple of logging settings that can be used in
-DAP mode.  These can be set on the command line using the @code{-iex}
+DAP mode.  These can be set on the command line using the @option{-iex}
 option (@pxref{File Options}).
 
 @table @kbd
@@ -41164,7 +41164,7 @@ those compilers.
 
 @item
 The command arguments you gave the compiler to compile your example and
-observe the bug.  For example, did you use @samp{-O}?  To guarantee
+observe the bug.  For example, did you use @option{-O}?  To guarantee
 you will not omit something important, list them all.  A copy of the
 Makefile (or the output from make) is sufficient.
 
@@ -41631,7 +41631,7 @@ directories of the @file{gdb} subdirectory.  This leads to build errors
 about missing include files such as @file{bfd/bfd.h}.
 
 You can install @code{@value{GDBN}} anywhere.  The best way to do this
-is to pass the @code{--prefix} option to @code{configure}, and then
+is to pass the @option{--prefix} option to @code{configure}, and then
 install it with @code{make install}.
 
 @node Separate Objdir
@@ -41647,11 +41647,11 @@ handles the @samp{VPATH} feature (@sc{gnu} @code{make} does), running
 program specified there.
 
 To build @code{gdb} in a separate directory, run @file{configure}
-with the @samp{--srcdir} option to specify where to find the source.
+with the @option{--srcdir} option to specify where to find the source.
 (You also need to specify a path to find @file{configure}
 itself from your working directory.  If the path to @file{configure}
-would be the same as the argument to @samp{--srcdir}, you can leave out
-the @samp{--srcdir} option; it is assumed.)
+would be the same as the argument to @option{--srcdir}, you can leave out
+the @option{--srcdir} option; it is assumed.)
 
 For example, with version @value{GDBVN}, you can build @value{GDBN} in a
 separate directory for a Sun 4 like this:
@@ -41684,7 +41684,7 @@ directories is to configure @value{GDBN} for cross-compiling (where
 @value{GDBN} runs on one machine---the @dfn{host}---while debugging
 programs that run on another machine---the @dfn{target}).
 You specify a cross-debugging target by
-giving the @samp{--target=@var{target}} option to @file{configure}.
+giving the @option{--target=@var{target}} option to @file{configure}.
 
 When you run @code{make} to build a program or library, you must run
 it in a configured directory---whatever directory you were in when you
@@ -41714,7 +41714,7 @@ of information in the following pattern:
 @end smallexample
 
 For example, you can use the alias @code{sun4} as a @var{host} argument,
-or as the value for @var{target} in a @code{--target=@var{target}}
+or as the value for @var{target} in a @option{--target=@var{target}}
 option.  The equivalent full name is @samp{sparc-sun-sunos4}.
 
 The @file{configure} script accompanying @value{GDBN} does not provide
@@ -41799,7 +41799,7 @@ Configure @value{GDBN} for cross-debugging programs running on the specified
 programs that run on the same machine (@var{host}) as @value{GDBN} itself.
 
 There is no convenient way to generate a list of all available
-targets.  Also see the @code{--enable-targets} option, below.
+targets.  Also see the @option{--enable-targets} option, below.
 @end table
 
 There are many other options that are specific to @value{GDBN}.  This
@@ -41825,14 +41825,14 @@ in.
 Set the @value{GDBN}-specific data directory.  @value{GDBN} will look
 here for certain supporting files or scripts.  This defaults to the
 @file{gdb} subdirectory of @samp{datadir} (which can be set using
-@code{--datadir}).
+@option{--datadir}).
 
 @item --with-relocated-sources=@var{dir}
 Sets up the default source path substitution rule so that directory
 names recorded in debug information will be automatically adjusted for
 any directory under @var{dir}.  @var{dir} should be a subdirectory of
 @value{GDBN}'s configured prefix, the one mentioned in the
-@code{--prefix} or @code{--exec-prefix} options to configure.  This
+@option{--prefix} or @option{--exec-prefix} options to configure.  This
 option is useful if GDB is supposed to be moved to a different place
 after it is built.
 
@@ -41933,7 +41933,7 @@ Use @var{dir} as the default system root directory for libraries whose
 file names begin with @file{/lib}' or @file{/usr/lib'}.  (The value of
 @var{dir} can be modified at run time by using the @command{set
 sysroot} command.)  If @var{dir} is under the @value{GDBN} configured
-prefix (set with @code{--prefix} or @code{--exec-prefix options}, the
+prefix (set with @option{--prefix} or @option{--exec-prefix} options, the
 default system root will be automatically adjusted if and when
 @value{GDBN} is moved to a different location.
 
@@ -41959,14 +41959,14 @@ different warning flags, depending on the exact version of the
 compiler you are using.
 
 @item --enable-werror
-Treat compiler warnings as errors.  It adds the @code{-Werror} flag
+Treat compiler warnings as errors.  It adds the @option{-Werror} flag
 to the compiler, which will fail the compilation if the compiler
 outputs any warning messages.
 
 @item --enable-ubsan
 Enable the GCC undefined behavior sanitizer.  This is disabled by
-default, but passing @code{--enable-ubsan=yes} or
-@code{--enable-ubsan=auto} to @code{configure} will enable it.  The
+default, but passing @option{--enable-ubsan=yes} or
+@option{--enable-ubsan=auto} to @code{configure} will enable it.  The
 undefined behavior sanitizer checks for C@t{++} undefined behavior.
 It has a performance cost, so if you are looking at @value{GDBN}'s
 performance, you should disable it.  The undefined behavior sanitizer
@@ -42906,7 +42906,7 @@ Control the DWARF compilation unit cache.
 
 @cindex DWARF compilation units cache
 In object files with inter-compilation-unit references, such as those
-produced by the GCC option @samp{-feliminate-dwarf2-dups}, the DWARF
+produced by the GCC option @option{-feliminate-dwarf2-dups}, the DWARF
 reader needs to frequently refer to previously read compilation units.
 This setting controls how long a compilation unit will remain in the
 cache if it is not referenced.  A higher limit means that cached
@@ -43002,8 +43002,8 @@ if you use profiling, @value{GDBN} will overwrite the profiling log file
 (often called @file{gmon.out}).  If you have a record of important profiling
 data in a @file{gmon.out} file, be sure to move it to a safe location.
 
-Configuring with @samp{--enable-profiling} arranges for @value{GDBN} to be
-compiled with the @samp{-pg} compiler option.
+Configuring with @option{--enable-profiling} arranges for @value{GDBN} to be
+compiled with the @option{-pg} compiler option.
 
 @kindex maint set show-debug-regs
 @kindex maint show show-debug-regs
@@ -51793,7 +51793,7 @@ gdb program core
 @end smallexample
 
 You can, instead, specify a process ID as a second argument or use option
-@code{-p}, if you want to debug a running process:
+@option{-p}, if you want to debug a running process:
 
 @smallexample
 gdb program 1234
@@ -51991,7 +51991,7 @@ gdb --args ./a.out -q
 
 @noindent
 starts @value{GDBN} with the introductory message, and passes the
-option @code{-q} to the inferior.
+option @option{-q} to the inferior.
 
 The difference between @option{--args} and @option{--no-escape-args}
 is whether @value{GDBN} applies escapes to the arguments it sees:
@@ -52602,7 +52602,7 @@ the @value{GDBN} manual in node @code{Startup}
 @item (not enabled with @option{--with-system-gdbinit} during compilation)
 @end ifclear
 System-wide initialization file.  It is executed unless user specified
-@value{GDBN} option @code{-nx} or @code{-n}.
+@value{GDBN} option @option{-nx} or @option{-n}.
 See more in
 @ifset man
 the @value{GDBN} manual in node @code{System-wide configuration}
@@ -52615,8 +52615,8 @@ the @value{GDBN} manual in node @code{System-wide configuration}
 @item (not enabled with @option{--with-system-gdbinit-dir} during compilation)
 @end ifclear
 System-wide initialization directory.  All files in this directory are
-executed on startup unless user specified @value{GDBN} option @code{-nx} or
-@code{-n}, as long as they have a recognized file extension.
+executed on startup unless user specified @value{GDBN} option @option{-nx} or
+@option{-n}, as long as they have a recognized file extension.
 See more in
 @ifset man
 the @value{GDBN} manual in node @code{System-wide configuration}
@@ -52628,7 +52628,7 @@ the @value{GDBN} manual in node @code{System-wide configuration}
 
 @item @file{~/.config/gdb/gdbinit} or @file{~/.gdbinit}
 User initialization file.  It is executed unless user specified
-@value{GDBN} options @code{-nx}, @code{-n} or @code{-nh}.
+@value{GDBN} options @option{-nx}, @option{-n} or @option{-nh}.
 
 @item @file{.gdbinit}
 Initialization file for current directory.  It may need to be enabled with

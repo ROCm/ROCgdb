@@ -326,12 +326,12 @@ Return a string containing the @value{GDBN} version.
 
 @deffn {Scheme Procedure} host-config
 Return a string containing the host configuration.
-This is the string passed to @code{--host} when @value{GDBN} was configured.
+This is the string passed to @option{--host} when @value{GDBN} was configured.
 @end deffn
 
 @deffn {Scheme Procedure} target-config
 Return a string containing the target configuration.
-This is the string passed to @code{--target} when @value{GDBN} was configured.
+This is the string passed to @option{--target} when @value{GDBN} was configured.
 @end deffn
 
 @node GDB Scheme Data Types
