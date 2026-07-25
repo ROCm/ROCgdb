@@ -842,7 +842,7 @@ This chapter discusses how to start @value{GDBN}, and how to get out of it.
 The essentials are:
 @itemize @bullet
 @item
-type @samp{@value{GDBP}} to start @value{GDBN}.
+type @command{@value{GDBP}} to start @value{GDBN}.
 @item
 type @kbd{quit}, @kbd{exit} or @kbd{Ctrl-d} to exit.
 @end itemize
@@ -857,10 +857,10 @@ type @kbd{quit}, @kbd{exit} or @kbd{Ctrl-d} to exit.
 @node Invoking GDB
 @section Invoking @value{GDBN}
 
-Invoke @value{GDBN} by running the program @code{@value{GDBP}}.  Once started,
+Invoke @value{GDBN} by running the program @command{@value{GDBP}}.  Once started,
 @value{GDBN} reads commands from the terminal until you tell it to exit.
 
-You can also run @code{@value{GDBP}} with a variety of arguments and options,
+You can also run @command{@value{GDBP}} with a variety of arguments and options,
 to specify more of your debugging environment at the outset.
 
 The command-line options described here are designed
@@ -900,19 +900,19 @@ debugger attached to a bare board, there may not be any notion of
 ``process'', and there is often no way to get a core dump.  @value{GDBN}
 will warn you if it is unable to attach or to read core dumps.
 
-You can optionally have @code{@value{GDBP}} pass any arguments after
+You can optionally have @command{@value{GDBP}} pass any arguments after
 the executable file to the inferior using @option{--args} or
 @option{--no-escape-args}.  These options stop option processing.
 @smallexample
 @value{GDBP} --args gcc -O2 -c foo.c
 @end smallexample
-This will cause @code{@value{GDBP}} to debug @code{gcc}, and to set
-@code{gcc}'s command-line arguments (@pxref{Arguments}) to @samp{-O2
+This will cause @command{@value{GDBP}} to debug @command{gcc}, and to set
+@command{gcc}'s command-line arguments (@pxref{Arguments}) to @samp{-O2
 -c foo.c}.  For the differences between @option{--args} and
 @option{--no-escape-args}, see @ref{--args and --no-escape-args options,
 ,@option{--args} and @option{--no-escape-args}}.
 
-You can run @code{@value{GDBP}} without printing the front material, which describes
+You can run @command{@value{GDBP}} without printing the front material, which describes
 @value{GDBN}'s non-warranty, by specifying @option{--silent}
 (or @option{-q}/@option{--quiet}):
 
@@ -1705,16 +1705,16 @@ You may also invoke shell commands from expressions, using the
 @code{$_shell} convenience function.  @xref{$_shell convenience
 function}.
 
-The utility @code{make} is often needed in development environments.
-You do not have to use the @code{shell} command for this purpose in
+The utility @command{make} is often needed in development environments.
+You do not have to use the @kbd{shell} command for this purpose in
 @value{GDBN}:
 
 @table @kbd
 @kindex make
 @cindex calling make
 @item make @var{make-args}
-Execute the @code{make} program with the specified
-arguments.  This is equivalent to @samp{shell make @var{make-args}}.
+Execute the @command{make} program with the specified
+arguments.  This is equivalent to @kbd{shell make @var{make-args}}.
 @end table
 
 @table @kbd
@@ -1776,7 +1776,7 @@ this contains a PIPE char!
 
 The convenience variables @code{$_shell_exitcode} and @code{$_shell_exitsignal}
 can be used to examine the exit status of the last shell command launched
-by @code{shell}, @code{make}, @code{pipe} and @code{|}.
+by @kbd{shell}, @kbd{make}, @kbd{pipe} and @kbd{|}.
 @xref{Convenience Vars,, Convenience Variables}.
 
 @node Logging Output
@@ -2567,7 +2567,7 @@ if your version of @value{GDBN} comes with one.
 @item show configuration
 Display detailed information about the way @value{GDBN} was configured
 when it was built.  This displays the optional arguments passed to the
-@file{configure} script and also configuration parameters detected
+@command{configure} script and also configuration parameters detected
 automatically by @command{configure}.  When reporting a @value{GDBN}
 bug (@pxref{GDB Bugs}), it is important to include this information in
 your report.
@@ -23482,7 +23482,7 @@ uncomprehended information, in hexadecimal.
 @value{GDBN} circumvents the error by ignoring this symbol information.
 This usually allows you to debug your program, though certain symbols
 are not accessible.  If you encounter such a problem and feel like
-debugging it, you can debug @code{@value{GDBP}} with itself, breakpoint
+debugging it, you can debug @command{@value{GDBP}} with itself, breakpoint
 on @code{complain}, then go up to the function @code{read_dbx_symtab}
 and examine @code{*bufp} to see the symbol.
 
@@ -41385,7 +41385,7 @@ Then give @file{gdb.dvi} to your @sc{dvi} printing program.
 
 @menu
 * Requirements::                Requirements for building @value{GDBN}
-* Running Configure::           Invoking the @value{GDBN} @file{configure} script
+* Running Configure::           Invoking the @value{GDBN} @command{configure} script
 * Separate Objdir::             Compiling @value{GDBN} in another directory
 * Config Names::                Specifying names for hosts and targets
 * Configure Options::           Summary of options for configure
@@ -41407,14 +41407,14 @@ recent C@t{++}17 compiler, e.g.@: GCC.
 
 @item GNU make
 @value{GDBN}'s build system relies on features only found in the GNU
-make program.  Other variants of @code{make} will not work.
+@command{make} program.  Other variants of @command{make} will not work.
 
 @item Libraries
 The following libraries are mandatory for building @value{GDBN}.  The
-@file{configure} script searches for each of these libraries in
+@command{configure} script searches for each of these libraries in
 several standard locations; if some library is installed in an unusual
 place, you can use either the @option{--with-@var{lib}}
-@file{configure} option to specify its installation directory, or
+@command{configure} option to specify its installation directory, or
 the two separate options @option{---with-@var{library}-include} (to
 specify the location of its header files) and
 @option{--with-@var{library}-lib} (to specify the location of its
@@ -41445,13 +41445,13 @@ The tools/packages and libraries listed below are optional;
 @value{GDBN} can be build without them, at the expense of some run-time
 functionality that will be missing.  As above, we list the home sites
 for each package/library, and the command-line options supported by
-the @file{configure} script to specify their installation directories
+the @command{configure} script to specify their installation directories
 if they are non-standard.  In addition, for each package you can use
 the option @option{--with-@var{package}} to force @value{GDBN} to be
 compiled with the named @var{package}, and
 @option{--without-@var{package}} to disable building with it even if
 it is available.  @xref{Configure Options}, for detailed description
-of the options to @file{configure}.
+of the options to @command{configure}.
 
 @table @asis
 @item Python
@@ -41508,9 +41508,9 @@ On systems without @code{iconv}, you can install the GNU Libiconv
 library; its latest version can be found on
 @url{https://ftp.gnu.org/pub/gnu/libiconv/} if your system doesn't
 provide it.  Use the @option{--with-libiconv-prefix} option to
-@file{configure} to specify non-standard installation place for it.
+@command{configure} to specify non-standard installation place for it.
 
-Alternatively, @value{GDBN}'s top-level @file{configure} and
+Alternatively, @value{GDBN}'s top-level @command{configure} and
 @file{Makefile} will arrange to build Libiconv if a directory named
 @file{libiconv} appears in the top-most source directory.  If Libiconv
 is built this way, and if the operating system does not provide a
@@ -41545,11 +41545,11 @@ distribution; if it is not, you can get the latest version from
 @end table
 
 @node Running Configure
-@section Invoking the @value{GDBN} @file{configure} Script
+@section Invoking the @value{GDBN} @command{configure} Script
 @cindex configuring @value{GDBN}
-@value{GDBN} comes with a @file{configure} script that automates the process
-of preparing @value{GDBN} for installation; you can then use @code{make} to
-build the @code{gdb} program.
+@value{GDBN} comes with a @command{configure} script that automates the process
+of preparing @value{GDBN} for installation; you can then use @command{make} to
+build the @command{@value{GDBP}} program.
 @iftex
 @c irrelevant in info file; it's as current as the code it lives with.
 @footnote{If you have a more recent version of @value{GDBN} than @value{GDBVN},
@@ -41589,12 +41589,12 @@ source for the @sc{gnu} command-line interface
 
 There may be other subdirectories as well.
 
-The simplest way to configure and build @value{GDBN} is to run @file{configure}
+The simplest way to configure and build @value{GDBN} is to run @command{configure}
 from the @file{gdb-@var{version-number}} source directory, which in
 this example is the @file{gdb-@value{GDBVN}} directory.
 
 First switch to the @file{gdb-@var{version-number}} source directory
-if you are not already in it; then run @file{configure}.  Pass the
+if you are not already in it; then run @command{configure}.  Pass the
 identifier for the platform on which @value{GDBN} will run as an
 argument.
 
@@ -41606,13 +41606,13 @@ cd gdb-@value{GDBVN}
 make
 @end smallexample
 
-Running @samp{configure} and then running @code{make} builds the
-included supporting libraries, then @code{gdb} itself.  The configured
+Running @command{configure} and then running @command{make} builds the
+included supporting libraries, then @command{@value{GDBP}} itself.  The configured
 source files, and the binaries, are left in the corresponding source
 directories.
 
 @need 750
-@file{configure} is a Bourne-shell (@code{/bin/sh}) script; if your
+@command{configure} is a Bourne-shell (@code{/bin/sh}) script; if your
 system does not recognize this automatically when you run a different
 shell, you may need to run @code{sh} on it explicitly:
 
@@ -41620,18 +41620,18 @@ shell, you may need to run @code{sh} on it explicitly:
 sh configure
 @end smallexample
 
-You should run the @file{configure} script from the top directory in the
+You should run the @command{configure} script from the top directory in the
 source tree, the @file{gdb-@var{version-number}} directory.  If you run
-@file{configure} from one of the subdirectories, you will configure only
+@command{configure} from one of the subdirectories, you will configure only
 that subdirectory.  That is usually not what you want.  In particular,
-if you run the first @file{configure} from the @file{gdb} subdirectory
+if you run the first @command{configure} from the @file{gdb} subdirectory
 of the @file{gdb-@var{version-number}} directory, you will omit the
 configuration of @file{bfd}, @file{readline}, and other sibling
 directories of the @file{gdb} subdirectory.  This leads to build errors
 about missing include files such as @file{bfd/bfd.h}.
 
 You can install @code{@value{GDBN}} anywhere.  The best way to do this
-is to pass the @option{--prefix} option to @code{configure}, and then
+is to pass the @option{--prefix} option to @command{configure}, and then
 install it with @code{make install}.
 
 @node Separate Objdir
@@ -41639,17 +41639,17 @@ install it with @code{make install}.
 
 If you want to run @value{GDBN} versions for several host or target machines,
 you need a different @code{gdb} compiled for each combination of
-host and target.  @file{configure} is designed to make this easy by
+host and target.  @command{configure} is designed to make this easy by
 allowing you to generate each configuration in a separate subdirectory,
-rather than in the source directory.  If your @code{make} program
-handles the @samp{VPATH} feature (@sc{gnu} @code{make} does), running
-@code{make} in each of these directories builds the @code{gdb}
+rather than in the source directory.  If your @command{make} program
+handles the @samp{VPATH} feature (@sc{gnu} @command{make} does), running
+@command{make} in each of these directories builds the @command{@value{GDBP}}
 program specified there.
 
-To build @code{gdb} in a separate directory, run @file{configure}
+To build @command{@value{GDBP}} in a separate directory, run @command{configure}
 with the @option{--srcdir} option to specify where to find the source.
-(You also need to specify a path to find @file{configure}
-itself from your working directory.  If the path to @file{configure}
+(You also need to specify a path to find @command{configure}
+itself from your working directory.  If the path to @command{configure}
 would be the same as the argument to @option{--srcdir}, you can leave out
 the @option{--srcdir} option; it is assumed.)
 
@@ -41666,15 +41666,15 @@ make
 @end group
 @end smallexample
 
-When @file{configure} builds a configuration using a remote source
+When @command{configure} builds a configuration using a remote source
 directory, it creates a tree for the binaries with the same structure
 (and using the same names) as the tree under the source directory.  In
 the example, you'd find the Sun 4 library @file{libiberty.a} in the
 directory @file{gdb-sun4/libiberty}, and @value{GDBN} itself in
 @file{gdb-sun4/gdb}.
 
-Make sure that your path to the @file{configure} script has just one
-instance of @file{gdb} in it.  If your path to @file{configure} looks
+Make sure that your path to the @command{configure} script has just one
+instance of @file{gdb} in it.  If your path to @command{configure} looks
 like @file{../gdb-@value{GDBVN}/gdb/configure}, you are configuring only
 one subdirectory of @value{GDBN}, not the whole package.  This leads to
 build errors about missing include files such as @file{bfd/bfd.h}.
@@ -41684,27 +41684,27 @@ directories is to configure @value{GDBN} for cross-compiling (where
 @value{GDBN} runs on one machine---the @dfn{host}---while debugging
 programs that run on another machine---the @dfn{target}).
 You specify a cross-debugging target by
-giving the @option{--target=@var{target}} option to @file{configure}.
+giving the @option{--target=@var{target}} option to @command{configure}.
 
-When you run @code{make} to build a program or library, you must run
+When you run @command{make} to build a program or library, you must run
 it in a configured directory---whatever directory you were in when you
-called @file{configure} (or one of its subdirectories).
+called @command{configure} (or one of its subdirectories).
 
-The @code{Makefile} that @file{configure} generates in each source
-directory also runs recursively.  If you type @code{make} in a source
+The @file{Makefile} that @command{configure} generates in each source
+directory also runs recursively.  If you invoke @command{make} in a source
 directory such as @file{gdb-@value{GDBVN}} (or in a separate configured
 directory configured with @samp{--srcdir=@var{dirname}/gdb-@value{GDBVN}}), you
-will build all the required libraries, and then build GDB.
+will build all the required libraries, and then build @command{@value{GDBP}}.
 
 When you have multiple hosts or targets configured in separate
-directories, you can run @code{make} on them in parallel (for example,
+directories, you can run @command{make} on them in parallel (for example,
 if they are NFS-mounted on each of the hosts); they will not interfere
 with each other.
 
 @node Config Names
 @section Specifying Names for Hosts and Targets
 
-The specifications used for hosts and targets in the @file{configure}
+The specifications used for hosts and targets in the @command{configure}
 script are based on a three-part naming scheme, but some short predefined
 aliases are also supported.  The full naming scheme encodes three pieces
 of information in the following pattern:
@@ -41717,9 +41717,9 @@ For example, you can use the alias @code{sun4} as a @var{host} argument,
 or as the value for @var{target} in a @option{--target=@var{target}}
 option.  The equivalent full name is @samp{sparc-sun-sunos4}.
 
-The @file{configure} script accompanying @value{GDBN} does not provide
+The @command{configure} script accompanying @value{GDBN} does not provide
 any query facility to list all supported host and target names or
-aliases.  @file{configure} calls the Bourne shell script
+aliases.  @command{configure} calls the Bourne shell script
 @code{config.sub} to map abbreviations to full names; you can read the
 script, if you wish, or you can use it to test your guesses on
 abbreviations---for example:
@@ -41744,17 +41744,17 @@ Invalid configuration `i986v': machine `i986v' not recognized
 directory (@file{gdb-@value{GDBVN}}, for version @value{GDBVN}).
 
 @node Configure Options
-@section @file{configure} Options
+@section @command{configure} Options
 
 @c FIXME: This largely repeats what was already described in
 @c ``Requirements'', and OTOH doesn't describe the more fgine-granular
 @c options like --with-libexpat-prefix and --with-python-libdir.
 @c Should it?
-Here is a summary of the @file{configure} options and arguments that
-are most often useful for building @value{GDBN}.  @file{configure}
+Here is a summary of the @command{configure} options and arguments that
+are most often useful for building @value{GDBN}.  @command{configure}
 also has several other options not listed here.  @xref{Running
 configure Scripts,,,autoconf}, for a full
-explanation of @file{configure}.
+explanation of @command{configure}.
 
 @smallexample
 configure @r{[}--help@r{]}
@@ -41771,7 +41771,7 @@ You may introduce options with a single @samp{-} rather than
 
 @table @option
 @item --help
-Display a quick summary of how to invoke @file{configure}.
+Display a quick summary of how to invoke @command{configure}.
 
 @item --prefix=@var{dir}
 Configure the source to install programs and files under directory
@@ -41787,9 +41787,9 @@ Configure the source to install programs under directory
 Use this option to make configurations in directories separate from the
 @value{GDBN} source directories.  Among other things, you can use this to
 build (or maintain) several configurations simultaneously, in separate
-directories.  @file{configure} writes configuration-specific files in
+directories.  @command{configure} writes configuration-specific files in
 the current directory, but arranges for them to use the source in the
-directory @var{dirname}.  @file{configure} creates directories under
+directory @var{dirname}.  @command{configure} creates directories under
 the working directory in parallel to the source directories below
 @var{dirname}.
 
@@ -41918,7 +41918,7 @@ Build @value{GDBN} with GNU Guile scripting support.  (Done by default
 if libguile is present and found at configure time.)  If your host
 does not have Guile installed, you can find it at
 @url{https://www.gnu.org/software/guile/}.  The optional argument @var{guile}
-can be a version number, which will cause @code{configure} to try to
+can be a version number, which will cause @command{configure} to try to
 use that version of Guile; or the file name of a @code{pkg-config}
 executable, which will be queried to find the information needed to
 compile and link against Guile.
@@ -41966,7 +41966,7 @@ outputs any warning messages.
 @item --enable-ubsan
 Enable the GCC undefined behavior sanitizer.  This is disabled by
 default, but passing @option{--enable-ubsan=yes} or
-@option{--enable-ubsan=auto} to @code{configure} will enable it.  The
+@option{--enable-ubsan=auto} to @command{configure} will enable it.  The
 undefined behavior sanitizer checks for C@t{++} undefined behavior.
 It has a performance cost, so if you are looking at @value{GDBN}'s
 performance, you should disable it.  The undefined behavior sanitizer
