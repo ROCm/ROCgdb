@@ -24,3 +24,4 @@
 gdbsever->gdbserver
 tcllint->tclint
 recordered->recorded
+skippig->skipping
