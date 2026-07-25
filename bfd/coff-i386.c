@@ -459,7 +459,7 @@ coff_pe_i386_relocate_section (bfd *output_bfd,
 
       /* Make sure that _bfd_coff_generic_relocate_section won't parse
          this reloc after us.  */
-      rel->r_type = 0;
+      rel->r_ignore = 1;
 
       symndx = rel->r_symndx;
 

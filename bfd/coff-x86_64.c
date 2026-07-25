@@ -591,12 +591,12 @@ coff_pe_amd64_relocate_section (bfd *output_bfd,
       asection *sec, *s;
       uint16_t idx = 0, i = 1;
 
-      if (rel->r_type != R_SECTION)
+      if (rel->r_type != R_AMD64_SECTION)
 	continue;
 
       /* Make sure that _bfd_coff_generic_relocate_section won't parse
          this reloc after us.  */
-      rel->r_type = 0;
+      rel->r_ignore = 1;
 
       symndx = rel->r_symndx;
 
@@ -647,7 +647,9 @@ coff_pe_amd64_relocate_section (bfd *output_bfd,
       bfd_putl16 (idx, contents + rel->r_vaddr - input_section->vma);
     }
 
-  return _bfd_coff_generic_relocate_section (output_bfd, info, input_bfd,input_section, contents,relocs, syms, sections);
+  return _bfd_coff_generic_relocate_section (output_bfd, info, input_bfd,
+					     input_section, contents,
+					     relocs, syms, sections);
 }
 
 #define coff_relocate_section coff_pe_amd64_relocate_section
