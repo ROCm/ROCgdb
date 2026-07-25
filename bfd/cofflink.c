@@ -3113,6 +3113,9 @@ _bfd_coff_generic_relocate_section (bfd *output_bfd,
       reloc_howto_type *howto;
       bfd_reloc_status_type rstat;
 
+      if (rel->r_ignore)
+	continue;
+
       symndx = rel->r_symndx;
 
       if (symndx == -1)

@@ -5315,7 +5315,6 @@ coff_slurp_reloc_table (bfd * abfd, sec_ptr asect, asymbol ** symbols)
       cache_ptr = reloc_cache + idx;
       src = native_relocs + idx * (size_t) bfd_coff_relsz (abfd);
 
-      dst.r_offset = 0;
       bfd_coff_swap_reloc_in (abfd, src, &dst);
 
 #ifdef RELOC_PROCESSING
