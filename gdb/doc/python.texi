@@ -9102,7 +9102,7 @@ and the list of auto-loaded scripts can be printed.
 @table @kbd
 @anchor{set auto-load python-scripts}
 @kindex set auto-load python-scripts
-@item set auto-load python-scripts [on|off]
+@item set auto-load python-scripts @r{[}on@r{|}off@r{]}
 Enable or disable the auto-loading of Python scripts.
 
 @anchor{show auto-load python-scripts}
@@ -9113,7 +9113,7 @@ Show whether auto-loading of Python scripts is enabled or disabled.
 @anchor{info auto-load python-scripts}
 @kindex info auto-load python-scripts
 @cindex print list of auto-loaded Python scripts
-@item info auto-load python-scripts [@var{regexp}]
+@item info auto-load python-scripts @r{[}@var{regexp}@r{]}
 Print the list of all Python scripts that @value{GDBN} auto-loaded.
 
 Also printed is the list of Python scripts that were mentioned in

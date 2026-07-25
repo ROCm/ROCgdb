@@ -1789,18 +1789,18 @@ There are several commands to control @value{GDBN}'s logging.
 
 @table @kbd
 @kindex set logging enabled
-@item set logging enabled [on|off]
+@item set logging enabled @r{[}on@r{|}off@r{]}
 Enable or disable logging.
 @cindex logging file name
 @item set logging file @var{file}
 Change the name of the current logfile.  The default logfile is @file{gdb.txt}.
-@item set logging overwrite [on|off]
+@item set logging overwrite @r{[}on@r{|}off@r{]}
 By default, @value{GDBN} will append to the logfile.  Set @code{overwrite} if
 you want @code{set logging enabled on} to overwrite the logfile instead.
-@item set logging redirect [on|off]
+@item set logging redirect @r{[}on@r{|}off@r{]}
 By default, @value{GDBN} output will go to both the terminal and the logfile.
 Set @code{redirect} if you want output to go only to the log file.
-@item set logging debugredirect [on|off]
+@item set logging debugredirect @r{[}on@r{|}off@r{]}
 By default, @value{GDBN} debug output will go to both the terminal and the logfile.
 Set @code{debugredirect} if you want debug output to go only to the log file.
 @kindex show logging
@@ -8788,11 +8788,11 @@ allow overriding relevant global print settings as set by @code{set
 backtrace} and @code{set print} subcommands:
 
 @table @code
-@item -past-main [@code{on}|@code{off}]
+@item -past-main @r{[}on@r{|}off@r{]}
 Set whether backtraces should continue past @code{main}.  Related setting:
 @ref{set backtrace past-main}.
 
-@item -past-entry [@code{on}|@code{off}]
+@item -past-entry @r{[}on@r{|}off@r{]}
 Set whether backtraces should continue past the entry point of a program.
 Related setting: @ref{set backtrace past-entry}.
 
@@ -8804,7 +8804,7 @@ Related setting: @ref{set print entry-values}.
 Set printing of non-scalar frame arguments.
 Related setting: @ref{set print frame-arguments}.
 
-@item -raw-frame-arguments [@code{on}|@code{off}]
+@item -raw-frame-arguments @r{[}on@r{|}off@r{]}
 Set whether to print frame arguments in raw form.
 Related setting: @ref{set print raw-frame-arguments}.
 
@@ -9318,11 +9318,11 @@ The @code{frame apply} command also supports a number of options that
 allow overriding relevant @code{set backtrace} settings:
 
 @table @code
-@item -past-main [@code{on}|@code{off}]
+@item -past-main @r{[}on@r{|}off@r{]}
 Whether backtraces should continue past @code{main}.
 Related setting: @ref{set backtrace past-main}.
 
-@item -past-entry [@code{on}|@code{off}]
+@item -past-entry @r{[}on@r{|}off@r{]}
 Whether backtraces should continue past the entry point of a program.
 Related setting: @ref{set backtrace past-entry}.
 @end table
@@ -10835,15 +10835,15 @@ overriding relevant global print settings as set by @code{set print}
 subcommands:
 
 @table @code
-@item -address [@code{on}|@code{off}]
+@item -address @r{[}on@r{|}off@r{]}
 Set printing of addresses.
 Related setting: @ref{set print address}.
 
-@item -array [@code{on}|@code{off}]
+@item -array @r{[}on@r{|}off@r{]}
 Pretty formatting of arrays.
 Related setting: @ref{set print array}.
 
-@item -array-indexes [@code{on}|@code{off}]
+@item -array-indexes @r{[}on@r{|}off@r{]}
 Set printing of array indexes.
 Related setting: @ref{set print array-indexes}.
 
@@ -10864,27 +10864,27 @@ CLI command.
 Set the threshold after which nested structures are replaced with
 ellipsis.  Related setting: @ref{set print max-depth}.
 
-@item -nibbles [@code{on}|@code{off}]
+@item -nibbles @r{[}on@r{|}off@r{]}
 Set whether to print binary values in groups of four bits, known
 as ``nibbles''.  @xref{set print nibbles}.
 
-@item -memory-tag-violations [@code{on}|@code{off}]
+@item -memory-tag-violations @r{[}on@r{|}off@r{]}
 Set printing of additional information about memory tag violations.
 @xref{set print memory-tag-violations}.
 
-@item -null-stop [@code{on}|@code{off}]
+@item -null-stop @r{[}on@r{|}off@r{]}
 Set printing of char arrays to stop at first null char.  Related
 setting: @ref{set print null-stop}.
 
-@item -object [@code{on}|@code{off}]
+@item -object @r{[}on@r{|}off@r{]}
 Set printing C@t{++} virtual function tables.  Related setting:
 @ref{set print object}.
 
-@item -pretty [@code{on}|@code{off}]
+@item -pretty @r{[}on@r{|}off@r{]}
 Set pretty formatting of structures.  Related setting: @ref{set print
 pretty}.
 
-@item -raw-values [@code{on}|@code{off}]
+@item -raw-values @r{[}on@r{|}off@r{]}
 Set whether to print values in raw form, bypassing any
 pretty-printers for that value.  Related setting: @ref{set print
 raw-values}.
@@ -10894,19 +10894,19 @@ Set threshold for repeated print elements.  @code{unlimited} causes
 all elements to be individually printed.  Related setting: @ref{set
 print repeats}.
 
-@item -static-members [@code{on}|@code{off}]
+@item -static-members @r{[}on@r{|}off@r{]}
 Set printing C@t{++} static members.  Related setting: @ref{set print
 static-members}.
 
-@item -symbol [@code{on}|@code{off}]
+@item -symbol @r{[}on@r{|}off@r{]}
 Set printing of symbol names when printing pointers.  Related setting:
 @ref{set print symbol}.
 
-@item -union [@code{on}|@code{off}]
+@item -union @r{[}on@r{|}off@r{]}
 Set printing of unions interior to structures.  Related setting:
 @ref{set print union}.
 
-@item -vtbl [@code{on}|@code{off}]
+@item -vtbl @r{[}on@r{|}off@r{]}
 Set printing of C++ virtual function tables.  Related setting:
 @ref{set print vtbl}.
 @end table
@@ -14228,7 +14228,7 @@ better error checking.  The following commands control this behavior.
 
 @table @kbd
 @kindex set mem inaccessible-by-default
-@item set mem inaccessible-by-default [on|off]
+@item set mem inaccessible-by-default @r{[}on@r{|}off@r{]}
 If @code{on} is specified, make  @value{GDBN} treat memory not
 explicitly described by the memory ranges as non-existent and refuse accesses
 to such memory.  The checks are only performed if there's at least one
@@ -17198,7 +17198,7 @@ The warning is enabled by default, but it can be controlled via a
 setting:
 
 @table @kbd
-@item set warn-language-frame-mismatch [on|off]
+@item set warn-language-frame-mismatch @r{[}on@r{|}off@r{]}
 @kindex warn-language-frame-mismatch
 Enable or disable the warning that is issued when the current language
 is set to a value that does not match the current frame.
@@ -18390,7 +18390,7 @@ printed.
 @cindex arrays slices (Fortran)
 @kindex set fortran repack-array-slices
 @kindex show fortran repack-array-slices
-@item set fortran repack-array-slices [on|off]
+@item set fortran repack-array-slices @r{[}on@r{|}off@r{]}
 @item show fortran repack-array-slices
 When taking a slice from an array, a Fortran compiler can choose to
 either produce an array descriptor that describes the slice in place,
@@ -20021,7 +20021,7 @@ well @value{GDBN} works without them.
 @table @kbd
 
 @kindex maint ada set ignore-descriptive-types
-@item maintenance ada set ignore-descriptive-types [on|off]
+@item maintenance ada set ignore-descriptive-types @r{[}on@r{|}off@r{]}
 Control whether the debugger should ignore descriptive types.
 The default is not to ignore descriptives types (@code{off}).
 
@@ -20929,11 +20929,11 @@ first instruction following a function prologue.  The @samp{EPILOGUE-BEGIN}
 column indicates that a given address marks the point where a block's frame is
 destroyed, making local variables hard or impossible to find.
 
-@kindex set always-read-ctf [on|off]
+@kindex set always-read-ctf @r{[}on@r{|}off@r{]}
 @kindex show always-read-ctf
 @cindex always-read-ctf
 @cindex CTF info, when to read
-@item set always-read-ctf [on|off]
+@item set always-read-ctf @r{[}on@r{|}off@r{]}
 @itemx show always-read-ctf
 
 When off, CTF debug info is only read if DWARF debug info is not
@@ -20977,7 +20977,7 @@ symbol-cache}..
 
 @kindex maint set ignore-prologue-end-flag
 @cindex prologue-end
-@item maint set ignore-prologue-end-flag [on|off]
+@item maint set ignore-prologue-end-flag @r{[}on@r{|}off@r{]}
 Enable or disable the use of the @samp{PROLOGUE-END} flag from the line-table.
 When @samp{off} (the default), @value{GDBN} uses the @samp{PROLOGUE-END} flag
 to place breakpoints past the end of a function prologue.  When @samp{on},
@@ -29010,7 +29010,7 @@ configured @code{auto-load safe-path} (@pxref{Auto-loading safe path}).
 @table @kbd
 @anchor{set auto-load local-gdbinit}
 @kindex set auto-load local-gdbinit
-@item set auto-load local-gdbinit [on|off]
+@item set auto-load local-gdbinit @r{[}on@r{|}off@r{]}
 Enable or disable the auto-loading of canned sequences of commands
 (@pxref{Sequences}) found in init file in the current directory.
 
@@ -29049,7 +29049,7 @@ Note that loading of this debugging library also requires accordingly configured
 @table @kbd
 @anchor{set auto-load libthread-db}
 @kindex set auto-load libthread-db
-@item set auto-load libthread-db [on|off]
+@item set auto-load libthread-db @r{[}on@r{|}off@r{]}
 Enable or disable the auto-loading of inferior specific thread debugging library.
 
 @anchor{show auto-load libthread-db}
@@ -29217,7 +29217,7 @@ warning: File "/tmp/true-gdb.gdb" auto-loading has been declined
 @table @kbd
 @anchor{set debug auto-load}
 @kindex set debug auto-load
-@item set debug auto-load [on|off]
+@item set debug auto-load @r{[}on@r{|}off@r{]}
 Set whether to print the filenames attempted to be auto-loaded.
 
 @anchor{show debug auto-load}
@@ -30524,7 +30524,7 @@ and the list of auto-loaded scripts can be printed.
 @table @kbd
 @anchor{set auto-load gdb-scripts}
 @kindex set auto-load gdb-scripts
-@item set auto-load gdb-scripts [on|off]
+@item set auto-load gdb-scripts @r{[}on@r{|}off@r{]}
 Enable or disable the auto-loading of canned sequences of commands scripts.
 
 @anchor{show auto-load gdb-scripts}
@@ -42311,7 +42311,7 @@ names matching @var{regexp}.
 @kindex maint set catch-demangler-crashes
 @kindex maint show catch-demangler-crashes
 @cindex demangler crashes
-@item maint set catch-demangler-crashes [on|off]
+@item maint set catch-demangler-crashes @r{[}on@r{|}off@r{]}
 @itemx maint show catch-demangler-crashes
 Control whether @value{GDBN} should attempt to catch crashes in the
 symbol name demangler.  The default is to attempt to catch crashes.
@@ -43142,7 +43142,7 @@ the left margin.
 This is useful in debugging performance problems.
 
 @table @kbd
-@item maint set per-command space [on|off]
+@item maint set per-command space @r{[}on@r{|}off@r{]}
 @itemx maint show per-command space
 Enable or disable the printing of the memory used by GDB for each command.
 If enabled, @value{GDBN} will display how much memory each command
@@ -43150,7 +43150,7 @@ took, following the command's own output.
 This can also be requested by invoking @value{GDBN} with the
 @option{--statistics} command-line switch (@pxref{Mode Options}).
 
-@item maint set per-command time [on|off]
+@item maint set per-command time @r{[}on@r{|}off@r{]}
 @itemx maint show per-command time
 Enable or disable the printing of the execution time of @value{GDBN}
 for each command.
@@ -43166,7 +43166,7 @@ spent by the program been debugged.
 This can also be requested by invoking @value{GDBN} with the
 @option{--statistics} command-line switch (@pxref{Mode Options}).
 
-@item maint set per-command symtab [on|off]
+@item maint set per-command symtab @r{[}on@r{|}off@r{]}
 @itemx maint show per-command symtab
 Enable or disable the printing of basic symbol table statistics
 for each command.
@@ -43184,7 +43184,7 @@ number of blocks in the blockvector
 
 @kindex maint set check-libthread-db
 @kindex maint show check-libthread-db
-@item maint set check-libthread-db [on|off]
+@item maint set check-libthread-db @r{[}on@r{|}off@r{]}
 @itemx maint show check-libthread-db
 Control whether @value{GDBN} should run integrity checks on inferior
 specific thread debugging libraries as they are loaded.  The default
@@ -43318,7 +43318,7 @@ arguments to remote targets.
 
 @kindex maint set backtrace-on-fatal-signal
 @kindex maint show backtrace-on-fatal-signal
-@item maint set backtrace-on-fatal-signal [on|off]
+@item maint set backtrace-on-fatal-signal @r{[}on@r{|}off@r{]}
 @itemx maint show backtrace-on-fatal-signal
 When this setting is @code{on}, if @value{GDBN} itself terminates with
 a fatal signal (e.g.@: SIGSEGV), then a limited backtrace will be

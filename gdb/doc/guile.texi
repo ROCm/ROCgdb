@@ -3923,7 +3923,7 @@ and the list of auto-loaded scripts can be printed.
 @table @kbd
 @anchor{set auto-load guile-scripts}
 @kindex set auto-load guile-scripts
-@item set auto-load guile-scripts [on|off]
+@item set auto-load guile-scripts @r{[}on@r{|}off@r{]}
 Enable or disable the auto-loading of Guile scripts.
 
 @anchor{show auto-load guile-scripts}
@@ -3934,7 +3934,7 @@ Show whether auto-loading of Guile scripts is enabled or disabled.
 @anchor{info auto-load guile-scripts}
 @kindex info auto-load guile-scripts
 @cindex print list of auto-loaded Guile scripts
-@item info auto-load guile-scripts [@var{regexp}]
+@item info auto-load guile-scripts @r{[}@var{regexp}@r{]}
 Print the list of all Guile scripts that @value{GDBN} auto-loaded.
 
 Also printed is the list of Guile scripts that were mentioned in
