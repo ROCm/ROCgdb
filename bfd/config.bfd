@@ -48,7 +48,6 @@ targ_underscore=no
 
 # Catch obsolete configurations.
 case $targ in
- s390-* | \
  null)
     if test "x$enable_obsolete" != xyes; then
       echo "*** Configuration $targ is obsolete." >&2
@@ -164,6 +163,7 @@ case $targ in
  or32-*-* | \
  powerpc-*-lynxos* | powerpc-*-windiss* | \
  powerpcle-*-pe | powerpcle-*-winnt* | powerpcle-*-cygwin* | \
+ s390-* | \
  sh*-*-netbsdaout* | \
  sh*-*-symbianelf* | sh5*-*-* | sh64*-*-* | \
  sparc*-*-*aout* | \
