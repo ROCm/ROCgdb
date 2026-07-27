@@ -59,11 +59,6 @@ typedef struct aarch64_field aarch64_field;
 #define AARCH64_FIELD_CONST(val, width) ((aarch64_field) {width, val, true})
 #define AARCH64_FIELD_NIL ((aarch64_field) {0, 0, false})
 
-#define FLD_CONST_0 AARCH64_FIELD_CONST (0, 1)
-#define FLD_CONST_00 AARCH64_FIELD_CONST (0, 2)
-#define FLD_CONST_01 AARCH64_FIELD_CONST (1, 2)
-#define FLD_CONST_1 AARCH64_FIELD_CONST (1, 1)
-
 /* Instruction fields.  These defines are included to reduce the initial diff
    size, but the indirection should eventually be eliminated.  */
 #define FLD_CRm                AARCH64_FIELD( 8,  4)

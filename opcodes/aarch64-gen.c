@@ -994,7 +994,12 @@ typedef struct operand operand;
 #undef F
 #endif
 
-#define FLD AARCH64_FIELD
+#define FLD(lsb, w)  { .num = lsb, .width = w }
+
+#define FLD_CONST_0  { .num = 0, .width = 1, .is_const = true }
+#define FLD_CONST_00 { .num = 0, .width = 2, .is_const = true }
+#define FLD_CONST_01 { .num = 1, .width = 2, .is_const = true }
+#define FLD_CONST_1  { .num = 1, .width = 1, .is_const = true }
 
 /* The parentheses used when calling this macro ensure that the list of fields
    appears as a single argument to the X and Y macros.  */
