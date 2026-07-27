@@ -581,6 +581,7 @@ DESCRIPTION
 .#define bfd_mach_amdgcn_gfx1100         0x041
 .#define bfd_mach_amdgcn_gfx1101         0x046
 .#define bfd_mach_amdgcn_gfx1102         0x047
+.#define bfd_mach_amdgcn_gfx1103         0x044
 .#define bfd_mach_amdgcn_gfx1150         0x043
 .#define bfd_mach_amdgcn_gfx1151         0x04a
 .#define bfd_mach_amdgcn_gfx1152         0x055
