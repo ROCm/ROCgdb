@@ -5885,7 +5885,7 @@ assign_file_positions_for_load_sections (bfd *abfd,
   struct elf_segment_map *phdr_load_seg;
   Elf_Internal_Phdr *phdrs;
   Elf_Internal_Phdr *p;
-  file_ptr off;  /* Octets.  */
+  ufile_ptr off;  /* Octets.  */
   bfd_size_type maxpagesize;
   unsigned int alloc, actual;
   unsigned int i, j;
@@ -6175,9 +6175,9 @@ assign_file_positions_for_load_sections (bfd *abfd,
 	    {
 	      if (m->count > 0)
 		{
-		  if (p->p_vaddr < (bfd_vma) off
+		  if (p->p_vaddr < off
 		      || (!m->p_paddr_valid
-			  && p->p_paddr < (bfd_vma) off))
+			  && p->p_paddr < off))
 		    {
 		      _bfd_error_handler
 			(_("%pB: not enough room for program headers,"
@@ -6595,7 +6595,7 @@ assign_file_positions_for_non_load_sections (bfd *abfd,
   Elf_Internal_Phdr *phdrs;
   Elf_Internal_Phdr *p;
   struct elf_segment_map *m;
-  file_ptr off;
+  ufile_ptr off;
   unsigned int opb = bfd_octets_per_byte (abfd, NULL);
   bfd_vma maxpagesize;
 
@@ -6864,7 +6864,7 @@ assign_file_positions_except_relocs (bfd *abfd,
       unsigned int num_sec = elf_numsections (abfd);
       Elf_Internal_Shdr **hdrpp;
       unsigned int i;
-      file_ptr off;
+      ufile_ptr off;
 
       /* Start after the ELF header.  */
       off = i_ehdrp->e_ehsize;
@@ -7110,7 +7110,7 @@ _bfd_elf_modify_headers (bfd *obfd, struct bfd_link_info *link_info)
 static bool
 _bfd_elf_assign_file_positions_for_non_load (bfd *abfd)
 {
-  file_ptr off;
+  ufile_ptr off;
   Elf_Internal_Shdr **shdrpp, **end_shdrpp;
   Elf_Internal_Shdr *shdrp;
   Elf_Internal_Ehdr *i_ehdrp;
