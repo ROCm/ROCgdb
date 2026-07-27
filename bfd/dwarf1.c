@@ -178,23 +178,24 @@ alloc_dwarf1_func (struct dwarf1_debug* stash, struct dwarf1_unit* aUnit)
    Return FALSE if the die is invalidly formatted; TRUE otherwise.  */
 
 static bool
-parse_die (bfd *	     abfd,
-	   struct die_info * aDieInfo,
-	   bfd_byte *	     aDiePtr,
-	   bfd_byte *	     aDiePtrEnd)
+parse_die (const struct dwarf1_debug *stash,
+	   struct die_info *aDieInfo,
+	   bfd_byte *aDiePtr)
 {
+  bfd *abfd = stash->abfd;
+  bfd_byte *aDiePtrEnd;
   bfd_byte *this_die = aDiePtr;
   bfd_byte *xptr = this_die;
 
   memset (aDieInfo, 0, sizeof (* aDieInfo));
 
   /* First comes the length.  */
-  if (xptr + 4 > aDiePtrEnd)
+  if (xptr + 4 > stash->debug_section_end)
     return false;
   aDieInfo->length = bfd_get_32 (abfd, xptr);
   xptr += 4;
   if (aDieInfo->length <= 4
-      || (size_t) (aDiePtrEnd - this_die) < aDieInfo->length)
+      || (size_t) (stash->debug_section_end - this_die) < aDieInfo->length)
     return false;
   aDiePtrEnd = this_die + aDieInfo->length;
   if (aDieInfo->length < 6)
@@ -232,7 +233,21 @@ parse_die (bfd *	     abfd,
 	  if (xptr + 4 <= aDiePtrEnd)
 	    {
 	      if (attr == AT_sibling)
-		aDieInfo->sibling = bfd_get_32 (abfd, xptr);
+		{
+		  aDieInfo->sibling = bfd_get_32 (abfd, xptr);
+		  if (aDieInfo->sibling != 0)
+		    {
+		      /* Reject a sibling earlier than the current die,
+			 or past the end of the .debug section.  This
+			 is to stop fuzzers generating endless loops.  */
+		      size_t next_off = aDiePtrEnd - stash->debug_section;
+		      size_t sec_size = (stash->debug_section_end
+					 - stash->debug_section);
+		      if (aDieInfo->sibling < next_off
+			  || aDieInfo->sibling > sec_size)
+			return false;
+		    }
+		}
 	      else if (attr == AT_stmt_list)
 		{
 		  aDieInfo->stmt_list_offset = bfd_get_32 (abfd, xptr);
@@ -384,8 +399,7 @@ parse_functions_in_unit (struct dwarf1_debug* stash, struct dwarf1_unit* aUnit)
       {
 	struct die_info eachDieInfo;
 
-	if (! parse_die (stash->abfd, &eachDieInfo, eachDie,
-			 stash->debug_section_end))
+	if (!parse_die (stash, &eachDieInfo, eachDie))
 	  return false;
 
 	if (eachDieInfo.tag == TAG_global_subroutine
@@ -550,8 +564,7 @@ _bfd_dwarf1_find_nearest_line (bfd *abfd,
     {
       struct die_info aDieInfo;
 
-      if (! parse_die (stash->abfd, &aDieInfo, stash->currentDie,
-		       stash->debug_section_end))
+      if (!parse_die (stash, &aDieInfo, stash->currentDie))
 	return false;
 
       if (aDieInfo.tag == TAG_compile_unit)
