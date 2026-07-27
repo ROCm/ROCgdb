@@ -243,7 +243,7 @@ set modes {command keys}
 with_debuginfod_env $cache {
     save_vars { env(DEBUGINFOD_URLS) } {
 	foreach_with_prefix how $modes {
-	    foreach_with_prefix ans { n y } {
+	    foreach_with_prefix answer { n y } {
 		file delete -force $cache
 
 		set url [start_debuginfod $db $debugdir]
@@ -256,9 +256,9 @@ with_debuginfod_env $cache {
 		setenv DEBUGINFOD_URLS $url
 
 		foreach_with_prefix fill_screen { true false } {
-		    run_switch_with_prompt_test $how $ans $fill_screen
+		    run_switch_with_prompt_test $how $answer $fill_screen
 		}
-		run_switch_to_asm_test $how $ans
+		run_switch_to_asm_test $how $answer
 
 		stop_debuginfod
 	    }
