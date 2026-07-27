@@ -356,7 +356,7 @@ m2_language::value_print_inner (struct value *val, struct ui_file *stream,
       break;
 
     case TYPE_CODE_PTR:
-      if (TYPE_CONST (type))
+      if (type->is_const ())
 	print_variable_at_address (type, valaddr, stream, recurse, options);
       else if (options->format && options->format != 's')
 	value_print_scalar_formatted (val, options, 0, stream);

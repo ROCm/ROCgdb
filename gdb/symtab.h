@@ -803,9 +803,7 @@ struct minimal_symbol : public general_symbol_info
     m_target_flag_2 = target_flag_2;
   }
 
-  /* Size of this symbol.  stabs_end_psymtab in stabsread.c uses this
-     information to calculate the end of the partial symtab based on the
-     address of the last symbol plus the size of the last symbol.  */
+  /* Size of this symbol.  */
 
   unsigned long m_size;
 

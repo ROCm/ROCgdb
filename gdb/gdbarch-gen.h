@@ -978,17 +978,23 @@ void set_gdbarch_cannot_step_breakpoint (struct gdbarch *gdbarch, bool cannot_st
 bool gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch);
 void set_gdbarch_have_nonsteppable_watchpoint (struct gdbarch *gdbarch, bool have_nonsteppable_watchpoint);
 
-bool gdbarch_address_class_type_flags_p (struct gdbarch *gdbarch);
+/* Given the DWARF identifier for an architecture-specific address class,
+   return the id of that address class. */
 
-using gdbarch_address_class_type_flags_ftype = type_instance_flags (int byte_size, int dwarf2_addr_class);
-type_instance_flags gdbarch_address_class_type_flags (struct gdbarch *gdbarch, int byte_size, int dwarf2_addr_class);
-void set_gdbarch_address_class_type_flags (struct gdbarch *gdbarch, gdbarch_address_class_type_flags_ftype *address_class_type_flags);
+bool gdbarch_address_class_dwarf_to_id_p (struct gdbarch *gdbarch);
 
-bool gdbarch_address_class_type_flags_to_name_p (struct gdbarch *gdbarch);
+using gdbarch_address_class_dwarf_to_id_ftype = unsigned int (int byte_size, int dwarf2_addr_class);
+unsigned int gdbarch_address_class_dwarf_to_id (struct gdbarch *gdbarch, int byte_size, int dwarf2_addr_class);
+void set_gdbarch_address_class_dwarf_to_id (struct gdbarch *gdbarch, gdbarch_address_class_dwarf_to_id_ftype *address_class_dwarf_to_id);
 
-using gdbarch_address_class_type_flags_to_name_ftype = const char *(struct gdbarch *gdbarch, type_instance_flags type_flags);
-const char *gdbarch_address_class_type_flags_to_name (struct gdbarch *gdbarch, type_instance_flags type_flags);
-void set_gdbarch_address_class_type_flags_to_name (struct gdbarch *gdbarch, gdbarch_address_class_type_flags_to_name_ftype *address_class_type_flags_to_name);
+/* Given an architecture-specific address class identifier, return the
+   name of that address class. */
+
+bool gdbarch_address_class_id_to_name_p (struct gdbarch *gdbarch);
+
+using gdbarch_address_class_id_to_name_ftype = const char *(struct gdbarch *gdbarch, unsigned int address_class);
+const char *gdbarch_address_class_id_to_name (struct gdbarch *gdbarch, unsigned int address_class);
+void set_gdbarch_address_class_id_to_name (struct gdbarch *gdbarch, gdbarch_address_class_id_to_name_ftype *address_class_id_to_name);
 
 /* Execute vendor-specific DWARF Call Frame Instruction.  OP is the instruction.
    FS are passed from the generic execute_cfa_program function. */
@@ -997,15 +1003,15 @@ using gdbarch_execute_dwarf_cfa_vendor_op_ftype = bool (struct gdbarch *gdbarch,
 bool gdbarch_execute_dwarf_cfa_vendor_op (struct gdbarch *gdbarch, gdb_byte op, struct dwarf2_frame_state *fs);
 void set_gdbarch_execute_dwarf_cfa_vendor_op (struct gdbarch *gdbarch, gdbarch_execute_dwarf_cfa_vendor_op_ftype *execute_dwarf_cfa_vendor_op);
 
-/* Return the appropriate type_flags for the supplied address class.
+/* Return the appropriate address class id for the supplied address class name.
    This function should return true if the address class was recognized and
-   type_flags was set, false otherwise. */
+   address_class was set, false otherwise. */
 
-bool gdbarch_address_class_name_to_type_flags_p (struct gdbarch *gdbarch);
+bool gdbarch_address_class_name_to_id_p (struct gdbarch *gdbarch);
 
-using gdbarch_address_class_name_to_type_flags_ftype = bool (struct gdbarch *gdbarch, const char *name, type_instance_flags *type_flags_ptr);
-bool gdbarch_address_class_name_to_type_flags (struct gdbarch *gdbarch, const char *name, type_instance_flags *type_flags_ptr);
-void set_gdbarch_address_class_name_to_type_flags (struct gdbarch *gdbarch, gdbarch_address_class_name_to_type_flags_ftype *address_class_name_to_type_flags);
+using gdbarch_address_class_name_to_id_ftype = bool (struct gdbarch *gdbarch, const char *name, unsigned int &address_class);
+bool gdbarch_address_class_name_to_id (struct gdbarch *gdbarch, const char *name, unsigned int &address_class);
+void set_gdbarch_address_class_name_to_id (struct gdbarch *gdbarch, gdbarch_address_class_name_to_id_ftype *address_class_name_to_id);
 
 /* Is a register in a group */
 

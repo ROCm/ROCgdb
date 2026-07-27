@@ -215,8 +215,14 @@ do_tests ()
 	cp gdb.sum gdb.log "$dir"
 
 	# Record the 'make check' command to enable easy re-running.
-	echo "make $maketarget RUNTESTFLAGS=\"${rtf[*]}\" TESTS=\"${tests[*]}\"" \
-	     > "$dir/make-check.sh"
+	make_check_script="$dir/make-check.sh"
+	cat <<-EOF > "$make_check_script"
+	#!/bin/sh
+
+	cd "$PWD" && \\
+	  make $maketarget RUNTESTFLAGS="${rtf[*]}" TESTS="${tests[*]}"
+	EOF
+	chmod +x "$make_check_script"
     fi
 }
 
@@ -320,7 +326,7 @@ main ()
     for b in "${target_boards[@]}"; do
 	echo "TARGET BOARD: $b"
 	rtf=(
-	    --target_board="$b"
+	    "--target_board=$b"
 	)
 	rtf_for_board "$b"
 	maketarget_for_board "$b"
@@ -332,7 +338,7 @@ main ()
     for b in "${gdbserver_boards[@]}" "${remote_gdbserver_boards[@]}"; do
 	echo "TARGET BOARD: $b"
 	rtf=(
-	    --target_board="$b"
+	    "--target_board=$b"
 	)
 	rtf_for_board "$b"
 	maketarget_for_board "$b"
@@ -345,8 +351,8 @@ main ()
 	for b in "${remote_gdbserver_boards[@]}"; do
 	    echo "HOST BOARD: $h, TARGET BOARD: $b"
 	    rtf=(
-		--host_board="$h"
-		--target_board="$b"
+		"--host_board=$h"
+		"--target_board=$b"
 	    )
 	    rtf_for_board "$h"
 	    rtf_for_board "$b"
@@ -360,8 +366,8 @@ main ()
     for b in "${host_target_boards[@]}"; do
 	echo "HOST/TARGET BOARD: $b"
 	rtf=(
-	    --host_board="$b"
-	    --target_board="$b"
+	    "--host_board=$b"
+	    "--target_board=$b"
 	)
 	rtf_for_board "$b"
 	maketarget_for_board "$b"

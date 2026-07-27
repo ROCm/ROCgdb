@@ -3688,9 +3688,9 @@ value_struct_elt_for_reference (struct type *domain, int offset,
 	    {
 	      for (j = 0; j < len; ++j)
 		{
-		  if (TYPE_CONST (intype) != TYPE_FN_FIELD_CONST (f, j))
+		  if (intype->is_const () != TYPE_FN_FIELD_CONST (f, j))
 		    continue;
-		  if (TYPE_VOLATILE (intype) != TYPE_FN_FIELD_VOLATILE (f, j))
+		  if (intype->is_volatile () != TYPE_FN_FIELD_VOLATILE (f, j))
 		    continue;
 
 		  if (compare_parameters (TYPE_FN_FIELD_TYPE (f, j), intype, 0)
@@ -3911,8 +3911,8 @@ value_rtti_indirect_type (struct value *v, int *full,
     {
       /* Copy qualifiers to the referenced object.  */
       target_type = target->type ();
-      real_type = make_cv_type (TYPE_CONST (target_type),
-				TYPE_VOLATILE (target_type), real_type);
+      real_type = make_cv_type (target_type->is_const (),
+				target_type->is_volatile (), real_type);
       if (TYPE_IS_REFERENCE (type))
 	real_type = lookup_reference_type (real_type, type->code ());
       else if (type->code () == TYPE_CODE_PTR)
@@ -3921,7 +3921,7 @@ value_rtti_indirect_type (struct value *v, int *full,
 	internal_error (_("Unexpected value type."));
 
       /* Copy qualifiers to the pointer/reference.  */
-      real_type = make_cv_type (TYPE_CONST (type), TYPE_VOLATILE (type),
+      real_type = make_cv_type (type->is_const (), type->is_volatile (),
 				real_type);
     }
 

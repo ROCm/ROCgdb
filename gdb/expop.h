@@ -275,6 +275,12 @@ check_objfile (enum_flags<T> val, struct objfile *objfile)
   return false;
 }
 
+static inline bool
+check_objfile (type_instance_flags val, struct objfile *objfile)
+{
+  return false;
+}
+
 template<typename T>
 static inline bool
 check_objfile (const std::vector<T> &collection, struct objfile *objfile)

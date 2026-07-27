@@ -19,6 +19,7 @@
 #include "event-top.h"
 #include "bfd.h"
 #include "symtab.h"
+#include "gdbarch.h"
 #include "gdbtypes.h"
 #include "expression.h"
 #include "value.h"
@@ -310,18 +311,18 @@ cp_type_print_method_args (struct type *mtype,
       gdb_assert (args[0].type ()->code () == TYPE_CODE_PTR);
       domain = args[0].type ()->target_type ();
 
-      if (TYPE_CONST (domain))
+      if (domain->is_const ())
 	gdb_printf (stream, " const");
 
-      if (TYPE_VOLATILE (domain))
+      if (domain->is_volatile ())
 	gdb_printf (stream, " volatile");
 
-      if (TYPE_RESTRICT (domain))
+      if (domain->is_restrict ())
 	gdb_printf (stream, (is_cplus_dialect (language)
 			     ? " __restrict__"
 			     : " restrict"));
 
-      if (TYPE_ATOMIC (domain))
+      if (domain->is_atomic ())
 	gdb_printf (stream, " _Atomic");
     }
 }
@@ -448,7 +449,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
   /* We don't print `const' qualifiers for references --- since all
      operators affect the thing referenced, not the reference itself,
      every reference is `const'.  */
-  if (TYPE_CONST (type) && !TYPE_IS_REFERENCE (type))
+  if (type->is_const () && !TYPE_IS_REFERENCE (type))
     {
       if (need_pre_space)
 	gdb_printf (stream, " ");
@@ -456,7 +457,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
       did_print_modifier = 1;
     }
 
-  if (TYPE_VOLATILE (type))
+  if (type->is_volatile ())
     {
       if (did_print_modifier || need_pre_space)
 	gdb_printf (stream, " ");
@@ -464,7 +465,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
       did_print_modifier = 1;
     }
 
-  if (TYPE_RESTRICT (type))
+  if (type->is_restrict ())
     {
       if (did_print_modifier || need_pre_space)
 	gdb_printf (stream, " ");
@@ -474,7 +475,7 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
       did_print_modifier = 1;
     }
 
-  if (TYPE_ATOMIC (type))
+  if (type->is_atomic ())
     {
       if (did_print_modifier || need_pre_space)
 	gdb_printf (stream, " ");
@@ -482,10 +483,18 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
       did_print_modifier = 1;
     }
 
-  address_space_id
-    = address_space_type_instance_flags_to_name (type->arch (),
-						 type->instance_flags ());
-  if (address_space_id)
+  address_space_id = nullptr;
+
+  if (type->is_code_space ())
+    address_space_id = "code";
+  else if (type->is_data_space ())
+    address_space_id = "data";
+  else if (gdbarch_address_class_id_to_name_p (type->arch ()))
+    address_space_id
+      = gdbarch_address_class_id_to_name (type->arch (),
+					  type->address_class ());
+
+  if (address_space_id != nullptr)
     {
       if (did_print_modifier || need_pre_space)
 	gdb_printf (stream, " ");

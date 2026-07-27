@@ -20,15 +20,13 @@
 #include "type-stack.h"
 
 #include "gdbtypes.h"
+#include "gdbarch.h"
 
 /* See type-stack.h.  */
 
 void
 type_stack::insert (enum type_pieces tp)
 {
-  union type_stack_elt element;
-  int slot;
-
   gdb_assert (tp == tp_pointer || tp == tp_reference
 	      || tp == tp_rvalue_reference || tp == tp_const
 	      || tp == tp_volatile || tp == tp_restrict
@@ -39,12 +37,9 @@ type_stack::insert (enum type_pieces tp)
      push this on the top of the stack.  */
   if (!m_elements.empty () && (tp == tp_const || tp == tp_volatile
 			       || tp == tp_restrict))
-    slot = 1;
+    insert_into (1, tp);
   else
-    slot = 0;
-
-  element.piece = tp;
-  insert_into (slot, element);
+    insert_into (0, tp);
 }
 
 /* See type-stack.h.  */
@@ -52,22 +47,34 @@ type_stack::insert (enum type_pieces tp)
 void
 type_stack::insert (struct gdbarch *gdbarch, const char *string)
 {
-  union type_stack_elt element;
-  int slot;
-
   /* If there is anything on the stack (we know it will be a
      tp_pointer), insert the address space qualifier above it.
      Otherwise, simply push this on the top of the stack.  */
-  if (!m_elements.empty ())
-    slot = 1;
-  else
-    slot = 0;
+  int slot = (!m_elements.empty ()) ? 1 : 0;
 
-  element.piece = tp_space_identifier;
-  insert_into (slot, element);
-  element.int_val
-    = address_space_name_to_type_instance_flags (gdbarch, string);
-  insert_into (slot, element);
+  /* Check for Harvard address space delimiters and
+     architecture-specific address classes.  */
+  if (streq (string, "code"))
+    {
+      insert_into (slot, tp_harvard_aspace_identifier);
+      insert_into (slot, HARVARD_ASPACE_CODE);
+    }
+  else if (streq (string, "data"))
+    {
+      insert_into (slot, tp_harvard_aspace_identifier);
+      insert_into (slot, HARVARD_ASPACE_DATA);
+    }
+  else if (unsigned int aclass = 0;
+	   gdbarch_address_class_name_to_id_p (gdbarch)
+	   && gdbarch_address_class_name_to_id (gdbarch,
+						string,
+						aclass))
+    {
+      insert_into (slot, tp_aclass_identifier);
+      insert_into (slot, aclass);
+    }
+  else
+    error (_("Unknown address space/class specifier: \"%s\""), string);
 }
 
 /* See type-stack.h.  */
@@ -75,7 +82,7 @@ type_stack::insert (struct gdbarch *gdbarch, const char *string)
 type_instance_flags
 type_stack::follow_type_instance_flags ()
 {
-  type_instance_flags flags = 0;
+  type_instance_flags flags {};
 
   for (;;)
     switch (pop ())
@@ -83,16 +90,16 @@ type_stack::follow_type_instance_flags ()
       case tp_end:
 	return flags;
       case tp_const:
-	flags |= TYPE_INSTANCE_FLAG_CONST;
+	flags.is_const = true;
 	break;
       case tp_volatile:
-	flags |= TYPE_INSTANCE_FLAG_VOLATILE;
+	flags.is_volatile = true;
 	break;
       case tp_atomic:
-	flags |= TYPE_INSTANCE_FLAG_ATOMIC;
+	flags.is_atomic = true;
 	break;
       case tp_restrict:
-	flags |= TYPE_INSTANCE_FLAG_RESTRICT;
+	flags.is_restrict = true;
 	break;
       default:
 	gdb_assert_not_reached ("unrecognized tp_ value in follow_types");
@@ -107,7 +114,8 @@ type_stack::follow_types (struct type *follow_type)
   int done = 0;
   int make_const = 0;
   int make_volatile = 0;
-  type_instance_flags make_addr_space = 0;
+  harvard_address_space make_harvard_aspace = HARVARD_ASPACE_NONE;
+  int make_address_class = 0;
   bool make_restrict = false;
   bool make_atomic = false;
   int array_size;
@@ -125,8 +133,11 @@ type_stack::follow_types (struct type *follow_type)
       case tp_volatile:
 	make_volatile = 1;
 	break;
-      case tp_space_identifier:
-	make_addr_space = (enum type_instance_flag_value) pop_int ();
+      case tp_harvard_aspace_identifier:
+	make_harvard_aspace = (harvard_address_space) pop_int ();
+	break;
+      case tp_aclass_identifier:
+	make_address_class = pop_int ();
 	break;
       case tp_atomic:
 	make_atomic = true;
@@ -145,21 +156,27 @@ type_stack::follow_types (struct type *follow_type)
       process_qualifiers:
 	if (make_const)
 	  follow_type = make_cv_type (make_const,
-				      TYPE_VOLATILE (follow_type),
+				      follow_type->is_volatile (),
 				      follow_type);
 	if (make_volatile)
-	  follow_type = make_cv_type (TYPE_CONST (follow_type),
+	  follow_type = make_cv_type (follow_type->is_const (),
 				      make_volatile,
 				      follow_type);
-	if (make_addr_space)
-	  follow_type = make_type_with_address_space (follow_type,
-						      make_addr_space);
+	if (make_harvard_aspace != HARVARD_ASPACE_NONE)
+	  follow_type
+	    = make_type_with_harvard_address_space (follow_type,
+						    make_harvard_aspace);
+	if (make_address_class != 0)
+	  follow_type
+	    = make_type_with_address_class (follow_type,
+					    make_address_class);
 	if (make_restrict)
 	  follow_type = make_restrict_type (follow_type);
 	if (make_atomic)
 	  follow_type = make_atomic_type (follow_type);
 	make_const = make_volatile = 0;
-	make_addr_space = 0;
+	make_harvard_aspace = HARVARD_ASPACE_NONE;
+	make_address_class = 0;
 	make_restrict = make_atomic = false;
 	break;
       case tp_array:

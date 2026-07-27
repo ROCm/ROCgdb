@@ -5186,7 +5186,7 @@ dwarf2_compute_name (const char *name,
 		  if (type->num_fields () > 0
 		      && type->field (0).is_artificial ()
 		      && type->field (0).type ()->code () == TYPE_CODE_PTR
-		      && TYPE_CONST (type->field (0).type ()->target_type ()))
+		      && type->field (0).type ()->target_type ()->is_const ())
 		    buf.puts (" const");
 		}
 	    }
@@ -12059,14 +12059,12 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 	  && alignment != TYPE_RAW_ALIGN (type))
       || addr_class != DW_ADDR_none)
     {
-      if (gdbarch_address_class_type_flags_p (gdbarch))
+      if (gdbarch_address_class_dwarf_to_id_p (gdbarch))
 	{
-	  type_instance_flags type_flags
-	    = gdbarch_address_class_type_flags (gdbarch, byte_size,
-						addr_class);
-	  gdb_assert ((type_flags & ~TYPE_INSTANCE_FLAG_ADDRESS_CLASS_ALL)
-		      == 0);
-	  type = make_type_with_address_space (type, type_flags);
+	  unsigned int aclass
+	    = gdbarch_address_class_dwarf_to_id (gdbarch, byte_size,
+						 addr_class);
+	  type = make_type_with_address_class (type, aclass);
 	}
       else if (type->length () != byte_size)
 	{
@@ -12186,8 +12184,8 @@ add_array_cv_type (struct die_info *die, struct dwarf2_cu *cu,
     }
 
   el_type = inner_array->target_type ();
-  cnst |= TYPE_CONST (el_type);
-  voltl |= TYPE_VOLATILE (el_type);
+  cnst |= el_type->is_const ();
+  voltl |= el_type->is_volatile ();
   inner_array->set_target_type (make_cv_type (cnst, voltl, el_type));
 
   return set_die_type (die, base_type, cu);
@@ -12210,7 +12208,7 @@ read_tag_const_type (struct die_info *die, struct dwarf2_cu *cu)
   if (base_type->code () == TYPE_CODE_ARRAY)
     return add_array_cv_type (die, cu, base_type, 1, 0);
 
-  cv_type = make_cv_type (1, TYPE_VOLATILE (base_type), base_type);
+  cv_type = make_cv_type (1, base_type->is_volatile (), base_type);
   return set_die_type (die, cv_type, cu);
 }
 
@@ -12232,7 +12230,7 @@ read_tag_volatile_type (struct die_info *die, struct dwarf2_cu *cu)
   if (base_type->code () == TYPE_CODE_ARRAY)
     return add_array_cv_type (die, cu, base_type, 0, 1);
 
-  cv_type = make_cv_type (TYPE_CONST (base_type), 1, base_type);
+  cv_type = make_cv_type (base_type->is_const (), 1, base_type);
   return set_die_type (die, cv_type, cu);
 }
 
@@ -12531,7 +12529,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 		 expects.  GCC marks THIS as const in method definitions,
 		 but not in the class specifications (GCC PR 43053).  */
 	      if (is_cplus_dialect (cu->lang ())
-		  && !TYPE_CONST (arg_type)
+		  && !arg_type->is_const ()
 		  && ftype->field (iparams).is_artificial ())
 		{
 		  int is_this = 0;
@@ -12555,7 +12553,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 		    is_this = 1;
 
 		  if (is_this)
-		    arg_type = make_cv_type (1, TYPE_VOLATILE (arg_type),
+		    arg_type = make_cv_type (1, arg_type->is_volatile (),
 					     arg_type);
 		}
 

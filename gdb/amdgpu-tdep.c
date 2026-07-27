@@ -1624,31 +1624,29 @@ constexpr unsigned int DWARF_GENERIC_ADDR_CLASS = 1;
 constexpr unsigned int DWARF_LOCAL_ADDR_CLASS = 3;
 constexpr unsigned int DWARF_PRIVATE_LANE_ADDR_CLASS = 5;
 
-/* Map DWARF2_ADDR_CLASS address class to type instance flags.  */
-static type_instance_flags
-amdgpu_address_class_type_flags (int byte_size, int dwarf2_addr_class)
+/* Map DWARF2_ADDR_CLASS address class to an address class id.  */
+static unsigned int
+amdgpu_address_class_dwarf_to_id (int byte_size, int dwarf2_addr_class)
 {
   if (dwarf2_addr_class == DWARF_GENERIC_ADDR_CLASS)
-    return TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1
-	   | TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2;
+    return 3;
   else if (dwarf2_addr_class == DWARF_LOCAL_ADDR_CLASS)
-    return TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1;
+    return 1;
   else if (dwarf2_addr_class == DWARF_PRIVATE_LANE_ADDR_CLASS)
-    return TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2;
+    return 2;
 
   return 0;
 }
 
 /* Map TYPE_FLAGS type instance flags to address class.  */
 static unsigned int
-amdgpu_type_flags_to_addr_class (type_instance_flags type_flags)
+amdgpu_type_flags_aclass_to_addr_class (unsigned int address_class)
 {
-  if ((type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
-      && (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2))
+  if (address_class == 3)
     return DWARF_GENERIC_ADDR_CLASS;
-  else if (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
+  else if (address_class == 1)
     return DWARF_LOCAL_ADDR_CLASS;
-  else if (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_2)
+  else if (address_class == 2)
     return DWARF_PRIVATE_LANE_ADDR_CLASS;
 
   /* With current limitations, we can only assume
@@ -1656,7 +1654,7 @@ amdgpu_type_flags_to_addr_class (type_instance_flags type_flags)
   return DWARF_GLOBAL_ADDR_CLASS;
 }
 
-/* Map TYPE_FLAGS type instance flags to address class name.
+/* Map ADDRESS_CLASS id to address class name.
 
    TODO: The idea of a target resolving a language address class name
 	 just seems wrong.
@@ -1664,10 +1662,11 @@ amdgpu_type_flags_to_addr_class (type_instance_flags type_flags)
 	 At the moment, we assume that the language is OpenCL and
 	 provide matching address class names.  */
 static const char*
-amdgpu_address_class_type_flags_to_name (struct gdbarch *gdbarch,
-					 type_instance_flags type_flags)
+amdgpu_address_class_id_to_name (struct gdbarch *gdbarch,
+				 unsigned int address_class)
 {
-  unsigned int addr_class = amdgpu_type_flags_to_addr_class (type_flags);
+  unsigned int addr_class
+    = amdgpu_type_flags_aclass_to_addr_class (address_class);
 
   if (addr_class == DWARF_GENERIC_ADDR_CLASS)
     return "generic";
@@ -1676,7 +1675,7 @@ amdgpu_address_class_type_flags_to_name (struct gdbarch *gdbarch,
   else if (addr_class == DWARF_PRIVATE_LANE_ADDR_CLASS)
     return "private";
   else
-    return "";
+    return nullptr;
 }
 
 /* Form a core address from a TYPE pointer type information and BUF
@@ -1698,8 +1697,9 @@ amdgpu_pointer_to_address (struct gdbarch *gdbarch,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR address
     = extract_unsigned_integer (buf, type->length (), byte_order);
+  unsigned int aclass_id = type->address_class ();
   unsigned int address_class
-    = amdgpu_type_flags_to_addr_class (type->instance_flags ());
+    = amdgpu_type_flags_aclass_to_addr_class (aclass_id);
 
   /* Address might be in a converted format already, so even if the
      class is global, the address might have the address space part
@@ -2069,10 +2069,10 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_dummy_id (gdbarch, amdgpu_dummy_id);
 
   set_gdbarch_pointer_to_address (gdbarch, amdgpu_pointer_to_address);
-  set_gdbarch_address_class_type_flags
-    (gdbarch, amdgpu_address_class_type_flags);
-  set_gdbarch_address_class_type_flags_to_name
-    (gdbarch, amdgpu_address_class_type_flags_to_name);
+  set_gdbarch_address_class_dwarf_to_id
+    (gdbarch, amdgpu_address_class_dwarf_to_id);
+  set_gdbarch_address_class_id_to_name
+    (gdbarch, amdgpu_address_class_id_to_name);
 
   /* Registers and memory.  */
   amd_dbgapi_architecture_id_t architecture_id;

@@ -1608,42 +1608,42 @@ s390_addr_bits_remove (struct gdbarch *gdbarch, CORE_ADDR addr)
   return addr & 0x7fffffff;
 }
 
-/* Implement addr_class_type_flags gdbarch method.
+/* Implement addr_class_dwarf_to_id gdbarch method.
    Only used for ABI_LINUX_ZSERIES.  */
 
-static type_instance_flags
-s390_address_class_type_flags (int byte_size, int dwarf2_addr_class)
+static unsigned int
+s390_address_class_dwarf_to_id (int byte_size, int dwarf2_addr_class)
 {
   if (byte_size == 4)
-    return TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1;
+    return 1;
   else
     return 0;
 }
 
-/* Implement addr_class_type_flags_to_name gdbarch method.
+/* Implement addr_class_id_to_name gdbarch method.
    Only used for ABI_LINUX_ZSERIES.  */
 
 static const char *
-s390_address_class_type_flags_to_name (struct gdbarch *gdbarch,
-				       type_instance_flags type_flags)
+s390_address_class_id_to_name (struct gdbarch *gdbarch,
+			       unsigned int address_class)
 {
-  if (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
+  if (address_class == 1)
     return "mode32";
   else
     return NULL;
 }
 
-/* Implement addr_class_name_to_type_flags gdbarch method.
+/* Implement addr_class_name_to_id gdbarch method.
    Only used for ABI_LINUX_ZSERIES.  */
 
 static bool
-s390_address_class_name_to_type_flags (struct gdbarch *gdbarch,
-				       const char *name,
-				       type_instance_flags *type_flags_ptr)
+s390_address_class_name_to_id (struct gdbarch *gdbarch,
+			       const char *name,
+			       unsigned int &address_class)
 {
   if (streq (name, "mode32"))
     {
-      *type_flags_ptr = TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1;
+      address_class = 1;
       return true;
     }
   else
@@ -7356,12 +7356,12 @@ s390_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       set_gdbarch_long_bit (gdbarch, 64);
       set_gdbarch_long_long_bit (gdbarch, 64);
       set_gdbarch_ptr_bit (gdbarch, 64);
-      set_gdbarch_address_class_type_flags (gdbarch,
-					    s390_address_class_type_flags);
-      set_gdbarch_address_class_type_flags_to_name (gdbarch,
-						    s390_address_class_type_flags_to_name);
-      set_gdbarch_address_class_name_to_type_flags (gdbarch,
-						    s390_address_class_name_to_type_flags);
+      set_gdbarch_address_class_dwarf_to_id (gdbarch,
+					     s390_address_class_dwarf_to_id);
+      set_gdbarch_address_class_id_to_name (gdbarch,
+					    s390_address_class_id_to_name);
+      set_gdbarch_address_class_name_to_id (gdbarch,
+					    s390_address_class_name_to_id);
       break;
     }
 

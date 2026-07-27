@@ -22,12 +22,12 @@ gdb_test_no_output "set language c"
 
 with_test_prefix "C" {
 	gdb_test "p *(@somerandomqualifiername int *) 0x12345678" \
-		"Unknown address space specifier: \"somerandomqualifiername\""
+		"Unknown address space/class specifier: \"somerandomqualifiername\""
 }
 
 gdb_test_no_output "set language c++"
 
 with_test_prefix "C++" {
 	gdb_test "p *(@somerandomqualifiername int *) 0x12345678" \
-		"Unknown address space specifier: \"somerandomqualifiername\""
+		"Unknown address space/class specifier: \"somerandomqualifiername\""
 }

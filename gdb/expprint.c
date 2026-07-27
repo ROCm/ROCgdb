@@ -148,9 +148,9 @@ dump_for_expression (struct ui_file *stream, int depth,
 		     type_instance_flags flags)
 {
   gdb_printf (stream, _("%*sType flags: "), depth, "");
-  if (flags & TYPE_INSTANCE_FLAG_CONST)
+  if (flags.is_const)
     gdb_puts ("const ", stream);
-  if (flags & TYPE_INSTANCE_FLAG_VOLATILE)
+  if (flags.is_volatile)
     gdb_puts ("volatile", stream);
   gdb_printf (stream, "\n");
 }

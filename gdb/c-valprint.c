@@ -109,7 +109,7 @@ c_textual_element_type (struct type *type, char format)
 	 being used as data.  */
       if (true_type->code () == TYPE_CODE_INT
 	  && true_type->length () == 1
-	  && !TYPE_NOTTEXT (true_type))
+	  && !true_type->is_nottext ())
 	return 1;
     }
 

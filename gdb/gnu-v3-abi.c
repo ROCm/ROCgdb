@@ -184,7 +184,7 @@ get_gdb_vtable_type (struct gdbarch *arch)
   t->set_name ("gdb_gnu_v3_abi_vtable");
   INIT_CPLUS_SPECIFIC (t);
 
-  result = make_type_with_address_space (t, TYPE_INSTANCE_FLAG_CODE_SPACE);
+  result = make_type_with_harvard_address_space (t, HARVARD_ASPACE_CODE);
   vtable_type_gdbarch_data.set (arch, result);
   return result;
 }

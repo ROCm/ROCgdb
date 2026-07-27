@@ -244,7 +244,7 @@ static void
 m2_pointer (struct type *type, struct ui_file *stream, int show,
 	    int level, const struct type_print_options *flags)
 {
-  if (TYPE_CONST (type))
+  if (type->is_const ())
     gdb_printf (stream, "[...] : ");
   else
     gdb_printf (stream, "POINTER TO ");

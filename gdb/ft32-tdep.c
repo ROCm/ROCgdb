@@ -332,54 +332,54 @@ ft32_pointer_to_address (struct gdbarch *gdbarch,
   CORE_ADDR addr
     = extract_unsigned_integer (buf, type->length (), byte_order);
 
-  if (TYPE_ADDRESS_CLASS_1 (type))
+  if (type->address_class () == 1)
     return addr;
   else
     return addr | RAM_BIAS;
 }
 
-/* Implementation of `address_class_type_flags' gdbarch method.
+/* Implementation of `address_class_dwarf_to_id' gdbarch method.
 
-   This method maps DW_AT_address_class attributes to a
-   type_instance_flag_value.  */
+   This method maps a DW_AT_address_class attribute to an address
+   class id.  */
 
-static type_instance_flags
-ft32_address_class_type_flags (int byte_size, int dwarf2_addr_class)
+static unsigned int
+ft32_address_class_dwarf_to_id (int byte_size, int dwarf2_addr_class)
 {
   /* The value 1 of the DW_AT_address_class attribute corresponds to the
      __flash__ qualifier, meaning pointer to data in FT32 program memory.
    */
   if (dwarf2_addr_class == 1)
-    return TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1;
+    return 1;
   return 0;
 }
 
-/* Implementation of `address_class_type_flags_to_name' gdbarch method.
+/* Implementation of `address_class_id_to_name' gdbarch method.
 
-   Convert a type_instance_flag_value to an address space qualifier.  */
+   Convert an address class id to an address space qualifier.  */
 
 static const char*
-ft32_address_class_type_flags_to_name (struct gdbarch *gdbarch,
-				       type_instance_flags type_flags)
+ft32_address_class_id_to_name (struct gdbarch *gdbarch,
+			       unsigned int address_class)
 {
-  if (type_flags & TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1)
+  if (address_class == 1)
     return "flash";
   else
     return NULL;
 }
 
-/* Implementation of `address_class_name_to_type_flags' gdbarch method.
+/* Implementation of `address_class_name_to_id' gdbarch method.
 
-   Convert an address space qualifier to a type_instance_flag_value.  */
+   Convert an address class name to an address class id.  */
 
 static bool
-ft32_address_class_name_to_type_flags (struct gdbarch *gdbarch,
-				       const char* name,
-				       type_instance_flags *type_flags_ptr)
+ft32_address_class_name_to_id (struct gdbarch *gdbarch,
+			       const char* name,
+			       unsigned int &address_class)
 {
   if (streq (name, "flash"))
     {
-      *type_flags_ptr = TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1;
+      address_class = 1;
       return true;
     }
   else
@@ -579,8 +579,7 @@ ft32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   func_void_type = lookup_function_type (void_type);
   tdep->pc_type = init_pointer_type (alloc, 4 * TARGET_CHAR_BIT, NULL,
 				     func_void_type);
-  tdep->pc_type->set_instance_flags (tdep->pc_type->instance_flags ()
-				     | TYPE_INSTANCE_FLAG_ADDRESS_CLASS_1);
+  tdep->pc_type->set_address_class (1);
 
   set_gdbarch_num_regs (gdbarch, FT32_NUM_REGS);
   set_gdbarch_sp_regnum (gdbarch, FT32_SP_REGNUM);
@@ -609,11 +608,12 @@ ft32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Support simple overlay manager.  */
   set_gdbarch_overlay_update (gdbarch, simple_overlay_update);
 
-  set_gdbarch_address_class_type_flags (gdbarch, ft32_address_class_type_flags);
-  set_gdbarch_address_class_name_to_type_flags
-    (gdbarch, ft32_address_class_name_to_type_flags);
-  set_gdbarch_address_class_type_flags_to_name
-    (gdbarch, ft32_address_class_type_flags_to_name);
+  set_gdbarch_address_class_dwarf_to_id
+    (gdbarch, ft32_address_class_dwarf_to_id);
+  set_gdbarch_address_class_name_to_id
+    (gdbarch, ft32_address_class_name_to_id);
+  set_gdbarch_address_class_id_to_name
+    (gdbarch, ft32_address_class_id_to_name);
 
   return gdbarch;
 }

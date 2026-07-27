@@ -1678,16 +1678,24 @@ non-steppable watchpoints.
 )
 
 Function(
-    type="type_instance_flags",
-    name="address_class_type_flags",
+    comment="""
+Given the DWARF identifier for an architecture-specific address class,
+return the id of that address class.
+""",
+    type="unsigned int",
+    name="address_class_dwarf_to_id",
     params=[("int", "byte_size"), ("int", "dwarf2_addr_class")],
     predicate=True,
 )
 
 Method(
+    comment="""
+Given an architecture-specific address class identifier, return the
+name of that address class.
+""",
     type="const char *",
-    name="address_class_type_flags_to_name",
-    params=[("type_instance_flags", "type_flags")],
+    name="address_class_id_to_name",
+    params=[("unsigned int", "address_class")],
     predicate=True,
 )
 
@@ -1705,13 +1713,13 @@ FS are passed from the generic execute_cfa_program function.
 
 Method(
     comment="""
-Return the appropriate type_flags for the supplied address class.
+Return the appropriate address class id for the supplied address class name.
 This function should return true if the address class was recognized and
-type_flags was set, false otherwise.
+address_class was set, false otherwise.
 """,
     type="bool",
-    name="address_class_name_to_type_flags",
-    params=[("const char *", "name"), ("type_instance_flags *", "type_flags_ptr")],
+    name="address_class_name_to_id",
+    params=[("const char *", "name"), ("unsigned int &", "address_class")],
     predicate=True,
 )
 

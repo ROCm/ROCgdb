@@ -443,10 +443,13 @@ i386_intel_simplify (expressionS *e)
 				   intel_state.index))
 	    return 0;
 	  e->X_add_symbol = newsym;
+	  symbol_mark_resolving (e->X_add_symbol);
 	}
       if (!intel_state.in_offset)
 	++intel_state.in_bracket;
       newsym = i386_intel_simplify_symbol (e->X_op_symbol);
+      if (e->X_add_symbol)
+	symbol_clear_resolving (e->X_add_symbol);
       if (!intel_state.in_offset)
 	--intel_state.in_bracket;
       if (!newsym)
@@ -560,7 +563,9 @@ i386_intel_simplify (expressionS *e)
 		}
 	    }
 
+	  symbol_mark_resolving (e->X_add_symbol);
 	  newsym = i386_intel_simplify_symbol (e->X_op_symbol);
+	  symbol_clear_resolving (e->X_add_symbol);
 	  if (newsym)
 	    {
 	      e->X_op_symbol = newsym;
@@ -617,7 +622,9 @@ i386_intel_simplify (expressionS *e)
 		  other = symbol_get_value_expression (e->X_add_symbol);
 		}
 
+	      symbol_mark_resolving (e->X_add_symbol);
 	      newsym = i386_intel_simplify_symbol (e->X_op_symbol);
+	      symbol_clear_resolving (e->X_add_symbol);
 	    }
 
 	  if (newsym)
@@ -719,7 +726,11 @@ i386_intel_simplify (expressionS *e)
 	return 0;
       if (e->X_op_symbol)
 	{
+	  if (e->X_add_symbol)
+	    symbol_mark_resolving (e->X_add_symbol);
 	  newsym = i386_intel_simplify_symbol (e->X_op_symbol);
+	  if (e->X_add_symbol)
+	    symbol_clear_resolving (e->X_add_symbol);
 	  if (!newsym)
 	    return 0;
 	  e->X_op_symbol = newsym;

@@ -1075,7 +1075,13 @@ format_to_type (format_data fmt, gdbarch *gdbarch, type_instance_flags flags)
     }
 
   gdb_assert (val_type != nullptr);
-  val_type = make_type_with_address_space (val_type, flags);
+
+  if (flags.harvard_aspace != HARVARD_ASPACE_NONE)
+    val_type = make_type_with_harvard_address_space (val_type,
+						     flags.harvard_aspace);
+
+  if (flags.address_class != 0)
+    val_type = make_type_with_address_class (val_type, flags.address_class);
 
   return val_type;
 }
@@ -1908,7 +1914,7 @@ x_command (const char *exp, int from_tty)
       else
 	next_address = value_as_address (val);
 
-      type_instance_flags flags = 0;
+      type_instance_flags flags {};
       if (val->type ()->is_pointer_or_reference ())
 	flags = val->type ()->target_type ()->instance_flags ();
 
@@ -2203,7 +2209,7 @@ do_one_display (struct display *d)
 	  if (d->format.format == 'i')
 	    addr = gdbarch_addr_bits_remove (d->exp->gdbarch, addr);
 
-	  type_instance_flags flags = 0;
+	  type_instance_flags flags {};
 	  if (val->type ()->is_pointer_or_reference ())
 	    flags = val->type ()->target_type ()->instance_flags ();
 
