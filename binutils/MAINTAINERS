@@ -44,6 +44,7 @@ repository without obtaining approval first:
   Michael Meissner <gnu@the-meissners.org>
   Richard Sandiford <rdsandiford@googlemail.com>
   Jan Beulich <jbeulich@suse.com>
+  Maciej W. Rozycki <macro@orcam.me.uk>
 
 GDB global maintainers also have permission to commit and approve
 patches to the top level files and to those parts of bfd files
