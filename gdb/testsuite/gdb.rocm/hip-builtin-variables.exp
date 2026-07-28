@@ -88,7 +88,7 @@ proc check_builtin_variables_values {} {
 	set num_z [set ${ref}_z]
 
 	gdb_test "p $var3d" "= {x = $num_x, y = $num_y, z = $num_z}" \
-	    "$var3d == $ref"
+	    "$var3d == \$$ref"
 	gdb_test "p ${var3d}.x" "$num_x" "${var3d}.x == $num_x"
 	gdb_test "p ${var3d}.y" "$num_y" "${var3d}.y == $num_y"
 	gdb_test "p ${var3d}.z" "$num_z" "${var3d}.z == $num_z"
