@@ -101,6 +101,13 @@ repos:
         args: [--trust-plugins]
         files: '^gdb/testsuite/.*\.(exp|tcl)$'
 
+  # Yaml hooks.
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        files: '^\.pre-commit-config.yaml$'
+
   # Local hooks.
   - repo: local
     hooks:
