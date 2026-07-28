@@ -37,6 +37,7 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 
+---
 minimum_pre_commit_version: 4.5.1
 default_install_hook_types: [pre-commit, commit-msg]
 default_stages: [pre-commit]
@@ -58,81 +59,81 @@ repos:
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 26.5.1
     hooks:
-    - id: black
-      types_or: &gdb_python_types [file]
-      files: &gdb_python_files '^gdb/.*\.py(\.in)?$'
-  - repo:  https://github.com/pycqa/flake8
+      - id: black
+        types_or: &gdb_python_types [file]
+        files: &gdb_python_files '^gdb/.*\.py(\.in)?$'
+  - repo: https://github.com/pycqa/flake8
     rev: 7.3.0
     hooks:
-    - id: flake8
-      types_or: *gdb_python_types
-      files: *gdb_python_files
-      args: [--config, gdb/setup.cfg]
+      - id: flake8
+        types_or: *gdb_python_types
+        files: *gdb_python_files
+        args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
     rev: 9.0.0b1
     hooks:
-    - id: isort
-      types_or: *gdb_python_types
-      files: *gdb_python_files
-      # Isort's .pre-commit-hooks.yaml sets stages, overriding default_stages,
-      # so this hook needs an explicit setting.
-      stages: [pre-commit]
+      - id: isort
+        types_or: *gdb_python_types
+        files: *gdb_python_files
+        # Isort's .pre-commit-hooks.yaml sets stages, overriding default_stages,
+        # so this hook needs an explicit setting.
+        stages: [pre-commit]
 
   # Codespell hooks.
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.3
     hooks:
-    - id: codespell
-      args: &codespell_args [--toml, gdb/pyproject.toml]
-      files: &gdb_files '^(gdb|gdbserver|gdbsupport)/'
-    - id: codespell
-      name: codespell-log
-      entry: gdb/contrib/codespell-log.sh
-      args: *codespell_args
-      verbose: true
-      stages: [commit-msg]
+      - id: codespell
+        args: &codespell_args [--toml, gdb/pyproject.toml]
+        files: &gdb_files '^(gdb|gdbserver|gdbsupport)/'
+      - id: codespell
+        name: codespell-log
+        entry: gdb/contrib/codespell-log.sh
+        args: *codespell_args
+        verbose: true
+        stages: [commit-msg]
 
   # Tclint hooks.
   - repo: https://github.com/nmoroze/tclint
     rev: v0.8.0
     hooks:
-    - id: tclint
-      args: [--trust-plugins]
-      files: '^gdb/testsuite/.*\.(exp|tcl)$'
+      - id: tclint
+        args: [--trust-plugins]
+        files: '^gdb/testsuite/.*\.(exp|tcl)$'
 
   # Local hooks.
   - repo: local
     hooks:
-    - id: &id0 check-include-guards
-      name: *id0
-      language: unsupported_script
-      entry: gdb/check-include-guards.py
-      # All gdb header files, but not headers in the test suite.
-      files: '^(gdb(support|server)?)/.*\.h$'
-      exclude: '.*/testsuite/.*'
-    - id: &id1 check-gnu-style
-      name: *id1
-      language: python
-      additional_dependencies: ['termcolor', 'unidiff']
-      entry: gdb/contrib/check-gnu-style-pre-commit.sh
-      files: '^(gdb(support|server)?)/.*\.(c|h|cc)$'
-      exclude: '.*/testsuite/.*'
-      verbose: true
-    - id: &id2 check-whitespace
-      name: *id2
-      language: unsupported_script
-      entry: gdb/contrib/check-whitespace-pre-commit.py
-      types: ['text']
-      files: *gdb_files
-    - id: &id3 pre-commit-setup
-      name: *id3
-      language: python
-      entry: gdb/contrib/pre-commit-setup.py
-      additional_dependencies: ["pyyaml"]
-      always_run: true
-      pass_filenames: false
-    - id: &id4 check-file-mode
-      name: *id4
-      language: unsupported_script
-      entry: gdb/contrib/check-file-mode.sh
-      files: *gdb_files
+      - id: &id0 check-include-guards
+        name: *id0
+        language: unsupported_script
+        entry: gdb/check-include-guards.py
+        # All gdb header files, but not headers in the test suite.
+        files: '^(gdb(support|server)?)/.*\.h$'
+        exclude: '.*/testsuite/.*'
+      - id: &id1 check-gnu-style
+        name: *id1
+        language: python
+        additional_dependencies: ['termcolor', 'unidiff']
+        entry: gdb/contrib/check-gnu-style-pre-commit.sh
+        files: '^(gdb(support|server)?)/.*\.(c|h|cc)$'
+        exclude: '.*/testsuite/.*'
+        verbose: true
+      - id: &id2 check-whitespace
+        name: *id2
+        language: unsupported_script
+        entry: gdb/contrib/check-whitespace-pre-commit.py
+        types: ['text']
+        files: *gdb_files
+      - id: &id3 pre-commit-setup
+        name: *id3
+        language: python
+        entry: gdb/contrib/pre-commit-setup.py
+        additional_dependencies: ["pyyaml"]
+        always_run: true
+        pass_filenames: false
+      - id: &id4 check-file-mode
+        name: *id4
+        language: unsupported_script
+        entry: gdb/contrib/check-file-mode.sh
+        files: *gdb_files
