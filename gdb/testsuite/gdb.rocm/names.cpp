@@ -232,7 +232,7 @@ int
 main (int argc, char **argv)
 {
   /* So that the GPU threads don't spin forever.  */
-  gdb_watchdog (30);
+  gdb_watchdog (90);
 
   if (argc != 2)
     {
