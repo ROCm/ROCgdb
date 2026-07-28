@@ -86,10 +86,13 @@ repos:
       - id: codespell
         args: &codespell_args [--toml, gdb/pyproject.toml]
         files: &gdb_files '^(gdb|gdbserver|gdbsupport)/'
+        # 'tomllib' library is not available on Python < 3.11.
+        additional_dependencies: &codespell_deps ['tomli']
       - id: codespell
         name: codespell-log
         entry: gdb/contrib/codespell-log.sh
         args: *codespell_args
+        additional_dependencies: *codespell_deps
         verbose: true
         stages: [commit-msg]
 
