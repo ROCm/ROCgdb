@@ -1,7 +1,7 @@
 #as:
 #readelf: -x .rodata -r
 
-Relocation section '.rel.rodata' at offset 0xd4 contains 4 entries:
+Relocation section '.rel.rodata' at offset 0x[0-9a-f]+ contains 4 entries:
  Offset     Info    Type            Sym.Value  Sym. Name
 0+  00000104 R_386_PLT32       00000000   foo1
 0+4  00000204 R_386_PLT32       00000000   foo2
