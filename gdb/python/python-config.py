@@ -78,5 +78,16 @@ for opt in opt_flags:
                 elif os.name == "nt":
                     libs.insert(0, "-L" + os.path.normpath(sys.prefix) + "/libs")
             if getvar("LINKFORSHARED") is not None:
-                libs.extend(getvar("LINKFORSHARED").split())
+                linkforshared = getvar("LINKFORSHARED")
+                # On AIX, LINKFORSHARED contains "-Wl,-bE:Modules/python.exp"
+                # where "Modules/python.exp" is a build-tree-relative path that
+                # does not exist on installed systems.  Replace it with the
+                # absolute installed path using LIBPL, which always points to
+                # the pythonX.Y/config-X.Y directory where python.exp is kept.
+                if sys.platform.startswith("aix") and getvar("LIBPL") is not None:
+                    linkforshared = linkforshared.replace(
+                        "Modules/python.exp",
+                        getvar("LIBPL") + "/python.exp",
+                    )
+                libs.extend(linkforshared.split())
         print(to_unix_path(" ".join(libs)))
