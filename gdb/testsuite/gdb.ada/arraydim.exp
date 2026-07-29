@@ -52,8 +52,13 @@ gdb_test "print m'first(3)" " = 4"
 gdb_test "print m'last(3)" " = 6"
 gdb_test "print m'length(3)" " = 3"
 
+# With GCC the test shows "int" as the element type, but with
+# gnat-llvm it shows "integer"; both of these are reasonable enough so
+# we accept either.  The difference here is because GCC emits a
+# declaration in the DWARF for foo.o, but gnat-llvm emits a
+# definition.
 gdb_test "ptype global_3dim_for_gdb_testing" \
-    "array \\(0 \\.\\. 0, 0 \\.\\. 1, 0 \\.\\. 2\\) of int"
+    [quotemeta "array (0 .. 0, 0 .. 1, 0 .. 2) of @/(int|integer)/"]
 
 gdb_test "print global_3dim_for_gdb_testing'first" " = 0"
 gdb_test "print global_3dim_for_gdb_testing'last" " = 0"

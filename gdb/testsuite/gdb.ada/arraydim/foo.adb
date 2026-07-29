@@ -18,11 +18,8 @@ procedure Foo is
    type Multi is array (1 .. 1, 2 .. 3, 4 .. 6) of Integer;
    M : Multi := (others => (others => (others => 0)));
 
-   --  Use a fake type for importing our C multi-dimensional array.
-   --  It's only to make sure the C unit gets linked in, regardless
-   --  of possible optimizations.
-   type Void_Star is access integer;
-   E : Void_Star;
+   type C_Multi is array (0 .. 0, 0 .. 1, 0 .. 2) of Integer;
+   E : C_Multi;
    pragma Import (C, E, "global_3dim_for_gdb_testing");
 begin
    Do_Nothing (M'Address);  -- STOP
