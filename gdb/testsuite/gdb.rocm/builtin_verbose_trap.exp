@@ -45,7 +45,6 @@ with_rocm_gpu_lock {
     # The inline frames for add_numbers should be hidden.
     gdb_test "next" ".*" "next 1"
     gdb_test "next" ".*" "next 2"
-    gdb_test "next" ".*" "next 3"
 
     # Verify backtrace does NOT show add_numbers inline frame.
     gdb_test "bt" \

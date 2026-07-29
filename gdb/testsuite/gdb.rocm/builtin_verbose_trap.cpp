@@ -31,8 +31,7 @@ test_trap_kernel ()
 {
   int x = 1;  /* Breakpoint here.  */
   int y = 2;
-  int z = add_numbers (x, y);  /* Step into inline function.  */
-  int r = add_numbers (x, y);
+  int z = add_numbers (x, y);  /* Step over inline function.  */
   __builtin_verbose_trap ("check verbose", "This is verbose trap!");
 }
 
