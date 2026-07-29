@@ -1,0 +1,105 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test if GDB DAP doesn't recognize CLI-driven inferior state changes
+# First:
+# - launch with stopOnEntry, then DAP evaluate("core-file <path>") to
+#   load the core
+# Then:
+# - evaluate(core-file) succeeds and the core is loaded
+# - All subsequent DAP requests (threads, evaluate, backtrace) return
+#   success: false, message: "notStopped"
+# - The new inferior is in stopped state, but GDB DAP's state tracker
+#   is out of sync
+
+require allow_dap_tests
+
+load_lib dap-support.exp
+
+# Reuse the existing corefile.c source from gdb.dap.
+standard_testfile corefile.c
+
+if {[build_executable ${testfile}.exp $testfile $srcfile] == -1} {
+    return
+}
+
+set corefile [core_find $binfile {}]
+if {$corefile == ""} {
+    untested "unable to create or find corefile"
+    return
+}
+
+if {[dap_initialize] == ""} {
+    return
+}
+
+# Launch the inferior with stop_at_main so that we have an active,
+# stopped inferior before we touch the core file.
+set launch_id [dap_launch $testfile stop_at_main 1]
+
+dap_check_request_and_response "configurationDone" configurationDone
+dap_check_response "launch response" launch $launch_id
+
+dap_wait_for_event_and_check "stopped at main" stopped \
+    "body reason" breakpoint
+
+# Now load the core file by way of a CLI command, sent through a DAP
+# evaluate request.  The "core-file" command attaches a new inferior
+# in stopped state.
+set obj [dap_check_request_and_response "load core via repl" \
+	     evaluate [format {o expression [s "core-file %s"] context [s repl]} \
+			   $corefile]]
+
+# After loading the core, GDB DAP must regard the (new) current
+# inferior as stopped.  Verify by issuing a few standard DAP requests
+# that previously came back as success=false / message="notStopped".
+
+# 1. threads request must succeed.
+set obj [dap_request_and_response threads]
+set response [lindex $obj 0]
+gdb_assert { [dict get $response success] } \
+    "threads request succeeds after core-file via evaluate"
+if {![dict get $response success] && [dict exists $response message]} {
+    gdb_assert { [dict get $response message] != "notStopped" } \
+	"threads message is not notStopped"
+}
+
+# Pick the first reported thread id for the stackTrace request below.
+set threads [dict get $response body threads]
+set tid [dict get [lindex $threads 0] id]
+
+# 2. evaluate("info threads") in the repl context must succeed.
+set obj [dap_request_and_response evaluate \
+	     {o expression [s "info threads"] context [s repl]}]
+set response [lindex $obj 0]
+gdb_assert { [dict get $response success] } \
+    "evaluate 'info threads' succeeds after core-file via evaluate"
+if {![dict get $response success] && [dict exists $response message]} {
+    gdb_assert { [dict get $response message] != "notStopped" } \
+	"evaluate message is not notStopped"
+}
+
+# 3. A backtrace request on a reported thread must succeed.
+set obj [dap_request_and_response stackTrace \
+	     [format {o threadId [i %d]} $tid]]
+set response [lindex $obj 0]
+gdb_assert { [dict get $response success] } \
+    "stackTrace succeeds after core-file via evaluate"
+if {![dict get $response success] && [dict exists $response message]} {
+    gdb_assert { [dict get $response message] != "notStopped" } \
+	"stackTrace message is not notStopped"
+}
+
+dap_shutdown true
