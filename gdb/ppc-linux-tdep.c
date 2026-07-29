@@ -2076,14 +2076,6 @@ ppc64_gnu_triplet_regexp (struct gdbarch *gdbarch)
   return "p(ower)?pc64"; /* codespell:ignore.  */
 }
 
-/* Implement the linux_gcc_target_options method.  */
-
-static std::string
-ppc64_linux_gcc_target_options (struct gdbarch *gdbarch)
-{
-  return "";
-}
-
 /* Fetch and return the TLS DTV (dynamic thread vector) address for PTID.
    Throw a suitable TLS error if something goes wrong.  */
 
@@ -2337,8 +2329,6 @@ ppc_linux_init_abi (struct gdbarch_info info,
 	set_gdbarch_gnu_triplet_regexp (gdbarch, ppc64le_gnu_triplet_regexp);
       else
 	set_gdbarch_gnu_triplet_regexp (gdbarch, ppc64_gnu_triplet_regexp);
-      /* Set GCC target options.  */
-      set_gdbarch_gcc_target_options (gdbarch, ppc64_linux_gcc_target_options);
       /* Internal thread local address support.  */
       set_gdbarch_get_thread_local_address (gdbarch,
 					    svr4_tls_get_thread_local_address);
