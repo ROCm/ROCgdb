@@ -24,20 +24,23 @@ standard_ada_testfile unchecked_union
 proc multi_line_string {str} {
     set result {}
     foreach line $str {
-	lappend result [string_to_regexp $line]
+	lappend result [quotemeta $line]
     }
     set res [multi_line {*}$result]
     verbose -log "RES: '$res'"
     return $res
 }
 
+# Note the quotemeta expression here.  gnat-llvm emits slightly a
+# different encoding here, which lets gdb see the discriminant for a
+# branch.
 set inner_string \
     [list \
 	 "    case ? is" \
 	 "        when 0 =>" \
 	 "            small: range 0 .. 255;" \
 	 "            second: range 0 .. 255;" \
-	 "        when ? =>" \
+	 "        when @/\[1?\]/ =>" \
 	 "            bval: range 0 .. 255;" \
 	 "        when others =>" \
 	 "            large: range 255 .. 510;" \
@@ -50,12 +53,15 @@ set inner_full \
 	 $inner_string \
 	 [list "end record"]]
 
+# Note the quotemeta expression here.  gnat-llvm emits slightly a
+# different encoding here, which lets gdb see the discriminant for a
+# branch.
 set pair_string \
     [list \
 	 "    case ? is" \
-	 "        when ? =>" \
+	 "        when @/\[0?\]/ =>" \
 	 "            field_one: range 0 .. 255;" \
-	 "        when ? =>" \
+	 "        when @/(\\?|others)/ =>" \
 	 "            field_two: range 255 .. 510;" \
 	 "    end case;"]
 
