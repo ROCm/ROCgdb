@@ -50,6 +50,12 @@ TEST_CATEGORIES = [
 # --one-by-one mode when --one-by-one-test-timeout is not provided.
 ONE_BY_ONE_DEFAULT_WALL_CLOCK_TIMEOUT = 3600
 
+# Default wall-clock timeout (seconds) for each --sanity-check probe when
+# --sanity-check-timeout is not provided. A trivial known-good HIP kernel
+# should return near-instantly; this is a starting value to be tuned
+# experimentally on real hardware.
+SANITY_CHECK_DEFAULT_TIMEOUT = 10
+
 # Sanitizers we pre-configure on every run. If rocgdb wasn't built with the
 # corresponding -fsanitize=..., the matching *_OPTIONS env var is silently
 # ignored at runtime, so listing extras here is harmless.
@@ -375,6 +381,7 @@ def parse_arguments() -> argparse.Namespace:
   python %(prog)s --skip-failed-test-log
   python %(prog)s --output-ignore-list-file custom_ignore_list.json
   python %(prog)s --one-by-one --tests gdb.rocm/foo.exp
+  python %(prog)s --one-by-one --sanity-check --gpu-tests
   python %(prog)s --timing --gpu-tests
   python %(prog)s --toolchain llvm
 
@@ -568,6 +575,23 @@ def parse_arguments() -> argparse.Namespace:
         "in --one-by-one mode. Defaults to 3600.",
     )
     parser.add_argument(
+        "--sanity-check",
+        action="store_true",
+        help="Before each one-by-one test, run a known-good HIP program "
+        "(built once per run from gdb.rocm/simple.cpp) and bail out if the GPU stops "
+        "responding. If the probe times out or exits non-zero, the system is "
+        "declared unreliable: a dmesg.log is captured under the one-by-one log "
+        "dir and the run aborts. Requires --one-by-one.",
+    )
+    parser.add_argument(
+        "--sanity-check-timeout",
+        type=_positive_nonzero_int,
+        default=None,
+        metavar="SECS",
+        help="Wall-clock timeout (seconds) for each --sanity-check probe. "
+        f"Defaults to {SANITY_CHECK_DEFAULT_TIMEOUT}. Requires --sanity-check.",
+    )
+    parser.add_argument(
         "--timing",
         action="store_true",
         help="Record each test's wall-clock duration and write rocgdb_timing.log "
@@ -609,6 +633,25 @@ def parse_arguments() -> argparse.Namespace:
         _log_error_and_exit(
             "--one-by-one-log-dir / --one-by-one-test-timeout require --one-by-one."
         )
+
+    # Validate --sanity-check constraints. The probe is only meaningful in
+    # one-by-one mode, where it runs between per-test `make check` invocations.
+    # Check the --parallel conflict first so the message points at the real
+    # incompatibility instead of suggesting the user add --one-by-one (which
+    # would then trip the mutual-exclusion error above).
+    if args.sanity_check and args.parallel:
+        _log_error_and_exit(
+            "--sanity-check cannot be combined with --parallel "
+            "(it runs in --one-by-one mode)."
+        )
+    if args.sanity_check and not args.one_by_one:
+        _log_error_and_exit("--sanity-check requires --one-by-one.")
+    if args.sanity_check_timeout is not None and not args.sanity_check:
+        _log_error_and_exit("--sanity-check-timeout requires --sanity-check.")
+    # Resolve the effective probe timeout now that the "set without
+    # --sanity-check" case has been rejected, so downstream code sees a value.
+    if args.sanity_check_timeout is None:
+        args.sanity_check_timeout = SANITY_CHECK_DEFAULT_TIMEOUT
 
     # Validate paths independently if provided. Either flag may be supplied
     # alone; whichever is omitted is auto-discovered in _resolve_rocm_paths.
@@ -1782,6 +1825,7 @@ def run_tests(
     test_results: "TestResults",
     args: argparse.Namespace,
     xfailed_tests: Optional[Dict[str, List[str]]] = None,
+    sanity_check_exe: Optional[Path] = None,
 ) -> None:
     """
     Run ROCgdb test suite with retry logic for failed tests.
@@ -1799,6 +1843,9 @@ def run_tests(
         args: Parsed command-line arguments.
         xfailed_tests: Compiler labels mapped to expected failing test paths.
             Used to skip retrying ignored tests when --retry-ignored-tests is off.
+        sanity_check_exe: When supplied (--sanity-check mode), the pre-built
+            known-good HIP executable run before each test in one-by-one mode.
+            None disables the probe.
 
     Returns:
         None
@@ -1845,6 +1892,7 @@ def run_tests(
                     f"(override with --one-by-one-test-timeout)"
                 )
             log_dir = args.one_by_one_log_dir or (test_suite_dir / "one_by_one_logs")
+
             _execute_one_by_one(
                 test_suite_dir,
                 current_tests,
@@ -1857,6 +1905,8 @@ def run_tests(
                 iteration,
                 wall_clock,
                 test_results if args.timing else None,
+                sanity_check_exe,
+                args.sanity_check_timeout,
             )
         else:
             cmd = [
@@ -2178,6 +2228,25 @@ def main() -> None:
         required_executables.insert(1, "amdclang++")
     check_executables(required_executables, env_vars)
 
+    # The sanity check probes the GPU with a HIP program, so it is only
+    # meaningful when gdb.rocm tests will actually run. Reject the combination
+    # early rather than compiling a HIP program for a CPU-only run.
+    if args.sanity_check and not has_rocm_tests:
+        _log_error_and_exit(
+            "--sanity-check requires gdb.rocm tests to be in scope, but none "
+            "were selected."
+        )
+
+    # Build the sanity-check executable once per invocation. It is rebuilt
+    # unconditionally so a binary left over from a previous run (possibly for a
+    # different GPU) can never cause a spurious "system unreliable" abort.
+    sanity_check_exe = None
+    if args.sanity_check:
+        log_dir = args.one_by_one_log_dir or (rocgdb_testsuite_dir / "one_by_one_logs")
+        sanity_check_exe = _build_sanity_check_executable(
+            rocgdb_testsuite_dir, log_dir, env_vars
+        )
+
     # Initialize test result tracking.
     test_results = TestResults()
     test_results.group_results = args.group_results
@@ -2196,6 +2265,7 @@ def main() -> None:
             test_results,
             args,
             xfailed_tests,
+            sanity_check_exe,
         )
 
     # Final summaries.
@@ -2283,6 +2353,214 @@ def _build_runtestflags(
     return " ".join(parts)
 
 
+def _decode_stream(data: Union[str, bytes, None]) -> str:
+    """
+    Normalize a captured subprocess stream to text.
+
+    TimeoutExpired.stdout/stderr may be bytes, str, or None depending on how
+    far communicate() progressed; coerce all three to a string for logging.
+
+    Args:
+        data: A captured stream value (str, bytes, or None).
+
+    Returns:
+        The decoded text, or "" when there was nothing captured.
+    """
+    if data is None:
+        return ""
+    if isinstance(data, bytes):
+        return data.decode("utf-8", errors="replace")
+    return data
+
+
+def _build_sanity_check_executable(
+    test_suite_dir: Path, log_dir: Path, env_vars: Dict[str, str]
+) -> Path:
+    """
+    Build the sanity-check HIP executable from gdb.rocm/simple.cpp.
+
+    simple.cpp is a self-contained HIP program with its own main() that launches
+    a trivial kernel and asserts the result, so it compiles directly with
+    amdclang++ and needs none of the testsuite's wrapper/driver machinery. The
+    executable is written to <log_dir>/sanity_check and rebuilt unconditionally
+    on every invocation: --offload-arch=native bakes in the build-time GPU, so
+    a binary left over from a previous run (possibly on different hardware)
+    must never be reused, or it could cause a spurious "system unreliable"
+    abort.
+
+    Args:
+        test_suite_dir: Path to the testsuite directory (source of simple.cpp).
+        log_dir: One-by-one log dir root; the executable is written here so it
+            sits next to any dmesg.log the probe writes.
+        env_vars: Prepared environment for the compile. Supplies the same
+            PATH/LD_LIBRARY_PATH as the testsuite run so amdclang++ and its HIP
+            toolchain resolve identically.
+
+    Returns:
+        Path to the freshly built sanity-check executable.
+
+    Exits:
+        Code 1 if the source is missing or the compile fails (a setup error,
+        distinct from the unreliable-system condition the probe detects).
+    """
+    src = test_suite_dir / "gdb.rocm" / "simple.cpp"
+    if not src.is_file():
+        _log_error_and_exit(f"Sanity-check source not found: {src}")
+
+    out = log_dir / "sanity_check"
+
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        _log_error_and_exit(f"Failed to create sanity-check log dir {log_dir}: {e}")
+
+    # Mirror the essential flags the testsuite uses to build gdb.rocm programs
+    # (see gdb/testsuite/boards/hip.exp and the command echoed by simple.exp):
+    #
+    # . -x hip puts amdclang++ in HIP mode so the device headers and toolchain
+    #   are on the include path. Without it the source is compiled as host C++
+    #   and <hip/hip_runtime.h> is not found (and --offload-arch is reported as
+    #   an unused argument).
+    # . --offload-arch=native auto-detects the installed GPU.
+    # . -mllvm=-amdgpu-spill-cfi-saved-regs matches the known-good recipe.
+    # . -Wno-unused-command-line-argument / -Wno-unknown-warning-option keep the
+    #   HIP link step quiet, as the board file does.
+    cmd = [
+        "amdclang++",
+        "-x",
+        "hip",
+        "--offload-arch=native",
+        "-mllvm=-amdgpu-spill-cfi-saved-regs",
+        "-Wno-unused-command-line-argument",
+        "-Wno-unknown-warning-option",
+        str(src),
+        "-o",
+        str(out),
+    ]
+    logger.info(f"Building sanity-check executable: {shlex.join(cmd)}")
+    result = _run_command(env=env_vars, cmd=cmd, capture_output=True, check=False)
+    if result.returncode != 0:
+        _log_error_and_exit(
+            f"Failed to build sanity-check executable from {src}: {result.stderr}"
+        )
+    logger.info(f"{STATUS_PASS} Sanity-check executable built at {out}")
+    return out
+
+
+def _dump_dmesg(log_dir: Path, env_vars: Dict[str, str]) -> None:
+    """
+    Capture kernel ring buffer output to <log_dir>/dmesg.log.
+
+    On many systems reading the kernel log is restricted
+    (kernel.dmesg_restrict), so a plain `dmesg` fails for non-root users. We
+    first try `dmesg`, then fall back to non-interactive `sudo -n dmesg` (which
+    never blocks on a password prompt). If neither yields output, we warn and
+    write nothing rather than saving a misleading file containing only the
+    permission error.
+
+    Best-effort throughout: a missing binary, a non-zero exit, or a write
+    failure is warned about but never raised, so it cannot mask the
+    unreliable-system exit that calls it.
+
+    Args:
+        log_dir: Directory to write dmesg.log into.
+        env_vars: Prepared environment for the dmesg invocation.
+
+    Returns:
+        None
+    """
+    dmesg_path = log_dir / "dmesg.log"
+
+    def _try(cmd: List[str]) -> Optional[str]:
+        try:
+            result = _run_command(cmd, env=env_vars, capture_output=True, check=False)
+        except SystemExit:
+            # _run_command calls _log_error_and_exit on OSError (e.g. the
+            # binary is missing) even with no error_msg; treat that as "this
+            # command is unavailable" so diagnostics never abort the abort.
+            return None
+        if result.returncode == 0 and result.stdout:
+            return result.stdout
+        return None
+
+    output = _try(["dmesg"]) or _try(["sudo", "-n", "dmesg"])
+    if not output:
+        logger.warning(
+            f"{STATUS_WARN} Could not capture dmesg (missing binary or "
+            f"insufficient privileges); skipping {dmesg_path}."
+        )
+        return
+
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        dmesg_path.write_text(output, encoding="utf-8")
+        logger.info(f"{STATUS_WARN} dmesg captured to {dmesg_path}")
+    except OSError as e:
+        logger.warning(f"{STATUS_WARN} Failed to write {dmesg_path}: {e}")
+
+
+def _run_sanity_check(
+    exe: Path, timeout: int, env_vars: Dict[str, str], log_dir: Path
+) -> None:
+    """
+    Run the sanity-check executable as a GPU health probe.
+
+    A trivial known-good HIP kernel should return well within `timeout`. If it
+    times out or exits non-zero, the system is declared unreliable: dmesg is
+    captured and the run aborts immediately (sys.exit(1)) rather than letting
+    every remaining test fail for reasons unrelated to the code under test.
+
+    Args:
+        exe: Path to the sanity-check executable.
+        timeout: Wall-clock timeout (seconds) for the probe.
+        env_vars: Prepared environment for the probe.
+        log_dir: One-by-one log dir root; dmesg.log is written here on failure.
+
+    Returns:
+        None on success.
+
+    Exits:
+        Code 1 if the probe times out or exits non-zero.
+    """
+    reason: Optional[str] = None
+    output = ""
+    start = time.perf_counter()
+    try:
+        result = _run_command(
+            [str(exe)],
+            env=env_vars,
+            capture_output=True,
+            check=False,
+            timeout=timeout,
+            kill_process_group=True,
+        )
+    except subprocess.TimeoutExpired as exc:
+        reason = f"sanity check timed out after {timeout}s"
+        # TimeoutExpired carries whatever the child emitted before the kill;
+        # it may be bytes or str depending on how far communicate() got.
+        output = _decode_stream(exc.stdout) + _decode_stream(exc.stderr)
+    else:
+        if result.returncode != 0:
+            reason = f"sanity check exited with code {result.returncode}"
+            output = (result.stdout or "") + (result.stderr or "")
+    duration = time.perf_counter() - start
+
+    if reason is not None:
+        logger.error(
+            f"{STATUS_FAIL} System has become unreliable: {reason}. "
+            f"Aborting the test run."
+        )
+        output = output.strip()
+        if output:
+            logger.error(f"{STATUS_FAIL} Sanity check output:")
+            for line in output.splitlines():
+                logger.error(f"       {line}")
+        _dump_dmesg(log_dir, env_vars)
+        sys.exit(1)
+
+    print_section(f"{STATUS_PASS} Sanity check passed in {duration:.2f}s")
+
+
 def _execute_one_by_one(
     test_suite_dir: Path,
     tests: List[str],
@@ -2294,7 +2572,9 @@ def _execute_one_by_one(
     compiler_label: str,
     iteration: int,
     wall_clock_timeout: int,
-    test_results: Optional["TestResults"] = None,
+    test_results: Optional["TestResults"],
+    sanity_check_exe: Optional[Path],
+    sanity_check_timeout: int,
 ) -> None:
     """
     Run each test in its own `make check` invocation, capturing per-test
@@ -2320,18 +2600,28 @@ def _execute_one_by_one(
         wall_clock_timeout: Wall-clock timeout (seconds) for each `make check`.
         test_results: When supplied (--timing mode), each test's duration is
             recorded via record_timing. None disables timing collection.
+        sanity_check_exe: When supplied (--sanity-check mode), the pre-built
+            known-good HIP executable run before each test as a GPU health
+            probe. None disables the probe.
+        sanity_check_timeout: Wall-clock timeout (seconds) for each probe.
 
     Returns:
         None
 
     Exits:
-        Code 1 if the aggregated gdb.sum cannot be written.
+        Code 1 if the aggregated gdb.sum cannot be written, or if a sanity-check
+        probe declares the system unreliable.
     """
     aggregated_lines: List[str] = []
     retry_number = iteration - 1
     base_suffix = "" if retry_number == 0 else f".retry-{retry_number}"
 
     for test in tests:
+        # Probe the GPU before each test. Bails out (sys.exit(1)) if the system
+        # has become unreliable, capturing dmesg.log under log_dir.
+        if sanity_check_exe is not None:
+            _run_sanity_check(sanity_check_exe, sanity_check_timeout, env_vars, log_dir)
+
         cmd = [
             "make",
             check_type,
@@ -2678,6 +2968,11 @@ def print_configuration(
             )
         )
         fields.append(("One-by-one Test Timeout", one_by_one_timeout_display))
+        if args.sanity_check:
+            fields.append(("Sanity Check", "Enabled"))
+            fields.append(
+                ("Sanity Check Timeout", f"{args.sanity_check_timeout} seconds")
+            )
     if args.timing:
         fields.append(
             (
