@@ -1,0 +1,91 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright 2026 Advanced Micro Devices, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that "set stop-on-solib-events 1" works for GPU code objects.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc do_test {} {
+    clean_restart
+    gdb_load $::binfile
+
+    with_rocm_gpu_lock {
+	if {![runto_main]} {
+	    return
+	}
+
+	# Enable stop-on-solib-events.
+	gdb_test_no_output "set stop-on-solib-events 1"
+
+	# Continue and expect to stop when GPU code objects are loaded.
+	# We should see at least one "Stopped due to GPU code object event"
+	# message.
+	set seen_gpu_solib_event 0
+	set seen_code_object_loaded 0
+
+	# Continue until we see GPU code object events or the program ends.
+	for {set i 0} {$i < 20} {incr i} {
+	    gdb_test_multiple "continue" "continue $i" {
+		-re -wrap "Stopped due to GPU code object event.*Inferior loaded.*" {
+		    set seen_gpu_solib_event 1
+		    set seen_code_object_loaded 1
+		    pass "$gdb_test_name: saw GPU code object load"
+		}
+		-re -wrap "Stopped due to GPU code object event.*Inferior unloaded.*" {
+		    set seen_gpu_solib_event 1
+		    pass "$gdb_test_name: saw GPU code object unload"
+		}
+		-re -wrap "Stopped due to shared library event.*" {
+		    # CPU shared library event, keep going.
+		    pass "$gdb_test_name: saw CPU shared library event"
+		}
+		-re -wrap "Inferior .* exited normally.*" {
+		    # Program ended.
+		    pass "$gdb_test_name: program exited"
+		    break
+		}
+		timeout {
+		    fail "$gdb_test_name: timeout"
+		    break
+		}
+	    }
+	}
+
+	# Verify we saw at least one GPU code object event.
+	if {$seen_gpu_solib_event == 0} {
+	    fail "did not see any GPU code object events"
+	} else {
+	    pass "saw GPU code object events"
+	}
+
+	# Verify we saw at least one code object load event.
+	if {$seen_code_object_loaded == 0} {
+	    fail "did not see GPU code object load event"
+	} else {
+	    pass "saw GPU code object load event"
+	}
+    }
+}
+
+do_test
