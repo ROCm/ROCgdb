@@ -22713,14 +22713,15 @@ The surrounding square brackets are optional.
 @item set stop-on-solib-events
 @kindex set stop-on-solib-events
 This command controls whether @value{GDBN} should give you control
-when the dynamic linker notifies it about some shared library event.
-The most common event of interest is loading or unloading of a new
-shared library.
+when the dynamic linker notifies it about some shared library event,
+or when GPU code objects are loaded or unloaded (AMD ROCm targets).
+The most common events of interest are loading or unloading of a new
+shared library or code object.
 
 @item show stop-on-solib-events
 @kindex show stop-on-solib-events
 Show whether @value{GDBN} stops and gives you control when shared
-library events happen.
+library events or GPU code object events happen.
 @end table
 
 Shared libraries are also supported in many cross or remote debugging

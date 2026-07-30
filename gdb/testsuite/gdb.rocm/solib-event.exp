@@ -1,0 +1,112 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright 2026 Advanced Micro Devices, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that "set stop-on-solib-events 1" works for GPU code objects.
+# Tests both file:// events (hipModuleLoad) and memory:// events
+# (hipModuleLoadData), as well as unload events (hipModuleUnload).
+# Also tests that the default setting (0) does not stop execution.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+# Build device module (.co file).
+set kernel_srcfile ${testfile}-kernel.cpp
+set hipmodule_path [standard_output_file ${testfile}.co]
+
+if {[gdb_compile $srcdir/$subdir/$kernel_srcfile \
+     $hipmodule_path object \
+     {debug hip additional_flags=--cuda-device-only}] != ""} {
+    return
+}
+
+# Build host executable.
+if {[build_executable "failed to prepare" $testfile $srcfile \
+	 {debug hip}] == -1} {
+    return
+}
+
+proc test_disabled {} {
+    with_rocm_gpu_lock {
+	clean_restart $::testfile
+
+	if {![runto_main -inferior-args $::hipmodule_path]} {
+	    return
+	}
+
+	# Set breakpoint at program exit and verify execution continues
+	# through all code object load/unload events without stopping.
+	gdb_breakpoint [gdb_get_line_number "return 0;"]
+	gdb_test "continue" \
+	    "Breakpoint .* main .*return 0.*" \
+	    "no stops for code object events when disabled"
+    }
+}
+
+proc test_enabled {} {
+    with_rocm_gpu_lock {
+	clean_restart $::testfile
+
+	if {![runto_main -inferior-args $::hipmodule_path]} {
+	    return
+	}
+
+	gdb_breakpoint [gdb_get_line_number "Enable SOLIB events here"] -temporary
+	gdb_continue_to_breakpoint "at enable solib-event"
+
+	gdb_test_no_output "set stop-on-solib-events 1"
+
+	with_test_prefix "file://" {
+	    gdb_breakpoint "test_file_load" -temporary
+	    gdb_continue_to_breakpoint "at test_file_load"
+
+	    # Test 1: file:// load event (hipModuleLoad).
+	    gdb_test "continue" \
+		"Stopped due to GPU code object event.*Inferior loaded file://\[^\r\n\]+" \
+		"load"
+
+	    # Test 2: file:// unload event (hipModuleUnload).
+	    gdb_test "continue" \
+		"Stopped due to GPU code object event.*Inferior unloaded file://\[^\r\n\]+" \
+		"unload"
+	}
+
+	with_test_prefix "memory://" {
+	    gdb_breakpoint "test_memory_load" -temporary
+	    gdb_continue_to_breakpoint "at test_memory_load"
+
+	    # Test 3: memory:// load event (hipModuleLoadData).
+	    gdb_test "continue" \
+		"Stopped due to GPU code object event.*Inferior loaded memory://\[^\r\n\]+" \
+		"load"
+
+	    # Test 4: memory:// unload event (hipModuleUnload).
+	    gdb_test "continue" \
+		"Stopped due to GPU code object event.*Inferior unloaded memory://.*" \
+		"unload"
+	}
+    }
+}
+
+with_test_prefix "stop-on-solib-events=0" {
+    test_disabled
+}
+
+with_test_prefix "stop-on-solib-events=1" {
+    test_enabled
+}

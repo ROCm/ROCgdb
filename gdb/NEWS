@@ -3,6 +3,12 @@
 
 *** Changes since GDB 17
 
+* The 'set stop-on-solib-events' setting now applies to GPU code objects
+  loaded by the AMD ROCm runtime, in addition to CPU shared libraries.
+  When enabled (non-zero value), GDB will stop execution whenever GPU code
+  objects are loaded or unloaded, allowing inspection and breakpoint
+  placement.
+
 * Support for the Common Trace Format (CTF) has been removed.  GDB now
   saves trace information exclusively in its own "tfile" format.
 

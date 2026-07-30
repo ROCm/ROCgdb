@@ -11037,8 +11037,9 @@ leave it stopped or free to run as needed."),
 Set stopping for shared library events."), _("\
 Show stopping for shared library events."), _("\
 If nonzero, gdb will give control to the user when the dynamic linker\n\
-notifies gdb of shared library events.  The most common event of interest\n\
-to the user would be loading/unloading of a new library."),
+notifies gdb of shared library events, or when GPU code objects are loaded\n\
+or unloaded (AMD ROCm targets).  The most common events of interest to the\n\
+user would be loading/unloading of a new library or code object."),
 			    set_stop_on_solib_events,
 			    show_stop_on_solib_events,
 			    &setlist, &showlist);
