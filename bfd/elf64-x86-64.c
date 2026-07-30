@@ -6091,7 +6091,8 @@ elf_x86_64_common_definition (Elf_Internal_Sym *sym)
 static unsigned int
 elf_x86_64_common_section_index (asection *sec)
 {
-  if ((elf_section_flags (sec) & SHF_X86_64_LARGE) == 0)
+  if (bfd_get_flavour (sec->owner) != bfd_target_elf_flavour
+      || (elf_section_flags (sec) & SHF_X86_64_LARGE) == 0)
     return SHN_COMMON;
   else
     return SHN_X86_64_LCOMMON;
