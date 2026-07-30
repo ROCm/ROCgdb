@@ -127,7 +127,11 @@ with_rocm_gpu_lock {
 	-re -wrap ".*Thread ($::decimal) \[^\r\n]* hit Breakpoint .*" {
 	    set gpu_thread $expect_out(1,string)
 	    pass $gdb_test_name
-	}
+		}
+	-re -wrap ".*" {
+	    fail $gdb_test_name
+        return
+    	}
     }
     gdb_test "thread $gpu_thread" "raise_fpe.*" "select GPU thread"
 
