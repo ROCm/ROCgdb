@@ -962,6 +962,10 @@ extern void _bfd_x86_elf_link_report_error
    Elf_Internal_Sym *, reloc_howto_type *,
    enum elf_x86_error_type) ATTRIBUTE_HIDDEN;
 
+extern void _bfd_x86_elf_link_report_relocation_error
+  (bfd *, asection *, const char *, Elf_Internal_Rela *,
+   reloc_howto_type *, bfd_reloc_status_type) ATTRIBUTE_HIDDEN;
+
 extern bool
 _bfd_elf_x86_copy_special_section_fields
   (const bfd *, bfd *, const Elf_Internal_Shdr *,
