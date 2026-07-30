@@ -1,0 +1,68 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright 2026 Advanced Micro Devices, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that "set stop-on-solib-events 1" works for GPU code objects.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc do_test {} {
+    with_rocm_gpu_lock {
+	if {![runto_main]} {
+	    return
+	}
+
+	gdb_test_no_output "set stop-on-solib-events 1"
+
+	# Continue through solib events until we hit the GPU code object event.
+	# There may be CPU shared library events before the GPU event.
+	# The limit of 20 iterations should be sufficient to cover all CPU
+	# shared library events that load before the first GPU code object.
+	set seen_gpu_solib_event 0
+	set max_continues 20
+
+	for {set i 0} {$i < $max_continues} {incr i} {
+	    gdb_test_multiple "continue" "continue looking for GPU event" {
+		-re -wrap "Stopped due to GPU code object event.*Inferior loaded (file://\[^\r\n\]+)" {
+		    set seen_gpu_solib_event 1
+		    break
+		}
+		-re -wrap "Stopped due to shared library event.*" {
+		    # CPU solib event, continue looping.
+		}
+		-re -wrap "Inferior.*exited" {
+		    break
+		}
+		-re -wrap ".*" {
+		    fail "unexpected stop before GPU code object event"
+		    break
+		}
+	    }
+	}
+
+	# Verify we saw the GPU code object event with file:// prefix.
+	gdb_assert {$seen_gpu_solib_event} "saw GPU code object event with file:// prefix"
+    }
+}
+
+do_test
