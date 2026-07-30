@@ -3369,23 +3369,58 @@ _bfd_x86_elf_link_report_tls_transition_error
   bfd_set_error (bfd_error_bad_value);
 }
 
-/* Report TLS invalid section error.  */
+/* Report link error.  */
 
 void
-_bfd_x86_elf_link_report_tls_invalid_section_error
+_bfd_x86_elf_link_report_error
   (bfd *abfd, asection *sec, Elf_Internal_Shdr *symtab_hdr,
    struct elf_link_hash_entry *h, Elf_Internal_Sym *sym,
-   reloc_howto_type *howto)
+   reloc_howto_type *howto, enum elf_x86_error_type type)
 {
   const char *name;
+  bool non_thread_local;
   if (h)
-    name = h->root.root.string;
+    {
+      non_thread_local = h->type != STT_TLS;
+      name = h->root.root.string;
+    }
   else
-    name = bfd_elf_sym_name (abfd, symtab_hdr, sym, NULL);
-  _bfd_error_handler
-    /* xgettext:c-format */
-    (_("%pB: relocation %s against thread local symbol `%s' in "
-       "invalid section `%pA'"), abfd, howto->name, name, sec);
+    {
+      non_thread_local = ELF_ST_TYPE (sym->st_info) != STT_TLS;
+      name = bfd_elf_sym_name (abfd, symtab_hdr, sym, NULL);
+      if (name[0] == '\0')
+	name = "*unknown*";
+    }
+
+  switch (type)
+    {
+    case elf_x86_error_tls:
+      if (non_thread_local)
+	_bfd_error_handler
+	  /* xgettext:c-format */
+	  (_("%pB: relocation %s against non-thread local symbol "
+	     "`%s' in section `%pA'"),
+	   abfd, howto->name, name, sec);
+      else
+	_bfd_error_handler
+	  /* xgettext:c-format */
+	  (_("%pB: relocation %s against thread local symbol `%s' in "
+	     "invalid section `%pA'"), abfd, howto->name, name, sec);
+      break;
+
+    case elf_x86_error_non_alloc:
+      _bfd_error_handler
+	/* xgettext:c-format */
+	(_("%pB: relocation %s against symbol `%s' in non-alloc "
+	   "section `%pA'"),
+	 abfd, howto->name, name, sec);
+      break;
+
+    default:
+      abort ();
+      break;
+    }
+
   bfd_set_error (bfd_error_bad_value);
 }
 
