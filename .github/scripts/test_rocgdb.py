@@ -55,6 +55,15 @@ ONE_BY_ONE_DEFAULT_WALL_CLOCK_TIMEOUT = 3600
 # ignored at runtime, so listing extras here is harmless.
 SANITIZERS = ("asan", "tsan", "ubsan", "msan", "lsan", "hwasan")
 
+# Supported toolchains, keyed by the identifier the toolchain option accepts.
+# Each one maps to the compiler label (a load bearing key used across results
+# and ignore lists) and the C, C++, and Fortran executables we pass to the
+# testsuite. Insertion order defines the default run order.
+TOOLCHAINS = {
+    "gnu": {"label": "GCC", "cc": "gcc", "cxx": "g++", "fc": "gfortran"},
+    "llvm": {"label": "LLVM", "cc": "clang", "cxx": "clang++", "fc": "flang"},
+}
+
 # Patterns for parsing DejaGnu .sum lines.
 RESULT_LINE_RE = re.compile(
     r"^(PASS|FAIL|XFAIL|UNTESTED|UNSUPPORTED|KFAIL|UNRESOLVED): (.+)$"
@@ -253,6 +262,25 @@ def load_ignore_list_from_json(json_path: Path) -> Dict[str, List[str]]:
     return data
 
 
+def select_toolchains(requested: Optional[List[str]]) -> List[str]:
+    """
+    Resolve the list of toolchain identifiers to run.
+
+    When no toolchain is requested, all of them run in definition order.
+    Repeated names are dropped while keeping the first occurrence so the same
+    toolchain never runs twice.
+
+    Args:
+        requested: Toolchain identifiers from --toolchain, or None when the
+            flag was omitted.
+
+    Returns:
+        Toolchain identifiers to run, in order, with duplicates removed.
+    """
+    names = requested if requested is not None else list(TOOLCHAINS.keys())
+    return list(dict.fromkeys(names))
+
+
 def _non_negative_int(value: str) -> int:
     """
     Validate argument is a non-negative integer.
@@ -345,6 +373,7 @@ def parse_arguments() -> argparse.Namespace:
   python %(prog)s --skip-failed-test-log
   python %(prog)s --output-ignore-list-file custom_ignore_list.json
   python %(prog)s --one-by-one --tests gdb.rocm/foo.exp
+  python %(prog)s --toolchain llvm
 
         """,
     )
@@ -382,6 +411,18 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         default="",
         help="Optimization level to pass to compiler (e.g., -O0, -Os, -Og).",
+    )
+    parser.add_argument(
+        "--toolchain",
+        nargs="+",
+        default=None,
+        metavar="NAME",
+        choices=list(TOOLCHAINS.keys()),
+        help="Toolchain(s) to run tests against. Choices: "
+        f"{', '.join(TOOLCHAINS.keys())}. Accepts one or more values; the flag "
+        "requires at least one. If omitted, all toolchains run and the results "
+        "are compared. Passing a single toolchain (e.g. --toolchain llvm) runs "
+        "only that toolchain and skips the cross-compiler comparison.",
     )
     parser.add_argument(
         "--parallel", action="store_true", help="Run tests in parallel. Default is off."
@@ -2007,6 +2048,9 @@ def main() -> None:
     # Print Python information.
     print_python_info()
 
+    # Build the compiler configurations from the selected toolchains.
+    selected_toolchains = select_toolchains(args.toolchain)
+
     # Show configuration summary.
     print_configuration(
         rocgdb_bin,
@@ -2016,6 +2060,7 @@ def main() -> None:
         args,
         ignore_list_file_status,
         output_ignore_list_file_status,
+        selected_toolchains,
     )
 
     # Load ignore list from JSON file.
@@ -2039,22 +2084,15 @@ def main() -> None:
 
     # Validate that we can run rocgdb.
     validate_rocgdb(rocgdb_bin, env_vars)
-
-    # Verify executables presence.
-    check_executables(
-        [
-            "make",
-            "amdclang++",
-            "gcc",
-            "g++",
-            "gfortran",
-            "clang",
-            "clang++",
-            "flang",
-            "runtest",
-        ],
-        env_vars,
-    )
+    compilers = [
+        (
+            TOOLCHAINS[name]["cc"],
+            TOOLCHAINS[name]["cxx"],
+            TOOLCHAINS[name]["fc"],
+            TOOLCHAINS[name]["label"],
+        )
+        for name in selected_toolchains
+    ]
 
     print_section("Expanding test paths")
     tests = expand_test_paths(args.tests, rocgdb_testsuite_dir)
@@ -2062,11 +2100,19 @@ def main() -> None:
     if not tests:
         _log_error_and_exit("No test files found")
 
-    # Compiler configurations.
-    compilers = [
-        ("gcc", "g++", "gfortran", "GCC"),
-        ("clang", "clang++", "flang", "LLVM"),
-    ]
+    # Verify executables presence. We only require the compilers of the selected
+    # toolchains, in first seen order with duplicates dropped, so a run of one
+    # toolchain does not fail because another toolchain's compilers are absent.
+    # amdclang++ is needed to compile GPU kernels for gdb.rocm tests; require it
+    # whenever any gdb.rocm test is in scope.
+    toolchain_executables = list(
+        dict.fromkeys(exe for cc, cxx, fc, _ in compilers for exe in (cc, cxx, fc))
+    )
+    has_rocm_tests = any(t.startswith("gdb.rocm/") or t == "gdb.rocm" for t in tests)
+    required_executables = ["make", *toolchain_executables, "runtest"]
+    if has_rocm_tests:
+        required_executables.insert(1, "amdclang++")
+    check_executables(required_executables, env_vars)
 
     # Initialize test result tracking.
     test_results = TestResults()
@@ -2094,6 +2140,14 @@ def main() -> None:
 
     # Generate and write output ignore list if requested.
     if args.output_ignore_list_file is not None:
+        if len(selected_toolchains) < 2:
+            logger.warning(
+                f"{STATUS_WARN} --output-ignore-list-file with a single toolchain "
+                "produces no Generic entries. Failures that would be Generic in a "
+                "two-toolchain run are filed under the single compiler label only, "
+                "so the generated list will not suppress those tests when run with "
+                "all toolchains."
+            )
         ignore_list = test_results.generate_ignore_list()
         try:
             with open(args.output_ignore_list_file, "w", encoding="utf-8") as f:
@@ -2396,6 +2450,7 @@ def print_configuration(
     args: argparse.Namespace,
     ignore_list_file_status: str,
     output_ignore_list_file_status: str,
+    selected_toolchains: List[str],
 ) -> None:
     """
     Display the ROCgdb test configuration in a formatted table.
@@ -2408,6 +2463,7 @@ def print_configuration(
         args: Parsed command-line arguments containing additional configuration values.
         ignore_list_file_status: Status message for ignore list file.
         output_ignore_list_file_status: Status message for output ignore list file.
+        selected_toolchains: Resolved toolchain identifiers to display, in run order.
 
     Returns:
         None
@@ -2431,6 +2487,10 @@ def print_configuration(
         else "Dejagnu's default"
     )
 
+    toolchains_display = ", ".join(
+        f"{name} ({TOOLCHAINS[name]['label']})" for name in selected_toolchains
+    )
+
     one_by_one_timeout_display = (
         f"{args.one_by_one_test_timeout} seconds"
         if args.one_by_one_test_timeout is not None
@@ -2444,6 +2504,7 @@ def print_configuration(
         ("Testsuite Directory", testsuite_dir),
         ("Configure Script", configure_script),
         ("Tests", " ".join(args.tests)),
+        ("Toolchains", toolchains_display),
         ("Check Type", args.check_type),
         ("Parallel Execution", parallel_info),
         ("One-by-one Mode", "Enabled" if args.one_by_one else "Disabled"),
