@@ -3004,6 +3004,12 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
       *imm_reloc = BFD_RELOC_UNUSED;
       p = percent_op_null;
 
+#define RV32_EVEN_CHECK(form, rclass, regno)     \
+  (!(ip->insn_mo->pinfo & INSN_RV32_EVEN_##form) \
+   || xlen != 32                                 \
+   || (rclass) != RCLASS_GPR                     \
+   || !((regno) & 1))
+
       for (oparg = insn->args;; ++oparg)
 	{
 	  opargStart = oparg;
@@ -3011,6 +3017,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	    ++asarg;
 	  switch (*oparg)
 	    {
+	      enum reg_class rclass;
+
 	    case '\0': /* End of args.  */
 	      if (insn->match_func && !insn->match_func (insn, ip->insn_opcode))
 		break;
@@ -3670,32 +3678,40 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	    case 'T': /* Floating point RS2.  */
 	    case 'U': /* Floating point RS1 and RS2.  */
 	    case 'R': /* Floating point RS3.  */
-	      if (reg_lookup (&asarg,
-			      (riscv_subset_supports (&riscv_rps_as, "zfinx")
-			      ? RCLASS_GPR : RCLASS_FPR), &regno))
+	      rclass = riscv_subset_supports (&riscv_rps_as, "zfinx")
+		       ? RCLASS_GPR : RCLASS_FPR;
+	      if (reg_lookup (&asarg, rclass, &regno))
 		{
 		  char c = *oparg;
 		  if (is_whitespace (*asarg))
 		    ++asarg;
+
 		  switch (c)
 		    {
 		    case 'D':
+		      if (!RV32_EVEN_CHECK (D, rclass, regno))
+			break;
 		      INSERT_OPERAND (RD, *ip, regno);
-		      break;
+		      continue;
 		    case 'S':
+		      if (!RV32_EVEN_CHECK (S, rclass, regno))
+			break;
 		      INSERT_OPERAND (RS1, *ip, regno);
-		      break;
+		      continue;
 		    case 'U':
 		      INSERT_OPERAND (RS1, *ip, regno);
 		      /* Fall through.  */
 		    case 'T':
+		      if (!RV32_EVEN_CHECK (T, rclass, regno))
+			break;
 		      INSERT_OPERAND (RS2, *ip, regno);
-		      break;
+		      continue;
 		    case 'R':
+		      if (!RV32_EVEN_CHECK (R, rclass, regno))
+			break;
 		      INSERT_OPERAND (RS3, *ip, regno);
-		      break;
+		      continue;
 		    }
-		  continue;
 		}
 	      break;
 
@@ -4529,6 +4545,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
       asarg = asargStart;
       insn_with_csr = false;
     }
+
+#undef RV32_EVEN_CHECK
 
  out:
   /* Restore the character we might have clobbered above.  */

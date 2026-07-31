@@ -1138,6 +1138,23 @@ riscv_disassemble_insn (bfd_vma memaddr,
 	      if (!riscv_multi_subset_supports (&pd->riscv_rps_dis,
 						op->insn_class))
 		continue;
+
+	      if (pd->xlen == 32
+		  && riscv_subset_supports (&pd->riscv_rps_dis, "zdinx"))
+		{
+		  if ((op->pinfo & INSN_RV32_EVEN_D)
+		      && (word & (1u << OP_SH_RD)))
+		    continue;
+		  if ((op->pinfo & INSN_RV32_EVEN_S)
+		      && (word & (1u << OP_SH_RS1)))
+		    continue;
+		  if ((op->pinfo & INSN_RV32_EVEN_T)
+		      && (word & (1u << OP_SH_RS2)))
+		    continue;
+		  if ((op->pinfo & INSN_RV32_EVEN_R)
+		      && (word & (1u << OP_SH_RS3)))
+		    continue;
+		}
 	    }
 
 	  /* It's a match.  */
