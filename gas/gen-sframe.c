@@ -426,7 +426,7 @@ get_fre_dataword_count (const struct sframe_row_entry *sframe_fre, bool flex_p)
 
 static unsigned int
 sframe_get_fre_dataword_size (const struct sframe_row_entry *sframe_fre,
-			    bool flex_p)
+			      bool flex_p)
 {
   unsigned int max_dataword_size = 0;
   unsigned int cfa_offset_size = 0;
@@ -1094,6 +1094,10 @@ static void
 sframe_xlate_ctx_cleanup (struct sframe_xlate_ctx *xlate_ctx)
 {
   sframe_row_entry_free (xlate_ctx->first_fre);
+  xlate_ctx->first_fre = NULL;
+  xlate_ctx->last_fre = NULL;
+  xlate_ctx->num_xlate_fres = 0;
+  xlate_ctx->flex_p = false;
   XDELETE (xlate_ctx->remember_fre);
   xlate_ctx->remember_fre = NULL;
   XDELETE (xlate_ctx->cur_fre);
