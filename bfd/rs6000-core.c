@@ -143,7 +143,10 @@ typedef union
 
 #ifdef AIX_5_CORE
 # define CORE_DUMPXX_VERSION	267312562
-# define CNEW_IS_CORE_DUMPXX(c) ((c).new_dump.c_version == CORE_DUMPXX_VERSION)
+# define CORE_DUMPXX_VERSION_AIX73	267312561
+# define CNEW_IS_CORE_DUMPXX(c) \
+  ((c).new_dump.c_version == CORE_DUMPXX_VERSION                \
+   || (c).new_dump.c_version == CORE_DUMPXX_VERSION_AIX73)
 #else
 # define CNEW_IS_CORE_DUMPXX(c) 0
 #endif
@@ -340,11 +343,19 @@ rs6000coff_core_p (bfd *abfd)
       return NULL;
     }
 
-  /* This isn't the right handler for 64-bit core files on AIX 5.x.  */
+  /* This isn't the right handler for 64-bit core files on AIX 5.x.
+     However, 32-bit processes on AIX 7.x can produce core_dumpxx format
+     cores with version 0xfeeddb1, which we need to handle here.
+     The aix5ppc-core.c handler will catch 64-bit cores.  */
   if (CORE_NEW (core) && CNEW_IS_CORE_DUMPXX (core))
     {
-      bfd_set_error (bfd_error_wrong_format);
-      return NULL;
+      /* Check if this is a 64-bit process core.  */
+      if (CNEW_PROC64 (core.new_dump))
+	{
+	  /* Let aix5ppc-core.c handle 64-bit cores.  */
+	  bfd_set_error (bfd_error_wrong_format);
+	  return NULL;
+	}
     }
 
   /* Copy fields from new or old core structure.  */
@@ -424,8 +435,11 @@ rs6000coff_core_p (bfd *abfd)
     }
 
   /* Don't check the core file size for a full core, AIX 4.1 includes
-     additional shared library sections in a full core.  */
-  if (!(c_flag & (FULL_CORE | CORE_TRUNC)))
+     additional shared library sections in a full core.
+     Also skip the check for AIX 7.3 32-bit cores in core_dumpxx format,
+     as they may have additional sections beyond c_stack + c_size.  */
+  if (!(c_flag & (FULL_CORE | CORE_TRUNC))
+      && !(CORE_NEW (core) && CNEW_IS_CORE_DUMPXX (core) && !proc64))
     {
       /* If the size is wrong, it means we're misinterpreting something.  */
       if (c_stack + (file_ptr) c_size != statbuf.st_size)
