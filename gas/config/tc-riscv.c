@@ -6137,6 +6137,13 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
 		   "any instructions"));
       break;
 
+    case Tag_RISCV_stack_align:
+      if (!attr[Tag_RISCV_stack_align].i
+	  || (attr[Tag_RISCV_stack_align].i &
+	      (attr[Tag_RISCV_stack_align].i - 1)))
+	as_warn (_("`stack_align' attribute with non-power-of-2 value"));
+      break;
+
     case Tag_RISCV_unaligned_access:
       if (attr[Tag_RISCV_unaligned_access].i > 1)
 	as_warn (_("`unaligned_access' attribute with non-boolean value"));
