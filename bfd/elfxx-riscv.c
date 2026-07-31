@@ -3892,6 +3892,23 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
 	 initialized.  */
       out_attr[0].i = 1;
 
+      for (i = LEAST_KNOWN_OBJ_ATTRIBUTE; i < NUM_KNOWN_OBJ_ATTRIBUTES; i++)
+	{
+	  switch (i)
+	    {
+	    case Tag_RISCV_unaligned_access:
+	      if (out_attr[i].i <= 1)
+		break;
+
+	      _bfd_error_handler
+		(_("warning: %pB uses non-boolean `unaligned_access' attribute; "
+		   "converting to boolean"),
+		 ibfd);
+	      out_attr[i].i = 1;
+	      break;
+	    }
+	}
+
       return true;
     }
 
@@ -3980,7 +3997,12 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
 	break;
 
       case Tag_RISCV_unaligned_access:
-	out_attr[i].i |= in_attr[i].i;
+	if (in_attr[i].i > 1)
+	  _bfd_error_handler
+	    (_("warning: %pB uses non-boolean `unaligned_access' attribute; "
+	       "converting to boolean"),
+	     ibfd);
+	out_attr[i].i |= !!in_attr[i].i;
 	break;
 
       case Tag_RISCV_stack_align:
