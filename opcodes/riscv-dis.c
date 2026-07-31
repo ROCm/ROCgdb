@@ -573,6 +573,11 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 	  break;
 
 	case 'm':
+	  if (EXTRACT_OPERAND (RM, l) == OP_MASK_RM)
+	    break;
+	  print (info->stream, dis_style_text, ",");
+	  /* Fall through. */
+	case 'M':
 	  arg_print (info, EXTRACT_OPERAND (RM, l),
 		     riscv_rm, ARRAY_SIZE (riscv_rm));
 	  break;

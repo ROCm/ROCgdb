@@ -1614,6 +1614,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	case 't': USE_BITS (OP_MASK_RS2, OP_SH_RS2); break;
 	case 'R': /* RS3, floating point.  */
 	case 'r': USE_BITS (OP_MASK_RS3, OP_SH_RS3); break;
+	case 'M':
 	case 'm': USE_BITS (OP_MASK_RM, OP_SH_RM); break;
 	case 'E': USE_BITS (OP_MASK_CSR, OP_SH_CSR); break;
 	case 'P': USE_BITS (OP_MASK_PRED, OP_SH_PRED); break;
@@ -3601,7 +3602,17 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		}
 	      continue;
 
-	    case 'm': /* Rounding mode.  */
+	    case 'm': /* Optional rounding mode.  */
+	      if (*asarg == '\0')
+		{
+		  INSERT_OPERAND (RM, *ip, OP_MASK_RM);
+		  continue;
+		}
+	      if (*asarg != ',')
+		break;
+	      ++asarg;
+	      /* Fall through. */
+	    case 'M': /* Rounding mode.  */
 	      if (arg_lookup (&asarg, riscv_rm,
 			      ARRAY_SIZE (riscv_rm), &regno))
 		{
