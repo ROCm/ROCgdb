@@ -1133,10 +1133,6 @@ riscv_disassemble_insn (bfd_vma memaddr,
 	      if (!riscv_multi_subset_supports (&pd->riscv_rps_dis,
 						op->insn_class))
 		continue;
-
- 	      if ((op->pinfo & INSN_V_EEW64)
-		  && !riscv_subset_supports (&pd->riscv_rps_dis, "zve64x"))
-		continue;
 	    }
 
 	  /* It's a match.  */

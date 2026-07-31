@@ -3001,6 +3001,9 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return (riscv_subset_supports (rps, "v")
 	      || riscv_subset_supports (rps, "zve64x")
 	      || riscv_subset_supports (rps, "zve32x"));
+    case INSN_CLASS_ZVE64X:
+      return (riscv_subset_supports (rps, "v")
+	      || riscv_subset_supports (rps, "zve64x"));
     case INSN_CLASS_ZVEF:
       return (riscv_subset_supports (rps, "v")
 	      || riscv_subset_supports (rps, "zve64d")
@@ -3355,6 +3358,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "zksh";
     case INSN_CLASS_V:
       return _("v' or `zve64x' or `zve32x");
+    case INSN_CLASS_ZVE64X:
+      return _("v' or `zve64x");
     case INSN_CLASS_ZVEF:
       return _("v' or `zve64d' or `zve64f' or `zve32f");
     case INSN_CLASS_ZVABD:

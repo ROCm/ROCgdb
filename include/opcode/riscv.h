@@ -560,6 +560,7 @@ enum riscv_insn_class
   INSN_CLASS_ZBC_OR_ZBKC,
   INSN_CLASS_ZKND_OR_ZKNE,
   INSN_CLASS_V,
+  INSN_CLASS_ZVE64X,
   INSN_CLASS_ZVEF,
   INSN_CLASS_ZVBB,
   INSN_CLASS_ZVBC,
@@ -698,8 +699,6 @@ struct riscv_opcode
 #define INSN_JSR		0x00000006
 /* Instruction is a data reference.  */
 #define INSN_DREF		0x00000008
-/* Instruction is allowed when eew >= 64.  */
-#define INSN_V_EEW64		0x10000000
 
 /* We have 5 data reference sizes, which we can encode in 3 bits.  */
 #define INSN_DATA_SIZE		0x00000070
