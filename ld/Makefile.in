@@ -2459,7 +2459,7 @@ install-data-local: install-bfdpluginLTLIBRARIES
 	$(mkinstalldirs) $(DESTDIR)$(scriptdir)/ldscripts
 	for f in ldscripts/* ; do \
 	  case $$f in \
-	    stamp) ;; \
+	    */stamp) ;; \
 	    *) $(INSTALL_DATA) $$f $(DESTDIR)$(scriptdir)/$$f ; \
 	  esac \
 	done
