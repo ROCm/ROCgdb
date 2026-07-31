@@ -4650,6 +4650,18 @@ riscv_ip_hardcode (char *str,
   return NULL;
 }
 
+/* The architecture and privileged elf attributes should be set before
+   assembling.  */
+static bool
+start_assembly (void)
+{
+  start_assemble = true;
+
+  riscv_set_abi_by_arch ();
+
+  return riscv_set_default_priv_spec (NULL);
+}
+
 void
 md_assemble (char *str)
 {
@@ -4657,16 +4669,8 @@ md_assemble (char *str)
   expressionS imm_expr;
   bfd_reloc_code_real_type imm_reloc = BFD_RELOC_UNUSED;
 
-  /* The architecture and privileged elf attributes should be set
-     before assembling.  */
-  if (!start_assemble)
-    {
-      start_assemble = true;
-
-      riscv_set_abi_by_arch ();
-      if (!riscv_set_default_priv_spec (NULL))
-       return;
-    }
+  if (!start_assemble && !start_assembly())
+    return;
 
   riscv_mapping_state (MAP_INSN, 0, false/* fr_align_code */);
 
@@ -5874,6 +5878,9 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
   expressionS imm_expr;
   bfd_reloc_code_real_type imm_reloc = BFD_RELOC_UNUSED;
   char save_c;
+
+  if (!start_assemble && !start_assembly())
+    return;
 
   while (!is_end_of_stmt (*input_line_pointer))
     ++input_line_pointer;
