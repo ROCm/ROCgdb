@@ -40,6 +40,5 @@ int
 main (void)
 {
   int result = tailcall_function (42);
-  result -= global_var;			/* Temporary breakpoint here.  */
-  return result;
+  return result - global_var;			/* Temporary breakpoint here.  */
 }
