@@ -6394,6 +6394,9 @@ proc gdb_compile {source dest type options} {
             } elseif { [linker_supports_Ttext_flag] } {
                 # For old GNU gold versions.
                 lappend new_options "ldflags=-Wl,-Ttext=$addr"
+            } elseif {[istarget "*-*-mingw*"]} {
+                # MSVC link.exe uses /BASE:addr via the clang driver.
+                lappend new_options "ldflags=-Wl,/BASE:$addr"
             } else {
                 error "Don't know how to handle text_segment option."
             }
@@ -6682,7 +6685,17 @@ proc gdb_compile {source dest type options} {
 		if { $result != "" } {
 		    return $result
 		}
-		if {[is_remote host]} {
+		if {[info exists ::GDB_PARALLEL]} {
+		    # In parallel mode, publish the shared object under the
+		    # per-run parallel cache dir (which check-parallel clears
+		    # at the start of each run), not under objdir root (which
+		    # is not cleared -- with the write-once publish below, a
+		    # stale object under objdir could otherwise survive across
+		    # runs).
+		    set unbuf_dir [make_gdb_parallel_path cache set_unbuffered_mode]
+		    set gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang) \
+			[file join $unbuf_dir $unbuf_obj_basename]
+		} elseif {[is_remote host]} {
 		    set gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang) $unbuf_obj_basename
 		} else {
 		    set gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang) ${objdir}/$unbuf_obj_basename
@@ -6690,12 +6703,29 @@ proc gdb_compile {source dest type options} {
 		# Link a copy of the output object, because the
 		# original may be automatically deleted.
 		if {[info exists ::GDB_PARALLEL]} {
-		    # Make sure to write the .o file atomically.
-		    # (Note GDB_PARALLEL mode does not support remote
-		    # host testing.)
-		    file rename -force -- \
-			$unbuf_obj \
-			$gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)
+		    # Publish the shared object exactly once.  The object is
+		    # identical for every parallel worker of this language,
+		    # so once one worker has published it there is no reason
+		    # to replace it.  On native Windows/MSYS2 hosts,
+		    # replacing a destination that another worker still has
+		    # open (e.g. as a linker input) can fail with a Tcl
+		    # "file busy" (EBUSY) or "permission denied" (EACCES)
+		    # error, aborting the whole .exp file.  A lock around a
+		    # plain "rename -force" would not help: the readers (the
+		    # linker) do not take the lock.  Instead the lock only
+		    # elects a single publisher; after the first publish
+		    # nothing ever replaces the destination.
+		    # (Note GDB_PARALLEL mode does not support remote host
+		    # testing.)
+		    set unbuf_dst $gdb_saved_set_unbuffered_mode_obj($unbuf_obj_lang)
+		    file mkdir [file dirname $unbuf_dst]
+		    with_lock "unbuf-mode-obj-${unbuf_obj_lang}.lock" {
+			if {[file exists $unbuf_dst]} {
+			    catch {file delete -force -- $unbuf_obj}
+			} else {
+			    file rename -- $unbuf_obj $unbuf_dst
+			}
+		    }
 		} else {
 		    remote_download host \
 			$unbuf_obj \
@@ -8726,7 +8756,7 @@ proc gdb_get_line_number { text { file "" } } {
     if {"$file" == ""} {
 	set file "$srcfile"
     }
-    if {![regexp "^/" "$file"]} {
+    if {![regexp "^/" "$file"] && ![regexp {^[A-Za-z]:/} $file]} {
 	set file "$srcdir/$subdir/$file"
     }
 
@@ -9455,7 +9485,7 @@ proc build_executable_from_specs {testname executable options args} {
     if {[string match gdb_compile_shlib* $func]} {
 	set sources_path {}
 	foreach {s local_options} $args {
-	    if {[regexp "^/" "$s"]} {
+	    if {[regexp "^/" "$s"] || [regexp {^[A-Za-z]:/} $s]} {
 		lappend sources_path "$s"
 	    } else {
 		lappend sources_path "$srcdir/$subdir/$s"
@@ -9465,7 +9495,7 @@ proc build_executable_from_specs {testname executable options args} {
     } elseif {[lsearch -exact $options rust] != -1} {
 	set sources_path {}
 	foreach {s local_options} $args {
-	    if {[regexp "^/" "$s"]} {
+	    if {[regexp "^/" "$s"] || [regexp {^[A-Za-z]:/} $s]} {
 		lappend sources_path "$s"
 	    } else {
 		lappend sources_path "$srcdir/$subdir/$s"
@@ -9476,7 +9506,7 @@ proc build_executable_from_specs {testname executable options args} {
 	set objects {}
 	set i 0
 	foreach {s local_options} $args {
-	    if {![regexp "^/" "$s"]} {
+	    if {![regexp "^/" "$s"] && ![regexp {^[A-Za-z]:/} $s]} {
 		set s "$srcdir/$subdir/$s"
 	    }
 	    if  { [$func "${s}" "${binfile}${i}.o" object $local_options] != "" } {
@@ -9817,6 +9847,12 @@ gdb_caching_proc target_endianness {} {
 # will return "ls".
 
 proc relative_filename {root full} {
+    # On MSYS2/Windows, standard_output_file returns Windows-style paths
+    # (F:/work/...) while $objdir is POSIX (/f/work/...).  Normalize both
+    # to the build machine format before comparing.
+    set root [build_file_normalize $root]
+    set full [build_file_normalize $full]
+
     set root_split [file split $root]
     set full_split [file split $full]
 
@@ -11715,6 +11751,12 @@ proc auto_lappend_include_files_1 {flags source {visited {}}} {
     upvar $flags up_flags
     upvar $visited up_visited
     global srcdir
+
+    # On native Windows/MSYS2 builds, standard_output_file returns a
+    # Windows-style path (e.g. F:/work/...) after host_file_normalize.
+    # Tcl on MSYS2 cannot open such a path directly; convert it back to
+    # the MSYS2 Unix-style path that Tcl understands.
+    set source [build_file_normalize $source]
 
     set ext [string tolower [file extension $source]]
     if {$ext ni {".c" ".cpp" ".cc" ".h" ".s"}} {

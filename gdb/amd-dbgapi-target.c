@@ -4565,7 +4565,7 @@ info_dispatches_command (const char *args, int from_tty)
 	    else if (acquire == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_SYSTEM)
 	      ss << "As";
 
-	    if ((barrier | acquire) && release)
+	    if (((int)barrier | (int)acquire) && release)
 	      ss << "|";
 
 	    if (release == AMD_DBGAPI_DISPATCH_FENCE_SCOPE_AGENT)

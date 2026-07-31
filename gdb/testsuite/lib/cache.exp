@@ -256,13 +256,25 @@ proc gdb_do_cache {name args} {
     if {[info exists GDB_PARALLEL]} {
 	verbose "$name: returning '$gdb_data_cache(${cache_name},value)' and writing file" 2
 	file mkdir [file dirname $cache_filename]
-	# Make sure to write the results file atomically.
+	# Write to a per-process temp file, then publish it once.
 	set fd [open $cache_filename.[pid] w]
 	puts $fd $gdb_data_cache(${cache_name},value)
 	puts $fd $gdb_data_cache(${cache_name},exit)
 	puts $fd $gdb_data_cache(${cache_name},also_called)
 	close $fd
-	file rename -force -- $cache_filename.[pid] $cache_filename
+	# Publish each cache file once.  Replacing an existing cache
+	# file with "rename -force" is not safe on Windows: another
+	# worker may have it open for reading, and Windows can reject
+	# the replacement with EBUSY or EACCES.  The cache value is
+	# deterministic for CACHE_NAME, so a later publisher can just
+	# discard its temp file.
+	with_lock "gdb-cache.lock" {
+	    if {[file exists $cache_filename]} {
+		catch {file delete -force -- $cache_filename.[pid]}
+	    } else {
+		file rename -- $cache_filename.[pid] $cache_filename
+	    }
+	}
     }
     gdb_cache_maybe_gdb_exit $name $gdb_data_cache(${cache_name},exit) \
 	$gdb_data_cache(${cache_name},also_called)

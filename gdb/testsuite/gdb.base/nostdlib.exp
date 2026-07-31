@@ -35,7 +35,7 @@ foreach_with_prefix pie { "nopie" "pie" } {
 
     set board [target_info name]
     if {[board_info $board exists mathlib]} {
-	set mathlib [board_info $dest mathlib]
+	set mathlib [board_info $board mathlib]
 	set_board_info mathlib ""
 	# tclint-disable-next-line command-args
 	set err [eval $compile]

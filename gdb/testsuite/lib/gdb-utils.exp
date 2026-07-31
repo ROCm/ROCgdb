@@ -179,11 +179,21 @@ proc version_compare { l1 op l2 } {
 # Acquire lock file LOCKFILE.  Tries forever until the lock file is
 # successfully created.
 
+proc lock_file_owner {} {
+    if {[info exists ::subdir] && [info exists ::gdb_test_file_name] \
+	    && $::gdb_test_file_name != ""} {
+	return "$::subdir/${::gdb_test_file_name}.exp"
+    }
+
+    return "pid [pid]"
+}
+
 proc lock_file_acquire {lockfile} {
-    verbose -log "acquiring lock file: $::subdir/${::gdb_test_file_name}.exp"
+    set whoami [lock_file_owner]
+    verbose -log "acquiring lock file: $whoami"
     while {true} {
 	if {![catch {open $lockfile {WRONLY CREAT EXCL}} rc]} {
-	    set msg "locked by $::subdir/${::gdb_test_file_name}.exp"
+	    set msg "locked by $whoami"
 	    verbose -log "lock file: $msg"
 	    # For debugging, put info in the lockfile about who owns
 	    # it.
@@ -198,7 +208,7 @@ proc lock_file_acquire {lockfile} {
 # Release a lock file.
 
 proc lock_file_release {info} {
-    verbose -log "releasing lock file: $::subdir/${::gdb_test_file_name}.exp"
+    verbose -log "releasing lock file: [lock_file_owner]"
 
     if {![catch {fconfigure [lindex $info 0]}]} {
 	if {![catch {
