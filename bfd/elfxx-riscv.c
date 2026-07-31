@@ -3906,6 +3906,17 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
 		 ibfd);
 	      out_attr[i].i = 1;
 	      break;
+
+	    case Tag_RISCV_stack_align:
+	      if (!(out_attr[i].i & (out_attr[i].i - 1)))
+		break;
+
+	      _bfd_error_handler
+		(_("warning: %pB uses non-power-of-2 `stack_align' attribute; "
+		   "ignoring"),
+		 ibfd);
+	      out_attr[i].i = 0;
+	      break;
 	    }
 	}
 
@@ -4006,10 +4017,14 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
 	break;
 
       case Tag_RISCV_stack_align:
-	if (out_attr[i].i == 0)
+	if ((in_attr[i].i & (in_attr[i].i - 1)) != 0)
+	  _bfd_error_handler
+	    (_("warning: %pB uses non-power-of-2 `stack_align' attribute; "
+	       "ignoring"),
+	     ibfd);
+	else if (out_attr[i].i == 0)
 	  out_attr[i].i = in_attr[i].i;
 	else if (in_attr[i].i != 0
-		 && out_attr[i].i != 0
 		 && out_attr[i].i != in_attr[i].i)
 	  {
 	    _bfd_error_handler
