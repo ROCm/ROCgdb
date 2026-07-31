@@ -1189,9 +1189,7 @@ const struct riscv_opcode riscv_opcodes[] =
 {"fcvt.lu.q", 64, INSN_CLASS_Q_INX,   "d,S",       MATCH_FCVT_LU_Q|MASK_RM, MASK_FCVT_LU_Q|MASK_RM, match_opcode, 0 },
 {"fcvt.lu.q", 64, INSN_CLASS_Q_INX,   "d,S,m",     MATCH_FCVT_LU_Q, MASK_FCVT_LU_Q, match_opcode, 0 },
 {"fcvt.q.l",  64, INSN_CLASS_Q_INX,   "D,s",       MATCH_FCVT_Q_L, MASK_FCVT_Q_L|MASK_RM, match_opcode, 0 },
-{"fcvt.q.l",  64, INSN_CLASS_Q_INX,   "D,s,m",     MATCH_FCVT_Q_L, MASK_FCVT_Q_L, match_opcode, 0 },
 {"fcvt.q.lu", 64, INSN_CLASS_Q_INX,   "D,s",       MATCH_FCVT_Q_LU, MASK_FCVT_Q_LU|MASK_RM, match_opcode, 0 },
-{"fcvt.q.lu", 64, INSN_CLASS_Q_INX,   "D,s,m",     MATCH_FCVT_Q_LU, MASK_FCVT_Q_LU, match_opcode, 0 },
 
 /* Compressed instructions.  */
 {"c.unimp",    0, INSN_CLASS_ZCA,   "",          0, 0xffffU,  match_opcode, 0 },
