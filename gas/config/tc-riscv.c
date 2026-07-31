@@ -3010,6 +3010,12 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
    || (rclass) != RCLASS_GPR                     \
    || !((regno) & 1))
 
+#define RV64_EVEN_CHECK(form, rclass, regno)     \
+  (!(ip->insn_mo->pinfo & INSN_RV64_EVEN_##form) \
+   || xlen > 64                                  \
+   || (rclass) != RCLASS_GPR                     \
+   || !((regno) & (xlen == 32 ? 3 : 1)))
+
       for (oparg = insn->args;; ++oparg)
 	{
 	  opargStart = oparg;
@@ -3689,12 +3695,14 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		  switch (c)
 		    {
 		    case 'D':
-		      if (!RV32_EVEN_CHECK (D, rclass, regno))
+		      if (!RV32_EVEN_CHECK (D, rclass, regno)
+			  || !RV64_EVEN_CHECK (D, rclass, regno))
 			break;
 		      INSERT_OPERAND (RD, *ip, regno);
 		      continue;
 		    case 'S':
-		      if (!RV32_EVEN_CHECK (S, rclass, regno))
+		      if (!RV32_EVEN_CHECK (S, rclass, regno)
+			  || !RV64_EVEN_CHECK (S, rclass, regno))
 			break;
 		      INSERT_OPERAND (RS1, *ip, regno);
 		      continue;
@@ -3702,12 +3710,14 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		      INSERT_OPERAND (RS1, *ip, regno);
 		      /* Fall through.  */
 		    case 'T':
-		      if (!RV32_EVEN_CHECK (T, rclass, regno))
+		      if (!RV32_EVEN_CHECK (T, rclass, regno)
+			  || !RV64_EVEN_CHECK (T, rclass, regno))
 			break;
 		      INSERT_OPERAND (RS2, *ip, regno);
 		      continue;
 		    case 'R':
-		      if (!RV32_EVEN_CHECK (R, rclass, regno))
+		      if (!RV32_EVEN_CHECK (R, rclass, regno)
+			  || !RV64_EVEN_CHECK (R, rclass, regno))
 			break;
 		      INSERT_OPERAND (RS3, *ip, regno);
 		      continue;
@@ -4547,6 +4557,7 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
     }
 
 #undef RV32_EVEN_CHECK
+#undef RV64_EVEN_CHECK
 
  out:
   /* Restore the character we might have clobbered above.  */

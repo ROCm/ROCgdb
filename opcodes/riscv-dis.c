@@ -1155,6 +1155,25 @@ riscv_disassemble_insn (bfd_vma memaddr,
 		      && (word & (1u << OP_SH_RS3)))
 		    continue;
 		}
+
+	      if (pd->xlen <= 64
+		  && riscv_subset_supports (&pd->riscv_rps_dis, "zqinx"))
+		{
+		  unsigned int mask = pd->xlen == 32 ? 3 : 1;
+
+		  if ((op->pinfo & INSN_RV64_EVEN_D)
+		      && (word & (mask << OP_SH_RD)))
+		    continue;
+		  if ((op->pinfo & INSN_RV64_EVEN_S)
+		      && (word & (mask << OP_SH_RS1)))
+		    continue;
+		  if ((op->pinfo & INSN_RV64_EVEN_T)
+		      && (word & (mask << OP_SH_RS2)))
+		    continue;
+		  if ((op->pinfo & INSN_RV64_EVEN_R)
+		      && (word & (mask << OP_SH_RS3)))
+		    continue;
+		}
 	    }
 
 	  /* It's a match.  */

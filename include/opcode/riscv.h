@@ -721,6 +721,19 @@ struct riscv_opcode
 #define INSN_RV32_EVEN_DU	(INSN_RV32_EVEN_D   | INSN_RV32_EVEN_T)
 #define INSN_RV32_EVEN_ST	(INSN_RV32_EVEN_S   | INSN_RV32_EVEN_T)
 
+/* Operands required to be an even-numbered register (pair) in RV64, and one
+   divisible by 4 on RV32.  */
+#define INSN_RV64_EVEN_D	0x00001000
+#define INSN_RV64_EVEN_S	0x00002000
+#define INSN_RV64_EVEN_T	0x00004000 /* Also covering U.  */
+#define INSN_RV64_EVEN_R	0x00008000
+/* Shorthands for combinations of the above.  */
+#define INSN_RV64_EVEN_DS	(INSN_RV64_EVEN_D   | INSN_RV64_EVEN_S)
+#define INSN_RV64_EVEN_DST	(INSN_RV64_EVEN_DS  | INSN_RV64_EVEN_T)
+#define INSN_RV64_EVEN_DSTR	(INSN_RV64_EVEN_DST | INSN_RV64_EVEN_R)
+#define INSN_RV64_EVEN_DU	(INSN_RV64_EVEN_D   | INSN_RV64_EVEN_T)
+#define INSN_RV64_EVEN_ST	(INSN_RV64_EVEN_S   | INSN_RV64_EVEN_T)
+
 /* Instruction is actually a macro.  It should be ignored by the
    disassembler, and requires special treatment by the assembler.  */
 #define INSN_MACRO		0xffffffff
