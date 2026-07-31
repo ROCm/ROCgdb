@@ -7162,17 +7162,24 @@ proc gdb_compile {source dest type options} {
     # archives, shared libraries), so the compiler does not try to
     # parse those as HIP source.  This lets a single amdclang++
     # invocation correctly handle a mix of sources and non-source
-    # inputs (e.g. when set_unbuffered_mode.o is appended via ldflags
-    # later in the command line).
+    # inputs.
     if {[lsearch -exact $options hip] != -1 && !$getting_compiler_info} {
 	set new_source {}
+	set x_lang ""
 	foreach src $source {
 	    set ext [string tolower [file extension $src]]
 	    if {$ext in {".c" ".cc" ".cp" ".cxx" ".cpp" ".c++" ".hip"}} {
-		lappend new_source "-x" "hip" $src
+		set x_lang "hip"
 	    } else {
-		lappend new_source "-x" "none" $src
+		set x_lang "none"
 	    }
+	    lappend new_source "-x" $x_lang $src
+	}
+	# Make sure that if we last opened "-x hip", we close it off
+	# with "-x none", in case something adds some input file via
+	# ldflags (e.g. set_unbuffered_mode.o).
+	if {$x_lang != "" && $x_lang != "none"} {
+	    lappend new_source "-x" "none"
 	}
 	set source $new_source
     }
