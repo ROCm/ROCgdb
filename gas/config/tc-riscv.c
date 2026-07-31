@@ -6105,14 +6105,13 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
 {
   obj_attr_tag_t tag = obj_attr_process_attribute (OBJ_ATTR_PROC);
   unsigned old_xlen;
-  obj_attribute *attr;
+  const obj_attribute *attr = elf_known_obj_attributes_proc (stdoutput);
 
   explicit_attr = true;
   switch (tag)
     {
     case Tag_RISCV_arch:
       old_xlen = xlen;
-      attr = elf_known_obj_attributes_proc (stdoutput);
       if (!start_assemble)
 	riscv_set_arch (attr[Tag_RISCV_arch].s);
       else
@@ -6136,6 +6135,11 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
       if (start_assemble)
        as_fatal (_("privileged elf attributes must be set before "
 		   "any instructions"));
+      break;
+
+    case Tag_RISCV_unaligned_access:
+      if (attr[Tag_RISCV_unaligned_access].i > 1)
+	as_warn (_("`unaligned_access' attribute with non-boolean value"));
       break;
 
     default:
