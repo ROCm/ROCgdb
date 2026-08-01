@@ -21,7 +21,6 @@ standard_testfile
 
 require allow_gdbserver_tests
 
-global server_spawn_id
 
 set gdbserver [find_gdbserver]
 set gdbserver_command "$gdbserver --selftest"

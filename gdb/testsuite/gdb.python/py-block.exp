@@ -30,7 +30,6 @@ if {![runto_main]} {
     return
 }
 
-global hex decimal
 gdb_breakpoint [gdb_get_line_number "Block break here."]
 gdb_continue_to_breakpoint "Block break here."
 

@@ -41,7 +41,6 @@ gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load $binfile
 
-global hex
 
 gdb_test "x /i start" "bra\t.\\+18 \\($hex\\)" \
 	"bra .+18"

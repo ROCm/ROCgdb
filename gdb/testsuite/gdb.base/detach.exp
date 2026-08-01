@@ -41,7 +41,6 @@ proc do_detach_tests {} {
   gdb_test "detach" "Detaching from program: .*$escapedbinfile, .*" "detach, $pass"
 }
 
-global pass
 set pass "one"
 do_detach_tests
 

@@ -62,7 +62,6 @@ gdb_test "cont" \
 
 gdb_test "up" " main .*" "up from marker1"
 
-global hex
 
 gdb_test "print &ibig.i\[0\]" " = \\(int \\*\\) $hex"
 

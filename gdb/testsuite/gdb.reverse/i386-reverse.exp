@@ -41,8 +41,6 @@ if {[supports_process_record]} {
     gdb_test_no_output "record" "turn on process record"
 }
 
-global hex
-global decimal
 
 gdb_test "step" "inc .eax.*" "step to inc eax 1st time"
 send_gdb "info reg eax\n"

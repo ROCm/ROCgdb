@@ -49,7 +49,6 @@ if {![runto_main]} {
     return -1
 }
 
-global gdb_prompt
 
 proc check_replay_at { insn } {
   gdb_test "info record" [multi_line \

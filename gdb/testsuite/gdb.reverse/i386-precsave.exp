@@ -41,8 +41,6 @@ runto_main
 # Activate process record/replay
 gdb_test_no_output "record" "turn on process record"
 
-global hex
-global decimal
 
 gdb_test "break $end_of_main" \
     "Breakpoint $decimal at .*$srcfile, line $end_of_main\." \

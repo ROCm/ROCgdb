@@ -22,7 +22,6 @@
 # overloaded member functions
 #
 
-global timeout
 set timeout 15
 #
 # test running programs

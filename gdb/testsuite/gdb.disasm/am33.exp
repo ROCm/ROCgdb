@@ -18,7 +18,6 @@
 
 require {istarget "mn10300*-*-*"}
 
-global exec_output
 
 set testfile "am33"
 set srcfile ${srcdir}/${subdir}/${testfile}.s

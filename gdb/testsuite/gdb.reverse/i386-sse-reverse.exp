@@ -48,8 +48,6 @@ if {[supports_process_record]} {
     gdb_test_no_output "record" "turn on process record"
 }
 
-global hex
-global decimal
 
 #sse_test
 

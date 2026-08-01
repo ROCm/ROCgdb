@@ -45,8 +45,6 @@ gdb_test "continue" \
 # occur in a single thread's backtrace, in the given order.
 #
 
-global hex
-global decimal
 
 #
 # This is a "backtrace break" ("btb"):

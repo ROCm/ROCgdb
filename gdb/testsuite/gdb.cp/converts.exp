@@ -56,7 +56,6 @@ gdb_test "p foo3_1 ((char *) 0, ta)" "Cannot resolve.*" \
     "check all parameters for badness"
 
 # Tests for null pointer conversion
-global gdb_prompt
 set nl {[\r\n]+}
 set t "null pointer conversion"
 gdb_test_multiple "p foo3_1 (0, 0)" $t {

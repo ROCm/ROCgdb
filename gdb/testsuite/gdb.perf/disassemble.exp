@@ -19,7 +19,6 @@ load_lib perftest.exp
 
 require allow_perf_tests
 
-global GDB
 
 standard_testfile .c
 # Overwrite $binfile
