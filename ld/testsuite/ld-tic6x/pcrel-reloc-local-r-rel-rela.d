@@ -1,8 +1,9 @@
 #name: C6X PC-relative relocations, local symbols, -r, mixed link of REL/RELA
-#as: -mlittle-endian
-#ld: -r -melf32_tic6x_le
 #source: pcrel-reloc-local-1.s -mgenerate-rel
 #source: pcrel-reloc-local-2.s
+#as: -mlittle-endian
+#ld: -r -melf32_tic6x_le
+#ld_after_inputfiles: && $LD -r -o tmpdir/pcrel-reloc-local-r-rel-rela.o tmpdir/dump
 #objdump: -dr
 
 .*: *file format elf32-tic6x-le
