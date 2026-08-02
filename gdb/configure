@@ -935,6 +935,7 @@ with_auto_load_safe_path
 enable_targets
 enable_binary_file_formats
 enable_gdb_dwarf_support
+enable_gdb_pdb_support
 with_amd_dbgapi
 enable_tui
 enable_gdbtk
@@ -1651,6 +1652,9 @@ Optional Features:
   --enable-gdb-dwarf-support
                           Enable support for the dwarf debuginfo format
                           (default 'yes')
+  --enable-gdb-pdb-support
+                          Enable support for the PDB debuginfo format
+                          (default: enabled for Windows targets)
   --enable-tui            enable full-screen terminal user interface (TUI)
   --enable-gdbtk          enable gdbtk graphical user interface (GUI)
   --enable-profiling      enable profiling of GDB
@@ -25299,6 +25303,36 @@ if test $gdb_native = yes; then
 fi
 
 
+# PDB debug format support.
+# Enable PDB if any Windows target is present or --enable-targets=all.
+# Check whether --enable-gdb-pdb-support was given.
+if test "${enable_gdb_pdb_support+set}" = set; then :
+  enableval=$enable_gdb_pdb_support;
+	   case $enableval in
+	     yes | no)
+	       ;;
+	     *)
+	       as_fn_error $? "bad value $enableval for --enable-gdb-pdb-support" "$LINENO" 5
+	       ;;
+	   esac
+
+else
+  if test x${all_targets} = xtrue || test x${gdb_windows_target} = xyes; then
+   enable_gdb_pdb_support=yes
+ else
+   enable_gdb_pdb_support=no
+ fi
+fi
+
+
+if test "x${enable_gdb_pdb_support}" != "xno"; then
+
+$as_echo "#define PDB_FORMAT_AVAILABLE 1" >>confdefs.h
+
+    CONFIG_SRCS="$CONFIG_SRCS \$(PDB_SRCS)"
+    CONFIG_OBS="$CONFIG_OBS \$(PDB_OBS)"
+fi
+
 # AMD debugger API support.
 
 
@@ -25472,6 +25506,7 @@ fi
 # For other settings, only the main target counts.
 gdb_sim=
 gdb_osabi=
+gdb_windows_target=
 targ=$target; . ${srcdir}/configure.tgt
 
 # Fetch the default architecture and default target vector from BFD.

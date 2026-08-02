@@ -1,0 +1,33 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Utilities for PDB format testing
+
+# Return true if the target supports PDB format debugging.
+proc pdb_support {} {
+    if {[info exists ::env(WINDIR)] || [string match "mingw*" [exec uname -s]]} {
+	return 1
+    }
+    if {[istarget "*-*-mingw*"] || [istarget "*-*-cygwin*"]} {
+	return 1
+    }
+    return 0
+}
+
+# Disable symbol server lookups.
+proc disable_pdb_symbol_server {} {
+    set ::env(_NT_SYMBOL_PATH) ""
+    set ::env(_NT_ALT_SYMBOL_PATH) ""
+}

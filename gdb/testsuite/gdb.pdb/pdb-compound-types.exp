@@ -1,0 +1,417 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test PDB compound type resolution — ptype and print tests verifying
+# that field types, access levels, and method properties are correctly
+# parsed by the PDB reader.
+#
+# Features tested:
+#   data members, enumerator constants, direct base classes,
+#   virtual base classes, indirect virtual bases, static data members,
+#   nested types, single methods, overloaded methods, vfunc table
+#   pointers, fieldlist continuation records.
+#
+# Access levels tested:
+#   public, private, protected
+#
+# Method properties tested:
+#   non-virtual, first virtual declaration, virtual override,
+#   static, pure virtual (first declaration), pure virtual override
+#
+# Uses precompiled pdb-compound-test-Od.exe + .pdb (no compiler needed).
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+# --- Set up file paths ---
+standard_testfile pdb-compound-test.cpp
+
+set exe ${binfile}.exe
+set pdb ${binfile}.pdb
+
+set src_dir_exe $srcdir/$subdir/pdb-compound-test-Od.exe
+set src_dir_pdb $srcdir/$subdir/pdb-compound-test-Od.pdb
+
+if {![file exists $src_dir_exe]} {
+    unsupported "prebuilt exe not found: $src_dir_exe"
+    return
+}
+if {![file exists $src_dir_pdb]} {
+    unsupported "prebuilt pdb not found: $src_dir_pdb"
+    return
+}
+
+catch {file mkdir [file dirname $exe]}
+file copy -force $src_dir_exe $exe
+file copy -force $src_dir_pdb $pdb
+
+if {![file exists $exe]} {
+    fail "failed to copy exe to $exe"
+    return
+}
+
+verbose -log "Using prebuilt exe: $src_dir_exe"
+verbose -log "Copied to: $exe"
+
+# ===================================================================
+# Load executable and reach compound_marker()
+# ===================================================================
+clean_restart $exe
+disable_pdb_symbol_server
+match_max 131072
+
+gdb_test "break compound_marker" \
+    "Breakpoint.*at.*" \
+    "set breakpoint at compound_marker"
+
+gdb_test "run" \
+    "Breakpoint.*compound_marker.*" \
+    "hit compound_marker breakpoint"
+
+# ===================================================================
+# enum constant values.
+#
+# Expected output for "ptype Color":
+#   type = enum Color : int32_t {
+#       Red = 0,
+#       Green = 1,
+#       Blue = 2,
+#       Yellow = 3,
+#       Black = 4
+#   }
+#
+# Expected output for "ptype Direction":
+#   type = enum Direction : int32_t {
+#       North = 0,
+#       South = 1,
+#       East = 2,
+#       West = 3
+#   }
+#
+# Expected output for "ptype BigValues":
+#   type = enum BigValues : int32_t {
+#       BV_ZERO = 0,
+#       BV_SMALL = 100,
+#       BV_MEDIUM = 10000,
+#       BV_LARGE = 1000000,
+#       BV_HUGE = 2000000000
+#   }
+# ===================================================================
+
+gdb_test "ptype Color" \
+    "enum Color : int32_t \\{.*Red.*Green.*Blue.*Yellow.*Black.*\\}" \
+    "ptype Color (basic enum)"
+
+gdb_test "ptype Direction" \
+    "enum Direction : int32_t \\{.*North.*South.*East.*West.*\\}" \
+    "ptype Direction (scoped enum)"
+
+gdb_test "ptype BigValues" \
+    "enum BigValues : int32_t \\{.*BV_ZERO.*BV_SMALL.*BV_MEDIUM.*BV_LARGE.*BV_HUGE.*\\}" \
+    "ptype BigValues (large values)"
+
+# ===================================================================
+# Test Data members.
+#
+# Expected output for "ptype SimpleStruct":
+#   type = struct SimpleStruct {
+#       int32_t x;
+#       int32_t y;
+#       double value;
+#       char tag;
+#       const char *name;
+#   }
+# ===================================================================
+
+gdb_test "ptype SimpleStruct" \
+    "struct SimpleStruct \\{.*int32_t x;.*int32_t y;.*double value;.*char tag;.*const char \\*name;.*\\}" \
+    "ptype SimpleStruct (5 fields)"
+
+# ===================================================================
+# Test bitfield members with width display.
+#
+# Expected output for "ptype PackedFlags":
+#   type = struct PackedFlags {
+#       uint32_t visible : 1;
+#       uint32_t enabled : 1;
+#       uint32_t mode : 4;
+#       uint32_t level : 8;
+#       uint32_t id : 18;
+#   }
+# ===================================================================
+
+gdb_test "ptype PackedFlags" \
+    "struct PackedFlags \\{.*uint32_t visible : 1;.*uint32_t enabled : 1;.*uint32_t mode : 4;.*uint32_t level : 8;.*uint32_t id : 18;.*\\}" \
+    "ptype PackedFlags (bitfields)"
+
+# ===================================================================
+# Union members.
+#
+# Expected output for "ptype MultiValue":
+#   type = union MultiValue {
+#       int32_t as_int;
+#       float as_float;
+#       double as_double;
+#       char as_bytes[8];
+#       int64_t as_longlong;
+#   }
+# ===================================================================
+
+gdb_test "ptype MultiValue" \
+    "union MultiValue \\{.*int32_t as_int;.*float as_float;.*double as_double;.*char as_bytes\\\[8\\\];.*int64_t as_longlong;.*\\}" \
+    "ptype MultiValue (union)"
+
+# ===================================================================
+# Tests: virtual methods, non-virtual methods, virtual destructor,
+# data member, constructor. Skip checking compiler generated methods.
+#
+# Expected output for "ptype Base":
+#   type = class Base {
+#     public:
+#       int32_t base_id;
+#
+#       Base(const Base &);
+#       Base(void);
+#       virtual ~Base(void);
+#       virtual int32_t compute(void) const;
+#       virtual const char * name(void) const;
+#       int32_t get_base_id(void) const;
+#       Base & operator=(const Base &);
+#       void __local_vftable_ctor_closure(void);
+#       virtual void * __vecDelDtor(uint32_t);
+#   }
+
+# ===================================================================
+
+gdb_test "ptype Base" \
+    "class Base \\{.*public:.*int32_t base_id;.*Base\\(void\\);.*virtual ~Base\\(void\\);.*virtual int32_t compute\\(void\\) const;.*virtual const char \\* name\\(void\\) const;.*int32_t get_base_id\\(void\\) const;.*\\}" \
+    "ptype Base (virtual + non-virtual methods)"
+
+# ===================================================================
+# Tests: inheritance from Base, static data member, overloaded methods,
+#        virtual overrides.
+#
+# Expected output for "ptype Derived":
+#   type = class Derived : public Base {
+#     public:
+#       double extra;
+#       static int32_t instance_count;
+#
+#       Derived(const Derived &);
+#       Derived(double);
+#       Derived(void);
+#       virtual ~Derived(void);
+#       virtual int32_t compute(void) const;
+#       virtual const char * name(void) const;
+#       double get_extra(void) const;
+#       void set_extra(float);
+#       void set_extra(int32_t);
+#       void set_extra(double);
+#       Derived & operator=(const Derived &);
+#       void __local_vftable_ctor_closure(void);
+#       virtual void * __vecDelDtor(uint32_t);
+#   }
+# ===================================================================
+
+gdb_test "ptype Derived" \
+    "class Derived : public Base \\{.*public:.*double extra;.*static int32_t instance_count;.*Derived\\(double\\);.*Derived\\(void\\);.*virtual ~Derived\\(void\\);.*virtual int32_t compute\\(void\\) const;.*virtual const char \\* name\\(void\\) const;.*double get_extra\\(void\\) const;.*void set_extra\\(float\\);.*void set_extra\\(int32_t\\);.*void set_extra\\(double\\);.*\\}" \
+    "ptype Derived (inheritance, static, overloads)"
+
+# ===================================================================
+# Tests: nested types, private/protected access sections, static method.
+#
+# Expected output for "ptype Container":
+#   type = class Container {
+#       Container::Entry entries_[1];
+#       int32_t size_;
+#     protected:
+#       Container::Status status_;
+#
+#     public:
+#       Container(void);
+#       void add(const Container::Entry &);
+#       int32_t size(void) const;
+#       Container::Status status(void) const;
+#       static int32_t max_size(void);
+#   }
+#
+# ===================================================================
+
+gdb_test "ptype Container" \
+    "class Container \\{.*Container::Entry entries_.*int32_t size_;.*protected:.*Container::Status status_;.*public:.*Container\\(void\\);.*void add\\(.*\\);.*int32_t size\\(void\\) const;.*Container::Status status\\(void\\) const;.*static int32_t max_size\\(void\\);.*\\}" \
+    "ptype Container (nested types, access sections, static)"
+
+# Nested struct:
+#
+# Expected output for "ptype Container::Entry":
+#   type = struct Container::Entry {
+#       int32_t key;
+#       double val;
+#   }
+gdb_test "ptype Container::Entry" \
+    "struct Container::Entry \\{.*int32_t key;.*double val;.*\\}" \
+    "ptype Container::Entry (nested struct)"
+
+# Nested enum:
+#
+# Expected output for "ptype Container::Status":
+#   type = enum Container::Status : int32_t {
+#       Empty = 0,
+#       Partial = 1,
+#       Full = 2
+#   }
+gdb_test "ptype Container::Status" \
+    "enum Container::Status.*\\{.*Empty.*Partial.*Full.*\\}" \
+    "ptype Container::Status (nested enum)"
+
+# ===================================================================
+# Tests: struct with too many fields, which triggers
+# emmiting PDB fieldlist continuation symbol.
+# Checks first (f000) and last (f499) fields are present.
+#
+# Expected output for "ptype HugeStruct":
+#   type = struct HugeStruct {
+#       int32_t f000;
+#       float f001;
+#       int32_t f002;
+#       ...
+#       float f499;
+#   }
+# ===================================================================
+
+gdb_test "ptype HugeStruct" \
+    "struct HugeStruct \\{.*int32_t f000;.*float f499;.*\\}" \
+    "ptype HugeStruct (500 fields, fieldlist continuation)"
+
+# ===================================================================
+# Tests: abstract class with pure virtual methods.
+#
+# Expected output for "ptype AbstractShape":
+#   type = class AbstractShape {
+#
+#     public:
+#       virtual ~AbstractShape(void);
+#       virtual double area(void) const;
+#       virtual const char * shape_name(void) const;
+#       AbstractShape(const AbstractShape &);
+#       AbstractShape(void);
+#       AbstractShape & operator=(const AbstractShape &);
+#       void __local_vftable_ctor_closure(void);
+#       virtual void * __vecDelDtor(uint32_t);
+#   }
+# ===================================================================
+
+gdb_test "ptype AbstractShape" \
+    "class AbstractShape \\{.*public:.*virtual ~AbstractShape\\(void\\);.*virtual double area\\(void\\) const;.*virtual const char \\* shape_name\\(void\\) const;.*\\}" \
+    "ptype AbstractShape (pure virtual methods)"
+
+# ===================================================================
+# Tests: Class inheriting from abstract, overriding virtuals.
+#
+# Expected output for "ptype Circle":
+#   type = class Circle : public AbstractShape {
+#     public:
+#       double radius;
+#
+#       Circle(Circle *);
+#       Circle(const Circle &);
+#       Circle(double);
+#       Circle(void);
+#       virtual double area(void) const;
+#       virtual const char * shape_name(void) const;
+#       virtual ~Circle(void);
+#       Circle & operator=(Circle *);
+#       Circle & operator=(const Circle &);
+#       void __local_vftable_ctor_closure(void);
+#       virtual void * __vecDelDtor(uint32_t);
+#   }
+# ===================================================================
+
+gdb_test "ptype Circle" \
+    "class Circle : public AbstractShape \\{.*public:.*double radius;.*Circle\\(double\\);.*Circle\\(void\\);.*virtual double area\\(void\\) const;.*virtual const char \\* shape_name\\(void\\) const;.*\\}" \
+    "ptype Circle (concrete from abstract)"
+
+# ===================================================================
+# Test virtual inheritance ("public virtual" in base list).
+#
+# Expected output for "ptype VBase":
+#   type = class VBase {
+#     public:
+#       int32_t vb_data;
+#
+#       VBase(void);
+#   }
+#
+# Expected output for "ptype Left":
+#   type = class Left : public virtual VBase {
+#     public:
+#       int32_t left_val;
+#
+#       Left(Left *);
+#       Left(const Left &);
+#       Left(void);
+#       Left & operator=(Left *);
+#       Left & operator=(const Left &);
+#   }
+#
+# Expected output for "ptype Right":
+#   type = class Right : public virtual VBase {
+#     public:
+#       int32_t right_val;
+#
+#       Right(Right *);
+#       Right(const Right &);
+#       Right(void);
+#       Right & operator=(Right *);
+#       Right & operator=(const Right &);
+#   }
+# ===================================================================
+
+gdb_test "ptype VBase" \
+    "class VBase \\{.*public:.*int32_t vb_data;.*VBase\\(void\\);.*\\}" \
+    "ptype VBase"
+
+gdb_test "ptype Left" \
+    "class Left : public virtual VBase \\{.*public:.*int32_t left_val;.*Left\\(void\\);.*\\}" \
+    "ptype Left (virtual inheritance)"
+
+gdb_test "ptype Right" \
+    "class Right : public virtual VBase \\{.*public:.*int32_t right_val;.*Right\\(void\\);.*\\}" \
+    "ptype Right (virtual inheritance)"
+
+# ===================================================================
+# Tests indirect virtual base in base list.
+#
+# Expected output for "ptype Diamond":
+#   type = class Diamond : public Left, public Right, public virtual VBase {
+#     public:
+#       int32_t diamond_val;
+#
+#       Diamond(Diamond *);
+#       Diamond(const Diamond &);
+#       Diamond(void);
+#       Diamond & operator=(Diamond *);
+#       Diamond & operator=(const Diamond &);
+#   }
+# ===================================================================
+
+gdb_test "ptype Diamond" \
+    "class Diamond : public Left, public Right, public virtual VBase \\{.*public:.*int32_t diamond_val;.*Diamond\\(void\\);.*\\}" \
+    "ptype Diamond (diamond inheritance)"
+

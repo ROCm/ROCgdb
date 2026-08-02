@@ -26,6 +26,7 @@
 #include "objfiles.h"
 #include "target.h"
 #include "dwarf2/public.h"
+#include "pdb/pdb.h"
 #include "coff-pe-read.h"
 #include "cli/cli-style.h"
 
@@ -345,7 +346,12 @@ coff_reader::symfile_read (symfile_add_flags symfile_flags)
 	warning (_ ("stabs debug information is not supported."));
     }
 
-  if (dwarf2_initialize_objfile (coffread_objfile))
+  if (pdb::pdb_initialize_objfile (coffread_objfile))
+    {
+      /* PDB debug information was found and successfully processed.
+	 No further symbol reading is necessary. */
+    }
+  else if (dwarf2_initialize_objfile (coffread_objfile))
     {
       /* Nothing.  */
     }
