@@ -17,6 +17,7 @@
 # This is a test for the gdb command "generate-core-file".
 
 require gcore_cmd_available
+require allow_xml_test
 
 standard_testfile
 
