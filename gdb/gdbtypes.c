@@ -366,10 +366,8 @@ smash_type (struct type *type)
 type *
 make_pointer_type (type *type)
 {
-  struct type *ntype;	/* New type */
-  ntype = type->pointer_type;
-
-  if (ntype)
+  struct type *ntype = type->pointer_type;
+  if (ntype != nullptr)
     return ntype;
 
   ntype = type_allocator (type).new_type ();
@@ -403,23 +401,22 @@ lookup_pointer_type (struct type *type)
 type *
 make_reference_type (type *type, type_code refcode)
 {
-  struct type *ntype;	/* New type */
-  struct type **reftype;
-
   gdb_assert (refcode == TYPE_CODE_REF || refcode == TYPE_CODE_RVALUE_REF);
 
-  ntype = (refcode == TYPE_CODE_REF ? type->reference_type
-	   : type->rvalue_reference_type);
+  struct type *ntype = (refcode == TYPE_CODE_REF
+			? type->reference_type
+			: type->rvalue_reference_type);
 
-  if (ntype)
+  if (ntype != nullptr)
     return ntype;
 
   ntype = type_allocator (type).new_type ();
   ntype->set_target_type (type);
-  reftype = (refcode == TYPE_CODE_REF ? &type->reference_type
-	     : &type->rvalue_reference_type);
 
-  *reftype = ntype;
+  if (refcode == TYPE_CODE_REF)
+    type->reference_type = ntype;
+  else
+    type->rvalue_reference_type = ntype;
 
   /* FIXME!  Assume the machine has only one representation for
      references, and that it matches the (only) representation for
