@@ -44,7 +44,7 @@ PerfTest::assemble {
     # we only run to main function of child GDB, so child GDB's
     # prompt can't be printed out.
     if ![runto_main] {
-	return -1
+	return
     }
 
     return 0

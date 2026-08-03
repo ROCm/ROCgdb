@@ -25,7 +25,7 @@ set binfile_lib [standard_output_file $libname.so]
 
 if { [gdb_compile_shlib $srcfile_lib $binfile_lib {}] != "" } {
     untested "failed to compile shared library 1"
-    return -1
+    return
 }
 
 set binfile_lib_target [gdb_download_shlib $binfile_lib]
@@ -34,7 +34,7 @@ if { [build_executable "failed to prepare" $testfile $srcfile \
 	  [list debug \
 	       additional_flags=-DSHLIB_NAME=\"$binfile_lib_target\" \
 	       shlib_load]] } {
-    return -1
+    return
 }
 
 # Start two inferiors, both running the same test binary.  The arguments

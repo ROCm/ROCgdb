@@ -23,11 +23,11 @@ require allow_fortran_tests
 
 if { [prepare_for_testing ${testfile}.exp ${testfile} ${srcfile} \
     {debug f90 quiet}] } {
-    return -1
+    return
 }
 
 if {![fortran_runto_main]} {
-    return -1
+    return
 }
 
 # Depending on the compiler being used, the type names can be printed

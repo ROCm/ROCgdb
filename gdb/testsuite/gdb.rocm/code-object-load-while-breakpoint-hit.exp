@@ -39,7 +39,7 @@ require allow_hipcc_tests
 # Build the host executable.
 if { [build_executable "failed to prepare" \
 	  $testfile $srcfile {debug hip}] == -1 } {
-    return -1
+    return
 }
 
 set hipmodule_path [standard_output_file ${testfile}.co]
@@ -48,7 +48,7 @@ set hipmodule_path [standard_output_file ${testfile}.co]
 if { [gdb_compile $srcdir/$subdir/$srcfile \
 	$hipmodule_path object \
 	{ debug hip additional_flags=--genco additional_flags=-DDEVICE } ] != "" } {
-    return -1
+    return
 }
 
 proc do_test { } {

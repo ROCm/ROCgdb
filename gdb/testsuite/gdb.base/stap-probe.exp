@@ -331,7 +331,7 @@ proc stap_test_no_debuginfo {exec_name {args ""}} {
 with_test_prefix "without semaphore, not optimized" {
     if {[stap_test "stap-probe-nosem-noopt"] == -1} {
 	untested "stap probe test failed"
-	  return -1
+	  return
     }
 
     foreach_with_prefix pie { "nopie" "pie" } {

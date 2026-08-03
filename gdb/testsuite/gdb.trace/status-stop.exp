@@ -21,16 +21,16 @@ set expfile $testfile.exp
 
 if {[prepare_for_testing "failed to prepare" $executable $srcfile \
 	 {debug nowarnings}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "target does not support trace"
-    return -1
+    return
 }
 
 # Verify that the sequence of commands "tstart tstop tstart" works well.

@@ -101,7 +101,7 @@ proc gdb_collect_probe_arg { msg probe val_arg0 } {
 
 if {![compile_stap_bin "stap-probe-nosem"]} {
     # An appropriate failure message has already been output
-    return -1
+    return
 }
 
 clean_restart $executable
@@ -121,7 +121,7 @@ gdb_exit
 
 if {![compile_stap_bin "stap-probe-sem" "-DUSE_PROBES"]} {
     # An appropriate failure message has already been output
-    return -1
+    return
 }
 
 gdb_collect_probe_arg "probe args with semaphore" "-probe-stap two" "46"

@@ -40,15 +40,15 @@ if {[info exists COMPILE]} {
 	}
 } else {
     unsupported "target architecture not supported"
-    return -1
+    return
 }
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $opts]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # When GDB prints the file for a stop location, it may print the full path

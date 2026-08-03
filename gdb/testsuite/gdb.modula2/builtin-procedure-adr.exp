@@ -20,7 +20,7 @@
 standard_testfile unbounded1.c
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug quiet}]} {
-    return -1
+    return
 }
 
 if {![runto main]} {

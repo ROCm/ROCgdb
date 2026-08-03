@@ -21,12 +21,12 @@ standard_testfile .c entry-values-dw.S
 
 if  {[gdb_compile ${srcdir}/${subdir}/${srcfile} ${binfile}1.o \
 	  object {nodebug}] != ""} {
-    return -1
+    return
 }
 
 if  {[gdb_compile [list ${binfile}1.o] \
 	  "${binfile}1" executable {}] != ""} {
-    return -1
+    return
 }
 
 clean_restart ${testfile}1
@@ -75,7 +75,7 @@ if { [string equal $returned_from_foo ""] } {
     # The following test makes no sense if the offset is unknown.  We need
     # to update the pattern above to match call or branch instruction for
     # the target architecture.
-    return -1
+    return
 }
 
 # Make some DWARF for the test.
@@ -155,18 +155,18 @@ Dwarf::assemble $asm_file {
 }
 
 if  {[gdb_compile $asm_file ${binfile}2.o object {nodebug}] != ""} {
-    return -1
+    return
 }
 
 if  {[gdb_compile [list ${binfile}1.o ${binfile}2.o] \
 	  "${binfile}" executable {}] != ""} {
-    return -1
+    return
 }
 
 clean_restart ${testfile}
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint "foo"
@@ -200,12 +200,12 @@ clean_restart $testfile
 load_lib "trace-support.exp"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "target does not support trace"
-    return -1
+    return
 }
 
 gdb_test "trace foo" "Tracepoint $decimal at .*"

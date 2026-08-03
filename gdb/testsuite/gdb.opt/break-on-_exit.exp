@@ -38,14 +38,14 @@ standard_testfile
 # See if we have target board readnow.exp or similar.
 if {[readnow]} {
     untested "--readnever not allowed in combination with --readnow"
-    return -1
+    return
 }
 
 save_vars { GDBFLAGS } {
     append GDBFLAGS " -readnever"
 
     if {[prepare_for_testing "failed to prepare" $testfile $srcfile nodebug]} {
-	return -1
+	return
     }
 }
 

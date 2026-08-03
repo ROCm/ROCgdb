@@ -16,7 +16,7 @@
 standard_testfile
 
 if { [build_executable ${testfile}.exp ${binfile} "${srcfile}" {debug}] != 0 } {
-    return -1
+    return
 }
 
 proc switch_to_inferior { num message } {

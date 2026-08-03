@@ -19,16 +19,16 @@ standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 {debug nowarnings}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "target does not support trace"
-    return -1
+    return
 }
 
 set BUFFER_SIZE 4
@@ -46,7 +46,7 @@ gdb_test_multiple "tstatus" $test {
 # If we did not get the default size then there is no point in running the
 # tests below.
 if { $default_size < 0 } {
-  return -1
+  return
 }
 
 # Change buffer size to 'BUFFER_SIZE'.

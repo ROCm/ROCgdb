@@ -25,16 +25,16 @@ set lib_flags [list debug]
 set bin_flags [list f90 debug shlib=${binfile_lib}]
 
 if {[gdb_compile_shlib ${srcfile_lib} ${binfile_lib} $lib_flags] != "" } {
-    return -1
+    return
 }
 
 if {[prepare_for_testing ${testfile}.exp ${testfile} ${srcfile} \
      ${bin_flags}]} {
-    return -1
+    return
 }
 
 if {![fortran_runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "all-assigned"]

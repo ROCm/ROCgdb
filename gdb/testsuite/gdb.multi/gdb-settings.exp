@@ -24,7 +24,7 @@ load_lib gdb-guile.exp
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile]} {
-    return -1
+    return
 }
 
 # Cache whether we can run Python and/or Guile tests.
@@ -53,7 +53,7 @@ foreach_with_prefix inf $inferiors {
 
     if { $run } {
 	if { ![runto_main] } {
-	    return -1
+	    return
 	}
     }
 }

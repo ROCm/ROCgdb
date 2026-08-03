@@ -358,7 +358,7 @@ set program [subst_vars {
 }]
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
-    return -1
+    return
 }
 
 # Make some DWARF for the test.
@@ -413,15 +413,15 @@ Dwarf::assemble $asm_file {
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile $asm_file] {nodebug}] } {
-    return -1
+    return
 }
 
 if {![runto func]} {
-    return -1
+    return
 }
 
 if {[skip_compile_feature_untested]} {
-    return -1
+    return
 }
 
 # If we have a bug, this will hang.

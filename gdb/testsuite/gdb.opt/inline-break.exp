@@ -21,7 +21,7 @@ standard_testfile
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile \
 	  {debug additional_flags=-Winline}] } {
-    return -1
+    return
 }
 
 # Return a string that may be used to match the output of "info break NUM".
@@ -195,7 +195,7 @@ foreach_with_prefix cmd [list "break" "tbreak"] {
     # Start with a clean state.
     delete_breakpoints
     if {![runto_main]} {
-	return -1
+	return
     }
 
     # Assemble flags to pass to gdb_breakpoint.  Lame but this is just

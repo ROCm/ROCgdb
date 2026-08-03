@@ -24,11 +24,11 @@ require allow_btrace_tests
 standard_testfile exception.cc
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 {nopie c++ debug}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # we want to see the full trace for this test

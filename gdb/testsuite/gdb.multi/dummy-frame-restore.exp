@@ -22,7 +22,7 @@ require !use_gdb_stub
 require allow_multi_inferior_tests
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug}]} {
-    return -1
+    return
 }
 
 # Inferior 1 stops at f1.

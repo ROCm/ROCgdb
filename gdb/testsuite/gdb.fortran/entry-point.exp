@@ -21,12 +21,12 @@ standard_testfile .f90
 load_lib "fortran.exp"
 
 if { [prepare_for_testing $testfile.exp $testfile $srcfile {debug f90}] } {
-    return -1
+    return
 }
 
 if { ![fortran_runto_main] } {
     untested "could not run to main"
-    return -1
+    return
 }
 
 # Test if we can set a breakpoint via the entry-point name.

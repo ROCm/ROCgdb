@@ -28,7 +28,7 @@ require allow_hw_watchpoint_access_tests
 
 if { [gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $executable

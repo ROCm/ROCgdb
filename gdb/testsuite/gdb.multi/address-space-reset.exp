@@ -26,7 +26,7 @@ standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile \
 	 {debug pthreads}]} {
-    return -1
+    return
 }
 
 # Problematic scenario is seen in non-stop mode.
@@ -36,7 +36,7 @@ save_vars {GDBFLAGS} {
 }
 
 if {![runto "breakpoint_1"]} {
-    return -1
+    return
 }
 
 # Start an empty gdbserver in a new inferior.
@@ -46,7 +46,7 @@ gdb_test "inferior 2" "Switching to inferior 2.*"
 set res [gdbserver_start "--multi" ""]
 set gdbserver_gdbport [lindex $res 1]
 if {[gdb_target_cmd "extended-remote" $gdbserver_gdbport]} {
-    return -1
+    return
 }
 
 # Go back to inferior 1.  Continuing should hit the next breakpoint.

@@ -28,11 +28,11 @@ set binfile1 [standard_output_file $testfile1]
 set binfile2 [standard_output_file $testfile2]
 
 if {[build_executable ${testfile}.exp ${binfile1} "${srcfile1}"] != 0} {
-    return -1
+    return
 }
 
 if {[build_executable ${testfile}.exp ${binfile2} "${srcfile2}"] != 0} {
-    return -1
+    return
 }
 
 # Start the first inferior.

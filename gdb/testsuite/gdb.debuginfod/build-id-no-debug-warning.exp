@@ -27,7 +27,7 @@ require allow_debuginfod_tests
 
 if {[build_executable "build executable" ${testfile} ${srcfile} \
 	 {debug build-id}] == -1} {
-    return -1
+    return
 }
 
 # Split debug information from BINFILE into BINFILE.debug.
@@ -37,7 +37,7 @@ if {[build_executable "build executable" ${testfile} ${srcfile} \
 # information by GDB will need to be done based on the build-id.
 if {[gdb_gnu_strip_debug $binfile no-debuglink]} {
     unsupported "cannot produce separate debug info files"
-    return -1
+    return
 }
 
 # Get the .build-id/PREFIX/SUFFIX.debug file name, and convert it to

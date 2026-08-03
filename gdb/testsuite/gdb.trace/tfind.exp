@@ -24,7 +24,7 @@ require gdb_trace_common_supports_arch
 if { [gdb_compile "$srcdir/$subdir/$srcfile" "$binfile" \
 	  executable {debug nowarnings nopie}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $testfile
@@ -117,7 +117,7 @@ gdb_test_multiple "tstart" "6.1: tstart" {
 }
 
 if {$return_me == 1} {
-    return -1
+    return
 }
 
 # test tstatus (when trace on)
@@ -148,7 +148,7 @@ gdb_test_multiple "tstop" "7.1: tstop" {
 }
 
 if {$return_me == 1} {
-    return -1
+    return
 }
 
 # test tstatus (when trace off)

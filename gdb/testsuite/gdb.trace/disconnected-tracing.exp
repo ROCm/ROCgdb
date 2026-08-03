@@ -24,21 +24,21 @@ set gdbserver_reconnect_p 1
 
 if { [info proc gdb_reconnect] == "" } {
     unsupported "target does not support reconnect"
-    return -1
+    return
 }
 
 if {[prepare_for_testing "failed to prepare" $executable $srcfile \
 	 {debug nowarnings}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "target does not support trace"
-    return -1
+    return
 }
 
 # Disconnect in tracing.

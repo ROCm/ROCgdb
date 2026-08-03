@@ -40,7 +40,7 @@ PerfTest::assemble {
 	lappend compile_flags "additional_flags=-DEXPANSION_DEPTH=${EXPANSION_DEPTH}"
 
 	if { [gdb_compile "$srcdir/$subdir/$srcfile" ${binfile} executable $compile_flags] != ""} {
-		return -1
+		return
 	}
 
 	return 0
@@ -50,7 +50,7 @@ PerfTest::assemble {
 	clean_restart $::testfile
 
 	if ![runto_main] {
-		return -1
+		return
 	}
 
 	return 0

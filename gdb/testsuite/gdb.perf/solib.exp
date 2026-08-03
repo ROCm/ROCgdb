@@ -50,7 +50,7 @@ PerfTest::assemble {
 
 	# Compile.
 	if { [gdb_compile_shlib $src $exe {debug}] != "" } {
-	    return -1
+	    return
 	}
 
 	# Delete object files to save some space.
@@ -65,7 +65,7 @@ PerfTest::assemble {
     }
 
     if { [gdb_compile "$srcdir/$subdir/$srcfile" ${binfile} executable  $compile_flags] != "" } {
-	return -1
+	return
     }
 
     return 0
@@ -75,7 +75,7 @@ PerfTest::assemble {
     clean_restart $::testfile
 
     if ![runto_main] {
-	return -1
+	return
     }
     return 0
 } {

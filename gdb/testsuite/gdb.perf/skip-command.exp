@@ -115,7 +115,7 @@ PerfTest::assemble {
 
     write_skip_func_source $skip_func_file "skip_func" [expr 4 * $SKIP_DIRECTIVE_COUNT]
     if { [gdb_compile [list "$srcdir/$subdir/$srcfile" $skip_func_file] ${binfile} executable {c++ debug}] != "" } {
-	return -1
+	return
     }
     return 0
 } {

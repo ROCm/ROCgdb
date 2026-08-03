@@ -29,17 +29,17 @@ set outputdir [standard_output_file {}]
 if { [catch {file copy -force ${srcdir}/${subdir}/${srcfile} \
 	     [standard_output_file ${sourcetmp}]}] != 0 } {
     error "create temporary file"
-    return -1
+    return
 }
 
 if { [gdb_compile "$sourcetmp" "$binfile" executable {debug build-id}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 if { [gdb_compile "$sourcetmp" "${binfile}2" executable {debug build-id}] != "" } {
     fail "compile"
-    return -1
+    return
 }
 
 # Write some assembly that just has a .gnu_debugaltlink section.

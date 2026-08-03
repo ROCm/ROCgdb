@@ -23,7 +23,7 @@ require gdb_trace_common_supports_arch
 if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile \
 	  executable {debug nowarnings}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Test notifications on creating, deleting and modifying TSV.
@@ -223,12 +223,12 @@ proc test_upload_tsv { } {
 clean_restart $testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "current target does not support trace"
-    return -1
+    return
 }
 
 gdb_exit

@@ -20,7 +20,7 @@ require allow_btrace_tests
 standard_testfile
 if {[gdb_compile_pthreads "$srcdir/$subdir/$srcfile" "$binfile" executable {debug}] != "" } {
     untested "failed to prepare"
-    return -1
+    return
 }
 
 # We need to enable non-stop mode for the remote case.
@@ -30,7 +30,7 @@ save_vars { GDBFLAGS } {
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 set bp_1 [gdb_get_line_number "bp.1" $srcfile]

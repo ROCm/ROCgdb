@@ -35,7 +35,7 @@ require has_gdbreplay
 standard_testfile
 
 if { [build_executable "failed to build exec" $testfile $srcfile {debug pthreads}] } {
-    return -1
+    return
 }
 
 # Start the inferior and record a remote log for our interaction with it.

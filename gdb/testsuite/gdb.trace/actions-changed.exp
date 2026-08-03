@@ -20,7 +20,7 @@ standard_testfile
 require gdb_trace_common_supports_arch
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 proc test_actions_changed { } {
@@ -162,12 +162,12 @@ proc test_actions_changed { } {
 clean_restart $testfile
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "current target does not support trace"
-    return -1
+    return
 }
 
 test_actions_changed

@@ -23,7 +23,7 @@ set libfile [standard_output_file ${testfile}-lib.so]
 
 if  { [gdb_compile_shlib "${srcdir}/${subdir}/${srclibfile}" $libfile {debug f90}] != "" } {
     untested "failed to compile shared library"
-    return -1
+    return
 }
 
 # prepare_for_testing cannot be used as linking with $libfile cannot be passed
@@ -32,7 +32,7 @@ if  { [gdb_compile_shlib "${srcdir}/${subdir}/${srclibfile}" $libfile {debug f90
 
 if  { [gdb_compile $srcdir/$subdir/$srcfile $binfile executable [list debug f90 shlib=$libfile]] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $testfile

@@ -41,7 +41,7 @@ if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile \
 	       "additional_flags=-DTFILE_DIR=\"$tfile_dir\""]] \
 	 != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 # Make sure we are starting fresh.
@@ -52,7 +52,7 @@ remote_file target delete $tfile_error
 
 if { ![generate_tracefile $binfile] } {
     unsupported "unable to generate trace file"
-    return -1
+    return
 }
 
 if {!$purely_local} {

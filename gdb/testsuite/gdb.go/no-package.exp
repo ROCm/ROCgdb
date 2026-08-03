@@ -24,7 +24,7 @@ require allow_go_tests support_go_compile !use_gdb_stub
 standard_testfile integers.go
 
 if {[prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug go}]} {
-    return -1
+    return
 }
 
 # The bug was that stopping in _start would crash.

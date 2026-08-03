@@ -34,7 +34,7 @@ PerfTest::assemble {
     global srcdir subdir srcfile binfile
 
     if { [gdb_compile "$srcdir/$subdir/$srcfile" ${binfile} executable {debug}] != "" } {
-	return -1
+	return
     }
     return 0
 } {
@@ -42,7 +42,7 @@ PerfTest::assemble {
     clean_restart $::testfile
 
     if ![runto_main] {
-	return -1
+	return
     }
     return 0
 } {

@@ -78,7 +78,7 @@ set obj [standard_output_file "${testfile}-dw.o"]
 if {[build_executable_and_dwo_files "$testfile.exp" "${binfile}" {nodebug} \
 	 [list $asm_file [list nodebug split-dwo] $obj] \
 	 [list $srcfile  [list nodebug]]]} {
-    return -1
+    return
 }
 
 clean_restart $::testfile

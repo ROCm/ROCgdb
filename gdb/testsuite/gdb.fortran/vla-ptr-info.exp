@@ -20,11 +20,11 @@ require allow_fortran_tests
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
     {debug f90 quiet}] } {
-    return -1
+    return
 }
 
 if {![fortran_runto_main]} {
-    return -1
+    return
 }
 
 set real4 [fortran_real4]

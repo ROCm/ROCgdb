@@ -20,7 +20,7 @@ require allow_fortran_tests
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
      {debug f90 quiet}] } {
-    return -1
+    return
 }
 
 # Depending on the compiler being used, the type names can be printed differently.
@@ -30,7 +30,7 @@ set int [fortran_int4]
 # the debugger when accessing it.
 if {![runto [gdb_get_line_number "before-allocated"]]} {
     perror "couldn't run to breakpoint before-allocated"
-    return -1
+    return
 }
 
 gdb_test "print twov" " = \\\( ivla1 = <not allocated>, ivla2 = <not allocated> \\\)" \

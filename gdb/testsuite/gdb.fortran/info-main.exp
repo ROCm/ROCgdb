@@ -23,7 +23,7 @@ save_vars { GDBFLAGS } {
     set GDBFLAGS [string map {"-readnow" ""} "$GDBFLAGS"]
 
     if {[prepare_for_testing ${testfile}.exp ${testfile} ${srcfile} {debug f90}]} {
-	return -1
+	return
     }
 }
 
@@ -31,7 +31,7 @@ gdb_test "info main" "simple" "info main prior to start"
 
 if {![fortran_runto_main]} {
     untested "could not run to main"
-    return -1
+    return
 }
 
 gdb_test "info main" "simple" "info main post start"

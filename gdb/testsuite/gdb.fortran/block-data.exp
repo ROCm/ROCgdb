@@ -27,11 +27,11 @@ standard_testfile .f
 load_lib "fortran.exp"
 
 if {[prepare_for_testing $testfile.exp $testfile $srcfile {debug f90}]} {
-    return -1
+    return
 }
 
 if {![fortran_runto_main]} {
-    return -1
+    return
 }
 
 with_test_prefix "default values" {

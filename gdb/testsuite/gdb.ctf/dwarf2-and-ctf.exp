@@ -27,21 +27,21 @@ set opts {}
 lappend opts debug
 if { [gdb_compile $s1 ${objfile} object $opts] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 set opts {}
 lappend opts "additional_flags=-gctf"
 if { [gdb_compile $s2 ${objfile2} object $opts] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 set opts {}
 lappend opts "additional_flags=-Wl,-ctf-variables"
 if { [gdb_compile [list ${objfile} ${objfile2}] $binfile executable $opts] != "" } {
     unsupported "failed to link"
-    return -1
+    return
 }
 
 clean_restart

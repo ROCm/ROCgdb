@@ -34,11 +34,11 @@ set testfile_other $testfile-other
 set binfile_other [standard_output_file $testfile_other]
 
 if { [build_executable ${testfile}.exp ${binfile} "${srcfile}" {debug}] != 0 } {
-    return -1
+    return
 }
 
 if { [build_executable ${testfile}.exp ${binfile_other} "${srcfile_other}" {debug}] != 0 } {
-    return -1
+    return
 }
 
 proc do_test {} {

@@ -32,13 +32,13 @@ set lib_opts [gdb_target_symbol_prefix_flags]
 if { [gdb_compile_shlib $libsrc1 $lib_sl1 $lib_opts] != ""
      || [gdb_compile_shlib $libsrc2 $lib_sl2 $lib_opts] != ""} {
     untested "failed to compile shared library"
-    return -1
+    return
 }
 
 set exec_opts [list debug shlib=$lib_sl1 shlib_load]
 if { [gdb_compile $srcdir/$subdir/$srcfile $binfile executable $exec_opts] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart $executable
@@ -47,12 +47,12 @@ gdb_load_shlib $lib_sl1
 gdb_load_shlib $lib_sl2
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "current target does not support trace"
-    return -1
+    return
 }
 
 # Verify pending tracepoint is resolved to running to main.
@@ -180,7 +180,7 @@ proc pending_tracepoint_resolved_during_trace { trace_type } \
     # Start with a fresh gdb.
     clean_restart $executable
     if {![runto_main]} {
-	return -1
+	return
     }
 
     gdb_test_multiple "$trace_type set_point2" "set pending tracepoint on set_point2" {
@@ -248,7 +248,7 @@ proc pending_tracepoint_installed_during_trace { trace_type } \
     # Start with a fresh gdb.
     clean_restart $executable
     if {![runto_main]} {
-	return -1
+	return
     }
 
     gdb_test "next" ".*"
@@ -321,7 +321,7 @@ proc pending_tracepoint_disconnect_during_trace { trace_type } \
     # Start with a fresh gdb.
     clean_restart $executable
     if {![runto_main]} {
-	return -1
+	return
     }
 
     gdb_test_multiple "trace pendfunc3" "set pending tracepoint on set_point2" {
@@ -368,7 +368,7 @@ proc pending_tracepoint_disconnect_after_resolved { trace_type } \
     # Start with a fresh gdb.
     clean_restart $executable
     if {![runto_main]} {
-	return -1
+	return
     }
 
     gdb_test_multiple "trace set_point2" "set pending tracepoint on set_point2" {
@@ -420,7 +420,7 @@ proc pending_tracepoint_with_action_resolved { trace_type } \
     # Start with a fresh gdb.
     clean_restart $executable
     if {![runto_main]} {
-	return -1
+	return
     }
 
     gdb_test_multiple "$trace_type set_point2" "set pending tracepoint on set_point2" {
@@ -502,7 +502,7 @@ lappend exec_opts "shlib=$libipa"
 
 if { [gdb_compile $srcdir/$subdir/$srcfile $binfile executable $exec_opts] != "" } {
     untested "failed to compile with in-process agent library"
-    return -1
+    return
 }
 
 pending_tracepoint_resolved "ftrace"

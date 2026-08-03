@@ -38,11 +38,11 @@ standard_testfile inline-small-func.c inline-small-func.h
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile] {debug optimize=-O1}] } {
-    return -1
+    return
 }
 
 if { ![runto_main] } {
-    return -1
+    return
 }
 
 # Delete all breakpoints, watchpoints, tracepoints, and catchpoints so that

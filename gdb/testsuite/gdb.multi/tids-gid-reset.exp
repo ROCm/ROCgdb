@@ -24,7 +24,7 @@ standard_testfile
 
 if { [build_executable "failed to prepare" ${testfile} ${srcfile} \
 	  {pthreads debug}] } {
-    return -1
+    return
 }
 
 with_test_prefix "single-inferior" {
@@ -32,7 +32,7 @@ with_test_prefix "single-inferior" {
 	clean_restart ${testfile}
 
 	if {![runto_main]} {
-	    return -1
+	    return
 	}
 
 	gdb_test "info threads -gid" "\\* 1 +1 +.*"
@@ -41,7 +41,7 @@ with_test_prefix "single-inferior" {
     with_test_prefix "restart" {
 	gdb_continue_to_end
 	if {![runto_main]} {
-	    return -1
+	    return
 	}
     }
 
@@ -82,7 +82,7 @@ with_test_prefix "multi-inferior" {
     with_test_prefix "restart" {
 	gdb_continue_to_end
 	if {![runto_main]} {
-	    return -1
+	    return
 	}
     }
 

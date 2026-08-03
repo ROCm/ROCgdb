@@ -62,7 +62,7 @@ if { $march2 != "" } {
 
 if { [build_executable "failed to prepare" ${exec1} "${srcfile1}" \
 	  [list debug additional_flags=${march1}]] } {
-    return -1
+    return
 }
 
 set options [list debug]
@@ -72,7 +72,7 @@ if {[istarget "aarch64*-*-*"]} {
 	lappend options "compiler=[arm_cc_for_target]"
     } else {
 	unsupported "ARM compiler is not known"
-	return -1
+	return
     }
 } else {
     lappend options "additional_flags=${march2}"
@@ -80,7 +80,7 @@ if {[istarget "aarch64*-*-*"]} {
 
 if { [build_executable "failed to prepare" ${exec2} "${srcfile2}" \
 	 $options]} {
-    return -1
+    return
 }
 
 # Start inferior 1

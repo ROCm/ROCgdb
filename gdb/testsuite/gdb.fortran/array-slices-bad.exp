@@ -22,12 +22,12 @@ load_lib fortran.exp
 
 if {[prepare_for_testing ${testfile}.exp ${testfile} ${srcfile} \
 	 {debug f90}]} {
-    return -1
+    return
 }
 
 if {![runto [gdb_get_line_number "First Breakpoint"]]} {
     perror "couldn't run to breakpoint First Breakpoint"
-    return -1
+    return
 }
 
 # Avoid libc symbols, in particular the 'array' type.

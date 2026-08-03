@@ -22,16 +22,16 @@ require gdb_trace_common_supports_arch
 
 if {[prepare_for_testing "failed to prepare" $executable $srcfile \
 	 [list debug]]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "target does not support trace"
-    return -1
+    return
 }
 
 set tstatus_output ""
