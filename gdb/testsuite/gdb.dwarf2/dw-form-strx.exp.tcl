@@ -54,10 +54,16 @@ Dwarf::assemble $asm_file {
     }
 }
 
-if { [prepare_for_testing "failed to prepare" ${testfile} \
+if { [build_executable "failed to prepare" ${testfile} \
 	  [list $srcfile $asm_file] {nodebug}] } {
     return
 }
+
+clean_restart
+
+gdb_test_no_output "maint set dwarf synchronous on"
+
+gdb_load $binfile
 
 # Let includers know prepare_for_testing was done, without having to check
 # source return status.

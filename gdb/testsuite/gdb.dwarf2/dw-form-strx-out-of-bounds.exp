@@ -34,8 +34,7 @@ set re_dwarf_error \
 set re_in_module \
     {in module [^\r\n]+}
 set re_in_module [string_to_regexp {[}]$re_in_module[string_to_regexp {]}]
+gdb_assert {[regexp "$re_dwarf_error $re_in_module" $gdb_file_cmd_msg]}
+
 set re_no_symbol [string_to_regexp {No symbol "global_var" in current context.}]
-gdb_test "ptype global_var" \
-    [multi_line \
-	 "$re_dwarf_error $re_in_module"\
-	 $re_no_symbol]
+gdb_test "ptype global_var" $re_no_symbol
