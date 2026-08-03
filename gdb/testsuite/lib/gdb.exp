@@ -6177,6 +6177,19 @@ proc gdb_compile {source dest type options} {
 	set omp_early_flags "-fopenmp -fopenmp-targets=amdgcn-amd-amdhsa\
 			     -mllvm=-amdgpu-spill-cfi-saved-regs"
 
+	# The benign __keep_alive warning pruned below is emitted by the
+	# device ld.lld at link time.  Newer lld (e.g. LLVM 23) defaults
+	# --color-diagnostics to "auto" and colorizes when spawned under a
+	# pty (as DejaGnu does), inserting ANSI escapes between "ld.lld:"
+	# and "warning:" that would stop the anchored regexp from matching.
+	# Tell the offload (device) linker not to colorize; only on the
+	# link step, so the compile step does not warn about an unused
+	# argument.  -Wl, would only reach the host linker, not the device
+	# ld.lld that emits this warning.
+	if {$type eq "executable"} {
+	    append omp_early_flags " -Xoffload-linker --no-color-diagnostics"
+	}
+
 	# amdflang does not understand some clang-only diagnostic
 	# flags, so only pass them on the C/C++ (non-f90) paths.
 	if {[lsearch -exact $options f90] == -1} {
