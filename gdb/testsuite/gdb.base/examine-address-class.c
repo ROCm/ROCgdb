@@ -18,6 +18,6 @@
 int
 main (void)
 {
-  int var = 42;
+  int var = 0x002a002a;
   return 0; /* break-here.  */
 }
