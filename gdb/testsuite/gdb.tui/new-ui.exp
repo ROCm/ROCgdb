@@ -15,6 +15,8 @@
 
 # Test TUI in combination with a new UI.
 
+require allow_tui_tests
+
 tuiterm_env
 
 # Creating a pty is done on build, and we use it with gdb on host, so we need
