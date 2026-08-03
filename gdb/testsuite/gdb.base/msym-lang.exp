@@ -20,4 +20,11 @@ if {[prepare_for_testing "failed to prepare" $testfile [list $srcfile $srcfile2]
     return
 }
 
-gdb_test "info func foo" ".* foo\\(\\).* foo\\(\\).*"
+# The optional leading dot is for ppc64 v1 ABI function descriptors.
+set re_foo [quotemeta {@/[.]?/foo()}]
+
+gdb_test "info func foo" \
+    [multi_line \
+	 "Non-debugging symbols:" \
+	 "$hex  $re_foo" \
+	 "$hex  $re_foo"]
