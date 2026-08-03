@@ -367,8 +367,6 @@ type *
 make_pointer_type (type *type)
 {
   struct type *ntype;	/* New type */
-  struct type *chain;
-
   ntype = type->pointer_type;
 
   if (ntype)
@@ -387,14 +385,6 @@ make_pointer_type (type *type)
      and addresses (CORE_ADDRs) using gdbarch_pointer_to_address and
      gdbarch_address_to_pointer.  */
   ntype->set_is_unsigned (true);
-
-  /* Update the length of all the other variants of this type.  */
-  chain = ntype->chain;
-  while (chain != ntype)
-    {
-      chain->set_length (ntype->length ());
-      chain = chain->chain;
-    }
 
   return ntype;
 }
@@ -415,7 +405,6 @@ make_reference_type (type *type, type_code refcode)
 {
   struct type *ntype;	/* New type */
   struct type **reftype;
-  struct type *chain;
 
   gdb_assert (refcode == TYPE_CODE_REF || refcode == TYPE_CODE_RVALUE_REF);
 
@@ -438,16 +427,6 @@ make_reference_type (type *type, type_code refcode)
 
   ntype->set_length (gdbarch_ptr_bit (type->arch ()) / TARGET_CHAR_BIT);
   ntype->set_code (refcode);
-
-  *reftype = ntype;
-
-  /* Update the length of all the other variants of this type.  */
-  chain = ntype->chain;
-  while (chain != ntype)
-    {
-      chain->set_length (ntype->length ());
-      chain = chain->chain;
-    }
 
   return ntype;
 }
