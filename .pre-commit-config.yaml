@@ -98,7 +98,7 @@ repos:
 
   # Tclint hooks.
   - repo: https://github.com/nmoroze/tclint
-    rev: v0.8.0
+    rev: v0.9.0
     hooks:
       - id: tclint
         args: [--trust-plugins]
