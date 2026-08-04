@@ -1148,9 +1148,19 @@ non-default address spaces."));
 
 /* See arch-utils.h.  */
 arch_addr_space_id
-default_dwarf_address_space_to_address_space_id (LONGEST dwarf_addr_space)
+default_address_space_dwarf_to_id (gdbarch *gdbarch,
+				   ULONGEST dwarf_addr_space)
 {
-  return (arch_addr_space_id) dwarf_addr_space;
+  if (gdbarch_address_spaces_p (gdbarch))
+    {
+      /* By default, assume 1-1 mapping.  */
+      for (const auto &address_space : gdbarch_address_spaces (gdbarch))
+	if (address_space.id == dwarf_addr_space)
+	  return (arch_addr_space_id) dwarf_addr_space;
+    }
+
+  error (_("DWARF address space id (%s) is not recognized by "
+	   "the architecture."), pulongest (dwarf_addr_space));
 }
 
 /* See arch-utils.h.  */
