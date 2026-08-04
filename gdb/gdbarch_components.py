@@ -915,16 +915,15 @@ is added and should not be pushed upstream.
     invalid=False,
 )
 
-Function(
+Method(
     comment="""
-Converts DWARF address space number to address space id.
-TODO: This hook is a quick fix until a proper address space support
-is added and should not be pushed upstream.
+Given the DWARF identifier for an architecture-specific address space,
+return the id of that address space.
 """,
     type="arch_addr_space_id",
-    name="dwarf_address_space_to_address_space_id",
-    params=[("LONGEST", "dwarf_addr_space")],
-    postdefault="default_dwarf_address_space_to_address_space_id",
+    name="address_space_dwarf_to_id",
+    params=[("ULONGEST", "dwarf_addr_space")],
+    postdefault="default_address_space_dwarf_to_id",
     invalid=False,
 )
 
