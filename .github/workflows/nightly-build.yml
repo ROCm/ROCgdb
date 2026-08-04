@@ -1,0 +1,53 @@
+name: Nightly ROCgdb Build
+
+on:
+  schedule:
+    # Run at 2:00 AM UTC every night (avoid :00 and :30 to reduce API load)
+    - cron: '7 2 * * *'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build (default: master)'
+        required: false
+        default: 'master'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  nightly-build-linux:
+    name: Nightly Build Linux
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        amdgpu_family: [gfx94X-dcgpu]
+    uses: ./.github/workflows/therock-ci-linux.yml
+    secrets: inherit
+    with:
+      amdgpu_families: ${{ matrix.amdgpu_family }}
+      artifact_group: nightly-${{ matrix.amdgpu_family }}
+      rocgdb_ref: ${{ inputs.branch || 'master' }}
+      extra_cmake_options: -DTHEROCK_ROCGDB_UPSTREAM_BUILD=ON
+
+  nightly_build_summary:
+    name: Nightly Build Summary
+    if: always()
+    needs:
+      - nightly-build-linux
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Output failed jobs
+        run: |
+          echo '${{ toJson(needs) }}'
+          FAILED_JOBS="$(echo '${{ toJson(needs) }}' \
+            | jq --raw-output \
+            'map_values(select(.result!="success" and .result!="skipped")) | keys | join(",")' \
+          )"
+          if [[ "${FAILED_JOBS}" != "" ]]; then
+            echo "The following jobs failed: ${FAILED_JOBS}"
+            exit 1
+          fi
