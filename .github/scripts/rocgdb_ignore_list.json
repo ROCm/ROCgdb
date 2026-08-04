@@ -1,10 +1,5 @@
 {
-  "Generic": [
-    "gdb.rocm/deep-stack.exp",
-    "gdb.rocm/lane-execution.exp",
-    "gdb.rocm/multi-inferior-fork.exp",
-    "gdb.rocm/multi-inferior-gpu.exp"
-  ],
+  "Generic": [],
   "GCC": [],
   "LLVM": [
     "gdb.dwarf2/dw2-case-insensitive.exp",
