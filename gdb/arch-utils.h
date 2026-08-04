@@ -422,9 +422,9 @@ extern const char *gdbarch_address_space_id_to_name
   (struct gdbarch *gdbarch, arch_addr_space_id addr_space_id);
 
 /* Default implementation of
-   gdbarch_dwarf_address_space_to_address_space_id.  */
-extern arch_addr_space_id default_dwarf_address_space_to_address_space_id
-  (LONGEST dwarf_addr_space);
+   gdbarch_address_space_dwarf_to_id.  */
+extern arch_addr_space_id default_address_space_dwarf_to_id
+(gdbarch *gdbarch, ULONGEST dwarf_addr_space);
 
 /* TODO: Following default address space hooks are a quick fix until a proper
 	 address space support is added and should not be pushed upstream.  */
