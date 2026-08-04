@@ -12,6 +12,14 @@ on:
         required: true
       artifact_run_id:
         type: string
+      test_options:
+        type: string
+        description: 'Options appended to each component test_script (e.g., "--parallel", "--optimization=-O3", "--check-type check-read1").'
+        default: ''
+      projects_to_test:
+        type: string
+        description: 'Components to build the test matrix for.'
+        default: 'rocgdb-cpu,rocgdb-gpu'
   workflow_dispatch:
     inputs:
       amdgpu_families:
@@ -23,6 +31,14 @@ on:
         required: true
       artifact_run_id:
         type: string
+      test_options:
+        type: string
+        description: 'Options appended to each component test_script (e.g., "--parallel", "--optimization=-O3", "--check-type check-read1").'
+        default: ''
+      projects_to_test:
+        type: string
+        description: 'Components to build the test matrix for.'
+        default: 'rocgdb-cpu,rocgdb-gpu'
 
 permissions:
   contents: read
@@ -59,7 +75,7 @@ jobs:
 
       - name: Configure test matrix
         env:
-          PROJECTS_TO_TEST: "rocgdb-cpu,rocgdb-gpu"
+          PROJECTS_TO_TEST: ${{ inputs.projects_to_test }}
           AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
           CI_CONFIG_PATH: ci-config
         id: configure
@@ -68,16 +84,22 @@ jobs:
       - name: Override rocgdb test_script to use artifact-installed script
         # TheRock's fetch_test_configurations.py points test_rocgdb.py at its own
         # build_tools copy. Rewrite to the script installed in the artifacts at
-        # OUTPUT_ARTIFACTS_DIR/tests/rocgdb/test_rocgdb.py.
+        # OUTPUT_ARTIFACTS_DIR/tests/rocgdb/test_rocgdb.py, then append any caller
+        # supplied test_options to each component's test_script.
         id: patch-scripts
+        env:
+          TEST_OPTIONS: ${{ inputs.test_options }}
         run: |
           components='${{ steps.configure.outputs.components }}'
           script_path="${{ env.OUTPUT_ARTIFACTS_DIR }}/tests/rocgdb/test_rocgdb.py"
-          updated=$(echo "$components" | jq -c --arg s "$script_path" '
+          updated=$(echo "$components" | jq -c --arg s "$script_path" --arg opts "$TEST_OPTIONS" '
             map(
-              .test_script |= gsub(
-                "build_tools/github_actions/test_executable_scripts/test_rocgdb\\.py";
-                $s
+              .test_script |= (
+                gsub(
+                  "build_tools/github_actions/test_executable_scripts/test_rocgdb\\.py";
+                  $s
+                )
+                | if $opts != "" then . + " " + $opts else . end
               )
             )
           ')
