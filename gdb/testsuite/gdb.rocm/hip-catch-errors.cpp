@@ -26,7 +26,7 @@ static bool gen_ref = false;
 
 struct hiperr_params_ref
 {
-  int no;
+  volatile int no;  /* Prevent the optimizer from keeping this in a register.  */
   const char *name;
   const char *str;
 
@@ -130,7 +130,7 @@ main (int argc, const char **argv)
       hip_set_device ();
       hip_get_device ();
       hip_launch_kernel ();
-      /* Break after reference initialization.  */
+      asm volatile ("" ::: "memory"); /* Break after reference initialization.  */
     }
   else if (test == "one")
     hip_set_device ();
