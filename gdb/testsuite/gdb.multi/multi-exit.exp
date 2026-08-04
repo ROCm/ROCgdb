@@ -29,7 +29,7 @@ require allow_multi_inferior_tests
 require !use_gdb_stub
 
 if {[build_executable "failed to prepare" $testfile $srcfile]} {
-    return -1
+    return
 }
 
 # We are testing GDB's ability to stop all threads.
@@ -70,7 +70,7 @@ set NUM_INFS 10
 
 for {set i 1} {$i <= $NUM_INFS} {incr i} {
     if {[start_inferior $i] < 0} {
-	return -1
+	return
     }
 }
 
@@ -92,7 +92,7 @@ for {set i 1} {$i <= $NUM_INFS} {incr i} {
 	}
 
 	if {$live_inferior == ""} {
-	    return -1
+	    return
 	}
 
 	gdb_test "inferior $live_inferior" \
@@ -111,7 +111,7 @@ for {set i 1} {$i <= $NUM_INFS} {incr i} {
 	}
 
 	if {$exited_inferior == ""} {
-	    return -1
+	    return
 	}
     }
 }

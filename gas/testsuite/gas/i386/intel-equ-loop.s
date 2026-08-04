@@ -23,3 +23,9 @@
 	j=h
 	i=j+h
 	.int i
+
+	k=k+esi
+	mov [k],al
+
+	l=l+edx
+	mov [2*l+edx],al

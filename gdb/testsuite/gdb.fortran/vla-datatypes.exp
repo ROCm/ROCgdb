@@ -20,14 +20,14 @@ require allow_fortran_tests
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} \
     {debug f90 quiet}] } {
-    return -1
+    return
 }
 
 # check that all fortran standard datatypes will be
 # handled correctly when using as VLA's
 
 if {![fortran_runto_main]} {
-    return -1
+    return
 }
 
 # Depending on the compiler being used, the type names can be printed differently.

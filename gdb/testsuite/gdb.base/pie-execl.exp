@@ -16,8 +16,6 @@
 # The problem was due to amd64_skip_prologue attempting to access inferior
 # memory before the PIE (Position Independent Executable) gets relocated.
 
-global inferior_spawn_id
-global gdb_spawn_id
 
 require {istarget *-linux*}
 require {!target_info exists noargs}

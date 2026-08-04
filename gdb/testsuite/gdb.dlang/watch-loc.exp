@@ -69,13 +69,13 @@ Dwarf::assemble $asm_file {
 
 if { [prepare_for_testing "failed to prepare" ${testfile} \
 	  [list $srcfile $asm_file] {nodebug}] } {
-    return -1
+    return
 }
 
 gdb_test_no_output "set language d"
 
 if {![runto "_Dmain"]} {
-    return -1
+    return
 }
 
 # watch -l will rewrite the expression to "*(watch.tstruct *) 0x12345",

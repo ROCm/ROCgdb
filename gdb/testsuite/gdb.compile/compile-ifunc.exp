@@ -32,11 +32,11 @@ with_test_prefix "nodebug" {
 
     if { [prepare_for_testing "failed to prepare" "$testfile-nodebug" \
 	      $srcfile $flags] } {
-	return -1
+	return
     }
 
     if {![runto_main]} {
-	return -1
+	return
     }
 
     # This binary has no debug information, so force the language to C in case
@@ -46,7 +46,7 @@ with_test_prefix "nodebug" {
     gdb_test_no_output "set language c" ""
 
     if {[skip_compile_feature_untested]} {
-	return -1
+	return
     }
 
     gdb_test "compile code resultvar = gnu_ifunc (10);" \
@@ -62,11 +62,11 @@ with_test_prefix "debug" {
 
     if { [prepare_for_testing "failed to prepare" "$testfile-debug" \
 	      $srcfile "debug $flags"] } {
-	return -1
+	return
     }
 
     if {![runto_main]} {
-	return -1
+	return
     }
     # gnu_ifunc (10): error: too many arguments to function 'gnu_ifunc'
     gdb_test "compile code resultvar = gnu_ifunc_alias (10);" \

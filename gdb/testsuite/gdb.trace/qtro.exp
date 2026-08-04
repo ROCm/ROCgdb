@@ -27,18 +27,18 @@ require gdb_protocol_is_remote
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug nopie}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # Check whether the target supports tracepoints.
 
 if {![gdb_target_supports_trace]} {
     unsupported "current target does not support trace"
-    return -1
+    return
 }
 
 # Run a trace session, stop it, and then inspect the resulting trace
@@ -91,13 +91,13 @@ gdb_test_multiple "show remote traceframe-info-packet" $test {
     }
 }
 if { $traceframe_info_supported == -1 } {
-    return -1
+    return
 }
 
 # Check whether we're testing with our own GDBserver.
 set is_gdbserver [target_is_gdbserver]
 if { $is_gdbserver == -1 } {
-    return -1
+    return
 }
 
 # Now disassemble (IOW, read from read-only memory) while inspecting a

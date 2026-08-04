@@ -34,7 +34,7 @@ if { $srcfile3 != "" } {
 lappend srcfilesoptions $srcfile4 "nodebug"
 if { [build_executable_from_specs $testfile.exp $testfile $options \
 	  {*}$srcfilesoptions] } {
-    return -1
+    return
 }
 
 clean_restart ${testfile}
@@ -55,11 +55,11 @@ gdb_test "compile file -r ${srcdir}/${subdir}/${testfile}-mod.c" \
     "test compile file command without running inferior"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {[skip_compile_feature_untested]} {
-    return -1
+    return
 }
 
 #
@@ -386,14 +386,14 @@ set binfile [standard_output_file $testfile]
 if { [gdb_compile_shlib ${srcdir}/${subdir}/${srcfile2} $libbin {debug}] != ""
      || [gdb_compile ${srcdir}/${subdir}/${srcfile} $binfile executable \
 	     [list debug shlib=$libbin]] == -1 } {
-    return -1
+    return
 }
 
 clean_restart $testfile
 gdb_load_shlib $libbin
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_test_no_output "compile code shlib_func ();" "call shared library function"

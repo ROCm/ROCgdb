@@ -152,7 +152,7 @@ proc test_linefeed_scroll { } {
 	"ijklmnop"
 	"qrstuvwx"
 	"yz01234 "
-	"yz01234 "
+	"        "
     } 0 3
     Term::dump_screen
 }

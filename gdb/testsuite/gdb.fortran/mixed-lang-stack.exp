@@ -32,7 +32,7 @@ if {[prepare_for_testing_full "failed to prepare" \
 	      $srcfile {debug} \
 	      $srcfile2 {debug c++ additional_flags=-std=c++11} \
 	      $srcfile3 {debug f90}]]} {
-    return -1
+    return
 }
 
 set have_index [exec_has_index_section $binfile]

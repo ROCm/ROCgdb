@@ -27,16 +27,16 @@ require gdb_trace_common_supports_arch
 
 if {[prepare_for_testing "failed to prepare" $executable $srcfile \
 	 [list debug $additional_flags]]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "target does not support trace"
-    return -1
+    return
 }
 
 require allow_in_proc_agent
@@ -50,7 +50,7 @@ set remote_libipa [gdb_load_shlib $libipa]
 if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile \
 	  executable [list debug nopie $additional_flags shlib=$libipa] ] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 clean_restart ${executable}
 

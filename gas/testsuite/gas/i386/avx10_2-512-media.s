@@ -1,7 +1,9 @@
 # Check 32bit AVX10.2/512 instructions
 
+	.ifndef AVX10_V1_AUX
 	.arch generic32
 	.arch .avx10.2/512
+	.endif
 	.text
 _start:
 	.irp m, ss, su, uu

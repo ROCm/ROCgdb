@@ -21,6 +21,8 @@
 
 static volatile pthread_t main_thread;
 
+static volatile int wait_for_exit = 1;
+
 static void *
 start (void *arg)
 {
@@ -28,6 +30,8 @@ start (void *arg)
 
   i = pthread_join (main_thread, NULL);
   assert (i == 0);
+  while (wait_for_exit)
+    usleep (100 * 1000);
 
   sleep (10);  /* break-here */
   return arg;

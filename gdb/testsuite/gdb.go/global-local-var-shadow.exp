@@ -24,13 +24,13 @@ require allow_go_tests support_go_compile
 standard_testfile .go
 
 if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile} {debug go}] } {
-    return -1
+    return
 }
 
 set bp_location1 [gdb_get_line_number "set breakpoint 1 here"]
 
 if { [go_runto_main] < 0 } {
-    return -1
+    return
 }
 
 gdb_test_multiple "print st" "print global var st" {

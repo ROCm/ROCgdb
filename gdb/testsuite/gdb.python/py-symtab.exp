@@ -32,7 +32,6 @@ if {![runto_main]} {
 
 set debug_types [debug_types]
 
-global hex decimal
 
 # Setup and get the symbol table.
 set line_no [gdb_get_line_number "Block break here."]

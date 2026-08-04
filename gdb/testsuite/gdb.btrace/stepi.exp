@@ -38,18 +38,17 @@ if {[info exists COMPILE]} {
 	}
 } else {
     unsupported "target architecture not supported"
-    return -1
+    return
 }
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
-global gdb_prompt
 
 proc check_replay_at { insn } {
   gdb_test "info record" [multi_line \

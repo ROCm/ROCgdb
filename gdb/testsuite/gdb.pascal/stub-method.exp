@@ -21,7 +21,7 @@ load_lib "pascal.exp"
 standard_testfile .pas
 
 if {[gdb_compile_pascal "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable [list debug ]] != "" } {
-  return -1
+  return
 }
 
 # If this fails, the failure will have already been recorded.

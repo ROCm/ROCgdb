@@ -16,6 +16,8 @@
 # Print std::string::npos using c++ pretty-printer.  Todo: convert this to a
 # DWARF assembly test-case, such that the regression test also works for clang.
 
+require allow_python_tests
+
 standard_testfile .cc
 
 set opts {}

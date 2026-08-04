@@ -310,6 +310,8 @@ tui_source_window_base::refresh_window ()
 {
   TUI_SCOPED_DEBUG_START_END ("window `%s`", name ());
 
+  gdb_assert (handle != nullptr);
+
   /* tui_win_info::refresh_window would draw the empty background window to
      the screen, potentially creating a flicker.  */
   wnoutrefresh (handle.get ());

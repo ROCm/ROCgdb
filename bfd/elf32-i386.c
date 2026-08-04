@@ -331,6 +331,10 @@ elf_i386_reloc_type_lookup (bfd *abfd,
       TRACE ("BFD_RELOC_386_GOT32X");
       return &elf_howto_table[R_386_GOT32X - R_386_tls_offset];
 
+    case BFD_RELOC_386_PC32_TO_PLT32:
+      TRACE ("BFD_RELOC_X86_PC32_TO_PLT32");
+      return &elf_howto_table[R_386_PLT32];
+
     case BFD_RELOC_VTABLE_INHERIT:
       TRACE ("BFD_RELOC_VTABLE_INHERIT");
       return &elf_howto_table[R_386_GNU_VTINHERIT - R_386_vt_offset];

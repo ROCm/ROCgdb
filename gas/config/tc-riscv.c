@@ -1614,6 +1614,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	case 't': USE_BITS (OP_MASK_RS2, OP_SH_RS2); break;
 	case 'R': /* RS3, floating point.  */
 	case 'r': USE_BITS (OP_MASK_RS3, OP_SH_RS3); break;
+	case 'M':
 	case 'm': USE_BITS (OP_MASK_RM, OP_SH_RM); break;
 	case 'E': USE_BITS (OP_MASK_CSR, OP_SH_CSR); break;
 	case 'P': USE_BITS (OP_MASK_PRED, OP_SH_PRED); break;
@@ -1633,6 +1634,7 @@ validate_riscv_insn (const struct riscv_opcode *opc, int length)
 	  switch (*++oparg)
 	    {
 	    case '7': USE_BITS (OP_MASK_FUNCT7, OP_SH_FUNCT7); break;
+	    case '6': USE_BITS (OP_MASK_FUNCT6, OP_SH_FUNCT6); break;
 	    case '3': USE_BITS (OP_MASK_FUNCT3, OP_SH_FUNCT3); break;
 	    case '2': USE_BITS (OP_MASK_FUNCT2, OP_SH_FUNCT2); break;
 	    default:
@@ -3002,6 +3004,18 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
       *imm_reloc = BFD_RELOC_UNUSED;
       p = percent_op_null;
 
+#define RV32_EVEN_CHECK(form, rclass, regno)     \
+  (!(ip->insn_mo->pinfo & INSN_RV32_EVEN_##form) \
+   || xlen != 32                                 \
+   || (rclass) != RCLASS_GPR                     \
+   || !((regno) & 1))
+
+#define RV64_EVEN_CHECK(form, rclass, regno)     \
+  (!(ip->insn_mo->pinfo & INSN_RV64_EVEN_##form) \
+   || xlen > 64                                  \
+   || (rclass) != RCLASS_GPR                     \
+   || !((regno) & (xlen == 32 ? 3 : 1)))
+
       for (oparg = insn->args;; ++oparg)
 	{
 	  opargStart = oparg;
@@ -3009,6 +3023,8 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	    ++asarg;
 	  switch (*oparg)
 	    {
+	      enum reg_class rclass;
+
 	    case '\0': /* End of args.  */
 	      if (insn->match_func && !insn->match_func (insn, ip->insn_opcode))
 		break;
@@ -3037,16 +3053,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 			*(asargStart - 1) = save_c;
 		      as_warn (_("read-only CSR is written `%s'"), str);
 		      insn_with_csr = false;
-		    }
-
-		  /* The (segmant) load and store with EEW 64 cannot be used
-		     when zve32x is enabled.  */
-		  if (ip->insn_mo->pinfo & INSN_V_EEW64
-		      && riscv_subset_supports (&riscv_rps_as, "zve32x")
-		      && !riscv_subset_supports (&riscv_rps_as, "zve64x"))
-		    {
-		      error.msg = _("illegal opcode for zve32x");
-		      break;
 		    }
 		}
 	      if (*asarg != '\0')
@@ -3610,7 +3616,17 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		}
 	      continue;
 
-	    case 'm': /* Rounding mode.  */
+	    case 'm': /* Optional rounding mode.  */
+	      if (*asarg == '\0')
+		{
+		  INSERT_OPERAND (RM, *ip, OP_MASK_RM);
+		  continue;
+		}
+	      if (*asarg != ',')
+		break;
+	      ++asarg;
+	      /* Fall through. */
+	    case 'M': /* Rounding mode.  */
 	      if (arg_lookup (&asarg, riscv_rm,
 			      ARRAY_SIZE (riscv_rm), &regno))
 		{
@@ -3668,32 +3684,44 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 	    case 'T': /* Floating point RS2.  */
 	    case 'U': /* Floating point RS1 and RS2.  */
 	    case 'R': /* Floating point RS3.  */
-	      if (reg_lookup (&asarg,
-			      (riscv_subset_supports (&riscv_rps_as, "zfinx")
-			      ? RCLASS_GPR : RCLASS_FPR), &regno))
+	      rclass = riscv_subset_supports (&riscv_rps_as, "zfinx")
+		       ? RCLASS_GPR : RCLASS_FPR;
+	      if (reg_lookup (&asarg, rclass, &regno))
 		{
 		  char c = *oparg;
 		  if (is_whitespace (*asarg))
 		    ++asarg;
+
 		  switch (c)
 		    {
 		    case 'D':
+		      if (!RV32_EVEN_CHECK (D, rclass, regno)
+			  || !RV64_EVEN_CHECK (D, rclass, regno))
+			break;
 		      INSERT_OPERAND (RD, *ip, regno);
-		      break;
+		      continue;
 		    case 'S':
+		      if (!RV32_EVEN_CHECK (S, rclass, regno)
+			  || !RV64_EVEN_CHECK (S, rclass, regno))
+			break;
 		      INSERT_OPERAND (RS1, *ip, regno);
-		      break;
+		      continue;
 		    case 'U':
 		      INSERT_OPERAND (RS1, *ip, regno);
 		      /* Fall through.  */
 		    case 'T':
+		      if (!RV32_EVEN_CHECK (T, rclass, regno)
+			  || !RV64_EVEN_CHECK (T, rclass, regno))
+			break;
 		      INSERT_OPERAND (RS2, *ip, regno);
-		      break;
+		      continue;
 		    case 'R':
+		      if (!RV32_EVEN_CHECK (R, rclass, regno)
+			  || !RV64_EVEN_CHECK (R, rclass, regno))
+			break;
 		      INSERT_OPERAND (RS3, *ip, regno);
-		      break;
+		      continue;
 		    }
-		  continue;
 		}
 	      break;
 
@@ -3866,6 +3894,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 		{
 		case 7:
 		  INSERT_OPERAND (FUNCT7, *ip, imm_expr->X_add_number);
+		  break;
+
+		case 6:
+		  INSERT_OPERAND (FUNCT6, *ip, imm_expr->X_add_number);
 		  break;
 
 		case 3:
@@ -4524,6 +4556,9 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
       insn_with_csr = false;
     }
 
+#undef RV32_EVEN_CHECK
+#undef RV64_EVEN_CHECK
+
  out:
   /* Restore the character we might have clobbered above.  */
   if (save_c)
@@ -4615,6 +4650,18 @@ riscv_ip_hardcode (char *str,
   return NULL;
 }
 
+/* The architecture and privileged elf attributes should be set before
+   assembling.  */
+static bool
+start_assembly (void)
+{
+  start_assemble = true;
+
+  riscv_set_abi_by_arch ();
+
+  return riscv_set_default_priv_spec (NULL);
+}
+
 void
 md_assemble (char *str)
 {
@@ -4622,16 +4669,8 @@ md_assemble (char *str)
   expressionS imm_expr;
   bfd_reloc_code_real_type imm_reloc = BFD_RELOC_UNUSED;
 
-  /* The architecture and privileged elf attributes should be set
-     before assembling.  */
-  if (!start_assemble)
-    {
-      start_assemble = true;
-
-      riscv_set_abi_by_arch ();
-      if (!riscv_set_default_priv_spec (NULL))
-       return;
-    }
+  if (!start_assemble && !start_assembly())
+    return;
 
   riscv_mapping_state (MAP_INSN, 0, false/* fr_align_code */);
 
@@ -5840,6 +5879,9 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
   bfd_reloc_code_real_type imm_reloc = BFD_RELOC_UNUSED;
   char save_c;
 
+  if (!start_assemble && !start_assembly())
+    return;
+
   while (!is_end_of_stmt (*input_line_pointer))
     ++input_line_pointer;
 
@@ -6063,14 +6105,13 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
 {
   obj_attr_tag_t tag = obj_attr_process_attribute (OBJ_ATTR_PROC);
   unsigned old_xlen;
-  obj_attribute *attr;
+  const obj_attribute *attr = elf_known_obj_attributes_proc (stdoutput);
 
   explicit_attr = true;
   switch (tag)
     {
     case Tag_RISCV_arch:
       old_xlen = xlen;
-      attr = elf_known_obj_attributes_proc (stdoutput);
       if (!start_assemble)
 	riscv_set_arch (attr[Tag_RISCV_arch].s);
       else
@@ -6094,6 +6135,18 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
       if (start_assemble)
        as_fatal (_("privileged elf attributes must be set before "
 		   "any instructions"));
+      break;
+
+    case Tag_RISCV_stack_align:
+      if (!attr[Tag_RISCV_stack_align].i
+	  || (attr[Tag_RISCV_stack_align].i &
+	      (attr[Tag_RISCV_stack_align].i - 1)))
+	as_warn (_("`stack_align' attribute with non-power-of-2 value"));
+      break;
+
+    case Tag_RISCV_unaligned_access:
+      if (attr[Tag_RISCV_unaligned_access].i > 1)
+	as_warn (_("`unaligned_access' attribute with non-boolean value"));
       break;
 
     default:

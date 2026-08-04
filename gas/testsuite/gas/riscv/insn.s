@@ -56,6 +56,24 @@ target:
 
 	.insn r  OP_V, 0, 1, x1, x3, x2
 
+	.option push
+	.option arch, +v,+zvksh			# the latter only for disassembly
+	.insn ivv OP_V, 0x0b, v3, v2, v1, v0.t
+	.insn fvv OP_V, 0x06, v3, v2, v1, v0.t
+	.insn fvv OP_V, 0x3f, v3, v1, v2, v0.t
+	.insn fvv OP_V, 0x10, f1, v2, v0	# last operand is opcode
+	.insn mvv OP_V, 0x1e, v3, v2, v1
+	.insn mvv OP_V, 0x10, x1, v2, v0	# last operand is opcode
+	.insn mvv OP_VE, 0x20, v3, v2, v1
+	.insn ivi OP_V, 0x0b, v3, v2, 1, v0.t
+	.insn ivx OP_V, 0x0b, v3, v2, x1, v0.t
+	.insn fvf OP_V, 0x06, v3, v2, f1, v0.t
+	.insn fvf OP_V, 0x3f, v3, v1, f2, v0.t
+	.insn fvf OP_V, 0x10, v1, v0, f2	# middle operand is opcode
+	.insn mvx OP_V, 0x2f, v3, v1, x2, v0.t
+	.insn mvx OP_V, 0x10, v1, v0, x2	# middle operand is opcode
+	.option pop
+
 	.insn 0x0001
 	.insn 0x00000013
 	.insn 0x0000001f

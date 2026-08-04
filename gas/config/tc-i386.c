@@ -1250,13 +1250,14 @@ static const arch_entry cpu_arch[] =
   VECARCH (sm4, SM4, ANY_SM4, reset),
   SUBARCH (pbndkb, PBNDKB, PBNDKB, false),
   VECARCH (avx10.1, AVX10_1, ANY_AVX512F, set),
+  VECARCH (avx10.1aux, AVX10_1_AUX, ANY_AVX10_1_AUX, set),
+  VECARCH (avx10.2, AVX10_2, ANY_AVX10_2, set),
   SUBARCH (user_msr, USER_MSR, USER_MSR, false),
   SUBARCH (apx_f, APX_F, ANY_APX_F, false),
   SUBARCH (apx_nci, APX_NCI, ANY_APX_NCI, false),
   SUBARCH (apx_ndd, APX_NDD, ANY_APX_NDD, false),
   SUBARCH (apx_nf, APX_NF, ANY_APX_NF, false),
   SUBARCH (apx_nci_ndd_nf, APX_NCI_NDD_NF, ANY_APX_NCI_NDD_NF, false),
-  VECARCH (avx10.2, AVX10_2, ANY_AVX10_2, set),
   SUBARCH (gmism2, GMISM2, GMISM2, false),
   SUBARCH (gmiccs, GMICCS, GMICCS, false),
   SUBARCH (msr_imm, MSR_IMM, MSR_IMM, false),
@@ -2317,14 +2318,18 @@ cpu_flags_match (const insn_template *t)
     {
       /* Dual AVX/AVX512 templates need to retain AVX512* only if we already
 	 know that EVEX encoding will be needed.  */
-      if ((any.bitfield.cpuavx || any.bitfield.cpuavx2 || any.bitfield.cpufma)
+      if ((any.bitfield.cpuavx || any.bitfield.cpuavx2
+	   || any.bitfield.cpufma || any.bitfield.cpuf16c)
 	  && (any.bitfield.cpuavx512f || any.bitfield.cpuavx512vl))
 	{
-	  if (need_evex_encoding (t))
+	  if (need_evex_encoding (t)
+	      || (any.bitfield.cpufma && !cpu_arch_flags.bitfield.cpufma)
+	      || (any.bitfield.cpuf16c && !cpu_arch_flags.bitfield.cpuf16c))
 	    {
 	      any.bitfield.cpuavx = 0;
 	      any.bitfield.cpuavx2 = 0;
 	      any.bitfield.cpufma = 0;
+	      any.bitfield.cpuf16c = 0;
 	    }
 	  /* need_evex_encoding(t) isn't reliable before operands were
 	     parsed.  */
@@ -4235,10 +4240,12 @@ install_template (const insn_template *t)
   if (t->opcode_modifier.vex && t->opcode_modifier.evex)
     {
       if ((maybe_cpu (t, CpuAVX) || maybe_cpu (t, CpuAVX2)
-	   || maybe_cpu (t, CpuFMA))
+	   || maybe_cpu (t, CpuFMA) || maybe_cpu (t, CpuF16C))
 	  && (maybe_cpu (t, CpuAVX512F) || maybe_cpu (t, CpuAVX512VL)))
 	{
-	  if (need_evex_encoding (t))
+	  if (need_evex_encoding (t)
+	      || (maybe_cpu (t, CpuFMA) && !cpu_arch_flags.bitfield.cpufma)
+	      || (maybe_cpu (t, CpuF16C) && !cpu_arch_flags.bitfield.cpuf16c))
 	    {
 	      i.tm.opcode_modifier.vex = 0;
 	      i.tm.cpu.bitfield.cpuavx512f = i.tm.cpu_any.bitfield.cpuavx512f;
@@ -5050,7 +5057,7 @@ optimize_encoding (void)
        */
       if (flag_code == CODE_64BIT && i.prefix[ADDR_PREFIX])
 	{
-	  if (!i.op[1].regs->reg_type.bitfield.word)
+	  if (!i.types[1].bitfield.word)
 	    i.tm.opcode_modifier.size = SIZE32;
 	  i.prefix[ADDR_PREFIX] = 0;
 	}
@@ -5065,15 +5072,15 @@ optimize_encoding (void)
 	      /* Don't transform a relocation to a 16-bit one.  */
 	      if (i.op[0].disps
 		  && i.op[0].disps->X_op != O_constant
-		  && i.op[1].regs->reg_type.bitfield.word)
+		  && i.types[1].bitfield.word)
 		return;
 
-	      if (!i.op[1].regs->reg_type.bitfield.qword
+	      if (!i.types[1].bitfield.qword
 		  || i.tm.opcode_modifier.size == SIZE32)
 		{
 		  i.tm.base_opcode = 0xb8;
 		  i.tm.opcode_modifier.modrm = 0;
-		  if (!i.op[1].regs->reg_type.bitfield.word)
+		  if (!i.types[1].bitfield.word)
 		    i.types[0].bitfield.imm32 = 1;
 		  else
 		    {
@@ -5097,28 +5104,28 @@ optimize_encoding (void)
 		   && i.op[0].disps->X_op != O_constant
 		   && ((!i.prefix[ADDR_PREFIX])
 		       != (flag_code == CODE_32BIT
-			   ? i.op[1].regs->reg_type.bitfield.dword
-			   : i.op[1].regs->reg_type.bitfield.word)))
+			   ? i.types[1].bitfield.dword
+			   : i.types[1].bitfield.word)))
 	    return;
 	  /* In 16-bit mode converting LEA with 16-bit addressing and a 32-bit
 	     destination is going to grow encoding size.  */
 	  else if (flag_code == CODE_16BIT
 		   && (optimize <= 1 || optimize_for_space)
 		   && !i.prefix[ADDR_PREFIX]
-		   && i.op[1].regs->reg_type.bitfield.dword)
+		   && i.types[1].bitfield.dword)
 	    return;
 	  else
 	    {
 	      i.tm.base_opcode = 0xb8;
 	      i.tm.opcode_modifier.modrm = 0;
-	      if (i.op[1].regs->reg_type.bitfield.dword)
+	      if (i.types[1].bitfield.dword)
 		i.types[0].bitfield.imm32 = 1;
 	      else
 		i.types[0].bitfield.imm16 = 1;
 
 	      if (i.op[0].disps
 		  && i.op[0].disps->X_op == O_constant
-		  && i.op[1].regs->reg_type.bitfield.dword
+		  && i.types[1].bitfield.dword
 		  /* NB: Add () to !i.prefix[ADDR_PREFIX] to silence
 		     GCC 5. */
 		  && (!i.prefix[ADDR_PREFIX]) != (flag_code == CODE_32BIT))
@@ -5156,7 +5163,7 @@ optimize_encoding (void)
 	    return;
 
 	  if (addr_reg->reg_type.bitfield.word
-	      && i.op[1].regs->reg_type.bitfield.dword)
+	      && i.types[1].bitfield.dword)
 	    {
 	      if (flag_code != CODE_32BIT)
 		return;
@@ -5167,7 +5174,7 @@ optimize_encoding (void)
 	    i.tm.base_opcode = 0x8b;
 
 	  if (addr_reg->reg_type.bitfield.dword
-	      && i.op[1].regs->reg_type.bitfield.qword)
+	      && i.types[1].bitfield.qword)
 	    i.tm.opcode_modifier.size = SIZE32;
 
 	  i.op[0].regs = addr_reg;
@@ -5461,7 +5468,7 @@ optimize_encoding (void)
 	   andl %rN, %rN  -> testl %rN, %rN
 	   orl %rN, %rN   -> testl %rN, %rN
        */
-      i.tm.base_opcode = 0x84 | (i.tm.base_opcode & 1);
+      i.tm.base_opcode = 0x84;
     }
   else if (!optimize_for_space
 	   && i.tm.base_opcode == 0xd0
@@ -5828,8 +5835,7 @@ optimize_encoding (void)
 	   && i.operands == i.reg_operands
 	   && i.tm.opcode_modifier.vex
 	   && !(i.op[0].regs->reg_flags & RegRex)
-	   && i.op[0].regs->reg_type.bitfield.xmmword
-	   && i.op[1].regs->reg_type.bitfield.xmmword
+	   && i.types[1].bitfield.xmmword
 	   && pp.encoding != encoding_vex3)
     {
       /* Optimize: -Os:
@@ -6895,7 +6901,7 @@ x86_check_tls_relocation (enum bfd_reloc_code_real r_type)
 	return x86_tls_error_no_base_reg;
       if (i.base_reg->reg_type.bitfield.instance != RegB)
 	return x86_tls_error_ebx;
-      if (!i.op[1].regs->reg_type.bitfield.dword)
+      if (!i.types[1].bitfield.dword)
 	return x86_tls_error_dest_32bit_reg_size;
       break;
 
@@ -6908,9 +6914,9 @@ x86_check_tls_relocation (enum bfd_reloc_code_real r_type)
        */
       if (i.tm.mnem_off != MN_lea)
 	return x86_tls_error_insn;
-      if (i.op[1].regs->reg_type.bitfield.instance != Accum)
+      if (i.types[1].bitfield.instance != Accum)
 	return x86_tls_error_dest_eax;
-      if (!i.op[1].regs->reg_type.bitfield.dword)
+      if (!i.types[1].bitfield.dword)
 	return x86_tls_error_dest_32bit_reg_size;
       if (i.index_reg)
 	{
@@ -6945,9 +6951,9 @@ x86_check_tls_relocation (enum bfd_reloc_code_real r_type)
 	return x86_tls_error_no_base_reg;
       if (i.base_reg->reg_type.bitfield.instance == Accum)
 	return x86_tls_error_eax;
-      if (i.op[1].regs->reg_type.bitfield.instance != Accum)
+      if (i.types[1].bitfield.instance != Accum)
 	return x86_tls_error_dest_eax;
-      if (!i.op[1].regs->reg_type.bitfield.dword)
+      if (!i.types[1].bitfield.dword)
 	return x86_tls_error_dest_32bit_reg_size;
       break;
 
@@ -6972,11 +6978,11 @@ x86_check_tls_relocation (enum bfd_reloc_code_real r_type)
 	return x86_tls_error_rip;
       if (x86_elf_abi == X86_64_ABI)
 	{
-	  if (!i.op[1].regs->reg_type.bitfield.qword)
+	  if (!i.types[1].bitfield.qword)
 	    return x86_tls_error_dest_64bit_reg_size;
 	}
-      else if (!i.op[1].regs->reg_type.bitfield.dword
-	       && !i.op[1].regs->reg_type.bitfield.qword)
+      else if (!i.types[1].bitfield.dword
+	       && !i.types[1].bitfield.qword)
 	return x86_tls_error_dest_32bit_or_64bit_reg_size;
 	  break;
 
@@ -6997,7 +7003,7 @@ x86_check_tls_relocation (enum bfd_reloc_code_real r_type)
       if (i.base_reg->reg_num != RegIP
 	  || !i.base_reg->reg_type.bitfield.qword)
 	return x86_tls_error_rip;
-      if (!i.op[1].regs->reg_type.bitfield.qword
+      if (!i.types[1].bitfield.qword
 	  || i.op[1].regs->reg_num != EDI_REG_NUM
 	  || i.op[1].regs->reg_flags)
 	return x86_tls_error_dest_rdi;
@@ -7036,7 +7042,7 @@ x86_check_tls_relocation (enum bfd_reloc_code_real r_type)
 	return x86_tls_error_sib;
       if (!i.base_reg->reg_type.bitfield.dword)
 	return x86_tls_error_base_reg_size;
-      if (!i.op[1].regs->reg_type.bitfield.dword)
+      if (!i.types[1].bitfield.dword)
 	return x86_tls_error_dest_32bit_reg_size;
       break;
 
@@ -7055,7 +7061,7 @@ x86_check_tls_relocation (enum bfd_reloc_code_real r_type)
 	return x86_tls_error_opcode;
       if (i.base_reg || i.index_reg)
 	return x86_tls_error_require_no_base_index_reg;
-      if (!i.op[1].regs->reg_type.bitfield.dword)
+      if (!i.types[1].bitfield.dword)
 	return x86_tls_error_dest_32bit_reg_size;
       break;
 
@@ -7082,11 +7088,11 @@ x86_check_tls_relocation (enum bfd_reloc_code_real r_type)
 	return x86_tls_error_rip;
       if (x86_elf_abi == X86_64_ABI)
 	{
-	  if (!i.op[i.operands - 1].regs->reg_type.bitfield.qword)
+	  if (!i.types[i.operands - 1].bitfield.qword)
 	    return x86_tls_error_dest_64bit_reg_size;
 	}
-      else if (!i.op[i.operands - 1].regs->reg_type.bitfield.dword
-	       && !i.op[i.operands - 1].regs->reg_type.bitfield.qword)
+      else if (!i.types[i.operands - 1].bitfield.dword
+	       && !i.types[i.operands - 1].bitfield.qword)
 	return x86_tls_error_dest_32bit_or_64bit_reg_size;
       break;
 
@@ -8797,11 +8803,16 @@ check_VecOperands (const insn_template *t)
      operand size is YMMword or XMMword.  Since this function runs after
      template matching, there's no need to check for YMMword/XMMword in
      the template.  */
-  cpu = cpu_flags_and (cpu_flags_from_attr (t->cpu), avx512);
+  cpu = cpu_flags_or (cpu_flags_from_attr (t->cpu),
+		      cpu_flags_from_attr (t->cpu_any));
+  cpu = cpu_flags_and (cpu, avx512);
   if (!cpu_flags_all_zero (&cpu)
-      && !is_cpu (t, CpuAVX512VL)
+      && !cpu.bitfield.cpuavx512vl
       && !cpu_arch_flags.bitfield.cpuavx512vl
-      && (!t->opcode_modifier.vex || need_evex_encoding (t)))
+      && (!t->opcode_modifier.vex || need_evex_encoding (t)
+	  /* Note: No need to check F16C here.  Those insns have distinct
+	     templates for distinct VEX.L / EVEX.L'L.  */
+	  || (maybe_cpu (t, CpuFMA) && !cpu_arch_flags.bitfield.cpufma)))
     {
       for (op = 0; op < t->operands; ++op)
 	{
@@ -9984,7 +9995,7 @@ match_template (char mnem_suffix)
 			 legacy-encoded and when no REX prefix is required.  */
 		      || (!check_EgprOperands (t + 1)
 			  && !check_Rex_required ()
-			  && !i.op[i.operands - 1].regs->reg_type.bitfield.qword)))
+			  && !i.types[i.operands - 1].bitfield.qword)))
 		{
 		  if (i.operands > 2 && match_dest_op == i.operands - 3)
 		    {
@@ -10596,7 +10607,7 @@ process_suffix (const insn_template *t)
 	  /* The address size override prefix changes the size of the
 	     first operand.  */
 	  if (flag_code == CODE_64BIT
-	      && i.op[0].regs->reg_type.bitfield.word)
+	      && i.types[0].bitfield.word)
 	    {
 	      as_bad (_("16-bit addressing unavailable for `%s'"),
 		      insn_name (&i.tm));
@@ -10604,8 +10615,8 @@ process_suffix (const insn_template *t)
 	    }
 
 	  if ((flag_code == CODE_32BIT
-	       ? i.op[0].regs->reg_type.bitfield.word
-	       : i.op[0].regs->reg_type.bitfield.dword)
+	       ? i.types[0].bitfield.word
+	       : i.types[0].bitfield.dword)
 	      && !add_prefix (ADDR_PREFIX_OPCODE))
 	    return 0;
 	}
@@ -10624,8 +10635,8 @@ process_suffix (const insn_template *t)
 	      && i.operands == 2
 	      && i.types[1].bitfield.class == Reg
 	      && (flag_code == CODE_32BIT
-		  ? i.op[1].regs->reg_type.bitfield.word
-		  : i.op[1].regs->reg_type.bitfield.dword)
+		  ? i.types[1].bitfield.word
+		  : i.types[1].bitfield.dword)
 	      && ((i.base_reg == NULL && i.index_reg == NULL)
 #ifdef OBJ_ELF
 		  || (x86_elf_abi == X86_64_X32_ABI
@@ -10653,15 +10664,15 @@ process_suffix (const insn_template *t)
 	      switch (need)
 		{
 		case need_word:
-		  if (i.op[op].regs->reg_type.bitfield.word)
+		  if (i.types[op].bitfield.word)
 		    continue;
 		  break;
 		case need_dword:
-		  if (i.op[op].regs->reg_type.bitfield.dword)
+		  if (i.types[op].bitfield.dword)
 		    continue;
 		  break;
 		case need_qword:
-		  if (i.op[op].regs->reg_type.bitfield.qword)
+		  if (i.types[op].bitfield.qword)
 		    continue;
 		  break;
 		}
@@ -13542,10 +13553,20 @@ x86_cons (expressionS *exp, int size)
 		    || got_reloc == BFD_RELOC_32_PLT_PCREL)
 		   && exp->X_op != O_symbol)
 	    {
-	      char c = *input_line_pointer;
-	      *input_line_pointer = 0;
-	      as_bad (_("invalid PLT expression `%s'"), save);
-	      *input_line_pointer = c;
+	    /* Allow directives like ".long foo@PLT - .L4".
+	       BFD_RELOC_X86_64_PC32_TO_PLT32 has an explicit addend and
+	       BFD_RELOC_386_PC32_TO_PLT32 has an implicit addend.  */
+	      if (size == 4 && exp->X_op == O_subtract)
+		got_reloc = (object_64bit
+			     ? BFD_RELOC_X86_64_PC32_TO_PLT32
+			     : BFD_RELOC_386_PC32_TO_PLT32);
+	      else
+		{
+		  char c = *input_line_pointer;
+		  *input_line_pointer = 0;
+		  as_bad (_("invalid PLT expression `%s'"), save);
+		  *input_line_pointer = c;
+		}
 	    }
 	}
     }
@@ -15607,7 +15628,7 @@ i386_att_operand (char *operand_string)
 	 Only another immediate or a GPR may precede it.  */
       if (i.mem_operands || i.reg_operands + i.imm_operands > 1
 	  || (i.reg_operands == 1
-	      && i.op[0].regs->reg_type.bitfield.class != Reg))
+	      && i.types[0].bitfield.class != Reg))
 	{
 	  as_bad (_("`%s': misplaced `%s'"),
 		  insn_name (current_templates.start), operand_string);
@@ -16768,6 +16789,12 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	   NB: Subtract the offset size only for jump instructions.  */
 	if (fixP->fx_pcrel)
 	  value = -4;
+	break;
+
+      case BFD_RELOC_386_PC32_TO_PLT32:
+	/* Set the implicit addend.  */
+	value = (seg->vma - fixP->fx_size + fixP->fx_addnumber
+		 + md_pcrel_from (fixP));
 	break;
 
       case BFD_RELOC_386_TLS_GD:
@@ -18575,6 +18602,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
     case BFD_RELOC_386_TLS_LE:
     case BFD_RELOC_386_TLS_GOTDESC:
     case BFD_RELOC_386_TLS_DESC_CALL:
+    case BFD_RELOC_386_PC32_TO_PLT32:
     case BFD_RELOC_X86_64_TLSGD:
     case BFD_RELOC_X86_64_TLSLD:
     case BFD_RELOC_X86_64_DTPOFF32:
@@ -18597,6 +18625,7 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
     case BFD_RELOC_X86_64_CODE_5_GOTPC32_TLSDESC:
     case BFD_RELOC_X86_64_CODE_6_GOTPC32_TLSDESC:
     case BFD_RELOC_X86_64_TLSDESC_CALL:
+    case BFD_RELOC_X86_64_PC32_TO_PLT32:
     case BFD_RELOC_RVA:
     case BFD_RELOC_VTABLE_ENTRY:
     case BFD_RELOC_VTABLE_INHERIT:
@@ -18740,6 +18769,13 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 	  case BFD_RELOC_X86_64_TLSDESC_CALL:
 	    rel->addend = fixp->fx_offset - fixp->fx_size;
 	    break;
+	  case BFD_RELOC_X86_64_PC32_TO_PLT32:
+	    /* This came from a directive like ".long foo@PLT - .L4".
+	       Generate R_X86_64_PLT32 with addend computed like
+	       R_X86_64_PC32 so that PLT entry is used to resolve
+	       this PC32 relocation.   */
+	    code = BFD_RELOC_32_PLT_PCREL;
+	    /* Fall through.  */
 	  default:
 	    rel->addend = (section->vma
 			   - fixp->fx_size

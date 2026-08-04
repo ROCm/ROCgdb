@@ -134,9 +134,10 @@ bfd_cleanup coff_real_object_p
 static void
 coff_swap_reloc_in (bfd *abfd, void *src, void *dst)
 {
-  RELOC *reloc_src = (RELOC *) src;
-  struct internal_reloc *reloc_dst = (struct internal_reloc *) dst;
+  RELOC *reloc_src = src;
+  struct internal_reloc *reloc_dst = dst;
 
+  memset (reloc_dst, 0, sizeof (*reloc_dst));
   reloc_dst->r_vaddr  = H_GET_32 (abfd, reloc_src->r_vaddr);
   reloc_dst->r_symndx = H_GET_S32 (abfd, reloc_src->r_symndx);
   reloc_dst->r_type   = H_GET_16 (abfd, reloc_src->r_type);

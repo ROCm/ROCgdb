@@ -143,8 +143,6 @@ proc record_full_function {function} {
 
 runto_main
 
-global hex
-global decimal
 
 # Record all the execution for vmov tests first.
 

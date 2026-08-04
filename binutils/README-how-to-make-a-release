@@ -286,9 +286,10 @@ How to create the release.
 
   21. a. Update the release number in bfd/version.m4 on the release
          branch to a whole new minor version number, without a point
-         value.  Eg "2.46.90" becomes "2.47".  NB/ Not: "2.47.00"
+         value.  Eg "2.47.90" becomes "2.48".  NB/ Not: "2.48.00"
 
-      b. Change bfd/development.sh to set all values to "false".
+      b. Change bfd/development.sh to set all values (ie 'development'
+         and 'experimental') to "false". 
 
       c. Regenerate the configure and makefiles.  And *info* files.
 
@@ -316,7 +317,7 @@ How to create the release.
       e. Commit.
 
 	   git add .
-           git commit -m "This is the 2.46 release"
+           git commit -m "This is the 2.48 release"
 	   git push
 	   
   22. Check that your file creation mask will create the
@@ -414,16 +415,16 @@ How to create the release.
 	    git tag -a <TAG> -u <Your Key> -m "Your message"
 	    
 	  eg:
-	    git tag -a binutils-2_47 -u DD9E3C4F      <=== Be careful to get the tag right
+	    git tag -a binutils-2_48 -u DD9E3C4F      <=== Be careful to get the tag right
 	  or:
-	    git tag -a binutils-2_47 -u DD9E3C4F -m "Official GNU Binutils 2.46 release"
+	    git tag -a binutils-2_48 -u DD9E3C4F -m "Official GNU Binutils 2.48 release"
 
         NB/ If you do sign the binaries make sure to use a key
 	that has been published with the FSF.
 
         Then push the release:
 
-	    git push origin binutils-2_47
+	    git push origin binutils-2_48
 
         If you get an error message along the lines of:
 	  "Invalid revision range ..."
@@ -431,7 +432,7 @@ How to create the release.
 
   27.  Upload the tarballs to ftp.gnu.org.
 
-          gnupload --to ftp.gnu.org:binutils binutils*47*.tar.*
+          gnupload --to ftp.gnu.org:binutils binutils*48*.tar.*
 
         Be prepared to provide the password for the key, if you
 	signed the binaries.
@@ -451,8 +452,8 @@ How to create the release.
 
        sftp sourceware.org
          cd /sourceware/ftp/pub/binutils/releases
- 	 put binutils*47*.tar.*
- 	 chmod 644 binutils*47*.tar.*
+ 	 put binutils*48*.tar.*
+ 	 chmod 644 binutils*48*.tar.*
 	 quit
 
   29. Update web pages.  For sourceware.org:
@@ -464,8 +465,8 @@ How to create the release.
       Create a new docs sub-directory and move into it:
 
         cd binutils-htdocs
-	mkdir docs-2.46
-        cd docs-2.46
+	mkdir docs-2.48
+        cd docs-2.48
 	
       Copy the index.html from the previous release
 
@@ -514,7 +515,7 @@ How to create the release.
 
          cd ..     [Should now be in be in binutils-htdocs/ ]
 	 rm docs
-	 ln -s docs-2.47 docs
+	 ln -s docs-2.48 docs
 	 
       Edit index.html file to change the links to point to the new
       release, mention any new features, update dates and so on.
@@ -525,9 +526,9 @@ How to create the release.
 
       Add the new directories and files, commit and push the changes:
 
-        git add docs-2.47
+        git add docs-2.48
         git add .
-        git commit -m"Update documenation for the 2.47 release"
+        git commit -m"Add documenation for the 2.48 release"
 	git push
 
 

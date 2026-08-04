@@ -7283,28 +7283,31 @@ lang_init_start_stop (void)
 
   for (abfd = link_info.input_bfds; abfd != NULL; abfd = abfd->link.next)
     for (s = abfd->sections; s != NULL; s = s->next)
-      {
-	const char *ps;
-	const char *secname = s->name;
+      if (bfd_link_relocatable (&link_info)
+	  || (s->flags & SEC_EXCLUDE) == 0)
+	{
+	  const char *ps;
+	  const char *secname = s->name;
 
-	for (ps = secname; *ps != '\0'; ps++)
-	  if (!ISALNUM ((unsigned char) *ps) && *ps != '_')
-	    break;
-	if (*ps == '\0')
-	  {
-	    char *symbol = (char *) xmalloc (10 + strlen (secname));
+	  for (ps = secname; *ps != '\0'; ps++)
+	    if (!ISALNUM ((unsigned char) *ps) && *ps != '_')
+	      break;
+	  if (*ps == '\0')
+	    {
+	      char *symbol = (char *) xmalloc (10 + strlen (secname));
 
-	    symbol[0] = leading_char;
-	    sprintf (symbol + (leading_char != 0), "__start_%s", secname);
-	    lang_define_start_stop (symbol, s);
+	      symbol[0] = leading_char;
+	      sprintf (symbol + (leading_char != 0), "__start_%s",
+		       secname);
+	      lang_define_start_stop (symbol, s);
 
-	    symbol[1] = leading_char;
-	    memcpy (symbol + 1 + (leading_char != 0), "__stop", 6);
-	    lang_define_start_stop (symbol + 1, s);
+	      symbol[1] = leading_char;
+	      memcpy (symbol + 1 + (leading_char != 0), "__stop", 6);
+	      lang_define_start_stop (symbol + 1, s);
 
-	    free (symbol);
-	  }
-      }
+	      free (symbol);
+	    }
+	}
 }
 
 /* Iterate over start_stop_syms.  */

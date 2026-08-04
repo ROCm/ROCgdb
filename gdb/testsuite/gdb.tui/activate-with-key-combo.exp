@@ -1,0 +1,83 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Exercise the multi-key combinations (e.g. 'C-x C-a') as a means to
+# activate TUI mode.  After activating TUI mode check that GDB is
+# still responsive, and output shows up in the CMD window.
+
+tuiterm_env
+
+require allow_tui_tests
+
+standard_testfile
+
+if {[build_executable "build executable" ${testfile} ${srcfile}] == -1} {
+    return
+}
+
+# Check that readline is in use.
+clean_restart
+if { ![readline_is_used] } {
+    unsupported "readline is required"
+    return
+}
+
+# Use KEY to activate TUI mode, where KEY should be a multi-key
+# combination, e.g. 'C-x C-a' expressed as an escape sequence,
+# e.g. "\030\001".  Wait for the GDB prompt to be displayed then type
+# a single character 'q'.  Check that the character shows up on the
+# screen then cancel the 'q' with Ctrl-C.  Finally send a basic print
+# command to GDB to ensure everything is still working and
+# responsive.
+proc run_test { key } {
+    Term::clean_restart 24 80 $::testfile
+
+    if {![Term::prepare_for_tui]} {
+	return
+    }
+
+    send_gdb $key
+
+    Term::wait_for ""
+
+    gdb_assert {[Term::check_region_contents_p 0 16 5 1 \
+		     [string_to_regexp "(gdb)"]]} \
+	"check prompt is where we want it"
+
+    send_gdb "q"
+
+    gdb_assert {[Term::wait_for_region_contents 0 16 80 1 q]} \
+	"the 'q' key appears in the terminal"
+
+    # Send Ctrl-c, cancelling the 'q' we typed.
+    send_gdb "\003"
+
+    gdb_assert {[Term::wait_for_region_contents 0 16 80 1 Quit]} \
+	"cancel the partial command"
+
+    Term::command "print 1"
+
+    gdb_assert {[Term::check_region_contents_p 0 18 80 1 " = 1"]} \
+	"wait for output of the print command"
+
+    Term::dump_screen
+}
+
+# Use different multi-key combinations to trigger a switch to TUI mode.
+foreach mk { \030\001 \030a \030A \0302 \0301 \030o } {
+    with_test_prefix "using key '[unprintable_to_octal $mk]'" {
+	run_test $mk
+    }
+}

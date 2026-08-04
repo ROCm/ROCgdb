@@ -1744,7 +1744,7 @@ elf32_avr_adjust_diff_reloc_value (bfd *abfd, struct bfd_section *isec,
       }
     }
 
-  /* For a diff reloc sym1 - sym2 the diff at assembly time (x) is written
+  /* For a diff reloc sym1 - sym2, the diff at assembly time (x) is written
      into the object file at the reloc offset. sym2's logical value is
      symval (<start_of_section>) + reloc addend. Compute the start and end
      addresses and check if the shrinked insn falls between sym1 and sym2. */
@@ -2375,15 +2375,15 @@ avr_load_all_property_sections (struct bfd_link_info *link_info)
    to check if the ret is no longer needed, it is checked that the ret's address
    is not the target of a branch or jump within the same section, it is checked
    that there is no skip instruction before the jmp/rjmp and that there
-   is no local or global label place at the address of the ret.
+   is no local or global label placed at the address of the ret.
 
    We refrain from relaxing within sections ".vectors" and
    ".jumptables" in order to maintain the position of the instructions.
    There, however, we substitute jmp/call by a sequence rjmp,nop/rcall,nop
-   if possible. (In future one could possibly use the space of the nop
+   if possible. (In the future one could possibly use the space of the nop
    for the first instruction of the irq service function.
 
-   The .jumptables sections is meant to be used for a future tablejump variant
+   The .jumptables section is meant to be used for a future tablejump variant
    for the devices with 3-byte program counter where the table itself
    contains 4-byte jump instructions whose relative offset must not
    be changed.  */
@@ -2410,7 +2410,7 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
 
   /* If 'shrinkable' is FALSE, do not shrink by deleting bytes while
      relaxing. Such shrinking can cause issues for the sections such
-     as .vectors and .jumptables. Instead the unused bytes should be
+     as .vectors and .jumptables. Instead, the unused bytes should be
      filled with nop instructions. */
   bool shrinkable = true;
 
@@ -2541,7 +2541,7 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
 	  if (h->root.type != bfd_link_hash_defined
 	      && h->root.type != bfd_link_hash_defweak)
 	    /* This appears to be a reference to an undefined
-	       symbol.  Just ignore it--it will be caught by the
+	       symbol.  Just ignore it -- it will be caught by the
 	       regular reloc processing.  */
 	    continue;
 
@@ -2600,7 +2600,7 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
 	    /* Here we handle the wrap-around case.  E.g. for a 16k device
 	       we could use a rjmp to jump from address 0x100 to 0x3d00!
 	       In order to make this work properly, we need to fill the
-	       vaiable avr_pc_wrap_around with the appropriate value.
+	       variable avr_pc_wrap_around with the appropriate value.
 	       I.e. 0x4000 for a 16k device.  */
 	    {
 	      /* Shrinking the code size makes the gaps larger in the
@@ -3012,7 +3012,7 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
 							       true))
 			      goto error_return;
 
-			    /* That will change things, so, we should relax
+			    /* That will change things, so we should relax
 			       again. Note that this is not required, and it
 			       may be slow.  */
 			    *again = true;
@@ -3050,7 +3050,7 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
 
 		    /* Look for alignment directives that have had enough
 		       bytes deleted before them, such that the directive
-		       can be moved backwards and still maintain the
+		       can be moved backwards and still maintains the
 		       required alignment.  */
 		    record = &relax_info->records.items [i];
 		    bytes_to_align
@@ -3268,7 +3268,7 @@ avr_add_stub (const char *stub_name,
 }
 
 /* We assume that there is already space allocated for the stub section
-   contents and that before building the stubs the section size is
+   contents, and that before building the stubs the section size is
    initialized to 0.  We assume that within the stub hash table entry,
    the absolute position of the jmp target has been written in the
    target_value field.  We write here the offset of the generated jmp insn

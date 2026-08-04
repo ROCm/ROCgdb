@@ -354,6 +354,9 @@ static inline unsigned int riscv_insn_length (insn_t insn)
 
 /* RVV fields.  */
 
+#define OP_MASK_FUNCT6		0x3fU
+#define OP_SH_FUNCT6		26
+
 #define OP_MASK_VD		0x1f
 #define OP_SH_VD		7
 #define OP_MASK_VS1		0x1f
@@ -557,6 +560,7 @@ enum riscv_insn_class
   INSN_CLASS_ZBC_OR_ZBKC,
   INSN_CLASS_ZKND_OR_ZKNE,
   INSN_CLASS_V,
+  INSN_CLASS_ZVE64X,
   INSN_CLASS_ZVEF,
   INSN_CLASS_ZVBB,
   INSN_CLASS_ZVBC,
@@ -695,8 +699,6 @@ struct riscv_opcode
 #define INSN_JSR		0x00000006
 /* Instruction is a data reference.  */
 #define INSN_DREF		0x00000008
-/* Instruction is allowed when eew >= 64.  */
-#define INSN_V_EEW64		0x10000000
 
 /* We have 5 data reference sizes, which we can encode in 3 bits.  */
 #define INSN_DATA_SIZE		0x00000070
@@ -706,6 +708,31 @@ struct riscv_opcode
 #define INSN_4_BYTE		0x00000030
 #define INSN_8_BYTE		0x00000040
 #define INSN_16_BYTE		0x00000050
+
+/* Operands required to be an even-numbered register (pair) in RV32.  */
+#define INSN_RV32_EVEN_D	0x00000100
+#define INSN_RV32_EVEN_S	0x00000200
+#define INSN_RV32_EVEN_T	0x00000400 /* Also covering U.  */
+#define INSN_RV32_EVEN_R	0x00000800
+/* Shorthands for combinations of the above.  */
+#define INSN_RV32_EVEN_DS	(INSN_RV32_EVEN_D   | INSN_RV32_EVEN_S)
+#define INSN_RV32_EVEN_DST	(INSN_RV32_EVEN_DS  | INSN_RV32_EVEN_T)
+#define INSN_RV32_EVEN_DSTR	(INSN_RV32_EVEN_DST | INSN_RV32_EVEN_R)
+#define INSN_RV32_EVEN_DU	(INSN_RV32_EVEN_D   | INSN_RV32_EVEN_T)
+#define INSN_RV32_EVEN_ST	(INSN_RV32_EVEN_S   | INSN_RV32_EVEN_T)
+
+/* Operands required to be an even-numbered register (pair) in RV64, and one
+   divisible by 4 on RV32.  */
+#define INSN_RV64_EVEN_D	0x00001000
+#define INSN_RV64_EVEN_S	0x00002000
+#define INSN_RV64_EVEN_T	0x00004000 /* Also covering U.  */
+#define INSN_RV64_EVEN_R	0x00008000
+/* Shorthands for combinations of the above.  */
+#define INSN_RV64_EVEN_DS	(INSN_RV64_EVEN_D   | INSN_RV64_EVEN_S)
+#define INSN_RV64_EVEN_DST	(INSN_RV64_EVEN_DS  | INSN_RV64_EVEN_T)
+#define INSN_RV64_EVEN_DSTR	(INSN_RV64_EVEN_DST | INSN_RV64_EVEN_R)
+#define INSN_RV64_EVEN_DU	(INSN_RV64_EVEN_D   | INSN_RV64_EVEN_T)
+#define INSN_RV64_EVEN_ST	(INSN_RV64_EVEN_S   | INSN_RV64_EVEN_T)
 
 /* Instruction is actually a macro.  It should be ignored by the
    disassembler, and requires special treatment by the assembler.  */

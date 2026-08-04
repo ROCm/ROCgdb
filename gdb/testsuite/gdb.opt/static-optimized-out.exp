@@ -24,7 +24,7 @@ lappend opts "optimize=-O2 -flto"
 
 if { [prepare_for_testing "failed to prepare" $testfile \
 	  [list $srcfile $srcfile2] $opts] } {
-    return -1
+    return
 }
 
 set val ""

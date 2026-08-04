@@ -496,6 +496,7 @@ alpha_ecoff_swap_reloc_in (bfd *abfd,
 {
   const RELOC *ext = ext_ptr;
 
+  memset (intern, 0, sizeof (*intern));
   intern->r_vaddr = H_GET_64 (abfd, ext->r_vaddr);
   intern->r_symndx = H_GET_32 (abfd, ext->r_symndx);
 

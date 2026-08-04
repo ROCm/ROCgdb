@@ -30,7 +30,7 @@ require allow_multi_inferior_tests
 require can_spawn_for_attach
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug}]} {
-    return -1
+    return
 }
 
 # Start the programs running and then wait for a bit, to be sure that

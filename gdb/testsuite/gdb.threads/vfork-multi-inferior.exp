@@ -86,7 +86,7 @@ proc do_test {method} {
     }
 
     # Start the first inferior.
-    gdb_test "inferior 1" "Switching to inferior 1 .*"
+    gdb_test -no-prompt-anchor "inferior 1" "Switching to inferior 1 .*"
     gdb_file_cmd ${::binfile}
     gdb_test "break should_break_here" "Breakpoint $::decimal at .*"
     gdb_test "start" "Thread 1.1 .* hit Temporary breakpoint.*" \

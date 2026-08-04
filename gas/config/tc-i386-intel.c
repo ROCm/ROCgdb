@@ -384,12 +384,14 @@ static symbolS *
 i386_intel_simplify_symbol (symbolS *sym)
 {
   if (symbol_resolving_p (sym))
-    return sym;
+    return NULL;
 
   symbolS *orig = sym;
   offsetT off;
   sym = symbol_equated_to (sym, &off);
-  if (sym == NULL || off != 0)
+  if (sym == NULL)
+    return NULL;
+  if (off != 0)
     return orig;
 
   segT seg = S_GET_SEGMENT (sym);
@@ -443,13 +445,10 @@ i386_intel_simplify (expressionS *e)
 				   intel_state.index))
 	    return 0;
 	  e->X_add_symbol = newsym;
-	  symbol_mark_resolving (e->X_add_symbol);
 	}
       if (!intel_state.in_offset)
 	++intel_state.in_bracket;
       newsym = i386_intel_simplify_symbol (e->X_op_symbol);
-      if (e->X_add_symbol)
-	symbol_clear_resolving (e->X_add_symbol);
       if (!intel_state.in_offset)
 	--intel_state.in_bracket;
       if (!newsym)
@@ -549,35 +548,31 @@ i386_intel_simplify (expressionS *e)
 	  segT leftseg = NULL, rightseg = NULL;
 
 	  newsym = i386_intel_simplify_symbol (e->X_add_symbol);
-	  if (newsym)
-	    {
-	      e->X_add_symbol = newsym;
+	  if (!newsym)
+	    return 0;
+	  e->X_add_symbol = newsym;
 
-	      if (base != intel_state.base || state_index != intel_state.index)
-		{
-		  base = intel_state.base;
-		  state_index = intel_state.index;
-		  left = symbol_get_value_expression (newsym);
-		  resolve_expression (left);
-		  leftseg = S_GET_SEGMENT (newsym);
-		}
+	  if (base != intel_state.base || state_index != intel_state.index)
+	    {
+	      base = intel_state.base;
+	      state_index = intel_state.index;
+	      left = symbol_get_value_expression (newsym);
+	      resolve_expression (left);
+	      leftseg = S_GET_SEGMENT (newsym);
 	    }
 
-	  symbol_mark_resolving (e->X_add_symbol);
 	  newsym = i386_intel_simplify_symbol (e->X_op_symbol);
-	  symbol_clear_resolving (e->X_add_symbol);
-	  if (newsym)
-	    {
-	      e->X_op_symbol = newsym;
+	  if (!newsym)
+	    return 0;
+	  e->X_op_symbol = newsym;
 
-	      if (base != intel_state.base || state_index != intel_state.index)
-		{
-		  base = intel_state.base;
-		  state_index = intel_state.index;
-		  right = symbol_get_value_expression (newsym);
-		  resolve_expression (right);
-		  rightseg = S_GET_SEGMENT (newsym);
-		}
+	  if (base != intel_state.base || state_index != intel_state.index)
+	    {
+	      base = intel_state.base;
+	      state_index = intel_state.index;
+	      right = symbol_get_value_expression (newsym);
+	      resolve_expression (right);
+	      rightseg = S_GET_SEGMENT (newsym);
 	    }
 
 	  if (left && right
@@ -622,9 +617,7 @@ i386_intel_simplify (expressionS *e)
 		  other = symbol_get_value_expression (e->X_add_symbol);
 		}
 
-	      symbol_mark_resolving (e->X_add_symbol);
 	      newsym = i386_intel_simplify_symbol (e->X_op_symbol);
-	      symbol_clear_resolving (e->X_add_symbol);
 	    }
 
 	  if (newsym)
@@ -726,11 +719,7 @@ i386_intel_simplify (expressionS *e)
 	return 0;
       if (e->X_op_symbol)
 	{
-	  if (e->X_add_symbol)
-	    symbol_mark_resolving (e->X_add_symbol);
 	  newsym = i386_intel_simplify_symbol (e->X_op_symbol);
-	  if (e->X_add_symbol)
-	    symbol_clear_resolving (e->X_add_symbol);
 	  if (!newsym)
 	    return 0;
 	  e->X_op_symbol = newsym;

@@ -29,7 +29,7 @@ require has_gdbreplay
 standard_testfile
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile] } {
-    return -1
+    return
 }
 
 # Connect to gdbserver and run to a breakpoint in main.  Record the

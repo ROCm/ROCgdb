@@ -25,11 +25,11 @@ require gdb_trace_common_supports_arch
 
 if {[prepare_for_testing "failed to prepare" $executable $srcfile \
 	 [list debug nowarnings nopie]]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
@@ -104,7 +104,7 @@ all tests in this module will fail."
 }
 
 if {$return_me == 1} {
-    return -1
+    return
 }
 
 #

@@ -1237,22 +1237,42 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zvabd", "+zve32x", check_implicit_always},
   {"zvfh", "+zvfhmin,+zfhmin", check_implicit_always},
   {"zvfhmin", "+zve32f", check_implicit_always},
-  {"zvfbfwma", "+zve32f,+zfbfmin", check_implicit_always},
+  {"zvfbfwma", "+zfbfmin,+zvfbfmin", check_implicit_always},
   {"zvfbfmin", "+zve32f", check_implicit_always},
   {"zvfbdota32f", "+zve32f", check_implicit_always},
   {"zvfqwbdota8f", "+zve32f", check_implicit_always},
   {"zvfqwdota8f", "+zve32f", check_implicit_always},
   {"zvfwbdota16bf", "+zve32f", check_implicit_always},
   {"zvfwdota16bf", "+zve32f", check_implicit_always},
+
+  {"zvbb", "+zvkb", check_implicit_always},
+  {"zvkng", "+zvkn,+zvkg", check_implicit_always},
+  {"zvknc", "+zvkn,+zvbc", check_implicit_always},
+  {"zvkn", "+zvkned,+zvknhb,+zvkb,+zvkt", check_implicit_always},
+  {"zvksg", "+zvks,+zvkg", check_implicit_always},
+  {"zvksc", "+zvks,+zvbc", check_implicit_always},
+  {"zvks", "+zvksed,+zvksh,+zvkb,+zvkt", check_implicit_always},
+
+  {"zvbc", "+zve32x", check_implicit_always},
+  {"zvkb", "+zve32x", check_implicit_always},
+  {"zvkg", "+zve32x", check_implicit_always},
+  {"zvkned", "+zve32x", check_implicit_always},
+  {"zvknha", "+zve32x", check_implicit_always},
+  {"zvknhb", "+zve32x", check_implicit_always},
+  {"zvksed", "+zve32x", check_implicit_always},
+  {"zvksh", "+zve32x", check_implicit_always},
+
   {"zvqwbdota8i", "+zve32x", check_implicit_always},
   {"zvqwbdota16i", "+zve64x", check_implicit_always},
   {"zvqwdota8i", "+zve32x", check_implicit_always},
   {"zvqwdota16i", "+zve64x", check_implicit_always},
+
   {"zve64d", "+d,+zve64f", check_implicit_always},
-  {"zve64f", "+zve32f,+zve64x,+zvl64b", check_implicit_always},
-  {"zve32f", "+f,+zve32x,+zvl32b", check_implicit_always},
+  {"zve64f", "+zve32f,+zve64x", check_implicit_always},
+  {"zve32f", "+f,+zve32x", check_implicit_always},
   {"zve64x", "+zve32x,+zvl64b", check_implicit_always},
   {"zve32x", "+zvl32b,+zicsr", check_implicit_always},
+
   {"zvl65536b", "+zvl32768b", check_implicit_always},
   {"zvl32768b", "+zvl16384b", check_implicit_always},
   {"zvl16384b", "+zvl8192b", check_implicit_always},
@@ -1312,13 +1332,6 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"zk", "+zkn,+zkr,+zkt", check_implicit_always},
   {"zkn", "+zbkb,+zbkc,+zbkx,+zkne,+zknd,+zknh", check_implicit_always},
   {"zks", "+zbkb,+zbkc,+zbkx,+zksed,+zksh", check_implicit_always},
-  {"zvbb", "+zvkb", check_implicit_always},
-  {"zvkng", "+zvkn,+zvkg", check_implicit_always},
-  {"zvknc", "+zvkn,+zvbc", check_implicit_always},
-  {"zvkn", "+zvkned,+zvknhb,+zvkb,+zvkt", check_implicit_always},
-  {"zvksg", "+zvks,+zvkg", check_implicit_always},
-  {"zvksc", "+zvks,+zvbc", check_implicit_always},
-  {"zvks", "+zvksed,+zvksh,+zvkb,+zvkt", check_implicit_always},
 
   {"sdtrig", "+zicsr", check_implicit_always},
 
@@ -2988,6 +3001,9 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return (riscv_subset_supports (rps, "v")
 	      || riscv_subset_supports (rps, "zve64x")
 	      || riscv_subset_supports (rps, "zve32x"));
+    case INSN_CLASS_ZVE64X:
+      return (riscv_subset_supports (rps, "v")
+	      || riscv_subset_supports (rps, "zve64x"));
     case INSN_CLASS_ZVEF:
       return (riscv_subset_supports (rps, "v")
 	      || riscv_subset_supports (rps, "zve64d")
@@ -3342,6 +3358,8 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "zksh";
     case INSN_CLASS_V:
       return _("v' or `zve64x' or `zve32x");
+    case INSN_CLASS_ZVE64X:
+      return _("v' or `zve64x");
     case INSN_CLASS_ZVEF:
       return _("v' or `zve64d' or `zve64f' or `zve32f");
     case INSN_CLASS_ZVABD:
@@ -3874,6 +3892,34 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
 	 initialized.  */
       out_attr[0].i = 1;
 
+      for (i = LEAST_KNOWN_OBJ_ATTRIBUTE; i < NUM_KNOWN_OBJ_ATTRIBUTES; i++)
+	{
+	  switch (i)
+	    {
+	    case Tag_RISCV_unaligned_access:
+	      if (out_attr[i].i <= 1)
+		break;
+
+	      _bfd_error_handler
+		(_("warning: %pB uses non-boolean `unaligned_access' attribute; "
+		   "converting to boolean"),
+		 ibfd);
+	      out_attr[i].i = 1;
+	      break;
+
+	    case Tag_RISCV_stack_align:
+	      if (!(out_attr[i].i & (out_attr[i].i - 1)))
+		break;
+
+	      _bfd_error_handler
+		(_("warning: %pB uses non-power-of-2 `stack_align' attribute; "
+		   "ignoring"),
+		 ibfd);
+	      out_attr[i].i = 0;
+	      break;
+	    }
+	}
+
       return true;
     }
 
@@ -3962,14 +4008,23 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
 	break;
 
       case Tag_RISCV_unaligned_access:
-	out_attr[i].i |= in_attr[i].i;
+	if (in_attr[i].i > 1)
+	  _bfd_error_handler
+	    (_("warning: %pB uses non-boolean `unaligned_access' attribute; "
+	       "converting to boolean"),
+	     ibfd);
+	out_attr[i].i |= !!in_attr[i].i;
 	break;
 
       case Tag_RISCV_stack_align:
-	if (out_attr[i].i == 0)
+	if ((in_attr[i].i & (in_attr[i].i - 1)) != 0)
+	  _bfd_error_handler
+	    (_("warning: %pB uses non-power-of-2 `stack_align' attribute; "
+	       "ignoring"),
+	     ibfd);
+	else if (out_attr[i].i == 0)
 	  out_attr[i].i = in_attr[i].i;
 	else if (in_attr[i].i != 0
-		 && out_attr[i].i != 0
 		 && out_attr[i].i != in_attr[i].i)
 	  {
 	    _bfd_error_handler

@@ -27,18 +27,18 @@ require allow_compile_tests
 
 if {[prepare_for_testing $testfile $testfile $srcfile \
 	 {debug nowarnings c++}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "break here" $srcfile]
 gdb_continue_to_breakpoint "testing location"
 
 if {[skip_compile_feature_untested "var = 0"]} {
-    return -1
+    return
 }
 
 # Reminder, "var" is an integer; all these types get converted to `int'.

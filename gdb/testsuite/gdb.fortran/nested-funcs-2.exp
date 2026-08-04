@@ -22,7 +22,7 @@ standard_testfile ".f90"
 
 if {[build_executable ${testfile}.exp ${testfile} \
 	 ${srcfile} {debug f90}]} {
-    return -1
+    return
 }
 
 set int4 [fortran_int4]

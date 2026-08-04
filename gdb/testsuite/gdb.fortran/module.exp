@@ -20,7 +20,7 @@ require allow_fortran_tests
 standard_testfile .f90
 
 if { [prepare_for_testing "failed to prepare" $testfile $srcfile {debug f90}] } {
-    return -1
+    return
 }
 
 # Test automatic language detection before the inferior starts.  It tests the

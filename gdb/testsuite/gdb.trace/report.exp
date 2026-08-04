@@ -22,7 +22,7 @@ require gdb_trace_common_supports_arch
 if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile \
 	  executable {debug nowarnings nopie}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 clean_restart $testfile
 runto_main
@@ -104,7 +104,7 @@ all tests in this module will fail."
 }
 
 if {$return_me == 1} {
-    return -1
+    return
 }
 
 #

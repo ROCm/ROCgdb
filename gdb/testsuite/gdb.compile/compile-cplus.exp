@@ -42,7 +42,7 @@ lappend srcfilesoptions $srcfile4 $srcfile4options
 
 if { [build_executable_from_specs $testfile.exp $testfile $options \
 	  {*}$srcfilesoptions] } {
-    return -1
+    return
 }
 
 clean_restart ${testfile}
@@ -55,14 +55,14 @@ gdb_test_no_output "set language c++" \
     "Set language to C++"
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint [gdb_get_line_number "break-here"]
 gdb_continue_to_breakpoint "break-here" ".* break-here .*"
 
 if {[skip_compile_feature_untested "var = 0"]} {
-    return -1
+    return
 }
 
 #

@@ -220,6 +220,7 @@ accept various extension mnemonics.  For example,
 @code{avx10.1/512},
 @code{avx10.1/256},
 @code{avx10.1/128},
+@code{avx10.1aux},
 @code{user_msr},
 @code{msr_imm},
 @code{apx_f},
@@ -1718,13 +1719,13 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.avx512_vpopcntdq} @tab @samp{.avx512_vbmi2} @tab @samp{.avx512_vnni}
 @item @samp{.avx512_bitalg} @tab @samp{.avx512_bf16} @tab @samp{.avx512_vp2intersect}
 @item @samp{.tdx} @tab @samp{.avx_vnni} @tab @samp{.avx512_fp16} @tab @samp{avx512_bmm}
-@item @samp{.avx10.1} @tab @samp{.clwb} @tab @samp{.rdpid} @tab @samp{.ptwrite}
-@item @samp{.ibt} @tab @samp{.prefetchi} @tab @samp{.avx_ifma} @tab @samp{.avx_vnni_int8}
+@item @samp{.avx10.1} @tab @samp{.avx10.1aux} @tab @samp{.avx10.2} @tab @samp{.clwb}
+@item @samp{.rdpid} @tab @samp{.ptwrite} @tab @samp{.ibt} @tab @samp{.prefetchi}
 @item @samp{.cmpccxadd} @tab @samp{.wrmsrns} @tab @samp{.msrlist} @tab @samp{.se1}
 @item @samp{.avx_ne_convert} @tab @samp{.rao_int} @tab @samp{.fred} @tab @samp{.lkgs}
 @item @samp{.avx_vnni_int16} @tab @samp{.sha512} @tab @samp{.sm3} @tab @samp{.sm4}
-@item @samp{.pbndkb} @tab @samp{.user_msr} @tab @samp{.msr_imm} @tab @samp{.avx10.2}
-@item @samp{.movrs}
+@item @samp{.pbndkb} @tab @samp{.user_msr} @tab @samp{.msr_imm}
+@item @samp{.avx_ifma} @tab @samp{.avx_vnni_int8} @tab @samp{.movrs}
 @item @samp{.wbnoinvd} @tab @samp{.pconfig} @tab @samp{.waitpkg} @tab @samp{.cldemote}
 @item @samp{.shstk} @tab @samp{.gfni} @tab @samp{.vaes} @tab @samp{.vpclmulqdq}
 @item @samp{.movdiri} @tab @samp{.movdir64b} @tab @samp{.enqcmd} @tab @samp{.tsxldtrk}

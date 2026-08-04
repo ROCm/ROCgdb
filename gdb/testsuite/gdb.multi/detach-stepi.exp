@@ -24,11 +24,11 @@ standard_testfile
 require allow_multi_inferior_tests
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 delete_breakpoints
@@ -41,7 +41,7 @@ gdb_test "inferior 2" "Switching to inferior .*" \
 
 gdb_load $binfile
 if {![runto "a_function"]} {
-    return -1
+    return
 }
 
 gdb_test "info inferiors" ".*" "info inferiors for logging"

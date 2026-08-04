@@ -25,7 +25,7 @@ require gdb_trace_common_supports_arch
 if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile \
 	  executable {debug nowarnings}] != "" } {
     untested "failed to compile"
-    return -1
+    return
 }
 
 clean_restart
@@ -99,7 +99,7 @@ gdb_trace_setactions "collect on tracepoint 1" "1" \
 	"collect gdb_struct1_test" "^$"
 gdb_run_cmd
 if {[gdb_test "" "Breakpoint ${decimal}, main.*" "run to main"] != 0} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {

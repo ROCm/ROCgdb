@@ -43,7 +43,7 @@ load_lib fortran.exp
 
 if {[build_executable ${testfile}.exp ${testfile} ${srcfile} \
 	 {debug f90}]} {
-    return -1
+    return
 }
 
 # Takes the name of an array slice as used in the test source, and extracts

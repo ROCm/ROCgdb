@@ -20,7 +20,7 @@ set executable $testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 {debug nowarnings c++ nopie}]} {
-    return -1
+    return
 }
 
 set ws "\[\r\n\t \]+"

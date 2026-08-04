@@ -1,0 +1,179 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check that the TUI can NOT be activated using 'C-x C-a', and similar
+# key combinations, from a secondary prompt.  Activating from the
+# secondary prompt has the same effect as pressing 'Return' at the
+# prompt, which might not be what the user wants.
+#
+# We could imagine a world where, when activating the TUI from a
+# secondary prompt works as we might expect, the prompt is not
+# cancelled, but reprinted within the TUI, and the user can then make
+# their choice and continue with their debug session.  If we ever
+# implement this, then this test will need to change.
+#
+# For now though we take the easy way and just ban the user from
+# activating the TUI from a secondary prompt.
+
+load_lib debuginfod-support.exp
+
+tuiterm_env
+
+require allow_tui_tests
+
+standard_testfile
+
+if {[build_executable "build executable" ${testfile} ${srcfile}] == -1} {
+    return
+}
+
+# Check that readline is in use.
+clean_restart
+if { ![readline_is_used] } {
+    unsupported "readline is required"
+    return
+}
+
+# Assuming that GDB is at a secondary prompt, try various multi-key
+# combinations and check that the screen doesn't change, these should
+# all be ignored.
+proc test_multi_key_combos {} {
+    foreach mk { \030\001 \030a \030A \0302 \0301 \030o \030s } {
+	set before [Term::get_region 0 0 80 24 "\r\n"]
+	send_gdb $mk
+
+	# It's not easy to check that pressing a key doesn't cause the
+	# display to change.  If we read the output then either the
+	# display didn't change, or we read the display to quickly,
+	# and the changes haven't been drawn yet.
+	#
+	# We could just throw a 'sleep 1' in here, which will mostly
+	# work, but still depends on GDB responding fast enough.
+	#
+	# To avoid this race we send the string '123' to GDB.  As
+	# GDB's UI is single threaded, by the time '123' is drawn then
+	# any effects from the multi-key combination should also have
+	# been drawn.
+	#
+	# We can then delete the '123' by sending 'C-u' to clear the
+	# line, and after this we can check that the display is
+	# exactly as it was before we started, this means that the
+	# multi-key combination didn't result in a UI change.
+
+	set a_string 123
+	send_gdb $a_string
+	Term::wait_for_region_contents 0 0 80 24 $a_string
+
+	send_gdb "\025"
+	Term::wait_for_region_contents 0 0 80 24 [string_to_regexp $before]
+
+	set after [Term::get_region 0 0 80 24 "\r\n"]
+	gdb_assert { $before eq $after } \
+	    "no changes after sending '[unprintable_to_octal $mk]'"
+    }
+}
+
+# Send CHAR followed by a newline to GDB, this should quit the
+# currently active secondary prompt.  Wait for the GDB prompt to
+# present, then send a basic print command to GDB to ensure that GDB
+# is still interactive.
+proc quit_prompt { char } {
+    send_gdb "${char}\n"
+    Term::wait_for ""
+
+    gdb_test "print 1" " = 1"
+}
+
+# Trigger the pagination prompt, then check that the multi-key
+# combinations don't result in a change to TUI mode.  Finally, check
+# that GDB is still responsive.
+proc_with_prefix test_from_pager_prompt {} {
+    Term::clean_restart 24 80 $::testfile
+
+    set cmd "echo "
+    for { set i 0 } { $i < 100 } { incr i } {
+	set cmd "${cmd}${i}\\n"
+    }
+
+    gdb_test_no_output "set pagination on"
+    gdb_test_no_output "set height 24"
+    send_gdb "$cmd\n"
+
+    if {![Term::wait_for_region_contents 0 0 80 24 \
+	      [string_to_regexp $::pagination_prompt_str]]} {
+	fail "spot secondary prompt"
+	return
+    }
+
+    test_multi_key_combos
+    quit_prompt q
+}
+
+# Trigger the debuginfod prompt, then check that the multi-key
+# combinations don't result in a change to TUI mode.  Finally, check
+# GDB is still responsive.
+proc_with_prefix test_from_debuginfod_prompt {} {
+    if { ![allow_debuginfod_tests] } {
+	return
+    }
+
+    set stripped_binfile [standard_output_file ${::testfile}-stripped]
+    file copy -force $::binfile $stripped_binfile
+    if {[gdb_gnu_strip_debug $stripped_binfile no-debuglink]} {
+	unsupported "produce separate debug info for [file tail $stripped_binfile]"
+	return
+    }
+
+    if {[section_get $stripped_binfile ".gnu_debuglink"] ne ""} {
+	unsupported "debug information has already been split out"
+	return
+    }
+
+    save_vars { env(DEBUGINFOD_URLS) } {
+	setenv DEBUGINFOD_URLS "foo"
+	Term::clean_restart 24 80
+    }
+
+    send_gdb "file \"$stripped_binfile\"\n"
+    if {![Term::wait_for_region_contents 0 0 80 24 \
+	      [string_to_regexp {(y or [n]) }]]} {
+	fail "spot secondary prompt"
+	return
+    }
+
+    test_multi_key_combos
+    quit_prompt n
+}
+
+# Trigger the pending breakpoint prompt, then check that the multi-key
+# combinations don't result in a change to TUI mode.  Finally, check
+# that GDB is still responsive.
+proc_with_prefix test_from_breakpoint_prompt {} {
+    Term::clean_restart 24 80 $::testfile
+
+    send_gdb "break _a_function_that_hopefully_doesnt_exist_\n"
+    if {![Term::wait_for_region_contents 0 0 80 24 \
+	      [string_to_regexp {(y or [n]) }]]} {
+	fail "spot secondary prompt"
+	return
+    }
+
+    test_multi_key_combos
+    quit_prompt n
+}
+
+test_from_pager_prompt
+test_from_debuginfod_prompt
+test_from_breakpoint_prompt

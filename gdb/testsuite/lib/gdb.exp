@@ -12668,6 +12668,33 @@ proc dwz_version_at_least { ver } {
     return [version_compare [split $ver .] <= [dwz_version]]
 }
 
+# Take a string containing unprintable characters and return a string
+# with the unprintable characters represented as 3 octal bytes,
+# e.g. "\030".
+#
+# To avoid having to escape backslashes, backslashes themselves are
+# also represented as octal.
+proc unprintable_to_octal { input_string } {
+    set result ""
+
+    foreach char [split $input_string ""] {
+	# Convert character to its integer ASCII value.
+	scan $char %c ascii_val
+
+	# Include printable characters as literals.  Exclude backslash
+	# to avoid needing to escape it, we don't actually expect to
+	# see that in INPUT_STRING though.
+	if {[string is print $char] && $char ne "\\"} {
+	    append result $char
+	} else {
+	    # Include non-printable characters as a 3-digit octal.
+	    append result [format "\\%03o" $ascii_val]
+	}
+    }
+
+    return $result
+}
+
 require {tcl_version_at_least 8 6 2}
 
 # Always load compatibility stuff.

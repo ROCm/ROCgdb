@@ -770,8 +770,11 @@ sim_open (SIM_OPEN_KIND kind, host_callback *callback, struct bfd *abfd,
       for (envc = 0; environ[envc] != NULL; envc++)
 	len += strlen (environ[envc]) + 1;
 
-      for (i = 0; prog_argv[i] != NULL; my_argc++, i++)
-	len += strlen (prog_argv[i]) + 1;
+      if (prog_argv != NULL)
+	{
+	  for (i = 0; prog_argv[i] != NULL; my_argc++, i++)
+	    len += strlen (prog_argv[i]) + 1;
+	}
 
       envstart = (envtop - len) & ~8191;
 

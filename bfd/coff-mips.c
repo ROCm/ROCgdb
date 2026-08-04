@@ -272,8 +272,9 @@ mips_ecoff_swap_reloc_in (bfd *  abfd,
 			  void * ext_ptr,
 			  struct internal_reloc *intern)
 {
-  const RELOC *ext = (RELOC *) ext_ptr;
+  const RELOC *ext = ext_ptr;
 
+  memset (intern, 0, sizeof (*intern));
   intern->r_vaddr = H_GET_32 (abfd, ext->r_vaddr);
   if (bfd_header_big_endian (abfd))
     {

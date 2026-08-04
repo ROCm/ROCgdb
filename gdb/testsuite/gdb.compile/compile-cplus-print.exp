@@ -32,17 +32,17 @@ set srcfilesoptions [list ${srcfile} ${options}]
 
 if { [build_executable_from_specs $testfile.exp $testfile $options \
 	  {*}$srcfilesoptions] } {
-    return -1
+    return
 }
 
 clean_restart ${testfile}
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {[skip_compile_feature_untested]} {
-    return -1
+    return
 }
 
 gdb_test_no_output "set language c++" \

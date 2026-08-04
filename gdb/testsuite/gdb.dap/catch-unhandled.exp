@@ -21,7 +21,7 @@ require allow_ada_tests allow_dap_tests gnat_runtime_has_debug_info
 standard_ada_testfile prog
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" executable debug] != ""} {
-    return -1
+    return
 }
 
 if {[dap_initialize] == ""} {

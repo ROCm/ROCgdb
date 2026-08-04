@@ -24,7 +24,7 @@ standard_testfile info-types.f90 info-types-2.f90
 
 if { [prepare_for_testing "failed to prepare" $testfile \
 	  [list $srcfile2 $srcfile] {debug f90}] } {
-    return -1
+    return
 }
 
 # Don't run to main to avoid increasing the search scope to include

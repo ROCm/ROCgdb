@@ -33,16 +33,16 @@ require {!target_info exists gdb,nosignals}
 standard_testfile
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile debug]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 if {![gdb_target_supports_trace]} {
     unsupported "target does not support trace"
-    return -1
+    return
 }
 
 # Step 1, find the syscall instruction address.
@@ -57,13 +57,13 @@ if { [istarget "i\[34567\]86-*-linux*"] || [istarget "x86_64-*-linux*"] } {
     set syscall_insn "\[ \t\](swi|svc)\[ \t\]"
 } else {
     unsupported "unknown syscall instruction"
-    return -1
+    return
 }
 
 # Start with a fresh gdb.
 clean_restart ${testfile}
 if {![runto_main]} {
-    return -1
+    return
 }
 
 gdb_breakpoint "kill" -qualified

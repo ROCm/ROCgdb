@@ -53,7 +53,7 @@ clean_restart ${::testfile}
 
 with_timeout_factor 3 {
     if {![fortran_runto_main]} {
-	return -1
+	return
     }
 
     gdb_test_no_output "set max-value-size unlimited"

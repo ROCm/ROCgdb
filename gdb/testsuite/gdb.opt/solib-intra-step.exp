@@ -31,7 +31,7 @@ set bin_flags [list debug shlib=${binfile_lib}]
 if { [gdb_compile_shlib ${srcfile_lib} ${binfile_lib} $lib_flags] != ""
      || [gdb_compile ${srcfile} ${binfile} executable $bin_flags] != "" } {
   untested "failed to compile"
-  return -1
+  return
 }
 
 clean_restart ${::testfile}

@@ -33,16 +33,16 @@ if {[info exists COMPILE]} {
     }
 } else {
     unsupported "target architecture not supported"
-    return -1
+    return
 }
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile $opts]} {
-    return -1
+    return
 }
 
 if { ![runto_main] } {
     untested "failed to run to main"
-    return -1
+    return
 }
 
 ### 1. Default testrun

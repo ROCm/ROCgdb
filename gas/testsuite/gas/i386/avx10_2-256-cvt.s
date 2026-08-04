@@ -1,7 +1,9 @@
 # Check 32bit AVX10.2/256 instructions
 
+	.ifndef AVX10_V1_AUX
 	.arch generic32
 	.arch .avx10.2/256
+	.endif
 	.text
 _start:
 	vcvt2ps2phx	%xmm4, %xmm5, %xmm6

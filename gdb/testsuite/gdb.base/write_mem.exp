@@ -18,7 +18,6 @@
 # Test for PR gdb/20948
 # Verify that invoking gdb with the --write argument works as expected
 
-global GDBFLAGS
 standard_testfile
 
 if {[build_executable $testfile.exp $testfile \

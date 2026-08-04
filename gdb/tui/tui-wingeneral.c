@@ -55,13 +55,12 @@ tui_batch_rendering::~tui_batch_rendering ()
 void
 tui_win_info::refresh_window ()
 {
-  if (handle != NULL)
-    {
-      if (suppress_output)
-	wnoutrefresh (handle.get ());
-      else
-	wrefresh (handle.get ());
-    }
+  gdb_assert (handle != nullptr);
+
+  if (suppress_output)
+    wnoutrefresh (handle.get ());
+  else
+    wrefresh (handle.get ());
 }
 
 /* Draw a border around the window.  */

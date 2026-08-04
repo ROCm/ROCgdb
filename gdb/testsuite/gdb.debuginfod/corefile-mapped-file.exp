@@ -349,7 +349,7 @@ gdb_assert { $ptr_value eq "unavailable" } \
 # shared library from debuginfod and use that to provide the file backed
 # mapping.
 if {![allow_debuginfod_tests]} {
-    untested "skippig debuginfod parts of this test"
+    untested "skipping debuginfod parts of this test"
     return
 }
 

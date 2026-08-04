@@ -1523,6 +1523,14 @@ if { [isnative] && [check_compiler_available] } {
 	    {} \
 	    "pr32067" \
 	] \
+	[list \
+	    "Build libjump-table.so" \
+	    "-shared" \
+	    "" \
+	    { x86-64-jump-table.s } \
+	    {} \
+	    "libjump-table.so" \
+	] \
     ]
 
     if  {[istarget "x86_64-*-linux*-gnux32"]} {
@@ -2044,6 +2052,14 @@ if { [isnative] && [check_compiler_available] } {
 	    "" \
 	    { plt3.s } \
 	    "plt3" \
+	    "pass.out" \
+	] \
+	[list \
+	    "Run pr34423" \
+	    "-Wl,--no-as-needed tmpdir/libjump-table.so" \
+	    "" \
+	    { pr34423.c } \
+	    "pr34423" \
 	    "pass.out" \
 	] \
     ]

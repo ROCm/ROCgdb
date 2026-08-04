@@ -2885,12 +2885,11 @@ elf_link_read_relocs_from_section (bfd *abfd,
    cached.  If the EXTERNAL_RELOCS and INTERNAL_RELOCS arguments are
    not NULL, they are used as buffers to read into.  They are known to
    be large enough.  If the INTERNAL_RELOCS relocs argument is NULL,
-   the return value is allocated using either malloc or bfd_alloc,
-   according to the KEEP_MEMORY argument.  If O has two relocation
-   sections (both REL and RELA relocations), then the REL_HDR
+   the return value is allocated using malloc.  If O has both a REL
+   relocation section and a RELA relocation section, then the REL
    relocations will appear first in INTERNAL_RELOCS, followed by the
-   RELA_HDR relocations.  If INFO isn't NULL and KEEP_MEMORY is true,
-   update cache_size.  */
+   RELA relocations.  If KEEP_MEMORY is true the internal relocs are
+   cached, with info->cache_size updated if INFO is non-NULL.  */
 
 Elf_Internal_Rela *
 _bfd_elf_link_info_read_relocs (bfd *abfd,
@@ -2900,9 +2899,9 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
 				Elf_Internal_Rela *internal_relocs,
 				bool keep_memory)
 {
-  void *alloc1 = NULL;
-  size_t alloc1_size;
-  Elf_Internal_Rela *alloc2 = NULL;
+  void *ext_alloc1, *ext_alloc2;
+  size_t ext_mmap1, ext_mmap2;
+  Elf_Internal_Rela *int_alloc = NULL;
   elf_backend_data *bed = get_elf_backend_data (abfd);
   struct bfd_elf_section_data *esdo = elf_section_data (o);
   Elf_Internal_Rela *internal_rela_relocs;
@@ -2920,46 +2919,58 @@ _bfd_elf_link_info_read_relocs (bfd *abfd,
       size = (bfd_size_type) o->reloc_count * sizeof (Elf_Internal_Rela);
       if (keep_memory && info)
 	info->cache_size += size;
-      internal_relocs = alloc2 = bfd_malloc (size);
+      internal_relocs = int_alloc = bfd_malloc (size);
       if (internal_relocs == NULL)
 	return NULL;
     }
 
-  alloc1 = external_relocs;
+  ext_alloc1 = external_relocs;
+  ext_mmap1 = 0;
   internal_rela_relocs = internal_relocs;
   if (esdo->rel.hdr)
     {
       if (!elf_link_read_relocs_from_section (abfd, o, esdo->rel.hdr,
-					      &alloc1, &alloc1_size,
+					      &ext_alloc1, &ext_mmap1,
 					      internal_relocs))
-	goto error_return;
-      external_relocs = (((bfd_byte *) external_relocs)
-			 + esdo->rel.hdr->sh_size);
+	{
+	  internal_relocs = NULL;
+	  goto out1;
+	}
+      if (external_relocs != NULL)
+	external_relocs = (((bfd_byte *) external_relocs)
+			   + esdo->rel.hdr->sh_size);
       internal_rela_relocs += (NUM_SHDR_ENTRIES (esdo->rel.hdr)
 			       * bed->s->int_rels_per_ext_rel);
     }
 
+  ext_alloc2 = external_relocs;
+  ext_mmap2 = 0;
   if (esdo->rela.hdr
-      && (!elf_link_read_relocs_from_section (abfd, o, esdo->rela.hdr,
-					      &alloc1, &alloc1_size,
-					      internal_rela_relocs)))
-    goto error_return;
+      && !elf_link_read_relocs_from_section (abfd, o, esdo->rela.hdr,
+					     &ext_alloc2, &ext_mmap2,
+					     internal_rela_relocs))
+    internal_relocs = NULL;
+
+  /* If the external relocs were mmap'd then we want to munmap them
+     regardless of whether or not an external_relocs buffer was
+     provided.  If they were not mmap'd then we only want to free
+     buffers allocated here.  */
+  if (ext_mmap2 != 0 || external_relocs == NULL)
+    _bfd_munmap_temporary (ext_alloc2, ext_mmap2);
+ out1:
+  if (ext_mmap1 != 0 || external_relocs == NULL)
+    _bfd_munmap_temporary (ext_alloc1, ext_mmap1);
+
+  /* Don't free int_alloc, if we are returning it under the name of
+     internal_relocs.  */
+  if (internal_relocs == NULL)
+    free (int_alloc);
 
   /* Cache the results for next time, if we can.  */
-  if (keep_memory)
+  else if (keep_memory)
     esdo->relocs = internal_relocs;
 
-  _bfd_munmap_temporary (alloc1, alloc1_size);
-
-  /* Don't free alloc2, since if it was allocated we are passing it
-     back (under the name of internal_relocs).  */
-
   return internal_relocs;
-
- error_return:
-  _bfd_munmap_temporary (alloc1, alloc1_size);
-  free (alloc2);
-  return NULL;
 }
 
 /* This is similar to _bfd_elf_link_info_read_relocs, except for that

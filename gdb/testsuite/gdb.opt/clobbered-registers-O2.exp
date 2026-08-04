@@ -23,7 +23,7 @@ standard_testfile .c -2.c -3.c
 if {[prepare_for_testing "failed to prepare" $testfile \
 	 [list $srcfile $srcfile2 $srcfile3] \
 	 {debug optimize=-O2 nowarnings}]} {
-    return -1
+    return
 }
 
 if {![runto start_sequence]} {

@@ -12009,10 +12009,6 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 {
   struct gdbarch *gdbarch = cu->per_objfile->objfile->arch ();
   unit_head *cu_header = &cu->header;
-  struct type *type;
-  struct attribute *attr_byte_size;
-  struct attribute *attr_address_class;
-  int byte_size;
   struct type *target_type;
 
   /* In Ada, it's possible to create a self-referential pointer type.
@@ -12028,23 +12024,24 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
     target_type = die_type (die, cu);
 
   /* The die_type call above may have already set the type for this DIE.  */
-  type = get_die_type (die, cu);
-  if (type)
+  type *type = get_die_type (die, cu);
+  if (type != nullptr)
     return type;
 
   type = lookup_pointer_type (target_type);
 
-  attr_byte_size = dwarf2_attr (die, DW_AT_byte_size, cu);
-  if (attr_byte_size)
+  ULONGEST byte_size;
+  if (attribute *attr_byte_size = dwarf2_attr (die, DW_AT_byte_size, cu);
+      attr_byte_size != nullptr)
     byte_size = (attr_byte_size->unsigned_constant ()
 		 .value_or (cu_header->addr_size));
   else
     byte_size = cu_header->addr_size;
 
-  attr_address_class = dwarf2_attr (die, DW_AT_address_class, cu);
   ULONGEST addr_class;
-  if (attr_address_class)
-    addr_class = (attr_address_class->unsigned_constant ()
+  if (attribute *attr_aclass = dwarf2_attr (die, DW_AT_address_class, cu);
+      attr_aclass != nullptr)
+    addr_class = (attr_aclass->unsigned_constant ()
 		  .value_or (DW_ADDR_none));
   else
     addr_class = DW_ADDR_none;
@@ -12054,10 +12051,7 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
   /* If the pointer size, alignment, or address class is different
      than the default, create a type variant marked as such and set
      the length accordingly.  */
-  if (type->length () != byte_size
-      || (alignment != 0 && TYPE_RAW_ALIGN (type) != 0
-	  && alignment != TYPE_RAW_ALIGN (type))
-      || addr_class != DW_ADDR_none)
+  if (addr_class != DW_ADDR_none)
     {
       if (gdbarch_address_class_dwarf_to_id_p (gdbarch))
 	{
@@ -12066,22 +12060,19 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
 						 addr_class);
 	  type = make_type_with_address_class (type, aclass);
 	}
-      else if (type->length () != byte_size)
-	{
-	  complaint (_("invalid pointer size %d"), byte_size);
-	}
-      else if (TYPE_RAW_ALIGN (type) != alignment)
-	{
-	  complaint (_("Invalid DW_AT_alignment"
-		       " - DIE at %s [in module %s]"),
-		     sect_offset_str (die->sect_off),
-		     objfile_name (cu->per_objfile->objfile));
-	}
       else
 	{
 	  /* Should we also complain about unhandled address classes?  */
 	}
     }
+  else if (type->length () != byte_size)
+    complaint (_("invalid pointer size %s"), pulongest (byte_size));
+  else if (alignment != 0 && TYPE_RAW_ALIGN (type) != 0
+	   && TYPE_RAW_ALIGN (type) != alignment)
+    complaint (_("Invalid DW_AT_alignment"
+		 " - DIE at %s [in module %s]"),
+	       sect_offset_str (die->sect_off),
+	       objfile_name (cu->per_objfile->objfile));
 
   type->set_length (byte_size);
   set_type_align (type, alignment);

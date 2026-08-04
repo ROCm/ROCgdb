@@ -296,7 +296,8 @@ tui_win_info::resize (int height_, int width_,
   if (handle == nullptr)
     make_window ();
 
-  rerender ();
+  if (!tui_defer_rerender)
+    rerender ();
 }
 
 

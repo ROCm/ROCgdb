@@ -36,11 +36,11 @@ gdb_test "info record" "No recording is currently active\\." "info record withou
 
 standard_testfile
 if {[prepare_for_testing "failed to prepare" $testfile {} {debug}]} {
-    return -1
+    return
 }
 
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # enable btrace
@@ -79,19 +79,19 @@ load_lib gdbserver-support.exp
 require allow_gdbserver_tests
 clean_restart $testfile
 if {![runto_main]} {
-    return -1
+    return
 }
 if {![runto_main]} {
-    return -1
+    return
 }
 
 # make sure record-btrace can be enabled after re-run
 clean_restart $testfile
 if {![runto_main]} {
-    return -1
+    return
 }
 gdb_test_no_output "record btrace" "enable after restart"
 if {![runto_main]} {
-    return -1
+    return
 }
 gdb_test_no_output "record btrace" "enable after re-run"

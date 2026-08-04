@@ -187,7 +187,7 @@ bad	.byte	xtrn@tpoff
 	.quad	xtrn - 0x80000000
 	.long	xtrn@got - 4
 	.long	xtrn@got + 4
-bad	.long	xtrn@plt - .
+bad	.long	xtrn@plt - _start
 
 	.text
 bad	add	$x+0x123456789, %rax

@@ -42,6 +42,7 @@
 #include "top.h"
 #include "ui.h"
 #include "observable.h"
+#include "run-on-main-thread.h"
 
 #include <fcntl.h>
 
@@ -68,6 +69,9 @@ show_tui_debug (struct ui_file *file, int from_tty,
 
 /* Tells whether the TUI is active or not.  */
 bool tui_active = false;
+
+/* See tui.h.  */
+bool tui_defer_rerender = false;
 
 /* Tells whether the TUI should do deferred curses initialization.
    If TRIBOOL_TRUE, then yes.  If TRIBOOL_FALSE. then no (because
@@ -114,16 +118,22 @@ static Keymap tui_readline_standard_keymap;
 static int
 tui_rl_switch_mode (int notused1 = 0, int notused2 = 0)
 {
+  gdb_assert (!gdb_in_secondary_prompt_p (current_ui));
 
-  /* Don't let exceptions escape.  We're in the middle of a readline
-     callback that isn't prepared for that.  */
+  /* This function is called through the run_on_main_thread event loop
+     callback mechanism.  That mechanism propagates
+     gdb_exception_forced_quit exceptions, but silently discards
+     gdb_exception exceptions.  We catch and print gdb_exception
+     exceptions before propagating them, the run_on_main_thread
+     mechanism will then discard these and return to the event loop.
+     Any RAII cleanup between here and there will have been done,
+     which is important.  For gdb_exception_forced_quit exceptions we
+     just propagate these up the stack without printing, these will be
+     handled when they are caught by the event loop.  */
   try
     {
       if (tui_active)
-	{
-	  tui_disable ();
-	  rl_prep_terminal (0);
-	}
+	tui_disable ();
       else
 	{
 	  /* If we type "foo", entering it into the readline buffer
@@ -139,43 +149,24 @@ tui_rl_switch_mode (int notused1 = 0, int notused2 = 0)
 	     TUI.  */
 	  rl_clear_visible_line ();
 
-	  /* If tui_enable throws, we'll re-prep below.  */
+	  /* Disable readline state ahead of enabling TUI mode.  If
+	     tui_enable fails then the next display_gdb_prompt will
+	     re-prep the terminal for us.  */
 	  rl_deprep_terminal ();
+
 	  tui_enable ();
 	}
     }
   catch (const gdb_exception_forced_quit &ex)
     {
-      /* Ideally, we'd do a 'throw' here, but as noted above, we can't
-	 do that, so, instead, we'll set the necessary flags so that
-	 a later QUIT check will restart the forced quit.  */
-      set_force_quit_flag ();
+      throw;
     }
   catch (const gdb_exception &ex)
     {
       exception_print (gdb_stderr, ex);
-
-      if (!tui_active)
-	rl_prep_terminal (0);
+      throw;
     }
 
-  /* Clear the readline in case switching occurred in middle of
-     something.  */
-  if (rl_end)
-    rl_kill_text (0, rl_end);
-
-  /* Since we left the curses mode, the terminal mode is restored to
-     some previous state.  That state may not be suitable for readline
-     to work correctly (it may be restored in line mode).  We force an
-     exit of the current readline so that readline is re-entered and
-     it will be able to setup the terminal for its needs.  By
-     re-entering in readline, we also redisplay its prompt in the
-     non-curses mode.  */
-  rl_newline (1, '\n');
-
-  /* Make sure the \n we are returning does not repeat the last
-     command.  */
-  dont_repeat ();
   return 0;
 }
 
@@ -198,6 +189,8 @@ tui_try_activate ()
 static int
 tui_rl_change_windows (int notused1, int notused2)
 {
+  gdb_assert (!gdb_in_secondary_prompt_p (current_ui));
+
   if (tui_try_activate ())
     tui_next_layout ();
 
@@ -209,6 +202,8 @@ tui_rl_change_windows (int notused1, int notused2)
 static int
 tui_rl_delete_other_windows (int notused1, int notused2)
 {
+  gdb_assert (!gdb_in_secondary_prompt_p (current_ui));
+
   if (tui_try_activate ())
     tui_remove_some_windows ();
 
@@ -220,6 +215,8 @@ tui_rl_delete_other_windows (int notused1, int notused2)
 static int
 tui_rl_other_window (int count, int key)
 {
+  gdb_assert (!gdb_in_secondary_prompt_p (current_ui));
+
   if (tui_try_activate ())
     tui_set_win_focus_to (tui_next_win (tui_win_with_focus ()));
 
@@ -231,10 +228,10 @@ tui_rl_other_window (int count, int key)
 static int
 tui_rl_command_key (int count, int key)
 {
-  int i;
+  gdb_assert (!gdb_in_secondary_prompt_p (current_ui));
 
   reinitialize_more_filter ();
-  for (i = 0; tui_commands[i].cmd; i++)
+  for (int i = 0; tui_commands[i].cmd; i++)
     {
       if (tui_commands[i].key == key)
 	{
@@ -262,6 +259,8 @@ tui_rl_command_key (int count, int key)
 static int
 tui_rl_command_mode (int count, int key)
 {
+  gdb_assert (!gdb_in_secondary_prompt_p (current_ui));
+
   tui_set_key_mode (TUI_ONE_COMMAND_MODE);
   return rl_insert (count, key);
 }
@@ -271,6 +270,8 @@ tui_rl_command_mode (int count, int key)
 static int
 tui_rl_next_keymap (int notused1, int notused2)
 {
+  gdb_assert (!gdb_in_secondary_prompt_p (current_ui));
+
   if (!tui_try_activate ())
     return 0;
 
@@ -310,6 +311,89 @@ tui_set_key_mode (enum tui_key_mode mode)
   tui_show_status_content ();
 }
 
+/* Wrapper around function FPTR, used to add common checks before
+   functions that are bound to readline multi-key combinations.  */
+
+template<int (*FPTR) (int, int)>
+int
+tui_rl_keybinding (int count, int key)
+{
+  /* Don't allow TUI changes while we're at an interactive prompt.  */
+  if (gdb_in_secondary_prompt_p (current_ui))
+    return 0;
+
+  run_on_main_thread ([=] () {
+    bool was_active = tui_active;
+
+    /* Cleanup required even on the exception path.  */
+    SCOPE_EXIT {
+      /* If we switched from CLI to TUI (or back) then we should
+	 reinitialize the pager in order to avoid spurious pagination
+	 prompts.  This is especially important going from CLI to TUI
+	 where the command window is usually smaller than the full
+	 terminal, so the pager might already think that we have more
+	 lines printed than will fit in the window, despite the window
+	 starting empty after a mode switch.  */
+      if (was_active != tui_active)
+	reinitialize_more_filter ();
+
+      /* The user was at a prompt and pressed a multi-key combination
+	 (e.g. C-x C-a).  As a result this callback was invoked from
+	 the event loop.  We're now exiting this callback and want to
+	 ensure that the prompt is drawn correctly.
+
+	 We have two approaches, full display_gdb_prompt, or a light
+	 weight tui_redisplay_readline.  The former will clear the
+	 readline input buffer and redisplay the prompt, while the
+	 second will redraw the prompt along with anything in the
+	 input buffer.  We want the light weight option where
+	 possible, but there are times when this isn't an option:
+
+	 1. A successful switch between CLI and TUI, in either
+	    direction, changes how we update the prompt.  We need to
+	    call display_gdb_prompt the first time to ensure
+	    everything is done correctly.  We also need to consider
+	    the case where tui_enable fails, leaving us in CLI mode,
+	    this also requires a call to display_gdb_prompt as the
+	    light weight tui_redisplay_readline is not appropriate for
+	    CLI use.
+
+	 2. Usually the TUI will have the RL_STATE_CALLBACK state flag
+	    set because of when this event callback is called.  If a
+	    secondary prompt has been displayed, then once the
+	    secondary prompt completed, the RL_STATE_CALLBACK flag
+	    will have been cleared.  This is good for us, because
+	    after a secondary prompt rl_prompt will still hold the
+	    secondary prompt string, so we need display_gdb_prompt to
+	    set the correct top-level prompt.  */
+      if (!was_active || !tui_active || !RL_ISSTATE (RL_STATE_CALLBACK))
+	{
+	  current_ui->prompt_state = PROMPT_NEEDED;
+	  display_gdb_prompt (nullptr);
+	}
+      else
+	{
+	  /* We can only reach here when was_active and tui_active are
+	     both true: starting in CLI mode (!was_active) or ending
+	     in CLI mode (!tui_active) both take the if block
+	     above.  */
+	  gdb_assert (tui_active);
+
+	  /* The only time rl_prompt will be NULL is when we switch
+	     from CLI to TUI, but that will be handled by the block
+	     above.  */
+	  gdb_assert (rl_prompt != nullptr);
+
+	  tui_redisplay_readline ();
+	}
+    };
+
+    (void) FPTR (count, key);
+  });
+
+  return 0;
+}
+
 /* Initialize readline and configure the keymap for the switching
    key shortcut.  */
 void
@@ -324,11 +408,16 @@ tui_ensure_readline_initialized ()
   int i;
   Keymap tui_ctlx_keymap;
 
-  rl_add_defun ("tui-switch-mode", tui_rl_switch_mode, -1);
-  rl_add_defun ("next-keymap", tui_rl_next_keymap, -1);
-  rl_add_defun ("tui-delete-other-windows", tui_rl_delete_other_windows, -1);
-  rl_add_defun ("tui-change-windows", tui_rl_change_windows, -1);
-  rl_add_defun ("tui-other-window", tui_rl_other_window, -1);
+  rl_add_defun ("tui-switch-mode",
+		tui_rl_keybinding<tui_rl_switch_mode>, -1);
+  rl_add_defun ("next-keymap",
+		tui_rl_keybinding<tui_rl_next_keymap>, -1);
+  rl_add_defun ("tui-delete-other-windows",
+		tui_rl_keybinding<tui_rl_delete_other_windows>, -1);
+  rl_add_defun ("tui-change-windows",
+		tui_rl_keybinding<tui_rl_change_windows>, -1);
+  rl_add_defun ("tui-other-window",
+		tui_rl_keybinding<tui_rl_other_window>, -1);
 
   tui_keymap = rl_make_bare_keymap ();
 
@@ -361,21 +450,21 @@ tui_ensure_readline_initialized ()
       rl_bind_key_in_map (i, tui_rl_command_mode, tui_keymap);
     }
 
-  rl_bind_key_in_map ('a', tui_rl_switch_mode, emacs_ctlx_keymap);
-  rl_bind_key_in_map ('a', tui_rl_switch_mode, tui_ctlx_keymap);
-  rl_bind_key_in_map ('A', tui_rl_switch_mode, emacs_ctlx_keymap);
-  rl_bind_key_in_map ('A', tui_rl_switch_mode, tui_ctlx_keymap);
-  rl_bind_key_in_map (c_ctrl ('A'), tui_rl_switch_mode, emacs_ctlx_keymap);
-  rl_bind_key_in_map (c_ctrl ('A'), tui_rl_switch_mode, tui_ctlx_keymap);
-  rl_bind_key_in_map ('1', tui_rl_delete_other_windows, emacs_ctlx_keymap);
-  rl_bind_key_in_map ('1', tui_rl_delete_other_windows, tui_ctlx_keymap);
-  rl_bind_key_in_map ('2', tui_rl_change_windows, emacs_ctlx_keymap);
-  rl_bind_key_in_map ('2', tui_rl_change_windows, tui_ctlx_keymap);
-  rl_bind_key_in_map ('o', tui_rl_other_window, emacs_ctlx_keymap);
-  rl_bind_key_in_map ('o', tui_rl_other_window, tui_ctlx_keymap);
-  rl_bind_key_in_map ('q', tui_rl_next_keymap, tui_keymap);
-  rl_bind_key_in_map ('s', tui_rl_next_keymap, emacs_ctlx_keymap);
-  rl_bind_key_in_map ('s', tui_rl_next_keymap, tui_ctlx_keymap);
+  rl_bind_key_in_map ('a', tui_rl_keybinding<tui_rl_switch_mode>, emacs_ctlx_keymap);
+  rl_bind_key_in_map ('a', tui_rl_keybinding<tui_rl_switch_mode>, tui_ctlx_keymap);
+  rl_bind_key_in_map ('A', tui_rl_keybinding<tui_rl_switch_mode>, emacs_ctlx_keymap);
+  rl_bind_key_in_map ('A', tui_rl_keybinding<tui_rl_switch_mode>, tui_ctlx_keymap);
+  rl_bind_key_in_map (c_ctrl ('A'), tui_rl_keybinding<tui_rl_switch_mode>, emacs_ctlx_keymap);
+  rl_bind_key_in_map (c_ctrl ('A'), tui_rl_keybinding<tui_rl_switch_mode>, tui_ctlx_keymap);
+  rl_bind_key_in_map ('1', tui_rl_keybinding<tui_rl_delete_other_windows>, emacs_ctlx_keymap);
+  rl_bind_key_in_map ('1', tui_rl_keybinding<tui_rl_delete_other_windows>, tui_ctlx_keymap);
+  rl_bind_key_in_map ('2', tui_rl_keybinding<tui_rl_change_windows>, emacs_ctlx_keymap);
+  rl_bind_key_in_map ('2', tui_rl_keybinding<tui_rl_change_windows>, tui_ctlx_keymap);
+  rl_bind_key_in_map ('o', tui_rl_keybinding<tui_rl_other_window>, emacs_ctlx_keymap);
+  rl_bind_key_in_map ('o', tui_rl_keybinding<tui_rl_other_window>, tui_ctlx_keymap);
+  rl_bind_key_in_map ('q', tui_rl_keybinding<tui_rl_next_keymap>, tui_keymap);
+  rl_bind_key_in_map ('s', tui_rl_keybinding<tui_rl_next_keymap>, emacs_ctlx_keymap);
+  rl_bind_key_in_map ('s', tui_rl_keybinding<tui_rl_next_keymap>, tui_ctlx_keymap);
 
   /* Initialize readline after the above.  */
   rl_initialize ();
@@ -469,6 +558,14 @@ tui_enable (void)
     return;
 
   tui_batch_rendering defer;
+
+  /* Defer filling in window contents at this time.  The window
+     content will be filled in by calling rerender later.  We do this
+     so that we can be sure the CMD window will exist as other windows
+     are rendered, filling in some windows might trigger a secondary
+     prompt (e.g. debuginfod prompt) and we want to be sure that the
+     CMD window exists to display the prompt in.  */
+  tui_defer_rerender = true;
 
   /* To avoid to initialize curses when gdb starts, there is a deferred
      curses initialization.  This initialization is made only once

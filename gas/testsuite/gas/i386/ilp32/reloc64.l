@@ -103,8 +103,6 @@
 .*:176:  Info: .*
 .*:3: Error: .*
 .*:177:  Info: .*
-.*:3: Error: .*
-.*:190:  Info: .*
 .*:193: Error: .* too large for field of 4 bytes at .*
 .*:194: Error: .* too large for field of 4 bytes at .*
 .*:195: Error: .* too large for field of 4 bytes at .*
@@ -113,6 +111,7 @@
 .*:197: Error: .* too large for field of 1 byte at .*
 .*:198: Error: .* too large for field of 2 bytes at .*
 .*:198: Error: .* too large for field of 1 byte at .*
+.*:190: Error: can't resolve xtrn - _start
 .*:201: Error: .* too large for field of 4 bytes at .*
 .*:202: Error: .* too large for field of 2 bytes at .*
 .*:203: Error: .* too large for field of 2 bytes at .*

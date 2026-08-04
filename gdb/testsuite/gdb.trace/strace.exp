@@ -29,7 +29,7 @@ set additional_flags [list quiet debug shlib=$libipa shlib_load \
 
 if { [gdb_compile $srcdir/$subdir/$srcfile $binfile executable $additional_flags] != ""} {
     untested "UST library or headers are not installed"
-    return -1
+    return
 }
 
 # Test that the socket file is removed when GDB quits, detaches or
@@ -368,7 +368,7 @@ if { [istarget "x86_64-*-linux*"] || [istarget "i\[34567\]86-*-linux*"] } {
 clean_restart $executable
 gdb_load_shlib $libipa
 if {![runto_main]} {
-    return -1
+    return
 }
 if {![gdb_target_supports_trace]} {
     # At this point, the socket file has been created.  We must make sure it is
@@ -377,7 +377,7 @@ if {![gdb_target_supports_trace]} {
     # the socket file.
     gdb_test "detach" "Detaching .*, process .*"
     unsupported "current target does not support trace"
-    return -1
+    return
 }
 
 # Double-check that marker ID ("-m") is not mistaken for an explicit location

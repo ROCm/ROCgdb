@@ -260,7 +260,7 @@ load_exec_and_core_file false false \
 # Setup a debuginfod server which can serve the original shared
 # library file.
 if {![allow_debuginfod_tests]} {
-    untested "skippig debuginfod parts of this test"
+    untested "skipping debuginfod parts of this test"
     return
 }
 

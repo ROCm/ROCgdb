@@ -15,8 +15,6 @@
 
 # Test a binary that uses MTE and exercise various MTE-related scenarios.
 
-global hex
-global decimal
 
 # Return TAG in hex format with no leading zeroes.
 proc get_hex_tag { tag } {

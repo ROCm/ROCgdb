@@ -23,7 +23,7 @@
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug pthreads}]} {
-    return -1
+    return
 }
 
 # Run "info threads" and return a list of various information:

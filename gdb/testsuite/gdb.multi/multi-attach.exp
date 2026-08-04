@@ -24,7 +24,7 @@ standard_testfile
 require can_spawn_for_attach
 
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug pthreads}]} {
-    return -1
+    return
 }
 
 # Start the programs running and then wait for a bit, to be sure that

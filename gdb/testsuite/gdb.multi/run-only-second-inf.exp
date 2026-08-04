@@ -23,7 +23,7 @@ standard_testfile
 require !use_gdb_stub
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug}]} {
-    return -1
+    return
 }
 
 # Setting the target to non-stop mode revealed a bug where the context

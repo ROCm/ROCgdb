@@ -30,7 +30,29 @@ if {![runto_main]} {
     return
 }
 
-gdb_breakpoint [gdb_get_line_number "break-here"]
+# Wait for the "Thread exited" message.
+set re_thread_exited {\[Thread [^\r\n]+ exited\]}
+set saw_thread_exited 0
+gdb_test_multiple "continue" "continue to thread exited" {
+    -re $re_thread_exited {
+	set saw_thread_exited 1
+	# Get a prompt.
+	send_gdb "\003"
+	exp_continue
+    }
+    -re -wrap "" {
+	pass $gdb_test_name
+    }
+}
+gdb_assert {$saw_thread_exited} "thread exited"
+if {!$saw_thread_exited} {
+    return
+}
+
+# Let the inferior exit the wait_for_exit loop.
+gdb_test_no_output "set var wait_for_exit = 0"
+
+gdb_breakpoint $srcfile:[gdb_get_line_number "break-here"]
 gdb_continue_to_breakpoint "break-here" ".* break-here .*"
 
 gdb_test "info threads" \

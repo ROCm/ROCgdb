@@ -35,14 +35,14 @@ set binfile2 [standard_output_file $testfile2]
 with_test_prefix "exec1" {
     if { [build_executable "failed to prepare" $testfile1 $srcfile1 \
 	      [list pthreads debug]] } {
-	return -1
+	return
     }
 }
 
 with_test_prefix "exec2" {
     if { [build_executable "failed to prepare" $testfile2 $srcfile2 \
 	      [list pthreads debug]] } {
-	return -1
+	return
     }
 }
 

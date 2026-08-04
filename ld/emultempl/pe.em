@@ -1573,6 +1573,16 @@ gld${EMULATION_NAME}_after_open (void)
 
   pe_output_file_set_long_section_names (link_info.output_bfd);
 
+  /* The RVAs of these symbols will be written into the PE header, so they
+     must not be collected.  */
+  char *sym = xstrdup ("__tls_used");
+  sym[0] = bfd_get_symbol_leading_char (link_info.output_bfd);
+  lang_add_gc_name (sym + !sym[0]);
+
+  sym = xstrdup ("__load_config_used");
+  sym[0] = bfd_get_symbol_leading_char (link_info.output_bfd);
+  lang_add_gc_name (sym + !sym[0]);
+
 #ifdef DLL_SUPPORT
   pe_process_import_defs (link_info.output_bfd, &link_info);
 

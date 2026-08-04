@@ -27,11 +27,11 @@ standard_testfile
 # Also discard local symbols.
 if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
 	 {ldflags=-Wl,-x nopie}]} {
-    return -1
+    return
 }
 
 if {![runto test]} {
-    return -1
+    return
 }
 
 # we want to see the full trace for this test

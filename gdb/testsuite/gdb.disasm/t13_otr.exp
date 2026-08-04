@@ -29,19 +29,18 @@ set link-flags "-m h8300sxelf"
 
 if {[target_assemble $srcfile $objfile "${asm-flags}"] != ""} {
      untested "failed to assemble"
-     return -1
+     return
 }
 
 if {[target_link $objfile $binfile "${link-flags}"] != ""} {
      untested "failed to link"
-     return -1
+     return
 }
 
 gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load $binfile
 
-global hex
 
 gdb_test "x /i start" "bra\t.\\+18 \\($hex\\)" \
 	"bra .+18"

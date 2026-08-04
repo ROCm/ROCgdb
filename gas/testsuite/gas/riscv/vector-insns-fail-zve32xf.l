@@ -1,225 +1,225 @@
 .*Assembler messages:
-.*Error: illegal opcode for zve32x `vle64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vle64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vle64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vse64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vse64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vse64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlse64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlse64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlse64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vsse64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vsse64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vsse64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vloxei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsoxei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vluxei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsuxei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vle64ff.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vle64ff.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vle64ff.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg2e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg2e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg2e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vsseg2e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg2e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg2e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg3e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg3e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg3e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vsseg3e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg3e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg3e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg4e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg4e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg4e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vsseg4e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg4e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg4e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg5e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg5e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg5e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vsseg5e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg5e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg5e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg6e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg6e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg6e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vsseg6e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg6e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg6e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg7e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg7e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg7e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vsseg7e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg7e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg7e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg8e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg8e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg8e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vsseg8e64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg8e64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vsseg8e64.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlsseg2e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg2e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg2e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vssseg2e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg2e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg2e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vlsseg3e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg3e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg3e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vssseg3e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg3e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg3e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vlsseg4e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg4e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg4e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vssseg4e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg4e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg4e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vlsseg5e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg5e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg5e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vssseg5e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg5e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg5e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vlsseg6e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg6e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg6e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vssseg6e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg6e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg6e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vlsseg7e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg7e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg7e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vssseg7e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg7e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg7e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vlsseg8e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg8e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vlsseg8e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vssseg8e64.v v4,\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg8e64.v v4,0\(a0\),a1'
-.*Error: illegal opcode for zve32x `vssseg8e64.v v4,\(a0\),a1,v0.t'
-.*Error: illegal opcode for zve32x `vloxseg2ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg2ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg2ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsoxseg2ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg2ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg2ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vloxseg3ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg3ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg3ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsoxseg3ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg3ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg3ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vloxseg4ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg4ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg4ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsoxseg4ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg4ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg4ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vloxseg5ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg5ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg5ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsoxseg5ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg5ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg5ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vloxseg6ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg6ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg6ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsoxseg6ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg6ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg6ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vloxseg7ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg7ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg7ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsoxseg7ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg7ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg7ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vloxseg8ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg8ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vloxseg8ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsoxseg8ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg8ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsoxseg8ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vluxseg2ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg2ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg2ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsuxseg2ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg2ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg2ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vluxseg3ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg3ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg3ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsuxseg3ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg3ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg3ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vluxseg4ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg4ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg4ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsuxseg4ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg4ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg4ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vluxseg5ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg5ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg5ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsuxseg5ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg5ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg5ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vluxseg6ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg6ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg6ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsuxseg6ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg6ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg6ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vluxseg7ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg7ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg7ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsuxseg7ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg7ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg7ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vluxseg8ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg8ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vluxseg8ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vsuxseg8ei64.v v4,\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg8ei64.v v4,0\(a0\),v12'
-.*Error: illegal opcode for zve32x `vsuxseg8ei64.v v4,\(a0\),v12,v0.t'
-.*Error: illegal opcode for zve32x `vlseg2e64ff.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg2e64ff.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg2e64ff.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg3e64ff.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg3e64ff.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg3e64ff.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg4e64ff.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg4e64ff.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg4e64ff.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg5e64ff.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg5e64ff.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg5e64ff.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg6e64ff.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg6e64ff.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg6e64ff.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg7e64ff.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg7e64ff.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg7e64ff.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vlseg8e64ff.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg8e64ff.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vlseg8e64ff.v v4,\(a0\),v0.t'
-.*Error: illegal opcode for zve32x `vl1re64.v v3,\(a0\)'
-.*Error: illegal opcode for zve32x `vl1re64.v v3,0\(a0\)'
-.*Error: illegal opcode for zve32x `vl2re64.v v2,\(a0\)'
-.*Error: illegal opcode for zve32x `vl2re64.v v2,0\(a0\)'
-.*Error: illegal opcode for zve32x `vl4re64.v v4,\(a0\)'
-.*Error: illegal opcode for zve32x `vl4re64.v v4,0\(a0\)'
-.*Error: illegal opcode for zve32x `vl8re64.v v8,\(a0\)'
-.*Error: illegal opcode for zve32x `vl8re64.v v8,0\(a0\)'
+.*Error: unrecognized opcode `vle64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vle64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vle64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vse64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vse64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vse64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlse64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlse64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlse64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsse64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsse64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsse64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vle64ff.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vle64ff.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vle64ff.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg2e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg2e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg2e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg2e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg2e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg2e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg3e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg3e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg3e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg3e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg3e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg3e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg4e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg4e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg4e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg4e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg4e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg4e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg5e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg5e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg5e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg5e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg5e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg5e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg6e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg6e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg6e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg6e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg6e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg6e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg7e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg7e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg7e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg7e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg7e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg7e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg8e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg8e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg8e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg8e64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg8e64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsseg8e64.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg2e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg2e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg2e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg2e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg2e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg2e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg3e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg3e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg3e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg3e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg3e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg3e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg4e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg4e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg4e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg4e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg4e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg4e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg5e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg5e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg5e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg5e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg5e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg5e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg6e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg6e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg6e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg6e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg6e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg6e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg7e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg7e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg7e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg7e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg7e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg7e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg8e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg8e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlsseg8e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg8e64.v v4,\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg8e64.v v4,0\(a0\),a1', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vssseg8e64.v v4,\(a0\),a1,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg2ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg2ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg2ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg2ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg2ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg2ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg3ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg3ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg3ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg3ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg3ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg3ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg4ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg4ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg4ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg4ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg4ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg4ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg5ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg5ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg5ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg5ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg5ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg5ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg6ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg6ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg6ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg6ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg6ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg6ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg7ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg7ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg7ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg7ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg7ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg7ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg8ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg8ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vloxseg8ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg8ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg8ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsoxseg8ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg2ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg2ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg2ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg2ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg2ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg2ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg3ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg3ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg3ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg3ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg3ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg3ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg4ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg4ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg4ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg4ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg4ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg4ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg5ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg5ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg5ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg5ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg5ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg5ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg6ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg6ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg6ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg6ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg6ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg6ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg7ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg7ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg7ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg7ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg7ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg7ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg8ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg8ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vluxseg8ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg8ei64.v v4,\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg8ei64.v v4,0\(a0\),v12', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vsuxseg8ei64.v v4,\(a0\),v12,v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg2e64ff.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg2e64ff.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg2e64ff.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg3e64ff.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg3e64ff.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg3e64ff.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg4e64ff.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg4e64ff.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg4e64ff.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg5e64ff.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg5e64ff.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg5e64ff.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg6e64ff.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg6e64ff.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg6e64ff.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg7e64ff.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg7e64ff.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg7e64ff.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg8e64ff.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg8e64ff.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vlseg8e64ff.v v4,\(a0\),v0.t', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vl1re64.v v3,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vl1re64.v v3,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vl2re64.v v2,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vl2re64.v v2,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vl4re64.v v4,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vl4re64.v v4,0\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vl8re64.v v8,\(a0\)', extension `v' or `zve64x' required
+.*Error: unrecognized opcode `vl8re64.v v8,0\(a0\)', extension `v' or `zve64x' required
