@@ -147,3 +147,8 @@ repos:
         language: unsupported_script
         entry: gdb/contrib/check-file-mode.sh
         files: *gdb_files
+
+# Local Variables:
+# indent-tabs-mode: nil
+# tab-width: 2
+# End:
