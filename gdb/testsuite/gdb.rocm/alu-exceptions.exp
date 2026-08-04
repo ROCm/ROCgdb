@@ -23,6 +23,11 @@ load_lib rocm.exp
 
 require allow_hip_tests
 
+# With optimized device code, the compiler may promote integer division to
+# floating-point, so enabling the integer divide-by-zero exception mode does
+# not trigger a SIGFPE.  Skip for optimized builds.
+require no_optimized_code
+
 standard_testfile .cpp
 
 if {[build_executable "failed to prepare $testfile" $testfile $srcfile \
