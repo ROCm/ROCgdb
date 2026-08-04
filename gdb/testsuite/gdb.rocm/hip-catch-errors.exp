@@ -252,8 +252,10 @@ proc do_test {} {
 	    gdb_test_no_output "set args launch"
 	    catch_hiperr
 	    check_hip_launch_kernel_err "run"
+	    # __device_stub__kernel is inlined into hip_launch_kernel at
+	    # higher optimization levels and may not appear in the backtrace.
 	    gdb_test "backtrace" \
-		".*__hipOnError.*hipLaunchKernel.*__device_stub__kernel.*" \
+		".*__hipOnError.*hipLaunchKernel.*" \
 		"call stack"
 	}
 
