@@ -1463,6 +1463,17 @@ namespace eval Dwarf {
 	_op .byte $size
     }
 
+    proc _handle_DW_OP_deref_type {size label} {
+	variable _cu_label
+
+	_op .byte $size
+	_op .uleb128 "$label - $_cu_label"
+    }
+
+    proc _handle_DW_OP_GNU_deref_type {size label} {
+	_handle_DW_OP_deref_type $size $label
+    }
+
     proc _handle_DW_OP_bregx {register offset} {
 	_op .uleb128 $register
 	_op .sleb128 $offset
