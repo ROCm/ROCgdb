@@ -1,0 +1,41 @@
+name: Update TheRock Dependencies
+
+on:
+  # schedule: # runs twice daily (03:17 and 15:17 UTC)
+  #   - cron: '17 3 * * *'
+  #   - cron: '17 15 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (fetch and print changes, but skip branch/commit/push/PR creation)'
+        type: boolean
+        default: true
+
+# Deny-all by default; grant writes only on the job that needs them.
+permissions: {}
+
+concurrency:
+  group: therock-deps-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Configure git identity and credentials
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global credential.helper "!gh auth git-credential"
+
+      - name: Update TheRock references
+        run: |
+          python3 .github/scripts/update_therock_deps.py ${{ inputs.dry_run && '--dry-run' || '' }}
