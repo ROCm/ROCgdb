@@ -414,7 +414,7 @@ extern std::optional<CORE_ADDR> default_get_shadow_stack_pointer
   /* Architecture address space handling.  */
 
 /* Convert address space name to an address space id.  */
-extern std::optional<arch_addr_space_id> gdbarch_name_to_address_space_id
+extern std::optional<arch_addr_space_id> gdbarch_address_space_name_to_id
   (struct gdbarch *gdbarch, const char *name);
 
 /* Convert address space id to an address space name.  */
