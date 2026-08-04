@@ -3681,7 +3681,7 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
 
 	  dwarf_require_integral (aspace_value->get_type ());
 	  arch_addr_space_id address_space
-	    = gdbarch_dwarf_address_space_to_address_space_id
+	    = gdbarch_address_space_dwarf_to_id
 		(arch, aspace_value->to_long ());
 	  CORE_ADDR address = address_value->to_long ();
 	  address
@@ -3834,7 +3834,7 @@ dwarf_expr_context::execute_llvm_stack_op (dwarf_llvm_user op,
 
 	  dwarf_require_integral (aspace_value->get_type ());
 	  arch_addr_space_id address_space
-	    = gdbarch_dwarf_address_space_to_address_space_id
+	    = gdbarch_address_space_dwarf_to_id
 		(arch, aspace_value->to_long ());
 	  memory->set_address_space (address_space);
 	  result_entry = memory;

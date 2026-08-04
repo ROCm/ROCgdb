@@ -481,13 +481,12 @@ using gdbarch_segment_address_to_core_address_ftype = CORE_ADDR (arch_addr_space
 CORE_ADDR gdbarch_segment_address_to_core_address (struct gdbarch *gdbarch, arch_addr_space_id address_space_id, CORE_ADDR address);
 void set_gdbarch_segment_address_to_core_address (struct gdbarch *gdbarch, gdbarch_segment_address_to_core_address_ftype *segment_address_to_core_address);
 
-/* Converts DWARF address space number to address space id.
-   TODO: This hook is a quick fix until a proper address space support
-   is added and should not be pushed upstream. */
+/* Given the DWARF identifier for an architecture-specific address space,
+   return the id of that address space. */
 
-using gdbarch_dwarf_address_space_to_address_space_id_ftype = arch_addr_space_id (LONGEST dwarf_addr_space);
-arch_addr_space_id gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, LONGEST dwarf_addr_space);
-void set_gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, gdbarch_dwarf_address_space_to_address_space_id_ftype *dwarf_address_space_to_address_space_id);
+using gdbarch_address_space_dwarf_to_id_ftype = arch_addr_space_id (struct gdbarch *gdbarch, ULONGEST dwarf_addr_space);
+arch_addr_space_id gdbarch_address_space_dwarf_to_id (struct gdbarch *gdbarch, ULONGEST dwarf_addr_space);
+void set_gdbarch_address_space_dwarf_to_id (struct gdbarch *gdbarch, gdbarch_address_space_dwarf_to_id_ftype *address_space_dwarf_to_id);
 
 /* Return the address's scope. */
 
