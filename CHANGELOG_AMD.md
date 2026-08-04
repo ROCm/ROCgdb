@@ -5,6 +5,8 @@ Full documentation for ROCgdb is available at
 
 ## ROCgdb-X for ROCm-next
 
+## ROCgdb-16-3 for ROCm-7.14
+
 ### Added
 
 - Dumping core of AMD GPU programs with the "gcore" command is now
