@@ -119,21 +119,22 @@ struct type_instance_flags
     return !(*this == other);
   }
 
-  type_instance_flags &operator|= (const type_instance_flags &other)
+  /* Merge OTHER flags to THIS.  Address space and address class
+     values of THIS are preserved, if they are non-zero.  Otherwise,
+     OTHER's values are used.  */
+  void merge (const type_instance_flags &other)
   {
     is_const = is_const || other.is_const;
     is_volatile = is_volatile || other.is_volatile;
 
-    gdb_assert (harvard_aspace == 0);
-    harvard_aspace = other.harvard_aspace;
-
-    gdb_assert (address_class == 0);
-    address_class = other.address_class;
+    if (harvard_aspace == HARVARD_ASPACE_NONE)
+      harvard_aspace = other.harvard_aspace;
+    if (address_class == 0)
+      address_class = other.address_class;
 
     is_nottext = is_nottext || other.is_nottext;
     is_restrict = is_restrict || other.is_restrict;
     is_atomic = is_atomic || other.is_atomic;
-    return *this;
   }
 
   /* Constant type.  If this is set, the corresponding type has a

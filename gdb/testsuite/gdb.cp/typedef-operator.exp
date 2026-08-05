@@ -32,3 +32,6 @@ if {![runto_main]} {
 }
 
 gdb_test "p *v" " = 42" "test typedef"
+
+# Test that address spaces are preserved.
+gdb_test "ptype (@data D)u" "type = @data class C .*"
