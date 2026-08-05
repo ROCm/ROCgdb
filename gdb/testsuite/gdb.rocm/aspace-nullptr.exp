@@ -1,0 +1,72 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test accessing memory through nullptr for various address spaces.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+if {[prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile \
+	 {debug hip}]} {
+    return
+}
+
+clean_restart $::testfile
+
+with_rocm_gpu_lock {
+    if {![runto_main]} {
+	return
+    }
+    set bp_line [gdb_get_line_number "Break here"]
+    gdb_breakpoint $bp_line -allow-pending -temporary
+    gdb_continue_to_breakpoint "kernel bp"
+
+    set trailer "\[^\r\n\]*(?=\r\n)"
+    set tok "\[^ \t\r\n\]+"
+    set sp "\[ \t\]+"
+
+    # Collect address spaces and their nullptrs into a dictionary.
+    set aspaces [dict create]
+
+    gdb_test_multiple "maint print address-spaces" "" {
+	-re "Name$trailer" {
+	    exp_continue
+	}
+	-re "^\r\n(${tok})${sp}${tok}${sp}${tok}${sp}(${tok})${sp}${trailer}" {
+	    set aspace_name $expect_out(1,string)
+	    set aspace_null $expect_out(2,string)
+	    dict set aspaces $aspace_name $aspace_null
+	    verbose -log "aspace: $aspace_name, nullptr: $aspace_null"
+	    exp_continue
+	}
+	-re "^\r\n$::gdb_prompt $" {
+	    gdb_assert {[dict size $aspaces] > 0} $gdb_test_name
+	}
+    }
+
+    # Accessing a nullptr in a particular address space should not
+    # crash or hang.
+    dict for {aspace nullptr} $aspaces {
+	gdb_test "print {int}${aspace}#${nullptr}" \
+	    "Cannot access memory .*" \
+	    "access nullptr in aspace $aspace"
+    }
+}
