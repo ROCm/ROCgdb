@@ -1974,6 +1974,8 @@ process_one_event (amd_dbgapi_inferior_info &info,
 			| AMD_DBGAPI_WAVE_STOP_REASON_FP_INVALID_OPERATION
 			| AMD_DBGAPI_WAVE_STOP_REASON_INT_DIVIDE_BY_0))
 	      ws.set_stopped (GDB_SIGNAL_FPE);
+	    else if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_ASSERT_TRAP)
+	      ws.set_stopped (GDB_SIGNAL_ABRT);
 	    else if (stop_reason
 		     & (AMD_DBGAPI_WAVE_STOP_REASON_BREAKPOINT
 			| AMD_DBGAPI_WAVE_STOP_REASON_WATCHPOINT
@@ -1981,8 +1983,6 @@ process_one_event (amd_dbgapi_inferior_info &info,
 			| AMD_DBGAPI_WAVE_STOP_REASON_DEBUG_TRAP
 			| AMD_DBGAPI_WAVE_STOP_REASON_TRAP))
 	      ws.set_stopped (GDB_SIGNAL_TRAP);
-	    else if (stop_reason & AMD_DBGAPI_WAVE_STOP_REASON_ASSERT_TRAP)
-	      ws.set_stopped (GDB_SIGNAL_ABRT);
 	    else
 	      ws.set_stopped (GDB_SIGNAL_0);
 
