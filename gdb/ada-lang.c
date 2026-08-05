@@ -806,8 +806,7 @@ ada_main_name ()
 					      sections)
 	   == TARGET_XFER_OK)
 	  && xferred > 0
-	  && (strnlen ((char *) main_program_name, sizeof (main_program_name))
-	      < sizeof (main_program_name)))
+	  && (strnlen ((char *) main_program_name, xferred) < xferred))
 	return (char *) main_program_name;
     }
 
