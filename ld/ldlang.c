@@ -8165,8 +8165,9 @@ lang_gc_sections (void)
 	}
     }
 
-  if (link_info.gc_sections)
-    bfd_gc_sections (link_info.output_bfd, &link_info);
+  if (link_info.gc_sections
+      && !bfd_gc_sections (link_info.output_bfd, &link_info))
+    fatal (_("%P: --gc-sections failed: %E\n"));
 }
 
 /* Worker for lang_find_relro_sections_1.  */
