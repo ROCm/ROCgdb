@@ -15522,9 +15522,9 @@ _bfd_elf_default_got_elt_size (struct bfd_link_info *info,
 
 /* Returns the name of the dynamic reloc section associated with SEC.  */
 
-static const char *
-get_dynamic_reloc_section_name (bfd *       abfd,
-				asection *  sec,
+static char *
+get_dynamic_reloc_section_name (bfd *abfd,
+				asection *sec,
 				bool is_rela)
 {
   const char *prefix = is_rela ? ".rela" : ".rel";
@@ -15561,14 +15561,28 @@ _bfd_elf_make_dynamic_reloc_section (asection *sec,
 
   if (reloc_sec == NULL)
     {
-      const char * name = get_dynamic_reloc_section_name (abfd, sec, is_rela);
+      bool known = (dynobj != NULL
+		    && (get_elf_backend_data (dynobj)
+			->relocs_compatible (dynobj->xvec, abfd->xvec)));
+      BFD_ASSERT (known);
+      if (!known
+	  || dynobj->xvec->byteorder != abfd->xvec->byteorder)
+	{
+	  _bfd_error_handler (_("%s dynamic relocs incompatible with%s%s output"),
+			      bfd_get_target (abfd),
+			      dynobj ? " " : "",
+			      dynobj ? bfd_get_target (dynobj) : "");
+	  return NULL;
+	}
 
+      char *name = get_dynamic_reloc_section_name (dynobj, sec, is_rela);
       if (name == NULL)
 	return NULL;
 
       reloc_sec = bfd_get_linker_section (dynobj, name);
-
-      if (reloc_sec == NULL)
+      if (reloc_sec != NULL)
+	bfd_release (dynobj, name);
+      else
 	{
 	  flagword flags = (SEC_HAS_CONTENTS | SEC_READONLY
 			    | SEC_IN_MEMORY | SEC_LINKER_CREATED);
