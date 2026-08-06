@@ -15216,13 +15216,12 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
     return false;
 
   sreloc = NULL;
-
-  if (htab->root.dynobj == NULL)
-    htab->root.dynobj = abfd;
-  if (!create_ifunc_sections (info))
+  dynobj = _bfd_elf_link_dynobj (info);
+  if (dynobj == NULL)
     return false;
 
-  dynobj = htab->root.dynobj;
+  if (!create_ifunc_sections (info))
+    return false;
 
   symtab_hdr = & elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);

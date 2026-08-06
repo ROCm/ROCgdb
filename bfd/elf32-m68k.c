@@ -2637,7 +2637,11 @@ elf_m68k_check_relocs (bfd *abfd,
 	  /* This symbol requires a global offset table entry.  */
 
 	  if (dynobj == NULL)
-	    elf_hash_table (info)->dynobj = dynobj = abfd;
+	    {
+	      dynobj = _bfd_elf_link_dynobj (info);
+	      if (dynobj == NULL)
+		return false;
+	    }
 
 	  if (!_bfd_elf_create_got_section (dynobj, info))
 	    return false;

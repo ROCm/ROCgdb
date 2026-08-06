@@ -1987,10 +1987,10 @@ elf_arc_check_relocs (bfd *			 abfd,
   if (bfd_link_relocatable (info))
     return true;
 
-  if (htab->dynobj == NULL)
-    htab->dynobj = abfd;
+  dynobj = _bfd_elf_link_dynobj (info);
+  if (dynobj == NULL)
+    return false;
 
-  dynobj = (elf_hash_table (info))->dynobj;
   symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 

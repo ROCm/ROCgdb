@@ -302,24 +302,20 @@ compatible_format (struct bfd_link_info *info, bfd *ibfd)
 
 /* Find a suitable object for attaching dynamic sections.  */
 
-static bfd *
-_bfd_elf_link_dynobj (struct bfd_link_info *info)
+bfd *
+_bfd_elf_link_dynobj_internal (struct bfd_link_info *info, bool report)
 {
   struct elf_link_hash_table *htab = elf_hash_table (info);
 
   if (htab->dynobj == NULL)
     {
       /* We need to find an input file of the same format as the
-	 output to hold linker created sections.  For now, exclude
-	 any stub bfd.  */
-      bfd *ibfd = info->input_bfds;
-      if ((ibfd->flags
-	   & (BFD_PLUGIN | BFD_LINKER_CREATED)) == BFD_LINKER_CREATED)
-	ibfd = ibfd->link.next;
-      for (; ibfd; ibfd = ibfd->link.next)
+	 output to hold linker created sections.  */
+      bfd *ibfd;
+      for (ibfd = info->input_bfds; ibfd; ibfd = ibfd->link.next)
 	if (compatible_format (info, ibfd))
 	  break;
-      if (ibfd == NULL)
+      if (ibfd == NULL && report)
 	_bfd_error_handler (_("no %s input object found"),
 			    bfd_get_target (info->output_bfd));
       htab->dynobj = ibfd;

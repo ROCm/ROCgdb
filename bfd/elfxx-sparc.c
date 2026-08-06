@@ -1362,8 +1362,9 @@ _bfd_sparc_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
   BFD_ASSERT (is_sparc_elf (abfd) || num_relocs == 0);
 
-  if (htab->elf.dynobj == NULL)
-    htab->elf.dynobj = abfd;
+  if (htab->elf.dynobj == NULL
+      && !_bfd_elf_link_dynobj (info))
+    return false;
   if (!create_ifunc_sections (htab->elf.dynobj, info))
     return false;
 

@@ -1133,11 +1133,12 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       return true;
     }
 
+  if (htab->elf.dynobj == NULL
+      && !_bfd_elf_link_dynobj (info))
+    return false;
+
   symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
-
-  if (htab->elf.dynobj == NULL)
-    htab->elf.dynobj = abfd;
 
   for (rel = relocs; rel < relocs + sec->reloc_count; rel++)
     {

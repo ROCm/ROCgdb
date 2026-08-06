@@ -2620,8 +2620,9 @@ ppc_elf_add_symbol_hook (bfd *abfd,
 	{
 	  flagword flags = SEC_IS_COMMON | SEC_SMALL_DATA | SEC_LINKER_CREATED;
 
-	  if (!htab->elf.dynobj)
-	    htab->elf.dynobj = abfd;
+	  if (htab->elf.dynobj == NULL
+	      && !_bfd_elf_link_dynobj (info))
+	    return false;
 
 	  htab->sbss = bfd_make_section_anyway_with_flags (htab->elf.dynobj,
 							   ".sbss",
@@ -2894,8 +2895,9 @@ ppc_elf_check_relocs (bfd *abfd,
   htab = ppc_elf_hash_table (info);
   if (htab->glink == NULL)
     {
-      if (htab->elf.dynobj == NULL)
-	htab->elf.dynobj = abfd;
+      if (htab->elf.dynobj == NULL
+	  && !_bfd_elf_link_dynobj (info))
+	return false;
       if (!ppc_elf_create_glink (htab->elf.dynobj, info))
 	return false;
     }
@@ -2942,8 +2944,9 @@ ppc_elf_check_relocs (bfd *abfd,
 	  && htab->elf.sgot == NULL
 	  && strcmp (h->root.root.string, "_GLOBAL_OFFSET_TABLE_") == 0)
 	{
-	  if (htab->elf.dynobj == NULL)
-	    htab->elf.dynobj = abfd;
+	  if (htab->elf.dynobj == NULL
+	      && !_bfd_elf_link_dynobj (info))
+	    return false;
 	  if (!ppc_elf_create_got (htab->elf.dynobj, info))
 	    return false;
 	  BFD_ASSERT (h == htab->elf.hgot);
@@ -3067,8 +3070,9 @@ ppc_elf_check_relocs (bfd *abfd,
 	  /* This symbol requires a global offset table entry.  */
 	  if (htab->elf.sgot == NULL)
 	    {
-	      if (htab->elf.dynobj == NULL)
-		htab->elf.dynobj = abfd;
+	      if (htab->elf.dynobj == NULL
+		  && !_bfd_elf_link_dynobj (info))
+		return false;
 	      if (!ppc_elf_create_got (htab->elf.dynobj, info))
 		return false;
 	    }
@@ -3431,8 +3435,9 @@ ppc_elf_check_relocs (bfd *abfd,
 #endif
 	      if (sreloc == NULL)
 		{
-		  if (htab->elf.dynobj == NULL)
-		    htab->elf.dynobj = abfd;
+		  if (htab->elf.dynobj == NULL
+		      && !_bfd_elf_link_dynobj (info))
+		    return false;
 
 		  sreloc = _bfd_elf_make_dynamic_reloc_section
 		    (sec, htab->elf.dynobj, 2, abfd, /*rela?*/ true);

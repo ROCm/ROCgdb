@@ -744,7 +744,9 @@ cr16_elf_check_relocs (bfd *abfd, struct bfd_link_info *info, asection *sec,
 	    {
 	    case R_CR16_GOT_REGREL20:
 	    case R_CR16_GOTC_REGREL20:
-	      elf_hash_table (info)->dynobj = dynobj = abfd;
+	      dynobj = _bfd_elf_link_dynobj (info);
+	      if (dynobj == NULL)
+		goto fail;
 	      if (! _bfd_cr16_elf_create_got_section (dynobj, info))
 		goto fail;
 	      break;

@@ -1115,7 +1115,9 @@ mn10300_elf_check_relocs (bfd *abfd,
 	    case R_MN10300_TLS_LD:
 	    case R_MN10300_TLS_GOTIE:
 	    case R_MN10300_TLS_IE:
-	      elf_hash_table (info)->dynobj = dynobj = abfd;
+	      dynobj = _bfd_elf_link_dynobj (info);
+	      if (dynobj == NULL)
+		goto fail;
 	      if (! _bfd_mn10300_elf_create_got_section (dynobj, info))
 		goto fail;
 	      break;

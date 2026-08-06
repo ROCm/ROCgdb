@@ -1768,9 +1768,9 @@ elf64_alpha_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
   BFD_ASSERT (is_alpha_elf (abfd));
 
-  dynobj = elf_hash_table (info)->dynobj;
+  dynobj = _bfd_elf_link_dynobj (info);
   if (dynobj == NULL)
-    elf_hash_table (info)->dynobj = dynobj = abfd;
+    return false;
 
   sreloc = NULL;
   symtab_hdr = &elf_symtab_hdr (abfd);

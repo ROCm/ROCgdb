@@ -1369,7 +1369,11 @@ rl78_elf_check_relocs
 	     for it now.  */
 	case R_RL78_DIR16S:
 	  if (dynobj == NULL)
-	    elf_hash_table (info)->dynobj = dynobj = abfd;
+	    {
+	      dynobj = _bfd_elf_link_dynobj (info);
+	      if (dynobj == NULL)
+		return false;
+	    }
 	  splt = elf_hash_table (info)->splt;
 	  if (splt == NULL)
 	    {

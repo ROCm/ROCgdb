@@ -8006,8 +8006,9 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  if (h->root.root.string
 	      && strcmp (h->root.root.string, "_GLOBAL_OFFSET_TABLE_") == 0)
 	    {
-	      if (htab->root.dynobj == NULL)
-		htab->root.dynobj = abfd;
+	      if (htab->root.dynobj == NULL
+		  && !_bfd_elf_link_dynobj (info))
+		return false;
 
 	      if (! aarch64_elf_create_got_section (htab->root.dynobj, info))
 		return false;
@@ -8038,8 +8039,9 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    case BFD_RELOC_AARCH64_MOVW_GOTOFF_G0_NC:
 	    case BFD_RELOC_AARCH64_MOVW_GOTOFF_G1:
 	    case BFD_RELOC_AARCH64_NN:
-	      if (htab->root.dynobj == NULL)
-		htab->root.dynobj = abfd;
+	      if (htab->root.dynobj == NULL
+		  && !_bfd_elf_link_dynobj (info))
+		return false;
 	      if (!_bfd_elf_create_ifunc_sections (htab->root.dynobj, info))
 		return false;
 	      break;
@@ -8165,9 +8167,9 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	       this reloc.  */
 	    if (sreloc == NULL)
 	      {
-		if (htab->root.dynobj == NULL)
-		  htab->root.dynobj = abfd;
-
+		if (htab->root.dynobj == NULL
+		    && !_bfd_elf_link_dynobj (info))
+		  return false;
 		sreloc = _bfd_elf_make_dynamic_reloc_section (sec,
 							      htab->root.dynobj,
 							      LOG_FILE_ALIGN,
@@ -8314,8 +8316,9 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		  }
 	      }
 
-	    if (htab->root.dynobj == NULL)
-	      htab->root.dynobj = abfd;
+	    if (htab->root.dynobj == NULL
+		&& !_bfd_elf_link_dynobj (info))
+	      return false;
 	    if (! aarch64_elf_create_got_section (htab->root.dynobj, info))
 	      return false;
 	    break;

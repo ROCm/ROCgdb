@@ -7169,7 +7169,11 @@ nds32_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    case R_NDS32_TLS_DESC_HI20:
 	    case R_NDS32_TLS_DESC_LO12:
 	      if (dynobj == NULL)
-		htab->root.dynobj = dynobj = abfd;
+		{
+		  dynobj = _bfd_elf_link_dynobj (info);
+		  if (dynobj == NULL)
+		    return false;
+		}
 	      if (!create_got_section (dynobj, info))
 		return false;
 	      break;
@@ -7336,7 +7340,11 @@ nds32_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	      struct elf_dyn_relocs **head;
 
 	      if (dynobj == NULL)
-		htab->root.dynobj = dynobj = abfd;
+		{
+		  dynobj = _bfd_elf_link_dynobj (info);
+		  if (dynobj == NULL)
+		    return false;
+		}
 
 	      /* When creating a shared object, we must copy these
 		 relocs into the output file.  We create a reloc

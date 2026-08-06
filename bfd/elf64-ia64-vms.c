@@ -234,9 +234,9 @@ static bool allocate_local_got
 static bool allocate_dynrel_entries
   (struct elf64_ia64_dyn_sym_info *, void *);
 static asection *get_pltoff
-  (bfd *, struct elf64_ia64_link_hash_table *);
+  (struct bfd_link_info *, struct elf64_ia64_link_hash_table *);
 static asection *get_got
-  (bfd *, struct elf64_ia64_link_hash_table *);
+  (struct bfd_link_info *, struct elf64_ia64_link_hash_table *);
 
 
 /* Given a ELF reloc, return the matching HOWTO structure.  */
@@ -1289,10 +1289,10 @@ elf64_ia64_create_dynamic_sections (bfd *abfd,
     return false;
   ia64_info->root.splt = s;
 
-  if (!get_got (abfd, ia64_info))
+  if (!get_got (info, ia64_info))
     return false;
 
-  if (!get_pltoff (abfd, ia64_info))
+  if (!get_pltoff (info, ia64_info))
     return false;
 
   s = bfd_make_section_anyway_with_flags (abfd, ".vmsdynstr",
@@ -1713,7 +1713,8 @@ get_dyn_sym_info (struct elf64_ia64_link_hash_table *ia64_info,
 }
 
 static asection *
-get_got (bfd *abfd, struct elf64_ia64_link_hash_table *ia64_info)
+get_got (struct bfd_link_info *info,
+	 struct elf64_ia64_link_hash_table *ia64_info)
 {
   asection *got;
   bfd *dynobj;
@@ -1723,9 +1724,9 @@ get_got (bfd *abfd, struct elf64_ia64_link_hash_table *ia64_info)
     {
       flagword flags;
 
-      dynobj = ia64_info->root.dynobj;
+      dynobj = _bfd_elf_link_dynobj (info);
       if (!dynobj)
-	ia64_info->root.dynobj = dynobj = abfd;
+	return NULL;
 
       /* The .got section is always aligned at 8 bytes.  */
       flags = get_elf_backend_data (dynobj)->dynamic_sec_flags;
@@ -1746,7 +1747,7 @@ get_got (bfd *abfd, struct elf64_ia64_link_hash_table *ia64_info)
    of a procedure, thus ensuring a unique address for each procedure.  */
 
 static asection *
-get_fptr (bfd *abfd, struct bfd_link_info *info,
+get_fptr (struct bfd_link_info *info,
 	  struct elf64_ia64_link_hash_table *ia64_info)
 {
   asection *fptr;
@@ -1755,9 +1756,9 @@ get_fptr (bfd *abfd, struct bfd_link_info *info,
   fptr = ia64_info->fptr_sec;
   if (!fptr)
     {
-      dynobj = ia64_info->root.dynobj;
+      dynobj = _bfd_elf_link_dynobj (info);
       if (!dynobj)
-	ia64_info->root.dynobj = dynobj = abfd;
+	return NULL;
 
       fptr = bfd_make_section_anyway_with_flags (dynobj, ".opd",
 						 (SEC_ALLOC
@@ -1800,7 +1801,8 @@ get_fptr (bfd *abfd, struct bfd_link_info *info,
 }
 
 static asection *
-get_pltoff (bfd *abfd, struct elf64_ia64_link_hash_table *ia64_info)
+get_pltoff (struct bfd_link_info *info,
+	    struct elf64_ia64_link_hash_table *ia64_info)
 {
   asection *pltoff;
   bfd *dynobj;
@@ -1808,9 +1810,9 @@ get_pltoff (bfd *abfd, struct elf64_ia64_link_hash_table *ia64_info)
   pltoff = ia64_info->pltoff_sec;
   if (!pltoff)
     {
-      dynobj = ia64_info->root.dynobj;
+      dynobj = _bfd_elf_link_dynobj (info);
       if (!dynobj)
-	ia64_info->root.dynobj = dynobj = abfd;
+	return NULL;
 
       pltoff = bfd_make_section_anyway_with_flags (dynobj,
 						   ELF_STRING_ia64_pltoff,
@@ -1835,7 +1837,7 @@ get_pltoff (bfd *abfd, struct elf64_ia64_link_hash_table *ia64_info)
 
 static asection *
 get_reloc_section (bfd *abfd,
-		   struct elf64_ia64_link_hash_table *ia64_info,
+		   struct bfd_link_info *info,
 		   asection *sec, bool create)
 {
   const char *srel_name;
@@ -1853,9 +1855,9 @@ get_reloc_section (bfd *abfd,
 	      || (startswith (srel_name, ".rel")
 		  && strcmp (bfd_section_name (sec), srel_name+4) == 0));
 
-  dynobj = ia64_info->root.dynobj;
+  dynobj = _bfd_elf_link_dynobj (info);
   if (!dynobj)
-    ia64_info->root.dynobj = dynobj = abfd;
+    return NULL;
 
   srel = bfd_get_linker_section (dynobj, srel_name);
   if (srel == NULL && create)
@@ -2228,7 +2230,7 @@ elf64_ia64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	{
 	  if (!got)
 	    {
-	      got = get_got (abfd, ia64_info);
+	      got = get_got (info, ia64_info);
 	      if (!got)
 		return false;
 	    }
@@ -2242,7 +2244,7 @@ elf64_ia64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  /* Create the .opd section.  */
 	  if (!fptr)
 	    {
-	      fptr = get_fptr (abfd, info, ia64_info);
+	      fptr = get_fptr (info, ia64_info);
 	      if (!fptr)
 		return false;
 	    }
@@ -2252,8 +2254,9 @@ elf64_ia64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	dyn_i->want_ltoff_fptr = 1;
       if (need_entry & (NEED_MIN_PLT | NEED_FULL_PLT))
 	{
-	  if (!ia64_info->root.dynobj)
-	    ia64_info->root.dynobj = abfd;
+	  if (!ia64_info->root.dynobj
+	      && !_bfd_elf_link_dynobj (info))
+	    return false;
 	  h->needs_plt = 1;
 	  dyn_i->want_plt = 1;
 	}
@@ -2265,7 +2268,7 @@ elf64_ia64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	     link.  */
 	  if (!pltoff)
 	    {
-	      pltoff = get_pltoff (abfd, ia64_info);
+	      pltoff = get_pltoff (info, ia64_info);
 	      if (!pltoff)
 		return false;
 	    }
@@ -2276,7 +2279,7 @@ elf64_ia64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	{
 	  if (!srel)
 	    {
-	      srel = get_reloc_section (abfd, ia64_info, sec, true);
+	      srel = get_reloc_section (abfd, info, sec, true);
 	      if (!srel)
 		return false;
 	    }

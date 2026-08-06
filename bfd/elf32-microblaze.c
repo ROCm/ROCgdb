@@ -2512,8 +2512,9 @@ microblaze_elf_check_relocs (bfd * abfd,
 	case R_MICROBLAZE_GOT_64:
 	  if (htab->elf.sgot == NULL)
 	    {
-	      if (htab->elf.dynobj == NULL)
-		htab->elf.dynobj = abfd;
+	      if (htab->elf.dynobj == NULL
+		  && !_bfd_elf_link_dynobj (info))
+		return false;
 	      if (!_bfd_elf_create_got_section (htab->elf.dynobj, info))
 		return false;
 	    }
@@ -2533,8 +2534,9 @@ microblaze_elf_check_relocs (bfd * abfd,
 	case R_MICROBLAZE_GOTOFF_32:
 	  if (htab->elf.sgot == NULL)
 	    {
-	      if (htab->elf.dynobj == NULL)
-		htab->elf.dynobj = abfd;
+	      if (htab->elf.dynobj == NULL
+		  && !_bfd_elf_link_dynobj (info))
+		return false;
 	      if (!_bfd_elf_create_got_section (htab->elf.dynobj, info))
 		return false;
 	    }
@@ -2600,12 +2602,9 @@ microblaze_elf_check_relocs (bfd * abfd,
 
 		if (sreloc == NULL)
 		  {
-		    bfd *dynobj;
-
-		    if (htab->elf.dynobj == NULL)
-		      htab->elf.dynobj = abfd;
-		    dynobj = htab->elf.dynobj;
-
+		    bfd *dynobj = _bfd_elf_link_dynobj (info);
+		    if (dynobj == NULL)
+		      return false;
 		    sreloc = _bfd_elf_make_dynamic_reloc_section (sec, dynobj,
 								  2, abfd, 1);
 		    if (sreloc == NULL)

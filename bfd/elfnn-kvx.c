@@ -3327,8 +3327,9 @@ elfNN_kvx_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	       this reloc.  */
 	    if (sreloc == NULL)
 	      {
-		if (htab->root.dynobj == NULL)
-		  htab->root.dynobj = abfd;
+		if (htab->root.dynobj == NULL
+		    && !_bfd_elf_link_dynobj (info))
+		  return false;
 
 		sreloc = _bfd_elf_make_dynamic_reloc_section
 		  (sec, htab->root.dynobj, LOG_FILE_ALIGN, abfd, /*rela? */ true);
@@ -3472,8 +3473,9 @@ elfNN_kvx_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		  }
 	      }
 
-	    if (htab->root.dynobj == NULL)
-	      htab->root.dynobj = abfd;
+	    if (htab->root.dynobj == NULL
+		&& !_bfd_elf_link_dynobj (info))
+	      return false;
 	    if (! kvx_elf_create_got_section (htab->root.dynobj, info))
 	      return false;
 	    break;
@@ -3490,8 +3492,9 @@ elfNN_kvx_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case BFD_RELOC_KVX_S37_GOTADDR_LO10:
 	case BFD_RELOC_KVX_S37_GOTADDR_UP27:
 
-	  if (htab->root.dynobj == NULL)
-	    htab->root.dynobj = abfd;
+	  if (htab->root.dynobj == NULL
+	      && !_bfd_elf_link_dynobj (info))
+	    return false;
 	  if (! kvx_elf_create_got_section (htab->root.dynobj, info))
 	    return false;
 	  break;

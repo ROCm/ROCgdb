@@ -2116,7 +2116,11 @@ or1k_elf_check_relocs (bfd *abfd,
 	  if (htab->root.sgot == NULL)
 	    {
 	      if (dynobj == NULL)
-		htab->root.dynobj = dynobj = abfd;
+		{
+		  dynobj = _bfd_elf_link_dynobj (info);
+		  if (dynobj == NULL)
+		    return false;
+		}
 	      if (!_bfd_elf_create_got_section (dynobj, info))
 		return false;
 	    }
@@ -2203,9 +2207,12 @@ or1k_elf_check_relocs (bfd *abfd,
 			   abfd, name);
 		      }
 
-		    if (htab->root.dynobj == NULL)
-		      htab->root.dynobj = abfd;
-		    dynobj = htab->root.dynobj;
+		    if (dynobj == NULL)
+		      {
+			dynobj = _bfd_elf_link_dynobj (info);
+			if (dynobj == NULL)
+			  return false;
+		      }
 
 		    sreloc = bfd_get_section_by_name (dynobj, name);
 		    if (sreloc == NULL)

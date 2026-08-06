@@ -1404,6 +1404,10 @@ tilepro_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
     return true;
 
   htab = tilepro_elf_hash_table (info);
+  if (htab->dynobj == NULL
+      && !_bfd_elf_link_dynobj (info))
+    return false;
+
   symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
@@ -1412,9 +1416,6 @@ tilepro_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
   num_relocs = sec->reloc_count;
 
   BFD_ASSERT (is_tilepro_elf (abfd) || num_relocs == 0);
-
-  if (htab->dynobj == NULL)
-    htab->dynobj = abfd;
 
   rel_end = relocs + num_relocs;
   for (rel = relocs; rel < rel_end; rel++)

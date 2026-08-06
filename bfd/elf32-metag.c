@@ -2098,7 +2098,11 @@ elf_metag_check_relocs (bfd *abfd,
 	    case R_METAG_HI16_GOTPC:
 	    case R_METAG_LO16_GOTPC:
 	      if (dynobj == NULL)
-		htab->etab.dynobj = dynobj = abfd;
+		{
+		  dynobj = _bfd_elf_link_dynobj (info);
+		  if (dynobj == NULL)
+		    return false;
+		}
 	      if (!elf_metag_create_dynamic_sections (dynobj, info))
 		return false;
 	      break;
@@ -2264,17 +2268,19 @@ elf_metag_check_relocs (bfd *abfd,
 	      struct elf_dyn_relocs *hdh_p;
 	      struct elf_dyn_relocs **hdh_head;
 
-	      if (dynobj == NULL)
-		htab->etab.dynobj = dynobj = abfd;
-
 	      /* When creating a shared object, we must copy these
 		 relocs into the output file.  We create a reloc
 		 section in dynobj and make room for the reloc.  */
 	      if (sreloc == NULL)
 		{
-		  sreloc = _bfd_elf_make_dynamic_reloc_section
-		    (sec, htab->etab.dynobj, 2, abfd, /*rela?*/ true);
-
+		  if (dynobj == NULL)
+		    {
+		      dynobj = _bfd_elf_link_dynobj (info);
+		      if (dynobj == NULL)
+			return false;
+		    }
+		  sreloc = _bfd_elf_make_dynamic_reloc_section (sec, dynobj, 2,
+								abfd, true);
 		  if (sreloc == NULL)
 		    {
 		      bfd_set_error (bfd_error_bad_value);

@@ -698,7 +698,11 @@ m32c_elf_check_relocs
 	     for it now.  */
 	case R_M32C_16:
 	  if (dynobj == NULL)
-	    elf_hash_table (info)->dynobj = dynobj = abfd;
+	    {
+	      dynobj = _bfd_elf_link_dynobj (info);
+	      if (dynobj == NULL)
+		return false;
+	    }
 	  splt = elf_hash_table (info)->splt;
 	  if (splt == NULL)
 	    {
