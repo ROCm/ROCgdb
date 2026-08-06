@@ -101,14 +101,19 @@ proc do_test { fault core_type output_type } {
     # chunk, causing a greedy pattern listed first to consume past the line
     # intended for the second pattern.  A single pattern sidesteps that by
     # iterating over all AMDGPU Wave lines with exp_continue and classifying
-    # each in Tcl.  The leading "*" identifies the selected (faulty) wave, and
-    # the quoted thread name identifies the auxiliary wave.
+    # each in Tcl.  The leading "*" identifies the selected (faulty) wave.
+    # The auxiliary wave is identified by the function call aux_kernel () on the line.
+    # The quoted thread name is not used because gfx90a does not initialize ttmps by
+    # default, so the thread name can be absent.
     gdb_test_multiple "info thread" "identify waves" {
-	-re "(\\\*?) *($::decimal) *AMDGPU Wave \[^\r\n\]* \"(\[^\"]+)\" \[^\r\n\]*\r\n" {
-	    if {$expect_out(1,string) eq "*"} {
-		set faulty_wave $expect_out(2,string)
-	    } elseif {$expect_out(3,string) eq "aux_kernel"} {
-		set aux_wave $expect_out(2,string)
+	-re "(\\\*?) *($::decimal) *AMDGPU Wave (\[^\r\n\]*)\r\n" {
+	    set marker $expect_out(1,string)
+	    set thread_num $expect_out(2,string)
+	    set wave_info $expect_out(3,string)
+	    if {$marker eq "*"} {
+		set faulty_wave $thread_num
+	    } elseif {[regexp {aux_kernel \(\)} $wave_info]} {
+		set aux_wave $thread_num
 	    }
 	    exp_continue
 	}
