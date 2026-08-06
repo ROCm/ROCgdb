@@ -32,6 +32,7 @@
 #include "coff/pe.h"
 #include "libcoff.h"
 #include "value.h"
+#include "language.h"
 #include <algorithm>
 
 /* The registers used to pass integer arguments during a function call.  */
@@ -363,6 +364,96 @@ amd64_windows_return_value (struct gdbarch *gdbarch, struct value *function,
 {
   int len = type->length ();
   int regnum = -1;
+
+  /* On Windows, a struct or union must be returned via a hidden sret
+     pointer (passed in RCX, returned in RAX) rather than in registers
+     if any of the following hold:
+       (a) has a user-defined (non-trivial) copy constructor
+       (b) has a user-defined (non-trivial) destructor
+       (c) has any private or protected non-static data members
+       (d) has any non-static data member of reference type
+
+     The spec also lists no-copy-assignment-operator, no-base-classes,
+     and no-virtual-functions as requirements for register return, but
+     those conditions are not checked here: a class with a base or a
+     virtual function almost always also has a non-trivial constructor
+     or destructor (caught by (a)/(b)), and copy-assignment is not
+     surfaced as a separate DWARF attribute in a way GDB can inspect.
+
+     Conditions (a) and (b) are enforced by both GCC/MinGW and the MSVC
+     ABI.  Conditions (c) and (d) are additional MSVC-ABI requirements
+     that GCC/MinGW does not enforce.
+
+     See https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention.  */
+  if (type->code () == TYPE_CODE_STRUCT
+      || type->code () == TYPE_CODE_UNION)
+    {
+      struct language_pass_by_ref_info info = language_pass_by_reference (type);
+
+      /* Conditions (a) and (b): non-trivial copy ctor or destructor.  */
+      bool needs_sret = (!info.trivially_copy_constructible
+			|| !info.trivially_destructible);
+
+      /* Conditions (c) and (d): only the MSVC ABI requires sret for
+	 types with private or protected non-static data members or
+	 non-static data members of reference type; GCC/MinGW ignores
+	 these for return-value classification.  Use
+	 GDB_OSABI_WINDOWS_MSVC as the primary indicator: it is set by
+	 the per-binary minsym scan in msvc_abi_new_objfile() when the
+	 binary contains '?'-mangled (MSVC) rather than '_Z'-mangled
+	 (Itanium) symbols.  A MinGW-configured GDB defaults to
+	 GDB_OSABI_WINDOWS_GNU even for MSVC binaries, so if the osabi
+	 check does not fire we fall back to inspecting the called
+	 function's linkage name directly for the '?' prefix.  When
+	 function is nullptr (e.g., callee not found by symbol lookup)
+	 and the osabi check did not fire, conditions (c) and (d) are
+	 not checked; the GDB_OSABI_WINDOWS_MSVC path is unaffected.  */
+      if (!needs_sret && HAVE_CPLUS_STRUCT (type))
+	{
+	  bool is_msvc_abi
+	    = (gdbarch_osabi (gdbarch) == GDB_OSABI_WINDOWS_MSVC);
+
+	  if (!is_msvc_abi && function != nullptr)
+	    {
+	      bound_minimal_symbol func_msym
+		= lookup_minimal_symbol_by_pc (function->address ());
+	      if (func_msym.minsym != nullptr)
+		{
+		  const char *lname = func_msym.minsym->linkage_name ();
+		  is_msvc_abi = (lname != nullptr && lname[0] == '?');
+		}
+	    }
+
+	  if (is_msvc_abi)
+	    {
+	      int n_bases = TYPE_N_BASECLASSES (type);
+	      for (int i = n_bases; i < type->num_fields (); i++)
+		{
+		  if (type->field (i).is_static ())
+		    continue;
+		  if (type->field (i).is_private ()
+		      || type->field (i).is_protected ()
+		      || type->field (i).type ()->code () == TYPE_CODE_REF
+		      || type->field (i).type ()->code () == TYPE_CODE_RVALUE_REF)
+		    {
+		      needs_sret = true;
+		      break;
+		    }
+		}
+	    }
+	}
+
+      if (needs_sret)
+	{
+	  if (read_value != nullptr)
+	    {
+	      ULONGEST addr;
+	      regcache_raw_read_unsigned (regcache, AMD64_RAX_REGNUM, &addr);
+	      *read_value = value_at_non_lval (type, addr);
+	    }
+	  return RETURN_VALUE_ABI_RETURNS_ADDRESS;
+	}
+    }
 
   /* See if our value is returned through a register.  If it is, then
      store the associated register number in REGNUM.  */
