@@ -359,12 +359,9 @@ mi_cmd_exec_interrupt (const char *command, const char *const *argv, int argc)
       scoped_disable_commit_resumed disable_commit_resumed
 	("interrupting all threads of thread group");
 
-      for (auto &thread : all_threads ())
+      for (thread_info &thread : inf->threads ())
 	{
 	  if (thread.state () != THREAD_RUNNING)
-	    continue;
-
-	  if (thread.ptid.pid () != inf->pid)
 	    continue;
 
 	  target_stop (thread.ptid);
@@ -603,14 +600,13 @@ print_one_inferior (struct inferior *inferior, bool recurse,
 
       if (inferior->pid != 0)
 	{
-	  for (auto &ti : all_threads ())
-	    if (ti.ptid.pid () == inferior->pid)
-	      {
-		int core = target_core_of_thread (ti.ptid);
+	  for (thread_info &ti : inferior->threads ())
+	    {
+	      int core = target_core_of_thread (ti.ptid);
 
-		if (core != -1)
-		  cores.insert (core);
-	      }
+	      if (core != -1)
+		cores.insert (core);
+	    }
 	}
 
       if (!cores.empty ())
