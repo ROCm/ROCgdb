@@ -50,10 +50,27 @@ TEST_CATEGORIES = [
 # --one-by-one mode when --one-by-one-test-timeout is not provided.
 ONE_BY_ONE_DEFAULT_WALL_CLOCK_TIMEOUT = 3600
 
+# Default wall-clock timeout (seconds) for each --sanity-check probe when
+# --sanity-check-timeout is not provided. A trivial known-good HIP kernel
+# should return near-instantly; this is a starting value to be tuned
+# experimentally on real hardware.
+SANITY_CHECK_DEFAULT_TIMEOUT = 10
+
 # Sanitizers we pre-configure on every run. If rocgdb wasn't built with the
 # corresponding -fsanitize=..., the matching *_OPTIONS env var is silently
 # ignored at runtime, so listing extras here is harmless.
 SANITIZERS = ("asan", "tsan", "ubsan", "msan", "lsan", "hwasan")
+
+# Supported toolchains, keyed by the identifier the toolchain option accepts.
+# Each one maps to the compiler label (a load bearing key used across results,
+# ignore lists, and timing output) and the C, C++, and Fortran executables we
+# pass to the testsuite. Insertion order defines the default run order.
+TOOLCHAINS = {
+    "gnu": {"label": "GCC", "cc": "gcc", "cxx": "g++", "fc": "gfortran"},
+    "llvm": {"label": "LLVM", "cc": "clang", "cxx": "clang++", "fc": "flang"},
+}
+
+TIMING_LOG_FILENAME = "rocgdb_timing.log"
 
 # Patterns for parsing DejaGnu .sum lines.
 RESULT_LINE_RE = re.compile(
@@ -253,6 +270,25 @@ def load_ignore_list_from_json(json_path: Path) -> Dict[str, List[str]]:
     return data
 
 
+def select_toolchains(requested: Optional[List[str]]) -> List[str]:
+    """
+    Resolve the list of toolchain identifiers to run.
+
+    When no toolchain is requested, all of them run in definition order.
+    Repeated names are dropped while keeping the first occurrence so the same
+    toolchain never runs twice.
+
+    Args:
+        requested: Toolchain identifiers from --toolchain, or None when the
+            flag was omitted.
+
+    Returns:
+        Toolchain identifiers to run, in order, with duplicates removed.
+    """
+    names = requested if requested is not None else list(TOOLCHAINS.keys())
+    return list(dict.fromkeys(names))
+
+
 def _non_negative_int(value: str) -> int:
     """
     Validate argument is a non-negative integer.
@@ -345,6 +381,9 @@ def parse_arguments() -> argparse.Namespace:
   python %(prog)s --skip-failed-test-log
   python %(prog)s --output-ignore-list-file custom_ignore_list.json
   python %(prog)s --one-by-one --tests gdb.rocm/foo.exp
+  python %(prog)s --one-by-one --sanity-check --gpu-tests
+  python %(prog)s --timing --gpu-tests
+  python %(prog)s --toolchain llvm
 
         """,
     )
@@ -382,6 +421,18 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         default="",
         help="Optimization level to pass to compiler (e.g., -O0, -Os, -Og).",
+    )
+    parser.add_argument(
+        "--toolchain",
+        nargs="+",
+        default=None,
+        metavar="NAME",
+        choices=list(TOOLCHAINS.keys()),
+        help="Toolchain(s) to run tests against. Choices: "
+        f"{', '.join(TOOLCHAINS.keys())}. Accepts one or more values; the flag "
+        "requires at least one. If omitted, all toolchains run and the results "
+        "are compared. Passing a single toolchain (e.g. --toolchain llvm) runs "
+        "only that toolchain and skips the cross-compiler comparison.",
     )
     parser.add_argument(
         "--parallel", action="store_true", help="Run tests in parallel. Default is off."
@@ -523,8 +574,49 @@ def parse_arguments() -> argparse.Namespace:
         help="Wall-clock timeout (seconds) per individual `make check` invocation "
         "in --one-by-one mode. Defaults to 3600.",
     )
+    parser.add_argument(
+        "--sanity-check",
+        action="store_true",
+        help="Before each one-by-one test, run a known-good HIP program "
+        "(built once per run from gdb.rocm/simple.cpp) and bail out if the GPU stops "
+        "responding. If the probe times out or exits non-zero, the system is "
+        "declared unreliable: a dmesg.log is captured under the one-by-one log "
+        "dir and the run aborts. Requires --one-by-one.",
+    )
+    parser.add_argument(
+        "--sanity-check-timeout",
+        type=_positive_nonzero_int,
+        default=None,
+        metavar="SECS",
+        help="Wall-clock timeout (seconds) for each --sanity-check probe. "
+        f"Defaults to {SANITY_CHECK_DEFAULT_TIMEOUT}. Requires --sanity-check.",
+    )
+    parser.add_argument(
+        "--timing",
+        action="store_true",
+        help="Record each test's wall-clock duration and write rocgdb_timing.log "
+        "grouped by compiler and directory, sorted from longest to shortest "
+        "running test. Implies --one-by-one. The recorded duration is the "
+        "maximum time of a successful run; tests that never passed show N/A.",
+    )
+    parser.add_argument(
+        "--timing-log-file",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="Output path for the timing log. Default: "
+        "<testsuite_dir>/rocgdb_timing.log. Requires --timing.",
+    )
 
     args = parser.parse_args()
+
+    # --timing is a specialization of one-by-one mode; enable it implicitly so
+    # a single flag turns on the timing run. Set before the one-by-one /
+    # parallel validation below so --timing --parallel is rejected too.
+    if args.timing:
+        args.one_by_one = True
+    if args.timing_log_file is not None and not args.timing:
+        _log_error_and_exit("--timing-log-file requires --timing.")
 
     # Validate that -j/--jobs is only used with --parallel.
     if args.jobs is not None and not args.parallel:
@@ -541,6 +633,25 @@ def parse_arguments() -> argparse.Namespace:
         _log_error_and_exit(
             "--one-by-one-log-dir / --one-by-one-test-timeout require --one-by-one."
         )
+
+    # Validate --sanity-check constraints. The probe is only meaningful in
+    # one-by-one mode, where it runs between per-test `make check` invocations.
+    # Check the --parallel conflict first so the message points at the real
+    # incompatibility instead of suggesting the user add --one-by-one (which
+    # would then trip the mutual-exclusion error above).
+    if args.sanity_check and args.parallel:
+        _log_error_and_exit(
+            "--sanity-check cannot be combined with --parallel "
+            "(it runs in --one-by-one mode)."
+        )
+    if args.sanity_check and not args.one_by_one:
+        _log_error_and_exit("--sanity-check requires --one-by-one.")
+    if args.sanity_check_timeout is not None and not args.sanity_check:
+        _log_error_and_exit("--sanity-check-timeout requires --sanity-check.")
+    # Resolve the effective probe timeout now that the "set without
+    # --sanity-check" case has been rejected, so downstream code sees a value.
+    if args.sanity_check_timeout is None:
+        args.sanity_check_timeout = SANITY_CHECK_DEFAULT_TIMEOUT
 
     # Validate paths independently if provided. Either flag may be supplied
     # alone; whichever is omitted is auto-discovered in _resolve_rocm_paths.
@@ -586,6 +697,42 @@ class TestResults:
         # "Running ....exp") per compiler_label. Replaced on each
         # update_results call so it reflects the most recent run's state.
         self.harness_errors: Dict[str, List[str]] = defaultdict(list)
+
+        # Per-test timings for --timing mode, keyed by compiler_label then
+        # test file. Value is the maximum duration (seconds) of a *successful*
+        # run, or None if the test ran but never passed. Populated by
+        # _execute_one_by_one via record_timing.
+        self.timings: Dict[str, Dict[str, Optional[float]]] = defaultdict(dict)
+
+    def record_timing(
+        self, compiler_label: str, test_file: str, duration: float, passed: bool
+    ) -> None:
+        """
+        Record a per-test wall-clock duration for --timing mode.
+
+        For a successful run, keep the maximum duration seen across all runs
+        (both compilers' retries), since the goal is spotting slow tests and
+        worst-case is the useful signal. A failed run never overwrites a
+        recorded success; a test that only ever fails is stored as None so the
+        report can show N/A.
+
+        Args:
+            compiler_label: Compiler identifier (e.g., "GCC", "LLVM").
+            test_file: Test file path (e.g., "gdb.rocm/simple.exp").
+            duration: Wall-clock duration of this run in seconds.
+            passed: Whether this run completed successfully.
+
+        Returns:
+            None
+        """
+        per_compiler = self.timings[compiler_label]
+        if passed:
+            prev = per_compiler.get(test_file)
+            if prev is None or duration > prev:
+                per_compiler[test_file] = duration
+        elif test_file not in per_compiler:
+            # Record the failure only if no successful timing exists yet.
+            per_compiler[test_file] = None
 
     def cleanup_old_entries(self, compiler_label: str, tests: List[str]) -> None:
         """
@@ -1678,6 +1825,7 @@ def run_tests(
     test_results: "TestResults",
     args: argparse.Namespace,
     xfailed_tests: Optional[Dict[str, List[str]]] = None,
+    sanity_check_exe: Optional[Path] = None,
 ) -> None:
     """
     Run ROCgdb test suite with retry logic for failed tests.
@@ -1695,6 +1843,9 @@ def run_tests(
         args: Parsed command-line arguments.
         xfailed_tests: Compiler labels mapped to expected failing test paths.
             Used to skip retrying ignored tests when --retry-ignored-tests is off.
+        sanity_check_exe: When supplied (--sanity-check mode), the pre-built
+            known-good HIP executable run before each test in one-by-one mode.
+            None disables the probe.
 
     Returns:
         None
@@ -1741,6 +1892,7 @@ def run_tests(
                     f"(override with --one-by-one-test-timeout)"
                 )
             log_dir = args.one_by_one_log_dir or (test_suite_dir / "one_by_one_logs")
+
             _execute_one_by_one(
                 test_suite_dir,
                 current_tests,
@@ -1752,6 +1904,9 @@ def run_tests(
                 compiler_label,
                 iteration,
                 wall_clock,
+                test_results if args.timing else None,
+                sanity_check_exe,
+                args.sanity_check_timeout,
             )
         else:
             cmd = [
@@ -2007,6 +2162,9 @@ def main() -> None:
     # Print Python information.
     print_python_info()
 
+    # Build the compiler configurations from the selected toolchains.
+    selected_toolchains = select_toolchains(args.toolchain)
+
     # Show configuration summary.
     print_configuration(
         rocgdb_bin,
@@ -2016,6 +2174,7 @@ def main() -> None:
         args,
         ignore_list_file_status,
         output_ignore_list_file_status,
+        selected_toolchains,
     )
 
     # Load ignore list from JSON file.
@@ -2039,22 +2198,15 @@ def main() -> None:
 
     # Validate that we can run rocgdb.
     validate_rocgdb(rocgdb_bin, env_vars)
-
-    # Verify executables presence.
-    check_executables(
-        [
-            "make",
-            "amdclang++",
-            "gcc",
-            "g++",
-            "gfortran",
-            "clang",
-            "clang++",
-            "flang",
-            "runtest",
-        ],
-        env_vars,
-    )
+    compilers = [
+        (
+            TOOLCHAINS[name]["cc"],
+            TOOLCHAINS[name]["cxx"],
+            TOOLCHAINS[name]["fc"],
+            TOOLCHAINS[name]["label"],
+        )
+        for name in selected_toolchains
+    ]
 
     print_section("Expanding test paths")
     tests = expand_test_paths(args.tests, rocgdb_testsuite_dir)
@@ -2062,11 +2214,38 @@ def main() -> None:
     if not tests:
         _log_error_and_exit("No test files found")
 
-    # Compiler configurations.
-    compilers = [
-        ("gcc", "g++", "gfortran", "GCC"),
-        ("clang", "clang++", "flang", "LLVM"),
-    ]
+    # Verify executables presence. We only require the compilers of the selected
+    # toolchains, in first seen order with duplicates dropped, so a run of one
+    # toolchain does not fail because another toolchain's compilers are absent.
+    # amdclang++ is needed to compile GPU kernels for gdb.rocm tests; require it
+    # whenever any gdb.rocm test is in scope.
+    toolchain_executables = list(
+        dict.fromkeys(exe for cc, cxx, fc, _ in compilers for exe in (cc, cxx, fc))
+    )
+    has_rocm_tests = any(t.startswith("gdb.rocm/") or t == "gdb.rocm" for t in tests)
+    required_executables = ["make", *toolchain_executables, "runtest"]
+    if has_rocm_tests:
+        required_executables.insert(1, "amdclang++")
+    check_executables(required_executables, env_vars)
+
+    # The sanity check probes the GPU with a HIP program, so it is only
+    # meaningful when gdb.rocm tests will actually run. Reject the combination
+    # early rather than compiling a HIP program for a CPU-only run.
+    if args.sanity_check and not has_rocm_tests:
+        _log_error_and_exit(
+            "--sanity-check requires gdb.rocm tests to be in scope, but none "
+            "were selected."
+        )
+
+    # Build the sanity-check executable once per invocation. It is rebuilt
+    # unconditionally so a binary left over from a previous run (possibly for a
+    # different GPU) can never cause a spurious "system unreliable" abort.
+    sanity_check_exe = None
+    if args.sanity_check:
+        log_dir = args.one_by_one_log_dir or (rocgdb_testsuite_dir / "one_by_one_logs")
+        sanity_check_exe = _build_sanity_check_executable(
+            rocgdb_testsuite_dir, log_dir, env_vars
+        )
 
     # Initialize test result tracking.
     test_results = TestResults()
@@ -2086,14 +2265,31 @@ def main() -> None:
             test_results,
             args,
             xfailed_tests,
+            sanity_check_exe,
         )
 
     # Final summaries.
     test_results.print_all_summaries()
     overall_pass = test_results.print_final_status(xfailed_tests, args.no_xfail)
 
+    # Write the per-test timing log if requested.
+    if args.timing:
+        timing_path = args.timing_log_file or (
+            rocgdb_testsuite_dir / TIMING_LOG_FILENAME
+        )
+        write_timing_log(test_results.timings, timing_path)
+        logger.info(f"{STATUS_PASS} Timing log written to {timing_path}")
+
     # Generate and write output ignore list if requested.
     if args.output_ignore_list_file is not None:
+        if len(selected_toolchains) < 2:
+            logger.warning(
+                f"{STATUS_WARN} --output-ignore-list-file with a single toolchain "
+                "produces no Generic entries. Failures that would be Generic in a "
+                "two-toolchain run are filed under the single compiler label only, "
+                "so the generated list will not suppress those tests when run with "
+                "all toolchains."
+            )
         ignore_list = test_results.generate_ignore_list()
         try:
             with open(args.output_ignore_list_file, "w", encoding="utf-8") as f:
@@ -2157,6 +2353,214 @@ def _build_runtestflags(
     return " ".join(parts)
 
 
+def _decode_stream(data: Union[str, bytes, None]) -> str:
+    """
+    Normalize a captured subprocess stream to text.
+
+    TimeoutExpired.stdout/stderr may be bytes, str, or None depending on how
+    far communicate() progressed; coerce all three to a string for logging.
+
+    Args:
+        data: A captured stream value (str, bytes, or None).
+
+    Returns:
+        The decoded text, or "" when there was nothing captured.
+    """
+    if data is None:
+        return ""
+    if isinstance(data, bytes):
+        return data.decode("utf-8", errors="replace")
+    return data
+
+
+def _build_sanity_check_executable(
+    test_suite_dir: Path, log_dir: Path, env_vars: Dict[str, str]
+) -> Path:
+    """
+    Build the sanity-check HIP executable from gdb.rocm/simple.cpp.
+
+    simple.cpp is a self-contained HIP program with its own main() that launches
+    a trivial kernel and asserts the result, so it compiles directly with
+    amdclang++ and needs none of the testsuite's wrapper/driver machinery. The
+    executable is written to <log_dir>/sanity_check and rebuilt unconditionally
+    on every invocation: --offload-arch=native bakes in the build-time GPU, so
+    a binary left over from a previous run (possibly on different hardware)
+    must never be reused, or it could cause a spurious "system unreliable"
+    abort.
+
+    Args:
+        test_suite_dir: Path to the testsuite directory (source of simple.cpp).
+        log_dir: One-by-one log dir root; the executable is written here so it
+            sits next to any dmesg.log the probe writes.
+        env_vars: Prepared environment for the compile. Supplies the same
+            PATH/LD_LIBRARY_PATH as the testsuite run so amdclang++ and its HIP
+            toolchain resolve identically.
+
+    Returns:
+        Path to the freshly built sanity-check executable.
+
+    Exits:
+        Code 1 if the source is missing or the compile fails (a setup error,
+        distinct from the unreliable-system condition the probe detects).
+    """
+    src = test_suite_dir / "gdb.rocm" / "simple.cpp"
+    if not src.is_file():
+        _log_error_and_exit(f"Sanity-check source not found: {src}")
+
+    out = log_dir / "sanity_check"
+
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        _log_error_and_exit(f"Failed to create sanity-check log dir {log_dir}: {e}")
+
+    # Mirror the essential flags the testsuite uses to build gdb.rocm programs
+    # (see gdb/testsuite/boards/hip.exp and the command echoed by simple.exp):
+    #
+    # . -x hip puts amdclang++ in HIP mode so the device headers and toolchain
+    #   are on the include path. Without it the source is compiled as host C++
+    #   and <hip/hip_runtime.h> is not found (and --offload-arch is reported as
+    #   an unused argument).
+    # . --offload-arch=native auto-detects the installed GPU.
+    # . -mllvm=-amdgpu-spill-cfi-saved-regs matches the known-good recipe.
+    # . -Wno-unused-command-line-argument / -Wno-unknown-warning-option keep the
+    #   HIP link step quiet, as the board file does.
+    cmd = [
+        "amdclang++",
+        "-x",
+        "hip",
+        "--offload-arch=native",
+        "-mllvm=-amdgpu-spill-cfi-saved-regs",
+        "-Wno-unused-command-line-argument",
+        "-Wno-unknown-warning-option",
+        str(src),
+        "-o",
+        str(out),
+    ]
+    logger.info(f"Building sanity-check executable: {shlex.join(cmd)}")
+    result = _run_command(env=env_vars, cmd=cmd, capture_output=True, check=False)
+    if result.returncode != 0:
+        _log_error_and_exit(
+            f"Failed to build sanity-check executable from {src}: {result.stderr}"
+        )
+    logger.info(f"{STATUS_PASS} Sanity-check executable built at {out}")
+    return out
+
+
+def _dump_dmesg(log_dir: Path, env_vars: Dict[str, str]) -> None:
+    """
+    Capture kernel ring buffer output to <log_dir>/dmesg.log.
+
+    On many systems reading the kernel log is restricted
+    (kernel.dmesg_restrict), so a plain `dmesg` fails for non-root users. We
+    first try `dmesg`, then fall back to non-interactive `sudo -n dmesg` (which
+    never blocks on a password prompt). If neither yields output, we warn and
+    write nothing rather than saving a misleading file containing only the
+    permission error.
+
+    Best-effort throughout: a missing binary, a non-zero exit, or a write
+    failure is warned about but never raised, so it cannot mask the
+    unreliable-system exit that calls it.
+
+    Args:
+        log_dir: Directory to write dmesg.log into.
+        env_vars: Prepared environment for the dmesg invocation.
+
+    Returns:
+        None
+    """
+    dmesg_path = log_dir / "dmesg.log"
+
+    def _try(cmd: List[str]) -> Optional[str]:
+        try:
+            result = _run_command(cmd, env=env_vars, capture_output=True, check=False)
+        except SystemExit:
+            # _run_command calls _log_error_and_exit on OSError (e.g. the
+            # binary is missing) even with no error_msg; treat that as "this
+            # command is unavailable" so diagnostics never abort the abort.
+            return None
+        if result.returncode == 0 and result.stdout:
+            return result.stdout
+        return None
+
+    output = _try(["dmesg"]) or _try(["sudo", "-n", "dmesg"])
+    if not output:
+        logger.warning(
+            f"{STATUS_WARN} Could not capture dmesg (missing binary or "
+            f"insufficient privileges); skipping {dmesg_path}."
+        )
+        return
+
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        dmesg_path.write_text(output, encoding="utf-8")
+        logger.info(f"{STATUS_WARN} dmesg captured to {dmesg_path}")
+    except OSError as e:
+        logger.warning(f"{STATUS_WARN} Failed to write {dmesg_path}: {e}")
+
+
+def _run_sanity_check(
+    exe: Path, timeout: int, env_vars: Dict[str, str], log_dir: Path
+) -> None:
+    """
+    Run the sanity-check executable as a GPU health probe.
+
+    A trivial known-good HIP kernel should return well within `timeout`. If it
+    times out or exits non-zero, the system is declared unreliable: dmesg is
+    captured and the run aborts immediately (sys.exit(1)) rather than letting
+    every remaining test fail for reasons unrelated to the code under test.
+
+    Args:
+        exe: Path to the sanity-check executable.
+        timeout: Wall-clock timeout (seconds) for the probe.
+        env_vars: Prepared environment for the probe.
+        log_dir: One-by-one log dir root; dmesg.log is written here on failure.
+
+    Returns:
+        None on success.
+
+    Exits:
+        Code 1 if the probe times out or exits non-zero.
+    """
+    reason: Optional[str] = None
+    output = ""
+    start = time.perf_counter()
+    try:
+        result = _run_command(
+            [str(exe)],
+            env=env_vars,
+            capture_output=True,
+            check=False,
+            timeout=timeout,
+            kill_process_group=True,
+        )
+    except subprocess.TimeoutExpired as exc:
+        reason = f"sanity check timed out after {timeout}s"
+        # TimeoutExpired carries whatever the child emitted before the kill;
+        # it may be bytes or str depending on how far communicate() got.
+        output = _decode_stream(exc.stdout) + _decode_stream(exc.stderr)
+    else:
+        if result.returncode != 0:
+            reason = f"sanity check exited with code {result.returncode}"
+            output = (result.stdout or "") + (result.stderr or "")
+    duration = time.perf_counter() - start
+
+    if reason is not None:
+        logger.error(
+            f"{STATUS_FAIL} System has become unreliable: {reason}. "
+            f"Aborting the test run."
+        )
+        output = output.strip()
+        if output:
+            logger.error(f"{STATUS_FAIL} Sanity check output:")
+            for line in output.splitlines():
+                logger.error(f"       {line}")
+        _dump_dmesg(log_dir, env_vars)
+        sys.exit(1)
+
+    print_section(f"{STATUS_PASS} Sanity check passed in {duration:.2f}s")
+
+
 def _execute_one_by_one(
     test_suite_dir: Path,
     tests: List[str],
@@ -2168,6 +2572,9 @@ def _execute_one_by_one(
     compiler_label: str,
     iteration: int,
     wall_clock_timeout: int,
+    test_results: Optional["TestResults"],
+    sanity_check_exe: Optional[Path],
+    sanity_check_timeout: int,
 ) -> None:
     """
     Run each test in its own `make check` invocation, capturing per-test
@@ -2191,18 +2598,30 @@ def _execute_one_by_one(
         compiler_label: Compiler identifier (e.g., "GCC").
         iteration: Current retry iteration (1-based) — controls log filename suffix.
         wall_clock_timeout: Wall-clock timeout (seconds) for each `make check`.
+        test_results: When supplied (--timing mode), each test's duration is
+            recorded via record_timing. None disables timing collection.
+        sanity_check_exe: When supplied (--sanity-check mode), the pre-built
+            known-good HIP executable run before each test as a GPU health
+            probe. None disables the probe.
+        sanity_check_timeout: Wall-clock timeout (seconds) for each probe.
 
     Returns:
         None
 
     Exits:
-        Code 1 if the aggregated gdb.sum cannot be written.
+        Code 1 if the aggregated gdb.sum cannot be written, or if a sanity-check
+        probe declares the system unreliable.
     """
     aggregated_lines: List[str] = []
     retry_number = iteration - 1
     base_suffix = "" if retry_number == 0 else f".retry-{retry_number}"
 
     for test in tests:
+        # Probe the GPU before each test. Bails out (sys.exit(1)) if the system
+        # has become unreliable, capturing dmesg.log under log_dir.
+        if sanity_check_exe is not None:
+            _run_sanity_check(sanity_check_exe, sanity_check_timeout, env_vars, log_dir)
+
         cmd = [
             "make",
             check_type,
@@ -2284,6 +2703,12 @@ def _execute_one_by_one(
             elif line.startswith("FAIL:"):
                 has_fail = True
         test_failed = wall_clock_timed_out or has_fail or has_unresolved or has_error
+
+        if test_results is not None:
+            test_results.record_timing(
+                compiler_label, test, duration, passed=not test_failed
+            )
+
         status_dir = "fail" if test_failed else "pass"
         if wall_clock_timed_out:
             status_text = "TIMEOUT"
@@ -2336,6 +2761,86 @@ def _execute_one_by_one(
         aggregated_sum.write_text("\n".join(aggregated_lines) + "\n", encoding="utf-8")
     except OSError as e:
         _log_error_and_exit(f"Failed to write aggregated gdb.sum: {e}")
+
+
+def _timing_entries_total(entries: List[Tuple[str, Optional[float]]]) -> float:
+    """
+    Sum the measured durations in a list of (test_file, duration) entries.
+
+    Entries whose duration is None (the test ran but never passed) contribute
+    nothing, so a directory of only such entries totals zero and sorts last.
+
+    Args:
+        entries: List of (test_file, duration) pairs for one directory.
+
+    Returns:
+        Total measured duration in seconds.
+    """
+    return sum(duration for _, duration in entries if duration is not None)
+
+
+def write_timing_log(
+    timings: Dict[str, Dict[str, Optional[float]]], out_path: Path
+) -> None:
+    """
+    Write the per-test timing log for --timing mode.
+
+    Entries are grouped by compiler, then by test directory (e.g. gdb.rocm),
+    and within each directory sorted by duration descending (longest-running
+    test first). Tests that ran but never passed are shown as N/A and sorted
+    after all timed tests.
+
+    Args:
+        timings: Nested mapping compiler_label -> test_file -> duration (or
+            None if the test never passed).
+        out_path: Destination path for the timing log.
+
+    Exits:
+        Code 1 if the file cannot be written.
+    """
+    lines: List[str] = [
+        "# ROCgdb per-test timing (one-by-one mode)",
+        "# Duration is the maximum wall-clock time of a successful run.",
+        "# N/A means the test ran but never passed.",
+    ]
+
+    print_width = 80
+    for compiler_label in timings.keys():
+        per_compiler = timings[compiler_label]
+        lines.append("")
+        lines.append("=" * print_width)
+        lines.append(f"Compiler: {compiler_label}")
+        lines.append("=" * print_width)
+
+        # Group this compiler's tests by directory.
+        grouped: Dict[str, List[Tuple[str, Optional[float]]]] = defaultdict(list)
+        for test_file, duration in per_compiler.items():
+            directory = os.path.dirname(test_file) or "."
+            grouped[directory].append((test_file, duration))
+
+        # Order directories by total measured time descending. A directory with
+        # only N/A entries totals zero and sorts last.
+        dir_totals = {d: _timing_entries_total(grouped[d]) for d in grouped}
+        for directory in sorted(grouped, key=dir_totals.__getitem__, reverse=True):
+            total = dir_totals[directory]
+            lines.append(f"\n{directory}  (total {total:.2f}s)")
+            # Timed tests first (longest to shortest), then N/A tests by name.
+            # Two-pass stable sort: name ascending first, then duration
+            # descending, so N/A ties break alphabetically.
+            entries = sorted(grouped[directory], key=lambda item: item[0])
+            entries = sorted(
+                entries,
+                key=lambda item: (item[1] is not None, item[1] or 0.0),
+                reverse=True,
+            )
+            for test_file, duration in entries:
+                value = f"{duration:10.2f}s" if duration is not None else f"{'N/A':>11}"
+                lines.append(f"  {value}  {test_file}")
+
+    try:
+        out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except OSError as e:
+        _log_error_and_exit(f"Failed to write timing log to {out_path}: {e}")
 
 
 def print_python_info() -> None:
@@ -2396,6 +2901,7 @@ def print_configuration(
     args: argparse.Namespace,
     ignore_list_file_status: str,
     output_ignore_list_file_status: str,
+    selected_toolchains: List[str],
 ) -> None:
     """
     Display the ROCgdb test configuration in a formatted table.
@@ -2408,6 +2914,7 @@ def print_configuration(
         args: Parsed command-line arguments containing additional configuration values.
         ignore_list_file_status: Status message for ignore list file.
         output_ignore_list_file_status: Status message for output ignore list file.
+        selected_toolchains: Resolved toolchain identifiers to display, in run order.
 
     Returns:
         None
@@ -2431,6 +2938,10 @@ def print_configuration(
         else "Dejagnu's default"
     )
 
+    toolchains_display = ", ".join(
+        f"{name} ({TOOLCHAINS[name]['label']})" for name in selected_toolchains
+    )
+
     one_by_one_timeout_display = (
         f"{args.one_by_one_test_timeout} seconds"
         if args.one_by_one_test_timeout is not None
@@ -2444,6 +2955,7 @@ def print_configuration(
         ("Testsuite Directory", testsuite_dir),
         ("Configure Script", configure_script),
         ("Tests", " ".join(args.tests)),
+        ("Toolchains", toolchains_display),
         ("Check Type", args.check_type),
         ("Parallel Execution", parallel_info),
         ("One-by-one Mode", "Enabled" if args.one_by_one else "Disabled"),
@@ -2456,6 +2968,18 @@ def print_configuration(
             )
         )
         fields.append(("One-by-one Test Timeout", one_by_one_timeout_display))
+        if args.sanity_check:
+            fields.append(("Sanity Check", "Enabled"))
+            fields.append(
+                ("Sanity Check Timeout", f"{args.sanity_check_timeout} seconds")
+            )
+    if args.timing:
+        fields.append(
+            (
+                "Timing Log",
+                args.timing_log_file or (testsuite_dir / TIMING_LOG_FILENAME),
+            )
+        )
     fields.extend(
         [
             ("Use FAIL ignore list", "Not using" if args.no_xfail else "Using"),
