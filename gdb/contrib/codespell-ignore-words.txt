@@ -58,3 +58,5 @@ endianity
 # Downstream ROCgdb lingo.
 HSA
 offen
+# Name pattern of AMD GPU device files.
+renderD

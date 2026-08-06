@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test if all LLVM DWARF extensions for heterogenous debugging
+# Test if all LLVM DWARF extensions for heterogeneous debugging
 # (https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html) show
 # up in "info address" command.
 #

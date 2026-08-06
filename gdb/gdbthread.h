@@ -653,7 +653,7 @@ private:
 
      If SIMD is supported by the architecture, changing this attribute
      switches the focus between different SIMD lanes within a thread.
-     This field is tigthly bound to the active SIMD lanes mask, which
+     This field is tightly bound to the active SIMD lanes mask, which
      indicates lanes that are currently active.
 
      If SIMD is not supported, we pretend there's only one lane, with
