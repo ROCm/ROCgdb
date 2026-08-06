@@ -1175,8 +1175,8 @@ elf_i386_tls_transition (struct bfd_link_info *info, bfd *abfd,
        || (sec->flags & SEC_CODE) == 0))
     {
       reloc_howto_type *howto = elf_i386_rtype_to_howto (from_type);
-      _bfd_x86_elf_link_report_tls_invalid_section_error
-	(abfd, sec, symtab_hdr, h, sym, howto);
+      _bfd_x86_elf_link_report_error (abfd, sec, symtab_hdr, h, sym,
+				      howto, elf_x86_error_tls);
       return false;
     }
 
@@ -1749,11 +1749,15 @@ elf_i386_scan_relocs (bfd *abfd,
 
 	    if (tls_type >= GOT_TLS_GD
 		&& tls_type <= GOT_TLS_GDESC
-		&& (elf_section_type (sec) != SHT_PROGBITS
+		&& ((h != NULL
+		     ? h->type != STT_TLS
+		     : ELF_ST_TYPE (isym->st_info) != STT_TLS)
+		    || elf_section_type (sec) != SHT_PROGBITS
 		    || (sec->flags & SEC_CODE) == 0))
 	      {
-		_bfd_x86_elf_link_report_tls_invalid_section_error
-		  (abfd, sec, symtab_hdr, h, isym, howto);
+		_bfd_x86_elf_link_report_error (abfd, sec, symtab_hdr,
+						h, isym, howto,
+						elf_x86_error_tls);
 		goto error_return;
 	      }
 
@@ -2585,6 +2589,18 @@ elf_i386_relocate_section (struct bfd_link_info *info,
 	{
 	case R_386_GOT32X:
 	case R_386_GOT32:
+	  /* Since we don't allow non-alloced sections to create GOT/PLT
+	     entries, issue an error if a non-alloced section references
+	     GOT.  */
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    {
+  non_alloc_error:
+	      _bfd_x86_elf_link_report_error (input_bfd, input_section,
+					      symtab_hdr, h, sym, howto,
+					      elf_x86_error_non_alloc);
+	      return false;
+	    }
+
 	  /* Relocation is to the entry for this symbol in the global
 	     offset table.  */
 	  if (htab->elf.sgot == NULL)
@@ -2717,6 +2733,9 @@ elf_i386_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_386_GOTOFF:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  /* Relocation is relative to the start of the global offset
 	     table.  */
 
@@ -2781,6 +2800,9 @@ elf_i386_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_386_GOTPC:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  /* Use global offset table as symbol value.  */
 	  relocation = htab->elf.sgotplt->output_section->vma
 		       + htab->elf.sgotplt->output_offset;
@@ -2788,6 +2810,9 @@ elf_i386_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_386_PLT32:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  /* Relocation is to the entry for this symbol in the
 	     procedure linkage table.  */
 
@@ -2915,6 +2940,9 @@ elf_i386_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_386_TLS_IE:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  if (!bfd_link_executable (info))
 	    {
 	      Elf_Internal_Rela outrel;
@@ -2942,6 +2970,9 @@ elf_i386_relocate_section (struct bfd_link_info *info,
 	case R_386_TLS_DESC_CALL:
 	case R_386_TLS_IE_32:
 	case R_386_TLS_GOTIE:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  tls_type = GOT_UNKNOWN;
 	  if (h == NULL && local_got_offsets)
 	    tls_type = elf_x86_local_got_tls_type (input_bfd) [r_symndx];
@@ -3440,6 +3471,9 @@ elf_i386_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_386_TLS_LDM:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  if (! elf_i386_tls_transition (info, input_bfd,
 					 input_section, contents,
 					 symtab_hdr, sym_hashes,
@@ -3512,6 +3546,9 @@ elf_i386_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_386_TLS_LDO_32:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  if (!bfd_link_executable (info)
 	      || (input_section->flags & SEC_CODE) == 0)
 	    relocation -= _bfd_x86_elf_dtpoff_base (info);
@@ -3522,6 +3559,9 @@ elf_i386_relocate_section (struct bfd_link_info *info,
 
 	case R_386_TLS_LE_32:
 	case R_386_TLS_LE:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  if (!bfd_link_executable (info))
 	    {
 	      Elf_Internal_Rela outrel;
@@ -3608,11 +3648,10 @@ elf_i386_relocate_section (struct bfd_link_info *info,
 	       (bfd_vma) 0, input_bfd, input_section, rel->r_offset);
 	  else
 	    {
-	      _bfd_error_handler
-		/* xgettext:c-format */
-		(_("%pB(%pA+%#" PRIx64 "): reloc against `%s': error %d"),
-		 input_bfd, input_section,
-		 (uint64_t) rel->r_offset, name, (int) r);
+	      _bfd_x86_elf_link_report_relocation_error (input_bfd,
+							 input_section,
+							 name, rel,
+							 howto, r);
 	      return false;
 	    }
 	}

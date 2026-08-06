@@ -2331,6 +2331,19 @@ _bfd_x86_elf_late_size_sections (struct bfd_link_info *info)
 	      else if (p->count != 0)
 		{
 		  srel = elf_section_data (p->sec)->sreloc;
+		  if (!srel)
+		    {
+		      /* NB: Since elf_link_read_relocs_from_section
+			 aborts for bad relocation, further relocations
+			 won't be processed and needed dynamic relocation
+			 section won't be created afterwards.  */
+		      _bfd_error_handler
+			/* xgettext:c-format */
+			(_("%pB: dynamic relocation section is needed "
+			   "for section `%pA'"),
+			 p->sec->owner, p->sec);
+		      continue;
+		    }
 		  srel->size += p->count * htab->sizeof_reloc;
 		  if ((p->sec->output_section->flags & SEC_READONLY) != 0
 		      && (info->flags & DF_TEXTREL) == 0)
@@ -3369,24 +3382,90 @@ _bfd_x86_elf_link_report_tls_transition_error
   bfd_set_error (bfd_error_bad_value);
 }
 
-/* Report TLS invalid section error.  */
+/* Report link error.  */
 
 void
-_bfd_x86_elf_link_report_tls_invalid_section_error
+_bfd_x86_elf_link_report_error
   (bfd *abfd, asection *sec, Elf_Internal_Shdr *symtab_hdr,
    struct elf_link_hash_entry *h, Elf_Internal_Sym *sym,
-   reloc_howto_type *howto)
+   reloc_howto_type *howto, enum elf_x86_error_type type)
 {
   const char *name;
+  bool non_thread_local;
   if (h)
-    name = h->root.root.string;
+    {
+      non_thread_local = h->type != STT_TLS;
+      name = h->root.root.string;
+    }
   else
-    name = bfd_elf_sym_name (abfd, symtab_hdr, sym, NULL);
+    {
+      non_thread_local = ELF_ST_TYPE (sym->st_info) != STT_TLS;
+      name = bfd_elf_sym_name (abfd, symtab_hdr, sym, NULL);
+      if (name[0] == '\0')
+	name = "*unknown*";
+    }
+
+  switch (type)
+    {
+    case elf_x86_error_tls:
+      if (non_thread_local)
+	_bfd_error_handler
+	  /* xgettext:c-format */
+	  (_("%pB: relocation %s against non-thread local symbol "
+	     "`%s' in section `%pA'"),
+	   abfd, howto->name, name, sec);
+      else
+	_bfd_error_handler
+	  /* xgettext:c-format */
+	  (_("%pB: relocation %s against thread local symbol `%s' in "
+	     "invalid section `%pA'"), abfd, howto->name, name, sec);
+      break;
+
+    case elf_x86_error_non_alloc:
+      _bfd_error_handler
+	/* xgettext:c-format */
+	(_("%pB: relocation %s against symbol `%s' in non-alloc "
+	   "section `%pA'"),
+	 abfd, howto->name, name, sec);
+      break;
+
+    default:
+      abort ();
+      break;
+    }
+
+  bfd_set_error (bfd_error_bad_value);
+}
+
+/* Report link relocation error.  */
+
+void
+_bfd_x86_elf_link_report_relocation_error (bfd *abfd, asection *sec,
+					   const char *name,
+					   Elf_Internal_Rela *rel,
+					   reloc_howto_type *howto,
+					   bfd_reloc_status_type status)
+{
+  const char *error_msg;
+
+  switch (status)
+    {
+    case bfd_reloc_outofrange:
+      error_msg = _("out of section range");
+      break;
+
+    case bfd_reloc_notsupported:
+      error_msg = _("not supported");
+      break;
+
+    default:
+      abort ();
+    }
+
   _bfd_error_handler
     /* xgettext:c-format */
-    (_("%pB: relocation %s against thread local symbol `%s' in "
-       "invalid section `%pA'"), abfd, howto->name, name, sec);
-  bfd_set_error (bfd_error_bad_value);
+    (_("%pB(%pA+%#" PRIx64 "): relocation `%s' against `%s': %s"),
+     abfd, sec, (uint64_t) rel->r_offset, howto->name, name, error_msg);
 }
 
 /* Return TRUE if symbol should be hashed in the `.gnu.hash' section.  */

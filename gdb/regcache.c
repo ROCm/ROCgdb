@@ -1542,7 +1542,7 @@ register_dump::dump (ui_out *out, const char *name)
 
   for (regnum = 0; regnum < descr->nr_cooked_registers; regnum++)
     {
-      ui_out_emit_tuple tuple_emitter (out, nullptr);
+      ui_out_emit_tuple tuple_emitter (out);
 
       /* Name.  */
       const char *p = gdbarch_register_name (m_gdbarch, regnum);

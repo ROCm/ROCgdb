@@ -3036,17 +3036,7 @@ check_typedef (struct type *type)
 	 error.  We just pick the outer address space (akin to letting the
 	 outer cast in a chain of casting win), instead of assuming
 	 "it can't happen".  */
-      {
-	type_instance_flags new_instance_flags = type->instance_flags ();
-
-	/* Treat code vs data spaces and address classes separately.  */
-	if (instance_flags.harvard_aspace != HARVARD_ASPACE_NONE)
-	  new_instance_flags.harvard_aspace = HARVARD_ASPACE_NONE;
-	if (instance_flags.address_class != 0)
-	  new_instance_flags.address_class = 0;
-
-	instance_flags |= new_instance_flags;
-      }
+      instance_flags.merge (type->instance_flags ());
     }
 
   /* If this is a struct/class/union with no fields, then check

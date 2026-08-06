@@ -1259,7 +1259,7 @@ print_script (struct loaded_script *script)
 {
   struct ui_out *uiout = current_uiout;
 
-  ui_out_emit_tuple tuple_emitter (uiout, NULL);
+  ui_out_emit_tuple tuple_emitter (uiout);
 
   uiout->field_string ("loaded", script->loaded ? "Yes" : "No");
   uiout->field_string ("script", script->name);

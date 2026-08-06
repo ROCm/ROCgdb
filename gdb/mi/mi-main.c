@@ -635,7 +635,7 @@ print_one_inferior (struct inferior *inferior, bool recurse,
   if (ids.empty () || (ids.find (inferior->pid) != ids.end ()))
     {
       gdb::unordered_set<int> cores;
-      ui_out_emit_tuple tuple_emitter (uiout, NULL);
+      ui_out_emit_tuple tuple_emitter (uiout);
 
       uiout->field_fmt ("id", "i%d", inferior->num);
       uiout->field_string ("type", "process");
@@ -731,7 +731,7 @@ list_available_thread_groups (const gdb::unordered_set<int> &ids, int recurse)
       if (!ids.empty () && ids.find (pid_i) == ids.end ())
 	continue;
 
-      ui_out_emit_tuple tuple_emitter (uiout, NULL);
+      ui_out_emit_tuple tuple_emitter (uiout);
 
       uiout->field_string ("id", *pid);
       uiout->field_string ("type", "process");
@@ -753,7 +753,7 @@ list_available_thread_groups (const gdb::unordered_set<int> &ids, int recurse)
 
 	      for (const osdata_item &child : children)
 		{
-		  ui_out_emit_tuple inner_tuple_emitter (uiout, NULL);
+		  ui_out_emit_tuple inner_tuple_emitter (uiout);
 		  const std::string *tid = get_osdata_column (child, "tid");
 		  const std::string *tcore = get_osdata_column (child, "core");
 
@@ -1105,7 +1105,7 @@ output_register (const frame_info_ptr &frame, int regnum, int format,
   if (skip_unavailable && !val->entirely_available ())
     return;
 
-  ui_out_emit_tuple tuple_emitter (uiout, NULL);
+  ui_out_emit_tuple tuple_emitter (uiout);
   uiout->field_signed ("number", regnum);
 
   if (format == 'N')
@@ -1360,7 +1360,7 @@ mi_cmd_data_read_memory (const char *command, const char *const *argv,
 	int col_byte;
 	struct value_print_options print_opts;
 
-	ui_out_emit_tuple tuple_emitter (uiout, NULL);
+	ui_out_emit_tuple tuple_emitter (uiout);
 	uiout->field_aspace_and_addr ("addr", gdbarch, addr + row_byte);
 	/* ui_out_field_core_addr_symbolic (uiout, "saddr", addr +
 	   row_byte); */
@@ -1459,7 +1459,7 @@ mi_cmd_data_read_memory_bytes (const char *command, const char *const *argv,
   ui_out_emit_list list_emitter (uiout, "memory");
   for (const memory_read_result &read_result : result)
     {
-      ui_out_emit_tuple tuple_emitter (uiout, NULL);
+      ui_out_emit_tuple tuple_emitter (uiout);
 
       uiout->field_aspace_and_addr ("begin", gdbarch, read_result.begin);
       uiout->field_aspace_and_addr ("offset", gdbarch,
@@ -2263,7 +2263,7 @@ mi_load_progress (const char *section_name,
 	gdb_puts (mi->current_token, mi->raw_stdout);
       gdb_puts ("+download", mi->raw_stdout);
       {
-	ui_out_emit_tuple tuple_emitter (uiout.get (), NULL);
+	ui_out_emit_tuple tuple_emitter (uiout.get ());
 	uiout->field_string ("section", section_name);
 	uiout->field_signed ("section-size", total_section);
 	uiout->field_signed ("total-size", grand_total);
@@ -2281,7 +2281,7 @@ mi_load_progress (const char *section_name,
 	gdb_puts (mi->current_token, mi->raw_stdout);
       gdb_puts ("+download", mi->raw_stdout);
       {
-	ui_out_emit_tuple tuple_emitter (uiout.get (), NULL);
+	ui_out_emit_tuple tuple_emitter (uiout.get ());
 	uiout->field_string ("section", section_name);
 	uiout->field_signed ("section-sent", sent_so_far);
 	uiout->field_signed ("section-size", total_section);
@@ -2712,7 +2712,7 @@ mi_cmd_trace_frame_collected (const char *command, const char *const *argv,
 
 	tsv = find_trace_state_variable_by_number (tvar);
 
-	ui_out_emit_tuple tuple_emitter (uiout, NULL);
+	ui_out_emit_tuple tuple_emitter (uiout);
 
 	if (tsv != NULL)
 	  {
@@ -2742,7 +2742,7 @@ mi_cmd_trace_frame_collected (const char *command, const char *const *argv,
       {
 	gdbarch *gdbarch = current_inferior ()->arch ();
 
-	ui_out_emit_tuple tuple_emitter (uiout, NULL);
+	ui_out_emit_tuple tuple_emitter (uiout);
 
 	uiout->field_core_addr ("address", gdbarch, r.start);
 	uiout->field_signed ("length", r.length);

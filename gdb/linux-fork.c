@@ -839,7 +839,7 @@ print_checkpoints (struct ui_out *uiout, inferior *req_inf, fork_info *req_fi)
 	  thread_info *t = any_thread_of_inferior (inf);
 	  bool is_current = fi.ptid.pid () == inf->pid;
 
-	  ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+	  ui_out_emit_tuple tuple_emitter (uiout);
 
 	  if (is_current && cur_inf == inf)
 	    uiout->field_string ("current", "*");

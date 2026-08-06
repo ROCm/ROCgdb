@@ -1633,8 +1633,8 @@ elf_x86_64_tls_transition (struct bfd_link_info *info, bfd *abfd,
     {
       reloc_howto_type *howto = elf_x86_64_rtype_to_howto (abfd,
 							   from_type);
-      _bfd_x86_elf_link_report_tls_invalid_section_error
-	(abfd, sec, symtab_hdr, h, sym, howto);
+      _bfd_x86_elf_link_report_error (abfd, sec, symtab_hdr, h,
+				      sym, howto, elf_x86_error_tls);
       return false;
     }
 
@@ -2772,11 +2772,15 @@ need_got:
 
 	    if (tls_type >= GOT_TLS_GD
 		&& tls_type <= GOT_TLS_GDESC
-		&& (elf_section_type (sec) != SHT_PROGBITS
+		&& ((h != NULL
+		     ? h->type != STT_TLS
+		     : ELF_ST_TYPE (isym->st_info) != STT_TLS)
+		    || elf_section_type (sec) != SHT_PROGBITS
 		    || (sec->flags & SEC_CODE) == 0))
 	      {
-		_bfd_x86_elf_link_report_tls_invalid_section_error
-		  (abfd, sec, symtab_hdr, h, isym, howto);
+		_bfd_x86_elf_link_report_error (abfd, sec, symtab_hdr,
+						h, isym, howto,
+						elf_x86_error_tls);
 		goto error_return;
 	      }
 
@@ -3602,6 +3606,18 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
 	case R_X86_64_GOTPCREL64:
 	  /* Use global offset table entry as symbol value.  */
 	case R_X86_64_GOTPLT64:
+	  /* Since we don't allow non-alloced sections to create GOT/PLT
+	     entries, issue an error if a non-alloced section references
+	     GOT.  */
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    {
+  non_alloc_error:
+	      _bfd_x86_elf_link_report_error (input_bfd, input_section,
+					      symtab_hdr, h, sym, howto,
+					      elf_x86_error_non_alloc);
+	      return false;
+	    }
+
 	  /* This is obsolete and treated the same as GOT64.  */
 	  base_got = htab->elf.sgot;
 
@@ -3740,6 +3756,9 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_X86_64_GOTOFF64:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  /* Relocation is relative to the start of the global offset
 	     table.  */
 
@@ -3806,6 +3825,9 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
 
 	case R_X86_64_GOTPC32:
 	case R_X86_64_GOTPC64:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  /* Use global offset table as symbol value.  */
 	  relocation = htab->elf.sgotplt->output_section->vma
 		       + htab->elf.sgotplt->output_offset;
@@ -3813,6 +3835,9 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_X86_64_PLTOFF64:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  /* Relocation is PLT entry relative to GOT.  For local
 	     symbols it's the symbol itself relative to GOT.  */
 	  if (h != NULL
@@ -3849,6 +3874,9 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_X86_64_PLT32:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  /* Relocation is to the entry for this symbol in the
 	     procedure linkage table.  */
 
@@ -4157,6 +4185,9 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
 	case R_X86_64_CODE_4_GOTTPOFF:
 	case R_X86_64_CODE_5_GOTTPOFF:
 	case R_X86_64_CODE_6_GOTTPOFF:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  tls_type = GOT_UNKNOWN;
 	  if (h == NULL && local_got_offsets)
 	    tls_type = elf_x86_local_got_tls_type (input_bfd) [r_symndx];
@@ -4883,6 +4914,9 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_X86_64_TLSLD:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  if (! elf_x86_64_tls_transition (info, input_bfd,
 					   input_section, contents,
 					   symtab_hdr, sym_hashes,
@@ -5012,6 +5046,9 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
 	  break;
 
 	case R_X86_64_DTPOFF32:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  if (!bfd_link_executable (info)
 	      || (input_section->flags & SEC_CODE) == 0)
 	    relocation -= _bfd_x86_elf_dtpoff_base (info);
@@ -5021,11 +5058,17 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
 
 	case R_X86_64_TPOFF32:
 	case R_X86_64_TPOFF64:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  BFD_ASSERT (bfd_link_executable (info));
 	  relocation = elf_x86_64_tpoff (info, relocation);
 	  break;
 
 	case R_X86_64_DTPOFF64:
+	  if ((input_section->flags & (SEC_ALLOC | SEC_DEBUGGING)) == 0)
+	    goto non_alloc_error;
+
 	  BFD_ASSERT ((input_section->flags & SEC_CODE) == 0);
 	  relocation -= _bfd_x86_elf_dtpoff_base (info);
 	  break;
@@ -5109,11 +5152,10 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
 	    }
 	  else
 	    {
-	      _bfd_error_handler
-		/* xgettext:c-format */
-		(_("%pB(%pA+%#" PRIx64 "): reloc against `%s': error %d"),
-		 input_bfd, input_section,
-		 (uint64_t) rel->r_offset, name, (int) r);
+	      _bfd_x86_elf_link_report_relocation_error (input_bfd,
+							 input_section,
+							 name, rel,
+							 howto, r);
 	      return false;
 	    }
 	}
@@ -6091,7 +6133,8 @@ elf_x86_64_common_definition (Elf_Internal_Sym *sym)
 static unsigned int
 elf_x86_64_common_section_index (asection *sec)
 {
-  if ((elf_section_flags (sec) & SHF_X86_64_LARGE) == 0)
+  if (bfd_get_flavour (sec->owner) != bfd_target_elf_flavour
+      || (elf_section_flags (sec) & SHF_X86_64_LARGE) == 0)
     return SHN_COMMON;
   else
     return SHN_X86_64_LCOMMON;

@@ -769,7 +769,7 @@ tui_all_windows_info (const char *arg, int from_tty)
   for (tui_win_info *win_info : all_tui_windows ())
     if (win_info->is_visible ())
       {
-	ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+	ui_out_emit_tuple tuple_emitter (uiout);
 
 	uiout->field_string ("name", win_info->name ());
 	uiout->field_signed ("lines", win_info->height);

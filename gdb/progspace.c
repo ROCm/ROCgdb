@@ -363,7 +363,7 @@ print_program_space (struct ui_out *uiout, int requested)
       if (requested != -1 && requested != pspace->num)
 	continue;
 
-      ui_out_emit_tuple tuple_emitter (uiout, NULL);
+      ui_out_emit_tuple tuple_emitter (uiout);
 
       if (pspace == current_program_space)
 	uiout->field_string ("current", "*");

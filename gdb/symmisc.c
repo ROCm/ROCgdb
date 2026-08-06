@@ -1018,7 +1018,7 @@ maintenance_print_one_line_table (struct symtab *symtab, void *data)
 	  const linetable_entry *item;
 
 	  item = &linetable->item [i];
-	  ui_out_emit_tuple tuple_emitter (uiout, nullptr);
+	  ui_out_emit_tuple tuple_emitter (uiout);
 	  uiout->field_signed ("index", i);
 	  if (item->line > 0)
 	    uiout->field_signed ("line", item->line,

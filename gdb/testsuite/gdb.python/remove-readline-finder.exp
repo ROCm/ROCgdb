@@ -23,5 +23,21 @@ standard_testfile
 
 clean_restart
 
+gdb_test_no_output "py import sys"
+
+# Check that readline is not imported.
+with_test_prefix initial {
+    gdb_test "py print (sys.modules.get('readline'))" \
+       "None"
+}
+
+# Try to import readline, and check that it fails.
+set re_msg "readline module disabled under GDB"
 gdb_test "py import readline" \
-  "Python Exception <class 'ImportError'>: readline module disabled under GDB\r\n.*"
+    [multi_line \
+	"Python Exception <class 'ImportError'>: $re_msg" \
+	"Error occurred in Python: $re_msg"]
+
+# Check that readline is still not imported.
+gdb_test "py print (sys.modules.get('readline'))" \
+    "None"

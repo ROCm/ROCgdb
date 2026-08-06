@@ -661,7 +661,7 @@ fatal (const char *fmt, ...)
 
   fflush (stdout);
   va_start (arg, fmt);
-  vfinfo (stderr, fmt, arg, true);
+  vfinfo (stderr, fmt, arg, false);
   va_end (arg);
   fflush (stderr);
   xexit (1);

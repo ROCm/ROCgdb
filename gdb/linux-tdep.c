@@ -927,7 +927,7 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
 	    {
 	      struct mapping m = read_mapping (line);
 
-	      ui_out_emit_tuple tuple_emitter (current_uiout, nullptr);
+	      ui_out_emit_tuple tuple_emitter (current_uiout);
 	      current_uiout->field_core_addr ("start", gdbarch, m.addr);
 	      current_uiout->field_core_addr ("end", gdbarch, m.endaddr);
 	      /* These next two aren't really addresses and so
@@ -1368,7 +1368,7 @@ linux_core_info_proc_mappings (struct gdbarch *gdbarch, struct bfd *cbfd,
 	    current_uiout->table_body ();
 	  }
 
-	ui_out_emit_tuple tuple_emitter (current_uiout, nullptr);
+	ui_out_emit_tuple tuple_emitter (current_uiout);
 	current_uiout->field_core_addr ("start", gdbarch, start);
 	current_uiout->field_core_addr ("end", gdbarch, end);
 	/* These next two aren't really addresses and so shouldn't be
