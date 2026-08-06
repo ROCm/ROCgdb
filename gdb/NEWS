@@ -1,7 +1,9 @@
 		What has changed in GDB?
 	     (Organized release by release)
 
-*** Changes since GDB 17
+*** Changes since GDB 18
+
+*** Changes in GDB 18
 
 * Support for the Common Trace Format (CTF) has been removed.  GDB now
   saves trace information exclusively in its own "tfile" format.
