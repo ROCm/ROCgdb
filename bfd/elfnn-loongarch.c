@@ -1191,9 +1191,6 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
       if (h && h->type == STT_GNU_IFUNC)
 	{
-	  if (htab->elf.dynobj == NULL)
-	    htab->elf.dynobj = abfd;
-
 	  /* Create 'irelifunc' in PIC object.  */
 	  if (bfd_link_pic (info)
 	      && !_bfd_elf_create_ifunc_sections (htab->elf.dynobj, info))
