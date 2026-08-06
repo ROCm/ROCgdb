@@ -15429,7 +15429,7 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  case R_ARM_GOTOFF32:
 	  case R_ARM_GOTPC:
 	    if (htab->root.sgot == NULL
-		&& !create_got_section (htab->root.dynobj, info))
+		&& !create_got_section (dynobj, info))
 	      return false;
 	    break;
 
@@ -15594,9 +15594,8 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  /* Create a reloc section in dynobj.  */
 	  if (sreloc == NULL)
 	    {
-	      sreloc = _bfd_elf_make_dynamic_reloc_section
-		(sec, dynobj, 2, abfd, ! htab->use_rel);
-
+	      sreloc = _bfd_elf_make_dynamic_reloc_section (sec, dynobj, 2, abfd,
+							    !htab->use_rel);
 	      if (sreloc == NULL)
 		return false;
 	    }
@@ -15615,9 +15614,7 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  p = *head;
 	  if (p == NULL || p->sec != sec)
 	    {
-	      size_t amt = sizeof *p;
-
-	      p = (struct elf_dyn_relocs *) bfd_alloc (htab->root.dynobj, amt);
+	      p = bfd_alloc (dynobj, sizeof (*p));
 	      if (p == NULL)
 		return false;
 	      p->next = *head;
@@ -17034,7 +17031,7 @@ elf32_arm_late_size_sections (struct bfd_link_info *info)
 	continue;
 
       /* Allocate memory for the section contents.  */
-      s->contents = (unsigned char *) bfd_zalloc (dynobj, s->size);
+      s->contents = bfd_zalloc (dynobj, s->size);
       if (s->contents == NULL)
 	return false;
       s->alloced = 1;

@@ -1955,8 +1955,7 @@ elf64_alpha_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	      if (!rent)
 		{
-		  size_t amt = sizeof (struct alpha_elf_reloc_entry);
-		  rent = (struct alpha_elf_reloc_entry *) bfd_alloc (abfd, amt);
+		  rent = bfd_alloc (abfd, sizeof (*rent));
 		  if (!rent)
 		    return false;
 

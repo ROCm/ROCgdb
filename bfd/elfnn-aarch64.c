@@ -8163,9 +8163,10 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		if (htab->root.dynobj == NULL)
 		  htab->root.dynobj = abfd;
 
-		sreloc = _bfd_elf_make_dynamic_reloc_section
-		  (sec, htab->root.dynobj, LOG_FILE_ALIGN, abfd, /*rela? */ true);
-
+		sreloc = _bfd_elf_make_dynamic_reloc_section (sec,
+							      htab->root.dynobj,
+							      LOG_FILE_ALIGN,
+							      abfd, true);
 		if (sreloc == NULL)
 		  return false;
 	      }
@@ -8203,9 +8204,7 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    p = *head;
 	    if (p == NULL || p->sec != sec)
 	      {
-		size_t amt = sizeof *p;
-		p = ((struct elf_dyn_relocs *)
-		     bfd_zalloc (htab->root.dynobj, amt));
+		p = bfd_zalloc (htab->root.dynobj, sizeof (*p));
 		if (p == NULL)
 		  return false;
 		p->next = *head;
@@ -9826,7 +9825,7 @@ elfNN_aarch64_late_size_sections (struct bfd_link_info *info)
 	 section's contents are written out.  This should not happen,
 	 but this way if it does, we get a R_AARCH64_NONE reloc instead
 	 of garbage.  */
-      s->contents = (bfd_byte *) bfd_zalloc (dynobj, s->size);
+      s->contents = bfd_zalloc (dynobj, s->size);
       if (s->contents == NULL)
 	return false;
       s->alloced = 1;

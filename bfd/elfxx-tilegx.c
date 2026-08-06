@@ -1989,9 +1989,7 @@ tilegx_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	      p = *head;
 	      if (p == NULL || p->sec != sec)
 		{
-		  size_t amt = sizeof *p;
-		  p = ((struct elf_dyn_relocs *)
-		       bfd_alloc (htab->elf.dynobj, amt));
+		  p = bfd_alloc (htab->elf.dynobj, sizeof (*p));
 		  if (p == NULL)
 		    return false;
 		  p->next = *head;

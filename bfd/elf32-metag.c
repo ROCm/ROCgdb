@@ -2305,8 +2305,7 @@ elf_metag_check_relocs (bfd *abfd,
 	      hdh_p = *hdh_head;
 	      if (hdh_p == NULL || hdh_p->sec != sec)
 		{
-		  hdh_p = ((struct elf_dyn_relocs *)
-			   bfd_alloc (dynobj, sizeof *hdh_p));
+		  hdh_p = bfd_alloc (dynobj, sizeof *hdh_p);
 		  if (hdh_p == NULL)
 		    return false;
 		  hdh_p->next = *hdh_head;
