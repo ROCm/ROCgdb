@@ -12096,6 +12096,18 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
       arch_addr_space_id aspace
 	= gdbarch_address_space_dwarf_to_id (gdbarch, addr_space);
       type = make_type_with_address_space (type, aspace);
+
+      /* We expect the type length information coming from DWARF to
+	 match what the architecture says.  If there is a mismatch,
+	 issue a complaint and continue with arch's decision.  */
+      if (type->length () != byte_size)
+	{
+	  complaint (_("length of pointer with address space (%s) and "
+		       "address class (%s) is %s in DWARF but arch says %s"),
+		     pulongest (addr_space), pulongest (addr_class),
+		     pulongest (byte_size), pulongest (type->length ()));
+	  byte_size = type->length ();
+	}
     }
 
   if (addr_class == DW_ADDR_none && addr_space == DW_ASPACE_default)
@@ -12180,21 +12192,35 @@ read_tag_reference_type (struct die_info *die, struct dwarf2_cu *cu,
 
   type = lookup_reference_type (target_type, refcode);
 
+  ULONGEST byte_size;
+  attr = dwarf2_attr (die, DW_AT_byte_size, cu);
+  if (attr != nullptr)
+    byte_size = (attr->unsigned_constant ()
+		 .value_or (cu_header->addr_size));
+  else
+    byte_size = cu_header->addr_size;
+
   ULONGEST addr_space = get_address_space (die, cu);
   if (addr_space != DW_ASPACE_default)
     {
       arch_addr_space_id aspace
 	= gdbarch_address_space_dwarf_to_id (gdbarch, addr_space);
       type = make_type_with_address_space (type, aspace);
+
+      /* We expect the type length information coming from DWARF to
+	 match what the architecture says.  If there is a mismatch,
+	 issue a complaint and continue with arch's decision.  */
+      if (type->length () != byte_size)
+	{
+	  complaint (_("length of reference type with address space (%s) "
+		       "is %s in DWARF but arch says %s"),
+		     pulongest (addr_space), pulongest (byte_size),
+		     pulongest (type->length ()));
+	  byte_size = type->length ();
+	}
     }
 
-  attr = dwarf2_attr (die, DW_AT_byte_size, cu);
-  if (attr != nullptr)
-    type->set_length (attr->unsigned_constant ()
-		      .value_or (cu_header->addr_size));
-  else
-    type->set_length (cu_header->addr_size);
-
+  type->set_length (byte_size);
   maybe_set_alignment (cu, die, type);
   return set_die_type (die, type, cu);
 }
