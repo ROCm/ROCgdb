@@ -36,11 +36,6 @@ struct hiperr_catchpoint : public code_breakpoint
 		     const char *cond_string)
     : code_breakpoint (gdbarch, bp_catchpoint, temp, cond_string)
   {
-    /* Make sure "locspec" is initialized, irrespective of the
-       "__hipOnError ()" symbol being found.  This allows listing the
-       breakpoint as a pending one when the binary is not loaded yet.
-       Otherwise, "info breakpoints" is going to trigger an assert.  */
-    locspec = new_explicit_location_spec_function ("__hipOnError");
     pspace = current_program_space;
     re_set (nullptr);
   }
@@ -71,7 +66,9 @@ hiperr_catchpoint::re_set (program_space * /*ps*/)
 
   try
     {
-      sals = this->decode_location_spec (this->locspec.get (),
+      location_spec_up locspec
+	= new_explicit_location_spec_function ("__hipOnError");
+      sals = this->decode_location_spec (locspec.get (),
 					 current_program_space);
     }
   catch (const gdb_exception_error &ex)
