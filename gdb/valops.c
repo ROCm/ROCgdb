@@ -667,11 +667,10 @@ value_cast (struct type *type, struct value *arg2)
     {
       return value::zero (to_type, not_lval);
     }
+  else if (code1 == TYPE_CODE_PTR && code2 == TYPE_CODE_PTR)
+    return value_cast_pointers (to_type, arg2, 0);
   else if (type->length () == type2->length ())
     {
-      if (code1 == TYPE_CODE_PTR && code2 == TYPE_CODE_PTR)
-	return value_cast_pointers (to_type, arg2, 0);
-
       arg2 = arg2->copy ();
 
       struct type *resolved_type

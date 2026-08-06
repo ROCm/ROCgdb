@@ -117,6 +117,7 @@ struct gdbarch
   gdbarch_segment_address_from_core_address_ftype *segment_address_from_core_address = nullptr;
   gdbarch_segment_address_to_core_address_ftype *segment_address_to_core_address = nullptr;
   gdbarch_address_space_dwarf_to_id_ftype *address_space_dwarf_to_id = nullptr;
+  gdbarch_address_space_pointer_size_ftype *address_space_pointer_size = nullptr;
   gdbarch_address_scope_ftype *address_scope = nullptr;
   gdbarch_get_watchable_aliases_ftype *get_watchable_aliases = default_get_watchable_aliases;
   gdbarch_return_value_ftype *return_value = nullptr;
@@ -389,6 +390,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   if (gdbarch->address_space_dwarf_to_id == nullptr)
     gdbarch->address_space_dwarf_to_id = default_address_space_dwarf_to_id;
   /* Skip verify of address_space_dwarf_to_id, invalid_p == 0.  */
+  /* Skip verify of address_space_pointer_size, has predicate.  */
   if (gdbarch->address_scope == nullptr)
     gdbarch->address_scope = default_address_scope;
   /* Skip verify of address_scope, invalid_p == 0.  */
@@ -835,6 +837,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: address_space_dwarf_to_id = <%s>\n",
 	      host_address_to_string (gdbarch->address_space_dwarf_to_id));
+  gdb_printf (file,
+	      "gdbarch_dump: gdbarch_address_space_pointer_size_p() = %d\n",
+	      gdbarch_address_space_pointer_size_p (gdbarch));
+  gdb_printf (file,
+	      "gdbarch_dump: address_space_pointer_size = <%s>\n",
+	      host_address_to_string (gdbarch->address_space_pointer_size));
   gdb_printf (file,
 	      "gdbarch_dump: address_scope = <%s>\n",
 	      host_address_to_string (gdbarch->address_scope));
@@ -2762,6 +2770,30 @@ set_gdbarch_address_space_dwarf_to_id (struct gdbarch *gdbarch,
 				       gdbarch_address_space_dwarf_to_id_ftype address_space_dwarf_to_id)
 {
   gdbarch->address_space_dwarf_to_id = address_space_dwarf_to_id;
+}
+
+bool
+gdbarch_address_space_pointer_size_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != nullptr);
+  return gdbarch->address_space_pointer_size != nullptr;
+}
+
+unsigned int
+gdbarch_address_space_pointer_size (struct gdbarch *gdbarch, arch_addr_space_id aspace)
+{
+  gdb_assert (gdbarch != nullptr);
+  gdb_assert (gdbarch->address_space_pointer_size != nullptr);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_address_space_pointer_size called\n");
+  return gdbarch->address_space_pointer_size (gdbarch, aspace);
+}
+
+void
+set_gdbarch_address_space_pointer_size (struct gdbarch *gdbarch,
+					gdbarch_address_space_pointer_size_ftype address_space_pointer_size)
+{
+  gdbarch->address_space_pointer_size = address_space_pointer_size;
 }
 
 location_scope

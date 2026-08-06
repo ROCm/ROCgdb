@@ -1868,6 +1868,47 @@ amdgpu_address_spaces (struct gdbarch *gdbarch)
   return tdep->address_spaces;
 }
 
+/* Implementation of the 'address_space_pointer_size' gdbarch method.  */
+
+static unsigned int
+amdgpu_address_space_pointer_size (gdbarch *gdbarch,
+				   arch_addr_space_id aspace)
+{
+  amd_dbgapi_architecture_id_t architecture_id;
+  if (inferior_ptid != null_ptid
+      && ptid_is_gpu (inferior_thread ()->ptid))
+    {
+      const amd_dbgapi_wave_id_t wave_id
+	= get_amd_dbgapi_wave_id (inferior_thread ()->ptid);
+      if (amd_dbgapi_wave_get_info (wave_id,
+				    AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
+				    sizeof (architecture_id),
+				    &architecture_id)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_get_architecture failed"));
+    }
+  else if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
+					&architecture_id)
+	   != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_get_architecture failed"));
+
+  /* Get a dbgapi address space id for the original address space.  */
+  amd_dbgapi_address_space_id_t dbgapi_aspace_id;
+  if (amd_dbgapi_dwarf_address_space_to_address_space
+	(architecture_id, aspace, &dbgapi_aspace_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
+
+  amd_dbgapi_size_t size;
+  if (amd_dbgapi_address_space_get_info
+	(dbgapi_aspace_id, AMD_DBGAPI_ADDRESS_SPACE_INFO_ADDRESS_SIZE,
+	 sizeof (size), &size)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_address_space_get_info failed"));
+
+  return (unsigned int) size / TARGET_CHAR_BIT;
+}
+
 static location_scope
 amdgpu_address_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address)
 {
@@ -2148,6 +2189,8 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_pointer_to_address (gdbarch, amdgpu_pointer_to_address);
   set_gdbarch_address_to_pointer (gdbarch, amdgpu_address_to_pointer);
   set_gdbarch_pointer_to_pointer (gdbarch, amdgpu_pointer_to_pointer);
+  set_gdbarch_address_space_pointer_size
+    (gdbarch, amdgpu_address_space_pointer_size);
   set_gdbarch_address_class_dwarf_to_id
     (gdbarch, amdgpu_address_class_dwarf_to_id);
   set_gdbarch_address_class_id_to_name
