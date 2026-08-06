@@ -59,6 +59,8 @@ gdb_test "p f4 ($i1, $i2)" ".* = {.* e = 123}" \
     "p f4 (i1, i2)"
 gdb_test "p f5 ($i1, $i2)" ".* = {f = 123}" \
     "p f5 (i1, i2)"
+gdb_test "p f6 ($i1, $i2)" ".* = {g = 123}" \
+    "p f6 (i1, i2)"
 
 gdb_breakpoint "f1"
 gdb_breakpoint "f2"
@@ -66,6 +68,7 @@ gdb_breakpoint "f22"
 gdb_breakpoint "f3"
 gdb_breakpoint "f4"
 gdb_breakpoint "f5"
+gdb_breakpoint "f6"
 
 gdb_continue_to_breakpoint "Break in f1"
 gdb_test "finish" " = {a = 123}" \
@@ -90,3 +93,7 @@ gdb_test "finish" " = {.* e = 123}" \
 gdb_continue_to_breakpoint "Break in f5"
 gdb_test "finish" " = {f = 123}" \
     "finish from f5"
+
+gdb_continue_to_breakpoint "Break in f6"
+gdb_test "finish" " = {g = 123}" \
+    "finish from f6"
