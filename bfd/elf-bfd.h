@@ -2732,7 +2732,7 @@ extern struct bfd_section *bfd_elf_tls_setup
   (struct bfd_link_info *);
 
 extern bool bfd_elf_link_create_dynamic_sections
-  (bfd *, struct bfd_link_info *);
+  (struct bfd_link_info *);
 extern bool _bfd_elf_omit_section_dynsym_default
   (struct bfd_link_info *, asection *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_omit_section_dynsym_all

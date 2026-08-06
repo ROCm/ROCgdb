@@ -303,34 +303,29 @@ compatible_format (struct bfd_link_info *info, bfd *ibfd)
 /* Find a suitable object for attaching dynamic sections.  */
 
 static bfd *
-_bfd_elf_link_dynobj (bfd *abfd, struct bfd_link_info *info)
+_bfd_elf_link_dynobj (struct bfd_link_info *info)
 {
-  struct elf_link_hash_table *hash_table;
+  struct elf_link_hash_table *htab = elf_hash_table (info);
 
-  hash_table = elf_hash_table (info);
-  if (hash_table->dynobj == NULL)
+  if (htab->dynobj == NULL)
     {
-      /* We may not set dynobj, an input file holding linker created
-	 dynamic sections to abfd, which may be a dynamic object with
-	 its own dynamic sections.  We need to find a normal input file
-	 to hold linker created sections if possible.  */
-      if ((abfd->flags & (DYNAMIC | BFD_PLUGIN)) != 0)
-	{
-	  bfd *ibfd;
-	  for (ibfd = info->input_bfds; ibfd; ibfd = ibfd->link.next)
-	    if ((ibfd->flags
-		 & (DYNAMIC | BFD_LINKER_CREATED | BFD_PLUGIN)) == 0
-		&& compatible_format (info, ibfd))
-	      {
-		abfd = ibfd;
-		break;
-	      }
-	}
-      /* ??? Accept abfd anyway, if the loop doesn't find anything?  */
-      hash_table->dynobj = abfd;
+      /* We need to find an input file of the same format as the
+	 output to hold linker created sections.  For now, exclude
+	 any stub bfd.  */
+      bfd *ibfd = info->input_bfds;
+      if ((ibfd->flags
+	   & (BFD_PLUGIN | BFD_LINKER_CREATED)) == BFD_LINKER_CREATED)
+	ibfd = ibfd->link.next;
+      for (; ibfd; ibfd = ibfd->link.next)
+	if (compatible_format (info, ibfd))
+	  break;
+      if (ibfd == NULL)
+	_bfd_error_handler (_("no %s input object found"),
+			    bfd_get_target (info->output_bfd));
+      htab->dynobj = ibfd;
     }
 
-  return hash_table->dynobj;
+  return htab->dynobj;
 }
 
 /* Return the strtab for dynamic symbol names.  Create it if
@@ -347,14 +342,13 @@ _bfd_elf_link_dynstr (struct bfd_link_info *info)
 }
 
 /* Create some sections which will be filled in with dynamic linking
-   information.  ABFD is an input file which requires dynamic sections
-   to be created.  The dynamic sections take up virtual memory space
+   information.  The dynamic sections take up virtual memory space
    when the final executable is run, so we need to create them before
    addresses are assigned to the output sections.  We work out the
    actual contents and size of these sections later.  */
 
 bool
-bfd_elf_link_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
+bfd_elf_link_create_dynamic_sections (struct bfd_link_info *info)
 {
   flagword flags;
   asection *s;
@@ -371,7 +365,7 @@ bfd_elf_link_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
   if (!_bfd_elf_link_dynstr (info))
     return false;
 
-  dynobj = _bfd_elf_link_dynobj (abfd, info);
+  dynobj = _bfd_elf_link_dynobj (info);
   if (dynobj == NULL)
     return false;
   obed = get_elf_backend_data (dynobj);
@@ -3969,7 +3963,7 @@ bfd_elf_add_dt_needed_tag (bfd *abfd, struct bfd_link_info *info)
   if (strindex == (size_t) -1)
     return -1;
 
-  if (!bfd_elf_link_create_dynamic_sections (abfd, info))
+  if (!bfd_elf_link_create_dynamic_sections (info))
     return -1;
 
   if (_bfd_elf_strtab_refcount (dynstr, strindex) != 1)
@@ -4601,7 +4595,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	  && info->output_bfd->xvec == abfd->xvec
 	  && !htab->dynamic_sections_created)
 	{
-	  if (!bfd_elf_link_create_dynamic_sections (abfd, info))
+	  if (!bfd_elf_link_create_dynamic_sections (info))
 	    goto error_return;
 	}
     }
@@ -4822,7 +4816,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
       /* Create dynamic sections for backends that require that be done
 	 before setup_gnu_properties.  */
       if (add_needed
-	  && !bfd_elf_link_create_dynamic_sections (abfd, info))
+	  && !bfd_elf_link_create_dynamic_sections (info))
 	return false;
 
       /* Save the DT_AUDIT entry for the linker emulation code. */
@@ -5760,7 +5754,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 
 		  /* Create dynamic sections for backends that require
 		     that be done before setup_gnu_properties.  */
-		  if (!bfd_elf_link_create_dynamic_sections (abfd, info))
+		  if (!bfd_elf_link_create_dynamic_sections (info))
 		    goto error_free_vers;
 		  add_needed = true;
 		}

@@ -2693,7 +2693,7 @@ elf32_tic6x_check_relocs (bfd *abfd, struct bfd_link_info *info,
   if ((bfd_link_pic (info) || elf32_tic6x_using_dsbt (abfd))
       && ! htab->elf.dynamic_sections_created)
     {
-      if (! bfd_elf_link_create_dynamic_sections (abfd, info))
+      if (!bfd_elf_link_create_dynamic_sections (info))
 	return false;
     }
 
