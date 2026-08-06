@@ -1598,6 +1598,71 @@ amdgpu_segment_address_from_core_address (CORE_ADDR addr)
   return addr & significant_bits;
 }
 
+/* Convert a given address in the given address space to an address in
+   another address space.  This is essentially a wrapper for a dbgapi
+   function.  PTID and SIMD_LANE are the contexts for which the
+   conversion should be made.  PTID can be NULL_PTID when the address
+   does not necessarily depend on wave context.  */
+
+static std::optional<addr_range>
+amdgpu_convert_address (gdbarch *gdbarch, ptid_t ptid, int simd_lane,
+			CORE_ADDR from_address,
+			arch_addr_space_id from_aspace_id,
+			arch_addr_space_id to_aspace_id)
+{
+  /* Argument should be already stripped off its address space id.  */
+  gdb_assert (amdgpu_address_space_id_from_core_address (from_address)
+	      == ARCH_ADDR_SPACE_ID_DEFAULT);
+
+  /* We should never get a valid ptid here that is not a gpu
+     thread.  */
+  gdb_assert (ptid == null_ptid || ptid_is_gpu (ptid));
+
+  const amd_dbgapi_wave_id_t wave_id
+    = (ptid != null_ptid)
+    ? get_amd_dbgapi_wave_id (ptid)
+    : AMD_DBGAPI_WAVE_NONE;
+
+  amd_dbgapi_architecture_id_t architecture_id;
+  if (ptid == null_ptid
+      && (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
+				       &architecture_id)
+	  != AMD_DBGAPI_STATUS_SUCCESS))
+      error (_("amd_dbgapi_get_architecture failed"));
+  else if (ptid != null_ptid
+	   && (amd_dbgapi_wave_get_info (wave_id,
+					 AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
+					 sizeof (architecture_id),
+					 &architecture_id)
+	       != AMD_DBGAPI_STATUS_SUCCESS))
+    error (_("amd_dbgapi_wave_get_info failed"));
+
+  /* Get a dbgapi address space id for the original address space.  */
+  amd_dbgapi_address_space_id_t dbgapi_from_addr_space_id;
+  if (amd_dbgapi_dwarf_address_space_to_address_space
+	(architecture_id, from_aspace_id, &dbgapi_from_addr_space_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
+
+  /* Get the dbgapi address space id for the default address space.  */
+  amd_dbgapi_address_space_id_t dbgapi_to_addr_space_id;
+  if (amd_dbgapi_dwarf_address_space_to_address_space
+	(architecture_id, to_aspace_id, &dbgapi_to_addr_space_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
+
+  CORE_ADDR converted_address;
+  size_t contiguous_size;
+
+  if (amd_dbgapi_convert_address_space
+	(wave_id, simd_lane, dbgapi_from_addr_space_id, from_address,
+	 dbgapi_to_addr_space_id, &converted_address, &contiguous_size)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return std::nullopt;
+
+  return addr_range {converted_address, contiguous_size};
+}
+
 /* Address class to address space mapping.
 
    TODO: This is just a quick fix to make the address class hand
@@ -1681,15 +1746,16 @@ amdgpu_address_class_id_to_name (struct gdbarch *gdbarch,
 /* Form a core address from a TYPE pointer type information and BUF
    pointer value buffer.
 
-   TODO: The address class information belongs to a type, which means
-	 that an address class is a language based concept, so either
-	 the language should define the address class numbers and
-	 names or some kind of a language enumeration needs to be
-	 passed in.
-
-	 At the moment, we assume that the language is OpenCL and we
-	 apply 1-1 mapping between its address classes and the AMDGPU
-	 address spaces.  */
+   TODO: TYPE may contain address space (i.e. DW_AT_address_space)
+   information.  In that case, we use it.  If empty, it is possible
+   that TYPE has address class (i.e. DW_AT_address_class) information.
+   OpenCL currently encodes source language address space qualifiers
+   in DW_AT_address_class.  Therefore we cannot ignore address class
+   and we handle them as "best effort".  Based on the direction DWARF
+   6 is taking, it is expected that OpenCL would stop using
+   DW_AT_address_class and use a new attribute instead.  When that
+   happens, all address-class related code, including gdbarch methods,
+   can be removed.  We just need address space.  */
 static CORE_ADDR
 amdgpu_pointer_to_address (struct gdbarch *gdbarch,
 			   struct type *type, const gdb_byte *buf)
@@ -1697,24 +1763,76 @@ amdgpu_pointer_to_address (struct gdbarch *gdbarch,
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR address
     = extract_unsigned_integer (buf, type->length (), byte_order);
-  unsigned int aclass_id = type->address_class ();
-  unsigned int address_class
-    = amdgpu_type_flags_aclass_to_addr_class (aclass_id);
 
-  /* Address might be in a converted format already, so even if the
-     class is global, the address might have the address space part
-     in it.  This happens in cases like 'p &local_array'."  */
-  if (address_class == DWARF_GLOBAL_ADDR_CLASS)
-    return address;
-
-  /* In the current implementation, we shouldn't have a case where we
-     have both type address class information as well as address
-     space information in a core address.  */
+  /* No address space information should be encoded in the pointer
+     value.  We use the pointer type for that purpose.  */
   gdb_assert (!amdgpu_address_space_id_from_core_address (address));
 
-  address = amdgpu_segment_address_from_core_address (address);
+  arch_addr_space_id address_space = type->address_space ();
+  if (address_space == 0)
+    {
+      /* Try address class.  At the moment, we assume 1-1 mapping
+	 between address classes and AMDGPU address spaces.  */
+      unsigned int aclass_id = type->address_class ();
+      address_space
+	= amdgpu_type_flags_aclass_to_addr_class (aclass_id);
+    }
 
-  return amdgpu_segment_address_to_core_address (address_class, address);
+  return amdgpu_segment_address_to_core_address (address_space, address);
+}
+
+/* Store ADDRESS, which may have an address space id encoded in it, to
+   an address value of type TYPE, which also has address space
+   information.  */
+
+static void
+amdgpu_address_to_pointer (gdbarch *gdbarch, type *type,
+			   gdb_byte *buffer, CORE_ADDR address)
+{
+  arch_addr_space_id addr_aspace
+    = amdgpu_address_space_id_from_core_address (address);
+  /* There is 1-1 mapping between DWARF address spaces and GPU address
+     spaces.  */
+  arch_addr_space_id type_aspace = type->address_space ();
+
+  gdb_assert (addr_aspace == type_aspace);
+
+  address = amdgpu_segment_address_from_core_address (address);
+  unsigned_address_to_pointer (gdbarch, type, buffer, address);
+}
+
+/* Convert ADDRESS from one address space to another.  */
+static CORE_ADDR
+amdgpu_pointer_to_pointer (gdbarch *gdbarch, type *from_type,
+			   CORE_ADDR address, type *to_type)
+{
+  arch_addr_space_id from_type_aspace = from_type->address_space ();
+  arch_addr_space_id to_type_aspace = to_type->address_space ();
+
+  /* Strip address space info from the address.  Initialize
+     FROM_ADDRESS to 0, although it is written by
+     'address_to_pointer', because FROM_TYPE may be shorter than size
+     of CORE_ADDR.  */
+  CORE_ADDR from_address = 0;
+  amdgpu_address_to_pointer (gdbarch, from_type,
+			     (gdb_byte *) &from_address, address);
+
+  /* Convert.  */
+  ptid_t ptid = inferior_thread ()->ptid;
+  gdb_assert (ptid_is_gpu (ptid));
+  int lane = inferior_thread ()->current_simd_lane ();
+
+  std::optional<addr_range> range
+    = amdgpu_convert_address (gdbarch, ptid, lane, from_address,
+			      from_type_aspace, to_type_aspace);
+  if (!range.has_value ())
+    error (_("Cannot convert pointer-to-'%s' to a pointer-to-'%s'"),
+	   gdbarch_address_space_id_to_name (gdbarch, from_type_aspace),
+	   gdbarch_address_space_id_to_name (gdbarch, to_type_aspace));
+
+  /* Add address space info.  */
+  return amdgpu_pointer_to_address (gdbarch, to_type,
+				    (gdb_byte *) &(range.value ().addr));
 }
 
 static CORE_ADDR
@@ -1748,6 +1866,47 @@ amdgpu_address_spaces (struct gdbarch *gdbarch)
 {
   amdgpu_gdbarch_tdep *tdep = get_amdgpu_gdbarch_tdep (gdbarch);
   return tdep->address_spaces;
+}
+
+/* Implementation of the 'address_space_pointer_size' gdbarch method.  */
+
+static unsigned int
+amdgpu_address_space_pointer_size (gdbarch *gdbarch,
+				   arch_addr_space_id aspace)
+{
+  amd_dbgapi_architecture_id_t architecture_id;
+  if (inferior_ptid != null_ptid
+      && ptid_is_gpu (inferior_thread ()->ptid))
+    {
+      const amd_dbgapi_wave_id_t wave_id
+	= get_amd_dbgapi_wave_id (inferior_thread ()->ptid);
+      if (amd_dbgapi_wave_get_info (wave_id,
+				    AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
+				    sizeof (architecture_id),
+				    &architecture_id)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_get_architecture failed"));
+    }
+  else if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
+					&architecture_id)
+	   != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_get_architecture failed"));
+
+  /* Get a dbgapi address space id for the original address space.  */
+  amd_dbgapi_address_space_id_t dbgapi_aspace_id;
+  if (amd_dbgapi_dwarf_address_space_to_address_space
+	(architecture_id, aspace, &dbgapi_aspace_id)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
+
+  amd_dbgapi_size_t size;
+  if (amd_dbgapi_address_space_get_info
+	(dbgapi_aspace_id, AMD_DBGAPI_ADDRESS_SPACE_INFO_ADDRESS_SIZE,
+	 sizeof (size), &size)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd_dbgapi_address_space_get_info failed"));
+
+  return (unsigned int) size / TARGET_CHAR_BIT;
 }
 
 static location_scope
@@ -1845,66 +2004,25 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
   if (size == 0)
     error (_("Watchpoint length must be non-zero number."));
 
-  /* We should never get a valid ptid here that is not a gpu
-     thread.  */
-  gdb_assert (ptid == null_ptid || ptid_is_gpu (ptid));
-
   std::vector<addr_range> aliases;
-  amd_dbgapi_architecture_id_t architecture_id;
-  /* If we have a wave, use the wave's arch, otherwise, use the arch matching
-     gdbarch.  */
-  if (ptid != null_ptid)
-    {
-      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (ptid);
-      if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
-				    sizeof (architecture_id), &architecture_id)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	error (_("amd_dbgapi_wave_get_info failed"));
-    }
-  else
-    {
-      if (amd_dbgapi_get_architecture (gdbarch_bfd_arch_info (gdbarch)->mach,
-				       &architecture_id)
-	  != AMD_DBGAPI_STATUS_SUCCESS)
-	error (_("amd_dbgapi_get_architecture failed"));
-    }
-
-  /* Get a dbgapi address space id for the original address space.  */
-  amd_dbgapi_address_space_id_t dbgapi_from_addr_space_id;
-  if (amd_dbgapi_dwarf_address_space_to_address_space
-	(architecture_id, (uint64_t) addr_space_id,
-	 &dbgapi_from_addr_space_id)
-	!= AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd_dbgapi_dwarf_address_space_to_address_space failed"));
-
-  /* Get the dbgapi address space id for the default address space.  */
-  amd_dbgapi_address_space_id_t dbgapi_to_addr_space_id;
-  gdb_assert (amd_dbgapi_dwarf_address_space_to_address_space
-	       (architecture_id, (uint64_t) ARCH_ADDR_SPACE_ID_DEFAULT,
-		&dbgapi_to_addr_space_id)
-	       == AMD_DBGAPI_STATUS_SUCCESS);
-
-  amd_dbgapi_wave_id_t wave_id = AMD_DBGAPI_WAVE_NONE;
-
-  if (ptid != null_ptid)
-    wave_id = get_amd_dbgapi_wave_id (ptid);
 
   /* Aliasing address range might not have the same layout.  Because
      of that, when ever there is a gap between the aliasing addresses,
      create a new range.  */
   while (true)
     {
-      amd_dbgapi_size_t converted_size;
-      amd_dbgapi_segment_address_t to_offset;
-
       /* Try to convert the address to an address in the
 	 default address space.  */
-      if (amd_dbgapi_convert_address_space
-	    (wave_id, simd_lane, dbgapi_from_addr_space_id,
-	     (amd_dbgapi_segment_address_t) addr,
-	     dbgapi_to_addr_space_id, &to_offset, &converted_size)
-	    != AMD_DBGAPI_STATUS_SUCCESS)
+      std::optional<addr_range> converted_range
+	= amdgpu_convert_address (gdbarch, ptid, simd_lane, addr,
+				  addr_space_id,
+				  ARCH_ADDR_SPACE_ID_DEFAULT);
+
+      if (!converted_range.has_value ())
 	return {};
+
+      size_t converted_size = converted_range.value ().size;
+      CORE_ADDR to_offset = converted_range.value ().addr;
 
       if (converted_size == 0)
 	return {};
@@ -2069,6 +2187,10 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_dummy_id (gdbarch, amdgpu_dummy_id);
 
   set_gdbarch_pointer_to_address (gdbarch, amdgpu_pointer_to_address);
+  set_gdbarch_address_to_pointer (gdbarch, amdgpu_address_to_pointer);
+  set_gdbarch_pointer_to_pointer (gdbarch, amdgpu_pointer_to_pointer);
+  set_gdbarch_address_space_pointer_size
+    (gdbarch, amdgpu_address_space_pointer_size);
   set_gdbarch_address_class_dwarf_to_id
     (gdbarch, amdgpu_address_class_dwarf_to_id);
   set_gdbarch_address_class_id_to_name

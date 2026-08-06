@@ -2564,7 +2564,7 @@ aspace_operation::evaluate (struct type *expect_type,
 
   const std::string &name = std::get<1> (m_storage);
   std::optional<arch_addr_space_id> address_space_id
-    = gdbarch_name_to_address_space_id (exp->gdbarch, name.c_str ());
+    = gdbarch_address_space_name_to_id (exp->gdbarch, name.c_str ());
 
   if (!address_space_id.has_value ())
     error (_("Address space %s not recognised by the architecture"),
