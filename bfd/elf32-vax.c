@@ -594,12 +594,10 @@ elf_vax_check_relocs (bfd *abfd, struct bfd_link_info *info, asection *sec,
 	  /* This symbol requires a global offset table entry.  */
 
 	  if (dynobj == NULL)
-	    {
-	      /* Create the .got section.  */
-	      elf_hash_table (info)->dynobj = dynobj = abfd;
-	      if (!_bfd_elf_create_got_section (dynobj, info))
-		return false;
-	    }
+	    elf_hash_table (info)->dynobj = dynobj = abfd;
+
+	  if (!_bfd_elf_create_got_section (dynobj, info))
+	    return false;
 
 	  if (h != NULL)
 	    {

@@ -6071,12 +6071,10 @@ elf32_frv_check_relocs (bfd *abfd,
 	case R_FRV_GPRELLO:
 	case R_FRV_LABEL24:
 	case R_FRV_32:
-	  if (! dynobj)
-	    {
-	      elf_hash_table (info)->dynobj = dynobj = abfd;
-	      if (! _frv_create_got_section (abfd, info))
-		return false;
-	    }
+	  if (dynobj == NULL)
+	    elf_hash_table (info)->dynobj = dynobj = abfd;
+	  if (!_frv_create_got_section (dynobj, info))
+	    return false;
 	  if (! IS_FDPIC (abfd))
 	    {
 	      picrel = NULL;
