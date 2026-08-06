@@ -282,7 +282,24 @@ _bfd_elf_create_got_section (bfd *dynobj, struct bfd_link_info *info)
 
   return true;
 }
-
+
+/* Return true if IBFD is compatible with the output.  Used for example
+   to decide whether an object file can hold linker generated dynamic
+   sections, and whether object file relocations can be examined by
+   check_relocs (for plt/got/dyn reloc generation).  */
+
+static bool
+compatible_format (struct bfd_link_info *info, bfd *ibfd)
+{
+  return (bfd_get_flavour (ibfd) == bfd_target_elf_flavour
+	  && is_elf_hash_table (info->hash)
+	  && elf_object_id (ibfd) == elf_hash_table_id (elf_hash_table (info))
+	  && !(ibfd->sections != NULL
+	       && ibfd->sections->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
+	  && (get_elf_backend_data (ibfd)
+	      ->relocs_compatible (ibfd->xvec, info->output_bfd->xvec)));
+}
+
 /* Create a strtab to hold the dynamic symbol names.  */
 static bool
 _bfd_elf_link_create_dynstrtab (bfd *abfd, struct bfd_link_info *info)
@@ -299,14 +316,10 @@ _bfd_elf_link_create_dynstrtab (bfd *abfd, struct bfd_link_info *info)
       if ((abfd->flags & (DYNAMIC | BFD_PLUGIN)) != 0)
 	{
 	  bfd *ibfd;
-	  asection *s;
 	  for (ibfd = info->input_bfds; ibfd; ibfd = ibfd->link.next)
 	    if ((ibfd->flags
 		 & (DYNAMIC | BFD_LINKER_CREATED | BFD_PLUGIN)) == 0
-		&& bfd_get_flavour (ibfd) == bfd_target_elf_flavour
-		&& elf_object_id (ibfd) == elf_hash_table_id (hash_table)
-		&& !((s = ibfd->sections) != NULL
-		     && s->sec_info_type == SEC_INFO_TYPE_JUST_SYMS))
+		&& compatible_format (info, ibfd))
 	      {
 		abfd = ibfd;
 		break;
@@ -4270,9 +4283,6 @@ _bfd_elf_link_iterate_on_relocs
    bool (*action) (bfd *, struct bfd_link_info *, asection *,
 		   const Elf_Internal_Rela *))
 {
-  elf_backend_data *bed = get_elf_backend_data (abfd);
-  struct elf_link_hash_table *htab = elf_hash_table (info);
-
   /* If this object is the same format as the output object, and it is
      not a shared library, then let the backend look through the
      relocs.
@@ -4291,13 +4301,9 @@ _bfd_elf_link_iterate_on_relocs
      I have no idea how to handle linking PIC code into a file of a
      different format.  It probably can't be done.  */
   if ((abfd->flags & DYNAMIC) == 0
-      && is_elf_hash_table (&htab->root)
-      && elf_object_id (abfd) == elf_hash_table_id (htab)
-      && (*bed->relocs_compatible) (abfd->xvec, info->output_bfd->xvec))
+      && compatible_format (info, abfd))
     {
-      asection *o;
-
-      for (o = abfd->sections; o != NULL; o = o->next)
+      for (asection *o = abfd->sections; o != NULL; o = o->next)
 	{
 	  Elf_Internal_Rela *internal_relocs;
 	  bool ok;
@@ -14384,24 +14390,14 @@ _bfd_elf_gc_mark_extra_sections (struct bfd_link_info *info,
 }
 
 static bool
-elf_gc_sweep (bfd *obfd, struct bfd_link_info *info)
+elf_gc_sweep (struct bfd_link_info *info)
 {
-  bfd *sub;
-  elf_backend_data *obed = get_elf_backend_data (obfd);
-
-  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
+  for (bfd *sub = info->input_bfds; sub != NULL; sub = sub->link.next)
     {
-      asection *o;
-
-      if (bfd_get_flavour (sub) != bfd_target_elf_flavour
-	  || elf_object_id (sub) != elf_hash_table_id (elf_hash_table (info))
-	  || !obed->relocs_compatible (sub->xvec, obfd->xvec))
-	continue;
-      o = sub->sections;
-      if (o == NULL || o->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
+      if (!compatible_format (info, sub))
 	continue;
 
-      for (o = sub->sections; o != NULL; o = o->next)
+      for (asection *o = sub->sections; o != NULL; o = o->next)
 	{
 	  /* When any section in a section group is kept, we keep all
 	     sections in the section group.  If the first member of
@@ -14648,7 +14644,6 @@ bool
 bfd_elf_gc_sections (bfd *obfd, struct bfd_link_info *info)
 {
   bool ok = true;
-  bfd *sub;
   elf_gc_mark_hook_fn gc_mark_hook;
   elf_backend_data *obed = get_elf_backend_data (obfd);
   struct elf_link_hash_table *htab;
@@ -14666,7 +14661,7 @@ bfd_elf_gc_sections (bfd *obfd, struct bfd_link_info *info)
 
   /* Try to parse each bfd's .eh_frame section.  Point elf_eh_frame_section
      at the .eh_frame section if we can mark the FDEs individually.  */
-  for (sub = info->input_bfds;
+  for (bfd *sub = info->input_bfds;
        info->eh_frame_hdr_type != COMPACT_EH_HDR && sub != NULL;
        sub = sub->link.next)
     {
@@ -14724,24 +14719,16 @@ bfd_elf_gc_sections (bfd *obfd, struct bfd_link_info *info)
 
   /* Grovel through relocs to find out who stays ...  */
   gc_mark_hook = obed->gc_mark_hook;
-  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
+  for (bfd *sub = info->input_bfds; sub != NULL; sub = sub->link.next)
     {
-      asection *o;
-
-      if (bfd_get_flavour (sub) != bfd_target_elf_flavour
-	  || elf_object_id (sub) != elf_hash_table_id (htab)
-	  || !obed->relocs_compatible (sub->xvec, obfd->xvec))
-	continue;
-
-      o = sub->sections;
-      if (o == NULL || o->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
+      if (!compatible_format (info, sub))
 	continue;
 
       /* Start at sections marked with SEC_KEEP (ref _bfd_elf_gc_keep).
 	 Also treat note sections as a root, if the section is not part
 	 of a group.  We must keep all PREINIT_ARRAY, INIT_ARRAY as
 	 well as FINI_ARRAY sections for ld -r.  */
-      for (o = sub->sections; o != NULL; o = o->next)
+      for (asection *o = sub->sections; o != NULL; o = o->next)
 	if (!o->gc_mark
 	    && (o->flags & SEC_EXCLUDE) == 0
 	    && ((o->flags & SEC_KEEP) != 0
@@ -14768,7 +14755,7 @@ bfd_elf_gc_sections (bfd *obfd, struct bfd_link_info *info)
     return false;
 
   /* ... and mark SEC_EXCLUDE for those that go.  */
-  return elf_gc_sweep (obfd, info);
+  return elf_gc_sweep (info);
 }
 
 /* Called from check_relocs to record the existence of a VTINHERIT reloc.  */
