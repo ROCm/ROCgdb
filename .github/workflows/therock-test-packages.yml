@@ -37,6 +37,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       components: ${{ steps.patch-scripts.outputs.components }}
+      cpu_runs_on: ${{ steps.runner.outputs.cpu_runs_on }}
     steps:
       - name: Checkout TheRock repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -56,6 +57,36 @@ jobs:
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
+
+      - name: Select CPU runner
+        id: runner
+        run: |
+          python3 - <<'EOF'
+          import os, sys
+          from pathlib import Path
+
+          ci_config = Path("ci-config")
+          default_runner = "aws-linux-scale-rocm-prod"
+
+          label = default_runner
+          if (ci_config / "runner-config.json").exists():
+              try:
+                  sys.path.insert(0, str(ci_config))
+                  from ci_config_api import load_config_v1
+                  config = load_config_v1(ci_config)
+                  candidates = config.build_runners.get("linux", {}).get("default", [])
+                  best = max(candidates, key=lambda e: e["weight"], default=None)
+                  if best:
+                      label = best["label"]
+              except Exception as e:
+                  print(f"Failed to load ci_config_api, using default: {e}", file=sys.stderr)
+          else:
+              print(f"ci-config not found, using default: {default_runner}", file=sys.stderr)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"cpu_runs_on={label}\n")
+          print(f"cpu_runs_on={label}")
+          EOF
 
       - name: Configure test matrix
         env:
@@ -97,12 +128,12 @@ jobs:
       therock_ref: ${{ inputs.therock_ref }}
       amdgpu_families: ${{ inputs.amdgpu_families }}
       # Per-component runner selection:
-      #   1. CPU-only components use a standard Linux scale runner
-      #   2. Per-component GPU runner (set by fetch_test_configurations.py)
+      #   1. CPU-only components use the runner from therock-ci-config
+      #   2. GPU components use the per-component runner from fetch_test_configurations.py
       test_runs_on: >-
         ${{
           (matrix.components.linux_cpu_runner == true &&
-            'aws-linux-scale-rocm-prod') ||
+            needs.configure_test_matrix.outputs.cpu_runs_on) ||
           matrix.components.test_runner
         }}
       component: ${{ toJSON(matrix.components) }}
