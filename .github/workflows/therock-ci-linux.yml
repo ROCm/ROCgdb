@@ -9,6 +9,9 @@ on:
         type: string
       extra_cmake_options:
         type: string
+      build_runs_on:
+        type: string
+        default: aws-linux-scale-rocm-prod
 
 permissions:
   contents: read
@@ -19,7 +22,7 @@ env:
 jobs:
   therock-build-linux:
     name: Build Linux Packages
-    runs-on: azure-linux-scale-rocm
+    runs-on: ${{ inputs.build_runs_on }}
     permissions:
       id-token: write
     outputs:

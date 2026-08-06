@@ -22,6 +22,7 @@ jobs:
       BASE_REF: HEAD^
     outputs:
       enable_therock_ci: ${{ steps.configure.outputs.enable_therock_ci }}
+      build_runs_on: ${{ steps.runner.outputs.build_runs_on }}
     steps:
       - name: "Checking out repository"
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -31,6 +32,18 @@ jobs:
       - name: "Configuring CI options"
         id: configure
         run: python .github/scripts/therock_configure_ci.py
+
+      - name: Checkout CI config
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ROCm/therock-ci-config
+          ref: main
+          path: ci-config
+        continue-on-error: true
+
+      - name: Select build runner
+        id: runner
+        run: python3 .github/scripts/select_runner.py build_runs_on
 
   therock-ci-linux:
     name: TheRock CI Linux
@@ -47,6 +60,7 @@ jobs:
     with:
       amdgpu_families: ${{ matrix.amdgpu_family }}
       artifact_group: ${{ matrix.amdgpu_family }}
+      build_runs_on: ${{ needs.setup.outputs.build_runs_on }}
       extra_cmake_options: >
         -DTHEROCK_ENABLE_ALL=OFF 
         -DTHEROCK_BUILD_TESTING=ON 
