@@ -300,9 +300,10 @@ compatible_format (struct bfd_link_info *info, bfd *ibfd)
 	      ->relocs_compatible (ibfd->xvec, info->output_bfd->xvec)));
 }
 
-/* Create a strtab to hold the dynamic symbol names.  */
-static bool
-_bfd_elf_link_create_dynstrtab (bfd *abfd, struct bfd_link_info *info)
+/* Find a suitable object for attaching dynamic sections.  */
+
+static bfd *
+_bfd_elf_link_dynobj (bfd *abfd, struct bfd_link_info *info)
 {
   struct elf_link_hash_table *hash_table;
 
@@ -325,16 +326,24 @@ _bfd_elf_link_create_dynstrtab (bfd *abfd, struct bfd_link_info *info)
 		break;
 	      }
 	}
+      /* ??? Accept abfd anyway, if the loop doesn't find anything?  */
       hash_table->dynobj = abfd;
     }
 
-  if (hash_table->dynstr == NULL)
-    {
-      hash_table->dynstr = _bfd_elf_strtab_init ();
-      if (hash_table->dynstr == NULL)
-	return false;
-    }
-  return true;
+  return hash_table->dynobj;
+}
+
+/* Return the strtab for dynamic symbol names.  Create it if
+   necessary.  */
+
+static struct elf_strtab_hash *
+_bfd_elf_link_dynstr (struct bfd_link_info *info)
+{
+  struct elf_link_hash_table *htab = elf_hash_table (info);
+
+  if (htab->dynstr == NULL)
+    htab->dynstr = _bfd_elf_strtab_init ();
+  return htab->dynstr;
 }
 
 /* Create some sections which will be filled in with dynamic linking
@@ -359,10 +368,12 @@ bfd_elf_link_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
   if (elf_hash_table (info)->dynamic_sections_created)
     return true;
 
-  if (!_bfd_elf_link_create_dynstrtab (abfd, info))
+  if (!_bfd_elf_link_dynstr (info))
     return false;
 
-  dynobj = elf_hash_table (info)->dynobj;
+  dynobj = _bfd_elf_link_dynobj (abfd, info);
+  if (dynobj == NULL)
+    return false;
   obed = get_elf_backend_data (dynobj);
 
   flags = obed->dynamic_sec_flags;
@@ -648,14 +659,9 @@ bfd_elf_link_record_dynamic_symbol (struct bfd_link_info *info,
 	elf_hash_table (info)->has_local_dynsyms = true;
       ++elf_hash_table (info)->dynsymcount;
 
-      dynstr = elf_hash_table (info)->dynstr;
+      dynstr = _bfd_elf_link_dynstr (info);
       if (dynstr == NULL)
-	{
-	  /* Create a strtab to hold the dynamic symbol names.  */
-	  elf_hash_table (info)->dynstr = dynstr = _bfd_elf_strtab_init ();
-	  if (dynstr == NULL)
-	    return false;
-	}
+	return false;
 
       char *unversioned_name = NULL;
 
@@ -916,14 +922,9 @@ bfd_elf_link_record_local_dynamic_symbol (struct bfd_link_info *info,
 	  (input_bfd, elf_symtab_hdr (input_bfd).sh_link,
 	   entry->isym.st_name));
 
-  dynstr = elf_hash_table (info)->dynstr;
+  dynstr = _bfd_elf_link_dynstr (info);
   if (dynstr == NULL)
-    {
-      /* Create a strtab to hold the dynamic symbol names.  */
-      elf_hash_table (info)->dynstr = dynstr = _bfd_elf_strtab_init ();
-      if (dynstr == NULL)
-	return 0;
-    }
+    return 0;
 
   dynstr_index = _bfd_elf_strtab_add (dynstr, name, false);
   if (dynstr_index == (size_t) -1)
@@ -3955,27 +3956,29 @@ _bfd_elf_strip_zero_sized_dynamic_sections (struct bfd_link_info *info)
 int
 bfd_elf_add_dt_needed_tag (bfd *abfd, struct bfd_link_info *info)
 {
-  struct elf_link_hash_table *hash_table;
+  struct elf_strtab_hash *dynstr;
   size_t strindex;
   const char *soname;
 
-  if (!_bfd_elf_link_create_dynstrtab (abfd, info))
+  dynstr = _bfd_elf_link_dynstr (info);
+  if (dynstr == NULL)
     return -1;
 
-  hash_table = elf_hash_table (info);
   soname = elf_dt_name (abfd);
-  strindex = _bfd_elf_strtab_add (hash_table->dynstr, soname, false);
+  strindex = _bfd_elf_strtab_add (dynstr, soname, false);
   if (strindex == (size_t) -1)
     return -1;
 
-  if (_bfd_elf_strtab_refcount (hash_table->dynstr, strindex) != 1)
+  if (!bfd_elf_link_create_dynamic_sections (abfd, info))
+    return -1;
+
+  if (_bfd_elf_strtab_refcount (dynstr, strindex) != 1)
     {
-      asection *sdyn;
-      elf_backend_data *obed;
+      struct elf_link_hash_table *hash_table = elf_hash_table (info);
+      elf_backend_data *obed = get_elf_backend_data (hash_table->dynobj);
+      asection *sdyn = hash_table->dynamic;
       bfd_byte *extdyn;
 
-      obed = get_elf_backend_data (hash_table->dynobj);
-      sdyn = hash_table->dynamic;
       if (sdyn != NULL && sdyn->size != 0)
 	for (extdyn = sdyn->contents;
 	     extdyn < sdyn->contents + sdyn->size;
@@ -3992,9 +3995,6 @@ bfd_elf_add_dt_needed_tag (bfd *abfd, struct bfd_link_info *info)
 	      }
 	  }
     }
-
-  if (!bfd_elf_link_create_dynamic_sections (hash_table->dynobj, info))
-    return -1;
 
   if (!_bfd_elf_add_dynamic_entry (info, DT_NEEDED, strindex))
     return -1;
