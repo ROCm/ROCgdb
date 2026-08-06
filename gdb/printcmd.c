@@ -376,8 +376,10 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
 
   /* If the value is a pointer, and pointers and addresses are not the
      same, then at this point, the value's length (in target bytes) is
-     gdbarch_addr_bit/TARGET_CHAR_BIT, not type->length ().  */
-  if (type->code () == TYPE_CODE_PTR)
+     gdbarch_addr_bit/TARGET_CHAR_BIT, not type->length ().
+     An exception to this is pointers to address spaces, which may have
+     different sizes.  */
+  if (type->code () == TYPE_CODE_PTR && type->address_space () == 0)
     len = gdbarch_addr_bit (gdbarch) / TARGET_CHAR_BIT;
 
   /* If we are printing it as unsigned, truncate it in case it is actually
