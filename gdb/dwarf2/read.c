@@ -12093,6 +12093,18 @@ read_tag_pointer_type (struct die_info *die, struct dwarf2_cu *cu)
       arch_addr_space_id aspace
 	= gdbarch_address_space_dwarf_to_id (gdbarch, addr_space);
       type = make_type_with_address_space (type, aspace);
+
+      /* We expect the type length information coming from DWARF to
+	 match what the architecture says.  If there is a mismatch,
+	 issue a complaint and continue with arch's decision.  */
+      if (type->length () != byte_size)
+	{
+	  complaint (_("length of pointer with address space (%s) and "
+		       "address class (%s) is %s in DWARF but arch says %s"),
+		     pulongest (addr_space), pulongest (addr_class),
+		     pulongest (byte_size), pulongest (type->length ()));
+	  byte_size = type->length ();
+	}
     }
   else if (type->length () != byte_size)
     complaint (_("invalid pointer size %s"), pulongest (byte_size));

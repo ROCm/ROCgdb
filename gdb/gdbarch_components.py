@@ -941,6 +941,18 @@ return the id of that address space.
 
 Method(
     comment="""
+Given an architecture-specific address space, return the size of a pointer
+that points to that address space.  This size is not necessarily the same
+as the size of a default pointer.
+""",
+    type="unsigned int",
+    name="address_space_pointer_size",
+    params=[("arch_addr_space_id", "aspace")],
+    predicate=True,
+)
+
+Method(
+    comment="""
 Return the address's scope.
 """,
     type="location_scope",
