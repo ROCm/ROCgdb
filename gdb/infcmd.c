@@ -722,6 +722,46 @@ ensure_not_running (void)
     error_is_running ();
 }
 
+/* See inferior.h.  */
+
+void
+proceed_one_thread (thread_info &thread)
+{
+  gdb_assert (non_stop);
+
+  if (thread.state () != THREAD_STOPPED)
+    return;
+
+  if (!thread.inf->has_execution ())
+    return;
+
+  switch_to_thread (&thread);
+  clear_proceed_status (0);
+  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
+}
+
+/* See inferior.h.  */
+
+void
+proceed_all_threads ()
+{
+  gdb_assert (non_stop);
+
+  for (thread_info &thread : all_threads ())
+    {
+      /* We go through all threads individually instead of compressing
+	 into a single target `resume_all' request, because some threads
+	 may be stopped in internal breakpoints/events, or stopped waiting
+	 for its turn in the displaced stepping queue (that is, they are
+	 running from the user's perspective but internally stopped).  The
+	 target side has no idea about why the thread is stopped, so a
+	 `resume_all' command would resume too much.  If/when GDB gains a
+	 way to tell the target `hold this thread stopped until I say
+	 otherwise', then we can optimize this.  */
+      proceed_one_thread (thread);
+    }
+}
+
 void
 continue_1 (bool all_threads_p)
 {
@@ -739,27 +779,7 @@ continue_1 (bool all_threads_p)
       scoped_disable_commit_resumed disable_commit_resumed
 	("continue all threads in non-stop");
 
-      for (auto &thread : all_threads ())
-	{
-	  /* We go through all threads individually instead of compressing
-	     into a single target `resume_all' request, because some threads
-	     may be stopped in internal breakpoints/events, or stopped waiting
-	     for its turn in the displaced stepping queue (that is, they are
-	     running from the user's perspective but internally stopped).  The
-	     target side has no idea about why the thread is stopped, so a
-	     `resume_all' command would resume too much.  If/when GDB gains a
-	     way to tell the target `hold this thread stopped until I say
-	     otherwise', then we can optimize this.  */
-	  if (thread.state () != THREAD_STOPPED)
-	    continue;
-
-	  if (!thread.inf->has_execution ())
-	    continue;
-
-	  switch_to_thread (&thread);
-	  clear_proceed_status (0);
-	  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
-	}
+      proceed_all_threads ();
 
       if (current_ui->prompt_state == PROMPT_BLOCKED)
 	{

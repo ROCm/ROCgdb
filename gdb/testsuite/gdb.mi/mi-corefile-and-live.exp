@@ -1,0 +1,99 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# In non-stop mode with schedule-multiple turned on, create two
+# inferiors, a core target and one other.  Then use the command
+# '-exec-continue --all'.
+#
+# The core target threads should not be marked as running by this.
+
+load_lib mi-support.exp
+set MIFLAGS "-i=mi"
+
+require isnative
+require allow_multi_inferior_tests
+
+standard_testfile
+
+if {[build_executable "build executable" $testfile $srcfile] == -1} {
+    return
+}
+
+set corefile [core_find $binfile]
+if {$corefile == ""} {
+    untested "unable to create or find corefile"
+    return
+}
+
+# Start GDB in non-stop and schedule-multiple mode.
+save_vars { GDBFLAGS } {
+    append GDBFLAGS { -ex "set non-stop on" }
+    append GDBFLAGS { -ex "set schedule-multiple on" }
+    mi_clean_restart $::testfile
+}
+
+if {[mi_runto_main] == -1} {
+    return
+}
+
+# Arrange for inferior 1, our non core file inferior, to stop before
+# it hits the abort call.
+mi_create_breakpoint "-g i1 foo" \
+    "set breakpoint on foo" \
+    -inferior 1
+
+# Setup inferior 2, this will load the core file.
+mi_gdb_test "-add-inferior" \
+    [multi_line \
+	 "=thread-group-added,id=\"i2\"" \
+	 "~\"\\\[New inferior 2\\\]\\\\n\"" \
+	 "\~\"Added inferior 2\[^\r\n\]*\\\\n\"" \
+	 "\\^done,inferior=\"\[^\"\]+\"(?:,connection={.*})?" ] \
+    "add inferior 2"
+
+# Set the executable for inferior 2.
+mi_gdb_test "-file-exec-and-symbols --thread-group i2 $::binfile" \
+    [string_to_regexp "^done"] \
+    "set executable of inferior 2"
+
+# Load the core file into inferior 2.
+mi_gdb_test \
+    "-target-select --thread-group i2 core $::corefile" \
+    [multi_line \
+	 "=thread-group-started,id=\"i2\",.*" \
+	 "=thread-created,id=\"2\",group-id=\"i2\"" \
+	 ".*\\^connected,frame=.*"] \
+    "load core file in inferior 2"
+
+# Check the core file thread is initially shown as stopped.
+mi_gdb_test "-thread-info 2" {.*,state="stopped".*} \
+    "core file thread is initially stopped"
+
+# Resume "all" threads.  As the core target doesn't support execution
+# this should not try to set the core target threads running.
+mi_gdb_test "-exec-continue --all" \
+    [string_to_regexp \
+	 [multi_line \
+	      "^running" \
+	      {*running,thread-id="1"}]] \
+    "resume all"
+
+# Wait for the non-core target thread to stop.
+mi_expect_stop "breakpoint-hit" \
+    "foo" ".*" ".*" ".*" {"" {disp="keep"}} "w1,i2 stop"
+
+# Check that the core target thread is still showing as stopped.
+mi_gdb_test "-thread-info 2" {.*,state="stopped".*} \
+    "core file thread is still stopped"

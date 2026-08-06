@@ -227,6 +227,17 @@ extern void registers_info (const char *, bool);
 
 extern void continue_1 (bool all_threads_p);
 
+/* For use only when non_stop is true.  Proceed all threads in every
+   inferior.  */
+
+extern void proceed_all_threads ();
+
+/* For use only when non_stop is true.  If THREAD is stopped, and is in an
+   inferior that has_execution then switch to THREAD, clear its proceed
+   status, and proceed the thread.  */
+
+extern void proceed_one_thread (thread_info &thread);
+
 extern void interrupt_target_1 (bool all_threads);
 
 using delete_longjmp_breakpoint_cleanup

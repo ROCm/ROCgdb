@@ -236,20 +236,6 @@ mi_cmd_exec_jump (const char *args, const char *const *argv, int argc)
 }
 
 static void
-proceed_thread (struct thread_info *thread, int pid)
-{
-  if (thread->state () != THREAD_STOPPED)
-    return;
-
-  if (pid != 0 && thread->ptid.pid () != pid)
-    return;
-
-  switch_to_thread (thread);
-  clear_proceed_status (0);
-  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
-}
-
-static void
 exec_continue (const char *const *argv, int argc)
 {
   prepare_execution_command (current_inferior ()->top_target (), mi_async_p ());
@@ -262,24 +248,25 @@ exec_continue (const char *const *argv, int argc)
 	 all threads in all inferiors, we need to iterate over
 	 threads.
 
-	 See comment on infcmd.c:proceed_thread_callback for rationale.  */
+	 See comment in infcmd.c:proceed_all_threads for rationale.  */
       if (current_context->all || current_context->thread_group != -1)
 	{
 	  scoped_restore_current_thread restore_thread;
 	  scoped_disable_commit_resumed disable_commit_resumed
 	    ("MI continue all threads in non-stop");
-	  int pid = 0;
 
+	  inferior *inf = nullptr;
 	  if (!current_context->all)
-	    {
-	      struct inferior *inf
-		= find_inferior_id (current_context->thread_group);
+	    inf = find_inferior_id (current_context->thread_group);
 
-	      pid = inf->pid;
+	  if (inf == nullptr)
+	    proceed_all_threads ();
+	  else
+	    {
+	      for (thread_info &thread : inf->threads ())
+		proceed_one_thread (thread);
 	    }
 
-	  for (auto &thread : all_threads ())
-	    proceed_thread (&thread, pid);
 	  disable_commit_resumed.reset_and_commit ();
 	}
       else
