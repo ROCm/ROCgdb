@@ -4172,7 +4172,7 @@ _bfd_aarch64_resize_stubs (struct elf_aarch64_link_hash_table *htab)
        section != NULL; section = section->next)
     {
       /* Ignore non-stub sections.  */
-      if (!strstr (section->name, STUB_SUFFIX))
+      if ((section->flags & SEC_LINKER_CREATED) != 0)
 	continue;
 
       /* Add space for a branch.  Add 8 bytes to keep section 8 byte aligned,
@@ -4185,7 +4185,7 @@ _bfd_aarch64_resize_stubs (struct elf_aarch64_link_hash_table *htab)
   for (section = htab->stub_bfd->sections;
        section != NULL; section = section->next)
     {
-      if (!strstr (section->name, STUB_SUFFIX))
+      if ((section->flags & SEC_LINKER_CREATED) != 0)
 	continue;
 
       /* Empty stub section.  */
@@ -4761,7 +4761,6 @@ elfNN_aarch64_size_stubs (bfd *output_bfd,
 		     bfd_get_mach (output_bfd));
 
   /* Stash our params away.  */
-  htab->stub_bfd = stub_bfd;
   htab->add_stub_section = add_stub_section;
   htab->layout_sections_again = layout_sections_again;
   stubs_always_before_branch = group_size < 0;
@@ -4868,7 +4867,7 @@ elfNN_aarch64_build_stubs (struct bfd_link_info *info)
       bfd_size_type size;
 
       /* Ignore non-stub sections.  */
-      if (!strstr (stub_sec->name, STUB_SUFFIX))
+      if ((stub_sec->flags & SEC_LINKER_CREATED) != 0)
 	continue;
 
       /* Allocate memory to hold the linker stubs.  */
@@ -5017,17 +5016,18 @@ setup_plt_values (struct bfd_link_info *link_info,
 
 /* Set option values needed during linking.  */
 void
-bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
-			       struct bfd_link_info *link_info,
+bfd_elfNN_aarch64_set_options (struct bfd_link_info *link_info,
 			       int no_enum_warn,
 			       int no_wchar_warn, int pic_veneer,
 			       int fix_erratum_835769,
 			       erratum_84319_opts fix_erratum_843419,
 			       int no_apply_dynamic_relocs,
 			       const aarch64_protection_opts *sw_protections,
-			       const aarch64_memtag_opts *memtag_opts)
+			       const aarch64_memtag_opts *memtag_opts,
+			       bfd *stub_bfd)
 {
   struct elf_aarch64_link_hash_table *globals;
+  bfd *output_bfd;
 
   globals = elf_aarch64_hash_table (link_info);
   globals->pic_veneer = pic_veneer;
@@ -5039,6 +5039,11 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
   globals->fix_erratum_843419 = fix_erratum_843419;
   globals->no_apply_dynamic_relocs = no_apply_dynamic_relocs;
 
+  globals->stub_bfd = stub_bfd;
+  stub_bfd->flags |= BFD_LINKER_CREATED;
+  elf_elfheader (stub_bfd)->e_ident[EI_CLASS] = ELFCLASSNN;
+
+  output_bfd = link_info->output_bfd;
   BFD_ASSERT (is_aarch64_elf (output_bfd));
   elf_aarch64_tdata (output_bfd)->no_enum_size_warning = no_enum_warn;
   elf_aarch64_tdata (output_bfd)->no_wchar_size_warning = no_wchar_warn;
@@ -8742,7 +8747,7 @@ elfNN_aarch64_output_arch_local_syms (struct bfd_link_info *info,
 	   stub_sec != NULL; stub_sec = stub_sec->next)
 	{
 	  /* Ignore non-stub sections.  */
-	  if (!strstr (stub_sec->name, STUB_SUFFIX))
+	  if ((stub_sec->flags & SEC_LINKER_CREATED) != 0)
 	    continue;
 
 	  osi.sec = stub_sec;

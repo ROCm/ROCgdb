@@ -6796,7 +6796,7 @@ elf32_arm_size_stubs (bfd *output_bfd,
 	   stub_sec = stub_sec->next)
 	{
 	  /* Ignore non-stub sections.  */
-	  if (!strstr (stub_sec->name, STUB_SUFFIX))
+	  if ((stub_sec->flags & SEC_LINKER_CREATED) != 0)
 	    continue;
 
 	  stub_sec->size = 0;
@@ -6943,7 +6943,7 @@ elf32_arm_build_stubs (struct bfd_link_info *info)
       bfd_size_type size;
 
       /* Ignore non-stub sections.  */
-      if (!strstr (stub_sec->name, STUB_SUFFIX))
+      if ((stub_sec->flags & SEC_LINKER_CREATED) != 0)
 	continue;
 
       /* Allocate memory to hold the linker stubs.  Zeroing the stub sections
@@ -18118,26 +18118,21 @@ elf32_arm_output_arch_local_syms (struct bfd_link_info *info,
       elf32_arm_output_map_sym (&osi, ARM_MAP_ARM, 0);
     }
 
-  /* Long calls stubs.  */
-  if (htab->stub_bfd && htab->stub_bfd->sections)
+  /* Long call stubs.  */
+  for (asection* stub_sec = htab->stub_bfd->sections;
+       stub_sec != NULL;
+       stub_sec = stub_sec->next)
     {
-      asection* stub_sec;
+      /* Ignore non-stub sections.  */
+      if ((stub_sec->flags & SEC_LINKER_CREATED) != 0)
+	continue;
 
-      for (stub_sec = htab->stub_bfd->sections;
-	   stub_sec != NULL;
-	   stub_sec = stub_sec->next)
-	{
-	  /* Ignore non-stub sections.  */
-	  if (!strstr (stub_sec->name, STUB_SUFFIX))
-	    continue;
+      osi.sec = stub_sec;
 
-	  osi.sec = stub_sec;
+      osi.sec_shndx = _bfd_elf_section_from_bfd_section
+	(info->output_bfd, osi.sec->output_section);
 
-	  osi.sec_shndx = _bfd_elf_section_from_bfd_section
-	    (info->output_bfd, osi.sec->output_section);
-
-	  bfd_hash_traverse (&htab->stub_hash_table, arm_map_one_stub, &osi);
-	}
+      bfd_hash_traverse (&htab->stub_hash_table, arm_map_one_stub, &osi);
     }
 
   /* Finally, output mapping symbols for the PLT.  */
@@ -18255,9 +18250,13 @@ elf32_arm_filter_cmse_symbols (struct bfd_link_info *info,
   char *cmse_name;
   size_t src_count, dst_count = 0;
   struct elf32_arm_link_hash_table *htab;
+  asection *stub_sec;
 
   htab = elf32_arm_hash_table (info);
-  if (!htab->stub_bfd || !htab->stub_bfd->sections)
+  for (stub_sec = htab->stub_bfd->sections; stub_sec; stub_sec = stub_sec->next)
+    if (!(stub_sec->flags & SEC_LINKER_CREATED))
+      break;
+  if (!stub_sec)
     symcount = 0;
 
   maxnamelen = 128;

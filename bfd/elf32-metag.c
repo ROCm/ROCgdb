@@ -3895,7 +3895,8 @@ elf_metag_size_stubs(bfd *output_bfd, bfd *stub_bfd,
       for (stub_sec = htab->stub_bfd->sections;
 	   stub_sec != NULL;
 	   stub_sec = stub_sec->next)
-	stub_sec->size = 0;
+	if (!(stub_sec->flags & SEC_LINKER_CREATED))
+	  stub_sec->size = 0;
 
       bfd_hash_traverse (&htab->bstab, metag_size_one_stub, htab);
 
@@ -3928,17 +3929,18 @@ elf_metag_build_stubs (struct bfd_link_info *info)
   for (stub_sec = htab->stub_bfd->sections;
        stub_sec != NULL;
        stub_sec = stub_sec->next)
-    {
-      bfd_size_type size;
+    if (!(stub_sec->flags & SEC_LINKER_CREATED))
+      {
+	bfd_size_type size;
 
-      /* Allocate memory to hold the linker stubs.  */
-      size = stub_sec->size;
-      stub_sec->contents = bfd_zalloc (htab->stub_bfd, size);
-      if (stub_sec->contents == NULL && size != 0)
-	return false;
-      stub_sec->alloced = 1;
-      stub_sec->size = 0;
-    }
+	/* Allocate memory to hold the linker stubs.  */
+	size = stub_sec->size;
+	stub_sec->contents = bfd_zalloc (htab->stub_bfd, size);
+	if (stub_sec->contents == NULL && size != 0)
+	  return false;
+	stub_sec->alloced = 1;
+	stub_sec->size = 0;
+      }
 
   /* Build the stubs as directed by the stub hash table.  */
   table = &htab->bstab;
