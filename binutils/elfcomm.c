@@ -35,10 +35,26 @@
 
 extern char *program_name;
 
+static bool seen_error = false;
+
+bool
+seen_elf_error (void)
+{
+  return seen_error;
+}
+
+void
+clear_elf_error (void)
+{
+  seen_error = false;
+}
+
 void
 error (const char *message, ...)
 {
   va_list args;
+
+  seen_error = true;
 
   /* Try to keep error messages in sync with the program's normal output.  */
   fflush (stdout);

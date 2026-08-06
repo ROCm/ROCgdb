@@ -21667,6 +21667,9 @@ process_got_section_contents (Filedata * filedata)
   if (!do_got_section_contents || all_relocations_count == 0)
     return res;
 
+  if (seen_elf_error ())
+    return false;
+
   switch (filedata->file_header.e_type)
     {
     case ET_DYN:
@@ -25607,8 +25610,11 @@ main (int argc, char ** argv)
 
   err = false;
   while (optind < argc)
-    if (! process_file (argv[optind++]))
-      err = true;
+    {
+      clear_elf_error ();
+      if (! process_file (argv[optind++]))
+	err = true;
+    }
 
   free (cmdline.dump_sects);
 
