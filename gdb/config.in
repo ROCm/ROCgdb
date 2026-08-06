@@ -136,6 +136,11 @@
    you don't. */
 #undef HAVE_DECL_ADDR_NO_RANDOMIZE
 
+/* Define to 1 if you have the declaration of
+   `amd_dbgapi_process_set_wave_launch_trap_on_entry', and to 0 if you don't.
+   */
+#undef HAVE_DECL_AMD_DBGAPI_PROCESS_SET_WAVE_LAUNCH_TRAP_ON_ENTRY
+
 /* Define to 1 if you have the declaration of `asprintf', and to 0 if you
    don't. */
 #undef HAVE_DECL_ASPRINTF
