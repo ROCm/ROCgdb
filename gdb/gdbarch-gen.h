@@ -497,6 +497,16 @@ using gdbarch_address_space_dwarf_to_id_ftype = arch_addr_space_id (struct gdbar
 arch_addr_space_id gdbarch_address_space_dwarf_to_id (struct gdbarch *gdbarch, ULONGEST dwarf_addr_space);
 void set_gdbarch_address_space_dwarf_to_id (struct gdbarch *gdbarch, gdbarch_address_space_dwarf_to_id_ftype *address_space_dwarf_to_id);
 
+/* Given an architecture-specific address space, return the size of a pointer
+   that points to that address space.  This size is not necessarily the same
+   as the size of a default pointer. */
+
+bool gdbarch_address_space_pointer_size_p (struct gdbarch *gdbarch);
+
+using gdbarch_address_space_pointer_size_ftype = unsigned int (struct gdbarch *gdbarch, arch_addr_space_id aspace);
+unsigned int gdbarch_address_space_pointer_size (struct gdbarch *gdbarch, arch_addr_space_id aspace);
+void set_gdbarch_address_space_pointer_size (struct gdbarch *gdbarch, gdbarch_address_space_pointer_size_ftype *address_space_pointer_size);
+
 /* Return the address's scope. */
 
 using gdbarch_address_scope_ftype = location_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address);

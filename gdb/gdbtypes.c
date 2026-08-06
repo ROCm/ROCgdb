@@ -560,8 +560,15 @@ make_qualified_type (struct type *type, type_instance_flags new_flags,
   /* Now set the instance flags and return the new type.  */
   ntype->set_instance_flags (new_flags);
 
-  /* Set length of new type to that of the original type.  */
-  ntype->set_length (type->length ());
+  /* Set length of new type to that of the original type, except for
+     pointers to address spaces, which may have a different size.  */
+  if (ntype->address_space () != 0
+      && gdbarch_address_space_pointer_size_p (type->arch ()))
+    ntype->set_length
+      (gdbarch_address_space_pointer_size (type->arch (),
+					   ntype->address_space ()));
+  else
+    ntype->set_length (type->length ());
 
   return ntype;
 }
