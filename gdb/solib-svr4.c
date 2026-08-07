@@ -1059,7 +1059,7 @@ svr4_solib_ops::clear_so (const solib &so) const
 /* Create the solib objects equivalent to the svr4_sos in SOS.  */
 
 owning_intrusive_list<solib>
-svr4_solib_ops::solibs_from_svr4_sos (const std::vector<svr4_so> &sos) const
+svr4_solib_ops::solibs_from_svr4_sos (const std::vector<svr4_so> &sos)
 {
   owning_intrusive_list<solib> dst;
 
@@ -1253,7 +1253,7 @@ svr4_current_sos_via_xfer_libraries (struct svr4_library_list *list,
    linker, build a fallback list from other sources.  */
 
 owning_intrusive_list<solib>
-svr4_solib_ops::default_sos (svr4_info *info) const
+svr4_solib_ops::default_sos (svr4_info *info)
 {
   if (!info->debug_loader_offset_p)
     return {};
@@ -1452,7 +1452,7 @@ svr4_solib_ops::current_sos_direct (svr4_info *info) const
 /* Collect sos read and stored by the probes interface.  */
 
 owning_intrusive_list<solib>
-svr4_solib_ops::collect_probes_sos (svr4_info *info) const
+svr4_solib_ops::collect_probes_sos (svr4_info *info)
 {
   owning_intrusive_list<solib> res;
 
@@ -1469,7 +1469,7 @@ svr4_solib_ops::collect_probes_sos (svr4_info *info) const
    method.  */
 
 owning_intrusive_list<solib>
-svr4_solib_ops::current_sos_1 (svr4_info *info) const
+svr4_solib_ops::current_sos_1 (svr4_info *info)
 {
   owning_intrusive_list<solib> sos;
 
@@ -1496,7 +1496,7 @@ svr4_solib_ops::current_sos_1 (svr4_info *info) const
 /* Implement the "current_sos" solib_ops method.  */
 
 owning_intrusive_list<solib>
-svr4_solib_ops::current_sos () const
+svr4_solib_ops::current_sos ()
 {
   svr4_info *info = get_svr4_info (current_program_space);
 
@@ -2143,7 +2143,7 @@ svr4_solib_ops::disable_probes_interface (svr4_info *info) const
    standard interface.  */
 
 void
-svr4_solib_ops::handle_event () const
+svr4_solib_ops::handle_event ()
 {
   struct svr4_info *info = get_svr4_info (current_program_space);
   struct probe_and_action *pa;
@@ -3318,7 +3318,7 @@ svr4_relocate_main_executable (void)
    their symbols to be read at a later time.  */
 
 void
-svr4_solib_ops::create_inferior_hook (int from_tty) const
+svr4_solib_ops::create_inferior_hook (int from_tty)
 {
   struct svr4_info *info;
 
