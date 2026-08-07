@@ -1040,15 +1040,15 @@ typedef CORE_ADDR (gdbarch_fetch_pointer_argument_ftype) (const frame_info_ptr &
 extern CORE_ADDR gdbarch_fetch_pointer_argument (struct gdbarch *gdbarch, const frame_info_ptr &frame, int argi, struct type *type);
 extern void set_gdbarch_fetch_pointer_argument (struct gdbarch *gdbarch, gdbarch_fetch_pointer_argument_ftype *fetch_pointer_argument);
 
-/* Fetch HIP error parameters from the FRAME's function arguments.
+/* Fetch HIP error information from the FRAME's function arguments.
    FRAME is the frame of a "__hipOnError ()" function.  On a successful
-   run, return the parameters.  Otherwise, return a std::nullopt. */
+   run, return the info.  Otherwise, return a std::nullopt. */
 
-extern bool gdbarch_fetch_hiperr_parameters_p (struct gdbarch *gdbarch);
+extern bool gdbarch_fetch_hiperr_info_p (struct gdbarch *gdbarch);
 
-typedef std::optional<hiperr_parameters> (gdbarch_fetch_hiperr_parameters_ftype) (frame_info_ptr frame);
-extern std::optional<hiperr_parameters> gdbarch_fetch_hiperr_parameters (struct gdbarch *gdbarch, frame_info_ptr frame);
-extern void set_gdbarch_fetch_hiperr_parameters (struct gdbarch *gdbarch, gdbarch_fetch_hiperr_parameters_ftype *fetch_hiperr_parameters);
+typedef std::optional<hiperr_info> (gdbarch_fetch_hiperr_info_ftype) (frame_info_ptr frame);
+extern std::optional<hiperr_info> gdbarch_fetch_hiperr_info (struct gdbarch *gdbarch, frame_info_ptr frame);
+extern void set_gdbarch_fetch_hiperr_info (struct gdbarch *gdbarch, gdbarch_fetch_hiperr_info_ftype *fetch_hiperr_info);
 
 /* Iterate over all supported register notes in a core file.  For each
    supported register note section, the iterator must call CB and pass

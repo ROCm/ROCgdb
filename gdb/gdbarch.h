@@ -152,9 +152,9 @@ enum call_dummy_location_type
   AT_ENTRY_POINT,
 };
 
-/* The data structure holding the HIP error parameters.  */
+/* The data structure holding the HIP error information.  */
 
-struct hiperr_parameters
+struct hiperr_info
 {
   /* The error number.  */
   uint32_t err_no;
@@ -162,7 +162,7 @@ struct hiperr_parameters
   /* The string representing the error name.  */
   gdb::unique_xmalloc_ptr<char> err_name;
 
-  /* The string describing the error name.  */
+  /* The descriptive text about the error name.  */
   gdb::unique_xmalloc_ptr<char> err_str;
 };
 
