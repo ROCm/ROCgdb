@@ -230,11 +230,11 @@ struct rocm_solib_ops : public solib_ops
   { return std::move (m_host_ops); }
 
   /* The methods implemented by rocm_solib_ops.  */
-  owning_intrusive_list<solib> current_sos () const override;
-  void create_inferior_hook (int from_tty) const override;
-  gdb_bfd_ref_ptr bfd_open (const char *pathname) const override;
+  owning_intrusive_list<solib> current_sos () override;
+  void create_inferior_hook (int from_tty) override;
+  gdb_bfd_ref_ptr bfd_open (const char *pathname) override;
   void relocate_section_addresses (solib &so, target_section *) const override;
-  void handle_event () const override;
+  void handle_event () override;
 
   /* Implement the following methods just to forward the calls to the host
      solib_ops.  We currently need to implement all the methods that
@@ -285,7 +285,7 @@ struct rocm_solib_ops : public solib_ops
 
 private:
   owning_intrusive_list<solib>
-  solibs_from_rocm_sos (const std::vector<rocm_so> &sos) const;
+  solibs_from_rocm_sos (const std::vector<rocm_so> &sos);
 
   solib_ops_up m_host_ops;
 };
@@ -318,7 +318,7 @@ rocm_solib_ops::relocate_section_addresses (solib &so,
 static void rocm_update_solib_list ();
 
 void
-rocm_solib_ops::handle_event () const
+rocm_solib_ops::handle_event ()
 {
   /* Since we sit on top of a host solib_ops, we might get called following an
      event concerning host libraries.  We must therefore forward the call.  If
@@ -334,7 +334,7 @@ rocm_solib_ops::handle_event () const
 /* Create solib objects from rocm_so objects in SOS.  */
 
 owning_intrusive_list<solib>
-rocm_solib_ops::solibs_from_rocm_sos (const std::vector<rocm_so> &sos) const
+rocm_solib_ops::solibs_from_rocm_sos (const std::vector<rocm_so> &sos)
 {
   owning_intrusive_list<solib> dst;
 
@@ -349,7 +349,7 @@ rocm_solib_ops::solibs_from_rocm_sos (const std::vector<rocm_so> &sos) const
    objects currently loaded in the inferior.  */
 
 owning_intrusive_list<solib>
-rocm_solib_ops::current_sos () const
+rocm_solib_ops::current_sos ()
 {
   /* First, retrieve the host-side shared library list.  */
   owning_intrusive_list<solib> sos = m_host_ops->current_sos ();
@@ -710,7 +710,7 @@ rocm_bfd_iovec_open (bfd *abfd, inferior *inferior)
 }
 
 gdb_bfd_ref_ptr
-rocm_solib_ops::bfd_open (const char *pathname) const
+rocm_solib_ops::bfd_open (const char *pathname)
 {
   /* Handle regular files with SVR4 open.  */
   if (strstr (pathname, "://") == nullptr)
@@ -798,7 +798,7 @@ rocm_solib_ops::bfd_open (const char *pathname) const
 }
 
 void
-rocm_solib_ops::create_inferior_hook (int from_tty) const
+rocm_solib_ops::create_inferior_hook (int from_tty)
 {
   get_solib_info (current_inferior ())->solib_list.clear ();
 

@@ -439,7 +439,7 @@ solib_bfd_open (const char *pathname)
 }
 
 gdb_bfd_ref_ptr
-solib_ops::bfd_open (const char *pathname) const
+solib_ops::bfd_open (const char *pathname)
 {
   return solib_bfd_open (pathname);
 }
@@ -572,7 +572,7 @@ solib_map_sections (solib &so)
 /* See solib.h.  */
 
 solib::solib (lm_info_up lm_info, std::string original_name_,
-	      std::string name_, const solib_ops &ops)
+	      std::string name_, solib_ops &ops)
   : lm_info (std::move (lm_info)),
     original_name (std::move (original_name_)),
     name (std::move (name_)),
@@ -706,7 +706,7 @@ notify_solib_unloaded (program_space *pspace, const solib &so,
 void
 update_solib_list (int from_tty)
 {
-  const solib_ops *ops = current_program_space->solib_ops ();
+  solib_ops *ops = current_program_space->solib_ops ();
 
   if (ops == nullptr)
     return;
@@ -1306,7 +1306,7 @@ clear_solib (program_space *pspace)
 void
 solib_create_inferior_hook (int from_tty)
 {
-  if (const solib_ops *ops = current_program_space->solib_ops ();
+  if (solib_ops *ops = current_program_space->solib_ops ();
       ops != nullptr)
     ops->create_inferior_hook (from_tty);
 }
@@ -1371,7 +1371,7 @@ update_solib_breakpoints (void)
 void
 handle_solib_event (void)
 {
-  if (const solib_ops *ops = current_program_space->solib_ops ();
+  if (solib_ops *ops = current_program_space->solib_ops ();
       ops != nullptr)
     ops->handle_event ();
 
