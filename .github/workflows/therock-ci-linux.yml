@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 env:
-  THEROCK_COMMIT_REF: 2ee541083481e6c93f2ea811f212b61047980b1a # 2026-07-30
+  THEROCK_COMMIT_REF: users/dravindr/tr_rocgdb # TEMP: validate 3-category matrix (do not merge)
 
 jobs:
   therock-build-linux:
