@@ -390,5 +390,5 @@ target_solib_ops::in_dynsym_resolve_code (CORE_ADDR pc) const
 solib_ops_up
 make_target_solib_ops (program_space *pspace)
 {
-  return std::make_unique<target_solib_ops> (pspace);
+  return std::make_unique<target_solib_ops> (pspace, true);
 }

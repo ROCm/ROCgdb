@@ -52,7 +52,7 @@ struct darwin_solib_ops : public solib_ops
 solib_ops_up
 make_darwin_solib_ops (program_space *pspace)
 {
-  return std::make_unique<darwin_solib_ops> (pspace);
+  return std::make_unique<darwin_solib_ops> (pspace, true);
 }
 
 struct gdb_dyld_image_info

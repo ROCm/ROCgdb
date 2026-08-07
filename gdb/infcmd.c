@@ -366,7 +366,7 @@ strip_bg_char (const char *args, int *bg_char_p)
 /* See inferior.h.  */
 
 void
-post_create_inferior (int from_tty, bool set_pspace_solib_ops)
+post_create_inferior (int from_tty, bool push_arch_solib_ops)
 {
   /* Be sure we own the terminal in case write operations are performed.  */
   target_terminal::ours_for_output ();
@@ -397,10 +397,16 @@ post_create_inferior (int from_tty, bool set_pspace_solib_ops)
 	throw;
     }
 
-  if (set_pspace_solib_ops)
-    current_program_space->set_solib_ops
-      (gdbarch_make_solib_ops (current_inferior ()->arch (),
-			       current_program_space));
+  if (push_arch_solib_ops)
+    {
+      /* This is called when an inferior gains execution.  Any solib_ops
+	 from previous executions should have been cleared by
+	 target_pre_inferior.  */
+      gdb_assert (current_program_space->solib_ops ().empty ());
+      current_program_space->add_solib_ops
+	(gdbarch_make_solib_ops (current_inferior ()->arch (),
+				 current_program_space));
+    }
 
   {
     const unsigned solib_add_generation

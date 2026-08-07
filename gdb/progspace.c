@@ -98,6 +98,42 @@ program_space::~program_space ()
 
 /* See progspace.h.  */
 
+void
+program_space::clear_solib_ops ()
+{
+  while (!m_solib_ops.empty ())
+    this->remove_solib_ops (*m_solib_ops.front ());
+}
+
+/* See progspace.h.  */
+
+void
+program_space::remove_solib_ops (const struct solib_ops &ops)
+{
+  auto ops_it
+    = std::find_if (m_solib_ops.begin (), m_solib_ops.end (),
+		    [&ops] (const auto &up) { return up.get () == &ops; });
+
+  gdb_assert (ops_it != m_solib_ops.end ());
+
+  /* Remove all solibs provided by the solib_ops being removed.  */
+  for (auto solibs_it = m_solib_list.begin ();
+       solibs_it != m_solib_list.end ();)
+    {
+      if (&solibs_it->ops () != &ops)
+	{
+	  ++solibs_it;
+	  continue;
+	}
+
+      solibs_it = remove_solib (this, solibs_it);
+    }
+
+  m_solib_ops.erase (ops_it);
+}
+
+/* See progspace.h.  */
+
 bool
 program_space::multi_objfile_p () const
 {
@@ -124,16 +160,59 @@ void
 program_space::iterate_over_objfiles_in_search_order
   (iterate_over_objfiles_in_search_order_cb_ftype cb, objfile *current_objfile)
 {
-  if (m_solib_ops != nullptr)
-    return m_solib_ops->iterate_over_objfiles_in_search_order
-      (cb, current_objfile);
+  struct solib_ops *curr_ops = nullptr;
 
-  if (current_objfile != nullptr && cb (current_objfile))
-    return;
+  if (current_objfile != nullptr)
+    {
+      if (solib *first_solib = current_objfile->first_solib ();
+	  first_solib != nullptr)
+	{
+	  /* If that objfile was created by an solib_ops, give a chance to that
+	     solib_ops to iterate the relevant objfiles first.
 
+	     If the objfile is associated to multiple struct solib, assume that
+	     they are all from the same solib_ops (so, get the ops from the
+	     first solib).  */
+	  curr_ops = &first_solib->ops ();
+
+	  if (curr_ops->iterate_over_objfiles_in_search_order (cb,
+							       current_objfile))
+	    return;
+	}
+      else
+	{
+	  /* Otherwise, search this objfile first.  */
+	  if (cb (current_objfile))
+	    return;
+	}
+    }
+
+  /* We didn't find what we were looking for based on the current objfile's
+     context, so expand the search.  Ask the other solib_ops.  */
+  for (auto &solib_ops : this->solib_ops ())
+    {
+      if (solib_ops.get () == curr_ops)
+	continue;
+
+      if (solib_ops->iterate_over_objfiles_in_search_order (cb, nullptr))
+	return;
+    }
+
+  /* Finally, look in the orphan objfiles.  */
   for (auto &objfile : this->objfiles ())
-    if (&objfile != current_objfile && cb (&objfile))
-      return;
+    {
+      /* The current objfile (if any) was already handled above.  */
+      if (&objfile == current_objfile)
+	continue;
+
+      /* If the obfile has any associated solibs, then it is not orphan, it has
+	 been handled above.  */
+      if (objfile.first_solib () != nullptr)
+	continue;
+
+      if (cb (&objfile))
+	return;
+    }
 }
 
 /* See progspace.h.  */

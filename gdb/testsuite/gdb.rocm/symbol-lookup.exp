@@ -1,0 +1,243 @@
+# Copyright 2025 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test symbol lookup with multiple host shared libraries and ROCm code objects.
+#
+# This test verifies that GDB correctly resolves symbols based on where the
+# program is stopped.  The following objfiles are in play:
+#
+#  - the main program
+#  - two host shared libraries
+#  - two ROCm code objects
+#
+# The main program is separated from host shared libraries for the purpose of
+# this test because it is handled differently than shared libraries by the
+# iterate_over_objfiles_in_search_order methods.
+#
+# Each objfile defines functions with various levels of uniqueness:
+#
+#   - func_main: unique to the main program
+#   - func_host_shared_lib_N: unique to host shared library N
+#   - func_device_code_object_N: unique to ROCm code object N
+#   - func_host_shared_lib: defined in both host shared libraries
+#   - func_device_code_object: defined in both ROCm code objects
+#   - func_N: defined in host shared library N and ROCm code object N
+#   - func_main_shared_lib_N: defined in the main program and host shared library N
+#   - func_main_code_object_N: defined in the main program and ROCm code object N
+#
+# The functions have different signatures, to be able to tell them apart.
+#
+# The test stops at breakpoints in each objfile and verifies that symbol
+# lookups return the expected function.  GDB gives priority to the current
+# objfile, and then objfiles from the current "solib provider", before
+# considering other loaded objfiles.
+
+load_lib rocm.exp
+
+standard_testfile .cpp
+
+require allow_hipcc_tests
+
+# Build the main program.
+if { [build_executable "failed to prepare" \
+	  $testfile $srcfile {debug hip}] == -1 } {
+    return
+}
+
+# Return the path to shared library N.
+proc shared_lib_path { n } {
+    return [standard_output_file ${::testfile}_${n}.so]
+}
+
+# Return the path to code object N.
+proc code_object_path { n } {
+    return [standard_output_file ${::testfile}_${n}.co]
+}
+
+# Build the host shared libraries and ROCm code objects.
+foreach n {1 2} {
+    set shared_lib [shared_lib_path $n]
+    set code_object [code_object_path $n]
+
+    # Build the host shlib N
+    if { [gdb_compile_shlib $srcdir/$subdir/$srcfile $shared_lib \
+	  [list debug additional_flags=-DSHARED_LIB_$n]] != "" } {
+	return
+    }
+
+    # Build the ROCm code object N
+    if { [gdb_compile $srcdir/$subdir/$srcfile $code_object object \
+	  [list debug hip additional_flags=--genco additional_flags=-DCODE_OBJECT_$n]] != "" } {
+	return
+    }
+}
+
+# Verify symbol lookup results at the current stop location.
+#
+# Each parameter is a regex matching the expected parameter type in the
+# function signature.  This parameter type is what allows us to confirm
+# that GDB found the expected version of the function.
+proc check_funcs { func_host_shared_lib func_device_code_object
+		   func_1 func_2
+		   func_main_shared_lib_1 func_main_shared_lib_2
+		   func_main_code_object_1 func_main_code_object_2 } {
+    # Unique functions: only one definition exists, so lookup is unambiguous.
+    gdb_test "print func_main" "<func_main\\(main_program_t\\)>"
+    gdb_test "print func_host_shared_lib_1" "<func_host_shared_lib_1\\(shared_lib_1_t\\)>"
+    gdb_test "print func_host_shared_lib_2" "<func_host_shared_lib_2\\(shared_lib_2_t\\)>"
+    gdb_test "print func_device_code_object_1" "<func_device_code_object_1\\(code_object_1_t\\)>"
+    gdb_test "print func_device_code_object_2" "<func_device_code_object_2\\(code_object_2_t\\)>"
+
+    # Functions defined in either both host shlibs or both code objects.
+    gdb_test "print func_host_shared_lib" "<func_host_shared_lib\\($func_host_shared_lib\\)>"
+    gdb_test "print func_device_code_object" "<func_device_code_object\\($func_device_code_object\\)>"
+
+    # Functions defined in one host shlib and one code object.
+    gdb_test "print func_1" "<func_1\\($func_1\\)>"
+    gdb_test "print func_2" "<func_2\\($func_2\\)>"
+
+    # Functions defined in main program and one objfile.
+    gdb_test "print func_main_shared_lib_1" "<func_main_shared_lib_1\\($func_main_shared_lib_1\\)>"
+    gdb_test "print func_main_shared_lib_2" "<func_main_shared_lib_2\\($func_main_shared_lib_2\\)>"
+    gdb_test "print func_main_code_object_1" "<func_main_code_object_1\\($func_main_code_object_1\\)>"
+    gdb_test "print func_main_code_object_2" "<func_main_code_object_2\\($func_main_code_object_2\\)>"
+}
+
+proc do_test {} {
+    clean_restart
+    gdb_load $::binfile
+
+    set shared_lib_1 [shared_lib_path 1]
+    set shared_lib_2 [shared_lib_path 2]
+    set code_object_1 [code_object_path 1]
+    set code_object_2 [code_object_path 2]
+
+    gdb_test_no_output "set args $shared_lib_1 $shared_lib_2 $code_object_1 $code_object_2" \
+	"set args"
+
+    with_rocm_gpu_lock {
+	if ![runto_main] {
+	    return
+	}
+
+	# Set a breakpoint in the main program after all libraries / code
+	# objects have been loaded, as well as one breakpoint in each objfile.
+	gdb_test "break func_main" \
+	    "Breakpoint $::decimal at $::hex.*"
+	gdb_test "with breakpoint pending on -- break func_host_shared_lib_1" \
+	    "Breakpoint $::decimal \\(func_host_shared_lib_1\\) pending."
+	gdb_test "with breakpoint pending on -- break func_host_shared_lib_2" \
+	    "Breakpoint $::decimal \\(func_host_shared_lib_2\\) pending."
+	gdb_test "with breakpoint pending on -- break func_device_code_object_1" \
+	    "Breakpoint $::decimal \\(func_device_code_object_1\\) pending."
+	gdb_test "with breakpoint pending on -- break func_device_code_object_2" \
+	    "Breakpoint $::decimal \\(func_device_code_object_2\\) pending."
+
+	# Stop in main program.  We expect:
+	#  - func_host_shared_lib to resolve to either shared lib (no preference)
+	#  - func_device_code_object to resolve to either code object (no preference)
+	#  - func_1 to resolve to shared_lib_1 (current solib provider)
+	#  - func_2 to resolve to shared_lib_2 (current solib provider)
+	#  - func_main_* symbols to resolve to main program's version (current objfile)
+	with_test_prefix "main program" {
+	    gdb_test "continue" "hit Breakpoint $::decimal, func_main .*"
+	    check_funcs \
+		"shared_lib_._t" \
+		"code_object_._t" \
+		"shared_lib_1_t" \
+		"shared_lib_2_t" \
+		"main_program_t" \
+		"main_program_t" \
+		"main_program_t" \
+		"main_program_t"
+	}
+
+	# Stop in host shared library 1.  We expect:
+	#  - func_host_shared_lib to resolve to shared_lib_1's version (current objfile)
+	#  - func_device_code_object to resolve to either code object (no preference)
+	#  - func_1 to resolve to shared_lib_1's version (current objfile)
+	#  - func_2 to resolve to shared_lib_2's version (current solib provider)
+	#  - func_main_shared_lib_1 to resolve to shared_lib_1's version (current objfile)
+	#  - func_main_shared_lib_2 to resolve to either main or shared_lib_2 (no preference)
+	#  - func_main_code_object_1 to resolve to either main or code_object_1 (no preference)
+	#  - func_main_code_object_2 to resolve to either main or code_object_2 (no preference)
+	with_test_prefix "host shared lib 1" {
+	    gdb_test "continue" "hit Breakpoint $::decimal, func_host_shared_lib_1 .*"
+	    check_funcs \
+		"shared_lib_1_t" \
+		"code_object_._t" \
+		"shared_lib_1_t" \
+		"shared_lib_2_t" \
+		"shared_lib_1_t" \
+		"(main_program_t|shared_lib_2_t)" \
+		"(main_program_t|code_object_1_t)" \
+		"(main_program_t|code_object_2_t)"
+	}
+
+	# Stop in host shared library 2.  Similar logic but now shared_lib_2
+	# is the current objfile.
+	with_test_prefix "host shared lib 2" {
+	    gdb_test "continue" "hit Breakpoint $::decimal, func_host_shared_lib_2 .*"
+	    check_funcs \
+		"shared_lib_2_t" \
+		"code_object_._t" \
+		"shared_lib_1_t" \
+		"shared_lib_2_t" \
+		"(main_program_t|shared_lib_1_t)" \
+		"shared_lib_2_t" \
+		"(main_program_t|code_object_1_t)" \
+		"(main_program_t|code_object_2_t)"
+	}
+
+	# Stop in ROCm code object 1.  We expect:
+	#  - func_host_shared_lib to resolve to either shared lib (no preference)
+	#  - func_device_code_object to resolve to code_object_1's version (current objfile)
+	#  - func_1 to resolve to code_object_1's version (current objfile)
+	#  - func_2 to resolve to code_object_2's version (current solib provider)
+	#  - func_main_shared_lib_1 to resolve to either main or shared_lib_1 (no preference)
+	#  - func_main_shared_lib_2 to resolve to either main or shared_lib_2 (no preference)
+	#  - func_main_code_object_1 to resolve to code_object_1's version (current objfile)
+	#  - func_main_code_object_2 to resolve to either main or code_object_2 (no preference)
+	with_test_prefix "device code object 1" {
+	    gdb_test "continue" "hit Breakpoint $::decimal, func_device_code_object_1 .*"
+	    check_funcs \
+		"shared_lib_._t" \
+		"code_object_1_t" \
+		"code_object_1_t" \
+		"code_object_2_t" \
+		"(main_program_t|shared_lib_1_t)" \
+		"(main_program_t|shared_lib_2_t)" \
+		"code_object_1_t" \
+		"(main_program_t|code_object_2_t)"
+	}
+
+	# Stop in ROCm code object 2.  Similar logic but now code_object_2
+	# is the current objfile.
+	with_test_prefix "device code object 2" {
+	    gdb_test "continue" "hit Breakpoint $::decimal, func_device_code_object_2 .*"
+	    check_funcs \
+		"shared_lib_._t" \
+		"code_object_2_t" \
+		"code_object_1_t" \
+		"code_object_2_t" \
+		"(main_program_t|shared_lib_1_t)" \
+		"(main_program_t|shared_lib_2_t)" \
+		"(main_program_t|code_object_1_t)" \
+		"code_object_2_t"
+	}
+    }
+}
+
+do_test

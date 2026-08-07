@@ -216,10 +216,10 @@ extern void setup_inferior (int from_tty);
    means (running, attaching, connecting, et cetera).  The target
    should be stopped.
 
-   If SET_PSPACE_SOLIB_OPS is true, initialize the program space's solib
-   provider using the current inferior's architecture.  */
+   If PUSH_ARCH_SOLIB_OPS is true, add an solib_ops to the current inferior's
+   program space provider using the current inferior's architecture.  */
 
-extern void post_create_inferior (int from_tty, bool set_pspace_solib_ops);
+extern void post_create_inferior (int from_tty, bool push_arch_solib_ops);
 
 extern void attach_command (const char *, int);
 

@@ -3635,7 +3635,7 @@ find_debug_base_for_solib (const solib *solib)
    stay in the same namespace as that file.  Otherwise, we only consider
    the initial namespace.  */
 
-void
+bool
 svr4_solib_ops::iterate_over_objfiles_in_search_order
   (iterate_over_objfiles_in_search_order_cb_ftype cb,
    objfile *current_objfile) const
@@ -3661,7 +3661,7 @@ svr4_solib_ops::iterate_over_objfiles_in_search_order
 	{
 	  checked_current_objfile = true;
 	  if (cb (current_objfile))
-	    return;
+	    return true;
 	}
     }
 
@@ -3682,13 +3682,25 @@ svr4_solib_ops::iterate_over_objfiles_in_search_order
       if (checked_current_objfile && &objfile == current_objfile)
 	continue;
 
-      /* Try to determine the namespace into which objfile was loaded.
-
-	 If we fail, e.g. for manually added symbol files or for the main
-	 executable, we assume that they were added to the initial
-	 namespace.  */
       const solib *solib = find_one_solib_for_objfile (&objfile);
-      CORE_ADDR solib_base = find_debug_base_for_solib (solib);
+      CORE_ADDR solib_base = 0;
+
+      if (solib != nullptr)
+	{
+	  /* Skip objfiles provided by other solib_ops.  */
+	  if (&solib->ops () != this)
+	    continue;
+
+	  solib_base = find_debug_base_for_solib (solib);
+	}
+      else if (&objfile != m_pspace->symfile_object_file)
+	{
+	  /* Objfiles not associated to an solib_ops are handled in the
+	     program_space method.  The main objfile is an exception to this,
+	     because it is part of the SVR4 domain.  */
+	  continue;
+	}
+
       if (solib_base == 0)
 	solib_base = default_debug_base;
 
@@ -3697,8 +3709,10 @@ svr4_solib_ops::iterate_over_objfiles_in_search_order
 	continue;
 
       if (cb (&objfile))
-	return;
+	return true;
     }
+
+  return false;
 }
 
 std::optional<CORE_ADDR>

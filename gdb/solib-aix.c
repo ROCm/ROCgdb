@@ -42,7 +42,7 @@ struct aix_solib_ops : public solib_ops
 solib_ops_up
 make_aix_solib_ops (program_space *pspace)
 {
-  return std::make_unique<aix_solib_ops> (pspace);
+  return std::make_unique<aix_solib_ops> (pspace, true);
 }
 
 /* Our private data in struct solib.  */

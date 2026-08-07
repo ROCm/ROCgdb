@@ -1378,7 +1378,7 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
      we don't want those to be satisfied by the libraries of the
      previous incarnation of this process.  */
   no_shared_libraries (current_program_space);
-  current_program_space->unset_solib_ops ();
+  current_program_space->clear_solib_ops ();
 
   inferior *execing_inferior = current_inferior ();
   inferior *following_inferior;
@@ -1435,7 +1435,7 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
      registers.  */
   target_find_description ();
 
-  following_inferior->pspace->set_solib_ops
+  following_inferior->pspace->add_solib_ops
     (gdbarch_make_solib_ops (following_inferior->arch (),
 			     following_inferior->pspace));
   gdb::observers::inferior_execd.notify (execing_inferior, following_inferior);

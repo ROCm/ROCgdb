@@ -835,7 +835,7 @@ struct windows_solib_ops : target_solib_ops
 static solib_ops_up
 make_windows_solib_ops (program_space *pspace)
 {
-  return std::make_unique<windows_solib_ops> (pspace);
+  return std::make_unique<windows_solib_ops> (pspace, true);
 }
 
 /* Implement the "solib_create_inferior_hook" solib_ops method.  */
