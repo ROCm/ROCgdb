@@ -242,26 +242,51 @@ struct program_space
      is outside all objfiles in this progspace.  */
   struct objfile *objfile_for_address (CORE_ADDR address);
 
-  /* Set this program space's solib provider.
+  /* Add OPS as an solib provider for this program space.
 
-     The solib provider must be unset prior to calling this method.  */
-  void set_solib_ops (solib_ops_up ops)
+     There must not be another instance of SOLIB_OPS_TYPE in the solib_ops list
+     of this program space.
+
+     Return a non-owning reference to the ops.  */
+  template <typename solib_ops_type>
+  solib_ops_type &add_solib_ops (std::unique_ptr<solib_ops_type> ops)
   {
-    gdb_assert (m_solib_ops == nullptr);
-    m_solib_ops = std::move (ops);
+    gdb_assert (this->find_solib_ops<solib_ops_type> () == nullptr);
+
+    auto &ret = *ops;
+    m_solib_ops.emplace_back (std::move (ops));
+    return ret;
   };
 
-  /* Unset and free this program space's solib provider.  */
-  void unset_solib_ops ()
-  { m_solib_ops = nullptr; }
+  /* Clear the list of solib providers for this program space.
 
-  /* Unset and return this program space's solib provider.  */
-  solib_ops_up release_solib_ops ()
-  { return std::move (m_solib_ops); }
+     Remove all solibs from the program space.  */
+  void clear_solib_ops ();
 
-  /* Get this program space's solib provider.  */
-  struct solib_ops *solib_ops () const
-  { return m_solib_ops.get (); }
+  /* Remove OPS from the list of solib_ops of this program space.
+
+     OPS must be present in the solib_ops list.
+
+     Remove all solibs created by OPS from the program space.  */
+  void remove_solib_ops (const solib_ops &ops);
+
+  /* Return a view of the solib providers for this program space.  */
+  std::vector<solib_ops_up> &solib_ops ()
+  { return m_solib_ops; }
+
+  /* Find an solib_ops instance of type SOLIB_OPS_TYPE.
+
+     Return nullptr if not found.  */
+  template <typename solib_ops_type>
+  solib_ops_type *find_solib_ops ()
+  {
+    for (auto &ops : this->solib_ops ())
+      if (auto ret = dynamic_cast<solib_ops_type *> (ops.get ());
+	  ret != nullptr)
+	return ret;
+
+    return nullptr;
+  }
 
   /* Return the list of all the solibs in this program space.  */
   owning_intrusive_list<solib> &solibs ()
@@ -401,8 +426,8 @@ private:
   /* All known objfiles are kept in a linked list.  */
   owning_intrusive_list<objfile> m_objfiles_list;
 
-  /* solib_ops implementation used to provide solibs in this program space.  */
-  solib_ops_up m_solib_ops;
+  /* solib_ops implementations used to provide solibs in this program space.  */
+  std::vector<solib_ops_up> m_solib_ops;
 
   /* List of shared objects mapped into this space.  Managed by
      solib.c.  */

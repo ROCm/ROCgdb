@@ -140,8 +140,8 @@ using iterate_over_objfiles_in_search_order_cb_ftype
 
 struct solib_ops
 {
-  explicit solib_ops (program_space *pspace)
-    : m_pspace (pspace)
+  solib_ops (program_space *pspace, bool handle_main_objfile)
+    : m_pspace (pspace), m_handle_main_objfile (handle_main_objfile)
   {}
 
   virtual ~solib_ops () = default;
@@ -271,21 +271,29 @@ struct solib_ops
   virtual std::vector<const solib *> get_solibs_in_ns (int ns) const
   { gdb_assert_not_reached ("namespaces not supported"); }
 
-  /* Iterate over all objfiles of the program space in the order that makes the
-     most sense for the architecture to make global symbol searches.
+  /* Iterate over all objfiles associated to this solib_ops in the order that
+     makes the most sense for the architecture to make global symbol searches.
+
+     If M_HANDLE_MAIN_OBJFILE is set, also iterate over the "main" objfile of
+     the program space (program_space::symfile_object_file).
 
      CB is a callback function passed an objfile to be searched.  The iteration
      stops if this function returns true.
 
      If not nullptr, CURRENT_OBJFILE corresponds to the objfile being inspected
-     when the symbol search was requested.  */
-  virtual void iterate_over_objfiles_in_search_order
+     when the symbol search was requested.  If not nullptr, it is guaranteed
+     that CURRENT_OBJFILE is associated to this solib_ops.  */
+  virtual bool iterate_over_objfiles_in_search_order
     (iterate_over_objfiles_in_search_order_cb_ftype cb,
      objfile *current_objfile) const;
 
 protected:
   /* The program space for which this solib_ops was created.  */
   program_space *m_pspace;
+
+  /* Whether this solib_ops should handle the main objfile
+     (pspace->symfile_object_file) in iterate_over_objfiles_in_search_order.  */
+  bool m_handle_main_objfile;
 };
 
 /* A unique pointer to an solib_ops.  */
