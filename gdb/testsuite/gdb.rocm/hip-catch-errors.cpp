@@ -21,10 +21,10 @@
 #include <hip/hip_runtime.h>
 #include "rocm-test-utils.h"
 
-/* If set, the "hip_* ()" functions will record the error parameters.  */
+/* If set, the "hip_* ()" functions will record the error info.  */
 static bool gen_ref = false;
 
-struct hiperr_params_ref
+struct hiperr_info_ref
 {
   volatile int no;  /* Prevent the optimizer from keeping this in a register.  */
   const char *name;
@@ -39,9 +39,9 @@ struct hiperr_params_ref
 };
 
 /* Reference values for the test.  */
-static hiperr_params_ref hip_set_device_err;
-static hiperr_params_ref hip_get_device_err;
-static hiperr_params_ref hip_launch_kernel_err;
+static hiperr_info_ref hip_set_device_err;
+static hiperr_info_ref hip_get_device_err;
+static hiperr_info_ref hip_launch_kernel_err;
 
 /* Get the maximum number of threads per block.  */
 
@@ -70,7 +70,7 @@ kernel ()
 }
 
 /* The purpose of these "hip_* ()" functions is to produce some errors
-   and have the error parameters recorded.  GDB can use these recorded
+   and have the error info recorded.  GDB can use these recorded
    values as references to verify the catchpoints outputs.  */
 
 /* Dispatch a kernel via the triple chevron syntax with an oversized

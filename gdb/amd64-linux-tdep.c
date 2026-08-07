@@ -2077,15 +2077,15 @@ amd64_init_reg (gdbarch *gdbarch, int regnum, dwarf2_frame_state_reg *reg,
     }
 }
 
-/* The AMD64 Linux ABI version of fetch_hiperr_parameters.  */
+/* The AMD64 Linux ABI version of fetch_hiperr_info.  */
 
-static std::optional<hiperr_parameters>
-amd64_linux_fetch_hiperr_parameters (frame_info_ptr frame)
+static std::optional<hiperr_info>
+amd64_linux_fetch_hiperr_info (frame_info_ptr frame)
 {
   CORE_ADDR struct_addr
     = value_as_address (value_of_register (AMD64_RDI_REGNUM, frame));
 
-  return amd64_fetch_hiperr_parameters (frame, struct_addr);
+  return amd64_fetch_hiperr_info (frame, struct_addr);
 }
 
 static void
@@ -2151,9 +2151,9 @@ amd64_linux_init_abi_common (struct gdbarch_info info, struct gdbarch *gdbarch,
 					amd64_linux_get_shadow_stack_pointer);
   dwarf2_frame_set_init_reg (gdbarch, amd64_init_reg);
 
-  /* Extract hiperr parameters for 'catch hiperr'.  */
-  set_gdbarch_fetch_hiperr_parameters
-    (gdbarch, amd64_linux_fetch_hiperr_parameters);
+  /* Extract hiperr info for 'catch hiperr'.  */
+  set_gdbarch_fetch_hiperr_info
+    (gdbarch, amd64_linux_fetch_hiperr_info);
 }
 
 static void

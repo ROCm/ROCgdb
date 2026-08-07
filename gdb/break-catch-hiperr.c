@@ -148,26 +148,26 @@ hiperr_frame_p (frame_info_ptr frame)
 }
 
 /* Format the HIP error info as a string (with newline) for printing.
-   Returns an empty string if the parameters cannot be fetched.  */
+   Returns an empty string if the information cannot be fetched.  */
 
 static std::string
 hiperr_info_string (struct gdbarch *gdbarch)
 {
   frame_info_ptr frame = get_selected_frame (_("No frame selected"));
 
-  if (!hiperr_frame_p (frame) || !gdbarch_fetch_hiperr_parameters_p (gdbarch))
+  if (!hiperr_frame_p (frame) || !gdbarch_fetch_hiperr_info_p (gdbarch))
     return std::string ();
 
-  std::optional<hiperr_parameters> err_params
-    = gdbarch_fetch_hiperr_parameters (gdbarch, frame);
+  std::optional<hiperr_info> err_info
+    = gdbarch_fetch_hiperr_info (gdbarch, frame);
 
-  if (!err_params.has_value ())
+  if (!err_info.has_value ())
     return std::string ();
 
   return string_printf (_("HIP API call failed with error %s (%u): %s\n"),
-			err_params->err_name.get (),
-			err_params->err_no,
-			err_params->err_str.get ());
+			err_info->err_name.get (),
+			err_info->err_no,
+			err_info->err_str.get ());
 }
 
 /* Message printed when the breakpoint is hit.  */
@@ -188,11 +188,11 @@ hiperr_catchpoint::print_it (const bpstat *bs) const
   print_num_locno (bs, uiout);
   uiout->text (" (HIP error)\n");
 
-  const std::string hiperr_info
+  const std::string hiperr_info_str
     = hiperr_info_string (bs->bp_location_at->gdbarch);
-  if (!hiperr_info.empty ())
+  if (!hiperr_info_str.empty ())
     {
-      uiout->text (hiperr_info.c_str ());
+      uiout->text (hiperr_info_str.c_str ());
       uiout->text
 	("\nThe $_hiperr convenience variable holds the error number.\n");
     }
@@ -244,13 +244,13 @@ compute_hiperr (struct gdbarch *gdbarch,
 {
   frame_info_ptr frame = get_selected_frame (_("No frame selected"));
 
-  if (!hiperr_frame_p (frame) || !gdbarch_fetch_hiperr_parameters_p (gdbarch))
+  if (!hiperr_frame_p (frame) || !gdbarch_fetch_hiperr_info_p (gdbarch))
     return value::allocate (builtin_type (gdbarch)->builtin_void);
 
-  std::optional<hiperr_parameters> err_params
-    = gdbarch_fetch_hiperr_parameters (gdbarch, frame);
+  std::optional<hiperr_info> err_info
+    = gdbarch_fetch_hiperr_info (gdbarch, frame);
 
-  if (!err_params.has_value ())
+  if (!err_info.has_value ())
     return value::allocate (builtin_type (gdbarch)->builtin_void);
 
   /* If there's a "hipError_t" type in the debug symbols that is
@@ -263,13 +263,13 @@ compute_hiperr (struct gdbarch *gdbarch,
     {
       gdb_byte err_no[4];
       const bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-      store_unsigned_integer (err_no, 4, byte_order, err_params->err_no);
+      store_unsigned_integer (err_no, 4, byte_order, err_info->err_no);
       return value_from_contents (bs.symbol->type (), err_no);
     }
 
   /* Return hiperr as an unsigned int.  */
   return value_from_ulongest (builtin_type (gdbarch)->builtin_uint32,
-			      err_params->err_no);
+			      err_info->err_no);
 }
 
 /* Implementation of the '$_hiperr' variable.  */
