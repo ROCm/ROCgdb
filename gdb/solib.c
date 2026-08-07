@@ -703,6 +703,34 @@ notify_solib_unloaded (program_space *pspace, const solib &so,
 
 /* See solib.h.  */
 
+owning_intrusive_list<solib>::iterator
+remove_solib (program_space *pspace,
+	      owning_intrusive_list<solib>::iterator solib_it)
+{
+  bool still_in_use
+    = solib_it->objfile != nullptr && solib_used (pspace, *solib_it);
+
+  /* Notify any observer that the shared object has been unloaded before we
+     remove it from GDB's tables.  */
+  notify_solib_unloaded (pspace, *solib_it, still_in_use, false);
+
+  /* Unless the user loaded it explicitly, free SO's objfile.  */
+  if (solib_it->objfile != nullptr
+      && !(solib_it->objfile->flags & OBJF_USERLOADED)
+      && !still_in_use)
+    solib_it->objfile->unlink ();
+
+  pspace->deleted_solibs.push_back (solib_it->name);
+
+  /* Some targets' section tables might be referring to
+     sections from so.abfd; remove them.  */
+  pspace->remove_target_sections (&*solib_it);
+
+  return pspace->solibs ().erase (solib_it);
+}
+
+/* See solib.h.  */
+
 void
 update_solib_list (int from_tty)
 {
@@ -784,30 +812,7 @@ update_solib_list (int from_tty)
 
       /* If it's not on the inferior's list, remove it from GDB's tables.  */
       else
-	{
-	  bool still_in_use
-	    = (gdb_iter->objfile != nullptr
-	       && solib_used (current_program_space, *gdb_iter));
-
-	  /* Notify any observer that the shared object has been
-	     unloaded before we remove it from GDB's tables.  */
-	  notify_solib_unloaded (current_program_space, *gdb_iter,
-				 still_in_use, false);
-
-	  /* Unless the user loaded it explicitly, free SO's objfile.  */
-	  if (gdb_iter->objfile != nullptr
-	      && !(gdb_iter->objfile->flags & OBJF_USERLOADED)
-	      && !still_in_use)
-	    gdb_iter->objfile->unlink ();
-
-	  current_program_space->deleted_solibs.push_back (gdb_iter->name);
-
-	  /* Some targets' section tables might be referring to
-	     sections from so.abfd; remove them.  */
-	  current_program_space->remove_target_sections (&*gdb_iter);
-
-	  gdb_iter = current_program_space->solibs ().erase (gdb_iter);
-	}
+	gdb_iter = remove_solib (current_program_space, gdb_iter);
     }
 
   /* Now the inferior's list contains only shared objects that don't
