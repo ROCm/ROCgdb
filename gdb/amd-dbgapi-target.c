@@ -2392,7 +2392,8 @@ amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
 
 static void
 amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
-			    target_waitkind fork_kind)
+			    target_waitkind fork_kind, bool detach_on_fork,
+			    bool follow_child)
 {
   if (child_inf != nullptr)
     {

@@ -92,9 +92,13 @@ extern observable<inferior */* exec_inf */, inferior */* follow_inf */>
    the child (because we follow only the child or we follow both), CHILD_INF
    is the child inferior.  Otherwise, CHILD_INF is nullptr.
 
-   FORK_KIND is TARGET_WAITKIND_FORKED or TARGET_WAITKIND_VFORKED.  */
+   FORK_KIND is TARGET_WAITKIND_FORKED or TARGET_WAITKIND_VFORKED.
+
+   DETACH_ON_FORK and FOLLOW_CHILD represent the "detach-on-fork" and
+   "follow-fork-mode" settings.  */
 extern observable<inferior */* parent_inf */, inferior */* child_inf */,
-		  target_waitkind /* fork_kind */> inferior_forked;
+		  target_waitkind /* fork_kind */, bool /* detach_on_fork */,
+		  bool /* follow_child */> inferior_forked;
 
 /* The shared library specified by SOLIB has been loaded.  Note that
    when gdb calls this observer, the library's symbols probably

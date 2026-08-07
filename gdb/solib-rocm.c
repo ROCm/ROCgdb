@@ -165,7 +165,13 @@ struct rocm_solib_ops : public solib_ops
   explicit rocm_solib_ops (program_space *pspace, solib_ops_up host_ops)
     : solib_ops (pspace), m_host_ops (std::move (host_ops))
   {
+    gdb_assert (m_host_ops != nullptr);
+    gdb_assert (dynamic_cast<rocm_solib_ops *> (m_host_ops.get ()) == nullptr);
   }
+
+  /* Release the host solib_ops.  */
+  solib_ops_up release_host_ops ()
+  { return std::move (m_host_ops); }
 
   /* The methods implemented by rocm_solib_ops.  */
   owning_intrusive_list<solib> current_sos () const override;
@@ -820,6 +826,10 @@ rocm_update_solib_list ()
 static void
 rocm_solib_target_inferior_created (inferior *inf)
 {
+  /* A vfork child shares its pspace with its parent, do not touch anything.  */
+  if (inf->vfork_parent != nullptr)
+    return;
+
   get_solib_info (inf)->solib_list.clear ();
 
   auto prev_ops = inf->pspace->release_solib_ops ();
@@ -851,6 +861,24 @@ rocm_solib_target_inferior_execd (inferior *exec_inf, inferior *follow_inf)
   get_solib_info (exec_inf)->solib_list.clear ();
 }
 
+static void
+rocm_solib_target_inferior_forked (inferior *parent_inf, inferior *child_inf,
+				   target_waitkind fork_kind,
+				   bool detach_on_fork, bool follow_child)
+{
+  if (detach_on_fork && follow_child && fork_kind == TARGET_WAITKIND_FORKED)
+    {
+      /* In this particular configuration, infrun's follow_fork_inferior
+	 function moves the parent pspace to the child directly.  Remove the
+	 existing rocm_solib_ops from the child and restore the host solib_ops,
+	 to make it look like a brand new pspace.  */
+      auto rocm_ops_holder = child_inf->pspace->release_solib_ops ();
+      auto rocm_ops
+	= gdb::checked_static_cast<rocm_solib_ops *> (rocm_ops_holder.get ());
+      child_inf->pspace->set_solib_ops (rocm_ops->release_host_ops ());
+    }
+}
+
 INIT_GDB_FILE (rocm_solib)
 {
   /* The dependency on the amd-dbgapi exists because solib-rocm's
@@ -864,4 +892,7 @@ INIT_GDB_FILE (rocm_solib)
   gdb::observers::inferior_execd.attach
     (rocm_solib_target_inferior_execd, "solib-rocm",
      { &get_amd_dbgapi_target_inferior_execd_observer_token () });
+
+  gdb::observers::inferior_forked.attach
+    (rocm_solib_target_inferior_forked, "solib-rocm");
 }
