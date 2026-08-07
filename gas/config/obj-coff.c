@@ -55,7 +55,11 @@ static const char weak_altprefix[] = ".weak.";
 #endif /* TE_PE */
 
 #include "obj-coff-seh-shared.c"
+#if defined (COFFAARCH64)
+#include "obj-coff-seh-aarch64.c"
+#else
 #include "obj-coff-seh.c"
+#endif
 
 typedef struct
   {

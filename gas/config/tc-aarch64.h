@@ -82,6 +82,12 @@ struct aarch64_fix
 
 #define tc_frob_section(S) aarch64_frob_section (S)
 
+#if defined (OBJ_COFF)
+#define md_finish aarch64_md_finish
+extern void aarch64_md_finish (void);
+extern void seh_aarch64_write_data (void);
+#endif
+
 /* The key used to sign a function's return address.  */
 enum pointer_auth_key {
   AARCH64_PAUTH_KEY_A,
