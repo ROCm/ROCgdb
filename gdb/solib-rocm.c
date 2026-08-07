@@ -181,30 +181,15 @@ struct rocm_so
   lm_info_svr4_up lm_info;
 };
 
-struct solib_info
-{
-  explicit solib_info (inferior *inf)
-    : fd_cache (inf)
-  {};
-
-  /* List of code objects loaded into the inferior.  */
-  std::vector<rocm_so> solib_list;
-
-  /* Cache of opened FD in the inferior.  */
-  rocm_solib_fd_cache fd_cache;
-};
-
-/* Per-inferior data key.  */
-static const registry<inferior>::key<solib_info> rocm_solib_data;
-
 /* solib_ops for ROCm systems.  */
 
 struct rocm_solib_ops : public solib_ops
 {
   /* HOST_OPS is the host solib_ops that rocm_solib_ops hijacks / wraps,
      in order to provide support for ROCm code objects.  */
-  explicit rocm_solib_ops (program_space *pspace, solib_ops_up host_ops)
-    : solib_ops (pspace), m_host_ops (std::move (host_ops))
+  explicit rocm_solib_ops (inferior *inf, solib_ops_up host_ops)
+    : solib_ops (inf->pspace), m_host_ops (std::move (host_ops)),
+      m_fd_cache (inf)
   {
     gdb_assert (m_host_ops != nullptr);
     gdb_assert (dynamic_cast<rocm_solib_ops *> (m_host_ops.get ()) == nullptr);
@@ -220,6 +205,10 @@ struct rocm_solib_ops : public solib_ops
   gdb_bfd_ref_ptr bfd_open (const char *pathname) override;
   void relocate_section_addresses (solib &so, target_section *) const override;
   void handle_event () override;
+
+  /* This needs to be public because it is called from
+     rocm_solib_target_inferior_created.  */
+  void update_solib_list ();
 
   /* Implement the following methods just to forward the calls to the host
      solib_ops.  We currently need to implement all the methods that
@@ -271,17 +260,16 @@ struct rocm_solib_ops : public solib_ops
 private:
   owning_intrusive_list<solib>
   solibs_from_rocm_sos (const std::vector<rocm_so> &sos);
+  gdb_bfd_iovec_base *bfd_iovec_open (bfd *abfd, inferior *inferior);
 
   solib_ops_up m_host_ops;
+
+  /* List of code objects loaded into the inferior.  */
+  std::vector<rocm_so> m_solib_list;
+
+  /* Cache of opened FD in the inferior.  */
+  rocm_solib_fd_cache m_fd_cache;
 };
-
-/* Fetch the solib_info data for INF.  */
-
-static struct solib_info *
-get_solib_info (inferior *inf)
-{
-  return &rocm_solib_data.try_emplace (inf, inf);
-}
 
 /* Relocate section addresses.  */
 
@@ -300,8 +288,6 @@ rocm_solib_ops::relocate_section_addresses (solib &so,
   sec->endaddr = sec->endaddr + li->l_addr;
 }
 
-static void rocm_update_solib_list ();
-
 void
 rocm_solib_ops::handle_event ()
 {
@@ -313,7 +299,7 @@ rocm_solib_ops::handle_event ()
      previously loaded).  */
   m_host_ops->handle_event ();
 
-  rocm_update_solib_list ();
+  this->update_solib_list ();
 }
 
 /* Create solib objects from rocm_so objects in SOS.  */
@@ -340,12 +326,10 @@ rocm_solib_ops::current_sos ()
   owning_intrusive_list<solib> sos = m_host_ops->current_sos ();
 
   /* Then, the device-side shared library list.  */
-  std::vector<rocm_so> &dev_sos = get_solib_info (current_inferior ())->solib_list;
-
-  if (dev_sos.empty ())
+  if (m_solib_list.empty ())
     return sos;
 
-  owning_intrusive_list<solib> dev_solibs = solibs_from_rocm_sos (dev_sos);
+  owning_intrusive_list<solib> dev_solibs = solibs_from_rocm_sos (m_solib_list);
 
   if (sos.empty ())
     return dev_solibs;
@@ -525,8 +509,8 @@ rocm_code_object_stream_memory::read (bfd *, void *buf, file_ptr size,
 
 } /* anonymous namespace */
 
-static gdb_bfd_iovec_base *
-rocm_bfd_iovec_open (bfd *abfd, inferior *inferior)
+gdb_bfd_iovec_base *
+rocm_solib_ops::bfd_iovec_open (bfd *abfd, inferior *inferior)
 {
   std::string_view uri (bfd_get_filename (abfd));
   std::string_view protocol_delim = "://";
@@ -635,10 +619,9 @@ rocm_bfd_iovec_open (bfd *abfd, inferior *inferior)
 	      && decoded_path[3] == '/')
 	    decoded_path.erase (0, 1);
 
-	  auto info = get_solib_info (inferior);
 	  fileio_error target_errno;
 	  rocm_solib_fd_cache::cached_target_fd fd
-	    = info->fd_cache.open (decoded_path, &target_errno);
+	    = m_fd_cache.open (decoded_path, &target_errno);
 
 	  if (fd.fd () == target_fd::INVALID)
 	    {
@@ -698,9 +681,9 @@ rocm_solib_ops::bfd_open (const char *pathname)
   if (strstr (pathname, "://") == nullptr)
     return m_host_ops->bfd_open (pathname);
 
-  auto open = [] (bfd *nbfd) -> gdb_bfd_iovec_base *
+  auto open = [this] (bfd *nbfd)
   {
-    return rocm_bfd_iovec_open (nbfd, current_inferior ());
+    return this->bfd_iovec_open (nbfd, current_inferior ());
   };
 
   gdb_bfd_ref_ptr abfd = gdb_bfd_openr_iovec (pathname, "elf64-amdgcn", open);
@@ -782,13 +765,12 @@ rocm_solib_ops::bfd_open (const char *pathname)
 void
 rocm_solib_ops::create_inferior_hook (int from_tty)
 {
-  get_solib_info (current_inferior ())->solib_list.clear ();
-
+  m_solib_list.clear ();
   m_host_ops->create_inferior_hook (from_tty);
 }
 
-static void
-rocm_update_solib_list ()
+void
+rocm_solib_ops::update_solib_list ()
 {
   inferior *inf = current_inferior ();
 
@@ -796,10 +778,7 @@ rocm_update_solib_list ()
   if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
     return;
 
-  solib_info *info = get_solib_info (inf);
-
-  info->solib_list.clear ();
-  std::vector<rocm_so> &sos = info->solib_list;
+  m_solib_list.clear ();
 
   amd_dbgapi_code_object_id_t *code_object_list;
   size_t count;
@@ -846,7 +825,8 @@ rocm_update_solib_list ()
       std::string unique_name
 	= string_printf ("code_object_%ld", code_object_list[i].handle);
 
-      sos.emplace_back (uri_bytes, std::move (unique_name), std::move (li));
+      m_solib_list.emplace_back (uri_bytes, std::move (unique_name),
+				 std::move (li));
     }
 }
 
@@ -857,17 +837,15 @@ rocm_solib_target_inferior_created (inferior *inf)
   if (inf->vfork_parent != nullptr)
     return;
 
-  get_solib_info (inf)->solib_list.clear ();
-
   auto prev_ops = inf->pspace->release_solib_ops ();
-  auto rocm_ops
-    = std::make_unique<rocm_solib_ops> (inf->pspace, std::move (prev_ops));
+  auto rocm_ops = std::make_unique<rocm_solib_ops> (inf, std::move (prev_ops));
   inf->pspace->set_solib_ops (std::move (rocm_ops));
 
-  rocm_update_solib_list ();
+  gdb::checked_static_cast<rocm_solib_ops *>
+    (inf->pspace->solib_ops ())->update_solib_list ();
 
   /* Force GDB to reload the solibs.  */
-  current_inferior ()->pspace->clear_solib_cache ();
+  inf->pspace->clear_solib_cache ();
   solib_add (nullptr, 0, auto_solib_add);
 }
 
@@ -882,10 +860,8 @@ rocm_solib_target_inferior_execd (inferior *exec_inf, inferior *follow_inf)
   auto pspace = follow_inf->pspace;
   auto prev_ops = pspace->release_solib_ops ();
   auto rocm_ops
-    = std::make_unique<rocm_solib_ops> (pspace, std::move (prev_ops));
+    = std::make_unique<rocm_solib_ops> (follow_inf, std::move (prev_ops));
   pspace->set_solib_ops (std::move (rocm_ops));
-
-  get_solib_info (exec_inf)->solib_list.clear ();
 }
 
 static void
@@ -898,10 +874,27 @@ rocm_solib_target_inferior_forked (inferior *parent_inf, inferior *child_inf,
       /* In this particular configuration, infrun's follow_fork_inferior
 	 function moves the parent pspace to the child directly.  Remove the
 	 existing rocm_solib_ops from the child and restore the host solib_ops,
-	 to make it look like a brand new pspace.  */
-      auto rocm_ops_holder = child_inf->pspace->release_solib_ops ();
+	 to make it look like a brand new pspace.
+
+	 Remove solibs created by the rocm_solib_ops, since they contain back
+	 references to the rocm_solib_ops (namely, to the fd cache).  */
+      auto &solibs = child_inf->pspace->solibs ();
       auto rocm_ops
-	= gdb::checked_static_cast<rocm_solib_ops *> (rocm_ops_holder.get ());
+	= gdb::checked_static_cast<rocm_solib_ops *>
+	    (child_inf->pspace->solib_ops ());
+
+      for (auto solibs_it = solibs.begin (); solibs_it != solibs.end ();)
+	{
+	  if (&solibs_it->ops () != rocm_ops)
+	    {
+	      ++solibs_it;
+	      continue;
+	    }
+
+	  solibs_it = remove_solib (child_inf->pspace, solibs_it);
+	}
+
+      auto rocm_ops_holder = child_inf->pspace->release_solib_ops ();
       child_inf->pspace->set_solib_ops (rocm_ops->release_host_ops ());
     }
 }
