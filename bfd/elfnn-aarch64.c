@@ -5704,7 +5704,7 @@ elfNN_aarch64_write_section (bfd *output_bfd  ATTRIBUTE_UNUSED,
 			 make_branch_to_erratum_835769_stub, &data);
     }
 
-  if (globals->fix_erratum_843419)
+  if (globals->fix_erratum_843419 != ERRAT_NONE)
     {
       struct erratum_835769_branch_to_stub_data data;
 
@@ -9747,7 +9747,7 @@ elfNN_aarch64_late_size_sections (struct bfd_link_info *info)
 
   /* Init mapping symbols information to use later to distingush between
      code and data while scanning for errata.  */
-  if (htab->fix_erratum_835769 || htab->fix_erratum_843419)
+  if (htab->fix_erratum_835769 || htab->fix_erratum_843419 != ERRAT_NONE)
     for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link.next)
       {
 	if (!is_aarch64_elf (ibfd))

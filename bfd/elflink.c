@@ -14764,7 +14764,8 @@ bfd_elf_gc_sections (bfd *obfd, struct bfd_link_info *info)
     }
 
   /* Allow the backend to mark additional target specific sections.  */
-  obed->gc_mark_extra_sections (info, gc_mark_hook);
+  if (!obed->gc_mark_extra_sections (info, gc_mark_hook))
+    return false;
 
   /* ... and mark SEC_EXCLUDE for those that go.  */
   return elf_gc_sweep (obfd, info);

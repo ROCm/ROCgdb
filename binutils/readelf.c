@@ -5303,6 +5303,7 @@ decode_AMDGPU_machine_flags (char *out, unsigned int e_flags, Filedata *filedata
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102")
+    AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151")
     AMDGPU_CASE (EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152")
@@ -21667,6 +21668,9 @@ process_got_section_contents (Filedata * filedata)
   if (!do_got_section_contents || all_relocations_count == 0)
     return res;
 
+  if (seen_elf_error ())
+    return false;
+
   switch (filedata->file_header.e_type)
     {
     case ET_DYN:
@@ -25709,8 +25713,11 @@ main (int argc, char ** argv)
 
   err = false;
   while (optind < argc)
-    if (! process_file (argv[optind++]))
-      err = true;
+    {
+      clear_elf_error ();
+      if (! process_file (argv[optind++]))
+	err = true;
+    }
 
   free (cmdline.dump_sects);
 
