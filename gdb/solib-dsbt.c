@@ -138,7 +138,7 @@ struct dsbt_solib_ops : public solib_ops
 solib_ops_up
 make_dsbt_solib_ops (program_space *pspace)
 {
-  return std::make_unique<dsbt_solib_ops> (pspace);
+  return std::make_unique<dsbt_solib_ops> (pspace, true);
 }
 
 /* Link map info to include in an allocated solib entry */

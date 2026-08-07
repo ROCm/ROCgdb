@@ -46,7 +46,7 @@ struct frv_solib_ops : public solib_ops
 solib_ops_up
 make_frv_solib_ops (program_space *pspace)
 {
-  return std::make_unique<frv_solib_ops> (pspace);
+  return std::make_unique<frv_solib_ops> (pspace, true);
 }
 
 /* FR-V pointers are four bytes wide.  */

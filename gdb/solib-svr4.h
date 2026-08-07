@@ -94,7 +94,9 @@ enum probe_action
 
 struct svr4_solib_ops : public solib_ops
 {
-  using solib_ops::solib_ops;
+  explicit svr4_solib_ops (program_space *pspace)
+    : solib_ops (pspace, true)
+  {}
 
   void relocate_section_addresses (solib &so, target_section *) const override;
   void clear_so (const solib &so) const override;
@@ -112,7 +114,7 @@ struct svr4_solib_ops : public solib_ops
   int find_solib_ns (const solib &so) const override;
   int num_active_namespaces () const override;
   std::vector<const solib *> get_solibs_in_ns (int nsid) const override;
-  void iterate_over_objfiles_in_search_order
+  bool iterate_over_objfiles_in_search_order
     (iterate_over_objfiles_in_search_order_cb_ftype cb,
      objfile *current_objfile) const override;
 
