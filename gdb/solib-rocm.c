@@ -189,7 +189,7 @@ struct rocm_solib_ops : public solib_ops
      in order to provide support for ROCm code objects.  */
   explicit rocm_solib_ops (inferior *inf, solib_ops_up host_ops)
     : solib_ops (inf->pspace), m_host_ops (std::move (host_ops)),
-      m_fd_cache (inf)
+      m_inf (inf), m_fd_cache (inf)
   {
     gdb_assert (m_host_ops != nullptr);
     gdb_assert (dynamic_cast<rocm_solib_ops *> (m_host_ops.get ()) == nullptr);
@@ -260,9 +260,12 @@ struct rocm_solib_ops : public solib_ops
 private:
   owning_intrusive_list<solib>
   solibs_from_rocm_sos (const std::vector<rocm_so> &sos);
-  gdb_bfd_iovec_base *bfd_iovec_open (bfd *abfd, inferior *inferior);
+  gdb_bfd_iovec_base *bfd_iovec_open (bfd *abfd);
 
   solib_ops_up m_host_ops;
+
+  /* Inferior this rocm_solib_ops is for.  */
+  inferior *m_inf;
 
   /* List of code objects loaded into the inferior.  */
   std::vector<rocm_so> m_solib_list;
@@ -510,7 +513,7 @@ rocm_code_object_stream_memory::read (bfd *, void *buf, file_ptr size,
 } /* anonymous namespace */
 
 gdb_bfd_iovec_base *
-rocm_solib_ops::bfd_iovec_open (bfd *abfd, inferior *inferior)
+rocm_solib_ops::bfd_iovec_open (bfd *abfd)
 {
   std::string_view uri (bfd_get_filename (abfd));
   std::string_view protocol_delim = "://";
@@ -637,7 +640,7 @@ rocm_solib_ops::bfd_iovec_open (bfd *abfd, inferior *inferior)
       if (protocol == "memory")
 	{
 	  ULONGEST pid = try_strtoulst (path);
-	  if (pid != inferior->pid)
+	  if (pid != m_inf->pid)
 	    {
 	      warning (_("`%s': code object is from another inferior"),
 		       std::string (uri).c_str ());
@@ -683,7 +686,7 @@ rocm_solib_ops::bfd_open (const char *pathname)
 
   auto open = [this] (bfd *nbfd)
   {
-    return this->bfd_iovec_open (nbfd, current_inferior ());
+    return this->bfd_iovec_open (nbfd);
   };
 
   gdb_bfd_ref_ptr abfd = gdb_bfd_openr_iovec (pathname, "elf64-amdgcn", open);
@@ -772,9 +775,7 @@ rocm_solib_ops::create_inferior_hook (int from_tty)
 void
 rocm_solib_ops::update_solib_list ()
 {
-  inferior *inf = current_inferior ();
-
-  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (m_inf);
   if (process_id.handle == AMD_DBGAPI_PROCESS_NONE.handle)
     return;
 
