@@ -650,6 +650,7 @@ solib_read_symbols (solib &so, symfile_add_flags flags)
 	  so.objfile->addr_low = so.addr_low;
 	}
 
+      so.objfile->add_solib (so);
       so.symbols_loaded = true;
     }
   catch (const gdb_exception_error &e)
@@ -715,10 +716,14 @@ remove_solib (program_space *pspace,
   notify_solib_unloaded (pspace, *solib_it, still_in_use, false);
 
   /* Unless the user loaded it explicitly, free SO's objfile.  */
-  if (solib_it->objfile != nullptr
-      && !(solib_it->objfile->flags & OBJF_USERLOADED)
-      && !still_in_use)
-    solib_it->objfile->unlink ();
+  if (solib_it->objfile != nullptr)
+    {
+      /* Remove the objfile -> solib backlink.  */
+      solib_it->objfile->remove_solib (*solib_it);
+
+      if (!(solib_it->objfile->flags & OBJF_USERLOADED) && !still_in_use)
+	solib_it->objfile->unlink ();
+    }
 
   pspace->deleted_solibs.push_back (solib_it->name);
 
