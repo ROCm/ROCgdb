@@ -40,22 +40,63 @@ struct rocm_solib_fd_cache
   explicit rocm_solib_fd_cache (inferior *inf) : m_inferior (inf) {}
   DISABLE_COPY_AND_ASSIGN (rocm_solib_fd_cache);
 
+  /* The open method returns an object of this type.
+
+     On destruction, automatically call close to indicate the caller no longer
+     uses the fd.  */
+  struct cached_target_fd
+  {
+    cached_target_fd (target_fd fd, rocm_solib_fd_cache &cache)
+      : m_fd (fd),
+	m_cache (cache)
+    {
+    }
+
+    cached_target_fd (cached_target_fd &&other)
+      : m_fd (other.m_fd),
+	m_cache (other.m_cache)
+    {
+      other.m_fd = target_fd::INVALID;
+    }
+
+    ~cached_target_fd ()
+    {
+      if (m_fd == target_fd::INVALID)
+	return;
+
+      fileio_error target_errno;
+      if (m_cache.close (m_fd, &target_errno) != 0)
+	warning (_("Failed to close solib: %s"),
+		 strerror (fileio_error_to_host (target_errno)));
+    }
+
+    DISABLE_COPY_AND_ASSIGN (cached_target_fd);
+
+    target_fd fd () const { return m_fd; }
+
+  private:
+    target_fd m_fd;
+    rocm_solib_fd_cache &m_cache;
+  };
+
   /* Return a read-only file descriptor to FILENAME and increment the
      associated reference count.
 
      Open the file FILENAME if it is not already opened, reuse the existing file
      descriptor otherwise.
 
-     On error target_fd::INVALID is returned, and TARGET_ERRNO is set.  */
-  target_fd open (const std::string &filename, fileio_error *target_errno);
+     On error, return a cached_target_fd with target_fd::INVALID and set
+     *TARGET_ERRNO.  */
+  cached_target_fd open (const std::string &filename,
+			 fileio_error *target_errno);
 
+private:
   /* Decrement the reference count to FD and close FD if the reference count
      reaches 0.
 
      On success, return 0.  On error, return -1 and set TARGET_ERRNO.  */
   int close (target_fd fd, fileio_error *target_errno);
 
-private:
   struct refcnt_fd
   {
     refcnt_fd (target_fd fd, int refcnt) : fd (fd), refcnt (refcnt) {}
@@ -73,7 +114,7 @@ private:
   gdb::unordered_string_map<refcnt_fd> m_cache;
 };
 
-target_fd
+rocm_solib_fd_cache::cached_target_fd
 rocm_solib_fd_cache::open (const std::string &filename,
 			   fileio_error *target_errno)
 {
@@ -88,7 +129,7 @@ rocm_solib_fd_cache::open (const std::string &filename,
 	m_cache.emplace (std::piecewise_construct,
 			 std::forward_as_tuple (filename),
 			 std::forward_as_tuple (fd, 1));
-      return fd;
+      return cached_target_fd { fd, *this };
     }
   else
     {
@@ -96,7 +137,7 @@ rocm_solib_fd_cache::open (const std::string &filename,
 	 already opened FD.  */
       it->second.refcnt++;
       gdb_assert (it->second.fd != target_fd::INVALID);
-      return it->second.fd;
+      return cached_target_fd { it->second.fd, *this };
     }
 }
 
@@ -356,7 +397,7 @@ struct rocm_code_object_stream_file final : rocm_code_object_stream
 {
   DISABLE_COPY_AND_ASSIGN (rocm_code_object_stream_file);
 
-  rocm_code_object_stream_file (rocm_solib_fd_cache &fd_cache, target_fd fd,
+  rocm_code_object_stream_file (rocm_solib_fd_cache::cached_target_fd fd,
 				ULONGEST offset, ULONGEST size);
 
   file_ptr read (bfd *abfd, void *buf, file_ptr size,
@@ -364,14 +405,9 @@ struct rocm_code_object_stream_file final : rocm_code_object_stream
 
   LONGEST size () override;
 
-  ~rocm_code_object_stream_file () override;
-
 protected:
-  /* The fd cache owning this code object stream.  */
-  rocm_solib_fd_cache &m_fd_cache;
-
   /* The target file descriptor for this stream.  */
-  target_fd m_fd;
+  rocm_solib_fd_cache::cached_target_fd m_fd;
 
   /* The offset of the ELF file image in the target file.  */
   ULONGEST m_offset;
@@ -382,9 +418,8 @@ protected:
 };
 
 rocm_code_object_stream_file::rocm_code_object_stream_file
-  (rocm_solib_fd_cache &fd_cache, target_fd fd, ULONGEST offset,
-   ULONGEST size)
-  : m_fd_cache (fd_cache), m_fd (fd), m_offset (offset), m_size (size)
+  (rocm_solib_fd_cache::cached_target_fd fd, ULONGEST offset, ULONGEST size)
+  : m_fd (std::move (fd)), m_offset (offset), m_size (size)
 {
 }
 
@@ -399,9 +434,9 @@ rocm_code_object_stream_file::read (bfd *, void *buf, file_ptr size,
       QUIT;
 
       file_ptr bytes_read
-	= target_fileio_pread (m_fd, static_cast<gdb_byte *> (buf) + nbytes,
-			       size, m_offset + offset + nbytes,
-			       &target_errno);
+	= target_fileio_pread (m_fd.fd (),
+			       static_cast<gdb_byte *> (buf) + nbytes, size,
+			       m_offset + offset + nbytes, &target_errno);
 
       if (bytes_read == 0)
 	break;
@@ -427,7 +462,7 @@ rocm_code_object_stream_file::size ()
     {
       fileio_error target_errno;
       struct stat stat;
-      if (target_fileio_fstat (m_fd, &stat, &target_errno) < 0)
+      if (target_fileio_fstat (m_fd.fd (), &stat, &target_errno) < 0)
 	{
 	  errno = fileio_error_to_host (target_errno);
 	  bfd_set_error (bfd_error_system_call);
@@ -445,14 +480,6 @@ rocm_code_object_stream_file::size ()
     }
 
   return m_size;
-}
-
-rocm_code_object_stream_file::~rocm_code_object_stream_file ()
-{
-  fileio_error target_errno;
-  if (m_fd_cache.close (m_fd, &target_errno) != 0)
-    warning (_("Failed to close solib: %s"),
-	     strerror (fileio_error_to_host (target_errno)));
 }
 
 /* Interface to a code object which lives in the inferior's memory.  */
@@ -610,16 +637,17 @@ rocm_bfd_iovec_open (bfd *abfd, inferior *inferior)
 
 	  auto info = get_solib_info (inferior);
 	  fileio_error target_errno;
-	  target_fd fd = info->fd_cache.open (decoded_path, &target_errno);
+	  rocm_solib_fd_cache::cached_target_fd fd
+	    = info->fd_cache.open (decoded_path, &target_errno);
 
-	  if (fd == target_fd::INVALID)
+	  if (fd.fd () == target_fd::INVALID)
 	    {
 	      errno = fileio_error_to_host (target_errno);
 	      bfd_set_error (bfd_error_system_call);
 	      return nullptr;
 	    }
 
-	  return new rocm_code_object_stream_file (info->fd_cache, fd, offset,
+	  return new rocm_code_object_stream_file (std::move (fd), offset,
 						   size);
 	}
 
