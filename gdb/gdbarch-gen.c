@@ -179,7 +179,7 @@ struct gdbarch
   gdbarch_address_class_name_to_id_ftype *address_class_name_to_id = nullptr;
   gdbarch_register_reggroup_p_ftype *register_reggroup_p = default_register_reggroup_p;
   gdbarch_fetch_pointer_argument_ftype *fetch_pointer_argument = nullptr;
-  gdbarch_fetch_hiperr_parameters_ftype *fetch_hiperr_parameters = nullptr;
+  gdbarch_fetch_hiperr_info_ftype *fetch_hiperr_info = nullptr;
   gdbarch_iterate_over_regset_sections_ftype *iterate_over_regset_sections = nullptr;
   gdbarch_make_corefile_notes_ftype *make_corefile_notes = nullptr;
   gdbarch_find_memory_regions_ftype *find_memory_regions = nullptr;
@@ -456,7 +456,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of address_class_name_to_id, has predicate.  */
   /* Skip verify of register_reggroup_p, invalid_p == 0.  */
   /* Skip verify of fetch_pointer_argument, invalid_p == 0.  */
-  /* Skip verify of fetch_hiperr_parameters, has predicate.  */
+  /* Skip verify of fetch_hiperr_info, has predicate.  */
   /* Skip verify of iterate_over_regset_sections, has predicate.  */
   /* Skip verify of make_corefile_notes, has predicate.  */
   /* Skip verify of find_memory_regions, has predicate.  */
@@ -1056,11 +1056,11 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
 	      "gdbarch_dump: fetch_pointer_argument = <%s>\n",
 	      host_address_to_string (gdbarch->fetch_pointer_argument));
   gdb_printf (file,
-	      "gdbarch_dump: gdbarch_fetch_hiperr_parameters_p() = %d\n",
-	      gdbarch_fetch_hiperr_parameters_p (gdbarch));
+	      "gdbarch_dump: gdbarch_fetch_hiperr_info_p() = %d\n",
+	      gdbarch_fetch_hiperr_info_p (gdbarch));
   gdb_printf (file,
-	      "gdbarch_dump: fetch_hiperr_parameters = <%s>\n",
-	      host_address_to_string (gdbarch->fetch_hiperr_parameters));
+	      "gdbarch_dump: fetch_hiperr_info = <%s>\n",
+	      host_address_to_string (gdbarch->fetch_hiperr_info));
   gdb_printf (file,
 	      "gdbarch_dump: gdbarch_iterate_over_regset_sections_p() = %d\n",
 	      gdbarch_iterate_over_regset_sections_p (gdbarch));
@@ -3885,27 +3885,27 @@ set_gdbarch_fetch_pointer_argument (struct gdbarch *gdbarch,
 }
 
 bool
-gdbarch_fetch_hiperr_parameters_p (struct gdbarch *gdbarch)
+gdbarch_fetch_hiperr_info_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != nullptr);
-  return gdbarch->fetch_hiperr_parameters != nullptr;
+  return gdbarch->fetch_hiperr_info != nullptr;
 }
 
-std::optional<hiperr_parameters>
-gdbarch_fetch_hiperr_parameters (struct gdbarch *gdbarch, frame_info_ptr frame)
+std::optional<hiperr_info>
+gdbarch_fetch_hiperr_info (struct gdbarch *gdbarch, frame_info_ptr frame)
 {
   gdb_assert (gdbarch != nullptr);
-  gdb_assert (gdbarch->fetch_hiperr_parameters != nullptr);
+  gdb_assert (gdbarch->fetch_hiperr_info != nullptr);
   if (gdbarch_debug >= 2)
-    gdb_printf (gdb_stdlog, "gdbarch_fetch_hiperr_parameters called\n");
-  return gdbarch->fetch_hiperr_parameters (frame);
+    gdb_printf (gdb_stdlog, "gdbarch_fetch_hiperr_info called\n");
+  return gdbarch->fetch_hiperr_info (frame);
 }
 
 void
-set_gdbarch_fetch_hiperr_parameters (struct gdbarch *gdbarch,
-				     gdbarch_fetch_hiperr_parameters_ftype fetch_hiperr_parameters)
+set_gdbarch_fetch_hiperr_info (struct gdbarch *gdbarch,
+			       gdbarch_fetch_hiperr_info_ftype fetch_hiperr_info)
 {
-  gdbarch->fetch_hiperr_parameters = fetch_hiperr_parameters;
+  gdbarch->fetch_hiperr_info = fetch_hiperr_info;
 }
 
 bool

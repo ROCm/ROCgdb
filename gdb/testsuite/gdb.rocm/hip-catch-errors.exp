@@ -45,7 +45,7 @@ if {[prepare_for_testing "failed to prepare non-debug version of ${testfile}" \
     return -1
 }
 
-# Reference error parameters for HIP API calls:
+# Reference error info for HIP API calls:
 #   hipSetDevice (...)
 #   hipGetDevice (...)
 #   hipLaunchKernel (...)

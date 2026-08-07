@@ -1750,12 +1750,12 @@ Fetch the pointer to the ith function argument.
 
 Function(
     comment="""
-Fetch HIP error parameters from the FRAME's function arguments.
+Fetch HIP error information from the FRAME's function arguments.
 FRAME is the frame of a "__hipOnError ()" function.  On a successful
-run, return the parameters.  Otherwise, return a std::nullopt.
+run, return the info.  Otherwise, return a std::nullopt.
 """,
-    type="std::optional<hiperr_parameters>",
-    name="fetch_hiperr_parameters",
+    type="std::optional<hiperr_info>",
+    name="fetch_hiperr_info",
     params=[
         ("frame_info_ptr", "frame"),
     ],
