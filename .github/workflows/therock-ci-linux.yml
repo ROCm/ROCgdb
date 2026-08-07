@@ -145,3 +145,87 @@ jobs:
       artifact_group: ${{ inputs.artifact_group }}
       therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
       artifact_run_id: ${{ github.run_id }}
+
+  # Extended test configurations. These reuse the single build from
+  # therock-build-linux (no rebuild) and fan out in parallel with each other
+  # and with therock-test-linux, all gated on a successful build.
+  extended-test-parallel:
+    name: "--parallel"
+    if: ${{ github.event_name == 'pull_request' && inputs.amdgpu_families == 'gfx94X-dcgpu' }}
+    needs: [therock-build-linux]
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      artifact_group: ${{ inputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--parallel -j4"
+
+  extended-test-optimization:
+    name: "--optimization=-O3"
+    if: ${{ github.event_name == 'pull_request' && inputs.amdgpu_families == 'gfx94X-dcgpu' }}
+    needs: [therock-build-linux]
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      artifact_group: ${{ inputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: "rocgdb-gpu"
+      test_options: "--optimization=-O3 --parallel -j4 --toolchain=llvm"
+
+  extended-test-check-read1:
+    name: "--check-type check-read1"
+    if: ${{ github.event_name == 'pull_request' && inputs.amdgpu_families == 'gfx94X-dcgpu' }}
+    needs: [therock-build-linux]
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      artifact_group: ${{ inputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--check-type check-read1 --parallel -j4"
+
+  extended-test-check-readmore:
+    name: "--check-type check-readmore"
+    if: ${{ github.event_name == 'pull_request' && inputs.amdgpu_families == 'gfx94X-dcgpu' }}
+    needs: [therock-build-linux]
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      artifact_group: ${{ inputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--check-type check-readmore --parallel -j4"
+
+  extended-test-optimization-lto:
+    name: "--optimization=\"-O3 -flto\""
+    if: ${{ github.event_name == 'pull_request' && inputs.amdgpu_families == 'gfx94X-dcgpu' }}
+    needs: [therock-build-linux]
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      artifact_group: ${{ inputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: "rocgdb-gpu"
+      test_options: "--optimization='-O3 -flto' --parallel -j4 --toolchain=llvm"
+
+  extended-test-hip-board:
+    name: "hip board gdb.base/break.exp"
+    if: ${{ github.event_name == 'pull_request' && inputs.amdgpu_families == 'gfx94X-dcgpu' }}
+    needs: [therock-build-linux]
+    uses: ./.github/workflows/therock-test-packages.yml
+    secrets: inherit
+    with:
+      amdgpu_families: ${{ inputs.amdgpu_families }}
+      artifact_group: ${{ inputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: "rocgdb-gpu"
+      test_options: "--runtestflags=--target_board=hip --tests gdb.base/break.exp --parallel -j4 --toolchain=llvm"
