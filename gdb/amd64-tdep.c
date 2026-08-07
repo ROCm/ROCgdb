@@ -1060,10 +1060,10 @@ amd64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 }
 
 
-/* Extract HIP error parameters from the STRUCT_ADDR which is
-   a struct address passed to "__hipOnError ()" as an argument.
+/* Extract HIP error info from the STRUCT_ADDR which is a struct
+   address passed to "__hipOnError ()" as an argument.
 
-   Only when all the parameters are retrieved successfully, return
+   Only when all the fields are retrieved successfully, return
    them as the result.  Otherwise [1], return an std::nullopt.
 
    [1]
@@ -1072,10 +1072,10 @@ amd64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
    - Not all the strings were read successfully
 */
 
-std::optional<hiperr_parameters>
-amd64_fetch_hiperr_parameters (frame_info_ptr frame, CORE_ADDR struct_addr)
+std::optional<hiperr_info>
+amd64_fetch_hiperr_info (frame_info_ptr frame, CORE_ADDR struct_addr)
 {
-  /* The HIP error parameters are packed in a struct with the following format:
+  /* The HIP error info is packed in a struct with the following format:
 
      struct {
 	uint32_t version;
@@ -1087,7 +1087,7 @@ amd64_fetch_hiperr_parameters (frame_info_ptr frame, CORE_ADDR struct_addr)
     The "version" is bumped when more fields are added to the structure.
     Newer versions must keep backward compatibility with the previous ones,
     by only tacking new fields at the end of the structure, so that older
-    clients can still extract the parameters they know.
+    clients can still extract the fields they know.
   */
 
   /* Cover the version (4), number (4) and two pointers (2*8).  */
@@ -1108,7 +1108,7 @@ amd64_fetch_hiperr_parameters (frame_info_ptr frame, CORE_ADDR struct_addr)
      compatible.  See note above.  */
   if (version < 1)
     {
-      warning (_("version '%s' for HIP error parameters is not supported."),
+      warning (_("version '%s' for HIP error info is not supported."),
 	       pulongest (version));
       return std::nullopt;
     }
@@ -1130,7 +1130,7 @@ amd64_fetch_hiperr_parameters (frame_info_ptr frame, CORE_ADDR struct_addr)
     return std::nullopt;
   err_str = std::move (str);
 
-  return hiperr_parameters {err_no, std::move (err_name), std::move (err_str)};
+  return hiperr_info {err_no, std::move (err_name), std::move (err_str)};
 }
 
 
