@@ -1,0 +1,76 @@
+# Copyright (C) 2022-2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test reporting out of range LDS access on supported architecture.
+# SIGBUS is expected when lds-addr-range-exception is on,
+# and an assertion failure is expected when it is off.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+proc do_test { } {
+    clean_restart
+    gdb_load $::binfile
+
+    with_rocm_gpu_lock {
+	if {![runto_main]} {
+	    return
+	}
+	# Run with lds-addr-range-exception off, we should see an assertion failure
+    gdb_breakpoint "kern" -allow-pending -qualified
+    gdb_continue_to_breakpoint "Continue to kernel with Exceptions off"
+	gdb_test_no_output "set amdgpu lds-addr-range-exception off" "set LDS Exceptions off"
+
+	delete_breakpoints
+
+	gdb_test "c" \
+		".*lds-addr-range-exception.cpp:51: void kern\\(size_t, size_t\\): Device-side assertion `arr\\\[idx\\\] == 8' failed\\..*" \
+	    "continue to assertion failure"
+	}
+	clean_restart
+    gdb_load $::binfile
+
+    with_rocm_gpu_lock {
+	if {![runto_main]} {
+	    return
+	}
+	# Run with lds-addr-range-exception on, we should see a seg-fault
+    gdb_breakpoint "kern" -allow-pending -qualified
+    gdb_continue_to_breakpoint "Continue to kernel with Exceptions on"
+	gdb_test_no_output "set amdgpu lds-addr-range-exception on" "set LDS Exceptions on"
+
+	delete_breakpoints
+
+	gdb_test "continue" "Thread ${::decimal}\[^\r\n\]* received signal SIGBUS, Bus error.*" \
+	    "continue to Bus error"
+    }
+}
+
+set target [lindex  [find_amdgpu_devices] 0]
+set target_family [string range $target 0 end-2]
+if {[lsearch -exact {gfx12 gfx13} $target_family] != -1} {
+	do_test
+} else {
+	unsupported "Skipping test, target family $target_family is not supported"
+}
