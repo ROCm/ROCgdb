@@ -356,8 +356,8 @@ struct rocm_code_object_stream_file final : rocm_code_object_stream
 {
   DISABLE_COPY_AND_ASSIGN (rocm_code_object_stream_file);
 
-  rocm_code_object_stream_file (inferior *inf, target_fd fd, ULONGEST offset,
-				ULONGEST size);
+  rocm_code_object_stream_file (rocm_solib_fd_cache &fd_cache, target_fd fd,
+				ULONGEST offset, ULONGEST size);
 
   file_ptr read (bfd *abfd, void *buf, file_ptr size,
 		 file_ptr offset) override;
@@ -367,9 +367,8 @@ struct rocm_code_object_stream_file final : rocm_code_object_stream
   ~rocm_code_object_stream_file () override;
 
 protected:
-
-  /* The inferior owning this code object stream.  */
-  inferior *m_inf;
+  /* The fd cache owning this code object stream.  */
+  rocm_solib_fd_cache &m_fd_cache;
 
   /* The target file descriptor for this stream.  */
   target_fd m_fd;
@@ -383,8 +382,9 @@ protected:
 };
 
 rocm_code_object_stream_file::rocm_code_object_stream_file
-  (inferior *inf, target_fd fd, ULONGEST offset, ULONGEST size)
-  : m_inf (inf), m_fd (fd), m_offset (offset), m_size (size)
+  (rocm_solib_fd_cache &fd_cache, target_fd fd, ULONGEST offset,
+   ULONGEST size)
+  : m_fd_cache (fd_cache), m_fd (fd), m_offset (offset), m_size (size)
 {
 }
 
@@ -449,9 +449,8 @@ rocm_code_object_stream_file::size ()
 
 rocm_code_object_stream_file::~rocm_code_object_stream_file ()
 {
-  auto info = get_solib_info (m_inf);
   fileio_error target_errno;
-  if (info->fd_cache.close (m_fd, &target_errno) != 0)
+  if (m_fd_cache.close (m_fd, &target_errno) != 0)
     warning (_("Failed to close solib: %s"),
 	     strerror (fileio_error_to_host (target_errno)));
 }
@@ -620,7 +619,7 @@ rocm_bfd_iovec_open (bfd *abfd, inferior *inferior)
 	      return nullptr;
 	    }
 
-	  return new rocm_code_object_stream_file (inferior, fd, offset,
+	  return new rocm_code_object_stream_file (info->fd_cache, fd, offset,
 						   size);
 	}
 
