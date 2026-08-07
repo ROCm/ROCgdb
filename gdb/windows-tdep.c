@@ -828,9 +828,6 @@ struct windows_solib_ops : target_solib_ops
   using target_solib_ops::target_solib_ops;
 
   void create_inferior_hook (int from_tty) override;
-  void iterate_over_objfiles_in_search_order
-    (iterate_over_objfiles_in_search_order_cb_ftype cb,
-     objfile *current_objfile) const override;
 };
 
 /* Return a new solib_ops for Windows systems.  */
@@ -887,43 +884,6 @@ windows_solib_ops::create_inferior_hook (int from_tty)
 	objfile_rebase (current_program_space->symfile_object_file,
 			exec_base - vmaddr);
     }
-}
-
-/* Implement the "iterate_over_objfiles_in_search_order" gdbarch
-   method.  It searches all objfiles, starting with CURRENT_OBJFILE
-   first (if not NULL).
-
-   On Windows, the system behaves a little differently when two
-   objfiles each define a global symbol using the same name, compared
-   to other platforms such as GNU/Linux for instance.  On GNU/Linux,
-   all instances of the symbol effectively get merged into a single
-   one, but on Windows, they remain distinct.
-
-   As a result, it usually makes sense to start global symbol searches
-   with the current objfile before expanding it to all other objfiles.
-   This helps for instance when a user debugs some code in a DLL that
-   refers to a global variable defined inside that DLL.  When trying
-   to print the value of that global variable, it would be unhelpful
-   to print the value of another global variable defined with the same
-   name, but in a different DLL.  */
-
-void
-windows_solib_ops::iterate_over_objfiles_in_search_order
-  (iterate_over_objfiles_in_search_order_cb_ftype cb,
-   objfile *current_objfile) const
-{
-  if (current_objfile)
-    {
-      if (cb (current_objfile))
-	return;
-    }
-
-  for (objfile &objfile : m_pspace->objfiles ())
-    if (&objfile != current_objfile)
-      {
-	if (cb (&objfile))
-	  return;
-      }
 }
 
 /* Implement the "auto_wide_charset" gdbarch method.  */

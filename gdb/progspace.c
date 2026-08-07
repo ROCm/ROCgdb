@@ -128,8 +128,11 @@ program_space::iterate_over_objfiles_in_search_order
     return m_solib_ops->iterate_over_objfiles_in_search_order
       (cb, current_objfile);
 
+  if (current_objfile != nullptr && cb (current_objfile))
+    return;
+
   for (auto &objfile : this->objfiles ())
-    if (cb (&objfile))
+    if (&objfile != current_objfile && cb (&objfile))
       return;
 }
 

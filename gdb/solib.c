@@ -451,8 +451,11 @@ solib_ops::iterate_over_objfiles_in_search_order
   (iterate_over_objfiles_in_search_order_cb_ftype cb,
    objfile *current_objfile) const
 {
+  if (current_objfile != nullptr && cb (current_objfile))
+    return;
+
   for (objfile &objfile : m_pspace->objfiles ())
-    if (cb (&objfile))
+    if (&objfile != current_objfile && cb (&objfile))
       return;
 }
 
