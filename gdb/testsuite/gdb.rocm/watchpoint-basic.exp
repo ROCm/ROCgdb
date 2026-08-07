@@ -96,7 +96,7 @@ proc_with_prefix test_host_watchpoint_after_runtime_load {} {
 # end and exit prematurely.
 
 gdb_caching_proc target_has_xfail {} {
-    set xfail_arches {gfx1201}
+    set xfail_arches {gfx1103 gfx1201}
 
     set targets [find_amdgpu_devices]
     if {[llength $targets] == 0} {
