@@ -99,14 +99,14 @@ struct svr4_solib_ops : public solib_ops
   void relocate_section_addresses (solib &so, target_section *) const override;
   void clear_so (const solib &so) const override;
   void clear_solib (program_space *pspace) const override;
-  void create_inferior_hook (int from_tty) const override;
-  owning_intrusive_list<solib> current_sos () const override;
+  void create_inferior_hook (int from_tty) override;
+  owning_intrusive_list<solib> current_sos () override;
   bool open_symbol_file_object (int from_tty) const override;
   bool in_dynsym_resolve_code (CORE_ADDR pc) const override;
   bool same (const solib &gdb, const solib &inferior) const override;
   bool keep_data_in_core (CORE_ADDR vaddr, unsigned long size) const override;
   void update_breakpoints () const override;
-  void handle_event () const override;
+  void handle_event () override;
   std::optional<CORE_ADDR> find_solib_addr (solib &so) const override;
   bool supports_namespaces () const override { return true; }
   int find_solib_ns (const solib &so) const override;
@@ -135,7 +135,7 @@ private:
   void free_probes_table (svr4_info *info) const;
   CORE_ADDR find_r_brk (svr4_info *info) const;
   CORE_ADDR find_r_ldsomap (svr4_info *info) const;
-  owning_intrusive_list<solib> default_sos (svr4_info *info) const;
+  owning_intrusive_list<solib> default_sos (svr4_info *info);
   int read_so_list (svr4_info *info, CORE_ADDR lm, CORE_ADDR prev_lm,
 		    CORE_ADDR debug_base, std::vector<svr4_so> &sos,
 		    int ignore_first) const;
@@ -144,10 +144,10 @@ private:
   CORE_ADDR lm_addr_check (const solib &so, bfd *abfd) const;
   CORE_ADDR read_r_next (CORE_ADDR debug_base) const;
   CORE_ADDR read_r_map (CORE_ADDR debug_base) const;
-  owning_intrusive_list<solib> collect_probes_sos (svr4_info *info) const;
-  owning_intrusive_list<solib> current_sos_1 (svr4_info *info) const;
+  owning_intrusive_list<solib> collect_probes_sos (svr4_info *info);
+  owning_intrusive_list<solib> current_sos_1 (svr4_info *info);
   owning_intrusive_list<solib> solibs_from_svr4_sos
-    (const std::vector<svr4_so> &sos) const;
+    (const std::vector<svr4_so> &sos);
   void disable_probes_interface (svr4_info *info) const;
   void update_full (svr4_info *info) const;
   int update_incremental (svr4_info *info, CORE_ADDR debug_base,

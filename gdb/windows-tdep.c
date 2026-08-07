@@ -827,7 +827,7 @@ struct windows_solib_ops : target_solib_ops
 {
   using target_solib_ops::target_solib_ops;
 
-  void create_inferior_hook (int from_tty) const override;
+  void create_inferior_hook (int from_tty) override;
   void iterate_over_objfiles_in_search_order
     (iterate_over_objfiles_in_search_order_cb_ftype cb,
      objfile *current_objfile) const override;
@@ -844,7 +844,7 @@ make_windows_solib_ops (program_space *pspace)
 /* Implement the "solib_create_inferior_hook" solib_ops method.  */
 
 void
-windows_solib_ops::create_inferior_hook (int from_tty) const
+windows_solib_ops::create_inferior_hook (int from_tty)
 {
   CORE_ADDR exec_base = 0;
 

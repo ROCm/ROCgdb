@@ -32,9 +32,9 @@ struct aix_solib_ops : public solib_ops
   using solib_ops::solib_ops;
 
   void relocate_section_addresses (solib &so, target_section *) const override;
-  void create_inferior_hook (int from_tty) const override;
-  owning_intrusive_list<solib> current_sos () const override;
-  gdb_bfd_ref_ptr bfd_open (const char *pathname) const override;
+  void create_inferior_hook (int from_tty) override;
+  owning_intrusive_list<solib> current_sos () override;
+  gdb_bfd_ref_ptr bfd_open (const char *pathname) override;
 };
 
 /* See solib-aix.h.  */
@@ -425,7 +425,7 @@ solib_aix_get_section_offsets (struct objfile *objfile,
 }
 
 void
-aix_solib_ops::create_inferior_hook (int from_tty) const
+aix_solib_ops::create_inferior_hook (int from_tty)
 {
   const char *warning_msg = "unable to relocate main executable";
 
@@ -454,7 +454,7 @@ aix_solib_ops::create_inferior_hook (int from_tty) const
 }
 
 owning_intrusive_list<solib>
-aix_solib_ops::current_sos () const
+aix_solib_ops::current_sos ()
 {
   std::optional<std::vector<lm_info_aix>> &library_list
     = solib_aix_get_library_list (current_inferior (), NULL);
@@ -498,7 +498,7 @@ aix_solib_ops::current_sos () const
 }
 
 gdb_bfd_ref_ptr
-aix_solib_ops::bfd_open (const char *pathname) const
+aix_solib_ops::bfd_open (const char *pathname)
 {
   /* The pathname is actually a synthetic filename with the following
      form: "/path/to/sharedlib(member.o)" (double-quotes excluded).

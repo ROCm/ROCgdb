@@ -232,7 +232,7 @@ solib_target_parse_libraries (const char *library)
 #endif
 
 owning_intrusive_list<solib>
-target_solib_ops::current_sos () const
+target_solib_ops::current_sos ()
 {
   owning_intrusive_list<solib> sos;
 

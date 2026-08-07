@@ -260,7 +260,7 @@ struct program_space
   { return std::move (m_solib_ops); }
 
   /* Get this program space's solib provider.  */
-  const struct solib_ops *solib_ops () const
+  struct solib_ops *solib_ops () const
   { return m_solib_ops.get (); }
 
   /* Return the list of all the solibs in this program space.  */

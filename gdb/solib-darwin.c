@@ -42,9 +42,9 @@ struct darwin_solib_ops : public solib_ops
 
   void relocate_section_addresses (solib &so, target_section *) const override;
   void clear_solib (program_space *pspace) const override;
-  void create_inferior_hook (int from_tty) const override;
-  owning_intrusive_list<solib> current_sos () const override;
-  gdb_bfd_ref_ptr bfd_open (const char *pathname) const override;
+  void create_inferior_hook (int from_tty) override;
+  owning_intrusive_list<solib> current_sos () override;
+  gdb_bfd_ref_ptr bfd_open (const char *pathname) override;
 };
 
 /* See solib-darwin.h.  */
@@ -211,7 +211,7 @@ find_program_interpreter (void)
 }
 
 owning_intrusive_list<solib>
-darwin_solib_ops::current_sos () const
+darwin_solib_ops::current_sos ()
 {
   type *ptr_type
     = builtin_type (current_inferior ()->arch ())->builtin_data_ptr;
@@ -471,7 +471,7 @@ darwin_solib_read_all_image_info_addr (struct darwin_info *info)
 }
 
 void
-darwin_solib_ops::create_inferior_hook (int from_tty) const
+darwin_solib_ops::create_inferior_hook (int from_tty)
 {
   /* Everything below only makes sense if we have a running inferior.  */
   if (!target_has_execution ())
@@ -606,7 +606,7 @@ darwin_solib_ops::relocate_section_addresses (solib &so,
 }
 
 gdb_bfd_ref_ptr
-darwin_solib_ops::bfd_open (const char *pathname) const
+darwin_solib_ops::bfd_open (const char *pathname)
 {
   int found_file;
 

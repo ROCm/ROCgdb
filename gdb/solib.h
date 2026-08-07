@@ -62,10 +62,10 @@ struct solib : intrusive_list_node<solib>
 
      OPS is the solib_ops implementation providing this solib.  */
   explicit solib (lm_info_up lm_info, std::string original_name,
-		  std::string name, const solib_ops &ops);
+		  std::string name, solib_ops &ops);
 
   /* Return the solib_ops implementation providing this solib.  */
-  const solib_ops &ops () const
+  solib_ops &ops () const
   { return *m_ops; }
 
   /* Free symbol-file related contents of SO and reset for possible reloading
@@ -126,7 +126,7 @@ struct solib : intrusive_list_node<solib>
 
 private:
   /* The solib_ops responsible for this solib.  */
-  const solib_ops *m_ops;
+  solib_ops *m_ops;
 };
 
 /* A unique pointer to an solib.  */
@@ -168,7 +168,7 @@ struct solib_ops
   /* Target dependent code to run after child process fork.
 
      Defaults to no-op.  */
-  virtual void create_inferior_hook (int from_tty) const {};
+  virtual void create_inferior_hook (int from_tty) {};
 
   /* Construct a list of the currently loaded shared objects.  This
      list does not include an entry for the main executable file.
@@ -177,7 +177,7 @@ struct solib_ops
      inferior --- we don't examine any of the shared library files
      themselves.  The declaration of `struct solib' says which fields
      we provide values for.  */
-  virtual owning_intrusive_list<solib> current_sos () const = 0;
+  virtual owning_intrusive_list<solib> current_sos () = 0;
 
   /* Find, open, and read the symbols for the main executable.  If
      FROM_TTY is non-zero, allow messages to be printed.
@@ -193,7 +193,7 @@ struct solib_ops
   { return false; };
 
   /* Find and open shared library binary file.  */
-  virtual gdb_bfd_ref_ptr bfd_open (const char *pathname) const;
+  virtual gdb_bfd_ref_ptr bfd_open (const char *pathname);
 
   /* Given two solib objects, GDB from the GDB thread list and INFERIOR from the
      list returned by current_sos, return true if they represent the same library.
@@ -221,7 +221,7 @@ struct solib_ops
      solib_add is called.
 
      Defaults to no-op.  */
-  virtual void handle_event () const {};
+  virtual void handle_event () {};
 
   /* Return an address within the inferior's address space which is known
      to be part of SO.  If there is no such address, or GDB doesn't know

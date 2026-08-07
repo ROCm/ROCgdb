@@ -36,8 +36,8 @@ struct frv_solib_ops : public solib_ops
 
   void relocate_section_addresses (solib &so, target_section *) const override;
   void clear_solib (program_space *pspace) const override;
-  void create_inferior_hook (int from_tty) const override;
-  owning_intrusive_list<solib> current_sos () const override;
+  void create_inferior_hook (int from_tty) override;
+  owning_intrusive_list<solib> current_sos () override;
   bool in_dynsym_resolve_code (CORE_ADDR pc) const override;
 };
 
@@ -321,7 +321,7 @@ lm_base (void)
 }
 
 owning_intrusive_list<solib>
-frv_solib_ops::current_sos () const
+frv_solib_ops::current_sos ()
 {
   bfd_endian byte_order = gdbarch_byte_order (current_inferior ()->arch ());
   CORE_ADDR lm_addr, mgot;
@@ -789,7 +789,7 @@ frv_relocate_main_executable (void)
    enabled.  */
 
 void
-frv_solib_ops::create_inferior_hook (int from_tty) const
+frv_solib_ops::create_inferior_hook (int from_tty)
 {
   /* Relocate main executable.  */
   frv_relocate_main_executable ();
