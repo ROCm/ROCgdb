@@ -364,6 +364,40 @@ amd64_windows_return_value (struct gdbarch *gdbarch, struct value *function,
   int len = type->length ();
   int regnum = -1;
 
+  /* MSVC ABI: non-trivially-copyable C++ types are always returned
+     via a hidden sret pointer, regardless of their size.  Use GDB's
+     existing language_pass_by_reference machinery to detect the
+     non-trivial case and redirect to
+     RETURN_VALUE_ABI_RETURNS_ADDRESS.  */
+  if (type->code () == TYPE_CODE_STRUCT
+      || type->code () == TYPE_CODE_UNION)
+    {
+      struct language_pass_by_ref_info info = language_pass_by_reference (type);
+      /* Check two underlying fields:
+	  trivially_copy_constructible  false => user copy/move ctor
+	  trivially_destructible        false => user destructor
+
+	 Fixes:
+	 - User copy ctor (non-const ref) -> trivially_copy_constructible=false
+	   -> sret path.
+	 - User copy ctor (const ref) -> same.
+	 - User copy ctor + non-ctor single-arg ctor -> same.
+	 - Virtual method -> trivially_copy_constructible=false (vtable)
+	   -> sret path.
+	 - Virtual base (: public virtual D) -> non-trivial -> sret.
+	 - User destructor -> trivially_destructible=false -> sret. */
+      if (!info.trivially_copy_constructible || !info.trivially_destructible)
+	{
+	  if (read_value != nullptr)
+	    {
+	      ULONGEST addr;
+	      regcache_raw_read_unsigned (regcache, AMD64_RAX_REGNUM, &addr);
+	      *read_value = value_at_non_lval (type, addr);
+	    }
+	  return RETURN_VALUE_ABI_RETURNS_ADDRESS;
+	}
+    }
+
   /* See if our value is returned through a register.  If it is, then
      store the associated register number in REGNUM.  */
   switch (type->code ())
