@@ -3592,10 +3592,10 @@ lp64_svr4_solib_ops::fetch_link_map_offsets () const
 }
 
 
-/* Return the DSO matching OBJFILE or nullptr if none can be found.  */
+/* Return one solib matching OBJFILE or nullptr if none can be found.  */
 
-static const solib *
-find_solib_for_objfile (struct objfile *objfile)
+static solib *
+find_one_solib_for_objfile (struct objfile *objfile)
 {
   if (objfile == nullptr)
     return nullptr;
@@ -3605,11 +3605,7 @@ find_solib_for_objfile (struct objfile *objfile)
   if (objfile->separate_debug_objfile_backlink != nullptr)
     objfile = objfile->separate_debug_objfile_backlink;
 
-  for (const solib &so : current_program_space->solibs ())
-    if (so.objfile == objfile)
-      return &so;
-
-  return nullptr;
+  return objfile->first_solib ();
 }
 
 /* Return the address of the r_debug object for the namespace containing
@@ -3676,7 +3672,7 @@ svr4_solib_ops::iterate_over_objfiles_in_search_order
      r_debug object, defaulting to the initial namespace.  */
   svr4_info *info = get_svr4_info (current_program_space);
   CORE_ADDR default_debug_base = this->default_debug_base (info);
-  const solib *curr_solib = find_solib_for_objfile (current_objfile);
+  const solib *curr_solib = find_one_solib_for_objfile (current_objfile);
   CORE_ADDR debug_base = find_debug_base_for_solib (curr_solib);
   if (debug_base == 0)
     debug_base = default_debug_base;
@@ -3691,7 +3687,7 @@ svr4_solib_ops::iterate_over_objfiles_in_search_order
 	 If we fail, e.g. for manually added symbol files or for the main
 	 executable, we assume that they were added to the initial
 	 namespace.  */
-      const solib *solib = find_solib_for_objfile (&objfile);
+      const solib *solib = find_one_solib_for_objfile (&objfile);
       CORE_ADDR solib_base = find_debug_base_for_solib (solib);
       if (solib_base == 0)
 	solib_base = default_debug_base;
