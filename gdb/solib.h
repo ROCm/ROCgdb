@@ -350,6 +350,16 @@ extern bool in_solib_dynsym_resolve_code (CORE_ADDR);
 
 extern void no_shared_libraries (program_space *pspace);
 
+/* Remove solib *SOLIB_IT from PSPACE.
+
+   Remove the corresponding objfiles and target sections.
+
+   Return an iterator to the next solib in PSPACE's solib list, helping to
+   continue iterating.  */
+
+extern owning_intrusive_list<solib>::iterator remove_solib
+  (program_space *pspace, owning_intrusive_list<solib>::iterator solib_it);
+
 /* Synchronize GDB's shared object list with inferior's.
 
    Extract the list of currently loaded shared objects from the
