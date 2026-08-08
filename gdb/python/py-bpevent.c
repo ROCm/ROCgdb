@@ -24,7 +24,8 @@
 
 gdbpy_ref<>
 create_breakpoint_event_object (const gdbpy_ref<> &dict,
-				PyObject *breakpoint_list, PyObject *first_bp)
+				gdbpy_borrowed_ref<> breakpoint_list,
+				gdbpy_borrowed_ref<> first_bp)
 {
   gdbpy_ref<> breakpoint_event_obj
     = create_stop_event_object (&breakpoint_event_object_type, dict);

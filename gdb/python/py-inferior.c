@@ -333,8 +333,7 @@ add_thread_object (struct thread_info *tp)
     return;
 
   gdbpy_ref<> event = create_thread_event_object
-    (&new_thread_event_object_type,
-     (PyObject *) ins_result.first->second.get ());
+    (&new_thread_event_object_type, ins_result.first->second);
 
   if (event == NULL
       || evpy_emit_event (event, gdb_py_events.new_thread) < 0)

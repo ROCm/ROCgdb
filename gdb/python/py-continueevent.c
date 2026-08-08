@@ -36,7 +36,7 @@ create_continue_event_object (ptid_t ptid)
     return nullptr;
 
   return create_thread_event_object (&continue_event_object_type,
-				     py_thr.get ());
+				     py_thr);
 }
 
 /* Callback function which notifies observers when a continue event occurs.

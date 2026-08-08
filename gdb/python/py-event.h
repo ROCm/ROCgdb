@@ -74,7 +74,7 @@ extern gdbpy_ref<> create_event_object (PyTypeObject *py_type);
 extern gdbpy_ref<> py_get_event_thread (ptid_t ptid);
 
 extern gdbpy_ref<> create_thread_event_object (PyTypeObject *py_type,
-					       PyObject *thread);
+					       gdbpy_borrowed_ref<> thread);
 
 extern int emit_new_objfile_event (struct objfile *objfile);
 extern int emit_free_objfile_event (struct objfile *objfile);

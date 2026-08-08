@@ -28,7 +28,7 @@ create_stop_event_object (PyTypeObject *py_type, const gdbpy_ref<> &dict)
   if (thread == nullptr)
     return nullptr;
 
-  gdbpy_ref<> result = create_thread_event_object (py_type, thread.get ());
+  gdbpy_ref<> result = create_thread_event_object (py_type, thread);
   if (result == nullptr)
     return nullptr;
 
