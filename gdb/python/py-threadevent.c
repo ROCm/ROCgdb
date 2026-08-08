@@ -45,9 +45,7 @@ create_thread_event_object (PyTypeObject *py_type, PyObject *thread)
   if (thread_event_obj == NULL)
     return NULL;
 
-  if (evpy_add_attribute (thread_event_obj.get (),
-			  "inferior_thread",
-			  thread) < 0)
+  if (evpy_add_attribute (thread_event_obj, "inferior_thread", thread) < 0)
     return NULL;
 
   return thread_event_obj;

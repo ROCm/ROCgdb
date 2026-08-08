@@ -605,7 +605,7 @@ gdbpy_tui_enabled (bool state)
     }
 
   gdbpy_ref<> code (PyBool_FromLong (state));
-  if (evpy_add_attribute (event_obj.get (), "enabled", code.get ()) < 0
+  if (evpy_add_attribute (event_obj, "enabled", code) < 0
       || evpy_emit_event (event_obj, gdb_py_events.tui_enabled) < 0)
     gdbpy_print_stack ();
 }

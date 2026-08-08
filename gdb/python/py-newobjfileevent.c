@@ -28,9 +28,8 @@ create_new_objfile_event_object (struct objfile *objfile)
     return NULL;
 
   gdbpy_ref<> py_objfile = objfile_to_objfile_object (objfile);
-  if (py_objfile == NULL || evpy_add_attribute (objfile_event.get (),
-						"new_objfile",
-						py_objfile.get ()) < 0)
+  if (py_objfile == nullptr
+      || evpy_add_attribute (objfile_event, "new_objfile", py_objfile) < 0)
     return NULL;
 
   return objfile_event;
@@ -65,8 +64,7 @@ create_free_objfile_event_object (struct objfile *objfile)
 
   gdbpy_ref<> py_objfile = objfile_to_objfile_object (objfile);
   if (py_objfile == nullptr
-      || evpy_add_attribute (objfile_event.get (), "objfile",
-			     py_objfile.get ()) < 0)
+      || evpy_add_attribute (objfile_event, "objfile", py_objfile) < 0)
     return nullptr;
 
   return objfile_event;
@@ -100,9 +98,8 @@ create_clear_objfiles_event_object (program_space *pspace)
     return NULL;
 
   gdbpy_ref<> py_progspace = pspace_to_pspace_object (pspace);
-  if (py_progspace == NULL || evpy_add_attribute (objfile_event.get (),
-						  "progspace",
-						  py_progspace.get ()) < 0)
+  if (py_progspace == nullptr
+      || evpy_add_attribute (objfile_event, "progspace", py_progspace) < 0)
     return NULL;
 
   return objfile_event;

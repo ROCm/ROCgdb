@@ -81,7 +81,7 @@ extern int emit_free_objfile_event (struct objfile *objfile);
 extern int emit_clear_objfiles_event (program_space *pspace);
 
 extern void evpy_dealloc (PyObject *self);
-extern int evpy_add_attribute (PyObject *event,
-			       const char *name, PyObject *attr);
+extern int evpy_add_attribute (gdbpy_borrowed_ref<> event,
+			       const char *name, gdbpy_borrowed_ref<> attr);
 
 #endif /* GDB_PYTHON_PY_EVENT_H */

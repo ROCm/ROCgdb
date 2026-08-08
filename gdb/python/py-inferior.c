@@ -255,8 +255,7 @@ python_new_inferior (struct inferior *inf)
 
   gdbpy_ref<> event = create_event_object (&new_inferior_event_object_type);
   if (event == NULL
-      || evpy_add_attribute (event.get (), "inferior",
-			     (PyObject *) inf_obj.get ()) < 0
+      || evpy_add_attribute (event, "inferior", inf_obj) < 0
       || evpy_emit_event (event, gdb_py_events.new_inferior) < 0)
     gdbpy_print_stack ();
 }
@@ -283,8 +282,7 @@ python_inferior_deleted (struct inferior *inf)
 
   gdbpy_ref<> event = create_event_object (&inferior_deleted_event_object_type);
   if (event == NULL
-      || evpy_add_attribute (event.get (), "inferior",
-			     (PyObject *) inf_obj.get ()) < 0
+      || evpy_add_attribute (event, "inferior", inf_obj) < 0
       || evpy_emit_event (event, gdb_py_events.inferior_deleted) < 0)
     gdbpy_print_stack ();
 }
@@ -1037,9 +1035,9 @@ python_context_changed (user_selected_what selection)
   gdbpy_ref<> event
     = create_event_object (&selected_context_event_object_type);
   if (event == nullptr
-      || evpy_add_attribute (event.get (), "inferior", inf_obj.get ()) < 0
-      || evpy_add_attribute (event.get (), "thread", thr_obj.get ()) < 0
-      || evpy_add_attribute (event.get (), "frame", frame_obj.get ()) < 0
+      || evpy_add_attribute (event, "inferior", inf_obj) < 0
+      || evpy_add_attribute (event, "thread", thr_obj) < 0
+      || evpy_add_attribute (event, "frame", frame_obj) < 0
       || evpy_emit_event (event, gdb_py_events.selected_context) < 0)
     gdbpy_print_stack ();
 }

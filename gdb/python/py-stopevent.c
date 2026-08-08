@@ -32,7 +32,7 @@ create_stop_event_object (PyTypeObject *py_type, const gdbpy_ref<> &dict)
   if (result == nullptr)
     return nullptr;
 
-  if (evpy_add_attribute (result.get (), "details", dict.get ()) < 0)
+  if (evpy_add_attribute (result, "details", dict) < 0)
     return nullptr;
 
   return result;

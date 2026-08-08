@@ -2500,7 +2500,7 @@ emit_exiting_event (int exit_code)
     return -1;
 
   gdbpy_ref<> code = gdb_py_object_from_longest (exit_code);
-  if (evpy_add_attribute (event_obj.get (), "exit_code", code.get ()) < 0)
+  if (evpy_add_attribute (event_obj, "exit_code", code) < 0)
     return -1;
 
   return evpy_emit_event (event_obj, gdb_py_events.gdb_exiting);

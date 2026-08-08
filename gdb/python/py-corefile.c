@@ -342,8 +342,7 @@ emit_corefile_changed_event (inferior *inf)
 
   gdbpy_ref<inferior_object> inf_obj = inferior_to_inferior_object (inf);
   if (inf_obj == nullptr
-      || evpy_add_attribute (event_obj.get (), "inferior",
-			     inf_obj.get ()) < 0)
+      || evpy_add_attribute (event_obj, "inferior", inf_obj) < 0)
     return -1;
 
   return evpy_emit_event (event_obj, gdb_py_events.corefile_changed);

@@ -32,12 +32,9 @@ create_breakpoint_event_object (const gdbpy_ref<> &dict,
   if (breakpoint_event_obj == NULL)
     return NULL;
 
-  if (evpy_add_attribute (breakpoint_event_obj.get (),
-			  "breakpoint",
-			  first_bp) < 0)
+  if (evpy_add_attribute (breakpoint_event_obj, "breakpoint", first_bp) < 0)
     return NULL;
-  if (evpy_add_attribute (breakpoint_event_obj.get (),
-			  "breakpoints",
+  if (evpy_add_attribute (breakpoint_event_obj, "breakpoints",
 			  breakpoint_list) < 0)
     return NULL;
 

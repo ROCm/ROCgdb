@@ -638,14 +638,12 @@ emit_executable_changed_event (eventregistry_object *registry,
 
   gdbpy_ref<> py_pspace = pspace_to_pspace_object (pspace);
   if (py_pspace == nullptr
-      || evpy_add_attribute (event_obj.get (), "progspace",
-			     py_pspace.get ()) < 0)
+      || evpy_add_attribute (event_obj, "progspace", py_pspace) < 0)
     return -1;
 
   gdbpy_ref<> py_reload_p (PyBool_FromLong (reload_p ? 1 : 0));
   if (py_reload_p == nullptr
-      || evpy_add_attribute (event_obj.get (), "reload",
-			     py_reload_p.get ()) < 0)
+      || evpy_add_attribute (event_obj, "reload", py_reload_p) < 0)
     return -1;
 
   return evpy_emit_event (event_obj, registry);
@@ -706,8 +704,7 @@ gdbpy_program_space_event (program_space *pspace, bool adding_p)
 
   gdbpy_ref<> event = create_event_object (event_type);
   if (event == nullptr
-      || evpy_add_attribute (event.get (), "progspace",
-			     pspace_obj.get ()) < 0
+      || evpy_add_attribute (event, "progspace", pspace_obj) < 0
       || evpy_emit_event (event, registry) < 0)
     gdbpy_print_stack ();
 }

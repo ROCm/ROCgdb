@@ -143,7 +143,7 @@ emit_connection_event (process_stratum_target *target,
     return -1;
 
   gdbpy_ref<> conn = target_to_connection_object (target);
-  if (evpy_add_attribute (event_obj.get (), "connection", conn.get ()) < 0)
+  if (evpy_add_attribute (event_obj, "connection", conn) < 0)
     return -1;
 
   return evpy_emit_event (event_obj, registry);
