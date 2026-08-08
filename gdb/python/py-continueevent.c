@@ -51,6 +51,6 @@ emit_continue_event (ptid_t ptid)
 
   gdbpy_ref<> event = create_continue_event_object (ptid);
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.cont);
+    return evpy_emit_event (event, gdb_py_events.cont);
   return -1;
 }

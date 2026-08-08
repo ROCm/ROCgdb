@@ -2503,7 +2503,7 @@ emit_exiting_event (int exit_code)
   if (evpy_add_attribute (event_obj.get (), "exit_code", code.get ()) < 0)
     return -1;
 
-  return evpy_emit_event (event_obj.get (), gdb_py_events.gdb_exiting);
+  return evpy_emit_event (event_obj, gdb_py_events.gdb_exiting);
 }
 
 /* Callback for the gdb_exiting observable.  EXIT_CODE is the value GDB

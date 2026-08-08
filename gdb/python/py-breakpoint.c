@@ -1270,8 +1270,7 @@ gdbpy_breakpoint_created (struct breakpoint *bp)
 
   if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_created))
     {
-      if (evpy_emit_event ((PyObject *) newbp,
-			   gdb_py_events.breakpoint_created) < 0)
+      if (evpy_emit_event (newbp, gdb_py_events.breakpoint_created) < 0)
 	gdbpy_print_stack ();
     }
 }
@@ -1299,7 +1298,7 @@ gdbpy_breakpoint_deleted (struct breakpoint *b)
 
 	  if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_deleted))
 	    {
-	      if (evpy_emit_event ((PyObject *) bp_obj.get (),
+	      if (evpy_emit_event (bp_obj,
 				   gdb_py_events.breakpoint_deleted) < 0)
 		gdbpy_print_stack ();
 	    }

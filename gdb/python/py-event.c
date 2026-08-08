@@ -62,7 +62,7 @@ gdbpy_initialize_event ()
    returns 0 if emit is successful -1 otherwise.  */
 
 int
-evpy_emit_event (PyObject *event,
+evpy_emit_event (gdbpy_opt_borrowed_ref<> event,
 		 eventregistry_object *registry)
 {
   Py_ssize_t i;
@@ -82,8 +82,11 @@ evpy_emit_event (PyObject *event,
       if (func == NULL)
 	return -1;
 
-      gdbpy_ref<> func_result (PyObject_CallFunctionObjArgs (func, event,
-							     NULL));
+      /* This local exists so we don't pass an object through
+	 '...'.  */
+      PyObject *ev = event;
+      gdbpy_ref<> func_result (PyObject_CallFunctionObjArgs (func, ev,
+							     nullptr));
 
       if (func_result == NULL)
 	{

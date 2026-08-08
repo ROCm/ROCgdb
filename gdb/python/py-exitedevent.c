@@ -59,7 +59,7 @@ emit_exited_event (const LONGEST *exit_code, struct inferior *inf)
   gdbpy_ref<> event = create_exited_event_object (exit_code, inf);
 
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.exited);
+    return evpy_emit_event (event, gdb_py_events.exited);
 
   return -1;
 }

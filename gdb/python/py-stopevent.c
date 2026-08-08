@@ -169,5 +169,5 @@ emit_stop_event (struct bpstat *bs, enum gdb_signal stop_signal)
 	return -1;
     }
 
-  return evpy_emit_event (stop_event_obj.get (), gdb_py_events.stop);
+  return evpy_emit_event (stop_event_obj, gdb_py_events.stop);
 }

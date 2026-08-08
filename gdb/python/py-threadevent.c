@@ -71,5 +71,5 @@ emit_thread_exit_event (thread_info * thread)
   if (inf_thr == nullptr)
     return -1;
 
-  return evpy_emit_event (inf_thr.get (), gdb_py_events.thread_exited);
+  return evpy_emit_event (inf_thr, gdb_py_events.thread_exited);
 }

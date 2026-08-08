@@ -48,7 +48,7 @@ emit_new_objfile_event (struct objfile *objfile)
 
   gdbpy_ref<> event = create_new_objfile_event_object (objfile);
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.new_objfile);
+    return evpy_emit_event (event, gdb_py_events.new_objfile);
   return -1;
 }
 
@@ -85,7 +85,7 @@ emit_free_objfile_event (struct objfile *objfile)
   gdbpy_ref<> event = create_free_objfile_event_object (objfile);
   if (event == nullptr)
     return -1;
-  return evpy_emit_event (event.get (), gdb_py_events.free_objfile);
+  return evpy_emit_event (event, gdb_py_events.free_objfile);
 }
 
 
@@ -121,6 +121,6 @@ emit_clear_objfiles_event (program_space *pspace)
 
   gdbpy_ref<> event = create_clear_objfiles_event_object (pspace);
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.clear_objfiles);
+    return evpy_emit_event (event, gdb_py_events.clear_objfiles);
   return -1;
 }

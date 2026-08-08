@@ -346,7 +346,7 @@ emit_corefile_changed_event (inferior *inf)
 			     inf_obj.get ()) < 0)
     return -1;
 
-  return evpy_emit_event (event_obj.get (), gdb_py_events.corefile_changed);
+  return evpy_emit_event (event_obj, gdb_py_events.corefile_changed);
 }
 
 /* Callback from gdb::observers::core_file_changed.  The core file for

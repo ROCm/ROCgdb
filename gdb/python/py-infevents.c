@@ -127,7 +127,7 @@ emit_inferior_call_event (inferior_call_kind flag, ptid_t thread,
 
   gdbpy_ref<> event = create_inferior_call_event_object (flag, thread, addr);
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.inferior_call);
+    return evpy_emit_event (event, gdb_py_events.inferior_call);
   return -1;
 }
 
@@ -142,7 +142,7 @@ emit_memory_changed_event (CORE_ADDR addr, ssize_t len)
 
   gdbpy_ref<> event = create_memory_changed_event_object (addr, len);
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.memory_changed);
+    return evpy_emit_event (event, gdb_py_events.memory_changed);
   return -1;
 }
 
@@ -157,6 +157,6 @@ emit_register_changed_event (const frame_info_ptr &frame, int regnum)
 
   gdbpy_ref<> event = create_register_changed_event_object (frame, regnum);
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.register_changed);
+    return evpy_emit_event (event, gdb_py_events.register_changed);
   return -1;
 }

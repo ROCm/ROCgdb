@@ -648,7 +648,7 @@ emit_executable_changed_event (eventregistry_object *registry,
 			     py_reload_p.get ()) < 0)
     return -1;
 
-  return evpy_emit_event (event_obj.get (), registry);
+  return evpy_emit_event (event_obj, registry);
 }
 
 /* Listener for the executable_changed observable, this is called when the
@@ -708,7 +708,7 @@ gdbpy_program_space_event (program_space *pspace, bool adding_p)
   if (event == nullptr
       || evpy_add_attribute (event.get (), "progspace",
 			     pspace_obj.get ()) < 0
-      || evpy_emit_event (event.get (), registry) < 0)
+      || evpy_emit_event (event, registry) < 0)
     gdbpy_print_stack ();
 }
 

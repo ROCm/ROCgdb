@@ -146,7 +146,7 @@ emit_connection_event (process_stratum_target *target,
   if (evpy_add_attribute (event_obj.get (), "connection", conn.get ()) < 0)
     return -1;
 
-  return evpy_emit_event (event_obj.get (), registry);
+  return evpy_emit_event (event_obj, registry);
 }
 
 /* Callback for the connection_removed observer.  */
