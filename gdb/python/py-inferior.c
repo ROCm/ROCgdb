@@ -296,8 +296,7 @@ thread_to_thread_object (thread_info *thr)
 
   auto thread_it = inf_obj->threads->find (thr);
   if (thread_it != inf_obj->threads->end ())
-    return gdbpy_ref<>::new_reference
-      ((PyObject *) (thread_it->second.get ()));
+    return gdbpy_ref<>::new_reference (thread_it->second.get ());
 
   PyErr_SetString (PyExc_SystemError,
 		   _("could not find gdb thread object"));
@@ -493,7 +492,7 @@ gdbpy_inferiors (PyObject *unused, PyObject *unused2)
       if (inferior == NULL)
 	continue;
 
-      if (PyList_Append (list.get (), (PyObject *) inferior.get ()) != 0)
+      if (PyList_Append (list.get (), inferior.get ()) != 0)
 	return NULL;
     }
 
@@ -985,8 +984,7 @@ infpy_dealloc (PyObject *obj)
 PyObject *
 gdbpy_selected_inferior (PyObject *self, PyObject *args)
 {
-  return ((PyObject *)
-	  inferior_to_inferior_object (current_inferior ()).release ());
+  return (inferior_to_inferior_object (current_inferior ()).release ());
 }
 
 /* Implement the selected_context event handler.  This is called when some

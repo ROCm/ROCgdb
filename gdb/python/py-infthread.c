@@ -48,7 +48,7 @@ create_thread_object (struct thread_info *tp)
     return nullptr;
 
   thread_obj->thread = tp;
-  thread_obj->inf_obj = (PyObject *) inf_obj.release ();
+  thread_obj->inf_obj = inf_obj.release ();
   if (!thread_obj->allocate_dict ())
     return nullptr;
 

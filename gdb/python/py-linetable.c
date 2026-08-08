@@ -113,7 +113,7 @@ build_linetable_entry (int line, CORE_ADDR address)
       obj->pc = address;
     }
 
-  return (PyObject *) obj;
+  return obj;
 }
 
 /* Internal helper function to build a Python Tuple from a vector.
@@ -350,7 +350,7 @@ ltpy_iter (PyObject *self)
   ltpy_iter_obj->source = self;
 
   Py_INCREF (self);
-  return (PyObject *) ltpy_iter_obj;
+  return ltpy_iter_obj;
 }
 
 static void

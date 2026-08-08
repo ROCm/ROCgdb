@@ -846,7 +846,7 @@ bppy_get_locations (PyObject *self, void *closure)
       Py_INCREF (self);
       py_bploc->owner = self_bp;
       py_bploc->bp_loc = ref.release ();
-      if (PyList_Append (list.get (), (PyObject *) py_bploc.get ()) != 0)
+      if (PyList_Append (list.get (), py_bploc.get ()) != 0)
 	return nullptr;
     }
   return list.release ();
@@ -1148,7 +1148,6 @@ gdbpy_breakpoint_cond_says_stop (const struct extension_language_defn *extlang,
 {
   int stop;
   struct gdbpy_breakpoint_object *bp_obj = b->py_bp_object;
-  PyObject *py_bp = (PyObject *) bp_obj;
 
   if (bp_obj == NULL)
     return EXT_LANG_BP_STOP_UNSET;
@@ -1160,9 +1159,9 @@ gdbpy_breakpoint_cond_says_stop (const struct extension_language_defn *extlang,
   if (bp_obj->is_finish_bp)
     bpfinishpy_pre_stop_hook (bp_obj);
 
-  if (PyObject_HasAttrString (py_bp, stop_func))
+  if (PyObject_HasAttrString (bp_obj, stop_func))
     {
-      gdbpy_ref<> result = gdbpy_call_method (py_bp, stop_func);
+      gdbpy_ref<> result = gdbpy_call_method (bp_obj, stop_func);
 
       stop = 1;
       if (result != NULL)
@@ -1197,15 +1196,11 @@ int
 gdbpy_breakpoint_has_cond (const struct extension_language_defn *extlang,
 			   struct breakpoint *b)
 {
-  PyObject *py_bp;
-
   if (b->py_bp_object == NULL)
     return 0;
 
-  py_bp = (PyObject *) b->py_bp_object;
-
   gdbpy_enter enter_py (b->gdbarch);
-  return PyObject_HasAttrString (py_bp, stop_func);
+  return PyObject_HasAttrString (b->py_bp_object, stop_func);
 }
 
 
@@ -1324,7 +1319,7 @@ gdbpy_breakpoint_modified (struct breakpoint *b)
     {
       gdbpy_enter enter_py (b->gdbarch);
 
-      PyObject *bp_obj = (PyObject *) bp->py_bp_object;
+      PyObject *bp_obj = bp->py_bp_object;
       if (bp_obj)
 	{
 	  if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_modified))
@@ -1612,7 +1607,7 @@ bplocpy_get_owner (PyObject *py_self, void *closure)
   BPPY_REQUIRE_VALID (self->owner);
   BPLOCPY_REQUIRE_VALID (self->owner, self);
   Py_INCREF (self->owner);
-  return (PyObject *) self->owner;
+  return self->owner;
 }
 
 /* Attempt to get fully resolved file path for symtab.  */

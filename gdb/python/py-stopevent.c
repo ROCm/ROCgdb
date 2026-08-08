@@ -123,8 +123,7 @@ emit_stop_event (struct bpstat *bs, enum gdb_signal stop_signal)
       if (current_bs->breakpoint_at
 	  && current_bs->breakpoint_at->py_bp_object)
 	{
-	  PyObject *current_py_bp =
-	      (PyObject *) current_bs->breakpoint_at->py_bp_object;
+	  PyObject *current_py_bp = current_bs->breakpoint_at->py_bp_object;
 
 	  if (list == NULL)
 	    {

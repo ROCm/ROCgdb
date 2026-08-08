@@ -197,7 +197,7 @@ btpy_list_new (thread_info *thread, Py_ssize_t first, Py_ssize_t last,
   obj->step = step;
   obj->element_type = element_type;
 
-  return (PyObject *) obj;
+  return obj;
 }
 
 /* Implementation of RecordInstruction.sal [gdb.Symtab_and_line] for btrace.

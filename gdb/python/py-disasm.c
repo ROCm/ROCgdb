@@ -282,7 +282,7 @@ disasm_info_init (PyObject *self, PyObject *args, PyObject *kwargs)
 
   /* As the OTHER object now holds a pointer to INFO we inc the ref count
      on INFO.  This stops INFO being deleted until OTHER has gone away.  */
-  Py_INCREF ((PyObject *) info);
+  Py_INCREF (info);
   return 0;
 }
 
@@ -296,7 +296,7 @@ disasm_info_dealloc (PyObject *self)
   /* We no longer care about the object our NEXT pointer points at, so we
      can decrement its reference count.  This macro handles the case when
      NEXT is nullptr.  */
-  Py_XDECREF ((PyObject *) obj->next);
+  Py_XDECREF (obj->next);
 
   /* Now core deallocation behavior.  */
   Py_TYPE (self)->tp_free (self);
@@ -354,7 +354,7 @@ make_disasm_text_part (std::string &&str, enum disassembler_style style)
   text_part->string = new std::string (str);
   text_part->style = style;
 
-  return gdbpy_ref<> ((PyObject *) text_part);
+  return gdbpy_ref<> (text_part);
 }
 
 /* Create a new DisassemblerAddressPart and return a gdbpy_ref wrapper for
@@ -370,7 +370,7 @@ make_disasm_addr_part (struct gdbarch *gdbarch, CORE_ADDR address)
   addr_part->address = address;
   addr_part->gdbarch = gdbarch;
 
-  return gdbpy_ref<> ((PyObject *) addr_part);
+  return gdbpy_ref<> (addr_part);
 }
 
 /* Ensure that a gdb.disassembler.DisassembleInfo is valid.  */
@@ -837,8 +837,7 @@ gdbpy_disassembler::read_memory_func (bfd_vma memaddr, gdb_byte *buff,
 
   /* Now call the DisassembleInfo.read_memory method.  This might have been
      overridden by the user.  */
-  gdbpy_ref<> result_obj = gdbpy_call_method ((PyObject *) obj, "read_memory",
-					      len, offset);
+  gdbpy_ref<> result_obj = gdbpy_call_method (obj, "read_memory", len, offset);
 
   /* Handle any exceptions.  */
   if (result_obj == nullptr)
@@ -1236,7 +1235,7 @@ gdbpy_print_insn (struct gdbarch *gdbarch, CORE_ADDR memaddr,
      disassembly.  */
   gdbpy_ref<> result
     (PyObject_CallFunctionObjArgs (hook.get (),
-				   (PyObject *) disasm_info.get (),
+				   disasm_info.get (),
 				   nullptr));
 
   if (result == nullptr)

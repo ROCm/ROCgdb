@@ -583,7 +583,7 @@ pspy_is_valid (PyObject *o, PyObject *args)
 gdbpy_ref<>
 pspace_to_pspace_object (struct program_space *pspace)
 {
-  PyObject *result = (PyObject *) pspy_pspace_data_key.get (pspace);
+  PyObject *result = pspy_pspace_data_key.get (pspace);
   if (result != nullptr)
     return gdbpy_ref<>::new_reference (result);
 

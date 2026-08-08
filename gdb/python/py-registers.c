@@ -244,7 +244,7 @@ gdbpy_new_reggroup_iterator (struct gdbarch *gdbarch)
     return NULL;
   iter->index = 0;
   iter->gdbarch = gdbarch;
-  return (PyObject *) iter;
+  return iter;
 }
 
 /* Create and return a new gdb.RegisterDescriptorIterator object which
@@ -286,7 +286,7 @@ gdbpy_new_register_descriptor_iterator (struct gdbarch *gdbarch,
   gdb_assert (grp != NULL);
   iter->reggroup = grp;
 
-  return (PyObject *) iter;
+  return iter;
 }
 
 /* Return a reference to the gdb.RegisterDescriptorIterator object.  */

@@ -98,7 +98,7 @@ blpy_iter (PyObject *self)
   Py_INCREF (self);
   block_iter_obj->source = (block_object *) self;
 
-  return (PyObject *) block_iter_obj;
+  return block_iter_obj;
 }
 
 static PyObject *

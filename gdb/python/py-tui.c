@@ -420,7 +420,7 @@ gdbpy_tui_window_maker::operator() (const char *win_name)
 
   gdbpy_ref<> user_window
     (PyObject_CallFunctionObjArgs (m_constr.get (),
-				   (PyObject *) wrapper.get (),
+				   wrapper.get (),
 				   nullptr));
   if (user_window == nullptr)
     {

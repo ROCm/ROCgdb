@@ -53,7 +53,7 @@ gdbpy_buffer_to_membuf (gdb::unique_xmalloc_ptr<gdb_byte> buffer,
   membuf_obj->addr = address;
   membuf_obj->length = length;
 
-  return PyMemoryView_FromObject ((PyObject *) membuf_obj.get ());
+  return PyMemoryView_FromObject (membuf_obj.get ());
 }
 
 /* Destructor for gdb.Membuf objects.  */

@@ -123,7 +123,7 @@ gdbpy_core_file_from_inferior (inferior *inf)
   if (get_inferior_core_bfd (inf) == nullptr)
     return py_none ();
 
-  PyObject *result = (PyObject *) cfpy_inferior_corefile_data_key.get (inf);
+  PyObject *result = cfpy_inferior_corefile_data_key.get (inf);
   if (result != nullptr)
     return gdbpy_ref<>::new_reference (result);
 
@@ -294,7 +294,7 @@ cfpy_mapped_files (PyObject *self, PyObject *args)
 
 	  /* Add to the gdb.CorefileMappedFileRegion list.  */
 	  if (PyTuple_SetItem (regions.get (), regions_idx++,
-			       (PyObject *) region_obj.release ()) < 0)
+			       region_obj.release ()) < 0)
 	    return nullptr;
 	}
 
@@ -313,7 +313,7 @@ cfpy_mapped_files (PyObject *self, PyObject *args)
 
       /* Add to the gdb.CorefileMappedFile list.  */
       if (PyTuple_SetItem (tuple.get (), tuple_idx++,
-			   (PyObject *) entry.release ()) < 0)
+			   entry.release ()) < 0)
 	return nullptr;
     }
 
