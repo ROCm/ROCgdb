@@ -265,7 +265,11 @@ proc gdb_compile {source dest type options} {
 
     set lang [hip_get_compile_language {$options}]
 
+    # Skip our overrides for host-only probe compilations done by
+    # find_amdgpu_devices.  Those pass hip_no_offload_arch to avoid
+    # calling hcc_amdgpu_targets recursively before its cache is set.
     if {[lsearch -exact $options getting_compiler_info] == -1
+	&& [lsearch -exact $options hip_no_offload_arch] == -1
 	&& !$calling_rocm_assemble
 	&& ($lang == "c" || $lang == "c++")} {
 
@@ -318,8 +322,17 @@ proc gdb_compile {source dest type options} {
 	    # ... because -x c++ would make Clang blindly treat the
 	    # input .o files as C++.
 	    #
+	    # Only remove "c++" when it is actually present.
 	    set idx [lsearch -exact $options "c++"]
-	    set options [lreplace $options $idx $idx]
+	    if {$idx != -1} {
+		set options [lreplace $options $idx $idx]
+	    }
+
+	    # Pass one --offload-arch flag per available GPU so the fat
+	    # binary contains a native code object for the machine.
+	    foreach gpu_target [hcc_amdgpu_targets] {
+		append hip_options " --offload-arch=$gpu_target"
+	    }
 
 	    # Since we wrap translation units with hip-test-wrapper.cc
 	    # when compiling C/C++ source files (see below), we can't
