@@ -1201,7 +1201,7 @@ gdb_test "finish" "Run till exit from.*convert_test.*" \
 gdb_test_no_output \
     "set \$r8 = 0" "set r8 for bmi test"
 gdb_test_no_output \
-    "set \$eax = 0x1312" "set eax for bmi test"
+    "set \$r12 = 0x1312" "set r12 for bmi test"
 gdb_test_no_output "set \$ebx = 0xdeadbeef" "set ebx for bmi test"
 gdb_test_no_output "set \$ecx = 0xcafeface" "set ecx for bmi test"
 gdb_test_no_output "set \$edx = 0x2337" "set edx for bmi test"
@@ -1213,7 +1213,7 @@ if {[record_full_function "bmi"] == true} {
 
     test_one_general_register "shrx" "ecx" "0xe884173"
     test_one_general_register "shlx" "ebx" "0x0"
-    test_one_general_register "sarx" "eax" "0x3"
+    test_one_general_register "sarx" "r12" "0x3"
     test_one_general_register "rorx" "ebx" "0x3b"
     test_one_general_register "pext" "ebx" "0x0"
     test_one_general_register "pdep" "ebx" "0x0"
@@ -1232,13 +1232,13 @@ if {[record_full_function "bmi"] == true} {
     test_one_general_register "blsr" "ecx" "0x2"
     test_one_general_register "blsr" "ebx" "0xffffffff"
 
-    test_one_general_register "blsmsk" "eax" "0x1312"
+    test_one_general_register "blsmsk" "r12" "0x1312"
     test_one_general_register "blsmsk" "ebx" "0x0"
 
     test_one_general_register "blsi" "r8" "0x0"
     test_one_general_register "blsi" "ecx" "0xdeadaced"
 
-    test_one_general_register "bextr" "eax" "0x1312"
+    test_one_general_register "bextr" "r12" "0x1312"
     test_one_general_register "bextr" "ebx" "0xdeadbeef"
 
     test_one_general_register "andn" "ecx" "0xcafeface"
