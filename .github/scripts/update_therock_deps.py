@@ -310,22 +310,38 @@ def run_update(dry_run: bool) -> str:
     commit, commit_date = get_therock_commit()
     build_digest, build_date = get_build_digest()
 
-    updated = render_ci_linux(content, commit, commit_date, build_digest, build_date)
-    if updated == content:
-        print("\nReferences already current; nothing to update.")
+    old_commit = old.get("commit")
+    old_digest = old.get("build_digest")
+    commit_changed = old_commit != commit
+    digest_changed = old_digest != build_digest
+
+    print("\n=== TheRock dependency update ===\n")
+    if commit_changed:
+        print(f"TheRock ref update:      {(old_commit or '?')[:12]} -> {commit[:12]}")
+    else:
+        print(f"TheRock ref:             unchanged ({commit[:12]})")
+    if digest_changed:
+        print(
+            f"Build container digest:  {(old_digest or '?')[:19]}... "
+            f"-> {build_digest[:19]}..."
+        )
+    else:
+        print(f"Build container digest:  unchanged ({build_digest[:19]}...)")
+
+    if not commit_changed and not digest_changed:
+        print("\nNo updates: TheRock ref and build container digest are both current.")
         summary("not-needed")
         return "not-needed"
 
-    print("\nUpdating references:")
-    if old.get("commit") != commit:
-        print(f"  commit:      {old.get('commit', '?')[:12]} -> {commit[:12]}")
-    if old.get("build_digest") != build_digest:
-        print(
-            f"  build image: {old.get('build_digest', '?')[:19]}... "
-            f"-> {build_digest[:19]}..."
-        )
+    updated = render_ci_linux(content, commit, commit_date, build_digest, build_date)
 
     if dry_run:
+        changes = []
+        if commit_changed:
+            changes.append("TheRock ref")
+        if digest_changed:
+            changes.append("build container digest")
+        print(f"\nDry run: would update {' and '.join(changes)}.")
         summary("dry-run")
         return "dry-run"
 
