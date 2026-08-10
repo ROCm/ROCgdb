@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # Copyright Advanced Micro Devices, Inc.
 # SPDX-License-Identifier: MIT
-"""Update TheRock references in ROCgdb's CI workflow.
+"""Update TheRock references in ROCgdb's CI dependency pin file.
 
 Fetches the latest TheRock commit and the latest therock_build_manylinux_x86_64
-container digest, updates .github/workflows/therock-ci-linux.yml, then pushes a
-branch and opens a ROCgdb PR labelled 'therock-deps'. If an update PR already
-carries that label, the run skips without touching git.
+container digest, updates .github/configs.json, then pushes a branch and
+opens a ROCgdb PR labelled 'therock-deps'. If an update PR already carries that
+label, the run skips without touching git.
 
 The test container is not updated here: it is pinned transitively through
-THEROCK_COMMIT_REF (TheRock's fetch_test_configurations.py supplies the test
+therock_commit_ref (TheRock's fetch_test_configurations.py supplies the test
 image), so bumping the commit ref updates it automatically.
 """
 
@@ -31,7 +31,7 @@ from pathlib import Path
 
 ROCGDB_REPO = "ROCm/ROCgdb"
 BASE_BRANCH = "amd-staging"
-CI_LINUX = Path(".github/workflows/therock-ci-linux.yml")
+CONFIG_FILE = Path(".github/configs.json")
 
 THEROCK_REPO_URL = "https://github.com/ROCm/TheRock.git"
 BUILD_IMAGE = "ghcr.io/rocm/therock_build_manylinux_x86_64"
@@ -186,50 +186,29 @@ def get_build_digest() -> tuple[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# File update
+# Dependency file read / write
 # ---------------------------------------------------------------------------
 
 
-def read_current(content: str) -> dict[str, str]:
-    """Extract the current commit ref and build digest from the CI workflow content."""
-    values: dict[str, str] = {}
-    commit = re.search(r"THEROCK_COMMIT_REF:\s+([0-9a-f]{40})", content)
-    if commit:
-        values["commit"] = commit.group(1)
-    digest = re.search(re.escape(BUILD_IMAGE) + r"@(sha256:[0-9a-f]{64})", content)
-    if digest:
-        values["build_digest"] = digest.group(1)
-    return values
+def read_deps() -> dict[str, str]:
+    """Read and return the current dependency pins from CONFIG_FILE."""
+    return json.loads(CONFIG_FILE.read_text())
 
 
-def render_ci_linux(
-    content: str, commit: str, commit_date: str, build_digest: str, build_date: str
-) -> str:
-    """Return updated content for the CI workflow.
-
-    Pure: does not write to disk. Raises if either expected pattern is not found.
-    """
-    updated, n = re.subn(
-        r"THEROCK_COMMIT_REF: .* # .*",
-        f"THEROCK_COMMIT_REF: {commit} # {commit_date}",
-        content,
-    )
-    if n != 1:
-        raise ValueError(
-            f"Expected exactly 1 match for THEROCK_COMMIT_REF pattern, got {n}. "
-            "Check that the line has a trailing '# date' comment."
-        )
-    updated, n = re.subn(
-        re.escape(BUILD_IMAGE) + r"@sha256:[0-9a-f]+ # .*",
-        f"{BUILD_IMAGE}@{build_digest} # {build_date}",
-        updated,
-    )
-    if n != 1:
-        raise ValueError(
-            f"Expected exactly 1 match for build image pattern, got {n}. "
-            "Check that the line has a trailing '# date' comment."
-        )
-    return updated
+def write_deps(
+    pins: dict[str, str],
+    commit: str,
+    commit_date: str,
+    build_digest: str,
+    build_date: str,
+) -> None:
+    """Write updated dependency pins to CONFIG_FILE."""
+    updated = dict(pins)
+    updated["therock_commit_ref"] = commit
+    updated["therock_commit_date"] = commit_date
+    updated["build_image"] = f"{BUILD_IMAGE}@{build_digest}"
+    updated["build_image_date"] = build_date
+    CONFIG_FILE.write_text(json.dumps(updated, indent=2) + "\n")
 
 
 # ---------------------------------------------------------------------------
@@ -237,12 +216,13 @@ def render_ci_linux(
 # ---------------------------------------------------------------------------
 
 
-def build_commit_message(old: dict[str, str], commit: str, digest: str) -> str:
+def build_commit_message(pins: dict[str, str], commit: str, digest: str) -> str:
     lines = ["Update TheRock dependencies and container images", ""]
-    old_commit = old.get("commit")
+    old_commit = pins.get("therock_commit_ref")
     if old_commit and old_commit != commit:
         lines.append(f"commit: {old_commit[:12]} -> {commit[:12]}")
-    old_digest = old.get("build_digest")
+    old_image = pins.get("build_image", "")
+    old_digest = old_image.split("@", 1)[1] if "@" in old_image else ""
     if old_digest and old_digest != digest:
         lines.append(f"build image: {old_digest[:19]}... -> {digest[:19]}...")
     return "\n".join(lines)
@@ -252,9 +232,9 @@ def open_update_pr(branch: str, commit: str) -> str:
     title = f"Update TheRock dependencies ({date.today().isoformat()})"
     body = (
         "## Automated TheRock dependency update\n\n"
-        f"Bumps `THEROCK_COMMIT_REF` to `{commit[:12]}` and refreshes the "
+        f"Bumps `therock_commit_ref` to `{commit[:12]}` and refreshes the "
         "`therock_build_manylinux_x86_64` build container digest in "
-        "`.github/workflows/therock-ci-linux.yml`.\n\n"
+        "`.github/configs.json`.\n\n"
         "Opened automatically by the TheRock dependency update workflow. "
         "Please kick CI manually (close and reopen, or push an empty commit), "
         "then merge."
@@ -295,8 +275,8 @@ def summary(result: str, pr: str | None = None) -> None:
 
 
 def run_update(dry_run: bool) -> str:
-    if not CI_LINUX.exists():
-        raise FileNotFoundError(f"{CI_LINUX} not found; run from the repo root.")
+    if not CONFIG_FILE.exists():
+        raise FileNotFoundError(f"{CONFIG_FILE} not found; run from the repo root.")
 
     if not dry_run:
         existing = find_open_update_pr()
@@ -305,24 +285,24 @@ def run_update(dry_run: bool) -> str:
             summary("skipped-existing-pr", existing)
             return "skipped-existing-pr"
 
-    content = CI_LINUX.read_text()
-    old = read_current(content)
+    pins = read_deps()
     commit, commit_date = get_therock_commit()
     build_digest, build_date = get_build_digest()
 
-    old_commit = old.get("commit")
-    old_digest = old.get("build_digest")
+    old_commit = pins.get("therock_commit_ref", "")
+    old_image = pins.get("build_image", "")
+    old_digest = old_image.split("@", 1)[1] if "@" in old_image else ""
     commit_changed = old_commit != commit
     digest_changed = old_digest != build_digest
 
     print("\n=== TheRock dependency update ===\n")
     if commit_changed:
-        print(f"TheRock ref update:      {(old_commit or '?')[:12]} -> {commit[:12]}")
+        print(f"TheRock ref update:      {old_commit[:12]} -> {commit[:12]}")
     else:
         print(f"TheRock ref:             unchanged ({commit[:12]})")
     if digest_changed:
         print(
-            f"Build container digest:  {(old_digest or '?')[:19]}... "
+            f"Build container digest:  {old_digest[:19]}... "
             f"-> {build_digest[:19]}..."
         )
     else:
@@ -332,8 +312,6 @@ def run_update(dry_run: bool) -> str:
         print("\nNo updates: TheRock ref and build container digest are both current.")
         summary("not-needed")
         return "not-needed"
-
-    updated = render_ci_linux(content, commit, commit_date, build_digest, build_date)
 
     if dry_run:
         changes = []
@@ -346,11 +324,11 @@ def run_update(dry_run: bool) -> str:
         return "dry-run"
 
     branch = f"{BRANCH_PREFIX}-{commit_date}-{commit[:8]}"
-    message = build_commit_message(old, commit, build_digest)
+    message = build_commit_message(pins, commit, build_digest)
 
     run(["git", "checkout", "-B", branch])
-    CI_LINUX.write_text(updated)
-    run(["git", "add", str(CI_LINUX)])
+    write_deps(pins, commit, commit_date, build_digest, build_date)
+    run(["git", "add", str(CONFIG_FILE)])
     run(["git", "commit", "-m", message])
     run(["git", "push", "origin", branch])
 
@@ -361,13 +339,13 @@ def run_update(dry_run: bool) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Update TheRock references in ROCgdb's CI workflow."
+        description="Update TheRock references in ROCgdb's CI dependency pin file."
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Fetch and update the file, print the diff, but skip branch, "
-        "commit, push and PR creation.",
+        help="Fetch and compute changes, print what would be updated, but skip "
+        "branch, commit, push and PR creation.",
     )
     args = parser.parse_args()
 
