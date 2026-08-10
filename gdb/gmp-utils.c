@@ -39,6 +39,18 @@ gmp_string_printf (const char *fmt, ...)
   return str;
 }
 
+/* Meant to be used in debug sessions, so don't export it in a header file.  */
+extern void ATTRIBUTE_USED debug (const gdb_mpz &);
+
+/* Print VAL.  */
+
+void ATTRIBUTE_USED
+debug (const gdb_mpz &val)
+{
+  gdb_printf (gdb_stdlog, "%s\n", val.str ().c_str ());
+  gdb_flush (gdb_stdlog);
+}
+
 /* See gmp-utils.h.  */
 
 void

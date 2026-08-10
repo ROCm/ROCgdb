@@ -498,8 +498,9 @@ gdb::unique_xmalloc_ptr<char> gdbpy_parse_command_name
   (const char *name, struct cmd_list_element ***base_list,
    struct cmd_list_element **start_list,
    struct cmd_list_element **prefix_cmd = nullptr);
-PyObject *gdbpy_register_tui_window (PyObject *self, PyObject *args,
-				     PyObject *kw);
+
+void gdbpy_register_tui_window (gdbpy_borrowed_ref<> args,
+				gdbpy_opt_borrowed_ref<> kw);
 
 gdbpy_ref<> symtab_and_line_to_sal_object (struct symtab_and_line sal);
 gdbpy_ref<> symtab_to_symtab_object (struct symtab *symtab);
@@ -1386,5 +1387,8 @@ py_notimplemented ()
 #undef Py_RETURN_TRUE
 #undef Py_RETURN_FALSE
 #undef Py_RETURN_NOTIMPLEMENTED
+
+#include "py-wrappers.h"
+#include "py-safety.h"
 
 #endif /* GDB_PYTHON_PYTHON_INTERNAL_H */

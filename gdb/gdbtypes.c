@@ -4092,7 +4092,6 @@ check_types_equal (struct type *type1, struct type *type2,
       || type1->endianity_is_not_default () != type2->endianity_is_not_default ()
       || type1->has_varargs () != type2->has_varargs ()
       || type1->is_vector () != type2->is_vector ()
-      || type1->is_nottext () != type2->is_nottext ()
       || type1->instance_flags () != type2->instance_flags ()
       || type1->num_fields () != type2->num_fields ())
     return false;
