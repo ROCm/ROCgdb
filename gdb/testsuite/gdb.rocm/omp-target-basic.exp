@@ -60,6 +60,10 @@ with_rocm_gpu_lock {
     # Still stopped at the first statement in the region (out_arr is
     # not written yet), so the data-sharing values are deterministic.
     with_test_prefix "locals" {
+	# The compiler emits unsigned long instead of int for the
+	# firstprivate argument variable.  The test may pass or fail
+	# depending on the surrounding values/memory.
+	setup_xfail "*-*-*"
 	gdb_test "print firstpriv_val" "= 42" "firstprivate value"
 	gdb_test "print in_arr\[0\]" "= 100" "mapped-to in_arr\[0\]"
 	gdb_test "print in_arr\[7\]" "= 107" "mapped-to in_arr\[7\]"
