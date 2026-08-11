@@ -50,7 +50,7 @@ jobs:
         github.event_name != 'pull_request' ||
         contains(github.event.pull_request.labels.*.name, 'ci:multi-arch')
       }}
-    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@63b9b0226dd017661e274187659ff24b5c00e625 # 2026-08-11
+    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@main
     permissions:
       contents: read
       actions: read
@@ -62,7 +62,7 @@ jobs:
       baseline_run_id: ${{ inputs.baseline_run_id || '' }}
       stage_reuse_mode: "reuse-stage"
       repository: ROCm/TheRock
-      ref: "63b9b0226dd017661e274187659ff24b5c00e625" # 2026-08-11
+      ref: "main"
       external_repo: '{"repository":"${{ github.repository }}","ref":"${{ github.sha }}","extra_cmake_options":"-DTHEROCK_USE_EXTERNAL_ROCGDB=ON"}'
 
   linux_build_and_test:
@@ -73,7 +73,7 @@ jobs:
         needs.setup.outputs.linux_build_config != '' &&
         needs.setup.outputs.enable_build_jobs == 'true'
       }}
-    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@63b9b0226dd017661e274187659ff24b5c00e625 # 2026-08-11
+    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@main
     secrets: inherit
     with:
       build_config: ${{ needs.setup.outputs.linux_build_config }}
@@ -82,7 +82,7 @@ jobs:
       test_type: ${{ needs.setup.outputs.test_type }}
       external_repo_config: ${{ needs.setup.outputs.external_repo_config }}
       repository: ROCm/TheRock
-      ref: "63b9b0226dd017661e274187659ff24b5c00e625" # 2026-08-11
+      ref: ${{ needs.setup.outputs.ref }}
     permissions:
       contents: read
       id-token: write
@@ -99,7 +99,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: "ROCm/TheRock"
-          ref: "63b9b0226dd017661e274187659ff24b5c00e625" # 2026-08-11
+          ref: ${{ needs.setup.outputs.ref }}
           sparse-checkout: build_tools/github_actions
           sparse-checkout-cone-mode: true
 
