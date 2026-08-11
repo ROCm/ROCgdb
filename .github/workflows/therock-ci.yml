@@ -1,10 +1,6 @@
 name: TheRock CI for rocgdb
 
 on:
-  push:
-    branches:
-      - amd-staging
-      - amd-staging-rocgdb-*
   pull_request:
     branches:
       - amd-staging
