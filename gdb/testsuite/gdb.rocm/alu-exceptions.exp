@@ -66,6 +66,8 @@ proc do_test { exception_name precise_alu_exceptions_supported } {
 
 	with_rocm_gpu_lock {
 	    gdb_test_no_output "set args $exception_name"
+	    # Prevent ROCr from generating a GPU core dump before calling abort.
+	    gdb_test_no_output "set environment HSA_DISABLE_COREDUMP_ON_EXCEPTION=1"
 	    if ![runto_main] {
 		return
 	    }
@@ -140,6 +142,8 @@ proc do_test { exception_name precise_alu_exceptions_supported } {
 	with_rocm_gpu_lock {
 	    gdb_test_no_output "set args $exception_name"
 	    gdb_test_no_output "set amdgpu precise-alu-exceptions on"
+	    # Prevent ROCr from generating a GPU core dump before calling abort.
+	    gdb_test_no_output "set environment HSA_DISABLE_COREDUMP_ON_EXCEPTION=1"
 	    if ![runto_main] {
 		return
 	    }
@@ -162,6 +166,8 @@ with_test_prefix "check_precise_alu_support" {
 
     with_rocm_gpu_lock {
 	gdb_test_no_output "set amdgpu precise-alu-exceptions on"
+	# Prevent ROCr from generating a GPU core dump before calling abort.
+	gdb_test_no_output "set environment HSA_DISABLE_COREDUMP_ON_EXCEPTION=1"
 	if ![runto_main] {
 	    return
 	}
