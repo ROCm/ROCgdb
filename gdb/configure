@@ -29315,8 +29315,8 @@ $as_echo "$ac_cv_guild_ok" >&6; }
 
     if test "$ac_cv_guild_ok" = no; then
     have_libguile=no
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: disabling guile support" >&5
-$as_echo "$as_me: WARNING: disabling guile support" >&2;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: disabling guile support, $GUILD fails compiling for $host" >&5
+$as_echo "$as_me: WARNING: disabling guile support, $GUILD fails compiling for $host" >&2;}
   fi
 fi
 
@@ -32080,8 +32080,8 @@ if test "$enable_binary_file_formats" != "all"; then
 	    # Do nothing.
 	    ;;
 	*)
-	    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: \"$req is required to support one or more requested targets.  Adding it\"" >&5
-$as_echo "$as_me: WARNING: \"$req is required to support one or more requested targets.  Adding it\"" >&2;}
+	    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $req is required to support one or more requested targets.  Adding it" >&5
+$as_echo "$as_me: WARNING: $req is required to support one or more requested targets.  Adding it" >&2;}
 	    enable_binary_file_formats="${enable_binary_file_formats},$req"
 	    ;;
 	esac
@@ -32101,9 +32101,9 @@ enable_binary_file_formats=$(echo $enable_binary_file_formats | sed 's/,/ /g')
 for format in $enable_binary_file_formats
 do
     if test "$format" = "elf" && test "$bfd_supports_elf" != "yes"; then
-	    as_fn_error but BFD does not support it." "\"elf support was requested" "$LINENO" 5;
+	    as_fn_error $? "ELF support was requested, but BFD does not support it" "$LINENO" 5
     elif test "$format" = "macho" && test "$bfd_supports_macho" != "yes"; then
-	    as_fn_error but BFD does not support it." "\"Mach-O support was requested" "$LINENO" 5;
+	    as_fn_error $? "Mach-O support was requested, but BFD does not support it" "$LINENO" 5
     fi
 
     if test "$format" = "all"; then
