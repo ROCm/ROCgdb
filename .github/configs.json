@@ -1,6 +1,12 @@
 {
   "therock_commit_ref": "2ee541083481e6c93f2ea811f212b61047980b1a",
   "therock_commit_date": "2026-07-30",
+  "therock_baseline_run_id": "",
+  "therock_baseline_run_ref": "",
+  "therock_baseline_run_date": "",
+  "therock_baseline_run_id_asan": "",
+  "therock_baseline_run_ref_asan": "",
+  "therock_baseline_run_date_asan": "",
   "build_image": "ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:8616d086df21bcc835aed5112ff0d878530a0cf5433f8f42c7b28b973a75bb19",
   "build_image_date": "2026-07-27"
 }

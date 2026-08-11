@@ -1,9 +1,8 @@
 name: Update TheRock Dependencies
 
 on:
-  # schedule: # runs twice daily (03:17 and 15:17 UTC)
-  #   - cron: '17 3 * * *'
-  #   - cron: '17 15 * * *'
+  schedule: # runs every 6 hours
+    - cron: '17 0,6,12,18 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
