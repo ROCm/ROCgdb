@@ -448,13 +448,6 @@ proc_with_prefix test_inferior_call {resolver_attr resolver_debug final_debug} {
        return
     }
 
-    # Without debug info for both the resolver and the resolved target,
-    # find_function_addr currently loses the synthetic return type after
-    # resolving the IFUNC.
-    if {!$resolver_debug && !$final_debug} {
-	unsupported "internal call resolves IFUNC malloc"
-	return
-    }
     gdb_test "print (get_string (\"hello-ifunc\"), str_in_arena ())" \
 	" = 1" \
 	"internal call resolves IFUNC malloc"

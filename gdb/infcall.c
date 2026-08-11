@@ -395,6 +395,9 @@ find_function_addr (struct value *function,
 	     FUNCTION_TYPE have been asked for.  */
 	  if (retval_type != NULL || function_type != NULL)
 	    {
+	      /* Default to original function type's return type.  Target type
+		 replaces this only if it provides a usable return type.  */
+	      value_type = ftype->target_type ();
 	      type *target_ftype = find_function_type (funaddr);
 	      /* If we don't have debug info for the target function,
 		 see if we can instead extract the target function's
@@ -403,8 +406,13 @@ find_function_addr (struct value *function,
 		target_ftype = find_gnu_ifunc_target_type (resolver_addr);
 	      if (target_ftype != NULL)
 		{
-		  value_type = check_typedef (target_ftype)->target_type ();
-		  ftype = target_ftype;
+		  type *target_value_type
+		    = check_typedef (target_ftype)->target_type ();
+		  if (target_value_type != nullptr)
+		    {
+		      value_type = target_value_type;
+		      ftype = target_ftype;
+		    }
 		}
 	    }
 	}
