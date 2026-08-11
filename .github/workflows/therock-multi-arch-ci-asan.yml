@@ -58,9 +58,10 @@ jobs:
       # targets gfx94X and gfx950 are selected to replicate the ASAN coverage in TheRock
       # as ASAN builds and tests require more resources, we only target these two architectures for the time being.
       linux_amdgpu_families: ${{ inputs.linux_amdgpu_families || 'gfx94X,gfx950' }}
-      linux_test_labels: ${{ inputs.linux_test_labels || '' }}
+      linux_test_labels: ${{ inputs.linux_test_labels || 'test:rocgdb' }}
       prebuilt_stages: ${{ inputs.prebuilt_stages || '' }}
       baseline_run_id: ${{ inputs.baseline_run_id || '' }}
+      stage_reuse_mode: "reuse-stage"
       repository: ROCm/TheRock
       ref: "63b9b0226dd017661e274187659ff24b5c00e625" # 2026-08-11
       external_repo: '{"repository":"${{ github.repository }}","ref":"${{ github.sha }}","extra_cmake_options":"-DTHEROCK_USE_EXTERNAL_ROCGDB=ON"}'
