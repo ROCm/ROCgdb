@@ -1,37 +1,93 @@
 # Copyright Advanced Micro Devices, Inc.
 # SPDX-License-Identifier: MIT
 
-# Nightly trigger for Multi-Arch CI
+# Multi-Arch Nightly CI for rocgdb
 #
-# This workflow triggers therock-multi-arch-ci.yml via workflow_dispatch
-# with specific GPU families. This is needed because TheRock's setup_multi_arch
-# workflow runs all families when triggered by schedule, ignoring inputs.
-# By using workflow_dispatch, TheRock respects our specified families.
+# Scheduled nightly release builds across gfx94X and gfx950.
+# For on-demand runs, use therock-multi-arch-ci.yml.
+#
+# The pinned TheRock ref is bumped explicitly via dedicated commits
+# whenever a newer TheRock baseline is needed.
 
-name: TheRock Multi-Arch CI Nightly Trigger
+name: TheRock Multi-Arch CI Nightly
 
 on:
   schedule:
     - cron: "0 7 * * *" # Runs nightly at 7 AM UTC
   pull_request:
     types: [labeled]
+  workflow_dispatch:
 
 permissions:
-  actions: write
   contents: read
+  actions: read
+
+concurrency:
+  # For scheduled runs, cancel any in-progress nightly so only one runs at a time.
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
 
 jobs:
-  multi-arch-ci-nightly-trigger:
+  setup:
     if: >-
       ${{
         github.event_name != 'pull_request' ||
         contains(github.event.pull_request.labels.*.name, 'ci:multi-arch-nightly')
       }}
-    runs-on: ubuntu-latest
+    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@63b9b0226dd017661e274187659ff24b5c00e625 # 2026-08-11
+    permissions:
+      contents: read
+      actions: read
+    with:
+      build_variant: "release"
+      linux_amdgpu_families: "gfx94X,gfx950"
+      linux_test_labels: "test:rocgdb"
+      stage_reuse_mode: "reuse-stage"
+      repository: ROCm/TheRock
+      ref: "63b9b0226dd017661e274187659ff24b5c00e625" # 2026-08-11
+      external_repo: '{"repository":"${{ github.repository }}","ref":"${{ github.sha }}","extra_cmake_options":"-DTHEROCK_USE_EXTERNAL_ROCGDB=ON"}'
+
+  linux_build_and_test:
+    name: Linux::${{ fromJSON(needs.setup.outputs.linux_build_config || '{}').build_variant_label || 'skip' }}
+    needs: setup
+    if: >-
+      ${{
+        needs.setup.outputs.linux_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true'
+      }}
+    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@63b9b0226dd017661e274187659ff24b5c00e625 # 2026-08-11
+    secrets: inherit
+    with:
+      build_config: ${{ needs.setup.outputs.linux_build_config }}
+      test_labels: ${{ needs.setup.outputs.linux_test_labels }}
+      rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
+      test_type: ${{ needs.setup.outputs.test_type }}
+      external_repo_config: ${{ needs.setup.outputs.external_repo_config }}
+      repository: ROCm/TheRock
+      ref: "63b9b0226dd017661e274187659ff24b5c00e625" # 2026-08-11
+    permissions:
+      contents: read
+      id-token: write
+
+  multi_arch_ci_summary:
+    name: Multi-Arch CI Summary
+    if: always()
+    needs:
+      - setup
+      - linux_build_and_test
+    runs-on: ubuntu-24.04
     steps:
-      - name: Trigger Multi-Arch CI with specific GPU families
-        uses: benc-uk/workflow-dispatch@e2e5e9a103e331dad343f381a29e654aea3cf8fc # v1.2.4
+      - name: Checkout TheRock repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          workflow: therock-multi-arch-ci.yml
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || 'amd-staging' }}
-          inputs: '{ "linux_amdgpu_families": "gfx94X,gfx950" }'
+          repository: "ROCm/TheRock"
+          ref: "63b9b0226dd017661e274187659ff24b5c00e625" # 2026-08-11
+          sparse-checkout: build_tools/github_actions
+          sparse-checkout-cone-mode: true
+
+      - name: Evaluate workflow results
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python build_tools/github_actions/workflow_summary.py \
+            --needs-json '${{ toJSON(needs) }}'
