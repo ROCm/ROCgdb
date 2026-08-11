@@ -6,8 +6,8 @@
 # Scheduled nightly release builds across gfx94X and gfx950.
 # For on-demand runs, use therock-multi-arch-ci.yml.
 #
-# The pinned TheRock ref is bumped explicitly via dedicated commits
-# whenever a newer TheRock baseline is needed.
+# The TheRock ref and baseline run ID are read from .github/configs.json,
+# kept fresh by therock-deps-update.yml (runs every 6 hours).
 
 name: TheRock Multi-Arch CI Nightly
 
@@ -23,17 +23,60 @@ permissions:
   actions: read
 
 concurrency:
-  # For scheduled runs, cancel any in-progress nightly so only one runs at a time.
   group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
-  setup:
+  resolve:
+    name: Resolve TheRock pins
+    runs-on: ubuntu-24.04
     if: >-
       ${{
         github.event_name != 'pull_request' ||
         contains(github.event.pull_request.labels.*.name, 'ci:multi-arch-nightly')
       }}
+    outputs:
+      therock_ref: ${{ steps.pins.outputs.therock_ref }}
+      baseline_run_id: ${{ steps.pins.outputs.baseline_run_id }}
+      prebuilt_stages: ${{ steps.pins.outputs.prebuilt_stages }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/configs.json
+          sparse-checkout-cone-mode: false
+
+      - name: Read pins from configs.json
+        id: pins
+        run: |
+          python3 - <<'EOF'
+          import json, os, re, sys
+
+          SHA_RE = re.compile(r'^[0-9a-f]{40}$')
+          RUN_ID_RE = re.compile(r'^\d+$')
+          PREBUILT = "runtime-tests,wsl-rocdxg,math-libs,comm-libs,storage-libs,dctools-core,profiler-apps,cv-libs,media-libs"
+
+          d = json.load(open('.github/configs.json'))
+
+          ref = d.get('therock_commit_ref', '')
+          if not SHA_RE.match(ref):
+              print(f"ERROR: therock_commit_ref is not a valid SHA-40: {ref!r}", file=sys.stderr)
+              sys.exit(1)
+
+          run_id = d.get('therock_baseline_run_id', '')
+          if run_id and not RUN_ID_RE.match(run_id):
+              print(f"ERROR: therock_baseline_run_id is not a valid run ID: {run_id!r}", file=sys.stderr)
+              sys.exit(1)
+
+          out = os.environ['GITHUB_OUTPUT']
+          with open(out, 'a') as f:
+              f.write(f"therock_ref={ref}\n")
+              f.write(f"baseline_run_id={run_id}\n")
+              f.write(f"prebuilt_stages={PREBUILT if run_id else ''}\n")
+          EOF
+
+  setup:
+    needs: resolve
     uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@main
     permissions:
       contents: read
@@ -42,14 +85,15 @@ jobs:
       build_variant: "release"
       linux_amdgpu_families: "gfx94X,gfx950"
       linux_test_labels: "test:rocgdb"
-      stage_reuse_mode: "reuse-stage"
+      prebuilt_stages: ${{ needs.resolve.outputs.prebuilt_stages }}
+      baseline_run_id: ${{ needs.resolve.outputs.baseline_run_id }}
       repository: ROCm/TheRock
-      ref: "main"
+      ref: ${{ needs.resolve.outputs.therock_ref }}
       external_repo: '{"repository":"${{ github.repository }}","ref":"${{ github.sha }}","extra_cmake_options":"-DTHEROCK_USE_EXTERNAL_ROCGDB=ON"}'
 
   linux_build_and_test:
     name: Linux::${{ fromJSON(needs.setup.outputs.linux_build_config || '{}').build_variant_label || 'skip' }}
-    needs: setup
+    needs: [resolve, setup]
     if: >-
       ${{
         needs.setup.outputs.linux_build_config != '' &&
