@@ -48,7 +48,6 @@ jobs:
       matrix:
         amdgpu_family: [gfx94X-dcgpu]
     uses: ./.github/workflows/therock-ci-linux.yml
-    secrets: inherit
     with:
       amdgpu_families: ${{ matrix.amdgpu_family }}
       artifact_group: ${{ matrix.amdgpu_family }}
