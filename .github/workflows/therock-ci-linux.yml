@@ -26,11 +26,9 @@ jobs:
       therock_ref: ${{ steps.export-ref.outputs.therock_ref }}
     container:
       image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:8616d086df21bcc835aed5112ff0d878530a0cf5433f8f42c7b28b973a75bb19 # 2026-07-27
-      options: -v /runner/config:/home/awsconfig/
     env:
       AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
       TEATIME_FORCE_INTERACTIVE: 0
-      AWS_SHARED_CREDENTIALS_FILE: /home/awsconfig/credentials.ini
       CACHE_DIR: ${{ github.workspace }}/.container-cache
       CCACHE_CONFIGPATH: ${{ github.workspace }}/.ccache/ccache.conf
 
@@ -126,7 +124,7 @@ jobs:
             --stage all
 
       - name: Post Build Upload
-        if: always()
+        if: always() && !github.event.pull_request.head.repo.fork
         run: |
           python3 build_tools/github_actions/post_build_upload.py \
             --run-id ${{ github.run_id }} \
@@ -139,7 +137,6 @@ jobs:
     if: ${{ inputs.amdgpu_families == 'gfx94X-dcgpu' }}
     needs: [therock-build-linux]
     uses: ./.github/workflows/therock-test-packages.yml
-    secrets: inherit
     with:
       amdgpu_families: ${{ inputs.amdgpu_families }}
       artifact_group: ${{ inputs.artifact_group }}
