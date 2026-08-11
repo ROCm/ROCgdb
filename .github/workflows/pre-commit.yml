@@ -5,7 +5,6 @@ name: pre-commit
 
 on:
   pull_request:
-  push:
     branches:
       - amd-staging
       - 'amd-staging-rocgdb-*'
@@ -24,12 +23,7 @@ jobs:
       - name: Determine base ref
         id: base-ref
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_REF="${{ github.event.pull_request.base.ref }}"
-          else
-            # For push events, use the current branch name
-            BASE_REF="${{ github.ref_name }}"
-          fi
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
           echo "base_ref=${BASE_REF}" >> $GITHUB_OUTPUT
           echo "Base ref: ${BASE_REF}"
 
