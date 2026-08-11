@@ -138,6 +138,11 @@ find_function_in_inferior (const char *name, struct objfile **objf_p)
 	  type = lookup_function_type (type);
 	  type = lookup_pointer_type (type);
 	  maddr = msymbol.value_address ();
+	  minimal_symbol_type minsym_type = msymbol.minsym->type ();
+
+	  if (minsym_type == mst_text_gnu_ifunc
+	      || minsym_type == mst_data_gnu_ifunc)
+	    type->target_type ()->set_is_gnu_ifunc (true);
 
 	  if (objf_p)
 	    *objf_p = objfile;

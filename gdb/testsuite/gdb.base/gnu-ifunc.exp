@@ -25,6 +25,13 @@ set libsrc ${libfile}.c
 set final_file "${testfile}-final"
 set final_src ${final_file}.c
 
+set infcall_file "${testfile}-inferior-call"
+set infcall_src ${infcall_file}.c
+set infcall_resolver_file "${testfile}-inferior-call-resolver"
+set infcall_resolver_src ${infcall_resolver_file}.c
+set infcall_final_file "${testfile}-inferior-call-final"
+set infcall_final_src ${infcall_final_file}.c
+
 # Return the binary suffix appended to program and library names to
 # make each testcase variant unique.
 proc make_binsuffix {resolver_attr resolver_debug final_debug} {
@@ -356,6 +363,103 @@ proc misc_tests {resolver_attr resolver_debug final_debug} {
     }
 }
 
+# Test that GDB resolves a GNU IFUNC minimal symbol when it uses
+# find_function_in_inferior to make an internal inferior call.  String
+# literals are copied into the inferior with a call to malloc, so an
+# IFUNC malloc exercises this path.
+
+proc_with_prefix test_inferior_call {resolver_attr resolver_debug final_debug} {
+    global srcdir subdir
+    global infcall_file infcall_src
+    global infcall_resolver_file infcall_resolver_src
+    global infcall_final_file infcall_final_src
+
+    set suffix [make_binsuffix $resolver_attr $resolver_debug $final_debug]
+    set executable ${infcall_file}-$suffix
+    set binfile [standard_output_file $executable]
+    set infcall_lib_so [standard_output_file ${infcall_file}-$suffix.so]
+    set resolver_obj [standard_output_file ${infcall_resolver_file}-$suffix.o]
+    set final_obj [standard_output_file ${infcall_final_file}-$suffix.o]
+
+    set resolver_opts {additional_flags=-fno-builtin-malloc additional_flags=-fpic}
+    set final_opts {additional_flags=-fpic}
+    set shlib_opts {ldflags=-Wl,-z,lazy}
+    set exec_opts [list debug shlib=$infcall_lib_so]
+    lappend exec_opts "ldflags=-Wl,-z,lazy"
+
+    if {$resolver_attr} {
+	lappend resolver_opts "additional_flags=-DIFUNC_RESOLVER_ATTR"
+    }
+
+    if {$resolver_debug} {
+	lappend resolver_opts "debug"
+    }
+
+    if {$final_debug} {
+	lappend final_opts "debug"
+    }
+
+    if { [gdb_compile ${srcdir}/${subdir}/${infcall_resolver_src} \
+	      $resolver_obj object $resolver_opts] != ""
+	 || [gdb_compile ${srcdir}/${subdir}/${infcall_final_src} \
+		 $final_obj object $final_opts] != ""
+	 || [gdb_compile_shlib [list $resolver_obj $final_obj] \
+		 $infcall_lib_so $shlib_opts] != ""
+	 || [gdb_compile ${srcdir}/${subdir}/${infcall_src} \
+		 $binfile executable $exec_opts] != "" } {
+	untested "failed to compile inferior call testcase"
+	return
+    }
+
+    clean_restart $executable
+    gdb_load_shlib $infcall_lib_so
+    if {![runto_main]} {
+	return
+    }
+
+    set malloc_addr {}
+    gdb_test_multiple "pipe maint print msymbols | grep \" malloc \"" \
+	"look for malloc msyms" {
+	-re "($::hex) malloc section \[^\r\n\]+\r\n" {
+	    lappend malloc_addr $expect_out(1,string)
+	    exp_continue
+	}
+
+	-re "$::gdb_prompt $" {
+	    gdb_assert {[llength $malloc_addr] > 0} \
+	       "found at least one malloc symbol"
+	}
+    }
+
+    set found_correct_malloc false
+    set first_addr [lindex $malloc_addr 0]
+    set infcall_lib_tail [file tail $infcall_lib_so]
+    gdb_test_multiple "info symbol $first_addr" "check first malloc symbol" {
+	-re -wrap " in section \[^\r\n\]+ of \[^\r\n\]+/$infcall_lib_tail" {
+	    set found_correct_malloc true
+	}
+
+	-re -wrap " in section \[^\r\n\]+" {
+	    # Nothing to do.
+	}
+    }
+    if { !$found_correct_malloc } {
+       unsupported "found some other malloc symbol"
+       return
+    }
+
+    # Without debug info for both the resolver and the resolved target,
+    # find_function_addr currently loses the synthetic return type after
+    # resolving the IFUNC.
+    if {!$resolver_debug && !$final_debug} {
+	unsupported "internal call resolves IFUNC malloc"
+	return
+    }
+    gdb_test "print (get_string (\"hello-ifunc\"), str_in_arena ())" \
+	" = 1" \
+	"internal call resolves IFUNC malloc"
+}
+
 # Test all the combinations of:
 #
 # - An ifunc resolver with the same name as the ifunc symbol vs an
@@ -374,6 +478,7 @@ foreach_with_prefix resolver_attr {0 1} {
 	    if { [build $resolver_attr $resolver_debug $final_debug] != 0 } {
 		misc_tests $resolver_attr $resolver_debug $final_debug
 		set-break $resolver_attr $resolver_debug $final_debug
+		test_inferior_call $resolver_attr $resolver_debug $final_debug
 	    }
 	}
     }
