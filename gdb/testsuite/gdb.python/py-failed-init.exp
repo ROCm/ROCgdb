@@ -24,8 +24,14 @@ save_vars { env(PYTHONHOME) } {
 gdb_test "python print (1)" \
     "Python not initialized"
 
+set output_seen 0
 gdb_test_multiple "quit" "" {
+    -re ^quit\r\n {
+	exp_continue
+    }
     eof {
+	set output_seen [expr [string length $expect_out(buffer)] != 0]
 	pass $gdb_test_name
     }
 }
+gdb_assert {!$output_seen} "no output after quit"

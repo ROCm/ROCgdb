@@ -383,6 +383,10 @@ eval_python_command (const char *command, int start_symbol,
 static void
 python_interactive_command (const char *arg, int from_tty)
 {
+  if (!gdbpy_import_readline_disabled ())
+    error (_("Disabling import readline failed, \"%ps\" command disabled"),
+	   styled_string (command_style.style (), "python-interactive"));
+
   struct ui *ui = current_ui;
   int err;
 
