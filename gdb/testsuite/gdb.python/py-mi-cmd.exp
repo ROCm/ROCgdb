@@ -68,10 +68,19 @@ mi_gdb_test "-pycmd bk2" \
     "\\^error,msg=\"Error occurred in Python: non-string object used as key: 1\"" \
     "-pycmd bk2"
 
+set re_msg \
+    [string cat \
+	 "(" \
+	 [string_to_regexp {__repr__ returned non-string (type BadKey)}] \
+	 "|" \
+	 [string_to_regexp \
+	      {ReallyBadKey.__repr__() must return a str, not BadKey}] \
+	 ")"]
 mi_gdb_test "-pycmd bk3" \
-    [multi_line \
-	 "&\"TypeError.*: __repr__ returned non-string \\(type BadKey\\)..\"" \
-	 "\\^error,msg=\"Error occurred in Python: __repr__ returned non-string \\(type BadKey\\)\""] \
+    [subst_vars \
+	 [multi_line \
+	      {&"TypeError.*: $re_msg\\n"} \
+	      {\^error,msg="Error occurred in Python: $re_msg"}]] \
     "-pycmd bk3"
 
 mi_gdb_test "-pycmd tpl" \
