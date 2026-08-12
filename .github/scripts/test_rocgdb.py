@@ -329,6 +329,30 @@ def _timeout_value(value: str) -> int:
     return ivalue
 
 
+def _parallel_fraction(value: str) -> float:
+    """
+    Validate argument is a float in the range (0.0, 1.0].
+
+    Args:
+        value: String value from command line.
+
+    Returns:
+        Float fraction value.
+
+    Raises:
+        argparse.ArgumentTypeError: If value is not in (0.0, 1.0].
+    """
+    try:
+        fvalue = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a valid number")
+    if not (0.0 < fvalue <= 1.0):
+        raise argparse.ArgumentTypeError(
+            f"--fraction must be in the range (0.0, 1.0], got {fvalue}"
+        )
+    return fvalue
+
+
 def _positive_nonzero_int(value: str) -> int:
     """
     Validate argument is a positive non-zero integer.
@@ -370,6 +394,8 @@ def parse_arguments() -> argparse.Namespace:
   python %(prog)s --gpu-tests
   python %(prog)s --cpu-tests
   python %(prog)s --parallel
+  python %(prog)s --parallel -j4
+  python %(prog)s --parallel --fraction 0.5
   python %(prog)s --group-results
   python %(prog)s --default-timeout 300
   python %(prog)s --retry-timeout 600
@@ -437,14 +463,27 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--parallel", action="store_true", help="Run tests in parallel. Default is off."
     )
-    parser.add_argument(
+    parallel_jobs_group = parser.add_mutually_exclusive_group()
+    parallel_jobs_group.add_argument(
         "-j",
         "--jobs",
         type=_positive_nonzero_int,
         default=None,
         metavar="N",
         help="Number of parallel jobs for make (e.g., -j4). Only valid with --parallel. "
-        "If --parallel is used without -j, defaults to os.cpu_count().",
+        "Mutually exclusive with --fraction. "
+        "If --parallel is used without -j or --fraction, defaults to os.cpu_count().",
+    )
+    parallel_jobs_group.add_argument(
+        "-f",
+        "--fraction",
+        type=_parallel_fraction,
+        default=None,
+        metavar="F",
+        help="Fraction of os.cpu_count() to use as the number of parallel jobs "
+        "(e.g., 0.5 for half the CPUs). Must be in the range (0.0, 1.0]. "
+        "Only valid with --parallel. Mutually exclusive with -j/--jobs. "
+        "The resulting job count is max(1, int(cpu_count * F)).",
     )
     parser.add_argument(
         "--quiet",
@@ -618,10 +657,14 @@ def parse_arguments() -> argparse.Namespace:
     if args.timing_log_file is not None and not args.timing:
         _log_error_and_exit("--timing-log-file requires --timing.")
 
-    # Validate that -j/--jobs is only used with --parallel.
+    # Validate that -j/--jobs and --fraction are only used with --parallel.
     if args.jobs is not None and not args.parallel:
         _log_error_and_exit(
             "-j/--jobs can only be specified when --parallel is provided."
+        )
+    if args.fraction is not None and not args.parallel:
+        _log_error_and_exit(
+            "-f/--fraction can only be specified when --parallel is provided."
         )
 
     # Validate --one-by-one constraints.
@@ -1916,7 +1959,10 @@ def run_tests(
                 f"TESTS={' '.join(current_tests)}",
             ]
             if args.parallel:
-                jobs = args.jobs or os.cpu_count()
+                if args.fraction is not None:
+                    jobs = max(1, int(os.cpu_count() * args.fraction))
+                else:
+                    jobs = args.jobs or os.cpu_count()
                 cmd += ["FORCE_PARALLEL=1", f"-j{jobs}"]
 
             logger.info(
@@ -2927,10 +2973,13 @@ def print_configuration(
 
     if not args.parallel:
         parallel_info = "Disabled"
-    elif args.jobs is None:
-        parallel_info = f"Enabled ({os.cpu_count()} jobs, from cpu_count)"
-    else:
+    elif args.fraction is not None:
+        jobs = max(1, int(os.cpu_count() * args.fraction))
+        parallel_info = f"Enabled ({jobs} jobs, from {args.fraction} * cpu_count)"
+    elif args.jobs is not None:
         parallel_info = f"Enabled ({args.jobs} jobs)"
+    else:
+        parallel_info = f"Enabled ({os.cpu_count()} jobs, from cpu_count)"
 
     default_timeout_display = (
         f"{args.default_timeout} seconds"
