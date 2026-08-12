@@ -16,35 +16,67 @@ on:
 permissions:
   contents: read
 
-env:
-  THEROCK_COMMIT_REF: 2ee541083481e6c93f2ea811f212b61047980b1a # 2026-07-30
-
 jobs:
+  resolve:
+    name: Resolve TheRock references
+    runs-on: ubuntu-24.04
+    outputs:
+      commit: ${{ steps.read.outputs.commit }}
+      image: ${{ steps.read.outputs.image }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Read TheRock dependency pins
+        id: read
+        shell: bash
+        run: |
+          read -r commit image < <(python3 -c "
+import json, sys
+try:
+    with open('.github/configs.json') as f:
+        d = json.load(f)
+    print(d['therock_commit_ref'], d['build_image'])
+except FileNotFoundError:
+    print('configs.json not found', file=sys.stderr); sys.exit(1)
+except json.JSONDecodeError as e:
+    print(f'configs.json is not valid JSON: {e}', file=sys.stderr); sys.exit(1)
+except KeyError as e:
+    print(f'Missing key in configs.json: {e}', file=sys.stderr); sys.exit(1)
+") || { echo 'Failed to read configs.json' >&2; exit 1; }
+          if ! [[ "$commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid therock_commit_ref: $commit" >&2; exit 1
+          fi
+          if ! [[ "$image" =~ ^ghcr\.io/[^@]+@sha256:[0-9a-f]{64}$ ]]; then
+            echo "Invalid build_image: $image" >&2; exit 1
+          fi
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
   therock-build-linux:
     name: Build Linux Packages
+    needs: resolve
     runs-on: ${{ inputs.build_runs_on }}
     permissions:
+      contents: read
       id-token: write
     outputs:
-      therock_ref: ${{ steps.export-ref.outputs.therock_ref }}
+      therock_ref: ${{ needs.resolve.outputs.commit }}
     container:
-      image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:8616d086df21bcc835aed5112ff0d878530a0cf5433f8f42c7b28b973a75bb19 # 2026-07-27
+      image: ${{ needs.resolve.outputs.image }}
     env:
+      THEROCK_COMMIT_REF: ${{ needs.resolve.outputs.commit }}
       AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
       TEATIME_FORCE_INTERACTIVE: 0
       CACHE_DIR: ${{ github.workspace }}/.container-cache
       CCACHE_CONFIGPATH: ${{ github.workspace }}/.ccache/ccache.conf
 
     steps:
-      - name: Export TheRock ref
-        id: export-ref
-        run: echo "therock_ref=${{ env.THEROCK_COMMIT_REF }}" >> $GITHUB_OUTPUT
-
       - name: Checkout TheRock repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: "ROCm/TheRock"
-          ref: ${{ env.THEROCK_COMMIT_REF }}
+          ref: ${{ needs.resolve.outputs.commit }}
 
       - name: Checkout CI config
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
