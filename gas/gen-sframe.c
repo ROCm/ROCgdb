@@ -1362,31 +1362,23 @@ sframe_xlate_do_def_cfa_offset (struct sframe_xlate_ctx *xlate_ctx,
 
   gas_assert (cur_fre);
   /*  Define the current CFA rule to use the provided offset (but to keep
-      the old register).  However, if the old register is not FP/SP,
+      the old register).  However, if the old register is invalid,
       skip creating SFrame stack trace info for the function.  */
-  if (cur_cfa_reg == SFRAME_CFA_FP_REG || cur_cfa_reg == SFRAME_CFA_SP_REG)
+  if (cur_cfa_reg == SFRAME_FRE_REG_INVALID)
     {
-      if (sframe_fre_stack_offset_bound_p (cfi_insn->u.i, true))
-	{
-	  sframe_fre_set_cfa_offset (cur_fre, cfi_insn->u.i);
-	  cur_fre->merge_candidate = false;
-	}
-      else
-	{
-	  as_warn (_("no SFrame FDE emitted; "
-		     ".cfi_def_cfa_offset with unsupported offset value"));
-	  return SFRAME_XLATE_ERR_NOTREPRESENTED;
-	}
-    }
-  else
-    {
-      /* No CFA base register in effect.  Non-SP/FP CFA base register should
-	 not occur, as sframe_xlate_do_def_cfa[_register] would detect this.  */
       as_warn (_("no SFrame FDE emitted; "
 		 ".cfi_def_cfa_offset without CFA base register in effect"));
       return SFRAME_XLATE_ERR_NOTREPRESENTED;
     }
 
+  if (!sframe_fre_stack_offset_bound_p (cfi_insn->u.i, true))
+    {
+      as_warn (_("no SFrame FDE emitted; "
+		 ".cfi_def_cfa_offset with unsupported offset value"));
+      return SFRAME_XLATE_ERR_NOTREPRESENTED;
+    }
+
+  sframe_fre_set_cfa_offset (cur_fre, cfi_insn->u.i);
   return SFRAME_XLATE_OK;
 }
 
