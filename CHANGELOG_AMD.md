@@ -12,6 +12,10 @@ Full documentation for ROCgdb is available at
   See the "HIP Runtime Error" subsection of the "GDB/MI Catchpoint
   Commands" section in the ROCgdb manual.
 
+- The address space operator '#' is recognized in Fortran programs too.
+  This allows evaluating expressions like 'private_lane#0x08' in Fortran
+  applications that offload kernels to an AMD GPU.
+
 ## ROCgdb-16-3 for ROCm-7.14
 
 ### Added
