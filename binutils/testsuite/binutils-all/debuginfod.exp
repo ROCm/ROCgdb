@@ -113,11 +113,13 @@ while { ! $found } {
       set found 1
     }
     "Failed to bind to port" {
-      exec kill -INT -[exp_pid]
+      catch {exec kill -INT -[exp_pid]}
       catch {close}; catch {wait -i $spawn_id}
     }
     timeout {
       fail "$test (find port timeout)"
+      catch {exec kill -INT -[exp_pid]}
+      catch {close}; catch {wait -i $spawn_id}
       return
     }
   }
@@ -145,7 +147,7 @@ foreach m $metrics {
 
   if { $timelim == 0 } {
     fail "$test (server init timeout)"
-    exec kill -INT -[exp_pid]
+    catch {exec kill -INT -[exp_pid]}
     catch {close}; catch {wait -i $spawn_id}
     return
   }
