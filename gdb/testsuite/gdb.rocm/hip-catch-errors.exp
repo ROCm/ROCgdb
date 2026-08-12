@@ -197,10 +197,14 @@ proc check_hip_launch_kernel_err {cmd} {
 # using the test program.  Return false if anything goes wrong.
 
 proc_with_prefix preparation_test {} {
+    # The return statements below return to this level.  Hence keep
+    # the state in a variable.
+    set res false
+
     with_rocm_gpu_lock {
 	clean_restart ${::testfile}.dbg
 	if {![runto_main]} {
-	    return false
+	    return
 	}
 	gdb_test_multiple "info symbol __hipOnError" \
 	    "check if __hipOnError symbol exists" {
@@ -209,7 +213,7 @@ proc_with_prefix preparation_test {} {
 	    }
 	    -re -wrap ".*" {
 		unsupported "no __hipOnError symbol was found"
-		return false
+		return
 	    }
 	}
 
@@ -219,7 +223,7 @@ proc_with_prefix preparation_test {} {
 	    gdb_test_no_output "set args ref"
 	    if {![runto [gdb_get_line_number \
 			    "Break after reference initialization"]]} {
-		return false
+		return
 	    }
 	    set res [init_reference_hip_errors]
 	}
