@@ -1,0 +1,23 @@
+#source: reloc-abs.s
+#as: -mrelax
+#objdump: -dr
+
+#...
+.*R_LARCH_ADD16	\*ABS\*\+0x2eef
+.*R_LARCH_SUB16	.L1\^B1
+.*R_LARCH_ADD32	\*ABS\*\+0x2eef
+.*R_LARCH_SUB32	.L1\^B1
+.*R_LARCH_ADD64	\*ABS\*\+0x12345678
+.*R_LARCH_SUB64	.L1\^B1
+.*R_LARCH_ADD16	\*ABS\*\+0x2eef
+.*R_LARCH_SUB16	.L1\^B1
+.*R_LARCH_ADD32	\*ABS\*\+0x2eef
+.*R_LARCH_SUB32	.L1\^B1
+.*R_LARCH_ADD8	\*ABS\*\+0x2e
+.*R_LARCH_SUB8	.L1\^B1
+.*R_LARCH_ADD16	\*ABS\*\+0x2eef
+.*R_LARCH_SUB16	.L1\^B1
+.*R_LARCH_ADD32	\*ABS\*\+0x2eef
+.*R_LARCH_SUB32	.L1\^B1
+.*R_LARCH_ADD64	\*ABS\*\+0x12345678
+.*R_LARCH_SUB64	.L1\^B1
