@@ -454,7 +454,8 @@ no_emojis ()
    - uFE0F: Variation Selector-16 (VS16)
    The VS16 forces "Emoji" presentation.  It is needed because the default
    presentation for Warning Sign is "Text".  Together, we get: ⚠️ .  */
-static std::string warning_prefix = u8"\u26A0\uFE0F ";
+static std::string warning_prefix
+  = reinterpret_cast<const char *> (u8"\u26A0\uFE0F ");
 
 /* Implement 'show style warning-prefix'.  */
 
@@ -479,7 +480,8 @@ print_warning_prefix (ui_file *file)
    - u274C: Cross Mark: ❌
    No VS16 is needed because the default presentation for Cross Mark is
    "Emoji".  */
-static std::string error_prefix = u8"\u274C ";
+static std::string error_prefix
+  = reinterpret_cast<const char *> (u8"\u274C ");
 
 /* Implement 'show style error-prefix'.  */
 
