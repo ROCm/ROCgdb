@@ -1556,12 +1556,12 @@ md_number_to_chars (char *buf, valueT val, int n)
   number_to_chars_littleendian (buf, val, n);
 }
 
-/* The location from which a PC relative jump should be calculated,
-   given a PC relative reloc.  */
+/* On LoongArch, PC-relative offset are relative to the start of the
+   current instruction.  */
 long
 md_pcrel_from (fixS *fixP ATTRIBUTE_UNUSED)
 {
-  return 0;
+  return fixP->fx_frag->fr_address + fixP->fx_where;
 }
 
 /* Return 1 if the relocation must be forced, and 0 if the relocation
