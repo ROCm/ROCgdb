@@ -93,6 +93,14 @@ public:
   virtual bool can_emit_style_escape ()
   { return false; }
 
+  /* True if emojis are allowed on STREAM.  */
+  bool emoji_allowed ()
+  {
+    /* By default, assume that emojis are not allowed on streams that don't
+       support ANSI escapes.  */
+    return can_emit_style_escape ();
+  }
+
   virtual void flush ()
   {}
 

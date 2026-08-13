@@ -471,7 +471,7 @@ show_warning_prefix (struct ui_file *file, int from_tty,
 void
 print_warning_prefix (ui_file *file)
 {
-  if (emojis_ok ())
+  if (file->emoji_allowed () && emojis_ok ())
     gdb_puts (warning_prefix.c_str (), file);
 }
 
@@ -496,7 +496,7 @@ show_error_prefix (struct ui_file *file, int from_tty,
 void
 print_error_prefix (ui_file *file)
 {
-  if (emojis_ok ())
+  if (file->emoji_allowed () && emojis_ok ())
     gdb_puts (error_prefix.c_str (), file);
 }
 
