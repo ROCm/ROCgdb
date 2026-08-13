@@ -1862,11 +1862,13 @@ microblaze_elf_relax_section (bfd *abfd,
   /* Get symbols for this section.  */
   symtab_hdr = &elf_symtab_hdr (abfd);
   isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
-  symcount =  symtab_hdr->sh_size / sizeof (Elf32_External_Sym);
-  if (isymbuf == NULL)
-    isymbuf = bfd_elf_get_elf_syms (abfd, symtab_hdr, symcount,
-				    0, NULL, NULL, NULL);
-  BFD_ASSERT (isymbuf != NULL);
+  if (isymbuf == NULL && symtab_hdr->sh_info != 0)
+    {
+      isymbuf = bfd_elf_get_elf_syms (abfd, symtab_hdr, symtab_hdr->sh_info,
+				      0, NULL, NULL, NULL);
+      if (isymbuf == NULL)
+	goto error_return;
+    }
 
   internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL, link_info->keep_memory);
   if (internal_relocs == NULL)
@@ -2084,6 +2086,9 @@ microblaze_elf_relax_section (bfd *abfd,
 	  irelscanend = irelocs + o->reloc_count;
 	  for (irelscan = irelocs; irelscan < irelscanend; irelscan++)
 	    {
+	      if (ELF32_R_SYM (irelscan->r_info) >= symtab_hdr->sh_info)
+		continue;
+
 	      if ((ELF32_R_TYPE (irelscan->r_info) == (int) R_MICROBLAZE_32)
 		  || (ELF32_R_TYPE (irelscan->r_info) == (int) R_MICROBLAZE_32_NONE))
 		{
@@ -2285,7 +2290,7 @@ microblaze_elf_relax_section (bfd *abfd,
 	}
 
       /* Adjust the local symbols defined in this section.  */
-      isymend = isymbuf + symtab_hdr->sh_info;
+      isymend = PTR_ADD (isymbuf, symtab_hdr->sh_info);
       for (isym = isymbuf; isym < isymend; isym++)
 	{
 	  if (isym->st_shndx == shndx)
@@ -2297,7 +2302,6 @@ microblaze_elf_relax_section (bfd *abfd,
 	}
 
       /* Now adjust the global symbols defined in this section.  */
-      isym = isymbuf + symtab_hdr->sh_info;
       symcount =  (symtab_hdr->sh_size / sizeof (Elf32_External_Sym)) - symtab_hdr->sh_info;
       for (sym_index = 0; sym_index < symcount; sym_index++)
 	{
