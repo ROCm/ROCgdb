@@ -75,9 +75,6 @@ extern bool loongarch_frag_align_code (int, int);
 #define TC_FORCE_RELOCATION(FIX) loongarch_force_relocation (FIX)
 extern int loongarch_force_relocation (struct fix *);
 
-/* If subsy of BFD_RELOC32/64 and PC in same segment, and without relax
-   or PC at start of subsy or with relax but sub_symbol_segment not in
-   SEC_CODE, we generate 32/64_PCREL.  */
 extern bool loongarch_force_relocation_sub_local (struct fix *, asection *);
 #define TC_FORCE_RELOCATION_SUB_LOCAL(FIX, SEC) \
   loongarch_force_relocation_sub_local (FIX, SEC)

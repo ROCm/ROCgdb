@@ -1590,22 +1590,6 @@ loongarch_force_relocation (struct fix *fixp)
   return generic_force_reloc (fixp);
 }
 
-/* If subsy of BFD_RELOC32/64 and PC in same segment, and without relax
-   or PC at start of subsy or with relax but sub_symbol_segment not in
-   SEC_CODE, we generate 32/64_PCREL.  */
-bool
-loongarch_force_relocation_sub_local (fixS *fixp, segT sec ATTRIBUTE_UNUSED)
-{
-  return !(LARCH_opts.thin_add_sub
-	   && (fixp->fx_r_type == BFD_RELOC_32
-	       || fixp->fx_r_type == BFD_RELOC_64)
-	   && (!LARCH_opts.relax
-	       || (S_GET_VALUE (fixp->fx_subsy)
-		   == fixp->fx_frag->fr_address + fixp->fx_where)
-	       || (S_GET_SEGMENT (fixp->fx_subsy)->flags & SEC_CODE) == 0));
-}
-
-
 /* Whether emit relocations for label subtraction in same section.  */
 static bool
 _loongarch_force_relocation_sub_same (segT sec,
@@ -1644,6 +1628,29 @@ _loongarch_force_relocation_sub_same (segT sec,
   return true;
 }
 
+/* Don't allow the generic code to convert fixups involving the
+   subtraction of a label in the current section to pc-relative.  */
+bool
+loongarch_force_relocation_sub_local (fixS *fixp, segT sec ATTRIBUTE_UNUSED)
+{
+  if (! LARCH_opts.thin_add_sub)
+    return true;
+
+  /* LoongArch only has R_LARCH_32/64_PCREL.  BFD_RELOC_32/64 can change
+     to R_LARCH_32/64_PCREL.  */
+  if (fixp->fx_r_type != BFD_RELOC_32
+      && fixp->fx_r_type != BFD_RELOC_64)
+    return true;
+
+  fragS *pcfrag = fixp->fx_frag;
+  fragS *subfrag = symbol_get_frag (fixp->fx_subsy);
+  segT subsec = S_GET_SEGMENT (fixp->fx_subsy);
+
+  if (! _loongarch_force_relocation_sub_same (subsec, pcfrag, subfrag))
+    return false;
+
+  return true;
+}
 
 /* Postpone text-section label subtraction calculation until linking,
    since linker relaxations might change the deltas.  */

@@ -9,14 +9,12 @@ Disassembly of section .text:
 00000000.* <.L1>:
 [ 	]+...
 .*R_LARCH_32_PCREL[ 	]+.L3
-.*R_LARCH_ADD32[ 	]+.L3
-.*R_LARCH_SUB32[ 	]+.L1
+.*R_LARCH_32_PCREL[ 	]+.L3\+0x4
 #...
 .*<.L2>:
 [ 	]+...
 .*R_LARCH_64_PCREL[ 	]+.L3
-.*R_LARCH_ADD64[ 	]+.L3
-.*R_LARCH_SUB64[ 	]+.L2
+.*R_LARCH_64_PCREL[ 	]+.L3\+0x8
 #...
 Disassembly[ 	]+of[ 	]+section[ 	]+sx:
 
