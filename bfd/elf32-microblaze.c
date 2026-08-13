@@ -1063,6 +1063,7 @@ microblaze_elf_relocate_section (struct bfd_link_info *info,
       struct elf_link_hash_entry *h;
       Elf_Internal_Sym *sym;
       asection *sec;
+      asection *sym_sec;
       const char *sym_name;
       bfd_reloc_status_type r = bfd_reloc_ok;
       const char *errmsg = NULL;
@@ -1084,6 +1085,41 @@ microblaze_elf_relocate_section (struct bfd_link_info *info,
 
       howto = microblaze_elf_howto_table[r_type];
       r_symndx = ELF32_R_SYM (rel->r_info);
+
+      /* Find the section defining the symbol, so that a relocation
+	 against a section discarded by linkonce or comdat handling can
+	 be neutralised.  The symbol is resolved separately in each of
+	 the two branches below, so this has to be done here to cover
+	 both the final and the relocatable link.  sym_hashes is NULL for
+	 an object with no global symbols, so it is checked as
+	 RELOC_FOR_GLOBAL_SYMBOL does, this running before that macro is
+	 reached.  */
+      sym_sec = NULL;
+      if (r_symndx < symtab_hdr->sh_info)
+	sym_sec = local_sections[r_symndx];
+      else if (sym_hashes != NULL)
+	{
+	  struct elf_link_hash_entry *hd;
+
+	  hd = sym_hashes[r_symndx - symtab_hdr->sh_info];
+	  while (hd != NULL
+		 && (hd->root.type == bfd_link_hash_indirect
+		     || hd->root.type == bfd_link_hash_warning))
+	    hd = (struct elf_link_hash_entry *) hd->root.u.i.link;
+
+	  if (hd != NULL
+	      && (hd->root.type == bfd_link_hash_defined
+		  || hd->root.type == bfd_link_hash_defweak))
+	    sym_sec = hd->root.u.def.section;
+	}
+
+      /* howto is NULL for R_MICROBLAZE_TEXTREL_32_LO, which has no entry
+	 in microblaze_elf_howto_raw, and _bfd_clear_contents reads
+	 howto->size.  elf32-ppc.c guards its howto pointers the same way.  */
+      if (sym_sec != NULL && discarded_section (sym_sec) && howto != NULL)
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, 1, relend, R_MICROBLAZE_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	{
