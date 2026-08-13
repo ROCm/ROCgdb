@@ -5412,8 +5412,7 @@ append_flags_type_flag (struct type *type, int bitpos, const char *name)
 			   name);
 }
 
-/* Allocate a TYPE_CODE_STRUCT or TYPE_CODE_UNION type structure (as
-   specified by CODE) associated with GDBARCH.  NAME is the type name.  */
+/* See gdbtypes.h.  */
 
 struct type *
 arch_composite_type (struct gdbarch *gdbarch, const char *name,
@@ -5428,9 +5427,7 @@ arch_composite_type (struct gdbarch *gdbarch, const char *name,
   return t;
 }
 
-/* Add new field with name NAME and type FIELD to composite type T.
-   Do not set the field's position or adjust the type's length;
-   the caller should do so.  Return the new field.  */
+/* See gdbtypes.h.  */
 
 struct field *
 append_composite_type_field_raw (struct type *t, const char *name,
@@ -5448,8 +5445,7 @@ append_composite_type_field_raw (struct type *t, const char *name,
   return f;
 }
 
-/* Add new field with name NAME and type FIELD to composite type T.
-   ALIGNMENT (if non-zero) specifies the minimum field alignment.  */
+/* See gdbtypes.h.  */
 
 void
 append_composite_type_field_aligned (struct type *t, const char *name,
@@ -5489,7 +5485,7 @@ append_composite_type_field_aligned (struct type *t, const char *name,
     }
 }
 
-/* Add new field with name NAME and type FIELD to composite type T.  */
+/* See gdbtypes.h.  */
 
 void
 append_composite_type_field (struct type *t, const char *name,
