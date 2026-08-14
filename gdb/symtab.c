@@ -4728,7 +4728,7 @@ global_symbol_searcher::expand_symtabs
 	(objfile *objfile, const std::optional<compiled_regex> &preg) const
 {
   domain_search_flags kind = m_kind;
-  bool found_msymbol = false;
+  bool found_func_msymbol_without_debug_info = false;
 
   auto do_file_match = [&] (const char *filename, bool basenames)
     {
@@ -4750,22 +4750,21 @@ global_symbol_searcher::expand_symtabs
      SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
      kind);
 
-  /* Here, we search through the minimal symbol tables for functions and
-     variables that match, and force their symbols to be read.  This is in
-     particular necessary for demangled variable names, which are no longer
-     put into the partial symbol tables.  The symbol will then be found
+  /* Here, we search through the minimal symbol tables for functions that
+     match, and force their symbols to be read.  The symbol will then be found
      during the scan of symtabs later.
 
-     For functions, find_pc_symtab should succeed if we have debug info for
-     the function, for variables we have to call
-     lookup_symbol_in_objfile_from_linkage_name to determine if the
-     variable has debug info.  If the lookup fails, set found_msymbol so
-     that we will rescan to print any matching symbols without debug info.
-     We only search the objfile the msymbol came from, we no longer search
-     all objfiles.  In large programs (1000s of shared libs) searching all
-     objfiles is not worth the pain.  */
+     find_compunit_symtab_for_pc should succeed if we have debug info for the
+     function.  If it fails, set found_func_msymbol_without_debug_info so that
+     we will rescan to print any matching symbols without debug info.  We only
+     search the objfile the msymbol came from, we no longer search all
+     objfiles.
+
+     Variables are not handled here, and looking them up does not expand any
+     symtab.  When no file names were given the caller unconditionally rescans
+     the minimal symbols for SEARCH_VAR_DOMAIN.  */
   if (m_filenames.empty ()
-      && (kind & (SEARCH_VAR_DOMAIN | SEARCH_FUNCTION_DOMAIN)) != 0)
+      && (kind & SEARCH_FUNCTION_DOMAIN) != 0)
     {
       for (minimal_symbol *msymbol : objfile->msymbols ())
 	{
@@ -4780,25 +4779,20 @@ global_symbol_searcher::expand_symtabs
 		  || preg->exec (msymbol->natural_name (), 0,
 				 NULL, 0) == 0)
 		{
-		  /* An important side-effect of these lookup functions is
+		  /* An important side-effect of this lookup function is
 		     to expand the symbol table if msymbol is found, later
 		     in the process we will add matching symbols or
 		     msymbols to the results list, and that requires that
 		     the symbols tables are expanded.  */
-		  if ((kind & SEARCH_FUNCTION_DOMAIN) != 0
-		      ? (find_compunit_symtab_for_pc
-			 (msymbol->value_address (objfile)) == NULL)
-		      : (lookup_symbol_in_objfile_from_linkage_name
-			 (objfile, msymbol->linkage_name (),
-			  SEARCH_VFT)
-			 .symbol == NULL))
-		    found_msymbol = true;
+		  if (find_compunit_symtab_for_pc
+			(msymbol->value_address (objfile)) == nullptr)
+		    found_func_msymbol_without_debug_info = true;
 		}
 	    }
 	}
     }
 
-  return found_msymbol;
+  return found_func_msymbol_without_debug_info;
 }
 
 /* See symtab.h.  */
@@ -4987,13 +4981,13 @@ global_symbol_searcher::search () const
 		    _("Invalid regexp"));
     }
 
-  bool found_msymbol = false;
+  bool found_func_msymbol_without_debug_info = false;
   std::set<symbol_search> result_set;
   for (objfile &objfile : current_program_space->objfiles ())
     {
       /* Expand symtabs within objfile that possibly contain matching
 	 symbols.  */
-      found_msymbol |= expand_symtabs (&objfile, preg);
+      found_func_msymbol_without_debug_info |= expand_symtabs (&objfile, preg);
 
       /* Find matching symbols within OBJFILE and add them in to the
 	 RESULT_SET set.  Use a set here so that we can easily detect
@@ -5011,7 +5005,7 @@ global_symbol_searcher::search () const
      user wants to see symbols matching a type regexp, then never give a
      minimal symbol, as we assume that a minimal symbol does not have a
      type.  */
-  if ((found_msymbol
+  if ((found_func_msymbol_without_debug_info
        || (m_filenames.empty () && (m_kind & SEARCH_VAR_DOMAIN) != 0))
       && !m_exclude_minsyms
       && !treg.has_value ())
