@@ -163,7 +163,8 @@ proc _selftest_setup { } {
 	[multi_line \
 	     "Starting program: $re_hs" \
 	     ".*" \
-	     [string cat "Breakpoint $::decimal, $function $re_args at" \
+	     [string cat \
+		  "Breakpoint $::decimal,( $::hex in)? $function $re_args at" \
 		  " ${re_hs}gdb.c:$re_hs"] \
 	     ".*"]
     set re_xfail \
