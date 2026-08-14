@@ -1411,12 +1411,16 @@ def setup_sanitizer_environment(env_vars: Dict[str, str], testsuite_dir: Path) -
     _log_aligned_fields(fields)
 
 
-def setup_environment(artifacts_dir: Path) -> Dict[str, str]:
+def setup_environment(artifacts_dir: Path, try_rocm_path: bool) -> Dict[str, str]:
     """
     Configure environment variables for test suite execution.
 
     Args:
         artifacts_dir: Path to artifacts directory with binaries and libraries.
+        try_rocm_path: Whether --try-rocm-path was passed.  When False,
+            ROCM_PATH is removed from the environment so a system-wide
+            setting cannot interfere with the LLVM toolchain paths we
+            configure explicitly.
 
     Returns:
         Updated environment variables dictionary.
@@ -1425,6 +1429,13 @@ def setup_environment(artifacts_dir: Path) -> Dict[str, str]:
 
     # Copy current environment.
     env_vars = os.environ.copy()
+
+    # Drop ROCM_PATH when the caller has not opted in to using it.  A
+    # system-wide ROCM_PATH can redirect LLVM tool lookups away from the
+    # artifacts tree we set up below, producing hard-to-diagnose failures.
+    if not try_rocm_path and "ROCM_PATH" in env_vars:
+        del env_vars["ROCM_PATH"]
+        logger.info("Dropped ROCM_PATH from environment (--try-rocm-path not set)")
 
     # Add ROCgdb and LLVM binaries to PATH and libraries to LD_LIBRARY_PATH.
     #
@@ -2239,7 +2250,7 @@ def main() -> None:
         setup_core_file_info()
 
     # Prepare environment for tests.
-    env_vars = setup_environment(rocm_dir)
+    env_vars = setup_environment(rocm_dir, args.try_rocm_path)
     setup_sanitizer_environment(env_vars, rocgdb_testsuite_dir)
 
     # Validate that we can run rocgdb.
