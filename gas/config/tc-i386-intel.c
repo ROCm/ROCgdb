@@ -912,9 +912,11 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	  i.types[this_operand].bitfield.tbyte = 1;
 	  if (got_a_float)
 	    break;
+	  const i386_operand_type *t_types
+	    = get_operand_types (current_templates.start);
 	  if (flag_code == CODE_64BIT
-	      && (current_templates.start->operand_types[0].bitfield.fword
-		  || current_templates.start->operand_types[0].bitfield.tbyte
+	      && (t_types[0].bitfield.fword
+		  || t_types[0].bitfield.tbyte
 		  || current_templates.start->opcode_modifier.jump == JUMP_DWORD
 		  || current_templates.start->opcode_modifier.jump == JUMP))
 	    suffix = QWORD_MNEM_SUFFIX; /* l[fgs]s, [ls][gi]dt, call, jmp */
@@ -1020,10 +1022,11 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	      if (!t->opcode_modifier.modrm)
 		break;
 
-	      if (!t->operand_types[op].bitfield.baseindex)
+	      const i386_operand_type *t_types = get_operand_types (t);
+	      if (!t_types[op].bitfield.baseindex)
 		continue;
 
-	      switch (t->operand_types[op].bitfield.class)
+	      switch (t_types[op].bitfield.class)
 		{
 		case RegMMX:
 		case RegSIMD:
