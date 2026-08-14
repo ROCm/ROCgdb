@@ -3469,6 +3469,11 @@ get_dynamic_type (Filedata * filedata, unsigned long type)
     }
 }
 
+#define ElfXX(n) Elf32 ## n
+#include "readelf-nn.c"
+#define ElfXX(n) Elf64 ## n
+#include "readelf-nn.c"
+
 static bool get_program_headers (Filedata *);
 static bool get_dynamic_section (Filedata *);
 
@@ -7367,100 +7372,6 @@ process_file_header (Filedata * filedata)
   return true;
 }
 
-/* Read in the program headers from FILEDATA and store them in PHEADERS.
-   Returns TRUE upon success, FALSE otherwise.  Loads 32-bit headers.  */
-
-static bool
-get_32bit_program_headers (Filedata * filedata, Elf_Internal_Phdr * pheaders)
-{
-  Elf32_External_Phdr * phdrs;
-  Elf32_External_Phdr * external;
-  Elf_Internal_Phdr *   internal;
-  unsigned int i;
-  unsigned int size = filedata->file_header.e_phentsize;
-  unsigned int num  = filedata->file_header.e_phnum;
-
-  /* PR binutils/17531: Cope with unexpected section header sizes.  */
-  if (size == 0 || num == 0)
-    return false;
-  if (size < sizeof * phdrs)
-    {
-      error (_("The e_phentsize field in the ELF header is less than the size of an ELF program header\n"));
-      return false;
-    }
-  if (size > sizeof * phdrs)
-    warn (_("The e_phentsize field in the ELF header is larger than the size of an ELF program header\n"));
-
-  phdrs = (Elf32_External_Phdr *) get_data (NULL, filedata, filedata->file_header.e_phoff,
-                                            size, num, _("program headers"));
-  if (phdrs == NULL)
-    return false;
-
-  for (i = 0, internal = pheaders, external = phdrs;
-       i < filedata->file_header.e_phnum;
-       i++, internal++, external++)
-    {
-      internal->p_type   = BYTE_GET (external->p_type);
-      internal->p_offset = BYTE_GET (external->p_offset);
-      internal->p_vaddr  = BYTE_GET (external->p_vaddr);
-      internal->p_paddr  = BYTE_GET (external->p_paddr);
-      internal->p_filesz = BYTE_GET (external->p_filesz);
-      internal->p_memsz  = BYTE_GET (external->p_memsz);
-      internal->p_flags  = BYTE_GET (external->p_flags);
-      internal->p_align  = BYTE_GET (external->p_align);
-    }
-
-  free (phdrs);
-  return true;
-}
-
-/* Read in the program headers from FILEDATA and store them in PHEADERS.
-   Returns TRUE upon success, FALSE otherwise.  Loads 64-bit headers.  */
-
-static bool
-get_64bit_program_headers (Filedata * filedata, Elf_Internal_Phdr * pheaders)
-{
-  Elf64_External_Phdr * phdrs;
-  Elf64_External_Phdr * external;
-  Elf_Internal_Phdr *   internal;
-  unsigned int i;
-  unsigned int size = filedata->file_header.e_phentsize;
-  unsigned int num  = filedata->file_header.e_phnum;
-
-  /* PR binutils/17531: Cope with unexpected section header sizes.  */
-  if (size == 0 || num == 0)
-    return false;
-  if (size < sizeof * phdrs)
-    {
-      error (_("The e_phentsize field in the ELF header is less than the size of an ELF program header\n"));
-      return false;
-    }
-  if (size > sizeof * phdrs)
-    warn (_("The e_phentsize field in the ELF header is larger than the size of an ELF program header\n"));
-
-  phdrs = (Elf64_External_Phdr *) get_data (NULL, filedata, filedata->file_header.e_phoff,
-                                            size, num, _("program headers"));
-  if (!phdrs)
-    return false;
-
-  for (i = 0, internal = pheaders, external = phdrs;
-       i < filedata->file_header.e_phnum;
-       i++, internal++, external++)
-    {
-      internal->p_type   = BYTE_GET (external->p_type);
-      internal->p_flags  = BYTE_GET (external->p_flags);
-      internal->p_offset = BYTE_GET (external->p_offset);
-      internal->p_vaddr  = BYTE_GET (external->p_vaddr);
-      internal->p_paddr  = BYTE_GET (external->p_paddr);
-      internal->p_filesz = BYTE_GET (external->p_filesz);
-      internal->p_memsz  = BYTE_GET (external->p_memsz);
-      internal->p_align  = BYTE_GET (external->p_align);
-    }
-
-  free (phdrs);
-  return true;
-}
-
 /* Returns TRUE if the program headers were read into `program_headers'.  */
 
 static bool
@@ -7493,8 +7404,8 @@ get_program_headers (Filedata * filedata)
     }
 
   if (is_32bit_elf
-      ? get_32bit_program_headers (filedata, phdrs)
-      : get_64bit_program_headers (filedata, phdrs))
+      ? Elf32_get_program_headers (filedata, phdrs)
+      : Elf64_get_program_headers (filedata, phdrs))
     {
       filedata->program_headers = phdrs;
       return true;
