@@ -4402,8 +4402,8 @@ build_vex_prefix (const insn_template *t)
 	 operand.  */
       vector_length = 0;
       for (op = t->operands; op--;)
-	if (t->operand_types[op].bitfield.xmmword
-	    && t->operand_types[op].bitfield.ymmword
+	if (i.tm_types[op].bitfield.xmmword
+	    && i.tm_types[op].bitfield.ymmword
 	    && i.types[op].bitfield.ymmword)
 	  {
 	    vector_length = 1;
