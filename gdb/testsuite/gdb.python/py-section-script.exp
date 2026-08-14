@@ -18,26 +18,23 @@
 
 require is_elf_target
 require allow_python_tests
+require {!is_remote host}
 
 standard_testfile
 
-# Make this available to gdb before the program starts, it is
-# automagically loaded by gdb.
-set remote_python_file [gdb_remote_download host \
-			    ${srcdir}/${subdir}/${testfile}.py]
-
-set quoted_name "\"$remote_python_file\""
+set python_file $srcdir/$subdir/$testfile.py
+set quoted_name "\"$python_file\""
 
 # Helper proc to 'set auto-load safe-path ...'.  Build the new path value by
 # joining ARGS together with an appropriate path separator character.
 proc set_auto_load_safe_path { args } {
     if {[ishost *-*-mingw*]} {
-	set remote_pathsep ";"
+	set pathsep ";"
     } else {
-	set remote_pathsep ":"
+	set pathsep ":"
     }
 
-    set safe_path [join $args $remote_pathsep]
+    set safe_path [join $args $pathsep]
 
     gdb_test_no_output "set auto-load safe-path $safe_path" \
 	"set auto-load safe-path"
@@ -56,6 +53,13 @@ foreach_with_prefix variant {plain compressed} {
     }
 
     if {[build_executable "build executable" $the_testfile $srcfile $flags] == -1} {
+	return
+    }
+
+    if {[section_get $the_binfile ".debug_gdb_scripts"] eq ""} {
+	# Target board cc-with-gnu-debug-link moves .debug_gdb_scripts into
+	# a separate debug file.
+	unsupported "Section .debug_gdb_scripts not in binfile"
 	return
     }
 
@@ -92,16 +96,8 @@ foreach_with_prefix variant {plain compressed} {
 
     clean_restart
 
-    # Get the name of the binfile on the host; on a remote host this means
-    # stripping off any directory prefix.
-    if {[is_remote host]} {
-	set remote_binfile [file tail ${the_binfile}]
-    } else {
-	set remote_binfile ${the_binfile}
-    }
-
-    set_auto_load_safe_path $remote_python_file $remote_binfile
-    gdb_load ${the_binfile}
+    set_auto_load_safe_path $python_file $the_binfile
+    gdb_load $the_binfile
     # Verify gdb loaded each script and they appear once in the list.
     gdb_test_multiple "info auto-load python-scripts" "verify scripts loaded" {
 	-re -wrap "Yes.*${testfile}.py.*Yes.*inlined-script.*" {
@@ -153,7 +149,7 @@ foreach_with_prefix variant {plain compressed} {
 	    return
 	}
 
-	set_auto_load_safe_path $remote_python_file $eu_strip_binfile
+	set_auto_load_safe_path $python_file $eu_strip_binfile
 	gdb_test_multiple "file $eu_strip_binfile" "load sepdebug" {
 	    -re -wrap "\r\nwarning: Invalid entry in \\.debug_gdb_scripts section.*" {
 		fail $gdb_test_name
@@ -203,7 +199,7 @@ foreach_with_prefix variant {plain compressed} {
 	# Add the directory containing OBJCOPY_BINFILE because the scripts
 	# section will be auto-loaded from the separate .debug file (not the
 	# main executable), which resides alongside it.
-	set_auto_load_safe_path $remote_python_file \
+	set_auto_load_safe_path $python_file \
 	    [file dirname ${objcopy_binfile}]
 	gdb_load $objcopy_binfile
 
