@@ -335,7 +335,7 @@ proc run_style_tests { } {
 	gdb_test_no_output "set host-charset UTF-8"
 	# Chosen since it will print an error.
 	gdb_test "maint translate-address" \
-	    "❌️ requires argument.*" \
+	    "❌ requires argument.*" \
 	    "emoji output"
 
 	gdb_test_no_output "set style error-prefix abcd:" \

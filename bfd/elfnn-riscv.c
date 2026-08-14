@@ -5587,6 +5587,7 @@ elfNN_riscv_merge_gnu_properties (struct bfd_link_info *info, bfd *abfd,
 #define elf_backend_got_header_size		(ARCH_SIZE / 8)
 #define elf_backend_want_dynrelro		1
 #define elf_backend_rela_normal			1
+#define elf_backend_dtrel_excludes_plt	1
 #define elf_backend_default_execstack		0
 
 #undef  elf_backend_obj_attrs_vendor

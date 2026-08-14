@@ -1,4 +1,4 @@
-# Copyright 2024-2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,25 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-require allow_python_tests
-require {!is_remote host}
+# Check that emojis are not printed in MI error messages.
 
-save_vars { env(PYTHONHOME) } {
-    setenv PYTHONHOME foo
+with_ansi_styling_terminal {
     clean_restart
-}
 
-gdb_test "python print (1)" \
-    "Python not initialized"
+    gdb_test "set style emoji on"
 
-set output_seen 0
-gdb_test_multiple "quit" "" {
-    -re ^quit\r\n {
-	exp_continue
-    }
-    eof {
-	set output_seen [expr [string length $expect_out(buffer)] != 0]
-	pass $gdb_test_name
-    }
+    # Check that there is no emoji printed before the error.  Regression test
+    # for PR34501.
+    set re_line \
+	[string_to_regexp \
+	     {&"No symbol table is loaded.  Use the \"file\" command.\n"}]
+    gdb_test {interpreter-exec mi2 "-break-insert -f foo"} \
+	"\r\n${re_line}(?=\r\n).*"
 }
-gdb_assert {!$output_seen} "no output after quit"

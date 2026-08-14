@@ -19,7 +19,9 @@
 
 #include "python-internal.h"
 #include "top.h"
+#include "ui-out.h"
 #include "cli/cli-utils.h"
+#include "cli/cli-style.h"
 
 /* Readline function suitable for PyOS_ReadlineFunctionPointer, which
    is used for Python's interactive parser and raw_input.  In both
@@ -116,8 +118,23 @@ sys.meta_path.insert(2, GdbRemoveReadlineFinder())\n\
 ";
   if (eval_python_command (code, Py_file_input) == 0)
     PyOS_ReadlineFunctionPointer = gdbpy_readline_wrapper;
+  else
+    {
+      gdbpy_print_stack ();
+
+      warning (_("Disabling import readline failed, \"%ps\" command disabled"),
+	       styled_string (command_style.style (), "python-interactive"));
+    }
 
   return 0;
+}
+
+/* See python-internal.h.  */
+
+bool
+gdbpy_import_readline_disabled ()
+{
+  return PyOS_ReadlineFunctionPointer == gdbpy_readline_wrapper;
 }
 
 GDBPY_INITIALIZE_FILE (gdbpy_initialize_gdb_readline);

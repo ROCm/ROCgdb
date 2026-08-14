@@ -10491,6 +10491,16 @@ aarch64_cleanup (void)
     }
 }
 
+#if defined (OBJ_COFF)
+/* Called after all assembly has been done.  */
+
+void
+aarch64_md_finish (void)
+{
+  seh_aarch64_write_data ();
+}
+#endif /* OBJ_COFF.  */
+
 #ifdef OBJ_ELF
 /* Remove any excess mapping symbols generated for alignment frags in
    SEC.  We may have created a mapping symbol before a zero byte

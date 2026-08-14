@@ -128,13 +128,11 @@ static void
 enable_async_notification (int fd)
 {
 #if defined(F_SETFL) && defined (FASYNC)
-  int save_fcntl_flags;
-
-  save_fcntl_flags = fcntl (fd, F_GETFL, 0);
-  fcntl (fd, F_SETFL, save_fcntl_flags | FASYNC);
-#if defined (F_SETOWN)
+#  if defined (F_SETOWN)
   fcntl (fd, F_SETOWN, getpid ());
-#endif
+#  endif
+  int save_fcntl_flags = fcntl (fd, F_GETFL, 0);
+  fcntl (fd, F_SETFL, save_fcntl_flags | FASYNC);
 #endif
 }
 

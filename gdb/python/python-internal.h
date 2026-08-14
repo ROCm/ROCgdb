@@ -1391,4 +1391,9 @@ py_notimplemented ()
 #include "py-wrappers.h"
 #include "py-safety.h"
 
+/* Return true if import readline was successfully disabled during
+   initialization.  */
+
+extern bool gdbpy_import_readline_disabled ();
+
 #endif /* GDB_PYTHON_PYTHON_INTERNAL_H */

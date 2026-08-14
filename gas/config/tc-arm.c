@@ -1141,6 +1141,8 @@ my_get_expression (expressionS * ep, char ** str, int prefix_mode)
 {
   char * save_in;
 
+  memset (ep, 0, sizeof (expressionS));
+
   /* In unified syntax, all prefixes are optional.  */
   if (unified_syntax)
     prefix_mode = (prefix_mode == GE_OPT_PREFIX_BIG) ? prefix_mode
@@ -1165,8 +1167,6 @@ my_get_expression (expressionS * ep, char ** str, int prefix_mode)
     default:
       abort ();
     }
-
-  memset (ep, 0, sizeof (expressionS));
 
   save_in = input_line_pointer;
   input_line_pointer = *str;
