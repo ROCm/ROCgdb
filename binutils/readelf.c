@@ -3469,17 +3469,181 @@ get_dynamic_type (Filedata * filedata, unsigned long type)
     }
 }
 
+/* Save the original section header values.  */
+
 static void
-validate_section_info (Elf_Internal_Shdr *, Elf_Internal_Shdr **,
-		       unsigned int, Filedata *);
+save_original_section_header_values (Elf_Internal_Shdr *internal,
+				     Elf_Internal_Shdr **orig_internal)
+{
+  /* Nothing to do if they have already been saved.  */
+  if (*orig_internal != NULL)
+    return;
+
+  *orig_internal = xmalloc (sizeof (**orig_internal));
+  **orig_internal = *internal;
+}
+
+/* Warn about and clear any invalid ELF section fields.  */
+
+static void
+validate_section_info (Elf_Internal_Shdr *internal,
+		       Elf_Internal_Shdr **orig_internal,
+		       unsigned int i, Filedata *filedata)
+{
+  bool dynamic = orig_internal == NULL;
+  if (!dynamic)
+    {
+      if (internal->sh_link >= filedata->file_header.e_shnum
+	  && !special_defined_section_index (filedata,
+					     internal->sh_link))
+	{
+	  warn (_("out of range %s (%" PRIu64 ") for section %u\n"),
+		"sh_link", (uint64_t) internal->sh_link, i);
+	  /* Save the original section header values before garbage
+	     values are cleared.  */
+	  save_original_section_header_values (internal, orig_internal);
+	  internal->sh_link = 0;
+	}
+
+      if ((internal->sh_flags & SHF_INFO_LINK) != 0
+	  && internal->sh_info > filedata->file_header.e_shnum)
+	{
+	  warn (_("out of range %s (%" PRIu64 ") for section %u\n"),
+		"sh_info", (uint64_t) internal->sh_info, i);
+	  save_original_section_header_values (internal, orig_internal);
+	  internal->sh_info = 0;
+	}
+    }
+
+  if (internal->sh_entsize > filedata->file_size)
+    {
+      if (dynamic)
+	warn (_("out of range %s (%" PRIu64 ")\n"),
+	      "DT_RELRENT", (uint64_t) internal->sh_entsize);
+      else
+	{
+	  warn (_("out of range %s (%" PRIu64 ") for section %u\n"),
+		"sh_entsize", (uint64_t) internal->sh_entsize, i);
+	  save_original_section_header_values (internal, orig_internal);
+	}
+      internal->sh_entsize = 0;
+    }
+
+  if (internal->sh_type != SHT_NOBITS)
+    {
+      uint64_t sh_offset = internal->sh_offset;
+      if (sh_offset > filedata->file_size)
+	{
+	  if (dynamic)
+	    warn (_("out of range %s (%" PRIu64 ")\n"),
+		  "DT_RELR", sh_offset);
+	  else
+	    {
+	      warn (_("out of range %s (%" PRIu64 ") for section %u\n"),
+		    "sh_offset", sh_offset, i);
+	      save_original_section_header_values (internal, orig_internal);
+	    }
+	  internal->sh_offset = 0;
+	  internal->sh_size = 0;
+	}
+      else if (internal->sh_size > filedata->file_size - sh_offset)
+	{
+	  if (dynamic)
+	    warn (_("out of range %s (%" PRIu64 ")\n"),
+		  "DT_RELRSZ", (uint64_t) internal->sh_size);
+	  else
+	    {
+	      warn (_("out of range %s (%" PRIu64 ") for section %u\n"),
+		    "sh_size", (uint64_t) internal->sh_size, i);
+	      save_original_section_header_values (internal, orig_internal);
+	    }
+	  internal->sh_size = 0;
+	}
+    }
+}
 
 #define ElfXX(n) Elf32 ## n
 #include "readelf-nn.c"
 #define ElfXX(n) Elf64 ## n
 #include "readelf-nn.c"
 
-static bool get_program_headers (Filedata *);
-static bool get_dynamic_section (Filedata *);
+/* Returns TRUE if the program headers were read into `program_headers'.  */
+
+static bool
+get_program_headers (Filedata * filedata)
+{
+  Elf_Internal_Phdr * phdrs;
+
+  /* Check cache of prior read.  */
+  if (filedata->program_headers != NULL)
+    return true;
+
+  /* Be kind to memory checkers by looking for
+     e_phnum values which we know must be invalid.  */
+  if (filedata->file_header.e_phnum
+      * (is_32bit_elf ? sizeof (Elf32_External_Phdr) : sizeof (Elf64_External_Phdr))
+      >= filedata->file_size)
+    {
+      error (_("Too many program headers - %#x - the file is not that big\n"),
+	     filedata->file_header.e_phnum);
+      return false;
+    }
+
+  phdrs = (Elf_Internal_Phdr *) cmalloc (filedata->file_header.e_phnum,
+					 sizeof (Elf_Internal_Phdr));
+  if (phdrs == NULL)
+    {
+      error (_("Out of memory reading %u program headers\n"),
+	     filedata->file_header.e_phnum);
+      return false;
+    }
+
+  if (is_32bit_elf
+      ? Elf32_get_program_headers (filedata, phdrs)
+      : Elf64_get_program_headers (filedata, phdrs))
+    {
+      filedata->program_headers = phdrs;
+      return true;
+    }
+
+  free (phdrs);
+  return false;
+}
+
+static bool
+get_section_headers (Filedata *filedata, bool probe)
+{
+  if (filedata->section_headers != NULL)
+    return true;
+
+  if (is_32bit_elf)
+    return Elf32_get_section_headers (filedata, probe);
+  else
+    return Elf64_get_section_headers (filedata, probe);
+}
+
+static Elf_Internal_Sym *
+get_elf_symbols (Filedata *filedata,
+		 Elf_Internal_Shdr *section,
+		 uint64_t *num_syms_return)
+{
+  if (is_32bit_elf)
+    return Elf32_get_symbols (filedata, section, num_syms_return);
+  else
+    return Elf64_get_symbols (filedata, section, num_syms_return);
+}
+
+static bool
+get_dynamic_section (Filedata *filedata)
+{
+  if (filedata->dynamic_section)
+    return true;
+
+  if (is_32bit_elf)
+    return Elf32_get_dynamic_section (filedata);
+  else
+    return Elf64_get_dynamic_section (filedata);
+}
 
 static void
 locate_dynamic_section (Filedata *filedata)
@@ -7376,49 +7540,6 @@ process_file_header (Filedata * filedata)
   return true;
 }
 
-/* Returns TRUE if the program headers were read into `program_headers'.  */
-
-static bool
-get_program_headers (Filedata * filedata)
-{
-  Elf_Internal_Phdr * phdrs;
-
-  /* Check cache of prior read.  */
-  if (filedata->program_headers != NULL)
-    return true;
-
-  /* Be kind to memory checkers by looking for
-     e_phnum values which we know must be invalid.  */
-  if (filedata->file_header.e_phnum
-      * (is_32bit_elf ? sizeof (Elf32_External_Phdr) : sizeof (Elf64_External_Phdr))
-      >= filedata->file_size)
-    {
-      error (_("Too many program headers - %#x - the file is not that big\n"),
-	     filedata->file_header.e_phnum);
-      return false;
-    }
-
-  phdrs = (Elf_Internal_Phdr *) cmalloc (filedata->file_header.e_phnum,
-					 sizeof (Elf_Internal_Phdr));
-  if (phdrs == NULL)
-    {
-      error (_("Out of memory reading %u program headers\n"),
-	     filedata->file_header.e_phnum);
-      return false;
-    }
-
-  if (is_32bit_elf
-      ? Elf32_get_program_headers (filedata, phdrs)
-      : Elf64_get_program_headers (filedata, phdrs))
-    {
-      filedata->program_headers = phdrs;
-      return true;
-    }
-
-  free (phdrs);
-  return false;
-}
-
 /* Print program header info and locate dynamic section.  */
 
 static void
@@ -7763,123 +7884,6 @@ offset_from_vma (Filedata * filedata, uint64_t vma, uint64_t size)
   warn (_("Virtual address %#" PRIx64
 	  " not located in any PT_LOAD segment.\n"), vma);
   return vma;
-}
-
-/* Save the original section header values.  */
-
-static void
-save_original_section_header_values (Elf_Internal_Shdr *internal,
-				     Elf_Internal_Shdr **orig_internal)
-{
-  /* Nothing to do if they have already been saved.  */
-  if (*orig_internal != NULL)
-    return;
-
-  *orig_internal = xmalloc (sizeof (**orig_internal));
-  **orig_internal = *internal;
-}
-
-
-/* Warn about and clear any invalid ELF section fields.  */
-
-static void
-validate_section_info (Elf_Internal_Shdr *internal,
-		       Elf_Internal_Shdr **orig_internal,
-		       unsigned int i, Filedata *filedata)
-{
-  bool dynamic = orig_internal == NULL;
-  if (!dynamic)
-    {
-      if (internal->sh_link >= filedata->file_header.e_shnum
-	  && !special_defined_section_index (filedata,
-					     internal->sh_link))
-	{
-	  warn (_("out of range %s (%" PRIu64 ") for section %u\n"),
-		"sh_link", (uint64_t) internal->sh_link, i);
-	  /* Save the original section header values before garbage
-	     values are cleared.  */
-	  save_original_section_header_values (internal, orig_internal);
-	  internal->sh_link = 0;
-	}
-
-      if ((internal->sh_flags & SHF_INFO_LINK) != 0
-	  && internal->sh_info > filedata->file_header.e_shnum)
-	{
-	  warn (_("out of range %s (%" PRIu64 ") for section %u\n"),
-		"sh_info", (uint64_t) internal->sh_info, i);
-	  save_original_section_header_values (internal, orig_internal);
-	  internal->sh_info = 0;
-	}
-    }
-
-  if (internal->sh_entsize > filedata->file_size)
-    {
-      if (dynamic)
-	warn (_("out of range %s (%" PRIu64 ")\n"),
-	      "DT_RELRENT", (uint64_t) internal->sh_entsize);
-      else
-	{
-	  warn (_("out of range %s (%" PRIu64 ") for section %u\n"),
-		"sh_entsize", (uint64_t) internal->sh_entsize, i);
-	  save_original_section_header_values (internal, orig_internal);
-	}
-      internal->sh_entsize = 0;
-    }
-
-  if (internal->sh_type != SHT_NOBITS)
-    {
-      uint64_t sh_offset = internal->sh_offset;
-      if (sh_offset > filedata->file_size)
-	{
-	  if (dynamic)
-	    warn (_("out of range %s (%" PRIu64 ")\n"),
-		  "DT_RELR", sh_offset);
-	  else
-	    {
-	      warn (_("out of range %s (%" PRIu64 ") for section %u\n"),
-		    "sh_offset", sh_offset, i);
-	      save_original_section_header_values (internal, orig_internal);
-	    }
-	  internal->sh_offset = 0;
-	  internal->sh_size = 0;
-	}
-      else if (internal->sh_size > filedata->file_size - sh_offset)
-	{
-	  if (dynamic)
-	    warn (_("out of range %s (%" PRIu64 ")\n"),
-		  "DT_RELRSZ", (uint64_t) internal->sh_size);
-	  else
-	    {
-	      warn (_("out of range %s (%" PRIu64 ") for section %u\n"),
-		    "sh_size", (uint64_t) internal->sh_size, i);
-	      save_original_section_header_values (internal, orig_internal);
-	    }
-	  internal->sh_size = 0;
-	}
-    }
-}
-
-static bool
-get_section_headers (Filedata *filedata, bool probe)
-{
-  if (filedata->section_headers != NULL)
-    return true;
-
-  if (is_32bit_elf)
-    return Elf32_get_section_headers (filedata, probe);
-  else
-    return Elf64_get_section_headers (filedata, probe);
-}
-
-static Elf_Internal_Sym *
-get_elf_symbols (Filedata *filedata,
-		 Elf_Internal_Shdr *section,
-		 uint64_t *num_syms_return)
-{
-  if (is_32bit_elf)
-    return Elf32_get_symbols (filedata, section, num_syms_return);
-  else
-    return Elf64_get_symbols (filedata, section, num_syms_return);
 }
 
 static const char *
@@ -12130,18 +12134,6 @@ dynamic_section_ia64_val (Elf_Internal_Dyn * entry)
       break;
     }
   putchar ('\n');
-}
-
-static bool
-get_dynamic_section (Filedata *filedata)
-{
-  if (filedata->dynamic_section)
-    return true;
-
-  if (is_32bit_elf)
-    return Elf32_get_dynamic_section (filedata);
-  else
-    return Elf64_get_dynamic_section (filedata);
 }
 
 static void
