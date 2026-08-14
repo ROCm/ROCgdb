@@ -175,9 +175,8 @@ INTERNAL
 .{* Used in generating armaps (archive tables of contents).  *}
 .struct orl		{* Output ranlib.  *}
 .{
-.  char **name;		{* Symbol name.  *}
+.  char *name;		{* Symbol name.  *}
 .  bfd *abfd;		{* Containing BFD.  *}
-.  int namidx;		{* Index into string table.  *}
 .};
 .
 .{* Return an inexistent element reference for archive ARCH.  *}
@@ -1023,29 +1022,13 @@ _bfd_load_armap (bfd *arch, unsigned int elength ATTRIBUTE_UNUSED,
        counter < ardata->symdef_count;
        counter++, set++)
     {
-      bfd_size_type namelen = strlen (*map[counter].name) + 1;
-      char *name = bfd_alloc (arch, namelen);
-
-      if (name == NULL)
-	{
-	  bfd_set_error (bfd_error_no_memory);
-	  goto release_symdefs;
-	}
-
-      memcpy (name, *map[counter].name, namelen);
-      set->name = name;
+      set->name = map[counter].name;
       set->u.abfd = map[counter].abfd;
     }
 
   ardata->symdef_use_bfd = true;
   arch->has_armap = true;
   return true;
-
- release_symdefs:
-  bfd_release (arch, ardata->symdefs);
-  ardata->symdef_count = 0;
-  ardata->symdefs = NULL;
-  return false;
 }
 
 /* Iterate over members of archive ARCH starting from FIRST_ONE and
@@ -2453,8 +2436,7 @@ _bfd_write_armap (bfd *arch, unsigned int elength,
 
 /* Iterate over members of archive ARCH retrieving their symbols and then
    push the symbols out using PUSH_ARMAP handler, giving it extended name
-   table length ELENGTH.  Retain the information according to KEEP_SYMTAB.
-   Note that the namidx for the first symbol is 0.  */
+   table length ELENGTH.  Retain the information according to KEEP_SYMTAB.  */
 
 bool
 _bfd_compute_and_push_armap
@@ -2577,20 +2559,15 @@ _bfd_compute_and_push_armap
 			    (_("%pB: plugin needed to handle lto object"),
 			     current);
 			}
-		      namelen = strlen (syms[src_count]->name);
-		      amt = sizeof (char *);
-		      map[orl_count].name = (char **) bfd_alloc (arch, amt);
+		      namelen = strlen (syms[src_count]->name) + 1;
+		      map[orl_count].name = bfd_alloc (arch, namelen);
 		      if (map[orl_count].name == NULL)
 			goto error_return;
-		      *(map[orl_count].name) = (char *) bfd_alloc (arch,
-								   namelen + 1);
-		      if (*(map[orl_count].name) == NULL)
-			goto error_return;
-		      strcpy (*(map[orl_count].name), syms[src_count]->name);
+		      memcpy (map[orl_count].name, syms[src_count]->name,
+			      namelen);
 		      map[orl_count].abfd = current;
-		      map[orl_count].namidx = stridx;
 
-		      stridx += namelen + 1;
+		      stridx += namelen;
 		      ++orl_count;
 		    }
 		}
@@ -2605,10 +2582,12 @@ _bfd_compute_and_push_armap
 
   /* OK, now we have collected all the data, let's push them out.  */
   ret = push_armap (arch, elength, map, orl_count, stridx);
+  if (!ret)
+    goto error_return;
 
   free (syms);
   free (map);
-  if (first_name != NULL)
+  if (!keep_symtab)
     bfd_release (arch, first_name);
 
   return ret;
@@ -2641,6 +2620,7 @@ _bfd_bsd_write_armap (bfd *arch,
   unsigned int count;
   struct ar_hdr hdr;
   long uid, gid;
+  unsigned int namidx = 0;
 
   first = mapsize + elength + sizeof (struct ar_hdr) + SARMAG;
 
@@ -2753,11 +2733,13 @@ _bfd_bsd_write_armap (bfd *arch,
 	}
 
       last_elt = current;
-      H_PUT_32 (arch, map[count].namidx, buf);
+      H_PUT_32 (arch, namidx, buf);
       H_PUT_32 (arch, firstreal, buf + BSD_SYMDEF_OFFSET_SIZE);
       if (bfd_write (buf, BSD_SYMDEF_SIZE, arch)
 	  != BSD_SYMDEF_SIZE)
 	return false;
+
+      namidx += strlen (map[count].name) + 1;
     }
 
   /* Now write the strings themselves.  */
@@ -2766,9 +2748,9 @@ _bfd_bsd_write_armap (bfd *arch,
     return false;
   for (count = 0; count < orl_count; count++)
     {
-      size_t len = strlen (*map[count].name) + 1;
+      size_t len = strlen (map[count].name) + 1;
 
-      if (bfd_write (*map[count].name, len, arch) != len)
+      if (bfd_write (map[count].name, len, arch) != len)
 	return false;
     }
 
@@ -2982,9 +2964,9 @@ _bfd_coff_write_armap (bfd *arch,
   /* Now write the strings themselves.  */
   for (count = 0; count < symbol_count; count++)
     {
-      size_t len = strlen (*map[count].name) + 1;
+      size_t len = strlen (map[count].name) + 1;
 
-      if (bfd_write (*map[count].name, len, arch) != len)
+      if (bfd_write (map[count].name, len, arch) != len)
 	return false;
     }
 

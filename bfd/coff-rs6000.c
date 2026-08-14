@@ -1944,7 +1944,7 @@ xcoff_write_armap_old (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
       const char *name;
       size_t namlen;
 
-      name = *map[i].name;
+      name = map[i].name;
       namlen = strlen (name);
       if (bfd_write (name, namlen + 1, abfd) != namlen + 1)
 	return false;
@@ -2058,7 +2058,7 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
       arch_info = bfd_get_arch_info (current_bfd);
       while (map[i].abfd == current_bfd)
 	{
-	  string_length = strlen (*map[i].name) + 1;
+	  string_length = strlen (map[i].name) + 1;
 	  if (arch_info->bits_per_address == 64)
 	    {
 	      sym_64++;
@@ -2175,7 +2175,7 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
 	    {
 	      if (arch_info->bits_per_address == 32)
 		{
-		  string_length = sprintf (st, "%s", *map[i].name);
+		  string_length = sprintf (st, "%s", map[i].name);
 		  st += string_length + 1;
 		}
 	      i++;
@@ -2259,7 +2259,7 @@ xcoff_write_armap_big (bfd *abfd, unsigned int elength ATTRIBUTE_UNUSED,
 	    {
 	      if (arch_info->bits_per_address == 64)
 		{
-		  string_length = sprintf (st, "%s", *map[i].name);
+		  string_length = sprintf (st, "%s", map[i].name);
 		  st += string_length + 1;
 		}
 	      i++;

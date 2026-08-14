@@ -1008,9 +1008,8 @@ extern const struct bfd_iovec _bfd_memory_iovec;
 /* Used in generating armaps (archive tables of contents).  */
 struct orl             /* Output ranlib.  */
 {
-  char **name;         /* Symbol name.  */
+  char *name;          /* Symbol name.  */
   bfd *abfd;           /* Containing BFD.  */
-  int namidx;          /* Index into string table.  */
 };
 
 /* Return an inexistent element reference for archive ARCH.  */
