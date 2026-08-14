@@ -12133,116 +12133,15 @@ dynamic_section_ia64_val (Elf_Internal_Dyn * entry)
 }
 
 static bool
-get_32bit_dynamic_section (Filedata * filedata)
-{
-  Elf32_External_Dyn * edyn;
-  Elf32_External_Dyn * ext;
-  Elf_Internal_Dyn * entry;
-
-  edyn = (Elf32_External_Dyn *) get_data (NULL, filedata,
-					  filedata->dynamic_addr, 1,
-					  filedata->dynamic_size,
-					  _("dynamic section"));
-  if (!edyn)
-    return false;
-
-  /* SGI's ELF has more than one section in the DYNAMIC segment, and we
-     might not have the luxury of section headers.  Look for the DT_NULL
-     terminator to determine the number of entries.  */
-  for (ext = edyn, filedata->dynamic_nent = 0;
-       (char *) (ext + 1) <= (char *) edyn + filedata->dynamic_size;
-       ext++)
-    {
-      filedata->dynamic_nent++;
-      if (BYTE_GET (ext->d_tag) == DT_NULL)
-	break;
-    }
-
-  filedata->dynamic_section
-    = (Elf_Internal_Dyn *) cmalloc (filedata->dynamic_nent, sizeof (* entry));
-  if (filedata->dynamic_section == NULL)
-    {
-      error (_("Out of memory allocating space for %" PRIu64 " dynamic entries\n"),
-	     filedata->dynamic_nent);
-      free (edyn);
-      return false;
-    }
-
-  for (ext = edyn, entry = filedata->dynamic_section;
-       entry < filedata->dynamic_section + filedata->dynamic_nent;
-       ext++, entry++)
-    {
-      entry->d_tag      = BYTE_GET (ext->d_tag);
-      entry->d_un.d_val = BYTE_GET (ext->d_un.d_val);
-    }
-
-  free (edyn);
-
-  return true;
-}
-
-static bool
-get_64bit_dynamic_section (Filedata * filedata)
-{
-  Elf64_External_Dyn * edyn;
-  Elf64_External_Dyn * ext;
-  Elf_Internal_Dyn * entry;
-
-  /* Read in the data.  */
-  edyn = (Elf64_External_Dyn *) get_data (NULL, filedata,
-					  filedata->dynamic_addr, 1,
-					  filedata->dynamic_size,
-					  _("dynamic section"));
-  if (!edyn)
-    return false;
-
-  /* SGI's ELF has more than one section in the DYNAMIC segment, and we
-     might not have the luxury of section headers.  Look for the DT_NULL
-     terminator to determine the number of entries.  */
-  for (ext = edyn, filedata->dynamic_nent = 0;
-       /* PR 17533 file: 033-67080-0.004 - do not read past end of buffer.  */
-       (char *) (ext + 1) <= (char *) edyn + filedata->dynamic_size;
-       ext++)
-    {
-      filedata->dynamic_nent++;
-      if (BYTE_GET (ext->d_tag) == DT_NULL)
-	break;
-    }
-
-  filedata->dynamic_section
-    = (Elf_Internal_Dyn *) cmalloc (filedata->dynamic_nent, sizeof (* entry));
-  if (filedata->dynamic_section == NULL)
-    {
-      error (_("Out of memory allocating space for %" PRIu64 " dynamic entries\n"),
-	     filedata->dynamic_nent);
-      free (edyn);
-      return false;
-    }
-
-  /* Convert from external to internal formats.  */
-  for (ext = edyn, entry = filedata->dynamic_section;
-       entry < filedata->dynamic_section + filedata->dynamic_nent;
-       ext++, entry++)
-    {
-      entry->d_tag      = BYTE_GET (ext->d_tag);
-      entry->d_un.d_val = BYTE_GET (ext->d_un.d_val);
-    }
-
-  free (edyn);
-
-  return true;
-}
-
-static bool
 get_dynamic_section (Filedata *filedata)
 {
   if (filedata->dynamic_section)
     return true;
 
   if (is_32bit_elf)
-    return get_32bit_dynamic_section (filedata);
+    return Elf32_get_dynamic_section (filedata);
   else
-    return get_64bit_dynamic_section (filedata);
+    return Elf64_get_dynamic_section (filedata);
 }
 
 static void

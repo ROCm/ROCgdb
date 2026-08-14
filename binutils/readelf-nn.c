@@ -280,4 +280,52 @@ ElfXX(_get_symbols) (Filedata *filedata, const Elf_Internal_Shdr *section,
   return isyms;
 }
 
+static bool
+ElfXX(_get_dynamic_section) (Filedata * filedata)
+{
+  ElfXX(_External_Dyn) * edyn, * ext;
+  Elf_Internal_Dyn * entry;
+
+  edyn = get_data (NULL, filedata, filedata->dynamic_addr, 1,
+		   filedata->dynamic_size, _("dynamic section"));
+  if (!edyn)
+    return false;
+
+  /* SGI's ELF has more than one section in the DYNAMIC segment, and we
+     might not have the luxury of section headers.  Look for the DT_NULL
+     terminator to determine the number of entries.  */
+  for (ext = edyn, filedata->dynamic_nent = 0;
+       /* PR 17533 file: 033-67080-0.004 - do not read past end of buffer.  */
+       (char *) (ext + 1) <= (char *) edyn + filedata->dynamic_size;
+       ext++)
+    {
+      filedata->dynamic_nent++;
+      if (BYTE_GET (ext->d_tag) == DT_NULL)
+	break;
+    }
+
+  filedata->dynamic_section
+    = (Elf_Internal_Dyn *) cmalloc (filedata->dynamic_nent, sizeof (* entry));
+  if (filedata->dynamic_section == NULL)
+    {
+      error (_("Out of memory allocating space for %" PRIu64 " dynamic entries\n"),
+	     filedata->dynamic_nent);
+      free (edyn);
+      return false;
+    }
+
+  /* Convert from external to internal formats.  */
+  for (ext = edyn, entry = filedata->dynamic_section;
+       entry < filedata->dynamic_section + filedata->dynamic_nent;
+       ext++, entry++)
+    {
+      entry->d_tag      = BYTE_GET (ext->d_tag);
+      entry->d_un.d_val = BYTE_GET (ext->d_un.d_val);
+    }
+
+  free (edyn);
+
+  return true;
+}
+
 #undef ElfXX
