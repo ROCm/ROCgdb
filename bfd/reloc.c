@@ -8152,8 +8152,9 @@ bfd_generic_get_relocated_section_contents (bfd *abfd,
 	    {
 	      if ((symbol->flags & BSF_SECTION_SYM)
 		  && symbol->section->sec_info_type == SEC_INFO_TYPE_MERGE
-		  /* This, while apparently necessary, feels bogus.  */
-		  && !(symbol->section->flags & SEC_DEBUGGING))
+		  /* bfd_simple_get_relocated_section_contents() is special.  */
+		  && (!(input_section->flags & SEC_DEBUGGING)
+		      || link_info->input_bfds != link_info->output_bfd))
 		{
 		  asection *sec = symbol->section;
 
