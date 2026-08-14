@@ -3368,37 +3368,21 @@ elf64_alpha_relax_with_lituse (struct alpha_relax_info *info,
 	    else
 	      all_optimized = false;
 
-	    /* Even if the target is not in range for a direct branch,
-	       if we share a GP, we can eliminate the gp reload.  */
-	    if (optdest)
-	      {
-		Elf_Internal_Rela *gpdisp
-		  = (elf64_alpha_find_reloc_at_ofs
-		     (info->relocs, irelend, urel_r_offset + 4,
-		      R_ALPHA_GPDISP));
-		if (gpdisp)
-		  {
-		    bfd_byte *p_ldah = contents + gpdisp->r_offset;
-		    bfd_byte *p_lda = p_ldah + gpdisp->r_addend;
-		    unsigned int ldah = bfd_get_32 (abfd, p_ldah);
-		    unsigned int lda = bfd_get_32 (abfd, p_lda);
-
-		    /* Verify that the instruction is "ldah $29,0($26)".
-		       Consider a function that ends in a noreturn call,
-		       and that the next function begins with an ldgp,
-		       and that by accident there is no padding between.
-		       In that case the insn would use $27 as the base.  */
-		    if (ldah == 0x27ba0000 && lda == 0x23bd0000)
-		      {
-			bfd_put_32 (abfd, (bfd_vma) INSN_UNOP, p_ldah);
-			bfd_put_32 (abfd, (bfd_vma) INSN_UNOP, p_lda);
-
-			gpdisp->r_info = ELF64_R_INFO (0, R_ALPHA_NONE);
-			changed_contents = true;
-			changed_relocs = true;
-		      }
-		  }
-	      }
+	    /* Keep the caller's GPDISP ldah/lda pair.  A non-zero optdest
+	       says the callee starts with our gp, which is enough to enter
+	       it past its own ldgp, but says nothing about the gp we get
+	       back: $gp is caller-saved, and a callee ending in a tail call
+	       returns with the tail target's gp in $29.  If that target
+	       lives in another sub-GOT, later displacements off $gp in this
+	       function silently name slots in the wrong sub-GOT.  Eliding
+	       the reload again would mean proving here that the callee
+	       returns with gp intact, which needs a scan of its
+	       instructions.  Cheaper would be a new STO_ALPHA_* bit that
+	       gas sets at .end, alongside STO_ALPHA_STD_GPLOAD, when it saw
+	       nothing in the function that can leave $29 clobbered.  Either
+	       way the payoff is two unops: the pair is already emitted, so
+	       the rewrite never shrinks .text, and dropping the got entry
+	       depends on optdest rather than on this.  */
 	  }
 	  break;
 	}
