@@ -1889,6 +1889,9 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
   if (ptid != null_ptid)
     wave_id = get_amd_dbgapi_wave_id (ptid);
 
+  amd_dbgapi_process_id_t process_id
+    = get_amd_dbgapi_process_id (current_inferior ());
+
   /* Aliasing address range might not have the same layout.  Because
      of that, when ever there is a gap between the aliasing addresses,
      create a new range.  */
@@ -1900,7 +1903,7 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
       /* Try to convert the address to an address in the
 	 default address space.  */
       if (amd_dbgapi_convert_address_space
-	    (wave_id, simd_lane, dbgapi_from_addr_space_id,
+	    (process_id, wave_id, simd_lane, dbgapi_from_addr_space_id,
 	     (amd_dbgapi_segment_address_t) addr,
 	     dbgapi_to_addr_space_id, &to_offset, &converted_size)
 	    != AMD_DBGAPI_STATUS_SUCCESS)
