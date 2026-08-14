@@ -4029,6 +4029,57 @@ ada_type_match_arrays (struct type *ftype, struct type *atype)
   return ada_type_match (f_elt_type, a_elt_type);
 }
 
+/* Helper for ada_type_match that checks that two record types are
+   compatible.  As with that function, FTYPE is the formal type and
+   ATYPE is the actual type.
+
+   Note that it is ok if this function is not precise, as long as
+   there aren't too many false negatives.  That is, it's better to
+   return 'true', because that will result in a menu being presented
+   to the user.  */
+
+static bool
+ada_type_match_records (type *ftype, type *atype)
+{
+  /* In the case of tagged types, we look through the parent types;
+     hence the loop.  */
+  while (atype != nullptr)
+    {
+      if (ftype == atype)
+	return true;
+
+      /* Note that the formal type might be dynamic in some way.  So,
+	 the checks we can do easily are fairly limited.  However, in
+	 Ada simply checking the name should be sufficient, because
+	 Ada doesn't allow anonymous record types; nor does it allow
+	 two record types with the same name.  And, if this is somehow
+	 violated (through shared library shenanigans or something),
+	 then it's fine to conservatively return 'true'.  Note we use
+	 the safe name here, because although Ada doesn't allow
+	 anonymous types, with a little effort the user could arrange
+	 for any type as the actual type.  */
+      if (streq (ftype->safe_name (), atype->safe_name ()))
+	return true;
+
+      /* Currently, gdb does not implement dispatching calls, and
+	 class-wide types aren't well-represented in the DWARF anyway.
+	 So as a heuristic, return true if the formal type is a parent
+	 of the actual type.  This works out OK because gdb finds the
+	 true runtime type of the actual parameter.
+
+	 This could be improved by further examining the overload set
+	 for a best match.  However this isn't done today, which is
+	 why the heuristic is needed.  */
+      if (!ada_is_tagged_type (atype, false))
+	break;
+
+      /* If this returns nullptr, the loop will stop.  */
+      atype = ada_parent_type (atype);
+    }
+
+  return false;
+}
+
 /* Return non-zero if formal type FTYPE matches actual type ATYPE.
    The term "match" here is rather loose.  The match is heuristic and
    liberal -- while it tries to reject matches that are obviously
@@ -4045,6 +4096,10 @@ ada_type_match (struct type *ftype, struct type *atype)
     ftype = ada_check_typedef (ftype->target_type ());
   if (atype->code () == TYPE_CODE_REF)
     atype = ada_check_typedef (atype->target_type ());
+
+  /* Also remove aligner types.  */
+  ftype = ada_aligned_type (ftype);
+  atype = ada_aligned_type (atype);
 
   switch (ftype->code ())
     {
@@ -4074,7 +4129,8 @@ ada_type_match (struct type *ftype, struct type *atype)
     case TYPE_CODE_STRUCT:
       if (!ada_is_array_descriptor_type (ftype))
 	return (atype->code () == TYPE_CODE_STRUCT
-		&& !ada_is_array_descriptor_type (atype));
+		&& !ada_is_array_descriptor_type (atype)
+		&& ada_type_match_records (ftype, atype));
 
       [[fallthrough]];
     case TYPE_CODE_ARRAY:
