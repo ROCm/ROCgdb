@@ -3469,6 +3469,10 @@ get_dynamic_type (Filedata * filedata, unsigned long type)
     }
 }
 
+static void
+validate_section_info (Elf_Internal_Shdr *, Elf_Internal_Shdr **,
+		       unsigned int, Filedata *);
+
 #define ElfXX(n) Elf32 ## n
 #include "readelf-nn.c"
 #define ElfXX(n) Elf64 ## n
@@ -7855,158 +7859,6 @@ validate_section_info (Elf_Internal_Shdr *internal,
     }
 }
 
-/* Allocate memory and load the sections headers into FILEDATA->filedata->section_headers.
-   If PROBE is true, this is just a probe and we do not generate any error
-   messages if the load fails.  */
-
-static bool
-get_32bit_section_headers (Filedata * filedata, bool probe)
-{
-  Elf32_External_Shdr * shdrs;
-  Elf_Internal_Shdr *   internal;
-  Elf_Internal_Shdr **  orig_internal;
-  unsigned int          i;
-  unsigned int          size = filedata->file_header.e_shentsize;
-  unsigned int          num = probe ? 1 : filedata->file_header.e_shnum;
-
-  /* PR binutils/17531: Cope with unexpected section header sizes.  */
-  if (size == 0 || num == 0)
-    return false;
-
-  /* The section header cannot be at the start of the file - that is
-     where the ELF file header is located.  A file with absolutely no
-     sections in it will use a shoff of 0.  */
-  if (filedata->file_header.e_shoff == 0)
-    return false;
-
-  if (size < sizeof * shdrs)
-    {
-      if (! probe)
-	error (_("The e_shentsize field in the ELF header is less than the size of an ELF section header\n"));
-      return false;
-    }
-  if (!probe && size > sizeof * shdrs)
-    warn (_("The e_shentsize field in the ELF header is larger than the size of an ELF section header\n"));
-
-  shdrs = (Elf32_External_Shdr *) get_data (NULL, filedata, filedata->file_header.e_shoff,
-                                            size, num,
-					    probe ? NULL : _("section headers"));
-  if (shdrs == NULL)
-    return false;
-
-  filedata->section_headers = (Elf_Internal_Shdr *)
-    cmalloc (num, sizeof (Elf_Internal_Shdr));
-  if (filedata->section_headers == NULL)
-    {
-      if (!probe)
-	error (_("Out of memory reading %u section headers\n"), num);
-      free (shdrs);
-      return false;
-    }
-
-  if (!probe)
-    filedata->orig_section_headers = xcalloc2 (num,
-					       sizeof (Elf_Internal_Shdr *));
-
-  orig_internal = filedata->orig_section_headers;
-  for (i = 0, internal = filedata->section_headers;
-       i < num;
-       i++, internal++, orig_internal++)
-    {
-      internal->sh_name      = BYTE_GET (shdrs[i].sh_name);
-      internal->sh_type      = BYTE_GET (shdrs[i].sh_type);
-      internal->sh_flags     = BYTE_GET (shdrs[i].sh_flags);
-      internal->sh_addr      = BYTE_GET (shdrs[i].sh_addr);
-      internal->sh_offset    = BYTE_GET (shdrs[i].sh_offset);
-      internal->sh_size      = BYTE_GET (shdrs[i].sh_size);
-      internal->sh_link      = BYTE_GET (shdrs[i].sh_link);
-      internal->sh_info      = BYTE_GET (shdrs[i].sh_info);
-      internal->sh_addralign = BYTE_GET (shdrs[i].sh_addralign);
-      internal->sh_entsize   = BYTE_GET (shdrs[i].sh_entsize);
-      if (!probe)
-	validate_section_info (internal, orig_internal, i, filedata);
-    }
-
-  free (shdrs);
-  return true;
-}
-
-/* Like get_32bit_section_headers, except that it fetches 64-bit headers.  */
-
-static bool
-get_64bit_section_headers (Filedata * filedata, bool probe)
-{
-  Elf64_External_Shdr *  shdrs;
-  Elf_Internal_Shdr *    internal;
-  Elf_Internal_Shdr **   orig_internal;
-  unsigned int           i;
-  unsigned int           size = filedata->file_header.e_shentsize;
-  unsigned int           num = probe ? 1 : filedata->file_header.e_shnum;
-
-  /* PR binutils/17531: Cope with unexpected section header sizes.  */
-  if (size == 0 || num == 0)
-    return false;
-
-  /* The section header cannot be at the start of the file - that is
-     where the ELF file header is located.  A file with absolutely no
-     sections in it will use a shoff of 0.  */
-  if (filedata->file_header.e_shoff == 0)
-    return false;
-
-  if (size < sizeof * shdrs)
-    {
-      if (! probe)
-	error (_("The e_shentsize field in the ELF header is less than the size of an ELF section header\n"));
-      return false;
-    }
-
-  if (! probe && size > sizeof * shdrs)
-    warn (_("The e_shentsize field in the ELF header is larger than the size of an ELF section header\n"));
-
-  shdrs = (Elf64_External_Shdr *) get_data (NULL, filedata,
-					    filedata->file_header.e_shoff,
-                                            size, num,
-					    probe ? NULL : _("section headers"));
-  if (shdrs == NULL)
-    return false;
-
-  filedata->section_headers = (Elf_Internal_Shdr *)
-    cmalloc (num, sizeof (Elf_Internal_Shdr));
-  if (filedata->section_headers == NULL)
-    {
-      if (! probe)
-	error (_("Out of memory reading %u section headers\n"), num);
-      free (shdrs);
-      return false;
-    }
-
-  if (!probe)
-    filedata->orig_section_headers = xcalloc2 (num,
-					       sizeof (Elf_Internal_Shdr *));
-
-  orig_internal = filedata->orig_section_headers;
-  for (i = 0, internal = filedata->section_headers;
-       i < num;
-       i++, internal++, orig_internal++)
-    {
-      internal->sh_name      = BYTE_GET (shdrs[i].sh_name);
-      internal->sh_type      = BYTE_GET (shdrs[i].sh_type);
-      internal->sh_flags     = BYTE_GET (shdrs[i].sh_flags);
-      internal->sh_addr      = BYTE_GET (shdrs[i].sh_addr);
-      internal->sh_size      = BYTE_GET (shdrs[i].sh_size);
-      internal->sh_entsize   = BYTE_GET (shdrs[i].sh_entsize);
-      internal->sh_link      = BYTE_GET (shdrs[i].sh_link);
-      internal->sh_info      = BYTE_GET (shdrs[i].sh_info);
-      internal->sh_offset    = BYTE_GET (shdrs[i].sh_offset);
-      internal->sh_addralign = BYTE_GET (shdrs[i].sh_addralign);
-      if (!probe)
-	validate_section_info (internal, orig_internal, i, filedata);
-    }
-
-  free (shdrs);
-  return true;
-}
-
 static bool
 get_section_headers (Filedata *filedata, bool probe)
 {
@@ -8014,9 +7866,9 @@ get_section_headers (Filedata *filedata, bool probe)
     return true;
 
   if (is_32bit_elf)
-    return get_32bit_section_headers (filedata, probe);
+    return Elf32_get_section_headers (filedata, probe);
   else
-    return get_64bit_section_headers (filedata, probe);
+    return Elf64_get_section_headers (filedata, probe);
 }
 
 static Elf_Internal_Sym *
