@@ -1376,6 +1376,8 @@ static htab_t op_hash;
 /* Hash table for register lookup.  */
 static htab_t reg_hash;
 
+#include "opcodes/i386-tbl.h"
+
 #if (defined (OBJ_ELF) || defined (OBJ_MACH_O) || defined (TE_PE))
 static const struct
 {
@@ -2551,7 +2553,7 @@ operand_type_check (i386_operand_type t, enum operand_type c)
 static INLINE const i386_operand_type *
 get_operand_types (const insn_template *t)
 {
-  return t->operand_types;
+  return &i386_operand_types[t->operand_ref];
 }
 
 /* Return 1 if there is no conflict in 8bit/16bit/32bit/64bit size
@@ -3647,8 +3649,6 @@ i386_mach (void)
     as_fatal (_("unknown architecture"));
 }
 
-#include "opcodes/i386-tbl.h"
-
 static void
 op_lookup (const char *mnemonic)
 {
