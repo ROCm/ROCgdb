@@ -1121,16 +1121,14 @@ default_terminal_info (struct target_ops *self, const char *args, int from_tty)
   gdb_printf (_("No saved terminal information.\n"));
 }
 
-/* A default implementation for the to_get_ada_task_ptid target method.
-
-   This function builds the PTID by using both LWP and TID as part of
-   the PTID lwp and tid elements.  The pid used is the pid of the
-   inferior_ptid.  */
+/* A default implementation for the to_get_ada_task_ptid target
+   method.  This function builds the PTID using just the LWP parameter
+   and the current inferior, as this is what most targets need.  */
 
 static ptid_t
 default_get_ada_task_ptid (struct target_ops *self, long lwp, ULONGEST tid)
 {
-  return ptid_t (inferior_ptid.pid (), lwp, tid);
+  return ptid_t (inferior_ptid.pid (), lwp);
 }
 
 static enum exec_direction_kind
