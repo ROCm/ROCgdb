@@ -2854,7 +2854,7 @@ procfs_notice_thread (procinfo *pi, procinfo *thread, void *ptr)
   ptid_t gdb_threadid = ptid_t (pi->pid, thread->tid, 0);
 
   thread_info *thr = the_procfs_target.find_thread (gdb_threadid);
-  if (thr == NULL || thr->state == THREAD_EXITED)
+  if (thr == NULL || thr->state () == THREAD_EXITED)
     add_thread (&the_procfs_target, gdb_threadid);
 
   return 0;
@@ -3155,7 +3155,7 @@ find_memory_regions_callback (struct prmap *map, find_memory_region_ftype func)
 	       (map->pr_mflags & MA_WRITE) != 0,
 	       (map->pr_mflags & MA_EXEC) != 0,
 	       true, /* MODIFIED is unknown, pass it as true.  */
-	       false);
+	       false, false);
 }
 
 /* External interface.  Calls a callback function once for each
@@ -3205,8 +3205,7 @@ mappingflags (long flags)
    mappings'.  */
 
 static bool
-info_mappings_callback (struct prmap *map, find_memory_region_ftype ignore,
-			void *unused)
+info_mappings_callback (struct prmap *map, find_memory_region_ftype ignore)
 {
   unsigned int pr_off;
 
@@ -3254,7 +3253,7 @@ info_proc_mappings (procinfo *pi, int summary)
 		"    Offset",
 		"Flags");
 
-  iterate_over_mappings (pi, NULL, NULL, info_mappings_callback);
+  iterate_over_mappings (pi, NULL, info_mappings_callback);
   gdb_printf ("\n");
 }
 
