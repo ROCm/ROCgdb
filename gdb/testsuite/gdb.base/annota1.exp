@@ -262,11 +262,31 @@ set pat_begin "\r\n\032\032post-prompt\r\nContinuing.\r\n\r\n\032\032starting\r\
 set pat_adjust "warning: Breakpoint 3 address previously adjusted from $hex to $hex.\r\n"
 set pat_end "\r\n\032\032breakpoint 3\r\n\r\nBreakpoint 3(\\.$decimal)?, \r\n\032\032frame-begin 0 $hex\r\n\r\n(\032\032frame-address\r\n$hex\r\n\032\032frame-address-end\r\n in \r\n)*.*\032\032frame-function-name\r\n.*printf(@.*)?\r\n\032\032frame-args\r\n.*\032\032frame-end\r\n\r\n\032\032stopped\r\n$gdb_prompt$"
 
+set unsupported 0
 gdb_test_multiple "continue" "continue to printf" {
     -re "${pat_begin}($pat_adjust)?$pat_end" {
 	pass $gdb_test_name
     }
+    -re $inferior_exited_re.*\r\n$gdb_prompt$ {
+	if {[istarget "powerpc64*-linux*"]} {
+	    # On ppc64, glibc without commit f05ab7c4a9
+	    # ("ldbl-128ibm-compat: Add local aliases for printf
+	    # family symbols") may have two printf breakpoint
+	    # locations, but export only one of them.  Consequently,
+	    # gdb sets a breakpoint on only one location, and there's
+	    # no guarantee that the breakpoint will trigger.
+	    xfail "$gdb_test_name (the program exited)"
+	} else {
+	    fail "$gdb_test_name (the program exited)"
+	}
+	set unsupported 1
+    }
     -re ".*$gdb_prompt$"     { fail $gdb_test_name }
+}
+
+if {$unsupported} {
+    unsupported "printf breakpoint didn't trigger"
+    return
 }
 
 set pac [string_to_regexp {[PAC]}]

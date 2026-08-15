@@ -163,16 +163,40 @@ gdb_test -prompt "$gdb_prompt$" "break printf" \
 #
 # get to printf
 #
-send_gdb "continue\n"
-gdb_expect_list "continue to printf" "$gdb_prompt$" [subst_vars {
-    "\r\n\032\032post-prompt\r\n"
-    "Continuing.\r\n"
-    "\r\n\032\032starting\r\n"
-    "\r\n\032\032breakpoint 3\r\n"
-    "\r\n"
-    "Breakpoint 3(\\.$decimal)?, \[^\r\n\]*\r\n"
-    "\r\n\032\032stopped\r\n"
-}]
+set re_pass \
+    [string cat \
+	 "\r\n\032\032post-prompt\r\n" \
+	 "Continuing.\r\n" \
+	 "\r\n\032\032starting\r\n" \
+	 "\r\n\032\032breakpoint 3\r\n" \
+	 "\r\n" \
+	 [subst_vars {Breakpoint 3(\.$decimal)?, [^\r\n]*\r\n}] \
+	 ".*" \
+	 "\r\n\032\032stopped"]
+set unsupported 0
+gdb_test_multiple "continue" "continue to printf" -prompt "$gdb_prompt$" {
+    -re -wrap $re_pass {
+	pass $gdb_test_name
+    }
+    -re -wrap $inferior_exited_re.* {
+	if {[istarget "powerpc64*-linux*"]} {
+	    # On ppc64, glibc without commit f05ab7c4a9
+	    # ("ldbl-128ibm-compat: Add local aliases for printf
+	    # family symbols") may have two printf breakpoint
+	    # locations, but export only one of them.  Consequently,
+	    # gdb sets a breakpoint on only one location, and there's
+	    # no guarantee that the breakpoint will trigger.
+	    xfail "$gdb_test_name (the program exited)"
+	} else {
+	    fail "$gdb_test_name (the program exited)"
+	}
+	set unsupported 1
+    }
+}
+if {$unsupported} {
+    unsupported "printf breakpoint didn't trigger"
+    return
+}
 
 send_gdb "backtrace\n"
 gdb_expect_list "backtrace from shlibrary" "$gdb_prompt$" {
