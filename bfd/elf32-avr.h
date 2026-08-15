@@ -24,7 +24,7 @@
 /* These four functions will be called from the ld back end.  */
 
 extern void elf32_avr_setup_params (struct bfd_link_info *, bfd *, asection *,
-				    bool, bool, bool, bfd_vma, bool);
+				    bool, bool, bool, bfd_vma, bool, bool);
 extern int elf32_avr_setup_section_lists (bfd *, struct bfd_link_info *);
 extern bool elf32_avr_size_stubs (bfd *, struct bfd_link_info *, bool);
 extern bool elf32_avr_build_stubs (struct bfd_link_info *);

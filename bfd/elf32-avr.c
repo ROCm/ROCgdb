@@ -729,6 +729,12 @@ static bfd_vma avr_pc_wrap_around = 0x10000000;
    machine will try to optimize CALL/RET sequences by a single jump
    instruction. This can be switched off by --no-call-ret-replacement.  */
 static bool avr_replace_call_ret_sequences = true;
+
+/* If this variable holds true, the linker relaxation machine will
+   try to remove RJMP instructions that are void.  This does not
+   include plain RJMP .+0 which is used by GCC to delay 2 cycles.
+   This can be switched off by --no-elide-rjmp0.  */
+static bool avr_elide_rjmp0 = true;
 
 
 /* Per-section relaxation related information for avr.  */
@@ -2563,7 +2569,11 @@ avr_reloc_at (bfd *abfd, Elf_Internal_Shdr *symtab_hdr,
 
    The .jumptables section is meant to be used for a future tablejump variant
    for the devices with 3-byte program counter where the table itself contains
-   4-byte jump instructions whose relative offset must not be changed.  */
+   4-byte jump instructions whose relative offset must not be changed.
+
+   Finally, we elide RJMP instructions that are void and not a delay.
+   This may occur when a function is tailcalling some other function,
+   and the latter happens to be located right after the former.  */
 
 static bool
 elf32_avr_relax_section (bfd *abfd,  asection *sec,
@@ -2657,6 +2667,7 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
   for (irel = internal_relocs; irel < irelend; irel++)
     {
       bfd_vma symval;
+      bool sym_is_global = false;
 
       if (ELF32_R_TYPE (irel->r_info) != R_AVR_13_PCREL
 	  && ELF32_R_TYPE (irel->r_info) != R_AVR_7_PCREL
@@ -2720,6 +2731,7 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
 	  symval = (h->root.u.def.value
 		    + h->root.u.def.section->output_section->vma
 		    + h->root.u.def.section->output_offset);
+	  sym_is_global = true;
 	}
 
       /* For simplicity of coding, we are going to modify the section
@@ -2897,6 +2909,84 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
 		  printf ("converted call/ret sequence at address 0x%x "
 			  "into jmp/ret sequence in section %s\n\n",
 			  (int) dot, sec->name);
+		*again = true;
+		break;
+	      }
+	    else if (avr_elide_rjmp0
+		     // Elide no-op RJMP tail calls like in
+		     //    RJMP func     ;; in module A
+		     //    .global func  ;; in module B
+		     //    func:
+		     && avr_is_RJMP (code_word)
+		     // Plain RJMP .+0 is used by GCC to delay 2 cycles, thus
+		     // we are only interested in global jump targets...
+		     && sym_is_global
+		     // ...without offset, and...
+		     && irel->r_addend == 0
+		     // ...where the RJMP targets the insn directly after it.
+		     && symval + irel->r_addend == dot + 2)
+	      {
+		if (debug_relax)
+		  printf ("found rjmp .+0 at address 0x%x in section %s\n",
+			  (int) dot, sec->name);
+
+		const bool has_prev = irel->r_offset >= 2;
+		const uint16_t prev_word = has_prev
+		  ? avr_word (abfd, contents + irel->r_offset - 2)
+		  : 0;
+
+		// The assumption in the following condition is that there is
+		// no dangling skip at the end of a section.  Note that a skip
+		// insn at that place doesn't make sense in a real program.
+		if (has_prev
+		    && avr_is_skip (prev_word))
+		  {
+		    if (debug_relax)
+		      printf ("skip insn prevents deletion of rjmp .+0 at "
+			      "address 0x%x\n", (int) dot);
+		    break;
+		  }
+
+		// Avoid the paranoid case where the RJMP is at the end of
+		// the program memory and jumps to 0x0.  We don't have the
+		// flash size handy, so assume a size of 0.5 KiB.
+		if ((dot + 2) % 0x200 == 0)
+		  {
+		    if (debug_relax)
+		      printf ("not deleting rjmp .+0 at address 0x%x that may "
+			      "be at the end of program memory\n", (int) dot);
+		    break;
+		  }
+
+		// Ditch the RJMP.
+		// Notice that labels or relocs at the RJMP are no issue.
+
+		if (debug_relax)
+		  printf ("deleted rjmp .+0 instruction at address 0x%x\n",
+			  (int) dot);
+
+		// Read this BFD's local symbols if we haven't done so already.
+		if (isymbuf == NULL && symtab_hdr->sh_info != 0)
+		  {
+		    isymbuf = avr_read_symbuf (abfd, symtab_hdr);
+		    if (isymbuf == NULL)
+		      break;
+		  }
+
+		elf_section_data (sec)->relocs = internal_relocs;
+		elf_section_data (sec)->this_hdr.contents = contents;
+		symtab_hdr->contents = (unsigned char *) isymbuf;
+
+		// Delete the two RJMP bytes, and...
+		if (!elf32_avr_relax_delete_bytes (abfd, sec,
+						   irel->r_offset, 2, true))
+		  goto error_return;
+
+		// ...decommission the reloc.
+		irel->r_info = R_AVR_NONE;
+
+		// That will change things, so we should relax again.
+		// Note that this is not required, and it may be slow.
 		*again = true;
 		break;
 	      }
@@ -3328,7 +3418,8 @@ void
 elf32_avr_setup_params (struct bfd_link_info *info, bfd *avr_stub_bfd,
 			asection *avr_stub_section,
 			bool no_stubs, bool deb_stubs, bool deb_relax,
-			bfd_vma pc_wrap_around, bool call_ret_replacement)
+			bfd_vma pc_wrap_around, bool call_ret_replacement,
+			bool elide_rjmp0)
 {
   elf32_avr_link_hash_table_t *htab = avr_link_hash_table (info);
 
@@ -3342,6 +3433,7 @@ elf32_avr_setup_params (struct bfd_link_info *info, bfd *avr_stub_bfd,
   debug_stubs = deb_stubs;
   avr_pc_wrap_around = pc_wrap_around;
   avr_replace_call_ret_sequences = call_ret_replacement;
+  avr_elide_rjmp0 = elide_rjmp0;
 }
 
 

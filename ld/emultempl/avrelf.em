@@ -43,6 +43,7 @@ static bool avr_no_stubs = false;
 static bool avr_debug_relax = false;
 static bool avr_debug_stubs = false;
 static bool avr_replace_call_ret_sequences = true;
+static bool avr_elide_rjmp0 = true;
 static bfd_vma avr_pc_wrap_around = 0x10000000;
 
 /* Transfers information to the bfd frontend.  */
@@ -57,7 +58,8 @@ avr_elf_set_global_bfd_parameters (void)
 			  avr_debug_stubs,
 			  avr_debug_relax,
 			  avr_pc_wrap_around,
-			  avr_replace_call_ret_sequences);
+			  avr_replace_call_ret_sequences,
+			  avr_elide_rjmp0);
 }
 
 
@@ -235,6 +237,8 @@ EOF
 PARSE_AND_LIST_LONGOPTS='
   { "no-call-ret-replacement", no_argument,
     NULL, OPTION_NO_CALL_RET_REPLACEMENT},
+  { "no-elide-rjmp0", no_argument,
+    NULL, OPTION_NO_ELIDE_RJMP0},
   { "pmem-wrap-around", required_argument,
     NULL, OPTION_PMEM_WRAP_AROUND},
   { "no-stubs", no_argument,
@@ -258,6 +262,14 @@ PARSE_AND_LIST_OPTIONS='
 		   "  substitute two immediately following call/ret\n"
 		   "                              "
 		   "  instructions by a single jump instruction.\n"
+		   "                              "
+		   "  This option disables this optimization.\n"));
+  fprintf (file, _("  --no-elide-rjmp0   "
+		   "The relaxation machine normally will\n"
+		   "                              "
+		   "  remove an rjmp instruction when it targets a\n"
+		   "                              "
+		   "  global symbol at a jump offset of 0.\n"
 		   "                              "
 		   "  This option disables this optimization.\n"));
   fprintf (file, _("  --no-stubs                  "
@@ -308,6 +320,13 @@ PARSE_AND_LIST_ARGS_CASES='
       {
 	/* This variable is defined in the bfd library.  */
 	avr_replace_call_ret_sequences = false;
+      }
+      break;
+
+    case OPTION_NO_ELIDE_RJMP0:
+      {
+	/* This variable is defined in the bfd library.  */
+	avr_elide_rjmp0 = false;
       }
       break;
 '
