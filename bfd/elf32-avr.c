@@ -26,6 +26,7 @@
 #include "elf-bfd.h"
 #include "elf/avr.h"
 #include "elf32-avr.h"
+#include "libiberty.h"
 
 /* Enable debugging printout at stdout with this variable.  */
 static bool debug_relax = false;
@@ -4097,6 +4098,67 @@ avr_elf32_property_record_name (struct avr_property_record *rec)
 }
 
 
+/* Merge object attributes from IBFD into OBFD.  Error if there are
+   conflicting attributes.  The follwing attributes are supported:
+   Tag_GNU_AVR_VTABLE_AS
+      One plus avr-g++'s named address-space for VTABLEs.
+*/
+
+static bool
+avr_elf_merge_obj_attributes (bfd *ibfd, struct bfd_link_info *info)
+{
+  static bfd *last_fp;
+  obj_attribute *in_attr, *in_attrs;
+  obj_attribute *out_attr, *out_attrs;
+  bfd *obfd = info->output_bfd;
+
+  in_attrs = elf_known_obj_attributes (ibfd)[OBJ_ATTR_GNU];
+  out_attrs = elf_known_obj_attributes (obfd)[OBJ_ATTR_GNU];
+
+  in_attr = &in_attrs[Tag_GNU_AVR_VTABLE_AS];
+  out_attr = &out_attrs[Tag_GNU_AVR_VTABLE_AS];
+
+  if (in_attr->i == Val_GNU_AVR_VTABLE_NONE
+      || out_attr->i == Val_GNU_AVR_VTABLE_NONE)
+    {
+      if (in_attr->i != Val_GNU_AVR_VTABLE_NONE)
+	{
+	  out_attr->type = ATTR_TYPE_FLAG_INT_VAL;
+	  out_attr->i = in_attr->i;
+	  last_fp = ibfd;
+	}
+    }
+  else if (in_attr->i != out_attr->i)
+    {
+      const char *const tag = "Tag_GNU_AVR_VTABLE_AS";
+      const char *const iname = avr_tag_vtable_as_name (in_attr->i);
+      const char *const oname = avr_tag_vtable_as_name (out_attr->i);
+
+      _bfd_error_handler
+	/* xgettext:c-format */
+	(_("%pB uses %s tag %d (%s), %pB uses %s tag %d (%s)"),
+	 ibfd, tag, in_attr->i, iname,
+	 last_fp, tag, out_attr->i, oname);
+
+      out_attr->type = ATTR_TYPE_FLAG_INT_VAL | ATTR_TYPE_FLAG_ERROR;
+      bfd_set_error (bfd_error_bad_value);
+      return false;
+    }
+
+  // Merge any common GNU attributes.
+  return _bfd_elf_merge_object_attributes (ibfd, info);
+}
+
+
+/* Merge backend specific data from an object file to the output
+   object file when linking.  */
+
+bool bfd_avr_elf_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
+{
+  return avr_elf_merge_obj_attributes (ibfd, info);
+}
+
+
 #define ELF_ARCH		bfd_arch_avr
 #define ELF_TARGET_ID		AVR_ELF_DATA
 #define ELF_MACHINE_CODE	EM_AVR
@@ -4121,6 +4183,8 @@ avr_elf32_property_record_name (struct avr_property_record *rec)
 #define bfd_elf32_bfd_get_relocated_section_contents \
 					elf32_avr_get_relocated_section_contents
 #define bfd_elf32_new_section_hook	elf_avr_new_section_hook
+#define bfd_elf32_bfd_merge_private_bfd_data \
+					bfd_avr_elf_merge_private_bfd_data
 #define elf_backend_special_sections	elf_avr_special_sections
 
 #include "elf32-target.h"

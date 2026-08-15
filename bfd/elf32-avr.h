@@ -29,6 +29,9 @@ extern int elf32_avr_setup_section_lists (bfd *, struct bfd_link_info *);
 extern bool elf32_avr_size_stubs (bfd *, struct bfd_link_info *, bool);
 extern bool elf32_avr_build_stubs (struct bfd_link_info *);
 
+extern bool
+bfd_avr_elf_merge_private_bfd_data (bfd *, struct bfd_link_info *);
+
 /* The name of the section into which the property records are stored.  */
 #define AVR_PROPERTY_RECORD_SECTION_NAME ".avr.prop"
 

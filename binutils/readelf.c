@@ -18366,6 +18366,30 @@ display_arm_attribute (const unsigned char * p,
 }
 
 static const unsigned char *
+display_avr_gnu_attribute (const unsigned char * p,
+			   unsigned int tag,
+			   const unsigned char * const end)
+{
+  if (tag == Tag_GNU_AVR_VTABLE_AS)
+    {
+      unsigned int val;
+
+      printf ("  Tag_GNU_AVR_VTABLE_AS (%u): ", tag);
+      if (p == end)
+	{
+	  printf (_("<corrupt>\n"));
+	  return p;
+	}
+
+      READ_ULEB (val, p, end);
+      printf ("%d (%s)\n", val, avr_tag_vtable_as_name (val));
+      return p;
+    }
+
+  return display_tag_value (tag & 1, p, end);
+}
+
+static const unsigned char *
 display_gnu_attribute (const unsigned char * p,
 		       const unsigned char * (* display_proc_gnu_attribute)
 		       (const unsigned char *, unsigned int, const unsigned char * const),
@@ -24166,6 +24190,10 @@ process_arch_specific (Filedata * filedata)
     case EM_AARCH64:
       return process_attributes_v2 (filedata, "aeabi", SHT_AARCH64_ATTRIBUTES,
 				    display_aarch64_attribute);
+
+    case EM_AVR:
+      return process_attributes (filedata, NULL, SHT_GNU_ATTRIBUTES, NULL,
+				 display_avr_gnu_attribute);
 
     case EM_MIPS:
     case EM_MIPS_RS3_LE:

@@ -1,5 +1,8 @@
 -*- text -*-
 
+* The avr target supports .gnu_attribute 4 (Tag_GNU_AVR_VTABLE_AS).
+  For details, see https://sourceware.org/PR34305
+
 Changes in 2.47:
 
 * New command line option --reloc-section-sym=[all|internal|none]

@@ -1,5 +1,8 @@
 -*- text -*-
 
+* The avr target supports .gnu_attribute 4 (Tag_GNU_AVR_VTABLE_AS).
+  For details, see https://sourceware.org/PR34305
+
 Changes in 2.47:
 
 * Add a linker optimization level of zero.  Using "-O 0" on the linker command
