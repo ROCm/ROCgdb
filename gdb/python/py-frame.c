@@ -141,6 +141,9 @@ struct frame_object : public PyObject
   /* The static link for this frame.  */
   gdbpy_ref<> static_link ();
 
+  /* Implementation of the Python richcompare API.  */
+  std::optional<bool> richcompare (gdbpy_borrowed_ref<> other, int op);
+
   static PyTypeObject *corresponding_object_type;
 };
 
@@ -482,30 +485,25 @@ gdbpy_frame_stop_reason_string (gdbpy_borrowed_ref<> args,
   return unwind_stop_reason_to_string ((enum unwind_stop_reason) reason);
 }
 
-/* Implements the equality comparison for Frame objects.
-   All other comparison operators will throw a TypeError Python exception,
-   as they aren't valid for frames.  */
+/* Implements the equality comparison for Frame objects.  */
 
-static PyObject *
-frapy_richcompare (PyObject *self, PyObject *other, int op)
+std::optional<bool>
+frame_object::richcompare (gdbpy_borrowed_ref<> other, int op)
 {
   int result;
 
   if (!PyObject_TypeCheck (other, &frame_object_type)
       || (op != Py_EQ && op != Py_NE))
-    return py_notimplemented ().release ();
+    return std::nullopt;
 
-  frame_object *self_frame = (frame_object *) self;
-  frame_object *other_frame = (frame_object *) other;
+  frame_object *other_frame = other;
 
-  if (self_frame->frame_id == other_frame->frame_id)
+  if (frame_id == other_frame->frame_id)
     result = Py_EQ;
   else
     result = Py_NE;
 
-  if (op == result)
-    return py_true ().release ();
-  return py_false ().release ();
+  return op == result;
 }
 
 PyTypeObject *frame_object::corresponding_object_type = &frame_object_type;
@@ -623,7 +621,7 @@ PyTypeObject frame_object_type = {
   "GDB frame object",		  /* tp_doc */
   0,				  /* tp_traverse */
   0,				  /* tp_clear */
-  frapy_richcompare,		  /* tp_richcompare */
+  wrap_richcompare<frame_object, &frame_object::richcompare>, /* tp_richcompare */
   0,				  /* tp_weaklistoffset */
   0,				  /* tp_iter */
   0,				  /* tp_iternext */
