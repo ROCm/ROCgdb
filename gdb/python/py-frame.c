@@ -466,24 +466,20 @@ gdbpy_selected_frame ()
 /* Implementation of gdb.stop_reason_string (Integer) -> String.
    Return a string explaining the unwind stop reason.  */
 
-PyObject *
-gdbpy_frame_stop_reason_string (PyObject *self, PyObject *args)
+const char *
+gdbpy_frame_stop_reason_string (gdbpy_borrowed_ref<> args,
+				gdbpy_opt_borrowed_ref<> kw)
 {
   int reason;
-  const char *str;
 
-  if (!PyArg_ParseTuple (args, "i", &reason))
-    return NULL;
+  static const char *keywords[] = { "reason", nullptr };
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "i", keywords, &reason);
 
   if (reason < UNWIND_FIRST || reason > UNWIND_LAST)
-    {
-      PyErr_SetString (PyExc_ValueError,
-		       _("Invalid frame stop reason."));
-      return NULL;
-    }
+    gdbpy_err_set_string (PyExc_ValueError,
+			  _("Invalid frame stop reason."));
 
-  str = unwind_stop_reason_to_string ((enum unwind_stop_reason) reason);
-  return PyUnicode_Decode (str, strlen (str), host_charset (), NULL);
+  return unwind_stop_reason_to_string ((enum unwind_stop_reason) reason);
 }
 
 /* Implements the equality comparison for Frame objects.

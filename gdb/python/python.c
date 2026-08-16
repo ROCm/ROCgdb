@@ -3154,9 +3154,9 @@ Return the newest frame object."),
   noargs_function<gdbpy_selected_frame> ("selected_frame",
     "selected_frame () -> gdb.Frame.\n\
 Return the selected frame object."),
-  { "frame_stop_reason_string", gdbpy_frame_stop_reason_string, METH_VARARGS,
+  varargs_function<gdbpy_frame_stop_reason_string> ("frame_stop_reason_string",
     "stop_reason_string (Integer) -> String.\n\
-Return a string explaining unwind stop reason." },
+Return a string explaining unwind stop reason."),
 
   { "start_recording", gdbpy_start_recording, METH_VARARGS,
     "start_recording ([method] [, format]) -> gdb.Record.\n\

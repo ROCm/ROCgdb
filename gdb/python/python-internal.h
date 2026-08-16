@@ -527,7 +527,8 @@ extern PyObject *gdbpy_history_count (PyObject *self, PyObject *args);
 PyObject *gdbpy_convenience_variable (PyObject *self, PyObject *args);
 PyObject *gdbpy_set_convenience_variable (PyObject *self, PyObject *args);
 PyObject *gdbpy_breakpoints (PyObject *, PyObject *);
-PyObject *gdbpy_frame_stop_reason_string (PyObject *, PyObject *);
+const char *gdbpy_frame_stop_reason_string (gdbpy_borrowed_ref<> args,
+					    gdbpy_opt_borrowed_ref<> kw);
 gdbpy_ref<> gdbpy_lookup_symbol (gdbpy_borrowed_ref<> args,
 				 gdbpy_opt_borrowed_ref<> kw);
 gdbpy_ref<> gdbpy_lookup_global_symbol (gdbpy_borrowed_ref<> args,
