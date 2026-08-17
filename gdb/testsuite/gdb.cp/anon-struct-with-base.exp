@@ -1,0 +1,65 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test printing a value whose type is an unnamed struct with a base class.
+
+standard_testfile .cc
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug c++}]} {
+    return
+}
+
+gdb_test "with print pretty off -- print v_data_base_data" \
+    "$::valnum_re = \{<base_data> = \{a = 1\}, b = 2\}"
+
+gdb_test "with print pretty off -- print v_no_data_base_data" \
+    "$::valnum_re = \{<base_data> = \{a = 3\}, <No data fields>\}"
+
+gdb_test "with print pretty off -- print v_data_base_no_data" \
+    "$::valnum_re = \{<base_no_data> = \{<No data fields>\}, c = 4\}"
+
+gdb_test "with print pretty off -- print v_no_data_base_no_data" \
+    "$::valnum_re = \{<base_no_data> = \{<No data fields>\}, <No data fields>\}"
+
+gdb_test "with print pretty on -- print v_data_base_data" \
+    [multi_line \
+	 "$::valnum_re = \{" \
+	 "  <base_data> = \{" \
+	 "    a = 1" \
+	 "  \}, " \
+	 "  members of <unnamed type>:" \
+	 "  b = 2" \
+	 "\}"]
+
+gdb_test "with print pretty on -- print v_no_data_base_data" \
+    [multi_line \
+	 "$::valnum_re = \{" \
+	 "  <base_data> = \{" \
+	 "    a = 3" \
+	 "  \}, <No data fields>\}"]
+
+gdb_test "with print pretty on -- print v_data_base_no_data" \
+    [multi_line \
+	 "$::valnum_re = \{" \
+	 "  <base_no_data> = \{<No data fields>\}, " \
+	 "  members of <unnamed type>:" \
+	 "  c = 4" \
+	 "\}"]
+
+gdb_test "with print pretty on -- print v_no_data_base_no_data" \
+    [multi_line \
+	 "$::valnum_re = \{" \
+	 "  <base_no_data> = \{<No data fields>\}, <No data fields>\}"]

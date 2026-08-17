@@ -564,7 +564,7 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 		  gdb_printf (stream, "\n");
 		  print_spaces (2 + 2 * recurse, stream);
 		  gdb_puts ("members of ", stream);
-		  gdb_puts (type->name (), stream);
+		  gdb_puts (type->safe_name (), stream);
 		  gdb_puts (": ", stream);
 		}
 	    }
