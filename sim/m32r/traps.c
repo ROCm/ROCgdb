@@ -134,7 +134,9 @@ m32r_core_signal (SIM_DESC sd, SIM_CPU *current_cpu, sim_cia cia,
     sim_core_signal (sd, current_cpu, cia, map, nr_bytes, addr,
 		     transfer, sig);
 }
-
+
+#ifdef __linux__
+
 /* Translate target's address to host's address.  */
 
 static void *
@@ -179,6 +181,8 @@ translate_endian_t2h (void *addr, size_t size)
   if (i <= size - 2)
     *((unsigned short *) p) = T2H_2 (*((unsigned short *) p));
 }
+
+#endif /* __linux__ */
 
 /* Trap support.
    The result is the pc address to continue at.
