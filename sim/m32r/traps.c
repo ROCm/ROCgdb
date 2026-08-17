@@ -188,7 +188,6 @@ USI
 m32r_trap (SIM_CPU *current_cpu, PCADDR pc, int num)
 {
   SIM_DESC sd = CPU_STATE (current_cpu);
-  host_callback *cb = STATE_CALLBACK (sd);
 
   if (STATE_ENVIRONMENT (sd) == OPERATING_ENVIRONMENT)
     goto case_default;
@@ -217,6 +216,7 @@ m32r_trap (SIM_CPU *current_cpu, PCADDR pc, int num)
 #ifdef __linux__
     case TRAP_LINUX_SYSCALL:
       {
+	host_callback *cb = STATE_CALLBACK (sd);
 	CB_SYSCALL s;
 	unsigned int func, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
 	int result, errcode;
