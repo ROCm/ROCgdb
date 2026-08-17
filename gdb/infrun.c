@@ -448,8 +448,28 @@ static void
 show_stop_on_solib_events (struct ui_file *file, int from_tty,
 			   struct cmd_list_element *c, const char *value)
 {
-  gdb_printf (file, _("Stopping for shared library events is %s.\n"),
-	      value);
+  int val = atoi (value);
+
+  gdb_printf (file, _("Stopping for shared library events is %s"), value);
+
+  switch (val)
+    {
+    case STOP_SOLIB_NONE:
+      gdb_printf (file, _(" (disabled).\n"));
+      break;
+    case STOP_SOLIB_CPU:
+      gdb_printf (file, _(" (CPU libraries only).\n"));
+      break;
+    case STOP_SOLIB_GPU:
+      gdb_printf (file, _(" (GPU code objects only).\n"));
+      break;
+    case STOP_SOLIB_ALL:
+      gdb_printf (file, _(" (CPU and GPU).\n"));
+      break;
+    default:
+      gdb_printf (file, _(".\n"));
+      break;
+    }
 }
 
 /* True after stop if current stack frame should be printed.  */
@@ -6462,7 +6482,8 @@ handle_inferior_event (struct execution_control_state *ecs)
 	       and place breakpoints in initializer routines for
 	       dynamically loaded objects (among other things).  */
 	    ecs->event_thread->set_stop_signal (GDB_SIGNAL_0);
-	    if (stop_on_solib_events)
+	    if (stop_on_solib_events == STOP_SOLIB_CPU
+		|| stop_on_solib_events == STOP_SOLIB_ALL)
 	      {
 		/* Make sure we print "Stopped due to solib-event" in
 		   normal_stop.  */
@@ -11036,9 +11057,12 @@ leave it stopped or free to run as needed."),
 			    &stop_on_solib_events, _("\
 Set stopping for shared library events."), _("\
 Show stopping for shared library events."), _("\
-If nonzero, gdb will give control to the user when the dynamic linker\n\
-notifies gdb of shared library events.  The most common event of interest\n\
-to the user would be loading/unloading of a new library."),
+Values:\n\
+  0 == Do not stop on shared library events.\n\
+  1 == Stop on CPU shared library events only.\n\
+  2 == Stop on GPU code object events only.\n\
+  3 == Stop on both CPU and GPU library events.\n\
+The most common events of interest are loading/unloading of libraries."),
 			    set_stop_on_solib_events,
 			    show_stop_on_solib_events,
 			    &setlist, &showlist);

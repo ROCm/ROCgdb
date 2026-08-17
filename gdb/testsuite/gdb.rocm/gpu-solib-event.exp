@@ -14,9 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test that "set stop-on-solib-events 1" works for GPU code objects.
+# Test that "set stop-on-solib-events" works for GPU code objects.
 # Tests both file:// events (hipModuleLoad) and memory:// events
 # (hipModuleLoadData), as well as unload events (hipModuleUnload).
+#
+# Uses stop-on-solib-events value 2 (GPU events only) to avoid
+# stopping on CPU shared library events.
 
 load_lib rocm.exp
 
@@ -39,7 +42,9 @@ if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}] == -1}
     return
 }
 
-# Helper proc to skip CPU solib events and find GPU events.
+# Helper proc to continue until we see the expected GPU event.
+# HIP runtime may load internal memory:// code objects, so we need to
+# skip GPU events that don't match our specific criteria.
 # Arguments:
 #   event_type: "load" or "unload"
 #   uri_pattern: regex pattern to match (e.g., "file://" or "memory://")
@@ -48,10 +53,6 @@ proc find_gpu_event {event_type uri_pattern test_name} {
     set seen_gpu_event 0
     set max_continues 20
 
-    # The limit of 20 iterations should be sufficient to cover all CPU
-    # shared library events that may occur during hipModule* operations.
-    # HIP runtime may also load internal memory:// code objects during
-    # hipModuleLoad, so we skip GPU events that don't match our criteria.
     for {set i 0} {$i < $max_continues} {incr i} {
 	gdb_test_multiple "continue" "continue looking for $test_name" {
 	    -re -wrap "Stopped due to GPU code object event.*Inferior (loaded|unloaded) ${uri_pattern}\[^\r\n\]+" {
@@ -65,10 +66,7 @@ proc find_gpu_event {event_type uri_pattern test_name} {
 		# GPU event doesn't match our criteria (wrong operation type), continue.
 	    }
 	    -re -wrap "Stopped due to GPU code object event.*" {
-		# GPU event with different URI type (e.g., memory:// when looking for file://), continue.
-	    }
-	    -re -wrap "Stopped due to shared library event.*" {
-		# CPU solib event, continue looping.
+		# GPU event with different URI type, continue.
 	    }
 	    -re -wrap "Inferior.*exited" {
 		break
@@ -96,7 +94,9 @@ proc do_test {} {
 	    return
 	}
 
-	gdb_test_no_output "set stop-on-solib-events 1"
+	# Use value 2 to stop on GPU code object events only.
+	# This avoids CPU shared library events during test execution.
+	gdb_test_no_output "set stop-on-solib-events 2"
 
 	# Test 1: file:// load event (hipModuleLoad).
 	gdb_breakpoint "test_file_load" -temporary

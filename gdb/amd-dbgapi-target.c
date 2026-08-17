@@ -926,9 +926,11 @@ amd_dbgapi_target_breakpoint::check_status (struct bpstat *bs)
   amd_dbgapi_event_processed (resume_event_id);
 
   /* If a CODE_OBJECT_LIST_UPDATED event was seen during event processing,
-     check if the user requested to stop on solib events.  This implements
-     stop-on-solib-events for GPU code objects.  */
-  if (info.code_object_list_updated && stop_on_solib_events != 0)
+     check if the user requested to stop on GPU code object events.  This
+     implements stop-on-solib-events for GPU code objects.  */
+  if (info.code_object_list_updated
+      && (stop_on_solib_events == STOP_SOLIB_GPU
+	  || stop_on_solib_events == STOP_SOLIB_ALL))
     {
       bs->stop = true;
       bs->print = true;
@@ -942,7 +944,7 @@ amd_dbgapi_target_breakpoint::print_it (const bpstat *bs) const
 {
   /* We only reach here when check_status set bs->print_it to print_it_normal,
      which happens only for GPU code object events when stop_on_solib_events
-     is enabled.  */
+     is set to STOP_SOLIB_GPU or STOP_SOLIB_ALL.  */
   bool any_deleted = !current_program_space->deleted_solibs.empty ();
   bool any_added = !current_program_space->added_solibs.empty ();
 
