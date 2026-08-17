@@ -34,6 +34,8 @@ proc do_test { } {
     clean_restart $::binfile
 
     with_rocm_gpu_lock {
+	# Prevent ROCr from generating a GPU core dump.
+	gdb_test_no_output "set environment HSA_DISABLE_COREDUMP_ON_EXCEPTION=1"
 	if ![runto_main] {
 	    return
 	}
