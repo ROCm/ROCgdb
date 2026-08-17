@@ -39,7 +39,7 @@ gdb_test "with print pretty on -- print v_data_base_data" \
 	 "$::valnum_re = \{" \
 	 "  <base_data> = \{" \
 	 "    a = 1" \
-	 "  \}, " \
+	 "  \}," \
 	 "  members of <unnamed type>:" \
 	 "  b = 2" \
 	 "\}"]
@@ -49,12 +49,14 @@ gdb_test "with print pretty on -- print v_no_data_base_data" \
 	 "$::valnum_re = \{" \
 	 "  <base_data> = \{" \
 	 "    a = 3" \
-	 "  \}, <No data fields>\}"]
+	 "  \}," \
+	 "  <No data fields>" \
+	 "\}"]
 
 gdb_test "with print pretty on -- print v_data_base_no_data" \
     [multi_line \
 	 "$::valnum_re = \{" \
-	 "  <base_no_data> = \{<No data fields>\}, " \
+	 "  <base_no_data> = \{<No data fields>\}," \
 	 "  members of <unnamed type>:" \
 	 "  c = 4" \
 	 "\}"]
@@ -62,4 +64,6 @@ gdb_test "with print pretty on -- print v_data_base_no_data" \
 gdb_test "with print pretty on -- print v_no_data_base_no_data" \
     [multi_line \
 	 "$::valnum_re = \{" \
-	 "  <base_no_data> = \{<No data fields>\}, <No data fields>\}"]
+	 "  <base_no_data> = \{<No data fields>\}," \
+	 "  <No data fields>" \
+	 "\}"]

@@ -165,7 +165,21 @@ cp_print_value_fields (struct value *val, struct ui_file *stream,
 
   /* If there are no data fields, skip this part */
   if (len == n_baseclasses || !len)
-    fprintf_styled (stream, metadata_style.style (), "<No data fields>");
+    {
+      if (options->prettyformat && n_baseclasses > 0)
+	{
+	  gdb_printf (stream, "\n");
+	  print_spaces (2 + 2 * recurse, stream);
+	}
+
+      fprintf_styled (stream, metadata_style.style (), "<No data fields>");
+
+      if (options->prettyformat && n_baseclasses > 0)
+	{
+	  gdb_printf (stream, "\n");
+	  print_spaces (2 * recurse, stream);
+	}
+    }
   else
     {
       size_t statmem_obstack_initial_size = 0;
@@ -532,7 +546,11 @@ cp_print_value (struct value *val, struct ui_file *stream,
 		 0);
 	    }
 	}
-      gdb_puts (", ", stream);
+
+      gdb_puts (",", stream);
+
+      if (!options->prettyformat)
+	gdb_puts (" ", stream);
 
     flush_it:
       ;
