@@ -109,6 +109,7 @@ struct type_instance_flags
 	    && is_volatile == other.is_volatile
 	    && harvard_aspace == other.harvard_aspace
 	    && address_class == other.address_class
+	    && address_space == other.address_space
 	    && is_nottext == other.is_nottext
 	    && is_restrict == other.is_restrict
 	    && is_atomic == other.is_atomic);
@@ -131,6 +132,8 @@ struct type_instance_flags
       harvard_aspace = other.harvard_aspace;
     if (address_class == 0)
       address_class = other.address_class;
+    if (address_space == 0)
+      address_space = other.address_space;
 
     is_nottext = is_nottext || other.is_nottext;
     is_restrict = is_restrict || other.is_restrict;
@@ -155,6 +158,16 @@ struct type_instance_flags
      specific ways to represent these different types of address
      classes.  */
   unsigned int address_class : 2;
+
+  /* Address space field.  Some architectures have distinct memory
+     storage banks for which the pointer value alone is not sufficient
+     to distinguish which storage is being pointed at.  For these
+     cases, the address space value, which typically comes from the
+     DW_AT_address_space attribute in DWARF, determines where to go.
+     The particular meaning of which actual value represents which
+     storage, is target-specific.  */
+  arch_addr_space_id address_space : 4;
+  static constexpr arch_addr_space_id ADDRESS_SPACE_MAX = 15;
 
   /* Not textual.  By default, GDB treats all single byte integers as
      characters (or elements of strings) unless this flag is set.  */
@@ -1233,6 +1246,12 @@ struct type
   unsigned int address_class () const
   {
     return this->m_instance_flags.address_class;
+  }
+
+  /* Return the address space of this type.  */
+  arch_addr_space_id address_space () const
+  {
+    return (arch_addr_space_id) this->m_instance_flags.address_space;
   }
 
   /* Get the bounds bounds of this type.  The type must be a range type.  */
@@ -2492,6 +2511,9 @@ extern struct type *make_type_with_harvard_address_space
 
 extern struct type *make_type_with_address_class
   (struct type *type, unsigned int address_class);
+
+extern type *make_type_with_address_space (type *type,
+					   arch_addr_space_id aspace);
 
 /* Implement direct support for MEMBER_TYPE in GNU C++.
    TO_TYPE is the type of the member.  DOMAIN is the type of the aggregate that

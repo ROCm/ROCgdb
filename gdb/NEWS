@@ -118,6 +118,9 @@
   intent to remove it in a future release.
   The s390 64-bit target (s390x-*) remains supported.
 
+* GDB now recognizes DWARF DW_AT_address_space attribute for pointer,
+  reference, and rvalue reference types.
+
 * Configure changes
 
 ** --with-babeltrace has been removed.  The babeltrace library was
