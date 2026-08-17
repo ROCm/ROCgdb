@@ -94,9 +94,9 @@ proc do_test {} {
 	    return
 	}
 
-	# Use value 2 to stop on GPU code object events only.
+	# Use "gpu" to stop on GPU code object events only.
 	# This avoids CPU shared library events during test execution.
-	gdb_test_no_output "set stop-on-solib-events 2"
+	gdb_test_no_output "set stop-on-solib-events gpu"
 
 	# Test 1: file:// load event (hipModuleLoad).
 	gdb_breakpoint "test_file_load" -temporary
