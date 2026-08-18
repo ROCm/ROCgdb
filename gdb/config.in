@@ -6,6 +6,9 @@
 /* Additional directories to look for separate debug info. */
 #undef ADDITIONAL_DEBUG_DIRS
 
+/* Define if amd_dbgapi_convert_address_space needs a process_id */
+#undef AMD_DBGAPI_CONVERT_ASPACE_NEED_PROCESS_ID
+
 /* Directories from which to load auto-loaded scripts. */
 #undef AUTO_LOAD_DIR
 
