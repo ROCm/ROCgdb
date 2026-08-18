@@ -28,11 +28,12 @@
      && (a).st_dev == (b).st_dev)
 # elif defined _WIN32 && ! defined __CYGWIN__
    /* Native Windows.  */
-   /* stat() and fstat() set st_dev and st_ino to 0 if information about
+   /* stat() and fstat() set st_ino to 0 if information about
       the inode is not available.  */
 #  define SAME_INODE(a, b) \
-    (!((a).st_ino == 0 && (a).st_dev == 0) \
-     && (a).st_ino == (b).st_ino && (a).st_dev == (b).st_dev)
+    ((a).st_ino != 0			\
+     && (a).st_ino == (b).st_ino	\
+     && (a).st_dev == (b).st_dev)
 # else
 #  define SAME_INODE(a, b)    \
     ((a).st_ino == (b).st_ino \
