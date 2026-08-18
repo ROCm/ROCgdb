@@ -4634,38 +4634,9 @@ _bfd_x86_elf_link_setup_gnu_properties
 	}
     }
 
-  dynobj = htab->elf.dynobj;
-
   /* Set htab->elf.dynobj here so that there is no need to check and
      set it in check_relocs.  */
-  if (dynobj == NULL)
-    {
-      if (pbfd != NULL)
-	{
-	  htab->elf.dynobj = pbfd;
-	  dynobj = pbfd;
-	}
-      else
-	{
-	  bfd *abfd;
-
-	  /* Find a normal input file to hold linker created
-	     sections.  */
-	  for (abfd = info->input_bfds;
-	       abfd != NULL;
-	       abfd = abfd->link.next)
-	    if (bfd_get_flavour (abfd) == bfd_target_elf_flavour
-		&& (abfd->flags
-		    & (DYNAMIC | BFD_LINKER_CREATED | BFD_PLUGIN)) == 0
-		&& bed->relocs_compatible (abfd->xvec,
-					   info->output_bfd->xvec))
-	      {
-		htab->elf.dynobj = abfd;
-		dynobj = abfd;
-		break;
-	      }
-	}
-    }
+  dynobj = _bfd_elf_link_dynobj_internal (info, false);
 
   /* Return if there are no normal input files.  */
   if (dynobj == NULL)

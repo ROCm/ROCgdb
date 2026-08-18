@@ -298,44 +298,44 @@ gdbpy_check_quit_flag (const struct extension_language_defn *extlang)
    Python start symbol, and does not automatically print the stack on
    errors.  FILENAME is used to set the file name in error messages;
    NULL means that this is evaluating a string, not the contents of a
-   file.  */
+   file.
+   Return the result of the evaluation on success, NULL on failure.  */
 
-int
+gdbpy_ref<>
 eval_python_command (const char *command, int start_symbol,
 		     const char *filename)
 {
-  PyObject *m, *d;
+  gdbpy_opt_borrowed_ref<> mainmod = PyImport_AddModule ("__main__");
+  if (mainmod == nullptr)
+    return nullptr;
 
-  m = PyImport_AddModule ("__main__");
-  if (m == NULL)
-    return -1;
-
-  d = PyModule_GetDict (m);
-  if (d == NULL)
-    return -1;
+  gdbpy_opt_borrowed_ref<> globals = PyModule_GetDict (mainmod);
+  if (globals == nullptr)
+    return nullptr;
 
   bool file_set = false;
   if (filename != nullptr)
     {
       gdbpy_ref<> file = host_string_to_python_string ("__file__");
       if (file == nullptr)
-	return -1;
+	return nullptr;
 
       /* PyDict_GetItemWithError returns a borrowed reference.  */
-      PyObject *found = PyDict_GetItemWithError (d, file.get ());
+      gdbpy_opt_borrowed_ref<> found
+	= PyDict_GetItemWithError (globals, file.get ());
       if (found == nullptr)
 	{
 	  if (PyErr_Occurred ())
-	    return -1;
+	    return nullptr;
 
 	  gdbpy_ref<> filename_obj = host_string_to_python_string (filename);
 	  if (filename_obj == nullptr)
-	    return -1;
+	    return nullptr;
 
-	  if (PyDict_SetItem (d, file.get (), filename_obj.get ()) < 0)
-	    return -1;
-	  if (PyDict_SetItemString (d, "__cached__", Py_None) < 0)
-	    return -1;
+	  if (PyDict_SetItem (globals, file.get (), filename_obj.get ()) < 0)
+	    return nullptr;
+	  if (PyDict_SetItemString (globals, "__cached__", Py_None) < 0)
+	    return nullptr;
 
 	  file_set = true;
 	}
@@ -348,12 +348,12 @@ eval_python_command (const char *command, int start_symbol,
 				      : filename,
 				      start_symbol));
 
-  int result = -1;
+  gdbpy_ref<> eval_result;
   if (code != nullptr)
     {
-      gdbpy_ref<> eval_result (PyEval_EvalCode (code.get (), d, d));
-      if (eval_result != nullptr)
-	result = 0;
+      eval_result.reset (PyEval_EvalCode (code.get (), globals, globals));
+      if (eval_result == nullptr)
+	gdb_assert (PyErr_Occurred ());
     }
 
   if (file_set)
@@ -361,21 +361,21 @@ eval_python_command (const char *command, int start_symbol,
       /* If there's already an exception occurring, preserve it and
 	 restore it before returning from this function.  */
       std::optional<gdbpy_err_fetch> save_error;
-      if (result < 0)
+      if (eval_result == nullptr)
 	save_error.emplace ();
 
       /* CPython also just ignores errors here.  These should be
 	 expected to be exceedingly rare anyway.  */
-      if (PyDict_DelItemString (d, "__file__") < 0)
+      if (PyDict_DelItemString (globals, "__file__") < 0)
 	PyErr_Clear ();
-      if (PyDict_DelItemString (d, "__cached__") < 0)
+      if (PyDict_DelItemString (globals, "__cached__") < 0)
 	PyErr_Clear ();
 
       if (save_error.has_value ())
 	save_error->restore ();
     }
 
-  return result;
+  return eval_result;
 }
 
 /* Implementation of the gdb "python-interactive" command.  */
@@ -388,7 +388,7 @@ python_interactive_command (const char *arg, int from_tty)
 	   styled_string (command_style.style (), "python-interactive"));
 
   struct ui *ui = current_ui;
-  int err;
+  bool err;
 
   scoped_restore save_async = make_scoped_restore (&current_ui->async, 0);
 
@@ -400,11 +400,11 @@ python_interactive_command (const char *arg, int from_tty)
     {
       std::string script = std::string (arg) + "\n";
       /* Py_single_input causes the result to be displayed.  */
-      err = eval_python_command (script.c_str (), Py_single_input);
+      err = (eval_python_command (script.c_str (), Py_single_input) == nullptr);
     }
   else
     {
-      err = PyRun_InteractiveLoop (ui->instream, "<stdin>");
+      err = PyRun_InteractiveLoop (ui->instream, "<stdin>") != 0;
       dont_repeat ();
     }
 
@@ -415,6 +415,7 @@ python_interactive_command (const char *arg, int from_tty)
 /* Like PyRun_SimpleFile, but if there is an exception, it is not
    automatically displayed.  FILE is the Python script to run named
    FILENAME.
+   Return true on success, false on failure.
 
    On Windows hosts few users would build Python themselves (this is no
    trivial task on this platform), and thus use binaries built by
@@ -425,11 +426,11 @@ python_interactive_command (const char *arg, int from_tty)
    A FILE * from one runtime does not necessarily operate correctly in
    the other runtime.  */
 
-static int
+static bool
 python_run_simple_file (FILE *file, const char *filename)
 {
   std::string contents = read_remainder_of_file (file);
-  return eval_python_command (contents.c_str (), Py_file_input, filename);
+  return eval_python_command (contents.c_str (), Py_file_input, filename) != nullptr;
 }
 
 /* Given a command_line, return a command string suitable for passing
@@ -463,8 +464,7 @@ gdbpy_eval_from_control_command (const struct extension_language_defn *extlang,
   gdbpy_enter enter_py;
 
   std::string script = compute_python_string (cmd->body_list_0.get ());
-  int ret = eval_python_command (script.c_str (), Py_file_input);
-  if (ret != 0)
+  if (eval_python_command (script.c_str (), Py_file_input) == nullptr)
     gdbpy_handle_exception ();
 }
 
@@ -480,8 +480,7 @@ python_command (const char *arg, int from_tty)
   arg = skip_spaces (arg);
   if (arg && *arg)
     {
-      int ret = eval_python_command (arg, Py_file_input);
-      if (ret != 0)
+      if (eval_python_command (arg, Py_file_input) == nullptr)
 	gdbpy_handle_exception ();
     }
   else
@@ -1124,8 +1123,7 @@ gdbpy_source_script (const struct extension_language_defn *extlang,
 		     FILE *file, const char *filename)
 {
   gdbpy_enter enter_py;
-  int result = python_run_simple_file (file, filename);
-  if (result != 0)
+  if (! python_run_simple_file (file, filename))
     gdbpy_handle_exception ();
 }
 
@@ -1831,8 +1829,7 @@ gdbpy_source_objfile_script (const struct extension_language_defn *extlang,
   scoped_restore restore_current_objfile
     = make_scoped_restore (&gdbpy_current_objfile, objfile);
 
-  int result = python_run_simple_file (file, filename);
-  if (result != 0)
+  if (! python_run_simple_file (file, filename))
     gdbpy_print_stack ();
 }
 
@@ -1854,8 +1851,7 @@ gdbpy_execute_objfile_script (const struct extension_language_defn *extlang,
   scoped_restore restore_current_objfile
     = make_scoped_restore (&gdbpy_current_objfile, objfile);
 
-  int ret = eval_python_command (script, Py_file_input);
-  if (ret != 0)
+  if (eval_python_command (script, Py_file_input) == nullptr)
     gdbpy_print_stack ();
 }
 
@@ -3189,24 +3185,20 @@ Stop current recording." },
     METH_VARARGS | METH_KEYWORDS,
     "lookup_type (name [, block]) -> type\n\
 Return a Type corresponding to the given name." },
-  { "lookup_symbol", (PyCFunction) gdbpy_lookup_symbol,
-    METH_VARARGS | METH_KEYWORDS,
+  varargs_function<gdbpy_lookup_symbol> ("lookup_symbol",
     "lookup_symbol (name [, block] [, domain]) -> (symbol, is_field_of_this)\n\
 Return a tuple with the symbol corresponding to the given name (or None) and\n\
 a boolean indicating if name is a field of the current implied argument\n\
-`this' (when the current language is object-oriented)." },
-  { "lookup_global_symbol", (PyCFunction) gdbpy_lookup_global_symbol,
-    METH_VARARGS | METH_KEYWORDS,
+`this' (when the current language is object-oriented)."),
+  varargs_function<gdbpy_lookup_global_symbol> ("lookup_global_symbol",
     "lookup_global_symbol (name [, domain]) -> symbol\n\
-Return the symbol corresponding to the given name (or None)." },
-  { "lookup_static_symbol", (PyCFunction) gdbpy_lookup_static_symbol,
-    METH_VARARGS | METH_KEYWORDS,
+Return the symbol corresponding to the given name (or None)."),
+  varargs_function<gdbpy_lookup_static_symbol> ("lookup_static_symbol",
     "lookup_static_symbol (name [, domain]) -> symbol\n\
-Return the static-linkage symbol corresponding to the given name (or None)." },
-  { "lookup_static_symbols", (PyCFunction) gdbpy_lookup_static_symbols,
-    METH_VARARGS | METH_KEYWORDS,
+Return the static-linkage symbol corresponding to the given name (or None)."),
+  varargs_function<gdbpy_lookup_static_symbols> ("lookup_static_symbols",
     "lookup_static_symbols (name [, domain]) -> symbol\n\
-Return a list of all static-linkage symbols corresponding to the given name." },
+Return a list of all static-linkage symbols corresponding to the given name."),
 
   { "lookup_objfile", (PyCFunction) gdbpy_lookup_objfile,
     METH_VARARGS | METH_KEYWORDS,

@@ -22,6 +22,7 @@
 #define _ELF_AVR_H
 
 #include "elf/reloc-macros.h"
+#include "libiberty.h" // ARRAY_SIZE
 
 /* Processor specific flags for the ELF header e_flags field.  */
 #define EF_AVR_MACH 0x7F
@@ -89,5 +90,77 @@ START_RELOC_NUMBERS (elf_avr_reloc_type)
      RELOC_NUMBER (R_AVR_PORT5,                35)
      RELOC_NUMBER (R_AVR_32_PCREL,             36)
 END_RELOC_NUMBERS (R_AVR_max)
+
+
+// Object attribute tags.
+enum
+{
+  // 0-3 are generic.
+
+  // VTABLE is located in some named address space.
+  Tag_GNU_AVR_VTABLE_AS = 4,
+};
+
+
+// Object attribute values.
+enum
+{
+  // There's no VTABLE instance or VTABLE access in the ojbect file.
+  Val_GNU_AVR_VTABLE_NONE = 0,
+
+  // When the module hosts or reads a VTABLE, then Tag_GNU_AVR_VTABLE_AS is
+  // one plus AVR GCC's address space enum from <GCC>/gcc/config/avr/avr.h.
+
+  // VTABLE is located in AS0, the generic address space (RAM).
+  // This includes .rodata.  */
+  Val_GNU_AVR_VTABLE_RAM = 0 + 1,
+
+  // __flash: 16-bit flash in 0x0 -- 0xffff.
+  Val_GNU_AVR_VTABLE_FLASH = 1 + 1,
+
+  // __flash1: 16-bit flash in 0x10000 -- 0x1ffff.
+  Val_GNU_AVR_VTABLE_FLASH1 = 2 + 1,
+
+  // __flash2: 16-bit flash in 0x20000 -- 0x2ffff.
+  Val_GNU_AVR_VTABLE_FLASH2 = 3 + 1,
+
+  // __flash3: 16-bit flash in 0x30000 -- 0x3ffff.
+  Val_GNU_AVR_VTABLE_FLASH3 = 4 + 1,
+
+  // __flash4: 16-bit flash in 0x40000 -- 0x4ffff.
+  Val_GNU_AVR_VTABLE_FLASH4 = 5 + 1,
+
+  // __flash5: 16-bit flash in 0x50000 -- 0x5ffff.
+  Val_GNU_AVR_VTABLE_FLASH5 = 6 + 1,
+
+  // __flashx: 24-bit flash.
+  Val_GNU_AVR_VTABLE_FLASHX = 7 + 1,
+
+  Val_GNU_AVR_VTABLE_Sentinel
+};
+
+
+// Map Tag_GNU_AVR_VTABLE_AS to a static string for diagnostics.
+
+static inline const char *
+avr_tag_vtable_as_name (int tag)
+{
+  switch (tag)
+    {
+    default:
+      break;
+    case Val_GNU_AVR_VTABLE_NONE: return "no vtables";
+    case Val_GNU_AVR_VTABLE_RAM: return "generic address space";
+    case Val_GNU_AVR_VTABLE_FLASH: return "__flash";
+    case Val_GNU_AVR_VTABLE_FLASH1: return "__flash1";
+    case Val_GNU_AVR_VTABLE_FLASH2: return "__flash2";
+    case Val_GNU_AVR_VTABLE_FLASH3: return "__flash3";
+    case Val_GNU_AVR_VTABLE_FLASH4: return "__flash4";
+    case Val_GNU_AVR_VTABLE_FLASH5: return "__flash5";
+    case Val_GNU_AVR_VTABLE_FLASHX: return "__flashx";
+    }
+
+  return "<unknown>";
+}
 
 #endif /* _ELF_AVR_H */

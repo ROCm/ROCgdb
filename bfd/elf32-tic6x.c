@@ -2693,7 +2693,7 @@ elf32_tic6x_check_relocs (bfd *abfd, struct bfd_link_info *info,
   if ((bfd_link_pic (info) || elf32_tic6x_using_dsbt (abfd))
       && ! htab->elf.dynamic_sections_created)
     {
-      if (! bfd_elf_link_create_dynamic_sections (abfd, info))
+      if (!bfd_elf_link_create_dynamic_sections (info))
 	return false;
     }
 
@@ -2788,8 +2788,9 @@ elf32_tic6x_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	  if (htab->elf.sgot == NULL)
 	    {
-	      if (htab->elf.dynobj == NULL)
-		htab->elf.dynobj = abfd;
+	      if (htab->elf.dynobj == NULL
+		  && !_bfd_elf_link_dynobj (info))
+		return false;
 	      if (!_bfd_elf_create_got_section (htab->elf.dynobj, info))
 		return false;
 	    }
@@ -2843,8 +2844,9 @@ elf32_tic6x_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		 this reloc.  */
 	      if (sreloc == NULL)
 		{
-		  if (htab->elf.dynobj == NULL)
-		    htab->elf.dynobj = abfd;
+		  if (htab->elf.dynobj == NULL
+		      && !_bfd_elf_link_dynobj (info))
+		    return false;
 
 		  sreloc = _bfd_elf_make_dynamic_reloc_section
 		    (sec, htab->elf.dynobj, 2, abfd, /*rela? */ true);

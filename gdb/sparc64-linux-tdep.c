@@ -134,11 +134,13 @@ sparc64_linux_report_signal_info (struct gdbarch *gdbarch, struct ui_out *uiout,
 
   try
     {
+      using gdb_si = gdb::siginfo_type;
+      using si_key = gdb::siginfo_type::key;
       /* Evaluate si_code to see if the segfault is ADI related.  */
-      si_code = parse_and_eval_long ("$_siginfo.si_code\n");
+      si_code = parse_and_eval_long (gdb_si::get (si_key::siginfo_code));
 
       if (si_code >= SEGV_ACCADI && si_code <= SEGV_ADIPERR)
-	addr = parse_and_eval_long ("$_siginfo._sifields._sigfault.si_addr");
+	addr = parse_and_eval_long (gdb_si::get (si_key::siginfo_addr));
     }
   catch (const gdb_exception_error &exception)
     {

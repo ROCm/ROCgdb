@@ -116,7 +116,7 @@ class GdbRemoveReadlineFinder(MetaPathFinder):\n\
 \n\
 sys.meta_path.insert(2, GdbRemoveReadlineFinder())\n\
 ";
-  if (eval_python_command (code, Py_file_input) == 0)
+  if (eval_python_command (code, Py_file_input) != nullptr)
     PyOS_ReadlineFunctionPointer = gdbpy_readline_wrapper;
   else
     {

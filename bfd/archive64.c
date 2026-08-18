@@ -247,9 +247,9 @@ _bfd_archive_64_bit_write_armap (bfd *arch,
   /* now write the strings themselves */
   for (count = 0; count < symbol_count; count++)
     {
-      size_t len = strlen (*map[count].name) + 1;
+      size_t len = strlen (map[count].name) + 1;
 
-      if (bfd_write (*map[count].name, len, arch) != len)
+      if (bfd_write (map[count].name, len, arch) != len)
 	return false;
     }
 

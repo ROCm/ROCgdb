@@ -595,11 +595,13 @@ elf_vax_check_relocs (bfd *abfd, struct bfd_link_info *info, asection *sec,
 
 	  if (dynobj == NULL)
 	    {
-	      /* Create the .got section.  */
-	      elf_hash_table (info)->dynobj = dynobj = abfd;
-	      if (!_bfd_elf_create_got_section (dynobj, info))
+	      dynobj = _bfd_elf_link_dynobj (info);
+	      if (dynobj == NULL)
 		return false;
 	    }
+
+	  if (!_bfd_elf_create_got_section (dynobj, info))
+	    return false;
 
 	  if (h != NULL)
 	    {

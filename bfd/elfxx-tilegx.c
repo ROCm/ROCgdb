@@ -1602,6 +1602,10 @@ tilegx_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
     return true;
 
   htab = tilegx_elf_hash_table (info);
+  if (htab->elf.dynobj == NULL
+      && !_bfd_elf_link_dynobj (info))
+    return false;
+
   symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
 
@@ -1610,9 +1614,6 @@ tilegx_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
   num_relocs = sec->reloc_count;
 
   BFD_ASSERT (is_tilegx_elf (abfd) || num_relocs == 0);
-
-  if (htab->elf.dynobj == NULL)
-    htab->elf.dynobj = abfd;
 
   rel_end = relocs + num_relocs;
 
@@ -1989,9 +1990,7 @@ tilegx_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	      p = *head;
 	      if (p == NULL || p->sec != sec)
 		{
-		  size_t amt = sizeof *p;
-		  p = ((struct elf_dyn_relocs *)
-		       bfd_alloc (htab->elf.dynobj, amt));
+		  p = bfd_alloc (htab->elf.dynobj, sizeof (*p));
 		  if (p == NULL)
 		    return false;
 		  p->next = *head;

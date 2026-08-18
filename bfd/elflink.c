@@ -282,57 +282,69 @@ _bfd_elf_create_got_section (bfd *dynobj, struct bfd_link_info *info)
 
   return true;
 }
-
-/* Create a strtab to hold the dynamic symbol names.  */
+
+/* Return true if IBFD is compatible with the output.  Used for example
+   to decide whether an object file can hold linker generated dynamic
+   sections, and whether object file relocations can be examined by
+   check_relocs (for plt/got/dyn reloc generation).  */
+
 static bool
-_bfd_elf_link_create_dynstrtab (bfd *abfd, struct bfd_link_info *info)
+compatible_format (struct bfd_link_info *info, bfd *ibfd)
 {
-  struct elf_link_hash_table *hash_table;
+  return (bfd_get_flavour (ibfd) == bfd_target_elf_flavour
+	  && is_elf_hash_table (info->hash)
+	  && elf_object_id (ibfd) == elf_hash_table_id (elf_hash_table (info))
+	  && !(ibfd->sections != NULL
+	       && ibfd->sections->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
+	  && (get_elf_backend_data (ibfd)
+	      ->relocs_compatible (ibfd->xvec, info->output_bfd->xvec)));
+}
 
-  hash_table = elf_hash_table (info);
-  if (hash_table->dynobj == NULL)
+/* Find a suitable object for attaching dynamic sections.  */
+
+bfd *
+_bfd_elf_link_dynobj_internal (struct bfd_link_info *info, bool report)
+{
+  struct elf_link_hash_table *htab = elf_hash_table (info);
+
+  if (htab->dynobj == NULL)
     {
-      /* We may not set dynobj, an input file holding linker created
-	 dynamic sections to abfd, which may be a dynamic object with
-	 its own dynamic sections.  We need to find a normal input file
-	 to hold linker created sections if possible.  */
-      if ((abfd->flags & (DYNAMIC | BFD_PLUGIN)) != 0)
-	{
-	  bfd *ibfd;
-	  asection *s;
-	  for (ibfd = info->input_bfds; ibfd; ibfd = ibfd->link.next)
-	    if ((ibfd->flags
-		 & (DYNAMIC | BFD_LINKER_CREATED | BFD_PLUGIN)) == 0
-		&& bfd_get_flavour (ibfd) == bfd_target_elf_flavour
-		&& elf_object_id (ibfd) == elf_hash_table_id (hash_table)
-		&& !((s = ibfd->sections) != NULL
-		     && s->sec_info_type == SEC_INFO_TYPE_JUST_SYMS))
-	      {
-		abfd = ibfd;
-		break;
-	      }
-	}
-      hash_table->dynobj = abfd;
+      /* We need to find an input file of the same format as the
+	 output to hold linker created sections.  */
+      bfd *ibfd;
+      for (ibfd = info->input_bfds; ibfd; ibfd = ibfd->link.next)
+	if (compatible_format (info, ibfd))
+	  break;
+      if (ibfd == NULL && report)
+	_bfd_error_handler (_("no %s input object found"),
+			    bfd_get_target (info->output_bfd));
+      htab->dynobj = ibfd;
     }
 
-  if (hash_table->dynstr == NULL)
-    {
-      hash_table->dynstr = _bfd_elf_strtab_init ();
-      if (hash_table->dynstr == NULL)
-	return false;
-    }
-  return true;
+  return htab->dynobj;
+}
+
+/* Return the strtab for dynamic symbol names.  Create it if
+   necessary.  */
+
+static struct elf_strtab_hash *
+_bfd_elf_link_dynstr (struct bfd_link_info *info)
+{
+  struct elf_link_hash_table *htab = elf_hash_table (info);
+
+  if (htab->dynstr == NULL)
+    htab->dynstr = _bfd_elf_strtab_init ();
+  return htab->dynstr;
 }
 
 /* Create some sections which will be filled in with dynamic linking
-   information.  ABFD is an input file which requires dynamic sections
-   to be created.  The dynamic sections take up virtual memory space
+   information.  The dynamic sections take up virtual memory space
    when the final executable is run, so we need to create them before
    addresses are assigned to the output sections.  We work out the
    actual contents and size of these sections later.  */
 
 bool
-bfd_elf_link_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
+bfd_elf_link_create_dynamic_sections (struct bfd_link_info *info)
 {
   flagword flags;
   asection *s;
@@ -346,10 +358,12 @@ bfd_elf_link_create_dynamic_sections (bfd *abfd, struct bfd_link_info *info)
   if (elf_hash_table (info)->dynamic_sections_created)
     return true;
 
-  if (!_bfd_elf_link_create_dynstrtab (abfd, info))
+  if (!_bfd_elf_link_dynstr (info))
     return false;
 
-  dynobj = elf_hash_table (info)->dynobj;
+  dynobj = _bfd_elf_link_dynobj (info);
+  if (dynobj == NULL)
+    return false;
   obed = get_elf_backend_data (dynobj);
 
   flags = obed->dynamic_sec_flags;
@@ -635,14 +649,9 @@ bfd_elf_link_record_dynamic_symbol (struct bfd_link_info *info,
 	elf_hash_table (info)->has_local_dynsyms = true;
       ++elf_hash_table (info)->dynsymcount;
 
-      dynstr = elf_hash_table (info)->dynstr;
+      dynstr = _bfd_elf_link_dynstr (info);
       if (dynstr == NULL)
-	{
-	  /* Create a strtab to hold the dynamic symbol names.  */
-	  elf_hash_table (info)->dynstr = dynstr = _bfd_elf_strtab_init ();
-	  if (dynstr == NULL)
-	    return false;
-	}
+	return false;
 
       char *unversioned_name = NULL;
 
@@ -903,14 +912,9 @@ bfd_elf_link_record_local_dynamic_symbol (struct bfd_link_info *info,
 	  (input_bfd, elf_symtab_hdr (input_bfd).sh_link,
 	   entry->isym.st_name));
 
-  dynstr = elf_hash_table (info)->dynstr;
+  dynstr = _bfd_elf_link_dynstr (info);
   if (dynstr == NULL)
-    {
-      /* Create a strtab to hold the dynamic symbol names.  */
-      elf_hash_table (info)->dynstr = dynstr = _bfd_elf_strtab_init ();
-      if (dynstr == NULL)
-	return 0;
-    }
+    return 0;
 
   dynstr_index = _bfd_elf_strtab_add (dynstr, name, false);
   if (dynstr_index == (size_t) -1)
@@ -3942,27 +3946,29 @@ _bfd_elf_strip_zero_sized_dynamic_sections (struct bfd_link_info *info)
 int
 bfd_elf_add_dt_needed_tag (bfd *abfd, struct bfd_link_info *info)
 {
-  struct elf_link_hash_table *hash_table;
+  struct elf_strtab_hash *dynstr;
   size_t strindex;
   const char *soname;
 
-  if (!_bfd_elf_link_create_dynstrtab (abfd, info))
+  dynstr = _bfd_elf_link_dynstr (info);
+  if (dynstr == NULL)
     return -1;
 
-  hash_table = elf_hash_table (info);
   soname = elf_dt_name (abfd);
-  strindex = _bfd_elf_strtab_add (hash_table->dynstr, soname, false);
+  strindex = _bfd_elf_strtab_add (dynstr, soname, false);
   if (strindex == (size_t) -1)
     return -1;
 
-  if (_bfd_elf_strtab_refcount (hash_table->dynstr, strindex) != 1)
+  if (!bfd_elf_link_create_dynamic_sections (info))
+    return -1;
+
+  if (_bfd_elf_strtab_refcount (dynstr, strindex) != 1)
     {
-      asection *sdyn;
-      elf_backend_data *obed;
+      struct elf_link_hash_table *hash_table = elf_hash_table (info);
+      elf_backend_data *obed = get_elf_backend_data (hash_table->dynobj);
+      asection *sdyn = hash_table->dynamic;
       bfd_byte *extdyn;
 
-      obed = get_elf_backend_data (hash_table->dynobj);
-      sdyn = hash_table->dynamic;
       if (sdyn != NULL && sdyn->size != 0)
 	for (extdyn = sdyn->contents;
 	     extdyn < sdyn->contents + sdyn->size;
@@ -3979,9 +3985,6 @@ bfd_elf_add_dt_needed_tag (bfd *abfd, struct bfd_link_info *info)
 	      }
 	  }
     }
-
-  if (!bfd_elf_link_create_dynamic_sections (hash_table->dynobj, info))
-    return -1;
 
   if (!_bfd_elf_add_dynamic_entry (info, DT_NEEDED, strindex))
     return -1;
@@ -4270,9 +4273,6 @@ _bfd_elf_link_iterate_on_relocs
    bool (*action) (bfd *, struct bfd_link_info *, asection *,
 		   const Elf_Internal_Rela *))
 {
-  elf_backend_data *bed = get_elf_backend_data (abfd);
-  struct elf_link_hash_table *htab = elf_hash_table (info);
-
   /* If this object is the same format as the output object, and it is
      not a shared library, then let the backend look through the
      relocs.
@@ -4291,13 +4291,9 @@ _bfd_elf_link_iterate_on_relocs
      I have no idea how to handle linking PIC code into a file of a
      different format.  It probably can't be done.  */
   if ((abfd->flags & DYNAMIC) == 0
-      && is_elf_hash_table (&htab->root)
-      && elf_object_id (abfd) == elf_hash_table_id (htab)
-      && (*bed->relocs_compatible) (abfd->xvec, info->output_bfd->xvec))
+      && compatible_format (info, abfd))
     {
-      asection *o;
-
-      for (o = abfd->sections; o != NULL; o = o->next)
+      for (asection *o = abfd->sections; o != NULL; o = o->next)
 	{
 	  Elf_Internal_Rela *internal_relocs;
 	  bool ok;
@@ -4595,7 +4591,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	  && info->output_bfd->xvec == abfd->xvec
 	  && !htab->dynamic_sections_created)
 	{
-	  if (!bfd_elf_link_create_dynamic_sections (abfd, info))
+	  if (!bfd_elf_link_create_dynamic_sections (info))
 	    goto error_return;
 	}
     }
@@ -4816,7 +4812,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
       /* Create dynamic sections for backends that require that be done
 	 before setup_gnu_properties.  */
       if (add_needed
-	  && !bfd_elf_link_create_dynamic_sections (abfd, info))
+	  && !bfd_elf_link_create_dynamic_sections (info))
 	return false;
 
       /* Save the DT_AUDIT entry for the linker emulation code. */
@@ -5754,7 +5750,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 
 		  /* Create dynamic sections for backends that require
 		     that be done before setup_gnu_properties.  */
-		  if (!bfd_elf_link_create_dynamic_sections (abfd, info))
+		  if (!bfd_elf_link_create_dynamic_sections (info))
 		    goto error_free_vers;
 		  add_needed = true;
 		}
@@ -14384,24 +14380,14 @@ _bfd_elf_gc_mark_extra_sections (struct bfd_link_info *info,
 }
 
 static bool
-elf_gc_sweep (bfd *obfd, struct bfd_link_info *info)
+elf_gc_sweep (struct bfd_link_info *info)
 {
-  bfd *sub;
-  elf_backend_data *obed = get_elf_backend_data (obfd);
-
-  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
+  for (bfd *sub = info->input_bfds; sub != NULL; sub = sub->link.next)
     {
-      asection *o;
-
-      if (bfd_get_flavour (sub) != bfd_target_elf_flavour
-	  || elf_object_id (sub) != elf_hash_table_id (elf_hash_table (info))
-	  || !obed->relocs_compatible (sub->xvec, obfd->xvec))
-	continue;
-      o = sub->sections;
-      if (o == NULL || o->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
+      if (!compatible_format (info, sub))
 	continue;
 
-      for (o = sub->sections; o != NULL; o = o->next)
+      for (asection *o = sub->sections; o != NULL; o = o->next)
 	{
 	  /* When any section in a section group is kept, we keep all
 	     sections in the section group.  If the first member of
@@ -14648,7 +14634,6 @@ bool
 bfd_elf_gc_sections (bfd *obfd, struct bfd_link_info *info)
 {
   bool ok = true;
-  bfd *sub;
   elf_gc_mark_hook_fn gc_mark_hook;
   elf_backend_data *obed = get_elf_backend_data (obfd);
   struct elf_link_hash_table *htab;
@@ -14666,7 +14651,7 @@ bfd_elf_gc_sections (bfd *obfd, struct bfd_link_info *info)
 
   /* Try to parse each bfd's .eh_frame section.  Point elf_eh_frame_section
      at the .eh_frame section if we can mark the FDEs individually.  */
-  for (sub = info->input_bfds;
+  for (bfd *sub = info->input_bfds;
        info->eh_frame_hdr_type != COMPACT_EH_HDR && sub != NULL;
        sub = sub->link.next)
     {
@@ -14724,24 +14709,16 @@ bfd_elf_gc_sections (bfd *obfd, struct bfd_link_info *info)
 
   /* Grovel through relocs to find out who stays ...  */
   gc_mark_hook = obed->gc_mark_hook;
-  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
+  for (bfd *sub = info->input_bfds; sub != NULL; sub = sub->link.next)
     {
-      asection *o;
-
-      if (bfd_get_flavour (sub) != bfd_target_elf_flavour
-	  || elf_object_id (sub) != elf_hash_table_id (htab)
-	  || !obed->relocs_compatible (sub->xvec, obfd->xvec))
-	continue;
-
-      o = sub->sections;
-      if (o == NULL || o->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
+      if (!compatible_format (info, sub))
 	continue;
 
       /* Start at sections marked with SEC_KEEP (ref _bfd_elf_gc_keep).
 	 Also treat note sections as a root, if the section is not part
 	 of a group.  We must keep all PREINIT_ARRAY, INIT_ARRAY as
 	 well as FINI_ARRAY sections for ld -r.  */
-      for (o = sub->sections; o != NULL; o = o->next)
+      for (asection *o = sub->sections; o != NULL; o = o->next)
 	if (!o->gc_mark
 	    && (o->flags & SEC_EXCLUDE) == 0
 	    && ((o->flags & SEC_KEEP) != 0
@@ -14768,7 +14745,7 @@ bfd_elf_gc_sections (bfd *obfd, struct bfd_link_info *info)
     return false;
 
   /* ... and mark SEC_EXCLUDE for those that go.  */
-  return elf_gc_sweep (obfd, info);
+  return elf_gc_sweep (info);
 }
 
 /* Called from check_relocs to record the existence of a VTINHERIT reloc.  */
@@ -15535,9 +15512,9 @@ _bfd_elf_default_got_elt_size (struct bfd_link_info *info,
 
 /* Returns the name of the dynamic reloc section associated with SEC.  */
 
-static const char *
-get_dynamic_reloc_section_name (bfd *       abfd,
-				asection *  sec,
+static char *
+get_dynamic_reloc_section_name (bfd *abfd,
+				asection *sec,
 				bool is_rela)
 {
   const char *prefix = is_rela ? ".rela" : ".rel";
@@ -15574,14 +15551,28 @@ _bfd_elf_make_dynamic_reloc_section (asection *sec,
 
   if (reloc_sec == NULL)
     {
-      const char * name = get_dynamic_reloc_section_name (abfd, sec, is_rela);
+      bool known = (dynobj != NULL
+		    && (get_elf_backend_data (dynobj)
+			->relocs_compatible (dynobj->xvec, abfd->xvec)));
+      BFD_ASSERT (known);
+      if (!known
+	  || dynobj->xvec->byteorder != abfd->xvec->byteorder)
+	{
+	  _bfd_error_handler (_("%s dynamic relocs incompatible with%s%s output"),
+			      bfd_get_target (abfd),
+			      dynobj ? " " : "",
+			      dynobj ? bfd_get_target (dynobj) : "");
+	  return NULL;
+	}
 
+      char *name = get_dynamic_reloc_section_name (dynobj, sec, is_rela);
       if (name == NULL)
 	return NULL;
 
       reloc_sec = bfd_get_linker_section (dynobj, name);
-
-      if (reloc_sec == NULL)
+      if (reloc_sec != NULL)
+	bfd_release (dynobj, name);
+      else
 	{
 	  flagword flags = (SEC_HAS_CONTENTS | SEC_READONLY
 			    | SEC_IN_MEMORY | SEC_LINKER_CREATED);

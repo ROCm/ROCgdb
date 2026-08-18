@@ -164,6 +164,8 @@ gdb_test "python print (a\[0\].value())" \
     "try to print value of a without a frame"
 gdb_test "python print (a\[0\].value(frame))" "0" \
     "print value of a"
+gdb_test "python print (a\[0\].value(frame=frame))" "0" \
+    "print value of a passing frame by name"
 gdb_test "python print (a\[0\].needs_frame)" "True" \
     "print whether a needs a frame"
 

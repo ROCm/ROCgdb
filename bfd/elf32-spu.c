@@ -619,9 +619,9 @@ spu_elf_create_sections (struct bfd_link_info *info)
       asection *s;
       flagword flags;
 
-      if (htab->elf.dynobj == NULL)
-	htab->elf.dynobj = ibfd;
-      ibfd = htab->elf.dynobj;
+      ibfd = _bfd_elf_link_dynobj (info);
+      if (ibfd == NULL)
+	return false;
       flags = (SEC_LOAD | SEC_ALLOC | SEC_READONLY | SEC_HAS_CONTENTS
 	       | SEC_IN_MEMORY | SEC_LINKER_CREATED);
       s = bfd_make_section_anyway_with_flags (ibfd, ".fixup", flags);

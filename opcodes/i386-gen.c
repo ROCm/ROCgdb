@@ -620,6 +620,17 @@ static bitfield operand_types[] =
 #endif
 };
 
+/* Class and instance are small non-negative numbers, while the other fields
+   have boolean type.  Use the smallest available type for latching the values
+   out of struct bitfield.  */
+typedef unsigned char opval_t;
+
+/* Number of opval_t in a single operand representation.  */
+#define OPVAL_COUNT (2 + ARRAY_SIZE (operand_types))
+
+static const opval_t **operands[MAX_OPERANDS + 1];
+static unsigned int nr_operands[MAX_OPERANDS + 1];
+
 static const char *filename;
 static i386_cpu_flags active_cpu_flags;
 static int active_isstring;
@@ -1385,7 +1396,7 @@ output_operand_type (FILE *table, enum operand_class class,
   fprintf (table, "%d } }", types[i].value);
 }
 
-static void
+static const opval_t *
 process_i386_operand_type (FILE *table, char *op, enum stage stage,
 			   const char *indent, int lineno)
 {
@@ -1448,8 +1459,35 @@ process_i386_operand_type (FILE *table, char *op, enum stage stage,
 	  set_bitfield("Disp32", types, 1, ARRAY_SIZE (types), lineno);
 	}
     }
+
+  if (!table)
+    {
+      opval_t *op = XNEWVEC (opval_t, OPVAL_COUNT);
+
+      op[0] = class;
+      op[1] = instance;
+
+      /* Check for no truncation.  */
+      if (op[0] != class || op[1] != instance)
+	fail ("%s: %d: class (%u) or instance (%u) out of range\n",
+	      filename, lineno);
+
+      for (unsigned int i = 0; i < ARRAY_SIZE (types); ++i)
+	{
+	  op[i + 2] = types[i].value;
+
+	  /* Check for no truncation.  */
+	  if (op[i + 2] != types[i].value)
+	    fail ("%s: %d: `%s' value out of range: %d\n",
+		  filename, lineno, types[i].name, types[i].value);
+	}
+
+      return op;
+    }
+
   output_operand_type (table, class, instance, types, ARRAY_SIZE (types),
 		       stage, indent);
+  return NULL;
 }
 
 static char *mkident (const char *mnem)
@@ -1466,13 +1504,53 @@ static char *mkident (const char *mnem)
   return ident;
 }
 
+static unsigned int
+get_opref (const opval_t *op[], unsigned int nr, bool parse)
+{
+  static unsigned int slots_operands[MAX_OPERANDS + 1];
+  unsigned int i, lst, step;
+
+  /* While parsing templates, insert into the respective list.  In this phase
+     also only consider whole groups of operands for merging.
+
+     On the final merging pass everything goes onto the MAX_OPERANDS list.  */
+  if (parse)
+    lst = step = nr;
+  else
+    lst = MAX_OPERANDS, step = 1;
+
+  /* Brute force lookup for now.  */
+  for (unsigned int ref = 0; ref + nr <= nr_operands[lst]; ref += step)
+    {
+      for (i = 0; i < nr; ++i)
+	if (memcmp (operands[lst][ref + i], op[i], OPVAL_COUNT))
+	  break;
+      if (i == nr)
+	{
+	  while (i--)
+	    free ((void *)op[i]);
+	  return ref;
+	}
+    }
+
+  if (nr_operands[lst] + nr > slots_operands[lst])
+    operands[lst] = XRESIZEVEC (const opval_t *, operands[lst],
+				slots_operands[lst] += 16 * nr);
+
+  for (i = 0; i < nr; ++i)
+    operands[lst][nr_operands[lst]++] = op[i];
+
+  return nr_operands[lst] - nr;
+}
+
 static void
 output_i386_opcode (FILE *table, const char *name, char *str,
 		    char *last, int lineno)
 {
-  unsigned int i, length, prefix = 0, space = 0;
+  unsigned int i, length, prefix = 0, space = 0, ref;
   char *base_opcode, *extension_opcode, *end, *ident;
   char *cpu_flags, *opcode_modifier, *operand_types [MAX_OPERANDS];
+  const opval_t *op [MAX_OPERANDS];
   unsigned long long opcode;
 
   /* Find base_opcode.  */
@@ -1577,25 +1655,29 @@ output_i386_opcode (FILE *table, const char *name, char *str,
 
   process_i386_cpu_flag (table, cpu_flags, NULL, ",", "    ", lineno, CpuMax);
 
-  fprintf (table, "    { ");
-
   for (i = 0; i < ARRAY_SIZE (operand_types); i++)
     {
       if (!operand_types[i])
-	{
-	  if (i == 0)
-	    process_i386_operand_type (table, "0", stage_opcodes, "\t  ",
-				       lineno);
-	  break;
-	}
+	break;
 
-      if (i != 0)
-	fprintf (table, ",\n      ");
-
-      process_i386_operand_type (table, operand_types[i], stage_opcodes,
-				 "\t  ", lineno);
+      op[i] = process_i386_operand_type (NULL, operand_types[i], stage_opcodes,
+					 NULL, lineno);
     }
-  fprintf (table, " } },\n");
+
+  if (i == 0)
+    {
+      fprintf (table, "    0 },\n");
+      return;
+    }
+
+  ref = get_opref (op, i, true);
+  /* The MAX_OPERANDS list won't further be altered, so the reference can be
+     recorded directly.  All other lists will be merged into the main list
+     later, and the reference to store will be known only then.  */
+  if (i == MAX_OPERANDS)
+    fprintf (table, "    %u },\n", ref);
+  else
+    fprintf (table, "    OPREF_%u_%u },\n", i, ref);
 }
 
 struct opcode_hash_entry
@@ -2117,9 +2199,40 @@ process_i386_opcodes (FILE *table)
     }
 
   fprintf (table, "  \"\\0\"\".insn\"\n");
-  fprintf (fp, "#define MN__insn %#x\n", offs + 1);
+  fprintf (fp, "#define MN__insn %#x\n\n", offs + 1);
 
   fprintf (table, ";\n");
+
+  for (i = MAX_OPERANDS - 1; i > 0; --i)
+    {
+      for (j = 0, nr = nr_operands[i]; j < nr; j += i)
+	{
+	  unsigned int ref = get_opref (&operands[i][j], i, false);
+
+	  fprintf (fp, "#define OPREF_%u_%u %u\n", i, j, ref);
+	}
+    }
+
+  fprintf (table, "\n/* i386 operand types table.  */\n\n");
+  fprintf (table, "static const i386_operand_type i386_operand_types[] =\n{\n");
+
+  for (i = 0; i < nr_operands[MAX_OPERANDS]; ++i)
+    {
+      const opval_t *op = operands[MAX_OPERANDS][i];
+      bitfield types[ARRAY_SIZE (operand_types)] = { [0] = { .name = NULL } };
+
+      fprintf (table, "  ");
+
+      for (j = 0; j < ARRAY_SIZE (types); ++j)
+	types[j].value = op[j + 2];
+
+      output_operand_type (table, op[0], op[1], types, ARRAY_SIZE (types),
+			   stage_opcodes, "      ");
+
+      fprintf (table, ",\n");
+    }
+
+  fprintf (table, "};\n");
 
   fclose (fp);
 }

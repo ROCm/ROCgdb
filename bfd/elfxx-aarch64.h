@@ -158,12 +158,12 @@ struct aarch64_memtag_opts
 typedef struct aarch64_memtag_opts aarch64_memtag_opts;
 
 extern void bfd_elf64_aarch64_set_options
-  (bfd *, struct bfd_link_info *, int, int, int, int, erratum_84319_opts, int,
-   const aarch64_protection_opts *, const aarch64_memtag_opts *);
+  (struct bfd_link_info *, int, int, int, int, erratum_84319_opts, int,
+   const aarch64_protection_opts *, const aarch64_memtag_opts *, bfd *);
 
 extern void bfd_elf32_aarch64_set_options
-  (bfd *, struct bfd_link_info *, int, int, int, int, erratum_84319_opts, int,
-   const aarch64_protection_opts *, const aarch64_memtag_opts *);
+  (struct bfd_link_info *, int, int, int, int, erratum_84319_opts, int,
+   const aarch64_protection_opts *, const aarch64_memtag_opts *, bfd *);
 
 /* AArch64 stub generation support for ELF64.  Called from the linker.  */
 extern int elf64_aarch64_setup_section_lists

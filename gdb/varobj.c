@@ -1419,20 +1419,13 @@ void
 varobj_set_visualizer (struct varobj *var, const char *visualizer)
 {
 #if HAVE_PYTHON
-  PyObject *mainmod;
-
   if (!gdb_python_initialized)
     return;
 
   gdbpy_enter_varobj enter_py (var);
 
-  mainmod = PyImport_AddModule ("__main__");
-  gdbpy_ref<> globals
-    = gdbpy_ref<>::new_reference (PyModule_GetDict (mainmod));
-  gdbpy_ref<> constructor (PyRun_String (visualizer, Py_eval_input,
-					 globals.get (), globals.get ()));
-
-  if (constructor == NULL)
+  auto constructor = eval_python_command (visualizer, Py_eval_input);
+  if (constructor == nullptr)
     {
       gdbpy_print_stack ();
       error (_("Could not evaluate visualizer expression: %s"), visualizer);

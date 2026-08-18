@@ -4172,7 +4172,7 @@ _bfd_aarch64_resize_stubs (struct elf_aarch64_link_hash_table *htab)
        section != NULL; section = section->next)
     {
       /* Ignore non-stub sections.  */
-      if (!strstr (section->name, STUB_SUFFIX))
+      if ((section->flags & SEC_LINKER_CREATED) != 0)
 	continue;
 
       /* Add space for a branch.  Add 8 bytes to keep section 8 byte aligned,
@@ -4185,7 +4185,7 @@ _bfd_aarch64_resize_stubs (struct elf_aarch64_link_hash_table *htab)
   for (section = htab->stub_bfd->sections;
        section != NULL; section = section->next)
     {
-      if (!strstr (section->name, STUB_SUFFIX))
+      if ((section->flags & SEC_LINKER_CREATED) != 0)
 	continue;
 
       /* Empty stub section.  */
@@ -4761,7 +4761,6 @@ elfNN_aarch64_size_stubs (bfd *output_bfd,
 		     bfd_get_mach (output_bfd));
 
   /* Stash our params away.  */
-  htab->stub_bfd = stub_bfd;
   htab->add_stub_section = add_stub_section;
   htab->layout_sections_again = layout_sections_again;
   stubs_always_before_branch = group_size < 0;
@@ -4868,7 +4867,7 @@ elfNN_aarch64_build_stubs (struct bfd_link_info *info)
       bfd_size_type size;
 
       /* Ignore non-stub sections.  */
-      if (!strstr (stub_sec->name, STUB_SUFFIX))
+      if ((stub_sec->flags & SEC_LINKER_CREATED) != 0)
 	continue;
 
       /* Allocate memory to hold the linker stubs.  */
@@ -5017,17 +5016,18 @@ setup_plt_values (struct bfd_link_info *link_info,
 
 /* Set option values needed during linking.  */
 void
-bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
-			       struct bfd_link_info *link_info,
+bfd_elfNN_aarch64_set_options (struct bfd_link_info *link_info,
 			       int no_enum_warn,
 			       int no_wchar_warn, int pic_veneer,
 			       int fix_erratum_835769,
 			       erratum_84319_opts fix_erratum_843419,
 			       int no_apply_dynamic_relocs,
 			       const aarch64_protection_opts *sw_protections,
-			       const aarch64_memtag_opts *memtag_opts)
+			       const aarch64_memtag_opts *memtag_opts,
+			       bfd *stub_bfd)
 {
   struct elf_aarch64_link_hash_table *globals;
+  bfd *output_bfd;
 
   globals = elf_aarch64_hash_table (link_info);
   globals->pic_veneer = pic_veneer;
@@ -5039,6 +5039,11 @@ bfd_elfNN_aarch64_set_options (struct bfd *output_bfd,
   globals->fix_erratum_843419 = fix_erratum_843419;
   globals->no_apply_dynamic_relocs = no_apply_dynamic_relocs;
 
+  globals->stub_bfd = stub_bfd;
+  stub_bfd->flags |= BFD_LINKER_CREATED;
+  elf_elfheader (stub_bfd)->e_ident[EI_CLASS] = ELFCLASSNN;
+
+  output_bfd = link_info->output_bfd;
   BFD_ASSERT (is_aarch64_elf (output_bfd));
   elf_aarch64_tdata (output_bfd)->no_enum_size_warning = no_enum_warn;
   elf_aarch64_tdata (output_bfd)->no_wchar_size_warning = no_wchar_warn;
@@ -8001,8 +8006,9 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  if (h->root.root.string
 	      && strcmp (h->root.root.string, "_GLOBAL_OFFSET_TABLE_") == 0)
 	    {
-	      if (htab->root.dynobj == NULL)
-		htab->root.dynobj = abfd;
+	      if (htab->root.dynobj == NULL
+		  && !_bfd_elf_link_dynobj (info))
+		return false;
 
 	      if (! aarch64_elf_create_got_section (htab->root.dynobj, info))
 		return false;
@@ -8033,8 +8039,9 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    case BFD_RELOC_AARCH64_MOVW_GOTOFF_G0_NC:
 	    case BFD_RELOC_AARCH64_MOVW_GOTOFF_G1:
 	    case BFD_RELOC_AARCH64_NN:
-	      if (htab->root.dynobj == NULL)
-		htab->root.dynobj = abfd;
+	      if (htab->root.dynobj == NULL
+		  && !_bfd_elf_link_dynobj (info))
+		return false;
 	      if (!_bfd_elf_create_ifunc_sections (htab->root.dynobj, info))
 		return false;
 	      break;
@@ -8160,12 +8167,13 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	       this reloc.  */
 	    if (sreloc == NULL)
 	      {
-		if (htab->root.dynobj == NULL)
-		  htab->root.dynobj = abfd;
-
-		sreloc = _bfd_elf_make_dynamic_reloc_section
-		  (sec, htab->root.dynobj, LOG_FILE_ALIGN, abfd, /*rela? */ true);
-
+		if (htab->root.dynobj == NULL
+		    && !_bfd_elf_link_dynobj (info))
+		  return false;
+		sreloc = _bfd_elf_make_dynamic_reloc_section (sec,
+							      htab->root.dynobj,
+							      LOG_FILE_ALIGN,
+							      abfd, true);
 		if (sreloc == NULL)
 		  return false;
 	      }
@@ -8203,9 +8211,7 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    p = *head;
 	    if (p == NULL || p->sec != sec)
 	      {
-		size_t amt = sizeof *p;
-		p = ((struct elf_dyn_relocs *)
-		     bfd_zalloc (htab->root.dynobj, amt));
+		p = bfd_zalloc (htab->root.dynobj, sizeof (*p));
 		if (p == NULL)
 		  return false;
 		p->next = *head;
@@ -8310,8 +8316,9 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		  }
 	      }
 
-	    if (htab->root.dynobj == NULL)
-	      htab->root.dynobj = abfd;
+	    if (htab->root.dynobj == NULL
+		&& !_bfd_elf_link_dynobj (info))
+	      return false;
 	    if (! aarch64_elf_create_got_section (htab->root.dynobj, info))
 	      return false;
 	    break;
@@ -8743,7 +8750,7 @@ elfNN_aarch64_output_arch_local_syms (struct bfd_link_info *info,
 	   stub_sec != NULL; stub_sec = stub_sec->next)
 	{
 	  /* Ignore non-stub sections.  */
-	  if (!strstr (stub_sec->name, STUB_SUFFIX))
+	  if ((stub_sec->flags & SEC_LINKER_CREATED) != 0)
 	    continue;
 
 	  osi.sec = stub_sec;
@@ -9826,7 +9833,7 @@ elfNN_aarch64_late_size_sections (struct bfd_link_info *info)
 	 section's contents are written out.  This should not happen,
 	 but this way if it does, we get a R_AARCH64_NONE reloc instead
 	 of garbage.  */
-      s->contents = (bfd_byte *) bfd_zalloc (dynobj, s->size);
+      s->contents = bfd_zalloc (dynobj, s->size);
       if (s->contents == NULL)
 	return false;
       s->alloced = 1;

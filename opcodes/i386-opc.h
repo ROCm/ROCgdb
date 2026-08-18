@@ -1104,11 +1104,11 @@ typedef struct insn_template
   /* cpu feature attributes */
   i386_cpu_attr cpu, cpu_any;
 
-  /* operand_types[i] describes the type of operand i.  This is made
-     by OR'ing together all of the possible type masks.  (e.g.
+  /* i386_operand_types[operand_ref + i] describes the type of operand i.
+     This is made by OR'ing together all of the possible type masks.  (e.g.
      'operand_types[i] = Reg|Imm' specifies that operand i can be
      either a register or an immediate operand.  */
-  i386_operand_type operand_types[MAX_OPERANDS];
+  unsigned int operand_ref;
 }
 insn_template;
 

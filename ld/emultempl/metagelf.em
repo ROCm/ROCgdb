@@ -64,6 +64,7 @@ metagelf_create_output_section_statements (void)
     }
 
   stub_file->the_bfd->flags |= BFD_LINKER_CREATED;
+  elf_elfheader (stub_file->the_bfd)->e_ident[EI_CLASS] = ELFCLASS32;
   ldlang_add_file (stub_file);
 }
 

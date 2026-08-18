@@ -17,7 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "top.h"
 #include "block.h"
 #include "frame.h"
 #include "symtab.h"
@@ -29,279 +28,218 @@ struct symbol_object : public PyObject
 {
   /* The GDB symbol structure this object is wrapping.  */
   struct symbol *symbol;
+
+  /* Require a valid symbol object.  If it is not valid, throw an
+     exception.  */
+  void require_valid ()
+  {
+    if (symbol == nullptr)
+      gdbpy_err_set_string (PyExc_RuntimeError, _("Symbol is invalid."));
+  }
+
+  /* Return a string representation of this symbol.  */
+  const char *str ()
+  {
+    require_valid ();
+    return symbol->print_name ();
+  }
+
+  /* 'type' attribute.  */
+  gdbpy_ref<> type ();
+
+  /* 'symtab' attribute.  */
+  gdbpy_ref<> symtab ();
+
+  /* 'name' attribute.  */
+  const char *name ();
+
+  /* 'linkage_name' attribute.  */
+  const char *linkage_name ();
+
+  /* 'addr_class' attribute.  */
+  int addr_class ();
+
+  /* 'domain' attribute.  */
+  int domain ();
+
+  /* 'is_argument' attribute.  */
+  bool is_argument ();
+
+  /* 'is_constant' attribute.  */
+  bool is_constant ();
+
+  /* 'is_function' attribute.  */
+  bool is_function ();
+
+  /* 'is_variable' attribute.  */
+  bool is_variable ();
+
+  /* 'is_artificial' attribute.  */
+  bool is_artificial ();
+
+  /* 'needs_frame' attribute.  */
+  bool needs_frame ();
+
+  /* 'line' attribute.  */
+  unsigned line ();
+
+  /* 'is_valid' method.  */
+  bool is_valid ()
+  {
+    return symbol != nullptr;
+  }
+
+  /* 'value' method.  */
+  gdbpy_ref<> value (gdbpy_borrowed_ref<> args, gdbpy_opt_borrowed_ref<> kw);
+
+  /* "repr" implementation.  */
+  gdbpy_ref<> repr ();
 };
 
 static_assert (gdb::is_python_allocatable_v<symbol_object>);
 
-/* Require a valid symbol.  All access to symbol_object->symbol should be
-   gated by this call.  */
-#define SYMPY_REQUIRE_VALID(symbol_obj, symbol)		\
-  do {							\
-    symbol = symbol_object_to_symbol (symbol_obj);	\
-    if (symbol == NULL)					\
-      {							\
-	PyErr_SetString (PyExc_RuntimeError,		\
-			 _("Symbol is invalid."));	\
-	return NULL;					\
-      }							\
-  } while (0)
-
 static const gdbpy_registry<gdbpy_memoizing_registry_storage<symbol_object,
   symbol, &symbol_object::symbol>> sympy_registry;
 
-static PyObject *
-sympy_str (PyObject *self)
+gdbpy_ref<>
+symbol_object::type ()
 {
-  PyObject *result;
-  struct symbol *symbol = NULL;
+  require_valid ();
 
-  SYMPY_REQUIRE_VALID (self, symbol);
+  if (symbol->type () == nullptr)
+    return py_none ();
 
-  result = PyUnicode_FromString (symbol->print_name ());
-
-  return result;
+  return type_to_type_object (symbol->type ());
 }
 
-static PyObject *
-sympy_get_type (PyObject *self, void *closure)
+gdbpy_ref<>
+symbol_object::symtab ()
 {
-  struct symbol *symbol = NULL;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  if (symbol->type () == NULL)
-    return py_none ().release ();
-
-  return type_to_type_object (symbol->type ()).release ();
-}
-
-static PyObject *
-sympy_get_symtab (PyObject *self, void *closure)
-{
-  struct symbol *symbol = NULL;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
+  require_valid ();
 
   if (!symbol->is_objfile_owned ())
-    return py_none ().release ();
+    return py_none ();
 
-  return symtab_to_symtab_object (symbol->symtab ()).release ();
+  return symtab_to_symtab_object (symbol->symtab ());
 }
 
-static PyObject *
-sympy_get_name (PyObject *self, void *closure)
+const char *
+symbol_object::name ()
 {
-  struct symbol *symbol = NULL;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  return PyUnicode_FromString (symbol->natural_name ());
+  require_valid ();
+  return symbol->natural_name ();
 }
 
-static PyObject *
-sympy_get_linkage_name (PyObject *self, void *closure)
+const char *
+symbol_object::linkage_name ()
 {
-  struct symbol *symbol = NULL;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  return PyUnicode_FromString (symbol->linkage_name ());
+  require_valid ();
+  return symbol->linkage_name ();
 }
 
-static PyObject *
-sympy_get_print_name (PyObject *self, void *closure)
+int
+symbol_object::addr_class ()
 {
-  struct symbol *symbol = NULL;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  return sympy_str (self);
+  require_valid ();
+  return symbol->loc_class ();
 }
 
-static PyObject *
-sympy_get_addr_class (PyObject *self, void *closure)
+int
+symbol_object::domain ()
 {
-  struct symbol *symbol = NULL;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  return gdb_py_object_from_longest (symbol->loc_class ()).release ();
+  require_valid ();
+  return symbol->domain ();
 }
 
-/* Implement gdb.Symbol.domain attribute.  Return the domain as an
-   integer.  */
-
-static PyObject *
-sympy_get_domain (PyObject *self, void *closure)
+bool
+symbol_object::is_argument ()
 {
-  struct symbol *symbol = nullptr;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  return gdb_py_object_from_longest (symbol->domain ()).release ();
+  require_valid ();
+  return symbol->is_argument ();
 }
 
-static PyObject *
-sympy_is_argument (PyObject *self, void *closure)
+bool
+symbol_object::is_constant ()
 {
-  struct symbol *symbol = NULL;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  return PyBool_FromLong (symbol->is_argument ());
-}
-
-static PyObject *
-sympy_is_constant (PyObject *self, void *closure)
-{
-  struct symbol *symbol = NULL;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
+  require_valid ();
   location_class loc_class = symbol->loc_class ();
-
-  return PyBool_FromLong (loc_class == LOC_CONST || loc_class == LOC_CONST_BYTES);
+  return loc_class == LOC_CONST || loc_class == LOC_CONST_BYTES;
 }
 
-static PyObject *
-sympy_is_function (PyObject *self, void *closure)
+bool
+symbol_object::is_function ()
 {
-  struct symbol *symbol = NULL;
+  require_valid ();
+  return symbol->loc_class () == LOC_BLOCK;
+}
 
-  SYMPY_REQUIRE_VALID (self, symbol);
-
+bool
+symbol_object::is_variable ()
+{
+  require_valid ();
   location_class loc_class = symbol->loc_class ();
-
-  return PyBool_FromLong (loc_class == LOC_BLOCK);
+  return (!symbol->is_argument ()
+	  && (loc_class == LOC_LOCAL || loc_class == LOC_REGISTER
+	      || loc_class == LOC_STATIC || loc_class == LOC_COMPUTED
+	      || loc_class == LOC_OPTIMIZED_OUT));
 }
 
-static PyObject *
-sympy_is_variable (PyObject *self, void *closure)
+bool
+symbol_object::is_artificial ()
 {
-  struct symbol *symbol = NULL;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  location_class loc_class = symbol->loc_class ();
-
-  return PyBool_FromLong (!symbol->is_argument ()
-			  && (loc_class == LOC_LOCAL || loc_class == LOC_REGISTER
-			      || loc_class == LOC_STATIC || loc_class == LOC_COMPUTED
-			      || loc_class == LOC_OPTIMIZED_OUT));
+  require_valid ();
+  return symbol->is_artificial ();
 }
 
-/* Implementation of Symbol.is_artificial.  */
-
-static PyObject *
-sympy_is_artificial (PyObject *self, void *closure)
+bool
+symbol_object::needs_frame ()
 {
-  struct symbol *symbol = nullptr;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  return PyBool_FromLong (symbol->is_artificial ());
+  require_valid ();
+  return symbol_read_needs_frame (symbol);
 }
 
-/* Implementation of gdb.Symbol.needs_frame -> Boolean.
-   Returns true iff the symbol needs a frame for evaluation.  */
-
-static PyObject *
-sympy_needs_frame (PyObject *self, void *closure)
+unsigned
+symbol_object::line ()
 {
-  struct symbol *symbol = NULL;
-  int result = 0;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  try
-    {
-      result = symbol_read_needs_frame (symbol);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  if (result)
-    return py_true ().release ();
-  return py_false ().release ();
-}
-
-/* Implementation of gdb.Symbol.line -> int.
-   Returns the line number at which the symbol was defined.  */
-
-static PyObject *
-sympy_line (PyObject *self, void *closure)
-{
-  struct symbol *symbol = NULL;
-
-  SYMPY_REQUIRE_VALID (self, symbol);
-
-  return gdb_py_object_from_longest (symbol->line ()).release ();
-}
-
-/* Implementation of gdb.Symbol.is_valid (self) -> Boolean.
-   Returns True if this Symbol still exists in GDB.  */
-
-static PyObject *
-sympy_is_valid (PyObject *self, PyObject *args)
-{
-  struct symbol *symbol = NULL;
-
-  symbol = symbol_object_to_symbol (self);
-  if (symbol == NULL)
-    return py_false ().release ();
-
-  return py_true ().release ();
+  require_valid ();
+  return symbol->line ();
 }
 
 /* Implementation of gdb.Symbol.value (self[, frame]) -> gdb.Value.  Returns
    the value of the symbol, or an error in various circumstances.  */
 
-static PyObject *
-sympy_value (PyObject *self, PyObject *args)
+gdbpy_ref<>
+symbol_object::value (gdbpy_borrowed_ref<> args, gdbpy_opt_borrowed_ref<> kw)
 {
-  struct symbol *symbol = NULL;
   frame_info_ptr frame_info = NULL;
   PyObject *frame_obj = NULL;
 
-  if (!PyArg_ParseTuple (args, "|O!", &frame_object_type, &frame_obj))
-    return NULL;
+  static const char *keywords[] = { "frame", nullptr };
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "|O!", keywords,
+				      &frame_object_type, &frame_obj);
 
-  SYMPY_REQUIRE_VALID (self, symbol);
+  require_valid ();
   if (symbol->loc_class () == LOC_TYPEDEF)
-    {
-      PyErr_SetString (PyExc_TypeError, "cannot get the value of a typedef");
-      return NULL;
-    }
+    gdbpy_err_set_string (PyExc_TypeError, "cannot get the value of a typedef");
 
   gdbpy_ref<> result;
-  try
+  if (frame_obj != nullptr)
     {
-      if (frame_obj != NULL)
-	{
-	  frame_info = frame_object_to_frame_info (frame_obj);
-	  if (frame_info == NULL)
-	    error (_("invalid frame"));
-	}
-
-      if (symbol_read_needs_frame (symbol) && frame_info == NULL)
-	error (_("symbol requires a frame to compute its value"));
-
-      /* TODO: currently, we have no way to recover the block in which SYMBOL
-	 was found, so we have no block to pass to read_var_value.  This will
-	 yield an incorrect value when symbol is not local to FRAME_INFO (this
-	 can happen with nested functions).  */
-      scoped_value_mark free_values;
-      struct value *value = read_var_value (symbol, NULL, frame_info);
-      result = value_to_value_object (value);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
+      frame_info = frame_object_to_frame_info (frame_obj);
+      if (frame_info == nullptr)
+	error (_("invalid frame"));
     }
 
-  return result.release ();
+  if (symbol_read_needs_frame (symbol) && frame_info == nullptr)
+    error (_("symbol requires a frame to compute its value"));
+
+  /* TODO: currently, we have no way to recover the block in which SYMBOL
+     was found, so we have no block to pass to read_var_value.  This will
+     yield an incorrect value when symbol is not local to FRAME_INFO (this
+     can happen with nested functions).  */
+  scoped_value_mark free_values;
+  struct value *value = read_var_value (symbol, nullptr, frame_info);
+  return value_to_value_object (value);
 }
 
 /* Given a symbol, and a symbol_object that has previously been
@@ -342,6 +280,8 @@ symbol_to_symbol_object (struct symbol *sym)
   if (result != nullptr)
     return result;
 
+  /* FIXME: Python safety.  This should use gdbpy_new and throw on
+     failure.  The callers aren't ready for this yet.  */
   symbol_object *sym_obj = PyObject_New (symbol_object, &symbol_object_type);
   if (sym_obj)
     set_symbol (sym_obj, sym);
@@ -376,16 +316,18 @@ sympy_dealloc (PyObject *obj)
 
 /* __repr__ implementation for gdb.Symbol.  */
 
-static PyObject *
-sympy_repr (PyObject *self)
+gdbpy_ref<>
+symbol_object::repr ()
 {
-  const auto symbol = symbol_object_to_symbol (self);
   if (symbol == nullptr)
-    return gdb_py_invalid_object_repr (self);
+    /* FIXME: Python safety.  gdb_py_invalid_object_repr ought to
+       throw on error, and return gdbpy_ref<>, but currently does
+       not.  */
+    return gdbpy_ref<> (gdb_py_invalid_object_repr (this));
 
-  return PyUnicode_FromFormat ("<%s print_name=%s>",
-			       gdbpy_py_obj_tp_name (self).c_str (),
-			       symbol->print_name ());
+  return gdbpy_unicode_from_format ("<%s print_name=%s>",
+				    gdbpy_py_obj_tp_name (this).c_str (),
+				    symbol->print_name ());
 }
 
 /* Implementation of
@@ -394,125 +336,102 @@ sympy_repr (PyObject *self)
    object or None, the second is a boolean with the value of
    is_a_field_of_this (see comment in lookup_symbol_in_language).  */
 
-PyObject *
-gdbpy_lookup_symbol (PyObject *self, PyObject *args, PyObject *kw)
+gdbpy_ref<>
+gdbpy_lookup_symbol (gdbpy_borrowed_ref<> args, gdbpy_opt_borrowed_ref<> kw)
 {
   int domain = VAR_DOMAIN;
   struct field_of_this_result is_a_field_of_this;
   const char *name;
   static const char *keywords[] = { "name", "block", "domain", NULL };
-  struct symbol *symbol = NULL;
-  PyObject *block_obj = NULL;
-  const struct block *block = NULL;
+  PyObject *block_obj = nullptr;
+  const struct block *block = nullptr;
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|O!i", keywords, &name,
-					&block_object_type, &block_obj,
-					&domain))
-    return NULL;
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "s|O!i", keywords, &name,
+				      &block_object_type, &block_obj,
+				      &domain);
 
-  if (block_obj)
+  if (block_obj != nullptr)
     block = block_object_to_block (block_obj);
   else
     {
-      frame_info_ptr selected_frame;
-
-      try
-	{
-	  selected_frame = get_selected_frame (_("No frame selected."));
-	  block = get_frame_block (selected_frame, NULL);
-	}
-      catch (const gdb_exception &except)
-	{
-	  return gdbpy_handle_gdb_exception (nullptr, except);
-	}
+      frame_info_ptr selected_frame
+	= get_selected_frame (_("No frame selected."));
+      block = get_frame_block (selected_frame, nullptr);
     }
 
-  try
-    {
-      domain_search_flags flags = from_scripting_domain (domain);
-      symbol = lookup_symbol (name, block, flags, &is_a_field_of_this).symbol;
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
+  domain_search_flags flags = from_scripting_domain (domain);
+  struct symbol *symbol
+    = lookup_symbol (name, block, flags, &is_a_field_of_this).symbol;
 
-  gdbpy_ref<> ret_tuple (PyTuple_New (2));
-  if (ret_tuple == NULL)
-    return NULL;
+  gdbpy_ref<> ret_tuple = gdbpy_tuple_new (2);
 
   gdbpy_ref<> sym_obj;
   if (symbol)
     {
       sym_obj = symbol_to_symbol_object (symbol);
+      /* FIXME: Python safety.  symbol_to_symbol_object should throw,
+	 but the other callers aren't ready for this yet.  */
       if (sym_obj == nullptr)
-	return nullptr;
+	throw gdb_python_exception ();
     }
   else
     sym_obj = py_none ();
 
-  if (PyTuple_SetItem (ret_tuple.get (), 0, sym_obj.release ()) < 0)
-    return nullptr;
+  gdbpy_tuple_set_item (ret_tuple, 0, std::move (sym_obj));
 
-  gdbpy_ref<> bool_obj (PyBool_FromLong (is_a_field_of_this.type != NULL));
-  if (PyTuple_SetItem (ret_tuple.get (), 1, bool_obj.release ()) < 0)
-    return nullptr;
+  gdbpy_ref<> bool_obj
+    = gdbpy_bool_from_long (is_a_field_of_this.type != nullptr);
+  gdbpy_tuple_set_item (ret_tuple, 1, std::move (bool_obj));
 
-  return ret_tuple.release ();
+  return ret_tuple;
 }
 
 /* Implementation of
    gdb.lookup_global_symbol (name [, domain]) -> symbol or None.  */
 
-PyObject *
-gdbpy_lookup_global_symbol (PyObject *self, PyObject *args, PyObject *kw)
+gdbpy_ref<>
+gdbpy_lookup_global_symbol (gdbpy_borrowed_ref<> args,
+			    gdbpy_opt_borrowed_ref<> kw)
 {
   int domain = VAR_DOMAIN;
   const char *name;
   static const char *keywords[] = { "name", "domain", NULL };
-  struct symbol *symbol = NULL;
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &name,
-					&domain))
-    return NULL;
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "s|i", keywords, &name,
+				      &domain);
 
-  try
-    {
-      domain_search_flags flags = from_scripting_domain (domain);
-      symbol = lookup_global_symbol (name, NULL, flags).symbol;
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
+  domain_search_flags flags = from_scripting_domain (domain);
+  struct symbol *symbol = lookup_global_symbol (name, NULL, flags).symbol;
 
   gdbpy_ref<> sym_obj;
-  if (symbol)
+  if (symbol != nullptr)
     {
+      /* FIXME: Python safety.  symbol_to_symbol_object should throw,
+	 but the other callers aren't ready for this yet.  */
       sym_obj = symbol_to_symbol_object (symbol);
       if (sym_obj == nullptr)
-	return nullptr;
+	throw gdb_python_exception ();
     }
   else
     sym_obj = py_none ();
 
-  return sym_obj.release ();
+  return sym_obj;
 }
 
 /* Implementation of
    gdb.lookup_static_symbol (name [, domain]) -> symbol or None.  */
 
-PyObject *
-gdbpy_lookup_static_symbol (PyObject *self, PyObject *args, PyObject *kw)
+gdbpy_ref<>
+gdbpy_lookup_static_symbol (gdbpy_borrowed_ref<> args,
+			    gdbpy_opt_borrowed_ref<> kw)
 {
   const char *name;
   int domain = VAR_DOMAIN;
   static const char *keywords[] = { "name", "domain", NULL };
   struct symbol *symbol = NULL;
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &name,
-					&domain))
-    return NULL;
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "s|i", keywords, &name,
+				      &domain);
 
   /* In order to find static symbols associated with the "current" object
      file ahead of those from other object files, we first need to see if
@@ -526,42 +445,32 @@ gdbpy_lookup_static_symbol (PyObject *self, PyObject *args, PyObject *kw)
 	= get_selected_frame (_("No frame selected."));
       block = get_frame_block (selected_frame, NULL);
     }
-  catch (const gdb_exception_forced_quit &e)
-    {
-      quit_force (NULL, 0);
-    }
-  catch (const gdb_exception &except)
+  catch (const gdb_exception_error &except)
     {
       /* Nothing.  */
     }
 
-  try
-    {
-      domain_search_flags flags = from_scripting_domain (domain);
+  domain_search_flags flags = from_scripting_domain (domain);
 
-      if (block != nullptr)
-	symbol
-	  = lookup_symbol_in_static_block (name, block, flags).symbol;
+  if (block != nullptr)
+    symbol = lookup_symbol_in_static_block (name, block, flags).symbol;
 
-      if (symbol == nullptr)
-	symbol = lookup_static_symbol (name, flags).symbol;
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
+  if (symbol == nullptr)
+    symbol = lookup_static_symbol (name, flags).symbol;
 
   gdbpy_ref<> sym_obj;
-  if (symbol)
+  if (symbol != nullptr)
     {
+      /* FIXME: Python safety.  symbol_to_symbol_object should throw,
+	 but the other callers aren't ready for this yet.  */
       sym_obj = symbol_to_symbol_object (symbol);
       if (sym_obj == nullptr)
-	return nullptr;
+	throw gdb_python_exception ();
     }
   else
     sym_obj = py_none ();
 
-  return sym_obj.release ();
+  return sym_obj;
 }
 
 /* Implementation of
@@ -569,75 +478,64 @@ gdbpy_lookup_static_symbol (PyObject *self, PyObject *args, PyObject *kw)
 
    Returns a list of all static symbols matching NAME in DOMAIN.  */
 
-PyObject *
-gdbpy_lookup_static_symbols (PyObject *self, PyObject *args, PyObject *kw)
+gdbpy_ref<>
+gdbpy_lookup_static_symbols (gdbpy_borrowed_ref<> args,
+			     gdbpy_opt_borrowed_ref<> kw)
 {
   const char *name;
   int domain = VAR_DOMAIN;
   static const char *keywords[] = { "name", "domain", NULL };
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "s|i", keywords, &name,
-					&domain))
-    return NULL;
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "s|i", keywords, &name,
+				      &domain);
 
-  gdbpy_ref<> return_list (PyList_New (0));
-  if (return_list == NULL)
-    return NULL;
+  gdbpy_ref<> return_list = gdbpy_new_list (0);
 
-  try
+  domain_search_flags flags = from_scripting_domain (domain);
+
+  /* Expand any symtabs that contain potentially matching symbols.  */
+  lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
+
+  for (objfile &objfile : current_program_space->objfiles ())
     {
-      domain_search_flags flags = from_scripting_domain (domain);
+      auto callback = [&] (compunit_symtab *cust)
+      {
+	/* Skip included compunits to prevent including compunits from
+	   being searched twice.  */
+	if (cust->user != nullptr)
+	  return iteration_status::keep_going;
 
-      /* Expand any symtabs that contain potentially matching symbols.  */
-      lookup_name_info lookup_name (name, symbol_name_match_type::FULL);
+	const struct blockvector *bv = cust->blockvector ();
+	const struct block *block = bv->static_block ();
 
-      for (objfile &objfile : current_program_space->objfiles ())
-	{
-	  auto callback = [&] (compunit_symtab *cust)
-	    {
-	      /* Skip included compunits to prevent including compunits from
-		 being searched twice.  */
-	      if (cust->user != nullptr)
-		return iteration_status::keep_going;
+	if (block != nullptr)
+	  {
+	    symbol *symbol = lookup_symbol_in_static_block
+	      (name, block, flags).symbol;
 
-	      const struct blockvector *bv = cust->blockvector ();
-	      const struct block *block = bv->static_block ();
+	    if (symbol != nullptr)
+	      {
+		/* FIXME: Python safety.  symbol_to_symbol_object should throw,
+		   but the other callers aren't ready for this yet.  */
+		gdbpy_ref<> sym_obj = symbol_to_symbol_object (symbol);
+		if (sym_obj == nullptr)
+		  throw gdb_python_exception ();
+		gdbpy_list_append (return_list, sym_obj);
+	      }
+	  }
 
-	      if (block != nullptr)
-		{
-		  symbol *symbol = lookup_symbol_in_static_block
-		    (name, block, flags).symbol;
+	return iteration_status::keep_going;
+      };
 
-		  if (symbol != nullptr)
-		    {
-		      gdbpy_ref<> sym_obj = symbol_to_symbol_object (symbol);
-		      if (sym_obj == nullptr
-			  || PyList_Append (return_list.get (),
-					    sym_obj.get ()) == -1)
-			return iteration_status::stop;
-		    }
-		}
-
-	      return iteration_status::keep_going;
-	    };
-
-	  /* The only reason why the iteration would stop is if an error was
-	     encountered during the callback execution.  */
-	  if (objfile.search (nullptr, &lookup_name, nullptr, callback,
-			      SEARCH_STATIC_BLOCK, flags)
-	      == iteration_status::stop)
-	    {
-	      gdb_assert (PyErr_Occurred ());
-	      return nullptr;
-	    }
-	}
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
+      /* The callback will throw on any error, so iteration should
+	 never stop unexpectedly.  */
+      iteration_status status = objfile.search (nullptr, &lookup_name,
+						nullptr, callback,
+						SEARCH_STATIC_BLOCK, flags);
+      gdb_assert (status == iteration_status::keep_going);
     }
 
-  return return_list.release ();
+  return return_list;
 }
 
 static int
@@ -696,45 +594,47 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_symbols);
 
 
 static gdb_PyGetSetDef symbol_object_getset[] = {
-  { "type", sympy_get_type, NULL,
+  { "type", wrap_getter<symbol_object, &symbol_object::type>, NULL,
     "Type of the symbol.", NULL },
-  { "symtab", sympy_get_symtab, NULL,
+  { "symtab", wrap_getter<symbol_object, &symbol_object::symtab>, NULL,
     "Symbol table in which the symbol appears.", NULL },
-  { "name", sympy_get_name, NULL,
+  { "name", wrap_getter<symbol_object, &symbol_object::name>, NULL,
     "Name of the symbol, as it appears in the source code.", NULL },
-  { "linkage_name", sympy_get_linkage_name, NULL,
-    "Name of the symbol, as used by the linker (i.e., may be mangled).",
+  { "linkage_name", wrap_getter<symbol_object, &symbol_object::linkage_name>,
+    NULL, "Name of the symbol, as used by the linker (i.e., may be mangled).",
     NULL },
-  { "print_name", sympy_get_print_name, NULL,
+  { "print_name", wrap_getter<symbol_object, &symbol_object::str>, NULL,
     "Name of the symbol in a form suitable for output.\n\
 This is either name or linkage_name, depending on whether the user asked GDB\n\
 to display demangled or mangled names.", NULL },
-  { "addr_class", sympy_get_addr_class, NULL, "Address class of the symbol." },
-  { "domain", sympy_get_domain, nullptr, "Domain of the symbol." },
-  { "is_argument", sympy_is_argument, NULL,
-    "True if the symbol is an argument of a function." },
-  { "is_artificial", sympy_is_artificial, nullptr,
-    "True if the symbol is marked artificial." },
-  { "is_constant", sympy_is_constant, NULL,
-    "True if the symbol is a constant." },
-  { "is_function", sympy_is_function, NULL,
-    "True if the symbol is a function or method." },
-  { "is_variable", sympy_is_variable, NULL,
-    "True if the symbol is a variable." },
-  { "needs_frame", sympy_needs_frame, NULL,
-    "True if the symbol requires a frame for evaluation." },
-  { "line", sympy_line, NULL,
+  { "addr_class", wrap_getter<symbol_object, &symbol_object::addr_class>, NULL,
+    "Address class of the symbol." },
+  { "domain", wrap_getter<symbol_object, &symbol_object::domain>, nullptr,
+    "Domain of the symbol." },
+  { "is_argument", wrap_getter<symbol_object, &symbol_object::is_argument>,
+    NULL, "True if the symbol is an argument of a function." },
+  { "is_artificial", wrap_getter<symbol_object, &symbol_object::is_artificial>,
+    nullptr, "True if the symbol is marked artificial." },
+  { "is_constant", wrap_getter<symbol_object, &symbol_object::is_constant>,
+    NULL, "True if the symbol is a constant." },
+  { "is_function", wrap_getter<symbol_object, &symbol_object::is_function>,
+    NULL, "True if the symbol is a function or method." },
+  { "is_variable", wrap_getter<symbol_object, &symbol_object::is_variable>,
+    NULL, "True if the symbol is a variable." },
+  { "needs_frame", wrap_getter<symbol_object, &symbol_object::needs_frame>,
+    NULL, "True if the symbol requires a frame for evaluation." },
+  { "line", wrap_getter<symbol_object, &symbol_object::line>, NULL,
     "The source line number at which the symbol was defined." },
   { NULL }  /* Sentinel */
 };
 
 static PyMethodDef symbol_object_methods[] = {
-  { "is_valid", sympy_is_valid, METH_NOARGS,
+  noargs_method<symbol_object, &symbol_object::is_valid> ("is_valid",
     "is_valid () -> Boolean.\n\
-Return true if this symbol is valid, false if not." },
-  { "value", sympy_value, METH_VARARGS,
+Return true if this symbol is valid, false if not."),
+  varargs_method<symbol_object, &symbol_object::value> ("value",
     "value ([frame]) -> gdb.Value\n\
-Return the value of the symbol." },
+Return the value of the symbol."),
   {NULL}  /* Sentinel */
 };
 
@@ -748,13 +648,13 @@ PyTypeObject symbol_object_type = {
   0,				  /*tp_getattr*/
   0,				  /*tp_setattr*/
   0,				  /*tp_compare*/
-  sympy_repr,                    /*tp_repr*/
+  wrap_tp_callback<symbol_object, &symbol_object::repr>, /*tp_repr*/
   0,				  /*tp_as_number*/
   0,				  /*tp_as_sequence*/
   0,				  /*tp_as_mapping*/
   0,				  /*tp_hash */
   0,				  /*tp_call*/
-  sympy_str,			  /*tp_str*/
+  wrap_tp_callback<symbol_object, &symbol_object::str>, /*tp_str*/
   0,				  /*tp_getattro*/
   0,				  /*tp_setattro*/
   0,				  /*tp_as_buffer*/

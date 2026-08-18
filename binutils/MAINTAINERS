@@ -133,7 +133,6 @@ responsibility among the other maintainers.
   SPARC		   Jose E. Marchesi <jose.marchesi@oracle.com>
   SPU		   Alan Modra <amodra@gmail.com>
   TIC54X           Timothy Wall <twall@alum.mit.edu>
-  TIC6X            Joseph Myers <josmyers@redhat.com>
   VAX		   Jan-Benedict Glaw <jbglaw@lug-owl.de>
   Visium	   Eric Botcazou <ebotcazou@libertysurf.fr>
   VMS		   Tristan Gingold <tgingold@free.fr>

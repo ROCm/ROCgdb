@@ -215,9 +215,6 @@ static bool allocate_global_data_stub
 static bool allocate_global_data_opd
   (struct elf_link_hash_entry *, void *);
 
-static bool get_reloc_section
-  (bfd *, struct elf64_hppa_link_hash_table *, asection *);
-
 static bool count_dyn_reloc
   (bfd *, struct elf64_hppa_link_hash_entry *,
    int, asection *, int, bfd_vma, bfd_vma);
@@ -229,16 +226,16 @@ static bool elf64_hppa_finalize_dynreloc
   (struct elf_link_hash_entry *, void *);
 
 static bool get_opd
-  (bfd *, struct bfd_link_info *, struct elf64_hppa_link_hash_table *);
+  (struct bfd_link_info *, struct elf64_hppa_link_hash_table *);
 
 static bool get_plt
-  (bfd *, struct bfd_link_info *, struct elf64_hppa_link_hash_table *);
+  (struct bfd_link_info *, struct elf64_hppa_link_hash_table *);
 
 static bool get_dlt
-  (bfd *, struct bfd_link_info *, struct elf64_hppa_link_hash_table *);
+  (struct bfd_link_info *, struct elf64_hppa_link_hash_table *);
 
 static bool get_stub
-  (bfd *, struct bfd_link_info *, struct elf64_hppa_link_hash_table *);
+  (struct bfd_link_info *, struct elf64_hppa_link_hash_table *);
 
 static int elf64_hppa_elf_get_symbol_type
   (Elf_Internal_Sym *, int);
@@ -388,6 +385,7 @@ elf64_hppa_section_from_shdr (bfd *abfd,
 
 static bool
 get_reloc_section (bfd *abfd,
+		   struct bfd_link_info *info,
 		   struct elf64_hppa_link_hash_table *hppa_info,
 		   asection *sec)
 {
@@ -401,9 +399,9 @@ get_reloc_section (bfd *abfd,
   if (srel_name == NULL)
     return false;
 
-  dynobj = hppa_info->root.dynobj;
+  dynobj = _bfd_elf_link_dynobj (info);
   if (!dynobj)
-    hppa_info->root.dynobj = dynobj = abfd;
+    return false;
 
   srel = bfd_get_linker_section (dynobj, srel_name);
   if (srel == NULL)
@@ -505,7 +503,7 @@ elf64_hppa_check_relocs (bfd *abfd,
      the special sections required for dynamic linking.  */
   if (! elf_hash_table (info)->dynamic_sections_created)
     {
-      if (! bfd_elf_link_create_dynamic_sections (abfd, info))
+      if (! bfd_elf_link_create_dynamic_sections (info))
 	return false;
     }
 
@@ -793,7 +791,7 @@ elf64_hppa_check_relocs (bfd *abfd,
 	  /* Allocate space for a DLT entry, as well as a dynamic
 	     relocation for this entry.  */
 	  if (! hppa_info->dlt_sec
-	      && ! get_dlt (abfd, info, hppa_info))
+	      && ! get_dlt (info, hppa_info))
 	    goto err_out;
 
 	  if (hh != NULL)
@@ -816,7 +814,7 @@ elf64_hppa_check_relocs (bfd *abfd,
       if (need_entry & NEED_PLT)
 	{
 	  if (! hppa_info->root.splt
-	      && ! get_plt (abfd, info, hppa_info))
+	      && ! get_plt (info, hppa_info))
 	    goto err_out;
 
 	  if (hh != NULL)
@@ -842,7 +840,7 @@ elf64_hppa_check_relocs (bfd *abfd,
       if (need_entry & NEED_STUB)
 	{
 	  if (! hppa_info->stub_sec
-	      && ! get_stub (abfd, info, hppa_info))
+	      && ! get_stub (info, hppa_info))
 	    goto err_out;
 	  if (hh)
 	    hh->want_stub = 1;
@@ -851,7 +849,7 @@ elf64_hppa_check_relocs (bfd *abfd,
       if (need_entry & NEED_OPD)
 	{
 	  if (! hppa_info->opd_sec
-	      && ! get_opd (abfd, info, hppa_info))
+	      && ! get_opd (info, hppa_info))
 	    goto err_out;
 
 	  /* FPTRs are not allocated by the dynamic linker for PA64,
@@ -879,7 +877,7 @@ elf64_hppa_check_relocs (bfd *abfd,
       if ((need_entry & NEED_DYNREL) && (sec->flags & SEC_ALLOC))
 	{
 	  if (! hppa_info->other_rel_sec
-	      && ! get_reloc_section (abfd, hppa_info, sec))
+	      && ! get_reloc_section (abfd, info, hppa_info, sec))
 	    goto err_out;
 
 	  /* Count dynamic relocations against global symbols.  */
@@ -1166,8 +1164,7 @@ elf64_hppa_init_file_header (bfd *abfd, struct bfd_link_info *info)
    of a procedure, thus ensuring a unique address for each procedure.  */
 
 static bool
-get_opd (bfd *abfd,
-	 struct bfd_link_info *info ATTRIBUTE_UNUSED,
+get_opd (struct bfd_link_info *info,
 	 struct elf64_hppa_link_hash_table *hppa_info)
 {
   asection *opd;
@@ -1176,9 +1173,9 @@ get_opd (bfd *abfd,
   opd = hppa_info->opd_sec;
   if (!opd)
     {
-      dynobj = hppa_info->root.dynobj;
+      dynobj = _bfd_elf_link_dynobj (info);
       if (!dynobj)
-	hppa_info->root.dynobj = dynobj = abfd;
+	return false;
 
       opd = bfd_make_section_anyway_with_flags (dynobj, ".opd",
 						(SEC_ALLOC
@@ -1202,8 +1199,7 @@ get_opd (bfd *abfd,
 /* Create the PLT section.  */
 
 static bool
-get_plt (bfd *abfd,
-	 struct bfd_link_info *info ATTRIBUTE_UNUSED,
+get_plt (struct bfd_link_info *info,
 	 struct elf64_hppa_link_hash_table *hppa_info)
 {
   asection *plt;
@@ -1212,9 +1208,9 @@ get_plt (bfd *abfd,
   plt = hppa_info->root.splt;
   if (!plt)
     {
-      dynobj = hppa_info->root.dynobj;
+      dynobj = _bfd_elf_link_dynobj (info);
       if (!dynobj)
-	hppa_info->root.dynobj = dynobj = abfd;
+	return false;
 
       plt = bfd_make_section_anyway_with_flags (dynobj, ".plt",
 						(SEC_ALLOC
@@ -1238,8 +1234,7 @@ get_plt (bfd *abfd,
 /* Create the DLT section.  */
 
 static bool
-get_dlt (bfd *abfd,
-	 struct bfd_link_info *info ATTRIBUTE_UNUSED,
+get_dlt (struct bfd_link_info *info,
 	 struct elf64_hppa_link_hash_table *hppa_info)
 {
   asection *dlt;
@@ -1248,9 +1243,9 @@ get_dlt (bfd *abfd,
   dlt = hppa_info->dlt_sec;
   if (!dlt)
     {
-      dynobj = hppa_info->root.dynobj;
+      dynobj = _bfd_elf_link_dynobj (info);
       if (!dynobj)
-	hppa_info->root.dynobj = dynobj = abfd;
+	return false;
 
       dlt = bfd_make_section_anyway_with_flags (dynobj, ".dlt",
 						(SEC_ALLOC
@@ -1274,8 +1269,7 @@ get_dlt (bfd *abfd,
 /* Create the stubs section.  */
 
 static bool
-get_stub (bfd *abfd,
-	  struct bfd_link_info *info ATTRIBUTE_UNUSED,
+get_stub (struct bfd_link_info *info,
 	  struct elf64_hppa_link_hash_table *hppa_info)
 {
   asection *stub;
@@ -1284,9 +1278,9 @@ get_stub (bfd *abfd,
   stub = hppa_info->stub_sec;
   if (!stub)
     {
-      dynobj = hppa_info->root.dynobj;
+      dynobj = _bfd_elf_link_dynobj (info);
       if (!dynobj)
-	hppa_info->root.dynobj = dynobj = abfd;
+	return false;
 
       stub = bfd_make_section_anyway_with_flags (dynobj, ".stub",
 						 (SEC_ALLOC | SEC_LOAD
@@ -1368,16 +1362,16 @@ elf64_hppa_create_dynamic_sections (bfd *abfd,
 	return false;
     }
 
-  if (! get_stub (abfd, info, hppa_info))
+  if (! get_stub (info, hppa_info))
     return false;
 
-  if (! get_dlt (abfd, info, hppa_info))
+  if (! get_dlt (info, hppa_info))
     return false;
 
-  if (! get_plt (abfd, info, hppa_info))
+  if (! get_plt (info, hppa_info))
     return false;
 
-  if (! get_opd (abfd, info, hppa_info))
+  if (! get_opd (info, hppa_info))
     return false;
 
   s = bfd_make_section_anyway_with_flags (abfd, ".rela.dlt", flags);

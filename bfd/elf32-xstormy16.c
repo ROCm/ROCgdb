@@ -460,7 +460,11 @@ xstormy16_elf_check_relocs (bfd *abfd,
 	    }
 
 	  if (dynobj == NULL)
-	    elf_hash_table (info)->dynobj = dynobj = abfd;
+	    {
+	      dynobj = _bfd_elf_link_dynobj (info);
+	      if (dynobj == NULL)
+		return false;
+	    }
 	  splt = elf_hash_table (info)->splt;
 	  if (splt == NULL)
 	    {

@@ -3458,7 +3458,11 @@ m32r_elf_check_relocs (bfd *abfd,
 	    case R_M32R_GOTPC_LO:
 	    case R_M32R_GOT24:
 	      if (dynobj == NULL)
-		htab->dynobj = dynobj = abfd;
+		{
+		  dynobj = _bfd_elf_link_dynobj (info);
+		  if (dynobj == NULL)
+		    return false;
+		}
 	      if (!_bfd_elf_create_got_section (dynobj, info))
 		return false;
 	      break;
@@ -3575,7 +3579,11 @@ m32r_elf_check_relocs (bfd *abfd,
 	      struct elf_dyn_relocs **head;
 
 	      if (dynobj == NULL)
-		htab->dynobj = dynobj = abfd;
+		{
+		  dynobj = _bfd_elf_link_dynobj (info);
+		  if (dynobj == NULL)
+		    return false;
+		}
 
 	      /* When creating a shared object, we must copy these
 		 relocs into the output file.  We create a reloc

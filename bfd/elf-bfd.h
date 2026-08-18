@@ -664,9 +664,7 @@ struct elf_link_hash_table
   /* TRUE if there are base symbols.  */
   bool has_base_symbols;
 
-  /* The BFD used to hold special sections created by the linker.
-     This will be the first BFD found which requires these sections to
-     be created.  */
+  /* The BFD used to hold special sections created by the linker.  */
   bfd *dynobj;
 
   /* The value to use when initialising got.refcount/offset and
@@ -2731,8 +2729,14 @@ extern unsigned int _bfd_elf_default_action_discarded
 extern struct bfd_section *bfd_elf_tls_setup
   (struct bfd_link_info *);
 
+extern bfd *_bfd_elf_link_dynobj_internal
+  (struct bfd_link_info *, bool) ATTRIBUTE_HIDDEN;
+static inline bfd *
+_bfd_elf_link_dynobj (struct bfd_link_info *info)
+{ return _bfd_elf_link_dynobj_internal (info, true); }
+
 extern bool bfd_elf_link_create_dynamic_sections
-  (bfd *, struct bfd_link_info *);
+  (struct bfd_link_info *);
 extern bool _bfd_elf_omit_section_dynsym_default
   (struct bfd_link_info *, asection *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_elf_omit_section_dynsym_all

@@ -3036,7 +3036,11 @@ cris_elf_check_relocs (bfd *abfd,
 	case R_CRIS_16_GOTPLT:
 	case R_CRIS_32_GOTPLT:
 	  if (dynobj == NULL)
-	    elf_hash_table (info)->dynobj = dynobj = abfd;
+	    {
+	      dynobj = _bfd_elf_link_dynobj (info);
+	      if (dynobj == NULL)
+		return false;
+	    }
 
 	  if (sgot == NULL)
 	    {

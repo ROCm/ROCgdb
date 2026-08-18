@@ -936,8 +936,9 @@ elf_s390_check_relocs (bfd *abfd,
 	    {
 	      struct plt_entry *plt;
 
-	      if (htab->elf.dynobj == NULL)
-		htab->elf.dynobj = abfd;
+	      if (htab->elf.dynobj == NULL
+		  && !_bfd_elf_link_dynobj (info))
+		return false;
 
 	      if (!s390_elf_create_ifunc_sections (htab->elf.dynobj, info))
 		return false;
@@ -999,8 +1000,9 @@ elf_s390_check_relocs (bfd *abfd,
 	case R_390_GOTPCDBL:
 	  if (htab->elf.sgot == NULL)
 	    {
-	      if (htab->elf.dynobj == NULL)
-		htab->elf.dynobj = abfd;
+	      if (htab->elf.dynobj == NULL
+		  && !_bfd_elf_link_dynobj (info))
+		return false;
 	      if (!_bfd_elf_create_got_section (htab->elf.dynobj, info))
 		return false;
 	    }
@@ -1008,8 +1010,9 @@ elf_s390_check_relocs (bfd *abfd,
 
       if (h != NULL)
 	{
-	  if (htab->elf.dynobj == NULL)
-	    htab->elf.dynobj = abfd;
+	  if (htab->elf.dynobj == NULL
+	      && !_bfd_elf_link_dynobj (info))
+	    return false;
 	  if (!s390_elf_create_ifunc_sections (htab->elf.dynobj, info))
 	    return false;
 
@@ -1254,8 +1257,9 @@ elf_s390_check_relocs (bfd *abfd,
 		 this reloc.  */
 	      if (sreloc == NULL)
 		{
-		  if (htab->elf.dynobj == NULL)
-		    htab->elf.dynobj = abfd;
+		  if (htab->elf.dynobj == NULL
+		      && !_bfd_elf_link_dynobj (info))
+		    return false;
 
 		  sreloc = _bfd_elf_make_dynamic_reloc_section
 		    (sec, htab->elf.dynobj, 2, abfd, /*rela?*/ true);

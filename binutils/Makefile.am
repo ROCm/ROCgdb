@@ -143,7 +143,7 @@ CFILES = \
 	nm.c not-ranlib.c not-strip.c \
 	objcopy.c objdump.c prdbg.c \
 	od-elf32_avr.c od-macho.c od-pe.c od-xcoff.c \
-	rclex.c rdcoff.c rddbg.c readelf.c rename.c \
+	rclex.c rdcoff.c rddbg.c readelf.c readelf-nn.c rename.c \
 	resbin.c rescoff.c resrc.c resres.c coremerge.c \
 	size.c srconv.c stabs.c strings.c sysdump.c \
 	syslex_wrap.c unwind-ia64.c elfedit.c version.c \
@@ -391,7 +391,7 @@ endif
 	$(AM_V_CC)$(COMPILE) $(DEBUGINFOD_CFLAGS) -c -o $@ $(srcdir)/dwarf.c
 endif
 
-readelf.@OBJEXT@: readelf.c
+readelf.@OBJEXT@: readelf.c readelf-nn.c
 if am__fastdepCC
 	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo $(MSGPACK_CFLAGS) -c -o $@ $(srcdir)/readelf.c
 	$(AM_V_at)mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po

@@ -50,6 +50,7 @@ rdcoff.c
 rddbg.c
 rddbg.c
 readelf.c
+readelf-nn.c
 rename.c
 resbin.c
 rescoff.c

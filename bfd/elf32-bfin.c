@@ -1227,11 +1227,13 @@ bfin_check_relocs (bfd * abfd,
 
 	  if (dynobj == NULL)
 	    {
-	      /* Create the .got section.  */
-	      elf_hash_table (info)->dynobj = dynobj = abfd;
-	      if (!_bfd_elf_create_got_section (dynobj, info))
+	      dynobj = _bfd_elf_link_dynobj (info);
+	      if (dynobj == NULL)
 		return false;
 	    }
+
+	  if (!_bfd_elf_create_got_section (dynobj, info))
+	    return false;
 
 	  sgot = elf_hash_table (info)->sgot;
 	  srelgot = elf_hash_table (info)->srelgot;
@@ -4558,13 +4560,18 @@ bfinfdpic_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_BFIN_PCREL24:
 	case R_BFIN_PCREL24_JUMP_L:
 	case R_BFIN_BYTE4_DATA:
-	  if (IS_FDPIC (abfd) && ! dynobj)
+	  if (IS_FDPIC (abfd))
 	    {
-	      elf_hash_table (info)->dynobj = dynobj = abfd;
-	      if (! _bfin_create_got_section (abfd, info))
+	      if (dynobj == NULL)
+		{
+		  dynobj = _bfd_elf_link_dynobj (info);
+		  if (dynobj == NULL)
+		    return false;
+		}
+	      if (!_bfin_create_got_section (dynobj, info))
 		return false;
 	    }
-	  if (! IS_FDPIC (abfd))
+	  else
 	    {
 	      picrel = NULL;
 	      break;

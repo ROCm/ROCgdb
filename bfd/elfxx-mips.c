@@ -8890,7 +8890,11 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case R_MICROMIPS_TLS_GD:
 	case R_MICROMIPS_TLS_LDM:
 	  if (dynobj == NULL)
-	    elf_hash_table (info)->dynobj = dynobj = abfd;
+	    {
+	      dynobj = _bfd_elf_link_dynobj (info);
+	      if (dynobj == NULL)
+		return false;
+	    }
 	  if (!mips_elf_create_got_section (dynobj, info))
 	    return false;
 	  if (htab->root.target_os == is_vxworks
@@ -8949,7 +8953,11 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    {
 	      can_make_dynamic_p = true;
 	      if (dynobj == NULL)
-		elf_hash_table (info)->dynobj = dynobj = abfd;
+		{
+		  dynobj = _bfd_elf_link_dynobj (info);
+		  if (dynobj == NULL)
+		    return false;
+		}
 	    }
 	  break;
 

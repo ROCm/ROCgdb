@@ -3198,11 +3198,6 @@ kvx_elf_create_got_section (bfd *abfd, struct bfd_link_info *info)
   /* The first bit of the global offset table is the header.  */
   s->size += bed->got_header_size;
 
-  /* we still need to handle got content when doing static link with PIC */
-  if (bfd_link_executable (info) && !bfd_link_pic (info)) {
-    htab->dynobj = abfd;
-  }
-
   return true;
 }
 
@@ -3332,8 +3327,9 @@ elfNN_kvx_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	       this reloc.  */
 	    if (sreloc == NULL)
 	      {
-		if (htab->root.dynobj == NULL)
-		  htab->root.dynobj = abfd;
+		if (htab->root.dynobj == NULL
+		    && !_bfd_elf_link_dynobj (info))
+		  return false;
 
 		sreloc = _bfd_elf_make_dynamic_reloc_section
 		  (sec, htab->root.dynobj, LOG_FILE_ALIGN, abfd, /*rela? */ true);
@@ -3477,8 +3473,9 @@ elfNN_kvx_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		  }
 	      }
 
-	    if (htab->root.dynobj == NULL)
-	      htab->root.dynobj = abfd;
+	    if (htab->root.dynobj == NULL
+		&& !_bfd_elf_link_dynobj (info))
+	      return false;
 	    if (! kvx_elf_create_got_section (htab->root.dynobj, info))
 	      return false;
 	    break;
@@ -3495,8 +3492,9 @@ elfNN_kvx_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	case BFD_RELOC_KVX_S37_GOTADDR_LO10:
 	case BFD_RELOC_KVX_S37_GOTADDR_UP27:
 
-	  if (htab->root.dynobj == NULL)
-	    htab->root.dynobj = abfd;
+	  if (htab->root.dynobj == NULL
+	      && !_bfd_elf_link_dynobj (info))
+	    return false;
 	  if (! kvx_elf_create_got_section (htab->root.dynobj, info))
 	    return false;
 	  break;

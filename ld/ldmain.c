@@ -1386,6 +1386,7 @@ add_archive_element (struct bfd_link_info *info,
   lang_input_statement_type *input;
   lang_input_statement_type *parent;
   lang_input_statement_type orig_input;
+  bfd * my_archive;
 
   input = stat_alloc (sizeof (*input));
   memset (input, 0, sizeof (*input));
@@ -1393,6 +1394,11 @@ add_archive_element (struct bfd_link_info *info,
   input->filename = bfd_get_filename (abfd);
   input->local_sym_name = bfd_get_filename (abfd);
   input->the_bfd = abfd;
+
+  /* If abfd is closed by plugin_maybe_claim() then accessing
+     abfd->my_archive could dereference freed memory, so keep a
+     copy of the my_archive pointer here.  */
+  my_archive = abfd->my_archive;
 
   /* Save the original data for trace files/tries below, as plugins
      (if enabled) may possibly alter it to point to a replacement
@@ -1439,7 +1445,7 @@ add_archive_element (struct bfd_link_info *info,
 
   /* Set the file_chain pointer of archives to the last element loaded
      from the archive.  See ldlang.c:find_rescan_insertion.  */
-  parent = bfd_usrdata (abfd->my_archive);
+  parent = bfd_usrdata (my_archive);
   if (parent != NULL && !parent->flags.reload)
     parent->next = input;
 
@@ -1490,17 +1496,17 @@ add_archive_element (struct bfd_link_info *info,
 	  header_printed = true;
 	}
 
-      if (abfd->my_archive == NULL
-	  || bfd_is_thin_archive (abfd->my_archive))
+      if (my_archive == NULL
+	  || bfd_is_thin_archive (my_archive))
 	{
 	  minfo ("%s", bfd_get_filename (abfd));
 	  len = strlen (bfd_get_filename (abfd));
 	}
       else
 	{
-	  minfo ("%s(%s)", bfd_get_filename (abfd->my_archive),
+	  minfo ("%s(%s)", bfd_get_filename (my_archive),
 		 bfd_get_filename (abfd));
-	  len = (strlen (bfd_get_filename (abfd->my_archive))
+	  len = (strlen (bfd_get_filename (my_archive))
 		 + strlen (bfd_get_filename (abfd))
 		 + 2);
 	}
@@ -1522,7 +1528,7 @@ add_archive_element (struct bfd_link_info *info,
 
   if (verbose
       || trace_files > 1
-      || (trace_files && bfd_is_thin_archive (orig_input.the_bfd->my_archive)))
+      || (trace_files && bfd_is_thin_archive (my_archive)))
     info_msg ("%pI\n", &orig_input);
   return true;
 }

@@ -47,11 +47,7 @@ search_dirs_type *search_head;
 #ifdef VMS
 static char *slash = "";
 #else
-#if defined (_WIN32) && !defined (__CYGWIN32__)
-static char *slash = "\\";
-#else
 static char *slash = "/";
-#endif
 #endif
 
 typedef struct search_arch

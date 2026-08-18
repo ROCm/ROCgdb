@@ -1133,11 +1133,12 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       return true;
     }
 
+  if (htab->elf.dynobj == NULL
+      && !_bfd_elf_link_dynobj (info))
+    return false;
+
   symtab_hdr = &elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
-
-  if (htab->elf.dynobj == NULL)
-    htab->elf.dynobj = abfd;
 
   for (rel = relocs; rel < relocs + sec->reloc_count; rel++)
     {
@@ -1191,9 +1192,6 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
       if (h && h->type == STT_GNU_IFUNC)
 	{
-	  if (htab->elf.dynobj == NULL)
-	    htab->elf.dynobj = abfd;
-
 	  /* Create 'irelifunc' in PIC object.  */
 	  if (bfd_link_pic (info)
 	      && !_bfd_elf_create_ifunc_sections (htab->elf.dynobj, info))
@@ -1555,8 +1553,7 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  p = *head;
 	  if (p == NULL || p->sec != sec)
 	    {
-	      bfd_size_type amt = sizeof *p;
-	      p = (struct elf_dyn_relocs *) bfd_alloc (htab->elf.dynobj, amt);
+	      p = bfd_alloc (htab->elf.dynobj, sizeof (*p));
 	      if (p == NULL)
 		return false;
 	      p->next = *head;

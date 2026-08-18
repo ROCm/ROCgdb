@@ -8100,6 +8100,25 @@ than 1, the file can only be processed by other toolchains under some private
 arrangement indicated by the flag value and the vendor name.
 @end table
 
+@subsection AVR Attributes
+
+@table @r
+@item Tag_GNU_AVR_VTABLE_AS (4)
+The @uref{https://gcc.gnu.org/onlinedocs/gcc/Named-Address-Spaces.html#AVR-Named-Address-Spaces,,named address space}
+for C++ virtual tables used by this object file:
+@itemize @bullet
+@item 0 for files that neither define nor access virtual tables.
+@item 1 for files that use the generic address space.
+@item 2 for files that use the 16-bit address space @code{__flash}.
+@item 3 for files that use the 16-bit address space @code{__flash1}.
+@item 4 for files that use the 16-bit address space @code{__flash2}.
+@item 5 for files that use the 16-bit address space @code{__flash3}.
+@item 6 for files that use the 16-bit address space @code{__flash4}.
+@item 7 for files that use the 16-bit address space @code{__flash5}.
+@item 8 for files that use the 24-bit address space @code{__flashx}.
+@end itemize
+@end table
+
 @subsection M680x0 Attributes
 
 @table @r
