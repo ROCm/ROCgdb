@@ -354,6 +354,31 @@ if test "$gdb_require_amd_dbgapi" = true \
 	AC_MSG_ERROR([amd-dbgapi not supported for host ${gdb_host}])
 	;;
     esac
+
+    # Detect if process id can be passed to convert_address_space.
+    save_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $AMD_DBGAPI_CFLAGS"
+    AC_MSG_CHECKING([whether amd_dbgapi_convert_address_space takes a process id])
+    AC_COMPILE_IFELSE(
+      [AC_LANG_PROGRAM(
+	[[#include <amd-dbgapi/amd-dbgapi.h>]],
+	[[amd_dbgapi_process_id_t p;
+	  amd_dbgapi_wave_id_t w;
+	  amd_dbgapi_lane_id_t l;
+	  amd_dbgapi_address_space_id_t s, d;
+	  amd_dbgapi_convert_address_space (p, w, l, s, 0, d, NULL, NULL);]]
+       )],
+       [amd_dbgapi_convert_aspace_needs_process_id=yes
+	AC_MSG_RESULT([yes])],
+       [amd_dbgapi_convert_aspace_needs_process_id=no
+	AC_MSG_RESULT([no])])
+    CPPFLAGS="$save_CPPFLAGS"
+
+    if test "x${amd_dbgapi_convert_aspace_needs_process_id}" = "xyes"; then
+      AC_DEFINE(AMD_DBGAPI_CONVERT_ASPACE_NEED_PROCESS_ID, 1,
+		[Define if amd_dbgapi_convert_address_space needs a process_id])
+    fi
+
   elif test "$gdb_require_amd_dbgapi" = true -o "$with_amd_dbgapi" = yes; then
     # amd-dbgapi was not found and...
     #

@@ -1900,7 +1900,11 @@ amdgpu_get_watchable_aliases (struct gdbarch *gdbarch,
       /* Try to convert the address to an address in the
 	 default address space.  */
       if (amd_dbgapi_convert_address_space
-	    (wave_id, simd_lane, dbgapi_from_addr_space_id,
+	    (
+#if AMD_DBGAPI_CONVERT_ASPACE_NEED_PROCESS_ID
+	     get_amd_dbgapi_process_id (current_inferior ()),
+#endif
+	     wave_id, simd_lane, dbgapi_from_addr_space_id,
 	     (amd_dbgapi_segment_address_t) addr,
 	     dbgapi_to_addr_space_id, &to_offset, &converted_size)
 	    != AMD_DBGAPI_STATUS_SUCCESS)
