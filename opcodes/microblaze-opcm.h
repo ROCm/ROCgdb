@@ -74,23 +74,23 @@ enum microblaze_instr_type
 /* Gen purpose regs go from 0 to 31.  */
 /* Mask is reg num - max_reg_num, ie reg_num - 32 in this case.  */
 
-#define REG_PC_MASK 0x8000
-#define REG_MSR_MASK 0x8001
-#define REG_EAR_MASK 0x8003
-#define REG_ESR_MASK 0x8005
-#define REG_FSR_MASK 0x8007
-#define REG_BTR_MASK 0x800b
-#define REG_EDR_MASK 0x800d
-#define REG_PVR_MASK 0xa000
-#define REG_SLR_MASK 0x8800
-#define REG_SHR_MASK 0x8802
+#define MICROBLAZE_REG_PC_MASK 0x8000
+#define MICROBLAZE_REG_MSR_MASK 0x8001
+#define MICROBLAZE_REG_EAR_MASK 0x8003
+#define MICROBLAZE_REG_ESR_MASK 0x8005
+#define MICROBLAZE_REG_FSR_MASK 0x8007
+#define MICROBLAZE_REG_BTR_MASK 0x800b
+#define MICROBLAZE_REG_EDR_MASK 0x800d
+#define MICROBLAZE_REG_PVR_MASK 0xa000
+#define MICROBLAZE_REG_SLR_MASK 0x8800
+#define MICROBLAZE_REG_SHR_MASK 0x8802
 
-#define REG_PID_MASK   0x9000
-#define REG_ZPR_MASK   0x9001
-#define REG_TLBX_MASK  0x9002
-#define REG_TLBLO_MASK 0x9003
-#define REG_TLBHI_MASK 0x9004
-#define REG_TLBSX_MASK 0x9005
+#define MICROBLAZE_REG_PID_MASK   0x9000
+#define MICROBLAZE_REG_ZPR_MASK   0x9001
+#define MICROBLAZE_REG_TLBX_MASK  0x9002
+#define MICROBLAZE_REG_TLBLO_MASK 0x9003
+#define MICROBLAZE_REG_TLBHI_MASK 0x9004
+#define MICROBLAZE_REG_TLBSX_MASK 0x9005
 
 #define MIN_REGNUM 0
 #define MAX_REGNUM 31
@@ -98,32 +98,32 @@ enum microblaze_instr_type
 #define MIN_PVR_REGNUM 0
 #define MAX_PVR_REGNUM 15
 
-#define REG_PC  32 /* PC.  */
-#define REG_MSR 33 /* Machine status reg.  */
-#define REG_EAR 35 /* Exception reg.  */
-#define REG_ESR 37 /* Exception reg.  */
-#define REG_FSR 39 /* FPU Status reg.  */
-#define REG_BTR 43 /* Branch Target reg.  */
-#define REG_EDR 45 /* Exception reg.  */
-#define REG_SHR 50 /* Stack High reg.  */
-#define REG_SLR 51 /* Stack Low reg.  */
-#define REG_PVR 40960 /* Program Verification reg.  */
+#define MICROBLAZE_REG_PC  32 /* PC.  */
+#define MICROBLAZE_REG_MSR 33 /* Machine status reg.  */
+#define MICROBLAZE_REG_EAR 35 /* Exception reg.  */
+#define MICROBLAZE_REG_ESR 37 /* Exception reg.  */
+#define MICROBLAZE_REG_FSR 39 /* FPU Status reg.  */
+#define MICROBLAZE_REG_BTR 43 /* Branch Target reg.  */
+#define MICROBLAZE_REG_EDR 45 /* Exception reg.  */
+#define MICROBLAZE_REG_SHR 50 /* Stack High reg.  */
+#define MICROBLAZE_REG_SLR 51 /* Stack Low reg.  */
+#define MICROBLAZE_REG_PVR 40960 /* Program Verification reg.  */
 
-#define REG_PID   36864 /* MMU: Process ID reg.  */
-#define REG_ZPR   36865 /* MMU: Zone Protect reg.  */
-#define REG_TLBX  36866 /* MMU: TLB Index reg.  */
-#define REG_TLBLO 36867 /* MMU: TLB Low reg.  */
-#define REG_TLBHI 36868 /* MMU: TLB High reg.  */
-#define REG_TLBSX 36869 /* MMU: TLB Search Index reg.  */
+#define MICROBLAZE_REG_PID   36864 /* MMU: Process ID reg.  */
+#define MICROBLAZE_REG_ZPR   36865 /* MMU: Zone Protect reg.  */
+#define MICROBLAZE_REG_TLBX  36866 /* MMU: TLB Index reg.  */
+#define MICROBLAZE_REG_TLBLO 36867 /* MMU: TLB Low reg.  */
+#define MICROBLAZE_REG_TLBHI 36868 /* MMU: TLB High reg.  */
+#define MICROBLAZE_REG_TLBSX 36869 /* MMU: TLB Search Index reg.  */
 
 /* Alternate names for gen purpose regs.  */
-#define REG_SP  1 /* stack pointer.  */
-#define REG_ROSDP 2 /* read-only small data pointer.  */
-#define REG_RWSDP 13 /* read-write small data pointer.  */
+#define MICROBLAZE_REG_SP  1 /* stack pointer.  */
+#define MICROBLAZE_REG_ROSDP 2 /* read-only small data pointer.  */
+#define MICROBLAZE_REG_RWSDP 13 /* read-write small data pointer.  */
 
 /* Assembler Register - Used in Delay Slot Optimization.  */
-#define REG_AS    18
-#define REG_ZERO  0
+#define MICROBLAZE_REG_AS    18
+#define MICROBLAZE_REG_ZERO  0
 
 #define RD_LOW  21 /* Low bit for RD.  */
 #define RA_LOW  16 /* Low bit for RA.  */

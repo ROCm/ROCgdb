@@ -407,68 +407,68 @@ parse_reg (char * s, unsigned * reg)
 
   if (strncasecmp (s, "rpc", 3) == 0)
     {
-      *reg = REG_PC;
+      *reg = MICROBLAZE_REG_PC;
       return s + 3;
     }
   else if (strncasecmp (s, "rmsr", 4) == 0)
     {
-      *reg = REG_MSR;
+      *reg = MICROBLAZE_REG_MSR;
       return s + 4;
     }
   else if (strncasecmp (s, "rear", 4) == 0)
     {
-      *reg = REG_EAR;
+      *reg = MICROBLAZE_REG_EAR;
       return s + 4;
     }
   else if (strncasecmp (s, "resr", 4) == 0)
     {
-      *reg = REG_ESR;
+      *reg = MICROBLAZE_REG_ESR;
       return s + 4;
     }
   else if (strncasecmp (s, "rfsr", 4) == 0)
     {
-      *reg = REG_FSR;
+      *reg = MICROBLAZE_REG_FSR;
       return s + 4;
     }
   else if (strncasecmp (s, "rbtr", 4) == 0)
     {
-      *reg = REG_BTR;
+      *reg = MICROBLAZE_REG_BTR;
       return s + 4;
     }
   else if (strncasecmp (s, "redr", 4) == 0)
     {
-      *reg = REG_EDR;
+      *reg = MICROBLAZE_REG_EDR;
       return s + 4;
     }
   /* MMU registers start.  */
   else if (strncasecmp (s, "rpid", 4) == 0)
     {
-      *reg = REG_PID;
+      *reg = MICROBLAZE_REG_PID;
       return s + 4;
     }
   else if (strncasecmp (s, "rzpr", 4) == 0)
     {
-      *reg = REG_ZPR;
+      *reg = MICROBLAZE_REG_ZPR;
       return s + 4;
     }
   else if (strncasecmp (s, "rtlbx", 5) == 0)
     {
-      *reg = REG_TLBX;
+      *reg = MICROBLAZE_REG_TLBX;
       return s + 5;
     }
   else if (strncasecmp (s, "rtlblo", 6) == 0)
     {
-      *reg = REG_TLBLO;
+      *reg = MICROBLAZE_REG_TLBLO;
       return s + 6;
     }
   else if (strncasecmp (s, "rtlbhi", 6) == 0)
     {
-      *reg = REG_TLBHI;
+      *reg = MICROBLAZE_REG_TLBHI;
       return s + 6;
     }
   else if (strncasecmp (s, "rtlbsx", 6) == 0)
     {
-      *reg = REG_TLBSX;
+      *reg = MICROBLAZE_REG_TLBSX;
       return s + 6;
     }
   /* MMU registers end.  */
@@ -488,17 +488,17 @@ parse_reg (char * s, unsigned * reg)
       else
         as_bad (_("register expected, but saw '%.6s'"), s);
       if (tmpreg - MIN_PVR_REGNUM <= MAX_PVR_REGNUM - MIN_PVR_REGNUM)
-        *reg = REG_PVR + tmpreg;
+        *reg = MICROBLAZE_REG_PVR + tmpreg;
       else
         {
           as_bad (_("Invalid register number at '%.6s'"), s);
-          *reg = REG_PVR;
+          *reg = MICROBLAZE_REG_PVR;
         }
       return s;
     }
   else if (strncasecmp (s, "rsp", 3) == 0)
     {
-      *reg = REG_SP;
+      *reg = MICROBLAZE_REG_SP;
       return s + 3;
     }
   else if (strncasecmp (s, "rfsl", 4) == 0)
@@ -528,12 +528,12 @@ parse_reg (char * s, unsigned * reg)
   /* Stack protection registers.  */
   else if (strncasecmp (s, "rshr", 4) == 0)
     {
-      *reg = REG_SHR;
+      *reg = MICROBLAZE_REG_SHR;
       return s + 4;
     }
   else if (strncasecmp (s, "rslr", 4) == 0)
     {
-      *reg = REG_SLR;
+      *reg = MICROBLAZE_REG_SLR;
       return s + 4;
     }
   else
@@ -835,14 +835,16 @@ static const char * str_microblaze_rw_anchor = "RW";
 static bool
 check_spl_reg (unsigned * reg)
 {
-  if ((*reg == REG_MSR)   || (*reg == REG_PC)
-      || (*reg == REG_EAR)   || (*reg == REG_ESR)
-      || (*reg == REG_FSR)   || (*reg == REG_BTR) || (*reg == REG_EDR)
-      || (*reg == REG_PID)   || (*reg == REG_ZPR)
-      || (*reg == REG_TLBX)  || (*reg == REG_TLBLO)
-      || (*reg == REG_TLBHI) || (*reg == REG_TLBSX)
-      || (*reg == REG_SHR)   || (*reg == REG_SLR)
-      || (*reg >= REG_PVR+MIN_PVR_REGNUM && *reg <= REG_PVR+MAX_PVR_REGNUM))
+  if ((*reg == MICROBLAZE_REG_MSR)   || (*reg == MICROBLAZE_REG_PC)
+      || (*reg == MICROBLAZE_REG_EAR)   || (*reg == MICROBLAZE_REG_ESR)
+      || (*reg == MICROBLAZE_REG_FSR)   || (*reg == MICROBLAZE_REG_BTR)
+      || (*reg == MICROBLAZE_REG_EDR)
+      || (*reg == MICROBLAZE_REG_PID)   || (*reg == MICROBLAZE_REG_ZPR)
+      || (*reg == MICROBLAZE_REG_TLBX)  || (*reg == MICROBLAZE_REG_TLBLO)
+      || (*reg == MICROBLAZE_REG_TLBHI) || (*reg == MICROBLAZE_REG_TLBSX)
+      || (*reg == MICROBLAZE_REG_SHR)   || (*reg == MICROBLAZE_REG_SLR)
+      || (*reg >= MICROBLAZE_REG_PVR+MIN_PVR_REGNUM
+	  && *reg <= MICROBLAZE_REG_PVR+MAX_PVR_REGNUM))
     return true;
 
   return false;
@@ -1011,9 +1013,9 @@ md_assemble (char * str)
 	  else if (streq (name, "smi"))
 	    as_fatal (_("smi pseudo instruction should not use a label in imm field"));
 
-	  if (reg2 == REG_ROSDP)
+	  if (reg2 == MICROBLAZE_REG_ROSDP)
 	    opc = str_microblaze_ro_anchor;
-	  else if (reg2 == REG_RWSDP)
+	  else if (reg2 == MICROBLAZE_REG_RWSDP)
 	    opc = str_microblaze_rw_anchor;
 	  else
 	    opc = NULL;
@@ -1422,36 +1424,37 @@ md_assemble (char * str)
           reg2 = 0;
         }
 
-      if (reg2 == REG_MSR)
-        immed = opcode->immval_mask | REG_MSR_MASK;
-      else if (reg2 == REG_PC)
-        immed = opcode->immval_mask | REG_PC_MASK;
-      else if (reg2 == REG_EAR)
-        immed = opcode->immval_mask | REG_EAR_MASK;
-      else if (reg2 == REG_ESR)
-        immed = opcode->immval_mask | REG_ESR_MASK;
-      else if (reg2 == REG_FSR)
-        immed = opcode->immval_mask | REG_FSR_MASK;
-      else if (reg2 == REG_BTR)
-        immed = opcode->immval_mask | REG_BTR_MASK;
-      else if (reg2 == REG_EDR)
-        immed = opcode->immval_mask | REG_EDR_MASK;
-      else if (reg2 == REG_PID)
-        immed = opcode->immval_mask | REG_PID_MASK;
-      else if (reg2 == REG_ZPR)
-        immed = opcode->immval_mask | REG_ZPR_MASK;
-      else if (reg2 == REG_TLBX)
-        immed = opcode->immval_mask | REG_TLBX_MASK;
-      else if (reg2 == REG_TLBLO)
-        immed = opcode->immval_mask | REG_TLBLO_MASK;
-      else if (reg2 == REG_TLBHI)
-        immed = opcode->immval_mask | REG_TLBHI_MASK;
-      else if (reg2 == REG_SHR)
-        immed = opcode->immval_mask | REG_SHR_MASK;
-      else if (reg2 == REG_SLR)
-        immed = opcode->immval_mask | REG_SLR_MASK;
-      else if (reg2 >= (REG_PVR+MIN_PVR_REGNUM) && reg2 <= (REG_PVR+MAX_PVR_REGNUM))
-	immed = opcode->immval_mask | REG_PVR_MASK | reg2;
+      if (reg2 == MICROBLAZE_REG_MSR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_MSR_MASK;
+      else if (reg2 == MICROBLAZE_REG_PC)
+        immed = opcode->immval_mask | MICROBLAZE_REG_PC_MASK;
+      else if (reg2 == MICROBLAZE_REG_EAR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_EAR_MASK;
+      else if (reg2 == MICROBLAZE_REG_ESR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_ESR_MASK;
+      else if (reg2 == MICROBLAZE_REG_FSR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_FSR_MASK;
+      else if (reg2 == MICROBLAZE_REG_BTR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_BTR_MASK;
+      else if (reg2 == MICROBLAZE_REG_EDR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_EDR_MASK;
+      else if (reg2 == MICROBLAZE_REG_PID)
+        immed = opcode->immval_mask | MICROBLAZE_REG_PID_MASK;
+      else if (reg2 == MICROBLAZE_REG_ZPR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_ZPR_MASK;
+      else if (reg2 == MICROBLAZE_REG_TLBX)
+        immed = opcode->immval_mask | MICROBLAZE_REG_TLBX_MASK;
+      else if (reg2 == MICROBLAZE_REG_TLBLO)
+        immed = opcode->immval_mask | MICROBLAZE_REG_TLBLO_MASK;
+      else if (reg2 == MICROBLAZE_REG_TLBHI)
+        immed = opcode->immval_mask | MICROBLAZE_REG_TLBHI_MASK;
+      else if (reg2 == MICROBLAZE_REG_SHR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_SHR_MASK;
+      else if (reg2 == MICROBLAZE_REG_SLR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_SLR_MASK;
+      else if (reg2 >= (MICROBLAZE_REG_PVR+MIN_PVR_REGNUM)
+	       && reg2 <= (MICROBLAZE_REG_PVR+MAX_PVR_REGNUM))
+	immed = opcode->immval_mask | MICROBLAZE_REG_PVR_MASK | reg2;
       else
         as_fatal (_("invalid value for special purpose register"));
       inst |= (reg1 << RD_LOW) & RD_MASK;
@@ -1475,36 +1478,36 @@ md_assemble (char * str)
           reg2 = 0;
         }
 
-      if (reg1 == REG_MSR)
-        immed = opcode->immval_mask | REG_MSR_MASK;
-      else if (reg1 == REG_PC)
-        immed = opcode->immval_mask | REG_PC_MASK;
-      else if (reg1 == REG_EAR)
-        immed = opcode->immval_mask | REG_EAR_MASK;
-      else if (reg1 == REG_ESR)
-        immed = opcode->immval_mask | REG_ESR_MASK;
-      else if (reg1 == REG_FSR)
-        immed = opcode->immval_mask | REG_FSR_MASK;
-      else if (reg1 == REG_BTR)
-        immed = opcode->immval_mask | REG_BTR_MASK;
-      else if (reg1 == REG_EDR)
-        immed = opcode->immval_mask | REG_EDR_MASK;
-      else if (reg1 == REG_PID)
-        immed = opcode->immval_mask | REG_PID_MASK;
-      else if (reg1 == REG_ZPR)
-        immed = opcode->immval_mask | REG_ZPR_MASK;
-      else if (reg1 == REG_TLBX)
-        immed = opcode->immval_mask | REG_TLBX_MASK;
-      else if (reg1 == REG_TLBLO)
-        immed = opcode->immval_mask | REG_TLBLO_MASK;
-      else if (reg1 == REG_TLBHI)
-        immed = opcode->immval_mask | REG_TLBHI_MASK;
-      else if (reg1 == REG_TLBSX)
-        immed = opcode->immval_mask | REG_TLBSX_MASK;
-      else if (reg1 == REG_SHR)
-        immed = opcode->immval_mask | REG_SHR_MASK;
-      else if (reg1 == REG_SLR)
-        immed = opcode->immval_mask | REG_SLR_MASK;
+      if (reg1 == MICROBLAZE_REG_MSR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_MSR_MASK;
+      else if (reg1 == MICROBLAZE_REG_PC)
+        immed = opcode->immval_mask | MICROBLAZE_REG_PC_MASK;
+      else if (reg1 == MICROBLAZE_REG_EAR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_EAR_MASK;
+      else if (reg1 == MICROBLAZE_REG_ESR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_ESR_MASK;
+      else if (reg1 == MICROBLAZE_REG_FSR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_FSR_MASK;
+      else if (reg1 == MICROBLAZE_REG_BTR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_BTR_MASK;
+      else if (reg1 == MICROBLAZE_REG_EDR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_EDR_MASK;
+      else if (reg1 == MICROBLAZE_REG_PID)
+        immed = opcode->immval_mask | MICROBLAZE_REG_PID_MASK;
+      else if (reg1 == MICROBLAZE_REG_ZPR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_ZPR_MASK;
+      else if (reg1 == MICROBLAZE_REG_TLBX)
+        immed = opcode->immval_mask | MICROBLAZE_REG_TLBX_MASK;
+      else if (reg1 == MICROBLAZE_REG_TLBLO)
+        immed = opcode->immval_mask | MICROBLAZE_REG_TLBLO_MASK;
+      else if (reg1 == MICROBLAZE_REG_TLBHI)
+        immed = opcode->immval_mask | MICROBLAZE_REG_TLBHI_MASK;
+      else if (reg1 == MICROBLAZE_REG_TLBSX)
+        immed = opcode->immval_mask | MICROBLAZE_REG_TLBSX_MASK;
+      else if (reg1 == MICROBLAZE_REG_SHR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_SHR_MASK;
+      else if (reg1 == MICROBLAZE_REG_SLR)
+        immed = opcode->immval_mask | MICROBLAZE_REG_SLR_MASK;
       else
         as_fatal (_("invalid value for special purpose register"));
       inst |= (reg2 << RA_LOW) & RA_MASK;

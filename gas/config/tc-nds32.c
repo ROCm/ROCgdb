@@ -6130,8 +6130,8 @@ nds32_elf_append_relax_relocs (const char *key, const void *value)
 
 	      /* Extra to NDS32_SYM.  */
 	      /* Detect if DESC_FUNC relax type do apply.  */
-	      if ((REG_GP == N32_RA5 (pattern_now->insn))
-		  || (REG_GP == N32_RB5 (pattern_now->insn)))
+	      if ((N32_REG_GP == N32_RA5 (pattern_now->insn))
+		  || (N32_REG_GP == N32_RB5 (pattern_now->insn)))
 		{
 		  fixP = fix_new_exp (fragP, where - fragP->fr_literal,
 				      fixup_size, &exp, pcrel,

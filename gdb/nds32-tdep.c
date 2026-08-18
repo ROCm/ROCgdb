@@ -53,7 +53,7 @@
 #define N32_LMW_BIM \
 	N32_TYPE4 (LSMW, 0, 0, 0, 0, (N32_LSMW_BIM << 2) | N32_LSMW_LSMW)
 #define N32_FLDI_SP \
-	N32_TYPE2 (LDC, 0, REG_SP, 0)
+	N32_TYPE2 (LDC, 0, N32_REG_SP, 0)
 
 /* Use an invalid address value as 'not available' marker.  */
 enum { REG_UNAVAIL = (CORE_ADDR) -1 };
@@ -588,7 +588,7 @@ nds32_push_multiple_words (struct nds32_frame_cache *cache, int rb, int re,
     }
 
   /* Skip case where re == rb == sp.  */
-  if ((rb < REG_FP) && (re < REG_FP))
+  if ((rb < N32_REG_FP) && (re < N32_REG_FP))
     {
       for (i = re; i >= rb; i--)
 	{
@@ -626,7 +626,8 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 	  /* 32-bit instruction */
 	  insn_len = 4;
 
-	  if (CHOP_BITS (insn, 15) == N32_TYPE2 (ADDI, REG_SP, REG_SP, 0))
+	  if (CHOP_BITS (insn, 15)
+	      == N32_TYPE2 (ADDI, N32_REG_SP, N32_REG_SP, 0))
 	    {
 	      /* addi $sp, $sp, imm15s */
 	      int imm15s = N32_IMM15S (insn);
@@ -640,7 +641,8 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 		  continue;
 		}
 	    }
-	  else if (CHOP_BITS (insn, 15) == N32_TYPE2 (ADDI, REG_FP, REG_SP, 0))
+	  else if (CHOP_BITS (insn, 15)
+		   == N32_TYPE2 (ADDI, N32_REG_FP, N32_REG_SP, 0))
 	    {
 	      /* addi $fp, $sp, imm15s */
 	      int imm15s = N32_IMM15S (insn);
@@ -655,7 +657,7 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 		}
 	    }
 	  else if ((insn & ~(__MASK (19) << 6)) == N32_SMW_ADM
-		   && N32_RA5 (insn) == REG_SP)
+		   && N32_RA5 (insn) == N32_REG_SP)
 	    {
 	      /* smw.adm Rb, [$sp], Re, enable4 */
 	      if (cache != NULL)
@@ -665,8 +667,9 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 	      in_prologue_bb = 1;
 	      continue;
 	    }
-	  else if (insn == N32_ALU1 (ADD, REG_SP, REG_SP, REG_TA)
-		   || insn == N32_ALU1 (ADD, REG_SP, REG_TA, REG_SP))
+	  else if (insn == N32_ALU1 (ADD, N32_REG_SP, N32_REG_SP, N32_REG_TA)
+		   || insn == N32_ALU1 (ADD, N32_REG_SP, N32_REG_TA,
+					N32_REG_SP))
 	    {
 	      /* add $sp, $sp, $ta */
 	      /* add $sp, $ta, $sp */
@@ -679,7 +682,7 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 		  continue;
 		}
 	    }
-	  else if (CHOP_BITS (insn, 20) == N32_TYPE1 (MOVI, REG_TA, 0))
+	  else if (CHOP_BITS (insn, 20) == N32_TYPE1 (MOVI, N32_REG_TA, 0))
 	    {
 	      /* movi $ta, imm20s */
 	      if (cache != NULL)
@@ -687,7 +690,7 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 
 	      continue;
 	    }
-	  else if (CHOP_BITS (insn, 20) == N32_TYPE1 (SETHI, REG_TA, 0))
+	  else if (CHOP_BITS (insn, 20) == N32_TYPE1 (SETHI, N32_REG_TA, 0))
 	    {
 	      /* sethi $ta, imm20u */
 	      if (cache != NULL)
@@ -695,7 +698,8 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 
 	      continue;
 	    }
-	  else if (CHOP_BITS (insn, 15) == N32_TYPE2 (ORI, REG_TA, REG_TA, 0))
+	  else if (CHOP_BITS (insn, 15)
+		   == N32_TYPE2 (ORI, N32_REG_TA, N32_REG_TA, 0))
 	    {
 	      /* ori $ta, $ta, imm15u */
 	      if (cache != NULL)
@@ -703,7 +707,8 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 
 	      continue;
 	    }
-	  else if (CHOP_BITS (insn, 15) == N32_TYPE2 (ADDI, REG_TA, REG_TA, 0))
+	  else if (CHOP_BITS (insn, 15)
+		   == N32_TYPE2 (ADDI, N32_REG_TA, N32_REG_TA, 0))
 	    {
 	      /* addi $ta, $ta, imm15s */
 	      if (cache != NULL)
@@ -711,27 +716,28 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 
 	      continue;
 	    }
-	  if (insn == N32_ALU1 (ADD, REG_GP, REG_TA, REG_GP)
-	      || insn == N32_ALU1 (ADD, REG_GP, REG_GP, REG_TA))
+	  if (insn == N32_ALU1 (ADD, N32_REG_GP, N32_REG_TA, N32_REG_GP)
+	      || insn == N32_ALU1 (ADD, N32_REG_GP, N32_REG_GP, N32_REG_TA))
 	    {
 	      /* add $gp, $ta, $gp */
 	      /* add $gp, $gp, $ta */
 	      in_prologue_bb = 1;
 	      continue;
 	    }
-	  else if (CHOP_BITS (insn, 20) == N32_TYPE1 (MOVI, REG_GP, 0))
+	  else if (CHOP_BITS (insn, 20) == N32_TYPE1 (MOVI, N32_REG_GP, 0))
 	    {
 	      /* movi $gp, imm20s */
 	      in_prologue_bb = 1;
 	      continue;
 	    }
-	  else if (CHOP_BITS (insn, 20) == N32_TYPE1 (SETHI, REG_GP, 0))
+	  else if (CHOP_BITS (insn, 20) == N32_TYPE1 (SETHI, N32_REG_GP, 0))
 	    {
 	      /* sethi $gp, imm20u */
 	      in_prologue_bb = 1;
 	      continue;
 	    }
-	  else if (CHOP_BITS (insn, 15) == N32_TYPE2 (ORI, REG_GP, REG_GP, 0))
+	  else if (CHOP_BITS (insn, 15)
+		   == N32_TYPE2 (ORI, N32_REG_GP, N32_REG_GP, 0))
 	    {
 	      /* ori $gp, $gp, imm15u */
 	      in_prologue_bb = 1;
@@ -761,7 +767,7 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 		 normal form (bit [12] == 0) is used.  */
 
 	      /* fsdi FDt, [$sp + (imm12s << 2)] */
-	      if (N32_RA5 (insn) == REG_SP)
+	      if (N32_RA5 (insn) == N32_REG_SP)
 		continue;
 	    }
 
@@ -814,13 +820,13 @@ nds32_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 	      in_prologue_bb = 1;
 	      continue;
 	    }
-	  else if (insn == N16_TYPE5 (ADD5PC, REG_GP))
+	  else if (insn == N16_TYPE5 (ADD5PC, N32_REG_GP))
 	    {
 	      /* add5.pc $gp */
 	      in_prologue_bb = 1;
 	      continue;
 	    }
-	  else if (CHOP_BITS (insn, 5) == N16_TYPE55 (MOVI55, REG_GP, 0))
+	  else if (CHOP_BITS (insn, 5) == N16_TYPE55 (MOVI55, N32_REG_GP, 0))
 	    {
 	      /* movi55 $gp, imm5s */
 	      in_prologue_bb = 1;
@@ -1028,7 +1034,7 @@ nds32_pop_multiple_words (struct nds32_frame_cache *cache, int rb, int re,
   int i;
 
   /* Skip case where re == rb == sp.  */
-  if ((rb < REG_FP) && (re < REG_FP))
+  if ((rb < N32_REG_FP) && (re < N32_REG_FP))
     {
       for (i = rb; i <= re; i++)
 	{
@@ -1066,16 +1072,16 @@ static inline int
 nds32_analyze_epilogue_insn32 (int abi_use_fpr, uint32_t insn,
 			       struct nds32_frame_cache *cache)
 {
-  if (CHOP_BITS (insn, 15) == N32_TYPE2 (ADDI, REG_SP, REG_SP, 0)
+  if (CHOP_BITS (insn, 15) == N32_TYPE2 (ADDI, N32_REG_SP, N32_REG_SP, 0)
       && N32_IMM15S (insn) > 0)
     /* addi $sp, $sp, imm15s */
     return INSN_RESET_SP;
-  else if (CHOP_BITS (insn, 15) == N32_TYPE2 (ADDI, REG_SP, REG_FP, 0)
+  else if (CHOP_BITS (insn, 15) == N32_TYPE2 (ADDI, N32_REG_SP, N32_REG_FP, 0)
 	   && N32_IMM15S (insn) < 0)
     /* addi $sp, $fp, imm15s */
     return INSN_RESET_SP;
   else if ((insn & ~(__MASK (19) << 6)) == N32_LMW_BIM
-	   && N32_RA5 (insn) == REG_SP)
+	   && N32_RA5 (insn) == N32_REG_SP)
     {
       /* lmw.bim Rb, [$sp], Re, enable4 */
       if (cache != NULL)
@@ -1084,11 +1090,11 @@ nds32_analyze_epilogue_insn32 (int abi_use_fpr, uint32_t insn,
 
       return INSN_RECOVER;
     }
-  else if (insn == N32_JREG (JR, 0, REG_LP, 0, 1))
+  else if (insn == N32_JREG (JR, 0, N32_REG_LP, 0, 1))
     /* ret $lp */
     return INSN_RETURN;
-  else if (insn == N32_ALU1 (ADD, REG_SP, REG_SP, REG_TA)
-	   || insn == N32_ALU1 (ADD, REG_SP, REG_TA, REG_SP))
+  else if (insn == N32_ALU1 (ADD, N32_REG_SP, N32_REG_SP, N32_REG_TA)
+	   || insn == N32_ALU1 (ADD, N32_REG_SP, N32_REG_TA, N32_REG_SP))
     /* add $sp, $sp, $ta */
     /* add $sp, $ta, $sp */
     return INSN_RESET_SP;
@@ -1122,7 +1128,7 @@ nds32_analyze_epilogue_insn32 (int abi_use_fpr, uint32_t insn,
 static inline int
 nds32_analyze_epilogue_insn16 (uint32_t insn, struct nds32_frame_cache *cache)
 {
-  if (insn == N16_TYPE5 (RET5, REG_LP))
+  if (insn == N16_TYPE5 (RET5, N32_REG_LP))
     /* ret5 $lp */
     return INSN_RETURN;
   else if (CHOP_BITS (insn, 10) == N16_TYPE10 (ADDI10S, 0))

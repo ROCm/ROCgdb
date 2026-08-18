@@ -21,20 +21,20 @@
 #define OPCODE_NDS32_H
 
 /* Registers.  */
-#define REG_R0		(0)
-#define REG_R5		(5)
-#define REG_R8		(8)
-#define REG_R10		(10)
-#define REG_R12		(12)
-#define REG_R15		(15)
-#define REG_R16		(16)
-#define REG_R20		(20)
-#define REG_TA		(15)
-#define REG_TP		(25)
-#define REG_FP		(28)
-#define REG_GP		(29)
-#define REG_LP		(30)
-#define REG_SP		(31)
+#define N32_REG_R0		(0)
+#define N32_REG_R5		(5)
+#define N32_REG_R8		(8)
+#define N32_REG_R10		(10)
+#define N32_REG_R12		(12)
+#define N32_REG_R15		(15)
+#define N32_REG_R16		(16)
+#define N32_REG_R20		(20)
+#define N32_REG_TA		(15)
+#define N32_REG_TP		(25)
+#define N32_REG_FP		(28)
+#define N32_REG_GP		(29)
+#define N32_REG_LP		(30)
+#define N32_REG_SP		(31)
 
 /* Macros for extracting fields or making an instruction.  */
 static const int nds32_r45map[] ATTRIBUTE_UNUSED =
@@ -967,24 +967,24 @@ enum n16_opcodes
 #define INSN_MFUSR_PC_MASK	0xFE0FFFFF
 
 /* Instructions use $ta register as operand.  */
-#define INSN_SETHI_TA	(INSN_SETHI | (REG_TA << 20))
-#define INSN_ORI_TA	(INSN_ORI | (REG_TA << 20) | (REG_TA << 15))
-#define INSN_ADD_TA	(INSN_ADD | (REG_TA << 20))
-#define INSN_ADD45_TA	(INSN_ADD45 | (REG_TA << 5))
-#define INSN_JR5_TA	(INSN_JR5 | (REG_TA << 0))
-#define INSN_RET5_TA	(INSN_RET5 | (REG_TA << 0))
-#define INSN_JR_TA	(INSN_JR | (REG_TA << 10))
-#define INSN_RET_TA	(INSN_RET | (REG_TA << 10))
-#define INSN_JRAL_TA	(INSN_JRAL | (REG_LP << 20) | (REG_TA << 10))
-#define INSN_JRAL5_TA	(INSN_JRAL5 | (REG_TA << 0))
-#define INSN_BEQZ_TA	(INSN_BEQZ | (REG_TA << 20))
-#define INSN_BNEZ_TA	(INSN_BNEZ | (REG_TA << 20))
-#define INSN_MOVI_TA	(INSN_MOVI | (REG_TA << 20))
-#define INSN_BEQ_TA	(INSN_BEQ | (REG_TA << 15))
-#define INSN_BNE_TA	(INSN_BNE | (REG_TA << 15))
+#define INSN_SETHI_TA	(INSN_SETHI | (N32_REG_TA << 20))
+#define INSN_ORI_TA	(INSN_ORI | (N32_REG_TA << 20) | (N32_REG_TA << 15))
+#define INSN_ADD_TA	(INSN_ADD | (N32_REG_TA << 20))
+#define INSN_ADD45_TA	(INSN_ADD45 | (N32_REG_TA << 5))
+#define INSN_JR5_TA	(INSN_JR5 | (N32_REG_TA << 0))
+#define INSN_RET5_TA	(INSN_RET5 | (N32_REG_TA << 0))
+#define INSN_JR_TA	(INSN_JR | (N32_REG_TA << 10))
+#define INSN_RET_TA	(INSN_RET | (N32_REG_TA << 10))
+#define INSN_JRAL_TA	(INSN_JRAL | (N32_REG_LP << 20) | (N32_REG_TA << 10))
+#define INSN_JRAL5_TA	(INSN_JRAL5 | (N32_REG_TA << 0))
+#define INSN_BEQZ_TA	(INSN_BEQZ | (N32_REG_TA << 20))
+#define INSN_BNEZ_TA	(INSN_BNEZ | (N32_REG_TA << 20))
+#define INSN_MOVI_TA	(INSN_MOVI | (N32_REG_TA << 20))
+#define INSN_BEQ_TA	(INSN_BEQ | (N32_REG_TA << 15))
+#define INSN_BNE_TA	(INSN_BNE | (N32_REG_TA << 15))
 
 /* Instructions use $r5 register as operand.  */
-#define INSN_BNE_R5	(INSN_BNE | (REG_R5 << 15))
-#define INSN_BEQ_R5	(INSN_BEQ | (REG_R5 << 15))
+#define INSN_BNE_R5	(INSN_BNE | (N32_REG_R5 << 15))
+#define INSN_BEQ_R5	(INSN_BEQ | (N32_REG_R5 << 15))
 
 #endif
