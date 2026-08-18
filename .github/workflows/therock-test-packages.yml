@@ -71,7 +71,7 @@ jobs:
 
       - name: Configure test matrix
         env:
-          PROJECTS_TO_TEST: "rocgdb-cpu,rocgdb-gpu"
+          PROJECTS_TO_TEST: "rocgdb-cpu,rocgdb-gpu,rocgdb-corefile"
           AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
           CI_CONFIG_PATH: ci-config
         id: configure
