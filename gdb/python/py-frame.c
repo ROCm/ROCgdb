@@ -438,41 +438,29 @@ frame_object::static_link ()
 /* Implementation of gdb.newest_frame () -> gdb.Frame.
    Returns the newest frame object.  */
 
-PyObject *
-gdbpy_newest_frame (PyObject *self, PyObject *args)
+gdbpy_ref<>
+gdbpy_newest_frame ()
 {
-  frame_info_ptr frame = NULL;
-
-  try
-    {
-      frame = get_current_frame ();
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  return frame_info_to_frame_object (frame).release ();
+  /* FIXME: Python safety.  Convert frame_info_to_frame_object.  */
+  gdbpy_ref<> result = frame_info_to_frame_object (get_current_frame ());
+  if (result == nullptr)
+    throw gdb_python_exception ();
+  return result;
 }
 
 /* Implementation of gdb.selected_frame () -> gdb.Frame.
    Returns the selected frame object.  */
 
-PyObject *
-gdbpy_selected_frame (PyObject *self, PyObject *args)
+gdbpy_ref<>
+gdbpy_selected_frame ()
 {
-  frame_info_ptr frame = NULL;
-
-  try
-    {
-      frame = get_selected_frame ("No frame is currently selected.");
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
-
-  return frame_info_to_frame_object (frame).release ();
+  frame_info_ptr frame
+    = get_selected_frame ("No frame is currently selected.");
+  /* FIXME: Python safety.  Convert frame_info_to_frame_object.  */
+  gdbpy_ref<> result = frame_info_to_frame_object (frame);
+  if (result == nullptr)
+    throw gdb_python_exception ();
+  return result;
 }
 
 /* Implementation of gdb.stop_reason_string (Integer) -> String.
