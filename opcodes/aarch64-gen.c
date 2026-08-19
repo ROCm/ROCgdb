@@ -789,8 +789,8 @@ opcode_node *
 find_alias_opcode (const aarch64_opcode *opcode)
 {
   int i;
-  /* Assume maximum of 32 disassemble preference candidates.  */
-  const int max_num_aliases = 32;
+  /* Assume maximum of 64 disassemble preference candidates.  */
+  const int max_num_aliases = 64;
   const aarch64_opcode *ent;
   const aarch64_opcode *preferred[max_num_aliases + 1];
   opcode_node head, **next;
