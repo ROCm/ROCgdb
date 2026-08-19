@@ -1,9 +1,8 @@
 name: Update TheRock Dependencies
 
 on:
-  # schedule: # runs twice daily (03:17 and 15:17 UTC)
-  #   - cron: '17 3 * * *'
-  #   - cron: '17 15 * * *'
+  schedule: # runs weekly on Mondays at 03:17 UTC
+    - cron: '17 3 * * 1'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -38,4 +37,4 @@ jobs:
 
       - name: Update TheRock references
         run: |
-          python3 .github/scripts/update_therock_deps.py ${{ inputs.dry_run && '--dry-run' || '' }}
+          python3 .github/scripts/update_therock_deps.py ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '' }}
