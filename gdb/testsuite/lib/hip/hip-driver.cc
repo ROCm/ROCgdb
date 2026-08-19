@@ -63,19 +63,19 @@ kernel (unsigned char *malloc_buffer,
 
   /* See comments in hip-test-main.h.  gdb_hip_test_main is weak -- we
      call the version that is defined by the testcase.  */
-  if (auto &m = static_cast<int (&)(int, char **, char **)>(gdb_hip_test_main))
+  if (auto *m = static_cast<int (*)(int, char **, char **)>(gdb_hip_test_main))
     *res = m (argc, argv, envp);
 
-  else if (auto &m = static_cast<int (&)(int, char **)>(gdb_hip_test_main))
+  else if (auto *m = static_cast<int (*)(int, char **)>(gdb_hip_test_main))
     *res = m (argc, argv);
 
-  else if (auto &m = static_cast<int (&)(int, const char **)>(gdb_hip_test_main))
+  else if (auto *m = static_cast<int (*)(int, const char **)>(gdb_hip_test_main))
     *res = m (argc, (const char **) argv);
 
-  else if (auto &m = static_cast<int (&)(int, char *const *)>(gdb_hip_test_main))
+  else if (auto *m = static_cast<int (*)(int, char *const *)>(gdb_hip_test_main))
     *res = m (argc, argv);
 
-  else if (auto &m = static_cast<int (&)()>(gdb_hip_test_main))
+  else if (auto *m = static_cast<int (*)()>(gdb_hip_test_main))
     *res = m ();
 
   else
