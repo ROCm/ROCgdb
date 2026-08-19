@@ -409,7 +409,11 @@ tui_get_begin_asm_address (struct gdbarch **gdbarch_p, CORE_ADDR *addr_p)
 	  bound_minimal_symbol main_symbol
 	    = lookup_minimal_symbol (current_program_space, main_name ());
 	  if (main_symbol.minsym != nullptr)
-	    addr = main_symbol.value_address ();
+	    {
+	      addr = main_symbol.value_address ();
+	      addr = gdbarch_convert_from_func_ptr_addr
+		       (gdbarch, addr, current_inferior ()->top_target ());
+	    }
 	}
     }
   else				/* The target is executing.  */
