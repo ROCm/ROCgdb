@@ -98,8 +98,14 @@ extern bool loongarch_force_relocation_sub_same(struct fix *, asection *);
 #define MD_APPLY_SYM_VALUE(FIX) 0
 
 #define TARGET_USE_CFIPOP 1
-/* Adjust debug_line after relaxation.  */
-#define DWARF2_USE_FIXED_ADVANCE_PC   1
+
+extern bool loongarch_fixed_advance_pc (symbolS *, symbolS *);
+#define DWARF2_USE_FIXED_ADVANCE_PC(FROM, TO) \
+  loongarch_fixed_advance_pc (FROM, TO)
+
+extern bool loongarch_fixed_advance_pc_frag (fragS *);
+#define DWARF2_USE_FIXED_ADVANCE_PC_FRAG(FRAG) \
+  loongarch_fixed_advance_pc_frag (FRAG)
 
 /* FDE Data Alignment Factor.
    FDE Code Alignment Factor (DWARF2_LINE_MIN_INSN_LENGTH) should be 1

@@ -77,7 +77,7 @@ extern bool nds32_allow_local_subtract (expressionS *, expressionS *, segT);
 #define md_allow_local_subtract(lhs,rhs,sect)	nds32_allow_local_subtract (lhs, rhs, sect)
 
 /* dwarf2dbg.c.  */
-#define DWARF2_USE_FIXED_ADVANCE_PC		1
+#define DWARF2_USE_FIXED_ADVANCE_PC(FROM, TO)	1
 
 /* write.c.  */
 extern long nds32_pcrel_from_section (struct fix *, segT);

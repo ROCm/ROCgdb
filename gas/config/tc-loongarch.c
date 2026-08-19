@@ -1652,6 +1652,32 @@ loongarch_force_relocation_sub_local (fixS *fixp, segT sec ATTRIBUTE_UNUSED)
   return true;
 }
 
+/* Use DW_LNS_fixed_advance_pc with relocations if there are linker-relaxable
+   instructions between from and to symbols. Otherwise, use special opcodes
+   without relocations.  */
+bool
+loongarch_fixed_advance_pc (symbolS *from, symbolS *to)
+{
+  segT fromsec = S_GET_SEGMENT (from);
+  segT tosec = S_GET_SEGMENT (to);
+  if (fromsec != tosec)
+    return false;
+  fragS *fromfrag = symbol_get_frag (from);
+  fragS *tofrag = symbol_get_frag (to);
+  return _loongarch_force_relocation_sub_same (fromsec, fromfrag, tofrag);
+}
+
+/* Similar to loongarch_fixed_advance_pc, used for frag.  */
+bool
+loongarch_fixed_advance_pc_frag (fragS *frag)
+{
+  expressionS *exp = symbol_get_value_expression (frag->fr_symbol);
+
+  if (exp->X_op != O_subtract)
+    return false;
+  return loongarch_fixed_advance_pc (exp->X_op_symbol, exp->X_add_symbol);
+}
+
 /* Postpone text-section label subtraction calculation until linking,
    since linker relaxations might change the deltas.  */
 bool

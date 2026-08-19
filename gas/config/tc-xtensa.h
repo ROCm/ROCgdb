@@ -424,7 +424,7 @@ extern void xtensa_init (int, char **);
 #define SUB_SEGMENT_ALIGN(SEG, FRCHAIN) 0
 
 /* Use line number format that is amenable to linker relaxation.  */
-#define DWARF2_USE_FIXED_ADVANCE_PC (linkrelax != 0)
+#define DWARF2_USE_FIXED_ADVANCE_PC(FROM, TO) (linkrelax != 0)
 
 
 /* Resource reservation info functions.  */
