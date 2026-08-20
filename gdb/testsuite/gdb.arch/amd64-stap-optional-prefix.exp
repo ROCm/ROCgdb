@@ -79,7 +79,7 @@ foreach probe_name $normal_probes_names \
 
 with_test_prefix "fail_probe" {
     goto_probe "fail_probe"
-    gdb_test "print \$_probe_arg0" "warning: unrecognized bitness `-7' for probe `fail_probe'\r\nInvalid probe argument 0 -- probe has 0 arguments available"
+    gdb_test "print \$_probe_arg0" "warning: unrecognized bitness \"-7\" for probe \"fail_probe\"\r\nInvalid probe argument 0 -- probe has 0 arguments available"
 }
 
 with_test_prefix "fail2_probe" {
