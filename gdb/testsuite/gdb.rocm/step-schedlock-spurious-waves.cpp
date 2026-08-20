@@ -31,7 +31,9 @@ end_of_kernel ()
 {
 }
 
-__global__ void
+/* optnone keeps the loop below intact under -O1/-O2/-O3, ensuring there are
+   enough source lines to step over.  */
+__global__ void __attribute__ ((optnone))
 kern ()
 {
   /* The test will need to step a few times, so provide an empty loop that
