@@ -925,7 +925,7 @@ typy_legacy_template_argument (struct type *type, const struct block *block,
 {
   int i;
   struct demangle_component *demangled;
-  std::unique_ptr<demangle_parse_info> info;
+  demangle_parse_info_up info;
   std::string err;
   struct type *argtype;
 

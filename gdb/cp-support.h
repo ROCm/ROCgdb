@@ -53,6 +53,10 @@ struct using_direct;
 
 #define CP_OPERATOR_LEN 8
 
+struct demangle_parse_info;
+
+using demangle_parse_info_up = std::unique_ptr<demangle_parse_info>;
+
 /* The result of parsing a name.  */
 
 struct demangle_parse_info
@@ -69,7 +73,7 @@ struct demangle_parse_info
 
   /* Any other objects referred to by this object, and whose storage
      lifetime must be linked.  */
-  std::vector<std::unique_ptr<demangle_parse_info>> infos;
+  std::vector<demangle_parse_info_up> infos;
 };
 
 
@@ -168,7 +172,7 @@ struct type *cp_find_type_baseclass_by_name (struct type *parent_type,
 
 /* Functions from cp-name-parser.y.  */
 
-extern std::unique_ptr<demangle_parse_info> cp_demangled_name_to_comp
+extern demangle_parse_info_up cp_demangled_name_to_comp
      (const char *demangled_name, std::string *errmsg = nullptr);
 
 /* Convert RESULT to a string.  ESTIMATED_LEN is used only as a guide
@@ -179,7 +183,7 @@ extern gdb::unique_xmalloc_ptr<char> cp_comp_to_string
 
 extern void cp_merge_demangle_parse_infos (struct demangle_parse_info *,
 					   struct demangle_component *,
-					   std::unique_ptr<demangle_parse_info>);
+					   demangle_parse_info_up);
 
 /* The list of "maint cplus" commands.  */
 

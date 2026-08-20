@@ -2040,7 +2040,7 @@ cp_comp_to_string (struct demangle_component *result, int estimated_len)
 void
 cp_merge_demangle_parse_infos (struct demangle_parse_info *dest,
 			       struct demangle_component *target,
-			       std::unique_ptr<demangle_parse_info> src)
+			       demangle_parse_info_up src)
 
 {
   /* Copy the SRC's parse data into DEST.  */
@@ -2055,7 +2055,7 @@ cp_merge_demangle_parse_infos (struct demangle_parse_info *dest,
    error, NULL is returned, and an error message will be set in
    *ERRMSG.  */
 
-struct std::unique_ptr<demangle_parse_info>
+demangle_parse_info_up
 cp_demangled_name_to_comp (const char *demangled_name,
 			   std::string *errmsg)
 {
