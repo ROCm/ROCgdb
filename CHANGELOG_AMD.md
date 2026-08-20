@@ -5,6 +5,8 @@ Full documentation for ROCgdb is available at
 
 ## ROCgdb-X for ROCm-next
 
+## ROCgdb-16.3 for ROCm-10.0
+
 ### Added
 
 - The "catch hiperr" feature is now exposed to MI too, with a new
