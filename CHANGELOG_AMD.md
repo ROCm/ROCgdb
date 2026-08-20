@@ -16,9 +16,16 @@ Full documentation for ROCgdb is available at
   This allows evaluating expressions like 'private_lane#0x08' in Fortran
   applications that offload kernels to an AMD GPU.
 
+## ROCgdb-16-3 for ROCm-7.14
+
+### Added
+
 - Dumping core of AMD GPU programs with the "gcore" command is now
   significantly faster, particularly for kernels that use small
   amounts of VRAM.
+- New "catch hiperr" command that stops the inferior when a HIP API
+  call returns an error.  The convenience variable `$_hiperr` holds
+  the error code at the catchpoint.
 
 ## ROCgdb-16-3 for ROCm-7.13
 
