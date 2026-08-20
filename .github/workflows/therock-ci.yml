@@ -1,10 +1,9 @@
 name: TheRock CI for rocgdb
 
+# Superseded by therock-multi-arch-ci.yml. The single-arch presubmit is disabled;
+# the pull_request trigger is removed so this chain (therock-ci-linux.yml,
+# therock-test-packages.yml, therock-test-component.yml) only runs on demand.
 on:
-  pull_request:
-    branches:
-      - amd-staging
-      - amd-staging-rocgdb-*
   workflow_dispatch:
 
 permissions:
