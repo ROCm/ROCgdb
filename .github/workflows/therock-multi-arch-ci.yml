@@ -1,0 +1,178 @@
+# Copyright Advanced Micro Devices, Inc.
+# SPDX-License-Identifier: MIT
+
+# Multi-Arch CI for ROCgdb
+#
+# Builds and tests ROCgdb across multiple GPU architectures by calling TheRock's
+# reusable multi-arch workflows directly, passing ROCgdb as an external repo.
+# TheRock already registers rocgdb as an external repo (checkout path
+# external-rocgdb, THEROCK_ROCGDB_SOURCE_DIR) and defines its tests
+# (rocgdb-cpu, rocgdb-gpu, rocgdb-corefile), so this workflow is mostly wiring.
+#
+# Supersedes the single-arch therock-ci.yml chain.
+#
+# TheRock ref: tracks ROCm/TheRock@main with automatic stage-reuse. The `@<ref>`
+# on `uses:` is the workflow-definition ref (Actions forbids an expression there)
+# and is kept in sync with the `ref:` build-source inputs.
+
+name: TheRock Multi-Arch CI
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - amd-staging
+      - amd-staging-rocgdb-*
+  workflow_dispatch:
+    inputs:
+      linux_amdgpu_families:
+        type: string
+        description: "Comma-separated Linux GPU families to build and test. ex: gfx94X,gfx950 (empty = default set)"
+        default: ""
+      linux_test_labels:
+        type: string
+        description: "Reduce the Linux test set to labels prefixed with 'test:'. ex: test:rocgdb-cpu,test:rocgdb-gpu"
+        default: ""
+      prebuilt_stages:
+        type: string
+        default: ""
+        description: "Comma-separated build stages to skip (or 'all'); artifacts are copied from baseline_run_id instead"
+      baseline_run_id:
+        type: string
+        default: ""
+        description: "Workflow run ID to copy prebuilt stage artifacts from; required when prebuilt_stages is set"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  # A PR number if a pull request and otherwise the commit hash. Cancels queued
+  # and in-progress runs for the same PR (presubmit) or commit (postsubmit).
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  configure:
+    name: Configure Changed Projects
+    runs-on: ubuntu-24.04
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'ci:skip') }}
+    outputs:
+      changed_projects: ${{ steps.configure.outputs.changed_projects }}
+      run_all_tests: ${{ steps.configure.outputs.run_all_tests }}
+      skip_tests: ${{ steps.configure.outputs.skip_tests }}
+    steps:
+      - name: Checkout repository config
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          sparse-checkout: .github/repos-config.json
+          sparse-checkout-cone-mode: false
+
+      - name: Checkout TheRock for configure script
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ROCm/TheRock
+          ref: main
+          path: _therock
+          sparse-checkout: build_tools/github_actions
+          sparse-checkout-cone-mode: true
+
+      - name: Configure CI
+        id: configure
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 _therock/build_tools/github_actions/configure_external_repo_ci.py \
+            --event-name "${{ github.event_name }}" \
+            --github-repo "${{ github.repository }}" \
+            --base-sha "${{ github.event.pull_request.base.sha }}" \
+            --head-sha "${{ github.event.pull_request.head.sha }}" \
+            --config-path ".github/repos-config.json"
+
+  setup:
+    needs: configure
+    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@main
+    with:
+      build_variant: "release"
+      linux_amdgpu_families: ${{ inputs.linux_amdgpu_families || 'gfx94X,gfx950,gfx125X' }}
+      # Linux-only for the first cut.
+      windows_amdgpu_families: ""
+      linux_test_labels: ${{ inputs.linux_test_labels || '' }}
+      prebuilt_stages: ${{ inputs.prebuilt_stages || '' }}
+      baseline_run_id: ${{ inputs.baseline_run_id || '' }}
+      # Automatic stage reuse: TheRock finds a commit-compatible baseline run on
+      # main and rebuilds only the impacted stages.
+      stage_reuse_mode: reuse-stage
+      repository: ROCm/TheRock
+      ref: main
+      # Build ROCgdb from this PR's source instead of TheRock's pinned submodule.
+      # detect_external_repo_config.py resolves the repo to rocgdb, checks it out
+      # to external-rocgdb, and injects -DTHEROCK_ROCGDB_SOURCE_DIR automatically;
+      # extra_cmake_options is appended verbatim.
+      # The repository name must be lowercase "rocgdb": TheRock's stage-impact
+      # analysis matches the changed repo against BUILD_TOPOLOGY.toml submodules
+      # by exact string ("rocgdb"), so passing "ROCgdb" fails the match and forces
+      # a full rebuild with no stage reuse. actions/checkout is case-insensitive.
+      # TEMPORARY: gfx125X/MI455 is build-only (test-runs-on: "") until the runner
+      # is confirmed online. TODO: enable GPU tests once hardware is available.
+      external_repo: >-
+        {
+          "repository": "${{ github.repository_owner }}/rocgdb",
+          "ref": "${{ github.sha }}",
+          "extra_cmake_options": "-DTHEROCK_USE_EXTERNAL_ROCGDB=ON -DTHEROCK_BUILD_TESTING=ON -DTHEROCK_ENABLE_DEBUG_TOOLS=ON",
+          "family_overrides": {
+            "gfx125x": {
+              "linux": {
+                "test-runs-on": "",
+                "fetch-gfx-targets": ["gfx1250"]
+              }
+            }
+          }
+        }
+
+  linux_build_and_test:
+    name: Linux::${{ fromJSON(needs.setup.outputs.linux_build_config || '{}').build_variant_label || 'skip' }}
+    needs: [configure, setup]
+    if: >-
+      ${{
+        needs.setup.outputs.linux_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true' &&
+        needs.configure.outputs.skip_tests != 'true'
+      }}
+    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@main
+    with:
+      build_config: ${{ needs.setup.outputs.linux_build_config }}
+      test_labels: ${{ needs.setup.outputs.linux_test_labels }}
+      rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
+      test_type: ${{ needs.setup.outputs.test_type }}
+      external_repo_config: ${{ needs.setup.outputs.external_repo_config }}
+      # Empty string when run_all_tests=true triggers a full test run downstream.
+      changed_projects: ${{ needs.configure.outputs.run_all_tests == 'true' && '' || needs.configure.outputs.changed_projects }}
+      repository: ROCm/TheRock
+      ref: main
+    permissions:
+      contents: read
+      id-token: write
+
+  multi_arch_ci_summary:
+    name: Multi-Arch CI Summary
+    if: always()
+    needs:
+      - setup
+      - linux_build_and_test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Output failed jobs
+        run: |
+          echo '${{ toJson(needs) }}'
+          FAILED_JOBS="$(echo '${{ toJson(needs) }}' \
+            | jq --raw-output \
+            'map_values(select(.result!="success" and .result!="skipped")) | keys | join(",")' \
+          )"
+          if [[ "${FAILED_JOBS}" != "" ]]; then
+            echo "The following jobs failed: ${FAILED_JOBS}"
+            exit 1
+          fi
