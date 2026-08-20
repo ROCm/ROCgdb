@@ -107,7 +107,7 @@ jobs:
       # main and rebuilds only the impacted stages.
       stage_reuse_mode: reuse-stage
       repository: ROCm/TheRock
-      ref: main
+      ref: users/lumachad/main/stage-reuse-timing
       # Build ROCgdb from this PR's source instead of TheRock's pinned submodule.
       # detect_external_repo_config.py resolves the repo to rocgdb, checks it out
       # to external-rocgdb, and injects -DTHEROCK_ROCGDB_SOURCE_DIR automatically;
@@ -152,7 +152,7 @@ jobs:
       # Empty string when run_all_tests=true triggers a full test run downstream.
       changed_projects: ${{ needs.configure.outputs.run_all_tests == 'true' && '' || needs.configure.outputs.changed_projects }}
       repository: ROCm/TheRock
-      ref: main
+      ref: users/lumachad/main/stage-reuse-timing
     permissions:
       contents: read
       id-token: write
