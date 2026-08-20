@@ -624,7 +624,7 @@ darwin_solib_ops::bfd_open (const char *pathname)
        (abfd.get (), bfd_object,
 	gdbarch_bfd_arch_info (current_inferior ()->arch ())));
   if (res == NULL)
-    error (_("`%ps': not a shared-library: %s"),
+    error (_("\"%ps\": not a shared-library: %s"),
 	   styled_string (file_name_style.style (),
 			  bfd_get_filename (abfd.get ())),
 	   bfd_errmsg (bfd_get_error ()));

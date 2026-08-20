@@ -568,7 +568,7 @@ set_architecture (const char *ignore_args,
 	target_architecture_user = info.bfd_arch_info;
       else
 	gdb_printf (gdb_stderr,
-		    _("Architecture `%s' not recognized.\n"),
+		    _("Architecture \"%s\" not recognized.\n"),
 		    set_architecture_string);
     }
   show_architecture (gdb_stdout, from_tty, NULL, NULL);

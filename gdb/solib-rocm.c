@@ -566,7 +566,7 @@ rocm_solib_ops::bfd_iovec_open (bfd *abfd)
 	  ULONGEST pid = try_strtoulst (path);
 	  if (pid != m_inf->pid)
 	    {
-	      warning (_("`%s': code object is from another inferior"),
+	      warning (_("\"%s\": code object is from another inferior"),
 		       std::string (uri).c_str ());
 	      bfd_set_error (bfd_error_bad_value);
 	      return nullptr;
@@ -583,7 +583,7 @@ rocm_solib_ops::bfd_iovec_open (bfd *abfd)
 	  return new rocm_code_object_stream_memory (std::move (buffer));
 	}
 
-      warning (_("`%s': protocol not supported: %s"),
+      warning (_("\"%s\": protocol not supported: %s"),
 	       std::string (uri).c_str (), protocol.c_str ());
       bfd_set_error (bfd_error_bad_value);
       return nullptr;
@@ -614,12 +614,12 @@ rocm_solib_ops::bfd_open (const char *pathname)
   gdb_bfd_ref_ptr abfd = gdb_bfd_openr_iovec (pathname, "elf64-amdgcn", open);
 
   if (abfd == nullptr)
-    error (_("Could not open `%s' as an executable file: %s"), pathname,
+    error (_("Could not open \"%s\" as an executable file: %s"), pathname,
 	   bfd_errmsg (bfd_get_error ()));
 
   /* Check bfd format.  */
   if (!gdb_bfd_check_format (abfd.get (), bfd_object))
-    error (_("`%s': not in executable format: %s"),
+    error (_("\"%s\": not in executable format: %s"),
 	   bfd_get_filename (abfd.get ()), bfd_errmsg (bfd_get_error ()));
 
   unsigned char osabi = elf_elfheader (abfd)->e_ident[EI_OSABI];
@@ -627,12 +627,12 @@ rocm_solib_ops::bfd_open (const char *pathname)
 
   /* Check that the code object is using the HSA OS ABI.  */
   if (osabi != ELFOSABI_AMDGPU_HSA)
-    error (_("`%s': ELF file OS ABI is not supported (%d)."),
+    error (_("\"%s\": ELF file OS ABI is not supported (%d)."),
 	   bfd_get_filename (abfd.get ()), osabi);
 
   /* We support HSA code objects V3 and greater.  */
   if (osabiversion < ELFABIVERSION_AMDGPU_HSA_V3)
-    error (_("`%s': ELF file HSA OS ABI version is not supported (%d)."),
+    error (_("\"%s\": ELF file HSA OS ABI version is not supported (%d)."),
 	   bfd_get_filename (abfd.get ()), osabiversion);
 
   /* For GDB to be able to use this solib, the exact AMDGPU processor type

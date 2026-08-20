@@ -316,7 +316,7 @@ proc test_stepping {} {
 	    default { fail "back at main from marker1 (timeout)" ; return }
 	}
 
-	gdb_test "next" "for \\(count = 0.*" "next to `for'"
+	gdb_test "next" "for \\(count = 0.*" "next to \"for\""
 
 	# Now test that "until" works.  It's a bit tricky to test
 	# "until", because compilers don't always arrange the code
@@ -593,16 +593,16 @@ proc test_watchpoint_and_breakpoint {} {
 }
 
 proc test_constant_watchpoint {} {
-    gdb_test "watch 5" "Cannot watch constant value `5'." "number is constant"
-    gdb_test "watch (int *)5" "Cannot watch constant value `\\(int \\*\\)5'." \
+    gdb_test "watch 5" "Cannot watch constant value \"5\"." "number is constant"
+    gdb_test "watch (int *)5" "Cannot watch constant value \"\\(int \\*\\)5\"." \
     "number with cast is constant"
-    gdb_test "watch marker1" "Cannot watch constant value `marker1'." \
+    gdb_test "watch marker1" "Cannot watch constant value \"marker1\"." \
     "marker1 is constant"
     gdb_test "watch count + 6" ".*atchpoint ${::decimal}: count \\+ 6"
-    gdb_test_no_output "delete \$bpnum" "delete watchpoint `count + 6'"
+    gdb_test_no_output "delete \$bpnum" "delete watchpoint \"count + 6\""
     gdb_test "watch 7 + count" \
 	"^(?:Hardware w|W)atchpoint $::decimal: 7 \\+ count"
-    gdb_test_no_output "delete \$bpnum" "delete watchpoint `7 + count'"
+    gdb_test_no_output "delete \$bpnum" "delete watchpoint \"7 + count\""
 }
 
 proc test_disable_enable_software_watchpoint {} {
@@ -612,14 +612,14 @@ proc test_disable_enable_software_watchpoint {} {
     # Watch something not memory to force a software watchpoint.
     gdb_test {watch $pc} "^(?:Hardware w|W)atchpoint $::decimal: .pc"
 
-    gdb_test_no_output "disable \$bpnum" "disable watchpoint `\$pc'"
-    gdb_test_no_output "enable \$bpnum" "re-enable watchpoint `\$pc'"
+    gdb_test_no_output "disable \$bpnum" "disable watchpoint \"\$pc\""
+    gdb_test_no_output "enable \$bpnum" "re-enable watchpoint \"\$pc\""
 
     gdb_test "info watchpoint \$bpnum" \
 	".*watchpoint\[ \t\]+keep\[ \t\]+y\[ \t\]+.pc.*" \
-	"watchpoint `\$pc' is enabled"
+	"watchpoint \"\$pc\" is enabled"
 
-    gdb_test_no_output "delete \$bpnum" "delete watchpoint `\$pc'"
+    gdb_test_no_output "delete \$bpnum" "delete watchpoint \"\$pc\""
 }
 
 proc test_watch_location {} {

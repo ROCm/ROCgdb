@@ -347,10 +347,10 @@ gnuv3_rtti_type (struct value *value,
   if (vtable_symbol_name == NULL
       || !startswith (vtable_symbol_name, "vtable for "))
     {
-      warning (_("can't find linker symbol for virtual table for `%s' value"),
+      warning (_("can't find linker symbol for virtual table for \"%s\" value"),
 	       values_type->safe_name ());
       if (vtable_symbol_name)
-	warning (_("  found `%s' instead"), vtable_symbol_name);
+	warning (_("  found \"%s\" instead"), vtable_symbol_name);
       return NULL;
     }
   class_name = vtable_symbol_name + 11;

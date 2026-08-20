@@ -956,7 +956,7 @@ print_frame_info_to_print_what (const char *print_frame_info)
     if (print_frame_info == print_frame_info_choices[i])
       return print_frame_info_print_what[i];
 
-  internal_error ("Unexpected print frame-info value `%s'.",
+  internal_error ("Unexpected print frame-info value \"%s\".",
 		  print_frame_info);
 }
 
@@ -3338,7 +3338,7 @@ If an argument is given, it is an expression for the value to return."));
 Select and print stack frame that called this one.\n\
 An argument says how many frames up to go."));
   add_com ("up-silently", class_support, up_silently_command, _("\
-Same as the `up' command, but does not print anything.\n\
+Same as the \"up\" command, but does not print anything.\n\
 This is useful in command scripts."));
 
   cmd_list_element *down_cmd
@@ -3348,7 +3348,7 @@ An argument says how many frames down to go."));
   add_com_alias ("do", down_cmd, class_stack, 1);
   add_com_alias ("dow", down_cmd, class_stack, 1);
   add_com ("down-silently", class_support, down_silently_command, _("\
-Same as the `down' command, but does not print anything.\n\
+Same as the \"down\" command, but does not print anything.\n\
 This is useful in command scripts."));
 
   cmd_list_element *frame_cmd_el

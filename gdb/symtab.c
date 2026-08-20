@@ -2133,7 +2133,7 @@ lookup_symbol_aux (const char *name, symbol_name_match_type match_type,
 
 	  if (t->code () != TYPE_CODE_STRUCT
 	      && t->code () != TYPE_CODE_UNION)
-	    error (_("Internal error: `%s' is not an aggregate"),
+	    error (_("Internal error: \"%s\" is not an aggregate"),
 		   langdef->name_of_this ());
 
 	  if (check_field (t, name, is_a_field_of_this))
@@ -2364,7 +2364,7 @@ error_in_psymtab_expansion (enum block_enum block_index, const char *name,
 			    struct compunit_symtab *cust)
 {
   error (_("\
-Internal: %s symbol `%s' found in %s psymtab but not in symtab.\n\
+Internal: %s symbol \"%s\" found in %s psymtab but not in symtab.\n\
 %s may be an inlined function, or may be a template function\n	 \
 (if a template, try specifying an instantiation: %s<type>)."),
 	 block_index == GLOBAL_BLOCK ? "global" : "static",
@@ -4216,24 +4216,24 @@ operator_chars (const char *p, const char **end)
 	return p;
       case '(':
 	if (p[1] != ')')
-	  error (_("`operator ()' must be specified "
-		   "without whitespace in `()'"));
+	  error (_("\"operator ()\" must be specified "
+		   "without whitespace in \"()\""));
 	*end = p + 2;
 	return p;
       case '?':
 	if (p[1] != ':')
-	  error (_("`operator ?:' must be specified "
-		   "without whitespace in `?:'"));
+	  error (_("\"operator ?:\" must be specified "
+		   "without whitespace in \"?:\""));
 	*end = p + 2;
 	return p;
       case '[':
 	if (p[1] != ']')
-	  error (_("`operator []' must be specified "
-		   "without whitespace in `[]'"));
+	  error (_("\"operator []\" must be specified "
+		   "without whitespace in \"[]\""));
 	*end = p + 2;
 	return p;
       default:
-	error (_("`operator %s' not supported"), p);
+	error (_("\"operator %s\" not supported"), p);
 	break;
       }
 

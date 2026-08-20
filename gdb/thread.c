@@ -1378,11 +1378,11 @@ print_thread_info_1 (struct ui_out *uiout, const char *requested_threads,
 
       if (inferior_ptid != null_ptid && current_exited)
 	uiout->message ("\n\
-The current thread <Thread ID %s> has terminated.  See `help thread'.\n",
+The current thread <Thread ID %s> has terminated.  See \"help thread\".\n",
 			print_thread_id (inferior_thread ()));
       else if (any_thread && inferior_ptid == null_ptid)
 	uiout->message ("\n\
-No selected thread.  See `help thread'.\n");
+No selected thread.  See \"help thread\".\n");
     }
 }
 

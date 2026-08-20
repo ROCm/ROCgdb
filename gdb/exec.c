@@ -935,7 +935,7 @@ print_section_info (const std::vector<target_section> *t, bfd *abfd)
   /* FIXME: 16 is not wide enough when gdbarch_addr_bit > 64.  */
   int wid = gdbarch_addr_bit (gdbarch) <= 32 ? 8 : 16;
 
-  gdb_printf ("\t`%ps', ",
+  gdb_printf ("\t\"%ps\", ",
 	      styled_string (file_name_style.style (),
 			     bfd_get_filename (abfd)));
   gdb_stdout->wrap_here (8);
@@ -1090,7 +1090,7 @@ INIT_GDB_FILE (exec)
   c = add_cmd ("file", class_files, file_command, _("\
 Use FILE as program to be debugged.\n\
 It is read for its symbols, for getting the contents of pure memory,\n\
-and it is the program executed when you use the `run' command.\n\
+and it is the program executed when you use the \"run\" command.\n\
 If FILE cannot be found as specified, your execution directory path\n\
 ($PATH) is searched for a command of that name.\n\
 No arg means to have no executable file and no symbols."), &cmdlist);
@@ -1108,7 +1108,7 @@ Change the base address of section SECTION of the exec file to ADDR.\n\
 This can be used if the exec file does not contain section addresses,\n\
 (such as in the a.out format), or when the addresses specified in the\n\
 file itself are wrong.  Each section must be changed separately.  The\n\
-``info files'' command lists all the sections and their addresses."));
+\"info files\" command lists all the sections and their addresses."));
 
   add_setshow_boolean_cmd ("write", class_support, &write_files, _("\
 Set writing into executable and core files."), _("\

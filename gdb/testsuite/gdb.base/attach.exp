@@ -160,7 +160,7 @@ proc_with_prefix do_attach_failure_tests {} {
     # Verify that we can't double attach to the process.
 
     gdb_test "attach $testpid" \
-	"Attaching to program.*`?${escapedbinfile}(\.exe)?'?, process $testpid.*main.*at .*$srcfile:.*" \
+	"Attaching to program.*\"?${escapedbinfile}(\.exe)?\"?, process $testpid.*main.*at .*$srcfile:.*" \
 	"first attach"
 
     gdb_test "add-inferior" "Added inferior 2.*" "add empty inferior 2"
@@ -250,7 +250,7 @@ proc_with_prefix do_attach_tests {} {
     }
 
     gdb_test "attach $testpid" \
-	"Attaching to program.*`?${escapedbinfile}(\.exe)?'?, process $testpid.*main.*at .*$srcfile:.*" \
+	"Attaching to program.*\"?${escapedbinfile}(\.exe)?\"?, process $testpid.*main.*at .*$srcfile:.*" \
 	"attach1, after setting file"
 
     # Verify that we can "see" the variable "should_exit" in the
@@ -591,7 +591,7 @@ proc_with_prefix do_attach_exec_mismatch_handling_tests {} {
     set test_spawn_id3 [spawn_wait_for_attach $binfile]
     set testpid3 [spawn_id_get_pid $test_spawn_id3]
 
-    gdb_test "attach $testpid3" "Attaching to program.*attach' has changed; re-reading symbols.*" \
+    gdb_test "attach $testpid3" "Attaching to program.*attach\" has changed; re-reading symbols.*" \
 	"$test attach1 again, after changing exec-file"
     gdb_test "detach" "Detaching from program: .* detached\\\]" "$test detach after attach changed exec-file"
 

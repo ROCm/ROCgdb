@@ -205,7 +205,7 @@ build_id_to_debug_bfd_1 (const std::string &original_link,
 
       if (debug_bfd == NULL)
 	{
-	  separate_debug_file_debug_printf ("unable to open `%s`", filename);
+	  separate_debug_file_debug_printf ("unable to open \"%s\"", filename);
 	  continue;
 	}
 
@@ -244,7 +244,7 @@ build_id_to_bfd_suffix (size_t build_id_len, const bfd_byte *build_id,
       /* Zero length build-ids are ignored by bfd.  */
       gdb_assert (build_id_len > 0);
       separate_debug_file_debug_printf
-	("Ignoring short build-id `%s' for build-id based lookup",
+	("Ignoring short build-id \"%s\" for build-id based lookup",
 	 bin2hex (build_id, build_id_len).c_str ());
       return {};
     }

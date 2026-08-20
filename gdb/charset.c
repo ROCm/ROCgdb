@@ -349,13 +349,13 @@ validate (struct gdbarch *gdbarch)
 
   desc = iconv_open (target_wide_cset, host_cset);
   if (desc == (iconv_t) -1)
-    error (_("Cannot convert between character sets `%s' and `%s'"),
+    error (_("Cannot convert between character sets \"%s\" and \"%s\""),
 	   target_wide_cset, host_cset);
   iconv_close (desc);
 
   desc = iconv_open (target_cset, host_cset);
   if (desc == (iconv_t) -1)
-    error (_("Cannot convert between character sets `%s' and `%s'"),
+    error (_("Cannot convert between character sets \"%s\" and \"%s\""),
 	   target_cset, host_cset);
   iconv_close (desc);
 
@@ -547,7 +547,7 @@ convert_between_encodings (const char *from, const char *to,
 		/* Invalid input sequence.  */
 		if (translit == translit_none)
 		  error (_("Could not convert character "
-			   "to `%s' character set"), to);
+			   "to \"%s\" character set"), to);
 
 		/* We emit escape sequence for the bytes, skip them,
 		   and try again.  */
@@ -1044,11 +1044,11 @@ INIT_GDB_FILE (charset)
 			charset_enum, &host_charset_name, _("\
 Set the host and target character sets."), _("\
 Show the host and target character sets."), _("\
-The `host character set' is the one used by the system GDB is running on.\n\
-The `target character set' is the one used by the program being debugged.\n\
+The \"host character set\" is the one used by the system GDB is running on.\n\
+The \"target character set\" is the one used by the program being debugged.\n\
 You may only use supersets of ASCII for your host character set; GDB does\n\
 not support any others.\n\
-To see a list of the character sets GDB supports, type `set charset <TAB>'."),
+To see a list of the character sets GDB supports, type \"set charset <TAB>\"."),
 			/* Note that the sfunc below needs to set
 			   target_charset_name, because the 'set
 			   charset' command sets two variables.  */
@@ -1060,10 +1060,10 @@ To see a list of the character sets GDB supports, type `set charset <TAB>'."),
 			charset_enum, &host_charset_name, _("\
 Set the host character set."), _("\
 Show the host character set."), _("\
-The `host character set' is the one used by the system GDB is running on.\n\
+The \"host character set\" is the one used by the system GDB is running on.\n\
 You may only use supersets of ASCII for your host character set; GDB does\n\
 not support any others.\n\
-To see a list of the character sets GDB supports, type `set host-charset <TAB>'."),
+To see a list of the character sets GDB supports, type \"set host-charset <TAB>\"."),
 			set_host_charset_sfunc,
 			show_host_charset_name,
 			&setlist, &showlist);
@@ -1075,10 +1075,10 @@ To see a list of the character sets GDB supports, type `set host-charset <TAB>'.
 			charset_enum, &target_charset_name, _("\
 Set the target character set."), _("\
 Show the target character set."), _("\
-The `target character set' is the one used by the program being debugged.\n\
+The \"target character set\" is the one used by the program being debugged.\n\
 GDB translates characters and strings between the host and target\n\
 character sets as needed.\n\
-To see a list of the character sets GDB supports, type `set target-charset'<TAB>"),
+To see a list of the character sets GDB supports, type \"set target-charset\"<TAB>"),
 			set_target_charset_sfunc,
 			show_target_charset_name,
 			&setlist, &showlist);
@@ -1091,12 +1091,12 @@ To see a list of the character sets GDB supports, type `set target-charset'<TAB>
 			_("\
 Set the target wide character set."), _("\
 Show the target wide character set."), _("\
-The `target wide character set' is the one used by the program being debugged.\
-\nIn particular it is the encoding used by `wchar_t'.\n\
+The \"target wide character set\" is the one used by the program being debugged.\
+\nIn particular it is the encoding used by \"wchar_t\".\n\
 GDB translates characters and strings between the host and target\n\
 character sets as needed.\n\
 To see a list of the character sets GDB supports, type\n\
-`set target-wide-charset'<TAB>"),
+\"set target-wide-charset\"<TAB>"),
 			set_target_wide_charset_sfunc,
 			show_target_wide_charset_name,
 			&setlist, &showlist);

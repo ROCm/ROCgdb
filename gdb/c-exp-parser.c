@@ -1307,7 +1307,7 @@ handle_qualified_field_name (qualified_name_token token)
 
   type = check_typedef (type);
   if (!type_aggregate_p (type))
-    error (_("`%s' is not defined as an aggregate type."),
+    error (_("\"%s\" is not defined as an aggregate type."),
 	   type->safe_name ());
   if (token.name[0] == '~')
     destructor_name_p (token.name, type);

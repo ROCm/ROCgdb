@@ -380,7 +380,7 @@ maint_print_all_sections (const char *header, bfd *abfd, objfile *objfile,
 {
   gdb_puts (header);
   gdb_stdout->wrap_here (8);
-  gdb_printf ("`%s', ", bfd_get_filename (abfd));
+  gdb_printf ("\"%s\", ", bfd_get_filename (abfd));
   gdb_stdout->wrap_here (8);
   gdb_printf (_("file type %s.\n"), bfd_get_target (abfd));
 

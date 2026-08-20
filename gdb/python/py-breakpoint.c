@@ -183,14 +183,14 @@ bppy_set_enabled (PyObject *self, PyObject *newvalue, void *closure)
   if (newvalue == NULL)
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("Cannot delete `enabled' attribute."));
+		       _("Cannot delete \"enabled\" attribute."));
 
       return -1;
     }
   else if (! PyBool_Check (newvalue))
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("The value of `enabled' must be a boolean."));
+		       _("The value of \"enabled\" must be a boolean."));
       return -1;
     }
 
@@ -225,13 +225,13 @@ bppy_set_silent (PyObject *self, PyObject *newvalue, void *closure)
   if (newvalue == NULL)
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("Cannot delete `silent' attribute."));
+		       _("Cannot delete \"silent\" attribute."));
       return -1;
     }
   else if (! PyBool_Check (newvalue))
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("The value of `silent' must be a boolean."));
+		       _("The value of \"silent\" must be a boolean."));
       return -1;
     }
 
@@ -256,7 +256,7 @@ bppy_set_thread (PyObject *self, PyObject *newvalue, void *closure)
   if (newvalue == NULL)
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("Cannot delete `thread' attribute."));
+		       _("Cannot delete \"thread\" attribute."));
       return -1;
     }
   else if (PyLong_Check (newvalue))
@@ -283,7 +283,7 @@ bppy_set_thread (PyObject *self, PyObject *newvalue, void *closure)
   else
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("The value of `thread' must be an integer or None."));
+		       _("The value of \"thread\" must be an integer or None."));
       return -1;
     }
 
@@ -379,7 +379,7 @@ bppy_set_task (PyObject *self, PyObject *newvalue, void *closure)
   if (newvalue == NULL)
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("Cannot delete `task' attribute."));
+		       _("Cannot delete \"task\" attribute."));
       return -1;
     }
   else if (PyLong_Check (newvalue))
@@ -416,7 +416,7 @@ bppy_set_task (PyObject *self, PyObject *newvalue, void *closure)
   else
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("The value of `task' must be an integer or None."));
+		       _("The value of \"task\" must be an integer or None."));
       return -1;
     }
 
@@ -462,13 +462,13 @@ bppy_set_ignore_count (PyObject *self, PyObject *newvalue, void *closure)
   if (newvalue == NULL)
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("Cannot delete `ignore_count' attribute."));
+		       _("Cannot delete \"ignore_count\" attribute."));
       return -1;
     }
   else if (!PyLong_Check (newvalue))
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("The value of `ignore_count' must be an integer."));
+		       _("The value of \"ignore_count\" must be an integer."));
       return -1;
     }
 
@@ -501,7 +501,7 @@ bppy_set_hit_count (PyObject *self, PyObject *newvalue, void *closure)
   if (newvalue == NULL)
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("Cannot delete `hit_count' attribute."));
+		       _("Cannot delete \"hit_count\" attribute."));
       return -1;
     }
   else
@@ -514,7 +514,7 @@ bppy_set_hit_count (PyObject *self, PyObject *newvalue, void *closure)
       if (value != 0)
 	{
 	  PyErr_SetString (PyExc_AttributeError,
-			   _("The value of `hit_count' must be zero."));
+			   _("The value of \"hit_count\" must be zero."));
 	  return -1;
 	}
     }
@@ -594,7 +594,7 @@ bppy_set_condition (PyObject *self, PyObject *newvalue, void *closure)
   if (newvalue == NULL)
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("Cannot delete `condition' attribute."));
+		       _("Cannot delete \"condition\" attribute."));
       return -1;
     }
   else if (newvalue == Py_None)

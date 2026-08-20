@@ -428,7 +428,7 @@ proc gdb_unload { {msg "file"} } {
 	    exp_continue
 	}
 
-	-re "Discard symbol table from `.*'. .y or n. $" {
+	-re "Discard symbol table from \".*\". .y or n. $" {
 	    send_gdb "y\n" answer
 	    exp_continue
 	}

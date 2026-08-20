@@ -1245,7 +1245,7 @@ static void
 show_system_call_allowed (const char *args, int from_tty)
 {
   if (args)
-    error (_("Garbage after \"%ps\" command: `%s'"),
+    error (_("Garbage after \"%ps\" command: \"%s\""),
 	   styled_string (command_style.style (),
 			  "show remote system-call-allowed"),
 	   args);

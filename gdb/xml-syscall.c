@@ -363,7 +363,7 @@ init_syscalls_info (struct gdbarch *gdbarch)
   if (syscalls_info->syscalls.empty ())
     {
       if (xml_syscall_file != NULL)
-	warning (_("Could not load the syscall XML file `%s/%s'."),
+	warning (_("Could not load the syscall XML file \"%s/%s\"."),
 		 gdb_datadir.c_str (), xml_syscall_file);
       else
 	warning (_("There is no XML file to open."));

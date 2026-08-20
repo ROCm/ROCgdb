@@ -1755,7 +1755,7 @@ captured_mi_execute_command (struct mi_interp *mi, struct ui_out *uiout,
       /* A MI command was read from the input stream.  */
       if (mi_debug_p)
 	gdb_printf (gdb_stdlog,
-		    " token=`%s' command=`%s' args=`%s'\n",
+		    " token=\"%s\" command=\"%s\" args=\"%s\"\n",
 		    context->token.c_str (), context->command.get (),
 		    context->args ());
 

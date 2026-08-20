@@ -815,7 +815,7 @@ signal_event_command (const char *args, int from_tty)
 
   if ((errno == ERANGE) || (event_id == 0) || (event_id > UINTPTR_MAX) ||
       ((HANDLE) event_id == INVALID_HANDLE_VALUE))
-    error (_("Failed to convert `%s' to event id"), args);
+    error (_("Failed to convert \"%s\" to event id"), args);
 
   SetEvent ((HANDLE) event_id);
   CloseHandle ((HANDLE) event_id);
@@ -2909,7 +2909,7 @@ windows_nat_target::create_inferior (const char *exec_file,
   ensure_only_one_process ();
 
   if (!exec_file)
-    error (_("No executable specified, use `target exec'."));
+    error (_("No executable specified, use \"target exec\"."));
 
   const char *inferior_cwd = current_inferior ()->cwd ().c_str ();
   std::string expanded_infcwd;

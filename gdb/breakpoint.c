@@ -10761,7 +10761,7 @@ watch_command_1 (const char *arg, int accessflag, int from_tty,
       len = exp_end - exp_start;
       while (len > 0 && c_isspace (exp_start[len - 1]))
 	len--;
-      error (_("Cannot watch constant value `%.*s'."), len, exp_start);
+      error (_("Cannot watch constant value \"%.*s\"."), len, exp_start);
     }
 
   exp_valid_block = tracker.block ();
@@ -15246,14 +15246,14 @@ INIT_GDB_FILE (breakpoint)
 
   add_com ("ignore", class_breakpoint, ignore_command, _("\
 Set ignore-count of breakpoint number N to COUNT.\n\
-Usage is `ignore N COUNT'."));
+Usage is \"ignore N COUNT\"."));
 
   commands_cmd_element = add_com ("commands", class_breakpoint,
 				  commands_command, _("\
 Set commands to be executed when the given breakpoints are hit.\n\
 Give a space-separated breakpoint list as argument after \"commands\".\n\
-A list element can be a breakpoint number (e.g. `5') or a range of numbers\n\
-(e.g. `5-7').\n\
+A list element can be a breakpoint number (e.g. \"5\") or a range of numbers\n\
+(e.g. \"5-7\").\n\
 With no argument, the targeted breakpoint is the last one set.\n\
 The commands themselves follow starting on the next line.\n\
 Type a line containing \"end\" to indicate the end of them.\n\
@@ -15264,7 +15264,7 @@ then no output is printed when it is hit, except what the commands print."));
   static std::string condition_command_help
     = gdb::option::build_help (_("\
 Specify breakpoint number N to break only if COND is true.\n\
-Usage is `condition [OPTION] N COND', where N is an integer and COND\n\
+Usage is \"condition [OPTION] N COND\", where N is an integer and COND\n\
 is an expression to be evaluated whenever breakpoint N is reached.\n\
 \n\
 Options:\n\
@@ -15571,7 +15571,7 @@ LOCATION may be a linespec, explicit, or address location (described below)\n\
 or -m MARKER_ID.\n\n\
 If a marker id is specified, probe the marker with that name.  With\n\
 no LOCATION, uses current execution address of the selected stack frame.\n\
-Static tracepoints accept an extra collect action -- ``collect $_sdata''.\n\
+Static tracepoints accept an extra collect action -- \"collect $_sdata\".\n\
 This collects arbitrary user data passed in the probe point call to the\n\
 tracing library.  You can inspect it when analyzing the trace buffer,\n\
 by printing the $_sdata variable like any other convenience variable.\n\

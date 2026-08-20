@@ -92,7 +92,7 @@ set q \
 set binregex [string_to_regexp $binfile]
 set re \
     [multi_line \
-	 "\\`$binregex\\' has changed; re-reading symbols\\.(" \
+	 "\"$binregex\" has changed; re-reading symbols\\.(" \
 	 "Expanding full symbols from $binfile\\.\\.\\.)?" \
 	 "Starting program: ${binregex}.*"]
 gdb_test "run" $re "rerun program" $q y

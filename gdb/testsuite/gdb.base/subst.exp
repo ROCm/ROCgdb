@@ -32,7 +32,7 @@ gdb_test "show substitute-path" \
 	 "show substitute-path, no rule entered yet"
 
 gdb_test "show substitute-path from" \
-	 "Source path substitution rule matching `from':" \
+	 "Source path substitution rule matching \"from\":" \
 	 "show substitute-path from, no rule entered yet"
 
 gdb_test "show substitute-path too many" \
@@ -40,14 +40,14 @@ gdb_test "show substitute-path too many" \
 	 "show substitute-path, too many arguments"
 
 gdb_test "unset substitute-path from" \
-	 "No substitution rule defined for `from'" \
+	 "No substitution rule defined for \"from\"" \
 	 "unset substitute-path from, no rule entered yet"
 
 gdb_test_no_output "unset substitute-path" \
 	 "unset substitute-path, no rule entered yet"
 
 gdb_test "unset substitute-path from" \
-	 "No substitution rule defined for `from'" \
+	 "No substitution rule defined for \"from\"" \
 	 "unset substitute-path from, after unset substitute-path"
 
 gdb_test "unset substitute-path from to" \
@@ -82,56 +82,56 @@ gdb_test_no_output "set substitute-path empty ''" \
 	 "add substitution rule to empty string"
 
 gdb_test "show substitute-path" \
-	 "List of all source path substitution rules:\r\n +`from' -> `to'.\r\n +`from1' -> `to1'.\r\n +`source' -> `destination'.\r\n\ +`depuis' -> `vers'.\r\n +`empty' -> `'." \
+	 "List of all source path substitution rules:\r\n +\"from\" -> \"to\".\r\n +\"from1\" -> \"to1\".\r\n +\"source\" -> \"destination\".\r\n\ +\"depuis\" -> \"vers\".\r\n +\"empty\" -> \"\"." \
 	 "show substitute-path after all paths added"
 
 gdb_test "show substitute-path from" \
-	 "Source path substitution rule matching `from':\r\n +`from' -> `to'." \
+	 "Source path substitution rule matching \"from\":\r\n +\"from\" -> \"to\"." \
 	 "show substitute-path from, after all paths added"
 
 gdb_test "show substitute-path depuis" \
-	 "Source path substitution rule matching `depuis':\r\n +`depuis' -> `vers'." \
+	 "Source path substitution rule matching \"depuis\":\r\n +\"depuis\" -> \"vers\"." \
 	 "show substitute-path depuis, after all paths added"
 
 gdb_test "show substitute-path from/path" \
-	 "Source path substitution rule matching `from/path':\r\n +`from' -> `to'." \
+	 "Source path substitution rule matching \"from/path\":\r\n +\"from\" -> \"to\"." \
 	 "show substitute-path from/path, after all paths added"
 
 gdb_test "show substitute-path from_a_bad_path" \
-	 "Source path substitution rule matching `from_a_bad_path':" \
+	 "Source path substitution rule matching \"from_a_bad_path\":" \
 	 "show substitute-path from_a_bad_path, after all paths added"
 
 gdb_test "show substitute-path garbage" \
-	 "Source path substitution rule matching `garbage':" \
+	 "Source path substitution rule matching \"garbage\":" \
 	 "show substitute-path garbage, after all paths added"
 
 gdb_test_no_output "unset substitute-path from" \
 	 "unset substitute-path from"
 
 gdb_test "show substitute-path from" \
-	 "Source path substitution rule matching `from':" \
+	 "Source path substitution rule matching \"from\":" \
 	 "show substitute-path from, after unsetting it"
 
 gdb_test "show substitute-path" \
-	 "List of all source path substitution rules:\r\n +`from1' -> `to1'.\r\n +`source' -> `destination'.\r\n\ +`depuis' -> `vers'.\r\n +`empty' -> `'." \
+	 "List of all source path substitution rules:\r\n +\"from1\" -> \"to1\".\r\n +\"source\" -> \"destination\".\r\n\ +\"depuis\" -> \"vers\".\r\n +\"empty\" -> \"\"." \
 	 "show substitute-path after from rule removed"
 
 gdb_test "unset substitute-path from" \
-	 "No substitution rule defined for `from'" \
+	 "No substitution rule defined for \"from\"" \
 	 "unset substitute-path from after the rule was removed"
 
 gdb_test_no_output "unset substitute-path depuis" \
 	 "unset substitute-path depuis (middle of list)"
 
 gdb_test "show substitute-path" \
-	 "List of all source path substitution rules:\r\n +`from1' -> `to1'.\r\n +`source' -> `destination'.\r\n\ +`empty' -> `'." \
+	 "List of all source path substitution rules:\r\n +\"from1\" -> \"to1\".\r\n +\"source\" -> \"destination\".\r\n\ +\"empty\" -> \"\"." \
 	 "show substitute-path after depuis rule removed"
 
 gdb_test_no_output "unset substitute-path empty" \
 	 "unset substitute-path empty (end of list)"
 
 gdb_test "show substitute-path" \
-	 "List of all source path substitution rules:\r\n +`from1' -> `to1'.\r\n +`source' -> `destination'." \
+	 "List of all source path substitution rules:\r\n +\"from1\" -> \"to1\".\r\n +\"source\" -> \"destination\"." \
 	 "show substitute-path after empty rule removed"
 
 gdb_test_no_output "unset substitute-path" \

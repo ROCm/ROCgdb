@@ -4297,8 +4297,8 @@ the frames below it.\n\
 stack pointer.\n\
     However, if you think GDB should simply search farther back\n\
 from %s for code which looks like the beginning of a\n\
-function, you can increase the range of the search using the `set\n\
-heuristic-fence-post' command.\n",
+function, you can increase the range of the search using the \"set\n\
+heuristic-fence-post\" command.\n",
 			    paddress (gdbarch, pc), paddress (gdbarch, pc));
 		blurb_printed = 1;
 	      }

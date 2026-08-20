@@ -857,7 +857,7 @@ dtrace_static_probe_ops::get_probes
 				(struct dtrace_dof_hdr *) dof);
 	  else
 	    complaint (_("could not obtain the contents of"
-			 "section '%s' in objfile `%s'."),
+			 "section \"%s\" in objfile \"%s\"."),
 		       bfd_section_name (sect), bfd_get_filename (abfd));
 
 	  xfree (dof);

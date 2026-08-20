@@ -79,7 +79,7 @@ gdb_test_no_output "delete 2" \
 # Insert a catchpoint on Program_Error Ada exception handlers.
 
 gdb_test "catch handlers Program_Error" \
-    "Catchpoint $decimal: `Program_Error' Ada exception handlers" \
+    "Catchpoint $decimal: \"Program_Error\" Ada exception handlers" \
     "insert catchpoint on Program_Error Ada exception handlers"
 
 # Continue, we should not stop at ABORT_SIGNAL but at Program_Error one.
@@ -95,7 +95,7 @@ gdb_test_no_output \
 # Insert a catchpoint on Storage_Error Ada exception handlers.
 
 gdb_test "catch handlers Storage_Error" \
-    "Catchpoint $decimal: `Storage_Error' Ada exception handlers" \
+    "Catchpoint $decimal: \"Storage_Error\" Ada exception handlers" \
     "insert catchpoint on Storage_Error Ada exception handlers"
 
 # Continue, we should stop at Storage_Error handlers.
@@ -141,7 +141,7 @@ gdb_test_no_output \
 # condition.
 
 gdb_test "catch handlers Program_Error if Global_Var = 4" \
-    "Catchpoint $decimal: `Program_Error' Ada exception handlers" \
+    "Catchpoint $decimal: \"Program_Error\" Ada exception handlers" \
     "insert catchpoint on Program_Error Ada exception handlers with condition"
 
 # Continue, we should not stop at first Program_Error handlers but at

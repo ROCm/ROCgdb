@@ -82,13 +82,13 @@ proc do_tests {} {
     gdb_test "jump $out_line" \
 	"Not confirmed.*" \
 	"aborted jump out of current function" \
-	"Line $out_line is not in `main'.  Jump anyway.*y or n. $" \
+	"Line $out_line is not in \"main\".  Jump anyway.*y or n. $" \
 	"n"
 
     gdb_test "jump $out_line" \
 	"Continuing at.*" \
 	"jump out of current function" \
-	"Line $out_line is not in `main'.  Jump anyway.*y or n. $" \
+	"Line $out_line is not in \"main\".  Jump anyway.*y or n. $" \
 	"y"
 }
 

@@ -399,7 +399,7 @@ INIT_GDB_FILE (core)
 Use FILE as core dump for examining memory and registers.\n\
 Usage: core-file FILE\n\
 No arg means have no core file.  This command has been superseded by the\n\
-`target core' and `detach' commands."), &cmdlist);
+\"target core\" and \"detach\" commands."), &cmdlist);
   set_cmd_completer (core_file_cmd, deprecated_filename_completer);
 
   set_show_commands set_show_gnutarget
@@ -407,7 +407,7 @@ No arg means have no core file.  This command has been superseded by the\n\
 				       &gnutarget_string, _("\
 Set the current BFD target."), _("\
 Show the current BFD target."), _("\
-Use `set gnutarget auto' to specify automatic detection."),
+Use \"set gnutarget auto\" to specify automatic detection."),
 				       set_gnutarget_command,
 				       show_gnutarget_string,
 				       &setlist, &showlist);

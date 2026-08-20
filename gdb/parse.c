@@ -260,10 +260,10 @@ parser_state::parse_error (const char *msg)
     this->lexptr = this->prev_lexptr;
 
   if (*this->lexptr == '\0')
-    error (_("A %s in expression, near the end of `%s'."),
+    error (_("A %s in expression, near the end of \"%s\"."),
 	   msg, this->start_of_input);
   else
-    error (_("A %s in expression, near `%s'."), msg, this->lexptr);
+    error (_("A %s in expression, near \"%s\"."), msg, this->lexptr);
 }
 
 

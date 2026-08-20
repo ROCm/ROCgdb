@@ -858,7 +858,7 @@ Connect to a target machine or process.\n\
 The first argument is the type or protocol of the target machine.\n\
 Remaining arguments are interpreted by the target protocol.  For more\n\
 information on the arguments for a particular protocol, type\n\
-`help target ' followed by the protocol name."),
+\"help target \" followed by the protocol name."),
 			  &targetlist, 0, &cmdlist);
   c = add_cmd (t.shortname, no_class, t.doc, &targetlist);
   c->set_context ((void *) &t);
@@ -1105,7 +1105,7 @@ target_supports_terminal_ours (void)
 static void
 tcomplain (void)
 {
-  error (_("You can't do that when your target is `%s'"),
+  error (_("You can't do that when your target is \"%s\""),
 	 current_inferior ()->top_target ()->shortname ());
 }
 
@@ -1267,7 +1267,7 @@ target_translate_tls_address (struct objfile *objfile, CORE_ADDR offset,
       if (name == nullptr)
 	error (_("Cannot translate TLS address without registers"));
       else
-	error (_("Cannot find address of TLS symbol `%s' without registers"),
+	error (_("Cannot find address of TLS symbol \"%s\" without registers"),
 	       name);
     }
 
@@ -1312,12 +1312,12 @@ target_translate_tls_address (struct objfile *objfile, CORE_ADDR offset,
 	      break;
 	    case TLS_LOAD_MODULE_NOT_FOUND_ERROR:
 	      if (objfile_is_library)
-		error (_("Cannot find shared library `%ps' in dynamic"
+		error (_("Cannot find shared library \"%ps\" in dynamic"
 			 " linker's load module list"),
 		       styled_string (file_name_style.style (),
 				      objfile_name (objfile)));
 	      else
-		error (_("Cannot find executable file `%ps' in dynamic"
+		error (_("Cannot find executable file \"%ps\" in dynamic"
 			 " linker's load module list"),
 		       styled_string (file_name_style.style (),
 				      objfile_name (objfile)));
@@ -1326,7 +1326,7 @@ target_translate_tls_address (struct objfile *objfile, CORE_ADDR offset,
 	      if (objfile_is_library)
 		error (_("The inferior has not yet allocated storage for"
 			 " thread-local variables in\n"
-			 "the shared library `%ps'\n"
+			 "the shared library \"%ps\"\n"
 			 "for %s"),
 		       styled_string (file_name_style.style (),
 				      objfile_name (objfile)),
@@ -1334,7 +1334,7 @@ target_translate_tls_address (struct objfile *objfile, CORE_ADDR offset,
 	      else
 		error (_("The inferior has not yet allocated storage for"
 			 " thread-local variables in\n"
-			 "the executable `%ps'\n"
+			 "the executable \"%ps\"\n"
 			 "for %s"),
 		       styled_string (file_name_style.style (),
 				      objfile_name (objfile)),

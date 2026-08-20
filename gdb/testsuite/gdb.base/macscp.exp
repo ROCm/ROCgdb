@@ -78,7 +78,7 @@ proc info_macro {macro} {
 		set definition {}
 	    }
 	}
-	-re "The symbol `${macro}' has no definition as a C/C\\+\\+ preprocessor macro\[^\r\n\]*\[\r\n\]" {
+	-re "The symbol \"${macro}\" has no definition as a C/C\\+\\+ preprocessor macro\[^\r\n\]*\[\r\n\]" {
 	    # `location' and `definition' should be empty when we see
 	    # this message.
 	    if {[llength $location] == 0 && [llength $definition] == 0} {
@@ -186,7 +186,7 @@ proc check_macro {macro expected where} {
 # expecting the result EXPECTED.
 proc list_and_check_macro {func macro expected} {
     gdb_test "list $func" ".*${func}.*" "list $func for $macro"
-    return [check_macro $macro $expected "after `list $func'"]
+    return [check_macro $macro $expected "after \"list $func\""]
 }
 
 gdb_test "list -q main" ".*main.*" "list main for support check"
@@ -231,31 +231,31 @@ gdb_test "info macro __LINE__" "#define __LINE__ 26" \
 gdb_test "list macscp4_2_from_macscp2" ".*macscp4_2_, MACSCP4_INCLUSION.*"
 switch -exact -- [info_macro WHERE] {
     {macscp4.h macscp2.h macscp1.c {before macscp4_2_..., from macscp2.h}} {
-	pass "info macro WHERE after `list macscp_4_2_from_macscp2'"
+	pass "info macro WHERE after \"list macscp_4_2_from_macscp2\""
     }
     {macscp4.h macscp3.h macscp1.c {before macscp4_2_..., from macscp3.h}} {
 	setup_kfail "gdb/7660" *-*-*
-	fail "info macro WHERE after `list macscp_4_2_from_macscp2' (gdb/7660)"
+	fail "info macro WHERE after \"list macscp_4_2_from_macscp2\" (gdb/7660)"
     }
     timeout {
-	fail "info macro WHERE after `list macscp_4_2_from_macscp2' (timeout)"
+	fail "info macro WHERE after \"list macscp_4_2_from_macscp2\" (timeout)"
     }
-    default { fail "info macro WHERE after `list macscp_4_2_from_macscp2'" }
+    default { fail "info macro WHERE after \"list macscp_4_2_from_macscp2\"" }
 }
 
 gdb_test "list macscp4_2_from_macscp3" ".*macscp4_2_, MACSCP4_INCLUSION.*"
 switch -exact -- [info_macro WHERE] {
     {macscp4.h macscp3.h macscp1.c {before macscp4_2_..., from macscp3.h}} {
-	pass "info macro WHERE after `list macscp_4_2_from_macscp3'"
+	pass "info macro WHERE after \"list macscp_4_2_from_macscp3\""
     }
     {macscp4.h macscp2.h macscp1.c {before macscp4_2_..., from macscp2.h}} {
 	setup_kfail "gdb/7660" *-*-*
-	fail "info macro WHERE after `list macscp_4_2_from_macscp3' (gdb/7660)"
+	fail "info macro WHERE after \"list macscp_4_2_from_macscp3\" (gdb/7660)"
     }
     timeout {
-	fail "info macro WHERE after `list macscp_4_2_from_macscp3' (timeout)"
+	fail "info macro WHERE after \"list macscp_4_2_from_macscp3\" (timeout)"
     }
-    default { fail "info macro WHERE after `list macscp_4_2_from_macscp3'" }
+    default { fail "info macro WHERE after \"list macscp_4_2_from_macscp3\"" }
 }
 
 

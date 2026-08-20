@@ -2980,7 +2980,7 @@ $_shell - execute a shell command and return the result.\n\
 
   add_cmd ("commands", no_set_class, show_commands, _("\
 Show the history of commands you typed.\n\
-You can supply a command number to start with, or a `+' to start after\n\
+You can supply a command number to start with, or a \"+\" to start after\n\
 the previous command number shown."),
 	   &showlist);
 
@@ -3089,7 +3089,7 @@ you must type \"disassemble 'foo.c'::bar\" and not \"disassemble foo.c:bar\"."))
   set_cmd_completer_handle_brkchars (c, disassemble_command_completer);
 
   c = add_com ("make", class_support, make_command, _("\
-Run the ``make'' program using the rest of the line as arguments."));
+Run the \"make\" program using the rest of the line as arguments."));
   set_cmd_completer (c, deprecated_filename_completer);
 
   c = add_cmd ("user", no_class, show_user, _("\

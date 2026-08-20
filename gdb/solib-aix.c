@@ -541,7 +541,7 @@ aix_solib_ops::bfd_open (const char *pathname)
 						found_file));
   if (archive_bfd == NULL)
     {
-      warning (_("Could not open `%ps' as an executable file: %s"),
+      warning (_("Could not open \"%ps\" as an executable file: %s"),
 	       styled_string (file_name_style.style (), filename.c_str ()),
 	       bfd_errmsg (bfd_get_error ()));
       return NULL;

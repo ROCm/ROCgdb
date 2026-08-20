@@ -365,7 +365,7 @@ c_get_string (struct value *value, gdb::unique_xmalloc_ptr<gdb_byte> *buffer,
     std::string type_str = type_to_string (type);
     if (!type_str.empty ())
       {
-	error (_("Trying to read string with inappropriate type `%s'."),
+	error (_("Trying to read string with inappropriate type \"%s\"."),
 	       type_str.c_str ());
       }
     else

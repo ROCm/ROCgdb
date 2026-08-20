@@ -33,7 +33,7 @@ set out_func [gdb_get_line_number "out-of-func"]
 gdb_test "jump $out_func" \
     "Not confirmed.*" \
     "aborted jump out of current function" \
-    "Line $out_func is not in `function_inline.*'.  Jump anyway.*y or n. $" \
+    "Line $out_func is not in \"function_inline.*\".  Jump anyway.*y or n. $" \
     "n"
 
 # Test jump in the same inline function.

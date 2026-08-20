@@ -1069,7 +1069,7 @@ parse_scrolling_args (const char *arg,
 	      *win_to_scroll = tui_partial_win_by_name (wname);
 
 	      if (*win_to_scroll == NULL)
-		error (_("Unrecognized window `%s'"), wname);
+		error (_("Unrecognized window \"%s\""), wname);
 	      if (!(*win_to_scroll)->is_visible ())
 		error (_("Window is not visible"));
 	      else if (*win_to_scroll == tui_cmd_win ())

@@ -2695,7 +2695,7 @@ get_kernel_table (unw_word_t ip, unw_dyn_info_t *di)
   di->u.ti.table_data = (unw_word_t *) ktab;
 
   if (gdbarch_debug >= 1)
-    gdb_printf (gdb_stdlog, "get_kernel_table: found table `%s': "
+    gdb_printf (gdb_stdlog, "get_kernel_table: found table \"%s\": "
 		"segbase=%s, length=%s, gp=%s\n",
 		(char *) di->u.ti.name_ptr,
 		hex_string (di->u.ti.segbase),
@@ -2802,7 +2802,7 @@ ia64_find_proc_info_x (unw_addr_space_t as, unw_word_t ip, unw_proc_info_t *pi,
 
       if (gdbarch_debug >= 1)
 	gdb_printf (gdb_stdlog, "ia64_find_proc_info_x: %s -> "
-		    "(name=`%s',segbase=%s,start=%s,end=%s,gp=%s,"
+		    "(name=\"%s\",segbase=%s,start=%s,end=%s,gp=%s,"
 		    "length=%s,data=%s)\n",
 		    hex_string (ip), (char *)di.u.ti.name_ptr,
 		    hex_string (di.u.ti.segbase),
@@ -2819,7 +2819,7 @@ ia64_find_proc_info_x (unw_addr_space_t as, unw_word_t ip, unw_proc_info_t *pi,
 
       if (gdbarch_debug >= 1)
 	gdb_printf (gdb_stdlog, "ia64_find_proc_info_x: %s -> "
-		    "(name=`%s',segbase=%s,start=%s,end=%s,gp=%s,"
+		    "(name=\"%s\",segbase=%s,start=%s,end=%s,gp=%s,"
 		    "length=%s,data=%s)\n",
 		    hex_string (ip), (char *)di.u.rti.name_ptr,
 		    hex_string (di.u.rti.segbase),

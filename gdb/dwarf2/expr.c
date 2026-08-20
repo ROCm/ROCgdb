@@ -1382,7 +1382,7 @@ dwarf_expr_require_composition (const gdb_byte *op_ptr, const gdb_byte *op_end,
 {
   if (op_ptr != op_end && *op_ptr != DW_OP_piece && *op_ptr != DW_OP_bit_piece
       && *op_ptr != DW_OP_GNU_uninit)
-    error (_("DWARF-2 expression error: `%s' operations must be "
+    error (_("DWARF-2 expression error: \"%s\" operations must be "
 	     "used either alone or in conjunction with DW_OP_piece "
 	     "or DW_OP_bit_piece."),
 	   op_name);

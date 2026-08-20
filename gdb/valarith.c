@@ -113,7 +113,7 @@ value_ptrdiff (struct value *arg1, struct value *arg2)
 
   if (check_typedef (type1->target_type ())->length ()
       != check_typedef (type2->target_type ())->length ())
-    error (_("First argument of `-' is a pointer and "
+    error (_("First argument of \"-\" is a pointer and "
 	     "second argument is neither\n"
 	     "an integer nor a pointer of the same type."));
 

@@ -84,5 +84,5 @@ with_test_prefix "fail_probe" {
 
 with_test_prefix "fail2_probe" {
     goto_probe "fail2_probe"
-    gdb_test "print \$_probe_arg0" "Unknown numeric token on expression `23-@\\\$16'."
+    gdb_test "print \$_probe_arg0" "Unknown numeric token on expression \"23-@\\\$16\"."
 }

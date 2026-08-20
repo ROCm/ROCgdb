@@ -2724,7 +2724,7 @@ static void
 check_empty (const char *args, const char *cmd_prefix)
 {
   if (args)
-    error (_("Garbage after \"%s\" command: `%s'"), cmd_prefix, args);
+    error (_("Garbage after \"%s\" command: \"%s\""), cmd_prefix, args);
 }
 
 /* Returns the alive thread named by INFERIOR_PID, or signals an error.  */
@@ -3234,8 +3234,8 @@ The argument should be the value of the send right in the task."),
      debug running tasks.  */
   add_cmd ("noninvasive", no_class, set_noninvasive_cmd, _("\
 Set task options so that we interfere as little as possible.\n\
-This is the same as setting `task pause', `exceptions', and\n\
-`signals' to the opposite value."),
+This is the same as setting \"task pause\", \"exceptions\", and\n\
+\"signals\" to the opposite value."),
 	   &setlist);
 
   /* Commands to show information about the task's ports.  */
@@ -3406,12 +3406,12 @@ Show whether the current thread is suspended while gdb has control."),
   add_cmd ("detach-suspend-count", class_run, set_thread_detach_sc_cmd, _("\
 Set the suspend count will leave on the thread when detaching.\n\
 Note that this is relative to suspend count when gdb noticed the thread;\n\
-use the `thread takeover-suspend-count' to force it to an absolute value."),
+use the \"thread takeover-suspend-count\" to force it to an absolute value."),
 	   &set_thread_cmd_list);
   add_cmd ("detach-suspend-count", no_class, show_thread_detach_sc_cmd, _("\
 Show the suspend count will leave on the thread when detaching.\n\
 Note that this is relative to suspend count when gdb noticed the thread;\n\
-use the `thread takeover-suspend-count' to force it to an absolute value."),
+use the \"thread takeover-suspend-count\" to force it to an absolute value."),
 	   &show_thread_cmd_list);
 
   cmd_list_element *set_thread_exception_port_cmd_

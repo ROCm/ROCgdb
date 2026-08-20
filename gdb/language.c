@@ -233,7 +233,7 @@ set_language (const char *language)
       return;
     }
 
-  internal_error ("Couldn't find language `%s' in known languages list.",
+  internal_error ("Couldn't find language \"%s\" in known languages list.",
 		  language);
 }
 

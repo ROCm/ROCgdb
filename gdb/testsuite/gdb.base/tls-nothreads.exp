@@ -100,7 +100,7 @@ proc do_tests {force_internal_tls {do_kfail_tls_access 0}} {
     gdb_continue_to_end
     with_test_prefix "after exit" {
 	gdb_test "print tls_tbss_1" \
-	    "Cannot (?:read|find address of TLS symbol) `tls_tbss_1' without registers"
+	    "Cannot (?:read|find address of TLS symbol) \"tls_tbss_1\" without registers"
     }
 
     with_test_prefix "stripped" {
@@ -149,7 +149,7 @@ proc do_tests {force_internal_tls {do_kfail_tls_access 0}} {
 	    # of GDB-internal TLS lookup support.)
 	    with_test_prefix "after exit" {
 		gdb_test "print (int) tls_tbss_1" \
-		    "Cannot find address of TLS symbol `tls_tbss_1' without registers"
+		    "Cannot find address of TLS symbol \"tls_tbss_1\" without registers"
 	    }
 	}
     }

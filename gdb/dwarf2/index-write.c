@@ -1751,9 +1751,9 @@ struct index_wip_file
     /* Validate DIR is a valid directory.  */
     struct stat buf;
     if (stat (dir, &buf) == -1)
-      perror_with_name (string_printf (_("`%s'"), dir).c_str ());
+      perror_with_name (string_printf (_("\"%s\""), dir).c_str ());
     if ((buf.st_mode & S_IFDIR) != S_IFDIR)
-      error (_("`%s': Is not a directory."), dir);
+      error (_("\"%s\": Is not a directory."), dir);
 
     filename = (std::string (dir) + SLASH_STRING + basename
 		+ suffix);
@@ -1763,13 +1763,13 @@ struct index_wip_file
     scoped_fd out_file_fd = gdb_mkostemp_cloexec (filename_temp.data (),
 						  O_BINARY);
     if (out_file_fd.get () == -1)
-      perror_with_name (string_printf (_("couldn't open `%s'"),
+      perror_with_name (string_printf (_("couldn't open \"%s\""),
 				       filename_temp.data ()).c_str ());
 
     out_file = out_file_fd.to_file ("wb");
 
     if (out_file == nullptr)
-      error (_("Can't open `%s' for writing"), filename_temp.data ());
+      error (_("Can't open \"%s\" for writing"), filename_temp.data ());
 
     unlink_file.emplace (filename_temp.data ());
   }
@@ -1933,7 +1933,7 @@ save_gdb_index_command (const char *args, int from_tty)
 	  catch (const gdb_exception_error &except)
 	    {
 	      exception_fprintf (gdb_stderr, except,
-				 _("Error while writing index for `%s': "),
+				 _("Error while writing index for \"%s\": "),
 				 objfile_name (&objfile));
 	    }
 	}

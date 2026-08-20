@@ -967,7 +967,7 @@ captured_main_1 (struct captured_main_args *context)
 	    break;
 	  case 'D':
 	    if (optarg[0] == '\0')
-	      error (_("%s: empty path for `--data-directory'"),
+	      error (_("%s: empty path for \"--data-directory\""),
 		     gdb_program_name);
 	    set_gdb_data_directory (optarg);
 	    gdb_datadir_provided = 1;
@@ -1010,7 +1010,7 @@ captured_main_1 (struct captured_main_args *context)
 
 	      rate = strtol (optarg, &p, 0);
 	      if (rate == 0 && p == optarg)
-		warning (_("could not set baud rate to `%s'."),
+		warning (_("could not set baud rate to \"%s\"."),
 			 optarg);
 	      else
 		baud_rate = rate;
@@ -1023,7 +1023,7 @@ captured_main_1 (struct captured_main_args *context)
 
 	      timeout = strtol (optarg, &p, 0);
 	      if (timeout == 0 && p == optarg)
-		warning (_("could not set timeout limit to `%s'."),
+		warning (_("could not set timeout limit to \"%s\"."),
 			 optarg);
 	      else
 		remote_timeout = timeout;
@@ -1051,7 +1051,7 @@ captured_main_1 (struct captured_main_args *context)
 #endif
 
 	  case '?':
-	    error (_("Use `%s --help' for a complete list of options."),
+	    error (_("Use \"%s --help\" for a complete list of options."),
 		   gdb_program_name);
 	  }
       }
@@ -1106,7 +1106,7 @@ captured_main_1 (struct captured_main_args *context)
 	 inferior.  The first one is the sym/exec file, and the rest
 	 are arguments.  */
       if (optind >= argc)
-	error (_("%s: `--args' specified but no program specified"),
+	error (_("%s: \"--args\" specified but no program specified"),
 	       gdb_program_name);
 
       symarg = argv[optind];

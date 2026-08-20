@@ -785,7 +785,7 @@ scope_operation::evaluate_funcall (struct type *expect_type,
 	{
 	  /* For the time being, we don't handle this.  */
 	  error (_("Call to overloaded function %ps requires "
-		   "`this' pointer"),
+		   "\"this\" pointer"),
 		 styled_string (function_name_style.style (),
 				function_name));
 	}
@@ -1425,7 +1425,7 @@ eval_op_subscript (struct type *expect_type, struct expression *exp,
 	  && type->code () != TYPE_CODE_PTR)
 	{
 	  if (type->name ())
-	    error (_("cannot subscript something of type `%s'"),
+	    error (_("cannot subscript something of type \"%s\""),
 		   type->name ());
 	  else
 	    error (_("cannot subscript requested type"));
@@ -1937,7 +1937,7 @@ eval_multi_subscript (struct type *expect_type, struct expression *exp,
 
 	    default:
 	      if (type->name ())
-		error (_("cannot subscript something of type `%s'"),
+		error (_("cannot subscript something of type \"%s\""),
 		       type->name ());
 	      else
 		error (_("cannot subscript requested type"));

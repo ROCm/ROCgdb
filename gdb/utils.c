@@ -276,8 +276,8 @@ void
 warn_cant_dump_core (const char *reason)
 {
   gdb_printf (gdb_stderr,
-	      _("%s\nUnable to dump core, use `ulimit -c"
-		" unlimited' before executing GDB next time.\n"),
+	      _("%s\nUnable to dump core, use \"ulimit -c"
+		" unlimited\" before executing GDB next time.\n"),
 	      reason);
 }
 
@@ -1057,8 +1057,8 @@ parse_escape (struct gdbarch *gdbarch, const char **string_ptr)
     }
 
   if (!host_char_to_target (gdbarch, c, &target_char))
-    error (_("The escape sequence `\\%c' is equivalent to plain `%c',"
-	     " which has no equivalent\nin the `%s' character set."),
+    error (_("The escape sequence \"\\%c\" is equivalent to plain \"%c\","
+	     " which has no equivalent\nin the \"%s\" character set."),
 	   c, c, target_charset (gdbarch));
   return target_char;
 }

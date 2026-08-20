@@ -508,7 +508,7 @@ file_is_auto_load_safe (const char *filename)
     return true;
 
   warning (_("File \"%ps\" auto-loading has been declined by your "
-	     "`auto-load safe-path' set to \"%s\"."),
+	     "\"auto-load safe-path\" set to \"%s\"."),
 	   styled_string (file_name_style.style (), filename_real.get ()),
 	   auto_load_safe_path.c_str ());
 
@@ -1422,7 +1422,7 @@ maybe_print_unsupported_script_warning
       warning (_("\
 Unsupported auto-load script at offset %u in section %s\n\
 of file %ps.\n\
-Use `info auto-load %s-scripts [REGEXP]' to list them."),
+Use \"info auto-load %s-scripts [REGEXP]\" to list them."),
 	       offset, section_name,
 	       styled_string (file_name_style.style (),
 			      objfile_name (objfile)),
@@ -1446,7 +1446,7 @@ maybe_print_script_not_found_warning
       warning (_("\
 Missing auto-load script at offset %u in section %s\n\
 of file %ps.\n\
-Use `info auto-load %s-scripts [REGEXP]' to list them."),
+Use \"info auto-load %s-scripts [REGEXP]\" to list them."),
 	       offset, section_name,
 	       styled_string (file_name_style.style (),
 			      objfile_name (objfile)),

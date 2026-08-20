@@ -1779,7 +1779,7 @@ ppc_stap_parse_special_token (struct gdbarch *gdbarch,
       regname[len] = '\0';
 
       if (user_reg_map_name_to_regnum (gdbarch, { regname, len }) == -1)
-	error (_("Invalid register name `%s' on expression `%s'."),
+	error (_("Invalid register name \"%s\" on expression \"%s\"."),
 	       regname, p->saved_arg);
 
       p->arg = s;

@@ -1618,9 +1618,9 @@ info_address_command (const char *exp, int from_tty)
 			  current_language->la_language, DMGL_ANSI);
 	  gdb_printf ("\" is a field of the local class variable ");
 	  if (current_language->la_language == language_objc)
-	    gdb_printf ("`self'\n");	/* ObjC equivalent of "this" */
+	    gdb_printf ("\"self\"\n");	/* ObjC equivalent of "this" */
 	  else
-	    gdb_printf ("`this'\n");
+	    gdb_printf ("\"this\"\n");
 	  return;
 	}
 
@@ -1791,7 +1791,7 @@ info_address_command (const char *exp, int from_tty)
 	      {
 		load_addr = CORE_ADDR (msym.minsym->unrelocated_address ());
 		gdb_printf (_("a thread-local variable at offset %s "
-			      "in the thread-local storage for `%s'"),
+			      "in the thread-local storage for \"%s\""),
 			    paddress (gdbarch, load_addr),
 			    objfile_name (section->objfile));
 	      }

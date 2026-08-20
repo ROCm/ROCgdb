@@ -477,7 +477,7 @@ macro_include (struct macro_source_file *source,
 
       std::string link_fullname = macro_source_fullname (*link);
       std::string source_fullname = macro_source_fullname (source);
-      complaint (_("both `%s' and `%s' allegedly #included at %s:%d"),
+      complaint (_("both \"%s\" and \"%s\" allegedly #included at %s:%d"),
 		 included, link_fullname.c_str (), source_fullname.c_str (),
 		 line);
 
@@ -728,7 +728,7 @@ check_for_redefinition (macro_source_file *source, int line, const char *name,
 	  std::string source_fullname = macro_source_fullname (source);
 	  std::string found_key_fullname
 	    = macro_source_fullname (found_key->start_file);
-	  complaint (_("macro `%s' redefined at %s:%d; "
+	  complaint (_("macro \"%s\" redefined at %s:%d; "
 		       "original definition at %s:%d"),
 		     name, source_fullname.c_str (), line,
 		     found_key_fullname.c_str (),
@@ -869,7 +869,7 @@ macro_undef (struct macro_source_file *source, int line,
 	 has no macro definition in scope is ignored.  So we should
 	 ignore it too.  */
 #if 0
-      complaint (_("no definition for macro `%s' in scope to #undef at %s:%d"),
+      complaint (_("no definition for macro \"%s\" in scope to #undef at %s:%d"),
 		 name, source->filename, line);
 #endif
     }

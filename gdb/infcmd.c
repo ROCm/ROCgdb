@@ -842,7 +842,7 @@ continue_command (const char *args, int from_tty)
     }
 
   if (!non_stop && all_threads_p)
-    error (_("`-a' is meaningless in all-stop mode."));
+    error (_("\"-a\" is meaningless in all-stop mode."));
 
   if (args != nullptr && all_threads_p)
     error (_("Can't resume all threads and specify "
@@ -1274,7 +1274,7 @@ jump_command (const char *arg, int from_tty)
   sfn = find_symbol_for_pc_maybe_inline (sal.pc);
   if (fn != nullptr && sfn != fn)
     {
-      if (!query (_("Line %ps is not in `%ps'.  Jump anyway? "),
+      if (!query (_("Line %ps is not in \"%ps\".  Jump anyway? "),
 		  styled_string (line_number_style.style (),
 				 pulongest (sal.line)),
 		  styled_string (function_name_style.style (),
@@ -2637,7 +2637,7 @@ registers_info (const char *addr_exp, bool fpregs)
       }
 
       /* Nothing matched.  */
-      error (_("Invalid register `%.*s'"), (int) (end - start), start);
+      error (_("Invalid register \"%.*s\""), (int) (end - start), start);
     }
 }
 
@@ -3326,7 +3326,7 @@ show_print_finish (struct ui_file *file, int from_tty,
 		   const char *value)
 {
   gdb_printf (file, _("\
-Printing of return value after `finish' is %s.\n"),
+Printing of return value after \"finish\" is %s.\n"),
 	      value);
 }
 
@@ -3691,8 +3691,8 @@ List all available info about the specified process."),
 
   add_setshow_boolean_cmd ("finish", class_support,
 			   &finish_print, _("\
-Set whether `finish' prints the return value."), _("\
-Show whether `finish' prints the return value."), nullptr,
+Set whether \"finish\" prints the return value."), _("\
+Show whether \"finish\" prints the return value."), nullptr,
 			   nullptr,
 			   show_print_finish,
 			   &setprintlist, &showprintlist);

@@ -41,7 +41,7 @@ static void
 dwarf2_macro_malformed_definition_complaint (const char *arg1)
 {
   complaint (_("macro debug info contains a "
-	       "malformed macro definition:\n`%s'"),
+	       "malformed macro definition:\n\"%s\""),
 	     arg1);
 }
 
@@ -91,7 +91,7 @@ consume_improper_spaces (const char *p, const char *body)
   if (*p == ' ')
     {
       complaint (_("macro definition contains spaces "
-		   "in formal argument list:\n`%s'"),
+		   "in formal argument list:\n\"%s\""),
 		 body);
 
       while (*p == ' ')
@@ -297,7 +297,7 @@ skip_form_bytes (bfd *abfd, const gdb_byte *bytes, const gdb_byte *buffer_end,
 
     default:
       {
-	complaint (_("invalid form 0x%x in `%s'"),
+	complaint (_("invalid form 0x%x in \"%s\""),
 		   form, section->get_name ());
 	return NULL;
       }
@@ -369,7 +369,7 @@ dwarf_parse_macro_header (const gdb_byte **opcode_definitions,
       version = read_2_bytes (abfd, mac_ptr);
       if (version != 4 && version != 5)
 	{
-	  complaint (_("unrecognized version `%d' in .debug_macro section"),
+	  complaint (_("unrecognized version \"%d\" in .debug_macro section"),
 		     version);
 	  return NULL;
 	}
@@ -650,7 +650,7 @@ dwarf_decode_macro_bytes (dwarf2_per_objfile *per_objfile,
 	case DW_MACRO_end_file:
 	  if (! current_file)
 	    complaint (_("macro debug info has an unmatched "
-			 "`close_file' directive"));
+			 "\"close_file\" directive"));
 	  else if (current_file->included_by == nullptr
 		   && cu->producer_is_clang ())
 	    {
@@ -688,7 +688,7 @@ dwarf_decode_macro_bytes (dwarf2_per_objfile *per_objfile,
 								  mac_ptr);
 		  if (next_type != 0)
 		    complaint (_("no terminating 0-type entry for "
-				 "macros in `.debug_macinfo' section"));
+				 "macros in \".debug_macinfo\" section"));
 
 		  return;
 		}

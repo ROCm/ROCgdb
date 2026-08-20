@@ -422,7 +422,7 @@ stap_get_opcode (const char **s)
       break;
 
     default:
-      error (_("Invalid opcode in expression `%s' for SystemTap"
+      error (_("Invalid opcode in expression \"%s\" for SystemTap"
 	       "probe"), *s);
     }
 
@@ -754,7 +754,7 @@ stap_parse_register_operand (struct stap_parse_info *p)
     }
 
   if (disp_op != nullptr && !indirect_p)
-    error (_("Invalid register displacement syntax on expression `%s'."),
+    error (_("Invalid register displacement syntax on expression \"%s\"."),
 	   p->saved_arg);
 
   /* Getting rid of register prefix.  */
@@ -786,7 +786,7 @@ stap_parse_register_operand (struct stap_parse_info *p)
 
   /* Is this a valid register name?  */
   if (regnum == -1)
-    error (_("Invalid register name `%s' on expression `%s'."),
+    error (_("Invalid register name \"%s\" on expression \"%s\"."),
 	   regname.c_str (), p->saved_arg);
 
   /* Check if there's any special treatment that the arch-specific
@@ -846,7 +846,7 @@ stap_parse_register_operand (struct stap_parse_info *p)
   if (stap_check_register_suffix (gdbarch, p->arg, &reg_suffix))
     p->arg += strlen (reg_suffix);
   else
-    error (_("Missing register name suffix on expression `%s'."),
+    error (_("Missing register name suffix on expression \"%s\"."),
 	   p->saved_arg);
 
   /* Getting rid of the register indirection suffix.  */
@@ -856,7 +856,7 @@ stap_parse_register_operand (struct stap_parse_info *p)
 						  &reg_ind_suffix))
 	p->arg += strlen (reg_ind_suffix);
       else
-	error (_("Missing indirection suffix on expression `%s'."),
+	error (_("Missing indirection suffix on expression \"%s\"."),
 	       p->saved_arg);
     }
 
@@ -935,8 +935,8 @@ stap_parse_single_operand (struct stap_parse_info *p)
 	  /* If we are here, it means it is a displacement.  The only
 	     operations allowed here are `-' and `+'.  */
 	  if (c != '-' && c != '+')
-	    error (_("Invalid operator `%c' for register displacement "
-		     "on expression `%s'."), c, p->saved_arg);
+	    error (_("Invalid operator \"%c\" for register displacement "
+		     "on expression \"%s\"."), c, p->saved_arg);
 
 	  result = stap_parse_register_operand (p);
 	}
@@ -988,13 +988,13 @@ stap_parse_single_operand (struct stap_parse_info *p)
 	  if (stap_check_integer_suffix (gdbarch, p->arg, &int_suffix))
 	    p->arg += strlen (int_suffix);
 	  else
-	    error (_("Invalid constant suffix on expression `%s'."),
+	    error (_("Invalid constant suffix on expression \"%s\"."),
 		   p->saved_arg);
 	}
       else if (stap_is_register_indirection_prefix (gdbarch, tmp, NULL))
 	result = stap_parse_register_operand (p);
       else
-	error (_("Unknown numeric token on expression `%s'."),
+	error (_("Unknown numeric token on expression \"%s\"."),
 	       p->saved_arg);
     }
   else if (stap_is_integer_prefix (gdbarch, p->arg, &int_prefix))
@@ -1013,14 +1013,14 @@ stap_parse_single_operand (struct stap_parse_info *p)
       if (stap_check_integer_suffix (gdbarch, p->arg, &int_suffix))
 	p->arg += strlen (int_suffix);
       else
-	error (_("Invalid constant suffix on expression `%s'."),
+	error (_("Invalid constant suffix on expression \"%s\"."),
 	       p->saved_arg);
     }
   else if (stap_is_register_prefix (gdbarch, p->arg, NULL)
 	   || stap_is_register_indirection_prefix (gdbarch, p->arg, NULL))
     result = stap_parse_register_operand (p);
   else
-    error (_("Operator `%c' not recognized on expression `%s'."),
+    error (_("Operator \"%c\" not recognized on expression \"%s\"."),
 	   *p->arg, p->saved_arg);
 
   return result;
@@ -1055,7 +1055,7 @@ stap_parse_argument_conditionally (struct stap_parse_info *p)
 
       p->arg = skip_spaces (p->arg);
       if (*p->arg != ')')
-	error (_("Missing close-parenthesis on expression `%s'."),
+	error (_("Missing close-parenthesis on expression \"%s\"."),
 	       p->saved_arg);
 
       --p->inside_paren_p;
@@ -1064,7 +1064,7 @@ stap_parse_argument_conditionally (struct stap_parse_info *p)
 	p->arg = skip_spaces (p->arg);
     }
   else
-    error (_("Cannot parse expression `%s'."), p->saved_arg);
+    error (_("Cannot parse expression \"%s\"."), p->saved_arg);
 
   return result;
 }
@@ -1115,7 +1115,7 @@ stap_parse_argument_1 (struct stap_parse_info *p,
       enum stap_operand_prec cur_prec;
 
       if (!stap_is_operator (p->arg))
-	error (_("Invalid operator `%c' on expression `%s'."), *p->arg,
+	error (_("Invalid operator \"%c\" on expression \"%s\"."), *p->arg,
 	       p->saved_arg);
 
       /* We have to save the current value of the expression buffer because
@@ -1571,7 +1571,7 @@ handle_stap_probe (struct objfile *objfile, struct sdt_note *el,
   /* Making sure there is a name.  */
   if (name == NULL)
     {
-      complaint (_("corrupt probe name when reading `%s'"),
+      complaint (_("corrupt probe name when reading \"%s\""),
 		 objfile_name (objfile));
 
       /* There is no way to use a probe without a name or a provider, so
@@ -1607,7 +1607,7 @@ handle_stap_probe (struct objfile *objfile, struct sdt_note *el,
       || (memchr (probe_args, '\0', (char *) el->data + el->size - name)
 	  != el->data + el->size - 1))
     {
-      complaint (_("corrupt probe argument when reading `%s'"),
+      complaint (_("corrupt probe argument when reading \"%s\""),
 		 objfile_name (objfile));
       /* If the argument string is NULL, it means some problem happened with
 	 it.  So we return.  */
@@ -1642,7 +1642,7 @@ get_stap_base_address (bfd *obfd, bfd_vma *base)
   if (ret == NULL)
     {
       complaint (_("could not obtain base address for "
-					"SystemTap section on objfile `%s'."),
+					"SystemTap section on objfile \"%s\"."),
 		 bfd_get_filename (obfd));
       return 0;
     }

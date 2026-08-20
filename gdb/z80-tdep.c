@@ -744,7 +744,7 @@ z80_breakpoint_kind_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pcptr)
       else
 	{
 	  warning(_("Unable to determine inferior's software breakpoint type: "
-		    "couldn't find `_break_handler' function in inferior. Will "
+		    "couldn't find \"_break_handler\" function in inferior. Will "
 		    "be used default software breakpoint instruction RST 0x08."));
 	  addr = 0x0008;
 	}
@@ -922,8 +922,8 @@ z80_read_overlay_region_table ()
   if (! novly_regions_msym.minsym)
     {
       error (_("Error reading inferior's overlay table: "
-	       "couldn't find `_novly_regions'\n"
-	       "variable in inferior.  Use `overlay manual' mode."));
+	       "couldn't find \"_novly_regions\"\n"
+	       "variable in inferior.  Use \"overlay manual\" mode."));
       return 0;
     }
 
@@ -932,8 +932,8 @@ z80_read_overlay_region_table ()
   if (! ovly_region_table_msym.minsym)
     {
       error (_("Error reading inferior's overlay table: couldn't find "
-	       "`_ovly_region_table'\n"
-	       "array in inferior.  Use `overlay manual' mode."));
+	       "\"_ovly_region_table\"\n"
+	       "array in inferior.  Use \"overlay manual\" mode."));
       return 0;
     }
 

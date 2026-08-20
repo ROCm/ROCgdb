@@ -83,7 +83,7 @@ if {![runto_main]} {
 }
 
 gdb_test "catch exception Program_Error" \
-    "Catchpoint $any_nb: \`Program_Error' Ada exception" \
+    "Catchpoint $any_nb: \"Program_Error\" Ada exception" \
     "insert catchpoint on Program_Error"
 
 gdb_test "catch assert" \
@@ -95,7 +95,7 @@ gdb_test "catch exception unhandled" \
     "insert catchpoint on unhandled exceptions"
 
 set catch_exception_entry \
-    "$any_nb${sp}catchpoint${sp}keep${sp}y${sp}\`Program_Error' Ada exception"
+    "$any_nb${sp}catchpoint${sp}keep${sp}y${sp}\"Program_Error\" Ada exception"
 set catch_assert_entry \
     "$any_nb${sp}catchpoint${sp}keep${sp}y${sp}failed Ada assertions"
 set catch_unhandled_entry \

@@ -614,14 +614,14 @@ gdbpy_parameter (PyObject *self, PyObject *args)
 
   if (cmd == CMD_LIST_AMBIGUOUS)
     return PyErr_Format (PyExc_RuntimeError,
-			 _("Parameter `%s' is ambiguous."), arg);
+			 _("Parameter \"%s\" is ambiguous."), arg);
   else if (!found)
     return PyErr_Format (PyExc_RuntimeError,
-			 _("Could not find parameter `%s'."), arg);
+			 _("Could not find parameter \"%s\"."), arg);
 
   if (!cmd->var.has_value ())
     return PyErr_Format (PyExc_RuntimeError,
-			 _("`%s' is not a parameter."), arg);
+			 _("\"%s\" is not a parameter."), arg);
 
   return gdbpy_parameter_value (*cmd->var);
 }
@@ -2930,7 +2930,7 @@ message == an error message without a stack will be printed."),
 Set whether the Python interpreter should ignore environment variables."), _("\
 Show whether the Python interpreter showlist ignore environment variables."), _("\
 When enabled GDB's Python interpreter will ignore any Python related\n\
-flags in the environment.  This is equivalent to passing `-E' to a\n\
+flags in the environment.  This is equivalent to passing \"-E\" to a\n\
 python executable."),
 			   set_python_ignore_environment,
 			   show_python_ignore_environment,
@@ -3027,7 +3027,7 @@ do_initialize (const struct extension_language_defn *extlang)
       /* This is passed in one call to warning so that blank lines aren't
 	 inserted between each line of text.  */
       warning (_("\n"
-		 "Could not load the Python gdb module from `%s'.\n"
+		 "Could not load the Python gdb module from \"%s\".\n"
 		 "Limited Python support is available from the _gdb module.\n"
 		 "Suggest passing --data-directory=/path/to/gdb/data-directory."),
 	       gdb_pythondir.c_str ());
@@ -3178,7 +3178,7 @@ Return a Type corresponding to the given name." },
     "lookup_symbol (name [, block] [, domain]) -> (symbol, is_field_of_this)\n\
 Return a tuple with the symbol corresponding to the given name (or None) and\n\
 a boolean indicating if name is a field of the current implied argument\n\
-`this' (when the current language is object-oriented)."),
+\"this\" (when the current language is object-oriented)."),
   varargs_function<gdbpy_lookup_global_symbol> ("lookup_global_symbol",
     "lookup_global_symbol (name [, domain]) -> symbol\n\
 Return the symbol corresponding to the given name (or None)."),
