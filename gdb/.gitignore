@@ -1,5 +1,4 @@
 /Makefile
-/build-gnulib
 /gdb-gdb.gdb
 /nm.h
 
@@ -13,14 +12,9 @@
 /d-exp.c
 /f-exp.c
 /gdb
-/gdbtui
 /gcore
 /go-exp.c
 /init.c
 /jit-reader.h
-/jv-exp.c
 /m2-exp.c
-/objc-exp.c
-/observer.inc
 /p-exp.c
-/rust-exp.c
