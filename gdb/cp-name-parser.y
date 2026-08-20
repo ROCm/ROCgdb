@@ -2098,8 +2098,7 @@ should_be_the_same (const char *one, const char *two)
 static void
 should_parse (const char *name)
 {
-  std::string err;
-  auto parsed = cp_demangled_name_to_comp (name, &err);
+  auto parsed = cp_demangled_name_to_comp (name);
   SELF_CHECK (parsed != nullptr);
 }
 

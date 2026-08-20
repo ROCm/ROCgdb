@@ -253,7 +253,7 @@ inspect_type (struct demangle_parse_info *info,
 	     tree will contain pointers into NAME, so NAME cannot
 	     be free'd until all typedef conversion is done and
 	     the final result is converted into a string.  */
-	  i = cp_demangled_name_to_comp (name, NULL);
+	  i = cp_demangled_name_to_comp (name);
 	  if (i != NULL)
 	    {
 	      /* Merge the two trees.  */
@@ -600,7 +600,7 @@ cp_canonicalize_string_full (const char *string,
   std::unique_ptr<demangle_parse_info> info;
 
   estimated_len = strlen (string) * 2;
-  info = cp_demangled_name_to_comp (string, NULL);
+  info = cp_demangled_name_to_comp (string);
   if (info != NULL)
     {
       /* Replace all the typedefs in the tree.  */
@@ -647,7 +647,7 @@ cp_canonicalize_string (const char *string)
   if (cp_already_canonical (string))
     return nullptr;
 
-  info = cp_demangled_name_to_comp (string, NULL);
+  info = cp_demangled_name_to_comp (string);
   if (info == NULL)
     return nullptr;
 
@@ -709,7 +709,7 @@ mangled_name_to_comp (const char *mangled_name, int options,
   /* If we could demangle the name, parse it to build the component
      tree.  */
   std::unique_ptr<demangle_parse_info> info
-    = cp_demangled_name_to_comp (demangled_name.get (), NULL);
+    = cp_demangled_name_to_comp (demangled_name.get ());
 
   if (info == NULL)
     return NULL;
@@ -904,7 +904,7 @@ cp_func_name (const char *full_name)
   struct demangle_component *ret_comp;
   std::unique_ptr<demangle_parse_info> info;
 
-  info = cp_demangled_name_to_comp (full_name, NULL);
+  info = cp_demangled_name_to_comp (full_name);
   if (!info)
     return nullptr;
 
@@ -933,7 +933,7 @@ cp_remove_params_1 (const char *demangled_name, bool require_params)
   if (demangled_name == NULL)
     return NULL;
 
-  info = cp_demangled_name_to_comp (demangled_name, NULL);
+  info = cp_demangled_name_to_comp (demangled_name);
   if (info == NULL)
     return NULL;
 

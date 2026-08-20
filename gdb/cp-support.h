@@ -169,7 +169,7 @@ struct type *cp_find_type_baseclass_by_name (struct type *parent_type,
 /* Functions from cp-name-parser.y.  */
 
 extern std::unique_ptr<demangle_parse_info> cp_demangled_name_to_comp
-     (const char *demangled_name, std::string *errmsg);
+     (const char *demangled_name, std::string *errmsg = nullptr);
 
 /* Convert RESULT to a string.  ESTIMATED_LEN is used only as a guide
    to the length of the result.  */
