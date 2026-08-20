@@ -108,6 +108,9 @@ jobs:
       stage_reuse_mode: reuse-stage
       repository: ROCm/TheRock
       ref: users/lumachad/main/stage-reuse-timing
+      # Pass main's tip SHA explicitly so commit-ancestry checking uses a
+      # real main commit, not the tip of the instrumented branch.
+      stage_reuse_current_sha: 48d493e696d795a0aa49c8f39969345eef8f4257
       # Build ROCgdb from this PR's source instead of TheRock's pinned submodule.
       # detect_external_repo_config.py resolves the repo to rocgdb, checks it out
       # to external-rocgdb, and injects -DTHEROCK_ROCGDB_SOURCE_DIR automatically;
