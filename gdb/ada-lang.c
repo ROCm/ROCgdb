@@ -7945,7 +7945,8 @@ ada_template_to_fixed_record_type_1 (struct type *type,
 	warning (_("Invalid type size for \"%s\" detected: %s."),
 		 rtype->name (), pulongest (type->length ()));
       else
-	warning (_("Invalid type size for <unnamed> detected: %s."),
+	warning (_("Invalid type size for %ps detected: %s."),
+		 styled_string (metadata_style.style (), "<unnamed>"),
 		 pulongest (type->length ()));
     }
   else

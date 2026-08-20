@@ -2909,7 +2909,8 @@ windows_nat_target::create_inferior (const char *exec_file,
   ensure_only_one_process ();
 
   if (!exec_file)
-    error (_("No executable specified, use \"target exec\"."));
+    error (_("No executable specified, use \"%ps\"."),
+	   styled_string (command_style.style (), "target exec"));
 
   const char *inferior_cwd = current_inferior ()->cwd ().c_str ();
   std::string expanded_infcwd;

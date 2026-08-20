@@ -22,6 +22,7 @@
 #include "xml-support.h"
 #include "xml-syscall.h"
 #include "gdbarch.h"
+#include "cli/cli-style.h"
 
 /* For the struct syscall definition.  */
 #include "target.h"
@@ -363,8 +364,11 @@ init_syscalls_info (struct gdbarch *gdbarch)
   if (syscalls_info->syscalls.empty ())
     {
       if (xml_syscall_file != NULL)
-	warning (_("Could not load the syscall XML file \"%s/%s\"."),
-		 gdb_datadir.c_str (), xml_syscall_file);
+	warning (_("Could not load the syscall XML file \"%p[%s/%s%p]\"."),
+		 file_name_style.style ().ptr (),
+		 gdb_datadir.c_str (),
+		 xml_syscall_file,
+		 nullptr);
       else
 	warning (_("There is no XML file to open."));
 
