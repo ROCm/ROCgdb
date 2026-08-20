@@ -1,0 +1,13 @@
+{
+  "repositories": [
+    {
+      "name": "rocgdb",
+      "url": "ROCm/ROCgdb",
+      "branch": "amd-staging",
+      "category": "projects",
+      "auto_subtree_pull": false,
+      "auto_subtree_push": false,
+      "monorepo_source_of_truth": true
+    }
+  ]
+}
