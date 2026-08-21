@@ -8029,8 +8029,8 @@ exclusive, the linker can issue a diagnostic.
 @command{@value{AS}} currently supports two versions of object attributes:
 @itemize @bullet{}
 @item
-Object Attributes version 1 (OAv1) used by: ARC, ARM, C-SKY, MIPS, MSP430, M68K,
-PowerPC, RISC-V, SPARC, s390, and TIC6X.
+Object Attributes version 1 (OAv1) used by: ARC, ARM, AVR, C-SKY, MIPS,
+MSP430, M68K, PowerPC, RISC-V, SPARC, s390, and TIC6X.
 @item
 Object Attributes version 2 (OAv2) used by: AArch64.
 @end itemize
