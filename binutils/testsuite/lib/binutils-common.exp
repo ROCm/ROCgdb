@@ -540,6 +540,7 @@ proc supports_oa_v1 {} {
     }
     if { [istarget arc-*-*]
 	 || [istarget arm*-*-*]
+	 || [istarget avr-*-*]
 	 || [istarget csky*-*-*]
 	 || [istarget loongarch*-*-*]
 	 || [istarget m68*-*-*]
