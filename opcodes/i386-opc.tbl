@@ -1916,11 +1916,11 @@ vpclmulhqlqdq, 0x6644/0x01, AVX&PCLMULQDQ, Modrm|Vex|Space0F3A|Src1VVVV|VexWIG|N
 vpclmullqhqdq, 0x6644/0x10, AVX&PCLMULQDQ, Modrm|Vex|Space0F3A|Src1VVVV|VexWIG|NoSuf|ImmExt, { Unspecified|BaseIndex|RegXMM, RegXMM, RegXMM }
 vpclmulhqhqdq, 0x6644/0x11, AVX&PCLMULQDQ, Modrm|Vex|Space0F3A|Src1VVVV|VexWIG|NoSuf|ImmExt, { Unspecified|BaseIndex|RegXMM, RegXMM, RegXMM }
 
-// GFNI + AVX
+// GFNI + AVX/AVX512
 
-vgf2p8affineinvqb, 0x66cf, AVX&GFNI, Modrm|Vex|Space0F3A|Src1VVVV|VexW1|CheckOperandSize|NoSuf, { Imm8, Unspecified|BaseIndex|RegXMM|RegYMM, RegXMM|RegYMM, RegXMM|RegYMM }
-vgf2p8affineqb, 0x66ce, AVX&GFNI, Modrm|Vex|Space0F3A|Src1VVVV|VexW1|CheckOperandSize|NoSuf, { Imm8, Unspecified|BaseIndex|RegXMM|RegYMM, RegXMM|RegYMM, RegXMM|RegYMM }
-vgf2p8mulb, 0x66cf, GFNI&(AVX|AVX512F), Modrm|Vex|EVexDYN|Masking|Space0F38|Src1VVVV|VexW0|Disp8ShiftVL|CheckOperandSize|NoSuf, { RegXMM|RegYMM|RegZMM|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+vgf2p8affineinvqb, 0x66cf, GFNI&(AVX|AVX512F), Modrm|Vex|Masking|Space0F3A|Src1VVVV|VexW1|Broadcast|Disp8ShiftVL|CheckOperandSize|NoSuf, { Imm8, RegXMM|RegYMM|RegZMM|Qword|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+vgf2p8affineqb, 0x66ce, GFNI&(AVX|AVX512F), Modrm|Vex|Masking|Space0F3A|Src1VVVV|VexW1|Broadcast|Disp8ShiftVL|CheckOperandSize|NoSuf, { Imm8, RegXMM|RegYMM|RegZMM|Qword|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+vgf2p8mulb, 0x66cf, GFNI&(AVX|AVX512F), Modrm|Vex|Masking|Space0F38|Src1VVVV|VexW0|Disp8ShiftVL|CheckOperandSize|NoSuf, { RegXMM|RegYMM|RegZMM|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
 
 // FSGSBASE and RDRND
 
@@ -2996,13 +2996,6 @@ vpopcnt<bw>, 0x6654, AVX512_BITALG, Modrm|Masking|Space0F38|<bw:vexw>|Disp8Shift
 vpshufbitqmb, 0x668f, AVX512_BITALG, Modrm|Masking|Space0F38|Src1VVVV|VexW0|Disp8ShiftVL|CheckOperandSize|NoSuf, { RegXMM|RegYMM|RegZMM|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegMask }
 
 // AVX512_BITALG instructions end
-
-// AVX512 + GFNI instructions
-
-vgf2p8affineinvqb, 0x66cf, GFNI&AVX512F, Modrm|Masking|Space0F3A|Src1VVVV|VexW1|Broadcast|Disp8ShiftVL|CheckOperandSize|NoSuf, { Imm8, RegXMM|RegYMM|RegZMM|Qword|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
-vgf2p8affineqb, 0x66ce, GFNI&AVX512F, Modrm|Masking|Space0F3A|Src1VVVV|VexW1|Broadcast|Disp8ShiftVL|CheckOperandSize|NoSuf, { Imm8, RegXMM|RegYMM|RegZMM|Qword|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
-
-// AVX512 + GFNI instructions end
 
 // INVLPGB instructions
 
