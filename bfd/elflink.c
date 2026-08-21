@@ -13180,8 +13180,6 @@ _bfd_elf_final_link (bfd *obfd, struct bfd_link_info *info)
      we could write the relocs out and then read them again; I don't
      know how bad the memory loss will be.  */
 
-  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
-    sub->output_has_begun = false;
   for (o = obfd->sections; o != NULL; o = o->next)
     {
       for (p = o->map_head.link_order; p != NULL; p = p->next)
@@ -13193,10 +13191,10 @@ _bfd_elf_final_link (bfd *obfd, struct bfd_link_info *info)
 	    {
 	      if (! sub->output_has_begun)
 		{
+		  sub->output_has_begun = true;
 		  if ((sub->flags & BFD_LINKER_CREATED) == 0
 		      && !elf_link_input_bfd (&flinfo, sub))
 		    goto error_return;
-		  sub->output_has_begun = true;
 		}
 	    }
 	  else if (p->type == bfd_section_reloc_link_order
@@ -13210,7 +13208,7 @@ _bfd_elf_final_link (bfd *obfd, struct bfd_link_info *info)
 	      if (! _bfd_default_link_order (obfd, info, o, p))
 		{
 		  if (p->type == bfd_indirect_link_order
-		      && (bfd_get_flavour (sub)
+		      && (bfd_get_flavour ((sub = p->u.indirect.section->owner))
 			  == bfd_target_elf_flavour)
 		      && (elf_elfheader (sub)->e_ident[EI_CLASS]
 			  != obed->s->elfclass))
@@ -13251,10 +13249,8 @@ _bfd_elf_final_link (bfd *obfd, struct bfd_link_info *info)
   for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
     if (sub->output_has_begun && (sub->flags & BFD_LINKER_CREATED) != 0)
       {
-	sub->output_has_begun = false;
 	if (!elf_link_input_bfd (&flinfo, sub))
 	  goto error_return;
-	sub->output_has_begun = true;
       }
 
   /* Free symbol buffer if needed.  */
