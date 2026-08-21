@@ -33,49 +33,106 @@ jobs:
         id: configure
         run: python .github/scripts/therock_configure_ci.py
 
-      - name: Checkout CI config
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: ROCm/therock-ci-config
-          ref: main
-          path: ci-config
-        continue-on-error: true
-
       - name: Select build runner
         id: runner
         run: python3 .github/scripts/select_runner.py build_runs_on
 
-  therock-ci-linux:
-    name: TheRock CI Linux
+  resolve:
+    name: Resolve TheRock references
     needs: setup
+    if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
+    runs-on: ubuntu-24.04
+    outputs:
+      therock_commit_ref: ${{ steps.read.outputs.therock_commit_ref }}
+      build_image: ${{ steps.read.outputs.build_image }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Read TheRock dependency pins
+        id: read
+        run: python3 .github/scripts/config.py therock_commit_ref build_image
+
+  therock-build-linux:
+    name: Build Linux Packages
+    needs: [setup, resolve]
     if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
     permissions:
       contents: read
       id-token: write
-    strategy:
-      fail-fast: false
-      matrix:
-        amdgpu_family: [gfx94X-dcgpu]
     uses: ./.github/workflows/therock-ci-linux.yml
     with:
-      amdgpu_families: ${{ matrix.amdgpu_family }}
-      artifact_group: ${{ matrix.amdgpu_family }}
+      amdgpu_families: dcgpu-all;dgpu-all;igpu-all
+      artifact_group: gfx94X
       build_runs_on: ${{ needs.setup.outputs.build_runs_on }}
+      therock_commit_ref: ${{ needs.resolve.outputs.therock_commit_ref }}
+      build_image: ${{ needs.resolve.outputs.build_image }}
       extra_cmake_options: >
-        -DTHEROCK_ENABLE_ALL=OFF 
-        -DTHEROCK_BUILD_TESTING=ON 
+        -DTHEROCK_AMDGPU_DIST_BUNDLE_NAME=multiarch
+        -DTHEROCK_ENABLE_ALL=OFF
+        -DTHEROCK_BUILD_TESTING=ON
         -DTHEROCK_ENABLE_DEBUG_TOOLS=ON
         -DTHEROCK_SHARED_PYTHON_EXECUTABLES=/opt/python-shared/cp310-cp310/bin/python3;/opt/python-shared/cp311-cp311/bin/python3;/opt/python-shared/cp312-cp312/bin/python3;/opt/python-shared/cp313-cp313/bin/python3;/opt/python-shared/cp314-cp314/bin/python3
         -DTHEROCK_DIST_PYTHON_EXECUTABLES=/opt/python/cp310-cp310/bin/python;/opt/python/cp311-cp311/bin/python;/opt/python/cp312-cp312/bin/python;/opt/python/cp313-cp313/bin/python
         -DTHEROCK_USE_EXTERNAL_ROCGDB=ON
         -DTHEROCK_ROCGDB_SOURCE_DIR=./rocgdb_under_test
 
+  test-gpu:
+    name: Test GPU
+    needs: [setup, therock-build-linux]
+    if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        amdgpu_family:
+          - gfx94X
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      amdgpu_families: ${{ matrix.amdgpu_family }}
+      artifact_group: gfx94X
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-gpu
+
+  test-cpu:
+    name: Test CPU
+    needs: [setup, therock-build-linux]
+    if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      amdgpu_families: gfx94X
+      artifact_group: gfx94X
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-cpu
+
+  test-corefile:
+    name: Test corefile (gfx942)
+    needs: [setup, therock-build-linux]
+    if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      amdgpu_families: gfx942
+      artifact_group: gfx94X
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-corefile
+
   therock_ci_summary:
     name: TheRock CI Summary
     if: always()
     needs:
       - setup
-      - therock-ci-linux
+      - therock-build-linux
+      - test-gpu
+      - test-cpu
+      - test-corefile
     runs-on: ubuntu-24.04
     steps:
       - name: Output failed jobs
