@@ -23,21 +23,25 @@ THE SOFTWARE.
 #include <hip/hip_runtime.h>
 
 /* Helper function where the debugger places a breakpoint to be sure no wave
-   can run to completion without the debugger noticing.  optnone implies
-   noinline and keeps the body opaque to the optimizer, so the breakpoint is
-   reliable and the call is not proven away under -O1/-O2/-O3.  */
-__device__ void __attribute__ ((optnone))
+   can run to completion without the debugger noticing.  __forceinline__ and
+   volatile asm guarantee the s_nop is emitted in-line in the kernel, giving
+   the debugger a reliable address to break on.  */
+__device__ __forceinline__ void
 end_of_kernel ()
 {
+  __asm__ volatile ("s_nop 0" ::: );  /* Debugger breaks on the inlined s_nop.  */
 }
 
-__global__ void
+__global__ void __attribute__ ((optnone))
 kern ()
 {
-  /* The test will need to step a few times, so provide an empty loop that
-     will make it possible.  */
-  for (int i = 0; i < 100; i++)
-    __builtin_amdgcn_s_sleep (1);
+  /* The test will need to step a few times.  */
+  __builtin_amdgcn_s_sleep (20);
+  __builtin_amdgcn_s_sleep (20);
+  __builtin_amdgcn_s_sleep (20);
+  __builtin_amdgcn_s_sleep (20);
+  __builtin_amdgcn_s_sleep (20);
+  __builtin_amdgcn_s_sleep (20);
 
   end_of_kernel ();
 }
