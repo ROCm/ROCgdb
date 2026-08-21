@@ -7,22 +7,30 @@ on:
         type: string
       artifact_group:
         type: string
+        default: ""
       therock_ref:
         type: string
         required: true
       artifact_run_id:
         type: string
+      projects_to_test:
+        type: string
+        default: "rocgdb-cpu,rocgdb-gpu,rocgdb-corefile"
   workflow_dispatch:
     inputs:
       amdgpu_families:
         type: string
       artifact_group:
         type: string
+        default: ""
       therock_ref:
         type: string
         required: true
       artifact_run_id:
         type: string
+      projects_to_test:
+        type: string
+        default: "rocgdb-cpu,rocgdb-gpu,rocgdb-corefile"
 
 permissions:
   contents: read
@@ -71,7 +79,7 @@ jobs:
 
       - name: Configure test matrix
         env:
-          PROJECTS_TO_TEST: "rocgdb-cpu,rocgdb-gpu,rocgdb-corefile"
+          PROJECTS_TO_TEST: ${{ inputs.projects_to_test }}
           AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
           CI_CONFIG_PATH: ci-config
         id: configure
@@ -108,6 +116,7 @@ jobs:
       artifact_run_id: ${{ inputs.artifact_run_id }}
       therock_ref: ${{ inputs.therock_ref }}
       amdgpu_families: ${{ inputs.amdgpu_families }}
+      artifact_group: ${{ inputs.artifact_group }}
       # Per-component runner selection:
       #   1. CPU-only components use the runner from therock-ci-config
       #   2. GPU components use the per-component runner from fetch_test_configurations.py
