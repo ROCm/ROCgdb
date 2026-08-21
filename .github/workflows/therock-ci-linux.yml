@@ -84,6 +84,8 @@ jobs:
 
       - name: Fetch sources
         run: |
+          # debug-tools only requires core build infrastructure; the excluded groups
+          # (rocm-libraries, ml-frameworks, media-libs, math-libraries) are not needed.
           ./build_tools/fetch_sources.py --jobs 12 --depth 1 \
             --no-include-rocm-libraries \
             --no-include-ml-frameworks \
