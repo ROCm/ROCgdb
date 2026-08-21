@@ -8117,6 +8117,12 @@ for C++ virtual tables used by this object file:
 @item 7 for files that use the 16-bit address space @code{__flash5}.
 @item 8 for files that use the 24-bit address space @code{__flashx}.
 @end itemize
+
+@item Tag_GNU_AVR_BITS_DOUBLE (8)
+Bit size of the @code{double} type, or 0 if no @code{double} is used.
+
+@item Tag_GNU_AVR_BITS_LONG_DOUBLE (12)
+Bit size of the @code{long double} type, or 0 if no @code{long double} is used.
 @end table
 
 @subsection M680x0 Attributes

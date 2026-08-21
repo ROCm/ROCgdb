@@ -18360,10 +18360,14 @@ display_avr_gnu_attribute (const unsigned char * p,
 			   unsigned int tag,
 			   const unsigned char * const end)
 {
-  if (tag == Tag_GNU_AVR_VTABLE_AS)
-    {
-      unsigned int val;
+  unsigned int val;
 
+  switch (tag)
+    {
+    default:
+      break;
+
+    case Tag_GNU_AVR_VTABLE_AS:
       printf ("  Tag_GNU_AVR_VTABLE_AS (%u): ", tag);
       if (p == end)
 	{
@@ -18373,6 +18377,28 @@ display_avr_gnu_attribute (const unsigned char * p,
 
       READ_ULEB (val, p, end);
       printf ("%d (%s)\n", val, avr_tag_vtable_as_name (val));
+      return p;
+
+    case Tag_GNU_AVR_BITS_DOUBLE:
+      printf ("  Tag_GNU_AVR_BITS_DOUBLE (%u): ", tag);
+      if (p == end)
+	printf (_("<corrupt>\n"));
+      else
+	{
+	  READ_ULEB (val, p, end);
+	  printf ("%d\n", val);
+	}
+      return p;
+
+    case Tag_GNU_AVR_BITS_LONG_DOUBLE:
+      printf ("  Tag_GNU_AVR_BITS_LONG_DOUBLE (%u): ", tag);
+      if (p == end)
+	printf (_("<corrupt>\n"));
+      else
+	{
+	  READ_ULEB (val, p, end);
+	  printf ("%d\n", val);
+	}
       return p;
     }
 

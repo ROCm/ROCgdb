@@ -1,7 +1,13 @@
 -*- text -*-
 
-* The avr target supports .gnu_attribute 4 (Tag_GNU_AVR_VTABLE_AS).
-  For details, see https://sourceware.org/PR34305
+* The avr target supports the following GNU attributes to make sure
+  that object files that are being linked are using the same ABI.
+  The following attributes have been added:
+  - .gnu_attribute 4 (Tag_GNU_AVR_VTABLE_AS).
+    For details, see https://sourceware.org/PR34305
+  - .gnu_attribute 8 (Tag_GNU_AVR_BITS_DOUBLE).
+    .gnu_attribute 12 (Tag_GNU_AVR_BITS_LONG_DOUBLE).
+    For details, see https://sourceware.org/PR34557
 
 Changes in 2.47:
 

@@ -4200,7 +4200,6 @@ avr_elf32_property_record_name (struct avr_property_record *rec)
 static bool
 avr_elf_merge_obj_attributes (bfd *ibfd, struct bfd_link_info *info)
 {
-  static bfd *last_fp;
   obj_attribute *in_attr, *in_attrs;
   obj_attribute *out_attr, *out_attrs;
   bfd *obfd = info->output_bfd;
@@ -4208,6 +4207,9 @@ avr_elf_merge_obj_attributes (bfd *ibfd, struct bfd_link_info *info)
   in_attrs = elf_known_obj_attributes (ibfd)[OBJ_ATTR_GNU];
   out_attrs = elf_known_obj_attributes (obfd)[OBJ_ATTR_GNU];
 
+  // Merge Tag_GNU_AVR_VTABLE_AS (4).
+
+  static bfd *last_fp_vtab;
   in_attr = &in_attrs[Tag_GNU_AVR_VTABLE_AS];
   out_attr = &out_attrs[Tag_GNU_AVR_VTABLE_AS];
 
@@ -4218,7 +4220,7 @@ avr_elf_merge_obj_attributes (bfd *ibfd, struct bfd_link_info *info)
 	{
 	  out_attr->type = ATTR_TYPE_FLAG_INT_VAL;
 	  out_attr->i = in_attr->i;
-	  last_fp = ibfd;
+	  last_fp_vtab = ibfd;
 	}
     }
   else if (in_attr->i != out_attr->i)
@@ -4227,11 +4229,70 @@ avr_elf_merge_obj_attributes (bfd *ibfd, struct bfd_link_info *info)
       const char *const iname = avr_tag_vtable_as_name (in_attr->i);
       const char *const oname = avr_tag_vtable_as_name (out_attr->i);
 
-      _bfd_error_handler
-	/* xgettext:c-format */
-	(_("%pB uses %s tag %d (%s), %pB uses %s tag %d (%s)"),
-	 ibfd, tag, in_attr->i, iname,
-	 last_fp, tag, out_attr->i, oname);
+      // xgettext:c-format
+      _bfd_error_handler (_("%pB uses %s tag %d (%s), %pB uses %s tag %d (%s)"),
+			  ibfd, tag, in_attr->i, iname,
+			  last_fp_vtab, tag, out_attr->i, oname);
+
+      out_attr->type = ATTR_TYPE_FLAG_INT_VAL | ATTR_TYPE_FLAG_ERROR;
+      bfd_set_error (bfd_error_bad_value);
+      return false;
+    }
+
+  // Merge Tag_GNU_AVR_BITS_DOUBLE (8).
+
+  static bfd *last_fp_dbl;
+  in_attr = &in_attrs[Tag_GNU_AVR_BITS_DOUBLE];
+  out_attr = &out_attrs[Tag_GNU_AVR_BITS_DOUBLE];
+
+  if (in_attr->i == 0
+      || out_attr->i == 0)
+    {
+      if (in_attr->i != 0)
+	{
+	  out_attr->type = ATTR_TYPE_FLAG_INT_VAL;
+	  out_attr->i = in_attr->i;
+	  last_fp_dbl = ibfd;
+	}
+    }
+  else if (in_attr->i != out_attr->i)
+    {
+      const char *const tag = "Tag_GNU_AVR_BITS_DOUBLE";
+
+      // xgettext:c-format
+      _bfd_error_handler (_("%pB uses %s tag %d, %pB uses %s tag %d"),
+			  ibfd, tag, in_attr->i,
+			  last_fp_dbl, tag, out_attr->i);
+
+      out_attr->type = ATTR_TYPE_FLAG_INT_VAL | ATTR_TYPE_FLAG_ERROR;
+      bfd_set_error (bfd_error_bad_value);
+      return false;
+    }
+
+  // Merge Tag_GNU_AVR_BITS_LONG_DOUBLE (12).
+
+  static bfd *last_fp_ldbl;
+  in_attr = &in_attrs[Tag_GNU_AVR_BITS_LONG_DOUBLE];
+  out_attr = &out_attrs[Tag_GNU_AVR_BITS_LONG_DOUBLE];
+
+  if (in_attr->i == 0
+      || out_attr->i == 0)
+    {
+      if (in_attr->i != 0)
+	{
+	  out_attr->type = ATTR_TYPE_FLAG_INT_VAL;
+	  out_attr->i = in_attr->i;
+	  last_fp_ldbl = ibfd;
+	}
+    }
+  else if (in_attr->i != out_attr->i)
+    {
+      const char *const tag = "Tag_GNU_AVR_BITS_LONG_DOUBLE";
+
+      // xgettext:c-format
+      _bfd_error_handler (_("%pB uses %s tag %d, %pB uses %s tag %d"),
+			  ibfd, tag, in_attr->i,
+			  last_fp_ldbl, tag, out_attr->i);
 
       out_attr->type = ATTR_TYPE_FLAG_INT_VAL | ATTR_TYPE_FLAG_ERROR;
       bfd_set_error (bfd_error_bad_value);
