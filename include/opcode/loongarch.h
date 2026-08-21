@@ -78,6 +78,8 @@ extern "C"
   #define LARCH_OP_GCSRXCHG 0x05000000
   #define LARCH_MK_AMSWAP_W 0xffff8000
   #define LARCH_OP_AMSWAP_W 0x38600000
+  #define LARCH_MK_DBAR 0xffff8000
+  #define LARCH_OP_DBAR 0x38720000
 
   #define LARCH_INSN_OPS(insn, op) ((insn & LARCH_MK_##op) == LARCH_OP_##op)
   #define LARCH_INSN_ADDI_D(insn) LARCH_INSN_OPS((insn), ADDI_D)
@@ -99,6 +101,7 @@ extern "C"
   #define LARCH_INSN_CSRXCHG(insn) LARCH_INSN_OPS((insn), CSRXCHG)
   #define LARCH_INSN_GCSRXCHG(insn) LARCH_INSN_OPS((insn), GCSRXCHG)
   #define LARCH_INSN_AMSWAP_W(insn) LARCH_INSN_OPS((insn), AMSWAP_W)
+  #define LARCH_INSN_DBAR(insn) LARCH_INSN_OPS((insn), DBAR)
 
   #define LARCH_INSN_ATOMIC_MEM(insn)			\
 	((insn & 0xfff80000) == 0x38580000	\

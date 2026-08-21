@@ -26,6 +26,7 @@
 #include <stdlib.h>
 
 static bool loongarch_dis_show_aliases = true;
+static bool loongarch_dis_show_annotate = false;
 static const char *const *loongarch_r_disname = NULL;
 static const char *const *loongarch_f_disname = NULL;
 static const char *const *loongarch_fc_disname = NULL;
@@ -114,6 +115,12 @@ parse_loongarch_dis_option (const char *option)
     {
       loongarch_r_disname = loongarch_r_normal_name;
       loongarch_f_disname = loongarch_f_normal_name;
+      return 0;
+    }
+
+  if (strcmp (option, "annotate") == 0)
+    {
+      loongarch_dis_show_annotate = true;
       return 0;
     }
 
@@ -243,6 +250,71 @@ dis_one_arg (char esc1, char esc2, const char *bit_field,
 }
 
 static void
+disassemble_annotate_one (insn_t insn, struct disassemble_info *info)
+{
+  if (LARCH_INSN_DBAR (insn))
+    {
+      if ((insn & 0x700) == 0x700)
+	{
+	  info->fprintf_styled_func (info->stream, dis_style_comment_start, "\t# SA-RAR");
+	  return;
+	}
+
+      /* Currently, for reserved hint values such as 0xf, 0x1f and 0x7000, even
+	 though execution behavior matches hint=0 on most hardware, their exact
+	 semantics are undefined.
+	 We adopt a conservative approach and skip annotation for these values.  */
+      if (!(insn & 0x7fe0))
+	{
+	  unsigned int hint = LARCH_GET_RD (insn);
+
+	  /* If hint value is 0xf or 0x1f, its no specific semantics.  */
+	  if ((hint & 0xf) == 0xf)
+	    return;
+
+	  /* dbar imm[4:0] annotate layout:
+	     CRW|RW
+	     │││ ││
+	     │││ │└─ bit 0
+	     │││ └── bit 1
+	     ││└──── bit 2
+	     │└───── bit 3
+	     └────── bit 4
+	     Bit 0: false denotes W, true denotes null, W declare store after this
+	     dbar are constrained by the barrier.
+	     Bit 1: false denotes R, true denotes null, R declare load after this
+	     dbar are constrained by the barrier.
+	     Bit 2: false denotes W, true denotes null, W declare store before this
+	     dbar are constrained by the barrier.
+	     Bit 3: false denotes R, true denotes null, R declare load before this
+	     dbar are constrained by the barrier.
+	     Bit 4: false denotes null, true denotes C, C declare only cached
+	     load\store are constrained by the barrier.
+	     For exmaple, immediate value 0x10 is annotated as CRW|RW that only
+	     cached load and store operations before and after this dbar are
+	     constrained by the barrier.  */
+	  char annotate[7] = {' ', ' ', ' ', '|', ' ', ' ', '\0'};
+	  if ((hint & (1u << 0)) == 0)
+	    annotate[5] = 'W';
+	  if ((hint & (1u << 1)) == 0)
+	    annotate[4] = 'R';
+	  if ((hint & (1u << 2)) == 0)
+	    annotate[2] = 'W';
+	  if ((hint & (1u << 3)) == 0)
+	    annotate[1] = 'R';
+	  if ((hint & (1u << 4)) != 0)
+	    annotate[0] = 'C';
+
+	  info->fprintf_styled_func (info->stream, dis_style_comment_start, "\t# ");
+	  info->fprintf_styled_func (info->stream, dis_style_sub_mnemonic, "%s", annotate);
+	  return;
+	}
+    }
+
+  return;
+}
+
+static void
 disassemble_one (insn_t insn, struct disassemble_info *info)
 {
   const struct loongarch_opcode *opc = get_loongarch_opcode_by_binfmt (insn);
@@ -319,6 +391,9 @@ disassemble_one (insn_t insn, struct disassemble_info *info)
     free (fake_args);
   }
 
+  if (loongarch_dis_show_annotate)
+    disassemble_annotate_one (insn, info);
+
   if (info->insn_type == dis_branch || info->insn_type == dis_condbranch)
     {
       info->fprintf_styled_func (info->stream, dis_style_comment_start, "\t# ");
@@ -368,5 +443,12 @@ with the -M switch (multiple options should be separated by commas):\n"));
     no-aliases    Use canonical instruction forms.\n"));
   fprintf (stream, _("\n\
     numeric       Print numeric register names, rather than ABI names.\n"));
+  fprintf (stream, _("\n\
+    annotate      Print LoongArch instruction annotations.\n"));
+  fprintf (stream, _("\
+		  dbar annotate layout:\n\
+		  'C': only cached load and store operations are constrained by the barrier;\n\
+		  '|' left‑side 'RW': all load and store before the dbar are constrained by the barrier;\n\
+		  '|' right‑side 'RW': all load and store after the dbar are constrained by the barrier.\n"));
   fprintf (stream, _("\n"));
 }
