@@ -13193,7 +13193,8 @@ _bfd_elf_final_link (bfd *obfd, struct bfd_link_info *info)
 	    {
 	      if (! sub->output_has_begun)
 		{
-		  if (! elf_link_input_bfd (&flinfo, sub))
+		  if ((sub->flags & BFD_LINKER_CREATED) == 0
+		      && !elf_link_input_bfd (&flinfo, sub))
 		    goto error_return;
 		  sub->output_has_begun = true;
 		}
@@ -13244,6 +13245,17 @@ _bfd_elf_final_link (bfd *obfd, struct bfd_link_info *info)
 	    }
 	}
     }
+  /* Writing of linker created BFDs is left until last, because the
+     aarch64 backend wants to copy insns from a relocated section to
+     a stub section.  See erratum_843419 code.  */
+  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
+    if (sub->output_has_begun && (sub->flags & BFD_LINKER_CREATED) != 0)
+      {
+	sub->output_has_begun = false;
+	if (!elf_link_input_bfd (&flinfo, sub))
+	  goto error_return;
+	sub->output_has_begun = true;
+      }
 
   /* Free symbol buffer if needed.  */
   if (!info->reduce_memory_overheads)
