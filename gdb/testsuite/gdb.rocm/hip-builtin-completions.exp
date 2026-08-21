@@ -52,28 +52,10 @@ proc all_hip_completions {} {
 	# threadI blockI blockD gridD warpSi
 	set substr [string range $var 0 [expr {[string length $var] - 3}]]
 
-	set seen false
-	gdb_test_multiple "complete print $substr" "print $substr" {
-	    -re "print $var\r\n" {
-		set seen true
-		exp_continue
-	    }
-	    -re "$::gdb_prompt $" {
-		gdb_assert {$seen} $gdb_test_name
-	    }
-	}
-
-	set seen false
-	gdb_test_multiple "complete break main if $substr" \
-	    "break main if $substr" {
-	    -re "break main if $var\r\n" {
-		set seen true
-		exp_continue
-	    }
-	    -re "$::gdb_prompt $" {
-		gdb_assert {$seen} $gdb_test_name
-	    }
-	}
+	gdb_test "complete print $substr" "print ${var}(?=\r\n).*" \
+	    "print $substr"
+	gdb_test "complete break main if $substr" \
+	    "break main if ${var}(?=\r\n).*" "break main if $substr"
     }
 
     # ".x", ".y" and ".z" completions for three-dimensional built-ins.
