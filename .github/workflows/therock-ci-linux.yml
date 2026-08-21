@@ -12,38 +12,31 @@ on:
       build_runs_on:
         type: string
         default: aws-linux-scale-rocm-prod
+      therock_commit_ref:
+        type: string
+        required: true
+      build_image:
+        type: string
+        required: true
+    outputs:
+      therock_ref:
+        value: ${{ jobs.therock-build-linux.outputs.therock_ref }}
 
 permissions:
   contents: read
 
 jobs:
-  resolve:
-    name: Resolve TheRock references
-    runs-on: ubuntu-24.04
-    outputs:
-      therock_commit_ref: ${{ steps.read.outputs.therock_commit_ref }}
-      build_image: ${{ steps.read.outputs.build_image }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Read TheRock dependency pins
-        id: read
-        run: python3 .github/scripts/config.py therock_commit_ref build_image
-
   therock-build-linux:
     name: Build Linux Packages
-    needs: resolve
     runs-on: ${{ inputs.build_runs_on }}
     permissions:
       contents: read
       id-token: write
     outputs:
-      therock_ref: ${{ needs.resolve.outputs.therock_commit_ref }}
+      therock_ref: ${{ inputs.therock_commit_ref }}
     container:
-      image: ${{ needs.resolve.outputs.build_image }}
+      image: ${{ inputs.build_image }}
     env:
-      THEROCK_COMMIT_REF: ${{ needs.resolve.outputs.therock_commit_ref }}
       AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
       TEATIME_FORCE_INTERACTIVE: 0
       CACHE_DIR: ${{ github.workspace }}/.container-cache
@@ -54,7 +47,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: "ROCm/TheRock"
-          ref: ${{ needs.resolve.outputs.therock_commit_ref }}
+          ref: ${{ inputs.therock_commit_ref }}
 
       - name: Checkout CI config
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -91,7 +84,11 @@ jobs:
 
       - name: Fetch sources
         run: |
-          ./build_tools/fetch_sources.py --jobs 12
+          ./build_tools/fetch_sources.py --jobs 12 --depth 1 \
+            --no-include-rocm-libraries \
+            --no-include-ml-frameworks \
+            --no-include-media-libs \
+            --no-include-math-libraries
 
       - name: Configure Projects
         env:
@@ -141,17 +138,6 @@ jobs:
         run: |
           python3 build_tools/github_actions/post_build_upload.py \
             --run-id ${{ github.run_id }} \
-            --artifact-group ${{ env.AMDGPU_FAMILIES }} \
+            --artifact-group ${{ inputs.artifact_group }} \
             --build-dir build \
             --upload
-
-  therock-test-linux:
-    name: "Run Tests"
-    if: ${{ inputs.amdgpu_families == 'gfx94X-dcgpu' }}
-    needs: [therock-build-linux]
-    uses: ./.github/workflows/therock-test-packages.yml
-    with:
-      amdgpu_families: ${{ inputs.amdgpu_families }}
-      artifact_group: ${{ inputs.artifact_group }}
-      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
-      artifact_run_id: ${{ github.run_id }}
