@@ -243,7 +243,7 @@ bfd_byte *
 bfd_coff_reloc16_get_relocated_section_contents
   (bfd *in_abfd,
    struct bfd_link_info *link_info,
-   struct bfd_link_order *link_order,
+   const struct bfd_link_order *link_order,
    bfd_byte *data,
    bool relocatable,
    asymbol **symbols)

@@ -3084,11 +3084,12 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
    seems to be important.  */
 
 static bfd_byte *
-elf32_avr_get_relocated_section_contents (bfd *output_bfd,
-					  struct bfd_link_info *link_info,
-					  struct bfd_link_order *link_order,
-					  bfd_byte *data, bool relocatable,
-					  asymbol **symbols)
+elf32_avr_get_relocated_section_contents
+  (bfd *output_bfd,
+   struct bfd_link_info *link_info,
+   const struct bfd_link_order *link_order,
+   bfd_byte *data, bool relocatable,
+   asymbol **symbols)
 {
   Elf_Internal_Shdr *symtab_hdr;
   asection *input_section = link_order->u.indirect.section;

@@ -2828,8 +2828,8 @@ bool bfd_set_private_flags (bfd *abfd, flagword flags);
        BFD_SEND (abfd, _bfd_canonicalize_dynamic_reloc, (abfd, arels, asyms))
 
 bfd_byte *bfd_get_relocated_section_contents
-   (bfd *, struct bfd_link_info *, struct bfd_link_order *, bfd_byte *,
-    bool, asymbol **);
+   (bfd *, struct bfd_link_info *, const struct bfd_link_order *,
+    bfd_byte *, bool, asymbol **);
 
 bool bfd_record_phdr
    (bfd *, unsigned long, bool, flagword, bool, bfd_vma,
@@ -7709,7 +7709,7 @@ typedef struct bfd_target
   bfd_byte *
        (*_bfd_get_relocated_section_contents) (bfd *,
 					       struct bfd_link_info *,
-					       struct bfd_link_order *,
+					       const struct bfd_link_order *,
 					       bfd_byte *, bool,
 					       struct bfd_symbol **);
 

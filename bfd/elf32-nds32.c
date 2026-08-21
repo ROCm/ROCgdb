@@ -13154,12 +13154,13 @@ nds32_fag_remove_unused_fpbase (bfd *abfd, asection *sec,
    The variety only modify function call for reading in the section.  */
 
 static bfd_byte *
-nds32_elf_get_relocated_section_contents (bfd *abfd,
-					  struct bfd_link_info *link_info,
-					  struct bfd_link_order *link_order,
-					  bfd_byte *data,
-					  bool relocatable,
-					  asymbol **symbols)
+nds32_elf_get_relocated_section_contents
+  (bfd *abfd,
+   struct bfd_link_info *link_info,
+   const struct bfd_link_order *link_order,
+   bfd_byte *data,
+   bool relocatable,
+   asymbol **symbols)
 {
   bfd *input_bfd = link_order->u.indirect.section->owner;
   asection *input_section = link_order->u.indirect.section;

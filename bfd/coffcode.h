@@ -1505,7 +1505,7 @@ CODE_FRAGMENT
 .     combined_entry_type *, unsigned int);
 .
 .  bool (*_bfd_coff_reloc16_extra_cases)
-.    (bfd *, struct bfd_link_info *, struct bfd_link_order *, arelent *,
+.    (bfd *, struct bfd_link_info *, const struct bfd_link_order *, arelent *,
 .     bfd_byte *, size_t *, size_t *);
 .
 .  int (*_bfd_coff_reloc16_estimate)
@@ -5475,13 +5475,14 @@ dummy_reloc16_estimate (bfd *abfd ATTRIBUTE_UNUSED,
 #define coff_reloc16_extra_cases dummy_reloc16_extra_cases
 
 static bool
-dummy_reloc16_extra_cases (bfd *abfd ATTRIBUTE_UNUSED,
-			   struct bfd_link_info *link_info ATTRIBUTE_UNUSED,
-			   struct bfd_link_order *link_order ATTRIBUTE_UNUSED,
-			   arelent *reloc ATTRIBUTE_UNUSED,
-			   bfd_byte *data ATTRIBUTE_UNUSED,
-			   size_t *src_ptr ATTRIBUTE_UNUSED,
-			   size_t *dst_ptr ATTRIBUTE_UNUSED)
+dummy_reloc16_extra_cases
+  (bfd *abfd ATTRIBUTE_UNUSED,
+   struct bfd_link_info *link_info ATTRIBUTE_UNUSED,
+   const struct bfd_link_order *link_order ATTRIBUTE_UNUSED,
+   arelent *reloc ATTRIBUTE_UNUSED,
+   bfd_byte *data ATTRIBUTE_UNUSED,
+   size_t *src_ptr ATTRIBUTE_UNUSED,
+   size_t *dst_ptr ATTRIBUTE_UNUSED)
 {
   return false;
 }

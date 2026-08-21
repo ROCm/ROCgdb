@@ -196,7 +196,7 @@ reloc_processing (arelent *relent,
 static bool
 extra_case (bfd *in_abfd,
 	    struct bfd_link_info *link_info,
-	    struct bfd_link_order *link_order,
+	    const struct bfd_link_order *link_order,
 	    arelent *reloc,
 	    bfd_byte *data,
 	    size_t *src_ptr,

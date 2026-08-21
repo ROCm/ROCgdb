@@ -116,7 +116,7 @@ extern bool _bfd_mips_elf_find_inliner_info
 extern bool _bfd_mips_elf_set_section_contents
   (bfd *, asection *, const void *, file_ptr, bfd_size_type) ATTRIBUTE_HIDDEN;
 extern bfd_byte *_bfd_elf_mips_get_relocated_section_contents
-  (bfd *, struct bfd_link_info *, struct bfd_link_order *,
+  (bfd *, struct bfd_link_info *, const struct bfd_link_order *,
    bfd_byte *, bool, asymbol **) ATTRIBUTE_HIDDEN;
 extern bool _bfd_mips_elf_relax_section
   (bfd *abfd, asection *sec, struct bfd_link_info *link_info,

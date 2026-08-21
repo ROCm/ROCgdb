@@ -1266,12 +1266,13 @@ mn10200_elf_symbol_address_p (bfd *abfd,
    which uses mn10200_elf_relocate_section.  */
 
 static bfd_byte *
-mn10200_elf_get_relocated_section_contents (bfd *output_bfd,
-					    struct bfd_link_info *link_info,
-					    struct bfd_link_order *link_order,
-					    bfd_byte *data,
-					    bool relocatable,
-					    asymbol **symbols)
+mn10200_elf_get_relocated_section_contents
+  (bfd *output_bfd,
+   struct bfd_link_info *link_info,
+   const struct bfd_link_order *link_order,
+   bfd_byte *data,
+   bool relocatable,
+   asymbol **symbols)
 {
   Elf_Internal_Shdr *symtab_hdr;
   asection *input_section = link_order->u.indirect.section;

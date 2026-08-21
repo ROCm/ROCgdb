@@ -8049,7 +8049,7 @@ SYNOPSIS
 	bfd_byte *bfd_generic_get_relocated_section_contents
 	  (bfd *abfd,
 	   struct bfd_link_info *link_info,
-	   struct bfd_link_order *link_order,
+	   const struct bfd_link_order *link_order,
 	   bfd_byte *data,
 	   bool relocatable,
 	   asymbol **symbols);
@@ -8060,12 +8060,13 @@ DESCRIPTION
 */
 
 bfd_byte *
-bfd_generic_get_relocated_section_contents (bfd *abfd,
-					    struct bfd_link_info *link_info,
-					    struct bfd_link_order *link_order,
-					    bfd_byte *data,
-					    bool relocatable,
-					    asymbol **symbols)
+bfd_generic_get_relocated_section_contents
+  (bfd *abfd,
+   struct bfd_link_info *link_info,
+   const struct bfd_link_order *link_order,
+   bfd_byte *data,
+   bool relocatable,
+   asymbol **symbols)
 {
   bfd *input_bfd = link_order->u.indirect.section->owner;
   asection *input_section = link_order->u.indirect.section;

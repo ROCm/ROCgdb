@@ -501,7 +501,7 @@ extern bool _bfd_generic_set_section_contents
 extern int _bfd_nolink_sizeof_headers
   (bfd *, struct bfd_link_info *) ATTRIBUTE_HIDDEN;
 extern bfd_byte *_bfd_nolink_bfd_get_relocated_section_contents
-  (bfd *, struct bfd_link_info *, struct bfd_link_order *,
+  (bfd *, struct bfd_link_info *, const struct bfd_link_order *,
    bfd_byte *, bool, asymbol **) ATTRIBUTE_HIDDEN;
 extern bool _bfd_nolink_bfd_relax_section
   (bfd *, asection *, struct bfd_link_info *, bool *) ATTRIBUTE_HIDDEN;
@@ -681,17 +681,17 @@ extern bool _bfd_generic_section_already_linked
 
 /* Generic reloc_link_order processing routine.  */
 extern bool _bfd_generic_reloc_link_order
-  (bfd *, struct bfd_link_info *, asection *, struct bfd_link_order *)
+  (bfd *, struct bfd_link_info *, asection *, const struct bfd_link_order *)
   ATTRIBUTE_HIDDEN;
 
 /* Default link order processing routine.  */
 extern bool _bfd_default_link_order
-  (bfd *, struct bfd_link_info *, asection *, struct bfd_link_order *)
+  (bfd *, struct bfd_link_info *, asection *, const struct bfd_link_order *)
   ATTRIBUTE_HIDDEN;
 
 /* Count the number of reloc entries in a link order list.  */
 extern unsigned int _bfd_count_link_order_relocs
-  (struct bfd_link_order *) ATTRIBUTE_HIDDEN;
+  (const struct bfd_link_order *) ATTRIBUTE_HIDDEN;
 
 /* Final link relocation routine.  */
 extern bfd_reloc_status_type _bfd_final_link_relocate
@@ -3475,7 +3475,7 @@ bool bfd_generic_lookup_section_flags
 bfd_byte *bfd_generic_get_relocated_section_contents
    (bfd *abfd,
     struct bfd_link_info *link_info,
-    struct bfd_link_order *link_order,
+    const struct bfd_link_order *link_order,
     bfd_byte *data,
     bool relocatable,
     asymbol **symbols) ATTRIBUTE_HIDDEN;

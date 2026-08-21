@@ -13503,7 +13503,7 @@ bfd_byte *
 _bfd_elf_mips_get_relocated_section_contents
   (bfd *abfd,
    struct bfd_link_info *link_info,
-   struct bfd_link_order *link_order,
+   const struct bfd_link_order *link_order,
    bfd_byte *data,
    bool relocatable,
    asymbol **symbols)

@@ -424,9 +424,9 @@ static bool generic_link_add_symbol_list
 static bool generic_add_output_symbol
   (bfd *, size_t *psymalloc, asymbol *);
 static bool default_data_link_order
-  (bfd *, struct bfd_link_info *, asection *, struct bfd_link_order *);
+  (bfd *, struct bfd_link_info *, asection *, const struct bfd_link_order *);
 static bool default_indirect_link_order
-  (bfd *, struct bfd_link_info *, asection *, struct bfd_link_order *,
+  (bfd *, struct bfd_link_info *, asection *, const struct bfd_link_order *,
    bool);
 static bool _bfd_generic_link_output_symbols
   (bfd *, bfd *, struct bfd_link_info *, size_t *);
@@ -1924,7 +1924,7 @@ _bfd_generic_final_link (bfd *abfd, struct bfd_link_info *info)
 {
   bfd *sub;
   asection *o;
-  struct bfd_link_order *p;
+  const struct bfd_link_order *p;
   size_t outsymalloc;
   struct generic_write_global_symbol_info wginfo;
 
@@ -2439,7 +2439,7 @@ bool
 _bfd_generic_reloc_link_order (bfd *abfd,
 			       struct bfd_link_info *info,
 			       asection *sec,
-			       struct bfd_link_order *link_order)
+			       const struct bfd_link_order *link_order)
 {
   arelent *r;
 
@@ -2564,7 +2564,7 @@ bool
 _bfd_default_link_order (bfd *abfd,
 			 struct bfd_link_info *info,
 			 asection *sec,
-			 struct bfd_link_order *link_order)
+			 const struct bfd_link_order *link_order)
 {
   switch (link_order->type)
     {
@@ -2587,7 +2587,7 @@ static bool
 default_data_link_order (bfd *abfd,
 			 struct bfd_link_info *info,
 			 asection *sec,
-			 struct bfd_link_order *link_order)
+			 const struct bfd_link_order *link_order)
 {
   bfd_size_type size;
   size_t fill_size;
@@ -2648,7 +2648,7 @@ static bool
 default_indirect_link_order (bfd *output_bfd,
 			     struct bfd_link_info *info,
 			     asection *output_section,
-			     struct bfd_link_order *link_order,
+			     const struct bfd_link_order *link_order,
 			     bool generic_linker)
 {
   asection *input_section;
@@ -2796,10 +2796,10 @@ default_indirect_link_order (bfd *output_bfd,
    list.  */
 
 unsigned int
-_bfd_count_link_order_relocs (struct bfd_link_order *link_order)
+_bfd_count_link_order_relocs (const struct bfd_link_order *link_order)
 {
-  register unsigned int c;
-  register struct bfd_link_order *l;
+  unsigned int c;
+  const struct bfd_link_order *l;
 
   c = 0;
   for (l = link_order; l != NULL; l = l->next)
@@ -3506,7 +3506,7 @@ bfd_byte *
 _bfd_nolink_bfd_get_relocated_section_contents
     (bfd *abfd,
      struct bfd_link_info *link_info ATTRIBUTE_UNUSED,
-     struct bfd_link_order *link_order ATTRIBUTE_UNUSED,
+     const struct bfd_link_order *link_order ATTRIBUTE_UNUSED,
      bfd_byte *data ATTRIBUTE_UNUSED,
      bool relocatable ATTRIBUTE_UNUSED,
      asymbol **symbols ATTRIBUTE_UNUSED)

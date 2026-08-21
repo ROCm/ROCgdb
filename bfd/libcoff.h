@@ -422,7 +422,7 @@ extern int coff_sizeof_headers
 extern bool bfd_coff_reloc16_relax_section
   (bfd *, asection *, struct bfd_link_info *, bool *) ATTRIBUTE_HIDDEN;
 extern bfd_byte *bfd_coff_reloc16_get_relocated_section_contents
-  (bfd *, struct bfd_link_info *, struct bfd_link_order *,
+  (bfd *, struct bfd_link_info *, const struct bfd_link_order *,
    bfd_byte *, bool, asymbol **) ATTRIBUTE_HIDDEN;
 extern bfd_vma bfd_coff_reloc16_get_value
   (arelent *, struct bfd_link_info *, asection *) ATTRIBUTE_HIDDEN;
@@ -846,7 +846,7 @@ typedef struct
      combined_entry_type *, unsigned int);
 
   bool (*_bfd_coff_reloc16_extra_cases)
-    (bfd *, struct bfd_link_info *, struct bfd_link_order *, arelent *,
+    (bfd *, struct bfd_link_info *, const struct bfd_link_order *, arelent *,
      bfd_byte *, size_t *, size_t *);
 
   int (*_bfd_coff_reloc16_estimate)
