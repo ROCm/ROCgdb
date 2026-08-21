@@ -2,6 +2,7 @@ name: TheRock CI for rocgdb
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches:
       - amd-staging
       - amd-staging-rocgdb-*
@@ -23,6 +24,8 @@ jobs:
     outputs:
       enable_therock_ci: ${{ steps.configure.outputs.enable_therock_ci }}
       build_runs_on: ${{ steps.runner.outputs.build_runs_on }}
+      test_families: ${{ steps.families.outputs.test_families }}
+      artifact_group: ${{ steps.families.outputs.artifact_group }}
     steps:
       - name: "Checking out repository"
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -36,6 +39,16 @@ jobs:
       - name: Select build runner
         id: runner
         run: python3 .github/scripts/select_runner.py build_runs_on
+
+      - name: Select GPU test families
+        id: families
+        run: |
+          echo 'artifact_group=gfx94X' >> $GITHUB_OUTPUT
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'ci:run-all-archs') }}" == "true" ]]; then
+            echo 'test_families=["gfx94X","gfx90a","gfx950","gfx110X","gfx1151","gfx120X"]' >> $GITHUB_OUTPUT
+          else
+            echo 'test_families=["gfx94X"]' >> $GITHUB_OUTPUT
+          fi
 
   resolve:
     name: Resolve TheRock references
@@ -63,10 +76,11 @@ jobs:
     uses: ./.github/workflows/therock-ci-linux.yml
     with:
       amdgpu_families: dcgpu-all;dgpu-all;igpu-all
-      artifact_group: gfx94X
+      artifact_group: ${{ needs.setup.outputs.artifact_group }}
       build_runs_on: ${{ needs.setup.outputs.build_runs_on }}
       therock_commit_ref: ${{ needs.resolve.outputs.therock_commit_ref }}
       build_image: ${{ needs.resolve.outputs.build_image }}
+      # Multi-arch builds cannot use the default bundle name (derived from amdgpu_families).
       extra_cmake_options: >
         -DTHEROCK_AMDGPU_DIST_BUNDLE_NAME=multiarch
         -DTHEROCK_ENABLE_ALL=OFF
@@ -86,12 +100,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        amdgpu_family:
-          - gfx94X
+        amdgpu_family: ${{ fromJSON(needs.setup.outputs.test_families) }}
     uses: ./.github/workflows/therock-test-packages.yml
     with:
       amdgpu_families: ${{ matrix.amdgpu_family }}
-      artifact_group: gfx94X
+      artifact_group: ${{ needs.setup.outputs.artifact_group }}
       therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
       artifact_run_id: ${{ github.run_id }}
       projects_to_test: rocgdb-gpu
@@ -105,7 +118,7 @@ jobs:
     uses: ./.github/workflows/therock-test-packages.yml
     with:
       amdgpu_families: gfx94X
-      artifact_group: gfx94X
+      artifact_group: ${{ needs.setup.outputs.artifact_group }}
       therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
       artifact_run_id: ${{ github.run_id }}
       projects_to_test: rocgdb-cpu
@@ -118,8 +131,9 @@ jobs:
       contents: read
     uses: ./.github/workflows/therock-test-packages.yml
     with:
+      # gfx942 is intentional: we only have a gfx942 corefile runner for rocgdb corefile testing.
       amdgpu_families: gfx942
-      artifact_group: gfx94X
+      artifact_group: ${{ needs.setup.outputs.artifact_group }}
       therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
       artifact_run_id: ${{ github.run_id }}
       projects_to_test: rocgdb-corefile
