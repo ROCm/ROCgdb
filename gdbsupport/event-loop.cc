@@ -521,7 +521,7 @@ handle_file_event (file_handler *file_ptr, int ready_mask)
 	  if (mask & POLLERR)
 	    warning (_("Error detected on fd %d"), file_ptr->fd);
 	  if (mask & POLLNVAL)
-	    warning (_("Invalid or non-`poll'able fd %d"),
+	    warning (_("Invalid or non-\"poll\"able fd %d"),
 		     file_ptr->fd);
 	  file_ptr->error = 1;
 	}
@@ -546,7 +546,7 @@ handle_file_event (file_handler *file_ptr, int ready_mask)
   if (mask != 0)
     {
       event_loop_ui_debug_printf (file_ptr->is_ui,
-				  "invoking fd file handler `%s`",
+				  "invoking fd file handler \"%s\"",
 				  file_ptr->name.c_str ());
       file_ptr->proc (file_ptr->error, file_ptr->client_data);
     }
