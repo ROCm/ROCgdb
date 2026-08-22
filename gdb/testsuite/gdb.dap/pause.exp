@@ -15,6 +15,9 @@
 
 # Test "pause" in DAP.
 
+# PR dap/34548
+require {!istarget "*-*-solaris2*"}
+
 require allow_dap_tests
 
 load_lib dap-support.exp
