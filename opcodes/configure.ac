@@ -96,7 +96,7 @@ BFD_64_BIT
 AC_SUBST(HDEFINES)
 AC_PROG_INSTALL
 
-AC_CHECK_DECLS([basename, stpcpy])
+AC_CHECK_DECLS([asprintf, basename, snprintf, stpcpy, strtoull, vsnprintf])
 
 # Check if sigsetjmp is available.  Using AC_CHECK_FUNCS won't do
 # since sigsetjmp might only be defined as a macro.
