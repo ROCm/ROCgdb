@@ -501,6 +501,42 @@ proc hip_devices_support_debug_multi_process {} {
     return 1
 }
 
+# Return true if a CPU thread can write to a __device__ global's
+# storage (the address obtained via hipGetSymbolAddress).
+
+gdb_caching_proc hip_devices_support_host_access_to_global {} {
+    if {![gdb_simple_compile host_access_to_global {
+	    #include <hip/hip_runtime.h>
+
+	    __device__ int global = 0;
+
+	    __global__ void kern () {}
+
+	    int __attribute__ ((optnone))
+	    main ()
+	    {
+	      kern<<<1, 1>>> ();
+	      if (hipDeviceSynchronize () != hipSuccess)
+		return 1;
+
+	      int *dev_global;
+	      if (hipGetSymbolAddress (reinterpret_cast<void **> (&dev_global),
+				       global))
+		return 2;
+
+	      /* This store faults on GPUs whose device memory is not
+		 host-accessible.  */
+	      *static_cast<volatile int *> (dev_global) = 8;
+	      return 0;
+	    }
+	} executable hip]} {
+	return 0
+    }
+
+    set result [log_host_exec "$obj"]
+    return [expr {[lindex $result 0] == 0}]
+}
+
 # Helpers below gate cooperative-group debugging tests, i.e. tests that
 # debug kernels launched with hipLaunchCooperativeKernel and
 # synchronized via cooperative_groups::this_grid ().sync ().
