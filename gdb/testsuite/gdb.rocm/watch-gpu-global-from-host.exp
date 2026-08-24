@@ -20,6 +20,11 @@ load_lib rocm.exp
 
 require allow_hip_tests
 
+# This test writes to a __device__ global's storage from a CPU thread,
+# which only works where that memory is host-accessible (an APU, or
+# XNACK/HMM unified memory).  Skip it on GPUs that cannot do this.
+require hip_devices_support_host_access_to_global
+
 standard_testfile .cpp
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
