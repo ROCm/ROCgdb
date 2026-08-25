@@ -7,6 +7,11 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
+- Improve "maint print address-spaces" command to display properties
+  of address spaces supported by an architecture.  For each address
+  space, print its name, DWARF id, address size, null address, and
+  access class.
+
 - The "catch hiperr" feature is now exposed to MI too, with a new
   `-catch-hiperr` command and related fields in `*stopped` records.
   See the "HIP Runtime Error" subsection of the "GDB/MI Catchpoint
