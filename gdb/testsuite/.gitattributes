@@ -1,0 +1,4 @@
+# -*- conf -*-
+
+# Binary format.
+*.bz2  binary

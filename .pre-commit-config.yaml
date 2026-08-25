@@ -126,7 +126,8 @@ repos:
         name: *id2
         language: unsupported_script
         entry: gdb/contrib/check-whitespace-pre-commit.py
-        types: ['text']
+        # Don't filter files on types, allowing this hook to see same files as
+        # git usage outside pre-commit.  Instead, filter files in .gitignore.
         files: *gdb_files
       - id: &id3 pre-commit-setup
         name: *id3
