@@ -23,7 +23,10 @@
 
 #include "xtensa-isa.h"
 
-#define MAX_ISTACK 12
+/* Must hold the largest multi-instruction widening expansion from
+   widen_spec_list in xtensa-relax.c.  Currently that is the loopgtz
+   + L32R sequence (13 entries including LITERAL and LABEL).  */
+#define MAX_ISTACK 16
 #define MAX_INSN_ARGS 64
 
 enum itype_enum

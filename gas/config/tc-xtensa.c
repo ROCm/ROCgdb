@@ -12604,7 +12604,9 @@ void
 istack_push (IStack *stack, TInsn *insn)
 {
   int rec = stack->ninsn;
-  gas_assert (!istack_full (stack));
+  if (istack_full (stack))
+    as_fatal (_("internal error: instruction stack overflow; "
+		"increase MAX_ISTACK"));
   stack->insn[rec] = *insn;
   stack->ninsn++;
 }
@@ -12618,7 +12620,9 @@ istack_push_space (IStack *stack)
 {
   int rec = stack->ninsn;
   TInsn *insn;
-  gas_assert (!istack_full (stack));
+  if (istack_full (stack))
+    as_fatal (_("internal error: instruction stack overflow; "
+		"increase MAX_ISTACK"));
   insn = &stack->insn[rec];
   tinsn_init (insn);
   stack->ninsn++;
