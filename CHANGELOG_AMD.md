@@ -5,14 +5,16 @@ Full documentation for ROCgdb is available at
 
 ## ROCgdb-X for ROCm-next
 
-## ROCgdb-16.3 for ROCm-10.0
-
 ### Added
 
 - The "catch hiperr" feature is now exposed to MI too, with a new
   `-catch-hiperr` command and related fields in `*stopped` records.
   See the "HIP Runtime Error" subsection of the "GDB/MI Catchpoint
   Commands" section in the ROCgdb manual.
+
+## ROCgdb-16.3 for ROCm-10.0
+
+### Added
 
 - The address space operator '#' is recognized in Fortran programs too.
   This allows evaluating expressions like 'private_lane#0x08' in Fortran
