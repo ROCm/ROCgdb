@@ -2088,7 +2088,7 @@ generated_files = \
 # Flags needed to compile Python code
 PYTHON_CFLAGS = @PYTHON_CFLAGS@
 
-all: gdb$(EXEEXT) $(CONFIG_ALL) gdb-gdb.py gdb-gdb.gdb gcore gstack gdb-add-index
+all: gdb$(EXEEXT) $(CONFIG_ALL) gdb-gdb.gdb gcore gstack gdb-add-index
 	@$(MAKE) $(FLAGS_TO_PASS) DO=all "DODIRS=$(SUBDIRS)" subdir_do
 
 # Rule for compiling .c files in the top-level gdb directory.
@@ -2425,7 +2425,7 @@ clean mostlyclean: $(CONFIG_CLEAN)
 distclean: clean
 	@$(MAKE) $(FLAGS_TO_PASS) DO=distclean "DODIRS=$(CLEANDIRS)" subdir_do
 	rm -f nm.h config.status config.h stamp-h b jit-reader.h gcore gstack gstack.in stamp-nmh
-	rm -f gdb-gdb.py gdb-gdb.gdb
+	rm -f gdb-gdb.gdb
 	rm -f y.output yacc.acts yacc.tmp y.tab.h
 	rm -f config.log config.cache
 	rm -f config.lt libtool
@@ -2489,9 +2489,6 @@ gstack gcore gdb-add-index: % : %.in version.c
 	vv=`grep 'version\[\] = ' version.c | grep -o '".*"' | tr -d \"`; \
 	sed -e "s,@VERSION@,$$vv," $< > $@
 	@chmod +x $@
-
-gdb-gdb.py: $(srcdir)/gdb-gdb.py.in config.status
-	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) $@
 
 gdb-gdb.gdb: $(srcdir)/gdb-gdb.gdb.in config.status
 	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) $@

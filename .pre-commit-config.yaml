@@ -48,32 +48,25 @@ default_stages: [pre-commit]
 repos:
   # Python hooks.  Run these for (in glob notation):
   #
-  #  - gdb/gdb-gdb.py.in
   #  - gdb/*.py
   #  - gdb/python/**/*.py
   #  - gdb/testsuite/*.py
-  #
-  # Because gdb/gdb-gdb.py.in is not classified as python, we use
-  # 'types_or: [file]' to override the default type for these hooks.
   #
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 26.5.1
     hooks:
       - id: black
-        types_or: &gdb_python_types [file]
-        files: &gdb_python_files '^gdb/.*\.py(\.in)?$'
+        files: &gdb_python_files '^gdb/.*\.py$'
   - repo: https://github.com/pycqa/flake8
     rev: 7.3.0
     hooks:
       - id: flake8
-        types_or: *gdb_python_types
         files: *gdb_python_files
         args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
     rev: 9.0.0b1
     hooks:
       - id: isort
-        types_or: *gdb_python_types
         files: *gdb_python_files
         # Isort's .pre-commit-hooks.yaml sets stages, overriding default_stages,
         # so this hook needs an explicit setting.

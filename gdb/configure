@@ -33716,7 +33716,9 @@ ac_config_files="$ac_config_files gstack.in:gstack-1.in"
 
 ac_config_files="$ac_config_files gdb-add-index.in:contrib/gdb-add-index.sh"
 
-ac_config_files="$ac_config_files Makefile gdb-gdb.gdb gdb-gdb.py doc/Makefile data-directory/Makefile"
+ac_config_files="$ac_config_files Makefile gdb-gdb.gdb doc/Makefile data-directory/Makefile"
+
+ac_config_links="$ac_config_links gdb-gdb.py:gdb-gdb.py"
 
 
 cat >confcache <<\_ACEOF
@@ -34816,9 +34818,9 @@ do
     "gdb-add-index.in") CONFIG_FILES="$CONFIG_FILES gdb-add-index.in:contrib/gdb-add-index.sh" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "gdb-gdb.gdb") CONFIG_FILES="$CONFIG_FILES gdb-gdb.gdb" ;;
-    "gdb-gdb.py") CONFIG_FILES="$CONFIG_FILES gdb-gdb.py" ;;
     "doc/Makefile") CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
     "data-directory/Makefile") CONFIG_FILES="$CONFIG_FILES data-directory/Makefile" ;;
+    "gdb-gdb.py") CONFIG_LINKS="$CONFIG_LINKS gdb-gdb.py:gdb-gdb.py" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac
