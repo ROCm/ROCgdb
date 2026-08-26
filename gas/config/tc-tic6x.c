@@ -4973,7 +4973,7 @@ tic6x_output_unwinding (bool need_extab)
 	  else if (cfa_offset > 0x40)
 	    {
 	      tic6x_unwind_byte (UNWIND_OP_ADD_SP | 0x3f);
-	      tic6x_unwind_byte (UNWIND_OP_ADD_SP | (cfa_offset - 0x40));
+	      tic6x_unwind_byte (UNWIND_OP_ADD_SP | (cfa_offset - 0x40 - 1));
 	    }
 	  else
 	    {
