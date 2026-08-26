@@ -1831,9 +1831,9 @@ coff_new_section_hook (bfd * abfd, asection * section)
   /* Allocate aux records for section symbols, to store size and
      related info.
 
-     @@ The 10 is a guess at a plausible maximum number of aux entries
-     (but shouldn't be a constant).  */
-  amt = sizeof (combined_entry_type) * 10;
+     One syment plus one aux: nothing sets n_numaux above 1 on a
+     section symbol, or indexes this array past native[1].  */
+  amt = sizeof (*native) * 2;
   native = (combined_entry_type *) bfd_zalloc (abfd, amt);
   if (native == NULL)
     return false;
