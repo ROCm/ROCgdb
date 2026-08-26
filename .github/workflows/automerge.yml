@@ -8,9 +8,6 @@ on:
         description: 'Dry run (fetch and probe, but skip pushes and PR creation)'
         type: boolean
         default: false
-  pull_request:
-    types: [closed]
-    branches: [amd-staging]
 
 concurrency:
   group: gdb-automerge
@@ -19,13 +16,6 @@ concurrency:
 jobs:
   automerge-to-staging:
     runs-on: ubuntu-latest
-    if: false
-    # Remove the above and uncomment below to activate:
-    # if: |
-    #   github.event_name != 'pull_request' ||
-    #   (github.event.pull_request.merged == true &&
-    #    (contains(github.event.pull_request.labels.*.name, 'merge-testing') ||
-    #     contains(github.event.pull_request.labels.*.name, 'merge-conflict')))
     permissions:
       contents: write
       pull-requests: write
@@ -45,4 +35,5 @@ jobs:
       - name: Trigger Automerge Job
         run: |
           python3 .github/scripts/automerge.py \
+            --repo "$WORKSPACE" \
             ${{ inputs.dry_run == true && '--dry-run' || '' }}
