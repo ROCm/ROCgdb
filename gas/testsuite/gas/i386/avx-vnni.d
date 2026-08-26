@@ -1,5 +1,6 @@
 #objdump: -dw
 #name: i386 AVX VNNI insns
+#warning_output: avx-vnni.e
 
 .*: +file format .*
 

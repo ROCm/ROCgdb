@@ -1,6 +1,12 @@
 .*: Assembler messages:
+.*:8: Warning: vpdpbusd: will use AVX-VNNI encoding; .*
+.*:9: Warning: vpdpbusd: will use AVX-VNNI encoding; .*
+.*:10: Warning: vpdpbusd: will use AVX-VNNI encoding; .*
 .*:15: Error: .* `vpmadd52luq'
 .*:21: Error: .* `vcvtneps2bf16y'
+.*:8: Warning: vpdpbusd: will use AVX-VNNI encoding; .*
+.*:9: Warning: vpdpbusd: will use AVX-VNNI encoding; .*
+.*:10: Warning: vpdpbusd: will use AVX-VNNI encoding; .*
 .*:15: Error: .* `vpmadd52luq'
 .*:21: Error: .* `vcvtneps2bf16y'
 #...
@@ -47,10 +53,13 @@
 [ 	]*[0-9]+[ 	]+>  \.arch \.noavx512vl
 [ 	]*[0-9]+[ 	]+> *
 [ 	]*[0-9]+[ 	]+\?\?\?\? C4E27550 	>  vpdpbusd %ymm0,%ymm1,%ymm2
+.*Warning: .*
 [ 	]*[0-9]+[ 	]+D0
 [ 	]*[0-9]+[ 	]+\?\?\?\? C4E27550 	>  vpdpbusd 0x20\(%eax\),%ymm1,%ymm2
+.*Warning: .*
 [ 	]*[0-9]+[ 	]+5020
 [ 	]*[0-9]+[ 	]+\?\?\?\? C4E27550 	>  vpdpbusd 0x100\(%eax\),%ymm1,%ymm2
+.*Warning: .*
 [ 	]*[0-9]+[ 	]+90000100 *
 [ 	]*[0-9]+[ 	]+00
 [ 	]*[0-9]+[ 	]+> *
@@ -83,10 +92,13 @@
 [ 	]*[0-9]+[ 	]+>  \.arch \.noavx512f
 [ 	]*[0-9]+[ 	]+> *
 [ 	]*[0-9]+[ 	]+\?\?\?\? C4E27550 	>  vpdpbusd %ymm0,%ymm1,%ymm2
+.*Warning: .*
 [ 	]*[0-9]+[ 	]+D0
 [ 	]*[0-9]+[ 	]+\?\?\?\? C4E27550 	>  vpdpbusd 0x20\(%eax\),%ymm1,%ymm2
+.*Warning: .*
 [ 	]*[0-9]+[ 	]+5020
 [ 	]*[0-9]+[ 	]+\?\?\?\? C4E27550 	>  vpdpbusd 0x100\(%eax\),%ymm1,%ymm2
+.*Warning: .*
 [ 	]*[0-9]+[ 	]+90000100 *
 [ 	]*[0-9]+[ 	]+00
 [ 	]*[0-9]+[ 	]+> *

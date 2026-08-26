@@ -4262,9 +4262,21 @@ install_template (const insn_template *t)
 	   || maybe_cpu (t, CpuFMA) || maybe_cpu (t, CpuF16C))
 	  && (maybe_cpu (t, CpuAVX512F) || maybe_cpu (t, CpuAVX512VL)))
 	{
-	  if (need_evex_encoding (t)
-	      || (maybe_cpu (t, CpuFMA) && !cpu_arch_flags.bitfield.cpufma)
-	      || (maybe_cpu (t, CpuF16C) && !cpu_arch_flags.bitfield.cpuf16c))
+	  bool evex = need_evex_encoding (t) || pp.encoding == encoding_egpr;
+
+	  if (!evex
+	      && ((maybe_cpu (t, CpuFMA) && !cpu_arch_flags.bitfield.cpufma)
+		  || (maybe_cpu (t, CpuF16C) && !cpu_arch_flags.bitfield.cpuf16c)))
+	    {
+	      if (!cpu_arch_isa_flags.bitfield.cpuavx512vl
+		  && !i.types[i.operands - 1].bitfield.zmmword)
+		as_warn(_("%s: will use AVX512VL encoding; use {evex} to silence"),
+			insn_name (t));
+
+	      evex = true;
+	    }
+
+	  if (evex)
 	    {
 	      i.tm.opcode_modifier.vex = 0;
 	      i.tm.cpu.bitfield.cpuavx512f = i.tm.cpu_any.bitfield.cpuavx512f;
@@ -4296,6 +4308,44 @@ install_template (const insn_template *t)
 	    i.tm.opcode_modifier.evex = 0;
 	}
     }
+
+  /* The various VNNI extensions are somewhat special:
+     - AVX512-VNNI pre-dates AVX-VNNI,
+     - AVX-VNNI-INT{8,16} have EVEX counterparts added by AVX10-V1-AUX.
+     In each case, when the former is disabled, warn about the use of a
+     potentially unexpected encoding unless
+     - a disambiguating pseudo-prefix or operand is in use, or
+     - the newer ISA extension was explicitly enabled.  */
+  if (is_cpu (t, CpuAVX_VNNI)
+      && !cpu_arch_isa_flags.bitfield.cpuavx_vnni
+      && pp.encoding != encoding_vex
+      && pp.encoding != encoding_vex3
+      && (!cpu_arch_flags.bitfield.cpuavx512_vnni
+	  || !cpu_arch_flags.bitfield.cpuavx512vl))
+    as_warn (_("%s: will use AVX-VNNI encoding; use {vex} to silence"),
+	     insn_name (t));
+
+  if (is_cpu (t, CpuAVX10_1_AUX)
+      && !cpu_arch_isa_flags.bitfield.cpuavx10_1_aux
+      && !need_evex_encoding (t)
+      && pp.encoding != encoding_egpr
+      && ((!cpu_arch_flags.bitfield.cpuavx_vnni_int8
+	   && is_cpu (t - 1, CpuAVX_VNNI_INT8))
+	  || (!cpu_arch_flags.bitfield.cpuavx_vnni_int16
+	   && is_cpu (t - 1, CpuAVX_VNNI_INT16))))
+    as_warn (_("%s: will use AVX10 encoding; use {evex} to silence"),
+	     insn_name (t));
+
+  /* CRC32 is also somewhat special, as its APX form is dependent upon only
+     APX_F.  */
+  if (t->mnem_off == MN_crc32
+      && is_cpu (t, CpuAPX_F)
+      && !cpu_arch_isa_flags.bitfield.cpuapx_f
+      && !cpu_arch_flags.bitfield.cpusse4_2
+      && !need_evex_encoding (t)
+      && pp.encoding != encoding_egpr)
+    as_warn (_("%s: will use APX encoding; use {evex} to silence"),
+	     insn_name (t));
 
   /* For CCMP and CTEST the template has EVEX.SCC in base_opcode. Move it out of
      there, to then adjust base_opcode to obtain its normal meaning.  */
