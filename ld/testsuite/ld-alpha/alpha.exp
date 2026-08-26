@@ -61,6 +61,11 @@ set alphatests {
      {emptygot.s}
      {{nm "-n" emptygot.nm}}
      "emptygot"}
+    {"got realloc after relax"
+     "-shared -relax -melf64alpha" ""
+     "" {got-realloc-a.s got-realloc-b.s}
+     {{readelf -SW got-realloc.rd}}
+     "got-realloc.so"}
 }
 
 # Not implemented yet

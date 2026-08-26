@@ -1122,6 +1122,22 @@ elf64_alpha_info_to_howto (bfd *abfd, arelent *cache_ptr,
 #define alpha_got_entry_size(r_type) \
   (r_type == R_ALPHA_TLSGD || r_type == R_ALPHA_TLSLDM ? 16 : 8)
 
+/* Return the address of the word at OFF bytes into GOTENT's got slot.
+   The got is sized repeatedly and its subsections re-merged as relaxation
+   proceeds, so check that the slot really lies inside the subsection
+   rather than writing past the end of it.  */
+
+static bfd_byte *
+alpha_got_slot (struct alpha_elf_got_entry *gotent, unsigned int off)
+{
+  struct alpha_elf_obj_tdata *td = alpha_elf_tdata (gotent->gotobj);
+
+  BFD_ASSERT (td->got->contents != NULL);
+  BFD_ASSERT (gotent->got_offset >= 0);
+  BFD_ASSERT ((bfd_vma) gotent->got_offset + off + 8 <= td->got->size);
+  return td->got->contents + gotent->got_offset + off;
+}
+
 /* This is PT_TLS segment p_vaddr.  */
 #define alpha_get_dtprel_base(info) \
   (elf_hash_table (info)->tls_sec->vma)
@@ -2561,34 +2577,15 @@ elf64_alpha_size_plt_section (struct bfd_link_info *info)
 static bool
 elf64_alpha_early_size_sections (struct bfd_link_info *info)
 {
-  bfd *i;
-  struct alpha_elf_link_hash_table * htab;
-
   if (bfd_link_relocatable (info))
     return true;
 
-  htab = alpha_elf_hash_table (info);
-  if (htab == NULL)
-    return false;
-
-  if (!elf64_alpha_size_got_sections (info, true))
-    return false;
-
-  /* Allocate space for all of the .got subsections.  */
-  i = htab->got_list;
-  for ( ; i ; i = alpha_elf_tdata(i)->got_link_next)
-    {
-      asection *s = alpha_elf_tdata(i)->got;
-      if (s->size > 0)
-	{
-	  s->contents = (bfd_byte *) bfd_zalloc (i, s->size);
-	  if (s->contents == NULL)
-	    return false;
-	  s->alloced = 1;
-	}
-    }
-
-  return true;
+  /* Size the .got subsections, but do not allocate their contents here.
+     This sizing is not final: relaxation re-runs it, and the re-merge
+     there can grow a subsection even though the table as a whole only
+     shrinks.  elf64_alpha_final_link allocates the contents once the
+     sizes have settled.  */
+  return elf64_alpha_size_got_sections (info, true);
 }
 
 /* The number of dynamic relocations required by a static relocation.  */
@@ -2840,6 +2837,12 @@ elf64_alpha_late_size_sections (struct bfd_link_info *info)
       /* It's OK to base decisions on the section name, because none
 	 of the dynobj section names depend upon the input files.  */
       name = bfd_section_name (s);
+
+      /* The .got subsection of DYNOBJ is sized along with all the other
+	 got subsections, and relaxation can still change that size.  Leave
+	 it for elf64_alpha_final_link to allocate.  */
+      if (strcmp (name, ".got") == 0)
+	continue;
 
       if (startswith (name, ".rela"))
 	{
@@ -3709,10 +3712,10 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
       htab->relax_trip = link_info->relax_trip;
 
       /* This should never fail after the initial round, since the only error
-	 is GOT overflow, and relaxation only shrinks the table.  However, we
-	 may only merge got sections during the first pass.  If we merge
-	 sections after we've created GPREL relocs, the GP for the merged
-	 section backs up which may put the relocs out of range.  */
+	 is GOT overflow, and relaxation only shrinks the table overall.
+	 However, we may only merge got sections during the first pass.  If
+	 we merge sections after we've created GPREL relocs, the GP for the
+	 merged section backs up which may put the relocs out of range.  */
       if (!elf64_alpha_size_got_sections (link_info, relax_pass == 0))
 	abort ();
       if (elf_hash_table (link_info)->dynamic_sections_created)
@@ -4313,7 +4316,7 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 	      gotent->reloc_done = 1;
 
 	      bfd_put_64 (info->output_bfd, value,
-			  sgot->contents + gotent->got_offset);
+			  alpha_got_slot (gotent, 0));
 
 	      /* If the symbol has been forced local, output a
 		 RELATIVE reloc, otherwise it will be handled in
@@ -4564,7 +4567,7 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 	      /* Note that the module index for the main program is 1.  */
 	      bfd_put_64 (info->output_bfd,
 			  !bfd_link_pic (info) && !dynamic_symbol_p,
-			  sgot->contents + gotent->got_offset);
+			  alpha_got_slot (gotent, 0));
 
 	      /* If the symbol has been forced local, output a
 		 DTPMOD64 reloc, otherwise it will be handled in
@@ -4583,7 +4586,7 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 		  value -= dtp_base;
 		}
 	      bfd_put_64 (info->output_bfd, value,
-			  sgot->contents + gotent->got_offset + 8);
+			  alpha_got_slot (gotent, 8));
 	    }
 
 	  value = (sgot->output_section->vma
@@ -4676,7 +4679,7 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 		    }
 		}
 	      bfd_put_64 (info->output_bfd, value,
-			  sgot->contents + gotent->got_offset);
+			  alpha_got_slot (gotent, 0));
 	    }
 
 	  value = (sgot->output_section->vma
@@ -4821,7 +4824,7 @@ elf64_alpha_finish_dynamic_symbol (struct bfd_link_info *info,
 
 	    /* Fill in the entry in the .got.  */
 	    bfd_put_64 (info->output_bfd, plt_addr,
-			sgot->contents + gotent->got_offset);
+			alpha_got_slot (gotent, 0));
 	  }
     }
   else if (alpha_elf_dynamic_symbol_p (h, info))
@@ -5236,6 +5239,25 @@ elf64_alpha_final_link (bfd *abfd, struct bfd_link_info *info)
 	}
     }
 
+  /* Allocate the contents of the .got subsections.  This is left until
+     now because the sizes are not final until relaxation has finished
+     with them: a re-merge there can grow a subsection even though the
+     got as a whole only shrinks.  */
+  for (bfd *i = htab->got_list;
+       i != NULL;
+       i = alpha_elf_tdata (i)->got_link_next)
+    {
+      asection *sgot = alpha_elf_tdata (i)->got;
+
+      if (sgot->size > 0)
+	{
+	  sgot->contents = (bfd_byte *) bfd_zalloc (i, sgot->size);
+	  if (sgot->contents == NULL)
+	    return false;
+	  sgot->alloced = 1;
+	}
+    }
+
   /* Invoke the regular ELF backend linker to do all the work.  */
   if (! _bfd_elf_final_link (abfd, info))
     return false;
@@ -5243,8 +5265,8 @@ elf64_alpha_final_link (bfd *abfd, struct bfd_link_info *info)
   /* Now write out the computed sections.  */
 
   /* The .got subsections...  */
-  bfd *i, *dynobj = elf_hash_table(info)->dynobj;
-  for (i = htab->got_list;
+  bfd *dynobj = elf_hash_table(info)->dynobj;
+  for (bfd *i = htab->got_list;
        i != NULL;
        i = alpha_elf_tdata(i)->got_link_next)
     {
