@@ -368,6 +368,13 @@ coff_real_object_p (bfd *abfd,
     }
 
   _bfd_coff_free_symbols (abfd);
+
+  if (obj_pe (abfd) && pe_data (abfd)->comdat_hash != NULL)
+    {
+      htab_delete (pe_data (abfd)->comdat_hash);
+      pe_data (abfd)->comdat_hash = NULL;
+    }
+
   return coff_object_cleanup;
 
  fail:
