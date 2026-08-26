@@ -2697,10 +2697,14 @@ _bfd_elf_link_assign_sym_version (struct elf_link_hash_entry *h, void *data)
   if (p != NULL && h->verinfo.vertree == NULL)
     {
       struct bfd_elf_version_tree *t;
+      bool default_version = false;
 
       ++p;
       if (*p == ELF_VER_CHR)
-	++p;
+	{
+	  default_version = true;
+	  ++p;
+	}
 
       /* If there is no version string, we can just return out.  */
       if (*p == '\0')
@@ -2714,6 +2718,52 @@ _bfd_elf_link_assign_sym_version (struct elf_link_hash_entry *h, void *data)
 
       if (hide)
 	obed->elf_backend_hide_symbol (info, h, true);
+      else if (default_version)
+	{
+	  /* Get the unversioned symbol for the default version.  */
+	  struct elf_link_hash_entry *h_u;
+	  size_t size = p - h->root.root.string - 1;
+	  char *unversioned_name = bfd_malloc (size);
+	  if (unversioned_name == NULL)
+	    {
+	      sinfo->failed = true;
+	      return false;
+	    }
+	  memcpy (unversioned_name, h->root.root.string, size - 1);
+	  unversioned_name[size - 1] = 0;
+	  h_u = elf_link_hash_lookup (elf_hash_table (info),
+				      unversioned_name, false,
+				      false, false);
+
+	  /* There must be an unversioned symbol. */
+	  if (h_u == NULL)
+	    abort ();
+
+	  while (h_u->root.type == bfd_link_hash_indirect
+		 || h_u->root.type == bfd_link_hash_warning)
+	    h_u = (struct elf_link_hash_entry *) h_u->root.u.i.link;
+
+	  /* Verify that there is only one default version.  */
+	  if (h_u->versioned != versioned_hidden
+	      && h_u->verinfo.vertree != h->verinfo.vertree)
+	    {
+	      /* xgettext:c-format */
+	      info->callbacks->einfo
+		(_("%X%P: %pB: multiple default versions of `%s': "
+		   "`%s' in %pB and `%s' in %pB.\n"),
+		 info->output_bfd, unversioned_name,
+		 h_u->verinfo.vertree->name,
+		 h_u->root.u.def.section->owner,
+		 h->verinfo.vertree->name,
+		 h->root.u.def.section->owner);
+	      bfd_set_error (bfd_error_bad_value);
+	      sinfo->failed = true;
+	      free (unversioned_name);
+	      return false;
+	    }
+
+	  free (unversioned_name);
+	}
 
       /* If we are building an application, we need to create a
 	 version node for this version.  */
