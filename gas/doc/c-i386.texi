@@ -221,6 +221,7 @@ accept various extension mnemonics.  For example,
 @code{avx10.1/256},
 @code{avx10.1/128},
 @code{avx10.1aux},
+@code{avx10v1aux},
 @code{user_msr},
 @code{msr_imm},
 @code{apx_f},
@@ -1719,7 +1720,8 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.avx512_vpopcntdq} @tab @samp{.avx512_vbmi2} @tab @samp{.avx512_vnni}
 @item @samp{.avx512_bitalg} @tab @samp{.avx512_bf16} @tab @samp{.avx512_vp2intersect}
 @item @samp{.tdx} @tab @samp{.avx_vnni} @tab @samp{.avx512_fp16} @tab @samp{avx512_bmm}
-@item @samp{.avx10.1} @tab @samp{.avx10.1aux} @tab @samp{.avx10.2} @tab @samp{.clwb}
+@item @samp{.avx10.1} @tab @samp{.avx10.1aux} @tab @samp{.avx10v1aux} @tab @samp{.avx10.2}
+@item @samp{.clwb}
 @item @samp{.rdpid} @tab @samp{.ptwrite} @tab @samp{.ibt} @tab @samp{.prefetchi}
 @item @samp{.cmpccxadd} @tab @samp{.wrmsrns} @tab @samp{.msrlist} @tab @samp{.se1}
 @item @samp{.avx_ne_convert} @tab @samp{.rao_int} @tab @samp{.fred} @tab @samp{.lkgs}
