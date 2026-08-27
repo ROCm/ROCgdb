@@ -2113,6 +2113,13 @@ free_dwo_info (void)
   first_dwo_info = NULL;
 }
 
+static bool
+is_dwo_section (const struct dwarf_section *section)
+{
+  size_t len = strlen (section->name);
+  return len >= 4 && memcmp (section->name + len - 4, ".dwo", 4) == 0;
+}
+
 /* Ensure that START + UVALUE is less than END.
    Return an adjusted UVALUE if necessary to ensure this relationship.  */
 
@@ -3884,8 +3891,7 @@ read_and_display_attr_value (unsigned long attribute,
     case DW_FORM_strx4:
       if (!do_loc)
 	{
-	  const char *suffix = section ? strrchr (section->name, '.') : NULL;
-	  bool dwo = suffix && strcmp (suffix, ".dwo") == 0;
+	  bool dwo = is_dwo_section (section);
 	  const char *strng;
 
 	  strng = fetch_indexed_string (uvalue, this_set, offset_size, dwo,
@@ -3944,8 +3950,7 @@ read_and_display_attr_value (unsigned long attribute,
       if (!do_loc)
 	{
 	  uint64_t base, idx;
-	  const char *suffix = strrchr (section->name, '.');
-	  bool dwo = suffix && strcmp (suffix, ".dwo") == 0;
+	  bool dwo = is_dwo_section (section);
 
 	  if (form == DW_FORM_loclistx)
 	    {
@@ -7586,11 +7591,7 @@ display_debug_macro (struct dwarf_section *section,
   unsigned char *end = start + section->size;
   unsigned char *curr = start;
   unsigned char *extended_op_buf[256];
-  bool is_dwo = false;
-  const char *suffix = strrchr (section->name, '.');
-
-  if (suffix && strcmp (suffix, ".dwo") == 0)
-    is_dwo = true;
+  bool is_dwo = is_dwo_section (section);
 
   if (is_dwo)
     {
@@ -8604,13 +8605,9 @@ display_debug_loc (struct dwarf_section *section, void *file)
   int locs_sorted = 1;
   unsigned char *next = start, *vnext = vstart;
   unsigned int *array = NULL;
-  const char *suffix = strrchr (section->name, '.');
-  bool is_dwo = false;
+  bool is_dwo = is_dwo_section (section);
   bool is_loclists = strstr (section->name, "debug_loclists") != NULL;
   uint64_t next_header_offset = 0;
-
-  if (suffix && strcmp (suffix, ".dwo") == 0)
-    is_dwo = true;
 
   bytes = section->size;
 
@@ -9266,9 +9263,7 @@ display_debug_str_offsets (struct dwarf_section *section,
   unsigned char *end = start + section->size;
   unsigned char *curr = start;
   uint64_t debug_str_offsets_hdr_len;
-
-  const char *suffix = strrchr (section->name, '.');
-  bool dwo = suffix && strcmp (suffix, ".dwo") == 0;
+  bool dwo = is_dwo_section (section);
 
   if (dwo)
     load_debug_section_with_follow (str_dwo, file);
