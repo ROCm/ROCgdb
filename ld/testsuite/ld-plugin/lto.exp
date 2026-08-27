@@ -275,6 +275,73 @@ set lto_link_tests [list \
    {} \
    "libcommon-2.a" \
   ] \
+  [list \
+   "Build pr34570a.exe" \
+   "-flto" \
+   "-flto -fcommon" \
+   {pr34570a.c pr34570b.c} \
+   {{readelf {-s --wide} pr34570a.d}} \
+   "pr34570a.exe" \
+  ] \
+  [list \
+   "Build pr34570b.exe" \
+   "-flto" \
+   "-flto -fcommon" \
+   {pr34570b.c pr34570a.c} \
+   {{readelf {-s --wide} pr34570a.d}} \
+   "pr34570b.exe" \
+  ] \
+  [list \
+   "Build pr34570a.o" \
+   "" \
+   "-O2 -fcommon -flto $lto_no_fat" \
+   {pr34570a.c} \
+   {} \
+   "" \
+   "c" \
+  ] \
+  [list \
+   "Build pr34570b.o" \
+   "" \
+   "-O2 -fcommon -fno-lto" \
+   {pr34570b.c} \
+   {} \
+   "" \
+   "c" \
+  ] \
+  [list \
+   "Build pr34570c.o" \
+   "" \
+   "-O2 -fcommon -flto $lto_no_fat" \
+   {pr34570c.c} \
+   {} \
+   "" \
+   "c" \
+  ] \
+  [list \
+   "Build pr34570c.exe" \
+   "-flto tmpdir/pr34570a.o tmpdir/pr34570b.o" \
+   "" \
+   {dummy.c} \
+   {{readelf {-s --wide} pr34570b.d}} \
+   "pr34570c.exe" \
+  ] \
+  [list \
+   "Build pr34570d.exe" \
+   "-flto tmpdir/pr34570b.o tmpdir/pr34570a.o" \
+   "" \
+   {dummy.c} \
+   {{readelf {-s --wide} pr34570b.d}} \
+   "pr34570d.exe" \
+  ] \
+  [list \
+   "Build pr34570e.exe" \
+   "-flto tmpdir/pr34570c.o tmpdir/pr34570b.o" \
+   "-flto -fcommon" \
+   {dummy.c} \
+   {{readelf {-s --wide} pr34570c.d}} \
+   "pr34570e.exe" \
+  ] \
 ]
 
 if { [at_least_gcc_version 10 0] && [check_lto_shared_available] } {

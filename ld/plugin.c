@@ -860,6 +860,8 @@ get_symbols (const void *handle, int nsyms, struct ld_plugin_symbol *syms,
 	  else if (owner_sec->owner != NULL
 		   && (owner_sec->owner->flags & DYNAMIC) != 0)
 	    res = LDPR_RESOLVED_DYN;
+	  else if (blhe->type == bfd_link_hash_common)
+	    res = LDPR_PREVAILING_DEF;
 	  else
 	    res = LDPR_RESOLVED_EXEC;
 	}
@@ -871,8 +873,6 @@ get_symbols (const void *handle, int nsyms, struct ld_plugin_symbol *syms,
 	res = LDPR_PREEMPTED_REG;
       else if (owner_sec->owner == abfd)
 	res = LDPR_PREVAILING_DEF_IRONLY;
-
-      /* Was originally def, weakdef, or common, but has been pre-empted.  */
       else if (is_ir_dummy_bfd (owner_sec->owner))
 	res = LDPR_PREEMPTED_IR;
       else
