@@ -954,7 +954,7 @@ proc gdb_continue_to_breakpoint {name {location_pattern .*}} {
 
     set kfail_pattern "Process record does not support instruction 0xfae64 at.*"
     return [gdb_test_multiple "continue" $full_name {
-	-re "(?:Breakpoint|Temporary breakpoint) .* (at|in) $location_pattern\r\n$gdb_prompt $" {
+	-re "(?:Breakpoint|Temporary breakpoint) .*( at| in|,) $location_pattern\r\n$gdb_prompt $" {
 	    pass $full_name
 	}
 	-re "(?:$kfail_pattern)\r\n$gdb_prompt $" {
