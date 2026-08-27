@@ -454,6 +454,21 @@ def main() -> None:
         print(f"Fetching origin/{TARGET_BRANCH}…")
         run_net(["git", "fetch", "origin", TARGET_BRANCH], cwd=repo)
 
+        # Unshallow if needed so that merge-base can find the common ancestor
+        # between origin/TARGET_BRANCH and sourceware/UPSTREAM_BRANCH.
+        is_shallow = (
+            run(
+                ["git", "rev-parse", "--is-shallow-repository"],
+                cwd=repo,
+            ).stdout.strip()
+            == "true"
+        )
+        if is_shallow:
+            print(f"Repo is shallow; unshallowing origin/{TARGET_BRANCH}…")
+            run_net(
+                ["git", "fetch", "--unshallow", "origin", TARGET_BRANCH], cwd=repo
+            )
+
         # ------------------------------------------------------------------ #
         # 5. Determine the commit range to merge.                             #
         # ------------------------------------------------------------------ #
