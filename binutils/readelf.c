@@ -16597,24 +16597,13 @@ static bool
 uncompress_section_contents (bool              is_zstd,
 			     unsigned char **  buffer,
 			     uint64_t          uncompressed_size,
-			     uint64_t *        size,
-			     uint64_t          file_size)
+			     uint64_t *        size)
 {
   uint64_t compressed_size = *size;
   unsigned char *compressed_buffer = *buffer;
   unsigned char *uncompressed_buffer = NULL;
   z_stream strm;
   int rc;
-
-  /* Similar to bfd_section_size_insane() in the BFD library we expect an
-     upper limit of ~10x compression.  Any compression larger than that is
-     thought to be due to fuzzing of the compression header.  */
-  if (uncompressed_size > file_size * 10)
-    {
-      error (_("Uncompressed section size is suspiciously large: 0x%" PRIu64 "\n"),
-	       uncompressed_size);
-      goto fail;
-    }
 
   uncompressed_buffer = xmalloc (uncompressed_size);
 
@@ -16732,7 +16721,7 @@ maybe_expand_or_relocate_section (Elf_Internal_Shdr *  section,
       if (uncompressed_size)
 	{
 	  if (uncompress_section_contents (is_zstd, &start, uncompressed_size,
-					   &new_size, filedata->file_size))
+					   &new_size))
 	    {
 	      *decomp_buf = start;
 	      section_size = new_size;
@@ -17315,7 +17304,7 @@ load_specific_debug_section (enum dwarf_section_display_enum  debug,
       if (uncompressed_size)
 	{
 	  if (uncompress_section_contents (is_zstd, &start, uncompressed_size,
-					   &size, filedata->file_size))
+					   &size))
 	    {
 	      /* Free the compressed buffer, update the section buffer
 		 and the section size if uncompress is successful.  */
