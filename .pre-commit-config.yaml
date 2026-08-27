@@ -64,7 +64,7 @@ repos:
         files: *gdb_python_files
         args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
-    rev: 9.0.0b1
+    rev: 8.0.1
     hooks:
       - id: isort
         files: *gdb_python_files
@@ -107,7 +107,7 @@ repos:
     rev: v1.38.0
     hooks:
       - id: yamllint
-        files: '^\.pre-commit-config.yaml$'
+        files: &pre_commit_config_file '^\.pre-commit-config.yaml$'
         # By default warnings don't cause yamllint to return non-zero, so they:
         # - don't cause the hook to fail, and
         # - are hidden unless pre-commit runs in verbose mode.
@@ -162,6 +162,13 @@ repos:
         # provide the dependency, which may be non-trivial.
         entry: gdb/contrib/shellcheck.sh
         stages: [manual]
+      - id: &id6 pre-commit-config-check
+        name: *id6
+        language: python
+        entry: gdb/contrib/pre-commit.py
+        args: [--config-check]
+        additional_dependencies: ["pyyaml"]
+        files: *pre_commit_config_file
 
 # Local Variables:
 # indent-tabs-mode: nil
