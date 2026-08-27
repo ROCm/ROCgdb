@@ -185,7 +185,7 @@ jobs:
       test_options: "--optimization='-O3 -flto'"
 
   test-gpu-check-read1:
-    name: Test GPU (check-read1)
+    name: Test check-read1
     needs: [setup, therock-build-linux]
     if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
     permissions:
@@ -199,7 +199,7 @@ jobs:
       test_options: "--check-type check-read1"
 
   test-gpu-check-readmore:
-    name: Test GPU (check-readmore)
+    name: Test check-readmore
     needs: [setup, therock-build-linux]
     if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
     permissions:
