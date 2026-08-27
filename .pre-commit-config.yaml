@@ -108,6 +108,11 @@ repos:
     hooks:
       - id: yamllint
         files: '^\.pre-commit-config.yaml$'
+        # By default warnings don't cause yamllint to return non-zero, so they:
+        # - don't cause the hook to fail, and
+        # - are hidden unless pre-commit runs in verbose mode.
+        # Enable strict mode to make sure we see and fix warnings.
+        args: [--strict]
 
   # Local hooks.
   - repo: local
