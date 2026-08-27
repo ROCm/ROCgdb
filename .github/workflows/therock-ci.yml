@@ -138,6 +138,100 @@ jobs:
       artifact_run_id: ${{ github.run_id }}
       projects_to_test: rocgdb-corefile
 
+  # Extended test configurations. These reuse the single build from
+  # therock-build-linux (no rebuild) and fan out in parallel with each other
+  # and with the standard tests, all gated on a successful build.
+  #
+  # The two optimization jobs (test-gpu-o3, test-gpu-lto) follow the same
+  # test_families matrix as test-gpu, so with ci:run-all-archs each adds up
+  # to six GPU jobs (one per architecture family). The check-type and hip
+  # board jobs run on gfx94X only.
+  test-gpu-o3:
+    name: Test GPU (-O3)
+    needs: [setup, therock-build-linux]
+    if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        amdgpu_family: ${{ fromJSON(needs.setup.outputs.test_families) }}
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      amdgpu_families: ${{ matrix.amdgpu_family }}
+      artifact_group: ${{ needs.setup.outputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-gpu,rocgdb-corefile
+      test_options: "--optimization=-O3"
+
+  test-gpu-lto:
+    name: Test GPU (-O3 -flto)
+    needs: [setup, therock-build-linux]
+    if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        amdgpu_family: ${{ fromJSON(needs.setup.outputs.test_families) }}
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      amdgpu_families: ${{ matrix.amdgpu_family }}
+      artifact_group: ${{ needs.setup.outputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-gpu,rocgdb-corefile
+      test_options: "--optimization='-O3 -flto'"
+
+  test-gpu-check-read1:
+    name: Test GPU (check-read1)
+    needs: [setup, therock-build-linux]
+    if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      amdgpu_families: gfx94X
+      artifact_group: ${{ needs.setup.outputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--check-type check-read1"
+
+  test-gpu-check-readmore:
+    name: Test GPU (check-readmore)
+    needs: [setup, therock-build-linux]
+    if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      amdgpu_families: gfx94X
+      artifact_group: ${{ needs.setup.outputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--check-type check-readmore"
+
+  test-gpu-hip-board:
+    name: Test GPU (hip board)
+    needs: [setup, therock-build-linux]
+    if: ${{ needs.setup.outputs.enable_therock_ci == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      amdgpu_families: gfx94X
+      artifact_group: ${{ needs.setup.outputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-gpu
+      test_options: >-
+        --runtestflags=--target_board=hip
+        --tests gdb.base/attach.exp gdb.base/start.exp gdb.base/callfuncs.exp
+        gdb.base/consecutive-step-over.exp gdb.base/ending-run.exp
+        gdb.base/finish.exp gdb.base/hbreak.exp gdb.base/signals.exp
+        gdb.base/step-test.exp gdb.base/watchpoint.exp
+
   therock_ci_summary:
     name: TheRock CI Summary
     if: always()
@@ -147,6 +241,11 @@ jobs:
       - test-gpu
       - test-cpu
       - test-corefile
+      - test-gpu-o3
+      - test-gpu-lto
+      - test-gpu-check-read1
+      - test-gpu-check-readmore
+      - test-gpu-hip-board
     runs-on: ubuntu-24.04
     steps:
       - name: Output failed jobs
