@@ -151,6 +151,17 @@ repos:
         language: unsupported_script
         entry: gdb/contrib/check-file-mode.sh
         files: *gdb_files
+      - id: &id5 shellcheck
+        name: *id5
+        files: '^(gdb|gdbsupport|gdbserver)/'
+        types: ['shell']
+        language: unsupported_script
+        # The gdb/contrib/shellcheck.sh script requires shellcheck 0.11.0
+        # (preferred) or 0.10.0.  Not pinning this to a single version is a
+        # compromise to deal with the fact that users themselves need to
+        # provide the dependency, which may be non-trivial.
+        entry: gdb/contrib/shellcheck.sh
+        stages: [manual]
 
 # Local Variables:
 # indent-tabs-mode: nil
