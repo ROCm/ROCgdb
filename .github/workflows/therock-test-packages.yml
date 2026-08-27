@@ -37,7 +37,6 @@ permissions:
 
 env:
   VENV_DIR: ${{ github.workspace }}/.venv
-  OUTPUT_ARTIFACTS_DIR: "./build"
 
 jobs:
   configure_test_matrix:
@@ -85,23 +84,13 @@ jobs:
         id: configure
         run: python ./build_tools/github_actions/fetch_test_configurations.py
 
-      - name: Override rocgdb test_script to use artifact-installed script
-        # TheRock's fetch_test_configurations.py points test_rocgdb.py at its own
-        # build_tools copy. Rewrite to the script installed in the artifacts at
-        # OUTPUT_ARTIFACTS_DIR/tests/rocgdb/test_rocgdb.py.
+      - name: Set rocgdb test_script
+        # TheRock now emits the installed script path directly; no rewrite needed.
         id: patch-scripts
+        env:
+          COMPONENTS: ${{ steps.configure.outputs.components }}
         run: |
-          components='${{ steps.configure.outputs.components }}'
-          script_path="${{ env.OUTPUT_ARTIFACTS_DIR }}/tests/rocgdb/test_rocgdb.py"
-          updated=$(echo "$components" | jq -c --arg s "$script_path" '
-            map(
-              .test_script |= gsub(
-                "build_tools/github_actions/test_executable_scripts/test_rocgdb\\.py";
-                $s
-              )
-            )
-          ')
-          echo "components=$updated" >> $GITHUB_OUTPUT
+          echo "components=$COMPONENTS" >> $GITHUB_OUTPUT
 
   test_components:
     name: "Test ${{ matrix.components.job_name }}"
