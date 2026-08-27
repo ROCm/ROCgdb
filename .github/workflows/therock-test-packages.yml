@@ -13,9 +13,14 @@ on:
         required: true
       artifact_run_id:
         type: string
+      test_options:
+        type: string
+        description: 'Job-specific options appended to each component test_script.'
+        default: ''
       projects_to_test:
         type: string
-        default: "rocgdb-cpu,rocgdb-gpu,rocgdb-corefile"
+        description: 'Components to build the test matrix for.'
+        default: 'rocgdb-cpu,rocgdb-gpu,rocgdb-corefile'
   workflow_dispatch:
     inputs:
       amdgpu_families:
@@ -28,9 +33,14 @@ on:
         required: true
       artifact_run_id:
         type: string
+      test_options:
+        type: string
+        description: 'Job-specific options appended to each component test_script.'
+        default: ''
       projects_to_test:
         type: string
-        default: "rocgdb-cpu,rocgdb-gpu,rocgdb-corefile"
+        description: 'Components to build the test matrix for.'
+        default: 'rocgdb-cpu,rocgdb-gpu,rocgdb-corefile'
 
 permissions:
   contents: read
@@ -84,13 +94,32 @@ jobs:
         id: configure
         run: python ./build_tools/github_actions/fetch_test_configurations.py
 
-      - name: Set rocgdb test_script
-        # TheRock now emits the installed script path directly; no rewrite needed.
+      - name: Patch rocgdb test_script options
+        # Append caller-supplied options to each component's test_script.
+        # When test_options contains --tests, first strip any pre-existing
+        # --tests from the upstream test_script so the caller's value wins
+        # explicitly rather than relying on argparse last-wins behaviour.
         id: patch-scripts
         env:
           COMPONENTS: ${{ steps.configure.outputs.components }}
+          TEST_OPTIONS: ${{ inputs.test_options }}
         run: |
-          echo "components=$COMPONENTS" >> $GITHUB_OUTPUT
+          strip_tests=false
+          if [[ " $TEST_OPTIONS " == *" --tests "* ]]; then
+            strip_tests=true
+          fi
+          updated=$(echo "$COMPONENTS" | jq -c \
+            --arg opts "$TEST_OPTIONS" \
+            --argjson strip "$strip_tests" '
+            map(
+              .test_script |= (
+                if $strip then gsub("--tests(\\s+[^-]\\S*)*"; "") else . end
+                | if $opts != "" then . + " " + $opts else . end
+                | gsub("  +"; " ") | sub("\\s+$"; "")
+              )
+            )
+          ')
+          echo "components=$updated" >> $GITHUB_OUTPUT
 
   test_components:
     name: "Test ${{ matrix.components.job_name }}"
