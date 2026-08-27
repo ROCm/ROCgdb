@@ -6104,6 +6104,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg)
       break;
 
     case BFD_RELOC_XTENSA_ASM_EXPAND:
+    case BFD_RELOC_XTENSA_PDIFF_ULEB128:
     case BFD_RELOC_XTENSA_TLS_FUNC:
     case BFD_RELOC_XTENSA_TLS_ARG:
     case BFD_RELOC_XTENSA_TLS_CALL:
@@ -7361,6 +7362,7 @@ static void xtensa_fix_target_frags (void);
 static void xtensa_mark_narrow_branches (void);
 static void xtensa_mark_zcl_first_insns (void);
 static void xtensa_mark_difference_of_two_symbols (void);
+static void xtensa_insert_uleb128_fixes (bfd *, asection *, void *);
 static void xtensa_fix_a0_b_retw_frags (void);
 static void xtensa_fix_b_j_loop_end_frags (void);
 static void xtensa_fix_close_loop_end_frags (void);
@@ -7401,6 +7403,9 @@ xtensa_md_finish (void)
   xtensa_add_config_info ();
 
   xtensa_check_frag_count ();
+
+  if (linkrelax)
+    bfd_map_over_sections (stdoutput, xtensa_insert_uleb128_fixes, NULL);
 }
 
 struct trampoline_chain_entry
@@ -8234,11 +8239,87 @@ xtensa_mark_zcl_first_insns (void)
       }
 }
 
+/* A difference of two symbols encoded as a uleb128 value can be handed to
+   the linker as a BFD_RELOC_XTENSA_PDIFF_ULEB128 relocation: the difference
+   itself stays in the section contents and the relocation records the
+   address of the subtracted symbol, which is all the linker needs to
+   rewrite the value after relaxation.  DWARF 5 location and range lists
+   are made almost entirely of such differences, so without this the code
+   covered by them could never be relaxed.
+
+   This has to run before relaxation turns the rs_leb128 frags into plain
+   data.  Differences that cannot be represented this way are left to
+   xtensa_mark_difference_of_two_symbols.
+
+   Mark the expression symbol so xtensa_leb128_frag_size can reserve one
+   spare byte: Xtensa linker relaxation can grow code, which may push a
+   difference across a uleb128 byte boundary.  */
+
+static void
+xtensa_insert_uleb128_fixes (bfd *abfd ATTRIBUTE_UNUSED,
+			     asection *sec,
+			     void *unused ATTRIBUTE_UNUSED)
+{
+  segment_info_type *seginfo = seg_info (sec);
+  fragS *fragP;
+
+  if (seginfo == NULL || seginfo->frchainP == NULL)
+    return;
+
+  subseg_set (sec, 0);
+
+  for (fragP = seginfo->frchainP->frch_root; fragP; fragP = fragP->fr_next)
+    {
+      expressionS *exp;
+      symbolS *op_sym;
+
+      /* Non-zero fr_subtype is sleb128 (no relocation).  */
+      if (fragP->fr_type != rs_leb128 || fragP->fr_subtype != 0
+	  || fragP->fr_symbol == NULL)
+	continue;
+
+      exp = symbol_get_value_expression (fragP->fr_symbol);
+      if (exp->X_op != O_subtract)
+	continue;
+
+      op_sym = exp->X_op_symbol;
+
+      /* R_XTENSA_PDIFF_ULEB128 only encodes same-section differences.  */
+      if (S_GET_SEGMENT (exp->X_add_symbol) != S_GET_SEGMENT (op_sym))
+	continue;
+
+      /* Only code sections are relaxed.  */
+      if (!(bfd_section_flags (S_GET_SEGMENT (op_sym)) & SEC_CODE))
+	continue;
+
+      fix_new (fragP, fragP->fr_fix, 0, op_sym, 0, 0,
+	       BFD_RELOC_XTENSA_PDIFF_ULEB128);
+      symbol_get_tc (fragP->fr_symbol)->has_leb128_diff_reloc = 1;
+    }
+}
+
+/* For uleb128 diffs with R_XTENSA_PDIFF_ULEB128, reserve one spare byte so
+   linker relaxation can grow the value across one 7-bit boundary without
+   overflowing.  Growth that needs more than one extra byte still errors in
+   the linker.  frag_var already allocated sizeof_leb128 (~0, 0) bytes;
+   clamp if the value already needs that many.  */
+
+offsetT
+xtensa_leb128_frag_size (const fragS *fragP, offsetT size)
+{
+  if (fragP->fr_symbol != NULL
+      && symbol_get_tc (fragP->fr_symbol)->has_leb128_diff_reloc
+      && size < (offsetT) sizeof_leb128 (~(valueT) 0, 0))
+    size++;
+  return size;
+}
+
 
 /* When a difference-of-symbols expression is encoded as a uleb128 or
-   sleb128 value, the linker is unable to adjust that value to account for
-   link-time relaxation.  Mark all the code between such symbols so that
-   its size cannot be changed by linker relaxation.  */
+   sleb128 value and no relocation can express it, the linker is unable to
+   adjust that value to account for link-time relaxation.  Mark all the code
+   between such symbols so that its size cannot be changed by linker
+   relaxation.  */
 
 static void
 xtensa_mark_difference_of_two_symbols (void)
@@ -8249,6 +8330,9 @@ xtensa_mark_difference_of_two_symbols (void)
        expr_sym = symbol_get_tc (expr_sym)->next_expr_symbol)
     {
       expressionS *exp = symbol_get_value_expression (expr_sym);
+
+      if (symbol_get_tc (expr_sym)->has_leb128_diff_reloc)
+	continue;
 
       if (exp->X_op == O_subtract)
 	{

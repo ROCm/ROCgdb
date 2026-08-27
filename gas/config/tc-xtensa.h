@@ -297,6 +297,9 @@ typedef struct xtensa_symfield_type
 {
   unsigned int is_loop_target : 1;
   unsigned int is_branch_target : 1;
+  /* Set when a uleb128 difference got R_XTENSA_PDIFF_ULEB128, so code
+     between the symbols may still be relaxed.  */
+  unsigned int has_leb128_diff_reloc : 1;
   symbolS *next_expr_symbol;
 } xtensa_symfield_type;
 
@@ -341,6 +344,7 @@ extern int xtensa_unrecognized_line (int);
 extern bool xtensa_check_inside_bundle (void);
 extern void xtensa_handle_align (fragS *);
 extern char *xtensa_section_rename (const char *);
+extern offsetT xtensa_leb128_frag_size (const fragS *, offsetT);
 
 /* We need to set the target endianness in xtensa_init and not in md_begin.
    This is because xtensa_target_format is called before md_begin, and we
@@ -374,6 +378,7 @@ extern void xtensa_init (int, char **);
 #define md_elf_section_change_hook	xtensa_elf_section_change_hook
 #define md_finish			xtensa_md_finish
 #define md_flush_pending_output()	xtensa_flush_pending_output ()
+#define md_leb128_frag_size(frag, size)	xtensa_leb128_frag_size (frag, size)
 #define md_operand(x)
 #define TEXT_SECTION_NAME		xtensa_section_rename (".text")
 #define DATA_SECTION_NAME		xtensa_section_rename (".data")

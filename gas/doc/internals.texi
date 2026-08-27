@@ -613,8 +613,11 @@ have this type.
 This state is used to implement the DWARF ``little endian base 128''
 variable length number format.  The @code{fr_symbol} is always an expression
 symbol, as constant expressions are emitted directly.  The @code{fr_offset}
-field is used during relaxation to hold the previous size of the number so
-that we can determine if the fragment changed size.
+field is used during relaxation to hold the reserved size of the number so
+that we can determine if the fragment changed size.  If
+@code{md_leb128_frag_size} is defined, that size may be larger than the
+shortest encoding; converting the frag to fill then emits a padded LEB128
+of the reserved width.
 
 @item rs_machine_dependent
 Displacement relaxation is to be done on this frag.  The target is indicated by
@@ -1234,6 +1237,22 @@ the default implementation, to scan @code{TC_GENERIC_RELAX_TABLE}.
 @cindex md_prepare_relax_scan
 If defined, it is a C statement that is invoked prior to scanning
 the relax table.
+
+@item md_leb128_frag_size (@var{frag}, @var{size})
+@cindex md_leb128_frag_size
+If defined, GAS will call this on each relaxation pass over an
+@code{rs_leb128} frag.  @var{frag} is the frag being relaxed.
+@var{size} is the length of the shortest LEB128 encoding of the
+current value (signedness is @code{fr_subtype}).  The return value
+becomes the reserved frag size.
+
+When the frag is converted to fill, GAS writes the shortest encoding and,
+if the reserved width is larger, extends it with redundant high-order
+bytes so the encoding still represents the same value.  A target can
+use this so a later linker rewrite can replace the encoding with a
+larger value in place, up to the reserved width, without changing the
+section size.  If the macro is not defined, GAS keeps @var{size}
+unchanged.
 
 @item LINKER_RELAXING_SHRINKS_ONLY
 @cindex LINKER_RELAXING_SHRINKS_ONLY

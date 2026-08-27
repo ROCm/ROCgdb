@@ -93,6 +93,9 @@ START_RELOC_NUMBERS (elf_xtensa_reloc_type)
      RELOC_NUMBER (R_XTENSA_NDIFF8, 60)
      RELOC_NUMBER (R_XTENSA_NDIFF16, 61)
      RELOC_NUMBER (R_XTENSA_NDIFF32, 62)
+     /* Positive same-section difference encoded as uleb128; rewritten
+	in place after relaxation without changing the section size.  */
+     RELOC_NUMBER (R_XTENSA_PDIFF_ULEB128, 63)
 END_RELOC_NUMBERS (R_XTENSA_max)
 
 /* Processor-specific flags for the ELF header e_flags field.  */

@@ -461,6 +461,23 @@ cvt_frag_to_fill (segT sec ATTRIBUTE_UNUSED, fragS *fragP)
 	size = output_leb128 (fragP->fr_literal + fragP->fr_fix, value,
 			      fragP->fr_subtype);
 
+	/* Relaxation may have reserved more room than the shortest encoding
+	   needs (see md_leb128_frag_size).  Keep the reserved size by adding
+	   redundant high-order continuation bytes; inert unless a target
+	   hook grew fr_offset above the minimal encoding.  */
+	if ((offsetT) size < fragP->fr_offset)
+	  {
+	    char *p = fragP->fr_literal + fragP->fr_fix;
+	    char pad = fragP->fr_subtype && (offsetT) value < 0 ? 0x7f : 0;
+
+	    do
+	      {
+		p[size - 1] |= 0x80;
+		p[size++] = pad;
+	      }
+	    while ((offsetT) size < fragP->fr_offset);
+	  }
+
 	fragP->fr_fix += size;
 	fragP->fr_type = rs_fill;
 	fragP->fr_var = 0;
@@ -3124,6 +3141,9 @@ relax_segment (struct frag *segment_frag_root, segT segment, int pass)
 
 		  value = resolve_symbol_value (fragP->fr_symbol);
 		  size = sizeof_leb128 (value, fragP->fr_subtype);
+#ifdef md_leb128_frag_size
+		  size = md_leb128_frag_size (fragP, size);
+#endif
 		  growth = size - fragP->fr_offset;
 		  fragP->fr_offset = size;
 		}

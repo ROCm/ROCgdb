@@ -16271,7 +16271,8 @@ is_none_reloc (Filedata * filedata, unsigned int reloc_type)
 	      || reloc_type == 59  /* R_XTENSA_PDIFF32.  */
 	      || reloc_type == 60  /* R_XTENSA_NDIFF8.  */
 	      || reloc_type == 61  /* R_XTENSA_NDIFF16.  */
-	      || reloc_type == 62  /* R_XTENSA_NDIFF32.  */);
+	      || reloc_type == 62  /* R_XTENSA_NDIFF32.  */
+	      || reloc_type == 63  /* R_XTENSA_PDIFF_ULEB128.  */);
     }
   return false;
 }

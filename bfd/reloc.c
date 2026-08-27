@@ -6032,6 +6032,18 @@ ENUMDOC
   relocation types, giving full 8/16 value ranges.
 
 ENUM
+  BFD_RELOC_XTENSA_PDIFF_ULEB128
+ENUMDOC
+  Xtensa relocation to mark a positive difference of two local symbols
+  encoded as an unsigned LEB128 value.  This works like
+  BFD_RELOC_XTENSA_PDIFF32, but the linker rewrites the difference in
+  place using the number of bytes the assembler originally emitted, so
+  that the size of the containing section never changes.  Without it the
+  assembler would have to inhibit linker relaxation of all code covered
+  by such a difference, which DWARF 5 location and range lists produce
+  for virtually every function.
+
+ENUM
   BFD_RELOC_Z80_DISP8
 ENUMDOC
   8 bit signed offset in (ix+d) or (iy+d).
