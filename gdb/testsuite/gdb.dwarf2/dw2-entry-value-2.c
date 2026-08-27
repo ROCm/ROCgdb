@@ -16,6 +16,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 int var = 2;
+unsigned long long fake_data[3] = { 1, 2, 3 };
 
 static
 void bar (int *p)

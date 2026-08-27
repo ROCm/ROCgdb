@@ -2365,10 +2365,15 @@ dwarf_expr_context::execute_stack_op (gdb::array_view<const gdb_byte> expr)
 		if (trivial_entry_value (this->m_frame))
 		  {
 		    /* We can assume that DW_OP_entry_value (expr) == expr.
-		       Handle as DW_OP_regx.  */
+		       Handle DW_OP_regx, place register value on the
+		       stack.  */
+		    gdbarch *f_arch = get_frame_arch (this->m_frame);
+		    int dwarf_regnum = kind_u.dwarf_reg;
+		    int gdb_regnum
+		      = dwarf_reg_to_regnum_or_error (f_arch, dwarf_regnum);
 		    result_val
-		      = value_from_ulongest (address_type, kind_u.dwarf_reg);
-		    this->m_location = DWARF_VALUE_REGISTER;
+		      = value_from_register (address_type, gdb_regnum,
+					     this->m_frame);
 		    break;
 		  }
 
