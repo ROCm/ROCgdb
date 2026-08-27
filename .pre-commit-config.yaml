@@ -64,7 +64,7 @@ repos:
         files: *gdb_python_files
         args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
-    rev: 8.0.1
+    rev: 9.0.0
     hooks:
       - id: isort
         files: *gdb_python_files
