@@ -4548,9 +4548,7 @@ is_any_vex_encoding (const insn_template *t)
 static INLINE bool
 is_apx_evex_encoding (void)
 {
-  return i.rex2 || i.tm.opcode_space == SPACE_MAP4 || pp.has_nf
-    || (i.vex.register_specifier
-	&& (i.vex.register_specifier->reg_flags & RegRex2));
+  return i.rex2 || i.tm.opcode_space == SPACE_MAP4 || pp.has_nf;
 }
 
 static INLINE bool
@@ -4650,7 +4648,7 @@ build_evex_prefix (void)
 	register_specifier += 8;
       /* The upper 16 registers are encoded in the fourth byte of the
 	 EVEX prefix.  */
-      if (!(i.vex.register_specifier->reg_flags & RegVRex))
+      if (!(i.vex.register_specifier->reg_flags & (RegVRex | RegRex2)))
 	i.vex.bytes[3] = 0x8;
       register_specifier = ~register_specifier & 0xf;
     }
@@ -4880,9 +4878,6 @@ build_apx_evex_prefix (bool force_nd)
       gas_assert (i.rm.mode != 3);
       i.vex.bytes[2] &= ~0x04;
     }
-  if (i.vex.register_specifier
-      && i.vex.register_specifier->reg_flags & RegRex2)
-    i.vex.bytes[3] &= ~0x08;
 
   /* Encode the NDD bit of the instruction promoted from the legacy
      space. ZU shares the same bit with NDD.  */
