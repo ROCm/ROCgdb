@@ -51,6 +51,12 @@ if { [check_lto_fat_available] } {
   set no_lto "-fno-lto"
 }
 
+if { [is_elf_format] } {
+    set dummy_s "dummy-elf.s"
+} else {
+    set dummy_s "dummy.s"
+}
+
 set as_gsframe ""
 if { [gas_sframe_check] } {
     set as_gsframe "-Wa,--gsframe"
@@ -284,16 +290,21 @@ if { [at_least_gcc_version 10 0] && [check_lto_shared_available] } {
 	 "-flto -fno-common $lto_no_fat" \
 	 {pr25355.c} \
 	 [list [list "nm" "$plug_opt" "pr25355.d"]]] \
-	[list "pr28264.so" \
-	 "-shared -Wl,--version-script=pr28264.ver" \
-	 "-flto $lto_no_fat -fPIC" \
-	 {pr28264.c} \
-	 {{readelf {--dyn-syms --wide} pr28264-1.d} \
-	  {readelf {--dyn-syms --wide} pr28264-2.d} \
-	  {readelf {--dyn-syms --wide} pr28264-3.d} \
-	  {readelf {--dyn-syms --wide} pr28264-4.d}} \
-	 {pr28264.so}] \
     ]]
+
+    if { [is_elf_format] } {
+	lappend lto_link_tests [list \
+	    "pr28264.so" \
+	    "-shared -Wl,--version-script=pr28264.ver" \
+	    "-flto $lto_no_fat -fPIC" \
+	    {pr28264.c} \
+	    {{readelf {--dyn-syms --wide} pr28264-1.d} \
+	     {readelf {--dyn-syms --wide} pr28264-2.d} \
+	     {readelf {--dyn-syms --wide} pr28264-3.d} \
+	     {readelf {--dyn-syms --wide} pr28264-4.d}} \
+	    {pr28264.so}] \
+	]
+    }
 }
 
 if { [at_least_gcc_version 4 7] } {
@@ -1179,7 +1190,7 @@ run_cc_link_tests $lto_link_symbol_tests
 run_ld_link_tests [list \
   [list "PR ld/19317 (2)" \
    "-r tmpdir/pr19317.o --no-error-execstack" "" "" \
-   {dummy.s} {} "pr19317-r.o"] \
+   [list $dummy_s] {} "pr19317-r.o"] \
 ]
 
 run_ld_link_exec_tests $lto_run_tests
@@ -1456,6 +1467,7 @@ proc llvm_lto_tests {} {
     global CC_FOR_TARGET
     global CLANG_FOR_TARGET
     global llvm_plug_opt
+    global dummy_s
 
     # Skip native x32 and i?86 targets since system LLVMgold.so may not
     # be compatible with native x32 and i?86 targets binutils.
@@ -1494,7 +1506,7 @@ proc llvm_lto_tests {} {
 	    "Build pr34572a.exe" \
 	    "-flto -Wl,--start-lib tmpdir/pr34572a.o -Wl,--end-lib" \
 	    "" \
-	    {dummy.s} \
+	    [list $dummy_s] \
 	    {} \
 	    "pr34572a.exe"
 	] \
@@ -1517,7 +1529,7 @@ proc llvm_lto_tests {} {
 	    "$llvm_plug_opt --start-lib tmpdir/pr34572b.o --end-lib" \
 	    "" \
 	    "" \
-	    {dummy.s} \
+	    [list $dummy_s] \
 	    {{readelf {-sW} pr34572.rd}} \
 	    "pr34572b.exe" \
 	] \
