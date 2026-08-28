@@ -1385,4 +1385,61 @@ if { [check_lto_fat_available] } {
     }
 }
 
+# Skip native x32 and i?86 targets since system LLVMgold.so may not be
+# compatible with native x32 and i?86 targets binutils.
+if { ![istarget "x86_64-*-linux*-gnux32"]
+     && ![istarget "i?86-*-*"]
+     && [info exists CLANG_FOR_TARGET]
+     && ![string match "" $llvm_plug_opt] } {
+    set CC_FOR_TARGET_saved "$CC_FOR_TARGET"
+    set CC_FOR_TARGET "$CLANG_FOR_TARGET"
+    run_cc_link_tests [list \
+	[list \
+	    "Build pr34572a.o" \
+	    "" \
+	    "-flto" \
+	    {pr34572a.c} \
+	] \
+	[list \
+	    "Build pr34572b.o" \
+	    "" \
+	    "-flto" \
+	    {pr34572b.c} \
+	] \
+	[list \
+	    "Build pr34572a.exe" \
+	    "-flto -Wl,--start-lib tmpdir/pr34572a.o -Wl,--end-lib" \
+	    "" \
+	    {dummy.s} \
+	    {} \
+	    "pr34572a.exe"
+	] \
+    ]
+
+    if { [isnative] } {
+	if {[file exists tmpdir/pr34572a.exe]} {
+	    set exec_output [run_host_cmd "tmpdir/pr34572a.exe" ""]
+	    if [string match "PASS\n" $exec_output] then {
+		pass "Run pr34572a.exe"
+	    } else {
+		fail "Run pr34572a.exe"
+	    }
+	}
+    }
+
+    run_ld_link_tests [list \
+	[list \
+	    "Build pr34572b.exe" \
+	    "$llvm_plug_opt --start-lib tmpdir/pr34572b.o --end-lib" \
+	    "" \
+	    "" \
+	    {dummy.s} \
+	    {{readelf {-sW} pr34572.rd}} \
+	    "pr34572b.exe" \
+	] \
+    ]
+
+    set CC_FOR_TARGET "$CC_FOR_TARGET_saved"
+}
+
 restore_notify

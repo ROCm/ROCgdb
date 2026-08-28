@@ -7617,6 +7617,9 @@ lang_check (void)
       if (file->flags.claimed)
 	continue;
       input_bfd = file->the_bfd;
+      /* Don't check format of IR dummy file.  */
+      if ((input_bfd->flags & BFD_PLUGIN) != 0)
+	continue;
       compatible
 	= bfd_arch_get_compatible (input_bfd, link_info.output_bfd,
 				   command_line.accept_unknown_input_arch);
@@ -7926,17 +7929,23 @@ lang_set_flags (lang_memory_region_type *ptr, const char *flags, int invert)
 }
 
 static void
-debug_input_files (void)
+debug_file_chain (lang_statement_list_type *chain)
 {
   lang_input_statement_type *f;
 
-  for (f = &input_file_chain.head->input_statement;
+  for (f = &chain->head->input_statement;
        f != NULL;
        f = f->next_real_file)
     if (f->the_bfd)
       fprintf (stderr, "file: %s\n", f->the_bfd->filename);
     else
       fprintf (stderr, "input: %s\n", f->filename);
+}
+
+static void
+debug_input_files (void)
+{
+  debug_file_chain (&input_file_chain);
 }
 
 /* Call a function on each real input file.  This function will be
@@ -8392,8 +8401,10 @@ lang_list_remove_tail (lang_statement_list_type *destlist,
 		       lang_statement_list_type *origlist)
 {
   union lang_statement_union **savetail;
-  /* Check that ORIGLIST really is an earlier state of DESTLIST.  */
-  ASSERT (origlist->head == destlist->head);
+  /* Check that ORIGLIST really is an earlier state of DESTLIST or an
+     empty list.  */
+  ASSERT ((origlist->head == NULL && origlist->tail == &destlist->head)
+	  || origlist->head == destlist->head);
   savetail = origlist->tail;
   origlist->head = *(savetail);
   origlist->tail = destlist->tail;
