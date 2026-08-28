@@ -4548,7 +4548,7 @@ is_any_vex_encoding (const insn_template *t)
 static INLINE bool
 is_apx_evex_encoding (void)
 {
-  return i.rex2 || i.tm.opcode_space == SPACE_MAP4 || pp.has_nf;
+  return (i.rex2 & REX_B) || i.tm.opcode_space == SPACE_MAP4 || pp.has_nf;
 }
 
 static INLINE bool
@@ -4678,10 +4678,9 @@ build_evex_prefix (void)
 
   /* The fifth bit of the second EVEX byte is 1's compliment of the
      REX_R bit in VREX.  */
-  if (!(i.vrex & REX_R))
+  if (!((i.vrex | i.rex2) & REX_R))
     i.vex.bytes[1] |= 0x10;
-  else
-    vrex_used |= REX_R;
+  vrex_used |= i.vrex & REX_R;
 
   if ((i.reg_operands + i.imm_operands) == i.operands)
     {
@@ -4761,7 +4760,7 @@ build_evex_prefix (void)
   /* The third byte of the EVEX prefix.  */
   i.vex.bytes[2] = ((w << 7)
 		    | (register_specifier << 3)
-		    | 4 /* Encode the U bit.  */
+		    | (i.rex2 & REX_X ? 0 : 4) /* Encode the U bit.  */
 		    | i.tm.opcode_modifier.opcodeprefix);
 
   /* The fourth byte of the EVEX prefix.  */
@@ -4869,15 +4868,8 @@ build_apx_evex_prefix (bool force_nd)
     }
 
   build_evex_prefix ();
-  if (i.rex2 & REX_R)
-    i.vex.bytes[1] &= ~0x10;
   if (i.rex2 & REX_B)
     i.vex.bytes[1] |= 0x08;
-  if (i.rex2 & REX_X)
-    {
-      gas_assert (i.rm.mode != 3);
-      i.vex.bytes[2] &= ~0x04;
-    }
 
   /* Encode the NDD bit of the instruction promoted from the legacy
      space. ZU shares the same bit with NDD.  */
