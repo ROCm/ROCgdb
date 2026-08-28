@@ -471,7 +471,14 @@ proc_with_prefix test_no_break_on_catchpoint {} {
     gdb_test "catch exec" "Catchpoint ${::decimal} \\(exec\\)" \
 	"set catch exec, never expected to trigger"
 
-    gdb_continue_to_end
+    gdb_test_multiple "continue" "" {
+	-re "Your system does not support this type.*" {
+	    unsupported "target does not support this type of catchpoint"
+	}
+	-re "Continuing." {
+	    pass "continue until exit"
+	}
+    }
 }
 
 test_no_break_on_catchpoint
