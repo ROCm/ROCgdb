@@ -47,7 +47,6 @@ for f in "$@"; do
 	    | gdb/contrib/gdb-add-index.sh \
 	    | gdb/gdb_buildall.sh \
 	    | gdb/gdb_mbuild.sh \
-	    | gdb/po/gdbtext \
 	    | gdb/regformats/regdat.sh \
 	    | gdb/testsuite/lib/pdtrace.in)
 	    # Skip unclean files.

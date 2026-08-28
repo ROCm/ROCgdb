@@ -20,6 +20,7 @@ aclocal.m4  -whitespace
 
 *.[ly]	whitespace=space-before-tab,indent-with-non-tab,trailing-space
 *.def	whitespace=space-before-tab,indent-with-non-tab,trailing-space
+po/gdbtext  whitespace=space-before-tab,indent-with-non-tab,trailing-space
 
 # Imported files.
 exc_request.defs -whitespace
