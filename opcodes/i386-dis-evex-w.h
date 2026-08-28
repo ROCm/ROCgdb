@@ -346,6 +346,10 @@
   {
     { "vpbroadcastmw2dY",	{ XM, MaskR }, 0 },
   },
+  /* EVEX_W_0F3841 */
+  {
+    { PREFIX_TABLE (PREFIX_EVEX_0F3841_W_0) },
+  },
   /* EVEX_W_0F384A_X86_64 */
   {
     { EVEX_LEN_TABLE (EVEX_LEN_0F384A_X86_64_W_0) },
@@ -445,6 +449,10 @@
     { "vextracti32x8",	{ EXymm, XM, Ib }, PREFIX_DATA },
     { "vextracti64x4",	{ EXymm, XM, Ib }, PREFIX_DATA },
   },
+  /* EVEX_W_0F3A3D */
+  {
+    { "vunpackb",	{ XM, EXEvexXNoBcst, Ib }, NO_PREFIX },
+  },
   /* EVEX_W_0F3A42 */
   {
     { PREFIX_TABLE (PREFIX_EVEX_0F3A42_W_0) },
@@ -485,6 +493,35 @@
   {
     { "push2", { { PUSH2_POP2_Fixup, q_mode}, Eq }, 0 },
     { "push2p", { { PUSH2_POP2_Fixup, q_mode}, Eq }, 0 },
+  },
+  /* EVEX_W_MAP5_37_P_0 */
+  {
+    { "vcvtbf42hf8",	{ XM, EXxmmq }, 0 },
+  },
+  /* EVEX_W_MAP5_38 */
+  {
+    { PREFIX_TABLE (PREFIX_EVEX_MAP5_38_W_0) },
+  },
+  /* EVEX_W_MAP5_39 */
+  {
+    { PREFIX_TABLE (PREFIX_EVEX_MAP5_39_W_0) },
+  },
+  /* EVEX_W_MAP5_3A */
+  {
+    { PREFIX_TABLE (PREFIX_EVEX_MAP5_3A_W_0) },
+  },
+  /* EVEX_W_MAP5_3B */
+  {
+    { PREFIX_TABLE (PREFIX_EVEX_MAP5_3B_W_0) },
+  },
+  /* EVEX_W_MAP5_3C */
+  {
+    { PREFIX_TABLE (PREFIX_EVEX_MAP5_3C_W_0) },
+  },
+  /* EVEX_W_MAP5_3E */
+  {
+    { Bad_Opcode },
+    { PREFIX_TABLE (PREFIX_EVEX_MAP5_3E_W_1) },
   },
   /* EVEX_W_MAP5_5B_P_0 */
   {

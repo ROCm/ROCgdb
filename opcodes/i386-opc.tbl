@@ -3614,6 +3614,52 @@ vucomxs<sdh>, 0x<sdh:spfx>2e, AVX10_2, Modrm|EVexLIG|<sdh:spc1>|<sdh:vexw>|Disp8
 
 // AVX10.2 instructions end.
 
+// AVX10_V2_AUX instructions.
+
+<cvtps8:opc, bf8:39, bf8s:3b, hf8:38, hf8s:3a>
+
+vcvtps2<cvtps8><xyz>, 0xf3<cvtps8:opc>, AVX10_V2_AUX, Modrm|Map5|<xyz:attr>|<xyz:att>|VexW0|Masking|Broadcast|NoSuf, { <xyz:src>|Dword, RegXMM }
+
+vcvtbiasps2<cvtps8>, 0x<cvtps8:opc>, AVX10_V2_AUX, Modrm|Map5|Src1VVVV|VexW0|Masking|Broadcast|Disp8ShiftVL|CheckOperandSize|NoSuf, { RegXMM|RegYMM|RegZMM|Dword|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM, RegXMM }
+
+<cvtps8>
+
+<cvtrops8:opc, hf8:38, hf8s:3a>
+
+vcvtrops2<cvtrops8><xyz>, 0x66<cvtrops8:opc>, AVX10_V2_AUX, Modrm|Map5|<xyz:attr>|<xyz:att>|VexW0|Masking|Broadcast|NoSuf, { <xyz:src>|Dword, RegXMM }
+
+<cvtrops8>
+
+<hb:vexw, hf:VexW0, bf:VexW1>
+
+vcvt<hb>82ps, 0x36, AVX10_V2_AUX, Modrm|Map5|EVex128|<hb:vexw>|Masking|Disp8MemShift=2|NoSuf, { RegXMM|Dword|Unspecified|BaseIndex, RegXMM }
+vcvt<hb>82ps, 0x36, AVX10_V2_AUX, Modrm|Map5|EVex256|<hb:vexw>|Masking|Disp8MemShift=3|NoSuf, { RegXMM|Qword|Unspecified|BaseIndex, RegYMM }
+vcvt<hb>82ps, 0x36, AVX10_V2_AUX, Modrm|Map5|EVex512|<hb:vexw>|Masking|Disp8MemShift=4|NoSuf, { RegXMM|Unspecified|BaseIndex, RegZMM }
+
+vcvt<hb>82bf4s, 0xf33d, AVX10_V2_AUX, RegMem|Map5|EVex128|<hb:vexw>|Disp8MemShift=3|NoSuf, { RegXMM, RegXMM|Qword|Unspecified|BaseIndex }
+vcvt<hb>82bf4s, 0xf33d, AVX10_V2_AUX, RegMem|Map5|EVex256|<hb:vexw>|Disp8MemShift=4|NoSuf, { RegYMM, RegXMM|Unspecified|BaseIndex }
+vcvt<hb>82bf4s, 0xf33d, AVX10_V2_AUX, RegMem|Map5|EVex512|<hb:vexw>|Disp8MemShift=5|NoSuf, { RegZMM, RegYMM|Unspecified|BaseIndex }
+
+vcvt<hb>62hf8, 0x6637, AVX10_V2_AUX, Modrm|Map5|<hb:vexw>|Masking|CheckOperandSize|NoSuf, { RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+
+<hb>
+
+vcvtbf82bf6s, 0xf33e, AVX10_V2_AUX, Modrm|EVexDYN|Map5|VexW1|CheckOperandSize|NoSuf, { RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+
+vcvthf82hf6s, 0xf33c, AVX10_V2_AUX, Modrm|EVexDYN|Map5|VexW0|CheckOperandSize|NoSuf, { RegXMM|RegYMM|RegZMM, RegXMM|RegYMM|RegZMM }
+
+vcvtbf42hf8, 0x37, AVX10_V2_AUX, Modrm|Map5|EVex128|VexW0|Masking|Disp8MemShift=3|NoSuf, { RegXMM|Qword|Unspecified|BaseIndex, RegXMM }
+vcvtbf42hf8, 0x37, AVX10_V2_AUX, Modrm|Map5|EVex256|VexW0|Masking|Disp8MemShift=4|NoSuf, { RegXMM|Unspecified|BaseIndex, RegYMM }
+vcvtbf42hf8, 0x37, AVX10_V2_AUX, Modrm|Map5|EVex512|VexW0|Masking|Disp8MemShift=5|NoSuf, { RegYMM|Unspecified|BaseIndex, RegZMM }
+
+vpmovssdb, 0xf341, AVX10_V2_AUX, Modrm|EVex128|Masking|Space0F38|VexW0|Disp8MemShift=2|NoSuf, { RegXMM, RegXMM|Dword|Unspecified|BaseIndex }
+vpmovssdb, 0xf341, AVX10_V2_AUX, Modrm|EVex256|Masking|Space0F38|VexW0|Disp8MemShift=3|NoSuf, { RegYMM, RegXMM|Qword|Unspecified|BaseIndex }
+vpmovssdb, 0xf341, AVX10_V2_AUX, Modrm|EVex512|Masking|Space0F38|VexW0|Disp8MemShift=4|NoSuf, { RegZMM, RegXMM|Unspecified|BaseIndex }
+
+vunpackb, 0x3d, AVX10_V2_AUX, Modrm|Masking|Space0F3A|VexW0|Disp8ShiftVL|CheckOperandSize|NoSuf, { Imm8, RegXMM|RegYMM|RegZMM|Unspecified|BaseIndex, RegXMM|RegYMM|RegZMM }
+
+// AVX10_V2_AUX instructions end.
+
 // MOVRS instructions.
 
 prefetchrst2, 0xf18/4, MOVRS, Modrm|Anysize|IgnoreSize|NoSuf, { BaseIndex }

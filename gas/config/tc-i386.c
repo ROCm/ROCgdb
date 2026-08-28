@@ -1256,6 +1256,7 @@ static const arch_entry cpu_arch[] =
   VECARCH (avx10.1aux, AVX10_1_AUX, ANY_AVX10_1_AUX, set),
   VECARCH (avx10v1aux, AVX10_1_AUX, ANY_AVX10_1_AUX, set),
   VECARCH (avx10.2, AVX10_2, ANY_AVX10_2, set),
+  VECARCH (avx10v2aux, AVX10_V2_AUX, ANY_AVX10_V2_AUX, set),
   SUBARCH (user_msr, USER_MSR, USER_MSR, false),
   SUBARCH (apx_f, APX_F, ANY_APX_F, false),
   SUBARCH (apx_nci, APX_NCI, ANY_APX_NCI, false),

@@ -1,5 +1,7 @@
 -*- text -*-
 
+* Add support for the x86 AVX10_V2_AUX instructions.
+
 * The avr target supports .gnu_attribute 4 (Tag_GNU_AVR_VTABLE_AS).
   For details, see https://sourceware.org/PR34305
 

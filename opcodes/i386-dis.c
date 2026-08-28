@@ -1211,6 +1211,7 @@ enum
   PREFIX_EVEX_0F3838,
   PREFIX_EVEX_0F3839,
   PREFIX_EVEX_0F383A,
+  PREFIX_EVEX_0F3841_W_0,
   PREFIX_EVEX_0F384A_X86_64_W_0_L_2,
   PREFIX_EVEX_0F3852,
   PREFIX_EVEX_0F3853,
@@ -1272,6 +1273,15 @@ enum
   PREFIX_EVEX_MAP5_6D,
   PREFIX_EVEX_MAP5_6E_L_0,
   PREFIX_EVEX_MAP5_6F_X86_64,
+  PREFIX_EVEX_MAP5_36,
+  PREFIX_EVEX_MAP5_37,
+  PREFIX_EVEX_MAP5_38_W_0,
+  PREFIX_EVEX_MAP5_39_W_0,
+  PREFIX_EVEX_MAP5_3A_W_0,
+  PREFIX_EVEX_MAP5_3B_W_0,
+  PREFIX_EVEX_MAP5_3C_W_0,
+  PREFIX_EVEX_MAP5_3D,
+  PREFIX_EVEX_MAP5_3E_W_1,
   PREFIX_EVEX_MAP5_74,
   PREFIX_EVEX_MAP5_78,
   PREFIX_EVEX_MAP5_79,
@@ -1827,6 +1837,7 @@ enum
   EVEX_W_0F3835_P_2,
   EVEX_W_0F3837,
   EVEX_W_0F383A_P_1,
+  EVEX_W_0F3841,
   EVEX_W_0F384A_X86_64,
   EVEX_W_0F3859,
   EVEX_W_0F385A_L_n,
@@ -1849,6 +1860,7 @@ enum
   EVEX_W_0F3A39_L_n,
   EVEX_W_0F3A3A_L_2,
   EVEX_W_0F3A3B_L_2,
+  EVEX_W_0F3A3D,
   EVEX_W_0F3A42,
   EVEX_W_0F3A43_L_n,
   EVEX_W_0F3A70,
@@ -1860,6 +1872,13 @@ enum
   EVEX_W_MAP4_F8_P3_M_1,
   EVEX_W_MAP4_FF_R_6,
 
+  EVEX_W_MAP5_37_P_0,
+  EVEX_W_MAP5_38,
+  EVEX_W_MAP5_39,
+  EVEX_W_MAP5_3A,
+  EVEX_W_MAP5_3B,
+  EVEX_W_MAP5_3C,
+  EVEX_W_MAP5_3E,
   EVEX_W_MAP5_5B_P_0,
   EVEX_W_MAP5_6C_P_0,
   EVEX_W_MAP5_6C_P_2,
@@ -1935,6 +1954,7 @@ struct dis386 {
    "XH" => print 'h' if EVEX.W=0, EVEX.W=1 is not a valid encoding (for FP16)
    "XB" => print 'bf16' if EVEX.W=0, EVEX.W=1 is not a valid encoding
 	   (for BF16)
+   "HB" => print 'hf' if EVEX.W=0 or 'bf' if EVEX.W=1
    "XS" => print 's' if !EVEX or EVEX.W=0, EVEX.W=1 is not a valid encoding
    "XV" => print "{vex} " pseudo prefix
    "XE" => print "{evex} " pseudo prefix if no EVEX-specific functionality is
@@ -10919,6 +10939,11 @@ putop (instr_info *ins, const char *in_template, int sizeflag)
 		}
 
 	      goto case_B;
+	    }
+	  else if (l == 1 && last[0] == 'H')
+	    {
+		*ins->obufp++ = ins->vex.w ? 'b' : 'h';
+		*ins->obufp++ = 'f';
 	    }
 	  else if (l && last[0] == 'X')
 	    {
