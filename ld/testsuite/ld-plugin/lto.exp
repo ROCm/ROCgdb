@@ -1485,6 +1485,7 @@ proc llvm_lto_tests {} {
 
    if {![file exists tmpdir/pr34572a.o]
        || ![file exists tmpdir/pr34572b.o]} {
+	set CC_FOR_TARGET "$CC_FOR_TARGET_saved"
 	return
     }
 
