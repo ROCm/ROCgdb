@@ -4371,8 +4371,15 @@ install_template (const insn_template *t)
   i.opcode_length = l;
 }
 
-/* Build the VEX prefix.  */
+/* Build the VEX prefix (2- or 3-byte)
 
+   | C5h |
+   | `R3 | `vvvv | L | pp |
+
+   | C4h |
+   | `R3 | `X3 | `B3 | mmmmm |
+   | W | `vvvv | L | pp |
+*/
 static void
 build_vex_prefix (const insn_template *t)
 {
@@ -4629,8 +4636,12 @@ get_broadcast_bytes (const insn_template *t, bool diag)
   return bytes;
 }
 
-/* Build the EVEX prefix.  */
-
+/* Build the EVEX prefix (4-byte) for evex insn
+   | 62h |
+   | `R3 | `X3 | `B3 | `R4 | B4 | mmm |
+   | W | `vvvv | U | pp |
+   | z | L'L | b | `V4 | aaa |
+*/
 static void
 build_evex_prefix (void)
 {
@@ -4815,7 +4826,7 @@ build_evex_prefix (void)
 
 /* Build (2 bytes) rex2 prefix.
    | D5h |
-   | m | R4 X4 B4 | W R X B |
+   | m | R4 X4 B4 | W R3 X3 B3 |
 
    Rex2 reuses i.vex as they both encode i.tm.opcode_space in their prefixes.
  */
@@ -4830,11 +4841,20 @@ build_rex2_prefix (void)
 		    | ((i.rex | i.prefix[REX_PREFIX]) & 0xf));
 }
 
-/* Build the EVEX prefix (4-byte) for evex insn
+/* Build the EVEX prefix (4-byte) for APX insn.  Apart from the basic form
+   (see build_evex_prefix()) there are two new forms:
+
    | 62h |
-   | `R`X`B`R' | B'mmm |
-   | W | v`v`v`v | `x' | pp |
-   | z| L'L | b | `v | aaa |
+   | `R3 | `X3 | `B3 | `R4 | B4 | mmm |
+   | W | `vvvv | `X4 | pp |
+   | 00 | L | ND | `V4 | NF | 00 |
+
+   and for NCI:
+
+   | 62h |
+   | `R3 | `X3 | `B3 | `R4 | B4 | mmm |
+   | W | OSZC | `X4 | pp |
+   | 0000 | SC3 SC2 SC1 SC0 |
 */
 static bool
 build_apx_evex_prefix (bool force_nd)
