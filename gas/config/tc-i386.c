@@ -4871,28 +4871,38 @@ build_apx_evex_prefix (bool force_nd)
   if (i.rex2 & REX_B)
     i.vex.bytes[1] |= 0x08;
 
-  /* Encode the NDD bit of the instruction promoted from the legacy
-     space. ZU shares the same bit with NDD.  */
+  /* Encode the ND bit of instructions promoted from legacy space.
+     ZU shares the bit with ND.  */
   if ((i.vex.register_specifier && i.tm.opcode_space == SPACE_MAP4)
       || i.tm.opcode_modifier.operandconstraint == ZERO_UPPER
       || force_nd)
-    i.vex.bytes[3] |= 0x10;
+    {
+      /* Incoming ND and aaa bits should be 0.  */
+      know (!(i.vex.bytes[3] & 0x17));
+
+      i.vex.bytes[3] |= 0x10;
+    }
 
   /* Encode SCC and oszc flags bits.  */
   if (i.tm.opcode_modifier.operandconstraint == SCC)
     {
-      /* The default value of vvvv is 1111 and needs to be cleared.  */
-      i.vex.bytes[2] &= ~0x78;
-      i.vex.bytes[2] |= (i.oszc_flags << 3);
-      /* ND and aaa bits shold be 0.  */
+      /* Incoming ND and aaa bits should (still) be 0.  */
       know (!(i.vex.bytes[3] & 0x17));
-      /* The default value of V' is 1 and needs to be cleared.  */
+
+      /* The incoming value of vvvv is 1111, i.e. bits may need clearing.  */
+      i.vex.bytes[2] &= (i.oszc_flags << 3) | 0x87;
+      /* The incoming value of V4 is 1 and needs to be cleared.  */
       i.vex.bytes[3] = (i.vex.bytes[3] & ~0x08) | i.scc;
     }
 
   /* Encode the NF bit.  */
   if (pp.has_nf || i.tm.opcode_modifier.operandconstraint == EVEX_NF)
-    i.vex.bytes[3] |= 0x04;
+    {
+      /* Incoming aaa bits should (still) be 0.  */
+      know (!(i.vex.bytes[3] & 7));
+
+      i.vex.bytes[3] |= 0x04;
+    }
 
   return true;
 }
