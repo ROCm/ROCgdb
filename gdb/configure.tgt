@@ -6,6 +6,7 @@
 #  gdb_sim                simulator library for target
 #  gdb_osabi              default OS ABI to use with target
 #  gdb_have_gcore         set to "true"/"false" if this target can run gcore
+#  gdb_windows_target     set to "yes" if building for a Windows target
 #  gdb_require_amd_dbgapi set to "true" if this target requires the amd-dbgapi
 #                         target
 
@@ -50,6 +51,9 @@ x86_tobjs="x86-tdep.o"
 i386_tobjs="i386-tdep.o arch/i386.o i387-tdep.o ${x86_tobjs}"
 amd64_tobjs="ravenscar-thread.o amd64-ravenscar-thread.o \
     amd64-tdep.o arch/amd64.o ${x86_tobjs}"
+
+# Initialize windows target flag
+gdb_windows_target=no
 
 # Here are three sections to get a list of target specific object
 # files according to target triplet $TARG.
@@ -158,6 +162,7 @@ aarch64*-*-linux*)
 aarch64-*-mingw*)
         # Target: MingW/aarch64
 	gdb_target_obs="aarch64-windows-tdep.o windows-tdep.o"
+	gdb_windows_target=yes
         ;;
 
 alpha*-*-linux*)
@@ -202,6 +207,7 @@ arc*-*-linux*)
 arm*-wince-pe | arm*-*-mingw32ce*)
 	# Target: ARM based machine running Windows CE (win32)
 	gdb_target_obs="arm-wince-tdep.o windows-tdep.o"
+	gdb_windows_target=yes
 	;;
 arm*-*-linux*)
 	# Target: ARM based machine running GNU/Linux
@@ -342,10 +348,12 @@ i[34567]86-*-gnu*)
 i[34567]86-*-cygwin*)
 	# Target: Intel 386 running win32
 	gdb_target_obs="i386-windows-tdep.o windows-tdep.o"
+	gdb_windows_target=yes
 	;;
 i[34567]86-*-mingw32*)
 	# Target: Intel 386 running win32
 	gdb_target_obs="i386-windows-tdep.o windows-tdep.o"
+	gdb_windows_target=yes
 	;;
 i[34567]86-*-go32* | i[34567]86-*-msdosdjgpp*)
 	# Target: i386 running DJGPP/go32.
@@ -744,6 +752,7 @@ x86_64-*-mingw* | x86_64-*-cygwin*)
 	gdb_target_obs="amd64-windows-tdep.o \
                         ${i386_tobjs} i386-windows-tdep.o \
                         windows-tdep.o"
+	gdb_windows_target=yes
         ;;
 x86_64-*-netbsd* | x86_64-*-knetbsd*-gnu)
 	# Target: NetBSD/amd64

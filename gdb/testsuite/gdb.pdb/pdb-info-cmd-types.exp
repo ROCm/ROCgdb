@@ -1,0 +1,979 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test "maintenance info pdb-types" command using pdb-compound-test-Od binary.
+#
+# Binary: pdb-compound-test-Od.exe / .pdb (prebuilt, /Zi /Od)
+# Source: pdb-compound-test.cpp
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+# --- Set up binary (pdb-compound-test-Od) ---
+set src_dir_exe $srcdir/$subdir/pdb-compound-test-Od.exe
+set src_dir_pdb $srcdir/$subdir/pdb-compound-test-Od.pdb
+
+if {![file exists $src_dir_exe]} {
+    unsupported "prebuilt exe not found: $src_dir_exe"
+    return
+}
+if {![file exists $src_dir_pdb]} {
+    unsupported "prebuilt pdb not found: $src_dir_pdb"
+    return
+}
+
+set exe [standard_output_file pdb-compound-test-Od.exe]
+set pdb [standard_output_file pdb-compound-test-Od.pdb]
+catch {file mkdir [file dirname $exe]}
+file copy -force $src_dir_exe $exe
+file copy -force $src_dir_pdb $pdb
+
+# ===================================================================
+# PART 1 — Unfiltered dump.
+# ===================================================================
+# Single "maintenance info pdb-types" invocation.  Scans the output and
+# verifies: all supported top-level LF_ kinds appear, expected named types
+# are present as complete (non-fwdref) definitions, compound types also
+# have a [fwdref] record, each kind prints the expected cross-reference
+# fields, and simple type indices are resolved to C names like "(int)".
+
+# Leaf kind presence flags
+set lf_modifier 0
+set lf_pointer 0
+set lf_procedure 0
+set lf_mfunction 0
+set lf_arglist 0
+set lf_fieldlist 0
+set lf_bitfield 0
+set lf_methodlist 0
+set lf_array 0
+set lf_class 0
+set lf_structure 0
+set lf_union 0
+set lf_enum 0
+set lf_vtshape 0
+
+# Named types (complete definitions)
+set name_base 0
+set name_derived 0
+set name_container 0
+set name_simplestruct 0
+set name_hugestruct 0
+set name_packedflags 0
+set name_multivalue 0
+set name_color 0
+set name_direction 0
+set name_bigvalues 0
+
+# Forward references (fwdref records must also exist)
+set fwdref_base 0
+set fwdref_derived 0
+set fwdref_container 0
+set fwdref_simplestruct 0
+set fwdref_hugestruct 0
+set fwdref_packedflags 0
+set fwdref_multivalue 0
+
+# Simple type name resolution.  Verifies pdb_type_index_name() prints
+# the C-level name for each simple type index referenced in the PDB.
+# Format in output: "0xKKMM(name)" where KK is SimpleTypeKind.
+set simple_void          0  ;# 0x0003 void           (procedure ret)
+set simple_char          0  ;# 0x0070 char           (as_bytes[])
+set simple_int           0  ;# 0x0074 int            (as_int, base_id, etc)
+set simple_uint          0  ;# 0x0075 unsigned int   (PackedFlags bitfield base)
+set simple_long          0  ;# 0x0012 long           (T_LONG legacy)
+set simple_ulong         0  ;# 0x0022 unsigned long  (T_ULONG legacy)
+set simple_quad          0  ;# 0x0013 __int64        (as_longlong)
+set simple_uquad         0  ;# 0x0023 unsigned __int64 (size_t/array index)
+set simple_float         0  ;# 0x0040 float          (as_float, set_extra)
+set simple_double        0  ;# 0x0041 double         (as_double, area)
+set simple_bool          0  ;# 0x0030 bool           (operator results)
+
+# Cross-references
+set xref_modifier_type 0
+set xref_pointer_utype 0
+set xref_procedure_ret 0
+set xref_procedure_args 0
+set xref_mfunction_ret 0
+set xref_mfunction_class 0
+set xref_mfunction_this 0
+set xref_mfunction_args 0
+set xref_arglist_count 0
+set xref_arglist_arg 0
+set xref_bitfield_type 0
+set xref_bitfield_bits 0
+set xref_bitfield_pos 0
+set xref_array_elem 0
+set xref_array_idx 0
+set xref_class_fields 0
+set xref_structure_fields 0
+set xref_union_fields 0
+set xref_enum_utype 0
+set xref_enum_fields 0
+
+set types_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types\" \
+    -ex \"quit\" \
+    $exe 2>&1"} types_output]
+
+if {$types_result != 0 || $types_output eq ""} {
+    fail "maintenance info pdb-types full dump: no output (result=$types_result)"
+} else {
+    foreach line [split $types_output "\n"] {
+	# --- Leaf kind detection + cross-refs ---
+	if {[regexp {LF_MODIFIER} $line]} {
+	    set lf_modifier 1
+	    if {[regexp {type=} $line]} { set xref_modifier_type 1 }
+	}
+	if {[regexp {LF_POINTER} $line]} {
+	    set lf_pointer 1
+	    if {[regexp {utype=} $line]} { set xref_pointer_utype 1 }
+	}
+	if {[regexp {LF_PROCEDURE} $line]} {
+	    set lf_procedure 1
+	    if {[regexp {ret=} $line]} { set xref_procedure_ret 1 }
+	    if {[regexp {args=} $line]} { set xref_procedure_args 1 }
+	}
+	if {[regexp {LF_MFUNCTION} $line]} {
+	    set lf_mfunction 1
+	    if {[regexp {ret=} $line]} { set xref_mfunction_ret 1 }
+	    if {[regexp {class=} $line]} { set xref_mfunction_class 1 }
+	    if {[regexp {this=} $line]} { set xref_mfunction_this 1 }
+	    if {[regexp {args=} $line]} { set xref_mfunction_args 1 }
+	}
+	if {[regexp {LF_ARGLIST} $line]} {
+	    set lf_arglist 1
+	    if {[regexp {count=} $line]} { set xref_arglist_count 1 }
+	    if {[regexp {arg=} $line]} { set xref_arglist_arg 1 }
+	}
+	if {[regexp {LF_FIELDLIST} $line]} {
+	    set lf_fieldlist 1
+	}
+	if {[regexp {LF_BITFIELD} $line]} {
+	    set lf_bitfield 1
+	    if {[regexp {type=} $line]} { set xref_bitfield_type 1 }
+	    if {[regexp {bits=} $line]} { set xref_bitfield_bits 1 }
+	    if {[regexp {pos=} $line]} { set xref_bitfield_pos 1 }
+	}
+	if {[regexp {LF_METHODLIST} $line]} {
+	    set lf_methodlist 1
+	}
+	if {[regexp {LF_ARRAY} $line]} {
+	    set lf_array 1
+	    if {[regexp {elem=} $line]} { set xref_array_elem 1 }
+	    if {[regexp {idx=} $line]} { set xref_array_idx 1 }
+	}
+	if {[regexp {LF_VTSHAPE} $line]} {
+	    set lf_vtshape 1
+	}
+
+	# --- Compound types with fields= ---
+	if {[regexp {LF_CLASS} $line]} {
+	    set lf_class 1
+	    if {[regexp {fields=} $line] && ![regexp {\[fwdref\]} $line]} {
+		set xref_class_fields 1
+	    }
+	    if {![regexp {\[fwdref\]} $line]} {
+		if {[regexp {`Base`} $line]} { set name_base 1 }
+		if {[regexp {`Derived`} $line]} { set name_derived 1 }
+		if {[regexp {`Container`} $line]} { set name_container 1 }
+	    }
+	    if {[regexp {\[fwdref\]} $line]} {
+		if {[regexp {`Base`} $line]} { set fwdref_base 1 }
+		if {[regexp {`Derived`} $line]} { set fwdref_derived 1 }
+		if {[regexp {`Container`} $line]} { set fwdref_container 1 }
+	    }
+	}
+	if {[regexp {LF_STRUCTURE} $line]} {
+	    set lf_structure 1
+	    if {[regexp {fields=} $line] && ![regexp {\[fwdref\]} $line]} {
+		set xref_structure_fields 1
+	    }
+	    if {![regexp {\[fwdref\]} $line]} {
+		if {[regexp {`SimpleStruct`} $line]} { set name_simplestruct 1 }
+		if {[regexp {`HugeStruct`} $line]} { set name_hugestruct 1 }
+		if {[regexp {`PackedFlags`} $line]} { set name_packedflags 1 }
+	    }
+	    if {[regexp {\[fwdref\]} $line]} {
+		if {[regexp {`SimpleStruct`} $line]} { set fwdref_simplestruct 1 }
+		if {[regexp {`HugeStruct`} $line]} { set fwdref_hugestruct 1 }
+		if {[regexp {`PackedFlags`} $line]} { set fwdref_packedflags 1 }
+	    }
+	}
+	if {[regexp {LF_UNION} $line]} {
+	    set lf_union 1
+	    if {[regexp {fields=} $line] && ![regexp {\[fwdref\]} $line]} {
+		set xref_union_fields 1
+	    }
+	    if {![regexp {\[fwdref\]} $line]} {
+		if {[regexp {`MultiValue`} $line]} { set name_multivalue 1 }
+	    }
+	    if {[regexp {\[fwdref\]} $line]} {
+		if {[regexp {`MultiValue`} $line]} { set fwdref_multivalue 1 }
+	    }
+	}
+	if {[regexp {LF_ENUM} $line]} {
+	    set lf_enum 1
+	    if {[regexp {utype=} $line]} { set xref_enum_utype 1 }
+	    if {[regexp {fields=} $line] && ![regexp {\[fwdref\]} $line]} {
+		set xref_enum_fields 1
+	    }
+	    if {![regexp {\[fwdref\]} $line]} {
+		if {[regexp {`Color`} $line]} { set name_color 1 }
+		if {[regexp {`Direction`} $line]} { set name_direction 1 }
+		if {[regexp {`BigValues`} $line]} { set name_bigvalues 1 }
+	    }
+	}
+
+	# --- Simple type name resolution (any "0xKKMM(name)" tokens) ---
+	if {[regexp {0x0003\(void\)} $line]}             { set simple_void 1 }
+	if {[regexp {0x0070\(char\)} $line]}             { set simple_char 1 }
+	if {[regexp {0x0074\(int\)} $line]}              { set simple_int 1 }
+	if {[regexp {0x0075\(unsigned int\)} $line]}     { set simple_uint 1 }
+	if {[regexp {0x0012\(long\)} $line]}             { set simple_long 1 }
+	if {[regexp {0x0022\(unsigned long\)} $line]}    { set simple_ulong 1 }
+	if {[regexp {0x0013\(__int64\)} $line]}          { set simple_quad 1 }
+	if {[regexp {0x0023\(unsigned __int64\)} $line]} { set simple_uquad 1 }
+	if {[regexp {0x0040\(float\)} $line]}            { set simple_float 1 }
+	if {[regexp {0x0041\(double\)} $line]}           { set simple_double 1 }
+	if {[regexp {0x0030\(bool\)} $line]}             { set simple_bool 1 }
+    }
+
+    # --- Report: leaf kinds ---
+    foreach {var label} {
+	lf_modifier    "LF_MODIFIER present"
+	lf_pointer     "LF_POINTER present"
+	lf_procedure   "LF_PROCEDURE present"
+	lf_mfunction   "LF_MFUNCTION present"
+	lf_arglist     "LF_ARGLIST present"
+	lf_fieldlist   "LF_FIELDLIST present"
+	lf_bitfield    "LF_BITFIELD present"
+	lf_methodlist  "LF_METHODLIST present"
+	lf_array       "LF_ARRAY present"
+	lf_class       "LF_CLASS present"
+	lf_structure   "LF_STRUCTURE present"
+	lf_union       "LF_UNION present"
+	lf_enum        "LF_ENUM present"
+	lf_vtshape     "LF_VTSHAPE present"
+    } {
+	if {[set $var]} {
+	    pass "maintenance info pdb-types: $label"
+	} else {
+	    fail "maintenance info pdb-types: $label"
+	}
+    }
+
+    # --- Report: named types ---
+    foreach {var label} {
+	name_base          "LF_CLASS `Base` complete"
+	name_derived       "LF_CLASS `Derived` complete"
+	name_container     "LF_CLASS `Container` complete"
+	name_simplestruct  "LF_STRUCTURE `SimpleStruct` complete"
+	name_hugestruct    "LF_STRUCTURE `HugeStruct` complete"
+	name_packedflags   "LF_STRUCTURE `PackedFlags` complete"
+	name_multivalue    "LF_UNION `MultiValue` complete"
+	name_color         "LF_ENUM `Color` complete"
+	name_direction     "LF_ENUM `Direction` complete"
+	name_bigvalues     "LF_ENUM `BigValues` complete"
+    } {
+	if {[set $var]} {
+	    pass "maintenance info pdb-types: $label"
+	} else {
+	    fail "maintenance info pdb-types: $label"
+	}
+    }
+
+    # --- Report: forward references ---
+    foreach {var label} {
+	fwdref_base          "LF_CLASS `Base` fwdref"
+	fwdref_derived       "LF_CLASS `Derived` fwdref"
+	fwdref_container     "LF_CLASS `Container` fwdref"
+	fwdref_simplestruct  "LF_STRUCTURE `SimpleStruct` fwdref"
+	fwdref_hugestruct    "LF_STRUCTURE `HugeStruct` fwdref"
+	fwdref_packedflags   "LF_STRUCTURE `PackedFlags` fwdref"
+	fwdref_multivalue    "LF_UNION `MultiValue` fwdref"
+    } {
+	if {[set $var]} {
+	    pass "maintenance info pdb-types: $label"
+	} else {
+	    fail "maintenance info pdb-types: $label"
+	}
+    }
+
+    # --- Report: cross-references ---
+    foreach {var label} {
+	xref_modifier_type     "LF_MODIFIER type= xref"
+	xref_pointer_utype     "LF_POINTER utype= xref"
+	xref_procedure_ret     "LF_PROCEDURE ret= xref"
+	xref_procedure_args    "LF_PROCEDURE args= xref"
+	xref_mfunction_ret     "LF_MFUNCTION ret= xref"
+	xref_mfunction_class   "LF_MFUNCTION class= xref"
+	xref_mfunction_this    "LF_MFUNCTION this= xref"
+	xref_mfunction_args    "LF_MFUNCTION args= xref"
+	xref_arglist_count     "LF_ARGLIST count= xref"
+	xref_arglist_arg       "LF_ARGLIST arg= xref"
+	xref_bitfield_type     "LF_BITFIELD type= xref"
+	xref_bitfield_bits     "LF_BITFIELD bits= xref"
+	xref_bitfield_pos      "LF_BITFIELD pos= xref"
+	xref_array_elem        "LF_ARRAY elem= xref"
+	xref_array_idx         "LF_ARRAY idx= xref"
+	xref_class_fields      "LF_CLASS fields= xref"
+	xref_structure_fields  "LF_STRUCTURE fields= xref"
+	xref_union_fields      "LF_UNION fields= xref"
+	xref_enum_utype        "LF_ENUM utype= xref"
+	xref_enum_fields       "LF_ENUM fields= xref"
+    } {
+	if {[set $var]} {
+	    pass "maintenance info pdb-types: $label"
+	} else {
+	    fail "maintenance info pdb-types: $label"
+	}
+    }
+
+    # --- Report: simple type name resolution ---
+    foreach {var label} {
+	simple_void    "simple type 0x0003 (void)"
+	simple_char    "simple type 0x0070 (char)"
+	simple_int     "simple type 0x0074 (int)"
+	simple_uint    "simple type 0x0075 (unsigned int)"
+	simple_long    "simple type 0x0012 (long)"
+	simple_ulong   "simple type 0x0022 (unsigned long)"
+	simple_quad    "simple type 0x0013 (__int64)"
+	simple_uquad   "simple type 0x0023 (unsigned __int64)"
+	simple_float   "simple type 0x0040 (float)"
+	simple_double  "simple type 0x0041 (double)"
+	simple_bool    "simple type 0x0030 (bool)"
+    } {
+	if {[set $var]} {
+	    pass "maintenance info pdb-types: $label"
+	} else {
+	    fail "maintenance info pdb-types: $label"
+	}
+    }
+}
+
+# ===================================================================
+# PART 2 — Per-kind filtered dumps.
+# ===================================================================
+# One "maintenance info pdb-types kind=LF_XXX" invocation per kind.  Each
+# verifies that only records of the requested kind appear, at least one
+# record is present, the expected cross-ref fields are printed, and (for
+# compound kinds) the expected named types appear.
+
+# ===================================================================
+# kind=LF_MODIFIER
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_type_xref 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_MODIFIER\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_MODIFIER: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_MODIFIER} $line]} {
+	    set has_target 1
+	    if {[regexp {type=} $line]} { set has_type_xref 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_MODIFIER records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-MODIFIER records leaked\n" }
+    if {!$has_type_xref} { set ok 0; send_user "FAIL: no type= xref\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_MODIFIER"
+    } else {
+	fail "maintenance info pdb-types kind=LF_MODIFIER"
+    }
+}
+
+# ===================================================================
+# kind=LF_POINTER
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_utype 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_POINTER\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_POINTER: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_POINTER} $line]} {
+	    set has_target 1
+	    if {[regexp {utype=} $line]} { set has_utype 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_POINTER records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-POINTER records leaked\n" }
+    if {!$has_utype} { set ok 0; send_user "FAIL: no utype= xref\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_POINTER"
+    } else {
+	fail "maintenance info pdb-types kind=LF_POINTER"
+    }
+}
+
+# ===================================================================
+# kind=LF_PROCEDURE
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_ret 0
+set has_args 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_PROCEDURE\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_PROCEDURE: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_PROCEDURE} $line]} {
+	    set has_target 1
+	    if {[regexp {ret=} $line]} { set has_ret 1 }
+	    if {[regexp {args=} $line]} { set has_args 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_PROCEDURE records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-PROCEDURE records leaked\n" }
+    if {!$has_ret} { set ok 0; send_user "FAIL: no ret= xref\n" }
+    if {!$has_args} { set ok 0; send_user "FAIL: no args= xref\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_PROCEDURE"
+    } else {
+	fail "maintenance info pdb-types kind=LF_PROCEDURE"
+    }
+}
+
+# ===================================================================
+# kind=LF_MFUNCTION
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_ret 0
+set has_class 0
+set has_this 0
+set has_args 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_MFUNCTION\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_MFUNCTION: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_MFUNCTION} $line]} {
+	    set has_target 1
+	    if {[regexp {ret=} $line]} { set has_ret 1 }
+	    if {[regexp {class=} $line]} { set has_class 1 }
+	    if {[regexp {this=} $line]} { set has_this 1 }
+	    if {[regexp {args=} $line]} { set has_args 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_MFUNCTION records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-MFUNCTION records leaked\n" }
+    if {!$has_ret} { set ok 0; send_user "FAIL: no ret= xref\n" }
+    if {!$has_class} { set ok 0; send_user "FAIL: no class= xref\n" }
+    if {!$has_this} { set ok 0; send_user "FAIL: no this= xref\n" }
+    if {!$has_args} { set ok 0; send_user "FAIL: no args= xref\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_MFUNCTION"
+    } else {
+	fail "maintenance info pdb-types kind=LF_MFUNCTION"
+    }
+}
+
+# ===================================================================
+# kind=LF_ARGLIST
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_count 0
+set has_arg 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_ARGLIST\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_ARGLIST: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_ARGLIST} $line]} {
+	    set has_target 1
+	    if {[regexp {count=} $line]} { set has_count 1 }
+	    if {[regexp {arg=} $line]} { set has_arg 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_ARGLIST records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-ARGLIST records leaked\n" }
+    if {!$has_count} { set ok 0; send_user "FAIL: no count= xref\n" }
+    if {!$has_arg} { set ok 0; send_user "FAIL: no arg= xref\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_ARGLIST"
+    } else {
+	fail "maintenance info pdb-types kind=LF_ARGLIST"
+    }
+}
+
+# ===================================================================
+# kind=LF_FIELDLIST
+# ===================================================================
+
+set has_target 0
+set has_other 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_FIELDLIST\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_FIELDLIST: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_FIELDLIST} $line]} {
+	    set has_target 1
+	} else {
+	    set has_other 1
+	}
+    }
+    if {$has_target && !$has_other} {
+	pass "maintenance info pdb-types kind=LF_FIELDLIST"
+    } else {
+	if {!$has_target} { send_user "FAIL: no LF_FIELDLIST records\n" }
+	if {$has_other} { send_user "FAIL: non-FIELDLIST records leaked\n" }
+	fail "maintenance info pdb-types kind=LF_FIELDLIST"
+    }
+}
+
+# ===================================================================
+# kind=LF_BITFIELD
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_type 0
+set has_bits 0
+set has_pos 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_BITFIELD\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_BITFIELD: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_BITFIELD} $line]} {
+	    set has_target 1
+	    if {[regexp {type=} $line]} { set has_type 1 }
+	    if {[regexp {bits=} $line]} { set has_bits 1 }
+	    if {[regexp {pos=} $line]} { set has_pos 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_BITFIELD records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-BITFIELD records leaked\n" }
+    if {!$has_type} { set ok 0; send_user "FAIL: no type= xref\n" }
+    if {!$has_bits} { set ok 0; send_user "FAIL: no bits= xref\n" }
+    if {!$has_pos} { set ok 0; send_user "FAIL: no pos= xref\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_BITFIELD"
+    } else {
+	fail "maintenance info pdb-types kind=LF_BITFIELD"
+    }
+}
+
+# ===================================================================
+# kind=LF_METHODLIST
+# ===================================================================
+
+set has_target 0
+set has_other 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_METHODLIST\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_METHODLIST: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_METHODLIST} $line]} {
+	    set has_target 1
+	} else {
+	    set has_other 1
+	}
+    }
+    if {$has_target && !$has_other} {
+	pass "maintenance info pdb-types kind=LF_METHODLIST"
+    } else {
+	if {!$has_target} { send_user "FAIL: no LF_METHODLIST records\n" }
+	if {$has_other} { send_user "FAIL: non-METHODLIST records leaked\n" }
+	fail "maintenance info pdb-types kind=LF_METHODLIST"
+    }
+}
+
+# ===================================================================
+# kind=LF_ARRAY
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_elem 0
+set has_idx 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_ARRAY\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_ARRAY: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_ARRAY} $line]} {
+	    set has_target 1
+	    if {[regexp {elem=} $line]} { set has_elem 1 }
+	    if {[regexp {idx=} $line]} { set has_idx 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_ARRAY records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-ARRAY records leaked\n" }
+    if {!$has_elem} { set ok 0; send_user "FAIL: no elem= xref\n" }
+    if {!$has_idx} { set ok 0; send_user "FAIL: no idx= xref\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_ARRAY"
+    } else {
+	fail "maintenance info pdb-types kind=LF_ARRAY"
+    }
+}
+
+# ===================================================================
+# kind=LF_CLASS
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_fields 0
+set has_base 0
+set has_derived 0
+set has_container 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_CLASS\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_CLASS: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_CLASS} $line]} {
+	    set has_target 1
+	    if {[regexp {fields=} $line] && ![regexp {\[fwdref\]} $line]} {
+		set has_fields 1
+	    }
+	    if {[regexp {`Base`} $line]} { set has_base 1 }
+	    if {[regexp {`Derived`} $line]} { set has_derived 1 }
+	    if {[regexp {`Container`} $line]} { set has_container 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_CLASS records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-CLASS records leaked\n" }
+    if {!$has_fields} { set ok 0; send_user "FAIL: no fields= on complete def\n" }
+    if {!$has_base} { set ok 0; send_user "FAIL: Base not found\n" }
+    if {!$has_derived} { set ok 0; send_user "FAIL: Derived not found\n" }
+    if {!$has_container} { set ok 0; send_user "FAIL: Container not found\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_CLASS"
+    } else {
+	fail "maintenance info pdb-types kind=LF_CLASS"
+    }
+}
+
+# ===================================================================
+# kind=LF_STRUCTURE
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_fields 0
+set has_simple 0
+set has_huge 0
+set has_packed 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_STRUCTURE\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_STRUCTURE: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_STRUCTURE} $line]} {
+	    set has_target 1
+	    if {[regexp {fields=} $line] && ![regexp {\[fwdref\]} $line]} {
+		set has_fields 1
+	    }
+	    if {[regexp {`SimpleStruct`} $line]} { set has_simple 1 }
+	    if {[regexp {`HugeStruct`} $line]} { set has_huge 1 }
+	    if {[regexp {`PackedFlags`} $line]} { set has_packed 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_STRUCTURE records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-STRUCTURE records leaked\n" }
+    if {!$has_fields} { set ok 0; send_user "FAIL: no fields= on complete def\n" }
+    if {!$has_simple} { set ok 0; send_user "FAIL: SimpleStruct not found\n" }
+    if {!$has_huge} { set ok 0; send_user "FAIL: HugeStruct not found\n" }
+    if {!$has_packed} { set ok 0; send_user "FAIL: PackedFlags not found\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_STRUCTURE"
+    } else {
+	fail "maintenance info pdb-types kind=LF_STRUCTURE"
+    }
+}
+
+# ===================================================================
+# kind=LF_UNION
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_fields 0
+set has_multivalue 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_UNION\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_UNION: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_UNION} $line]} {
+	    set has_target 1
+	    if {[regexp {fields=} $line] && ![regexp {\[fwdref\]} $line]} {
+		set has_fields 1
+	    }
+	    if {[regexp {`MultiValue`} $line]} { set has_multivalue 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_UNION records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-UNION records leaked\n" }
+    if {!$has_fields} { set ok 0; send_user "FAIL: no fields= on complete def\n" }
+    if {!$has_multivalue} { set ok 0; send_user "FAIL: MultiValue not found\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_UNION"
+    } else {
+	fail "maintenance info pdb-types kind=LF_UNION"
+    }
+}
+
+# ===================================================================
+# kind=LF_ENUM
+# ===================================================================
+
+set has_target 0
+set has_other 0
+set has_utype 0
+set has_fields 0
+set has_color 0
+set has_direction 0
+set has_bigvalues 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_ENUM\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_ENUM: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_ENUM} $line]} {
+	    set has_target 1
+	    if {[regexp {utype=} $line]} { set has_utype 1 }
+	    if {[regexp {fields=} $line] && ![regexp {\[fwdref\]} $line]} {
+		set has_fields 1
+	    }
+	    if {[regexp {`Color`} $line]} { set has_color 1 }
+	    if {[regexp {`Direction`} $line]} { set has_direction 1 }
+	    if {[regexp {`BigValues`} $line]} { set has_bigvalues 1 }
+	} else {
+	    set has_other 1
+	}
+    }
+    set ok 1
+    if {!$has_target} { set ok 0; send_user "FAIL: no LF_ENUM records\n" }
+    if {$has_other} { set ok 0; send_user "FAIL: non-ENUM records leaked\n" }
+    if {!$has_utype} { set ok 0; send_user "FAIL: no utype= xref\n" }
+    if {!$has_fields} { set ok 0; send_user "FAIL: no fields= on complete def\n" }
+    if {!$has_color} { set ok 0; send_user "FAIL: Color not found\n" }
+    if {!$has_direction} { set ok 0; send_user "FAIL: Direction not found\n" }
+    if {!$has_bigvalues} { set ok 0; send_user "FAIL: BigValues not found\n" }
+    if {$ok} {
+	pass "maintenance info pdb-types kind=LF_ENUM"
+    } else {
+	fail "maintenance info pdb-types kind=LF_ENUM"
+    }
+}
+
+# ===================================================================
+# kind=LF_VTSHAPE
+# ===================================================================
+
+set has_target 0
+set has_other 0
+
+set filt_result [catch {exec sh -c "$GDB -nw -nx -q \
+    -iex \"set height 0\" \
+    -iex \"set width 0\" \
+    -ex \"set debug-file-directory \\\"\\\"\" \
+    -ex \"maintenance info pdb-types kind=LF_VTSHAPE\" \
+    -ex \"quit\" \
+    $exe 2>&1 | grep -e \"0x\[0-9a-f\]\""} filt_output]
+
+if {$filt_result != 0 || $filt_output eq ""} {
+    fail "maintenance info pdb-types kind=LF_VTSHAPE: no output"
+} else {
+    foreach line [split $filt_output "\n"] {
+	if {![regexp {^\s+0x[0-9a-fA-F]+:} $line]} { continue }
+	if {[regexp {LF_VTSHAPE} $line]} {
+	    set has_target 1
+	} else {
+	    set has_other 1
+	}
+    }
+    if {$has_target && !$has_other} {
+	pass "maintenance info pdb-types kind=LF_VTSHAPE"
+    } else {
+	if {!$has_target} { send_user "FAIL: no LF_VTSHAPE records\n" }
+	if {$has_other} { send_user "FAIL: non-VTSHAPE records leaked\n" }
+	fail "maintenance info pdb-types kind=LF_VTSHAPE"
+    }
+}
