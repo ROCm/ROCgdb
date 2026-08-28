@@ -1,4 +1,4 @@
-#!/bin/sh -u
+#!/bin/sh
 
 # Register protocol definitions for GDB, the GNU debugger.
 # Copyright (C) 2001-2026 Free Software Foundation, Inc.
@@ -18,6 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+set -u
+
 # Format of the input files
 read="type entry"
 
@@ -30,13 +32,9 @@ do_read ()
 	if test "${line}" = ""
 	then
 	    continue
-	elif test "${line}" = "#" -a "${comment}" = ""
-	then
-	    continue
 	elif expr "${line}" : "#" > /dev/null
 	then
-	    comment="${comment}
-${line}"
+	    continue
 	else
 
 	    # The semantics of IFS varies between different SH's.  Some
