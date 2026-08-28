@@ -422,4 +422,30 @@ target_debug_print_opt_size_t (opt_size_t size)
   return "";
 }
 
+static std::string
+target_debug_print (int i)
+{ return std::to_string (i); }
+
+template<typename T>
+static std::string
+target_debug_print (const std::vector<T> &vec)
+{
+  std::string s = "{ ";
+  const char *comma = "";
+
+  for (const auto &v : vec)
+    {
+      string_appendf (s, "%s%s", comma, target_debug_print (v).c_str ());
+      comma = ", ";
+    }
+
+  s += " }";
+
+  return s;
+}
+
+static std::string
+target_debug_print_std_vector_int (const std::vector<int> &vec)
+{ return target_debug_print (vec); }
+
 #endif /* GDB_TARGET_DEBUG_H */

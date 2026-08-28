@@ -113,7 +113,7 @@ struct dummy_target : public target_ops
   bool can_async_p () override;
   bool is_async_p () override;
   void async (bool arg0) override;
-  int async_wait_fd () override;
+  std::vector<int> async_wait_fds () override;
   bool has_pending_events () override;
   void thread_events (bool arg0) override;
   bool supports_set_thread_options (gdb_thread_options arg0) override;
@@ -305,7 +305,7 @@ struct debug_target : public target_ops
   bool can_async_p () override;
   bool is_async_p () override;
   void async (bool arg0) override;
-  int async_wait_fd () override;
+  std::vector<int> async_wait_fds () override;
   bool has_pending_events () override;
   void thread_events (bool arg0) override;
   bool supports_set_thread_options (gdb_thread_options arg0) override;
@@ -2394,27 +2394,27 @@ debug_target::async (bool arg0)
 	      target_debug_print_bool (arg0).c_str ());
 }
 
-int
-target_ops::async_wait_fd ()
+std::vector<int>
+target_ops::async_wait_fds ()
 {
-  return this->beneath ()->async_wait_fd ();
+  return this->beneath ()->async_wait_fds ();
 }
 
-int
-dummy_target::async_wait_fd ()
+std::vector<int>
+dummy_target::async_wait_fds ()
 {
   noprocess ();
 }
 
-int
-debug_target::async_wait_fd ()
+std::vector<int>
+debug_target::async_wait_fds ()
 {
-  target_debug_printf_nofunc ("-> %s->async_wait_fd (...)", this->beneath ()->shortname ());
-  int result
-    = this->beneath ()->async_wait_fd ();
-  target_debug_printf_nofunc ("<- %s->async_wait_fd () = %s",
+  target_debug_printf_nofunc ("-> %s->async_wait_fds (...)", this->beneath ()->shortname ());
+  std::vector<int> result
+    = this->beneath ()->async_wait_fds ();
+  target_debug_printf_nofunc ("<- %s->async_wait_fds () = %s",
 	      this->beneath ()->shortname (),
-	      target_debug_print_int (result).c_str ());
+	      target_debug_print_std_vector_int (result).c_str ());
   return result;
 }
 

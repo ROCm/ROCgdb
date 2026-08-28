@@ -260,9 +260,9 @@ struct windows_nat_target : public inf_child_target
 
   void async (bool enable) override;
 
-  int async_wait_fd () override
+  std::vector<int> async_wait_fd () override
   {
-    return serial_event_fd (m_wait_event);
+    return { serial_event_fd (m_wait_event) };
   }
 
   void debug_registers_changed_all_threads ();
