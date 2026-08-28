@@ -1452,12 +1452,20 @@ if { [check_lto_fat_available] } {
     }
 }
 
-# Skip native x32 and i?86 targets since system LLVMgold.so may not be
-# compatible with native x32 and i?86 targets binutils.
-if { ![istarget "x86_64-*-linux*-gnux32"]
-     && ![istarget "i?86-*-*"]
-     && [info exists CLANG_FOR_TARGET]
-     && ![string match "" $llvm_plug_opt] } {
+proc llvm_lto_tests {} {
+    global CC_FOR_TARGET
+    global CLANG_FOR_TARGET
+    global llvm_plug_opt
+
+    # Skip native x32 and i?86 targets since system LLVMgold.so may not
+    # be compatible with native x32 and i?86 targets binutils.
+    if {[istarget "x86_64-*-linux*-gnux32"]
+	|| [istarget "i?86-*-*"]
+	|| ![info exists CLANG_FOR_TARGET]
+	|| [string match "" $llvm_plug_opt] } {
+	return
+    }
+
     set CC_FOR_TARGET_saved "$CC_FOR_TARGET"
     set CC_FOR_TARGET "$CLANG_FOR_TARGET"
     run_cc_link_tests [list \
@@ -1473,6 +1481,14 @@ if { ![istarget "x86_64-*-linux*-gnux32"]
 	    "-flto" \
 	    {pr34572b.c} \
 	] \
+    ]
+
+   if {![file exists tmpdir/pr34572a.o]
+       || ![file exists tmpdir/pr34572b.o]} {
+	return
+    }
+
+    run_cc_link_tests [list \
 	[list \
 	    "Build pr34572a.exe" \
 	    "-flto -Wl,--start-lib tmpdir/pr34572a.o -Wl,--end-lib" \
@@ -1508,5 +1524,7 @@ if { ![istarget "x86_64-*-linux*-gnux32"]
 
     set CC_FOR_TARGET "$CC_FOR_TARGET_saved"
 }
+
+llvm_lto_tests
 
 restore_notify
