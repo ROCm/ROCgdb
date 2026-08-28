@@ -25,7 +25,7 @@ do_read ()
 {
     type=""
     entry=""
-    while read line
+    while read -r line
     do
 	if test "${line}" = ""
 	then
@@ -42,9 +42,11 @@ ${line}"
 	    # The semantics of IFS varies between different SH's.  Some
 	    # treat ``::' as three fields while some treat it as just too.
 	    # Work around this by eliminating ``::'' ....
-	    line="`echo "${line}" | sed -e 's/::/: :/g' -e 's/::/: :/g'`"
+	    line="$(echo "${line}" | sed -e 's/::/: :/g' -e 's/::/: :/g')"
 
 	    OFS="${IFS}" ; IFS="[:]"
+	    # Word-splitting on read variable is required.
+	    # shellcheck disable=SC2086
 	    eval read ${read} <<EOF
 ${line}
 EOF
@@ -54,9 +56,10 @@ EOF
 	    # that ended up with just that space character.
 	    for r in ${read}
 	    do
-		if eval test \"\${${r}}\" = \"\ \"
+		eval "rvalue=\$$r"
+		if test "${rvalue:-}" = " "
 		then
-		    eval ${r}=""
+		    eval "$r=''"
 		fi
 	    done
 
@@ -71,7 +74,7 @@ EOF
     fi
 }
 
-if test ! -r $1; then
+if test ! -r "$1"; then
   echo "$0: Could not open $1." 1>&2
   exit 1
 fi
@@ -105,8 +108,8 @@ EOF
 }
 
 
-exec > new-$3
-copyright $1
+exec > new-"$3"
+copyright "$1"
 echo '#include "regdef.h"'
 echo '#include "tdesc.h"'
 echo
@@ -119,7 +122,7 @@ xmlosabi=x
 expedite=x
 feature=x
 osabi=unknown
-exec < $1
+exec < "$1"
 while do_read
 do
   if test "${type}" = "name"; then
@@ -162,13 +165,13 @@ do
     echo "  tdesc_create_reg (feature, \"${entry}\","
     echo "  0, 0, NULL, ${type}, NULL);"
 
-    offset=`expr ${offset} + ${type}`
-    i=`expr $i + 1`
+    offset=$((offset + type))
+    i=$((i + 1))
   fi
 done
 
 echo
-echo "static const char *expedite_regs_${name}[] = { \"`echo ${expedite} | sed 's/,/", "/g'`\", 0 };"
+echo "static const char *expedite_regs_${name}[] = { \"$(echo "${expedite}" | sed 's/,/", "/g')\", 0 };"
 
 echo "#ifndef IN_PROCESS_AGENT"
 if test "${feature}" != x; then
