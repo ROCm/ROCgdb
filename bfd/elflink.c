@@ -4633,13 +4633,12 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	 are no input BFD's of the same format as the output, we can't
 	 make a shared library.  */
       if (!just_syms
+	  && !htab->dynamic_sections_created
 	  && (bfd_link_pic (info)
 	      || (!bfd_link_relocatable (info)
 		  && info->nointerp
 		  && (info->export_dynamic || info->dynamic)))
-	  && is_elf_hash_table (&htab->root)
-	  && info->output_bfd->xvec == abfd->xvec
-	  && !htab->dynamic_sections_created)
+	  && compatible_format (info, abfd))
 	{
 	  if (!bfd_elf_link_create_dynamic_sections (info))
 	    goto error_return;

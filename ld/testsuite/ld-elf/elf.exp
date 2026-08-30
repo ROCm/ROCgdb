@@ -40,7 +40,7 @@ proc riscv_little_endian { } {
 
 set old_ldflags $LDFLAGS
 if { [istarget spu*-*-*] } {
-    set LDFLAGS "$LDFLAGS --local-store 0:0"
+    append LDFLAGS " --local-store 0:0"
 }
 
 # hpux .comm differs from everyone else
@@ -48,7 +48,7 @@ set hpux ""
 set old_asflags $ASFLAGS
 if [istarget "*-*-hpux*"] {
     set hpux "--defsym HPUX=1"
-    set ASFLAGS "$ASFLAGS --defsym HPUX=1"
+    append ASFLAGS " --defsym HPUX=1"
 }
 
 # Some tests expect 32-bit addresses.  Force the executable to low addresses.
@@ -60,7 +60,7 @@ proc alpha_ld_flags { } {
 }
 
 if { [istarget alpha*-*-* ] } {
-    set ASFLAGS "$ASFLAGS --defsym NO_SET=1"
+    append ASFLAGS " --defsym NO_SET=1"
 }
 
 if [istarget "tic6x-*-*"] {
