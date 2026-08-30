@@ -35,8 +35,6 @@ static bool ignore_lma = true;
 static void
 rx_elf_create_output_section_statements (void)
 {
-  extern void bfd_elf32_rx_set_target_flags (bool, bool);
-
   bfd_elf32_rx_set_target_flags (no_flag_mismatch_warnings, ignore_lma);
 }
 

@@ -32,8 +32,6 @@ fragment <<EOF
 static void
 rx_linux_create_output_section_statements (void)
 {
-  extern void bfd_elf32_rx_set_target_flags (bool, bool);
-
   bfd_elf32_rx_set_target_flags (false, false);
 }
 

@@ -3126,8 +3126,6 @@ rx_elf_set_private_flags (bfd * abfd, flagword flags)
 static bool no_warn_mismatch = false;
 static bool ignore_lma = true;
 
-void bfd_elf32_rx_set_target_flags (bool, bool);
-
 void
 bfd_elf32_rx_set_target_flags (bool user_no_warn_mismatch,
 			       bool user_ignore_lma)

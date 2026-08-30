@@ -18,4 +18,5 @@
    Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
    MA 02110-1301, USA.  */
 
-extern void rx_additional_link_map_text (bfd *obfd, struct bfd_link_info *info, FILE *mapfile);
+extern void bfd_elf32_rx_set_target_flags (bool, bool);
+extern void rx_additional_link_map_text (bfd *, struct bfd_link_info *, FILE *);
