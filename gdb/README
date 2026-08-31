@@ -82,6 +82,9 @@ list of options, invoke the subdirectory `configure', like:
    (Take note of how this differs from the invocation used to actually
 configure the build tree.)
 
+   Building GDB requires GNU make version 3.82 or later; other `make'
+programs will not work.
+
    GDB requires a C++17 compiler.  If you do not have a
 C++17 compiler for your system, you may be able to download and install
 the GNU CC compiler.  It is available via anonymous FTP from the
@@ -254,10 +257,8 @@ Compiling GDB in another directory
 you need a different `gdb' compiled for each combination of host and
 target.  `configure' is designed to make this easy by allowing you to
 generate each configuration in a separate subdirectory, rather than in
-the source directory.  If your `make' program handles the `VPATH'
-feature correctly (GNU `make' and SunOS 'make' are two that should),
-running `make' in each of these directories builds the `gdb' program
-specified there.
+the source directory.  Running `make' in each of these directories
+builds the `gdb' program specified there.
 
    To build `gdb' in a separate directory, run `configure' with the
 `--srcdir' option to specify where to find the source. (You also need
@@ -367,8 +368,6 @@ more obscure GDB `configure' options are not listed here.
      `DIR'.
 
 `--srcdir=PATH'
-     *Warning: using this option requires GNU `make', or another `make'
-     that compatibly implements the `VPATH' feature.*
      Use this option to make configurations in directories separate
      from the GDB source directories.  Among other things, you can use
      this to build (or maintain) several configurations simultaneously,
@@ -778,8 +777,8 @@ When using a `make'-based method, you can use the Makefile variable
 
 	make RUNTESTFLAGS=--directory=gdb.cp check
 
-If you use GNU make, you can use its `-j' option to run the testsuite
-in parallel.  This can greatly reduce the amount of time it takes for
+You can use the `-j' option of `make' to run the testsuite in
+parallel.  This can greatly reduce the amount of time it takes for
 the testsuite to run.  In this case, if you set `RUNTESTFLAGS' then,
 by default, the tests will be run serially even under `-j'.  You can
 override this and force a parallel run by setting the `make' variable
