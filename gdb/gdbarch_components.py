@@ -2952,3 +2952,30 @@ SHADOW_STACK_ENABLED to false.
     predefault="default_get_shadow_stack_pointer",
     invalid=False,
 )
+
+Method(
+    comment="""
+Determine whether an inline frame should be shown in backtraces.
+
+This hook is called when GDB encounters an inline frame to decide whether
+it should be displayed to the user or hidden.  By default, inline frames
+are hidden during normal stepping to provide a source-level debugging
+experience.  However, some inline frames contain important diagnostic
+information that should always be visible.
+
+A common use case is verbose trap frames (e.g., __builtin_verbose_trap)
+which embed crash diagnostic messages in specially-named inline frames.
+When such a trap fires, the inline frame should be shown even though
+inline frames are normally hidden.
+
+The hook receives the inline frame's symbol and the signal that stopped
+execution, allowing architecture-specific code to make the decision.
+
+Return true if the inline frame should be shown, false to hide it.
+""",
+    type="bool",
+    name="should_show_inline_frame",
+    params=[("const struct symbol *", "func"), ("enum gdb_signal", "stop_signal")],
+    predefault="default_should_show_inline_frame",
+    invalid=False,
+)
