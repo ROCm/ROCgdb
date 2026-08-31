@@ -2606,17 +2606,6 @@ force_update:
 # will remove them.
 MAKEOVERRIDES =
 
-# Some files need explicit build rules (due to -Werror problems) or due
-# to sub-directory fun 'n' games.
-
-# ada-exp.c can appear in srcdir, for releases; or in ., for
-# development builds.
-ADA_EXP_C = `if test -f ada-exp.c; then echo ada-exp.c; else echo $(srcdir)/ada-exp.c; fi`
-
-ada-exp.o: ada-exp.c
-	$(COMPILE) $(ADA_EXP_C)
-	$(POSTCOMPILE)
-
 # Message files.  Based on code in gcc/Makefile.in.
 
 # Rules for generating translated message descriptions.  Disabled by
