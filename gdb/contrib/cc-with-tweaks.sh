@@ -335,4 +335,4 @@ if [ "$want_gnu_debuglink" = true ]; then
     [ $rc != 0 ] && exit $rc
 fi
 
-exit $rc
+exit "$rc"
