@@ -451,4 +451,9 @@ extern int default_supported_lanes_count (struct gdbarch *gdbarch,
 extern std::vector<addr_range> default_get_watchable_aliases
   (struct gdbarch *gdbarch, ptid_t ptid, int simd_lane, addr_range range);
 
+/* Default implementation of gdbarch_show_verbose_trap_inline_frame.  */
+extern bool default_show_verbose_trap_inline_frame
+  (struct gdbarch *gdbarch, const struct symbol *func,
+   enum gdb_signal stop_signal);
+
 #endif /* GDB_ARCH_UTILS_H */

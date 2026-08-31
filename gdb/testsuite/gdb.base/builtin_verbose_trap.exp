@@ -1,0 +1,79 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that __builtin_verbose_trap inline frames are shown when trap fires.
+# __builtin_verbose_trap is a Clang-only builtin, added in Clang 17.
+
+require {expr {[test_compiler_info clang*] && ![test_compiler_info {clang-1[0-6]-*}]}}
+
+standard_testfile .cpp
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+# Set breakpoint in function before inline function call.
+gdb_breakpoint "test_trap_function"
+
+# Continue to breakpoint.
+gdb_test "continue" \
+    ".*Breakpoint.*test_trap_function.*" \
+    "hit breakpoint in function"
+
+# Step through inline function calls with next.
+# The inline frames for add_numbers should be hidden.
+gdb_test "next" ".*" "next 1"
+gdb_test "next" ".*" "next 2"
+
+# Verify backtrace does NOT show add_numbers inline frame.
+gdb_test "bt" \
+    ".*test_trap_function.*" \
+    "inline frame not shown during stepping"
+
+gdb_test_no_output "set confirm off"
+
+# Continue to trigger the trap.
+# CPU uses ud2 instruction which generates SIGILL (not SIGABRT like GPU).
+gdb_test "continue" \
+    ".*received signal SIGILL.*" \
+    "received trap signal"
+
+# Verify verbose trap message appears in backtrace.
+gdb_test "bt" \
+    ".*This is verbose trap.*" \
+    "verbose trap message appears in backtrace"
+
+# Test single stepping into the trap.
+if {![runto_main]} {
+    return
+}
+
+gdb_breakpoint "builtin_verbose_trap.cpp:29"
+
+gdb_test "continue" \
+    ".*Breakpoint.*add_numbers.*" \
+    "hit breakpoint before trap for stepping test"
+
+gdb_test "next" \
+    ".*received signal SIGILL.*" \
+    "next triggers trap signal"
+
+gdb_test "bt" \
+    ".*This is verbose trap.*" \
+    "verbose trap message appears after stepping"

@@ -265,6 +265,7 @@ struct gdbarch
   gdbarch_core_parse_exec_context_ftype *core_parse_exec_context = default_core_parse_exec_context;
   gdbarch_shadow_stack_push_ftype *shadow_stack_push = nullptr;
   gdbarch_get_shadow_stack_pointer_ftype *get_shadow_stack_pointer = default_get_shadow_stack_pointer;
+  gdbarch_show_verbose_trap_inline_frame_ftype *show_verbose_trap_inline_frame = default_show_verbose_trap_inline_frame;
 };
 
 /* Create a new ``struct gdbarch'' based on information provided by
@@ -547,6 +548,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of core_parse_exec_context, invalid_p == 0.  */
   /* Skip verify of shadow_stack_push, has predicate.  */
   /* Skip verify of get_shadow_stack_pointer, invalid_p == 0.  */
+  /* Skip verify of show_verbose_trap_inline_frame, invalid_p == 0.  */
   if (!log.empty ())
     internal_error (_("verify_gdbarch: the following are invalid ...%s"),
 		    log.c_str ());
@@ -1421,6 +1423,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: get_shadow_stack_pointer = <%s>\n",
 	      host_address_to_string (gdbarch->get_shadow_stack_pointer));
+  gdb_printf (file,
+	      "gdbarch_dump: show_verbose_trap_inline_frame = <%s>\n",
+	      host_address_to_string (gdbarch->show_verbose_trap_inline_frame));
   if (gdbarch->dump_tdep != nullptr)
     gdbarch->dump_tdep (gdbarch, file);
 }
@@ -5599,4 +5604,21 @@ set_gdbarch_get_shadow_stack_pointer (struct gdbarch *gdbarch,
 				      gdbarch_get_shadow_stack_pointer_ftype get_shadow_stack_pointer)
 {
   gdbarch->get_shadow_stack_pointer = get_shadow_stack_pointer;
+}
+
+bool
+gdbarch_show_verbose_trap_inline_frame (struct gdbarch *gdbarch, const struct symbol *func, enum gdb_signal stop_signal)
+{
+  gdb_assert (gdbarch != nullptr);
+  gdb_assert (gdbarch->show_verbose_trap_inline_frame != nullptr);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_show_verbose_trap_inline_frame called\n");
+  return gdbarch->show_verbose_trap_inline_frame (gdbarch, func, stop_signal);
+}
+
+void
+set_gdbarch_show_verbose_trap_inline_frame (struct gdbarch *gdbarch,
+					    gdbarch_show_verbose_trap_inline_frame_ftype show_verbose_trap_inline_frame)
+{
+  gdbarch->show_verbose_trap_inline_frame = show_verbose_trap_inline_frame;
 }
