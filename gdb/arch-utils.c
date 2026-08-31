@@ -1613,6 +1613,18 @@ core_file_exec_context::environment () const
   return e;
 }
 
+/* See arch-utils.h.  */
+
+/* Default implementation: don't show inline frames.  */
+
+bool
+default_should_show_inline_frame (struct gdbarch *gdbarch,
+				  const struct symbol *func,
+				  enum gdb_signal stop_signal)
+{
+  return false;
+}
+
 INIT_GDB_FILE (gdbarch_utils)
 {
   add_setshow_enum_cmd ("endian", class_support,
