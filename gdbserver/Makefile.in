@@ -48,9 +48,7 @@ AR_FLAGS = rc
 STRIP = @STRIP@
 
 # Dependency tracking information.
-DEPMODE = @CCDEPMODE@
 DEPDIR = @DEPDIR@
-depcomp = $(SHELL) $(srcdir)/../depcomp
 
 # Directory containing source files.  Don't clean up the spacing,
 # this exact string is matched for by the "configure" script.
@@ -63,11 +61,14 @@ top_builddir = .
 
 include $(srcdir)/../gdb/silent-rules.mk
 
-# Note that these are overridden by GNU make-specific code below if
-# GNU make is used.  The overrides implement dependency tracking.
+# Note that we put the dependencies into a .Tpo file, then move them into
+# place if the compile succeeds.  We need this because gcc does not
+# atomically write the dependency output file.
 COMPILE.pre = $(CXX) $(CXX_DIALECT)
-COMPILE.post = -c -o $@
-POSTCOMPILE = @true
+COMPILE.post = -c -o $@ \
+	-MT $@ -MMD -MP -MF $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo
+POSTCOMPILE = @mv $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo \
+	$(@D)/$(DEPDIR)/$(basename $(@F)).Po
 
 INCLUDE_SERVER_H = -include $(srcdir)/server.h
 
@@ -595,23 +596,6 @@ gdbreplay.o: gdbreplay.cc
 #
 # Dependency tracking.
 #
-
-ifeq ($(DEPMODE),depmode=gcc3)
-# Note that we put the dependencies into a .Tpo file, then move them
-# into place if the compile succeeds.  We need this because gcc does
-# not atomically write the dependency output file.
-override COMPILE.post = -c -o $@ -MT $@ -MMD -MP \
-	-MF $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo
-override POSTCOMPILE = @mv $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo \
-	$(@D)/$(DEPDIR)/$(basename $(@F)).Po
-else
-override COMPILE.pre = source='$<' object='$@' libtool=no \
-	DEPDIR=$(DEPDIR) $(DEPMODE) $(depcomp) \
-	$(CXX) $(CXX_DIALECT)
-# depcomp handles atomicity for us, so we don't need a postcompile
-# step.
-override POSTCOMPILE =
-endif
 
 # A list of all the objects we might care about in this build, for
 # dependency tracking.

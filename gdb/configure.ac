@@ -61,7 +61,6 @@ GDB_AC_COMMON
 
 # Dependency checking.
 ZW_CREATE_DEPDIR
-ZW_PROG_COMPILER_DEPENDENCIES([CC])
 
 # Since the first call to PKG_CHECK_MODULES may not happen (is guarded by
 # a condition), we must call PKG_PROG_PKG_CONFIG explicitly to probe for

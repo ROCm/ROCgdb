@@ -76,8 +76,6 @@ AC_CONFIG_COMMANDS([gdbdepdir],[
   done],
   [ac_aux_dir=$ac_aux_dir DEPDIR=$DEPDIR CONFIG_SRC_SUBDIR="$CONFIG_SRC_SUBDIR"])
 
-ZW_PROG_COMPILER_DEPENDENCIES([CC])
-
 AC_CHECK_HEADERS([ \
   arpa/inet.h \
   fcntl.h \

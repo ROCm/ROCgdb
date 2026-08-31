@@ -103,9 +103,7 @@ CXX = @CXX@
 CXX_DIALECT = @CXX_DIALECT@
 
 # Dependency tracking information.
-DEPMODE = @CCDEPMODE@
 DEPDIR = @DEPDIR@
-depcomp = $(SHELL) $(srcdir)/../depcomp
 
 # Directory containing source files.
 srcdir = @srcdir@
@@ -114,11 +112,14 @@ top_srcdir = @top_srcdir@
 
 include $(srcdir)/silent-rules.mk
 
-# Note that these are overridden by GNU make-specific code below if
-# GNU make is used.  The overrides implement dependency tracking.
+# Note that we put the dependencies into a .Tpo file, then move them into
+# place if the compile succeeds.  We need this because gcc does not
+# atomically write the dependency output file.
 COMPILE.pre = $(CXX) -x c++ $(CXX_DIALECT)
-COMPILE.post = -c -o $@
-POSTCOMPILE = @true
+COMPILE.post = -c -o $@ \
+	-MT $@ -MMD -MP -MF $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo
+POSTCOMPILE = @mv $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo \
+	$(@D)/$(DEPDIR)/$(basename $(@F)).Po
 
 # CXXFLAGS is at the very end on purpose, so that user-supplied flags can
 # override internal flags.
@@ -2824,23 +2825,6 @@ all_gdbtk_cflags = $(IDE_CFLAGS) $(ITCL_CFLAGS) \
 #
 # Dependency tracking.
 #
-
-ifeq ($(DEPMODE),depmode=gcc3)
-# Note that we put the dependencies into a .Tpo file, then move them
-# into place if the compile succeeds.  We need this because gcc does
-# not atomically write the dependency output file.
-override COMPILE.post = -c -o $@ -MT $@ -MMD -MP \
-	-MF $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo
-override POSTCOMPILE = @mv $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo \
-	$(@D)/$(DEPDIR)/$(basename $(@F)).Po
-else
-override COMPILE.pre = source='$<' object='$@' libtool=no \
-	DEPDIR=$(DEPDIR) $(DEPMODE) $(depcomp) \
-	$(CXX) -x c++ $(CXX_DIALECT)
-# depcomp handles atomicity for us, so we don't need a postcompile
-# step.
-override POSTCOMPILE =
-endif
 
 # A list of all the objects we might care about in this build, for
 # dependency tracking.
