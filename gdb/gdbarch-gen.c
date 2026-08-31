@@ -273,6 +273,7 @@ struct gdbarch
   gdbarch_read_core_file_mappings_ftype *read_core_file_mappings = default_read_core_file_mappings;
   gdbarch_use_target_description_from_corefile_notes_ftype *use_target_description_from_corefile_notes = default_use_target_description_from_corefile_notes;
   gdbarch_core_parse_exec_context_ftype *core_parse_exec_context = default_core_parse_exec_context;
+  gdbarch_should_show_inline_frame_ftype *should_show_inline_frame = default_should_show_inline_frame;
 };
 
 /* Create a new ``struct gdbarch'' based on information provided by
@@ -567,6 +568,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of read_core_file_mappings, invalid_p == 0.  */
   /* Skip verify of use_target_description_from_corefile_notes, invalid_p == 0.  */
   /* Skip verify of core_parse_exec_context, invalid_p == 0.  */
+  /* Skip verify of should_show_inline_frame, invalid_p == 0.  */
   if (!log.empty ())
     internal_error (_("verify_gdbarch: the following are invalid ...%s"),
 		    log.c_str ());
@@ -1483,6 +1485,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   gdb_printf (file,
 	      "gdbarch_dump: core_parse_exec_context = <%s>\n",
 	      host_address_to_string (gdbarch->core_parse_exec_context));
+  gdb_printf (file,
+	      "gdbarch_dump: should_show_inline_frame = <%s>\n",
+	      host_address_to_string (gdbarch->should_show_inline_frame));
   if (gdbarch->dump_tdep != NULL)
     gdbarch->dump_tdep (gdbarch, file);
 }
@@ -5842,4 +5847,21 @@ set_gdbarch_core_parse_exec_context (struct gdbarch *gdbarch,
 				     gdbarch_core_parse_exec_context_ftype core_parse_exec_context)
 {
   gdbarch->core_parse_exec_context = core_parse_exec_context;
+}
+
+bool
+gdbarch_should_show_inline_frame (struct gdbarch *gdbarch, const struct symbol *func, enum gdb_signal stop_signal)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->should_show_inline_frame != NULL);
+  if (gdbarch_debug >= 2)
+    gdb_printf (gdb_stdlog, "gdbarch_should_show_inline_frame called\n");
+  return gdbarch->should_show_inline_frame (gdbarch, func, stop_signal);
+}
+
+void
+set_gdbarch_should_show_inline_frame (struct gdbarch *gdbarch,
+				      gdbarch_should_show_inline_frame_ftype should_show_inline_frame)
+{
+  gdbarch->should_show_inline_frame = should_show_inline_frame;
 }
