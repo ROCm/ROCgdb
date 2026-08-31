@@ -602,14 +602,8 @@ gdbreplay.o: gdbreplay.cc
 # dependency tracking.
 all_object_files = $(OBS) $(GDBREPLAY_OBS) $(IPA_OBJS)
 
-# Ensure that generated files are created early.  Use order-only
-# dependencies if available.  They require GNU make 3.80 or newer,
-# and the .VARIABLES variable was introduced at the same time.
-ifdef .VARIABLES
+# Ensure that generated files are created early.
 $(all_object_files): | $(generated_files)
-else
-$(all_object_files) : $(generated_files)
-endif
 
 # All the .deps files to include.
 all_deps_files = $(foreach dep,$(patsubst %.o,%.Po,$(all_object_files)),\

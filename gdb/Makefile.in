@@ -2834,14 +2834,8 @@ all_object_files = gdb.o $(LIBGDB_OBS) gdbtk/generic/gdbtk-main.o
 all_deps_files = $(foreach dep,$(patsubst %.o,%.Po,$(all_object_files)),\
     $(dir $(dep))/$(DEPDIR)/$(notdir $(dep)))
 
-# Ensure that generated files are created early.  Use order-only
-# dependencies if available.  They require GNU make 3.80 or newer,
-# and the .VARIABLES variable was introduced at the same time.
-ifdef .VARIABLES
+# Ensure that generated files are created early.
 $(all_object_files): | $(generated_files)
-else
-$(all_object_files) : $(generated_files)
-endif
 
 # Dependencies.
 -include $(all_deps_files)
