@@ -2952,3 +2952,26 @@ SHADOW_STACK_ENABLED to false.
     predefault="default_get_shadow_stack_pointer",
     invalid=False,
 )
+
+Method(
+    comment="""
+Return true if the inline frame represented by FUNC should NOT be skipped
+when stopped due to STOP_SIGNAL.  This allows architectures to show
+compiler-generated inline frames that contain verbose trap messages
+(e.g., __builtin_verbose_trap).
+
+By default, inline frames are skipped to provide better stepping experience.
+However, for verbose trap scenarios, the inline frame contains important
+diagnostic information that should be visible in backtraces.
+
+Architectures can use this hook to detect verbose trap frames by checking
+both the symbol name (e.g., starts with "__clang_trap_msg$") and the stop
+signal (e.g., GDB_SIGNAL_ABRT for abort traps), returning true only when
+both conditions indicate a verbose trap scenario.
+""",
+    type="bool",
+    name="show_verbose_trap_inline_frame",
+    params=[("const struct symbol *", "func"), ("enum gdb_signal", "stop_signal")],
+    predefault="default_show_verbose_trap_inline_frame",
+    invalid=False,
+)
