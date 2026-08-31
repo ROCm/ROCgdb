@@ -1858,3 +1858,25 @@ void set_gdbarch_shadow_stack_push (struct gdbarch *gdbarch, gdbarch_shadow_stac
 using gdbarch_get_shadow_stack_pointer_ftype = std::optional<CORE_ADDR> (struct gdbarch *gdbarch, regcache *regcache, bool &shadow_stack_enabled);
 std::optional<CORE_ADDR> gdbarch_get_shadow_stack_pointer (struct gdbarch *gdbarch, regcache *regcache, bool &shadow_stack_enabled);
 void set_gdbarch_get_shadow_stack_pointer (struct gdbarch *gdbarch, gdbarch_get_shadow_stack_pointer_ftype *get_shadow_stack_pointer);
+
+/* Determine whether an inline frame should be shown in backtraces.
+
+   This hook is called when GDB encounters an inline frame to decide whether
+   it should be displayed to the user or hidden.  By default, inline frames
+   are hidden during normal stepping to provide a source-level debugging
+   experience.  However, some inline frames contain important diagnostic
+   information that should always be visible.
+
+   A common use case is verbose trap frames (e.g., __builtin_verbose_trap)
+   which embed crash diagnostic messages in specially-named inline frames.
+   When such a trap fires, the inline frame should be shown even though
+   inline frames are normally hidden.
+
+   The hook receives the inline frame's symbol and the signal that stopped
+   execution, allowing architecture-specific code to make the decision.
+
+   Return true if the inline frame should be shown, false to hide it. */
+
+using gdbarch_should_show_inline_frame_ftype = bool (struct gdbarch *gdbarch, const struct symbol *func, enum gdb_signal stop_signal);
+bool gdbarch_should_show_inline_frame (struct gdbarch *gdbarch, const struct symbol *func, enum gdb_signal stop_signal);
+void set_gdbarch_should_show_inline_frame (struct gdbarch *gdbarch, gdbarch_should_show_inline_frame_ftype *should_show_inline_frame);

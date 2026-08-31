@@ -2088,6 +2088,36 @@ amd64_linux_fetch_hiperr_info (frame_info_ptr frame)
   return amd64_fetch_hiperr_info (frame, struct_addr);
 }
 
+/* Return true if the inline frame FUNC should be shown when stopped
+   due to STOP_SIGNAL.  This allows showing verbose trap inline frames
+   on x86_64.  */
+
+/* Determine whether to show an inline frame.
+   Show verbose trap frames (__clang_trap_msg$...) when SIGILL occurs.  */
+
+static bool
+amd64_linux_should_show_inline_frame (struct gdbarch *gdbarch,
+				      const struct symbol *func,
+				      enum gdb_signal stop_signal)
+{
+  /* Only show verbose trap frames when stopped due to illegal instruction.
+     The ud2 instruction used by verbose traps on x86_64 generates SIGILL.
+     This ensures we only show the frame when the trap actually fired,
+     not when user stepped into it with commands like "step".  */
+  if (stop_signal != GDB_SIGNAL_ILL)
+    return false;
+
+  /* Check if this is a verbose trap inline frame by looking for the
+     compiler-generated function name pattern.  */
+  const char *name = func->linkage_name ();
+  if (name == nullptr)
+    return false;
+
+  /* Verbose trap frames have names like:
+     "__clang_trap_msg$<category>$<message>"  */
+  return startswith (name, "__clang_trap_msg$");
+}
+
 static void
 amd64_linux_init_abi_common (struct gdbarch_info info, struct gdbarch *gdbarch,
 			     int num_disp_step_buffers)
@@ -2154,6 +2184,10 @@ amd64_linux_init_abi_common (struct gdbarch_info info, struct gdbarch *gdbarch,
   /* Extract hiperr info for 'catch hiperr'.  */
   set_gdbarch_fetch_hiperr_info
     (gdbarch, amd64_linux_fetch_hiperr_info);
+
+  /* Show verbose trap inline frames when stopped due to abort.  */
+  set_gdbarch_should_show_inline_frame
+    (gdbarch, amd64_linux_should_show_inline_frame);
 }
 
 static void
