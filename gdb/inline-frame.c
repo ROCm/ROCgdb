@@ -28,6 +28,7 @@
 #include "regcache.h"
 #include "symtab.h"
 #include "frame.h"
+#include "gdbarch.h"
 #include "cli/cli-cmds.h"
 #include "cli/cli-style.h"
 #include <algorithm>
@@ -432,10 +433,14 @@ skip_inline_frames (thread_info *thread, bpstat *stop_chain)
      which contains all of the inlined functions, we never skip this.  */
   int skipped_frames = 0;
 
+  struct gdbarch *gdbarch = get_frame_arch (get_current_frame ());
+  enum gdb_signal stop_signal = thread->stop_signal ();
+
   for (const auto sym : function_symbols)
     {
       if (stopped_by_user_bp_inline_frame (sym, stop_chain)
-	  || sym == function_symbols.back ())
+	  || sym == function_symbols.back ()
+	  || gdbarch_should_show_inline_frame (gdbarch, sym, stop_signal))
 	break;
 
       ++skipped_frames;
