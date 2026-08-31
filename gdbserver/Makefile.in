@@ -27,7 +27,7 @@ program_transform_name = @program_transform_name@
 bindir = @bindir@
 libdir = @libdir@
 
-CONFIG_SRC_SUBDIR = @CONFIG_SRC_SUBDIR@
+CONFIG_SRC_SUBDIR = arch gdbsupport nat target
 
 install_sh = @install_sh@
 
@@ -428,17 +428,14 @@ mostlyclean clean:
 	rm -f $(IPA_LIB)
 	rm -f *-generated.cc
 	rm -f stamp-xml
-	rm -f $(DEPDIR)/*.Po
-	for i in $(CONFIG_SRC_SUBDIR); do \
-		rm -f $$i/*.o;	\
-		rm -f $$i/$(DEPDIR)/*; \
+	rm -f $(addsuffix /*.o,$(CONFIG_SRC_SUBDIR))
+	rm -f $(addsuffix /*,$(ALL_DEPDIRS))
+	for d in $(ALL_DEPDIRS); do \
+		if test -d "$$d"; then rmdir "$$d" || exit 1; fi; \
 	done
 
 maintainer-clean realclean distclean: clean
 	rm -f Makefile config.status config.h stamp-h config.log config.cache
-	for i in $(CONFIG_SRC_SUBDIR); do \
-		rmdir $$i/$(DEPDIR); \
-	done
 
 config.h: stamp-h ; @true
 stamp-h: config.in config.status
@@ -596,8 +593,16 @@ gdbreplay.o: gdbreplay.cc
 # dependency tracking.
 all_object_files = $(OBS) $(GDBREPLAY_OBS) $(IPA_OBJS)
 
-# Ensure that generated files are created early.
-$(all_object_files): | $(generated_files)
+# All the directories in which we put dependency files.
+ALL_DEPDIRS = $(DEPDIR) $(addsuffix /$(DEPDIR),$(CONFIG_SRC_SUBDIR))
+
+$(ALL_DEPDIRS):
+	$(ECHO_GEN) mkdir -p $@
+
+# Ensure that the generated files and the dependency directories are created
+# early.  Creating a dependency directory also creates the directory the
+# objects go in.
+$(all_object_files): | $(generated_files) $(ALL_DEPDIRS)
 
 # All the .deps files to include.
 all_deps_files = $(foreach dep,$(patsubst %.o,%.Po,$(all_object_files)),\

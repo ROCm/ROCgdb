@@ -637,7 +637,6 @@ REPORT_BUGS_TO
 PKGVERSION
 WERROR_CFLAGS
 WARN_CFLAGS
-CONFIG_SRC_SUBDIR
 CATOBJEXT
 GENCAT
 INSTOBJEXT
@@ -10956,9 +10955,6 @@ rmdir .tst 2>/dev/null
 
 DEPDIR="${am__leading_dot}deps"
 
-ac_config_commands="$ac_config_commands depdir"
-
-
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ${MAKE-make} sets \$(MAKE)" >&5
 $as_echo_n "checking whether ${MAKE-make} sets \$(MAKE)... " >&6; }
@@ -12812,13 +12808,6 @@ $as_echo "$LINGUAS" >&6; }
   CATOBJEXT=.gmo
 
 fi
-
-# Create sub-directories for objects and dependencies.
-CONFIG_SRC_SUBDIR="arch gdbsupport nat target"
-
-
-ac_config_commands="$ac_config_commands gdbdepdir"
-
 
 for ac_header in  \
   arpa/inet.h \
@@ -15459,7 +15448,6 @@ cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1
 #
 # INIT-COMMANDS
 #
-ac_aux_dir=$ac_aux_dir DEPDIR=$DEPDIR
 # Capture the value of obsolete ALL_LINGUAS because we need it to compute
     # POFILES, GMOFILES, UPDATEPOFILES, DUMMYPOFILES, CATALOGS. But hide it
     # from automake.
@@ -15467,7 +15455,6 @@ ac_aux_dir=$ac_aux_dir DEPDIR=$DEPDIR
     # Capture the value of LINGUAS because we need it to compute CATALOGS.
     LINGUAS="${LINGUAS-%UNSET%}"
 
-ac_aux_dir=$ac_aux_dir DEPDIR=$DEPDIR CONFIG_SRC_SUBDIR="$CONFIG_SRC_SUBDIR"
 
 _ACEOF
 
@@ -15478,9 +15465,7 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h:config.in" ;;
-    "depdir") CONFIG_COMMANDS="$CONFIG_COMMANDS depdir" ;;
     "default-1") CONFIG_COMMANDS="$CONFIG_COMMANDS default-1" ;;
-    "gdbdepdir") CONFIG_COMMANDS="$CONFIG_COMMANDS gdbdepdir" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
@@ -16038,7 +16023,6 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
 
   case $ac_file$ac_mode in
     "config.h":H) echo > stamp-h ;;
-    "depdir":C) $SHELL $ac_aux_dir/mkinstalldirs $DEPDIR ;;
     "default-1":C)
     for ac_file in $CONFIG_FILES; do
       # Support "outfile[:infile[:infile...]]"
@@ -16140,11 +16124,6 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
         ;;
       esac
     done ;;
-    "gdbdepdir":C)
-  for subdir in ${CONFIG_SRC_SUBDIR}
-  do
-      $SHELL $ac_aux_dir/mkinstalldirs $subdir/$DEPDIR
-  done ;;
 
   esac
 done # for ac_tag

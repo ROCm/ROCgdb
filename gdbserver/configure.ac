@@ -60,21 +60,10 @@ ACX_NONCANONICAL_TARGET
 ACX_NONCANONICAL_HOST
 
 # Dependency checking.
-ZW_CREATE_DEPDIR
+AM_SET_DEPDIR
 
 dnl Set up for gettext.
 ZW_GNU_GETTEXT_SISTER_DIR
-
-# Create sub-directories for objects and dependencies.
-CONFIG_SRC_SUBDIR="arch gdbsupport nat target"
-AC_SUBST(CONFIG_SRC_SUBDIR)
-
-AC_CONFIG_COMMANDS([gdbdepdir],[
-  for subdir in ${CONFIG_SRC_SUBDIR}
-  do
-      $SHELL $ac_aux_dir/mkinstalldirs $subdir/$DEPDIR
-  done],
-  [ac_aux_dir=$ac_aux_dir DEPDIR=$DEPDIR CONFIG_SRC_SUBDIR="$CONFIG_SRC_SUBDIR"])
 
 AC_CHECK_HEADERS([ \
   arpa/inet.h \

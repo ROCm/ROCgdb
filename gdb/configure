@@ -22696,9 +22696,6 @@ rmdir .tst 2>/dev/null
 
 DEPDIR="${am__leading_dot}deps"
 
-ac_config_commands="$ac_config_commands depdir"
-
-
 
 # Since the first call to PKG_CHECK_MODULES may not happen (is guarded by
 # a condition), we must call PKG_PROG_PKG_CONFIG explicitly to probe for
@@ -34694,7 +34691,6 @@ fi
 ac_aux_dir='$ac_aux_dir'
 
 
-ac_aux_dir=$ac_aux_dir DEPDIR=$DEPDIR
 # Capture the value of obsolete ALL_LINGUAS because we need it to compute
     # POFILES, GMOFILES, UPDATEPOFILES, DUMMYPOFILES, CATALOGS. But hide it
     # from automake.
@@ -34714,7 +34710,6 @@ do
   case $ac_config_target in
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h:config.in" ;;
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
-    "depdir") CONFIG_COMMANDS="$CONFIG_COMMANDS depdir" ;;
     "default-1") CONFIG_COMMANDS="$CONFIG_COMMANDS default-1" ;;
     "jit-reader.h") CONFIG_FILES="$CONFIG_FILES jit-reader.h:jit-reader.in" ;;
     "nm.h") CONFIG_LINKS="$CONFIG_LINKS nm.h:$GDB_NM_FILE" ;;
@@ -36163,7 +36158,6 @@ compiler_lib_search_path=$lt_compiler_lib_search_path_CXX
 _LT_EOF
 
  ;;
-    "depdir":C) $SHELL $ac_aux_dir/mkinstalldirs $DEPDIR ;;
     "default-1":C)
     for ac_file in $CONFIG_FILES; do
       # Support "outfile[:infile[:infile...]]"

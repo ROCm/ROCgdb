@@ -590,7 +590,6 @@ HAVE_GSTACK = @HAVE_GSTACK@
 
 CONFIG_SRC_SUBDIR = arch cli dwarf2 mi compile tui unittests guile python \
 	target nat gdbtk/generic
-CONFIG_DEP_SUBDIR = $(addsuffix /$(DEPDIR),$(CONFIG_SRC_SUBDIR))
 
 # -I. for config files.
 # -I$(srcdir) for gdb internal headers.
@@ -2092,14 +2091,10 @@ PYTHON_CFLAGS = @PYTHON_CFLAGS@
 all: gdb$(EXEEXT) $(CONFIG_ALL) gdb-gdb.gdb gcore gstack gdb-add-index
 	@$(MAKE) $(FLAGS_TO_PASS) DO=all "DODIRS=$(SUBDIRS)" subdir_do
 
-# Rule for compiling .c files in the top-level gdb directory.
-# The order-only dependencies ensure that we create the build subdirectories.
-%.o: %.c | $(CONFIG_DEP_SUBDIR)
+# Rule for compiling .c files.
+%.o: %.c
 	$(COMPILE) $<
 	$(POSTCOMPILE)
-
-$(CONFIG_DEP_SUBDIR):
-	$(ECHO_GEN) $(SHELL) $(srcdir)/../install-sh -d $@
 
 # Python files need special flags.
 python/%.o: INTERNAL_CFLAGS += $(PYTHON_CFLAGS)
@@ -2413,10 +2408,10 @@ clean mostlyclean: $(CONFIG_CLEAN)
 	rm -f gdb$(EXEEXT) core make.log
 	rm -f gdb[0-9]$(EXEEXT)
 	rm -f xml-builtin.c stamp-xml
-	rm -f $(DEPDIR)/*
-	for i in $(CONFIG_SRC_SUBDIR); do \
-		rm -f $$i/*.o;	\
-		rm -f $$i/$(DEPDIR)/*; \
+	rm -f $(addsuffix /*.o,$(CONFIG_SRC_SUBDIR))
+	rm -f $(addsuffix /*,$(ALL_DEPDIRS))
+	for d in $(ALL_DEPDIRS); do \
+		if test -d "$$d"; then rmdir "$$d" || exit 1; fi; \
 	done
 
 # This used to depend on c-exp.c m2-exp.c TAGS
@@ -2431,10 +2426,6 @@ distclean: clean
 	rm -f config.log config.cache
 	rm -f config.lt libtool
 	rm -f Makefile
-	rm -rf $(DEPDIR)
-	for i in $(CONFIG_SRC_SUBDIR); do \
-		if test -d $$i/$(DEPDIR); then rmdir $$i/$(DEPDIR); fi \
-	done
 
 maintainer-clean: local-maintainer-clean do-maintainer-clean distclean
 realclean: maintainer-clean
@@ -2813,12 +2804,20 @@ all_gdbtk_cflags = $(IDE_CFLAGS) $(ITCL_CFLAGS) \
 # dependency tracking.
 all_object_files = gdb.o $(LIBGDB_OBS) gdbtk/generic/gdbtk-main.o
 
+# All the directories in which we put dependency files.
+ALL_DEPDIRS = $(DEPDIR) $(addsuffix /$(DEPDIR),$(CONFIG_SRC_SUBDIR))
+
+$(ALL_DEPDIRS):
+	$(ECHO_GEN) mkdir -p $@
+
 # All the .deps files to include.
 all_deps_files = $(foreach dep,$(patsubst %.o,%.Po,$(all_object_files)),\
     $(dir $(dep))/$(DEPDIR)/$(notdir $(dep)))
 
-# Ensure that generated files are created early.
-$(all_object_files): | $(generated_files)
+# Ensure that the generated files and the dependency directories are created
+# early.  Creating a dependency directory also creates the directory the
+# objects go in.
+$(all_object_files): | $(generated_files) $(ALL_DEPDIRS)
 
 # Dependencies.
 -include $(all_deps_files)
