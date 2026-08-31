@@ -1613,6 +1613,17 @@ core_file_exec_context::environment () const
   return e;
 }
 
+/* See arch-utils.h.  */
+
+bool
+default_show_verbose_trap_inline_frame (struct gdbarch *gdbarch,
+					const struct symbol *func,
+					enum gdb_signal stop_signal)
+{
+  /* By default, do not show verbose trap inline frames.  */
+  return false;
+}
+
 INIT_GDB_FILE (gdbarch_utils)
 {
   add_setshow_enum_cmd ("endian", class_support,

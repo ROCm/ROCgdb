@@ -2023,6 +2023,30 @@ amdgpu_supports_arch_info (const struct bfd_arch_info *info)
   return status == AMD_DBGAPI_STATUS_SUCCESS;
 }
 
+/* Implementation of gdbarch_show_verbose_trap_inline_frame for AMDGPU.  */
+
+static bool
+amdgpu_show_verbose_trap_inline_frame (struct gdbarch *gdbarch,
+				       const struct symbol *func,
+				       enum gdb_signal stop_signal)
+{
+  /* Only show verbose trap frames when stopped due to abort signal.
+     This ensures we only show the frame when the trap actually fired,
+     not when user stepped into it with commands like "step".  */
+  if (stop_signal != GDB_SIGNAL_ABRT)
+    return false;
+
+  /* Check if this is a verbose trap inline frame by looking for the
+     compiler-generated function name pattern.  */
+  const char *name = func->linkage_name ();
+  if (name == nullptr)
+    return false;
+
+  /* Verbose trap frames have names like:
+     "__clang_trap_msg$<category>$<message>"  */
+  return startswith (name, "__clang_trap_msg$");
+}
+
 static struct gdbarch *
 amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
@@ -2274,6 +2298,9 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
     error (_("amd_dbgapi_architecture_get_info failed"));
 
   set_gdbarch_decr_pc_after_break (gdbarch, pc_adjust);
+
+  set_gdbarch_show_verbose_trap_inline_frame
+    (gdbarch, amdgpu_show_verbose_trap_inline_frame);
 
   /* Get info about address spaces.  */
   size_t address_space_count;
