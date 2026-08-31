@@ -592,6 +592,7 @@ target/%.o: ../gdb/target/%.c
 gdbreplay.o: gdbreplay.cc
 	$(ECHO_CXX) $(COMPILE.pre) $(INTERNAL_CFLAGS) $(CXXFLAGS) \
 		-include gdbsupport/common-defs.h $(COMPILE.post) $<
+	$(POSTCOMPILE)
 
 #
 # Dependency tracking.
