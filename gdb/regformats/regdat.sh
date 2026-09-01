@@ -23,17 +23,14 @@ set -u
 # Format of the input files
 read="type entry"
 
-do_read ()
+do_read()
 {
     type=""
     entry=""
-    while read -r line
-    do
-	if test "${line}" = ""
-	then
+    while read -r line; do
+	if test "${line}" = ""; then
 	    continue
-	elif expr "${line}" : "#" > /dev/null
-	then
+	elif expr "${line}" : "#" > /dev/null; then
 	    continue
 	else
 
@@ -42,21 +39,20 @@ do_read ()
 	    # Work around this by eliminating ``::'' ....
 	    line="$(echo "${line}" | sed -e 's/::/: :/g' -e 's/::/: :/g')"
 
-	    OFS="${IFS}" ; IFS="[:]"
+	    OFS="${IFS}"
+	    IFS="[:]"
 	    # Word-splitting on read variable is required.
 	    # shellcheck disable=SC2086
-	    eval read ${read} <<EOF
+	    eval read ${read} << EOF
 ${line}
 EOF
 	    IFS="${OFS}"
 
 	    # .... and then going back through each field and strip out those
 	    # that ended up with just that space character.
-	    for r in ${read}
-	    do
+	    for r in ${read}; do
 		eval "rvalue=\$$r"
-		if test "${rvalue:-}" = " "
-		then
+		if test "${rvalue:-}" = " "; then
 		    eval "$r=''"
 		fi
 	    done
@@ -64,8 +60,7 @@ EOF
 	    break
 	fi
     done
-    if [ -n "${type}" ]
-    then
+    if [ -n "${type}" ]; then
 	true
     else
 	false
@@ -77,9 +72,9 @@ if test ! -r "$1"; then
     exit 1
 fi
 
-copyright ()
+copyright()
 {
-    cat <<EOF
+    cat << EOF
 /* *INDENT-OFF* */ /* THIS FILE IS GENERATED */
 
 /* A register protocol for GDB, the GNU debugger.
@@ -105,7 +100,6 @@ copyright ()
 EOF
 }
 
-
 exec > new-"$3"
 copyright "$1"
 echo '#include "regdef.h"'
@@ -121,8 +115,7 @@ expedite=x
 feature=x
 osabi=unknown
 exec < "$1"
-while do_read
-do
+while do_read; do
     if test "${type}" = "name"; then
 	name="${entry}"
 
@@ -194,7 +187,7 @@ echo
 
 osabi_enum=$(grep "${osabi}" "$2" | sed 's/.*(\([^,]\+\),.*/GDB_OSABI_\1/')
 
-cat <<EOF
+cat << EOF
   result->xmltarget = xmltarget_${name};
 #endif
 
