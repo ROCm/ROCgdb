@@ -1764,6 +1764,7 @@ static bool
 elf64_alpha_want_plt (struct alpha_elf_link_hash_entry *ah)
 {
   return ((ah->root.type == STT_FUNC
+	  || ah->root.type == STT_GNU_IFUNC
 	  || ah->root.root.type == bfd_link_hash_undefweak
 	  || ah->root.root.type == bfd_link_hash_undefined)
 	  && (ah->flags & ALPHA_ELF_LINK_HASH_LU_PLT) != 0
@@ -1781,6 +1782,31 @@ elf64_alpha_sort_relocs_p (asection *sec)
   return (sec->flags & SEC_CODE) == 0;
 }
 
+
+/* True if a relocation refers to an IFUNC defined in a regular object.  H
+   describes the symbol when it is global and SYM when it is local.  An
+   undefined symbol can carry the IFUNC type from a .type directive; it is
+   treated as an ordinary undefined function, as the generic code does when
+   it writes it out.  */
+
+static bool
+elf64_alpha_ifunc_p (struct alpha_elf_link_hash_entry *h,
+		     Elf_Internal_Sym *sym)
+{
+  if (h != NULL)
+    return h->root.type == STT_GNU_IFUNC && h->root.def_regular;
+
+  return sym != NULL && ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC;
+}
+
+/* True if a relocation of type R_TYPE against an IFUNC can end up as an
+   R_ALPHA_IRELATIVE.  */
+
+static bool
+elf64_alpha_ifunc_reloc_p (unsigned long r_type)
+{
+  return r_type == R_ALPHA_LITERAL || r_type == R_ALPHA_REFQUAD;
+}
 
 /* Handle dynamic relocations when doing an Alpha ELF link.  */
 
@@ -3822,6 +3848,12 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
 
 	  isym = isymbuf + r_symndx;
 
+	  /* A reference to an IFUNC has to keep going through the GOT: a
+	     direct branch or a gp-relative address would reach the resolver
+	     rather than the function it selects.  */
+	  if (elf64_alpha_ifunc_p (NULL, isym))
+	    continue;
+
 	  /* Given the symbol for a TLSLDM reloc is ignored, this also
 	     means forcing the symbol value to the tp base.  */
 	  if (r_type == R_ALPHA_TLSLDM)
@@ -3864,6 +3896,10 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
 	  while (h->root.root.type == bfd_link_hash_indirect
 		 || h->root.root.type == bfd_link_hash_warning)
 	    h = (struct alpha_elf_link_hash_entry *)h->root.root.u.i.link;
+
+	  /* A reference to an IFUNC has to keep going through the GOT.  */
+	  if (elf64_alpha_ifunc_p (h, NULL))
+	    continue;
 
 	  /* If the symbol is undefined, we can't do anything with it.  */
 	  if (h->root.root.type == bfd_link_hash_undefined)
@@ -4346,15 +4382,18 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 	      bfd_put_64 (info->output_bfd, value,
 			  alpha_got_slot (gotent, 0));
 
-	      /* If the symbol has been forced local, output a
-		 RELATIVE reloc, otherwise it will be handled in
-		 finish_dynamic_symbol.  */
+	      /* If the symbol has been forced local, output a RELATIVE
+		 reloc, otherwise it will be handled in finish_dynamic_symbol.
+		 An IFUNC gets an IRELATIVE instead.  */
 	      if (bfd_link_pic (info)
 		  && !dynamic_symbol_p
 		  && !undef_weak_ref)
 		elf64_alpha_emit_dynrel (info->output_bfd, info, sgot, srelgot,
 					 gotent->got_offset, 0,
-					 R_ALPHA_RELATIVE, value);
+					 (elf64_alpha_ifunc_p (h, sym)
+					  ? R_ALPHA_IRELATIVE
+					  : R_ALPHA_RELATIVE),
+					 value);
 	    }
 
 	  value = (sgot->output_section->vma
@@ -4504,6 +4543,18 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 		  }
 		dynindx = 0;
 		dynaddend = value - dtp_base;
+	      }
+	    else if (elf64_alpha_ifunc_reloc_p (r_type)
+		     && bfd_link_pic (info)
+		     && elf64_alpha_ifunc_p (h, sym)
+		     && (input_section->flags & SEC_ALLOC))
+	      {
+		/* The RELATIVE this would otherwise get would store the
+		   address of the resolver.  Space for it is already
+		   reserved, so the IRELATIVE takes its place.  */
+		dynindx = 0;
+		dyntype = R_ALPHA_IRELATIVE;
+		dynaddend = value;
 	      }
 	    else if (bfd_link_pic (info)
 		     && r_symndx != STN_UNDEF
