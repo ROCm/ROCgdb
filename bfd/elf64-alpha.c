@@ -2667,7 +2667,7 @@ elf64_alpha_calc_dynrel_sizes (struct alpha_elf_link_hash_entry *h,
 	    entries * sizeof (Elf64_External_Rela) * relent->count;
 	  if ((sec->flags & SEC_READONLY) != 0)
 	    {
-	      info->flags |= DT_TEXTREL;
+	      info->flags |= DF_TEXTREL;
 	      info->callbacks->minfo
 		(_("%pB: dynamic relocation against `%pT' in "
 		   "read-only section `%pA'\n"),
