@@ -4904,6 +4904,32 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 		  {
 		    srel_out = elf_hash_table (info)->irelplt;
 
+		    /* Every entry of .rela.iplt is applied, so it must not
+		       contain the R_ALPHA_NONE that elf64_alpha_emit_dynrel
+		       writes for a relocation whose place in the output has
+		       been removed.  Sizing .rela.iplt skips the sections that
+		       do not make it into the output, but .eh_frame editing
+		       deletes the place of a relocation later still, long
+		       after the section has been sized and given an address;
+		       there is nothing left to shrink it by.  Report it rather
+		       than produce an executable that faults at startup.  */
+		    if ((_bfd_elf_section_offset (info->output_bfd, info,
+						  input_section, rel->r_offset)
+			 | 1) == (bfd_vma) -1)
+		      {
+			_bfd_error_handler
+			  /* xgettext:c-format */
+			  (_("%pB: cannot resolve STT_GNU_IFUNC symbol `%s': "
+			     "the place of its %s relocation in `%pA' was "
+			     "deleted"),
+			   input_bfd,
+			   elf64_alpha_sym_name (input_bfd, symtab_hdr, h,
+						 sym, sec),
+			   howto->name, input_section);
+			ret_val = false;
+			continue;
+		      }
+
 		    /* Startup code in a static executable applies this after
 		       the kernel has mapped the segment, and unlike the
 		       dynamic linker it cannot make a read-only one writable.
@@ -5466,6 +5492,7 @@ elf64_alpha_final_link (bfd *abfd, struct bfd_link_info *info)
   asection *o;
   struct bfd_link_order *p;
   asection *mdebug_sec;
+  asection *irelplt;
   struct ecoff_debug_info debug;
   const struct ecoff_debug_swap *swap
     = get_elf_backend_data (abfd)->elf_backend_ecoff_debug_swap;
@@ -5707,6 +5734,26 @@ elf64_alpha_final_link (bfd *abfd, struct bfd_link_info *info)
   /* Invoke the regular ELF backend linker to do all the work.  */
   if (! _bfd_elf_final_link (abfd, info))
     return false;
+
+  /* libc's startup code applies every entry between __rela_iplt_start and
+     __rela_iplt_end, so an entry left as R_ALPHA_NONE would fault.  Every
+     way for relocate_section to reserve a slot and then not fill it is
+     diagnosed there, so this is a consistency check on the sizing rather
+     than something a user can provoke.  */
+  irelplt = elf_hash_table (info)->irelplt;
+  if (irelplt != NULL
+      && irelplt->reloc_count * sizeof (Elf64_External_Rela) != irelplt->size)
+    {
+      _bfd_error_handler
+	/* xgettext:c-format */
+	(_("%pB: internal error: %lu .rela.iplt entries were reserved but "
+	   "%lu were written"),
+	 abfd,
+	 (unsigned long) (irelplt->size / sizeof (Elf64_External_Rela)),
+	 (unsigned long) irelplt->reloc_count);
+      bfd_set_error (bfd_error_bad_value);
+      return false;
+    }
 
   /* Now write out the computed sections.  */
 
