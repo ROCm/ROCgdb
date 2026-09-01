@@ -66,6 +66,8 @@ set alphatests {
      "" {got-realloc-a.s got-realloc-b.s}
      {{readelf -SW got-realloc.rd}}
      "got-realloc.so"}
+    {"IFUNC helper shared library" "-shared -melf64alpha" ""
+     "" {ifunc-shlib.s} {} "libalphaifunc.so"}
 }
 
 # Not implemented yet
@@ -75,6 +77,10 @@ set alphatests {
 
 run_ld_link_tests $alphatests
 
+# The dump tests run after the link tests above, so a .d file may name one
+# of the shared libraries they leave in tmpdir.  Several do: linking against
+# a shared library is the only way to make a dump test produce an
+# executable with dynamic sections.
 set test_list [lsort [glob -nocomplain $srcdir/$subdir/*.d]]
 foreach t $test_list {
     # We need to strip the ".d", but can leave the dirname.
