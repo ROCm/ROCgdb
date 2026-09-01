@@ -142,7 +142,7 @@ Contents of the .debug_info section:
     <122>   DW_AT_decl_file   : 1
     <122>   DW_AT_decl_line   : 6
     <122>   DW_AT_type        : <0x81>
-    <126>   DW_AT_location    : 0x23 \(location list\)
+    <126>   DW_AT_location    : 0x2(3|6) \(location list\)
  <2><12a>: Abbrev Number: 10 \(DW_TAG_call_site\)
     <12b>   DW_AT_call_return_pc: 0x12345
     <133>   DW_AT_call_origin : <0x157>
@@ -273,19 +273,19 @@ Contents of the .debug_loclists section:
     Offset   Begin            End              Expression
     0000000c 0000000000001234 \(base address\)
     00000015 0000000000001234 0000000000001236 \(DW_OP_reg5 \([^()]*\)\)
-    0000001a 0000000000001236 0000000000001239 \(DW_OP_entry_value: \(DW_OP_reg5 \([^()]*\)\); DW_OP_stack_value\)
-    00000022 <End of list>
-    00000023 0000000000001234 \(base address\)
-    0000002c 0000000000001234 0000000000001236 \(DW_OP_reg4 \([^()]*\)\)
-    00000031 0000000000001236 0000000000001239 \(DW_OP_entry_value: \(DW_OP_reg4 \([^()]*\)\); DW_OP_stack_value\)
-    00000039 <End of list>
+    0000001(a|b) 0000000000001236 0000000000001239 \(DW_OP_entry_value: \(DW_OP_reg5 \([^()]*\)\); DW_OP_stack_value\)
+    0000002(2|5) <End of list>
+    0000002(3|6) 0000000000001234 \(base address\)
+    0000002(c|f) 0000000000001234 0000000000001236 \(DW_OP_reg4 \([^()]*\)\)
+    0000003(1|5) 0000000000001236 0000000000001239 \(DW_OP_entry_value: \(DW_OP_reg4 \([^()]*\)\); DW_OP_stack_value\)
+    0000003(9|f) <End of list>
 
 Contents of the .debug_rnglists section:
 #...
     Offset   Begin    End
     0000000c 0000000000001234 0000000000001236 
-    00000016 0000000000001234 0000000000001239 
-    00000020 <End of list>
+    0000001(6|7) 0000000000001234 0000000000001239 
+    0000002(0|2) <End of list>
 
 Raw dump of debug contents of section .debug_line:
 
