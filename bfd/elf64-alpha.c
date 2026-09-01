@@ -4104,6 +4104,20 @@ elf64_alpha_relocate_section_r (struct bfd_link_info *info ATTRIBUTE_UNUSED,
   return ret_val;
 }
 
+/* The name of the symbol a relocation refers to, for diagnostics.  H
+   describes the symbol when it is global and SYM when it is local.  */
+
+static const char *
+elf64_alpha_sym_name (bfd *abfd, Elf_Internal_Shdr *symtab_hdr,
+		      struct alpha_elf_link_hash_entry *h,
+		      Elf_Internal_Sym *sym, asection *sec)
+{
+  if (h != NULL)
+    return h->root.root.root.string;
+
+  return bfd_elf_sym_name (abfd, symtab_hdr, sym, sec);
+}
+
 /* Relocate an Alpha ELF section.  */
 
 static int
@@ -4443,17 +4457,8 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 		value += 8;
 		break;
 	      default:
-		if (h != NULL)
-		  name = h->root.root.root.string;
-		else
-		  {
-		    name = (bfd_elf_string_from_elf_section
-			    (input_bfd, symtab_hdr->sh_link, sym->st_name));
-		    if (name == NULL)
-		      name = _("<unknown>");
-		    else if (name[0] == 0)
-		      name = bfd_section_name (sec);
-		  }
+		name = elf64_alpha_sym_name (input_bfd, symtab_hdr, h, sym,
+					     sec);
 		_bfd_error_handler
 		  /* xgettext:c-format */
 		  (_("%pB: !samegp reloc against symbol without .prologue: %s"),
