@@ -1168,8 +1168,11 @@ win32_process_target::wait (ptid_t ptid, target_waitstatus *ourstatus,
 	case TARGET_WAITKIND_SIGNALLED:
 	case TARGET_WAITKIND_LOADED:
 	  {
-	    OUTMSG2 (("Child Stopped with signal = %d \n",
-		      ourstatus->sig ()));
+	    if (ourstatus->kind () == TARGET_WAITKIND_LOADED)
+	      OUTMSG2 (("Child stopped due to library load\n"));
+	    else
+	      OUTMSG2 (("Child stopped with signal = %d \n",
+			ourstatus->sig ()));
 	    maybe_adjust_pc (current_event);
 
 	    /* All-stop, suspend all threads until they are explicitly
@@ -1179,8 +1182,8 @@ win32_process_target::wait (ptid_t ptid, target_waitstatus *ourstatus,
 	    return debug_event_ptid (&current_event);
 	  }
 	default:
-	  OUTMSG (("Ignoring unknown internal event, %d\n",
-		  ourstatus->kind ()));
+	  OUTMSG (("Ignoring unknown internal event, %s\n",
+		   ourstatus->to_string ().c_str ()));
 	  [[fallthrough]];
 	case TARGET_WAITKIND_SPURIOUS:
 	  /* do nothing, just continue */
