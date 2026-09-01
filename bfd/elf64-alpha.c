@@ -4901,7 +4901,30 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 		dynaddend = value;
 
 		if (elf64_alpha_ifunc_irelplt_p (h, sym, info))
-		  srel_out = elf_hash_table (info)->irelplt;
+		  {
+		    srel_out = elf_hash_table (info)->irelplt;
+
+		    /* Startup code in a static executable applies this after
+		       the kernel has mapped the segment, and unlike the
+		       dynamic linker it cannot make a read-only one writable.
+		       Other targets hand out the address of a PLT stub
+		       instead; alpha has no PLT entry for a non-dynamic
+		       function.  */
+		    if ((input_section->flags & SEC_READONLY) != 0
+			&& !elf_hash_table (info)->dynamic_sections_created)
+		      {
+			_bfd_error_handler
+			  /* xgettext:c-format */
+			  (_("%pB: address of STT_GNU_IFUNC symbol `%s' in "
+			     "read-only section `%pA' cannot be relocated in "
+			     "a static link"),
+			   input_bfd,
+			   elf64_alpha_sym_name (input_bfd, symtab_hdr, h,
+						 sym, sec),
+			   input_section);
+			ret_val = false;
+		      }
+		  }
 	      }
 	    else if (bfd_link_pic (info)
 		     && r_symndx != STN_UNDEF
