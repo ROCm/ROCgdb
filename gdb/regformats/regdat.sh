@@ -178,7 +178,7 @@ elif test "${xmltarget}" = x; then
 	if test "${xmlosabi}" != x; then
 	    echo "<osabi>${xmlosabi}</osabi>\\"
 	fi
-	echo "</target>\";"
+	echo '</target>";'
     fi
 else
     echo "static const char *xmltarget_${name} = \"${xmltarget}\";"
