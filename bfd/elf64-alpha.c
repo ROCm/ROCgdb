@@ -4686,6 +4686,27 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 	    break;
 	  }
 
+      /* An R_ALPHA_IRELATIVE carries the address of the resolver in its
+	 addend, so there is no room in it for an offset from the symbol.
+	 A reference the dynamic linker resolves is not affected: it keeps
+	 the addend of the symbolic relocation it gets instead.  */
+      if (addend != 0
+	  && elf64_alpha_ifunc_reloc_p (r_type)
+	  && elf64_alpha_ifunc_p (h, sym)
+	  && (input_section->flags & SEC_ALLOC)
+	  && (elf64_alpha_ifunc_irelplt_p (h, sym, info)
+	      || (bfd_link_pic (info) && !dynamic_symbol_p)))
+	{
+	  _bfd_error_handler
+	    /* xgettext:c-format */
+	    (_("%pB: %s relocation against STT_GNU_IFUNC symbol `%s' has a "
+	       "non-zero addend"),
+	     input_bfd, howto->name,
+	     elf64_alpha_sym_name (input_bfd, symtab_hdr, h, sym, sec));
+	  ret_val = false;
+	  continue;
+	}
+
       switch (r_type)
 	{
 	case R_ALPHA_GPDISP:
