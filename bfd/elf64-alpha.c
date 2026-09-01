@@ -1020,6 +1020,22 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 0xffff,		/* src_mask */
 	 0xffff,		/* dst_mask */
 	 false),		/* pcrel_offset */
+
+  /* A dynamic relocation to set a 64-bit field to the value returned by
+     the resolver whose address is the addend.  */
+  HOWTO (R_ALPHA_IRELATIVE,
+	 0,
+	 0,
+	 0,
+	 false,
+	 0,
+	 complain_overflow_dont,
+	 bfd_elf_generic_reloc,
+	 "IRELATIVE",
+	 false,
+	 0,
+	 0,
+	 true),
 };
 
 /* A mapping from BFD reloc types to Alpha ELF reloc types.  */
@@ -1062,6 +1078,7 @@ static const struct elf_reloc_map elf64_alpha_reloc_map[] =
   {BFD_RELOC_ALPHA_TPREL_HI16,		R_ALPHA_TPRELHI},
   {BFD_RELOC_ALPHA_TPREL_LO16,		R_ALPHA_TPRELLO},
   {BFD_RELOC_ALPHA_TPREL16,		R_ALPHA_TPREL16},
+  {BFD_RELOC_IRELATIVE,			R_ALPHA_IRELATIVE},
 };
 
 /* Given a BFD reloc type, return a HOWTO structure.  */
@@ -5310,6 +5327,8 @@ elf64_alpha_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
       return reloc_class_plt;
     case R_ALPHA_COPY:
       return reloc_class_copy;
+    case R_ALPHA_IRELATIVE:
+      return reloc_class_ifunc;
     default:
       return reloc_class_normal;
     }
