@@ -33,6 +33,13 @@ struct program_space;
 
 extern bool debug_solib;
 
+/* Values for 'set stop-on-solib-events' setting.  */
+
+#define STOP_SOLIB_NONE 0
+#define STOP_SOLIB_CPU  1
+#define STOP_SOLIB_GPU  2
+#define STOP_SOLIB_ALL  3
+
 /* Print an "solib" debug statement.  */
 
 #define solib_debug_printf(fmt, ...) \
