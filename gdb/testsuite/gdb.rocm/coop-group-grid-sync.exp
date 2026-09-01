@@ -40,6 +40,31 @@ if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
     return
 }
 
+# On gfx1151, hipLaunchCooperativeKernel fails under the debugger
+# with HIP error 401.  KFD refuses GWS allocation while debug trap
+# is enabled.  The program works without GDB so this is an expected
+# failure rather than UNSUPPORTED.  Drop the xfail once a kernel
+# with the GWS debug fix is in use.
+
+proc target_has_xfail {} {
+    set xfail_arches {gfx1151}
+
+    set targets [find_amdgpu_devices]
+    if {[llength $targets] == 0} {
+	return 0
+    }
+
+    # The test runs on the first visible HIP device.
+    set target [lindex $targets 0]
+    return [expr {[lsearch -exact $xfail_arches $target] != -1}]
+}
+
+proc maybe_xfail {} {
+    if {[target_has_xfail]} {
+	setup_xfail "*-*-*" "AIROCGDB-654"
+    }
+}
+
 # Test debugging a single-device cooperative kernel.  Stop at a
 # breakpoint after grid.sync () -- which fires once all waves have
 # crossed the GWS barrier, proving GWS-protected code can be debugged
@@ -63,6 +88,7 @@ proc_with_prefix test_coop_grid_sync {} {
 	# Continue into the kernel.  If the program self-skips (no device
 	# advertises cooperativeLaunch) it exits cleanly; treat that as
 	# UNSUPPORTED rather than a FAIL.
+	maybe_xfail
 	set reached 0
 	gdb_test_multiple "continue" "stop after grid.sync" {
 	    -re -wrap "Temporary breakpoint $::decimal,\[^\r\n\]*coop_grid_sync_kernel .*" {
