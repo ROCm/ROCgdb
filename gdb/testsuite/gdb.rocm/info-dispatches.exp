@@ -95,13 +95,13 @@ with_rocm_gpu_lock {
     set seen_header 0
     set leading_star 0
     set dispatch_ids [list]
-    set table_header_regex "\[ \t\]+Target\[ \t\]+Id\[ \t\]+Grid\[ \t\]+Workgroup\[ \t\]+Fence\[ \t\]+Kernel\[ \t\]+Function"
+    set table_header_regex "\[ \t\]+Target\[ \t\]+Id\[ \t\]+Grid\[ \t\]+Cluster\[ \t\]+Workgroup\[ \t\]+Fence\[ \t\]+Kernel\[ \t\]+Function"
 
     # Sample output:
     #
-    #   Id   Target Id                      Grid    Workgroup Fence   Kernel Function
-    # * 1    AMDGPU Dispatch 1:1:1 (PKID 1) [1,1,1] [1,1,1]   B|Aa|Ra single_wave_kernel1()
-    #   2    AMDGPU Dispatch 1:3:2 (PKID 0) [1,1,1] [1,1,1]   B|Aa|Ra single_wave_kernel2()
+    #   Id   Target Id                      Grid    Cluster Workgroup Fence   Kernel Function
+    # * 1    AMDGPU Dispatch 1:1:1 (PKID 1) [1,1,1] -       [1,1,1]   B|Aa|Ra single_wave_kernel1()
+    #   2    AMDGPU Dispatch 1:3:2 (PKID 0) [1,1,1] -       [1,1,1]   B|Aa|Ra single_wave_kernel2()
     #
     gdb_test_multiple "info dispatches" "info dispatches with multiple dispatches" -lbl {
 	-re "$table_header_regex" {
@@ -130,15 +130,15 @@ with_rocm_gpu_lock {
     set seen_header 0
     set leading_star 0
     set dispatch_ids [list]
-    set table_header_regex "\[ \t\]+Target\[ \t\]+Id\[ \t\]+Grid\[ \t\]+Workgroup\[ \t\]+Fence\[ \t\]+Address\[ \t\]+Spaces\[ \t\]+Kernel\[ \t\]+Descriptor\[ \t\]+Kernel\[ \t\]+Args\[ \t\]+Completion\[ \t\]+Signal\[ \t\]+Kernel\[ \t\]+Function"
+    set table_header_regex "\[ \t\]+Target\[ \t\]+Id\[ \t\]+Grid\[ \t\]+Cluster\[ \t\]+Workgroup\[ \t\]+Fence\[ \t\]+Address\[ \t\]+Spaces\[ \t\]+Kernel\[ \t\]+Descriptor\[ \t\]+Kernel\[ \t\]+Args\[ \t\]+Completion\[ \t\]+Signal\[ \t\]+Kernel\[ \t\]+Function"
 
     # Save kernel1 dispatch id for the next test.
     set kernel1_dispatch 0
 
     # Sample output:
-    #   Id   Target Id                      Grid    Workgroup Fence   Address Spaces        Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
-    # * 1    AMDGPU Dispatch 1:1:1 (PKID 0) [1,1,1] [1,1,1]   B|Aa|Ra Shared(0), Private(0) 0x00007ffff5dd8740 0x00007ffee0c00000 (nil)              single_wave_kernel1()
-    #   2    AMDGPU Dispatch 1:3:2 (PKID 0) [1,1,1] [1,1,1]   B|Aa|Ra Shared(0), Private(0) 0x00007ffff5dd8780 0x00007ffee0200000 (nil)              single_wave_kernel2()
+    #   Id   Target Id                      Grid    Cluster Workgroup Fence   Address Spaces        Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
+    # * 1    AMDGPU Dispatch 1:1:1 (PKID 0) [1,1,1] -       [1,1,1]   B|Aa|Ra Shared(0), Private(0) 0x00007ffff5dd8740 0x00007ffee0c00000 (nil)              single_wave_kernel1()
+    #   2    AMDGPU Dispatch 1:3:2 (PKID 0) [1,1,1] -       [1,1,1]   B|Aa|Ra Shared(0), Private(0) 0x00007ffff5dd8780 0x00007ffee0200000 (nil)              single_wave_kernel2()
     #
     gdb_test_multiple "info dispatches -full" "info dispatches with full arg" -lbl {
 	-re "$table_header_regex" {
@@ -168,12 +168,12 @@ with_rocm_gpu_lock {
     # KERNEL1_DISPATCH.
 
     set seen_header 0
-    set table_header_regex "\[ \t\]+Target\[ \t\]+Id\[ \t\]+Grid\[ \t\]+Workgroup\[ \t\]+Fence\[ \t\]+Kernel\[ \t\]+Function"
+    set table_header_regex "\[ \t\]+Target\[ \t\]+Id\[ \t\]+Grid\[ \t\]+Cluster\[ \t\]+Workgroup\[ \t\]+Fence\[ \t\]+Kernel\[ \t\]+Function"
 
     # Sample output:
     #
-    #   Id   Target Id                      Grid    Workgroup Fence   Kernel Function
-    # * 1    AMDGPU Dispatch 1:1:1 (PKID 1) [1,1,1] [1,1,1]   B|Aa|Ra single_wave_kernel1()
+    #   Id   Target Id                      Grid    Cluster Workgroup Fence   Kernel Function
+    # * 1    AMDGPU Dispatch 1:1:1 (PKID 1) [1,1,1] -       [1,1,1]   B|Aa|Ra single_wave_kernel1()
     #
     gdb_test_multiple "info dispatches $kernel1_dispatch" \
 		      "info dispatches given a dispatch id" -lbl {
