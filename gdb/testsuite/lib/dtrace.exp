@@ -22,10 +22,6 @@
 # 3. Generate an object file containing a DOF program using dtrace -G.
 # 4. Link everything together to get the test program.
 #
-# Note that if DTrace is not found in the host system then this
-# function uses the pdtrace implementation, which is located at
-# testsuite/lib/pdtrace.
-#
 # This function requires 'testfile', 'srcfile' and 'binfile' to be
 # properly set.
 #
@@ -35,11 +31,13 @@ proc dtrace_build_usdt_test_program {} {
 
     # Make sure that dtrace is installed, it is the real one (not the
     # script installed by SystemTap, for example) and of the right
-    # version (>= 0.4.0).  If it is not then use pdtrace instead.
+    # version (>= 0.4.0).
     set dtrace "dtrace"
     set result [remote_exec host "$dtrace -V"]
     if {[lindex $result 0] != 0 || ![regexp {^dtrace: Sun D [0-9]\.[0-9]\.[0-9]} [lindex $result 1]]} {
-	set dtrace "${objdir}/lib/pdtrace"
+	# We used to use fall back here to a local implementation called
+	# pdtrace.
+	return -1
     }
     set dscript_file "${srcdir}/${subdir}/${testfile}.d"
 
