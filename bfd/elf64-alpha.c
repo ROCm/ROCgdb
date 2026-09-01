@@ -1718,7 +1718,7 @@ get_got_entry (bfd *abfd, struct alpha_elf_link_hash_entry *h,
       size_t amt;
 
       amt = sizeof (struct alpha_elf_got_entry);
-      gotent = (struct alpha_elf_got_entry *) bfd_alloc (abfd, amt);
+      gotent = (struct alpha_elf_got_entry *) bfd_zalloc (abfd, amt);
       if (!gotent)
 	return NULL;
 
@@ -1728,8 +1728,6 @@ get_got_entry (bfd *abfd, struct alpha_elf_link_hash_entry *h,
       gotent->plt_offset = -1;
       gotent->use_count = 1;
       gotent->reloc_type = r_type;
-      gotent->reloc_done = 0;
-      gotent->reloc_xlated = 0;
 
       gotent->next = *slot;
       *slot = gotent;
@@ -3655,7 +3653,7 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
 	  else
 	    {
 	      tprel_gotent = (struct alpha_elf_got_entry *)
-		bfd_alloc (info->abfd, sizeof (struct alpha_elf_got_entry));
+		bfd_zalloc (info->abfd, sizeof (struct alpha_elf_got_entry));
 	      if (!tprel_gotent)
 		return false;
 
@@ -3665,8 +3663,7 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
 	      tprel_gotent->gotobj = info->gotobj;
 	      tprel_gotent->addend = irel->r_addend;
 	      tprel_gotent->got_offset = -1;
-	      tprel_gotent->reloc_done = 0;
-	      tprel_gotent->reloc_xlated = 0;
+	      tprel_gotent->plt_offset = -1;
 	    }
 
 	  tprel_gotent->use_count = 1;
