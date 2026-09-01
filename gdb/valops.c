@@ -562,7 +562,7 @@ value_cast (struct type *type, struct value *arg2)
 	return value_from_longest (to_type, value_as_long (arg2));
     }
   else if ((code1 == TYPE_CODE_INT || code1 == TYPE_CODE_ENUM
-	    || code1 == TYPE_CODE_RANGE)
+	    || code1 == TYPE_CODE_RANGE || code1 == TYPE_CODE_FLAGS)
 	   && (scalar || code2 == TYPE_CODE_PTR
 	       || code2 == TYPE_CODE_MEMBERPTR))
     {
