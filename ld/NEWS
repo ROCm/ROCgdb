@@ -1,5 +1,12 @@
 -*- text -*-
 
+* The alpha target supports indirect functions (STT_GNU_IFUNC), using the
+  newly allocated R_ALPHA_IRELATIVE (42) dynamic relocation.  No dynamic
+  linker or C library startup code implements that relocation yet, so a
+  program that uses an indirect function needs a matching C library to run.
+  Taking the address of one from a read-only section is not supported in a
+  static link.
+
 * The avr target supports the following GNU attributes to make sure
   that object files that are being linked are using the same ABI.
   The following attributes have been added:
