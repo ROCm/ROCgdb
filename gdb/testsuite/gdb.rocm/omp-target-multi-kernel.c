@@ -27,13 +27,17 @@
 #define N 32
 
 #pragma omp declare target
-static int
+/* optnone prevents the compiler from optimizing x away, keeping it
+   readable in the debugger.  */
+static int __attribute__((optnone))
 square_dev (int x)
 {
   return x * x;
 }
 
-static int
+/* optnone prevents the compiler from optimizing x away, keeping it
+   readable in the debugger.  */
+static int __attribute__((optnone))
 cube_dev (int x)
 {
   return x * x * x;
