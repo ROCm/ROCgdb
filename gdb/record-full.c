@@ -2796,11 +2796,11 @@ maintenance_print_record_instruction (const char *args, int from_tty)
   if (offset == record_full_log.size ())
     offset--;
   if (args != nullptr)
-    {
-      offset += value_as_long (parse_and_eval (args));
-      if (offset >= record_full_log.size () || offset < 0)
-	error (_("Not enough recorded history"));
-    }
+    offset += value_as_long (parse_and_eval (args));
+
+  if (offset >= record_full_log.size () || offset < 0)
+    error (_("Not enough recorded history"));
+
   auto to_print = record_full_log.begin () + offset;
 
   gdbarch *arch = current_inferior ()->arch ();
