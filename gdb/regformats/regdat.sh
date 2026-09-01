@@ -73,13 +73,13 @@ EOF
 }
 
 if test ! -r "$1"; then
-  echo "$0: Could not open $1." 1>&2
-  exit 1
+    echo "$0: Could not open $1." 1>&2
+    exit 1
 fi
 
 copyright ()
 {
-cat <<EOF
+    cat <<EOF
 /* *INDENT-OFF* */ /* THIS FILE IS GENERATED */
 
 /* A register protocol for GDB, the GNU debugger.
@@ -123,49 +123,49 @@ osabi=unknown
 exec < "$1"
 while do_read
 do
-  if test "${type}" = "name"; then
-    name="${entry}"
+    if test "${type}" = "name"; then
+	name="${entry}"
 
-    echo "const_target_desc_up tdesc_${name};"
-    echo ""
+	echo "const_target_desc_up tdesc_${name};"
+	echo ""
 
-    # This is necessary for -Wmissing-declarations.
-    echo "void init_registers_${name} (void);"
+	# This is necessary for -Wmissing-declarations.
+	echo "void init_registers_${name} (void);"
 
-    echo "void"
-    echo "init_registers_${name} (void)"
-    echo "{"
-    echo "  target_desc_up result = allocate_target_description ();"
-    echo "  struct tdesc_feature *feature = tdesc_create_feature (result.get (), \"${name}\");"
-    continue
-  elif test "${type}" = "xmltarget"; then
-    xmltarget="${entry}"
-    continue
-  elif test "${type}" = "xmlarch"; then
-    xmlarch="${entry}"
-    continue
-  elif test "${type}" = "xmlosabi"; then
-    xmlosabi="${entry}"
-    continue
-  elif test "${type}" = "expedite"; then
-    expedite="${entry}"
-    continue
-  elif test "${type}" = "feature"; then
-    feature="${entry}"
-    continue
-  elif test "${type}" = "osabi"; then
-    osabi="${entry}"
-    continue
-  elif test "${name}" = x; then
-    echo "$0: $1 does not specify \`\`name''." 1>&2
-    exit 1
-  else
-    echo "  tdesc_create_reg (feature, \"${entry}\","
-    echo "  0, 0, NULL, ${type}, NULL);"
+	echo "void"
+	echo "init_registers_${name} (void)"
+	echo "{"
+	echo "  target_desc_up result = allocate_target_description ();"
+	echo "  struct tdesc_feature *feature = tdesc_create_feature (result.get (), \"${name}\");"
+	continue
+    elif test "${type}" = "xmltarget"; then
+	xmltarget="${entry}"
+	continue
+    elif test "${type}" = "xmlarch"; then
+	xmlarch="${entry}"
+	continue
+    elif test "${type}" = "xmlosabi"; then
+	xmlosabi="${entry}"
+	continue
+    elif test "${type}" = "expedite"; then
+	expedite="${entry}"
+	continue
+    elif test "${type}" = "feature"; then
+	feature="${entry}"
+	continue
+    elif test "${type}" = "osabi"; then
+	osabi="${entry}"
+	continue
+    elif test "${name}" = x; then
+	echo "$0: $1 does not specify \`\`name''." 1>&2
+	exit 1
+    else
+	echo "  tdesc_create_reg (feature, \"${entry}\","
+	echo "  0, 0, NULL, ${type}, NULL);"
 
-    offset=$((offset + type))
-    i=$((i + 1))
-  fi
+	offset=$((offset + type))
+	i=$((i + 1))
+    fi
 done
 
 echo
@@ -173,22 +173,22 @@ echo "static const char *expedite_regs_${name}[] = { \"$(echo "${expedite}" | se
 
 echo "#ifndef IN_PROCESS_AGENT"
 if test "${feature}" != x; then
-  echo "static const char *xmltarget_${name} = 0;"
-elif test "${xmltarget}" = x; then
-  if test "${xmlarch}" = x && test "${xmlosabi}" = x; then
     echo "static const char *xmltarget_${name} = 0;"
-  else
-    echo "static const char *xmltarget_${name} = \"@<target>\\"
-    if test "${xmlarch}" != x; then
-      echo "<architecture>${xmlarch}</architecture>\\"
+elif test "${xmltarget}" = x; then
+    if test "${xmlarch}" = x && test "${xmlosabi}" = x; then
+	echo "static const char *xmltarget_${name} = 0;"
+    else
+	echo "static const char *xmltarget_${name} = \"@<target>\\"
+	if test "${xmlarch}" != x; then
+	    echo "<architecture>${xmlarch}</architecture>\\"
+	fi
+	if test "${xmlosabi}" != x; then
+	    echo "<osabi>${xmlosabi}</osabi>\\"
+	fi
+	echo "</target>\";"
     fi
-    if test "${xmlosabi}" != x; then
-      echo "<osabi>${xmlosabi}</osabi>\\"
-    fi
-    echo "</target>\";"
-  fi
 else
-  echo "static const char *xmltarget_${name} = \"${xmltarget}\";"
+    echo "static const char *xmltarget_${name} = \"${xmltarget}\";"
 fi
 echo
 
