@@ -2158,12 +2158,44 @@ tc_loongarch_parse_to_dw2regnum (expressionS *exp)
     expression_and_evaluate (exp);
 }
 
+/* Convert an rs_machine_dependent alignment frag before the first
+   linker-relaxable instruction into an ordinary rs_align_code frag.
+   GAS will compute the exact NOP count from the final addresses, so no
+   R_LARCH_ALIGN is emitted.  */
+static void
+loongarch_resolve_align_before_relax (fragS *frag)
+{
+  int n = 0; /* Alignment.  */
+  int max = 0; /* Maximum number of bytes can be skipped.  */
+  if (frag->fr_symbol == NULL) /* No third maximum expression.  */
+    {
+      offsetT align_bytes = frag->fr_offset + 4;
+      while (align_bytes > 1)
+	{
+	  align_bytes >>= 1;
+	  n++;
+	}
+    }
+  else
+    {
+      n = frag->fr_offset & 0xff;
+      max = frag->fr_offset >> 8;
+    }
+
+  frag->fr_type = rs_align_code;
+  frag->fr_fix = 0;
+  frag->fr_var = 1;
+  frag->fr_offset = n;
+  frag->fr_subtype = max;
+  frag->fr_symbol = NULL;
+  frag->tc_frag_data.linker_relax = false;
+}
 
 void
 loongarch_pre_output_hook (void)
 {
+  segT sec;
   const frchainS *frch;
-  segT s;
 
   if (!LARCH_opts.relax)
     return;
@@ -2172,10 +2204,11 @@ loongarch_pre_output_hook (void)
   segT seg = now_seg;
   subsegT subseg = now_subseg;
 
-  for (s = stdoutput->sections; s; s = s->next)
-    for (frch = seg_info (s)->frchainP; frch; frch = frch->frch_next)
+  for (sec = stdoutput->sections; sec; sec = sec->next)
+    for (frch = seg_info (sec)->frchainP; frch; frch = frch->frch_next)
       {
 	fragS *frag;
+	bool seen_relax = false;
 
 	for (frag = frch->frch_root; frag; frag = frag->fr_next)
 	  {
@@ -2192,13 +2225,21 @@ loongarch_pre_output_hook (void)
 
 		/* We must set the segment before creating a frag after all
 		   frag chains have been chained together.  */
-		subseg_set (s, frch->frch_subseg);
+		subseg_set (sec, frch->frch_subseg);
 
 		/* Set the size to 1 temporary.  The size may change in
 		   relax_segment. Update to the real size in md_apply_fix.  */
 		fix_new_exp (frag, (int) frag->fr_offset, 1, &exp, 0,
 			     BFD_RELOC_LARCH_CFA);
 	      }
+	    else if (frag->fr_type == rs_machine_dependent
+		     && frag->fr_subtype == rs_align_code
+		     && ! has_relax_reloc
+		     && ! seen_relax)
+	      loongarch_resolve_align_before_relax (frag);
+
+	    if (frag->tc_frag_data.linker_relax)
+	      seen_relax = true;
 	  }
       }
 
@@ -2238,6 +2279,30 @@ loongarch_frob_file_before_fix (void)
 	sec->sec_flg1 = true;
 	frag->tc_frag_data.linker_relax = true;
       }
+
+  /* Update sec_flg1 because converting an rs_machine_dependent align frag
+     to rs_align_code may clear sec_flg1.  */
+  for (segT sec = stdoutput->sections; sec != NULL; sec = sec->next)
+    {
+      segment_info_type *seginfo = seg_info (sec);
+
+      if (seginfo == NULL || seginfo->frchainP == NULL)
+	{
+	  sec->sec_flg1 = false;
+	  continue;
+	}
+
+      bool has_relax_frag = false;
+      for (fragS *frag = seginfo->frchainP->frch_root;
+	   frag != NULL; frag = frag->fr_next)
+	if (frag->tc_frag_data.linker_relax)
+	  {
+	    has_relax_frag = true;
+	    break;
+	  }
+
+      sec->sec_flg1 = has_relax_frag;
+    }
 }
 
 void
@@ -2279,11 +2344,6 @@ loongarch_frag_align_code (int n, int max)
   if (!LARCH_opts.relax)
     return false;
 
-  /* Only create an alignment frag if the current section already
-     has relaxed instructions.  */
-  if (!now_seg->sec_flg1)
-    return false;
-
   bfd_vma align_bytes = (bfd_vma) 1 << n;
   bfd_vma worst_case_bytes = align_bytes - 4;
   bfd_vma addend = worst_case_bytes;
@@ -2319,6 +2379,9 @@ loongarch_frag_align_code (int n, int max)
 		   rs_align_code, s, addend, NULL);
   /* TC_FRAG_INIT in frag_var resets this flag, so set it after frag_var.  */
   align_frag->tc_frag_data.linker_relax = true;
+  /* This frag may be converted to rs_align_code, reset sec_flg1 in
+     loongarch_frob_file_before_fix.  */
+  now_seg->sec_flg1 = true;
 
   /* Default write NOP for aligned bytes.  */
   loongarch_make_nops (nops, worst_case_bytes);
