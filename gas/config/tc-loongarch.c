@@ -121,6 +121,9 @@ static const char default_arch[] = DEFAULT_ARCH;
 
 static bool call_reloc = 0;
 
+/* Whether has .reloc *, R_LARCH_RELAX.  */
+static bool has_relax_reloc = false;
+
 /* The dwarf2 data alignment, adjusted for 32 or 64 bit.  */
 int loongarch_cie_data_alignment;
 
@@ -1603,7 +1606,12 @@ _loongarch_force_relocation_sub_same (segT sec,
 
   /* Not emit relocation if addsy and subsy are in the same frag.  */
   if (addfrag == subfrag)
-    return false;
+    {
+      if (addfrag->tc_frag_data.linker_relax)
+	return true;
+      else
+	return false;
+    }
 
   /* Emit relocation if find a frag is relaxable from addsy to subsy.  */
   fragS *s;
@@ -1651,11 +1659,17 @@ loongarch_force_relocation_sub_local (fixS *fixp, segT sec ATTRIBUTE_UNUSED)
 }
 
 /* Use DW_LNS_fixed_advance_pc with relocations if there are linker-relaxable
-   instructions between from and to symbols. Otherwise, use special opcodes
+   instructions between from and to symbols.  Otherwise, use special opcodes
    without relocations.  */
 bool
 loongarch_fixed_advance_pc (symbolS *from, symbolS *to)
 {
+  /* If any R_LARCH_RELAX is set by .reloc, conservatively use
+     DW_LNS_fixed_advance_pc.  Because this function used before
+     loongarch_frob_file_before_fix update frag and section flag.  */
+  if (has_relax_reloc)
+    return true;
+
   segT fromsec = S_GET_SEGMENT (from);
   segT tosec = S_GET_SEGMENT (to);
   if (fromsec != tosec)
@@ -2192,6 +2206,40 @@ loongarch_pre_output_hook (void)
   subseg_set (seg, subseg);
 }
 
+/* Called after size_seg and before fix_segment, when reloc addresses are final.
+   Mark the frag and section targeted by each .reloc *, R_LARCH_RELAX as
+   linker-relaxable, then update sec_flg1 from the remaining linker-relaxable
+   frags.  */
+void
+loongarch_frob_file_before_fix (void)
+{
+  if (! LARCH_opts.relax)
+    return;
+
+  if (has_relax_reloc)
+    for (struct reloc_list *r = reloc_list; r != NULL; r = r->next)
+      {
+	segT sec = r->u.b.sec;
+
+	if (sec == NULL || (sec->flags & SEC_CODE) == 0)
+	  continue;
+
+	if (r->u.b.r.howto->type != R_LARCH_RELAX)
+	  continue;
+
+	segment_info_type *seginfo = seg_info (sec);
+	if (seginfo == NULL)
+	  continue;
+
+	fragS *frag = get_frag_for_address (NULL, seginfo, r->u.b.r.address);
+	if (frag == NULL)
+	  continue;
+
+	sec->sec_flg1 = true;
+	frag->tc_frag_data.linker_relax = true;
+      }
+}
+
 void
 md_show_usage (FILE *stream)
 {
@@ -2388,13 +2436,27 @@ loongarch_insert_uleb128_fixes (bfd *abfd ATTRIBUTE_UNUSED,
     }
 }
 
+/* If any .reloc *, R_LARCH_RELAX is present.  */
+static bool
+loongarch_has_relax_reloc (void)
+{
+  for (struct reloc_list *r = reloc_list; r != NULL; r = r->next)
+    if (r->u.a.howto->type == R_LARCH_RELAX)
+      return true;
+
+  return false;
+}
+
 void
 loongarch_md_finish (void)
 {
-  /* Insert relocations for uleb128 directives, so the values can be recomputed
-     at link time.  */
   if (LARCH_opts.relax)
-    bfd_map_over_sections (stdoutput, loongarch_insert_uleb128_fixes, NULL);
+    {
+      has_relax_reloc = loongarch_has_relax_reloc ();
+      /* Insert relocations for uleb128 directives, so the values can be
+	 recomputed at link time.  */
+      bfd_map_over_sections (stdoutput, loongarch_insert_uleb128_fixes, NULL);
+    }
 }
 
 void
