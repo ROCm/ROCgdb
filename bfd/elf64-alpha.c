@@ -4349,6 +4349,37 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 	    && gotent->addend == addend)
 	  break;
 
+      /* A reference to an IFUNC has to go through the GOT entry or the data
+	 word that an R_ALPHA_IRELATIVE fills in with the address the
+	 resolver returns.  A relocation that names the symbol directly
+	 reaches the resolver instead, and R_ALPHA_REFLONG has no room for
+	 the address in the first place.  */
+      if (elf64_alpha_ifunc_p (h, sym) && (input_section->flags & SEC_ALLOC))
+	switch (r_type)
+	  {
+	  case R_ALPHA_REFLONG:
+	  case R_ALPHA_BRADDR:
+	  case R_ALPHA_BRSGP:
+	  case R_ALPHA_GPREL16:
+	  case R_ALPHA_GPREL32:
+	  case R_ALPHA_GPRELLOW:
+	  case R_ALPHA_GPRELHIGH:
+	  case R_ALPHA_SREL16:
+	  case R_ALPHA_SREL32:
+	  case R_ALPHA_SREL64:
+	    _bfd_error_handler
+	      /* xgettext:c-format */
+	      (_("%pB: %s relocation against STT_GNU_IFUNC symbol `%s' is "
+		 "not supported"),
+	       input_bfd, howto->name,
+	       elf64_alpha_sym_name (input_bfd, symtab_hdr, h, sym, sec));
+	    ret_val = false;
+	    continue;
+
+	  default:
+	    break;
+	  }
+
       switch (r_type)
 	{
 	case R_ALPHA_GPDISP:
