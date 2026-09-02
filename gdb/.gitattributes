@@ -26,4 +26,4 @@ po/gdbtext  whitespace=space-before-tab,indent-with-non-tab,trailing-space
 exc_request.defs -whitespace
 
 # Files with significant trailing whitespace.
-gdb-gdb.gdb.in  whitespace=space-before-tab,indent-with-non-tab,-trailing-space
+gdb-gdb.gdb  whitespace=space-before-tab,indent-with-non-tab,-trailing-space

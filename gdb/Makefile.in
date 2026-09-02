@@ -2490,9 +2490,6 @@ gstack gcore gdb-add-index: % : %.in version.c
 	sed -e "s,@VERSION@,$$vv," $< > $@
 	@chmod +x $@
 
-gdb-gdb.gdb: $(srcdir)/gdb-gdb.gdb.in config.status
-	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) $@
-
 config.h: stamp-h ; @true
 stamp-h: $(srcdir)/config.in config.status
 	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) config.h

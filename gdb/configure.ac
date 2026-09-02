@@ -2404,7 +2404,8 @@ GDB_AC_TRANSFORM([gcore], [GCORE_TRANSFORM_NAME])
 AC_CONFIG_FILES([gcore.in:gcore-1.in])
 AC_CONFIG_FILES([gstack.in:gstack-1.in])
 AC_CONFIG_FILES([gdb-add-index.in:contrib/gdb-add-index.sh])
-AC_CONFIG_FILES([Makefile gdb-gdb.gdb doc/Makefile data-directory/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile data-directory/Makefile])
 AC_CONFIG_LINKS([gdb-gdb.py:gdb-gdb.py])
+AC_CONFIG_LINKS([gdb-gdb.gdb:gdb-gdb.gdb])
 
 AC_OUTPUT
