@@ -317,7 +317,7 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
 
   proc = add_process (pid, attached);
   child_init_thread_list ();
-  windows_process.child_initialization_done = 0;
+  windows_process.child_initialization_done = false;
 
   if (the_low_target.initial_stuff != NULL)
     (*the_low_target.initial_stuff) (proc);
@@ -373,7 +373,7 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
     = inferior_started_by_cygwin (pid, attached);
 #endif
 
-  windows_process.child_initialization_done = 1;
+  windows_process.child_initialization_done = true;
 }
 
 /* Resume all artificially suspended threads if we are continuing

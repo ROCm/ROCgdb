@@ -197,9 +197,9 @@ struct gdbserver_windows_process : public windows_nat::windows_process_info
   /* True if current_process_handle needs to be closed.  */
   bool open_process_used = false;
 
-  /* Zero during the child initialization phase, and nonzero
+  /* False during the child initialization phase, and true
      otherwise.  */
-  int child_initialization_done = 0;
+  bool child_initialization_done = false;
 };
 
 /* The sole Windows process.  */
