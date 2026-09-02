@@ -41,9 +41,7 @@ for f in "$@"; do
 	    # Skip generated files.
 	    continue
 	    ;;
-	gdb/config/djgpp/djcheck.sh \
-	    | gdb/config/djgpp/djconfig.sh \
-	    | gdb/contrib/gdb-add-index.sh \
+	gdb/contrib/gdb-add-index.sh \
 	    | gdb/gdb_buildall.sh \
 	    | gdb/gdb_mbuild.sh )
 	    # Skip unclean files.

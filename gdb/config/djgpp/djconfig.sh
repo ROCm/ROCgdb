@@ -40,30 +40,30 @@ unset CDPATH
 # then only forward slashes (/) in the directories. It should be
 # an absolute path.
 
-if [ x$1 = x ]; then
+if [ "$1" = "" ]; then
   srcdir=`pwd`
 else
-  srcdir=`cd $1 && pwd`
+  srcdir=`cd "$1" && pwd` || exit 1
   shift
 fi
 
 # Make sure they don't have some file names mangled by untarring.
-echo -n "Checking the unpacked distribution..."
-if ( ! test -f ${srcdir}/bfd/ChangeLog.0203      || \
-     ! test -f ${srcdir}/gdb/ChangeLog.002       || \
-     ! test -f ${srcdir}/opcodes/ChangeLog.0203  || \
-     ! test -f ${srcdir}/readline/config.h-in ) ; then
-  if ( ! test -f ${srcdir}/bfd/ChangeLog.0203 ) ; then
-    notfound=${srcdir}/bfd/ChangeLog.0203
+printf "Checking the unpacked distribution..."
+if ! test -f "${srcdir}/bfd/ChangeLog.0203"      || \
+     ! test -f "${srcdir}/gdb/ChangeLog.002"       || \
+     ! test -f "${srcdir}/opcodes/ChangeLog.0203"  || \
+     ! test -f "${srcdir}/readline/config.h-in"; then
+  if ! test -f "${srcdir}/bfd/ChangeLog.0203"; then
+    notfound="${srcdir}/bfd/ChangeLog.0203"
   else
-    if ( ! test -f ${srcdir}/gdb/ChangeLog.002) ; then
-      notfound=${srcdir}/gdb/ChangeLog.002
+    if ! test -f "${srcdir}/gdb/ChangeLog.002"; then
+      notfound="${srcdir}/gdb/ChangeLog.002"
     else
-      if ( ! test -f ${srcdir}/readline/config.h-in ) ; then
-        notfound=${srcdir}/readline/config.h-in
+      if ! test -f "${srcdir}/readline/config.h-in"; then
+        notfound="${srcdir}/readline/config.h-in"
       else
-        if ( ! test -f ${srcdir}/opcodes/ChangeLog.0203 ) ; then
-          notfound=${srcdir}/opcodes/ChangeLog.0203
+        if ! test -f "${srcdir}/opcodes/ChangeLog.0203"; then
+          notfound="${srcdir}/opcodes/ChangeLog.0203"
         fi
       fi
     fi
@@ -85,7 +85,7 @@ else
 fi
 
 # Where is the directory with DJGPP-specific scripts?
-DJGPPDIR=${srcdir}/gdb/config/djgpp
+DJGPPDIR="${srcdir}/gdb/config/djgpp"
 
 echo "Editing configure scripts for DJGPP..."
 TMPFILE="${TMPDIR-.}/cfg.tmp"
@@ -103,22 +103,22 @@ fi
 # We use explicit /dev/env/DJDIR/bin/find to avoid catching
 # an incompatible DOS/Windows version that might be on their PATH.
 for fix_dir in \
-  `cd $srcdir && /dev/env/DJDIR/bin/find . -type d ! -ipath "${SKIPDIR}" ! -ipath "${SKIPFILES}"`
+  `cd "$srcdir" && /dev/env/DJDIR/bin/find . -type d ! -ipath "${SKIPDIR}" ! -ipath "${SKIPFILES}"`
 do
-  if test ! -f ${fix_dir}/configure.orig ; then
-    if test -f ${srcdir}/${fix_dir}/configure ; then
-      mkdir -p ${fix_dir}
-      cp -p ${srcdir}/${fix_dir}/configure ${fix_dir}/configure.orig
+  if test ! -f "${fix_dir}/configure.orig" ; then
+    if test -f "${srcdir}/${fix_dir}/configure" ; then
+      mkdir -p "${fix_dir}"
+      cp -p "${srcdir}/${fix_dir}/configure" "${fix_dir}/configure.orig"
     fi
   fi
-  if test -f ${fix_dir}/configure.orig ; then
-    sed -f ${DJGPPDIR}/config.sed ${fix_dir}/configure.orig > $TMPFILE
-    update $TMPFILE ${fix_dir}/configure
-    touch ./${fix_dir}/configure -r ${fix_dir}/configure.orig
-    rm -f $TMPFILE
+  if test -f "${fix_dir}/configure.orig" ; then
+    sed -f "${DJGPPDIR}/config.sed" "${fix_dir}/configure.orig" > "$TMPFILE"
+    update "$TMPFILE" "${fix_dir}/configure"
+    touch "./${fix_dir}/configure" -r "${fix_dir}/configure.orig"
+    rm -f "$TMPFILE"
   fi
-  if test -f ${fix_dir}/INSTALL ; then
-    mv ${fix_dir}/INSTALL ${fix_dir}/INSTALL.txt
+  if test -f "${fix_dir}/INSTALL" ; then
+    mv "${fix_dir}/INSTALL" "${fix_dir}/INSTALL.txt"
   fi
 done
 
@@ -134,7 +134,7 @@ export CONFIG_SHELL=/dev/env/DJDIR/bin/sh.exe
 # force to have the ltmain.sh script to be in DOS text format,
 # otherwise the resulting ltconfig script will have mixed
 # (UNIX/DOS) format and is unusable with Bash ports before v2.03.
-utod $srcdir/ltmain.sh
+utod "$srcdir/ltmain.sh"
 
 # Give the configure script some hints:
 export LD=ld
@@ -159,16 +159,16 @@ export lt_cv_sys_max_cmd_len=12288
 # Force depcomp to use _deps rather than .deps as the name of the
 # subdirectory where the *.Po dependency files are put.  File names
 # with leading dots are invalid on DOS 8+3 filesystems.
-export DEPDIR=${DEPDIR:-_deps}
+export DEPDIR="${DEPDIR:-_deps}"
 
 # The configure script needs to see the `install-sh' script, otherwise
 # it decides the source installation is broken.  But "make install" will
 # fail on 8+3 filesystems if it finds a file `install-', since there
 # are numerous "install-foo" targets in Makefile's.  So we rename the
 # offending file after the configure step is done.
-if test ! -f ${srcdir}/install-sh ; then
-  if test -f ${srcdir}/install-.sh ; then
-    mv ${srcdir}/install-.sh ${srcdir}/install-sh
+if test ! -f "${srcdir}/install-sh" ; then
+  if test -f "${srcdir}/install-.sh" ; then
+    mv "${srcdir}/install-.sh" "${srcdir}/install-sh"
   fi
 fi
 
@@ -176,10 +176,11 @@ fi
 # support, which is nearly impossible to be supported in the current way,
 # since it relies on file names which will never work on DOS.
 echo "Running the configure script..."
-$srcdir/configure --srcdir="$srcdir" --prefix='${DJDIR}' \
+# shellcheck disable=SC2016 # $DJDIR is not expanded here.
+"$srcdir/configure" --srcdir="$srcdir" --prefix='${DJDIR}' \
   --disable-shared --disable-nls --verbose --enable-build-warnings=\
--Wimplicit,-Wcomment,-Wformat,-Wparentheses,-Wpointer-arith,-Wuninitialized $*
+-Wimplicit,-Wcomment,-Wformat,-Wparentheses,-Wpointer-arith,-Wuninitialized "$@"
 
-if test -f ${srcdir}/install- ; then
-  mv ${srcdir}/install- ${srcdir}/install-.sh
+if test -f "${srcdir}/install-" ; then
+  mv "${srcdir}/install-" "${srcdir}/install-.sh"
 fi
