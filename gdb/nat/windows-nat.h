@@ -155,21 +155,20 @@ struct windows_thread_info
      pending stop.  See stop_one_thread.  */
   stopping_kind stopping = SK_NOT_STOPPING;
 
-/* Info about a potential pending stop.
+  /* Info about a potential pending stop.
 
-   Sometimes, Windows will report a stop on a thread that has been
-   ostensibly suspended.  We believe what happens here is that two
-   threads hit a breakpoint simultaneously, and the Windows kernel
-   queues the stop events.  However, this can result in the strange
-   effect of trying to single step thread A -- leaving all other
-   threads suspended -- and then seeing a stop in thread B.  To handle
-   this scenario, we queue the "pending" stop here, and then
-   process it once the step has completed.  See PR gdb/22992.
-   If we do have a pending event, its Windows event info is in
-   LAST_EVENT.
+     Sometimes, Windows will report a stop on a thread that has been
+     ostensibly suspended.  We believe what happens here is that two
+     threads hit a breakpoint simultaneously, and the Windows kernel
+     queues the stop events.  However, this can result in the strange
+     effect of trying to single step thread A -- leaving all other
+     threads suspended -- and then seeing a stop in thread B.  To handle
+     this scenario, we queue the "pending" stop here, and then process
+     it once the step has completed.  See PR gdb/22992.  If we do have a
+     pending event, its Windows event info is in LAST_EVENT.
 
-   TARGET_WAITKIND_IGNORE if the thread does not have a pending
-   stop.  */
+     TARGET_WAITKIND_IGNORE if the thread does not have a pending
+     stop.  */
   target_waitstatus pending_status;
 
   /* The last Windows event returned by WaitForDebugEvent for this
