@@ -517,9 +517,6 @@ win32_process_target::create_inferior (const char *program,
   DWORD err;
   char *args = (char *) program_args.c_str ();
 
-  /* win32_wait needs to know we're not attaching.  */
-  windows_process.attaching = 0;
-
   if (!program)
     error (_("No executable specified, specify executable to debug.\n"));
 
@@ -609,8 +606,6 @@ win32_process_target::attach (unsigned long pid)
 	{
 	  DebugSetProcessKillOnExit (FALSE);
 
-	  /* win32_wait needs to know we're attaching.  */
-	  windows_process.attaching = 1;
 	  do_initial_child_stuff (h, pid, 1);
 	  return 0;
 	}
@@ -988,7 +983,6 @@ get_child_debug_event (DWORD *continue_status,
   /* Check if GDB sent us an interrupt request.  */
   check_remote_input_interrupt_request ();
 
-  windows_process.attaching = 0;
   {
     process_info *proc = find_process_pid (windows_process.process_id);
     for (thread_info &thread : proc->thread_list ())
