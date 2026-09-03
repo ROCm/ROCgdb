@@ -623,7 +623,7 @@ gdb_wait_for_event (int block)
 	  FD_ZERO (&gdb_notifier.ready_masks[1]);
 	  FD_ZERO (&gdb_notifier.ready_masks[2]);
 
-	  /* Dont print anything if we got a signal, let gdb handle
+	  /* Don't print anything if we got a signal, let gdb handle
 	     it.  */
 	  if (errno != EINTR)
 	    perror_with_name (("select"));

@@ -2161,7 +2161,7 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 					     get_frame_pc);
 
 	    /* If SYMBOL_NEEDS_FRAME is returned from the previous call,
-	       we dont have to check the baton content.  */
+	       we don't have to check the baton content.  */
 	    if (symbol_needs != SYMBOL_NEEDS_FRAME)
 	      {
 		gdbarch *arch = baton.per_objfile->objfile->arch ();
@@ -2212,7 +2212,7 @@ dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
 					       get_frame_pc, true);
 
 	    /* If SYMBOL_NEEDS_FRAME is returned from the previous call,
-	       we dont have to check the baton content.  */
+	       we don't have to check the baton content.  */
 	    if (symbol_needs != SYMBOL_NEEDS_FRAME)
 	      {
 		gdbarch *arch = baton.per_objfile->objfile->arch ();

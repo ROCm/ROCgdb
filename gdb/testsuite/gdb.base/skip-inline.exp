@@ -94,7 +94,7 @@ gdb_test "skip function foo" "Function foo will be skipped when stepping\."
 single_step
 
 # Some compilers link the epilogue of functions to the line containing the
-# closing brace, while others dont.  The behavior ends up so out of sync
+# closing brace, while others don't.  The behavior ends up so out of sync
 # with multiple steps at a time, that completely different procs would need
 # to be made, and it is frankly unnecessary.
 if {$epilogue} {

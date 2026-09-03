@@ -2120,7 +2120,7 @@ micromips_next_pc (struct regcache *regcache, CORE_ADDR pc)
 /* Decoding the next place to set a breakpoint is irregular for the
    mips 16 variant, but fortunately, there fewer instructions.  We have
    to cope ith extensions for 16 bit instructions and a pair of actual
-   32 bit instructions.  We dont want to set a single step instruction
+   32 bit instructions.  We don't want to set a single step instruction
    on the extend instruction either.  */
 
 /* Lots of mips16 instruction formats */

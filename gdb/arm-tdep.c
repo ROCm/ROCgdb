@@ -11546,7 +11546,7 @@ arm_record_extension_space (arm_insn_decode_record *arm_insn_r)
 	      if (0 == insn_op1 || 1 == insn_op1)
 		{
 		  /* SMLA<x><y>, SMLAW<y>, SMULW<y>.  */
-		  /* We dont do optimization for SMULW<y> where we
+		  /* We don't do optimization for SMULW<y> where we
 		     need only Rd.  */
 		  record_buf[0] = bits (arm_insn_r->arm_insn, 12, 15);
 		  record_buf[1] = ARM_PS_REGNUM;

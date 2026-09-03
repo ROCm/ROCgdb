@@ -289,7 +289,7 @@ decode_prologue (struct gdbarch *gdbarch,
       if (insn == 0x0000)
 	break;
 
-      /* If this is a 32 bit instruction, we dont want to examine its
+      /* If this is a 32 bit instruction, we don't want to examine its
 	 immediate data as though it were an instruction.  */
       if (current_pc & 0x02)
 	{
