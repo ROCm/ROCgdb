@@ -1,0 +1,258 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the "info waves" and "info waves count" CLI commands.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile info-waves.cpp
+
+if { [prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile \
+	{ debug hip }] } {
+    return -1
+}
+
+# Check "info waves count" and "info waves" output.  MIN_TOTAL is the
+# minimum acceptable total.  EXPECT_RUNNING is 1 if running >= 1 is
+# required (non-stop with spinner wave present).  INF_NUM, if given,
+# is passed as an argument to query a specific inferior.
+proc cli_check_waves { min_total expect_running { inf_num "" } } {
+    set suffix ""
+    if { $inf_num ne "" } { set suffix " $inf_num" }
+    set wave_count 0
+    gdb_test_multiple "info waves count$suffix" "info waves count" {
+	-re -wrap "($::decimal)" {
+	    set wave_count $expect_out(1,string)
+	    gdb_assert { $wave_count >= $min_total } $gdb_test_name
+	}
+	timeout {
+	    fail "$gdb_test_name (timeout)"
+	}
+    }
+    gdb_test_multiple "info waves$suffix" "info waves summary" {
+	-re -wrap "($::decimal) waves \\(($::decimal) running,\
+		   ($::decimal) single-stepping, ($::decimal) stopped\\)" {
+	    set total   $expect_out(1,string)
+	    set running $expect_out(2,string)
+	    set sstep   $expect_out(3,string)
+	    set stopped $expect_out(4,string)
+	    gdb_assert { $total == $wave_count } \
+		"info waves total matches info waves count"
+	    if { $expect_running } {
+		gdb_assert { $running >= 1 } "at least one wave is running"
+	    }
+	    if { $min_total >= 1 } {
+		gdb_assert { $stopped >= 1 } "at least one wave is stopped"
+	    }
+	    gdb_assert { $total == $running + $sstep + $stopped } \
+		"info waves counts sum to total"
+	}
+	timeout {
+	    fail "$gdb_test_name (timeout)"
+	}
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Scenario 1: before GPU activity.
+# ---------------------------------------------------------------------------
+
+proc test_before_gpu_activity {} {
+    clean_restart $::testfile
+    if { ![runto_main] } {
+	return
+    }
+    gdb_test "info waves" \
+	"0 waves \\(0 running, 0 single-stepping, 0 stopped\\)" \
+	"info waves before GPU activity"
+    gdb_test "info waves count" "0" \
+	"info waves count before GPU activity"
+
+    # Invalid/non-existent inferior numbers.
+    gdb_test "info waves 0" "No inferior number 0\\." \
+	"info waves with inferior 0"
+    gdb_test "info waves count 0" "No inferior number 0\\." \
+	"info waves count with inferior 0"
+    gdb_test "info waves 99" "No inferior number 99\\." \
+	"info waves with inferior 99"
+    gdb_test "info waves count 99" "No inferior number 99\\." \
+	"info waves count with inferior 99"
+}
+
+# ---------------------------------------------------------------------------
+# Scenario 2: all-stop at kernel_bp.
+# Both waves are stopped (all-stop halts everything).
+# ---------------------------------------------------------------------------
+
+proc test_at_kernel_bp {} {
+    clean_restart $::testfile
+    if { ![runto_main] } {
+	return
+    }
+    gdb_breakpoint "kernel_bp" -allow-pending
+    gdb_test_multiple "continue" "continue to kernel_bp" {
+	-re -wrap ".*hit Breakpoint.*kernel_bp.*" {
+	    pass $gdb_test_name
+	}
+	timeout {
+	    fail "$gdb_test_name (timeout)"
+	}
+    }
+    cli_check_waves 2 0
+}
+
+# ---------------------------------------------------------------------------
+# Scenario 3: non-stop at kernel_bp.
+# One wave is stopped at the breakpoint; the other is still spinning.
+# Also exercises single-stepping observation via async stepi.
+# ---------------------------------------------------------------------------
+
+proc test_nonstop {} {
+    save_vars { ::GDBFLAGS } {
+	append ::GDBFLAGS " -ex \"set non-stop on\""
+	clean_restart $::testfile
+    }
+    if { ![runto_main] } {
+	return
+    }
+    gdb_test "show non-stop" \
+	"Controlling the inferior in non-stop mode is on.*" \
+	"non-stop mode is on"
+    gdb_breakpoint "kernel_bp" -allow-pending
+    gdb_test "continue &" "Continuing\\." "continue async"
+
+    set stopped_thread 0
+    gdb_test_multiple "" "hit kernel_bp" -lbl {
+	-re "Thread ($::decimal)\[^\r\n\]* hit Breakpoint\[^\r\n\]*, kernel_bp " {
+	    set stopped_thread $expect_out(1,string)
+	    pass $gdb_test_name
+	}
+	timeout {
+	    fail "$gdb_test_name (timeout)"
+	}
+    }
+
+    cli_check_waves 2 1
+
+    # Single-stepping: issue 1000 async steps and poll until a
+    # single-stepping wave is observed.
+    gdb_test "thread $stopped_thread" \
+	"Switching to thread $stopped_thread.*" \
+	"switch to stopped wave thread"
+    gdb_test "stepi 1000 &" "" "start async single-stepping"
+    set found_sstep 0
+    with_test_prefix "poll for single-stepping wave" {
+	for {set i 0} {$i < 20 && $found_sstep == 0} {incr i} {
+	    gdb_test_multiple "info waves" "attempt $i" {
+		-re -wrap "($::decimal) waves \\(($::decimal) running,\
+			   ($::decimal) single-stepping,\
+			   ($::decimal) stopped\\)" {
+		    if { $expect_out(3,string) >= 1 } {
+			set found_sstep 1
+		    }
+		    pass $gdb_test_name
+		}
+		timeout {
+		    fail "$gdb_test_name (timeout)"
+		}
+	    }
+	}
+    }
+    gdb_assert { $found_sstep } "observed at least one single-stepping wave"
+}
+
+# ---------------------------------------------------------------------------
+# Scenario 4: multi-inferior non-stop.
+# Two inferiors each stop at kernel_bp.  Tests the [INF-NUM] argument.
+# Requires multi-process GPU debug support.
+# ---------------------------------------------------------------------------
+
+proc test_multi_inferior {} {
+    save_vars { ::GDBFLAGS } {
+	append ::GDBFLAGS " -ex \"set non-stop on\""
+	clean_restart $::testfile
+    }
+    if { ![runto_main] } {
+	return
+    }
+    gdb_test "add-inferior" "Added inferior 2.*" "add inferior 2"
+    gdb_test "inferior 2" "Switching to inferior 2.*" "switch to inferior 2"
+    gdb_load $::binfile
+    if { ![runto_main] } {
+	return
+    }
+    gdb_breakpoint "kernel_bp" -allow-pending
+    gdb_test_multiple "continue -a &" "continue both inferiors" {
+	-re "Continuing\\.\r\n$::gdb_prompt " {
+	    pass $gdb_test_name
+	}
+	timeout {
+	    fail "$gdb_test_name (timeout)"
+	}
+    }
+
+    set stopped_infs [list]
+    set test "wait for both inferiors at kernel_bp"
+    gdb_test_multiple "" $test -lbl {
+	-re "Thread ($::decimal)\\.$::decimal\[^\r\n\]* hit Breakpoint\[^\r\n\]*, kernel_bp " {
+	    set inf $expect_out(1,string)
+	    if { [lsearch -exact $stopped_infs $inf] == -1 } {
+		lappend stopped_infs $inf
+	    }
+	    if { [llength $stopped_infs] < 2 } {
+		exp_continue
+	    } else {
+		pass $test
+	    }
+	}
+	timeout {
+	    fail "$test (timeout)"
+	}
+    }
+
+    # From inferior 1, query current inferior and inferior 2 by number.
+    gdb_test "inferior 1" "Switching to inferior 1.*" \
+	"switch to inferior 1 for cross-inferior query"
+    with_test_prefix "current inferior 1" {
+	cli_check_waves 1 0
+    }
+    with_test_prefix "non-current inferior 2" {
+	cli_check_waves 1 0 2
+    }
+}
+
+with_rocm_gpu_lock {
+    with_test_prefix "before-gpu" {
+	test_before_gpu_activity
+    }
+    with_test_prefix "all-stop" {
+	test_at_kernel_bp
+    }
+    with_test_prefix "non-stop" {
+	test_nonstop
+    }
+
+    if { [allow_multi_inferior_tests] \
+	     && [hip_devices_support_debug_multi_process] } {
+	with_test_prefix "multi-inferior" {
+	    test_multi_inferior
+	}
+    }
+}
