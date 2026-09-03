@@ -2423,7 +2423,9 @@ distclean: clean
 	@$(MAKE) $(FLAGS_TO_PASS) DO=distclean "DODIRS=$(CLEANDIRS)" subdir_do
 	rm -f nm.h config.status config.h stamp-h b jit-reader.h stamp-nmh
 	rm -f gcore.in gstack.in gdb-add-index.in
-	rm -f gdb-gdb.gdb
+	if test "$(srcdir)" != "."; then \
+		rm -f gdb-gdb.gdb gdb-gdb.py; \
+	fi
 	rm -f y.output yacc.acts yacc.tmp y.tab.h
 	rm -f config.log config.cache
 	rm -f config.lt libtool
