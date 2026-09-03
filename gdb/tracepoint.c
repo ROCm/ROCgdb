@@ -873,7 +873,7 @@ collection_list::add_local_register (struct gdbarch *gdbarch,
 
       add_ax_registers (aexpr.get ());
 
-      /* Usually ax_reg_mask for a pseudo-regiser only sets the
+      /* Usually ax_reg_mask for a pseudo-register only sets the
 	 corresponding raw registers in the ax mask, but if this isn't
 	 the case add the expression that is generated to the
 	 collection list.  */

@@ -891,7 +891,7 @@ proc_wait_for_stop (procinfo *pi)
 
   clear_sigint_trap ();
 
-  /* We been runnin' and we stopped -- need to update status.  */
+  /* We've been running and we stopped -- need to update status.  */
   pi->status_valid = 0;
 
   return win;
