@@ -58,6 +58,7 @@ gld${EMULATION_NAME}_before_parse (void)
 #endif /* not TARGET_ */
   input_flags.dynamic = ${DYNAMIC_LINK-true};
   config.has_shared = `if test -n "$GENERATE_SHLIB_SCRIPT" ; then echo true ; else echo false ; fi`;
+  config.tls_nobits_occupies_vma = `if test "x${EMBEDDED}" = xyes ; then echo true ; else echo false ; fi`;
   config.separate_code = `if test "x${SEPARATE_CODE}" = xyes ; then echo true ; else echo false ; fi`;
 EOF
 if test -n "$COMMONPAGESIZE"; then

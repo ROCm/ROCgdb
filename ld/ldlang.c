@@ -5890,8 +5890,11 @@ sort_sections_by_vma (const void *arg1, const void *arg2)
 #define IS_TBSS(s) \
   ((s->flags & (SEC_LOAD | SEC_THREAD_LOCAL)) == SEC_THREAD_LOCAL)
 
+#define TBSS_EFFECTIVELY_ZERO(s) \
+  (IS_TBSS (s) && !config.tls_nobits_occupies_vma)
+
 #define IGNORE_SECTION(s) \
-  ((s->flags & SEC_ALLOC) == 0 || IS_TBSS (s))
+  ((s->flags & SEC_ALLOC) == 0 || TBSS_EFFECTIVELY_ZERO (s))
 
 /* Check to see if any allocated sections overlap with other allocated
    sections.  This can happen if a linker script specifies the output
@@ -6433,8 +6436,8 @@ lang_size_sections_1
 	    if (bfd_is_abs_section (os->bfd_section) || os->ignored)
 	      break;
 
-	    /* .tbss sections effectively have zero size.  */
-	    if (!IS_TBSS (os->bfd_section)
+	    /* Hosted .tbss sections effectively have zero size.  */
+	    if (!TBSS_EFFECTIVELY_ZERO (os->bfd_section)
 		|| bfd_link_relocatable (&link_info))
 	      dotdelta = TO_ADDR (os->bfd_section->size);
 	    else
@@ -6813,7 +6816,7 @@ lang_size_relro_segment_1 (void)
 	bfd_vma start, end, bump;
 
 	end = start = sec->vma;
-	if (!IS_TBSS (sec))
+	if (!TBSS_EFFECTIVELY_ZERO (sec))
 	  end += TO_ADDR (sec->size);
 	bump = desired_end - end;
 	/* We'd like to increase START by BUMP, but we must heed
@@ -6936,8 +6939,8 @@ lang_do_assignments_1 (lang_statement_union_type *s,
 		  {
 		    newdot = os->bfd_section->vma;
 
-		    /* .tbss sections effectively have zero size.  */
-		    if (!IS_TBSS (os->bfd_section)
+		    /* Hosted .tbss sections effectively have zero size.  */
+		    if (!TBSS_EFFECTIVELY_ZERO (os->bfd_section)
 			|| bfd_link_relocatable (&link_info))
 		      newdot += TO_ADDR (os->bfd_section->size);
 

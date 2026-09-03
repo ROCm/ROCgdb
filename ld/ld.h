@@ -236,6 +236,10 @@ typedef struct
      parameter.  */
   bool has_shared;
 
+  /* If TRUE, TLS NOBITS sections consume VMA like other allocated
+     sections.  */
+  bool tls_nobits_occupies_vma;
+
   /* If TRUE, build constructors.  */
   bool build_constructors;
 
