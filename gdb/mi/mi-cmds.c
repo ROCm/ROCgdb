@@ -303,7 +303,9 @@ add_builtin_mi_commands ()
   add_mi_cmd_mi ("list-features", mi_cmd_list_features);
   add_mi_cmd_mi ("list-target-features", mi_cmd_list_target_features);
   add_mi_cmd_mi ("list-thread-groups", mi_cmd_list_thread_groups);
-  add_mi_cmd_cli ("queue-info", "info queues", 1),
+  add_mi_cmd_cli ("queue-info", "info queues", 1);
+  add_mi_cmd_cli ("wave-count", "info waves count", 1);
+  add_mi_cmd_cli ("wave-info", "info waves", 1);
   add_mi_cmd_mi ("remove-inferior", mi_cmd_remove_inferior);
   add_mi_cmd_mi ("stack-info-depth", mi_cmd_stack_info_depth);
   add_mi_cmd_mi ("stack-info-frame", mi_cmd_stack_info_frame);
