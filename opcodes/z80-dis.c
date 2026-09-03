@@ -21,6 +21,7 @@
 
 #include "sysdep.h"
 #include "disassemble.h"
+#include "libiberty.h"
 #include <stdio.h>
 
 struct buffer
@@ -768,11 +769,55 @@ pref_ind (struct buffer *buf, disassemble_info *info, const char *txt)
 static int
 print_insn_z80_buf (struct buffer *buf, disassemble_info *info);
 
+struct sized_buf
+{
+  char *buf;
+  size_t size;
+};
+
+/* An fprintf_ftype implementation writing to STREAM, which must point to a
+   struct sized_buf.  */
+
+static int ATTRIBUTE_PRINTF_2
+sized_buf_printf (void *stream, const char *format, ...)
+{
+  va_list ap;
+  int ret;
+  struct sized_buf *sbuf = stream;
+
+  va_start (ap, format);
+  ret = vsnprintf (sbuf->buf, sbuf->size, format, ap);
+  va_end (ap);
+
+  return ret;
+}
+
+/* Same as sized_buf_printf, but as an fprintf_styled_ftype implementation.
+   The style is ignored for now.  */
+
+static int ATTRIBUTE_PRINTF_3
+sized_buf_styled_printf (void *stream,
+			 enum disassembler_style style ATTRIBUTE_UNUSED,
+			 const char *format, ...)
+{
+  va_list ap;
+  int ret;
+  struct sized_buf *sbuf = stream;
+
+  va_start (ap, format);
+  ret = vsnprintf (sbuf->buf, sbuf->size, format, ap);
+  va_end (ap);
+
+  return ret;
+}
+
 static int
 suffix (struct buffer *buf, disassemble_info *info, const char *txt)
 {
   char mybuf[TXTSIZ*4];
+  struct sized_buf sbuf = { mybuf, ARRAY_SIZE (mybuf) };
   fprintf_ftype old_fprintf;
+  fprintf_styled_ftype old_fprintf_styled;
   void *old_stream;
   char *p;
 
@@ -800,15 +845,15 @@ suffix (struct buffer *buf, disassemble_info *info, const char *txt)
     }
 
   old_fprintf = info->fprintf_func;
+  old_fprintf_styled = info->fprintf_styled_func;
   old_stream = info->stream;
-  info->fprintf_func = (fprintf_ftype) &sprintf;
-  info->stream = mybuf;
+  disassemble_set_printf (info, &sbuf, sized_buf_printf,
+			  sized_buf_styled_printf);
   mybuf[0] = 0;
   buf->base++;
   if (print_insn_z80_buf (buf, info) >= 0)
     buf->n_used++;
-  info->fprintf_func = old_fprintf;
-  info->stream = old_stream;
+  disassemble_set_printf (info, old_stream, old_fprintf, old_fprintf_styled);
 
   for (p = mybuf; *p; ++p)
     if (*p == ' ')

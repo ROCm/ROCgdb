@@ -134,7 +134,9 @@ m32r_core_signal (SIM_DESC sd, SIM_CPU *current_cpu, sim_cia cia,
     sim_core_signal (sd, current_cpu, cia, map, nr_bytes, addr,
 		     transfer, sig);
 }
-
+
+#ifdef __linux__
+
 /* Translate target's address to host's address.  */
 
 static void *
@@ -180,6 +182,8 @@ translate_endian_t2h (void *addr, size_t size)
     *((unsigned short *) p) = T2H_2 (*((unsigned short *) p));
 }
 
+#endif /* __linux__ */
+
 /* Trap support.
    The result is the pc address to continue at.
    Preprocessing like saving the various registers has already been done.  */
@@ -188,7 +192,6 @@ USI
 m32r_trap (SIM_CPU *current_cpu, PCADDR pc, int num)
 {
   SIM_DESC sd = CPU_STATE (current_cpu);
-  host_callback *cb = STATE_CALLBACK (sd);
 
   if (STATE_ENVIRONMENT (sd) == OPERATING_ENVIRONMENT)
     goto case_default;
@@ -217,6 +220,7 @@ m32r_trap (SIM_CPU *current_cpu, PCADDR pc, int num)
 #ifdef __linux__
     case TRAP_LINUX_SYSCALL:
       {
+	host_callback *cb = STATE_CALLBACK (sd);
 	CB_SYSCALL s;
 	unsigned int func, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
 	int result, errcode;
