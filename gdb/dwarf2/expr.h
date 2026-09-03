@@ -221,8 +221,12 @@ private:
   /* Fetch the result of the expression evaluation in a form of
      a struct value, where TYPE, SUBOBJ_TYPE and SUBOBJ_OFFSET
      describe the source level representation of that result.
-     AS_LVAL defines if the fetched struct value is expected to
-     be a value or a location description.  */
+
+     When AS_LVAL is false, any memory location descriptions
+     (DWARF_VALUE_MEMORY) are treated as values on the stack
+     (i.e. handled as DWARF_VALUE_STACK).  Handling of any other
+     dwarf_value_location type is unchanged.  When AS_LVAL is true
+     then all dwarf_value_location types are handled as normal.  */
   value *fetch_result (struct type *type, struct type *subobj_type,
 		       LONGEST subobj_offset, bool as_lval);
 

@@ -1031,11 +1031,6 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
     }
   else
     {
-      /* If AS_LVAL is false, means that the implicit conversion
-	 from a location description to value is expected.  */
-      if (!as_lval)
-	this->m_location = DWARF_VALUE_STACK;
-
       switch (this->m_location)
 	{
 	case DWARF_VALUE_REGISTER:
@@ -1070,21 +1065,26 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
 	  break;
 
 	case DWARF_VALUE_MEMORY:
-	  {
-	    struct type *ptr_type;
-	    CORE_ADDR address = this->fetch_address (0);
-	    bool in_stack_memory = this->fetch_in_stack_memory (0);
+	  /* If AS_LVAL is true, handle this memory location normally.
+	     Otherwise, fall through to DWARF_VALUE_STACK and treat
+	     the value on the DWARF stack as a plain value, not a
+	     memory location description.  */
+	  if (as_lval)
+	    {
+	      struct type *ptr_type;
+	      CORE_ADDR address = this->fetch_address (0);
+	      bool in_stack_memory = this->fetch_in_stack_memory (0);
 
-	    /* DW_OP_deref_size (and possibly other operations too) may
-	       create a pointer instead of an address.  Ideally, the
-	       pointer to address conversion would be performed as part
-	       of those operations, but the type of the object to
-	       which the address refers is not known at the time of
-	       the operation.  Therefore, we do the conversion here
-	       since the type is readily available.  */
+	      /* DW_OP_deref_size (and possibly other operations too) may
+		 create a pointer instead of an address.  Ideally, the
+		 pointer to address conversion would be performed as part
+		 of those operations, but the type of the object to
+		 which the address refers is not known at the time of
+		 the operation.  Therefore, we do the conversion here
+		 since the type is readily available.  */
 
-	    switch (subobj_type->code ())
-	      {
+	      switch (subobj_type->code ())
+		{
 		case TYPE_CODE_FUNC:
 		case TYPE_CODE_METHOD:
 		  ptr_type = builtin_type (arch)->builtin_func_ptr;
@@ -1092,16 +1092,16 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
 		default:
 		  ptr_type = builtin_type (arch)->builtin_data_ptr;
 		  break;
-	      }
-	    address = value_as_address (value_from_pointer (ptr_type, address));
+		}
+	      address = value_as_address (value_from_pointer (ptr_type, address));
 
-	    retval = value_at_lazy (subobj_type, address + subobj_offset,
-				    m_frame);
-	    if (in_stack_memory)
-	      retval->set_stack (true);
-	  }
-	  break;
-
+	      retval = value_at_lazy (subobj_type, address + subobj_offset,
+				      m_frame);
+	      if (in_stack_memory)
+		retval->set_stack (true);
+	      break;
+	    }
+	  [[fallthrough]];
 	case DWARF_VALUE_STACK:
 	  {
 	    value *val = this->fetch (0);
@@ -2363,26 +2363,60 @@ dwarf_expr_context::execute_stack_op (gdb::span<const gdb_byte> expr)
 	      error (_("DW_OP_entry_value: too few bytes available."));
 
 	    auto entry_value_expr = gdb::make_span (op_ptr, len);
+	    op_ptr += len;
+
+	    if (trivial_entry_value (this->m_frame))
+	      {
+		/* Rather than create a whole new context, we simply back up
+		   the current stack locally and install a new empty stack,
+		   then reset it afterwards, effectively erasing whatever
+		   the recursive call put there.  */
+		std::vector<dwarf_stack_value> saved_stack = std::move (this->m_stack);
+		SCOPE_EXIT { this->m_stack = std::move (saved_stack); };
+		this->m_stack.clear ();
+
+		/* Back up the location as DW_OP_entry_value might appear as
+		   part of some complex expression that has already set a
+		   non-memory location.  We don't need to reset m_location
+		   back to a default value though as calling eval does that
+		   for us.  */
+		scoped_restore restore_m_location = make_scoped_restore (&this->m_location);
+
+		/* Back up, and arrange to restore, the saved pieces vector
+		   as this is referenced by the fetch_result call below.  It
+		   would be unusual for DW_OP_entry_value to appear within a
+		   composite location, but it's easy enough to handle this
+		   case correctly, so let's do that.  */
+		std::vector<dwarf_expr_piece> saved_pieces = std::move (this->m_pieces);
+		SCOPE_EXIT { this->m_pieces = std::move (saved_pieces); };
+		this->m_pieces.clear ();
+
+		/* By this point m_initialized must be true, there is no point
+		   backing this up and restoring it as evaluating
+		   ENTRY_VALUE_EXPR will just set this to true again.  */
+		gdb_assert (this->m_initialized);
+
+		/* Evaluate the entry expression.  */
+		eval (entry_value_expr);
+
+		/* After evaluating ENTRY_VALUE_EXPR m_initialized should
+		   still be true.  */
+		gdb_assert (this->m_initialized);
+
+		/* The DWARF spec says the entry value block can contain
+		   either a DWARF expression or a register location
+		   description.  Pass as_lval=false here so that
+		   DWARF_VALUE_MEMORY locations will be treated as
+		   DWARF_VALUE_STACK, treating the expression as a value,
+		   not a location.  */
+		result_val = fetch_result (address_type, address_type, 0,
+					   false);
+		break;
+	      }
+
 	    kind_u.dwarf_reg = dwarf_block_to_dwarf_reg (entry_value_expr);
 	    if (kind_u.dwarf_reg != -1)
 	      {
-		op_ptr += len;
-
-		if (trivial_entry_value (this->m_frame))
-		  {
-		    /* We can assume that DW_OP_entry_value (expr) == expr.
-		       Handle DW_OP_regx, place register value on the
-		       stack.  */
-		    gdbarch *f_arch = get_frame_arch (this->m_frame);
-		    int dwarf_regnum = kind_u.dwarf_reg;
-		    int gdb_regnum
-		      = dwarf_reg_to_regnum_or_error (f_arch, dwarf_regnum);
-		    result_val
-		      = value_from_register (address_type, gdb_regnum,
-					     this->m_frame);
-		    break;
-		  }
-
 		this->push_dwarf_reg_entry_value (CALL_SITE_PARAMETER_DWARF_REG,
 						  kind_u,
 						  -1 /* deref_size */);
@@ -2395,17 +2429,6 @@ dwarf_expr_context::execute_stack_op (gdb::span<const gdb_byte> expr)
 	      {
 		if (deref_size == -1)
 		  deref_size = this->m_addr_size;
-		op_ptr += len;
-
-		if (trivial_entry_value (this->m_frame))
-		  {
-		    /* We can assume that DW_OP_entry_value (expr) == expr.
-		       Handle as DW_OP_bregx;DW_OP_deref_size.  */
-		    CORE_ADDR addr
-		      = read_addr_from_reg (this->m_frame, kind_u.dwarf_reg);
-		    result_val = this->deref (addr, deref_size);
-		    break;
-		  }
 
 		this->push_dwarf_reg_entry_value (CALL_SITE_PARAMETER_DWARF_REG,
 						  kind_u, deref_size);
