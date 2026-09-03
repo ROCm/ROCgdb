@@ -212,7 +212,7 @@ handle_file ()
 		$OBJCOPY --add-section $section="$index" \
 			 --set-section-flags $section=readonly \
 			 --add-section .debug_str="$debugstrmerge" \
-		         --set-section-flags .debug_str=readonly \
+			 --set-section-flags .debug_str=readonly \
 			 "$fpath" "$fpath"
 	    else
 		$OBJCOPY --add-section $section="$index" \

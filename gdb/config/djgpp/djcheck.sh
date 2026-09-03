@@ -36,9 +36,9 @@ do
     fi
     $GDB ${options} < "${base}.in" 2>&1 \
       | sed -e '/GNU gdb /s/ [.0-9][.0-9]*//' \
-            -e '/^Copyright/s/[12][0-9][0-9][0-9]/XYZZY/g' \
-            -e '/Starting program: /s|[A-z]:/.*/||' \
-            -e '/main (/s/=0x[0-9a-f][0-9a-f]*/=XYZ/g' \
+	    -e '/^Copyright/s/[12][0-9][0-9][0-9]/XYZZY/g' \
+	    -e '/Starting program: /s|[A-z]:/.*/||' \
+	    -e '/main (/s/=0x[0-9a-f][0-9a-f]*/=XYZ/g' \
       > "${base}.tst"
     if diff --binary -u "${base}.out" "${base}.tst" ; then
       rm -f "${base}.tst"

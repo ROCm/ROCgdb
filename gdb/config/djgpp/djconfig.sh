@@ -60,11 +60,11 @@ if ! test -f "${srcdir}/bfd/ChangeLog.0203"      || \
       notfound="${srcdir}/gdb/ChangeLog.002"
     else
       if ! test -f "${srcdir}/readline/config.h-in"; then
-        notfound="${srcdir}/readline/config.h-in"
+	notfound="${srcdir}/readline/config.h-in"
       else
-        if ! test -f "${srcdir}/opcodes/ChangeLog.0203"; then
-          notfound="${srcdir}/opcodes/ChangeLog.0203"
-        fi
+	if ! test -f "${srcdir}/opcodes/ChangeLog.0203"; then
+	  notfound="${srcdir}/opcodes/ChangeLog.0203"
+	fi
       fi
     fi
   fi
