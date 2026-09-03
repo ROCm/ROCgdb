@@ -4246,7 +4246,7 @@ target_done_generating_core (void)
 
 
 
-static char targ_desc[] =
+static char const targ_desc[] =
 "Names of targets and files being debugged.\nShows the entire \
 stack of targets currently in use (including the exec-file,\n\
 core-file, and process, if any), as well as the symbol file name.";
