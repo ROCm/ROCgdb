@@ -2408,6 +2408,7 @@ clean mostlyclean: $(CONFIG_CLEAN)
 	rm -f gdb$(EXEEXT) core make.log
 	rm -f gdb[0-9]$(EXEEXT)
 	rm -f xml-builtin.c stamp-xml
+	rm -f gcore gstack gdb-add-index
 	rm -f $(addsuffix /*.o,$(CONFIG_SRC_SUBDIR))
 	rm -f $(addsuffix /*,$(ALL_DEPDIRS))
 	for d in $(ALL_DEPDIRS); do \
@@ -2420,7 +2421,8 @@ clean mostlyclean: $(CONFIG_CLEAN)
 # functionality described is if the distributed files are unmodified.
 distclean: clean
 	@$(MAKE) $(FLAGS_TO_PASS) DO=distclean "DODIRS=$(CLEANDIRS)" subdir_do
-	rm -f nm.h config.status config.h stamp-h b jit-reader.h gcore gstack gstack.in stamp-nmh
+	rm -f nm.h config.status config.h stamp-h b jit-reader.h stamp-nmh
+	rm -f gcore.in gstack.in gdb-add-index.in
 	rm -f gdb-gdb.gdb
 	rm -f y.output yacc.acts yacc.tmp y.tab.h
 	rm -f config.log config.cache
