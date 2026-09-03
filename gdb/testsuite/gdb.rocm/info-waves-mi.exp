@@ -1,0 +1,268 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the -wave-info and -wave-count MI commands.
+#
+# -wave-count and -wave-info are AMDGPU-specific MI commands available only in
+# ROCgdb.  The ROCm-extended mi_expect_stop already handles AMDGPU-specific
+# *stopped fields (hit-lanes, lane-id) as optional elements.
+
+load_lib rocm.exp
+load_lib mi-support.exp
+
+require allow_hip_tests
+
+standard_testfile info-waves.cpp
+
+if { [prepare_for_testing "failed to prepare ${testfile}" $testfile $srcfile \
+	{ debug hip }] } {
+    return -1
+}
+
+# Check -wave-count and -wave-info MI output.  MIN_TOTAL is the minimum
+# acceptable count.  EXPECT_RUNNING is 1 if the running field must be >= 1.
+proc mi_check_waves { min_total expect_running } {
+    set wave_count 0
+    gdb_test_multiple "-wave-count" "-wave-count" {
+	-re "\\^done,count=\"(\[0-9\]+)\"" {
+	    set wave_count $expect_out(1,string)
+	    gdb_assert { $wave_count >= $min_total } "-wave-count >= $min_total"
+	    pass $gdb_test_name
+	}
+	timeout {
+	    fail "$gdb_test_name (timeout)"
+	}
+    }
+    gdb_test_multiple "-wave-info" "-wave-info" {
+	-re "\\^done,total=\"(\[0-9\]+)\",running=\"(\[0-9\]+)\",single-stepping=\"(\[0-9\]+)\",stopped=\"(\[0-9\]+)\"" {
+	    set total   $expect_out(1,string)
+	    set running $expect_out(2,string)
+	    set sstep   $expect_out(3,string)
+	    set stopped $expect_out(4,string)
+	    gdb_assert { $total == $wave_count } \
+		"-wave-info total matches -wave-count"
+	    if { $expect_running } {
+		gdb_assert { $running >= 1 } "at least one wave is running (MI)"
+	    }
+	    if { $min_total >= 1 } {
+		gdb_assert { $stopped >= 1 } "at least one wave is stopped (MI)"
+	    }
+	    gdb_assert { $total == $running + $sstep + $stopped } \
+		"-wave-info counts sum to total"
+	    pass $gdb_test_name
+	}
+	timeout {
+	    fail "$gdb_test_name (timeout)"
+	}
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Scenario 1: before GPU activity.
+# ---------------------------------------------------------------------------
+
+proc test_before_gpu_activity {} {
+    if { [mi_clean_restart $::testfile] } {
+	return
+    }
+    if { [mi_runto_main] < 0 } {
+	return
+    }
+    mi_gdb_test "-wave-count" \
+	"\\^done,count=\"0\"" \
+	"-wave-count before GPU activity"
+    mi_gdb_test "-wave-info" \
+	"\\^done,total=\"0\",running=\"0\",single-stepping=\"0\",stopped=\"0\"" \
+	"-wave-info before GPU activity"
+}
+
+# ---------------------------------------------------------------------------
+# Scenario 2: all-stop at kernel_bp.
+# Both waves are stopped (all-stop halts everything).
+# ---------------------------------------------------------------------------
+
+proc test_at_kernel_bp {} {
+    if { [mi_clean_restart $::testfile] } {
+	return
+    }
+    if { [mi_runto_main] < 0 } {
+	return
+    }
+    mi_create_breakpoint_pending "-f kernel_bp" "set breakpoint at kernel_bp"
+    mi_send_resuming_command "exec-continue" "continue to kernel_bp"
+    mi_expect_stop "breakpoint-hit" "kernel_bp" "" ".*" ".*" \
+	{ "" "disp=\"keep\"" } "stop at kernel_bp"
+    mi_check_waves 2 0
+}
+
+# ---------------------------------------------------------------------------
+# Scenario 3: non-stop at kernel_bp.
+# One wave is stopped at the breakpoint; the other is still spinning.
+# Also exercises single-stepping observation via async stepi.
+# ---------------------------------------------------------------------------
+
+proc test_nonstop {} {
+    save_vars { ::GDBFLAGS } {
+	append ::GDBFLAGS " -ex \"set non-stop on\""
+	mi_clean_restart $::testfile
+    }
+    mi_gdb_test "-gdb-set mi-async 1" "\\^done" "enable MI async"
+    mi_detect_async
+    if { [mi_runto_main] < 0 } {
+	return
+    }
+    mi_create_breakpoint_pending "-f kernel_bp" "set breakpoint at kernel_bp"
+    if { [mi_send_resuming_command "exec-continue" "continue async"] != 0 } {
+	return
+    }
+    # Capture the stopped thread-id from the *stopped event so we can
+    # single-step it below.  mi_expect_stop does not return thread-id.
+    gdb_expect {
+	-re "\\*stopped,reason=\"breakpoint-hit\",\[^\n\]*func=\"kernel_bp\"\[^\n\]*thread-id=\"($::decimal)\"" {
+	    set stopped_tid $expect_out(1,string)
+	    pass "stop at kernel_bp"
+	}
+	timeout {
+	    fail "stop at kernel_bp (timeout)"
+	    return
+	}
+    }
+    mi_check_waves 2 1
+
+    # Exercise the single-stepping state: select the stopped GPU thread and
+    # queue a large async stepi so the wave stays in single-stepping state
+    # long enough to observe with -wave-info.
+    gdb_test_multiple "-interpreter-exec console \"thread $stopped_tid\"" \
+	"switch to stopped wave thread" {
+	-re "\\^done" {
+	    pass $gdb_test_name
+	}
+	timeout {
+	    fail "$gdb_test_name (timeout)"
+	}
+    }
+    # stepi N & is async: GDB emits ^running followed by *running.
+    gdb_test_multiple "-interpreter-exec console \"stepi 1000 &\"" \
+	"start async single-stepping" {
+	-re "\\^running.*" {
+	    pass $gdb_test_name
+	}
+	timeout {
+	    fail "$gdb_test_name (timeout)"
+	}
+    }
+    set found_sstep 0
+    with_test_prefix "poll for single-stepping wave" {
+	for {set i 0} {$i < 20 && $found_sstep == 0} {incr i} {
+	    gdb_test_multiple "-wave-info" "attempt $i" {
+		-re "\\^done,total=\"$::decimal\",running=\"$::decimal\",single-stepping=\"($::decimal)\",stopped=\"$::decimal\"" {
+		    if { $expect_out(1,string) >= 1 } {
+			set found_sstep 1
+		    }
+		    pass $gdb_test_name
+		}
+		timeout {
+		    fail "$gdb_test_name (timeout)"
+		}
+	    }
+	}
+    }
+    gdb_assert { $found_sstep } "observed at least one single-stepping wave (MI)"
+}
+
+# ---------------------------------------------------------------------------
+# Scenario 4: multi-inferior non-stop.
+# MI commands always query the current inferior.  Two inferiors each stop at
+# kernel_bp.  Requires multi-process GPU debug support.
+# ---------------------------------------------------------------------------
+
+proc test_multi_inferior {} {
+    save_vars { ::GDBFLAGS } {
+	append ::GDBFLAGS " -ex \"set non-stop on\""
+	mi_clean_restart $::testfile
+    }
+    mi_gdb_test "-gdb-set mi-async 1" "\\^done" "enable MI async"
+    mi_detect_async
+    if { [mi_runto_main] < 0 } {
+	return
+    }
+    # Add inferior 2 and load the binary into it.
+    # -add-inferior response includes a connection field; match flexibly.
+    mi_gdb_test "-add-inferior" \
+	"\\^done,inferior=\"i2\".*" "add inferior 2"
+    mi_gdb_test "-interpreter-exec console \"inferior 2\"" \
+	".*\\^done" "select inferior 2"
+    mi_gdb_test "-file-exec-and-symbols $::binfile" "\\^done" \
+	"load binary in inferior 2"
+    # Run inferior 2 to main.  With both inferiors sharing the same binary the
+    # temporary breakpoint resolves in both and gets addr="<MULTIPLE>", so
+    # match flexibly and pass locno to mi_expect_stop.
+    mi_gdb_test "220-break-insert --qualified -t main" \
+	"220\\^done,bkpt=.*" "breakpoint at main for inferior 2"
+    if { [mi_run_cmd] < 0 } {
+	return
+    }
+    mi_expect_stop "breakpoint-hit" "main" ".*" ".*" "${::decimal}" \
+	[list "" "disp=\"del\"" "locno=\"$::decimal\""] \
+	"mi runto main for inferior 2"
+    mi_create_breakpoint_pending "-f kernel_bp" "set breakpoint at kernel_bp"
+    # mi_send_resuming_command expects only one *running event.  With two
+    # inferiors, two are emitted; match them directly with mi_gdb_test.
+    mi_gdb_test "-exec-continue --all" \
+	"\\^running(\r\n\\*running,thread-id=\"\[^\"\]+\")+" \
+	"continue both inferiors"
+    # Wait for both inferiors to stop at kernel_bp.  Between and after the two
+    # *stopped events GDB emits =breakpoint-modified and =thread-created lines
+    # that mi_expect_stop cannot skip, so count stops with gdb_expect directly.
+    set stopped_count 0
+    set test "both inferiors stop at kernel_bp"
+    gdb_expect {
+	-re "\\*stopped,reason=\"breakpoint-hit\",\[^\n\]*func=\"kernel_bp\"\[^\n\]*\n" {
+	    incr stopped_count
+	    if { $stopped_count < 2 } {
+		exp_continue
+	    } else {
+		pass $test
+	    }
+	}
+	timeout {
+	    fail "$test (timeout, got $stopped_count of 2 stops)"
+	}
+    }
+    # -wave-info and -wave-count query the current inferior.
+    mi_check_waves 1 0
+}
+
+with_rocm_gpu_lock {
+    with_test_prefix "before-gpu" {
+	test_before_gpu_activity
+    }
+    with_test_prefix "all-stop" {
+	test_at_kernel_bp
+    }
+    with_test_prefix "non-stop" {
+	test_nonstop
+    }
+
+    if { [allow_multi_inferior_tests] \
+	     && [hip_devices_support_debug_multi_process] } {
+	with_test_prefix "multi-inferior" {
+	    test_multi_inferior
+	}
+    }
+}
