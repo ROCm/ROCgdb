@@ -2421,7 +2421,7 @@ clean mostlyclean: $(CONFIG_CLEAN)
 # functionality described is if the distributed files are unmodified.
 distclean: clean
 	@$(MAKE) $(FLAGS_TO_PASS) DO=distclean "DODIRS=$(CLEANDIRS)" subdir_do
-	rm -f nm.h config.status config.h stamp-h b jit-reader.h stamp-nmh
+	rm -f nm.h config.status config.h stamp-h jit-reader.h stamp-nmh
 	rm -f gcore.in gstack.in gdb-add-index.in
 	if test "$(srcdir)" != "."; then \
 		rm -f gdb-gdb.gdb gdb-gdb.py; \
