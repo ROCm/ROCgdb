@@ -1604,7 +1604,7 @@ extern void
 extern breakpoint *install_breakpoint
   (int internal, std::unique_ptr<breakpoint> &&b, int update_gll);
 
-/* Returns the breakpoint ops appropriate for use with with LOCSPEC
+/* Returns the breakpoint ops appropriate for use with LOCSPEC
    and according to IS_TRACEPOINT.  Use this to ensure, for example,
    that you pass the correct ops to create_breakpoint for probe
    location specs.  If LOCSPEC is NULL, returns

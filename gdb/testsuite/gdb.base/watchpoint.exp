@@ -438,7 +438,7 @@ proc test_watchpoint_triggered_in_syscall {} {
     }
 }
 
-# Do a simple test of of watching through a pointer when the pointer
+# Do a simple test of watching through a pointer when the pointer
 # itself changes.  Should add some more complicated stuff here.
 
 proc test_complex_watchpoint {} {

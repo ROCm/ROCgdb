@@ -1201,7 +1201,7 @@ public:
   }
 
   /* Unregister Python object OBJ.  OBJ will no longer be invalidated when
-     OWNER is about to be be freed.  */
+     OWNER is about to be freed.  */
   template <typename O>
   void remove (O *owner, obj_type *obj) const
   {

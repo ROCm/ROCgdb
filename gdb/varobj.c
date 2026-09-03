@@ -2263,7 +2263,7 @@ varobj_value_is_changeable_p (const struct varobj *var)
   return var->root->lang_ops->value_is_changeable_p (var);
 }
 
-/* Return true if that varobj is floating, that is is always evaluated in the
+/* Return true if that varobj is floating, that is always evaluated in the
    selected frame, and not bound to thread/frame.  Such variable objects
    are created using '@' as frame specifier to -var-create.  */
 bool

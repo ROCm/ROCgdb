@@ -119,7 +119,7 @@ class BaseReference(ABC):
     # Helper method to compute the final name for a child whose base
     # name is given.  Updates the name_counts map.  This is used to
     # handle shadowing -- in DAP, the adapter is responsible for
-    # making sure that all the variables in a a given container have
+    # making sure that all the variables in a given container have
     # unique names.  See
     # https://github.com/microsoft/debug-adapter-protocol/issues/141
     # and

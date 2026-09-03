@@ -259,7 +259,7 @@ public:
 
   ~frame_info_ptr ()
   {
-    /* If this node has static storage, it should be be deleted before
+    /* If this node has static storage, it should be deleted before
        frame_list.  */
     frame_list.erase (frame_list.iterator_to (*this));
   }

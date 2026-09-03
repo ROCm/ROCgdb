@@ -394,7 +394,7 @@ Takes @var{value}, an instance of @code{gdb.Value} (@pxref{Values From
 Inferior}), and appends the value this object represents to
 @value{GDBN}'s value history (@pxref{Value History}), and return an
 integer, its history number.  If @var{value} is not a
-@code{gdb.Value}, it is is converted using the @code{gdb.Value}
+@code{gdb.Value}, it is converted using the @code{gdb.Value}
 constructor.  If @var{value} can't be converted to a @code{gdb.Value}
 then a @code{TypeError} is raised.
 
@@ -422,7 +422,7 @@ named @var{name}.  @var{name} must be a string.  The name should not
 include the @samp{$} that is used to mark a convenience variable in an
 expression.  If @var{value} is @code{None}, then the convenience
 variable is removed.  Otherwise, if @var{value} is not a
-@code{gdb.Value} (@pxref{Values From Inferior}), it is is converted
+@code{gdb.Value} (@pxref{Values From Inferior}), it is converted
 using the @code{gdb.Value} constructor.
 @end defun
 

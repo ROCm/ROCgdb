@@ -535,7 +535,7 @@ avr_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR pc_beg, CORE_ADDR pc_end,
 
   /* FIXME: TRoth/2003-06-11: This could be made more efficient by only
      reading in the bytes of the prologue.  The problem is that the figuring
-     out where the end of the prologue is is a bit difficult.  The old code
+     out where the end of the prologue is a bit difficult.  The old code
      tried to do that, but failed quite often.  */
   read_memory (pc_beg, prologue, len);
 

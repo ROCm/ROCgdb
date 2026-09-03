@@ -230,7 +230,7 @@ proc test_scalar_returns { } {
 
     # If the previous test did not work, the program counter might
     # still be inside foo() rather than main().  Make sure the program
-    # counter is is main().
+    # counter is main().
     #
     # This happens on ppc64 GNU/Linux with gcc 3.4.1 and a buggy GDB
 

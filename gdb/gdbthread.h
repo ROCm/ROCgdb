@@ -355,7 +355,7 @@ public:
 	  per-inferior thread number.  This number is unique in the
 	  inferior but not unique between inferiors.
 
-     b) The global ID (GId).  This is a a single integer unique
+     b) The global ID (GId).  This is a single integer unique
 	between all inferiors.
 
      E.g.:

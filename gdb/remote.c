@@ -6748,7 +6748,7 @@ thread_pending_fork_status (struct thread_info *thread)
   return &ws;
 }
 
-/* Return THREAD's pending status if is is a pending fork/vfork/clone
+/* Return THREAD's pending status if is a pending fork/vfork/clone
    event, else return nullptr.  */
 
 static const target_waitstatus *
@@ -10822,7 +10822,7 @@ show_watchdog (struct ui_file *file, int from_tty,
 /* Read a packet from the remote machine, with error checking, and
    store it in *BUF.  Resize *BUF if necessary to hold the result.  If
    FOREVER, wait forever rather than timing out; this is used (in
-   synchronous mode) to wait for a target that is is executing user
+   synchronous mode) to wait for a target that is executing user
    code to stop.  If FOREVER == false, this function is allowed to time
    out gracefully and return an indication of this to the caller.
    Otherwise return the number of bytes read.  If IS_NOTIF is not

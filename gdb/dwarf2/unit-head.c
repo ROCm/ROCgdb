@@ -142,7 +142,7 @@ read_unit_head (struct unit_head *header, const gdb_byte *info_ptr,
   return info_ptr;
 }
 
-/* Subroutine of read_and_check_unit_head to to simplify it.
+/* Subroutine of read_and_check_unit_head to simplify it.
    Perform various error checking on the header.  */
 
 static void

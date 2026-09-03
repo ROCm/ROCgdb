@@ -8751,7 +8751,7 @@ gdb_print_insn_arm (bfd_vma memaddr, disassemble_info *info)
 
    There are other ways of forcing a breakpoint.  GNU/Linux, RISC iX,
    and NetBSD all use a software interrupt rather than an undefined
-   instruction to force a trap.  This can be handled by by the
+   instruction to force a trap.  This can be handled by the
    abi-specific code during establishment of the gdbarch vector.  */
 
 #define ARM_LE_BREAKPOINT {0xFE,0xDE,0xFF,0xE7}

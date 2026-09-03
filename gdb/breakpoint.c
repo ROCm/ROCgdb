@@ -7373,7 +7373,7 @@ watchpoint_locations_match (const struct bp_location *loc1,
   gdb_assert (w2 != NULL);
 
   /* If the target can evaluate the condition expression in hardware,
-     then we we need to insert both watchpoints even if they are at
+     then we need to insert both watchpoints even if they are at
      the same place.  Otherwise the watchpoint will only trigger when
      the condition of whichever watchpoint was inserted evaluates to
      true, not giving a chance for GDB to check the condition of the
@@ -9139,7 +9139,7 @@ decode_static_tracepoint_spec (const char **arg_p)
   return sals;
 }
 
-/* Returns the breakpoint ops appropriate for use with with LOCATION_TYPE and
+/* Returns the breakpoint ops appropriate for use with LOCATION_TYPE and
    according to IS_TRACEPOINT.  */
 
 static const struct breakpoint_ops *

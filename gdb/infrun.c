@@ -1718,7 +1718,7 @@ infrun_inferior_execd (inferior *exec_inf, inferior *follow_inf)
 {
   /* If some threads where was doing a displaced step in this inferior at the
      moment of the exec, they no longer exist.  Even if the exec'ing thread
-     doing a displaced step, we don't want to to any fixup nor restore displaced
+     doing a displaced step, we don't want to do any fixup nor restore displaced
      stepping buffer bytes.  */
   follow_inf->displaced_step_state.reset ();
 

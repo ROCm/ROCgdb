@@ -5812,7 +5812,7 @@ Renesas RL78				rl78-*-elf
      This keyword, when provided, will direct the output to either
      stdout, stderr, or GDB's logging output.
 
-  ** Parameters can now be be sub-classed in Python, and in particular
+  ** Parameters can now be sub-classed in Python, and in particular
      you may implement the get_set_doc and get_show_doc functions.
      This improves how Parameter set/show documentation is processed
      and allows for more dynamic content.

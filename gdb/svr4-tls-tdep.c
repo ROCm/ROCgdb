@@ -117,7 +117,7 @@ svr4_tls_get_thread_local_address (struct gdbarch *gdbarch, ptid_t ptid,
        target stack, except when 'force_internal_tls_address_lookup'
        has been set.
 
-     The idea here is to prefer use of of the target's thread_stratum
+     The idea here is to prefer use of the target's thread_stratum
      method since it should be more accurate.  */
   if (gdbarch_data->get_tls_dtv_addr == nullptr
       || (current_inferior ()->target_at (thread_stratum) != nullptr
