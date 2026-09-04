@@ -607,7 +607,7 @@ PyObject *gdbpy_buffer_to_membuf (gdb::unique_xmalloc_ptr<gdb_byte> buffer,
 
 struct process_stratum_target;
 gdbpy_ref<> target_to_connection_object (process_stratum_target *target);
-PyObject *gdbpy_connections (PyObject *self, PyObject *args);
+gdbpy_ref<> gdbpy_connections ();
 
 const struct block *block_object_to_block (PyObject *obj);
 struct symbol *symbol_object_to_symbol (PyObject *obj);
