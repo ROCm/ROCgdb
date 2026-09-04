@@ -45,7 +45,7 @@ FILE *errorf;
 /* Flags to set in the elf header */
 #define DEFAULT_FLAGS 0
 
-#ifdef OBJ_FDPIC_ELF
+#ifdef TE_LINUX_FDPIC
 # define DEFAULT_FDPIC EF_BFIN_FDPIC
 #else
 # define DEFAULT_FDPIC 0
