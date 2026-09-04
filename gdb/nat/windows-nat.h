@@ -221,7 +221,6 @@ struct windows_process_info
   /* The process handle */
   HANDLE handle = 0;
   DWORD process_id = 0;
-  DWORD main_thread_id = 0;
 
 #ifdef __CYGWIN__
   /* True if the inferior was created through Cygwin's spawn path

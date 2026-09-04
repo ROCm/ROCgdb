@@ -293,7 +293,6 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
 
   windows_process.handle = proch;
   windows_process.process_id = pid;
-  windows_process.main_thread_id = 0;
 
   windows_process.open_process_used = true;
 
@@ -1056,11 +1055,10 @@ get_child_debug_event (DWORD *continue_status,
 	}
 
       windows_process.handle = current_event->u.CreateProcessInfo.hProcess;
-      windows_process.main_thread_id = current_event->dwThreadId;
 
       /* Add the main thread.  */
       child_add_thread (current_event->dwProcessId,
-			windows_process.main_thread_id,
+			current_event->dwThreadId,
 			current_event->u.CreateProcessInfo.hThread,
 			current_event->u.CreateProcessInfo.lpThreadLocalBase);
       break;
