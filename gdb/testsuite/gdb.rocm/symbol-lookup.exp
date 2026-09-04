@@ -128,7 +128,7 @@ proc do_test {} {
 	"set args"
 
     with_rocm_gpu_lock {
-	if ![runto_main] {
+	if {![runto_main]} {
 	    return
 	}
 
