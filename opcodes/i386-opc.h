@@ -328,6 +328,10 @@ enum i386_cpu
   CpuRMPQUERY,
   /* RMPREAD instruction required */
   CpuRMPREAD,
+  /* RMPDIRTY instruction required */
+  CpuRMPDIRTY,
+  /* RMPOPT instruction required */
+  CpuRMPOPT,
   /* Intel APX New Conditional Instructions support required.  */
   CpuAPX_NCI,
   /* Intel APX Non-Destructive Destination support required.  */
@@ -573,6 +577,8 @@ typedef union i386_cpu_flags
       unsigned int cpusnp:1;
       unsigned int cpurmpquery:1;
       unsigned int cpurmpread:1;
+      unsigned int cpurmpdirty:1;
+      unsigned int cpurmpopt:1;
       unsigned int cpuapx_nci:1;
       unsigned int cpuapx_ndd:1;
       unsigned int cpuapx_nf:1;

@@ -1245,6 +1245,8 @@ static const arch_entry cpu_arch[] =
   SUBARCH (rao_int, RAO_INT, RAO_INT, false),
   SUBARCH (rmpquery, RMPQUERY, ANY_RMPQUERY, false),
   SUBARCH (rmpread, RMPREAD, ANY_RMPREAD, false),
+  SUBARCH (rmpdirty, RMPDIRTY, ANY_RMPDIRTY, false),
+  SUBARCH (rmpopt, RMPOPT, ANY_RMPOPT, false),
   SUBARCH (fred, FRED, ANY_FRED, false),
   SUBARCH (lkgs, LKGS, ANY_LKGS, false),
   VECARCH (avx_vnni_int16, AVX_VNNI_INT16, ANY_AVX_VNNI_INT16, reset),
@@ -7397,7 +7399,8 @@ i386_assemble (char *line)
 
   /* All Intel opcodes have reversed operands except for "bound", "enter",
      "invlpg*", "monitor*", "mwait*", "tpause", "umwait", "pvalidate",
-     "rmpadjust", "rmpquery", and deprecated forms of "rmpupdate".
+     "rmpadjust", "rmpquery", "rmpopt", "rmpchkd", and deprecated forms of
+     "rmpupdate".
      We also don't reverse intersegment "jmp" and "call" instructions with
      2 immediate operands so that the immediate segment precedes the offset
      consistently in Intel and AT&T modes.  */

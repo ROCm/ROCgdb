@@ -3205,6 +3205,20 @@ rmpread, 0xf20f01fd, RMPREAD&x64, IsString|NoSuf|NoRex64, { Acc|Qword, RegC|Unsp
 
 // RMPREAD instruction end
 
+// RMPCHKD instruction
+
+rmpchkd, 0xf30f01fc, RMPDIRTY, NoSuf, {}
+rmpchkd, 0xf30f01fc, RMPDIRTY, AddrPrefixOpReg|NoSuf, { Acc|Dword|Qword, RegC|Qword }
+
+// RMPCHKD instruction end
+
+// RMPOPT instruction
+
+rmpopt, 0xf20f01fc, RMPOPT, NoSuf, {}
+rmpopt, 0xf20f01fc, RMPOPT, AddrPrefixOpReg|NoSuf, { Acc|Dword|Qword, RegC|Qword }
+
+// RMPOPT instruction end
+
 // RDPRU instruction
 
 rdpru, 0x0f01fd, RDPRU, NoSuf, {}
