@@ -35,12 +35,13 @@ runto "foo.adb:$bp_location"
 # Make sure that all tasks appear in the "info tasks" listing, and
 # that the active task is the environment task.
 gdb_test "info tasks" \
-    [join {" +ID +TID P-ID Pri State +Name" \
-	       "\\* +1 .* main_task" \
-	       " +2 .* task_list\\(1\\)" \
-	       " +3 .* task_list\\(2\\)" \
-	       " +4 .* task_list\\(3\\)"} \
-	 "\r\n"] \
+    [quotemeta \
+	 [multi_line \
+	      " ID TID P-ID Pri State Name" \
+	      "* 1 @... main_task" \
+	      "  2 @... task_list(1)" \
+	      "  3 @... task_list(2)" \
+	      "  4 @... task_list(3)"]] \
     "info tasks before inserting breakpoint"
 
 # Insert a watchpoint that should stop only if task 3 stops, and
@@ -69,12 +70,13 @@ gdb_test "continue" \
 # Check that it is indeed task 3 that hit the watchpoint by checking
 # which is the active task.
 gdb_test "info tasks" \
-    [join {" +ID +TID P-ID Pri State +Name" \
-	       " +1 .* main_task" \
-	       " +2 .* task_list\\(1\\)" \
-	       "\\* +3 .* task_list\\(2\\)" \
-	       " +4 .* task_list\\(3\\)"} \
-	 "\r\n"] \
+    [quotemeta \
+	 [multi_line \
+	      " ID TID P-ID Pri State Name" \
+	      "  1 @... main_task" \
+	      "  2 @... task_list(1)" \
+	      "* 3 @... task_list(2)" \
+	      "  4 @... task_list(3)"]] \
     "info tasks after hitting watchpoint"
 
 # Now, resume the execution and make sure that GDB does not stop when
