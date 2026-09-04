@@ -1362,19 +1362,10 @@ record_full_wait_1 (struct target_ops *ops,
 	      /* Check for beginning and end of log.  */
 	      if (execution_direction == EXEC_REVERSE
 		  && record_full_next_insn < 0)
-		{
-		  /* Hit beginning of record log in reverse.  */
-		  status->set_no_history ();
-		  record_full_next_insn = 0;
-		  break;
-		}
-	      if (execution_direction != EXEC_REVERSE
-		  && record_full_next_insn == record_full_log.size ())
-		{
-		  /* Hit end of record log going forward.  */
-		  status->set_no_history ();
-		  break;
-		}
+		break;
+	      else if (execution_direction != EXEC_REVERSE
+		       && record_full_next_insn == record_full_log.size ())
+		break;
 
 	      record_full_log[record_full_next_insn].exec_insn (regcache);
 
@@ -1424,11 +1415,13 @@ record_full_wait_1 (struct target_ops *ops,
 	    {
 	      gdb_assert (execution_direction == EXEC_REVERSE);
 	      record_full_next_insn = 0;
+	      status->set_no_history ();
 	    }
-	  else if (record_full_next_insn > record_full_log.size ())
+	  else if (record_full_next_insn >= record_full_log.size ())
 	    {
 	      gdb_assert (execution_direction == EXEC_FORWARD);
 	      record_full_next_insn = record_full_log.size ();
+	      status->set_no_history ();
 	    }
 	  /* Reset the current instruction to point to the one to be replayed
 	     moving forward.  */
