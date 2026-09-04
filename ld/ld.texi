@@ -3471,6 +3471,8 @@ values by either a space or an equals sign.
 @item --add-stdcall-alias
 If given, symbols with a stdcall suffix (@@@var{nn}) will be exported
 as-is and also with the suffix stripped.
+Because PE+ targets have a single calling convention, symbols there
+are never decorated and this option is accepted but has no effect.
 [This option is specific to PE targeted ports of the linker]
 
 @kindex --base-file
@@ -3526,6 +3528,8 @@ to be usable.  If you specify @option{--enable-stdcall-fixup}, this
 feature is fully enabled and warnings are not printed.  If you specify
 @option{--disable-stdcall-fixup}, this feature is disabled and such
 mismatches are considered to be errors.
+Because PE+ targets have a single calling convention, symbols there
+are never decorated and these options are accepted but have no effect.
 [This option is specific to PE targeted ports of the linker]
 
 @kindex --leading-underscore
@@ -3595,6 +3599,8 @@ committed.
 @item --kill-at
 If given, the stdcall suffixes (@@@var{nn}) will be stripped from
 symbols before they are exported.
+Because PE+ targets have a single calling convention, symbols there
+are never decorated and this option is accepted but has no effect.
 [This option is specific to PE targeted ports of the linker]
 
 @kindex --large-address-aware
