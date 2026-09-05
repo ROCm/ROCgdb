@@ -1032,6 +1032,7 @@ TARGET_FLAGS_TO_PASS = \
 # Files that should wind up in SFILES and whose corresponding .o
 # should be in COMMON_OBS.
 COMMON_SFILES = \
+	ada-exp-parser.c \
 	ada-lang.c \
 	ada-tasks.c \
 	ada-typeprint.c \
@@ -1275,6 +1276,7 @@ HFILES_NO_SRCDIR = \
 	aarch64-ravenscar-thread.h \
 	aarch64-tdep.h \
 	ada-casefold.h \
+	ada-exp-parser.h \
 	ada-exp.h \
 	ada-lang.h \
 	addrmap.h \

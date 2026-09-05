@@ -453,7 +453,7 @@ public:
 private:
 
   /* We may need to provide a prefix to field name completion.  See
-     ada-exp-parser.y:find_completion_bounds for details.  */
+     ada-exp-parser.c:find_completion_bounds for details.  */
   std::string m_prefix;
 };
 
