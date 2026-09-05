@@ -1077,6 +1077,7 @@ COMMON_SFILES = \
 	corefile.c \
 	corelow.c \
 	cp-abi.c \
+	cp-name-parser.c \
 	cp-namespace.c \
 	cp-support.c \
 	cp-valprint.c \
@@ -1374,6 +1375,7 @@ HFILES_NO_SRCDIR = \
 	config/nm-linux.h \
 	config/sparc/nm-sol2.h \
 	cp-abi.h \
+	cp-name-parser.h \
 	cp-support.h \
 	cris-tdep.h \
 	csky-tdep.h \
@@ -2080,7 +2082,7 @@ YYHFILES = $(patsubst %-gen.c,%-gen.h,$(YYFILES))
 #
 # Files in there can be removed after a while, once build directories with them
 # are unlikely to be around.
-STALE_GENERATED_FILES =
+STALE_GENERATED_FILES = cp-name-parser.c
 
 # Things which need to be built when making a distribution.
 
