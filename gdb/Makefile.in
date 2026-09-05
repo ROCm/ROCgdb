@@ -1084,6 +1084,7 @@ COMMON_SFILES = \
 	cp-support.c \
 	cp-valprint.c \
 	ctfread.c \
+	d-exp-parser.c \
 	d-lang.c \
 	d-namespace.c \
 	d-valprint.c \
@@ -1395,6 +1396,7 @@ HFILES_NO_SRCDIR = \
 	disasm.h \
 	disasm-selftests.h \
 	displaced-stepping.h \
+	d-exp-parser.h \
 	d-lang.h \
 	dummy-frame.h \
 	dwarf2/abbrev.h \
