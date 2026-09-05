@@ -329,6 +329,14 @@ private:
   std::vector<expr::operation_up> m_operations;
 };
 
+/* Return the type table for the architecture associated to PS.  */
+
+static inline const struct builtin_type *
+parse_type (parser_state *ps)
+{
+  return builtin_type (ps->gdbarch ());
+}
+
 /* A string token, either a char-string or bit-string.  Char-strings are
    used, for example, for the names of symbols.  */
 

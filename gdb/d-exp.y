@@ -50,9 +50,6 @@
 #include "expop.h"
 #include "cli/cli-style.h"
 
-#define parse_type(ps) builtin_type (ps->gdbarch ())
-#define parse_d_type(ps) builtin_d_type (ps->gdbarch ())
-
 /* Remap normal yacc parser interface names (yyparse, yylex, yyerror,
    etc).  */
 #define GDB_YY_REMAP_PREFIX d_
@@ -73,6 +70,14 @@ static int yylex (void);
 static void yyerror (const char *);
 
 static int type_aggregate_p (struct type *);
+
+/* Return the D type table for the architecture associated to PS.  */
+
+static inline const struct builtin_d_type *
+parse_d_type (parser_state *ps)
+{
+  return builtin_d_type (ps->gdbarch ());
+}
 
 using namespace expr;
 

@@ -45,9 +45,6 @@
 #include "block.h"
 #include "m2-exp.h"
 
-#define parse_type(ps) builtin_type (ps->gdbarch ())
-#define parse_m2_type(ps) builtin_m2_type (ps->gdbarch ())
-
 /* Remap normal yacc parser interface names (yyparse, yylex, yyerror,
    etc).  */
 #define GDB_YY_REMAP_PREFIX m2_
@@ -68,6 +65,14 @@ static int parse_number (int);
 
 /* The sign of the number being parsed.  */
 static int number_sign = 1;
+
+/* Return the Modula-2 type table for the architecture associated to PS.  */
+
+static inline const struct builtin_m2_type *
+parse_m2_type (parser_state *ps)
+{
+  return builtin_m2_type (ps->gdbarch ());
+}
 
 using namespace expr;
 %}

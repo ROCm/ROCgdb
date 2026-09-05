@@ -46,8 +46,6 @@
 #include "ada-exp.h"
 #include "cli/cli-style.h"
 
-#define parse_type(ps) builtin_type (ps->gdbarch ())
-
 /* Remap normal yacc parser interface names (yyparse, yylex, yyerror,
    etc).  */
 #define GDB_YY_REMAP_PREFIX ada_

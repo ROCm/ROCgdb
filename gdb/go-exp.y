@@ -61,8 +61,6 @@
 #include "block.h"
 #include "expop.h"
 
-#define parse_type(ps) builtin_type (ps->gdbarch ())
-
 /* Remap normal yacc parser interface names (yyparse, yylex, yyerror,
    etc).  */
 #define GDB_YY_REMAP_PREFIX go_

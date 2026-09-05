@@ -52,9 +52,6 @@
 #include "type-stack.h"
 #include "f-exp.h"
 
-#define parse_type(ps) builtin_type (ps->gdbarch ())
-#define parse_f_type(ps) builtin_f_type (ps->gdbarch ())
-
 /* Remap normal yacc parser interface names (yyparse, yylex, yyerror,
    etc).  */
 #define GDB_YY_REMAP_PREFIX f_
@@ -96,6 +93,14 @@ static void fortran_wrap2_kind (type *base_type);
 
 template<typename T>
 static void fortran_wrap3_kind (type *base_type);
+
+/* Return the Fortran type table for the architecture associated to PS.  */
+
+static inline const struct builtin_f_type *
+parse_f_type (parser_state *ps)
+{
+  return builtin_f_type (ps->gdbarch ());
+}
 
 using namespace expr;
 %}
