@@ -53,13 +53,6 @@
 #define GDB_YY_REMAP_PREFIX ada_
 #include "yy-remap.h"
 
-struct name_info {
-  struct symbol *sym;
-  struct minimal_symbol *msym;
-  const struct block *block;
-  struct stoken stoken;
-};
-
 /* The state of the parser, used internally when we are parsing the
    expression.  */
 
