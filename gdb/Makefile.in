@@ -128,8 +128,8 @@ COMPILE = $(ECHO_CXX) $(COMPILE.pre) $(INTERNAL_CFLAGS) $(CXXFLAGS) \
 
 YACC = @YACC@
 
-# This is used to rebuild ada-lex.c from ada-lex.l.  If the program is
-# not defined, but ada-lex.c is present, compilation will continue,
+# This is used to rebuild ada-lex-gen.c from ada-lex.l.  If the program
+# is not defined, but ada-lex-gen.c is present, compilation will continue,
 # possibly with a warning.
 FLEX = flex
 
@@ -2057,19 +2057,19 @@ REQUIRED_SUBDIRS = doc | testsuite | data-directory
 
 # Parser intermediate files.
 YYFILES = \
-	ada-exp.c \
-	ada-lex.c \
-	c-exp.c \
-	cp-name-parser.c \
-	d-exp.c \
-	f-exp.c \
-	go-exp.c \
-	m2-exp.c \
-	p-exp.c
+	ada-exp-gen.c \
+	ada-lex-gen.c \
+	c-exp-gen.c \
+	cp-name-parser-gen.c \
+	d-exp-gen.c \
+	f-exp-gen.c \
+	go-exp-gen.c \
+	m2-exp-gen.c \
+	p-exp-gen.c
 
-# ada-lex.c is included by another file, so it shouldn't wind up as a
-# .o itself.
-YYOBJ = $(filter-out ada-lex.o,$(patsubst %.c,%.o,$(YYFILES)))
+# ada-lex-gen.c is included by another file, so it shouldn't wind up as
+# a .o itself.
+YYOBJ = $(filter-out ada-lex-gen.o,$(patsubst %.c,%.o,$(YYFILES)))
 
 # Things which need to be built when making a distribution.
 
@@ -2078,7 +2078,7 @@ DISTSTUFF = $(YYFILES)
 
 # All generated files which can be included by another file.
 generated_files = \
-	ada-lex.c \
+	ada-lex-gen.c \
 	config.h \
 	jit-reader.h \
 	$(NAT_GENERATED_FILES) \
@@ -2338,7 +2338,7 @@ INIT_FILES_FILTER_OUT = \
 
 INIT_FILES = \
 	$(patsubst %.o,%.c, \
-	  $(patsubst %-exp.o,%-exp.y, \
+	  $(patsubst %-exp-gen.o,%-exp.y, \
 	    $(filter-out $(INIT_FILES_FILTER_OUT), $(COMMON_OBS))))
 
 init.c: stamp-init; @true
@@ -2677,15 +2677,22 @@ po/$(PACKAGE).pot: force
 #
 # YACC/LEX dependencies
 #
-# LANG-exp.c is generated in objdir from LANG-exp.y if it doesn't
-# exist in srcdir, then compiled in objdir to LANG-exp.o.  If we
-# said LANG-exp.c rather than ./c-exp.c some makes would
-# sometimes re-write it into $(srcdir)/c-exp.c.  Remove bogus
+# LANG-exp-gen.c is generated in objdir from LANG-exp.y if it doesn't
+# exist in srcdir, then compiled in objdir to LANG-exp-gen.o.  If we
+# said LANG-exp-gen.c rather than ./c-exp-gen.c some makes would
+# sometimes re-write it into $(srcdir)/c-exp-gen.c.  Remove bogus
 # decls for malloc/realloc/free which conflict with everything else.
-# Strictly speaking c-exp.c should therefore depend on
+# Strictly speaking c-exp-gen.c should therefore depend on
 # Makefile.in, but that was a pretty big annoyance.
 
+# Cancel make's built-in rules for producing a .c file from a .y or .l
+# file, to avoid them producing a <build>/foo-exp.c file from
+# <source>/foo-exp.y, when we also have a hand-written <source>/foo-exp.c
+# file.
 %.c: %.y
+%.c: %.l
+
+%-gen.c: %.y
 	$(ECHO_YACC) $(SHELL) $(YLWRAP) $< y.tab.c $@.tmp -- \
 		$(YACC) $(YFLAGS) || (rm -f $@.tmp; false)
 	@sed -e '/extern.*malloc/d' \
@@ -2704,7 +2711,7 @@ po/$(PACKAGE).pot: force
 	  < $@.tmp > $@.new && \
 	  rm -f $@.tmp && \
 	  mv $@.new $@
-%.c: %.l
+%-gen.c: %.l
 	$(ECHO_LEX) $(FLEX) -t $< > $@.tmp || (rm -f $@.tmp; false)
 	@sed -e '/extern.*malloc/d' \
 	     -e '/extern.*realloc/d' \

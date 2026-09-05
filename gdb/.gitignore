@@ -5,16 +5,16 @@
 /version.c
 /xml-builtin.c
 
-/ada-exp.c
-/ada-lex.c
-/c-exp.c
-/cp-name-parser.c
-/d-exp.c
-/f-exp.c
+/ada-exp-gen.c
+/ada-lex-gen.c
+/c-exp-gen.c
+/cp-name-parser-gen.c
+/d-exp-gen.c
+/f-exp-gen.c
 /gdb
 /gcore
-/go-exp.c
+/go-exp-gen.c
 /init.c
 /jit-reader.h
-/m2-exp.c
-/p-exp.c
+/m2-exp-gen.c
+/p-exp-gen.c
