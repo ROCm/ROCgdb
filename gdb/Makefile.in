@@ -2070,9 +2070,12 @@ YYFILES = \
 # a .o itself.
 YYOBJ = $(filter-out ada-lex-gen.o,$(patsubst %.c,%.o,$(YYFILES)))
 
+# The headers bison/byacc and flex generate alongside the files above.
+YYHFILES = $(patsubst %-gen.c,%-gen.h,$(YYFILES))
+
 # Things which need to be built when making a distribution.
 
-DISTSTUFF = $(YYFILES)
+DISTSTUFF = $(YYFILES) $(YYHFILES)
 
 
 # All generated files which can be included by another file.
@@ -2080,6 +2083,7 @@ generated_files = \
 	ada-lex-gen.c \
 	config.h \
 	jit-reader.h \
+	$(YYHFILES) \
 	$(NAT_GENERATED_FILES) \
 	$(NM_H)
 
@@ -2436,7 +2440,7 @@ local-maintainer-clean:
 	@echo "This command is intended for maintainers to use;"
 	@echo "it deletes files that may require special tools to rebuild."
 	rm -f TAGS
-	rm -f $(YYFILES)
+	rm -f $(YYFILES) $(YYHFILES)
 	rm -f nm.h config.status
 
 do-maintainer-clean:
@@ -2709,17 +2713,25 @@ YY_PREFIX_go-exp = go_yy
 YY_PREFIX_m2-exp = m2_yy
 YY_PREFIX_p-exp = pascal_yy
 
-%-gen.c: %.y $(POST_PROCESS_PARSER_OUTPUT_SH)
-	$(ECHO_YACC) $(SHELL) $(YLWRAP) $< y.tab.c $@.tmp -- \
-		$(YACC) $(YFLAGS) -p $(YY_PREFIX_$*) -t || (rm -f $@.tmp; false)
-	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $@.tmp > $@.new && \
-	  rm -f $@.tmp && \
-	  mv $@.new $@
-%-gen.c: %.l $(POST_PROCESS_PARSER_OUTPUT_SH)
-	$(ECHO_LEX) $(FLEX) -t -P $(YY_PREFIX_$*) $< > $@.tmp || (rm -f $@.tmp; false)
-	@$(POST_PROCESS_PARSER_OUTPUT) flex $* < $@.tmp > $@.new && \
-	  rm -f $@.tmp && \
-	  mv $@.new $@
+%-gen.c %-gen.h: %.y $(POST_PROCESS_PARSER_OUTPUT_SH)
+	$(ECHO_YACC) $(SHELL) $(YLWRAP) $< \
+		y.tab.c $*-gen.c.tmp \
+		y.tab.h $*-gen.h.tmp -- \
+		$(YACC) $(YFLAGS) -p $(YY_PREFIX_$*) -t -d \
+			|| (rm -f $*-gen.c.tmp $*-gen.h.tmp; false)
+	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $*-gen.c.tmp > $*-gen.c.new \
+		&& rm -f $*-gen.c.tmp && mv $*-gen.c.new $*-gen.c
+	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $*-gen.h.tmp > $*-gen.h.new \
+		&& rm -f $*-gen.h.tmp && mv $*-gen.h.new $*-gen.h
+
+%-gen.c %-gen.h: %.l $(POST_PROCESS_PARSER_OUTPUT_SH)
+	$(ECHO_LEX) $(FLEX) -t -P $(YY_PREFIX_$*) \
+		--header-file=$*-gen.h.tmp $< > $*-gen.c.tmp \
+			|| (rm -f $*-gen.c.tmp $*-gen.h.tmp; false)
+	@$(POST_PROCESS_PARSER_OUTPUT) flex $* < $*-gen.c.tmp > $*-gen.c.new \
+		&& rm -f $*-gen.c.tmp && mv $*-gen.c.new $*-gen.c
+	@$(POST_PROCESS_PARSER_OUTPUT) flex $* < $*-gen.h.tmp > $*-gen.h.new \
+		&& rm -f $*-gen.h.tmp && mv $*-gen.h.new $*-gen.h
 
 # XML rules
 
