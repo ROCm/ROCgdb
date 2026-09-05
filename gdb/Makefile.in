@@ -2704,7 +2704,6 @@ po/$(PACKAGE).pot: force
 	     -e 's/\([ \t;,(]\)free\([ \t]*[&(),]\)/\1xfree\2/g' \
 	     -e 's/\([ \t;,(]\)free$$/\1xfree/g' \
 	     -e '/^#line.*y.tab.c/d' \
-	     -e 's/YY_NULL/YY_NULLPTR/g' \
 	     -e "s/YYSTYPE/$(subst -,_,$*)_YYSTYPE/g" \
 	     -e "s/yyalloc/$(subst -,_,$*)_yyalloc/g" \
 	     -e "s/yysymbol_kind_t/$(subst -,_,$*)_yysymbol_kind_t/g" \
