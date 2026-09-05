@@ -28,6 +28,7 @@
 #include "varobj.h"
 #include "gdbcore.h"
 #include "f-lang.h"
+#include "f-exp-parser.h"
 #include "valprint.h"
 #include "value.h"
 #include "cp-support.h"
@@ -1629,6 +1630,14 @@ fortran_structop_operation::evaluate (struct type *expect_type,
 }
 
 } /* namespace expr */
+
+/* See language.h.  */
+
+int
+f_language::parser (struct parser_state *ps) const
+{
+  return f_parse (ps);
+}
 
 /* See language.h.  */
 

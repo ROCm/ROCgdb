@@ -1103,6 +1103,7 @@ COMMON_SFILES = \
 	expanded-symbol.c \
 	expprint.c \
 	extension.c \
+	f-exp-parser.c \
 	f-lang.c \
 	f-typeprint.c \
 	f-valprint.c \
@@ -1455,6 +1456,7 @@ HFILES_NO_SRCDIR = \
 	filesystem.h \
 	find-memory-region.h \
 	finish-thread-state.h \
+	f-exp-parser.h \
 	f-lang.h \
 	frame-base.h \
 	frame.h \
