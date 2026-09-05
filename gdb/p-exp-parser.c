@@ -947,6 +947,9 @@ pascal_parse (struct parser_state *par_state)
   pstate = par_state;
   paren_depth = 0;
 
+  scoped_restore restore_yydebug = make_scoped_restore (&pascal_yydebug,
+							par_state->debug);
+
   int result = pascal_yyparse ();
   if (!result)
     pstate->set_operation (pstate->pop ());
