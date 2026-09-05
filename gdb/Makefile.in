@@ -1064,6 +1064,7 @@ COMMON_SFILES = \
 	buffered-streams.c \
 	build-id.c \
 	buildsym.c \
+	c-exp-parser.c \
 	c-lang.c \
 	c-typeprint.c \
 	c-valprint.c \
@@ -1343,6 +1344,7 @@ HFILES_NO_SRCDIR = \
 	buffered-streams.h \
 	build-id.h \
 	buildsym.h \
+	c-exp-parser.h \
 	c-exp.h \
 	cgen-remap.h \
 	charset.h \

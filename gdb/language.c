@@ -42,6 +42,7 @@
 #include "cp-support.h"
 #include "frame.h"
 #include "c-lang.h"
+#include "c-exp-parser.h"
 #include <algorithm>
 #include "gdbarch.h"
 

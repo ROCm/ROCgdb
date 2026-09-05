@@ -43,6 +43,7 @@
 #include "parser-defs.h"
 #include "language.h"
 #include "c-lang.h"
+#include "c-exp-parser.h"
 #include "d-lang.h"
 #include "charset.h"
 #include "block.h"
