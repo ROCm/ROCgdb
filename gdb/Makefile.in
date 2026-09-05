@@ -1137,6 +1137,7 @@ COMMON_SFILES = \
 	language.c \
 	linespec.c \
 	location.c \
+	m2-exp-parser.c \
 	m2-lang.c \
 	m2-typeprint.c \
 	m2-valprint.c \
@@ -1518,6 +1519,7 @@ HFILES_NO_SRCDIR = \
 	linux-tdep.h \
 	location.h \
 	loongarch-tdep.h \
+	m2-exp-parser.h \
 	m2-exp.h \
 	m2-lang.h \
 	m32r-tdep.h \

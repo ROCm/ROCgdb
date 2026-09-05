@@ -25,6 +25,7 @@
 #include "language.h"
 #include "varobj.h"
 #include "m2-lang.h"
+#include "m2-exp-parser.h"
 #include "c-lang.h"
 #include "valprint.h"
 #include "gdbarch.h"
@@ -115,6 +116,14 @@ eval_op_m2_subscript (struct type *expect_type, struct expression *exp,
 /* Single instance of the M2 language.  */
 
 static m2_language m2_language_defn;
+
+/* See language.h.  */
+
+int
+m2_language::parser (struct parser_state *ps) const
+{
+  return m2_parse (ps);
+}
 
 /* See language.h.  */
 
