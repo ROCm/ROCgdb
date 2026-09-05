@@ -1120,6 +1120,7 @@ COMMON_SFILES = \
 	gmp-utils.c \
 	gnu-v2-abi.c \
 	gnu-v3-abi.c \
+	go-exp-parser.c \
 	go-lang.c \
 	go-typeprint.c \
 	go-valprint.c \
@@ -1482,6 +1483,7 @@ HFILES_NO_SRCDIR = \
 	gmp-utils.h \
 	gnu-nat.h \
 	gnu-nat-mig.h \
+	go-exp-parser.h \
 	go-lang.h \
 	gregset.h \
 	guile/guile.h \
