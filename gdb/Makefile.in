@@ -1163,6 +1163,7 @@ COMMON_SFILES = \
 	opencl-lang.c \
 	osabi.c \
 	osdata.c \
+	p-exp-parser.c \
 	p-lang.c \
 	p-typeprint.c \
 	p-valprint.c \
@@ -1605,6 +1606,7 @@ HFILES_NO_SRCDIR = \
 	osdata.h \
 	pager.h \
 	parser-defs.h \
+	p-exp-parser.h \
 	p-lang.h \
 	ppc64-tdep.h \
 	ppc-fbsd-tdep.h \
