@@ -2692,38 +2692,22 @@ po/$(PACKAGE).pot: force
 %.c: %.y
 %.c: %.l
 
-%-gen.c: %.y
+# Post-process a file produced by a parser generator, see the script
+# for details.
+POST_PROCESS_PARSER_OUTPUT_SH = $(srcdir)/post-process-parser-output.sh
+POST_PROCESS_PARSER_OUTPUT = $(SHELL) $(POST_PROCESS_PARSER_OUTPUT_SH)
+
+%-gen.c: %.y $(POST_PROCESS_PARSER_OUTPUT_SH)
 	$(ECHO_YACC) $(SHELL) $(YLWRAP) $< y.tab.c $@.tmp -- \
 		$(YACC) $(YFLAGS) || (rm -f $@.tmp; false)
-	@sed -e '/extern.*malloc/d' \
-	     -e '/extern.*realloc/d' \
-	     -e '/extern.*free/d' \
-	     -e '/include.*malloc.h/d' \
-	     -e 's/\([^x]\)malloc/\1xmalloc/g' \
-	     -e 's/\([^x]\)realloc/\1xrealloc/g' \
-	     -e 's/\([ \t;,(]\)free\([ \t]*[&(),]\)/\1xfree\2/g' \
-	     -e 's/\([ \t;,(]\)free$$/\1xfree/g' \
-	     -e '/^#line.*y.tab.c/d' \
-	     -e "s/YYSTYPE/$(subst -,_,$*)_YYSTYPE/g" \
-	     -e "s/yyalloc/$(subst -,_,$*)_yyalloc/g" \
-	     -e "s/yysymbol_kind_t/$(subst -,_,$*)_yysymbol_kind_t/g" \
-	  < $@.tmp > $@.new && \
+	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $@.tmp > $@.new && \
 	  rm -f $@.tmp && \
 	  mv $@.new $@
-%-gen.c: %.l
+%-gen.c: %.l $(POST_PROCESS_PARSER_OUTPUT_SH)
 	$(ECHO_LEX) $(FLEX) -t $< > $@.tmp || (rm -f $@.tmp; false)
-	@sed -e '/extern.*malloc/d' \
-	     -e '/extern.*realloc/d' \
-	     -e '/extern.*free/d' \
-	     -e '/include.*malloc.h/d' \
-	     -e 's/\([^x]\)malloc/\1xmalloc/g' \
-	     -e 's/\([^x]\)realloc/\1xrealloc/g' \
-	     -e 's/\([ \t;,(]\)free\([ \t]*[&(),]\)/\1xfree\2/g' \
-	     -e 's/\([ \t;,(]\)free$$/\1xfree/g' \
-	     -e 's/yy_flex_xrealloc/yyxrealloc/g' \
-	     < $@.tmp > $@.new && \
-	     rm -f $@.tmp && \
-	     mv $@.new $@
+	@$(POST_PROCESS_PARSER_OUTPUT) flex $* < $@.tmp > $@.new && \
+	  rm -f $@.tmp && \
+	  mv $@.new $@
 
 # XML rules
 
