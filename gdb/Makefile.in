@@ -2073,6 +2073,15 @@ YYOBJ = $(filter-out ada-lex-gen.o,$(patsubst %.c,%.o,$(YYFILES)))
 # The headers bison/byacc and flex generate alongside the files above.
 YYHFILES = $(patsubst %-gen.c,%-gen.h,$(YYFILES))
 
+# Files that used to be generated in the build directory (for builds from git
+# at least), but are now committed source files.  A leftover copy in an
+# existing build directory would shadow the real source file with the same name
+# and cause a hard to debug build failure.
+#
+# Files in there can be removed after a while, once build directories with them
+# are unlikely to be around.
+STALE_GENERATED_FILES =
+
 # Things which need to be built when making a distribution.
 
 DISTSTUFF = $(YYFILES) $(YYHFILES)
@@ -2090,8 +2099,31 @@ generated_files = \
 # Flags needed to compile Python code
 PYTHON_CFLAGS = @PYTHON_CFLAGS@
 
-all: gdb$(EXEEXT) $(CONFIG_ALL) gcore gstack gdb-add-index
+all: check-stale-generated-files gdb$(EXEEXT) $(CONFIG_ALL) gcore \
+	gstack gdb-add-index
 	@$(MAKE) $(FLAGS_TO_PASS) DO=all "DODIRS=$(SUBDIRS)" subdir_do
+
+# Error out if the build directory contains known stale generated files, which
+# would shadow the source files with the same name and cause a hard to debug
+# build failure.  See STALE_GENERATED_FILES above.
+.PHONY: check-stale-generated-files
+check-stale-generated-files:
+	@if test "$(srcdir)" != "."; then \
+		stale=""; \
+		for f in $(STALE_GENERATED_FILES); do \
+			if test -f "$$f"; then \
+				stale="$$stale $$f"; \
+			fi; \
+		done; \
+		if test -n "$$stale"; then \
+			echo "Error: stale generated files found in the build directory:" >&2; \
+			echo "   $$stale" >&2; \
+			echo "They are left over from an older build of GDB and shadow the" >&2; \
+			echo "source files with the same name.  Run \"make clean\" (or delete" >&2; \
+			echo "them manually) then build again." >&2; \
+			exit 1; \
+		fi; \
+	fi
 
 # Rule for compiling .c files.
 %.o: %.c
@@ -2416,6 +2448,9 @@ clean mostlyclean: $(CONFIG_CLEAN)
 	for d in $(ALL_DEPDIRS); do \
 		if test -d "$$d"; then rmdir "$$d" || exit 1; fi; \
 	done
+	if test "$(srcdir)" != "."; then \
+		rm -f $(STALE_GENERATED_FILES); \
+	fi
 
 # This used to depend on c-exp.c m2-exp.c TAGS
 # I believe this is wrong; the makefile standards for distclean just
