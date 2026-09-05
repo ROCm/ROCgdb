@@ -2,7 +2,7 @@
 
    Copyright (C) 2003-2026 Free Software Foundation, Inc.
 
-   Parts of the lexer are based on c-exp.y from GDB.
+   Parts of the lexer are based on c-exp-parser.y from GDB.
 
    This file is part of GDB.
 

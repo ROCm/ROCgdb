@@ -1,6 +1,6 @@
 /* YACC grammar for Modula-2 expressions, for GDB.
    Copyright (C) 1986-2026 Free Software Foundation, Inc.
-   Generated from expread.y (now c-exp.y) and contributed by the Department
+   Generated from expread.y (now c-exp-parser.y) and contributed by the Department
    of Computer Science at the State University of New York at Buffalo, 1991.
 
    This file is part of GDB.

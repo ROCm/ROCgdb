@@ -18,7 +18,7 @@
 
 /*----------------------------------------------------------------------*/
 
-/* The converted version of this file is to be included in ada-exp.y, */
+/* The converted version of this file is to be included in ada-exp-parser.y, */
 /* the Ada parser for gdb.  The function yylex obtains characters from */
 /* the global pointer lexptr.  It returns a syntactic category for */
 /* each successive token and places a semantic value into yylval */

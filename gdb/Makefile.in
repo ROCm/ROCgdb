@@ -1232,19 +1232,19 @@ COMMON_SFILES = \
 # Links made at configuration time should not be specified here, since
 # SFILES is used in building the distribution archive.
 SFILES = \
-	ada-exp.y \
+	ada-exp-parser.y \
 	arch/i386.c \
-	c-exp.y \
+	c-exp-parser.y \
 	cp-name-parser.y \
-	d-exp.y \
+	d-exp-parser.y \
 	dtrace-probe.c \
 	elf-none-tdep.c \
-	f-exp.y \
+	f-exp-parser.y \
 	gcore-elf.c \
 	gdb.c \
-	go-exp.y \
-	m2-exp.y \
-	p-exp.y \
+	go-exp-parser.y \
+	m2-exp-parser.y \
+	p-exp-parser.y \
 	proc-service.list \
 	ser-base.c \
 	ser-unix.c \
@@ -2058,15 +2058,15 @@ REQUIRED_SUBDIRS = doc | testsuite | data-directory
 
 # Parser intermediate files.
 YYFILES = \
-	ada-exp-gen.c \
+	ada-exp-parser-gen.c \
 	ada-lex-gen.c \
-	c-exp-gen.c \
+	c-exp-parser-gen.c \
 	cp-name-parser-gen.c \
-	d-exp-gen.c \
-	f-exp-gen.c \
-	go-exp-gen.c \
-	m2-exp-gen.c \
-	p-exp-gen.c
+	d-exp-parser-gen.c \
+	f-exp-parser-gen.c \
+	go-exp-parser-gen.c \
+	m2-exp-parser-gen.c \
+	p-exp-parser-gen.c
 
 # ada-lex-gen.c is included by another file, so it shouldn't wind up as
 # a .o itself.
@@ -2375,7 +2375,7 @@ INIT_FILES_FILTER_OUT = \
 
 INIT_FILES = \
 	$(patsubst %.o,%.c, \
-	  $(patsubst %-exp-gen.o,%-exp.y, \
+	  $(patsubst %-exp-parser-gen.o,%-exp-parser.y, \
 	    $(filter-out $(INIT_FILES_FILTER_OUT), $(COMMON_OBS))))
 
 init.c: stamp-init; @true
@@ -2717,12 +2717,13 @@ po/$(PACKAGE).pot: force
 #
 # YACC/LEX dependencies
 #
-# LANG-exp-gen.c is generated in objdir from LANG-exp.y if it doesn't
-# exist in srcdir, then compiled in objdir to LANG-exp-gen.o.  If we
-# said LANG-exp-gen.c rather than ./c-exp-gen.c some makes would
-# sometimes re-write it into $(srcdir)/c-exp-gen.c.  Remove bogus
+# LANG-exp-parser-gen.c is generated in objdir from LANG-exp-parser.y if
+# it doesn't exist in srcdir, then compiled in objdir to
+# LANG-exp-parser-gen.o.  If we said LANG-exp-parser-gen.c rather than
+# ./c-exp-parser-gen.c some makes would sometimes re-write it into
+# $(srcdir)/c-exp-parser-gen.c.  Remove bogus
 # decls for malloc/realloc/free which conflict with everything else.
-# Strictly speaking c-exp-gen.c should therefore depend on
+# Strictly speaking c-exp-parser-gen.c should therefore depend on
 # Makefile.in, but that was a pretty big annoyance.
 
 # Cancel make's built-in rules for producing a .c file from a .y or .l
@@ -2740,15 +2741,15 @@ POST_PROCESS_PARSER_OUTPUT = $(SHELL) $(POST_PROCESS_PARSER_OUTPUT_SH)
 # The prefix to give to the symbols each parser or lexer generator
 # produces, so that they can coexist in the same program.  There is no
 # rule tying it to the file name, so spell it out for each one.
-YY_PREFIX_ada-exp = ada_yy
+YY_PREFIX_ada-exp-parser = ada_yy
 YY_PREFIX_ada-lex = ada_yy
-YY_PREFIX_c-exp = c_yy
+YY_PREFIX_c-exp-parser = c_yy
 YY_PREFIX_cp-name-parser = cpname_yy
-YY_PREFIX_d-exp = d_yy
-YY_PREFIX_f-exp = f_yy
-YY_PREFIX_go-exp = go_yy
-YY_PREFIX_m2-exp = m2_yy
-YY_PREFIX_p-exp = pascal_yy
+YY_PREFIX_d-exp-parser = d_yy
+YY_PREFIX_f-exp-parser = f_yy
+YY_PREFIX_go-exp-parser = go_yy
+YY_PREFIX_m2-exp-parser = m2_yy
+YY_PREFIX_p-exp-parser = pascal_yy
 
 %-gen.c %-gen.h: %.y $(POST_PROCESS_PARSER_OUTPUT_SH)
 	$(ECHO_YACC) $(SHELL) $(YLWRAP) $< \

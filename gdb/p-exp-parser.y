@@ -16,7 +16,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* This file is derived from c-exp.y */
+/* This file is derived from c-exp-parser.y */
 
 /* Parse a Pascal expression from text in a string,
    and return the result as a  struct expression  pointer.

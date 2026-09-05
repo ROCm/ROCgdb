@@ -58,7 +58,7 @@ enum c_string_type_values : unsigned
 
 DEF_ENUM_FLAGS_TYPE (enum c_string_type_values, c_string_type);
 
-/* Defined in c-exp.y.  */
+/* Defined in c-exp-parser.y.  */
 
 extern int c_parse (struct parser_state *);
 

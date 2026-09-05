@@ -153,7 +153,7 @@ extern int ada_get_field_index (const struct type *type,
 				const char *field_name,
 				int maybe_missing);
 
-extern int ada_parse (struct parser_state *);    /* Defined in ada-exp.y */
+extern int ada_parse (struct parser_state *);    /* Defined in ada-exp-parser.y */
 
 			/* Defined in ada-typeprint.c */
 extern void ada_print_type (struct type *, const char *, struct ui_file *, int,

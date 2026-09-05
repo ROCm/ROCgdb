@@ -17,7 +17,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* This file is derived from c-exp.y, p-exp.y.  */
+/* This file is derived from c-exp-parser.y, p-exp-parser.y.  */
 
 /* Parse a Go expression from text in a string,
    and return the result as a struct expression pointer.
@@ -626,9 +626,9 @@ name_not_typename
    LEN is the number of characters in it.  */
 
 /* FIXME: Needs some error checking for the float case.  */
-/* FIXME(dje): IWBN to use c-exp.y's parse_number if we could.
+/* FIXME(dje): IWBN to use c-exp-parser.y's parse_number if we could.
    That will require moving the guts into a function that we both call
-   as our YYSTYPE is different than c-exp.y's  */
+   as our YYSTYPE is different than c-exp-parser.y's  */
 
 static int
 parse_number (struct parser_state *par_state,
@@ -1422,7 +1422,7 @@ classify_name (struct parser_state *par_state, const struct block *block)
   return NAME;
 }
 
-/* This is taken from c-exp.y mostly to get something working.
+/* This is taken from c-exp-parser.y mostly to get something working.
    The basic structure has been kept because we may yet need some of it.  */
 
 static int
