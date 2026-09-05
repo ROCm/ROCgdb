@@ -45,9 +45,6 @@
 #include "parser-defs.h"
 #include "gdbsupport/selftest.h"
 
-#define GDB_YY_REMAP_PREFIX cpname
-#include "yy-remap.h"
-
 %}
 
 %union

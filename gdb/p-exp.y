@@ -51,11 +51,6 @@
 #include "block.h"
 #include "expop.h"
 
-/* Remap normal yacc parser interface names (yyparse, yylex, yyerror,
-   etc).  */
-#define GDB_YY_REMAP_PREFIX pascal_
-#include "yy-remap.h"
-
 /* The state of the parser, used internally when we are parsing the
    expression.  */
 

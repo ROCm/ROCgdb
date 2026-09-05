@@ -1740,7 +1740,6 @@ HFILES_NO_SRCDIR = \
 	xml-syscall.h \
 	xml-tdesc.h \
 	xtensa-tdep.h \
-	yy-remap.h \
 	z80-tdep.h
 
 # Header files that already have srcdir in them, or which are in objdir.
@@ -2697,14 +2696,27 @@ po/$(PACKAGE).pot: force
 POST_PROCESS_PARSER_OUTPUT_SH = $(srcdir)/post-process-parser-output.sh
 POST_PROCESS_PARSER_OUTPUT = $(SHELL) $(POST_PROCESS_PARSER_OUTPUT_SH)
 
+# The prefix to give to the symbols each parser or lexer generator
+# produces, so that they can coexist in the same program.  There is no
+# rule tying it to the file name, so spell it out for each one.
+YY_PREFIX_ada-exp = ada_yy
+YY_PREFIX_ada-lex = ada_yy
+YY_PREFIX_c-exp = c_yy
+YY_PREFIX_cp-name-parser = cpnameyy
+YY_PREFIX_d-exp = d_yy
+YY_PREFIX_f-exp = f_yy
+YY_PREFIX_go-exp = go_yy
+YY_PREFIX_m2-exp = m2_yy
+YY_PREFIX_p-exp = pascal_yy
+
 %-gen.c: %.y $(POST_PROCESS_PARSER_OUTPUT_SH)
 	$(ECHO_YACC) $(SHELL) $(YLWRAP) $< y.tab.c $@.tmp -- \
-		$(YACC) $(YFLAGS) || (rm -f $@.tmp; false)
+		$(YACC) $(YFLAGS) -p $(YY_PREFIX_$*) -t || (rm -f $@.tmp; false)
 	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $@.tmp > $@.new && \
 	  rm -f $@.tmp && \
 	  mv $@.new $@
 %-gen.c: %.l $(POST_PROCESS_PARSER_OUTPUT_SH)
-	$(ECHO_LEX) $(FLEX) -t $< > $@.tmp || (rm -f $@.tmp; false)
+	$(ECHO_LEX) $(FLEX) -t -P $(YY_PREFIX_$*) $< > $@.tmp || (rm -f $@.tmp; false)
 	@$(POST_PROCESS_PARSER_OUTPUT) flex $* < $@.tmp > $@.new && \
 	  rm -f $@.tmp && \
 	  mv $@.new $@

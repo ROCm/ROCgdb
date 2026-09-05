@@ -46,11 +46,6 @@
 #include "ada-exp.h"
 #include "cli/cli-style.h"
 
-/* Remap normal yacc parser interface names (yyparse, yylex, yyerror,
-   etc).  */
-#define GDB_YY_REMAP_PREFIX ada_
-#include "yy-remap.h"
-
 /* The state of the parser, used internally when we are parsing the
    expression.  */
 
@@ -1236,20 +1231,6 @@ primary	:	'*' primary		%prec '.'
 
 /* yylex defined in ada-lex-gen.c: Reads one token, getting characters */
 /* through lexptr.  */
-
-/* Remap normal flex interface names (yylex) as well as gratuitously */
-/* global symbol names, so we can have multiple flex-generated parsers */
-/* in gdb.  */
-
-/* (See note above on previous definitions for YACC.) */
-
-#define yy_create_buffer ada_yy_create_buffer
-#define yy_delete_buffer ada_yy_delete_buffer
-#define yy_init_buffer ada_yy_init_buffer
-#define yy_load_buffer_state ada_yy_load_buffer_state
-#define yy_switch_to_buffer ada_yy_switch_to_buffer
-#define yyrestart ada_yyrestart
-#define yytext ada_yytext
 
 /* The following kludge was found necessary to prevent conflicts between */
 /* defs.h and non-standard stdlib.h files.  */
