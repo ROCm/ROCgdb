@@ -48,7 +48,7 @@ load_lib rocm.exp
 
 standard_testfile .cpp
 
-require allow_hipcc_tests
+require allow_hip_tests
 
 # Build the main program.
 if { [build_executable "failed to prepare" \
@@ -79,7 +79,7 @@ foreach n {1 2} {
 
     # Build the ROCm code object N
     if { [gdb_compile $srcdir/$subdir/$srcfile $code_object object \
-	  [list debug hip additional_flags=--genco additional_flags=-DCODE_OBJECT_$n]] != "" } {
+	  [list debug hip additional_flags=--cuda-device-only additional_flags=-DCODE_OBJECT_$n]] != "" } {
 	return
     }
 }
