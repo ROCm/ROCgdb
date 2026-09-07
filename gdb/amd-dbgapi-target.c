@@ -769,16 +769,20 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
   amd_dbgapi_wave_id_t wave_id = (ptid_is_gpu (inferior_ptid)
 				  ? get_amd_dbgapi_wave_id (inferior_ptid)
 				  : AMD_DBGAPI_WAVE_NONE);
+  /* dbgapi requires LANE_NONE when wave is WAVE_NONE.  */
+  amd_dbgapi_lane_id_t lane_id = (wave_id != AMD_DBGAPI_WAVE_NONE
+				  ? 0
+				  : AMD_DBGAPI_LANE_NONE);
 
   size_t len = requested_len;
   amd_dbgapi_status_t status;
 
   if (readbuf != nullptr)
-    status = amd_dbgapi_read_memory (process_id, wave_id, 0,
+    status = amd_dbgapi_read_memory (process_id, wave_id, lane_id,
 				     AMD_DBGAPI_ADDRESS_SPACE_GLOBAL,
 				     offset, &len, readbuf);
   else
-    status = amd_dbgapi_write_memory (process_id, wave_id, 0,
+    status = amd_dbgapi_write_memory (process_id, wave_id, lane_id,
 				      AMD_DBGAPI_ADDRESS_SPACE_GLOBAL,
 				      offset, &len, writebuf);
 
