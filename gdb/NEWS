@@ -21,6 +21,14 @@
   ABIs.  GDB does not yet support the MSVC C++ ABI (demangling scheme,
   C++ object layout, etc.) or PDB debug information.
 
+* New targets
+
+i386 Windows/MSVC               i[34567]86-*-windows-msvc
+
+amd64 Windows/MSVC              x86_64-*-windows-msvc
+
+AArch64 Windows/MSVC            aarch64-*-windows-msvc
+
 *** Changes in GDB 18
 
 * Support for the Common Trace Format (CTF) has been removed.  GDB now
@@ -147,12 +155,6 @@
 GNU/Linux/MicroBlaze (gdbserver) microblazeel-*linux*
 
 AArch64 MinGW                   aarch64-*-mingw*
-
-i386 Windows/MSVC               i[34567]86-*-windows-msvc
-
-amd64 Windows/MSVC              x86_64-*-windows-msvc
-
-AArch64 Windows/MSVC            aarch64-*-windows-msvc
 
 * Deprecated targets
 
