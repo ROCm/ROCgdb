@@ -3077,6 +3077,10 @@ gdb_caching_proc with_system_readline {} {
 }
 
 gdb_caching_proc allow_dap_tests {} {
+    if { ![supports_target_async] } {
+	return 0
+    }
+
     if { ![allow_python_tests] } {
 	return 0
     }
@@ -3913,6 +3917,35 @@ gdb_caching_proc supports_memtag {} {
 	}
     }
     return 0
+}
+
+# Return 1 if target supports asynchronous execution, otherwise return 0.
+gdb_caching_proc supports_target_async {} {
+    set me "supports_target_async"
+
+    set src { int main() { return 0; } }
+    if {![gdb_simple_compile $me $src executable ""]} {
+	return 0
+    }
+
+    clean_restart
+    gdb_load $obj
+
+    set res 0
+    if { [runto_main] } {
+	gdb_test_multiple "continue &" "" {
+	    -re "Continuing..*" {
+		set res 1
+	    }
+	    -re ".*Asynchronous execution not supported on this target..*" {
+		set res 0
+	    }
+	}
+    }
+
+    gdb_exit
+    remote_file build delete $obj
+    return $res
 }
 
 # Return 1 if catch syscall is supported, otherwise return 0.
