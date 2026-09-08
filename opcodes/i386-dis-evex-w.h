@@ -41,8 +41,8 @@
   },
   /* EVEX_W_0F6F_P_3 */
   {
-    { "vmovdqu8",	{ XM, EXx }, 0 },
-    { "vmovdqu16",	{ XM, EXx }, 0 },
+    { "vmovdqu8",	{ XM, EXEvexXNoBcst }, 0 },
+    { "vmovdqu16",	{ XM, EXEvexXNoBcst }, 0 },
   },
   /* EVEX_W_0F70_P_2 */
   {

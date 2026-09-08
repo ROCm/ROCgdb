@@ -12310,6 +12310,9 @@ OP_E_memory (instr_info *ins, int bytemode, int sizeflag)
   /* Handles EVEX other than APX EVEX-promoted instructions.  */
   if (ins->vex.evex && ins->evex_type == evex_default)
     {
+      /* Broadcast can only ever be valid for memory sources.  */
+      if (ins->vex.b && ins->obufp == ins->op_out[0])
+	ins->vex.no_broadcast = true;
 
       /* Zeroing-masking is invalid for memory destinations. Set the flag
 	 uniformly, as the consumer will inspect it only for the destination
@@ -12747,10 +12750,6 @@ OP_E_memory (instr_info *ins, int bytemode, int sizeflag)
     {
       ins->evex_used |= EVEX_b_used;
 
-      /* Broadcast can only ever be valid for memory sources.  */
-      if (ins->obufp == ins->op_out[0])
-	ins->vex.no_broadcast = true;
-
       if (!ins->vex.no_broadcast
 	  && (!ins->intel_syntax || !(ins->evex_used & EVEX_len_used)))
 	{
@@ -12774,7 +12773,7 @@ OP_E_memory (instr_info *ins, int bytemode, int sizeflag)
 	  else if (bytemode == q_mode
 		   || bytemode == ymmq_mode)
 	    ins->vex.no_broadcast = true;
-	  else if (ins->vex.w
+	  else if ((bytemode == x_mode && ins->vex.w)
 		   || bytemode == evex_half_bcst_xmmqdh_mode
 		   || bytemode == evex_half_bcst_xmmq_mode)
 	    {
