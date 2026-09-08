@@ -4886,7 +4886,17 @@ fetch_inferior_event ()
 	    if (!non_stop
 		&& cmd_done
 		&& ecs.ws.kind () != TARGET_WAITKIND_NO_RESUMED)
-	      restore_thread.dont_restore ();
+	      {
+		restore_thread.dont_restore ();
+
+		/* Save current thread for remember-threads-per-inferior feature.
+		   This handles automatic event-driven thread switches (breakpoints,
+		   signals, schedule-multiple execution) which don't trigger the
+		   user_selected_context_changed observer.  The observer only fires
+		   for explicit user commands like "thread X" or "inferior Y".  */
+		if (remember_inferior_threads)
+		  save_inferior_last_thread ();
+	      }
 	  }
       }
 

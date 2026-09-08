@@ -3518,6 +3518,26 @@ To switch focus between inferiors, use the @code{inferior} command:
 Make inferior number @var{infno} the current inferior.  The argument
 @var{infno} is the inferior number assigned by @value{GDBN}, as shown
 in the first field of the @samp{info inferiors} display.
+
+By default, when switching to an inferior, @value{GDBN} selects the first
+available thread.  Optionally, @value{GDBN} can remember and restore the
+thread that was previously selected in that inferior (if it still exists).
+This behavior can be controlled with the @code{set remember-threads-per-inferior}
+command, described below.
+@end table
+
+@cindex remember threads per inferior
+@kindex set remember-threads-per-inferior
+@kindex show remember-threads-per-inferior
+@table @code
+@item set remember-threads-per-inferior on|off
+Control whether @value{GDBN} remembers the selected thread for each inferior.
+When enabled, switching to a previously used inferior will restore the thread
+that was selected when you switched away.  When disabled (the default),
+@value{GDBN} always selects the first available thread.
+
+@item show remember-threads-per-inferior
+Show whether @value{GDBN} remembers the selected thread for each inferior.
 @end table
 
 @vindex $_inferior@r{, convenience variable}

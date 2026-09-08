@@ -276,6 +276,10 @@ extern int stopped_by_random_signal;
    `set print inferior-events'.  */
 extern bool print_inferior_events;
 
+/* Control whether GDB remembers the selected thread per inferior, set with
+   `set remember-threads-per-inferior'.  */
+extern bool remember_inferior_threads;
+
 /* Anything but NO_STOP_QUIETLY means we expect a trap and the caller
    will handle it themselves.  STOP_QUIETLY is used when running in
    the shell before the child program has been exec'd and when running
@@ -696,6 +700,10 @@ public:
   /* Per inferior data-pointers required by other GDB modules.  */
   registry<inferior> registry_fields;
 
+  /* The last thread that was current when inferior was switched away
+     from.  */
+  thread_info_ref last_user_thread;
+
 private:
 
   /* Unpush TARGET and assert that it worked.  */
@@ -901,6 +909,12 @@ extern void print_selected_inferior (struct ui_out *uiout);
 
 extern void switch_to_inferior_and_push_target
   (inferior *new_inf, bool no_connection, inferior *org_inf);
+
+/* Record the current inferior's selected thread, so it can be
+   restored later.  GDB will select the recorded thread, if alive,
+   instead of any thread from the current inferior.  */
+
+extern void save_inferior_last_thread ();
 
 /* Return true if ID is a valid global inferior number.  */
 

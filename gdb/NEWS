@@ -7,6 +7,14 @@
   Support displaying and modifying Intel APX registers (Extended GPRs
   $r16 - $r31) including byte, word and dword pseudo registers.
 
+* New setting 'set remember-threads-per-inferior'
+
+  When enabled, GDB remembers which thread was selected when you were
+  last working in each inferior.  When you switch back to that inferior,
+  GDB automatically restores the previous thread selection (if the thread
+  still exists).  This feature is disabled by default; use
+  'set remember-threads-per-inferior on' to enable it.
+
 * GDB now distinguishes between the GNU (MinGW) and MSVC Windows ABIs.
 
   The "set osabi" command accepts two new values, "Windows-GNU" and

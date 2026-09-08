@@ -962,6 +962,10 @@ private:
   scoped_restore_current_language m_lang;
 };
 
+/* Return true if there is a current thread.  */
+
+bool has_current_thread ();
+
 /* Returns a pointer into the thread_info corresponding to
    INFERIOR_PTID.  INFERIOR_PTID *must* be in the thread list.  */
 extern struct thread_info* inferior_thread (void);

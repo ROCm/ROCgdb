@@ -1,0 +1,187 @@
+# Copyright 2024-2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# This test covers retaining of current thread when switching between
+# inferiors.
+#
+# It starts two inferiors that have 2 threads each, a main thread and a
+# thread that will have strategically placed sleeps to control execution
+# behaviour.
+#
+# test_explicit: Switch threads and switch between inferiors during stops.
+# Check that GDB remembers the previously selected thread of an inferior when
+# we switch to that inferior.
+#
+# test_implicit: Check that GDB remembers the previously selected thread of
+# an inferior when we are implicitly switched to another thread due to an
+# event.
+#
+# test_disabled_behavior: Check that the feature can be turned off and back
+# on, and that re-enabling it only captures the thread of the inferior we're
+# currently on.
+
+standard_testfile
+
+# This testcase explicitly creates another inferior.
+if {[use_gdb_stub]} {
+    return
+}
+
+if {[build_executable "failed to prepare" $testfile $srcfile \
+    {debug pthreads}] == -1} {
+    return -1
+}
+
+proc switch_inferior { num msg } {
+    gdb_test "inferior ${num}" "\\\[Switching to inferior ${num}.*" "${msg}"
+}
+
+proc switch_inferior_expect_thread { inf tid msg } {
+    gdb_test "inferior ${inf}" "\\\[Switching to thread $tid.*" "${msg}"
+}
+
+proc switch_thread { tid msg } {
+    gdb_test "thread $tid" "\\\[Switching to thread $tid.*" "${msg}"
+}
+
+# Common test preparation: start two inferiors and let them run to BP
+# at "worker thread break 1" location.
+
+proc_with_prefix prepare_test { } {
+    global binfile testfile
+
+    clean_restart $testfile
+
+    # This feature is off by default, turn it on for these tests.
+    gdb_test_no_output "set remember-threads-per-inferior on" \
+	"enable remember-threads-per-inferior feature"
+
+    gdb_breakpoint [gdb_get_line_number "worker thread break 1"]
+
+    # Add another inferior, switch to it, load the binary and run it to after
+    # additional threads have started.
+    gdb_test "add-inferior" "Added inferior 2.*" \
+    "add new inferior"
+    switch_inferior 2 "switch to the new inferior 2"
+
+    gdb_test "file $binfile" ".*" "load binary for inferior 2"
+    gdb_test_no_output "set remote exec-file $binfile" \
+    "set remote exec-file"
+
+
+    gdb_test "run" \
+    "Thread 2.2.*hit Breakpoint 1.2.*" \
+    "inferior 2 run to breakpoint break"
+
+    switch_inferior 1 "switch to inferior 1"
+
+    gdb_test "run" \
+    "Thread 1.2.*hit Breakpoint 1.1.*" \
+    "inferior 1 run to breakpoint break"
+}
+
+# Test scenario for verifying that during stops, explicit inferior and thread
+# switches store the correct last user thread.
+
+proc_with_prefix test_explicit {} {
+    prepare_test
+
+    switch_inferior_expect_thread 2 2.2 "switch to inferior 2 thread 2.2"
+    switch_inferior_expect_thread 1 1.2 "back to inferior 1 thread 1.2"
+
+    gdb_continue_to_end "inferior 1" continue 1
+
+    switch_inferior_expect_thread 2 2.2 "again back to inferior 2 thread 2.2"
+
+    gdb_continue_to_end "inferior 2" continue 1
+}
+
+# Test scenario for verifying that during stops, implicit inferior and thread
+# switches store the correct last user thread.
+
+proc_with_prefix test_implicit {} {
+    prepare_test
+
+    gdb_breakpoint [gdb_get_line_number "worker thread break 2"]
+
+    # Enable sleeps in inferior 1 worker thread to slow it down.  Consequently
+    # breakpoint in inferior 2 will be hit first.
+    gdb_test "print duration = 2" " = 2"
+
+    switch_thread 2.1 "switch inferior 2 to main thread"
+    switch_thread 1.1 "switch inferior 1 to main thread"
+
+    gdb_test_no_output "set schedule-multiple on"
+
+    gdb_test "continue" \
+    ".*Thread 2.2.*Breakpoint 2.2.*" \
+    "continue next breakpoint expect T2.2"
+
+    # Enable sleeps in inferior 2 worker thread to slow it down.  Consequently
+    # next breakpoint in inferior 1 will be hit first.
+    gdb_test "print duration = 3" " = 3"
+
+    gdb_test "continue" \
+    ".*Thread 1.2.*Breakpoint 2.1.*" \
+    "continue next breakpoint expect T1.2"
+
+    switch_inferior_expect_thread 2 2.2 "switch inferior 2 stopped at 2nd BP"
+    switch_inferior_expect_thread 1 1.2 "switch inferior 1 stopped at 2nd BP"
+}
+
+# Test scenario for verifying that the feature can be disabled.
+
+proc_with_prefix test_disabled_behavior {} {
+    prepare_test
+
+    # Disable the feature
+    gdb_test_no_output "set remember-threads-per-inferior off" \
+    "disable remember-threads-per-inferior feature"
+
+    # Switch to thread 2.2
+    switch_thread 2.2 "switch to thread 2.2"
+
+    # Switch to inferior 1 - with feature disabled, should NOT remember thread 1.2,
+    # should pick first available (1.1)
+    gdb_test "inferior 1" "\\\[Switching to thread 1.1.*" \
+    "with feature off, switches to first thread"
+
+    # Switch to thread 1.2
+    switch_thread 1.2 "switch to thread 1.2"
+
+    # Switch to inferior 2 - with feature disabled, should NOT remember thread 2.2,
+    # should pick first available (2.1)
+    gdb_test "inferior 2" "\\\[Switching to thread 2.1.*" \
+    "with feature off, selects first thread in inferior"
+
+    # Re-enable the feature and verify it works again.  We're currently
+    # on inferior 2, thread 2.1.
+    gdb_test_no_output "set remember-threads-per-inferior on" \
+    "re-enable remember-threads-per-inferior feature"
+
+    # Now switching back to inferior 1 should remember 1.2
+    switch_inferior_expect_thread 1 1.2 \
+    "feature on again, restores previously selected thread 1.2"
+
+    # Switching to inferior 2 should give 2.1, not the older 2.2 that was
+    # recorded before we disabled the feature.  Re-enabling captures the
+    # thread we were on (2.1) right away, overwriting that stale memory.
+    switch_inferior_expect_thread 2 2.1 \
+    "feature on again, enabling captured current thread 2.1"
+}
+
+test_explicit
+test_implicit
+test_disabled_behavior

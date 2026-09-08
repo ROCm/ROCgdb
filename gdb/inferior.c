@@ -46,6 +46,9 @@ static int highest_inferior_num;
 /* See inferior.h.  */
 bool print_inferior_events = true;
 
+/* Control whether to remember selected threads per inferior.  */
+bool remember_inferior_threads = false;
+
 /* The Current Inferior.  This is a strong reference.  I.e., whenever
    an inferior is the current inferior, its refcount is
    incremented.  */
@@ -509,6 +512,43 @@ inferior_pid_to_str (int pid)
 /* See inferior.h.  */
 
 void
+save_inferior_last_thread ()
+{
+  if (has_current_thread ())
+    current_inferior ()->last_user_thread
+      = thread_info_ref::new_reference (inferior_thread ());
+  else
+    current_inferior ()->last_user_thread = nullptr;
+}
+
+/* Observer callback for explicit user-initiated thread switches.
+   This captures switches from commands like "thread X" or "inferior Y".
+   Note: This does NOT fire for automatic event-driven switches (e.g.,
+   breakpoint hits in schedule-multiple mode).  Those are handled by a
+   direct call in fetch_inferior_event instead.  */
+
+static void
+inferiors_on_user_selected_context_changed (user_selected_what selection)
+{
+  if (remember_inferior_threads && (selection & USER_SELECTED_THREAD))
+    save_inferior_last_thread ();
+}
+
+/* Callback for "set remember-threads-per-inferior".  Capture the
+   current inferior's thread right away, so the thread we're already
+   on isn't lost the first time we switch away.  */
+
+static void
+set_remember_inferior_threads (const char *args, int from_tty,
+				struct cmd_list_element *c)
+{
+  if (remember_inferior_threads)
+    save_inferior_last_thread ();
+}
+
+/* See inferior.h.  */
+
+void
 print_selected_inferior (struct ui_out *uiout)
 {
   struct inferior *inf = current_inferior ();
@@ -771,8 +811,23 @@ inferior_command (const char *args, int from_tty)
 	{
 	  if (inf != current_inferior ())
 	    {
-	      thread_info *tp = any_non_exited_thread_of_inferior (inf);
-	      if (tp == NULL)
+	      thread_info *tp = nullptr;
+
+	      if (remember_inferior_threads)
+		{
+		  thread_info *stored_tp = inf->last_user_thread.get ();
+
+		  /* Fallback to selecting any non-exited thread of
+		     inferior.  */
+		  tp = (stored_tp == nullptr
+			|| stored_tp->state () == THREAD_EXITED)
+			? any_non_exited_thread_of_inferior (inf)
+			: stored_tp;
+		}
+	      else
+		tp = any_non_exited_thread_of_inferior (inf);
+
+	      if (tp == nullptr)
 		error (_("Inferior has no threads."));
 
 	      switch_to_thread (tp);
@@ -1255,5 +1310,22 @@ Show printing of inferior events (such as inferior start and exit)."), NULL,
 	 show_print_inferior_events,
 	 &setprintlist, &showprintlist);
 
+  add_setshow_boolean_cmd ("remember-threads-per-inferior", no_class,
+	 &remember_inferior_threads, _("\
+Set whether GDB will remember the current thread in each inferior."), _("\
+Show whether GDB will remember the current thread in each inferior."), _("\
+When on, GDB records which thread was current when switching away from\n\
+an inferior, and automatically restores that thread when switching back\n\
+to that inferior (if the thread still exists).  When off, GDB selects\n\
+the first available thread."),
+	 set_remember_inferior_threads,
+	 NULL,
+	 &setlist, &showlist);
+
   create_internalvar_type_lazy ("_inferior", &inferior_funcs, NULL);
+
+  /* Observe user_selected_context_changed to store the current user
+     thread.  */
+  gdb::observers::user_selected_context_changed.attach (
+      inferiors_on_user_selected_context_changed, "inferiors");
 }
