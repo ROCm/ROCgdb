@@ -232,13 +232,13 @@ mapped_gdb_index::build_name_components (dwarf2_per_objfile *per_objfile)
       if (strstr (name, "::") != nullptr)
 	{
 	  components = split_name (name, split_style::CXX);
-	  lang = language_cplus;
+	  lang = language_cplus_;
 	}
       else if (strchr (name, '<') != nullptr)
 	{
 	  /* Guess that this is a template and so a C++ name.  */
 	  components.emplace_back (name);
-	  lang = language_cplus;
+	  lang = language_cplus_;
 	}
       else if (strstr (name, "__") != nullptr)
 	{
@@ -299,7 +299,7 @@ mapped_gdb_index::build_name_components (dwarf2_per_objfile *per_objfile)
 	      else
 		{
 		  tag = DW_TAG_structure_type;
-		  this_lang = language_cplus;
+		  this_lang = language_cplus_;
 		}
 	      break;
 	      /* The "default" should not happen, but we mention it to
