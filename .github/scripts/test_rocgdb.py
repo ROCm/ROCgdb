@@ -17,6 +17,7 @@ import subprocess
 import sys
 import sysconfig
 import time
+import types
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, NoReturn, Optional, Set, Tuple, Union
@@ -372,6 +373,32 @@ def _positive_nonzero_int(value: str) -> int:
     return ivalue
 
 
+def _load_emulator_support() -> types.ModuleType:
+    """
+    Import the rocjitsu emulator support module, needed only for --emulate.
+
+    Imported lazily so this file keeps working as the single script it is
+    installed as (see the install rule in TheRock's debug-tools/rocgdb):
+    hardware runs never reach this, and an emulated run says exactly what is
+    missing instead of failing at import time.
+
+    Returns:
+        The rocjitsu_emulator module.
+
+    Exits:
+        Code 1 if the module is not next to this script.
+    """
+    try:
+        import rocjitsu_emulator
+    except ImportError as e:
+        _log_error_and_exit(
+            "--emulate needs rocjitsu_emulator.py next to this script in "
+            f"{Path(__file__).resolve().parent}, but it could not be "
+            f"imported: {e}"
+        )
+    return rocjitsu_emulator
+
+
 def parse_arguments() -> argparse.Namespace:
     """
     Parse and validate command-line arguments for the ROCgdb test suite.
@@ -410,6 +437,8 @@ def parse_arguments() -> argparse.Namespace:
   python %(prog)s --one-by-one --sanity-check --gpu-tests
   python %(prog)s --timing --gpu-tests
   python %(prog)s --toolchain llvm
+  python %(prog)s --emulate mi350x --gpu-tests
+  python %(prog)s --emulate gfx942 --one-by-one --tests gdb.rocm/simple.exp
 
         """,
     )
@@ -551,6 +580,17 @@ def parse_arguments() -> argparse.Namespace:
         "Only applies when retrying tests that timed out. Default is 100.",
     )
     parser.add_argument(
+        "--emulate",
+        type=str,
+        default=None,
+        metavar="GPU",
+        help="Run the tests on an emulated GPU (rocjitsu) instead of real "
+        "hardware; no AMD GPU needed. GPU is a mirage profile (mi300x, "
+        "mi350x, mi450x) or the gfx target it emulates (gfx942, gfx950, "
+        "gfx1250), which the ROCm tree must have been built for. Raises "
+        "--default-timeout, since emulated tests are slower.",
+    )
+    parser.add_argument(
         "--try-rocm-path",
         action="store_true",
         help="Try to use ROCM_PATH environment variable to determine the ROCm tree root. "
@@ -677,6 +717,24 @@ def parse_arguments() -> argparse.Namespace:
             "--one-by-one-log-dir / --one-by-one-test-timeout require --one-by-one."
         )
 
+    # The probe exists to catch a GPU that has wedged and would fail every
+    # remaining test, so that the run aborts with a dmesg.log instead. Neither
+    # half of that applies to an emulated GPU: it is built fresh for each test,
+    # so no state survives to poison the next one, and dmesg says nothing about
+    # a device implemented in userspace. Ignore the option instead of rejecting
+    # it, so the same command line serves hardware and the emulator.
+    if args.emulate is not None and args.sanity_check:
+        logger.warning(
+            f"{STATUS_WARN} --emulate: ignoring --sanity-check (and "
+            "--sanity-check-timeout). The probe detects a wedged GPU; an "
+            "emulated one is built fresh for every test."
+        )
+        args.sanity_check = False
+        # Clearing the timeout too, or the "--sanity-check-timeout requires
+        # --sanity-check" check below would reject a command line we just said
+        # we were ignoring.
+        args.sanity_check_timeout = None
+
     # Validate --sanity-check constraints. The probe is only meaningful in
     # one-by-one mode, where it runs between per-test `make check` invocations.
     # Check the --parallel conflict first so the message points at the real
@@ -702,6 +760,36 @@ def parse_arguments() -> argparse.Namespace:
         args.testsuite_dir = validate_path(args.testsuite_dir, is_dir=True)
     if args.rocgdb_bin is not None:
         args.rocgdb_bin = validate_path(args.rocgdb_bin, is_file=True)
+
+    # Reject an unknown emulated GPU here rather than after the environment is
+    # set up, and raise the timeout: emulated tests run far slower than on
+    # hardware, where dejagnu's own 10 second per-testcase default is enough.
+    # Left at that default the slow tests fail for want of time rather than for
+    # a real reason.
+    if args.emulate is not None:
+        emulator_support = _load_emulator_support()
+        try:
+            emulator_support.normalize_profile(args.emulate)
+        except emulator_support.EmulatorError as e:
+            _log_error_and_exit(str(e))
+        if args.default_timeout is None:
+            args.default_timeout = emulator_support.DEFAULT_TIMEOUT
+            logger.info(
+                "--emulate: using a default timeout of "
+                f"{args.default_timeout}s (override with --default-timeout)"
+            )
+        # Under emulation the job count is a memory question, not just a CPU
+        # one, so the emulator decides what an unspecified --jobs should be
+        # rather than leaving it at "as many as there are CPUs".
+        # --fraction is left exactly as it is resolved for hardware: it names a
+        # share of the CPUs, and nothing here second-guesses it.
+        if args.parallel and args.fraction is None:
+            advice = emulator_support.parallel_jobs(args.jobs, os.cpu_count() or 1)
+            args.jobs = advice.jobs
+            if advice.warn:
+                logger.warning(f"{STATUS_WARN} {advice.message}")
+            elif advice.message:
+                logger.info(advice.message)
 
     # Adjust retry-timeout if default-timeout is larger.
     if args.default_timeout is not None and args.default_timeout > args.retry_timeout:
@@ -1880,6 +1968,7 @@ def run_tests(
     args: argparse.Namespace,
     xfailed_tests: Optional[Dict[str, List[str]]] = None,
     sanity_check_exe: Optional[Path] = None,
+    emulator=None,
 ) -> None:
     """
     Run ROCgdb test suite with retry logic for failed tests.
@@ -1900,6 +1989,8 @@ def run_tests(
         sanity_check_exe: When supplied (--sanity-check mode), the pre-built
             known-good HIP executable run before each test in one-by-one mode.
             None disables the probe.
+        emulator: When supplied (--emulate mode), the emulated GPU each
+            `make check` is run inside. None runs on real hardware.
 
     Returns:
         None
@@ -1961,6 +2052,7 @@ def run_tests(
                 test_results if args.timing else None,
                 sanity_check_exe,
                 args.sanity_check_timeout,
+                emulator,
             )
         else:
             cmd = [
@@ -1975,6 +2067,17 @@ def run_tests(
                 else:
                     jobs = args.jobs or os.cpu_count()
                 cmd += ["FORCE_PARALLEL=1", f"-j{jobs}"]
+
+            if emulator is not None:
+                if args.parallel:
+                    # A session per job rather than one for all of them, so the
+                    # jobs do not queue on a single emulated GPU. Quoted because
+                    # make expands $(RUNTEST) into a shell recipe.
+                    wrapper = shlex.quote(str(emulator.runtest_wrapper()))
+                    cmd.append(f"RUNTEST={wrapper}")
+                else:
+                    # One session for the whole `make check`, as on hardware.
+                    cmd = emulator.wrap(cmd)
 
             logger.info(
                 f"Executing tests with {compiler_label} - Iteration {iteration}: {shlex.join(cmd)}"
@@ -2283,7 +2386,22 @@ def main() -> None:
     required_executables = ["make", *toolchain_executables, "runtest"]
     if has_rocm_tests:
         required_executables.insert(1, "amdclang++")
+    if args.emulate is not None:
+        required_executables.append("mirage")
     check_executables(required_executables, env_vars)
+
+    # Resolve the emulated GPU, if one was asked for.
+    emulator = None
+    if args.emulate is not None:
+        emulator_support = _load_emulator_support()
+        try:
+            emulator = emulator_support.Emulator.resolve(
+                args.emulate, rocm_dir, path=env_vars.get("PATH")
+            )
+        except emulator_support.EmulatorError as e:
+            _log_error_and_exit(str(e))
+        print_section("Emulated GPU (no hardware in use)")
+        _log_aligned_fields(emulator.summary())
 
     # The sanity check probes the GPU with a HIP program, so it is only
     # meaningful when gdb.rocm tests will actually run. Reject the combination
@@ -2323,6 +2441,7 @@ def main() -> None:
             args,
             xfailed_tests,
             sanity_check_exe,
+            emulator,
         )
 
     # Final summaries.
@@ -2632,6 +2751,7 @@ def _execute_one_by_one(
     test_results: Optional["TestResults"],
     sanity_check_exe: Optional[Path],
     sanity_check_timeout: int,
+    emulator=None,
 ) -> None:
     """
     Run each test in its own `make check` invocation, capturing per-test
@@ -2685,6 +2805,10 @@ def _execute_one_by_one(
             f"RUNTESTFLAGS={runtestflags_str}",
             f"TESTS={test}",
         ]
+        # A session per test, so no test can be affected by GPU state an
+        # earlier one left behind.
+        if emulator is not None:
+            cmd = emulator.wrap(cmd)
         logger.info(f"[one-by-one] {compiler_label} - {test}: {shlex.join(cmd)}")
 
         # Purge stale gdb.sum / gdb.log so a killed or failing `make` cannot
@@ -2716,6 +2840,10 @@ def _execute_one_by_one(
             logger.warning(
                 f"{STATUS_WARN} {test}: wall-clock timeout after {wall_clock_timeout}s"
             )
+            # The kill denied mirage the chance to tear its session down, so
+            # reclaim it before the next test brings up its own.
+            if emulator is not None:
+                emulator.cleanup()
         duration = time.perf_counter() - start
 
         # Read per-test gdb.sum for both bucketing and aggregation.
