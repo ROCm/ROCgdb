@@ -151,3 +151,13 @@ ignore-multiline-regex = 'codespell:ignore-begin.*?codespell:ignore-end'
 # Add 1 (disable warnings about wrong encoding) in addition to the default
 # 2+32 to skip warnings about iso-8859-1 encoded files.
 quiet-level = 35 # 1+2+32
+
+# For regex we currently use the default value, which since v2.2.6 corresponds
+# to: regex = '''[A-Za-z0-9_'’-]+''' .
+#
+# Dropping the underscore or dash exposes us to more true and false positives.
+# It remains to be seen whether that's a good tradeoff.
+#
+# A related issue ( https://github.com/codespell-project/codespell/issues/1508
+# ) is the fact that using a non-default regex is not compatible with -w, which
+# is a convenient way to fix codespell errors.
