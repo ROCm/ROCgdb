@@ -43,31 +43,15 @@ proc attached_core_test { fault } {
 	"Signal\\s+Stop\\s+Print\\s+Pass.*SIGABRT\\s+No\\s+Yes\\s+Yes.*"
     gdb_test "handle SIGSEGV nostop pass" \
 	"Signal\\s+Stop\\s+Print\\s+Pass.*SIGSEGV\\s+No\\s+Yes\\s+Yes.*"
-    gdb_test_no_output "set cwd $coredir"
-    gdb_test_no_output "set args $fault"
+    gdb_test_no_output "set cwd $coredir" "set core directory"
+    gdb_test_no_output "set args $fault" "set fault argument"
 
     gdb_run_cmd
 
     # Wait for program to crash and cores to be written.  This can take
-    # a while for large core dumps.  GPU crashes produce multiple signal
-    # and thread messages before the final exit, so we must consume them
-    # with exp_continue until we see the prompt.
+    # a while for large core dumps.
     with_timeout_factor 3 {
-	gdb_test_multiple "" "wait for program exit" {
-	    -re "Program terminated with signal" {
-		exp_continue
-	    }
-	    -re "The program no longer exists" {
-		exp_continue
-	    }
-	    -re "$::gdb_prompt $" {
-		pass $gdb_test_name
-	    }
-	    timeout {
-		fail "$gdb_test_name (timeout)"
-		return
-	    }
-	}
+	gdb_test "" ".*The program no longer exists.*" "wait for program exit"
     }
 
     set allcore_list [glob -nocomplain -directory $coredir "core*"]
