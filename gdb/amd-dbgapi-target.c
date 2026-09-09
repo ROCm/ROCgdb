@@ -38,6 +38,7 @@
 #include "gdbthread.h"
 #include "inf-loop.h"
 #include "inferior.h"
+#include "infrun.h"
 #include "location.h"
 #include "objfiles.h"
 #include "observable.h"
@@ -45,6 +46,7 @@
 #include "solib.h"
 #include "target.h"
 #include "tid-parse.h"
+#include "ui-out.h"
 #include "bfd/elf-bfd.h"
 #include "elf/amdgpu.h"
 #include "cp-support.h"
@@ -283,6 +285,11 @@ struct amd_dbgapi_inferior_info
 
   /* List of pending events the amd-dbgapi target retrieved from the dbgapi.  */
   std::list<std::pair<ptid_t, target_waitstatus>> wave_events;
+
+  /* Flag to track if a CODE_OBJECT_LIST_UPDATED event was seen during
+     process_event_queue.  Used to implement stop-on-solib-events for GPU
+     code objects.  */
+  bool code_object_list_updated = false;
 
   /* Map of threads with ongoing displaced steps to corresponding amd-dbgapi
      displaced stepping handles.  */
@@ -832,6 +839,7 @@ struct amd_dbgapi_target_breakpoint : public code_breakpoint
 
   void re_set (program_space *) override;
   void check_status (struct bpstat *bs) override;
+  enum print_stop_action print_it (const bpstat *bs) const override;
 };
 
 void
@@ -882,6 +890,12 @@ amd_dbgapi_target_breakpoint::check_status (struct bpstat *bs)
 
   require_forward_progress (info, false);
 
+  /* Clear the flag so event processing below can detect a new
+     CODE_OBJECT_LIST_UPDATED event.  This flag is reset at the top of
+     check_status before each use to ensure we only see events from the
+     current stop.  */
+  info.code_object_list_updated = false;
+
   /* If the action is AMD_DBGAPI_BREAKPOINT_ACTION_HALT, we need to wait until
      a breakpoint resume event for this breakpoint_id is seen.  */
   amd_dbgapi_event_id_t resume_event_id
@@ -910,6 +924,74 @@ amd_dbgapi_target_breakpoint::check_status (struct bpstat *bs)
 	   pulongest (resume_breakpoint_id.handle));
 
   amd_dbgapi_event_processed (resume_event_id);
+
+  /* If a CODE_OBJECT_LIST_UPDATED event was seen during event processing,
+     check if the user requested to stop on GPU code object events.  This
+     implements stop-on-solib-events for GPU code objects.  */
+  if (info.code_object_list_updated
+      && (stop_on_solib_events == STOP_SOLIB_GPU
+	  || stop_on_solib_events == STOP_SOLIB_ALL))
+    {
+      bs->stop = true;
+      bs->print = true;
+      /* Allow print_it () to print the GPU code object event message.  */
+      bs->print_it = print_it_normal;
+    }
+}
+
+enum print_stop_action
+amd_dbgapi_target_breakpoint::print_it (const bpstat *bs) const
+{
+  /* We only reach here when check_status set bs->print_it to print_it_normal,
+     which happens only for GPU code object events when stop_on_solib_events
+     is set to STOP_SOLIB_GPU or STOP_SOLIB_ALL.  */
+  bool any_deleted = !current_program_space->deleted_solibs.empty ();
+  bool any_added = !current_program_space->added_solibs.empty ();
+
+  if (current_uiout->is_mi_like_p ())
+    {
+      current_uiout->field_string
+	("reason", async_reason_lookup (EXEC_ASYNC_SOLIB_EVENT));
+      current_uiout->field_string ("object-kind", "gpu-code-object");
+    }
+
+  if (any_added || any_deleted)
+    current_uiout->text (_("Stopped due to GPU code object event:\n"));
+  else
+    current_uiout->text (_("Stopped due to GPU code object event (no "
+			   "code objects added or removed)\n"));
+
+  if (any_deleted)
+    {
+      current_uiout->text (_("  Inferior unloaded "));
+      ui_out_emit_list list_emitter (current_uiout, "removed");
+      bool first = true;
+      for (const std::string &name : current_program_space->deleted_solibs)
+	{
+	  if (!first)
+	    current_uiout->text ("    ");
+	  first = false;
+	  current_uiout->field_string ("code-object", name);
+	  current_uiout->text ("\n");
+	}
+    }
+
+  if (any_added)
+    {
+      current_uiout->text (_("  Inferior loaded "));
+      ui_out_emit_list list_emitter (current_uiout, "added");
+      bool first = true;
+      for (solib *iter : current_program_space->added_solibs)
+	{
+	  if (!first)
+	    current_uiout->text ("    ");
+	  first = false;
+	  current_uiout->field_string ("code-object", iter->name);
+	  current_uiout->text ("\n");
+	}
+    }
+
+  return PRINT_NOTHING;
 }
 
 bool
@@ -2120,6 +2202,7 @@ process_one_event (amd_dbgapi_inferior_info &info,
 	 inferior is the inferior that hit the breakpoint, which should still be
 	 the case now.  */
       gdb_assert (info.inf == current_inferior ());
+      info.code_object_list_updated = true;
       handle_solib_event ();
       break;
 

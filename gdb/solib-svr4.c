@@ -2305,9 +2305,13 @@ svr4_update_solib_event_breakpoint (struct breakpoint *b)
 
       if (pa->action == DO_NOTHING)
 	{
-	  if (b->enable_state == bp_disabled && stop_on_solib_events)
+	  if (b->enable_state == bp_disabled
+	      && (stop_on_solib_events == STOP_SOLIB_CPU
+		  || stop_on_solib_events == STOP_SOLIB_ALL))
 	    enable_breakpoint (b);
-	  else if (b->enable_state == bp_enabled && !stop_on_solib_events)
+	  else if (b->enable_state == bp_enabled
+		   && stop_on_solib_events != STOP_SOLIB_CPU
+		   && stop_on_solib_events != STOP_SOLIB_ALL)
 	    disable_breakpoint (b);
 	}
 

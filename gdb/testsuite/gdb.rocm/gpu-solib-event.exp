@@ -1,0 +1,119 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright 2026 Advanced Micro Devices, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that "set stop-on-solib-events" works for GPU code objects.
+# Tests both file:// events (hipModuleLoad) and memory:// events
+# (hipModuleLoadData), as well as unload events (hipModuleUnload).
+#
+# Uses stop-on-solib-events value 2 (GPU events only) to avoid
+# stopping on CPU shared library events.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+# Build device module (.co file).
+set kernel_srcfile ${testfile}-kernel.cpp
+set hipmodule_path [standard_output_file ${testfile}.co]
+
+if {[gdb_compile $srcdir/$subdir/$kernel_srcfile \
+     $hipmodule_path object \
+     {debug hip additional_flags=--cuda-device-only}] != ""} {
+    return
+}
+
+# Build host executable.
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}] == -1} {
+    return
+}
+
+# Helper proc to continue until we see the expected GPU event.
+# HIP runtime may load internal memory:// code objects, so we need to
+# skip GPU events that don't match our specific criteria.
+# Arguments:
+#   event_type: "load" or "unload"
+#   uri_pattern: regex pattern to match (e.g., "file://" or "memory://")
+#   test_name: descriptive name for the test
+proc find_gpu_event {event_type uri_pattern test_name} {
+    set seen_gpu_event 0
+    set max_continues 20
+
+    for {set i 0} {$i < $max_continues} {incr i} {
+	gdb_test_multiple "continue" "continue looking for $test_name" {
+	    -re -wrap "Stopped due to GPU code object event.*Inferior (loaded|unloaded) ${uri_pattern}\[^\r\n\]+" {
+		if {[string equal $event_type "load"] && [string equal $expect_out(1,string) "loaded"]} {
+		    set seen_gpu_event 1
+		    break
+		} elseif {[string equal $event_type "unload"] && [string equal $expect_out(1,string) "unloaded"]} {
+		    set seen_gpu_event 1
+		    break
+		}
+		# GPU event doesn't match our criteria (wrong operation type), continue.
+	    }
+	    -re -wrap "Stopped due to GPU code object event.*" {
+		# GPU event with different URI type, continue.
+	    }
+	    -re -wrap "Inferior.*exited" {
+		break
+	    }
+	    -re -wrap ".*" {
+		fail "unexpected stop before $test_name"
+		break
+	    }
+	}
+
+	if {$seen_gpu_event} {
+	    break
+	}
+    }
+
+    gdb_assert {$seen_gpu_event} $test_name
+}
+
+proc do_test {} {
+    with_rocm_gpu_lock {
+	clean_restart
+	gdb_load $::binfile
+
+	if {![runto_main -inferior-args $::hipmodule_path]} {
+	    return
+	}
+
+	# Use "gpu" to stop on GPU code object events only.
+	# This avoids CPU shared library events during test execution.
+	gdb_test_no_output "set stop-on-solib-events gpu"
+
+	# Test 1: file:// load event (hipModuleLoad).
+	gdb_breakpoint "test_file_load" -temporary
+	gdb_continue_to_breakpoint "at test_file_load"
+	find_gpu_event "load" "file://" "saw GPU code object load event with file:// prefix"
+
+	# Test 2: file:// unload event (hipModuleUnload).
+	find_gpu_event "unload" "file://" "saw GPU code object unload event with file:// prefix"
+
+	# Test 3: memory:// load event (hipModuleLoadData).
+	gdb_breakpoint "test_memory_load" -temporary
+	gdb_continue_to_breakpoint "at test_memory_load"
+	find_gpu_event "load" "memory://" "saw GPU code object load event with memory:// prefix"
+
+	# Test 4: memory:// unload event (hipModuleUnload).
+	find_gpu_event "unload" "memory://" "saw GPU code object unload event with memory:// prefix"
+    }
+}
+
+do_test
