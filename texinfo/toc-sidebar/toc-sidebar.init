@@ -1,0 +1,226 @@
+# -*- perl -*-
+
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This file is part of GDB.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# HTML layout for a texinfo HTML manual.  Every page gets a persistent
+# navigation sidebar on the left.  The sidebar is built from the
+# manual's own table of contents, so it always matches the generated
+# output and there is no separate data file to maintain.  texi2any
+# loads this with --init-file.
+
+use strict;
+use warnings;
+use File::Spec;
+
+# The init-file API this file uses (texinfo_set_from_init_file,
+# texinfo_register_handler) was introduced in texi2any 7.0.  Previous
+# releases do not have it, and calling those subroutines aborts
+# loading the init file with an error.  When the API is missing, do
+# nothing -- the manual is then generated in texinfo's default form,
+# without the sidebar, so the build still produces a usable manual.
+if (!defined &texinfo_set_from_init_file)
+  {
+    return 1;
+  }
+
+# Note: the sidebar is built through texi2any's converter
+# customization API (texinfo_register_handler and the $converter
+# methods used below), which texinfo documents as not yet stable.  We
+# accept that risk, as there is no other way to assemble the contents
+# tree at convert time, the version guard above already disables the
+# feature where the API is absent, and a future change is far more
+# likely to be a small adjustment with the capability intact than an
+# outright removal.  The error-reporting call further down is one such
+# example: texi2any 7.2 added converter_document_error, a cleaner form
+# taking just the message, alongside the older document_error.  The
+# old form kept working, so the capability stayed put across the
+# change.
+
+# The table of contents is generated into index.html, under
+# #SEC_Contents.  A page could extract it from index.html at runtime
+# with fetch(), but browsers block fetch() under file://.  So instead
+# write the whole contents tree once at build time into
+# toc-sidebar-data.js, and have every page pull it in with a plain
+# <script> tag, which is not subject to that restriction.  (Under http
+# the <script> costs the same single round trip the fetch would; it is
+# one file the browser caches and reuses across pages.)  Sharing one
+# build-time file across all pages has a second payoff: every page
+# sees the identical tree, with identical hrefs, so toc-sidebar.js can
+# key its remembered set of expanded sections by href and have that
+# set stay meaningful as the user walks from one page to the next.
+texinfo_set_from_init_file('contents', 1);
+
+# Escape a string for embedding in a double-quoted JavaScript string.
+sub toc_sidebar_js_escape
+{
+  my ($s) = @_;
+  $s =~ s/\\/\\\\/g;
+  $s =~ s/"/\\"/g;
+  $s =~ s/\r//g;
+  $s =~ s/\n/\\n/g;
+  return $s;
+}
+
+# Write the formatted contents tree to toc-sidebar-data.js as one
+# JavaScript string, together with the manual's title.  This runs at
+# the "finish" stage, after the pages are generated.  The hrefs are
+# computed as-if from index.html.  The manual pages are emitted all in
+# one directory, so those come out as basenames that work from any
+# page.
+#
+# The title is the manual's own texinfo @settitle, rendered to HTML,
+# so it tracks whatever the manual sets (which may be customized)
+# instead of being hardcoded here.  toc-sidebar.js puts it at the top
+# of the sidebar.
+sub toc_sidebar_write_data
+{
+  # The middle argument is the Texinfo::Document being converted.
+  # This handler does not need it.
+  my ($converter, $document, $stage) = @_;
+
+  my $contents = &{$converter->formatting_function('format_contents')}
+                   ($converter, 'contents', undef, 'index.html');
+  return 0 if (!defined ($contents) or $contents eq '');
+
+  my $title_tree = $converter->get_info ('title_tree');
+  my $title = defined ($title_tree)
+              ? $converter->convert_tree ($title_tree) : '';
+
+  my $dir = $converter->get_info ('destination_directory');
+  my $path = (defined ($dir) and $dir ne '')
+             ? File::Spec->catfile ($dir, 'toc-sidebar-data.js') : 'toc-sidebar-data.js';
+
+  # get_info returns the directory as a character string.  Encode it
+  # to the filesystem's byte form before opening, the way texi2any
+  # encodes its own output file names.  encoded_output_file_name
+  # returns the encoded name and the encoding it chose.  Only the name
+  # is needed.
+  my ($encoded_path) = $converter->encoded_output_file_name ($path);
+
+  $contents = toc_sidebar_js_escape ($contents);
+  $title = toc_sidebar_js_escape ($title);
+
+  my $fh;
+  if (!open ($fh, '>:utf8', $encoded_path))
+    {
+      # Report the failure through the converter so it is counted like
+      # any other texi2any diagnostic and the build exits non-zero.
+      #
+      # texi2any 7.2 added converter_document_error, which takes just
+      # the message.  Before that (7.0, 7.1) only document_error is
+      # available, which must be called as document_error ($converter,
+      # $msg) -- the converter first, as the configuration object it
+      # reads PROGRAM from, then the message text.  Note the API
+      # manual documents the arguments the other way round, as
+      # document_error($text, $converter), but that order does not
+      # work -- it dies inside Texinfo::Report trying to call get_conf
+      # on the message string.  So do not "fix" the call below to
+      # match the manual.  Prefer the newer form, fall back to the
+      # working form of the old one.
+      my $msg = sprintf ("could not open %s for writing: %s", $path, $!);
+      if ($converter->can ('converter_document_error'))
+        {
+          $converter->converter_document_error ($msg);
+        }
+      else
+        {
+          $converter->document_error ($converter, $msg);
+        }
+      return -1;
+    }
+  print $fh "window.TOC_SIDEBAR_CONTENTS = \"$contents\";\n";
+  print $fh "window.TOC_SIDEBAR_TITLE = \"$title\";\n";
+  close ($fh);
+  return 0;
+}
+
+texinfo_register_handler ('finish', \&toc_sidebar_write_data);
+
+# The sidebar shell, injected right after <body> on every page,
+# followed by the two scripts and then the opening tag of the
+# main-content wrapper that holds the rest of the page body.
+# toc-sidebar.js fills in the tree from window.TOC_SIDEBAR_CONTENTS
+# and the title from window.TOC_SIDEBAR_TITLE.  The shell stays empty
+# when JavaScript is off; the stylesheet hides it then and the page
+# falls back to a single content column.
+#
+# The two scripts sit here, between the empty shell and the main
+# content, rather than up in the page <head>.  A <script> tag with
+# neither "defer" nor "async" is parser-blocking: when the browser's
+# HTML parser reaches it, parsing pauses, the script runs to
+# completion, and only then does parsing (and the page's first paint)
+# carry on.  At this point the parser has built the empty shell above
+# but has not painted anything yet, so toc-sidebar.js fills in the
+# contents tree and scrolls it to the current page while the screen is
+# still blank.  This way, the sidebar is already in place the first
+# time the user sees the page.  Loading these from the <head> with
+# "defer" would run them only after the blank shell had been painted,
+# so the tree would pop in and the sidebar would jump to the current
+# page on every load.
+#
+# This prevents the sidebar from flickering on its own, but does not
+# make navigation completely seamless, though.  Each click loads a
+# whole new document, and in the gap between tearing the old page down
+# and painting the new one the browser can flash the page blank.  That
+# is most noticeable on the largest pages, typically the big indexes,
+# but turns up intermittently on smaller pages too.  Building the
+# sidebar before the first paint is itself parser-blocking, so it
+# wouldn't help close that gap.
+#
+# toc-sidebar-data.js comes first so window.TOC_SIDEBAR_CONTENTS is
+# set before toc-sidebar.js reads it.
+my $sidebar = <<'END_SIDEBAR';
+<nav id="toc-sidebar" class="toc-sidebar" aria-label="Manual contents">
+<div class="toc-sidebar-title"><a href="index.html"></a></div>
+<div class="toc-sidebar-search">
+<input id="toc-sidebar-search-input" type="search" placeholder="Filter sections" aria-label="Filter sections">
+</div>
+<div id="toc-sidebar-tree" class="toc-sidebar-tree"></div>
+</nav>
+<script src="toc-sidebar-data.js"></script>
+<script src="toc-sidebar.js"></script>
+<div class="toc-sidebar-main">
+END_SIDEBAR
+
+texinfo_set_from_init_file('AFTER_BODY_OPEN', $sidebar);
+texinfo_set_from_init_file('PRE_BODY_CLOSE', "</div><!-- toc-sidebar-main -->\n");
+
+# Pull in the sidebar's own stylesheet here rather than with
+# texi2any's --css-ref.  The sidebar exists only when this init file
+# runs, i.e. on texi2any 7.0+, and referencing toc-sidebar.css from
+# here ties it to that, so a build that falls back to the plain manual
+# never points at a stylesheet for a sidebar it did not emit.
+#
+# Mark the page as script-enabled.  This inline script has no "defer",
+# so the parser runs it immediately, here in the head before the body
+# is laid out.
+#
+# Add the "js" class to <html>, which the stylesheet keys the sidebar
+# layout off.  Setting the class before the first paint means the page
+# is drawn the right way the first time: with the sidebar when
+# JavaScript is on, and as a single column when it is off.  If class
+# were set later instead, the page would first be drawn as a single
+# column and then re-laid out once the sidebar appeared.  The contents
+# data (toc-sidebar-data.js) and the sidebar script (toc-sidebar.js)
+# load from the body, next to the sidebar shell; see the comment on
+# $sidebar above for why they go there and not here.
+texinfo_set_from_init_file('EXTRA_HEAD',
+  '<link rel="stylesheet" type="text/css" href="toc-sidebar.css">'
+  . '<script>document.documentElement.classList.add ("js");</script>');
+
+1;
