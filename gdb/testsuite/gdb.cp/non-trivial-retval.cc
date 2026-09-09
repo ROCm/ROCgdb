@@ -160,6 +160,27 @@ f5 (int i1, int i2)
   return f;
 }
 
+/* G has only private nonstatic data members.  The C++ standard considers
+   it trivially copyable (no user-defined copy constructor or destructor),
+   but the Windows x64 ABI requires all nonstatic data members to be public
+   for a type to qualify for register return.  Types with any private or
+   protected nonstatic data members must be returned via a hidden pointer
+   (sret) instead.  This tests that GDB correctly handles such a return.  */
+class G
+{
+  int g;
+public:
+  G () : g (0) {}
+  G (int val) : g (val) {}
+  int get () const { return g; }
+};
+
+G
+f6 (int i1, int i2)
+{
+  return G (i1 + i2);
+}
+
 /* We place a breakpoint on the call to this function.  */
 
 void
@@ -183,6 +204,7 @@ main (void)
   C c = f3 (i1, i2);
   E e = f4 (i1, i2);
   F f = f5 (i1, i2);
+  G g = f6 (i1, i2);
 
   return 0;
 }

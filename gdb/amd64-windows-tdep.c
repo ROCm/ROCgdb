@@ -364,6 +364,77 @@ amd64_windows_return_value (struct gdbarch *gdbarch, struct value *function,
   int len = type->length ();
   int regnum = -1;
 
+  /* On Windows, a struct or union must be returned via a hidden sret
+     pointer (passed in RCX, returned in RAX) rather than in registers
+     if any of the following hold:
+       (a) has a user-defined (non-trivial) copy constructor
+       (b) has a user-defined (non-trivial) destructor
+       (c) has any private or protected non-static data members
+
+     Conditions (a) and (b) are enforced by both GCC/MinGW and the MSVC
+     ABI.  Condition (c) is an additional MSVC-ABI requirement that
+     GCC/MinGW does not enforce.
+
+     See https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention.  */
+  if (type->code () == TYPE_CODE_STRUCT
+      || type->code () == TYPE_CODE_UNION)
+    {
+      struct language_pass_by_ref_info info = language_pass_by_reference (type);
+
+      /* Conditions (a) and (b): non-trivial copy ctor or destructor.  */
+      bool needs_sret = (!info.trivially_copy_constructible
+			|| !info.trivially_destructible);
+
+      /* Condition (c): private or protected non-static data members.
+	 Only the MSVC ABI requires sret in this case; GCC/MinGW ignores
+	 member access specifiers for return-value classification.  Detect
+	 MSVC-compiled code by the '?' prefix on the mangled symbol name
+	 (MSVC mangles as '?foo@@...'; GNU/Itanium mangles as '_Z...').
+
+	 Note: once upstream's GDB_OSABI_WINDOWS_MSVC (Pedro Alves,
+	 gdb-patches 2026-07) is available AND the sniffer can reliably
+	 distinguish the two Windows ABIs from the binary, this heuristic
+	 could be replaced by gdbarch_osabi (gdbarch) == GDB_OSABI_WINDOWS_MSVC.
+	 Until then the mangled-name check is the only per-binary detector.
+
+	 See https://sourceware.org/pipermail/gdb-patches/2026-July/228640.html.  */
+      if (!needs_sret && function != nullptr)
+	{
+	  bound_minimal_symbol func_msym
+	    = lookup_minimal_symbol_by_pc (function->address ());
+	  if (func_msym.minsym != nullptr)
+	    {
+	      const char *lname = func_msym.minsym->linkage_name ();
+	      if (lname != nullptr && lname[0] == '?' && HAVE_CPLUS_STRUCT (type))
+		{
+		  int n_bases = TYPE_N_BASECLASSES (type);
+		  for (int i = n_bases; i < type->num_fields (); i++)
+		    {
+		      if (type->field (i).is_static ())
+			continue;
+		      if (type->field (i).is_private ()
+			  || type->field (i).is_protected ())
+			{
+			  needs_sret = true;
+			  break;
+			}
+		    }
+		}
+	    }
+	}
+
+      if (needs_sret)
+	{
+	  if (read_value != nullptr)
+	    {
+	      ULONGEST addr;
+	      regcache_raw_read_unsigned (regcache, AMD64_RAX_REGNUM, &addr);
+	      *read_value = value_at_non_lval (type, addr);
+	    }
+	  return RETURN_VALUE_ABI_RETURNS_ADDRESS;
+	}
+    }
+
   /* See if our value is returned through a register.  If it is, then
      store the associated register number in REGNUM.  */
   switch (type->code ())
