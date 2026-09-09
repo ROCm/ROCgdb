@@ -56,11 +56,11 @@ gdb_test "source -v -s ./source-test.gdb" \
 # Test sourcing a non-existent file, both when the source command
 # comes from the a command entered at the GDB prompt, and when
 # it comes from a script being sourced.
-gdb_test "source for-sure-nonexistant-file" \
-	 "for-sure-nonexistant-file: No such file or directory\."
+gdb_test "source for-sure-nonexistent-file" \
+	 "for-sure-nonexistent-file: No such file or directory\."
 
 gdb_test "source source-nofile.gdb" \
-	 "warning: for-sure-nonexistant-file: No such file or directory\.\[\r\n\]*source error not fatal"
+	 "warning: for-sure-nonexistent-file: No such file or directory\.\[\r\n\]*source error not fatal"
 
 
 # Test commands that error out in sourced files, including in nested sourced

@@ -72,6 +72,8 @@ skip = [
 'gdb/aclocal.m4',
 'gdbserver/aclocal.m4',
 'gdbsupport/aclocal.m4',
+# Skip codespell files containing typos.
+'gdb/contrib/codespell-dictionary.txt',
 # TODO:
 # codespell:ignore-begin.  Ignore slite and endianity.
 'gdb/testsuite/config/slite.exp',

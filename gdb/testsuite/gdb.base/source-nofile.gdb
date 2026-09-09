@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-source for-sure-nonexistant-file
+source for-sure-nonexistent-file
 
 # Just print an message to confirm that failing to source the file
 # did not cause this script to abort.

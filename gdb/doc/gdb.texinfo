@@ -3827,7 +3827,7 @@ program information from the perspective of the current thread.
 
 @cindex @code{New} @var{systag} message
 @cindex thread identifier (system)
-@c FIXME-implementors!! It would be more helpful if the [New...] message
+@c FIXME-implementers!! It would be more helpful if the [New...] message
 @c included GDB's numeric thread handle, so you could just go to that
 @c thread without first checking `info threads'.
 Whenever @value{GDBN} detects a new thread in your program, it displays

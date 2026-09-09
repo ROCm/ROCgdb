@@ -28,7 +28,7 @@
 # We may get the required setup in case of a libc with missing separate
 # debuginfo, but we want the same effect if that debuginfo is installed.
 #
-# So, we use -readnever to read minimal symbols, but not non-miminal symbols.
+# So, we use -readnever to read minimal symbols, but not non-minimal symbols.
 #
 # Because the code at _exit may be and usually is optimized, the test is in
 # the gdb.opt directory.
