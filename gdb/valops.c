@@ -112,21 +112,34 @@ show_overload_resolution (struct ui_file *file, int from_tty,
 struct value *
 find_function_in_inferior (const char *name, struct objfile **objf_p)
 {
-  struct block_symbol sym;
   bound_minimal_symbol msymbol;
 
-  sym = lookup_symbol (name, nullptr, SEARCH_FUNCTION_DOMAIN, nullptr);
-  if (sym.symbol != nullptr)
+  try
     {
-      msymbol = find_gnu_ifunc (sym.symbol);
-      if (msymbol.minsym == nullptr)
+      block_symbol sym = lookup_symbol (name, nullptr, SEARCH_FUNCTION_DOMAIN,
+					nullptr);
+
+      if (sym.symbol != nullptr)
 	{
-	  if (objf_p != nullptr)
-	    *objf_p = sym.symbol->objfile ();
-	  return value_of_variable (sym.symbol, sym.block);
+	  msymbol = find_gnu_ifunc (sym.symbol);
+	  if (msymbol.minsym == nullptr)
+	    {
+	      if (objf_p != nullptr)
+		*objf_p = sym.symbol->objfile ();
+	      return value_of_variable (sym.symbol, sym.block);
+	    }
 	}
     }
-  else
+  catch (const gdb_exception_error &)
+    {
+      /* Ignore the error.  If there's a problem looking for the full
+	 symbol then we shouldn't give up, we should fall back to
+	 looking for the minimal symbol.  */
+    }
+
+  /* If we didn't find an IFunc related minimal symbol above, then
+     look for a suitable minimal symbol now.  */
+  if (msymbol.minsym == nullptr)
     msymbol = lookup_minimal_symbol (current_program_space, name);
 
   if (msymbol.minsym != nullptr)
