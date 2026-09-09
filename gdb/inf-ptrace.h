@@ -63,8 +63,8 @@ struct inf_ptrace_target : public inf_child_target
   bool is_async_p () override
   { return m_event_pipe.is_open (); }
 
-  int async_wait_fd () override
-  { return m_event_pipe.event_fd (); }
+  std::vector<int> async_wait_fds () override
+  { return {async_wait_fd ()}; }
 
   /* Helper routine used from SIGCHLD handlers to signal the async
      event pipe.  */
@@ -84,6 +84,8 @@ protected:
   { m_event_pipe.flush (); }
   void async_file_mark ()
   { m_event_pipe.mark (); }
+  int async_wait_fd ()
+  { return m_event_pipe.event_fd (); }
 
   /* Cleanup the inferior after a successful ptrace detach.  */
   void detach_success (inferior *inf);
