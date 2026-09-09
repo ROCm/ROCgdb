@@ -334,6 +334,12 @@ if test "$gdb_require_amd_dbgapi" = true \
     AC_DEFINE(HAVE_AMD_DBGAPI, 1, [Define if amd-dbgapi is being linked in.])
     TARGET_OBS="$TARGET_OBS amd-dbgapi-target.o"
 
+    save_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $AMD_DBGAPI_CFLAGS"
+    AC_CHECK_DECLS([amd_dbgapi_process_enable_traps], [], [],
+		   [[#include <amd-dbgapi/amd-dbgapi.h>]])
+    CPPFLAGS="$save_CPPFLAGS"
+
     # If --enable-targets=all was provided, use the list of all files depending
     # on amd-dbgapi that is hardcoded in the Makefile.  Else, the appropriate
     # architecture entry in configure.tgt will have added the files to

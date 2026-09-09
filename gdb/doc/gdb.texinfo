@@ -3654,12 +3654,12 @@ Adds @var{n} inferiors ready to execute the same program as inferior
 @var{infno}; @var{n} defaults to 1, and @var{infno} defaults to the
 number of the current inferior.  This command copies the values of the
 @var{args}, @w{@var{inferior-tty}}, @var{cwd}, @w{@code{amdgpu
-precise-memory}} and @w{@code{amdgpu precise-alu-exceptions}} properties
-from the current inferior to the new one.  It also propagates changes
-the user made to environment variables using the @w{@code{set
-environment}} and @w{@code{unset environment}} commands.  This is a
-convenient command when you want to run another instance of the inferior
-you are debugging.
+precise-memory}}, @w{@code{amdgpu precise-alu-exceptions}} and
+@w{@code{amdgpu trap-on-entry}} properties from the current inferior to
+the new one.  It also propagates changes the user made to environment
+variables using the @w{@code{set environment}} and @w{@code{unset
+environment}} commands.  This is a convenient command when you want to
+run another instance of the inferior you are debugging.
 
 @smallexample
 (@value{GDBP}) info inferiors
@@ -29922,6 +29922,78 @@ AMDGPU precise ALU exceptions reporting is on (currently enabled).
 @item show amdgpu precise-alu-exceptions
 Display the currently requested and effective @acronym{AMD}
 @acronym{GPU} precise ALU exceptions setting.
+
+@end table
+
+@subsubsection @acronym{AMD} @acronym{GPU} Forcing Waves to Trap on Entry
+
+By default, @acronym{AMD} @acronym{GPU} waves execute freely once they are
+created, and are only stopped when they hit a breakpoint or report an
+exception.  It can be useful to instead have every wave stop as soon as it
+enters a kernel, for example to inspect any activity on the device.
+
+The following commands can be used to control whether waves trap on entry:
+
+@table @code
+
+@kindex set amdgpu trap-on-entry
+@cindex AMD GPU trap-on-entry
+@item set amdgpu trap-on-entry @var{mode}
+Controls whether @acronym{AMD} @acronym{GPU} waves trap when they enter a
+kernel:
+
+@table @code
+
+@item off
+The program executes normally.  This is the default.
+
+@item on
+Request that the program breaks at every kernel entry on the devices.
+
+The trap-on-entry mode can be changed at any time in the life of the
+program.  If the trap-on-entry mode is updated before the inferior
+is started, the update request is recorded and applies as soon as
+possible.  For example:
+
+@smallexample
+(@value{GDBP}) set amdgpu trap-on-entry on
+(@value{GDBP}) show amdgpu trap-on-entry
+AMDGPU wave launch trap-on-entry is on (currently disabled).
+(@value{GDBP}) start
+Temporary breakpoint 1 at 0x218cc9: file /tmp/trap-on-entry.cpp, line 46.
+Starting program: /tmp/a.out
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Temporary breakpoint 1, main (argc=1, argv=0x7fffffffe628) at /tmp/trap-on-entry.cpp:46
+46	  if (argc != 2)
+(@value{GDBP}) show amdgpu trap-on-entry
+AMDGPU wave launch trap-on-entry is on (currently enabled).
+@end smallexample
+
+Any activity on the GPU can thus be captured:
+
+@smallexample
+(@value{GDBP}) continue
+Continuing.
+
+Thread 15 "do_an_addition" received signal SIGTRAP, Trace/breakpoint trap.
+[Switching to thread 15, lane 0 (AMDGPU Lane 1:2:2:9/0 (0,0,0)[0,0,0])]
+do_an_addition () at /tmp/trap-on-entry.cpp:23
+23    @{
+@end smallexample
+
+This feature may expose some internal components from the runtime, which
+may add clutter to the debugging session.  It is advised to ensure these
+are initialized prior to enabling it.
+
+@end table
+
+@kindex show amdgpu trap-on-entry
+@cindex AMD GPU trap-on-entry
+@item show amdgpu trap-on-entry
+Display the currently requested and effective @acronym{AMD}
+@acronym{GPU} trap-on-entry setting.
 
 @end table
 
