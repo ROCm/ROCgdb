@@ -1,0 +1,347 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Self-test for the slot-pool shared/exclusive lock layer in
+# lib/gdb-utils.exp -- the foundation under with_rocm_gpu_lock.
+# Children are spawned as separate tclsh processes so the test
+# exercises the cross-process file locks for real.
+
+load_lib gdb-utils.exp
+
+if {[auto_execok tclsh] eq ""} {
+    untested "tclsh not available"
+    return
+}
+
+set helper [file normalize \
+    [file join $srcdir $subdir slot-pool-lock-helper.tcl]]
+set tmpdir [standard_output_file lockdir]
+set child_pids {}
+
+# Spawn a helper.  Returns the done-marker path; wait_all polls for it.
+# Records the PID so reset_tmpdir can clean up stragglers from a
+# previous (possibly timed-out) scenario.
+proc spawn_child {id kind hold_ms} {
+    global helper tmpdir log_file child_pids
+    set done [file join $tmpdir "done-$id"]
+    set err  [file join $tmpdir "err-$id"]
+    verbose -log "  spawn child id=$id kind=$kind hold=${hold_ms}ms"
+    set pid [exec tclsh $helper $tmpdir $kind $hold_ms $log_file $done $id \
+		 </dev/null >&$err &]
+    lappend child_pids $pid
+    return $done
+}
+
+proc wait_all {done_files {timeout_ms 60000}} {
+    global child_pids
+    set deadline [expr {[clock milliseconds] + $timeout_ms}]
+    foreach d $done_files {
+	while {![file exists $d]} {
+	    if {[clock milliseconds] > $deadline} {
+		verbose -log "  wait_all: timeout after ${timeout_ms}ms waiting for [file tail $d]"
+		return 0
+	    }
+	    after 50
+	}
+    }
+    # All children done -- forget their PIDs so the next reset_tmpdir
+    # doesn't waste kills on already-reaped processes.
+    set child_pids {}
+    return 1
+}
+
+# Busy-wait until any file matching GLOB_PATTERN exists.  Used to
+# synchronise scenarios on observable lock-file state (e.g. an
+# exclusive waiter creating its barrier file) instead of guessing
+# fork+exec latency.  Polls at 25 ms, so files that appear and
+# disappear faster than that may be missed -- intended for long-lived
+# lock files, not transient markers.
+proc wait_for_file {glob_pattern {timeout_ms 5000}} {
+    set deadline [expr {[clock milliseconds] + $timeout_ms}]
+    while {[clock milliseconds] < $deadline} {
+	if {[llength [glob -nocomplain $glob_pattern]] > 0} {
+	    return 1
+	}
+	after 25
+    }
+    return 0
+}
+
+# Read the merged event log.  No reader/writer locking: children
+# append one short line per event via {open a; puts; close}, where Tcl
+# opens the file with O_APPEND and emits the buffered line in a single
+# write(2) at close.  On Linux, an O_APPEND write atomically advances
+# the file offset, so concurrent appenders cannot interleave bytes
+# within a line.  Porting this self-test to a platform without that
+# guarantee would need an explicit lock around the writes.
+proc read_events {log_file} {
+    set events {}
+    set ch [open $log_file r]
+    while {[gets $ch line] >= 0} {
+	if {$line eq ""} continue
+	lappend events $line
+    }
+    close $ch
+    # Sort by timestamp so interleaved appends are easy to read.
+    return [lsort -integer -index 0 $events]
+}
+
+# Return the microsecond timestamp of event {ID TAG} (TAG is the first
+# whitespace-separated token after the id), or -1 if not found.
+proc ts_of {events id tag} {
+    foreach e $events {
+	set ts   [lindex $e 0]
+	set eid  [lindex $e 1]
+	set etag [lindex $e 2]
+	if {$eid == $id && $etag eq $tag} { return $ts }
+    }
+    return -1
+}
+
+# Dump the merged event timeline to gdb.log with millisecond
+# timestamps (3 fractional digits) rebased to the first event.  Also
+# surface any non-empty child stderr.
+proc dump_events {events} {
+    global tmpdir
+    if {[llength $events] == 0} {
+	verbose -log "  (no events recorded)"
+    } else {
+	set t0 [lindex [lindex $events 0] 0]
+	verbose -log "  timeline (t=ms relative to first event):"
+	foreach e $events {
+	    set rel [expr {([lindex $e 0] - $t0) / 1000.0}]
+	    set rest [lrange $e 1 end]
+	    verbose -log [format "    %10.3f  %s" $rel $rest]
+	}
+    }
+    foreach errf [lsort [glob -nocomplain [file join $tmpdir err-*]]] {
+	if {[file size $errf] > 0} {
+	    verbose -log "  child stderr ([file tail $errf]):"
+	    set ch [open $errf r]
+	    while {[gets $ch line] >= 0} {
+		verbose -log "    | $line"
+	    }
+	    close $ch
+	}
+    }
+}
+
+# Wipe the lock dir between scenarios and kill any helper still alive
+# from a previous (likely timed-out) scenario, so its lingering writes
+# can't contaminate the next log.
+proc reset_tmpdir {tag} {
+    global tmpdir log_file child_pids
+    verbose -log "scenario: $tag"
+    foreach pid $child_pids {
+	catch {exec kill -9 $pid}
+    }
+    set child_pids {}
+    file delete -force $tmpdir
+    file mkdir $tmpdir
+    set log_file [file join $tmpdir "log-$tag"]
+    close [open $log_file w]
+}
+
+# === Capacity: N shared can hold concurrently within a pool. ===
+with_test_prefix "shared-capacity" {
+    reset_tmpdir capacity
+    set dones {}
+    lappend dones [spawn_child 1 shared-1-2 500]
+    lappend dones [spawn_child 2 shared-1-2 500]
+    gdb_assert {[wait_all $dones]} "children completed"
+    set events [read_events $log_file]
+    dump_events $events
+    set h1 [ts_of $events 1 hold]
+    set h2 [ts_of $events 2 hold]
+    set r1 [ts_of $events 1 release]
+    set r2 [ts_of $events 2 release]
+    gdb_assert {$h1 != -1 && $h2 != -1} "both acquired"
+    # Both holds before either release => concurrent occupancy.
+    gdb_assert {$h1 < $r2 && $h2 < $r1} "concurrent holds within capacity"
+}
+
+# === Mutex: exclusive waits for shared to drain. ===
+with_test_prefix "shared-exclusive-mutex" {
+    reset_tmpdir mutex
+    set dones {}
+    lappend dones [spawn_child 1 shared-1-1 500]
+    after 100
+    lappend dones [spawn_child 2 exclusive-1-1 100]
+    gdb_assert {[wait_all $dones]} "children completed"
+    set events [read_events $log_file]
+    dump_events $events
+    set r1 [ts_of $events 1 release]
+    set h2 [ts_of $events 2 hold]
+    gdb_assert {$r1 != -1 && $h2 != -1} "both ran"
+    gdb_assert {$h2 > $r1} "exclusive waited for shared"
+}
+
+# === Multi-pool spread: 4 shared on 4 pools land on 4 distinct pools. ===
+# Row-major fill takes slot 0 of every pool before slot 1 of any pool,
+# so each of the first NPOOLS shared acquirers must get its own pool.
+with_test_prefix "multi-pool-spread" {
+    reset_tmpdir spread
+    set dones {}
+    for {set i 1} {$i <= 4} {incr i} {
+	lappend dones [spawn_child $i shared-4-2 500]
+    }
+    gdb_assert {[wait_all $dones]} "children completed"
+    set events [read_events $log_file]
+    dump_events $events
+    set pools {}
+    foreach e $events {
+	if {[regexp {hold pool=(\d+)} $e -> p]} { lappend pools $p }
+    }
+    set distinct [llength [lsort -unique $pools]]
+    verbose -log "  pool assignment: $pools ([llength $pools] holds, $distinct distinct)"
+    gdb_assert {$distinct == 4} "4 distinct pools used"
+}
+
+# === Writer priority: a queued exclusive blocks new shared acquirers. ===
+# Two shared fill a one-pool x two-slot pool; an exclusive arrives while
+# they hold; a late shared arrives after the exclusive's barrier is
+# observable in the lockdir, but before the pool drains.  Writer
+# priority requires the late shared to wait until the exclusive
+# completes, even though slots free up momentarily when the first two
+# release.  We poll for the barrier file (instead of guessing fork
+# latency) so the test stays deterministic under load.
+with_test_prefix "writer-priority" {
+    reset_tmpdir priority
+    set dones {}
+    lappend dones [spawn_child 1 shared-1-2 1500]
+    lappend dones [spawn_child 2 shared-1-2 1500]
+    after 100
+    lappend dones [spawn_child 3 exclusive-1-2 200]
+    gdb_assert {[wait_for_file [file join $tmpdir barrier-0.lock]]} \
+	"exclusive barrier observable"
+    lappend dones [spawn_child 4 shared-1-2 100]
+    gdb_assert {[wait_all $dones]} "children completed"
+    set events [read_events $log_file]
+    dump_events $events
+    set rex [ts_of $events 3 release]
+    set h4  [ts_of $events 4 hold]
+    gdb_assert {$rex != -1 && $h4 != -1} "all four ran"
+    gdb_assert {$h4 > $rex} "late shared waited for exclusive"
+}
+
+# === Exclusive queued behind exclusive on the same pool. ===
+# With one pool, two exclusives serialise: the second's hold must
+# follow the first's release.
+with_test_prefix "exclusive-behind-exclusive" {
+    reset_tmpdir excl_queue
+    set dones {}
+    lappend dones [spawn_child 1 exclusive-1-1 300]
+    gdb_assert {[wait_for_file [file join $tmpdir barrier-0.lock]]} \
+	"first exclusive's barrier observable"
+    lappend dones [spawn_child 2 exclusive-1-1 100]
+    gdb_assert {[wait_all $dones]} "children completed"
+    set events [read_events $log_file]
+    dump_events $events
+    set r1 [ts_of $events 1 release]
+    set h2 [ts_of $events 2 hold]
+    gdb_assert {$r1 != -1 && $h2 != -1} "both ran"
+    gdb_assert {$h2 > $r1} "second exclusive waited for first"
+}
+
+# === Machine lock: blocks every pool. ===
+# A 2-pool x 2-slot setup with one shared holding a slot in some
+# pool; a machine acquirer must wait for that shared to release
+# (it needs every pool), and once it holds, no other shared can
+# acquire anywhere.
+with_test_prefix "machine-lock" {
+    reset_tmpdir machine
+    set dones {}
+    lappend dones [spawn_child 1 shared-2-2 400]
+    after 100
+    lappend dones [spawn_child 2 machine-2-2 200]
+    # Wait until both of the machine acquirer's barriers are
+    # visible, then try to slip another shared in -- it must see
+    # the machine's barriers and yield, regardless of which pool
+    # it tries first.
+    gdb_assert {[wait_for_file [file join $tmpdir barrier-1.lock]]} \
+	"machine's pool-1 barrier observable"
+    lappend dones [spawn_child 3 shared-2-2 50]
+    gdb_assert {[wait_all $dones]} "children completed"
+    set events [read_events $log_file]
+    dump_events $events
+    set r1   [ts_of $events 1 release]
+    set hM   [ts_of $events 2 hold]
+    set rM   [ts_of $events 2 release]
+    set h3   [ts_of $events 3 hold]
+    gdb_assert {$r1 != -1 && $hM != -1 && $h3 != -1} "all three ran"
+    gdb_assert {$hM > $r1} "machine waited for shared"
+    gdb_assert {$h3 > $rM} "later shared waited for machine"
+}
+
+# === Randomised pool start offset is actually random. ===
+# Each isolated single-acquirer run picks its starting pool with
+# rand().  Across many runs, the chosen pool must not always be the
+# same -- otherwise concurrent acquirers would concentrate on pool 0
+# under load.  We require at least 3 distinct starting pools out of
+# 16 trials on a 4-pool setup.  A working RNG should essentially never
+# trip this; a failure here most likely means rand() is stuck on a
+# constant (e.g. an unseeded interpreter) rather than a real
+# statistical fluke.
+with_test_prefix "randomised-start-offset" {
+    reset_tmpdir randstart
+    set dones {}
+    for {set i 1} {$i <= 16} {incr i} {
+	lappend dones [spawn_child $i shared-4-1 20]
+	# Tiny stagger so each child sees an empty pool and the
+	# rand() outcome alone decides the starting pool.
+	after 30
+    }
+    gdb_assert {[wait_all $dones]} "children completed"
+    set events [read_events $log_file]
+    dump_events $events
+    set pools {}
+    foreach e $events {
+	if {[regexp {hold pool=(\d+)} $e -> p]} { lappend pools $p }
+    }
+    set distinct [llength [lsort -unique $pools]]
+    verbose -log "  start pools: $pools ($distinct distinct)"
+    gdb_assert {$distinct >= 3} "rand spreads start"
+}
+
+# === Error in body releases the lock and rethrows. ===
+# In-process: drive the wrapper with a thrown body, confirm the
+# error propagates.  Then re-acquire from a child with a tight
+# wait_all timeout, so a regression that leaks the slot fails the
+# scenario instead of hanging until DejaGnu's top-level timeout.
+with_test_prefix "error-releases-lock" {
+    reset_tmpdir errprop
+    save_vars { ::GDB_PARALLEL ::GDB_LOCK_DIR } {
+	set ::GDB_PARALLEL 1
+	set ::GDB_LOCK_DIR $tmpdir
+	verbose -log "  invoking with_shared_lock_multi with body that throws"
+	set caught 0
+	set msg ""
+	if {[catch {
+	    with_shared_lock_multi slot 1 1 barrier { error "boom" }
+	} msg]} {
+	    set caught 1
+	}
+	verbose -log "  caught=$caught msg='$msg'"
+	gdb_assert {$caught} "error from body propagated"
+	gdb_assert {$msg eq "boom"} "message preserved"
+    }
+    verbose -log "  re-acquiring same slot via child (3s deadline)"
+    set dones [list [spawn_child 99 shared-1-1 50]]
+    gdb_assert {[wait_all $dones 3000]} \
+	"re-acquire completed within deadline (slot was released)"
+    set events [read_events $log_file]
+    dump_events $events
+}
