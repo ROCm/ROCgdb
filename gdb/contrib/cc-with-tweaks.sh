@@ -163,7 +163,7 @@ output_dir="${output_file%/*}"
 
 "$@"
 rc=$?
-[ $rc != 0 ] && exit $rc
+if [ $rc != 0 ]; then exit $rc; fi
 if [ ! -f "$output_file" ]
 then
     echo "$myname: Internal error: $output_file missing." >&2
@@ -184,7 +184,7 @@ get_tmpdir ()
 if [ "$want_objcopy_compress" = true ]; then
     $OBJCOPY --compress-debug-sections "$output_file"
     rc=$?
-    [ $rc != 0 ] && exit $rc
+    if [ $rc != 0 ]; then exit $rc; fi
 fi
 
 if [ "$want_index" = true ]; then
@@ -212,7 +212,7 @@ if [ "$want_index" = true ]; then
     rc=${PIPESTATUS[0]}
     mv "$tmpfile" "$output_file"
     rm -f "$tmpdir"/*.dwo
-    [ "$rc" != 0 ] && exit "$rc"
+    if [ "$rc" != 0 ]; then exit "$rc"; fi
 fi
 
 if [ "$want_index_cache" = true ]; then
@@ -221,7 +221,7 @@ if [ "$want_index_cache" = true ]; then
 	 -ex "set index-cache enabled on" \
 	 -ex "file $output_file"
     rc=$?
-    [ $rc != 0 ] && exit $rc
+    if [ $rc != 0 ]; then exit $rc; fi
 fi
 
 if [ "$want_dwz" = true ] || [ "$want_multi" = true ]; then
@@ -290,11 +290,10 @@ if [ "$want_dwp" = true ]; then
 		  | sed -e 's/^.*: //' \
 		  | sort \
 		  | uniq)
-    rc=0
     if  [ ${#dwo_files[@]} -ne 0 ]; then
 	$DWP -o "${output_file}.dwp" "${dwo_files[@]}" > /dev/null
 	rc=$?
-	[ $rc != 0 ] && exit $rc
+	if [ $rc != 0 ]; then exit $rc; fi
 	rm -f "${dwo_files[@]}"
     fi
 fi
@@ -313,11 +312,11 @@ if [ "$want_gnu_debuglink" = true ]; then
     strip "${STRIP_ARGS_STRIP_DEBUG[@]}" "${output_file}" \
 	  -o "${stripped_file}"
     rc=$?
-    [ $rc != 0 ] && exit $rc
+    if [ $rc != 0 ]; then exit $rc; fi
     strip "${STRIP_ARGS_KEEP_DEBUG[@]}" "${output_file}" \
 	  -o "${debug_file}"
     rc=$?
-    [ $rc != 0 ] && exit $rc
+    if [ $rc != 0 ]; then exit $rc; fi
 
     # The .gnu_debuglink is supposed to contain no leading directories.
     link=$(basename "${debug_file}")
@@ -332,7 +331,7 @@ if [ "$want_gnu_debuglink" = true ]; then
 		 "${output_file}"
     )
     rc=$?
-    [ $rc != 0 ] && exit $rc
+    if [ $rc != 0 ]; then exit $rc; fi
 fi
 
-exit "$rc"
+exit 0
