@@ -421,18 +421,44 @@ proc gdb_compile_ocl {source dest type options} {
 }
 
 # Run "info threads INF_NUM", return the number of "AMDGPU Wave" threads found.
+# Print only the first and last 20 wave lines if there are more than 40 waves,
+# replacing the omitted middle with a single summary line "... N lines omitted ...".
 
 proc info_threads_get_wave_count { inf_num } {
     set wave_count 0
+    set wave_lines {}
+    set test_name "unknown"
+
+    log_user 0
     gdb_test_multiple "info threads ${inf_num}.*" "" {
 	-re "AMDGPU Wave\[^\r\n\]+\r\n" {
 	    incr wave_count
+	    lappend wave_lines [string trimright $expect_out(buffer) "\r\n"]
+	    exp_continue
+	}
+
+	-re "\[^\r\n\]+\r\n" {
+	    lappend wave_lines [string trimright $expect_out(buffer) "\r\n"]
 	    exp_continue
 	}
 
 	-re "$::gdb_prompt " {
-	    pass $gdb_test_name
+	    set test_name $gdb_test_name
 	}
+    }
+    log_user 1
+
+    set n [llength $wave_lines]
+    if {$n <= 40} {
+	foreach line $wave_lines { verbose -log $line }
+    } else {
+	foreach line [lrange $wave_lines 0 19] { verbose -log $line }
+	verbose -log "... [expr {$n - 40}] lines omitted ..."
+	foreach line [lrange $wave_lines [expr {$n - 20}] end] { verbose -log $line }
+    }
+
+    if {$test_name ne "unknown"} {
+	pass $test_name
     }
 
     return $wave_count
