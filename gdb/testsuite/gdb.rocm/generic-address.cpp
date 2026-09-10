@@ -43,19 +43,27 @@ kern ()
       assert (local == 1337);
       /* Break here 2: If hit, the assert must have gone smoothly.  */
       NOP (2);
+
+      assert (local == 1991);
+      /* Break here 3: If hit, the assert must have gone smoothly.  */
+      NOP (3);
     }
 
-  /* Break here 3; debugger's actions:
+  /* Break here 4; debugger's actions:
      - Check if still in lane 11.
      - Run some other checks.
      - Change "arr[1..4]" to 0x87654321.  */
-  NOP (3);
+  NOP (4);
 
   if (lane == 11)
     {
       assert (*((uint32_t *) &arr[1]) == 0x87654321);
-      /* Break here 4: If hit, the assert must have gone smoothly.  */
-      NOP (4);
+      /* Break here 5: If hit, the assert must have gone smoothly.  */
+      NOP (5);
+
+      assert (*((uint32_t *) &arr[1]) == 0xfedcba98);
+      /* Break here 6: If hit, the assert must have gone smoothly.  */
+      NOP (6);
     }
 }
 

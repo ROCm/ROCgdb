@@ -289,6 +289,43 @@ value_cast_pointers (struct type *type, struct value *arg2,
 {
   struct type *type1 = check_typedef (type);
   struct type *type2 = check_typedef (arg2->type ());
+
+  arch_addr_space_id aspace1 = type1->address_space ();
+  arch_addr_space_id aspace2 = type2->address_space ();
+
+  /* If the value's type has address space information, propagate
+     that information to the result.  This allows doing things like
+
+       (int *) local#123
+       (int *) &a_var_in_local_address_space
+
+     which yield 'int *' with "local" as the address space.  */
+  if (aspace2 != 0 && aspace1 == 0)
+    {
+      type = make_type_with_address_space (type, aspace2);
+      type1 = check_typedef (type);
+      aspace1 = type1->address_space ();
+    }
+
+  if (aspace1 != aspace2
+      && gdbarch_pointer_to_pointer_p (type1->arch ()))
+    {
+      /* This happens when there is, say, a pointer PTR to generic
+	 address space and the user does
+
+	 (gdb) p ptr = private_lane#0x1234.
+
+	 Convert from one address space to the other.  */
+      CORE_ADDR from_addr = value_as_address (arg2);
+      CORE_ADDR to_addr = gdbarch_pointer_to_pointer (type1->arch (), type2,
+						      from_addr, type1);
+
+      /* Convert the pointer type by clearing the address space
+	 and then using the new one.  */
+      type2 = make_type_with_address_space (type2, aspace1);
+      arg2 = value_from_pointer (type2, to_addr);
+    }
+
   struct type *t1 = check_typedef (type1->target_type ());
   struct type *t2 = check_typedef (type2->target_type ());
 
@@ -630,11 +667,10 @@ value_cast (struct type *type, struct value *arg2)
     {
       return value::zero (to_type, not_lval);
     }
+  else if (code1 == TYPE_CODE_PTR && code2 == TYPE_CODE_PTR)
+    return value_cast_pointers (to_type, arg2, 0);
   else if (type->length () == type2->length ())
     {
-      if (code1 == TYPE_CODE_PTR && code2 == TYPE_CODE_PTR)
-	return value_cast_pointers (to_type, arg2, 0);
-
       arg2 = arg2->copy ();
 
       struct type *resolved_type
