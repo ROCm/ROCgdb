@@ -321,8 +321,8 @@ procedure Prog is
 
    X : Unsigned_Enumeration := Value_23;
 
-   type Signed_Enumeration is ( SE_A, SE_B, SE_C, SE_D);
-   for Signed_Enumeration use (-1, 0, 1, 2);
+   type Signed_Enumeration is ( SE_A, SE_B, SE_C, SE_D, SE_E, SE_F);
+   for Signed_Enumeration use (-1, 0, 1, 2, 128, 255);
 
    Y : Signed_Enumeration := SE_D;
 

@@ -34,7 +34,18 @@ for {set num 0} {$num <= 300} {incr num} {
     gdb_test "print/d Unsigned_Enumeration'Val($num)" " = $num"
 }
 
-foreach {name dec} {se_a -1 se_b 0 se_c 1 se_d 2} {
+foreach {name dec} {se_a -1 se_b 0 se_c 1 se_d 2 se_e 128 se_f 255} {
     gdb_test "print $name" " = $name"
     gdb_test "print/d $name" " = $dec"
 }
+
+gdb_test "ptype signed_enumeration" \
+    [string_to_regexp \
+	 "type = (se_a => -1, se_b, se_c, se_d, se_e => 128, se_f => 255)"]
+
+set names {}
+for {set num 0} {$num <= 300} {incr num} {
+    lappend names value_$num
+}
+gdb_test "ptype unsigned_enumeration" \
+    [string_to_regexp "type = ([join $names ", "])"]

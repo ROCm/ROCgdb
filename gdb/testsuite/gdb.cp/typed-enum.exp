@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Check if unsigned typedef are handled correctly with typed enums.
+# Check various cases of typed enums.
 
 require allow_cplus_tests
 
@@ -30,3 +30,23 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile $opts]} {
 
 gdb_test "print (int)byte_val" "= 128"
 gdb_test "print (int)uchar_val" "= 128"
+
+# int_enum
+gdb_test "print (int)int_val" "= 128"
+gdb_test "print int_val" "= int_val"
+gdb_test "ptype int_enum" \
+    [multi_line \
+	 "type = enum int_enum : int \{" \
+	 "    int_three = 3," \
+	 "    int_val = 128" \
+	 "\}"]
+
+# schar_enum
+gdb_test "print (int)schar_neg" "= -128"
+gdb_test "print schar_neg" "= schar_neg"
+gdb_test "ptype schar_enum" \
+    [multi_line \
+	 "type = enum schar_enum : signed char \{" \
+	 "    schar_neg = -128," \
+	 "    schar_val = 127" \
+	 "\}"]

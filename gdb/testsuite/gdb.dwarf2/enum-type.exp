@@ -63,6 +63,99 @@ Dwarf::assemble $asm_file {
 		    DW_AT_const_value 2 DW_FORM_sdata
 		}
 	    }
+
+	    # Enumeration with signed underlying type.
+	    DW_TAG_enumeration_type {
+		DW_AT_name ESIGNED
+		DW_AT_type :$integer_label
+	    } {
+		# These must not be interpreted as negative numbers, despite
+		# the underlying type being signed.  This is how gcc emits
+		# (at the time of writing):
+		#
+		# enum ESIGNED
+		#  {
+		#     S_NARROW = 0x80,
+		#     S_WIDE = 0x8000,
+		#     S_NEGATIVE = -10,
+		# };
+
+		DW_TAG_enumerator {
+		    DW_AT_name S_NARROW
+		    DW_AT_const_value 0x80 DW_FORM_data1
+		}
+
+		DW_TAG_enumerator {
+		    DW_AT_name S_WIDE
+		    DW_AT_const_value 0x8000 DW_FORM_data2
+		}
+
+		DW_TAG_enumerator {
+		    DW_AT_name S_NEGATIVE
+		    DW_AT_const_value -10 DW_FORM_sdata
+		}
+	    }
+
+	    # Enumeration with unsigned underlying type.
+	    DW_TAG_enumeration_type {
+		DW_AT_name EUNSIGNED
+		DW_AT_type :$uinteger_label
+	    } {
+		DW_TAG_enumerator {
+		    DW_AT_name U_NARROW
+		    DW_AT_const_value 0x80 DW_FORM_data1
+		}
+
+		DW_TAG_enumerator {
+		    DW_AT_name U_WIDE
+		    # Use this particular value to avoid the enum flags
+		    # mechanism kicking in.
+		    DW_AT_const_value 0x8880 DW_FORM_data2
+		}
+	    }
+
+	    # Enumeration whose underlying type is signed but which has no
+	    # negative enumerator.  It must still be considered a signed type.
+	    DW_TAG_enumeration_type {
+		DW_AT_name ESIGNEDPOS
+		DW_AT_type :$integer_label
+	    } {
+		DW_TAG_enumerator {
+		    DW_AT_name SP_MULTI
+		    DW_AT_const_value 3 DW_FORM_sdata
+		}
+	    }
+
+	    # Enumeration without an underlying type, the sign has to be
+	    # deduced from the constants.  Here they are all non-negative,
+	    # so the enum is unsigned.
+	    DW_TAG_enumeration_type {
+		DW_AT_name ENOTYPE
+		DW_AT_byte_size 4 DW_FORM_sdata
+	    } {
+		DW_TAG_enumerator {
+		    DW_AT_name N_NARROW
+		    DW_AT_const_value 0xff DW_FORM_data1
+		}
+	    }
+
+	    # Same, but with a negative enumerator, which makes the
+	    # enum signed.
+	    DW_TAG_enumeration_type {
+		DW_AT_name ENOTYPENEG
+		DW_AT_byte_size 4 DW_FORM_sdata
+	    } {
+		# This one still must not be sign-extended.
+		DW_TAG_enumerator {
+		    DW_AT_name NN_NARROW
+		    DW_AT_const_value 0xff DW_FORM_data1
+		}
+
+		DW_TAG_enumerator {
+		    DW_AT_name NN_NEGATIVE
+		    DW_AT_const_value -2 DW_FORM_sdata
+		}
+	    }
 	}
     }
 
@@ -114,15 +207,79 @@ gdb_test "ptype enum EU" \
 	"type = enum EU {" \
 	"    TWO = 2" \
 	"}"] "ptype EU in enum C"
-gdb_test_no_output "set lang c++"
-gdb_test "ptype enum EU" \
+
+gdb_test "with lang c++ -- ptype enum EU" \
     [multi_line \
 	"type = enum EU : unsigned int {" \
 	"    TWO = 2" \
 	"}"] "ptype EU in C++"
 
-gdb_test "p ns::val1" \
+gdb_test "with lang c++ -- p ns::val1" \
     " = ns::val1"
+
+# Check that DW_FORM_data* enumerator constants are not sign-extended
+# (PR 34616).
+#
+# Both "ptype" (which reads the enum type's fields) and "print" of an
+# enumerator (which reads the enumerator symbol) must agree.
+gdb_test "ptype enum ESIGNED" \
+    [multi_line \
+	 "type = enum ESIGNED {" \
+	 "    S_NARROW = 128," \
+	 "    S_WIDE = 32768," \
+	 "    S_NEGATIVE = -10" \
+	 "}"]
+gdb_test "print S_NARROW" " = S_NARROW"
+gdb_test "print (int) S_NARROW" " = 128"
+gdb_test "print S_WIDE" " = S_WIDE"
+gdb_test "print (int) S_WIDE" " = 32768"
+gdb_test "print S_NEGATIVE" " = S_NEGATIVE"
+gdb_test "print (int) S_NEGATIVE" " = -10"
+
+gdb_test "ptype enum EUNSIGNED" \
+    [multi_line \
+	 "type = enum EUNSIGNED {" \
+	 "    U_NARROW = 128," \
+	 "    U_WIDE = 34944" \
+	 "}"]
+gdb_test "print U_NARROW" " = U_NARROW"
+gdb_test "print (int) U_NARROW" " = 128"
+gdb_test "print U_WIDE" " = U_WIDE"
+gdb_test "print (int) U_WIDE" " = 34944"
+
+gdb_test "ptype enum ESIGNEDPOS" \
+    [multi_line \
+	 "type = enum ESIGNEDPOS {" \
+	 "    SP_MULTI = 3" \
+	 "}"]
+gdb_test "print SP_MULTI" " = SP_MULTI"
+gdb_test "print (int) SP_MULTI" " = 3"
+
+gdb_test "ptype enum ENOTYPE" \
+    [multi_line \
+	 "type = enum ENOTYPE {" \
+	 "    N_NARROW = 255" \
+	 "}"]
+gdb_test "print N_NARROW" " = N_NARROW"
+gdb_test "print (int) N_NARROW" " = 255"
+
+gdb_test "ptype enum ENOTYPENEG" \
+    [multi_line \
+	 "type = enum ENOTYPENEG {" \
+	 "    NN_NARROW = 255," \
+	 "    NN_NEGATIVE = -2" \
+	 "}"]
+gdb_test "print NN_NARROW" " = NN_NARROW"
+gdb_test "print (int) NN_NARROW" " = 255"
+gdb_test "print NN_NEGATIVE" " = NN_NEGATIVE"
+gdb_test "print (int) NN_NEGATIVE" " = -2"
+
+# Check the sign of the enumeration types themselves.
+gdb_test "print (enum ESIGNED) -1" " = -1"
+gdb_test "print (enum EUNSIGNED) -1" " = 4294967295"
+gdb_test "print (enum ESIGNEDPOS) -1" " = -1"
+gdb_test "print (enum ENOTYPE) -1" " = 4294967295"
+gdb_test "print (enum ENOTYPENEG) -1" " = -1"
 
 require !readnow
 require {string equal [have_index $binfile] ""}

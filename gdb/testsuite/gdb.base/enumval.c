@@ -15,7 +15,19 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-enum e { I, J = 0xffffffffU, K = 0xf000000000000000ULL } e = J, f = K;
+enum wide_values { I, J = 0xffffffffU, K = 0xf000000000000000ULL }
+  e = J, f = K;
+
+/* Enum that mixes a negative enumerator with one that could be misinterpreted
+   if the compiler describes its value with DW_FORM_data1 (see PR
+   symtab/34616).  */
+
+enum mixed { M_NEG = -1, M = 200 } g = M;
+
+/* The same, but with no negative enumerator, so that the enum is
+   unsigned.  */
+
+enum unmixed { U_ZERO, U = 200 } h = U;
 
 enum { ZERO };
 
