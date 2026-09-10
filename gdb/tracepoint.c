@@ -1164,6 +1164,9 @@ collection_list::stringify ()
     gdb_printf ("\n");
   if (!m_memranges.empty () && info_verbose)
     gdb_printf ("Collecting memranges: \n");
+
+  char *buf_end = temp_buf.data () + temp_buf.size ();
+
   for (i = 0, count = 0, end = temp_buf.data ();
        i < m_memranges.size (); i++)
     {
@@ -1193,11 +1196,12 @@ collection_list::stringify ()
 	   "FFFFFFFF" (or more, depending on sizeof (unsigned)).
 	   Special-case it.  */
 	if (m_memranges[i].type == memrange_absolute)
-	  sprintf (end, "M-1,%s,%lX", phex_nz (m_memranges[i].start, 0),
-		   (long) length);
+	  xsnprintf (end, buf_end - end, "M-1,%s,%lX",
+		     phex_nz (m_memranges[i].start, 0), (long) length);
 	else
-	  sprintf (end, "M%X,%s,%lX", m_memranges[i].type,
-		   phex_nz (m_memranges[i].start, 0), (long) length);
+	  xsnprintf (end, buf_end - end, "M%X,%s,%lX",
+		     m_memranges[i].type, phex_nz (m_memranges[i].start, 0),
+		     (long) length);
       }
 
       count += strlen (end);
@@ -1213,7 +1217,9 @@ collection_list::stringify ()
 	  count = 0;
 	  end = temp_buf.data ();
 	}
-      sprintf (end, "X%08X,", (int) m_aexprs[i]->buf.size ());
+
+      xsnprintf (end, buf_end - end, "X%08X,",
+		 (int) m_aexprs[i]->buf.size ());
       end += 10;		/* 'X' + 8 hex digits + ',' */
       count += 10;
 
@@ -2816,11 +2822,14 @@ encode_source_string (int tpnum, ULONGEST addr,
 {
   if (80 + strlen (srctype) > buf_size)
     error (_("Buffer too small for source encoding"));
-  sprintf (buf, "%x:%s:%s:%x:%x:",
-	   tpnum, phex_nz (addr),
-	   srctype, 0, (int) strlen (src));
+
+  xsnprintf (buf, buf_size, "%x:%s:%s:%x:%x:",
+	     tpnum, phex_nz (addr),
+	     srctype, 0, (int) strlen (src));
+
   if (strlen (buf) + strlen (src) * 2 >= buf_size)
     error (_("Source string too long for buffer"));
+
   bin2hex ((gdb_byte *) src, buf + strlen (buf), strlen (src));
   return -1;
 }

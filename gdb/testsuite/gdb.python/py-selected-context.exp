@@ -46,7 +46,9 @@ proc event_regexp { inferior {thread "None"} {frame "None"}} {
 # inferior.  INF should be an inferior number, e.g. '1', '2', etc.
 proc check_inferior { inf testname } {
     gdb_test "info inferiors" \
-	"\r\n\\*\\s+[string_to_regexp $inf]\\s+\[^\r\n\]*(?=\r\n)" \
+	[multi_line \
+	     "" \
+	     [subst_vars {[*]\s+$inf\s+[^\r\n]*(?=\r\n).*}]] \
 	$testname
 }
 

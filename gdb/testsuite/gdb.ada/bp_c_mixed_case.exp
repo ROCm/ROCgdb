@@ -60,8 +60,12 @@ gdb_test "p <MixedCaseFunc>" \
     " = void" \
     "p <MixedCaseFunc>, in Ada"
 
+# The optional leading dot is for ppc64 v1 ABI function descriptors.
 gdb_test "p <NoDebugMixedCaseFunc>" \
-    " = {<text variable, no debug info>} $hex <NoDebugMixedCaseFunc>" \
+    [quotemeta \
+	 [string cat \
+	      {$@DECIMAL = {<text variable, no debug info>} @HEX} \
+	      { <@/[.]?/NoDebugMixedCaseFunc>}]] \
     "p <NoDebugMixedCaseFunc>, in Ada"
 
 # Try inserting a breakpoint inside a C function. Because the function's

@@ -808,20 +808,17 @@ static int
 elf_gnu_ifunc_resolve_by_got (const char *name, CORE_ADDR *addr_p)
 {
   gnu_ifunc_debug_printf ("resolving \"%s\" by GOT", name);
-  char *name_got_plt;
-  const size_t got_suffix_len = strlen (SYMBOL_GOT_PLT_SUFFIX);
   int found = 0;
   const char *func = __func__;
 
-  name_got_plt = (char *) alloca (strlen (name) + got_suffix_len + 1);
-  sprintf (name_got_plt, "%s" SYMBOL_GOT_PLT_SUFFIX, name);
+  std::string name_got_plt = std::string (name) + SYMBOL_GOT_PLT_SUFFIX;
 
   /* FIXME: we only search the initial namespace.
 
      To search other namespaces, we would need to provide context, e.g. in
      form of an objfile in that namespace.  */
   current_program_space->iterate_over_objfiles_in_search_order
-    ([name, name_got_plt, &addr_p, &found, func] (struct objfile *objfile)
+    ([name, &name_got_plt, &addr_p, &found, func] (struct objfile *objfile)
        {
 	 bfd *obfd = objfile->obfd.get ();
 	 struct gdbarch *gdbarch = objfile->arch ();
@@ -832,8 +829,8 @@ elf_gnu_ifunc_resolve_by_got (const char *name, CORE_ADDR *addr_p)
 	 gdb_byte *buf = (gdb_byte *) alloca (ptr_size);
 
 	 bound_minimal_symbol msym
-	   = lookup_minimal_symbol (current_program_space, name_got_plt,
-				    objfile);
+	   = lookup_minimal_symbol (current_program_space,
+				    name_got_plt.c_str (), objfile);
 	 if (msym.minsym == NULL)
 	   return 0;
 	 if (msym.minsym->type () != mst_slot_got_plt)
@@ -854,7 +851,8 @@ elf_gnu_ifunc_resolve_by_got (const char *name, CORE_ADDR *addr_p)
 	 addr = gdbarch_addr_bits_remove (gdbarch, addr);
 
 	 gnu_ifunc_debug_printf_func (func, "GOT entry \"%s\" points to %s",
-				      name_got_plt, paddress (gdbarch, addr));
+				      name_got_plt.c_str (),
+				      paddress (gdbarch, addr));
 
 	 if (elf_gnu_ifunc_record_cache (name, addr))
 	   {

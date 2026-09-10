@@ -74,7 +74,8 @@ proc do_test {precise_memory has_xfail} {
 	    setup_xfail "*-*-*"
 	}
 	gdb_test "continue" \
-	    [multi_line "Switching to \[^\r\n\]+(?=\r\n)" \
+	    [multi_line \
+		{Switching to [^\r\n]+} \
 		"" \
 		"Thread $::decimal \[^\r\n\]*hit Hardware watchpoint $::decimal: -location \\*v" \
 		"" \

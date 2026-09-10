@@ -92,10 +92,9 @@ std::string
 string_printf (const char* fmt, ...)
 {
   va_list vp;
-  int size;
 
   va_start (vp, fmt);
-  size = vsnprintf (NULL, 0, fmt, vp);
+  int size = vsnprintf (NULL, 0, fmt, vp);
   va_end (vp);
 
   std::string str (size, '\0');
@@ -103,7 +102,8 @@ string_printf (const char* fmt, ...)
   /* C++11 and later guarantee std::string uses contiguous memory and
      always includes the terminating '\0'.  */
   va_start (vp, fmt);
-  vsprintf (&str[0], fmt, vp);
+  int ret = vsnprintf (&str[0], size + 1, fmt, vp);
+  gdb_assert (ret == size);
   va_end (vp);
 
   return str;
@@ -115,17 +115,17 @@ std::string
 string_vprintf (const char* fmt, va_list args)
 {
   va_list vp;
-  size_t size;
 
   va_copy (vp, args);
-  size = vsnprintf (NULL, 0, fmt, vp);
+  int size = vsnprintf (NULL, 0, fmt, vp);
   va_end (vp);
 
   std::string str (size, '\0');
 
   /* C++11 and later guarantee std::string uses contiguous memory and
      always includes the terminating '\0'.  */
-  vsprintf (&str[0], fmt, args);
+  int ret = vsnprintf (&str[0], size + 1, fmt, args);
+  gdb_assert (ret == size);
 
   return str;
 }
@@ -152,10 +152,9 @@ std::string &
 string_vappendf (std::string &str, const char *fmt, va_list args)
 {
   va_list vp;
-  int grow_size;
 
   va_copy (vp, args);
-  grow_size = vsnprintf (NULL, 0, fmt, vp);
+  int grow_size = vsnprintf (NULL, 0, fmt, vp);
   va_end (vp);
 
   size_t curr_size = str.size ();
@@ -163,7 +162,8 @@ string_vappendf (std::string &str, const char *fmt, va_list args)
 
   /* C++11 and later guarantee std::string uses contiguous memory and
      always includes the terminating '\0'.  */
-  vsprintf (&str[curr_size], fmt, args);
+  int ret = vsnprintf (&str[curr_size], grow_size + 1, fmt, args);
+  gdb_assert (ret == grow_size);
 
   return str;
 }

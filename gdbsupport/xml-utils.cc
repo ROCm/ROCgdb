@@ -88,52 +88,55 @@ string_xml_appendf (std::string &buffer, const char *format, ...)
 	      str = va_arg (ap, char *);
 	      break;
 	    case 'd':
-	      sprintf (str, "%d", va_arg (ap, int));
+	      xsnprintf (buf, sizeof (buf), "%d", va_arg (ap, int));
 	      break;
 	    case 'u':
-	      sprintf (str, "%u", va_arg (ap, unsigned int));
+	      xsnprintf (buf, sizeof (buf), "%u", va_arg (ap, unsigned int));
 	      break;
 	    case 'x':
-	      sprintf (str, "%x", va_arg (ap, unsigned int));
+	      xsnprintf (buf, sizeof (buf), "%x", va_arg (ap, unsigned int));
 	      break;
 	    case 'o':
-	      sprintf (str, "%o", va_arg (ap, unsigned int));
+	      xsnprintf (buf, sizeof (buf), "%o", va_arg (ap, unsigned int));
 	      break;
 	    case 'l':
 	      f++;
 	      switch (*f)
 		{
 		case 'd':
-		  sprintf (str, "%ld", va_arg (ap, long));
+		  xsnprintf (buf, sizeof (buf), "%ld", va_arg (ap, long));
 		  break;
 		case 'u':
-		  sprintf (str, "%lu", va_arg (ap, unsigned long));
+		  xsnprintf (buf, sizeof (buf), "%lu",
+			     va_arg (ap, unsigned long));
 		  break;
 		case 'x':
-		  sprintf (str, "%lx", va_arg (ap, unsigned long));
+		  xsnprintf (buf, sizeof (buf), "%lx",
+			     va_arg (ap, unsigned long));
 		  break;
 		case 'o':
-		  sprintf (str, "%lo", va_arg (ap, unsigned long));
+		  xsnprintf (buf, sizeof (buf), "%lo",
+			     va_arg (ap, unsigned long));
 		  break;
 		case 'l':
 		  f++;
 		  switch (*f)
 		    {
 		    case 'd':
-		      sprintf (str, "%" PRId64,
-			       (int64_t) va_arg (ap, long long));
+		      xsnprintf (buf, sizeof (buf), "%" PRId64,
+				 (int64_t) va_arg (ap, long long));
 		      break;
 		    case 'u':
-		      sprintf (str, "%" PRIu64,
-			       (uint64_t) va_arg (ap, unsigned long long));
+		      xsnprintf (buf, sizeof (buf), "%" PRIu64,
+				 (uint64_t) va_arg (ap, unsigned long long));
 		      break;
 		    case 'x':
-		      sprintf (str, "%" PRIx64,
-			       (uint64_t) va_arg (ap, unsigned long long));
+		      xsnprintf (buf, sizeof (buf), "%" PRIx64,
+				 (uint64_t) va_arg (ap, unsigned long long));
 		      break;
 		    case 'o':
-		      sprintf (str, "%" PRIo64,
-			       (uint64_t) va_arg (ap, unsigned long long));
+		      xsnprintf (buf, sizeof (buf), "%" PRIo64,
+				 (uint64_t) va_arg (ap, unsigned long long));
 		      break;
 		    default:
 		      str = 0;

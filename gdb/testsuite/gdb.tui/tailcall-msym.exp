@@ -136,14 +136,35 @@ if { [build_executable "build" $real_testfile $asm_file {nodebug}] } {
 
 Term::clean_restart 24 80 $real_testfile
 
+if {![Term::prepare_for_tui]} {
+    unsupported "TUI not supported"
+    return
+}
+
+foreach func {caller callee main dummy_func} {
+    set re_found \
+	"^$valnum_re = {<text variable, no debug info>} $hex <$func>"
+
+    set found 0
+    gdb_test_multiple "p $func" "" {
+       -re -wrap $re_found {
+	   set found 1
+       }
+       -re -wrap "" {
+       }
+    }
+
+    if {!$found} {
+       unsupported "couldn't find function $func"
+       return
+    }
+}
+
 if {![runto callee]} {
     return
 }
 
-if {![Term::enter_tui]} {
-    unsupported "TUI not supported"
-    return
-}
+Term::command_no_prompt_prefix "tui enable"
 
 # Check the function name on display in the status bar.  The interesting
 # case here is 'caller', which is a tailcall function in an objfile with

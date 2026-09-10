@@ -3772,15 +3772,16 @@ process_queue (dwarf2_per_objfile *per_objfile)
       if (signatured_type *sig_type = per_cu->as_signatured_type ();
 	  sig_type != nullptr)
 	{
-	  sprintf (buf, "TU %s at offset %s", hex_string (sig_type->signature),
-		   sect_offset_str (per_cu->sect_off ()));
+	  xsnprintf (buf, sizeof (buf), "TU %s at offset %s",
+		     hex_string (sig_type->signature),
+		     sect_offset_str (per_cu->sect_off ()));
 	  /* There can be 100s of TUs.  Only print them in verbose mode.  */
 	  debug_print_threshold = 2;
 	}
       else
 	{
-	  sprintf (buf, "CU at offset %s",
-		   sect_offset_str (per_cu->sect_off ()));
+	  xsnprintf (buf, sizeof (buf), "CU at offset %s",
+		     sect_offset_str (per_cu->sect_off ()));
 	  debug_print_threshold = 1;
 	}
 
