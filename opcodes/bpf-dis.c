@@ -208,6 +208,12 @@ print_insn_bpf (bfd_vma pc, disassemble_info *info)
                   (*info->fprintf_styled_func) (info->stream, dis_style_text, "%%");
                   p += 2;
                 }
+              else if (*(p + 1) == 't')
+                {
+                  /* %t marks the end of a mnemonic and prints to nothing;
+                     the %w or %W that follows prints the space.  */
+                  p += 2;
+                }
               else if (*(p + 1) == 'w' || *(p + 1) == 'W')
                 {
                   /* %W prints to a single space.  */

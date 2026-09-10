@@ -264,6 +264,16 @@ struct bpf_opcode
      %i64 - 64-bit signed immediate.
      %w - expect zero or more white spaces and print a single space.
      %W - expect one or more white spaces and print a single space.
+     %t - expect the end of a mnemonic, and print nothing.
+
+     %t consumes no input.  It only asserts that the mnemonic just
+     matched ends there, that is, that the input does not continue it
+     with a character that could begin another mnemonic.  Any white
+     space is left to the %w or %W that follows: `goto%t%w%d16' matches
+     `goto +1', `goto+1' and `goto1', but not `gotol +1', which is a
+     different instruction.  Write %t after any literal mnemonic text,
+     so that adding an instruction whose mnemonic extends an existing
+     one does not silently make the shorter one match it.
 
      When parsing and printing %o16 and %I32 (but not %i32) an
      explicit sign is always expected and included.  Therefore, to
