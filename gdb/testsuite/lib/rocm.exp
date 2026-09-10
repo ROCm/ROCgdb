@@ -420,14 +420,14 @@ proc gdb_compile_ocl {source dest type options} {
     return $result
 }
 
-# Run "info threads INF_NUM", return the number of "AMDGPU Wave" threads found.
+# Return the wave count for inferior INF_NUM via "info waves count INF_NUM".
 
 proc info_threads_get_wave_count { inf_num } {
     set wave_count 0
-    gdb_test_multiple "info threads ${inf_num}.*" "" {
-	-re "AMDGPU Wave\[^\r\n\]+\r\n" {
-	    incr wave_count
-	    exp_continue
+    gdb_test_multiple "info waves count ${inf_num}" "" {
+	-re "($::decimal)\r\n$::gdb_prompt " {
+	    set wave_count $expect_out(1,string)
+	    pass $gdb_test_name
 	}
 
 	-re "$::gdb_prompt " {
