@@ -78,6 +78,7 @@ if {[istarget bpf*-*-*]} {
     run_dump_test jcond-be-pseudoc
 
     run_dump_test spacing-pseudoc
+    run_dump_test spacing-mnemonic-pseudoc
 
     # Overflow tests
     run_dump_test offset16-overflow
