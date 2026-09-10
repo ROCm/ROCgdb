@@ -102,6 +102,16 @@ run_ld_link_tests [list \
 	{} \
 	"pr22649-1.so" \
     ] \
+    [list \
+	"Build pr34623.so" \
+	"$LFLAGS -shared" \
+	"" \
+	"$AFLAGS_PIC" \
+	{pr34623.s} \
+	{{readelf {--dyn-syms --wide} pr34623a.rd} \
+	 {readelf {--dyn-syms --wide} pr34623b.rd}} \
+	"pr34623.so" \
+    ] \
 ]
 
 run_ld_link_tests [list \

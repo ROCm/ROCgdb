@@ -7715,6 +7715,7 @@ NOTE: This behaviour is deprecated and will be removed in a future version of th
 	{
 	  if (!_bfd_elf_add_dynamic_entry (info, DT_INIT, 0))
 	    return false;
+	  obed->elf_backend_hide_symbol (info, h, true);
 	}
       h = (info->fini_function
 	   ? elf_link_hash_lookup (elf_hash_table (info),
@@ -7727,6 +7728,7 @@ NOTE: This behaviour is deprecated and will be removed in a future version of th
 	{
 	  if (!_bfd_elf_add_dynamic_entry (info, DT_FINI, 0))
 	    return false;
+	  obed->elf_backend_hide_symbol (info, h, true);
 	}
 
       s = bfd_get_section_by_name (info->output_bfd, ".preinit_array");
