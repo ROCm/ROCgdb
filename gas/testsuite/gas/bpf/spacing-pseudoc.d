@@ -1,4 +1,4 @@
-#as: -EB -mdialect=pseudoc
+#as: -EL -mdialect=pseudoc
 #source: spacing-pseudoc.s
 #objdump: -dr -M hex,pseudoc
 #name: spacing, pseudoc syntax
