@@ -122,7 +122,7 @@ run_ld_link_tests [list \
     ] \
     [list \
 	"pr26580-1" \
-	"$LFLAGS --as-needed -Ltmpdir -lpr26580-1" "" \
+	"$LFLAGS --as-needed -Ltmpdir" "-lpr26580-1" \
 	"$AFLAGS" \
 	{ pr26580-a.s } \
 	{ {readelf -s pr26580-1.sd} } \
@@ -130,7 +130,7 @@ run_ld_link_tests [list \
     ] \
     [list \
 	"pr26580-2" \
-	"$LFLAGS --no-as-needed -Ltmpdir -lpr26580-1" "" \
+	"$LFLAGS --no-as-needed -Ltmpdir" "-lpr26580-1" \
 	"$AFLAGS" \
 	{ pr26580-a.s } \
 	{ {readelf -s pr26580-2.sd} } \

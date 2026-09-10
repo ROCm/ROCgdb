@@ -1301,7 +1301,7 @@ exp_fold_tree_1 (etree_type *tree)
 			{
 			  bfd_copy_link_hash_symbol_type (link_info.output_bfd,
 							  h, expld.assign_src);
-			  expld.assign_src->non_ir_ref_regular = true;
+			  ldlang_ref (expld.assign_src);
 			}
 		    }
 		}

@@ -4252,6 +4252,19 @@ ldlang_add_undef (const char *const name, bool cmdline ATTRIBUTE_UNUSED)
     insert_undefined (new_undef->name);
 }
 
+/* Mark symbol as referenced.  */
+
+void
+ldlang_ref (struct bfd_link_hash_entry *h)
+{
+  h->non_ir_ref_regular = 1;
+  if (is_elf_hash_table (link_info.hash))
+    {
+      ((struct elf_link_hash_entry *) h)->ref_regular = 1;
+      ((struct elf_link_hash_entry *) h)->ref_regular_nonweak = 1;
+    }
+}
+
 /* Insert NAME as undefined in the symbol table.  */
 
 static void
@@ -4266,7 +4279,7 @@ insert_undefined (const char *name)
     {
       h->type = bfd_link_hash_undefined;
       h->u.undef.abfd = NULL;
-      h->non_ir_ref_regular = true;
+      ldlang_ref (h);
       bfd_link_add_undef (link_info.hash, h);
     }
 }
