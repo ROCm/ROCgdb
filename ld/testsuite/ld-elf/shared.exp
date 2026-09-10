@@ -942,6 +942,24 @@ run_cc_link_tests [list \
 	{{readelf -d pr21086.rd}} \
 	"pr21086" \
     ] \
+    [list \
+	"Build pr32816.so" \
+	"-shared" \
+	"-fPIC" \
+	{pr32816a.c} \
+	{} \
+	"pr32816.so" \
+    ] \
+    [list \
+	"Build pr32816" \
+	"-Wl,-u,ProfilerStart,--as-need" \
+	"" \
+	{pr32816b.c} \
+	{{readelf -d pr32816.rd}} \
+	"pr32816" \
+	"c" \
+	"tmpdir/pr32816.so" \
+    ] \
 ]
 
 # pr19073.s uses .set, which has a different meaning on alpha.
