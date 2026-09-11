@@ -651,7 +651,7 @@ static const bfd_byte elf_x86_64_lazy_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE] =
   0x66, 0x90			/* xchg %ax,%ax		      */
 };
 
-/* Entries in the non-lazey procedure linkage table look like this.  */
+/* Entries in the non-lazy procedure linkage table look like this.  */
 
 static const bfd_byte elf_x86_64_non_lazy_plt_entry[NON_LAZY_PLT_ENTRY_SIZE] =
 {
@@ -660,7 +660,7 @@ static const bfd_byte elf_x86_64_non_lazy_plt_entry[NON_LAZY_PLT_ENTRY_SIZE] =
   0x66, 0x90	     /* xchg %ax,%ax				      */
 };
 
-/* Entries for branches with BND prefix in the non-lazey procedure
+/* Entries for branches with BND prefix in the non-lazy procedure
    linkage table look like this.  */
 
 static const bfd_byte elf_x86_64_non_lazy_bnd_plt_entry[NON_LAZY_PLT_ENTRY_SIZE] =
@@ -670,7 +670,7 @@ static const bfd_byte elf_x86_64_non_lazy_bnd_plt_entry[NON_LAZY_PLT_ENTRY_SIZE]
   0x90		     /* nop					      */
 };
 
-/* Entries for IBT-enabled branches with BND prefix in the non-lazey
+/* Entries for IBT-enabled branches with BND prefix in the non-lazy
    procedure linkage table look like this.  They have the same size as
    the lazy PLT entry.  */
 
@@ -682,7 +682,7 @@ static const bfd_byte elf_x86_64_non_lazy_bnd_ibt_plt_entry[LAZY_PLT_ENTRY_SIZE]
   0x0f, 0x1f, 0x44, 0x00, 0x00	/* nopl 0x0(%rax,%rax,1)       */
 };
 
-/* Entries for branches with IBT-enabled in the non-lazey procedure
+/* Entries for branches with IBT-enabled in the non-lazy procedure
    linkage table look like this.  They have the same size as the lazy
    PLT entry.  */
 
