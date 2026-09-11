@@ -13669,6 +13669,19 @@ elf32_arm_final_link (bfd *abfd, struct bfd_link_info *info)
 	}
     }
 
+  /* Process CMSE stubs (they are not part of the stub_group above).  */
+  if (htab->cmse_stub_sec != NULL)
+    {
+      sec = htab->cmse_stub_sec;
+      osec = sec->output_section;
+
+      elf32_arm_write_section (abfd, info, sec, sec->contents);
+
+      if (!bfd_set_section_contents (abfd, osec, sec->contents,
+				     sec->output_offset, sec->size))
+	return false;
+    }
+
   /* Write out any glue sections now that we have created all the
      stubs.  */
   if (globals->bfd_of_glue_owner != NULL)
