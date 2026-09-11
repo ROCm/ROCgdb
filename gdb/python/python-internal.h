@@ -430,6 +430,9 @@ struct gdbpy_breakpoint_object : public PyObject
 
   /* True is this is a FinishBreakpoint object, false otherwise.  */
   bool is_finish_bp;
+
+  /* If this breakpoint is not valid, throw an exception.  */
+  void require_valid () const;
 };
 
 static_assert (gdb::is_python_allocatable_v<gdbpy_breakpoint_object>);

@@ -69,6 +69,15 @@ struct gdbpy_breakpoint_location_object : public PyObject
 
   /* Implementation of 'repr'.  */
   gdbpy_ref<> repr ();
+
+  /* If this breakpoint location is not valid, throw an exception.  */
+  void require_valid () const
+  {
+    owner->require_valid ();
+    if (owner->bp != bp_loc->owner)
+      return gdbpy_err_format (PyExc_RuntimeError,
+			       _("Breakpoint location is invalid."));
+  }
 };
 
 static_assert (gdb::is_python_allocatable_v<gdbpy_breakpoint_location_object>);
@@ -158,6 +167,14 @@ static struct pybp_code pybp_watch_types[] =
   { "WP_ACCESS", hw_access},
   {NULL} /* Sentinel.  */
 };
+
+void
+gdbpy_breakpoint_object::require_valid () const
+{
+  if (bp == nullptr)
+    gdbpy_err_format (PyExc_RuntimeError, _("Breakpoint %d is invalid."),
+		      number);
+}
 
 /* Python function which checks the validity of a breakpoint object.  */
 static PyObject *
