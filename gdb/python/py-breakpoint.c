@@ -44,6 +44,9 @@ struct gdbpy_breakpoint_location_object : public PyObject
 
   /* An owning reference to the location's breakpoint owner.  */
   gdbpy_breakpoint_object *owner;
+
+  /* Implementation of 'repr'.  */
+  gdbpy_ref<> repr ();
 };
 
 static_assert (gdb::is_python_allocatable_v<gdbpy_breakpoint_location_object>);
@@ -1724,36 +1727,33 @@ bplocpy_dealloc (PyObject *py_self)
 
 /* __repr__ implementation for gdb.BreakpointLocation.  */
 
-static PyObject *
-bplocpy_repr (PyObject *py_self)
+gdbpy_ref<>
+gdbpy_breakpoint_location_object::repr ()
 {
-  const auto self = (gdbpy_breakpoint_location_object *) py_self;
-  if (self->owner == nullptr || self->owner->bp == nullptr
-      || self->owner->bp != self->bp_loc->owner)
-    return gdb_py_invalid_object_repr (py_self);
+  if (owner == nullptr || owner->bp == nullptr || owner->bp != bp_loc->owner)
+    /* FIXME: Python safety.  gdb_py_invalid_object_repr ought to
+       throw on error, and return gdbpy_ref<>, but currently does
+       not.  */
+    return gdbpy_ref<> (gdb_py_invalid_object_repr (this));
 
   /* For most things we just defer to bp_location::to_string, but that
      doesn't include the enabled/disabled information, which is kind
      of handy here.  */
-  const auto enabled = self->bp_loc->enabled ? "enabled " : "disabled ";
+  const auto enabled = bp_loc->enabled ? "enabled " : "disabled ";
   std::string str (enabled);
 
   try
     {
-      str += self->bp_loc->to_string ();
+      str += bp_loc->to_string ();
     }
   catch (const gdb_exception_error &ignore)
     {
-      return gdb_py_invalid_object_repr (py_self);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
+      return gdbpy_ref<> (gdb_py_invalid_object_repr (this));
     }
 
-  return PyUnicode_FromFormat ("<%s %s>",
-			       gdbpy_py_obj_tp_name (py_self).c_str (),
-			       str.c_str ());
+  return gdbpy_unicode_from_format ("<%s %s>",
+				    gdbpy_py_obj_tp_name (this).c_str (),
+				    str.c_str ());
 }
 
 /* Attribute get/set Python definitions. */
@@ -1787,7 +1787,8 @@ PyTypeObject breakpoint_location_object_type =
   0,					/*tp_getattr*/
   0,					/*tp_setattr*/
   0,					/*tp_compare*/
-  bplocpy_repr,                        /*tp_repr*/
+  wrap_tp_callback<gdbpy_breakpoint_location_object,
+		   &gdbpy_breakpoint_location_object::repr>, /*tp_repr*/
   0,					/*tp_as_number*/
   0,					/*tp_as_sequence*/
   0,					/*tp_as_mapping*/
