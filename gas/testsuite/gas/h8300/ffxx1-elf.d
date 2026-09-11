@@ -1,4 +1,4 @@
-#objdump: --prefix-addresses -dr
+#objdump: --prefix-addresses -dr -m h8300
 #name: FFxx1
 
 # Test for FFxx:8 addressing.
