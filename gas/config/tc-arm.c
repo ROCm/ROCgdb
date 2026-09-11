@@ -14672,6 +14672,7 @@ NEON_ENC_TAB
 /* Used for MVE tail predicated loop instructions.  */\
   X(2, (R, R), QUAD),			\
 /* Half float shape supported so far.  */\
+  X (3, (H, H, I), HALF),		\
   X (2, (H, D), MIXED),			\
   X (2, (D, H), MIXED),			\
   X (2, (H, F), MIXED),			\
@@ -18634,10 +18635,10 @@ do_neon_shll (void)
   CVT_VAR (f32_s32, N_F32, N_S32, whole_reg,   "fsltos", "fsitos", NULL)      \
   CVT_VAR (f32_u32, N_F32, N_U32, whole_reg,   "fultos", "fuitos", NULL)      \
   /* Half-precision conversions.  */					      \
-  CVT_VAR (s16_f16, N_S16, N_F16 | N_KEY, whole_reg, NULL, NULL, NULL)	      \
-  CVT_VAR (u16_f16, N_U16, N_F16 | N_KEY, whole_reg, NULL, NULL, NULL)	      \
-  CVT_VAR (f16_s16, N_F16 | N_KEY, N_S16, whole_reg, NULL, NULL, NULL)	      \
-  CVT_VAR (f16_u16, N_F16 | N_KEY, N_U16, whole_reg, NULL, NULL, NULL)	      \
+  CVT_VAR (s16_f16, N_S16, N_F16 | N_KEY, whole_reg, "ftoshs",  NULL, NULL)   \
+  CVT_VAR (u16_f16, N_U16, N_F16 | N_KEY, whole_reg, "ftouhs", NULL, NULL)    \
+  CVT_VAR (f16_s16, N_F16 | N_KEY, N_S16, whole_reg, "fshtos", NULL, NULL)    \
+  CVT_VAR (f16_u16, N_F16 | N_KEY, N_U16, whole_reg, "fuhtos", NULL, NULL)    \
   CVT_VAR (f32_f16, N_F32, N_F16, whole_reg,   NULL,     NULL,     NULL)      \
   CVT_VAR (f16_f32, N_F16, N_F32, whole_reg,   NULL,     NULL,     NULL)      \
   /* New VCVT instructions introduced by ARMv8.2 fp16 extension.	      \
@@ -18723,7 +18724,7 @@ do_vfp_nsyn_cvt (enum neon_shape rs, enum neon_cvt_flavour flavour)
   const char *opname = 0;
 
   if (rs == NS_DDI || rs == NS_QQI || rs == NS_FFI
-      || rs == NS_FHI || rs == NS_HFI)
+      || rs == NS_FHI || rs == NS_HFI || rs == NS_HHI)
     {
       /* Conversions with immediate bitshift.  */
       const char *enc[] =
@@ -18741,6 +18742,16 @@ do_vfp_nsyn_cvt (enum neon_shape rs, enum neon_cvt_flavour flavour)
 		      _("operands 0 and 1 must be the same register"));
 	  inst.operands[1] = inst.operands[2];
 	  memset (&inst.operands[2], '\0', sizeof (inst.operands[2]));
+	  if (rs == NS_HHI)
+	    {
+	      constraint (!(flavour == neon_cvt_flavour_f16_s16
+			    || flavour == neon_cvt_flavour_s16_f16
+			    || flavour == neon_cvt_flavour_f16_u16
+			    || flavour == neon_cvt_flavour_u16_f16),
+			 _("invalid suffix"));
+	      constraint (inst.operands[2].imm < 0 || inst.operands[2].imm > 16,
+			  _("immediate value out of range"));
+	    }
 	}
     }
   else
@@ -18753,6 +18764,11 @@ do_vfp_nsyn_cvt (enum neon_shape rs, enum neon_cvt_flavour flavour)
 	  NULL
 #undef CVT_VAR
 	};
+	constraint ((flavour == neon_cvt_flavour_f16_s16
+		     || flavour == neon_cvt_flavour_s16_f16
+		     || flavour == neon_cvt_flavour_f16_u16
+		     || flavour == neon_cvt_flavour_u16_f16),
+		   _("invalid suffix"));
 
       if (flavour < (int) ARRAY_SIZE (enc))
 	opname = enc[flavour];
@@ -18764,8 +18780,12 @@ do_vfp_nsyn_cvt (enum neon_shape rs, enum neon_cvt_flavour flavour)
   /* ARMv8.2 fp16 VCVT instruction.  */
   if (flavour == neon_cvt_flavour_s32_f16
       || flavour == neon_cvt_flavour_u32_f16
+      || flavour == neon_cvt_flavour_s16_f16
+      || flavour == neon_cvt_flavour_u16_f16
       || flavour == neon_cvt_flavour_f16_u32
-      || flavour == neon_cvt_flavour_f16_s32)
+      || flavour == neon_cvt_flavour_f16_s32
+      || flavour == neon_cvt_flavour_f16_s16
+      || flavour == neon_cvt_flavour_f16_u16)
     do_scalar_fp16_v82_encode ();
 }
 
@@ -18865,7 +18885,7 @@ do_vfp_nsyn_cvt_fpv8 (enum neon_cvt_flavour flavour,
 static void
 do_neon_cvt_1 (enum neon_cvt_mode mode)
 {
-  enum neon_shape rs = neon_select_shape (NS_DDI, NS_QQI, NS_FFI, NS_DD, NS_QQ,
+  enum neon_shape rs = neon_select_shape (NS_DDI, NS_QQI, NS_FFI, NS_HHI, NS_DD, NS_QQ,
 					  NS_FD, NS_DF, NS_FF, NS_QD, NS_DQ,
 					  NS_FH, NS_HF, NS_FHI, NS_HFI,
 					  NS_NULL);

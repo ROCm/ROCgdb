@@ -73,3 +73,39 @@ Disassembly of section .text:
   f0:	eef619e5 	vrintz.f16	s3, s11
   f4:	fef02ae4 	vins.f16	s5, s9
   f8:	fef02a64 	vmovx.f16	s5, s9
+  fc:	eeba0948 	vcvt.f16.s16	s0, s0, #0
+ 100:	eebb0948 	vcvt.f16.u16	s0, s0, #0
+ 104:	eebe0948 	vcvt.s16.f16	s0, s0, #0
+ 108:	eebf0948 	vcvt.u16.f16	s0, s0, #0
+ 10c:	eeba0946 	vcvt.f16.s16	s0, s0, #4
+ 110:	eebb0946 	vcvt.f16.u16	s0, s0, #4
+ 114:	eebe0946 	vcvt.s16.f16	s0, s0, #4
+ 118:	eebf0946 	vcvt.u16.f16	s0, s0, #4
+ 11c:	eeba0940 	vcvt.f16.s16	s0, s0, #16
+ 120:	eebb0940 	vcvt.f16.u16	s0, s0, #16
+ 124:	eebe0940 	vcvt.s16.f16	s0, s0, #16
+ 128:	eebf0940 	vcvt.u16.f16	s0, s0, #16
+ 12c:	eefa2948 	vcvt.f16.s16	s5, s5, #0
+ 130:	eefb2948 	vcvt.f16.u16	s5, s5, #0
+ 134:	eefe2948 	vcvt.s16.f16	s5, s5, #0
+ 138:	eeff2948 	vcvt.u16.f16	s5, s5, #0
+ 13c:	eeba3946 	vcvt.f16.s16	s6, s6, #4
+ 140:	eebb3946 	vcvt.f16.u16	s6, s6, #4
+ 144:	eebe3946 	vcvt.s16.f16	s6, s6, #4
+ 148:	eebf3946 	vcvt.u16.f16	s6, s6, #4
+ 14c:	eefa3940 	vcvt.f16.s16	s7, s7, #16
+ 150:	eefb3940 	vcvt.f16.u16	s7, s7, #16
+ 154:	eefe3940 	vcvt.s16.f16	s7, s7, #16
+ 158:	eeff3940 	vcvt.u16.f16	s7, s7, #16
+ 15c:	eefa7948 	vcvt.f16.s16	s15, s15, #0
+ 160:	eefb7948 	vcvt.f16.u16	s15, s15, #0
+ 164:	eefe7948 	vcvt.s16.f16	s15, s15, #0
+ 168:	eeff7948 	vcvt.u16.f16	s15, s15, #0
+ 16c:	eefa7946 	vcvt.f16.s16	s15, s15, #4
+ 170:	eefb7946 	vcvt.f16.u16	s15, s15, #4
+ 174:	eefe7946 	vcvt.s16.f16	s15, s15, #4
+ 178:	eeff7946 	vcvt.u16.f16	s15, s15, #4
+ 17c:	eefa7940 	vcvt.f16.s16	s15, s15, #16
+ 180:	eefb7940 	vcvt.f16.u16	s15, s15, #16
+ 184:	eefe7940 	vcvt.s16.f16	s15, s15, #16
+ 188:	eeff7940 	vcvt.u16.f16	s15, s15, #16
