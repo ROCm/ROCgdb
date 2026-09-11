@@ -434,29 +434,6 @@ struct gdbpy_breakpoint_object : public PyObject
 
 static_assert (gdb::is_python_allocatable_v<gdbpy_breakpoint_object>);
 
-/* Require that BREAKPOINT be a valid breakpoint ID; throw a Python
-   exception if it is invalid.  */
-#define BPPY_REQUIRE_VALID(Breakpoint)                                  \
-    do {                                                                \
-      if ((Breakpoint)->bp == NULL)                                     \
-	return PyErr_Format (PyExc_RuntimeError,                        \
-			     _("Breakpoint %d is invalid."),            \
-			     (Breakpoint)->number);                     \
-    } while (0)
-
-/* Require that BREAKPOINT be a valid breakpoint ID; throw a Python
-   exception if it is invalid.  This macro is for use in setter functions.  */
-#define BPPY_SET_REQUIRE_VALID(Breakpoint)                              \
-    do {                                                                \
-      if ((Breakpoint)->bp == NULL)                                     \
-	{                                                               \
-	  PyErr_Format (PyExc_RuntimeError, _("Breakpoint %d is invalid."), \
-			(Breakpoint)->number);                          \
-	  return -1;                                                    \
-	}                                                               \
-    } while (0)
-
-
 /* Variables used to pass information between the Breakpoint
    constructor and the breakpoint-created hook function.  */
 extern gdbpy_breakpoint_object *bppy_pending_object;
