@@ -164,7 +164,10 @@ static void
 obj_coff_bss (int ignore ATTRIBUTE_UNUSED)
 {
   if (*input_line_pointer == '\n')
-    subseg_new (".bss", get_absolute_expression ());
+    {
+      obj_coff_section_change_hook ();
+      subseg_new (".bss", get_absolute_expression ());
+    }
   else
     s_lcomm (0);
 }
@@ -1540,6 +1543,73 @@ obj_coff_finalize_section_relocs (asection *sec, arelent **relocs,
   return true;
 }
 
+static segT previous_section;
+static subsegT previous_subsection;
+
+/* This can be called from the processor backends if they change
+   sections.  */
+
+void
+obj_coff_section_change_hook (void)
+{
+  previous_section = now_seg;
+  previous_subsection = now_subseg;
+}
+
+static void
+obj_coff_previous (int ignore ATTRIBUTE_UNUSED)
+{
+  segT new_section;
+  subsegT new_subsection;
+
+  if (previous_section == NULL)
+    {
+      as_warn (_(".previous without corresponding .section; ignored"));
+      return;
+    }
+
+#ifdef md_flush_pending_output
+  md_flush_pending_output ();
+#endif
+
+  new_section = previous_section;
+  new_subsection = previous_subsection;
+  obj_coff_section_change_hook ();
+
+  subseg_set (new_section, new_subsection);
+}
+
+struct section_stack
+{
+  struct section_stack *next;
+  segT seg, prev_seg;
+  subsegT subseg, prev_subseg;
+};
+
+static struct section_stack *section_stack;
+
+static void
+obj_coff_popsection (int ignore ATTRIBUTE_UNUSED)
+{
+  struct section_stack *top = section_stack;
+
+  if (top == NULL)
+    {
+      as_warn (_(".popsection without corresponding .pushsection; ignored"));
+      return;
+    }
+
+#ifdef md_flush_pending_output
+  md_flush_pending_output ();
+#endif
+
+  section_stack = top->next;
+  previous_section = top->prev_seg;
+  previous_subsection = top->prev_subseg;
+  subseg_set (top->seg, top->subseg);
+  free (top);
+}
+
 /* Implement the .section pseudo op:
   	.section name {, "flags"}
                   ^         ^
@@ -1563,7 +1633,7 @@ obj_coff_finalize_section_relocs (asection *sec, arelent **relocs,
    .section directive to be parsed in both ELF and COFF formats.  */
 
 void
-obj_coff_section (int ignore ATTRIBUTE_UNUSED)
+obj_coff_section (int push)
 {
   /* Strip out the section name.  */
   char *section_name;
@@ -1695,6 +1765,18 @@ obj_coff_section (int ignore ATTRIBUTE_UNUSED)
 	}
     }
 
+  if (push)
+    {
+      struct section_stack *elt = XNEW (struct section_stack);
+      elt->next = section_stack;
+      elt->seg = now_seg;
+      elt->prev_seg = previous_section;
+      elt->subseg = now_subseg;
+      elt->prev_subseg = previous_subsection;
+      section_stack = elt;
+    }
+
+  obj_coff_section_change_hook ();
   sec = subseg_new (name, exp);
 
   if (is_bss)
@@ -1902,6 +1984,9 @@ static const pseudo_typeS coff_pseudo_table[] =
   {"ident", obj_coff_ident, 0},
   {"line", obj_coff_line, 0},
   {"ln", obj_coff_ln, 0},
+  {"popsection", obj_coff_popsection, 0},
+  {"previous", obj_coff_previous, 0},
+  {"pushsection", obj_coff_section, 1},
   {"scl", obj_coff_scl, 0},
   {"sect", obj_coff_section, 0},
   {"sect.s", obj_coff_section, 0},
@@ -1941,13 +2026,26 @@ coff_separate_stab_sections (void)
   return 1;
 }
 
+static void
+coff_end (void)
+{
+  if (!ENABLE_LEAK_CHECK)
+    return;
+  while (section_stack)
+    {
+      struct section_stack *top = section_stack;
+      section_stack = top->next;
+      free (top);
+    }
+}
+
 const struct format_ops coff_format_ops =
 {
   bfd_target_coff_flavour,
   0,	/* dfl_leading_underscore */
   1,	/* emit_section_symbols */
   0,    /* begin */
-  0,	/* end.  */
+  coff_end,
   c_dot_file_symbol,
   coff_assign_symbol,
   coff_frob_symbol,

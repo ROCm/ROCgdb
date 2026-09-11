@@ -38,3 +38,6 @@ if { ![istarget *c4x*-*-*] && ![istarget *c54x*-*-*] } {
     run_dump_test func3
     run_dump_test func4
 }
+
+run_dump_test pushpop
+run_dump_test previous

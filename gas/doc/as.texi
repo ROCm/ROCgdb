@@ -6700,7 +6700,7 @@ undefined.
 This is one of the ELF section stack manipulation directives.  The others are
 @code{.section} (@pxref{Section}), @code{.subsection} (@pxref{SubSection}),
 @code{.pushsection} (@pxref{PushSection}), and @code{.previous}
-(@pxref{Previous}).
+(@pxref{Previous}). It is also implemented on COFF targets.
 
 This directive replaces the current section (and subsection) with the top
 section (and subsection) on the section stack.  This section is popped off the
@@ -6716,7 +6716,7 @@ stack.
 This is one of the ELF section stack manipulation directives.  The others are
 @code{.section} (@pxref{Section}), @code{.subsection} (@pxref{SubSection}),
 @code{.pushsection} (@pxref{PushSection}), and @code{.popsection}
-(@pxref{PopSection}).
+(@pxref{PopSection}). It is also implemented on COFF targets.
 
 This directive swaps the current section (and subsection) with most recently
 referenced section/subsection pair prior to this one.  Multiple
@@ -6820,7 +6820,7 @@ expanded.  @xref{Macro}.
 This is one of the ELF section stack manipulation directives.  The others are
 @code{.section} (@pxref{Section}), @code{.subsection} (@pxref{SubSection}),
 @code{.popsection} (@pxref{PopSection}), and @code{.previous}
-(@pxref{Previous}).
+(@pxref{Previous}). It is also implemented on COFF targets.
 
 This directive pushes the current section (and subsection) onto the
 top of the section stack, and then replaces the current section and
@@ -6996,6 +6996,11 @@ will be as if no flags had been specified at all.
 
 If the optional argument to the @code{.section} directive is not quoted, it is
 taken as a subsection number (@pxref{Sub-Sections}).
+
+For COFF targets, the @code{.pushsection} (@pxref{PushSection}),
+@code{.popsection} (@pxref{PopSection}), and @code{.previous}
+(@pxref{Previous}) directives are also implemented.
+
 @end ifset
 
 @ifset ELF

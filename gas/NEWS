@@ -1,5 +1,9 @@
 -*- text -*-
 
+* Support for .previous, .pushsection and .popsection for COFF targets.
+  The semantics are the same as for ELF targets. This allows one to
+  compile the Linux kernel as a Windows/ReactOS driver.
+
 * Add support for the x86 AVX10_V2_AUX instructions.
 
 * The avr target supports .gnu_attribute 4 (Tag_GNU_AVR_VTABLE_AS).

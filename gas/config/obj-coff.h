@@ -318,6 +318,7 @@ extern void coff_obj_read_begin_hook     (void);
 extern void pecoff_obj_set_weak_hook     (symbolS *);
 extern void pecoff_obj_clear_weak_hook   (symbolS *);
 #endif
+extern void obj_coff_section_change_hook (void);
 extern void obj_coff_section             (int);
 extern segT obj_coff_add_segment         (const char *);
 extern void obj_coff_def                 (int);
