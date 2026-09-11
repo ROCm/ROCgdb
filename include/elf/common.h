@@ -783,6 +783,12 @@
 					/*   note name must be "LINUX".  */
 #define NT_RISCV_CSR    0x900		/* RISC-V Control and Status Registers */
 					/*   note name must be "LINUX".  */
+#define NT_RISCV_VECTOR 0x901           /* RISC-V vector registers */
+					/*   note name must be "LINUX".  */
+#define NT_RISCV_TAGGED_ADDR_CTRL 0x902	/* RISC-V tagged address control (prctl()) */
+					/*   note name must be "LINUX".  */
+#define NT_RISCV_USER_CFI 0x903		/* RISC-V shadow stack state */
+					/*   note name must be "LINUX".  */
 #define NT_SIGINFO	0x53494749	/* Fields of siginfo_t.  */
 #define NT_FILE		0x46494c45	/* Description of mapped files.  */
 

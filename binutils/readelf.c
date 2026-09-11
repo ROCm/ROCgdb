@@ -21514,6 +21514,12 @@ get_note_type (Filedata * filedata, unsigned e_type)
 	return _("NT_ARC_V2 (ARC HS accumulator/extra registers)");
       case NT_RISCV_CSR:
 	return _("NT_RISCV_CSR (RISC-V control and status registers)");
+      case NT_RISCV_VECTOR:
+	return _("NT_RISCV_VECTOR (RISC-V vector registers)");
+      case NT_RISCV_TAGGED_ADDR_CTRL:
+	return _("NT_RISCV_TAGGED_ADDR_CTRL (RISC-V tagged address control (prctl()))");
+      case NT_RISCV_USER_CFI:
+	return _("NT_RISCV_USER_CFI (RISC-V shadow stack state)");
       case NT_PSTATUS:
 	return _("NT_PSTATUS (pstatus structure)");
       case NT_FPREGS:
