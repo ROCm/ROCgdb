@@ -590,6 +590,7 @@ DESCRIPTION
 .#define bfd_mach_amdgcn_gfx1201         0x04e
 .#define bfd_mach_amdgcn_gfx12_5_generic 0x05b
 .#define bfd_mach_amdgcn_gfx1250         0x049
+.#define bfd_mach_amdgcn_gfx1250_strict  0x0eb
 .  bfd_arch_last
 .  };
 */
