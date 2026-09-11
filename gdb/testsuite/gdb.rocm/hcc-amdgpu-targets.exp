@@ -34,8 +34,11 @@ proc with_stub_devices {devices body} {
 }
 
 # Tests using find_amdgpu_devices (no HCC_AMDGPU_TARGET env var).
+# Disable generic-target mapping for the duration of this file so that
+# the deduplication logic is tested against concrete arch names.
 
-save_vars { env(HCC_AMDGPU_TARGET) } {
+save_vars { env(HCC_AMDGPU_TARGET) ::rocm_use_generic_targets } {
+    set ::rocm_use_generic_targets 0
     unset -nocomplain ::env(HCC_AMDGPU_TARGET)
 
     with_stub_devices {gfx942 gfx942 gfx942} {
@@ -65,14 +68,16 @@ save_vars { env(HCC_AMDGPU_TARGET) } {
 
 # Tests using HCC_AMDGPU_TARGET env var.
 
-save_vars { env(HCC_AMDGPU_TARGET) } {
+save_vars { env(HCC_AMDGPU_TARGET) ::rocm_use_generic_targets } {
+    set ::rocm_use_generic_targets 0
     set ::env(HCC_AMDGPU_TARGET) "gfx942,gfx942,gfx942"
     set result [hcc_amdgpu_targets]
     verbose -log "hcc_amdgpu_targets: got $result"
     gdb_assert {$result eq {gfx942}} "env var: duplicates removed"
 }
 
-save_vars { env(HCC_AMDGPU_TARGET) } {
+save_vars { env(HCC_AMDGPU_TARGET) ::rocm_use_generic_targets } {
+    set ::rocm_use_generic_targets 0
     set ::env(HCC_AMDGPU_TARGET) "gfx906,gfx90a,gfx906"
     set result [hcc_amdgpu_targets]
     verbose -log "hcc_amdgpu_targets: got $result"

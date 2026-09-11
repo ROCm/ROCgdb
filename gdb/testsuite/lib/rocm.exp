@@ -101,6 +101,37 @@ gdb_caching_proc find_amdgpu_devices {} {
     return {}
 }
 
+# Return the generic AMDGPU target for ARCH, or "" if no generic target
+# exists for it.
+
+proc generic_target_for { arch } {
+    array set map {
+	gfx900 gfx9-generic    gfx902 gfx9-generic
+	gfx904 gfx9-generic    gfx906 gfx9-generic
+	gfx909 gfx9-generic    gfx90c gfx9-generic
+	gfx942 gfx9-4-generic  gfx950 gfx9-4-generic
+	gfx1010 gfx10-1-generic  gfx1011 gfx10-1-generic
+	gfx1012 gfx10-1-generic  gfx1013 gfx10-1-generic
+	gfx1030 gfx10-3-generic  gfx1031 gfx10-3-generic
+	gfx1032 gfx10-3-generic  gfx1033 gfx10-3-generic
+	gfx1034 gfx10-3-generic  gfx1035 gfx10-3-generic
+	gfx1036 gfx10-3-generic
+	gfx1100 gfx11-generic  gfx1101 gfx11-generic
+	gfx1102 gfx11-generic  gfx1103 gfx11-generic
+	gfx1150 gfx11-generic  gfx1151 gfx11-generic
+	gfx1152 gfx11-generic  gfx1153 gfx11-generic
+	gfx1154 gfx11-generic
+	gfx1170 gfx11-7-generic  gfx1171 gfx11-7-generic
+	gfx1172 gfx11-7-generic
+	gfx1200 gfx12-generic  gfx1201 gfx12-generic
+	gfx1250 gfx12-5-generic
+    }
+    if { [info exists map($arch)] } {
+	return $map($arch)
+    }
+    return ""
+}
+
 # Get the list of unique GPU targets to compile for.
 #
 # If HCC_AMDGPU_TARGET is set in the environment, use it.
@@ -128,6 +159,21 @@ proc hcc_amdgpu_targets {} {
 	    lappend unique $t
 	}
     }
+
+    # When the rocm-generic board is active, map each concrete arch to
+    # its generic equivalent and drop any that have no mapping.
+    if { [info exists ::rocm_use_generic_targets] \
+	     && $::rocm_use_generic_targets } {
+	set mapped {}
+	foreach t $unique {
+	    set g [generic_target_for $t]
+	    if { $g ne "" && $g ni $mapped } {
+		lappend mapped $g
+	    }
+	}
+	return $mapped
+    }
+
     return $unique
 }
 

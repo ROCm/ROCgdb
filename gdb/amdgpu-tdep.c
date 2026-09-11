@@ -1762,10 +1762,26 @@ amdgpu_address_scope (struct gdbarch *gdbarch, ptid_t ptid, CORE_ADDR address)
     = amdgpu_segment_address_from_core_address (address);
 
   amd_dbgapi_architecture_id_t architecture_id;
-  if (amd_dbgapi_get_architecture
-      (gdbarch_bfd_arch_info (gdbarch)->mach, &architecture_id)
-      != AMD_DBGAPI_STATUS_SUCCESS)
-    error (_("amd_dbgapi_get_architecture failed"));
+  if (ptid_is_gpu (ptid))
+    {
+      /* We have a concrete wave, use the wave's architecture.  */
+      amd_dbgapi_wave_id_t wave_id = get_amd_dbgapi_wave_id (ptid);
+
+      if (amd_dbgapi_wave_get_info (wave_id,
+				    AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
+				    sizeof (architecture_id),
+				    &architecture_id)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_wave_get_info failed"));
+
+    }
+  else
+    {
+      if (amd_dbgapi_get_architecture
+	  (gdbarch_bfd_arch_info (gdbarch)->mach, &architecture_id)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd_dbgapi_get_architecture failed"));
+    }
 
   amd_dbgapi_address_space_id_t address_space_id;
   if (amd_dbgapi_dwarf_address_space_to_address_space (architecture_id,
