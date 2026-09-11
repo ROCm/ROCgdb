@@ -161,6 +161,9 @@ struct gdb_mpz
   /* Return a string containing VAL.  */
   std::string str () const { return gmp_string_printf ("%Zd", m_val); }
 
+  /* As str, but in hex.  */
+  std::string hex () const { return gmp_string_printf ("%#Zx", m_val); }
+
   /* The destructor.  */
   ~gdb_mpz () { mpz_clear (m_val); }
 

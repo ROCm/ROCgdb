@@ -47,7 +47,9 @@ extern void ATTRIBUTE_USED debug (const gdb_mpz &);
 void ATTRIBUTE_USED
 debug (const gdb_mpz &val)
 {
-  gdb_printf (gdb_stdlog, "%s\n", val.str ().c_str ());
+  std::string dec = val.str ();
+  std::string hex = val.hex ();
+  gdb_printf (gdb_stdlog, "%s (%s)\n", dec.c_str (), hex.c_str ());
   gdb_flush (gdb_stdlog);
 }
 
