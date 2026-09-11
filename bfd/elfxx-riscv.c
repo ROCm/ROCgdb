@@ -1340,6 +1340,7 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
 
   {"smaia", "+ssaia", check_implicit_always},
   {"smcdeleg", "+ssccfg", check_implicit_always},
+  {"smpmpdeleg", "+smcsrind,+sspmp", check_implicit_always},
   {"smcsrind", "+sscsrind", check_implicit_always},
   {"smcntrpmf", "+zicsr", check_implicit_always},
   {"smctr", "+zicsr", check_implicit_always},
@@ -1352,6 +1353,8 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
 
   {"ssaia", "+zicsr", check_implicit_always},
   {"ssccfg", "+sscsrind", check_implicit_always},
+  {"sspmpen", "+sspmp", check_implicit_always},
+  {"sspmp", "+sscsrind", check_implicit_always},
   {"sscsrind", "+zicsr", check_implicit_always},
   {"sscofpmf", "+zicsr", check_implicit_always},
   {"sscounterenw", "+zicsr", check_implicit_always},
@@ -1613,6 +1616,7 @@ static const struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {"smcntrpmf",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smctr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smepmp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"smpmpdeleg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smpmpmt",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smrnmi",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smstateen",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -1640,6 +1644,8 @@ static const struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {"svrsw60t59b",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"svvptc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssqosid",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"sspmp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"sspmpen",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssnpm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smnpm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smmpm",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },

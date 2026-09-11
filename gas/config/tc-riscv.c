@@ -83,6 +83,7 @@ enum riscv_csr_class
   CSR_CLASS_SMCNTRPMF,		/* Smcntrpmf */
   CSR_CLASS_SMCNTRPMF_32,	/* Smcntrpmf, rv32 only */
   CSR_CLASS_SMCTR,		/* Smctr */
+  CSR_CLASS_SMPMPDELEG,		/* Smpmpdeleg */
   CSR_CLASS_SMRNMI,		/* Smrnmi */
   CSR_CLASS_SMSTATEEN,		/* Smstateen only */
   CSR_CLASS_SMSTATEEN_32,	/* Smstateen RV32 only */
@@ -105,6 +106,8 @@ enum riscv_csr_class
   CSR_CLASS_SSTC_32,		/* Sstc RV32 only */
   CSR_CLASS_SSTC_AND_H_32,	/* Sstc RV32 only (with H) */
   CSR_CLASS_SSCTR,		/* Ssctr */
+  CSR_CLASS_SSPMPEN,		/* Sspmpen */
+  CSR_CLASS_SSPMPEN_32,		/* Sspmpen, RV32 only */
   CSR_CLASS_SSQOSID,		/* Ssqosid */
   CSR_CLASS_XTHEADVECTOR,	/* xtheadvector only */
 };
@@ -1124,6 +1127,7 @@ riscv_csr_address (const char *csr_name,
       extension = "smstateen";
       break;
     case CSR_CLASS_SMCTR: extension = "smctr"; break;
+    case CSR_CLASS_SMPMPDELEG: extension = "smpmpdeleg"; break;
     case CSR_CLASS_SSAIA:
     case CSR_CLASS_SSAIA_AND_H:
     case CSR_CLASS_SSAIA_32:
@@ -1173,6 +1177,12 @@ riscv_csr_address (const char *csr_name,
       extension = "sstc";
       break;
     case CSR_CLASS_SSCTR: extension = "ssctr"; break;
+    case CSR_CLASS_SSPMPEN_32:
+      is_rv32_only = true;
+      /* Fall through.  */
+    case CSR_CLASS_SSPMPEN:
+      extension = "sspmpen";
+      break;
     case CSR_CLASS_DEBUG:
       break;
     case CSR_CLASS_XTHEADVECTOR:
