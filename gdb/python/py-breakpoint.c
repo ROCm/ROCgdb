@@ -1261,7 +1261,7 @@ gdbpy_breakpoint_created (struct breakpoint *bp)
       newbp->number = bp->number;
       newbp->bp = bp;
       newbp->bp->py_bp_object = newbp;
-      newbp->is_finish_bp = 0;
+      newbp->is_finish_bp = false;
       ++bppy_live;
     }
   else

@@ -428,8 +428,8 @@ struct gdbpy_breakpoint_object : public PyObject
      deleted.  */
   struct breakpoint *bp;
 
-  /* 1 is this is a FinishBreakpoint object, 0 otherwise.  */
-  int is_finish_bp;
+  /* True is this is a FinishBreakpoint object, false otherwise.  */
+  bool is_finish_bp;
 };
 
 static_assert (gdb::is_python_allocatable_v<gdbpy_breakpoint_object>);
