@@ -82,7 +82,7 @@ len_without_escapes (const std::string &str)
 
 /* Function to disassemble up to COUNT instructions starting from address
    PC into the ASM_LINES vector (which will be emptied of any previous
-   contents).  Return the address of the COUNT'th instruction after pc.
+   contents).  Return the address after the last disassembled instruction.
    When ADDR_SIZE is non-null then place the maximum size of an address and
    label into the value pointed to by ADDR_SIZE, and set the addr_size
    field on each item in ASM_LINES, otherwise the addr_size fields within
