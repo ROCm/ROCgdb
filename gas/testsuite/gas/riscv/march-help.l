@@ -69,7 +69,7 @@ All available -march extensions for RISC-V:
 	zve64x                                  1.0
 	zve64f                                  1.0
 	zve64d                                  1.0
-	zvabd                                   1.0
+	zvabd                                   0.9
 	zvbb                                    1.0
 	zvbc                                    1.0
 	zvfbdota32f                             1.0

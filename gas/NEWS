@@ -9,6 +9,8 @@
 * The avr target supports .gnu_attribute 4 (Tag_GNU_AVR_VTABLE_AS).
   For details, see https://sourceware.org/PR34305
 
+* Add support for new variants and encodings of RISC-V Zvabd extension v0.9.
+
 Changes in 2.47:
 
 * New command line option --reloc-section-sym=[all|internal|none]

@@ -2242,11 +2242,15 @@ const struct riscv_opcode riscv_opcodes[] =
 {"vsm3me.vv",    0, INSN_CLASS_ZVKSH, "Vd,Vt,Vs", MATCH_VSM3ME_VV, MASK_VSM3ME_VV, match_opcode, 0},
 
 /* Zvabd instructions.  */
-{"vabs.v",       0, INSN_CLASS_ZVABD, "Vd,VtVm",    MATCH_VABS_V,     MASK_VABS_V,     match_opcode, 0},
+{"vabs.v",       0, INSN_CLASS_ZVABD, "Vd,VtVm",    MATCH_VABD_VX,    MASK_VABD_VX | MASK_RS1, match_opcode, INSN_ALIAS},
 {"vabd.vv",      0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VABD_VV,    MASK_VABD_VV,    match_opcode, 0},
+{"vabd.vx",      0, INSN_CLASS_ZVABD, "Vd,Vt,sVm", MATCH_VABD_VX,    MASK_VABD_VX,    match_opcode, 0},
 {"vabdu.vv",     0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VABDU_VV,   MASK_VABDU_VV,   match_opcode, 0},
+{"vabdu.vx",     0, INSN_CLASS_ZVABD, "Vd,Vt,sVm", MATCH_VABDU_VX,   MASK_VABDU_VX,   match_opcode, 0},
 {"vwabda.vv",    0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VWABDA_VV,  MASK_VWABDA_VV,  match_opcode, 0},
+{"vwabda.vx",    0, INSN_CLASS_ZVABD, "Vd,Vt,sVm", MATCH_VWABDA_VX,  MASK_VWABDA_VX,  match_opcode, 0},
 {"vwabdau.vv",   0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VWABDAU_VV, MASK_VWABDAU_VV, match_opcode, 0},
+{"vwabdau.vx",   0, INSN_CLASS_ZVABD, "Vd,Vt,sVm", MATCH_VWABDAU_VX, MASK_VWABDAU_VX, match_opcode, 0},
 
 /* ZCB instructions.  */
 {"c.lbu",      0, INSN_CLASS_ZCB, "Ct,Wcb(Cs)", MATCH_C_LBU, MASK_C_LBU, match_opcode, INSN_DREF|INSN_1_BYTE },
