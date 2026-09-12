@@ -161,6 +161,12 @@ tui_disassemble (struct gdbarch *gdbarch,
 static CORE_ADDR
 tui_find_backward_disassembly_start_address (CORE_ADDR addr)
 {
+  if (addr == 0)
+    {
+      /* We cannot go backwards from zero.  */
+      return addr;
+    }
+
   bound_minimal_symbol msym_prev;
   bound_minimal_symbol msym
     = lookup_minimal_symbol_by_pc_section (addr - 1, nullptr,
