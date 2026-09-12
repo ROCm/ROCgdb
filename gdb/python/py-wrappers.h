@@ -127,7 +127,7 @@ gdbpy_bytes_size (gdbpy_borrowed_ref<> ref)
 
 /* Wrapper for PyList_New.  */
 static inline gdbpy_ref<>
-gdbpy_new_list (Py_ssize_t len)
+gdbpy_list_new (Py_ssize_t len)
 {
   gdbpy_ref<> result (PyList_New (len));
   if (result == nullptr)
@@ -145,7 +145,7 @@ gdbpy_list_append (gdbpy_borrowed_ref<> list, gdbpy_borrowed_ref<> val)
 
 /* Wrapper for PyDict_New.  */
 static inline gdbpy_ref<>
-gdbpy_new_dict ()
+gdbpy_dict_new ()
 {
   gdbpy_ref<> result (PyDict_New ());
   if (result == nullptr)
@@ -205,7 +205,7 @@ gdbpy_unicode_from_string (std::string_view str)
   return result;
 }
 
-/* Wrapper for PyUnicode_FromFormatV.  A template function is used to
+/* Wrapper for PyUnicode_FromFormat.  A template function is used to
    avoid issues with throwing across va_end.  */
 template<typename... Arg>
 gdbpy_ref<>
