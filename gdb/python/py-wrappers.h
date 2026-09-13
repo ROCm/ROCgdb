@@ -384,4 +384,14 @@ gdbpy_get_address (gdbpy_borrowed_ref<> obj)
   return result;
 }
 
+/* Wrapper for PyObject_IsTrue.  */
+static inline bool
+gdbpy_object_is_true (gdbpy_borrowed_ref<> val)
+{
+  int cmp = PyObject_IsTrue (val);
+  if (cmp < 0)
+    throw gdb_python_exception ();
+  return cmp;
+}
+
 #endif /* GDB_PYTHON_PY_WRAPPERS_H */

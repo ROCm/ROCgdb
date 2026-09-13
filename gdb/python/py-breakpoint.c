@@ -75,6 +75,10 @@ struct gdbpy_breakpoint_location_object : public PyObject
     return bp_loc->enabled;
   }
 
+  /* Python function to set the enabled state of a breakpoint
+     location.  */
+  void set_enabled (gdbpy_opt_borrowed_ref<> newvalue);
+
   /* Python function to get owner of breakpoint location, which is of
      type gdb.Breakpoint.  */
   gdbpy_ref<> get_owner () const
@@ -127,18 +131,6 @@ struct gdbpy_breakpoint_location_object : public PyObject
 };
 
 static_assert (gdb::is_python_allocatable_v<gdbpy_breakpoint_location_object>);
-
-/* Require that BREAKPOINT and LOCATION->OWNER are the same; throw a Python
-   exception if they are not.  This macro is for use in setter functions.  */
-#define BPLOCPY_SET_REQUIRE_VALID(Breakpoint, Location)                     \
-    do {                                                                    \
-      if ((Breakpoint)->bp != (Location)->bp_loc->owner)                    \
-	{                                                                   \
-	  PyErr_Format (PyExc_RuntimeError,                                 \
-			_("Breakpoint location is invalid."));		    \
-	  return -1;                                                        \
-	}                                                                   \
-    } while (0)
 
 /* Debugging of Python breakpoints.  */
 
@@ -1614,39 +1606,20 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_breakpoint_locations);
 
 /* Python function to set the enabled state of a breakpoint location.  */
 
-static int
-bplocpy_set_enabled (PyObject *py_self, PyObject *newvalue, void *closure)
+void
+gdbpy_breakpoint_location_object::set_enabled
+     (gdbpy_opt_borrowed_ref<> newvalue)
 {
-  auto *self = (gdbpy_breakpoint_location_object *) py_self;
-  BPPY_SET_REQUIRE_VALID (self->owner);
-  BPLOCPY_SET_REQUIRE_VALID (self->owner, self);
+  require_valid ();
 
   if (newvalue == nullptr)
-    {
-      PyErr_SetString (PyExc_TypeError,
-		       _("Cannot delete 'enabled' attribute."));
-      return -1;
-    }
+    gdbpy_err_set_string (PyExc_TypeError,
+			  _("Cannot delete 'enabled' attribute."));
   else if (!PyBool_Check (newvalue))
-    {
-      PyErr_SetString (PyExc_TypeError,
-		       _("The value of 'enabled' must be a boolean."));
-      return -1;
-    }
+    gdbpy_err_set_string (PyExc_TypeError,
+			  _("The value of 'enabled' must be a boolean."));
 
-  int cmp = PyObject_IsTrue (newvalue);
-  if (cmp < 0)
-    return -1;
-
-  try
-    {
-      enable_disable_bp_location (self->bp_loc, cmp == 1);
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (-1, except);
-    }
-  return 0;
+  enable_disable_bp_location (bp_loc, gdbpy_object_is_true (newvalue));
 }
 
 /* Attempt to get fully resolved file path for symtab.  */
@@ -1769,7 +1742,8 @@ static gdb_PyGetSetDef bp_location_object_getset[] = {
   { "enabled",
     wrap_getter<gdbpy_breakpoint_location_object,
 		&gdbpy_breakpoint_location_object::get_enabled>,
-    bplocpy_set_enabled,
+    wrap_setter<gdbpy_breakpoint_location_object,
+		&gdbpy_breakpoint_location_object::set_enabled>,
     "Boolean telling whether the breakpoint is enabled.", NULL },
   { "owner",
     wrap_getter<gdbpy_breakpoint_location_object,
