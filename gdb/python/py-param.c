@@ -376,15 +376,13 @@ set_parameter_value (parmpy_object *self, PyObject *value)
 		}
 	    }
 
-	if (allowed == TRIBOOL_UNKNOWN)
-	  {
-	    if (val > UINT_MAX || val < INT_MIN
+	if (allowed == TRIBOOL_UNKNOWN
+	    && (val > UINT_MAX || val < INT_MIN
 		|| (var_type == var_uinteger && val < 0)
 		|| (var_type == var_integer && val > INT_MAX)
 		|| (var_type == var_pinteger && val < 0)
-		|| (var_type == var_pinteger && val > INT_MAX))
-	      allowed = TRIBOOL_FALSE;
-	  }
+		|| (var_type == var_pinteger && val > INT_MAX)))
+	  allowed = TRIBOOL_FALSE;
 	if (allowed == TRIBOOL_FALSE)
 	  {
 	    PyErr_SetString (PyExc_RuntimeError,

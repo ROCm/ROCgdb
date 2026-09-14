@@ -1263,11 +1263,9 @@ gdbpy_breakpoint_created (struct breakpoint *bp)
       gdbpy_print_stack ();
     }
 
-  if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_created))
-    {
-      if (evpy_emit_event (newbp, gdb_py_events.breakpoint_created) < 0)
-	gdbpy_print_stack ();
-    }
+  if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_created)
+      && evpy_emit_event (newbp, gdb_py_events.breakpoint_created) < 0)
+    gdbpy_print_stack ();
 }
 
 /* Callback that is used when a breakpoint is deleted.  This will
@@ -1291,12 +1289,10 @@ gdbpy_breakpoint_deleted (struct breakpoint *b)
 	  if (bp_obj->is_finish_bp)
 	    bpfinishpy_pre_delete_hook (bp_obj.get ());
 
-	  if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_deleted))
-	    {
-	      if (evpy_emit_event (bp_obj,
-				   gdb_py_events.breakpoint_deleted) < 0)
-		gdbpy_print_stack ();
-	    }
+	  if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_deleted)
+	      && evpy_emit_event (bp_obj,
+				  gdb_py_events.breakpoint_deleted) < 0)
+	    gdbpy_print_stack ();
 
 	  bp_obj->bp = NULL;
 	  --bppy_live;
@@ -1320,15 +1316,10 @@ gdbpy_breakpoint_modified (struct breakpoint *b)
       gdbpy_enter enter_py (b->gdbarch);
 
       PyObject *bp_obj = bp->py_bp_object;
-      if (bp_obj)
-	{
-	  if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_modified))
-	    {
-	      if (evpy_emit_event (bp_obj,
-				   gdb_py_events.breakpoint_modified) < 0)
-		gdbpy_print_stack ();
-	    }
-	}
+      if (bp_obj != nullptr
+	  && !evregpy_no_listeners_p (gdb_py_events.breakpoint_modified)
+	  && evpy_emit_event (bp_obj, gdb_py_events.breakpoint_modified) < 0)
+	gdbpy_print_stack ();
     }
 }
 

@@ -662,10 +662,10 @@ gdbpy_executable_changed (struct program_space *pspace, bool reload_p)
 
   gdbpy_enter enter_py;
 
-  if (!evregpy_no_listeners_p (gdb_py_events.executable_changed))
-    if (emit_executable_changed_event (gdb_py_events.executable_changed,
-				       pspace, reload_p) < 0)
-      gdbpy_print_stack ();
+  if (!evregpy_no_listeners_p (gdb_py_events.executable_changed)
+      && emit_executable_changed_event (gdb_py_events.executable_changed,
+					pspace, reload_p) < 0)
+    gdbpy_print_stack ();
 }
 
 /* Helper function to emit NewProgspaceEvent (when ADDING_P is true) or

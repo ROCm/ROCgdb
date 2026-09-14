@@ -905,11 +905,8 @@ gdbpy_rbreak (PyObject *self, PyObject *args, PyObject *kw)
   for (const symbol_search &p : symbols)
     {
       /* Minimal symbols included?  */
-      if (minsyms_p)
-	{
-	  if (p.msymbol.minsym != NULL)
-	    count++;
-	}
+      if (minsyms_p && p.msymbol.minsym != nullptr)
+	count++;
 
       if (p.symbol != NULL)
 	count++;
@@ -936,9 +933,8 @@ gdbpy_rbreak (PyObject *self, PyObject *args, PyObject *kw)
       std::string symbol_name;
 
       /* Skipping minimal symbols?  */
-      if (minsyms_p == 0)
-	if (p.msymbol.minsym != NULL)
-	  continue;
+      if (minsyms_p == 0 && p.msymbol.minsym != nullptr)
+	continue;
 
       if (p.msymbol.minsym == NULL)
 	{
