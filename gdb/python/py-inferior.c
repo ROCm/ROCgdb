@@ -984,7 +984,7 @@ infpy_dealloc (PyObject *obj)
 PyObject *
 gdbpy_selected_inferior (PyObject *self, PyObject *args)
 {
-  return (inferior_to_inferior_object (current_inferior ()).release ());
+  return inferior_to_inferior_object (current_inferior ()).release ();
 }
 
 /* Implement the selected_context event handler.  This is called when some

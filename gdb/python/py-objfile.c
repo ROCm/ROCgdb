@@ -674,7 +674,7 @@ objfile_to_objfile_object (struct objfile *objfile)
   if (result == NULL)
     {
       gdbpy_ref<objfile_object> object
-	((objfile_object *) PyObject_New (objfile_object, &objfile_object_type));
+	(PyObject_New (objfile_object, &objfile_object_type));
       if (object == NULL)
 	return NULL;
       if (!objfpy_initialize (object))

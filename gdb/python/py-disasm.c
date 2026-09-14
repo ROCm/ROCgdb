@@ -608,7 +608,7 @@ disasmpy_builtin_disassemble (PyObject *self, PyObject *args, PyObject *kw)
     ((disasm_result_object *) type->tp_alloc (type, 0));
   auto content = disassembler.release ();
   disasmpy_init_disassembler_result (res.get (), length, std::move (content));
-  return reinterpret_cast<PyObject *> (res.release ());
+  return res.release ();
 }
 
 /* Implement gdb._set_enabled function.  Takes a boolean parameter, and
@@ -1215,8 +1215,7 @@ gdbpy_print_insn (struct gdbarch *gdbarch, CORE_ADDR memaddr,
 
   /* Create the new DisassembleInfo object we will pass into Python.  */
   gdbpy_ref<disasm_info_object> disasm_info
-    ((disasm_info_object *) PyObject_New (disasm_info_object,
-					  &disasm_info_object_type));
+    (PyObject_New (disasm_info_object, &disasm_info_object_type));
   if (disasm_info == nullptr)
     {
       gdbpy_print_stack ();

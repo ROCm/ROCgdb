@@ -1214,7 +1214,7 @@ public:
   gdbpy_ref<> lookup (O *owner, val_type *val) const
   {
     obj_type *obj = get_storage (owner)->lookup (val);
-    Py_XINCREF (static_cast<PyObject *> (obj));
+    Py_XINCREF (obj);
     return gdbpy_ref<> (obj);
   }
 

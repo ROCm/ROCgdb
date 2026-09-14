@@ -363,14 +363,12 @@ bpfinishpy_detect_out_scope_cb (struct breakpoint *b,
 				struct breakpoint *bp_stopped,
 				bool delete_bp)
 {
-  PyObject *py_bp = b->py_bp_object;
-
   /* Trigger out_of_scope if this is a FinishBreakpoint and its frame is
      not anymore in the current callstack.  */
-  if (py_bp != NULL && b->py_bp_object->is_finish_bp)
+  if (b->py_bp_object != nullptr && b->py_bp_object->is_finish_bp)
     {
       struct finish_breakpoint_object *finish_bp =
-	  (struct finish_breakpoint_object *) py_bp;
+	  (struct finish_breakpoint_object *) b->py_bp_object;
 
       /* Check scope if not currently stopped at the FinishBreakpoint.  */
       if (b != bp_stopped)
