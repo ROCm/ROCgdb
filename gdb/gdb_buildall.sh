@@ -202,7 +202,7 @@ cat <<EOF > arch
 set architecture
 quit
 EOF
-./gdb/gdb --batch -nx -x arch 2>&1 | cat > gdb_archs
+./gdb/gdb --data-directory gdb/data-directory --batch -nx -x arch 2>&1 | cat > gdb_archs
 tail -n 1 gdb_archs | sed 's/auto./\n/g' | sed 's/,/\n/g' |  sed 's/Requires an argument. Valid arguments are/\n/g' | sed '/^[ ]*$/d' > arch
 mv arch gdb_archs
 
@@ -226,7 +226,7 @@ EOF
   log_file=$target.log
   log_file=${log_file//:/_}
   echo -n "... ${target}"
-  ./gdb/gdb -batch -nx -x x 2>&1 | cat > $log_file
+  ./gdb/gdb --data-directory gdb/data-directory -batch -nx -x x 2>&1 | cat > $log_file
   # Check GDBs results
   if test ! -s $log_file
   then
