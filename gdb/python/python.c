@@ -1258,8 +1258,7 @@ gdbpy_before_prompt_hook (const struct extension_language_defn *extlang,
 	    }
 
 	  gdbpy_ref<> result
-	    (PyObject_CallFunctionObjArgs (hook.get (), current_prompt.get (),
-					   NULL));
+	    = gdbpy_object_call_function_obj_args (hook, current_prompt);
 	  if (result == NULL)
 	    {
 	      gdbpy_print_stack ();
@@ -1360,11 +1359,10 @@ gdbpy_colorize (const std::string &filename, const std::string &contents,
      contents (a bytes object).  This function should return either a bytes
      object, the same contents with styling applied, or None to indicate
      that no styling should be performed.  */
-  gdbpy_ref<> result (PyObject_CallFunctionObjArgs (hook.get (),
-						    fname_arg.get (),
-						    contents_arg.get (),
-						    lang_arg.get (),
-						    nullptr));
+  gdbpy_ref<> result = gdbpy_object_call_function_obj_args (hook,
+							    fname_arg,
+							    contents_arg,
+							    lang_arg);
   if (result == nullptr)
     {
       gdbpy_print_stack ();
@@ -1429,10 +1427,9 @@ gdbpy_colorize_disasm (const std::string &content, gdbarch *gdbarch)
       return {};
     }
 
-  gdbpy_ref<> result (PyObject_CallFunctionObjArgs (hook.get (),
-						    content_arg.get (),
-						    gdbarch_arg.get (),
-						    nullptr));
+  gdbpy_ref<> result = gdbpy_object_call_function_obj_args (hook,
+							    content_arg,
+							    gdbarch_arg);
   if (result == nullptr)
     {
       gdbpy_print_stack ();
@@ -1899,8 +1896,7 @@ gdbpy_handle_missing_debuginfo (const struct extension_language_defn *extlang,
 
   /* Call the function, passing in the Python objfile object.  */
   gdbpy_ref<> pyo_execute_ret
-    (PyObject_CallFunctionObjArgs (pyo_handler.get (), pyo_objfile.get (),
-				   nullptr));
+    = gdbpy_object_call_function_obj_args (pyo_handler, pyo_objfile);
   if (pyo_execute_ret == nullptr)
     {
       /* If the handler is cancelled due to a Ctrl-C, then propagate
@@ -1999,9 +1995,8 @@ gdbpy_find_objfile_from_buildid (const struct extension_language_defn *extlang,
 
   /* Call the function, passing in the Python objfile object.  */
   gdbpy_ref<> pyo_execute_ret
-    (PyObject_CallFunctionObjArgs (pyo_handler.get (), pyo_pspace.get (),
-				   pyo_buildid.get (), pyo_filename.get (),
-				   nullptr));
+    = gdbpy_object_call_function_obj_args (pyo_handler, pyo_pspace,
+					   pyo_buildid, pyo_filename);
   if (pyo_execute_ret == nullptr)
     {
       /* If the handler is cancelled due to a Ctrl-C, then propagate
@@ -2051,8 +2046,6 @@ static void
 gdbpy_start_type_printers (const struct extension_language_defn *extlang,
 			   struct ext_lang_type_printers *ext_printers)
 {
-  PyObject *printers_obj = NULL;
-
   if (!gdb_python_initialized)
     return;
 
@@ -2073,11 +2066,11 @@ gdbpy_start_type_printers (const struct extension_language_defn *extlang,
       return;
     }
 
-  printers_obj = PyObject_CallFunctionObjArgs (func.get (), (char *) NULL);
-  if (printers_obj == NULL)
+  gdbpy_ref<> printers_obj = gdbpy_object_call_function_obj_args (func);
+  if (printers_obj == nullptr)
     gdbpy_print_stack ();
   else
-    ext_printers->py_type_printers = printers_obj;
+    ext_printers->py_type_printers = printers_obj.release ();
 }
 
 /* If TYPE is recognized by some type printer, store in *PRETTIED_TYPE
@@ -2126,10 +2119,9 @@ gdbpy_apply_type_printers (const struct extension_language_defn *extlang,
       return EXT_LANG_RC_ERROR;
     }
 
-  gdbpy_ref<> result_obj (PyObject_CallFunctionObjArgs (func.get (),
-							printers_obj,
-							type_obj.get (),
-							(char *) NULL));
+  gdbpy_ref<> result_obj = gdbpy_object_call_function_obj_args (func,
+								printers_obj,
+								type_obj);
   if (result_obj == NULL)
     {
       gdbpy_print_stack ();

@@ -1232,10 +1232,7 @@ gdbpy_print_insn (struct gdbarch *gdbarch, CORE_ADDR memaddr,
 
   /* Call into the registered disassembler to (possibly) perform the
      disassembly.  */
-  gdbpy_ref<> result
-    (PyObject_CallFunctionObjArgs (hook.get (),
-				   disasm_info.get (),
-				   nullptr));
+  gdbpy_ref<> result = gdbpy_object_call_function_obj_args (hook, disasm_info);
 
   if (result == nullptr)
     {

@@ -83,12 +83,11 @@ evpy_emit_event (gdbpy_opt_borrowed_ref<> event,
       if (func == NULL)
 	return -1;
 
-      /* This local exists so we don't pass an object through
-	 '...'.  */
-      PyObject *ev = event;
-      gdbpy_ref<> func_result (PyObject_CallFunctionObjArgs (func, ev,
-							     nullptr));
-
+      gdbpy_ref<> func_result;
+      if (event == nullptr)
+	func_result = gdbpy_object_call_function_obj_args (func);
+      else
+	func_result = gdbpy_object_call_function_obj_args (func, event);
       if (func_result == NULL)
 	{
 	  /* Print the trace here, but keep going -- we want to try to

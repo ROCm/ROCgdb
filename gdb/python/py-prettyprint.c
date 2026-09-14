@@ -78,8 +78,7 @@ search_pp_list (PyObject *list, PyObject *value)
 	    continue;
 	}
 
-      gdbpy_ref<> printer (PyObject_CallFunctionObjArgs (function, value,
-							 NULL));
+      gdbpy_ref<> printer = gdbpy_object_call_function_obj_args (function, value);
       if (printer == NULL)
 	return NULL;
       else if (printer != Py_None)

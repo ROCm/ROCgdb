@@ -826,11 +826,9 @@ recpy_call_filter (const uint64_t payload, std::optional<uint64_t> ip,
   else
     py_ip = gdb_py_object_from_ulongest (*ip);
 
-  gdbpy_ref<> py_result (PyObject_CallFunctionObjArgs ((PyObject *) ptw_filter,
-							py_payload.get (),
-							py_ip.get (),
-							nullptr));
-
+  gdbpy_ref<> py_result
+    = gdbpy_object_call_function_obj_args ((PyObject *) ptw_filter,
+					   py_payload, py_ip);
   if (py_result == nullptr)
     {
       gdbpy_print_stack ();

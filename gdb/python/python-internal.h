@@ -212,6 +212,68 @@ gdbpy_call_method (const gdbpy_ref<> &o, const char *method, Args... args)
 # define PyObject_CallMethod POISONED_PyObject_CallMethod
 #endif
 
+namespace detail
+{
+
+/* These are helpers for gdbpy_object_call_function_obj_args.  Each
+   function takes a single argument and returns a non-NULL
+   PyObject*.  */
+
+static inline PyObject *
+unwrap_ref (PyObject *val)
+{
+  gdb_assert (val != nullptr);
+  return val;
+}
+
+template<typename T>
+PyObject *
+unwrap_ref (const gdbpy_ref<T> &val)
+{
+  gdb_assert (val != nullptr);
+  return val.get ();
+}
+
+template<typename T>
+PyObject *
+unwrap_ref (gdbpy_borrowed_ref<T> val)
+{
+  /* Note that VAL cannot be nullptr here by construction.  */
+  return (PyObject *) val;
+}
+
+}
+
+/* A wrapper for PyObject_CallFunctionObjArgs that takes various kinds
+   of gdb wrappers, in addition to "PyObject *".  This variant does
+   not allow NULL arguments.  While PyObject_CallFunctionObjArgs
+   requires a trailing NULL, this function does not -- it supplies the
+   required trailing NULL on its own.
+
+   As a safety measure, no argument may be NULL.  While this may be
+   slightly inconvenient at times (you can't early-terminate the
+   arguments, you have to add a special case at the call site), it
+   avoids bugs where early termination was unintentional.  */
+template<typename Arg, typename... Args>
+static inline gdbpy_ref<>
+gdbpy_object_call_function_obj_args (Arg &&fn, Args && ...args)
+{
+  PyObject *result
+    = PyObject_CallFunctionObjArgs (detail::unwrap_ref (fn),
+				    detail::unwrap_ref (args)...,
+				    nullptr);
+  return gdbpy_ref<> (result);
+}
+
+/* Poison PyObject_CallFunctionObjArgs.  The typesafe wrapper
+   gdbpy_object_call_function_obj_args should be used instead.  */
+#undef PyObject_CallFunctionObjArgs
+#ifdef __GNUC__
+# pragma GCC poison PyObject_CallFunctionObjArgs
+#else
+# define PyObject_CallFunctionObjArgs POISONED_PyObject_CallFunctionObjArgs
+#endif
+
 /* The 'name' parameter of PyErr_NewException was missing the 'const'
    qualifier in Python <= 3.4.  Hence, we wrap it in a function to
    avoid errors when compiled with -Werror.  */

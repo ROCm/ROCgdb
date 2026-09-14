@@ -418,10 +418,8 @@ gdbpy_tui_window_maker::operator() (const char *win_name)
      which, this method should not be called.  */
   gdb_assert (m_constr != nullptr);
 
-  gdbpy_ref<> user_window
-    (PyObject_CallFunctionObjArgs (m_constr.get (),
-				   wrapper.get (),
-				   nullptr));
+  gdbpy_ref<> user_window = gdbpy_object_call_function_obj_args (m_constr,
+								 wrapper);
   if (user_window == nullptr)
     {
       gdbpy_print_stack ();

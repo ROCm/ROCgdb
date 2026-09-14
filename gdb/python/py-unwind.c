@@ -898,7 +898,7 @@ frame_unwind_python::sniff (const frame_info_ptr &this_frame,
 
   /* A (gdb.UnwindInfo, str) tuple, or None.  */
   gdbpy_ref<> pyo_execute_ret
-    (PyObject_CallFunctionObjArgs (pyo_execute.get (), pfo.get (), nullptr));
+    = gdbpy_object_call_function_obj_args (pyo_execute, pfo);
   if (pyo_execute_ret == nullptr)
     {
       /* If the unwinder is cancelled due to a Ctrl-C, then propagate
