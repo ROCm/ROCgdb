@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Build script to build GDB with all targets enabled.
 
@@ -53,7 +53,7 @@ EOF
 ### Command line options.
 makejobs=
 force=false
-targexp=""
+targexp=()
 bfd_flag=""
 clean=false
 while test $# -gt 0
@@ -63,7 +63,7 @@ do
       # Number of parallel make jobs.
       shift
       test $# -ge 1 || usage
-      makejobs="-j $1"
+      makejobs="$1"
       ;;
       --clean )
 	# Shall the build directory be deleted after processing?
@@ -73,7 +73,7 @@ do
       # A regular expression for selecting targets
       shift
       test $# -ge 1 || usage
-      targexp="${targexp} -e ${1}"
+      targexp=("${targexp[@]}" -e "${1}")
       ;;
     --force )
       # Force a rebuild
@@ -97,8 +97,8 @@ fi
 ### Environment.
 
 # Convert these to absolute directory paths.
-srcdir=`cd $1 && /bin/pwd` || exit 1
-builddir=`cd $2 && /bin/pwd` || exit 1
+srcdir=$(cd "$1" && /bin/pwd) || exit 1
+builddir=$(cd "$2" && /bin/pwd) || exit 1
 # Version of make to use
 make=${MAKE:-make}
 MAKE=${make}
@@ -108,9 +108,9 @@ ulimit -c 0
 
 # Just make sure we're in the right directory.
 maintainers=${srcdir}/gdb/MAINTAINERS
-if [ ! -r ${maintainers} ]
+if [ ! -r "${maintainers}" ]
 then
-    echo Maintainers file ${maintainers} not found
+    echo "Maintainers file ${maintainers} not found"
     exit 1
 fi
 
@@ -125,15 +125,15 @@ dir=${builddir}/ALL
 if ${force}
 then
   echo ... forcing rebuild
-  rm -rf ${dir}
+  rm -rf "${dir}"
 fi
 
 # Did the previous configure attempt fail?  If it did restart from scratch
-if test -d ${dir} -a ! -r ${dir}/Makefile
+if test -d "${dir}" -a ! -r "${dir}/Makefile"
 then
   echo ... removing partially configured
-  rm -rf ${dir}
-  if test -d ${dir}
+  rm -rf "${dir}"
+  if test -d "${dir}"
   then
     echo "... ERROR: Unable to remove directory ${dir}"
     exit 1
@@ -141,27 +141,33 @@ then
 fi
 
 # Create build directory.
-mkdir -p ${dir}
-cd ${dir} || exit 1
+mkdir -p "${dir}"
+cd "${dir}" || exit 1
 
 # Configure GDB.
 if test ! -r Makefile
 then
+  # Set custom gdb/sim build warnings here.  The code using these two vars
+  # seems be copied from gdb_mbuild.sh, where they are set from --target lines
+  # in MAINTAINERS.
+  gdbopts=""
+  simopts=""
+
   # Default SIMOPTS to GDBOPTS.
   test -z "${simopts}" && simopts="${gdbopts}"
 
   # The config options.
   __build="--enable-targets=all"
-  __enable_gdb_build_warnings=`test -z "${gdbopts}" \
-    || echo "--enable-gdb-build-warnings=${gdbopts}"`
-  __enable_sim_build_warnings=`test -z "${simopts}" \
-    || echo "--enable-sim-build-warnings=${simopts}"`
+  __enable_gdb_build_warnings=$(test -z "${gdbopts}" \
+    || echo "--enable-gdb-build-warnings=${gdbopts}")
+  __enable_sim_build_warnings=$(test -z "${simopts}" \
+    || echo "--enable-sim-build-warnings=${simopts}")
   __configure="${srcdir}/configure \
     ${__build} ${bfd_flag}\
     ${__enable_gdb_build_warnings} \
     ${__enable_sim_build_warnings}"
-  echo ... ${__configure}
-  trap "echo Removing partially configured ${dir} directory ...; rm -rf ${dir}; exit 1" 1 2 15
+  echo "... ${__configure}"
+  trap 'echo Removing partially configured ${dir} directory ...; rm -rf ${dir}; exit 1' 1 2 15
   ${__configure} > Config.log 2>&1
   trap "exit 1"  1 2 15
 
@@ -178,8 +184,8 @@ fi
 gdb_bin="gdb/gdb"
 if test ! -x gdb/gdb -a ! -x gdb/gdb.exe
 then
-  echo ... ${make} ${makejobs}
-  ( ${make} ${makejobs} all-gdb || rm -f gdb/gdb gdb/gdb.exe
+  echo "... ${make} ${makejobs:+-j $makejobs}"
+  ( "${make}" ${makejobs:+-j $makejobs} all-gdb || rm -f gdb/gdb gdb/gdb.exe
   ) > Build.log 2>&1
 
   # If the build fails, exit.
@@ -206,17 +212,17 @@ EOF
 tail -n 1 gdb_archs | sed 's/auto./\n/g' | sed 's/,/\n/g' |  sed 's/Requires an argument. Valid arguments are/\n/g' | sed '/^[ ]*$/d' > arch
 mv arch gdb_archs
 
-if test "${targexp}" != ""
+if test ${#targexp[@]} -ne 0
 then
-  alltarg=`cat gdb_archs | grep ${targexp}`
+  alltarg=$(grep "${targexp[@]}" gdb_archs)
 else
-  alltarg=`cat gdb_archs`
+  alltarg=$(cat gdb_archs)
 fi
 rm -f gdb_archs
 
 # Test all architectures available in ALLTARG
 echo "maint print architecture for"
-echo "$alltarg" | while read target
+echo "$alltarg" | while read -r target
 do
   cat <<EOF > x
 set architecture ${target}
@@ -226,14 +232,14 @@ EOF
   log_file=$target.log
   log_file=${log_file//:/_}
   echo -n "... ${target}"
-  ./gdb/gdb --data-directory gdb/data-directory -batch -nx -x x 2>&1 | cat > $log_file
+  ./gdb/gdb --data-directory gdb/data-directory -batch -nx -x x 2>&1 | cat > "$log_file"
   # Check GDBs results
-  if test ! -s $log_file
+  if test ! -s "$log_file"
   then
-    echo " ERR: gdb printed no output" | tee -a $log_file
-  elif test `grep -o internal-error $log_file | tail -n 1`
+    echo " ERR: gdb printed no output" | tee -a "$log_file"
+  elif test "$(grep -o internal-error "$log_file" | tail -n 1)"
   then
-    echo " ERR: gdb panic" | tee -a $log_file
+    echo " ERR: gdb panic" | tee -a "$log_file"
   else
     echo " OK"
   fi
@@ -241,20 +247,20 @@ EOF
   # Create a sed script that cleans up the output from GDB.
   rm -f mbuild.sed
   # Rules to replace <0xNNNN> with the corresponding function's name.
-  sed -n -e '/<0x0*>/d' -e 's/^.*<0x\([0-9a-f]*\)>.*$/0x\1/p' $log_file \
+  sed -n -e '/<0x0*>/d' -e 's/^.*<0x\([0-9a-f]*\)>.*$/0x\1/p' "$log_file" \
   | sort -u \
-  | while read addr
+  | while read -r addr
   do
-    func="`addr2line -f -e ./$gdb_bin -s ${addr} | sed -n -e 1p`"
+    func="$(addr2line -f -e ./$gdb_bin -s "${addr}" | sed -n -e 1p)"
     echo "s/<${addr}>/<${func}>/g"
   done >> mbuild.sed
   # Rules to strip the leading paths off of file names.
   echo 's/"\/.*\/gdb\//"gdb\//g' >> mbuild.sed
   # Run the script.
-  sed -f mbuild.sed $log_file > Mbuild.log
+  sed -f mbuild.sed "$log_file" > Mbuild.log
 
-  mv Mbuild.log ${builddir}/$log_file
-  rm -rf $log_file x mbuild.sed
+  mv Mbuild.log "${builddir}/$log_file"
+  rm -rf "$log_file" x mbuild.sed
 done
 echo "done."
 
@@ -262,7 +268,7 @@ echo "done."
 if ${clean}
 then
   echo "cleaning up $dir"
-  rm -rf ${dir}
+  rm -rf "${dir}"
 fi
 
 exit 0
