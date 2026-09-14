@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #  Multi-build script for testing compilation of all maintained
 #  configs of GDB.
@@ -44,19 +44,20 @@ Usage: gdb_mbuild.sh [ <options> ... ] <srcdir> <builddir>
    MAKE (make)"
 EOF
     exit 1;
-cat <<NOTYET
-  -b <maxbuilds> Run <maxbuild> builds in parallel.
-		 On a single cpu machine, 1 is recommended.
-NOTYET
+
+    # Not yet implemented:
+    # -b <maxbuilds> Run <maxbuild> builds in parallel.
+    #		   On a single cpu machine, 1 is recommended.
 }
 
 ### COMMAND LINE OPTIONS
 
 makejobs=
+# shellcheck disable=SC2034 # Not yet implemented.
 maxbuilds=1
 keepgoing=
 force=false
-targexp=""
+targexp=()
 verbose=0
 keep=false
 while test $# -gt 0
@@ -66,12 +67,13 @@ do
 	# Number of parallel make jobs.
 	shift
 	test $# -ge 1 || usage
-	makejobs="-j $1"
+	makejobs="$1"
 	;;
     -b | -c )
 	# Number of builds to fire off in parallel.
 	shift
 	test $# -ge 1 || usage
+	# shellcheck disable=SC2034 # Not yet implemented.
 	maxbuilds=$1
 	;;
     -k )
@@ -85,7 +87,7 @@ do
 	# A regular expression for selecting targets
 	shift
 	test $# -ge 1 || usage
-	targexp="${targexp} -e ${1}"
+	targexp=("${targexp[@]}" "-e" "${1}")
 	;;
     -f )
 	# Force a rebuild
@@ -93,7 +95,7 @@ do
 	;;
     -v )
 	# Be more, and more, and more, verbose
-	verbose=`expr ${verbose} + 1`
+	verbose=$((verbose + 1))
 	;;
     -* ) usage ;;
     *) break ;;
@@ -112,10 +114,10 @@ fi
 # Convert these to absolute directory paths.
 
 # Where the sources live
-srcdir=`cd $1 && /bin/pwd` || exit 1
+srcdir=$(cd "$1" && /bin/pwd) || exit 1
 
 # Where the builds occur
-builddir=`cd $2 && /bin/pwd` || exit 1
+builddir=$(cd "$2" && /bin/pwd) || exit 1
 
 ### ENVIRONMENT PARAMETERS
 
@@ -127,14 +129,14 @@ export MAKE
 
 # Where to look for the list of targets to test
 maintainers=${srcdir}/gdb/MAINTAINERS
-if [ ! -r ${maintainers} ]
+if [ ! -r "${maintainers}" ]
 then
-    echo Maintainers file ${maintainers} not found
+    echo "Maintainers file ${maintainers} not found"
     exit 1
 fi
 
 # Get the list of targets and the build options
-alltarg=`cat ${maintainers} | tr -s '[\t]' '[ ]' | sed -n '
+alltarg=$(tr -s '\t' ' ' < "${maintainers}" | sed -n '
 /^[ ]*[-a-z0-9\.]*[ ]*[(]*--target=.*/ !d
 s/^.*--target=//
 s/).*$//
@@ -150,12 +152,12 @@ h
 b loop
 :end
 p
-' | if test "${targexp}" = ""
+' | if test ${#targexp[@]} -eq 0
 then
     grep -v -e broken -e OBSOLETE
 else
-    grep ${targexp}
-fi`
+    grep "${targexp[@]}"
+fi)
 
 
 # Usage: fail <message> <test-that-should-succeed>.  Should the build
@@ -185,11 +187,11 @@ fail ()
 
 log ()
 {
-    if test ${verbose} -ge $1
+    if test ${verbose} -ge "$1"
     then
-	tee $2
+	tee "$2"
     else
-	cat > $2
+	cat > "$2"
     fi
 }
 
@@ -203,7 +205,7 @@ echo ""
 
 # For each target, configure, build and test it.
 
-echo "$alltarg" | while read target gdbopts simopts
+echo "$alltarg" | while read -r target gdbopts simopts
 do
 
     trap "exit 1"  1 2 15
@@ -214,24 +216,24 @@ do
 
     if ${force}
     then
-	echo forcing ${target} ...
-	rm -rf ${dir}
-    elif test -f ${dir}
+	echo "forcing ${target} ..."
+	rm -rf "${dir}"
+    elif test -f "${dir}"
     then
 	echo "${target}"
 	continue
     else
-	echo ${target} ...
+	echo "${target} ..."
     fi
 
     # Did the previous configure attempt fail?  If it did
     # restart from scratch.
 
-    if test -d ${dir} -a ! -r ${dir}/Makefile
+    if test -d "${dir}" -a ! -r "${dir}/Makefile"
     then
-	echo ... removing partially configured ${target}
-	rm -rf ${dir}
-	if test -d ${dir}
+	echo "... removing partially configured ${target}"
+	rm -rf "${dir}"
+	if test -d "${dir}"
 	then
 	    echo "${target}: unable to remove directory ${dir}"
 	    exit 1
@@ -240,8 +242,8 @@ do
 
     # From now on, we're in this target's build directory
 
-    mkdir -p ${dir}
-    cd ${dir} || exit 1
+    mkdir -p "${dir}"
+    cd "${dir}" || exit 1
 
     # Configure, if not already.  Should this go back to being
     # separate and done in parallel?
@@ -252,16 +254,16 @@ do
 	test -z "${simopts}" && simopts="${gdbopts}"
 	# The config options
 	__target="--target=${target}"
-	__enable_gdb_build_warnings=`test -z "${gdbopts}" \
-	    || echo "--enable-gdb-build-warnings=${gdbopts}"`
-	__enable_sim_build_warnings=`test -z "${simopts}" \
-	    || echo "--enable-sim-build-warnings=${simopts}"`
+	__enable_gdb_build_warnings=$(test -z "${gdbopts}" \
+	    || echo "--enable-gdb-build-warnings=${gdbopts}")
+	__enable_sim_build_warnings=$(test -z "${simopts}" \
+	    || echo "--enable-sim-build-warnings=${simopts}")
 	__configure="${srcdir}/configure \
 	    ${__target} \
 	    ${__enable_gdb_build_warnings} \
 	    ${__enable_sim_build_warnings}"
-	echo ... ${__configure}
-	trap "echo Removing partially configured ${dir} directory ...; rm -rf ${dir}; exit 1" 1 2 15
+	echo "... ${__configure}"
+	trap 'echo "Removing partially configured ${dir} directory ..."; rm -rf "${dir}"; exit 1' 1 2 15
 	${__configure} 2>&1 | log 2 Config.log
 	trap "exit 1"  1 2 15
     fi
@@ -275,16 +277,16 @@ do
 	# the follow-on code knows things failed.  Stops the follow-on
 	# code thinking that a failed rebuild succeeded (executable
 	# left around from previous build).
-	echo ... ${make} ${keepgoing} ${makejobs} ${target}
-	( ${make} ${keepgoing} ${makejobs} all-gdb || rm -f gdb/gdb gdb/gdb.exe
+	echo "... ${make} ${keepgoing} ${makejobs:+-j $makejobs} ${target}"
+	( ${make} ${keepgoing} ${makejobs:+-j $makejobs} all-gdb || rm -f gdb/gdb gdb/gdb.exe
 	) 2>&1 | log 1 Build.log
     fi
     fail "compile failed" ! -x gdb/gdb -a ! -x gdb/gdb.exe
 
     # Check that the built GDB can at least print it's architecture.
 
-    echo ... run ${target}
-    rm -f core gdb.core ${dir}/gdb/x
+    echo "... run ${target}"
+    rm -f core gdb.core "${dir}/gdb/x"
     cat <<EOF > x
 maint print architecture
 quit
@@ -294,7 +296,7 @@ EOF
     fail "gdb printed no output" ! -s Gdb.log
     grep -e internal-error Gdb.log && fail "gdb panic" 1
 
-    echo ... cleanup ${target}
+    echo "... cleanup ${target}"
 
     # Create a sed script that cleans up the output from GDB.
     rm -f mbuild.sed
@@ -303,9 +305,9 @@ EOF
     # name.
     sed -n -e '/<0x0*>/d' -e 's/^.*<0x\([0-9a-f]*\)>.*$/0x\1/p' Gdb.log \
     | sort -u \
-    | while read addr
+    | while read -r addr
     do
-	func="`addr2line -f -e ./gdb/gdb -s ${addr} | sed -n -e 1p`"
+	func="$(addr2line -f -e ./gdb/gdb -s "${addr}" | sed -n -e 1p)"
 	test ${verbose} -gt 0 && echo "${addr} ${func}" 1>&2
 	echo "s/<${addr}>/<${func}>/g"
     done >> mbuild.sed
@@ -317,20 +319,20 @@ EOF
     # Replace the build directory with a file as semaphore that stops
     # a rebuild. (should the logs be saved?)
 
-    cd ${builddir}
+    cd "${builddir}" || exit 1
 
     if ${keep}
     then
 	:
     else
-	rm -f ${target}.tmp
-	mv ${target}/Mbuild.log ${target}.tmp
-	rm -rf ${target}
-	mv ${target}.tmp ${target}
+	rm -f "${target}.tmp"
+	mv "${target}/Mbuild.log" "${target}.tmp"
+	rm -rf "${target}"
+	mv "${target}.tmp" "${target}"
     fi
 
     # Success!
-    echo ... ${target} built
+    echo "... ${target} built"
 
 done
 

@@ -42,8 +42,7 @@ for f in "$@"; do
 	    continue
 	    ;;
 	gdb/contrib/gdb-add-index.sh \
-	    | gdb/gdb_buildall.sh \
-	    | gdb/gdb_mbuild.sh )
+	    | gdb/gdb_buildall.sh )
 	    # Skip unclean files.
 	    continue
 	    ;;
