@@ -243,7 +243,7 @@ python_new_inferior (struct inferior *inf)
 
   gdbpy_enter enter_py;
 
-  if (evregpy_no_listeners_p (gdb_py_events.new_inferior))
+  if (!evregpy_has_listeners_p (gdb_py_events.new_inferior))
     return;
 
   gdbpy_ref<inferior_object> inf_obj = inferior_to_inferior_object (inf);
@@ -270,7 +270,7 @@ python_inferior_deleted (struct inferior *inf)
 
   gdbpy_enter enter_py;
 
-  if (evregpy_no_listeners_p (gdb_py_events.inferior_deleted))
+  if (!evregpy_has_listeners_p (gdb_py_events.inferior_deleted))
     return;
 
   gdbpy_ref<inferior_object> inf_obj = inferior_to_inferior_object (inf);
@@ -328,7 +328,7 @@ add_thread_object (struct thread_info *tp)
   if (!ins_result.second)
     return;
 
-  if (evregpy_no_listeners_p (gdb_py_events.new_thread))
+  if (!evregpy_has_listeners_p (gdb_py_events.new_thread))
     return;
 
   gdbpy_ref<> event = create_thread_event_object
@@ -1000,7 +1000,7 @@ python_context_changed (user_selected_what selection)
 
   gdbpy_enter enter_py (current_inferior ()->arch ());
 
-  if (evregpy_no_listeners_p (gdb_py_events.selected_context))
+  if (!evregpy_has_listeners_p (gdb_py_events.selected_context))
     return;
 
   gdbpy_ref<> inf_obj (gdbpy_selected_inferior (nullptr, nullptr));

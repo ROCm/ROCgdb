@@ -110,7 +110,7 @@ emit_stop_event (struct bpstat *bs, enum gdb_signal stop_signal)
   PyObject *first_bp = NULL;
   struct bpstat *current_bs;
 
-  if (evregpy_no_listeners_p (gdb_py_events.stop))
+  if (!evregpy_has_listeners_p (gdb_py_events.stop))
     return 0;
 
   gdbpy_ref<> dict = py_print_bpstat (bs, stop_signal);

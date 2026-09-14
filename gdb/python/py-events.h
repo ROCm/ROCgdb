@@ -52,6 +52,9 @@ struct events_object
 extern events_object gdb_py_events;
 
 extern eventregistry_object *create_eventregistry_object (void);
-extern bool evregpy_no_listeners_p (eventregistry_object *registry);
+
+/* Return true if at least one listener is connected to REGISTRY.  */
+
+extern bool evregpy_has_listeners_p (eventregistry_object *registry);
 
 #endif /* GDB_PYTHON_PY_EVENTS_H */

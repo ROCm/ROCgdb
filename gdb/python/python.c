@@ -1233,7 +1233,7 @@ gdbpy_before_prompt_hook (const struct extension_language_defn *extlang,
 
   gdbpy_enter enter_py;
 
-  if (!evregpy_no_listeners_p (gdb_py_events.before_prompt)
+  if (evregpy_has_listeners_p (gdb_py_events.before_prompt)
       && evpy_emit_event (NULL, gdb_py_events.before_prompt) < 0)
     return EXT_LANG_RC_ERROR;
 
@@ -2488,7 +2488,7 @@ init__gdb_module (void)
 static int
 emit_exiting_event (int exit_code)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.gdb_exiting))
+  if (!evregpy_has_listeners_p (gdb_py_events.gdb_exiting))
     return 0;
 
   gdbpy_ref<> event_obj = create_event_object (&gdb_exiting_event_object_type);

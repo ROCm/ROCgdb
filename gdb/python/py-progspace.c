@@ -662,7 +662,7 @@ gdbpy_executable_changed (struct program_space *pspace, bool reload_p)
 
   gdbpy_enter enter_py;
 
-  if (!evregpy_no_listeners_p (gdb_py_events.executable_changed)
+  if (evregpy_has_listeners_p (gdb_py_events.executable_changed)
       && emit_executable_changed_event (gdb_py_events.executable_changed,
 					pspace, reload_p) < 0)
     gdbpy_print_stack ();
@@ -692,7 +692,7 @@ gdbpy_program_space_event (program_space *pspace, bool adding_p)
       event_type = &free_progspace_event_object_type;
     }
 
-  if (evregpy_no_listeners_p (registry))
+  if (!evregpy_has_listeners_p (registry))
     return;
 
   gdbpy_ref<> pspace_obj = pspace_to_pspace_object (pspace);

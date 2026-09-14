@@ -594,7 +594,7 @@ gdbpy_tui_enabled (bool state)
 {
   gdbpy_enter enter_py;
 
-  if (evregpy_no_listeners_p (gdb_py_events.tui_enabled))
+  if (!evregpy_has_listeners_p (gdb_py_events.tui_enabled))
     return;
 
   gdbpy_ref<> event_obj = create_event_object (&tui_enabled_event_object_type);

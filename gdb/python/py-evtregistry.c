@@ -106,15 +106,14 @@ gdbpy_initialize_eventregistry ()
   return gdbpy_type_ready (&eventregistry_object_type);
 }
 
-/* Return the number of listeners currently connected to this
-   registry.  */
+/* See py-events.h.  */
 
 bool
-evregpy_no_listeners_p (eventregistry_object *registry)
+evregpy_has_listeners_p (eventregistry_object *registry)
 {
   /* REGISTRY can be nullptr if gdb failed to find the data directory
      at startup.  */
-  return registry == nullptr || PyList_Size (registry->callbacks) == 0;
+  return registry != nullptr && PyList_Size (registry->callbacks) > 0;
 }
 
 GDBPY_INITIALIZE_FILE (gdbpy_initialize_eventregistry);

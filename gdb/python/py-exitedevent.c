@@ -51,7 +51,7 @@ create_exited_event_object (const LONGEST *exit_code, struct inferior *inf)
 int
 emit_exited_event (const LONGEST *exit_code, struct inferior *inf)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.exited))
+  if (!evregpy_has_listeners_p (gdb_py_events.exited))
     return 0;
 
   gdbpy_ref<> event = create_exited_event_object (exit_code, inf);

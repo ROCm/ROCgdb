@@ -42,7 +42,7 @@ create_new_objfile_event_object (struct objfile *objfile)
 int
 emit_new_objfile_event (struct objfile *objfile)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.new_objfile))
+  if (!evregpy_has_listeners_p (gdb_py_events.new_objfile))
     return 0;
 
   gdbpy_ref<> event = create_new_objfile_event_object (objfile);
@@ -77,7 +77,7 @@ create_free_objfile_event_object (struct objfile *objfile)
 int
 emit_free_objfile_event (struct objfile *objfile)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.free_objfile))
+  if (!evregpy_has_listeners_p (gdb_py_events.free_objfile))
     return 0;
 
   gdbpy_ref<> event = create_free_objfile_event_object (objfile);
@@ -113,7 +113,7 @@ create_clear_objfiles_event_object (program_space *pspace)
 int
 emit_clear_objfiles_event (program_space *pspace)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.clear_objfiles))
+  if (!evregpy_has_listeners_p (gdb_py_events.clear_objfiles))
     return 0;
 
   gdbpy_ref<> event = create_clear_objfiles_event_object (pspace);

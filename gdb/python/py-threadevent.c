@@ -54,7 +54,7 @@ create_thread_event_object (PyTypeObject *py_type, gdbpy_borrowed_ref<> thread)
 int
 emit_thread_exit_event (thread_info * thread)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.thread_exited))
+  if (!evregpy_has_listeners_p (gdb_py_events.thread_exited))
     return 0;
 
   auto py_thr = thread_to_thread_object (thread);

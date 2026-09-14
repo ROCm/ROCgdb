@@ -122,7 +122,7 @@ int
 emit_inferior_call_event (inferior_call_kind flag, ptid_t thread,
 			  CORE_ADDR addr)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.inferior_call))
+  if (!evregpy_has_listeners_p (gdb_py_events.inferior_call))
     return 0;
 
   gdbpy_ref<> event = create_inferior_call_event_object (flag, thread, addr);
@@ -137,7 +137,7 @@ emit_inferior_call_event (inferior_call_kind flag, ptid_t thread,
 int
 emit_memory_changed_event (CORE_ADDR addr, ssize_t len)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.memory_changed))
+  if (!evregpy_has_listeners_p (gdb_py_events.memory_changed))
     return 0;
 
   gdbpy_ref<> event = create_memory_changed_event_object (addr, len);
@@ -152,7 +152,7 @@ emit_memory_changed_event (CORE_ADDR addr, ssize_t len)
 int
 emit_register_changed_event (const frame_info_ptr &frame, int regnum)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.register_changed))
+  if (!evregpy_has_listeners_p (gdb_py_events.register_changed))
     return 0;
 
   gdbpy_ref<> event = create_register_changed_event_object (frame, regnum);

@@ -160,7 +160,7 @@ connpy_connection_removed (process_stratum_target *target)
 
   gdbpy_enter enter_py;
 
-  if (!evregpy_no_listeners_p (gdb_py_events.connection_removed)
+  if (evregpy_has_listeners_p (gdb_py_events.connection_removed)
       && emit_connection_event (target, gdb_py_events.connection_removed) < 0)
     gdbpy_print_stack ();
 

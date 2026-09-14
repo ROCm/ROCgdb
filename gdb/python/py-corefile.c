@@ -332,7 +332,7 @@ static int
 emit_corefile_changed_event (inferior *inf)
 {
   /* If there are no listeners then we are done.  */
-  if (evregpy_no_listeners_p (gdb_py_events.corefile_changed))
+  if (!evregpy_has_listeners_p (gdb_py_events.corefile_changed))
     return 0;
 
   gdbpy_ref<> event_obj
