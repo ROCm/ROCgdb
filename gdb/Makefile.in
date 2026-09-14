@@ -1153,6 +1153,7 @@ COMMON_SFILES = \
 	memtag.c \
 	minidebug.c \
 	minsyms.c \
+	msvc-abi.c \
 	namespace.c \
 	objc-lang.c \
 	objfiles.c \
