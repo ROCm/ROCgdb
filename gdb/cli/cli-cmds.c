@@ -2713,11 +2713,10 @@ shell_internal_fn (struct gdbarch *gdbarch,
   if (!language->is_string_type_p (type))
     error (_("Argument must be a string."));
 
-  value_print_options opts;
-  get_no_prettyformat_print_options (&opts);
+  value_print_options opts = get_no_prettyformat_print_options ();
 
   string_file stream;
-  value_print (val, &stream, &opts);
+  value_print (val, &stream, opts);
 
   /* We should always have two quote chars, which we'll strip.  */
   gdb_assert (stream.size () >= 2);

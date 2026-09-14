@@ -35,4 +35,10 @@ crc32  al,al
 crc32  ax, ax
 crc32  rax,eax
 
+# Also check handling with SSE4.2 disabled.
+
+	.arch .nosse4.2
+		crc32	%ecx, %edx
+	{evex}	crc32	%ecx, %edx
+
 .p2align 4

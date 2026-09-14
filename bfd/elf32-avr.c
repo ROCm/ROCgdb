@@ -729,6 +729,12 @@ static bfd_vma avr_pc_wrap_around = 0x10000000;
    machine will try to optimize CALL/RET sequences by a single jump
    instruction. This can be switched off by --no-call-ret-replacement.  */
 static bool avr_replace_call_ret_sequences = true;
+
+/* If this variable holds true, the linker relaxation machine will
+   try to remove RJMP instructions that are void.  This does not
+   include plain RJMP .+0 which is used by GCC to delay 2 cycles.
+   This can be switched off by --no-elide-rjmp0.  */
+static bool avr_elide_rjmp0 = true;
 
 
 /* Per-section relaxation related information for avr.  */
@@ -2563,7 +2569,11 @@ avr_reloc_at (bfd *abfd, Elf_Internal_Shdr *symtab_hdr,
 
    The .jumptables section is meant to be used for a future tablejump variant
    for the devices with 3-byte program counter where the table itself contains
-   4-byte jump instructions whose relative offset must not be changed.  */
+   4-byte jump instructions whose relative offset must not be changed.
+
+   Finally, we elide RJMP instructions that are void and not a delay.
+   This may occur when a function is tailcalling some other function,
+   and the latter happens to be located right after the former.  */
 
 static bool
 elf32_avr_relax_section (bfd *abfd,  asection *sec,
@@ -2657,6 +2667,7 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
   for (irel = internal_relocs; irel < irelend; irel++)
     {
       bfd_vma symval;
+      bool sym_is_global = false;
 
       if (ELF32_R_TYPE (irel->r_info) != R_AVR_13_PCREL
 	  && ELF32_R_TYPE (irel->r_info) != R_AVR_7_PCREL
@@ -2720,6 +2731,7 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
 	  symval = (h->root.u.def.value
 		    + h->root.u.def.section->output_section->vma
 		    + h->root.u.def.section->output_offset);
+	  sym_is_global = true;
 	}
 
       /* For simplicity of coding, we are going to modify the section
@@ -2897,6 +2909,84 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
 		  printf ("converted call/ret sequence at address 0x%x "
 			  "into jmp/ret sequence in section %s\n\n",
 			  (int) dot, sec->name);
+		*again = true;
+		break;
+	      }
+	    else if (avr_elide_rjmp0
+		     // Elide no-op RJMP tail calls like in
+		     //    RJMP func     ;; in module A
+		     //    .global func  ;; in module B
+		     //    func:
+		     && avr_is_RJMP (code_word)
+		     // Plain RJMP .+0 is used by GCC to delay 2 cycles, thus
+		     // we are only interested in global jump targets...
+		     && sym_is_global
+		     // ...without offset, and...
+		     && irel->r_addend == 0
+		     // ...where the RJMP targets the insn directly after it.
+		     && symval + irel->r_addend == dot + 2)
+	      {
+		if (debug_relax)
+		  printf ("found rjmp .+0 at address 0x%x in section %s\n",
+			  (int) dot, sec->name);
+
+		const bool has_prev = irel->r_offset >= 2;
+		const uint16_t prev_word = has_prev
+		  ? avr_word (abfd, contents + irel->r_offset - 2)
+		  : 0;
+
+		// The assumption in the following condition is that there is
+		// no dangling skip at the end of a section.  Note that a skip
+		// insn at that place doesn't make sense in a real program.
+		if (has_prev
+		    && avr_is_skip (prev_word))
+		  {
+		    if (debug_relax)
+		      printf ("skip insn prevents deletion of rjmp .+0 at "
+			      "address 0x%x\n", (int) dot);
+		    break;
+		  }
+
+		// Avoid the paranoid case where the RJMP is at the end of
+		// the program memory and jumps to 0x0.  We don't have the
+		// flash size handy, so assume a size of 0.5 KiB.
+		if ((dot + 2) % 0x200 == 0)
+		  {
+		    if (debug_relax)
+		      printf ("not deleting rjmp .+0 at address 0x%x that may "
+			      "be at the end of program memory\n", (int) dot);
+		    break;
+		  }
+
+		// Ditch the RJMP.
+		// Notice that labels or relocs at the RJMP are no issue.
+
+		if (debug_relax)
+		  printf ("deleted rjmp .+0 instruction at address 0x%x\n",
+			  (int) dot);
+
+		// Read this BFD's local symbols if we haven't done so already.
+		if (isymbuf == NULL && symtab_hdr->sh_info != 0)
+		  {
+		    isymbuf = avr_read_symbuf (abfd, symtab_hdr);
+		    if (isymbuf == NULL)
+		      break;
+		  }
+
+		elf_section_data (sec)->relocs = internal_relocs;
+		elf_section_data (sec)->this_hdr.contents = contents;
+		symtab_hdr->contents = (unsigned char *) isymbuf;
+
+		// Delete the two RJMP bytes, and...
+		if (!elf32_avr_relax_delete_bytes (abfd, sec,
+						   irel->r_offset, 2, true))
+		  goto error_return;
+
+		// ...decommission the reloc.
+		irel->r_info = R_AVR_NONE;
+
+		// That will change things, so we should relax again.
+		// Note that this is not required, and it may be slow.
 		*again = true;
 		break;
 	      }
@@ -3084,11 +3174,12 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
    seems to be important.  */
 
 static bfd_byte *
-elf32_avr_get_relocated_section_contents (bfd *output_bfd,
-					  struct bfd_link_info *link_info,
-					  struct bfd_link_order *link_order,
-					  bfd_byte *data, bool relocatable,
-					  asymbol **symbols)
+elf32_avr_get_relocated_section_contents
+  (bfd *output_bfd,
+   struct bfd_link_info *link_info,
+   const struct bfd_link_order *link_order,
+   bfd_byte *data, bool relocatable,
+   asymbol **symbols)
 {
   Elf_Internal_Shdr *symtab_hdr;
   asection *input_section = link_order->u.indirect.section;
@@ -3327,7 +3418,8 @@ void
 elf32_avr_setup_params (struct bfd_link_info *info, bfd *avr_stub_bfd,
 			asection *avr_stub_section,
 			bool no_stubs, bool deb_stubs, bool deb_relax,
-			bfd_vma pc_wrap_around, bool call_ret_replacement)
+			bfd_vma pc_wrap_around, bool call_ret_replacement,
+			bool elide_rjmp0)
 {
   elf32_avr_link_hash_table_t *htab = avr_link_hash_table (info);
 
@@ -3341,6 +3433,7 @@ elf32_avr_setup_params (struct bfd_link_info *info, bfd *avr_stub_bfd,
   debug_stubs = deb_stubs;
   avr_pc_wrap_around = pc_wrap_around;
   avr_replace_call_ret_sequences = call_ret_replacement;
+  avr_elide_rjmp0 = elide_rjmp0;
 }
 
 
@@ -4107,7 +4200,6 @@ avr_elf32_property_record_name (struct avr_property_record *rec)
 static bool
 avr_elf_merge_obj_attributes (bfd *ibfd, struct bfd_link_info *info)
 {
-  static bfd *last_fp;
   obj_attribute *in_attr, *in_attrs;
   obj_attribute *out_attr, *out_attrs;
   bfd *obfd = info->output_bfd;
@@ -4115,6 +4207,9 @@ avr_elf_merge_obj_attributes (bfd *ibfd, struct bfd_link_info *info)
   in_attrs = elf_known_obj_attributes (ibfd)[OBJ_ATTR_GNU];
   out_attrs = elf_known_obj_attributes (obfd)[OBJ_ATTR_GNU];
 
+  // Merge Tag_GNU_AVR_VTABLE_AS (4).
+
+  static bfd *last_fp_vtab;
   in_attr = &in_attrs[Tag_GNU_AVR_VTABLE_AS];
   out_attr = &out_attrs[Tag_GNU_AVR_VTABLE_AS];
 
@@ -4125,7 +4220,7 @@ avr_elf_merge_obj_attributes (bfd *ibfd, struct bfd_link_info *info)
 	{
 	  out_attr->type = ATTR_TYPE_FLAG_INT_VAL;
 	  out_attr->i = in_attr->i;
-	  last_fp = ibfd;
+	  last_fp_vtab = ibfd;
 	}
     }
   else if (in_attr->i != out_attr->i)
@@ -4134,11 +4229,70 @@ avr_elf_merge_obj_attributes (bfd *ibfd, struct bfd_link_info *info)
       const char *const iname = avr_tag_vtable_as_name (in_attr->i);
       const char *const oname = avr_tag_vtable_as_name (out_attr->i);
 
-      _bfd_error_handler
-	/* xgettext:c-format */
-	(_("%pB uses %s tag %d (%s), %pB uses %s tag %d (%s)"),
-	 ibfd, tag, in_attr->i, iname,
-	 last_fp, tag, out_attr->i, oname);
+      // xgettext:c-format
+      _bfd_error_handler (_("%pB uses %s tag %d (%s), %pB uses %s tag %d (%s)"),
+			  ibfd, tag, in_attr->i, iname,
+			  last_fp_vtab, tag, out_attr->i, oname);
+
+      out_attr->type = ATTR_TYPE_FLAG_INT_VAL | ATTR_TYPE_FLAG_ERROR;
+      bfd_set_error (bfd_error_bad_value);
+      return false;
+    }
+
+  // Merge Tag_GNU_AVR_BITS_DOUBLE (8).
+
+  static bfd *last_fp_dbl;
+  in_attr = &in_attrs[Tag_GNU_AVR_BITS_DOUBLE];
+  out_attr = &out_attrs[Tag_GNU_AVR_BITS_DOUBLE];
+
+  if (in_attr->i == 0
+      || out_attr->i == 0)
+    {
+      if (in_attr->i != 0)
+	{
+	  out_attr->type = ATTR_TYPE_FLAG_INT_VAL;
+	  out_attr->i = in_attr->i;
+	  last_fp_dbl = ibfd;
+	}
+    }
+  else if (in_attr->i != out_attr->i)
+    {
+      const char *const tag = "Tag_GNU_AVR_BITS_DOUBLE";
+
+      // xgettext:c-format
+      _bfd_error_handler (_("%pB uses %s tag %d, %pB uses %s tag %d"),
+			  ibfd, tag, in_attr->i,
+			  last_fp_dbl, tag, out_attr->i);
+
+      out_attr->type = ATTR_TYPE_FLAG_INT_VAL | ATTR_TYPE_FLAG_ERROR;
+      bfd_set_error (bfd_error_bad_value);
+      return false;
+    }
+
+  // Merge Tag_GNU_AVR_BITS_LONG_DOUBLE (12).
+
+  static bfd *last_fp_ldbl;
+  in_attr = &in_attrs[Tag_GNU_AVR_BITS_LONG_DOUBLE];
+  out_attr = &out_attrs[Tag_GNU_AVR_BITS_LONG_DOUBLE];
+
+  if (in_attr->i == 0
+      || out_attr->i == 0)
+    {
+      if (in_attr->i != 0)
+	{
+	  out_attr->type = ATTR_TYPE_FLAG_INT_VAL;
+	  out_attr->i = in_attr->i;
+	  last_fp_ldbl = ibfd;
+	}
+    }
+  else if (in_attr->i != out_attr->i)
+    {
+      const char *const tag = "Tag_GNU_AVR_BITS_LONG_DOUBLE";
+
+      // xgettext:c-format
+      _bfd_error_handler (_("%pB uses %s tag %d, %pB uses %s tag %d"),
+			  ibfd, tag, in_attr->i,
+			  last_fp_ldbl, tag, out_attr->i);
 
       out_attr->type = ATTR_TYPE_FLAG_INT_VAL | ATTR_TYPE_FLAG_ERROR;
       bfd_set_error (bfd_error_bad_value);
@@ -4186,5 +4340,6 @@ bool bfd_avr_elf_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info)
 #define bfd_elf32_bfd_merge_private_bfd_data \
 					bfd_avr_elf_merge_private_bfd_data
 #define elf_backend_special_sections	elf_avr_special_sections
+#define elf_backend_want_stub_bfd	1
 
 #include "elf32-target.h"

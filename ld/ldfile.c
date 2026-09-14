@@ -881,15 +881,30 @@ ldfile_find_command_file (const char *name,
      the same linker script twice.  */
   if (stat (filename, &sbuf1) == 0)
     {
-      struct stat sbuf2;
+#if defined _WIN32 && ! defined __CYGWIN__
+      /* Native Windows stat reports st_ino as zero on most file
+	 systems.  Compare file names there.  */
+      bool have_inode = sbuf1.st_ino != 0;
+#else
+      bool have_inode = true;
+#endif
+
       for (script = processed_scripts;
 	   script != NULL;
 	   script = script->next)
-	if ((open_how != script_nonT || script->open_how != script_nonT)
-	    && stat (script->name, &sbuf2) == 0
-	    && SAME_INODE (sbuf1, sbuf2))
-	  fatal (_("%P: error: linker script file '%s (%s)'"
-		   " appears multiple times\n"), filename, script->name);
+	{
+	  struct stat sbuf2;
+
+	  if (open_how == script_nonT && script->open_how == script_nonT)
+	    continue;
+
+	  if (have_inode
+	      ? (stat (script->name, &sbuf2) == 0
+		 && SAME_INODE (sbuf1, sbuf2))
+	      : filename_cmp (filename, script->name) == 0)
+	    fatal (_("%P: error: linker script file '%s (%s)'"
+		     " appears multiple times\n"), filename, script->name);
+	}
     }
 
   len = strlen (filename);

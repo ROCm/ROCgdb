@@ -1,0 +1,10 @@
+# -*- conf -*-
+
+# Binary format.
+*.pdf  binary
+*.png  binary
+
+# Text format, but diffs aren't useful.
+# Note that stack_frame.eps is an EPS file without embedded bitmap preview.
+*.svg  text -diff
+stack_frame.eps  text -diff

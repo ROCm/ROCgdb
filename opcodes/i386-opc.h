@@ -211,6 +211,8 @@ enum i386_cpu
   CpuAVX512_BMM,
   /* AVX10.1-aux Instructions support required.  */
   CpuAVX10_1_AUX,
+  /* AVX10 V2 Auxiliary Instructions support required.  */
+  CpuAVX10_V2_AUX,
   /* TDX Instructions support required.  */
   CpuTDX,
   /* Intel AVX VNNI Instructions support required.  */
@@ -326,6 +328,10 @@ enum i386_cpu
   CpuRMPQUERY,
   /* RMPREAD instruction required */
   CpuRMPREAD,
+  /* RMPDIRTY instruction required */
+  CpuRMPDIRTY,
+  /* RMPOPT instruction required */
+  CpuRMPOPT,
   /* Intel APX New Conditional Instructions support required.  */
   CpuAPX_NCI,
   /* Intel APX Non-Destructive Destination support required.  */
@@ -512,6 +518,7 @@ typedef union i386_cpu_flags
       unsigned int cpuavx512_vp2intersect:1;
       unsigned int cpuavx512_bmm:1;
       unsigned int cpuavx10_1_aux:1;
+      unsigned int cpuavx10_v2_aux:1;
       unsigned int cputdx:1;
       unsigned int cpuavx_vnni:1;
       unsigned int cpuavx512_fp16:1;
@@ -570,6 +577,8 @@ typedef union i386_cpu_flags
       unsigned int cpusnp:1;
       unsigned int cpurmpquery:1;
       unsigned int cpurmpread:1;
+      unsigned int cpurmpdirty:1;
+      unsigned int cpurmpopt:1;
       unsigned int cpuapx_nci:1;
       unsigned int cpuapx_ndd:1;
       unsigned int cpuapx_nf:1;

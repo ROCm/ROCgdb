@@ -1305,6 +1305,7 @@ static const struct bfd_elf_special_section elf32_m68hc11_special_sections[] =
 #define elf_info_to_howto	NULL
 #define elf_info_to_howto_rel	m68hc11_info_to_howto_rel
 #define bfd_elf32_bfd_relax_section  m68hc11_elf_relax_section
+#define elf_backend_want_stub_bfd    1
 #define elf_backend_check_relocs     elf32_m68hc11_check_relocs
 #define elf_backend_relocate_section elf32_m68hc11_relocate_section
 #define elf_backend_add_symbol_hook  elf32_m68hc11_add_symbol_hook

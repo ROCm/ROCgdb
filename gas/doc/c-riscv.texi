@@ -766,6 +766,36 @@ extensions supported and provides the location of their
 publicly-released documentation:
 
 @table @r
+@item XAndesBFHCvt
+The XAndesBFHCvt extension provides scalar BF16 and FP32 conversion instructions.
+
+It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
+
+@item XAndesVBFHCvt
+The XAndesVBFHCvt extension provides vector BF16 and FP32 conversion instructions.
+
+It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
+
+@item XAndesVSIntLoad
+The XAndesVSIntLoad extension provides vector load instructions for INT4 data into 8-bit elements.
+
+It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
+
+@item XAndesVPackFPH
+The XAndesVPackFPH extension provides vector packed FP16 fused multiply-add instructions.
+
+It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
+
+@item XAndesVDot
+The XAndesVDot extension provides vector dot product instructions.
+
+It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
+
+@item XAndesVSIntH
+The XAndesVSIntH extension provides INT4 vector load and INT4/INT8 vector floating-point widening instructions.
+
+It is documented in @url{https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf}.
+
 @item XCvAlu
 The XCvAlu extension provides instructions for general ALU operations.
 

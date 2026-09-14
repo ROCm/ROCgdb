@@ -46,7 +46,7 @@ nto_create_QNX_note_section(int type)
   Elf_External_Note *e_note;
   bfd_size_type size;
 
-  /* As ${ARCH}elf.em is imported and ${ARCH}_elf_create_output_section_statements
+  /* As ${ARCH}elf.em is imported and ${ARCH}_elf_after_open_output
      is called before this function, stub_file should already be defined.  */
   if (!stub_file)
     {

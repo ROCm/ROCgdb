@@ -38,10 +38,6 @@ fragment <<EOF
    && elf_tdata (bfd) != NULL				\
    && elf_object_id (bfd) == MIPS_ELF_DATA)
 
-/* Fake input file for stubs.  */
-static lang_input_statement_type *stub_file;
-static bfd *stub_bfd;
-
 static bool insn32;
 static bool ignore_branch_isa;
 static bool compact_branches;
@@ -140,28 +136,8 @@ mips_add_stub_section (const char *stub_sec_name, asection *input_section,
   if (bfd_is_abs_section (output_section))
     return NULL;
 
-  /* Create the stub file, if we haven't already.  */
-  if (stub_file == NULL)
-    {
-      stub_file = lang_add_input_file ("linker stubs",
-				       lang_input_file_is_fake_enum,
-				       NULL);
-      stub_bfd = bfd_create ("linker stubs", link_info.output_bfd);
-      if (stub_bfd == NULL
-	  || !bfd_set_arch_mach (stub_bfd,
-				 bfd_get_arch (link_info.output_bfd),
-				 bfd_get_mach (link_info.output_bfd)))
-	{
-	  fatal (_("%P: can not create BFD: %E\n"));
-	  return NULL;
-	}
-      stub_bfd->flags |= BFD_LINKER_CREATED;
-      stub_file->the_bfd = stub_bfd;
-      ldlang_add_file (stub_file);
-    }
-
   /* Create the section.  */
-  stub_sec = bfd_make_section_anyway (stub_bfd, stub_sec_name);
+  stub_sec = bfd_make_section_anyway (stub_file->the_bfd, stub_sec_name);
   if (stub_sec == NULL)
     goto err_ret;
 
@@ -192,17 +168,15 @@ mips_add_stub_section (const char *stub_sec_name, asection *input_section,
 /* This is called before the input files are opened.  */
 
 static void
-mips_create_output_section_statements (void)
+mips_after_open_output (void)
 {
-  struct elf_link_hash_table *htab;
+  ldelf_after_open_output ();
 
-  htab = elf_hash_table (&link_info);
-  if (is_elf_hash_table (&htab->root) && is_mips_elf (link_info.output_bfd))
-    _bfd_mips_elf_linker_flags (&link_info, insn32, ignore_branch_isa,
-				${gnu_target});
-
-  if (is_mips_elf (link_info.output_bfd))
+  if (stub_file)
     {
+      _bfd_mips_elf_linker_flags (&link_info, insn32, ignore_branch_isa,
+				  ${gnu_target});
+
       _bfd_mips_elf_compact_branches (&link_info, compact_branches);
       _bfd_mips_elf_init_stubs (&link_info, mips_add_stub_section);
     }
@@ -291,4 +265,4 @@ PARSE_AND_LIST_ARGS_CASES='
 '
 
 LDEMUL_BEFORE_ALLOCATION=mips_before_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=mips_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=mips_after_open_output

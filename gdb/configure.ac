@@ -60,8 +60,7 @@ AX_CXX_COMPILE_STDCXX(17, , mandatory)
 GDB_AC_COMMON
 
 # Dependency checking.
-ZW_CREATE_DEPDIR
-ZW_PROG_COMPILER_DEPENDENCIES([CC])
+AM_SET_DEPDIR
 
 # Since the first call to PKG_CHECK_MODULES may not happen (is guarded by
 # a condition), we must call PKG_PROG_PKG_CONFIG explicitly to probe for
@@ -222,10 +221,25 @@ BFD_64_BIT
 # configuration.
 gdb_host_obs=posix-hdep.o
 
+# Check whether the configuration is native -- i.e., whether GDB will
+# debug processes running on the same machine it runs on.  If so, we
+# let configure.host and configure.nat pull in the native-debug
+# support.
+gdb_native=no
 if test "${target}" = "${host}"; then
   gdb_native=yes
-else
-  gdb_native=no
+elif test "${host_cpu}" = "${target_cpu}"; then
+  # Debugging Windows binaries on a Windows host is native even when
+  # the host and target triplets differ across the mingw/cygwin/msvc
+  # ABI boundary.  E.g., a mingw32-hosted GDB targeting binaries
+  # produced by a compiler defaulting to windows-msvc.
+  case ${host_os} in
+    mingw* | cygwin*)
+      case ${target_os} in
+	mingw* | cygwin* | windows*)
+	  gdb_native=yes ;;
+      esac ;;
+  esac
 fi
 
 . $srcdir/configure.host
@@ -2429,6 +2443,8 @@ GDB_AC_TRANSFORM([gcore], [GCORE_TRANSFORM_NAME])
 AC_CONFIG_FILES([gcore.in:gcore-1.in])
 AC_CONFIG_FILES([gstack.in:gstack-1.in])
 AC_CONFIG_FILES([gdb-add-index.in:contrib/gdb-add-index.sh])
-AC_CONFIG_FILES([Makefile gdb-gdb.gdb gdb-gdb.py doc/Makefile data-directory/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile data-directory/Makefile])
+AC_CONFIG_LINKS([gdb-gdb.py:gdb-gdb.py])
+AC_CONFIG_LINKS([gdb-gdb.gdb:gdb-gdb.gdb])
 
 AC_OUTPUT

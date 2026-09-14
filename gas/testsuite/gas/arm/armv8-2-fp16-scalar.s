@@ -58,6 +58,12 @@
 	.endr
 	.endm
 
+	.macro f16_ssi_cvt_imm16 reg0, reg1, imm
+	.irp op, vcvt.f16.s16, vcvt.f16.u16, vcvt.s16.f16, vcvt.u16.f16
+		\op s\reg0, s\reg1, \imm
+	.endr
+	.endm
+
 	.text
 
 	vmov.f16 s0, r1
@@ -84,3 +90,12 @@
 	f16_ss_cvt_amnpr 5, 10
 	f16_ss_vrint 3, 11
 	f16_ss_mov 5, 9
+	f16_ssi_cvt_imm16 0, 0, #0
+	f16_ssi_cvt_imm16 0, 0, #4
+	f16_ssi_cvt_imm16 0, 0, #16
+	f16_ssi_cvt_imm16 5, 5, #0
+	f16_ssi_cvt_imm16 6, 6, #4
+	f16_ssi_cvt_imm16 7, 7, #16
+	f16_ssi_cvt_imm16 15, 15, #0
+	f16_ssi_cvt_imm16 15, 15, #4
+	f16_ssi_cvt_imm16 15, 15, #16

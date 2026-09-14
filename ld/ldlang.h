@@ -654,6 +654,8 @@ extern lang_output_section_statement_type *next_matching_output_section_statemen
   (lang_output_section_statement_type *, int);
 extern void ldlang_add_undef
   (const char *const, bool);
+extern void ldlang_ref
+  (struct bfd_link_hash_entry *h);
 extern void ldlang_add_require_defined
   (const char *const);
 extern void lang_add_output_format

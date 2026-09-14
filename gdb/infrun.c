@@ -716,7 +716,8 @@ holding the child stopped.  Try \"set %ps\" or \"%ps\".\n"),
   target_follow_fork (child_inf, child_ptid, fork_kind, follow_child,
 		      detach_fork);
 
-  gdb::observers::inferior_forked.notify (parent_inf, child_inf, fork_kind);
+  gdb::observers::inferior_forked.notify (parent_inf, child_inf, fork_kind,
+					  detach_fork, follow_child);
 
   /* target_follow_fork must leave the parent as the current inferior.  If we
      want to follow the child, we make it the current one below.  */
@@ -1394,7 +1395,7 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
      we don't want those to be satisfied by the libraries of the
      previous incarnation of this process.  */
   no_shared_libraries (current_program_space);
-  current_program_space->unset_solib_ops ();
+  current_program_space->clear_solib_ops ();
 
   inferior *execing_inferior = current_inferior ();
   inferior *following_inferior;
@@ -1451,7 +1452,7 @@ follow_exec (ptid_t ptid, const char *exec_file_target)
      registers.  */
   target_find_description ();
 
-  following_inferior->pspace->set_solib_ops
+  following_inferior->pspace->add_solib_ops
     (gdbarch_make_solib_ops (following_inferior->arch (),
 			     following_inferior->pspace));
   gdb::observers::inferior_execd.notify (execing_inferior, following_inferior);
@@ -1735,7 +1736,7 @@ infrun_inferior_execd (inferior *exec_inf, inferior *follow_inf)
 {
   /* If some threads where was doing a displaced step in this inferior at the
      moment of the exec, they no longer exist.  Even if the exec'ing thread
-     doing a displaced step, we don't want to to any fixup nor restore displaced
+     doing a displaced step, we don't want to do any fixup nor restore displaced
      stepping buffer bytes.  */
   follow_inf->displaced_step_state.reset ();
 

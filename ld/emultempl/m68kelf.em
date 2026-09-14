@@ -190,8 +190,9 @@ m68k_elf_after_allocation (void)
    After the output has been created, but before inputs are read.  */
 
 static void
-elf_m68k_create_output_section_statements (void)
+elf_m68k_after_open_output (void)
 {
+  ldelf_after_open_output ();
   bfd_elf_m68k_set_target_options (&link_info, got_handling);
 }
 
@@ -227,4 +228,4 @@ PARSE_AND_LIST_ARGS_CASES='
 # the standard routines, so give them a different name.
 LDEMUL_AFTER_OPEN=m68k_elf_after_open
 LDEMUL_AFTER_ALLOCATION=m68k_elf_after_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=elf_m68k_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=elf_m68k_after_open_output

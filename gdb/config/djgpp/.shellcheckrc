@@ -1,0 +1,4 @@
+# There's a concern that $(...) is not (sufficiently) supported on DJGPP [1].
+# Disable SC2006 to allow legacy backticked `...`.
+# [1] https://sourceware.org/pipermail/gdb-patches/2026-August/229860.html
+disable=SC2006

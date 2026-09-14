@@ -713,24 +713,20 @@ xstormy16_elf_relax_section (bfd *dynobj,
 static bool
 xstormy16_elf_early_size_sections (struct bfd_link_info *info)
 {
-  bfd *dynobj;
   asection *splt;
 
   if (bfd_link_relocatable (info))
     return true;
 
-  dynobj = elf_hash_table (info)->dynobj;
-  if (dynobj == NULL)
-    return true;
-
   splt = elf_hash_table (info)->splt;
-  BFD_ASSERT (splt != NULL);
-
-  splt->contents = bfd_zalloc (dynobj, splt->size);
-  if (splt->contents == NULL)
-    return false;
-  splt->alloced = 1;
-
+  if (splt != NULL)
+    {
+      bfd *dynobj = elf_hash_table (info)->dynobj;
+      splt->contents = bfd_zalloc (dynobj, splt->size);
+      if (splt->contents == NULL)
+	return false;
+      splt->alloced = 1;
+    }
   return true;
 }
 
@@ -970,7 +966,7 @@ xstormy16_elf_finish_dynamic_sections (struct bfd_link_info *info,
   /* As an extra sanity check, verify that all plt entries have
      been filled in.  */
 
-  if (dynobj != NULL && splt != NULL)
+  if (splt != NULL)
     {
       bfd_byte *contents = splt->contents;
       unsigned int i, size = splt->size;

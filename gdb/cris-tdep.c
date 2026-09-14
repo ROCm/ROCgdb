@@ -2095,10 +2095,8 @@ process_autoincrement (int size, unsigned short inst, inst_env_type *inst_env)
 
       /* The PC must be word aligned, so increase the PC with one
 	 word even if the size is byte.  */
-      if (cris_get_operand1 (inst) == REG_PC)
-	{
-	  inst_env->reg[REG_PC] += 1;
-	}
+      if (cris_get_operand1 (inst) == CRIS_REG_PC)
+	inst_env->reg[CRIS_REG_PC] += 1;
     }
   else if (size == INST_WORD_SIZE)
     {
@@ -2179,10 +2177,8 @@ biap_prefix (unsigned short inst, inst_env_type *inst_env)
   /* If the PC is operand1 (base) the address used is the address after
      the main instruction, i.e. address + 2 (the PC is already compensated
      for the prefix operation).  */
-  if (cris_get_operand1 (inst) == REG_PC)
-    {
-      inst_env->prefix_value += 2;
-    }
+  if (cris_get_operand1 (inst) == CRIS_REG_PC)
+    inst_env->prefix_value += 2;
 
   /* A prefix doesn't change the xflag_found.  But the rest of the flags
      need updating.  */
@@ -2254,7 +2250,7 @@ eight_bit_offset_branch_op (unsigned short inst, inst_env_type *inst_env)
   offset &= ~BRANCH_SIGNED_SHORT_OFFSET_MASK;
 
   inst_env->branch_found = 1;
-  inst_env->branch_break_address = inst_env->reg[REG_PC] + offset;
+  inst_env->branch_break_address = inst_env->reg[CRIS_REG_PC] + offset;
 
   inst_env->slot_needed = 1;
   inst_env->prefix_found = 0;
@@ -2277,15 +2273,15 @@ sixteen_bit_offset_branch_op (unsigned short inst, inst_env_type *inst_env)
     }
 
   /* We have a branch, find out the offset for the branch.  */
-  offset = read_memory_integer (inst_env->reg[REG_PC], 2,
+  offset = read_memory_integer (inst_env->reg[CRIS_REG_PC], 2,
 				inst_env->byte_order);
 
   /* The instruction is one word longer than normal, so add one word
      to the PC.  */
-  inst_env->reg[REG_PC] += 2;
+  inst_env->reg[CRIS_REG_PC] += 2;
 
   inst_env->branch_found = 1;
-  inst_env->branch_break_address = inst_env->reg[REG_PC] + offset;
+  inst_env->branch_break_address = inst_env->reg[CRIS_REG_PC] + offset;
 
 
   inst_env->slot_needed = 1;
@@ -2310,7 +2306,7 @@ abs_op (unsigned short inst, inst_env_type *inst_env)
     }
 
   /* Check if the operation affects the PC.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
 
       /* It's invalid to change to the PC if we are in a delay slot.  */
@@ -2320,13 +2316,13 @@ abs_op (unsigned short inst, inst_env_type *inst_env)
 	  return;
 	}
 
-      value = (long) inst_env->reg[REG_PC];
+      value = (long) inst_env->reg[CRIS_REG_PC];
 
       /* The value of abs (SIGNED_DWORD_MASK) is SIGNED_DWORD_MASK.  */
       if (value != SIGNED_DWORD_MASK)
 	{
 	  value = -value;
-	  inst_env->reg[REG_PC] = (long) value;
+	  inst_env->reg[CRIS_REG_PC] = (long) value;
 	}
     }
 
@@ -2343,7 +2339,7 @@ addi_op (unsigned short inst, inst_env_type *inst_env)
 {
   /* It's invalid to have the PC as base register.  And ADDI can't have
      a prefix.  */
-  if (inst_env->prefix_found || (cris_get_operand1 (inst) == REG_PC))
+  if (inst_env->prefix_found || (cris_get_operand1 (inst) == CRIS_REG_PC))
     {
       inst_env->invalid = 1;
       return;
@@ -2372,7 +2368,7 @@ asr_op (unsigned short inst, inst_env_type *inst_env)
     }
 
   /* Check if the PC is the target register.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
       /* It's invalid to change the PC in a delay slot.  */
       if (inst_env->slot_needed)
@@ -2383,7 +2379,7 @@ asr_op (unsigned short inst, inst_env_type *inst_env)
       /* Get the number of bits to shift.  */
       shift_steps
 	= cris_get_asr_shift_steps (inst_env->reg[cris_get_operand1 (inst)]);
-      value = inst_env->reg[REG_PC];
+      value = inst_env->reg[CRIS_REG_PC];
 
       /* Find out how many bits the operation should apply to.  */
       if (cris_get_size (inst) == INST_BYTE_SIZE)
@@ -2397,8 +2393,8 @@ asr_op (unsigned short inst, inst_env_type *inst_env)
 	  value = value >> shift_steps;
 	  value |= signed_extend_mask;
 	  value &= 0xFF;
-	  inst_env->reg[REG_PC] &= 0xFFFFFF00;
-	  inst_env->reg[REG_PC] |= value;
+	  inst_env->reg[CRIS_REG_PC] &= 0xFFFFFF00;
+	  inst_env->reg[CRIS_REG_PC] |= value;
 	}
       else if (cris_get_size (inst) == INST_WORD_SIZE)
 	{
@@ -2411,8 +2407,8 @@ asr_op (unsigned short inst, inst_env_type *inst_env)
 	  value = value >> shift_steps;
 	  value |= signed_extend_mask;
 	  value &= 0xFFFF;
-	  inst_env->reg[REG_PC] &= 0xFFFF0000;
-	  inst_env->reg[REG_PC] |= value;
+	  inst_env->reg[CRIS_REG_PC] &= 0xFFFF0000;
+	  inst_env->reg[CRIS_REG_PC] |= value;
 	}
       else if (cris_get_size (inst) == INST_DWORD_SIZE)
 	{
@@ -2424,7 +2420,7 @@ asr_op (unsigned short inst, inst_env_type *inst_env)
 	    }
 	  value = value >> shift_steps;
 	  value |= signed_extend_mask;
-	  inst_env->reg[REG_PC]  = value;
+	  inst_env->reg[CRIS_REG_PC]  = value;
 	}
     }
   inst_env->slot_needed = 0;
@@ -2451,7 +2447,7 @@ asrq_op (unsigned short inst, inst_env_type *inst_env)
     }
 
   /* Check if the PC is the target register.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
 
       /* It's invalid to change the PC in a delay slot.  */
@@ -2463,7 +2459,7 @@ asrq_op (unsigned short inst, inst_env_type *inst_env)
       /* The shift size is given as a 5 bit quick value, i.e. we don't
 	 want the sign bit of the quick value.  */
       shift_steps = cris_get_asr_shift_steps (inst);
-      value = inst_env->reg[REG_PC];
+      value = inst_env->reg[CRIS_REG_PC];
       if (value & SIGNED_DWORD_MASK)
 	{
 	  signed_extend_mask = 0xFFFFFFFF;
@@ -2472,7 +2468,7 @@ asrq_op (unsigned short inst, inst_env_type *inst_env)
 	}
       value = value >> shift_steps;
       value |= signed_extend_mask;
-      inst_env->reg[REG_PC]  = value;
+      inst_env->reg[CRIS_REG_PC]  = value;
     }
   inst_env->slot_needed = 0;
   inst_env->prefix_found = 0;
@@ -2525,7 +2521,7 @@ static void
 two_operand_bound_op (unsigned short inst, inst_env_type *inst_env)
 {
   /* It's invalid to have the PC as the index operand.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
       inst_env->invalid = 1;
       return;
@@ -2559,7 +2555,7 @@ three_operand_bound_op (unsigned short inst, inst_env_type *inst_env)
 {
   /* It's an error if we haven't got a prefix.  And it's also an error
      if the PC is the destination register.  */
-  if ((!inst_env->prefix_found) || (cris_get_operand1 (inst) == REG_PC))
+  if ((!inst_env->prefix_found) || (cris_get_operand1 (inst) == CRIS_REG_PC))
     {
       inst_env->invalid = 1;
       return;
@@ -2612,22 +2608,19 @@ static void
 reg_mode_clear_op (unsigned short inst, inst_env_type *inst_env)
 {
   /* Check if the target is the PC.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
       /* The instruction will clear the instruction's size bits.  */
       int clear_size = cris_get_clear_size (inst);
       if (clear_size == INST_BYTE_SIZE)
-	{
-	  inst_env->delay_slot_pc = inst_env->reg[REG_PC] & 0xFFFFFF00;
-	}
+	inst_env->delay_slot_pc = inst_env->reg[CRIS_REG_PC] & 0xFFFFFF00;
+
       if (clear_size == INST_WORD_SIZE)
-	{
-	  inst_env->delay_slot_pc = inst_env->reg[REG_PC] & 0xFFFF0000;
-	}
+	inst_env->delay_slot_pc = inst_env->reg[CRIS_REG_PC] & 0xFFFF0000;
+
       if (clear_size == INST_DWORD_SIZE)
-	{
-	  inst_env->delay_slot_pc = 0x0;
-	}
+	inst_env->delay_slot_pc = 0x0;
+
       /* The jump will be delayed with one delay slot.  So we need a delay
 	 slot.  */
       inst_env->slot_needed = 1;
@@ -2694,7 +2687,7 @@ dstep_logshift_mstep_neg_not_op (unsigned short inst, inst_env_type *inst_env)
 {
   /* It's invalid to have the PC as the destination.  The instruction can't
      have a prefix.  */
-  if ((cris_get_operand2 (inst) == REG_PC) || inst_env->prefix_found)
+  if ((cris_get_operand2 (inst) == CRIS_REG_PC) || inst_env->prefix_found)
     {
       inst_env->invalid = 1;
       return;
@@ -2732,7 +2725,7 @@ scc_op (unsigned short inst, inst_env_type *inst_env)
 {
   /* It's invalid to have the PC as the destination.  The instruction can't
      have a prefix.  */
-  if ((cris_get_operand2 (inst) == REG_PC) || inst_env->prefix_found)
+  if ((cris_get_operand2 (inst) == CRIS_REG_PC) || inst_env->prefix_found)
     {
       inst_env->invalid = 1;
       return;
@@ -2758,7 +2751,7 @@ reg_mode_jump_op (unsigned short inst, inst_env_type *inst_env)
     }
 
   /* Just change the PC.  */
-  inst_env->reg[REG_PC] = inst_env->reg[cris_get_operand1 (inst)];
+  inst_env->reg[CRIS_REG_PC] = inst_env->reg[cris_get_operand1 (inst)];
   inst_env->slot_needed = 0;
   inst_env->prefix_found = 0;
   inst_env->xflag_found = 0;
@@ -2803,7 +2796,7 @@ none_reg_mode_jump_op (unsigned short inst, inst_env_type *inst_env)
 	      inst_env->reg[cris_get_operand1 (inst)] += 4;
 	    }
 	}
-      inst_env->reg[REG_PC] = newpc;
+      inst_env->reg[CRIS_REG_PC] = newpc;
     }
   inst_env->slot_needed = 0;
   inst_env->prefix_found = 0;
@@ -2824,7 +2817,7 @@ move_to_preg_op (struct gdbarch *gdbarch, unsigned short inst,
       if (cris_get_mode (inst) == PREFIX_ASSIGN_MODE)
 	{
 	  /* The prefix handles the problem if we are in a delay slot.  */
-	  if (cris_get_operand1 (inst) == REG_PC)
+	  if (cris_get_operand1 (inst) == CRIS_REG_PC)
 	    {
 	      /* Just take care of the assign.  */
 	      check_assign (inst, inst_env);
@@ -2835,7 +2828,7 @@ move_to_preg_op (struct gdbarch *gdbarch, unsigned short inst,
     {
       /* The instruction doesn't have a prefix, the only case left that we
 	 are interested in is the autoincrement mode.  */
-      if (cris_get_operand1 (inst) == REG_PC)
+      if (cris_get_operand1 (inst) == CRIS_REG_PC)
 	{
 	  /* If the PC is to be incremented it's invalid to be in a
 	     delay slot.  */
@@ -2880,7 +2873,7 @@ none_reg_mode_move_from_preg_op (struct gdbarch *gdbarch, unsigned short inst,
       if (cris_get_mode (inst) == PREFIX_ASSIGN_MODE)
 	{
 	  /* The prefix handles the problem if we are in a delay slot.  */
-	  if (cris_get_operand1 (inst) == REG_PC)
+	  if (cris_get_operand1 (inst) == CRIS_REG_PC)
 	    {
 	      /* Just take care of the assign.  */
 	      check_assign (inst, inst_env);
@@ -2891,7 +2884,7 @@ none_reg_mode_move_from_preg_op (struct gdbarch *gdbarch, unsigned short inst,
      are interested in is the autoincrement mode.  */
   else if (cris_get_mode (inst) == AUTOINC_MODE)
     {
-      if (cris_get_operand1 (inst) == REG_PC)
+      if (cris_get_operand1 (inst) == CRIS_REG_PC)
 	{
 	  /* If the PC is to be incremented it's invalid to be in a
 	     delay slot.  */
@@ -2935,7 +2928,7 @@ reg_mode_move_from_preg_op (unsigned short inst, inst_env_type *inst_env)
       return;
     }
 
-  if (cris_get_operand1 (inst) == REG_PC)
+  if (cris_get_operand1 (inst) == CRIS_REG_PC)
     {
       /* It's invalid to change the PC in a delay slot.  */
       if (inst_env->slot_needed)
@@ -2967,25 +2960,25 @@ move_mem_to_reg_movem_op (unsigned short inst, inst_env_type *inst_env)
     {
       /* The prefix handles the problem if we are in a delay slot.  Is the
 	 MOVEM instruction going to change the PC?  */
-      if (cris_get_operand2 (inst) >= REG_PC)
+      if (cris_get_operand2 (inst) >= CRIS_REG_PC)
 	{
-	  inst_env->reg[REG_PC] =
+	  inst_env->reg[CRIS_REG_PC] =
 	    read_memory_unsigned_integer (inst_env->prefix_value,
 					  4, inst_env->byte_order);
 	}
       /* The assign value is the value after the increment.  Normally, the
 	 assign value is the value before the increment.  */
-      if ((cris_get_operand1 (inst) == REG_PC)
+      if ((cris_get_operand1 (inst) == CRIS_REG_PC)
 	  && (cris_get_mode (inst) == PREFIX_ASSIGN_MODE))
 	{
-	  inst_env->reg[REG_PC] = inst_env->prefix_value;
-	  inst_env->reg[REG_PC] += 4 * (cris_get_operand2 (inst) + 1);
+	  inst_env->reg[CRIS_REG_PC] = inst_env->prefix_value;
+	  inst_env->reg[CRIS_REG_PC] += 4 * (cris_get_operand2 (inst) + 1);
 	}
     }
   else
     {
       /* Is the MOVEM instruction going to change the PC?  */
-      if (cris_get_operand2 (inst) == REG_PC)
+      if (cris_get_operand2 (inst) == CRIS_REG_PC)
 	{
 	  /* It's invalid to change the PC in a delay slot.  */
 	  if (inst_env->slot_needed)
@@ -2993,13 +2986,13 @@ move_mem_to_reg_movem_op (unsigned short inst, inst_env_type *inst_env)
 	      inst_env->invalid = 1;
 	      return;
 	    }
-	  inst_env->reg[REG_PC] =
+	  inst_env->reg[CRIS_REG_PC] =
 	    read_memory_unsigned_integer (inst_env->reg[cris_get_operand1 (inst)],
 					  4, inst_env->byte_order);
 	}
       /* The increment is not depending on the size, instead it's depending
 	 on the number of registers loaded from memory.  */
-      if ((cris_get_operand1 (inst) == REG_PC)
+      if ((cris_get_operand1 (inst) == CRIS_REG_PC)
 	  && (cris_get_mode (inst) == AUTOINC_MODE))
 	{
 	  /* It's invalid to change the PC in a delay slot.  */
@@ -3008,7 +3001,7 @@ move_mem_to_reg_movem_op (unsigned short inst, inst_env_type *inst_env)
 	      inst_env->invalid = 1;
 	      return;
 	    }
-	  inst_env->reg[REG_PC] += 4 * (cris_get_operand2 (inst) + 1);
+	  inst_env->reg[CRIS_REG_PC] += 4 * (cris_get_operand2 (inst) + 1);
 	}
     }
   inst_env->slot_needed = 0;
@@ -3026,19 +3019,19 @@ move_reg_to_mem_movem_op (unsigned short inst, inst_env_type *inst_env)
     {
       /* The assign value is the value after the increment.  Normally, the
 	 assign value is the value before the increment.  */
-      if ((cris_get_operand1 (inst) == REG_PC)
+      if ((cris_get_operand1 (inst) == CRIS_REG_PC)
 	  && (cris_get_mode (inst) == PREFIX_ASSIGN_MODE))
 	{
 	  /* The prefix handles the problem if we are in a delay slot.  */
-	  inst_env->reg[REG_PC] = inst_env->prefix_value;
-	  inst_env->reg[REG_PC] += 4 * (cris_get_operand2 (inst) + 1);
+	  inst_env->reg[CRIS_REG_PC] = inst_env->prefix_value;
+	  inst_env->reg[CRIS_REG_PC] += 4 * (cris_get_operand2 (inst) + 1);
 	}
     }
   else
     {
       /* The increment is not depending on the size, instead it's depending
 	 on the number of registers loaded to memory.  */
-      if ((cris_get_operand1 (inst) == REG_PC)
+      if ((cris_get_operand1 (inst) == CRIS_REG_PC)
 	  && (cris_get_mode (inst) == AUTOINC_MODE))
 	{
 	  /* It's invalid to change the PC in a delay slot.  */
@@ -3047,7 +3040,7 @@ move_reg_to_mem_movem_op (unsigned short inst, inst_env_type *inst_env)
 	      inst_env->invalid = 1;
 	      return;
 	    }
-	  inst_env->reg[REG_PC] += 4 * (cris_get_operand2 (inst) + 1);
+	  inst_env->reg[CRIS_REG_PC] += 4 * (cris_get_operand2 (inst) + 1);
 	}
     }
   inst_env->slot_needed = 0;
@@ -3078,7 +3071,7 @@ xor_op (unsigned short inst, inst_env_type *inst_env)
     }
 
   /* Check if the PC is the target.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
       /* It's invalid to change the PC in a delay slot.  */
       if (inst_env->slot_needed)
@@ -3086,7 +3079,7 @@ xor_op (unsigned short inst, inst_env_type *inst_env)
 	  inst_env->invalid = 1;
 	  return;
 	}
-      inst_env->reg[REG_PC] ^= inst_env->reg[cris_get_operand1 (inst)];
+      inst_env->reg[CRIS_REG_PC] ^= inst_env->reg[cris_get_operand1 (inst)];
     }
   inst_env->slot_needed = 0;
   inst_env->prefix_found = 0;
@@ -3107,7 +3100,7 @@ muls_op (unsigned short inst, inst_env_type *inst_env)
     }
 
   /* Consider it invalid if the PC is the target.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
       inst_env->invalid = 1;
       return;
@@ -3131,7 +3124,7 @@ mulu_op (unsigned short inst, inst_env_type *inst_env)
     }
 
   /* Consider it invalid if the PC is the target.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
       inst_env->invalid = 1;
       return;
@@ -3218,8 +3211,8 @@ add_sub_cmp_and_or_move_action (unsigned short inst, inst_env_type *inst_env,
   source2 &= operation_mask;
 
   /* Calculate the new breakpoint address.  */
-  inst_env->reg[REG_PC] &= pc_mask;
-  inst_env->reg[REG_PC] |= source1;
+  inst_env->reg[CRIS_REG_PC] &= pc_mask;
+  inst_env->reg[CRIS_REG_PC] |= source1;
 
 }
 
@@ -3280,7 +3273,7 @@ reg_mode_add_sub_cmp_and_or_move_op (unsigned short inst,
       return;
     }
   /* Check if the instruction has PC as its target.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
       if (inst_env->slot_needed)
 	{
@@ -3289,7 +3282,7 @@ reg_mode_add_sub_cmp_and_or_move_op (unsigned short inst,
 	}
       /* The instruction has the PC as its target register.  */
       operand1 = inst_env->reg[cris_get_operand1 (inst)];
-      operand2 = inst_env->reg[REG_PC];
+      operand2 = inst_env->reg[CRIS_REG_PC];
 
       /* Check if it's a extend, signed or zero instruction.  */
       if (cris_get_opcode (inst) < 4)
@@ -3347,9 +3340,9 @@ handle_prefix_assign_mode_for_aritm_op (unsigned short inst,
   unsigned long operand3;
 
   check_assign (inst, inst_env);
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
-      operand2 = inst_env->reg[REG_PC];
+      operand2 = inst_env->reg[CRIS_REG_PC];
 
       /* Get the value of the third operand.  */
       operand3 = get_data_from_address (&inst, inst_env->prefix_value,
@@ -3376,7 +3369,7 @@ three_operand_add_sub_cmp_and_or_op (unsigned short inst,
   unsigned long operand2;
   unsigned long operand3;
 
-  if (cris_get_operand1 (inst) == REG_PC)
+  if (cris_get_operand1 (inst) == CRIS_REG_PC)
     {
       /* The PC will be changed by the instruction.  */
       operand2 = inst_env->reg[cris_get_operand2 (inst)];
@@ -3437,12 +3430,12 @@ handle_inc_and_index_mode_for_aritm_op (unsigned short inst,
 
   /* The instruction is either an indirect or autoincrement addressing mode.
      Check if the destination register is the PC.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
       /* Must be done here, get_data_from_address may change the size
 	 field.  */
       size = cris_get_size (inst);
-      operand2 = inst_env->reg[REG_PC];
+      operand2 = inst_env->reg[CRIS_REG_PC];
 
       /* Get the value of the third operand, i.e. the indirect operand.  */
       operand1 = inst_env->reg[cris_get_operand1 (inst)];
@@ -3454,7 +3447,7 @@ handle_inc_and_index_mode_for_aritm_op (unsigned short inst,
     }
   /* If this is an autoincrement addressing mode, check if the increment
      changes the PC.  */
-  if ((cris_get_operand1 (inst) == REG_PC)
+  if ((cris_get_operand1 (inst) == CRIS_REG_PC)
       && (cris_get_mode (inst) == AUTOINC_MODE))
     {
       /* Get the size field.  */
@@ -3521,7 +3514,7 @@ quick_mode_add_sub_op (unsigned short inst, inst_env_type *inst_env)
     }
 
   /* Check if the instruction has PC as its target.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
       if (inst_env->slot_needed)
 	{
@@ -3529,7 +3522,7 @@ quick_mode_add_sub_op (unsigned short inst, inst_env_type *inst_env)
 	  return;
 	}
       operand1 = cris_get_quick_value (inst);
-      operand2 = inst_env->reg[REG_PC];
+      operand2 = inst_env->reg[CRIS_REG_PC];
 
       /* The size should now be dword.  */
       cris_set_size_to_dword (&inst);
@@ -3560,7 +3553,7 @@ quick_mode_and_cmp_move_or_op (unsigned short inst, inst_env_type *inst_env)
       return;
     }
   /* Check if the instruction has PC as its target.  */
-  if (cris_get_operand2 (inst) == REG_PC)
+  if (cris_get_operand2 (inst) == CRIS_REG_PC)
     {
       if (inst_env->slot_needed)
 	{
@@ -3569,7 +3562,7 @@ quick_mode_and_cmp_move_or_op (unsigned short inst, inst_env_type *inst_env)
 	}
       /* The instruction has the PC as its target register.  */
       operand1 = cris_get_quick_value (inst);
-      operand2 = inst_env->reg[REG_PC];
+      operand2 = inst_env->reg[CRIS_REG_PC];
 
       /* The quick value is signed, so check if we must do a signed extend.  */
       if (operand1 & SIGNED_QUICK_VALUE_MASK)

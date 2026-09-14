@@ -16,6 +16,8 @@ SECTIONS
   HIDDEN (_gp = . + 0x7ff0);
   .got : { *(.got) }
 
+  .data : { *(.data) }
+
   . = ALIGN (0x400);
   .tdata : { *(.tdata) }
 

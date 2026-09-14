@@ -1235,26 +1235,6 @@ _bfd_kvx_resize_stubs (struct elf_kvx_link_hash_table *htab)
   bfd_hash_traverse (&htab->stub_hash_table, kvx_size_one_stub, htab);
 }
 
-/* Satisfy the ELF linker by filling in some fields in our fake bfd.  */
-
-bool
-kvx_elfNN_init_stub_bfd (struct bfd_link_info *info,
-			bfd *stub_bfd)
-{
-  struct elf_kvx_link_hash_table *htab;
-
-  elf_elfheader (stub_bfd)->e_ident[EI_CLASS] = ELFCLASSNN;
-
-/* Always hook our dynamic sections into the first bfd, which is the
-   linker created stub bfd.  This ensures that the GOT header is at
-   the start of the output TOC section.  */
-  htab = elf_kvx_hash_table (info);
-  if (htab == NULL)
-    return false;
-
-  return true;
-}
-
 /* Determine and set the size of the stub section for a final link.
 
    The basic idea here is to examine all the relocations looking for
@@ -4756,6 +4736,7 @@ elfNN_kvx_plt_sym_val (bfd_vma i, const asection *plt,
 #define elf_backend_plt_readonly       1
 #define elf_backend_want_got_plt       1
 #define elf_backend_want_plt_sym       0
+#define elf_backend_want_stub_bfd      1
 #define elf_backend_may_use_rel_p      0
 #define elf_backend_may_use_rela_p     1
 #define elf_backend_default_use_rela_p 1

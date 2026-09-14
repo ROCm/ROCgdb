@@ -198,7 +198,7 @@ or1k_analyse_l_addi (uint32_t inst, unsigned int *rd_ptr,
     return false; /* Failure */
 }
 
-/* This is used to to parse store instructions during various prologue
+/* This is used to parse store instructions during various prologue
    analysis routines.  The l.sw instruction has semantics:
 
      assembly:        l.sw  I(rA),rB

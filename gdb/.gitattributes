@@ -20,9 +20,15 @@ aclocal.m4  -whitespace
 
 *.[ly]	whitespace=space-before-tab,indent-with-non-tab,trailing-space
 *.def	whitespace=space-before-tab,indent-with-non-tab,trailing-space
+*.sh    whitespace=space-before-tab,indent-with-non-tab,trailing-space
+po/gdbtext  whitespace=space-before-tab,indent-with-non-tab,trailing-space
+gcore-1.in  whitespace=space-before-tab,indent-with-non-tab,trailing-space
+gstack-1.in whitespace=space-before-tab,indent-with-non-tab,trailing-space
+make-init-c whitespace=space-before-tab,indent-with-non-tab,trailing-space
+testsuite/lib/notty-wrap whitespace=space-before-tab,indent-with-non-tab,trailing-space
 
 # Imported files.
 exc_request.defs -whitespace
 
 # Files with significant trailing whitespace.
-gdb-gdb.gdb.in  whitespace=space-before-tab,indent-with-non-tab,-trailing-space
+gdb-gdb.gdb  whitespace=space-before-tab,indent-with-non-tab,-trailing-space

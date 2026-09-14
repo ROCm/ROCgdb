@@ -18,9 +18,11 @@
    Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
    MA 02110-1301, USA.  */
 
+extern lang_input_statement_type *stub_file;
 extern const char *ldelf_emit_note_gnu_build_id;
 extern const char *ldelf_emit_note_fdo_package_metadata;
 
+extern void ldelf_after_open_output (void);
 extern void ldelf_finish (void);
 extern void ldelf_after_parse (void);
 extern bool ldelf_load_symbols (lang_input_statement_type *);

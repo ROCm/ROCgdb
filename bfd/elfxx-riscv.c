@@ -1230,6 +1230,9 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"xtheadvector", "+zicsr", check_implicit_always},
   {"xtheadzvamo", "+zaamo", check_implicit_always},
 
+  {"xxtvarith", "+v",	check_implicit_always},
+  {"xxtvcoder", "+v",	check_implicit_always},
+
   {"xsmtvdot", "+zve32x", check_implicit_always},
   {"xsmtvdotii", "+xsmtvdot", check_implicit_always},
 
@@ -1539,7 +1542,7 @@ static const struct riscv_supported_ext riscv_supported_std_z_ext[] =
   {"zve64x",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zve64f",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zve64d",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
-  {"zvabd",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"zvabd",		ISA_SPEC_CLASS_DRAFT,		0, 9, 0 },
   {"zvbb",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvbc",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"zvfbdota32f",	ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -1652,6 +1655,12 @@ static const struct riscv_supported_ext riscv_supported_std_zxm_ext[] =
 
 static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
 {
+  {"xandesbfhcvt",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
+  {"xandesvbfhcvt",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
+  {"xandesvsintload",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
+  {"xandesvpackfph",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
+  {"xandesvdot",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
+  {"xandesvsinth",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
   {"xcvalu",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xcvbi",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xcvbitmanip",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
@@ -1674,6 +1683,8 @@ static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xtheadvector",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadvdot",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadzvamo",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xxtvarith",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xxtvcoder",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xventanacondops",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xsfcease",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
@@ -3086,6 +3097,18 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "svinval");
     case INSN_CLASS_H:
       return riscv_subset_supports (rps, "h");
+    case INSN_CLASS_XANDESBFHCVT:
+      return riscv_subset_supports (rps, "xandesbfhcvt");
+    case INSN_CLASS_XANDESVBFHCVT:
+      return riscv_subset_supports (rps, "xandesvbfhcvt");
+    case INSN_CLASS_XANDESVSINTLOAD:
+      return riscv_subset_supports (rps, "xandesvsintload");
+    case INSN_CLASS_XANDESVPACKFPH:
+      return riscv_subset_supports (rps, "xandesvpackfph");
+    case INSN_CLASS_XANDESVDOT:
+      return riscv_subset_supports (rps, "xandesvdot");
+    case INSN_CLASS_XANDESVSINTH:
+      return riscv_subset_supports (rps, "xandesvsinth");
     case INSN_CLASS_XCVALU:
       return riscv_subset_supports (rps, "xcvalu");
     case INSN_CLASS_XCVBI:
@@ -3128,6 +3151,10 @@ riscv_multi_subset_supports (riscv_parse_subset_t *rps,
       return riscv_subset_supports (rps, "xtheadvector");
     case INSN_CLASS_XTHEADVDOT:
       return riscv_subset_supports (rps, "xtheadvdot");
+    case INSN_CLASS_XXTVARITH:
+      return riscv_subset_supports (rps, "xxtvarith");
+    case INSN_CLASS_XXTVCODER:
+      return riscv_subset_supports (rps, "xxtvcoder");
     case INSN_CLASS_XTHEADZVAMO:
       return riscv_subset_supports (rps, "xtheadzvamo");
     case INSN_CLASS_XVENTANACONDOPS:
@@ -3432,6 +3459,18 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "svinval";
     case INSN_CLASS_H:
       return _("h");
+    case INSN_CLASS_XANDESBFHCVT:
+      return "xandesbfhcvt";
+    case INSN_CLASS_XANDESVBFHCVT:
+      return "xandesvbfhcvt";
+    case INSN_CLASS_XANDESVSINTLOAD:
+      return "xandesvsintload";
+    case INSN_CLASS_XANDESVPACKFPH:
+      return "xandesvpackfph";
+    case INSN_CLASS_XANDESVDOT:
+      return "xandesvdot";
+    case INSN_CLASS_XANDESVSINTH:
+      return "xandesvsinth";
     case INSN_CLASS_XCVALU:
       return "xcvalu";
     case INSN_CLASS_XCVBI:
@@ -3474,6 +3513,10 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xtheadvector";
     case INSN_CLASS_XTHEADVDOT:
       return "xtheadvdot";
+    case INSN_CLASS_XXTVARITH:
+      return "xxtvarith";
+    case INSN_CLASS_XXTVCODER:
+      return "xxtvcoder";
     case INSN_CLASS_XTHEADZVAMO:
       return "xtheadzvamo";
     case INSN_CLASS_XVENTANACONDOPS:

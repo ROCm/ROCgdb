@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Check that the DWARF reader works with a a DW_AT_specification that
+# Check that the DWARF reader works with a DW_AT_specification that
 # refers to a later DIE.  Inter-cu variant of forward-spec.exp.
 
 load_lib dwarf.exp

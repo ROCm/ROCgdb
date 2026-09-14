@@ -3,6 +3,32 @@
 
 *** Changes since GDB 18
 
+* GDB now distinguishes between the GNU (MinGW) and MSVC Windows ABIs.
+
+  The "set osabi" command accepts two new values, "Windows-GNU" and
+  "Windows-MSVC".  The GNU ABI is for code produced by MinGW
+  toolchains, while the MSVC ABI is for code produced by Microsoft's
+  MSVC compiler (though see the PDB note below), or Clang targeting
+  one of {i686,aarch64,x86_64}-pc-windows-msvc.  The existing
+  "Windows" value continues to work and now means "let GDB pick the
+  flavor": GDB uses the configured default OS ABI (from --target) when
+  that is a Windows flavor, and otherwise assumes the GNU flavor.  For
+  example, --target=x86_64-pc-windows-msvc defaults to the MSVC ABI,
+  and --target=x86_64-w64-mingw32 defaults to GNU ABI.  Similarly for
+  the i686 and AArch64 variants.  See "New targets" entry below.
+
+  Currently, GDB is aware that "long double" differs between the two
+  ABIs.  GDB does not yet support the MSVC C++ ABI (demangling scheme,
+  C++ object layout, etc.) or PDB debug information.
+
+* New targets
+
+i386 Windows/MSVC               i[34567]86-*-windows-msvc
+
+amd64 Windows/MSVC              x86_64-*-windows-msvc
+
+AArch64 Windows/MSVC            aarch64-*-windows-msvc
+
 *** Changes in GDB 18
 
 * Support for the Common Trace Format (CTF) has been removed.  GDB now
@@ -5816,7 +5842,7 @@ Renesas RL78				rl78-*-elf
      This keyword, when provided, will direct the output to either
      stdout, stderr, or GDB's logging output.
 
-  ** Parameters can now be be sub-classed in Python, and in particular
+  ** Parameters can now be sub-classed in Python, and in particular
      you may implement the get_set_doc and get_show_doc functions.
      This improves how Parameter set/show documentation is processed
      and allows for more dynamic content.

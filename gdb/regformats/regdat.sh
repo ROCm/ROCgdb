@@ -1,4 +1,4 @@
-#!/bin/sh -u
+#!/bin/sh
 
 # Register protocol definitions for GDB, the GNU debugger.
 # Copyright (C) 2001-2026 Free Software Foundation, Inc.
@@ -18,67 +18,63 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+set -u
+
 # Format of the input files
 read="type entry"
 
-do_read ()
+do_read()
 {
     type=""
     entry=""
-    while read line
-    do
-	if test "${line}" = ""
-	then
+    while read -r line; do
+	if test "${line}" = ""; then
 	    continue
-	elif test "${line}" = "#" -a "${comment}" = ""
-	then
+	elif expr "${line}" : "#" > /dev/null; then
 	    continue
-	elif expr "${line}" : "#" > /dev/null
-	then
-	    comment="${comment}
-${line}"
 	else
 
 	    # The semantics of IFS varies between different SH's.  Some
 	    # treat ``::' as three fields while some treat it as just too.
 	    # Work around this by eliminating ``::'' ....
-	    line="`echo "${line}" | sed -e 's/::/: :/g' -e 's/::/: :/g'`"
+	    line="$(echo "${line}" | sed -e 's/::/: :/g' -e 's/::/: :/g')"
 
-	    OFS="${IFS}" ; IFS="[:]"
-	    eval read ${read} <<EOF
+	    OFS="${IFS}"
+	    IFS="[:]"
+	    # Word-splitting on read variable is required.
+	    # shellcheck disable=SC2086
+	    eval read ${read} << EOF
 ${line}
 EOF
 	    IFS="${OFS}"
 
 	    # .... and then going back through each field and strip out those
 	    # that ended up with just that space character.
-	    for r in ${read}
-	    do
-		if eval test \"\${${r}}\" = \"\ \"
-		then
-		    eval ${r}=""
+	    for r in ${read}; do
+		eval "rvalue=\$$r"
+		if test "${rvalue:-}" = " "; then
+		    eval "$r=''"
 		fi
 	    done
 
 	    break
 	fi
     done
-    if [ -n "${type}" ]
-    then
+    if [ -n "${type}" ]; then
 	true
     else
 	false
     fi
 }
 
-if test ! -r $1; then
-  echo "$0: Could not open $1." 1>&2
-  exit 1
+if test ! -r "$1"; then
+    echo "$0: Could not open $1." 1>&2
+    exit 1
 fi
 
-copyright ()
+copyright()
 {
-cat <<EOF
+    cat << EOF
 /* *INDENT-OFF* */ /* THIS FILE IS GENERATED */
 
 /* A register protocol for GDB, the GNU debugger.
@@ -104,9 +100,8 @@ cat <<EOF
 EOF
 }
 
-
-exec > new-$3
-copyright $1
+exec > new-"$3"
+copyright "$1"
 echo '#include "regdef.h"'
 echo '#include "tdesc.h"'
 echo
@@ -119,81 +114,80 @@ xmlosabi=x
 expedite=x
 feature=x
 osabi=unknown
-exec < $1
-while do_read
-do
-  if test "${type}" = "name"; then
-    name="${entry}"
+exec < "$1"
+while do_read; do
+    if test "${type}" = "name"; then
+	name="${entry}"
 
-    echo "const_target_desc_up tdesc_${name};"
-    echo ""
+	echo "const_target_desc_up tdesc_${name};"
+	echo ""
 
-    # This is necessary for -Wmissing-declarations.
-    echo "void init_registers_${name} (void);"
+	# This is necessary for -Wmissing-declarations.
+	echo "void init_registers_${name} (void);"
 
-    echo "void"
-    echo "init_registers_${name} (void)"
-    echo "{"
-    echo "  target_desc_up result = allocate_target_description ();"
-    echo "  struct tdesc_feature *feature = tdesc_create_feature (result.get (), \"${name}\");"
-    continue
-  elif test "${type}" = "xmltarget"; then
-    xmltarget="${entry}"
-    continue
-  elif test "${type}" = "xmlarch"; then
-    xmlarch="${entry}"
-    continue
-  elif test "${type}" = "xmlosabi"; then
-    xmlosabi="${entry}"
-    continue
-  elif test "${type}" = "expedite"; then
-    expedite="${entry}"
-    continue
-  elif test "${type}" = "feature"; then
-    feature="${entry}"
-    continue
-  elif test "${type}" = "osabi"; then
-    osabi="${entry}"
-    continue
-  elif test "${name}" = x; then
-    echo "$0: $1 does not specify \`\`name''." 1>&2
-    exit 1
-  else
-    echo "  tdesc_create_reg (feature, \"${entry}\","
-    echo "  0, 0, NULL, ${type}, NULL);"
+	echo "void"
+	echo "init_registers_${name} (void)"
+	echo "{"
+	echo "  target_desc_up result = allocate_target_description ();"
+	echo "  struct tdesc_feature *feature = tdesc_create_feature (result.get (), \"${name}\");"
+	continue
+    elif test "${type}" = "xmltarget"; then
+	xmltarget="${entry}"
+	continue
+    elif test "${type}" = "xmlarch"; then
+	xmlarch="${entry}"
+	continue
+    elif test "${type}" = "xmlosabi"; then
+	xmlosabi="${entry}"
+	continue
+    elif test "${type}" = "expedite"; then
+	expedite="${entry}"
+	continue
+    elif test "${type}" = "feature"; then
+	feature="${entry}"
+	continue
+    elif test "${type}" = "osabi"; then
+	osabi="${entry}"
+	continue
+    elif test "${name}" = x; then
+	echo "$0: $1 does not specify \`\`name''." 1>&2
+	exit 1
+    else
+	echo "  tdesc_create_reg (feature, \"${entry}\","
+	echo "  0, 0, NULL, ${type}, NULL);"
 
-    offset=`expr ${offset} + ${type}`
-    i=`expr $i + 1`
-  fi
+	offset=$((offset + type))
+	i=$((i + 1))
+    fi
 done
 
 echo
-echo "static const char *expedite_regs_${name}[] = { \"`echo ${expedite} | sed 's/,/", "/g'`\", 0 };"
+echo "static const char *expedite_regs_${name}[] = { \"$(echo "${expedite}" | sed 's/,/", "/g')\", 0 };"
 
 echo "#ifndef IN_PROCESS_AGENT"
 if test "${feature}" != x; then
-  echo "static const char *xmltarget_${name} = 0;"
-elif test "${xmltarget}" = x; then
-  if test "${xmlarch}" = x && test "${xmlosabi}" = x; then
     echo "static const char *xmltarget_${name} = 0;"
-  else
-    echo "static const char *xmltarget_${name} = \"@<target>\\"
-    if test "${xmlarch}" != x; then
-      echo "<architecture>${xmlarch}</architecture>\\"
+elif test "${xmltarget}" = x; then
+    if test "${xmlarch}" = x && test "${xmlosabi}" = x; then
+	echo "static const char *xmltarget_${name} = 0;"
+    else
+	echo "static const char *xmltarget_${name} = \"@<target>\\"
+	if test "${xmlarch}" != x; then
+	    echo "<architecture>${xmlarch}</architecture>\\"
+	fi
+	if test "${xmlosabi}" != x; then
+	    echo "<osabi>${xmlosabi}</osabi>\\"
+	fi
+	echo '</target>";'
     fi
-    if test "${xmlosabi}" != x; then
-      echo "<osabi>${xmlosabi}</osabi>\\"
-    fi
-    echo "</target>\";"
-  fi
 else
-  echo "static const char *xmltarget_${name} = \"${xmltarget}\";"
+    echo "static const char *xmltarget_${name} = \"${xmltarget}\";"
 fi
 echo
 
 osabi_enum=$(grep "${osabi}" "$2" | sed 's/.*(\([^,]\+\),.*/GDB_OSABI_\1/')
 
-cat <<EOF
+cat << EOF
   result->xmltarget = xmltarget_${name};
 #endif
 

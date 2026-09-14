@@ -258,6 +258,7 @@ if [gas_32_check] then {
     run_list_test "noavx512-1" "-almn"
     run_list_test "noavx512-2" "-almn --divide"
     run_dump_test "noextreg"
+    run_list_test "warn-enc" "-almn"
     run_dump_test "xmmhi32"
     run_dump_test "xsave"
     run_dump_test "xsave-intel"

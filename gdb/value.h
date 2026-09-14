@@ -140,6 +140,7 @@ private:
       m_stack (false),
       m_is_zero (false),
       m_in_history (false),
+      m_fetch_lazy_failed (false),
       m_type (type_),
       m_enclosing_type (type_)
   {
@@ -284,7 +285,13 @@ public:
   { return m_lazy; }
 
   void set_lazy (bool val)
-  { m_lazy = val; }
+  {
+    m_lazy = val;
+    m_fetch_lazy_failed = false;
+  }
+
+  bool fetch_lazy_failed () const
+  { return m_fetch_lazy_failed; }
 
   /* If a value represents a C++ object, then the `type' field gives the
      object's compile-time type.  If the object actually belongs to some
@@ -712,6 +719,9 @@ private:
   /* True if this a value recorded in value history; false otherwise.  */
   bool m_in_history : 1;
 
+  /* True if fetch_lazy () did not finish successfully.  */
+  bool m_fetch_lazy_failed : 1;
+
   /* Location of value (if lval).  */
   union
   {
@@ -1084,7 +1094,7 @@ struct value *value_vector_widen (struct value *scalar_value,
 class frame_info_ptr;
 struct fn_field;
 
-extern int print_address_demangle (const struct value_print_options *,
+extern int print_address_demangle (const value_print_options &,
 				   struct gdbarch *, CORE_ADDR,
 				   struct ui_file *, int);
 
@@ -1609,7 +1619,7 @@ extern void print_floating (const gdb_byte *valaddr, struct type *type,
 			    struct ui_file *stream);
 
 extern void value_print (struct value *val, struct ui_file *stream,
-			 const struct value_print_options *options);
+			 const value_print_options &options);
 
 /* Release values from the value chain and return them.  Values
    created after MARK are released.  If MARK is nullptr, or if MARK is
@@ -1622,13 +1632,13 @@ extern std::vector<value_ref_ptr> value_release_to_mark
 
 extern void common_val_print (struct value *val,
 			      struct ui_file *stream, int recurse,
-			      const struct value_print_options *options,
+			      const value_print_options &options,
 			      const struct language_defn *language);
 
 extern int val_print_string (struct type *elttype, const char *encoding,
 			     CORE_ADDR addr, int len,
 			     struct ui_file *stream,
-			     const struct value_print_options *options);
+			     const value_print_options &options);
 
 /* Track the shadowing status of a variable.  */
 enum class var_shadowing

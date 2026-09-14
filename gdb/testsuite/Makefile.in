@@ -255,6 +255,23 @@ check-single-racy:
 	  `ls racy_outputs/*/gdb.sum` > racy.sum; \
 	sed -n '/=== gdb Summary ===/,$$ p' racy.sum
 
+# Combine the individual gdb.sum / gdb.log files found anywhere under
+# directory $(1) into a single gdb.sum / gdb.log pair in directory
+# $(2), using contrib/dg-extract-results.sh.
+#
+# The file list is piped in via "-f -" rather than expanded onto the
+# command line: a parallel run writes one gdb.sum/gdb.log per .exp, so
+# the list can hold thousands of paths and overflow the command-line
+# length limit (notably on Windows, where the limit is ~32 KB).
+define DG_EXTRACT_RESULTS
+	find $(1) -name gdb.sum -print \
+	  | $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -f - \
+	  > $(2)/gdb.sum; \
+	find $(1) -name gdb.log -print \
+	  | $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -L -f - \
+	  > $(2)/gdb.log
+endef
+
 check-parallel:
 	-rm -f *core*
 	-rm -rf cache outputs temp
@@ -262,14 +279,24 @@ check-parallel:
 	$(MAKE) -k do-check-parallel; \
 	result=$$?; \
 	if test -d outputs; then \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh \
-	    `find outputs -name gdb.sum -print` > gdb.sum; \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -L \
-	    `find outputs -name gdb.log -print` > gdb.log; \
+	  $(call DG_EXTRACT_RESULTS,outputs,.); \
 	  $(SHELL) $(srcdir)/lib/dg-add-core-file-count.sh; \
 	  sed -n '/=== gdb Summary ===/,$$ p' gdb.sum; \
 	fi; \
 	exit $$result
+
+# Regenerate the combined gdb.sum / gdb.log from an existing outputs/
+# directory, without re-running any tests.  Handy after a "make check"
+# parallel run to rebuild the combined results by hand -- for example
+# after tweaking contrib/dg-extract-results.sh.
+extract-results:
+	@if test ! -d outputs; then \
+	  echo "No outputs/ directory found; run a parallel \"make check\" first."; \
+	  exit 1; \
+	fi
+	$(call DG_EXTRACT_RESULTS,outputs,.)
+	$(SHELL) $(srcdir)/lib/dg-add-core-file-count.sh
+	sed -n '/=== gdb Summary ===/,$$ p' gdb.sum
 
 check-parallel-racy:
 	-rm -rf cache racy_outputs temp
@@ -284,12 +311,7 @@ check-parallel-racy:
 	for n in `seq $$racyiter` ; do \
 	  $(MAKE) -k do-check-parallel-racy \
 	    RACY_OUTPUT_N=$$n; \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh \
-	    `find racy_outputs/$$n -name gdb.sum -print` > \
-	    racy_outputs/$$n/gdb.sum; \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -L \
-	    `find racy_outputs/$$n -name gdb.log -print` > \
-	    racy_outputs/$$n/gdb.log; \
+	  $(call DG_EXTRACT_RESULTS,racy_outputs/$$n,racy_outputs/$$n); \
 	  sed -n '/=== gdb Summary ===/,$$ p' racy_outputs/$$n/gdb.sum; \
 	done; \
 	$(srcdir)/analyze-racy-logs.py \
@@ -391,10 +413,7 @@ check-all-boards: all $(abs_builddir)/site.exp
 		"$(TESTS)"; \
 	result=$$?; \
 	if test -d check-all; then \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh \
-	    `find check-all -name gdb.sum -print` > check-all/gdb.sum; \
-	  $(SHELL) $(srcdir)/../../contrib/dg-extract-results.sh -L \
-	    `find check-all -name gdb.log -print` > check-all/gdb.log; \
+	  $(call DG_EXTRACT_RESULTS,check-all,check-all); \
 	  sed -n '/=== gdb Summary ===/,$$ p' check-all/gdb.sum; \
 	fi; \
 	exit $$result
@@ -412,14 +431,11 @@ clean mostlyclean:
 
 distclean maintainer-clean realclean: clean
 	-rm -f *~ core
-	-rm -f Makefile config.status *-init.exp lib/pdtrace
+	-rm -f Makefile config.status *-init.exp
 	-rm -fr *.log summary detail *.plog *.sum *.psum site.*
 
 Makefile : Makefile.in config.status $(host_makefile_frag)
 	$(SHELL) config.status Makefile
-
-lib/pdtrace: pdtrace.in config.status
-	$(SHELL) config.status lib/pdtrace
 
 config.status: configure
 	$(SHELL) config.status --recheck

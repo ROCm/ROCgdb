@@ -275,7 +275,7 @@ frv_linux_sigtramp_frame_cache (const frame_info_ptr &this_frame,
 
   cache = trad_frame_cache_zalloc (this_frame);
 
-  /* FIXME: cagney/2004-05-01: This is is long standing broken code.
+  /* FIXME: cagney/2004-05-01: This is long standing broken code.
      The frame ID's code address should be the start-address of the
      signal trampoline and not the current PC within that
      trampoline.  */

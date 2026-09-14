@@ -49,6 +49,51 @@ with_test_prefix "cmd with trailing control code" {
     }
 }
 
+proc quit {proc} {
+    with_override perror nop {
+	with_override fail nop {
+	    if {$proc == "gdb_test_multiple"} {
+		set res [gdb_test_multiple "quit" "" {}]
+		# Not reached.
+	    } elseif {$proc == "gdb_test"} {
+		set res [gdb_test "quit"]
+		# Reached.
+	    }
+	    return [expr {100 + $res}]
+	}
+    }
+    # Not reached.
+    return 200
+}
+
+if {![is_remote host]} {
+    with_test_prefix "eof handling" {
+	set res 300
+	try {
+	    set res [quit gdb_test_multiple]
+	} on return {result} {
+	} finally {
+	    # Proc gdb_test_multiple does "return -1" on eof, which makes its
+	    # caller return.  Check that behavior.
+	    gdb_assert {$res == -1} "gdb_test_multiple"
+	}
+
+	clean_restart
+
+	set res 300
+	try {
+	    set res [quit gdb_test]
+	} on return {result} {
+	} finally {
+	    # Proc gdb_test_multiple does "return -1" on eof, which makes its
+	    # caller return, which is gdb_test.  Check that behavior.
+	    gdb_assert {$res == 99} "gdb_test"
+	}
+
+	clean_restart
+    }
+}
+
 # Change the prompt.
 set prompt "(GDB) "
 set prompt_re "\\(GDB\\) $"

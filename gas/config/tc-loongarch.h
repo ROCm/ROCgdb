@@ -75,9 +75,6 @@ extern bool loongarch_frag_align_code (int, int);
 #define TC_FORCE_RELOCATION(FIX) loongarch_force_relocation (FIX)
 extern int loongarch_force_relocation (struct fix *);
 
-/* If subsy of BFD_RELOC32/64 and PC in same segment, and without relax
-   or PC at start of subsy or with relax but sub_symbol_segment not in
-   SEC_CODE, we generate 32/64_PCREL.  */
 extern bool loongarch_force_relocation_sub_local (struct fix *, asection *);
 #define TC_FORCE_RELOCATION_SUB_LOCAL(FIX, SEC) \
   loongarch_force_relocation_sub_local (FIX, SEC)
@@ -101,8 +98,14 @@ extern bool loongarch_force_relocation_sub_same(struct fix *, asection *);
 #define MD_APPLY_SYM_VALUE(FIX) 0
 
 #define TARGET_USE_CFIPOP 1
-/* Adjust debug_line after relaxation.  */
-#define DWARF2_USE_FIXED_ADVANCE_PC   1
+
+extern bool loongarch_fixed_advance_pc (symbolS *, symbolS *);
+#define DWARF2_USE_FIXED_ADVANCE_PC(FROM, TO) \
+  loongarch_fixed_advance_pc (FROM, TO)
+
+extern bool loongarch_fixed_advance_pc_frag (fragS *);
+#define DWARF2_USE_FIXED_ADVANCE_PC_FRAG(FRAG) \
+  loongarch_fixed_advance_pc_frag (FRAG)
 
 /* FDE Data Alignment Factor.
    FDE Code Alignment Factor (DWARF2_LINE_MIN_INSN_LENGTH) should be 1

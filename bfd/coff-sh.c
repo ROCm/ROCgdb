@@ -2895,7 +2895,7 @@ sh_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 static bfd_byte *
 sh_coff_get_relocated_section_contents (bfd *output_bfd,
 					struct bfd_link_info *link_info,
-					struct bfd_link_order *link_order,
+					const struct bfd_link_order *link_order,
 					bfd_byte *data,
 					bool relocatable,
 					asymbol **symbols)

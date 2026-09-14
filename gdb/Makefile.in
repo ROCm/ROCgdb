@@ -104,9 +104,7 @@ CXX = @CXX@
 CXX_DIALECT = @CXX_DIALECT@
 
 # Dependency tracking information.
-DEPMODE = @CCDEPMODE@
 DEPDIR = @DEPDIR@
-depcomp = $(SHELL) $(srcdir)/../depcomp
 
 # Directory containing source files.
 srcdir = @srcdir@
@@ -115,11 +113,14 @@ top_srcdir = @top_srcdir@
 
 include $(srcdir)/silent-rules.mk
 
-# Note that these are overridden by GNU make-specific code below if
-# GNU make is used.  The overrides implement dependency tracking.
+# Note that we put the dependencies into a .Tpo file, then move them into
+# place if the compile succeeds.  We need this because gcc does not
+# atomically write the dependency output file.
 COMPILE.pre = $(CXX) -x c++ $(CXX_DIALECT)
-COMPILE.post = -c -o $@
-POSTCOMPILE = @true
+COMPILE.post = -c -o $@ \
+	-MT $@ -MMD -MP -MF $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo
+POSTCOMPILE = @mv $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo \
+	$(@D)/$(DEPDIR)/$(basename $(@F)).Po
 
 # CXXFLAGS is at the very end on purpose, so that user-supplied flags can
 # override internal flags.
@@ -590,7 +591,6 @@ HAVE_GSTACK = @HAVE_GSTACK@
 
 CONFIG_SRC_SUBDIR = arch cli dwarf2 mi compile tui unittests guile python \
 	target nat gdbtk/generic
-CONFIG_DEP_SUBDIR = $(addsuffix /$(DEPDIR),$(CONFIG_SRC_SUBDIR))
 
 # -I. for config files.
 # -I$(srcdir) for gdb internal headers.
@@ -2093,17 +2093,13 @@ generated_files = \
 # Flags needed to compile Python code
 PYTHON_CFLAGS = @PYTHON_CFLAGS@
 
-all: gdb$(EXEEXT) $(CONFIG_ALL) gdb-gdb.py gdb-gdb.gdb gcore gstack gdb-add-index
+all: gdb$(EXEEXT) $(CONFIG_ALL) gcore gstack gdb-add-index
 	@$(MAKE) $(FLAGS_TO_PASS) DO=all "DODIRS=$(SUBDIRS)" subdir_do
 
-# Rule for compiling .c files in the top-level gdb directory.
-# The order-only dependencies ensure that we create the build subdirectories.
-%.o: %.c | $(CONFIG_DEP_SUBDIR)
+# Rule for compiling .c files.
+%.o: %.c
 	$(COMPILE) $<
 	$(POSTCOMPILE)
-
-$(CONFIG_DEP_SUBDIR):
-	$(ECHO_GEN) $(SHELL) $(srcdir)/../install-sh -d $@
 
 # Python files need special flags.
 python/%.o: INTERNAL_CFLAGS += $(PYTHON_CFLAGS)
@@ -2417,10 +2413,11 @@ clean mostlyclean: $(CONFIG_CLEAN)
 	rm -f gdb$(EXEEXT) core make.log
 	rm -f gdb[0-9]$(EXEEXT)
 	rm -f xml-builtin.c stamp-xml
-	rm -f $(DEPDIR)/*
-	for i in $(CONFIG_SRC_SUBDIR); do \
-		rm -f $$i/*.o;	\
-		rm -f $$i/$(DEPDIR)/*; \
+	rm -f gcore gstack gdb-add-index
+	rm -f $(addsuffix /*.o,$(CONFIG_SRC_SUBDIR))
+	rm -f $(addsuffix /*,$(ALL_DEPDIRS))
+	for d in $(ALL_DEPDIRS); do \
+		if test -d "$$d"; then rmdir "$$d" || exit 1; fi; \
 	done
 
 # This used to depend on c-exp.c m2-exp.c TAGS
@@ -2429,16 +2426,15 @@ clean mostlyclean: $(CONFIG_CLEAN)
 # functionality described is if the distributed files are unmodified.
 distclean: clean
 	@$(MAKE) $(FLAGS_TO_PASS) DO=distclean "DODIRS=$(CLEANDIRS)" subdir_do
-	rm -f nm.h config.status config.h stamp-h b jit-reader.h gcore gstack gstack.in stamp-nmh
-	rm -f gdb-gdb.py gdb-gdb.gdb
+	rm -f nm.h config.status config.h stamp-h jit-reader.h stamp-nmh
+	rm -f gcore.in gstack.in gdb-add-index.in
+	if test "$(srcdir)" != "."; then \
+		rm -f gdb-gdb.gdb gdb-gdb.py; \
+	fi
 	rm -f y.output yacc.acts yacc.tmp y.tab.h
 	rm -f config.log config.cache
 	rm -f config.lt libtool
 	rm -f Makefile
-	rm -rf $(DEPDIR)
-	for i in $(CONFIG_SRC_SUBDIR); do \
-		if test -d $$i/$(DEPDIR); then rmdir $$i/$(DEPDIR); fi \
-	done
 
 maintainer-clean: local-maintainer-clean do-maintainer-clean distclean
 realclean: maintainer-clean
@@ -2446,10 +2442,6 @@ realclean: maintainer-clean
 local-maintainer-clean:
 	@echo "This command is intended for maintainers to use;"
 	@echo "it deletes files that may require special tools to rebuild."
-	rm -f c-exp.c \
-		cp-name-parser.c \
-		ada-lex.c ada-exp.c \
-		d-exp.c f-exp.c go-exp.c m2-exp.c p-exp.c
 	rm -f TAGS
 	rm -f $(YYFILES)
 	rm -f nm.h config.status
@@ -2498,12 +2490,6 @@ gstack gcore gdb-add-index: % : %.in version.c
 	vv=`grep 'version\[\] = ' version.c | grep -o '".*"' | tr -d \"`; \
 	sed -e "s,@VERSION@,$$vv," $< > $@
 	@chmod +x $@
-
-gdb-gdb.py: $(srcdir)/gdb-gdb.py.in config.status
-	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) $@
-
-gdb-gdb.gdb: $(srcdir)/gdb-gdb.gdb.in config.status
-	$(ECHO_GEN) $(SHELL) config.status $(SILENT_FLAG) $@
 
 config.h: stamp-h ; @true
 stamp-h: $(srcdir)/config.in config.status
@@ -2615,27 +2601,10 @@ gdb.cxref: $(SFILES)
 
 force_update:
 
-# GNU Make has an annoying habit of putting *all* the Makefile variables
-# into the environment, unless you include this target as a circumvention.
-# Rumor is that this will be fixed (and this target can be removed)
-# in GNU Make 4.0.
-.NOEXPORT:
-
 # GNU Make 3.63 has a different problem: it keeps tacking command line
 # overrides onto the definition of $(MAKE).  This variable setting
 # will remove them.
 MAKEOVERRIDES =
-
-# Some files need explicit build rules (due to -Werror problems) or due
-# to sub-directory fun 'n' games.
-
-# ada-exp.c can appear in srcdir, for releases; or in ., for
-# development builds.
-ADA_EXP_C = `if test -f ada-exp.c; then echo ada-exp.c; else echo $(srcdir)/ada-exp.c; fi`
-
-ada-exp.o: ada-exp.c
-	$(COMPILE) $(ADA_EXP_C)
-	$(POSTCOMPILE)
 
 # Message files.  Based on code in gcc/Makefile.in.
 
@@ -2840,39 +2809,24 @@ all_gdbtk_cflags = $(IDE_CFLAGS) $(ITCL_CFLAGS) \
 # Dependency tracking.
 #
 
-ifeq ($(DEPMODE),depmode=gcc3)
-# Note that we put the dependencies into a .Tpo file, then move them
-# into place if the compile succeeds.  We need this because gcc does
-# not atomically write the dependency output file.
-override COMPILE.post = -c -o $@ -MT $@ -MMD -MP \
-	-MF $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo
-override POSTCOMPILE = @mv $(@D)/$(DEPDIR)/$(basename $(@F)).Tpo \
-	$(@D)/$(DEPDIR)/$(basename $(@F)).Po
-else
-override COMPILE.pre = source='$<' object='$@' libtool=no \
-	DEPDIR=$(DEPDIR) $(DEPMODE) $(depcomp) \
-	$(CXX) -x c++ $(CXX_DIALECT)
-# depcomp handles atomicity for us, so we don't need a postcompile
-# step.
-override POSTCOMPILE =
-endif
-
 # A list of all the objects we might care about in this build, for
 # dependency tracking.
 all_object_files = gdb.o $(LIBGDB_OBS) gdbtk/generic/gdbtk-main.o
+
+# All the directories in which we put dependency files.
+ALL_DEPDIRS = $(DEPDIR) $(addsuffix /$(DEPDIR),$(CONFIG_SRC_SUBDIR))
+
+$(ALL_DEPDIRS):
+	$(ECHO_GEN) mkdir -p $@
 
 # All the .deps files to include.
 all_deps_files = $(foreach dep,$(patsubst %.o,%.Po,$(all_object_files)),\
     $(dir $(dep))/$(DEPDIR)/$(notdir $(dep)))
 
-# Ensure that generated files are created early.  Use order-only
-# dependencies if available.  They require GNU make 3.80 or newer,
-# and the .VARIABLES variable was introduced at the same time.
-ifdef .VARIABLES
-$(all_object_files): | $(generated_files)
-else
-$(all_object_files) : $(generated_files)
-endif
+# Ensure that the generated files and the dependency directories are created
+# early.  Creating a dependency directory also creates the directory the
+# objects go in.
+$(all_object_files): | $(generated_files) $(ALL_DEPDIRS)
 
 # Dependencies.
 -include $(all_deps_files)

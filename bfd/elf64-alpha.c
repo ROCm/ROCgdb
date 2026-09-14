@@ -135,6 +135,11 @@ struct alpha_elf_got_entry
 
   /* Have we adjusted this entry for SEC_MERGE?  */
   unsigned char reloc_xlated;
+
+  /* Does a section that survives into the output refer to this entry?
+     Only such an entry is ever filled in, so only such an entry gets an
+     R_ALPHA_IRELATIVE reserved for it.  */
+  unsigned char irel_live;
 };
 
 struct alpha_elf_reloc_entry
@@ -196,6 +201,12 @@ struct alpha_elf_link_hash_table
   /* The most recent relax pass that we've seen.  The GOTs
      should be regenerated if this doesn't match.  */
   int relax_trip;
+
+  /* The part of the size of .rela.iplt that is due to data references to
+     an IFUNC, counted once the sections that survive into the output are
+     known.  The rest comes from got entries and is recomputed whenever the
+     GOTs are.  */
+  bfd_size_type irelplt_data_size;
 };
 
 /* Look up an entry in a Alpha ELF linker hash table.  */
@@ -1020,6 +1031,22 @@ static reloc_howto_type elf64_alpha_howto_table[] =
 	 0xffff,		/* src_mask */
 	 0xffff,		/* dst_mask */
 	 false),		/* pcrel_offset */
+
+  /* A dynamic relocation to set a 64-bit field to the value returned by
+     the resolver whose address is the addend.  */
+  HOWTO (R_ALPHA_IRELATIVE,
+	 0,
+	 0,
+	 0,
+	 false,
+	 0,
+	 complain_overflow_dont,
+	 bfd_elf_generic_reloc,
+	 "IRELATIVE",
+	 false,
+	 0,
+	 0,
+	 true),
 };
 
 /* A mapping from BFD reloc types to Alpha ELF reloc types.  */
@@ -1062,6 +1089,7 @@ static const struct elf_reloc_map elf64_alpha_reloc_map[] =
   {BFD_RELOC_ALPHA_TPREL_HI16,		R_ALPHA_TPRELHI},
   {BFD_RELOC_ALPHA_TPREL_LO16,		R_ALPHA_TPRELLO},
   {BFD_RELOC_ALPHA_TPREL16,		R_ALPHA_TPREL16},
+  {BFD_RELOC_IRELATIVE,			R_ALPHA_IRELATIVE},
 };
 
 /* Given a BFD reloc type, return a HOWTO structure.  */
@@ -1121,6 +1149,22 @@ elf64_alpha_info_to_howto (bfd *abfd, arelent *cache_ptr,
 /* These two relocations create a two-word entry in the got.  */
 #define alpha_got_entry_size(r_type) \
   (r_type == R_ALPHA_TLSGD || r_type == R_ALPHA_TLSLDM ? 16 : 8)
+
+/* Return the address of the word at OFF bytes into GOTENT's got slot.
+   The got is sized repeatedly and its subsections re-merged as relaxation
+   proceeds, so check that the slot really lies inside the subsection
+   rather than writing past the end of it.  */
+
+static bfd_byte *
+alpha_got_slot (struct alpha_elf_got_entry *gotent, unsigned int off)
+{
+  struct alpha_elf_obj_tdata *td = alpha_elf_tdata (gotent->gotobj);
+
+  BFD_ASSERT (td->got->contents != NULL);
+  BFD_ASSERT (gotent->got_offset >= 0);
+  BFD_ASSERT ((bfd_vma) gotent->got_offset + off + 8 <= td->got->size);
+  return td->got->contents + gotent->got_offset + off;
+}
 
 /* This is PT_TLS segment p_vaddr.  */
 #define alpha_get_dtprel_base(info) \
@@ -1702,7 +1746,7 @@ get_got_entry (bfd *abfd, struct alpha_elf_link_hash_entry *h,
       size_t amt;
 
       amt = sizeof (struct alpha_elf_got_entry);
-      gotent = (struct alpha_elf_got_entry *) bfd_alloc (abfd, amt);
+      gotent = (struct alpha_elf_got_entry *) bfd_zalloc (abfd, amt);
       if (!gotent)
 	return NULL;
 
@@ -1712,8 +1756,6 @@ get_got_entry (bfd *abfd, struct alpha_elf_link_hash_entry *h,
       gotent->plt_offset = -1;
       gotent->use_count = 1;
       gotent->reloc_type = r_type;
-      gotent->reloc_done = 0;
-      gotent->reloc_xlated = 0;
 
       gotent->next = *slot;
       *slot = gotent;
@@ -1733,6 +1775,7 @@ static bool
 elf64_alpha_want_plt (struct alpha_elf_link_hash_entry *ah)
 {
   return ((ah->root.type == STT_FUNC
+	  || ah->root.type == STT_GNU_IFUNC
 	  || ah->root.root.type == bfd_link_hash_undefweak
 	  || ah->root.root.type == bfd_link_hash_undefined)
 	  && (ah->flags & ALPHA_ELF_LINK_HASH_LU_PLT) != 0
@@ -1750,6 +1793,285 @@ elf64_alpha_sort_relocs_p (asection *sec)
   return (sec->flags & SEC_CODE) == 0;
 }
 
+
+/* True if a relocation refers to an IFUNC defined in a regular object.  H
+   describes the symbol when it is global and SYM when it is local.  An
+   undefined symbol can carry the IFUNC type from a .type directive; it is
+   treated as an ordinary undefined function, as the generic code does when
+   it writes it out.  */
+
+static bool
+elf64_alpha_ifunc_p (struct alpha_elf_link_hash_entry *h,
+		     Elf_Internal_Sym *sym)
+{
+  if (h != NULL)
+    return h->root.type == STT_GNU_IFUNC && h->root.def_regular;
+
+  return sym != NULL && ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC;
+}
+
+/* True if a relocation of type R_TYPE against an IFUNC can end up as an
+   R_ALPHA_IRELATIVE.  */
+
+static bool
+elf64_alpha_ifunc_reloc_p (unsigned long r_type)
+{
+  return r_type == R_ALPHA_LITERAL || r_type == R_ALPHA_REFQUAD;
+}
+
+/* True if a reference to the IFUNC described by H (global) or SYM (local)
+   needs its R_ALPHA_IRELATIVE in .rela.iplt: the link is not PIC, so
+   nothing has reserved a slot for it alongside the R_ALPHA_RELATIVE it
+   would otherwise have had, and the symbol is not preemptible.  */
+
+static bool
+elf64_alpha_ifunc_irelplt_p (struct alpha_elf_link_hash_entry *h,
+			     Elf_Internal_Sym *sym,
+			     struct bfd_link_info *info)
+{
+  if (!elf64_alpha_ifunc_p (h, sym) || bfd_link_pic (info))
+    return false;
+
+  return h == NULL || !alpha_elf_dynamic_symbol_p (&h->root, info);
+}
+
+/* Create .rela.iplt.  Called from check_relocs, since the section has to
+   exist before input sections are mapped to output sections.  One that
+   stays empty is stripped by elf64_alpha_late_size_sections.  */
+
+static bool
+elf64_alpha_create_irelplt (struct bfd_link_info *info)
+{
+  struct elf_link_hash_table *htab = elf_hash_table (info);
+  const struct elf_backend_data *bed;
+  asection *s;
+
+  if (htab->irelplt != NULL)
+    return true;
+
+  bed = get_elf_backend_data (info->output_bfd);
+  s = bfd_make_section_anyway_with_flags (htab->dynobj, ".rela.iplt",
+					  (bed->dynamic_sec_flags
+					   | SEC_READONLY));
+  if (s == NULL || !bfd_set_section_alignment (s, 3))
+    return false;
+
+  htab->irelplt = s;
+  return true;
+}
+
+/* Note that an R_ALPHA_IRELATIVE will be applied to SEC.  A read-only one
+   needs the page made writable at startup, which only the dynamic linker
+   can do.  Only a data relocation can land in such a section; the GOT is
+   always writable.  */
+
+static void
+elf64_alpha_note_irelative (struct bfd_link_info *info, asection *sec)
+{
+  if ((sec->flags & SEC_READONLY) != 0)
+    {
+      info->flags |= DF_TEXTREL;
+      info->callbacks->minfo
+	(_("%pB: R_ALPHA_IRELATIVE in read-only section `%pA'\n"),
+	 sec->owner, sec);
+    }
+}
+
+/* Note the references to an IFUNC that need an R_ALPHA_IRELATIVE in
+   .rela.iplt: mark the got entries that get one and count the data
+   relocations that do.  Only the input sections that make it into the
+   output are relocated, and only their references are emitted, so this runs
+   once the output sections are known rather than in check_relocs, which
+   still sees the sections a linker script goes on to discard.  */
+
+static bool
+elf64_alpha_scan_irelative (struct bfd_link_info *info)
+{
+  struct alpha_elf_link_hash_table *htab = alpha_elf_hash_table (info);
+  bfd *abfd;
+
+  htab->irelplt_data_size = 0;
+
+  for (abfd = info->input_bfds; abfd != NULL; abfd = abfd->link.next)
+    {
+      Elf_Internal_Shdr *symtab_hdr;
+      asection *sec;
+
+      if (!is_alpha_elf (abfd) || (abfd->flags & DYNAMIC) != 0)
+	continue;
+
+      symtab_hdr = &elf_symtab_hdr (abfd);
+
+      for (sec = abfd->sections; sec != NULL; sec = sec->next)
+	{
+	  Elf_Internal_Rela *relocs, *rel, *relend;
+	  bool noted = false;
+
+	  /* The sections elf_link_input_bfd will relocate.  One a linker
+	     script discarded and one discarded as a duplicate both have the
+	     absolute section for their output.  */
+	  if ((sec->flags & (SEC_ALLOC | SEC_RELOC | SEC_HAS_CONTENTS))
+	      != (SEC_ALLOC | SEC_RELOC | SEC_HAS_CONTENTS)
+	      || sec->reloc_count == 0
+	      || sec->output_section == NULL
+	      || bfd_is_abs_section (sec->output_section))
+	    continue;
+
+	  relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+					      info->keep_memory);
+	  if (relocs == NULL)
+	    return false;
+
+	  relend = relocs + sec->reloc_count;
+	  for (rel = relocs; rel < relend; rel++)
+	    {
+	      unsigned long r_type = ELF64_R_TYPE (rel->r_info);
+	      unsigned long r_symndx = ELF64_R_SYM (rel->r_info);
+	      struct alpha_elf_link_hash_entry *h = NULL;
+	      Elf_Internal_Sym *isym = NULL;
+	      struct alpha_elf_got_entry *gotent;
+
+	      if (!elf64_alpha_ifunc_reloc_p (r_type))
+		continue;
+
+	      if (r_symndx < symtab_hdr->sh_info)
+		{
+		  isym = bfd_sym_from_r_symndx
+		    (&elf_hash_table (info)->sym_cache, abfd, r_symndx);
+		  if (isym == NULL)
+		    return false;
+		}
+	      else
+		{
+		  h = (alpha_elf_sym_hashes (abfd)
+		       [r_symndx - symtab_hdr->sh_info]);
+		  while (h->root.root.type == bfd_link_hash_indirect
+			 || h->root.root.type == bfd_link_hash_warning)
+		    h = ((struct alpha_elf_link_hash_entry *)
+			 h->root.root.u.i.link);
+		}
+
+	      /* A symbol defined in a section the linker discarded reaches
+		 relocate_section as an error rather than as a relocation to
+		 emit, so nothing may be reserved for it.  */
+	      if (h != NULL)
+		{
+		  if ((h->root.root.type == bfd_link_hash_defined
+		       || h->root.root.type == bfd_link_hash_defweak)
+		      && discarded_section (h->root.root.u.def.section))
+		    continue;
+		}
+	      else if (isym->st_shndx < SHN_LORESERVE
+		       || isym->st_shndx > SHN_HIRESERVE)
+		{
+		  /* An index above the reserved range is one that
+		     bfd_sym_from_r_symndx expanded from an SHN_XINDEX
+		     entry; elf_link_input_bfd looks that one up too.  */
+		  asection *isec;
+
+		  isec = bfd_section_from_elf_index (abfd, isym->st_shndx);
+		  if (isec != NULL && discarded_section (isec))
+		    continue;
+		}
+
+	      if (!elf64_alpha_ifunc_irelplt_p (h, isym, info))
+		continue;
+
+	      if (r_type == R_ALPHA_REFQUAD)
+		{
+		  htab->irelplt_data_size += sizeof (Elf64_External_Rela);
+		  if (!noted)
+		    {
+		      elf64_alpha_note_irelative (info, sec);
+		      noted = true;
+		    }
+		  continue;
+		}
+
+	      /* However many references reach a got entry, it holds one
+		 address and gets one R_ALPHA_IRELATIVE.  Find it the way
+		 relocate_section will.  */
+	      if (h != NULL)
+		gotent = h->got_entries;
+	      else if (alpha_elf_tdata (abfd)->local_got_entries != NULL)
+		gotent = alpha_elf_tdata (abfd)->local_got_entries[r_symndx];
+	      else
+		gotent = NULL;
+
+	      for (; gotent != NULL; gotent = gotent->next)
+		if (gotent->gotobj == alpha_elf_tdata (abfd)->gotobj
+		    && gotent->reloc_type == r_type
+		    && gotent->addend == rel->r_addend)
+		  {
+		    gotent->irel_live = 1;
+		    break;
+		  }
+	    }
+
+	  if (elf_section_data (sec)->relocs != relocs)
+	    free (relocs);
+	}
+    }
+
+  return true;
+}
+
+/* Reserve space in .rela.iplt for the got entries of a global IFUNC that
+   elf64_alpha_scan_irelative marked.  */
+
+static bool
+elf64_alpha_size_irelative (struct alpha_elf_link_hash_entry *h,
+			    struct bfd_link_info *info)
+{
+  asection *irelplt = elf_hash_table (info)->irelplt;
+  struct alpha_elf_got_entry *gotent;
+
+  for (gotent = h->got_entries; gotent != NULL; gotent = gotent->next)
+    if (gotent->irel_live && gotent->use_count > 0)
+      irelplt->size += sizeof (Elf64_External_Rela);
+
+  return true;
+}
+
+/* Size .rela.iplt.  The data references are counted once, since nothing
+   later changes them; the got entries of a global IFUNC can still merge
+   when the GOTs are re-merged during relaxation, so the part of the size
+   that comes from them is recomputed alongside them.  */
+
+static void
+elf64_alpha_size_irelplt_section (struct bfd_link_info *info)
+{
+  struct alpha_elf_link_hash_table *htab = alpha_elf_hash_table (info);
+  asection *irelplt = elf_hash_table (info)->irelplt;
+  bfd *i;
+
+  if (irelplt == NULL)
+    return;
+
+  irelplt->size = htab->irelplt_data_size;
+  alpha_elf_link_hash_traverse (htab, elf64_alpha_size_irelative, info);
+
+  /* A local symbol has no hash entry for the traversal to reach.  */
+  for (i = htab->got_list; i != NULL; i = alpha_elf_tdata (i)->got_link_next)
+    {
+      bfd *j;
+
+      for (j = i; j != NULL; j = alpha_elf_tdata (j)->in_got_link_next)
+	{
+	  struct alpha_elf_got_entry **local_got_entries, *gotent;
+	  int k, n;
+
+	  local_got_entries = alpha_elf_tdata (j)->local_got_entries;
+	  if (local_got_entries == NULL)
+	    continue;
+
+	  for (k = 0, n = elf_symtab_hdr (j).sh_info; k < n; ++k)
+	    for (gotent = local_got_entries[k]; gotent; gotent = gotent->next)
+	      if (gotent->irel_live && gotent->use_count > 0)
+		irelplt->size += sizeof (Elf64_External_Rela);
+	}
+    }
+}
 
 /* Handle dynamic relocations when doing an Alpha ELF link.  */
 
@@ -1787,14 +2109,29 @@ elf64_alpha_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
       unsigned long r_symndx, r_type;
       struct alpha_elf_link_hash_entry *h;
+      Elf_Internal_Sym *isym;
       unsigned int gotent_flags;
       bool maybe_dynamic;
       unsigned int need;
       bfd_vma addend;
 
       r_symndx = ELF64_R_SYM (rel->r_info);
+      r_type = ELF64_R_TYPE (rel->r_info);
+      isym = NULL;
       if (r_symndx < symtab_hdr->sh_info)
-	h = NULL;
+	{
+	  h = NULL;
+
+	  /* A local IFUNC needs the same treatment as a global one, but
+	     only the symbol table says that it is one.  */
+	  if (elf64_alpha_ifunc_reloc_p (r_type))
+	    {
+	      isym = bfd_sym_from_r_symndx (&elf_hash_table (info)->sym_cache,
+					    abfd, r_symndx);
+	      if (isym == NULL)
+		return false;
+	    }
+	}
       else
 	{
 	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
@@ -1820,9 +2157,16 @@ elf64_alpha_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		|| h->root.root.type == bfd_link_hash_defweak))
 	maybe_dynamic = true;
 
+      /* Whether a global IFUNC needs .rela.iplt is not settled until
+	 sizing, so create the section for every reference that might.  */
+      if (elf64_alpha_ifunc_reloc_p (r_type)
+	  && elf64_alpha_ifunc_p (h, isym)
+	  && !bfd_link_pic (info)
+	  && !elf64_alpha_create_irelplt (info))
+	return false;
+
       need = 0;
       gotent_flags = 0;
-      r_type = ELF64_R_TYPE (rel->r_info);
       addend = rel->r_addend;
 
       switch (r_type)
@@ -1854,7 +2198,16 @@ elf64_alpha_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 	case R_ALPHA_REFLONG:
 	case R_ALPHA_REFQUAD:
-	  if (bfd_link_pic (info) || maybe_dynamic)
+	  if (r_type == R_ALPHA_REFQUAD && elf64_alpha_ifunc_p (h, isym))
+	    {
+	      /* A reference that becomes an R_ALPHA_IRELATIVE in .rela.iplt
+		 is sized later, from the sections that survive.  Whether a
+		 global one does is not settled until then, so record it
+		 either way; a local symbol never becomes dynamic.  */
+	      if (h != NULL || !elf64_alpha_ifunc_irelplt_p (NULL, isym, info))
+		need = NEED_DYNREL;
+	    }
+	  else if (bfd_link_pic (info) || maybe_dynamic)
 	    need = NEED_DYNREL;
 	  break;
 
@@ -2292,6 +2645,7 @@ elf64_alpha_merge_gots (bfd *a, bfd *b)
 		    && ae->addend == be->addend)
 		  {
 		    ae->flags |= be->flags;
+		    ae->irel_live |= be->irel_live;
 		    ae->use_count += be->use_count;
 		    *pbe = be->next;
 		    memset (be, 0xa5, sizeof (*be));
@@ -2561,34 +2915,15 @@ elf64_alpha_size_plt_section (struct bfd_link_info *info)
 static bool
 elf64_alpha_early_size_sections (struct bfd_link_info *info)
 {
-  bfd *i;
-  struct alpha_elf_link_hash_table * htab;
-
   if (bfd_link_relocatable (info))
     return true;
 
-  htab = alpha_elf_hash_table (info);
-  if (htab == NULL)
-    return false;
-
-  if (!elf64_alpha_size_got_sections (info, true))
-    return false;
-
-  /* Allocate space for all of the .got subsections.  */
-  i = htab->got_list;
-  for ( ; i ; i = alpha_elf_tdata(i)->got_link_next)
-    {
-      asection *s = alpha_elf_tdata(i)->got;
-      if (s->size > 0)
-	{
-	  s->contents = (bfd_byte *) bfd_zalloc (i, s->size);
-	  if (s->contents == NULL)
-	    return false;
-	  s->alloced = 1;
-	}
-    }
-
-  return true;
+  /* Size the .got subsections, but do not allocate their contents here.
+     This sizing is not final: relaxation re-runs it, and the re-merge
+     there can grow a subsection even though the table as a whole only
+     shrinks.  elf64_alpha_final_link allocates the contents once the
+     sizes have settled.  */
+  return elf64_alpha_size_got_sections (info, true);
 }
 
 /* The number of dynamic relocations required by a static relocation.  */
@@ -2672,7 +3007,7 @@ elf64_alpha_calc_dynrel_sizes (struct alpha_elf_link_hash_entry *h,
 	    entries * sizeof (Elf64_External_Rela) * relent->count;
 	  if ((sec->flags & SEC_READONLY) != 0)
 	    {
-	      info->flags |= DT_TEXTREL;
+	      info->flags |= DF_TEXTREL;
 	      info->callbacks->minfo
 		(_("%pB: dynamic relocation against `%pT' in "
 		   "read-only section `%pA'\n"),
@@ -2823,7 +3158,15 @@ elf64_alpha_late_size_sections (struct bfd_link_info *info)
       elf64_alpha_size_rela_got_section (info);
       elf64_alpha_size_plt_section (info);
     }
-  /* else we're not dynamic and by definition we don't need such things.  */
+
+  /* The sizing above reserves nothing for a non-dynamic IFUNC, since the
+     dynamic linker never sees it; its relocations go in .rela.iplt.  */
+  if (elf_hash_table (info)->irelplt != NULL)
+    {
+      if (!elf64_alpha_scan_irelative (info))
+	return false;
+      elf64_alpha_size_irelplt_section (info);
+    }
 
   /* The check_relocs and adjust_dynamic_symbol entry points have
      determined the sizes of the various dynamic sections.  Allocate
@@ -2840,6 +3183,12 @@ elf64_alpha_late_size_sections (struct bfd_link_info *info)
       /* It's OK to base decisions on the section name, because none
 	 of the dynobj section names depend upon the input files.  */
       name = bfd_section_name (s);
+
+      /* The .got subsection of DYNOBJ is sized along with all the other
+	 got subsections, and relaxation can still change that size.  Leave
+	 it for elf64_alpha_final_link to allocate.  */
+      if (strcmp (name, ".got") == 0)
+	continue;
 
       if (startswith (name, ".rela"))
 	{
@@ -3368,37 +3717,21 @@ elf64_alpha_relax_with_lituse (struct alpha_relax_info *info,
 	    else
 	      all_optimized = false;
 
-	    /* Even if the target is not in range for a direct branch,
-	       if we share a GP, we can eliminate the gp reload.  */
-	    if (optdest)
-	      {
-		Elf_Internal_Rela *gpdisp
-		  = (elf64_alpha_find_reloc_at_ofs
-		     (info->relocs, irelend, urel_r_offset + 4,
-		      R_ALPHA_GPDISP));
-		if (gpdisp)
-		  {
-		    bfd_byte *p_ldah = contents + gpdisp->r_offset;
-		    bfd_byte *p_lda = p_ldah + gpdisp->r_addend;
-		    unsigned int ldah = bfd_get_32 (abfd, p_ldah);
-		    unsigned int lda = bfd_get_32 (abfd, p_lda);
-
-		    /* Verify that the instruction is "ldah $29,0($26)".
-		       Consider a function that ends in a noreturn call,
-		       and that the next function begins with an ldgp,
-		       and that by accident there is no padding between.
-		       In that case the insn would use $27 as the base.  */
-		    if (ldah == 0x27ba0000 && lda == 0x23bd0000)
-		      {
-			bfd_put_32 (abfd, (bfd_vma) INSN_UNOP, p_ldah);
-			bfd_put_32 (abfd, (bfd_vma) INSN_UNOP, p_lda);
-
-			gpdisp->r_info = ELF64_R_INFO (0, R_ALPHA_NONE);
-			changed_contents = true;
-			changed_relocs = true;
-		      }
-		  }
-	      }
+	    /* Keep the caller's GPDISP ldah/lda pair.  A non-zero optdest
+	       says the callee starts with our gp, which is enough to enter
+	       it past its own ldgp, but says nothing about the gp we get
+	       back: $gp is caller-saved, and a callee ending in a tail call
+	       returns with the tail target's gp in $29.  If that target
+	       lives in another sub-GOT, later displacements off $gp in this
+	       function silently name slots in the wrong sub-GOT.  Eliding
+	       the reload again would mean proving here that the callee
+	       returns with gp intact, which needs a scan of its
+	       instructions.  Cheaper would be a new STO_ALPHA_* bit that
+	       gas sets at .end, alongside STO_ALPHA_STD_GPLOAD, when it saw
+	       nothing in the function that can leave $29 clobbered.  Either
+	       way the payoff is two unops: the pair is already emitted, so
+	       the rewrite never shrinks .text, and dropping the got entry
+	       depends on optdest rather than on this.  */
 	  }
 	  break;
 	}
@@ -3668,7 +4001,7 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
 	  else
 	    {
 	      tprel_gotent = (struct alpha_elf_got_entry *)
-		bfd_alloc (info->abfd, sizeof (struct alpha_elf_got_entry));
+		bfd_zalloc (info->abfd, sizeof (struct alpha_elf_got_entry));
 	      if (!tprel_gotent)
 		return false;
 
@@ -3678,8 +4011,7 @@ elf64_alpha_relax_tls_get_addr (struct alpha_relax_info *info, bfd_vma symval,
 	      tprel_gotent->gotobj = info->gotobj;
 	      tprel_gotent->addend = irel->r_addend;
 	      tprel_gotent->got_offset = -1;
-	      tprel_gotent->reloc_done = 0;
-	      tprel_gotent->reloc_xlated = 0;
+	      tprel_gotent->plt_offset = -1;
 	    }
 
 	  tprel_gotent->use_count = 1;
@@ -3725,10 +4057,10 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
       htab->relax_trip = link_info->relax_trip;
 
       /* This should never fail after the initial round, since the only error
-	 is GOT overflow, and relaxation only shrinks the table.  However, we
-	 may only merge got sections during the first pass.  If we merge
-	 sections after we've created GPREL relocs, the GP for the merged
-	 section backs up which may put the relocs out of range.  */
+	 is GOT overflow, and relaxation only shrinks the table overall.
+	 However, we may only merge got sections during the first pass.  If
+	 we merge sections after we've created GPREL relocs, the GP for the
+	 merged section backs up which may put the relocs out of range.  */
       if (!elf64_alpha_size_got_sections (link_info, relax_pass == 0))
 	abort ();
       if (elf_hash_table (link_info)->dynamic_sections_created)
@@ -3736,6 +4068,7 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
 	  elf64_alpha_size_plt_section (link_info);
 	  elf64_alpha_size_rela_got_section (link_info);
 	}
+      elf64_alpha_size_irelplt_section (link_info);
     }
 
   symtab_hdr = &elf_symtab_hdr (abfd);
@@ -3821,6 +4154,12 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
 
 	  isym = isymbuf + r_symndx;
 
+	  /* A reference to an IFUNC has to keep going through the GOT: a
+	     direct branch or a gp-relative address would reach the resolver
+	     rather than the function it selects.  */
+	  if (elf64_alpha_ifunc_p (NULL, isym))
+	    continue;
+
 	  /* Given the symbol for a TLSLDM reloc is ignored, this also
 	     means forcing the symbol value to the tp base.  */
 	  if (r_type == R_ALPHA_TLSLDM)
@@ -3863,6 +4202,10 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
 	  while (h->root.root.type == bfd_link_hash_indirect
 		 || h->root.root.type == bfd_link_hash_warning)
 	    h = (struct alpha_elf_link_hash_entry *)h->root.root.u.i.link;
+
+	  /* A reference to an IFUNC has to keep going through the GOT.  */
+	  if (elf64_alpha_ifunc_p (h, NULL))
+	    continue;
 
 	  /* If the symbol is undefined, we can't do anything with it.  */
 	  if (h->root.root.type == bfd_link_hash_undefined)
@@ -4103,6 +4446,20 @@ elf64_alpha_relocate_section_r (struct bfd_link_info *info ATTRIBUTE_UNUSED,
   return ret_val;
 }
 
+/* The name of the symbol a relocation refers to, for diagnostics.  H
+   describes the symbol when it is global and SYM when it is local.  */
+
+static const char *
+elf64_alpha_sym_name (bfd *abfd, Elf_Internal_Shdr *symtab_hdr,
+		      struct alpha_elf_link_hash_entry *h,
+		      Elf_Internal_Sym *sym, asection *sec)
+{
+  if (h != NULL)
+    return h->root.root.root.string;
+
+  return bfd_elf_sym_name (abfd, symtab_hdr, sym, sec);
+}
+
 /* Relocate an Alpha ELF section.  */
 
 static int
@@ -4298,6 +4655,58 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 	    && gotent->addend == addend)
 	  break;
 
+      /* A reference to an IFUNC has to go through the GOT entry or the data
+	 word that an R_ALPHA_IRELATIVE fills in with the address the
+	 resolver returns.  A relocation that names the symbol directly
+	 reaches the resolver instead, and R_ALPHA_REFLONG has no room for
+	 the address in the first place.  */
+      if (elf64_alpha_ifunc_p (h, sym) && (input_section->flags & SEC_ALLOC))
+	switch (r_type)
+	  {
+	  case R_ALPHA_REFLONG:
+	  case R_ALPHA_BRADDR:
+	  case R_ALPHA_BRSGP:
+	  case R_ALPHA_GPREL16:
+	  case R_ALPHA_GPREL32:
+	  case R_ALPHA_GPRELLOW:
+	  case R_ALPHA_GPRELHIGH:
+	  case R_ALPHA_SREL16:
+	  case R_ALPHA_SREL32:
+	  case R_ALPHA_SREL64:
+	    _bfd_error_handler
+	      /* xgettext:c-format */
+	      (_("%pB: %s relocation against STT_GNU_IFUNC symbol `%s' is "
+		 "not supported"),
+	       input_bfd, howto->name,
+	       elf64_alpha_sym_name (input_bfd, symtab_hdr, h, sym, sec));
+	    ret_val = false;
+	    continue;
+
+	  default:
+	    break;
+	  }
+
+      /* An R_ALPHA_IRELATIVE carries the address of the resolver in its
+	 addend, so there is no room in it for an offset from the symbol.
+	 A reference the dynamic linker resolves is not affected: it keeps
+	 the addend of the symbolic relocation it gets instead.  */
+      if (addend != 0
+	  && elf64_alpha_ifunc_reloc_p (r_type)
+	  && elf64_alpha_ifunc_p (h, sym)
+	  && (input_section->flags & SEC_ALLOC)
+	  && (elf64_alpha_ifunc_irelplt_p (h, sym, info)
+	      || (bfd_link_pic (info) && !dynamic_symbol_p)))
+	{
+	  _bfd_error_handler
+	    /* xgettext:c-format */
+	    (_("%pB: %s relocation against STT_GNU_IFUNC symbol `%s' has a "
+	       "non-zero addend"),
+	     input_bfd, howto->name,
+	     elf64_alpha_sym_name (input_bfd, symtab_hdr, h, sym, sec));
+	  ret_val = false;
+	  continue;
+	}
+
       switch (r_type)
 	{
 	case R_ALPHA_GPDISP:
@@ -4329,17 +4738,25 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 	      gotent->reloc_done = 1;
 
 	      bfd_put_64 (info->output_bfd, value,
-			  sgot->contents + gotent->got_offset);
+			  alpha_got_slot (gotent, 0));
 
-	      /* If the symbol has been forced local, output a
-		 RELATIVE reloc, otherwise it will be handled in
-		 finish_dynamic_symbol.  */
-	      if (bfd_link_pic (info)
-		  && !dynamic_symbol_p
-		  && !undef_weak_ref)
+	      /* If the symbol has been forced local, output a RELATIVE
+		 reloc, otherwise it will be handled in finish_dynamic_symbol.
+		 An IFUNC gets an IRELATIVE instead.  */
+	      if (elf64_alpha_ifunc_irelplt_p (h, sym, info))
+		elf64_alpha_emit_dynrel (info->output_bfd, info, sgot,
+					 elf_hash_table (info)->irelplt,
+					 gotent->got_offset, 0,
+					 R_ALPHA_IRELATIVE, value);
+	      else if (bfd_link_pic (info)
+		       && !dynamic_symbol_p
+		       && !undef_weak_ref)
 		elf64_alpha_emit_dynrel (info->output_bfd, info, sgot, srelgot,
 					 gotent->got_offset, 0,
-					 R_ALPHA_RELATIVE, value);
+					 (elf64_alpha_ifunc_p (h, sym)
+					  ? R_ALPHA_IRELATIVE
+					  : R_ALPHA_RELATIVE),
+					 value);
 	    }
 
 	  value = (sgot->output_section->vma
@@ -4442,17 +4859,8 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 		value += 8;
 		break;
 	      default:
-		if (h != NULL)
-		  name = h->root.root.root.string;
-		else
-		  {
-		    name = (bfd_elf_string_from_elf_section
-			    (input_bfd, symtab_hdr->sh_link, sym->st_name));
-		    if (name == NULL)
-		      name = _("<unknown>");
-		    else if (name[0] == 0)
-		      name = bfd_section_name (sec);
-		  }
+		name = elf64_alpha_sym_name (input_bfd, symtab_hdr, h, sym,
+					     sec);
 		_bfd_error_handler
 		  /* xgettext:c-format */
 		  (_("%pB: !samegp reloc against symbol without .prologue: %s"),
@@ -4471,6 +4879,7 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 	  {
 	    long dynindx, dyntype = r_type;
 	    bfd_vma dynaddend;
+	    asection *srel_out = srel;
 
 	    /* Careful here to remember RELATIVE relocations for global
 	       variables for symbolic shared objects.  */
@@ -4498,6 +4907,71 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 		  }
 		dynindx = 0;
 		dynaddend = value - dtp_base;
+	      }
+	    else if (elf64_alpha_ifunc_reloc_p (r_type)
+		     && elf64_alpha_ifunc_p (h, sym)
+		     && (input_section->flags & SEC_ALLOC))
+	      {
+		/* In a PIC link the RELATIVE this would otherwise get would
+		   store the address of the resolver, and space for it is
+		   already reserved, so the IRELATIVE takes its place.  A
+		   non-PIC link reserved nothing there and puts it in
+		   .rela.iplt instead.  */
+		dynindx = 0;
+		dyntype = R_ALPHA_IRELATIVE;
+		dynaddend = value;
+
+		if (elf64_alpha_ifunc_irelplt_p (h, sym, info))
+		  {
+		    srel_out = elf_hash_table (info)->irelplt;
+
+		    /* Every entry of .rela.iplt is applied, so it must not
+		       contain the R_ALPHA_NONE that elf64_alpha_emit_dynrel
+		       writes for a relocation whose place in the output has
+		       been removed.  Sizing .rela.iplt skips the sections that
+		       do not make it into the output, but .eh_frame editing
+		       deletes the place of a relocation later still, long
+		       after the section has been sized and given an address;
+		       there is nothing left to shrink it by.  Report it rather
+		       than produce an executable that faults at startup.  */
+		    if ((_bfd_elf_section_offset (info->output_bfd, info,
+						  input_section, rel->r_offset)
+			 | 1) == (bfd_vma) -1)
+		      {
+			_bfd_error_handler
+			  /* xgettext:c-format */
+			  (_("%pB: cannot resolve STT_GNU_IFUNC symbol `%s': "
+			     "the place of its %s relocation in `%pA' was "
+			     "deleted"),
+			   input_bfd,
+			   elf64_alpha_sym_name (input_bfd, symtab_hdr, h,
+						 sym, sec),
+			   howto->name, input_section);
+			ret_val = false;
+			continue;
+		      }
+
+		    /* Startup code in a static executable applies this after
+		       the kernel has mapped the segment, and unlike the
+		       dynamic linker it cannot make a read-only one writable.
+		       Other targets hand out the address of a PLT stub
+		       instead; alpha has no PLT entry for a non-dynamic
+		       function.  */
+		    if ((input_section->flags & SEC_READONLY) != 0
+			&& !elf_hash_table (info)->dynamic_sections_created)
+		      {
+			_bfd_error_handler
+			  /* xgettext:c-format */
+			  (_("%pB: address of STT_GNU_IFUNC symbol `%s' in "
+			     "read-only section `%pA' cannot be relocated in "
+			     "a static link"),
+			   input_bfd,
+			   elf64_alpha_sym_name (input_bfd, symtab_hdr, h,
+						 sym, sec),
+			   input_section);
+			ret_val = false;
+		      }
+		  }
 	      }
 	    else if (bfd_link_pic (info)
 		     && r_symndx != STN_UNDEF
@@ -4527,7 +5001,7 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 
 	    if (input_section->flags & SEC_ALLOC)
 	      elf64_alpha_emit_dynrel (info->output_bfd, info, input_section,
-				       srel, rel->r_offset, dynindx,
+				       srel_out, rel->r_offset, dynindx,
 				       dyntype, dynaddend);
 	  }
 	  goto default_reloc;
@@ -4580,7 +5054,7 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 	      /* Note that the module index for the main program is 1.  */
 	      bfd_put_64 (info->output_bfd,
 			  !bfd_link_pic (info) && !dynamic_symbol_p,
-			  sgot->contents + gotent->got_offset);
+			  alpha_got_slot (gotent, 0));
 
 	      /* If the symbol has been forced local, output a
 		 DTPMOD64 reloc, otherwise it will be handled in
@@ -4599,7 +5073,7 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 		  value -= dtp_base;
 		}
 	      bfd_put_64 (info->output_bfd, value,
-			  sgot->contents + gotent->got_offset + 8);
+			  alpha_got_slot (gotent, 8));
 	    }
 
 	  value = (sgot->output_section->vma
@@ -4692,7 +5166,7 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
 		    }
 		}
 	      bfd_put_64 (info->output_bfd, value,
-			  sgot->contents + gotent->got_offset);
+			  alpha_got_slot (gotent, 0));
 	    }
 
 	  value = (sgot->output_section->vma
@@ -4761,6 +5235,12 @@ elf64_alpha_finish_dynamic_symbol (struct bfd_link_info *info,
 				   Elf_Internal_Sym *sym)
 {
   struct alpha_elf_link_hash_entry *ah = (struct alpha_elf_link_hash_entry *)h;
+
+  /* Only a defined IFUNC gets here without dynamic sections.  There is no
+     PLT to fill in, whatever needs_plt says, and relocate_section has
+     already written its GOT entries.  */
+  if (!elf_hash_table (info)->dynamic_sections_created)
+    return true;
 
   if (h->needs_plt)
     {
@@ -4837,7 +5317,7 @@ elf64_alpha_finish_dynamic_symbol (struct bfd_link_info *info,
 
 	    /* Fill in the entry in the .got.  */
 	    bfd_put_64 (info->output_bfd, plt_addr,
-			sgot->contents + gotent->got_offset);
+			alpha_got_slot (gotent, 0));
 	  }
     }
   else if (alpha_elf_dynamic_symbol_p (h, info))
@@ -5033,6 +5513,7 @@ elf64_alpha_final_link (bfd *abfd, struct bfd_link_info *info)
   asection *o;
   struct bfd_link_order *p;
   asection *mdebug_sec;
+  asection *irelplt;
   struct ecoff_debug_info debug;
   const struct ecoff_debug_swap *swap
     = get_elf_backend_data (abfd)->elf_backend_ecoff_debug_swap;
@@ -5252,15 +5733,54 @@ elf64_alpha_final_link (bfd *abfd, struct bfd_link_info *info)
 	}
     }
 
+  /* Allocate the contents of the .got subsections.  This is left until
+     now because the sizes are not final until relaxation has finished
+     with them: a re-merge there can grow a subsection even though the
+     got as a whole only shrinks.  */
+  for (bfd *i = htab->got_list;
+       i != NULL;
+       i = alpha_elf_tdata (i)->got_link_next)
+    {
+      asection *sgot = alpha_elf_tdata (i)->got;
+
+      if (sgot->size > 0)
+	{
+	  sgot->contents = (bfd_byte *) bfd_zalloc (i, sgot->size);
+	  if (sgot->contents == NULL)
+	    return false;
+	  sgot->alloced = 1;
+	}
+    }
+
   /* Invoke the regular ELF backend linker to do all the work.  */
   if (! _bfd_elf_final_link (abfd, info))
     return false;
 
+  /* libc's startup code applies every entry between __rela_iplt_start and
+     __rela_iplt_end, so an entry left as R_ALPHA_NONE would fault.  Every
+     way for relocate_section to reserve a slot and then not fill it is
+     diagnosed there, so this is a consistency check on the sizing rather
+     than something a user can provoke.  */
+  irelplt = elf_hash_table (info)->irelplt;
+  if (irelplt != NULL
+      && irelplt->reloc_count * sizeof (Elf64_External_Rela) != irelplt->size)
+    {
+      _bfd_error_handler
+	/* xgettext:c-format */
+	(_("%pB: internal error: %lu .rela.iplt entries were reserved but "
+	   "%lu were written"),
+	 abfd,
+	 (unsigned long) (irelplt->size / sizeof (Elf64_External_Rela)),
+	 (unsigned long) irelplt->reloc_count);
+      bfd_set_error (bfd_error_bad_value);
+      return false;
+    }
+
   /* Now write out the computed sections.  */
 
   /* The .got subsections...  */
-  bfd *i, *dynobj = elf_hash_table(info)->dynobj;
-  for (i = htab->got_list;
+  bfd *dynobj = elf_hash_table(info)->dynobj;
+  for (bfd *i = htab->got_list;
        i != NULL;
        i = alpha_elf_tdata(i)->got_link_next)
     {
@@ -5307,6 +5827,8 @@ elf64_alpha_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
       return reloc_class_plt;
     case R_ALPHA_COPY:
       return reloc_class_copy;
+    case R_ALPHA_IRELATIVE:
+      return reloc_class_ifunc;
     default:
       return reloc_class_normal;
     }

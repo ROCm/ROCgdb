@@ -49,19 +49,35 @@
    This set also needs to be verified if it is complete.  */
 #define IS_RETURN(op) (op == rtsd || op == rtid)
 #define IS_UPDATE_SP(op, rd, ra) \
-  ((op == addik || op == addi) && rd == REG_SP && ra == REG_SP)
+  ((op == addik || op == addi) \
+   && rd == MICROBLAZE_REG_SP \
+   && ra == MICROBLAZE_REG_SP)
 #define IS_SPILL_SP(op, rd, ra) \
-  ((op == swi || op == sw) && rd == REG_SP && ra == REG_SP)
+  ((op == swi || op == sw) \
+   && rd == MICROBLAZE_REG_SP \
+   && ra == MICROBLAZE_REG_SP)
 #define IS_SPILL_REG(op, rd, ra) \
-  ((op == swi || op == sw) && rd != REG_SP && ra == REG_SP)
+  ((op == swi || op == sw) \
+   && rd != MICROBLAZE_REG_SP \
+   && ra == MICROBLAZE_REG_SP)
 #define IS_ALSO_SPILL_REG(op, rd, ra, rb) \
-  ((op == swi || op == sw) && rd != REG_SP && ra == 0 && rb == REG_SP)
+  ((op == swi || op == sw) \
+   && rd != MICROBLAZE_REG_SP \
+   && ra == 0 \
+   && rb == MICROBLAZE_REG_SP)
 #define IS_SETUP_FP(op, ra, rb) \
-  ((op == add || op == addik || op == addk) && ra == REG_SP && rb == 0)
+  ((op == add || op == addik || op == addk) \
+   && ra == MICROBLAZE_REG_SP \
+   && rb == 0)
 #define IS_SPILL_REG_FP(op, rd, ra, fpregnum) \
-  ((op == swi || op == sw) && rd != REG_SP && ra == fpregnum && ra != 0)
+  ((op == swi || op == sw) \
+   && rd != MICROBLAZE_REG_SP \
+   && ra == fpregnum \
+   && ra != 0)
 #define IS_SAVE_HIDDEN_PTR(op, rd, ra, rb) \
-  ((op == add || op == addik) && ra == MICROBLAZE_FIRST_ARGREG && rb == 0)
+  ((op == add || op == addik) \
+   && ra == MICROBLAZE_FIRST_ARGREG \
+   && rb == 0)
 
 /* The registers of the Xilinx microblaze processor.  */
 

@@ -435,7 +435,7 @@ extern enum ext_lang_rc gdbpy_apply_val_pretty_printer
   (const struct extension_language_defn *,
    struct value *value,
    struct ui_file *stream, int recurse,
-   const struct value_print_options *options,
+   const value_print_options &options,
    const struct language_defn *language);
 extern void gdbpy_load_ptwrite_filter
   (const struct extension_language_defn *extlang,
@@ -970,14 +970,14 @@ int gdbpy_is_value_object (PyObject *obj);
 gdbpy_ref<> apply_varobj_pretty_printer (PyObject *print_obj,
 					 struct value **replacement,
 					 struct ui_file *stream,
-					 const value_print_options *opts);
+					 const value_print_options &opts);
 gdbpy_ref<> gdbpy_get_varobj_pretty_printer (struct value *value);
 gdb::unique_xmalloc_ptr<char> gdbpy_get_display_hint (PyObject *printer);
 PyObject *gdbpy_default_visualizer (PyObject *self, PyObject *args);
 
 PyObject *gdbpy_print_options (PyObject *self, PyObject *args);
-void gdbpy_get_print_options (value_print_options *opts);
-extern const struct value_print_options *gdbpy_current_print_options;
+const value_print_options &gdbpy_get_print_options ();
+extern const value_print_options *gdbpy_current_print_options;
 
 void bpfinishpy_pre_stop_hook (struct gdbpy_breakpoint_object *bp_obj);
 void bpfinishpy_post_stop_hook (struct gdbpy_breakpoint_object *bp_obj);
@@ -1036,7 +1036,7 @@ struct varobj;
 std::unique_ptr<varobj_iter> py_varobj_get_iterator
      (struct varobj *var,
       PyObject *printer,
-      const value_print_options *opts);
+      const value_print_options &opts);
 
 /* Deleter for Py_buffer unique_ptr specialization.  */
 
@@ -1201,7 +1201,7 @@ public:
   }
 
   /* Unregister Python object OBJ.  OBJ will no longer be invalidated when
-     OWNER is about to be be freed.  */
+     OWNER is about to be freed.  */
   template <typename O>
   void remove (O *owner, obj_type *obj) const
   {

@@ -41,7 +41,7 @@ static bool elf32_h8_relax_delete_bytes
   (bfd *, asection *, bfd_vma, int);
 static bool elf32_h8_symbol_address_p (bfd *, asection *, bfd_vma);
 static bfd_byte *elf32_h8_get_relocated_section_contents
-  (bfd *, struct bfd_link_info *, struct bfd_link_order *,
+  (bfd *, struct bfd_link_info *, const struct bfd_link_order *,
    bfd_byte *, bool, asymbol **);
 static bfd_reloc_status_type elf32_h8_final_link_relocate
   (unsigned long, bfd *, bfd *, asection *,
@@ -1596,12 +1596,13 @@ elf32_h8_symbol_address_p (bfd *abfd, asection *sec, bfd_vma addr)
    which uses elf32_h8_relocate_section.  */
 
 static bfd_byte *
-elf32_h8_get_relocated_section_contents (bfd *output_bfd,
-					 struct bfd_link_info *link_info,
-					 struct bfd_link_order *link_order,
-					 bfd_byte *data,
-					 bool relocatable,
-					 asymbol **symbols)
+elf32_h8_get_relocated_section_contents
+  (bfd *output_bfd,
+   struct bfd_link_info *link_info,
+   const struct bfd_link_order *link_order,
+   bfd_byte *data,
+   bool relocatable,
+   asymbol **symbols)
 {
   Elf_Internal_Shdr *symtab_hdr;
   asection *input_section = link_order->u.indirect.section;

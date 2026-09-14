@@ -62,7 +62,6 @@ gdbarch_register_osabi (enum bfd_architecture arch, unsigned long machine,
 {
   struct gdb_osabi_handler **handler_p;
   const struct bfd_arch_info *arch_info = bfd_lookup_arch (arch, machine);
-  const char **name_ptr;
 
   /* Registering an OS ABI handler for "unknown" is not allowed.  */
   if (osabi == GDB_OSABI_UNKNOWN)
@@ -101,8 +100,17 @@ gdbarch_register_osabi (enum bfd_architecture arch, unsigned long machine,
   (*handler_p)->osabi = osabi;
   (*handler_p)->init_osabi = init_osabi;
 
-  /* Add this OS ABI to the list of enum values for "set osabi", if it isn't
-     already there.  */
+  /* Add this OS ABI to the list of enum values for "set osabi".  */
+  gdbarch_add_osabi_name (osabi);
+}
+
+/* See osabi.h.  */
+
+void
+gdbarch_add_osabi_name (enum gdb_osabi osabi)
+{
+  const char **name_ptr;
+
   for (name_ptr = gdb_osabi_available_names; *name_ptr; name_ptr ++)
     {
       if (*name_ptr == gdbarch_osabi_name (osabi))
@@ -601,8 +609,22 @@ show_osabi (struct ui_file *file, int from_tty, struct cmd_list_element *c,
 		  "(currently \"%s\").\n"),
 		gdbarch_osabi_name (gdbarch_osabi (get_current_arch ())));
   else
-    gdb_printf (file, _("The current OS ABI is \"%s\".\n"),
-		gdbarch_osabi_name (user_selected_osabi));
+    {
+      /* The OS ABI in effect may differ from the one the user
+	 selected: a generic OS ABI such as "Windows" is resolved to a
+	 concrete one (a Windows flavor) when the gdbarch is
+	 built.  */
+      enum gdb_osabi effective = gdbarch_osabi (get_current_arch ());
+
+      if (effective != user_selected_osabi)
+	gdb_printf (file,
+		    _("The current OS ABI is \"%s\" (resolved to \"%s\").\n"),
+		    gdbarch_osabi_name (user_selected_osabi),
+		    gdbarch_osabi_name (effective));
+      else
+	gdb_printf (file, _("The current OS ABI is \"%s\".\n"),
+		    gdbarch_osabi_name (user_selected_osabi));
+    }
 
   if (GDB_OSABI_DEFAULT != GDB_OSABI_UNKNOWN)
     gdb_printf (file, _("The default OS ABI is \"%s\".\n"),

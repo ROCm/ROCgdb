@@ -5062,7 +5062,7 @@ sh_elf_relocate_section (struct bfd_link_info *info,
 static bfd_byte *
 sh_elf_get_relocated_section_contents (bfd *output_bfd,
 				       struct bfd_link_info *link_info,
-				       struct bfd_link_order *link_order,
+				       const struct bfd_link_order *link_order,
 				       bfd_byte *data,
 				       bool relocatable,
 				       asymbol **symbols)

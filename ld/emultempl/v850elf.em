@@ -54,7 +54,7 @@ v850_after_open (void)
    After the output has been created, but before inputs are read.  */
 
 static void
-v850_create_output_section_statements (void)
+v850_after_open_output (void)
 {
   /* See PR 22419 for an example of why this is necessary.  */
   if (strstr (bfd_get_target (link_info.output_bfd), "v850") == NULL)
@@ -67,10 +67,12 @@ v850_create_output_section_statements (void)
 	       " whilst linking %s binaries\n"), "V850");
       return;
     }
+
+  ldelf_after_open_output ();
 }
 
 
 EOF
 
 LDEMUL_AFTER_OPEN=v850_after_open
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=v850_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=v850_after_open_output

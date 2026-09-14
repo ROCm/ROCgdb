@@ -91,9 +91,6 @@ aarch64_elf_before_allocation (void)
   gld${EMULATION_NAME}_before_allocation ();
 }
 
-/* Fake input file for stubs.  */
-static lang_input_statement_type *stub_file;
-
 /* Whether we need to call gldarm_layout_sections_again.  */
 static int need_laying_out = 0;
 
@@ -322,7 +319,7 @@ gld${EMULATION_NAME}_finish (void)
 /* This is a convenient point to tell BFD about target specific flags.
    After the output has been created, but before inputs are read.  */
 static void
-aarch64_elf_create_output_section_statements (void)
+aarch64_elf_after_open_output (void)
 {
   if (strstr (bfd_get_target (link_info.output_bfd), "aarch64") == NULL)
     {
@@ -335,30 +332,19 @@ aarch64_elf_create_output_section_statements (void)
       return;
     }
 
-  stub_file = lang_add_input_file ("linker stubs",
-				   lang_input_file_is_fake_enum,
-				   NULL);
-  stub_file->the_bfd = bfd_create ("linker stubs", link_info.output_bfd);
-  if (stub_file->the_bfd == NULL
-      || ! bfd_set_arch_mach (stub_file->the_bfd,
-			      bfd_get_arch (link_info.output_bfd),
-			      bfd_get_mach (link_info.output_bfd)))
-    {
-      fatal (_("%P: can not create BFD: %E\n"));
-      return;
-    }
-  ldlang_add_file (stub_file);
+  ldelf_after_open_output ();
 
-  bfd_elf${ELFSIZE}_aarch64_set_options (&link_info,
-				 no_enum_size_warning,
-				 no_wchar_size_warning,
-				 pic_veneer,
-				 fix_erratum_835769, fix_erratum_843419,
-				 no_apply_dynamic_relocs,
-				 &sw_protections,
-				 &memtag_opts,
-				 stub_file->the_bfd);
-
+  if (stub_file)
+    bfd_elf${ELFSIZE}_aarch64_set_options (&link_info,
+				   no_enum_size_warning,
+				   no_wchar_size_warning,
+				   pic_veneer,
+				   fix_erratum_835769,
+				   fix_erratum_843419,
+				   no_apply_dynamic_relocs,
+				   &sw_protections,
+				   &memtag_opts,
+				   stub_file->the_bfd);
 }
 
 static bool
@@ -646,7 +632,7 @@ PARSE_AND_LIST_ARGS_CASES='
 # the standard routines, so give them a different name.
 LDEMUL_BEFORE_ALLOCATION=aarch64_elf_before_allocation
 LDEMUL_AFTER_ALLOCATION=gld${EMULATION_NAME}_after_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=aarch64_elf_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=aarch64_elf_after_open_output
 
 # Replace the elf before_parse function with our own.
 LDEMUL_BEFORE_PARSE=gld"${EMULATION_NAME}"_before_parse

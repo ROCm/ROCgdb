@@ -194,7 +194,6 @@ static char *pdb_name;
 #endif
 
 #ifdef DLL_SUPPORT
-static int    pep_enable_stdcall_fixup = 1; /* 0=disable 1=enable (default).  */
 static char * pep_out_def_filename = NULL;
 static int    pep_enable_auto_image_base = 0;
 static char * pep_dll_search_prefix = NULL;
@@ -425,9 +424,6 @@ gld${EMULATION_NAME}_list_options (FILE *file)
   fprintf (file, _("  --[no-]insert-timestamp            Use a real timestamp rather than zero (default)\n"));
   fprintf (file, _("                                     This makes binaries non-deterministic\n"));
 #ifdef DLL_SUPPORT
-  fprintf (file, _("  --add-stdcall-alias                Export symbols with and without @nn\n"));
-  fprintf (file, _("  --disable-stdcall-fixup            Don't link _sym to _sym@nn\n"));
-  fprintf (file, _("  --enable-stdcall-fixup             Link _sym to _sym@nn without warnings\n"));
   fprintf (file, _("  --exclude-symbols sym,sym,...      Exclude symbols from automatic export\n"));
   fprintf (file, _("  --exclude-all-symbols              Exclude all symbols from automatic export\n"));
   fprintf (file, _("  --exclude-libs lib,lib,...         Exclude libraries from automatic export\n"));
@@ -435,7 +431,6 @@ gld${EMULATION_NAME}_list_options (FILE *file)
   fprintf (file, _("                                     Exclude objects, archive members from auto\n"));
   fprintf (file, _("                                     export, place into import library instead\n"));
   fprintf (file, _("  --export-all-symbols               Automatically export all globals to DLL\n"));
-  fprintf (file, _("  --kill-at                          Remove @nn from exported symbols\n"));
   fprintf (file, _("  --output-def <file>                Generate a .DEF file for the built DLL\n"));
   fprintf (file, _("  --warn-duplicate-exports           Warn about duplicate exports\n"));
   fprintf (file, _("  --compat-implib                    Create backward compatible import libs;\n\
@@ -768,16 +763,11 @@ gld${EMULATION_NAME}_handle_option (int optc)
       pep_dll_add_excludes (optarg, EXCLUDEFORIMPLIB);
       break;
     case OPTION_KILL_ATS:
-      pep_dll_kill_ats = 1;
-      break;
     case OPTION_STDCALL_ALIASES:
-      pep_dll_stdcall_aliases = 1;
-      break;
     case OPTION_ENABLE_STDCALL_FIXUP:
-      pep_enable_stdcall_fixup = 1;
-      break;
     case OPTION_DISABLE_STDCALL_FIXUP:
-      pep_enable_stdcall_fixup = 0;
+      /* Ignored: stdcall and cdecl are unsupported on platforms using
+	 Win64's ABI.  */
       break;
     case OPTION_WARN_DUPLICATE_EXPORTS:
       pep_dll_warn_dup_exports = 1;
@@ -1031,132 +1021,6 @@ gld${EMULATION_NAME}_after_parse (void)
 }
 
 #ifdef DLL_SUPPORT
-static struct bfd_link_hash_entry *pep_undef_found_sym;
-
-static bool
-pep_undef_cdecl_match (struct bfd_link_hash_entry *h, void *inf)
-{
-  int sl;
-  char *string = inf;
-  const char *hs = h->root.string;
-
-  sl = strlen (string);
-  if (h->type == bfd_link_hash_defined
-      && ((*hs == '@' && *string == '_'
-		   && strncmp (hs + 1, string + 1, sl - 1) == 0)
-		  || strncmp (hs, string, sl) == 0)
-      && h->root.string[sl] == '@')
-    {
-      pep_undef_found_sym = h;
-      return false;
-    }
-  return true;
-}
-
-static void
-set_decoration (const char *undecorated_name,
-		struct bfd_link_hash_entry * decoration)
-{
-  static bool  gave_warning_message = false;
-  struct decoration_hash_entry *entry;
-
-  if (is_underscoring () && undecorated_name[0] == '_')
-    undecorated_name++;
-
-  entry = (struct decoration_hash_entry *)
-	  bfd_hash_lookup (&(coff_hash_table (&link_info)->decoration_hash),
-			   undecorated_name, true /* create */, false /* copy */);
-
-  if (entry->decorated_link != NULL && !gave_warning_message)
-    {
-      einfo (_("%P: warning: overwriting decorated name %s with %s\n"),
-	     entry->decorated_link->root.string, undecorated_name);
-      gave_warning_message = true;
-    }
-
-  entry->decorated_link = decoration;
-}
-
-static void
-pep_fixup_stdcalls (void)
-{
-  static int gave_warning_message = 0;
-  struct bfd_link_hash_entry *undef, *sym;
-
-  if (pep_dll_extra_pe_debug)
-    printf ("%s\n", __func__);
-
-  for (undef = link_info.hash->undefs; undef; undef=undef->u.undef.next)
-    if (undef->type == bfd_link_hash_undefined)
-      {
-	const char* at = strchr (undef->root.string, '@');
-	int lead_at = (*undef->root.string == '@');
-	if (lead_at)
-	  at = strchr (undef->root.string + 1, '@');
-	if (at || lead_at)
-	  {
-	    /* The symbol is a stdcall symbol, so let's look for a
-	       cdecl symbol with the same name and resolve to that.  */
-	    char *cname = xstrdup (undef->root.string);
-	    char *at2;
-
-	    if (lead_at)
-	      *cname = '_';
-	    at2 = strchr (cname, '@');
-	    if (at2)
-	      *at2 = 0;
-	    sym = bfd_link_hash_lookup (link_info.hash, cname, 0, 0, 1);
-
-	    if (sym && sym->type == bfd_link_hash_defined)
-	      {
-		undef->type = bfd_link_hash_defined;
-		undef->u.def.value = sym->u.def.value;
-		undef->u.def.section = sym->u.def.section;
-
-		if (pep_enable_stdcall_fixup == -1)
-		  {
-		    einfo (_("warning: resolving %s by linking to %s\n"),
-			   undef->root.string, cname);
-		    if (! gave_warning_message)
-		      {
-			gave_warning_message = 1;
-			einfo (_("Use --enable-stdcall-fixup to disable these warnings\n"));
-			einfo (_("Use --disable-stdcall-fixup to disable these fixups\n"));
-		      }
-		  }
-	      }
-	  }
-	else
-	  {
-	    /* The symbol is a cdecl symbol, so we look for stdcall
-	       symbols - which means scanning the whole symbol table.  */
-	    pep_undef_found_sym = 0;
-	    bfd_link_hash_traverse (link_info.hash, pep_undef_cdecl_match,
-				    (char *) undef->root.string);
-	    sym = pep_undef_found_sym;
-	    if (sym)
-	      {
-		undef->type = bfd_link_hash_defined;
-		undef->u.def.value = sym->u.def.value;
-		undef->u.def.section = sym->u.def.section;
-		set_decoration (undef->root.string, sym);
-
-		if (pep_enable_stdcall_fixup == -1)
-		  {
-		    einfo (_("warning: resolving %s by linking to %s\n"),
-			   undef->root.string, sym->root.string);
-		    if (! gave_warning_message)
-		      {
-			gave_warning_message = 1;
-			einfo (_("Use --enable-stdcall-fixup to disable these warnings\n"));
-			einfo (_("Use --disable-stdcall-fixup to disable these fixups\n"));
-		      }
-		  }
-	      }
-	  }
-      }
-}
-
 static bfd_vma
 read_addend (arelent *rel, asection *s)
 {
@@ -1597,12 +1461,6 @@ gld${EMULATION_NAME}_after_open (void)
 
   if (link_info.pei386_auto_import) /* -1=warn or 1=enable */
     pep_find_data_imports (U ("_head_"), make_import_fixup);
-
-  /* The implementation of the feature is rather dumb and would cause the
-     compilation time to go through the roof if there are many undefined
-     symbols in the link, so it needs to be run after auto-import.  */
-  if (pep_enable_stdcall_fixup) /* -1=warn or 1=enable */
-    pep_fixup_stdcalls ();
 
 #if !defined(TARGET_IS_i386pep) && !defined(COFF_WITH_peAArch64)
   if (bfd_link_pic (&link_info))

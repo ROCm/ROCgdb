@@ -504,7 +504,7 @@ gen_gmon_map (char *name)
   bfd_vma loadaddr, vaddr = core_text_sect->vma; //lma?
   bfd_size_type msize = core_text_sect->size;
   int timestamp = 1;
-  int offset = 0;
+  int offset = core_text_sect->filepos;
   int check = -1;
   int modeflags = PROT_READ | PROT_EXEC; //0x05
   char *new_file_path;
@@ -522,6 +522,7 @@ gen_gmon_map (char *name)
   mpage = ~(page_size - 1);
   // Round down to page size alignment
   loadaddr = vaddr & mpage;
+  offset &= mpage;
   // Compensate for the alignment gain
   msize += vaddr - loadaddr;
   // Round up to a multiple of page size;

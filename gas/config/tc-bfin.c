@@ -45,14 +45,13 @@ FILE *errorf;
 /* Flags to set in the elf header */
 #define DEFAULT_FLAGS 0
 
-#ifdef OBJ_FDPIC_ELF
+#ifdef TE_LINUX_FDPIC
 # define DEFAULT_FDPIC EF_BFIN_FDPIC
 #else
 # define DEFAULT_FDPIC 0
 #endif
 
 static flagword bfin_flags = DEFAULT_FLAGS | DEFAULT_FDPIC;
-static const char *bfin_pic_flag = DEFAULT_FDPIC ? "-mfdpic" : NULL;
 
 /* Blackfin specific function to handle FD-PIC pointer initializations.  */
 
@@ -410,12 +409,10 @@ md_parse_option (int c ATTRIBUTE_UNUSED, const char *arg ATTRIBUTE_UNUSED)
 
     case OPTION_FDPIC:
       bfin_flags |= EF_BFIN_FDPIC;
-      bfin_pic_flag = "-mfdpic";
       break;
 
     case OPTION_NOPIC:
       bfin_flags &= ~(EF_BFIN_FDPIC);
-      bfin_pic_flag = 0;
       break;
     }
 

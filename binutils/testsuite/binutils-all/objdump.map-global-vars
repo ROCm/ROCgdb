@@ -1,0 +1,87 @@
+.*objdump-map-global-vars:     file format .*
+
+a @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: char, size: 0x1
+
+b @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: int, size: 0x(2|4|8)
+
+c @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: long .*, size: 0x(4|8)
+
+d @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: ptr, size: 0x(4|8)
+
+e @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: volatile
+  type: int, size: 0x(2|4|8)
+
+f @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: const
+  type: int, size: 0x(2|4|8)
+
+g @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: enum _enum, size: 0x(2|4)
+ {
+  value: E1 = 0
+  value: E2 = 1
+  value: E3 = 2
+ }
+
+h @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: struct _struct, size: 0x(4|8)
+ {
+   member: m1, offset: 0
+    type: char, size: 0x1
+   member: m2, offset: 0x(4|8)
+    type: enum _enum, size: 0x(2|4)
+    {
+     value: E1 = 0
+     value: E2 = 1
+     value: E3 = 2
+    }
+ }
+
+i @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: union _union, size: 0x(2|4|8)
+ {
+   member: u1, offset: 0
+    type: char, size: 0x1
+   member: u2, offset: 0
+    type: ptr, size: 0x(2|4|8)
+     type: const
+      type: char, size: 0x1
+ }
+
+j @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: typedef node
+ {
+  type: struct _node, size: 0x(4|8|10)
+  {
+    member: value, offset: 0
+     type: int, size: 0x(2|4|8)
+    member: next, offset: 0x(4|8)
+     type: ptr, size: 0x(2|4|8)
+      nested: struct _node
+  }
+ }
+
+k @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: array\[4\]\[2\]
+  type: typedef node
+  {
+   type: struct _node, size: 0x(4|8|10)
+   {
+     member: value, offset: 0
+      type: int, size: 0x(2|4|8)
+     member: next, offset: 0x8
+      type: ptr, size: 0x(2|4|8)
+       nested: struct _node
+   }
+  }
+
+l @ 0x([0-9a-fA-F]{8}) 0x([0-9a-fA-F]{8})
+ type: array\[2\]
+  type: ptr, size: 0x(2|4|8)
+   type: char, size: 0x1
+

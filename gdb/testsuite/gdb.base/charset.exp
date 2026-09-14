@@ -522,7 +522,7 @@ foreach val {0 1 2 3 4 5 6 7 8 9 a b c d e f} {
 # Tests for wide- or unicode- strings.  L is the prefix letter to use,
 # either "L" (for wide strings), "u" (for UTF-16), or "U" (for UTF-32).
 # NAME is used in the test names and should be related to the prefix
-# letter in some easy-to-undestand way.
+# letter in some easy-to-understand way.
 proc test_wide_or_unicode {L name} {
     gdb_test "print $L\"ab\" $L\"c\"" " = $L\"abc\"" \
       "basic $name string concatenation"

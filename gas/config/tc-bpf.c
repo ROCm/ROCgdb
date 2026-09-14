@@ -1511,6 +1511,29 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
                     s += 1;
                   p += 2;
                 }
+              else if (*(p + 1) == 't')
+                {
+                  /* Match the end of a mnemonic, which is terminated by
+                     either a space or a character that cannot begin another
+                     mnemonic.  Consumes no input: any white space that
+                     follows is left to the %w or %W that comes next.
+
+                     If the input continues the mnemonic instead, the
+                     template has only matched a prefix of a longer mnemonic
+                     and does not apply.  Rejecting it here lets a subsequent
+                     template have a go at the whole mnemonic.
+
+                     '*' is excluded because md_begin makes it a name
+                     beginner, so that a pseudo-C store can start a line, but
+                     it never continues a mnemonic: `lock*(u64 *) (r1 + 0) +=
+                     r2' has the operand of `lock%t%w' right after it.  */
+                  if (!is_whitespace (*s) && *s != '*' && is_name_beginner (*s))
+                    {
+                      PARSE_ERROR ("expected white space, got '%s'", s);
+                      break;
+                    }
+                  p += 2;
+                }
               else if (*(p + 1) == 'W')
                 {
                   /* Expect one or more spaces.  */

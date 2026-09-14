@@ -252,7 +252,7 @@ gld${EMULATION_NAME}_after_allocation (void)
    fake input file to hold the align sections.  */
 
 static void
-loongarch_elf_create_output_section_statements (void)
+loongarch_elf_after_open_output (void)
 {
   if (! bfd_link_relocatable (&link_info))
     return;
@@ -284,4 +284,4 @@ EOF
 
 LDEMUL_BEFORE_ALLOCATION=larch_elf_before_allocation
 LDEMUL_AFTER_ALLOCATION=gld${EMULATION_NAME}_after_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=loongarch_elf_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=loongarch_elf_after_open_output

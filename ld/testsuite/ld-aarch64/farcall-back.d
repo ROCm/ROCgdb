@@ -39,7 +39,7 @@ Disassembly of section .text:
 
 0000000000002050 <__bar1_veneer>:
     2050:	d07ffff0 	adrp	x16, 100000000 <bar1>
-    2054:	91000210 	add	x16, x16, #0x0
+    2054:	d503201f 	nop
     2058:	d61f0200 	br	x16
 	...
 

@@ -29,7 +29,7 @@ struct target_solib_ops : solib_ops
   using solib_ops::solib_ops;
 
   void relocate_section_addresses (solib &so, target_section *) const override;
-  owning_intrusive_list<solib> current_sos () const override;
+  owning_intrusive_list<solib> current_sos () override;
   bool in_dynsym_resolve_code (CORE_ADDR pc) const override;
 };
 

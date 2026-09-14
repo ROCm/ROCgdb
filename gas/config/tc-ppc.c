@@ -4529,6 +4529,8 @@ ppc_csect (int ignore ATTRIBUTE_UNUSED)
 static void
 ppc_change_csect (symbolS *sym, offsetT align)
 {
+  obj_coff_section_change_hook ();
+
   if (S_IS_DEFINED (sym))
     subseg_set (S_GET_SEGMENT (sym), symbol_get_tc (sym)->subseg);
   else
@@ -4652,6 +4654,7 @@ ppc_change_debug_section (unsigned int idx, subsegT subseg)
   flagword oldflags;
   const struct xcoff_dwsect_name *dw = &xcoff_dwsect_names[idx];
 
+  obj_coff_section_change_hook ();
   sec = subseg_new (dw->xcoff_name, subseg);
   oldflags = bfd_section_flags (sec);
   if (oldflags == SEC_NO_FLAGS)
@@ -5650,6 +5653,7 @@ ppc_ec (int ignore ATTRIBUTE_UNUSED)
 static void
 ppc_toc (int ignore ATTRIBUTE_UNUSED)
 {
+  obj_coff_section_change_hook ();
   if (ppc_toc_csect != NULL)
     subseg_set (data_section, symbol_get_tc (ppc_toc_csect)->subseg);
   else

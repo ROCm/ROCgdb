@@ -187,19 +187,19 @@ struct gdbserver_windows_process : public windows_nat::windows_process_info
 
   void fill_thread_context (windows_nat::windows_thread_info *th) override;
 
-  int attaching = 0;
-
   /* A status that hasn't been reported to the core yet, and so
      win32_wait should return it next, instead of fetching the next
      debug event off the win32 API.  */
   struct target_waitstatus cached_status;
+  /* The ptid corresponding to the above status.  */
+  ptid_t cached_ptid;
 
   /* True if current_process_handle needs to be closed.  */
   bool open_process_used = false;
 
-  /* Zero during the child initialization phase, and nonzero
+  /* False during the child initialization phase, and true
      otherwise.  */
-  int child_initialization_done = 0;
+  bool child_initialization_done = false;
 };
 
 /* The sole Windows process.  */

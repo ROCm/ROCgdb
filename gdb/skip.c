@@ -1035,9 +1035,6 @@ static void
 info_skip_command (const char *arg, int from_tty)
 {
   int num_printable_entries = 0;
-  struct value_print_options opts;
-
-  get_user_print_options (&opts);
 
   /* Count the number of rows in the table and see if we need space for a
      64-bit address anywhere.  */

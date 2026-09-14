@@ -155,8 +155,9 @@ gcore_command (const char *args, int from_tty)
     stop_all_threads ("generating coredump", inf);
   else
     {
-      all_stop_was_running = (any_thread_of_inferior (inf)->internal_state ()
-			      == THREAD_INT_RUNNING);
+      all_stop_was_running
+	= (any_non_exited_thread_of_inferior (inf)->internal_state ()
+	   == THREAD_INT_RUNNING);
 
       if (all_stop_was_running)
 	{

@@ -5343,6 +5343,7 @@ elf32_csky_obj_attrs_handle_unknown (bfd *abfd ATTRIBUTE_UNUSED,
 #define elf_backend_plt_readonly              1
 #define elf_backend_want_got_sym              1
 #define elf_backend_want_dynrelro             1
+#define elf_backend_want_stub_bfd	      1
 #define elf_backend_got_header_size           12
 #define elf_backend_want_got_plt              1
 
