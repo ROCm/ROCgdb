@@ -2557,37 +2557,6 @@ iterate_over_block_arg_vars (const struct block *b,
     }
 }
 
-/* See stack.h.  */
-
-void
-iterate_over_block_arg_vars_printing
-  (const struct block *b,
-   iterate_over_block_arg_local_vars_cb_printing cb)
-{
-  for (struct symbol *sym : block_iterator_range (b))
-    {
-      /* Don't worry about things which aren't arguments.  */
-      if (sym->is_argument ())
-	{
-	  /* We have to look up the symbol because arguments can have
-	     two entries (one a parameter, one a local) and the one we
-	     want is the local, which lookup_symbol will find for us.
-	     This includes gcc1 (not gcc2) on the sparc when passing a
-	     small structure and gcc2 when the argument type is float
-	     and it is passed as a double and converted to float by
-	     the prologue (in the latter case the type of the LOC_ARG
-	     symbol is double and the type of the LOC_LOCAL symbol is
-	     float).  There are also LOC_ARG/LOC_REGISTER pairs which
-	     are not combined in symbol-reading.  */
-
-	  struct symbol *sym2
-	    = lookup_symbol_search_name (sym->search_name (),
-					 b, SEARCH_VAR_DOMAIN).symbol;
-	  cb (sym->print_name (), sym2, var_shadowing::NONE);
-	}
-    }
-}
-
 /* Print all argument variables of the function of FRAME.
    Print them with values to STREAM.
    If REGEXP is not NULL, only print argument variables whose name
@@ -2630,7 +2599,11 @@ print_frame_arg_vars (const frame_info_ptr &frame,
   cb_data.stream = stream;
   cb_data.values_printed = 0;
 
-  iterate_over_block_arg_vars_printing (func->value_block (), cb_data);
+  iterate_over_block_arg_vars (func->value_block (),
+    [&] (const char *print_name, symbol *sym)
+      {
+	cb_data (print_name, sym, var_shadowing::NONE);
+      });
 
   if (!cb_data.values_printed && !quiet)
     {
