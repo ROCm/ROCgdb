@@ -26,6 +26,7 @@ jobs:
       build_runs_on: ${{ steps.runner.outputs.build_runs_on }}
       test_families: ${{ steps.families.outputs.test_families }}
       artifact_group: ${{ steps.families.outputs.artifact_group }}
+      run_generic_board: ${{ steps.families.outputs.run_generic_board }}
     steps:
       - name: "Checking out repository"
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -48,6 +49,11 @@ jobs:
             echo 'test_families=["gfx94X","gfx90a","gfx950","gfx110X","gfx1151","gfx120X"]' >> $GITHUB_OUTPUT
           else
             echo 'test_families=["gfx94X"]' >> $GITHUB_OUTPUT
+          fi
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'test:generic-gfx-board') }}" == "true" ]]; then
+            echo 'run_generic_board=true' >> $GITHUB_OUTPUT
+          else
+            echo 'run_generic_board=false' >> $GITHUB_OUTPUT
           fi
 
   resolve:
@@ -232,6 +238,31 @@ jobs:
         gdb.base/finish.exp gdb.base/hbreak.exp gdb.base/signals.exp
         gdb.base/step-test.exp gdb.base/watchpoint.exp
 
+  # Generic-board jobs. Run the gdb.rocm/ testsuite with kernels compiled for
+  # generic AMDGPU targets (rocm-generic board). Runs on every concrete GPU
+  # family that test-gpu covers, so we verify generic-compiled code works on
+  # real hardware. Opt-in via the 'test:generic-gfx-board' PR label.
+  test-gpu-generic:
+    name: Test GPU (generic board)
+    needs: [setup, therock-build-linux]
+    if: >-
+      ${{ needs.setup.outputs.enable_therock_ci == 'true' &&
+          needs.setup.outputs.run_generic_board == 'true' }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        amdgpu_family: ${{ fromJSON(needs.setup.outputs.test_families) }}
+    uses: ./.github/workflows/therock-test-packages.yml
+    with:
+      amdgpu_families: ${{ matrix.amdgpu_family }}
+      artifact_group: ${{ needs.setup.outputs.artifact_group }}
+      therock_ref: ${{ needs.therock-build-linux.outputs.therock_ref }}
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-gpu
+      test_options: "--runtestflags=--target_board=rocm-generic"
+
   therock_ci_summary:
     name: TheRock CI Summary
     if: always()
@@ -246,6 +277,7 @@ jobs:
       - test-gpu-check-read1
       - test-gpu-check-readmore
       - test-gpu-hip-board
+      - test-gpu-generic
     runs-on: ubuntu-24.04
     steps:
       - name: Output failed jobs
