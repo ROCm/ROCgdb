@@ -1052,7 +1052,7 @@ general_symbol_info::natural_name () const
 {
   switch (strip_cplus_dialect (language ()))
     {
-    case language_cplus:
+    case language_cplus_:
     case language_d:
     case language_go:
     case language_objc:
@@ -1078,7 +1078,7 @@ general_symbol_info::demangled_name () const
 
   switch (strip_cplus_dialect (language ()))
     {
-    case language_cplus:
+    case language_cplus_:
     case language_d:
     case language_go:
     case language_objc:
