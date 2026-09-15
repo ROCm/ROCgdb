@@ -409,6 +409,7 @@ def parse_arguments() -> argparse.Namespace:
   python %(prog)s --one-by-one --tests gdb.rocm/foo.exp
   python %(prog)s --one-by-one --sanity-check --gpu-tests
   python %(prog)s --timing --gpu-tests
+  python %(prog)s --gpu-corefile-tests
   python %(prog)s --toolchain llvm
 
         """,
@@ -512,21 +513,28 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
         help="List of tests to run (individual .exp files or directories). "
         "For directories, the /*.exp suffix is automatically added. "
-        "Mutually exclusive with --gpu-tests and --cpu-tests. "
+        "Mutually exclusive with --gpu-tests, --cpu-tests, and --gpu-corefile-tests. "
         "Default (if no test option specified) is gdb.rocm/*.exp and gdb.dwarf2/*.exp",
     )
     test_group.add_argument(
         "--gpu-tests",
         action="store_true",
         help="Run GPU-specific tests (gdb.rocm directory only). "
-        "Mutually exclusive with --tests and --cpu-tests.",
+        "Mutually exclusive with --tests, --cpu-tests, and --gpu-corefile-tests.",
     )
     test_group.add_argument(
         "--cpu-tests",
         action="store_true",
         help="Run all CPU tests (all testsuite directories except gdb.rocm). "
         "Automatically discovers all gdb.* directories with .exp files. "
-        "Mutually exclusive with --tests and --gpu-tests.",
+        "Mutually exclusive with --tests, --gpu-tests, and --gpu-corefile-tests.",
+    )
+    test_group.add_argument(
+        "--gpu-corefile-tests",
+        action="store_true",
+        help="Run GPU system-generated corefile tests (gdb.rocm/runtime-core*.exp). "
+        "New tests are picked up automatically when they match that pattern. "
+        "Mutually exclusive with --tests, --gpu-tests, and --cpu-tests.",
     )
 
     parser.add_argument(
@@ -2199,6 +2207,19 @@ def main() -> None:
     if args.gpu_tests:
         args.tests = ["gdb.rocm"]
         logger.info("Using --gpu-tests: running gdb.rocm tests only")
+    elif args.gpu_corefile_tests:
+        corefile_tests = sorted(
+            glob.glob("gdb.rocm/runtime-core*.exp", root_dir=str(rocgdb_testsuite_dir))
+        )
+        if not corefile_tests:
+            _log_error_and_exit(
+                "No GPU corefile tests found matching gdb.rocm/runtime-core*.exp"
+            )
+        args.tests = corefile_tests
+        logger.info(
+            f"Using --gpu-corefile-tests: found {len(corefile_tests)} test(s): "
+            f"{' '.join(corefile_tests)}"
+        )
     elif args.cpu_tests:
         args.tests = discover_test_directories(
             rocgdb_testsuite_dir, exclude=["gdb.rocm"]
