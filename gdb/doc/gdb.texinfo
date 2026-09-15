@@ -24475,6 +24475,12 @@ work-items of the heterogeneous dispatch.  The number of dimensions displayed
 matches the dimensionality of the heterogeneous dispatch.
 
 @item
+The x, y, and z heterogeneous cluster dimensions, in that order, in terms of
+work-items of the heterogeneous dispatch.  The number of dimensions displayed
+matches the dimensionality of the heterogeneous dispatch.  If the architecture
+of the dispatch does not support clusters, a @code{-} is shown.
+
+@item
 The x, y, and z heterogeneous work-group dimensions, in that order, in terms of
 work-items of the heterogeneous dispatch.  The number of dimensions displayed
 matches the dimensionality of the heterogeneous dispatch.
@@ -24520,8 +24526,8 @@ For example,
 
 @smallexample
 (@value{GDBP}) info dispatches -full
-  Id   Target Id                      Grid      Workgroup Fence   Address Spaces          Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
-* 1    AMDGPU Dispatch 1:1:1 (PKID 0) [256,1,1] [128,1,1] B|As    Shared(0), Private(220) 0x00007ffde5409800 0x00007ffff7e00000 (nil)              bit_extract_kernel(unsigned int*, unsigned int const*, unsigned long)
+  Id   Target Id                      Grid      Cluster Workgroup Fence   Address Spaces          Kernel Descriptor  Kernel Args        Completion Signal  Kernel Function
+* 1    AMDGPU Dispatch 1:1:1 (PKID 0) [256,1,1] -       [128,1,1] B|As    Shared(0), Private(220) 0x00007ffde5409800 0x00007ffff7e00000 (nil)              bit_extract_kernel(unsigned int*, unsigned int const*, unsigned long)
 @end smallexample
 
 If you're debugging multiple inferiors, @value{GDBN} displays
@@ -29508,6 +29514,12 @@ AMDGPU Wave @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id} (@var{
 @end smallexample
 
 It is used in the @samp{Target ID} column of the @samp{info threads} command.
+If the work-group is in a cluster, the cluster coordinates are shown, too,
+as shown below.
+
+@smallexample
+AMDGPU Wave @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id} (@var{cluster-x},@var{cluster-y},@var{cluster-z})/(@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
+@end smallexample
 
 @item Lane Target ID
 The @acronym{AMD} @acronym{GPU} lane target identifier (@var{lane_systag})
@@ -29518,6 +29530,12 @@ AMDGPU Lane @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id}/@var{l
 @end smallexample
 
 It is used in the @samp{Target ID} column of the @samp{info lanes} command.
+If the work-group is in a cluster, the cluster coordinates are shown, too,
+as shown below.
+
+@smallexample
+AMDGPU Lane @var{agent-id}:@var{queue-id}:@var{dispatch-id}:@var{wave-id}/@var{lane-index} (@var{cluster-x},@var{cluster-y},@var{cluster-z})/(@var{work-group-x},@var{work-group-y},@var{work-group-z})[@var{work-item-x},@var{work-item-y},@var{work-item-z}]
+@end smallexample
 
 @end table
 
@@ -29532,6 +29550,13 @@ variable has the following format:
 
 @smallexample
 (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
+@end smallexample
+
+If the work-group is in a cluster, cluster coordinates are included, too,
+using the following format:
+
+@smallexample
+(@var{cluster-x},@var{cluster-y},@var{cluster-z})/(@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
 @end smallexample
 
 @item $_thread_workgroup_pos
@@ -29574,10 +29599,19 @@ identifier identifier respectively.  The identifiers are per process.
 The @acronym{AMD} @acronym{GPU} target driver packet identifier.  The
 identifier is per queue.
 
+@item cluster-x
+@itemx cluster-y
+@itemx cluster-z
+The grid position of the thread's work-group's cluster within the
+heterogeneous dispatch.  This position is not shown if the work-group
+does not belong to a cluster.
+
 @item work-group-x
 @itemx work-group-y
 @itemx work-group-z
-The grid position of the thread's work-group within the heterogeneous dispatch.
+The position of the thread's work-group within the heterogeneous
+dispatch, if the work-group belongs to a cluster.  Otherwise
+it is the position of the work-group within the grid.
 
 @item work-group-thread-index
 The thread's number within the heterogeneous work-group.
@@ -30092,16 +30126,31 @@ returns a string that has the format:
 (@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
 @end smallexample
 
+If the work-group is in a cluster, cluster coordinates are included, too,
+using the following format:
+
+@smallexample
+(@var{cluster-x},@var{cluster-y},@var{cluster-z})/(@var{work-group-x},@var{work-group-y},@var{work-group-z})/@var{work-group-thread-index}
+@end smallexample
+
 @noindent
 Where:
 
 @table @var
 
+@item cluster-x
+@itemx cluster-y
+@itemx cluster-z
+The grid position of the thread's work-group's cluster within the
+heterogeneous dispatch.  This position is not shown if the work-group
+does not belong to a cluster.
+
 @item work-group-x
 @itemx work-group-y
 @itemx work-group-z
-The grid position of the thread's work-group within the heterogeneous
-dispatch.
+The position of the thread's work-group within the heterogeneous
+dispatch, if the work-group belongs to a cluster.  Otherwise
+it is the position of the work-group within the grid.
 
 @item work-group-thread-index
 The thread's number within the heterogeneous work-group.
