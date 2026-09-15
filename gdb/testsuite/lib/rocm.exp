@@ -713,7 +713,7 @@ proc rocm_core_find {binfile {deletefiles {}} {arg ""} {output_file "/dev/null"}
 # AMDGPU core dump, issue an UNSUPPORTED, and return 0.  If any other error is
 # detected, issue a FAIL and return 0.
 
-proc rocm_generate_core_file { corefile_path } {
+proc rocm_generate_gcore_file { corefile_path } {
     # On some configurations, creating the core dump can take a significant
     # amount of time.  Make sure to use an appropriate timeout value.
     with_timeout_factor 5 {
