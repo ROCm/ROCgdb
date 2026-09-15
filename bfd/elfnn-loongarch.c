@@ -7197,7 +7197,7 @@ elfNN_loongarch_size_aligns (bfd *output_bfd,
 #define elf_backend_finish_relative_relocs \
   loongarch_elf_finish_relative_relocs
 #define bfd_elfNN_new_section_hook loongarch_elf_new_section_hook
-
+#define elf_backend_want_stub_bfd      1
 #define elf_backend_dtrel_excludes_plt 1
 
 #include "elfNN-target.h"
