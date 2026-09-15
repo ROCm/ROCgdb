@@ -151,6 +151,10 @@ repos:
         language: unsupported_script
         entry: gdb/contrib/check-file-mode.sh
         files: *gdb_files
+        # With the default types == [file], because types and types_or are
+        # and-ed, no symlinks will be selected, so we use types == [] instead.
+        types: []
+        types_or: [file, symlink]
       - id: &id5 shellcheck
         name: *id5
         files: '^(gdb|gdbsupport|gdbserver)/'

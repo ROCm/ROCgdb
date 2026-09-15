@@ -1,1 +1,3 @@
-../gdb/.shellcheckrc
+# SC2002 was disabled by default in 0.11.0.  Turn it on for
+# compatibility with 0.10.0.
+enable=useless-use-of-cat
