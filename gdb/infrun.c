@@ -434,6 +434,17 @@ static struct cmd_list_element *stop_command;
    of shared library events by the dynamic linker.  */
 int stop_on_solib_events;
 
+/* Extra literals for stop-on-solib-events setting.
+   Allows both string keywords and numeric values (0-3).  */
+static const literal_def stop_on_solib_events_literals[] =
+  {
+    { "none", STOP_SOLIB_NONE, 0 },  /* Accept "none" or 0.  */
+    { "cpu",  STOP_SOLIB_CPU,  1 },  /* Accept "cpu" or 1.  */
+    { "gpu",  STOP_SOLIB_GPU,  2 },  /* Accept "gpu" or 2.  */
+    { "all",  STOP_SOLIB_ALL,  3 },  /* Accept "all" or 3.  */
+    { nullptr }
+  };
+
 /* Enable or disable optional shared library event breakpoints
    as appropriate when the above flag is changed.  */
 
@@ -448,8 +459,41 @@ static void
 show_stop_on_solib_events (struct ui_file *file, int from_tty,
 			   struct cmd_list_element *c, const char *value)
 {
-  gdb_printf (file, _("Stopping for shared library events is %s.\n"),
-	      value);
+  /* The value string will show the literal ("none", "cpu", "gpu", "all")
+     when set via keyword, or the number when set numerically.  Access the
+     actual integer value to provide consistent descriptive suffix.  */
+  switch (stop_on_solib_events)
+    {
+    case STOP_SOLIB_NONE:
+      gdb_printf (file,
+		  _("Stopping for shared library events is \"%s\" "
+		    "(disabled).\n"),
+		  value);
+      break;
+    case STOP_SOLIB_CPU:
+      gdb_printf (file,
+		  _("Stopping for shared library events is \"%s\" "
+		    "(CPU libraries only).\n"),
+		  value);
+      break;
+    case STOP_SOLIB_GPU:
+      gdb_printf (file,
+		  _("Stopping for shared library events is \"%s\" "
+		    "(GPU code objects only).\n"),
+		  value);
+      break;
+    case STOP_SOLIB_ALL:
+      gdb_printf (file,
+		  _("Stopping for shared library events is \"%s\" "
+		    "(CPU and GPU).\n"),
+		  value);
+      break;
+    default:
+      gdb_printf (file,
+		  _("Stopping for shared library events is \"%s\".\n"),
+		  value);
+      break;
+    }
 }
 
 /* True after stop if current stack frame should be printed.  */
@@ -6462,7 +6506,8 @@ handle_inferior_event (struct execution_control_state *ecs)
 	       and place breakpoints in initializer routines for
 	       dynamically loaded objects (among other things).  */
 	    ecs->event_thread->set_stop_signal (GDB_SIGNAL_0);
-	    if (stop_on_solib_events)
+	    if (stop_on_solib_events == STOP_SOLIB_CPU
+		|| stop_on_solib_events == STOP_SOLIB_ALL)
 	      {
 		/* Make sure we print "Stopped due to solib-event" in
 		   normal_stop.  */
@@ -11032,13 +11077,18 @@ leave it stopped or free to run as needed."),
   /* Update cached state.  */
   signal_cache_update (-1);
 
-  add_setshow_zinteger_cmd ("stop-on-solib-events", class_support,
-			    &stop_on_solib_events, _("\
+  add_setshow_uinteger_cmd ("stop-on-solib-events", class_support,
+			    (unsigned int *) &stop_on_solib_events,
+			    stop_on_solib_events_literals, _("\
 Set stopping for shared library events."), _("\
 Show stopping for shared library events."), _("\
-If nonzero, gdb will give control to the user when the dynamic linker\n\
-notifies gdb of shared library events.  The most common event of interest\n\
-to the user would be loading/unloading of a new library."),
+If a number, valid values are 0 through 3.  Alternatively, the following\n\
+keywords may be used:\n\
+  none - Do not stop on shared library events.\n\
+  cpu  - Stop on CPU shared library events only.\n\
+  gpu  - Stop on GPU code object events only.\n\
+  all  - Stop on both CPU and GPU library events.\n\
+The most common events of interest are loading/unloading of libraries."),
 			    set_stop_on_solib_events,
 			    show_stop_on_solib_events,
 			    &setlist, &showlist);
