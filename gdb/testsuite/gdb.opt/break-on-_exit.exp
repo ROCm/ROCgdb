@@ -62,4 +62,6 @@ gdb_test "info shared"
 
 # If the skip_prologue analysis of _exit is too eager, we may not hit the
 # breakpoint.
-gdb_continue_to_breakpoint "_exit" "_exit \\(\\) .*"
+# The optional leading dot is for ppc64 v1 ABI function descriptors.
+gdb_continue_to_breakpoint "_exit" \
+    [quotemeta {@/[.]?/_exit () @...}]

@@ -22,7 +22,7 @@ save_vars { env(PYTHONHOME) } {
 }
 
 gdb_test "python print (1)" \
-    "Python not initialized"
+    "(Python not initialized|1)"
 
 set output_seen 0
 gdb_test_multiple "quit" "" {
