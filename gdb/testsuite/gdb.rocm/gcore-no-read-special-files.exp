@@ -42,7 +42,7 @@ proc do_test {} {
   }
 
   set corefile_path [standard_output_file "generated-core"]
-  if {![rocm_generate_core_file $corefile_path]} {
+  if {![rocm_generate_gcore_file $corefile_path]} {
     return
   }
 
