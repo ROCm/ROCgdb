@@ -123,14 +123,14 @@ repos:
         entry: gdb/check-include-guards.py
         # All gdb header files, but not headers in the test suite.
         files: '^(gdb(support|server)?)/.*\.h$'
-        exclude: '.*/testsuite/.*'
+        exclude: &testsuite_files '.*/testsuite/.*'
       - id: &id1 check-gnu-style
         name: *id1
         language: python
         additional_dependencies: ['termcolor', 'unidiff']
         entry: gdb/contrib/check-gnu-style-pre-commit.sh
         files: '^(gdb(support|server)?)/.*\.(c|h|cc)$'
-        exclude: '.*/testsuite/.*'
+        exclude: *testsuite_files
         verbose: true
       - id: &id2 check-whitespace
         name: *id2
@@ -173,6 +173,13 @@ repos:
         args: [--config-check]
         additional_dependencies: ["pyyaml"]
         files: *pre_commit_config_file
+      - id: &id7 check-copies
+        name: *id7
+        language: unsupported_script
+        entry: gdb/contrib/check-copies.py
+        files: *gdb_files
+        exclude: *testsuite_files
+        require_serial: true
 
 # Local Variables:
 # indent-tabs-mode: nil
