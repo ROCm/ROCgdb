@@ -220,11 +220,13 @@ struct amd_dbgapi_inferior_info
 {
   explicit amd_dbgapi_inferior_info
     (inferior *inf, bool precise_memory_requested = false,
-     bool precise_alu_exceptions_requested = false)
+     bool precise_alu_exceptions_requested = false,
+     bool trap_on_entry_requested = false)
     : inf (inf)
   {
     precise_memory.requested = precise_memory_requested;
     precise_alu_exceptions.requested = precise_alu_exceptions_requested;
+    trap_on_entry.requested = trap_on_entry_requested;
   }
 
   /* Backlink to inferior.  */
@@ -263,6 +265,9 @@ struct amd_dbgapi_inferior_info
   /* Track the status of precise ALU exception reporting request and
      enablement.  */
   struct dbgapi_feature_request precise_alu_exceptions;
+
+  /* Track the status of trap-on-entry request and enablement.  */
+  struct dbgapi_feature_request trap_on_entry;
 
   gdb::unordered_map<decltype (amd_dbgapi_breakpoint_id_t::handle),
 		     struct breakpoint *>
@@ -2447,6 +2452,31 @@ set_process_alu_exceptions_precision (amd_dbgapi_inferior_info &info)
 	   get_status_string (status));
 }
 
+/* Set the process' wave launch trap-on-entry mode.  */
+
+static void
+set_process_trap_on_entry (amd_dbgapi_inferior_info &info)
+{
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_ENABLE_TRAPS
+  auto value = (info.trap_on_entry.requested 
+                ? AMD_DBGAPI_WAVE_ENABLE_TRAP_ON_ENTRY
+                : AMD_DBGAPI_WAVE_ENABLE_TRAP_NONE);
+
+  amd_dbgapi_status_t status
+    = amd_dbgapi_process_enable_traps (info.process_id, value, AMD_DBGAPI_WAVE_ENABLE_TRAP_ON_ENTRY);
+#else
+  amd_dbgapi_status_t status = AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED;
+#endif
+
+  if (status == AMD_DBGAPI_STATUS_SUCCESS)
+    info.trap_on_entry.enabled = info.trap_on_entry.requested;
+  else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
+	warning (_("AMDGPU enabled traps could not be set."));
+  else
+    error (_("amd_dbgapi_process_enable_traps failed (%s)"),
+	   get_status_string (status));
+}
+
 /* Handle extra initialisation after we have attached to a AMDGPU corefile.  */
 
 static void
@@ -2570,6 +2600,7 @@ attach_amd_dbgapi (inferior *inf)
 
   set_process_memory_precision (info);
   set_process_alu_exceptions_precision (info);
+  set_process_trap_on_entry (info);
 
   /* If GDB is attaching to a process that has the runtime loaded, there will
      already be a "runtime loaded" event available.  Consume it and push the
@@ -2619,10 +2650,11 @@ detach_amd_dbgapi (inferior *inf)
   for (auto &&value : info.breakpoint_map)
     delete_breakpoint (value.second);
 
-  /* Reset the amd_dbgapi_inferior_info, except for precise_memory_mode and
-     precise_alu_exceptions.  */
+  /* Reset the amd_dbgapi_inferior_info, except for precise_memory_mode,
+     precise_alu_exceptions and trap_on_entry.  */
   info = amd_dbgapi_inferior_info (inf, info.precise_memory.requested,
-				   info.precise_alu_exceptions.requested);
+				   info.precise_alu_exceptions.requested,
+				   info.trap_on_entry.requested);
 
   maybe_reset_amd_dbgapi ();
 }
@@ -3058,6 +3090,7 @@ amd_dbgapi_target_inferior_cloned (inferior *original_inferior,
   new_info.precise_memory.requested = orig_info.precise_memory.requested;
   new_info.precise_alu_exceptions.requested
     = orig_info.precise_alu_exceptions.requested;
+  new_info.trap_on_entry.requested = orig_info.trap_on_entry.requested;
 }
 
 /* inferior_execd observer.  */
@@ -3078,6 +3111,8 @@ amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
   get_amd_dbgapi_inferior_info (follow_inf).precise_alu_exceptions.requested
     = get_amd_dbgapi_inferior_info (exec_inf)
 	.precise_alu_exceptions.requested;
+  get_amd_dbgapi_inferior_info (follow_inf).trap_on_entry.requested
+    = get_amd_dbgapi_inferior_info (exec_inf).trap_on_entry.requested;
 
   attach_amd_dbgapi (follow_inf);
 }
@@ -3099,6 +3134,8 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
 	= parent_info.precise_memory.requested;
       child_info.precise_alu_exceptions.requested
 	= parent_info.precise_alu_exceptions.requested;
+      child_info.trap_on_entry.requested
+	= parent_info.trap_on_entry.requested;
 
       if (fork_kind != TARGET_WAITKIND_VFORKED)
 	{
@@ -3661,6 +3698,55 @@ get_effective_precise_alu_exception_mode ()
   amd_dbgapi_inferior_info &info
     = get_amd_dbgapi_inferior_info (current_inferior ());
   return info.precise_alu_exceptions.enabled;
+}
+
+/* Callback for "show amdgpu trap-on-entry".  */
+
+static void
+show_trap_on_entry_mode (struct ui_file *file, int from_tty,
+			 struct cmd_list_element *c, const char *value)
+{
+  const amd_dbgapi_inferior_info &info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+
+  gdb_printf (file,
+	      _("AMDGPU wave launch trap-on-entry is %s (currently %s).\n"),
+	      info.trap_on_entry.requested ? "on" : "off",
+	      info.trap_on_entry.enabled ? "enabled" : "disabled");
+}
+
+/* Callback for "set amdgpu trap-on-entry".  */
+
+static void
+set_trap_on_entry_mode (bool value)
+{
+  amd_dbgapi_inferior_info &info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+
+  info.trap_on_entry.requested = value;
+
+  if (info.runtime_state == AMD_DBGAPI_RUNTIME_STATE_LOADED_SUCCESS)
+    set_process_trap_on_entry (info);
+}
+
+/* Get the trap-on-entry requested mode.  */
+
+static bool
+get_trap_on_entry_mode ()
+{
+  const amd_dbgapi_inferior_info &info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+  return info.trap_on_entry.requested;
+}
+
+/* Get the trap-on-entry effective mode.  */
+
+static bool
+get_effective_trap_on_entry_mode ()
+{
+  amd_dbgapi_inferior_info &info
+    = get_amd_dbgapi_inferior_info (current_inferior ());
+  return info.trap_on_entry.enabled;
 }
 
 static const char *
@@ -5145,6 +5231,19 @@ running.  If off (default), precise ALU exceptions reporting is disabled."),
 
   cmds.show->var->set_effective_value_getter<bool>
     (get_effective_precise_alu_exception_mode);
+
+  cmds = add_setshow_boolean_cmd ("trap-on-entry", no_class,
+				  _("Set trap-on-entry mode."),
+				  _("Show trap-on-entry mode."), _("\
+If on, all newly created waves will trap immediately upon launch before\n\
+executing any shader instructions.  If off (default), waves execute normally."),
+				  set_trap_on_entry_mode,
+				  get_trap_on_entry_mode,
+				  show_trap_on_entry_mode,
+				  &set_amdgpu_list, &show_amdgpu_list);
+
+  cmds.show->var->set_effective_value_getter<bool>
+    (get_effective_trap_on_entry_mode);
 
   add_cmd ("version", no_set_class, show_dbgapi_version,
 	   _("Show the ROCdbgapi library version and build information."),
