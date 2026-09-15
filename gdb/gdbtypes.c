@@ -560,8 +560,15 @@ make_qualified_type (struct type *type, type_instance_flags new_flags,
   /* Now set the instance flags and return the new type.  */
   ntype->set_instance_flags (new_flags);
 
-  /* Set length of new type to that of the original type.  */
-  ntype->set_length (type->length ());
+  /* Set length of new type to that of the original type, except for
+     pointers to address spaces, which may have a different size.  */
+  if (ntype->address_space () != 0
+      && gdbarch_address_space_pointer_size_p (type->arch ()))
+    ntype->set_length
+      (gdbarch_address_space_pointer_size (type->arch (),
+					   ntype->address_space ()));
+  else
+    ntype->set_length (type->length ());
 
   return ntype;
 }
@@ -601,6 +608,18 @@ make_type_with_address_class (struct type *type,
   gdb_assert (address_class < 4); /* We use two bits for this field.  */
   type_instance_flags new_flags = type->instance_flags ();
   new_flags.address_class = address_class;
+
+  return make_qualified_type (type, new_flags, nullptr);
+}
+
+/* Make a variant of TYPE with ASPACE as the type's
+   DW_AT_address_space attribute.  */
+type *
+make_type_with_address_space (type *type, arch_addr_space_id aspace)
+{
+  gdb_assert (aspace <= type_instance_flags::ADDRESS_SPACE_MAX);
+  type_instance_flags new_flags = type->instance_flags ();
+  new_flags.address_space = aspace;
 
   return make_qualified_type (type, new_flags, nullptr);
 }
@@ -687,6 +706,7 @@ replace_type (struct type *ntype, struct type *type)
 	 symbol readers which do construct address-class variants don't
 	 call replace_type().  */
       gdb_assert (chain->address_class () == 0);
+      gdb_assert (chain->address_space () == 0);
 
       chain->set_length (type->length ());
       chain = chain->chain;
@@ -4995,6 +5015,8 @@ recursive_dump_type (struct type *type, int spaces)
     gdb_puts (" TYPE_DATA_SPACE");
   if (type->address_class () != 0)
     gdb_printf (" TYPE_ADDRESS_CLASS(%u)", type->address_class ());
+  if (type->address_space () != 0)
+    gdb_printf (" TYPE_ADDRESS_SPACE(%s)", pulongest (type->address_space ()));
   if (type->is_restrict ())
     gdb_puts (" TYPE_RESTRICT");
   if (type->is_atomic ())

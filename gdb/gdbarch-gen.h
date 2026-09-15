@@ -443,6 +443,15 @@ using gdbarch_address_to_pointer_ftype = void (struct gdbarch *gdbarch, struct t
 void gdbarch_address_to_pointer (struct gdbarch *gdbarch, struct type *type, gdb_byte *buf, CORE_ADDR addr);
 void set_gdbarch_address_to_pointer (struct gdbarch *gdbarch, gdbarch_address_to_pointer_ftype *address_to_pointer);
 
+/* Convert an address of type FROM_TYPE to an address of type TO_TYPE.
+   This is particularly useful to convert between address spaces. */
+
+bool gdbarch_pointer_to_pointer_p (struct gdbarch *gdbarch);
+
+using gdbarch_pointer_to_pointer_ftype = CORE_ADDR (struct gdbarch *gdbarch, type *from_type, CORE_ADDR address, type *to_type);
+CORE_ADDR gdbarch_pointer_to_pointer (struct gdbarch *gdbarch, type *from_type, CORE_ADDR address, type *to_type);
+void set_gdbarch_pointer_to_pointer (struct gdbarch *gdbarch, gdbarch_pointer_to_pointer_ftype *pointer_to_pointer);
+
 bool gdbarch_integer_to_address_p (struct gdbarch *gdbarch);
 
 using gdbarch_integer_to_address_ftype = CORE_ADDR (struct gdbarch *gdbarch, struct type *type, const gdb_byte *buf, arch_addr_space_id address_space_id);
@@ -481,13 +490,22 @@ using gdbarch_segment_address_to_core_address_ftype = CORE_ADDR (arch_addr_space
 CORE_ADDR gdbarch_segment_address_to_core_address (struct gdbarch *gdbarch, arch_addr_space_id address_space_id, CORE_ADDR address);
 void set_gdbarch_segment_address_to_core_address (struct gdbarch *gdbarch, gdbarch_segment_address_to_core_address_ftype *segment_address_to_core_address);
 
-/* Converts DWARF address space number to address space id.
-   TODO: This hook is a quick fix until a proper address space support
-   is added and should not be pushed upstream. */
+/* Given the DWARF identifier for an architecture-specific address space,
+   return the id of that address space. */
 
-using gdbarch_dwarf_address_space_to_address_space_id_ftype = arch_addr_space_id (LONGEST dwarf_addr_space);
-arch_addr_space_id gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, LONGEST dwarf_addr_space);
-void set_gdbarch_dwarf_address_space_to_address_space_id (struct gdbarch *gdbarch, gdbarch_dwarf_address_space_to_address_space_id_ftype *dwarf_address_space_to_address_space_id);
+using gdbarch_address_space_dwarf_to_id_ftype = arch_addr_space_id (struct gdbarch *gdbarch, ULONGEST dwarf_addr_space);
+arch_addr_space_id gdbarch_address_space_dwarf_to_id (struct gdbarch *gdbarch, ULONGEST dwarf_addr_space);
+void set_gdbarch_address_space_dwarf_to_id (struct gdbarch *gdbarch, gdbarch_address_space_dwarf_to_id_ftype *address_space_dwarf_to_id);
+
+/* Given an architecture-specific address space, return the size of a pointer
+   that points to that address space.  This size is not necessarily the same
+   as the size of a default pointer. */
+
+bool gdbarch_address_space_pointer_size_p (struct gdbarch *gdbarch);
+
+using gdbarch_address_space_pointer_size_ftype = unsigned int (struct gdbarch *gdbarch, arch_addr_space_id aspace);
+unsigned int gdbarch_address_space_pointer_size (struct gdbarch *gdbarch, arch_addr_space_id aspace);
+void set_gdbarch_address_space_pointer_size (struct gdbarch *gdbarch, gdbarch_address_space_pointer_size_ftype *address_space_pointer_size);
 
 /* Return the address's scope. */
 

@@ -855,6 +855,18 @@ Method(
 )
 
 Method(
+    comment="""
+Convert an address of type FROM_TYPE to an address of type TO_TYPE.
+This is particularly useful to convert between address spaces.
+""",
+    type="CORE_ADDR",
+    name="pointer_to_pointer",
+    params=[("type *", "from_type"), ("CORE_ADDR", "address"), ("type *", "to_type")],
+    predicate=True,
+    invalid=True,
+)
+
+Method(
     type="CORE_ADDR",
     name="integer_to_address",
     params=[
@@ -915,17 +927,28 @@ is added and should not be pushed upstream.
     invalid=False,
 )
 
-Function(
+Method(
     comment="""
-Converts DWARF address space number to address space id.
-TODO: This hook is a quick fix until a proper address space support
-is added and should not be pushed upstream.
+Given the DWARF identifier for an architecture-specific address space,
+return the id of that address space.
 """,
     type="arch_addr_space_id",
-    name="dwarf_address_space_to_address_space_id",
-    params=[("LONGEST", "dwarf_addr_space")],
-    postdefault="default_dwarf_address_space_to_address_space_id",
+    name="address_space_dwarf_to_id",
+    params=[("ULONGEST", "dwarf_addr_space")],
+    postdefault="default_address_space_dwarf_to_id",
     invalid=False,
+)
+
+Method(
+    comment="""
+Given an architecture-specific address space, return the size of a pointer
+that points to that address space.  This size is not necessarily the same
+as the size of a default pointer.
+""",
+    type="unsigned int",
+    name="address_space_pointer_size",
+    params=[("arch_addr_space_id", "aspace")],
+    predicate=True,
 )
 
 Method(
