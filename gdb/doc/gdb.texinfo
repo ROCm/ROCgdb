@@ -24167,8 +24167,8 @@ to disassemble multiple architectures in the same inferior
 executing on multiple heterogeneous agents
 
 @item @code{info agents}, @code{info queues}, @code{info packets},
-@code{info dispatches}, commands to inquire about the heterogeneous
-system
+@code{info dispatches}, @code{info waves}, commands to inquire about
+the heterogeneous system
 
 @item @code{queue find}, @code{dispatch find}, commands to find heterogeneous
 entities
@@ -24528,6 +24528,38 @@ If you're debugging multiple inferiors, @value{GDBN} displays
 heterogeneous dispatch IDs using the qualified
 @var{inferior-num}.@var{dispatch-num} format.  Otherwise, only
 @var{dispatch-num} is shown.
+
+@item info waves @r{[}@var{inferior-num}@r{]}
+@kindex info waves
+Lists the active heterogeneous waves in inferior @var{inferior-num}, or
+in the current inferior if @var{inferior-num} is omitted, broken down by
+state: running, single-stepping, and stopped.  If the inferior has no
+active GPU process, all counts are zero.
+
+For example,
+
+@smallexample
+(@value{GDBP}) info waves
+4096 waves (3840 running, 0 single-stepping, 256 stopped)
+(@value{GDBP}) info waves 2
+1024 waves (1024 running, 0 single-stepping, 0 stopped)
+@end smallexample
+
+@item info waves count @r{[}@var{inferior-num}@r{]}
+@kindex info waves count
+Lists the total number of active heterogeneous waves in inferior
+@var{inferior-num}, or in the current inferior if @var{inferior-num} is omitted.
+This is useful in scripts when only the count is needed.
+If the inferior has no active GPU process, the count is zero.
+
+For example,
+
+@smallexample
+(@value{GDBP}) info waves count
+4096
+(@value{GDBP}) info waves count 2
+1024
+@end smallexample
 
 @item queue find @var{regexp}
 @cindex search for a heterogeneous queue
@@ -38825,6 +38857,85 @@ thread is not associated with a heterogeneous dispatch, or if a
   kernel-desc="0x00007ffde7e00740",kernel-args="0x00007fffeff00000",
   completion="0x0000000000000000",kernel-function="0x00007ffde7e01000"@}​​​​​],
 current-dispatch-id="1.1"
+(gdb)
+@end smallexample
+
+@subheading The @code{-wave-info} Command
+@findex -wave-info
+
+@subsubheading Synopsis
+
+@smallexample
+ -wave-info
+@end smallexample
+
+Lists the active heterogeneous waves in the current inferior, broken
+down by state.
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} command is @samp{info waves}.
+
+@subsubheading Result
+
+The result contains the following fields:
+
+@table @code
+@item total
+The total number of active waves.
+
+@item running
+The number of waves in the running state.
+
+@item single-stepping
+The number of waves in the single-stepping state.
+
+@item stopped
+The number of waves in the stopped state.
+
+@end table
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-wave-info
+^done,total="4096",running="3840",single-stepping="0",stopped="256"
+(gdb)
+@end smallexample
+
+@subheading The @code{-wave-count} Command
+@findex -wave-count
+
+@subsubheading Synopsis
+
+@smallexample
+ -wave-count
+@end smallexample
+
+Lists the total number of active heterogeneous waves in the current
+inferior.
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} command is @samp{info waves count}.
+
+@subsubheading Result
+
+The result contains the following field:
+
+@table @code
+@item count
+The total number of active waves.
+
+@end table
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-wave-count
+^done,count="4096"
 (gdb)
 @end smallexample
 

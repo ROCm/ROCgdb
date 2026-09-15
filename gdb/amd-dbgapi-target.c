@@ -4058,6 +4058,7 @@ info_agents_command (const char *args, int from_tty)
 }
 
 static struct cmd_list_element *queue_list;
+static struct cmd_list_element *wave_list;
 
 static void
 info_queues_command (const char *args, int from_tty)
@@ -4368,6 +4369,124 @@ num_digits (T value)
 }
 
 static struct cmd_list_element *dispatch_list;
+
+/* Wave counts broken down by state.  */
+
+struct wave_counts
+{
+  size_t total = 0;
+  size_t running = 0;
+  size_t single_stepping = 0;
+  size_t stopped = 0;
+};
+
+/* Return wave counts for INF, querying the dbgapi directly.  */
+
+static wave_counts
+count_waves (inferior *inf)
+{
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+  wave_counts counts;
+
+  if (process_id == AMD_DBGAPI_PROCESS_NONE)
+    return counts;
+
+  amd_dbgapi_wave_id_t *waves;
+  size_t wave_count;
+  if (amd_dbgapi_process_wave_list (process_id, &wave_count, &waves,
+				    nullptr)
+      != AMD_DBGAPI_STATUS_SUCCESS)
+    return counts;
+
+  for (size_t i = 0; i < wave_count; ++i)
+    {
+      amd_dbgapi_wave_state_t state;
+      if (amd_dbgapi_wave_get_info (waves[i], AMD_DBGAPI_WAVE_INFO_STATE,
+				    sizeof (state), &state)
+	  != AMD_DBGAPI_STATUS_SUCCESS)
+	/* Skip waves whose state cannot be retrieved; they are not
+	   reflected in counts.total.  */
+	continue;
+
+      ++counts.total;
+      switch (state)
+	{
+	case AMD_DBGAPI_WAVE_STATE_RUN:
+	  ++counts.running;
+	  break;
+	case AMD_DBGAPI_WAVE_STATE_SINGLE_STEP:
+	  ++counts.single_stepping;
+	  break;
+	case AMD_DBGAPI_WAVE_STATE_STOP:
+	  ++counts.stopped;
+	  break;
+	default:
+	  /* Unknown state from a newer dbgapi version.  The wave is
+	     counted in total but not in any sub-bucket.  */
+	  break;
+	}
+    }
+
+  xfree (waves);
+  return counts;
+}
+
+/* Parse an optional inferior number from ARGS.  Returns the current inferior
+   if ARGS is empty, or the inferior with the given number if ARGS is non-empty.
+   Throws an error if the number is out of range or refers to a non-existent
+   inferior.  */
+
+static inferior *
+parse_inferior_for_waves (const char *args)
+{
+  if (args == nullptr || *args == '\0')
+    return current_inferior ();
+
+  long num = parse_and_eval_long (args);
+  inferior *inf = (num >= 1 && num <= INT_MAX)
+    ? find_inferior_id ((int) num) : nullptr;
+  if (inf == nullptr)
+    error (_("No inferior number %ld."), num);
+
+  return inf;
+}
+
+static void
+info_waves_command (const char *args, int from_tty)
+{
+  struct ui_out *uiout = current_uiout;
+  inferior *inf = parse_inferior_for_waves (args);
+  wave_counts counts = count_waves (inf);
+
+  if (uiout->is_mi_like_p ())
+    {
+      uiout->field_signed ("total", counts.total);
+      uiout->field_signed ("running", counts.running);
+      uiout->field_signed ("single-stepping", counts.single_stepping);
+      uiout->field_signed ("stopped", counts.stopped);
+    }
+  else
+    {
+      uiout->message (_("%zu waves (%zu running, %zu single-stepping,"
+			" %zu stopped)\n"),
+		      counts.total, counts.running, counts.single_stepping,
+		      counts.stopped);
+    }
+}
+
+static void
+info_waves_count_command (const char *args, int from_tty)
+{
+  struct ui_out *uiout = current_uiout;
+  inferior *inf = parse_inferior_for_waves (args);
+  /* count_waves enumerates all wave states; only total is used here.  */
+  wave_counts counts = count_waves (inf);
+
+  if (uiout->is_mi_like_p ())
+    uiout->field_signed ("count", counts.total);
+  else
+    uiout->message (_("%zu\n"), counts.total);
+}
 
 struct info_dispatches_opts
 {
@@ -5242,6 +5361,24 @@ Otherwise, all dispatches are displayed."),
   auto *c = add_info ("dispatches", info_dispatches_command,
 		      info_dispatches_help.c_str ());
   set_cmd_completer_handle_brkchars (c, info_dispatches_command_completer);
+
+  add_prefix_cmd ("waves", class_info, info_waves_command,
+		  _("Commands for querying heterogeneous waves.\n\
+Usage: info waves [INF-NUM]\n\
+\n\
+Display a summary of active waves in inferior INF-NUM, or in the\n\
+current inferior if INF-NUM is omitted.  If the inferior has no\n\
+active GPU process, all counts are zero."),
+		  &wave_list, 1, &infolist);
+
+  add_cmd ("count", class_info, info_waves_count_command,
+	   _("Display the number of active heterogeneous waves.\n\
+Usage: info waves count [INF-NUM]\n\
+\n\
+Display the total number of waves in inferior INF-NUM, or in the\n\
+current inferior if INF-NUM is omitted.  If the inferior has no\n\
+active GPU process, the count is zero."),
+	   &wave_list);
 
   add_cmd ("address-spaces", class_maintenance,
 	   maintenance_print_address_spaces, _("\
