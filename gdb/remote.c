@@ -5761,7 +5761,7 @@ remote_target::start_remote_1 (int from_tty, int extended_p)
       /* Need to switch to a specific thread, because remote_check_symbols
 	 uses INFERIOR_PTID to set the general thread.  */
       scoped_restore_current_thread restore_thread;
-      thread_info *thread = any_thread_of_inferior (inf);
+      thread_info *thread = any_non_exited_thread_of_inferior (inf);
       switch_to_thread (thread);
       this->remote_check_symbols ();
     }
@@ -6748,7 +6748,7 @@ thread_pending_fork_status (struct thread_info *thread)
   return &ws;
 }
 
-/* Return THREAD's pending status if is is a pending fork/vfork/clone
+/* Return THREAD's pending status if is a pending fork/vfork/clone
    event, else return nullptr.  */
 
 static const target_waitstatus *
@@ -10822,7 +10822,7 @@ show_watchdog (struct ui_file *file, int from_tty,
 /* Read a packet from the remote machine, with error checking, and
    store it in *BUF.  Resize *BUF if necessary to hold the result.  If
    FOREVER, wait forever rather than timing out; this is used (in
-   synchronous mode) to wait for a target that is is executing user
+   synchronous mode) to wait for a target that is executing user
    code to stop.  If FOREVER == false, this function is allowed to time
    out gracefully and return an indication of this to the caller.
    Otherwise return the number of bytes read.  If IS_NOTIF is not
@@ -16175,7 +16175,7 @@ remote_objfile_changed_check_symbols (program_space *pspace)
 	 called very early in the connection process, while the inferior is
 	 being set up, before threads are added.  Just skip it, start_remote_1
 	 also calls remote_check_symbols when it's done setting things up.  */
-      thread_info *thread = any_thread_of_inferior (inf);
+      thread_info *thread = any_non_exited_thread_of_inferior (inf);
       if (thread != nullptr)
 	{
 	  scoped_restore_current_thread restore_thread;

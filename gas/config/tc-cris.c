@@ -1306,7 +1306,7 @@ md_assemble (char *str)
 	  /* General register.  */
 	  opcodep[0] = -4;
 	}
-      opcodep[1] = (REG_SP << 4) + (BDAP_QUICK_OPCODE >> 8);
+      opcodep[1] = (CRIS_REG_SP << 4) + (BDAP_QUICK_OPCODE >> 8);
       break;
 
     default:
@@ -2381,7 +2381,7 @@ get_gen_reg (char **cPP, int *regnop)
 	{
 	  /* It's "PC": consume the "c" and we're done.  */
 	  (*cPP)++;
-	  *regnop = REG_PC;
+	  *regnop = CRIS_REG_PC;
 	  return 1;
 	}
       break;
@@ -2441,7 +2441,7 @@ get_gen_reg (char **cPP, int *regnop)
 	{
 	  /* It's "SP": consume the "p" and we're done.  */
 	  (*cPP)++;
-	  *regnop = REG_SP;
+	  *regnop = CRIS_REG_SP;
 	  return 1;
 	}
       break;
@@ -2750,7 +2750,7 @@ get_autoinc_prefix_or_indir_op (char **cPP, struct cris_prefix *prefixp,
 			       | (prefixp->base_reg_number << 12)
 			       | (AUTOINCR_BIT << 8)
 			       | (2 << 4)
-			       | REG_PC /* << 0 */);
+			       | CRIS_REG_PC /* << 0 */);
 
 			  /* This can have a PIC suffix, specifying reloc
 			     type to use.  */
@@ -2826,7 +2826,7 @@ get_autoinc_prefix_or_indir_op (char **cPP, struct cris_prefix *prefixp,
       /* Expression found, this is immediate mode.  */
       prefixp->kind = PREFIX_NONE;
       *is_autoincp = 1;
-      *src_regnop = REG_PC;
+      *src_regnop = CRIS_REG_PC;
       *imm_foundp = 1;
 
       /* This can have a PIC suffix, specifying reloc type to use.  The
@@ -2997,7 +2997,7 @@ get_3op_or_dip_prefix_op (char **cPP, struct cris_prefix *prefixp)
 		   | (prefixp->base_reg_number << 12)
 		   | (AUTOINCR_BIT << 8)
 		   | (2 << 4)
-		   | REG_PC /* << 0 */);
+		   | CRIS_REG_PC /* << 0 */);
 
 	      /* This can have a PIC suffix, specifying reloc type to use.  */
 	      if ((pic || tls) && **cPP == RELOC_SUFFIX_CHAR)
@@ -3062,7 +3062,7 @@ get_3op_or_dip_prefix_op (char **cPP, struct cris_prefix *prefixp)
       /* Expression found, the so called absolute mode for a
 	 double-indirect prefix on PC.  */
       prefixp->kind = PREFIX_DIP;
-      prefixp->opcode = DIP_OPCODE | (AUTOINCR_BIT << 8) | REG_PC;
+      prefixp->opcode = DIP_OPCODE | (AUTOINCR_BIT << 8) | CRIS_REG_PC;
       prefixp->reloc = BFD_RELOC_32;
 
       /* For :GD and :IE, it makes sense to have TLS specifiers here.  */

@@ -2196,6 +2196,18 @@ rs6000_linux_adjust_frame_regnum (struct gdbarch *gdbarch, int num,
   return num;
 }
 
+/* Implement gdbarch_gcc_target_options.  A module built for the "compile"
+   command is loaded into inferior memory without a linker, so it has no
+   PLT.  -mlongcall makes calls to other modules indirect, and -mno-pltseq
+   stops GCC reaching the target through a PLT entry; together they let the
+   call be resolved against the module's own TOC.  */
+
+static std::string
+ppc64_gcc_target_options (struct gdbarch *gdbarch)
+{
+  return default_gcc_target_options (gdbarch) + " -mlongcall -mno-pltseq";
+}
+
 static void
 ppc_linux_init_abi (struct gdbarch_info info,
 		    struct gdbarch *gdbarch)
@@ -2304,6 +2316,7 @@ ppc_linux_init_abi (struct gdbarch_info info,
 	    (gdbarch, ppc_elfv2_elf_make_msymbol_special);
 
 	  set_gdbarch_skip_entrypoint (gdbarch, ppc_elfv2_skip_entrypoint);
+	  set_gdbarch_gcc_target_options (gdbarch, ppc64_gcc_target_options);
 	}
 
       /* Shared library handling.  */

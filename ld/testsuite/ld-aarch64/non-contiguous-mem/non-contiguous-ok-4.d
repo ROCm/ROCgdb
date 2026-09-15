@@ -53,7 +53,7 @@ Disassembly of section \.raml:
 
 000000001fff0028 \<__code4_veneer\>:
     1fff0028:	90100290 	adrp	x16, 40040000 \<code4\>
-    1fff002c:	91000210 	add	x16, x16, #0x0
+    1fff002c:	d503201f 	nop
     1fff0030:	d61f0200 	br	x16
 	...
 

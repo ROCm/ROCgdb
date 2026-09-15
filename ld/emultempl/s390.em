@@ -31,8 +31,10 @@ static struct s390_elf_params params = { 0 };
 /* This is a convenient point to tell BFD about target specific flags.
    After the output has been created, but before inputs are read.  */
 static void
-s390_elf_create_output_section_statements (void)
+s390_elf_after_open_output (void)
 {
+  ldelf_after_open_output ();
+
   if (!bfd_elf_s390_set_options (&link_info, &params))
     fatal (_("%P: can not init BFD: %E\n"));
 }
@@ -57,4 +59,4 @@ PARSE_AND_LIST_ARGS_CASES=${PARSE_AND_LIST_ARGS_CASES}'
       break;
 '
 
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=s390_elf_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=s390_elf_after_open_output

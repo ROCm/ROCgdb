@@ -21,7 +21,4 @@
 #define FPU_DEFAULT FPU_ARCH_SOFTVFP
 #define EABI_DEFAULT EF_ARM_EABI_VER5
 
-#define LOCAL_LABELS_DOLLAR 1
-#define LOCAL_LABELS_FB 1
-
-#include "obj-format.h"
+#include "te-generic.h"

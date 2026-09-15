@@ -317,7 +317,7 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
 
   proc = add_process (pid, attached);
   child_init_thread_list ();
-  windows_process.child_initialization_done = 0;
+  windows_process.child_initialization_done = false;
 
   if (the_low_target.initial_stuff != NULL)
     (*the_low_target.initial_stuff) (proc);
@@ -337,6 +337,7 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
 	  || status.kind () == TARGET_WAITKIND_STOPPED)
 	{
 	  windows_process.cached_status = status;
+	  windows_process.cached_ptid = current_thread->id;
 	  break;
 	}
 
@@ -373,7 +374,7 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
     = inferior_started_by_cygwin (pid, attached);
 #endif
 
-  windows_process.child_initialization_done = 1;
+  windows_process.child_initialization_done = true;
 }
 
 /* Resume all artificially suspended threads if we are continuing
@@ -517,9 +518,6 @@ win32_process_target::create_inferior (const char *program,
   DWORD err;
   char *args = (char *) program_args.c_str ();
 
-  /* win32_wait needs to know we're not attaching.  */
-  windows_process.attaching = 0;
-
   if (!program)
     error (_("No executable specified, specify executable to debug.\n"));
 
@@ -609,8 +607,6 @@ win32_process_target::attach (unsigned long pid)
 	{
 	  DebugSetProcessKillOnExit (FALSE);
 
-	  /* win32_wait needs to know we're attaching.  */
-	  windows_process.attaching = 1;
 	  do_initial_child_stuff (h, pid, 1);
 	  return 0;
 	}
@@ -988,7 +984,6 @@ get_child_debug_event (DWORD *continue_status,
   /* Check if GDB sent us an interrupt request.  */
   check_remote_input_interrupt_request ();
 
-  windows_process.attaching = 0;
   {
     process_info *proc = find_process_pid (windows_process.process_id);
     for (thread_info &thread : proc->thread_list ())
@@ -1145,8 +1140,8 @@ win32_process_target::wait (ptid_t ptid, target_waitstatus *ourstatus,
 	 fails).  Report it now.  */
       *ourstatus = windows_process.cached_status;
       windows_process.cached_status.set_ignore ();
-      return ptid_t (windows_process.process_id,
-		     windows_process.main_thread_id, 0);
+      switch_to_thread (find_thread_ptid (windows_process.cached_ptid));
+      return windows_process.cached_ptid;
     }
 
   while (1)
@@ -1168,8 +1163,11 @@ win32_process_target::wait (ptid_t ptid, target_waitstatus *ourstatus,
 	case TARGET_WAITKIND_SIGNALLED:
 	case TARGET_WAITKIND_LOADED:
 	  {
-	    OUTMSG2 (("Child Stopped with signal = %d \n",
-		      ourstatus->sig ()));
+	    if (ourstatus->kind () == TARGET_WAITKIND_LOADED)
+	      OUTMSG2 (("Child stopped due to library load\n"));
+	    else
+	      OUTMSG2 (("Child stopped with signal = %d \n",
+			ourstatus->sig ()));
 	    maybe_adjust_pc (current_event);
 
 	    /* All-stop, suspend all threads until they are explicitly
@@ -1179,8 +1177,8 @@ win32_process_target::wait (ptid_t ptid, target_waitstatus *ourstatus,
 	    return debug_event_ptid (&current_event);
 	  }
 	default:
-	  OUTMSG (("Ignoring unknown internal event, %d\n",
-		  ourstatus->kind ()));
+	  OUTMSG (("Ignoring unknown internal event, %s\n",
+		   ourstatus->to_string ().c_str ()));
 	  [[fallthrough]];
 	case TARGET_WAITKIND_SPURIOUS:
 	  /* do nothing, just continue */

@@ -1505,7 +1505,7 @@ CODE_FRAGMENT
 .     combined_entry_type *, unsigned int);
 .
 .  bool (*_bfd_coff_reloc16_extra_cases)
-.    (bfd *, struct bfd_link_info *, struct bfd_link_order *, arelent *,
+.    (bfd *, struct bfd_link_info *, const struct bfd_link_order *, arelent *,
 .     bfd_byte *, size_t *, size_t *);
 .
 .  int (*_bfd_coff_reloc16_estimate)
@@ -1831,9 +1831,9 @@ coff_new_section_hook (bfd * abfd, asection * section)
   /* Allocate aux records for section symbols, to store size and
      related info.
 
-     @@ The 10 is a guess at a plausible maximum number of aux entries
-     (but shouldn't be a constant).  */
-  amt = sizeof (combined_entry_type) * 10;
+     One syment plus one aux: nothing sets n_numaux above 1 on a
+     section symbol, or indexes this array past native[1].  */
+  amt = sizeof (*native) * 2;
   native = (combined_entry_type *) bfd_zalloc (abfd, amt);
   if (native == NULL)
     return false;
@@ -4411,43 +4411,43 @@ coff_set_section_contents (bfd * abfd,
     }
 
 #if defined(_LIB) && !defined(TARG_AUX)
-   /* The physical address field of a .lib section is used to hold the
-      number of shared libraries in the section.  This code counts the
-      number of sections being written, and increments the lma field
-      with the number.
+  /* The physical address field of a .lib section is used to hold the
+     number of shared libraries in the section.  This code counts the
+     number of sections being written, and increments the lma field
+     with the number.
 
-      I have found no documentation on the contents of this section.
-      Experimentation indicates that the section contains zero or more
-      records, each of which has the following structure:
+     I have found no documentation on the contents of this section.
+     Experimentation indicates that the section contains zero or more
+     records, each of which has the following structure:
 
-      - a (four byte) word holding the length of this record, in words,
-      - a word that always seems to be set to "2",
-      - the path to a shared library, null-terminated and then padded
-	to a whole word boundary.
+     - a (four byte) word holding the length of this record, in words,
+     - a word that always seems to be set to "2",
+     - the path to a shared library, null-terminated and then padded
+     to a whole word boundary.
 
-      bfd_assert calls have been added to alert if an attempt is made
-      to write a section which doesn't follow these assumptions.  The
-      code has been tested on ISC 4.1 by me, and on SCO by Robert Lipe
-      <robertl@arnet.com> (Thanks!).
+     bfd_assert calls have been added to alert if an attempt is made
+     to write a section which doesn't follow these assumptions.  The
+     code has been tested on ISC 4.1 by me, and on SCO by Robert Lipe
+     <robertl@arnet.com> (Thanks!).
 
-      Gvran Uddeborg <gvran@uddeborg.pp.se>.  */
-    if (strcmp (section->name, _LIB) == 0)
-      {
-	bfd_byte *rec, *recend;
+     Gvran Uddeborg <gvran@uddeborg.pp.se>.  */
+  if (count >= 4 && strcmp (section->name, _LIB) == 0)
+    {
+      bfd_size_type off = 0;
 
-	rec = (bfd_byte *) location;
-	recend = rec + count;
-	while (recend - rec >= 4)
-	  {
-	    size_t len = bfd_get_32 (abfd, rec);
-	    if (len == 0 || len > (size_t) (recend - rec) / 4)
-	      break;
-	    rec += len * 4;
-	    ++section->lma;
-	  }
+      while (off <= count - 4)
+	{
+	  uint32_t len = bfd_get_32 (abfd, (bfd_byte *) location + off);
+	  if (len == 0
+	      || len > (uint32_t) -1 / 4
+	      || len * 4 > count - off)
+	    break;
+	  off += len * 4;
+	  ++section->lma;
+	}
 
-	BFD_ASSERT (rec == recend);
-      }
+      BFD_ASSERT (off == count);
+    }
 #endif
 
   /* Don't write out bss sections - one way to do this is to
@@ -5475,13 +5475,14 @@ dummy_reloc16_estimate (bfd *abfd ATTRIBUTE_UNUSED,
 #define coff_reloc16_extra_cases dummy_reloc16_extra_cases
 
 static bool
-dummy_reloc16_extra_cases (bfd *abfd ATTRIBUTE_UNUSED,
-			   struct bfd_link_info *link_info ATTRIBUTE_UNUSED,
-			   struct bfd_link_order *link_order ATTRIBUTE_UNUSED,
-			   arelent *reloc ATTRIBUTE_UNUSED,
-			   bfd_byte *data ATTRIBUTE_UNUSED,
-			   size_t *src_ptr ATTRIBUTE_UNUSED,
-			   size_t *dst_ptr ATTRIBUTE_UNUSED)
+dummy_reloc16_extra_cases
+  (bfd *abfd ATTRIBUTE_UNUSED,
+   struct bfd_link_info *link_info ATTRIBUTE_UNUSED,
+   const struct bfd_link_order *link_order ATTRIBUTE_UNUSED,
+   arelent *reloc ATTRIBUTE_UNUSED,
+   bfd_byte *data ATTRIBUTE_UNUSED,
+   size_t *src_ptr ATTRIBUTE_UNUSED,
+   size_t *dst_ptr ATTRIBUTE_UNUSED)
 {
   return false;
 }

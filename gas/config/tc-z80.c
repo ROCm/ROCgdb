@@ -1086,7 +1086,7 @@ parse_cc (const char *s, char * op)
 {
   const char *p;
   int i;
-  struct reg_entry * cc_p;
+  const struct reg_entry *cc_p;
 
   for (i = 0; i < BUFLEN; ++i)
     {

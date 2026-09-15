@@ -486,7 +486,7 @@ _returnFromException (Frame * frame)
       frame = lastFrame;
       frame->frameSize = 4;
       frame->format = 0;
-      frame->fsaveHeader = -1;	/* restore regs, but we dont have fsave info */
+      frame->fsaveHeader = -1;	/* restore regs, but we don't have fsave info */
     }
 
 #if !defined (mc68020) && !defined (mc68332)

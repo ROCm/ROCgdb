@@ -357,7 +357,7 @@ public:
 	  per-inferior thread number.  This number is unique in the
 	  inferior but not unique between inferiors.
 
-     b) The global ID (GId).  This is a a single integer unique
+     b) The global ID (GId).  This is a single integer unique
 	between all inferiors.
 
      E.g.:
@@ -815,9 +815,9 @@ struct thread_info *find_thread_by_handle
 /* Finds the first thread of the specified inferior.  */
 extern struct thread_info *first_thread_of_inferior (inferior *inf);
 
-/* Returns any thread of inferior INF, giving preference to the
+/* Returns any non-exited thread of inferior INF, giving preference to the
    current thread.  */
-extern struct thread_info *any_thread_of_inferior (inferior *inf);
+extern struct thread_info *any_non_exited_thread_of_inferior (inferior *inf);
 
 /* Returns any non-exited thread of inferior INF, giving preference to
    the current thread, and to not executing threads.  */

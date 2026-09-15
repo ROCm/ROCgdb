@@ -9,5 +9,5 @@ Disassembly of section .text:
 
 00010000 \<test\>:
  +10000:	d53bd041 	mrs	x1, tpidr_el0
- +10004:	11400020 	add	w0, w1, #0x0, lsl #12
+ +10004:	2a0103e0 	mov	w0, w1
  +10008:	11002000 	add	w0, w0, #0x8

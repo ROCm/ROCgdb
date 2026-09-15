@@ -31,14 +31,15 @@ static struct elf_linker_x86_params params;
    After the output has been created, but before inputs are read.  */
 
 static void
-elf_x86_create_output_section_statements (void)
+elf_x86_after_open_output (void)
 {
+  ldelf_after_open_output ();
   bfd_elf_linker_x86_set_options (&link_info, &params);
 }
 
 EOF
 
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=elf_x86_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=elf_x86_after_open_output
 
 if test -n "$CALL_NOP_BYTE"; then
 

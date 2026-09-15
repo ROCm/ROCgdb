@@ -22,6 +22,9 @@
 #ifndef _ELF32_METAG_H
 #define _ELF32_METAG_H
 
+extern void elf_metag_init_stub_bfd
+  (struct bfd_link_info *, bfd *);
+
 extern int elf_metag_setup_section_lists
   (bfd *, struct bfd_link_info *);
 
@@ -29,7 +32,7 @@ extern void elf_metag_next_input_section
   (struct bfd_link_info *, asection *);
 
 extern bool elf_metag_size_stubs
-  (bfd *, bfd *, struct bfd_link_info *, bfd_signed_vma,
+  (struct bfd_link_info *, bfd_signed_vma,
    asection * (*) (const char *, asection *), void (*) (void));
 
 extern bool elf_metag_build_stubs

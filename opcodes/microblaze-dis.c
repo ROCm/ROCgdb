@@ -133,58 +133,59 @@ get_field_special (struct string_buf *buf, long instr,
 
   switch ((((instr & IMM_MASK) >> IMM_LOW) ^ op->immval_mask))
     {
-    case REG_MSR_MASK :
+    case MICROBLAZE_REG_MSR_MASK:
       spr = "msr";
       break;
-    case REG_PC_MASK :
+    case MICROBLAZE_REG_PC_MASK:
       spr = "pc";
       break;
-    case REG_EAR_MASK :
+    case MICROBLAZE_REG_EAR_MASK:
       spr = "ear";
       break;
-    case REG_ESR_MASK :
+    case MICROBLAZE_REG_ESR_MASK:
       spr = "esr";
       break;
-    case REG_FSR_MASK :
+    case MICROBLAZE_REG_FSR_MASK:
       spr = "fsr";
       break;
-    case REG_BTR_MASK :
+    case MICROBLAZE_REG_BTR_MASK:
       spr = "btr";
       break;
-    case REG_EDR_MASK :
+    case MICROBLAZE_REG_EDR_MASK:
       spr = "edr";
       break;
-    case REG_PID_MASK :
+    case MICROBLAZE_REG_PID_MASK:
       spr = "pid";
       break;
-    case REG_ZPR_MASK :
+    case MICROBLAZE_REG_ZPR_MASK:
       spr = "zpr";
       break;
-    case REG_TLBX_MASK :
+    case MICROBLAZE_REG_TLBX_MASK:
       spr = "tlbx";
       break;
-    case REG_TLBLO_MASK :
+    case MICROBLAZE_REG_TLBLO_MASK:
       spr = "tlblo";
       break;
-    case REG_TLBHI_MASK :
+    case MICROBLAZE_REG_TLBHI_MASK:
       spr = "tlbhi";
       break;
-    case REG_TLBSX_MASK :
+    case MICROBLAZE_REG_TLBSX_MASK:
       spr = "tlbsx";
       break;
-    case REG_SHR_MASK :
+    case MICROBLAZE_REG_SHR_MASK:
       spr = "shr";
       break;
-    case REG_SLR_MASK :
+    case MICROBLAZE_REG_SLR_MASK:
       spr = "slr";
       break;
-    default :
+    default:
       if (((((instr & IMM_MASK) >> IMM_LOW) ^ op->immval_mask) & 0xE000)
-	  == REG_PVR_MASK)
+	  == MICROBLAZE_REG_PVR_MASK)
 	{
 	  sprintf (p, "%spvr%d", register_prefix,
-		   (unsigned short)(((instr & IMM_MASK) >> IMM_LOW)
-				    ^ op->immval_mask) ^ REG_PVR_MASK);
+		   ((unsigned short)(((instr & IMM_MASK) >> IMM_LOW)
+				     ^ op->immval_mask)
+		    ^ MICROBLAZE_REG_PVR_MASK));
 	  return p;
 	}
       else

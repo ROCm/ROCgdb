@@ -2796,16 +2796,15 @@ maintenance_print_record_instruction (const char *args, int from_tty)
   if (offset == record_full_log.size ())
     offset--;
   if (args != nullptr)
-    {
-      offset += value_as_long (parse_and_eval (args));
-      if (offset >= record_full_log.size () || offset < 0)
-	error (_("Not enough recorded history"));
-    }
+    offset += value_as_long (parse_and_eval (args));
+
+  if (offset >= record_full_log.size () || offset < 0)
+    error (_("Not enough recorded history"));
+
   auto to_print = record_full_log.begin () + offset;
 
   gdbarch *arch = current_inferior ()->arch ();
-  struct value_print_options opts;
-  get_user_print_options (&opts);
+  value_print_options opts = get_user_print_options ();
   opts.raw = true;
 
   for (auto &entry : to_print->effects)
@@ -2820,7 +2819,7 @@ maintenance_print_record_instruction (const char *args, int from_tty)
 					 entry.get_loc ());
 	      gdb_printf ("Register %s changed: ",
 			  gdbarch_register_name (arch, entry.reg ().num));
-	      value_print (val, gdb_stdout, &opts);
+	      value_print (val, gdb_stdout, opts);
 	      gdb_printf ("\n");
 	      break;
 	    }
@@ -2842,7 +2841,7 @@ maintenance_print_record_instruction (const char *args, int from_tty)
   value *val = value_from_contents (regtype, to_print->pc.get_loc ());
   gdb_printf ("Register %s changed: ",
 	      gdbarch_register_name (arch, to_print->pc.num));
-  value_print (val, gdb_stdout, &opts);
+  value_print (val, gdb_stdout, opts);
   gdb_printf ("\n");
 }
 

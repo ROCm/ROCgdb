@@ -17,6 +17,7 @@
 
 #include "windows-tdep.h"
 #include "extract-store-integer.h"
+#include "gdbtypes.h"
 #include "gdbsupport/gdb_obstack.h"
 #include "xml-support.h"
 #include "gdbarch.h"
@@ -826,10 +827,7 @@ struct windows_solib_ops : target_solib_ops
 {
   using target_solib_ops::target_solib_ops;
 
-  void create_inferior_hook (int from_tty) const override;
-  void iterate_over_objfiles_in_search_order
-    (iterate_over_objfiles_in_search_order_cb_ftype cb,
-     objfile *current_objfile) const override;
+  void create_inferior_hook (int from_tty) override;
 };
 
 /* Return a new solib_ops for Windows systems.  */
@@ -837,13 +835,13 @@ struct windows_solib_ops : target_solib_ops
 static solib_ops_up
 make_windows_solib_ops (program_space *pspace)
 {
-  return std::make_unique<windows_solib_ops> (pspace);
+  return std::make_unique<windows_solib_ops> (pspace, true);
 }
 
 /* Implement the "solib_create_inferior_hook" solib_ops method.  */
 
 void
-windows_solib_ops::create_inferior_hook (int from_tty) const
+windows_solib_ops::create_inferior_hook (int from_tty)
 {
   CORE_ADDR exec_base = 0;
 
@@ -886,43 +884,6 @@ windows_solib_ops::create_inferior_hook (int from_tty) const
 	objfile_rebase (current_program_space->symfile_object_file,
 			exec_base - vmaddr);
     }
-}
-
-/* Implement the "iterate_over_objfiles_in_search_order" gdbarch
-   method.  It searches all objfiles, starting with CURRENT_OBJFILE
-   first (if not NULL).
-
-   On Windows, the system behaves a little differently when two
-   objfiles each define a global symbol using the same name, compared
-   to other platforms such as GNU/Linux for instance.  On GNU/Linux,
-   all instances of the symbol effectively get merged into a single
-   one, but on Windows, they remain distinct.
-
-   As a result, it usually makes sense to start global symbol searches
-   with the current objfile before expanding it to all other objfiles.
-   This helps for instance when a user debugs some code in a DLL that
-   refers to a global variable defined inside that DLL.  When trying
-   to print the value of that global variable, it would be unhelpful
-   to print the value of another global variable defined with the same
-   name, but in a different DLL.  */
-
-void
-windows_solib_ops::iterate_over_objfiles_in_search_order
-  (iterate_over_objfiles_in_search_order_cb_ftype cb,
-   objfile *current_objfile) const
-{
-  if (current_objfile)
-    {
-      if (cb (current_objfile))
-	return;
-    }
-
-  for (objfile &objfile : m_pspace->objfiles ())
-    if (&objfile != current_objfile)
-      {
-	if (cb (&objfile))
-	  return;
-      }
 }
 
 /* Implement the "auto_wide_charset" gdbarch method.  */
@@ -1028,6 +989,14 @@ windows_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* On Windows, "long"s are only 32bit.  */
   set_gdbarch_long_bit (gdbarch, 32);
+
+  /* With the MSVC ABI, "long double" is just an IEEE 64-bit double,
+     the same as "double".  */
+  if (info.osabi == GDB_OSABI_WINDOWS_MSVC)
+    {
+      set_gdbarch_long_double_bit (gdbarch, 64);
+      set_gdbarch_long_double_format (gdbarch, floatformats_ieee_double);
+    }
 
   /* Enable TLS support.  */
   set_gdbarch_fetch_tls_load_module_address (gdbarch,

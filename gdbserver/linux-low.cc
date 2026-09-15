@@ -70,6 +70,14 @@
 #define AT_HWCAP2 26
 #endif
 
+#ifndef AT_HWCAP3
+#define AT_HWCAP3 29
+#endif
+
+#ifndef AT_HWCAP4
+#define AT_HWCAP4 30
+#endif
+
 /* Some targets did not define these ptrace constants from the start,
    so gdbserver defines them locally here.  In the future, these may
    be removed after they are added to asm/ptrace.h.  */
@@ -7233,6 +7241,26 @@ linux_get_hwcap2 (int pid, int wordsize)
   CORE_ADDR hwcap2 = 0;
   linux_get_auxv (pid, wordsize, AT_HWCAP2, &hwcap2);
   return hwcap2;
+}
+
+/* See linux-low.h.  */
+
+CORE_ADDR
+linux_get_hwcap3 (int pid, int wordsize)
+{
+  CORE_ADDR hwcap3 = 0;
+  linux_get_auxv (pid, wordsize, AT_HWCAP3, &hwcap3);
+  return hwcap3;
+}
+
+/* See linux-low.h.  */
+
+CORE_ADDR
+linux_get_hwcap4 (int pid, int wordsize)
+{
+  CORE_ADDR hwcap4 = 0;
+  linux_get_auxv (pid, wordsize, AT_HWCAP4, &hwcap4);
+  return hwcap4;
 }
 
 #ifdef HAVE_LINUX_REGSETS

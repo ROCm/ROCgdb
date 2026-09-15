@@ -61,7 +61,7 @@ awk '
     sub(/^SYS_/,"",$2);
     printf "  <syscall name=\"%s\" number=\"%s\"", $2, $3
     if (sub(/^netbsd[0-9]*_/,"",$2) != 0)
-        printf " alias=\"%s\"", $2
+	printf " alias=\"%s\"", $2
     printf "/>\n"
 }
 /\/\* [0-9]* is obsolete [a-z_]* \*\// {

@@ -48,32 +48,25 @@ default_stages: [pre-commit]
 repos:
   # Python hooks.  Run these for (in glob notation):
   #
-  #  - gdb/gdb-gdb.py.in
   #  - gdb/*.py
   #  - gdb/python/**/*.py
   #  - gdb/testsuite/*.py
-  #
-  # Because gdb/gdb-gdb.py.in is not classified as python, we use
-  # 'types_or: [file]' to override the default type for these hooks.
   #
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 26.5.1
     hooks:
       - id: black
-        types_or: &gdb_python_types [file]
-        files: &gdb_python_files '^gdb/.*\.py(\.in)?$'
+        files: &gdb_python_files '^gdb/.*\.py$'
   - repo: https://github.com/pycqa/flake8
     rev: 7.3.0
     hooks:
       - id: flake8
-        types_or: *gdb_python_types
         files: *gdb_python_files
         args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
-    rev: 9.0.0b1
+    rev: 9.0.1
     hooks:
       - id: isort
-        types_or: *gdb_python_types
         files: *gdb_python_files
         # Isort's .pre-commit-hooks.yaml sets stages, overriding default_stages,
         # so this hook needs an explicit setting.
@@ -93,6 +86,11 @@ repos:
         entry: gdb/contrib/codespell-log.sh
         args: *codespell_args
         additional_dependencies: *codespell_deps
+        # Override the [text] setting in .pre-commit-hooks.yaml, allowing this
+        # hook to see the same files as codespell usage outside pre-commit.
+        # Instead, filter files in gdb/pyproject.toml.
+        types: &types_default [file]
+        types_or: &types_or_default []
         verbose: true
         stages: [commit-msg]
 
@@ -109,7 +107,12 @@ repos:
     rev: v1.38.0
     hooks:
       - id: yamllint
-        files: '^\.pre-commit-config.yaml$'
+        files: &pre_commit_config_file '^\.pre-commit-config.yaml$'
+        # By default warnings don't cause yamllint to return non-zero, so they:
+        # - don't cause the hook to fail, and
+        # - are hidden unless pre-commit runs in verbose mode.
+        # Enable strict mode to make sure we see and fix warnings.
+        args: [--strict]
 
   # Local hooks.
   - repo: local
@@ -133,7 +136,8 @@ repos:
         name: *id2
         language: unsupported_script
         entry: gdb/contrib/check-whitespace-pre-commit.py
-        types: ['text']
+        # Don't filter files on types, allowing this hook to see same files as
+        # git usage outside pre-commit.  Instead, filter files in .gitignore.
         files: *gdb_files
       - id: &id3 pre-commit-setup
         name: *id3
@@ -147,6 +151,24 @@ repos:
         language: unsupported_script
         entry: gdb/contrib/check-file-mode.sh
         files: *gdb_files
+      - id: &id5 shellcheck
+        name: *id5
+        files: '^(gdb|gdbsupport|gdbserver)/'
+        types: ['shell']
+        language: unsupported_script
+        # The gdb/contrib/shellcheck.sh script requires shellcheck 0.11.0
+        # (preferred) or 0.10.0.  Not pinning this to a single version is a
+        # compromise to deal with the fact that users themselves need to
+        # provide the dependency, which may be non-trivial.
+        entry: gdb/contrib/shellcheck.sh
+        stages: [manual]
+      - id: &id6 pre-commit-config-check
+        name: *id6
+        language: python
+        entry: gdb/contrib/pre-commit.py
+        args: [--config-check]
+        additional_dependencies: ["pyyaml"]
+        files: *pre_commit_config_file
 
 # Local Variables:
 # indent-tabs-mode: nil

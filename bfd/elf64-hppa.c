@@ -1804,7 +1804,7 @@ elf64_hppa_late_size_sections (struct bfd_link_info *info)
     }
 
   /* Add __text_seg section symbol to dynamic table.  */
-  if (!hppa_info->text_hash_entry)
+  if (hppa_info->root.dynamic_sections_created && !hppa_info->text_hash_entry)
     {
       asection *s;
 
@@ -1833,7 +1833,7 @@ elf64_hppa_late_size_sections (struct bfd_link_info *info)
     }
 
   /* Add __data_seg section symbol to dynamic table.  */
-  if (!hppa_info->data_hash_entry)
+  if (hppa_info->root.dynamic_sections_created && !hppa_info->data_hash_entry)
     {
       asection *s;
 

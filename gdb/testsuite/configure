@@ -622,10 +622,6 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-NM_TRANSFORM_NAME
-GAS_TRANSFORM_NAME
-READELF_TRANSFORM_NAME
-STRIP_TRANSFORM_NAME
 EXTRA_RULES
 EGREP
 GREP
@@ -3449,8 +3445,6 @@ if test "${build}" = "${host}" -a "${host}" = "${target}"; then
 fi
 
 
-# Transform the name of some programs and generate the lib/pdtrace
-# test tool.
 test "$program_prefix" != NONE &&
   program_transform_name="s&^&$program_prefix&;$program_transform_name"
 # Use a double $ so make ignores it.
@@ -3460,40 +3454,6 @@ test "$program_suffix" != NONE &&
 # By default was `s,x,x', remove it if useless.
 ac_script='s/[\\$]/&&/g;s/;s,x,x,$//'
 program_transform_name=`$as_echo "$program_transform_name" | sed "$ac_script"`
-
-
-  gdb_ac_transform=`echo "$program_transform_name" | sed -e 's/\\$\\$/\\$/g'`
-  STRIP_TRANSFORM_NAME=`echo strip | sed -e "$gdb_ac_transform"`
-  if test "x$STRIP_TRANSFORM_NAME" = x; then
-     STRIP_TRANSFORM_NAME=strip
-  fi
-
-
-
-  gdb_ac_transform=`echo "$program_transform_name" | sed -e 's/\\$\\$/\\$/g'`
-  READELF_TRANSFORM_NAME=`echo readelf | sed -e "$gdb_ac_transform"`
-  if test "x$READELF_TRANSFORM_NAME" = x; then
-     READELF_TRANSFORM_NAME=readelf
-  fi
-
-
-
-  gdb_ac_transform=`echo "$program_transform_name" | sed -e 's/\\$\\$/\\$/g'`
-  GAS_TRANSFORM_NAME=`echo as | sed -e "$gdb_ac_transform"`
-  if test "x$GAS_TRANSFORM_NAME" = x; then
-     GAS_TRANSFORM_NAME=as
-  fi
-
-
-
-  gdb_ac_transform=`echo "$program_transform_name" | sed -e 's/\\$\\$/\\$/g'`
-  NM_TRANSFORM_NAME=`echo nm | sed -e "$gdb_ac_transform"`
-  if test "x$NM_TRANSFORM_NAME" = x; then
-     NM_TRANSFORM_NAME=nm
-  fi
-
-
-ac_config_files="$ac_config_files lib/pdtrace"
 
 ac_config_files="$ac_config_files Makefile"
 
@@ -4203,7 +4163,6 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "lib/pdtrace") CONFIG_FILES="$CONFIG_FILES lib/pdtrace" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
@@ -4618,11 +4577,6 @@ which seems to be undefined.  Please make sure it is defined" >&2;}
 
   esac
 
-
-  case $ac_file$ac_mode in
-    "lib/pdtrace":F) chmod +x lib/pdtrace ;;
-
-  esac
 done # for ac_tag
 
 

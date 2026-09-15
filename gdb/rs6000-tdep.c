@@ -697,7 +697,7 @@ insn_changes_sp_or_jumps (unsigned long insn)
 
   /* NOTE: There are many ways to change the value of a given register.
 	   The ways below are those used when the register is R1, the SP,
-	   in a funtion's epilogue.  */
+	   in a function's epilogue.  */
 
   if (opcode == 31 && subcode == 444 && a == 1)
     return 1;  /* mr R1,Rn */

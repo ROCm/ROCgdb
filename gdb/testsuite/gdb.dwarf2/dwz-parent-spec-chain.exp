@@ -1,0 +1,125 @@
+# Copyright 2024-2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check that the cooked index gets the correct parents for some
+# entries with the parents in a partial unit.
+#
+# The structure is similar to what's generated for test-case
+# gdb.cp/breakpoint-locs.exp with gcc and target board cc-with-dwz,
+# only in that case we have:
+#
+#   DW_TAG_inlined_subroutine -ao-> decl DW_TAG_subprogram -s->
+#     (DW_TAG_namespace::DW_TAG_class_type::decl DW_TAG_subprogram)
+#
+# and here we use:
+#
+#   DW_TAG_subprogram -s-> decl DW_TAG_subprogram -s->
+#     (DW_TAG_namespace::decl DW_TAG_subprogram)
+#
+# In the above '-s->' is a DW_AT_specification link and '-ao->' is a
+# DW_AT_abstract_origin link.
+
+load_lib dwarf.exp
+
+require dwarf2_support
+
+standard_testfile .c dwz.S
+
+# Create the DWARF.
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    get_func_info foo
+    get_func_info bar
+    get_func_info main
+
+    declare_labels partial_label int_label decl1 decl2
+
+    cu {} {
+	partial_label: DW_TAG_partial_unit {} {
+	    int_label: DW_TAG_base_type {
+		DW_AT_name int
+		DW_AT_byte_size 4 sdata
+		DW_AT_encoding @DW_ATE_signed
+	    }
+
+	    DW_TAG_namespace {
+		DW_AT_name ns
+	    } {
+		decl1: DW_TAG_subprogram {
+		    DW_AT_type :$int_label
+		    DW_AT_external 1 flag
+		}
+	    }
+
+	    decl2: DW_TAG_subprogram {
+		DW_AT_specification %$decl1
+	    }
+	}
+    }
+
+    cu {} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_C_plus_plus
+	} {
+	    DW_TAG_imported_unit {
+		DW_AT_import $partial_label ref_addr
+	    }
+
+	    DW_TAG_subprogram {
+		DW_AT_specification %$decl2
+		DW_AT_name foo
+		DW_AT_low_pc $foo_start DW_FORM_addr
+		DW_AT_high_pc $foo_end DW_FORM_addr
+		DW_AT_linkage_name _ZN2ns3fooEv
+	    }
+	}
+    }
+
+    cu {} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_C_plus_plus
+	} {
+	    DW_TAG_imported_unit {
+		DW_AT_import $partial_label ref_addr
+	    }
+
+	    DW_TAG_subprogram {
+		DW_AT_specification %$decl2
+		DW_AT_name bar
+		DW_AT_low_pc $bar_start DW_FORM_addr
+		DW_AT_high_pc $bar_end DW_FORM_addr
+		DW_AT_linkage_name _ZN2ns3barEv
+	    }
+
+	    DW_TAG_subprogram {
+		DW_AT_name main
+		DW_AT_low_pc $main_start DW_FORM_addr
+		DW_AT_high_pc $main_end DW_FORM_addr
+	    }
+	}
+    }
+}
+
+if { [prepare_for_testing "failed to prepare" $testfile \
+	  [list $asm_file $srcfile] {nodebug}] } {
+    return
+}
+
+# Regression test for PR32299.  These should both pass, but before the fix
+# only one of them passed.
+gdb_test "p ns::foo" \
+    [string_to_regexp " <ns::foo()>"]
+gdb_test "p ns::bar" \
+    [string_to_regexp " <ns::bar()>"]

@@ -62,8 +62,11 @@ aarch64_windows_osabi_sniffer (bfd *abfd)
 
 INIT_GDB_FILE (aarch64_windows_tdep)
 {
-  gdbarch_register_osabi (bfd_arch_aarch64, 0, GDB_OSABI_WINDOWS,
+  gdbarch_register_osabi (bfd_arch_aarch64, 0, GDB_OSABI_WINDOWS_GNU,
 			  aarch64_windows_init_abi);
+  gdbarch_register_osabi (bfd_arch_aarch64, 0, GDB_OSABI_WINDOWS_MSVC,
+			  aarch64_windows_init_abi);
+  gdbarch_add_osabi_name (GDB_OSABI_WINDOWS);
 
   gdbarch_register_osabi_sniffer (bfd_arch_aarch64, bfd_target_coff_flavour,
 				  aarch64_windows_osabi_sniffer);

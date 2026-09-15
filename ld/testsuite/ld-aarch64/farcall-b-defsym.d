@@ -14,6 +14,6 @@ Disassembly of section .text:
 [ \t]+100c:[ \t]+d503201f[ \t]+nop
 0+1010 <__bar_veneer>:
     1010:	90040010 	adrp	x16, 8001000 <bar>
-    1014:	91000210 	add	x16, x16, #0x0
+    1014:	d503201f 	nop
     1018:	d61f0200 	br	x16
 	...

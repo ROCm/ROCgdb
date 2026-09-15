@@ -558,12 +558,11 @@ cplus_number_of_children (const struct varobj *var)
   struct type *type;
   int children, dont_know;
   int lookup_actual_type = 0;
-  struct value_print_options opts;
 
   dont_know = 1;
   children = 0;
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   if (!CPLUS_FAKE_CHILD (var))
     {
@@ -681,7 +680,6 @@ cplus_describe_child (const struct varobj *parent, int index,
   int lookup_actual_type = 0;
   const char *parent_expression = NULL;
   const struct varobj *var;
-  struct value_print_options opts;
 
   if (cname)
     *cname = std::string ();
@@ -692,7 +690,7 @@ cplus_describe_child (const struct varobj *parent, int index,
   if (cfull_expression)
     *cfull_expression = std::string ();
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   var = (CPLUS_FAKE_CHILD (parent)) ? parent->parent : parent;
   if (opts.objectprint)

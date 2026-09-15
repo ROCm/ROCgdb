@@ -49,6 +49,9 @@ struct dt_needed
   const char *name;
 };
 
+/* Fake input file for dynamic and stub sections.  */
+lang_input_statement_type *stub_file;
+
 /* Style of .note.gnu.build-id section.  */
 const char *ldelf_emit_note_gnu_build_id;
 
@@ -64,6 +67,43 @@ static struct stat global_stat;
 static struct bfd_link_needed_list *global_vercheck_needed;
 static bool global_vercheck_failed;
 static bool orphan_init_done;
+
+/* This is called before the input files are opened.  We create a new
+   fake input file to hold dynamic sections and other linker created
+   sections.  */
+
+void
+ldelf_after_open_output (void)
+{
+  if (bfd_get_flavour (link_info.output_bfd) != bfd_target_elf_flavour)
+    return;
+
+  struct elf_link_hash_table *htab = elf_hash_table (&link_info);
+  if (elf_object_id (link_info.output_bfd) != elf_hash_table_id (htab))
+    return;
+
+  elf_backend_data *obed = get_elf_backend_data (link_info.output_bfd);
+  if (!obed->want_stub_bfd)
+    return;
+
+  stub_file = lang_add_input_file ("linker stubs",
+				   lang_input_file_is_fake_enum,
+				   NULL);
+  stub_file->the_bfd = bfd_create ("linker stubs", link_info.output_bfd);
+  if (stub_file->the_bfd == NULL
+      || !bfd_set_arch_mach (stub_file->the_bfd,
+			     bfd_get_arch (link_info.output_bfd),
+			     bfd_get_mach (link_info.output_bfd)))
+    {
+      fatal (_("%P: can not create BFD: %E\n"));
+      return;
+    }
+
+  stub_file->the_bfd->flags |= BFD_LINKER_CREATED;
+  elf_elfheader (stub_file->the_bfd)->e_ident[EI_CLASS] = obed->s->elfclass;
+
+  ldlang_add_file (stub_file);
+}
 
 void
 ldelf_after_parse (void)

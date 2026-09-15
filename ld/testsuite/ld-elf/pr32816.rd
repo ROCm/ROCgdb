@@ -1,0 +1,3 @@
+#...
+ +0x[0-9a-f]+ +\(NEEDED\) +Shared library: +\[.*pr32816.so\]
+#pass

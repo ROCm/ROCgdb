@@ -62,10 +62,10 @@ struct solib : intrusive_list_node<solib>
 
      OPS is the solib_ops implementation providing this solib.  */
   explicit solib (lm_info_up lm_info, std::string original_name,
-		  std::string name, const solib_ops &ops);
+		  std::string name, solib_ops &ops);
 
   /* Return the solib_ops implementation providing this solib.  */
-  const solib_ops &ops () const
+  solib_ops &ops () const
   { return *m_ops; }
 
   /* Free symbol-file related contents of SO and reset for possible reloading
@@ -126,7 +126,7 @@ struct solib : intrusive_list_node<solib>
 
 private:
   /* The solib_ops responsible for this solib.  */
-  const solib_ops *m_ops;
+  solib_ops *m_ops;
 };
 
 /* A unique pointer to an solib.  */
@@ -140,8 +140,8 @@ using iterate_over_objfiles_in_search_order_cb_ftype
 
 struct solib_ops
 {
-  explicit solib_ops (program_space *pspace)
-    : m_pspace (pspace)
+  solib_ops (program_space *pspace, bool handle_main_objfile)
+    : m_pspace (pspace), m_handle_main_objfile (handle_main_objfile)
   {}
 
   virtual ~solib_ops () = default;
@@ -168,7 +168,7 @@ struct solib_ops
   /* Target dependent code to run after child process fork.
 
      Defaults to no-op.  */
-  virtual void create_inferior_hook (int from_tty) const {};
+  virtual void create_inferior_hook (int from_tty) {};
 
   /* Construct a list of the currently loaded shared objects.  This
      list does not include an entry for the main executable file.
@@ -177,7 +177,7 @@ struct solib_ops
      inferior --- we don't examine any of the shared library files
      themselves.  The declaration of `struct solib' says which fields
      we provide values for.  */
-  virtual owning_intrusive_list<solib> current_sos () const = 0;
+  virtual owning_intrusive_list<solib> current_sos () = 0;
 
   /* Find, open, and read the symbols for the main executable.  If
      FROM_TTY is non-zero, allow messages to be printed.
@@ -193,7 +193,7 @@ struct solib_ops
   { return false; };
 
   /* Find and open shared library binary file.  */
-  virtual gdb_bfd_ref_ptr bfd_open (const char *pathname) const;
+  virtual gdb_bfd_ref_ptr bfd_open (const char *pathname);
 
   /* Given two solib objects, GDB from the GDB thread list and INFERIOR from the
      list returned by current_sos, return true if they represent the same library.
@@ -221,7 +221,7 @@ struct solib_ops
      solib_add is called.
 
      Defaults to no-op.  */
-  virtual void handle_event () const {};
+  virtual void handle_event () {};
 
   /* Return an address within the inferior's address space which is known
      to be part of SO.  If there is no such address, or GDB doesn't know
@@ -271,21 +271,29 @@ struct solib_ops
   virtual std::vector<const solib *> get_solibs_in_ns (int ns) const
   { gdb_assert_not_reached ("namespaces not supported"); }
 
-  /* Iterate over all objfiles of the program space in the order that makes the
-     most sense for the architecture to make global symbol searches.
+  /* Iterate over all objfiles associated to this solib_ops in the order that
+     makes the most sense for the architecture to make global symbol searches.
+
+     If M_HANDLE_MAIN_OBJFILE is set, also iterate over the "main" objfile of
+     the program space (program_space::symfile_object_file).
 
      CB is a callback function passed an objfile to be searched.  The iteration
      stops if this function returns true.
 
      If not nullptr, CURRENT_OBJFILE corresponds to the objfile being inspected
-     when the symbol search was requested.  */
-  virtual void iterate_over_objfiles_in_search_order
+     when the symbol search was requested.  If not nullptr, it is guaranteed
+     that CURRENT_OBJFILE is associated to this solib_ops.  */
+  virtual bool iterate_over_objfiles_in_search_order
     (iterate_over_objfiles_in_search_order_cb_ftype cb,
      objfile *current_objfile) const;
 
 protected:
   /* The program space for which this solib_ops was created.  */
   program_space *m_pspace;
+
+  /* Whether this solib_ops should handle the main objfile
+     (pspace->symfile_object_file) in iterate_over_objfiles_in_search_order.  */
+  bool m_handle_main_objfile;
 };
 
 /* A unique pointer to an solib_ops.  */
@@ -349,6 +357,16 @@ extern bool in_solib_dynsym_resolve_code (CORE_ADDR);
 /* Discard symbols that were auto-loaded from shared libraries in PSPACE.  */
 
 extern void no_shared_libraries (program_space *pspace);
+
+/* Remove solib *SOLIB_IT from PSPACE.
+
+   Remove the corresponding objfiles and target sections.
+
+   Return an iterator to the next solib in PSPACE's solib list, helping to
+   continue iterating.  */
+
+extern owning_intrusive_list<solib>::iterator remove_solib
+  (program_space *pspace, owning_intrusive_list<solib>::iterator solib_it);
 
 /* Synchronize GDB's shared object list with inferior's.
 

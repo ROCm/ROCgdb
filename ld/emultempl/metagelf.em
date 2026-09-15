@@ -28,9 +28,6 @@ fragment <<EOF
 #include "elf32-metag.h"
 
 
-/* Fake input file for stubs.  */
-static lang_input_statement_type *stub_file;
-
 /* Whether we need to call metag_layout_sections_again.  */
 static int need_laying_out = 0;
 
@@ -43,29 +40,11 @@ static bfd_signed_vma group_size = 1;
    fake input file to hold the stub sections.  */
 
 static void
-metagelf_create_output_section_statements (void)
+metagelf_after_open_output (void)
 {
-  extern const bfd_target metag_elf32_vec;
-
-  if (link_info.output_bfd->xvec != &metag_elf32_vec)
-    return;
-
-  stub_file = lang_add_input_file ("linker stubs",
-				   lang_input_file_is_fake_enum,
-				   NULL);
-  stub_file->the_bfd = bfd_create ("linker stubs", link_info.output_bfd);
-  if (stub_file->the_bfd == NULL
-      || ! bfd_set_arch_mach (stub_file->the_bfd,
-			      bfd_get_arch (link_info.output_bfd),
-			      bfd_get_mach (link_info.output_bfd)))
-    {
-      fatal (_("%P: can not create BFD: %E\n"));
-      return;
-    }
-
-  stub_file->the_bfd->flags |= BFD_LINKER_CREATED;
-  elf_elfheader (stub_file->the_bfd)->e_ident[EI_CLASS] = ELFCLASS32;
-  ldlang_add_file (stub_file);
+  ldelf_after_open_output ();
+  if (stub_file)
+    elf_metag_init_stub_bfd (&link_info, stub_file->the_bfd);
 }
 
 
@@ -251,9 +230,7 @@ gld${EMULATION_NAME}_after_allocation (void)
 	  lang_for_each_statement (build_section_lists);
 
 	  /* Call into the BFD backend to do the real work.  */
-	  if (! elf_metag_size_stubs (link_info.output_bfd,
-				      stub_file->the_bfd,
-				      &link_info,
+	  if (! elf_metag_size_stubs (&link_info,
 				      group_size,
 				      &metagelf_add_stub_section,
 				      &metagelf_layout_sections_again))
@@ -314,4 +291,4 @@ PARSE_AND_LIST_ARGS_CASES='
 # Put these extra metagelf routines in ld_${EMULATION_NAME}_emulation
 #
 LDEMUL_AFTER_ALLOCATION=gld${EMULATION_NAME}_after_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=metagelf_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=metagelf_after_open_output

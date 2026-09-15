@@ -168,7 +168,7 @@ extern bool msp430_allow_local_subtract (expressionS *, expressionS *, segT);
    so don't report errors at this point.  */
 #define TC_VALIDATE_FIX_SUB(FIX, SEG) 1
 
-#define DWARF2_USE_FIXED_ADVANCE_PC 1
+#define DWARF2_USE_FIXED_ADVANCE_PC(FROM, TO) 1
 
 #define TC_LINKRELAX_FIXUP(seg) ((seg->flags & SEC_CODE) || (seg->flags & SEC_DEBUGGING))
 

@@ -158,10 +158,9 @@ solib_catchpoint::print_it (const bpstat *bs) const
 bool
 solib_catchpoint::print_one (const bp_location **locs) const
 {
-  struct value_print_options opts;
   struct ui_out *uiout = current_uiout;
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
   /* Field 4, the address, is omitted (which makes the columns not
      line up too nicely with the headers, but the effect is relatively
      readable).  */

@@ -124,10 +124,10 @@ ldemul_set_symbols (void)
 }
 
 void
-ldemul_create_output_section_statements (void)
+ldemul_after_open_output (void)
 {
-  if (ld_emulation->create_output_section_statements)
-    ld_emulation->create_output_section_statements ();
+  if (ld_emulation->after_open_output)
+    ld_emulation->after_open_output ();
 }
 
 char *

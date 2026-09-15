@@ -67,6 +67,33 @@ Dwarf::assemble $asm_file {
 			DW_OP_entry_value {
 			    DW_OP_regx $::dwarf_regnum
 			}
+			DW_OP_stack_value
+		     } SPECIAL_expr
+		}
+
+		DW_TAG_variable {
+		     DW_AT_name argc2
+		     DW_AT_type :$integer
+		     DW_AT_location {
+			DW_OP_entry_value {
+			    DW_OP_regx $::dwarf_regnum
+			}
+			DW_OP_plus_uconst 3
+			DW_OP_stack_value
+		     } SPECIAL_expr
+		}
+
+		DW_TAG_variable {
+		     DW_AT_name argc3
+		     DW_AT_type :$integer
+		     DW_AT_location {
+			DW_OP_addr [gdb_target_symbol fake_data]
+			DW_OP_entry_value {
+			    DW_OP_regx $::dwarf_regnum
+			}
+			DW_OP_const1u 3
+			DW_OP_shl
+			DW_OP_plus
 		     } SPECIAL_expr
 		}
 	    }
@@ -87,6 +114,19 @@ Dwarf::assemble $asm_file {
 			DW_OP_stack_value
 		     } SPECIAL_expr
 		}
+
+		DW_TAG_variable {
+		     DW_AT_name foo2
+		     DW_AT_type :$integer
+		     DW_AT_location {
+			DW_OP_entry_value {
+			    DW_OP_bregx $::dwarf_regnum 0
+			    DW_OP_deref_size 4
+			}
+			DW_OP_plus_uconst 1
+			DW_OP_stack_value
+		     } SPECIAL_expr
+		}
 	    }
 	}
     }
@@ -103,12 +143,16 @@ if { ![runto *main] } {
 
 with_test_prefix "at main+0" {
     gdb_test "p argc" " = 1"
+    gdb_test "p argc2" " = 4"
+    gdb_test "p argc3" " = 2"
 
     gdb_test "stepi"
 }
 
 with_test_prefix "at main+1" {
     gdb_test "p argc" " = <optimized out>"
+    gdb_test "p argc2" " = <optimized out>"
+    gdb_test "p argc3" " = <optimized out>"
 }
 
 gdb_breakpoint "*bar"
@@ -116,10 +160,12 @@ gdb_continue_to_breakpoint "bar"
 
 with_test_prefix "at bar+0" {
     gdb_test "p foo" " = 2"
+    gdb_test "p foo2" " = 3"
 
     gdb_test "stepi"
 }
 
 with_test_prefix "at bar+1" {
     gdb_test "p foo" " = <optimized out>"
+    gdb_test "p foo2" " = <optimized out>"
 }

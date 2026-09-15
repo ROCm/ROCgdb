@@ -47,6 +47,8 @@ static struct ppc_elf_params params = { PLT_UNSET, 0, -1,
 static void
 ppc_after_open_output (void)
 {
+  ldelf_after_open_output ();
+
   if (params.emit_stub_syms < 0)
     params.emit_stub_syms = (link_info.emitrelocations
 			     || bfd_link_pic (&link_info));
@@ -418,7 +420,7 @@ PARSE_AND_LIST_ARGS_CASES=${PARSE_AND_LIST_ARGS_CASES}'
 
 # Put these extra ppc32elf routines in ld_${EMULATION_NAME}_emulation
 #
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=ppc_after_open_output
+LDEMUL_AFTER_OPEN_OUTPUT=ppc_after_open_output
 if test -z "$VXWORKS_BASE_EM_FILE" ; then
   LDEMUL_AFTER_CHECK_RELOCS=ppc_after_check_relocs
 fi

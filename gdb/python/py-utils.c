@@ -221,7 +221,14 @@ gdbpy_convert_exception (const struct gdb_exception &exception)
   if (exception.reason == RETURN_QUIT)
     exc_class = PyExc_KeyboardInterrupt;
   else if (exception.reason == RETURN_FORCED_QUIT)
-    quit_force (NULL, 0);
+    {
+      /* Ideally we'd like to propagate the exception to top-level, where
+	 we'll call quit_force.  Propagating the exception would ensure that
+	 appropriate cleanups are run.
+	 OTOH, there is the risk that the exception will be swallowed.
+	 For now, don't take this risk and immediately call quit_force.  */
+      quit_force (NULL, 0);
+    }
   else if (exception.error == MEMORY_ERROR)
     exc_class = gdbpy_gdb_memory_error;
   else
@@ -485,6 +492,11 @@ gdbpy_handle_exception ()
 	  exit_arg = 1;
 	}
 
+      /* Ideally we'd like to propagate the exception to top-level, where
+	 we'll call quit_force.  Propagating the exception would ensure that
+	 appropriate cleanups are run.
+	 OTOH, there is the risk that the exception will be swallowed.
+	 For now, don't take this risk and immediately call quit_force.  */
       quit_force (&exit_arg, 0);
     }
   else if (! fetched_error.type_matches (gdbpy_gdberror_exc)

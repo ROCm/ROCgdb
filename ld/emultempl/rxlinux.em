@@ -30,13 +30,12 @@ fragment <<EOF
 /* This is a convenient point to tell BFD about target specific flags.
    After the output has been created, but before inputs are read.  */
 static void
-rx_linux_create_output_section_statements (void)
+rx_linux_after_open_output (void)
 {
-  extern void bfd_elf32_rx_set_target_flags (bool, bool);
-
+  ldelf_after_open_output ();
   bfd_elf32_rx_set_target_flags (false, false);
 }
 
 EOF
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=rx_linux_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=rx_linux_after_open_output
 

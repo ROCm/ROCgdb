@@ -3005,7 +3005,7 @@ do_initialize (const struct extension_language_defn *extlang)
      initialized to an empty list following any of the PyConfig
      initialization functions.  If it does turn out that some kind of
      initialization is still needed, it should be added to the
-     PyConfig-based initialization in do_start_initialize().  */
+     PyConfig-based initialization in do_start_initialization().  */
 #if PY_VERSION_HEX < 0x030a0000
   /* If sys.path is not defined yet, define it first.  */
   if (!(sys_path && PyList_Check (sys_path)))

@@ -28,9 +28,6 @@ fragment <<EOF
 #include "elf32-hppa.h"
 
 
-/* Fake input file for stubs.  */
-static lang_input_statement_type *stub_file;
-
 /* Type of import/export stubs to build.  For a single sub-space model,
    we can build smaller import stubs and there is no need for export
    stubs.  */
@@ -66,29 +63,12 @@ hppaelf_after_parse (void)
    fake input file to hold the stub sections.  */
 
 static void
-hppaelf_create_output_section_statements (void)
+hppaelf_after_open_output (void)
 {
-  if (!(bfd_get_flavour (link_info.output_bfd) == bfd_target_elf_flavour
-	&& (elf_object_id (link_info.output_bfd) == HPPA32_ELF_DATA
-	    || elf_object_id (link_info.output_bfd) == HPPA64_ELF_DATA)))
-    return;
+  ldelf_after_open_output ();
 
-  stub_file = lang_add_input_file ("linker stubs",
-				   lang_input_file_is_fake_enum,
-				   NULL);
-  stub_file->the_bfd = bfd_create ("linker stubs", link_info.output_bfd);
-  if (stub_file->the_bfd == NULL
-      || ! bfd_set_arch_mach (stub_file->the_bfd,
-			      bfd_get_arch (link_info.output_bfd),
-			      bfd_get_mach (link_info.output_bfd)))
-    {
-      fatal (_("%P: can not create BFD: %E\n"));
-      return;
-    }
-
-  stub_file->the_bfd->flags |= BFD_LINKER_CREATED;
-  ldlang_add_file (stub_file);
-  elf32_hppa_init_stub_bfd (stub_file->the_bfd, &link_info);
+  if (stub_file != NULL)
+    elf32_hppa_init_stub_bfd (stub_file->the_bfd, &link_info);
 }
 
 
@@ -355,4 +335,4 @@ PARSE_AND_LIST_ARGS_CASES='
 #
 LDEMUL_AFTER_PARSE=hppaelf_after_parse
 LDEMUL_AFTER_ALLOCATION=gld${EMULATION_NAME}_after_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=hppaelf_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=hppaelf_after_open_output

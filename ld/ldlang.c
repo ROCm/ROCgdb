@@ -4252,6 +4252,19 @@ ldlang_add_undef (const char *const name, bool cmdline ATTRIBUTE_UNUSED)
     insert_undefined (new_undef->name);
 }
 
+/* Mark symbol as referenced.  */
+
+void
+ldlang_ref (struct bfd_link_hash_entry *h)
+{
+  h->non_ir_ref_regular = 1;
+  if (is_elf_hash_table (link_info.hash))
+    {
+      ((struct elf_link_hash_entry *) h)->ref_regular = 1;
+      ((struct elf_link_hash_entry *) h)->ref_regular_nonweak = 1;
+    }
+}
+
 /* Insert NAME as undefined in the symbol table.  */
 
 static void
@@ -4266,7 +4279,7 @@ insert_undefined (const char *name)
     {
       h->type = bfd_link_hash_undefined;
       h->u.undef.abfd = NULL;
-      h->non_ir_ref_regular = true;
+      ldlang_ref (h);
       bfd_link_add_undef (link_info.hash, h);
     }
 }
@@ -5890,8 +5903,11 @@ sort_sections_by_vma (const void *arg1, const void *arg2)
 #define IS_TBSS(s) \
   ((s->flags & (SEC_LOAD | SEC_THREAD_LOCAL)) == SEC_THREAD_LOCAL)
 
+#define TBSS_EFFECTIVELY_ZERO(s) \
+  (IS_TBSS (s) && !config.tls_nobits_occupies_vma)
+
 #define IGNORE_SECTION(s) \
-  ((s->flags & SEC_ALLOC) == 0 || IS_TBSS (s))
+  ((s->flags & SEC_ALLOC) == 0 || TBSS_EFFECTIVELY_ZERO (s))
 
 /* Check to see if any allocated sections overlap with other allocated
    sections.  This can happen if a linker script specifies the output
@@ -6433,8 +6449,8 @@ lang_size_sections_1
 	    if (bfd_is_abs_section (os->bfd_section) || os->ignored)
 	      break;
 
-	    /* .tbss sections effectively have zero size.  */
-	    if (!IS_TBSS (os->bfd_section)
+	    /* Hosted .tbss sections effectively have zero size.  */
+	    if (!TBSS_EFFECTIVELY_ZERO (os->bfd_section)
 		|| bfd_link_relocatable (&link_info))
 	      dotdelta = TO_ADDR (os->bfd_section->size);
 	    else
@@ -6813,7 +6829,7 @@ lang_size_relro_segment_1 (void)
 	bfd_vma start, end, bump;
 
 	end = start = sec->vma;
-	if (!IS_TBSS (sec))
+	if (!TBSS_EFFECTIVELY_ZERO (sec))
 	  end += TO_ADDR (sec->size);
 	bump = desired_end - end;
 	/* We'd like to increase START by BUMP, but we must heed
@@ -6936,8 +6952,8 @@ lang_do_assignments_1 (lang_statement_union_type *s,
 		  {
 		    newdot = os->bfd_section->vma;
 
-		    /* .tbss sections effectively have zero size.  */
-		    if (!IS_TBSS (os->bfd_section)
+		    /* Hosted .tbss sections effectively have zero size.  */
+		    if (!TBSS_EFFECTIVELY_ZERO (os->bfd_section)
 			|| bfd_link_relocatable (&link_info))
 		      newdot += TO_ADDR (os->bfd_section->size);
 
@@ -7617,6 +7633,12 @@ lang_check (void)
       if (file->flags.claimed)
 	continue;
       input_bfd = file->the_bfd;
+      /* Don't check format of IR dummy file.  */
+      if ((input_bfd->flags & BFD_PLUGIN) != 0)
+	continue;
+      if ((input_bfd->flags & BFD_LINKER_CREATED) != 0)
+	continue;
+
       compatible
 	= bfd_arch_get_compatible (input_bfd, link_info.output_bfd,
 				   command_line.accept_unknown_input_arch);
@@ -7926,17 +7948,23 @@ lang_set_flags (lang_memory_region_type *ptr, const char *flags, int invert)
 }
 
 static void
-debug_input_files (void)
+debug_file_chain (lang_statement_list_type *chain)
 {
   lang_input_statement_type *f;
 
-  for (f = &input_file_chain.head->input_statement;
+  for (f = &chain->head->input_statement;
        f != NULL;
        f = f->next_real_file)
     if (f->the_bfd)
       fprintf (stderr, "file: %s\n", f->the_bfd->filename);
     else
       fprintf (stderr, "input: %s\n", f->filename);
+}
+
+static void
+debug_input_files (void)
+{
+  debug_file_chain (&input_file_chain);
 }
 
 /* Call a function on each real input file.  This function will be
@@ -8392,8 +8420,10 @@ lang_list_remove_tail (lang_statement_list_type *destlist,
 		       lang_statement_list_type *origlist)
 {
   union lang_statement_union **savetail;
-  /* Check that ORIGLIST really is an earlier state of DESTLIST.  */
-  ASSERT (origlist->head == destlist->head);
+  /* Check that ORIGLIST really is an earlier state of DESTLIST or an
+     empty list.  */
+  ASSERT ((origlist->head == NULL && origlist->tail == &destlist->head)
+	  || origlist->head == destlist->head);
   savetail = origlist->tail;
   origlist->head = *(savetail);
   origlist->tail = destlist->tail;
@@ -8584,7 +8614,7 @@ lang_process (void)
   lang_for_each_statement (ldlang_open_output);
   init_opb (NULL);
 
-  ldemul_create_output_section_statements ();
+  ldemul_after_open_output ();
 
   /* Add to the hash table all undefineds on the command line.  */
   lang_place_undefineds ();
@@ -11246,7 +11276,7 @@ cmdline_emit_object_only_section (void)
   /* Open the object-only file for output.  */
   lang_for_each_statement (ldlang_open_output);
 
-  ldemul_create_output_section_statements ();
+  ldemul_after_open_output ();
 
   if (!bfd_section_already_linked_table_init ())
     fatal (_("%P: Failed to create hash table\n"));

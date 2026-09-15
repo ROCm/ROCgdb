@@ -357,7 +357,6 @@ whatis_exp (const char *exp, int show)
   int full = 0;
   LONGEST top = -1;
   int using_enc = 0;
-  struct value_print_options opts;
   struct type_print_options flags = default_ptype_flags;
 
   if (exp)
@@ -457,7 +456,7 @@ whatis_exp (const char *exp, int show)
       flags.print_offsets = 0;
     }
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
   if (val != NULL && opts.objectprint)
     {
       if (type->is_pointer_or_reference ()

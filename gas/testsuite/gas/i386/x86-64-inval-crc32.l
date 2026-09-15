@@ -28,6 +28,7 @@
 .*:34: Error: .*
 .*:35: Error: .*
 .*:36: Error: .*
+.*:41: Warning: .*
 GAS LISTING .*
 
 
@@ -71,5 +72,14 @@ GAS LISTING .*
 [ 	]*[0-9]+[ 	]+crc32  al,al
 [ 	]*[0-9]+[ 	]+crc32  ax, ax
 [ 	]*[0-9]+[ 	]+crc32  rax,eax
+[ 	]*[0-9]+[ 	]*
+[ 	]*[0-9]+[ 	]+# Also check handling with SSE4.2 disabled.
+[ 	]*[0-9]+[ 	]*
+[ 	]*[0-9]+[ 	]+\.arch \.nosse4\.2
+[ 	]*[0-9]+[ 	]+\?* 62F47C08[ 	]+crc32	%ecx, %edx
+\*\*\*\*  Warning: crc32: will use APX encoding; use \{evex\} to silence
+[ 	]*[0-9]+[ 	]+F1CA
+[ 	]*[0-9]+[ 	]+\?* 62F47C08[ 	]+\{evex\}	crc32	%ecx, %edx
+[ 	]*[0-9]+[ 	]+F1CA
 [ 	]*[0-9]+[ 	]*
 #pass

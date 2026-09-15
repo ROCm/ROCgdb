@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include "exceptions.h"
 #include "extract-store-integer.h"
+#include "progspace.h"
 #include "symtab.h"
 #include "bfd.h"
 #include "build-id.h"
@@ -439,21 +440,45 @@ solib_bfd_open (const char *pathname)
 }
 
 gdb_bfd_ref_ptr
-solib_ops::bfd_open (const char *pathname) const
+solib_ops::bfd_open (const char *pathname)
 {
   return solib_bfd_open (pathname);
 }
 
 /* See solib.h.  */
 
-void
+bool
 solib_ops::iterate_over_objfiles_in_search_order
   (iterate_over_objfiles_in_search_order_cb_ftype cb,
    objfile *current_objfile) const
 {
+  if (current_objfile != nullptr && cb (current_objfile))
+    return true;
+
   for (objfile &objfile : m_pspace->objfiles ())
-    if (cb (&objfile))
-      return;
+    {
+      /* The current objfile, if any, was handled above.  */
+      if (current_objfile == &objfile)
+	continue;
+
+      /* Call CB on OBJFILE if either:
+
+	  - OBJFILE was provided by this solib_ops, or
+	  - this is the main objfile and M_HANDLE_MAIN_OBJFILE is true
+	 */
+      bool is_from_this = (objfile.first_solib () != nullptr
+			   && &objfile.first_solib ()->ops () == this);
+      bool is_main_handled_by_this = (&objfile == m_pspace->symfile_object_file
+				      && m_handle_main_objfile);
+
+      if (!is_from_this && !is_main_handled_by_this)
+	continue;
+
+      if (cb (&objfile))
+	return true;
+    }
+
+  return false;
 }
 
 /* Given a pointer to one of the shared objects in our list of mapped
@@ -572,7 +597,7 @@ solib_map_sections (solib &so)
 /* See solib.h.  */
 
 solib::solib (lm_info_up lm_info, std::string original_name_,
-	      std::string name_, const solib_ops &ops)
+	      std::string name_, solib_ops &ops)
   : lm_info (std::move (lm_info)),
     original_name (std::move (original_name_)),
     name (std::move (name_)),
@@ -650,6 +675,7 @@ solib_read_symbols (solib &so, symfile_add_flags flags)
 	  so.objfile->addr_low = so.addr_low;
 	}
 
+      so.objfile->add_solib (so);
       so.symbols_loaded = true;
     }
   catch (const gdb_exception_error &e)
@@ -703,14 +729,41 @@ notify_solib_unloaded (program_space *pspace, const solib &so,
 
 /* See solib.h.  */
 
+owning_intrusive_list<solib>::iterator
+remove_solib (program_space *pspace,
+	      owning_intrusive_list<solib>::iterator solib_it)
+{
+  bool still_in_use
+    = solib_it->objfile != nullptr && solib_used (pspace, *solib_it);
+
+  /* Notify any observer that the shared object has been unloaded before we
+     remove it from GDB's tables.  */
+  notify_solib_unloaded (pspace, *solib_it, still_in_use, false);
+
+  /* Unless the user loaded it explicitly, free SO's objfile.  */
+  if (solib_it->objfile != nullptr)
+    {
+      /* Remove the objfile -> solib backlink.  */
+      solib_it->objfile->remove_solib (*solib_it);
+
+      if (!(solib_it->objfile->flags & OBJF_USERLOADED) && !still_in_use)
+	solib_it->objfile->unlink ();
+    }
+
+  pspace->deleted_solibs.push_back (solib_it->name);
+
+  /* Some targets' section tables might be referring to
+     sections from so.abfd; remove them.  */
+  pspace->remove_target_sections (&*solib_it);
+
+  return pspace->solibs ().erase (solib_it);
+}
+
+/* See solib.h.  */
+
 void
 update_solib_list (int from_tty)
 {
-  const solib_ops *ops = current_program_space->solib_ops ();
-
-  if (ops == nullptr)
-    return;
-
   /* We can reach here due to changing solib-search-path or the
      sysroot, before having any inferior.  */
   if (target_has_execution () && inferior_ptid != null_ptid)
@@ -725,7 +778,9 @@ update_solib_list (int from_tty)
 	{
 	  try
 	    {
-	      ops->open_symbol_file_object (from_tty);
+	      for (const auto &ops : current_program_space->solib_ops ())
+		if (ops->open_symbol_file_object (from_tty))
+		  break;
 	    }
 	  catch (const gdb_exception_error &ex)
 	    {
@@ -760,7 +815,10 @@ update_solib_list (int from_tty)
      the time we're done walking GDB's list, the inferior's list
      contains only the new shared objects, which we then add.  */
 
-  owning_intrusive_list<solib> inferior = ops->current_sos ();
+  owning_intrusive_list<solib> inferior;
+  for (auto &ops : current_program_space->solib_ops ())
+    inferior.splice (ops->current_sos ());
+
   owning_intrusive_list<solib>::iterator gdb_iter
     = current_program_space->solibs ().begin ();
   while (gdb_iter != current_program_space->solibs ().end ())
@@ -770,8 +828,13 @@ update_solib_list (int from_tty)
       /* Check to see whether the shared object *gdb also appears in
 	 the inferior's current list.  */
       for (; inferior_iter != inferior.end (); ++inferior_iter)
-	if (ops->same (*gdb_iter, *inferior_iter))
-	  break;
+	{
+	  if (&gdb_iter->ops () != &inferior_iter->ops ())
+	    continue;
+
+	  if (gdb_iter->ops ().same (*gdb_iter, *inferior_iter))
+	   break;
+	}
 
       /* If the shared object appears on the inferior's list too, then
 	 it's still loaded, so we don't need to do anything.  Delete
@@ -784,30 +847,7 @@ update_solib_list (int from_tty)
 
       /* If it's not on the inferior's list, remove it from GDB's tables.  */
       else
-	{
-	  bool still_in_use
-	    = (gdb_iter->objfile != nullptr
-	       && solib_used (current_program_space, *gdb_iter));
-
-	  /* Notify any observer that the shared object has been
-	     unloaded before we remove it from GDB's tables.  */
-	  notify_solib_unloaded (current_program_space, *gdb_iter,
-				 still_in_use, false);
-
-	  /* Unless the user loaded it explicitly, free SO's objfile.  */
-	  if (gdb_iter->objfile != nullptr
-	      && !(gdb_iter->objfile->flags & OBJF_USERLOADED)
-	      && !still_in_use)
-	    gdb_iter->objfile->unlink ();
-
-	  current_program_space->deleted_solibs.push_back (gdb_iter->name);
-
-	  /* Some targets' section tables might be referring to
-	     sections from so.abfd; remove them.  */
-	  current_program_space->remove_target_sections (&*gdb_iter);
-
-	  gdb_iter = current_program_space->solibs ().erase (gdb_iter);
-	}
+	gdb_iter = remove_solib (current_program_space, gdb_iter);
     }
 
   /* Now the inferior's list contains only shared objects that don't
@@ -1011,25 +1051,28 @@ print_solib_list_table (std::vector<const solib *> solib_list,
   gdbarch *gdbarch = current_inferior ()->arch ();
   /* "0x", a little whitespace, and two hex digits per byte of pointers.  */
   int addr_width = 4 + (gdbarch_ptr_bit (gdbarch) / 4);
-  const solib_ops *ops = current_program_space->solib_ops ();
   struct ui_out *uiout = current_uiout;
   bool so_missing_debug_info = false;
 
-  if (ops == nullptr)
-    return;
+  /* The conditions for this command to print solib namespaces:
 
-  /* There are 3 conditions for this command to print solib namespaces,
-     first PRINT_NAMESPACE has to be true, second the solib_ops has to
-     support multiple namespaces, and third there must be more than one
-     active namespace.  Fold all these into the PRINT_NAMESPACE condition.  */
-  print_namespace = (print_namespace
-		     && ops != nullptr
-		     && ops->supports_namespaces ()
-		     && ops->num_active_namespaces () > 1);
+      - PRINT_NAMESPACE has to be true
+      - at least one solib_ops has to have more than one active namespace
 
-  int num_cols = 4;
+     Fold these into the PRINT_NAMESPACE condition.  */
   if (print_namespace)
-    num_cols++;
+    {
+      print_namespace = false;
+
+      for (auto &ops : current_program_space->solib_ops ())
+	if (ops->supports_namespaces () && ops->num_active_namespaces () > 1)
+	  {
+	    print_namespace = true;
+	    break;
+	  }
+    }
+
+  int num_cols = print_namespace ? 5 : 4;
 
   {
     ui_out_emit_table table_emitter (uiout, num_cols, solib_list.size (),
@@ -1067,7 +1110,11 @@ print_solib_list_table (std::vector<const solib *> solib_list,
 	  {
 	    try
 	      {
-		uiout->field_fmt ("namespace", "%d", ops->find_solib_ns (*so));
+		if (so->ops ().supports_namespaces ())
+		  uiout->field_fmt ("namespace", "%d",
+				    so->ops ().find_solib_ns (*so));
+		else
+		  uiout->field_skip ("namespace");
 	      }
 	    catch (const gdb_exception_error &er)
 	      {
@@ -1150,81 +1197,92 @@ info_sharedlibrary_command (const char *pattern, int from_tty)
 static void
 info_linker_namespace_command (const char *pattern, int from_tty)
 {
-  const solib_ops *ops = current_program_space->solib_ops ();
-
-  /* This command only really makes sense for inferiors that support
-     linker namespaces, so we can leave early.  */
-  if (ops == nullptr || !ops->supports_namespaces ())
-    error (_("Current inferior does not support linker namespaces.  "
-	     "Use \"info sharedlibrary\" instead."));
-
-  struct ui_out *uiout = current_uiout;
-  std::vector<std::pair<int, std::vector<const solib *>>> all_solibs_to_print;
-
   pattern = skip_spaces (pattern);
 
-  if (pattern == nullptr || pattern[0] == '\0')
-    {
-      uiout->message (_("There are %d linker namespaces loaded.\n"),
-		      ops->num_active_namespaces ());
+  /* Will be set to true if at least one solib_ops in the program space
+     supports namespaces.  */
+  bool one_solib_ops_supports_namespaces = false;
 
-      int printed = 0;
-      for (int i = 0; printed < ops->num_active_namespaces (); i++)
+  for (auto &ops : current_program_space->solib_ops ())
+    {
+      if (!ops->supports_namespaces ())
+	continue;
+
+      one_solib_ops_supports_namespaces = true;
+
+      struct ui_out *uiout = current_uiout;
+      std::vector<std::pair<int, std::vector<const solib *>>>
+	all_solibs_to_print;
+
+      if (pattern == nullptr || pattern[0] == '\0')
 	{
-	  std::vector<const solib *> solibs_to_print
-	    = ops->get_solibs_in_ns (i);
-	  if (solibs_to_print.size () > 0)
+	  /* The output here will be awkward if multiple solib_ops support
+	     namespaces, but it's just theoretical for now, so don't bother
+	     trying to do anything fancier.  */
+	  uiout->message (_("There are %d linker namespaces loaded.\n"),
+			  ops->num_active_namespaces ());
+
+	  int printed = 0;
+	  for (int i = 0; printed < ops->num_active_namespaces (); i++)
 	    {
-	      all_solibs_to_print.push_back (std::make_pair
-					      (i, solibs_to_print));
-	      printed++;
+	      std::vector<const solib *> solibs_to_print
+		= ops->get_solibs_in_ns (i);
+	      if (solibs_to_print.size () > 0)
+		{
+		  all_solibs_to_print.push_back (std::make_pair
+						  (i, solibs_to_print));
+		  printed++;
+		}
 	    }
 	}
-    }
-  else
-    {
-      int ns;
-      /* Check if the pattern includes the optional [[ and ]] decorators.
-	 To match multiple occurrences, '+' needs to be escaped, and every
-	 escape sequence must be doubled to survive the compiler pass.  */
-      re_comp ("^\\[\\[[0-9]\\+\\]\\]$");
-      if (re_exec (pattern))
-	ns = strtol (pattern + 2, nullptr, 10);
       else
 	{
-	  char *end = nullptr;
-	  ns = strtol (pattern, &end, 10);
-	  if (end[0] != '\0')
-	    error (_("Invalid linker namespace identifier: %s"), pattern);
+	  int ns;
+	  /* Check if the pattern includes the optional [[ and ]] decorators.
+	     To match multiple occurrences, '+' needs to be escaped, and every
+	     escape sequence must be doubled to survive the compiler pass.  */
+	  re_comp ("^\\[\\[[0-9]\\+\\]\\]$");
+	  if (re_exec (pattern))
+	    ns = strtol (pattern + 2, nullptr, 10);
+	  else
+	    {
+	      char *end = nullptr;
+	      ns = strtol (pattern, &end, 10);
+	      if (end[0] != '\0')
+		error (_("Invalid linker namespace identifier: %s"), pattern);
+	    }
+
+	  all_solibs_to_print.push_back
+	    (std::make_pair (ns, ops->get_solibs_in_ns (ns)));
 	}
 
-      all_solibs_to_print.push_back
-	(std::make_pair (ns, ops->get_solibs_in_ns (ns)));
-    }
-
-  for (const auto &[ns, solibs_to_print] : all_solibs_to_print)
-    {
-      uiout->message ("\n");
-
-      if (solibs_to_print.size () == 0)
+      for (const auto &[ns, solibs_to_print] : all_solibs_to_print)
 	{
-	  uiout->message (_("Linker namespace %d is not active.\n"), ns);
-	  /* If we got here, a specific namespace was requested, so there
-	     will only be one vector.  We can leave early.  */
-	  break;
+	  uiout->message ("\n");
+
+	  if (solibs_to_print.size () == 0)
+	    {
+	      uiout->message (_("Linker namespace %d is not active.\n"), ns);
+	      /* If we got here, a specific namespace was requested, so there
+		 will only be one vector.  We can leave early.  */
+	      break;
+	    }
+
+	  if (solibs_to_print.size () == 1)
+	    uiout->message
+	      (_("1 library loaded in linker namespace %d:\n"), ns);
+	  else
+	    uiout->message
+	      (_("%zu libraries loaded in linker namespace %d:\n"),
+	       solibs_to_print.size (), ns);
+
+	  print_solib_list_table (solibs_to_print, false);
 	}
-
-      if (solibs_to_print.size () == 1)
-	uiout->message
-	  (_("1 library loaded in linker namespace %d:\n"), ns);
-      else
-	uiout->message
-	  (_("%zu libraries loaded in linker namespace %d:\n"),
-	   solibs_to_print.size (), ns);
-
-
-      print_solib_list_table (solibs_to_print, false);
     }
+
+  if (!one_solib_ops_supports_namespaces)
+    error (_("Current inferior does not support linker namespaces.  "
+	     "Use \"info sharedlibrary\" instead."));
 }
 
 /* See solib.h.  */
@@ -1272,9 +1330,11 @@ solib_ops::same (const solib &a, const solib &b) const
 bool
 solib_keep_data_in_core (CORE_ADDR vaddr, unsigned long size)
 {
-  const solib_ops *ops = current_program_space->solib_ops ();
+  for (const auto &ops : current_program_space->solib_ops ())
+    if (ops->keep_data_in_core (vaddr, size))
+      return true;
 
-  return ops != nullptr && ops->keep_data_in_core (vaddr, size);
+  return false;
 }
 
 /* See solib.h.  */
@@ -1293,8 +1353,7 @@ clear_solib (program_space *pspace)
 
   pspace->solibs ().clear ();
 
-  if (const solib_ops *ops = pspace->solib_ops ();
-      ops != nullptr)
+  for (const auto &ops : pspace->solib_ops ())
     ops->clear_solib (pspace);
 }
 
@@ -1306,8 +1365,7 @@ clear_solib (program_space *pspace)
 void
 solib_create_inferior_hook (int from_tty)
 {
-  if (const solib_ops *ops = current_program_space->solib_ops ();
-      ops != nullptr)
+  for (const auto &ops : current_program_space->solib_ops ())
     ops->create_inferior_hook (from_tty);
 }
 
@@ -1316,9 +1374,11 @@ solib_create_inferior_hook (int from_tty)
 bool
 in_solib_dynsym_resolve_code (CORE_ADDR pc)
 {
-  const solib_ops *ops = current_program_space->solib_ops ();
+  for (const auto &ops : current_program_space->solib_ops ())
+    if (ops->in_dynsym_resolve_code (pc))
+      return true;
 
-  return ops != nullptr && ops->in_dynsym_resolve_code (pc);
+  return false;
 }
 
 /* Implements the "sharedlibrary" command.  */
@@ -1360,9 +1420,7 @@ no_shared_libraries_command (const char *ignored, int from_tty)
 void
 update_solib_breakpoints (void)
 {
-  const solib_ops *ops = current_program_space->solib_ops ();
-
-  if (ops != nullptr)
+  for (const auto &ops : current_program_space->solib_ops ())
     ops->update_breakpoints ();
 }
 
@@ -1371,8 +1429,7 @@ update_solib_breakpoints (void)
 void
 handle_solib_event (void)
 {
-  if (const solib_ops *ops = current_program_space->solib_ops ();
-      ops != nullptr)
+  for (const auto &ops : current_program_space->solib_ops ())
     ops->handle_event ();
 
   current_inferior ()->pspace->clear_solib_cache ();
@@ -1470,8 +1527,7 @@ reload_shared_libraries (const char *ignored, int from_tty,
     {
       /* Reset or free private data structures not associated with
 	 solib entries.  */
-      if (const solib_ops *ops = current_program_space->solib_ops ();
-	  ops != nullptr)
+      for (const auto &ops : current_program_space->solib_ops ())
 	ops->clear_solib (current_program_space);
 
       /* Remove any previous solib event breakpoint.  This is usually
@@ -1803,11 +1859,13 @@ remove_user_added_objfile (struct objfile *objfile)
 int
 solib_linker_namespace_count (program_space *pspace)
 {
-  if (const auto ops = pspace->solib_ops (); ops != nullptr
-      && ops->supports_namespaces ())
-    return ops->num_active_namespaces ();
+  int num_active_namespaces = 0;
 
-  return 0;
+  for (const auto &ops : pspace->solib_ops ())
+    if (ops->supports_namespaces ())
+      num_active_namespaces += ops->num_active_namespaces ();
+
+  return num_active_namespaces;
 }
 
 /* Implementation of the linker_namespace convenience variable.

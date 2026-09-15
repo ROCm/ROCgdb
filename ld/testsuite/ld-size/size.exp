@@ -110,7 +110,7 @@ run_cc_link_tests [list \
     [list \
 	"Build size-7" \
 	"$NOPIE_LDFLAGS -Wl,--no-as-needed,-z,notext tmpdir/libsize-7.so" \
-	"$NOPIE_CFLAGS" \
+	"$NOPIE_CFLAGS $DIRECT_EXTERN_ACCESS_CFLAGS" \
 	{size-7a.c} \
 	{{readelf -rW size-7.rd}} \
 	"size-7.exe" \
@@ -125,7 +125,7 @@ run_cc_link_tests [list \
     [list \
 	"Build size-8" \
 	"$NOPIE_LDFLAGS -Wl,--no-as-needed,-z,notext tmpdir/libsize-8.so" \
-	"$NOPIE_CFLAGS" \
+	"$NOPIE_CFLAGS $DIRECT_EXTERN_ACCESS_CFLAGS" \
 	{size-8a.c} \
 	{{readelf -rW size-8.rd}} \
 	"size-8.exe" \
@@ -232,7 +232,7 @@ run_ld_link_exec_tests [list \
 	{size-4a.c size-4b.c} \
 	"size-4a" \
 	"size-4.out" \
-	"$NOPIE_CFLAGS" \
+	"$NOPIE_CFLAGS $DIRECT_EXTERN_ACCESS_CFLAGS" \
     ] \
     [list \
 	"Run size-4b" \
@@ -241,7 +241,7 @@ run_ld_link_exec_tests [list \
 	{size-4b.c size-4a.c} \
 	"size-4b" \
 	"size-4.out" \
-	"$NOPIE_CFLAGS" \
+	"$NOPIE_CFLAGS $DIRECT_EXTERN_ACCESS_CFLAGS" \
     ] \
     [list \
 	"Run size-5a" \
@@ -250,7 +250,7 @@ run_ld_link_exec_tests [list \
 	{size-5a.c size-5b.c} \
 	"size-5a" \
 	"size-5.out" \
-	"$NOPIE_CFLAGS" \
+	"$NOPIE_CFLAGS $DIRECT_EXTERN_ACCESS_CFLAGS" \
     ] \
     [list \
 	"Run size-5b" \
@@ -259,7 +259,7 @@ run_ld_link_exec_tests [list \
 	{size-5b.c size-5a.c} \
 	"size-5b" \
 	"size-5.out" \
-	"$NOPIE_CFLAGS" \
+	"$NOPIE_CFLAGS $DIRECT_EXTERN_ACCESS_CFLAGS" \
     ] \
     [list \
 	"Run size-6" \
@@ -268,7 +268,7 @@ run_ld_link_exec_tests [list \
 	{size-6a.c} \
 	"size-6" \
 	"size-6.out" \
-	"$NOPIE_CFLAGS" \
+	"$NOPIE_CFLAGS $DIRECT_EXTERN_ACCESS_CFLAGS" \
     ] \
     [list \
 	"Run size-8" \
@@ -278,7 +278,7 @@ run_ld_link_exec_tests [list \
 	{size-8a.c} \
 	"size-8" \
 	"size-8.out" \
-	"$NOPIE_CFLAGS" \
+	"$NOPIE_CFLAGS $DIRECT_EXTERN_ACCESS_CFLAGS" \
     ] \
     [list \
 	"Run size-9" \

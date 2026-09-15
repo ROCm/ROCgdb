@@ -138,7 +138,7 @@ fi \
     | sort \
     | uniq -c \
     | awk "{ if (($minfreq == 0 || $minfreq <= \$1) \
-                 && ($maxfreq == 0 || \$1 <= $maxfreq)) { print \$0; } }" \
+		 && ($maxfreq == 0 || \$1 <= $maxfreq)) { print \$0; } }" \
     | awk '{ print length($0) " " $0; }' \
     | sort -n -r \
     | cut -d ' ' -f 2-

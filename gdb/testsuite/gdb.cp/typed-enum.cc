@@ -27,9 +27,23 @@ enum uchar_enum : unsigned char
   uchar_val = 128
 };
 
+enum int_enum : int
+{
+  int_three = 3,
+  int_val = 128
+};
+
+enum schar_enum : signed char
+{
+  schar_neg = -128,
+  schar_val = 127
+};
+
 int main()
 {
   int v1 = byte_val;
   int v2 = uchar_val;
-  return v1 == v2;
+  int v3 = int_val;
+  int v4 = schar_neg;
+  return v1 == v2 && v3 == v4;
 }

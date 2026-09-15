@@ -1444,7 +1444,7 @@ rl78_elf_finish_dynamic_sections (struct bfd_link_info *info,
 
   dynobj = elf_hash_table (info)->dynobj;
   splt = elf_hash_table (info)->splt;
-  if (dynobj != NULL && splt != NULL)
+  if (splt != NULL)
     {
       bfd_byte *contents = splt->contents;
       unsigned int i, size = splt->size;
@@ -1462,24 +1462,20 @@ rl78_elf_finish_dynamic_sections (struct bfd_link_info *info,
 static bool
 rl78_elf_early_size_sections (struct bfd_link_info *info)
 {
-  bfd *dynobj;
   asection *splt;
 
   if (bfd_link_relocatable (info))
     return true;
 
-  dynobj = elf_hash_table (info)->dynobj;
-  if (dynobj == NULL)
-    return true;
-
   splt = elf_hash_table (info)->splt;
-  BFD_ASSERT (splt != NULL);
-
-  splt->contents = (bfd_byte *) bfd_zalloc (dynobj, splt->size);
-  if (splt->contents == NULL)
-    return false;
-  splt->alloced = 1;
-
+  if (splt != NULL)
+    {
+      bfd *dynobj = elf_hash_table (info)->dynobj;
+      splt->contents = bfd_zalloc (dynobj, splt->size);
+      if (splt->contents == NULL)
+	return false;
+      splt->alloced = 1;
+    }
   return true;
 }
 

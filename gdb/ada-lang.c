@@ -12417,9 +12417,8 @@ bool
 ada_catchpoint::print_one (const bp_location **last_loc) const
 {
   struct ui_out *uiout = current_uiout;
-  struct value_print_options opts;
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   if (opts.addressprint)
     uiout->field_skip ("addr");
@@ -13512,7 +13511,7 @@ public:
   void print_array_index (struct type *index_type,
 			  LONGEST index,
 			  struct ui_file *stream,
-			  const value_print_options *options) const override
+			  const value_print_options &options) const override
   {
     struct value *index_value = val_atr (index_type, index);
 
@@ -13818,7 +13817,7 @@ public:
   /* See language.h.  */
 
   void value_print (struct value *val, struct ui_file *stream,
-		    const struct value_print_options *options) const override
+		    const value_print_options &options) const override
   {
     return ada_value_print (val, stream, options);
   }
@@ -13827,7 +13826,7 @@ public:
 
   void value_print_inner
 	(struct value *val, struct ui_file *stream, int recurse,
-	 const struct value_print_options *options) const override
+	 const value_print_options &options) const override
   {
     return ada_value_print_inner (val, stream, recurse, options);
   }
@@ -13898,7 +13897,7 @@ public:
   void printstr (struct ui_file *stream, struct type *elttype,
 		 const gdb_byte *string, unsigned int length,
 		 const char *encoding, int force_ellipses,
-		 const struct value_print_options *options) const override
+		 const value_print_options &options) const override
   {
     /* ada_printstr doesn't handle UTF-8 too well, but we want this
        for lazy-string printing.  Defer this case to the generic

@@ -87,10 +87,8 @@ hiperr_catchpoint::re_set (program_space * /*ps*/)
 bool
 hiperr_catchpoint::print_one (const bp_location **last_loc) const
 {
-  struct value_print_options opts;
+  struct value_print_options opts = get_user_print_options ();
   struct ui_out *uiout = current_uiout;
-
-  get_user_print_options (&opts);
 
   if (opts.addressprint)
     uiout->field_skip ("addr");

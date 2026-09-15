@@ -1635,7 +1635,7 @@ fortran_structop_operation::evaluate (struct type *expect_type,
 void
 f_language::print_array_index (struct type *index_type, LONGEST index,
 			       struct ui_file *stream,
-			       const value_print_options *options) const
+			       const value_print_options &options) const
 {
   struct value *index_value = value_from_longest (index_type, index);
 

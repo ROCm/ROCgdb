@@ -41,4 +41,8 @@
 	      (eval . (c-set-offset 'brace-list-open 0))
 	      (eval . (c-set-offset 'innamespace 0))
 	      ))
+ (sh-mode . ((indent-tabs-mode . t)
+	     (tab-width . 8)
+	     (sh-basic-offset . 4)  ;; Supported from v22.1 onwards.
+	     (sh-indentation . 4))) ;; For older versions.
 )

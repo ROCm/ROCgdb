@@ -447,7 +447,6 @@ elf32_hppa_init_stub_bfd (bfd *abfd, struct bfd_link_info *info)
 {
   struct elf32_hppa_link_hash_table *htab = hppa_link_hash_table (info);
 
-  elf_elfheader (abfd)->e_ident[EI_CLASS] = ELFCLASS32;
   htab->etab.dynobj = abfd;
 }
 
@@ -4530,6 +4529,7 @@ elf32_hppa_elf_get_symbol_type (Elf_Internal_Sym *elf_sym, int type)
 #define elf_backend_want_plt_sym	     0
 #define elf_backend_got_header_size	     8
 #define elf_backend_want_dynrelro	     1
+#define elf_backend_want_stub_bfd	     1
 #define elf_backend_rela_normal		     1
 #define elf_backend_dtrel_excludes_plt	     1
 #define elf_backend_no_page_alias	     1

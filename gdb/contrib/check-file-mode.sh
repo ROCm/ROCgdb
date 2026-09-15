@@ -27,8 +27,7 @@ for f in "$@"; do
 	    | gdb/gcore-1.in \
 	    | gdb/po/gdbtext \
 	    | gdb/make-init-c \
-	    | gdb/testsuite/lib/notty-wrap \
-	    | gdb/testsuite/lib/pdtrace.in )
+	    | gdb/testsuite/lib/notty-wrap )
 	    continue
 	    ;;
 	*)

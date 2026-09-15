@@ -1,8 +1,6 @@
 #ld: -shared -version-script pr24718-1.t
 #readelf: -V
 #target: [check_shared_lib_support]
-#xfail: tic6x-*-*
-# tic6x requires a non-default emulation.
 
 #...
 Version definition section '\.gnu\.version_d' contains 3 entries:

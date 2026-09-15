@@ -19,12 +19,5 @@
    02110-1301, USA.  */
 
 #define TE_VXWORKS	1
-#define LOCAL_LABELS_DOLLAR 1
-#define LOCAL_LABELS_FB 1
 
-/* these define interfaces */
-#ifdef OBJ_HEADER
-#include OBJ_HEADER
-#else
-#include "obj-format.h"
-#endif
+#include "te-generic.h"

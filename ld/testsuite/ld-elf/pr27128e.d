@@ -4,8 +4,8 @@
 #target: [check_shared_lib_support]
 #notarget: [is_underscore_target]
 # _Zrm1XS_ doesn't have an extra underscore.
-#xfail: hppa64-*-* tic6x-*-*
-# hppa64 uses dot-symbols, tic6x DYN lacks dynamic sections for this testcase
+#xfail: hppa64-*-*
+# hppa64 uses dot-symbols
 
 #...
 VERS_2\.0 A 0+ 
