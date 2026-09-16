@@ -1560,6 +1560,7 @@ HFILES_NO_SRCDIR = \
 	nat/aarch64-linux-hw-point.h \
 	nat/aarch64-mte-linux-ptrace.h \
 	nat/aarch64-pauth-linux.h \
+	nat/aarch64-poe-linux.h \
 	nat/aarch64-scalable-linux-ptrace.h \
 	nat/aarch64-scalable-linux-sigcontext.h \
 	nat/amd64-linux-siginfo.h \

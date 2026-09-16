@@ -28,6 +28,7 @@
 #include "../features/aarch64-sme2.c"
 #include "../features/aarch64-tls.c"
 #include "../features/aarch64-gcs.c"
+#include "../features/aarch64-poe.c"
 #include "../features/aarch64-gcs-linux.c"
 
 /* See arch/aarch64.h.  */
@@ -76,6 +77,9 @@ aarch64_create_target_description (const aarch64_features &features)
 
   if (features.fpmr)
     regnum = create_feature_aarch64_fpmr (tdesc.get (), regnum);
+
+  if (features.poe)
+    regnum = create_feature_aarch64_poe (tdesc.get (), regnum);
 
   return tdesc;
 }

@@ -208,6 +208,18 @@ struct aarch64_gdbarch_tdep : gdbarch_tdep_base
     return gcs_linux_reg_base != -1;
   }
 
+  /* POE register.  This is -1 if no POE feature is available.  */
+  int poe_regnum = -1;
+  int poe_pseudo_base = 0;
+  int poe_pseudo_count = 0;
+
+  /* Returns true if the target supports the POE feature.  */
+  bool
+  has_poe () const
+  {
+    return poe_regnum != -1;
+  }
+
   /* First FPMR register.  This is -1 if FPMR is not supported.  */
   int fpmr_regnum = -1;
 

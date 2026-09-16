@@ -35,6 +35,8 @@ struct aarch64_features
   bool pauth = false;
   bool mte = false;
   bool fpmr = false;
+  /* Whether the Permission Overlay Extension (FEAT_S1POE) is supported.  */
+  bool poe = false;
 
   /* A positive TLS value indicates the number of TLS registers available.  */
   uint8_t tls = 0;
@@ -70,7 +72,8 @@ inline bool operator==(const aarch64_features &lhs, const aarch64_features &rhs)
     && lhs.sme2 == rhs.sme2
     && lhs.gcs == rhs.gcs
     && lhs.gcs_linux == rhs.gcs_linux
-    && lhs.fpmr == rhs.fpmr;
+    && lhs.fpmr == rhs.fpmr
+    && lhs.poe == rhs.poe;
 }
 
 namespace std
@@ -103,6 +106,9 @@ namespace std
 
       /* FPMR feature.  */
       h = h << 1 | features.fpmr;
+
+      /* POE feature.  */
+      h = h << 1 | features.poe;
       return h;
     }
   };

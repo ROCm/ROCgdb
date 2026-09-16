@@ -27333,6 +27333,40 @@ For more information about @acronym{FPMR}, please refer to the official
 @uref{https://developer.arm.com/documentation/ddi0601/latest,ignored,
 architecture registers documentation}.
 
+@subsubsection AArch64 Permission Overlay Extension
+@cindex Permission Overlay Extension, AArch64
+@cindex POE, AArch64
+
+When @value{GDBN} is debugging an AArch64 target and the Permission Overlay
+Extension (@acronym{POE}) is available, @value{GDBN} will make the
+@code{por_el0} register available.
+
+To aid debugging, @value{GDBN} interprets the permissions of each field in
+@code{por_el0} when displaying it with the @code{info registers} command.
+
+@smallexample
+(gdb) info registers por_el0
+por_el0 0x0000000000000007 [ P0=rwx ]
+@end smallexample
+
+@value{GDBN} also provides pseudo-registers named @code{por_p0} through
+@code{por_p15} for accessing the individual permission fields in
+@code{por_el0}. These pseudo-registers can be read and written independently.
+Writing a pseudo-register updates the corresponding 4-bit field in
+@code{por_el0}.
+
+@smallexample
+(gdb) set $por_el0 = 0x7
+(gdb) set $por_p1 = 0x7
+(gdb) info registers por_el0
+por_el0		0x0000000000000077	[ P1=rwx P0=rwx ]
+(gdb) info registers por_p1
+por_p1		0x7			rwx
+@end smallexample
+
+The @code{info registers por} command can be used to display @code{por_el0} and
+all the POE pseudo-registers.
+
 @node x86
 @subsection x86
 
