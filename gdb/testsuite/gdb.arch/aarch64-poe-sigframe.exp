@@ -1,0 +1,55 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test a binary that uses POE to unwind POR_EL0 from the signal frame context.
+
+global hex
+global decimal
+
+require allow_aarch64_poe_tests
+
+standard_testfile
+if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+# Set POR_EL0 register in main.
+gdb_test_no_output "set \$por_el0=0x777"
+
+gdb_breakpoint "handler"
+
+gdb_test "handle SIGUSR1 nostop" \
+	 ".*SIGUSR1.*No.*Yes.*Yes.*"
+
+gdb_test "continue" \
+	 ".*Breakpoint ${::decimal}, handler \\(sig=10\\).*"
+
+# Update POR_EL0 in the current signal handler frame.
+gdb_test_no_output "set \$por_el0=0x007"
+
+# Select the frame above the signal handler frame, which makes GDB unwind the
+# POR_EL0 from the signal frame POE context.
+gdb_test "frame 2" "#2  ($hex in )?\\S+ \\(.*\\) (at|from) \\S+.*" \
+	 "reached frame 2"
+
+# Print POR_EL0 and verify that it reflects the value from frame above the
+# signal handler frame.
+gdb_test "p/x \$por_el0" \
+	 "\\$\[0-9\]+ = 0x777" \
+	 "print/x por_el0 from the frame before the signal handler"

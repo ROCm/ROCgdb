@@ -1,0 +1,55 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test a binary that supports FEAT_S1POE and exposes POR_EL0 register.
+
+global hex
+global decimal
+
+require allow_aarch64_poe_tests
+
+standard_testfile
+if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+# Display POE violation SIGSEGV error message.
+set poe_sigsegv_re [multi_line \
+    "Program received signal SIGSEGV, Segmentation fault" \
+    "Protection Key Violation while accessing address ${hex} with Protection Key = ${decimal}"]
+
+gdb_test_multiple "continue" "display POE violation information" {
+    -re "$poe_sigsegv_re.*$gdb_prompt $" {
+	pass $gdb_test_name
+    }
+    -re ".*exited with code 01.*$gdb_prompt $" {
+	unsupported "POE userspace support unavailable"
+	return
+    }
+}
+
+# Fix the POE permissions (set $por_el0) and continue without delivering SIGSEGV.
+gdb_test_no_output "set \$por_el0 = 0x57" \
+    "allow write access by updating POR_EL0"
+
+gdb_test_multiple "signal 0" "continue after fixing POE fault" {
+    -re ".*exited normally.*$gdb_prompt $" {
+	pass $gdb_test_name
+    }
+}
