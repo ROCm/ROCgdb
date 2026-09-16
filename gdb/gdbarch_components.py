@@ -2816,5 +2816,4 @@ non-executable stack).
     name="imprecise_pagefault_reporting",
     predefault="false",
     invalid=False,
-    unused=True,
 )

@@ -1270,6 +1270,12 @@ amdgpu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   set_gdbarch_decr_pc_after_break (gdbarch, pc_adjust);
 
+  /* Pagefaults are reported imprecisely.  If we receive a SIGSEGV on
+     an instruction where there is already a breakpoint, we tell GDB
+     to not convert the signal to a breakpoint hit, but to continue
+     treating it as SIGSEGV.  */
+  set_gdbarch_imprecise_pagefault_reporting (gdbarch, true);
+
   return gdbarch_u.release ();
 }
 

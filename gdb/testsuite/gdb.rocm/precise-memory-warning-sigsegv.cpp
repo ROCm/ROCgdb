@@ -24,6 +24,7 @@ kernel ()
 {
   int *p = nullptr;
   *p = 1;
+  int x = 42; /* Break here.  */
 }
 
 int
