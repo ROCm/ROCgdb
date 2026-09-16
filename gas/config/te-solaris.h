@@ -19,10 +19,7 @@
 
 #define TE_SOLARIS
 
-#define LOCAL_LABELS_DOLLAR 1
-#define LOCAL_LABELS_FB 1
-
-#include "obj-format.h"
+#include "te-generic.h"
 
 /* The Sun linker doesn't merge read-only and read-write sections into
    a single section so we must force all EH frame sections to use the

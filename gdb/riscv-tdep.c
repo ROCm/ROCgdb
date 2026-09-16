@@ -1180,14 +1180,13 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
 
   if (riscv_is_fp_regno_p (regnum))
     {
-      struct value_print_options opts;
       const gdb_byte *valaddr = val->contents_for_printing ().data ();
       enum bfd_endian byte_order = type_byte_order (regtype);
 
-      get_user_print_options (&opts);
+      value_print_options opts = get_user_print_options ();
       opts.deref_ref = true;
 
-      common_val_print (val, file, 0, &opts, current_language);
+      common_val_print (val, file, 0, opts, current_language);
 
       if (print_raw_format)
 	{
@@ -1199,13 +1198,12 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
     }
   else
     {
-      struct value_print_options opts;
       riscv_gdbarch_tdep *tdep = gdbarch_tdep<riscv_gdbarch_tdep> (gdbarch);
 
       /* Print the register in hex.  */
-      get_formatted_print_options (&opts, 'x');
+      value_print_options opts = get_formatted_print_options ('x');
       opts.deref_ref = true;
-      common_val_print (val, file, 0, &opts, current_language);
+      common_val_print (val, file, 0, opts, current_language);
 
       if (print_raw_format)
 	{
@@ -1338,10 +1336,10 @@ riscv_print_one_register_info (struct gdbarch *gdbarch,
 		 natural format.  */
 	      if (regtype->is_vector () == 0)
 		{
-		  get_user_print_options (&opts);
+		  opts = get_user_print_options ();
 		  opts.deref_ref = true;
 		  gdb_printf (file, "\t");
-		  common_val_print (val, file, 0, &opts, current_language);
+		  common_val_print (val, file, 0, opts, current_language);
 		}
 	    }
 	}

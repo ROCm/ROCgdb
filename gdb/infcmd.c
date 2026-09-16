@@ -369,7 +369,7 @@ strip_bg_char (const char *args, int *bg_char_p)
 /* See inferior.h.  */
 
 void
-post_create_inferior (int from_tty, bool set_pspace_solib_ops)
+post_create_inferior (int from_tty, bool push_arch_solib_ops)
 {
   /* Be sure we own the terminal in case write operations are performed.  */
   target_terminal::ours_for_output ();
@@ -400,10 +400,16 @@ post_create_inferior (int from_tty, bool set_pspace_solib_ops)
 	throw;
     }
 
-  if (set_pspace_solib_ops)
-    current_program_space->set_solib_ops
-      (gdbarch_make_solib_ops (current_inferior ()->arch (),
-			       current_program_space));
+  if (push_arch_solib_ops)
+    {
+      /* This is called when an inferior gains execution.  Any solib_ops
+	 from previous executions should have been cleared by
+	 target_pre_inferior.  */
+      gdb_assert (current_program_space->solib_ops ().empty ());
+      current_program_space->add_solib_ops
+	(gdbarch_make_solib_ops (current_inferior ()->arch (),
+				 current_program_space));
+    }
 
   {
     const unsigned solib_add_generation
@@ -725,6 +731,46 @@ ensure_not_running (void)
     error_is_running ();
 }
 
+/* See inferior.h.  */
+
+void
+proceed_one_thread (thread_info &thread)
+{
+  gdb_assert (non_stop);
+
+  if (thread.state () != THREAD_STOPPED)
+    return;
+
+  if (!thread.inf->has_execution ())
+    return;
+
+  switch_to_thread (&thread);
+  clear_proceed_status (0);
+  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
+}
+
+/* See inferior.h.  */
+
+void
+proceed_all_threads ()
+{
+  gdb_assert (non_stop);
+
+  for (thread_info &thread : all_threads ())
+    {
+      /* We go through all threads individually instead of compressing
+	 into a single target `resume_all' request, because some threads
+	 may be stopped in internal breakpoints/events, or stopped waiting
+	 for its turn in the displaced stepping queue (that is, they are
+	 running from the user's perspective but internally stopped).  The
+	 target side has no idea about why the thread is stopped, so a
+	 `resume_all' command would resume too much.  If/when GDB gains a
+	 way to tell the target `hold this thread stopped until I say
+	 otherwise', then we can optimize this.  */
+      proceed_one_thread (thread);
+    }
+}
+
 void
 continue_1 (bool all_threads_p)
 {
@@ -742,27 +788,7 @@ continue_1 (bool all_threads_p)
       scoped_disable_commit_resumed disable_commit_resumed
 	("continue all threads in non-stop");
 
-      for (auto &thread : all_threads ())
-	{
-	  /* We go through all threads individually instead of compressing
-	     into a single target `resume_all' request, because some threads
-	     may be stopped in internal breakpoints/events, or stopped waiting
-	     for its turn in the displaced stepping queue (that is, they are
-	     running from the user's perspective but internally stopped).  The
-	     target side has no idea about why the thread is stopped, so a
-	     `resume_all' command would resume too much.  If/when GDB gains a
-	     way to tell the target `hold this thread stopped until I say
-	     otherwise', then we can optimize this.  */
-	  if (thread.state () != THREAD_STOPPED)
-	    continue;
-
-	  if (!thread.inf->has_execution ())
-	    continue;
-
-	  switch_to_thread (&thread);
-	  clear_proceed_status (0);
-	  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
-	}
+      proceed_all_threads ();
 
       if (current_ui->prompt_state == PROMPT_BLOCKED)
 	{
@@ -1650,11 +1676,9 @@ print_return_value_1 (struct ui_out *uiout, struct return_value_info *rv)
 
       if (finish_print)
 	{
-	  struct value_print_options opts;
-	  get_user_print_options (&opts);
-
+	  const value_print_options opts = get_user_print_options ();
 	  string_file stb;
-	  value_print (rv->value, &stb, &opts);
+	  value_print (rv->value, &stb, opts);
 	  uiout->field_stream ("return-value", stb);
 	}
       else
@@ -2419,14 +2443,13 @@ default_print_one_register_info (struct ui_file *file,
   if (regtype->code () == TYPE_CODE_FLT
       || regtype->code () == TYPE_CODE_DECFLOAT)
     {
-      struct value_print_options opts;
       const gdb_byte *valaddr = val->contents_for_printing ().data ();
       enum bfd_endian byte_order = type_byte_order (regtype);
 
-      get_user_print_options (&opts);
+      value_print_options opts = get_user_print_options ();
       opts.deref_ref = true;
 
-      common_val_print (val, &format_stream, 0, &opts, current_language);
+      common_val_print (val, &format_stream, 0, opts, current_language);
 
       if (print_raw_format)
 	{
@@ -2439,20 +2462,18 @@ default_print_one_register_info (struct ui_file *file,
     }
   else
     {
-      struct value_print_options opts;
-
       /* Print the register in hex.  */
-      get_formatted_print_options (&opts, 'x');
+      value_print_options opts = get_formatted_print_options ('x');
       opts.deref_ref = true;
-      common_val_print (val, &format_stream, 0, &opts, current_language);
+      common_val_print (val, &format_stream, 0, opts, current_language);
       /* If not a vector register, print it also according to its
 	 natural format.  */
       if (print_raw_format && regtype->is_vector () == 0)
 	{
 	  pad_to_column (format_stream, value_column_2);
-	  get_user_print_options (&opts);
+	  opts = get_user_print_options ();
 	  opts.deref_ref = true;
-	  common_val_print (val, &format_stream, 0, &opts, current_language);
+	  common_val_print (val, &format_stream, 0, opts, current_language);
 	}
     }
 

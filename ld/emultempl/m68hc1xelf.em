@@ -46,9 +46,6 @@ fragment <<EOF
 
 static asection *m68hc11elf_add_stub_section (const char *, asection *);
 
-/* Fake input file for stubs.  */
-static lang_input_statement_type *stub_file;
-
 /* By default the HC11/HC12 trampolines to call a far function using
    a normal 'bsr' and 'jsr' convention are generated during the link.
    The --no-trampoline option prevents that.  */
@@ -141,29 +138,16 @@ m68hc11_elf_${EMULATION_NAME}_before_allocation (void)
    fake input file to hold the stub sections.  */
 
 static void
-m68hc11elf_create_output_section_statements (void)
+m68hc11elf_after_open_output (void)
 {
-  if (bfd_get_flavour (link_info.output_bfd) != bfd_target_elf_flavour)
+  ldelf_after_open_output ();
+
+  if (stub_file == NULL)
     {
       einfo (_("%X%P: changing output format whilst linking "
 	       "is not supported\n"));
       return;
     }
-
-  stub_file = lang_add_input_file ("linker stubs",
-				   lang_input_file_is_fake_enum,
-				   NULL);
-  stub_file->the_bfd = bfd_create ("linker stubs", link_info.output_bfd);
-  if (stub_file->the_bfd == NULL
-      || !bfd_set_arch_mach (stub_file->the_bfd,
-			     bfd_get_arch (link_info.output_bfd),
-			     bfd_get_mach (link_info.output_bfd)))
-    {
-      fatal (_("%P: can not create BFD: %E\n"));
-      return;
-    }
-
-  ldlang_add_file (stub_file);
 }
 
 
@@ -351,4 +335,4 @@ PARSE_AND_LIST_ARGS_CASES='
 #
 LDEMUL_BEFORE_ALLOCATION=m68hc11_elf_${EMULATION_NAME}_before_allocation
 LDEMUL_AFTER_ALLOCATION=m68hc11elf_after_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=m68hc11elf_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=m68hc11elf_after_open_output

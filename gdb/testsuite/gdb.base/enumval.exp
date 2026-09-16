@@ -70,6 +70,28 @@ gdb_test_multiple $test $test {
     }
 }
 
+# enum mixed
+gdb_test "print g" " = M"
+gdb_test "print M" " = M"
+gdb_test "print (int) M" " = 200"
+gdb_test "ptype enum mixed" \
+    [multi_line \
+	 "type = enum mixed {" \
+	 "    M_NEG = -1," \
+	 "    M = 200" \
+	 "}"]
+
+# enum unmixed
+gdb_test "print h" " = U"
+gdb_test "print U" " = U"
+gdb_test "print (int) U" " = 200"
+gdb_test "ptype enum unmixed" \
+    [multi_line \
+	 "type = enum unmixed {" \
+	 "    U_ZERO = 0," \
+	 "    U = 200" \
+	 "}"]
+
 # gold/15021
 # With -fdebug-types-section, Gold's .gdb_index entry for ZERO refers to the
 # CU, but the CU doesn't use the TU (type unit) that defines ZERO.

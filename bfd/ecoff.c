@@ -2241,25 +2241,28 @@ _bfd_ecoff_set_section_contents (bfd *abfd,
       && ! ecoff_compute_section_file_positions (abfd))
     return false;
 
-  /* Handle the .lib section specially so that Irix 4 shared libraries
-     work out.  See coff_set_section_contents in coffcode.h.  */
-  if (streq (section->name, _LIB))
-    {
-      bfd_byte *rec, *recend;
-
-      rec = (bfd_byte *) location;
-      recend = rec + count;
-      while (rec < recend)
-	{
-	  ++section->lma;
-	  rec += bfd_get_32 (abfd, rec) * 4;
-	}
-
-      BFD_ASSERT (rec == recend);
-    }
-
   if (count == 0)
     return true;
+
+  /* Handle the .lib section specially so that Irix 4 shared libraries
+     work out.  See coff_set_section_contents in coffcode.h.  */
+  if (count >= 4 && strcmp (section->name, _LIB) == 0)
+    {
+      bfd_size_type off = 0;
+
+      while (off <= count - 4)
+	{
+	  uint32_t len = bfd_get_32 (abfd, (bfd_byte *) location + off);
+	  if (len == 0
+	      || len > (uint32_t) -1 / 4
+	      || len * 4 > count - off)
+	    break;
+	  off += len * 4;
+	  ++section->lma;
+	}
+
+      BFD_ASSERT (off == count);
+    }
 
   pos = section->filepos + offset;
   if (bfd_seek (abfd, pos, SEEK_SET) != 0

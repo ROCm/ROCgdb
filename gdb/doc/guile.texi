@@ -3340,7 +3340,7 @@ Return @code{#t} if @var{object} is an object of type @code{<gdb:lazy-string>}.
 Otherwise return @code{#f}.
 @end deffn
 
-@deffn {Scheme Procedure} lazy-string-address lazy-sring
+@deffn {Scheme Procedure} lazy-string-address lazy-string
 Return the address of @var{lazy-string}.
 @end deffn
 

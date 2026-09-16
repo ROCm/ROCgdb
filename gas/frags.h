@@ -48,7 +48,7 @@ struct frag {
   offsetT fr_var;
   /* For variable-length tail.  */
   offsetT fr_offset;
-  /* For variable-length tail.  */
+  /* Symbol associated with the frag, if any.  */
   symbolS *fr_symbol;
   /* Points to opcode low addr byte, for relaxation.  */
   char *fr_opcode;

@@ -82,7 +82,7 @@ len_without_escapes (const std::string &str)
 
 /* Function to disassemble up to COUNT instructions starting from address
    PC into the ASM_LINES vector (which will be emptied of any previous
-   contents).  Return the address of the COUNT'th instruction after pc.
+   contents).  Return the address after the last disassembled instruction.
    When ADDR_SIZE is non-null then place the maximum size of an address and
    label into the value pointed to by ADDR_SIZE, and set the addr_size
    field on each item in ASM_LINES, otherwise the addr_size fields within
@@ -161,6 +161,12 @@ tui_disassemble (struct gdbarch *gdbarch,
 static CORE_ADDR
 tui_find_backward_disassembly_start_address (CORE_ADDR addr)
 {
+  if (addr == 0)
+    {
+      /* We cannot go backwards from zero.  */
+      return addr;
+    }
+
   bound_minimal_symbol msym_prev;
   bound_minimal_symbol msym
     = lookup_minimal_symbol_by_pc_section (addr - 1, nullptr,
@@ -409,7 +415,11 @@ tui_get_begin_asm_address (struct gdbarch **gdbarch_p, CORE_ADDR *addr_p)
 	  bound_minimal_symbol main_symbol
 	    = lookup_minimal_symbol (current_program_space, main_name ());
 	  if (main_symbol.minsym != nullptr)
-	    addr = main_symbol.value_address ();
+	    {
+	      addr = main_symbol.value_address ();
+	      addr = gdbarch_convert_from_func_ptr_addr
+		       (gdbarch, addr, current_inferior ()->top_target ());
+	    }
 	}
     }
   else				/* The target is executing.  */

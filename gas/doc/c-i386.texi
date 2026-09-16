@@ -221,6 +221,7 @@ accept various extension mnemonics.  For example,
 @code{avx10.1/256},
 @code{avx10.1/128},
 @code{avx10.1aux},
+@code{avx10v1aux},
 @code{user_msr},
 @code{msr_imm},
 @code{apx_f},
@@ -232,6 +233,7 @@ accept various extension mnemonics.  For example,
 @code{avx10.2/512},
 @code{avx10.2/256},
 @code{avx10.2/128},
+@code{avx10v2aux},
 @code{movrs},
 @code{amx_int8},
 @code{amx_bf16},
@@ -291,6 +293,8 @@ accept various extension mnemonics.  For example,
 @code{tlbsync},
 @code{rmpquery},
 @code{rmpread},
+@code{rmpdirty},
+@code{rmpopt},
 @code{svme},
 @code{gmism2},
 @code{gmiccs},
@@ -1719,7 +1723,8 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.avx512_vpopcntdq} @tab @samp{.avx512_vbmi2} @tab @samp{.avx512_vnni}
 @item @samp{.avx512_bitalg} @tab @samp{.avx512_bf16} @tab @samp{.avx512_vp2intersect}
 @item @samp{.tdx} @tab @samp{.avx_vnni} @tab @samp{.avx512_fp16} @tab @samp{avx512_bmm}
-@item @samp{.avx10.1} @tab @samp{.avx10.1aux} @tab @samp{.avx10.2} @tab @samp{.clwb}
+@item @samp{.avx10.1} @tab @samp{.avx10.1aux} @tab @samp{.avx10v1aux} @tab @samp{.avx10.2}
+@item @samp{.avx10v2aux} @tab @samp{.clwb}
 @item @samp{.rdpid} @tab @samp{.ptwrite} @tab @samp{.ibt} @tab @samp{.prefetchi}
 @item @samp{.cmpccxadd} @tab @samp{.wrmsrns} @tab @samp{.msrlist} @tab @samp{.se1}
 @item @samp{.avx_ne_convert} @tab @samp{.rao_int} @tab @samp{.fred} @tab @samp{.lkgs}
@@ -1739,7 +1744,8 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.lwp} @tab @samp{.fma4} @tab @samp{.xop} @tab @samp{.cx16}
 @item @samp{.padlock} @tab @samp{.clzero} @tab @samp{.mwaitx} @tab @samp{.rdpru}
 @item @samp{.mcommit} @tab @samp{.sev_es} @tab @samp{.snp} @tab @samp{.invlpgb}
-@item @samp{.tlbsync} @tab @samp{.rmpquery} @tab @samp{.rmpread} @tab @samp{.apx_f}
+@item @samp{.tlbsync} @tab @samp{.rmpquery} @tab @samp{.rmpread} @tab @samp{.rmpdirty}
+@item @samp{.rmpopt} @tab @samp{.apx_f}
 @item @samp{.apx_nci} @tab @samp{.apx_ndd} @tab @samp{.apx_nf} @tab @samp{.apx_nci_ndd_nf}
 @item @samp{.gmism2} @tab @samp{.gmiccs} @tab @samp{.padlockrng2} @tab @samp{.padlockphe2}
 @item @samp{.padlockxmodx}

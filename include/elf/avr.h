@@ -99,6 +99,12 @@ enum
 
   // VTABLE is located in some named address space.
   Tag_GNU_AVR_VTABLE_AS = 4,
+
+  // Bits used by the double type, or 0 if no see.
+  Tag_GNU_AVR_BITS_DOUBLE = 8,
+
+  // Bits used by the long double type, or 0 if no see.
+  Tag_GNU_AVR_BITS_LONG_DOUBLE = 12,
 };
 
 

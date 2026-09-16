@@ -30,6 +30,8 @@ run_dump_test "lcall"
 run_dump_test "relax-diff1"
 run_dump_test "relax-loc"
 run_dump_test "relax-ndiff"
+run_dump_test "relax-uleb128"
+run_dump_test "relax-uleb128-2"
 
 run_dump_test "relax-static-pie"
 run_dump_test "relax-static-local-pie"

@@ -2697,10 +2697,14 @@ _bfd_elf_link_assign_sym_version (struct elf_link_hash_entry *h, void *data)
   if (p != NULL && h->verinfo.vertree == NULL)
     {
       struct bfd_elf_version_tree *t;
+      bool default_version = false;
 
       ++p;
       if (*p == ELF_VER_CHR)
-	++p;
+	{
+	  default_version = true;
+	  ++p;
+	}
 
       /* If there is no version string, we can just return out.  */
       if (*p == '\0')
@@ -2714,6 +2718,52 @@ _bfd_elf_link_assign_sym_version (struct elf_link_hash_entry *h, void *data)
 
       if (hide)
 	obed->elf_backend_hide_symbol (info, h, true);
+      else if (default_version)
+	{
+	  /* Get the unversioned symbol for the default version.  */
+	  struct elf_link_hash_entry *h_u;
+	  size_t size = p - h->root.root.string - 1;
+	  char *unversioned_name = bfd_malloc (size);
+	  if (unversioned_name == NULL)
+	    {
+	      sinfo->failed = true;
+	      return false;
+	    }
+	  memcpy (unversioned_name, h->root.root.string, size - 1);
+	  unversioned_name[size - 1] = 0;
+	  h_u = elf_link_hash_lookup (elf_hash_table (info),
+				      unversioned_name, false,
+				      false, false);
+
+	  /* There must be an unversioned symbol. */
+	  if (h_u == NULL)
+	    abort ();
+
+	  while (h_u->root.type == bfd_link_hash_indirect
+		 || h_u->root.type == bfd_link_hash_warning)
+	    h_u = (struct elf_link_hash_entry *) h_u->root.u.i.link;
+
+	  /* Verify that there is only one default version.  */
+	  if (h_u->versioned != versioned_hidden
+	      && h_u->verinfo.vertree != h->verinfo.vertree)
+	    {
+	      /* xgettext:c-format */
+	      info->callbacks->einfo
+		(_("%X%P: %pB: multiple default versions of `%s': "
+		   "`%s' in %pB and `%s' in %pB.\n"),
+		 info->output_bfd, unversioned_name,
+		 h_u->verinfo.vertree->name,
+		 h_u->root.u.def.section->owner,
+		 h->verinfo.vertree->name,
+		 h->root.u.def.section->owner);
+	      bfd_set_error (bfd_error_bad_value);
+	      sinfo->failed = true;
+	      free (unversioned_name);
+	      return false;
+	    }
+
+	  free (unversioned_name);
+	}
 
       /* If we are building an application, we need to create a
 	 version node for this version.  */
@@ -4587,9 +4637,7 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	      || (!bfd_link_relocatable (info)
 		  && info->nointerp
 		  && (info->export_dynamic || info->dynamic)))
-	  && is_elf_hash_table (&htab->root)
-	  && info->output_bfd->xvec == abfd->xvec
-	  && !htab->dynamic_sections_created)
+	  && compatible_format (info, abfd))
 	{
 	  if (!bfd_elf_link_create_dynamic_sections (info))
 	    goto error_return;
@@ -7667,6 +7715,7 @@ NOTE: This behaviour is deprecated and will be removed in a future version of th
 	{
 	  if (!_bfd_elf_add_dynamic_entry (info, DT_INIT, 0))
 	    return false;
+	  obed->elf_backend_hide_symbol (info, h, true);
 	}
       h = (info->fini_function
 	   ? elf_link_hash_lookup (elf_hash_table (info),
@@ -7679,6 +7728,7 @@ NOTE: This behaviour is deprecated and will be removed in a future version of th
 	{
 	  if (!_bfd_elf_add_dynamic_entry (info, DT_FINI, 0))
 	    return false;
+	  obed->elf_backend_hide_symbol (info, h, true);
 	}
 
       s = bfd_get_section_by_name (info->output_bfd, ".preinit_array");
@@ -13180,8 +13230,6 @@ _bfd_elf_final_link (bfd *obfd, struct bfd_link_info *info)
      we could write the relocs out and then read them again; I don't
      know how bad the memory loss will be.  */
 
-  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
-    sub->output_has_begun = false;
   for (o = obfd->sections; o != NULL; o = o->next)
     {
       for (p = o->map_head.link_order; p != NULL; p = p->next)
@@ -13193,9 +13241,10 @@ _bfd_elf_final_link (bfd *obfd, struct bfd_link_info *info)
 	    {
 	      if (! sub->output_has_begun)
 		{
-		  if (! elf_link_input_bfd (&flinfo, sub))
-		    goto error_return;
 		  sub->output_has_begun = true;
+		  if ((sub->flags & BFD_LINKER_CREATED) == 0
+		      && !elf_link_input_bfd (&flinfo, sub))
+		    goto error_return;
 		}
 	    }
 	  else if (p->type == bfd_section_reloc_link_order
@@ -13209,7 +13258,7 @@ _bfd_elf_final_link (bfd *obfd, struct bfd_link_info *info)
 	      if (! _bfd_default_link_order (obfd, info, o, p))
 		{
 		  if (p->type == bfd_indirect_link_order
-		      && (bfd_get_flavour (sub)
+		      && (bfd_get_flavour ((sub = p->u.indirect.section->owner))
 			  == bfd_target_elf_flavour)
 		      && (elf_elfheader (sub)->e_ident[EI_CLASS]
 			  != obed->s->elfclass))
@@ -13244,6 +13293,15 @@ _bfd_elf_final_link (bfd *obfd, struct bfd_link_info *info)
 	    }
 	}
     }
+  /* Writing of linker created BFDs is left until last, because the
+     aarch64 backend wants to copy insns from a relocated section to
+     a stub section.  See erratum_843419 code.  */
+  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
+    if (sub->output_has_begun && (sub->flags & BFD_LINKER_CREATED) != 0)
+      {
+	if (!elf_link_input_bfd (&flinfo, sub))
+	  goto error_return;
+      }
 
   /* Free symbol buffer if needed.  */
   if (!info->reduce_memory_overheads)

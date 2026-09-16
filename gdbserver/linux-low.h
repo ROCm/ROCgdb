@@ -977,4 +977,12 @@ CORE_ADDR linux_get_hwcap (int pid, int wordsize);
 
 CORE_ADDR linux_get_hwcap2 (int pid, int wordsize);
 
+/* Fetch the AT_HWCAP3 entry from the auxv vector, where entries are length
+   WORDSIZE, of process with pid PID.  If no entry was found, return 0.  */
+CORE_ADDR linux_get_hwcap3 (int pid, int wordsize);
+
+/* Fetch the AT_HWCAP4 entry from the auxv vector, where entries are length
+   WORDSIZE, of process with pid PID.  If no entry was found, return 0.  */
+CORE_ADDR linux_get_hwcap4 (int pid, int wordsize);
+
 #endif /* GDBSERVER_LINUX_LOW_H */

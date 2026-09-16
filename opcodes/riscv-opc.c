@@ -2242,11 +2242,15 @@ const struct riscv_opcode riscv_opcodes[] =
 {"vsm3me.vv",    0, INSN_CLASS_ZVKSH, "Vd,Vt,Vs", MATCH_VSM3ME_VV, MASK_VSM3ME_VV, match_opcode, 0},
 
 /* Zvabd instructions.  */
-{"vabs.v",       0, INSN_CLASS_ZVABD, "Vd,VtVm",    MATCH_VABS_V,     MASK_VABS_V,     match_opcode, 0},
+{"vabs.v",       0, INSN_CLASS_ZVABD, "Vd,VtVm",    MATCH_VABD_VX,    MASK_VABD_VX | MASK_RS1, match_opcode, INSN_ALIAS},
 {"vabd.vv",      0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VABD_VV,    MASK_VABD_VV,    match_opcode, 0},
+{"vabd.vx",      0, INSN_CLASS_ZVABD, "Vd,Vt,sVm", MATCH_VABD_VX,    MASK_VABD_VX,    match_opcode, 0},
 {"vabdu.vv",     0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VABDU_VV,   MASK_VABDU_VV,   match_opcode, 0},
+{"vabdu.vx",     0, INSN_CLASS_ZVABD, "Vd,Vt,sVm", MATCH_VABDU_VX,   MASK_VABDU_VX,   match_opcode, 0},
 {"vwabda.vv",    0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VWABDA_VV,  MASK_VWABDA_VV,  match_opcode, 0},
+{"vwabda.vx",    0, INSN_CLASS_ZVABD, "Vd,Vt,sVm", MATCH_VWABDA_VX,  MASK_VWABDA_VX,  match_opcode, 0},
 {"vwabdau.vv",   0, INSN_CLASS_ZVABD, "Vd,Vt,VsVm", MATCH_VWABDAU_VV, MASK_VWABDAU_VV, match_opcode, 0},
+{"vwabdau.vx",   0, INSN_CLASS_ZVABD, "Vd,Vt,sVm", MATCH_VWABDAU_VX, MASK_VWABDAU_VX, match_opcode, 0},
 
 /* ZCB instructions.  */
 {"c.lbu",      0, INSN_CLASS_ZCB, "Ct,Wcb(Cs)", MATCH_C_LBU, MASK_C_LBU, match_opcode, INSN_DREF|INSN_1_BYTE },
@@ -2348,6 +2352,34 @@ const struct riscv_opcode riscv_opcodes[] =
 {"hsv.h",       0, INSN_CLASS_H, "t,0(s)", MATCH_HSV_H, MASK_HSV_H, match_opcode, INSN_DREF|INSN_2_BYTE },
 {"hsv.w",       0, INSN_CLASS_H, "t,0(s)", MATCH_HSV_W, MASK_HSV_W, match_opcode, INSN_DREF|INSN_4_BYTE },
 {"hsv.d",      64, INSN_CLASS_H, "t,0(s)", MATCH_HSV_D, MASK_HSV_D, match_opcode, INSN_DREF|INSN_8_BYTE },
+
+/* Vendor-specific (Andes) XAndesBFHCvt instructions.  */
+{"nds.fcvt.s.bf16", 0, INSN_CLASS_XANDESBFHCVT, "D,T", MATCH_NDS_FCVT_S_BF16, MASK_NDS_FCVT_S_BF16, match_opcode, 0},
+{"nds.fcvt.bf16.s", 0, INSN_CLASS_XANDESBFHCVT, "D,T", MATCH_NDS_FCVT_BF16_S, MASK_NDS_FCVT_BF16_S, match_opcode, 0},
+
+/* Vendor-specific (Andes) XAndesVBFHCvt instructions.  */
+{"nds.vfwcvt.s.bf16", 0, INSN_CLASS_XANDESVBFHCVT, "Vd,Vt", MATCH_NDS_VFWCVT_S_BF16, MASK_NDS_VFWCVT_S_BF16, match_opcode, 0},
+{"nds.vfncvt.bf16.s", 0, INSN_CLASS_XANDESVBFHCVT, "Vd,Vt", MATCH_NDS_VFNCVT_BF16_S, MASK_NDS_VFNCVT_BF16_S, match_opcode, 0},
+
+/* Vendor-specific (Andes) XAndesVSIntLoad instructions.  */
+{"nds.vln8.v",  0, INSN_CLASS_XANDESVSINTLOAD, "Vd,0(s)Vm", MATCH_NDS_VLN8_V, MASK_NDS_VLN8_V, match_opcode, INSN_DREF},
+{"nds.vlnu8.v", 0, INSN_CLASS_XANDESVSINTLOAD, "Vd,0(s)Vm", MATCH_NDS_VLNU8_V, MASK_NDS_VLNU8_V, match_opcode, INSN_DREF},
+
+/* Vendor-specific (Andes) XAndesVPackFPH instructions.  */
+{"nds.vfpmadt.vf", 0, INSN_CLASS_XANDESVPACKFPH, "Vd,S,VtVm", MATCH_NDS_VFPMADT_VF, MASK_NDS_VFPMADT_VF, match_opcode, 0},
+{"nds.vfpmadb.vf", 0, INSN_CLASS_XANDESVPACKFPH, "Vd,S,VtVm", MATCH_NDS_VFPMADB_VF, MASK_NDS_VFPMADB_VF, match_opcode, 0},
+
+/* Vendor-specific (Andes) XAndesVDot instructions.  */
+{"nds.vd4dots.vv",  0, INSN_CLASS_XANDESVDOT, "Vd,Vs,VtVm", MATCH_NDS_VD4DOTS_VV, MASK_NDS_VD4DOTS_VV, match_opcode, 0},
+{"nds.vd4dotu.vv",  0, INSN_CLASS_XANDESVDOT, "Vd,Vs,VtVm", MATCH_NDS_VD4DOTU_VV, MASK_NDS_VD4DOTU_VV, match_opcode, 0},
+{"nds.vd4dotsu.vv", 0, INSN_CLASS_XANDESVDOT, "Vd,Vs,VtVm", MATCH_NDS_VD4DOTSU_VV, MASK_NDS_VD4DOTSU_VV, match_opcode, 0},
+
+/* Vendor-specific (Andes) XAndesVSIntH instructions.  */
+{"nds.vle4.v",        0, INSN_CLASS_XANDESVSINTH, "Vd,0(s)", MATCH_NDS_VLE4_V, MASK_NDS_VLE4_V, match_opcode, INSN_DREF},
+{"nds.vfwcvt.f.n.v",  0, INSN_CLASS_XANDESVSINTH, "Vd,VtVm", MATCH_NDS_VFWCVT_F_N_V, MASK_NDS_VFWCVT_F_N_V, match_opcode, 0},
+{"nds.vfwcvt.f.nu.v", 0, INSN_CLASS_XANDESVSINTH, "Vd,VtVm", MATCH_NDS_VFWCVT_F_NU_V, MASK_NDS_VFWCVT_F_NU_V, match_opcode, 0},
+{"nds.vfwcvt.f.b.v",  0, INSN_CLASS_XANDESVSINTH, "Vd,VtVm", MATCH_NDS_VFWCVT_F_B_V, MASK_NDS_VFWCVT_F_B_V, match_opcode, 0},
+{"nds.vfwcvt.f.bu.v", 0, INSN_CLASS_XANDESVSINTH, "Vd,VtVm", MATCH_NDS_VFWCVT_F_BU_V, MASK_NDS_VFWCVT_F_BU_V, match_opcode, 0},
 
 /* Vendor-specific (CORE-V) Xcvmac instructions.  */
 {"cv.mac",      0, INSN_CLASS_XCVMAC, "d,s,t",     MATCH_CV_MAC,      MASK_CV_MAC, match_opcode, 0},
@@ -3490,6 +3522,38 @@ const struct riscv_opcode riscv_opcodes[] =
 {"th.vmaqau.vx",       0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQAU_VX, MASK_TH_VMAQAU_VX, match_opcode, 0},
 {"th.vmaqasu.vx",      0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQASU_VX, MASK_TH_VMAQASU_VX, match_opcode, 0},
 {"th.vmaqaus.vx",      0, INSN_CLASS_XTHEADVDOT,  "Vd,s,VtVm",  MATCH_TH_VMAQAUS_VX, MASK_TH_VMAQAUS_VX, match_opcode, 0},
+
+/* Vendor-specific (XuanTie) XXTVarith instructions.  */
+{"xt.vile.vv",      0, INSN_CLASS_XXTVARITH,  "Vd,Vt,Vs",   MATCH_XT_VILE_VV,      MASK_XT_VILE_VV,      match_opcode, 0 },
+{"xt.vilo.vv",      0, INSN_CLASS_XXTVARITH,  "Vd,Vt,Vs",   MATCH_XT_VILO_VV,      MASK_XT_VILO_VV,      match_opcode, 0 },
+{"xt.vcrcfoldr.vv", 0, INSN_CLASS_XXTVARITH,  "Vd,Vt,Vs",   MATCH_XT_VCRCFOLDR_VV, MASK_XT_VCRCFOLDR_VV, match_opcode, 0 },
+{"xt.vcrcfoldn.vv", 0, INSN_CLASS_XXTVARITH,  "Vd,Vt,Vs",   MATCH_XT_VCRCFOLDN_VV, MASK_XT_VCRCFOLDN_VV, match_opcode, 0 },
+{"xt.vgmulxor.vv",  0, INSN_CLASS_XXTVARITH,  "Vd,Vt,Vs",   MATCH_XT_VGMULXOR_VV,  MASK_XT_VGMULXOR_VV,  match_opcode, 0 },
+
+/* Vendor-specific (XuanTie) XXTVcoder instructions.  */
+{"xt.vabd.vv",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VABD_VV,      MASK_XT_VABD_VV,      match_opcode, 0 },
+{"xt.vabd.vx",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VABD_VX,      MASK_XT_VABD_VX,      match_opcode, 0 },
+{"xt.vabd.vi",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,ViVm", MATCH_XT_VABD_VI,      MASK_XT_VABD_VI,      match_opcode, 0 },
+{"xt.vabdu.vv",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VABDU_VV,     MASK_XT_VABDU_VV,     match_opcode, 0 },
+{"xt.vabdu.vx",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VABDU_VX,     MASK_XT_VABDU_VX,     match_opcode, 0 },
+{"xt.vabdu.vi",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VjVm", MATCH_XT_VABDU_VI,     MASK_XT_VABDU_VI,     match_opcode, 0 },
+{"xt.vaba.vv",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VABA_VV,      MASK_XT_VABA_VV,      match_opcode, 0 },
+{"xt.vaba.vx",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VABA_VX,      MASK_XT_VABA_VX,      match_opcode, 0 },
+{"xt.vaba.vi",      0, INSN_CLASS_XXTVCODER,  "Vd,Vt,ViVm", MATCH_XT_VABA_VI,      MASK_XT_VABA_VI,      match_opcode, 0 },
+{"xt.vabau.vv",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VABAU_VV,     MASK_XT_VABAU_VV,     match_opcode, 0 },
+{"xt.vabau.vx",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VABAU_VX,     MASK_XT_VABAU_VX,     match_opcode, 0 },
+{"xt.vabau.vi",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VjVm", MATCH_XT_VABAU_VI,     MASK_XT_VABAU_VI,     match_opcode, 0 },
+{"xt.vwabd.vv",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VWABD_VV,     MASK_XT_VWABD_VV,     match_opcode, 0 },
+{"xt.vwabd.vx",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VWABD_VX,     MASK_XT_VWABD_VX,     match_opcode, 0 },
+{"xt.vwaba.vv",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VWABA_VV,     MASK_XT_VWABA_VV,     match_opcode, 0 },
+{"xt.vwaba.vx",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VWABA_VX,     MASK_XT_VWABA_VX,     match_opcode, 0 },
+{"xt.vwabau.vv",    0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VWABAU_VV,    MASK_XT_VWABAU_VV,    match_opcode, 0 },
+{"xt.vwabau.vx",    0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VWABAU_VX,    MASK_XT_VWABAU_VX,    match_opcode, 0 },
+{"xt.vwabdu.vv",    0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VWABDU_VV,    MASK_XT_VWABDU_VV,    match_opcode, 0 },
+{"xt.vwabdu.vx",    0, INSN_CLASS_XXTVCODER,  "Vd,Vt,sVm",  MATCH_XT_VWABDU_VX,    MASK_XT_VWABDU_VX,    match_opcode, 0 },
+{"xt.vfabd.vv",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VFABD_VV,     MASK_XT_VFABD_VV,     match_opcode, 0 },
+{"xt.vfabd.vf",     0, INSN_CLASS_XXTVCODER,  "Vd,Vt,SVm",  MATCH_XT_VFABD_VF,     MASK_XT_VFABD_VF,     match_opcode, 0 },
+{"xt.vabsmax.vv",   0, INSN_CLASS_XXTVCODER,  "Vd,Vt,VsVm", MATCH_XT_VABSMAX_VV,   MASK_XT_VABSMAX_VV,   match_opcode, 0 },
 
 /* Vendor-specific (Ventana Microsystems) XVentanaCondOps instructions */
 {"vt.maskc",   64, INSN_CLASS_XVENTANACONDOPS, "d,s,t", MATCH_VT_MASKC, MASK_VT_MASKC, match_opcode, 0 },

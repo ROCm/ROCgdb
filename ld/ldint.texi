@@ -577,10 +577,9 @@ script might have set up, like the entry point.
 appears to be the main core of the linking itself, as far as emulation
 hooks are concerned(*).  It first opens the output file's BFD, calling
 @code{ldemul_set_output_arch}, and calls
-@code{ldemul_create_output_section_statements} in case you need to use
+@code{ldemul_after_open_output} in case you need to use
 other means to find or create object files (i.e. shared libraries
-found on a path, or fake stub objects).  Despite the name, nobody
-creates output sections here.
+found on a path, or fake stub objects).
 
 (*) In most cases, the BFD library does the bulk of the actual
 linking, handling symbol tables, symbol resolution, relocations, and
@@ -637,7 +636,7 @@ In summary,
 @itemize @bullet
 @item create @code{output_bfd}
 @item @code{ldemul_set_output_arch}
-@item @code{ldemul_create_output_section_statements}
+@item @code{ldemul_after_open_output}
 @item read objects, create input bfds - all symbols exist, but have no values
 @item may call @code{ldemul_unrecognized_file}
 @item will call @code{ldemul_recognized_file}

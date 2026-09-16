@@ -1803,6 +1803,7 @@ struct elf_backend_data
   unsigned want_got_sym : 1;
   unsigned want_dynbss : 1;
   unsigned want_dynrelro : 1;
+  unsigned want_stub_bfd : 1;
 
   /* Targets which do not support physical addressing often require
      that the p_paddr field in the section header to be set to zero.

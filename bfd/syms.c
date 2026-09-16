@@ -1130,6 +1130,7 @@ _bfd_stab_section_find_nearest_line (bfd *abfd,
 	}
 
       free (reloc_vector);
+      reloc_vector = NULL;
 
       /* First time through this function, build a table matching
 	 function VM addresses to stabs, then sort based on starting
@@ -1186,7 +1187,7 @@ _bfd_stab_section_find_nearest_line (bfd *abfd,
       amt *= sizeof (struct indexentry);
       info->indextable = (struct indexentry *) bfd_malloc (amt);
       if (info->indextable == NULL)
-	goto out3;
+	goto out2;
 
       file_name = NULL;
       directory_name = NULL;

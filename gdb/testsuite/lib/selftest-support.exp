@@ -246,7 +246,18 @@ proc do_self_tests {body} {
 	    set ::GDB "libtool --mode=execute $::GDB"
 	}
 
-	set ::GDBFLAGS "$::GDBFLAGS $file"
+	# By default, dwarf synchronous is off, so the effort to load $file
+	# may be spread over subsequent commands and cause timeouts on slow
+	# systems.  Use "maintenance set dwarf synchronous on", to make sure
+	# $file is completely loaded during gdb_start.
+	# Proc gdb_start has a timeout of 600 for spawning gdb, which seems
+	# sufficient to handle both spawning gdb and loading $file.
+	# Using gdb_load would permit a timeout of 120s just for loading
+	# $file, but we're not using that because we want libtool to
+	# update $file.
+	append ::GDBFLAGS \
+	    " " -iex " " {"maintenance set dwarf synchronous on"} \
+	    " " $file
 	gdb_start
     }
 

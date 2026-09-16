@@ -988,6 +988,9 @@ tic4x_sect (int x ATTRIBUTE_UNUSED)
   else
     num = 0;
 
+#ifdef OBJ_COFF
+  obj_coff_section_change_hook ();
+#endif
   seg = subseg_new (name, num);
   if (line_label != NULL)
     {

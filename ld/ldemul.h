@@ -60,7 +60,7 @@ extern void ldemul_finish
   (void);
 extern void ldemul_set_symbols
   (void);
-extern void ldemul_create_output_section_statements
+extern void ldemul_after_open_output
   (void);
 extern lang_output_section_statement_type *ldemul_place_orphan
   (asection *, const char *, int);
@@ -171,7 +171,7 @@ typedef struct ld_emulation_xfer_struct {
   void	(*finish) (void);
 
   /* Create any output sections needed by the target.  */
-  void	(*create_output_section_statements) (void);
+  void	(*after_open_output) (void);
 
   /* Try to open a dynamic library.  ARCH is an architecture name, and
      is normally the empty string.  ENTRY is the lang_input_statement

@@ -1096,10 +1096,8 @@ struct type *
 value_actual_type (struct value *value, int resolve_simple_types,
 		   int *real_type_found)
 {
-  struct value_print_options opts;
   struct type *result;
-
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
 
   if (real_type_found)
     *real_type_found = 0;
@@ -1599,6 +1597,7 @@ value::copy () const
   val->m_bitpos = m_bitpos;
   val->m_bitsize = m_bitsize;
   val->m_lazy = m_lazy;
+  val->m_fetch_lazy_failed = m_fetch_lazy_failed;
   val->m_embedded_offset = embedded_offset ();
   val->m_pointed_to_offset = m_pointed_to_offset;
   val->m_modifiable = m_modifiable;
@@ -1835,12 +1834,10 @@ show_values (const char *num_exp, int from_tty)
 
   for (i = num; i < num + 10 && i <= value_history.size (); i++)
     {
-      struct value_print_options opts;
-
       val = access_value_history (i);
       gdb_printf (("$%d = "), i);
-      get_user_print_options (&opts);
-      value_print (val, gdb_stdout, &opts);
+      const value_print_options &opts = get_user_print_options ();
+      value_print (val, gdb_stdout, opts);
       gdb_printf (("\n"));
     }
 
@@ -2613,9 +2610,8 @@ show_convenience (const char *ignore, int from_tty)
 {
   struct gdbarch *gdbarch = get_current_arch ();
   int varseen = 0;
-  struct value_print_options opts;
 
-  get_user_print_options (&opts);
+  const value_print_options &opts = get_user_print_options ();
   for (auto &pair : internalvars)
     {
       internalvar &var = pair.second;
@@ -2631,7 +2627,7 @@ show_convenience (const char *ignore, int from_tty)
 	  struct value *val;
 
 	  val = value_of_internalvar (gdbarch, &var);
-	  value_print (val, gdb_stdout, &opts);
+	  value_print (val, gdb_stdout, opts);
 	}
       catch (const gdb_exception_error &ex)
 	{
@@ -4178,6 +4174,8 @@ value::fetch_lazy ()
      value.  */
   gdb_assert (m_optimized_out.empty ());
   gdb_assert (m_unavailable.empty ());
+  /* Will be reset with set_lazy () at the end if successful.  */
+  m_fetch_lazy_failed = true;
   if (m_is_zero)
     {
       /* Nothing.  */

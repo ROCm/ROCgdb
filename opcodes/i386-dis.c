@@ -1018,6 +1018,7 @@ enum
   PREFIX_0F01_REG_5_MOD_3_RM_6,
   PREFIX_0F01_REG_5_MOD_3_RM_7,
   PREFIX_0F01_REG_7_MOD_3_RM_2,
+  PREFIX_0F01_REG_7_MOD_3_RM_4,
   PREFIX_0F01_REG_7_MOD_3_RM_5,
   PREFIX_0F01_REG_7_MOD_3_RM_6,
   PREFIX_0F01_REG_7_MOD_3_RM_7,
@@ -1211,6 +1212,7 @@ enum
   PREFIX_EVEX_0F3838,
   PREFIX_EVEX_0F3839,
   PREFIX_EVEX_0F383A,
+  PREFIX_EVEX_0F3841_W_0,
   PREFIX_EVEX_0F384A_X86_64_W_0_L_2,
   PREFIX_EVEX_0F3852,
   PREFIX_EVEX_0F3853,
@@ -1272,6 +1274,15 @@ enum
   PREFIX_EVEX_MAP5_6D,
   PREFIX_EVEX_MAP5_6E_L_0,
   PREFIX_EVEX_MAP5_6F_X86_64,
+  PREFIX_EVEX_MAP5_36,
+  PREFIX_EVEX_MAP5_37,
+  PREFIX_EVEX_MAP5_38_W_0,
+  PREFIX_EVEX_MAP5_39_W_0,
+  PREFIX_EVEX_MAP5_3A_W_0,
+  PREFIX_EVEX_MAP5_3B_W_0,
+  PREFIX_EVEX_MAP5_3C_W_0,
+  PREFIX_EVEX_MAP5_3D,
+  PREFIX_EVEX_MAP5_3E_W_1,
   PREFIX_EVEX_MAP5_74,
   PREFIX_EVEX_MAP5_78,
   PREFIX_EVEX_MAP5_79,
@@ -1353,6 +1364,8 @@ enum
   X86_64_0F01_REG_5_MOD_3_RM_5_PREFIX_1,
   X86_64_0F01_REG_5_MOD_3_RM_6_PREFIX_1,
   X86_64_0F01_REG_5_MOD_3_RM_7_PREFIX_1,
+  X86_64_0F01_REG_7_MOD_3_RM_4_PREFIX_1,
+  X86_64_0F01_REG_7_MOD_3_RM_4_PREFIX_3,
   X86_64_0F01_REG_7_MOD_3_RM_5_PREFIX_1,
   X86_64_0F01_REG_7_MOD_3_RM_5_PREFIX_3,
   X86_64_0F01_REG_7_MOD_3_RM_6_PREFIX_1,
@@ -1827,6 +1840,7 @@ enum
   EVEX_W_0F3835_P_2,
   EVEX_W_0F3837,
   EVEX_W_0F383A_P_1,
+  EVEX_W_0F3841,
   EVEX_W_0F384A_X86_64,
   EVEX_W_0F3859,
   EVEX_W_0F385A_L_n,
@@ -1849,6 +1863,7 @@ enum
   EVEX_W_0F3A39_L_n,
   EVEX_W_0F3A3A_L_2,
   EVEX_W_0F3A3B_L_2,
+  EVEX_W_0F3A3D,
   EVEX_W_0F3A42,
   EVEX_W_0F3A43_L_n,
   EVEX_W_0F3A70,
@@ -1860,6 +1875,13 @@ enum
   EVEX_W_MAP4_F8_P3_M_1,
   EVEX_W_MAP4_FF_R_6,
 
+  EVEX_W_MAP5_37_P_0,
+  EVEX_W_MAP5_38,
+  EVEX_W_MAP5_39,
+  EVEX_W_MAP5_3A,
+  EVEX_W_MAP5_3B,
+  EVEX_W_MAP5_3C,
+  EVEX_W_MAP5_3E,
   EVEX_W_MAP5_5B_P_0,
   EVEX_W_MAP5_6C_P_0,
   EVEX_W_MAP5_6C_P_2,
@@ -1935,6 +1957,7 @@ struct dis386 {
    "XH" => print 'h' if EVEX.W=0, EVEX.W=1 is not a valid encoding (for FP16)
    "XB" => print 'bf16' if EVEX.W=0, EVEX.W=1 is not a valid encoding
 	   (for BF16)
+   "HB" => print 'hf' if EVEX.W=0 or 'bf' if EVEX.W=1
    "XS" => print 's' if !EVEX or EVEX.W=0, EVEX.W=1 is not a valid encoding
    "XV" => print "{vex} " pseudo prefix
    "XE" => print "{evex} " pseudo prefix if no EVEX-specific functionality is
@@ -3265,6 +3288,14 @@ static const struct dis386 prefix_table[][4] = {
   {
     { "monitorx",	{ { OP_Monitor, 0 } }, 0  },
     { "mcommit",	{ Skip_MODRM }, 0 },
+  },
+
+  /* PREFIX_0F01_REG_7_MOD_3_RM_4 */
+  {
+    { "clzero",	{ Skip_MODRM }, 0 },
+    { X86_64_TABLE (X86_64_0F01_REG_7_MOD_3_RM_4_PREFIX_1) },
+    { Bad_Opcode },
+    { X86_64_TABLE (X86_64_0F01_REG_7_MOD_3_RM_4_PREFIX_3) },
   },
 
   /* PREFIX_0F01_REG_7_MOD_3_RM_5 */
@@ -4650,6 +4681,18 @@ static const struct dis386 x86_64_table[][2] = {
   {
     { Bad_Opcode },
     { "stui",	{ Skip_MODRM }, 0 },
+  },
+
+  /* X86_64_0F01_REG_7_MOD_3_RM_4_PREFIX_1 */
+  {
+    { Bad_Opcode },
+    { "rmpchkd",	{ Skip_MODRM }, 0 },
+  },
+
+  /* X86_64_0F01_REG_7_MOD_3_RM_4_PREFIX_3 */
+  {
+    { Bad_Opcode },
+    { "rmpopt",	{ Skip_MODRM }, 0 },
   },
 
   /* X86_64_0F01_REG_7_MOD_3_RM_5_PREFIX_1 */
@@ -8743,7 +8786,7 @@ static const struct dis386 rm_table[][8] = {
     { "rdtscp",		{ Skip_MODRM }, 0  },
     { PREFIX_TABLE (PREFIX_0F01_REG_7_MOD_3_RM_2) },
     { "mwaitx",		{ { OP_Mwait, eBX_reg } }, PREFIX_OPCODE },
-    { "clzero",		{ Skip_MODRM }, 0  },
+    { PREFIX_TABLE (PREFIX_0F01_REG_7_MOD_3_RM_4) },
     { PREFIX_TABLE (PREFIX_0F01_REG_7_MOD_3_RM_5) },
     { PREFIX_TABLE (PREFIX_0F01_REG_7_MOD_3_RM_6) },
     { PREFIX_TABLE (PREFIX_0F01_REG_7_MOD_3_RM_7) },
@@ -10920,6 +10963,11 @@ putop (instr_info *ins, const char *in_template, int sizeflag)
 
 	      goto case_B;
 	    }
+	  else if (l == 1 && last[0] == 'H')
+	    {
+		*ins->obufp++ = ins->vex.w ? 'b' : 'h';
+		*ins->obufp++ = 'f';
+	    }
 	  else if (l && last[0] == 'X')
 	    {
 	      if (!ins->vex.w)
@@ -12262,6 +12310,9 @@ OP_E_memory (instr_info *ins, int bytemode, int sizeflag)
   /* Handles EVEX other than APX EVEX-promoted instructions.  */
   if (ins->vex.evex && ins->evex_type == evex_default)
     {
+      /* Broadcast can only ever be valid for memory sources.  */
+      if (ins->vex.b && ins->obufp == ins->op_out[0])
+	ins->vex.no_broadcast = true;
 
       /* Zeroing-masking is invalid for memory destinations. Set the flag
 	 uniformly, as the consumer will inspect it only for the destination
@@ -12699,10 +12750,6 @@ OP_E_memory (instr_info *ins, int bytemode, int sizeflag)
     {
       ins->evex_used |= EVEX_b_used;
 
-      /* Broadcast can only ever be valid for memory sources.  */
-      if (ins->obufp == ins->op_out[0])
-	ins->vex.no_broadcast = true;
-
       if (!ins->vex.no_broadcast
 	  && (!ins->intel_syntax || !(ins->evex_used & EVEX_len_used)))
 	{
@@ -12726,7 +12773,7 @@ OP_E_memory (instr_info *ins, int bytemode, int sizeflag)
 	  else if (bytemode == q_mode
 		   || bytemode == ymmq_mode)
 	    ins->vex.no_broadcast = true;
-	  else if (ins->vex.w
+	  else if ((bytemode == x_mode && ins->vex.w)
 		   || bytemode == evex_half_bcst_xmmqdh_mode
 		   || bytemode == evex_half_bcst_xmmq_mode)
 	    {

@@ -52,13 +52,6 @@ _bfd_kvx_elf_put_addend (bfd *, bfd_byte *, bfd_reloc_code_real_type,
 			     reloc_howto_type *, bfd_signed_vma)
   ATTRIBUTE_HIDDEN;
 
-bool
-kvx_elf32_init_stub_bfd (struct bfd_link_info *info,
-			bfd *stub_bfd);
-bool
-kvx_elf64_init_stub_bfd (struct bfd_link_info *info,
-			bfd *stub_bfd);
-
 bool _bfd_kvx_elf_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
   ATTRIBUTE_HIDDEN;
 

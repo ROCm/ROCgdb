@@ -18,7 +18,7 @@
 #
 # GDB use to emit a 'breakpoint-modified' dprintf breakpoints each
 # time the dprintf_breakpoint::re_set function was called as this
-# would re-cacluate the dprintf command string, even though in most
+# would re-calculate the dprintf command string, even though in most
 # cases the calculated string was no different from the previous
 # value.
 #

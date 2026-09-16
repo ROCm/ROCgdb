@@ -571,7 +571,7 @@ public:
 
 	if (oldinf != newinf)
 	  {
-	    thread_info *tp = any_thread_of_inferior (newinf);
+	    thread_info *tp = any_non_exited_thread_of_inferior (newinf);
 	    switch_to_thread (tp);
 	    m_oldinf = oldinf;
 	  }
@@ -593,7 +593,7 @@ public:
 	    remove_breakpoints ();
 	    if (m_oldinf != nullptr)
 	      {
-		thread_info *tp = any_thread_of_inferior (m_oldinf);
+		thread_info *tp = any_non_exited_thread_of_inferior (m_oldinf);
 		switch_to_thread (tp);
 	      }
 	    fork_load_infrun_state (m_oldfp);
@@ -836,7 +836,7 @@ print_checkpoints (struct ui_out *uiout, inferior *req_inf, fork_info *req_fi)
 	  if (req_fi != nullptr && req_fi != &fi)
 	    continue;
 
-	  thread_info *t = any_thread_of_inferior (inf);
+	  thread_info *t = any_non_exited_thread_of_inferior (inf);
 	  bool is_current = fi.ptid.pid () == inf->pid;
 
 	  ui_out_emit_tuple tuple_emitter (uiout);
@@ -1063,7 +1063,7 @@ linux_fork_context (struct fork_info *newfp, int from_tty, inferior *newinf)
 
   if (newinf != current_inferior ())
     {
-      thread_info *tp = any_thread_of_inferior (newinf);
+      thread_info *tp = any_non_exited_thread_of_inferior (newinf);
       switch_to_thread (tp);
       inferior_changed = true;
     }
@@ -1100,7 +1100,7 @@ restart_command (const char *args, int from_tty)
   /* Don't allow switching from a thread/fork that's running.  */
   inferior *curinf = current_inferior ();
   if (curinf->pid != 0
-      && any_thread_of_inferior (curinf)->state () == THREAD_RUNNING)
+      && any_non_exited_thread_of_inferior (curinf)->state () == THREAD_RUNNING)
     error (_("Cannot execute this command while "
 	     "the selected thread is running."));
 

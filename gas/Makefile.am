@@ -306,7 +306,6 @@ OBJ_FORMAT_CFILES = \
 	config/obj-ecoff.c \
 	config/obj-elf.c \
 	config/obj-evax.c \
-	config/obj-fdpicelf.c \
 	config/obj-macho.c \
 	config/obj-multi.c \
 	config/obj-som.c
@@ -317,7 +316,6 @@ OBJ_FORMAT_HFILES = \
 	config/obj-ecoff.h \
 	config/obj-elf.h \
 	config/obj-evax.h \
-	config/obj-fdpicelf.h \
 	config/obj-macho.h \
 	config/obj-multi.h \
 	config/obj-som.h
@@ -343,6 +341,8 @@ TARG_ENV_HFILES = \
 	config/te-hppa64.h \
 	config/te-hppalinux64.h \
 	config/te-interix.h \
+	config/te-linux-fdpic.h \
+	config/te-linux.h \
 	config/te-lynx.h \
 	config/te-macos.h \
 	config/te-nbsd.h \

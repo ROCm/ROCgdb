@@ -1059,7 +1059,7 @@ svr4_solib_ops::clear_so (const solib &so) const
 /* Create the solib objects equivalent to the svr4_sos in SOS.  */
 
 owning_intrusive_list<solib>
-svr4_solib_ops::solibs_from_svr4_sos (const std::vector<svr4_so> &sos) const
+svr4_solib_ops::solibs_from_svr4_sos (const std::vector<svr4_so> &sos)
 {
   owning_intrusive_list<solib> dst;
 
@@ -1253,7 +1253,7 @@ svr4_current_sos_via_xfer_libraries (struct svr4_library_list *list,
    linker, build a fallback list from other sources.  */
 
 owning_intrusive_list<solib>
-svr4_solib_ops::default_sos (svr4_info *info) const
+svr4_solib_ops::default_sos (svr4_info *info)
 {
   if (!info->debug_loader_offset_p)
     return {};
@@ -1452,7 +1452,7 @@ svr4_solib_ops::current_sos_direct (svr4_info *info) const
 /* Collect sos read and stored by the probes interface.  */
 
 owning_intrusive_list<solib>
-svr4_solib_ops::collect_probes_sos (svr4_info *info) const
+svr4_solib_ops::collect_probes_sos (svr4_info *info)
 {
   owning_intrusive_list<solib> res;
 
@@ -1469,7 +1469,7 @@ svr4_solib_ops::collect_probes_sos (svr4_info *info) const
    method.  */
 
 owning_intrusive_list<solib>
-svr4_solib_ops::current_sos_1 (svr4_info *info) const
+svr4_solib_ops::current_sos_1 (svr4_info *info)
 {
   owning_intrusive_list<solib> sos;
 
@@ -1496,7 +1496,7 @@ svr4_solib_ops::current_sos_1 (svr4_info *info) const
 /* Implement the "current_sos" solib_ops method.  */
 
 owning_intrusive_list<solib>
-svr4_solib_ops::current_sos () const
+svr4_solib_ops::current_sos ()
 {
   svr4_info *info = get_svr4_info (current_program_space);
 
@@ -2143,7 +2143,7 @@ svr4_solib_ops::disable_probes_interface (svr4_info *info) const
    standard interface.  */
 
 void
-svr4_solib_ops::handle_event () const
+svr4_solib_ops::handle_event ()
 {
   struct svr4_info *info = get_svr4_info (current_program_space);
   struct probe_and_action *pa;
@@ -3318,7 +3318,7 @@ svr4_relocate_main_executable (void)
    their symbols to be read at a later time.  */
 
 void
-svr4_solib_ops::create_inferior_hook (int from_tty) const
+svr4_solib_ops::create_inferior_hook (int from_tty)
 {
   struct svr4_info *info;
 
@@ -3592,10 +3592,10 @@ lp64_svr4_solib_ops::fetch_link_map_offsets () const
 }
 
 
-/* Return the DSO matching OBJFILE or nullptr if none can be found.  */
+/* Return one solib matching OBJFILE or nullptr if none can be found.  */
 
-static const solib *
-find_solib_for_objfile (struct objfile *objfile)
+static solib *
+find_one_solib_for_objfile (struct objfile *objfile)
 {
   if (objfile == nullptr)
     return nullptr;
@@ -3605,11 +3605,7 @@ find_solib_for_objfile (struct objfile *objfile)
   if (objfile->separate_debug_objfile_backlink != nullptr)
     objfile = objfile->separate_debug_objfile_backlink;
 
-  for (const solib &so : current_program_space->solibs ())
-    if (so.objfile == objfile)
-      return &so;
-
-  return nullptr;
+  return objfile->first_solib ();
 }
 
 /* Return the address of the r_debug object for the namespace containing
@@ -3639,7 +3635,7 @@ find_debug_base_for_solib (const solib *solib)
    stay in the same namespace as that file.  Otherwise, we only consider
    the initial namespace.  */
 
-void
+bool
 svr4_solib_ops::iterate_over_objfiles_in_search_order
   (iterate_over_objfiles_in_search_order_cb_ftype cb,
    objfile *current_objfile) const
@@ -3665,7 +3661,7 @@ svr4_solib_ops::iterate_over_objfiles_in_search_order
 	{
 	  checked_current_objfile = true;
 	  if (cb (current_objfile))
-	    return;
+	    return true;
 	}
     }
 
@@ -3676,7 +3672,7 @@ svr4_solib_ops::iterate_over_objfiles_in_search_order
      r_debug object, defaulting to the initial namespace.  */
   svr4_info *info = get_svr4_info (current_program_space);
   CORE_ADDR default_debug_base = this->default_debug_base (info);
-  const solib *curr_solib = find_solib_for_objfile (current_objfile);
+  const solib *curr_solib = find_one_solib_for_objfile (current_objfile);
   CORE_ADDR debug_base = find_debug_base_for_solib (curr_solib);
   if (debug_base == 0)
     debug_base = default_debug_base;
@@ -3686,13 +3682,25 @@ svr4_solib_ops::iterate_over_objfiles_in_search_order
       if (checked_current_objfile && &objfile == current_objfile)
 	continue;
 
-      /* Try to determine the namespace into which objfile was loaded.
+      const solib *solib = find_one_solib_for_objfile (&objfile);
+      CORE_ADDR solib_base = 0;
 
-	 If we fail, e.g. for manually added symbol files or for the main
-	 executable, we assume that they were added to the initial
-	 namespace.  */
-      const solib *solib = find_solib_for_objfile (&objfile);
-      CORE_ADDR solib_base = find_debug_base_for_solib (solib);
+      if (solib != nullptr)
+	{
+	  /* Skip objfiles provided by other solib_ops.  */
+	  if (&solib->ops () != this)
+	    continue;
+
+	  solib_base = find_debug_base_for_solib (solib);
+	}
+      else if (&objfile != m_pspace->symfile_object_file)
+	{
+	  /* Objfiles not associated to an solib_ops are handled in the
+	     program_space method.  The main objfile is an exception to this,
+	     because it is part of the SVR4 domain.  */
+	  continue;
+	}
+
       if (solib_base == 0)
 	solib_base = default_debug_base;
 
@@ -3701,8 +3709,10 @@ svr4_solib_ops::iterate_over_objfiles_in_search_order
 	continue;
 
       if (cb (&objfile))
-	return;
+	return true;
     }
+
+  return false;
 }
 
 std::optional<CORE_ADDR>

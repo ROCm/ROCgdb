@@ -346,6 +346,8 @@ static reloc_howto_type elf_howto_table[] =
 	 bfd_elf_xtensa_reloc, "R_XTENSA_NDIFF16", false, 0, 0xffff, false),
   HOWTO (R_XTENSA_NDIFF32, 0, 4, 32, false, 0, complain_overflow_bitfield,
 	 bfd_elf_xtensa_reloc, "R_XTENSA_NDIFF32", false, 0, 0xffffffff, false),
+  HOWTO (R_XTENSA_PDIFF_ULEB128, 0, 0, 0, false, 0, complain_overflow_dont,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_PDIFF_ULEB128", false, 0, 0, false),
 };
 
 #if DEBUG_GEN_RELOC
@@ -408,6 +410,10 @@ elf_xtensa_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
     case BFD_RELOC_XTENSA_NDIFF32:
       TRACE ("BFD_RELOC_XTENSA_NDIFF32");
       return &elf_howto_table[(unsigned) R_XTENSA_NDIFF32 ];
+
+    case BFD_RELOC_XTENSA_PDIFF_ULEB128:
+      TRACE ("BFD_RELOC_XTENSA_PDIFF_ULEB128");
+      return &elf_howto_table[(unsigned) R_XTENSA_PDIFF_ULEB128 ];
 
     case BFD_RELOC_XTENSA_RTLD:
       TRACE ("BFD_RELOC_XTENSA_RTLD");
@@ -1891,6 +1897,7 @@ elf_xtensa_do_reloc (reloc_howto_type *howto,
     case R_XTENSA_NDIFF8:
     case R_XTENSA_NDIFF16:
     case R_XTENSA_NDIFF32:
+    case R_XTENSA_PDIFF_ULEB128:
     case R_XTENSA_TLS_FUNC:
     case R_XTENSA_TLS_ARG:
     case R_XTENSA_TLS_CALL:
@@ -9649,6 +9656,79 @@ relax_section (bfd *abfd, asection *sec, struct bfd_link_info *link_info)
 	    {
 	      r_reloc new_reloc;
 	      target_sec = translate_reloc (&r_rel, &new_reloc, target_sec);
+
+	      if (r_type == R_XTENSA_PDIFF_ULEB128)
+		{
+		  bfd_vma diff_value, new_end_offset;
+		  unsigned int len, new_len = 0;
+		  bfd_byte *p, *q, *endp;
+
+		  if (sec_size <= old_source_offset)
+		    {
+		      (*link_info->callbacks->reloc_dangerous)
+			(link_info, _("invalid relocation address"),
+			 abfd, sec, old_source_offset);
+		      goto error_return;
+		    }
+
+		  /* The value is read back from the section contents, so
+		     it must not be trusted to be a well formed uleb128
+		     that ends before the end of the section.  */
+		  p = q = &contents[old_source_offset];
+		  diff_value = _bfd_safe_read_leb128 (abfd, &q, false,
+						      contents + sec_size);
+		  len = q - p;
+		  if (len == 0 || (q[-1] & 0x80) != 0)
+		    {
+		      (*link_info->callbacks->reloc_dangerous)
+			(link_info, _("invalid uleb128 difference"),
+			 abfd, sec, old_source_offset);
+		      goto error_return;
+		    }
+
+		  new_end_offset = offset_with_removed_text_map
+		    (&target_relax_info->action_list,
+		     r_rel.target_offset + diff_value);
+		  if (new_end_offset < new_reloc.target_offset)
+		    {
+		      (*link_info->callbacks->reloc_dangerous)
+			(link_info, _("uleb128 difference is negative after "
+				      "relaxation"),
+			 abfd, sec, old_source_offset);
+		      goto error_return;
+		    }
+		  diff_value = new_end_offset - new_reloc.target_offset;
+
+		  /* Byte length of the minimal uleb128 encoding of
+		     DIFF_VALUE.  */
+		  for (bfd_vma v = diff_value; new_len++, v >>= 7; )
+		    ;
+		  /* The assembler reserves one spare byte for these
+		     differences, but reject growth that still needs more
+		     bytes than were emitted.  */
+		  if (new_len > len)
+		    {
+		      (*link_info->callbacks->reloc_dangerous)
+			(link_info, _("uleb128 difference overflows after "
+				      "relaxation"),
+			 abfd, sec, old_source_offset);
+		      goto error_return;
+		    }
+
+		  /* Rewrite the difference in place, always using the
+		     number of bytes the assembler emitted so that the size
+		     of this section does not change.  A value that now
+		     needs fewer bytes is padded with uleb128 zeroes.  */
+		  endp = p + len - 1;
+		  memset (p, 0x80, len - 1);
+		  *endp = 0;
+		  p = _bfd_write_unsigned_leb128 (p, endp, diff_value);
+		  BFD_ASSERT (p);
+		  if (--p < endp)
+		    *p |= 0x80;
+
+		  pin_contents (sec, contents);
+		}
 
 	      if (r_type == R_XTENSA_DIFF8
 		  || r_type == R_XTENSA_DIFF16

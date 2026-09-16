@@ -770,48 +770,48 @@ bmi_test ()
 {
   /* start bmi_test.  */
   /* Using GDB, load these values onto registers for testing.
-     eax = 0x1312
+     r12 = 0x1312
      ebx = 0xdeadbeef
      ecx = 0xcafeface
      edx = 0x2337
      r8  = 0
      this way it's easy to confirm we're undoing things correctly.  */
 
-  asm volatile ("andn %rbx, %rax, %r8");
-  asm volatile ("andn %ebx, %eax, %ecx");
+  asm volatile ("andn %rbx, %r12, %r8");
+  asm volatile ("andn %ebx, %r12d, %ecx");
 
   asm volatile ("bextr %rcx, %r8, %rbx");
   asm volatile ("bextr %ebx, %ecx, %r8d");
 
-  asm volatile ("blsi %rax, %rcx");
+  asm volatile ("blsi %r12, %rcx");
   asm volatile ("blsi %ebx, %r8d");
 
   asm volatile ("blsmsk %r8, %rbx");
-  asm volatile ("blsmsk %eax, %eax");
+  asm volatile ("blsmsk %r12d, %r12d");
 
   asm volatile ("blsr %rcx, %rbx");
   asm volatile ("blsr %r8d, %ecx");
 
-  asm volatile ("lzcnt %rax, %r8");
-  asm volatile ("lzcnt %eax, %ecx");
-  asm volatile ("lzcnt %ax, %bx");
+  asm volatile ("lzcnt %r12, %r8");
+  asm volatile ("lzcnt %r12d, %ecx");
+  asm volatile ("lzcnt %r12w, %bx");
 
-  asm volatile ("tzcnt %rax, %rcx");
-  asm volatile ("tzcnt %eax, %ebx");
-  asm volatile ("tzcnt %ax, %r8w");
+  asm volatile ("tzcnt %r12, %rcx");
+  asm volatile ("tzcnt %r12d, %ebx");
+  asm volatile ("tzcnt %r12w, %r8w");
 
-  asm volatile ("mulx %eax, %ebx, %ecx");
+  asm volatile ("mulx %r12d, %ebx, %ecx");
   asm volatile ("mulx %ebx, %ecx, %ebx");
 
   asm volatile ("pdep %r8, %rcx, %rbx");
   asm volatile ("pext %edx, %ecx, %ebx");
   asm volatile ("rorx $10, %r8, %rbx");
-  asm volatile ("sarx %edx, %ebx, %eax");
-  asm volatile ("shlx %eax, %ecx, %ebx");
-  asm volatile ("shrx %r8d, %eax, %ecx");
+  asm volatile ("sarx %edx, %ebx, %r12d");
+  asm volatile ("shlx %r12d, %ecx, %ebx");
+  asm volatile ("shrx %r8d, %r12d, %ecx");
 
   asm volatile ("bzhi %edx, %ebx, %r8d");
-  asm volatile ("bzhi %rax, %rcx, %r8");
+  asm volatile ("bzhi %r12, %rcx, %r8");
 
   return 0; /* end bmi_test  */
 }

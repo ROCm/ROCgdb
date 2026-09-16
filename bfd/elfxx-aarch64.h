@@ -218,7 +218,7 @@ _bfd_aarch64_reencode_adr_imm (uint32_t, uint32_t) ATTRIBUTE_HIDDEN;
 
 extern bfd_reloc_status_type
 _bfd_aarch64_elf_put_addend (bfd *, bfd_byte *, bfd_reloc_code_real_type,
-			     reloc_howto_type *, bfd_signed_vma)
+			     reloc_howto_type *, bfd_signed_vma, bool)
 			    ATTRIBUTE_HIDDEN;
 
 extern bfd_vma

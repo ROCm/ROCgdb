@@ -2276,16 +2276,22 @@
 #define MATCH_VSM3ME_VV 0x82002077
 #define MASK_VSM3ME_VV 0xfe00707f
 /* Zvabd instructions.  */
-#define MATCH_VABS_V 0x48082057
-#define MASK_VABS_V 0xfc0ff07f
-#define MATCH_VABD_VV 0x44002057
+#define MATCH_VABD_VV 0x54002057
 #define MASK_VABD_VV 0xfc00707f
-#define MATCH_VABDU_VV 0x4c002057
+#define MATCH_VABD_VX 0x54006057
+#define MASK_VABD_VX 0xfc00707f
+#define MATCH_VABDU_VV 0x58002057
 #define MASK_VABDU_VV 0xfc00707f
-#define MATCH_VWABDA_VV 0x54002057
+#define MATCH_VABDU_VX 0x58006057
+#define MASK_VABDU_VX 0xfc00707f
+#define MATCH_VWABDA_VV 0xf4000057
 #define MASK_VWABDA_VV 0xfc00707f
-#define MATCH_VWABDAU_VV 0x58002057
+#define MATCH_VWABDA_VX 0xf4004057
+#define MASK_VWABDA_VX 0xfc00707f
+#define MATCH_VWABDAU_VV 0xf8000057
 #define MASK_VWABDAU_VV 0xfc00707f
+#define MATCH_VWABDAU_VX 0xf8004057
+#define MASK_VWABDAU_VX 0xfc00707f
 /* Zcb instructions.  */
 #define MATCH_C_LBU 0x8000
 #define MASK_C_LBU 0xfc03
@@ -2601,6 +2607,44 @@
 #define MASK_VFQWBDOTA_ALT_VV 0xfc00707f
 #define MATCH_VFBDOTA_VV 0xac001077
 #define MASK_VFBDOTA_VV 0xfc00707f
+/* Vendor-specific (Andes) XAndesBFHCvt instructions.  */
+#define MATCH_NDS_FCVT_S_BF16 0x1405b
+#define MASK_NDS_FCVT_S_BF16 0xfe0ff07f
+#define MATCH_NDS_FCVT_BF16_S 0x1c05b
+#define MASK_NDS_FCVT_BF16_S 0xfe0ff07f
+/* Vendor-specific (Andes) XAndesVBFHCvt instructions.  */
+#define MATCH_NDS_VFWCVT_S_BF16 0x405b
+#define MASK_NDS_VFWCVT_S_BF16 0xfe0ff07f
+#define MATCH_NDS_VFNCVT_BF16_S 0xc05b
+#define MASK_NDS_VFNCVT_BF16_S 0xfe0ff07f
+/* Vendor-specific (Andes) XAndesVSIntLoad instructions.  */
+#define MATCH_NDS_VLN8_V 0x420405b
+#define MASK_NDS_VLN8_V 0xfdf0707f
+#define MATCH_NDS_VLNU8_V 0x430405b
+#define MASK_NDS_VLNU8_V 0xfdf0707f
+/* Vendor-specific (Andes) XAndesVPackFPH instructions.  */
+#define MATCH_NDS_VFPMADT_VF 0x800405b
+#define MASK_NDS_VFPMADT_VF 0xfc00707f
+#define MATCH_NDS_VFPMADB_VF 0xc00405b
+#define MASK_NDS_VFPMADB_VF 0xfc00707f
+/* Vendor-specific (Andes) XAndesVDot instructions.  */
+#define MATCH_NDS_VD4DOTS_VV 0x1000405b
+#define MASK_NDS_VD4DOTS_VV 0xfc00707f
+#define MATCH_NDS_VD4DOTU_VV 0x1c00405b
+#define MASK_NDS_VD4DOTU_VV 0xfc00707f
+#define MATCH_NDS_VD4DOTSU_VV 0x1400405b
+#define MASK_NDS_VD4DOTSU_VV 0xfc00707f
+/* Vendor-specific (Andes) XAndesVSIntH instructions.  */
+#define MATCH_NDS_VLE4_V 0x600405b
+#define MASK_NDS_VLE4_V 0xfff0707f
+#define MATCH_NDS_VFWCVT_F_N_V 0x2405b
+#define MASK_NDS_VFWCVT_F_N_V 0xfc0ff07f
+#define MATCH_NDS_VFWCVT_F_NU_V 0x2c05b
+#define MASK_NDS_VFWCVT_F_NU_V 0xfc0ff07f
+#define MATCH_NDS_VFWCVT_F_B_V 0x3405b
+#define MASK_NDS_VFWCVT_F_B_V 0xfc0ff07f
+#define MATCH_NDS_VFWCVT_F_BU_V 0x3c05b
+#define MASK_NDS_VFWCVT_F_BU_V 0xfc0ff07f
 /* Vendor-specific (CORE-V) Xcvmac instructions.  */
 #define MATCH_CV_MAC       0x9000302b
 #define MASK_CV_MAC        0xfe00707f
@@ -3798,6 +3842,64 @@
 #define MASK_TH_VMAQASU_VX 0xfc00707f
 #define MATCH_TH_VMAQAUS_VX 0x9c00600b
 #define MASK_TH_VMAQAUS_VX 0xfc00707f
+/* Vendor-specific (XuanTie) XXTVarith instructions.  */
+#define MATCH_XT_VILE_VV 0xda00600b
+#define MASK_XT_VILE_VV 0xfe00707f
+#define MATCH_XT_VILO_VV 0xf200600b
+#define MASK_XT_VILO_VV 0xfe00707f
+#define MATCH_XT_VGMULXOR_VV 0x7a00600b
+#define MASK_XT_VGMULXOR_VV 0xfe00707f
+#define MATCH_XT_VCRCFOLDR_VV 0xfa00600b
+#define MASK_XT_VCRCFOLDR_VV 0xfe00707f
+#define MATCH_XT_VCRCFOLDN_VV 0xfe00600b
+#define MASK_XT_VCRCFOLDN_VV 0xfe00707f
+/* Vendor-specific (XuanTie) XXTVcoder instructions.  */
+#define MATCH_XT_VABD_VV 0xc000700b
+#define MASK_XT_VABD_VV 0xfc00707f
+#define MATCH_XT_VABD_VX 0xc400700b
+#define MASK_XT_VABD_VX 0xfc00707f
+#define MATCH_XT_VABD_VI 0xc800700b
+#define MASK_XT_VABD_VI 0xfc00707f
+#define MATCH_XT_VABA_VV 0xd800700b
+#define MASK_XT_VABA_VV 0xfc00707f
+#define MATCH_XT_VABA_VX 0xdc00700b
+#define MASK_XT_VABA_VX 0xfc00707f
+#define MATCH_XT_VABA_VI 0xcc00700b
+#define MASK_XT_VABA_VI 0xfc00707f
+#define MATCH_XT_VABDU_VV 0xa000600b
+#define MASK_XT_VABDU_VV 0xfc00707f
+#define MATCH_XT_VABDU_VX 0xa400600b
+#define MASK_XT_VABDU_VX 0xfc00707f
+#define MATCH_XT_VABDU_VI 0xa800600b
+#define MASK_XT_VABDU_VI 0xfc00707f
+#define MATCH_XT_VABAU_VV 0xb000600b
+#define MASK_XT_VABAU_VV 0xfc00707f
+#define MATCH_XT_VABAU_VX 0xb400600b
+#define MASK_XT_VABAU_VX 0xfc00707f
+#define MATCH_XT_VABAU_VI 0xac00600b
+#define MASK_XT_VABAU_VI 0xfc00707f
+#define MATCH_XT_VWABD_VV 0xe000700b
+#define MASK_XT_VWABD_VV 0xfc00707f
+#define MATCH_XT_VWABD_VX 0xe400700b
+#define MASK_XT_VWABD_VX 0xfc00707f
+#define MATCH_XT_VWABA_VV 0xf000700b
+#define MASK_XT_VWABA_VV 0xfc00707f
+#define MATCH_XT_VWABA_VX 0xf400700b
+#define MASK_XT_VWABA_VX 0xfc00707f
+#define MATCH_XT_VWABAU_VV 0xf800700b
+#define MASK_XT_VWABAU_VV 0xfc00707f
+#define MATCH_XT_VWABAU_VX 0xfc00700b
+#define MASK_XT_VWABAU_VX 0xfc00707f
+#define MATCH_XT_VWABDU_VV 0xe800700b
+#define MASK_XT_VWABDU_VV 0xfc00707f
+#define MATCH_XT_VWABDU_VX 0xec00700b
+#define MASK_XT_VWABDU_VX 0xfc00707f
+#define MATCH_XT_VFABD_VV 0xd000700b
+#define MASK_XT_VFABD_VV 0xfc00707f
+#define MATCH_XT_VFABD_VF 0xd400700b
+#define MASK_XT_VFABD_VF 0xfc00707f
+#define MATCH_XT_VABSMAX_VV 0x6800700b
+#define MASK_XT_VABSMAX_VV 0xfc00707f
 /* Vendor-specific (Ventana Microsystems) XVentanaCondOps instructions */
 #define MATCH_VT_MASKC 0x607b
 #define MASK_VT_MASKC 0xfe00707f
@@ -5043,6 +5145,28 @@ DECLARE_INSN(sd_rl, MATCH_SDR, MASK_SDR)
 DECLARE_INSN(sctrclr, MATCH_SCTRCLR, MASK_SCTRCLR)
 /* Smrnmi instruction */
 DECLARE_INSN(mnret, MATCH_MNRET, MASK_MNRET)
+/* Vendor-specific (Andes) XAndesBFHCvt instructions.  */
+DECLARE_INSN(nds_fcvt_s_bf16, MATCH_NDS_FCVT_S_BF16, MASK_NDS_FCVT_S_BF16)
+DECLARE_INSN(nds_fcvt_bf16_s, MATCH_NDS_FCVT_BF16_S, MASK_NDS_FCVT_BF16_S)
+/* Vendor-specific (Andes) XAndesVBFHCvt instructions.  */
+DECLARE_INSN(nds_vfwcvt_s_bf16, MATCH_NDS_VFWCVT_S_BF16, MASK_NDS_VFWCVT_S_BF16)
+DECLARE_INSN(nds_vfncvt_bf16_s, MATCH_NDS_VFNCVT_BF16_S, MASK_NDS_VFNCVT_BF16_S)
+/* Vendor-specific (Andes) XAndesVSIntLoad instructions.  */
+DECLARE_INSN(nds_vln8_v, MATCH_NDS_VLN8_V, MASK_NDS_VLN8_V)
+DECLARE_INSN(nds_vlnu8_v, MATCH_NDS_VLNU8_V, MASK_NDS_VLNU8_V)
+/* Vendor-specific (Andes) XAndesVPackFPH instructions.  */
+DECLARE_INSN(nds_vfpmadt_vf, MATCH_NDS_VFPMADT_VF, MASK_NDS_VFPMADT_VF)
+DECLARE_INSN(nds_vfpmadb_vf, MATCH_NDS_VFPMADB_VF, MASK_NDS_VFPMADB_VF)
+/* Vendor-specific (Andes) XAndesVDot instructions.  */
+DECLARE_INSN(nds_vd4dots_vv, MATCH_NDS_VD4DOTS_VV, MASK_NDS_VD4DOTS_VV)
+DECLARE_INSN(nds_vd4dotu_vv, MATCH_NDS_VD4DOTU_VV, MASK_NDS_VD4DOTU_VV)
+DECLARE_INSN(nds_vd4dotsu_vv, MATCH_NDS_VD4DOTSU_VV, MASK_NDS_VD4DOTSU_VV)
+/* Vendor-specific (Andes) XAndesVSIntH instructions.  */
+DECLARE_INSN(nds_vle4_v, MATCH_NDS_VLE4_V, MASK_NDS_VLE4_V)
+DECLARE_INSN(nds_vfwcvt_f_n_v, MATCH_NDS_VFWCVT_F_N_V, MASK_NDS_VFWCVT_F_N_V)
+DECLARE_INSN(nds_vfwcvt_f_nu_v, MATCH_NDS_VFWCVT_F_NU_V, MASK_NDS_VFWCVT_F_NU_V)
+DECLARE_INSN(nds_vfwcvt_f_b_v, MATCH_NDS_VFWCVT_F_B_V, MASK_NDS_VFWCVT_F_B_V)
+DECLARE_INSN(nds_vfwcvt_f_bu_v, MATCH_NDS_VFWCVT_F_BU_V, MASK_NDS_VFWCVT_F_BU_V)
 /* Vendor-specific (T-Head) XTheadBa instructions.  */
 DECLARE_INSN(th_addsl, MATCH_TH_ADDSL, MASK_TH_ADDSL)
 /* Vendor-specific (T-Head) XTheadBb instructions.  */

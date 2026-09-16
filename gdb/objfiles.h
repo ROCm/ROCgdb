@@ -450,6 +450,27 @@ public:
   /* Return the program space associated with this objfile.  */
   program_space *pspace () { return m_pspace; }
 
+  /* Return the first solib associated to this objfile, or nullptr if there are
+     none.  */
+  solib *first_solib ()
+  { return !m_solibs.empty () ? m_solibs[0] : nullptr; }
+
+  /* Add SOLIB to the list of solibs associated to this objfile.  */
+  void add_solib (solib &solib)
+  {
+    gdb_assert (std::find (m_solibs.begin (), m_solibs.end (), &solib)
+		== m_solibs.end ());
+    m_solibs.emplace_back (&solib);
+  }
+
+  /* Remove SOLIB from the list of solibs associated to this objfile.  */
+  void remove_solib (solib &solib)
+  {
+    auto it = std::find (m_solibs.begin (), m_solibs.end (), &solib);
+    gdb_assert (it != m_solibs.end ());
+    m_solibs.erase (it);
+  }
+
   using compunit_symtab_iterator
     = owning_intrusive_list<compunit_symtab>::iterator;
   using compunit_symtab_range = iterator_range<compunit_symtab_iterator>;
@@ -701,6 +722,10 @@ private:
   /* The program space associated with this objfile.  */
 
   program_space *m_pspace;
+
+  /* The solibs associated to this objfile.  This is a 1 objfile to N solibs
+     relationship (see solib.c for details).  */
+  std::vector<solib *> m_solibs;
 
 public:
   /* The object file's BFD.  Can be null if the objfile contains only

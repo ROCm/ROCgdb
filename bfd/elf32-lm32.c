@@ -2084,7 +2084,8 @@ lm32_elf_late_size_sections (struct bfd_link_info *info)
     return false;
 
   /* Allocate .rofixup section.  */
-  if (IS_FDPIC (info->output_bfd))
+  if (IS_FDPIC (info->output_bfd)
+      && lm32fdpic_fixup32_section (info) != NULL)
     {
       struct weak_symbol_list *list_start = NULL, *list_end = NULL;
       int rgot_weak_count = 0;

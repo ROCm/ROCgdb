@@ -30,5 +30,13 @@ if [istarget loongarch*-*-*] {
 	    "attr-ifunc-4" \
 	    "attr-ifunc-4.out" \
 	] \
+	[list \
+	    "Run static-ifunc" \
+	    "-static" \
+	    "" \
+	    {static-ifunc.c} \
+	    "static-ifunc" \
+	    "static-ifunc.out" \
+	] \
     ]
 }

@@ -432,6 +432,13 @@ run_dump_test "rel32-reject"
 run_dump_test "rel32-reject-pie"
 run_dump_test "pie-bind-locally"
 
+if {[istarget "arm*-*-eabi*"]} {
+    run_dump_test "tls-nobits-vma-static"
+    run_dump_test "tls-nobits-vma-exec"
+    run_dump_test "tls-nobits-vma-pie"
+    run_dump_test "tls-nobits-vma-dynamic"
+}
+
 # Exclude non-ARM-EABI targets.
 
 if { [istarget "arm*-*-netbsd*"] } {

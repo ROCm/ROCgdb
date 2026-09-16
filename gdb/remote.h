@@ -50,7 +50,7 @@ extern bool remote_debug;
    store it in *BUF.  Resize *BUF using xrealloc if necessary to hold
    the result, and update *SIZEOF_BUF.  If FOREVER, wait forever
    rather than timing out; this is used (in synchronous mode) to wait
-   for a target that is is executing user code to stop.  */
+   for a target that is executing user code to stop.  */
 
 extern void getpkt (remote_target *remote,
 		    char **buf, long *sizeof_buf, int forever);

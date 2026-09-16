@@ -42,6 +42,13 @@ proc set_breakpoint_on_gcd_function {} {
 
     set lineno [gdb_get_line_number "gdb break here"]
     gdb_test "set breakpoint pending on"
+
+    # PR testsuite/34534
+    set compiler [find_g++]
+    set res [catch {exec $compiler -Wl,--version} output]
+    if {[regexp "Solaris Link Editors" $output]} {
+	setup_xfail "*-*-solaris2*"
+    }
     gdb_test "b $lineno" \
 	[multi_line \
 	     "^No compiled code for line $lineno in the current file\\." \

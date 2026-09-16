@@ -42,7 +42,7 @@ gld${EMULATION_NAME}_before_parse (void)
    standard library.  */
 
 static void
-gld${EMULATION_NAME}_create_output_section_statements (void)
+gld${EMULATION_NAME}_after_open_output (void)
 {
   lang_add_input_file ("imagelib", lang_input_file_is_l_enum, NULL);
   lang_add_input_file ("starlet", lang_input_file_is_l_enum, NULL);
@@ -229,7 +229,7 @@ fi
 
 LDEMUL_PLACE_ORPHAN=vms_place_orphan
 LDEMUL_BEFORE_PARSE=gld"$EMULATION_NAME"_before_parse
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=gld"$EMULATION_NAME"_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=gld"$EMULATION_NAME"_after_open_output
 LDEMUL_FIND_POTENTIAL_LIBRARIES=gld"$EMULATION_NAME"_find_potential_libraries
 LDEMUL_OPEN_DYNAMIC_ARCHIVE=gld"$EMULATION_NAME"_open_dynamic_archive
 LDEMUL_ADD_OPTIONS=gld"$EMULATION_NAME"_add_options

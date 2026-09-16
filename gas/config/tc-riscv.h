@@ -135,7 +135,7 @@ extern void riscv_elf_section_change_hook (void);
 extern void riscv_elf_final_processing (void);
 
 /* Adjust debug_line after relaxation.  */
-#define DWARF2_USE_FIXED_ADVANCE_PC 1
+#define DWARF2_USE_FIXED_ADVANCE_PC(FROM, TO) 1
 
 #define md_parse_name(name, exp, mode, c) \
   riscv_parse_name (name, exp, mode)

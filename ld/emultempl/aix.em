@@ -1630,7 +1630,7 @@ fi
 fragment <<EOF
 
 static void
-gld${EMULATION_NAME}_create_output_section_statements (void)
+gld${EMULATION_NAME}_after_open_output (void)
 {
   if ((bfd_get_flavour (link_info.output_bfd) != bfd_target_xcoff_flavour))
     return;
@@ -1767,7 +1767,7 @@ LDEMUL_SET_OUTPUT_ARCH=gld${EMULATION_NAME}_set_output_arch
 LDEMUL_CHOOSE_TARGET=gld${EMULATION_NAME}_choose_target
 LDEMUL_BEFORE_ALLOCATION=gld${EMULATION_NAME}_before_allocation
 LDEMUL_AFTER_ALLOCATION=gld${EMULATION_NAME}_after_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=gld${EMULATION_NAME}_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=gld${EMULATION_NAME}_after_open_output
 LDEMUL_OPEN_DYNAMIC_ARCHIVE=gld${EMULATION_NAME}_open_dynamic_archive
 LDEMUL_PARSE_ARGS=gld${EMULATION_NAME}_parse_args
 LDEMUL_ADD_OPTIONS=gld${EMULATION_NAME}_add_options

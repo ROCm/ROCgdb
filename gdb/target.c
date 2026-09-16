@@ -2483,7 +2483,7 @@ target_pre_inferior ()
   if (!gdbarch_has_global_solist (current_inferior ()->arch ()))
     {
       no_shared_libraries (current_program_space);
-      current_program_space->unset_solib_ops ();
+      current_program_space->clear_solib_ops ();
 
       invalidate_target_mem_regions ();
 
@@ -4341,7 +4341,7 @@ target_dump_thread_in_corefile (ptid_t ptid)
 
 
 
-static char targ_desc[] =
+static char const targ_desc[] =
 "Names of targets and files being debugged.\nShows the entire \
 stack of targets currently in use (including the exec-file,\n\
 core-file, and process, if any), as well as the symbol file name.";

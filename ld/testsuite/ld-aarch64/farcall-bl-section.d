@@ -17,7 +17,7 @@ Disassembly of section .text:
 
 .* <__bar_veneer>:
     1018:	90040010 	adrp	x16, 8001000 <bar>
-    101c:	91000210 	add	x16, x16, #0x0
+    101c:	d503201f 	nop
     1020:	d61f0200 	br	x16
     1024:	00000000 	udf	#0
 

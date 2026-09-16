@@ -83,6 +83,7 @@ static bfd_vma opd_entry_value
 #define elf_backend_plt_not_loaded 1
 #define elf_backend_got_header_size 8
 #define elf_backend_want_dynrelro 1
+#define elf_backend_want_stub_bfd 1
 #define elf_backend_can_gc_sections 1
 #define elf_backend_can_refcount 1
 #define elf_backend_rela_normal 1
@@ -3692,15 +3693,11 @@ create_linkage_sections (bfd *dynobj, struct bfd_link_info *info)
   return true;
 }
 
-/* Satisfy the ELF linker by filling in some fields in our fake bfd.  */
-
 bool
 ppc64_elf_init_stub_bfd (struct bfd_link_info *info,
 			 struct ppc64_elf_params *params)
 {
   struct ppc_link_hash_table *htab;
-
-  elf_elfheader (params->stub_bfd)->e_ident[EI_CLASS] = ELFCLASS64;
 
 /* Always hook our dynamic sections into the first bfd, which is the
    linker created stub bfd.  This ensures that the GOT header is at

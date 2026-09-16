@@ -16272,7 +16272,8 @@ is_none_reloc (Filedata * filedata, unsigned int reloc_type)
 	      || reloc_type == 59  /* R_XTENSA_PDIFF32.  */
 	      || reloc_type == 60  /* R_XTENSA_NDIFF8.  */
 	      || reloc_type == 61  /* R_XTENSA_NDIFF16.  */
-	      || reloc_type == 62  /* R_XTENSA_NDIFF32.  */);
+	      || reloc_type == 62  /* R_XTENSA_NDIFF32.  */
+	      || reloc_type == 63  /* R_XTENSA_PDIFF_ULEB128.  */);
     }
   return false;
 }
@@ -16598,24 +16599,13 @@ static bool
 uncompress_section_contents (bool              is_zstd,
 			     unsigned char **  buffer,
 			     uint64_t          uncompressed_size,
-			     uint64_t *        size,
-			     uint64_t          file_size)
+			     uint64_t *        size)
 {
   uint64_t compressed_size = *size;
   unsigned char *compressed_buffer = *buffer;
   unsigned char *uncompressed_buffer = NULL;
   z_stream strm;
   int rc;
-
-  /* Similar to bfd_section_size_insane() in the BFD library we expect an
-     upper limit of ~10x compression.  Any compression larger than that is
-     thought to be due to fuzzing of the compression header.  */
-  if (uncompressed_size > file_size * 10)
-    {
-      error (_("Uncompressed section size is suspiciously large: 0x%" PRIu64 "\n"),
-	       uncompressed_size);
-      goto fail;
-    }
 
   uncompressed_buffer = xmalloc (uncompressed_size);
 
@@ -16733,7 +16723,7 @@ maybe_expand_or_relocate_section (Elf_Internal_Shdr *  section,
       if (uncompressed_size)
 	{
 	  if (uncompress_section_contents (is_zstd, &start, uncompressed_size,
-					   &new_size, filedata->file_size))
+					   &new_size))
 	    {
 	      *decomp_buf = start;
 	      section_size = new_size;
@@ -17316,7 +17306,7 @@ load_specific_debug_section (enum dwarf_section_display_enum  debug,
       if (uncompressed_size)
 	{
 	  if (uncompress_section_contents (is_zstd, &start, uncompressed_size,
-					   &size, filedata->file_size))
+					   &size))
 	    {
 	      /* Free the compressed buffer, update the section buffer
 		 and the section size if uncompress is successful.  */
@@ -18371,10 +18361,14 @@ display_avr_gnu_attribute (const unsigned char * p,
 			   unsigned int tag,
 			   const unsigned char * const end)
 {
-  if (tag == Tag_GNU_AVR_VTABLE_AS)
-    {
-      unsigned int val;
+  unsigned int val;
 
+  switch (tag)
+    {
+    default:
+      break;
+
+    case Tag_GNU_AVR_VTABLE_AS:
       printf ("  Tag_GNU_AVR_VTABLE_AS (%u): ", tag);
       if (p == end)
 	{
@@ -18384,6 +18378,28 @@ display_avr_gnu_attribute (const unsigned char * p,
 
       READ_ULEB (val, p, end);
       printf ("%d (%s)\n", val, avr_tag_vtable_as_name (val));
+      return p;
+
+    case Tag_GNU_AVR_BITS_DOUBLE:
+      printf ("  Tag_GNU_AVR_BITS_DOUBLE (%u): ", tag);
+      if (p == end)
+	printf (_("<corrupt>\n"));
+      else
+	{
+	  READ_ULEB (val, p, end);
+	  printf ("%d\n", val);
+	}
+      return p;
+
+    case Tag_GNU_AVR_BITS_LONG_DOUBLE:
+      printf ("  Tag_GNU_AVR_BITS_LONG_DOUBLE (%u): ", tag);
+      if (p == end)
+	printf (_("<corrupt>\n"));
+      else
+	{
+	  READ_ULEB (val, p, end);
+	  printf ("%d\n", val);
+	}
       return p;
     }
 
@@ -21499,6 +21515,12 @@ get_note_type (Filedata * filedata, unsigned e_type)
 	return _("NT_ARC_V2 (ARC HS accumulator/extra registers)");
       case NT_RISCV_CSR:
 	return _("NT_RISCV_CSR (RISC-V control and status registers)");
+      case NT_RISCV_VECTOR:
+	return _("NT_RISCV_VECTOR (RISC-V vector registers)");
+      case NT_RISCV_TAGGED_ADDR_CTRL:
+	return _("NT_RISCV_TAGGED_ADDR_CTRL (RISC-V tagged address control (prctl()))");
+      case NT_RISCV_USER_CFI:
+	return _("NT_RISCV_USER_CFI (RISC-V shadow stack state)");
       case NT_PSTATUS:
 	return _("NT_PSTATUS (pstatus structure)");
       case NT_FPREGS:

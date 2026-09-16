@@ -42,7 +42,7 @@ static int elf32_crx_relocate_section
 static bool elf32_crx_relax_section
   (bfd *, asection *, struct bfd_link_info *, bool *);
 static bfd_byte * elf32_crx_get_relocated_section_contents
-  (bfd *, struct bfd_link_info *, struct bfd_link_order *,
+  (bfd *, struct bfd_link_info *, const struct bfd_link_order *,
    bfd_byte *, bool, asymbol **);
 
 /* crx_reloc_map array maps BFD relocation enum into a CRGAS relocation type.  */
@@ -717,12 +717,13 @@ elf32_crx_relax_delete_bytes (struct bfd_link_info *link_info, bfd *abfd,
    which uses elf32_crx_relocate_section.  */
 
 static bfd_byte *
-elf32_crx_get_relocated_section_contents (bfd *output_bfd,
-					  struct bfd_link_info *link_info,
-					  struct bfd_link_order *link_order,
-					  bfd_byte *data,
-					  bool relocatable,
-					  asymbol **symbols)
+elf32_crx_get_relocated_section_contents
+  (bfd *output_bfd,
+   struct bfd_link_info *link_info,
+   const struct bfd_link_order *link_order,
+   bfd_byte *data,
+   bool relocatable,
+   asymbol **symbols)
 {
   Elf_Internal_Shdr *symtab_hdr;
   asection *input_section = link_order->u.indirect.section;

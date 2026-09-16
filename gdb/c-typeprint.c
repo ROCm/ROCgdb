@@ -336,7 +336,7 @@ cp_type_print_method_args (struct type *mtype,
    any typename for TYPE and show its details.
    SHOW is always zero on recursive calls.
 
-   NEED_POST_SPACE is non-zero when a space will be be needed
+   NEED_POST_SPACE is non-zero when a space will be needed
    between a trailing qualifier and a field, variable, or function
    name.  */
 

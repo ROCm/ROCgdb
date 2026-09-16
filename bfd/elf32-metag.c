@@ -1041,6 +1041,14 @@ elf_metag_link_hash_table_create (bfd *abfd)
   return &htab->etab.root;
 }
 
+void
+elf_metag_init_stub_bfd (struct bfd_link_info *info, bfd *stub_bfd)
+{
+  struct elf_metag_link_hash_table *htab = metag_link_hash_table (info);
+
+  htab->stub_bfd = stub_bfd;
+}
+
 /* Section name for stubs is the associated section name plus this
    string.  */
 #define STUB_SUFFIX ".stub"
@@ -3639,11 +3647,10 @@ instruction.  */
 /* See elf32-hppa.c and elf64-ppc.c.  */
 
 bool
-elf_metag_size_stubs(bfd *output_bfd, bfd *stub_bfd,
-		     struct bfd_link_info *info,
-		     bfd_signed_vma group_size,
-		     asection * (*add_stub_section) (const char *, asection *),
-		     void (*layout_sections_again) (void))
+elf_metag_size_stubs (struct bfd_link_info *info,
+		      bfd_signed_vma group_size,
+		      asection * (*add_stub_section) (const char *, asection *),
+		      void (*layout_sections_again) (void))
 {
   bfd_size_type stub_group_size;
   bool stubs_always_before_branch;
@@ -3651,7 +3658,6 @@ elf_metag_size_stubs(bfd *output_bfd, bfd *stub_bfd,
   struct elf_metag_link_hash_table *htab = metag_link_hash_table (info);
 
   /* Stash our params away.  */
-  htab->stub_bfd = stub_bfd;
   htab->add_stub_section = add_stub_section;
   htab->layout_sections_again = layout_sections_again;
   stubs_always_before_branch = group_size < 0;
@@ -3675,7 +3681,7 @@ elf_metag_size_stubs(bfd *output_bfd, bfd *stub_bfd,
 
   group_sections (htab, stub_group_size, stubs_always_before_branch);
 
-  switch (get_local_syms (output_bfd, info->input_bfds, info))
+  switch (get_local_syms (info->output_bfd, info->input_bfds, info))
     {
     default:
       if (htab->all_local_syms)
@@ -3728,7 +3734,7 @@ elf_metag_size_stubs(bfd *output_bfd, bfd *stub_bfd,
 	      /* If this section is a link-once section that will be
 		 discarded, then don't create any stubs.  */
 	      if (section->output_section == NULL
-		  || section->output_section->owner != output_bfd)
+		  || section->output_section->owner != info->output_bfd)
 		continue;
 
 	      /* Get the relocs.  */
@@ -4016,6 +4022,7 @@ elf_metag_plt_sym_val (bfd_vma i, const asection *plt,
 #define elf_backend_plt_readonly		1
 #define elf_backend_dtrel_excludes_plt		1
 #define elf_backend_want_dynrelro		1
+#define elf_backend_want_stub_bfd		1
 
 #define bfd_elf32_bfd_reloc_type_lookup	metag_reloc_type_lookup
 #define bfd_elf32_bfd_reloc_name_lookup	metag_reloc_name_lookup

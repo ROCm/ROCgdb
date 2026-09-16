@@ -174,7 +174,7 @@ gdb_test_multiple "stepi" "$test_message" {
 
 # stepi backward out of a function call
 
-# When testing stepi, we dont want to infinitely step if we're not moving
+# When testing stepi, we don't want to infinitely step if we're not moving
 # so we store the starting PC, in case we land on the same line as above
 set start_pc [get_hexadecimal_valueof "\$pc" 0 "get PC at start"]
 set get_pc_count 0

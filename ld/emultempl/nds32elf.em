@@ -39,7 +39,7 @@ static int load_store_relax = 1;
    variables. Do this after the output has been created, but before
    inputs are read.  */
 static void
-nds32_elf_create_output_section_statements (void)
+nds32_elf_after_open_output (void)
 {
   if (strstr (bfd_get_target (link_info.output_bfd), "nds32") == NULL)
     {
@@ -48,6 +48,8 @@ nds32_elf_create_output_section_statements (void)
 	       "linking %s binaries\n"), "NDS32");
       return;
     }
+
+  ldelf_after_open_output ();
 
   bfd_elf32_nds32_set_target_option (&link_info,
 				     relax_fp_as_gp,
@@ -210,4 +212,4 @@ PARSE_AND_LIST_ARGS_CASES='
 LDEMUL_AFTER_OPEN=nds32_elf_after_open
 LDEMUL_AFTER_PARSE=nds32_elf_after_parse
 LDEMUL_AFTER_ALLOCATION=nds32_elf_after_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=nds32_elf_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=nds32_elf_after_open_output

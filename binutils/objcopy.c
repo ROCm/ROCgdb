@@ -1134,7 +1134,7 @@ add_specific_symbols (const char *filename, htab_t htab, char **buffer_p)
   unsigned int line_count;
 
   size = get_file_size (filename);
-  if (size == 0)
+  if (size < 1)
     {
       status = 1;
       return;

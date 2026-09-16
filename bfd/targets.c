@@ -482,7 +482,7 @@ BFD_JUMP_TABLE macros.
 .  bfd_byte *
 .	(*_bfd_get_relocated_section_contents) (bfd *,
 .					        struct bfd_link_info *,
-.					        struct bfd_link_order *,
+.					        const struct bfd_link_order *,
 .					        bfd_byte *, bool,
 .					        struct bfd_symbol **);
 .

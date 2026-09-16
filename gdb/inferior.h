@@ -216,16 +216,27 @@ extern void setup_inferior (int from_tty);
    means (running, attaching, connecting, et cetera).  The target
    should be stopped.
 
-   If SET_PSPACE_SOLIB_OPS is true, initialize the program space's solib
-   provider using the current inferior's architecture.  */
+   If PUSH_ARCH_SOLIB_OPS is true, add an solib_ops to the current inferior's
+   program space provider using the current inferior's architecture.  */
 
-extern void post_create_inferior (int from_tty, bool set_pspace_solib_ops);
+extern void post_create_inferior (int from_tty, bool push_arch_solib_ops);
 
 extern void attach_command (const char *, int);
 
 extern void registers_info (const char *, bool);
 
 extern void continue_1 (bool all_threads_p);
+
+/* For use only when non_stop is true.  Proceed all threads in every
+   inferior.  */
+
+extern void proceed_all_threads ();
+
+/* For use only when non_stop is true.  If THREAD is stopped, and is in an
+   inferior that has_execution then switch to THREAD, clear its proceed
+   status, and proceed the thread.  */
+
+extern void proceed_one_thread (thread_info &thread);
 
 extern void interrupt_target_1 (bool all_threads);
 

@@ -77,23 +77,23 @@ while getopts vhao:g:d:-: OPT; do
     fi
 
     case "$OPT" in
-        a)
-            case "$(uname -s)" in
-                Linux)
-                    use_coredump_filter="off"
-                    dump_excluded_mappings="on"
-                    ;;
-            esac
-            ;;
-        o)
-            prefix=$OPTARG
-            ;;
-        g)
-            gdb_binary="$OPTARG"
-            ;;
-        d)
-            data_directory="$OPTARG"
-            ;;
+	a)
+	    case "$(uname -s)" in
+		Linux)
+		    use_coredump_filter="off"
+		    dump_excluded_mappings="on"
+		    ;;
+	    esac
+	    ;;
+	o)
+	    prefix=$OPTARG
+	    ;;
+	g)
+	    gdb_binary="$OPTARG"
+	    ;;
+	d)
+	    data_directory="$OPTARG"
+	    ;;
 	h | help)
 	    print_help
 	    exit 0
@@ -107,14 +107,14 @@ while getopts vhao:g:d:-: OPT; do
 	    print_try_help 1>&2
 	    exit 2
 	    ;;
-        *)
+	*)
 	    # Unknown single character options are handled by the \?
 	    # case above.  This is formatted to match the error
 	    # getopts gives for an unknown single character option.
 	    echo "$0: illegal option -- $OPT" 1>&2
 	    print_try_help 1>&2
 	    exit 2
-            ;;
+	    ;;
     esac
 done
 
@@ -175,10 +175,10 @@ do
 	# `</dev/null' to avoid touching interactive terminal if it is
 	# available but not accessible as GDB would get stopped on SIGTTIN.
 	"$gdb_binary" </dev/null \
-            ${data_directory:+--data-directory "$data_directory"} \
+	    ${data_directory:+--data-directory "$data_directory"} \
 	    --nx --batch --readnever -iex 'set debuginfod enabled off' \
 	    -ex "set pagination off" -ex "set height 0" -ex "set width 0" \
-            ${use_coredump_filter:+-ex "set use-coredump-filter ${use_coredump_filter}"} \
+	    ${use_coredump_filter:+-ex "set use-coredump-filter ${use_coredump_filter}"} \
 	    ${dump_excluded_mappings:+-ex "set dump-excluded-mappings ${dump_excluded_mappings}"} \
 	    -ex "attach $pid" -ex "gcore $prefix.$pid" -ex detach -ex quit
 

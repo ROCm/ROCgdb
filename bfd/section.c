@@ -1765,23 +1765,7 @@ bfd_section_size_insane (bfd *abfd, asection *sec)
 
   if (sec->compress_status == DECOMPRESS_SECTION_ZSTD
       || sec->compress_status == DECOMPRESS_SECTION_ZLIB)
-    {
-      /* PR26946, PR28834: Sanity check compress header uncompressed
-	 size against the original file size, and check that the
-	 compressed section can be read from file.  We choose an
-	 arbitrary uncompressed size of 10x the file size, rather than
-	 a compress ratio.  The reason being that compiling
-	 "int aaa..a;" with "a" repeated enough times can result in
-	 compression ratios without limit for .debug_str, whereas such
-	 a file will usually also have the enormous symbol
-	 uncompressed in .symtab.  */
-     if (size / 10 > filesize)
-       {
-	 bfd_set_error (bfd_error_bad_value);
-	 return true;
-       }
-     size = sec->compressed_size;
-    }
+    size = sec->compressed_size;
 
   if ((ufile_ptr) sec->filepos > filesize || size > filesize - sec->filepos)
     {

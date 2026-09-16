@@ -4,8 +4,6 @@
 #target: [check_shared_lib_support]
 #notarget: [is_underscore_target]
 # _Zrm1XS_ doesn't have an extra underscore.
-#xfail: tic6x-*-*
-# tic6x DYN lacks dynamic sections for this testcase
 
 #...
 VERS_2\.0 A 0+ 

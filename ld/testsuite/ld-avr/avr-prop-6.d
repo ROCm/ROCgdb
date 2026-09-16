@@ -1,6 +1,6 @@
 #name: AVR .avr.prop, single .align sym at end of section test.
 #as: -mavrxmega2 -mlink-relax
-#ld: -mavrxmega2 --relax
+#ld: -mavrxmega2 --relax --no-elide-rjmp0
 #source: avr-prop-6.s
 #objdump: -S
 #target: avr-*-*

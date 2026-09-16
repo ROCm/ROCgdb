@@ -237,20 +237,6 @@ mi_cmd_exec_jump (const char *args, const char *const *argv, int argc)
 }
 
 static void
-proceed_thread (struct thread_info *thread, int pid)
-{
-  if (thread->state () != THREAD_STOPPED)
-    return;
-
-  if (pid != 0 && thread->ptid.pid () != pid)
-    return;
-
-  switch_to_thread (thread);
-  clear_proceed_status (0);
-  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT);
-}
-
-static void
 exec_continue (const char *const *argv, int argc)
 {
   prepare_execution_command (current_inferior ()->top_target (), mi_async_p ());
@@ -263,24 +249,25 @@ exec_continue (const char *const *argv, int argc)
 	 all threads in all inferiors, we need to iterate over
 	 threads.
 
-	 See comment on infcmd.c:proceed_thread_callback for rationale.  */
+	 See comment in infcmd.c:proceed_all_threads for rationale.  */
       if (current_context->all || current_context->thread_group != -1)
 	{
 	  scoped_restore_current_thread restore_thread;
 	  scoped_disable_commit_resumed disable_commit_resumed
 	    ("MI continue all threads in non-stop");
-	  int pid = 0;
 
+	  inferior *inf = nullptr;
 	  if (!current_context->all)
-	    {
-	      struct inferior *inf
-		= find_inferior_id (current_context->thread_group);
+	    inf = find_inferior_id (current_context->thread_group);
 
-	      pid = inf->pid;
+	  if (inf == nullptr)
+	    proceed_all_threads ();
+	  else
+	    {
+	      for (thread_info &thread : inf->threads ())
+		proceed_one_thread (thread);
 	    }
 
-	  for (auto &thread : all_threads ())
-	    proceed_thread (&thread, pid);
 	  disable_commit_resumed.reset_and_commit ();
 	}
       else
@@ -360,12 +347,9 @@ mi_cmd_exec_interrupt (const char *command, const char *const *argv, int argc)
       scoped_disable_commit_resumed disable_commit_resumed
 	("interrupting all threads of thread group");
 
-      for (auto &thread : all_threads ())
+      for (thread_info &thread : inf->threads ())
 	{
 	  if (thread.state () != THREAD_RUNNING)
-	    continue;
-
-	  if (thread.ptid.pid () != inf->pid)
 	    continue;
 
 	  target_stop (thread.ptid);
@@ -394,7 +378,7 @@ run_one_inferior (inferior *inf, bool start_p)
 
   if (inf->pid != 0)
     {
-      thread_info *tp = any_thread_of_inferior (inf);
+      thread_info *tp = any_non_exited_thread_of_inferior (inf);
       if (tp == NULL)
 	error (_("Inferior has no threads."));
 
@@ -650,14 +634,13 @@ print_one_inferior (struct inferior *inferior, bool recurse,
 
       if (inferior->pid != 0)
 	{
-	  for (auto &ti : all_threads ())
-	    if (ti.ptid.pid () == inferior->pid)
-	      {
-		int core = target_core_of_thread (ti.ptid);
+	  for (thread_info &ti : inferior->threads ())
+	    {
+	      int core = target_core_of_thread (ti.ptid);
 
-		if (core != -1)
-		  cores.insert (core);
-	      }
+	      if (core != -1)
+		cores.insert (core);
+	    }
 	}
 
       if (!cores.empty ())
@@ -1100,7 +1083,6 @@ output_register (const frame_info_ptr &frame, int regnum, int format,
   struct ui_out *uiout = current_uiout;
   value *val
     = value_of_register (regnum, get_next_frame_sentinel_okay (frame));
-  struct value_print_options opts;
 
   if (skip_unavailable && !val->entirely_available ())
     return;
@@ -1116,9 +1098,9 @@ output_register (const frame_info_ptr &frame, int regnum, int format,
 
   string_file stb;
 
-  get_formatted_print_options (&opts, format);
+  value_print_options opts = get_formatted_print_options (format);
   opts.deref_ref = true;
-  common_val_print (val, &stb, 0, &opts, current_language);
+  common_val_print (val, &stb, 0, opts, current_language);
   uiout->field_stream ("value", stb);
 }
 
@@ -1187,7 +1169,6 @@ mi_cmd_data_evaluate_expression (const char *command, const char *const *argv,
 				 int argc)
 {
   struct value *val;
-  struct value_print_options opts;
   struct ui_out *uiout = current_uiout;
 
   if (argc != 1)
@@ -1201,9 +1182,9 @@ mi_cmd_data_evaluate_expression (const char *command, const char *const *argv,
   string_file stb;
 
   /* Print the result of the expression evaluation.  */
-  get_user_print_options (&opts);
+  value_print_options opts = get_user_print_options ();
   opts.deref_ref = false;
-  common_val_print (val, &stb, 0, &opts, current_language);
+  common_val_print (val, &stb, 0, opts, current_language);
 
   uiout->field_stream ("value", stb);
 }
@@ -1358,7 +1339,6 @@ mi_cmd_data_read_memory (const char *command, const char *const *argv,
       {
 	int col;
 	int col_byte;
-	struct value_print_options print_opts;
 
 	ui_out_emit_tuple tuple_emitter (uiout);
 	uiout->field_aspace_and_addr ("addr", gdbarch, addr + row_byte);
@@ -1366,7 +1346,8 @@ mi_cmd_data_read_memory (const char *command, const char *const *argv,
 	   row_byte); */
 	{
 	  ui_out_emit_list list_data_emitter (uiout, "data");
-	  get_formatted_print_options (&print_opts, word_format);
+	  value_print_options print_opts
+	    = get_formatted_print_options (word_format);
 	  for (col = 0, col_byte = row_byte;
 	       col < nr_cols;
 	       col++, col_byte += word_size)
@@ -1379,7 +1360,7 @@ mi_cmd_data_read_memory (const char *command, const char *const *argv,
 		{
 		  stream.clear ();
 		  print_scalar_formatted (&mbuf[col_byte], word_type,
-					  &print_opts, word_asize, &stream);
+					  print_opts, word_asize, &stream);
 		  uiout->field_stream (NULL, stream);
 		}
 	    }
@@ -1786,7 +1767,7 @@ mi_cmd_remove_inferior (const char *command, const char *const *argv, int argc)
 
       set_current_inferior (new_inferior);
       if (new_inferior->pid != 0)
-	tp = any_thread_of_inferior (new_inferior);
+	tp = any_non_exited_thread_of_inferior (new_inferior);
       if (tp != NULL)
 	switch_to_thread (tp);
       else
@@ -2551,21 +2532,17 @@ print_variable_or_computed (const char *expression, enum print_values values)
       uiout->field_stream ("type", stb);
       if (mi_simple_type_p (val->type ()))
 	{
-	  struct value_print_options opts;
-
-	  get_no_prettyformat_print_options (&opts);
+	  value_print_options opts = get_no_prettyformat_print_options ();
 	  opts.deref_ref = true;
-	  common_val_print (val, &stb, 0, &opts, current_language);
+	  common_val_print (val, &stb, 0, opts, current_language);
 	  uiout->field_stream ("value", stb);
 	}
       break;
     case PRINT_ALL_VALUES:
       {
-	struct value_print_options opts;
-
-	get_no_prettyformat_print_options (&opts);
+	value_print_options opts = get_no_prettyformat_print_options ();
 	opts.deref_ref = true;
-	common_val_print (val, &stb, 0, &opts, current_language);
+	common_val_print (val, &stb, 0, opts, current_language);
 	uiout->field_stream ("value", stb);
       }
       break;

@@ -457,7 +457,6 @@ print_frame_arg (const frame_print_options &fp_opts,
 	  try
 	    {
 	      const struct language_defn *language;
-	      struct value_print_options vp_opts;
 
 	      /* Avoid value_print because it will deref ref parameters.  We
 		 just want to print their addresses.  Print ??? for args whose
@@ -474,7 +473,8 @@ print_frame_arg (const frame_print_options &fp_opts,
 	      else
 		language = current_language;
 
-	      get_no_prettyformat_print_options (&vp_opts);
+	      value_print_options vp_opts
+		= get_no_prettyformat_print_options ();
 	      vp_opts.deref_ref = true;
 	      vp_opts.raw = fp_opts.print_raw_frame_arguments;
 
@@ -482,7 +482,7 @@ print_frame_arg (const frame_print_options &fp_opts,
 	      vp_opts.summary
 		= fp_opts.print_frame_arguments == print_frame_arguments_scalars;
 
-	      common_val_print_checked (arg->val, &stb, 2, &vp_opts, language);
+	      common_val_print_checked (arg->val, &stb, 2, vp_opts, language);
 	    }
 	  catch (const gdb_exception_error &except)
 	    {
@@ -1083,9 +1083,7 @@ do_print_frame_info (struct ui_out *uiout, const frame_print_options &fp_opts,
 						  sal.line + 1, 0);
       else
 	{
-	  struct value_print_options opts;
-
-	  get_user_print_options (&opts);
+	  const value_print_options &opts = get_user_print_options ();
 	  /* We used to do this earlier, but that is clearly
 	     wrong.  This function is used by many different
 	     parts of gdb, including normal_stop in infrun.c,
@@ -1269,7 +1267,6 @@ print_frame (struct ui_out *uiout,
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   enum language funlang = language_unknown;
-  struct value_print_options opts;
   struct symbol *func;
   std::optional <CORE_ADDR> pc;
 
@@ -1290,7 +1287,7 @@ print_frame (struct ui_out *uiout,
 	uiout->field_fmt_signed (2, ui_left, "level",
 				 frame_relative_level (frame));
       }
-    get_user_print_options (&opts);
+    const value_print_options &opts = get_user_print_options ();
     if (opts.addressprint)
       if (!sal.symtab
 	  || frame_show_address (frame, sal)

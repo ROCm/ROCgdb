@@ -1063,6 +1063,7 @@ microblaze_elf_relocate_section (struct bfd_link_info *info,
       struct elf_link_hash_entry *h;
       Elf_Internal_Sym *sym;
       asection *sec;
+      asection *sym_sec;
       const char *sym_name;
       bfd_reloc_status_type r = bfd_reloc_ok;
       const char *errmsg = NULL;
@@ -1084,6 +1085,41 @@ microblaze_elf_relocate_section (struct bfd_link_info *info,
 
       howto = microblaze_elf_howto_table[r_type];
       r_symndx = ELF32_R_SYM (rel->r_info);
+
+      /* Find the section defining the symbol, so that a relocation
+	 against a section discarded by linkonce or comdat handling can
+	 be neutralised.  The symbol is resolved separately in each of
+	 the two branches below, so this has to be done here to cover
+	 both the final and the relocatable link.  sym_hashes is NULL for
+	 an object with no global symbols, so it is checked as
+	 RELOC_FOR_GLOBAL_SYMBOL does, this running before that macro is
+	 reached.  */
+      sym_sec = NULL;
+      if (r_symndx < symtab_hdr->sh_info)
+	sym_sec = local_sections[r_symndx];
+      else if (sym_hashes != NULL)
+	{
+	  struct elf_link_hash_entry *hd;
+
+	  hd = sym_hashes[r_symndx - symtab_hdr->sh_info];
+	  while (hd != NULL
+		 && (hd->root.type == bfd_link_hash_indirect
+		     || hd->root.type == bfd_link_hash_warning))
+	    hd = (struct elf_link_hash_entry *) hd->root.u.i.link;
+
+	  if (hd != NULL
+	      && (hd->root.type == bfd_link_hash_defined
+		  || hd->root.type == bfd_link_hash_defweak))
+	    sym_sec = hd->root.u.def.section;
+	}
+
+      /* howto is NULL for R_MICROBLAZE_TEXTREL_32_LO, which has no entry
+	 in microblaze_elf_howto_raw, and _bfd_clear_contents reads
+	 howto->size.  elf32-ppc.c guards its howto pointers the same way.  */
+      if (sym_sec != NULL && discarded_section (sym_sec) && howto != NULL)
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, 1, relend, R_MICROBLAZE_NONE,
+					 howto, 0, contents);
 
       if (bfd_link_relocatable (info))
 	{
@@ -1862,11 +1898,13 @@ microblaze_elf_relax_section (bfd *abfd,
   /* Get symbols for this section.  */
   symtab_hdr = &elf_symtab_hdr (abfd);
   isymbuf = (Elf_Internal_Sym *) symtab_hdr->contents;
-  symcount =  symtab_hdr->sh_size / sizeof (Elf32_External_Sym);
-  if (isymbuf == NULL)
-    isymbuf = bfd_elf_get_elf_syms (abfd, symtab_hdr, symcount,
-				    0, NULL, NULL, NULL);
-  BFD_ASSERT (isymbuf != NULL);
+  if (isymbuf == NULL && symtab_hdr->sh_info != 0)
+    {
+      isymbuf = bfd_elf_get_elf_syms (abfd, symtab_hdr, symtab_hdr->sh_info,
+				      0, NULL, NULL, NULL);
+      if (isymbuf == NULL)
+	goto error_return;
+    }
 
   internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL, link_info->keep_memory);
   if (internal_relocs == NULL)
@@ -2084,6 +2122,9 @@ microblaze_elf_relax_section (bfd *abfd,
 	  irelscanend = irelocs + o->reloc_count;
 	  for (irelscan = irelocs; irelscan < irelscanend; irelscan++)
 	    {
+	      if (ELF32_R_SYM (irelscan->r_info) >= symtab_hdr->sh_info)
+		continue;
+
 	      if ((ELF32_R_TYPE (irelscan->r_info) == (int) R_MICROBLAZE_32)
 		  || (ELF32_R_TYPE (irelscan->r_info) == (int) R_MICROBLAZE_32_NONE))
 		{
@@ -2285,7 +2326,7 @@ microblaze_elf_relax_section (bfd *abfd,
 	}
 
       /* Adjust the local symbols defined in this section.  */
-      isymend = isymbuf + symtab_hdr->sh_info;
+      isymend = PTR_ADD (isymbuf, symtab_hdr->sh_info);
       for (isym = isymbuf; isym < isymend; isym++)
 	{
 	  if (isym->st_shndx == shndx)
@@ -2297,7 +2338,6 @@ microblaze_elf_relax_section (bfd *abfd,
 	}
 
       /* Now adjust the global symbols defined in this section.  */
-      isym = isymbuf + symtab_hdr->sh_info;
       symcount =  (symtab_hdr->sh_size / sizeof (Elf32_External_Sym)) - symtab_hdr->sh_info;
       for (sym_index = 0; sym_index < symcount; sym_index++)
 	{

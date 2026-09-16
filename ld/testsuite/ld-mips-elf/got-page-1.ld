@@ -1,6 +1,7 @@
 SECTIONS
 {
   . = 0x80000;
+  .rodata : { *(.rodata .rodata.*) }
   .interp : { *(.interp) }
   .hash : { *(.hash) }
   .dynsym : { *(.dynsym) }

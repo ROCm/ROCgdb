@@ -19,7 +19,7 @@ Section Headers:
  +\[[ 0-9]+\] .tdata +PROGBITS +[0-9a-f]+ [0-9a-f]+ [0-9a-f]+ 00 +WAT +0 +0 +4
  +\[[ 0-9]+\] .dynamic +DYNAMIC +[0-9a-f]+ [0-9a-f]+ [0-9a-f]+ 08 +WA +4 +0 +4
  +\[[ 0-9]+\] .got +PROGBITS +[0-9a-f]+ [0-9a-f]+ [0-9a-f]+ 00 +WA +0 +0 +4
- +\[[ 0-9]+\] .xtensa.info +NOTE +0+ .*
+ +\[[ 0-9]+\] .xtensa.info +NOTE +[0-9a-f]+ .*
  +\[[ 0-9]+\] .xt.lit +PROGBITS +0+ .*
  +\[[ 0-9]+\] .xt.prop +PROGBITS +0+ .*
  +\[[ 0-9]+\] .symtab +.*

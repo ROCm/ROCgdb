@@ -143,12 +143,11 @@ static int
 vlscm_print_value_smob (SCM self, SCM port, scm_print_state *pstate)
 {
   value_smob *v_smob = (value_smob *) SCM_SMOB_DATA (self);
-  struct value_print_options opts;
 
   if (pstate->writingp)
     gdbscm_printf (port, "#<%s ", value_smob_name);
 
-  get_user_print_options (&opts);
+  value_print_options opts = get_user_print_options ();
   opts.deref_ref = false;
 
   /* pstate->writingp = zero if invoked by display/~A, and nonzero if
@@ -162,7 +161,7 @@ vlscm_print_value_smob (SCM self, SCM port, scm_print_state *pstate)
     {
       string_file stb;
 
-      common_val_print (v_smob->value, &stb, 0, &opts, current_language);
+      common_val_print (v_smob->value, &stb, 0, opts, current_language);
       scm_puts (stb.c_str (), port);
     }
   catch (const gdb_exception &except)
@@ -1266,9 +1265,8 @@ gdbscm_value_print (SCM self)
   value_smob *v_smob
     = vlscm_get_value_smob_arg_unsafe (self, SCM_ARG1, FUNC_NAME);
   struct value *value = v_smob->value;
-  struct value_print_options opts;
 
-  get_user_print_options (&opts);
+  value_print_options opts = get_user_print_options ();
   opts.deref_ref = false;
 
   string_file stb;
@@ -1276,7 +1274,7 @@ gdbscm_value_print (SCM self)
   gdbscm_gdb_exception exc {};
   try
     {
-      common_val_print (value, &stb, 0, &opts, current_language);
+      common_val_print (value, &stb, 0, opts, current_language);
     }
   catch (const gdb_exception &except)
     {

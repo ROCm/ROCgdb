@@ -33,7 +33,6 @@ fragment <<EOF
 /* The fake file and it's corresponding section meant to hold
    the linker stubs if needed.  */
 
-static lang_input_statement_type *stub_file;
 static asection *avr_stub_section;
 
 /* Variables set by the command-line parameters and transferred
@@ -43,6 +42,7 @@ static bool avr_no_stubs = false;
 static bool avr_debug_relax = false;
 static bool avr_debug_stubs = false;
 static bool avr_replace_call_ret_sequences = true;
+static bool avr_elide_rjmp0 = true;
 static bfd_vma avr_pc_wrap_around = 0x10000000;
 
 /* Transfers information to the bfd frontend.  */
@@ -57,7 +57,8 @@ avr_elf_set_global_bfd_parameters (void)
 			  avr_debug_stubs,
 			  avr_debug_relax,
 			  avr_pc_wrap_around,
-			  avr_replace_call_ret_sequences);
+			  avr_replace_call_ret_sequences,
+			  avr_elide_rjmp0);
 }
 
 
@@ -110,7 +111,7 @@ avr_elf_${EMULATION_NAME}_before_allocation (void)
    fake input file to hold the stub section and generate the section itself.  */
 
 static void
-avr_elf_create_output_section_statements (void)
+avr_elf_after_open_output (void)
 {
   flagword flags;
 
@@ -121,20 +122,7 @@ avr_elf_create_output_section_statements (void)
       return;
     }
 
-  stub_file = lang_add_input_file ("linker stubs",
-				   lang_input_file_is_fake_enum,
-				   NULL);
-
-  stub_file->the_bfd = bfd_create ("linker stubs", link_info.output_bfd);
-  if (stub_file->the_bfd == NULL
-      || !bfd_set_arch_mach (stub_file->the_bfd,
-			     bfd_get_arch (link_info.output_bfd),
-			     bfd_get_mach (link_info.output_bfd)))
-    {
-      einfo (_("%X%P: can not create stub BFD: %E\n"));
-      return;
-    }
-  stub_file->the_bfd->flags |= BFD_LINKER_CREATED;
+  ldelf_after_open_output ();
 
   /* Now we add the stub section.  */
 
@@ -143,18 +131,10 @@ avr_elf_create_output_section_statements (void)
   avr_stub_section = bfd_make_section_anyway_with_flags (stub_file->the_bfd,
 							 ".trampolines",
 							 flags);
-  if (avr_stub_section == NULL)
-    goto err_ret;
-
-  avr_stub_section->alignment_power = 1;
-
-  ldlang_add_file (stub_file);
-
-  return;
-
- err_ret:
-  einfo (_("%X%P: can not make stub section: %E\n"));
-  return;
+  if (avr_stub_section != NULL)
+    avr_stub_section->alignment_power = 1;
+  else
+    einfo (_("%X%P: can not make stub section: %E\n"));
 }
 
 /* Re-calculates the size of the stubs so that we won't waste space.  */
@@ -235,6 +215,8 @@ EOF
 PARSE_AND_LIST_LONGOPTS='
   { "no-call-ret-replacement", no_argument,
     NULL, OPTION_NO_CALL_RET_REPLACEMENT},
+  { "no-elide-rjmp0", no_argument,
+    NULL, OPTION_NO_ELIDE_RJMP0},
   { "pmem-wrap-around", required_argument,
     NULL, OPTION_PMEM_WRAP_AROUND},
   { "no-stubs", no_argument,
@@ -258,6 +240,14 @@ PARSE_AND_LIST_OPTIONS='
 		   "  substitute two immediately following call/ret\n"
 		   "                              "
 		   "  instructions by a single jump instruction.\n"
+		   "                              "
+		   "  This option disables this optimization.\n"));
+  fprintf (file, _("  --no-elide-rjmp0   "
+		   "The relaxation machine normally will\n"
+		   "                              "
+		   "  remove an rjmp instruction when it targets a\n"
+		   "                              "
+		   "  global symbol at a jump offset of 0.\n"
 		   "                              "
 		   "  This option disables this optimization.\n"));
   fprintf (file, _("  --no-stubs                  "
@@ -310,6 +300,13 @@ PARSE_AND_LIST_ARGS_CASES='
 	avr_replace_call_ret_sequences = false;
       }
       break;
+
+    case OPTION_NO_ELIDE_RJMP0:
+      {
+	/* This variable is defined in the bfd library.  */
+	avr_elide_rjmp0 = false;
+      }
+      break;
 '
 
 #
@@ -318,5 +315,5 @@ PARSE_AND_LIST_ARGS_CASES='
 LDEMUL_BEFORE_PARSE=avr_elf_before_parse
 LDEMUL_BEFORE_ALLOCATION=avr_elf_${EMULATION_NAME}_before_allocation
 LDEMUL_AFTER_ALLOCATION=avr_elf_after_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=avr_elf_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=avr_elf_after_open_output
 LDEMUL_FINISH=avr_finish

@@ -44,6 +44,6 @@ Disassembly of section .text:
 
 0*400020 <__farbranch_veneer>:
 [ ]*400020:	900fe010 	adrp	x16, 20000000 <farbranch>
-[ ]*400024:	91000210 	add	x16, x16, #0x0
+[ ]*400024:	d503201f 	nop
 [ ]*400028:	d61f0200 	br	x16
 	...

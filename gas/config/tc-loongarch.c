@@ -1556,12 +1556,12 @@ md_number_to_chars (char *buf, valueT val, int n)
   number_to_chars_littleendian (buf, val, n);
 }
 
-/* The location from which a PC relative jump should be calculated,
-   given a PC relative reloc.  */
+/* On LoongArch, PC-relative offset are relative to the start of the
+   current instruction.  */
 long
 md_pcrel_from (fixS *fixP ATTRIBUTE_UNUSED)
 {
-  return 0;
+  return fixP->fx_frag->fr_address + fixP->fx_where;
 }
 
 /* Return 1 if the relocation must be forced, and 0 if the relocation
@@ -1589,22 +1589,6 @@ loongarch_force_relocation (struct fix *fixp)
     }
   return generic_force_reloc (fixp);
 }
-
-/* If subsy of BFD_RELOC32/64 and PC in same segment, and without relax
-   or PC at start of subsy or with relax but sub_symbol_segment not in
-   SEC_CODE, we generate 32/64_PCREL.  */
-bool
-loongarch_force_relocation_sub_local (fixS *fixp, segT sec ATTRIBUTE_UNUSED)
-{
-  return !(LARCH_opts.thin_add_sub
-	   && (fixp->fx_r_type == BFD_RELOC_32
-	       || fixp->fx_r_type == BFD_RELOC_64)
-	   && (!LARCH_opts.relax
-	       || (S_GET_VALUE (fixp->fx_subsy)
-		   == fixp->fx_frag->fr_address + fixp->fx_where)
-	       || (S_GET_SEGMENT (fixp->fx_subsy)->flags & SEC_CODE) == 0));
-}
-
 
 /* Whether emit relocations for label subtraction in same section.  */
 static bool
@@ -1644,6 +1628,55 @@ _loongarch_force_relocation_sub_same (segT sec,
   return true;
 }
 
+/* Don't allow the generic code to convert fixups involving the
+   subtraction of a label in the current section to pc-relative.  */
+bool
+loongarch_force_relocation_sub_local (fixS *fixp, segT sec ATTRIBUTE_UNUSED)
+{
+  if (! LARCH_opts.thin_add_sub)
+    return true;
+
+  /* LoongArch only has R_LARCH_32/64_PCREL.  BFD_RELOC_32/64 can change
+     to R_LARCH_32/64_PCREL.  */
+  if (fixp->fx_r_type != BFD_RELOC_32
+      && fixp->fx_r_type != BFD_RELOC_64)
+    return true;
+
+  fragS *pcfrag = fixp->fx_frag;
+  fragS *subfrag = symbol_get_frag (fixp->fx_subsy);
+  segT subsec = S_GET_SEGMENT (fixp->fx_subsy);
+
+  if (! _loongarch_force_relocation_sub_same (subsec, pcfrag, subfrag))
+    return false;
+
+  return true;
+}
+
+/* Use DW_LNS_fixed_advance_pc with relocations if there are linker-relaxable
+   instructions between from and to symbols. Otherwise, use special opcodes
+   without relocations.  */
+bool
+loongarch_fixed_advance_pc (symbolS *from, symbolS *to)
+{
+  segT fromsec = S_GET_SEGMENT (from);
+  segT tosec = S_GET_SEGMENT (to);
+  if (fromsec != tosec)
+    return false;
+  fragS *fromfrag = symbol_get_frag (from);
+  fragS *tofrag = symbol_get_frag (to);
+  return _loongarch_force_relocation_sub_same (fromsec, fromfrag, tofrag);
+}
+
+/* Similar to loongarch_fixed_advance_pc, used for frag.  */
+bool
+loongarch_fixed_advance_pc_frag (fragS *frag)
+{
+  expressionS *exp = symbol_get_value_expression (frag->fr_symbol);
+
+  if (exp->X_op != O_subtract)
+    return false;
+  return loongarch_fixed_advance_pc (exp->X_op_symbol, exp->X_add_symbol);
+}
 
 /* Postpone text-section label subtraction calculation until linking,
    since linker relaxations might change the deltas.  */
@@ -1758,39 +1791,8 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       fix_reloc_insn (fixP, (bfd_vma)stack_top, buf);
       break;
 
-    /* LARCH only has R_LARCH_64/32, not has R_LARCH_24/16/8.
-       For BFD_RELOC_64/32, if fx_addsy and fx_subsy not null, wer need
-       generate BFD_RELOC_LARCH_ADD64/32 and BFD_RELOC_LARCH_SUB64/32 here.
-       Then will parse howto table bfd_reloc_code_real_type to generate
-       R_LARCH_ADD64/32 and R_LARCH_SUB64/32 reloc at tc_gen_reloc function.
-       If only fx_addsy not null, skip here directly, then generate
-       R_LARCH_64/32.
-
-       For BFD_RELOC_24/16/8, if fx_addsy and fx_subsy not null, wer need
-       generate BFD_RELOC_LARCH_ADD24/16/8 and BFD_RELOC_LARCH_SUB24/16/8 here.
-       Then will parse howto table bfd_reloc_code_real_type to generate
-       R_LARCH_ADD24/16/8 and R_LARCH_SUB24/16/8 reloc at tc_gen_reloc
-       function. If only fx_addsy not null, we generate
-       BFD_RELOC_LARCH_ADD24/16/8 only, then generate R_LARCH_24/16/8.
-       To avoid R_LARCH_ADDxx add extra value, we write 0 first
-       (use md_number_to_chars (buf, 0, fixP->fx_size)).  */
     case BFD_RELOC_64:
     case BFD_RELOC_32:
-      if (fixP->fx_pcrel)
-	{
-	  switch (fixP->fx_r_type)
-	    {
-	    case BFD_RELOC_64:
-	      fixP->fx_r_type = BFD_RELOC_64_PCREL;
-	      break;
-	    case BFD_RELOC_32:
-	      fixP->fx_r_type = BFD_RELOC_32_PCREL;
-	      break;
-	    default:
-	      break;
-	    }
-	}
-
       /* If symbol in .eh_frame the address may be adjusted, and contents of
 	 .eh_frame will be adjusted, so use pc-relative relocation for FDE
 	 initial location.
@@ -1807,33 +1809,65 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	  fixP->fx_subsy = NULL;
 	  break;
 	}
-
-      if (fixP->fx_addsy && fixP->fx_subsy)
+      else if (fixP->fx_pcrel && LARCH_opts.thin_add_sub)
 	{
-	  fixP->fx_next = xmemdup (fixP, sizeof (*fixP), sizeof (*fixP));
-	  fixP->fx_next->fx_addsy = fixP->fx_subsy;
-	  fixP->fx_next->fx_subsy = NULL;
-	  fixP->fx_next->fx_offset = 0;
-	  fixP->fx_subsy = NULL;
-
 	  switch (fixP->fx_r_type)
 	    {
 	    case BFD_RELOC_64:
-	      fixP->fx_r_type = BFD_RELOC_LARCH_ADD64;
-	      fixP->fx_next->fx_r_type = BFD_RELOC_LARCH_SUB64;
+	      fixP->fx_r_type = BFD_RELOC_64_PCREL;
 	      break;
 	    case BFD_RELOC_32:
-	      fixP->fx_r_type = BFD_RELOC_LARCH_ADD32;
-	      fixP->fx_next->fx_r_type = BFD_RELOC_LARCH_SUB32;
+	      fixP->fx_r_type = BFD_RELOC_32_PCREL;
 	      break;
 	    default:
 	      break;
 	    }
+	}
+      else
+	{
+	  /* For .long 0x2eef - 1b, fx_addsy is set to NULL in fixup_segment.
+	     If fx_addsy and fx_subsy both is NULL, no need to emit relocations.
+	     If fx_sybsy is not NULL, fake up a local symbol in the absolute
+	     section, just as fixup_segment dose for fx_pcrel relocations.  */
+	  if (fixP->fx_addsy == NULL
+	      && fixP->fx_subsy != NULL)
+	    fixP->fx_addsy = abs_section_sym;
 
-	  md_number_to_chars (buf, 0, fixP->fx_size);
+	  /* For .4byte/.8byte symbol, fx_addsy is not NULL, fx_subsy is NULL.
+	     Not need to enter this if branch, just emit R_LARCH_32/64 directly.
+	     BFD_RELOC_32/64 -> R_LARCH_32/64.  */
+	  if (fixP->fx_addsy && fixP->fx_subsy)
+	    {
+	      fixP->fx_next = xmemdup (fixP, sizeof (*fixP), sizeof (*fixP));
+	      fixP->fx_next->fx_addsy = fixP->fx_subsy;
+	      fixP->fx_next->fx_subsy = NULL;
+	      fixP->fx_next->fx_offset = 0;
+	      fixP->fx_subsy = NULL;
+
+	      switch (fixP->fx_r_type)
+		{
+		case BFD_RELOC_64:
+		  fixP->fx_r_type = BFD_RELOC_LARCH_ADD64;
+		  fixP->fx_next->fx_r_type = BFD_RELOC_LARCH_SUB64;
+		  break;
+		case BFD_RELOC_32:
+		  fixP->fx_r_type = BFD_RELOC_LARCH_ADD32;
+		  fixP->fx_next->fx_r_type = BFD_RELOC_LARCH_SUB32;
+		  break;
+		default:
+		  break;
+		}
+
+	      /* Because we use ADD/SUB relocations, clear the position
+		 to avoid the linker adding an extra value.  */
+	      md_number_to_chars (buf, 0, fixP->fx_size);
+	    }
 	}
 
-      if (fixP->fx_addsy == NULL)
+      /* If all symbols are resolved, write the value without emitting
+	 relocatiosn.  */
+      if (fixP->fx_addsy == NULL
+	  && fixP->fx_subsy == NULL)
 	{
 	  fixP->fx_done = 1;
 	  md_number_to_chars (buf, *valP, fixP->fx_size);
@@ -1843,39 +1877,61 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
     case BFD_RELOC_24:
     case BFD_RELOC_16:
     case BFD_RELOC_8:
+      /* Similar with BFD_RELOC_64/32.  */
+      if (fixP->fx_addsy == NULL
+	  && fixP->fx_subsy != NULL)
+	fixP->fx_addsy = abs_section_sym;
+
+      /* For .byte/.2byte/.3byte(if supported) symbol, fx_addsy is not NULL,
+	 fx_subsy is NULL.  There are no corresponding R_LARCH_8/16/24, need
+	 to enter this if branch to emit R_LARCH_ADD8/16/24.
+	 BFD_RELOC_8/16/24 -> BFD_RELOC_LARCH_ADD8/16/24 -> R_LARCH_ADD8/16/24.  */
       if (fixP->fx_addsy)
 	{
-	  fixP->fx_next = xmemdup (fixP, sizeof (*fixP), sizeof (*fixP));
-	  fixP->fx_next->fx_addsy = fixP->fx_subsy;
-	  fixP->fx_next->fx_subsy = NULL;
-	  fixP->fx_next->fx_offset = 0;
-	  fixP->fx_subsy = NULL;
-
 	  switch (fixP->fx_r_type)
 	    {
 	    case BFD_RELOC_24:
 	      fixP->fx_r_type = BFD_RELOC_LARCH_ADD24;
-	      fixP->fx_next->fx_r_type = BFD_RELOC_LARCH_SUB24;
 	      break;
 	    case BFD_RELOC_16:
 	      fixP->fx_r_type = BFD_RELOC_LARCH_ADD16;
-	      fixP->fx_next->fx_r_type = BFD_RELOC_LARCH_SUB16;
 	      break;
 	    case BFD_RELOC_8:
 	      fixP->fx_r_type = BFD_RELOC_LARCH_ADD8;
-	      fixP->fx_next->fx_r_type = BFD_RELOC_LARCH_SUB8;
 	      break;
 	    default:
 	      break;
 	    }
 
-	  md_number_to_chars (buf, 0, fixP->fx_size);
+	  if (fixP->fx_subsy != NULL)
+	    {
+	      fixP->fx_next = xmemdup (fixP, sizeof (*fixP), sizeof (*fixP));
+	      fixP->fx_next->fx_addsy = fixP->fx_subsy;
+	      fixP->fx_next->fx_subsy = NULL;
+	      fixP->fx_next->fx_offset = 0;
+	      fixP->fx_subsy = NULL;
 
-	  if (fixP->fx_next->fx_addsy == NULL)
-	    fixP->fx_next->fx_done = 1;
+	      switch (fixP->fx_r_type)
+		{
+		case BFD_RELOC_LARCH_ADD24:
+		  fixP->fx_next->fx_r_type = BFD_RELOC_LARCH_SUB24;
+		  break;
+		case BFD_RELOC_LARCH_ADD16:
+		  fixP->fx_next->fx_r_type = BFD_RELOC_LARCH_SUB16;
+		  break;
+		case BFD_RELOC_LARCH_ADD8:
+		  fixP->fx_next->fx_r_type = BFD_RELOC_LARCH_SUB8;
+		  break;
+		default:
+		  break;
+		}
+	    }
+
+	  md_number_to_chars (buf, 0, fixP->fx_size);
 	}
 
-      if (fixP->fx_addsy == NULL)
+      if (fixP->fx_addsy == NULL
+	  && fixP->fx_subsy == NULL)
 	{
 	  fixP->fx_done = 1;
 	  md_number_to_chars (buf, *valP, fixP->fx_size);

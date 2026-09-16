@@ -106,16 +106,19 @@ struct windows_private_thread_info : private_thread_info, windows_thread_info
   {}
 };
 
-/* Get the windows_thread_info object associated with THR.  */
+/* If THR belongs to the windows-nat target, returns the
+   windows_thread_info object associated with it.  Otherwise returns
+   NULL.  */
 
 static inline windows_thread_info *
 as_windows_thread_info (thread_info *thr)
 {
   /* Cast to windows_private_thread_info, which inherits from
-     private_thread_info, and is implicitly convertible to
-     windows_thread_info, the return type.  */
+     windows_thread_info, the return type.  We use dynamic_cast,
+     because the inferior's thread list may have threads from other
+     targets on the target stack.  */
   private_thread_info *priv = thr->priv.get ();
-  return gdb::checked_static_cast<windows_private_thread_info *> (priv);
+  return dynamic_cast<windows_private_thread_info *> (priv);
 }
 
 struct windows_per_inferior : public windows_nat::windows_process_info
@@ -440,7 +443,7 @@ public:
 
   all_windows_threads_iterator &operator++ ()
   {
-    ++m_base_iter;
+    advance ();
     return *this;
   }
 
@@ -451,6 +454,9 @@ public:
   { return !(*this == other); }
 
 private:
+  /* Advance to the next windows-nat thread.  */
+  void advance ();
+
   all_non_exited_threads_iterator m_base_iter;
 };
 
@@ -463,8 +469,7 @@ public:
     : m_base_range (base_range)
   {}
 
-  all_windows_threads_iterator begin () const
-  { return all_windows_threads_iterator (m_base_range.begin ()); }
+  all_windows_threads_iterator begin () const;
   all_windows_threads_iterator end () const
   { return all_windows_threads_iterator (m_base_range.end ()); }
 

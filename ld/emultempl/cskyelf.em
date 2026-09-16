@@ -30,9 +30,6 @@ fragment <<EOF
 /* To use branch stub or not.  */
 extern bool use_branch_stub;
 
-/* Fake input file for stubs.  */
-static lang_input_statement_type *stub_file;
-
 /* Whether we need to call gldcsky_layout_sections_again.  */
 static int need_laying_out = 0;
 
@@ -130,33 +127,13 @@ esac
 
 fragment <<EOF
 
-/* This is a convenient point to tell BFD about target specific flags.
-   After the output has been created, but before inputs are read.  */
 static void
-csky_elf_create_output_section_statements (void)
+csky_elf_after_open_output (void)
 {
-  if (!(bfd_get_flavour (link_info.output_bfd) == bfd_target_elf_flavour
-	&& elf_object_id (link_info.output_bfd) == CSKY_ELF_DATA))
+  ldelf_after_open_output ();
+
+  if (stub_file == NULL)
     use_branch_stub = false;
-
-  /* If don't use branch stub, just do not emit stub_file.  */
-  if (!use_branch_stub)
-    return;
-
-  stub_file = lang_add_input_file ("linker stubs",
-				   lang_input_file_is_fake_enum, NULL);
-  stub_file->the_bfd = bfd_create ("linker stubs", link_info.output_bfd);
-  if (stub_file->the_bfd == NULL
-      || !bfd_set_arch_mach (stub_file->the_bfd,
-	  bfd_get_arch (link_info.output_bfd),
-	  bfd_get_mach (link_info.output_bfd)))
-    {
-      fatal (_("%P: can not create BFD: %E\n"));
-      return;
-    }
-
-  stub_file->the_bfd->flags |= BFD_LINKER_CREATED;
-  ldlang_add_file (stub_file);
 }
 
 /* Call-back for elf32_csky_size_stubs.  */
@@ -327,5 +304,5 @@ case ${target} in
     csky-*-linux-*) LDEMUL_BEFORE_PARSE=csky_elf_before_parse ;;
 esac
 LDEMUL_AFTER_ALLOCATION=gld${EMULATION_NAME}_after_allocation
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=csky_elf_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=csky_elf_after_open_output
 LDEMUL_FINISH=gld${EMULATION_NAME}_finish

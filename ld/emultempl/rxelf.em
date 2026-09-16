@@ -33,10 +33,9 @@ static bool ignore_lma = true;
 /* This is a convenient point to tell BFD about target specific flags.
    After the output has been created, but before inputs are read.  */
 static void
-rx_elf_create_output_section_statements (void)
+rx_elf_after_open_output (void)
 {
-  extern void bfd_elf32_rx_set_target_flags (bool, bool);
-
+  ldelf_after_open_output ();
   bfd_elf32_rx_set_target_flags (no_flag_mismatch_warnings, ignore_lma);
 }
 
@@ -80,6 +79,6 @@ PARSE_AND_LIST_ARGS_CASES='
       break;
 '
 
-LDEMUL_CREATE_OUTPUT_SECTION_STATEMENTS=rx_elf_create_output_section_statements
+LDEMUL_AFTER_OPEN_OUTPUT=rx_elf_after_open_output
 
 LDEMUL_EXTRA_MAP_FILE_TEXT=rx_additional_link_map_text
