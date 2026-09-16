@@ -47,6 +47,10 @@
 #include "cli/cli-style.h"
 #include "cli/cli-cmds.h"
 
+#if defined (__linux__) || defined (__CYGWIN__)
+#include <sched.h>
+#endif
+
 static void maintenance_do_deprecate (const char *, int);
 
 #ifndef _WIN32
@@ -882,6 +886,20 @@ update_thread_pool_size ()
 	 systems.  */
       const int max_thread_count = 8;
       n_threads = std::min (hardware_threads, max_thread_count);
+
+      if (n_threads > 1)
+	{
+	  /* Exclude unavailable hardware threads (for instance made
+	     unavailable using taskset).  */
+#if (defined (__linux__) || defined (__CYGWIN__)) && defined (_GNU_SOURCE)
+	  cpu_set_t cpus;
+	  int res = sched_getaffinity (getpid (), sizeof (cpu_set_t), &cpus);
+	  if (res == 0)
+	    n_threads = std::min (n_threads, CPU_COUNT (&cpus));
+#else
+	  /* Todo: handle other platforms.  */
+#endif
+	}
     }
 
   gdb::thread_pool::g_thread_pool->set_thread_count (n_threads);
