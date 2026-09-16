@@ -53,6 +53,7 @@
 
 #include "arch/aarch64-fpmr-linux.h"
 #include "arch/aarch64-gcs-linux.h"
+#include "arch/aarch64-poe-linux.h"
 #include "arch/aarch64-mte.h"
 #include "arch/aarch64-mte-linux.h"
 #include "arch/aarch64-pauth-linux.h"
@@ -2675,11 +2676,12 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
-  if (!(tdep->has_mte () || tdep->has_gcs ()) || siggnal != GDB_SIGNAL_SEGV)
+  if (!(tdep->has_mte () || tdep->has_gcs () || tdep->has_poe ())
+      || siggnal != GDB_SIGNAL_SEGV)
     return;
 
   CORE_ADDR fault_addr = 0;
-  long si_code = 0, si_errno = 0;
+  long si_code = 0, si_errno = 0, si_pkey = -1;
 
   try
     {
@@ -2689,6 +2691,8 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 	 violation.  */
       si_code = parse_and_eval_long (gdb_si::get (si_key::siginfo_code));
       si_errno = parse_and_eval_long (gdb_si::get (si_key::siginfo_errno));
+      if (tdep->has_poe ())
+	si_pkey = parse_and_eval_long (gdb_si::get (si_key::siginfo_pkey));
 
       fault_addr
 	= parse_and_eval_long (gdb_si::get (si_key::siginfo_addr));
@@ -2705,6 +2709,8 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
     meaning = _("Memory tag violation");
   else if (si_code == AARCH64_SEGV_CPERR && si_errno == 0)
     meaning = _("Guarded Control Stack error");
+  else if (si_code == AARCH64_SEGV_PKUERR)
+    meaning = _("Protection Key Violation");
   else
     return;
 
@@ -2735,6 +2741,15 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 	  uiout->text (_("Logical tag "));
 	  uiout->field_string ("logical-tag", hex_string (ltag));
 	}
+    }
+  /* Additional information for SIGSEGV caused by a permission overlay
+     violation.  */
+  else if (si_code == AARCH64_SEGV_PKUERR)
+    {
+      uiout->text (_(" while accessing address "));
+      uiout->field_core_addr ("fault-addr", gdbarch, fault_addr);
+      uiout->text (_(" with Protection Key = "));
+      uiout->field_signed ("protection-key", si_pkey);
     }
   else if (si_code != AARCH64_SEGV_CPERR)
     {
@@ -3056,7 +3071,7 @@ aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 					 aarch64_linux_decode_memtag_section);
     }
 
-  if (tdep->has_mte () || tdep->has_gcs ())
+  if (tdep->has_mte () || tdep->has_gcs () || tdep->has_poe ())
     set_gdbarch_report_signal_info (gdbarch, aarch64_linux_report_signal_info);
 
   /* Initialize the aarch64_linux_record_tdep.  */

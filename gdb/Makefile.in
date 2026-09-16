@@ -1306,6 +1306,7 @@ HFILES_NO_SRCDIR = \
 	arch/aarch64-mte.h \
 	arch/aarch64-mte-linux.h \
 	arch/aarch64-pauth-linux.h \
+	arch/aarch64-poe-linux.h \
 	arch/aarch64-scalable-linux.h \
 	arch/amd64.h \
 	arch/amd64-linux-tdesc.h \
