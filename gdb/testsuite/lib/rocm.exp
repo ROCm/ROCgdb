@@ -132,6 +132,42 @@ proc generic_target_for { arch } {
     return ""
 }
 
+# Return true if the current GPU can enable XNACK (memory retry).
+#
+# Every device can run with XNACK off, so only the on mode needs
+# probing.  hipDeviceProp_t::gcnArchName carries the effective runtime
+# mode as a feature suffix, e.g. "gfx942:sramecc+:xnack+".  Running the
+# probe with HSA_XNACK forced to 1 shows whether the runtime can turn
+# XNACK on for this device, which tracks the device configuration rather
+# than the static architecture alone.
+
+gdb_caching_proc hip_device_xnack_supported {} {
+    if {![gdb_simple_compile xnack_probe {
+	    #include <hip/hip_runtime.h>
+	    #include <stdio.h>
+
+	    int
+	    main ()
+	    {
+	      /* Query device 0.  The tests assume a homogeneous set of
+		 GPUs, as does find_amdgpu_devices above.  */
+	      hipDeviceProp_t props;
+	      if (hipGetDeviceProperties (&props, 0) == hipSuccess)
+		printf ("%s\n", props.gcnArchName);
+	    }
+	} executable {hip hip_no_offload_arch}]} {
+	return 0
+    }
+
+    save_vars { ::env(HSA_XNACK) } {
+	set ::env(HSA_XNACK) 1
+	set result [log_host_exec "$obj"]
+    }
+
+    return [expr {[lindex $result 0] == 0
+		  && [string first "xnack+" [lindex $result 1]] != -1}]
+}
+
 # Get the list of unique GPU targets to compile for.
 #
 # If HCC_AMDGPU_TARGET is set in the environment, use it.
