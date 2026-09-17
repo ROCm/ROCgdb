@@ -26,9 +26,10 @@ kernel ()
 {
 
   /* Simple kernel which loads from address 0 to trigger a pagefault.
-     When precise memory is not enabled, it is expected that the memory fault
-     is reported after the s_nop instruction.  With precise-memory, the
-     exception should be reported on the s_nop.  */
+     With precise-memory disabled the fault is reported after the s_nop.
+     With precise-memory enabled the reported location depends on the
+     XNACK mode.  It is the s_load_dword itself when XNACK is enabled, or
+     the following s_nop when XNACK is disabled.  */
   asm volatile ("s_mov_b64 [s10, s11], 0\n"
 		"s_load_dword s12, [s10, s11]\n"
 		"s_nop 0"

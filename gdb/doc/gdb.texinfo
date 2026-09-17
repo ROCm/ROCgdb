@@ -29771,11 +29771,15 @@ caused the memory violation or address watch event.  This is the
 default.
 
 @item on
-Requests that the program location will be immediately after the
-instruction that caused a memory violation or address watch event.
-Enabling this mode may make the @acronym{AMD} @acronym{GPU} device execution
-significantly slower as it has to wait for each memory operation to complete
-before executing the next instruction.
+Requests that the program location be reported precisely for a memory
+violation or address watch event.  Depending on the device's
+@acronym{XNACK} (memory retry) mode, the program location is left either
+at the faulting instruction or immediately after it.  When
+@acronym{XNACK} is enabled, the faulting instruction can be replayed, so
+the wave stops on that instruction.  When it is disabled, the location is
+immediately after it.  Enabling this mode may make the @acronym{AMD}
+@acronym{GPU} device execution significantly slower as it has to wait for
+each memory operation to complete before executing the next instruction.
 
 @end table
 
