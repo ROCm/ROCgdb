@@ -35,20 +35,22 @@ kern (size_t dyn_alloc, size_t lds_size)
   for (size_t i = 0; i < dyn_alloc; i++)
     assert (arr[i] == i);
 
-  /* Use the last four bytes of the LDS  */
+  /* Use the fourth-to-last byte of the LDS.  */
   size_t idx = lds_size - 4;
   if (threadIdx.x == 0)
     {
       assert (idx >= dyn_alloc);
-      arr[idx] = 8;
+      arr[idx] = 77;
     }
   __syncthreads ();
 
-  /* This is expected to fail.
-     One could run this kernel once and expect to fail at the assert, then run
-     it again with the LDS reporting on, and check you receive the memviol.  */
+  /* The assert here must be triggered.
+
+     The idea is to run this kernel once and expect it to fail at the
+     assert, then run it again with the LDS reporting on, and check
+     "memviol" is received at "arr[idx] = 77" above.  */
   if (threadIdx.x == 0)
-    assert (arr[idx] == 8);
+    assert (arr[idx] == 77);
   __syncthreads ();
 }
 

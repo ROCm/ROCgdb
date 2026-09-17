@@ -21,6 +21,7 @@
 
 #include "amd-dbgapi-target.h"
 #include "amd-dbgapi-hdep.h"
+#include "amd-dbgapi/amd-dbgapi.h"
 #include "amdgpu-tdep.h"
 #include "arch-utils.h"
 #include "async-event.h"
@@ -215,6 +216,95 @@ struct wave_info
 
 /* Big enough to hold the size of the largest register in bytes.  */
 #define AMDGPU_MAX_REGISTER_SIZE 256
+
+#if AMD_DBGAPI_VERSION_MAJOR > 0 || AMD_DBGAPI_VERSION_MINOR >= 83
+/* amd-dbgpapi-specific property data.  */
+
+/* Properties' names we're interested in.  */
+const char *PROPERTY_PRECISE_MEMORY = "PRECISE_MEMORY_EXCEPTION";
+const char *PROPERTY_PRECISE_ALU = "PRECISE_ALU_EXCEPTION";
+const char *PROPERTY_LDS_EXCEPTION = "LDS_EXCEPTION";
+
+std::unordered_map<std::string, amd_dbgapi_property_id_t>
+  amd_dbgapi_properties;
+
+/* Initialize "amd_dbgapi_properties" with the properties that we
+   care about: PROPERTY_{PRECISE_MEMORY,PRECISE_ALU,LDS_EXCEPTION}.  */
+
+static void
+fetch_amd_dbgapi_properties ()
+{
+  size_t count;
+  amd_dbgapi_property_id_t *properties;
+  amd_dbgapi_status_t status;
+
+  amd_dbgapi_properties.clear ();
+
+  status = amd_dbgapi_property_list (&count, &properties);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd-dbgapi failed to get list of properties (%s)"),
+	   get_status_string (status));
+
+  gdb_assert (properties != nullptr);
+
+  for (size_t i = 0; i < count; ++i)
+    {
+      const char *key;
+      char *name;
+      status = amd_dbgapi_property_get_info (properties[i],
+					     AMD_DBGAPI_PROPERTY_INFO_NAME,
+					     sizeof (name), &name);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  free (properties);
+	  error (_("amd-dbgapi failed to get property info (%s)"),
+		 get_status_string (status));
+	}
+
+      if (strcmp (name, PROPERTY_PRECISE_MEMORY) == 0)
+	key = PROPERTY_PRECISE_MEMORY;
+      else if (strcmp (name, PROPERTY_PRECISE_ALU) == 0)
+	key = PROPERTY_PRECISE_ALU;
+      else if (strcmp (name, PROPERTY_LDS_EXCEPTION) == 0)
+	key = PROPERTY_LDS_EXCEPTION;
+      else
+	{
+	  free (name);
+	  continue;
+	}
+
+      free (name);
+      amd_dbgapi_properties[key] = properties[i];
+
+      /* Sanity checks: all must be boolean and process oriented.  */
+      amd_dbgapi_property_type_t type;
+      amd_dbgapi_property_scope_t scope;
+
+      status = amd_dbgapi_property_get_info (properties[i],
+					     AMD_DBGAPI_PROPERTY_INFO_TYPE,
+					     sizeof (type), &type);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  free (properties);
+	  error (_("amd-dbgapi failed to get property info (%s)"),
+		 get_status_string (status));
+	}
+      gdb_assert (type == AMD_DBGAPI_PROPERTY_TYPE_BOOL);
+
+      status = amd_dbgapi_property_get_info (properties[i],
+					     AMD_DBGAPI_PROPERTY_INFO_SCOPE,
+					     sizeof (scope), &scope);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  free (properties);
+	  error (_("amd-dbgapi failed to get property info (%s)"),
+		 get_status_string (status));
+	}
+      gdb_assert (scope == AMD_DBGAPI_PROPERTY_SCOPE_PROCESS);
+    }
+  free (properties);
+}
+#endif /* DBGAPI versions >= 0.83  */
 
 /* amd-dbgapi-specific inferior data.  */
 
@@ -2537,11 +2627,32 @@ amd_dbgapi_target::stopped_by_hw_breakpoint ()
 static void
 set_process_memory_precision (amd_dbgapi_inferior_info &info)
 {
+#if AMD_DBGAPI_VERSION_MAJOR > 0 || AMD_DBGAPI_VERSION_MINOR >= 83
+  if (amd_dbgapi_properties.find (PROPERTY_PRECISE_MEMORY)
+      == amd_dbgapi_properties.end ())
+    {
+      warning (_("AMDGPU precise memory access reporting property "
+		 "could not be found."));
+      return;
+    }
+
+  amd_dbgapi_property_bool_t value = !!info.precise_memory.requested;
+
+  amd_dbgapi_property_context_t ctx;
+  ctx.mode = AMD_DBGAPI_PROPERTY_CONTEXT_MODE_PROCESS;
+  ctx.process_id = info.process_id;
+
+  amd_dbgapi_status_t status
+    = amd_dbgapi_property_set
+	(amd_dbgapi_properties.at (PROPERTY_PRECISE_MEMORY),
+	 &ctx, sizeof (value), &value);
+#else
   auto mode = (info.precise_memory.requested
 	       ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
 	       : AMD_DBGAPI_MEMORY_PRECISION_NONE);
   amd_dbgapi_status_t status
     = amd_dbgapi_set_memory_precision (info.process_id, mode);
+#endif
 
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
     info.precise_memory.enabled = info.precise_memory.requested;
@@ -2560,12 +2671,32 @@ set_process_memory_precision (amd_dbgapi_inferior_info &info)
 static void
 set_process_alu_exceptions_precision (amd_dbgapi_inferior_info &info)
 {
+#if AMD_DBGAPI_VERSION_MAJOR > 0 || AMD_DBGAPI_VERSION_MINOR >= 83
+  if (amd_dbgapi_properties.find (PROPERTY_PRECISE_ALU)
+      == amd_dbgapi_properties.end ())
+    {
+      warning (_("AMDGPU precise ALU exceptions reporting property "
+		 "could not be found."));
+      return;
+    }
+
+  amd_dbgapi_property_bool_t value = !!info.precise_alu_exceptions.requested;
+
+  amd_dbgapi_property_context_t ctx;
+  ctx.mode = AMD_DBGAPI_PROPERTY_CONTEXT_MODE_PROCESS;
+  ctx.process_id = info.process_id;
+
+  amd_dbgapi_status_t status
+    = amd_dbgapi_property_set (amd_dbgapi_properties.at (PROPERTY_PRECISE_ALU),
+			       &ctx, sizeof (value), &value);
+#else
   auto mode = (info.precise_alu_exceptions.requested
 	       ? AMD_DBGAPI_ALU_EXCEPTIONS_PRECISION_PRECISE
 	       : AMD_DBGAPI_ALU_EXCEPTIONS_PRECISION_NONE);
 
   amd_dbgapi_status_t status
     = amd_dbgapi_set_alu_exceptions_precision (info.process_id, mode);
+#endif
 
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
     info.precise_alu_exceptions.enabled
@@ -2585,23 +2716,38 @@ set_process_alu_exceptions_precision (amd_dbgapi_inferior_info &info)
 static void
 set_process_local_memory_out_of_addr_range_exception (amd_dbgapi_inferior_info &info)
 {
-  auto mode = (info.local_memory_out_of_addr_range_exception.requested
-			? AMD_DBGAPI_GROUP_SEGMENT_EXCEPTIONS_OUT_OF_ADDR_RANGE
-			: AMD_DBGAPI_GROUP_SEGMENT_EXCEPTIONS_NONE);
+#if AMD_DBGAPI_VERSION_MAJOR > 0 || AMD_DBGAPI_VERSION_MINOR >= 83
+  if (amd_dbgapi_properties.find (PROPERTY_LDS_EXCEPTION)
+      == amd_dbgapi_properties.end ())
+    {
+      warning (_("AMDGPU local memory exceptions property "
+		 "could not be found."));
+      return;
+    }
+
+  amd_dbgapi_property_bool_t value
+    = !!info.local_memory_out_of_addr_range_exception.requested;
+
+  amd_dbgapi_property_context_t ctx;
+  ctx.mode = AMD_DBGAPI_PROPERTY_CONTEXT_MODE_PROCESS;
+  ctx.process_id = info.process_id;
 
   amd_dbgapi_status_t status
-    = amd_dbgapi_set_group_segment_out_of_addr_range_exception
-		(info.process_id, mode);
+    = amd_dbgapi_property_set (amd_dbgapi_properties.at (PROPERTY_LDS_EXCEPTION),
+			       &ctx, sizeof (value), &value);
 
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
     info.local_memory_out_of_addr_range_exception.enabled
 		= info.local_memory_out_of_addr_range_exception.requested;
   else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
-    warning (_("AMDGPU local memory out-of-address-range exception reporting could not "
-			"be enabled."));
+    warning (_("AMDGPU local memory out-of-address-range exception reporting "
+	       "is not available."));
   else if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd_dbgapi_set_local_memory_out_of_addr_range_exception failed (%s)"),
-		get_status_string (status));
+	   get_status_string (status));
+#else
+  warning (_("dbgapi does not support lds exception setting"));
+#endif
 }
 
 /* Handle extra initialisation after we have attached to a AMDGPU corefile.  */
@@ -2777,11 +2923,11 @@ detach_amd_dbgapi (inferior *inf)
   for (auto &&value : info.breakpoint_map)
     delete_breakpoint (value.second);
 
-  /* Reset the amd_dbgapi_inferior_info, except for precise_memory_mode and
-     precise_alu_exceptions.  */
-  info = amd_dbgapi_inferior_info (inf, info.precise_memory.requested,
-				info.precise_alu_exceptions.requested,
-				info.local_memory_out_of_addr_range_exception.requested);
+  /* Reset the amd_dbgapi_inferior_info, except for the requested fields.  */
+  info = amd_dbgapi_inferior_info (
+    inf, info.precise_memory.requested,
+    info.precise_alu_exceptions.requested,
+    info.local_memory_out_of_addr_range_exception.requested);
 
   maybe_reset_amd_dbgapi ();
 }
@@ -3234,14 +3380,15 @@ amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
   /* If using "follow-exec-mode new", carry over the precise-memory and local-memory
      settings to the new inferior (otherwise, FOLLOW_INF and ORIG_INF point to
      the same inferior, so this is a no-op).  */
-  get_amd_dbgapi_inferior_info (follow_inf).precise_memory.requested
-    = get_amd_dbgapi_inferior_info (exec_inf).precise_memory.requested;
-  get_amd_dbgapi_inferior_info (follow_inf).precise_alu_exceptions.requested
-    = get_amd_dbgapi_inferior_info (exec_inf)
-	.precise_alu_exceptions.requested;
-  get_amd_dbgapi_inferior_info (follow_inf).local_memory_out_of_addr_range_exception
-	.requested = get_amd_dbgapi_inferior_info (exec_inf)
-	.local_memory_out_of_addr_range_exception.requested;
+  const amd_dbgapi_inferior_info &exec_info
+    = get_amd_dbgapi_inferior_info (exec_inf);
+  amd_dbgapi_inferior_info &follow_info
+    = get_amd_dbgapi_inferior_info (follow_inf);
+  follow_info.precise_memory.requested = exec_info.precise_memory.requested;
+  follow_info.precise_alu_exceptions.requested
+    = exec_info.precise_alu_exceptions.requested;
+  follow_info.local_memory_out_of_addr_range_exception.requested
+    = exec_info.local_memory_out_of_addr_range_exception.requested;
 
   attach_amd_dbgapi (follow_inf);
 }
@@ -3255,7 +3402,7 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
 {
   if (child_inf != nullptr)
     {
-      /* Copy precise-memory and local-memory requested values from parent to child.  */
+      /* Copy requested features from parent to child.  */
       const amd_dbgapi_inferior_info &parent_info
 	= get_amd_dbgapi_inferior_info (parent_inf);
       amd_dbgapi_inferior_info &child_info
@@ -5337,6 +5484,10 @@ maybe_reset_amd_dbgapi ()
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd-dbgapi failed to initialize (%s)"),
 	   get_status_string (status));
+
+#if AMD_DBGAPI_VERSION_MAJOR > 0 || AMD_DBGAPI_VERSION_MINOR >= 83
+  fetch_amd_dbgapi_properties ();
+#endif
 }
 
 INIT_GDB_FILE (amd_dbgapi_target)
@@ -5355,6 +5506,11 @@ INIT_GDB_FILE (amd_dbgapi_target)
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd-dbgapi failed to initialize (%s)"),
 	   get_status_string (status));
+
+#if AMD_DBGAPI_VERSION_MAJOR > 0 || AMD_DBGAPI_VERSION_MINOR >= 83
+  /* Get all the properties beknown to dbgapi.  */
+  fetch_amd_dbgapi_properties ();
+#endif
 
   /* Set the initial log level.  */
   amd_dbgapi_set_log_level (get_debug_amd_dbgapi_lib_log_level ());
