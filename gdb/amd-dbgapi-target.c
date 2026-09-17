@@ -2658,11 +2658,11 @@ detach_amd_dbgapi (inferior *inf)
   for (auto &&value : info.breakpoint_map)
     delete_breakpoint (value.second);
 
-  /* Reset the amd_dbgapi_inferior_info, except for precise_memory_mode and
-     precise_alu_exceptions.  */
-  info = amd_dbgapi_inferior_info (inf, info.precise_memory.requested,
-				info.precise_alu_exceptions.requested,
-				info.local_memory_out_of_addr_range_exception.requested);
+  /* Reset the amd_dbgapi_inferior_info, except for the requested fields.  */
+  info = amd_dbgapi_inferior_info (
+    inf, info.precise_memory.requested,
+    info.precise_alu_exceptions.requested,
+    info.local_memory_out_of_addr_range_exception.requested);
 
   maybe_reset_amd_dbgapi ();
 }
@@ -3115,14 +3115,15 @@ amd_dbgapi_inferior_execd (inferior *exec_inf, inferior *follow_inf)
   /* If using "follow-exec-mode new", carry over the precise-memory and local-memory
      settings to the new inferior (otherwise, FOLLOW_INF and ORIG_INF point to
      the same inferior, so this is a no-op).  */
-  get_amd_dbgapi_inferior_info (follow_inf).precise_memory.requested
-    = get_amd_dbgapi_inferior_info (exec_inf).precise_memory.requested;
-  get_amd_dbgapi_inferior_info (follow_inf).precise_alu_exceptions.requested
-    = get_amd_dbgapi_inferior_info (exec_inf)
-	.precise_alu_exceptions.requested;
-  get_amd_dbgapi_inferior_info (follow_inf).local_memory_out_of_addr_range_exception
-	.requested = get_amd_dbgapi_inferior_info (exec_inf)
-	.local_memory_out_of_addr_range_exception.requested;
+  const amd_dbgapi_inferior_info &exec_info
+    = get_amd_dbgapi_inferior_info (exec_inf);
+  amd_dbgapi_inferior_info &follow_info
+    = get_amd_dbgapi_inferior_info (follow_inf);
+  follow_info.precise_memory.requested = exec_info.precise_memory.requested;
+  follow_info.precise_alu_exceptions.requested
+    = exec_info.precise_alu_exceptions.requested;
+  follow_info.local_memory_out_of_addr_range_exception.requested
+    = exec_info.local_memory_out_of_addr_range_exception.requested;
 
   attach_amd_dbgapi (follow_inf);
 }
@@ -3136,7 +3137,7 @@ amd_dbgapi_inferior_forked (inferior *parent_inf, inferior *child_inf,
 {
   if (child_inf != nullptr)
     {
-      /* Copy precise-memory and local-memory requested values from parent to child.  */
+      /* Copy requested features from parent to child.  */
       const amd_dbgapi_inferior_info &parent_info
 	= get_amd_dbgapi_inferior_info (parent_inf);
       amd_dbgapi_inferior_info &child_info
