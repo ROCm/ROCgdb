@@ -360,10 +360,6 @@ protected:
   virtual void do_field_string (int fldno, int width, ui_align align,
 				const char *fldname, const char *string,
 				const ui_file_style &style) = 0;
-  virtual void do_field_fmt (int fldno, int width, ui_align align,
-			     const char *fldname, const ui_file_style &style,
-			     const char *format, va_list args)
-    ATTRIBUTE_PRINTF (7, 0) = 0;
   virtual void do_spaces (int numspaces) = 0;
   virtual void do_text (const char *string) = 0;
 

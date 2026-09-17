@@ -534,9 +534,9 @@ ui_out::field_fmt (const char *fldname, const char *format, ...)
   verify_field (&fldno, &width, &align);
 
   va_start (args, format);
-
-  do_field_fmt (fldno, width, align, fldname, ui_file_style (), format, args);
-
+  std::string str = string_vprintf (format, args);
+  do_field_string (fldno, width, align, fldname, str.c_str (),
+		   ui_file_style ());
   va_end (args);
 }
 
@@ -552,9 +552,8 @@ ui_out::field_fmt (const char *fldname, const ui_file_style &style,
   verify_field (&fldno, &width, &align);
 
   va_start (args, format);
-
-  do_field_fmt (fldno, width, align, fldname, style, format, args);
-
+  std::string str = string_vprintf (format, args);
+  do_field_string (fldno, width, align, fldname, str.c_str (), style);
   va_end (args);
 }
 

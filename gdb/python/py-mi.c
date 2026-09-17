@@ -119,18 +119,6 @@ py_ui_out::do_field_string (int fldno, int width, ui_align align,
   add_field (fldname, val);
 }
 
-void
-py_ui_out::do_field_fmt (int fldno, int width, ui_align align,
-			 const char *fldname, const ui_file_style &style,
-			 const char *format, va_list args)
-{
-  if (m_error.has_value ())
-    return;
-
-  std::string str = string_vprintf (format, args);
-  do_field_string (fldno, width, align, fldname, str.c_str (), style);
-}
-
 /* Implementation of the gdb.execute_mi command.  */
 
 PyObject *
