@@ -1551,7 +1551,7 @@ parse_smaps_key_value (const char *keyword, const char *line,
    DATA is the contents of the smaps file.  The parsed contents are stored
    into the SMAPS vector.  */
 
-static std::vector<struct smaps_data>
+static std::vector<smaps_data>
 parse_smaps_data (const char *data,
 		  const std::string &maps_filename)
 {
@@ -1561,7 +1561,7 @@ parse_smaps_data (const char *data,
 
   line = strtok_r ((char *) data, "\n", &t);
 
-  std::vector<struct smaps_data> smaps;
+  std::vector<smaps_data> smaps;
 
   while (line != NULL)
     {
@@ -1673,7 +1673,7 @@ parse_smaps_data (const char *data,
 	    }
 	}
       /* Save the smaps entry to the vector.  */
-	struct smaps_data map;
+	smaps_data map;
 
 	map.start_address = m.addr;
 	map.end_address = m.endaddr;
@@ -1716,7 +1716,7 @@ linux_process_address_in_memtag_page (CORE_ADDR address)
     return false;
 
   /* Parse the contents of smaps into a vector.  */
-  std::vector<struct smaps_data> smaps
+  std::vector<smaps_data> smaps
     = parse_smaps_data (data.get (), smaps_file);
 
   for (const smaps_data &map : smaps)
@@ -1812,10 +1812,10 @@ linux_find_memory_regions_full (struct gdbarch *gdbarch,
     }
 
   /* Parse the contents of smaps into a vector.  */
-  std::vector<struct smaps_data> smaps
+  std::vector<smaps_data> smaps
     = parse_smaps_data (data.get (), maps_filename);
 
-  for (const struct smaps_data &map : smaps)
+  for (const smaps_data &map : smaps)
     {
       /* Invoke the callback function to create the corefile segment.  */
       if (should_dump_mapping_p (filterflags, map))
