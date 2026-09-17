@@ -7,6 +7,12 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
+- Add support for the gfx1250-strict architecture variant.
+
+## ROCgdb-16.3 for ROCm-10.1
+
+### Added
+
 - For AMD64 and AMDGPU targets, print backtrace information for
   Clang's __builtin_verbose_trap.  The debug information emited
   by the compiler describes the category and message arguments
