@@ -21,6 +21,10 @@
   ABIs.  GDB does not yet support the MSVC C++ ABI (demangling scheme,
   C++ object layout, etc.) or PDB debug information.
 
+* GDB can now read OS-generated core files on systems with Intel AMX
+  support.  The AMX registers themselves are not yet readable, but
+  other xsave state can be read.
+
 * New targets
 
 i386 Windows/MSVC               i[34567]86-*-windows-msvc
@@ -28,6 +32,20 @@ i386 Windows/MSVC               i[34567]86-*-windows-msvc
 amd64 Windows/MSVC              x86_64-*-windows-msvc
 
 AArch64 Windows/MSVC            aarch64-*-windows-msvc
+
+* New commands
+
+set print shadowed on|off
+show print shadowed
+  This controls the output of the "info locals" command.  If the option is
+  "off", shadowed variables will be omitted from the output.  The default is
+  to print shadowed variables.
+
+* Changed commands
+
+info locals
+  The new "-shadowed on|off" option overrides the "set print shadowed"
+  setting for a single invocation of the command.
 
 *** Changes in GDB 18
 

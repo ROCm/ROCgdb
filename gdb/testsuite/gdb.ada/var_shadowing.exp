@@ -36,4 +36,5 @@ gdb_test "info locals" [multi_line \
     "i = 111\t<$testfile.adb:$i_level3>"  \
     "i = 11\t<$testfile.adb:$i_level2, shadowed>"  \
     "i = 1\t<$testfile.adb:$i_level1, shadowed>"  \
+    "Use \"set print shadowed off\" to hide shadowed variables." \
 ] "info locals at innermost level"

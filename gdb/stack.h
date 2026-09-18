@@ -39,13 +39,6 @@ void iterate_over_block_arg_vars (const struct block *block,
 void iterate_over_block_local_vars (const struct block *block,
 				    iterate_over_block_arg_local_vars_cb cb);
 
-/* Iterate over all the argument variables in block B, call CB for
-   each variable with its print name, symbol, and shadowing status.  */
-
-void iterate_over_block_arg_vars_printing
-  (const struct block *block,
-   iterate_over_block_arg_local_vars_cb_printing cb);
-
 /* Iterate over all the local variables in block B, including all its
    superblocks, stopping when the top-level block is reached.  Call CB
    for each variable with its print name, symbol, and shadowing status

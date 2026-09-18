@@ -36,11 +36,8 @@ static const char outofscope_func[] = "out_of_scope";
 
 /* struct implementing the gdb.FinishBreakpoint object by extending
    the gdb.Breakpoint class.  */
-struct finish_breakpoint_object
+struct finish_breakpoint_object : public gdbpy_breakpoint_object
 {
-  /* gdb.Breakpoint base class.  */
-  gdbpy_breakpoint_object py_bp;
-
   /* gdb.Symbol object of the function finished by this breakpoint.
 
      nullptr if no debug information was available or return type was VOID.  */
@@ -60,6 +57,8 @@ struct finish_breakpoint_object
      left this frame.  */
   struct frame_id initiating_frame;
 };
+
+static_assert (gdb::is_python_allocatable_v<finish_breakpoint_object>);
 
 extern PyTypeObject finish_breakpoint_object_type;
 
@@ -301,7 +300,7 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
       self_bpfinish->function_value = nullptr;
     }
 
-  bppy_pending_object = &self_bpfinish->py_bp;
+  bppy_pending_object = self_bpfinish;
   bppy_pending_object->number = -1;
   bppy_pending_object->bp = NULL;
 
@@ -325,12 +324,12 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
       return gdbpy_handle_gdb_exception (-1, except);
     }
 
-  self_bpfinish->py_bp.bp->frame_id = frame_id;
-  self_bpfinish->py_bp.is_finish_bp = 1;
+  self_bpfinish->bp->frame_id = frame_id;
+  self_bpfinish->is_finish_bp = 1;
   self_bpfinish->initiating_frame = get_frame_id (frame);
 
   /* Bind the breakpoint with the current program space.  */
-  self_bpfinish->py_bp.bp->pspace = current_program_space;
+  self_bpfinish->bp->pspace = current_program_space;
 
   return 0;
 }
@@ -342,13 +341,11 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 static void
 bpfinishpy_out_of_scope (struct finish_breakpoint_object *bpfinish_obj)
 {
-  gdbpy_breakpoint_object *bp_obj = (gdbpy_breakpoint_object *) bpfinish_obj;
-  PyObject *py_obj = (PyObject *) bp_obj;
-
-  if (bpfinish_obj->py_bp.bp->enable_state == bp_enabled
-      && PyObject_HasAttrString (py_obj, outofscope_func))
+  if (bpfinish_obj->bp->enable_state == bp_enabled
+      && PyObject_HasAttrString (bpfinish_obj, outofscope_func))
     {
-      gdbpy_ref<> meth_result = gdbpy_call_method (py_obj, outofscope_func);
+      gdbpy_ref<> meth_result = gdbpy_call_method (bpfinish_obj,
+						   outofscope_func);
       if (meth_result == NULL)
 	gdbpy_print_stack ();
     }
@@ -366,14 +363,12 @@ bpfinishpy_detect_out_scope_cb (struct breakpoint *b,
 				struct breakpoint *bp_stopped,
 				bool delete_bp)
 {
-  PyObject *py_bp = (PyObject *) b->py_bp_object;
-
   /* Trigger out_of_scope if this is a FinishBreakpoint and its frame is
      not anymore in the current callstack.  */
-  if (py_bp != NULL && b->py_bp_object->is_finish_bp)
+  if (b->py_bp_object != nullptr && b->py_bp_object->is_finish_bp)
     {
       struct finish_breakpoint_object *finish_bp =
-	  (struct finish_breakpoint_object *) py_bp;
+	  (struct finish_breakpoint_object *) b->py_bp_object;
 
       /* Check scope if not currently stopped at the FinishBreakpoint.  */
       if (b != bp_stopped)
@@ -388,7 +383,7 @@ bpfinishpy_detect_out_scope_cb (struct breakpoint *b,
 		{
 		  bpfinishpy_out_of_scope (finish_bp);
 		  if (delete_bp)
-		    delete_breakpoint (finish_bp->py_bp.bp);
+		    delete_breakpoint (finish_bp->bp);
 		}
 	    }
 	  catch (const gdb_exception &except)

@@ -905,11 +905,8 @@ gdbpy_rbreak (PyObject *self, PyObject *args, PyObject *kw)
   for (const symbol_search &p : symbols)
     {
       /* Minimal symbols included?  */
-      if (minsyms_p)
-	{
-	  if (p.msymbol.minsym != NULL)
-	    count++;
-	}
+      if (minsyms_p && p.msymbol.minsym != nullptr)
+	count++;
 
       if (p.symbol != NULL)
 	count++;
@@ -936,9 +933,8 @@ gdbpy_rbreak (PyObject *self, PyObject *args, PyObject *kw)
       std::string symbol_name;
 
       /* Skipping minimal symbols?  */
-      if (minsyms_p == 0)
-	if (p.msymbol.minsym != NULL)
-	  continue;
+      if (minsyms_p == 0 && p.msymbol.minsym != nullptr)
+	continue;
 
       if (p.msymbol.minsym == NULL)
 	{
@@ -1237,7 +1233,7 @@ gdbpy_before_prompt_hook (const struct extension_language_defn *extlang,
 
   gdbpy_enter enter_py;
 
-  if (!evregpy_no_listeners_p (gdb_py_events.before_prompt)
+  if (evregpy_has_listeners_p (gdb_py_events.before_prompt)
       && evpy_emit_event (NULL, gdb_py_events.before_prompt) < 0)
     return EXT_LANG_RC_ERROR;
 
@@ -1262,8 +1258,7 @@ gdbpy_before_prompt_hook (const struct extension_language_defn *extlang,
 	    }
 
 	  gdbpy_ref<> result
-	    (PyObject_CallFunctionObjArgs (hook.get (), current_prompt.get (),
-					   NULL));
+	    = gdbpy_object_call_function_obj_args (hook, current_prompt);
 	  if (result == NULL)
 	    {
 	      gdbpy_print_stack ();
@@ -1364,11 +1359,10 @@ gdbpy_colorize (const std::string &filename, const std::string &contents,
      contents (a bytes object).  This function should return either a bytes
      object, the same contents with styling applied, or None to indicate
      that no styling should be performed.  */
-  gdbpy_ref<> result (PyObject_CallFunctionObjArgs (hook.get (),
-						    fname_arg.get (),
-						    contents_arg.get (),
-						    lang_arg.get (),
-						    nullptr));
+  gdbpy_ref<> result = gdbpy_object_call_function_obj_args (hook,
+							    fname_arg,
+							    contents_arg,
+							    lang_arg);
   if (result == nullptr)
     {
       gdbpy_print_stack ();
@@ -1433,10 +1427,9 @@ gdbpy_colorize_disasm (const std::string &content, gdbarch *gdbarch)
       return {};
     }
 
-  gdbpy_ref<> result (PyObject_CallFunctionObjArgs (hook.get (),
-						    content_arg.get (),
-						    gdbarch_arg.get (),
-						    nullptr));
+  gdbpy_ref<> result = gdbpy_object_call_function_obj_args (hook,
+							    content_arg,
+							    gdbarch_arg);
   if (result == nullptr)
     {
       gdbpy_print_stack ();
@@ -1903,8 +1896,7 @@ gdbpy_handle_missing_debuginfo (const struct extension_language_defn *extlang,
 
   /* Call the function, passing in the Python objfile object.  */
   gdbpy_ref<> pyo_execute_ret
-    (PyObject_CallFunctionObjArgs (pyo_handler.get (), pyo_objfile.get (),
-				   nullptr));
+    = gdbpy_object_call_function_obj_args (pyo_handler, pyo_objfile);
   if (pyo_execute_ret == nullptr)
     {
       /* If the handler is cancelled due to a Ctrl-C, then propagate
@@ -2003,9 +1995,8 @@ gdbpy_find_objfile_from_buildid (const struct extension_language_defn *extlang,
 
   /* Call the function, passing in the Python objfile object.  */
   gdbpy_ref<> pyo_execute_ret
-    (PyObject_CallFunctionObjArgs (pyo_handler.get (), pyo_pspace.get (),
-				   pyo_buildid.get (), pyo_filename.get (),
-				   nullptr));
+    = gdbpy_object_call_function_obj_args (pyo_handler, pyo_pspace,
+					   pyo_buildid, pyo_filename);
   if (pyo_execute_ret == nullptr)
     {
       /* If the handler is cancelled due to a Ctrl-C, then propagate
@@ -2055,8 +2046,6 @@ static void
 gdbpy_start_type_printers (const struct extension_language_defn *extlang,
 			   struct ext_lang_type_printers *ext_printers)
 {
-  PyObject *printers_obj = NULL;
-
   if (!gdb_python_initialized)
     return;
 
@@ -2077,11 +2066,11 @@ gdbpy_start_type_printers (const struct extension_language_defn *extlang,
       return;
     }
 
-  printers_obj = PyObject_CallFunctionObjArgs (func.get (), (char *) NULL);
-  if (printers_obj == NULL)
+  gdbpy_ref<> printers_obj = gdbpy_object_call_function_obj_args (func);
+  if (printers_obj == nullptr)
     gdbpy_print_stack ();
   else
-    ext_printers->py_type_printers = printers_obj;
+    ext_printers->py_type_printers = printers_obj.release ();
 }
 
 /* If TYPE is recognized by some type printer, store in *PRETTIED_TYPE
@@ -2130,10 +2119,9 @@ gdbpy_apply_type_printers (const struct extension_language_defn *extlang,
       return EXT_LANG_RC_ERROR;
     }
 
-  gdbpy_ref<> result_obj (PyObject_CallFunctionObjArgs (func.get (),
-							printers_obj,
-							type_obj.get (),
-							(char *) NULL));
+  gdbpy_ref<> result_obj = gdbpy_object_call_function_obj_args (func,
+								printers_obj,
+								type_obj);
   if (result_obj == NULL)
     {
       gdbpy_print_stack ();
@@ -2492,7 +2480,7 @@ init__gdb_module (void)
 static int
 emit_exiting_event (int exit_code)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.gdb_exiting))
+  if (!evregpy_has_listeners_p (gdb_py_events.gdb_exiting))
     return 0;
 
   gdbpy_ref<> event_obj = create_event_object (&gdb_exiting_event_object_type);
@@ -2500,10 +2488,11 @@ emit_exiting_event (int exit_code)
     return -1;
 
   gdbpy_ref<> code = gdb_py_object_from_longest (exit_code);
-  if (evpy_add_attribute (event_obj.get (), "exit_code", code.get ()) < 0)
+  if (code == nullptr
+      || evpy_add_attribute (event_obj, "exit_code", code) < 0)
     return -1;
 
-  return evpy_emit_event (event_obj.get (), gdb_py_events.gdb_exiting);
+  return evpy_emit_event (event_obj, gdb_py_events.gdb_exiting);
 }
 
 /* Callback for the gdb_exiting observable.  EXIT_CODE is the value GDB

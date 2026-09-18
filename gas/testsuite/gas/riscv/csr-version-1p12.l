@@ -677,6 +677,10 @@
 .*Info: macro .*
 .*Warning: invalid CSR `minstretcfgh', needs `smcntrpmf' extension
 .*Info: macro .*
+.*Warning: invalid CSR `mpmpdeleg', needs `smpmpdeleg' extension
+.*Info: macro .*
+.*Warning: invalid CSR `mpmpdeleg', needs `smpmpdeleg' extension
+.*Info: macro .*
 .*Warning: invalid CSR `mnepc', needs `smrnmi' extension
 .*Info: macro .*
 .*Warning: invalid CSR `mnepc', needs `smrnmi' extension
@@ -1402,6 +1406,18 @@
 .*Warning: invalid CSR `mctrctl', needs `smctr' extension
 .*Info: macro .*
 .*Warning: invalid CSR `mctrctl', needs `smctr' extension
+.*Info: macro .*
+.*Warning: invalid CSR `spmpen', needs `sspmpen' extension
+.*Info: macro .*
+.*Warning: invalid CSR `spmpen', needs `sspmpen' extension
+.*Info: macro .*
+.*Warning: invalid CSR `spmpenh', needs rv32i extension
+.*Info: macro .*
+.*Warning: invalid CSR `spmpenh', needs `sspmpen' extension
+.*Info: macro .*
+.*Warning: invalid CSR `spmpenh', needs rv32i extension
+.*Info: macro .*
+.*Warning: invalid CSR `spmpenh', needs `sspmpen' extension
 .*Info: macro .*
 .*Warning: invalid CSR `ustatus' for the privileged spec `1.12'
 .*Info: macro .*

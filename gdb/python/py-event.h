@@ -53,7 +53,12 @@ extern int emit_inferior_call_event (inferior_call_kind kind,
 extern int emit_register_changed_event (const frame_info_ptr &frame,
 					int regnum);
 extern int emit_memory_changed_event (CORE_ADDR addr, ssize_t len);
-extern int evpy_emit_event (PyObject *event,
+
+/* Emit an event to a given event registry.  Return 0 on success, -1
+   with the Python exception set on failure.  gdbpy_opt_borrowed_ref
+   is used; if NULL is passed, then the event will be emitted without
+   a payload.  */
+extern int evpy_emit_event (gdbpy_opt_borrowed_ref<> event,
 			    eventregistry_object *registry);
 
 /* Emits a thread exit event for THREAD */
@@ -69,14 +74,14 @@ extern gdbpy_ref<> create_event_object (PyTypeObject *py_type);
 extern gdbpy_ref<> py_get_event_thread (ptid_t ptid);
 
 extern gdbpy_ref<> create_thread_event_object (PyTypeObject *py_type,
-					       PyObject *thread);
+					       gdbpy_borrowed_ref<> thread);
 
 extern int emit_new_objfile_event (struct objfile *objfile);
 extern int emit_free_objfile_event (struct objfile *objfile);
 extern int emit_clear_objfiles_event (program_space *pspace);
 
 extern void evpy_dealloc (PyObject *self);
-extern int evpy_add_attribute (PyObject *event,
-			       const char *name, PyObject *attr);
+extern int evpy_add_attribute (gdbpy_borrowed_ref<> event,
+			       const char *name, gdbpy_borrowed_ref<> attr);
 
 #endif /* GDB_PYTHON_PY_EVENT_H */

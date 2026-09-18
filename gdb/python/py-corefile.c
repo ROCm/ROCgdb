@@ -123,7 +123,7 @@ gdbpy_core_file_from_inferior (inferior *inf)
   if (get_inferior_core_bfd (inf) == nullptr)
     return py_none ();
 
-  PyObject *result = (PyObject *) cfpy_inferior_corefile_data_key.get (inf);
+  PyObject *result = cfpy_inferior_corefile_data_key.get (inf);
   if (result != nullptr)
     return gdbpy_ref<>::new_reference (result);
 
@@ -294,7 +294,7 @@ cfpy_mapped_files (PyObject *self, PyObject *args)
 
 	  /* Add to the gdb.CorefileMappedFileRegion list.  */
 	  if (PyTuple_SetItem (regions.get (), regions_idx++,
-			       (PyObject *) region_obj.release ()) < 0)
+			       region_obj.release ()) < 0)
 	    return nullptr;
 	}
 
@@ -313,7 +313,7 @@ cfpy_mapped_files (PyObject *self, PyObject *args)
 
       /* Add to the gdb.CorefileMappedFile list.  */
       if (PyTuple_SetItem (tuple.get (), tuple_idx++,
-			   (PyObject *) entry.release ()) < 0)
+			   entry.release ()) < 0)
 	return nullptr;
     }
 
@@ -332,7 +332,7 @@ static int
 emit_corefile_changed_event (inferior *inf)
 {
   /* If there are no listeners then we are done.  */
-  if (evregpy_no_listeners_p (gdb_py_events.corefile_changed))
+  if (!evregpy_has_listeners_p (gdb_py_events.corefile_changed))
     return 0;
 
   gdbpy_ref<> event_obj
@@ -342,11 +342,10 @@ emit_corefile_changed_event (inferior *inf)
 
   gdbpy_ref<inferior_object> inf_obj = inferior_to_inferior_object (inf);
   if (inf_obj == nullptr
-      || evpy_add_attribute (event_obj.get (), "inferior",
-			     inf_obj.get ()) < 0)
+      || evpy_add_attribute (event_obj, "inferior", inf_obj) < 0)
     return -1;
 
-  return evpy_emit_event (event_obj.get (), gdb_py_events.corefile_changed);
+  return evpy_emit_event (event_obj, gdb_py_events.corefile_changed);
 }
 
 /* Callback from gdb::observers::core_file_changed.  The core file for

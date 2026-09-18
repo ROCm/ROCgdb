@@ -37,17 +37,13 @@ py_get_event_thread (ptid_t ptid)
 }
 
 gdbpy_ref<>
-create_thread_event_object (PyTypeObject *py_type, PyObject *thread)
+create_thread_event_object (PyTypeObject *py_type, gdbpy_borrowed_ref<> thread)
 {
-  gdb_assert (thread != NULL);
-
   gdbpy_ref<> thread_event_obj = create_event_object (py_type);
   if (thread_event_obj == NULL)
     return NULL;
 
-  if (evpy_add_attribute (thread_event_obj.get (),
-			  "inferior_thread",
-			  thread) < 0)
+  if (evpy_add_attribute (thread_event_obj, "inferior_thread", thread) < 0)
     return NULL;
 
   return thread_event_obj;
@@ -58,7 +54,7 @@ create_thread_event_object (PyTypeObject *py_type, PyObject *thread)
 int
 emit_thread_exit_event (thread_info * thread)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.thread_exited))
+  if (!evregpy_has_listeners_p (gdb_py_events.thread_exited))
     return 0;
 
   auto py_thr = thread_to_thread_object (thread);
@@ -67,9 +63,9 @@ emit_thread_exit_event (thread_info * thread)
     return -1;
 
   auto inf_thr = create_thread_event_object (&thread_exited_event_object_type,
-				     py_thr.get ());
+					     py_thr);
   if (inf_thr == nullptr)
     return -1;
 
-  return evpy_emit_event (inf_thr.get (), gdb_py_events.thread_exited);
+  return evpy_emit_event (inf_thr, gdb_py_events.thread_exited);
 }

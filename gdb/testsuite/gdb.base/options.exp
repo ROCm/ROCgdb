@@ -30,6 +30,7 @@
 #  - tfaas
 #  - thread apply
 #  - taas
+#  - info locals
 
 load_lib compile-support.exp
 load_lib completion-support.exp
@@ -529,6 +530,25 @@ proc_with_prefix test-info-threads {} {
 
     # "ID" isn't really something the user can type.
     test_gdb_complete_none "info threads I"
+}
+
+# Basic option-machinery + "info locals" command integration tests.
+proc_with_prefix test-info-locals {} {
+    clean_restart $::testfile
+
+    if {![runto_main]} {
+	return
+    }
+
+    test_gdb_complete_multiple "info locals " "-" "" {
+	"-q"
+	"-shadowed"
+	"-t"
+    }
+
+    test_gdb_complete_unique \
+	"info locals -s" \
+	"info locals -shadowed"
 }
 
 # Miscellaneous tests.
@@ -1174,6 +1194,9 @@ test-thread-apply
 
 # Basic "info threads" integration tests.
 test-info-threads
+
+# Basic "info locals" integration tests.
+test-info-locals
 
 # There was a bug where the "metasyntactic variable" was glued to the
 # option.

@@ -42,9 +42,6 @@ PARSE_AND_LIST_ARGS_CASES=${PARSE_AND_LIST_ARGS_CASES}'
 
 fragment <<EOF
 
-/* Fake input file for align.  */
-static lang_input_statement_type *align_file;
-
 static void
 larch_elf_before_allocation (void)
 {
@@ -154,7 +151,7 @@ elf${ELFSIZE}_loongarch_add_align_section (const char *align_sec_name,
 
   flags = (SEC_ALLOC | SEC_LOAD | SEC_READONLY | SEC_CODE
 	   | SEC_HAS_CONTENTS | SEC_RELOC | SEC_IN_MEMORY | SEC_KEEP);
-  align_sec = bfd_make_section_anyway_with_flags (align_file->the_bfd,
+  align_sec = bfd_make_section_anyway_with_flags (stub_file->the_bfd,
 						  align_sec_name, flags);
   if (align_sec == NULL)
     goto err_ret;
@@ -172,7 +169,7 @@ elf${ELFSIZE}_loongarch_add_align_section (const char *align_sec_name,
     goto err_ret;
 
   align_sec->size = (1 << input_section->alignment_power) - 4;
-  align_sec->contents = bfd_alloc (align_file->the_bfd, align_sec->size);
+  align_sec->contents = bfd_alloc (stub_file->the_bfd, align_sec->size);
   if (align_sec->contents == NULL && align_sec->size != 0)
     goto err_ret;
   align_sec->alloced = 1;
@@ -212,10 +209,10 @@ gld${EMULATION_NAME}_after_allocation (void)
 
   /* If generating a relocatable output file, we have to add align
      at the start of sections.  */
-  if (align_file != NULL && bfd_link_relocatable (&link_info))
+  if (stub_file != NULL && bfd_link_relocatable (&link_info))
     {
       if (! elf${ELFSIZE}_loongarch_size_aligns (link_info.output_bfd,
-			align_file->the_bfd,
+			stub_file->the_bfd,
 			&link_info,
 			&elf${ELFSIZE}_loongarch_add_align_section,
 			&gldloongarch_layout_sections_again))
@@ -248,40 +245,7 @@ gld${EMULATION_NAME}_after_allocation (void)
   ldelf_map_segments (need_layout);
 }
 
-/* This is called before the input files are opened.  We create a new
-   fake input file to hold the align sections.  */
-
-static void
-loongarch_elf_after_open_output (void)
-{
-  if (! bfd_link_relocatable (&link_info))
-    return;
-
-  align_file = lang_add_input_file ("linker aligns",
-				    lang_input_file_is_fake_enum,
-				    NULL);
-  align_file->the_bfd = bfd_create ("linker aligns",
-				    link_info.output_bfd);
-  if (align_file->the_bfd == NULL
-      || ! bfd_set_arch_mach (align_file->the_bfd,
-			      bfd_get_arch (link_info.output_bfd),
-			      bfd_get_mach (link_info.output_bfd)))
-    {
-      fatal (_("%P: can not create BFD: %E\n"));
-      return;
-    }
-
-  align_file->the_bfd->flags |= BFD_LINKER_CREATED;
-
-  Elf_Internal_Ehdr *ehdr = elf_elfheader (align_file->the_bfd);
-  elf_backend_data *bed = get_elf_backend_data (link_info.output_bfd);
-  ehdr->e_ident[EI_CLASS] = bed->s->elfclass;
-
-  ldlang_add_file (align_file);
-}
-
 EOF
 
 LDEMUL_BEFORE_ALLOCATION=larch_elf_before_allocation
 LDEMUL_AFTER_ALLOCATION=gld${EMULATION_NAME}_after_allocation
-LDEMUL_AFTER_OPEN_OUTPUT=loongarch_elf_after_open_output

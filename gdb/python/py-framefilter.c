@@ -329,11 +329,9 @@ py_print_single_arg (struct ui_out *out,
       if the value is a frame argument.  This is denoted in this
       function with PRINT_ARGS_FIELD which is flag from the caller to
       emit the ARGS field.  */
-  if (out->is_mi_like_p ())
-    {
-      if (print_args_field || args_type != NO_VALUES)
-	maybe_tuple.emplace (out, nullptr);
-    }
+  if (out->is_mi_like_p ()
+      && (print_args_field || args_type != NO_VALUES))
+    maybe_tuple.emplace (out, nullptr);
 
   annotate_arg_begin ();
 
@@ -585,11 +583,9 @@ enumerate_locals (PyObject *iter,
       /* With PRINT_NO_VALUES, MI does not emit a tuple normally as
 	 each output contains only one field.  The exception is
 	 -stack-list-variables, which always provides a tuple.  */
-      if (out->is_mi_like_p ())
-	{
-	  if (print_args_field || args_type != NO_VALUES)
-	    tuple.emplace (out, nullptr);
-	}
+      if (out->is_mi_like_p ()
+	  && (print_args_field || args_type != NO_VALUES))
+	tuple.emplace (out, nullptr);
 
       /* If the output is not MI we indent locals.  */
       out->spaces (local_indent);
@@ -886,19 +882,17 @@ py_print_frame (PyObject *filter, frame_filter_flags flags,
     {
       /* Print address to the address field.  If an address is not provided,
 	 print nothing.  */
-      if (opts.addressprint && has_addr)
-	{
-	  if (!sal.symtab
+      if (opts.addressprint && has_addr
+	  && (!sal.symtab
 	      || frame_show_address (frame, sal)
-	      || print_what == LOC_AND_ADDRESS)
-	    {
-	      annotate_frame_address ();
-	      out->field_core_addr ("addr", gdbarch, address);
-	      if (get_frame_pc_masked (frame))
-		out->field_string ("pac", " [PAC]");
-	      annotate_frame_address_end ();
-	      out->text (" in ");
-	    }
+	      || print_what == LOC_AND_ADDRESS))
+	{
+	  annotate_frame_address ();
+	  out->field_core_addr ("addr", gdbarch, address);
+	  if (get_frame_pc_masked (frame))
+	    out->field_string ("pac", " [PAC]");
+	  annotate_frame_address_end ();
+	  out->text (" in ");
 	}
 
       /* Print frame function name.  */
@@ -1034,12 +1028,10 @@ py_print_frame (PyObject *filter, frame_filter_flags flags,
 	out->text ("\n");
     }
 
-  if (print_locals)
-    {
-      if (py_print_locals (filter, out, args_type, indent,
-			   frame) == EXT_LANG_BT_ERROR)
-	return EXT_LANG_BT_ERROR;
-    }
+  if (print_locals
+      && py_print_locals (filter, out, args_type, indent,
+			  frame) == EXT_LANG_BT_ERROR)
+    return EXT_LANG_BT_ERROR;
 
   if ((flags & PRINT_HIDE) == 0)
     {
@@ -1103,11 +1095,10 @@ bootstrap_python_frame_filters (const frame_info_ptr &frame,
   if (py_frame_high == NULL)
     return NULL;
 
-  gdbpy_ref<> iterable (PyObject_CallFunctionObjArgs (sort_func.get (),
-						      frame_obj.get (),
-						      py_frame_low.get (),
-						      py_frame_high.get (),
-						      NULL));
+  gdbpy_ref<> iterable = gdbpy_object_call_function_obj_args (sort_func,
+							      frame_obj,
+							      py_frame_low,
+							      py_frame_high);
   if (iterable == NULL)
     return NULL;
 

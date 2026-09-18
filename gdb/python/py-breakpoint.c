@@ -846,7 +846,7 @@ bppy_get_locations (PyObject *self, void *closure)
       Py_INCREF (self);
       py_bploc->owner = self_bp;
       py_bploc->bp_loc = ref.release ();
-      if (PyList_Append (list.get (), (PyObject *) py_bploc.get ()) != 0)
+      if (PyList_Append (list.get (), py_bploc.get ()) != 0)
 	return nullptr;
     }
   return list.release ();
@@ -1089,26 +1089,6 @@ bppy_repr (PyObject *self)
 			       bp->bp->hit_count, str.c_str ());
 }
 
-/* Append to LIST the breakpoint Python object associated to B.
-
-   Return true on success.  Return false on failure, with the Python error
-   indicator set.  */
-
-static bool
-build_bp_list (struct breakpoint *b, PyObject *list)
-{
-  PyObject *bp = (PyObject *) b->py_bp_object;
-
-  /* Not all breakpoints will have a companion Python object.
-     Only breakpoints that were created via bppy_new, or
-     breakpoints that were created externally and are tracked by
-     the Python Scripting API.  */
-  if (bp == nullptr)
-    return true;
-
-  return PyList_Append (list, bp) == 0;
-}
-
 /* See python-internal.h.  */
 
 bool
@@ -1141,11 +1121,18 @@ gdbpy_breakpoints (PyObject *self, PyObject *args)
   if (list == NULL)
     return NULL;
 
-  /* If build_bp_list returns false, it signals an error condition.  In that
-     case abandon building the list and return nullptr.  */
   for (breakpoint &bp : all_breakpoints ())
-    if (!build_bp_list (&bp, list.get ()))
-      return nullptr;
+    {
+      /* Not all breakpoints will have a companion Python object.
+	 Only breakpoints that were created via bppy_new, or
+	 breakpoints that were created externally and are tracked by
+	 the Python Scripting API.  */
+      if (bp.py_bp_object == nullptr)
+	continue;
+
+      if (PyList_Append (list.get (), bp.py_bp_object) < 0)
+	return nullptr;
+    }
 
   return PyList_AsTuple (list.get ());
 }
@@ -1161,7 +1148,6 @@ gdbpy_breakpoint_cond_says_stop (const struct extension_language_defn *extlang,
 {
   int stop;
   struct gdbpy_breakpoint_object *bp_obj = b->py_bp_object;
-  PyObject *py_bp = (PyObject *) bp_obj;
 
   if (bp_obj == NULL)
     return EXT_LANG_BP_STOP_UNSET;
@@ -1173,9 +1159,9 @@ gdbpy_breakpoint_cond_says_stop (const struct extension_language_defn *extlang,
   if (bp_obj->is_finish_bp)
     bpfinishpy_pre_stop_hook (bp_obj);
 
-  if (PyObject_HasAttrString (py_bp, stop_func))
+  if (PyObject_HasAttrString (bp_obj, stop_func))
     {
-      gdbpy_ref<> result = gdbpy_call_method (py_bp, stop_func);
+      gdbpy_ref<> result = gdbpy_call_method (bp_obj, stop_func);
 
       stop = 1;
       if (result != NULL)
@@ -1210,15 +1196,11 @@ int
 gdbpy_breakpoint_has_cond (const struct extension_language_defn *extlang,
 			   struct breakpoint *b)
 {
-  PyObject *py_bp;
-
   if (b->py_bp_object == NULL)
     return 0;
 
-  py_bp = (PyObject *) b->py_bp_object;
-
   gdbpy_enter enter_py (b->gdbarch);
-  return PyObject_HasAttrString (py_bp, stop_func);
+  return PyObject_HasAttrString (b->py_bp_object, stop_func);
 }
 
 
@@ -1281,12 +1263,9 @@ gdbpy_breakpoint_created (struct breakpoint *bp)
       gdbpy_print_stack ();
     }
 
-  if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_created))
-    {
-      if (evpy_emit_event ((PyObject *) newbp,
-			   gdb_py_events.breakpoint_created) < 0)
-	gdbpy_print_stack ();
-    }
+  if (evregpy_has_listeners_p (gdb_py_events.breakpoint_created)
+      && evpy_emit_event (newbp, gdb_py_events.breakpoint_created) < 0)
+    gdbpy_print_stack ();
 }
 
 /* Callback that is used when a breakpoint is deleted.  This will
@@ -1310,12 +1289,10 @@ gdbpy_breakpoint_deleted (struct breakpoint *b)
 	  if (bp_obj->is_finish_bp)
 	    bpfinishpy_pre_delete_hook (bp_obj.get ());
 
-	  if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_deleted))
-	    {
-	      if (evpy_emit_event ((PyObject *) bp_obj.get (),
-				   gdb_py_events.breakpoint_deleted) < 0)
-		gdbpy_print_stack ();
-	    }
+	  if (evregpy_has_listeners_p (gdb_py_events.breakpoint_deleted)
+	      && evpy_emit_event (bp_obj,
+				  gdb_py_events.breakpoint_deleted) < 0)
+	    gdbpy_print_stack ();
 
 	  bp_obj->bp = NULL;
 	  --bppy_live;
@@ -1338,16 +1315,11 @@ gdbpy_breakpoint_modified (struct breakpoint *b)
     {
       gdbpy_enter enter_py (b->gdbarch);
 
-      PyObject *bp_obj = (PyObject *) bp->py_bp_object;
-      if (bp_obj)
-	{
-	  if (!evregpy_no_listeners_p (gdb_py_events.breakpoint_modified))
-	    {
-	      if (evpy_emit_event (bp_obj,
-				   gdb_py_events.breakpoint_modified) < 0)
-		gdbpy_print_stack ();
-	    }
-	}
+      PyObject *bp_obj = bp->py_bp_object;
+      if (bp_obj != nullptr
+	  && evregpy_has_listeners_p (gdb_py_events.breakpoint_modified)
+	  && evpy_emit_event (bp_obj, gdb_py_events.breakpoint_modified) < 0)
+	gdbpy_print_stack ();
     }
 }
 
@@ -1626,7 +1598,7 @@ bplocpy_get_owner (PyObject *py_self, void *closure)
   BPPY_REQUIRE_VALID (self->owner);
   BPLOCPY_REQUIRE_VALID (self->owner, self);
   Py_INCREF (self->owner);
-  return (PyObject *) self->owner;
+  return self->owner;
 }
 
 /* Attempt to get fully resolved file path for symtab.  */

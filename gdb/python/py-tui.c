@@ -418,10 +418,8 @@ gdbpy_tui_window_maker::operator() (const char *win_name)
      which, this method should not be called.  */
   gdb_assert (m_constr != nullptr);
 
-  gdbpy_ref<> user_window
-    (PyObject_CallFunctionObjArgs (m_constr.get (),
-				   (PyObject *) wrapper.get (),
-				   nullptr));
+  gdbpy_ref<> user_window = gdbpy_object_call_function_obj_args (m_constr,
+								 wrapper);
   if (user_window == nullptr)
     {
       gdbpy_print_stack ();
@@ -594,7 +592,7 @@ gdbpy_tui_enabled (bool state)
 {
   gdbpy_enter enter_py;
 
-  if (evregpy_no_listeners_p (gdb_py_events.tui_enabled))
+  if (!evregpy_has_listeners_p (gdb_py_events.tui_enabled))
     return;
 
   gdbpy_ref<> event_obj = create_event_object (&tui_enabled_event_object_type);
@@ -605,8 +603,9 @@ gdbpy_tui_enabled (bool state)
     }
 
   gdbpy_ref<> code (PyBool_FromLong (state));
-  if (evpy_add_attribute (event_obj.get (), "enabled", code.get ()) < 0
-      || evpy_emit_event (event_obj.get (), gdb_py_events.tui_enabled) < 0)
+  if (code == nullptr
+      || evpy_add_attribute (event_obj, "enabled", code) < 0
+      || evpy_emit_event (event_obj, gdb_py_events.tui_enabled) < 0)
     gdbpy_print_stack ();
 }
 

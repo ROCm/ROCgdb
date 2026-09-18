@@ -113,16 +113,12 @@ fnpy_init (PyObject *self, PyObject *args, PyObject *kwds)
   if (PyObject_HasAttrString (self, "__doc__"))
     {
       gdbpy_ref<> ds_obj (PyObject_GetAttrString (self, "__doc__"));
-      if (ds_obj != NULL)
+      if (ds_obj != nullptr && gdbpy_is_string (ds_obj.get ()))
 	{
-	  if (gdbpy_is_string (ds_obj.get ()))
-	    {
-	      docstring = python_string_to_host_string (ds_obj.get ());
-	      if (docstring == NULL)
-		return -1;
-	      docstring
-		= gdbpy_fix_doc_string_indentation (std::move (docstring));
-	    }
+	  docstring = python_string_to_host_string (ds_obj.get ());
+	  if (docstring == nullptr)
+	    return -1;
+	  docstring = gdbpy_fix_doc_string_indentation (std::move (docstring));
 	}
     }
   if (! docstring)

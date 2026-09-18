@@ -28,11 +28,11 @@ create_stop_event_object (PyTypeObject *py_type, const gdbpy_ref<> &dict)
   if (thread == nullptr)
     return nullptr;
 
-  gdbpy_ref<> result = create_thread_event_object (py_type, thread.get ());
+  gdbpy_ref<> result = create_thread_event_object (py_type, thread);
   if (result == nullptr)
     return nullptr;
 
-  if (evpy_add_attribute (result.get (), "details", dict.get ()) < 0)
+  if (evpy_add_attribute (result, "details", dict) < 0)
     return nullptr;
 
   return result;
@@ -110,7 +110,7 @@ emit_stop_event (struct bpstat *bs, enum gdb_signal stop_signal)
   PyObject *first_bp = NULL;
   struct bpstat *current_bs;
 
-  if (evregpy_no_listeners_p (gdb_py_events.stop))
+  if (!evregpy_has_listeners_p (gdb_py_events.stop))
     return 0;
 
   gdbpy_ref<> dict = py_print_bpstat (bs, stop_signal);
@@ -123,8 +123,7 @@ emit_stop_event (struct bpstat *bs, enum gdb_signal stop_signal)
       if (current_bs->breakpoint_at
 	  && current_bs->breakpoint_at->py_bp_object)
 	{
-	  PyObject *current_py_bp =
-	      (PyObject *) current_bs->breakpoint_at->py_bp_object;
+	  PyObject *current_py_bp = current_bs->breakpoint_at->py_bp_object;
 
 	  if (list == NULL)
 	    {
@@ -169,5 +168,5 @@ emit_stop_event (struct bpstat *bs, enum gdb_signal stop_signal)
 	return -1;
     }
 
-  return evpy_emit_event (stop_event_obj.get (), gdb_py_events.stop);
+  return evpy_emit_event (stop_event_obj, gdb_py_events.stop);
 }

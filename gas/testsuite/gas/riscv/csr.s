@@ -367,6 +367,9 @@
 	csr mcyclecfgh
 	csr minstretcfgh
 
+	# Smpmpdeleg extension
+	csr mpmpdeleg
+
 	# smrnmi
 	csr mnepc
 	csr mncause
@@ -484,6 +487,10 @@
 	csr sctrdepth
 	csr vsctrctl
 	csr mctrctl
+
+	# Sspmpen
+	csr spmpen
+	csr spmpenh
 
 	# Supported in previous priv spec, but dropped now
 

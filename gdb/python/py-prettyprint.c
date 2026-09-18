@@ -78,8 +78,7 @@ search_pp_list (PyObject *list, PyObject *value)
 	    continue;
 	}
 
-      gdbpy_ref<> printer (PyObject_CallFunctionObjArgs (function, value,
-							 NULL));
+      gdbpy_ref<> printer = gdbpy_object_call_function_obj_args (function, value);
       if (printer == NULL)
 	return NULL;
       else if (printer != Py_None)
@@ -204,17 +203,15 @@ pretty_print_one_value (PyObject *printer, struct value **out_value)
 	{
 	  result.reset (PyObject_CallMethodObjArgs (printer, gdbpy_to_string_cst,
 						    NULL));
-	  if (result != NULL)
+	  if (result != nullptr
+	      && !gdbpy_is_string (result.get ())
+	      && !gdbpy_is_lazy_string (result.get ())
+	      && result != Py_None)
 	    {
-	      if (! gdbpy_is_string (result.get ())
-		  && ! gdbpy_is_lazy_string (result.get ())
-		  && result != Py_None)
-		{
-		  *out_value = convert_value_from_python (result.get ());
-		  if (PyErr_Occurred ())
-		    *out_value = NULL;
-		  result = NULL;
-		}
+	      *out_value = convert_value_from_python (result.get ());
+	      if (PyErr_Occurred ())
+		*out_value = nullptr;
+	      result = nullptr;
 	    }
 	}
     }

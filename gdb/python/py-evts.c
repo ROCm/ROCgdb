@@ -43,9 +43,7 @@ add_new_registry (eventregistry_object **registryp, const char *name)
   if (*registryp == NULL)
     return -1;
 
-  return gdb_pymodule_addobject (gdb_py_events.mod,
-				 name,
-				 (PyObject *)(*registryp));
+  return gdb_pymodule_addobject (gdb_py_events.mod, name, *registryp);
 }
 
 /* Create and populate the _gdbevents module.  Note that this is

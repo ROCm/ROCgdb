@@ -1,0 +1,49 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Tests that GDB does not assert if interrupting an empty remote target
+# in non-stop mode.  Also tests that no 'vCont' package is sent for empty
+# remote targets.
+
+load_lib gdbserver-support.exp
+
+require allow_gdbserver_tests
+
+clean_restart
+
+# Make sure we're disconnected, in case we're testing with an
+# extended-remote board, therefore already connected.
+gdb_test "disconnect" ".*"
+
+gdbserver_start_extended "--once"
+
+gdb_test_no_output "set non-stop on"
+
+gdb_test "interrupt" \
+    "Cannot execute this command without a live selected thread."
+
+gdb_test_no_output "set debug remote on"
+
+# Test that we do not see a 'vCont' package if we interrupt an empty
+# remote target.
+set re \
+    [multi_line \
+	 [string_to_regexp {[remote] stop: enter}] \
+	 [string_to_regexp {[remote] stop: exit}] \
+	 ""]
+
+gdb_test_lines "interrupt -a" "no vCont is sent" "^$re$" -re-not "vCont"
+
+gdb_test_no_output "set debug remote off"

@@ -208,7 +208,7 @@ recpy_insn_new (thread_info *thread, enum record_method method,
   obj->method = method;
   obj->number = number;
 
-  return (PyObject *) obj;
+  return obj;
 }
 
 /* Implementation of RecordInstruction.sal [gdb.Symtab_and_line].  */
@@ -305,7 +305,7 @@ recpy_func_new (thread_info *thread, enum record_method method,
   obj->method = method;
   obj->number = number;
 
-  return (PyObject *) obj;
+  return obj;
 }
 
 /* Implementation of RecordFunctionSegment.level [int].  */
@@ -460,7 +460,7 @@ recpy_gap_new (int reason_code, const char *reason_string, Py_ssize_t number)
   obj->reason_string = reason_string;
   obj->number = number;
 
-  return (PyObject *) obj;
+  return obj;
 }
 
 /* Implementation of RecordGap.number [int].  */
@@ -509,7 +509,7 @@ recpy_aux_new (thread_info *thread, enum record_method method,
   obj->method = method;
   obj->number = number;
 
-  return (PyObject *) obj;
+  return obj;
 }
 
 /* Implementation of Auxiliary.data [buffer].  */
@@ -698,7 +698,7 @@ gdbpy_current_recording (PyObject *self, PyObject *args)
   ret->thread = inferior_thread ();
   ret->method = target_record_method (ret->thread->ptid);
 
-  return (PyObject *) ret;
+  return ret;
 }
 
 /* Implementation of gdb.stop_recording (self) -> None.  */

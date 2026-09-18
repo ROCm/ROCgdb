@@ -489,7 +489,7 @@ gdbpy_lookup_static_symbols (gdbpy_borrowed_ref<> args,
   gdbpy_arg_parse_tuple_and_keywords (args, kw, "s|i", keywords, &name,
 				      &domain);
 
-  gdbpy_ref<> return_list = gdbpy_new_list (0);
+  gdbpy_ref<> return_list = gdbpy_list_new (0);
 
   domain_search_flags flags = from_scripting_domain (domain);
 

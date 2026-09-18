@@ -54,6 +54,7 @@ gdb_test "info locals"  [multi_line \
     "a = 101"   \
     "val1 = 1"  \
     "val2 = 2\t<$srcfile:$val2_d1, shadowed>"  \
+    "Use \"set print shadowed off\" to hide shadowed variables." \
     ] "info locals first level"
 
 gdb_breakpoint $srcfile:$bp_line3
@@ -65,6 +66,7 @@ gdb_test "info locals" [multi_line \
     "a = 102"   \
     "val1 = 1\t<$srcfile:$val1_d1, shadowed>"  \
     "val2 = 2\t<$srcfile:$val2_d1, shadowed>"  \
+    "Use \"set print shadowed off\" to hide shadowed variables." \
     ] "info locals second level"
 
 gdb_breakpoint $srcfile:$bp_line4
@@ -80,7 +82,93 @@ gdb_test "info locals" [multi_line \
     "a = 103\t<$srcfile:$a_line, shadowed>"   \
     "val1 = 1\t<$srcfile:$val1_d1, shadowed>" \
     "val2 = 2\t<$srcfile:$val2_d1, shadowed>" \
+    "Use \"set print shadowed off\" to hide shadowed variables." \
     ] "info locals at innermost level"
+
+gdb_test "info locals -shadowed off" [multi_line \
+    "a = 999"   \
+    "val1 = 6"  \
+    "val2 = 7"  \
+    "val3 = 8"  \
+    "Some shadowed variables were omitted, use \"set print shadowed on\" to include them." \
+    ] "info locals -shadowed off at innermost level"
+
+# Use a type filter.  Only the shadowed variable is of type double.
+gdb_test "info locals -t double" [multi_line \
+    "val3 = 4\t<$srcfile:$val3_d1, shadowed>" \
+    "Use \"set print shadowed off\" to hide shadowed variables." \
+    ] "info locals -t double at innermost level"
+
+gdb_test "backtrace -full" [multi_line \
+    "#0 +shadowing \\(\\) at .*" \
+    "\[ \t\]+a = 999\t<${testfile}2.c:16>" \
+    "\[ \t\]+val1 = 6\t<$srcfile:$val1_d3>"  \
+    "\[ \t\]+val2 = 7\t<$srcfile:$val2_d3>"  \
+    "\[ \t\]+val3 = 8\t<$srcfile:$val3_d2>"  \
+    "\[ \t\]+val1 = 5\t<$srcfile:$val1_d2, shadowed>" \
+    "\[ \t\]+val2 = 3\t<$srcfile:$val2_d2, shadowed>" \
+    "\[ \t\]+val3 = 4\t<$srcfile:$val3_d1, shadowed>" \
+    "\[ \t\]+a = 103\t<$srcfile:$a_line, shadowed>"   \
+    "\[ \t\]+val1 = 1\t<$srcfile:$val1_d1, shadowed>" \
+    "\[ \t\]+val2 = 2\t<$srcfile:$val2_d1, shadowed>" \
+    "#1 +$hex in main \\(\\) at .*" \
+    "No locals\\." \
+    ] "backtrace -full including shadowed variables"
+
+gdb_test_no_output "set print shadowed off"
+
+gdb_test "show print shadowed" \
+    "Printing of shadowed variables is off\\." \
+    "show print shadowed off"
+
+gdb_test "backtrace -full" [multi_line \
+    "#0 +shadowing \\(\\) at .*" \
+    "\[ \t\]+a = 999" \
+    "\[ \t\]+val1 = 6"  \
+    "\[ \t\]+val2 = 7"  \
+    "\[ \t\]+val3 = 8"  \
+    "#1 +$hex in main \\(\\) at .*" \
+    "No locals\\." \
+    ] "backtrace -full excluding shadowed variables"
+
+gdb_test "info locals" [multi_line \
+    "a = 999"   \
+    "val1 = 6"  \
+    "val2 = 7"  \
+    "val3 = 8"  \
+    "Some shadowed variables were omitted, use \"set print shadowed on\" to include them." \
+    ] "info locals at innermost level with filtered out shadowed"
+
+# Use a type filter.  Printing of shadowed variables is disabled, so nothing
+# is printed.
+gdb_test "info locals -t double" [multi_line \
+    "No matching locals\\." \
+    "Some shadowed variables were omitted, use \"set print shadowed on\" to include them." \
+    ] "info locals -t double with filtered out shadowed"
+
+# Variables filtered by a regexp are not reported as shadowed.
+gdb_test "info locals -t float" "No matching locals\\." \
+    "info locals -t float with filtered out shadowed"
+
+# Override the user's setting to print shadowed variables.
+gdb_test "info locals -shadowed on" [multi_line \
+    "a = 999\t<${testfile}2.c:16>" \
+    "val1 = 6\t<$srcfile:$val1_d3>"  \
+    "val2 = 7\t<$srcfile:$val2_d3>"  \
+    "val3 = 8\t<$srcfile:$val3_d2>"  \
+    "val1 = 5\t<$srcfile:$val1_d2, shadowed>" \
+    "val2 = 3\t<$srcfile:$val2_d2, shadowed>" \
+    "val3 = 4\t<$srcfile:$val3_d1, shadowed>" \
+    "a = 103\t<$srcfile:$a_line, shadowed>"   \
+    "val1 = 1\t<$srcfile:$val1_d1, shadowed>" \
+    "val2 = 2\t<$srcfile:$val2_d1, shadowed>" \
+    "Use \"set print shadowed off\" to hide shadowed variables." \
+    ] "info locals -shadowed on at innermost level"
+
+# The quiet option suppresses the hint about the shadowed setting.
+gdb_test_no_output "info locals -q -t double"
+
+gdb_test_no_output "set print shadowed on"
 
 gdb_breakpoint $srcfile:$bp_line5
 gdb_continue_to_breakpoint "continue to outermost level last" \

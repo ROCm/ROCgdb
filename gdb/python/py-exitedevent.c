@@ -33,15 +33,13 @@ create_exited_event_object (const LONGEST *exit_code, struct inferior *inf)
 
       if (exit_code_obj == NULL)
 	return NULL;
-      if (evpy_add_attribute (exited_event.get (), "exit_code",
-			      exit_code_obj.get ()) < 0)
+      if (evpy_add_attribute (exited_event, "exit_code", exit_code_obj) < 0)
 	return NULL;
     }
 
   gdbpy_ref<inferior_object> inf_obj = inferior_to_inferior_object (inf);
-  if (inf_obj == NULL || evpy_add_attribute (exited_event.get (),
-					     "inferior",
-					     (PyObject *) inf_obj.get ()) < 0)
+  if (inf_obj == nullptr
+      || evpy_add_attribute (exited_event, "inferior", inf_obj) < 0)
     return NULL;
 
   return exited_event;
@@ -53,13 +51,13 @@ create_exited_event_object (const LONGEST *exit_code, struct inferior *inf)
 int
 emit_exited_event (const LONGEST *exit_code, struct inferior *inf)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.exited))
+  if (!evregpy_has_listeners_p (gdb_py_events.exited))
     return 0;
 
   gdbpy_ref<> event = create_exited_event_object (exit_code, inf);
 
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.exited);
+    return evpy_emit_event (event, gdb_py_events.exited);
 
   return -1;
 }

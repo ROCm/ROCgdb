@@ -45,7 +45,8 @@ create_event_object (PyTypeObject *py_type)
    function acquires a new reference to ATTR.  */
 
 int
-evpy_add_attribute (PyObject *event, const char *name, PyObject *attr)
+evpy_add_attribute (gdbpy_borrowed_ref<> event, const char *name,
+		    gdbpy_borrowed_ref<> attr)
 {
   return PyObject_SetAttrString (event, name, attr);
 }
@@ -62,7 +63,7 @@ gdbpy_initialize_event ()
    returns 0 if emit is successful -1 otherwise.  */
 
 int
-evpy_emit_event (PyObject *event,
+evpy_emit_event (gdbpy_opt_borrowed_ref<> event,
 		 eventregistry_object *registry)
 {
   Py_ssize_t i;
@@ -82,9 +83,11 @@ evpy_emit_event (PyObject *event,
       if (func == NULL)
 	return -1;
 
-      gdbpy_ref<> func_result (PyObject_CallFunctionObjArgs (func, event,
-							     NULL));
-
+      gdbpy_ref<> func_result;
+      if (event == nullptr)
+	func_result = gdbpy_object_call_function_obj_args (func);
+      else
+	func_result = gdbpy_object_call_function_obj_args (func, event);
       if (func_result == NULL)
 	{
 	  /* Print the trace here, but keep going -- we want to try to

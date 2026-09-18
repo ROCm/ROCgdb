@@ -9267,7 +9267,7 @@ If both @var{regexp} and @var{type_regexp} are provided, an argument
 is printed only if its name matches @var{regexp} and its type matches
 @var{type_regexp}.
 
-@item info locals [-q]
+@item info locals [-q] [-shadowed [on|off]]
 @kindex info locals
 Print the local variables of the selected frame, each on a separate
 line.  These are all variables (declared either static or automatic)
@@ -9276,6 +9276,9 @@ accessible at the point of execution of the selected frame.
 The optional flag @samp{-q}, which stands for @samp{quiet}, disables
 printing header information and messages explaining why no local variables
 have been printed.
+
+The optional argument @samp{-shadowed} overrides the @code{set print shadowed}
+setting (@pxref{set print shadowed}) for this invocation of the command.
 
 @smallexample
 @group
@@ -9291,6 +9294,7 @@ have been printed.
 x = 4	<file.c:3>
 y = 52
 x = 3	<file.c:1, shadowed>
+Use "set print shadowed off" to hide shadowed variables.
 @end group
 @end smallexample
 
@@ -9301,7 +9305,8 @@ same name which is declared within an inner scope (decision block,
 method, or inner class).  When shadowing is detected, location
 information is added to all instances of the shadowed variable name.
 The outermost instances are additionally followed by @samp{shadowed}
-to indicate that they are not the active variable.
+to indicate that they are not the active variable.  Printing shadowed
+variables can be controlled by @ref{set print shadowed}.
 
 @item info locals [-q] [-t @var{type_regexp}] [@var{regexp}]
 Like @kbd{info locals}, but only print the local variables selected
@@ -12918,6 +12923,19 @@ Do not pretty print C@t{++} virtual function tables.
 
 @item show print vtbl
 Show whether C@t{++} virtual function tables are pretty printed, or not.
+
+@anchor{set print shadowed}
+@item set print shadowed
+@itemx set print shadowed on
+@cindex printing shadowed variables
+Print variables that are shadowed by a declaration in an inner scope
+(@pxref{shadowed variables}).  The default is on.
+
+@item set print shadowed off
+Do not print shadowed variables.
+
+@item show print shadowed
+Show whether shadowed variables are printed or not.
 @end table
 
 @node Pretty Printing

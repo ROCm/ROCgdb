@@ -21,4 +21,15 @@ SECTIONS
 	{
 		*(.data)
 	}
+  .data.unaligned_local : { *(.data.unaligned_local) }
+  .data.unaligned_hidden : { *(.data.unaligned_hidden) }
+  .data.unaligned_global : { *(.data.unaligned_global) }
+  .data.unaligned_DYNAMIC : { *(.data.unaligned_DYNAMIC) }
+  .data.aligned_local : { *(.data.aligned_local) }
+  .data.aligned_hidden : { *(.data.aligned_hidden) }
+  .data.aligned_global : { *(.data.aligned_global) }
+  .data.aligned_global_abs : { *(.data.aligned_global_abs) }
+  .data.aligned_weak_undef : { *(.data.aligned_weak_undef) }
+  .data.aligned_DYNAMIC : { *(.data.aligned_DYNAMIC) }
+  .dynamic : { *(.dynamic) }
 }

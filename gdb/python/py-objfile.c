@@ -237,7 +237,7 @@ objfpy_new (PyTypeObject *type, PyObject *args, PyObject *keywords)
   if (self != nullptr && !objfpy_initialize (self))
     return nullptr;
 
-  return (PyObject *) self.release ();
+  return self.release ();
 }
 
 PyObject *
@@ -670,12 +670,11 @@ gdbpy_lookup_objfile (PyObject *self, PyObject *args, PyObject *kw)
 gdbpy_ref<>
 objfile_to_objfile_object (struct objfile *objfile)
 {
-  PyObject *result
-    = (PyObject *) objfpy_objfile_data_key.get (objfile);
+  PyObject *result = objfpy_objfile_data_key.get (objfile);
   if (result == NULL)
     {
       gdbpy_ref<objfile_object> object
-	((objfile_object *) PyObject_New (objfile_object, &objfile_object_type));
+	(PyObject_New (objfile_object, &objfile_object_type));
       if (object == NULL)
 	return NULL;
       if (!objfpy_initialize (object))
@@ -683,7 +682,7 @@ objfile_to_objfile_object (struct objfile *objfile)
 
       object->objfile = objfile;
       objfpy_objfile_data_key.set (objfile, object.get ());
-      result = (PyObject *) object.release ();
+      result = object.release ();
     }
 
   return gdbpy_ref<>::new_reference (result);

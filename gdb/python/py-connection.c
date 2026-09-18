@@ -143,10 +143,11 @@ emit_connection_event (process_stratum_target *target,
     return -1;
 
   gdbpy_ref<> conn = target_to_connection_object (target);
-  if (evpy_add_attribute (event_obj.get (), "connection", conn.get ()) < 0)
+  if (conn == nullptr
+      || evpy_add_attribute (event_obj, "connection", conn) < 0)
     return -1;
 
-  return evpy_emit_event (event_obj.get (), registry);
+  return evpy_emit_event (event_obj, registry);
 }
 
 /* Callback for the connection_removed observer.  */
@@ -159,9 +160,9 @@ connpy_connection_removed (process_stratum_target *target)
 
   gdbpy_enter enter_py;
 
-  if (!evregpy_no_listeners_p (gdb_py_events.connection_removed))
-    if (emit_connection_event (target, gdb_py_events.connection_removed) < 0)
-      gdbpy_print_stack ();
+  if (evregpy_has_listeners_p (gdb_py_events.connection_removed)
+      && emit_connection_event (target, gdb_py_events.connection_removed) < 0)
+    gdbpy_print_stack ();
 
   auto conn_obj_iter = all_connection_objects.find (target);
   if (conn_obj_iter != all_connection_objects.end ())

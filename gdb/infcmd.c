@@ -3157,7 +3157,10 @@ interrupt_target_1 (bool all_threads)
 	    }
 	}
       else
-	stop_current_target_threads_ns (inferior_ptid);
+	{
+	  ensure_valid_thread ();
+	  stop_current_target_threads_ns (inferior_ptid);
+	}
     }
   else
     target_interrupt ();

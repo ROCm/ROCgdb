@@ -59,7 +59,7 @@ arch_object_data_init (struct gdbarch *gdbarch)
 
   arch_obj->gdbarch = gdbarch;
 
-  return (PyObject *) arch_obj;
+  return arch_obj;
 }
 
 /* Returns the struct gdbarch value corresponding to the given Python

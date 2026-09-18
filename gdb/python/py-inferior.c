@@ -243,7 +243,7 @@ python_new_inferior (struct inferior *inf)
 
   gdbpy_enter enter_py;
 
-  if (evregpy_no_listeners_p (gdb_py_events.new_inferior))
+  if (!evregpy_has_listeners_p (gdb_py_events.new_inferior))
     return;
 
   gdbpy_ref<inferior_object> inf_obj = inferior_to_inferior_object (inf);
@@ -255,9 +255,8 @@ python_new_inferior (struct inferior *inf)
 
   gdbpy_ref<> event = create_event_object (&new_inferior_event_object_type);
   if (event == NULL
-      || evpy_add_attribute (event.get (), "inferior",
-			     (PyObject *) inf_obj.get ()) < 0
-      || evpy_emit_event (event.get (), gdb_py_events.new_inferior) < 0)
+      || evpy_add_attribute (event, "inferior", inf_obj) < 0
+      || evpy_emit_event (event, gdb_py_events.new_inferior) < 0)
     gdbpy_print_stack ();
 }
 
@@ -271,7 +270,7 @@ python_inferior_deleted (struct inferior *inf)
 
   gdbpy_enter enter_py;
 
-  if (evregpy_no_listeners_p (gdb_py_events.inferior_deleted))
+  if (!evregpy_has_listeners_p (gdb_py_events.inferior_deleted))
     return;
 
   gdbpy_ref<inferior_object> inf_obj = inferior_to_inferior_object (inf);
@@ -283,9 +282,8 @@ python_inferior_deleted (struct inferior *inf)
 
   gdbpy_ref<> event = create_event_object (&inferior_deleted_event_object_type);
   if (event == NULL
-      || evpy_add_attribute (event.get (), "inferior",
-			     (PyObject *) inf_obj.get ()) < 0
-      || evpy_emit_event (event.get (), gdb_py_events.inferior_deleted) < 0)
+      || evpy_add_attribute (event, "inferior", inf_obj) < 0
+      || evpy_emit_event (event, gdb_py_events.inferior_deleted) < 0)
     gdbpy_print_stack ();
 }
 
@@ -298,8 +296,7 @@ thread_to_thread_object (thread_info *thr)
 
   auto thread_it = inf_obj->threads->find (thr);
   if (thread_it != inf_obj->threads->end ())
-    return gdbpy_ref<>::new_reference
-      ((PyObject *) (thread_it->second.get ()));
+    return gdbpy_ref<>::new_reference (thread_it->second.get ());
 
   PyErr_SetString (PyExc_SystemError,
 		   _("could not find gdb thread object"));
@@ -331,15 +328,14 @@ add_thread_object (struct thread_info *tp)
   if (!ins_result.second)
     return;
 
-  if (evregpy_no_listeners_p (gdb_py_events.new_thread))
+  if (!evregpy_has_listeners_p (gdb_py_events.new_thread))
     return;
 
   gdbpy_ref<> event = create_thread_event_object
-    (&new_thread_event_object_type,
-     (PyObject *) ins_result.first->second.get ());
+    (&new_thread_event_object_type, ins_result.first->second);
 
   if (event == NULL
-      || evpy_emit_event (event.get (), gdb_py_events.new_thread) < 0)
+      || evpy_emit_event (event, gdb_py_events.new_thread) < 0)
     gdbpy_print_stack ();
 }
 
@@ -496,7 +492,7 @@ gdbpy_inferiors (PyObject *unused, PyObject *unused2)
       if (inferior == NULL)
 	continue;
 
-      if (PyList_Append (list.get (), (PyObject *) inferior.get ()) != 0)
+      if (PyList_Append (list.get (), inferior.get ()) != 0)
 	return NULL;
     }
 
@@ -988,8 +984,7 @@ infpy_dealloc (PyObject *obj)
 PyObject *
 gdbpy_selected_inferior (PyObject *self, PyObject *args)
 {
-  return ((PyObject *)
-	  inferior_to_inferior_object (current_inferior ()).release ());
+  return inferior_to_inferior_object (current_inferior ()).release ();
 }
 
 /* Implement the selected_context event handler.  This is called when some
@@ -1005,7 +1000,7 @@ python_context_changed (user_selected_what selection)
 
   gdbpy_enter enter_py (current_inferior ()->arch ());
 
-  if (evregpy_no_listeners_p (gdb_py_events.selected_context))
+  if (!evregpy_has_listeners_p (gdb_py_events.selected_context))
     return;
 
   gdbpy_ref<> inf_obj (gdbpy_selected_inferior (nullptr, nullptr));
@@ -1037,10 +1032,10 @@ python_context_changed (user_selected_what selection)
   gdbpy_ref<> event
     = create_event_object (&selected_context_event_object_type);
   if (event == nullptr
-      || evpy_add_attribute (event.get (), "inferior", inf_obj.get ()) < 0
-      || evpy_add_attribute (event.get (), "thread", thr_obj.get ()) < 0
-      || evpy_add_attribute (event.get (), "frame", frame_obj.get ()) < 0
-      || evpy_emit_event (event.get (), gdb_py_events.selected_context) < 0)
+      || evpy_add_attribute (event, "inferior", inf_obj) < 0
+      || evpy_add_attribute (event, "thread", thr_obj) < 0
+      || evpy_add_attribute (event, "frame", frame_obj) < 0
+      || evpy_emit_event (event, gdb_py_events.selected_context) < 0)
     gdbpy_print_stack ();
 }
 

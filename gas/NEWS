@@ -11,6 +11,9 @@
 
 * Add support for new variants and encodings of RISC-V Zvabd extension v0.9.
 
+* Add support for RISC-V standard extensions:
+  ziccamoc 1.0, zama16b v1.0, sspmp v1.0, sspmpen v1.0 and smpmpdeleg v1.0.
+
 Changes in 2.47:
 
 * New command line option --reloc-section-sym=[all|internal|none]

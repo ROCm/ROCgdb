@@ -34,9 +34,8 @@ create_signal_event_object (const gdbpy_ref<> &dict,
   gdbpy_ref<> signal_name_obj (PyUnicode_FromString (signal_name));
   if (signal_name_obj == NULL)
     return NULL;
-  if (evpy_add_attribute (signal_event_obj.get (),
-			  "stop_signal",
-			  signal_name_obj.get ()) < 0)
+  if (evpy_add_attribute (signal_event_obj, "stop_signal",
+			  signal_name_obj) < 0)
     return NULL;
 
   return signal_event_obj;

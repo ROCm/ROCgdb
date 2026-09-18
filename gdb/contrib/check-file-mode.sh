@@ -17,30 +17,59 @@
 set -e
 set -o pipefail
 
-no_exec_files=()
-for f in "$@"; do
-    case $f in
-	*/*.py \
-	    | */*.sh \
-	    | */configure \
-	    | gdb/gstack-1.in \
-	    | gdb/gcore-1.in \
-	    | gdb/po/gdbtext \
-	    | gdb/make-init-c \
-	    | gdb/testsuite/lib/notty-wrap )
-	    continue
-	    ;;
-	*)
-	    no_exec_files=("${no_exec_files[@]}" "$f")
-	    ;;
-    esac
-done
-
-if [ ${#no_exec_files[@]} -eq 0 ]; then
-    exit 0
-fi
-
 # Flag files that are executable, but not meant to be executable.
+check_exec ()
+{
+    no_exec_files=()
+    for f in "$@"; do
+	case $f in
+	    */*.py \
+		| */*.sh )
+		# Shell script or python.
+		continue
+		;;
+	    gdb/po/gdbtext \
+		| gdb/make-init-c \
+		| gdb/testsuite/lib/notty-wrap )
+		# Shell script without .sh extension.
+		continue
+		;;
+	    */configure \
+		| gdb/gstack-1.in \
+		| gdb/gcore-1.in )
+		# Used to generate shell script.
+		continue
+		;;
+	    *)
+		no_exec_files=("${no_exec_files[@]}" "$f")
+		;;
+	esac
+    done
 
-git ls-files --stage -- "${no_exec_files[@]}" \
-    | (! grep '^100755 ')
+    if [ ${#no_exec_files[@]} -eq 0 ]; then
+	return
+    fi
+
+    if ! git ls-files --stage -- "${no_exec_files[@]}" \
+	    | (! grep '^100755 '); then
+	echo "Found executable mode (100755) on file without .sh or .py"
+	echo "Please fix or add to exception list in $0"
+	exit 1
+    fi
+}
+
+# Flag symlinks.  Symlinks are support by git, but can be problematic on
+# platforms without proper support for it [1].
+# [1] https://gitforwindows.org/symbolic-links.html
+check_symlinks ()
+{
+    if ! git ls-files --stage -- "$@" \
+	    | (! grep '^120000 '); then
+	echo "Found symlink mode (120000)"
+	echo "Please replace by copy"
+	exit 1
+    fi
+}
+
+check_exec "$@"
+check_symlinks "$@"

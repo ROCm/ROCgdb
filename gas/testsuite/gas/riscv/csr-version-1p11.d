@@ -649,6 +649,8 @@ Disassembly of section .text:
 [ 	]+[0-9a-f]+:[ 	]+72159073[ 	]+csrw[ 	]+mcyclecfgh,a1
 [ 	]+[0-9a-f]+:[ 	]+72202573[ 	]+csrr[ 	]+a0,minstretcfgh
 [ 	]+[0-9a-f]+:[ 	]+72259073[ 	]+csrw[ 	]+minstretcfgh,a1
+[ 	]+[0-9a-f]+:[ 	]+31602573[ 	]+csrr[ 	]+a0,mpmpdeleg
+[ 	]+[0-9a-f]+:[ 	]+31659073[ 	]+csrw[ 	]+mpmpdeleg,a1
 [ 	]+[0-9a-f]+:[ 	]+74102573[ 	]+csrr[ 	]+a0,mnepc
 [ 	]+[0-9a-f]+:[ 	]+74159073[ 	]+csrw[ 	]+mnepc,a1
 [ 	]+[0-9a-f]+:[ 	]+74202573[ 	]+csrr[ 	]+a0,mncause
@@ -849,6 +851,10 @@ Disassembly of section .text:
 [ 	]+[0-9a-f]+:[ 	]+24e59073[ 	]+csrw[ 	]+vsctrctl,a1
 [ 	]+[0-9a-f]+:[ 	]+34e02573[ 	]+csrr[ 	]+a0,mctrctl
 [ 	]+[0-9a-f]+:[ 	]+34e59073[ 	]+csrw[ 	]+mctrctl,a1
+[ 	]+[0-9a-f]+:[ 	]+18302573[ 	]+csrr[ 	]+a0,spmpen
+[ 	]+[0-9a-f]+:[ 	]+18359073[ 	]+csrw[ 	]+spmpen,a1
+[ 	]+[0-9a-f]+:[ 	]+19302573[ 	]+csrr[ 	]+a0,spmpenh
+[ 	]+[0-9a-f]+:[ 	]+19359073[ 	]+csrw[ 	]+spmpenh,a1
 [ 	]+[0-9a-f]+:[ 	]+00002573[ 	]+csrr[ 	]+a0,ustatus
 [ 	]+[0-9a-f]+:[ 	]+00059073[ 	]+csrw[ 	]+ustatus,a1
 [ 	]+[0-9a-f]+:[ 	]+00402573[ 	]+csrr[ 	]+a0,uie

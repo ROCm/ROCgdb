@@ -44,14 +44,14 @@ create_inferior_call_event_object (inferior_call_kind flag, ptid_t ptid,
   if (ptid_obj == NULL)
     return NULL;
 
-  if (evpy_add_attribute (event.get (), "ptid", ptid_obj.get ()) < 0)
+  if (evpy_add_attribute (event, "ptid", ptid_obj) < 0)
     return NULL;
 
   gdbpy_ref<> addr_obj = gdb_py_object_from_ulongest (addr);
   if (addr_obj == NULL)
     return NULL;
 
-  if (evpy_add_attribute (event.get (), "address", addr_obj.get ()) < 0)
+  if (evpy_add_attribute (event, "address", addr_obj) < 0)
     return NULL;
 
   return event;
@@ -72,14 +72,14 @@ create_register_changed_event_object (const frame_info_ptr &frame,
   if (frame_obj == NULL)
     return NULL;
 
-  if (evpy_add_attribute (event.get (), "frame", frame_obj.get ()) < 0)
+  if (evpy_add_attribute (event, "frame", frame_obj) < 0)
     return NULL;
 
   gdbpy_ref<> regnum_obj = gdb_py_object_from_longest (regnum);
   if (regnum_obj == NULL)
     return NULL;
 
-  if (evpy_add_attribute (event.get (), "regnum", regnum_obj.get ()) < 0)
+  if (evpy_add_attribute (event, "regnum", regnum_obj) < 0)
     return NULL;
 
   return event;
@@ -100,14 +100,14 @@ create_memory_changed_event_object (CORE_ADDR addr, ssize_t len)
   if (addr_obj == NULL)
     return NULL;
 
-  if (evpy_add_attribute (event.get (), "address", addr_obj.get ()) < 0)
+  if (evpy_add_attribute (event, "address", addr_obj) < 0)
     return NULL;
 
   gdbpy_ref<> len_obj = gdb_py_object_from_longest (len);
   if (len_obj == NULL)
     return NULL;
 
-  if (evpy_add_attribute (event.get (), "length", len_obj.get ()) < 0)
+  if (evpy_add_attribute (event, "length", len_obj) < 0)
     return NULL;
 
   return event;
@@ -122,12 +122,12 @@ int
 emit_inferior_call_event (inferior_call_kind flag, ptid_t thread,
 			  CORE_ADDR addr)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.inferior_call))
+  if (!evregpy_has_listeners_p (gdb_py_events.inferior_call))
     return 0;
 
   gdbpy_ref<> event = create_inferior_call_event_object (flag, thread, addr);
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.inferior_call);
+    return evpy_emit_event (event, gdb_py_events.inferior_call);
   return -1;
 }
 
@@ -137,12 +137,12 @@ emit_inferior_call_event (inferior_call_kind flag, ptid_t thread,
 int
 emit_memory_changed_event (CORE_ADDR addr, ssize_t len)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.memory_changed))
+  if (!evregpy_has_listeners_p (gdb_py_events.memory_changed))
     return 0;
 
   gdbpy_ref<> event = create_memory_changed_event_object (addr, len);
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.memory_changed);
+    return evpy_emit_event (event, gdb_py_events.memory_changed);
   return -1;
 }
 
@@ -152,11 +152,11 @@ emit_memory_changed_event (CORE_ADDR addr, ssize_t len)
 int
 emit_register_changed_event (const frame_info_ptr &frame, int regnum)
 {
-  if (evregpy_no_listeners_p (gdb_py_events.register_changed))
+  if (!evregpy_has_listeners_p (gdb_py_events.register_changed))
     return 0;
 
   gdbpy_ref<> event = create_register_changed_event_object (frame, regnum);
   if (event != NULL)
-    return evpy_emit_event (event.get (), gdb_py_events.register_changed);
+    return evpy_emit_event (event, gdb_py_events.register_changed);
   return -1;
 }

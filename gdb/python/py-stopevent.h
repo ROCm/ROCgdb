@@ -28,9 +28,10 @@ extern gdbpy_ref<> create_stop_event_object (PyTypeObject *py_type,
 extern int emit_stop_event (struct bpstat *bs,
 			    enum gdb_signal stop_signal);
 
-extern gdbpy_ref<> create_breakpoint_event_object (const gdbpy_ref<> &dict,
-						   PyObject *breakpoint_list,
-						   PyObject *first_bp);
+extern gdbpy_ref<> create_breakpoint_event_object
+     (const gdbpy_ref<> &dict,
+      gdbpy_borrowed_ref<> breakpoint_list,
+      gdbpy_borrowed_ref<> first_bp);
 
 extern gdbpy_ref<> create_signal_event_object (const gdbpy_ref<> &dict,
 					       enum gdb_signal stop_signal);
