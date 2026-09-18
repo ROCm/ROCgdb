@@ -174,21 +174,21 @@ static pthdb_callbacks_t pd_callbacks = {
 struct aix_thread_variables
 {
   /* Whether the current application is debuggable by pthdb.  */
-  int pd_able;
+  bool pd_able = false;
 
   /* Whether a threaded application is being debugged.  */
-  int pd_active;
+  bool pd_active = false;
 
   /* Current pthdb session.  */
-  pthdb_session_t pd_session;
+  pthdb_session_t pd_session = 0;
 
   /* Address of the function that libpthread will call when libpthdebug
    is ready to be initialized.  */
-  CORE_ADDR pd_brk_addr;
+  CORE_ADDR pd_brk_addr = 0;
 
   /* Whether the current architecture is 64-bit.
    Only valid when pd_able is true.  */
-  int arch64;
+  bool arch64 = false;
 
   /* Describes the number of thread exit events reported.  */
   std::unordered_set<pthdb_pthread_t> exited_threads;
@@ -921,7 +921,7 @@ pd_activate (pid_t pid)
 			       PTHDB_FLAG_REGS, &pd_callbacks,
 			       &data->pd_session);
   if (status == PTHDB_SUCCESS)
-    data->pd_active = 1;
+    data->pd_active = true;
 }
 
 /* AIX implementation of update_thread_list.  */
@@ -986,7 +986,7 @@ pd_enable (inferior *inf)
 
   /* Prepare for thread debugging.  */
   current_inferior ()->push_target (&aix_thread_ops);
-  data->pd_able = 1;
+  data->pd_able = true;
 
   /* If we're debugging a core file or an attached inferior, the
      pthread library may already have been initialized, so try to
@@ -1009,8 +1009,8 @@ pd_disable (inferior *inf)
   pthdb_session_destroy (data->pd_session);
 
   pid_to_prc (&inferior_ptid);
-  data->pd_active = 0;
-  data->pd_able = 0;
+  data->pd_active = false;
+  data->pd_able = false;
   current_inferior ()->unpush_target (&aix_thread_ops);
 }
 
