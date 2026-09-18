@@ -2431,20 +2431,43 @@ extern struct type *init_pointer_type (type_allocator &alloc, int bit,
 extern struct type *init_fixed_point_type (type_allocator &, int, int,
 					   const char *);
 
-/* Helper functions to construct a struct or record type.  An
-   initially empty type is created using arch_composite_type().
-   Fields are then added using append_composite_type_field*().  A union
-   type has its size set to the largest field.  A struct type has each
-   field packed against the previous.  */
+/* Allocate a structure or union type (as specified by CODE) associated with
+   GDBARCH.
+
+   NAME is the type name.  If it is nullptr, the type is anonymous.
+
+   The new type initially has no fields.  Fields can be added by calling
+   append_composite_type_field*.  */
 
 extern struct type *arch_composite_type (struct gdbarch *gdbarch,
 					 const char *name, enum type_code code);
+
+/* Add a new field named NAME with type FIELD to composite type T.
+
+   If NAME is an empty string and the field's type is a structure or a union,
+   the fields of that structure or union are visible directly in T.
+
+   This function updates the size of T:
+     - A union type has its size set to the largest field.
+     - A structure type has each field packed against the previous.  */
+
 extern void append_composite_type_field (struct type *t, const char *name,
 					 struct type *field);
+
+/* Like append_composite_type_field, except that ALIGNMENT (if non-zero)
+   specifies the minimum alignment of the new field.  */
+
 extern void append_composite_type_field_aligned (struct type *t,
 						 const char *name,
 						 struct type *field,
 						 int alignment);
+
+/* Like append_composite_type_field, except that this function does not
+   set the field's position or adjust the length of T; the caller is
+   responsible for doing so.
+
+   Return the newly added field.  */
+
 struct field *append_composite_type_field_raw (struct type *t, const char *name,
 					       struct type *field);
 

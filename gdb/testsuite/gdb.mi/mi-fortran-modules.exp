@@ -30,11 +30,6 @@ if {[build_executable "failed to prepare" ${testfile} \
 
 mi_clean_restart $::testfile
 
-mi_runto_main
-
-# Avoid libc symbols.
-mi_gdb_test {-interpreter-exec console "nosharedlibrary"}
-
 # Patterns to skip optional system modules that appear with later versions of GFortran.
 set system_modules_pattern \
     "\{filename=\"\[^\"\]+/ieee/\[^/\]+\.F90\",fullname=\"\[^\"\]+\",symbols=\\\[(\[^\]\]+)\\\]\},.*"

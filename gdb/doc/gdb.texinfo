@@ -6527,7 +6527,7 @@ from assembly, C and C@t{++} languages@footnote{See
 @uref{http://sourceware.org/systemtap/wiki/UserSpaceProbeImplementation}
 for a good reference on how the @acronym{SDT} probes are implemented.}.
 
-@item @code{DTrace} (@uref{http://oss.oracle.com/projects/DTrace})
+@item @code{DTrace} (@uref{https://docs.oracle.com/en/operating-systems/oracle-linux/dtrace-guide/})
 @acronym{USDT} probes.  @code{DTrace} probes are usable from C and
 C@t{++} languages.
 @end itemize

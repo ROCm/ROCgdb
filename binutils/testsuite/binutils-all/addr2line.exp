@@ -19,6 +19,19 @@ set opts ""
 set dot ""
 set exe [exeext]
 
+# Which function is reported when two of them cover exactly the same range.
+# An inlined subroutine covering exactly the range of the subprogram that
+# contains it must be the one named, and the same one on every run.
+if { [is_elf_format] } {
+    # ft32 relaxation leaves ".byte .Lfunc_end - .Lfunc_begin" unresolvable
+    # at assembly time.
+    set norelax ""
+    if [istarget ft32-*] {
+	set norelax [list [list as -norelax]]
+    }
+    run_dump_test "dw2-inline-tie" $norelax
+}
+
 # powerpc64 function symbols are on descriptors rather than code.
 # MUSL uses the ELFv2 ABI for PowerPC, so the problem does not apply there.
 if { [istarget powerpc64-*-*] && ![istarget powerpc64-*-musl] } {

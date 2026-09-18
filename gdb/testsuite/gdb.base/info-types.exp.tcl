@@ -33,12 +33,6 @@ proc run_test { lang } {
 	return -1
     }
 
-    if { ![runto_main] } {
-	return 0
-    }
-
-    gdb_test_no_output "nosharedlibrary"
-
     set file_re "File .*[string_to_regexp $srcfile]:"
 
     if { $lang == "c++" } {
