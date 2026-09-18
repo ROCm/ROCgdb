@@ -197,13 +197,21 @@ proc hcc_amdgpu_targets {} {
     }
 
     # When the rocm-generic board is active, map each concrete arch to
-    # its generic equivalent and drop any that have no mapping.
+    # its generic target.  If a concrete arch has no compatible generic
+    # target, fall back to using the concrete arch itself, so we still
+    # pass a valid offload target, and warn loudly so it's clear the
+    # generic board isn't actually exercising the generic target for
+    # that arch.
     if { [info exists ::rocm_use_generic_targets] \
 	     && $::rocm_use_generic_targets } {
 	set mapped {}
 	foreach t $unique {
 	    set g [generic_target_for $t]
-	    if { $g ne "" && $g ni $mapped } {
+	    if { $g eq "" } {
+		warning "no compatible generic target for $t, falling back to $t"
+		set g $t
+	    }
+	    if { $g ni $mapped } {
 		lappend mapped $g
 	    }
 	}
