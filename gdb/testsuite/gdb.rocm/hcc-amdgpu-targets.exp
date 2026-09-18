@@ -83,3 +83,31 @@ save_vars { env(HCC_AMDGPU_TARGET) ::rocm_use_generic_targets } {
     verbose -log "hcc_amdgpu_targets: got $result"
     gdb_assert {$result eq {gfx906 gfx90a}} "env var: order preserved when deduplicating"
 }
+
+# Tests with the rocm-generic board active (::rocm_use_generic_targets 1).
+# Arches with no generic mapping (e.g. gfx90a) must fall back to the
+# concrete arch instead of being dropped.
+
+save_vars { env(HCC_AMDGPU_TARGET) ::rocm_use_generic_targets } {
+    set ::rocm_use_generic_targets 1
+    unset -nocomplain ::env(HCC_AMDGPU_TARGET)
+
+    with_stub_devices {gfx906} {
+	set result [hcc_amdgpu_targets]
+	verbose -log "hcc_amdgpu_targets: got $result"
+	gdb_assert {$result eq {gfx9-generic}} "generic board: mapped arch is translated"
+    }
+
+    with_stub_devices {gfx90a} {
+	set result [hcc_amdgpu_targets]
+	verbose -log "hcc_amdgpu_targets: got $result"
+	gdb_assert {$result eq {gfx90a}} "generic board: unmapped arch falls back to concrete arch"
+    }
+
+    with_stub_devices {gfx906 gfx90a gfx1100} {
+	set result [hcc_amdgpu_targets]
+	verbose -log "hcc_amdgpu_targets: got $result"
+	gdb_assert {$result eq {gfx9-generic gfx90a gfx11-generic}} \
+	    "generic board: mix of mapped and unmapped arches"
+    }
+}
