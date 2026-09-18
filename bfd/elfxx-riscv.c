@@ -4144,26 +4144,22 @@ _bfd_riscv_elf_merge_private_bfd_data (bfd *ibfd, struct bfd_link_info *info,
     {
       bool null_input_bfd = true;
       bool only_data_sections = true;
-      bool has_load_contents = false;
       asection *sec;
 
       for (sec = ibfd->sections; sec != NULL; sec = sec->next)
 	{
 	  null_input_bfd = false;
 
-	  if ((bfd_section_flags (sec) & (SEC_LOAD | SEC_HAS_CONTENTS))
-	      == (SEC_LOAD | SEC_HAS_CONTENTS))
+	  if ((bfd_section_flags (sec)
+	       & (SEC_LOAD | SEC_CODE | SEC_HAS_CONTENTS))
+	      == (SEC_LOAD | SEC_CODE | SEC_HAS_CONTENTS))
 	    {
-	      /* Ignore empty and .note.gnu.build-id sections.  */
-	      if (sec->size != 0
-		  && strcmp (sec->name, ".note.gnu.build-id") != 0)
-		has_load_contents = true;
-	      if ((bfd_section_flags (sec) & SEC_CODE) != 0)
-		only_data_sections = false;
+	      only_data_sections = false;
+	      break;
 	    }
 	}
 
-      if (!has_load_contents || null_input_bfd || only_data_sections)
+      if (null_input_bfd || only_data_sections)
 	return true;
     }
 
