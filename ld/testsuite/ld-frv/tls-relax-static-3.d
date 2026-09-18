@@ -1,6 +1,6 @@
 #name: FRV TLS undefweak relocs, static linking with relaxation
 #source: tls-3.s
-#objdump: -D -j .text -j .got -j .plt
+#objdump: -D -z -j .text -j .got -j .plt
 #ld: -static --relax
 
 .*:     file format elf.*frv.*
@@ -20,7 +20,11 @@ Disassembly of section \.text:
    100b8:	00 88 00 00 	nop\.p
    100bc:	80 88 00 00 	nop
    100c0:	92 fc 00 00 	setlos lo\(0x0\),gr9
+
 Disassembly of section \.got:
 
 000140c8 <(__data_start|_GLOBAL_OFFSET_TABLE_)>:
-	\.\.\.
+[0-9a-f ]+:	00 00 00 00 .*
+[0-9a-f ]+:	00 00 00 00 .*
+[0-9a-f ]+:	00 00 00 00 .*
+[0-9a-f ]+:	00 00 00 00 .*
