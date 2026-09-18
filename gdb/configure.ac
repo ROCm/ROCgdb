@@ -1542,6 +1542,7 @@ AC_CHECK_FUNCS([ \
   pread64 \
   pwrite \
   resize_term \
+  sched_getaffinity \
   setlocale \
   setrlimit \
   setsid \
