@@ -307,6 +307,7 @@ _bfd_elf_link_dynobj_internal (struct bfd_link_info *info, bool report)
 {
   struct elf_link_hash_table *htab = elf_hash_table (info);
 
+  BFD_ASSERT (htab->dynobj != NULL);
   if (htab->dynobj == NULL)
     {
       /* We need to find an input file of the same format as the
