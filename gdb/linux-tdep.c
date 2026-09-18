@@ -932,7 +932,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
 	  gdb_printf ("cmdline = '%s'\n", buffer);
 	}
       else
-	warning (_("unable to open /proc file '%s'"), filename);
+	warning (_("unable to open /proc file '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (cwd_f)
     {
@@ -942,7 +943,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
       if (contents.has_value ())
 	gdb_printf ("cwd = '%s'\n", contents->c_str ());
       else
-	warning (_("unable to read link '%s'"), filename);
+	warning (_("unable to read link '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (environ_f)
     {
@@ -966,7 +968,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
 	    }
 	}
       else
-	warning (_("unable to open /proc file '%s'"), filename);
+	warning (_("unable to open /proc file '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (exe_f)
     {
@@ -976,7 +979,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
       if (contents.has_value ())
 	gdb_printf ("exe = '%s'\n", contents->c_str ());
       else
-	warning (_("unable to read link '%s'"), filename);
+	warning (_("unable to read link '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (mappings_f)
     {
@@ -1021,7 +1025,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
 	    }
 	}
       else
-	warning (_("unable to open /proc file '%s'"), filename);
+	warning (_("unable to open /proc file '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (status_f)
     {
@@ -1031,7 +1036,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
       if (status)
 	gdb_puts (status.get ());
       else
-	warning (_("unable to open /proc file '%s'"), filename);
+	warning (_("unable to open /proc file '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
   if (stat_f)
     {
@@ -1167,7 +1173,8 @@ linux_info_proc (struct gdbarch *gdbarch, const char *args,
 #endif
 	}
       else
-	warning (_("unable to open /proc file '%s'"), filename);
+	warning (_("unable to open /proc file '%ps'"),
+		 styled_string (file_name_style.style (), filename));
     }
 }
 
@@ -2923,7 +2930,8 @@ linux_vsyscall_range_raw (struct gdbarch *gdbarch, struct mem_range *range)
 	}
     }
   else
-    warning (_("unable to open /proc file '%s'"), filename);
+    warning (_("unable to open /proc file '%ps'"),
+	     styled_string (file_name_style.style (), filename));
 
   return false;
 }
