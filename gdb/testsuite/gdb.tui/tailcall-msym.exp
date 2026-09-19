@@ -22,6 +22,9 @@
 # Still, I wanted the test to live in gdb.tui/ as this really is testing
 # TUI specific code.
 
+# The dummy function doesn't compile on cygwin.
+require {!istarget *-*-cygwin*}
+
 tuiterm_env
 
 standard_testfile
