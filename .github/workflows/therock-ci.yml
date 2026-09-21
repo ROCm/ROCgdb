@@ -36,6 +36,14 @@ jobs:
         id: configure
         run: python .github/scripts/therock_configure_ci.py
 
+      - name: Checkout CI config
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ROCm/therock-ci-config
+          ref: main
+          path: ci-config
+        continue-on-error: true
+
       - name: Select build runner
         id: runner
         run: python3 .github/scripts/select_runner.py build_runs_on
