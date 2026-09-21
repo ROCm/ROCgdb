@@ -266,14 +266,21 @@ proc_with_prefix test {} {
 	    }
 	}
 
-	# The state of each lane, per "info lanes -all".
-	array unset lane_state
+	# The following tests all work with the wave that has unused
+	# lanes.
+	gdb_test "thread $partial_wave" "Switching .*" "switch to partial wave"
 
 	# Show all lanes including unused lanes & collect lane states
-	# for subsequent tests.
+	# for subsequent tests.  Do this while the wave is still
+	# synchronously stopped at the "bar" breakpoint, which
+	# guarantees a stable, reproducible mix of active and inactive
+	# lanes (even work items call "bar" and are active, odd work
+	# items call "foo" and are inactive).  This snapshot is reused
+	# by the "state filter" tests below and by the "lane apply"
+	# tests further down, both of which require a real active lane
+	# and a real inactive lane to exist.
 	with_test_prefix "all" {
-	    gdb_test "thread $partial_wave" "Switching .*" \
-		"switch to partial wave"
+	    array unset lane_state
 
 	    # The last seen lane.
 	    set lane -1
@@ -364,10 +371,6 @@ proc_with_prefix test {} {
 	    }
 	}
 
-	# The following tests all work with the wave that has unused
-	# lanes.
-	gdb_test "thread $partial_wave" "Switching .*" "switch to partial wave"
-
 	with_test_prefix "state filter" {
 	    # Test "info lanes" without options again, but this time check
 	    # whether we only print active lanes, and whether we print
@@ -379,8 +382,55 @@ proc_with_prefix test {} {
 	    info_lanes "info lanes -active" lane_state {"A"}
 	    info_lanes "info lanes -inactive" lane_state {"I"}
 	}
+    }
 
-	# Test "info lanes" when the wave is running.
+    with_test_prefix "lane apply" {
+
+	with_test_prefix "state filter" {
+	    lane_apply "lane apply all" lane_state {"A" "I"}
+	    lane_apply "lane apply all -all" lane_state {"A" "I" "U"}
+	    lane_apply "lane apply all -active" lane_state {"A"}
+	    lane_apply "lane apply all -inactive" lane_state {"I"}
+	}
+
+	# Find an active lane and an inactive lane.
+	set active_lane -1
+	set inactive_lane -1
+	for {set i 0} {$i < [array size lane_state]} {incr i} {
+	    if {$lane_state($i) == "A"} {
+		set active_lane $i
+	    } elseif {$lane_state($i) == "I"} {
+		set inactive_lane $i
+	    }
+	}
+
+	# Test that "-active" when the lane list does not include any
+	# active lane ends up not printing anything.  Same for
+	# "-inactive".
+	with_test_prefix "no match" {
+	    gdb_test_no_output "lane apply $active_lane -inactive print 1"
+	    gdb_test_no_output "lane apply $inactive_lane -active print 1"
+
+	    # Double check that -active really prints the active lane,
+	    # and same for -inactive.
+	    gdb_test "lane apply $active_lane -active print \$_lane" \
+		"Lane $active_lane .*= $active_lane"
+	    gdb_test "lane apply $inactive_lane -inactive print \$_lane" \
+		"Lane $inactive_lane .*= $inactive_lane"
+
+	}
+    }
+
+    # Test "info lanes" when the wave is running.  This runs last
+    # among the "info lanes"/"lane apply" tests, after the ones
+    # above that depend on the guaranteed active/inactive lane split
+    # that only holds while the wave is stopped at the "bar"
+    # breakpoint.  Letting the wave run via "cont&" and re-stopping
+    # it asynchronously via "interrupt" leaves it at an
+    # unpredictable point in its control flow and does not preserve
+    # that split (e.g. all lanes may end up active), so nothing
+    # after this point relies on a specific active/inactive mix.
+    with_test_prefix "info lanes" {
 	with_test_prefix "running" {
 	    delete_breakpoints
 	    gdb_test "cont&" "Continuing\."
@@ -456,46 +506,7 @@ proc_with_prefix test {} {
 			}
 		    }
 		}
-		gdb_test "thread $partial_wave" "Switching .*" \
-		    "switch to partial wave"
 	    }
-	}
-    }
-
-    with_test_prefix "lane apply" {
-
-	with_test_prefix "state filter" {
-	    lane_apply "lane apply all" lane_state {"A" "I"}
-	    lane_apply "lane apply all -all" lane_state {"A" "I" "U"}
-	    lane_apply "lane apply all -active" lane_state {"A"}
-	    lane_apply "lane apply all -inactive" lane_state {"I"}
-	}
-
-	# Find an active lane and an inactive lane.
-	set active_lane -1
-	set inactive_lane -1
-	for {set i 0} {$i < [array size lane_state]} {incr i} {
-	    if {$lane_state($i) == "A"} {
-		set active_lane $i
-	    } elseif {$lane_state($i) == "I"} {
-		set inactive_lane $i
-	    }
-	}
-
-	# Test that "-active" when the lane list does not include any
-	# active lane ends up not printing anything.  Same for
-	# "-inactive".
-	with_test_prefix "no match" {
-	    gdb_test_no_output "lane apply $active_lane -inactive print 1"
-	    gdb_test_no_output "lane apply $inactive_lane -active print 1"
-
-	    # Double check that -active really prints the active lane,
-	    # and same for -inactive.
-	    gdb_test "lane apply $active_lane -active print \$_lane" \
-		"Lane $active_lane .*= $active_lane"
-	    gdb_test "lane apply $inactive_lane -inactive print \$_lane" \
-		"Lane $inactive_lane .*= $inactive_lane"
-
 	}
     }
 
