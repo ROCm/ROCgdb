@@ -26,9 +26,9 @@ def main():
     if (ci_config / "runner-config.json").exists():
         try:
             sys.path.insert(0, str(ci_config))
-            from ci_config_api import load_config_v1
+            from ci_config_api import load_config
 
-            config = load_config_v1(ci_config)
+            config = load_config(version=2, config_path=ci_config)
             candidates = config.build_runners.get("linux", {}).get("default", [])
             best = max(candidates, key=lambda e: e["weight"], default=None)
             if best:
