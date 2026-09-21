@@ -573,9 +573,13 @@ namespace eval Dwarf {
     # The address size for debug ranges section.
     variable _debug_ranges_64_bit
 
-    # The index into the .debug_addr section (used for fission
-    # generation).
+    # The index of the next entry in the currently open .debug_addr
+    # contribution, or the empty string if no contribution is open.
     variable _debug_addr_index
+
+    # The label marking the end of the currently open .debug_addr
+    # contribution, or the empty string if no contribution is open.
+    variable _debug_addr_end_label
 
     # Flag, true if the current CU is contains fission information,
     # otherwise false.
@@ -801,9 +805,12 @@ namespace eval Dwarf {
 		_op .${_cu_addr_size}byte $value
 	    }
 
+	    DW_FORM_addrx -
 	    DW_FORM_GNU_addr_index {
 		variable _debug_addr_index
 		variable _cu_addr_size
+
+		_debug_addr_check_open
 
 		_op .uleb128 ${_debug_addr_index}
 		incr _debug_addr_index
@@ -941,6 +948,7 @@ namespace eval Dwarf {
 	    DW_AT_name {
 		return DW_FORM_string
 	    }
+	    DW_AT_addr_base -
 	    DW_AT_GNU_addr_base {
 		return DW_FORM_sec_offset
 	    }
@@ -1316,6 +1324,8 @@ namespace eval Dwarf {
 	variable _debug_addr_index
 	variable _cu_addr_size
 
+	_debug_addr_check_open
+
 	_op .uleb128 ${_debug_addr_index}
 	incr _debug_addr_index
 
@@ -1651,20 +1661,99 @@ namespace eval Dwarf {
 	uplevel $_level $body
     }
 
-    # Return a label that references the current position in the
-    # .debug_addr table.  When a user is creating split DWARF they
-    # will define two CUs, the first will be the split DWARF content,
-    # and the second will be the non-split stub CU.  The split DWARF
-    # CU fills in the .debug_addr section, but the non-split CU
-    # includes a reference to the start of the section.  The label
-    # returned by this proc provides that reference.
-    proc debug_addr_label {} {
+    # Verify that a .debug_addr contribution is open, that is that the
+    # debug_addr_label proc was called.
+    proc _debug_addr_check_open {} {
 	variable _debug_addr_index
 
-	set lbl [new_label "debug_addr_idx_${_debug_addr_index}_"]
+	if { $_debug_addr_index == "" } {
+	    error "no .debug_addr contribution is open, call the addr proc first"
+	}
+    }
+
+    # Terminate the currently open .debug_addr contribution, if any, by
+    # defining its end label.
+    proc _debug_addr_end_contribution {} {
+	variable _debug_addr_end_label
+
+	if { $_debug_addr_end_label == "" } {
+	    return
+	}
+
+	_defer_output .debug_addr {
+	    define_label $_debug_addr_end_label
+	}
+
+	set _debug_addr_end_label ""
+    }
+
+    # Start this unit's contribution to the .debug_addr section and return a
+    # label referencing its first entry.
+    #
+    # When a user is creating split DWARF they will define two CUs, the first will
+    # be the split DWARF content, and the second will be the non-split stub
+    # CU.  The split DWARF CU fills in the .debug_addr section with addresses,
+    # but the non-split CU includes a reference to the start of the address
+    # array section (through DW_AT_addr_base for DWARF 5, DW_AT_GNU_addr_base
+    # for DWARF 4 GNU extensions).
+    #
+    # This proc must be called from within a cu or tu body, before any
+    # use of DW_FORM_addrx, or any operator that appends an address to
+    # .debug_addr.
+    #
+    # The `version` option gives the version of the .debug_addr section to
+    # emit.  If the version is >= 5, start the contribution with a header.
+    # The offset and address sizes are obtained from the current unit.
+    #
+    # If the version is < 5, then the contribution is understood to be in the
+    # format of DWARF 4 GNU extension, which does not use a header (in which
+    # case the version isn't written anywhere).
+    #
+    # Calling this proc again terminates the previous contribution, starts a
+    # new one, and restarts entry indices at zero.
+    proc debug_addr_label { {options {}} } {
+	variable _debug_addr_index
+	variable _debug_addr_end_label
+	variable _cu_addr_size
+	variable _cu_offset_size
+
+	parse_options {
+	    {version 4}
+	}
+
+	_debug_addr_end_contribution
+
+	if { $version >= 5 } {
+	    set _debug_addr_end_label [new_label "debug_addr_end_"]
+	    set post_unit_len_label [new_label "debug_addr_post_unit_len_"]
+
+	    _defer_output .debug_addr {
+		if { $_cu_offset_size == 8 } {
+		    _op .4byte 0xffffffff "unit length 1/2"
+		    _op .8byte \
+			"$_debug_addr_end_label - $post_unit_len_label" \
+			"unit length 2/2"
+		} else {
+		    _op .4byte \
+			"$_debug_addr_end_label - $post_unit_len_label" \
+			"unit length"
+		}
+
+		define_label $post_unit_len_label
+
+		_op .2byte $version "version"
+		_op .byte $_cu_addr_size "address size"
+		_op .byte 0 "segment selector size"
+	    }
+	}
+
+	set lbl [new_label "debug_addr_base_"]
 	_defer_output .debug_addr {
 	    define_label $lbl
 	}
+
+	set _debug_addr_index 0
+
 	return $lbl
     }
 
@@ -3981,6 +4070,7 @@ namespace eval Dwarf {
 	variable _line_header_end_label
 	variable _debug_ranges_64_bit
 	variable _debug_addr_index
+	variable _debug_addr_end_label
 	variable _level
 	variable _dwo_abbrev_num
 
@@ -4015,7 +4105,8 @@ namespace eval Dwarf {
 
 	set _line_count 0
 	set _debug_ranges_64_bit [is_64_target]
-	set _debug_addr_index 0
+	set _debug_addr_index ""
+	set _debug_addr_end_label ""
 	set _dwo_abbrev_num 1
 
 	# Dummy CU at the start to ensure that the first CU in $body is not
@@ -4045,6 +4136,9 @@ namespace eval Dwarf {
 		_op .byte 0x0 "Abbrev end - Terminator"
 	    }
 	}
+
+	# Terminate the last .debug_addr contribution, if any.
+	_debug_addr_end_contribution
 
 	_write_deferred_output
 
