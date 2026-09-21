@@ -42,7 +42,12 @@ private:
   unsigned int m_length = 0;
 public:
   unsigned char version = 0;
+
+  /* Size of an address on the target system.
+
+     Contains one of the values accepted by dwarf2_addr_size_is_supported.  */
   unsigned char addr_size = 0;
+
   unsigned char signed_addr_p = 0;
   sect_offset abbrev_sect_off {};
 

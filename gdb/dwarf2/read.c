@@ -235,7 +235,9 @@ struct loclists_rnglists_header
   short version;
 
   /* A 1-byte unsigned integer containing the size in bytes of an address on
-     the target system.  */
+     the target system.
+
+     Contains one of the values accepted by dwarf2_addr_size_is_supported.  */
   unsigned char addr_size;
 
   /* A 4-byte count of the number of offsets that follow the header.  */
@@ -519,7 +521,7 @@ static void var_decode_location (struct attribute *attr,
 static unsigned int peek_abbrev_code (bfd *, const gdb_byte *);
 
 static unrelocated_addr read_addr_index (struct dwarf2_cu *cu,
-					 unsigned int addr_index);
+					 ULONGEST addr_index);
 
 static const char *read_indirect_string (dwarf2_per_objfile *per_objfile, bfd *,
 					 const gdb_byte *, const unit_head *,
@@ -14654,35 +14656,44 @@ dwarf2_per_objfile::read_line_string (const gdb_byte *buf,
    ADDR_SIZE is the size of addresses from the CU header.  */
 
 static unrelocated_addr
-read_addr_index_1 (dwarf2_per_objfile *per_objfile, unsigned int addr_index,
+read_addr_index_1 (dwarf2_per_objfile *per_objfile, ULONGEST addr_index,
 		   std::optional<ULONGEST> addr_base, int addr_size)
 {
   struct objfile *objfile = per_objfile->objfile;
-  bfd *abfd = objfile->obfd.get ();
-  const gdb_byte *info_ptr;
+  dwarf2_per_bfd *per_bfd = per_objfile->per_bfd;
   ULONGEST addr_base_or_zero = addr_base.has_value () ? *addr_base : 0;
 
-  per_objfile->per_bfd->addr.read (objfile);
-  if (per_objfile->per_bfd->addr.buffer == NULL)
+  per_bfd->addr.read (objfile);
+  if (per_bfd->addr.buffer == NULL)
     error (_("DW_FORM_addr_index used without .debug_addr section [in module %s]"),
 	   objfile_name (objfile));
-  if (addr_base_or_zero + addr_index * addr_size
-      >= per_objfile->per_bfd->addr.size)
-    error (_("DW_FORM_addr_index pointing outside of "
-	     ".debug_addr section [in module %s]"),
+
+  /* Check that the DW_AT_addr_base value makes sense.  */
+  if (addr_base_or_zero > per_bfd->addr.size)
+    error (_("DW_AT_addr_base points outside of .debug_addr section "
+	     "[in module %s]"),
 	   objfile_name (objfile));
-  info_ptr = (per_objfile->per_bfd->addr.buffer + addr_base_or_zero
-	      + addr_index * addr_size);
-  if (addr_size == 4)
-    return (unrelocated_addr) bfd_get_32 (abfd, info_ptr);
-  else
-    return (unrelocated_addr) bfd_get_64 (abfd, info_ptr);
+
+  ULONGEST bytes_avail = per_bfd->addr.size - addr_base_or_zero;
+  ULONGEST entry_offset = addr_index * addr_size;
+
+  /* Check that the whole entry fits inside the section.  */
+  if (entry_offset + addr_size > bytes_avail)
+    error (_("DW_FORM_addr_index points outside of .debug_addr section "
+	     "[in module %s]"),
+	   objfile_name (objfile));
+
+  const gdb_byte *addr_ptr
+    = per_bfd->addr.buffer + addr_base_or_zero + entry_offset;
+
+  return (unrelocated_addr) extract_unsigned_integer (addr_ptr, addr_size,
+						      per_bfd->byte_order ());
 }
 
 /* Given index ADDR_INDEX in .debug_addr, fetch the value.  */
 
 static unrelocated_addr
-read_addr_index (struct dwarf2_cu *cu, unsigned int addr_index)
+read_addr_index (struct dwarf2_cu *cu, ULONGEST addr_index)
 {
   return read_addr_index_1 (cu->per_objfile, addr_index,
 			    cu->addr_base, cu->header.addr_size);
@@ -14695,7 +14706,7 @@ read_addr_index_from_leb128 (struct dwarf2_cu *cu, const gdb_byte *info_ptr,
 			     unsigned int *bytes_read)
 {
   bfd *abfd = cu->per_objfile->objfile->obfd.get ();
-  unsigned int addr_index = read_unsigned_leb128 (abfd, info_ptr, bytes_read);
+  ULONGEST addr_index = read_unsigned_leb128 (abfd, info_ptr, bytes_read);
 
   return read_addr_index (cu, addr_index);
 }
@@ -14704,7 +14715,7 @@ read_addr_index_from_leb128 (struct dwarf2_cu *cu, const gdb_byte *info_ptr,
 
 unrelocated_addr
 dwarf2_read_addr_index (dwarf2_per_cu *per_cu, dwarf2_per_objfile *per_objfile,
-			unsigned int addr_index)
+			ULONGEST addr_index)
 {
   struct dwarf2_cu *cu = per_objfile->get_cu (per_cu);
   std::optional<ULONGEST> addr_base;
