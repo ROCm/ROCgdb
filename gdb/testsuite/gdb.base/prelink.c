@@ -19,7 +19,7 @@
 
 extern int copyreloc;
 
-/* Test GDB itself finds `&bssvar' right.   */
+/* Test GDB itself finds `&bssvar' right.  */
 static int bssvar, *bssvarp = &bssvar;
 
 extern void (*h (void)) (void (*)(void));

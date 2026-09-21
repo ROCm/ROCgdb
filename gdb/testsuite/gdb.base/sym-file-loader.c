@@ -445,7 +445,7 @@ find_symtab (Elf_External_Ehdr *ehdr, uint64_t *symtab_size)
   return NULL;
 }
 
-/* Translate a file offset to an address in a loaded segment.   */
+/* Translate a file offset to an address in a loaded segment.  */
 
 static int
 translate_offset (uint64_t file_offset, struct segment *seg, void **addr)

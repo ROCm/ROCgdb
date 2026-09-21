@@ -1702,7 +1702,7 @@ struct fn_field
 {
   /* This is the mangled name which we can look up to find the
      address of the method (FIXME: it would be cleaner to have a
-     pointer to the struct symbol here instead).   */
+     pointer to the struct symbol here instead).  */
 
   const char *physname;
 

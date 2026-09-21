@@ -300,7 +300,7 @@ i386_fetch_tls_regs (regcache *regcache, int tid, int regnum)
   i386_supply_tls_regs (regcache, regnum, tls_ud);
 }
 
-/* See x86-linux-nat.h.   */
+/* See x86-linux-nat.h.  */
 
 void
 i386_store_tls_regs (regcache *regcache, int tid, int regnum)

@@ -1855,7 +1855,7 @@ extern int target_can_run ();
 
    However, if the target is hardware single-stepping a thread that is
    about to receive a signal, it needs to be reported in any case, even
-   if mentioned in a previous target_pass_signals call.   */
+   if mentioned in a previous target_pass_signals call.  */
 
 extern void target_pass_signals
   (gdb::array_view<const unsigned char> pass_signals);

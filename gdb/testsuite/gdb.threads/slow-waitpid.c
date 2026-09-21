@@ -324,7 +324,7 @@ sigsuspend (const sigset_t *mask)
      have a thread alive that is going to deliver a signal but doing this
      will boost the speed as we don't have to wait for a signal.  If the
      signal ends up being delivered then it should be harmless, we'll just
-     perform an additional waitpid call.   */
+     perform an additional waitpid call.  */
   if (!sigismember (mask, SIGCHLD))
     {
       if (cached_wait_status.cached_p)

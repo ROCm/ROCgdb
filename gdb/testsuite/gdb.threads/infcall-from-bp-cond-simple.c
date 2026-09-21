@@ -42,7 +42,7 @@ int
 function_that_segfaults ()
 {
   int *p = 0;
-  *p = 1;	/* Segfault happens here.   */
+  *p = 1;	/* Segfault happens here.  */
   return 0;
 }
 

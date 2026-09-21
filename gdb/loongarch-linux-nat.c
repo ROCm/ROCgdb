@@ -704,7 +704,7 @@ loongarch_linux_nat_target::post_attach (int pid)
   linux_nat_target::post_attach (pid);
 }
 
-/* linux_nat_new_fork hook.   */
+/* linux_nat_new_fork hook.  */
 
 void
 loongarch_linux_nat_target::low_new_fork (struct lwp_info *parent,

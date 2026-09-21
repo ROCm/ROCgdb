@@ -46,7 +46,7 @@ spawn_thread ()
   return 1;
 }
 
-/* A place for GDB to place a breakpoint.   */
+/* A place for GDB to place a breakpoint.  */
 void __attribute__((used))
 breakpt ()
 {

@@ -2032,7 +2032,7 @@ linux_corefile_parse_exec_context_1 (struct gdbarch *gdbarch, bfd *cbfd)
   /* Setup DEREF a helper function which loads a value from an address.
      The returned value is always placed into a uint64_t, even if we only
      load 4-bytes, this allows the code below to be pretty generic.  All
-     the values we're dealing with are unsigned, so this should be OK.   */
+     the values we're dealing with are unsigned, so this should be OK.  */
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   const auto deref = [=] (CORE_ADDR p) -> uint64_t
     {

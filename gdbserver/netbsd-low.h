@@ -21,7 +21,7 @@
 struct regcache;
 struct target_desc;
 
-/*  Some information relative to a given register set.   */
+/*  Some information relative to a given register set.  */
 
 struct netbsd_regset_info
 {

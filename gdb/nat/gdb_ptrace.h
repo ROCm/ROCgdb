@@ -88,11 +88,11 @@
 # ifdef PT_SINGLE1
 #  define PT_STEP	PT_SINGLE1
 # else
-#  define PT_STEP	9	/* Single step the child.   */
+#  define PT_STEP	9	/* Single step the child.  */
 # endif
 #endif
 
-/* Not all systems support attaching and detaching.   */
+/* Not all systems support attaching and detaching.  */
 
 #ifndef PT_ATTACH
 # ifdef PTRACE_ATTACH

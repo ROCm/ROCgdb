@@ -112,7 +112,7 @@ main ()
   int an_array[] = { 2, 3, 5 };
 
   int an_array_with_repetition[] = {
-    1,					/*  1 time.   */
+    1,					/*  1 time.  */
     3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,	/* 12 times.  */
     5, 5, 5,				/*  3 times   */
     };

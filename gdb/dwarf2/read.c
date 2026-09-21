@@ -6219,7 +6219,7 @@ create_dwp_hash_table (dwarf2_per_bfd *per_bfd, struct dwp_file *dwp_file,
 
   /* For Version 5, the version is really 2 bytes of data & 2 bytes of padding.
      For now it's safe to just read 4 bytes (particularly as it's difficult to
-     tell if you're dealing with Version 5 before you've read the version).   */
+     tell if you're dealing with Version 5 before you've read the version).  */
   version = read_4_bytes (dbfd, index_ptr);
   index_ptr += 4;
   if (version != 2 && version != 5)

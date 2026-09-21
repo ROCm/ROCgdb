@@ -808,7 +808,7 @@ ia64_memory_remove_breakpoint (struct gdbarch *gdbarch,
 static int
 ia64_breakpoint_kind_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pcptr)
 {
-  /* A place holder of gdbarch method breakpoint_kind_from_pc.   */
+  /* A place holder of gdbarch method breakpoint_kind_from_pc.  */
   return 0;
 }
 

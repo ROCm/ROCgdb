@@ -348,7 +348,7 @@ stylepy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 
 
 
-/* See python-internal.h.   */
+/* See python-internal.h.  */
 
 bool
 gdbpy_is_style (PyObject *obj)
@@ -373,7 +373,7 @@ stylepy_to_style (style_object *stylepy)
   return style;
 }
 
-/* See python-internal.h.   */
+/* See python-internal.h.  */
 
 std::optional<ui_file_style>
 gdbpy_style_object_to_ui_file_style (PyObject *obj)

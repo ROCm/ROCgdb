@@ -4416,7 +4416,7 @@ output_source_filename_data::output (const char *disp_name,
 
 struct filename_partial_match_opts
 {
-  /* Only match the directory name part.   */
+  /* Only match the directory name part.  */
   bool dirname = false;
 
   /* Only match the basename part.  */

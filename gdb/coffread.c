@@ -350,7 +350,7 @@ coff_reader::symfile_read (symfile_add_flags symfile_flags)
       /* Nothing.  */
     }
 
-  /* Try to add separate debug file if no symbols table found.   */
+  /* Try to add separate debug file if no symbols table found.  */
   else if (!coffread_objfile->has_partial_symbols ()
 	   && coffread_objfile->separate_debug_objfile == NULL
 	   && coffread_objfile->separate_debug_objfile_backlink == NULL)

@@ -1030,7 +1030,7 @@ frame_find_by_id (struct frame_id id)
 	 to find an invalid ID, we check for a common situation where
 	 we can detect from comparing stack addresses that no other
 	 frame in the current frame chain can have this ID.  See the
-	 comment at frame_id_inner for details.   */
+	 comment at frame_id_inner for details.  */
       if (get_frame_type (frame) == NORMAL_FRAME
 	  && !frame_id_inner (get_frame_arch (frame), id, self)
 	  && frame_id_inner (get_frame_arch (prev_frame), id,

@@ -27,7 +27,7 @@
 
 static volatile unsigned int global_var = 123;
 
-/* Wrapper around pthread_create.   */
+/* Wrapper around pthread_create.  */
 
 static void
 create_thread (pthread_t *child,

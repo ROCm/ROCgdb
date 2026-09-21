@@ -74,7 +74,7 @@ static const int inv_reg_perm[N_PHYSICAL_REGISTERS] =
 static const char *
 s12z_register_name (struct gdbarch *gdbarch, int regnum)
 {
-  /*  Registers is declared in opcodes/s12z.h.   */
+  /*  Registers is declared in opcodes/s12z.h.  */
   return registers[reg_perm[regnum]].name;
 }
 

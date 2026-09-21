@@ -603,7 +603,7 @@ s390_linux_nat_target::low_forget_process (pid_t pid)
     }
 }
 
-/* linux_nat_new_fork hook.   */
+/* linux_nat_new_fork hook.  */
 
 void
 s390_linux_nat_target::low_new_fork (struct lwp_info *parent, pid_t child_pid)

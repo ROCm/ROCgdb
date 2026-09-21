@@ -548,7 +548,7 @@ linux_fork_detach (int from_tty, lwp_info *lp, inferior *inf)
 
 /* Temporarily switch to the infrun state stored on the fork_info
    identified by a given ptid_t.  When this object goes out of scope,
-   restore the currently selected infrun state.   */
+   restore the currently selected infrun state.  */
 
 class scoped_switch_fork_info
 {
