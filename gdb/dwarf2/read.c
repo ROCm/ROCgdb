@@ -238,10 +238,6 @@ struct loclists_rnglists_header
      the target system.  */
   unsigned char addr_size;
 
-  /* A 1-byte unsigned integer containing the size in bytes of a segment selector
-     on the target system.  */
-  unsigned char segment_collector_size;
-
   /* A 4-byte count of the number of offsets that follow the header.  */
   unsigned int offset_entry_count;
 };
@@ -14098,7 +14094,7 @@ read_loclists_rnglists_header (struct loclists_rnglists_header *header,
 	   section->get_name (), header->addr_size,
 	   section->get_file_name ());
 
-  header->segment_collector_size = read_1_byte (abfd, info_ptr);
+  /* Skip segment_selector_size.  */
   info_ptr += 1;
 
   header->offset_entry_count = read_4_bytes (abfd, info_ptr);
