@@ -221,6 +221,39 @@ proc hcc_amdgpu_targets {} {
     return $unique
 }
 
+# Return the list of amdgcn architecture names (e.g. "gfx900") that GDB
+# is built with BFD support for.  Fetched once per testsuite run via a
+# single GDB invocation and cached, since the result never depends on
+# any particular arch being asked about.
+
+gdb_caching_proc rocm_bfd_amdgcn_archs {} {
+    set cmd "$::INTERNAL_GDBFLAGS -batch \
+	-ex \"complete set architecture amdgcn:\""
+    set result [remote_exec host $::GDB $cmd]
+    if { [lindex $result 0] != 0 } {
+	warning "failed to query BFD-supported amdgcn architectures"
+	return {}
+    }
+    set output [lindex $result 1]
+    set archs {}
+    foreach line [split $output "\n"] {
+	if { [regexp {^set architecture amdgcn:(\S+)} $line -> arch] } {
+	    lappend archs $arch
+	}
+    }
+    return $archs
+}
+
+# Return true if ARCH (a concrete gfx target, e.g. "gfx1036") is
+# registered with BFD, i.e. GDB actually supports debugging it.  This
+# is independent of generic_target_for: a concrete arch can map to a
+# working generic target for compilation purposes while still being
+# entirely unsupported by GDB for debugging.
+
+proc rocm_arch_supported_by_gdb { arch } {
+    return [expr { [lsearch -exact [rocm_bfd_amdgcn_archs] $arch] != -1 }]
+}
+
 gdb_caching_proc allow_hip_tests {} {
     # Only the native target supports ROCm debugging.  E.g., when
     # testing against GDBserver, there's no point in running the ROCm
@@ -249,6 +282,31 @@ gdb_caching_proc allow_hip_tests {} {
     set devices [find_amdgpu_devices]
     if {[llength $devices] == 0} {
 	return {0 "no suitable amdgpu targets found"}
+    }
+
+    # Check the concrete arch of each device against the list of
+    # architectures registered with BFD, regardless of whether the
+    # generic board is active.  A concrete arch missing from that list
+    # means GDB does not support debugging it at all.  Whether it also
+    # maps to a generic target for compilation says nothing about
+    # whether it's supported.
+    set supported 0
+    set unsupported_archs {}
+    foreach arch $devices {
+	if { [rocm_arch_supported_by_gdb $arch] } {
+	    set supported 1
+	    break
+	}
+	if { [lsearch -exact $unsupported_archs $arch] == -1 } {
+	    lappend unsupported_archs $arch
+	}
+    }
+    if { !$supported } {
+	if { [llength $unsupported_archs] == 1 } {
+	    return [list 0 "$unsupported_archs architecture not supported"]
+	}
+	set archs_str [join $unsupported_archs ", "]
+	return [list 0 "$archs_str architectures not supported"]
     }
 
     return 1
