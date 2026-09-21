@@ -1,0 +1,294 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+
+# This file is part of GDB.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Unit tests for rocm_bfd_amdgcn_archs, rocm_arch_supported_by_gdb, and
+# the concrete-arch gate in allow_hip_tests.  These stub remote_exec
+# and find_amdgpu_devices so they exercise the parsing and lookup logic
+# without requiring a real GPU, a real amd-dbgapi enabled GDB build, or
+# a running GDB instance.
+
+load_lib rocm.exp
+
+# Clear a gdb_caching_proc's cached result for NAME, both in-memory
+# and, when GDB_PARALLEL is in effect, on disk.  Used both before and
+# after stubbing out whatever NAME depends on, so a fake result never
+# leaks into a later block in this file or, more importantly, into
+# another .exp file that runs later in the same testsuite session and
+# reads back this same on-disk cache entry.
+proc clear_caching_proc_cache {name} {
+    global gdb_data_cache
+    set cache_name [file join [target_info name] $name]
+    array unset gdb_data_cache "${cache_name},*"
+    if { [info exists ::GDB_PARALLEL] } {
+	set cache_filename [make_gdb_parallel_path cache $cache_name]
+	file delete -force $cache_filename
+    }
+}
+
+# Run BODY with remote_exec stubbed to return OUTPUT (the raw command
+# output, not the {status output} list remote_exec itself returns)
+# alongside exit status STATUS (0 by default), counting invocations in
+# the global rocm_test_remote_exec_calls, then restore the original
+# proc.  Clears any cached rocm_bfd_amdgcn_archs result both before
+# BODY runs (so it exercises the stub fresh) and after (so the fake
+# result doesn't leak into later blocks or files).
+proc with_stub_remote_exec {output body {status 0}} {
+    global rocm_test_remote_exec_calls
+    set rocm_test_remote_exec_calls 0
+    set ::rocm_test_stub_output $output
+    set ::rocm_test_stub_status $status
+
+    clear_caching_proc_cache rocm_bfd_amdgcn_archs
+
+    rename remote_exec __saved_remote_exec
+    # tclint-disable-next-line command-args
+    proc remote_exec {args} {
+	incr ::rocm_test_remote_exec_calls
+	# allow_hip_tests also calls remote_exec to check for
+	# amd-dbgapi support via "--configuration" before ever
+	# reaching the BFD-arch check.  Answer that call with fixed
+	# output reporting amd-dbgapi support, so tests that stub
+	# remote_exec to drive allow_hip_tests don't need to know
+	# about that earlier, unrelated check.
+	if { [string match "*--configuration*" $args] } {
+	    return {0 "--with-amd-dbgapi"}
+	}
+	return [list $::rocm_test_stub_status $::rocm_test_stub_output]
+    }
+
+    set code [catch {uplevel 1 $body} result]
+
+    rename remote_exec {}
+    rename __saved_remote_exec remote_exec
+
+    clear_caching_proc_cache rocm_bfd_amdgcn_archs
+
+    return -code $code $result
+}
+
+# Run BODY with generic_target_for stubbed so that ARCH maps to
+# GENERIC, then restore the original proc.  Used to simulate a
+# concrete-to-generic mapping using dummy arch names that don't
+# correspond to any real hardware, so the test stays valid regardless
+# of which real concrete arches GDB currently supports.
+proc with_stub_generic_target_for {arch generic body} {
+    set ::rocm_test_stub_arch $arch
+    set ::rocm_test_stub_generic $generic
+
+    rename generic_target_for __saved_generic_target_for
+    proc generic_target_for { a } {
+	if { $a eq $::rocm_test_stub_arch } {
+	    return $::rocm_test_stub_generic
+	}
+	return [__saved_generic_target_for $a]
+    }
+
+    set code [catch {uplevel 1 $body} result]
+
+    rename generic_target_for {}
+    rename __saved_generic_target_for generic_target_for
+
+    return -code $code $result
+}
+
+# Run BODY with find_amdgpu_devices stubbed to return DEVICES, then
+# restore the original proc.  Mirrors the identically-named helper in
+# hcc-amdgpu-targets.exp.
+proc with_stub_devices {devices body} {
+    rename find_amdgpu_devices __saved_find_amdgpu_devices
+    # tclint-disable-next-line command-args
+    proc find_amdgpu_devices {} [list return $devices]
+    set code [catch {uplevel 1 $body} result]
+    rename find_amdgpu_devices {}
+    rename __saved_find_amdgpu_devices find_amdgpu_devices
+    return -code $code $result
+}
+
+# Fake output for the "complete set architecture amdgcn:" command.
+# Includes two real, always-BFD-supported concrete arches (gfx900,
+# gfx90a) plus a dummy generic bucket (gfx0000-generic), used below to
+# simulate an unsupported concrete arch that maps to a supported
+# generic target.  Dummy names are used for the unsupported cases
+# (rather than a real arch like gfx1036) so the tests don't rely on
+# any particular real arch remaining unsupported by BFD forever.
+set rocm_test_fake_complete_output \
+    [join {
+	"set architecture amdgcn:gfx900"
+	"set architecture amdgcn:gfx90a"
+	"set architecture amdgcn:gfx0000-generic"
+    } "\n"]
+
+with_stub_remote_exec $rocm_test_fake_complete_output {
+    set archs [rocm_bfd_amdgcn_archs]
+    verbose -log "rocm_bfd_amdgcn_archs: got $archs"
+    gdb_assert {$archs eq {gfx900 gfx90a gfx0000-generic}} \
+	"parses arch names out of the complete command output"
+}
+
+# Case: the GDB invocation used to query the BFD-supported arch list
+# itself fails (nonzero exit status), e.g. a broken GDB build.  This
+# must not be misreported as "no architectures supported".  The list
+# should come back empty without crashing, and a warning should be the
+# only side effect.
+with_stub_remote_exec $rocm_test_fake_complete_output {
+    set archs [rocm_bfd_amdgcn_archs]
+    verbose -log "rocm_bfd_amdgcn_archs: got $archs"
+    gdb_assert {$archs eq {}} \
+	"a failed remote_exec invocation is reported as an empty arch list"
+} 1
+
+# Case: remote_exec succeeds, but its output has no "set architecture
+# amdgcn:" lines to parse, e.g. a GDB build with no amdgcn BFD support
+# at all.  This must come back as an empty list too, without erroring.
+with_stub_remote_exec "some unrelated output\nwith no matching lines" {
+    set archs [rocm_bfd_amdgcn_archs]
+    verbose -log "rocm_bfd_amdgcn_archs: got $archs"
+    gdb_assert {$archs eq {}} \
+	"output with no matching lines is reported as an empty arch list"
+}
+
+# Case: supported concrete arch with a valid generic mapping.  gfx900
+# is in the fake BFD list, and really does map to gfx9-generic via the
+# real generic_target_for.
+with_stub_remote_exec $rocm_test_fake_complete_output {
+    set result [rocm_arch_supported_by_gdb gfx900]
+    verbose -log "rocm_arch_supported_by_gdb: got $result"
+    gdb_assert {[generic_target_for gfx900] eq "gfx9-generic"} \
+	"sanity check: gfx900 has a generic mapping"
+    gdb_assert {$result == 1} \
+	"supported concrete arch with a generic mapping reports supported"
+}
+
+# Case: supported concrete arch with no generic mapping.  gfx90a is in
+# the fake BFD list, but has no entry in the real generic_target_for
+# map.
+with_stub_remote_exec $rocm_test_fake_complete_output {
+    set result [rocm_arch_supported_by_gdb gfx90a]
+    verbose -log "rocm_arch_supported_by_gdb: got $result"
+    gdb_assert {[generic_target_for gfx90a] eq ""} \
+	"sanity check: gfx90a has no generic mapping"
+    gdb_assert {$result == 1} \
+	"supported concrete arch with no generic mapping reports supported"
+}
+
+# Case: unsupported concrete arch with no generic mapping.  gfx0001 is
+# a dummy arch, absent from both the fake BFD list and the real
+# generic_target_for map.
+with_stub_remote_exec $rocm_test_fake_complete_output {
+    set result [rocm_arch_supported_by_gdb gfx0001]
+    verbose -log "rocm_arch_supported_by_gdb: got $result"
+    gdb_assert {[generic_target_for gfx0001] eq ""} \
+	"sanity check: gfx0001 has no generic mapping"
+    gdb_assert {$result == 0} \
+	"unsupported concrete arch with no generic mapping reports unsupported"
+}
+
+# Case: unsupported concrete arch with a valid generic mapping to a
+# supported generic bucket.  This is the scenario that matters most: a
+# concrete arch can compile fine against its generic bucket while
+# still being entirely unsupported by GDB for debugging.  gfx0000 and
+# its mapping are dummies, so this stays valid even once real
+# hardware currently missing BFD support (like gfx1036) gets added.
+with_stub_generic_target_for gfx0000 gfx0000-generic {
+    with_stub_remote_exec $rocm_test_fake_complete_output {
+	set result [rocm_arch_supported_by_gdb gfx0000]
+	verbose -log "rocm_arch_supported_by_gdb: got $result"
+	gdb_assert {[generic_target_for gfx0000] eq "gfx0000-generic"} \
+	    "sanity check: gfx0000 maps to a BFD-supported generic bucket"
+	gdb_assert {$result == 0} \
+	    "concrete arch missing from BFD list reports unsupported, even when its generic-mapped target is supported"
+    }
+}
+
+with_stub_remote_exec $rocm_test_fake_complete_output {
+    rocm_arch_supported_by_gdb gfx900
+    rocm_arch_supported_by_gdb gfx90a
+    rocm_arch_supported_by_gdb gfx0001
+    verbose -log "rocm_bfd_amdgcn_archs: remote_exec called $rocm_test_remote_exec_calls time(s)"
+    gdb_assert {$rocm_test_remote_exec_calls == 1} \
+	"the arch list is fetched once and reused across arches"
+}
+
+# Tests for the concrete-arch gate added to allow_hip_tests.  These
+# stub find_amdgpu_devices (the set of concrete arches found on the
+# "hardware") together with remote_exec (the fake BFD-supported arch
+# list), so the loop/aggregation logic in allow_hip_tests itself is
+# exercised, not just its two helpers.
+
+with_stub_devices {gfx0001} {
+    with_stub_remote_exec $rocm_test_fake_complete_output {
+	clear_caching_proc_cache allow_hip_tests
+	set result [allow_hip_tests]
+	verbose -log "allow_hip_tests: got $result"
+	gdb_assert {[lindex $result 0] == 0} \
+	    "allow_hip_tests fails when the only device's arch is unsupported by BFD"
+    }
+}
+
+with_stub_devices {gfx900} {
+    with_stub_remote_exec $rocm_test_fake_complete_output {
+	clear_caching_proc_cache allow_hip_tests
+	set result [allow_hip_tests]
+	verbose -log "allow_hip_tests: got $result"
+	gdb_assert {[lindex $result 0] == 1} \
+	    "allow_hip_tests succeeds when the only device's arch is supported by BFD"
+    }
+}
+
+with_stub_devices {gfx0001 gfx900} {
+    with_stub_remote_exec $rocm_test_fake_complete_output {
+	clear_caching_proc_cache allow_hip_tests
+	set result [allow_hip_tests]
+	verbose -log "allow_hip_tests: got $result"
+	gdb_assert {[lindex $result 0] == 1} \
+	    "allow_hip_tests succeeds when at least one of several devices is supported by BFD"
+    }
+}
+
+# Case: a single unsupported arch, repeated across several devices
+# (e.g. a multi-GPU machine where every device has the same
+# unsupported arch).  The failure message should name that arch only
+# once, and use the singular "architecture".
+with_stub_devices {gfx0001 gfx0001 gfx0001} {
+    with_stub_remote_exec $rocm_test_fake_complete_output {
+	clear_caching_proc_cache allow_hip_tests
+	set result [allow_hip_tests]
+	verbose -log "allow_hip_tests: got $result"
+	gdb_assert {[lindex $result 1] eq "gfx0001 architecture not supported"} \
+	    "a repeated unsupported arch is reported only once, singular"
+    }
+}
+
+# Case: several distinct unsupported arches.  The failure message
+# should list each distinct arch once, in order, using the plural
+# "architectures".
+with_stub_devices {gfx0001 gfx0002 gfx0001} {
+    with_stub_remote_exec $rocm_test_fake_complete_output {
+	clear_caching_proc_cache allow_hip_tests
+	set result [allow_hip_tests]
+	verbose -log "allow_hip_tests: got $result"
+	gdb_assert {[lindex $result 1] \
+			eq "gfx0001, gfx0002 architectures not supported"} \
+	    "distinct unsupported arches are each reported once, plural"
+    }
+}
+
+# allow_hip_tests is also used, for real, by every other gdb.rocm/*.exp
+# file in this run.  Clear its cached result here so the fake verdict
+# from the stubbed blocks above never leaks into those real test
+# files by way of the shared on-disk gdb_caching_proc cache.
+clear_caching_proc_cache allow_hip_tests
