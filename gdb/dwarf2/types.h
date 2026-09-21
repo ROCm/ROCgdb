@@ -39,4 +39,12 @@ sect_offset_str (sect_offset offset)
   return hex_string (to_underlying (offset));
 }
 
+/* Return true if ADDR_SIZE is an address size GDB knows how to handle.  */
+
+static inline bool
+dwarf2_addr_size_is_supported (unsigned int addr_size)
+{
+  return addr_size == 2 || addr_size == 4 || addr_size == 8;
+}
+
 #endif /* GDB_DWARF2_TYPES_H */

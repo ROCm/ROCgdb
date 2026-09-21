@@ -1770,6 +1770,11 @@ decode_frame_entry_1 (struct gdbarch *gdbarch,
 	  /* FIXME: check that this is the same as from the CU header.  */
 	  cie->addr_size = read_1_byte (unit->abfd, buf);
 	  ++buf;
+
+	  if (!dwarf2_addr_size_is_supported (cie->addr_size))
+	    error (_("Unsupported address size in CIE "
+		     "(is %u, should be 2, 4 or 8)."), cie->addr_size);
+
 	  cie->segment_size = read_1_byte (unit->abfd, buf);
 	  ++buf;
 	}

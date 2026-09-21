@@ -14091,6 +14091,13 @@ read_loclists_rnglists_header (struct loclists_rnglists_header *header,
   header->addr_size = read_1_byte (abfd, info_ptr);
   info_ptr += 1;
 
+  if (!dwarf2_addr_size_is_supported (header->addr_size))
+    error (_(DWARF_ERROR_PREFIX
+	     "unsupported address size in %s header "
+	     "(is %u, should be 2, 4 or 8) [in module %s]"),
+	   section->get_name (), header->addr_size,
+	   section->get_file_name ());
+
   header->segment_collector_size = read_1_byte (abfd, info_ptr);
   info_ptr += 1;
 
