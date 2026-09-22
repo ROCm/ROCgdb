@@ -2822,7 +2822,7 @@ strncmp_iw_with_mode_tests ()
 
   /* Test scope operator.  */
   check_scope_operator (language_minimal);
-  check_scope_operator (language_cplus);
+  check_scope_operator (language_cplus_);
   check_scope_operator (language_fortran);
   check_scope_operator (language_rust);
 
@@ -2866,7 +2866,7 @@ strncmp_iw_with_mode_tests ()
 #undef MATCH
     };
 
-  user_def_ops_test (language_cplus);
+  user_def_ops_test (language_cplus_);
   user_def_ops_test (language_hip);
 
   /* Skip "[abi:cxx11]" tags in the symbol name if the lookup name
