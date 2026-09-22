@@ -3105,6 +3105,8 @@ extern char *elfcore_write_ppc_tm_cppr
   (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_ppc_tm_cdscr
   (bfd *, char *, int *, const void *, int);
+extern char *elfcore_write_ppc_dmr
+  (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_s390_timer
   (bfd *, char *, int *, const void *, int);
 extern char *elfcore_write_s390_todcmp

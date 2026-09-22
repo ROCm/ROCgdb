@@ -81,6 +81,7 @@ SECTION
 #define NOTE_PSEUDO_SECTION_LOONGARCH_LASX	".reg-loongarch-lasx"
 #define NOTE_PSEUDO_SECTION_LOONGARCH_LBT	".reg-loongarch-lbt"
 #define NOTE_PSEUDO_SECTION_LOONGARCH_LSX	".reg-loongarch-lsx"
+#define NOTE_PSEUDO_SECTION_PPC_DMR		".reg-ppc-dmr"
 #define NOTE_PSEUDO_SECTION_PPC_DSCR		".reg-ppc-dscr"
 #define NOTE_PSEUDO_SECTION_PPC_EBB		".reg-ppc-ebb"
 #define NOTE_PSEUDO_SECTION_PPC_PMU		".reg-ppc-pmu"
@@ -10568,6 +10569,12 @@ elfcore_grok_ppc_tm_cdscr (bfd *abfd, Elf_Internal_Note *note)
 }
 
 static bool
+elfcore_grok_ppc_dmr (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, NOTE_PSEUDO_SECTION_PPC_DMR, note);
+}
+
+static bool
 elfcore_grok_s390_high_gprs (bfd *abfd, Elf_Internal_Note *note)
 {
   return elfcore_make_note_pseudosection (abfd, NOTE_PSEUDO_SECTION_S390_HIGH_GPRS, note);
@@ -11185,6 +11192,7 @@ elfcore_grok_note (bfd *abfd, Elf_Internal_Note *note)
 	case NT_LARCH_LASX:	return elfcore_grok_loongarch_lasx (abfd, note);
 	case NT_LARCH_LBT:	return elfcore_grok_loongarch_lbt (abfd, note);
 	case NT_LARCH_LSX:	return elfcore_grok_loongarch_lsx (abfd, note);
+	case NT_PPC_DMR:	return elfcore_grok_ppc_dmr (abfd, note);
 	case NT_PPC_DSCR:	return elfcore_grok_ppc_dscr (abfd, note);
 	case NT_PPC_EBB:	return elfcore_grok_ppc_ebb (abfd, note);
 	case NT_PPC_PMU:	return elfcore_grok_ppc_pmu (abfd, note);
@@ -12602,6 +12610,17 @@ elfcore_write_ppc_tm_cdscr (bfd *abfd,
 			     ppc_tm_cdscr, size);
 }
 
+char *
+elfcore_write_ppc_dmr (bfd *abfd,
+		       char *buf,
+		       int *bufsiz,
+		       const void *ppc_dmr,
+		       int size)
+{
+  return elfcore_write_note (abfd, buf, bufsiz,
+			     NOTE_NAME_LINUX, NT_PPC_DMR, ppc_dmr, size);
+}
+
 static char *
 elfcore_write_s390_high_gprs (bfd *abfd,
 			      char *buf,
@@ -13046,6 +13065,7 @@ elfcore_write_register_note (bfd *abfd,
       { NOTE_PSEUDO_SECTION_LOONGARCH_LASX,   elfcore_write_loongarch_lasx},
       { NOTE_PSEUDO_SECTION_LOONGARCH_LBT,    elfcore_write_loongarch_lbt},
       { NOTE_PSEUDO_SECTION_LOONGARCH_LSX,    elfcore_write_loongarch_lsx},
+      { NOTE_PSEUDO_SECTION_PPC_DMR,          elfcore_write_ppc_dmr},
       { NOTE_PSEUDO_SECTION_PPC_DSCR,         elfcore_write_ppc_dscr},
       { NOTE_PSEUDO_SECTION_PPC_EBB,          elfcore_write_ppc_ebb},
       { NOTE_PSEUDO_SECTION_PPC_PMU,          elfcore_write_ppc_pmu},

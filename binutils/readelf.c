@@ -21440,6 +21440,8 @@ get_note_type (Filedata * filedata, unsigned e_type)
 	return _("NT_PPC_TM_CPPR (ppc checkpointed PPR register)");
       case NT_PPC_TM_CDSCR:
 	return _("NT_PPC_TM_CDSCR (ppc checkpointed DSCR register)");
+      case NT_PPC_DMR:
+	return _("NT_PPC_DMR (ppc Dense Math registers)");
       case NT_386_TLS:
 	return _("NT_386_TLS (x86 TLS information)");
       case NT_386_IOPERM:
