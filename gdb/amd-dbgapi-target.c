@@ -940,53 +940,10 @@ amd_dbgapi_target_breakpoint::print_it (const bpstat *bs) const
 {
   /* We only reach here when check_status set bs->print_it to print_it_normal,
      which happens only for GPU code object events when stop_on_solib_events
-     is enabled.  */
-  bool any_deleted = !current_program_space->deleted_solibs.empty ();
-  bool any_added = !current_program_space->added_solibs.empty ();
-
-  if (any_added || any_deleted)
-    current_uiout->text (_("Stopped due to GPU code object event:\n"));
-  else
-    current_uiout->text (_("Stopped due to GPU code object event (no "
-			   "code objects added or removed)\n"));
-
-  if (current_uiout->is_mi_like_p ())
-    {
-      current_uiout->field_string
-	("reason", async_reason_lookup (EXEC_ASYNC_SOLIB_EVENT));
-      current_uiout->field_string ("object-kind", "gpu-code-object");
-    }
-
-  if (any_deleted)
-    {
-      current_uiout->text (_("  Inferior unloaded "));
-      ui_out_emit_list list_emitter (current_uiout, "removed");
-      bool first = true;
-      for (const std::string &name : current_program_space->deleted_solibs)
-	{
-	  if (!first)
-	    current_uiout->text ("    ");
-	  first = false;
-	  current_uiout->field_string ("code-object", name);
-	  current_uiout->text ("\n");
-	}
-    }
-
-  if (any_added)
-    {
-      current_uiout->text (_("  Inferior loaded "));
-      ui_out_emit_list list_emitter (current_uiout, "added");
-      bool first = true;
-      for (solib *iter : current_program_space->added_solibs)
-	{
-	  if (!first)
-	    current_uiout->text ("    ");
-	  first = false;
-	  current_uiout->field_string ("code-object", iter->name);
-	  current_uiout->text ("\n");
-	}
-    }
-
+     is enabled.  Use the generalized print_solib_event with GPU-specific
+     parameters.  */
+  print_solib_event (false, "GPU code object", "GPU code objects",
+		     "code-object", "gpu-code-object");
   return PRINT_NOTHING;
 }
 
