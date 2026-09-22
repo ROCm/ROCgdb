@@ -1037,20 +1037,16 @@ linespec_lexer_consume_token (linespec_parser *parser)
 static linespec_token
 linespec_lexer_peek_token (linespec_parser *parser)
 {
-  linespec_token next;
-  const char *saved_stream = parser->lexer.stream;
-  linespec_token saved_token = parser->lexer.current;
-  int saved_completion_quote_char = parser->completion_quote_char;
-  const char *saved_completion_quote_end = parser->completion_quote_end;
-  const char *saved_completion_word = parser->completion_word;
+  scoped_restore stream_restore = make_scoped_restore (&parser->lexer.stream);
+  scoped_restore token_restore = make_scoped_restore (&parser->lexer.current);
+  scoped_restore completion_quote_char_restore
+    = make_scoped_restore (&parser->completion_quote_char);
+  scoped_restore completion_quote_end_restore
+    = make_scoped_restore (&parser->completion_quote_end);
+  scoped_restore completion_word_restore
+    = make_scoped_restore (&parser->completion_word);
 
-  next = linespec_lexer_consume_token (parser);
-  parser->lexer.stream = saved_stream;
-  parser->lexer.current = saved_token;
-  parser->completion_quote_char = saved_completion_quote_char;
-  parser->completion_quote_end = saved_completion_quote_end;
-  parser->completion_word = saved_completion_word;
-  return next;
+  return linespec_lexer_consume_token (parser);
 }
 
 /* Helper functions.  */
