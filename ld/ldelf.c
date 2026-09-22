@@ -2129,6 +2129,7 @@ elf_orphan_compatible (asection *in, asection *out)
 	  || ((elf_section_flags (in) & SHF_LINK_ORDER) != 0
 	      && (elf_section_flags (out) & SHF_LINK_ORDER) != 0
 	      && elf_linked_to_section (in) != NULL
+	      && elf_linked_to_section (out) != NULL
 	      && (elf_linked_to_section (in)->output_section
 		  != elf_linked_to_section (out)->output_section))
 	  || ((elf_section_flags (out) ^ elf_section_flags (in))
