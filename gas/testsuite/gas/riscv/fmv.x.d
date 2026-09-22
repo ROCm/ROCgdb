@@ -1,4 +1,4 @@
-#as:
+#as: -march=rv32i
 #objdump: -dr
 
 .*:[ 	]+file format .*
