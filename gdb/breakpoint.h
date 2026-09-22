@@ -2114,7 +2114,10 @@ bool is_hardware_watchpoint (const struct breakpoint *bpt);
    IS_CATCHPOINT is true if the event is due to a "catch load"
    catchpoint, false otherwise.  */
 
-extern void print_solib_event (bool is_catchpoint);
+extern void print_solib_event (bool is_catchpoint,
+			       const char *event_description = "shared library",
+			       const char *item_field_name = "library",
+			       const char *object_kind = nullptr);
 
 /* Print a message describing any user-breakpoints set at PC.  This
    concerns with logical breakpoints, so we match program spaces, not

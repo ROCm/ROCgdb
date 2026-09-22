@@ -5247,7 +5247,8 @@ print_bp_stop_message (bpstat *bs)
 /* See breakpoint.h.  */
 
 void
-print_solib_event (bool is_catchpoint)
+print_solib_event (bool is_catchpoint, const char *event_description,
+		   const char *item_field_name, const char *object_kind)
 {
   bool any_deleted = !current_program_space->deleted_solibs.empty ();
   bool any_added = !current_program_space->added_solibs.empty ();
@@ -5255,15 +5256,22 @@ print_solib_event (bool is_catchpoint)
   if (!is_catchpoint)
     {
       if (any_added || any_deleted)
-	current_uiout->text (_("Stopped due to shared library event:\n"));
+	current_uiout->text (string_printf (_("Stopped due to %s event:\n"),
+					    event_description).c_str ());
       else
-	current_uiout->text (_("Stopped due to shared library event (no "
-			       "libraries added or removed)\n"));
+	current_uiout->text (string_printf (_("Stopped due to %s event (no "
+					      "%ss added or removed)\n"),
+					    event_description,
+					    event_description).c_str ());
     }
 
   if (current_uiout->is_mi_like_p ())
-    current_uiout->field_string ("reason",
-				 async_reason_lookup (EXEC_ASYNC_SOLIB_EVENT));
+    {
+      current_uiout->field_string ("reason",
+				   async_reason_lookup (EXEC_ASYNC_SOLIB_EVENT));
+      if (object_kind != nullptr)
+	current_uiout->field_string ("object-kind", object_kind);
+    }
 
   if (any_deleted)
     {
@@ -5275,7 +5283,7 @@ print_solib_event (bool is_catchpoint)
 
 	  if (ix > 0)
 	    current_uiout->text ("    ");
-	  current_uiout->field_string ("library", name);
+	  current_uiout->field_string (item_field_name, name);
 	  current_uiout->text ("\n");
 	}
     }
@@ -5290,7 +5298,7 @@ print_solib_event (bool is_catchpoint)
 	  if (!first)
 	    current_uiout->text ("    ");
 	  first = false;
-	  current_uiout->field_string ("library", iter->name);
+	  current_uiout->field_string (item_field_name, iter->name);
 	  current_uiout->text ("\n");
 	}
     }
