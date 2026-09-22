@@ -6,7 +6,7 @@
 
 Disassembly of section .text:
 
-00000100 <_start>:
+00000100 <__?start>:
 #
 # Relaxation of aa:16
 #

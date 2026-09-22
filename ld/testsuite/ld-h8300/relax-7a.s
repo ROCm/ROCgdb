@@ -1,9 +1,10 @@
 	.h8300s
 # relax expected
-	.global _start
+	.global _start, __start
 	.section	.text.func1,"ax",@progbits
 	.align 1
 _start:
+__start:
 	sub.l	er0,er0
 	sub.l	er2,er2
 	mov.l	#var3,er1

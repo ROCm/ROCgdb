@@ -27,7 +27,7 @@ Contents of section .rodata:
 
 Disassembly of section .text:
 
-00000100 <_start>:
+00000100 <__?start>:
  100:	sub.l	er0,er0
  102:	sub.l	er2,er2
  104:	mov.l	#0xffff8000,er1

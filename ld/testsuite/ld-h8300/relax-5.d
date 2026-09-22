@@ -7,7 +7,7 @@
 
 Disassembly of section .text:
 
-00000100 <_start>:
+00000100 <__?start>:
  100:	ldc	@0x0:16,ccr
  106:	ldc	@0x7fff:16,ccr
  10c:	ldc	@0x8000:32,ccr

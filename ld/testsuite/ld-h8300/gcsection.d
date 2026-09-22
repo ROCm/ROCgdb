@@ -17,7 +17,7 @@ Disassembly of section .text:
  114:	mov.l	@er7\+,er6
  118:	rts	
 
-0000011a <_start>:
+0000011a <__?start>:
  11a:	mov.l	er6,@-er7
  11e:	mov.l	er7,er6
  120:	mov.w	#0x4b,r0

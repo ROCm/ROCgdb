@@ -29,8 +29,9 @@ _functionWeDontUse:
 	.size	_functionWeDontUse, .-_functionWeDontUse
 	.section	.text.start,"ax",@progbits
 	.align 1
-	.global _start
+	.global _start, __start
 _start:
+__start:
 	mov.l	er6,@-er7
 	mov.l	er7,er6
 	mov.w	#75,r0
@@ -39,5 +40,5 @@ _start:
 	mov.w	r2,r0
 	mov.l	@er7+,er6
 	rts
-	.size	_start, .-_start
+	.size	__start, .-__start
 	.end

@@ -6,6 +6,6 @@
 .*:     file format .*
 Disassembly of section .text:
 
-00000100 <_start>:
+00000100 <__?start>:
  100:	mov.b	r2l,@0xbd:8
  102:	rts	

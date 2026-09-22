@@ -1,6 +1,7 @@
 	.h8300s
-	.globl	_start
+	.global	_start, __start
 _start:
+__start:
 	# s3-s6 aren't valid 16-bit addresses.
 	mov.b	@s1:16,r0l
 	mov.b	@s2:16,r0l

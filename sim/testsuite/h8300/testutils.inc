@@ -20,8 +20,9 @@
 
 	.text
 	.align 2
-	.global _start
+	.global _start, __start
 _start:
+__start:
 	jmp	_main
 
 	.data
