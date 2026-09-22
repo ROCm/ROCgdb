@@ -4,6 +4,10 @@
 # Scoped multi-arch CI for the ROCm debug tools (rocgdb, rocdbgapi/amd-dbgapi,
 # rocr-debug-agent) via TheRock's reusable multi-arch pipeline.
 #
+# Rollout: opt-in during the transition. Presubmit runs only on PRs carrying the
+# `ci:multi-arch` label (so it does not double up with therock-ci.yml); manual
+# dispatch always runs. Drop the label gate to switch over fully.
+#
 # TheRock ref is pinned to match .github/configs.json's therock_commit_ref.
 # Update every `@<ref>` / `ref:` below together with configs.json on a bump.
 
@@ -21,6 +25,22 @@ on:
         type: string
         description: "Linux GPU families to build/test (empty = gfx94X)."
         default: ""
+      linux_test_labels:
+        type: string
+        description: "Reduce Linux tests to these 'test:'-prefixed labels (empty = test:rocgdb,test:rocr-debug-agent)."
+        default: ""
+      prebuilt_stages:
+        type: string
+        description: "Comma-separated build stages to skip; artifacts copied from baseline_run_id instead."
+        default: ""
+      baseline_run_id:
+        type: string
+        description: "Workflow run ID to copy prebuilt stage artifacts from (required with prebuilt_stages)."
+        default: ""
+      baseline_repository:
+        type: string
+        description: "Repository to query for baseline_run_id (defaults to this repo when baseline_run_id is set)."
+        default: ""
 
 permissions:
   contents: read
@@ -34,7 +54,14 @@ jobs:
   configure:
     name: Configure
     runs-on: ubuntu-24.04
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'ci:skip') }}
+    # Presubmit is opt-in via `ci:multi-arch` during the transition;
+    # workflow_dispatch always runs.
+    if: >-
+      ${{
+        !contains(github.event.pull_request.labels.*.name, 'ci:skip') &&
+        (github.event_name != 'pull_request' ||
+         contains(github.event.pull_request.labels.*.name, 'ci:multi-arch'))
+      }}
     env:
       BASE_REF: HEAD^
     outputs:
@@ -73,7 +100,7 @@ jobs:
       linux_amdgpu_families: ${{ needs.configure.outputs.linux_amdgpu_families }}
       windows_amdgpu_families: "" # Debug tools are Linux-only.
       # Explicit (empty would also pull in compiler-runtime's kfdtest).
-      linux_test_labels: "test:rocgdb,test:rocr-debug-agent"
+      linux_test_labels: ${{ inputs.linux_test_labels || 'test:rocgdb,test:rocr-debug-agent' }}
       windows_test_labels: ""
       # Only the stages the debug-tools artifacts need; all others skipped.
       build_stages: "compiler-runtime,debug-tools"
@@ -82,6 +109,9 @@ jobs:
       build_jax: false
       build_native_linux: false
       stage_reuse_mode: reuse-stage
+      prebuilt_stages: ${{ inputs.prebuilt_stages || '' }}
+      baseline_run_id: ${{ inputs.baseline_run_id || '' }}
+      baseline_repository: ${{ inputs.baseline_repository || (inputs.baseline_run_id != '' && github.repository) || '' }}
       repository: ROCm/TheRock
       ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05 # 2026-09-21
       # Build this PR's ROCgdb source (-> THEROCK_ROCGDB_SOURCE_DIR).
