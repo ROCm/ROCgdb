@@ -3363,11 +3363,10 @@ lookup_address_in_function_table (struct comp_unit *unit,
 	    continue;
 
 	  if (arange->high - arange->low < best_fit_len
-	      /* The following comparison is designed to return the same
-		 match as the previous algorithm for routines which have the
-		 same best fit length.  */
+	      /* Among matches of the same length take the one later in the
+		 DIE stream.  */
 	      || (arange->high - arange->low == best_fit_len
-		  && funcinfo > best_fit))
+		  && funcinfo->unit_offset > best_fit->unit_offset))
 	    {
 	      best_fit = funcinfo;
 	      best_fit_len = arange->high - arange->low;

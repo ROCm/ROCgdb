@@ -28,14 +28,6 @@ if { [prepare_for_testing "failed to prepare" $testfile \
     return
 }
 
-if { ![fortran_runto_main] } {
-    perror "Could not run to main."
-    return
-}
-
-# Avoid libc symbols.
-gdb_test "nosharedlibrary"
-
 set logical4 [fortran_logical4]
 set integer4 [fortran_int4]
 set real4 [fortran_real4]

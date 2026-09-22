@@ -47,7 +47,7 @@
 #include "cli/cli-style.h"
 #include "cli/cli-cmds.h"
 
-#if defined (__linux__) || defined (__CYGWIN__)
+#if __has_include(<sched.h>)
 #include <sched.h>
 #endif
 
@@ -891,13 +891,11 @@ update_thread_pool_size ()
 	{
 	  /* Exclude unavailable hardware threads (for instance made
 	     unavailable using taskset).  */
-#if (defined (__linux__) || defined (__CYGWIN__)) && defined (_GNU_SOURCE)
+#if HAVE_SCHED_GETAFFINITY
 	  cpu_set_t cpus;
 	  int res = sched_getaffinity (getpid (), sizeof (cpu_set_t), &cpus);
 	  if (res == 0)
 	    n_threads = std::min (n_threads, CPU_COUNT (&cpus));
-#else
-	  /* Todo: handle other platforms.  */
 #endif
 	}
     }

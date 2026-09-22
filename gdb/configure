@@ -30201,6 +30201,7 @@ for ac_func in  \
   pread64 \
   pwrite \
   resize_term \
+  sched_getaffinity \
   setlocale \
   setrlimit \
   setsid \

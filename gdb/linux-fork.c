@@ -664,7 +664,12 @@ inferior_call_waitpid (ptid_t pptid, int pid)
       argv[1] = value_from_pointer (builtin_type (gdbarch)->builtin_data_ptr, 0);
       argv[2] = value_from_longest (builtin_type (gdbarch)->builtin_int, 0);
 
-      retv = call_function_by_hand (waitpid_fn, NULL, argv);
+      /* Use `int` default return type, even though waitpid actually
+	 returns pid_t.  This matches ARGV[0] above, which is
+	 similarly of type pid_t, but we treat as `int`.  */
+      retv = call_function_by_hand (waitpid_fn,
+				    builtin_type (gdbarch)->builtin_int,
+				    argv);
 
       if (value_as_long (retv) >= 0)
 	ret = 0;
@@ -1007,7 +1012,11 @@ checkpoint_command (const char *args, int from_tty)
     scoped_restore save_pid
       = make_scoped_restore (&checkpointing_pid, inferior_ptid.pid ());
 
-    ret = call_function_by_hand (fork_fn, NULL, {});
+    /* Use `int` as the default return type even though fork actually
+       returns pid_t.  */
+    ret = call_function_by_hand (fork_fn,
+				 builtin_type (gdbarch)->builtin_int,
+				 {});
   }
 
   if (!ret)	/* Probably can't happen.  */
