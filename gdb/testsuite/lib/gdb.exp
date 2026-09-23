@@ -8930,7 +8930,7 @@ proc gdb_finish { } {
 
     if { [info procs ::gdb_tcl_unknown] != "" } {
 	# Restore dejagnu's version of proc unknown.
-	rename ::unknown ""
+	unproc ::unknown
 	rename ::dejagnu_unknown ::unknown
     }
 
@@ -11351,7 +11351,7 @@ proc with_override { name override body } {
 	# tclint-disable-next-line command-args
 	proc $name $old_args $old_body
     } else {
-	rename $name ""
+	unproc $name
     }
 
     # Return as appropriate.
@@ -12465,6 +12465,12 @@ proc unprintable_to_octal { input_string } {
 
 # Ignore args and don't do anything.  Can be used with proc with_override.
 proc nop {args} {}
+
+# Delete proc P.
+proc unproc {p} {
+    # Renaming to an empty string deletes proc P.
+    uplevel 1 [list rename $p {}]
+}
 
 require {tcl_version_at_least 8 6 2}
 

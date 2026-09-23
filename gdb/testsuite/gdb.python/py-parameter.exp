@@ -912,4 +912,4 @@ test_ambiguous_parameter
 test_unknown_prefix
 test_set_show_parameters
 
-rename py_param_test_maybe_no_output ""
+unproc py_param_test_maybe_no_output

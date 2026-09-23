@@ -705,7 +705,7 @@ if {[info procs find_gnatmake] == ""} {
     set use_gdb_compile(ada) 1
     gdb_note [join [list $note_prefix "Ada" $note_suffix] ""]
 } else {
-    rename gdb_find_gnatmake ""
+    unproc gdb_find_gnatmake
 }
 
 if {[info procs find_gfortran] == ""} {
@@ -713,7 +713,7 @@ if {[info procs find_gfortran] == ""} {
     set use_gdb_compile(fortran) 1
     gdb_note [join [list $note_prefix "Fortran" $note_suffix] ""]
 } else {
-    rename gdb_find_gfortran ""
+    unproc gdb_find_gfortran
 }
 
 if {[info procs find_go_linker] == ""} {
@@ -722,8 +722,8 @@ if {[info procs find_go_linker] == ""} {
     set use_gdb_compile(go) 1
     gdb_note [join [list $note_prefix "Go" $note_suffix] ""]
 } else {
-    rename gdb_find_go ""
-    rename gdb_find_go_linker ""
+    unproc gdb_find_go
+    unproc gdb_find_go_linker
 }
 
 if {[info procs find_gdc] == ""} {
@@ -731,7 +731,7 @@ if {[info procs find_gdc] == ""} {
     set use_gdb_compile(d) 1
     gdb_note [join [list $note_prefix "D" $note_suffix] ""]
 } else {
-    rename gdb_find_gdc ""
+    unproc gdb_find_gdc
 }
 
 if {[info procs find_rustc] == ""} {
@@ -739,7 +739,7 @@ if {[info procs find_rustc] == ""} {
     set use_gdb_compile(rust) 1
     gdb_note [join [list $note_prefix "Rust" $note_suffix] ""]
 } else {
-    rename gdb_find_rustc ""
+    unproc gdb_find_rustc
 }
 
 if {[info procs find_hip_compiler] == ""} {
@@ -747,7 +747,7 @@ if {[info procs find_hip_compiler] == ""} {
     set use_gdb_compile(hip) 1
     gdb_note [join [list $note_prefix "HIP" $note_suffix] ""]
 } else {
-    rename gdb_find_hip_compiler ""
+    unproc gdb_find_hip_compiler
 }
 
 # If dejagnu's default_target_compile is missing support for any language,
@@ -756,7 +756,7 @@ if { [array size use_gdb_compile] != 0 } {
     catch {rename default_target_compile dejagnu_default_target_compile}
     rename gdb_default_target_compile default_target_compile
 } else {
-    rename gdb_default_target_compile ""
+    unproc gdb_default_target_compile
 }
 
 # Various ccache versions provide incorrect debug info such as ignoring
