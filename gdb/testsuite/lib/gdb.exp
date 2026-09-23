@@ -8699,17 +8699,18 @@ proc standard_temp_file {basename} {
 # as is and delete A.  Return 1 if rename happened.
 
 proc tentative_rename { a b } {
-    global errorInfo errorCode
-    set code [catch {file rename -- $a $b} result]
-    if { $code == 1 && [lindex $errorCode 0] == "POSIX" \
-	     && [lindex $errorCode 1] == "EEXIST" } {
-	file delete $a
-	return 0
-    }
-    if {$code == 1} {
-	return -code error -errorinfo $errorInfo -errorcode $errorCode $result
-    } elseif {$code > 1} {
-	return -code $code $result
+    try {
+	file rename -- $a $b
+    } on error {result opts} {
+	set errorcode [dict get $opts -errorcode]
+	if { [lindex $errorcode 0] == "POSIX" \
+		 && [lindex $errorcode 1] == "EEXIST" } {
+	    file delete $a
+	    return 0
+	}
+
+	# Rethrow.
+	return -options $opts $result
     }
     return 1
 }
