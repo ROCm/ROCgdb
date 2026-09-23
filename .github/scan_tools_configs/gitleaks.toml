@@ -51,8 +51,7 @@ description = "Test fixtures using well-known dummy variable names"
 regexTarget = "match"
 regexes = [
   "(?i)\\bINVALID_TOKEN\\s*='",
-  "(?i)\\bwrong_secret\\s*='",
-  "\\bFormat\\.Graphics\\.PixelValueAccessMode\\s*='",
+  "(?i)\\bwrong_secret\\s*='"
 ]
 
 [[allowlists]]
@@ -66,4 +65,12 @@ regexes = [
   '''[A-Z][A-Z0-9_]*SHA256\s*[=:]''',
   '''[A-Z][A-Z0-9_]*SHA512\s*[=:]''',
   '''[A-Z][A-Z0-9_]*MD5\s*[=:]''',
+]
+
+[[allowlists]]
+description = "C identifiers misread as secrets (binutils/gdb sources)"
+# `generic-api-key` keys off words like "access" and "key" near a value.
+regexes = [
+  '''^(?:Modifier|Immediate)_kv\d+_v\d+_\w+$''',
+  '''^[A-Z][A-Z0-9_]*_REGNUM$''',
 ]
