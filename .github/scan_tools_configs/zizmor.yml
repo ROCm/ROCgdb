@@ -12,4 +12,11 @@
 # `<rule-id>: { ignore: [file.yml:line:col] }`, which keeps a suppression
 # reviewable in one place rather than scattered as inline comments
 # across workflows.
-rules: {}
+rules:
+  unpinned-images:
+    ignore:
+      # inputs.build_image is a workflow_call input; zizmor cannot trace it
+      # back through the caller chain (nightly-build.yml / therock-ci.yml)
+      # to its source in .github/configs.json, where it is already pinned
+      # by digest (build_image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:...).
+      - therock-ci-linux.yml:42:7
