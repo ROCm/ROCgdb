@@ -5348,6 +5348,61 @@ maintenance_print_address_spaces (const char *args, int from_tty)
   address_spaces_dump (get_current_arch ());
 }
 
+/* Return the number of active heterogeneous waves in INF, or 0 if INF has
+   no active GPU process.  Throw an error if amd-dbgapi fails to list the
+   waves.  */
+
+static size_t
+wave_count (inferior *inf)
+{
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (inf);
+
+  if (process_id == AMD_DBGAPI_PROCESS_NONE)
+    return 0;
+
+  amd_dbgapi_wave_id_t *waves;
+  size_t count;
+  amd_dbgapi_status_t status
+    = amd_dbgapi_process_wave_list (process_id, &count, &waves, nullptr);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd-dbgapi failed to get the list of waves (%s)"),
+	   get_status_string (status));
+
+  xfree (waves);
+  return count;
+}
+
+/* Parse an optional inferior number from ARGS.  Return the current inferior
+   if ARGS is empty, or the inferior with the given number if ARGS is
+   non-empty.  Throw an error if the number is out of range or refers to a
+   non-existent inferior.  */
+
+static inferior *
+parse_inferior_for_waves (const char *args)
+{
+  if (args == nullptr || *args == '\0')
+    return current_inferior ();
+
+  long num = parse_and_eval_long (args);
+  if (num >= 1 && num <= INT_MAX)
+    {
+      inferior *inf = find_inferior_id ((int) num);
+      if (inf != nullptr)
+	return inf;
+    }
+
+  error (_("No inferior number %ld."), num);
+}
+
+/* Implement "maintenance info amdgpu wave-count".  */
+
+static void
+maintenance_wave_count_command (const char *args, int from_tty)
+{
+  inferior *inf = parse_inferior_for_waves (args);
+  gdb_printf ("%zu\n", wave_count (inf));
+}
+
 static void
 dispatch_find_command (const char *arg, int from_tty)
 {
@@ -5649,4 +5704,13 @@ Display properties of address-spaces supported by the current architecture.\n\
 For each address space, print its name, DWARF id, address size,\n\
 null address, and access class."),
 	   &maintenanceprintlist);
+
+  add_cmd ("wave-count", class_maintenance, maintenance_wave_count_command,
+	   _("Display the number of active heterogeneous waves.\n\
+Usage: maintenance info amdgpu wave-count [INF-NUM]\n\
+\n\
+Display the total number of waves in inferior INF-NUM, or in the\n\
+current inferior if INF-NUM is omitted.  If the inferior has no\n\
+active GPU process, the count is zero."),
+	   &maintenance_info_amdgpu_list);
 }

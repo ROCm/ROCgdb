@@ -45626,6 +45626,13 @@ become invalid, once execution resumes.
 Not every address is reachable from every space: if it is not, the row
 for that space reads @samp{<not reachable>}.
 
+@kindex maint info amdgpu wave-count
+@item maint info amdgpu wave-count @r{[}@var{inferior-num}@r{]}
+Print the number of active heterogeneous waves in inferior
+@var{inferior-num}, or in the current inferior if @var{inferior-num} is
+not given.  If the inferior has no active @acronym{GPU} process, the
+count is zero.
+
 @anchor{maint info python-disassemblers}
 @kindex maint info python-disassemblers
 @item maint info python-disassemblers
