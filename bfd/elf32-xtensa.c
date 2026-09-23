@@ -348,6 +348,13 @@ static reloc_howto_type elf_howto_table[] =
 	 bfd_elf_xtensa_reloc, "R_XTENSA_NDIFF32", false, 0, 0xffffffff, false),
   HOWTO (R_XTENSA_PDIFF_ULEB128, 0, 0, 0, false, 0, complain_overflow_dont,
 	 bfd_elf_xtensa_reloc, "R_XTENSA_PDIFF_ULEB128", false, 0, 0, false),
+
+  /* Absolute 32-bit address with the addend taken only from r_addend.
+     Unlike R_XTENSA_32 this is not partial_inplace, so the contents of
+     the relocated word do not contribute to the result.  */
+  HOWTO (R_XTENSA_32_ABS, 0, 4, 32, false, 0, complain_overflow_bitfield,
+	 bfd_elf_xtensa_reloc, "R_XTENSA_32_ABS",
+	 false, 0, 0xffffffff, false),
 };
 
 #if DEBUG_GEN_RELOC
@@ -414,6 +421,10 @@ elf_xtensa_reloc_type_lookup (bfd *abfd ATTRIBUTE_UNUSED,
     case BFD_RELOC_XTENSA_PDIFF_ULEB128:
       TRACE ("BFD_RELOC_XTENSA_PDIFF_ULEB128");
       return &elf_howto_table[(unsigned) R_XTENSA_PDIFF_ULEB128 ];
+
+    case BFD_RELOC_XTENSA_32_ABS:
+      TRACE ("BFD_RELOC_XTENSA_32_ABS");
+      return &elf_howto_table[(unsigned) R_XTENSA_32_ABS ];
 
     case BFD_RELOC_XTENSA_RTLD:
       TRACE ("BFD_RELOC_XTENSA_RTLD");
@@ -854,6 +865,23 @@ property_table_matches (const void *ap, const void *bp)
 }
 
 
+/* Addend of relocation IREL.  R_XTENSA_32 is the only partial_inplace
+   relocation, so only for it does the relocated word in CONTENTS
+   contribute.  Other relocations, such as R_XTENSA_32_ABS, take the
+   addend from r_addend alone.  */
+
+static bfd_vma
+xtensa_reloc_addend (bfd *abfd, bfd_byte *contents,
+		     const Elf_Internal_Rela *irel)
+{
+  bfd_vma addend = irel->r_addend;
+
+  if (ELF32_R_TYPE (irel->r_info) == R_XTENSA_32)
+    addend += bfd_get_32 (abfd, contents + irel->r_offset);
+  return addend;
+}
+
+
 /* Get the literal table or property table entries for the given
    section.  Sets TABLE_P and returns the number of entries.  On
    error, returns a negative value.  */
@@ -952,14 +980,16 @@ xtensa_read_table_entries (bfd *abfd,
 	{
 	  bfd_vma sym_off;
 	  unsigned long r_symndx = ELF32_R_SYM (irel->r_info);
-	  BFD_ASSERT (ELF32_R_TYPE (irel->r_info) == R_XTENSA_32);
+	  BFD_ASSERT (ELF32_R_TYPE (irel->r_info) == R_XTENSA_32
+		      || ELF32_R_TYPE (irel->r_info) == R_XTENSA_32_ABS);
 
 	  if (get_elf_r_symndx_section (abfd, r_symndx) != section)
 	    continue;
 
 	  sym_off = get_elf_r_symndx_offset (abfd, r_symndx);
 	  BFD_ASSERT (sym_off == 0);
-	  address += (section_addr + sym_off + irel->r_addend);
+	  address = (section_addr + sym_off
+		     + xtensa_reloc_addend (abfd, table_data, irel));
 	}
       else
 	{
@@ -1148,6 +1178,7 @@ elf_xtensa_check_relocs (bfd *abfd,
 	  break;
 
 	case R_XTENSA_32:
+	case R_XTENSA_32_ABS:
 	  tls_type = GOT_NORMAL;
 	  is_got = true;
 	  break;
@@ -1951,6 +1982,7 @@ elf_xtensa_do_reloc (reloc_howto_type *howto,
       bfd_put_32 (abfd, relocation - self_address, contents + address);
       return bfd_reloc_ok;
 
+    case R_XTENSA_32_ABS:
     case R_XTENSA_PLT:
     case R_XTENSA_TLSDESC_FN:
     case R_XTENSA_TLSDESC_ARG:
@@ -2783,6 +2815,7 @@ elf_xtensa_relocate_section (struct bfd_link_info *info,
       switch (r_type)
 	{
 	case R_XTENSA_32:
+	case R_XTENSA_32_ABS:
 	case R_XTENSA_PLT:
 	  if (elf_hash_table (info)->dynamic_sections_created
 	      && (input_section->flags & SEC_ALLOC) != 0
@@ -2828,7 +2861,7 @@ elf_xtensa_relocate_section (struct bfd_link_info *info,
 		      outrel.r_addend = rel->r_addend;
 		      rel->r_addend = 0;
 
-		      if (r_type == R_XTENSA_32)
+		      if (r_type == R_XTENSA_32 || r_type == R_XTENSA_32_ABS)
 			{
 			  outrel.r_info =
 			    ELF32_R_INFO (h->dynindx, R_XTENSA_GLOB_DAT);
@@ -5202,6 +5235,19 @@ init_literal_value (literal_value *lit,
 }
 
 
+/* R_XTENSA_32 and R_XTENSA_32_ABS literals with the same target_offset hold
+   the same address, because r_reloc_init folds the in-place addend of
+   R_XTENSA_32 into target_offset.  */
+
+static unsigned
+literal_reloc_type (const r_reloc *r_rel)
+{
+  unsigned r_type = ELF32_R_TYPE (r_rel->rela.r_info);
+
+  return r_type == R_XTENSA_32_ABS ? R_XTENSA_32 : r_type;
+}
+
+
 static bool
 literal_value_equal (const literal_value *src1,
 		     const literal_value *src2,
@@ -5215,8 +5261,7 @@ literal_value_equal (const literal_value *src1,
   if (r_reloc_is_const (&src1->r_rel))
     return (src1->value == src2->value);
 
-  if (ELF32_R_TYPE (src1->r_rel.rela.r_info)
-      != ELF32_R_TYPE (src2->r_rel.rela.r_info))
+  if (literal_reloc_type (&src1->r_rel) != literal_reloc_type (&src2->r_rel))
     return false;
 
   if (src1->r_rel.target_offset != src2->r_rel.target_offset)
@@ -8847,10 +8892,11 @@ compute_removed_literals (bfd *abfd,
       irel = get_irel_at_offset (sec, internal_relocs,
 				 rel->r_rel.target_offset);
 
-      /* If the relocation on this is not a simple R_XTENSA_32 or
-	 R_XTENSA_PLT then do not consider it.  This may happen when
-	 the difference of two symbols is used in a literal.  */
+      /* If the relocation on this is not a simple R_XTENSA_32,
+	 R_XTENSA_32_ABS or R_XTENSA_PLT then do not consider it.  This may
+	 happen when the difference of two symbols is used in a literal.  */
       if (irel && (ELF32_R_TYPE (irel->r_info) != R_XTENSA_32
+		   && ELF32_R_TYPE (irel->r_info) != R_XTENSA_32_ABS
 		   && ELF32_R_TYPE (irel->r_info) != R_XTENSA_PLT))
 	continue;
 
@@ -10321,7 +10367,8 @@ shrink_dynamic_reloc_sections (struct bfd_link_info *info,
 
   dynamic_symbol = elf_xtensa_dynamic_symbol_p (h, info);
 
-  if ((r_type == R_XTENSA_32 || r_type == R_XTENSA_PLT)
+  if ((r_type == R_XTENSA_32 || r_type == R_XTENSA_32_ABS
+       || r_type == R_XTENSA_PLT)
       && (input_section->flags & SEC_ALLOC) != 0
       && (dynamic_symbol
 	  || (bfd_link_pic (info)
@@ -10787,19 +10834,18 @@ relax_property_section (bfd *abfd,
 		remove_this_rel = true;
 	    }
 	  else if (offset_rel
-		   && ELF32_R_TYPE (offset_rel->r_info) == R_XTENSA_32)
+		   && (ELF32_R_TYPE (offset_rel->r_info) == R_XTENSA_32
+		       || ELF32_R_TYPE (offset_rel->r_info) == R_XTENSA_32_ABS))
 	    {
 	      if (last_irel)
 		{
 		  flagword old_flags;
 		  bfd_vma old_size =
 		    bfd_get_32 (abfd, &contents[last_irel->r_offset + 4]);
-		  bfd_vma old_address =
-		    (last_irel->r_addend
-		     + bfd_get_32 (abfd, &contents[last_irel->r_offset]));
-		  bfd_vma new_address =
-		    (offset_rel->r_addend
-		     + bfd_get_32 (abfd, &contents[actual_offset]));
+		  bfd_vma old_address = xtensa_reloc_addend (abfd, contents,
+							    last_irel);
+		  bfd_vma new_address = xtensa_reloc_addend (abfd, contents,
+							    offset_rel);
 		  if (is_full_prop_section)
 		    old_flags = bfd_get_32
 		      (abfd, &contents[last_irel->r_offset + 8]);

@@ -15717,7 +15717,8 @@ is_32bit_abs_reloc (Filedata * filedata, unsigned int reloc_type)
       return reloc_type == 1; /* R_XSTROMY16_32.  */
     case EM_XTENSA_OLD:
     case EM_XTENSA:
-      return reloc_type == 1; /* R_XTENSA_32.  */
+      /* R_XTENSA_32 or R_XTENSA_32_ABS.  */
+      return reloc_type == 1 || reloc_type == 64;
     case EM_Z80:
       return reloc_type == 6; /* R_Z80_32.  */
     default:

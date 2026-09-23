@@ -130,6 +130,17 @@ Choose ABI tag written to the @code{.xtensa.info} section.  ABI tag
 indicates ABI of the assembly code.  A warning is issued by the linker
 on an attempt to link object files with inconsistent ABI tags.
 Default ABI is chosen by the Xtensa core configuration.
+
+@item --abs32-rela | --no-abs32-rela
+@kindex --abs32-rela
+@kindex --no-abs32-rela
+Choose the relocation emitted for 32-bit absolute data.
+@samp{--abs32-rela} emits @code{R_XTENSA_32_ABS}, which keeps the whole
+addend in the relocation and is the form produced by LLVM.
+@samp{--no-abs32-rela} emits @code{R_XTENSA_32}, which may also keep the
+addend in the relocated word and is understood by older linkers and by
+loaders of relocatable objects.  The default is @samp{--no-abs32-rela},
+unless the assembler was configured with @samp{--enable-r-xtensa-32-abs}.
 @end table
 
 @c man end

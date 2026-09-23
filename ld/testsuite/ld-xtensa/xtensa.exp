@@ -44,4 +44,9 @@ run_dump_test "relax-undef-weak-local-pie"
 run_dump_test "relax-undef-weak-shared"
 run_dump_test "relax-undef-weak-local-shared"
 
+run_dump_test "reloc-abs32"
+run_dump_test "reloc-abs32-r"
+run_dump_test "reloc-coalesce-abs32"
+run_dump_test "reloc-prop-abs32"
+
 run_dump_test "startstop"

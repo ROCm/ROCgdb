@@ -6178,6 +6178,12 @@ enum bfd_reloc_code_real
      for virtually every function.  */
   BFD_RELOC_XTENSA_PDIFF_ULEB128,
 
+  /* Xtensa 32-bit absolute address, computed as S + A with the addend taken
+     only from the r_addend field.  Unlike R_XTENSA_32, to which BFD_RELOC_32
+     maps and which is partial_inplace, the contents of the relocated word do
+     not contribute to the result.  */
+  BFD_RELOC_XTENSA_32_ABS,
+
   /* 8 bit signed offset in (ix+d) or (iy+d).  */
   BFD_RELOC_Z80_DISP8,
 
