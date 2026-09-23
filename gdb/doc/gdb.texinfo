@@ -45865,6 +45865,13 @@ block but doesn't print the symbols themselves.  The symbol names can
 be found using @kbd{maint print symbols} (@pxref{maint print
 symbols}).
 
+@kindex maint info wave-count
+@item maint info wave-count @r{[}@var{inferior-num}@r{]}
+Print the number of active heterogeneous waves in inferior
+@var{inferior-num}, or in the current inferior if @var{inferior-num} is
+not given.  If the inferior has no active GPU process, the count is
+zero.
+
 @kindex maint print registers
 @kindex maint print raw-registers
 @kindex maint print cooked-registers

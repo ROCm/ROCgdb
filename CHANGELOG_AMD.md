@@ -8,6 +8,8 @@ Full documentation for ROCgdb is available at
 ### Added
 
 - Add support for the gfx1250-strict architecture variant.
+- Add a "maint info wave-count" command that prints the number of
+  active heterogeneous waves in an inferior.
 
 ## ROCgdb-16.3 for ROCm-10.1
 
