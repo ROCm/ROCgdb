@@ -20,3 +20,8 @@ rules:
       # to its source in .github/configs.json, where it is already pinned
       # by digest (build_image: ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:...).
       - therock-ci-linux.yml:42:7
+      # inputs.component is a workflow_call input whose container_image field
+      # is populated by ROCm/TheRock's own workflows/matrix generation, not
+      # by anything in this repo; confirmed pinned by digest there, but
+      # zizmor cannot trace it through that indirection.
+      - therock-test-component.yml:31:7
