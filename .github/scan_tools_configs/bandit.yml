@@ -1,12 +1,15 @@
-# bandit configuration for rocm-security-gh
+# bandit configuration for ROCgdb
 # Reference: https://bandit.readthedocs.io/en/latest/config.html
 #
-# The default for repositories that ship no bandit config of their own.
-# A repository that ships one (`bandit.yaml` or `bandit.yml`) replaces
-# this file wholesale rather than layering onto it, so suppressions and
-# tuning that belong to a single repository (e.g. `skips: [...]`) belong
-# there. What goes here is what should hold for a repository that has
-# said nothing.
+# This file replaces the rocm-security-gh org default wholesale (a
+# repository-shipped bandit.yml is not layered onto the default).
+#
+# exclude_dirs below also accepts individual file paths. gdb/contrib,
+# gdb/testsuite and sim are excluded wholesale since we don't ship any
+# of those trees. The remaining individual files are inherited from
+# upstream GDB/binutils tooling, unmodified by ROCm, and are excluded
+# rather than fixed here to avoid carrying a local patch against
+# upstream sources.
 
 exclude_dirs:
   - .git
@@ -15,3 +18,12 @@ exclude_dirs:
   - build
   - dist
   - node_modules
+  - contrib/mklog.py
+  - etc/update-copyright.py
+  - gdb/check-include-guards.py
+  - gdb/contrib
+  - gdb/copyright.py
+  - gdb/python/lib/gdb/styling.py
+  - gdb/syscalls/riscv-linux-canonicalize-syscall-gen.py
+  - gdb/testsuite
+  - sim
