@@ -324,18 +324,11 @@ proc shared_gdb_end_use {} {
 
 proc with_shared_gdb { body } {
     shared_gdb_enable
-    set code [catch { uplevel 1 $body } result]
-    shared_gdb_disable
-
-    # Return as appropriate.
-    if { $code == 1 } {
-	global errorInfo errorCode
-	return -code error -errorinfo $errorInfo -errorcode $errorCode $result
-    } elseif { $code > 1 } {
-	return -code $code $result
+    try {
+	transparent_uplevel $body
+    } finally {
+	shared_gdb_disable
     }
-
-    return $result
 }
 
 # Return a list of expressions about function FUNC's address and length.
