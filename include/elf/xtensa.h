@@ -96,6 +96,11 @@ START_RELOC_NUMBERS (elf_xtensa_reloc_type)
      /* Positive same-section difference encoded as uleb128; rewritten
 	in place after relaxation without changing the section size.  */
      RELOC_NUMBER (R_XTENSA_PDIFF_ULEB128, 63)
+     /* 32-bit absolute address computed as S + A, with the addend taken
+	only from r_addend as the generic ABI requires.  Unlike R_XTENSA_32,
+	which is partial_inplace, the contents of the relocated word do not
+	contribute to the result.  */
+     RELOC_NUMBER (R_XTENSA_32_ABS, 64)
 END_RELOC_NUMBERS (R_XTENSA_max)
 
 /* Processor-specific flags for the ELF header e_flags field.  */
