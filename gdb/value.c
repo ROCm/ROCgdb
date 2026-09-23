@@ -1027,7 +1027,7 @@ allocate_repeat_value (struct type *type, int count)
   struct type *array_type
     = lookup_array_range_type (type, low_bound, count + low_bound - 1);
 
-  return value::allocate (array_type);
+  return value::allocate_lazy (array_type);
 }
 
 struct value *
