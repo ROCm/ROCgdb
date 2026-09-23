@@ -117,7 +117,6 @@ exp_print_token (token_code_type code, int infix_p)
     { DEFINED, "DEFINED" },
     { TARGET_K, "TARGET" },
     { SEARCH_DIR, "SEARCH_DIR" },
-    { MAP, "MAP" },
     { ENTRY, "ENTRY" },
     { NEXT, "NEXT" },
     { ALIGNOF, "ALIGNOF" },
