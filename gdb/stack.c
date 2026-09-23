@@ -1800,7 +1800,7 @@ select_frame_command_core (const frame_info_ptr &fi, bool ignored)
 
 /* The core of all the "frame" sub-commands.  Select frame FI, and if this
    means we change frame send out a change notification (otherwise, just
-   reprint the current frame summary).   */
+   reprint the current frame summary).  */
 
 static void
 frame_command_core (const frame_info_ptr &fi, bool ignored)

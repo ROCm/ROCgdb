@@ -2299,8 +2299,8 @@ struct loongarch_record_s
 {
   struct gdbarch *gdbarch;
   struct regcache *regcache;
-  CORE_ADDR this_addr;                 /* Addr of insn to be recorded.   */
-  uint32_t insn;                       /* Insn to be recorded.           */
+  CORE_ADDR this_addr;                 /* Addr of insn to be recorded.  */
+  uint32_t insn;                       /* Insn to be recorded.  */
 };
 
 /* Record handler for data processing instructions.  */

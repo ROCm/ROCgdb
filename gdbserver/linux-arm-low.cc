@@ -986,7 +986,7 @@ get_next_pcs_syscall_next_pc (struct arm_get_next_pcs *self)
   if (svc_number == __NR_sigreturn || svc_number == __NR_rt_sigreturn)
     {
       /* SIGRETURN or RT_SIGRETURN may affect the arm thumb mode, so
-	 update IS_THUMB.   */
+	 update IS_THUMB.  */
       next_pc = arm_sigreturn_next_pc (regcache, svc_number, &is_thumb);
     }
 

@@ -26,7 +26,7 @@
 #ifdef __powerpc64__
 
 /* Get the HWCAP from the process of GDB or GDBserver.  If success,
-   save it in *VALP.   */
+   save it in *VALP.  */
 
 static void
 ppc64_host_hwcap (unsigned long *valp)
@@ -65,7 +65,7 @@ ppc64_64bit_inferior_p (long msr)
      MSR is set.  The PowerISA Book III-S MSR is different from the
      PowerISA Book III-E MSR.  The Book III-S MSR is 64 bits wide, and
      its MSR[SF] is the bit 0 of a 64-bit value.  Book III-E MSR is 32
-     bits wide, and its MSR[CM] is the bit 0 of a 32-bit value.   */
+     bits wide, and its MSR[CM] is the bit 0 of a 32-bit value.  */
   if (ppc_host_hwcap & PPC_FEATURE_BOOKE)
     return msr & 0x80000000;
   else

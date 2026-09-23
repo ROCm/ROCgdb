@@ -28,7 +28,7 @@ static struct sigaction original_signal_actions[NSIG];
 static sigset_t original_signal_mask;
 #endif
 
-/* See signals-state-save-restore.h.   */
+/* See signals-state-save-restore.h.  */
 
 void
 save_original_signals_state (bool quiet)
@@ -85,7 +85,7 @@ won't be propagated to spawned programs.\n"));
 #endif
 }
 
-/* See signals-state-save-restore.h.   */
+/* See signals-state-save-restore.h.  */
 
 void
 restore_original_signals_state (void)

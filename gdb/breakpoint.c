@@ -7076,7 +7076,7 @@ print_one_breakpoint_location (struct breakpoint *b,
 	}
 
       /* Don't display it when tracepoint or tracepoint location is
-	 pending.   */
+	 pending.  */
       if (!header_of_multiple && loc != NULL && !loc->shlib_disabled)
 	{
 	  annotate_field (11);
@@ -10933,7 +10933,7 @@ watch_maybe_just_location (const char *arg, int accessflag, int from_tty)
   watch_command_1 (arg, accessflag, from_tty, opts.location, false);
 }
 
-/* Command completion for 'watch', 'awatch', and 'rwatch' commands.   */
+/* Command completion for 'watch', 'awatch', and 'rwatch' commands.  */
 static void
 watch_command_completer (struct cmd_list_element *ignore,
 			 completion_tracker &tracker,

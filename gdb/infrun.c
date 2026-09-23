@@ -8595,7 +8595,7 @@ process_event_stop_test (struct execution_control_state *ecs)
      which includes things like the line number we are stepping away from.
      This means we will stop when we find a line table entry that is marked
      as is-statement, even if it matches the non-statement one we just
-     stepped into.   */
+     stepped into.  */
 
   ecs->event_thread->control.step_range_start = stop_pc_sal.pc;
   ecs->event_thread->control.step_range_end = stop_pc_sal.end;

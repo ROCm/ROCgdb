@@ -5350,7 +5350,7 @@ get_semicolon_delimited_hex_as_string (const char **ptr)
   return str;
 }
 
-/* See declaration in class above.   */
+/* See declaration in class above.  */
 
 remote_exec_and_args_info
 remote_target::fetch_remote_executable_and_arguments ()
@@ -16635,7 +16635,7 @@ test_memory_tagging_functions ()
   /* On the previous tests, qIsAddressTagged packet was auto detected and set
      as supported.  But an empty reply means the packet is unsupported, so for
      testing the empty reply the support is reset to unknown state, otherwise
-     packet_ok will complain.   */
+     packet_ok will complain.  */
   remote.m_features.m_protocol_packets[PACKET_qIsAddressTagged].support =
     PACKET_SUPPORT_UNKNOWN;
   SELF_CHECK (check_is_address_tagged_reply (&remote, packet, is_tagged) ==

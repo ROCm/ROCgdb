@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2006-2026 Free Software Foundation, Inc.
+   Copyright 2026 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,20 +15,38 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <stdio.h>
+	.section .text
+	.global main
+main:
+	nop
 
-extern int copyreloc;
+#ifdef __arm__
+	.section	.text_1,"ax",%progbits
+#else
+	.section	.text_1,"ax",@progbits
+#endif
 
-/* Test GDB itself finds `&bssvar' right.  */
-static int bssvar, *bssvarp = &bssvar;
+	# This is foo, but we don't use a symbol.  We use a repetition of 8 to
+	# get the end of the section to be 8-byte aligned, to increase the
+	# chances of avoiding a section hole in between .text_1 and .text_2.
+	.rept 8
+	nop
+	.endr
 
-extern void (*h (void)) (void (*)(void));
+	.align 1
 
-int
-main (void)
-{
-  void (*f) (void (*)(void)) = h ();
-  printf ("%p\n", f);
-  printf ("%d\n", copyreloc);
-  f (0);
-}
+#ifdef __arm__
+	.section	.text_2,"ax",%progbits
+#else
+	.section	.text_2,"ax",@progbits
+#endif
+
+	.global bar
+bar:
+	nop
+
+#ifdef __arm__
+	.section	.note.GNU-stack,"",%progbits
+#else
+	.section	.note.GNU-stack,"",@progbits
+#endif

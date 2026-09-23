@@ -1,0 +1,89 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Setup TUI such that the first instruction in the disassembly window is the
+# start of a section.  Then scroll back to the last instruction of the
+# previous section.  ATM this won't work if there's a section hole.
+#
+# The .S file tries to make sure that there's no section hole, but AFAIU that
+# can't be guaranteed.  If this test-case detects a section hole, it bails
+# out with unsupported.
+#
+# The .S file is odd in the sense that the "previous section" doesn't contain
+# any symbols.  This is done to trigger a different path in
+# tui_find_backward_disassembly_start_address.
+
+# This test-case uses two extra text sections.  This is not supported on cygwin.
+require {!istarget *-*-cygwin*}
+
+tuiterm_env
+
+standard_testfile scroll-back.S
+
+if {[build_executable "failed to prepare" $testfile $srcfile \
+	 {nodebug}] == -1} {
+    return
+}
+
+Term::clean_restart 24 80 $testfile
+if {![Term::prepare_for_tui]} {
+    unsupported "TUI not supported"
+    return
+}
+
+set re_no_hole \
+    [subst_vars \
+	 {$hex:\s+$hex}]
+set re_hole \
+    [subst_vars \
+	 {$hex:\s+Cannot access memory at address $hex}]
+
+set section_hole -1
+gdb_test_multiple "x /cx bar-1" "" {
+    -re -wrap $re_no_hole {
+	set section_hole 0
+    }
+    -re -wrap $re_hole {
+	set section_hole 1
+    }
+}
+
+if {$section_hole != 0} {
+    unsupported "require no section hole between .text_1 and .text_2"
+    return
+}
+
+gdb_assert {[Term::command_no_prompt_prefix "layout asm"] == 1}
+gdb_assert {[Term::command "disassemble bar"] == 1}
+
+set first_line_asm {1 1 78 1}
+Term::check_region_contents "first insn bar" {*}$first_line_asm \
+    [subst_vars \
+	 {$hex\s+<bar>\s+nop}]
+
+# Send an up arrow.
+set esc "\033"
+set left_square_bracket "\["
+set csi "$esc$left_square_bracket"
+set cursor_up "${csi}A"
+send_gdb $cursor_up
+
+Term::dump_screen
+
+gdb_assert \
+    {[Term::wait_for_region_contents {*}$first_line_asm \
+	  [subst_vars \
+	       {$hex\s+nop}]]} \
+    "last insn foo"

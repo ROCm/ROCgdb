@@ -485,8 +485,8 @@ pru_elf32_do_s10_pcrel_relocate (bfd *input_bfd, reloc_howto_type *howto,
   BFD_ASSERT (bfd_get_reloc_size (howto) == 4);
   x = bfd_get_32 (input_bfd, location);
 
-  qboff = GET_BROFF_SIGNED (x) << howto->rightshift;
-  relocation += qboff;
+  qboff = GET_BROFF_SIGNED (x);
+  relocation += qboff << howto->rightshift;
 
   BFD_ASSERT (howto->complain_on_overflow == complain_overflow_bitfield);
 

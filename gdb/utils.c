@@ -29,7 +29,7 @@
 #endif /* HAVE_SYS_RESOURCE_H */
 
 #ifdef TUI
-/* For tui_get_command_dimension and tui_disable.   */
+/* For tui_get_command_dimension and tui_disable.  */
 #include "tui/tui.h"
 #endif
 

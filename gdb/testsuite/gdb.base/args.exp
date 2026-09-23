@@ -30,37 +30,6 @@ if {[build_executable $testfile.exp $testfile $srcfile] == -1} {
     return
 }
 
-# Assuming a running GDB.  Check the status of the single inferior
-# argument feature.  When this feature is on GDB passes inferior
-# arguments as a single combined string.  When this feature is off GDB
-# will split the inferior arguments into multiple separate strings.
-#
-# Return true when arguments are being split, or false when a single
-# combined string is being sent.
-
-proc is_argument_splitting_on {} {
-    set arg_splitting true
-
-    gdb_test_multiple "show remote single-inferior-argument-feature-packet" "" {
-	-re -wrap "Support for the 'single-inferior-argument-feature' packet on the current remote target is \"(on|off)\"\\.(.*)" {
-	    set value $expect_out(1,string)
-	    pass $gdb_test_name
-	    if { $value eq "on" } {
-		set arg_splitting false
-	    }
-	}
-	-re -wrap "Support for the 'single-inferior-argument-feature' packet on the current remote target is \"auto\", currently (enabled|disabled)\\.(.*)" {
-	    set value $expect_out(1,string)
-	    pass $gdb_test_name
-	    if { $value eq "enabled" } {
-		set arg_splitting false
-	    }
-	}
-    }
-
-    return $arg_splitting
-}
-
 # NAME is the name to use for the tests and ARGLIST is the list of
 # arguments that are passed to GDB when it is started.
 #
@@ -125,20 +94,6 @@ proc args_test { name arglist {re_esc_list {}} {re_no_esc_list {}} } {
 			set arg {\\n}
 		    } elseif { $arg eq "\"" } {
 			set arg {\\\"}
-		    }
-
-		    # If we are starting with a shell, we're not escaping
-		    # special shell characters in arguments passed to GDB,
-		    # we're using a remote target, and the arguments contain
-		    # a shell variable (indicated with a '$'), then this
-		    # test will currently fail if we are splitting the
-		    # arguments.
-		    if { $startup_with_shell eq "on"
-			 && $arg_flag eq "no-escape-args"
-			 && [gdb_protocol_is_remote]
-			 && [string first "\$" $arglist] != -1
-			 && [is_argument_splitting_on] } {
-			setup_xfail "*-*-*" gdb/28392
 		    }
 
 		    gdb_test "print argv\[$i\]" \

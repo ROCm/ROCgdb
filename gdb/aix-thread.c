@@ -1568,7 +1568,7 @@ fill_sprs64 (const struct regcache *regcache,
      same as the raw size of the PC (in the register cache).  If
      they're not, then either GDB has been built incorrectly, or
      there's some other kind of internal error.  To be really safe,
-     we should check all of the sizes.   */
+     we should check all of the sizes.  */
   gdb_assert (sizeof (*iar) == register_size
 				 (gdbarch, gdbarch_pc_regnum (gdbarch)));
 

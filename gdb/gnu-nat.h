@@ -61,7 +61,7 @@ struct proc
     mach_port_t saved_exc_port;	/* The task/thread's real exception port.  */
     mach_port_t exc_port;	/* Our replacement, which for.  */
 
-    int sc;			/* Desired suspend count.   */
+    int sc;			/* Desired suspend count.  */
     int cur_sc;			/* Implemented suspend count.  */
     int run_sc;			/* Default sc when the program is running.  */
     int pause_sc;		/* Default sc when gdb has control.  */

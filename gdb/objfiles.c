@@ -928,7 +928,7 @@ bsearch_cmp (const void *key, const void *elt)
   return 1;
 }
 
-/* Returns a section whose range includes PC or NULL if none found.   */
+/* Returns a section whose range includes PC or NULL if none found.  */
 
 struct obj_section *
 find_pc_section (CORE_ADDR pc)

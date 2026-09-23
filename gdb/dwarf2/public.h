@@ -23,7 +23,7 @@
 /* A DWARF names index variant.  */
 enum class dw_index_kind
 {
-  /* GDB's own .gdb_index format.   */
+  /* GDB's own .gdb_index format.  */
   GDB_INDEX,
 
   /* DWARF5 .debug_names.  */

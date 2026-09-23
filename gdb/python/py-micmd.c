@@ -528,7 +528,7 @@ micmdpy_set_installed (PyObject *self, PyObject *newvalue, void *closure)
     return micmdpy_uninstall_command (micmd_obj);
 }
 
-/* The gdb.MICommand properties.   */
+/* The gdb.MICommand properties.  */
 
 static gdb_PyGetSetDef micmdpy_object_getset[] = {
   { "name", micmdpy_get_name, nullptr, "The command's name.", nullptr },

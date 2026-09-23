@@ -34,7 +34,7 @@ int n_threads = 50;
 /* Mutex used to hold creating detached threads.  */
 pthread_mutex_t dthrds_create_mutex;
 
-/* Wrapper for pthread_create.   */
+/* Wrapper for pthread_create.  */
 
 void
 create_thread (pthread_attr_t *attr,

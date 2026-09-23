@@ -1447,7 +1447,7 @@ disasmpy_text_part_string (PyObject *self, void *closure)
   return disasmpy_text_part_str (self);
 }
 
-/* Implement DisassemblerTextPart.style attribute.   */
+/* Implement DisassemblerTextPart.style attribute.  */
 
 static PyObject *
 disasmpy_text_part_style (PyObject *self, void *closure)

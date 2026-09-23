@@ -2323,7 +2323,7 @@ static i386_insn i386_tramp_chain_on_stack_insns[] =
   {0}
 };
 
-/* Return whether PC points inside a stack trampoline.   */
+/* Return whether PC points inside a stack trampoline.  */
 
 static int
 i386_in_stack_tramp_p (CORE_ADDR pc)

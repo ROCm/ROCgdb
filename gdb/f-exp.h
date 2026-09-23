@@ -141,7 +141,7 @@ extern struct value * eval_op_f_loc (struct type *expect_type,
 /* Implement the evaluation of UNOP_FORTRAN_RANK.  EXPECTED_TYPE, EXP, and
    NOSIDE are as for expression::evaluate (see expression.h).  OP will
    always be UNOP_FORTRAN_RANK, and ARG1 is the argument being passed to
-   the expression.   */
+   the expression.  */
 
 extern struct value *eval_op_f_rank (struct type *expect_type,
 				     struct expression *exp,

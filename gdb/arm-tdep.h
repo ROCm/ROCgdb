@@ -235,7 +235,7 @@ struct arm_displaced_step_copy_insn_closure
   /* The size of original instruction, 2 or 4.  */
   unsigned int insn_size;
   /* True if the original insn (and thus all replacement insns) are Thumb
-     instead of ARM.   */
+     instead of ARM.  */
   unsigned int is_thumb;
 
   /* The slots in the array is used in this way below,

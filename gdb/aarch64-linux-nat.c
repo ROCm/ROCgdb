@@ -925,7 +925,7 @@ supply_fpregset (struct regcache *regcache, const gdb_fpregset_t *fpregsetp)
 			  AARCH64_LINUX_SIZEOF_FPREGSET);
 }
 
-/* linux_nat_new_fork hook.   */
+/* linux_nat_new_fork hook.  */
 
 void
 aarch64_linux_nat_target::low_new_fork (struct lwp_info *parent,

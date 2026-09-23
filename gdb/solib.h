@@ -408,7 +408,7 @@ extern int gdb_bfd_scan_elf_dyntag (const int desired_dyntag, bfd *abfd,
 				    CORE_ADDR *ptr, CORE_ADDR *ptr_addr);
 
 /* If FILENAME refers to an ELF shared object then attempt to return the
-   string referred to by its DT_SONAME tag.   */
+   string referred to by its DT_SONAME tag.  */
 
 extern gdb::unique_xmalloc_ptr<char> gdb_bfd_read_elf_soname
   (const char *filename);

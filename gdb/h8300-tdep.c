@@ -716,7 +716,7 @@ h8300_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
 /* Function: extract_return_value
    Figure out where in REGBUF the called function has left its return value.
-   Copy that into VALBUF.  Be sure to account for CPU type.   */
+   Copy that into VALBUF.  Be sure to account for CPU type.  */
 
 static void
 h8300_extract_return_value (struct type *type, struct regcache *regcache,

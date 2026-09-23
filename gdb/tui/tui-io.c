@@ -1090,7 +1090,7 @@ tui_dispatch_ctrl_char (unsigned int ch)
   return 0;
 }
 
-/* See tui-io.h.   */
+/* See tui-io.h.  */
 
 void
 tui_inject_newline_into_command_window ()

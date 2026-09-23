@@ -196,7 +196,7 @@ static const struct frame_unwind_legacy bpf_frame_unwind (
 /* Breakpoints.  */
 
 /* Enum describing the different kinds of breakpoints.  We currently
-   just support one, implemented by the brkpt xbpf instruction.   */
+   just support one, implemented by the brkpt xbpf instruction.  */
 
 enum bpf_breakpoint_kinds
 {

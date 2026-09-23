@@ -358,9 +358,9 @@ objc_language::demangle_symbol (const char *mangled, int options) const
 	  xfree(demangled);	/* not mangled name */
 	  return nullptr;
 	}
-      if (cp[1] == '_')		/* Easy case: no category name.    */
+      if (cp[1] == '_')		/* Easy case: no category name.  */
 	{
-	  *cp++ = ' ';		/* Replace two '_' with one ' '.   */
+	  *cp++ = ' ';		/* Replace two '_' with one ' '.  */
 	  strcpy(cp, mangled + (cp - demangled) + 2);
 	}
       else

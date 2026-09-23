@@ -2531,7 +2531,7 @@ catch_python_fatal (int signum)
   throw_exception_sjlj (gdb_exception {RETURN_ERROR, GENERIC_ERROR});
 }
 
-/* Call Py_Initialize (), and return true if successful.   */
+/* Call Py_Initialize (), and return true if successful.  */
 
 static bool
 py_initialize_catch_abort ()

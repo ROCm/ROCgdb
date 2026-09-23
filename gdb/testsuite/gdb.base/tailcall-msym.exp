@@ -23,6 +23,9 @@
 # and to create a fake function symbol that sits immediately after the
 # tail call function.
 
+# The dummy function doesn't compile on cygwin.
+require {!istarget *-*-cygwin*}
+
 standard_testfile
 
 # Compile with debug info first so we can find the instruction boundaries.

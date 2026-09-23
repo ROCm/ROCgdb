@@ -152,7 +152,7 @@ struct inf
   {
     /* Fields describing the current inferior.  */
 
-    struct proc *task;		/* The mach task.   */
+    struct proc *task;		/* The mach task.  */
     struct proc *threads;	/* A linked list of all threads in TASK.  */
 
     /* True if THREADS needn't be validated by querying the task.  We

@@ -30,6 +30,18 @@ if { [build_executable "failed to prepare" $testfile $srcfile $opts] == -1 } {
     return
 }
 
+# This test-case relies on not being able to scroll to before _start.  Strip
+# the notes to make sure there are no sections before start.
+
+set objcopy_program [gdb_find_objcopy]
+set res \
+    [remote_exec host \
+	 "$objcopy_program --remove-section=.note.* $binfile"]
+if {[lindex $res 0] != 0} {
+    unsupported "Couldn't strip notes"
+    return
+}
+
 Term::clean_restart 24 80 $testfile
 if {![Term::prepare_for_tui]} {
     unsupported "TUI not supported"

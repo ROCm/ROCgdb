@@ -19,6 +19,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "gdbsupport/common-inferior.h"
+#include "gdbsupport/special-shell-chars.h"
 
 /* See common-inferior.h.  */
 
@@ -100,18 +101,7 @@ escape_characters (const char *arg, const char *special)
 static std::string
 escape_shell_characters (const char *arg)
 {
-#ifdef __MINGW32__
-  /* This holds all the characters considered special to the
-     Windows shells.  */
-  static const char special[] = "\"!&*|[]{}<>?`~^=;, \t\n";
-#else
-  /* This holds all the characters considered special to the
-     typical Unix shells.  We include `^' because the SunOS
-     /bin/sh treats it as a synonym for `|'.  */
-  static const char special[] = "\"!#$&*()\\|[]{}<>?'`~^; \t\n";
-#endif
-
-  return escape_characters (arg, special);
+  return escape_characters (arg, special_shell_characters);
 }
 
 /* Return a version of ARG that has quote characters and white space

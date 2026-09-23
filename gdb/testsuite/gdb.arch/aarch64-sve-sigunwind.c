@@ -15,7 +15,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-/* Exercise unwinding AArch64's SVE registers from a signal frame.   */
+/* Exercise unwinding AArch64's SVE registers from a signal frame.  */
 
 #include <stdio.h>
 #include <stdlib.h>

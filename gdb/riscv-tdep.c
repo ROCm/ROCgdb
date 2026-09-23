@@ -4900,7 +4900,7 @@ class riscv_recorded_insn final
      where recording is happening.  */
   int m_xlen = 0;
 
-  /* Flag that says whether we are in baremetal mode.   */
+  /* Flag that says whether we are in baremetal mode.  */
   bool m_in_baremetal_mode = false;
 
   /* Helper for decode 16-bit instruction RS1.  */

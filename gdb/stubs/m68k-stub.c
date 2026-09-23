@@ -273,7 +273,7 @@ copyUserLoop:
 
 /* this function is called immediately when a level 7 interrupt occurs */
 /* if the previous interrupt level was 7 then we're already servicing  */
-/* this interrupt and an rte is in order to return to the debugger.    */
+/* this interrupt and an rte is in order to return to the debugger.  */
 /* For the 68000, the offset for sr is 6 due to the jsr return address */
 asm("
 .text

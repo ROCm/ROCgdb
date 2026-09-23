@@ -1651,7 +1651,7 @@ emit_mov (uint32_t *buf, struct aarch64_register rd,
 
    RD is the destination register.
    IMM is the immediate.
-   SHIFT is the logical shift left to apply to IMM.   */
+   SHIFT is the logical shift left to apply to IMM.  */
 
 static int
 emit_movk (uint32_t *buf, struct aarch64_register rd, uint32_t imm,

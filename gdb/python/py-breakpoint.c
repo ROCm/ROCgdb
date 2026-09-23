@@ -1622,7 +1622,7 @@ bploc_filepath (struct symtab *bploc_symtab)
 }
 
 /* Python function to get the source file name path and line number
-   where this breakpoint location was set.   */
+   where this breakpoint location was set.  */
 
 static PyObject *
 bplocpy_get_source_location (PyObject *py_self, void *closure)
