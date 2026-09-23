@@ -22,13 +22,16 @@ jobs:
 
       - name: Determine base ref
         id: base-ref
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          BASE_REF="${{ github.event.pull_request.base.ref }}"
           echo "base_ref=${BASE_REF}" >> $GITHUB_OUTPUT
           echo "Base ref: ${BASE_REF}"
 
       - name: Fetch base branch
-        run: git fetch origin ${{ steps.base-ref.outputs.base_ref }}
+        env:
+          BASE_REF: ${{ steps.base-ref.outputs.base_ref }}
+        run: git fetch origin "$BASE_REF"
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
