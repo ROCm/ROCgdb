@@ -274,12 +274,11 @@ disassemble_annotate_one (insn_t insn, struct disassemble_info *info)
 
 	  /* dbar imm[4:0] annotate layout:
 	     CRW|RW
-	     │││ ││
-	     │││ │└─ bit 0
-	     │││ └── bit 1
-	     ││└──── bit 2
-	     │└───── bit 3
-	     └────── bit 4
+	     ||| ||_ bit 0
+	     ||| |__ bit 1
+	     |||____ bit 2
+	     ||_____ bit 3
+	     |______ bit 4
 	     Bit 0: false denotes W, true denotes null, W declare store after this
 	     dbar are constrained by the barrier.
 	     Bit 1: false denotes R, true denotes null, R declare load after this
