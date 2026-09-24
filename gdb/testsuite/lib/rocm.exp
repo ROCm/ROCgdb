@@ -514,13 +514,9 @@ proc gdb_compile_ocl {source dest type options} {
 
 proc info_threads_get_wave_count { inf_num } {
     set wave_count 0
-    gdb_test_multiple "info threads ${inf_num}.*" "" {
-	-re "AMDGPU Wave\[^\r\n\]+\r\n" {
-	    incr wave_count
-	    exp_continue
-	}
-
-	-re "$::gdb_prompt " {
+    gdb_test_multiple "maintenance info wave-count ${inf_num}" "" {
+	-re "(\[0-9\]+)\r\n$::gdb_prompt " {
+	    set wave_count $expect_out(1,string)
 	    pass $gdb_test_name
 	}
     }
