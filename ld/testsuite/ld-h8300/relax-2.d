@@ -6,7 +6,7 @@
 
 Disassembly of section .text:
 
-00000100 <_start>:
+00000100 <__?start>:
  100:	mov.b	@0x64:8,r0l
  102:	mov.b	r0l,@0x64:8
  104:	mov.b	@0x4320:16,r0l

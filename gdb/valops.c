@@ -1427,11 +1427,6 @@ value_repeat (struct value *arg1, int count)
   val->set_lval (lval_memory);
   val->set_address (arg1->address ());
   val->set_bitpos (arg1->bitpos ());
-  type *enclosing_type = val->enclosing_type ();
-
-  read_value_memory (val, val->bitpos (), val->stack (),
-		     val->address (), val->contents_all_raw ().data (),
-		     type_length_units (enclosing_type));
 
   return val;
 }

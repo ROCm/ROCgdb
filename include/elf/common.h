@@ -686,6 +686,8 @@
 					/*   note name must be "LINUX".  */
 #define NT_PPC_TM_CDSCR	0x10f		/* PowerPC TM checkpointed Data SCR */
 					/*   note name must be "LINUX".  */
+#define NT_PPC_DMR	0x113		/* PowerPC Dense Math Registers */
+					/*   note name must be "LINUX".  */
 #define NT_386_TLS	0x200		/* x86 TLS information */
 					/*   note name must be "LINUX".  */
 #define NT_386_IOPERM	0x201		/* x86 io permissions */

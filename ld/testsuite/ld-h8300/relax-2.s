@@ -1,6 +1,7 @@
 	.h8300h
-	.globl	_start
+	.global	_start, __start
 _start:
+__start:
 	mov.b	@foo:16,r0l
 	mov.b	r0l,@foo:16
 	mov.b	@bar:32,r0l

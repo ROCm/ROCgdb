@@ -937,9 +937,9 @@ z80_read_overlay_region_table ()
       return 0;
     }
 
-  const enum overlay_debugging_state save_ovly_dbg = overlay_debugging;
   /* prevent infinite recurse */
-  overlay_debugging = ovly_off;
+  scoped_restore overlay_debugging_restore
+    = make_scoped_restore (&overlay_debugging, ovly_off);
 
   gdbarch = ovly_region_table_msym.objfile->arch ();
   word_size = gdbarch_long_bit (gdbarch) / TARGET_CHAR_BIT;
@@ -956,7 +956,6 @@ z80_read_overlay_region_table ()
 			  (unsigned int *) cache_ovly_region_table,
 			  cache_novly_regions * 3, word_size, byte_order);
 
-  overlay_debugging = save_ovly_dbg;
   return 1;                     /* SUCCESS */
 }
 

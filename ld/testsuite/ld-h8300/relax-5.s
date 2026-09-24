@@ -4,11 +4,12 @@
 ; ldc.w @aa:32,exr
 ; stc.w exr,@aa:32
 	.h8300s
-    	.globl	_start
+    	.global	_start, __start
 ;
 ; Relaxation of aa:32
 ;
     _start:
+    __start:
     	ldc  @s1:32,ccr
 	ldc  @s2:32,ccr
 	ldc  @s3:32,ccr

@@ -1,8 +1,9 @@
 ; Relaxation is possible for following bit manipulation instructions
 ; BAND, BCLR, BIAND, BILD, BIOR, BIST, BIXOR, BLD, BNOT, BOR, BSET, BST, BTST, BXOR
 	.h8300s
-	.globl	_start
+	.global	_start, __start
 _start:
+__start:
 	# s3-s6 aren't valid 16-bit addresses.
 	mov.b	#0x3,r0l
 	mov.b	#0x5,r2l

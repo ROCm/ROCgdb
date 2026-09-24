@@ -9,7 +9,7 @@
 
 Disassembly of section .text:
 
-00000100 <_start>:
+00000100 <__?start>:
  100:	0d 00.*mov.w	r0,r0
  102:	47 02.*beq	.+2 \(0x106\)
  104:	55 02.*bsr	.+2 \(0x108\)
