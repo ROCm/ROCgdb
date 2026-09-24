@@ -82,6 +82,9 @@ cooked_index_shard::add (sect_offset die_offset, enum dwarf_tag tag,
 				       parent_entry, per_cu);
   m_entries.push_back (result);
 
+  if ((flags & IS_PARENT_DEFERRED) != 0)
+    m_have_deferred_parents = true;
+
   /* An explicitly-tagged main program should always override the
      implicit "main" discovery.  */
   if ((flags & IS_MAIN) != 0)
@@ -190,7 +193,24 @@ struct cooked_index_entry_name_ptr_eq
 /* See cooked-index-shard.h.  */
 
 void
-cooked_index_shard::finalize (const parent_map_map *parent_maps)
+cooked_index_shard::resolve_deferred_parents
+	(const parent_map_map *parent_maps)
+{
+  gdb_assert (m_have_deferred_parents);
+
+  for (cooked_index_entry *entry : m_entries)
+    if ((entry->flags & IS_PARENT_DEFERRED) != 0)
+      {
+	const cooked_index_entry *new_parent
+	  = parent_maps->find (entry->get_deferred_parent ());
+	entry->resolve_parent (new_parent);
+      }
+}
+
+/* See cooked-index-shard.h.  */
+
+void
+cooked_index_shard::canonicalize_names ()
 {
   gdb::unordered_set<const cooked_index_entry *,
 		     cooked_index_entry_name_ptr_hash,
@@ -216,12 +236,8 @@ cooked_index_shard::finalize (const parent_map_map *parent_maps)
 
   for (cooked_index_entry *entry : m_entries)
     {
-      if ((entry->flags & IS_PARENT_DEFERRED) != 0)
-	{
-	  const cooked_index_entry *new_parent
-	    = parent_maps->find (entry->get_deferred_parent ());
-	  entry->resolve_parent (new_parent);
-	}
+      /* Deferred parents should not reach this point.  */
+      gdb_assert ((entry->flags & IS_PARENT_DEFERRED) == 0);
 
       /* Note that this code must be kept in sync with
 	 cooked_index::get_main -- if canonicalization is required

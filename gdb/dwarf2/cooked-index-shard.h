@@ -118,22 +118,34 @@ private:
        (cooked_index_entry *entry, htab_t gnat_entries,
 	std::vector<cooked_index_entry *> &new_entries);
 
-  /* Finalize the index.  This should be called a single time, when
-     the index has been fully populated.  It enters all the entries
-     into the internal table and fixes up all missing parent links.
-     This may be invoked in a worker thread.  */
-  void finalize (const parent_map_map *parent_maps);
+  /* Use PARENT_MAPS to resolve the deferred parent links of entries in this
+     shard.  */
+  void resolve_deferred_parents (const parent_map_map *parent_maps);
+
+  /* Compute the canonical name for the entries in this shard.
+
+     Due to how Ada name lookups work, this function may also create new index
+     entries with full names.  */
+  void canonicalize_names ();
 
   /* Storage for the entries.  */
   auto_obstack m_storage;
+
   /* List of all entries.  */
   std::vector<cooked_index_entry *> m_entries;
+
   /* If we found an entry with 'is_main' set, store it here.  */
   cooked_index_entry *m_main = nullptr;
+
   /* The addrmap.  This maps address ranges to dwarf2_per_cu objects.  */
   addrmap_fixed *m_addrmap = nullptr;
+
   /* Storage for canonical names.  */
   gdb::string_set m_names;
+
+  /* True if at least one entry in this shard has a parent link that requires
+     deferred resolution.  */
+  bool m_have_deferred_parents = false;
 };
 
 using cooked_index_shard_up = std::unique_ptr<cooked_index_shard>;

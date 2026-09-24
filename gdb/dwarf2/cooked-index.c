@@ -74,31 +74,73 @@ cooked_index::set_contents ()
 
   m_state->set (cooked_state::MAIN_AVAILABLE);
 
-  /* This is run after finalization is done -- but not before.  If
-     this task were submitted earlier, it would have to wait for
-     finalization.  However, that would take a slot in the global
-     thread pool, and if enough such tasks were submitted at once, it
-     would cause a livelock.  */
-  gdb::task_group finalizers ([this] ()
-  {
-    m_state->set (cooked_state::FINALIZED);
-    m_state->write_to_cache (index_for_writing ());
-    m_state->set (cooked_state::CACHE_DONE);
-  });
+  /* Start the first step of index finalization.  */
+  this->start_resolve_deferred_parents ();
+}
 
-  for (auto &shard : m_shards)
+/* See cooked-index.h.  */
+
+void
+cooked_index::start_resolve_deferred_parents ()
+{
+  gdb::task_group group ([this] ()
     {
-      auto this_shard = shard.get ();
-      const parent_map_map *parent_maps = m_state->get_parent_map_map ();
-      finalizers.add_task ([this, this_shard, parent_maps] ()
+      this->start_canonicalize_names ();
+    });
+
+  /* Arrange to call resolve_deferred_parents on each shard that has at least
+     one deferred parent link.  */
+  for (const cooked_index_shard_up &shard : m_shards)
+    {
+      if (!shard->m_have_deferred_parents)
+	continue;
+
+      group.add_task ([this, this_shard = shard.get ()] ()
 	{
-	  scoped_time_it time_it ("DWARF finalize worker",
+	  scoped_time_it time_it ("DWARF resolve deferred parents worker",
 				  m_state->m_per_command_time);
-	  this_shard->finalize (parent_maps);
+
+	  this_shard->resolve_deferred_parents (m_state->get_parent_map_map ());
 	});
     }
 
-  finalizers.start ();
+  group.start ();
+}
+
+/* See cooked-index.h.  */
+
+void
+cooked_index::start_canonicalize_names ()
+{
+  gdb::task_group group ([this] ()
+    {
+      /* The index is considered finalized (fully usable) at this point.  */
+      m_state->set (cooked_state::FINALIZED);
+      this->write_to_cache ();
+    });
+
+  /* Arrange to call canonicalize_names on each shard.  */
+  for (const cooked_index_shard_up &shard : m_shards)
+    {
+      group.add_task ([this, this_shard = shard.get ()] ()
+	{
+	  scoped_time_it time_it ("DWARF canonicalize names worker",
+				  m_state->m_per_command_time);
+
+	  this_shard->canonicalize_names ();
+	});
+    }
+
+  group.start ();
+}
+
+/* See cooked-index.h.  */
+
+void
+cooked_index::write_to_cache ()
+{
+  m_state->write_to_cache (index_for_writing ());
+  m_state->set (cooked_state::CACHE_DONE);
 }
 
 cooked_index::~cooked_index ()
@@ -190,7 +232,7 @@ cooked_index::get_main () const
 	  if ((entry->flags & IS_MAIN) != 0)
 	    {
 	      /* This should be kept in sync with
-		 cooked_index_shard::finalize.  Note that there, C
+		 cooked_index_shard::canonicalize_names.  Note that there, C
 		 requires canonicalization -- but that is only for
 		 types, 'main' doesn't count.  Similarly, C++ requires
 		 canonicalization, but again "main" is an

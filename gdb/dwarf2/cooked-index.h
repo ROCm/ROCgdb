@@ -70,14 +70,17 @@
    .                                        |
    .   if main thread calls...              v
    .   compute_main_name         cooked_index::set_contents
-   .          |                           / | \
-   .          v                          /  |  \
-   .   wait (MAIN_AVAILABLE)          finalization
-   .          |                          \  |  /
-   .          v                           \ | /
-   .        done                      state = FINALIZED
-   .                                        |
-   .                                        v
+   .          |                              |
+   .          v                              v
+   .   wait (MAIN_AVAILABLE)      resolve deferred parents
+   .          |                              |
+   .          v                              v
+   .        done                     canonicalize names
+   .                                         |
+   .                                         v
+   .                                 state = FINALIZED
+   .                                         |
+   .                                         v
    .                              maybe write to index cache
    .                                  state = CACHE_DONE
    .                                 ~cooked_index_worker
@@ -91,7 +94,10 @@
    .          |
    .          v
    .    use the index
-*/
+
+   The steps between set_contents and FINALIZED can be thought of as the
+   "index finalization", where we fix up a number of things that couldn't
+   be done during the parallel scan.  */
 
 class cooked_index : public dwarf_scanner_base
 {
@@ -170,6 +176,18 @@ public:
   { wait (cooked_state::CACHE_DONE); }
 
 private:
+  /* Start the "resolve deferred parents" step of index finalization.  */
+  void start_resolve_deferred_parents ();
+
+  /* Start the "canonicalize names" step of index finalization.
+
+     This step must run after "resolve deferred parents", because it depends on
+     the parents being set.  */
+  void start_canonicalize_names ();
+
+  /* Execute the "write to cache" step at the end of index
+     finalization.  */
+  void write_to_cache ();
 
   /* The vector of cooked_index objects.  This is stored because the
      entries are stored on the obstacks in those objects.  */

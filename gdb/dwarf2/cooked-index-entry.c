@@ -194,7 +194,7 @@ cooked_index_entry::full_name (struct obstack *storage,
 	 of writing), then we need to compute the linkage name here.
 	 However for traditional GNAT, the linkage name will be in
 	 'name'.  Detect this by looking for "__"; see also
-	 cooked_index_shard::finalize.  */
+	 cooked_index_shard::canonicalize_names.  */
       if ((name_flags & FOR_ADA_LINKAGE_NAME) != 0)
 	{
 	  if (strstr (name, "__") != nullptr)
