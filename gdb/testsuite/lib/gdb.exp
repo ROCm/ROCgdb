@@ -3356,15 +3356,13 @@ proc with_test_prefix { prefix body } {
 # including the iterator's name and current value in the prefix.
 
 proc foreach_with_prefix {var list body} {
-    upvar 1 $var myvar
-    catch {
-	foreach myvar $list {
-	    with_test_prefix "$var=$myvar" {
-		uplevel 1 $body
+    transparent_uplevel [subst_vars {
+	foreach $var {$list} {
+	    with_test_prefix "$var=[set $var]" {
+		$body
 	    }
 	}
-    } result opts
-    return -options [dict incr opts -level] $result
+    }]
 }
 
 # Like TCL's native proc, but defines a procedure that wraps its body
