@@ -33,7 +33,9 @@ proc test_breakpoint {name} {
     # Restart the program every time, so that a single failure doesn't
     # lead to a cascade.
     if {![runto_main]} {
-	return -code continue
+	transparent_uplevel {
+	    continue
+	}
     } else {
 	gdb_breakpoint "${name}"
 	gdb_test "continue" "Continuing.\r\n\r\nBreakpoint \[0-9\]*, ${name}.*" "continue to ${name}"

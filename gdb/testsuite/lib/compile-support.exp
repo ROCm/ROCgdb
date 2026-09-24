@@ -210,7 +210,9 @@ namespace eval ::CompileExpression {
 	    }
 	}
 	if {!$ok} {
-	    return -code return 0
+	    transparent_uplevel {
+		return 0
+	    }
 	}
     }
 

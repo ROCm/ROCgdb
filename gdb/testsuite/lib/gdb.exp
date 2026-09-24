@@ -11581,14 +11581,18 @@ proc require { args } {
 	    error "proc $fn returned a list of unexpected length $len"
 	}
 
-	if {$required_val != !!$actual_val} {
-	    if { [string length $msg] > 0 } {
-		unsupported "require failed: $arg ($msg)"
-	    } else {
-		unsupported "require failed: $arg"
-	    }
+	if {$required_val == !!$actual_val} {
+	    continue
+	}
 
-	    return -code return 0
+	if { [string length $msg] > 0 } {
+	    unsupported "require failed: $arg ($msg)"
+	} else {
+	    unsupported "require failed: $arg"
+	}
+
+	transparent_uplevel {
+	    return 0
 	}
     }
 }
