@@ -2931,19 +2931,19 @@ proc foreach_mi_ui_mode { var_name body } {
        set modes {"main" "separate"}
     }
 
-    foreach var $modes {
-       with_test_prefix "$var_name=$var" {
-	   set code [catch {uplevel 1 $body} result]
-       }
+    set code [catch {
+	foreach var $modes {
+	    with_test_prefix "$var_name=$var" {
+		uplevel 1 $body
+	    }
+	}
+    } result]
 
-       if {$code == 1} {
-	   global errorInfo errorCode
-	   return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-       } elseif {$code == 3} {
-	   break
-       } elseif {$code == 2} {
-	   return -code $code $result
-       }
+    if {$code == 1} {
+	global errorInfo errorCode
+	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
+    } else {
+	return -code $code $result
     }
 }
 
