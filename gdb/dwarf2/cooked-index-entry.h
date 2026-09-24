@@ -224,17 +224,21 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
     return compare (canonical, other.canonical, SORT) < 0;
   }
 
+  /* Return true if this entry's parent still has to be resolved.  */
+  bool parent_is_deferred () const
+  { return (flags & IS_PARENT_DEFERRED) != 0; }
+
   /* Set parent entry to PARENT.  */
   void set_parent (const cooked_index_entry *parent)
   {
-    gdb_assert ((flags & IS_PARENT_DEFERRED) == 0);
+    gdb_assert (!parent_is_deferred ());
     m_parent_entry.resolved = parent;
   }
 
   /* Resolve deferred parent entry to PARENT.  */
   void resolve_parent (const cooked_index_entry *parent)
   {
-    gdb_assert ((flags & IS_PARENT_DEFERRED) != 0);
+    gdb_assert (parent_is_deferred ());
     flags = flags & ~IS_PARENT_DEFERRED;
     m_parent_entry.resolved = parent;
   }
@@ -242,14 +246,14 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
   /* Return parent entry.  */
   const cooked_index_entry *get_parent () const
   {
-    gdb_assert ((flags & IS_PARENT_DEFERRED) == 0);
+    gdb_assert (!parent_is_deferred ());
     return m_parent_entry.resolved;
   }
 
   /* Return deferred parent entry.  */
   parent_map::addr_type get_deferred_parent () const
   {
-    gdb_assert ((flags & IS_PARENT_DEFERRED) != 0);
+    gdb_assert (parent_is_deferred ());
     return m_parent_entry.deferred;
   }
 

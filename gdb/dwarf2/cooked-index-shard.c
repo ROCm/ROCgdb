@@ -85,7 +85,7 @@ cooked_index_shard::add (sect_offset die_offset, enum dwarf_tag tag,
 				       parent_entry, per_cu);
   m_entries.push_back (result);
 
-  if ((flags & IS_PARENT_DEFERRED) != 0)
+  if (result->parent_is_deferred ())
     m_have_deferred_parents = true;
 
   if (result->name_is_deferred ())
@@ -109,8 +109,8 @@ cooked_index_shard::add (sect_offset die_offset, enum dwarf_tag tag,
      by language_may_use_plain_main as well), but it's handy as a spot
      to document.  */
   else if (lang != language_unknown
-	   && (flags & IS_PARENT_DEFERRED) == 0
-	   && parent_entry.resolved == nullptr
+	   && !result->parent_is_deferred ()
+	   && result->get_parent () == nullptr
 	   && m_main == nullptr
 	   && language_may_use_plain_main (lang)
 	   && !result->name_is_deferred ()
@@ -238,7 +238,7 @@ cooked_index_shard::resolve_deferred_parents
   gdb_assert (m_have_deferred_parents);
 
   for (cooked_index_entry *entry : m_entries)
-    if ((entry->flags & IS_PARENT_DEFERRED) != 0)
+    if (entry->parent_is_deferred ())
       {
 	const cooked_index_entry *new_parent
 	  = parent_maps->find (entry->get_deferred_parent ());
@@ -308,7 +308,7 @@ cooked_index_shard::canonicalize_names ()
   for (cooked_index_entry *entry : m_entries)
     {
       /* Deferred parents should not reach this point.  */
-      gdb_assert ((entry->flags & IS_PARENT_DEFERRED) == 0);
+      gdb_assert (!entry->parent_is_deferred ());
 
       /* Entries without a name are filtered out during the call to
 	 prune_nameless_entries.  */
