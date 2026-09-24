@@ -1,8 +1,9 @@
 # Copyright (c) Advanced Micro Devices, Inc., or its affiliates.
 # SPDX-License-Identifier: MIT
 
-# Scoped multi-arch CI for the ROCm debug tools (rocgdb, rocdbgapi/amd-dbgapi,
-# rocr-debug-agent) via TheRock's reusable multi-arch pipeline.
+# Scoped multi-arch CI for the ROCm debug tools: builds rocgdb, rocdbgapi
+# (amd-dbgapi) and rocr-debug-agent (the debug-tools stage); tests rocgdb only,
+# matching single-arch CI. Runs via TheRock's reusable multi-arch pipeline.
 #
 # Rollout: opt-in during the transition. Presubmit runs only on PRs carrying the
 # `ci:multi-arch` label (so it does not double up with therock-ci.yml); manual
@@ -27,7 +28,7 @@ on:
         default: ""
       linux_test_labels:
         type: string
-        description: "Reduce Linux tests to these 'test:'-prefixed labels (empty = test:rocgdb,test:rocr-debug-agent)."
+        description: "Reduce Linux tests to these 'test:'-prefixed labels (empty = test:rocgdb)."
         default: ""
       prebuilt_stages:
         type: string
@@ -100,7 +101,7 @@ jobs:
       linux_amdgpu_families: ${{ needs.configure.outputs.linux_amdgpu_families }}
       windows_amdgpu_families: "" # Debug tools are Linux-only.
       # Explicit (empty would also pull in compiler-runtime's kfdtest).
-      linux_test_labels: ${{ inputs.linux_test_labels || 'test:rocgdb,test:rocr-debug-agent' }}
+      linux_test_labels: ${{ inputs.linux_test_labels || 'test:rocgdb' }}
       windows_test_labels: ""
       # Only the stages the debug-tools artifacts need; all others skipped.
       build_stages: "compiler-runtime,debug-tools"
