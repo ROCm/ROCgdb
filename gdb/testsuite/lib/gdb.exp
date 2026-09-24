@@ -6436,18 +6436,14 @@ proc quote_for_host { args } {
 # atomic commit, and it doesn't matter which one wins, as all the
 # copies are identical.
 proc file_rename_atomic {src dst} {
-    set rc [catch { file rename -force -- $src $dst } err opts]
-
-    if {$rc} {
-	set code [dict get $opts -errorcode]
-	if {[llength $code] >= 2 && [lindex $code 1] eq "EBUSY"} {
-	    # Normal parallel race loss.
-	} else {
-	    error $err $opts
-	}
+    try {
+	file rename -force -- $src $dst
+    } trap "POSIX EBUSY" {} {
+	# Normal parallel race loss.
+	return 0
     }
 
-    return $rc
+    return 1
 }
 
 # Set while linker_supports_manifest_embed is running its test link,
@@ -8685,17 +8681,11 @@ proc standard_temp_file {basename} {
 proc tentative_rename { a b } {
     try {
 	file rename -- $a $b
-    } on error {result opts} {
-	set errorcode [dict get $opts -errorcode]
-	if { [lindex $errorcode 0] == "POSIX" \
-		 && [lindex $errorcode 1] == "EEXIST" } {
-	    file delete $a
-	    return 0
-	}
-
-	# Rethrow.
-	return -options $opts $result
+    } trap "POSIX EEXIST" {} {
+	file delete $a
+	return 0
     }
+
     return 1
 }
 
