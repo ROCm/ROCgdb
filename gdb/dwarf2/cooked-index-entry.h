@@ -47,6 +47,8 @@ enum cooked_index_flag_enum : unsigned char
   /* True if this is a function that has DW_AT_inline set in a way
      that indicates it was inlined.  */
   IS_INLINED = 64,
+  /* True if m_name.deferred has a value rather than m_name.resolved.  */
+  IS_NAME_DEFERRED = 128,
 };
 DEF_ENUM_FLAGS_TYPE (enum cooked_index_flag_enum, cooked_index_flag);
 
@@ -79,6 +81,31 @@ union cooked_index_entry_ref
   parent_map::addr_type deferred;
 };
 
+/* Type representing either a resolved or deferred cooked_index_entry
+   name.  A deferred name is held as the DW_AT_signature of the DIE
+   that carries the real name.  */
+
+union cooked_index_entry_name_ref
+{
+  cooked_index_entry_name_ref (ULONGEST deferred_)
+  {
+    deferred = deferred_;
+  }
+
+  cooked_index_entry_name_ref (const char *resolved_)
+  {
+    resolved = resolved_;
+  }
+
+  const char *resolved;
+  ULONGEST deferred;
+};
+
+/* Type that maps DW_AT_signature values for a TU to the name of the
+   primary type within the TU.  */
+
+using signature_to_name_map = gdb::unordered_map<ULONGEST, const char *>;
+
 /* Return a string representation of FLAGS.  */
 
 std::string to_string (cooked_index_flag flags);
@@ -94,15 +121,16 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
 {
   cooked_index_entry (sect_offset die_offset_, enum dwarf_tag tag_,
 		      cooked_index_flag flags_,
-		      enum language lang_, const char *name_,
+		      enum language lang_,
+		      cooked_index_entry_name_ref name_,
 		      cooked_index_entry_ref parent_entry_,
 		      dwarf2_per_cu *per_cu_)
-    : name (name_),
-      tag (tag_),
+    : tag (tag_),
       flags (flags_),
       lang (lang_),
       die_offset (die_offset_),
       per_cu (per_cu_),
+      m_name (name_),
       m_parent_entry (parent_entry_)
   {
   }
@@ -225,6 +253,36 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
     return m_parent_entry.deferred;
   }
 
+  /* Return the entry's name.  This may be the name or the linkage
+     name -- two entries are created for DIEs which have both
+     attributes.  It points to a string that outlives this entry,
+     which in practice means the mapped DWARF or the storage of one of
+     the cooked_index_shard objects.  */
+  const char *name () const
+  {
+    gdb_assert (!name_is_deferred ());
+    return m_name.resolved;
+  }
+
+  /* Return true if this entry's name still has to be resolved.  */
+  bool name_is_deferred () const
+  { return (flags & IS_NAME_DEFERRED) != 0; }
+
+  /* Return the signature of the DIE holding this entry's name.  */
+  ULONGEST get_deferred_name () const
+  {
+    gdb_assert (name_is_deferred ());
+    return m_name.deferred;
+  }
+
+  /* Resolve deferred name to NAME.  */
+  void resolve_name (const char *name)
+  {
+    gdb_assert (name_is_deferred ());
+    flags = flags & ~IS_NAME_DEFERRED;
+    m_name.resolved = name;
+  }
+
   /* Force the language to be set to the CU's language.  This may only
      be called when the language is unknown, which can only happen
      with .gdb_index.  This method is const because it is called from
@@ -252,12 +310,7 @@ struct cooked_index_entry : public allocate_on_obstack<cooked_index_entry>
      defined in some CU that is included by many other CUs.  */
   iteration_status visit_defining_cus (per_cu_callback callback) const;
 
-  /* The name as it appears in DWARF.  This always points into one of
-     the mapped DWARF sections.  Note that this may be the name or the
-     linkage name -- two entries are created for DIEs which have both
-     attributes.  */
-  const char *name;
-  /* The canonical name.  This may be equal to NAME.  */
+  /* The canonical name.  This may be equal to the name.  */
   const char *canonical = nullptr;
   /* The DWARF tag.  */
   enum dwarf_tag tag;
@@ -283,6 +336,10 @@ private:
      for a description of the FLAGS parameter.  */
   void write_scope (struct obstack *storage, const char *sep,
 		    cooked_index_full_name_flag flags) const;
+
+  /* The entry's name, or the signature by which it can be found.  See
+     IS_NAME_DEFERRED and the accessors above.  */
+  cooked_index_entry_name_ref m_name;
 
   /* The parent entry.  This is NULL for top-level entries.
      Otherwise, it points to the parent entry, such as a namespace or

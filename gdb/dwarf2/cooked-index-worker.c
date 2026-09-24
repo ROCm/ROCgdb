@@ -249,6 +249,15 @@ cooked_index_worker::done_reading ()
       m_all_parents_map.add_map (*one_result.get_parent_map ());
   }
 
+  {
+    scoped_time_it time_it ("DWARF add signature name map", m_per_command_time);
+
+    /* Combine all of the signature to name maps.  */
+    for (cooked_index_worker_result &one_result : m_results)
+      for (const auto &[sig, name] : one_result.get_sig_name_map ())
+	m_all_sig_names_map.emplace (sig, name);
+  }
+
   /* Update all the CU inclusion information.  */
   for (auto &item : m_results)
     item.invert_cu_inclusions ();

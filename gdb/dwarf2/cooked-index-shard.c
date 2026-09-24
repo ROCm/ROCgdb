@@ -20,6 +20,8 @@
 #include "dwarf2/cooked-index-shard.h"
 #include "dwarf2/tag.h"
 #include "dwarf2/index-common.h"
+#include "dwarf2/read.h"
+#include "dwarf2/error.h"
 #include "cp-support.h"
 #include "c-lang.h"
 #include "ada-lang.h"
@@ -48,7 +50,7 @@ cooked_index_shard::create (sect_offset die_offset,
 			    enum dwarf_tag tag,
 			    cooked_index_flag flags,
 			    enum language lang,
-			    const char *name,
+			    cooked_index_entry_name_ref name,
 			    cooked_index_entry_ref parent_entry,
 			    dwarf2_per_cu *per_cu)
 {
@@ -75,7 +77,8 @@ cooked_index_shard::create (sect_offset die_offset,
 cooked_index_entry *
 cooked_index_shard::add (sect_offset die_offset, enum dwarf_tag tag,
 			 cooked_index_flag flags, enum language lang,
-			 const char *name, cooked_index_entry_ref parent_entry,
+			 cooked_index_entry_name_ref name,
+			 cooked_index_entry_ref parent_entry,
 			 dwarf2_per_cu *per_cu)
 {
   cooked_index_entry *result = create (die_offset, tag, flags, lang, name,
@@ -84,6 +87,9 @@ cooked_index_shard::add (sect_offset die_offset, enum dwarf_tag tag,
 
   if ((flags & IS_PARENT_DEFERRED) != 0)
     m_have_deferred_parents = true;
+
+  if (result->name_is_deferred ())
+    m_have_deferred_names = true;
 
   /* An explicitly-tagged main program should always override the
      implicit "main" discovery.  */
@@ -107,7 +113,8 @@ cooked_index_shard::add (sect_offset die_offset, enum dwarf_tag tag,
 	   && parent_entry.resolved == nullptr
 	   && m_main == nullptr
 	   && language_may_use_plain_main (lang)
-	   && streq (name, "main"))
+	   && !result->name_is_deferred ()
+	   && streq (result->name (), "main"))
     m_main = result;
 
   return result;
@@ -125,10 +132,10 @@ cooked_index_shard::handle_gnat_encoded_entry
      characters are left as-is.  This is done to make name matching a
      bit simpler; and for wide characters, it means the choice of Ada
      source charset does not affect the indexer directly.  */
-  std::string canonical = ada_decode (entry->name, false, false);
+  std::string canonical = ada_decode (entry->name (), false, false);
   if (canonical.empty ())
     {
-      entry->canonical = entry->name;
+      entry->canonical = entry->name ();
       return;
     }
   std::vector<std::string_view> names = split_name (canonical.c_str (),
@@ -151,7 +158,7 @@ cooked_index_shard::handle_gnat_encoded_entry
 	  last = create (entry->die_offset, DW_TAG_module,
 			 IS_SYNTHESIZED, language_ada, new_name, parent,
 			 entry->per_cu);
-	  last->canonical = last->name;
+	  last->canonical = last->name ();
 	  new_entries.push_back (last);
 	  *slot = last;
 	}
@@ -175,7 +182,7 @@ struct cooked_index_entry_name_ptr_hash
 
   std::uint64_t operator () (const cooked_index_entry *entry) const noexcept
   {
-    return ankerl::unordered_dense::hash<const char *> () (entry->name);
+    return ankerl::unordered_dense::hash<const char *> () (entry->name ());
   }
 };
 
@@ -186,9 +193,41 @@ struct cooked_index_entry_name_ptr_eq
   bool operator () (const cooked_index_entry *a,
 		    const cooked_index_entry *b) const noexcept
   {
-    return a->name == b->name;
+    return a->name () == b->name ();
   }
 };
+
+/* See cooked-index-shard.h.  */
+
+bool
+cooked_index_shard::resolve_deferred_names
+	(const signature_to_name_map &sig_names)
+{
+  bool have_nameless_entries = false;
+  for (cooked_index_entry *entry : m_entries)
+    {
+      if (!entry->name_is_deferred ())
+	continue;
+
+      const ULONGEST signature = entry->get_deferred_name ();
+
+      if (const auto it = sig_names.find (signature);
+	  it != sig_names.end ())
+	entry->resolve_name (it->second);
+      else
+	{
+	  have_nameless_entries = true;
+	  complaint (_(DWARF_ERROR_PREFIX
+		       "Cannot find signatured DIE %s referenced from DIE "
+		       "at %s [in module %s]"),
+		     hex_string (signature),
+		     sect_offset_str (entry->die_offset),
+		     entry->per_cu->per_bfd ()->filename ());
+	}
+    }
+
+  return have_nameless_entries;
+}
 
 /* See cooked-index-shard.h.  */
 
@@ -205,6 +244,38 @@ cooked_index_shard::resolve_deferred_parents
 	  = parent_maps->find (entry->get_deferred_parent ());
 	entry->resolve_parent (new_parent);
       }
+}
+
+/* See cooked-index-shard.h.  */
+
+void
+cooked_index_shard::prune_nameless_entries ()
+{
+  for (cooked_index_entry *entry : m_entries)
+    {
+      /* Remove a parent reference if the parent has no name.  This
+	 leaves ENTRY as an orphan, but this only happens if the DWARF
+	 is corrupted and we failed to find a name for the parent.  We
+	 can safely check the parent's name at this point because all
+	 deferred names and parent links will have been resolved in
+	 all shards before this is called on any shard.  */
+      if (const cooked_index_entry *parent = entry->get_parent ();
+	  parent != nullptr && parent->name_is_deferred ())
+	entry->set_parent (nullptr);
+    }
+
+  /* If we failed to resolve the name of an entry via its signature
+     then remove the entry from the m_entries vector.  This should be
+     rare, and should only happen when we have corrupted DWARF.  The
+     entries still live on the obstack, so parent pointers are still
+     valid, but removing entries from the index means we don't try to
+     search them when looking for index hits.  */
+  m_entries.erase (std::remove_if (m_entries.begin (), m_entries.end (),
+				   [] (const cooked_index_entry *e)
+				   {
+				     return e->name_is_deferred ();
+				   }),
+		   m_entries.end ());
 }
 
 /* See cooked-index-shard.h.  */
@@ -239,21 +310,25 @@ cooked_index_shard::canonicalize_names ()
       /* Deferred parents should not reach this point.  */
       gdb_assert ((entry->flags & IS_PARENT_DEFERRED) == 0);
 
+      /* Entries without a name are filtered out during the call to
+	 prune_nameless_entries.  */
+      gdb_assert (!entry->name_is_deferred ());
+
       /* Note that this code must be kept in sync with
 	 cooked_index::get_main -- if canonicalization is required
 	 here, then a check might be required there.  */
       gdb_assert (entry->canonical == nullptr);
       if ((entry->flags & IS_LINKAGE) != 0)
-	entry->canonical = entry->name;
+	entry->canonical = entry->name ();
       else if (entry->lang == language_ada)
 	{
 	  /* Newer versions of GNAT emit DW_TAG_module and use a
 	     hierarchical structure.  In this case, we don't need to
 	     do any extra work.  This can be detected by looking for a
 	     GNAT-encoded name.  */
-	  if (strstr (entry->name, "__") == nullptr)
+	  if (strstr (entry->name (), "__") == nullptr)
 	    {
-	      entry->canonical = entry->name;
+	      entry->canonical = entry->name ();
 
 	      /* If the entry does not have a parent, then there's
 		 nothing extra to do here -- the entry itself is
@@ -300,10 +375,10 @@ cooked_index_shard::canonicalize_names ()
 		 name.  */
 	      gdb::unique_xmalloc_ptr<char> canon_name
 		= (entry->lang == language_cplus
-		   ? cp_canonicalize_string (entry->name)
-		   : c_canonicalize_name (entry->name));
+		   ? cp_canonicalize_string (entry->name ())
+		   : c_canonicalize_name (entry->name ()));
 	      if (canon_name == nullptr)
-		entry->canonical = entry->name;
+		entry->canonical = entry->name ();
 	      else
 		entry->canonical = m_names.insert (std::move (canon_name));
 	    }
@@ -315,7 +390,7 @@ cooked_index_shard::canonicalize_names ()
 	    }
 	}
       else
-	entry->canonical = entry->name;
+	entry->canonical = entry->name ();
     }
 
   /* Make sure any new Ada entries end up in the results.  This isn't

@@ -26,6 +26,7 @@
 #include "addrmap.h"
 #include "gdbsupport/iterator-range.h"
 #include "gdbsupport/string-set.h"
+#include "complaints.h"
 
 /* An index of interesting DIEs.  This is "cooked", in contrast to a
    mapped .debug_names or .gdb_index, which are "raw".  An entry in
@@ -44,7 +45,7 @@ public:
      Entries are owned by this object.  The new item is returned.  */
   cooked_index_entry *add (sect_offset die_offset, enum dwarf_tag tag,
 			   cooked_index_flag flags, enum language lang,
-			   const char *name,
+			   cooked_index_entry_name_ref name,
 			   cooked_index_entry_ref parent_entry,
 			   dwarf2_per_cu *per_cu);
 
@@ -105,7 +106,7 @@ private:
 			      enum dwarf_tag tag,
 			      cooked_index_flag flags,
 			      enum language lang,
-			      const char *name,
+			      cooked_index_entry_name_ref name,
 			      cooked_index_entry_ref parent_entry,
 			      dwarf2_per_cu *per_cu);
 
@@ -118,15 +119,49 @@ private:
        (cooked_index_entry *entry, htab_t gnat_entries,
 	std::vector<cooked_index_entry *> &new_entries);
 
+  /* Use SIG_NAMES to resolve the deferred names of entries in this shard.
+
+     Return true if any deferred name could not be resolved.  */
+  bool resolve_deferred_names (const signature_to_name_map &sig_names);
+
   /* Use PARENT_MAPS to resolve the deferred parent links of entries in this
      shard.  */
   void resolve_deferred_parents (const parent_map_map *parent_maps);
+
+  /* Remove index entries that have no name (for which we failed to
+     resolve the name in resolve_deferred_names).  Break any parent link
+     pointing to an entry with no name.  */
+  void prune_nameless_entries ();
 
   /* Compute the canonical name for the entries in this shard.
 
      Due to how Ada name lookups work, this function may also create new index
      entries with full names.  */
   void canonicalize_names ();
+
+  /* Called after each step of the finalization process.  Store
+     COMPLAINTS so they can be reported later on the main thread.  */
+  void merge_finalize_complaints (complaint_collection &&complaints)
+  {
+    if (m_finalize_complaints.empty ())
+      m_finalize_complaints = std::move (complaints);
+    else
+      {
+	/* The current version of gdb::unordered_set doesn't support
+	   the merge method that std::unordered_set supports.  If we
+	   update gdb::unordered_set then we could switch this to use
+	   merge().  */
+	m_finalize_complaints.insert (complaints.begin (), complaints.end ());
+      }
+  }
+
+  /* Return the set of complaints emitted during the finalization
+     process.  We move these complaints out of the shard as these are
+     only emitted once, and don't need to be stored beyond that.  */
+  complaint_collection release_finalize_complaints ()
+  {
+    return std::move (m_finalize_complaints);
+  }
 
   /* Storage for the entries.  */
   auto_obstack m_storage;
@@ -143,9 +178,17 @@ private:
   /* Storage for canonical names.  */
   gdb::string_set m_names;
 
+  /* True if at least one entry in this shard has a name that requires
+     deferred resolution.  */
+  bool m_have_deferred_names = false;
+
   /* True if at least one entry in this shard has a parent link that requires
      deferred resolution.  */
   bool m_have_deferred_parents = false;
+
+  /* Any complaints emitted while finalizing the index are stored
+     here until they can be emitted on the main thread.  */
+  complaint_collection m_finalize_complaints;
 };
 
 using cooked_index_shard_up = std::unique_ptr<cooked_index_shard>;
