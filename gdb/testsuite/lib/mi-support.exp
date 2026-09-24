@@ -2922,8 +2922,6 @@ proc mi_get_valueof { fmt exp default {test ""} } {
 # BODY will be run just once with MODE set to 'main'.
 
 proc foreach_mi_ui_mode { var_name body } {
-    upvar 1 $var_name var
-
     if {[gdb_debug_enabled]} {
        # gdb debug doesn't work for separate-mi-tty.
        set modes {"main"}
@@ -2931,14 +2929,11 @@ proc foreach_mi_ui_mode { var_name body } {
        set modes {"main" "separate"}
     }
 
-    catch {
-	foreach var $modes {
-	    with_test_prefix "$var_name=$var" {
-		uplevel 1 $body
-	    }
+    transparent_uplevel [subst_vars {
+	foreach_with_prefix $var_name {$modes} {
+	    $body
 	}
-    } result opts
-    return -options [dict incr opts -level] $result
+    }]
 }
 
 # Check if GDB has information about the stderr symbol.
