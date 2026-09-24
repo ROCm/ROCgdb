@@ -7575,16 +7575,9 @@ proc gdb_expect { args } {
 	set tmt [get_largest_timeout]
     }
 
-    set code [catch \
-	{uplevel remote_expect host $tmt $expcode} string]
-
-    if {$code == 1} {
-	global errorInfo errorCode
-
-	return -code error -errorinfo $errorInfo -errorcode $errorCode $string
-    } else {
-	return -code $code $string
-    }
+    transparent_uplevel [subst_vars {
+	remote_expect host $tmt $expcode
+    }]
 }
 
 # gdb_expect_list TEST SENTINEL LIST -- expect a sequence of outputs
