@@ -1,0 +1,55 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that source-tracking breakpoints handle missing source files correctly.
+# When source tracking is enabled but the source file cannot be found, GDB
+# should create a non-tracking breakpoint and not crash or fail.
+
+standard_testfile adjust_breakpoint.cpp
+set build_srcfile xxx-${testfile}.cpp
+
+set new_source_file [standard_output_file ${build_srcfile}]
+remote_exec build "cp ${srcdir}/${subdir}/adjust_breakpoint.cpp $new_source_file"
+if { [prepare_for_testing "failed to prepare" $testfile $new_source_file] } {
+    return
+}
+
+# Enable source tracking.
+gdb_test_no_output "set breakpoint source-tracking enabled on" \
+    "enable source tracking breakpoints"
+
+# Now remove the source file before setting the breakpoint.
+set bp_line [gdb_get_line_number "return 0;" $new_source_file]
+remote_exec build "rm -f $new_source_file"
+
+# Verify the source is not available.
+gdb_test "list" ".*No such file or directory.*" \
+    "verify source file is not available"
+
+# Try to set a breakpoint, this should succeed but not be tracked.
+gdb_test "break ${build_srcfile}:${bp_line}" "Breakpoint.*at.*" \
+    "create breakpoint when source file missing"
+
+# Check that the breakpoint was created but is not tracked,
+# it should not show the "source-tracking enabled" message.
+gdb_test_multiple "info breakpoints" \
+    "breakpoint not tracked when source missing" {
+	-re -wrap "source-tracking enabled.*" {
+	    fail $gdb_test_name
+	}
+	-re -wrap "breakpoint.*${build_srcfile}:${bp_line}.*" {
+	    pass $gdb_test_name
+	}
+    }

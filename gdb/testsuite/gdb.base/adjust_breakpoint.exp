@@ -1,0 +1,167 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# 1) Set the breakpoint to a certain line in $srcfile. Replace the $srcfile
+# with tmp-$srcfile which is exactly the same except one line is missing,
+# which changes the line where the breakpoint was initially set and moves
+# the breakpoint one line backwards.
+# Check if GDB adjusted the line correctly.
+#
+# 2) Do all the same but move the breakpoint a few lines forward by adding an
+# additional line to the tmp2-$srcfile.
+
+standard_testfile .cpp -2.cpp -3.cpp -4.cpp
+set build_srcfile ${testfile}-xxx.cpp
+
+set new_source_file [standard_output_file ${build_srcfile}]
+remote_exec build "cp ${srcdir}/${subdir}/${srcfile} $new_source_file"
+if { [prepare_for_testing "failed to prepare" $testfile $new_source_file] } {
+    return
+}
+
+# Enable source tracking for breakpoints.
+gdb_test_no_output "set breakpoint source-tracking enabled on" \
+    "enable source tracking breakpoints"
+
+# If a breakpoint is being source tracked, then turning source
+# tracking off discards the tracking information and prints a message.
+# If no breakpoints are being source tracked then disabling source
+# tracking should be silent.
+with_test_prefix "check disabling is silent" {
+    gdb_test_no_output "set breakpoint source-tracking enabled off" \
+	"disable"
+
+    gdb_test_no_output "set breakpoint source-tracking enabled on" \
+	"enable"
+}
+
+# Test that the breakpoint can be adjusted backward.
+set lineno [gdb_get_line_number "var += i;" $new_source_file]
+gdb_breakpoint ${build_srcfile}:$lineno
+
+# Sleep to ensure timestamp changes when we rebuild.
+sleep 1
+remote_exec build "cp ${srcdir}/${subdir}/${srcfile2} $new_source_file"
+if {[build_executable "failed to prepare" $testfile $new_source_file] == -1} {
+    return
+}
+
+set lineno [expr {$lineno - 1}]
+gdb_test "run" "Breakpoint 1,.*$build_srcfile:$lineno\r\n$lineno\t.*" \
+    "run stops at adjusted breakpoint location"
+gdb_test "info breakpoints" \
+    "breakpoint.*keep.*y.*$hex.*$build_srcfile:$lineno.*already hit 1 time" \
+    "info breakpoints show the breakpoint was adjusted one line backward"
+
+# Test that the breakpoint can be adjusted forward.
+clean_restart ${testfile}
+gdb_test_no_output "set breakpoint source-tracking enabled on" \
+    "enable source tracking breakpoints for part 2"
+gdb_breakpoint ${build_srcfile}:$lineno
+
+# Sleep to ensure timestamp changes when we rebuild.
+sleep 1
+remote_exec build "cp ${srcdir}/${subdir}/${srcfile3} $new_source_file"
+if {[build_executable "failed to prepare" $testfile $new_source_file] == -1} {
+    return
+}
+
+set lineno [expr {$lineno + 2}]
+gdb_test "run" "Breakpoint 1,.*$build_srcfile:$lineno\r\n$lineno\t.*" \
+    "run for the second time stops at adjusted breakpoint location"
+gdb_test "info breakpoints" \
+    "breakpoint.*keep.*y.*$hex.*$build_srcfile:$lineno.*already hit 1 time" \
+    "info breakpoints show the breakpoint was adjusted forward"
+
+# Disable source tracking breakpoints, the existing tracking
+# information is discarded.
+gdb_test "set breakpoint source-tracking enabled off" \
+    "^Discarding existing source tracking information\\." \
+    "disable source tracking, existing tracking is discarded"
+
+gdb_test "info breakpoints" \
+    [multi_line \
+	 "1\\s+breakpoint\\s+keep\\s+y\[^\r\n\]+" \
+	 "\\s+breakpoint already hit \[^\r\n\]+"] \
+    "info breakpoints breakpoint no longer tracked"
+
+# Test what happens when the breakpoint line disappears.
+clean_restart ${testfile}
+gdb_test_no_output "set breakpoint source-tracking enabled on" \
+    "enable source tracking breakpoints for part 3"
+set lineno [gdb_get_line_number "var += 10;" $new_source_file]
+gdb_breakpoint ${build_srcfile}:$lineno
+
+# Sleep to ensure timestamp changes when we rebuild.
+sleep 1
+remote_exec build "cp ${srcdir}/${subdir}/${srcfile4} $new_source_file"
+if {[build_executable "failed to prepare" $testfile $new_source_file] == -1} {
+    return
+}
+
+# When the original line is removed and cannot be found in the search window,
+# the breakpoint stays at the symbol-resolved location. Line 10 becomes blank
+# in tmp3, so GDB resolves it to line 11 (return var;) or stays at line 10.
+# We test that it doesn't move beyond the reasonable range.
+set lineno_re "(?:$lineno|[expr {$lineno + 1}])"
+gdb_test "run" "Breakpoint 1,.*$build_srcfile:$lineno_re\r\n$lineno_re\t.*" \
+    "run for the third time stops near original location"
+gdb_test "info breakpoints" \
+    "breakpoint.*keep.*y.*$hex.*$build_srcfile:$lineno_re.*already hit 1 time" \
+    "the breakpoint stays near original location when line disappears"
+
+# Test that with source tracking disabled the breakpoint should not be
+# adjusted.
+clean_restart ${testfile}
+# Don't enable source tracking - test that breakpoints don't adjust without it
+set lineno [gdb_get_line_number "return var;" $new_source_file]
+gdb_breakpoint ${build_srcfile}:$lineno
+
+# Sleep to ensure timestamp changes when we rebuild.
+sleep 1
+remote_exec build "cp ${srcdir}/${subdir}/${srcfile2} $new_source_file"
+if {[build_executable "failed to prepare" $testfile $new_source_file] == -1} {
+    return
+}
+
+gdb_test "run" "Breakpoint 1,.*$build_srcfile:$lineno\r\n$lineno\t.*" \
+    "run for the fourth time stops at unadjusted location"
+gdb_test "info breakpoints" \
+    "breakpoint.*keep.*y.*$hex.*$build_srcfile:$lineno.*already hit 1 time" \
+    "breakpoint not adjusted when tracking disabled"
+
+# Test that relative line breakpoints (e.g., "b +1") with source tracking
+# enabled do not produce a spurious warning.  Relative line offsets are not
+# supported for source tracking, so the breakpoint should be created silently
+# without any warning message.
+clean_restart ${testfile}
+gdb_test_no_output "set breakpoint source-tracking enabled on" \
+    "enable source tracking for relative line test"
+
+# Run to main so we have a current line context for relative breakpoints.
+if {![runto_main]} {
+    return
+}
+
+# "b +1" is a relative offset breakpoint - not trackable, but should be
+# created silently with no warning.
+gdb_test_multiple "break +1" "relative line breakpoint creates no warning" {
+    -re -wrap "warning:.*source-track.*" {
+	fail "$gdb_test_name (unexpected warning)"
+    }
+    -re -wrap "Breakpoint $decimal at $hex.*" {
+	pass $gdb_test_name
+    }
+}

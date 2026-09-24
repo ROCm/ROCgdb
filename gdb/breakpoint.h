@@ -615,6 +615,8 @@ using bp_location_list = intrusive_list<bp_location>;
 using bp_location_iterator = bp_location_list::iterator;
 using bp_location_range = iterator_range<bp_location_iterator>;
 
+struct breakpoint_source;
+
 /* Note that the ->silent field is not currently used by any commands
    (though the code is in there if it was to be, and set_raw_breakpoint
    does set it to 0).  I implemented it because I thought it would be
@@ -863,6 +865,11 @@ struct breakpoint : public intrusive_list_node<breakpoint>
      find the end of the range.  */
   location_spec_up locspec_range_end;
 
+  /* Captured source code around the breakpoint location, used to
+     track source around the breakpoint to automatically adjust the breakpoint
+     when source code changes between recompilations.  */
+  std::unique_ptr<breakpoint_source> bp_source;
+
   /* Architecture we used to set the breakpoint.  */
   struct gdbarch *gdbarch;
   /* Language we used to set the breakpoint.  */
@@ -982,6 +989,13 @@ protected:
 
   /* Helper method that does the basic work of re_set.  */
   void re_set_default (program_space *pspace);
+
+  /* Helper method for re_set_default.  Checks if the executable was
+     reloaded and if so, attempts to adjust the breakpoint location
+     using source tracking.  EXPANDED may be updated if the location
+     is adjusted.  */
+  void adjust_bp_for_source_tracking (program_space *filter_pspace,
+				      std::vector<symtab_and_line> &expanded);
 
   /* Find the SaL locations corresponding to the given LOCATION.
      On return, FOUND will be 1 if any SaL was found, zero otherwise.  */

@@ -33,6 +33,13 @@
   within arguments before passing them to the remote target.  Remote
   targets will need updating to take this into account.
 
+* GDB now supports source-tracking breakpoints, which automatically
+  adjust their location when source code changes between rebuilds.
+  When enabled, file and line breakpoints capture the surrounding
+  source code context and use it to adjust the breakpoint line if the
+  source is modified.  Source tracking can be enabled with 'set
+  breakpoint source-tracking enabled on'.
+
 * New targets
 
 i386 Windows/MSVC               i[34567]86-*-windows-msvc
@@ -48,6 +55,17 @@ show print shadowed
   This controls the output of the "info locals" command.  If the option is
   "off", shadowed variables will be omitted from the output.  The default is
   to print shadowed variables.
+
+set breakpoint source-tracking enabled [on|off]
+show breakpoint source-tracking enabled
+  Enable or disable source-tracking for file and line breakpoints.
+  When enabled, breakpoints capture surrounding source code and
+  automatically adjust their location when the source changes between
+  recompilations.
+
+maintenance info source-tracking-context BPNUM
+  Displays the captured source context that GDB uses to track and
+  adjust a breakpoint when source changes.
 
 * Changed commands
 

@@ -4661,6 +4661,29 @@ program.
 On some systems, you can set breakpoints in shared libraries before
 the executable is run.
 
+@cindex source-tracking breakpoints
+@cindex breakpoints, automatic adjustment when source changes
+@value{GDBN} supports @dfn{source-tracking breakpoints}, which
+automatically adjust their location when source code changes between
+recompilations.  When enabled with @kbd{set breakpoint source-tracking
+enabled on}, breakpoints set by file and line number capture a small
+window of surrounding source lines centered on the breakpoint line.
+If the source file is modified and the executable is rebuilt,
+@value{GDBN} searches a window of approximately 12 lines centered on the
+breakpoint's original position for the best match.  For each candidate
+line that matches the original breakpoint line, @value{GDBN} compares
+all captured context lines at their corresponding offsets and scores the
+match by how many lines agree.  The candidate with the highest score is
+selected, provided a majority of the context lines match, reducing false
+positives from short or repeated lines.  If no match meets the threshold,
+@value{GDBN} issues a warning and keeps the breakpoint at its original
+location, disabling source tracking for that breakpoint.  Note that
+breakpoints set by function name or address are not affected by source
+tracking.  Source tracking requires that source files be accessible and
+that the executable contain line-number debug information.
+
+@xref{Set Breaks}.
+
 @cindex watchpoints
 @cindex data breakpoints
 @cindex memory tracing
@@ -42092,6 +42115,13 @@ Shared library events.
 
 @end table
 
+@kindex maint info source-tracking-context
+@item maint info source-tracking-context @var{num}
+For source-tracking breakpoints (@pxref{Breakpoints}), print the
+tracked source code context for breakpoint @var{num}.  If breakpoint
+@var{num} is not source tracked, or @var{num} is not a valid
+breakpoint number, then the command gives an error.
+
 @kindex maint info btrace
 @item maint info btrace
 Pint information about raw branch tracing data.
@@ -42959,6 +42989,22 @@ triggers a hardware-assisted breakpoint or watchpoint.
 Control whether to show all non zero areas within a 1k block starting
 at thread local base, when using the @samp{info w32 thread-information-block}
 command.
+
+@kindex set breakpoint source-tracking enabled
+@kindex show breakpoint source-tracking enabled
+@item set breakpoint source-tracking enabled @r{[}on@r{|}off@r{]}
+@itemx show breakpoint source-tracking enabled
+Control whether to enable source-tracking for breakpoints set by file and
+line number.  Use @code{on} to enable, @code{off} to disable.  When
+enabled, @value{GDBN} captures a window of source lines around each
+new file:line breakpoint and uses it to relocate the breakpoint if the
+source is modified and the executable is rebuilt.  @xref{Breakpoints},
+for a full description of the matching algorithm and its limitations.
+The default is @code{off}.  Breakpoints set by function name or address
+are not affected by this setting.
+
+If this setting is changed from @samp{on} to @samp{off}, then any
+existing source tracking information will be discarded.
 
 @kindex maint set target-async
 @kindex maint show target-async
