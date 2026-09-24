@@ -1372,7 +1372,6 @@ proc gdb_test_multiple { command message args } {
 	send_user "Message is \"$message\"\n"
     }
 
-    set result -1
     set string "${command}\n"
     if { $command != "" } {
 	set multi_line_re "\[\r\n\] *>"
@@ -1581,25 +1580,25 @@ proc gdb_test_multiple { command message args } {
     }
     set gdb_test_name "$message"
 
-    set result 0
-    set code [catch {gdb_expect $code} string]
-
-    # Clean up the gdb_test_name variable.  If we had a
-    # previous value then restore it, otherwise, delete the variable
-    # from the parent scope.
-    if { [info exists gdb_test_name_old] } {
-	set gdb_test_name "$gdb_test_name_old"
-    } else {
-	unset gdb_test_name
+    try {
+	if {[info exists result]} {
+	    error "result set but not used"
+	}
+	set result 0
+	if {[catch {gdb_expect $code} string opts] == 0} {
+	    return $result
+	}
+	return -options [dict incr opts -level] $string
+    } finally {
+	# Clean up the gdb_test_name variable.  If we had a
+	# previous value then restore it, otherwise, delete the variable
+	# from the parent scope.
+	if { [info exists gdb_test_name_old] } {
+	    set gdb_test_name "$gdb_test_name_old"
+	} else {
+	    unset gdb_test_name
+	}
     }
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code error -errorinfo $errorInfo -errorcode $errorCode $string
-    } elseif {$code > 1} {
-	return -code $code $string
-    }
-    return $result
 }
 
 # Usage: gdb_test_multiline NAME INPUT RESULT {INPUT RESULT} ...
