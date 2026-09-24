@@ -3357,20 +3357,14 @@ proc with_test_prefix { prefix body } {
 
 proc foreach_with_prefix {var list body} {
     upvar 1 $var myvar
-    set code [catch {
+    catch {
 	foreach myvar $list {
 	    with_test_prefix "$var=$myvar" {
 		uplevel 1 $body
 	    }
 	}
-    } result]
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
-    }
+    } result opts
+    return -options [dict incr opts -level] $result
 }
 
 # Like TCL's native proc, but defines a procedure that wraps its body

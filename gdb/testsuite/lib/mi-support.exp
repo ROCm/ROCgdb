@@ -2931,20 +2931,14 @@ proc foreach_mi_ui_mode { var_name body } {
        set modes {"main" "separate"}
     }
 
-    set code [catch {
+    catch {
 	foreach var $modes {
 	    with_test_prefix "$var_name=$var" {
 		uplevel 1 $body
 	    }
 	}
-    } result]
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
-    }
+    } result opts
+    return -options [dict incr opts -level] $result
 }
 
 # Check if GDB has information about the stderr symbol.
