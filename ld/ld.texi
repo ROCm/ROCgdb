@@ -1642,7 +1642,7 @@ building position-dependent executable and relocatable output.
 @option{nopack-relative-relocs} is the default, which disables compact
 relative relocation.  When linked against the GNU C Library, a
 GLIBC_ABI_DT_RELR symbol version dependency on the shared C Library is
-added to the output.  Supported for i386 and x86-64.
+added to the output.  Supported for i386, x86-64 and RISC-V.
 
 @item relro
 @itemx norelro

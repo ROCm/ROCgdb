@@ -16,6 +16,9 @@
     .gnu_attribute 12 (Tag_GNU_AVR_BITS_LONG_DOUBLE).
     For details, see https://sourceware.org/PR34557
 
+* Add support for RISC-V DT_RELR (compressed R_RISCV_RELATIVE), enabled
+  with -z pack-relative-relocs.
+
 Changes in 2.47:
 
 * Add a linker optimization level of zero.  Using "-O 0" on the linker command

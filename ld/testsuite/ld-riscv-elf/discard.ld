@@ -8,6 +8,6 @@ SECTIONS
   .text : { *(.text) }
   . = 0x20000;
   .got  : { *(.got) *(.got.plt)}
-  . = 0x30000;
+  . = 0x12340000;
   .data : { *(.data) *(.data.*) }
 }

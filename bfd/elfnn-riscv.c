@@ -77,21 +77,27 @@
        && (H)->type == STT_GNU_IFUNC \
        && ((SEC)->flags & SEC_CODE) == 0))
 
-/* True if dynamic relocation should be generated.  */
-#define RISCV_GENERATE_DYNAMIC_RELOC(PCREL, INFO, H, RESOLVED_TO_ZERO) \
-  ((bfd_link_pic (INFO) \
-    && ((H) == NULL \
-	|| (ELF_ST_VISIBILITY ((H)->other) == STV_DEFAULT && !(RESOLVED_TO_ZERO)) \
-	|| (H)->root.type != bfd_link_hash_undefweak) \
-    && (!(PCREL) \
-	|| !SYMBOL_CALLS_LOCAL ((INFO), (H)))) \
-   || (!bfd_link_pic (INFO) \
-       && (H) != NULL \
-       && (H)->dynindx != -1 \
-       && !(H)->non_got_ref \
-       && (((H)->def_dynamic && !(H)->def_regular) \
-	   || (H)->root.type == bfd_link_hash_undefweak \
-	   || (H)->root.type == bfd_link_hash_undefined)))
+/* True if dynamic relocation should be generated when generating a shared
+   library or PIE.  */
+#define RISCV_GENERATE_DYNAMIC_RELOC_FOR_PIC(PCREL, INFO, H, RESOLVED_TO_ZERO) \
+  (bfd_link_pic (INFO) \
+   && ((H) == NULL \
+       || (ELF_ST_VISIBILITY ((H)->other) == STV_DEFAULT && !(RESOLVED_TO_ZERO)) \
+       || (H)->root.type != bfd_link_hash_undefweak) \
+   && (!(PCREL) \
+       || !SYMBOL_CALLS_LOCAL ((INFO), (H))))
+
+/* True if dynamic relocation should be generated when generating an
+   executable.  We may need to keep relocations for symbols satisfied
+   by a dynamic library if we manage to avoid.  */
+#define RISCV_GENERATE_DYNAMIC_RELOC_FOR_EXE(INFO, H) \
+  (!bfd_link_pic (INFO) \
+   && (H) != NULL \
+   && (H)->dynindx != -1 \
+   && !(H)->non_got_ref \
+   && (((H)->def_dynamic && !(H)->def_regular) \
+	 || (H)->root.type == bfd_link_hash_undefweak \
+	 || (H)->root.type == bfd_link_hash_undefined))
 
 /* True if this input relocation should be copied to output.  H->dynindx
    may be -1 if this symbol was marked to become local.  */
@@ -200,6 +206,39 @@ elfNN_riscv_mkobject (bfd *abfd)
 				  sizeof (struct _bfd_riscv_elf_obj_tdata));
 }
 
+struct relr_entry
+{
+  asection *sec;
+  bfd_vma off;
+};
+
+typedef struct _riscv_elf_section_data
+{
+  struct bfd_elf_section_data elf;
+
+  /* Handle interactions between DT_RELR and relaxation.  */
+  struct relr_entry *relr;
+} _riscv_elf_section_data;
+
+#define riscv_elf_section_data(sec) \
+  ((_riscv_elf_section_data *) elf_section_data (sec))
+
+/* Allocate target specific section data.  */
+
+static bool
+elfNN_riscv_new_section_hook (bfd *abfd, asection *sec)
+{
+  if (!sec->used_by_bfd)
+    {
+      struct _riscv_elf_section_data *sdata;
+      sdata = bfd_zalloc (abfd, sizeof (*sdata));
+      if (sdata == NULL)
+	return false;
+      sec->used_by_bfd = sdata;
+    }
+  return _bfd_elf_new_section_hook (abfd, sec);
+}
+
 #include "elf/common.h"
 #include "elf/internal.h"
 
@@ -254,6 +293,17 @@ struct riscv_elf_link_hash_table
   bool (*make_plt_header) (bfd *output_bfd, struct riscv_elf_link_hash_table *htab);
   bool (*make_plt_entry) (bfd *output_bfd, asection *got, bfd_vma got_offset,
 			  asection *plt, bfd_vma plt_offset);
+
+  /* Array of RELATIVE relocs to be emitted in DT_RELR format.  */
+  bfd_size_type relr_alloc;
+  bfd_size_type relr_count;
+  struct relr_entry *relr;
+  /* Sorted output addresses of above RELATIVE relocs.  */
+  bfd_vma *relr_sorted;
+  /* Layout recomputation count.  */
+  bfd_size_type relr_layout_iter;
+  /* The section layouts are updating for relr.  */
+  bool layout_mutating_for_relr;
 };
 
 /* Instruction access functions. */
@@ -1707,6 +1757,369 @@ allocate_local_ifunc_dynrelocs (void **slot, void *inf)
   return allocate_ifunc_dynrelocs (h, inf);
 }
 
+/* Record a relative relocation that will be emitted packed (DT_RELR).
+   Called after relocation sections are sized, so undo the size accounting
+   for this relocation.  */
+
+static bool
+record_relr (struct riscv_elf_link_hash_table *htab, asection *sec,
+	     bfd_vma off, asection *sreloc)
+{
+  struct relr_entry **sec_relr = &riscv_elf_section_data (sec)->relr;
+
+  /* Undo the relocation section size accounting.  */
+  BFD_ASSERT (sreloc->size >= sizeof (ElfNN_External_Rela));
+  sreloc->size -= sizeof (ElfNN_External_Rela);
+
+  /* The packing format uses the last bit of the address so that
+     must be aligned.  We don't pack relocations that may not be
+     aligned even though the final output address could end up
+     aligned, to avoid complex sizing logic for a rare case.  */
+  BFD_ASSERT (off % 2 == 0 && sec->alignment_power > 0);
+  if (htab->relr_count >= htab->relr_alloc)
+    {
+      if (htab->relr_alloc == 0)
+	htab->relr_alloc = 4096;
+      else
+	htab->relr_alloc *= 2;
+      htab->relr = bfd_realloc (htab->relr,
+				htab->relr_alloc * sizeof (*htab->relr));
+      if (htab->relr == NULL)
+	return false;
+    }
+
+  htab->relr[htab->relr_count].sec = sec;
+  htab->relr[htab->relr_count].off = off;
+  if (*sec_relr == NULL)
+    *sec_relr = &htab->relr[htab->relr_count];
+  htab->relr_count++;
+  return true;
+}
+
+/* Follow allocate_dynrelocs, but only record relative relocations against the
+   GOT and undo their previous size accounting.  */
+
+static bool
+record_relr_dyn_got_relocs (struct elf_link_hash_entry *h, void *inf)
+{
+  if (h->root.type == bfd_link_hash_indirect)
+    return true;
+  if (h->type == STT_GNU_IFUNC && h->def_regular)
+    return true;
+  if (h->got.refcount <= 0)
+    return true;
+  if (riscv_elf_hash_entry (h)->tls_type
+      & (GOT_TLS_GD | GOT_TLS_IE | GOT_TLSDESC))
+    return true;
+
+  struct bfd_link_info *info = (struct bfd_link_info *) inf;
+  struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
+
+  /* Need to make sure gp is output as a dynamic symbol for pde?  */
+
+  if (bfd_link_pic (info) && !UNDEFWEAK_NO_DYNAMIC_RELOC (info, h))
+    {
+      /* Check got relocs in riscv_elf_relocate_section.  */
+      bool relative_reloc = SYMBOL_REFERENCES_LOCAL (info, h)
+			    && !bfd_is_abs_symbol (&h->root);
+      if (relative_reloc)
+	if (!record_relr (htab, htab->elf.sgot, h->got.offset,
+			  htab->elf.srelgot))
+	  return false;
+    }
+  return true;
+}
+
+/* Record packed relative relocs against the GOT for local symbols.
+   Undo the size accounting of riscv_elf_late_size_sections.  */
+
+static bool
+record_relr_local_got_relocs (bfd *input_bfd, struct bfd_link_info *info)
+{
+  bfd_signed_vma *local_got_refcounts = elf_local_got_refcounts (input_bfd);
+  bfd_vma *local_got_offsets = elf_local_got_offsets (input_bfd);
+  char *local_tls_type = _bfd_riscv_elf_local_got_tls_type (input_bfd);
+
+  if (!bfd_link_pic (info)
+      || !local_got_refcounts
+      || !local_got_offsets
+      || !local_tls_type)
+    return true;
+
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (input_bfd);
+  struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
+  for (unsigned int i = 0; i < symtab_hdr->sh_info; i++)
+    {
+      if (local_got_refcounts[i] <= 0)
+	continue;
+      if ((local_tls_type[i] & GOT_NORMAL) == 0)
+	continue;
+
+      bfd_vma off = local_got_offsets[i];
+
+      /* FIXME: If the local symbol is in SHN_ABS then emitting
+	 a relative relocation is not correct, but it seems to
+	 be wrong in riscv_elf_relocate_section too.  */
+      if (!record_relr (htab, htab->elf.sgot, off, htab->elf.srelgot))
+	return false;
+    }
+  return true;
+}
+
+/* Follows the logic of riscv_elf_relocate_section to decide which
+   relocations will become relative and possible to pack.  Ignore
+   relocations against the GOT, those are handled separately per-symbol.
+   Undo the size accounting of the packed relocations and record them
+   so the relr section can be sized later.  */
+
+static bool
+record_relr_non_got_relocs (bfd *input_bfd, struct bfd_link_info *info,
+			    asection *sec)
+{
+  if (sec->reloc_count == 0)
+    return true;
+  if ((sec->flags & (SEC_RELOC | SEC_ALLOC | SEC_DEBUGGING))
+      != (SEC_RELOC | SEC_ALLOC))
+    return true;
+  if (sec->alignment_power == 0)
+    return true;
+  if (discarded_section (sec))
+    return true;
+  asection *sreloc = elf_section_data (sec)->sreloc;
+  if (sreloc == NULL)
+    return true;
+
+  struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (input_bfd);
+  struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (input_bfd);
+  const Elf_Internal_Rela * relocs =
+	_bfd_elf_link_info_read_relocs (input_bfd, info, sec, NULL, NULL,
+					info->keep_memory);
+  BFD_ASSERT (relocs != NULL);
+
+  const Elf_Internal_Rela *rel = relocs;
+  const Elf_Internal_Rela *rel_end = relocs + sec->reloc_count;
+  for (; rel < rel_end; rel++)
+    {
+      unsigned int r_symndx = ELFNN_R_SYM (rel->r_info);
+      unsigned int r_type = ELFNN_R_TYPE (rel->r_info);
+
+      /* Handle relocs that can become R_RISCV_RELATIVE,
+	 but not ones against the GOT as those are handled
+	 separately per-symbol.  */
+      if (r_type != R_RISCV_32 && r_type != R_RISCV_64)
+	continue;
+      /* Can only pack relocation against an aligned address.  */
+      if (rel->r_offset % 2 != 0)
+	continue;
+
+      struct elf_link_hash_entry *h = NULL;
+      asection *def_sec = NULL;
+      bool resolved_to_zero = false;
+      if (r_symndx < symtab_hdr->sh_info)
+	{
+	  /* A local symbol.  */
+	  Elf_Internal_Sym *isym;
+	  isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
+					input_bfd, r_symndx);
+	  BFD_ASSERT (isym != NULL);
+
+	  if (ELF_ST_TYPE (isym->st_info) == STT_GNU_IFUNC)
+	    continue;
+
+	  def_sec = bfd_section_from_elf_index (input_bfd, isym->st_shndx);
+	}
+      else
+	{
+	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
+	  while (h->root.type == bfd_link_hash_indirect
+		 || h->root.type == bfd_link_hash_warning)
+	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* Filter out symbols that cannot have a relative reloc.  */
+	  if (h->dyn_relocs == NULL)
+	    continue;
+	  if (bfd_is_abs_symbol (&h->root))
+	    continue;
+	  if (h->type == STT_GNU_IFUNC)
+	    continue;
+
+	  if (h->root.type == bfd_link_hash_defined
+	      || h->root.type == bfd_link_hash_defweak)
+	    def_sec = h->root.u.def.section;
+
+	  resolved_to_zero = UNDEFWEAK_NO_DYNAMIC_RELOC (info, h);
+	}
+
+      if (def_sec != NULL && discarded_section (def_sec))
+	continue;
+
+      /* Same logic as in riscv_elf_relocate_section, for R_RISCV_32/64.
+	 Except conditionals trimmed that cannot result a reltive reloc.  */
+      reloc_howto_type *howto = riscv_elf_rtype_to_howto (input_bfd, r_type);
+      if (RISCV_GENERATE_DYNAMIC_RELOC_FOR_PIC (howto->pc_relative, info, h,
+						resolved_to_zero))
+	{
+	  if (RISCV_COPY_INPUT_RELOC (info, h))
+	    continue;
+
+	  if (!record_relr (htab, sec, rel->r_offset, sreloc))
+	    return false;
+	}
+    }
+  return true;
+}
+
+static int
+cmp_relr_addr (const void *p, const void *q)
+{
+  const bfd_vma *a = p;
+  const bfd_vma *b = q;
+  return *a < *b ? -1 : *a > *b ? 1 : 0;
+}
+
+/* Produce a malloc'd sorted array of reloc addresses in htab->relr_sorted.
+   Returns false on allocation failure.  */
+
+static bool
+sort_relr (struct bfd_link_info *info,
+	   struct riscv_elf_link_hash_table *htab)
+{
+  if (htab->relr_count == 0)
+    return true;
+
+  bfd_vma *addr = htab->relr_sorted;
+  if (addr == NULL)
+    {
+      addr = bfd_malloc (htab->relr_count * sizeof (*addr));
+      if (addr == NULL)
+	return false;
+      htab->relr_sorted = addr;
+    }
+
+  for (bfd_size_type i = 0; i < htab->relr_count; i++)
+    {
+      bfd_vma off = _bfd_elf_section_offset (info->output_bfd, info,
+					     htab->relr[i].sec,
+					     htab->relr[i].off);
+      addr[i] = htab->relr[i].sec->output_section->vma
+		+ htab->relr[i].sec->output_offset
+		+ off;
+    }
+  qsort (addr, htab->relr_count, sizeof (*addr), cmp_relr_addr);
+  return true;
+}
+
+/* Size of a relr entry and a relocated location.  */
+#define RELR_SZ (ARCH_SIZE / 8)
+/* Number of consecutive locations a relr bitmap entry references.  */
+#define RELR_N (ARCH_SIZE - 1)
+
+/* Size .relr.dyn whenever the layout changes, the number of packed
+   relocs are unchanged but the packed representation can.  */
+
+static bool
+riscv_elf_size_relative_relocs (struct bfd_link_info *info,
+				bool *need_layout)
+{
+  struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
+  asection *srelrdyn = htab->elf.srelrdyn;
+  *need_layout = false;
+
+  if (!sort_relr (info, htab))
+    return false;
+  bfd_vma *addr = htab->relr_sorted;
+
+  BFD_ASSERT (srelrdyn != NULL);
+  bfd_size_type oldsize = srelrdyn->size;
+  srelrdyn->size = 0;
+  for (bfd_size_type i = 0; i < htab->relr_count; )
+    {
+      bfd_vma base = addr[i];
+      i++;
+      srelrdyn->size += RELR_SZ;
+      base += RELR_SZ;
+      for (;;)
+	{
+	  bfd_size_type start_i = i;
+	  while (i < htab->relr_count
+		 && addr[i] - base < RELR_N * RELR_SZ
+		 && (addr[i] - base) % RELR_SZ == 0)
+	    i++;
+	  if (i == start_i)
+	    break;
+	  srelrdyn->size += RELR_SZ;
+	  base += RELR_N * RELR_SZ;
+	}
+    }
+  if (srelrdyn->size != oldsize)
+    {
+      *need_layout = true;
+      /* Stop after a few iterations in case the layout does not converge,
+	 we can do this when the size would shrink.  */
+      if (htab->relr_layout_iter++ > 5 && srelrdyn->size < oldsize)
+	{
+	  srelrdyn->size = oldsize;
+	  *need_layout = false;
+	}
+    }
+  htab->layout_mutating_for_relr = *need_layout;
+  return true;
+}
+
+/* Emit the .relr.dyn section after it is sized and the layout is fixed.  */
+
+static bool
+riscv_elf_finish_relative_relocs (struct bfd_link_info *info)
+{
+  struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
+  asection *srelrdyn = htab->elf.srelrdyn;
+  bfd *dynobj = htab->elf.dynobj;
+
+  if (srelrdyn == NULL || srelrdyn->size == 0)
+    return true;
+  srelrdyn->contents = bfd_alloc (dynobj, srelrdyn->size);
+  if (srelrdyn->contents == NULL)
+    return false;
+  srelrdyn->alloced = 1;
+  bfd_vma *addr = htab->relr_sorted;
+  bfd_byte *loc = srelrdyn->contents;
+  for (bfd_size_type i = 0; i < htab->relr_count; )
+    {
+      bfd_vma base = addr[i];
+      i++;
+      bfd_put_NN (dynobj, base, loc);
+      loc += RELR_SZ;
+      base += RELR_SZ;
+      for (;;)
+	{
+	  bfd_vma bits = 0;
+	  while (i < htab->relr_count)
+	    {
+	      bfd_vma delta = addr[i] - base;
+	      if (delta >= RELR_N * RELR_SZ || delta % RELR_SZ != 0)
+		break;
+	      bits |= (bfd_vma) 1 << (delta / RELR_SZ);
+	      i++;
+	    }
+	  if (bits == 0)
+	    break;
+	  bfd_put_NN (dynobj, (bits << 1) | 1, loc);
+	  loc += RELR_SZ;
+	  base += RELR_N * RELR_SZ;
+	}
+    }
+  free (addr);
+  htab->relr_sorted = NULL;
+  /* Pad any excess with 1's, a do-nothing encoding.  */
+  while (loc < srelrdyn->contents + srelrdyn->size)
+    {
+      bfd_put_NN (dynobj, 1, loc);
+      loc += RELR_SZ;
+    }
+  return true;
+}
+
 static bool
 riscv_elf_late_size_sections (struct bfd_link_info *info)
 {
@@ -1856,6 +2269,27 @@ riscv_elf_late_size_sections (struct bfd_link_info *info)
 	htab->elf.sgotplt->size = 0;
     }
 
+  /* Record the relative relocations that will be packed and undo the
+     size allocation for them in .rela.*. The size of .relr.dyn will be
+     computed later iteratively since it depends on the final layout.  */
+  if (info->enable_dt_relr && !bfd_link_relocatable (info))
+    {
+      elf_link_hash_traverse (&htab->elf, record_relr_dyn_got_relocs, info);
+
+      for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link.next)
+	{
+	  if (!is_riscv_elf (ibfd))
+	    continue;
+
+	  for (s = ibfd->sections; s != NULL; s = s->next)
+	    if (!record_relr_non_got_relocs (ibfd, info, s))
+	      return false;
+
+	  if (!record_relr_local_got_relocs (ibfd, info))
+	    return false;
+	}
+    }
+
   /* The check_relocs and adjust_dynamic_symbol entry points have
      determined the sizes of the various dynamic sections.  Allocate
      memory for them.  */
@@ -1884,6 +2318,15 @@ riscv_elf_late_size_sections (struct bfd_link_info *info)
 		 to copy relocs into the output file.  */
 	      s->reloc_count = 0;
 	    }
+	}
+      else if (s == htab->elf.srelrdyn)
+	{
+	  /* Remove .relr.dyn based on relr_count, not size, since
+	     it is not sized yet.  */
+	  if (htab->relr_count == 0)
+	    s->flags |= SEC_EXCLUDE;
+	  /* Allocate contents later.  */
+	  continue;
 	}
       else
 	{
@@ -2937,7 +3380,7 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
 	  /* We need to generate a R_RISCV_RELATIVE relocation later in the
 	     riscv_elf_finish_dynamic_symbol if h->dynindx != -1;  Otherwise,
 	     generate a R_RISCV_RELATIVE relocation here now.  */
-	  if (relative_got)
+	  if (relative_got && !info->enable_dt_relr)
 	    {
 	      asection *s = htab->elf.srelgot;
 	      BFD_ASSERT (s != NULL);
@@ -3174,8 +3617,9 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
 	  if ((input_section->flags & SEC_ALLOC) == 0)
 	    break;
 
-	  if (RISCV_GENERATE_DYNAMIC_RELOC (howto->pc_relative, info, h,
-					    resolved_to_zero))
+	  if (RISCV_GENERATE_DYNAMIC_RELOC_FOR_PIC (howto->pc_relative, info,
+						    h, resolved_to_zero)
+	      || RISCV_GENERATE_DYNAMIC_RELOC_FOR_EXE (info, h))
 	    {
 	      Elf_Internal_Rela outrel;
 	      asection *sreloc;
@@ -3214,6 +3658,14 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
 		  /* Maybe just use !SYMBOL_REFERENCES_LOCAL to check?  */
 		  outrel.r_info = ELFNN_R_INFO (h->dynindx, r_type);
 		  outrel.r_addend = rel->r_addend;
+		}
+	      else if (info->enable_dt_relr
+		       && input_section->alignment_power != 0
+		       && rel->r_offset % 2 == 0)
+		{
+		  /* Don't emit a relative relocation that is packed, only
+		     apply the addend.  */
+		  goto do_relocation;
 		}
 	      else
 		{
@@ -3664,6 +4116,11 @@ riscv_elf_finish_dynamic_symbol (struct bfd_link_info *info,
 	     of a version file.  The entry in the global offset table will
 	     already have been initialized in the relocate_section function.  */
 	  BFD_ASSERT ((h->got.offset & 1) != 0);
+
+	  /* Don't emit relative relocs if they are packed.  */
+	  if (info->enable_dt_relr)
+	    goto skip_got_reloc;
+
 	  asection *sec = h->root.u.def.section;
 	  rela.r_info = ELFNN_R_INFO (0, R_RISCV_RELATIVE);
 	  rela.r_addend = (h->root.u.def.value
@@ -3699,6 +4156,8 @@ riscv_elf_finish_dynamic_symbol (struct bfd_link_info *info,
 	  bed->s->swap_reloca_out (info->output_bfd, &rela, loc);
 	}
     }
+
+ skip_got_reloc:
 
   if (h->needs_copy)
     {
@@ -4233,6 +4692,16 @@ _riscv_relax_delete_bytes (bfd *abfd,
 	    sym_hash->size -= count;
 	}
     }
+
+  /* Adjust the offsets for all record relr in this section.  */
+  struct relr_entry *relr = riscv_elf_section_data (sec)->relr;
+  struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (link_info);
+  struct relr_entry *relr_end = NULL;
+  if (htab->relr_count)
+    relr_end = htab->relr + htab->relr_count;
+  for (; relr && relr < relr_end && relr->sec == sec; relr++)
+    if (relr->off > addr && relr->off < toaddr)
+      relr->off -= count;
 
   return true;
 }
@@ -5115,7 +5584,10 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
 	  && !pass->required)
       /* The exp_seg_relro_adjust is enum phase_enum (0x4),
 	 and defined in ld/ldexp.h.  */
-      || *(htab->data_segment_phase) == 4)
+      || *(htab->data_segment_phase) == 4
+      /* It's not safe to do relaxations when relr are updating the section
+	 layouts.  */
+      || htab->layout_mutating_for_relr)
     return true;
 
   /* Record the first relax section, so that we can reset the
@@ -5689,6 +6161,7 @@ elfNN_riscv_merge_gnu_properties (struct bfd_link_info *info, bfd *abfd,
 #define bfd_elfNN_mkobject			elfNN_riscv_mkobject
 #define bfd_elfNN_get_synthetic_symtab		\
   elfNN_riscv_get_synthetic_symtab
+#define bfd_elfNN_new_section_hook		elfNN_riscv_new_section_hook
 
 #define elf_backend_reloc_type_class		riscv_reloc_type_class
 #define elf_backend_copy_indirect_symbol	riscv_elf_copy_indirect_symbol
@@ -5717,6 +6190,8 @@ elfNN_riscv_merge_gnu_properties (struct bfd_link_info *info, bfd *abfd,
   elfNN_riscv_link_setup_gnu_properties
 #define elf_backend_merge_gnu_properties	\
   elfNN_riscv_merge_gnu_properties
+#define elf_backend_size_relative_relocs	riscv_elf_size_relative_relocs
+#define elf_backend_finish_relative_relocs	riscv_elf_finish_relative_relocs
 
 #define elf_backend_can_gc_sections		1
 #define elf_backend_can_refcount		1

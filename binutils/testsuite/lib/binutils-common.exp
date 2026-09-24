@@ -486,7 +486,8 @@ proc supports_dt_relr {} {
 	  || [istarget i?86-*-*]
 	  || [istarget powerpc64*-*-*]
 	  || [istarget aarch64*-*-*]
-	  || [istarget loongarch64*-*-*])
+	  || [istarget loongarch64*-*-*]
+	  || [istarget riscv*-*-*])
 	 && ([istarget *-*-linux*]
 	     || [istarget *-*-gnu*]) } {
 	return 1

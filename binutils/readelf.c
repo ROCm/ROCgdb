@@ -1723,6 +1723,20 @@ is_aarch64_special_symbol_name (const char *name)
   return name[2] == 0 || name[2] == '.';
 }
 
+/* See riscv_elf_is_mapping_symbols.  */
+
+static bool
+is_riscv_special_symbol_name (const char *name)
+{
+  return (!strcmp (name, "$d")
+	  || !strcmp (name, "$x")
+	  || !strncmp (name, "$xrv", 4)
+	  /* Only used for counting gp in risc-v.  */
+	  || !strcmp (name, "__DATA_BEGIN__")
+	  || !strcmp (name, "__SDATA_BEGIN__")
+	  || !strcmp (name, "__BSS_END__"));
+}
+
 static bool
 is_special_symbol_name (Filedata * filedata, const char * s)
 {
@@ -1730,6 +1744,9 @@ is_special_symbol_name (Filedata * filedata, const char * s)
     {
     case EM_AARCH64:
       return is_aarch64_special_symbol_name (s);
+
+    case EM_RISCV:
+      return is_riscv_special_symbol_name (s);
 
     default:
       return false;

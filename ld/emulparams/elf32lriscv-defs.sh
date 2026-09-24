@@ -18,6 +18,7 @@ fi
 
 GENERATE_SHLIB_SCRIPT=yes
 GENERATE_PIE_SCRIPT=yes
+source_sh ${srcdir}/emulparams/dt-relr.sh
 
 IREL_IN_PLT=
 TEXT_START_ADDR=0x10000

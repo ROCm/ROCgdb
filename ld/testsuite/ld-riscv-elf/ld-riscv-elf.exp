@@ -78,6 +78,40 @@ proc run_dump_test_ifunc { name target output} {
 	      "$name-$target.$ext"]]
 }
 
+proc run_dump_test_relr { name target output} {
+    # TODO: big-endian for *.d test cases?
+    set asflags "-mlittle-endian"
+    set ldflags "-z pack-relative-relocs -T relr-relocs.ld"
+    switch -- $output {
+	pie {
+	    set ext "pie"
+	    set ldflags "$ldflags -pie"
+	}
+	pic {
+	    set ext "so"
+	    set ldflags "$ldflags -shared"
+	}
+    }
+    switch -- $target {
+	rv32 {
+	    set asflags "$asflags -march=rv32i -mabi=ilp32"
+	    set ldflags "$ldflags -m[riscv_choose_ilp32_emul]"
+	}
+	rv64 {
+	    set asflags "$asflags -march=rv64i -mabi=lp64 -defsym __64_bit__=1"
+	    set ldflags "$ldflags -m[riscv_choose_lp64_emul]"
+	}
+    }
+    run_ld_link_tests [list \
+	[list "$name ($target-$output)" \
+	      "$ldflags" "" \
+	      "$asflags" \
+	      [list "$name.s"] \
+	      [concat [list "readelf -rW  $name-$target-$output.rd"] \
+		      [list "objdump -dsw $name-$target-$output.d"]] \
+	      "$name-$target.$ext"]]
+}
+
 proc run_relax_twice_test {} {
     global as
     global ld
@@ -248,6 +282,25 @@ if [istarget "riscv*-*-*"] {
     run_dump_test "discard-exe"
     run_dump_test "discard-pie"
     run_dump_test "discard-pic"
+
+    # RELR
+    run_dump_test_relr "relr-data" rv32 pie
+    run_dump_test_relr "relr-data" rv32 pic
+    run_dump_test_relr "relr-got" rv32 pie
+    run_dump_test_relr "relr-got" rv32 pic
+    run_dump_test_relr "relr-align" rv32 pic
+    run_dump_test_relr "relr-data" rv64 pie
+    run_dump_test_relr "relr-data" rv64 pic
+    run_dump_test_relr "relr-got" rv64 pie
+    run_dump_test_relr "relr-got" rv64 pic
+    run_dump_test_relr "relr-align" rv64 pic
+    run_dump_test "relr-textrel-pie"
+    run_dump_test "relr-textrel-pic"
+    run_dump_test "relr-discard-pie"
+    run_dump_test "relr-discard-pic"
+    run_dump_test "relr-got-start"
+    run_dump_test "relr-addend"
+    run_dump_test "relr-relax"
 
     # IFUNC testcases.
     # Check IFUNC by single type relocs.
