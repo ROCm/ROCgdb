@@ -49,6 +49,11 @@ static bool check_spl_reg (unsigned *);
 #define	INST_BYTE1(x)  (target_big_endian ? (((x) >> 16) & 0xFF) : (((x) >> 8) & 0xFF))
 #define	INST_BYTE2(x)  (target_big_endian ? (((x) >> 8) & 0xFF) : (((x) >> 16) & 0xFF))
 #define	INST_BYTE3(x)  (target_big_endian ? ((x) & 0xFF) : (((x) >> 24) & 0xFF))
+/* Offset of the 16-bit immediate field within an instruction word.  The
+   word is stored in target byte order, so the field moves as well as its
+   bytes: it is the low half, which is at offset 2 big-endian and 0
+   little-endian.  */
+#define	INST_IMM_OFFSET  (target_big_endian ? 2 : 0)
 
 /* This array holds the chars that always start a comment.  If the
    pre-processor is disabled, these aren't very useful.  */
@@ -2113,16 +2118,7 @@ md_apply_fix (fixS *   fixP,
     {
     case BFD_RELOC_MICROBLAZE_32_LO:
     case BFD_RELOC_MICROBLAZE_32_LO_PCREL:
-      if (target_big_endian)
-	{
-	  buf[2] |= ((val >> 8) & 0xff);
-	  buf[3] |= (val & 0xff);
-	}
-      else
-	{
-	  buf[1] |= ((val >> 8) & 0xff);
-	  buf[0] |= (val & 0xff);
-	}
+      md_number_to_chars (buf + INST_IMM_OFFSET, val, 2);
       break;
     case BFD_RELOC_MICROBLAZE_32_ROSDA:
     case BFD_RELOC_MICROBLAZE_32_RWSDA:
@@ -2133,16 +2129,7 @@ md_apply_fix (fixS *   fixP,
 	    as_bad_where (file, fixP->fx_line,
 			  _("pcrel for branch to %s too far (0x%x)"),
 			  symname, (int) val);
-	  if (target_big_endian)
-	    {
-	      buf[2] |= ((val >> 8) & 0xff);
-	      buf[3] |= (val & 0xff);
-	    }
-	  else
-	    {
-	      buf[1] |= ((val >> 8) & 0xff);
-	      buf[0] |= (val & 0xff);
-	    }
+	  md_number_to_chars (buf + INST_IMM_OFFSET, val, 2);
 	}
       break;
     case BFD_RELOC_8:
@@ -2159,20 +2146,7 @@ md_apply_fix (fixS *   fixP,
       /* Don't do anything if the symbol is not defined.  */
       if (fixP->fx_addsy == NULL || S_IS_DEFINED (fixP->fx_addsy))
 	{
-	  if (target_big_endian)
-	    {
-	      buf[0] |= ((val >> 24) & 0xff);
-	      buf[1] |= ((val >> 16) & 0xff);
-	      buf[2] |= ((val >> 8) & 0xff);
-	      buf[3] |= (val & 0xff);
-	    }
-	  else
-	    {
-	      buf[3] |= ((val >> 24) & 0xff);
-	      buf[2] |= ((val >> 16) & 0xff);
-	      buf[1] |= ((val >> 8) & 0xff);
-	      buf[0] |= (val & 0xff);
-	    }
+	  md_number_to_chars (buf, val, 4);
 	}
       break;
     case BFD_RELOC_64_PCREL:
@@ -2194,24 +2168,12 @@ md_apply_fix (fixS *   fixP,
       if (fixP->fx_addsy == NULL || S_IS_DEFINED (fixP->fx_addsy))
 	inst1 |= ((val & 0xFFFF0000) >> 16) & IMM_MASK;
 
-      buf[0] = INST_BYTE0 (inst1);
-      buf[1] = INST_BYTE1 (inst1);
-      buf[2] = INST_BYTE2 (inst1);
-      buf[3] = INST_BYTE3 (inst1);
+      md_number_to_chars (buf, inst1, INST_WORD_SIZE);
 
       /* Add the value only if the symbol is defined.  */
       if (fixP->fx_addsy == NULL || S_IS_DEFINED (fixP->fx_addsy))
 	{
-	  if (target_big_endian)
-	    {
-	      buf[6] |= ((val >> 8) & 0xff);
-	      buf[7] |= (val & 0xff);
-	    }
-	  else
-	    {
-	      buf[5] |= ((val >> 8) & 0xff);
-	      buf[4] |= (val & 0xff);
-	    }
+	  md_number_to_chars (buf + INST_WORD_SIZE + INST_IMM_OFFSET, val, 2);
 	}
       break;
 
@@ -2242,10 +2204,7 @@ md_apply_fix (fixS *   fixP,
 
       /* We can fixup call to a defined non-global address
 	 within the same section only.  */
-      buf[0] = INST_BYTE0 (inst1);
-      buf[1] = INST_BYTE1 (inst1);
-      buf[2] = INST_BYTE2 (inst1);
-      buf[3] = INST_BYTE3 (inst1);
+      md_number_to_chars (buf, inst1, INST_WORD_SIZE);
       return;
 
     default:
