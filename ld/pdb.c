@@ -4391,6 +4391,9 @@ create_source_info_substream (void **data, uint32_t *size,
   *size += sizeof (uint32_t) * source_files_count;
   *size += strings_len;
 
+  /* Subsequent DBI substreams must be 4-byte aligned.  */
+  *size = (*size + 3) & ~3;
+
   *data = xmalloc (*size);
 
   ptr = (uint8_t *) *data;
@@ -4456,6 +4459,7 @@ create_source_info_substream (void **data, uint32_t *size,
 	    }
 	}
     }
+  memset (ptr, 0, (uint8_t *) *data + *size - ptr);
 }
 
 /* Used as parameter to qsort, to sort globals by hash.  */
