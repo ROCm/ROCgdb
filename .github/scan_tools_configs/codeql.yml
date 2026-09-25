@@ -1,15 +1,2 @@
 paths-ignore:
-  - gdb/testsuite/gdb.rocm/detach-while-breakpoints-inserted.cpp
-  - gdb/testsuite/gdb.rocm/detach-while-breakpoints-inserted.exp
-  - gdb/testsuite/gdb.rocm/device-interrupt.cpp
-  - gdb/testsuite/gdb.rocm/device-interrupt.exp
-  - gdb/testsuite/gdb.rocm/interrupt-twice.cpp
-  - gdb/testsuite/gdb.rocm/interrupt-twice.exp
-  - gdb/testsuite/gdb.rocm/lane-info.cpp
-  - gdb/testsuite/gdb.rocm/lane-info.exp
-  - gdb/testsuite/gdb.rocm/mi-attach.cpp
-  - gdb/testsuite/gdb.rocm/mi-attach.exp
-  - gdb/testsuite/gdb.rocm/names.cpp
-  - gdb/testsuite/gdb.rocm/names.exp
   - gdb/testsuite/gdb.rocm/runtime-core.cpp
-  - gdb/testsuite/gdb.rocm/runtime-core.exp
