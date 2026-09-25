@@ -144,7 +144,7 @@ static void yyerror (const char *);
 %token NOLOAD DSECT COPY INFO OVERLAY
 %token READONLY
 %token TYPE
-%token DEFINED TARGET_K SEARCH_DIR MAP ENTRY
+%token DEFINED TARGET_K SEARCH_DIR ENTRY
 %token <integer> NEXT
 %token SIZEOF ALIGNOF ADDR LOADADDR MAX_K MIN_K
 %token STARTUP HLL SYSLIB FLOAT NOFLOAT NOCROSSREFS NOCROSSREFS_TO
@@ -154,7 +154,7 @@ static void yyerror (const char *);
 %type <token> assign_op atype attributes_opt sect_constraint opt_align_with_input
 %type <name>  filename
 %token CHIP LIST SECT ABSOLUTE  LOAD NEWLINE ENDWORD ORDER NAMEWORD ASSERT_K
-%token LOG2CEIL FORMAT PUBLIC DEFSYMEND BASE ALIAS TRUNCATE REL
+%token LOG2CEIL FORMAT PUBLIC DEFSYMEND BASE ALIAS REL
 %token INPUT_SCRIPT INPUT_MRI_SCRIPT INPUT_DEFSYM CASE EXTERN START
 %token <name> VERS_TAG VERS_IDENTIFIER
 %token GLOBAL LOCAL VERSIONK INPUT_VERSION_SCRIPT INPUT_SECTION_ORDERING_SCRIPT
@@ -249,8 +249,6 @@ mri_script_command:
 			{ mri_alias ($2, 0, (int) $4.integer); }
 	|	BASE	 exp
 			{ mri_base($2); }
-	|	TRUNCATE INT
-		{ mri_truncate ((unsigned int) $2.integer); }
 	|	CASE casesymlist
 	|	EXTERN extern_name_list
 	|	INCLUDE filename
@@ -346,8 +344,6 @@ ifile_p1:
 		  { lang_enter_lib (); }
 		    '(' input_list ')'
 		  { lang_leave_lib (); }
-	|	MAP '(' filename ')'
-		{ lang_add_map($3); }
 	|	INCLUDE filename
 		{ ldfile_open_command_file ($2); }
 		ifile_list END

@@ -1,0 +1,102 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+set stmts \
+    [list \
+	 {} \
+	 "error foo" \
+	 return \
+	 break \
+	 continue \
+	 "return -code ok" \
+	 "return -code error" \
+	 "return -code return" \
+	 "return -code break" \
+	 "return -code continue" \
+	 "return -code ok -level 0" \
+	 "return -code ok -level 1" \
+	 "return -code ok -level 2" \
+	 "return -code error -level 0" \
+	 "return -code error -level 1" \
+	 "return -code error -level 2" \
+	 "return -code return -level 0" \
+	 "return -code return -level 1" \
+	 "return -code return -level 2" \
+	 "return -code break -level 0" \
+	 "return -code break -level 1" \
+	 "return -code break -level 2" \
+	 "return -code continue -level 0" \
+	 "return -code continue -level 1" \
+	 "return -code continue -level 2"]
+
+foreach stmt $stmts {
+    verbose -log "STMT: $stmt"
+
+    set counter 0
+    set res1 [catch {
+	incr counter 1
+	foreach i {1 2 3} {
+	    incr counter 10
+	    if {$i == 2} {
+		{*}$stmt
+	    }
+	    incr counter 100
+	}
+	incr counter 1000
+    } script_res1 opts1]
+    set counter1 $counter
+
+    set counter 0
+    set res2 [catch {
+	incr counter 1
+	foreach_with_prefix i {1 2 3} {
+	    incr counter 10
+	    if {$i == 2} {
+		{*}$stmt
+	    }
+	    incr counter 100
+	}
+	incr counter 1000
+    } script_res2 opts2]
+    set counter2 $counter
+
+    verbose -log "COUNTER1: $counter1"
+    verbose -log "COUNTER2: $counter2"
+    gdb_assert {$counter1 == $counter2} "$stmt: counter"
+
+    verbose -log "RES1: $res1"
+    verbose -log "RES2: $res2"
+    gdb_assert {$res1 == $res2} "$stmt: res"
+
+    verbose -log "SCRIPT_RES1: '$script_res1'"
+    verbose -log "SCRIPT_RES2: '$script_res2'"
+    gdb_assert {$script_res1 == $script_res2} "$stmt: script_res"
+
+    # Note: we skip -errorinfo and -errorstack here.  These differ for
+    # something like "error foo", and they should.  When it comes to errors,
+    # we're not trying to hide the indirection.
+    foreach key {-code -level -errorcode} {
+	set v1 {}
+	set v2 {}
+	if {[dict exists $opts1 $key]} {
+	    set v1 [dict get $opts1 $key]
+	}
+	if {[dict exists $opts2 $key]} {
+	    set v2 [dict get $opts2 $key]
+	}
+	verbose -log "KEY: $key, V1: $v1"
+	verbose -log "KEY: $key, V2: $v2"
+	gdb_assert {$v1 == $v2} "$stmt: opts: $key"
+    }
+}

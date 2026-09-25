@@ -70,7 +70,7 @@ if {    ![istarget alpha*-*-*vms*]
      && ![istarget avr-*-*]
      && ![istarget ft32-*-*]
      && ![istarget hppa*-*-*]
-     && ![istarget microblaze-*-*]
+     && ![istarget microblaze*-*-*]
      && ![istarget loongarch*-*-*]
      && ![istarget mn10300-*-*]
      && ![istarget msp430*-*-*]
@@ -472,7 +472,7 @@ switch -glob $target_triplet {
     alpha*-*-* { }
     hppa*-*-* { }
     iq2000-*-* { }
-    microblaze-*-* { }
+    microblaze*-*-* { }
     mips*-*-* { }
     score*-*-* { }
     xtensa*-*-* { }

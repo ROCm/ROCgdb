@@ -8,10 +8,10 @@
 # choose to emit them even though the relocs are in .data, leading to
 # "redefined symbol cannot be used on reloc".
 #xfail: am33*-*-* crx*-*-* h8300*-*-* mn10200*-*-* mn10300*-*-*
-# mep and microblaze use complex relocs and don't resolve the relocs.
+# mep uses complex relocs and doesn't resolve the relocs.
 # one of the relocs references minus_one, which is a bug, but no one
 # seems bothered enough to fix this.
-#xfail: mep-*-* microblaze-*-*
+#xfail: mep-*-*
 
 .*: .*
 
