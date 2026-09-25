@@ -18,7 +18,9 @@ concurrency:
 jobs:
   setup:
     runs-on: ubuntu-24.04
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'ci:skip') }}
+    # Skip single-arch CI when a PR opts into multi-arch CI (ci:multi-arch),
+    # so the multi-arch jobs can be seen in isolation during the transition.
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'ci:skip') && !contains(github.event.pull_request.labels.*.name, 'ci:multi-arch') }}
     env:
       BASE_REF: HEAD^
     outputs:
