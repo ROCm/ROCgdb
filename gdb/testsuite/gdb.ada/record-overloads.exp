@@ -1,0 +1,70 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+load_lib "ada.exp"
+
+require allow_ada_tests
+
+standard_ada_testfile prog
+
+foreach_gnat_encoding scenario flags {all minimal} {
+    lappend flags debug
+
+    if {[gdb_compile_ada "${srcfile}" "${binfile}-${scenario}" \
+	     executable $flags] != ""} {
+	return
+    }
+
+    clean_restart ${testfile}-${scenario}
+
+    set bp_location [gdb_get_line_number "START" ${testdir}/prog.adb]
+    runto "prog.adb:$bp_location"
+
+    gdb_test "print oload(r1)" [quotemeta {@DECIMAL = 0}]
+    gdb_test "print oload(r2)" [quotemeta {@DECIMAL = 1}]
+
+    # This one is not ambiguous.
+    gdb_test "print oload(rb)" [quotemeta {@DECIMAL = 2}]
+
+    # Neither is this one, because gdb can see that RCB's runtime type
+    # is Rec_Base.
+    gdb_test "print oload(rcb)" [quotemeta {@DECIMAL = 2}]
+
+    gdb_test "print oload(rcf)" [quotemeta {@DECIMAL = 4}]
+
+    proc test_menu {var} {
+	set menu [multi_line "Multiple matches for oload" \
+		      "\\\[0\\\] cancel" \
+		      "\\\[1\\\] pck.oload (.*rec_base).*" \
+		      "\\\[2\\\] pck.oload (.*rec_derived).*" \
+		      "> $"]
+	gdb_test_multiple "print oload($var)" "menu for $var" {
+	    -re "$menu" {
+		pass "$gdb_test_name"
+	    }
+	    default {
+		fail "$gdb_test_name"
+	    }
+	}
+	# Cancel the call.
+	gdb_test 0 cancelled "cancel call for $var"
+    }
+
+    # These should not be ambiguous, but currently are: RD because gdb
+    # can't tell the difference between a type and a class-wide type;
+    # and RCD because gdb does not implement dispatching.
+    test_menu rd
+    test_menu rcd
+}
