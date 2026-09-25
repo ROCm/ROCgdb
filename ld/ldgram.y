@@ -154,7 +154,7 @@ static void yyerror (const char *);
 %type <token> assign_op atype attributes_opt sect_constraint opt_align_with_input
 %type <name>  filename
 %token CHIP LIST SECT ABSOLUTE  LOAD NEWLINE ENDWORD ORDER NAMEWORD ASSERT_K
-%token LOG2CEIL FORMAT PUBLIC DEFSYMEND BASE ALIAS TRUNCATE REL
+%token LOG2CEIL FORMAT PUBLIC DEFSYMEND BASE ALIAS REL
 %token INPUT_SCRIPT INPUT_MRI_SCRIPT INPUT_DEFSYM CASE EXTERN START
 %token <name> VERS_TAG VERS_IDENTIFIER
 %token GLOBAL LOCAL VERSIONK INPUT_VERSION_SCRIPT INPUT_SECTION_ORDERING_SCRIPT
@@ -249,8 +249,6 @@ mri_script_command:
 			{ mri_alias ($2, 0, (int) $4.integer); }
 	|	BASE	 exp
 			{ mri_base($2); }
-	|	TRUNCATE INT
-		{ mri_truncate ((unsigned int) $2.integer); }
 	|	CASE casesymlist
 	|	EXTERN extern_name_list
 	|	INCLUDE filename

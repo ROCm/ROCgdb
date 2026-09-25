@@ -361,7 +361,6 @@ V_IDENTIFIER [*?.$_a-zA-Z\[\]\-\!\^\\]([*?.$_a-zA-Z0-9\[\]\-\!\^\\]|::)*
 <MRI>"CHIP"			{ RTOKEN(CHIP); }
 <MRI>"BASE"			{ RTOKEN(BASE); }
 <MRI>"ALIAS"			{ RTOKEN(ALIAS); }
-<MRI>"TRUNCATE"			{ RTOKEN(TRUNCATE); }
 <MRI>"LOAD"			{ RTOKEN(LOAD); }
 <MRI>"PUBLIC"			{ RTOKEN(PUBLIC); }
 <MRI>"ORDER"			{ RTOKEN(ORDER); }
@@ -378,7 +377,6 @@ V_IDENTIFIER [*?.$_a-zA-Z\[\]\-\!\^\\]([*?.$_a-zA-Z0-9\[\]\-\!\^\\]|::)*
 <MRI>"chip"			{ RTOKEN(CHIP); }
 <MRI>"base"			{ RTOKEN(BASE); }
 <MRI>"alias"			{ RTOKEN(ALIAS); }
-<MRI>"truncate"			{ RTOKEN(TRUNCATE); }
 <MRI>"load"			{ RTOKEN(LOAD); }
 <MRI>"public"			{ RTOKEN(PUBLIC); }
 <MRI>"order"			{ RTOKEN(ORDER); }
