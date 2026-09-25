@@ -1,2 +1,2 @@
 paths-ignore:
-  - gdb/testsuite/**
+  - gdb/testsuite/gdb.rocm/**
