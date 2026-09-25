@@ -31,3 +31,20 @@ proc test_multibyte {testfile} {
 }
 
 test_multibyte $srcdir/$subdir/strings-1.bin
+
+proc test_print_file_name {testfile} {
+    global STRINGS
+    global STRINGSFLAGS
+
+    set testname "strings -f prints filename prefix"
+    set got [binutils_run $STRINGS "$STRINGSFLAGS -f --encoding=l $testfile"]
+
+    set want "strings-1\.bin: +String1.*strings-1\.bin: +String2"
+    if ![regexp $want $got] then {
+	fail "$testname"
+	return
+    }
+    pass $testname
+}
+
+test_print_file_name $srcdir/$subdir/strings-1.bin
