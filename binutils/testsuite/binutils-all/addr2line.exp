@@ -16,8 +16,18 @@
 
 set testname "addr2line"
 set opts ""
-set dot ""
+set pfx ""
 set exe [exeext]
+
+# If the host is Windows/MSYS, replace the leading /x with a DOS/Windows
+# drive letter, e.g change /x/y/foo/bar to X:/y/foo/bar.
+set tmp_srcdir $srcdir
+if { [ishost *-*-mingw*] } {
+    # Step 1: Replace the leading /x/ with x:/.
+    set tmp_srcdir [regsub {^/([a-zA-Z])/} $srcdir {\1:/}]
+    # Step 2: Change the leading x to X.
+    set tmp_srcdir [string toupper [string index $tmp_srcdir 0]][string range $tmp_srcdir 1 end]
+}
 
 # Which function is reported when two of them cover exactly the same range.
 # An inlined subroutine covering exactly the range of the subprogram that
@@ -36,7 +46,13 @@ if { [is_elf_format] } {
 # MUSL uses the ELFv2 ABI for PowerPC, so the problem does not apply there.
 if { [istarget powerpc64-*-*] && ![istarget powerpc64-*-musl] } {
     set opts --synthetic
-    set dot {\.}
+    set pfx {\.}
+}
+
+# Bare metal gcc for H8/300 prepends an underscore to symbol names.
+# Note that h8300-linux-gnu-gcc does not do this.
+if { [istarget h8300-*-elf] } {
+    set pfx {_}
 }
 
 if { [target_compile $srcdir/$subdir/testprog.c tmpdir/testprog executable debug] != "" } {
@@ -48,12 +64,12 @@ if { [target_compile $srcdir/$subdir/testprog.c tmpdir/testprog executable debug
 #testcase for default option.
 #Run nm command and input the main symbol address to addr2line.
 set output [binutils_run $NM "$opts tmpdir/testprog$exe"]
-if ![regexp -line "^(\[0-9a-fA-F\]+)? +\[Tt\] ${dot}main" $output contents] then {
+if ![regexp -line "^(\[0-9a-fA-F\]+)? +\[Tt\] ${pfx}main" $output contents] then {
     fail "$testname"
 } else {
     set list [regexp -inline -all -- {\S+} $contents]
     set got [binutils_run $ADDR2LINE "-e tmpdir/testprog$exe [lindex $list 0]"]
-    set want "$srcdir/$subdir/testprog.c:\[0-9\]+"
+    set want "$tmp_srcdir/$subdir/testprog.c:\[0-9\]+"
     if ![regexp $want $got] then {
 	fail "$testname $got\n"
     } else {
@@ -63,12 +79,12 @@ if ![regexp -line "^(\[0-9a-fA-F\]+)? +\[Tt\] ${dot}main" $output contents] then
 
 #testcase for -f option.
 #Run nm command and input the fn function symbol address to addr2line.
-if ![regexp -line "^(\[0-9a-fA-F\]+)? +\[Tt\] ${dot}fn" $output contents] then {
+if ![regexp -line "^(\[0-9a-fA-F\]+)? +\[Tt\] ${pfx}fn" $output contents] then {
     fail "$testname -f option"
 } else {
     set list [regexp -inline -all -- {\S+} $contents]
     set got [binutils_run $ADDR2LINE "-f -e tmpdir/testprog$exe [lindex $list 0]"]
-    set want "fn\n$srcdir/$subdir/testprog.c:\[0-9\]+"
+    set want "fn\n$tmp_srcdir/$subdir/testprog.c:\[0-9\]+"
     if ![regexp $want $got] then {
 	fail "$testname -f option $got\n"
     } else {
