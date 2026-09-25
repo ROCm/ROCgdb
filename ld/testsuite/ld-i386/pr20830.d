@@ -20,19 +20,19 @@ Contents of the .eh_frame section:
   DW_CFA_nop
   DW_CFA_nop
 
-0+18 00000010 0000001c FDE cie=00000000 pc=00000128..00000133
-  DW_CFA_nop
-  DW_CFA_nop
-  DW_CFA_nop
-
-0+2c 00000020 00000030 FDE cie=00000000 pc=00000110..00000120
+0+18 0+20 0+1c FDE cie=0+ pc=0+110\.\.0+120
   DW_CFA_def_cfa_offset: 8
   DW_CFA_advance_loc: 6 to 00000116
   DW_CFA_def_cfa_offset: 12
   DW_CFA_advance_loc: 10 to 00000120
   DW_CFA_def_cfa_expression \(DW_OP_breg4 \(esp\): 4; DW_OP_breg8 \(eip\): 0; DW_OP_lit15; DW_OP_and; DW_OP_lit11; DW_OP_ge; DW_OP_lit2; DW_OP_shl; DW_OP_plus\)
 
-0+50 00000010 00000054 FDE cie=00000000 pc=00000120..00000128
+0+3c 0+10 0+40 FDE cie=0+ pc=0+120\.\.0+128
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+
+0+50 0+10 0+54 FDE cie=0+ pc=0+128\.\.0+133
   DW_CFA_nop
   DW_CFA_nop
   DW_CFA_nop
