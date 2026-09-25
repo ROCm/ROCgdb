@@ -32,8 +32,8 @@ require no_optimized_code
 
 standard_testfile .cpp
 
-if { [build_executable "failed to prepare" ${testfile} ${srcfile} \
-      {debug hip}] } {
+set options [ list "additional_flags=-DTIMEOUT=$timeout" debug hip ]
+if {[build_executable "failed to prepare" $testfile $srcfile $options]} {
     return -1
 }
 

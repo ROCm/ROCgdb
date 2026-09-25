@@ -39,7 +39,9 @@ int
 main ()
 {
   /* Make sure we don't run forever.  */
-  gdb_watchdog (30);
+  #ifdef TIMEOUT
+    gdb_watchdog (TIMEOUT * 3);
+  #endif
 
   int *result_ptr, result;
   hipError_t error = hipMalloc (&result_ptr, sizeof (int));
