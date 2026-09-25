@@ -203,6 +203,11 @@ elfNN_riscv_mkobject (bfd *abfd)
 #include "elf/common.h"
 #include "elf/internal.h"
 
+/* The max number of relax passes.  */
+#define RISCV_MAX_RELAX_PASSES 8
+
+struct riscv_relax_pass;
+
 struct riscv_elf_link_hash_table
 {
   struct elf_link_hash_table elf;
@@ -229,6 +234,14 @@ struct riscv_elf_link_hash_table
   /* The data segment phase, don't relax the section
      when it is exp_seg_relro_adjust.  */
   int *data_segment_phase;
+
+  /* The relax passes for this link, indexed by info->relax_pass.  Set by
+     bfd_elfNN_riscv_init_relax_passes.  */
+  const struct riscv_relax_pass *relax_passes[RISCV_MAX_RELAX_PASSES];
+  unsigned int num_relax_passes;
+
+  /* The pass that ran last, or -1.  */
+  int cur_relax_pass;
 
   /* Relocations for variant CC symbols may be present.  */
   int variant_cc;
@@ -627,6 +640,8 @@ riscv_elf_get_local_sym_hash (struct riscv_elf_link_hash_table *htab,
   return &ret->elf;
 }
 
+static void riscv_finish_relax_pass (struct riscv_elf_link_hash_table *);
+
 /* Destroy a RISC-V elf linker hash table.  */
 
 static void
@@ -634,6 +649,9 @@ riscv_elf_link_hash_table_free (bfd *obfd)
 {
   struct riscv_elf_link_hash_table *ret
     = (struct riscv_elf_link_hash_table *) obfd->link.hash;
+
+  /* The last pass never sees a pass after it.  */
+  riscv_finish_relax_pass (ret);
 
   if (ret->loc_hash_table)
     htab_delete (ret->loc_hash_table);
@@ -696,6 +714,7 @@ riscv_elf_link_hash_table_create (bfd *abfd)
 
   ret->max_alignment = (bfd_vma) -1;
   ret->max_alignment_for_gp = (bfd_vma) -1;
+  ret->cur_relax_pass = -1;
 
   setup_plt_values (abfd, ret, PLT_NORMAL);
 
@@ -4909,11 +4928,154 @@ bfd_elfNN_riscv_set_data_segment_info (struct bfd_link_info *info,
   htab->data_segment_phase = data_segment_phase;
 }
 
-/* Relax a section.
+/* A relax pass.  riscv_init_relax_passes picks the passes for a link and
+   their order; info->relax_pass indexes that list.  */
 
-   Pass 0: Shortens code sequences for LUI/CALL/TPREL/PCREL relocs and
-	   deletes the obsolete bytes.
-   Pass 1: Which cannot be disabled, handles code alignment directives.  */
+typedef struct riscv_relax_pass
+{
+  const char *name;
+
+  /* Whether the pass still runs when target specific optimizations are
+     disabled.  */
+  bool required;
+
+  /* Decide how to relax RELOCS[*I].  Set *FUNC to the relax function, or
+     leave it NULL to skip the reloc.  May step *I over a paired
+     R_RISCV_RELAX.  Return false on error.  */
+  bool (*select) (bfd *, asection *, struct bfd_link_info *,
+		  Elf_Internal_Rela *, unsigned int *, relax_func_t *);
+
+  /* If non-NULL, called after all relocs of a section are scanned.  */
+  void (*finish_section) (riscv_pcgp_relocs *);
+
+  /* If non-NULL, called once the pass is done with all sections.  */
+  void (*finish) (void);
+} riscv_relax_pass;
+
+/* If RELOCS[*I] is paired with R_RISCV_RELAX, step *I over the
+   R_RISCV_RELAX and return true.  */
+
+static bool
+riscv_relax_skip_paired_relax (asection *sec, Elf_Internal_Rela *relocs,
+			       unsigned int *i)
+{
+  Elf_Internal_Rela *rel = relocs + *i;
+
+  if (*i == sec->reloc_count - 1
+      || ELFNN_R_TYPE ((rel + 1)->r_info) != R_RISCV_RELAX
+      || rel->r_offset != (rel + 1)->r_offset)
+    return false;
+
+  ++*i;
+  return true;
+}
+
+/* Shorten code sequences for LUI/CALL/TPREL/PCREL relocs and delete the
+   obsolete bytes.  */
+
+static bool
+riscv_relax_select_shorten (bfd *abfd ATTRIBUTE_UNUSED, asection *sec,
+			    struct bfd_link_info *info,
+			    Elf_Internal_Rela *relocs, unsigned int *i,
+			    relax_func_t *func)
+{
+  int type = ELFNN_R_TYPE (relocs[*i].r_info);
+  relax_func_t f;
+
+  if (type == R_RISCV_CALL
+      || type == R_RISCV_CALL_PLT)
+    f = _bfd_riscv_relax_call;
+  else if (type == R_RISCV_HI20
+	   || type == R_RISCV_LO12_I
+	   || type == R_RISCV_LO12_S)
+    f = _bfd_riscv_relax_lui;
+  else if (type == R_RISCV_TPREL_HI20
+	   || type == R_RISCV_TPREL_ADD
+	   || type == R_RISCV_TPREL_LO12_I
+	   || type == R_RISCV_TPREL_LO12_S)
+    f = _bfd_riscv_relax_tls_le;
+  else if (!bfd_link_pic (info)
+	   && (type == R_RISCV_PCREL_HI20
+	       || type == R_RISCV_PCREL_LO12_I
+	       || type == R_RISCV_PCREL_LO12_S))
+    f = _bfd_riscv_relax_pc;
+  else if (type == R_RISCV_JAL)
+    f = _bfd_riscv_relax_jal;
+  else
+    return true;
+
+  /* Only relax this reloc if it is paired with R_RISCV_RELAX.  */
+  if (!riscv_relax_skip_paired_relax (sec, relocs, i))
+    return true;
+
+  riscv_relax_delete_bytes = _riscv_relax_delete_piecewise;
+  *func = f;
+  return true;
+}
+
+/* Handle code alignment directives.  */
+
+static bool
+riscv_relax_select_align (bfd *abfd ATTRIBUTE_UNUSED,
+			  asection *sec ATTRIBUTE_UNUSED,
+			  struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			  Elf_Internal_Rela *relocs, unsigned int *i,
+			  relax_func_t *func)
+{
+  if (ELFNN_R_TYPE (relocs[*i].r_info) != R_RISCV_ALIGN)
+    return true;
+
+  riscv_relax_delete_bytes = _riscv_relax_delete_immediate;
+  *func = _bfd_riscv_relax_align;
+  return true;
+}
+
+static const riscv_relax_pass riscv_relax_pass_shorten =
+  { "shorten", false, riscv_relax_select_shorten, NULL, NULL };
+
+static const riscv_relax_pass riscv_relax_pass_align =
+  { "align", true, riscv_relax_select_align, NULL, NULL };
+
+static void
+riscv_add_relax_pass (struct riscv_elf_link_hash_table *htab,
+		      const riscv_relax_pass *pass)
+{
+  BFD_ASSERT (htab->num_relax_passes < RISCV_MAX_RELAX_PASSES);
+  htab->relax_passes[htab->num_relax_passes++] = pass;
+}
+
+/* Run the FINISH hook of the pass that ran last, if any.  */
+
+static void
+riscv_finish_relax_pass (struct riscv_elf_link_hash_table *htab)
+{
+  int cur = htab->cur_relax_pass;
+
+  if (cur >= 0 && htab->relax_passes[cur]->finish != NULL)
+    htab->relax_passes[cur]->finish ();
+  htab->cur_relax_pass = -1;
+}
+
+/* Choose the relax passes for this link.  The linker calls this before
+   relaxation starts, after the input attributes are merged into the
+   output.  Return the
+   number of passes, which the linker stores in info->relax_pass.  */
+
+unsigned int
+bfd_elfNN_riscv_init_relax_passes (struct bfd_link_info *info)
+{
+  struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
+
+  htab->num_relax_passes = 0;
+  htab->cur_relax_pass = -1;
+
+  riscv_add_relax_pass (htab, &riscv_relax_pass_shorten);
+  riscv_add_relax_pass (htab, &riscv_relax_pass_align);
+
+  return htab->num_relax_passes;
+}
+
+/* Relax a section, using the pass that info->relax_pass selects.  */
 
 static bool
 _bfd_riscv_relax_section (bfd *abfd, asection *sec,
@@ -4928,9 +5090,21 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
   unsigned int i;
   bfd_vma max_alignment, reserve_size = 0;
   riscv_pcgp_relocs pcgp_relocs;
+  const riscv_relax_pass *pass;
   static asection *first_section = NULL;
 
   *again = false;
+
+  if ((unsigned int) info->relax_pass >= htab->num_relax_passes)
+    return true;
+
+  /* Run the FINISH hook of the previous pass once a new pass starts.  */
+  if (htab->cur_relax_pass != info->relax_pass)
+    {
+      riscv_finish_relax_pass (htab);
+      htab->cur_relax_pass = info->relax_pass;
+    }
+  pass = htab->relax_passes[info->relax_pass];
 
   if (bfd_link_relocatable (info)
       || sec->sec_flg0
@@ -4938,7 +5112,7 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
       || (sec->flags & SEC_RELOC) == 0
       || (sec->flags & SEC_HAS_CONTENTS) == 0
       || (info->disable_target_specific_optimizations
-	  && info->relax_pass == 0)
+	  && !pass->required)
       /* The exp_seg_relro_adjust is enum phase_enum (0x4),
 	 and defined in ld/ldexp.h.  */
       || *(htab->data_segment_phase) == 4)
@@ -4975,53 +5149,15 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
       asection *sym_sec;
       Elf_Internal_Rela *rel = relocs + i;
       relax_func_t relax_func;
-      int type = ELFNN_R_TYPE (rel->r_info);
       bfd_vma symval;
       char symtype;
       bool undefined_weak = false;
 
       relax_func = NULL;
       riscv_relax_delete_bytes = NULL;
-      if (info->relax_pass == 0)
-	{
-	  if (type == R_RISCV_CALL
-	      || type == R_RISCV_CALL_PLT)
-	    relax_func = _bfd_riscv_relax_call;
-	  else if (type == R_RISCV_HI20
-		   || type == R_RISCV_LO12_I
-		   || type == R_RISCV_LO12_S)
-	    relax_func = _bfd_riscv_relax_lui;
-	  else if (type == R_RISCV_TPREL_HI20
-		   || type == R_RISCV_TPREL_ADD
-		   || type == R_RISCV_TPREL_LO12_I
-		   || type == R_RISCV_TPREL_LO12_S)
-	    relax_func = _bfd_riscv_relax_tls_le;
-	  else if (!bfd_link_pic (info)
-		   && (type == R_RISCV_PCREL_HI20
-		       || type == R_RISCV_PCREL_LO12_I
-		       || type == R_RISCV_PCREL_LO12_S))
-	    relax_func = _bfd_riscv_relax_pc;
-	  else if (type == R_RISCV_JAL)
-	    relax_func = _bfd_riscv_relax_jal;
-	  else
-	    continue;
-	  riscv_relax_delete_bytes = _riscv_relax_delete_piecewise;
-
-	  /* Only relax this reloc if it is paired with R_RISCV_RELAX.  */
-	  if (i == sec->reloc_count - 1
-	      || ELFNN_R_TYPE ((rel + 1)->r_info) != R_RISCV_RELAX
-	      || rel->r_offset != (rel + 1)->r_offset)
-	    continue;
-
-	  /* Skip over the R_RISCV_RELAX.  */
-	  i++;
-	}
-      else if (info->relax_pass == 1 && type == R_RISCV_ALIGN)
-	{
-	  relax_func = _bfd_riscv_relax_align;
-	  riscv_relax_delete_bytes = _riscv_relax_delete_immediate;
-	}
-      else
+      if (!pass->select (abfd, sec, info, relocs, &i, &relax_func))
+	goto fail;
+      if (relax_func == NULL)
 	continue;
 
       data->relocs = relocs;
@@ -5181,6 +5317,9 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
 		       &pcgp_relocs, undefined_weak))
 	goto fail;
     }
+
+  if (pass->finish_section != NULL)
+    pass->finish_section (&pcgp_relocs);
 
   /* Resolve R_RISCV_DELETE relocations.  */
   if (!riscv_relax_resolve_delete_relocs (abfd, sec, info, relocs))

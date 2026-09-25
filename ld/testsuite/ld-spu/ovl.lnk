@@ -4,4 +4,6 @@ SECTIONS
   .text : { *(.text) *(.stub) }
   .data : { *(.data) *(.ovtab) }
   .bss : { *(.bss) }
+  .nonalloc 0 : { *(.nonalloc) }
+  .note.spu_name 0 : { *(.note.spu_name) }
 }
