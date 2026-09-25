@@ -36,7 +36,11 @@ main ()
 {
   /* Make sure that if anything goes wrong, the program eventually
      gets killed.  */
-  gdb_watchdog (30);
+  #ifdef TIMEOUT
+    gdb_watchdog (TIMEOUT * 3);
+  #else
+    gdb_watchdog (30);
+  #endif
 
   kern<<<1, 1>>> ();
   return hipDeviceSynchronize () != hipSuccess;

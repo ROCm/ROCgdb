@@ -95,7 +95,11 @@ main (int argc, char **argv)
 {
   /* Make sure that the process terminates if the exception is not caught by
      the ROCr runtime.  */
-  gdb_watchdog (30);
+  #ifdef TIMEOUT
+    gdb_watchdog (TIMEOUT * 3);
+  #else
+    gdb_watchdog (30);
+  #endif
 
   if (argc != 2)
     {

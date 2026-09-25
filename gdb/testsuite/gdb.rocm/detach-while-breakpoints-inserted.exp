@@ -40,6 +40,9 @@ if { [is_remote target] } {
 }
 
 set opts [list hip debug "additional_flags=-DTOUCH_FILE_PATH=\"$touch_file_path\""]
+if {$timeout ne ""} {
+    lappend opts "additional_flags=-DTIMEOUT=$timeout"
+}
 if {[build_executable "failed to prepare" $testfile $srcfile $opts]} {
     return
 }

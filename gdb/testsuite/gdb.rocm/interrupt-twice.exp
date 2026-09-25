@@ -23,7 +23,11 @@ require allow_hip_tests
 
 standard_testfile .cpp
 
-if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+set options [ list debug hip ]
+if {$timeout ne ""} {
+    lappend options "additional_flags=-DTIMEOUT=$timeout"
+}
+if {[build_executable "failed to prepare" $testfile $srcfile $options]} {
     return
 }
 
