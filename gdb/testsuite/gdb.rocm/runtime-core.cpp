@@ -97,6 +97,8 @@ main (int argc, char **argv)
      the ROCr runtime.  */
   #ifdef TIMEOUT
     gdb_watchdog (TIMEOUT * 3);
+  #else
+    gdb_watchdog (30);
   #endif
 
   if (argc != 2)

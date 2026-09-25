@@ -53,6 +53,8 @@ main (int argc, char **argv)
   /* Don't run forever.  */
   #ifdef TIMEOUT
     gdb_watchdog (TIMEOUT);
+  #else
+    gdb_watchdog (10);
   #endif
 
   /* Wait until kernel finishes.  In this case, this blocks

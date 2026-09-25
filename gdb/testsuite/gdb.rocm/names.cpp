@@ -234,6 +234,8 @@ main (int argc, char **argv)
   /* So that the GPU threads don't spin forever.  */
   #ifdef TIMEOUT
     gdb_watchdog (TIMEOUT * 3);
+  #else
+    gdb_watchdog (30);
   #endif
 
   if (argc != 2)

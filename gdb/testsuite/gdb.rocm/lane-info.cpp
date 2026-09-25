@@ -82,6 +82,8 @@ main ()
 {
   #ifdef TIMEOUT
     gdb_watchdog (TIMEOUT * 3);
+  #else
+    gdb_watchdog (30);
   #endif
 
  /* If the wavefront size is 64 lanes, then this results in 2 waves, 1

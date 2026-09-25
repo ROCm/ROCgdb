@@ -32,6 +32,8 @@ main ()
      wrong it eventually gets killed.  */
   #ifdef TIMEOUT
     gdb_watchdog (TIMEOUT * 3);
+  #else
+    gdb_watchdog (30);
   #endif
 
   kern<<<1, 1>>> ();
