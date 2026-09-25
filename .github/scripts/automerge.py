@@ -370,8 +370,14 @@ def probe_clean_prefix(
     commits: list[str],
 ) -> tuple[str | None, str | None]:
     """
-    Walk commits oldest-to-newest on a throwaway branch off origin/TARGET_BRANCH.
+    Walk commits oldest-to-newest on a throwaway branch off origin/TARGET_BRANCH,
+    to find how far UPSTREAM_BRANCH merges into TARGET_BRANCH without conflicts.
     Returns (last_clean_commit, first_conflict_commit).
+
+    This only probes for the conflict boundary; it does not produce the merge
+    commit to push. Once the boundary is known, build_conflict_free_branch()
+    builds a single fresh merge of the boundary commit directly onto
+    origin/TARGET_BRANCH.
     """
     run(["git", "checkout", "-B", "probe", f"origin/{TARGET_BRANCH}"], cwd=repo)
 
@@ -391,6 +397,17 @@ def probe_clean_prefix(
         run(["git", "branch", "-D", "probe"], cwd=repo, check=False)
 
     return last_clean, first_conflict
+
+
+def build_conflict_free_branch(repo: Path, branch: str, commit: str) -> None:
+    """
+    Check out `branch` from origin/TARGET_BRANCH and merge `commit` into it
+    in a single merge commit. `commit` must already merge cleanly (verified
+    by probe_clean_prefix) — its ancestry includes every earlier commit in
+    the clean prefix, so one merge here pulls in the whole prefix at once.
+    """
+    run(["git", "checkout", "-B", branch, f"origin/{TARGET_BRANCH}"], cwd=repo)
+    run(["git", "merge", "--no-edit", commit], cwd=repo)
 
 
 def main() -> None:
@@ -465,9 +482,7 @@ def main() -> None:
         )
         if is_shallow:
             print(f"Repo is shallow; unshallowing origin/{TARGET_BRANCH}…")
-            run_net(
-                ["git", "fetch", "--unshallow", "origin", TARGET_BRANCH], cwd=repo
-            )
+            run_net(["git", "fetch", "--unshallow", "origin", TARGET_BRANCH], cwd=repo)
 
         # ------------------------------------------------------------------ #
         # 5. Determine the commit range to merge.                             #
@@ -544,15 +559,8 @@ def main() -> None:
                     f"  Title  : {conflict_free_title}"
                 )
             else:
-                run_net(
-                    [
-                        "git",
-                        "push",
-                        "origin",
-                        f"{commits[-1]}:refs/heads/{conflict_free_branch}",
-                    ],
-                    cwd=repo,
-                )
+                build_conflict_free_branch(repo, conflict_free_branch, commits[-1])
+                run_net(["git", "push", "origin", conflict_free_branch], cwd=repo)
                 open_conflict_free_pr(
                     branch=conflict_free_branch,
                     first_commit=merge_base_sha,
@@ -581,15 +589,8 @@ def main() -> None:
                     f"  Title  : {conflict_free_title}"
                 )
                 return
-            run_net(
-                [
-                    "git",
-                    "push",
-                    "origin",
-                    f"{last_clean}:refs/heads/{conflict_free_branch}",
-                ],
-                cwd=repo,
-            )
+            build_conflict_free_branch(repo, conflict_free_branch, last_clean)
+            run_net(["git", "push", "origin", conflict_free_branch], cwd=repo)
             open_conflict_free_pr(
                 branch=conflict_free_branch,
                 first_commit=merge_base_sha,
