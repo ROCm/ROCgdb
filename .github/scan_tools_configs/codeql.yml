@@ -1,4 +1,6 @@
 paths-ignore:
-  # TODO: Remove once CodeQL c-cpp analysis no longer fails on runtime-core.cpp
-  # in PR security scan run 36086752855 (job 107920441067).
+  # TODO: Temporary workaround for a CodeQL c-cpp extraction failure where
+  # runtime-core.cpp causes the PR security scan job to be terminated during
+  # "Perform CodeQL Analysis". Remove after upstream CodeQL extraction for
+  # this test source is fixed and c-cpp scan completes without this exclusion.
   - gdb/testsuite/gdb.rocm/runtime-core.cpp
