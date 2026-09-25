@@ -408,7 +408,7 @@ _start:
 	{rex2} cmp %cl, %dl
 	{rex2} mov $1, %bl
 	{rex2} movl %eax,%ebx
-	{rex2} movl %eax,%r14d
+	{rex2} movq %rax,%r14
 	{rex2} movl %eax,(%r8)
 	{rex2} movaps %xmm7,%xmm2
 	{rex2} movaps %xmm7,%xmm12

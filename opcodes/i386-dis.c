@@ -10267,7 +10267,7 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
   /* Check if the REX2 prefix is used.  */
   if (ins.last_rex2_prefix >= 0
       && ((ins.rex2 & REX2_SPECIAL)
-	  || (((ins.rex2 & 7) ^ (ins.rex2_used & 7)) == 0
+	  || (((ins.rex2 ^ ins.rex2_used) & 7) == 0
 	      && (ins.rex ^ ins.rex_used) == 0
 	      && (ins.rex2 & 7))))
     ins.all_prefixes[ins.last_rex2_prefix] = 0;
@@ -10300,11 +10300,14 @@ print_insn (bfd_vma pc, disassemble_info *info, int intel_syntax)
 	if (name == NULL)
 	  abort ();
 	prefix_length += strlen (name) + 1;
-	if (ins.all_prefixes[i] == REX2_OPCODE)
+	if (ins.all_prefixes[i] != REX2_OPCODE)
+	  i386_dis_printf (info, dis_style_mnemonic, "%s ", name);
+	else if (((ins.rex2 ^ ins.rex2_used) & 7) == 0
+		 && ((ins.rex ^ ins.rex_used) & 0xf) == 0)
+	  i386_dis_printf (info, dis_style_mnemonic, "{%s} ", name);
+	else
 	  i386_dis_printf (info, dis_style_mnemonic, "{%s 0x%x} ", name,
 			   (unsigned int) ins.rex2_payload);
-	else
-	  i386_dis_printf (info, dis_style_mnemonic, "%s ", name);
       }
 
   /* Check maximum code length.  */
