@@ -1,2 +1,4 @@
 paths-ignore:
+  # TODO: Remove once CodeQL c-cpp analysis no longer fails on runtime-core.cpp
+  # in PR security scan run 36086752855 (job 107920441067).
   - gdb/testsuite/gdb.rocm/runtime-core.cpp
