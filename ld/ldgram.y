@@ -144,7 +144,7 @@ static void yyerror (const char *);
 %token NOLOAD DSECT COPY INFO OVERLAY
 %token READONLY
 %token TYPE
-%token DEFINED TARGET_K SEARCH_DIR MAP ENTRY
+%token DEFINED TARGET_K SEARCH_DIR ENTRY
 %token <integer> NEXT
 %token SIZEOF ALIGNOF ADDR LOADADDR MAX_K MIN_K
 %token STARTUP HLL SYSLIB FLOAT NOFLOAT NOCROSSREFS NOCROSSREFS_TO
@@ -346,8 +346,6 @@ ifile_p1:
 		  { lang_enter_lib (); }
 		    '(' input_list ')'
 		  { lang_leave_lib (); }
-	|	MAP '(' filename ')'
-		{ lang_add_map($3); }
 	|	INCLUDE filename
 		{ ldfile_open_command_file ($2); }
 		ifile_list END
