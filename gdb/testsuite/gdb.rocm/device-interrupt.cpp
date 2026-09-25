@@ -52,7 +52,7 @@ main (int argc, char **argv)
 
   /* Don't run forever.  */
   #ifdef TIMEOUT
-    gdb_watchdog (TIMEOUT);
+    gdb_watchdog (TIMEOUT * 3);
   #else
     gdb_watchdog (10);
   #endif
