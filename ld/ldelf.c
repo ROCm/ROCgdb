@@ -99,6 +99,8 @@ ldelf_after_open_output (void)
       return;
     }
 
+  if (obed->elf_backend_finish_dynamic_sections != NULL)
+    htab->dynobj = stub_file->the_bfd;
   stub_file->the_bfd->flags |= BFD_LINKER_CREATED;
   elf_elfheader (stub_file->the_bfd)->e_ident[EI_CLASS] = obed->s->elfclass;
 
