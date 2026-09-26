@@ -202,6 +202,11 @@ struct alpha_elf_link_hash_table
      should be regenerated if this doesn't match.  */
   int relax_trip;
 
+  /* True once relaxation has reached its second pass.  ld may rerun
+     relaxation from pass 0, but .got subsections must not be merged
+     after GPREL relocs exist.  */
+  bool no_got_merge;
+
   /* The part of the size of .rela.iplt that is due to data references to
      an IFUNC, counted once the sections that survive into the output are
      known.  The rest comes from got entries and is recomputed whenever the
@@ -4051,6 +4056,9 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
   BFD_ASSERT (is_alpha_elf (abfd));
   relax_pass = link_info->relax_pass;
 
+  if (relax_pass != 0)
+    htab->no_got_merge = true;
+
   /* Make sure our GOT and PLT tables are up-to-date.  */
   if (htab->relax_trip != link_info->relax_trip)
     {
@@ -4058,10 +4066,10 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
 
       /* This should never fail after the initial round, since the only error
 	 is GOT overflow, and relaxation only shrinks the table overall.
-	 However, we may only merge got sections during the first pass.  If
-	 we merge sections after we've created GPREL relocs, the GP for the
+	 However, we may only merge got sections before GPREL relocs have
+	 been created.  If we merge sections afterwards, the GP for the
 	 merged section backs up which may put the relocs out of range.  */
-      if (!elf64_alpha_size_got_sections (link_info, relax_pass == 0))
+      if (!elf64_alpha_size_got_sections (link_info, !htab->no_got_merge))
 	abort ();
       if (elf_hash_table (link_info)->dynamic_sections_created)
 	{
