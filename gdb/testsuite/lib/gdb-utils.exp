@@ -36,7 +36,9 @@ proc gdb_init_commands {} {
 
 proc string_to_regexp {str} {
     set result $str
-    regsub -all {[]?*+.|(){}^$\[\\]} $str {\\&} result
+    # We use a backslash to escape the closing square bracket, even if it's
+    # the first character, to unconfuse emacs tcl-mode.
+    regsub -all {[\]?*+.|(){}^$\[\\]} $str {\\&} result
     return $result
 }
 

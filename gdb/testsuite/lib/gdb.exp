@@ -3656,7 +3656,9 @@ proc with_gdb_prompt { prompt body } {
     # we start recording both forms separately instead of just $gdb_prompt.
     # The testsuite is pretty-much hardwired to interpret $gdb_prompt as the
     # regexp form.
-    regsub -all {[]*+.|()^$\[\\]} $prompt {\\&} prompt
+    # We use a backslash to escape the closing square bracket, even if it's
+    # the first character, to unconfuse emacs tcl-mode.
+    regsub -all {[\]*+.|()^$\[\\]} $prompt {\\&} prompt
 
     set saved $gdb_prompt
 
