@@ -48,6 +48,12 @@ with_test_prefix main-ui {
 
 with_test_prefix new-ui {
     with_spawn_id $new_ui_spawn_id {
+	gdb_test_multiple "" "initial prompt on new ui" {
+	    -re "$gdb_prompt $" {
+		pass $gdb_test_name
+	    }
+	}
+
 	# Check that we cannot enable TUI in the new UI.
 	gdb_test "tui enable" $re_cannot_enable_disable_tui
     }
