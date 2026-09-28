@@ -53,6 +53,7 @@ proc test_quit_with_sig {sig} {
     gdb_test_multiple "" $test {
 	eof {
 	    pass $test
+	    gdb_exit_cleanup
 	}
     }
 }
@@ -152,6 +153,7 @@ proc quit_with_live_inferior {appear_how extra_inferior quit_how} {
 		gdb_test_multiple "" $test {
 		    eof {
 			pass $test
+			gdb_exit_cleanup
 		    }
 		}
 	    }
