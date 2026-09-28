@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 # Scoped multi-arch CI for the ROCm debug tools: builds rocgdb, rocdbgapi
-# (amd-dbgapi) and rocr-debug-agent (the debug-tools stage); tests rocgdb only,
-# matching single-arch CI. Runs via TheRock's reusable multi-arch pipeline.
+# (amd-dbgapi) and rocr-debug-agent (the debug-tools stage); tests rocgdb (base
+# jobs plus the -O3/-flto/check-read1/check-readmore/hip-board variants), matching
+# single-arch CI. Runs via TheRock's reusable multi-arch pipeline.
 #
 # Rollout: opt-in during the transition. Presubmit runs only on PRs carrying the
 # `ci:multi-arch` label (so it does not double up with therock-ci.yml); manual
@@ -148,6 +149,133 @@ jobs:
       contents: read
       id-token: write
 
+  # --- Extended rocgdb test variants (parity with single-arch therock-ci.yml) ---
+  # These reuse the multi-arch build (no rebuild) and run only on gfx94X, exactly
+  # as single-arch CI does. They are ROCgdb's own regression gate and stay in this
+  # repo (not TheRock's shared test matrix).
+  test-gpu-o3:
+    name: Test GPU (-O3)
+    needs: [configure, setup, linux_build_and_test]
+    if: >-
+      ${{
+        needs.configure.outputs.enable_therock_ci == 'true' &&
+        needs.setup.outputs.linux_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true' &&
+        contains(needs.configure.outputs.linux_amdgpu_families, 'gfx94X')
+      }}
+    uses: ./.github/workflows/therock-test-packages.yml
+    permissions:
+      contents: read
+    with:
+      # Extended rocgdb tests reuse the gfx94X multi-arch build (same run) and
+      # match single-arch CI's validation scope. gfx94X is the only family with a
+      # core-dump runner for rocgdb-corefile.
+      amdgpu_families: gfx94X
+      artifact_group: ${{ fromJSON(needs.setup.outputs.linux_build_config).artifact_group }}
+      therock_ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-gpu,rocgdb-corefile
+      test_options: "--optimization=-O3"
+
+  test-gpu-lto:
+    name: Test GPU (-O3 -flto)
+    needs: [configure, setup, linux_build_and_test]
+    if: >-
+      ${{
+        needs.configure.outputs.enable_therock_ci == 'true' &&
+        needs.setup.outputs.linux_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true' &&
+        contains(needs.configure.outputs.linux_amdgpu_families, 'gfx94X')
+      }}
+    uses: ./.github/workflows/therock-test-packages.yml
+    permissions:
+      contents: read
+    with:
+      # Extended rocgdb tests reuse the gfx94X multi-arch build (same run) and
+      # match single-arch CI's validation scope. gfx94X is the only family with a
+      # core-dump runner for rocgdb-corefile.
+      amdgpu_families: gfx94X
+      artifact_group: ${{ fromJSON(needs.setup.outputs.linux_build_config).artifact_group }}
+      therock_ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-gpu,rocgdb-corefile
+      test_options: "--optimization='-O3 -flto'"
+
+  test-gpu-check-read1:
+    name: Test check-read1
+    needs: [configure, setup, linux_build_and_test]
+    if: >-
+      ${{
+        needs.configure.outputs.enable_therock_ci == 'true' &&
+        needs.setup.outputs.linux_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true' &&
+        contains(needs.configure.outputs.linux_amdgpu_families, 'gfx94X')
+      }}
+    uses: ./.github/workflows/therock-test-packages.yml
+    permissions:
+      contents: read
+    with:
+      # Extended rocgdb tests reuse the gfx94X multi-arch build (same run) and
+      # match single-arch CI's validation scope. gfx94X is the only family with a
+      # core-dump runner for rocgdb-corefile.
+      amdgpu_families: gfx94X
+      artifact_group: ${{ fromJSON(needs.setup.outputs.linux_build_config).artifact_group }}
+      therock_ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--check-type check-read1"
+
+  test-gpu-check-readmore:
+    name: Test check-readmore
+    needs: [configure, setup, linux_build_and_test]
+    if: >-
+      ${{
+        needs.configure.outputs.enable_therock_ci == 'true' &&
+        needs.setup.outputs.linux_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true' &&
+        contains(needs.configure.outputs.linux_amdgpu_families, 'gfx94X')
+      }}
+    uses: ./.github/workflows/therock-test-packages.yml
+    permissions:
+      contents: read
+    with:
+      # Extended rocgdb tests reuse the gfx94X multi-arch build (same run) and
+      # match single-arch CI's validation scope. gfx94X is the only family with a
+      # core-dump runner for rocgdb-corefile.
+      amdgpu_families: gfx94X
+      artifact_group: ${{ fromJSON(needs.setup.outputs.linux_build_config).artifact_group }}
+      therock_ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05
+      artifact_run_id: ${{ github.run_id }}
+      test_options: "--check-type check-readmore"
+
+  test-gpu-hip-board:
+    name: Test GPU (hip board)
+    needs: [configure, setup, linux_build_and_test]
+    if: >-
+      ${{
+        needs.configure.outputs.enable_therock_ci == 'true' &&
+        needs.setup.outputs.linux_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true' &&
+        contains(needs.configure.outputs.linux_amdgpu_families, 'gfx94X')
+      }}
+    uses: ./.github/workflows/therock-test-packages.yml
+    permissions:
+      contents: read
+    with:
+      # Extended rocgdb tests reuse the gfx94X multi-arch build (same run) and
+      # match single-arch CI's validation scope. gfx94X is the only family with a
+      # core-dump runner for rocgdb-corefile.
+      amdgpu_families: gfx94X
+      artifact_group: ${{ fromJSON(needs.setup.outputs.linux_build_config).artifact_group }}
+      therock_ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05
+      artifact_run_id: ${{ github.run_id }}
+      projects_to_test: rocgdb-gpu
+      test_options: >-
+        --runtestflags=--target_board=hip
+        --tests gdb.base/attach.exp gdb.base/start.exp gdb.base/callfuncs.exp
+        gdb.base/consecutive-step-over.exp gdb.base/ending-run.exp
+        gdb.base/finish.exp gdb.base/hbreak.exp gdb.base/signals.exp
+        gdb.base/step-test.exp gdb.base/watchpoint.exp
+
   multi_arch_ci_summary:
     name: Multi-Arch CI Summary
     if: always()
@@ -155,6 +283,11 @@ jobs:
       - configure
       - setup
       - linux_build_and_test
+      - test-gpu-o3
+      - test-gpu-lto
+      - test-gpu-check-read1
+      - test-gpu-check-readmore
+      - test-gpu-hip-board
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout TheRock repository
