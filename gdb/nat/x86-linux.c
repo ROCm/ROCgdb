@@ -27,12 +27,6 @@
 #include "nat/gdb_ptrace.h"
 #include <sys/user.h>
 
-#ifndef __x86_64__
-#include "nat/i386-linux.h"
-#else
-#include "nat/amd64-linux.h"
-#endif
-
 /* Per-thread arch-specific data we want to keep.  */
 
 struct arch_lwp_info
@@ -198,16 +192,9 @@ i386_ptrace_get_tls_data (int pid, gdb::array_view<user_desc> buffer)
 {
   gdb_assert (buffer.size () == 3);
 
-  for (int i = 0; i < 3; ++i)
-    {
-      void *addr = (void *) (uintptr_t) (i386_initial_tls_gdt + i);
-      void *data = buffer.slice (i, 1).data ();
+  iovec iov { buffer.data (), buffer.size () * sizeof (user_desc) };
 
-      if (ptrace (PTRACE_GET_THREAD_AREA, pid, addr, data) < 0)
-	return false;
-    }
-
-  return true;
+  return ptrace (PTRACE_GETREGSET, pid, NT_386_TLS, &iov) == 0;
 }
 
 /* See nat/x86-linux.h.  */
@@ -217,14 +204,7 @@ i386_ptrace_set_tls_data (int pid, gdb::array_view<user_desc> buffer)
 {
   gdb_assert (buffer.size () == 3);
 
-  for (int i = 0; i < 3; ++i)
-    {
-      void *addr = (void *) (uintptr_t) (i386_initial_tls_gdt + i);
-      void *data = buffer.slice (i, 1).data ();
+  iovec iov { buffer.data (), buffer.size () * sizeof (user_desc) };
 
-      if (ptrace (PTRACE_SET_THREAD_AREA, pid, addr, data) < 0)
-       return false;
-    }
-
-  return true;
+  return ptrace (PTRACE_SETREGSET, pid, NT_386_TLS, &iov) == 0;
 }
