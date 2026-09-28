@@ -413,9 +413,9 @@ get_detach_signal (process_stratum_target *proc_target, ptid_t ptid)
 
 static struct cmd_list_element *stop_command;
 
-/* Nonzero if we want to give control to the user when we're notified
-   of shared library events by the dynamic linker.  */
-int stop_on_solib_events;
+/* See infrun.h.  */
+
+bool stop_on_solib_events;
 
 /* Enable or disable optional shared library event breakpoints
    as appropriate when the above flag is changed.  */
@@ -10846,16 +10846,16 @@ leave it stopped or free to run as needed."),
   /* Update cached state.  */
   signal_cache_update (-1);
 
-  add_setshow_zinteger_cmd ("stop-on-solib-events", class_support,
-			    &stop_on_solib_events, _("\
+  add_setshow_boolean_cmd ("stop-on-solib-events", class_support,
+			   &stop_on_solib_events, _("\
 Set stopping for shared library events."), _("\
 Show stopping for shared library events."), _("\
-If nonzero, gdb will give control to the user when the dynamic linker\n\
+If on, gdb will give control to the user when the dynamic linker\n\
 notifies gdb of shared library events.  The most common event of interest\n\
 to the user would be loading/unloading of a new library."),
-			    set_stop_on_solib_events,
-			    show_stop_on_solib_events,
-			    &setlist, &showlist);
+			   set_stop_on_solib_events,
+			   show_stop_on_solib_events,
+			   &setlist, &showlist);
 
   add_setshow_enum_cmd ("follow-fork-mode", class_run,
 			follow_fork_mode_kind_names,

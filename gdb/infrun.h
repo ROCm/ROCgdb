@@ -75,9 +75,9 @@ infrun_debug_show_threads (const char *title, ThreadRange threads)
 }
 
 
-/* Nonzero if we want to give control to the user when we're notified
+/* True if we want to give control to the user when we're notified
    of shared library events by the dynamic linker.  */
-extern int stop_on_solib_events;
+extern bool stop_on_solib_events;
 
 /* True if execution commands resume all threads of all processes by
    default; otherwise, resume only threads of the current inferior

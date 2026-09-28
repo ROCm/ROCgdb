@@ -22510,7 +22510,7 @@ The surrounding square brackets are optional.
 @end table
 
 @table @code
-@item set stop-on-solib-events
+@item set stop-on-solib-events @r{[}on@r{|}off@r{]}
 @kindex set stop-on-solib-events
 This command controls whether @value{GDBN} should give you control
 when the dynamic linker notifies it about some shared library event.

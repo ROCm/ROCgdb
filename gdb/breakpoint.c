@@ -12236,8 +12236,8 @@ internal_breakpoint::check_status (bpstat *bs)
 	 events.  This allows the user to get control and place
 	 breakpoints in initializer routines for dynamically loaded
 	 objects (among other things).  */
-      bs->stop = stop_on_solib_events != 0;
-      bs->print = stop_on_solib_events != 0;
+      bs->stop = stop_on_solib_events;
+      bs->print = stop_on_solib_events;
     }
   else
     bs->stop = false;

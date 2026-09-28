@@ -51,6 +51,12 @@ show print shadowed
 
 * Changed commands
 
+set stop-on-solib-events on|off
+show stop-on-solib-events
+  This setting is now a boolean.  Previously, it was an integer, where
+  any non-zero value meant "on".  The values 0 and 1 are still
+  accepted.
+
 info locals
   The new "-shadowed on|off" option overrides the "set print shadowed"
   setting for a single invocation of the command.
