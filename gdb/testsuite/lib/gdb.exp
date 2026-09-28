@@ -2497,6 +2497,20 @@ proc gdb_reinitialize_dir { subdir } {
     }
 }
 
+# Clean up after the current gdb instance that has exited.
+
+proc gdb_exit_cleanup {} {
+    if {![is_remote host]} {
+	if {[catch { remote_close host } message]} {
+	    warning "closing gdb failed with: $message"
+	}
+    }
+
+    unset ::gdb_spawn_id
+    unset ::gdb_tty_name
+    unset ::inferior_spawn_id
+}
+
 #
 # gdb_exit -- exit the GDB, killing the target program if necessary
 #
@@ -2539,14 +2553,7 @@ proc default_gdb_exit {} {
 	}
     }
 
-    if {![is_remote host]} {
-	if {[catch { remote_close host } message]} {
-	    warning "closing gdb failed with: $message"
-	}
-    }
-    unset gdb_spawn_id
-    unset ::gdb_tty_name
-    unset inferior_spawn_id
+    gdb_exit_cleanup
 }
 
 # Load a file into the debugger.
