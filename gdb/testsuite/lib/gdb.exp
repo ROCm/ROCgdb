@@ -145,7 +145,7 @@ rename load_lib saved_load_lib
 proc load_lib { file } {
     array set known_global {}
     foreach varname [info globals] {
-       set known_globals($varname) 1
+	set known_globals($varname) 1
     }
 
     try {
@@ -612,10 +612,10 @@ proc gdb_run_cmd { {inferior_args {}} } {
 	}
     }
     send_gdb "run $inferior_args\n"
-# This doesn't work quite right yet.
-# Use -notransfer here so that test cases (like chng-sym.exp)
-# may test for additional start-up messages.
-   gdb_expect 60 {
+    # This doesn't work quite right yet.
+    # Use -notransfer here so that test cases (like chng-sym.exp)
+    # may test for additional start-up messages.
+    gdb_expect 60 {
 	-re "The program .* has been started already.*y or n. $" {
 	    send_gdb "y\n" answer
 	    exp_continue
@@ -780,16 +780,16 @@ proc gdb_breakpoint { linespec args } {
 	-re "$break_message \[0-9\]*: file .*, line $decimal.\r\n$gdb_prompt $" {}
 	-re "$break_message \[0-9\]* at .*$gdb_prompt $" {}
 	-re "$break_message \[0-9\]* \\(.*\\) pending.*$gdb_prompt $" {
-		if {$pending_response == "n"} {
-			if { $print_fail } {
-				fail $gdb_test_name
-			}
-			return 0
+	    if {$pending_response == "n"} {
+		if { $print_fail } {
+		    fail $gdb_test_name
 		}
+		return 0
+	    }
 	}
 	-re "Make breakpoint pending.*y or \\\[n\\\]. $" {
-		send_gdb "$pending_response\n"
-		exp_continue
+	    send_gdb "$pending_response\n"
+	    exp_continue
 	}
 	-re "$gdb_prompt $" {
 	    if { $print_fail } {
@@ -1260,7 +1260,7 @@ proc gdb_test_multiple { command message args } {
 
     if {$use_gdb_stub
 	&& [regexp -nocase {^\s*(r|run|star|start|at|att|atta|attac|attach)\M} \
-	    $command]} {
+		$command]} {
 	error "gdbserver does not support $command without extended-remote"
     }
 
@@ -1524,11 +1524,11 @@ proc gdb_test_multiple { command message args } {
     }
 
     if {$line_by_line} {
-       append code {
-	   -re "\r\n\[^\r\n\]*(?=\r\n)" {
-	       exp_continue
-	   }
-       }
+	append code {
+	    -re "\r\n\[^\r\n\]*(?=\r\n)" {
+		exp_continue
+	    }
+	}
     }
 
     # Now patterns that apply to any spawn id specified.
@@ -2671,7 +2671,7 @@ proc gdb_file_cmd { arg {kill_flag 1} } {
 	-re "$gdb_prompt $" {
 	    perror "Couldn't load $basename into GDB."
 	    return -1
-	    }
+	}
 	timeout {
 	    perror "Couldn't load $basename into GDB (timeout)."
 	    return -1
@@ -3810,7 +3810,7 @@ proc get_largest_timeout {} {
 
     set tmt 0
     if {[info exists timeout]} {
-      set tmt $timeout
+	set tmt $timeout
     }
     if { [info exists gtimeout] && $gtimeout > $tmt } {
 	set tmt $gtimeout
@@ -3907,7 +3907,7 @@ gdb_caching_proc supports_memtag {} {
 
     gdb_test_multiple "memory-tag check" "" {
 	-re "Memory tagging not supported or disabled by the current architecture\..*$gdb_prompt $" {
-	  return 0
+	    return 0
 	}
 	-re "Argument required \\(address or pointer\\).*$gdb_prompt $" {
 	    return 1
@@ -4389,7 +4389,7 @@ gdb_caching_proc allow_altivec_tests {} {
 	    set allow_vmx_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_vmx_tests 0
 	}
     }
@@ -4409,11 +4409,11 @@ gdb_caching_proc allow_power_isa_3_1_tests {} {
     # Compile a test program containing ISA 3.1 instructions.
     set src {
 	int main() {
-	asm volatile ("pnop"); // marker
-		asm volatile ("nop");
-		return 0;
-	    }
+	    asm volatile ("pnop"); // marker
+	    asm volatile ("nop");
+	    return 0;
 	}
+    }
 
     if {![gdb_simple_compile $me $src executable ]} {
 	return 0
@@ -4505,7 +4505,7 @@ gdb_caching_proc allow_vsx_tests {} {
 	    set allow_vsx_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_vsx_tests 0
 	}
     }
@@ -4752,23 +4752,23 @@ gdb_caching_proc allow_lam_tests {} {
 
     # Compile a test program.
     set src {
-      #define _GNU_SOURCE
-      #include <unistd.h>
-      #include <sys/syscall.h>
-      #include <assert.h>
-      #include <errno.h>
-      #include <asm/prctl.h>
+	#define _GNU_SOURCE
+	#include <unistd.h>
+	#include <sys/syscall.h>
+	#include <assert.h>
+	#include <errno.h>
+	#include <asm/prctl.h>
 
-      int configure_lam ()
-      {
-	errno = 0;
-	syscall (SYS_arch_prctl, ARCH_ENABLE_TAGGED_ADDR, 6);
-	assert_perror (errno);
-	return errno;
-      }
+	int configure_lam ()
+	{
+	    errno = 0;
+	    syscall (SYS_arch_prctl, ARCH_ENABLE_TAGGED_ADDR, 6);
+	    assert_perror (errno);
+	    return errno;
+	}
 
-      int
-      main () { return configure_lam (); }
+	int
+	main () { return configure_lam (); }
     }
 
     if {![gdb_simple_compile $me $src executable ""]} {
@@ -4921,8 +4921,8 @@ gdb_caching_proc allow_btrace_ptw_tests {} {
 	int
 	main ()
 	{
-	  _ptwrite32 (0x42);
-	  return 0;
+	    _ptwrite32 (0x42);
+	    return 0;
 	}
     }
 
@@ -4960,15 +4960,15 @@ gdb_caching_proc allow_btrace_ptw_tests {} {
 
 	gdb_test_multiple "maintenance btrace packet-history 0,1000" \
 	    "$me: check decoding support" {
-	    -re  "ptw" {
-		verbose -log "$me:  ptwrite decoding support detected."
-		set allow_btrace_ptw_tests 1
+		-re  "ptw" {
+		    verbose -log "$me:  ptwrite decoding support detected."
+		    set allow_btrace_ptw_tests 1
+		}
+		-re -wrap "" {
+		    verbose -log "$me:  ptwrite decoding support not detected."
+		    set allow_btrace_ptw_tests 0
+		}
 	    }
-	    -re -wrap "" {
-		verbose -log "$me:  ptwrite decoding support not detected."
-		set allow_btrace_ptw_tests 0
-	    }
-	}
     }
 
     gdb_exit
@@ -4991,7 +4991,7 @@ gdb_caching_proc allow_btrace_pt_event_trace_tests {} {
 	int
 	main ()
 	{
-	  return 0;
+	    return 0;
 	}
     }
 
@@ -5074,7 +5074,7 @@ gdb_caching_proc allow_aarch64_sve_tests {} {
 	    set allow_sve_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_sve_tests 0
 	}
     }
@@ -5135,12 +5135,12 @@ gdb_caching_proc aarch64_initialize_sve_information { } {
 
     # Go through the data and extract the supported SVE vector lengths.
     set vl_count [get_valueof "" "supported_vl_count" "0" \
-			      "fetch value of supported_vl_count"]
+		      "fetch value of supported_vl_count"]
     verbose -log "Found $vl_count supported SVE vector length values"
 
     for {set vl_index 0} {$vl_index < $vl_count} {incr vl_index} {
 	set test_vl [get_valueof "" "supported_vl\[$vl_index\]" "0" \
-				 "fetch value of supported_vl\[$vl_index\]"]
+			 "fetch value of supported_vl\[$vl_index\]"]
 
 	# Mark this vector length as supported.
 	if {$test_vl != 0} {
@@ -5233,7 +5233,7 @@ gdb_caching_proc allow_aarch64_sme_tests {} {
 	    set allow_sme_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_sme_tests 0
 	}
     }
@@ -5294,12 +5294,12 @@ gdb_caching_proc aarch64_initialize_sme_information { } {
 
     # Go through the data and extract the supported SME vector lengths.
     set svl_count [get_valueof "" "supported_svl_count" "0" \
-			       "fetch value of supported_svl_count"]
+		       "fetch value of supported_svl_count"]
     verbose -log "Found $svl_count supported SME vector length values"
 
     for {set svl_index 0} {$svl_index < $svl_count} {incr svl_index} {
 	set test_svl [get_valueof "" "supported_svl\[$svl_index\]" "0" \
-				  "fetch value of supported_svl\[$svl_index\]"]
+			  "fetch value of supported_svl\[$svl_index\]"]
 
 	# Mark this streaming vector length as supported.
 	if {$test_svl != 0} {
@@ -5393,7 +5393,7 @@ gdb_caching_proc allow_aarch64_fpmr_tests {} {
 	    set allow_fpmr_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_fpmr_tests 0
 	}
     }
@@ -5447,7 +5447,7 @@ gdb_caching_proc allow_aarch64_lrcpc3_tests {} {
     gdb_load $obj
     gdb_run_cmd
     gdb_expect {
-    -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	-re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
 	    verbose -log "\n$me: lrcpc3 support detected"
 	    set allow_lrcpc3_tests 1
 	}
@@ -5486,7 +5486,7 @@ gdb_caching_proc allow_aarch64_cssc_tests {} {
     }
 
     if {![gdb_simple_compile $me $src executable $compile_flags]} {
-	    return 0
+	return 0
     }
 
     # Compilation succeeded so now run it via gdb.
@@ -5504,7 +5504,7 @@ gdb_caching_proc allow_aarch64_cssc_tests {} {
 	    set allow_cssc_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_cssc_tests 0
 	}
     }
@@ -5531,9 +5531,9 @@ gdb_caching_proc allow_aarch64_lse128_tests {} {
 
     # Compile a test program reading LSE128.
     set src {
-    #include <stdint.h>
+	#include <stdint.h>
 
-    int main() {
+	int main() {
 	    __attribute__((aligned(16))) uint64_t mem[2] = { 0x0, 0x1 };
 	    uint64_t *ptr = mem;
 	    __asm__ volatile ("ldclrp x0, x1, [%0]\n" :: "r"(ptr) : "x0", "x1", "memory");
@@ -5542,7 +5542,7 @@ gdb_caching_proc allow_aarch64_lse128_tests {} {
     }
 
     if {![gdb_simple_compile $me $src executable $compile_flags]} {
-	    return 0
+	return 0
     }
 
     # Compilation succeeded so now run it via gdb.
@@ -5560,7 +5560,7 @@ gdb_caching_proc allow_aarch64_lse128_tests {} {
 	    set allow_lse128_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_lse128_tests 0
 	}
     }
@@ -5622,7 +5622,7 @@ gdb_caching_proc allow_aarch64_mops_tests {} {
 	    set allow_mops_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_mops_tests 0
 	}
     }
@@ -5978,13 +5978,13 @@ proc is_any_target {args} {
 # check for skipping respective tests.
 
 proc use_gdb_stub {} {
-  global use_gdb_stub
+    global use_gdb_stub
 
-  if {[info exists use_gdb_stub]} {
-     return $use_gdb_stub
-  }
+    if {[info exists use_gdb_stub]} {
+	return $use_gdb_stub
+    }
 
-  return [target_info exists use_gdb_stub]
+    return [target_info exists use_gdb_stub]
 }
 
 # Return 1 if the current remote target is an instance of our GDBserver, 0
@@ -6422,7 +6422,7 @@ proc escape_for_host { str } {
     if { [is_remote host] } {
 	set map {
 	    {$} {\\$}
-       }
+	}
     } else {
 	set map {
 	    {$} {\$}
@@ -6802,7 +6802,7 @@ proc gdb_compile {source dest type options} {
 			|| [istarget *-*-pe*])} {
 		lappend source "${shlib_name}.a"
 	    } else {
-	       lappend source $shlib_name
+		lappend source $shlib_name
 	    }
 	    if { $shlib_found == 0 } {
 		set shlib_found 1
@@ -6871,7 +6871,7 @@ proc gdb_compile {source dest type options} {
 
 	} elseif { $opt == "dwarf5" } {
 	    if {[test_compiler_info {gcc-*}] \
-		|| [test_compiler_info {clang-*}]} {
+		    || [test_compiler_info {clang-*}]} {
 		lappend new_options "additional_flags=-gdwarf-5"
 	    } else {
 		error "No idea how to force DWARF-5 in this compiler"
@@ -7036,16 +7036,16 @@ proc gdb_compile {source dest type options} {
 	lappend options "$flag"
     }
 
-  set macros [lsearch -exact $options macros]
-  if {$macros != -1} {
-      if { [test_compiler_info "clang-*"] } {
-	  set flag "additional_flags=-fdebug-macro"
-      } else {
-	  set flag "additional_flags=-g3"
-      }
+    set macros [lsearch -exact $options macros]
+    if {$macros != -1} {
+	if { [test_compiler_info "clang-*"] } {
+	    set flag "additional_flags=-fdebug-macro"
+	} else {
+	    set flag "additional_flags=-g3"
+	}
 
-      set options [lreplace $options $macros $macros $flag]
-  }
+	set options [lreplace $options $macros $macros $flag]
+    }
 
     if { $type == "executable" } {
 	if { ([istarget "*-*-mingw*"]
@@ -7179,8 +7179,8 @@ proc gdb_compile {source dest type options} {
 
     cond_wrap [expr {$pie != -1 || $nopie != -1}] \
 	with_PIE_multilib_flags_filtered {
-	set result [target_compile $source $dest $type $options]
-    }
+	    set result [target_compile $source $dest $type $options]
+	}
 
     # Prune uninteresting compiler (and linker) output.
     regsub "Creating library file: \[^\r\n\]*\[\r\n\]+" $result "" result
@@ -7288,17 +7288,17 @@ proc gdb_compile_shlib_1 {sources dest options} {
 	}
 	"gcc-*" {
 	    if { [istarget "powerpc*-*-aix*"]
-		   || [istarget "rs6000*-*-aix*"]
-		   || [istarget "*-*-cygwin*"]
-		   || [istarget "*-*-mingw*"]
-		   || [istarget "*-*-pe*"] } {
+		 || [istarget "rs6000*-*-aix*"]
+		 || [istarget "*-*-cygwin*"]
+		 || [istarget "*-*-mingw*"]
+		 || [istarget "*-*-pe*"] } {
 		lappend obj_options "additional_flags=-fPIC"
 	    } else {
 		lappend obj_options "additional_flags=-fpic"
 	    }
 	}
 	"icc-*" {
-		lappend obj_options "additional_flags=-fpic"
+	    lappend obj_options "additional_flags=-fpic"
 	}
 	default {
 	    # don't know what the compiler is...
@@ -8102,10 +8102,10 @@ proc exec_symbol_file { binfile } {
 # to BINFILE2, but some targets require multiple binary files.
 proc gdb_rename_execfile { binfile1 binfile2 } {
     file rename -force [exec_target_file ${binfile1}] \
-		       [exec_target_file ${binfile2}]
+	[exec_target_file ${binfile2}]
     if { [exec_target_file ${binfile1}] != [exec_symbol_file ${binfile1}] } {
 	file rename -force [exec_symbol_file ${binfile1}] \
-			   [exec_symbol_file ${binfile2}]
+	    [exec_symbol_file ${binfile2}]
     }
 }
 
@@ -8673,7 +8673,7 @@ proc standard_output_file_with_gdb_instance {basename} {
     set count $gdb_instances
 
     if {$count == 0} {
-      return [standard_output_file $basename]
+	return [standard_output_file $basename]
     }
     return [standard_output_file ${basename}.${count}]
 }
@@ -9129,87 +9129,87 @@ proc gdb_get_line_number { text { file "" } } {
 #	is accepted.
 
 proc gdb_continue_to_end {{mssg ""} {command continue} {allow_extra 0}} {
-  global inferior_exited_re use_gdb_stub
+    global inferior_exited_re use_gdb_stub
 
-  if {$mssg == ""} {
-      set text "continue until exit"
-  } else {
-      set text "continue until exit at $mssg"
-  }
-
-  if {$allow_extra} {
-      set extra ".*"
-  } elseif {[istarget *-*-cygwin*] || [istarget *-*-mingw*]} {
-      # On Windows, even on supposedly single-threaded programs, we
-      # may see thread exit output when running to end, for threads
-      # spawned by the runtime.  E.g.:
-      #
-      #  (gdb) continue
-      #  Continuing.
-      #  [Thread 14364.0x21d4 exited with code 0]
-      #  [Thread 14364.0x4374 exited with code 0]
-      #  [Thread 14364.0x3aec exited with code 0]
-      #  [Thread 14364.0x3368 exited with code 0]
-      #  [Inferior 1 (process 14364) exited normally]
-      #
-      set extra "(\\\[Thread \[^\r\n\]+ exited with code $::decimal\\\]\r\n)*"
-  } else {
-      set extra ""
-  }
-
-  # By default, we don't rely on exit() behavior of remote stubs --
-  # it's common for exit() to be implemented as a simple infinite
-  # loop, or a forced crash/reset.  For native targets, by default, we
-  # assume process exit is reported as such.  If a non-reliable target
-  # is used, we set a breakpoint at exit, and continue to that.
-  if { [target_info exists exit_is_reliable] } {
-      set exit_is_reliable [target_info exit_is_reliable]
-  } else {
-      set exit_is_reliable [expr {! $use_gdb_stub}]
-  }
-
-  if { ! $exit_is_reliable } {
-    if {![gdb_breakpoint "exit"]} {
-      return 0
+    if {$mssg == ""} {
+	set text "continue until exit"
+    } else {
+	set text "continue until exit at $mssg"
     }
-    gdb_test $command "Continuing..*Breakpoint .*exit.*" \
-	$text
-  } else {
-    # Continue until we exit.  Should not stop again.
-    # Don't bother to check the output of the program, that may be
-    # extremely tough for some remote systems.
-    gdb_test $command \
-      "Continuing.\[\r\n0-9\]+${extra}(... EXIT code 0\[\r\n\]+|$inferior_exited_re normally).*"\
-	$text
-  }
+
+    if {$allow_extra} {
+	set extra ".*"
+    } elseif {[istarget *-*-cygwin*] || [istarget *-*-mingw*]} {
+	# On Windows, even on supposedly single-threaded programs, we
+	# may see thread exit output when running to end, for threads
+	# spawned by the runtime.  E.g.:
+	#
+	#  (gdb) continue
+	#  Continuing.
+	#  [Thread 14364.0x21d4 exited with code 0]
+	#  [Thread 14364.0x4374 exited with code 0]
+	#  [Thread 14364.0x3aec exited with code 0]
+	#  [Thread 14364.0x3368 exited with code 0]
+	#  [Inferior 1 (process 14364) exited normally]
+	#
+	set extra "(\\\[Thread \[^\r\n\]+ exited with code $::decimal\\\]\r\n)*"
+    } else {
+	set extra ""
+    }
+
+    # By default, we don't rely on exit() behavior of remote stubs --
+    # it's common for exit() to be implemented as a simple infinite
+    # loop, or a forced crash/reset.  For native targets, by default, we
+    # assume process exit is reported as such.  If a non-reliable target
+    # is used, we set a breakpoint at exit, and continue to that.
+    if { [target_info exists exit_is_reliable] } {
+	set exit_is_reliable [target_info exit_is_reliable]
+    } else {
+	set exit_is_reliable [expr {! $use_gdb_stub}]
+    }
+
+    if { ! $exit_is_reliable } {
+	if {![gdb_breakpoint "exit"]} {
+	    return 0
+	}
+	gdb_test $command "Continuing..*Breakpoint .*exit.*" \
+	    $text
+    } else {
+	# Continue until we exit.  Should not stop again.
+	# Don't bother to check the output of the program, that may be
+	# extremely tough for some remote systems.
+	gdb_test $command \
+	    "Continuing.\[\r\n0-9\]+${extra}(... EXIT code 0\[\r\n\]+|$inferior_exited_re normally).*"\
+	    $text
+    }
 }
 
 proc rerun_to_main {} {
-  global gdb_prompt use_gdb_stub
+    global gdb_prompt use_gdb_stub
 
-  if {$use_gdb_stub} {
-    gdb_run_cmd
-    gdb_expect {
-      -re ".*Breakpoint .*main .*$gdb_prompt $"\
-	      {pass "rerun to main" ; return 0}
-      -re "$gdb_prompt $"\
-	      {fail "rerun to main" ; return 0}
-      timeout {fail "(timeout) rerun to main" ; return 0}
+    if {$use_gdb_stub} {
+	gdb_run_cmd
+	gdb_expect {
+	    -re ".*Breakpoint .*main .*$gdb_prompt $"\
+		{pass "rerun to main" ; return 0}
+	    -re "$gdb_prompt $"\
+		{fail "rerun to main" ; return 0}
+	    timeout {fail "(timeout) rerun to main" ; return 0}
+	}
+    } else {
+	send_gdb "run\n"
+	gdb_expect {
+	    -re "The program .* has been started already.*y or n. $" {
+		send_gdb "y\n" answer
+		exp_continue
+	    }
+	    -re "Starting program.*$gdb_prompt $"\
+		{pass "rerun to main" ; return 0}
+	    -re "$gdb_prompt $"\
+		{fail "rerun to main" ; return 0}
+	    timeout {fail "(timeout) rerun to main" ; return 0}
+	}
     }
-  } else {
-    send_gdb "run\n"
-    gdb_expect {
-      -re "The program .* has been started already.*y or n. $" {
-	  send_gdb "y\n" answer
-	  exp_continue
-      }
-      -re "Starting program.*$gdb_prompt $"\
-	      {pass "rerun to main" ; return 0}
-      -re "$gdb_prompt $"\
-	      {fail "rerun to main" ; return 0}
-      timeout {fail "(timeout) rerun to main" ; return 0}
-    }
-  }
 }
 
 # Return true if EXECUTABLE contains a .gdb_index or .debug_names index section.
@@ -9508,21 +9508,21 @@ gdb_caching_proc gdb_has_argv0 {} {
     file delete $obj
 
     if { !$result
-      && ([istarget *-*-linux*]
-	  || [istarget *-*-freebsd*] || [istarget *-*-kfreebsd*]
-	  || [istarget *-*-netbsd*] || [istarget *-*-knetbsd*]
-	  || [istarget *-*-openbsd*]
-	  || [istarget *-*-darwin*]
-	  || [istarget *-*-solaris*]
-	  || [istarget *-*-aix*]
-	  || [istarget *-*-gnu*]
-	  || [istarget *-*-cygwin*] || [istarget *-*-mingw32*]
-	  || [istarget *-*-*djgpp*] || [istarget *-*-go32*]
-	  || [istarget *-wince-pe] || [istarget *-*-mingw32ce*]
-	  || [istarget *-*-osf*]
-	  || [istarget *-*-dicos*]
-	  || [istarget *-*-*vms*]
-	  || [istarget *-*-lynx*178]) } {
+	 && ([istarget *-*-linux*]
+	     || [istarget *-*-freebsd*] || [istarget *-*-kfreebsd*]
+	     || [istarget *-*-netbsd*] || [istarget *-*-knetbsd*]
+	     || [istarget *-*-openbsd*]
+	     || [istarget *-*-darwin*]
+	     || [istarget *-*-solaris*]
+	     || [istarget *-*-aix*]
+	     || [istarget *-*-gnu*]
+	     || [istarget *-*-cygwin*] || [istarget *-*-mingw32*]
+	     || [istarget *-*-*djgpp*] || [istarget *-*-go32*]
+	     || [istarget *-wince-pe] || [istarget *-*-mingw32ce*]
+	     || [istarget *-*-osf*]
+	     || [istarget *-*-dicos*]
+	     || [istarget *-*-*vms*]
+	     || [istarget *-*-lynx*178]) } {
 	fail "argv\[0\] should be available on this target"
     }
 
@@ -9635,7 +9635,7 @@ proc gdb_gnu_strip_debug { dest args } {
     verbose "result is $result"
     verbose "output is $output"
     if {$result == 1} {
-      return 1
+	return 1
     }
 
     # Workaround PR binutils/10802:
@@ -9649,7 +9649,7 @@ proc gdb_gnu_strip_debug { dest args } {
     verbose "result is $result"
     verbose "output is $output"
     if {$result == 1} {
-      return 1
+	return 1
     }
 
     # If no-main is passed, strip the symbol for main from the separate
@@ -9741,7 +9741,7 @@ proc test_class_help { command_class expected_initial_lines {list_of_commands {}
 	"Type \"help\" followed by command name for full documentation\.[\r\n]+"
     }
     set l_entire_body [concat $expected_initial_lines $l_list_of_commands \
-		       $l_stock_body $help_list_trailer]
+			   $l_stock_body $help_list_trailer]
 
     help_test_raw "help ${command_class}" $l_entire_body $testname
 }
@@ -9774,8 +9774,8 @@ proc test_prefix_command_help { command_list expected_initial_lines args } {
     # Use 'list' and not just {} because we want variables to
     # be expanded in this list.
     set l_stock_body [list\
-	 "List of \"$full_command\" subcommands\:.*\[\r\n\]+"\
-	 "Type \"help $full_command\" followed by subcommand name for full documentation\.\[\r\n\]+"]
+			  "List of \"$full_command\" subcommands\:.*\[\r\n\]+"\
+			  "Type \"help $full_command\" followed by subcommand name for full documentation\.\[\r\n\]+"]
     set l_entire_body [concat $expected_initial_lines $l_stock_body $help_list_trailer]
     if {[llength $args]>0} {
 	help_test_raw "help ${command}" $l_entire_body [lindex $args 0]
@@ -10397,8 +10397,8 @@ gdb_caching_proc gdb_target_symbol_prefix {} {
     set result [catch {exec $objdump_program --syms $obj} output]
 
     if { $result == 0 \
-	&& ![regexp -lineanchor \
-	     { ([^ a-zA-Z0-9]*)main$} $output dummy prefix] } {
+	     && ![regexp -lineanchor \
+		      { ([^ a-zA-Z0-9]*)main$} $output dummy prefix] } {
 	verbose "gdb_target_symbol_prefix: Could not find main in objdump output; returning null prefix" 2
     }
 
@@ -10485,8 +10485,8 @@ gdb_caching_proc support_nested_function_tests {} {
 # prepended.  (See gdb_target_symbol_prefix, above.)
 
 proc gdb_target_symbol { symbol } {
-  set prefix [gdb_target_symbol_prefix]
-  return "${prefix}${symbol}"
+    set prefix [gdb_target_symbol_prefix]
+    return "${prefix}${symbol}"
 }
 
 # gdb_target_symbol_prefix_flags_asm returns a string that can be
@@ -10899,7 +10899,7 @@ proc gdb_debug_init { } {
     global gdb_prompt
 
     if {![gdb_debug_enabled]} {
-      return;
+	return;
     }
 
     # First ensure logging is off.
@@ -10912,7 +10912,7 @@ proc gdb_debug_init { } {
 
     global gdbdebug
     foreach entry [split $gdbdebug ,] {
-      send_gdb "set debug $entry 1\n"
+	send_gdb "set debug $entry 1\n"
     }
 
     # Now that everything is set, enable logging.
@@ -10963,7 +10963,7 @@ proc gdb_stdin_log_write { message {type standard} } {
 
     global in_file
     if {![info exists in_file]} {
-      return
+	return
     }
 
     # Check message types.
@@ -11079,7 +11079,7 @@ gdb_caching_proc supports_fcf_protection {} {
 	int main () {
 	    return 0;
 	}
-  } executable "additional_flags=-fcf-protection=full"]
+    } executable "additional_flags=-fcf-protection=full"]
 }
 
 # Return true if symbols were read in using -readnow.  Otherwise,
@@ -11482,20 +11482,20 @@ gdb_caching_proc have_avx {} {
 
     # Compile a test program.
     set src {
-       #include "nat/x86-cpuid.h"
+	#include "nat/x86-cpuid.h"
 
 	int main() {
-	  unsigned int eax, ebx, ecx, edx;
+	    unsigned int eax, ebx, ecx, edx;
 
-	if (!x86_cpuid (1, &eax, &ebx, &ecx, &edx)) {
-	  return 0;
-	}
+	    if (!x86_cpuid (1, &eax, &ebx, &ecx, &edx)) {
+		return 0;
+	    }
 
-	if ((ecx & (bit_AVX | bit_OSXSAVE)) == (bit_AVX | bit_OSXSAVE)) {
-	  return 1;
-	} else {
-	  return 0;
-	}
+	    if ((ecx & (bit_AVX | bit_OSXSAVE)) == (bit_AVX | bit_OSXSAVE)) {
+		return 1;
+	    } else {
+		return 0;
+	    }
 	}
     }
     set compile_flags "incdir=${srcdir}/.."
@@ -11519,49 +11519,49 @@ gdb_caching_proc have_avx {} {
 
 # Return 1 if target supports avx2, otherwise return 0.
 gdb_caching_proc have_avx2 {} {
-	global srcdir
+    global srcdir
 
-	set me "have_avx2"
-	if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
-	    verbose "$me: target does not support avx2, returning 0" 2
-	    return 0
-	}
+    set me "have_avx2"
+    if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
+	verbose "$me: target does not support avx2, returning 0" 2
+	return 0
+    }
 
-	# Compile a test program.
-	set src {
-	   #include "nat/x86-cpuid.h"
+    # Compile a test program.
+    set src {
+	#include "nat/x86-cpuid.h"
 
-	    int main() {
-	      unsigned int eax, ebx, ecx, edx;
+	int main() {
+	    unsigned int eax, ebx, ecx, edx;
 
 	    if (!x86_cpuid_count (7, 0, &eax, &ebx, &ecx, &edx)) {
 		return 0;
 	    }
 
 	    if ((ebx & bit_AVX2) == bit_AVX2) {
-	      return 1;
+		return 1;
 	    } else {
-	      return 0;
+		return 0;
 	    }
-	    }
 	}
-	set compile_flags "incdir=${srcdir}/.."
-	if {![gdb_simple_compile $me $src executable $compile_flags]} {
-	    return 0
-	}
+    }
+    set compile_flags "incdir=${srcdir}/.."
+    if {![gdb_simple_compile $me $src executable $compile_flags]} {
+	return 0
+    }
 
-	set target_obj [gdb_remote_download target $obj]
-	set result [remote_exec target $target_obj]
-	set status [lindex $result 0]
-	set output [lindex $result 1]
-	if { $output != "" } {
-	    set status 0
-	}
+    set target_obj [gdb_remote_download target $obj]
+    set result [remote_exec target $target_obj]
+    set status [lindex $result 0]
+    set output [lindex $result 1]
+    if { $output != "" } {
+	set status 0
+    }
 
-	remote_file build delete $obj
+    remote_file build delete $obj
 
-	verbose "$me: returning $status" 2
-	return $status
+    verbose "$me: returning $status" 2
+    return $status
 }
 
 # Called as
@@ -11949,7 +11949,7 @@ gdb_caching_proc have_epilogue_line_info {} {
 	}
     }
     if {![gdb_simple_compile "simple_program" $main]} {
-	 return False
+	return False
     }
 
     clean_restart
