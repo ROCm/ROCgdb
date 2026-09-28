@@ -3137,6 +3137,9 @@ gdb_caching_proc allow_dlmopen_tests {} {
 	    return 42;
 	}
     }
+
+    # Note: we use a "for ... if (1) ..." trick to make emacs tcl-mode indent
+    # the for loop as if it was an if.
     set src {
 	#define _GNU_SOURCE
 	#include <dlfcn.h>
@@ -3158,9 +3161,11 @@ gdb_caching_proc allow_dlmopen_tests {} {
 
 	    r_debug = 0;
 	    /* Taken from /usr/include/link.h.  */
-	    for (dyn = _DYNAMIC; dyn->d_tag != DT_NULL; ++dyn)
-		if (dyn->d_tag == DT_DEBUG)
+	    for (dyn = _DYNAMIC; dyn->d_tag != DT_NULL; ++dyn) if (1) {
+		if (dyn->d_tag == DT_DEBUG) {
 		    r_debug = (struct r_debug *) dyn->d_un.d_ptr;
+		}
+	    }
 
 	    if (!r_debug) {
 		printf ("r_debug not found.\n");
@@ -11482,13 +11487,15 @@ gdb_caching_proc have_avx {} {
 	int main() {
 	  unsigned int eax, ebx, ecx, edx;
 
-	if (!x86_cpuid (1, &eax, &ebx, &ecx, &edx))
+	if (!x86_cpuid (1, &eax, &ebx, &ecx, &edx)) {
 	  return 0;
+	}
 
-	if ((ecx & (bit_AVX | bit_OSXSAVE)) == (bit_AVX | bit_OSXSAVE))
+	if ((ecx & (bit_AVX | bit_OSXSAVE)) == (bit_AVX | bit_OSXSAVE)) {
 	  return 1;
-	else
+	} else {
 	  return 0;
+	}
 	}
     }
     set compile_flags "incdir=${srcdir}/.."
@@ -11527,13 +11534,15 @@ gdb_caching_proc have_avx2 {} {
 	    int main() {
 	      unsigned int eax, ebx, ecx, edx;
 
-	    if (!x86_cpuid_count (7, 0, &eax, &ebx, &ecx, &edx))
-	      return 0;
+	    if (!x86_cpuid_count (7, 0, &eax, &ebx, &ecx, &edx)) {
+		return 0;
+	    }
 
-	    if ((ebx & bit_AVX2) == bit_AVX2)
+	    if ((ebx & bit_AVX2) == bit_AVX2) {
 	      return 1;
-	    else
+	    } else {
 	      return 0;
+	    }
 	    }
 	}
 	set compile_flags "incdir=${srcdir}/.."
@@ -11641,8 +11650,9 @@ gdb_caching_proc has_hw_wp_support {} {
 	int main (void) {
 	    volatile int local;
 	    local = 1;
-	    if (local == 1)
+	    if (local == 1) {
 		return 1;
+	    }
 	    return 0;
 	}
     }
