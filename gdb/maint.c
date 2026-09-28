@@ -1230,7 +1230,8 @@ scoped_time_it::~scoped_time_it ()
 		     "user+sys %.03f, %.01f %% CPU\n",
 		     m_what, wall_ms / 1000.0, user_ms / 1000.0,
 		     sys_ms / 1000.0, user_plus_sys_ms / 1000.0,
-		     user_plus_sys_ms * 100.0 / wall_ms);
+		     (wall_ms == 0
+		      ? 0.0 : user_plus_sys_ms * 100.0 / wall_ms));
   gdb_stdlog->write_async_safe (str.data (), str.size ());
 }
 
