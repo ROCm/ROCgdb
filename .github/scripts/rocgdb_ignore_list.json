@@ -10,6 +10,8 @@
     "gdb.dwarf2/dw2-skip-prologue.exp",
     "gdb.dwarf2/dw2-unresolved.exp",
     "gdb.dwarf2/fission-dw-form-strx.exp",
-    "gdb.dwarf2/pr13961.exp"
+    "gdb.dwarf2/pr13961.exp",
+    "gdb.rocm/multi-inferior-run-spurious-waves.exp",
+    "gdb.rocm/step-schedlock-spurious-waves.exp"
   ]
 }
