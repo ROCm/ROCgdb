@@ -34,10 +34,12 @@
    functionality is available to the user, but many characters (those
    outside the narrow range) will be displayed as escapes.
 
-   Finally, some systems do not have iconv, or are really broken
-   (e.g., Solaris, which almost has all of this working, but where
-   just enough is broken to make it too hard to use).  Here we provide
-   a phony iconv which only handles a single character set, and we
+   While the Solaris 11.4 system headers don't define __STDC_ISO_10646__
+   (it's a C17 addition while Solaris libc only conforms to C11), the
+   system iconv works well enough.
+
+   Finally, some systems do not have iconv, or are really broken.  Here we
+   provide a phony iconv which only handles a single character set, and we
    provide wrappers for the wchar_t functionality we use.  */
 
 
@@ -59,7 +61,8 @@
    iconvlist.  */
 #if defined (HAVE_ICONV) && defined (HAVE_BTOWC) \
   && (defined (__STDC_ISO_10646__) \
-      || (defined (_LIBICONV_VERSION) && _LIBICONV_VERSION >= 0x108))
+      || (defined (_LIBICONV_VERSION) && _LIBICONV_VERSION >= 0x108) \
+      || (defined (__sun__) && defined (__svr4__)))
 
 using gdb_wchar_t = wchar_t;
 using gdb_wint_t = wint_t;
@@ -88,7 +91,8 @@ using gdb_wint_t = wint_t;
    Sonoma specifically, but it is desirable for binaries built for
    older versions of macOS to still work on newer ones such as Sonoma,
    so there is no version check here for this workaround.  */
-#if defined (__STDC_ISO_10646__) || defined (__APPLE__)
+#if defined (__STDC_ISO_10646__) || defined (__APPLE__) \
+  || (defined (__sun__) && defined (__svr4__))
 #define USE_INTERMEDIATE_ENCODING_FUNCTION
 #define INTERMEDIATE_ENCODING intermediate_encoding ()
 const char *intermediate_encoding (void);

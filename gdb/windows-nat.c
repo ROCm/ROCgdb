@@ -1366,15 +1366,20 @@ windows_nat_target::thread_events (bool enable)
   m_report_thread_events = enable;
 }
 
-/* True if there is any resumed thread.  */
+/* True if there is any resumed thread, or no thread at all.  */
 
 bool
 windows_nat_target::any_resumed_thread ()
 {
+  bool has_thread = false;
   for (thread_info &thread : all_non_exited_threads (this))
-    if (thread.internal_state () == THREAD_INT_RUNNING)
-      return true;
-  return false;
+    {
+      has_thread = true;
+      if (thread.internal_state () == THREAD_INT_RUNNING)
+	return true;
+    }
+  DEBUG_EVENTS ("any_resumed_thread: has_thread=%d", has_thread);
+  return !has_thread;
 }
 
 /* Called for both EXIT_THREAD_DEBUG_EVENT and

@@ -160,6 +160,7 @@ abbrev_table::read (struct dwarf2_section_info *section,
 	    case DW_AT_specification:
 	    case DW_AT_abstract_origin:
 	    case DW_AT_extension:
+	    case DW_AT_signature:
 	      has_specification_or_origin = true;
 	      break;
 

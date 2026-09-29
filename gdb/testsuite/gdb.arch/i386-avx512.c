@@ -19,6 +19,8 @@
 
 #include "x86-cpuid.h"
 
+volatile int should_dump_core_p = 1;
+
 typedef struct
 {
   double f[8];
@@ -232,6 +234,13 @@ main (int argc, char **argv)
       /* Move initial values from array to registers and read from ZMM regs.  */
       move_zmm_data_to_reg ();
       asm ("nop"); /* third breakpoint here  */
+
+      /* Crash for OS core file.  */
+      if (should_dump_core_p)
+	{
+	  /* Generate SIGSEGV to crash.  */
+	  *(volatile int *) 0;
+	}
 
       /* Test script incremented values,
 	 move back to array and check values.  */

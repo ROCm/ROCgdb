@@ -19,6 +19,8 @@
 #ifndef GDB_UI_STYLE_H
 #define GDB_UI_STYLE_H
 
+#include <array>
+
 /* One of the color spaces that usually supported by terminals.  */
 enum class color_space
 {

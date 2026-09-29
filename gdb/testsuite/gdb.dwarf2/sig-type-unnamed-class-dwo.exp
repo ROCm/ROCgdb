@@ -1,0 +1,143 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Like sig-type-unnamed-class.exp, but with split DWARF.  The type
+# unit in the DWO file is skeletonless, which is the norm when using
+# split DWARF.
+#
+# Check that the cooked index correctly resolves the parent of a member
+# function when the class declaration stub in the DWO compile unit has
+# DW_AT_signature but no DW_AT_name, and the referenced type unit is
+# skeletonless.
+
+load_lib dwarf.exp
+
+# This test can only be run on targets which support DWARF-2 and use gas.
+require dwarf2_support
+
+standard_testfile main-foo.c -dw.S
+
+# Build the test program using VERSION for the CU/TU DWARF version.
+
+proc run_test { version } {
+    set asm_file [standard_output_file $::srcfile2]
+
+    # Setup some state based on DWARF version.
+    if { $version == 5 } {
+	set dwo_cu_opts [list fission 1 version 5 dwo_id 0xF00D]
+	set skel_cu_opts [list version 5 dwo_id 0xF00D]
+	set dwo_name_attr DW_AT_dwo_name
+    } else {
+	set dwo_cu_opts [list fission 1 version 4]
+	set skel_cu_opts [list version 4]
+	set dwo_name_attr DW_AT_GNU_dwo_name
+    }
+
+    set testfile_name ${::testfile}-${version}
+
+    Dwarf::assemble $asm_file {
+	upvar version version
+	upvar dwo_cu_opts dwo_cu_opts
+	upvar skel_cu_opts skel_cu_opts
+	upvar dwo_name_attr dwo_name_attr
+	upvar testfile_name testfile_name
+
+	declare_labels method_decl
+
+	get_func_info foo
+
+	# Type unit in the DWO file.  This is skeletonless: there is no
+	# corresponding skeleton TU in the main file.
+	tu {
+	    fission 1
+	    version $version
+	} 0xdeadbeef01234567 the_type {
+	    type_unit {
+		DW_AT_language @DW_LANG_C_plus_plus
+	    } {
+		the_type: DW_TAG_class_type {
+		    DW_AT_name the_type
+		    DW_AT_byte_size 1 DW_FORM_sdata
+		}
+	    }
+	}
+
+	set debug_addr_base [debug_addr_label]
+
+	# Compile unit in the DWO file.  Contains a class declaration
+	# stub with DW_AT_signature but no DW_AT_name, replicating what
+	# Clang emits with -fdebug-types-section.  The class name must
+	# be resolved by following the signature to the type unit.
+	cu $dwo_cu_opts {
+	    compile_unit {
+		DW_AT_language @DW_LANG_C_plus_plus
+		DW_AT_name ${::srcfile}
+		DW_AT_comp_dir .
+		if { $version == 4 } {
+		    DW_AT_GNU_dwo_id 0xF00D DW_FORM_data8
+		}
+	    } {
+		DW_TAG_class_type {
+		    DW_AT_declaration 1 DW_FORM_flag
+		    DW_AT_signature 0xdeadbeef01234567 DW_FORM_ref_sig8
+		} {
+		    method_decl: DW_TAG_subprogram {
+			DW_AT_name method
+			DW_AT_linkage_name _ZN8the_type6methodEv
+			DW_AT_declaration 1 DW_FORM_flag
+		    }
+		}
+
+		DW_TAG_subprogram {
+		    DW_AT_specification :$method_decl
+		    DW_AT_low_pc $foo_start DW_FORM_GNU_addr_index
+		    DW_AT_high_pc $foo_end DW_FORM_GNU_addr_index
+		}
+	    }
+	}
+
+	# Skeleton CU in the main file.
+	cu $skel_cu_opts {
+	    compile_unit {
+		$dwo_name_attr ${testfile_name}-dw.dwo DW_FORM_strp
+		DW_AT_comp_dir .
+		DW_AT_GNU_addr_base $debug_addr_base
+		if { $version == 4 } {
+		    DW_AT_GNU_dwo_id 0xF00D DW_FORM_data8
+		}
+	    } {}
+	}
+    }
+
+    set binfile_name [standard_output_file $testfile_name]
+    set obj [standard_output_file "${testfile_name}-dw.o"]
+    if {[build_executable_and_dwo_files "build exec and dwo" $binfile_name \
+	     {nodebug} \
+	     [list $asm_file {nodebug split-dwo} $obj] \
+	     [list $::srcfile {nodebug}]]} {
+	return
+    }
+
+    clean_restart $testfile_name
+
+    # Check that GDB was able to find the parent for "method", and as
+    # a result, can correctly find this field of "the_type".
+    gdb_test "print the_type::method" \
+	[string_to_regexp " <the_type::method()>"]
+}
+
+foreach_with_prefix version { 4 5 } {
+    run_test $version
+}

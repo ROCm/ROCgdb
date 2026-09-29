@@ -24,6 +24,21 @@ if { [target_info gdb_protocol] != "" } {
     return
 }
 
+if { [istarget "*-*-solaris*"] } {
+    # This quote is taken from PR gdb/34555:
+    #
+    #   When running the gdb.base/many-headers.exp test on Solaris,
+    #   gdb consumes excessive amounts of memory.  Because Solaris
+    #   doesn't use lazy allocation, this eventually consumes all
+    #   swap, slows the machine to a crawl, and often requires a
+    #   reboot.
+    #
+    # To avoid this, and make running the testsuite easier, let's skip
+    # this test for now.
+    untested "test triggers memory exhaustion (PR gdb/34555)"
+    return
+}
+
 standard_testfile
 
 if {[build_executable "failed to prepare" $testfile $srcfile debug]} {
