@@ -2842,10 +2842,185 @@ pe_create_runtime_relocator_reference (bfd *parent)
   return abfd;
 }
 
+static void
+aarch64_make_jump_stub(const char* symbol_name, bfd* parent)
+{
+  static struct bfd_hash_table *stub_hash = NULL;
+  if (!stub_hash)
+    {
+      stub_hash = (struct bfd_hash_table *) xmalloc
+		  (sizeof (struct bfd_hash_table));
+      bfd_hash_table_init (stub_hash, bfd_hash_newfunc,
+			  sizeof (struct bfd_hash_entry));
+    }
+
+  if (pe_dll_extra_pe_debug)
+    printf ("searching for existing jump stub %s\n", symbol_name);
+
+  if (bfd_hash_lookup(stub_hash, symbol_name, false, false))
+    return;
+
+  if (pe_dll_extra_pe_debug)
+    printf ("creating jump stub for %s\n", symbol_name);
+  bfd_hash_lookup(stub_hash, symbol_name, true, true);
+
+  static unsigned tmp_stub_seq = 0;
+  char *oname = xasprintf ("jump_stub_d%06d.o", tmp_stub_seq);
+  ++tmp_stub_seq;
+
+  bfd *abfd = bfd_create (oname, parent);
+  free (oname);
+  bfd_make_writable (abfd);
+
+  bfd_set_format (abfd, bfd_object);
+  bfd_set_arch_mach (abfd, pe_details->bfd_arch, 0);
+
+  symptr = 0;
+  symtab = xmalloc (4 * sizeof (asymbol *));
+
+  asection *tx  = quick_section (abfd, ".text", SEC_CODE | SEC_HAS_CONTENTS
+				 | SEC_READONLY, 2);
+  quick_symbol (abfd, "", symbol_name, "", tx, BSF_GLOBAL, 0);
+  quick_symbol (abfd, "__imp_", symbol_name, "", bfd_und_section_ptr,
+		BSF_GLOBAL, 0);
+
+  const unsigned jmp_byte_count = sizeof (jmp_aarch64_bytes);
+  bfd_set_section_size (tx, jmp_byte_count);
+  unsigned char *td = xmalloc (jmp_byte_count);
+  tx->contents = td;
+  memcpy (td, jmp_aarch64_bytes, jmp_byte_count);
+
+  quick_reloc (abfd, 0, BFD_RELOC_AARCH64_ADR_HI21_PCREL, 2);
+  quick_reloc (abfd, 4, BFD_RELOC_AARCH64_ADD_LO12, 2);
+  save_relocs (tx);
+
+  bfd_set_symtab (abfd, symtab, symptr);
+
+  bfd_set_section_contents (abfd, tx, td, 0, jmp_byte_count);
+  bfd_make_readable (abfd);
+  add_bfd_to_link (abfd, bfd_get_filename (abfd), &link_info);
+}
+
+static void
+aarch64_make_imp_offset(const char* imp_symbol_name,
+			const char* imp_offset_name, const int offset,
+			unsigned rd, const char* caller_label, bfd* parent)
+{
+  /* offset should be an adrp immediate size.  */
+  if (offset >= (1 << 20) || offset < -(1 << 20))
+    einfo (_("%X%P: offset out of range: %d\n"), offset);
+
+  if (pe_dll_extra_pe_debug)
+    printf("symbol: %s imp_offset_name: %s offset: %u rs: %u caller: %s\n",
+	   imp_symbol_name, imp_offset_name, offset, rd, caller_label);
+
+  static const unsigned char imp_offset_bytes[] =
+    {
+      0x00, 0x00, 0x00, 0x90, /* adrp x0, <imp_symbol_name>		*/
+      0x00, 0x00, 0x40, 0xf9, /* ldr x0, [x0, :lo12:<imp_symbol_name>]	*/
+      0x00, 0x00, 0x40, 0x91, /* add x0, x0, 0, lsl 12			*/
+      0x01, 0x00, 0x00, 0x14  /* b <caller_label> + 4			*/
+    };
+
+  static unsigned tmp_stub_seq = 0;
+  char *oname = xasprintf ("imp_offset_stub_d%06d.o", tmp_stub_seq);
+  ++tmp_stub_seq;
+
+  bfd *abfd = bfd_create (oname, parent);
+  free (oname);
+  bfd_make_writable (abfd);
+
+  bfd_set_format (abfd, bfd_object);
+  bfd_set_arch_mach (abfd, pe_details->bfd_arch, 0);
+
+  symptr = 0;
+  symtab = xmalloc (5 * sizeof (asymbol *));
+
+  asection *tx = quick_section (abfd, ".text", SEC_CODE | SEC_HAS_CONTENTS
+				| SEC_READONLY, 2);
+  quick_symbol (abfd, "", imp_offset_name, "", tx, BSF_GLOBAL, 0);
+  quick_symbol (abfd, "", imp_symbol_name, "", UNDSEC, BSF_GLOBAL, 0);
+  quick_symbol (abfd, "", caller_label, "", UNDSEC, BSF_GLOBAL, 0);
+
+  const unsigned imp_offset_byte_count = sizeof (imp_offset_bytes);
+  bfd_set_section_size (tx, imp_offset_byte_count);
+  uint32_t *td = xmalloc (imp_offset_byte_count);
+  tx->contents = (bfd_byte*) td;
+  memcpy (td, imp_offset_bytes, imp_offset_byte_count);
+
+  rd &= (1 << 5) - 1;
+  td[0] |= rd;
+  td[1] |= (rd << 5) | rd;
+
+  /* The bottom 12 bits are handled outside the thunk.  */
+  unsigned imm = offset & -4096;
+  if (offset < 0)
+  {
+    /* Change ADD (immediate) to SUB (immediate).  */
+    td[2] |= 1 << 30;
+    imm = -imm;
+  }
+  imm >>= 12;
+  td[2] |= (rd << 5) | rd;
+  td[2] |= imm << 10;
+
+  quick_reloc (abfd, 0, BFD_RELOC_AARCH64_ADR_HI21_PCREL, 2);
+  quick_reloc (abfd, 4, BFD_RELOC_AARCH64_LDST64_LO12, 2);
+  quick_reloc (abfd, 12, BFD_RELOC_AARCH64_CALL26, 3);
+  save_relocs (tx);
+
+  bfd_set_symtab (abfd, symtab, symptr);
+
+  bfd_set_section_contents (abfd, tx, td, 0, imp_offset_byte_count);
+  bfd_make_readable (abfd);
+  add_bfd_to_link (abfd, bfd_get_filename (abfd), &link_info);
+}
+
 void
 pe_create_import_fixup (arelent *rel, asection *s, bfd_vma addend, char *name,
 			const char *symname)
 {
+ if (pe_details->pe_arch == PE_ARCH_aarch64)
+   {
+      if (rel->howto->bitsize == 12)
+	/* :lo12: bits are used within the replacement for the adrp
+	   instruction.  */
+	return;
+      else if (rel->howto->bitsize == 26)
+	{
+	  /* On AArch64, a single opcode is not sufficient for relocation
+	     in dynamic linking. The linker generates a jump stub instead.  */
+	  aarch64_make_jump_stub(name, s->owner);
+	  return;
+	}
+      else if (rel->howto->bitsize == 21)
+	{
+	  uint32_t opcode;
+	  if (!bfd_get_section_contents (s->owner, s, &opcode,
+					 rel->address, 4))
+	    return;
+
+	  int32_t imm = (opcode >> 5) & ((1 << 19) - 1);
+	  imm <<= 2;
+	  imm |= (opcode >> 29) & ((1 << 2) - 1);
+	  if (imm & (1 << 20))
+	    imm -= (1 << 21);
+
+	  char *imp_offset_label = xasprintf("__imp_%s", name);
+	  char *imp_label = xasprintf("%s_%x_%lx", imp_offset_label,
+				      current_sec->id,
+				      (long unsigned) rel->address);
+	  const char *fixup_name = make_import_fixup_mark (rel, name);
+	  unsigned rd = opcode & ((1 << 5) - 1);
+	  aarch64_make_imp_offset(imp_offset_label, imp_label, imm, rd,
+				  fixup_name, s->owner);
+
+	  free(imp_label);
+	  free(imp_offset_label);
+	  return;
+	}
+   }
+
   const char *fixup_name = make_import_fixup_mark (rel, name);
   bfd *b;
 

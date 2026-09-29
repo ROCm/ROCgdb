@@ -121,6 +121,17 @@ if {[istarget "aarch64-*-pe*"] || [istarget "aarch64-*-mingw*"]} {
     }
 
     run_ld_link_tests $pe_tests
+
+    set auto_import_aarch64_test "auto-import-aarch64"
+    if { [ld_assemble $as $srcdir/$subdir/auto-import-dll-aarch64.s tmpdir/auto-import-dll-aarch64.o]
+	 && [ld_assemble $as $srcdir/$subdir/auto-import-aarch64.s tmpdir/auto-import-aarch64.o]
+	 && [ld_link $ld "tmpdir/auto-import-dll.dll" "-shared tmpdir/auto-import-dll-aarch64.o --out-implib tmpdir/libauto-import-dll-aarch64.a"]
+	 && [ld_link $ld "tmpdir/auto-import-aarch64.exe" "tmpdir/auto-import-aarch64.o tmpdir/libauto-import-dll-aarch64.a"]
+	 && [regexp [file_contents "$srcdir/$subdir/auto-import-aarch64.d"] [run_host_cmd "$objdump" "-d tmpdir/auto-import-aarch64.exe"]] } {
+	pass $auto_import_aarch64_test
+    } else {
+	fail $auto_import_aarch64_test
+    }
 }
 
 run_dump_test "image_size"
@@ -185,10 +196,10 @@ if [check_shared_lib_support] {
     }
     run_dump_test "symbols-ordinals-hints-exports-ld"
     # no dlltool for these two
-    setup_xfail aarch64-*-* sh-*-*
+    setup_xfail sh-*-*
     run_dump_test "symbols-ordinals-hints-exports-dlltool"
     run_dump_test "symbols-ordinals-hints-imports-ld"
-    setup_xfail aarch64-*-* sh-*-*
+    setup_xfail sh-*-*
     run_dump_test "symbols-ordinals-hints-imports-dlltool"
     set ASFLAGS $old_ASFLAGS
 }

@@ -521,6 +521,39 @@ coff_pe_aarch64_relocate_section (bfd *output_bfd,
 
       h = obj_coff_sym_hashes (input_bfd)[symndx];
 
+      if (h && h->root.type == bfd_link_hash_defweak)
+	switch (rel->r_type)
+	  {
+	  case IMAGE_REL_ARM64_PAGEOFFSET_12A:
+	  case IMAGE_REL_ARM64_PAGEOFFSET_12L:
+	    {
+	      rel->r_ignore = 1;
+	      continue;
+	    }
+	  case IMAGE_REL_ARM64_BRANCH26:
+	    {
+	      const unsigned char prefix_length = sizeof("__imp_") - 1;
+	      h = (struct coff_link_hash_entry*)
+		  bfd_link_hash_lookup (info->hash, h->root.root.string
+					+ prefix_length, 0, 0, 1);
+	      break;
+	    }
+	  case IMAGE_REL_ARM64_PAGEBASE_REL21:
+	    {
+	      uint32_t opcode = 0x14000000; /* b <label>.  */
+	      bfd_putl32 (opcode, contents + rel->r_vaddr);
+	      rel->r_type = IMAGE_REL_ARM64_BRANCH26;
+
+	      char* imp_label = xasprintf("%s_%x_%lx", h->root.root.string,
+					  input_section->id,
+					  (long unsigned) rel->r_vaddr);
+	      h = (struct coff_link_hash_entry*)
+		  bfd_link_hash_lookup (info->hash, imp_label, 0, 0, 1);
+	      free(imp_label);
+	      break;
+	    }
+	  }
+
       if (h && h->root.type == bfd_link_hash_defined)
 	{
 	  sec = h->root.u.def.section;
