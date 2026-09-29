@@ -49,4 +49,13 @@ gdb_test "print theA->nonvirt" \
     "${::valnum_re} = {void \\(A \\* const\\)} $hex <A::nonvirt\\((void|)\\)>" \
     "print nonvirtual method."
 
-gdb_exit
+proc test_formatted {exp} {
+    set out [get_valueof "" $exp ""]
+    regexp -- [subst_vars {^.* ($::hex) .*$}] $out ignore value
+    gdb_test "print/x $exp" " = $value"
+    gdb_test "print/d $exp" " = [expr {$value}]"
+}
+
+# Test for PR gdb/34685.
+test_formatted A::nonvirt
+test_formatted theA->virt

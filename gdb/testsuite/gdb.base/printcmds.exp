@@ -1176,6 +1176,18 @@ proc test_printf_convenience_var {prefix} {
     }
 }
 
+# Test formatted print with a function.  See PR gdb/34685.
+proc test_function_print {} {
+    with_test_prefix function {
+	gdb_test_no_output "set print address on"
+	set out [get_valueof "" main ""]
+	gdb_test_no_output "set print address off"
+    }
+    regexp -- [subst_vars {^.* ($::hex) .*$}] $out ignore value
+    gdb_test "print/x main" " = $value"
+    gdb_test "print/d main" " = [expr {$value}]"
+}
+
 clean_restart
 
 gdb_test "print \$pc" "No registers\\."
@@ -1267,3 +1279,4 @@ test_print_symbol
 test_repeat_bytes
 test_radices
 test_repeat_bytes_limit
+test_function_print
