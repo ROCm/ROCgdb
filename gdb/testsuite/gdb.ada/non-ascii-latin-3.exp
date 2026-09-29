@@ -67,4 +67,4 @@ gdb_test break_2 "Breakpoint $decimal .*" \
     "gdb_breakpoint: set breakpoint at func_ż"
 
 gdb_test print_3 "warning: charset conversion failure.*" \
-     "print var_𝕯"
+    "print var_𝕯"

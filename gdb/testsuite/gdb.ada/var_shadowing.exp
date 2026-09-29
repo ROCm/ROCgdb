@@ -20,7 +20,7 @@ require allow_ada_tests
 standard_ada_testfile var_shadowing
 
 if {[gdb_compile_ada "${srcfile}" "${binfile}" \
-    executable [list debug]] != "" } {
+	 executable [list debug]] != "" } {
     return
 }
 
@@ -32,9 +32,11 @@ set i_level3 [gdb_get_line_number "I-Level3"]
 set bp_location [gdb_get_line_number "BREAK"]
 runto "var_shadowing.adb:$bp_location"
 
-gdb_test "info locals" [multi_line \
-    "i = 111\t<$testfile.adb:$i_level3>"  \
-    "i = 11\t<$testfile.adb:$i_level2, shadowed>"  \
-    "i = 1\t<$testfile.adb:$i_level1, shadowed>"  \
-    "Use \"set print shadowed off\" to hide shadowed variables." \
-] "info locals at innermost level"
+gdb_test "info locals" \
+    [multi_line \
+	 "i = 111\t<$testfile.adb:$i_level3>"  \
+	 "i = 11\t<$testfile.adb:$i_level2, shadowed>"  \
+	 "i = 1\t<$testfile.adb:$i_level1, shadowed>"  \
+	 [string_to_regexp \
+	      {Use "set print shadowed off" to hide shadowed variables.}]] \
+    "info locals at innermost level"
