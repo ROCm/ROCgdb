@@ -619,6 +619,8 @@ run_command_1 (const char *args, int from_tty, enum run_how run_how)
   infrun_debug_show_threads ("immediately after create_process",
 			     current_inferior ()->non_exited_threads ());
 
+  current_inferior ()->first_stop_pending = true;
+
   /* We're starting off a new process.  When we get out of here, in
      non-stop mode, finish the state of all threads of that process,
      but leave other threads alone, as they may be stopped in internal
