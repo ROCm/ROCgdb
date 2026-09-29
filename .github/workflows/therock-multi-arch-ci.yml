@@ -10,8 +10,10 @@
 # `ci:multi-arch` label (so it does not double up with therock-ci.yml); manual
 # dispatch always runs. Drop the label gate to switch over fully.
 #
-# TheRock ref is pinned to match .github/configs.json's therock_commit_ref.
-# Update every `@<ref>` / `ref:` below together with configs.json on a bump.
+# TheRock ref: read once from .github/configs.json (therock_commit_ref) and
+# reused everywhere via needs.configure.outputs.therock_ref. The two
+# reusable-workflow `uses: ...@<sha>` lines below are the only literals GitHub
+# requires; update_therock_deps.py keeps them in sync with configs.json.
 
 name: TheRock Multi-Arch CI
 
@@ -56,19 +58,16 @@ jobs:
   configure:
     name: Configure
     runs-on: ubuntu-24.04
-    # Presubmit is opt-in via `ci:multi-arch` during the transition;
-    # workflow_dispatch always runs.
-    if: >-
-      ${{
-        !contains(github.event.pull_request.labels.*.name, 'ci:skip') &&
-        (github.event_name != 'pull_request' ||
-         contains(github.event.pull_request.labels.*.name, 'ci:multi-arch'))
-      }}
+    # Multi-arch CI is the default gate now; single-arch CI (therock-ci.yml) is
+    # opt-in via the `ci:single-arch` label.
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'ci:skip') }}
     env:
       BASE_REF: HEAD^
     outputs:
       enable_therock_ci: ${{ steps.configure.outputs.enable_therock_ci }}
       linux_amdgpu_families: ${{ steps.families.outputs.linux_amdgpu_families }}
+      # Single source of truth for the pinned TheRock ref.
+      therock_ref: ${{ steps.therock_ref.outputs.therock_commit_ref }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -78,6 +77,12 @@ jobs:
       - name: Configure CI options
         id: configure
         run: python .github/scripts/therock_configure_ci.py
+
+      # Read the pinned TheRock ref from .github/configs.json so every ref below
+      # comes from one place (configs.json is bumped by update_therock_deps.py).
+      - name: Resolve TheRock ref
+        id: therock_ref
+        run: python3 .github/scripts/config.py therock_commit_ref
 
       # Default gfx94X (only family with a core-dump runner for rocgdb-corefile);
       # ci:run-all-archs label or the dispatch input widens it.
@@ -96,7 +101,7 @@ jobs:
   setup:
     needs: configure
     if: ${{ needs.configure.outputs.enable_therock_ci == 'true' }}
-    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05 # 2026-09-21
+    uses: ROCm/TheRock/.github/workflows/setup_multi_arch.yml@5b25aa6c10372be28208b25331ba7cdeebfc8e34 # 2026-09-28
     with:
       build_variant: "release"
       linux_amdgpu_families: ${{ needs.configure.outputs.linux_amdgpu_families }}
@@ -115,7 +120,7 @@ jobs:
       baseline_run_id: ${{ inputs.baseline_run_id || '' }}
       baseline_repository: ${{ inputs.baseline_repository || (inputs.baseline_run_id != '' && github.repository) || '' }}
       repository: ROCm/TheRock
-      ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05 # 2026-09-21
+      ref: ${{ needs.configure.outputs.therock_ref }}
       # Build this PR's ROCgdb source (-> THEROCK_ROCGDB_SOURCE_DIR).
       external_repo: >-
         {
@@ -133,7 +138,7 @@ jobs:
         needs.setup.outputs.linux_build_config != '' &&
         needs.setup.outputs.enable_build_jobs == 'true'
       }}
-    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05 # 2026-09-21
+    uses: ROCm/TheRock/.github/workflows/multi_arch_ci_linux.yml@5b25aa6c10372be28208b25331ba7cdeebfc8e34 # 2026-09-28
     with:
       build_config: ${{ needs.setup.outputs.linux_build_config }}
       test_labels: ${{ needs.setup.outputs.linux_test_labels }}
@@ -144,7 +149,7 @@ jobs:
       external_repo_config: ${{ needs.setup.outputs.external_repo_config }}
       changed_projects: "" # Test selection driven by test_labels alone.
       repository: ROCm/TheRock
-      ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05 # 2026-09-21
+      ref: ${{ needs.configure.outputs.therock_ref }}
     permissions:
       contents: read
       id-token: write
@@ -172,7 +177,7 @@ jobs:
       # core-dump runner for rocgdb-corefile.
       amdgpu_families: gfx94X
       artifact_group: ${{ fromJSON(needs.setup.outputs.linux_build_config).artifact_group }}
-      therock_ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05
+      therock_ref: ${{ needs.configure.outputs.therock_ref }}
       artifact_run_id: ${{ github.run_id }}
       projects_to_test: rocgdb-gpu,rocgdb-corefile
       test_options: "--optimization=-O3"
@@ -196,7 +201,7 @@ jobs:
       # core-dump runner for rocgdb-corefile.
       amdgpu_families: gfx94X
       artifact_group: ${{ fromJSON(needs.setup.outputs.linux_build_config).artifact_group }}
-      therock_ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05
+      therock_ref: ${{ needs.configure.outputs.therock_ref }}
       artifact_run_id: ${{ github.run_id }}
       projects_to_test: rocgdb-gpu,rocgdb-corefile
       test_options: "--optimization='-O3 -flto'"
@@ -220,7 +225,7 @@ jobs:
       # core-dump runner for rocgdb-corefile.
       amdgpu_families: gfx94X
       artifact_group: ${{ fromJSON(needs.setup.outputs.linux_build_config).artifact_group }}
-      therock_ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05
+      therock_ref: ${{ needs.configure.outputs.therock_ref }}
       artifact_run_id: ${{ github.run_id }}
       test_options: "--check-type check-read1"
 
@@ -243,7 +248,7 @@ jobs:
       # core-dump runner for rocgdb-corefile.
       amdgpu_families: gfx94X
       artifact_group: ${{ fromJSON(needs.setup.outputs.linux_build_config).artifact_group }}
-      therock_ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05
+      therock_ref: ${{ needs.configure.outputs.therock_ref }}
       artifact_run_id: ${{ github.run_id }}
       test_options: "--check-type check-readmore"
 
@@ -266,7 +271,7 @@ jobs:
       # core-dump runner for rocgdb-corefile.
       amdgpu_families: gfx94X
       artifact_group: ${{ fromJSON(needs.setup.outputs.linux_build_config).artifact_group }}
-      therock_ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05
+      therock_ref: ${{ needs.configure.outputs.therock_ref }}
       artifact_run_id: ${{ github.run_id }}
       projects_to_test: rocgdb-gpu
       test_options: >-
@@ -294,7 +299,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: "ROCm/TheRock"
-          ref: a4cdc81d1c7ad7f4f8c872ba728bbc0e3734ad05 # 2026-09-21
+          ref: ${{ needs.configure.outputs.therock_ref }}
           sparse-checkout: build_tools/github_actions
           sparse-checkout-cone-mode: true
 
