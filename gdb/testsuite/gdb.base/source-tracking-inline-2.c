@@ -42,9 +42,9 @@ main (void)
 {
   ++global_var;
 
-  int ans = foo (42) + bar (10);
+  int answer = foo (42) + bar (10);
 
   ++global_var;
 
-  return ans - global_var;
+  return answer - global_var;
 }
