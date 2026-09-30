@@ -194,6 +194,8 @@ get_ipa_tdesc (int idx)
       return tdesc_powerpc_isa207_vsx64l.get ();
     case PPC_TDESC_ISA207_HTM_VSX:
       return tdesc_powerpc_isa207_htm_vsx64l.get ();
+    case PPC_TDESC_ISA32_VSX:
+      return tdesc_powerpc_isa32_vsx64l.get ();
 #else
     case PPC_TDESC_BASE:
       return tdesc_powerpc_32l.get ();
@@ -213,6 +215,8 @@ get_ipa_tdesc (int idx)
       return tdesc_powerpc_isa207_vsx32l.get ();
     case PPC_TDESC_ISA207_HTM_VSX:
       return tdesc_powerpc_isa207_htm_vsx32l.get ();
+    case PPC_TDESC_ISA32_VSX:
+      return tdesc_powerpc_isa32_vsx32l.get ();
     case PPC_TDESC_E500:
       return tdesc_powerpc_e500l.get ();
 #endif

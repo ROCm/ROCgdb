@@ -558,6 +558,34 @@ ppc_store_pmuregset (struct regcache *regcache, const void *buf)
   supply_register_by_name (regcache, "mmcr0", &regset[32]);
 }
 
+/* Dense Math Registers (DMR).  */
+static const char *const dmr_names[] = {
+  "dmr0", "dmr1", "dmr2", "dmr3",
+  "dmr4", "dmr5", "dmr6", "dmr7"
+};
+
+/* Dense Math Register regset fill function.  */
+
+static void
+ppc_fill_dmrregset (struct regcache *regcache, void *buf)
+{
+  char *regset = (char *) buf;
+
+  for (int i = 0; i < 8; i++)
+    collect_register_by_name (regcache, dmr_names[i], &regset[i * 128]);
+}
+
+/* Dense Math Register regset store function.  */
+
+static void
+ppc_store_dmrregset (struct regcache *regcache, const void *buf)
+{
+  const char *regset = (const char *) buf;
+
+  for (int i = 0; i < 8; i++)
+    supply_register_by_name (regcache, dmr_names[i], &regset[i * 128]);
+}
+
 /* Hardware Transactional Memory special-purpose register regset fill
    function.  */
 
@@ -831,6 +859,8 @@ static struct regset_info ppc_regsets[] = {
     NULL, ppc_store_ebbregset },
   { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_PPC_PMU, 0, EXTENDED_REGS,
     ppc_fill_pmuregset, ppc_store_pmuregset },
+  { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_PPC_DMR, 0, EXTENDED_REGS,
+    ppc_fill_dmrregset, ppc_store_dmrregset },
   { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_PPC_TAR, 0, EXTENDED_REGS,
     ppc_fill_tarregset, ppc_store_tarregset },
   { PTRACE_GETREGSET, PTRACE_SETREGSET, NT_PPC_PPR, 0, EXTENDED_REGS,
@@ -926,6 +956,9 @@ ppc_target::low_arch_setup ()
 	}
     }
 
+  if (ppc_hwcap2 & PPC_FEATURE2_DMF)
+    features.isa32 = true;
+
   tdesc = ppc_linux_match_description (features);
 
   /* On 32-bit machines, check for SPE registers.
@@ -989,6 +1022,10 @@ ppc_target::low_arch_setup ()
 	  case NT_PPC_PMU:
 	    regset->size = (features.isa207 ?
 			    PPC_LINUX_SIZEOF_PMUREGSET : 0);
+	    break;
+	  case NT_PPC_DMR:
+	    regset->size = (features.isa32 ?
+			    PPC_LINUX_SIZEOF_DMRREGSET : 0);
 	    break;
 	  case NT_PPC_TM_SPR:
 	    regset->size = (features.htm ?
@@ -3415,6 +3452,8 @@ ppc_target::get_ipa_tdesc_idx ()
     return PPC_TDESC_ISA207_VSX;
   if (tdesc == tdesc_powerpc_isa207_htm_vsx64l.get ())
     return PPC_TDESC_ISA207_HTM_VSX;
+  if (tdesc == tdesc_powerpc_isa32_vsx64l.get ())
+    return PPC_TDESC_ISA32_VSX;
 #endif
 
   if (tdesc == tdesc_powerpc_32l.get ())
@@ -3435,6 +3474,8 @@ ppc_target::get_ipa_tdesc_idx ()
     return PPC_TDESC_ISA207_VSX;
   if (tdesc == tdesc_powerpc_isa207_htm_vsx32l.get ())
     return PPC_TDESC_ISA207_HTM_VSX;
+  if (tdesc == tdesc_powerpc_isa32_vsx32l.get ())
+    return PPC_TDESC_ISA32_VSX;
   if (tdesc == tdesc_powerpc_e500l.get ())
     return PPC_TDESC_E500;
 
@@ -3459,6 +3500,7 @@ initialize_low_arch (void)
   init_registers_powerpc_isa205_ppr_dscr_vsx32l ();
   init_registers_powerpc_isa207_vsx32l ();
   init_registers_powerpc_isa207_htm_vsx32l ();
+  init_registers_powerpc_isa32_vsx32l ();
   init_registers_powerpc_e500l ();
 #if __powerpc64__
   init_registers_powerpc_64l ();
@@ -3470,6 +3512,7 @@ initialize_low_arch (void)
   init_registers_powerpc_isa205_ppr_dscr_vsx64l ();
   init_registers_powerpc_isa207_vsx64l ();
   init_registers_powerpc_isa207_htm_vsx64l ();
+  init_registers_powerpc_isa32_vsx64l ();
 #endif
 
   initialize_regsets_info (&ppc_regsets_info);

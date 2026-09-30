@@ -7553,7 +7553,7 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   int have_tar = 0, have_ebb = 0, have_pmu = 0, have_htm_spr = 0;
   int have_htm_core = 0, have_htm_fpu = 0, have_htm_altivec = 0;
   int have_htm_vsx = 0, have_htm_ppr = 0, have_htm_dscr = 0;
-  int have_htm_tar = 0;
+  int have_htm_tar = 0, have_dmr = 0;
   int tdesc_wordsize = -1;
   const struct target_desc *tdesc = info.target_desc;
   tdesc_arch_data_up tdesc_data;
@@ -7882,6 +7882,27 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 	}
       else
 	have_ebb = 0;
+
+      /* Dense Math Registers (DMR).  */
+      feature = tdesc_find_feature (tdesc, "org.gnu.gdb.power.dmr");
+      if (feature != NULL)
+	{
+	  static const char *const dmr_regs[] = {
+	    "dmr0", "dmr1", "dmr2", "dmr3", "dmr4", "dmr5",
+	    "dmr6", "dmr7"
+	  };
+
+	  valid_p = 1;
+	  for (i = 0; i < ARRAY_SIZE (dmr_regs); i++)
+	    valid_p &= tdesc_numbered_register (feature, tdesc_data.get (),
+						PPC_DMR0_REGNUM + i,
+						dmr_regs[i]);
+	  if (!valid_p)
+	    return NULL;
+	  have_dmr = 1;
+	}
+      else
+	have_dmr = 0;
 
       /* Subset of the ISA 2.07 Performance Monitor Registers provided
 	 by Linux.  */
@@ -8290,6 +8311,7 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->ppc_siar_regnum = have_pmu ? PPC_SIAR_REGNUM : -1;
   tdep->ppc_sdar_regnum = have_pmu ? PPC_SDAR_REGNUM : -1;
   tdep->ppc_sier_regnum = have_pmu ? PPC_SIER_REGNUM : -1;
+  tdep->ppc_dmr0_regnum = have_dmr ? PPC_DMR0_REGNUM : -1;
 
   tdep->have_htm_spr = have_htm_spr;
   tdep->have_htm_core = have_htm_core;

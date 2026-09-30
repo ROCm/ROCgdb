@@ -64,5 +64,6 @@ extern const struct regset ppc32_linux_cvsxregset;
 extern const struct regset ppc32_linux_cpprregset;
 extern const struct regset ppc32_linux_cdscrregset;
 extern const struct regset ppc32_linux_ctarregset;
+extern const struct regset ppc32_linux_dmrregset;
 
 #endif /* GDB_PPC_LINUX_TDEP_H */

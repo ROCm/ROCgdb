@@ -282,6 +282,10 @@ struct ppc_gdbarch_tdep : gdbarch_tdep_base
     int ppc_sdar_regnum = 0;
     int ppc_sier_regnum = 0;
 
+    /* Register number of dmr0, or -1 if Dense Math registers are not
+       available.  */
+    int ppc_dmr0_regnum = 0;
+
     /* Hardware Transactional Memory registers.  */
     int have_htm_spr = 0;
     int have_htm_core = 0;
@@ -389,6 +393,16 @@ enum {
   PPC_CPPR_REGNUM = 321,
   PPC_CDSCR_REGNUM = 322,
   PPC_CTAR_REGNUM = 323,
+
+  /* Dense Math Registers (DMR).  */
+  PPC_DMR0_REGNUM = 324,
+  PPC_DMR1_REGNUM,
+  PPC_DMR2_REGNUM,
+  PPC_DMR3_REGNUM,
+  PPC_DMR4_REGNUM,
+  PPC_DMR5_REGNUM,
+  PPC_DMR6_REGNUM,
+  PPC_DMR7_REGNUM,
   PPC_NUM_REGS
 };
 
@@ -415,6 +429,8 @@ enum {
 
 #define PPC_IS_CKPTVSX_REGNUM(i) \
   ((i) >= PPC_CVSR0_UPPER_REGNUM && (i) < (PPC_CVSR0_UPPER_REGNUM + 32))
+
+#define PPC_IS_DMR_REGNUM(i) ((i) >= PPC_DMR0_REGNUM && (i) <= PPC_DMR7_REGNUM)
 
 /* An instruction to match.  */
 
