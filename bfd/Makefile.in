@@ -180,7 +180,7 @@ am__installdirs = "$(DESTDIR)$(bfdlibdir)" "$(DESTDIR)$(infodir)" \
 	"$(DESTDIR)$(bfdincludedir)"
 LTLIBRARIES = $(bfdlib_LTLIBRARIES) $(noinst_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-am__objects_1 = archive.lo archures.lo bfd.lo bfdio.lo cache.lo \
+am__objects_1 = archive.lo archures.lo bfd.lo bfdio.lo btf.lo cache.lo \
 	coff-bfd.lo compress.lo corefile.lo format.lo hash.lo \
 	libbfd.lo linker.lo merge.lo opncls.lo reloc.lo section.lo \
 	simple.lo stab-syms.lo stabs.lo syms.lo targets.lo binary.lo \
@@ -544,7 +544,7 @@ BFD_H = bfd.h
 # need two copies of the executable, one to download and one for the
 # debugger).
 BFD32_LIBS = \
-	archive.lo archures.lo bfd.lo bfdio.lo cache.lo \
+	archive.lo archures.lo bfd.lo bfdio.lo btf.lo cache.lo \
 	coff-bfd.lo compress.lo corefile.lo format.lo \
 	hash.lo libbfd.lo linker.lo merge.lo opncls.lo reloc.lo \
 	section.lo simple.lo stab-syms.lo stabs.lo syms.lo targets.lo \
@@ -552,7 +552,7 @@ BFD32_LIBS = \
 
 BFD64_LIBS = archive64.lo
 BFD32_LIBS_CFILES = \
-	archive.c archures.c bfd.c bfdio.c cache.c coff-bfd.c \
+	archive.c archures.c bfd.c bfdio.c btf.c cache.c coff-bfd.c \
 	compress.c corefile.c format.c hash.c \
 	libbfd.c linker.c merge.c opncls.c reloc.c \
 	section.c simple.c stab-syms.c stabs.c syms.c targets.c \
@@ -1166,7 +1166,7 @@ BUILD_CFILES = \
 
 CFILES = $(SOURCE_CFILES) $(BUILD_CFILES)
 SOURCE_HFILES = \
-	aout-target.h aoutx.h arc-got.h arc-plt.h \
+	aout-target.h aoutx.h arc-got.h arc-plt.h btf.h \
 	coff-arm.h coff-bfd.h coffcode.h coffswap.h \
 	cpu-aarch64.h cpu-arm.h cpu-h8300.h cpu-m68k.h cpu-riscv.h \
 	ecoff-bfd.h ecoffswap.h \
@@ -1219,12 +1219,12 @@ EXTRA_libbfd_la_SOURCES = $(CFILES)
 libbfd_la_DEPENDENCIES = $(OFILES) ofiles ../libsframe/libsframe.la
 libbfd_la_LIBADD = `cat ofiles` @SHARED_LIBADD@ $(LIBDL) $(ZLIB) $(ZSTD_LIBS) ../libsframe/libsframe.la
 BFD_H_FILES = bfd-in.h libbfd.c hash.c section.c syms.c \
-	archive.c archures.c bfd.c bfdio.c \
+	archive.c archures.c bfd.c bfdio.c btf.c \
 	cache.c compress.c corefile.c format.c linker.c opncls.c \
 	reloc.c simple.c stab-syms.c stabs.c targets.c
 
 BFD64_H_FILES = archive64.c
-LIBBFD_H_FILES = libbfd-in.h libbfd.c bfd.c bfdio.c \
+LIBBFD_H_FILES = libbfd-in.h libbfd.c bfd.c bfdio.c btf.c \
 	archive.c archures.c cache.c hash.c linker.c opncls.c \
 	reloc.c section.c stabs.c targets.c
 
