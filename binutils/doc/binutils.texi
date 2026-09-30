@@ -2353,6 +2353,7 @@ objdump [@option{-a}|@option{--archive-headers}]
         [@option{--debug-dir=@file{dir}}]
         [@option{--map-global-vars}]
         [@option{-L}|@option{--process-links}]
+        [@option{--btf=}@var{section}]
         [@option{--ctf=}@var{section}]
         [@option{--sframe=}@var{section}]
         [@option{-G}|@option{--stabs}]
@@ -3016,6 +3017,12 @@ Enable additional checks for consistency of Dwarf information.
 
 @item --debug-dir=@file{dir}
 Search @file{dir} when looking for separate debug info files.
+
+@item --btf[=@var{section}]
+@cindex BTF
+@cindex BPF Type Format
+Display the contents of the specified BTF section.
+By default, display the contents of the section named @var{.BTF}.
 
 @include ctf.options.texi
 
