@@ -1118,6 +1118,7 @@ COMMON_SFILES = \
 	gmp-utils.c \
 	gnu-v2-abi.c \
 	gnu-v3-abi.c \
+	msvc-abi.c \
 	go-lang.c \
 	go-typeprint.c \
 	go-valprint.c \

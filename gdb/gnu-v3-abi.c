@@ -390,7 +390,7 @@ gnuv3_rtti_type (struct value *value,
 /* Return a function pointer for CONTAINER's VTABLE_INDEX'th virtual
    function, of type FNTYPE.  */
 
-static struct value *
+struct value *
 gnuv3_get_virtual_fn (struct gdbarch *gdbarch, struct value *container,
 		      struct type *fntype, int vtable_index)
 {
@@ -1372,7 +1372,7 @@ is_move_constructor_type (struct type *class_type,
    the 'artificial' flag, the 'defaulted' attribute, and the
    'deleted' attribute.  */
 
-static struct language_pass_by_ref_info
+struct language_pass_by_ref_info
 gnuv3_pass_by_reference (struct type *type)
 {
   int fieldnum, fieldelem;

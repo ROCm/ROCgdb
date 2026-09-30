@@ -255,4 +255,14 @@ struct cp_abi_ops
 extern int register_cp_abi (struct cp_abi_ops *abi);
 extern void set_cp_abi_as_auto_default (const char *short_name);
 
+/* Functions from gnu-v3-abi.c exposed for reuse by other ABI modules.
+   Both are made non-static in gnu-v3-abi.c specifically for this
+   purpose.  */
+extern struct language_pass_by_ref_info
+gnuv3_pass_by_reference (struct type *type);
+
+extern struct value *
+gnuv3_get_virtual_fn (struct gdbarch *gdbarch, struct value *container,
+		      struct type *fntype, int vtable_index);
+
 #endif /* GDB_CP_ABI_H */
