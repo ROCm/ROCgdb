@@ -2488,8 +2488,9 @@ user_visible_resume_ptid (int step)
 	 individually.  */
       resume_ptid = inferior_ptid;
     }
-  else if ((scheduler_mode == schedlock_on)
-	   || (scheduler_mode == schedlock_step && step))
+  else if (((scheduler_mode == schedlock_on)
+	    || (scheduler_mode == schedlock_step && step))
+	   && !current_inferior ()->first_stop_pending)
     {
       /* User-settable 'scheduler' mode requires solo thread
 	 resume.  */
@@ -3298,6 +3299,9 @@ thread_still_needs_step_over (struct thread_info *tp)
 static bool
 schedlock_applies (struct thread_info *tp)
 {
+  if (tp->inf->first_stop_pending)
+    return false;
+
   return (scheduler_mode == schedlock_on
 	  || (scheduler_mode == schedlock_step
 	      && tp->control.stepping_command)
@@ -9810,6 +9814,8 @@ normal_stop ()
   get_last_target_status (nullptr, nullptr, &last);
 
   new_stop_id ();
+
+  current_inferior ()->first_stop_pending = false;
 
   /* If an exception is thrown from this point on, make sure to
      propagate GDB's knowledge of the executing state to the
