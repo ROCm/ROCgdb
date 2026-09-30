@@ -124,9 +124,27 @@ info-local: $(MANS)
 	        (rm -f $@.T$$$$ && exit 1)
 	$(AM_V_at)rm -f %D%/as.pod
 
+# Wire in the TOC navigation sidebar with the HTML manual.
+#
+TOC_SIDEBAR_DIR = $(srcdir)/../texinfo/toc-sidebar
+TOC_SIDEBAR_ASSETS = $(TOC_SIDEBAR_DIR)/toc-sidebar.css \
+		     $(TOC_SIDEBAR_DIR)/toc-sidebar.js
+
+# List of extra stylesheets to brand the HTML manual.  Each stylesheet
+# is referenced with --css-ref and copied into the output directory.
+# It is empty by default and can be set on the make command line, so a
+# build can theme the manual without editing the sources.
+MANUAL_CSS =
+
+# ROCm branding.
+MANUAL_CSS += $(srcdir)/../rocm-theme.css
+
 html-local: %D%/as/index.html
-%D%/as/index.html: %D%/as.texi $(%C%_as_TEXINFOS) %D%/$(am__dirstamp)
+%D%/as/index.html: %D%/as.texi $(%C%_as_TEXINFOS) %D%/$(am__dirstamp) $(MANUAL_CSS)
 	$(AM_V_GEN)$(MAKEINFOHTML) $(AM_MAKEINFOHTMLFLAGS) $(MAKEINFOFLAGS) \
+	  --init-file=$(TOC_SIDEBAR_DIR)/toc-sidebar.init \
+	  $(foreach css,$(MANUAL_CSS),--css-ref=$(notdir $(css))) \
 	  --split=node -I$(srcdir)/%D% -o %D%/as $(srcdir)/%D%/as.texi
+	$(AM_V_at)cp $(TOC_SIDEBAR_ASSETS) $(MANUAL_CSS) %D%/as
 
 MAINTAINERCLEANFILES += %D%/as.info
