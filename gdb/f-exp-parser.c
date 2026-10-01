@@ -25,7 +25,7 @@
 #include "language.h"
 #include "parser-defs.h"
 #include "value.h"
-#include <algorithm>
+#include <string>
 
 /* The entry point of the bison/yacc-generated parser, defined in
    f-exp-parser-gen.c.  Bison produces a declaration for f_yyparse in
@@ -574,40 +574,6 @@ static const f_token f_keywords[] =
   { "precision", PRECISION, OP_NULL, true },
 };
 
-/* Implementation of a dynamically expandable buffer for processing input
-   characters acquired through lexptr and building a value to return in
-   yylval.  Ripped off from ch-exp.y */
-
-static char *tempbuf;		/* Current buffer contents */
-static int tempbufsize;		/* Size of allocated buffer */
-static int tempbufindex;	/* Current index into buffer */
-
-#define GROWBY_MIN_SIZE 64	/* Minimum amount to grow buffer by */
-
-#define CHECKBUF(size) \
-  do { \
-    if (tempbufindex + (size) >= tempbufsize) \
-      { \
-	growbuf_by_size (size); \
-      } \
-  } while (0);
-
-/* Grow the static temp buffer if necessary, including allocating the
-   first one on demand.  */
-
-static void
-growbuf_by_size (int count)
-{
-  int growby;
-
-  growby = std::max (count, GROWBY_MIN_SIZE);
-  tempbufsize += growby;
-  if (tempbuf == NULL)
-    tempbuf = (char *) xmalloc (tempbufsize);
-  else
-    tempbuf = (char *) xrealloc (tempbuf, tempbufsize);
-}
-
 /* Blatantly ripped off from ch-exp.y. This routine recognizes F77
    string-literals.
 
@@ -622,9 +588,13 @@ match_string_literal (void)
 {
   const char *tokptr = pstate->lexptr;
 
-  for (tempbufindex = 0, tokptr++; *tokptr != '\0'; tokptr++)
+  /* Buffer used to build and hold the string value returned in f_yylval.  Its
+     contents are only valid until the next call.  */
+  static std::string tempbuf;
+
+  tempbuf.clear ();
+  for (tokptr++; *tokptr != '\0'; tokptr++)
     {
-      CHECKBUF (1);
       if (*tokptr == *pstate->lexptr)
 	{
 	  if (*(tokptr + 1) == *pstate->lexptr)
@@ -632,16 +602,17 @@ match_string_literal (void)
 	  else
 	    break;
 	}
-      tempbuf[tempbufindex++] = *tokptr;
+
+      tempbuf += *tokptr;
     }
+
   if (*tokptr == '\0'					/* no terminator */
-      || tempbufindex == 0)				/* no string */
+      || tempbuf.empty ())				/* no string */
     return 0;
   else
     {
-      tempbuf[tempbufindex] = '\0';
-      f_yylval.sval.ptr = tempbuf;
-      f_yylval.sval.length = tempbufindex;
+      f_yylval.sval.ptr = tempbuf.c_str ();
+      f_yylval.sval.length = tempbuf.size ();
       pstate->lexptr = ++tokptr;
       return STRING_LITERAL;
     }
