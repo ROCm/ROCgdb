@@ -4938,65 +4938,85 @@ global_symbol_searcher::add_matching_msymbols
   return true;
 }
 
+/* Compile REGEXP, a symbol name or symbol type regexp.
+
+   If REGEXP is nullptr, return an empty optional.  */
+
+static std::optional<compiled_regex>
+compile_symbol_search_regex (const char *regexp)
+{
+  if (regexp == nullptr)
+    return {};
+
+  int cflags
+    = REG_NOSUB | (case_sensitivity == case_sensitive_off ? REG_ICASE : 0);
+
+  return std::make_optional<compiled_regex> (regexp, cflags,
+					     _("Invalid regexp"));
+}
+
+/* See symtab.h.  */
+
+std::optional<compiled_regex>
+global_symbol_searcher::compile_name_regex () const
+{
+  if (m_symbol_name_regexp == nullptr)
+    return {};
+
+  const char *symbol_name_regexp = m_symbol_name_regexp;
+  std::string symbol_name_regexp_holder;
+
+  /* Make sure spacing is right for C++ operators.
+     This is just a courtesy to make the matching less sensitive
+     to how many spaces the user leaves between 'operator'
+     and <TYPENAME> or <OPERATOR>.  */
+  const char *op_end;
+  const char *opname = operator_chars (symbol_name_regexp, &op_end);
+
+  if (*opname)
+    {
+      /* -1 means ok; otherwise number of spaces needed.  */
+      int fix = -1;
+
+      if (c_isalpha (*opname) || *opname == '_' || *opname == '$')
+	{
+	  /* There should be 1 space between 'operator' and 'TYPENAME'.  */
+	  if (opname[-1] != ' ' || opname[-2] == ' ')
+	    fix = 1;
+	}
+      else
+	{
+	  /* There should be 0 spaces between 'operator' and 'OPERATOR'.  */
+	  if (opname[-1] == ' ')
+	    fix = 0;
+	}
+      /* If wrong number of spaces, fix it.  */
+      if (fix >= 0)
+	{
+	  symbol_name_regexp_holder
+	    = string_printf ("operator%.*s%s", fix, " ", opname);
+	  symbol_name_regexp = symbol_name_regexp_holder.c_str ();
+	}
+    }
+
+  return compile_symbol_search_regex (symbol_name_regexp);
+}
+
+/* See symtab.h.  */
+
+std::optional<compiled_regex>
+global_symbol_searcher::compile_type_regex () const
+{
+  return compile_symbol_search_regex (m_symbol_type_regexp);
+}
+
 /* See symtab.h.  */
 
 std::vector<symbol_search>
 global_symbol_searcher::search () const
 {
-  std::optional<compiled_regex> name_regex;
-  std::optional<compiled_regex> type_regex;
-
-  if (m_symbol_name_regexp != NULL)
-    {
-      const char *symbol_name_regexp = m_symbol_name_regexp;
-      std::string symbol_name_regexp_holder;
-
-      /* Make sure spacing is right for C++ operators.
-	 This is just a courtesy to make the matching less sensitive
-	 to how many spaces the user leaves between 'operator'
-	 and <TYPENAME> or <OPERATOR>.  */
-      const char *op_end;
-      const char *opname = operator_chars (symbol_name_regexp, &op_end);
-
-      if (*opname)
-	{
-	  int fix = -1;		/* -1 means ok; otherwise number of
-				    spaces needed.  */
-
-	  if (c_isalpha (*opname) || *opname == '_' || *opname == '$')
-	    {
-	      /* There should 1 space between 'operator' and 'TYPENAME'.  */
-	      if (opname[-1] != ' ' || opname[-2] == ' ')
-		fix = 1;
-	    }
-	  else
-	    {
-	      /* There should 0 spaces between 'operator' and 'OPERATOR'.  */
-	      if (opname[-1] == ' ')
-		fix = 0;
-	    }
-	  /* If wrong number of spaces, fix it.  */
-	  if (fix >= 0)
-	    {
-	      symbol_name_regexp_holder
-		= string_printf ("operator%.*s%s", fix, " ", opname);
-	      symbol_name_regexp = symbol_name_regexp_holder.c_str ();
-	    }
-	}
-
-      int cflags = REG_NOSUB | (case_sensitivity == case_sensitive_off
-				? REG_ICASE : 0);
-      name_regex.emplace (symbol_name_regexp, cflags,
-			  _("Invalid regexp"));
-    }
-
-  if (m_symbol_type_regexp != NULL)
-    {
-      int cflags = REG_NOSUB | (case_sensitivity == case_sensitive_off
-				? REG_ICASE : 0);
-      type_regex.emplace (m_symbol_type_regexp, cflags,
-			  _("Invalid regexp"));
-    }
+  std::optional<compiled_regex> name_regex = compile_name_regex ();
+  std::optional<compiled_regex> type_regex = compile_type_regex ();
 
   bool found_func_msymbol_without_debug_info = false;
   std::set<symbol_search> result_set;

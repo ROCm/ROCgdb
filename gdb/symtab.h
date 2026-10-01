@@ -2670,6 +2670,15 @@ private:
      of SIZE_MAX, there is no "unlimited".  */
   size_t m_max_search_results = SIZE_MAX;
 
+  /* Compile M_SYMBOL_NAME_REGEXP, if set.
+
+     This function normalizes the spacing when it detects a C++ operator in the
+     regexp.  */
+  std::optional<compiled_regex> compile_name_regex () const;
+
+  /* Compile M_SYMBOL_TYPE_REGEXP, if set.  */
+  std::optional<compiled_regex> compile_type_regex () const;
+
   /* Expand symtabs in OBJFILE that match NAME_REGEX, are of type M_KIND.
      Return true if any msymbols were seen that we should later consider
      adding to the results list.  */
