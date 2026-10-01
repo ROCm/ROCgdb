@@ -404,6 +404,7 @@ disassemble_one (insn_t insn, struct disassemble_info *info)
 int
 print_insn_loongarch (bfd_vma memaddr, struct disassemble_info *info)
 {
+  bfd_byte buffer[4];
   insn_t insn;
   int status;
 
@@ -420,12 +421,14 @@ print_insn_loongarch (bfd_vma memaddr, struct disassemble_info *info)
   info->insn_info_valid = 1;
   info->target = memaddr;
 
-  if ((status = info->read_memory_func (memaddr, (bfd_byte *) &insn,
-					sizeof (insn), info)) != 0)
+  if ((status = info->read_memory_func (memaddr, buffer, sizeof (buffer),
+					info)) != 0)
     {
       info->memory_error_func (status, memaddr, info);
       return -1; /* loongarch_insn_length (0); */
     }
+
+  insn = bfd_getl32 (buffer);
 
   disassemble_one (insn, info);
 
