@@ -105,6 +105,7 @@ END_RELOC_NUMBERS (R_RISCV_max)
 #define R_RISCV_GPREL_S           (R_RISCV_max + 4)
 #define R_RISCV_TPREL_I           (R_RISCV_max + 5)
 #define R_RISCV_TPREL_S           (R_RISCV_max + 6)
+#define R_RISCV_TABLE_JUMP        (R_RISCV_max + 7)
 
 /* Processor specific flags for the ELF header e_flags field.  */
 
@@ -131,6 +132,10 @@ END_RELOC_NUMBERS (R_RISCV_max)
 
 /* The name of the global pointer symbol.  */
 #define RISCV_GP_SYMBOL "__global_pointer$"
+
+#define RISCV_TABLE_JUMP_BASE_SYMBOL "__jvt_base$"
+
+#define TABLE_JUMP_SEC_NAME ".riscv.jvt"
 
 /* Processor specific dynamic array tags.  */
 #define DT_RISCV_VARIANT_CC (DT_LOPROC + 1)
