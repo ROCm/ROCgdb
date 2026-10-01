@@ -2613,8 +2613,8 @@ extern std::optional<compiled_regex> compile_symbol_search_regex
   (const char *regexp);
 
 /* In order to search for global symbols of a particular kind matching
-   particular regular expressions, create an instance of this structure and
-   call the SEARCH member function.  */
+   particular regular expressions, create an instance of this class and call
+   the SEARCH member function.  */
 class global_symbol_searcher
 {
 public:
@@ -2670,8 +2670,8 @@ private:
   /* Regular expression to match against the symbol type.  */
   const char *m_symbol_type_regexp = nullptr;
 
-  /* When this flag is false then minsyms that match M_SYMBOL_REGEXP will
-     be included in the results, otherwise they are excluded.  */
+  /* When this flag is false then minsyms that match M_SYMBOL_NAME_REGEXP
+     will be included in the results, otherwise they are excluded.  */
   bool m_exclude_minsyms = false;
 
   /* Maximum number of search results.  We currently impose a hard limit
@@ -2711,12 +2711,12 @@ private:
 		       const std::optional<compiled_regex> &name_regex) const;
 
   /* Add symbols from symtabs in OBJFILE that match NAME_REGEX, and
-     TYPE_REGEX, and are of type M_KIND, to the results set RESULTS_SET.
+     TYPE_REGEX, and are of type M_KIND, to the results set RESULT_SET.
      Return false if we stop adding results early due to having already
      found too many results (based on M_MAX_SEARCH_RESULTS limit),
      otherwise return true.
      Returning true does not indicate that any results were added, just
-     that we didn't _not_ add a result due to reaching MAX_SEARCH_RESULTS.  */
+     that we didn't _not_ add a result due to reaching M_MAX_SEARCH_RESULTS.  */
   bool add_matching_symbols (objfile &objfile,
 			     const std::optional<compiled_regex> &name_regex,
 			     const std::optional<compiled_regex> &type_regex,
@@ -2727,7 +2727,7 @@ private:
      due to having already found too many results (based on max search
      results limit M_MAX_SEARCH_RESULTS), otherwise return true.  Returning
      true does not indicate that any results were added, just that we
-     didn't _not_ add a result due to reaching MAX_SEARCH_RESULTS.  */
+     didn't _not_ add a result due to reaching M_MAX_SEARCH_RESULTS.  */
   bool add_matching_msymbols (objfile &objfile,
 			      const std::optional<compiled_regex> &name_regex,
 			      std::vector<symbol_search> &results) const;

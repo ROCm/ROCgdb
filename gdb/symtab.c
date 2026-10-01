@@ -4945,7 +4945,7 @@ global_symbol_searcher::add_matching_msymbols
 	continue;
 
       /* For functions we can do a quick check of whether the
-	 symbol might be found via find_pc_symtab.  */
+	 symbol might be found via find_compunit_symtab_for_pc.  */
       if (m_kind == symbol_search_kind::FUNCTION
 	  && (find_compunit_symtab_for_pc
 	      (msymbol->value_address (&objfile)) != nullptr))
