@@ -71,7 +71,7 @@ mi_cmd_symbol_list_lines (const char *command, const char *const *argv,
    results.  */
 
 static void
-output_debug_symbol (ui_out *uiout, domain_search_flags kind,
+output_debug_symbol (ui_out *uiout, symbol_search_kind kind,
 		     struct symbol *sym, int block)
 {
   ui_out_emit_tuple tuple_emitter (uiout);
@@ -80,7 +80,8 @@ output_debug_symbol (ui_out *uiout, domain_search_flags kind,
     uiout->field_unsigned ("line", sym->line ());
   uiout->field_string ("name", sym->print_name ());
 
-  if ((kind & (SEARCH_FUNCTION_DOMAIN | SEARCH_VAR_DOMAIN)) != 0)
+  if (kind == symbol_search_kind::FUNCTION
+      || kind == symbol_search_kind::VARIABLE)
     {
       string_file tmp_stream;
       type_print (sym->type (), "", &tmp_stream, -1);
@@ -111,7 +112,7 @@ output_nondebug_symbol (ui_out *uiout, const bound_minimal_symbol &msymbol)
    and then prints the matching [m]symbols in an MI structured format.  */
 
 static void
-mi_symbol_info (domain_search_flags kind, const char *name_regexp,
+mi_symbol_info (symbol_search_kind kind, const char *name_regexp,
 		const char *type_regexp, bool exclude_minsyms,
 		size_t max_results)
 {
@@ -188,7 +189,7 @@ parse_max_results_option (const char *arg)
    Processes command line options from ARGV and ARGC.  */
 
 static void
-mi_info_functions_or_variables (domain_search_flags kind,
+mi_info_functions_or_variables (symbol_search_kind kind,
 				const char *const *argv, int argc)
 {
   size_t max_results = SIZE_MAX;
@@ -215,7 +216,7 @@ mi_info_functions_or_variables (domain_search_flags kind,
   while (1)
     {
       const char *cmd_string
-	= ((kind == SEARCH_FUNCTION_DOMAIN)
+	= ((kind == symbol_search_kind::FUNCTION)
 	   ? "-symbol-info-functions" : "-symbol-info-variables");
       int opt = mi_getopt (cmd_string, argc, argv, opts, &oind, &oarg);
       if (opt < 0)
@@ -251,7 +252,7 @@ using module_symbol_search_iterator
 static module_symbol_search_iterator
 output_module_symbols_in_single_module_and_file
 	(struct ui_out *uiout, module_symbol_search_iterator iter,
-	 const module_symbol_search_iterator end, domain_search_flags kind)
+	 const module_symbol_search_iterator end, symbol_search_kind kind)
 {
   /* The symbol for the module in which the first result resides.  */
   const symbol *first_module_symbol = iter->first.symbol;
@@ -286,7 +287,7 @@ output_module_symbols_in_single_module_and_file
 static module_symbol_search_iterator
 output_module_symbols_in_single_module
 	(struct ui_out *uiout, module_symbol_search_iterator iter,
-	 const module_symbol_search_iterator end, domain_search_flags kind)
+	 const module_symbol_search_iterator end, symbol_search_kind kind)
 {
   gdb_assert (iter->first.symbol != nullptr);
   gdb_assert (iter->second.symbol != nullptr);
@@ -314,7 +315,7 @@ output_module_symbols_in_single_module
    command line options passed to the MI command.  */
 
 static void
-mi_info_module_functions_or_variables (domain_search_flags kind,
+mi_info_module_functions_or_variables (symbol_search_kind kind,
 				       const char *const *argv, int argc)
 {
   const char *module_regexp = nullptr;
@@ -341,7 +342,7 @@ mi_info_module_functions_or_variables (domain_search_flags kind,
   while (1)
     {
       const char *cmd_string
-	= ((kind == SEARCH_FUNCTION_DOMAIN)
+	= ((kind == symbol_search_kind::FUNCTION)
 	   ? "-symbol-info-module-functions"
 	   : "-symbol-info-module-variables");
       int opt = mi_getopt (cmd_string, argc, argv, opts, &oind, &oarg);
@@ -383,7 +384,7 @@ void
 mi_cmd_symbol_info_functions (const char *command, const char *const *argv,
 			      int argc)
 {
-  mi_info_functions_or_variables (SEARCH_FUNCTION_DOMAIN, argv, argc);
+  mi_info_functions_or_variables (symbol_search_kind::FUNCTION, argv, argc);
 }
 
 /* Implement -symbol-info-module-functions command.  */
@@ -392,7 +393,8 @@ void
 mi_cmd_symbol_info_module_functions (const char *command,
 				     const char *const *argv, int argc)
 {
-  mi_info_module_functions_or_variables (SEARCH_FUNCTION_DOMAIN, argv, argc);
+  mi_info_module_functions_or_variables (symbol_search_kind::FUNCTION,
+					 argv, argc);
 }
 
 /* Implement -symbol-info-module-variables command.  */
@@ -401,7 +403,8 @@ void
 mi_cmd_symbol_info_module_variables (const char *command,
 				     const char *const *argv, int argc)
 {
-  mi_info_module_functions_or_variables (SEARCH_VAR_DOMAIN, argv, argc);
+  mi_info_module_functions_or_variables (symbol_search_kind::VARIABLE,
+					 argv, argc);
 }
 
 /* Implement -symbol-inf-modules command.  */
@@ -444,7 +447,8 @@ mi_cmd_symbol_info_modules (const char *command, const char *const *argv,
 	}
     }
 
-  mi_symbol_info (SEARCH_MODULE_DOMAIN, regexp, nullptr, true, max_results);
+  mi_symbol_info (symbol_search_kind::MODULE, regexp, nullptr, true,
+		  max_results);
 }
 
 /* Implement -symbol-info-types command.  */
@@ -487,8 +491,8 @@ mi_cmd_symbol_info_types (const char *command, const char *const *argv,
 	}
     }
 
-  mi_symbol_info (SEARCH_TYPE_DOMAIN | SEARCH_STRUCT_DOMAIN, regexp, nullptr,
-		  true, max_results);
+  mi_symbol_info (symbol_search_kind::TYPE, regexp, nullptr, true,
+		  max_results);
 }
 
 /* Implement -symbol-info-variables command.  */
@@ -497,5 +501,5 @@ void
 mi_cmd_symbol_info_variables (const char *command, const char *const *argv,
 			      int argc)
 {
-  mi_info_functions_or_variables (SEARCH_VAR_DOMAIN, argv, argc);
+  mi_info_functions_or_variables (symbol_search_kind::VARIABLE, argv, argc);
 }

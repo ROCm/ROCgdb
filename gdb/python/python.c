@@ -848,7 +848,7 @@ gdbpy_rbreak (PyObject *self, PyObject *args, PyObject *kw)
       minsyms_p = cmp;
     }
 
-  global_symbol_searcher spec (SEARCH_FUNCTION_DOMAIN, regex);
+  global_symbol_searcher spec (symbol_search_kind::FUNCTION, regex);
 
   /* The "symtabs" keyword is any Python iterable object that returns
      a gdb.Symtab on each iteration.  If specified, iterate through

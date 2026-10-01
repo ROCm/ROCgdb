@@ -2586,6 +2586,24 @@ private:
 				  const symbol_search &sym_b);
 };
 
+/* The kind of symbols searched for by global_symbol_searcher.  */
+
+enum class symbol_search_kind
+{
+  /* Variables, excluding enum constants.  */
+  VARIABLE,
+
+  /* Functions.  */
+  FUNCTION,
+
+  /* Type names, including those with a struct/union/enum prefix (STRUCT
+     domain).  */
+  TYPE,
+
+  /* Fortran modules.  */
+  MODULE,
+};
+
 /* In order to search for global symbols of a particular kind matching
    particular regular expressions, create an instance of this structure and
    call the SEARCH member function.  */
@@ -2594,7 +2612,7 @@ class global_symbol_searcher
 public:
 
   /* Constructor.  */
-  global_symbol_searcher (domain_search_flags kind,
+  global_symbol_searcher (symbol_search_kind kind,
 			  const char *symbol_name_regexp)
     : m_kind (kind),
       m_symbol_name_regexp (symbol_name_regexp)
@@ -2635,14 +2653,8 @@ private:
   /* The set of source files to search in for matching symbols.  */
   std::vector<gdb::unique_xmalloc_ptr<char>> m_filenames;
 
-  /* The kind of symbols are we searching for.
-     VARIABLES_DOMAIN - Search all symbols, excluding functions, type
-			names, and constants (enums).
-     FUNCTIONS_DOMAIN - Search all functions..
-     TYPES_DOMAIN     - Search all type names.
-     MODULES_DOMAIN   - Search all Fortran modules.
-     ALL_DOMAIN       - Not valid for this function.  */
-  domain_search_flags m_kind;
+  /* The kind of symbols we are searching for.  */
+  symbol_search_kind m_kind;
 
   /* Regular expression to match against the symbol name.  */
   const char *m_symbol_name_regexp = nullptr;
@@ -2686,7 +2698,7 @@ private:
 			      std::vector<symbol_search> *results) const;
 
   /* Return true if MSYMBOL is of type KIND.  */
-  static bool is_suitable_msymbol (const domain_search_flags kind,
+  static bool is_suitable_msymbol (symbol_search_kind kind,
 				   const minimal_symbol *msymbol);
 };
 
@@ -2703,7 +2715,7 @@ using module_symbol_search = std::pair<symbol_search, symbol_search>;
    within the module.  */
 extern std::vector<module_symbol_search> search_module_symbols
 	(const char *module_regexp, const char *regexp,
-	 const char *type_regexp, domain_search_flags kind);
+	 const char *type_regexp, symbol_search_kind kind);
 
 /* Convert a global or static symbol SYM (based on BLOCK, which should be
    either GLOBAL_BLOCK or STATIC_BLOCK) into a string for use in 'info'
