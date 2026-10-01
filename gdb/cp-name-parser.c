@@ -147,7 +147,7 @@ cpname_state::d_qualify (struct demangle_component *lhs,
 /* Return a builtin type corresponding to FLAGS.  */
 
 struct demangle_component *
-cpname_state::d_int_type (int flags)
+cpname_state::d_int_type (int_flags flags)
 {
   const char *name;
 
@@ -162,7 +162,7 @@ cpname_state::d_int_type (int flags)
     case INT_UNSIGNED | INT_CHAR:
       name = "unsigned char";
       break;
-    case 0:
+    case INT_NONE:
     case INT_SIGNED:
       name = "int";
       break;

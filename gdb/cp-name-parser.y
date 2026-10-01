@@ -61,6 +61,7 @@
     } abstract;
     int lval;
     cp_name_parser::qual_flag qual;
+    cp_name_parser::int_flag int_type;
     const char *opname;
   }
 
@@ -87,7 +88,7 @@
 
 %type <qual> qualifier qualifiers qualifiers_opt
 
-%type <lval> int_part int_seq
+%type <int_type> int_part int_seq
 
 %token <comp> INT
 %token <comp> FLOAT
@@ -540,22 +541,24 @@ qualifiers	:	qualifier
    invalid output for them - an error would be better.  */
 
 int_part	:	INT_KEYWORD
-			{ $$ = 0; }
+			{ $$ = cp_name_parser::INT_NONE; }
 		|	SIGNED_KEYWORD
-			{ $$ = INT_SIGNED; }
+			{ $$ = cp_name_parser::INT_SIGNED; }
 		|	UNSIGNED
-			{ $$ = INT_UNSIGNED; }
+			{ $$ = cp_name_parser::INT_UNSIGNED; }
 		|	CHAR
-			{ $$ = INT_CHAR; }
+			{ $$ = cp_name_parser::INT_CHAR; }
 		|	LONG
-			{ $$ = INT_LONG; }
+			{ $$ = cp_name_parser::INT_LONG; }
 		|	SHORT
-			{ $$ = INT_SHORT; }
+			{ $$ = cp_name_parser::INT_SHORT; }
 		;
 
 int_seq		:	int_part
 		|	int_seq int_part
-			{ $$ = $1 | $2; if ($1 & $2 & INT_LONG) $$ = $1 | INT_LLONG; }
+			{ $$ = $1 | $2;
+			  if ($1 & $2 & cp_name_parser::INT_LONG)
+			    $$ = $1 | cp_name_parser::INT_LLONG; }
 		;
 
 builtin_type	:	int_seq

@@ -26,16 +26,6 @@
 union cp_name_parser_YYSTYPE;
 struct demangle_parse_info;
 
-/* Flags passed to cpname_state::d_int_type.  */
-
-#define INT_CHAR	(1 << 0)
-#define INT_SHORT	(1 << 1)
-#define INT_LONG	(1 << 2)
-#define INT_LLONG	(1 << 3)
-
-#define INT_SIGNED	(1 << 4)
-#define INT_UNSIGNED	(1 << 5)
-
 #define d_left(dc) (dc)->u.s_binary.left
 #define d_right(dc) (dc)->u.s_binary.right
 
@@ -52,6 +42,21 @@ enum qual_flag
 };
 
 DEF_ENUM_FLAGS_TYPE (enum qual_flag, qual_flags);
+
+/* Integer type specifiers, passed to cpname_state::d_int_type.  */
+
+enum int_flag
+{
+  INT_NONE = 0,
+  INT_CHAR = 1 << 0,
+  INT_SHORT = 1 << 1,
+  INT_LONG = 1 << 2,
+  INT_LLONG = 1 << 3,
+  INT_SIGNED = 1 << 4,
+  INT_UNSIGNED = 1 << 5,
+};
+
+DEF_ENUM_FLAGS_TYPE (enum int_flag, int_flags);
 
 /* State of an ongoing parse.  */
 
@@ -109,7 +114,7 @@ struct cpname_state
   struct demangle_component *d_qualify (struct demangle_component *lhs,
 					qual_flags qualifiers, int is_method);
 
-  struct demangle_component *d_int_type (int flags);
+  struct demangle_component *d_int_type (int_flags flags);
 
   struct demangle_component *d_unary (const char *name,
 				      struct demangle_component *lhs);
