@@ -2712,6 +2712,27 @@ lex_selector (const char **lex_ptr, struct stoken *token)
   return true;
 }
 
+/* Return true if SYM, found by looking up KEYWORD, shadows that
+   keyword.  C++ symbol lookup ignores a trailing parameter list, which
+   is what we want for a function such as "decltype(int)", but it also
+   means that looking up "decltype" can find the type
+   "decltype(nullptr)".  Only accept a symbol that is not a function if
+   its unqualified name is exactly KEYWORD.  */
+
+static bool
+symbol_shadows_keyword (const struct symbol *sym, const char *keyword)
+{
+  if (sym->loc_class () == LOC_BLOCK)
+    return true;
+
+  const char *name = sym->search_name ();
+  unsigned int prefix_len = cp_entire_prefix_len (name);
+  if (prefix_len > 0)
+    name += prefix_len + 2;
+
+  return strcmp (name, keyword) == 0;
+}
+
 /* Read one token, getting characters through lexptr.  */
 
 static int
@@ -3077,11 +3098,12 @@ lex_one_token (struct parser_state *par_state, bool *is_quoted_name)
 	if ((token.flags & FLAG_SHADOW) != 0)
 	  {
 	    struct field_of_this_result is_a_field_of_this;
-
-	    if (lookup_symbol (copy.c_str (),
+	    struct symbol *sym
+	      = lookup_symbol (copy.c_str (),
 			       pstate->expression_context_block,
-			       SEARCH_VFT, &is_a_field_of_this).symbol
-		!= NULL)
+			       SEARCH_VFT, &is_a_field_of_this).symbol;
+
+	    if (sym != NULL && symbol_shadows_keyword (sym, copy.c_str ()))
 	      {
 		/* The keyword is shadowed.  */
 		break;
