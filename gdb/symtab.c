@@ -4878,13 +4878,9 @@ global_symbol_searcher::add_matching_symbols
 	      if (sym->domain () == MODULE_DOMAIN && sym->line () == 0)
 		continue;
 
+	      /* Match, insert if not already in the results.  */
 	      if (result_set->size () < m_max_search_results)
-		{
-		  /* Match, insert if not already in the results.  */
-		  symbol_search ss (block, sym);
-		  if (result_set->find (ss) == result_set->end ())
-		    result_set->insert (ss);
-		}
+		result_set->emplace (block, sym);
 	      else
 		return false;
 	    }
