@@ -2289,8 +2289,8 @@ iterate_over_block_local_vars_printing
 
 struct print_variable_and_value_data
 {
-  std::optional<compiled_regex> preg;
-  std::optional<compiled_regex> treg;
+  std::optional<compiled_regex> name_regex;
+  std::optional<compiled_regex> type_regex;
   struct frame_id frame_id;
   int num_tabs;
   struct ui_file *stream;
@@ -2312,11 +2312,11 @@ print_variable_and_value_data::operator() (const char *print_name,
 {
   frame_info_ptr frame;
 
-  if (preg.has_value ()
-      && preg->exec (sym->natural_name (), 0, NULL, 0) != 0)
+  if (name_regex.has_value ()
+      && name_regex->exec (sym->natural_name (), 0, nullptr, 0) != 0)
     return;
-  if (treg.has_value ()
-      && !treg_matches_sym_type_name (*treg, sym))
+  if (type_regex.has_value ()
+      && !regex_matches_sym_type_name (*type_regex, sym))
     return;
   if (language_def (sym->language ())->symbol_printing_suppressed (sym))
     return;
@@ -2399,8 +2399,8 @@ print_frame_local_vars (const frame_info_ptr &frame,
       return;
     }
 
-  prepare_reg (regexp, &cb_data.preg);
-  prepare_reg (t_regexp, &cb_data.treg);
+  prepare_reg (regexp, &cb_data.name_regex);
+  prepare_reg (t_regexp, &cb_data.type_regex);
   cb_data.frame_id = get_frame_id (frame);
   cb_data.num_tabs = 4 * num_tabs;
   cb_data.stream = stream;
@@ -2592,8 +2592,8 @@ print_frame_arg_vars (const frame_info_ptr &frame,
       return;
     }
 
-  prepare_reg (regexp, &cb_data.preg);
-  prepare_reg (t_regexp, &cb_data.treg);
+  prepare_reg (regexp, &cb_data.name_regex);
+  prepare_reg (t_regexp, &cb_data.type_regex);
   cb_data.frame_id = get_frame_id (frame);
   cb_data.num_tabs = 0;
   cb_data.stream = stream;

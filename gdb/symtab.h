@@ -2670,31 +2670,32 @@ private:
      of SIZE_MAX, there is no "unlimited".  */
   size_t m_max_search_results = SIZE_MAX;
 
-  /* Expand symtabs in OBJFILE that match PREG, are of type M_KIND.  Return
-     true if any msymbols were seen that we should later consider adding to
-     the results list.  */
+  /* Expand symtabs in OBJFILE that match NAME_REGEX, are of type M_KIND.
+     Return true if any msymbols were seen that we should later consider
+     adding to the results list.  */
   bool expand_symtabs (objfile *objfile,
-		       const std::optional<compiled_regex> &preg) const;
+		       const std::optional<compiled_regex> &name_regex) const;
 
-  /* Add symbols from symtabs in OBJFILE that match PREG, and TREG, and are
-     of type M_KIND, to the results set RESULTS_SET.  Return false if we
-     stop adding results early due to having already found too many results
-     (based on M_MAX_SEARCH_RESULTS limit), otherwise return true.
+  /* Add symbols from symtabs in OBJFILE that match NAME_REGEX, and
+     TYPE_REGEX, and are of type M_KIND, to the results set RESULTS_SET.
+     Return false if we stop adding results early due to having already
+     found too many results (based on M_MAX_SEARCH_RESULTS limit),
+     otherwise return true.
      Returning true does not indicate that any results were added, just
      that we didn't _not_ add a result due to reaching MAX_SEARCH_RESULTS.  */
   bool add_matching_symbols (objfile *objfile,
-			     const std::optional<compiled_regex> &preg,
-			     const std::optional<compiled_regex> &treg,
+			     const std::optional<compiled_regex> &name_regex,
+			     const std::optional<compiled_regex> &type_regex,
 			     std::set<symbol_search> *result_set) const;
 
-  /* Add msymbols from OBJFILE that match PREG and M_KIND, to the results
-     vector RESULTS.  Return false if we stop adding results early due to
-     having already found too many results (based on max search results
-     limit M_MAX_SEARCH_RESULTS), otherwise return true.  Returning true
-     does not indicate that any results were added, just that we didn't
-     _not_ add a result due to reaching MAX_SEARCH_RESULTS.  */
+  /* Add msymbols from OBJFILE that match NAME_REGEX and M_KIND, to the
+     results vector RESULTS.  Return false if we stop adding results early
+     due to having already found too many results (based on max search
+     results limit M_MAX_SEARCH_RESULTS), otherwise return true.  Returning
+     true does not indicate that any results were added, just that we
+     didn't _not_ add a result due to reaching MAX_SEARCH_RESULTS.  */
   bool add_matching_msymbols (objfile *objfile,
-			      const std::optional<compiled_regex> &preg,
+			      const std::optional<compiled_regex> &name_regex,
 			      std::vector<symbol_search> *results) const;
 
   /* Return true if MSYMBOL is of type KIND.  */
@@ -2723,8 +2724,11 @@ extern std::vector<module_symbol_search> search_module_symbols
 
 extern std::string symbol_to_info_string (struct symbol *sym, int block);
 
-extern bool treg_matches_sym_type_name (const compiled_regex &treg,
-					const struct symbol *sym);
+/* Returns true if the SYM's type name matches TYPE_REGEX.
+   If SYM has no type name, returns false.  */
+
+extern bool regex_matches_sym_type_name (const compiled_regex &type_regex,
+					 const symbol *sym);
 
 /* The name of the ``main'' function.  */
 extern const char *main_name ();

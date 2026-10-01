@@ -4666,18 +4666,16 @@ symbol_search::compare_search_syms (const symbol_search &sym_a,
     return -1;
 }
 
-/* Returns true if the type_name of symbol_type of SYM matches TREG.
-   If SYM has no symbol_type or symbol_name, returns false.  */
+/* See symtab.h.  */
 
 bool
-treg_matches_sym_type_name (const compiled_regex &treg,
-			    const struct symbol *sym)
+regex_matches_sym_type_name (const compiled_regex &type_regex,
+			     const symbol *sym)
 {
   struct type *sym_type;
   std::string printed_sym_type_name;
 
-  symbol_lookup_debug_printf_v ("treg_matches_sym_type_name, sym %s",
-				sym->natural_name ());
+  symbol_lookup_debug_printf_v ("sym %s", sym->natural_name ());
 
   sym_type = sym->type ();
   if (sym_type == NULL)
@@ -4695,7 +4693,7 @@ treg_matches_sym_type_name (const compiled_regex &treg,
   if (printed_sym_type_name.empty ())
     return false;
 
-  return treg.exec (printed_sym_type_name.c_str (), 0, NULL, 0) == 0;
+  return type_regex.exec (printed_sym_type_name.c_str (), 0, nullptr, 0) == 0;
 }
 
 /* Return the domain search flags matching symbols of kind KIND.  */
@@ -4745,7 +4743,8 @@ global_symbol_searcher::is_suitable_msymbol
 
 bool
 global_symbol_searcher::expand_symtabs
-	(objfile *objfile, const std::optional<compiled_regex> &preg) const
+	(objfile *objfile,
+	 const std::optional<compiled_regex> &name_regex) const
 {
   bool found_func_msymbol_without_debug_info = false;
 
@@ -4762,8 +4761,8 @@ global_symbol_searcher::expand_symtabs
      &lookup_name_info::match_any (),
      [&] (const char *symname)
      {
-       return (!preg.has_value ()
-	       || preg->exec (symname, 0, NULL, 0) == 0);
+       return (!name_regex.has_value ()
+	       || name_regex->exec (symname, 0, nullptr, 0) == 0);
      },
      NULL,
      SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
@@ -4794,9 +4793,9 @@ global_symbol_searcher::expand_symtabs
 
 	  if (is_suitable_msymbol (m_kind, msymbol))
 	    {
-	      if (!preg.has_value ()
-		  || preg->exec (msymbol->natural_name (), 0,
-				 NULL, 0) == 0)
+	      if (!name_regex.has_value ()
+		  || name_regex->exec (msymbol->natural_name (), 0,
+				       nullptr, 0) == 0)
 		{
 		  /* An important side-effect of this lookup function is
 		     to expand the symbol table if msymbol is found, later
@@ -4819,8 +4818,8 @@ global_symbol_searcher::expand_symtabs
 bool
 global_symbol_searcher::add_matching_symbols
 	(objfile *objfile,
-	 const std::optional<compiled_regex> &preg,
-	 const std::optional<compiled_regex> &treg,
+	 const std::optional<compiled_regex> &name_regex,
+	 const std::optional<compiled_regex> &type_regex,
 	 std::set<symbol_search> *result_set) const
 {
   domain_search_flags domain = to_search_flags (m_kind);
@@ -4854,14 +4853,15 @@ global_symbol_searcher::add_matching_symbols
 	      if (!sym->matches (domain))
 		continue;
 
-	      if (preg.has_value () && preg->exec (sym->natural_name (), 0,
-						   nullptr, 0) != 0)
+	      if (name_regex.has_value ()
+		  && name_regex->exec (sym->natural_name (), 0,
+				       nullptr, 0) != 0)
 		continue;
 
 	      if (((sym->domain () == VAR_DOMAIN
 		    || sym->domain () == FUNCTION_DOMAIN)
-		   && treg.has_value ()
-		   && !treg_matches_sym_type_name (*treg, sym)))
+		   && type_regex.has_value ()
+		   && !regex_matches_sym_type_name (*type_regex, sym)))
 		continue;
 
 	      if (m_kind == symbol_search_kind::VARIABLE)
@@ -4898,7 +4898,7 @@ global_symbol_searcher::add_matching_symbols
 
 bool
 global_symbol_searcher::add_matching_msymbols
-	(objfile *objfile, const std::optional<compiled_regex> &preg,
+	(objfile *objfile, const std::optional<compiled_regex> &name_regex,
 	 std::vector<symbol_search> *results) const
 {
   for (minimal_symbol *msymbol : objfile->msymbols ())
@@ -4910,9 +4910,9 @@ global_symbol_searcher::add_matching_msymbols
 
       if (is_suitable_msymbol (m_kind, msymbol))
 	{
-	  if (!preg.has_value ()
-	      || preg->exec (msymbol->natural_name (), 0,
-			     NULL, 0) == 0)
+	  if (!name_regex.has_value ()
+	      || name_regex->exec (msymbol->natural_name (), 0,
+				   nullptr, 0) == 0)
 	    {
 	      /* For functions we can do a quick check of whether the
 		 symbol might be found via find_pc_symtab.  */
@@ -4943,8 +4943,8 @@ global_symbol_searcher::add_matching_msymbols
 std::vector<symbol_search>
 global_symbol_searcher::search () const
 {
-  std::optional<compiled_regex> preg;
-  std::optional<compiled_regex> treg;
+  std::optional<compiled_regex> name_regex;
+  std::optional<compiled_regex> type_regex;
 
   if (m_symbol_name_regexp != NULL)
     {
@@ -4986,16 +4986,16 @@ global_symbol_searcher::search () const
 
       int cflags = REG_NOSUB | (case_sensitivity == case_sensitive_off
 				? REG_ICASE : 0);
-      preg.emplace (symbol_name_regexp, cflags,
-		    _("Invalid regexp"));
+      name_regex.emplace (symbol_name_regexp, cflags,
+			  _("Invalid regexp"));
     }
 
   if (m_symbol_type_regexp != NULL)
     {
       int cflags = REG_NOSUB | (case_sensitivity == case_sensitive_off
 				? REG_ICASE : 0);
-      treg.emplace (m_symbol_type_regexp, cflags,
-		    _("Invalid regexp"));
+      type_regex.emplace (m_symbol_type_regexp, cflags,
+			  _("Invalid regexp"));
     }
 
   bool found_func_msymbol_without_debug_info = false;
@@ -5004,13 +5004,15 @@ global_symbol_searcher::search () const
     {
       /* Expand symtabs within objfile that possibly contain matching
 	 symbols.  */
-      found_func_msymbol_without_debug_info |= expand_symtabs (&objfile, preg);
+      found_func_msymbol_without_debug_info
+	|= expand_symtabs (&objfile, name_regex);
 
       /* Find matching symbols within OBJFILE and add them in to the
 	 RESULT_SET set.  Use a set here so that we can easily detect
 	 duplicates as we go, and can therefore track how many unique
 	 matches we have found so far.  */
-      if (!add_matching_symbols (&objfile, preg, treg, &result_set))
+      if (!add_matching_symbols (&objfile, name_regex, type_regex,
+				 &result_set))
 	break;
     }
 
@@ -5025,12 +5027,12 @@ global_symbol_searcher::search () const
   if ((found_func_msymbol_without_debug_info
        || (m_filenames.empty () && m_kind == symbol_search_kind::VARIABLE))
       && !m_exclude_minsyms
-      && !treg.has_value ())
+      && !type_regex.has_value ())
     {
       gdb_assert (m_kind == symbol_search_kind::VARIABLE
 		  || m_kind == symbol_search_kind::FUNCTION);
       for (objfile &objfile : current_program_space->objfiles ())
-	if (!add_matching_msymbols (&objfile, preg, &result))
+	if (!add_matching_msymbols (&objfile, name_regex, &result))
 	  break;
     }
 
