@@ -10748,6 +10748,24 @@ proc multi_line { args } {
     return [join $args "\r\n"]
 }
 
+# As multi_line, but deals with text translation mode.  On windows, if the
+# translation mode of an output stream of an executable is set to text, every
+# '\n' is translated to '\r\n'.  For GDB, we work around this using
+# -binary-output, so we can just use multi_line.  But for other executables,
+# we need to handle this.
+
+proc multi_line_ttm { args } {
+    if { ![ishost "*-*-mingw*"] } {
+	return [multi_line {*}$args]
+    }
+
+    if { [llength $args] == 1 } {
+	set hint "forgot {*} before list argument?"
+	error "multi_line_ttm called with one argument ($hint)"
+    }
+    return [join $args "\r\r\n"]
+}
+
 # Similar to the above, but while multi_line is meant to be used to
 # match GDB output, this one is meant to be used to build strings to
 # send as GDB input.
