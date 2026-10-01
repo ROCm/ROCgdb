@@ -4858,25 +4858,33 @@ global_symbol_searcher::add_matching_symbols
 				       nullptr, 0) != 0)
 		continue;
 
-	      if (((sym->domain () == VAR_DOMAIN
-		    || sym->domain () == FUNCTION_DOMAIN)
-		   && type_regex.has_value ()
-		   && !regex_matches_sym_type_name (*type_regex, sym)))
-		continue;
-
-	      if (m_kind == symbol_search_kind::VARIABLE)
+	      switch (m_kind)
 		{
+		case symbol_search_kind::VARIABLE:
+		  /* LOC_CONST can be used for more than just enums, e.g.,
+		     C++ static const members.  We only want to skip enums
+		     here.  */
 		  if (sym->loc_class () == LOC_UNRESOLVED
-		      /* LOC_CONST can be used for more than
-			 just enums, e.g., c++ static const
-			 members.  We only want to skip enums
-			 here.  */
 		      || (sym->loc_class () == LOC_CONST
-			  && (sym->type ()->code () == TYPE_CODE_ENUM)))
+			  && sym->type ()->code () == TYPE_CODE_ENUM))
 		    continue;
+		  [[fallthrough]];
+
+		case symbol_search_kind::FUNCTION:
+		  if (type_regex.has_value ()
+		      && !regex_matches_sym_type_name (*type_regex, sym))
+		    continue;
+		  break;
+
+		case symbol_search_kind::TYPE:
+		  break;
+
+		case symbol_search_kind::MODULE:
+		  /* Skip module declarations, keep only definitions.  */
+		  if (sym->line () == 0)
+		    continue;
+		  break;
 		}
-	      if (sym->domain () == MODULE_DOMAIN && sym->line () == 0)
-		continue;
 
 	      /* Match, insert if not already in the results.  */
 	      if (result_set->size () < m_max_search_results)
