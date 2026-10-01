@@ -71,17 +71,13 @@ namespace safety_details
    used in gdb, these are all Python-facing and will return NULL on
    error.  */
 
-static inline PyObject *
-to_python (bool value)
-{
-  return PyBool_FromLong (value);
-}
-
 template<typename T, typename = gdb::Requires<std::is_integral<T>>>
 static inline PyObject *
 to_python (T value)
 {
-  if constexpr (std::is_signed<T>::value)
+  if constexpr (std::is_same<T, bool>::value)
+    return PyBool_FromLong (value);
+  else if constexpr (std::is_signed<T>::value)
     return gdb_py_object_from_longest (value).release ();
   else
     return gdb_py_object_from_ulongest (value).release ();
