@@ -18,27 +18,31 @@ Contents of the .eh_frame section:
   DW_CFA_nop
   DW_CFA_nop
 
-0+18 0000000000000014 0000001c FDE cie=00000000 pc=[a-f0-9]+\.\.[a-f0-9]+
-  DW_CFA_advance_loc: 4 to [a-f0-9]+
+0+18 0+24 0+1c FDE cie=0+ pc=0+260\.\.0+290
   DW_CFA_def_cfa_offset: 16
-  DW_CFA_advance_loc: 9 to [a-f0-9]+
-  DW_CFA_def_cfa_offset: 8
-  DW_CFA_nop
-
-0+30 0000000000000024 00000034 FDE cie=00000000 pc=[a-f0-9]+\.\.[a-f0-9]+
-  DW_CFA_def_cfa_offset: 16
-  DW_CFA_advance_loc: 6 to [a-f0-9]+
+  DW_CFA_advance_loc: 6 to 0+266
   DW_CFA_def_cfa_offset: 24
-  DW_CFA_advance_loc: 10 to [a-f0-9]+
+  DW_CFA_advance_loc: 10 to 0+270
   DW_CFA_def_cfa_expression \(DW_OP_breg7 \(rsp\): 8; DW_OP_breg16 \(rip\): 0; DW_OP_lit15; DW_OP_and; DW_OP_lit9; DW_OP_ge; DW_OP_lit3; DW_OP_shl; DW_OP_plus\)
   DW_CFA_nop
   DW_CFA_nop
   DW_CFA_nop
   DW_CFA_nop
 
-0+58 0000000000000010 0000005c FDE cie=00000000 pc=[a-f0-9]+\.\.[a-f0-9]+
+0+40 0+14 0+44 FDE cie=0+ pc=0+290\.\.0+2b0
   DW_CFA_nop
   DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+
+0+58 0+14 0+5c FDE cie=0+ pc=0+2b0\.\.0+2c2
+  DW_CFA_advance_loc: 4 to 0+2b4
+  DW_CFA_def_cfa_offset: 16
+  DW_CFA_advance_loc: 9 to 0+2bd
+  DW_CFA_def_cfa_offset: 8
   DW_CFA_nop
 
 

@@ -45,7 +45,6 @@ struct section_name_struct {
   int ok_to_load;
 };
 
-static unsigned int symbol_truncate = 10000;
 static etree_type *base; /* Relocation base - or null */
 
 static struct section_name_struct *order;
@@ -307,10 +306,4 @@ void
 mri_alignmod (const char *name, etree_type *exp)
 {
   mri_add_to_list (&subalignment, name, 0, 0, 0, exp);
-}
-
-void
-mri_truncate (unsigned int exp)
-{
-  symbol_truncate = exp;
 }
