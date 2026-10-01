@@ -2715,9 +2715,8 @@ private:
 			      const std::optional<compiled_regex> &name_regex,
 			      std::vector<symbol_search> *results) const;
 
-  /* Return true if MSYMBOL is of type KIND.  */
-  static bool is_suitable_msymbol (symbol_search_kind kind,
-				   const minimal_symbol *msymbol);
+  /* Return true if MSYMBOL is of type M_KIND.  */
+  bool is_suitable_msymbol (const minimal_symbol *msymbol) const;
 };
 
 /* When searching for Fortran symbols within modules (functions/variables)

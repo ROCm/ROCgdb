@@ -4720,7 +4720,7 @@ to_search_flags (symbol_search_kind kind)
 
 bool
 global_symbol_searcher::is_suitable_msymbol
-	(symbol_search_kind kind, const minimal_symbol *msymbol)
+	(const minimal_symbol *msymbol) const
 {
   switch (msymbol->type ())
     {
@@ -4728,12 +4728,12 @@ global_symbol_searcher::is_suitable_msymbol
     case mst_bss:
     case mst_file_data:
     case mst_file_bss:
-      return kind == symbol_search_kind::VARIABLE;
+      return m_kind == symbol_search_kind::VARIABLE;
     case mst_text:
     case mst_file_text:
     case mst_solib_trampoline:
     case mst_text_gnu_ifunc:
-      return kind == symbol_search_kind::FUNCTION;
+      return m_kind == symbol_search_kind::FUNCTION;
     default:
       return false;
     }
@@ -4791,7 +4791,7 @@ global_symbol_searcher::expand_symtabs
 	  if (msymbol->created_by_gdb)
 	    continue;
 
-	  if (is_suitable_msymbol (m_kind, msymbol))
+	  if (is_suitable_msymbol (msymbol))
 	    {
 	      if (!name_regex.has_value ()
 		  || name_regex->exec (msymbol->natural_name (), 0,
@@ -4912,7 +4912,7 @@ global_symbol_searcher::add_matching_msymbols
       if (msymbol->created_by_gdb)
 	continue;
 
-      if (is_suitable_msymbol (m_kind, msymbol))
+      if (is_suitable_msymbol (msymbol))
 	{
 	  if (!name_regex.has_value ()
 	      || name_regex->exec (msymbol->natural_name (), 0,
