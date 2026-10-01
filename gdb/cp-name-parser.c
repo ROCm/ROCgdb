@@ -110,8 +110,8 @@ cpname_state::make_name (const char *name, int len)
    may already be qualified; duplicate qualifiers are not created.  */
 
 struct demangle_component *
-cpname_state::d_qualify (struct demangle_component *lhs, int qualifiers,
-			 int is_method)
+cpname_state::d_qualify (struct demangle_component *lhs,
+			 qual_flags qualifiers, int is_method)
 {
   struct demangle_component **inner_p;
   enum demangle_component_type type;

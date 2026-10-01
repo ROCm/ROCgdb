@@ -21,15 +21,10 @@
 #define GDB_CP_NAME_PARSER_H
 
 #include "demangle.h"
+#include "gdbsupport/enum-flags.h"
 
 union cp_name_parser_YYSTYPE;
 struct demangle_parse_info;
-
-/* Flags passed to cpname_state::d_qualify.  */
-
-#define QUAL_CONST 1
-#define QUAL_RESTRICT 2
-#define QUAL_VOLATILE 4
 
 /* Flags passed to cpname_state::d_int_type.  */
 
@@ -45,6 +40,18 @@ struct demangle_parse_info;
 #define d_right(dc) (dc)->u.s_binary.right
 
 namespace cp_name_parser {
+
+/* Type qualifiers, passed to cpname_state::d_qualify.  */
+
+enum qual_flag
+{
+  QUAL_NONE = 0,
+  QUAL_CONST = 1,
+  QUAL_RESTRICT = 2,
+  QUAL_VOLATILE = 4,
+};
+
+DEF_ENUM_FLAGS_TYPE (enum qual_flag, qual_flags);
 
 /* State of an ongoing parse.  */
 
@@ -100,7 +107,7 @@ struct cpname_state
   struct demangle_component *make_name (const char *name, int len);
 
   struct demangle_component *d_qualify (struct demangle_component *lhs,
-					int qualifiers, int is_method);
+					qual_flags qualifiers, int is_method);
 
   struct demangle_component *d_int_type (int flags);
 

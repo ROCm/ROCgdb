@@ -60,6 +60,7 @@
       int fold_flag;
     } abstract;
     int lval;
+    cp_name_parser::qual_flag qual;
     const char *opname;
   }
 
@@ -84,7 +85,7 @@
 
 %type <nested1> nested_name
 
-%type <lval> qualifier qualifiers qualifiers_opt
+%type <qual> qualifier qualifiers qualifiers_opt
 
 %type <lval> int_part int_seq
 
@@ -518,16 +519,16 @@ function_arglist:	'(' function_args ')' qualifiers_opt %prec NAME
 
 /* Should do something about DEMANGLE_COMPONENT_VENDOR_TYPE_QUAL */
 qualifiers_opt	:	/* epsilon */
-			{ $$ = 0; }
+			{ $$ = cp_name_parser::QUAL_NONE; }
 		|	qualifiers
 		;
 
 qualifier	:	RESTRICT
-			{ $$ = QUAL_RESTRICT; }
+			{ $$ = cp_name_parser::QUAL_RESTRICT; }
 		|	VOLATILE_KEYWORD
-			{ $$ = QUAL_VOLATILE; }
+			{ $$ = cp_name_parser::QUAL_VOLATILE; }
 		|	CONST_KEYWORD
-			{ $$ = QUAL_CONST; }
+			{ $$ = cp_name_parser::QUAL_CONST; }
 		;
 
 qualifiers	:	qualifier
