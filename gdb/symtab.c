@@ -4938,11 +4938,9 @@ global_symbol_searcher::add_matching_msymbols
   return true;
 }
 
-/* Compile REGEXP, a symbol name or symbol type regexp.
+/* See symtab.h.  */
 
-   If REGEXP is nullptr, return an empty optional.  */
-
-static std::optional<compiled_regex>
+std::optional<compiled_regex>
 compile_symbol_search_regex (const char *regexp)
 {
   if (regexp == nullptr)

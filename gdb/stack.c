@@ -2289,13 +2289,24 @@ iterate_over_block_local_vars_printing
 
 struct print_variable_and_value_data
 {
+  print_variable_and_value_data (const char *regexp, const char *t_regexp,
+				 frame_id frame_id, int num_tabs,
+				 ui_file *stream, bool print_shadowed)
+    : name_regex (compile_symbol_search_regex (regexp)),
+      type_regex (compile_symbol_search_regex (t_regexp)),
+      frame_id (frame_id),
+      num_tabs (num_tabs),
+      stream (stream),
+      print_shadowed (print_shadowed)
+  {}
+
   std::optional<compiled_regex> name_regex;
   std::optional<compiled_regex> type_regex;
   struct frame_id frame_id;
   int num_tabs;
   struct ui_file *stream;
-  int values_printed;
-  bool print_shadowed = true;
+  int values_printed = 0;
+  bool print_shadowed;
   bool printed_shadowed_variables = false;
   bool omitted_shadowed_variables = false;
 
@@ -2344,22 +2355,6 @@ print_variable_and_value_data::operator() (const char *print_name,
     printed_shadowed_variables = true;
 }
 
-/* Prepares the regular expression REG from REGEXP.
-   If REGEXP is NULL, it results in an empty regular expression.  */
-
-static void
-prepare_reg (const char *regexp, std::optional<compiled_regex> *reg)
-{
-  if (regexp != NULL)
-    {
-      int cflags = REG_NOSUB | (case_sensitivity == case_sensitive_off
-				? REG_ICASE : 0);
-      reg->emplace (regexp, cflags, _("Invalid regexp"));
-    }
-  else
-    reg->reset ();
-}
-
 /* Print all variables from the innermost up to the function block of FRAME.
    Print them with values to STREAM indented by NUM_TABS.
    PRINT_SHADOWED controls whether shadowed variables are printed.
@@ -2379,7 +2374,6 @@ print_frame_local_vars (const frame_info_ptr &frame,
 			const char *t_regexp, int num_tabs,
 			struct ui_file *stream)
 {
-  struct print_variable_and_value_data cb_data;
   const struct block *block;
   std::optional<CORE_ADDR> pc;
 
@@ -2399,13 +2393,9 @@ print_frame_local_vars (const frame_info_ptr &frame,
       return;
     }
 
-  prepare_reg (regexp, &cb_data.name_regex);
-  prepare_reg (t_regexp, &cb_data.type_regex);
-  cb_data.frame_id = get_frame_id (frame);
-  cb_data.num_tabs = 4 * num_tabs;
-  cb_data.stream = stream;
-  cb_data.values_printed = 0;
-  cb_data.print_shadowed = print_shadowed;
+  print_variable_and_value_data cb_data (regexp, t_regexp,
+					 get_frame_id (frame), 4 * num_tabs,
+					 stream, print_shadowed);
 
   /* Temporarily change the selected frame to the given FRAME.
      This allows routines that rely on the selected frame instead
@@ -2572,7 +2562,6 @@ print_frame_arg_vars (const frame_info_ptr &frame,
 		      const char *regexp, const char *t_regexp,
 		      struct ui_file *stream)
 {
-  struct print_variable_and_value_data cb_data;
   struct symbol *func;
   std::optional<CORE_ADDR> pc;
 
@@ -2592,12 +2581,8 @@ print_frame_arg_vars (const frame_info_ptr &frame,
       return;
     }
 
-  prepare_reg (regexp, &cb_data.name_regex);
-  prepare_reg (t_regexp, &cb_data.type_regex);
-  cb_data.frame_id = get_frame_id (frame);
-  cb_data.num_tabs = 0;
-  cb_data.stream = stream;
-  cb_data.values_printed = 0;
+  print_variable_and_value_data cb_data (regexp, t_regexp,
+					 get_frame_id (frame), 0, stream, true);
 
   iterate_over_block_arg_vars (func->value_block (),
     [&] (const char *print_name, symbol *sym)

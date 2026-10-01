@@ -2604,6 +2604,14 @@ enum class symbol_search_kind
   MODULE,
 };
 
+/* Compile REGEXP, a regexp used to match symbol names or types.  The regexp
+   is case-insensitive if case sensitivity is off.
+
+   If REGEXP is nullptr, return an empty optional.  */
+
+extern std::optional<compiled_regex> compile_symbol_search_regex
+  (const char *regexp);
+
 /* In order to search for global symbols of a particular kind matching
    particular regular expressions, create an instance of this structure and
    call the SEARCH member function.  */
