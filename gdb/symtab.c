@@ -4833,7 +4833,7 @@ global_symbol_searcher::msymbol_matches
 
 bool
 global_symbol_searcher::expand_symtabs
-	(objfile *objfile,
+	(objfile &objfile,
 	 const std::optional<compiled_regex> &name_regex) const
 {
   bool found_func_msymbol_without_debug_info = false;
@@ -4846,7 +4846,7 @@ global_symbol_searcher::expand_symtabs
   if (!m_filenames.empty ())
     file_matcher = do_file_match;
 
-  objfile->search
+  objfile.search
     (file_matcher,
      &lookup_name_info::match_any (),
      [&] (const char *symname)
@@ -4873,7 +4873,7 @@ global_symbol_searcher::expand_symtabs
   if (m_filenames.empty ()
       && m_kind == symbol_search_kind::FUNCTION)
     {
-      for (minimal_symbol *msymbol : objfile->msymbols ())
+      for (minimal_symbol *msymbol : objfile.msymbols ())
 	{
 	  QUIT;
 
@@ -4885,7 +4885,7 @@ global_symbol_searcher::expand_symtabs
 	     will add matching symbols or msymbols to the results list, and
 	     that requires that the symbols tables are expanded.  */
 	  if (find_compunit_symtab_for_pc
-		(msymbol->value_address (objfile)) == nullptr)
+		(msymbol->value_address (&objfile)) == nullptr)
 	    found_func_msymbol_without_debug_info = true;
 	}
     }
@@ -4897,13 +4897,13 @@ global_symbol_searcher::expand_symtabs
 
 bool
 global_symbol_searcher::add_matching_symbols
-	(objfile *objfile,
+	(objfile &objfile,
 	 const std::optional<compiled_regex> &name_regex,
 	 const std::optional<compiled_regex> &type_regex,
-	 std::set<symbol_search> *result_set) const
+	 std::set<symbol_search> &result_set) const
 {
   /* Add matching symbols (if not already present).  */
-  for (compunit_symtab &cust : objfile->compunits ())
+  for (compunit_symtab &cust : objfile.compunits ())
     {
       const struct blockvector *bv  = cust.blockvector ();
 
@@ -4919,8 +4919,8 @@ global_symbol_searcher::add_matching_symbols
 		continue;
 
 	      /* Match, insert if not already in the results.  */
-	      if (result_set->size () < m_max_search_results)
-		result_set->emplace (block, sym);
+	      if (result_set.size () < m_max_search_results)
+		result_set.emplace (block, sym);
 	      else
 		return false;
 	    }
@@ -4934,10 +4934,10 @@ global_symbol_searcher::add_matching_symbols
 
 bool
 global_symbol_searcher::add_matching_msymbols
-	(objfile *objfile, const std::optional<compiled_regex> &name_regex,
-	 std::vector<symbol_search> *results) const
+	(objfile &objfile, const std::optional<compiled_regex> &name_regex,
+	 std::vector<symbol_search> &results) const
 {
-  for (minimal_symbol *msymbol : objfile->msymbols ())
+  for (minimal_symbol *msymbol : objfile.msymbols ())
     {
       QUIT;
 
@@ -4948,16 +4948,16 @@ global_symbol_searcher::add_matching_msymbols
 	 symbol might be found via find_pc_symtab.  */
       if (m_kind == symbol_search_kind::FUNCTION
 	  && (find_compunit_symtab_for_pc
-	      (msymbol->value_address (objfile)) != nullptr))
+	      (msymbol->value_address (&objfile)) != nullptr))
 	continue;
 
       if (lookup_symbol_in_objfile_from_linkage_name
-	    (objfile, msymbol->linkage_name (), SEARCH_VFT).symbol != nullptr)
+	    (&objfile, msymbol->linkage_name (), SEARCH_VFT).symbol != nullptr)
 	continue;
 
       /* Matching msymbol, add it to the results list.  */
-      if (results->size () < m_max_search_results)
-	results->emplace_back (GLOBAL_BLOCK, msymbol, objfile);
+      if (results.size () < m_max_search_results)
+	results.emplace_back (GLOBAL_BLOCK, msymbol, &objfile);
       else
 	return false;
     }
@@ -5050,14 +5050,13 @@ global_symbol_searcher::search () const
       /* Expand symtabs within objfile that possibly contain matching
 	 symbols.  */
       found_func_msymbol_without_debug_info
-	|= expand_symtabs (&objfile, name_regex);
+	|= expand_symtabs (objfile, name_regex);
 
       /* Find matching symbols within OBJFILE and add them in to the
 	 RESULT_SET set.  Use a set here so that we can easily detect
 	 duplicates as we go, and can therefore track how many unique
 	 matches we have found so far.  */
-      if (!add_matching_symbols (&objfile, name_regex, type_regex,
-				 &result_set))
+      if (!add_matching_symbols (objfile, name_regex, type_regex, result_set))
 	break;
     }
 
@@ -5077,7 +5076,7 @@ global_symbol_searcher::search () const
       gdb_assert (m_kind == symbol_search_kind::VARIABLE
 		  || m_kind == symbol_search_kind::FUNCTION);
       for (objfile &objfile : current_program_space->objfiles ())
-	if (!add_matching_msymbols (&objfile, name_regex, &result))
+	if (!add_matching_msymbols (objfile, name_regex, result))
 	  break;
     }
 

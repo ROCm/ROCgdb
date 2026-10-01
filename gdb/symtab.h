@@ -2707,7 +2707,7 @@ private:
      Return true if a matching function msymbol without debug info was
      seen, meaning that msymbols should later be considered for the results
      list.  */
-  bool expand_symtabs (objfile *objfile,
+  bool expand_symtabs (objfile &objfile,
 		       const std::optional<compiled_regex> &name_regex) const;
 
   /* Add symbols from symtabs in OBJFILE that match NAME_REGEX, and
@@ -2717,10 +2717,10 @@ private:
      otherwise return true.
      Returning true does not indicate that any results were added, just
      that we didn't _not_ add a result due to reaching MAX_SEARCH_RESULTS.  */
-  bool add_matching_symbols (objfile *objfile,
+  bool add_matching_symbols (objfile &objfile,
 			     const std::optional<compiled_regex> &name_regex,
 			     const std::optional<compiled_regex> &type_regex,
-			     std::set<symbol_search> *result_set) const;
+			     std::set<symbol_search> &result_set) const;
 
   /* Add msymbols from OBJFILE that match NAME_REGEX and M_KIND, to the
      results vector RESULTS.  Return false if we stop adding results early
@@ -2728,9 +2728,9 @@ private:
      results limit M_MAX_SEARCH_RESULTS), otherwise return true.  Returning
      true does not indicate that any results were added, just that we
      didn't _not_ add a result due to reaching MAX_SEARCH_RESULTS.  */
-  bool add_matching_msymbols (objfile *objfile,
+  bool add_matching_msymbols (objfile &objfile,
 			      const std::optional<compiled_regex> &name_regex,
-			      std::vector<symbol_search> *results) const;
+			      std::vector<symbol_search> &results) const;
 
   /* Return true if MSYMBOL is of type M_KIND.  */
   bool is_suitable_msymbol (const minimal_symbol *msymbol) const;
