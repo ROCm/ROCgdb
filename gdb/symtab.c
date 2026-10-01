@@ -4779,8 +4779,8 @@ global_symbol_searcher::expand_symtabs
      objfiles.
 
      Variables are not handled here, and looking them up does not expand any
-     symtab.  When no file names were given the caller unconditionally rescans
-     the minimal symbols for SEARCH_VAR_DOMAIN.  */
+     symtab.  When no file names were given the caller rescans the minimal
+     symbols for variables.  */
   if (m_filenames.empty ()
       && m_kind == symbol_search_kind::FUNCTION)
     {

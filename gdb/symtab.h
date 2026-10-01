@@ -2687,9 +2687,10 @@ private:
   /* Compile M_SYMBOL_TYPE_REGEXP, if set.  */
   std::optional<compiled_regex> compile_type_regex () const;
 
-  /* Expand symtabs in OBJFILE that match NAME_REGEX, are of type M_KIND.
-     Return true if any msymbols were seen that we should later consider
-     adding to the results list.  */
+  /* Expand symtabs in OBJFILE that match NAME_REGEX and are of type M_KIND.
+     Return true if a matching function msymbol without debug info was
+     seen, meaning that msymbols should later be considered for the results
+     list.  */
   bool expand_symtabs (objfile *objfile,
 		       const std::optional<compiled_regex> &name_regex) const;
 
