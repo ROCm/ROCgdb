@@ -9,6 +9,13 @@ Full documentation for ROCgdb is available at
 
 - Add support for the gfx1250-strict architecture variant.
 
+### Resolved issues
+
+- Fixed expressions using `decltype`, such as
+  `print alignof(decltype(threadIdx))`, failing with a syntax error when a
+  loaded library with debug information, such as a debug build of the ROCm
+  runtime, contains the `std::nullptr_t` type.
+
 ## ROCgdb-16.3 for ROCm-10.1
 
 ### Added
