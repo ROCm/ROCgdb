@@ -17,6 +17,13 @@ Full documentation for ROCgdb is available at
   in the target id of a GPU thread, if the dispatch is running in cluster
   mode.  Also, the "info dispatch" command shows cluster dimensions.
 
+### Resolved issues
+
+- Fixed expressions using `decltype`, such as
+  `print alignof(decltype(threadIdx))`, failing with a syntax error when a
+  loaded library with debug information, such as a debug build of the ROCm
+  runtime, contains the `std::nullptr_t` type.
+
 ## ROCgdb-16.3 for ROCm-10.1
 
 ### Added
