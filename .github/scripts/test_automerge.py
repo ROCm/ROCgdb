@@ -359,5 +359,149 @@ class TestDryRun(unittest.TestCase):
         mock_mirror.assert_not_called()
 
 
+# ---------------------------------------------------------------------------
+# Conflict-free branch build (non-dry-run push path)
+# ---------------------------------------------------------------------------
+
+
+class TestConflictFreeBranchBuild(unittest.TestCase):
+    """
+    Exercises the real (non-dry-run) push path for the conflict-free branch:
+    the probe branch must be renamed and force-pushed, not rebuilt from
+    scratch with a second merge.
+    """
+
+    def _run_live(self, probe_result):
+        run_calls = []
+        run_net_calls = []
+
+        def fake_run(cmd, cwd=None, check=True, **kwargs):
+            run_calls.append(list(cmd))
+            if "remote" in cmd and cmd[-1] == "remote":
+                return _completed(stdout="origin\nsourceware\n")
+            if "merge-base" in cmd:
+                return _completed(
+                    stdout="base0000000000000000000000000000000000000000"
+                )
+            if "log" in cmd and "--format=%H" in cmd:
+                return _completed(stdout="aaa\nbbb\nccc")
+            return _completed()
+
+        def fake_run_net(cmd, cwd=None):
+            run_net_calls.append(list(cmd))
+            return _completed()
+
+        with patch("pathlib.Path.mkdir"), patch(
+            "pathlib.Path.exists", return_value=True
+        ), patch.object(am, "run", side_effect=fake_run), patch.object(
+            am, "run_net", side_effect=fake_run_net
+        ), patch.object(
+            am, "find_open_conflict_pr", return_value=None
+        ), patch.object(
+            am, "find_open_conflict_free_pr", return_value=None
+        ), patch.object(
+            am, "probe_clean_prefix", return_value=probe_result
+        ), patch.object(
+            am, "open_conflict_free_pr"
+        ) as mock_ff_pr, patch.object(
+            am, "push_upstream_mirror"
+        ), patch.object(
+            am, "DRY_RUN", False
+        ):
+            am.main()
+
+        return run_calls, run_net_calls, mock_ff_pr
+
+    def test_all_clean_renames_probe_and_force_pushes(self):
+        run_calls, run_net_calls, mock_ff_pr = self._run_live(
+            probe_result=("ccc", None)
+        )
+
+        expected_branch = (
+            f"{am.CONFLICT_FREE_BRANCH_PREFIX}-{am.date.today().isoformat()}-ccc"
+        )
+        self.assertIn(["git", "branch", "-m", "probe", expected_branch], run_calls)
+        self.assertIn(
+            ["git", "push", "--force-with-lease", "origin", expected_branch],
+            run_net_calls,
+        )
+        mock_ff_pr.assert_called_once()
+        self.assertEqual(mock_ff_pr.call_args.kwargs["branch"], expected_branch)
+
+    def test_partial_clean_renames_probe_and_force_pushes(self):
+        run_calls, run_net_calls, mock_ff_pr = self._run_live(
+            probe_result=("aaa", "bbb")
+        )
+
+        expected_branch = (
+            f"{am.CONFLICT_FREE_BRANCH_PREFIX}-{am.date.today().isoformat()}-aaa"
+        )
+        self.assertIn(["git", "branch", "-m", "probe", expected_branch], run_calls)
+        self.assertIn(
+            ["git", "push", "--force-with-lease", "origin", expected_branch],
+            run_net_calls,
+        )
+        mock_ff_pr.assert_called_once()
+        self.assertEqual(mock_ff_pr.call_args.kwargs["branch"], expected_branch)
+
+
+# ---------------------------------------------------------------------------
+# open_conflict_pr / open_conflict_free_pr
+# ---------------------------------------------------------------------------
+
+
+class TestOpenPrBase(unittest.TestCase):
+    """
+    The whole point of basing conflict(-free) branches on the target branch
+    is defeated if the PR itself is opened against upstream. Exercise the
+    gh pr create call directly rather than mocking it away.
+    """
+
+    def _run(self, fn, **kwargs):
+        run_calls = []
+
+        def fake_run(cmd, cwd=None, check=True, **_kwargs):
+            run_calls.append(list(cmd))
+            if cmd[:3] == ["gh", "label", "list"]:
+                return _completed(stdout="[]")
+            return _completed(stdout="https://github.com/ROCm/ROCgdb/pull/1")
+
+        with patch.object(am, "run", side_effect=fake_run):
+            fn(**kwargs)
+
+        return run_calls
+
+    def test_open_conflict_pr_bases_on_target_not_upstream(self):
+        run_calls = self._run(
+            am.open_conflict_pr,
+            branch="users/github/conflict",
+            merge_base_sha="a" * 40,
+            conflict_commit="b" * 40,
+            conflicted_files=["foo.c"],
+            title="Conflict",
+        )
+
+        create_call = next(c for c in run_calls if c[:3] == ["gh", "pr", "create"])
+        self.assertIn("--base", create_call)
+        base = create_call[create_call.index("--base") + 1]
+        self.assertEqual(base, am.TARGET_BRANCH)
+        self.assertNotEqual(base, am.UPSTREAM_BRANCH)
+
+    def test_open_conflict_free_pr_bases_on_target_not_upstream(self):
+        run_calls = self._run(
+            am.open_conflict_free_pr,
+            branch="users/github/conflict-free",
+            first_commit="a" * 40,
+            last_commit="c" * 40,
+            title="Conflict-free",
+        )
+
+        create_call = next(c for c in run_calls if c[:3] == ["gh", "pr", "create"])
+        self.assertIn("--base", create_call)
+        base = create_call[create_call.index("--base") + 1]
+        self.assertEqual(base, am.TARGET_BRANCH)
+        self.assertNotEqual(base, am.UPSTREAM_BRANCH)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -370,8 +370,14 @@ def probe_clean_prefix(
     commits: list[str],
 ) -> tuple[str | None, str | None]:
     """
-    Walk commits oldest-to-newest on a throwaway branch off origin/TARGET_BRANCH.
+    Walk commits oldest-to-newest on a throwaway branch off origin/TARGET_BRANCH,
+    to find how far UPSTREAM_BRANCH merges into TARGET_BRANCH without conflicts.
     Returns (last_clean_commit, first_conflict_commit).
+
+    If a clean prefix exists (last_clean is not None), the `probe` branch is
+    left in place, holding the merge chain built while walking that prefix —
+    the caller can push it directly as the conflict-free branch. Otherwise
+    `probe` is discarded.
     """
     run(["git", "checkout", "-B", "probe", f"origin/{TARGET_BRANCH}"], cwd=repo)
 
@@ -387,8 +393,9 @@ def probe_clean_prefix(
                 break
             last_clean = commit
     finally:
-        run(["git", "checkout", "--detach", "HEAD"], cwd=repo, check=False)
-        run(["git", "branch", "-D", "probe"], cwd=repo, check=False)
+        if last_clean is None:
+            run(["git", "checkout", "--detach", "HEAD"], cwd=repo, check=False)
+            run(["git", "branch", "-D", "probe"], cwd=repo, check=False)
 
     return last_clean, first_conflict
 
@@ -521,7 +528,10 @@ def main() -> None:
         print("Probing for clean merge prefix…")
         last_clean, first_conflict = probe_clean_prefix(repo, commits)
 
-        # Probe leaves the repo on detached HEAD; return to the local branch.
+        # Probe leaves the repo on the `probe` branch (if a clean prefix was
+        # found) or detached HEAD (otherwise); return to the local branch.
+        # The `probe` branch ref itself survives the checkout below, and is
+        # reused as the conflict-free branch if applicable.
         if not DRY_RUN:
             run(["git", "checkout", TARGET_BRANCH], cwd=repo)
 
@@ -544,12 +554,14 @@ def main() -> None:
                     f"  Title  : {conflict_free_title}"
                 )
             else:
+                run(["git", "branch", "-m", "probe", conflict_free_branch], cwd=repo)
                 run_net(
                     [
                         "git",
                         "push",
+                        "--force-with-lease",
                         "origin",
-                        f"{commits[-1]}:refs/heads/{conflict_free_branch}",
+                        conflict_free_branch,
                     ],
                     cwd=repo,
                 )
@@ -581,13 +593,9 @@ def main() -> None:
                     f"  Title  : {conflict_free_title}"
                 )
                 return
+            run(["git", "branch", "-m", "probe", conflict_free_branch], cwd=repo)
             run_net(
-                [
-                    "git",
-                    "push",
-                    "origin",
-                    f"{last_clean}:refs/heads/{conflict_free_branch}",
-                ],
+                ["git", "push", "--force-with-lease", "origin", conflict_free_branch],
                 cwd=repo,
             )
             open_conflict_free_pr(
