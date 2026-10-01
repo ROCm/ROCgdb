@@ -4739,6 +4739,96 @@ global_symbol_searcher::is_suitable_msymbol
     }
 }
 
+/* Return true if NAME matches NAME_REGEX, or if NAME_REGEX is empty.  */
+
+static bool
+name_matches (const std::optional<compiled_regex> &name_regex,
+	      const char *name)
+{
+  return (!name_regex.has_value ()
+	  || name_regex->exec (name, 0, nullptr, 0) == 0);
+}
+
+/* See symtab.h.  */
+
+bool
+global_symbol_searcher::symtab_matches_filenames (symtab *symtab) const
+{
+  /* Check first sole SYMTAB->FILENAME.  It does not need to be a substring
+     of symtab_to_fullname as it may contain "./" etc.  */
+  if (file_matches (symtab->filename (), m_filenames, false))
+    return true;
+
+  if (!basenames_may_differ
+      && !file_matches (lbasename (symtab->filename ()), m_filenames, true))
+    return false;
+
+  return file_matches (symtab_to_fullname (symtab), m_filenames, false);
+}
+
+/* See symtab.h.  */
+
+bool
+global_symbol_searcher::symbol_matches
+	(const symbol *sym,
+	 const std::optional<compiled_regex> &name_regex,
+	 const std::optional<compiled_regex> &type_regex) const
+{
+  if (!symtab_matches_filenames (sym->symtab ()))
+    return false;
+
+  if (!sym->matches (to_search_flags (m_kind)))
+    return false;
+
+  if (!name_matches (name_regex, sym->natural_name ()))
+    return false;
+
+  switch (m_kind)
+    {
+    case symbol_search_kind::VARIABLE:
+      /* LOC_CONST can be used for more than just enums, e.g., C++ static
+	 const members.  We only want to skip enums here.  */
+      if (sym->loc_class () == LOC_UNRESOLVED
+	  || (sym->loc_class () == LOC_CONST
+	      && sym->type ()->code () == TYPE_CODE_ENUM))
+	return false;
+      [[fallthrough]];
+
+    case symbol_search_kind::FUNCTION:
+      if (type_regex.has_value ()
+	  && !regex_matches_sym_type_name (*type_regex, sym))
+	return false;
+      break;
+
+    case symbol_search_kind::TYPE:
+      break;
+
+    case symbol_search_kind::MODULE:
+      /* Skip module declarations, keep only definitions.  */
+      if (sym->line () == 0)
+	return false;
+      break;
+    }
+
+  return true;
+}
+
+/* See symtab.h.  */
+
+bool
+global_symbol_searcher::msymbol_matches
+	(const minimal_symbol *msymbol,
+	 const std::optional<compiled_regex> &name_regex) const
+{
+  if (msymbol->created_by_gdb)
+    return false;
+
+  if (!is_suitable_msymbol (msymbol))
+    return false;
+
+  return name_matches (name_regex, msymbol->natural_name ());
+}
+
 /* See symtab.h.  */
 
 bool
@@ -4761,8 +4851,7 @@ global_symbol_searcher::expand_symtabs
      &lookup_name_info::match_any (),
      [&] (const char *symname)
      {
-       return (!name_regex.has_value ()
-	       || name_regex->exec (symname, 0, nullptr, 0) == 0);
+       return name_matches (name_regex, symname);
      },
      NULL,
      SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
@@ -4788,25 +4877,16 @@ global_symbol_searcher::expand_symtabs
 	{
 	  QUIT;
 
-	  if (msymbol->created_by_gdb)
+	  if (!msymbol_matches (msymbol, name_regex))
 	    continue;
 
-	  if (is_suitable_msymbol (msymbol))
-	    {
-	      if (!name_regex.has_value ()
-		  || name_regex->exec (msymbol->natural_name (), 0,
-				       nullptr, 0) == 0)
-		{
-		  /* An important side-effect of this lookup function is
-		     to expand the symbol table if msymbol is found, later
-		     in the process we will add matching symbols or
-		     msymbols to the results list, and that requires that
-		     the symbols tables are expanded.  */
-		  if (find_compunit_symtab_for_pc
-			(msymbol->value_address (objfile)) == nullptr)
-		    found_func_msymbol_without_debug_info = true;
-		}
-	    }
+	  /* An important side-effect of this lookup function is to expand
+	     the symbol table if msymbol is found, later in the process we
+	     will add matching symbols or msymbols to the results list, and
+	     that requires that the symbols tables are expanded.  */
+	  if (find_compunit_symtab_for_pc
+		(msymbol->value_address (objfile)) == nullptr)
+	    found_func_msymbol_without_debug_info = true;
 	}
     }
 
@@ -4822,8 +4902,6 @@ global_symbol_searcher::add_matching_symbols
 	 const std::optional<compiled_regex> &type_regex,
 	 std::set<symbol_search> *result_set) const
 {
-  domain_search_flags domain = to_search_flags (m_kind);
-
   /* Add matching symbols (if not already present).  */
   for (compunit_symtab &cust : objfile->compunits ())
     {
@@ -4835,56 +4913,10 @@ global_symbol_searcher::add_matching_symbols
 
 	  for (struct symbol *sym : block_iterator_range (b))
 	    {
-	      struct symtab *real_symtab = sym->symtab ();
-
 	      QUIT;
 
-	      /* Check first sole REAL_SYMTAB->FILENAME.  It does
-		 not need to be a substring of symtab_to_fullname as
-		 it may contain "./" etc.  */
-	      if (!(file_matches (real_symtab->filename (), m_filenames, false)
-		    || ((basenames_may_differ
-			 || file_matches (lbasename (real_symtab->filename ()),
-					  m_filenames, true))
-			&& file_matches (symtab_to_fullname (real_symtab),
-					 m_filenames, false))))
+	      if (!symbol_matches (sym, name_regex, type_regex))
 		continue;
-
-	      if (!sym->matches (domain))
-		continue;
-
-	      if (name_regex.has_value ()
-		  && name_regex->exec (sym->natural_name (), 0,
-				       nullptr, 0) != 0)
-		continue;
-
-	      switch (m_kind)
-		{
-		case symbol_search_kind::VARIABLE:
-		  /* LOC_CONST can be used for more than just enums, e.g.,
-		     C++ static const members.  We only want to skip enums
-		     here.  */
-		  if (sym->loc_class () == LOC_UNRESOLVED
-		      || (sym->loc_class () == LOC_CONST
-			  && sym->type ()->code () == TYPE_CODE_ENUM))
-		    continue;
-		  [[fallthrough]];
-
-		case symbol_search_kind::FUNCTION:
-		  if (type_regex.has_value ()
-		      && !regex_matches_sym_type_name (*type_regex, sym))
-		    continue;
-		  break;
-
-		case symbol_search_kind::TYPE:
-		  break;
-
-		case symbol_search_kind::MODULE:
-		  /* Skip module declarations, keep only definitions.  */
-		  if (sym->line () == 0)
-		    continue;
-		  break;
-		}
 
 	      /* Match, insert if not already in the results.  */
 	      if (result_set->size () < m_max_search_results)
@@ -4909,34 +4941,25 @@ global_symbol_searcher::add_matching_msymbols
     {
       QUIT;
 
-      if (msymbol->created_by_gdb)
+      if (!msymbol_matches (msymbol, name_regex))
 	continue;
 
-      if (is_suitable_msymbol (msymbol))
-	{
-	  if (!name_regex.has_value ()
-	      || name_regex->exec (msymbol->natural_name (), 0,
-				   nullptr, 0) == 0)
-	    {
-	      /* For functions we can do a quick check of whether the
-		 symbol might be found via find_pc_symtab.  */
-	      if (m_kind != symbol_search_kind::FUNCTION
-		  || (find_compunit_symtab_for_pc
-		      (msymbol->value_address (objfile)) == NULL))
-		{
-		  if (lookup_symbol_in_objfile_from_linkage_name
-		      (objfile, msymbol->linkage_name (),
-		       SEARCH_VFT).symbol == NULL)
-		    {
-		      /* Matching msymbol, add it to the results list.  */
-		      if (results->size () < m_max_search_results)
-			results->emplace_back (GLOBAL_BLOCK, msymbol, objfile);
-		      else
-			return false;
-		    }
-		}
-	    }
-	}
+      /* For functions we can do a quick check of whether the
+	 symbol might be found via find_pc_symtab.  */
+      if (m_kind == symbol_search_kind::FUNCTION
+	  && (find_compunit_symtab_for_pc
+	      (msymbol->value_address (objfile)) != nullptr))
+	continue;
+
+      if (lookup_symbol_in_objfile_from_linkage_name
+	    (objfile, msymbol->linkage_name (), SEARCH_VFT).symbol != nullptr)
+	continue;
+
+      /* Matching msymbol, add it to the results list.  */
+      if (results->size () < m_max_search_results)
+	results->emplace_back (GLOBAL_BLOCK, msymbol, objfile);
+      else
+	return false;
     }
 
   return true;

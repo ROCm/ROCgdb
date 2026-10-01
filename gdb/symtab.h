@@ -2687,6 +2687,22 @@ private:
   /* Compile M_SYMBOL_TYPE_REGEXP, if set.  */
   std::optional<compiled_regex> compile_type_regex () const;
 
+  /* Return true if SYMTAB matches one of M_FILENAMES.  */
+  bool symtab_matches_filenames (symtab *symtab) const;
+
+  /* Return true if SYM is of kind M_KIND, is in a file matching
+     M_FILENAMES, and matches NAME_REGEX and TYPE_REGEX.  */
+  bool symbol_matches (const symbol *sym,
+		       const std::optional<compiled_regex> &name_regex,
+		       const std::optional<compiled_regex> &type_regex) const;
+
+  /* Return true if MSYMBOL is of kind M_KIND and matches NAME_REGEX.
+
+     This function also filters out the minimal symbols artificially created by
+     GDB.  */
+  bool msymbol_matches (const minimal_symbol *msymbol,
+			const std::optional<compiled_regex> &name_regex) const;
+
   /* Expand symtabs in OBJFILE that match NAME_REGEX and are of type M_KIND.
      Return true if a matching function msymbol without debug info was
      seen, meaning that msymbols should later be considered for the results
