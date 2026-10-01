@@ -26,8 +26,21 @@
 union cp_name_parser_YYSTYPE;
 struct demangle_parse_info;
 
-#define d_left(dc) (dc)->u.s_binary.left
-#define d_right(dc) (dc)->u.s_binary.right
+/* Return a reference to the left child of binary component DC.  */
+
+static inline struct demangle_component *&
+d_left (struct demangle_component *dc)
+{
+  return dc->u.s_binary.left;
+}
+
+/* Return a reference to the right child of binary component DC.  */
+
+static inline struct demangle_component *&
+d_right (struct demangle_component *dc)
+{
+  return dc->u.s_binary.right;
+}
 
 namespace cp_name_parser {
 
