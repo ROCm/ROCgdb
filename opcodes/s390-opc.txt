@@ -823,7 +823,7 @@ b373 lcdfr RRE_FF "load complement no cc" z9-ec zarch
 b3c1 ldgr RRE_FR "load FPR from GR" z9-ec zarch
 b3cd lgdr RRE_RF "load GR from FPR" z9-ec zarch
 b3d2 adtr RRF_F0FF "add long dfp" z9-ec zarch
-b3da axtr RRR_FE0FEFE "add extended dfp" z9-ec zarch
+b3da axtr RRF_FE0FEFE "add extended dfp" z9-ec zarch
 b3e4 cdtr RRE_FF "compare long dfp" z9-ec zarch
 b3ec cxtr RRE_FEFE "compare extended dfp" z9-ec zarch
 b3e0 kdtr RRE_FF "compare and signal long dfp" z9-ec zarch
@@ -843,7 +843,7 @@ b3eb csxtr RRF_0UREFE "convert from extended dfp to signed bcd" z9-ec zarch
 b3e2 cudtr RRE_RF "convert from long dfp to unsigned bcd" z9-ec zarch
 b3ea cuxtr RRE_RFE "convert from extended dfp to unsigned bcd" z9-ec zarch
 b3d1 ddtr RRF_F0FF "divide long dfp" z9-ec zarch
-b3d9 dxtr RRR_FE0FEFE "divide extended dfp" z9-ec zarch
+b3d9 dxtr RRF_FE0FEFE "divide extended dfp" z9-ec zarch
 b3e5 eedtr RRE_RF "extract biased exponent from long dfp" z9-ec zarch
 b3ed eextr RRE_RFE "extract biased exponent from extended dfp" z9-ec zarch
 b3e7 esdtr RRE_RF "extract significance from long dfp" z9-ec zarch
@@ -860,7 +860,7 @@ b3dc lxdtr RRF_0UFEF "load lengthened extended dfp" z9-ec zarch
 b3d5 ledtr RRF_UUFF "load rounded long dfp" z9-ec zarch
 b3dd ldxtr RRF_UUFFE "load rounded extended dfp" z9-ec zarch
 b3d0 mdtr RRF_F0FF "multiply long dfp" z9-ec zarch
-b3d8 mxtr RRR_FE0FEFE "multiply extended dfp" z9-ec zarch
+b3d8 mxtr RRF_FE0FEFE "multiply extended dfp" z9-ec zarch
 b3f5 qadtr RRF_FUFF "Quantize long dfp" z9-ec zarch
 b3fd qaxtr RRF_FEUFEFE "Quantize extended dfp" z9-ec zarch
 b3f7 rrdtr RRF_FFRU "Reround long dfp" z9-ec zarch
@@ -872,7 +872,7 @@ ed0000000048 slxt RXF_FERRDFE "shift coefficient left extended dfp" z9-ec zarch
 ed0000000041 srdt RXF_FRRDF "shift coefficient right long dfp" z9-ec zarch
 ed0000000049 srxt RXF_FERRDFE "shift coefficient right extended dfp" z9-ec zarch
 b3d3 sdtr RRF_F0FF "subtract long dfp" z9-ec zarch
-b3db sxtr RRR_FE0FEFE "subtract extended dfp" z9-ec zarch
+b3db sxtr RRF_FE0FEFE "subtract extended dfp" z9-ec zarch
 ed0000000050 tdcet RXE_FRRD "test data class short dfp" z9-ec zarch
 ed0000000054 tdcdt RXE_FRRD "test data class long dfp" z9-ec zarch
 ed0000000058 tdcxt RXE_FERRD "test data class extended dfp" z9-ec zarch

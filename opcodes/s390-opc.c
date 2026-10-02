@@ -366,6 +366,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RRF_FE0FER   4, { FE_24,FE_16,R_28,0,0,0 }         /* e.g. iextr */
 #define INSTR_RRF_F0FF     4, { F_24,F_28,F_16,0,0,0 }           /* e.g. ddtr  */
 #define INSTR_RRF_FUFF     4, { F_24,F_16,F_28,U4_20,0,0 }       /* e.g. didbr */
+#define INSTR_RRF_FE0FEFE  4, { FE_24,FE_28,FE_16,0,0,0 }        /* e.g. axtr  */
 #define INSTR_RRF_FEUFEFE  4, { FE_24,FE_16,FE_28,U4_20,0,0 }    /* e.g. qaxtr */
 #define INSTR_RRF_FUFF2    4, { F_24,F_28,F_16,U4_20,0,0 }       /* e.g. adtra */
 #define INSTR_RRF_FEUFEFE2 4, { FE_24,FE_28,FE_16,U4_20,0,0 }    /* e.g. axtra */
@@ -409,7 +410,6 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RR_RERE      2, { RE_8,RE_12,0,0,0,0 }             /* e.g. clcl  */
 #define INSTR_RR_U0        2, { U8_8, 0,0,0,0,0 }                /* e.g. svc   */
 #define INSTR_RR_UR        2, { U4_8,R_12,0,0,0,0 }              /* e.g. bcr   */
-#define INSTR_RRR_FE0FEFE  4, { FE_24,FE_28,FE_16,0,0,0 }        /* e.g. axtr  */
 #define INSTR_RRS_RRRDU    6, { R_8,R_12,U4_32,D_20,B_16 }       /* e.g. crb   */
 #define INSTR_RRS_RRRD0    6, { R_8,R_12,D_20,B_16,0 }           /* e.g. crbne */
 #define INSTR_RSE_RRRD     6, { R_8,R_12,D_20,B_16,0,0 }         /* e.g. lmh   */
@@ -601,6 +601,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RRF_FE0FER   { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRF_F0FF     { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRF_FUFF     { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
+#define MASK_RRF_FE0FEFE  { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRF_FEUFEFE  { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRF_FUFF2    { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRF_FEUFEFE2 { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
@@ -644,7 +645,6 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RR_RERE      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_U0        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_UR        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
-#define MASK_RRR_FE0FEFE  { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRS_RRRDU    { 0xff, 0x00, 0x00, 0x00, 0x0f, 0xff }
 #define MASK_RRS_RRRD0    { 0xff, 0x00, 0x00, 0x00, 0xff, 0xff }
 #define MASK_RSE_RRRD     { 0xff, 0x00, 0x00, 0x00, 0xff, 0xff }
