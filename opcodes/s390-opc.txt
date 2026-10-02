@@ -733,8 +733,8 @@ b33f msdr RRF_F0FF "multiply and subtract long hfp" z990 esa,zarch
 ed000000003f msd RXF_FRRDF "multiply and subtract long hfp" z990 esa,zarch
 b32f mser RRF_F0FF "mutliply and subtract short hfp" z990 esa,zarch
 ed000000002f mse RXF_FRRDF "multiply and subttract short hfp" z990 esa,zarch
-b92e km RRE_RR "cipher message" z990 esa,zarch
-b92f kmc RRE_RR "cipher message with chaining" z990 esa,zarch
+b92e km RRE_RERE "cipher message" z990 esa,zarch
+b92f kmc RRE_RERE "cipher message with chaining" z990 esa,zarch
 b93e kimd RRE_RR "compute intermediate message digest" z990 esa,zarch
 b93f klmd RRE_RR "compute last message digest" z990 esa,zarch
 b91e kmac RRE_RR "compute message authentication code" z990 esa,zarch
