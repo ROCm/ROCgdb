@@ -256,7 +256,7 @@ a706 brct RI_RP "branch relative on count" g5 esa,zarch condjump
 a706 jct RI_RP "branch relative on count" g5 esa,zarch condjump
 b241 cksm RRE_RRE "checksum" g5 esa,zarch
 a70e chi RI_RI "compare halfword immediate" g5 esa,zarch
-a9 clcle RS_RRRD "compare logical long extended" g5 esa,zarch
+a9 clcle RS_RERERD "compare logical long extended" g5 esa,zarch
 a708 lhi RI_RI "load halfword immediate" g5 esa,zarch
 a8 mvcle RS_RERERD "move long extended" g5 esa,zarch
 a70c mhi RI_RI "multiply halfword immediate" g5 esa,zarch

@@ -121,7 +121,7 @@ Disassembly of section .text:
 .*:	55 65 af ff [	 ]*cl	%r6,4095\(%r5,%r10\)
 .*:	d5 ff 5f ff af ff [	 ]*clc	4095\(256,%r5\),4095\(%r10\)
 .*:	0f 68 [	 ]*clcl	%r6,%r8
-.*:	a9 69 5f ff [	 ]*clcle	%r6,%r9,4095\(%r5\)
+.*:	a9 68 5f ff [	 ]*clcle	%r6,%r8,4095\(%r5\)
 .*:	95 ff 5f ff [	 ]*cli	4095\(%r5\),255
 .*:	bd 6a 5f ff [	 ]*clm	%r6,10,4095\(%r5\)
 .*:	15 69 [	 ]*clr	%r6,%r9
