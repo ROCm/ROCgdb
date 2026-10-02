@@ -40,7 +40,7 @@ b21a cfc S_RD "compare and form codeword" g5 esa,zarch
 49 ch RX_RRRD "compare halfword" g5 esa,zarch
 55 cl RX_RRRD "compare logical" g5 esa,zarch
 d5 clc SS_L0RDRD "compare logical" g5 esa,zarch
-0f clcl RR_RR "compare logical long" g5 esa,zarch
+0f clcl RR_RERE "compare logical long" g5 esa,zarch
 95 cli SI_URD "compare logical" g5 esa,zarch
 bd clm RS_RURD "compare logical characters under mask" g5 esa,zarch
 15 clr RR_RR "compare logical" g5 esa,zarch

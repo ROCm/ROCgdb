@@ -404,6 +404,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RR_R0        2, { R_8, 0,0,0,0,0 }                 /* e.g. spm   */
 #define INSTR_RR_RR        2, { R_8,R_12,0,0,0,0 }               /* e.g. lr    */
 #define INSTR_RR_RER       2, { RE_8,R_12,0,0,0,0 }              /* e.g. dr    */
+#define INSTR_RR_RERE      2, { RE_8,RE_12,0,0,0,0 }             /* e.g. clcl  */
 #define INSTR_RR_U0        2, { U8_8, 0,0,0,0,0 }                /* e.g. svc   */
 #define INSTR_RR_UR        2, { U4_8,R_12,0,0,0,0 }              /* e.g. bcr   */
 #define INSTR_RRR_F0FF     4, { F_24,F_28,F_16,0,0,0 }           /* e.g. ddtr  */
@@ -638,6 +639,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RR_R0        { 0xff, 0x0f, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_RR        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_RER       { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
+#define MASK_RR_RERE      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_U0        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_UR        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRR_F0FF     { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
