@@ -342,13 +342,13 @@ b317 meebr RRE_FF "multiply short bfp" g5 esa,zarch
 ed0000000017 meeb RXE_FRRD "multiply short bfp" g5 esa,zarch
 b30c mdebr RRE_FF "multiply short to long bfp" g5 esa,zarch
 ed000000000c mdeb RXE_FRRD "multiply short to long bfp" g5 esa,zarch
-b31e madbr RRF_F0FF "multiply and add long bfp" g5 esa,zarch
+b31e madbr RRD_F0FF "multiply and add long bfp" g5 esa,zarch
 ed000000001e madb RXF_FRRDF "multiply and add long bfp" g5 esa,zarch
-b30e maebr RRF_F0FF "multiply and add short bfp" g5 esa,zarch
+b30e maebr RRD_F0FF "multiply and add short bfp" g5 esa,zarch
 ed000000000e maeb RXF_FRRDF "multiply and add short bfp" g5 esa,zarch
-b31f msdbr RRF_F0FF "multiply and subtract long bfp" g5 esa,zarch
+b31f msdbr RRD_F0FF "multiply and subtract long bfp" g5 esa,zarch
 ed000000001f msdb RXF_FRRDF "multiply and subtract long bfp" g5 esa,zarch
-b30f msebr RRF_F0FF "multiply and subtract short bfp" g5 esa,zarch
+b30f msebr RRD_F0FF "multiply and subtract short bfp" g5 esa,zarch
 ed000000000f mseb RXF_FRRDF "multiply and subtract short bfp" g5 esa,zarch
 # efpc and sfpc have only one operand; retain RR register format for compatibility
 b384 sfpc RRE_RR "set fpc" g5 esa,zarch optparm
@@ -725,13 +725,13 @@ eb0000000096 lmh RSY_RRRD "load multiple high" z990 zarch
 # new z990 instructions
 b98a cspg RRE_RR "compare and swap and purge" z990 zarch
 b98e idte RRF_RURR2 "invalidate dat table entry" z990 zarch optparm
-b33e madr RRF_F0FF "multiply and add long hfp" z990 esa,zarch
+b33e madr RRD_F0FF "multiply and add long hfp" z990 esa,zarch
 ed000000003e mad RXF_FRRDF "multiply and add long hfp" z990 esa,zarch
-b32e maer RRF_F0FF "multiply and add short hfp" z990 esa,zarch
+b32e maer RRD_F0FF "multiply and add short hfp" z990 esa,zarch
 ed000000002e mae RXF_FRRDF "multiply and add short hfp" z990 esa,zarch
-b33f msdr RRF_F0FF "multiply and subtract long hfp" z990 esa,zarch
+b33f msdr RRD_F0FF "multiply and subtract long hfp" z990 esa,zarch
 ed000000003f msd RXF_FRRDF "multiply and subtract long hfp" z990 esa,zarch
-b32f mser RRF_F0FF "mutliply and subtract short hfp" z990 esa,zarch
+b32f mser RRD_F0FF "mutliply and subtract short hfp" z990 esa,zarch
 ed000000002f mse RXF_FRRDF "multiply and subttract short hfp" z990 esa,zarch
 b92e km RRE_RERE "cipher message" z990 esa,zarch
 b92f kmc RRE_RERE "cipher message with chaining" z990 esa,zarch
@@ -805,14 +805,14 @@ b9b0 cu14 RRF_U0RERE "convert utf-8 to utf-32" z9-109 zarch optparm
 b9be srstu RRE_RR "search string unicode" z9-109 zarch
 d0 trtr SS_L0RDRD "tranlate and test reverse" z9-109 zarch
 b33b myr RRF_FE0FF "multiply unnormalized long hfp" z9-109 zarch
-b33d myhr RRF_F0FF "multiply unnormalized long hfp high" z9-109 zarch
-b339 mylr RRF_F0FF "multiply unnormalized long hfp low" z9-109 zarch
+b33d myhr RRD_F0FF "multiply unnormalized long hfp high" z9-109 zarch
+b339 mylr RRD_F0FF "multiply unnormalized long hfp low" z9-109 zarch
 ed000000003b my RXF_FRRDFE "multiply unnormalized long hfp" z9-109 zarch
 ed000000003d myh RXF_FRRDF "multiply unnormalized long hfp high" z9-109 zarch
 ed0000000039 myl RXF_FRRDF "multiply unnormalized long hfp low" z9-109 zarch
-b33a mayr RRF_F0FF "multiply and add unnormalized long hfp" z9-109 zarch
-b33c mayhr RRF_F0FF "multiply and add unnormalized long hfp high" z9-109 zarch
-b338 maylr RRF_F0FF "multiply and add unnormalized long hfp low" z9-109 zarch
+b33a mayr RRD_F0FF "multiply and add unnormalized long hfp" z9-109 zarch
+b33c mayhr RRD_F0FF "multiply and add unnormalized long hfp high" z9-109 zarch
+b338 maylr RRD_F0FF "multiply and add unnormalized long hfp low" z9-109 zarch
 ed000000003a may RXF_FRRDF "multiply and add unnormalized long hfp" z9-109 zarch
 ed000000003c mayh RXF_FRRDF "multiply and add unnormalized long hfp high" z9-109 zarch
 ed0000000038 mayl RXF_FRRDF "multiply and add unnormalized long hfp low" z9-109 zarch
