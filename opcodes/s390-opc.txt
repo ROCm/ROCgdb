@@ -2049,6 +2049,9 @@ e60000000052 vcvbg VRR_RV0UU "vector convert to binary 64 bit" arch13 zarch optp
 
 b93a kdsa RRE_RR "compute digital signature authentication" arch13 zarch
 
+# PPA-in-Order Facility
+
+b2e8 ppa RRF_U0RR "perform processor assist" arch13 zarch
 
 # z16 (arch14) instructions
 
