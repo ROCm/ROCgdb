@@ -1200,7 +1200,7 @@ e70000000046 vgmb VRI_V0UU "vector generate mask byte" z13 zarch vx
 e70000001046 vgmh VRI_V0UU "vector generate mask halfword" z13 zarch vx
 e70000002046 vgmf VRI_V0UU "vector generate mask word" z13 zarch vx
 e70000003046 vgmg VRI_V0UU "vector generate mask double word" z13 zarch vx
-e70000000056 vlr VRX_VV "vector register load" z13 zarch vx
+e70000000056 vlr VRR_VV "vector register load" z13 zarch vx
 e70000000005 vlrep VRX_VRRDU "vector load and replicate" z13 zarch vx
 e70000000005 vlrepb VRX_VRRD "vector load and replicate byte elements" z13 zarch vx
 e70000001005 vlreph VRX_VRRD "vector load and replicate halfword elements" z13 zarch vx

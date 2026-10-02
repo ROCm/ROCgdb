@@ -495,7 +495,6 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_VRI_VV0UU    6, { V_8,V_12,U8_28,U4_24,0,0 }       /* e.g. vcvdq */
 #define INSTR_VRI_VVV0UV   6, { V_8,V_12,V_16,V_32,U8_24,0 }     /* e.g. veval */
 #define INSTR_VRX_VRRD     6, { V_8,D_20,X_12,B_16,0,0 }         /* e.g. vl    */
-#define INSTR_VRX_VV       6, { V_8,V_12,0,0,0,0 }               /* e.g. vlr   */
 #define INSTR_VRX_VRRDU    6, { V_8,D_20,X_12,B_16,U4_32,0 }     /* e.g. vlrep */
 #define INSTR_VRS_RVRDU    6, { R_8,V_12,D_20,B_16,U4_32,0 }     /* e.g. vlgv  */
 #define INSTR_VRS_RVRD     6, { R_8,V_12,D_20,B_16,0,0 }         /* e.g. vlgvb */
@@ -731,7 +730,6 @@ unused_s390_operands_static_asserts (void)
 #define MASK_VRI_VV0UU    { 0xff, 0x00, 0xff, 0x00, 0x00, 0xff }
 #define MASK_VRI_VVV0UV   { 0xff, 0x00, 0x0f, 0x00, 0x00, 0xff }
 #define MASK_VRX_VRRD     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
-#define MASK_VRX_VV       { 0xff, 0x00, 0xff, 0xff, 0xf0, 0xff }
 #define MASK_VRX_VRRDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRS_RVRDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRS_RVRD     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
