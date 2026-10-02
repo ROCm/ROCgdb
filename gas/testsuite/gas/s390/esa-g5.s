@@ -120,7 +120,7 @@ foo:
 	clm	%r6,10,4095(%r5)
 	clr	%r6,%r9
 	clst	%r6,%r9
-	cmpsc	%r6,%r9
+	cmpsc	%r6,%r8
 	cp	4095(6,%r5),4095(9,%r10)
 	cpya	%a6,%a9
 	cr	%r6,%r9

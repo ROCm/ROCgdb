@@ -126,7 +126,7 @@ Disassembly of section .text:
 .*:	bd 6a 5f ff [	 ]*clm	%r6,10,4095\(%r5\)
 .*:	15 69 [	 ]*clr	%r6,%r9
 .*:	b2 5d 00 69 [	 ]*clst	%r6,%r9
-.*:	b2 63 00 69 [	 ]*cmpsc	%r6,%r9
+.*:	b2 63 00 68 [	 ]*cmpsc	%r6,%r8
 .*:	f9 58 5f ff af ff [	 ]*cp	4095\(6,%r5\),4095\(9,%r10\)
 .*:	b2 4d 00 69 [	 ]*cpya	%a6,%a9
 .*:	19 69 [	 ]*cr	%r6,%r9

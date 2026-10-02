@@ -596,7 +596,7 @@ ed0000000037 mee RXE_FRRD "multiply short hfp" g5 esa,zarch
 b336 sqxr RRE_FEFE "square root extended hfp" g5 esa,zarch
 ed0000000034 sqe RXE_FRRD "square root short hfp" g5 esa,zarch
 ed0000000035 sqd RXE_FRRD "square root long hfp" g5 esa,zarch
-b263 cmpsc RRE_RR "compression call" g5 esa,zarch
+b263 cmpsc RRE_RERE "compression call" g5 esa,zarch
 eb00000000c0 tp RSL_R0RD "test decimal" g5 esa,zarch
 b365 lxr RRE_FEFE "load extended fp" g5 esa,zarch
 b22e pgin RRE_RR "page in" g5 esa,zarch
