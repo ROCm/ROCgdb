@@ -135,7 +135,7 @@ foo:
 	stg	%r9,4095(%r5,%r10)
 	stmg	%r9,%r6,4095(%r5)
 	stmh	%r9,%r6,4095(%r5)
-	stpq	%r9,4095(%r5,%r10)
+	stpq	%r8,4095(%r5,%r10)
 	strag	4095(%r5),4095(%r9)
 	strvg	%r9,4095(%r5,%r10)
 	sturg	%r9,%r6

@@ -141,7 +141,7 @@ Disassembly of section .text:
 .*:	e3 95 af ff 00 24 [ 	]*stg	%r9,4095\(%r5,%r10\)
 .*:	eb 96 5f ff 00 24 [ 	]*stmg	%r9,%r6,4095\(%r5\)
 .*:	eb 96 5f ff 00 26 [ 	]*stmh	%r9,%r6,4095\(%r5\)
-.*:	e3 95 af ff 00 8e [ 	]*stpq	%r9,4095\(%r5,%r10\)
+.*:	e3 85 af ff 00 8e [ 	]*stpq	%r8,4095\(%r5,%r10\)
 .*:	e5 02 5f ff 9f ff [ 	]*strag	4095\(%r5\),4095\(%r9\)
 .*:	e3 95 af ff 00 2f [ 	]*strvg	%r9,4095\(%r5,%r10\)
 .*:	b9 25 00 96 [ 	]*sturg	%r9,%r6

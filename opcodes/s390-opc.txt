@@ -560,7 +560,7 @@ e30000000086 mlg RXE_RERRD "multiply logical 64" z900 zarch
 e30000000087 dlg RXE_RERRD "divide logical 64" z900 zarch
 e30000000088 alcg RXE_RRRD "add logical with carry 64" z900 zarch
 e30000000089 slbg RXE_RRRD "subtract logical with borrow 64" z900 zarch
-e3000000008e stpq RXE_RRRD "store pair to quadword" z900 zarch
+e3000000008e stpq RXE_RERRD "store pair to quadword" z900 zarch
 e3000000008f lpq RXE_RERRD "load pair from quadword" z900 zarch
 e30000000096 ml RXE_RERRD "multiply logical 32" z900 esa,zarch
 e30000000097 dl RXE_RERRD "divide logical 32" z900 esa,zarch
@@ -692,7 +692,7 @@ e30000000086 mlg RXY_RERRD "multiply logical 64" z990 zarch
 e30000000087 dlg RXY_RERRD "divide logical 64" z990 zarch
 e30000000088 alcg RXY_RRRD "add logical with carry 64" z990 zarch
 e30000000089 slbg RXY_RRRD "subtract logical with borrow 64" z990 zarch
-e3000000008e stpq RXY_RRRD "store pair to quadword" z990 zarch
+e3000000008e stpq RXY_RERRD "store pair to quadword" z990 zarch
 e3000000008f lpq RXY_RERRD "load pair from quadword" z990 zarch
 e30000000090 llgc RXY_RRRD "load logical character" z990 zarch
 e30000000091 llgh RXY_RRRD "load logical halfword" z990 zarch
