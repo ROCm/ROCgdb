@@ -15,12 +15,17 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
+#include "source-tracking-inline-hdr.h"
+
 volatile int global_var = 0;
 
 static inline void __attribute__ ((__always_inline__))
 inline_func (void)
 {
-  global_var += 2;		/* Breakpoint here.  */
+  global_var = global_var + 5;
+  global_var = global_var + 1;
+  global_var = global_var + 2;		/* Breakpoint here.  */
+  global_var = global_var + 3;
 }
 
 int __attribute__ ((noinline, noclone))
@@ -46,5 +51,6 @@ main (void)
 
   ++global_var;
 
-  return answer - global_var;
+  header_func ();
+  return answer - other_func (global_var);
 }

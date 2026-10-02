@@ -1,0 +1,82 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Create a multi-location breakpoint where the two locations are in
+# two different objfiles; the main executable and a shared library.
+#
+# Turn on source tracking, and place a breakpoint on the source of the
+# multi-location breakpoint.  The breakpoint should not be tracked as
+# GDB does not currently source track breakpoints that are in multiple
+# objfiles.
+
+require allow_shlib_tests
+
+standard_testfile .c -common.c -lib.c
+
+set libname lib$::testfile.so
+set objlib [standard_output_file $libname]
+if {[build_executable "build solib" $libname \
+	 [list $srcfile3 $srcfile2] {debug shlib}] == -1} {
+    return
+}
+
+if {[prepare_for_testing "prepare" $testfile \
+	 [list $srcfile $srcfile2] [list debug shlib=$objlib]] == -1} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+# Enable the source tracking feature.
+gdb_test_no_output "set breakpoint source-tracking enabled on" \
+    "enable source tracking breakpoints"
+
+# Create a breakpoint that appears in multiple objfiles, GDB will not
+# currently source track this breakpoint.
+with_test_prefix "untracked b/p" {
+    set lineno [gdb_get_line_number "/* Breakpoint here.  */" $srcfile2]
+
+    gdb_breakpoint $srcfile2:$lineno
+    set bp_num [get_integer_valueof "\$bpnum" "*UNKNOWN*"]
+
+    gdb_test "info breakpoint $bp_num" \
+	"\r\n$bp_num\\.1\\s+\[^\r\n\]+\r\n$bp_num\\.2\\s+\[^\r\n\]+" \
+	"check there are two locations for the breakpoint"
+
+    gdb_test "maintenance info source-tracking-context $bp_num" \
+	"Breakpoint $bp_num does not have source tracking enabled\\." \
+	"check breakpoint is not source tracked"
+}
+
+# Now try creating a source tracked breakpoint in a single objfile to
+# confirm that source tracking has been correctly enabled.
+with_test_prefix "tracked b/p" {
+    set lineno [gdb_get_line_number "/* Breakpoint here.  */" $srcfile]
+
+    gdb_breakpoint $srcfile:$lineno
+    set bp_num [get_integer_valueof "\$bpnum" "*UNKNOWN*"]
+
+    gdb_test "info breakpoint $bp_num" \
+	[multi_line \
+	     "\r\n$bp_num\\s+\[^\r\n\]+" \
+	     "\\s+source-tracking enabled\[^\r\n\]*"] \
+	"check there is just one location for the breakpoint"
+
+    gdb_test "maintenance info source-tracking-context $bp_num" \
+	"/\\* Breakpoint here\\.  \\*/.*" \
+	"check breakpoint is source tracked"
+}

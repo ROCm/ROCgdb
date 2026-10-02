@@ -1,0 +1,101 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Create a multi-location breakpoint using file and line syntax where
+# the multiple locations come from different source files.  This
+# requires having two source files aa/foo.c and bb/foo.c, then placing
+# a breakpoint on 'foo.c:10' or similar.  GDB will find both 'foo.c'
+# files, and try to create breakpoints on line 10 in both.
+#
+# The point of this test is that breakpoint source tracking should not
+# activate for this breakpoint due to the locations coming from
+# different source files.
+
+standard_testfile .c -other.c
+
+# Create two sub-directories of the build directory in which our two
+# source files can be placed.
+set directory_aa [standard_output_file aa]
+set directory_bb [standard_output_file bb]
+remote_exec build "mkdir -p \"$directory_aa\" \"$directory_bb\""
+
+# Now copy the two source files into the two directories, give them
+# the same basename.
+remote_exec build "cp $srcdir/$subdir/$srcfile $directory_aa/$srcfile"
+remote_exec build "cp $srcdir/$subdir/$srcfile2 $directory_bb/$srcfile"
+
+# Now build the executable.
+if { [prepare_for_testing "failed to prepare" $testfile \
+	  [list $directory_aa/$srcfile $directory_bb/$srcfile]] } {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+gdb_test_no_output "set breakpoint source-tracking enabled on" \
+    "enable source tracking breakpoints"
+
+# Sanity check our source files.  Both have a 'Breakpoint here'
+# marker, these should be on the same line number within the two
+# files.  This isn't a "test" as this isn't checking GDB
+# functionality, this is checking a developer hasn't broken the test.
+set lineno1 [gdb_get_line_number "Breakpoint here." $directory_aa/$srcfile]
+set lineno2 [gdb_get_line_number "Breakpoint here." $directory_bb/$srcfile]
+if { $lineno1 != $lineno2 } {
+    error "line numbers don't match between source files"
+}
+set lineno $lineno1
+
+# Create a breakpoint using the filename and line number.  The
+# filename will match two files, so this will result in two locations
+# being created.
+gdb_test "break ${srcfile}:$lineno" \
+    "^Breakpoint $decimal at $hex: ${srcfile}:$lineno\\. \\(2 locations\\)"
+set bp_num [get_integer_valueof "\$bpnum" "*UNKNOWN*" \
+		"get bp_num for multi-location breakpoint"]
+
+# As the two locations are from two different files this breakpoint
+# should not be source tracked.
+gdb_test_multiple "info breakpoints $bp_num" \
+    "multi-location breakpoint not tracked" {
+	-re -wrap "source-tracking enabled.*" {
+	    fail "$gdb_test_name (tracking incorrectly enabled)"
+	}
+	-re -wrap "" {
+	    pass $gdb_test_name
+	}
+    }
+
+# Now for a sanity check, lets make sure we can create source tracked
+# breakpoints on the files individually.
+foreach_with_prefix dir { aa bb } {
+    delete_breakpoints
+    gdb_test "break $dir/${srcfile}:$lineno" \
+	"^Breakpoint $decimal at $hex: file \[^\r\n\]+/$dir/${srcfile}, line $lineno\\."
+    set bp_num [get_integer_valueof "\$bpnum" "*UNKNOWN*" \
+		    "get bp_num for breakpoint in $dir/$srcfile"]
+
+    gdb_test_multiple "info breakpoints $bp_num" \
+	"single location breakpoint from $dir/$srcfile is tracked" {
+	    -re -wrap "source-tracking enabled \\(tracking $::decimal lines around line $lineno\\).*" {
+		pass $gdb_test_name
+	    }
+	    -re -wrap "" {
+		fail $gdb_test_name
+	    }
+	}
+}

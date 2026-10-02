@@ -13,17 +13,50 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Test of the source tracking breakpoint feature when trying to place
-# a breakpoint on inline functions.  As the breakpoint resolves to
-# multiple locations we don't currently source track these
-# breakpoints.
+# Place a breakpoint on an inline function.  As the inline function
+# comes from a single source location then GDB will source track this
+# location; when the source line within the inline function moves GDB
+# will update which line the breakpoint is on.
+#
+# This test covers the case where the inline function and its uses are
+# within a single source file, and the case where the inline function
+# is in a header file and used in multiple source files.
 
-standard_testfile -1.c -2.c
+# This test restarts the inferior with 'start'.  This doesn't work
+# when using plain 'gdbserver'.
+require !use_gdb_stub
 
-set build_srcfile [standard_output_file ${testfile}.c]
+# This test has a main source file, there are two copies of this (-1.c
+# and -2.c), then a header file of which there are also two copies
+# (-hdr-1.h and -hdr-2.h).  Then there is the "other" source file,
+# this never changes, there is just one copy of this.
+standard_testfile -1.c -2.c -hdr-1.h -hdr-2.h -other.c
 
+# We need to copy the main source file and the header file into the
+# build directory so we can rename them.  As both these files and the
+# "other" source file all need to include the renamed header file it
+# is easier if the "other" source file is also copied to the build
+# directory, even though this file is never renamed.  The alternative
+# would be to setup include search paths.
+set build_other_srcfile [standard_output_file [file tail $srcfile5]]
+
+# These are the names given to the main source file and the header
+# file within the build directory.
+set testfile_src ${testfile}.c
+set testfile_hdr ${testfile}-hdr.h
+set build_srcfile [standard_output_file $testfile_src]
+set build_header [standard_output_file $testfile_hdr]
+
+# Copy the "other" source file into the build directory now.  This
+# only needs doing once as this file never changes.
+remote_exec build "cp $srcdir/$subdir/$srcfile5 $build_other_srcfile"
+
+# Copy the original source files into the build directory.
 remote_exec build "cp $srcdir/$subdir/$srcfile $build_srcfile"
-if { [prepare_for_testing "failed to prepare" $testfile $build_srcfile] } {
+remote_exec build "cp $srcdir/$subdir/$srcfile3 $build_header"
+
+if { [prepare_for_testing "failed to prepare" $testfile \
+	  [list $build_srcfile $build_other_srcfile]] } {
     return
 }
 
@@ -34,47 +67,103 @@ if {![runto_main]} {
 gdb_test_no_output "set breakpoint source-tracking enabled on" \
     "enable source tracking breakpoints"
 
-set lineno [gdb_get_line_number "Breakpoint here." $build_srcfile]
+# Get initial breakpoint line numbers.
+set lineno_src [gdb_get_line_number "Breakpoint here." $build_srcfile]
+set lineno_hdr [gdb_get_line_number "Header breakpoint location." \
+		    $build_header]
 
-# The breakpoint is on an inline function called from two places,
-# so it resolves to 2 locations.
-gdb_test "break ${testfile}.c:$lineno" \
-    "^Breakpoint $decimal at $hex: ${testfile}.c:$lineno\\. \\(2 locations\\)"
+# Create a breakpoint on an inline function within the main source
+# file.  This breakpoint is called from two places, so it resolves to
+# 2 locations.
+gdb_test "break ${testfile_src}:$lineno_src" \
+    "^Breakpoint $decimal at $hex: ${testfile_src}:$lineno_src\\. \\(2 locations\\)"
+set bp_num_src [get_integer_valueof "\$bpnum" "*UNKNOWN*" \
+		   "get number for main source breakpoint"]
 
-# Check that we are tracking the expected number of lines.
-#
-# With the multi-location fix, this breakpoint should NOT be tracked
-# because it has 2 locations (inline function called from two places).
-# The output should show <MULTIPLE> but NOT "source-tracking enabled".
-gdb_test_multiple "info breakpoints" \
-  "multi-location breakpoint not tracked" {
-    -re -wrap "source-tracking enabled.*" {
-      fail "$gdb_test_name (tracking incorrectly enabled)"
-    }
-    -re -wrap "<MULTIPLE>.*" {
-      pass $gdb_test_name
+# Create a breakpoint on an inline function within the header file.
+# This breakpoint is also called from two places, so it also resolves
+# to 2 locations.
+gdb_test "break ${testfile_hdr}:$lineno_hdr" \
+    "^Breakpoint $decimal at $hex: ${testfile_hdr}:$lineno_hdr\\. \\(2 locations\\)"
+set bp_num_hdr [get_integer_valueof "\$bpnum" "*UNKNOWN*" \
+		   "get number for header breakpoint"]
+
+# Run 'info breakpoints BP_NUM' and check that the breakpoint is
+# source tracked around LINENO.  Use TESTNAME as the name of the test
+# being run.
+proc check_bp_tracked { bp_num lineno testname } {
+    gdb_test_multiple "info breakpoints $bp_num" $testname {
+	-re -wrap "source-tracking enabled \\(tracking $::decimal lines around line $lineno\\).*" {
+	    pass $gdb_test_name
+	}
+	-re -wrap "" {
+	    fail "$gdb_test_name (source tracking not enabled)"
+	}
     }
 }
 
+# Check that the breakpoint on the inline function from the main
+# source file is being source tracked.
+check_bp_tracked $bp_num_src $lineno_src \
+    "inline function within source file is tracked"
+
+# And check that the breakpoint on the inline function from the header
+# file is also being source tracked.
+check_bp_tracked $bp_num_hdr $lineno_hdr \
+    "inline function within header file is tracked"
+
+# Change the main source file, this changes the inline function within
+# that source file, but the header breakpoint is unchanged.
+
 sleep 1
 remote_exec build "cp $srcdir/$subdir/$srcfile2 $build_srcfile"
-if { [build_executable "failed to build" $testfile $build_srcfile] } {
+if { [build_executable "failed to build" $testfile \
+	  [list $build_srcfile $build_other_srcfile]] } {
     return
 }
 
 # Reload the executable.  'start' internally uses 'tbreak main', which
 # is not a file:line breakpoint, so it will not be source-tracked.
-gdb_test "with confirm off -- start"
+gdb_test "with confirm off -- start" ".*" \
+    "start after changing main source file"
 
-# After reload, the breakpoint should still NOT be tracked because it
-# still has 2 locations.  This verifies we don't try to track
-# multi-location breakpoints even after reload.
-gdb_test_multiple "info breakpoints" \
-    "multi-location breakpoint still not tracked after reload" {
-    -re -wrap "source-tracking enabled.*" {
-	fail "$gdb_test_name (tracking incorrectly enabled)"
-    }
-    -re -wrap "<MULTIPLE>.*" {
-	pass $gdb_test_name
-    }
+# Update our understanding of where the breakpoint should be.
+set lineno_src [gdb_get_line_number "Breakpoint here." $build_srcfile]
+
+# The breakpoint should still be source tracked, but its location
+# should have been updated.
+check_bp_tracked $bp_num_src $lineno_src \
+    "main source file breakpoint has moved"
+
+# The header file breakpoint should not have moved, but should still
+# be tracked.
+check_bp_tracked $bp_num_hdr $lineno_hdr \
+    "header file breakpoint has not moved"
+
+# Change the header file, this moves the breakpoint line for the
+# inline function in the header file.
+sleep 1
+remote_exec build "cp $srcdir/$subdir/$srcfile4 $build_header"
+if { [build_executable "failed to build" $testfile \
+	  [list $build_srcfile $build_other_srcfile]] } {
+    return
 }
+
+# Reload the executable.  'start' internally uses 'tbreak main', which
+# is not a file:line breakpoint, so it will not be source-tracked.
+gdb_test "with confirm off -- start" ".*" \
+    "start after changing header file"
+
+# Update our understanding of where the breakpoint should be.
+set lineno_hdr [gdb_get_line_number "Header breakpoint location." \
+		    $build_header]
+
+# The main file breakpoint should still be tracked, but should not
+# have moved.
+check_bp_tracked $bp_num_src $lineno_src \
+    "main source file breakpoint has not moved"
+
+# The header file breakpoint should have moved, and should still be
+# tracked.
+check_bp_tracked $bp_num_hdr $lineno_hdr \
+    "header file breakpoint has moved"
