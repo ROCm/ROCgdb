@@ -91,10 +91,10 @@ Disassembly of section .text:
 .*:	e3 69 b8 f0 fd 69 [	 ]*llxaq	%r6,-10000\(%r9,%r11\)
 .*:	b9 6c b0 69 [	 ]*bextg	%r6,%r9,%r11
 .*:	b9 6d b0 69 [	 ]*bdepg	%r6,%r9,%r11
-.*:	b9 3e 00 69 [	 ]*kimd	%r6,%r9
-.*:	b9 3e d0 69 [	 ]*kimd	%r6,%r9,13
-.*:	b9 3f 00 69 [	 ]*klmd	%r6,%r9
-.*:	b9 3f d0 69 [	 ]*klmd	%r6,%r9,13
+.*:	b9 3e 00 68 [	 ]*kimd	%r6,%r8
+.*:	b9 3e d0 68 [	 ]*kimd	%r6,%r8,13
+.*:	b9 3f 00 68 [	 ]*klmd	%r6,%r8
+.*:	b9 3f d0 68 [	 ]*klmd	%r6,%r8,13
 .*:	e6 f1 00 d0 04 4e [	 ]*vcvbq	%v15,%v17,13
 .*:	e6 f1 00 cf d4 4a [	 ]*vcvdq	%v15,%v17,253,12
 .*:	e6 0f 00 00 00 5f [	 ]*vtp	%v15

@@ -387,6 +387,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RRF_FFRU     4, { F_24,F_16,R_28,U4_20,0,0 }       /* e.g. rrdtr */
 #define INSTR_RRF_FEFERU   4, { FE_24,FE_16,R_28,U4_20,0,0 }     /* e.g. rrxtr */
 #define INSTR_RRF_U0RR     4, { R_24,R_28,U4_16,0,0,0 }          /* e.g. sske  */
+#define INSTR_RRF_U0RRE    4, { R_24,RE_28,U4_16,0,0,0 }         /* e.g. kimd  */
 #define INSTR_RRF_U0RER    4, { RE_24,R_28,U4_16,0,0,0 }         /* e.g. trte  */
 #define INSTR_RRF_U0RERE   4, { RE_24,RE_28,U4_16,0,0,0 }        /* e.g. cu24  */
 #define INSTR_RRF_00RR     4, { R_24,R_28,0,0,0,0 }              /* e.g. clrtne */
@@ -622,6 +623,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RRF_FFRU     { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRF_FEFERU   { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRF_U0RR     { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
+#define MASK_RRF_U0RRE    { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRF_U0RER    { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRF_U0RERE   { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRF_00RR     { 0xff, 0xff, 0xff, 0x00, 0x00, 0x00 }

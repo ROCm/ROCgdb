@@ -735,9 +735,9 @@ b32f mser RRF_F0FF "mutliply and subtract short hfp" z990 esa,zarch
 ed000000002f mse RXF_FRRDF "multiply and subttract short hfp" z990 esa,zarch
 b92e km RRE_RERE "cipher message" z990 esa,zarch
 b92f kmc RRE_RERE "cipher message with chaining" z990 esa,zarch
-b93e kimd RRE_RR "compute intermediate message digest" z990 esa,zarch
-b93f klmd RRE_RR "compute last message digest" z990 esa,zarch
-b91e kmac RRE_RR "compute message authentication code" z990 esa,zarch
+b93e kimd RRE_RRE "compute intermediate message digest" z990 esa,zarch
+b93f klmd RRE_RRE "compute last message digest" z990 esa,zarch
+b91e kmac RRE_RRE "compute message authentication code" z990 esa,zarch
 b99a epair RRE_R0 "extract primary ASN and instance" z990 esa,zarch
 b99b esair RRE_R0 "extract secondary ASN and instance" z990 esa,zarch
 b99e pti RRE_RR "program transfer with instance" z990 esa,zarch
@@ -2196,8 +2196,8 @@ b96d bdepg RRF_R0RR2 "bit deposit" arch15 zarch
 
 # Message-Security-Assist Extension 12
 
-b93e kimd RRF_U0RR "compute intermediate message digest" arch15 zarch optparm
-b93f klmd RRF_U0RR "compute last message digest" arch15 zarch optparm
+b93e kimd RRF_U0RRE "compute intermediate message digest" arch15 zarch optparm
+b93f klmd RRF_U0RRE "compute last message digest" arch15 zarch optparm
 
 # Vector-Packed-Decimal-Enhancement Facility 3
 
