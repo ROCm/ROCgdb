@@ -7,6 +7,11 @@
   Taking the address of one from a read-only section is not supported in a
   static link.
 
+* The avr target supports a new command-line option --prune-vectab
+  that removes unused vector table entries during relaxation (PR34679).
+  An entry is unused when it jump to __bad_interrupt and all the
+  following entries are also unused.
+
 * The avr target supports the following GNU attributes to make sure
   that object files that are being linked are using the same ABI.
   The following attributes have been added:

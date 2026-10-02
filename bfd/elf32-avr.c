@@ -34,6 +34,21 @@ static bool debug_relax = false;
 /* Enable debugging printout at stdout with this variable.  */
 static bool debug_stubs = false;
 
+// When debug_relax is on, output a formatted message to stdout.
+static void rout (const char *fmt, ...) ATTRIBUTE_PRINTF_1;
+static void rout (const char *fmt, ...)
+{
+  va_list args;
+  va_start (args, fmt);
+  if (debug_relax)
+    {
+      vprintf (fmt, args);
+      fflush (stdout);
+    }
+  va_end (args);
+}
+
+
 static bfd_reloc_status_type
 bfd_elf_avr_diff_reloc (bfd *, arelent *, asymbol *, void *,
 			asection *, bfd *, char **);
@@ -735,6 +750,9 @@ static bool avr_replace_call_ret_sequences = true;
    include plain RJMP .+0 which is used by GCC to delay 2 cycles.
    This can be switched off by --no-elide-rjmp0.  */
 static bool avr_elide_rjmp0 = true;
+
+/* Prune the vector table provided --relax.  */
+static bool avr_prune_vectab = false;
 
 
 /* Per-section relaxation related information for avr.  */
@@ -999,6 +1017,13 @@ avr_is_RJMP (uint16_t w)
   return 0xc000 == (w & 0xf000);
 }
 
+/* Return true iff W is a CLH instruction.  */
+
+static bool
+avr_is_CLH (uint16_t w)
+{
+  return 0x94d8 == w;
+}
 
 /* Return true iff W is a RET instruction.  */
 
@@ -2539,6 +2564,380 @@ avr_reloc_at (bfd *abfd, Elf_Internal_Shdr *symtab_hdr,
 }
 
 
+/* Return the target address of a global symbol NAME, or -1 if not found.  */
+
+static int
+avr_global_symbol_address (struct bfd_link_info *link_info, const char *name)
+{
+  struct bfd_link_hash_entry *h;
+  h = bfd_link_hash_lookup (link_info->hash, name,
+			    false /*create*/, false /*copy*/, true /*follow*/);
+  if (h)
+    {
+      const bfd_vma value = h->u.def.value;
+      const asection *sec = h->u.def.section;
+      return (int) (value
+		    + sec->output_offset
+		    + sec->output_section->vma);
+    }
+
+  return -1;
+}
+
+
+/* Return NULL or the name of the global symbol used by reloc REL.  */
+
+static const char *
+avr_reloc_global_symbol_name (bfd *abfd, Elf_Internal_Rela *rel)
+{
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
+
+  if (ELF32_R_SYM (rel->r_info) < symtab_hdr->sh_info)
+    // This is a local symbol.
+    return NULL;
+
+  struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (abfd);
+  struct elf_link_hash_entry *h;
+  h = sym_hashes[ELF32_R_SYM (rel->r_info) - symtab_hdr->sh_info];
+  if (h != NULL)
+    {
+      while (h->root.type == bfd_link_hash_indirect
+	     || h->root.type == bfd_link_hash_warning)
+	h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+      return h->root.root.string;
+    }
+
+  return NULL;
+}
+
+
+// AVR-LibC produces vectabs with up to 128 entries at most.
+#define N_IRQS 128
+
+// Symbol name of an unused vectab entry.  Vectab entries that target
+// the address of this global symbol are regarded as unused.
+#define S_BAD_IRQ "__bad_interrupt"
+
+// An antry in the vector table.
+typedef struct
+{
+  int idx;
+  // Targte address of jump.
+  unsigned symval;
+  Elf_Internal_Rela *reloc;
+  // Code address of the jump / vectab entry.
+  bfd_vma dot;
+  // Whether something is targeting the vectab entry.
+  bool has_label_or_reloc;
+} avr_irq_t;
+
+// The entire vector table.
+typedef struct
+{
+  // Size in bytes of .vectors without an optional trailing CLH.
+  unsigned size;
+  // The number of (expected) IRQs.
+  int n_irqs;
+  // The size of one entry is 2 bytes or 4 bytes.
+  int vec_size;
+  // Code address of __bad_interrupt.
+  int bad_irq;
+  // The very table.
+  avr_irq_t irqs[N_IRQS];
+  // Whether vectab pruning has been attempted.
+  bool pruned;
+} avr_vectab_t;
+
+
+/* Traverse all input bfds and find all CALL / JMP relocs that point
+   into the vectab.  This allows code like
+
+	JMP __vectors + 0x8
+
+   to work as expected, i.e. the respective IRQ entry won't be pruned.
+   Notice that  JMP 0x8  is *NOT SUPPORTED* since it doesn't have a
+   reloc, and hence we can't find it without scanning the entire code.
+   Set  vtab->irqs[].has_label_or_reloc  when such a reloc is found.  */
+
+static bool
+avr_find_relocs_to_vectab (struct bfd_link_info *link_info, avr_vectab_t *vtab)
+{
+  for (bfd *abfd = link_info->input_bfds; abfd; abfd = abfd->link.next)
+    {
+      Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
+
+      for (struct bfd_section *sec = abfd->sections; sec; sec = sec->next)
+	{
+	  if (sec->reloc_count == 0
+	      || (sec->flags & SEC_RELOC) == 0
+	      || (sec->flags & SEC_HAS_CONTENTS) == 0
+	      || (sec->flags & SEC_CODE) == 0)
+	    continue;
+
+	  Elf_Internal_Rela *rel = elf_section_data (sec)->relocs;
+	  if (rel == NULL)
+	    rel = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL, true);
+
+	  Elf_Internal_Rela *relend = rel + sec->reloc_count;
+	  for (; rel && rel < relend; ++rel)
+	    {
+	      if (ELF32_R_SYM (rel->r_info) >= symtab_hdr->sh_info
+		  && (ELF32_R_TYPE (rel->r_info) == R_AVR_CALL
+		      || ELF32_R_TYPE (rel->r_info) == R_AVR_13_PCREL))
+		{
+		  // A global symbol.
+		  const char *sname = avr_reloc_global_symbol_name (abfd, rel);
+		  if (sname && !strcmp (sname, "__vectors"))
+		    {
+		      const int idx = rel->r_addend / vtab->vec_size;
+		      if (idx >= 0 && idx < vtab->n_irqs)
+			vtab->irqs[idx].has_label_or_reloc = true;
+		    }
+		} // Jump / call related
+	    } // Relocs
+	} // Input sections
+    } // BFDs
+
+  return false;
+}
+
+
+/* Fill *vtab according to an AVR-LibC vector table as found in section *sec
+   and return NULL.  When the vector table is not as expected, then return
+   the respective reason as a static constant string.  */
+
+static const char *
+avr_init_vectab (bfd *abfd, struct bfd_link_info *link_info, asection *sec,
+		 Elf_Internal_Rela *internal_relocs, bfd_byte *contents,
+		 avr_vectab_t *vtab)
+{
+  Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (abfd);
+
+  // Look up __bad_interrupt in the linker's global hash table.
+  vtab->bad_irq = avr_global_symbol_address (link_info, S_BAD_IRQ);
+  if (vtab->bad_irq < 0)
+    return S_BAD_IRQ " not found";
+
+  rout ("Prune: %s = 0x%x\n", S_BAD_IRQ, vtab->bad_irq);
+
+  // The very first word must be a JMP or a RJMP.  It heralds the
+  // sizes of all the following entries.
+  const uint16_t code_word0 = avr_word (abfd, contents + 0);
+  vtab->vec_size = 0?0
+    : avr_is_RJMP (code_word0) ? 2
+    : avr_is_JMP (code_word0) ? 4
+    : 0;
+
+  if (vtab->vec_size == 0)
+    return "vectab doesn't start with JMP nor RJMP";
+
+  vtab->size = (unsigned) sec->size;
+  const uint16_t code_last = avr_word (abfd, contents + vtab->size - 2);
+
+  if (vtab->vec_size == 4
+      && vtab->size % 4 == 2
+      && avr_is_CLH (code_last))
+    {
+      // This is the case for AVR-SD devices that need a valid insn after each
+      // executed instruction.  AVR-LibC inserts a CLH after the very vectab.
+      rout ("Prune: vectab has a trailing CLH\n");
+      vtab->size -= 2;
+    }
+  else if (vtab->size % vtab->vec_size != 0)
+    return "odd vectab layout";
+
+  vtab->n_irqs = vtab->size / vtab->vec_size;
+
+  rout ("Prune: expecting %d %sJMP entries\n", vtab->n_irqs,
+	vtab->vec_size == 2 ? "R" : "");
+
+  if (vtab->n_irqs > N_IRQS)
+    return "vectab has more than 128 entries";
+
+  // As soon as we know the vec_size, find any relocs that point
+  // into the vectab.  Mark .has_label_or_reloc accordingly.
+  avr_find_relocs_to_vectab (link_info, vtab);
+
+  int n_irqs = 0;
+  Elf_Internal_Rela *irelend = internal_relocs + sec->reloc_count;
+  for (Elf_Internal_Rela *irel = internal_relocs; irel < irelend; ++irel)
+    {
+      rout ("Prune: reloc #%d off=%x, add=%x", (int) (irel - internal_relocs),
+	    (int) irel->r_offset, (int) irel->r_addend);
+
+      if (irel->r_addend)
+	return "non-zero addend";
+
+      // The size in bytes of the entry.
+      const int sz = 0?0
+	: ELF32_R_TYPE (irel->r_info) == R_AVR_13_PCREL ? 2
+	: ELF32_R_TYPE (irel->r_info) == R_AVR_CALL ? 4
+	: 0;
+
+      // The sizes of all relocs must be the same, otherwise it's not
+      // an AVR-LibC vector table.
+      if (sz == 0
+	  || (vtab->vec_size != 0 && sz != vtab->vec_size))
+	return "unexpected reloc";
+
+      vtab->vec_size = sz;
+
+      if (irel->r_offset % sz != 0
+	  || irel->r_offset + sz > vtab->size)
+	return "unexpected reloc offset";
+
+      rout (" %s", sz == 2 ? "R_AVR_13_PCREL" : "R_AVR_CALL");
+
+      const int idx = irel->r_offset / sz;
+      if (idx >= N_IRQS)
+	return "vectab has more than 128 entries";
+
+      avr_irq_t *irq = &vtab->irqs[idx];
+
+      if (irq->reloc != NULL)
+	return "overlapping relocs";
+
+      irq->idx = idx;
+      irq->reloc = irel;
+      n_irqs += 1;
+
+      if (ELF32_R_SYM (irel->r_info) < symtab_hdr->sh_info)
+	return "symbol is not global";
+      else
+	{
+	  // Symbol is external.  Get its value.
+	  unsigned long i = ELF32_R_SYM (irel->r_info) - symtab_hdr->sh_info;
+	  struct elf_link_hash_entry *h = elf_sym_hashes (abfd)[i];
+	  BFD_ASSERT (h != NULL);
+	  if (h->root.type != bfd_link_hash_defined
+	      && h->root.type != bfd_link_hash_defweak)
+	    return "symbol is not defined";
+
+	  irq->symval = (h->root.u.def.value
+			 + h->root.u.def.section->output_section->vma
+			 + h->root.u.def.section->output_offset);
+	}
+
+      rout (" symval=0x%x idx=%d", irq->symval, irq->idx);
+
+      const char *s_code = NULL;
+      const uint16_t code_word = avr_word (abfd, contents + irel->r_offset);
+      if (vtab->vec_size == 2 && avr_is_RJMP (code_word))
+	s_code = "rjmp";
+      else if (vtab->vec_size == 4 && avr_is_JMP (code_word))
+	s_code = "jmp";
+      else
+	return "unexpected opcode";
+
+      // Get the address of this instruction.
+      irq->dot = sec->output_section->vma + sec->output_offset + irel->r_offset;
+
+      rout (" %s .=0x%x", s_code, (unsigned) irq->dot);
+
+      if (idx == 0
+	  || avr_local_label_at (abfd, sec, symtab_hdr, irel->r_offset)
+	  || avr_global_label_at (abfd, sec, symtab_hdr, irel->r_offset))
+	irq->has_label_or_reloc = true;
+
+      if (irq->has_label_or_reloc)
+	rout (" label_or_reloc");
+      if (irq->symval != (unsigned) vtab->bad_irq)
+	rout (" required");
+
+      rout ("\n");
+    } // Relocs
+
+  if (n_irqs != vtab->n_irqs)
+    return "incomplete vectab";
+
+  // All is fine and *vtab has been initialized.
+  return NULL;
+}
+
+
+/* Try to prune a vector table from AVR-LibC.  When entries are unused, i.e.
+   they effectively jump to __bad_interrupt, then we can remove them provided
+   all later entries can also be removed.  The trigger is --prune-vectab,
+   which only takes effect when linker relaxation is on.
+   return 1:  Vectab has just been changed.
+   return 0:  Nothing changed and no internal error occurred.
+   return -1: An error occurred.  */
+
+static int
+avr_maybe_prune_vectab (bfd *abfd, struct bfd_link_info *link_info,
+			asection *sec, Elf_Internal_Rela *internal_relocs,
+			bfd_byte **pcontents)
+{
+  static avr_vectab_t avr_vectab;
+  avr_vectab_t *vtab = &avr_vectab;
+
+  if (!avr_prune_vectab || vtab->pruned || strcmp (sec->name, ".vectors"))
+    return 0;
+
+  vtab->pruned = true;
+
+  rout ("== Pruning .vectors of size 0x%x\n", (unsigned) sec->size);
+
+  // Get a cached copy of the contents if it exists.
+  if (elf_section_data (sec)->this_hdr.contents != NULL)
+    *pcontents = elf_section_data (sec)->this_hdr.contents;
+  else
+    // Go get them off disk.
+    if (! bfd_malloc_and_get_section (abfd, sec, pcontents))
+      {
+	rout ("Prune failed: error reading contents\n");
+	return -1;
+      }
+
+  // Init the vtab structure, or give a reason for why it's not a vector table.
+  const char *reason = avr_init_vectab (abfd, link_info, sec, internal_relocs,
+					*pcontents, vtab);
+  if (reason)
+    {
+      rout ("\nPrune failed: %s\n", reason);
+      return 0;
+    }
+
+  // Finally, we have all the checks done and data in place, so that
+  // we can perform the actual pruning.
+
+  int last_idx = 0;
+  for (int i = 0; i < vtab->n_irqs; ++i)
+    if (vtab->irqs[i].has_label_or_reloc
+	|| vtab->irqs[i].symval != (unsigned) vtab->bad_irq)
+      last_idx = i;
+
+  const int n_delete = (vtab->n_irqs - 1 - last_idx) * vtab->vec_size;
+  rout ("Prune: last remaining irq:%d, pruning 0x%x=%d bytes from %d irqs\n",
+	last_idx, n_delete, n_delete, n_delete / vtab->vec_size);
+  if (n_delete == 0)
+    return 0;
+
+  rout ("Prune: remove irq");
+
+  elf_section_data (sec)->this_hdr.contents = *pcontents;
+
+  for (int i = vtab->n_irqs - 1; i > last_idx; --i)
+    {
+      const avr_irq_t *irq = &vtab->irqs[i];
+
+      rout (" %d", irq->idx);
+      if (!elf32_avr_relax_delete_bytes (abfd, sec, irq->reloc->r_offset,
+					 vtab->vec_size, true))
+	return -1;
+      // Avoid relocs to point outside of the section.
+      // This is needed even for R_AVR_NONE.
+      irq->reloc->r_offset = 0;
+      irq->reloc->r_info = R_AVR_NONE;
+    }
+
+  rout ("\nPrune vectab accomplished.\n");
+
+  return 1;
+}
+
+
 /* This function handles relaxing for the avr.
    Many important relaxing opportunities within functions are already
    realized by the compiler itself.  Though when the back end emits
@@ -2563,9 +2962,15 @@ avr_reloc_at (bfd *abfd, Elf_Internal_Shdr *symtab_hdr,
    . there is no local or global label placed at RET, and
    . there is no reloc pointing to the RET.
 
-   We refrain from relaxing within sections ".vectors" and ".jumptables" in
+   We refrain from relaxing within sections .vectors and .jumptables in
    order to maintain the position of the instructions.  There, however,
-   we substitute JMP/CALL by a sequence RJMP+NOP/RCALL+NOP if possible.
+   we substitute JMP / CALL by a sequence RJMP+NOP / RCALL+NOP if possible.
+
+   Though in .vectors we remove unused vector entries if --prune-vectab.
+   These are entries that target __bad_interrupt (which is the weak default
+   for all the vectors), and where all the following entries are also unused.
+   This is performed by avr_maybe_prune_vectab() above, which runs prior to
+   the very relaxing of .vectors.
 
    The .jumptables section is meant to be used for a future tablejump variant
    for the devices with 3-byte program counter where the table itself contains
@@ -2662,9 +3067,16 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
   if (internal_relocs == NULL)
     goto error_return;
 
+  const int mpv = avr_maybe_prune_vectab (abfd, link_info, sec,
+					  internal_relocs, &contents);
+  if (mpv < 0)
+    goto error_return;
+  else if (mpv > 0)
+    *again = true;
+
   /* Walk through the relocs looking for relaxing opportunities.  */
   irelend = internal_relocs + sec->reloc_count;
-  for (irel = internal_relocs; irel < irelend; irel++)
+  for (irel = internal_relocs; irel < irelend && !mpv; irel++)
     {
       bfd_vma symval;
       bool sym_is_global = false;
@@ -2835,8 +3247,19 @@ elf32_avr_relax_section (bfd *abfd,  asection *sec,
 		irel->r_info = ELF32_R_INFO (ELF32_R_SYM (irel->r_info),
 					     R_AVR_13_PCREL);
 
+		// Allow to ditch the final NOP?
+		bfd_byte *pmaybe_clh = contents + irel->r_offset + 4;
+		const bool may_prune_last_vectab_entry
+		  = (avr_prune_vectab
+		     && !strcmp (sec->name, ".vectors")
+		     && (irel->r_offset + 4 == sec->size
+			 || (irel->r_offset + 6 == sec->size
+			     && avr_is_CLH (avr_word (abfd, pmaybe_clh)))));
+
 		// We should not modify the ordering if 'shrinkable' is FALSE.
-		if (!shrinkable)
+		if (!shrinkable
+		    // ...except --prune-vectab allows it for the last entry.
+		    && !may_prune_last_vectab_entry)
 		  {
 		    // Let's insert a NOP.
 		    bfd_put_8 (abfd, 0x00, contents + irel->r_offset + 2);
@@ -3419,7 +3842,7 @@ elf32_avr_setup_params (struct bfd_link_info *info, bfd *avr_stub_bfd,
 			asection *avr_stub_section,
 			bool no_stubs, bool deb_stubs, bool deb_relax,
 			bfd_vma pc_wrap_around, bool call_ret_replacement,
-			bool elide_rjmp0)
+			bool elide_rjmp0, bool prune_vectab)
 {
   elf32_avr_link_hash_table_t *htab = avr_link_hash_table (info);
 
@@ -3434,6 +3857,7 @@ elf32_avr_setup_params (struct bfd_link_info *info, bfd *avr_stub_bfd,
   avr_pc_wrap_around = pc_wrap_around;
   avr_replace_call_ret_sequences = call_ret_replacement;
   avr_elide_rjmp0 = elide_rjmp0;
+  avr_prune_vectab = prune_vectab;
 }
 
 
