@@ -720,7 +720,7 @@ eb0000000044 bxhg RSY_RRRD "branch on index high 64" z990 zarch
 eb0000000045 bxleg RSY_RRRD "branch on index low or equal 64" z990 zarch
 eb0000000080 icmh RSY_RURD "insert characters under mask high with long offset" z990 zarch
 eb000000008e mvclu RSY_RERERD "move long unicode" z990 esa,zarch
-eb000000008f clclu RSY_RRRD "compare logical long unicode with long offset" z990 esa,zarch
+eb000000008f clclu RSY_RERERD "compare logical long unicode with long offset" z990 esa,zarch
 eb0000000096 lmh RSY_RRRD "load multiple high" z990 zarch
 # new z990 instructions
 b98a cspg RRE_RR "compare and swap and purge" z990 zarch

@@ -5,4 +5,4 @@ foo:
 	kimd	%r6,%r8
 	klmd	%r6,%r8
 	kmac	%r6,%r8
-	clclu	%r6,%r9,-524288(%r5)
+	clclu	%r6,%r8,-524288(%r5)
