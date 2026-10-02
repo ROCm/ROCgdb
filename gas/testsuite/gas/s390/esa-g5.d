@@ -1,4 +1,4 @@
-#name: s390 opcode (esa g5)
+#name: s390 opcode (g5 / arch3)
 #objdump: -drw
 
 .*: +file format .*

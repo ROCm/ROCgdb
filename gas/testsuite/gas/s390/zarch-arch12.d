@@ -1,4 +1,4 @@
-#name: s390x opcodes (arch12)
+#name: s390x opcodes (z14 / arch12)
 #objdump: -dr
 
 .*: +file format .*
