@@ -131,7 +131,7 @@ d2 mvc SS_L0RDRD "move" g5 esa,zarch
 e50f mvcdk SSE_RDRD "move with destination key" g5 esa,zarch
 e8 mvcin SS_L0RDRD "move inverse" g5 esa,zarch
 d9 mvck SS_RRRDRD "move with key" g5 esa,zarch
-0e mvcl RR_RR "move long" g5 esa,zarch
+0e mvcl RR_RERE "move long" g5 esa,zarch
 da mvcp SS_RRRDRD "move to primary" g5 esa,zarch
 db mvcs SS_RRRDRD "move to secondary" g5 esa,zarch
 e50e mvcsk SSE_RDRD "move with source key" g5 esa,zarch

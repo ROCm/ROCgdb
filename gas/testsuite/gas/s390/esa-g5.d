@@ -339,7 +339,7 @@ Disassembly of section .text:
 .*:	e5 0f 5f ff af ff [	 ]*mvcdk	4095\(%r5\),4095\(%r10\)
 .*:	e8 ff 5f ff af ff [	 ]*mvcin	4095\(256,%r5\),4095\(%r10\)
 .*:	d9 69 5f ff af ff [	 ]*mvck	4095\(%r6,%r5\),4095\(%r10\),%r9
-.*:	0e 69 [	 ]*mvcl	%r6,%r9
+.*:	0e 68 [	 ]*mvcl	%r6,%r8
 .*:	a8 68 5f ff [	 ]*mvcle	%r6,%r8,4095\(%r5\)
 .*:	eb 68 5f ff 00 8e [	 ]*mvclu	%r6,%r8,4095\(%r5\)
 .*:	da 69 5f ff af ff [	 ]*mvcp	4095\(%r6,%r5\),4095\(%r10\),%r9
