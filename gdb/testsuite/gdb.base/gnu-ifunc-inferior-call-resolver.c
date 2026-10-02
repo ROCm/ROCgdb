@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2025-2026 Free Software Foundation, Inc.
+   Copyright 2026 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,19 +15,29 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-int var = 2;
-unsigned long long fake_data[3] = { 1, 2, 3 };
+#include <stddef.h>
 
-static
-void bar (int *p)
+extern void *dummy_malloc (size_t size);
+
+typedef void *(*malloc_t) (size_t size);
+
+#ifndef IFUNC_RESOLVER_ATTR
+asm (".type malloc, %gnu_indirect_function");
+malloc_t
+malloc (unsigned long hwcap)
+#else
+static malloc_t
+resolve_malloc (void)
+#endif
 {
-  asm ("bar_label: .globl bar_label");
+#ifndef IFUNC_RESOLVER_ATTR
+  (void) hwcap;
+#endif
+  return dummy_malloc;
 }
 
-int
-main()
-{
-  asm ("main_label: .globl main_label");
-  bar (&var);
-  return 0;
-}
+#ifdef IFUNC_RESOLVER_ATTR
+extern void *malloc (size_t size);
+
+__typeof (malloc) malloc __attribute__ ((ifunc ("resolve_malloc")));
+#endif

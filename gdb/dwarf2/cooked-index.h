@@ -31,6 +31,8 @@
 #include "dwarf2/cooked-index-shard.h"
 #include "dwarf2/cooked-index-worker.h"
 
+#include <atomic>
+
 /* The main index of DIEs.
 
    The index is created by multiple threads.  The overall process is
@@ -70,14 +72,23 @@
    .                                        |
    .   if main thread calls...              v
    .   compute_main_name         cooked_index::set_contents
-   .          |                           / | \
-   .          v                          /  |  \
-   .   wait (MAIN_AVAILABLE)          finalization
-   .          |                          \  |  /
-   .          v                           \ | /
-   .        done                      state = FINALIZED
-   .                                        |
-   .                                        v
+   .          |                              |
+   .          v                              v
+   .   wait (MAIN_AVAILABLE)      resolve deferred names
+   .          |                              |
+   .          v                              v
+   .        done                   resolve deferred parents
+   .                                         |
+   .                                         v
+   .                                prune nameless entries
+   .                                         |
+   .                                         v
+   .                                  canonicalize names
+   .                                         |
+   .                                         v
+   .                                 state = FINALIZED
+   .                                         |
+   .                                         v
    .                              maybe write to index cache
    .                                  state = CACHE_DONE
    .                                 ~cooked_index_worker
@@ -91,7 +102,10 @@
    .          |
    .          v
    .    use the index
-*/
+
+   The steps between set_contents and FINALIZED can be thought of as the
+   "index finalization", where we fix up a number of things that couldn't
+   be done during the parallel scan.  */
 
 class cooked_index : public dwarf_scanner_base
 {
@@ -170,6 +184,28 @@ public:
   { wait (cooked_state::CACHE_DONE); }
 
 private:
+  /* Start the "resolve deferred names" step of index finalization.  */
+  void start_resolve_deferred_names ();
+
+  /* Start the "resolve deferred parents" step of index finalization.  */
+  void start_resolve_deferred_parents ();
+
+  /* Start the "prune nameless entries" step of index finalization.
+
+     This step must run after "resolve deferred names" and "resolve deferred
+     parents", because it relies on names and parents being set.  */
+  void start_prune_nameless_entries ();
+
+  /* Start the "canonicalize names" step of index finalization.
+
+     This step must run after "resolve deferred parents", because it depends on
+     the parents being set, and after "prune nameless entries", because it
+     requires all entries to have a name.  */
+  void start_canonicalize_names ();
+
+  /* Execute the "write to cache" step at the end of index
+     finalization.  */
+  void write_to_cache ();
 
   /* The vector of cooked_index objects.  This is stored because the
      entries are stored on the obstacks in those objects.  */
@@ -179,6 +215,16 @@ private:
      that the state is CACHE_DONE -- it's important to note that only
      the main thread may change the value of this pointer.  */
   cooked_index_worker_up m_state;
+
+  /* Any complaints raised during finalization are held within the
+     shards in M_SHARDS.  Once the main thread has waited for
+     finalization to be complete then the cached complaints are
+     emitted, and this flag is set to true.  */
+  bool m_finalize_complaints_emitted = false;
+
+  /* True if some deferred name could not be resolved during the "resolve
+     deferred names" step.  */
+  std::atomic<bool> m_have_nameless_entries = false;
 };
 
 /* An implementation of quick_symbol_functions for the cooked DWARF

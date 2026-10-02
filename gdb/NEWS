@@ -1,7 +1,7 @@
 		What has changed in GDB?
 	     (Organized release by release)
 
-*** Changes since GDB 17
+*** Changes in GDB 18
 
 * Support for the Common Trace Format (CTF) has been removed.  GDB now
   saves trace information exclusively in its own "tfile" format.
@@ -115,6 +115,10 @@
   Glibc 2.43 and GCC 16.1 have deprecated s390 32-bit, both with the
   intent to remove it in a future release.
   The s390 64-bit target (s390x-*) remains supported.
+
+* GDB can now read OS-generated core files on systems with Intel AMX
+  support.  The AMX registers themselves are not yet readable, but
+  other xsave state can be read.
 
 * Configure changes
 

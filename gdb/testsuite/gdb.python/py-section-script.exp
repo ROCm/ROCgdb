@@ -61,9 +61,24 @@ foreach_with_prefix variant {plain compressed} {
 
     if {$variant == "compressed"} {
 	set objdump_program [gdb_find_objdump]
-	set debug_sect [exec $objdump_program -j .debug_gdb_scripts -s "$the_binfile"]
-	set debug_sect_decompressed [exec $objdump_program -j .debug_gdb_scripts \
-			    -s "$the_binfile" --decompress]
+
+	set res \
+	    [remote_exec host \
+		 "$objdump_program -j .debug_gdb_scripts -s \"$the_binfile\""]
+	if {[lindex $res 0] != 0} {
+	    unsupported "Couldn't run objdump"
+	    return
+	}
+	set debug_sect [lindex $res 1]
+
+	set res \
+	    [remote_exec host \
+		 "$objdump_program -j .debug_gdb_scripts -s \"$the_binfile\" --decompress"]
+	if {[lindex $res 0] != 0} {
+	    unsupported "Couldn't run objdump --decompress"
+	    return
+	}
+	set debug_sect_decompressed [lindex $res 1]
 
 	if {$debug_sect == $debug_sect_decompressed} {
 	    fail ".debug_gdb_scripts in $the_binfile is not compressed"

@@ -1298,7 +1298,7 @@ if test "${have_libguile}" != no; then
   dnl If not, disable guile support.
   if test "$ac_cv_guild_ok" = no; then
     have_libguile=no
-    AC_MSG_WARN(disabling guile support, $GUILD fails compiling for $host)
+    AC_MSG_WARN([disabling guile support, $GUILD fails compiling for $host])
   fi
 fi
 
@@ -2080,7 +2080,7 @@ if test "$enable_binary_file_formats" != "all"; then
 	    # Do nothing.
 	    ;;
 	*)
-	    AC_MSG_WARN("$req is required to support one or more requested targets.  Adding it")
+	    AC_MSG_WARN([$req is required to support one or more requested targets.  Adding it])
 	    enable_binary_file_formats="${enable_binary_file_formats},$req"
 	    ;;
 	esac
@@ -2097,9 +2097,9 @@ enable_binary_file_formats=$(echo $enable_binary_file_formats | sed 's/,/ /g')
 for format in $enable_binary_file_formats
 do
     if test "$format" = "elf" && test "$bfd_supports_elf" != "yes"; then
-	    AC_MSG_ERROR("elf support was requested, but BFD does not support it.");
+	    AC_MSG_ERROR([ELF support was requested, but BFD does not support it])
     elif test "$format" = "macho" && test "$bfd_supports_macho" != "yes"; then
-	    AC_MSG_ERROR("Mach-O support was requested, but BFD does not support it.");
+	    AC_MSG_ERROR([Mach-O support was requested, but BFD does not support it])
     fi
 
     if test "$format" = "all"; then

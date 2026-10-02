@@ -23,6 +23,8 @@
 /* Align sufficient to be able to use vmovaps.  */
 #define ALIGN 32
 
+volatile int should_dump_core_p = 1;
+
 typedef struct {
   _Alignas (ALIGN) float f[8];
 } v8sf_t;
@@ -86,6 +88,13 @@ main (int argc, char **argv)
 #endif
 
   asm ("nop"); /* first breakpoint here */
+
+  /* Crash for OS core file.  */
+  if (should_dump_core_p)
+    {
+      /* Generate SIGSEGV to crash.  */
+      *(volatile int *) 0;
+    }
 
   asm (
        "vmovaps %%ymm0, 0(%0)\n\t"

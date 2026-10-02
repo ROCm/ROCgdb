@@ -4707,9 +4707,12 @@ dwarf_expr_context::execute_stack_op (gdb::array_view<const gdb_byte> expr)
 		if (trivial_entry_value (this->m_frame))
 		  {
 		    /* We can assume that DW_OP_entry_value (expr) == expr.
-		       Handle as DW_OP_regx.  */
+		       Handle DW_OP_regx, place register value on the
+		       stack.  */
 		    result_entry = std::make_shared<dwarf_register>
-		      (arch, kind_u.dwarf_reg);
+		      (arch, kind_u.dwarf_reg)->deref (this->m_frame,
+						       this->m_addr_info,
+						       address_type);
 		    break;
 		  }
 

@@ -1,6 +1,6 @@
 /* This testcase is part of GDB, the GNU debugger.
 
-   Copyright 2025-2026 Free Software Foundation, Inc.
+   Copyright 2026 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,19 +15,13 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-int var = 2;
-unsigned long long fake_data[3] = { 1, 2, 3 };
+#include <stddef.h>
 
-static
-void bar (int *p)
-{
-  asm ("bar_label: .globl bar_label");
-}
+extern char arena[32];
 
-int
-main()
+void *
+dummy_malloc (size_t size)
 {
-  asm ("main_label: .globl main_label");
-  bar (&var);
-  return 0;
+  (void) size;
+  return arena;
 }
