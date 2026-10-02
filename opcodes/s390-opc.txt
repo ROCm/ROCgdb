@@ -2205,7 +2205,7 @@ e6000000004e vcvbq VRR_VV0U2 "vector convert to binary 128 bit" arch15 zarch
 e6000000004a vcvdq VRI_VV0UU "vector convert to decimal 128 bit" arch15 zarch
 
 e6000000005f vtp VRR_0V0U "vector test decimal" arch15 zarch optparm
-e6000000007f vtz VRR_0VVU "vector test zoned" arch15 zarch
+e6000000007f vtz VRI_0VVU "vector test zoned" arch15 zarch
 
 # Concurrent-Functions Facility
 

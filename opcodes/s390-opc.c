@@ -476,6 +476,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_S_00         4, { 0,0,0,0,0,0 }                    /* e.g. hsch  */
 #define INSTR_S_RD         4, { D_20,B_16,0,0,0,0 }              /* e.g. stck  */
 #define INSTR_VRV_VVXRDU   6, { V_8,D_20,VX_12,B_16,U4_32,0 }    /* e.g. vgef  */
+#define INSTR_VRI_0VVU     6, { V_12,V_16,U16_20,0,0,0 }         /* e.g. vtz   */
 #define INSTR_VRI_V0U      6, { V_8,U16_16,0,0,0,0 }             /* e.g. vgbm  */
 #define INSTR_VRI_V        6, { V_8,0,0,0,0,0 }                  /* e.g. vzero */
 #define INSTR_VRI_V0UUU    6, { V_8,U8_16,U8_24,U4_32,0,0 }      /* e.g. vgm   */
@@ -534,7 +535,6 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_VRR_VV0U0U   6, { V_8,V_12,U4_32,U4_24,0,0 }       /* e.g. vistr */
 #define INSTR_VRR_0V       6, { V_12,0,0,0,0,0 }                 /* e.g. vtp   */
 #define INSTR_VRR_0V0U     6, { V_12,U16_20,0,0,0,0 }            /* e.g. vtp   */
-#define INSTR_VRR_0VVU     6, { V_12,V_16,U16_20,0,0,0 }         /* e.g. vtz   */
 #define INSTR_VRR_0VV0U    6, { V_12,V_16,U4_24,0,0,0 }          /* e.g. vcp   */
 #define INSTR_VRR_RV0U     6, { R_8,V_12,U4_24,0,0,0 }           /* e.g. vcvb  */
 #define INSTR_VRR_RV0UU    6, { R_8,V_12,U4_24,U4_28,0,0 }       /* e.g. vcvb  */
@@ -711,6 +711,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_S_00         { 0xff, 0xff, 0xff, 0xff, 0x00, 0x00 }
 #define MASK_S_RD         { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_VRV_VVXRDU   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRI_0VVU     { 0xff, 0xf0, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRI_V0U      { 0xff, 0x0f, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRI_V        { 0xff, 0x0f, 0xff, 0xff, 0xf0, 0xff }
 #define MASK_VRI_V0UUU    { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
@@ -769,7 +770,6 @@ unused_s390_operands_static_asserts (void)
 #define MASK_VRR_VV0U0U   { 0xff, 0x00, 0xff, 0x0f, 0x00, 0xff }
 #define MASK_VRR_0V       { 0xff, 0xf0, 0xff, 0xff, 0xf0, 0xff }
 #define MASK_VRR_0V0U     { 0xff, 0xf0, 0xf0, 0x00, 0x00, 0xff }
-#define MASK_VRR_0VVU     { 0xff, 0xf0, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRR_0VV0U    { 0xff, 0xf0, 0x0f, 0x0f, 0xf0, 0xff }
 #define MASK_VRR_RV0U     { 0xff, 0x00, 0xff, 0x0f, 0xf0, 0xff }
 #define MASK_VRR_RV0UU    { 0xff, 0x00, 0xff, 0x00, 0xf0, 0xff }
