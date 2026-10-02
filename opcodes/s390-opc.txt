@@ -804,7 +804,7 @@ b2a7 cutfu RRF_U0RERE "convert utf-8 to unicode" z9-109 zarch optparm
 b9b0 cu14 RRF_U0RERE "convert utf-8 to utf-32" z9-109 zarch optparm
 b9be srstu RRE_RR "search string unicode" z9-109 zarch
 d0 trtr SS_L0RDRD "tranlate and test reverse" z9-109 zarch
-b33b myr RRF_FE0FF "multiply unnormalized long hfp" z9-109 zarch
+b33b myr RRD_FE0FF "multiply unnormalized long hfp" z9-109 zarch
 b33d myhr RRD_F0FF "multiply unnormalized long hfp high" z9-109 zarch
 b339 mylr RRD_F0FF "multiply unnormalized long hfp low" z9-109 zarch
 ed000000003b my RXF_FRRDFE "multiply unnormalized long hfp" z9-109 zarch
