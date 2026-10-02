@@ -288,7 +288,7 @@ b319 cdbr RRE_FF "compare long bfp" g5 esa,zarch
 ed0000000019 cdb RXE_FRRD "compare long bfp" g5 esa,zarch
 b309 cebr RRE_FF "compare short bfp" g5 esa,zarch
 ed0000000009 ceb RXE_FRRD "compare short bfp" g5 esa,zarch
-b348 kxbr RRE_FF "compare and signal extended bfp" g5 esa,zarch
+b348 kxbr RRE_FEFE "compare and signal extended bfp" g5 esa,zarch
 b318 kdbr RRE_FF "compare and signal long bfp" g5 esa,zarch
 ed0000000018 kdb RXE_FRRD "compare and signal long bfp" g5 esa,zarch
 b308 kebr RRE_FF "compare and signal short bfp" g5 esa,zarch

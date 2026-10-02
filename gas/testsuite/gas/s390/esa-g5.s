@@ -226,7 +226,7 @@ foo:
 	kdbr	%f6,%f9
 	keb	%f6,4095(%r5,%r10)
 	kebr	%f6,%f9
-	kxbr	%f6,%f9
+	kxbr	%f5,%f8
 	l	%r6,4095(%r5,%r10)
 	la	%r6,4095(%r5,%r10)
 	lae	%r6,4095(%r5,%r10)

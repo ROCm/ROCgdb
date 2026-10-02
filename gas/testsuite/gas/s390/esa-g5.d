@@ -232,7 +232,7 @@ Disassembly of section .text:
 .*:	b3 18 00 69 [	 ]*kdbr	%f6,%f9
 .*:	ed 65 af ff 00 08 [	 ]*keb	%f6,4095\(%r5,%r10\)
 .*:	b3 08 00 69 [	 ]*kebr	%f6,%f9
-.*:	b3 48 00 69 [	 ]*kxbr	%f6,%f9
+.*:	b3 48 00 58 [	 ]*kxbr	%f5,%f8
 .*:	58 65 af ff [	 ]*l	%r6,4095\(%r5,%r10\)
 .*:	41 65 af ff [	 ]*la	%r6,4095\(%r5,%r10\)
 .*:	51 65 af ff [	 ]*lae	%r6,4095\(%r5,%r10\)
