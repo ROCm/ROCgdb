@@ -51,7 +51,7 @@ foo:
 	cu12	%r6,%r8
 	cu14	%r6,%r8,15
 	cu14	%r6,%r8
-	myr	%f6,%f9,%f5
+	myr	%f5,%f9,%f6
 	myhr	%f6,%f9,%f5
 	mylr	%f6,%f9,%f5
 	my	%f5,%f9,4095(%r5,%r10)

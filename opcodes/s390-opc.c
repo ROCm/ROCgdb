@@ -360,7 +360,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RRE_FR       4, { F_24,R_28,0,0,0,0 }              /* e.g. ldgr  */
 #define INSTR_RRE_FER      4, { FE_24,R_28,0,0,0,0 }             /* e.g. cxfbr */
 #define INSTR_RRF_F0FF     4, { F_16,F_24,F_28,0,0,0 }           /* e.g. madbr */
-#define INSTR_RRF_FE0FF    4, { F_16,F_24,F_28,0,0,0 }           /* e.g. myr   */
+#define INSTR_RRF_FE0FF    4, { FE_16,F_24,F_28,0,0,0 }          /* e.g. myr   */
 #define INSTR_RRF_F0FF2    4, { F_24,F_16,F_28,0,0,0 }           /* e.g. cpsdr */
 #define INSTR_RRF_F0FR     4, { F_24,F_16,R_28,0,0,0 }           /* e.g. iedtr */
 #define INSTR_RRF_FE0FER   4, { FE_24,FE_16,R_28,0,0,0 }         /* e.g. iextr */
