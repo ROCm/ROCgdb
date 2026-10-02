@@ -111,7 +111,7 @@ foo:
 	cfxr	%r5,9,%f4
 	ch	%r6,4095(%r5,%r10)
 	chi	%r6,-32767
-	cksm	%r6,%r9
+	cksm	%r6,%r8
 	cl	%r6,4095(%r5,%r10)
 	clc	4095(256,%r5),4095(%r10)
 	clcl	%r6,%r9

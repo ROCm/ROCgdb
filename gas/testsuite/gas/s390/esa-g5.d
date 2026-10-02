@@ -117,7 +117,7 @@ Disassembly of section .text:
 .*:	b3 ba 90 54 [	 ]*cfxr	%r5,9,%f4
 .*:	49 65 af ff [	 ]*ch	%r6,4095\(%r5,%r10\)
 .*:	a7 6e 80 01 [	 ]*chi	%r6,-32767
-.*:	b2 41 00 69 [	 ]*cksm	%r6,%r9
+.*:	b2 41 00 68 [	 ]*cksm	%r6,%r8
 .*:	55 65 af ff [	 ]*cl	%r6,4095\(%r5,%r10\)
 .*:	d5 ff 5f ff af ff [	 ]*clc	4095\(256,%r5\),4095\(%r10\)
 .*:	0f 69 [	 ]*clcl	%r6,%r9
