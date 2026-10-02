@@ -602,6 +602,10 @@ b365 lxr RRE_FEFE "load extended fp" g5 esa,zarch
 b22e pgin RRE_RR "page in" g5 esa,zarch
 b22f pgout RRE_RR "page out" g5 esa,zarch
 b276 xsch S_00 "cancel subchannel" g5 esa,zarch
+
+
+# z990 (arch6) instructions
+
 # New long displacement instructions on z990
 e3000000005a ay RXY_RRRD "add with long offset" z990 zarch
 e3000000007a ahy RXY_RRRD "add halfword with long offset" z990 zarch
@@ -739,6 +743,9 @@ b99b esair RRE_R0 "extract secondary ASN and instance" z990 esa,zarch
 b99e pti RRE_RR "program transfer with instance" z990 esa,zarch
 b99f ssair RRE_R0 "set secondary ASN with instance" z990 esa,zarch
 
+
+# z9-109 and z9-ec (arch7) instructions
+
 # z9-109 extended immediate instructions
 c209 afi RIL_RI "add immediate 32" z9-109 zarch
 c208 agfi RIL_RI "add immediate 64<32" z9-109 zarch
@@ -778,22 +785,15 @@ c00d oilf RIL_RU "or immediate low" z9-109 zarch
 c205 slfi RIL_RU "subtract logical immediate 32" z9-109 zarch
 c204 slgfi RIL_RU "subtract logical immediate 64<32" z9-109 zarch
 0104 ptff E "perform timing facility function" z9-109 zarch
-# z9-109 store facility list extended
 b2b0 stfle S_RD "store facility list extended" z9-109 zarch
-# z9-109 store clock fast
 b27c stckf S_RD "store clock fast" z9-109 zarch
-# z9-109 move with optional specifications instruction
 c800 mvcos SSF_RRDRD "move with optional specifications" z9-109 zarch
-# z9-109 load page-table-entry address instruction
 b9aa lptea RRF_RURR2 "load page-table-entry address" z9-109 zarch
-# z9-109 conditional sske facility, sske instruction entered twice
 b22b sske RRF_U0RR "set storage key extended" z9-109 zarch optparm
-# z9-109 etf2-enhancement facility, instructions entered twice
 b993 troo RRF_U0RER "translate one to one" z9-109 esa,zarch optparm
 b992 trot RRF_U0RER "translate one to two" z9-109 esa,zarch optparm
 b991 trto RRF_U0RER "translate two to one" z9-109 esa,zarch optparm
 b990 trtt RRF_U0RER "translate two to two" z9-109 esa,zarch optparm
-# z9-109 etf3-enhancement facility, some instructions entered twice
 b9b1 cu24 RRF_U0RERE "convert utf-16 to utf-32" z9-109 zarch optparm
 b2a6 cu21 RRF_U0RERE "convert utf-16 to utf-8" z9-109 zarch optparm
 b2a6 cuutf RRF_U0RERE "convert unicode to utf-8" z9-109 zarch optparm
@@ -804,7 +804,6 @@ b2a7 cutfu RRF_U0RERE "convert utf-8 to unicode" z9-109 zarch optparm
 b9b0 cu14 RRF_U0RERE "convert utf-8 to utf-32" z9-109 zarch optparm
 b9be srstu RRE_RR "search string unicode" z9-109 zarch
 d0 trtr SS_L0RDRD "tranlate and test reverse" z9-109 zarch
-# z9-109 unnormalized hfp multiply & multiply and add
 b33b myr RRF_FE0FF "multiply unnormalized long hfp" z9-109 zarch
 b33d myhr RRF_F0FF "multiply unnormalized long hfp high" z9-109 zarch
 b339 mylr RRF_F0FF "multiply unnormalized long hfp low" z9-109 zarch
@@ -884,7 +883,9 @@ ed0000000059 tdgxt RXE_FERRD "test data group extended dfp" z9-ec zarch
 c801 ectg SSF_RRDRD "extract cpu time" z9-ec zarch
 c802 csst SSF_RRDRD "compare and swap and store" z9-ec zarch
 
-# The new instructions of the System z10 Enterprise Class
+
+# z10 (arch8) instructions
+
 eb000000006a asi SIY_IRD "add immediate (32<8)" z10 zarch
 eb000000007a agsi SIY_IRD "add immediate (64<8)" z10 zarch
 eb000000006e alsi SIY_IRD "add logical with signed immediate (32<8)" z10 zarch
@@ -1006,6 +1007,9 @@ b286 qsi S_RD "query sampling information" z10 zarch
 b2e0 scctr RRE_RR "set cpu counter" z10 zarch
 b2e1 spctr RRE_RR "set peripheral counter" z10 zarch
 b280 lpp S_RD "load program parameter" z10 zarch
+
+
+# z196 (arch9) instructions
 
 # The new instructions of the IBM zEnterprise z196
 b9c8 ahhhr RRF_R0RR2 "add high high" z196 zarch
@@ -1150,7 +1154,9 @@ b92c pcc RRE_00 "perform cryptographic computation" z196 zarch
 b92d kmctr RRF_R0RR "cipher message with counter" z196 zarch
 b928 pckmo RRE_00 "perform cryptographic key management operation" z196 zarch
 
-# The new instructions of the IBM zEnterprise EC12
+
+# zEC12 (arch10) instructions
+
 b2ec etnd RRE_R0 "extract transaction nesting depth" zEC12 zarch htm
 e30000000025 ntstg RXY_RRRD "nontransactional store" zEC12 zarch htm
 b2fc tabort S_RD "transaction abort" zEC12 zarch htm
@@ -1178,11 +1184,12 @@ ed00000000ab cxzt RSL_LRDFEU "convert from zoned extended" zEC12 zarch
 ed00000000a8 czdt RSL_LRDFU "convert to zoned long" zEC12 zarch
 ed00000000a9 czxt RSL_LRDFEU "convert to zoned extended" zEC12 zarch
 
-# The new instructions of IBM z13
+
+# z13 (arch11) instructions
 
 e70000000027 lcbb RXE_RRRDU "load count to block boundary" z13 zarch vx
 
-# Chapter 21
+# Chapter 21 - Vector Support Instructions
 e70000000013 vgef VRV_VVXRDU "vector gather element 4 byte elements" z13 zarch vx
 e70000000012 vgeg VRV_VVXRDU "vector gather element 8 byte elements" z13 zarch vx
 e70000000044 vgbm VRI_V0U "vector generate byte mask" z13 zarch vx
@@ -1294,7 +1301,7 @@ e700000000d4 vupllb VRR_VV "vector unpack logical low byte" z13 zarch vx
 e700000010d4 vupllh VRR_VV "vector unpack logical low halfword" z13 zarch vx
 e700000020d4 vupllf VRR_VV "vector unpack logical low word" z13 zarch vx
 
-# Chapter 22
+# Chapter 22 - Vector Integer Instructions
 e700000000f3 va VRR_VVV0U "vector add" z13 zarch vx
 e700000000f3 vab VRR_VVV "vector add byte" z13 zarch vx
 e700000010f3 vah VRR_VVV "vector add halfword" z13 zarch vx
@@ -1612,7 +1619,7 @@ e7000030008a vstrczbs VRR_VVVU0VB3 "vector string range compare byte" z13 zarch 
 e7000130008a vstrczhs VRR_VVVU0VB3 "vector string range compare halfword" z13 zarch optparm,vx
 e7000230008a vstrczfs VRR_VVVU0VB3 "vector string range compare word" z13 zarch optparm,vx
 
-# Chapter 24
+# Chapter 24 - Vector Floating-Point Instructions
 e700000000e3 vfa VRR_VVV0UU "vector fp add" z13 zarch vx
 e700000030e3 vfadb VRR_VVV "vector fp add long" z13 zarch vx
 e700000830e3 wfadb VRR_VVV "vector fp add long" z13 zarch vx
@@ -1721,9 +1728,10 @@ e7000000003e vstm VRS_VVRDU "vector store multiple" z13 zarch optparm,vx
 
 eb0000000017 stcctm RSY_RURD "store cpu counter multiple" z13 zarch
 
-# arch12 instructions
 
-# Vector Enhancements Facility 1
+# z14 (arch12) instructions
+
+# Vector-Enhancements Facility 1
 
 e70000000085 vbperm VRR_VVV "vector bit permute" arch12 zarch
 e70000006004 vllezlf VRX_VRRD "vector load logical word element and zero - left aligned" arch12 zarch
@@ -1867,7 +1875,7 @@ e7000000204a vftcisb VRI_VVU2 "vector fp test data class immediate short" arch12
 e7000008204a wftcisb VRI_VVU2 "scalar vector fp test data class immediate scalar short" arch12 zarch
 e7000008404a wftcixb VRI_VVU2 "scalar vector fp test data class immediate scalar extended" arch12 zarch
 
-# Miscellaneous Instruction Extensions Facility 2
+# Miscellaneous-Instruction-Extensions Facility 2
 
 e30000000038 agh RXY_RRRD "add halfword to 64 bit value" arch12 zarch
 e30000000047 bic RXY_URRD "branch indirect on condition" arch12 zarch
@@ -1882,7 +1890,7 @@ e30000000053 msc RXY_RRRD "multiply single 32x32mem -> 32" arch12 zarch
 e30000000083 msgc RXY_RRRD "multiply single 64x64mem -> 64" arch12 zarch
 e30000000039 sgh RXY_RRRD "subtract halfword from 64 bit value" arch12 zarch
 
-# Vector packed decimal facility
+# Vector-Packed-Decimal Facility
 
 e60000000037 vlrlr VRS_RRDV "vector load rightmost with length" arch12 zarch
 e60000000035 vlrl VSI_URDV "vector load rightmost with immediate length" arch12 zarch
@@ -1907,7 +1915,7 @@ e60000000073 vsp VRI_VVV0UU2 "vector subtract decimal" arch12 zarch
 e6000000005f vtp VRR_0V "vector test decimal" arch12 zarch
 e6000000003c vupkz VSI_URDV "vector unpack zoned" arch12 zarch
 
-# Guarded storage facility
+# Guarded-Storage Facility
 
 e3000000004c lgg RXY_RRRD "load guarded 64 bit" arch12 zarch
 e30000000048 llgfsg RXY_RRRD "load logical and shift guarded 64 bit" arch12 zarch
@@ -1922,10 +1930,10 @@ b93c prno RRE_RR "perform random number operation" arch12 zarch
 b9a1 tpei RRE_RR "test pending external interruption" arch12 zarch
 b9ac irbm RRE_RR "insert reference bits multiple" arch12 zarch
 
-# arch13 instructions
 
+# z15 (arch13) instructions
 
-# Miscellaneous Instruction Extensions Facility 2
+# Miscellaneous-Instruction-Extensions Facility 2
 
 b9f5 ncrk RRF_R0RR2 "and with complement 32 bit" arch13 zarch
 b9e5 ncgrk RRF_R0RR2 "and with complement 64 bit" arch13 zarch
@@ -1948,7 +1956,7 @@ b9e30000 selgr*20 RRF_R0RR3 "select 64 bit" arch13 zarch
 b9c0 selfhr RRF_RURR "select high" arch13 zarch
 b9c00000 selfhr*20 RRF_R0RR3 "select high" arch13 zarch
 
-# Vector Enhancements Facility 2
+# Vector-Enhancements Facility 2
 
 e60000000006 vlbr VRX_VRRDU "vector load byte reversed elements" arch13 zarch
 e60000001006 vlbrh VRX_VRRD "vector load byte reversed halfword elements" arch13 zarch
@@ -2024,7 +2032,7 @@ e700000000c0 vclfp VRR_VV0UUU "vector fp convert to logical" arch13 zarch
 e700000020c0 vclfeb VRR_VV0UU "vector fp convert to logical 32 bit" arch13 zarch
 e700000820c0 wclfeb VRR_VV0UU8 "vector fp convert to logical 32 bit" arch13 zarch
 
-# Deflate conversion facility
+# Deflate-Conversion Facility
 
 b939 dfltcc RRF_R0RR2 "deflate conversion call" arch13 zarch
 
@@ -2032,17 +2040,17 @@ b939 dfltcc RRF_R0RR2 "deflate conversion call" arch13 zarch
 
 b938 sortl RRE_RR "sort lists" arch13 zarch
 
-# Vector packed decimal enhancement facility
+# Vector-Packed-Decimal-Enhancement Facility
 
 e60000000050 vcvb VRR_RV0UU "vector convert to binary 32 bit" arch13 zarch optparm
 e60000000052 vcvbg VRR_RV0UU "vector convert to binary 64 bit" arch13 zarch optparm
 
-# Message Security Assist Extension 9
+# Message-Security-Assist Extension 9
 
 b93a kdsa RRE_RR "compute digital signature authentication" arch13 zarch
 
 
-# arch14 (z16) instructions
+# z16 (arch14) instructions
 
 # Vector-Packed-Decimal-Enhancement Facility 2
 
@@ -2082,7 +2090,7 @@ b201 stbear S_RD "store bear" arch14 zarch
 b28f qpaci S_RD "query processor activity counter information" arch14 zarch
 
 
-# arch15 instructions
+# z17 (arch15) instructions
 
 # Vector-Enhancements Facility 3
 
