@@ -120,6 +120,7 @@ struct bfd_preserve
   unsigned int symcount;
   bool read_only;
   bfd_vma start_address;
+  ufile_ptr origin;
   struct bfd_hash_table section_htab;
 };
 
@@ -148,6 +149,7 @@ bfd_preserve_save (bfd *abfd, struct bfd_preserve *preserve,
   preserve->symcount = abfd->symcount;
   preserve->read_only = abfd->read_only;
   preserve->start_address = abfd->start_address;
+  preserve->origin = abfd->origin;
   preserve->section_htab = abfd->section_htab;
   preserve->marker = bfd_alloc (abfd, 1);
   preserve->build_id = abfd->build_id;
@@ -207,6 +209,8 @@ bfd_reinit (bfd *abfd, unsigned int section_id,
   abfd->symcount = 0;
   abfd->read_only = 0;
   abfd->start_address = 0;
+  if (abfd->my_archive == NULL)
+    abfd->origin = 0;
   abfd->build_id = NULL;
   bfd_section_list_clear (abfd);
 }
@@ -229,6 +233,7 @@ bfd_preserve_restore (bfd *abfd, struct bfd_preserve *preserve)
   abfd->symcount = preserve->symcount;
   abfd->read_only = preserve->read_only;
   abfd->start_address = preserve->start_address;
+  abfd->origin = preserve->origin;
   abfd->build_id = preserve->build_id;
 
   /* bfd_release frees all memory more recently bfd_alloc'd than
