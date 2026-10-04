@@ -2391,6 +2391,8 @@ xcoff_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 {
   if (! _bfd_coff_get_external_symbols (abfd))
     return false;
+  if (! _bfd_coff_check_symbol_table (abfd))
+    return false;
   if (! xcoff_link_add_symbols (abfd, info))
     return false;
   if (! info->keep_memory)
@@ -2568,6 +2570,12 @@ xcoff_link_check_archive_element (bfd *abfd,
   keep_syms_p = (obj_coff_external_syms (abfd) != NULL);
   if (!_bfd_coff_get_external_symbols (abfd))
     return false;
+  if (!_bfd_coff_check_symbol_table (abfd))
+    {
+      if (!keep_syms_p)
+	_bfd_coff_free_symbols (abfd);
+      return false;
+    }
 
   oldbfd = abfd;
   if (!xcoff_link_check_ar_symbols (abfd, info, pneeded, &abfd))
@@ -2585,6 +2593,12 @@ xcoff_link_check_archive_element (bfd *abfd,
 	  keep_syms_p = (obj_coff_external_syms (abfd) != NULL);
 	  if (!_bfd_coff_get_external_symbols (abfd))
 	    return false;
+	  if (!_bfd_coff_check_symbol_table (abfd))
+	    {
+	      if (!keep_syms_p)
+		_bfd_coff_free_symbols (abfd);
+	      return false;
+	    }
 	}
       if (!xcoff_link_add_symbols (abfd, info))
 	return false;
@@ -4167,6 +4181,8 @@ bfd_xcoff_build_dynamic_sections (bfd *output_bfd,
 
       if (! _bfd_coff_get_external_symbols (sub))
 	goto error_return;
+      if (! _bfd_coff_check_symbol_table (sub))
+	goto error_return;
 
       symcount = obj_raw_syment_count (sub);
       debug_index = bfd_zalloc (sub, symcount * sizeof (long));
@@ -5234,6 +5250,8 @@ xcoff_link_input_bfd (struct xcoff_final_link_info *flinfo,
     hash = false;
 
   if (! _bfd_coff_get_external_symbols (input_bfd))
+    return false;
+  if (! _bfd_coff_check_symbol_table (input_bfd))
     return false;
 
   /* Make one pass over the symbols and assign indices to symbols that

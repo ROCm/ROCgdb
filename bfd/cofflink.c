@@ -254,6 +254,8 @@ coff_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 {
   if (! _bfd_coff_get_external_symbols (abfd))
     return false;
+  if (! _bfd_coff_check_symbol_table (abfd))
+    return false;
   if (! coff_link_add_symbols (abfd, info))
     return false;
 
@@ -1582,6 +1584,8 @@ _bfd_coff_link_input_bfd (struct coff_final_link_info *flaginfo, bfd *input_bfd)
     hash = false;
 
   if (! _bfd_coff_get_external_symbols (input_bfd))
+    return false;
+  if (! _bfd_coff_check_symbol_table (input_bfd))
     return false;
 
   esym = (bfd_byte *) obj_coff_external_syms (input_bfd);

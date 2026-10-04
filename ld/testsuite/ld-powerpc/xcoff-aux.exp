@@ -1,0 +1,372 @@
+# Expect script for XCOFF auxiliary symbol count overrun regression tests.
+#
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This file is part of the GNU Binutils.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; see the file COPYING3. If not,
+# see <http://www.gnu.org/licenses/>.
+
+# Skip on remote host configurations as objects are generated in local tmpdir.
+if { [is_remote host] } {
+    return
+}
+
+# Only run on targets that support XCOFF or multi-target builds supporting aix5rs6.
+if { ![is_xcoff_format] } {
+    if { ![ld_supports_emul "aix5rs6"] } {
+	return
+    }
+}
+
+# Objects are built here rather than assembled, so they go straight into the
+# tmpdir directory that config/default.exp creates in the build tree.
+set tmpdir tmpdir
+
+# Read f_symptr (big-endian u32 at offset 8) from an XCOFF32 object.
+# Shifts the four bytes explicitly so the result does not depend on the
+# host byte order or on Tcl's default integer size.
+proc xcoff32_symptr { obj } {
+    set f [open $obj "rb"]
+    fconfigure $f -translation binary
+    seek $f 8
+    set bytes [read $f 4]
+    close $f
+    binary scan $bytes "cccc" b0 b1 b2 b3
+    return [expr {((($b0 & 0xff) << 24) | (($b1 & 0xff) << 16) | (($b2 & 0xff) << 8) | ($b3 & 0xff)) & 0xffffffff}]
+}
+
+# Read a single unsigned byte from a file.
+proc read_byte { file off } {
+    set f [open $file "rb"]
+    fconfigure $f -translation binary
+    seek $f $off
+    set b [read $f 1]
+    close $f
+    binary scan $b "c" val
+    return [expr {$val & 0xff}]
+}
+
+# Mutate a single byte in an object file using native Tcl.
+proc mutate_byte { src dst off val } {
+    file copy -force $src $dst
+    set f [open $dst "r+b"]
+    fconfigure $f -translation binary
+    seek $f $off
+    puts -nonewline $f [binary format "c" $val]
+    close $f
+}
+
+# Run LD over OBJ, writing OUTFILE, and return the pair {status output}.
+#
+# The exit status is read back from the shell rather than from
+# remote_exec, which collapses every outcome to 0 or 1 and so cannot tell
+# an ordinary link failure apart from a linker killed by a signal.  The
+# shell reports 128 + signal number for the latter, so a status of 128 or
+# more means the linker died rather than rejected its input.
+proc run_ld_capture { ld opts obj outfile } {
+    set cmd "$ld $opts -o $outfile $obj 2>&1; echo XCOFF_EXIT:\$?"
+    set out [lindex [remote_exec host [concat sh -c [list $cmd]]] 1]
+    set status -1
+    if { [regexp {XCOFF_EXIT:(\d+)} $out -> status] } {
+	regsub {XCOFF_EXIT:\d+\s*$} $out "" out
+    }
+    return [list $status $out]
+}
+
+# Return 1 if OUT holds evidence that the linker crashed, aborted, or
+# tripped an assertion instead of rejecting its input.
+proc crashed { out } {
+    foreach pat { "*AddressSanitizer*" "*LeakSanitizer*"
+		  "*Segmentation fault*" "*core dumped*" "*SIGABRT*"
+		  "*SIGSEGV*" "*free(): invalid size*" "*malloc(): *"
+		  "*corrupted size vs. prev_size*" "*assertion fail*"
+		  "*Aborted*" } {
+	if { [string match $pat $out] } {
+	    return 1
+	}
+    }
+    return 0
+}
+
+# Link OBJ and require LD to reject its malformed symbol table cleanly:
+# exit status 1, the "missing aux entries" diagnostic, no crash output and
+# no output file left behind.  On the non-csect malformed cases, an unpatched
+# linker either asserts, aborts, or crashes while processing the unchecked
+# symbol table.  The standalone inflated case may also leave a corrupt output
+# file, so these cases double as negative controls for the fix.
+proc expect_clean_rejection { ld opts obj bin what } {
+    file delete -force $bin
+    set result [run_ld_capture $ld $opts $obj $bin]
+    set status [lindex $result 0]
+    set out [lindex $result 1]
+    if { $status == 1
+	 && ![file exists $bin]
+	 && ! [crashed $out]
+	 && [string match "*has missing aux entries*" $out] } {
+	pass "XCOFF aux $what: rejected cleanly"
+    } else {
+	fail "XCOFF aux $what: expected status 1, no crash and no output file,\
+	      got status $status, output file [expr {[file exists $bin] ? \
+	      {exists} : {absent}}]: $out"
+    }
+    file delete -force $bin
+}
+
+proc xcoff_aux_test {} {
+    global ld tmpdir
+
+    set emul ""
+    if { [ld_supports_emul "aix5rs6"] } {
+	set emul "-m aix5rs6"
+    }
+
+    # Embedded hex representation of a valid 592-byte XCOFF32 seed object.
+    # Layout:
+    #   Header: magic 0x01df, 3 sections (.text, .data, .bss), f_nsyms = 18,
+    #           f_symptr = 264 (0x0108).
+    #   Symbols: 9 symbols with 1 auxiliary entry each = 18 slots of 18 bytes:
+    #     Slot  0..1 : '.file'  (class 103 C_FILE,   n_numaux = 1) -> nx at off 281
+    #     Slot  2..3 : '.text'  (class 107 C_HIDEXT, n_numaux = 1)
+    #     Slot  4..5 : '_start' (class   2 C_EXT,    n_numaux = 1)
+    #     Slot  6..7 : '.data'  (class 107 C_HIDEXT, n_numaux = 1)
+    #     Slot  8..9 : 'gdata'  (class   2 C_EXT,    n_numaux = 1)
+    #     Slot 10..11: 'gptr'   (class   2 C_EXT,    n_numaux = 1)
+    #     Slot 12..13: 'tbl'    (class   2 C_EXT,    n_numaux = 1)
+    #     Slot 14..15: 'rodata' (class   2 C_EXT,    n_numaux = 1)
+    #     Slot 16..17: 'bssvar' (class   2 C_EXT,    n_numaux = 1) -> nx at off 569
+    #
+    # Boundary condition:
+    #   The unmutated seed represents the exact-fit positive boundary where declared
+    #   entries match auxiliary counts (9 symbols + 9 aux = 18 slots).
+    #   Two boundary overrun conditions are exercised:
+    #   1. Non-csect boundary: symbol 0 (.file, class C_FILE) n_numaux mutated from
+    #      1 to 18 (1 + 18 = 19 > 18 slots). Bypasses csect-scoped checks.
+    #   2. Csect boundary: symbol 16 (bssvar, class C_EXT) n_numaux mutated from
+    #      1 to 2 (17 + 2 = 19 > 18 slots), overrunning table by 1 slot.
+    set seed_hex {
+	01df0003000000000000010800000012001c0204010700020000000c00000050
+	000000400000000000000000000000102e746578740000000000000000000000
+	0000000c000000a8000000000000000000000000000000202e64617461000000
+	000000100000001000000050000000b400000000000000000000000000000040
+	2e62737300000000000000600000006000000040000000000000000000000000
+	000000000000008038600001386300024e8000201122334455667788deadbeef
+	cafebabe010203040506070868656c6c6f20776f726c645c3000000000000000
+	00000000000000000000000000000000000000000000000000000000dead0001
+	00000000000000002e66696c6500000000000000fffe0000670166616b650000
+	0000000000000000000000002e7465787400000000000000000100006b010000
+	000c00000000000011000000000000005f737461727400000000000000010000
+	02010000000200000000000002000000000000002e6461746100000000000010
+	000200006b010000005000000000000011050000000000006764617461000000
+	0000001000020000020100000006000000000000020500000000000067707472
+	0000000000000018000200000201000000060000000000000205000000000000
+	74626c0000000000000000350002000002010000000600000000000002050000
+	00000000726f6461746100000000005500020000020100000006000000000000
+	0205000000000000627373766172000000000060000300000201000000400000
+	00000000030500000000000000000004
+    }
+    regsub -all {\s+} $seed_hex "" clean_hex
+    set seed "$tmpdir/xcoff-aux-seed.o"
+    set f [open $seed "wb"]
+    fconfigure $f -translation binary
+    puts -nonewline $f [binary format H* $clean_hex]
+    close $f
+
+    # Verify seed object layout and mutation offsets.
+    if { [file size $seed] != 592 } {
+	unresolved "XCOFF aux test: seed size is [file size $seed], expected 592"
+	return
+    }
+
+    set symptr [xcoff32_symptr $seed]
+    if { $symptr != 264 } {
+	unresolved "XCOFF aux test: bad f_symptr $symptr in seed, expected 264"
+	return
+    }
+
+    set first_nnumaux_off [expr {$symptr + 17}]
+    set last_nnumaux_off [expr {$symptr + 16 * 18 + 17}]
+    if { [read_byte $seed $first_nnumaux_off] != 1 || [read_byte $seed $last_nnumaux_off] != 1 } {
+	unresolved "XCOFF aux test: seed symbol table layout does not match expected offsets"
+	return
+    }
+
+    # 1. Positive control (exact-fit boundary): the unmutated seed declares
+    # exactly as many entries as it holds, so it must link with status 0.
+    set ctrl_bin "$tmpdir/xcoff-aux-control"
+    file delete -force $ctrl_bin
+    set result [run_ld_capture $ld "$emul -e 0" $seed $ctrl_bin]
+    set status [lindex $result 0]
+    set out [lindex $result 1]
+    if { $status != 0 || [crashed $out] || ![file exists $ctrl_bin] } {
+	fail "XCOFF aux positive control: unmutated seed did not link cleanly (status $status): $out"
+	return
+    }
+    pass "XCOFF aux positive control: unmutated seed links cleanly"
+    file delete -force $ctrl_bin
+
+    # 2. Non-csect boundary test: mutate the first symbol (.file, class
+    # C_FILE) n_numaux from 1 to 18.
+    # The table has 18 slots.  Symbol 0 takes one slot and claims 18 aux
+    # entries, so it overruns the table by exactly 1 slot.  Because .file is
+    # not a csect symbol this bypasses the csect-scoped checks and reaches
+    # the final link pass, where an unpatched linker walks off the end of
+    # flinfo.sym_indices.
+    set bad_file_boundary "$tmpdir/xcoff-aux-file-boundary.o"
+    if { [catch {mutate_byte $seed $bad_file_boundary $first_nnumaux_off 18} err] } {
+	fail "XCOFF aux file boundary: could not mutate: $err"
+	return
+    }
+    expect_clean_rejection $ld "$emul -e 0" $bad_file_boundary \
+	"$tmpdir/xcoff-aux-file-boundary" \
+	"non-csect boundary, 1 slot past table end (.file n_numaux = 18)"
+
+    # 3. Non-csect inflated overrun test: inflate .file n_numaux to 255.
+    # On an unpatched linker this overruns flinfo.sym_indices by 238 slots.
+    # The constant -1 written by *indexp++ = -1 in xcoff_link_input_bfd then
+    # corrupts the following glibc chunk headers, so the link dies of
+    # SIGABRT after emitting a corrupt output file.
+    set bad_overrun "$tmpdir/xcoff-aux-overrun.o"
+    if { [catch {mutate_byte $seed $bad_overrun $first_nnumaux_off 255} err] } {
+	fail "XCOFF aux overrun: could not mutate: $err"
+	return
+    }
+    expect_clean_rejection $ld "$emul -e 0" $bad_overrun \
+	"$tmpdir/xcoff-aux-overrun" \
+	"non-csect inflated overrun, 238 slots past table end (.file n_numaux = 255)"
+
+    # 4. Csect boundary test: mutate the last symbol (index 16, bssvar) from
+    # 1 to 2 aux entries.  Symbol index 16 is slot 16 and exactly one aux
+    # entry fits in slot 17, so claiming 2 overruns by 1 slot.
+    #
+    # This case does NOT test the new check.  bssvar is a csect symbol, so
+    # the check added by 23acf2f003f already rejects it, and this testcase
+    # passes on an unpatched linker just as it does on a patched one.  It is
+    # kept to pin the exact-fit boundary from the other side and to confirm
+    # that the new check agrees with the older one on the same input.  Only
+    # the four non-csect standalone and archive member cases discriminate
+    # patched from unpatched.
+    set bad_csect_boundary "$tmpdir/xcoff-aux-csect-boundary.o"
+    if { [catch {mutate_byte $seed $bad_csect_boundary $last_nnumaux_off 2} err] } {
+	fail "XCOFF aux csect boundary: could not mutate: $err"
+	return
+    }
+    expect_clean_rejection $ld "$emul -e 0" $bad_csect_boundary \
+	"$tmpdir/xcoff-aux-csect-boundary" \
+	"csect boundary, 1 slot past table end, also rejected by 23acf2f003f (bssvar n_numaux = 2)"
+
+    # 5. Archive positive control: the unmutated archive contains valid
+    # member xcoff-seed.o defining gdata; linking with -u gdata extracts it
+    # and must exit 0.
+    set ar_hex {
+	3c62696761663e0a383436202020202020202020202020202020202031303134
+	2020202020202020202020202020202030202020202020202020202020202020
+	2020202031323820202020202020202020202020202020203132382020202020
+	2020202020202020202020200000000000000000000000000000000000000000
+	3539322020202020202020202020202020202020383436202020202020202020
+	2020202020202020302020202020202020202020202020202020202031373931
+	3132393132312020313030302020202020202020313030312020202020202020
+	3130303634342020202020203132202078636f66662d736565642e6f600a01df
+	0003000000000000010800000012001c0204010700020000000c000000500000
+	00400000000000000000000000102e7465787400000000000000000000000000
+	000c000000a8000000000000000000000000000000202e646174610000000000
+	00100000001000000050000000b4000000000000000000000000000000402e62
+	7373000000000000006000000060000000400000000000000000000000000000
+	00000000008038600001386300024e8000201122334455667788deadbeefcafe
+	babe010203040506070868656c6c6f20776f726c645c30000000000000000000
+	0000000000000000000000000000000000000000000000000000dead00010000
+	0000000000002e66696c6500000000000000fffe0000670166616b6500000000
+	000000000000000000002e7465787400000000000000000100006b010000000c
+	00000000000011000000000000005f7374617274000000000000000100000201
+	0000000200000000000002000000000000002e64617461000000000000100002
+	00006b0100000050000000000000110500000000000067646174610000000000
+	0010000200000201000000060000000000000205000000000000677074720000
+	0000000000180002000002010000000600000000000002050000000000007462
+	6c00000000000000003500020000020100000006000000000000020500000000
+	0000726f64617461000000000055000200000201000000060000000000000205
+	0000000000006273737661720000000000600003000002010000004000000000
+	0000030500000000000000000004353420202020202020202020202020202020
+	2020313031342020202020202020202020202020202031323820202020202020
+	2020202020202020202030202020202020202020202030202020202020202020
+	202030202020202020202020202030202020202020202020202030202020600a
+	3120202020202020202020202020202020202020313238202020202020202020
+	202020202020202078636f66662d736565642e6f000039322020202020202020
+	2020202020202020202030202020202020202020202020202020202020203834
+	3620202020202020202020202020202020203020202020202020202020203020
+	2020202020202020202030202020202020202020202030202020202020202020
+	202030202020600a000000000000000600000000000000800000000000000080
+	0000000000000080000000000000008000000000000000800000000000000080
+	5f737461727400676461746100677074720074626c00726f6461746100627373
+	76617200
+    }
+    regsub -all {\s+} $ar_hex "" clean_ar_hex
+    set ar_seed "$tmpdir/xcoff-aux-seed.a"
+    set f [open $ar_seed "wb"]
+    fconfigure $f -translation binary
+    puts -nonewline $f [binary format H* $clean_ar_hex]
+    close $f
+
+    if { [file size $ar_seed] != 1220 } {
+	unresolved "XCOFF aux test: archive size is [file size $ar_seed], expected 1220"
+	return
+    }
+
+    # Offset 535 is 254 (member data start) + 264 (f_symptr) + 17 (.file n_numaux).
+    set ar_first_nnumaux_off 535
+    if { [read_byte $ar_seed $ar_first_nnumaux_off] != 1 } {
+	unresolved "XCOFF aux test: archive member layout does not match expected offset"
+	return
+    }
+
+    set ar_ctrl_bin "$tmpdir/xcoff-aux-ar-control"
+    file delete -force $ar_ctrl_bin
+    set result [run_ld_capture $ld "$emul -e 0 -u gdata" $ar_seed $ar_ctrl_bin]
+    set status [lindex $result 0]
+    set out [lindex $result 1]
+    if { $status != 0 || [crashed $out] || ![file exists $ar_ctrl_bin] } {
+	fail "XCOFF aux archive positive control: unmutated archive did not link cleanly (status $status): $out"
+	return
+    }
+    pass "XCOFF aux archive positive control: unmutated archive links cleanly"
+    file delete -force $ar_ctrl_bin
+
+    # 6. Archive member boundary test: mutate member .file n_numaux to 18.
+    # On an unpatched linker, the malformed member passes archive processing
+    # without validation; subsequent dynamic section processing then crashes
+    # with SIGSEGV in bfd_xcoff_build_dynamic_sections.
+    set bad_ar_boundary "$tmpdir/xcoff-aux-ar-boundary.a"
+    if { [catch {mutate_byte $ar_seed $bad_ar_boundary $ar_first_nnumaux_off 18} err] } {
+	fail "XCOFF aux archive boundary: could not mutate: $err"
+	return
+    }
+    expect_clean_rejection $ld "$emul -e 0 -u gdata" $bad_ar_boundary \
+	"$tmpdir/xcoff-aux-ar-boundary" \
+	"archive member boundary, 1 slot past table end (.file n_numaux = 18)"
+
+    # 7. Archive member inflated overrun test: mutate member .file n_numaux to 255.
+    # On an unpatched linker, the malformed member passes archive processing
+    # without validation; subsequent dynamic section processing then crashes
+    # with SIGSEGV in bfd_xcoff_build_dynamic_sections.
+    set bad_ar_overrun "$tmpdir/xcoff-aux-ar-overrun.a"
+    if { [catch {mutate_byte $ar_seed $bad_ar_overrun $ar_first_nnumaux_off 255} err] } {
+	fail "XCOFF aux archive overrun: could not mutate: $err"
+	return
+    }
+    expect_clean_rejection $ld "$emul -e 0 -u gdata" $bad_ar_overrun \
+	"$tmpdir/xcoff-aux-ar-overrun" \
+	"archive member inflated overrun, 238 slots past table end (.file n_numaux = 255)"
+
+}
+
+xcoff_aux_test

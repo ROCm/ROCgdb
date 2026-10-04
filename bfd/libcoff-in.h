@@ -384,6 +384,8 @@ extern const char *_bfd_coff_read_string_table
   (bfd *) ATTRIBUTE_HIDDEN;
 extern bool _bfd_coff_free_symbols
   (bfd *) ATTRIBUTE_HIDDEN;
+extern bool _bfd_coff_check_symbol_table
+  (bfd *) ATTRIBUTE_HIDDEN;
 extern struct coff_ptr_struct *coff_get_normalized_symtab
   (bfd *) ATTRIBUTE_HIDDEN;
 extern long coff_get_reloc_upper_bound
