@@ -1,2 +1,2 @@
 .*: Assembler messages:
-.*:1: Error: unable to include `/etc/'
+.*:1: Error: (unable to include `./tmpdir/'|file not found: ./tmpdir/)
