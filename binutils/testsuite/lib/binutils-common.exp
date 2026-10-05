@@ -946,11 +946,12 @@ proc prune_dump_output { output } {
 #   objdump: FLAGS
 #   readelf: FLAGS
 #   size: FLAGS
+#   strings: FLAGS
 #	Use the specified program to analyze the output file, and pass it
 #	FLAGS, in addition to the output name.  Note that they are run
 #	with LC_ALL=C in the environment to give consistent sorting of
 #	symbols.  If no FLAGS are needed then you can use:
-#	    DUMPPROG: [nm objdump readelf addr2line]
+#	    DUMPPROG: [nm objdump readelf addr2line strings]
 #	instead, or just pass a flag that happens to be the default.
 #	If objdump is the dump tool and we're not dumping binary, nor
 #	have run ld, then the standard section names (.text, .data and
@@ -1052,7 +1053,7 @@ proc run_dump_test { name {extra_options {}} } {
     global ADDR2LINE ADDR2LINEFLAGS AS ASFLAGS CC_FOR_TARGET CFLAGS_FOR_TARGET
     global ELFEDIT ELFEDITFLAGS LD LDFLAGS NM NMFLAGS OBJCOPY OBJCOPYFLAGS
     global OBJDUMP OBJDUMPFLAGS READELF READELFFLAGS STRIP STRIPFLAGS
-    global SIZE SIZEFLAGS
+    global SIZE SIZEFLAGS STRINGS STRINGSFLAGS
     global copyfile env runtests srcdir subdir verbose base_dir
     global DT_RELR_LDFLAGS NO_DT_RELR_LDFLAGS
     global NO_ROSEGMENT_LDFLAGS
@@ -1315,6 +1316,7 @@ proc run_dump_test { name {extra_options {}} } {
 		objdump		{ set dumpprogram objdump }
 		readelf		{ set dumpprogram readelf }
 		size		{ set dumpprogram size }
+		strings         { set dumpprogram strings }
 		default		{
 		    perror "unrecognized DUMPPROG option $opts(DUMPPROG) in $file.d"
 		    unresolved $base_testname
@@ -1323,7 +1325,7 @@ proc run_dump_test { name {extra_options {}} } {
 	    }
 	} else {
 	    # Guess which program to run, by seeing which option was specified.
-	    foreach p {addr2line nm objdump readelf size} {
+	    foreach p {addr2line nm objdump readelf size strings} {
 		if {$opts($p) != ""} {
 		    if {$dumpprogram != ""} {
 			perror "ambiguous dump program in $file.d"

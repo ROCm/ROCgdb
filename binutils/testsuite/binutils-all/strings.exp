@@ -48,3 +48,9 @@ proc test_print_file_name {testfile} {
 }
 
 test_print_file_name $srcdir/$subdir/strings-1.bin
+
+
+# Test strings -n case
+run_dump_test strings-len-default
+run_dump_test strings-len-n-5
+run_dump_test strings-len-n-7
