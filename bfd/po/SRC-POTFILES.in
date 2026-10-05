@@ -13,6 +13,7 @@ archures.c
 bfd.c
 bfdio.c
 binary.c
+btf.c
 cache.c
 cf-i386lynx.c
 cisco-core.c
