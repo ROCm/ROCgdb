@@ -344,7 +344,7 @@ zmm28, Class=RegSIMD|Zmmword, RegVRex|RegRex, 4, Dw2Inval, 79
 zmm29, Class=RegSIMD|Zmmword, RegVRex|RegRex, 5, Dw2Inval, 80
 zmm30, Class=RegSIMD|Zmmword, RegVRex|RegRex, 6, Dw2Inval, 81
 zmm31, Class=RegSIMD|Zmmword, RegVRex|RegRex, 7, Dw2Inval, 82
-// TMM registers for AMX
+// TMM registers for AMX / ACE
 tmm0, Class=RegSIMD|Tmmword, 0, 0, Dw2Inval, Dw2Inval
 tmm1, Class=RegSIMD|Tmmword, 0, 1, Dw2Inval, Dw2Inval
 tmm2, Class=RegSIMD|Tmmword, 0, 2, Dw2Inval, Dw2Inval

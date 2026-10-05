@@ -3239,10 +3239,33 @@ xresldtrk, 0xf20f01e9, TSXLDTRK, NoSuf, {}
 
 // TSXLDTRK instructions end.
 
-// AMX instructions.
+// AMX and ACE shared instructions.
 
 ldtilecfg, 0x49/0, APX_F(TILE), Modrm|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex }
 sttilecfg, 0x6649/0, APX_F(TILE), Modrm|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex }
+
+tilerelease, 0x49c0, TILE, Vex128|Space0F38|VexW0|NoSuf, {}
+
+tilezero, 0xf249, TILE, Modrm|Vex128|Space0F38|VexW0|NoSuf, { RegTMM }
+
+tcvtrowd2ps, 0xf34a, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tcvtrowd2ps, 0xf307, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+
+tcvtrowps2bf16h, 0xf26d, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tcvtrowps2bf16h, 0xf207, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+tcvtrowps2bf16l, 0xf36d, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tcvtrowps2bf16l, 0xf377, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+tcvtrowps2phh, 0x6d, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tcvtrowps2phh, 0x07, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+tcvtrowps2phl, 0x666d, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tcvtrowps2phl, 0xf277, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+
+tilemovrow, 0x664a, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tilemovrow, 0x6607, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+
+// AMX and ACE shared instructions end.
+
+// AMX instructions.
 
 tcmmimfp16ps, 0x666c, AMX_COMPLEX, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 tcmmrlfp16ps, 0x6c, AMX_COMPLEX, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
@@ -3261,10 +3284,6 @@ tileloaddt1, 0x664b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSu
 tileloaddrs, 0xf24a, APX_F(AMX_MOVRS), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
 tileloaddrst1, 0x664a, APX_F(AMX_MOVRS), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
 tilestored, 0xf34b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { RegTMM, Unspecified|BaseIndex }
-
-tilerelease, 0x49c0, TILE, Vex128|Space0F38|VexW0|NoSuf, {}
-
-tilezero, 0xf249, TILE, Modrm|Vex128|Space0F38|VexW0|NoSuf, { RegTMM }
 
 <z:pfx, z0:, z1:66>
 
@@ -3294,21 +3313,6 @@ tdpbf8ps, 0xfd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTM
 tdpbhf8ps, 0xf2fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 tdphbf8ps, 0xf3fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 tdphf8ps, 0x66fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
-
-tcvtrowd2ps, 0xf34a, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tcvtrowd2ps, 0xf307, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-
-tcvtrowps2bf16h, 0xf26d, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tcvtrowps2bf16h, 0xf207, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-tcvtrowps2bf16l, 0xf36d, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tcvtrowps2bf16l, 0xf377, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-tcvtrowps2phh, 0x6d, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tcvtrowps2phh, 0x07, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-tcvtrowps2phl, 0x666d, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tcvtrowps2phl, 0xf277, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-
-tilemovrow, 0x664a, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tilemovrow, 0x6607, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
 
 // AMX instructions end.
 

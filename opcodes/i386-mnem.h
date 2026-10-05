@@ -3066,7 +3066,7 @@ static const char i386_mnemonics[];
 #define OPREF_2_430 710
 #define OPREF_2_432 712
 #define OPREF_2_434 714
-#define OPREF_2_436 379
+#define OPREF_2_436 385
 #define OPREF_2_438 716
 #define OPREF_2_440 718
 #define OPREF_2_442 720
@@ -3145,6 +3145,6 @@ static const char i386_mnemonics[];
 #define OPREF_1_52 71
 #define OPREF_1_53 316
 #define OPREF_1_54 232
-#define OPREF_1_55 379
+#define OPREF_1_55 380
 #define OPREF_1_56 636
 #define OPREF_1_57 778

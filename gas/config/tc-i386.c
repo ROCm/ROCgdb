@@ -1207,6 +1207,7 @@ static const arch_entry cpu_arch[] =
   SUBARCH (pconfig, PCONFIG, PCONFIG, false),
   SUBARCH (waitpkg, WAITPKG, WAITPKG, false),
   SUBARCH (cldemote, CLDEMOTE, CLDEMOTE, false),
+  SUBARCH (ace_v1, ACE_V1, ANY_ACE_V1, false),
   SUBARCH (amx_int8, AMX_INT8, ANY_AMX_INT8, false),
   SUBARCH (amx_bf16, AMX_BF16, ANY_AMX_BF16, false),
   SUBARCH (amx_fp16, AMX_FP16, ANY_AMX_FP16, false),
@@ -1907,6 +1908,7 @@ _is_cpu (const i386_cpu_attr *a, enum i386_cpu cpu)
     case CpuAPX_F:    return a->bitfield.cpuapx_f;
     case CpuAVX10_2:  return a->bitfield.cpuavx10_2;
     case CpuAMX_TRANSPOSE:  return a->bitfield.cpuamx_transpose;
+    case CpuACE_V1:   return a->bitfield.cpuace_v1;
     case Cpu64:       return a->bitfield.cpu64;
     case CpuNo64:     return a->bitfield.cpuno64;
     default:
@@ -3353,8 +3355,10 @@ static void isa_disable (unsigned int idx)
   cpu_arch_isa_flags
     = cpu_flags_and_not (cpu_arch_isa_flags, cpu_arch[idx].disable);
 
-  /* TILE is internal. .noamx_tile does not automatically clear it.  */
-  if (!cpu_arch_flags.bitfield.cpuamx_tile)
+  /* TILE is internal. .noamx_tile and .noace_v1 do not automatically clear
+     it.  */
+  if (!cpu_arch_flags.bitfield.cpuamx_tile
+      && !cpu_arch_flags.bitfield.cpuace_v1)
     {
       cpu_arch_flags.bitfield.cputile = 0;
       cpu_arch_isa_flags.bitfield.cputile = 0;
