@@ -51,6 +51,11 @@ static const struct dis386 evex_len_table[][3] = {
     { PREFIX_TABLE (PREFIX_EVEX_0F384A_X86_64_W_0_L_2) },
   },
 
+  /* EVEX_LEN_0F384B_X86_64 */
+  {
+    { X86_64_EVEX_MEM_W_TABLE (VEX_W_0F384B_X86_64_L_0) },
+  },
+
   /* EVEX_LEN_0F385A */
   {
     { Bad_Opcode },

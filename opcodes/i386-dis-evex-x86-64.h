@@ -3,6 +3,11 @@
     { Bad_Opcode },
     { VEX_W_TABLE (EVEX_W_0F384A_X86_64) },
   },
+  /* X86_64_EVEX_0F384B */
+  {
+    { Bad_Opcode },
+    { EVEX_LEN_TABLE (EVEX_LEN_0F384B_X86_64) },
+  },
   /* X86_64_EVEX_0F386D */
   {
     { Bad_Opcode },

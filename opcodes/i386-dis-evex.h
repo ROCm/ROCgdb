@@ -377,7 +377,7 @@ static const struct dis386 evex_table[][256] = {
     { Bad_Opcode },
     { X86_64_EVEX_MEM_W_TABLE (VEX_W_0F3849_X86_64_L_0) },
     { X86_64_TABLE (X86_64_EVEX_0F384A) },
-    { X86_64_EVEX_MEM_W_TABLE (VEX_W_0F384B_X86_64_L_0) },
+    { X86_64_TABLE (X86_64_EVEX_0F384B) },
     { "vrcp14p%XW",	{ XM, EXx }, PREFIX_DATA },
     { "vrcp14s%XW",	{ XMScalar, VexScalar, EXdq }, PREFIX_DATA },
     { "vrsqrt14p%XW",	{ XM, EXx }, 0 },
