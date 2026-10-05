@@ -278,6 +278,8 @@ enum i386_cpu
   CpuAMX_AVX512,
   /* AMX-TILE instructions required */
   CpuAMX_TILE,
+  /* Tile management instructions required (internal). */
+  CpuTILE,
   /* GFNI instructions required */
   CpuGFNI,
   /* VAES instructions required */
@@ -552,6 +554,7 @@ typedef union i386_cpu_flags
       unsigned int cpuamx_movrs:1;
       unsigned int cpuamx_avx512:1;
       unsigned int cpuamx_tile:1;
+      unsigned int cputile:1;
       unsigned int cpugfni:1;
       unsigned int cpuvaes:1;
       unsigned int cpuvpclmulqdq:1;

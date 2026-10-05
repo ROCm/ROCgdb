@@ -3241,8 +3241,8 @@ xresldtrk, 0xf20f01e9, TSXLDTRK, NoSuf, {}
 
 // AMX instructions.
 
-ldtilecfg, 0x49/0, APX_F(AMX_TILE), Modrm|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex }
-sttilecfg, 0x6649/0, APX_F(AMX_TILE), Modrm|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex }
+ldtilecfg, 0x49/0, APX_F(TILE), Modrm|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex }
+sttilecfg, 0x6649/0, APX_F(TILE), Modrm|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex }
 
 tcmmimfp16ps, 0x666c, AMX_COMPLEX, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 tcmmrlfp16ps, 0x6c, AMX_COMPLEX, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
@@ -3260,9 +3260,9 @@ tileloaddrs, 0xf24a, APX_F(AMX_MOVRS), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoS
 tileloaddrst1, 0x664a, APX_F(AMX_MOVRS), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
 tilestored, 0xf34b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { RegTMM, Unspecified|BaseIndex }
 
-tilerelease, 0x49c0, AMX_TILE, Vex128|Space0F38|VexW0|NoSuf, {}
+tilerelease, 0x49c0, TILE, Vex128|Space0F38|VexW0|NoSuf, {}
 
-tilezero, 0xf249, AMX_TILE, Modrm|Vex128|Space0F38|VexW0|NoSuf, { RegTMM }
+tilezero, 0xf249, TILE, Modrm|Vex128|Space0F38|VexW0|NoSuf, { RegTMM }
 
 <z:pfx, z0:, z1:66>
 

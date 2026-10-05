@@ -2360,7 +2360,7 @@ cpu_flags_match (const insn_template *t)
 	      || any.bitfield.cpuavx512dq || any.bitfield.cpuamx_tile
 	      || any.bitfield.cpucmpccxadd || any.bitfield.cpuuser_msr
 	      || any.bitfield.cpumsr_imm || any.bitfield.cpuamx_transpose
-	      || any.bitfield.cpuamx_movrs))
+	      || any.bitfield.cpuamx_movrs || any.bitfield.cputile))
 	{
 	  /* These checks (verifying that APX_F() was properly used in the
 	     opcode table entry) make sure there's no need for an "else" to
@@ -3352,6 +3352,13 @@ static void isa_disable (unsigned int idx)
 
   cpu_arch_isa_flags
     = cpu_flags_and_not (cpu_arch_isa_flags, cpu_arch[idx].disable);
+
+  /* TILE is internal. .noamx_tile does not automatically clear it.  */
+  if (!cpu_arch_flags.bitfield.cpuamx_tile)
+    {
+      cpu_arch_flags.bitfield.cputile = 0;
+      cpu_arch_isa_flags.bitfield.cputile = 0;
+    }
 }
 
 static void
@@ -4303,7 +4310,7 @@ install_template (const insn_template *t)
 	   || maybe_cpu (t, CpuAVX512BW) || maybe_cpu (t, CpuBMI)
 	   || maybe_cpu (t, CpuBMI2) || maybe_cpu (t, CpuUSER_MSR)
 	   || maybe_cpu (t, CpuMSR_IMM) || maybe_cpu (t, CpuAMX_TRANSPOSE)
-	   || maybe_cpu (t, CpuAMX_MOVRS))
+	   || maybe_cpu (t, CpuAMX_MOVRS) || maybe_cpu (t, CpuTILE))
 	  && maybe_cpu (t, CpuAPX_F))
 	{
 	  if (need_evex_encoding (t))
@@ -12588,7 +12595,7 @@ output_insn (const struct last_insn *last_insn)
       unsigned int feature_2_used = 0;
 
       if ((i.xstate & xstate_tmm) == xstate_tmm
-	  || is_cpu (&i.tm, CpuAMX_TILE))
+	  || is_cpu (&i.tm, CpuTILE))
 	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_TMM;
 
       if (is_cpu (&i.tm, Cpu8087)
@@ -17073,7 +17080,7 @@ static bool check_register (const reg_entry *r)
     return false;
 
   if (r->reg_type.bitfield.tmmword
-      && (!cpu_arch_flags.bitfield.cpuamx_tile
+      && (!cpu_arch_flags.bitfield.cputile
           || flag_code != CODE_64BIT))
     return false;
 
