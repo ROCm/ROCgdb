@@ -27,6 +27,7 @@
 #include "infrun.h"
 #include "gdbsupport/environ.h"
 #include "gdbsupport/common-inferior.h"
+#include "gdbsupport/scope-exit.h"
 #include "value.h"
 #include "cli/cli-cmds.h"
 #include "cli/cli-style.h"
@@ -619,6 +620,17 @@ run_command_1 (const char *args, int from_tty, enum run_how run_how)
   infrun_debug_show_threads ("immediately after create_process",
 			     current_inferior ()->non_exited_threads ());
 
+  inferior *started_inf = current_inferior ();
+  started_inf->first_stop_pending = true;
+
+  /* If starting the program fails before its first stop, normal_stop
+     never runs to clear the flag, which would leave scheduler-locking
+     disabled for this inferior.  */
+  auto reset_first_stop_pending = make_scope_exit ([started_inf] ()
+    {
+      started_inf->first_stop_pending = false;
+    });
+
   /* We're starting off a new process.  When we get out of here, in
      non-stop mode, finish the state of all threads of that process,
      but leave other threads alone, as they may be stopped in internal
@@ -663,8 +675,9 @@ run_command_1 (const char *args, int from_tty, enum run_how run_how)
 	   GDB_SIGNAL_0);
 
   /* Since there was no error, there's no need to finish the thread
-     states here.  */
+     states here, and normal_stop will clear first_stop_pending.  */
   finish_state.release ();
+  reset_first_stop_pending.release ();
 
   disable_commit_resumed.reset_and_commit ();
 }

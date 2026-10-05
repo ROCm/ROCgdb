@@ -9,6 +9,14 @@ Full documentation for ROCgdb is available at
 
 - Add support for the gfx1250-strict architecture variant.
 
+### Changed
+
+- Scheduler-locking no longer applies while `run`, `start` or `starti`
+  is starting the program, until the program first stops.  Previously,
+  restarting a program with scheduler-locking on could hang if the
+  program waited for threads it creates while starting up, which HIP
+  programs always do.
+
 ## ROCgdb-16.3 for ROCm-10.1
 
 ### Added
