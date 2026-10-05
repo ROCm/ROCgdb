@@ -3249,10 +3249,12 @@ tcmmrlfp16ps, 0x6c, AMX_COMPLEX, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { 
 
 tdpbf16ps, 0xf35c, AMX_BF16, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 tdpfp16ps, 0xf25c, AMX_FP16, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
-tdpbssd, 0xf25e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
-tdpbuud, 0x5e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
-tdpbusd, 0x665e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
-tdpbsud, 0xf35e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+
+<tdpb:pfx, uu:, us:66, su:f3, ss:f2>
+
+tdpb<tdpb>d, 0x<tdpb:pfx>5e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+
+<tdpb>
 
 tileloadd, 0xf24b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
 tileloaddt1, 0x664b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
