@@ -376,7 +376,7 @@ riscv_is_insn_reloc (const reloc_howto_type *howto)
 #define PLT_HEADER_SIZE (PLT_HEADER_INSNS * 4)
 #define PLT_ENTRY_SIZE (PLT_ENTRY_INSNS * 4)
 
-#define PLT_ZICFILP_UNLABELED_HEADER_INSNS 12
+#define PLT_ZICFILP_UNLABELED_HEADER_INSNS 8
 #define PLT_ZICFILP_UNLABELED_ENTRY_INSNS 4
 #define PLT_ZICFILP_UNLABELED_HEADER_SIZE (PLT_ZICFILP_UNLABELED_HEADER_INSNS * 4)
 #define PLT_ZICFILP_UNLABELED_ENTRY_SIZE (PLT_ZICFILP_UNLABELED_ENTRY_INSNS * 4)
@@ -474,19 +474,16 @@ static bool
 riscv_make_plt_zicfilp_unlabeled_header (bfd *output_bfd,
 					 struct riscv_elf_link_hash_table *htab)
 {
-  /*
-      lpad   0  # disable label checking
-      auipc  t2, %hi(.got.plt)          # Rewrite this to using
-      sub    t1, t1, t3                 # shifted .got.plt offset + hdr size + 16
-      l[w|d] t3, %lo(1b)(t2)            # _dl_runtime_resolve
-      addi   t1, t1, -(hdr size + 12)   # shifted .got.plt offset
-      addi   t0, t2, %pcrel_lo(1b)      # &.got.plt
-      srli   t1, t1, log2(16/PTRSIZE)   # .got.plt offset
-      l[w|d] t0, PTRSIZE(t0)            # link map
-      jr     t3
-      nop
-      nop
-      nop  */
+  /* The PLT entries jump here through t2, which needs no landing pad.
+
+    1:  auipc  t3, %pcrel_hi(.got.plt)
+	sub    t1, t1, t2               # shifted .got.plt offset + hdr size + 16
+	l[w|d] t2, %pcrel_lo(1b)(t3)    # _dl_runtime_resolve
+	addi   t1, t1, -(hdr size + 16) # shifted .got.plt offset
+	addi   t0, t3, %pcrel_lo(1b)    # &.got.plt
+	srli   t1, t1, log2(16/PTRSIZE) # .got.plt offset
+	l[w|d] t0, PTRSIZE(t0)          # link map
+	jr     t2  */
 
   /* RVE has no t3 register, so this won't work, and is not supported.  */
   if (elf_elfheader (output_bfd)->e_flags & EF_RISCV_RVE)
@@ -502,25 +499,21 @@ riscv_make_plt_zicfilp_unlabeled_header (bfd *output_bfd,
   asection *splt = htab->elf.splt;
   bfd_vma plt_header_addr = sec_addr (splt);
 
-  bfd_vma auipc_addr = plt_header_addr + 4;
-  /* Add INSN_BYTES to skip the lpad instruction.  */
-  bfd_vma gotplt_offset_high = RISCV_PCREL_HIGH_PART (gotplt_addr, auipc_addr);
-  bfd_vma gotplt_offset_low = RISCV_PCREL_LOW_PART (gotplt_addr, auipc_addr);
+  bfd_vma gotplt_offset_high = RISCV_PCREL_HIGH_PART (gotplt_addr,
+						     plt_header_addr);
+  bfd_vma gotplt_offset_low = RISCV_PCREL_LOW_PART (gotplt_addr,
+						   plt_header_addr);
 
   uint32_t header[PLT_ZICFILP_UNLABELED_HEADER_INSNS];
-  header[0] = RISCV_UTYPE (LPAD, X_ZERO, 0);
-  header[1] = RISCV_UTYPE (AUIPC, X_T2, gotplt_offset_high);
-  header[2] = RISCV_RTYPE (SUB, X_T1, X_T1, X_T3);
-  header[3] = RISCV_ITYPE (LREG, X_T3, X_T2, gotplt_offset_low);
-  header[4] = RISCV_ITYPE (ADDI, X_T1, X_T1,
+  header[0] = RISCV_UTYPE (AUIPC, X_T3, gotplt_offset_high);
+  header[1] = RISCV_RTYPE (SUB, X_T1, X_T1, X_T2);
+  header[2] = RISCV_ITYPE (LREG, X_T2, X_T3, gotplt_offset_low);
+  header[3] = RISCV_ITYPE (ADDI, X_T1, X_T1,
 			   (uint32_t) -(PLT_ZICFILP_UNLABELED_HEADER_SIZE + 16));
-  header[5] = RISCV_ITYPE (ADDI, X_T0, X_T2, gotplt_offset_low);
-  header[6] = RISCV_ITYPE (SRLI, X_T1, X_T1, 4 - RISCV_ELF_LOG_WORD_BYTES);
-  header[7] = RISCV_ITYPE (LREG, X_T0, X_T0, RISCV_ELF_WORD_BYTES);
-  header[8] = RISCV_ITYPE (JALR, 0, X_T3, 0);
-  header[9] = RISCV_NOP;
-  header[10] = RISCV_NOP;
-  header[11] = RISCV_NOP;
+  header[4] = RISCV_ITYPE (ADDI, X_T0, X_T3, gotplt_offset_low);
+  header[5] = RISCV_ITYPE (SRLI, X_T1, X_T1, 4 - RISCV_ELF_LOG_WORD_BYTES);
+  header[6] = RISCV_ITYPE (LREG, X_T0, X_T0, RISCV_ELF_WORD_BYTES);
+  header[7] = RISCV_ITYPE (JALR, 0, X_T2, 0);
 
   for (int i = 0; i < PLT_ZICFILP_UNLABELED_HEADER_INSNS; i++)
     bfd_putl32 (header[i], splt->contents + 4 * i);
@@ -568,11 +561,11 @@ riscv_make_plt_zicfilp_unlabeled_entry (bfd *output_bfd, asection *got,
 					bfd_vma plt_offset)
 {
   /*    lpad    0
-    1:  auipc   t3, %pcrel_hi(function@.got.plt)
-	l[w|d]  t3, %pcrel_lo(1b)(t3)
-	jalr    t1, t3 */
+    1:  auipc   t2, %pcrel_hi(function@.got.plt)
+	l[w|d]  t2, %pcrel_lo(1b)(t2)
+	jalr    t1, t2 */
 
-  /* RVE has no t3 register, so this won't work, and is not supported.  */
+  /* RVE PLT generation is not supported, see the PLT header.  */
   if (elf_elfheader (output_bfd)->e_flags & EF_RISCV_RVE)
     {
       _bfd_error_handler (_("%pB: warning: RVE PLT generation not supported"),
@@ -585,9 +578,9 @@ riscv_make_plt_zicfilp_unlabeled_entry (bfd *output_bfd, asection *got,
   bfd_vma auipc_addr = plt_entry_addr + 4;
   uint32_t entry[PLT_ZICFILP_UNLABELED_ENTRY_INSNS];
   entry[0] = RISCV_UTYPE (LPAD, X_ZERO, 0);
-  entry[1] = RISCV_UTYPE (AUIPC, X_T3, RISCV_PCREL_HIGH_PART (got_entry_addr, auipc_addr));
-  entry[2] = RISCV_ITYPE (LREG,  X_T3, X_T3, RISCV_PCREL_LOW_PART (got_entry_addr, auipc_addr));
-  entry[3] = RISCV_ITYPE (JALR, X_T1, X_T3, 0);
+  entry[1] = RISCV_UTYPE (AUIPC, X_T2, RISCV_PCREL_HIGH_PART (got_entry_addr, auipc_addr));
+  entry[2] = RISCV_ITYPE (LREG,  X_T2, X_T2, RISCV_PCREL_LOW_PART (got_entry_addr, auipc_addr));
+  entry[3] = RISCV_ITYPE (JALR, X_T1, X_T2, 0);
 
   bfd_byte *loc = plt->contents + plt_offset;
   for (int i = 0; i < PLT_ZICFILP_UNLABELED_ENTRY_INSNS; i++)
