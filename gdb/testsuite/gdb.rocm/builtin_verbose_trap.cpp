@@ -22,7 +22,7 @@
 __global__ void
 test_trap_kernel ()
 {
-  int x = 1;
+  volatile int x = 1;
   __builtin_verbose_trap ("check verbose", "This is verbose trap!");
 }
 
