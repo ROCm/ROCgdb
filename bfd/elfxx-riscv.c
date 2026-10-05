@@ -1233,8 +1233,8 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"xxtvarith", "+v",	check_implicit_always},
   {"xxtvcoder", "+v",	check_implicit_always},
 
-  {"xsmtvdot", "+zve32x", check_implicit_always},
   {"xsmtvdotii", "+xsmtvdot", check_implicit_always},
+  {"xsmtvdot", "+zve32x", check_implicit_always},
 
   {"v", "+zve64d,+zvl128b", check_implicit_always},
   {"zvabd", "+zve32x", check_implicit_always},
