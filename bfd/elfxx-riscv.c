@@ -3546,6 +3546,14 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xsmtvdot";
     case INSN_CLASS_XSMTVDOTII:
       return "xsmtvdotii";
+    case INSN_CLASS_XMIPSCBOP:
+      return "xmipscbop";
+    case INSN_CLASS_XMIPSCMOV:
+      return "xmipscmov";
+    case INSN_CLASS_XMIPSEXECTL:
+      return "xmipsexectl";
+    case INSN_CLASS_XMIPSLSP:
+      return "xmipslsp";
     case INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII:
       return _("xsmtvdot' or `xsmtvdotii");
     default:
