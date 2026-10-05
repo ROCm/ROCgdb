@@ -210,6 +210,28 @@ Security Realities Of The GDB Project
   user to protect this connection, for example, by only starting
   gdbserver within a secure network.
 
+  Additionally, when GDB connects to a remote target, it will, by
+  default, automatically download the executable and shared libraries
+  from the remote system and parse them locally, without prompting the
+  user.  This means that the risks described above relating to parsing
+  malformed executables also apply when performing remote debugging.
+
+  If the remote target is untrusted, or the connection to the remote
+  target is untrusted, malicious or malformed binaries could be served
+  to GDB, resulting in any of the issues described above.  Any bugs in
+  GDB triggered by such files are evaluated against the definitions in
+  this document independently of how the files were obtained.
+
+  Any bug related to remote debugging, whether the remote connection
+  or target is trusted or not, is a security bug if the bug meets the
+  other definitions in this document.  If an untrusted remote target,
+  or use of an untrusted connection makes use of a documented GDB
+  behaviour, then this is not a security bug in GDB.
+
+  Users should apply the same precautions when performing remote
+  debugging as when analysing an untrusted binary locally, including
+  running GDB in a secure, sandboxed environment.
+
 Reporting Non-Security Bugs
 ---------------------------
 
