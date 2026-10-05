@@ -65,19 +65,19 @@ static bool debug_aix_thread;
 
 /* In AIX 5.1, functions use pthdb_tid_t instead of tid_t.  */
 #ifndef PTHDB_VERSION_3
-#define pthdb_tid_t	tid_t
+#define pthdb_tid_t tid_t
 #endif
 
 /* Success and failure values returned by pthdb callbacks.  */
 
-#define PDC_SUCCESS	PTHDB_SUCCESS
-#define PDC_FAILURE	PTHDB_CALLBACK
+#define PDC_SUCCESS PTHDB_SUCCESS
+#define PDC_FAILURE PTHDB_CALLBACK
 
 /* Private data attached to each element in GDB's thread list.  */
 
 struct aix_thread_info : public private_thread_info
 {
-  pthdb_pthread_t pdtid;	 /* thread's libpthdebug id */
+  pthdb_pthread_t pdtid; /* thread's libpthdebug id */
 };
 
 /* Return the aix_thread_info attached to THREAD.  */
@@ -90,7 +90,8 @@ get_aix_thread_info (thread_info *thread)
 
 /* Information about a thread of which libpthdebug is aware.  */
 
-struct pd_thread {
+struct pd_thread
+{
   pthdb_pthread_t pdtid;
   pthread_t pthid;
   pthdb_tid_t tid;
@@ -236,38 +237,70 @@ pd_status2str (int status)
 {
   switch (status)
     {
-    case PTHDB_SUCCESS:		return "SUCCESS";
-    case PTHDB_NOSYS:		return "NOSYS";
-    case PTHDB_NOTSUP:		return "NOTSUP";
-    case PTHDB_BAD_VERSION:	return "BAD_VERSION";
-    case PTHDB_BAD_USER:	return "BAD_USER";
-    case PTHDB_BAD_SESSION:	return "BAD_SESSION";
-    case PTHDB_BAD_MODE:	return "BAD_MODE";
-    case PTHDB_BAD_FLAGS:	return "BAD_FLAGS";
-    case PTHDB_BAD_CALLBACK:	return "BAD_CALLBACK";
-    case PTHDB_BAD_POINTER:	return "BAD_POINTER";
-    case PTHDB_BAD_CMD:		return "BAD_CMD";
-    case PTHDB_BAD_PTHREAD:	return "BAD_PTHREAD";
-    case PTHDB_BAD_ATTR:	return "BAD_ATTR";
-    case PTHDB_BAD_MUTEX:	return "BAD_MUTEX";
-    case PTHDB_BAD_MUTEXATTR:	return "BAD_MUTEXATTR";
-    case PTHDB_BAD_COND:	return "BAD_COND";
-    case PTHDB_BAD_CONDATTR:	return "BAD_CONDATTR";
-    case PTHDB_BAD_RWLOCK:	return "BAD_RWLOCK";
-    case PTHDB_BAD_RWLOCKATTR:	return "BAD_RWLOCKATTR";
-    case PTHDB_BAD_KEY:		return "BAD_KEY";
-    case PTHDB_BAD_PTID:	return "BAD_PTID";
-    case PTHDB_BAD_TID:		return "BAD_TID";
-    case PTHDB_CALLBACK:	return "CALLBACK";
-    case PTHDB_CONTEXT:		return "CONTEXT";
-    case PTHDB_HELD:		return "HELD";
-    case PTHDB_NOT_HELD:	return "NOT_HELD";
-    case PTHDB_MEMORY:		return "MEMORY";
-    case PTHDB_NOT_PTHREADED:	return "NOT_PTHREADED";
-    case PTHDB_SYMBOL:		return "SYMBOL";
-    case PTHDB_NOT_AVAIL:	return "NOT_AVAIL";
-    case PTHDB_INTERNAL:	return "INTERNAL";
-    default:			return "UNKNOWN";
+    case PTHDB_SUCCESS:
+      return "SUCCESS";
+    case PTHDB_NOSYS:
+      return "NOSYS";
+    case PTHDB_NOTSUP:
+      return "NOTSUP";
+    case PTHDB_BAD_VERSION:
+      return "BAD_VERSION";
+    case PTHDB_BAD_USER:
+      return "BAD_USER";
+    case PTHDB_BAD_SESSION:
+      return "BAD_SESSION";
+    case PTHDB_BAD_MODE:
+      return "BAD_MODE";
+    case PTHDB_BAD_FLAGS:
+      return "BAD_FLAGS";
+    case PTHDB_BAD_CALLBACK:
+      return "BAD_CALLBACK";
+    case PTHDB_BAD_POINTER:
+      return "BAD_POINTER";
+    case PTHDB_BAD_CMD:
+      return "BAD_CMD";
+    case PTHDB_BAD_PTHREAD:
+      return "BAD_PTHREAD";
+    case PTHDB_BAD_ATTR:
+      return "BAD_ATTR";
+    case PTHDB_BAD_MUTEX:
+      return "BAD_MUTEX";
+    case PTHDB_BAD_MUTEXATTR:
+      return "BAD_MUTEXATTR";
+    case PTHDB_BAD_COND:
+      return "BAD_COND";
+    case PTHDB_BAD_CONDATTR:
+      return "BAD_CONDATTR";
+    case PTHDB_BAD_RWLOCK:
+      return "BAD_RWLOCK";
+    case PTHDB_BAD_RWLOCKATTR:
+      return "BAD_RWLOCKATTR";
+    case PTHDB_BAD_KEY:
+      return "BAD_KEY";
+    case PTHDB_BAD_PTID:
+      return "BAD_PTID";
+    case PTHDB_BAD_TID:
+      return "BAD_TID";
+    case PTHDB_CALLBACK:
+      return "CALLBACK";
+    case PTHDB_CONTEXT:
+      return "CONTEXT";
+    case PTHDB_HELD:
+      return "HELD";
+    case PTHDB_NOT_HELD:
+      return "NOT_HELD";
+    case PTHDB_MEMORY:
+      return "MEMORY";
+    case PTHDB_NOT_PTHREADED:
+      return "NOT_PTHREADED";
+    case PTHDB_SYMBOL:
+      return "SYMBOL";
+    case PTHDB_NOT_AVAIL:
+      return "NOT_AVAIL";
+    case PTHDB_INTERNAL:
+      return "INTERNAL";
+    default:
+      return "UNKNOWN";
     }
 }
 
@@ -299,16 +332,15 @@ ptrace_check (int req, int id, int ret)
 			req, id, ret, errno);
 	  return ret == -1 ? 0 : 1;
 	}
-	break;
-     case PTT_READ_VEC:
-     case PTT_READ_VSX:
-	if (debug_aix_thread)
-	  gdb_printf (gdb_stdlog,
-		      "ptrace (%d, %d) = %d (errno = %d)\n",
-		      req, id, ret, errno);
-	if (ret == -1)
-	  return -1;
-	break;
+      break;
+    case PTT_READ_VEC:
+    case PTT_READ_VSX:
+      if (debug_aix_thread)
+	gdb_printf (gdb_stdlog, "ptrace (%d, %d) = %d (errno = %d)\n",
+		    req, id, ret, errno);
+      if (ret == -1)
+	return -1;
+      break;
     }
   error (_("aix-thread: ptrace (%d, %d) returned %d (errno = %d %s)"),
 	 req, id, ret, errno, safe_strerror (errno));
@@ -368,7 +400,8 @@ pid_to_prc (ptid_t *ptidp)
    the address of SYMBOLS[<i>].name.  */
 
 static int
-pdc_symbol_addrs (pthdb_user_t user_current_pid, pthdb_symbol_t *symbols, int count)
+pdc_symbol_addrs (pthdb_user_t user_current_pid, pthdb_symbol_t *symbols,
+		  int count)
 {
   int i;
   char *name;
@@ -447,13 +480,13 @@ pdc_read_regs (pthdb_user_t user_current_pid,
 	  if (!ptrace64aix (PTT_READ_GPRS, tid,
 			    (unsigned long) gprs64, 0, NULL))
 	    memset (gprs64, 0, sizeof (gprs64));
-	  memcpy (context->gpr, gprs64, sizeof(gprs64));
+	  memcpy (context->gpr, gprs64, sizeof (gprs64));
 	}
       else
 	{
 	  if (!ptrace32 (PTT_READ_GPRS, tid, (uintptr_t) gprs32, 0, NULL))
 	    memset (gprs32, 0, sizeof (gprs32));
-	  memcpy (context->gpr, gprs32, sizeof(gprs32));
+	  memcpy (context->gpr, gprs32, sizeof (gprs32));
 	}
     }
 
@@ -462,7 +495,7 @@ pdc_read_regs (pthdb_user_t user_current_pid,
     {
       if (!ptrace32 (PTT_READ_FPRS, tid, (uintptr_t) fprs, 0, NULL))
 	memset (fprs, 0, sizeof (fprs));
-      memcpy (context->fpr, fprs, sizeof(fprs));
+      memcpy (context->fpr, fprs, sizeof (fprs));
     }
 
   /* Special-purpose registers.  */
@@ -473,49 +506,49 @@ pdc_read_regs (pthdb_user_t user_current_pid,
 	  if (!ptrace64aix (PTT_READ_SPRS, tid,
 			    (unsigned long) &sprs64, 0, NULL))
 	    memset (&sprs64, 0, sizeof (sprs64));
-	  memcpy (&context->msr, &sprs64, sizeof(sprs64));
+	  memcpy (&context->msr, &sprs64, sizeof (sprs64));
 	}
       else
 	{
 	  if (!ptrace32 (PTT_READ_SPRS, tid, (uintptr_t) &sprs32, 0, NULL))
 	    memset (&sprs32, 0, sizeof (sprs32));
-	  memcpy (&context->msr, &sprs32, sizeof(sprs32));
+	  memcpy (&context->msr, &sprs32, sizeof (sprs32));
 	}
     }
 
   /* vector registers.  */
   __vmx_context_t vmx;
-  if (__power_vmx() && (flags & PTHDB_FLAG_REGS))
+  if (__power_vmx () && (flags & PTHDB_FLAG_REGS))
     {
       if (data->arch64)
 	{
 	  if (!ptrace64aix (PTT_READ_VEC, tid, (long long) &vmx, 0, 0))
 	    memset (&vmx, 0, sizeof (vmx));
-	  memcpy (&context->vmx, &vmx, sizeof(__vmx_context_t));
+	  memcpy (&context->vmx, &vmx, sizeof (__vmx_context_t));
 	}
       else
 	{
 	  if (!ptrace32 (PTT_READ_VEC, tid, (long long) &vmx, 0, 0))
 	    memset (&vmx, 0, sizeof (vmx));
-	   memcpy (&context->vmx, &vmx, sizeof(__vmx_context_t));
+	  memcpy (&context->vmx, &vmx, sizeof (__vmx_context_t));
 	}
     }
 
   /* vsx registers.  */
   __vsx_context_t vsx;
-  if (__power_vsx() && (flags & PTHDB_FLAG_REGS))
+  if (__power_vsx () && (flags & PTHDB_FLAG_REGS))
     {
       if (data->arch64)
 	{
 	  if (!ptrace64aix (PTT_READ_VSX, tid, (long long) &vsx, 0, 0))
 	    memset (&vsx, 0, sizeof (vsx));
-	  memcpy (&context->vsx, &vsx, sizeof(__vsx_context_t));
+	  memcpy (&context->vsx, &vsx, sizeof (__vsx_context_t));
 	}
       else
 	{
 	  if (!ptrace32 (PTT_READ_VSX, tid, (long long) &vsx, 0, 0))
 	    memset (&vsx, 0, sizeof (vsx));
-	  memcpy (&context->vsx, &vsx, sizeof(__vsx_context_t));
+	  memcpy (&context->vsx, &vsx, sizeof (__vsx_context_t));
 	}
     }
   return 0;
@@ -576,7 +609,7 @@ pdc_write_regs (pthdb_user_t user_current_pid,
     }
 
   /* vector registers.  */
-  if (__power_vmx() && (flags & PTHDB_FLAG_REGS))
+  if (__power_vmx () && (flags & PTHDB_FLAG_REGS))
     {
       if (data->arch64)
 	ptrace64aix (PTT_WRITE_VEC, tid, (unsigned long) &context->vmx, 0, 0);
@@ -585,7 +618,7 @@ pdc_write_regs (pthdb_user_t user_current_pid,
     }
 
   /* vsx registers.  */
-  if (__power_vsx() && (flags & PTHDB_FLAG_REGS))
+  if (__power_vsx () && (flags & PTHDB_FLAG_REGS))
     {
       if (data->arch64)
 	ptrace64aix (PTT_WRITE_VSX, tid, (unsigned long) &context->vsx, 0, 0);
@@ -636,7 +669,8 @@ pdc_write_data (pthdb_user_t user_current_pid, void *buf,
 
   if (debug_aix_thread)
     gdb_printf (gdb_stdlog,
-		"pdc_write_data (user_current_pid = %ld, buf = 0x%lx, addr = %s, len = %ld)\n",
+		"pdc_write_data (user_current_pid = %ld, buf = 0x%lx,"
+		" addr = %s, len = %ld)\n",
 		user_current_pid, (long) buf, hex_string (addr), len);
 
   {
@@ -682,7 +716,8 @@ pdc_realloc (pthdb_user_t user_current_pid, void *buf, size_t len, void **bufp)
 {
   if (debug_aix_thread)
     gdb_printf (gdb_stdlog,
-		"pdc_realloc (user_current_pid = %ld, buf = 0x%lx, len = %ld, bufp = 0x%lx)\n",
+		"pdc_realloc (user_current_pid = %ld, buf = 0x%lx,"
+		" len = %ld, bufp = 0x%lx)\n",
 		user_current_pid, (long) buf, len, (long) bufp);
   *bufp = xrealloc (buf, len);
   if (debug_aix_thread)
@@ -808,7 +843,7 @@ sync_threadlists (pid_t pid)
       if (state == PST_TERM)
 	{
 	  if (data->exited_threads.count (pdtid) != 0)
-	     continue;
+	    continue;
 	}
 
       /* If this thread has never been reported to GDB, add it.  */
@@ -827,7 +862,7 @@ sync_threadlists (pid_t pid)
 	    }
 	  else
 	    add_thread_with_info (proc_target, ptid,
-		private_thread_info_up (priv));
+				  private_thread_info_up (priv));
 	}
 
       /* The thread is terminated. Remove it.  */
@@ -1302,10 +1337,10 @@ fetch_regs_user_thread (struct regcache *regcache, pthdb_pthread_t pdtid)
 
   if (data->arch64)
     supply_sprs64 (regcache, ctx.iar, ctx.msr, ctx.cr, ctx.lr, ctx.ctr,
-			     ctx.xer, ctx.fpscr);
+		   ctx.xer, ctx.fpscr);
   else
     supply_sprs32 (regcache, ctx.iar, ctx.msr, ctx.cr, ctx.lr, ctx.ctr,
-			     ctx.xer, ctx.fpscr);
+		   ctx.xer, ctx.fpscr);
 
   /* Altivec registers.  */
   supply_altivec_regs (regcache, ctx.vmx);
@@ -1381,7 +1416,7 @@ fetch_regs_kernel_thread (struct regcache *regcache, int regno,
       else
 	ret = ptrace32 (PTT_READ_VEC, tid, (uintptr_t) &vmx, 0, 0);
       if (ret < 0)
-	memset(&vmx, 0, sizeof(__vmx_context_t));
+	memset (&vmx, 0, sizeof (__vmx_context_t));
       for (i = 0; i < ppc_num_vrs; i++)
 	regcache->raw_supply (tdep->ppc_vr0_regnum + i, &(vmx.__vr[i]));
       regcache->raw_supply (tdep->ppc_vrsave_regnum, &(vmx.__vrsave));
@@ -1398,7 +1433,7 @@ fetch_regs_kernel_thread (struct regcache *regcache, int regno,
       else
 	ret = ptrace32 (PTT_READ_VSX, tid, (long long) &vsx, 0, 0);
       if (ret < 0)
-	memset(&vsx, 0, sizeof(__vsx_context_t));
+	memset (&vsx, 0, sizeof (__vsx_context_t));
       for (i = 0; i < ppc_num_vshrs; i++)
 	regcache->raw_supply (tdep->ppc_vsr0_upper_regnum + i, &(vsx.__vsr_dw1[i]));
     }
@@ -1461,7 +1496,7 @@ aix_thread_target::fetch_registers (struct regcache *regcache, int regno)
     {
       thread = current_inferior ()->find_thread (regcache->ptid ());
       aix_thread_info *priv = get_aix_thread_info (thread);
-      tid = regcache->ptid().lwp ();
+      tid = regcache->ptid ().lwp ();
 
       if (tid == PTHDB_INVALID_TID)
 	fetch_regs_user_thread (regcache, priv->pdtid);
@@ -1480,9 +1515,10 @@ fill_altivec (const struct regcache *regcache, __vmx_context_t *vmx)
   int regno;
 
   for (regno = 0; regno < ppc_num_vrs; regno++)
-    if (REG_VALID == regcache->get_register_status (tdep->ppc_vr0_regnum + regno))
+    if (REG_VALID == regcache->get_register_status
+	(tdep->ppc_vr0_regnum + regno))
       regcache->raw_collect (tdep->ppc_vr0_regnum + regno,
-				     &(vmx->__vr[regno]));
+			     &(vmx->__vr[regno]));
 
   if (REG_VALID == regcache->get_register_status (tdep->ppc_vrsave_regnum))
     regcache->raw_collect (tdep->ppc_vrsave_regnum, &(vmx->__vrsave));
@@ -1493,14 +1529,15 @@ fill_altivec (const struct regcache *regcache, __vmx_context_t *vmx)
 /* Fill vsx registers. */
 
 static void
-fill_vsx (const struct regcache *regcache, __vsx_context_t  *vsx)
+fill_vsx (const struct regcache *regcache, __vsx_context_t *vsx)
 {
   struct gdbarch *gdbarch = regcache->arch ();
   ppc_gdbarch_tdep *tdep = gdbarch_tdep<ppc_gdbarch_tdep> (gdbarch);
   int regno;
 
   for (regno = 0; regno < ppc_num_vshrs; regno++)
-    if (REG_VALID == regcache->get_register_status ( tdep->ppc_vsr0_upper_regnum + regno))
+    if (REG_VALID == regcache->get_register_status
+	(tdep->ppc_vsr0_upper_regnum + regno))
       regcache->raw_collect (tdep->ppc_vsr0_upper_regnum + regno,
 			     &(vsx->__vsr_dw1[0]) + regno);
 }
@@ -1516,7 +1553,7 @@ fill_gprs64 (const struct regcache *regcache, uint64_t *vals)
 
   for (regno = 0; regno < ppc_num_gprs; regno++)
     if (REG_VALID == regcache->get_register_status
-		       (tdep->ppc_gp0_regnum + regno))
+	(tdep->ppc_gp0_regnum + regno))
       regcache->raw_collect (tdep->ppc_gp0_regnum + regno, vals + regno);
 }
 
@@ -1529,7 +1566,7 @@ fill_gprs32 (const struct regcache *regcache, uint32_t *vals)
 
   for (regno = 0; regno < ppc_num_gprs; regno++)
     if (REG_VALID == regcache->get_register_status
-		       (tdep->ppc_gp0_regnum + regno))
+	(tdep->ppc_gp0_regnum + regno))
       regcache->raw_collect (tdep->ppc_gp0_regnum + regno, vals + regno);
 }
 
@@ -1641,7 +1678,7 @@ store_regs_user_thread (const struct regcache *regcache, pthdb_pthread_t pdtid)
   struct aix_thread_variables *data;
   data = get_thread_data_helper_for_ptid (inferior_ptid);
   __vmx_context_t vmx;
-  __vsx_context_t  vsx;
+  __vsx_context_t vsx;
 
   if (debug_aix_thread)
     gdb_printf (gdb_stdlog,
@@ -1656,9 +1693,9 @@ store_regs_user_thread (const struct regcache *regcache, pthdb_pthread_t pdtid)
 
   /* Fill altivec-registers.  */
 
-  if (__power_vmx())
+  if (__power_vmx ())
     {
-      memset(&vmx, 0, sizeof(__vmx_context_t));
+      memset (&vmx, 0, sizeof (__vmx_context_t));
       for (i = 0; i < ppc_num_vrs; i++)
 	if (REG_VALID == regcache->get_register_status (tdep->ppc_vr0_regnum + i))
 	  {
@@ -1674,9 +1711,9 @@ store_regs_user_thread (const struct regcache *regcache, pthdb_pthread_t pdtid)
 
   /* Fill vsx registers. */
 
-  if (__power_vsx())
+  if (__power_vsx ())
     {
-      memset(&vsx, 0, sizeof(__vsx_context_t));
+      memset (&vsx, 0, sizeof (__vsx_context_t));
       for (i = 0; i < ppc_num_vshrs; i++)
 	if (REG_VALID == regcache->get_register_status (tdep->ppc_vsr0_regnum + i))
 	  {
@@ -1711,7 +1748,7 @@ store_regs_user_thread (const struct regcache *regcache, pthdb_pthread_t pdtid)
   if (data->arch64)
     {
       fill_sprs64 (regcache, &ctx.iar, &ctx.msr, &ctx.cr, &ctx.lr, &ctx.ctr,
-			     &ctx.xer, &ctx.fpscr);
+		   &ctx.xer, &ctx.fpscr);
     }
   else
     {
@@ -1721,9 +1758,9 @@ store_regs_user_thread (const struct regcache *regcache, pthdb_pthread_t pdtid)
 	       tmp_fpscr;
 
       fill_sprs32 (regcache, &tmp_iar, &tmp_msr, &tmp_cr, &tmp_lr, &tmp_ctr,
-			     &tmp_xer, &tmp_fpscr);
+		   &tmp_xer, &tmp_fpscr);
       if (REG_VALID == regcache->get_register_status
-			 (gdbarch_pc_regnum (gdbarch)))
+	  (gdbarch_pc_regnum (gdbarch)))
 	ctx.iar = tmp_iar;
       if (REG_VALID == regcache->get_register_status (tdep->ppc_ps_regnum))
 	ctx.msr = tmp_msr;
@@ -1764,7 +1801,7 @@ store_regs_kernel_thread (const struct regcache *regcache, int regno,
   uint32_t gprs32[ppc_num_gprs];
   double fprs[ppc_num_fprs];
   struct ptxsprs sprs64;
-  struct ptsprs  sprs32;
+  struct ptsprs sprs32;
   struct aix_thread_variables *data;
   int ret = 0;
 
@@ -1853,62 +1890,64 @@ store_regs_kernel_thread (const struct regcache *regcache, int regno,
 
 	  if (tdep->ppc_mq_regnum >= 0)
 	    if (REG_VALID == regcache->get_register_status
-			       (tdep->ppc_mq_regnum))
+		(tdep->ppc_mq_regnum))
 	      regcache->raw_collect (tdep->ppc_mq_regnum, &sprs32.pt_mq);
 
 	  ptrace32 (PTT_WRITE_SPRS, tid, (uintptr_t) &sprs32, 0, NULL);
 	}
     }
 
-    /* Vector registers.  */
-    if (tdep->ppc_vr0_regnum != -1 && tdep->ppc_vrsave_regnum != -1
-	&& (regno == -1 || (regno >= tdep->ppc_vr0_regnum
-	&& regno <= tdep->ppc_vrsave_regnum)))
-      {
-	__vmx_context_t vmx;
-	if (__power_vmx())
-	  {
-	    if (data->arch64)
-	      ret = ptrace64aix (PTT_READ_VEC, tid, (long long) &vmx, 0, 0);
-	    else
-	      ret = ptrace32 (PTT_READ_VEC, tid, (long long) &vmx, 0, 0);
-	    if (ret > 0)
-	      {
-		fill_altivec(regcache, &vmx);
-		if (data->arch64)
-		  ret = ptrace64aix (PTT_WRITE_VEC, tid, (long long) &vmx, 0, 0);
-		else
-		  ret = ptrace32 (PTT_WRITE_VEC, tid, (long long) &vmx, 0, 0);
-		if (ret < 0)
-		  perror_with_name (_("Unable to store AltiVec register after read"));
-	      }
-	  }
-      }
+  /* Vector registers.  */
+  if (tdep->ppc_vr0_regnum != -1 && tdep->ppc_vrsave_regnum != -1
+      && (regno == -1
+	  || (regno >= tdep->ppc_vr0_regnum
+	      && regno <= tdep->ppc_vrsave_regnum)))
+    {
+      __vmx_context_t vmx;
+      if (__power_vmx ())
+	{
+	  if (data->arch64)
+	    ret = ptrace64aix (PTT_READ_VEC, tid, (long long) &vmx, 0, 0);
+	  else
+	    ret = ptrace32 (PTT_READ_VEC, tid, (long long) &vmx, 0, 0);
+	  if (ret > 0)
+	    {
+	      fill_altivec (regcache, &vmx);
+	      if (data->arch64)
+		ret = ptrace64aix (PTT_WRITE_VEC, tid, (long long) &vmx, 0, 0);
+	      else
+		ret = ptrace32 (PTT_WRITE_VEC, tid, (long long) &vmx, 0, 0);
+	      if (ret < 0)
+		perror_with_name (_("Unable to store AltiVec register after read"));
+	    }
+	}
+    }
 
-    /* VSX registers.  */
-    if (tdep->ppc_vsr0_upper_regnum != -1 && (regno == -1
-	|| (regno >=tdep->ppc_vsr0_upper_regnum
-	&& regno < tdep->ppc_vsr0_upper_regnum + ppc_num_vshrs)))
-      {
-	__vsx_context_t vsx;
-	if (__power_vsx())
-	  {
-	    if (data->arch64)
-	      ret =  ptrace64aix (PTT_READ_VSX, tid, (long long) &vsx, 0, 0);
-	    else
-	      ret =  ptrace32 (PTT_READ_VSX, tid, (long long) &vsx, 0, 0);
-	    if (ret > 0)
-	      {
-		fill_vsx (regcache, &vsx);
-		if (data->arch64)
-		  ret = ptrace64aix (PTT_WRITE_VSX, tid, (long long) &vsx, 0, 0);
-		else
-		  ret = ptrace32 (PTT_WRITE_VSX, tid, (long long) &vsx, 0, 0);
-		if (ret < 0)
-		  perror_with_name (_("Unable to store VSX register after read"));
-	      }
-	  }
-      }
+  /* VSX registers.  */
+  if (tdep->ppc_vsr0_upper_regnum != -1
+      && (regno == -1
+	  || (regno >= tdep->ppc_vsr0_upper_regnum
+	      && regno < tdep->ppc_vsr0_upper_regnum + ppc_num_vshrs)))
+    {
+      __vsx_context_t vsx;
+      if (__power_vsx ())
+	{
+	  if (data->arch64)
+	    ret = ptrace64aix (PTT_READ_VSX, tid, (long long) &vsx, 0, 0);
+	  else
+	    ret = ptrace32 (PTT_READ_VSX, tid, (long long) &vsx, 0, 0);
+	  if (ret > 0)
+	    {
+	      fill_vsx (regcache, &vsx);
+	      if (data->arch64)
+		ret = ptrace64aix (PTT_WRITE_VSX, tid, (long long) &vsx, 0, 0);
+	      else
+		ret = ptrace32 (PTT_WRITE_VSX, tid, (long long) &vsx, 0, 0);
+	      if (ret < 0)
+		perror_with_name (_("Unable to store VSX register after read"));
+	    }
+	}
+    }
 }
 
 /* Store gdb's current view of the register set into the
@@ -1990,7 +2029,7 @@ aix_thread_target::pid_to_str (ptid_t ptid)
       aix_thread_info *priv = get_aix_thread_info (thread_info);
 
       return string_printf (_("Thread %s (tid %s)"), pulongest (ptid.tid ()),
-		pulongest (ptid.lwp ()));
+			    pulongest (ptid.lwp ()));
     }
 
   return beneath ()->pid_to_str (ptid);
@@ -2048,7 +2087,7 @@ aix_thread_target::extra_thread_info (struct thread_info *thread)
 
   buf.write ("", 1);
 
-  xfree (ret);			/* Free old buffer.  */
+  xfree (ret); /* Free old buffer.  */
 
   ret = xstrdup (buf.c_str ());
 
