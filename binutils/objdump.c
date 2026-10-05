@@ -5010,9 +5010,9 @@ dump_btf_record (bfd *abfd, bfd_byte *buf,
 		char *en_name = (char *) buf + str_off + en->name_off;
 		int64_t value = BTF_ENUM64_VALUE (en);
 		if (kflag)
-		  printf ("\n        '%s' val=%ld", en_name, value);
+		  printf ("\n        '%s' val=%" PRId64, en_name, value);
 		else
-		  printf ("\n        '%s' val=%lu", en_name,
+		  printf ("\n        '%s' val=%" PRIu64, en_name,
 			  (uint64_t) value);
 		payload += sizeof (struct btf_enum64);
 		free (en);
