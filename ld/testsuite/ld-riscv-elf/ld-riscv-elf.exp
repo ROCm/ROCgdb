@@ -273,8 +273,18 @@ if [istarget "riscv*-*-*"] {
     run_dump_test "property-combine-and-1"
     run_dump_test "property-combine-and-2"
     run_dump_test "property-combine-and-3"
+    run_dump_test "property-zicfilp-unlabeled-report"
+    run_dump_test "property-zicfilp-unlabeled-report-single"
+    run_dump_test "property-zicfiss-report"
+    run_dump_test "property-zicfiss-report-error"
+    run_dump_test "property-zicfilp-never"
+    run_dump_test "property-zicfiss-never"
+    run_dump_test "property-cfi-never"
+    run_dump_test "property-zicfilp-bad"
 
     run_dump_test "zicfilp-unlabeled-plt"
+    run_dump_test "zicfilp-force-plt"
+    run_dump_test "zicfilp-never-plt"
 
     run_dump_test "pie-bind-locally-rv32"
     run_dump_test "pie-bind-locally-rv64"

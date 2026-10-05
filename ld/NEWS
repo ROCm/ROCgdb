@@ -24,6 +24,13 @@
 * Add support for RISC-V DT_RELR (compressed R_RISCV_RELATIVE), enabled
   with -z pack-relative-relocs.
 
+* Add -z zicfilp=[implicit|unlabeled|never] and
+  -z zicfiss=[implicit|always|never] options for RISC-V to control the
+  Zicfilp unlabeled landing pad and the Zicfiss shadow stack properties of
+  the output, and -z zicfilp-unlabeled-report=[none|warning|error] and
+  -z zicfiss-report=[none|warning|error] to report inputs without them.
+  These follow the RISC-V toolchain conventions.
+
 Changes in 2.47:
 
 * Add a linker optimization level of zero.  Using "-O 0" on the linker command

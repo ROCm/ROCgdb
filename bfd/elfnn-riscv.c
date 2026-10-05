@@ -185,6 +185,15 @@ struct _bfd_riscv_elf_obj_tdata
 
   /* All GNU_PROPERTY_RISCV_FEATURE_1_AND properties. */
   uint32_t gnu_and_prop;
+
+  /* GNU_PROPERTY_RISCV_FEATURE_1_AND bits cleared by -z zicfilp=never
+     and -z zicfiss=never.  */
+  uint32_t gnu_and_prop_never;
+
+  /* How to report the inputs without the CFI properties.  */
+  riscv_report_policy zicfilp_unlabeled_report;
+  riscv_report_policy zicfiss_report;
+
   /* PLT type.  */
   riscv_plt_type plt_type;
 };
@@ -334,7 +343,23 @@ void
 riscv_elfNN_set_options (struct bfd_link_info *link_info,
 			 struct riscv_elf_params *params)
 {
+  struct _bfd_riscv_elf_obj_tdata *tdata
+    = _bfd_riscv_elf_tdata (link_info->output_bfd);
+
   riscv_elf_hash_table (link_info)->params = params;
+
+  if (params->zicfilp == RISCV_ZICFILP_UNLABELED)
+    tdata->gnu_and_prop |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+  else if (params->zicfilp == RISCV_ZICFILP_NEVER)
+    tdata->gnu_and_prop_never |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+
+  if (params->zicfiss == RISCV_ZICFISS_ALWAYS)
+    tdata->gnu_and_prop |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+  else if (params->zicfiss == RISCV_ZICFISS_NEVER)
+    tdata->gnu_and_prop_never |= GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+
+  tdata->zicfilp_unlabeled_report = params->zicfilp_unlabeled_report;
+  tdata->zicfiss_report = params->zicfiss_report;
 }
 
 static bool
@@ -6103,6 +6128,64 @@ riscv_elf_merge_symbol_attribute (struct elf_link_hash_entry *h,
     h->other |= STO_RISCV_VARIANT_CC;
 }
 
+/* Report ABFD for not having PROPERTY, as requested by -z OPTION.  */
+
+static void
+riscv_report_missing_cfi_property (struct bfd_link_info *info, bfd *abfd,
+				   riscv_report_policy report,
+				   const char *option, const char *property)
+{
+  if (report == RISCV_REPORT_ERROR)
+    info->callbacks->einfo (_("%X%pB: error: -z %s: file does not have "
+			      "%s property\n"), abfd, option, property);
+  else if (report == RISCV_REPORT_WARNING)
+    info->callbacks->einfo (_("%pB: warning: -z %s: file does not have "
+			      "%s property\n"), abfd, option, property);
+}
+
+/* Report each input without the CFI properties for -z zicfilp-*-report=
+   and -z zicfiss-report=.  This must run before the properties are
+   merged, since the merge adds the forced properties to one of the
+   inputs.  */
+
+static void
+riscv_report_missing_cfi_properties (struct bfd_link_info *info)
+{
+  struct _bfd_riscv_elf_obj_tdata *tdata
+    = _bfd_riscv_elf_tdata (info->output_bfd);
+  bfd *abfd;
+
+  if (tdata->zicfilp_unlabeled_report == RISCV_REPORT_NONE
+      && tdata->zicfiss_report == RISCV_REPORT_NONE)
+    return;
+
+  /* Only check the inputs whose properties get merged.  */
+  for (abfd = info->input_bfds; abfd != NULL; abfd = abfd->link.next)
+    {
+      if (bfd_get_flavour (abfd) != bfd_target_elf_flavour
+	  || (abfd->flags & (DYNAMIC | BFD_PLUGIN | BFD_LINKER_CREATED)) != 0
+	  || bfd_count_sections (abfd) == 0
+	  || elf_elfheader (abfd)->e_machine != EM_RISCV)
+	continue;
+
+      elf_property_list *p
+	= _bfd_elf_find_property (elf_properties (abfd),
+				  GNU_PROPERTY_RISCV_FEATURE_1_AND, NULL);
+      uint32_t number = p != NULL ? p->property.u.number : 0;
+
+      if (!(number & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED))
+	riscv_report_missing_cfi_property
+	  (info, abfd, tdata->zicfilp_unlabeled_report,
+	   "zicfilp-unlabeled-report",
+	   "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED");
+
+      if (!(number & GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS))
+	riscv_report_missing_cfi_property
+	  (info, abfd, tdata->zicfiss_report, "zicfiss-report",
+	   "GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS");
+    }
+}
+
 /* Implement elf_backend_setup_gnu_properties for RISC-V.  It serves as a
    wrapper function for _bfd_riscv_elf_link_setup_gnu_properties to account
    for the effect of GNU properties of the output_bfd.  */
@@ -6111,6 +6194,8 @@ static bfd *
 elfNN_riscv_link_setup_gnu_properties (struct bfd_link_info *info)
 {
   uint32_t and_prop = _bfd_riscv_elf_tdata (info->output_bfd)->gnu_and_prop;
+
+  riscv_report_missing_cfi_properties (info);
 
   bfd *pbfd = _bfd_riscv_elf_link_setup_gnu_properties (info, &and_prop);
 
@@ -6123,6 +6208,33 @@ elfNN_riscv_link_setup_gnu_properties (struct bfd_link_info *info)
 		    _bfd_riscv_elf_tdata (info->output_bfd)->plt_type);
 
   return pbfd;
+}
+
+/* Implement elf_backend_fixup_gnu_properties for RISC-V.  Clear the
+   bits turned off by -z zicfilp=never and -z zicfiss=never after the
+   properties are merged.  */
+
+static void
+elfNN_riscv_link_fixup_gnu_properties (struct bfd_link_info *info,
+				       elf_property_list **listp)
+{
+  uint32_t never = _bfd_riscv_elf_tdata (info->output_bfd)->gnu_and_prop_never;
+  elf_property_list *p;
+
+  if (never == 0)
+    return;
+
+  for (; (p = *listp) != NULL; listp = &p->next)
+    if (p->property.pr_type == GNU_PROPERTY_RISCV_FEATURE_1_AND
+	&& p->property.pr_kind == property_number)
+      {
+	p->property.u.number &= ~never;
+	/* The generic code keeps an empty processor specific property,
+	   so remove it here.  */
+	if (p->property.u.number == 0)
+	  *listp = p->next;
+	break;
+      }
 }
 
 /* Implement elf_backend_merge_gnu_properties for RISC-V.  It serves as a
@@ -6189,6 +6301,8 @@ elfNN_riscv_merge_gnu_properties (struct bfd_link_info *info, bfd *abfd,
   elfNN_riscv_link_setup_gnu_properties
 #define elf_backend_merge_gnu_properties	\
   elfNN_riscv_merge_gnu_properties
+#define elf_backend_fixup_gnu_properties	\
+  elfNN_riscv_link_fixup_gnu_properties
 #define elf_backend_size_relative_relocs	riscv_elf_size_relative_relocs
 #define elf_backend_finish_relative_relocs	riscv_elf_finish_relative_relocs
 

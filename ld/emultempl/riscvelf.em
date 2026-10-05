@@ -26,7 +26,25 @@ fragment <<EOF
 #include "elfxx-riscv.h"
 
 static struct riscv_elf_params params = { .relax_gp = 1,
-					  .check_uleb128 = 0};
+					  .check_uleb128 = 0,
+					  .zicfilp = RISCV_ZICFILP_IMPLICIT,
+					  .zicfiss = RISCV_ZICFISS_IMPLICIT,
+					  .zicfilp_unlabeled_report = RISCV_REPORT_NONE,
+					  .zicfiss_report = RISCV_REPORT_NONE };
+
+/* Parse the value of -z NAME=VALUE for the CFI report options.  */
+
+static riscv_report_policy
+riscv_parse_report_option (const char *option, const char *value)
+{
+  if (strcmp (value, "none") == 0)
+    return RISCV_REPORT_NONE;
+  if (strcmp (value, "warning") == 0)
+    return RISCV_REPORT_WARNING;
+  if (strcmp (value, "error") == 0)
+    return RISCV_REPORT_ERROR;
+  fatal (_("%P: error: unrecognized value '-z %s'\n"), option);
+}
 EOF
 
 # Define some shell vars to insert bits of code into the standard elf
@@ -43,7 +61,64 @@ PARSE_AND_LIST_OPTIONS=${PARSE_AND_LIST_OPTIONS}'
   fprintf (file, _("  --no-relax-gp               Don'\''t perform GP relaxation\n"));
   fprintf (file, _("  --check-uleb128             Check if SUB_ULEB128 has non-zero addend\n"));
   fprintf (file, _("  --no-check-uleb128          Don'\''t check if SUB_ULEB128 has non-zero addend\n"));
+  fprintf (file, _("\
+  -z zicfilp=[implicit|unlabeled|never]\n\
+                              Control the Zicfilp marking of the output\n\
+                                implicit (default): deduce from the inputs\n\
+                                unlabeled: mark the output with CFI_LP_UNLABELED\n\
+                                  and generate the landing pad PLT\n\
+                                never: never mark the output with Zicfilp\n"));
+  fprintf (file, _("\
+  -z zicfilp-unlabeled-report=[none|warning|error]\n\
+                              Report the inputs without CFI_LP_UNLABELED\n\
+                                (default: none)\n"));
+  fprintf (file, _("\
+  -z zicfiss=[implicit|always|never]\n\
+                              Control the Zicfiss marking of the output\n\
+                                implicit (default): deduce from the inputs\n\
+                                always: mark the output with CFI_SS\n\
+                                never: never mark the output with CFI_SS\n"));
+  fprintf (file, _("\
+  -z zicfiss-report=[none|warning|error]\n\
+                              Report the inputs without CFI_SS (default: none)\n"));
 '
+
+PARSE_AND_LIST_ARGS_CASE_Z_RISCV='
+      else if (startswith (optarg, "zicfilp="))
+	{
+	  const char *value = optarg + strlen ("zicfilp=");
+	  if (strcmp (value, "implicit") == 0)
+	    params.zicfilp = RISCV_ZICFILP_IMPLICIT;
+	  else if (strcmp (value, "unlabeled") == 0)
+	    params.zicfilp = RISCV_ZICFILP_UNLABELED;
+	  else if (strcmp (value, "never") == 0)
+	    params.zicfilp = RISCV_ZICFILP_NEVER;
+	  else
+	    fatal (_("%P: error: unrecognized value '\''-z %s'\''\n"), optarg);
+	}
+      else if (startswith (optarg, "zicfilp-unlabeled-report="))
+	params.zicfilp_unlabeled_report
+	  = riscv_parse_report_option (optarg,
+	      optarg + strlen ("zicfilp-unlabeled-report="));
+      else if (startswith (optarg, "zicfiss="))
+	{
+	  const char *value = optarg + strlen ("zicfiss=");
+	  if (strcmp (value, "implicit") == 0)
+	    params.zicfiss = RISCV_ZICFISS_IMPLICIT;
+	  else if (strcmp (value, "always") == 0)
+	    params.zicfiss = RISCV_ZICFISS_ALWAYS;
+	  else if (strcmp (value, "never") == 0)
+	    params.zicfiss = RISCV_ZICFISS_NEVER;
+	  else
+	    fatal (_("%P: error: unrecognized value '\''-z %s'\''\n"), optarg);
+	}
+      else if (startswith (optarg, "zicfiss-report="))
+	params.zicfiss_report
+	  = riscv_parse_report_option (optarg,
+	      optarg + strlen ("zicfiss-report="));
+'
+
+PARSE_AND_LIST_ARGS_CASE_Z="$PARSE_AND_LIST_ARGS_CASE_Z $PARSE_AND_LIST_ARGS_CASE_Z_RISCV"
 
 PARSE_AND_LIST_ARGS_CASES=${PARSE_AND_LIST_ARGS_CASES}'
     case OPTION_RELAX_GP:

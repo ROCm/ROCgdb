@@ -1752,6 +1752,50 @@ x86-64 ISA levels in input files.
 x86-64 ISA levels in input files.
 Supported for Linux/i386 and Linux/x86_64.
 
+@item zicfilp=implicit
+@itemx zicfilp=unlabeled
+@itemx zicfilp=never
+Specify how to mark the output with
+GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED in .note.gnu.property
+section, which indicates compatibility with the unlabeled landing pad
+scheme of the Zicfilp extension.  @option{zicfilp=implicit}, which is
+the default, marks the output only if all input relocatable files have
+the property.  @option{zicfilp=unlabeled} always marks the output.
+@option{zicfilp=never} never marks the output.  PLT entries with
+landing pads are generated if the output is marked.
+Supported for RISC-V.
+
+@item zicfilp-unlabeled-report=none
+@itemx zicfilp-unlabeled-report=warning
+@itemx zicfilp-unlabeled-report=error
+Specify how to report input relocatable files without
+GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED.
+@option{zicfilp-unlabeled-report=none}, which is the default, reports
+nothing.  @option{zicfilp-unlabeled-report=warning} reports a warning
+and @option{zicfilp-unlabeled-report=error} reports an error for each
+such file.  Supported for RISC-V.
+
+@item zicfiss=implicit
+@itemx zicfiss=always
+@itemx zicfiss=never
+Specify how to mark the output with GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS
+in .note.gnu.property section, which indicates compatibility with the
+shadow stack of the Zicfiss extension.  @option{zicfiss=implicit},
+which is the default, marks the output only if all input relocatable
+files have the property.  @option{zicfiss=always} always marks the
+output.  @option{zicfiss=never} never marks the output.
+Supported for RISC-V.
+
+@item zicfiss-report=none
+@itemx zicfiss-report=warning
+@itemx zicfiss-report=error
+Specify how to report input relocatable files without
+GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS.  @option{zicfiss-report=none},
+which is the default, reports nothing.
+@option{zicfiss-report=warning} reports a warning and
+@option{zicfiss-report=error} reports an error for each such file.
+Supported for RISC-V.
+
 @end table
 
 Other keywords are ignored for Solaris compatibility.
