@@ -373,22 +373,6 @@ print_scalar_formatted (const gdb_byte *valaddr, struct type *type,
   /* String printing should go through val_print_scalar_formatted.  */
   gdb_assert (options.format != 's');
 
-  /* If the value is a pointer, and pointers and addresses are not the
-     same, then at this point, the value's length (in target bytes) is
-     gdbarch_addr_bit/TARGET_CHAR_BIT, not type->length ().  */
-  if (type->code () == TYPE_CODE_PTR)
-    len = gdbarch_addr_bit (gdbarch) / TARGET_CHAR_BIT;
-
-  /* If we are printing it as unsigned, truncate it in case it is actually
-     a negative signed value (e.g. "print/u (short)-1" should print 65535
-     (if shorts are 16 bits) instead of 4294967295).  */
-  if (options.format != 'c'
-      && (options.format != 'd' || type->is_unsigned ()))
-    {
-      if (len < type->length () && byte_order == BFD_ENDIAN_BIG)
-	valaddr += type->length () - len;
-    }
-
   /* Allow LEN == 0, and in this case, don't assume that VALADDR is
      valid.  */
   const gdb_byte zero = 0;
