@@ -4726,11 +4726,58 @@ _bfd_XXi_final_link_postscript (bfd * abfd, struct coff_final_link_info *pfinfo)
 	   || h1->root.type == bfd_link_hash_defweak)
 	  && h1->root.u.def.section != NULL
 	  && h1->root.u.def.section->output_section != NULL)
-	pe_data (abfd)->pe_opthdr.DataDirectory[PE_TLS_TABLE].VirtualAddress =
-	  (h1->root.u.def.value
-	   + h1->root.u.def.section->output_section->vma
-	   + h1->root.u.def.section->output_offset
-	   - pe_data (abfd)->pe_opthdr.ImageBase);
+	{
+	  pe_data (abfd)->pe_opthdr.DataDirectory[PE_TLS_TABLE].VirtualAddress =
+	    (h1->root.u.def.value
+	     + h1->root.u.def.section->output_section->vma
+	     + h1->root.u.def.section->output_offset
+	     - pe_data (abfd)->pe_opthdr.ImageBase);
+
+	  /* Set the alignment of the output `.tls` section which contains
+	     TLS template data, into `_tls_used.Characteristics`.  The other
+	     bits are set to zeros.  */
+	  asection *tls_sect = bfd_get_section_by_name (abfd, ".tls");
+	  if (tls_sect != NULL && tls_sect->alignment_power > 0)
+	    {
+	      /* Valid alignment values are 1 to 2**13 (8192 bytes).  */
+	      if (tls_sect->alignment_power <= 13)
+		{
+#if !defined(COFF_WITH_pep) && !defined(COFF_WITH_pex64) \
+    && !defined(COFF_WITH_peAArch64) && !defined(COFF_WITH_peLoongArch64) \
+    && !defined (COFF_WITH_peRiscV64)
+		  uint32_t offset_of_Characteristics = 0x14;
+#else
+		  uint32_t offset_of_Characteristics = 0x24;
+#endif
+		  char temp[4];
+		  bfd_put_32
+		    (abfd,
+		     IMAGE_SCN_ALIGN_POWER_CONST (tls_sect->alignment_power),
+		     temp);
+		  if (!bfd_set_section_contents
+			 (abfd,
+			  h1->root.u.def.section->output_section,
+			  temp,
+			  (h1->root.u.def.value
+			   + h1->root.u.def.section->output_offset
+			   + offset_of_Characteristics),
+			  4))
+		    {
+		      _bfd_error_handler
+			(_("%pB: unable to fill in DataDirectory[%d]: could not write %s.Characteristics"),
+			 abfd, PE_TLS_TABLE, name);
+		      result = false;
+		    }
+		}
+	      else
+		{
+		  _bfd_error_handler
+		    (_("%pB: unable to fill in DataDirectory[%d]: alignment of .tls section (%d) is too large"),
+		     abfd, PE_TLS_TABLE, 1 << tls_sect->alignment_power);
+		  result = false;
+		}
+	    }
+	}
       else
 	{
 	  _bfd_error_handler
