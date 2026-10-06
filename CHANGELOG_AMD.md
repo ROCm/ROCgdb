@@ -13,6 +13,9 @@ Full documentation for ROCgdb is available at
   - `gfx1172`
   - `gfx11-7-generic`
   - `gfx1250-strict`
+- Support for workgroup clusters.  GDB now includes cluster coordinates
+  in the target id of a GPU thread, if the dispatch is running in cluster
+  mode.  Also, the "info dispatch" command shows cluster dimensions.
 
 ## ROCgdb-16.3 for ROCm-10.1
 
