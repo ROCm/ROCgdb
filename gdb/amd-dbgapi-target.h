@@ -163,4 +163,10 @@ dispatch_get_info_throw (amd_dbgapi_dispatch_id_t dispatch_id,
 	   dispatch_id.handle, get_status_string (status));
 }
 
+/* Return the sizes of the workgroup that thread TP belongs to,
+   taking into account the work-items that actually fit in the grid.  */
+
+std::optional<std::array<size_t, 3>> partial_workgroup_sizes
+  (thread_info *tp);
+
 #endif /* GDB_AMD_DBGAPI_TARGET_H */
