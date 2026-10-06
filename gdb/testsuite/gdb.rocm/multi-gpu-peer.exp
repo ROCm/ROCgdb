@@ -1,0 +1,362 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test one process that, for each visible GPU, allocates memory on that
+# GPU and dispatches a kernel writing it on the next GPU, wrapping
+# around to GPU 0.  The watchpoint is set from host code before the
+# dispatch, and again after stopping inside the kernel.  Both stores
+# must be reported, the kernel must run on the compute GPU's agent,
+# and from that stop the allocation GPU is inspectable: the peer
+# buffer, PC, registers, and backtrace.
+#
+# Results are aggregated over all GPUs, so the test names and count do
+# not depend on how many GPUs are visible.  Per-GPU details go to the log.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+# Send COMMAND and return its output.  Only record a result on error.
+
+proc run_cmd { command } {
+    set output ""
+    gdb_test_multiple $command "run_cmd [incr ::run_cmd_count]: $command" {
+	-re -wrap "(.*)" {
+	    set output $expect_out(1,string)
+	}
+    }
+    return $output
+}
+
+# Decimal value of EXPR, or -1 if it cannot be read.  No result on success.
+
+proc int_value { expr } {
+    if {[regexp "= (-?\[0-9\]+)" [run_cmd "print /d $expr"] -> value]} {
+	return $value
+    }
+    return -1
+}
+
+# PCI location recorded for device DEV, formatted as DDDD:BB:DD.
+# Return "" if it cannot be read.
+
+proc pci_string { dev } {
+    set output [run_cmd "print /x pci_location\[$dev\]"]
+    if {![regexp "= ($::hex)" $output -> hex]} {
+	return ""
+    }
+    # Domain, bus, and device, matching "info agents" without the function.
+    return [format "%04x:%02x:%02x" \
+		[expr {($hex >> 16) & 0xffff}] \
+		[expr {($hex >> 8) & 0xff}] \
+		[expr {$hex & 0xff}]]
+}
+
+# Return 1 when the agent marked current by "info agents" is the agent
+# of the current wave in "info threads".  When LOC is not empty, that
+# agent's PCI location must also be LOC.
+
+proc current_agent_matches { loc } {
+    set agents [run_cmd "info agents"]
+    set threads [run_cmd "info threads"]
+
+    set agent -1
+    set wave_agent -1
+    regexp {\r\n\*[[:space:]]+([0-9]+)} $agents -> agent
+    regexp {\r\n\*[[:space:]]+[0-9]+[[:space:]]+AMDGPU Wave ([0-9]+):} \
+	$threads -> wave_agent
+    verbose -log "current agent $agent, wave agent $wave_agent"
+
+    if {$agent < 0 || $agent != $wave_agent} {
+	verbose -log "info agents:\n$agents"
+	verbose -log "info threads:\n$threads"
+	return 0
+    }
+    if {$loc eq ""} {
+	return 1
+    }
+
+    verbose -log "expected compute device location $loc"
+    if {![regexp "\r\n\\*\[^\r\n\]* ${loc}\\.\[0-7\]" $agents]} {
+	verbose -log "info agents:\n$agents"
+	return 0
+    }
+    return 1
+}
+
+# From a stop on the compute GPU, inspect the peer buffer on both GPUs
+# and the allocation GPU's PC, registers, and backtrace.  Return the
+# key of the first failing check, or "".
+
+proc inspect_cross_gpu {} {
+    if {[int_value "*buf"] != 17} {
+	verbose -log "compute GPU *buf is not 17"
+	run_cmd "set variable *hold = 0"
+	return buf_compute
+    }
+
+    set threads [run_cmd "info threads"]
+    set compute_tid -1
+    set alloc_tid -1
+    regexp {\r\n\*[[:space:]]+([0-9]+)} $threads -> compute_tid
+    regexp "\r\n\\*?\[ \t\]+(\[0-9\]+)\[ \t\]+AMDGPU Wave \[^\r\n\]*wait_kernel" \
+	$threads -> alloc_tid
+    verbose -log "allocation GPU thread $alloc_tid, compute thread $compute_tid"
+
+    if {$alloc_tid < 0 || $compute_tid < 0} {
+	verbose -log "info threads:\n$threads"
+	run_cmd "set variable *hold = 0"
+	return alloc_thread
+    }
+
+    set output [run_cmd "thread $alloc_tid"]
+    if {![regexp "Switching to thread" $output]} {
+	verbose -log "could not switch to allocation GPU thread:\n$output"
+	run_cmd "set variable *hold = 0"
+	run_cmd "thread $compute_tid"
+	return alloc_thread
+    }
+
+    set failed ""
+    if {[int_value "*buf"] != 17} {
+	verbose -log "allocation GPU *buf is not 17"
+	set failed buf_alloc
+    } elseif {![regexp "=> $::hex\[^\r\n\]*wait_kernel" \
+		    [set output [run_cmd "x/i \$pc"]]]} {
+	verbose -log "allocation GPU \$pc is not in wait_kernel:\n$output"
+	set failed pc
+    } elseif {![regexp "pc\[ \t\]+$::hex" \
+		    [set output [run_cmd "info registers pc"]]]} {
+	verbose -log "allocation GPU registers:\n$output"
+	set failed regs
+    } elseif {![regexp "#0\[^\r\n\]*wait_kernel" \
+		    [set output [run_cmd "backtrace"]]]} {
+	verbose -log "allocation GPU backtrace:\n$output"
+	set failed bt_alloc
+    }
+
+    run_cmd "set variable *hold = 0"
+    run_cmd "thread $compute_tid"
+
+    if {$failed ne ""} {
+	return $failed
+    }
+    if {![regexp "#0\[^\r\n\]*store_kernel" \
+	      [set output [run_cmd "backtrace"]]]} {
+	verbose -log "compute GPU backtrace:\n$output"
+	return bt_compute
+    }
+    return ""
+}
+
+# Return 1 if continuing reports a hardware watchpoint changing OLD to NEW.
+
+proc continue_to_watchpoint_hit { old new } {
+    set output [run_cmd "continue"]
+    set hit_re [multi_line \
+		    "hit Hardware watchpoint $::decimal: \[^\r\n\]*" \
+		    "" \
+		    "Old value = $old" \
+		    "New value = $new"]
+    if {[regexp $hit_re $output]} {
+	return 1
+    }
+    verbose -log "watchpoint did not report $old -> $new:\n$output"
+    return 0
+}
+
+# Continue to the dispatch that writes ALLOC_DEV's memory and test it.
+# COMPUTE_LOC is the compute GPU's PCI location, or "" when locations
+# are not unique.  VARIANT is "host" or "kernel".  Return the key of
+# the first failing check, or "".
+
+proc test_one_gpu { alloc_dev compute_loc variant } {
+    if {![regexp "hit Breakpoint $::decimal, main " [run_cmd "continue"]]
+	|| [int_value "alloc_dev"] != $alloc_dev} {
+	return dispatch
+    }
+
+    if {$variant eq "kernel"} {
+	# A code object per GPU makes the hit "Temporary breakpoint N.M".
+	set output ""
+	if {![gdb_breakpoint [gdb_get_line_number "Break in kernel"] \
+		  -temporary]
+	    || ![regexp \
+		    "hit Temporary breakpoint $::decimal\[.0-9\]*,\[^\r\n\]*store_kernel" \
+		    [set output [run_cmd "continue"]]]} {
+	    verbose -log "did not stop in store_kernel:\n$output"
+	    run_cmd "set variable *hold = 0"
+	    return kernel
+	}
+    }
+
+    if {![regexp "Hardware watchpoint $::decimal: " [run_cmd "watch *buf"]]
+	|| ![continue_to_watchpoint_hit 7 17]} {
+	run_cmd "set variable *hold = 0"
+	return store1
+    }
+
+    if {![current_agent_matches $compute_loc]} {
+	run_cmd "set variable *hold = 0"
+	return agent
+    }
+
+    set failed [inspect_cross_gpu]
+    if {$failed ne ""} {
+	return $failed
+    }
+
+    if {![continue_to_watchpoint_hit 17 37]} {
+	return store2
+    }
+
+    run_cmd "delete \$bpnum"
+    return ""
+}
+
+# VARIANT is "host" (watchpoint set before the dispatch) or "kernel"
+# (watchpoint set after stopping inside the kernel).  NGPUS is the
+# visible GPU count.  ALLOC_DEVS is the list of allocation GPUs the
+# program will dispatch, and LOCATIONS holds every visible GPU's PCI
+# location, indexed by device.  AMBIGUOUS is true when those locations
+# are not unique.
+
+proc test_gpus { variant ngpus alloc_devs locations ambiguous } {
+    set checks [list dispatch "stopped before each dispatch"]
+    if {$variant eq "kernel"} {
+	lappend checks kernel "kernel breakpoint hit on each compute GPU"
+    }
+    lappend checks \
+	store1 "watchpoint reports the first store" \
+	agent "kernel runs on the compute device's agent" \
+	buf_compute "peer buffer readable from compute GPU" \
+	alloc_thread "allocation GPU wave is present" \
+	buf_alloc "peer buffer readable from allocation GPU" \
+	pc "allocation GPU PC is readable" \
+	regs "allocation GPU registers are readable" \
+	bt_alloc "allocation GPU backtrace is wait_kernel" \
+	bt_compute "compute GPU backtrace is store_kernel" \
+	store2 "watchpoint reports the second store"
+
+    with_rocm_gpu_lock {
+	clean_restart $::testfile
+	# Missing this breakpoint is a failure, not "found 0 devices".
+	if {[runto [gdb_get_line_number "Break after device query"]]} {
+	    gdb_breakpoint [gdb_get_line_number "Break before dispatch"]
+
+	    set failed ""
+	    foreach dev $alloc_devs {
+		set compute_dev [expr {($dev + 1) % $ngpus}]
+		verbose -log "GPU $dev memory, kernel on GPU $compute_dev"
+		if {$ambiguous} {
+		    set compute_loc ""
+		} else {
+		    set compute_loc [lindex $locations $compute_dev]
+		}
+		set failed [test_one_gpu $dev $compute_loc $variant]
+		if {$failed ne ""} {
+		    verbose -log "check \"$failed\" failed for GPU $dev\
+				  memory, kernel on GPU $compute_dev"
+		    break
+		}
+	    }
+
+	    foreach {check name} $checks {
+		if {$check eq "agent" && $ambiguous && $failed eq ""} {
+		    verbose -log "GPUs share PCI locations, can't identify\
+				  agents"
+		    unsupported $name
+		} elseif {$failed eq ""} {
+		    pass $name
+		} elseif {$failed eq $check} {
+		    fail $name
+		} else {
+		    unresolved $name
+		}
+	    }
+
+	    if {$failed eq ""} {
+		delete_breakpoints
+		gdb_continue_to_end "" continue 1
+	    } else {
+		unresolved "continue until exit"
+	    }
+	}
+    }
+}
+
+set ngpus 0
+set alloc_devs {}
+set locations {}
+set ambiguous 0
+set run_variants 0
+
+with_rocm_gpu_lock {
+    clean_restart $::testfile
+    if {![runto [gdb_get_line_number "Break after device query"]]} {
+	# runto already recorded the FAIL.
+    } else {
+	set ngpus [int_value "num_devices"]
+	if {$ngpus < 0} {
+	    fail "read visible GPU count"
+	} elseif {$ngpus < 2} {
+	    verbose -log "visible GPUs: $ngpus"
+	    unsupported "need at least 2 visible GPUs"
+	} else {
+	    verbose -log "visible GPUs: $ngpus"
+	    set readable 1
+	    for {set dev 0} {$dev < $ngpus} {incr dev} {
+		set loc [pci_string $dev]
+		set access [int_value "can_access\[$dev\]"]
+		if {$loc eq "" || $access < 0} {
+		    fail "read device information"
+		    set readable 0
+		    break
+		}
+		lappend locations $loc
+		if {$access == 1} {
+		    lappend alloc_devs $dev
+		} else {
+		    verbose -log "GPU [expr {($dev + 1) % $ngpus}] can't\
+				  access GPU $dev memory, skipping GPU $dev"
+		}
+	    }
+	    if {$readable} {
+		verbose -log "GPU PCI locations: $locations"
+		if {[llength $alloc_devs] == 0} {
+		    unsupported "no GPU memory accessible from another GPU"
+		} else {
+		    set ambiguous [expr {[llength [lsort -unique $locations]] \
+					     != [llength $locations]}]
+		    set run_variants 1
+		}
+	    }
+	}
+    }
+}
+
+if {$run_variants} {
+    foreach variant {host kernel} {
+	with_test_prefix $variant {
+	    test_gpus $variant $ngpus $alloc_devs $locations $ambiguous
+	}
+    }
+}
