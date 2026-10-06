@@ -579,7 +579,6 @@ _bfd_coff_internal_syment_name (bfd *abfd,
     {
       const char *strings;
 
-      BFD_ASSERT (sym->_n._n_n._n_offset >= STRING_SIZE_SIZE);
       strings = obj_coff_strings (abfd);
       if (strings == NULL)
 	{
@@ -587,7 +586,8 @@ _bfd_coff_internal_syment_name (bfd *abfd,
 	  if (strings == NULL)
 	    return NULL;
 	}
-      if (sym->_n._n_n._n_offset >= obj_coff_strings_len (abfd))
+      if (sym->_n._n_n._n_offset < STRING_SIZE_SIZE
+	  || sym->_n._n_n._n_offset >= obj_coff_strings_len (abfd))
 	return NULL;
       return strings + sym->_n._n_n._n_offset;
     }
