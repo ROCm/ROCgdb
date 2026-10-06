@@ -184,26 +184,30 @@ Security Realities Of The GDB Project
 
   When using GDB to examine, but not execute, an untrusted program
   (with gdbserver, the program will be started, but paused at the
-  first instruction and not run further), there should be no security
-  risks, however the GDB maintainers don't currently believe that GDB
-  or gdbserver is reliable enough to ensure that there are no security
-  risks.
+  first instruction and not run further), ideally there should be no
+  security risks.  However, there are known bugs in GDB related to
+  loading malformed executables and parsing the debug information, a
+  consequence of these bugs is that a malicious program could trigger
+  undefined behavior in GDB, which could be used to trigger arbitrary
+  code execution.  This means that even just loading an untrusted
+  executable into GDB, without executing the program, can pose a
+  security risk.
 
-  There are known bugs in GDB related to loading malformed executables
-  and parsing the debug information, a consequence of these bugs is
-  that a malicious program could trigger undefined behavior in GDB,
-  which could be used to trigger arbitrary code execution.
+  Given these risks, the advice of the GDB project is that, when
+  examining or debugging an untrusted binary, always do so in a
+  secure, sandboxed environment.
 
-  Given these risks, the advice of the GDB project is that, when using
-  GDB with an untrusted binary, always do so in a secure, sandboxed
-  environment.
-
-  As there are already known bugs in GDB relating to undefined
-  behavior triggered from malformed programs, further bugs in this
-  area should still be reported, but are unlikely to be given high
-  priority.  Bugs in GDB that are triggered by well-formed programs
-  should also be reported, and are likely to be treated as higher
-  priority as these are more likely to impact normal use of GDB.
+  Bugs related to parsing malformed executables and debug information
+  can meet the definition of a security bug as described in this
+  document.  However, the GDB project believes there are likely to be
+  many such bugs, and addressing all of them as high priority security
+  issues is not feasible given current project resources.  Users
+  should instead rely on sandboxing as the primary mitigation.  Bugs
+  in this area should still be reported through the normal bug
+  reporting process and will be addressed when possible.  Bugs in GDB
+  that are triggered by well-formed programs should also be reported,
+  and are likely to be treated as higher priority as these are more
+  likely to impact normal use of GDB.
 
   When using GDB and gdbserver to perform remote debug, the connection
   between the two components is by design insecure.  It is up to the
