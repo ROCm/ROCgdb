@@ -53,7 +53,8 @@ case "$generator" in
 	    -e '/^#line.*y.tab.c/d' \
 	    -e "s/YYSTYPE/${name}_YYSTYPE/g" \
 	    -e "s/yyalloc/${name}_yyalloc/g" \
-	    -e "s/yysymbol_kind_t/${name}_yysymbol_kind_t/g"
+	    -e "s/yysymbol_kind_t/${name}_yysymbol_kind_t/g" \
+	    -e "s/YYSTACKDATA/${name}_YYSTACKDATA/g"
 	;;
     flex)
 	sed -e "$common" \
