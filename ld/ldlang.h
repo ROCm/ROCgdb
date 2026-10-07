@@ -597,8 +597,6 @@ extern void lang_add_target
   (const char *);
 extern void lang_add_wild
   (struct wildcard_spec *, struct wildcard_list *, bool);
-extern void lang_add_map
-  (const char *);
 extern void lang_add_fill
   (fill_type *);
 extern lang_assignment_statement_type *lang_add_assignment
