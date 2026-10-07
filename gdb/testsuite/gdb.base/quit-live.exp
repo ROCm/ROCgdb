@@ -43,8 +43,7 @@ if {[build_executable "failed to build" $testfile $srcfile debug]} {
 # Send signal SIG to GDB, and expect GDB to exit.
 
 proc test_quit_with_sig {sig} {
-    set gdb_pid [exp_pid -i [board_info host fileid]]
-    remote_exec host "kill -$sig ${gdb_pid}"
+    kill_gdb $sig
 
     set test "quit with SIG$sig"
     # If GDB mishandles the signal and doesn't exit, this should FAIL
@@ -177,7 +176,15 @@ foreach_with_prefix appear_how {"run" "attach" "attach-nofile"} {
     }
 
     foreach_with_prefix extra_inferior {0 1} {
-	foreach_with_prefix quit_how {"quit" "sigterm" "sighup"} {
+	set qhs {}
+	lappend qhs "quit"
+	foreach sig {"sigterm" "sighup"} {
+	    if {[remote_kill_spawn_id_p host $sig]} {
+		lappend qhs $sig
+	    }
+	}
+
+	foreach_with_prefix quit_how $qhs {
 	    quit_with_live_inferior $appear_how $extra_inferior $quit_how
 	}
     }

@@ -12515,6 +12515,35 @@ proc unproc {p} {
     uplevel 1 [list rename $p {}]
 }
 
+# Return 1 if SIG can be delivered to a spawn_id on board.
+proc remote_kill_spawn_id_p { board sig } {
+    if {$board == "host" || $board == "target"} {
+	if {[isremote $board]} {
+	    # For remote host/target, the spawn_id holds the pid of the ssh
+	    # session, so we'd end up sending signals to ssh instead.
+	    return 0
+	}
+    }
+
+    return 1
+}
+
+# Send SIG to PID on BOARD.
+proc remote_kill_spawn_id { board spawn_id sig } {
+    set pid [exp_pid -i $spawn_id]
+
+    if {![remote_kill_spawn_id_p $board $sig]} {
+	error "Can't send signal $sig to $pid on remote $board"
+    }
+
+    return [remote_exec $board "kill -$sig $pid"]
+}
+
+# Send SIG to GDB.
+proc kill_gdb { sig } {
+    return [remote_kill_spawn_id host $::gdb_spawn_id $sig]
+}
+
 require {tcl_version_at_least 8 6 2}
 
 # Always load compatibility stuff.
