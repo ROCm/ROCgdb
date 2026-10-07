@@ -3209,8 +3209,8 @@ namespace eval Dwarf {
 	variable _level
 	uplevel $_level $body
 
-	rename include_dir ""
-	rename file_name ""
+	unproc include_dir
+	unproc file_name
 
 	_line_finalize_header
 

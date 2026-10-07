@@ -28,7 +28,7 @@ proc with_stub_devices {devices body} {
     # tclint-disable-next-line command-args
     proc find_amdgpu_devices {} [list return $devices]
     set code [catch {uplevel 1 $body} result]
-    rename find_amdgpu_devices {}
+    unproc find_amdgpu_devices
     rename __saved_find_amdgpu_devices find_amdgpu_devices
     return -code $code $result
 }
