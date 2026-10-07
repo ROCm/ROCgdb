@@ -41,14 +41,6 @@
 void microblaze_generate_symbol (char *sym);
 static bool check_spl_reg (unsigned *);
 
-/* Several places in this file insert raw instructions into the
-   object. They should generate the instruction
-   and then use these four macros to crack the instruction value into
-   the appropriate byte values.  */
-#define	INST_BYTE0(x)  (target_big_endian ? (((x) >> 24) & 0xFF) : ((x) & 0xFF))
-#define	INST_BYTE1(x)  (target_big_endian ? (((x) >> 16) & 0xFF) : (((x) >> 8) & 0xFF))
-#define	INST_BYTE2(x)  (target_big_endian ? (((x) >> 8) & 0xFF) : (((x) >> 16) & 0xFF))
-#define	INST_BYTE3(x)  (target_big_endian ? ((x) & 0xFF) : (((x) >> 24) & 0xFF))
 /* Offset of the 16-bit immediate field within an instruction word.  The
    word is stored in target byte order, so the field moves as well as its
    bytes: it is the low half, which is at offset 2 big-endian and 0
@@ -1068,10 +1060,7 @@ md_assemble (char * str)
 
           for (i = 0; i < count - 1; i++)
 	    {
-              output[0] = INST_BYTE0 (inst);
-              output[1] = INST_BYTE1 (inst);
-              output[2] = INST_BYTE2 (inst);
-              output[3] = INST_BYTE3 (inst);
+	      md_number_to_chars (output, inst, INST_WORD_SIZE);
               output = frag_more (isize);
               immed = immed + 4;
               reg1++;
@@ -1096,10 +1085,7 @@ md_assemble (char * str)
 
               inst1 = opcode1->bit_sequence;
               inst1 |= ((immed & 0xFFFF0000) >> 16) & IMM_MASK;
-              output[0] = INST_BYTE0 (inst1);
-              output[1] = INST_BYTE1 (inst1);
-              output[2] = INST_BYTE2 (inst1);
-              output[3] = INST_BYTE3 (inst1);
+	      md_number_to_chars (output, inst1, INST_WORD_SIZE);
               output = frag_more (isize);
 	    }
 	  inst |= (reg1 << RD_LOW) & RD_MASK;
@@ -1631,10 +1617,7 @@ md_assemble (char * str)
 
           inst1 = opcode1->bit_sequence;
           inst1 |= ((immed & 0xFFFF0000) >> 16) & IMM_MASK;
-          output[0] = INST_BYTE0 (inst1);
-          output[1] = INST_BYTE1 (inst1);
-          output[2] = INST_BYTE2 (inst1);
-          output[3] = INST_BYTE3 (inst1);
+	  md_number_to_chars (output, inst1, INST_WORD_SIZE);
           output = frag_more (isize);
         }
 
@@ -1697,10 +1680,7 @@ md_assemble (char * str)
 
           inst1 = opcode1->bit_sequence;
           inst1 |= ((immed & 0xFFFF0000) >> 16) & IMM_MASK;
-          output[0] = INST_BYTE0 (inst1);
-          output[1] = INST_BYTE1 (inst1);
-          output[2] = INST_BYTE2 (inst1);
-          output[3] = INST_BYTE3 (inst1);
+	  md_number_to_chars (output, inst1, INST_WORD_SIZE);
           output = frag_more (isize);
         }
 
@@ -1770,10 +1750,7 @@ md_assemble (char * str)
 
           inst1 = opcode1->bit_sequence;
           inst1 |= ((immed & 0xFFFF0000) >> 16) & IMM_MASK;
-          output[0] = INST_BYTE0 (inst1);
-          output[1] = INST_BYTE1 (inst1);
-          output[2] = INST_BYTE2 (inst1);
-          output[3] = INST_BYTE3 (inst1);
+	  md_number_to_chars (output, inst1, INST_WORD_SIZE);
           output = frag_more (isize);
         }
       inst |= (immed << IMM_LOW) & IMM_MASK;
@@ -1813,10 +1790,7 @@ md_assemble (char * str)
   if (strcmp (op_end, opcode->name) && strcmp (op_end, ""))
     as_warn (_("ignoring operands: %s "), op_end);
 
-  output[0] = INST_BYTE0 (inst);
-  output[1] = INST_BYTE1 (inst);
-  output[2] = INST_BYTE2 (inst);
-  output[3] = INST_BYTE3 (inst);
+  md_number_to_chars (output, inst, INST_WORD_SIZE);
 
 #ifdef OBJ_ELF
   dwarf2_emit_insn (4);
