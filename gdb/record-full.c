@@ -1063,7 +1063,7 @@ static int record_full_resume_step = 0;
 
 /* True if we've been resumed, and so each record_full_wait call should
    advance execution.  If this is false, record_full_wait will return a
-   TARGET_WAITKIND_IGNORE.  */
+   TARGET_WAITKIND_NO_RESUMED.  */
 static int record_full_resumed = 0;
 
 /* The execution direction of the last resume we got.  This is
@@ -1187,8 +1187,8 @@ record_full_wait_1 (struct target_ops *ops,
     {
       gdb_assert ((options & TARGET_WNOHANG) != 0);
 
-      /* No interesting event.  */
-      status->set_ignore ();
+      /* No thread was resumed at all.  */
+      status->set_no_resumed ();
       return minus_one_ptid;
     }
 
