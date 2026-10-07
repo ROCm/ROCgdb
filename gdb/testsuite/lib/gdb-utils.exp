@@ -184,7 +184,9 @@ proc version_compare { l1 op l2 } {
 proc lock_file_acquire {lockfile} {
     verbose -log "acquiring lock file: $::subdir/${::gdb_test_file_name}.exp"
     while {true} {
-	if {![catch {open $lockfile {WRONLY CREAT EXCL}} rc]} {
+	try {
+	    open $lockfile {WRONLY CREAT EXCL}
+	} on ok {rc} {
 	    set msg "locked by $::subdir/${::gdb_test_file_name}.exp"
 	    verbose -log "lock file: $msg"
 	    # For debugging, put info in the lockfile about who owns
@@ -192,6 +194,8 @@ proc lock_file_acquire {lockfile} {
 	    puts  $rc $msg
 	    flush $rc
 	    return [list $rc $lockfile]
+	} on error {} {
+	    # Ignore and try again.
 	}
 	after 10
     }
@@ -202,18 +206,20 @@ proc lock_file_acquire {lockfile} {
 proc lock_file_release {info} {
     verbose -log "releasing lock file: $::subdir/${::gdb_test_file_name}.exp"
 
-    if {![catch {fconfigure [lindex $info 0]}]} {
-	if {![catch {
-	    close [lindex $info 0]
-	    file delete -force [lindex $info 1]
-	} rc]} {
-	    return ""
-	} else {
-	    return -code error "Error releasing lockfile: '$rc'"
-	}
-    } else {
+    try {
+	fconfigure [lindex $info 0]
+    } on error {} {
 	error "invalid lock"
     }
+
+    try {
+	close [lindex $info 0]
+	file delete -force [lindex $info 1]
+    } on error {rc} {
+	error "Error releasing lockfile: '$rc'"
+    }
+
+    return ""
 }
 
 # Return directory where we keep lock files.
