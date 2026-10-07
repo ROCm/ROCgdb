@@ -1681,6 +1681,9 @@ elf64_hppa_late_size_sections (struct bfd_link_info *info)
       if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour)
 	continue;
 
+      if ((ibfd->flags & BFD_LINKER_CREATED) != 0)
+	continue;
+
       for (sec = ibfd->sections; sec != NULL; sec = sec->next)
 	{
 	  struct elf64_hppa_dyn_reloc_entry *hdh_p;
