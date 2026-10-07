@@ -370,8 +370,14 @@ def probe_clean_prefix(
     commits: list[str],
 ) -> tuple[str | None, str | None]:
     """
-    Walk commits oldest-to-newest on a throwaway branch off origin/TARGET_BRANCH.
-    Returns (last_clean_commit, first_conflict_commit).
+    Walk commits oldest-to-newest on a throwaway `probe` branch off
+    origin/TARGET_BRANCH, to find how far UPSTREAM_BRANCH merges into
+    TARGET_BRANCH without conflicts. Returns (last_clean_commit, first_conflict_commit).
+
+    `probe` (and its per-commit merge chain) is always discarded afterwards:
+    the caller rebuilds the clean range as a single merge commit rather than
+    reusing this chain, so the published history isn't one merge commit per
+    upstream commit.
     """
     run(["git", "checkout", "-B", "probe", f"origin/{TARGET_BRANCH}"], cwd=repo)
 
@@ -380,7 +386,9 @@ def probe_clean_prefix(
 
     try:
         for commit in commits:
-            result = run(["git", "merge", "--no-edit", commit], cwd=repo, check=False)
+            result = run(
+                ["git", "merge", "--no-ff", "--no-edit", commit], cwd=repo, check=False
+            )
             if result.returncode != 0:
                 run(["git", "merge", "--abort"], cwd=repo, check=False)
                 first_conflict = commit
@@ -391,6 +399,32 @@ def probe_clean_prefix(
         run(["git", "branch", "-D", "probe"], cwd=repo, check=False)
 
     return last_clean, first_conflict
+
+
+def build_conflict_free_branch(repo: Path, branch: str, last_commit: str) -> None:
+    """
+    Build `branch` as a single --no-ff merge of `last_commit` (and all its
+    ancestors) onto a fresh origin/TARGET_BRANCH, then force-push it.
+
+    Merging `last_commit` directly pulls in every commit between it and the
+    merge-base automatically, so this produces one merge commit for the
+    whole clean range instead of the per-commit chain built while probing.
+    --no-ff guards against the same fast-forward problem probing avoids: if
+    origin/TARGET_BRANCH's tip is an ancestor of `last_commit`, a plain merge
+    would fast-forward and the branch would carry no TARGET_BRANCH history.
+
+    This job works from a fresh checkout that never fetches branches by
+    name, so it has no remote-tracking ref to tell --force-with-lease what
+    the branch currently looks like on the remote. Without one, the lease
+    check has nothing to compare against and rejects a same-day retry that
+    is only overwriting our own prior push. Fetch the branch first so the
+    lease has a baseline; if it doesn't exist on the remote yet, the fetch
+    is a no-op and the push creates it.
+    """
+    run(["git", "checkout", "-B", branch, f"origin/{TARGET_BRANCH}"], cwd=repo)
+    run(["git", "merge", "--no-ff", "--no-edit", last_commit], cwd=repo)
+    run(["git", "fetch", "origin", branch], cwd=repo, check=False)
+    run_net(["git", "push", "--force-with-lease", "origin", branch], cwd=repo)
 
 
 def main() -> None:
@@ -521,7 +555,8 @@ def main() -> None:
         print("Probing for clean merge prefix…")
         last_clean, first_conflict = probe_clean_prefix(repo, commits)
 
-        # Probe leaves the repo on detached HEAD; return to the local branch.
+        # probe_clean_prefix() always leaves the repo on detached HEAD and
+        # discards `probe`; return to the local target branch set up above.
         if not DRY_RUN:
             run(["git", "checkout", TARGET_BRANCH], cwd=repo)
 
@@ -544,15 +579,7 @@ def main() -> None:
                     f"  Title  : {conflict_free_title}"
                 )
             else:
-                run_net(
-                    [
-                        "git",
-                        "push",
-                        "origin",
-                        f"{commits[-1]}:refs/heads/{conflict_free_branch}",
-                    ],
-                    cwd=repo,
-                )
+                build_conflict_free_branch(repo, conflict_free_branch, commits[-1])
                 open_conflict_free_pr(
                     branch=conflict_free_branch,
                     first_commit=merge_base_sha,
@@ -581,15 +608,7 @@ def main() -> None:
                     f"  Title  : {conflict_free_title}"
                 )
                 return
-            run_net(
-                [
-                    "git",
-                    "push",
-                    "origin",
-                    f"{last_clean}:refs/heads/{conflict_free_branch}",
-                ],
-                cwd=repo,
-            )
+            build_conflict_free_branch(repo, conflict_free_branch, last_clean)
             open_conflict_free_pr(
                 branch=conflict_free_branch,
                 first_commit=merge_base_sha,
