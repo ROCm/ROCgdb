@@ -562,7 +562,7 @@ with_test_prefix "set/show parameter" {
     gdb_test "show test-prefix-2" "^invoke -- show"
 }
 
-rename scm_param_test_maybe_no_output ""
+unproc scm_param_test_maybe_no_output
 
 # Test a color parameter.
 

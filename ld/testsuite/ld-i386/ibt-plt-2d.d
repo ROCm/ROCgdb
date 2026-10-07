@@ -18,29 +18,29 @@ Contents of the .eh_frame section:
   DW_CFA_nop
   DW_CFA_nop
 
-0+18 0000001c 0000001c FDE cie=00000000 pc=[a-f0-9]+\.\.[a-f0-9]+
-  DW_CFA_advance_loc: 1 to [a-f0-9]+
+0+18 0+20 0+1c FDE cie=0+ pc=0+180\.\.0+1b0
+  DW_CFA_def_cfa_offset: 8
+  DW_CFA_advance_loc: 6 to 0+186
+  DW_CFA_def_cfa_offset: 12
+  DW_CFA_advance_loc: 10 to 0+190
+  DW_CFA_def_cfa_expression \(DW_OP_breg4 \(esp\): 4; DW_OP_breg8 \(eip\): 0; DW_OP_lit15; DW_OP_and; DW_OP_lit9; DW_OP_ge; DW_OP_lit2; DW_OP_shl; DW_OP_plus\)
+
+0+3c 0+10 0+40 FDE cie=0+ pc=0+1b0\.\.0+1d0
+  DW_CFA_nop
+  DW_CFA_nop
+  DW_CFA_nop
+
+0+50 0+1c 0+54 FDE cie=0+ pc=0+1d0\.\.0+1ee
+  DW_CFA_advance_loc: 1 to 0+1d1
   DW_CFA_def_cfa_offset: 8
   DW_CFA_offset: r3 \(ebx\) at cfa-8
-  DW_CFA_advance_loc: 14 to [a-f0-9]+
+  DW_CFA_advance_loc: 14 to 0+1df
   DW_CFA_def_cfa_offset: 16
-  DW_CFA_advance_loc: 13 to [a-f0-9]+
+  DW_CFA_advance_loc: 13 to 0+1ec
   DW_CFA_def_cfa_offset: 8
-  DW_CFA_advance_loc: 1 to [a-f0-9]+
+  DW_CFA_advance_loc: 1 to 0+1ed
   DW_CFA_restore: r3 \(ebx\)
   DW_CFA_def_cfa_offset: 4
-
-0+38 00000010 0000003c FDE cie=00000000 pc=[a-f0-9]+\.\.[a-f0-9]+
-  DW_CFA_nop
-  DW_CFA_nop
-  DW_CFA_nop
-
-0+4c 00000020 00000050 FDE cie=00000000 pc=[a-f0-9]+\.\.[a-f0-9]+
-  DW_CFA_def_cfa_offset: 8
-  DW_CFA_advance_loc: 6 to [a-f0-9]+
-  DW_CFA_def_cfa_offset: 12
-  DW_CFA_advance_loc: 10 to [a-f0-9]+
-  DW_CFA_def_cfa_expression \(DW_OP_breg4 \(esp\): 4; DW_OP_breg8 \(eip\): 0; DW_OP_lit15; DW_OP_and; DW_OP_lit9; DW_OP_ge; DW_OP_lit2; DW_OP_shl; DW_OP_plus\)
 
 0+70 00000010 00000074 FDE cie=00000000 pc=[a-f0-9]+\.\.[a-f0-9]+
   DW_CFA_nop
