@@ -68,7 +68,17 @@ public:
   ~scope_exit_base ()
   {
     if (!m_released)
-      POLICY::on_exit ();
+      {
+	try
+	  {
+	    POLICY::on_exit ();
+	  }
+	catch (const gdb_exception &ex)
+	  {
+	    gdb_assert_not_reached ("unhandled exception in scope exit: %s",
+				    ex.message != nullptr ? ex.what () : "");
+	  }
+      }
   }
 
   DISABLE_COPY_AND_ASSIGN (scope_exit_base);
