@@ -3230,6 +3230,53 @@ gdb_caching_proc allow_tui_tests {} {
     return [expr {[string first "--enable-tui" $output] != -1}]
 }
 
+# Run BODY in the context of the caller's caller.
+#
+# To be used in a proc foo:
+#   proc foo {body} {
+#       transparent_uplevel $body
+#   }
+# to make "foo body" have the same effect as "body".
+#
+# It ensures this by doing two things:
+# - evaluating the body in the context of the caller of foo
+# - propagating any return, exceptional or not, to the caller of foo.
+#
+# Typically used in conjunction with try/finally, to ensure something
+# happens before and after body.  For instance, this:
+#   proc foo {body} {
+#       try {
+#           puts "foo: enter"
+#           transparent_uplevel $body
+#       } finally {
+#           puts "foo: exit"
+#       }
+#   }
+#
+#   for {set i 0} {$i < 5} {incr i} {
+#       puts $i
+#       foo {
+#           if {$i == 2} {
+#               break
+#           }
+#       }
+#   }
+# produces:
+#   0
+#   foo: enter
+#   foo: exit
+#   1
+#   foo: enter
+#   foo: exit
+#   2
+#   foo: enter
+#   foo: exit
+
+proc transparent_uplevel { body } {
+    catch {uplevel 2 $body} result opts
+    return -options [dict incr opts -level 2] $result
+}
+
 # Test files shall make sure all the test result lines in gdb.sum are
 # unique in a test run, so that comparing the gdb.sum files of two
 # test runs gives correct results.  Test files that exercise
