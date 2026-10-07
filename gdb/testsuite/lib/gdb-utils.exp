@@ -235,17 +235,12 @@ proc with_lock { lock_file body } {
 	set lock_rc [lock_file_acquire $lock_file]
     }
 
-    set code [catch {uplevel 1 $body} result]
-
-    if {[info exists ::GDB_PARALLEL]} {
-	lock_file_release $lock_rc
-    }
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+    try {
+	transparent_uplevel $body
+    } finally {
+	if {[info exists ::GDB_PARALLEL]} {
+	    lock_file_release $lock_rc
+	}
     }
 }
 
