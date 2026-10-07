@@ -2145,6 +2145,13 @@ md_apply_fix (fixS *   fixP,
 	    }
 	}
       break;
+    case BFD_RELOC_8:
+    case BFD_RELOC_16:
+      /* md_number_to_chars writes in target byte order.  */
+      if (fixP->fx_done)
+	md_number_to_chars (buf, val, fixP->fx_size);
+      break;
+
     case BFD_RELOC_32:
     case BFD_RELOC_RVA:
     case BFD_RELOC_32_PCREL:
