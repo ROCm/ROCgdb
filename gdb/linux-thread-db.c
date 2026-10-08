@@ -101,7 +101,6 @@ public:
 				      CORE_ADDR load_module_addr,
 				      CORE_ADDR offset) override;
   const char *extra_thread_info (struct thread_info *) override;
-  ptid_t get_ada_task_ptid (long lwp, ULONGEST thread) override;
 
   thread_info *thread_handle_to_thread_info (const gdb_byte *thread_handle,
 					     int handle_len,
@@ -1816,15 +1815,6 @@ thread_db_target::get_thread_local_address (ptid_t ptid,
     }
 
   return beneath->get_thread_local_address (ptid, lm, offset);
-}
-
-/* Implement the to_get_ada_task_ptid target method for this target.  */
-
-ptid_t
-thread_db_target::get_ada_task_ptid (long lwp, ULONGEST thread)
-{
-  /* NPTL uses a 1:1 model, so the LWP id suffices.  */
-  return ptid_t (inferior_ptid.pid (), lwp);
 }
 
 void

@@ -67,18 +67,16 @@ proc target_compile_ada_from_dir {builddir source dest type options} {
 	set_board_info multilib_flags "$multilib_flag"
     }
 
-    catch {
+    try {
 	with_cwd $builddir {
 	    return [target_compile $source $dest $type $options]
 	}
-    } result options
-
-    if { $save_multilib_flag != "" } {
-	unset_board_info "multilib_flags"
-	set_board_info multilib_flags $save_multilib_flag
+    } finally {
+	if { $save_multilib_flag != "" } {
+	    unset_board_info "multilib_flags"
+	    set_board_info multilib_flags $save_multilib_flag
+	}
     }
-
-    return -options $options $result
 }
 
 # Compile some Ada code.  Return "" if the compile was successful.
