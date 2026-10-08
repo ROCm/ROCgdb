@@ -20,7 +20,7 @@
 # can read both rbx and ebx correctly for each frame, and that when we write to
 # ebx, rbx for that frame is correctly updated.
 
-require is_x86_64_m64_target
+require is_x86_64_m64_target have_avx
 
 standard_testfile
 
