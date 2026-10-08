@@ -5248,6 +5248,46 @@ literal_reloc_type (const r_reloc *r_rel)
 }
 
 
+/* Return the offset of R_REL's target in a SEC_MERGE section after
+   merging, and set *PENTITY to the input offset of the entity that
+   merging moves.  Targets in one input section all map into the same
+   representative section, so their offsets compare directly.
+
+   Gas reduces a zero addend against a local symbol to a relocation
+   against the section symbol, whose addend selects the entity.  Any
+   other "symbol + addend" is relative to the symbol: merging moves the
+   symbol and the addend is applied afterwards.  */
+
+static bfd_vma
+r_reloc_merged_offset (const r_reloc *r_rel, bfd_vma *pentity)
+{
+  unsigned long r_symndx = ELF32_R_SYM (r_rel->rela.r_info);
+  asection *sec = r_reloc_get_section (r_rel);
+  bfd_vma symval = get_elf_r_symndx_offset (r_rel->abfd, r_symndx);
+  bfd_vma addend = r_rel->target_offset - symval;
+  unsigned int symtype = STT_NOTYPE;
+
+  if (r_symndx < elf_symtab_hdr (r_rel->abfd).sh_info)
+    {
+      Elf_Internal_Sym *isymbuf = retrieve_local_syms (r_rel->abfd);
+
+      symtype = ELF_ST_TYPE (isymbuf[r_symndx].st_info);
+    }
+
+  if (symtype == STT_SECTION)
+    symval += addend;
+
+  *pentity = symval;
+  if (sec->sec_info_type == SEC_INFO_TYPE_MERGE)
+    symval = _bfd_merged_section_offset (r_rel->abfd, &sec, symval);
+
+  if (symtype != STT_SECTION)
+    symval += addend;
+
+  return symval;
+}
+
+
 static bool
 literal_value_equal (const literal_value *src1,
 		     const literal_value *src2,
@@ -5289,9 +5329,26 @@ literal_value_equal (const literal_value *src1,
 	  || ((!h1 || h1->root.type != bfd_link_hash_defweak)
 	      && (!h2 || h2->root.type != bfd_link_hash_defweak))))
     {
-      if (r_reloc_get_section (&src1->r_rel)
-	  != r_reloc_get_section (&src2->r_rel))
+      asection *sec = r_reloc_get_section (&src1->r_rel);
+
+      if (sec != r_reloc_get_section (&src2->r_rel))
 	return false;
+
+      /* Same input offset is not the same value once SEC_MERGE runs.  */
+      if ((sec->flags & SEC_MERGE) != 0)
+	{
+	  bfd_vma entity1, entity2;
+
+	  if (r_reloc_merged_offset (&src1->r_rel, &entity1)
+	      != r_reloc_merged_offset (&src2->r_rel, &entity2))
+	    return false;
+
+	  /* A relocatable link has not merged the section yet, and the
+	     final link may still move different entities apart.  */
+	  if (sec->sec_info_type != SEC_INFO_TYPE_MERGE
+	      && entity1 != entity2)
+	    return false;
+	}
     }
   else
     {

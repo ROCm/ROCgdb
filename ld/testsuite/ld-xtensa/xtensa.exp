@@ -25,6 +25,7 @@ if { !([istarget "xtensa*-*-*"]) } {
 
 run_dump_test "call_overflow"
 run_dump_test "coalesce"
+run_dump_test "coalesce-merge"
 run_dump_test "diff_overflow"
 run_dump_test "lcall"
 run_dump_test "relax-diff1"
