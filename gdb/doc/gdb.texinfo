@@ -20152,7 +20152,7 @@ Show if descriptive types are ignored by @value{GDBN}.
 @cindex HIP
 
 @value{GDBN} supports the
-HIP@footnote{@url{https://rocm.docs.amd.com/projects/HIP/en/docs-develop/what_is_hip.html,
+HIP@footnote{@url{https://rocm.docs.amd.com/projects/HIP/en/latest/what_is_hip.html,
 Heterogeneous Interface for Portability}} programming language.
 
 @node HIP built-in variables
