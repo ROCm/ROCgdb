@@ -35,14 +35,14 @@
 	}                                                                    \
     } while (0)
 
-__device__ static void wait_all_kernels ();
+__device__ static void kernel_body ();
 
 /* A kernel with a name longer than GDB's longest possible name.  */
 
 __global__ void
 long_kernel_name_abcdefghijklmnopqrstuvwxyz ()
 {
-  wait_all_kernels ();
+  kernel_body ();
 }
 
 /* A kernel with a name longer than GDB's longest possible name.  */
@@ -50,7 +50,7 @@ long_kernel_name_abcdefghijklmnopqrstuvwxyz ()
 __global__ void
 long_kernel_name_0123456789 ()
 {
-  wait_all_kernels ();
+  kernel_body ();
 }
 
 /* A kernel with a normal, short name.  */
@@ -58,7 +58,7 @@ long_kernel_name_0123456789 ()
 __global__ void
 kern ()
 {
-  wait_all_kernels ();
+  kernel_body ();
 }
 
 /* Same, but with some parameters.  */
@@ -66,7 +66,7 @@ kern ()
 __global__ void
 kern (int)
 {
-  wait_all_kernels ();
+  kernel_body ();
 }
 
 /* A kernel with extern "C" linkage, which doesn't include an argument
@@ -75,7 +75,7 @@ kern (int)
 extern "C" __global__ void
 c_kern ()
 {
-  wait_all_kernels ();
+  kernel_body ();
 }
 
 /* A kernel in a namespace.  */
@@ -85,7 +85,7 @@ namespace NS {
 __global__ void
 kern_ns ()
 {
-  wait_all_kernels ();
+  kernel_body ();
 }
 
 }
@@ -97,7 +97,7 @@ namespace {
 __global__ void
 anonymous ()
 {
-  wait_all_kernels ();
+  kernel_body ();
 }
 
 }
@@ -113,14 +113,14 @@ template<E val>
 __global__ void
 templ_non_type ()
 {
-  wait_all_kernels ();
+  kernel_body ();
 }
 
 template<typename... Args>
 __global__ void __attribute__ ((optnone))
 templ_type (Args... args)
 {
-  wait_all_kernels ();
+  kernel_body ();
 }
 
 /* List of kernel names and a callback that launches the named
@@ -198,24 +198,13 @@ static struct
   },
 };
 
-/* Number of kernels seen so far by wait_all_kernels.  */
-__device__ static int kernels_seen = 0;
-
-/* Number of kernels expected to be seen by wait_all_kernels.  */
-__device__ static int number_kernels = 0;
-
-/* Wait until every kernel has reached here, so that they are all
-   running concurrently before any of them exits.  */
+/* Breakpoints keep the kernels stopped for concurrent name checks.
+   Let each kernel finish independently when run outside the debugger.  */
 
 __device__ static void
-wait_all_kernels ()
+kernel_body ()
 {
-  atomicAdd (&kernels_seen, 1);
-  while (atomicAdd (&kernels_seen, 0) < number_kernels)
-    {
-      /* Sleep a bit to avoid hogging the GPU.  */
-      __builtin_amdgcn_s_sleep (64);
-    }
+  __builtin_amdgcn_s_sleep (64);
 }
 
 /* True if we want to run the kernel named KERNEL.  ARG is the
@@ -226,6 +215,12 @@ static bool
 should_run_kernel (const char *arg, const char *kernel)
 {
   return strcmp (arg, "all") == 0 || strcmp (arg, kernel) == 0;
+}
+
+__global__ void __attribute__ ((optnone))
+warmup ()
+{
+  __builtin_amdgcn_s_sleep (1);
 }
 
 int
@@ -241,17 +236,7 @@ main (int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  int h_number_kernels = 0;
-  for (auto &k : kernels)
-    {
-      if (should_run_kernel (argv[1], k.kernel))
-	h_number_kernels++;
-    }
-  CHECK (hipMemcpyToSymbol (HIP_SYMBOL (number_kernels), &h_number_kernels,
-			    sizeof (int)));
-
-  /* Launch each kernel on its own stream, so they can all run
-     concurrently.  */
+  /* Create a stream for each requested kernel.  */
   std::vector<hipStream_t> streams;
 
   for (auto &k : kernels)
@@ -261,7 +246,24 @@ main (int argc, char **argv)
 	  hipStream_t st;
 	  CHECK (hipStreamCreate (&st));
 	  streams.push_back (st);
-	  k.launch (st);
+	}
+    }
+
+  /* Initialize stream resources before a test kernel can stop at a
+     breakpoint.  Hostcall initialization may wait for GPU work.  */
+  for (hipStream_t st : streams)
+    {
+      warmup<<<dim3 (1), dim3 (1), 0, st>>> ();
+      CHECK (hipGetLastError ());
+    }
+  CHECK (hipDeviceSynchronize ());
+
+  size_t stream_index = 0;
+  for (auto &k : kernels)
+    {
+      if (should_run_kernel (argv[1], k.kernel))
+	{
+	  k.launch (streams[stream_index++]);
 	  CHECK (hipGetLastError ());
 	}
     }
