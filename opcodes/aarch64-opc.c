@@ -1484,23 +1484,24 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
   switch (aarch64_operands[type].op_class)
     {
     case AARCH64_OPND_CLASS_INT_REG:
-      /* Check for pair of xzr registers.  */
-      if (type == AARCH64_OPND_PAIRREG_OR_XZR
-	  && opnds[idx - 1].reg.regno == 0x1f)
+      switch (type)
 	{
-	  if (opnds[idx].reg.regno != 0x1f)
+	case AARCH64_OPND_PAIRREG:
+	case AARCH64_OPND_PAIRREG_OR_XZR:
+	  /* Check for pair of xzr registers.  */
+	  if (type == AARCH64_OPND_PAIRREG_OR_XZR
+	      && opnds[idx - 1].reg.regno == 0x1f)
 	    {
-	      set_syntax_error (mismatch_detail, idx - 1,
-				_("second reg in pair should be xzr if first is"
-				  " xzr"));
-	      return false;
+	      if (opnds[idx].reg.regno != 0x1f)
+		{
+		  set_syntax_error (mismatch_detail, idx - 1,
+		      _("second reg in pair should be xzr if first is xzr"));
+		  return false;
+		}
+	      break;
 	    }
-	}
-      /* Check pair reg constraints for instructions taking a pair of
-	 consecutively-numbered general-purpose registers.  */
-      else if (type == AARCH64_OPND_PAIRREG
-	       || type == AARCH64_OPND_PAIRREG_OR_XZR)
-	{
+	  /* Check pair reg constraints for instructions taking a pair of
+	     consecutively-numbered general-purpose registers.  */
 	  assert (idx == 1 || idx == 2 || idx == 3 || idx == 5);
 	  if (opnds[idx - 1].reg.regno % 2 != 0)
 	    {
@@ -1515,11 +1516,9 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	      return false;
 	    }
 	  break;
-	}
 
-      /* <Xt> may be optional in some IC and TLBI instructions.  */
-      if (type == AARCH64_OPND_Rt_SYS)
-	{
+	case AARCH64_OPND_Rt_SYS:
+	  /* <Xt> may be optional in some IC and TLBI instructions.  */
 	  assert (idx == 1 && (aarch64_get_operand_class (opnds[0].type)
 			       == AARCH64_OPND_CLASS_SYSTEM));
 	  if (!(opnds[1].present && aarch64_sys_ins_reg_tlbid_xt (opnds[0].sysins_op)))
@@ -1536,7 +1535,11 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 		  set_other_error (mismatch_detail, idx, _("missing register"));
 		  return false;
 		}
-	   }
+	    }
+	  break;
+
+	default:
+	  break;
 	}
       break;
 
