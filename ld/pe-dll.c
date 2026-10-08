@@ -2906,10 +2906,6 @@ aarch64_make_imp_offset(const char* imp_symbol_name,
 			const char* imp_offset_name, const int offset,
 			unsigned rd, const char* caller_label, bfd* parent)
 {
-  /* offset should be an adrp immediate size.  */
-  if (offset >= (1 << 20) || offset < -(1 << 20))
-    einfo (_("%X%P: offset out of range: %d\n"), offset);
-
   if (pe_dll_extra_pe_debug)
     printf("symbol: %s imp_offset_name: %s offset: %u rs: %u caller: %s\n",
 	   imp_symbol_name, imp_offset_name, offset, rd, caller_label);
@@ -2952,7 +2948,9 @@ aarch64_make_imp_offset(const char* imp_symbol_name,
   td[0] |= rd;
   td[1] |= (rd << 5) | rd;
 
-  /* The bottom 12 bits are handled outside the thunk.  */
+  /* offset is extracted from a 21-bit adrp immediate.  The bottom 12 bits are
+     handled outside the thunk.  The remaining bits are in range for an ADD/SUB
+     with shifted immediate.  */
   unsigned imm = offset & -4096;
   if (offset < 0)
   {
