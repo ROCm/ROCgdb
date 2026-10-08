@@ -2885,7 +2885,7 @@ riscv_resolve_tlsdesc_lo_relocs (riscv_pcrel_relocs *p)
 	int type = ELFNN_R_TYPE (r->reloc->r_info);
 	bfd_vma pc = sec_addr (r->input_section) + r->reloc->r_offset;
 	const char *msg = NULL;
-	bfd_vma insn, value;
+	bfd_vma insn = 0, value;
 	bool le;
 
 	if ((type == R_RISCV_TLSDESC_CALL) != (pass == 1))
