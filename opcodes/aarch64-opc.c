@@ -1538,6 +1538,15 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	    }
 	  break;
 
+	case AARCH64_OPND_Rt_LS64:
+	  if (opnd->reg.regno > 22 || opnd->reg.regno % 2 != 0)
+	    {
+	      set_other_error (mismatch_detail, idx,
+			       _("invalid Rt register number in 64-byte load/store"));
+	      return false;
+	    }
+	  break;
+
 	default:
 	  break;
 	}

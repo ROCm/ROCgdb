@@ -57,6 +57,11 @@
 	st64bv0 x0, x20, [x2]
 	st64bv0 x0, x22, [x2]
 
+/* Rt = 1, 24 or 31 is not valid in an ld64b instruction.  */
+.inst	0xf83fd001
+.inst	0xf83fd018
+.inst	0xf83fd01f
+
 .arch armv8-a
 /* Accelerator Data system register.  */
 	mrs x0, accdata_el1

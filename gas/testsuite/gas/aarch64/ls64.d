@@ -54,5 +54,8 @@ Disassembly of section \.text:
 .*:	f820a052 	st64bv0	x0, x18, \[x2\]
 .*:	f820a054 	st64bv0	x0, x20, \[x2\]
 .*:	f820a056 	st64bv0	x0, x22, \[x2\]
+.*:	f83fd001 	.inst	0xf83fd001 ; undefined
+.*:	f83fd018 	.inst	0xf83fd018 ; undefined
+.*:	f83fd01f 	.inst	0xf83fd01f ; undefined
 .*:	d538d0a0 	mrs	x0, accdata_el1
 .*:	d518d0a0 	msr	accdata_el1, x0
