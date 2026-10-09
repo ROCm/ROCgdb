@@ -570,4 +570,9 @@
   {
     { "vbitrevb", { XM, EXx }, NO_PREFIX },
     { Bad_Opcode }
-  }
+  },
+  /* EVEX_W_MAP6_95_X86_64_L_2 */
+  {
+    { PREFIX_TABLE (PREFIX_EVEX_MAP6_95_X86_64_L_2_W_0) },
+    { PREFIX_TABLE (PREFIX_EVEX_MAP6_95_X86_64_L_2_W_1) },
+  },

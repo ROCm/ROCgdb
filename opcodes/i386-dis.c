@@ -463,6 +463,7 @@ fetch_error (const instr_info *ins)
 #define Mymm { OP_M, ymm_mode }
 #define Gb { OP_G, b_mode }
 #define Gbnd { OP_G, bnd_mode }
+#define BSR { OP_G, bsr_mode }
 #define Gv { OP_G, v_mode }
 #define Gd { OP_G, d_mode }
 #define Gdq { OP_G, dq_mode }
@@ -722,6 +723,8 @@ enum
   ymmq_mode,
   /* TMM operand */
   tmm_mode,
+  /* Block scale register operand.  */
+  bsr_mode,
   /* d_mode in 32bit, q_mode in 64bit mode.  */
   m_mode,
   /* pair of v_mode operands */
@@ -971,6 +974,7 @@ enum
   MOD_0F38F8,
 
   MOD_VEX_0F3849_X86_64_L_0_W_0,
+  MOD_VEX_0F3849_X86_64_L_0_W_1,
 
   MOD_EVEX_MAP4_60,
   MOD_EVEX_MAP4_61,
@@ -995,6 +999,7 @@ enum
 
   RM_VEX_0F3849_X86_64_L_0_W_0_M_1_P_0_R_0,
   RM_VEX_0F3849_X86_64_L_0_W_0_M_1_P_3,
+  RM_VEX_0F3849_X86_64_L_0_W_1_M_1_P_3,
 };
 
 enum
@@ -1141,6 +1146,7 @@ enum
   PREFIX_VEX_0F3848_X86_64_L_0_W_0,
   PREFIX_VEX_0F3849_X86_64_L_0_W_0_M_0,
   PREFIX_VEX_0F3849_X86_64_L_0_W_0_M_1,
+  PREFIX_VEX_0F3849_X86_64_L_0_W_1_M_1,
   PREFIX_VEX_0F384A_X86_64_W_0_L_0,
   PREFIX_VEX_0F384B_X86_64_L_0_W_0,
   PREFIX_VEX_0F3850_W_0,
@@ -1299,6 +1305,8 @@ enum
   PREFIX_EVEX_MAP6_4E,
   PREFIX_EVEX_MAP6_56,
   PREFIX_EVEX_MAP6_57,
+  PREFIX_EVEX_MAP6_95_X86_64_L_2_W_0,
+  PREFIX_EVEX_MAP6_95_X86_64_L_2_W_1,
   PREFIX_EVEX_MAP6_98,
   PREFIX_EVEX_MAP6_9A,
   PREFIX_EVEX_MAP6_9C,
@@ -1410,6 +1418,7 @@ enum
   X86_64_EVEX_0F3A77,
 
   X86_64_EVEX_MAP5_6F,
+  X86_64_EVEX_MAP6_95,
 };
 
 enum
@@ -1630,6 +1639,7 @@ enum
   EVEX_LEN_MAP5_7E,
   EVEX_LEN_MAP6_80_W_0,
   EVEX_LEN_MAP6_80_W_1,
+  EVEX_LEN_MAP6_95_X86_64,
 };
 
 enum
@@ -1894,6 +1904,7 @@ enum
   EVEX_W_MAP5_7E_P_1,
   EVEX_W_MAP6_80,
   EVEX_W_MAP6_81,
+  EVEX_W_MAP6_95_X86_64_L_2,
 };
 
 typedef bool (*op_rtn) (instr_info *ins, int bytemode, int sizeflag);
@@ -2718,6 +2729,10 @@ static const char att_names_zmm[][8] = {
 static const char att_names_tmm[][8] = {
   "%tmm0", "%tmm1", "%tmm2", "%tmm3",
   "%tmm4", "%tmm5", "%tmm6", "%tmm7"
+};
+
+static const char att_names_bsr[][8] = {
+  "%bsr0"
 };
 
 static const char att_names_mask[][8] = {
@@ -4185,6 +4200,14 @@ static const struct dis386 prefix_table[][4] = {
     { Bad_Opcode },
     { Bad_Opcode },
     { RM_TABLE (RM_VEX_0F3849_X86_64_L_0_W_0_M_1_P_3) },
+  },
+
+  /* PREFIX_VEX_0F3849_X86_64_L_0_W_1_M_1 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { RM_TABLE (RM_VEX_0F3849_X86_64_L_0_W_1_M_1_P_3) },
   },
 
   /* PREFIX_VEX_0F384A_X86_64_W_0_L_0 */
@@ -8138,6 +8161,7 @@ static const struct dis386 vex_w_table[][2] = {
   {
     /* VEX_W_0F3849_X86_64_L_0 */
     { MOD_TABLE (MOD_VEX_0F3849_X86_64_L_0_W_0) },
+    { MOD_TABLE (MOD_VEX_0F3849_X86_64_L_0_W_1) },
   },
   {
     /* VEX_W_0F384A_X86_64 */
@@ -8714,6 +8738,11 @@ static const struct dis386 mod_table[][2] = {
     { PREFIX_TABLE (PREFIX_VEX_0F3849_X86_64_L_0_W_0_M_0) },
     { PREFIX_TABLE (PREFIX_VEX_0F3849_X86_64_L_0_W_0_M_1) },
   },
+  {
+    /* MOD_VEX_0F3849_X86_64_L_0_W_1 */
+    { Bad_Opcode },
+    { PREFIX_TABLE (PREFIX_VEX_0F3849_X86_64_L_0_W_1_M_1) },
+  },
 
 #include "i386-dis-evex-mod.h"
 };
@@ -8823,6 +8852,10 @@ static const struct dis386 rm_table[][8] = {
   {
     /* RM_VEX_0F3849_X86_64_L_0_W_0_M_1_P_3 */
     { "tilezero",	{ TMM, Skip_MODRM }, 0 },
+  },
+  {
+    /* RM_VEX_0F3849_X86_64_L_0_W_1_M_1_P_3 */
+    { "bsrinit",	{ BSR, Skip_MODRM }, 0 },
   },
 };
 
@@ -12122,6 +12155,14 @@ print_register (instr_info *ins, unsigned int reg, unsigned int rexmask,
 	  return;
 	}
       names = att_names_bnd;
+      break;
+    case bsr_mode:
+      if (reg)
+	{
+	  oappend (ins, "(bad)");
+	  return;
+	}
+      names = att_names_bsr;
       break;
     case indir_v_mode:
       if (ins->address_mode == mode_64bit && ins->isa64 == intel64)

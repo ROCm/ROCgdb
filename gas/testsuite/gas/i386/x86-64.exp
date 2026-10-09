@@ -693,6 +693,7 @@ run_dump_test "x86-64-amx"
 run_dump_test "x86-64-amx-intel"
 run_dump_test "x86-64-amx-bad"
 run_dump_test "x86-64-ace_v1"
+run_dump_test "x86-64-ace_v1-intel"
 
 if { ![istarget "*-*-aix*"]
      && ![istarget "*-*-*bsd*"]

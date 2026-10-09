@@ -212,4 +212,10 @@ static const struct dis386 evex_len_table[][3] = {
     { "vbmacxor16x16x16", { XM, Vex, EXx }, NO_PREFIX },
     { "vbmacxor16x16x16", { XM, Vex, EXx }, NO_PREFIX },
   },
+  /* EVEX_LEN_MAP6_95_X86_64 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { VEX_W_TABLE (EVEX_W_MAP6_95_X86_64_L_2) },
+  },
 };

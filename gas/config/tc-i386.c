@@ -2613,7 +2613,10 @@ match_simd_size (const i386_operand_type *t_types, unsigned int wanted,
 	   || (i.types[given].bitfield.zmmword
 	       && !t_types[wanted].bitfield.zmmword)
 	   || (i.types[given].bitfield.tmmword
-	       && !t_types[wanted].bitfield.tmmword));
+	       && !t_types[wanted].bitfield.tmmword)
+	   /* RegSIMD|Byte marks %bsr0; it is not the operand size.  */
+	   || (i.types[given].bitfield.byte
+	       && !t_types[wanted].bitfield.byte));
 }
 
 /* Return 1 if there is no conflict in any size between operand GIVEN
@@ -3970,6 +3973,7 @@ const type_names[] =
   { { .bitfield = { .class = RegSIMD, .ymmword = 1 } }, "rYMM" },
   { { .bitfield = { .class = RegSIMD, .zmmword = 1 } }, "rZMM" },
   { { .bitfield = { .class = RegSIMD, .tmmword = 1 } }, "rTMM" },
+  { { .bitfield = { .class = RegSIMD, .byte = 1 } }, "bsr" },
   { { .bitfield = { .class = RegMask } }, "Mask reg" },
   { { .bitfield = { .class = RegBND } }, "rBND" },
 };
@@ -9911,7 +9915,8 @@ match_template (char mnem_suffix)
 		      && (intel_syntax || intel_mnemonic))
 		    found_reverse_match |= Opcode_FloatR;
 		}
-	      else if (is_cpu (t, CpuFMA4) || is_cpu (t, CpuXOP))
+	      else if (is_cpu (t, CpuFMA4) || is_cpu (t, CpuXOP)
+		       || is_cpu (t, CpuACE_V1))
 		{
 		  found_reverse_match = Opcode_VexW;
 		  goto check_operands_345;
@@ -10236,8 +10241,10 @@ match_template (char mnem_suffix)
 	 flipping VEX.W.  */
       i.tm.opcode_modifier.vexw ^= VEXW0 ^ VEXW1;
 
-      /* In 3-operand insns XOP.W changes which operand goes into XOP.vvvv.  */
-      i.tm.opcode_modifier.vexvvvv = VexVVVV_SRC1;
+      /* In most 3-operand insns XOP.W changes which operand goes into
+	 XOP.vvvv.  */
+      if (!is_cpu (t, CpuACE_V1))
+	i.tm.opcode_modifier.vexvvvv = VexVVVV_SRC1;
 
     swap_first_2:
       j = i.tm_types[0].bitfield.imm8;
@@ -11113,11 +11120,11 @@ process_operands (void)
   else if (i.tm.opcode_modifier.immext)
     process_immext ();
 
-  /* TILEZERO is unusual in that it has a single operand encoded in ModR/M.reg,
-     not ModR/M.rm.  To avoid special casing this in build_modrm_byte(), fake a
-     new destination operand here, while converting the source one to register
-     number 0.  */
-  if (i.tm.mnem_off == MN_tilezero)
+  /* TILEZERO and BSRINIT are unusual in that they have a single operand
+     encoded in ModR/M.reg, not ModR/M.rm.  To avoid special casing this in
+     build_modrm_byte(), fake a new destination operand here, while converting
+     the source one to register number 0.  */
+  if (i.tm.mnem_off == MN_tilezero || i.tm.mnem_off == MN_bsrinit)
     {
       copy_operand (1, 0);
       i.op[0].regs -= i.op[0].regs->reg_num;
@@ -17086,6 +17093,12 @@ static bool check_register (const reg_entry *r)
   if (r->reg_type.bitfield.tmmword
       && (!cpu_arch_flags.bitfield.cputile
           || flag_code != CODE_64BIT))
+    return false;
+
+  if (r->reg_type.bitfield.class == RegSIMD
+      && r->reg_type.bitfield.byte
+      && (!cpu_arch_flags.bitfield.cpuace_v1
+	  || flag_code != CODE_64BIT))
     return false;
 
   if (r->reg_type.bitfield.class == RegBND && !cpu_arch_flags.bitfield.cpumpx)

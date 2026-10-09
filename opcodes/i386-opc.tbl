@@ -57,6 +57,7 @@
 #define RegYMM Class=RegSIMD|Ymmword
 #define RegZMM Class=RegSIMD|Zmmword
 #define RegTMM Class=RegSIMD|Tmmword
+#define RegBSR Class=RegSIMD|Byte
 
 #define RegMask Class=RegMask
 
@@ -3315,6 +3316,15 @@ tdphbf8ps, 0xf3fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, Re
 tdphf8ps, 0x66fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 
 // AMX instructions end.
+
+// ACE instructions.
+
+bsrinit, 0xf249, ACE_V1, Modrm|Vex128|Space0F38|VexW1|NoSuf, { RegBSR }
+bsrmovf, 0x95, ACE_V1, Modrm|EVex512|Map6|VexW1|Src1VVVV|Disp8MemShift=6|NoSuf, { RegZMM|Unspecified|BaseIndex, RegZMM, RegBSR }
+bsrmovh, 0xf295, ACE_V1, D|Modrm|EVex512|Map6|VexW|Disp8MemShift=6|NoSuf, { RegBSR, RegZMM|Unspecified|BaseIndex }
+bsrmovl, 0xf395, ACE_V1, D|Modrm|EVex512|Map6|VexW|Disp8MemShift=6|NoSuf, { RegBSR, RegZMM|Unspecified|BaseIndex }
+
+// ACE instructions end.
 
 // KEYLOCKER instructions.
 

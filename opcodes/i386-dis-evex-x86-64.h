@@ -28,3 +28,8 @@
     { Bad_Opcode },
     { PREFIX_TABLE (PREFIX_EVEX_MAP5_6F_X86_64) },
   },
+  /* X86_64_EVEX_MAP6_95 */
+  {
+    { Bad_Opcode },
+    { EVEX_LEN_TABLE (EVEX_LEN_MAP6_95_X86_64) },
+  },

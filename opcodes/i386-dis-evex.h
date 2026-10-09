@@ -1624,7 +1624,7 @@ static const struct dis386 evex_table[][256] = {
     { Bad_Opcode },
     { Bad_Opcode },
     { Bad_Opcode },
-    { Bad_Opcode },
+    { X86_64_TABLE (X86_64_EVEX_MAP6_95) },
     { "vfmaddsub132p%XH",  { XM, Vex, EXxh, EXxEVexR }, PREFIX_DATA },
     { "vfmsubadd132p%XH",  { XM, Vex, EXxh, EXxEVexR }, PREFIX_DATA },
     /* 98 */

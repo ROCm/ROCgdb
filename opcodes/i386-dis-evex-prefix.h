@@ -761,6 +761,20 @@
     { Bad_Opcode },
     { "vfcmaddcs%XH",     { { DistinctDest_Fixup, scalar_mode }, VexScalar, EXd, EXxEVexR }, 0 },
   },
+  /* PREFIX_EVEX_MAP6_95_X86_64_L_2_W_0 */
+  {
+    { Bad_Opcode },
+    { "bsrmovl", { EXEvexXNoBcst, BSR }, 0 },
+    { Bad_Opcode },
+    { "bsrmovh", { EXEvexXNoBcst, BSR }, 0 },
+  },
+  /* PREFIX_EVEX_MAP6_95_X86_64_L_2_W_1 */
+  {
+    { "bsrmovf", { BSR, Vex, EXEvexXNoBcst }, 0 },
+    { "bsrmovl", { BSR, EXEvexXNoBcst }, 0 },
+    { Bad_Opcode },
+    { "bsrmovh", { BSR, EXEvexXNoBcst }, 0 },
+  },
   /* PREFIX_EVEX_MAP6_98 */
   {
     { "vfmadd132%XB",	{ XM, Vex, EXxh }, 0 },

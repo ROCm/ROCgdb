@@ -20,8 +20,19 @@ Disassembly of section \.text:
 [ 	]*[a-f0-9]+:[ 	]*62 63 7f 48 07 f5 08[ 	]+tcvtrowps2bf16h \$0x8,%tmm5,%zmm30
 [ 	]*[a-f0-9]+:[ 	]*62 62 6c 48 6d f5[ 	]+tcvtrowps2phh %edx,%tmm5,%zmm30
 [ 	]*[a-f0-9]+:[ 	]*62 63 7c 48 07 f5 08[ 	]+tcvtrowps2phh \$0x8,%tmm5,%zmm30
+[ 	]*[a-f0-9]+:[ 	]*62 d6 ff 48 95 c2[ 	]+bsrmovh %zmm10,%bsr0
+[ 	]*[a-f0-9]+:[ 	]*62 f6 ff 48 95 41 7f[ 	]+bsrmovh 0x1fc0\(%rcx\),%bsr0
+[ 	]*[a-f0-9]+:[ 	]*62 f6 7f 48 95 c4[ 	]+bsrmovh %bsr0,%zmm4
+[ 	]*[a-f0-9]+:[ 	]*62 f6 7f 48 95 41 80[ 	]+bsrmovh %bsr0,-0x2000\(%rcx\)
 [ 	]*[a-f0-9]+:[ 	]*62 62 6e 48 6d f5[ 	]+tcvtrowps2bf16l %edx,%tmm5,%zmm30
 [ 	]*[a-f0-9]+:[ 	]*62 63 7e 48 77 f5 08[ 	]+tcvtrowps2bf16l \$0x8,%tmm5,%zmm30
 [ 	]*[a-f0-9]+:[ 	]*62 62 6d 48 6d f5[ 	]+tcvtrowps2phl %edx,%tmm5,%zmm30
 [ 	]*[a-f0-9]+:[ 	]*62 63 7f 48 77 f5 08[ 	]+tcvtrowps2phl \$0x8,%tmm5,%zmm30
+[ 	]*[a-f0-9]+:[ 	]*62 d6 fe 48 95 c2[ 	]+bsrmovl %zmm10,%bsr0
+[ 	]*[a-f0-9]+:[ 	]*62 f6 fe 48 95 41 7f[ 	]+bsrmovl 0x1fc0\(%rcx\),%bsr0
+[ 	]*[a-f0-9]+:[ 	]*62 f6 7e 48 95 c4[ 	]+bsrmovl %bsr0,%zmm4
+[ 	]*[a-f0-9]+:[ 	]*62 f6 7e 48 95 41 80[ 	]+bsrmovl %bsr0,-0x2000\(%rcx\)
+[ 	]*[a-f0-9]+:[ 	]*c4 e2 fb 49 c0[ 	]+bsrinit %bsr0
+[ 	]*[a-f0-9]+:[ 	]*62 f6 f4 48 95 c3[ 	]+bsrmovf %zmm3,%zmm1,%bsr0
+[ 	]*[a-f0-9]+:[ 	]*62 f6 f4 48 95 41 7f[ 	]+bsrmovf 0x1fc0\(%rcx\),%zmm1,%bsr0
 #pass

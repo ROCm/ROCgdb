@@ -353,6 +353,8 @@ tmm4, Class=RegSIMD|Tmmword, 0, 4, Dw2Inval, Dw2Inval
 tmm5, Class=RegSIMD|Tmmword, 0, 5, Dw2Inval, Dw2Inval
 tmm6, Class=RegSIMD|Tmmword, 0, 6, Dw2Inval, Dw2Inval
 tmm7, Class=RegSIMD|Tmmword, 0, 7, Dw2Inval, Dw2Inval
+// Block scale register for ACE
+bsr0, Class=RegSIMD|Instance=Accum|Byte, 0, 0, Dw2Inval, Dw2Inval
 // Bound registers for MPX
 bnd0, Class=RegBND, 0, 0, Dw2Inval, 126
 bnd1, Class=RegBND, 0, 1, Dw2Inval, 127

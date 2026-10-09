@@ -19,4 +19,14 @@ start:
 
 	tcvtrowps2ph\p   %edx, %tmm5, %zmm30
 	tcvtrowps2ph\p   $8, %tmm5, %zmm30
+
+	bsrmov\p %zmm10, %bsr0
+	bsrmov\p 8128(%rcx), %bsr0
+
+	bsrmov\p %bsr0, %zmm4
+	bsrmov\p %bsr0, -8192(%rcx)
 	.endr
+
+	bsrinit %bsr0
+	bsrmovf %zmm3, %zmm1, %bsr0
+	bsrmovf 8128(%rcx), %zmm1, %bsr0
