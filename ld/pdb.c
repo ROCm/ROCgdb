@@ -4359,7 +4359,7 @@ create_source_info_substream (void **data, uint32_t *size,
 			      struct source_files_info *source)
 {
   uint16_t dedupe_source_files_count = 0;
-  uint16_t source_files_count = 0;
+  unsigned int source_files_count = 0;
   uint32_t strings_len = 0;
   uint8_t *ptr;
 
