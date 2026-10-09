@@ -33,6 +33,10 @@ from pathlib import Path
 ROCGDB_REPO = "ROCm/ROCgdb"
 BASE_BRANCH = "amd-staging"
 CONFIG_FILE = Path(".github/configs.json")
+# Multi-arch CI workflow embeds the TheRock ref in two reusable-workflow
+# `uses: ...@<sha>` lines (GitHub requires a literal ref there). They must stay
+# in sync with therock_commit_ref, so we rewrite them on every bump.
+MULTI_ARCH_WORKFLOW = Path(".github/workflows/therock-multi-arch-ci.yml")
 
 BUILD_IMAGE = "ghcr.io/rocm/therock_build_manylinux_x86_64"
 
@@ -269,6 +273,27 @@ def write_deps(pins: dict[str, str]) -> None:
     CONFIG_FILE.write_text(json.dumps(pins, indent=2) + "\n")
 
 
+def update_workflow_therock_ref(old_commit: str, new_commit: str) -> bool:
+    """Rewrite the pinned TheRock SHA in MULTI_ARCH_WORKFLOW.
+
+    The multi-arch workflow reads therock_commit_ref from configs.json for its
+    `ref:` inputs, but GitHub forces the two reusable-workflow `uses: ...@<sha>`
+    lines to use a literal ref. Keep those literals in lock-step with
+    configs.json so a bump never leaves the workflow pinned to a stale ref.
+
+    Returns True if the file changed.
+    """
+    if not old_commit or old_commit == new_commit:
+        return False
+    if not MULTI_ARCH_WORKFLOW.exists():
+        return False
+    text = MULTI_ARCH_WORKFLOW.read_text()
+    if old_commit not in text:
+        return False
+    MULTI_ARCH_WORKFLOW.write_text(text.replace(old_commit, new_commit))
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Branch / commit / PR
 # ---------------------------------------------------------------------------
@@ -429,6 +454,8 @@ def run_update(dry_run: bool) -> str:
     )
     write_deps(updated)
     run(["git", "add", str(CONFIG_FILE)])
+    if commit_changed and update_workflow_therock_ref(old_commit, commit):
+        run(["git", "add", str(MULTI_ARCH_WORKFLOW)])
     run(["git", "commit", "-m", message])
     run(["git", "push", "origin", branch])
 
