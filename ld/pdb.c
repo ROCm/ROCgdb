@@ -3811,6 +3811,7 @@ create_linker_symbols (bfd *abfd, uint8_t **syms, uint32_t *sym_byte_size,
   env_size += strlen (exeval) + 1;
   env_size += sizeof (pdb);
   env_size += strlen (pdbval) + 1;
+  env_size++; /* Terminating empty string.  */
 
   if (env_size % 4)
     padding2 = 4 - (env_size % 4);
@@ -3882,6 +3883,8 @@ create_linker_symbols (bfd *abfd, uint8_t **syms, uint32_t *sym_byte_size,
   ptr += sizeof (pdb);
   memcpy (ptr, pdbval, strlen (pdbval) + 1);
   ptr += strlen (pdbval) + 1;
+
+  *ptr++ = 0;
 
   /* Microsoft's LINK also includes "cmd", the command-line options passed
      to the linker, but unfortunately we don't have access to argc and argv
