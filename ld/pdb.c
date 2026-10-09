@@ -3933,10 +3933,7 @@ populate_module_stream (bfd *stream, bfd *mod, uint32_t *sym_byte_size,
 	    {
 	      if (!handle_debugt_section (s, mod, types, ids, mod_num, strings,
 					  &map, &num_types))
-		{
-		  free (mod_source->files);
-		  return false;
-		}
+		return false;
 
 	      break;
 	    }
@@ -3955,7 +3952,6 @@ populate_module_stream (bfd *stream, bfd *mod, uint32_t *sym_byte_size,
 		{
 		  free (c13_info);
 		  free (syms);
-		  free (mod_source->files);
 		  free (map);
 		  return false;
 		}
