@@ -5402,7 +5402,14 @@ create_pdb_file (bfd *abfd, const char *pdb_name, const unsigned char *guid)
   ret = true;
 
 end:
-  bfd_close (pdb);
+  if (!bfd_close (pdb))
+    {
+      einfo (_("%P: cannot write PDB file: %E\n"));
+      ret = false;
+    }
+
+  if (!ret)
+    unlink_if_ordinary (pdb_name);
 
   htab_delete (strings.hashmap);
 

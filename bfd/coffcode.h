@@ -4325,8 +4325,9 @@ coff_write_object_contents (bfd * abfd)
        but before header is written so we can update it to point to debug directory.  */
     struct pe_tdata *pe = pe_data (abfd);
 
-    if (pe->build_id.after_write_object_contents != NULL)
-      (*pe->build_id.after_write_object_contents) (abfd);
+    if (pe->build_id.after_write_object_contents != NULL
+	&& !(*pe->build_id.after_write_object_contents) (abfd))
+      return false;
   }
 #endif
 
