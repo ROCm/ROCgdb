@@ -600,6 +600,7 @@ fetch_error (const instr_info *ins)
 #define VexGatherD { OP_VEX, vex_vsib_d_w_dq_mode }
 #define VexGatherQ { OP_VEX, vex_vsib_q_w_dq_mode }
 #define VexGdq { OP_VEX, dq_mode }
+#define VexGd { OP_VEX, d_mode }
 #define VexGb { OP_VEX, b_mode }
 #define VexGv { OP_VEX, v_mode }
 #define VexTmm { OP_VEX, tmm_mode }
@@ -1220,6 +1221,8 @@ enum
   PREFIX_EVEX_0F383A,
   PREFIX_EVEX_0F3841_W_0,
   PREFIX_EVEX_0F384A_X86_64_W_0_L_2,
+  PREFIX_EVEX_0F384A_X86_64_W_1_L_2,
+  PREFIX_EVEX_0F384B_X86_64_W_1_L_2,
   PREFIX_EVEX_0F3852,
   PREFIX_EVEX_0F3853,
   PREFIX_EVEX_0F3868,
@@ -1231,11 +1234,13 @@ enum
   PREFIX_EVEX_0F38AA,
   PREFIX_EVEX_0F38AB,
 
-  PREFIX_EVEX_0F3A07_X86_64_W_0_L_2,
+  PREFIX_EVEX_0F3A07_X86_64_L_2_W_0,
+  PREFIX_EVEX_0F3A07_X86_64_L_2_W_1,
   PREFIX_EVEX_0F3A08,
   PREFIX_EVEX_0F3A0A,
   PREFIX_EVEX_0F3A26,
   PREFIX_EVEX_0F3A27,
+  PREFIX_EVEX_0F3A2F_X86_64_W_1_L_2,
   PREFIX_EVEX_0F3A42_W_0,
   PREFIX_EVEX_0F3A52,
   PREFIX_EVEX_0F3A53,
@@ -1415,6 +1420,7 @@ enum
   X86_64_EVEX_0F384B,
   X86_64_EVEX_0F386D,
   X86_64_EVEX_0F3A07,
+  X86_64_EVEX_0F3A2F,
   X86_64_EVEX_0F3A77,
 
   X86_64_EVEX_MAP5_6F,
@@ -1614,6 +1620,7 @@ enum
   EVEX_LEN_0F381B,
   EVEX_LEN_0F3836,
   EVEX_LEN_0F384A_X86_64_W_0,
+  EVEX_LEN_0F384A_X86_64_W_1,
   EVEX_LEN_0F384B_X86_64,
   EVEX_LEN_0F385A,
   EVEX_LEN_0F385B,
@@ -1622,12 +1629,13 @@ enum
   EVEX_LEN_0F38C7,
   EVEX_LEN_0F3A00,
   EVEX_LEN_0F3A01,
-  EVEX_LEN_0F3A07_X86_64_W_0,
+  EVEX_LEN_0F3A07_X86_64,
   EVEX_LEN_0F3A18,
   EVEX_LEN_0F3A19,
   EVEX_LEN_0F3A1A,
   EVEX_LEN_0F3A1B,
   EVEX_LEN_0F3A23,
+  EVEX_LEN_0F3A2F_X86_64_W_1,
   EVEX_LEN_0F3A38,
   EVEX_LEN_0F3A39,
   EVEX_LEN_0F3A3A,
@@ -1854,6 +1862,7 @@ enum
   EVEX_W_0F383A_P_1,
   EVEX_W_0F3841,
   EVEX_W_0F384A_X86_64,
+  EVEX_W_0F384B_X86_64_L_2,
   EVEX_W_0F3859,
   EVEX_W_0F385A_L_n,
   EVEX_W_0F385B_L_2,
@@ -1864,13 +1873,14 @@ enum
   EVEX_W_0F387B,
   EVEX_W_0F3883,
 
-  EVEX_W_0F3A07_X86_64,
+  EVEX_W_0F3A07_X86_64_L_2,
   EVEX_W_0F3A18_L_n,
   EVEX_W_0F3A19_L_n,
   EVEX_W_0F3A1A_L_2,
   EVEX_W_0F3A1B_L_2,
   EVEX_W_0F3A21,
   EVEX_W_0F3A23_L_n,
+  EVEX_W_0F3A2F_X86_64,
   EVEX_W_0F3A38_L_n,
   EVEX_W_0F3A39_L_n,
   EVEX_W_0F3A3A_L_2,
@@ -14283,6 +14293,10 @@ OP_VEX (instr_info *ins, int bytemode, int sizeflag ATTRIBUTE_UNUSED)
 
     case b_mode:
       oappend_register (ins, att_names8rex[reg]);
+      return true;
+
+    case d_mode:
+      oappend_register (ins, att_names32[reg]);
       return true;
 
     case q_mode:

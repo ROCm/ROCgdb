@@ -248,11 +248,23 @@
     { Bad_Opcode },
     { "vpmovssdb",	{ EXxmmqd, XM }, 0 },
   },
-  /* PREFIX_EVEX_0F384A_W_0_L_2 */
+  /* PREFIX_EVEX_0F384A_X86_64_W_0_L_2 */
   {
     { Bad_Opcode },
-    { "tcvtrowd2ps",	{ XM, Rtmm, VexGdq }, 0 },
-    { "tilemovrow",	{ XM, Rtmm, VexGdq }, 0 },
+    { "tcvtrowd2ps",	{ XM, Rtmm, VexGd }, 0 },
+    { "tilemovrow",	{ XM, Rtmm, VexGd }, 0 },
+  },
+  /* PREFIX_EVEX_0F384A_X86_64_W_1_L_2 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { "tilemovrow",	{ TMM, Ux, VexGd }, 0 },
+  },
+  /* PREFIX_EVEX_0F384B_X86_64_W_1_L_2 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { "tilemovcol",	{ TMM, Ux, VexGd }, 0 },
   },
   /* PREFIX_EVEX_0F3852 */
   {
@@ -277,10 +289,10 @@
   },
   /* PREFIX_EVEX_0F386D_W_0_L_2 */
   {
-    { "tcvtrowps2phh",	{ XM, Rtmm, VexGdq }, 0 },
-    { "tcvtrowps2bf16l",	{ XM, Rtmm, VexGdq }, 0 },
-    { "tcvtrowps2phl",	{ XM, Rtmm, VexGdq }, 0 },
-    { "tcvtrowps2bf16h",	{ XM, Rtmm, VexGdq }, 0 },
+    { "tcvtrowps2phh",	{ XM, Rtmm, VexGd }, 0 },
+    { "tcvtrowps2bf16l",	{ XM, Rtmm, VexGd }, 0 },
+    { "tcvtrowps2phl",	{ XM, Rtmm, VexGd }, 0 },
+    { "tcvtrowps2bf16h",	{ XM, Rtmm, VexGd }, 0 },
   },
   /* PREFIX_EVEX_0F3872 */
   {
@@ -324,12 +336,18 @@
     { "%XEvfmsub213s%XW",	{ XMScalar, VexScalar, EXdq, EXxEVexR }, 0 },
     { "v4fnmadds%XS",	{ XMScalar, VexScalar, Mxmm }, 0 },
   },
-  /* PREFIX_EVEX_0F3A07_W_0_L_2 */
+  /* PREFIX_EVEX_0F3A07_X86_64_L_2_W_0 */
   {
     { "tcvtrowps2phh",	{ XM, Rtmm, Ib }, 0 },
     { "tcvtrowd2ps",	{ XM, Rtmm, Ib }, 0 },
     { "tilemovrow",	{ XM, Rtmm, Ib }, 0 },
     { "tcvtrowps2bf16h",	{ XM, Rtmm, Ib }, 0 },
+  },
+  /* PREFIX_EVEX_0F3A07_X86_64_L_2_W_1 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { "tilemovrow",	{ TMM, Ux, Ib }, 0 },
   },
   /* PREFIX_EVEX_0F3A08 */
   {
@@ -356,6 +374,12 @@
     { "vgetmants%XH",     { XMScalar, VexScalar, EXw, EXxEVexS, Ib }, 0 },
     { Bad_Opcode },
     { "vgetmants%XW",	{ XMScalar, VexScalar, EXdq, EXxEVexS, Ib }, 0 },
+  },
+  /* PREFIX_EVEX_0F3A2F_X86_64_W_1_L_2 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { "tilemovcol",	{ TMM, Ux, Ib }, 0 },
   },
   /* PREFIX_EVEX_0F3A42_W_0 */
   {

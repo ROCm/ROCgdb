@@ -9,6 +9,10 @@ start:
 
 	tilemovrow %ebx, %tmm2, %zmm1
 	tilemovrow $8, %tmm2, %zmm1
+	tilemovrow %ebx, %zmm2, %tmm1
+	tilemovrow $8, %zmm2, %tmm1
+	tilemovcol %ebx, %zmm2, %tmm1
+	tilemovcol $8, %zmm2, %tmm1
 
 	tcvtrowd2ps     %edx, %tmm5, %zmm30
 	tcvtrowd2ps     $8, %tmm5, %zmm30

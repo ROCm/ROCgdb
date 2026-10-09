@@ -16,7 +16,12 @@
   /* X86_64_EVEX_0F3A07 */
   {
     { Bad_Opcode },
-    { VEX_W_TABLE (EVEX_W_0F3A07_X86_64) },
+    { EVEX_LEN_TABLE (EVEX_LEN_0F3A07_X86_64) },
+  },
+  /* X86_64_EVEX_0F3A2F */
+  {
+    { Bad_Opcode },
+    { VEX_W_TABLE (EVEX_W_0F3A2F_X86_64) },
   },
   /* X86_64_EVEX_0F3A77 */
   {

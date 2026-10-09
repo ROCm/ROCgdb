@@ -14,6 +14,10 @@ Disassembly of section \.text:
 [ 	]*[a-f0-9]+:[ 	]*c4 e2 78 49 c0[ 	]+tilerelease
 [ 	]*[a-f0-9]+:[ 	]*62 f2 65 48 4a ca[ 	]+tilemovrow zmm1,tmm2,ebx
 [ 	]*[a-f0-9]+:[ 	]*62 f3 7d 48 07 ca 08[ 	]+tilemovrow zmm1,tmm2,0x8
+[ 	]*[a-f0-9]+:[ 	]*62 f2 e5 48 4a ca[ 	]+tilemovrow tmm1,zmm2,ebx
+[ 	]*[a-f0-9]+:[ 	]*62 f3 fd 48 07 ca 08[ 	]+tilemovrow tmm1,zmm2,0x8
+[ 	]*[a-f0-9]+:[ 	]*62 f2 e5 48 4b ca[ 	]+tilemovcol tmm1,zmm2,ebx
+[ 	]*[a-f0-9]+:[ 	]*62 f3 fd 48 2f ca 08[ 	]+tilemovcol tmm1,zmm2,0x8
 [ 	]*[a-f0-9]+:[ 	]*62 62 6e 48 4a f5[ 	]+tcvtrowd2ps zmm30,tmm5,edx
 [ 	]*[a-f0-9]+:[ 	]*62 63 7e 48 07 f5 08[ 	]+tcvtrowd2ps zmm30,tmm5,0x8
 [ 	]*[a-f0-9]+:[ 	]*62 62 6f 48 6d f5[ 	]+tcvtrowps2bf16h zmm30,tmm5,edx

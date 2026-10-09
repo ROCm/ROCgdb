@@ -3324,6 +3324,11 @@ bsrmovf, 0x95, ACE_V1, Modrm|EVex512|Map6|VexW1|Src1VVVV|Disp8MemShift=6|NoSuf, 
 bsrmovh, 0xf295, ACE_V1, D|Modrm|EVex512|Map6|VexW|Disp8MemShift=6|NoSuf, { RegBSR, RegZMM|Unspecified|BaseIndex }
 bsrmovl, 0xf395, ACE_V1, D|Modrm|EVex512|Map6|VexW|Disp8MemShift=6|NoSuf, { RegBSR, RegZMM|Unspecified|BaseIndex }
 
+tilemovcol, 0x662f, ACE_V1, Modrm|EVex512|Space0F3A|VexW1|NoSuf, { Imm8, RegZMM, RegTMM }
+tilemovcol, 0x664b, ACE_V1, Modrm|EVex512|Space0F38|VexW1|Src2VVVV|NoSuf, { Reg32, RegZMM, RegTMM }
+tilemovrow, 0x6607, ACE_V1, Modrm|EVex512|Space0F3A|VexW1|NoSuf, { Imm8, RegZMM, RegTMM }
+tilemovrow, 0x664a, ACE_V1, Modrm|EVex512|Space0F38|VexW1|Src2VVVV|NoSuf, { Reg32, RegZMM, RegTMM }
+
 // ACE instructions end.
 
 // KEYLOCKER instructions.
