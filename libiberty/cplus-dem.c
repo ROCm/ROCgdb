@@ -100,6 +100,12 @@ const struct demangler_engine libiberty_demanglers[] =
   }
   ,
   {
+    MSVC_DEMANGLING_STYLE_STRING,
+    msvc_demangling,
+    "MSVC (Microsoft Visual C++ ABI) style demangling"
+  }
+  ,
+  {
     NULL, unknown_demangling, NULL
   }
 };
@@ -110,7 +116,7 @@ const struct demangler_engine libiberty_demanglers[] =
 enum demangling_styles
 cplus_demangle_set_style (enum demangling_styles style)
 {
-  const struct demangler_engine *demangler = libiberty_demanglers; 
+  const struct demangler_engine *demangler = libiberty_demanglers;
 
   for (; demangler->demangling_style != unknown_demangling; ++demangler)
     if (style == demangler->demangling_style)
@@ -122,12 +128,73 @@ cplus_demangle_set_style (enum demangling_styles style)
   return unknown_demangling;
 }
 
+/* Optional MSVC demangler, registered by tools that link an MSVC
+   demangling implementation (e.g. libdemangle-msvc).  When NULL,
+   cplus_demangle has no MSVC support and will return NULL for MSVC
+   mangled names.  */
+
+static const struct msvc_demangler_ops *msvc_ops = NULL;
+
+void
+cplus_demangle_set_msvc_ops (const struct msvc_demangler_ops *ops)
+{
+  msvc_ops = ops;
+}
+
+const char *
+cplus_demangle_msvc_mangled_start (const char *name)
+{
+  if (msvc_ops == NULL || name == NULL)
+    return NULL;
+  return msvc_ops->mangled_start (name);
+}
+
+static int
+msvc_mangled_p (const char *name)
+{
+  return name != NULL && cplus_demangle_msvc_mangled_start (name) == name;
+}
+
+enum gnu_v3_ctor_kinds
+is_msvc_mangled_ctor (const char *name)
+{
+  if (!msvc_mangled_p (name) || msvc_ops->ctor_kind == NULL)
+    return (enum gnu_v3_ctor_kinds) 0;
+  return msvc_ops->ctor_kind (name);
+}
+
+enum gnu_v3_dtor_kinds
+is_msvc_mangled_dtor (const char *name)
+{
+  if (!msvc_mangled_p (name) || msvc_ops->dtor_kind == NULL)
+    return (enum gnu_v3_dtor_kinds) 0;
+  return msvc_ops->dtor_kind (name);
+}
+
+char *
+cplus_demangle_msvc_class_name (const char *physname)
+{
+  if (!msvc_mangled_p (physname)
+      || msvc_ops->class_name_from_physname == NULL)
+    return NULL;
+  return msvc_ops->class_name_from_physname (physname);
+}
+
+char *
+cplus_demangle_msvc_method_name (const char *physname)
+{
+  if (!msvc_mangled_p (physname)
+      || msvc_ops->method_name_from_physname == NULL)
+    return NULL;
+  return msvc_ops->method_name_from_physname (physname);
+}
+
 /* Do string name to style translation */
 
 enum demangling_styles
 cplus_demangle_name_to_style (const char *name)
 {
-  const struct demangler_engine *demangler = libiberty_demanglers; 
+  const struct demangler_engine *demangler = libiberty_demanglers;
 
   for (; demangler->demangling_style != unknown_demangling; ++demangler)
     if (strcmp (name, demangler->demangling_style_name) == 0)
@@ -158,6 +225,16 @@ cplus_demangle (const char *mangled, int options)
 
   if ((options & DMGL_STYLE_MASK) == 0)
     options |= (int) current_demangling_style & DMGL_STYLE_MASK;
+
+  /* The MSVC demangler is supplied externally, registered via
+     cplus_demangle_set_msvc_ops.  */
+  if ((MSVC_DEMANGLING || AUTO_DEMANGLING)
+      && msvc_mangled_p (mangled) && msvc_ops->demangle != NULL)
+    {
+      ret = msvc_ops->demangle (mangled, options);
+      if (ret || MSVC_DEMANGLING)
+	return ret;
+    }
 
   /* The Rust demangling is implemented elsewhere.
      Legacy Rust symbols overlap with GNU_V3, so try Rust first.  */

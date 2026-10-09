@@ -27,6 +27,13 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile {c++}]} {
     return
 }
 
+# Without the MSVC demangler, MSVC-mangled minimal symbols have no C++ names.
+set is_msvc [gdb_symbol_is_msvc even_harder]
+if {$is_msvc && ![gdb_msvc_demangler_built]} {
+    unsupported "MSVC demangler not built in"
+    return
+}
+
 # Before setting the language, try to set a few simple breakpoints
 set min_syms [list \
 		  "GDB<int>::a() const" \
@@ -42,16 +49,23 @@ foreach sym $min_syms {
 
 gdb_test_no_output "set language c++"
 
+# Itanium keeps template return types; automatic MSVC demangling omits them.
+set template_name "int GDB<char>::even_harder<int>(char)"
+if {$is_msvc} {
+    set template_name "GDB<char>::even_harder<int>(char)"
+}
+
 # A list of minimal symbol names to check.
 # Note that GDB<char>::even_harder<int>(char) is quoted and includes
 # the return type.  This is necessary because this is the demangled name
 # of the minimal symbol.
+# The MSVC case above therefore uses the name without the return type.
 set min_syms [list \
 		  "GDB<int>::operator ==" \
 		  "GDB<int>::operator==(GDB<int> const&) const" \
 		  "GDB<char>::harder(char)" \
 		  "GDB<int>::harder(int)" \
-		  {"int GDB<char>::even_harder<int>(char)"} \
+		  "\"$template_name\"" \
 		  "GDB<int>::simple()"]
 
 foreach sym $min_syms {

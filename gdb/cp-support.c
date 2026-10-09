@@ -723,10 +723,15 @@ cp_class_name_from_physname (const char *physname)
   gdb::unique_xmalloc_ptr<char> demangled_name;
   gdb::unique_xmalloc_ptr<char> ret;
   struct demangle_component *ret_comp, *prev_comp, *cur_comp;
-  demangle_parse_info_up info
-    = mangled_name_to_comp (physname, DMGL_ANSI, &storage, &demangled_name);
+  demangle_parse_info_up info;
   int done;
 
+  char *msvc_result = cplus_demangle_msvc_class_name (physname);
+  if (msvc_result != NULL)
+    return msvc_result;
+
+  info = mangled_name_to_comp (physname, DMGL_ANSI,
+			       &storage, &demangled_name);
   if (info == nullptr)
     return nullptr;
 
@@ -869,9 +874,14 @@ method_name_from_physname (const char *physname)
   gdb::unique_xmalloc_ptr<char> demangled_name;
   gdb::unique_xmalloc_ptr<char> ret;
   struct demangle_component *ret_comp;
-  demangle_parse_info_up info
-    = mangled_name_to_comp (physname, DMGL_ANSI, &storage, &demangled_name);
+  demangle_parse_info_up info;
 
+  char *msvc_result = cplus_demangle_msvc_method_name (physname);
+  if (msvc_result != NULL)
+    return msvc_result;
+
+  info = mangled_name_to_comp (physname, DMGL_ANSI,
+			       &storage, &demangled_name);
   if (info == nullptr)
     return nullptr;
 
@@ -2280,6 +2290,92 @@ test_cp_remove_params ()
 #undef CHECK_INCOMPL
 }
 
+/* Verify cp_class_name_from_physname / method_name_from_physname on a
+   Itanium-mangled physname.  */
+
+static void
+test_itanium_physname ()
+{
+  /* _ZN7MyClass3fooEv  ==  MyClass::foo()  */
+  const char *physname = "_ZN7MyClass3fooEv";
+
+  char *cls = cp_class_name_from_physname (physname);
+  SELF_CHECK (cls != NULL && strcmp (cls, "MyClass") == 0);
+  xfree (cls);
+
+  char *mtd = method_name_from_physname (physname);
+  SELF_CHECK (mtd != NULL && strcmp (mtd, "foo") == 0);
+  xfree (mtd);
+}
+
+#ifdef HAVE_MSVC_DEMANGLER
+
+/* Verify cp_class_name_from_physname / method_name_from_physname on a
+   MSVC mangled physname.  */
+
+static void
+test_msvc_physname ()
+{
+  /* Simple method: ?foo@MyClass@@QEAAXXZ ==
+     void MyClass::foo(void).  */
+  char *cls = cp_class_name_from_physname ("?foo@MyClass@@QEAAXXZ");
+  SELF_CHECK (cls != NULL && strstr (cls, "MyClass") != NULL);
+  xfree (cls);
+
+  char *mtd = method_name_from_physname ("?foo@MyClass@@QEAAXXZ");
+  SELF_CHECK (mtd != NULL && strcmp (mtd, "foo") == 0);
+  xfree (mtd);
+
+  /* Nested class: ?bar@Inner@Outer@@QEAAXXZ ==
+     void Outer::Inner::bar(void).  */
+  cls = cp_class_name_from_physname ("?bar@Inner@Outer@@QEAAXXZ");
+  SELF_CHECK (cls != NULL && strstr (cls, "Outer") != NULL
+	      && strstr (cls, "Inner") != NULL);
+  xfree (cls);
+
+  mtd = method_name_from_physname ("?bar@Inner@Outer@@QEAAXXZ");
+  SELF_CHECK (mtd != NULL && strcmp (mtd, "bar") == 0);
+  xfree (mtd);
+}
+
+/* Verify is_msvc_mangled_ctor / is_msvc_mangled_dtor on structors
+   emitted by clang-cl.  */
+
+static void
+test_msvc_structor ()
+{
+  SELF_CHECK (is_msvc_mangled_ctor ("??0A@@QEAA@XZ")
+	      == gnu_v3_complete_object_ctor);
+  SELF_CHECK (is_msvc_mangled_ctor ("??$?0H@T@@QEAA@H@Z")
+	      == gnu_v3_complete_object_ctor);
+  SELF_CHECK (is_msvc_mangled_ctor ("??0exception@std@@QEAA@AEBV01@@Z")
+	      == gnu_v3_complete_object_ctor);
+  SELF_CHECK (is_msvc_mangled_dtor ("??0A@@QEAA@XZ") == 0);
+
+  SELF_CHECK (is_msvc_mangled_dtor ("??1A@@UEAA@XZ")
+	      == gnu_v3_base_object_dtor);
+  SELF_CHECK (is_msvc_mangled_dtor ("??_DA@@QEAAXXZ")
+	      == gnu_v3_complete_object_dtor);
+  SELF_CHECK (is_msvc_mangled_dtor ("??_GA@@UEAAPEAXI@Z")
+	      == gnu_v3_deleting_dtor);
+  SELF_CHECK (is_msvc_mangled_dtor ("??_Etype_info@@UEAAPEAXI@Z")
+	      == gnu_v3_deleting_dtor);
+  SELF_CHECK (is_msvc_mangled_ctor ("??1A@@UEAA@XZ") == 0);
+
+  /* Not structors: a method, a vftable, an RTTI descriptor, EH data, an
+     Itanium name and the default/copy constructor closures.  */
+  for (const char *name : { "?catcher@ns@@YAHH@Z", "??_7A@@6B@",
+			    "??_R0?AVexception@std@@@8",
+			    "$cppxdata$??0A@@QEAA@XZ", "_ZN1AC1Ev",
+			    "??_FA@@QEAAXXZ", "??_OA@@QEAAXAEAV0@@Z" })
+    {
+      SELF_CHECK (is_msvc_mangled_ctor (name) == 0);
+      SELF_CHECK (is_msvc_mangled_dtor (name) == 0);
+    }
+}
+
+#endif /* HAVE_MSVC_DEMANGLER */
+
 } /* namespace selftests */
 
 #endif /* GDB_SELF_CHECK */
@@ -2427,5 +2523,13 @@ display the offending symbol."),
 			    selftests::test_cp_remove_params);
   selftests::register_test ("cp_search_name_hash",
 			    selftests::test_cp_search_name_hash);
+  selftests::register_test ("cp_class_name_from_physname-itanium",
+			    selftests::test_itanium_physname);
+#ifdef HAVE_MSVC_DEMANGLER
+  selftests::register_test ("cp_class_name_from_physname-msvc",
+			    selftests::test_msvc_physname);
+  selftests::register_test ("is_msvc_mangled_structor",
+			    selftests::test_msvc_structor);
+#endif
 #endif
 }

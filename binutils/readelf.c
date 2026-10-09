@@ -66,6 +66,9 @@
 #include "ctf-api.h"
 #include "sframe-api.h"
 #include "demangle.h"
+#ifdef HAVE_MSVC_DEMANGLER
+#include "demangle-msvc.h"
+#endif
 
 #include "elf/common.h"
 #include "elf/external.h"
@@ -25168,6 +25171,10 @@ main (int argc, char ** argv)
   setlocale (LC_CTYPE, "");
   bindtextdomain (PACKAGE, LOCALEDIR);
   textdomain (PACKAGE);
+
+#ifdef HAVE_MSVC_DEMANGLER
+  cplus_demangle_set_msvc_ops (&msvc_demangler_ops);
+#endif
 
   expandargv (&argc, &argv);
 

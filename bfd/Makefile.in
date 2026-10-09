@@ -180,6 +180,7 @@ am__installdirs = "$(DESTDIR)$(bfdlibdir)" "$(DESTDIR)$(infodir)" \
 	"$(DESTDIR)$(bfdincludedir)"
 LTLIBRARIES = $(bfdlib_LTLIBRARIES) $(noinst_LTLIBRARIES)
 am__DEPENDENCIES_1 =
+@ENABLE_MSVC_DEMANGLER_TRUE@am__DEPENDENCIES_2 = ../libdemangle-msvc/libdemangle-msvc.la
 am__objects_1 = archive.lo archures.lo bfd.lo bfdio.lo cache.lo \
 	coff-bfd.lo compress.lo corefile.lo format.lo hash.lo \
 	libbfd.lo linker.lo merge.lo opncls.lo reloc.lo section.lo \
@@ -385,6 +386,7 @@ MKDIR_P = @MKDIR_P@
 MKINSTALLDIRS = @MKINSTALLDIRS@
 MSGFMT = @MSGFMT@
 MSGMERGE = @MSGMERGE@
+MSVC_DEMANGLER_INCLUDE = @MSVC_DEMANGLER_INCLUDE@
 NM = @NM@
 NMEDIT = @NMEDIT@
 NO_WERROR = @NO_WERROR@
@@ -530,7 +532,8 @@ ZLIBINC = @zlibinc@
 AM_CFLAGS = $(WARN_CFLAGS) $(ZLIBINC) $(ZSTD_CFLAGS)
 AM_CPPFLAGS = -DBINDIR='"$(bindir)"' -DLIBDIR='"$(libdir)"' \
 	@LARGEFILE_CPPFLAGS@ @HDEFINES@ @COREFLAG@ @TDEFINES@ \
-	$(CSEARCH) $(CSWITCHES) $(HAVEVECS) @INCINTL@
+	$(CSEARCH) $(CSWITCHES) $(HAVEVECS) @INCINTL@ \
+	@MSVC_DEMANGLER_INCLUDE@ $(am__empty)
 @PLUGINS_TRUE@LIBDL = @lt_cv_dlopen_libs@
 
 # bfd.h goes here, for now
@@ -1216,8 +1219,16 @@ OFILES = $(BFD_BACKENDS) $(BFD_MACHINES) @COREFILE@ @bfd64_libs@
 # dependency tracking fragments are picked up in the Makefile.
 libbfd_la_SOURCES = $(BFD32_LIBS_CFILES)
 EXTRA_libbfd_la_SOURCES = $(CFILES)
-libbfd_la_DEPENDENCIES = $(OFILES) ofiles ../libsframe/libsframe.la
-libbfd_la_LIBADD = `cat ofiles` @SHARED_LIBADD@ $(LIBDL) $(ZLIB) $(ZSTD_LIBS) ../libsframe/libsframe.la
+@ENABLE_MSVC_DEMANGLER_FALSE@LIBDEMANGLE_MSVC = 
+
+# bfd_init() registers the MSVC demangler from libdemangle-msvc.
+@ENABLE_MSVC_DEMANGLER_TRUE@LIBDEMANGLE_MSVC = ../libdemangle-msvc/libdemangle-msvc.la
+libbfd_la_DEPENDENCIES = $(OFILES) ofiles ../libsframe/libsframe.la \
+	$(LIBDEMANGLE_MSVC)
+
+libbfd_la_LIBADD = `cat ofiles` @SHARED_LIBADD@ $(LIBDL) $(ZLIB) $(ZSTD_LIBS) ../libsframe/libsframe.la \
+	$(LIBDEMANGLE_MSVC)
+
 BFD_H_FILES = bfd-in.h libbfd.c hash.c section.c syms.c \
 	archive.c archures.c bfd.c bfdio.c \
 	cache.c compress.c corefile.c format.c linker.c opncls.c \

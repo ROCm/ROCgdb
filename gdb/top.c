@@ -1736,6 +1736,16 @@ This GDB was configured as follows:\n\
 "));
 #endif
 
+#ifdef HAVE_MSVC_DEMANGLER
+  gdb_printf (stream, _("\
+	     --with-msvc-demangler\n\
+"));
+#else
+  gdb_printf (stream, _("\
+	     --without-msvc-demangler\n\
+"));
+#endif
+
 #if HAVE_SOURCE_HIGHLIGHT
   gdb_printf (stream, _("\
 	     --enable-source-highlight\n\

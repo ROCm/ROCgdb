@@ -742,6 +742,9 @@ EXTERNAL
 #include "bfdver.h"
 #include "libiberty.h"
 #include "demangle.h"
+#ifdef HAVE_MSVC_DEMANGLER
+#include "demangle-msvc.h"
+#endif
 #include "safe-ctype.h"
 #include "bfdlink.h"
 #include "libbfd.h"
@@ -2003,6 +2006,11 @@ bfd_init (void)
   _bfd_error_internal = error_handler_fprintf;
   _bfd_assert_handler = _bfd_default_assert_handler;
 
+#ifdef HAVE_MSVC_DEMANGLER
+  /* Use MSVC demangling for every libbfd consumer.  */
+  cplus_demangle_set_msvc_ops (&msvc_demangler_ops);
+#endif
+
   return BFD_INIT_MAGIC;
 }
 
@@ -3004,9 +3012,33 @@ DESCRIPTION
 	Wrapper around cplus_demangle.  Strips leading underscores and
 	other such chars that would otherwise confuse the demangler.
 	If passed a g++ v3 ABI mangled name, returns a buffer allocated
-	with malloc holding the demangled name.  Returns NULL otherwise
-	and on memory alloc failure.
+	with malloc holding the demangled name.  The same applies to
+	MSVC mangled names when libdemangle-msvc is linked in.  Returns
+	NULL otherwise and on memory alloc failure.
 */
+
+/* Demangle NAME, whose MSVC-mangled part starts at MANGLED.  Text before
+   MANGLED (the tag of an EH or unwind table) is put back in front.  */
+
+static char *
+bfd_demangle_msvc (const char *name, const char *mangled, int options)
+{
+  size_t pre_len = mangled - name;
+  char *res = cplus_demangle (mangled, options);
+
+  if (res == NULL || pre_len == 0)
+    return res;
+
+  size_t len = strlen (res) + 1;
+  char *final = (char *) bfd_malloc (pre_len + len);
+  if (final != NULL)
+    {
+      memcpy (final, name, pre_len);
+      memcpy (final + pre_len, res, len);
+    }
+  free (res);
+  return final;
+}
 
 char *
 bfd_demangle (bfd *abfd, const char *name, int options)
@@ -3021,6 +3053,20 @@ bfd_demangle (bfd *abfd, const char *name, int options)
 	       && bfd_get_symbol_leading_char (abfd) == *name);
   if (skip_lead)
     ++name;
+
+  const char *msvc = cplus_demangle_msvc_mangled_start (name);
+  if (msvc != NULL)
+    {
+      res = bfd_demangle_msvc (name, msvc, options);
+      if (res == NULL && skip_lead)
+	{
+	  size_t len = strlen (name) + 1;
+	  res = (char *) bfd_malloc (len);
+	  if (res != NULL)
+	    memcpy (res, name, len);
+	}
+      return res;
+    }
 
   /* This is a hack for better error reporting on XCOFF, PowerPC64-ELF
      or the MS PE format.  These formats have a number of leading '.'s

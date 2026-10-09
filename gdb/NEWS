@@ -170,11 +170,22 @@ info locals
   intent to remove it in a future release.
   The s390 64-bit target (s390x-*) remains supported.
 
+* GDB can now demangle MSVC-mangled C++ symbols (for example
+  "?foo@@YAXXZ") when built with the in-tree libdemangle-msvc
+  library.  This is controlled by the new top-level
+  --with-msvc-demangler configure option (auto-detected for
+  Windows/PE targets when omitted; pass =yes to force enable or
+  =no to disable).  When enabled, MSVC symbols are demangled
+  transparently wherever GDB prints symbol names.
+
 * Configure changes
 
 ** --with-babeltrace has been removed.  The babeltrace library was
    only used to help GDB parse Common Trace Format (CTF) data.  The
    support for CTF has also been removed.
+
+** New --with-msvc-demangler option, enabling MSVC C++ symbol
+   demangling via the in-tree libdemangle-msvc library.
 
 * New targets
 
