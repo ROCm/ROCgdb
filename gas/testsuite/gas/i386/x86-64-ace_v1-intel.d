@@ -39,4 +39,14 @@ Disassembly of section \.text:
 [ 	]*[a-f0-9]+:[ 	]*c4 e2 fb 49 c0[ 	]+bsrinit bsr0
 [ 	]*[a-f0-9]+:[ 	]*62 f6 f4 48 95 c3[ 	]+bsrmovf bsr0,zmm1,zmm3
 [ 	]*[a-f0-9]+:[ 	]*62 f6 f4 48 95 41 7f[ 	]+bsrmovf bsr0,zmm1,ZMMWORD PTR \[rcx\+0x1fc0\]
+[ 	]*[a-f0-9]+:[ 	]*62 f3 6c 48 8d c9 00[ 	]+top4mxbf8ps tmm1,zmm1,zmm2,0x0
+[ 	]*[a-f0-9]+:[ 	]*62 f3 6f 48 8d c9 00[ 	]+top4mxbhf8ps tmm1,zmm1,zmm2,0x0
+[ 	]*[a-f0-9]+:[ 	]*62 f3 6e 48 8d c9 00[ 	]+top4mxhbf8ps tmm1,zmm1,zmm2,0x0
+[ 	]*[a-f0-9]+:[ 	]*62 f3 6d 48 8d c9 00[ 	]+top4mxhf8ps tmm1,zmm1,zmm2,0x0
+[ 	]*[a-f0-9]+:[ 	]*62 f3 6f 48 8f c9 00[ 	]+top4mxbssps tmm1,zmm1,zmm2,0x0
+[ 	]*[a-f0-9]+:[ 	]*62 f2 6e 48 5c c1[ 	]+top2bf16ps tmm0,zmm1,zmm2
+[ 	]*[a-f0-9]+:[ 	]*62 f2 6f 48 5e c1[ 	]+top4bssd tmm0,zmm1,zmm2
+[ 	]*[a-f0-9]+:[ 	]*62 f2 6e 48 5e c1[ 	]+top4bsud tmm0,zmm1,zmm2
+[ 	]*[a-f0-9]+:[ 	]*62 f2 6d 48 5e c1[ 	]+top4busd tmm0,zmm1,zmm2
+[ 	]*[a-f0-9]+:[ 	]*62 f2 6c 48 5e c1[ 	]+top4buud tmm0,zmm1,zmm2
 #pass

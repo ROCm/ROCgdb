@@ -79,6 +79,20 @@ static const struct dis386 evex_len_table[][3] = {
     { VEX_W_TABLE (EVEX_W_0F385B_L_2) },
   },
 
+  /* EVEX_LEN_0F385C_X86_64_W_0 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { PREFIX_TABLE (PREFIX_EVEX_0F385C_X86_64_W_0_L_2) },
+  },
+
+  /* EVEX_LEN_0F385E_X86_64_W_0 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { PREFIX_TABLE (PREFIX_EVEX_0F385E_X86_64_W_0_L_2) },
+  },
+
   /* EVEX_LEN_0F386D_X86_64_W_0_M_1 */
   {
     { Bad_Opcode },
@@ -203,6 +217,20 @@ static const struct dis386 evex_len_table[][3] = {
     { Bad_Opcode },
     { Bad_Opcode },
     { PREFIX_TABLE (PREFIX_EVEX_0F3A77_X86_64_W_0_L_2) },
+  },
+
+  /* EVEX_LEN_0F3A8D_X86_64_W_0 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { PREFIX_TABLE (PREFIX_EVEX_0F3A8D_X86_64_W_0_L_2) },
+  },
+
+  /* EVEX_LEN_0F3A8F_X86_64_W_0 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { PREFIX_TABLE (PREFIX_EVEX_0F3A8F_X86_64_W_0_L_2) },
   },
 
   /* EVEX_LEN_MAP5_6E */

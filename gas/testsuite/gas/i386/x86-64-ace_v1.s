@@ -34,3 +34,17 @@ start:
 	bsrinit %bsr0
 	bsrmovf %zmm3, %zmm1, %bsr0
 	bsrmovf 8128(%rcx), %zmm1, %bsr0
+
+	top4mxbf8ps  $0, %zmm2, %zmm1, %tmm1
+	top4mxbhf8ps $0, %zmm2, %zmm1, %tmm1
+	top4mxhbf8ps $0, %zmm2, %zmm1, %tmm1
+	top4mxhf8ps  $0, %zmm2, %zmm1, %tmm1
+
+	top4mxbssps $0, %zmm2, %zmm1, %tmm1
+
+	top2bf16ps %zmm2, %zmm1, %tmm0
+
+	top4bssd   %zmm2, %zmm1, %tmm0
+	top4bsud   %zmm2, %zmm1, %tmm0
+	top4busd   %zmm2, %zmm1, %tmm0
+	top4buud   %zmm2, %zmm1, %tmm0

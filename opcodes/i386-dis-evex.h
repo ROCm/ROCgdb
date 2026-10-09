@@ -396,9 +396,9 @@ static const struct dis386 evex_table[][256] = {
     { VEX_W_TABLE (EVEX_W_0F3859) },
     { EVEX_LEN_TABLE (EVEX_LEN_0F385A) },
     { EVEX_LEN_TABLE (EVEX_LEN_0F385B) },
+    { X86_64_TABLE (X86_64_EVEX_0F385C) },
     { Bad_Opcode },
-    { Bad_Opcode },
-    { Bad_Opcode },
+    { X86_64_TABLE (X86_64_EVEX_0F385E) },
     { Bad_Opcode },
     /* 60 */
     { Bad_Opcode },
@@ -742,9 +742,9 @@ static const struct dis386 evex_table[][256] = {
     { Bad_Opcode },
     { Bad_Opcode },
     { Bad_Opcode },
+    { X86_64_TABLE (X86_64_EVEX_0F3A8D) },
     { Bad_Opcode },
-    { Bad_Opcode },
-    { Bad_Opcode },
+    { X86_64_TABLE (X86_64_EVEX_0F3A8F) },
     /* 90 */
     { Bad_Opcode },
     { Bad_Opcode },

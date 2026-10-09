@@ -280,6 +280,18 @@
     { VEX_W_TABLE (VEX_W_0F3853) },
     { "vp4dpws%XSds",	{ XM, Vex, Mxmm }, 0 },
   },
+  /* PREFIX_EVEX_0F385C_X86_64_W_0_L_2 */
+  {
+    { Bad_Opcode },
+    { "top2bf16ps",	{ TMM, Ux, Vex }, 0 },
+  },
+  /* PREFIX_EVEX_0F385E_X86_64_W_0_L_2 */
+  {
+    { "top4buud",	{ TMM, Ux, Vex }, 0 },
+    { "top4bsud",	{ TMM, Ux, Vex }, 0 },
+    { "top4busd",	{ TMM, Ux, Vex }, 0 },
+    { "top4bssd",	{ TMM, Ux, Vex }, 0 },
+  },
   /* PREFIX_EVEX_0F3868 */
   {
     { Bad_Opcode },
@@ -432,6 +444,20 @@
     { "tcvtrowps2bf16l",	{ XM, Rtmm, Ib }, 0 },
     { Bad_Opcode },
     { "tcvtrowps2phl",	{ XM, Rtmm, Ib }, 0 },
+  },
+  /* PREFIX_EVEX_0F3A8D_X86_64_W_0_L_2 */
+  {
+    { "top4mxbf8ps",	{ TMM, Ux, Vex, Ib }, 0 },
+    { "top4mxhbf8ps",	{ TMM, Ux, Vex, Ib }, 0 },
+    { "top4mxhf8ps",	{ TMM, Ux, Vex, Ib }, 0 },
+    { "top4mxbhf8ps",	{ TMM, Ux, Vex, Ib }, 0 },
+  },
+  /* PREFIX_EVEX_0F3A8F_X86_64_W_0_L_2 */
+  {
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { Bad_Opcode },
+    { "top4mxbssps",	{ TMM, Ux, Vex, Ib }, 0 },
   },
   /* PREFIX_EVEX_0F3AC2 */
   {

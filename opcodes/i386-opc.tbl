@@ -3278,8 +3278,6 @@ tdpfp16ps, 0xf25c, AMX_FP16, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegT
 
 tdpb<tdpb>d, 0x<tdpb:pfx>5e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 
-<tdpb>
-
 tileloadd, 0xf24b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
 tileloaddt1, 0x664b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
 tileloaddrs, 0xf24a, APX_F(AMX_MOVRS), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
@@ -3328,6 +3326,19 @@ tilemovcol, 0x662f, ACE_V1, Modrm|EVex512|Space0F3A|VexW1|NoSuf, { Imm8, RegZMM,
 tilemovcol, 0x664b, ACE_V1, Modrm|EVex512|Space0F38|VexW1|Src2VVVV|NoSuf, { Reg32, RegZMM, RegTMM }
 tilemovrow, 0x6607, ACE_V1, Modrm|EVex512|Space0F3A|VexW1|NoSuf, { Imm8, RegZMM, RegTMM }
 tilemovrow, 0x664a, ACE_V1, Modrm|EVex512|Space0F38|VexW1|Src2VVVV|NoSuf, { Reg32, RegZMM, RegTMM }
+
+top2bf16ps, 0xf35c, ACE_V1, Modrm|EVex512|Space0F38|VexW0|Src2VVVV|NoSuf, { RegZMM, RegZMM, RegTMM }
+top4b<tdpb>d, 0x<tdpb:pfx>5e, ACE_V1, Modrm|EVex512|Space0F38|VexW0|Src2VVVV|NoSuf, { RegZMM, RegZMM, RegTMM }
+
+<tdpb>
+
+<top4:pfx, bf:, hf:66, hbf:f3, bhf:f2>
+
+top4mx<top4>8ps, 0x<top4:pfx>8d, ACE_V1, Modrm|EVex512|Space0F3A|VexW0|Src2VVVV|NoSuf, { Imm8, RegZMM, RegZMM, RegTMM }
+
+<top4>
+
+top4mxbssps, 0xf28f, ACE_V1, Modrm|EVex512|Space0F3A|VexW0|Src2VVVV|NoSuf, { Imm8, RegZMM, RegZMM, RegTMM }
 
 // ACE instructions end.
 
