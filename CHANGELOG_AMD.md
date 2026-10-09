@@ -24,6 +24,14 @@ Full documentation for ROCgdb is available at
   loaded library with debug information, such as a debug build of the ROCm
   runtime, contains the `std::nullptr_t` type.
 
+### Changed
+
+- Scheduler-locking no longer applies while `run`, `start` or `starti`
+  is starting the program, until the program first stops.  Previously,
+  restarting a program with scheduler-locking on could hang if the
+  program waited for threads it creates while starting up, which HIP
+  programs always do.
+
 ## ROCgdb-16.3 for ROCm-10.1
 
 ### Added

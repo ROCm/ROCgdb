@@ -7580,6 +7580,13 @@ mode or during normal execution.  This is the default mode.
 If supported by the target, when scheduler-locking is in effect, new
 threads created by the resumed thread are held stopped.
 
+Scheduler-locking does not apply while the program is being started by
+@code{run}, @code{start} or @code{starti}: until the program first
+stops, all of its threads, including new ones, may run.  This lets the
+program reach its first stop even if scheduler-locking was left on from
+a previous run and the program depends on threads it creates while
+starting up.
+
 @item show scheduler-locking
 Display the current scheduler locking mode.
 @end table
