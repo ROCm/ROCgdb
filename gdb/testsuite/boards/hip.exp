@@ -178,6 +178,13 @@ proc do_gpu_lock_release {} {
 # that.
 
 if {[info exists GDB_PARALLEL]} {
+    # The hip board serializes all HIP-board GDB sessions against the
+    # GPU with a single lock file of its own; it does not use the
+    # gdb.rocm per-GPU lock pools in lib/rocm.exp, since every
+    # testcase run under this board (not just gdb.rocm/ ones) needs
+    # to take the lock.
+    set hip_gpu_lock_filename gpu-parallel-hip.lock
+
     if { [info procs hip_org_gdb_spawn] == "" } {
 	rename gdb_spawn hip_org_gdb_spawn
     }
@@ -185,9 +192,9 @@ if {[info exists GDB_PARALLEL]} {
 	global gdb_spawn_id
 
 	if ![info exists gdb_spawn_id] {
-	    global gpu_lock_filename
+	    global hip_gpu_lock_filename
 	    global gpu_lock_rc
-	    set gpu_lock_rc [lock_file_acquire $gpu_lock_filename]
+	    set gpu_lock_rc [lock_file_acquire $hip_gpu_lock_filename]
 	}
 
 	set res [hip_org_gdb_spawn]
