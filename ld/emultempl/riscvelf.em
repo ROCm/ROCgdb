@@ -81,7 +81,8 @@ riscv_elf_before_allocation (void)
 	ENABLE_RELAXATION;
     }
 
-  link_info.relax_pass = 2;
+  /* BFD picks the relax passes for this link.  */
+  link_info.relax_pass = bfd_elf${ELFSIZE}_riscv_init_relax_passes (&link_info);
 }
 
 static void

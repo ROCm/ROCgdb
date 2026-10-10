@@ -231,8 +231,6 @@ struct windows_nat_target : public inf_child_target
 
   const char *pid_to_exec_file (int pid) override;
 
-  ptid_t get_ada_task_ptid (long lwp, ULONGEST thread) override;
-
   bool get_tib_address (ptid_t ptid, CORE_ADDR *addr) override;
 
   const char *thread_name (struct thread_info *) override;

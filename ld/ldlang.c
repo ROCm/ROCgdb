@@ -70,7 +70,6 @@ static struct obstack pt_obstack;
 static const char *entry_symbol_default = "start";
 static bool map_head_is_link_order = false;
 static lang_output_section_statement_type *default_common_section;
-static bool map_option_f;
 static bfd_vma print_dot;
 static lang_input_statement_type *first_file;
 static const char *current_target;
@@ -9118,21 +9117,6 @@ lang_add_target (const char *name)
 
   new_stmt = new_stat (lang_target_statement, stat_ptr);
   new_stmt->target = name;
-}
-
-void
-lang_add_map (const char *name)
-{
-  while (*name)
-    {
-      switch (*name)
-	{
-	case 'F':
-	  map_option_f = true;
-	  break;
-	}
-      name++;
-    }
 }
 
 void
