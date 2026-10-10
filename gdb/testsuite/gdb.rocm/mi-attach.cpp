@@ -30,7 +30,9 @@ main ()
 {
   /* This program will run outside of GDB, make sure that if anything goes
      wrong it eventually gets killed.  */
-  gdb_watchdog (30);
+  #ifdef TIMEOUT
+    gdb_watchdog (TIMEOUT * 3);
+  #endif
 
   kern<<<1, 1>>> ();
   return hipDeviceSynchronize () != hipSuccess;
