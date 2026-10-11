@@ -502,7 +502,7 @@ _bfd_xcoff_canonicalize_dynamic_reloc (bfd *abfd,
 	{
 	  _bfd_error_handler
 	    /* xgettext:c-format */
-	    (_("%pB: warning: illegal symbol index %lu in relocs"),
+	    (_("%pB: warning: invalid symbol index %lu in relocs"),
 	     abfd, (unsigned long) ldrel.l_symndx);
 	  relbuf->sym_ptr_ptr = &bfd_abs_section_ptr->symbol;
 	}
@@ -1725,6 +1725,16 @@ xcoff_link_add_symbols (bfd *abfd, struct bfd_link_info *info)
 		  bfd_byte *erelsym;
 
 		  struct internal_syment relsym;
+
+		  if (! coff_symndx_in_range (abfd, rel->r_symndx))
+		    {
+		      _bfd_error_handler
+			/* xgettext: c-format */
+			(_("%pB: invalid symbol index %ld in relocs"),
+			 abfd, rel->r_symndx);
+		      bfd_set_error (bfd_error_bad_value);
+		      goto error_return;
+		    }
 
 		  erelsym = ((bfd_byte *) obj_coff_external_syms (abfd)
 			     + rel->r_symndx * symesz);

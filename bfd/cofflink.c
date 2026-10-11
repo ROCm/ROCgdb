@@ -3131,7 +3131,7 @@ _bfd_coff_generic_relocate_section (bfd *output_bfd,
 	{
 	  _bfd_error_handler
 	    /* xgettext: c-format */
-	    (_("%pB: illegal symbol index %ld in relocs"), input_bfd, symndx);
+	    (_("%pB: invalid symbol index %ld in relocs"), input_bfd, symndx);
 	  return false;
 	}
       else

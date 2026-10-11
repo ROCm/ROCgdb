@@ -517,6 +517,17 @@ coff_pe_aarch64_relocate_section (bfd *output_bfd,
 	continue;
 
       symndx = rel->r_symndx;
+
+      if (! coff_symndx_in_range (input_bfd, symndx))
+	{
+	  _bfd_error_handler
+	    /* xgettext: c-format */
+	    (_("%pB: invalid symbol index %ld in relocs"),
+	     input_bfd, symndx);
+	  bfd_set_error (bfd_error_bad_value);
+	  return false;
+	}
+
       sym_value = syms[symndx].n_value;
 
       h = obj_coff_sym_hashes (input_bfd)[symndx];
@@ -574,10 +585,6 @@ coff_pe_aarch64_relocate_section (bfd *output_bfd,
 	continue;
 
       dest_vma = sec->output_section->vma + sec->output_offset + sym_value;
-
-      if (symndx < 0
-	  || (unsigned long) symndx >= obj_raw_syment_count (input_bfd))
-	continue;
 
       /* All the relocs handled below operate on 4 bytes.  */
       if (input_section->size < rel->r_vaddr

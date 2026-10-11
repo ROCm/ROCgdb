@@ -57,6 +57,15 @@ extern "C" {
 #define obj_coff_strings_written(bfd) (coff_data (bfd)->strings_written)
 #define obj_coff_local_toc_table(bfd) (coff_data (bfd)->local_toc_sym_map)
 
+/* True if SYMNDX is a valid index into the raw external COFF symbol
+   table (obj_coff_external_syms).  Rejects negative indices, and any
+   index at or past the declared symbol count.  COFF backends that
+   walk raw symbol entries or the parallel obj_coff_sym_hashes array
+   must gate the access with this, exactly as the generic linker's
+   _bfd_coff_generic_relocate_section does.  */
+#define coff_symndx_in_range(abfd, symndx)			\
+  ((unsigned long) (symndx) < obj_raw_syment_count (abfd))
+
 /* `Tdata' information kept for COFF files.  */
 
 typedef struct coff_tdata
