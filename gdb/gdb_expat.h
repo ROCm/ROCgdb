@@ -35,4 +35,20 @@
 #define XMLCALL
 #endif
 
+/* Return the line number of PARSER's current position.
+
+   Expat 2.9.0 deprecates XML_GetCurrentLineNumber in favor of
+   XML_GetCurrentLineNumber64.  */
+
+static inline std::uint64_t
+gdb_xml_get_current_line_number (XML_Parser parser)
+{
+#if (XML_MAJOR_VERSION > 2 \
+     || (XML_MAJOR_VERSION == 2 && XML_MINOR_VERSION >= 9))
+  return XML_GetCurrentLineNumber64 (parser);
+#else
+  return XML_GetCurrentLineNumber (parser);
+#endif
+}
+
 #endif /* GDB_GDB_EXPAT_H */

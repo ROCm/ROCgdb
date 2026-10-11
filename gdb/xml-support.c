@@ -179,7 +179,7 @@ gdb_xml_body_text (void *data, const XML_Char *text, int length)
 void
 gdb_xml_parser::vdebug (const char *format, va_list ap)
 {
-  int line = XML_GetCurrentLineNumber (m_expat_parser);
+  int line = gdb_xml_get_current_line_number (m_expat_parser);
 
   std::string message = string_vprintf (format, ap);
   if (line)
@@ -208,7 +208,7 @@ gdb_xml_debug (struct gdb_xml_parser *parser, const char *format, ...)
 void
 gdb_xml_parser::verror (const char *format, va_list ap)
 {
-  int line = XML_GetCurrentLineNumber (m_expat_parser);
+  int line = gdb_xml_get_current_line_number (m_expat_parser);
 
   m_last_line = line;
   throw_verror (XML_PARSE_ERROR, format, ap);
