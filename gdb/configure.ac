@@ -796,11 +796,6 @@ else
     else
       AC_MSG_WARN([expat is missing or unusable; some features may be unavailable.])
     fi
-  else
-    save_LIBS=$LIBS
-    LIBS="$LIBS $LIBEXPAT"
-    AC_CHECK_FUNCS(XML_StopParser)
-    LIBS=$save_LIBS
   fi
 fi
 

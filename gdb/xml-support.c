@@ -117,9 +117,7 @@ struct gdb_xml_parser
   void set_error (gdb_exception &&error)
   {
     m_error = std::move (error);
-#ifdef HAVE_XML_STOPPARSER
     XML_StopParser (m_expat_parser, XML_FALSE);
-#endif
   }
 
   /* Return the underlying expat parser.  */
