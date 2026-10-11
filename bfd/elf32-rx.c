@@ -3519,7 +3519,7 @@ rx_get_section_contents (bfd *	       abfd,
 
 	  count -= cnt;
 	  offset += cnt;
-	  cloc += count;
+	  cloc += cnt;
 	}
 
       end_cnt = count % 4;
