@@ -1386,6 +1386,7 @@ enum aarch64_opcode_idx
   A64_OPID_d503215f_pacib1716,
   A64_OPID_d503219f_autia1716,
   A64_OPID_d50321df_autib1716,
+  A64_OPID_d50324ff_pacm,
   A64_OPID_d503221f_esb,
   A64_OPID_d503223f_psb_BARRIER_PSB,
   A64_OPID_d503225f_tsb_BARRIER_PSB,

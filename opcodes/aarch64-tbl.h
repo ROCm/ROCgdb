@@ -5179,6 +5179,7 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   CORE_INSN ("pacib1716", 0xd503215f, 0xffffffff, ic_system, 0, OP0 (), QL_0, F_ALIAS),
   CORE_INSN ("autia1716", 0xd503219f, 0xffffffff, ic_system, 0, OP0 (), QL_0, F_ALIAS),
   CORE_INSN ("autib1716", 0xd50321df, 0xffffffff, ic_system, 0, OP0 (), QL_0, F_ALIAS),
+  CORE_INSN ("pacm", 0xd50324ff, 0xffffffff, ic_system, 0, OP0 (), QL_0, F_ALIAS),
   CORE_INSN ("esb", 0xd503221f, 0xffffffff, ic_system, 0, OP0 (), QL_0, F_ALIAS),
   CORE_INSN ("psb", 0xd503223f, 0xffffffff, ic_system, 0, OP1 (BARRIER_PSB), QL_NIL1, F_ALIAS),
   CORE_INSN ("tsb", 0xd503225f, 0xffffffff, ic_system, 0, OP1 (BARRIER_PSB), QL_NIL1, F_ALIAS),

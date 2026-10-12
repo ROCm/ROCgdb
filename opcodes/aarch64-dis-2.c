@@ -37492,6 +37492,9 @@ aarch64_find_next_alias_opcode (const aarch64_opcode *opcode)
       value = A64_OPID_d503221f_esb;
       break;
     case A64_OPID_d503221f_esb:
+      value = A64_OPID_d50324ff_pacm;
+      break;
+    case A64_OPID_d50324ff_pacm:
       value = A64_OPID_d50321df_autib1716;
       break;
     case A64_OPID_d50321df_autib1716:
