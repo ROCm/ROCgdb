@@ -779,6 +779,7 @@ aarch64_insert_operand (const aarch64_operand *self,
   switch (key)
     {
     case AARCH64_OPND_Rd:
+    case AARCH64_OPND_Rd_NOT_ZR:
     case AARCH64_OPND_Rn:
     case AARCH64_OPND_Rm:
     case AARCH64_OPND_Rt:

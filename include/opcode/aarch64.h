@@ -625,6 +625,7 @@ enum aarch64_opnd
   AARCH64_OPND_NIL,	/* no operand---MUST BE FIRST!*/
 
   AARCH64_OPND_Rd,	/* Integer register as destination.  */
+  AARCH64_OPND_Rd_NOT_ZR,	/* Integer register as destination, not XZR.  */
   AARCH64_OPND_Rn,	/* Integer register as source.  */
   AARCH64_OPND_Rm,	/* Integer register as source.  */
   AARCH64_OPND_Rt,	/* Integer register used in ld/st instructions.  */

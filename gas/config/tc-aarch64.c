@@ -6829,6 +6829,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
       switch (operands[i])
 	{
 	case AARCH64_OPND_Rd:
+	case AARCH64_OPND_Rd_NOT_ZR:
 	case AARCH64_OPND_Rn:
 	case AARCH64_OPND_Rm:
 	case AARCH64_OPND_Rt:

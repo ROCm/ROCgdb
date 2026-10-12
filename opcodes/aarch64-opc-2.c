@@ -27,6 +27,7 @@ const struct aarch64_operand aarch64_operands[] =
 {
   {AARCH64_OPND_CLASS_NIL, "", 0, {}, "<none>"},
   {AARCH64_OPND_CLASS_INT_REG, "Rd", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 0, false}}, "an integer register"},
+  {AARCH64_OPND_CLASS_INT_REG, "Rd_NOT_ZR", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 0, false}}, "an integer register"},
   {AARCH64_OPND_CLASS_INT_REG, "Rn", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 5, false}}, "an integer register"},
   {AARCH64_OPND_CLASS_INT_REG, "Rm", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 16, false}}, "an integer register"},
   {AARCH64_OPND_CLASS_INT_REG, "Rt", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 0, false}}, "an integer register"},
