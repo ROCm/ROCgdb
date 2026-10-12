@@ -248,6 +248,13 @@ Reporting Non-Security Bugs
 
     https://sourceware.org/bugzilla/
 
+  Bugs related to parsing malformed executables and debug information
+  should be reported through the public bugzilla.  This is an area of
+  GDB containing known bugs, and as discussed above, it is advised
+  that users mitigate these bugs by running within a sandboxed
+  environment.  As such, these bugs are considered to pose limited
+  risk to users.
+
 Reporting Security Bugs
 -----------------------
 
