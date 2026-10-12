@@ -270,7 +270,14 @@ registers.
 @item neg rd
 @itemx rd = - rd
 64-bit arithmetic negation.
+@end table
 
+@subsection Data movement instructions
+
+Note that in pseudoc syntax these instructions should use @code{r}
+registers.
+
+@table @code
 @item mov rd, rs
 @itemx mov rd, imm32
 @itemx rd = rs
@@ -369,7 +376,15 @@ in the same instruction.
 @item neg32 rd
 @itemx rd = - rd
 32-bit arithmetic negation.
+@end table
 
+@subsection 32-bit data movement instructions
+
+Note that in pseudoc syntax these instructions should use @code{w}
+registers.  It is not allowed to mix @code{w} and @code{r} registers
+in the same instruction.
+
+@table @code
 @item mov32 rd, rs
 @itemx mov32 rd, imm32
 @itemx rd = rs
