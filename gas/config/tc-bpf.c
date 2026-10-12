@@ -1316,6 +1316,11 @@ parse_bpf_register (char *s, char rw, uint8_t *regno)
           *regno = 10;
           s += 2;
         }
+      else if (*(s + 1) == '1')
+        {
+          *regno = 11;
+          s += 2;
+        }
       else
         {
           *regno = 1;

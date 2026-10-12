@@ -87,7 +87,8 @@ Statements and assembly directives are separated by newlines and
 @cindex BPF register names
 @cindex register names, BPF
 The eBPF processor provides ten general-purpose 64-bit registers,
-which are read-write, and a read-only frame pointer register:
+which are read-write, a read-only frame pointer register, and a stack
+argument register:
 
 @noindent
 In normal syntax:
@@ -98,6 +99,8 @@ General-purpose registers.
 @item %r10
 @itemx %fp
 Read-only frame pointer register.
+@item %r11
+Stack argument register.
 @end table
 
 All BPF registers are 64-bit long.  However, in the Pseudo-C syntax
@@ -116,7 +119,14 @@ General-purpose register in an instruction that operates on its value
 as if it was a 32-bit value.
 @item r10
 Read-only frame pointer register.
+@item r11
+Stack argument register.
 @end table
+
+The stack argument register is used to pass arguments beyond the fifth
+to a BPF function: it is the base register of 64-bit stores of
+outgoing arguments, at negative offsets, and of 64-bit loads of
+incoming arguments, at positive offsets.
 
 @noindent
 Note that in the Pseudo-C syntax register names are not preceded by
