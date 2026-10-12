@@ -39,8 +39,12 @@ OTHER_SDATA_SECTIONS="
     ${RELOCATING+PROVIDE (_lit4_end = .);}
   }
 "
+# Do not wrap these in KEEP ().  Property sections are unreferenced, but
+# elf_xtensa_gc_mark_extra_sections keeps the tables that describe live
+# sections.  KEEP () sets SEC_KEEP and, for a COMDAT group, retains the
+# rest of that group.
 OTHER_SECTIONS="
-  .xt.lit       0 : { KEEP (*(.xt.lit${RELOCATING+ .xt.lit.* .gnu.linkonce.p.*})) }
-  .xt.insn      0 : { KEEP (*(.xt.insn${RELOCATING+ .gnu.linkonce.x.*})) }
-  .xt.prop      0 : { KEEP (*(.xt.prop${RELOCATING+ .xt.prop.* .gnu.linkonce.prop.*})) }
+  .xt.lit       0 : { *(.xt.lit${RELOCATING+ .xt.lit.* .gnu.linkonce.p.*}) }
+  .xt.insn      0 : { *(.xt.insn${RELOCATING+ .gnu.linkonce.x.*}) }
+  .xt.prop      0 : { *(.xt.prop${RELOCATING+ .xt.prop.* .gnu.linkonce.prop.*}) }
 "

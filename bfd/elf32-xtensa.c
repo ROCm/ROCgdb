@@ -1362,16 +1362,12 @@ elf_xtensa_gc_mark_hook (asection *sec,
 			 struct elf_link_hash_entry *h,
 			 unsigned int symndx)
 {
-  /* Property sections are marked "KEEP" in the linker scripts, but they
-     should not cause other sections to be marked.  (This approach relies
-     on elf_xtensa_discard_info to remove property table entries that
-     describe discarded sections.  Alternatively, it might be more
-     efficient to avoid using "KEEP" in the linker scripts and instead use
-     the gc_mark_extra_sections hook to mark only the property sections
-     that describe marked sections.  That alternative does not work well
-     with the current property table sections, which do not correspond
-     one-to-one with the sections they describe, but that should be fixed
-     someday.) */
+  /* Nothing refers to a property section, so it is kept alive by
+     elf_xtensa_gc_mark_extra_sections instead, and its relocations must
+     not cause other sections to be marked.  (This relies on
+     elf_xtensa_discard_info to remove property table entries that
+     describe discarded sections, which is needed anyway because a
+     property section may describe more than one section.)  */
   if (xtensa_is_property_section (sec))
     return NULL;
 
@@ -1384,6 +1380,65 @@ elf_xtensa_gc_mark_hook (asection *sec,
       }
 
   return _bfd_elf_gc_mark_hook (sec, info, cookie, h, symndx);
+}
+
+
+/* Property sections are not referenced by anything, so this pass marks
+   the ones describing sections that have been marked.  */
+
+static bool
+elf_xtensa_gc_mark_extra_sections (struct bfd_link_info *info,
+				   elf_gc_mark_hook_fn gc_mark_hook)
+{
+  static const char *const prop_names[] = XTENSA_PROPERTY_SEC_NAMES;
+  bfd *sub;
+  bool warned = false;
+
+  _bfd_elf_gc_mark_extra_sections (info, gc_mark_hook);
+
+  for (sub = info->input_bfds; sub != NULL; sub = sub->link.next)
+    {
+      asection *sec;
+
+      if (!is_xtensa_elf (sub))
+	continue;
+
+      for (sec = sub->sections; sec != NULL; sec = sec->next)
+	{
+	  size_t i;
+
+	  if (!sec->gc_mark
+	      || (sec->flags & SEC_ALLOC) == 0
+	      || xtensa_is_property_section (sec))
+	    continue;
+
+	  for (i = 0; i < sizeof (prop_names) / sizeof (prop_names[0]); i++)
+	    {
+	      asection *prop_sec =
+		xtensa_get_property_section (sec, prop_names[i]);
+
+	      /* Set "gc_mark" directly rather than calling _bfd_elf_gc_mark:
+		 a property section can be a member of the COMDAT group of
+		 the section it describes, and marking a group member retains
+		 the entire group.  Nothing else needs to be marked because
+		 elf_xtensa_gc_mark_hook ignores relocations in property
+		 sections.  */
+	      if (prop_sec != NULL)
+		{
+		  if (!warned && (prop_sec->flags & SEC_KEEP) != 0)
+		    {
+		      info->callbacks->einfo
+			(_("%P: warning: KEEP should not be used for Xtensa "
+			   "property section %s\n"), prop_names[i]);
+		      warned = true;
+		    }
+		  prop_sec->gc_mark = 1;
+		}
+	    }
+	}
+    }
+
+  return true;
 }
 
 
@@ -11680,6 +11735,7 @@ static const struct bfd_elf_special_section elf_xtensa_special_sections[] =
 #define elf_backend_finish_dynamic_sections  elf_xtensa_finish_dynamic_sections
 #define elf_backend_finish_dynamic_symbol    elf_xtensa_finish_dynamic_symbol
 #define elf_backend_gc_mark_hook	     elf_xtensa_gc_mark_hook
+#define elf_backend_gc_mark_extra_sections   elf_xtensa_gc_mark_extra_sections
 #define elf_backend_grok_prstatus	     elf_xtensa_grok_prstatus
 #define elf_backend_grok_psinfo		     elf_xtensa_grok_psinfo
 #define elf_backend_hide_symbol		     elf_xtensa_hide_symbol

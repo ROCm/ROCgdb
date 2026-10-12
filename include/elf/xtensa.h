@@ -139,6 +139,9 @@ END_RELOC_NUMBERS (R_XTENSA_max)
 #define XTENSA_LIT_SEC_NAME  ".xt.lit"
 #define XTENSA_PROP_SEC_NAME ".xt.prop"
 
+#define XTENSA_PROPERTY_SEC_NAMES \
+  { XTENSA_INSN_SEC_NAME, XTENSA_LIT_SEC_NAME, XTENSA_PROP_SEC_NAME }
+
 typedef struct property_table_entry_t
 {
   bfd_vma address;
