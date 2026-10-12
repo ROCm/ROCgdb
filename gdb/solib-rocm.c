@@ -663,6 +663,30 @@ rocm_solib_ops::bfd_open (const char *pathname)
   amd_dbgapi_status_t dbgapi_query_arch
     = amd_dbgapi_get_architecture (gfx_arch, &architecture_id);
 
+  /* Get human-readable architecture name for error messages.  */
+  char *arch_name_str = nullptr;
+  std::string arch_display_name;
+
+  if (dbgapi_query_arch == AMD_DBGAPI_STATUS_SUCCESS)
+    {
+      if (amd_dbgapi_architecture_get_info
+	  (architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_NAME,
+	   sizeof (arch_name_str), &arch_name_str)
+	  == AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  arch_display_name = arch_name_str;
+	  xfree (arch_name_str);
+	}
+    }
+
+  if (arch_display_name.empty ())
+    {
+      if (bfd_arch_info != nullptr)
+	arch_display_name = bfd_arch_info->printable_name;
+      else
+	arch_display_name = string_printf ("gfx%02x", gfx_arch);
+    }
+
   if (dbgapi_query_arch != AMD_DBGAPI_STATUS_SUCCESS
       || bfd_arch_info ==  nullptr)
     {
@@ -671,8 +695,9 @@ rocm_solib_ops::bfd_open (const char *pathname)
 	{
 	  /* Neither of the libraries knows about this arch, so we cannot
 	     provide a human readable name for it.  */
-	  error (_("'%s': AMDGCN architecture %#02x is not supported."),
-		 bfd_get_filename (abfd.get ()), gfx_arch);
+	  error (_("'%s': AMDGCN architecture %s is not supported."),
+		 bfd_get_filename (abfd.get ()),
+		 arch_display_name.c_str ());
 	}
       else if (dbgapi_query_arch != AMD_DBGAPI_STATUS_SUCCESS)
 	{
@@ -680,22 +705,79 @@ rocm_solib_ops::bfd_open (const char *pathname)
 	  error (_("'%s': AMDGCN architecture %s not supported by "
 		   "amd-dbgapi."),
 		 bfd_get_filename (abfd.get ()),
-		 bfd_arch_info->printable_name);
+		 arch_display_name.c_str ());
 	}
       else
 	{
 	  gdb_assert (dbgapi_query_arch == AMD_DBGAPI_STATUS_SUCCESS);
-	  char *arch_name;
-	  if (amd_dbgapi_architecture_get_info
-	      (architecture_id, AMD_DBGAPI_ARCHITECTURE_INFO_NAME,
-	       sizeof (arch_name), &arch_name) != AMD_DBGAPI_STATUS_SUCCESS)
-	    error (_("amd_dbgapi_architecture_get_info call failed for arch "
-		     "%#02x."), gfx_arch);
-	  gdb::unique_xmalloc_ptr<char> arch_name_cleaner (arch_name);
-
 	  error (_("'%s': AMDGCN architecture %s not supported."),
 		 bfd_get_filename (abfd.get ()),
-		 arch_name);
+		 arch_display_name.c_str ());
+	}
+    }
+
+  /* Check if any agent in the current inferior has this architecture.  */
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (m_inf);
+  if (process_id.handle != AMD_DBGAPI_PROCESS_NONE.handle)
+    {
+      amd_dbgapi_agent_id_t *agent_list;
+      size_t agent_count;
+
+      amd_dbgapi_status_t agent_list_status
+	= amd_dbgapi_process_agent_list (process_id, &agent_count,
+					 &agent_list, nullptr);
+
+      if (agent_list_status != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("'%s': Failed to enumerate agents: %s"),
+	       bfd_get_filename (abfd.get ()),
+	       get_status_string (agent_list_status));
+
+      bool found_matching_agent = false;
+      size_t failed_queries = 0;
+
+      for (size_t i = 0; i < agent_count; ++i)
+	{
+	  amd_dbgapi_architecture_id_t agent_arch;
+	  amd_dbgapi_status_t status
+	    = amd_dbgapi_agent_get_info
+		(agent_list[i], AMD_DBGAPI_AGENT_INFO_ARCHITECTURE,
+		 sizeof (agent_arch), &agent_arch);
+
+	  if (status == AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE)
+	    {
+	      /* Agent has unsupported architecture - this is expected.
+		 Skip this agent and check the next one.  */
+	      continue;
+	    }
+	  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	    {
+	      /* Genuine error querying agent architecture.  */
+	      ++failed_queries;
+	      continue;
+	    }
+
+	  if (agent_arch == architecture_id)
+	    {
+	      found_matching_agent = true;
+	      break;
+	    }
+	}
+
+      xfree (agent_list);
+
+      if (!found_matching_agent)
+	{
+	  /* If all queries failed, report that instead of "no matching
+	     agent".  */
+	  if (failed_queries == agent_count && agent_count > 0)
+	    error (_("'%s': Failed to query agent architectures for code "
+		     "object validation."),
+		   bfd_get_filename (abfd.get ()));
+
+	  /* Otherwise, genuinely no matching agent found.  */
+	  error (_("'%s': No active agent for AMDGCN architecture %s."),
+		 bfd_get_filename (abfd.get ()),
+		 arch_display_name.c_str ());
 	}
     }
 
