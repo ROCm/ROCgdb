@@ -17,7 +17,7 @@ Introduction
 Policy Objectives
 -----------------
 
-  The objective of this policy is define what the GDB project
+  The objective of this policy is to define what the GDB project
   considers a security bug and what is a non-security bug, and how
   bugs can be reported.
 
