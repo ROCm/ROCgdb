@@ -296,6 +296,16 @@ Move the sign-extended 16-bit value in @code{rs} to @code{rd}.
 @item movs rd, rs, 32
 @itemx rd = (s32) rs
 Move the sign-extended 32-bit value in @code{rs} to @code{rd}.
+
+@item addrc rd, rs, 0, 1
+@itemx rd = addr_space_cast (rs, 0, 1)
+Convert the pointer in @code{rs}, which is in the arena address space
+1, to the generic address space 0, and store it in @code{rd}.
+
+@item addrc rd, rs, 1, 0
+@itemx rd = addr_space_cast (rs, 1, 0)
+Convert the pointer in @code{rs}, which is in the generic address
+space 0, to the arena address space 1, and store it in @code{rd}.
 @end table
 
 @subsection 32-bit arithmetic instructions

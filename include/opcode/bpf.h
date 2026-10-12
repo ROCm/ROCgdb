@@ -136,6 +136,15 @@ typedef uint64_t bpf_insn_word;
 #define BPF_OFFSET16_MOVS8 ((uint64_t)8 << 32)
 #define BPF_OFFSET16_MOVS16 ((uint64_t)16 << 32)
 #define BPF_OFFSET16_MOVS32 ((uint64_t)32 << 32)
+#define BPF_OFFSET16_ASCAST ((uint64_t)0x1 << 32)
+
+/* In an address space cast the immediate holds the destination address
+   space in its upper half and the source address space in its lower
+   half.  Only the generic address space 0 and the arena address space
+   1 exist, so only these two combinations are meaningful.  */
+
+#define BPF_IMM32_ASCAST_K ((uint64_t)0x00000001) /* 0 <- 1.  */
+#define BPF_IMM32_ASCAST_U ((uint64_t)0x00010000) /* 1 <- 0.  */
 
 #define BPF_IMM32_END16 ((uint64_t)0x00000010)
 #define BPF_IMM32_END32 ((uint64_t)0x00000020)
@@ -172,7 +181,7 @@ enum bpf_insn_id
   BPF_INSN_NEGR, BPF_INSN_LSHR, BPF_INSN_LSHI,
   BPF_INSN_RSHR, BPF_INSN_RSHI, BPF_INSN_ARSHR, BPF_INSN_ARSHI,
   BPF_INSN_MOVS8R, BPF_INSN_MOVS16R, BPF_INSN_MOVS32R,
-  BPF_INSN_MOVR, BPF_INSN_MOVI,
+  BPF_INSN_ASCASTK, BPF_INSN_ASCASTU, BPF_INSN_MOVR, BPF_INSN_MOVI,
   /* ALU32 instructions.  */
   BPF_INSN_ADD32R, BPF_INSN_ADD32I, BPF_INSN_SUB32R, BPF_INSN_SUB32I,
   BPF_INSN_MUL32R, BPF_INSN_MUL32I, BPF_INSN_SDIV32R, BPF_INSN_SDIV32I,
