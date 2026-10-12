@@ -13,7 +13,6 @@ import urllib.request
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-
 # ---------------------------------------------------------------------------
 # Load module under test without triggering __main__, then register it in
 # sys.modules so @patch("update_therock_deps.*") resolves correctly.
@@ -837,7 +836,6 @@ class TestRun(unittest.TestCase):
 
 import subprocess  # noqa: E402 — needed for CalledProcessError reference above
 
-
 # ---------------------------------------------------------------------------
 # run_update (additional)
 # ---------------------------------------------------------------------------
@@ -965,6 +963,40 @@ class TestMain(unittest.TestCase):
         with patch("sys.argv", ["update_therock_deps.py"]):
             rc = m.main()
         self.assertEqual(rc, 1)
+
+
+class UpdateWorkflowTheRockRefTest(unittest.TestCase):
+    """Tests for keeping the multi-arch workflow's uses:@<sha> in sync."""
+
+    def _write(self, text):
+        d = tempfile.mkdtemp()
+        wf = Path(d) / "therock-multi-arch-ci.yml"
+        wf.write_text(text)
+        return wf
+
+    def test_rewrites_uses_sha(self):
+        old = "a" * 40
+        new = "b" * 40
+        wf = self._write(f"uses: ROCm/TheRock/x.yml@{old} # date\n")
+        with patch.object(m, "MULTI_ARCH_WORKFLOW", wf):
+            changed = m.update_workflow_therock_ref(old, new)
+        self.assertTrue(changed)
+        self.assertIn(new, wf.read_text())
+        self.assertNotIn(old, wf.read_text())
+
+    def test_noop_when_unchanged(self):
+        old = "a" * 40
+        wf = self._write(f"uses: x@{old}\n")
+        with patch.object(m, "MULTI_ARCH_WORKFLOW", wf):
+            self.assertFalse(m.update_workflow_therock_ref(old, old))
+
+    def test_noop_when_sha_absent(self):
+        old = "a" * 40
+        new = "b" * 40
+        wf = self._write("uses: x@" + ("c" * 40) + "\n")
+        with patch.object(m, "MULTI_ARCH_WORKFLOW", wf):
+            self.assertFalse(m.update_workflow_therock_ref(old, new))
+        self.assertNotIn(new, wf.read_text())
 
 
 if __name__ == "__main__":
