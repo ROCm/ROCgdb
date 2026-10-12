@@ -122,9 +122,10 @@ What Is Not A Security Bug
   GDB provides 3 different turing complete languages, Guile, Python
   and direct access to the shell.  Making use of these languages can
   have unknown effects, including outside of the GDB process.  Such
-  effects will only be considered security bugs if they fit some of the
-  definitions in this document and the effect can only be reproduced
-  when executed in the GDB environment.
+  effects will only be considered security bugs if they fit some of
+  the definitions in this document and the effect is caused by a bug
+  in GDB's implementation rather than being an inherent consequence of
+  the executed code, or being a bug in the underlying language.
 
   Any issues that arise from running an untrusted program outside of a
   secure environment are not security bugs in GDB.  Any issues that
