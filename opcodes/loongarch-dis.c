@@ -448,7 +448,7 @@ with the -M switch (multiple options should be separated by commas):\n"));
   fprintf (stream, _("\
 		  dbar annotate layout:\n\
 		  'C': only cached load and store operations are constrained by the barrier;\n\
-		  '|' left‑side 'RW': all load and store before the dbar are constrained by the barrier;\n\
-		  '|' right‑side 'RW': all load and store after the dbar are constrained by the barrier.\n"));
+		  '|' left-side 'RW': all load and store before the dbar are constrained by the barrier;\n\
+		  '|' right-side 'RW': all load and store after the dbar are constrained by the barrier.\n"));
   fprintf (stream, _("\n"));
 }

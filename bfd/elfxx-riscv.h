@@ -143,6 +143,11 @@ bfd_elf32_riscv_set_data_segment_info (struct bfd_link_info *, int *);
 extern void
 bfd_elf64_riscv_set_data_segment_info (struct bfd_link_info *, int *);
 
+extern unsigned int
+bfd_elf32_riscv_init_relax_passes (struct bfd_link_info *);
+extern unsigned int
+bfd_elf64_riscv_init_relax_passes (struct bfd_link_info *);
+
 extern bool
 _bfd_riscv_elf_merge_private_bfd_data (bfd *, struct bfd_link_info *,
 				       unsigned int) ATTRIBUTE_HIDDEN;

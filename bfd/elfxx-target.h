@@ -116,7 +116,11 @@
 #define elf_backend_want_dynrelro 0
 #endif
 #ifndef elf_backend_want_stub_bfd
+#ifdef elf_backend_finish_dynamic_sections
+#define elf_backend_want_stub_bfd 1
+#else
 #define elf_backend_want_stub_bfd 0
+#endif
 #endif
 #ifndef elf_backend_want_p_paddr_set_to_zero
 #define elf_backend_want_p_paddr_set_to_zero 0

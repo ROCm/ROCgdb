@@ -2999,6 +2999,9 @@ discover_functions (struct bfd_link_info *info)
       if (ibfd->xvec != &spu_elf32_vec)
 	continue;
 
+      if ((ibfd->flags & BFD_LINKER_CREATED) != 0)
+	continue;
+
       /* Read all the symbols.  */
       symtab_hdr = &elf_symtab_hdr (ibfd);
       symcount = symtab_hdr->sh_size / symtab_hdr->sh_entsize;

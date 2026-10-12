@@ -32,7 +32,6 @@ extern void mri_format (const char *);
 extern void mri_public (const char *, etree_type *);
 extern void mri_align (const char *, etree_type *);
 extern void mri_alignmod (const char *, etree_type *);
-extern void mri_truncate (unsigned int);
 extern void mri_draw_tree (void);
 
 #endif

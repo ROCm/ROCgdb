@@ -71,6 +71,33 @@ with_test_prefix "return" {
     check_sequence $seq "0 0"
 }
 
+# Test TCL_RETURN (2), level 2.
+foreach foreach_variant {foreach foreach_with_prefix} {
+    with_test_prefix "$foreach_variant: return level 2" {
+	proc test_return_level_2_inner {} {
+	    set seq ""
+	    $::foreach_variant var1 {0 1} {
+		$::foreach_variant var2 {0 1} {
+		    lappend seq $var1 $var2
+		    return -level 2 $seq
+		}
+	    }
+	    return $seq
+	}
+	proc test_return_level_2_outer {} {
+	    test_return_level_2_inner
+	    return "outer"
+	}
+
+	try {
+	    set seq "initial"
+	    set seq [test_return_level_2_outer]
+	} finally {
+	    check_sequence $seq "0 0"
+	}
+    }
+}
+
 # Test TCL_BREAK (3).
 with_test_prefix "break" {
     set seq ""

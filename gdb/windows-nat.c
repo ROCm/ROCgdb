@@ -3427,12 +3427,6 @@ windows_nat_target::get_tib_address (ptid_t ptid, CORE_ADDR *addr)
   return true;
 }
 
-ptid_t
-windows_nat_target::get_ada_task_ptid (long lwp, ULONGEST thread)
-{
-  return ptid_t (inferior_ptid.pid (), lwp, 0);
-}
-
 /* Implementation of the to_thread_name method.  */
 
 const char *

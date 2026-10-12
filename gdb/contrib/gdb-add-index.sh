@@ -82,7 +82,7 @@ case ${opt} in
 	;;
 esac
 # Break from loop if the first character of OPT is not '-'.
-[ "x$(printf %.1s "$opt")" != "x-" ]
+[ "$(printf %.1s "$opt")" != "-" ]
 do
     shift
 done
@@ -94,9 +94,13 @@ fi
 
 file="$1"
 
+# All arguments have been processed, there's no need to have them around
+# anymore.
+set --
+
 if test -L "$file"; then
     if ! command -v readlink >/dev/null 2>&1; then
-	echo "$myname: 'readlink' missing.  Failed to follow symlink $1." 1>&2
+	echo "$myname: 'readlink' missing.  Failed to follow symlink $file." 1>&2
 	exit 1
     fi
 
@@ -135,8 +139,7 @@ if $READELF -S "$file" | grep -q " \.gnu_debugaltlink "; then
     dwz_file=$($READELF --string-dump=.gnu_debugaltlink "$file" \
 		   | grep -A1  "'\.gnu_debugaltlink':" \
 		   | tail -n +2 \
-		   | sed 's/.*]//')
-    dwz_file=$(echo $dwz_file)
+		   | sed 's/.*] *//')
     if $READELF -S "$dwz_file" | grep -E -q " \.(gdb_index|debug_names) "; then
 	# Already has an index, skip it.
 	dwz_file=""
@@ -154,19 +157,25 @@ set_files ()
     debugstrerr="${fpath}.debug_str.err"
 }
 
-tmp_files=
-for f in "$file" "$dwz_file"; do
-    if [ "$f" = "" ]; then
-	continue
-    fi
-    set_files "$f"
-    tmp_files="$tmp_files $index4 $index5 $debugstr $debugstrmerge $debugstrerr"
-done
-
-rm -f $tmp_files
-
 # Ensure intermediate index file is removed when we exit.
-trap "rm -f $tmp_files" 0
+cleanup ()
+{
+    for f in "$file" "$dwz_file"; do
+	if [ "$f" = "" ]; then
+	    continue
+	fi
+	set_files "$f"
+	rm -f \
+	   "$index4" \
+	   "$index5" \
+	   "$debugstr" \
+	   "$debugstrmerge" \
+	   "$debugstrerr"
+    done
+}
+
+cleanup
+trap cleanup 0
 
 $GDB --batch -nx -iex 'set auto-load no' \
     -iex 'set debuginfod enabled off' \
