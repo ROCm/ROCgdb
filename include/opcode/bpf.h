@@ -164,6 +164,8 @@ typedef uint64_t bpf_insn_word;
 #define BPF_IMM32_AFXOR ((uint64_t)0x000000a1)
 #define BPF_IMM32_AXCHG ((uint64_t)0x000000e1)
 #define BPF_IMM32_ACMP  ((uint64_t)0x000000f1)
+#define BPF_IMM32_LDACQ ((uint64_t)0x00000100)
+#define BPF_IMM32_STREL ((uint64_t)0x00000110)
 
 /* Unique identifiers for BPF instructions.  */
 
@@ -239,6 +241,9 @@ enum bpf_insn_id
   BPF_INSN_ACMP, BPF_INSN_AXCHG,
   /* Atomic compare-and-swap, atomic exchange (32-bit).  */
   BPF_INSN_ACMP32, BPF_INSN_AXCHG32,
+  /* Load-acquire and store-release.  */
+  BPF_INSN_LDACQB, BPF_INSN_LDACQH, BPF_INSN_LDACQW, BPF_INSN_LDACQDW,
+  BPF_INSN_STRELB, BPF_INSN_STRELH, BPF_INSN_STRELW, BPF_INSN_STRELDW,
   /* Conditional pseudo-jump "may_goto".  A NOP until the BPF runtime
      decides it isn't.  */
   BPF_INSN_JCOND,

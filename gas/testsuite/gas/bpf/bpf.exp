@@ -42,12 +42,16 @@ if {[istarget bpf*-*-*]} {
     run_dump_test jump-gotol-cond-pseudoc
     run_dump_test isa-spec-gated
     run_dump_test isa-spec-gated-pseudoc
+    run_dump_test isa-spec-gated-v3
+    run_dump_test isa-spec-gated-v3-pseudoc
     run_dump_test atomic-v1
     run_dump_test atomic
     run_dump_test atomic-pseudoc
     run_dump_test ascast
     run_dump_test ascast-pseudoc
     run_dump_test ascast-v1
+    run_dump_test acqrel
+    run_dump_test acqrel-pseudoc
     run_dump_test indcall-1
     run_dump_test indcall-1-pseudoc
 
@@ -78,6 +82,8 @@ if {[istarget bpf*-*-*]} {
     run_dump_test atomic-be-pseudoc
     run_dump_test ascast-be
     run_dump_test ascast-be-pseudoc
+    run_dump_test acqrel-be
+    run_dump_test acqrel-be-pseudoc
 
     run_dump_test jump-relax-ja-be
     run_dump_test jump-relax-jump-be

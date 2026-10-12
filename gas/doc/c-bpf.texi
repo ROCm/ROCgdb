@@ -908,3 +908,40 @@ compatibility:
 @item xaddw [rd + offset16], rs
 Alias to @code{aadd32}.
 @end table
+
+@subsection Load-acquire and store-release instructions
+
+These instructions load or store an 8-bit, 16-bit, 32-bit or 64-bit
+value with acquire or release ordering semantics.  The 8-bit, 16-bit
+and 32-bit loads zero-extend the loaded value into @code{rd}.
+
+Note that in pseudoc syntax the 8-bit, 16-bit and 32-bit variants
+should use @code{w} registers for the loaded or stored value, and the
+64-bit variants @code{r} registers.
+
+@table @code
+@item ldacqb rd, [rs + offset16]
+@itemx ldacqh rd, [rs + offset16]
+@itemx ldacqw rd, [rs + offset16]
+@itemx ldacqdw rd, [rs + offset16]
+@itemx wd = load_acquire ((u8 *)(rs + offset16))
+@itemx wd = load_acquire ((u16 *)(rs + offset16))
+@itemx wd = load_acquire ((u32 *)(rs + offset16))
+@itemx rd = load_acquire ((u64 *)(rs + offset16))
+Load-acquire.  Load the value addressed by @code{rs + offset16} into
+@code{rd}, ordered before any memory access that follows it.
+
+@item strelb [rd + offset16], rs
+@itemx strelh [rd + offset16], rs
+@itemx strelw [rd + offset16], rs
+@itemx streldw [rd + offset16], rs
+@itemx store_release ((u8 *)(rd + offset16), ws)
+@itemx store_release ((u16 *)(rd + offset16), ws)
+@itemx store_release ((u32 *)(rd + offset16), ws)
+@itemx store_release ((u64 *)(rd + offset16), rs)
+Store-release.  Store the value in @code{rs} to the address
+@code{rd + offset16}, ordered after any memory access that precedes
+it.
+@end table
+
+These instructions are only available in BPF v4 or later.
