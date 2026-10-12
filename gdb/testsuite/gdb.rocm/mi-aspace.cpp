@@ -36,6 +36,8 @@ int global_var;
 __device__ void
 aspace_test ()
 {
+  /* Define a local variable to enforce scratch space usage.  */
+  volatile int var = 42;
 }
 
 __global__ void
