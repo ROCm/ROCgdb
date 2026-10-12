@@ -256,6 +256,8 @@ const struct bpf_opcode bpf_opcodes[] =
    BPF_V1, BPF_CODE, BPF_CLASS_ST|BPF_SIZE_DW|BPF_MODE_MEM},
 
   /* Compare-and-jump instructions (reg OP reg).  */
+  {BPF_INSN_JAX, "ja%W%dr", "gotox%t%w%dr",
+   BPF_V4, BPF_CODE, BPF_CLASS_JMP|BPF_CODE_JA|BPF_SRC_X},
   {BPF_INSN_JAR, "ja%W%d16", "goto%t%w%d16",
    BPF_V1, BPF_CODE, BPF_CLASS_JMP|BPF_CODE_JA|BPF_SRC_K},
   {BPF_INSN_JEQR, "jeq%W%dr , %sr , %d16", "if%t%w%dr == %sr%wgoto%t%w%d16",

@@ -52,6 +52,8 @@ if {[istarget bpf*-*-*]} {
     run_dump_test ascast-v1
     run_dump_test acqrel
     run_dump_test acqrel-pseudoc
+    run_dump_test gotox
+    run_dump_test gotox-pseudoc
     run_dump_test indcall-1
     run_dump_test indcall-1-pseudoc
 
@@ -84,6 +86,8 @@ if {[istarget bpf*-*-*]} {
     run_dump_test ascast-be-pseudoc
     run_dump_test acqrel-be
     run_dump_test acqrel-be-pseudoc
+    run_dump_test gotox-be
+    run_dump_test gotox-be-pseudoc
 
     run_dump_test jump-relax-ja-be
     run_dump_test jump-relax-jump-be

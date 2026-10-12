@@ -6,3 +6,4 @@
         ldacqdw %r1, [%r2+0]
         strelh [%r1+0], %r2
         streldw [%r1+0], %r2
+        ja %r1

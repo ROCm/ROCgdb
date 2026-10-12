@@ -606,6 +606,12 @@ Jump-always.
 @itemx gotol disp32
 Jump-always, long range.
 
+@item ja rd
+@itemx gotox rd
+Jump-always, indirect: jump to the location held in @code{rd},
+typically loaded from a jump table.  Only available in BPF v4 or
+later.
+
 @item jeq rd, rs, disp16
 @itemx jeq rd, imm32, disp16
 @itemx if rd == rs goto disp16
