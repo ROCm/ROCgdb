@@ -733,6 +733,7 @@ enum aarch64_opnd
   AARCH64_OPND_ADDR_ADRP,	/* Memory address for ADRP */
   AARCH64_OPND_ADDR_PCREL9,	/* 9-bit PC-relative address for e.g. CB<cc>.  */
   AARCH64_OPND_ADDR_PCREL14,	/* 14-bit PC-relative address for e.g. TBZ.  */
+  AARCH64_OPND_ADDR_UPCREL16,	/* unsigned 16-bit PC-relative offset (imm16:'00') for e.g. RETA<k>... */
   AARCH64_OPND_ADDR_PCREL19,	/* 19-bit PC-relative address for e.g. LDR.  */
   AARCH64_OPND_ADDR_PCREL21,	/* 21-bit PC-relative address for e.g. ADR.  */
   AARCH64_OPND_ADDR_PCREL26,	/* 26-bit PC-relative address for e.g. BL.  */
@@ -1178,6 +1179,7 @@ enum aarch64_insn_class
   lse_atomic,
   lse128_atomic,
   movewide,
+  pauthlr_imm,
   pcreladdr,
   ic_system,
   sme_fp_sd,

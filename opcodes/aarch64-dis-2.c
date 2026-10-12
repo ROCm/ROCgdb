@@ -13208,10 +13208,30 @@ aarch64_opcode_lookup_1 (uint32_t word)
                     }
                   else
                     {
-                      /* 33222222222211111111110000000000
-                         10987654321098765432109876543210
-                         xxxx00111xxxxxxxxxxxxxxxxxxxxxxx.  */
-                      return A64_OPID_13800000_extr_Rd_Rn_Rm_IMMS;
+                      if (((word >> 21) & 0x1) == 0)
+                        {
+                          if (((word >> 29) & 0x1) == 0)
+                            {
+                              /* 33222222222211111111110000000000
+                                 10987654321098765432109876543210
+                                 xx0x00111x0xxxxxxxxxxxxxxxxxxxxx.  */
+                              return A64_OPID_13800000_extr_Rd_Rn_Rm_IMMS;
+                            }
+                          else
+                            {
+                              /* 33222222222211111111110000000000
+                                 10987654321098765432109876543210
+                                 xx1x00111x0xxxxxxxxxxxxxxxxxxxxx.  */
+                              return A64_OPID_f380001f_autiasppc_ADDR_UPCREL16;
+                            }
+                        }
+                      else
+                        {
+                          /* 33222222222211111111110000000000
+                             10987654321098765432109876543210
+                             xxxx00111x1xxxxxxxxxxxxxxxxxxxxx.  */
+                          return A64_OPID_f3a0001f_autibsppc_ADDR_UPCREL16;
+                        }
                     }
                 }
               else
@@ -26995,10 +27015,20 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                     {
                                       if (((word >> 25) & 0x1) == 0)
                                         {
-                                          /* 33222222222211111111110000000000
-                                             10987654321098765432109876543210
-                                             x1010101000xxxxxxxxxxxxxxxxxxxxx.  */
-                                          return A64_OPID_d500403f_xaflag;
+                                          if (((word >> 31) & 0x1) == 0)
+                                            {
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 01010101000xxxxxxxxxxxxxxxxxxxxx.  */
+                                              return A64_OPID_5500001f_retaasppc_ADDR_UPCREL16;
+                                            }
+                                          else
+                                            {
+                                              /* 33222222222211111111110000000000
+                                                 10987654321098765432109876543210
+                                                 11010101000xxxxxxxxxxxxxxxxxxxxx.  */
+                                              return A64_OPID_d500403f_xaflag;
+                                            }
                                         }
                                       else
                                         {
@@ -27080,10 +27110,20 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                 {
                                   if (((word >> 25) & 0x1) == 0)
                                     {
-                                      /* 33222222222211111111110000000000
-                                         10987654321098765432109876543210
-                                         x1010101x01xxxxxxxxxxxxxxxxxxxxx.  */
-                                      return A64_OPID_d5233060_tstart_Rd;
+                                      if (((word >> 31) & 0x1) == 0)
+                                        {
+                                          /* 33222222222211111111110000000000
+                                             10987654321098765432109876543210
+                                             01010101x01xxxxxxxxxxxxxxxxxxxxx.  */
+                                          return A64_OPID_5520001f_retabsppc_ADDR_UPCREL16;
+                                        }
+                                      else
+                                        {
+                                          /* 33222222222211111111110000000000
+                                             10987654321098765432109876543210
+                                             11010101x01xxxxxxxxxxxxxxxxxxxxx.  */
+                                          return A64_OPID_d5233060_tstart_Rd;
+                                        }
                                     }
                                   else
                                     {
@@ -38035,6 +38075,7 @@ aarch64_extract_operand (const aarch64_operand *self,
     case AARCH64_OPND_ADDR_ADRP:
     case AARCH64_OPND_ADDR_PCREL9:
     case AARCH64_OPND_ADDR_PCREL14:
+    case AARCH64_OPND_ADDR_UPCREL16:
     case AARCH64_OPND_ADDR_PCREL19:
     case AARCH64_OPND_ADDR_PCREL21:
     case AARCH64_OPND_ADDR_PCREL26:

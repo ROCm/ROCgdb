@@ -939,6 +939,7 @@ aarch64_insert_operand (const aarch64_operand *self,
     case AARCH64_OPND_NZCV:
     case AARCH64_OPND_ADDR_PCREL9:
     case AARCH64_OPND_ADDR_PCREL14:
+    case AARCH64_OPND_ADDR_UPCREL16:
     case AARCH64_OPND_ADDR_PCREL19:
     case AARCH64_OPND_ADDR_PCREL21:
     case AARCH64_OPND_ADDR_PCREL26:

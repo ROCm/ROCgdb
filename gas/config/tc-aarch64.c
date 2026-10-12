@@ -5239,6 +5239,12 @@ encode_addsub_imm_shift_amount (uint32_t cnt)
   return cnt << 22;
 }
 
+/* Encode the imm16 field of RETA<k>SPPC instruction.  */
+static inline uint32_t
+encode_pauthauti_imm16 (uint32_t imm)
+{
+  return imm << 5;
+}
 
 /* encode the imm field of Adr instruction */
 static inline uint32_t
@@ -7606,6 +7612,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_ADDR_PCREL9:
 	case AARCH64_OPND_ADDR_PCREL14:
+	case AARCH64_OPND_ADDR_UPCREL16:
 	case AARCH64_OPND_ADDR_PCREL19:
 	case AARCH64_OPND_ADDR_PCREL21:
 	case AARCH64_OPND_ADDR_PCREL26:
@@ -7659,6 +7666,11 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 		    inst.reloc.type =
 		      (opcode->op == OP_BL) ? BFD_RELOC_AARCH64_CALL26
 			 : BFD_RELOC_AARCH64_JUMP26;
+		    break;
+		  case pauthlr_imm:
+		    /* e.g. AUTI<k>SPPC or RETA<k>SPPC  */
+		    gas_assert (operands[i] == AARCH64_OPND_ADDR_UPCREL16);
+		    aarch64_set_gas_internal_fixup (&inst.reloc, info, 0);
 		    break;
 		  case loadlit:
 		    gas_assert (operands[i] == AARCH64_OPND_ADDR_PCREL19);
@@ -9855,6 +9867,27 @@ fix_insn (fixS *fixP, uint32_t flags, offsetT value)
 
       as_bad_where (fixP->fx_file, fixP->fx_line,
 		    _("immediate offset out of range"));
+      break;
+
+    case AARCH64_OPND_ADDR_UPCREL16:
+      /* immediate offset from a label.  */
+      if (value & 3)
+	{
+	  as_bad_where (fixP->fx_file, fixP->fx_line,
+			 _("pc-relative address offset not word aligned"));
+	  break;
+	}
+      value = - (value >> 2);
+      if (unsigned_overflow (value, 16))
+	{
+	  as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("pc-relative address offset out of range"));
+	  break;
+	}
+
+      insn = get_aarch64_insn (buf);
+      insn |= encode_pauthauti_imm16 (value);
+      put_aarch64_insn (buf, insn);
       break;
 
     default:

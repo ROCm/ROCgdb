@@ -4430,6 +4430,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   PAUTH_INSN ("eretab", 0xd69f0fff, 0xffffffff, branch_reg, OP0 (), QL_0, F_BRANCH_RET),
   PAUTH_LR_INSN ("retaasppcr", 0xd65f0be0, 0xffffffe0, branch_reg, OP1 (Rd_NOT_ZR), QL_I1X, F_BRANCH_RET),
   PAUTH_LR_INSN ("retabsppcr", 0xd65f0fe0, 0xffffffe0, branch_reg, OP1 (Rd_NOT_ZR), QL_I1X, F_BRANCH_RET),
+  PAUTH_LR_INSN ("retaasppc", 0x5500001f, 0xffe0001f, pauthlr_imm, OP1 (ADDR_UPCREL16), QL_PCREL_NIL, F_BRANCH_RET),
+  PAUTH_LR_INSN ("retabsppc", 0x5520001f, 0xffe0001f, pauthlr_imm, OP1 (ADDR_UPCREL16), QL_PCREL_NIL, F_BRANCH_RET),
   /* Compare & branch (immediate).  */
   CORE_INSN ("cbz", 0x34000000, 0x7f000000, compbranch, 0, OP2 (Rt, ADDR_PCREL19), QL_R_PCREL, F_SF),
   CORE_INSN ("cbnz", 0x35000000, 0x7f000000, compbranch, 0, OP2 (Rt, ADDR_PCREL19), QL_R_PCREL, F_SF),
@@ -4537,6 +4539,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   PAUTH_INSN ("autdb", 0xdac11c00, 0xfffffc00, dp_1src, OP2 (Rd, Rn_SP), QL_I2SAMEX, 0),
   PAUTH_LR_INSN ("autiasppcr", 0xdac1901e, 0xfffffc1f, aarch64_misc, OP1 (Rn), QL_I1X, 0),
   PAUTH_LR_INSN ("autibsppcr", 0xdac1941e, 0xfffffc1f, aarch64_misc, OP1 (Rn), QL_I1X, 0),
+  PAUTH_LR_INSN ("autiasppc", 0xf380001f, 0xffe0001f, pauthlr_imm, OP1 (ADDR_UPCREL16), QL_PCREL_NIL, F_SUBCLASS_OTHER),
+  PAUTH_LR_INSN ("autibsppc", 0xf3a0001f, 0xffe0001f, pauthlr_imm, OP1 (ADDR_UPCREL16), QL_PCREL_NIL, F_SUBCLASS_OTHER),
   PAUTH_LR_INSN ("autia171615", 0xdac1bbfe, 0xffffffff, aarch64_misc, OP0 (), QL_0, 0),
   PAUTH_LR_INSN ("autib171615", 0xdac1bffe, 0xffffffff, aarch64_misc, OP0 (), QL_0, 0),
   PAUTH_INSN ("paciza", 0xdac123e0, 0xffffffe0, dp_1src, OP1 (Rd), QL_I1X, 0),
@@ -8179,6 +8183,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       F(FLD(5, 9)), "9-bit PC-relative address")			\
     Y(ADDRESS, imm, "ADDR_PCREL14", OPD_F_SEXT | OPD_F_SHIFT_BY_2,	\
       F(FLD(5, 14)), "14-bit PC-relative address")			\
+    Y(ADDRESS, imm, "ADDR_UPCREL16", OPD_F_UNSIGNED | OPD_F_SHIFT_BY_2,	\
+      F(FLD(5, 16)), "unsigned 16-bit PC-relative offset (imm16:'00')")	\
     Y(ADDRESS, imm, "ADDR_PCREL19", OPD_F_SEXT | OPD_F_SHIFT_BY_2,	\
       F(FLD(5, 19)), "19-bit PC-relative address")			\
     Y(ADDRESS, imm, "ADDR_PCREL21", OPD_F_SEXT, F(FLD(5, 19), FLD(29, 2)),	\
