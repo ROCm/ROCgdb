@@ -2922,6 +2922,8 @@ static const aarch64_feature_set aarch64_feature_sve =
   AARCH64_FEATURE (SVE);
 static const aarch64_feature_set aarch64_feature_pauth =
   AARCH64_FEATURE (PAUTH);
+static const aarch64_feature_set aarch64_feature_pauth_lr =
+  AARCH64_FEATURES (2, PAUTH, PAUTH_LR);
 static const aarch64_feature_set aarch64_feature_compnum =
   AARCH64_FEATURE (COMPNUM);
 static const aarch64_feature_set aarch64_feature_jscvt =
@@ -3179,6 +3181,7 @@ static const aarch64_feature_set aarch64_feature_tev =
 #define FPRCVT		&aarch64_feature_fprcvt
 #define SVE		&aarch64_feature_sve
 #define PAUTH		&aarch64_feature_pauth
+#define PAUTH_LR	&aarch64_feature_pauth_lr
 #define COMPNUM		&aarch64_feature_compnum
 #define JSCVT		&aarch64_feature_jscvt
 #define RCPC		&aarch64_feature_rcpc
@@ -3338,6 +3341,8 @@ static const aarch64_feature_set aarch64_feature_tev =
     FLAGS | F_INVALID_IMM_SYMS_2, CONSTRAINTS, TIED, NULL }
 #define PAUTH_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, 0, PAUTH, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define PAUTH_LR_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, PAUTH_LR, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define CNUM_INSN(NAME,OPCODE,MASK,CLASS,OP,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, OP, COMPNUM, OPS, QUALS, FLAGS | F_INVALID_IMM_SYMS_1, 0, 0, NULL }
 #define JSCVT_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \

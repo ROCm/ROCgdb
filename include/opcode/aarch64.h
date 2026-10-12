@@ -81,6 +81,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_LS64,
   /* v8.3 Pointer Authentication.  */
   AARCH64_FEATURE_PAUTH,
+  /* Pointer Authentication LR signing extension.  */
+  AARCH64_FEATURE_PAUTH_LR,
   /* FP instructions.  */
   AARCH64_FEATURE_FP,
   /* SIMD instructions.  */
