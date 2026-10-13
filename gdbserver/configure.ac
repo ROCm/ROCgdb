@@ -335,10 +335,6 @@ AC_CACHE_CHECK(
      [gdbsrv_cv_have_sync_builtins=no]
    )]
 )
-if test "$gdbsrv_cv_have_sync_builtins" = yes; then
-  AC_DEFINE(HAVE_SYNC_BUILTINS, 1,
-    [Define to 1 if the target supports __sync_*_compare_and_swap])
-fi
 
 dnl Check for -fvisibility=hidden support in the compiler.
 saved_cflags="$CFLAGS"

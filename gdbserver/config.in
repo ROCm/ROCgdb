@@ -302,9 +302,6 @@
 /* Define to 1 if `st_blocks' is a member of `struct stat'. */
 #undef HAVE_STRUCT_STAT_ST_BLOCKS
 
-/* Define to 1 if the target supports __sync_*_compare_and_swap */
-#undef HAVE_SYNC_BUILTINS
-
 /* Define to 1 if you have the <sys/file.h> header file. */
 #undef HAVE_SYS_FILE_H
 

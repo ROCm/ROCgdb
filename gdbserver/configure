@@ -13988,11 +13988,6 @@ rm -f core conftest.err conftest.$ac_objext \
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdbsrv_cv_have_sync_builtins" >&5
 $as_echo "$gdbsrv_cv_have_sync_builtins" >&6; }
-if test "$gdbsrv_cv_have_sync_builtins" = yes; then
-
-$as_echo "#define HAVE_SYNC_BUILTINS 1" >>confdefs.h
-
-fi
 
 saved_cflags="$CFLAGS"
 CFLAGS="$CFLAGS -fvisibility=hidden"
