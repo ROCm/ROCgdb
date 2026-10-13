@@ -39,7 +39,8 @@ gdb_assert { [Term::wait_for ""] } "enter TUI"
 
 # Exit TUI.
 send_gdb "\030\001"
-gdb_assert { [Term::wait_for ""] } "exit TUI"
+gdb_assert { [Term::wait_for_region_contents {*}$line "^$gdb_prompt "] } \
+    "exit TUI"
 
 # Type b.
 send_gdb "b"
