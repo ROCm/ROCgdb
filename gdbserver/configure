@@ -13686,9 +13686,7 @@ esac
 
 . ${srcdir}/configure.srv
 
-if test "${srv_mingwce}" = "yes"; then
-  LIBS="$LIBS -lws2"
-elif test "${srv_mingw}" = "yes"; then
+if test "${srv_mingw}" = "yes"; then
   # WIN32APILIBS is set by GDB_AC_COMMON.
   LIBS="$LIBS $WIN32APILIBS"
 fi
