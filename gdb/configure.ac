@@ -1511,8 +1511,6 @@ AC_CHECK_TYPES(socklen_t, [], [],
 # Checks for compiler characteristics.  #
 # ------------------------------------- #
 
-AC_C_CONST
-AC_C_INLINE
 AC_C_BIGENDIAN
 
 # ------------------------------ #
