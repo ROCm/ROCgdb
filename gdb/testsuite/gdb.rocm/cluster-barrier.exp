@@ -59,7 +59,7 @@ foreach_with_prefix bp {BP1 BP2 BP3} {
 	}
 
 	set bp_line [gdb_get_line_number "$bp"]
-	gdb_breakpoint "$bp_line" -allow-pending -temporary
+	gdb_breakpoint "$bp_line" allow-pending temporary
 	gdb_continue_to_breakpoint "$bp"
 
 	gdb_continue_to_end "" continue 1
