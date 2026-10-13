@@ -1452,7 +1452,6 @@ AC_CHECK_HEADERS([ \
   machine/reg.h \
   nlist.h \
   ptrace.h \
-  sys/debugreg.h \
   sys/file.h \
   sys/filio.h \
   sys/ioctl.h \

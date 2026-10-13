@@ -532,9 +532,6 @@
 /* Define to 1 if `td_pcb' is a member of `struct thread'. */
 #undef HAVE_STRUCT_THREAD_TD_PCB
 
-/* Define to 1 if you have the <sys/debugreg.h> header file. */
-#undef HAVE_SYS_DEBUGREG_H
-
 /* Define to 1 if you have the <sys/file.h> header file. */
 #undef HAVE_SYS_FILE_H
 
