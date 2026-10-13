@@ -466,9 +466,6 @@
 /* Define if sigsetjmp is available. */
 #undef HAVE_SIGSETJMP
 
-/* Define to 1 if you have the `sigsetmask' function. */
-#undef HAVE_SIGSETMASK
-
 /* Define to 1 if you have the `sigtimedwait' function. */
 #undef HAVE_SIGTIMEDWAIT
 
@@ -591,9 +588,6 @@
 
 /* Define to 1 if you have the <thread_db.h> header file. */
 #undef HAVE_THREAD_DB_H
-
-/* Define to 1 if you have the `ttrace' function. */
-#undef HAVE_TTRACE
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H

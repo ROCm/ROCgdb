@@ -1543,8 +1543,6 @@ AC_CHECK_FUNCS([ \
   setlocale \
   setrlimit \
   setsid \
-  sigsetmask \
-  ttrace \
   use_default_colors \
   wresize \
 ])
