@@ -2007,10 +2007,6 @@ if test "$gdb_cv_var_bfd_elf" = yes; then
   CONFIG_OBS="$CONFIG_OBS gcore-elf.o elf-none-tdep.o"
   AC_DEFINE(HAVE_ELF, 1,
 	    [Define if ELF support should be included.])
-  # -ldl is provided by bfd/Makefile.am (LIBDL) <PLUGINS>.
-  if test "$plugins" = "yes"; then
-    AC_SEARCH_LIBS(dlopen, dl)
-  fi
   bfd_supports_elf=yes
   all_binary_file_srcs="$all_binary_file_srcs \$(elf_SRCS)"
 fi
