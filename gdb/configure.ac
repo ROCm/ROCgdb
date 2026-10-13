@@ -1724,55 +1724,6 @@ if test "$gdb_cv_printf_has_decfloat" = yes; then
 	    [Define to 1 if the "%H, %D and %DD" formats work to print decfloats.])
 fi
 
-# Check if the compiler supports the `long double' type.  We can't use
-# AC_C_LONG_DOUBLE because that one does additional checks on the
-# constants defined in <float.h> that fail on some systems,
-# e.g. FreeBSD/i386 4.7 and OpenBSD/i386 3.6.
-
-AC_CACHE_CHECK([for long double support in compiler], gdb_cv_c_long_double,
-	       [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[long double foo;]])],
-				  gdb_cv_c_long_double=yes,
-				  gdb_cv_c_long_double=no)])
-if test "$gdb_cv_c_long_double" = yes; then
-  AC_DEFINE(HAVE_LONG_DOUBLE, 1,
-	   [Define to 1 if the compiler supports long double.])
-fi
-
-# Check if the compiler and runtime support printing long doubles.
-
-AC_CACHE_CHECK([for long double support in printf],
-	       gdb_cv_printf_has_long_double,
-	       [AC_RUN_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT],
-[[char buf[16];
-  long double f = 3.141592653;
-  sprintf (buf, "%Lg", f);
-  return (strncmp ("3.14159", buf, 7));]])],
-			      gdb_cv_printf_has_long_double=yes,
-			      gdb_cv_printf_has_long_double=no,
-			      gdb_cv_printf_has_long_double=no)])
-if test "$gdb_cv_printf_has_long_double" = yes; then
-  AC_DEFINE(PRINTF_HAS_LONG_DOUBLE, 1,
-	    [Define to 1 if the "%Lg" format works to print long doubles.])
-fi
-
-# Check if the compiler and runtime support scanning long doubles.
-
-AC_CACHE_CHECK([for long double support in scanf],
-	       gdb_cv_scanf_has_long_double,
-	       [AC_RUN_IFELSE([AC_LANG_PROGRAM(
-[[#include <stdio.h>]],
-[[char *buf = "3.141592653";
-  long double f = 0;
-  sscanf (buf, "%Lg", &f);
-  return !(f > 3.14159 && f < 3.14160);]])],
-			      gdb_cv_scanf_has_long_double=yes,
-			      gdb_cv_scanf_has_long_double=no,
-			      gdb_cv_scanf_has_long_double=no)])
-if test "$gdb_cv_scanf_has_long_double" = yes; then
-  AC_DEFINE(SCANF_HAS_LONG_DOUBLE, 1,
-	    [Define to 1 if the "%Lg" format works to scan long doubles.])
-fi
-
 case ${host_os} in
 aix*)
   AC_CACHE_CHECK(

@@ -306,9 +306,6 @@
 /* Define to 1 if you have the <locale.h> header file. */
 #undef HAVE_LOCALE_H
 
-/* Define to 1 if the compiler supports long double. */
-#undef HAVE_LONG_DOUBLE
-
 /* Define to 1 if the system has the type `long long'. */
 #undef HAVE_LONG_LONG
 
@@ -650,9 +647,6 @@
 /* Define to 1 if the "%H, %D and %DD" formats work to print decfloats. */
 #undef PRINTF_HAS_DECFLOAT
 
-/* Define to 1 if the "%Lg" format works to print long doubles. */
-#undef PRINTF_HAS_LONG_DOUBLE
-
 /* Define to 1 if the "%ll" format works to print long longs. */
 #undef PRINTF_HAS_LONG_LONG
 
@@ -690,9 +684,6 @@
 
 /* Bug reporting address */
 #undef REPORT_BUGS_TO
-
-/* Define to 1 if the "%Lg" format works to scan long doubles. */
-#undef SCANF_HAS_LONG_DOUBLE
 
 /* Define to 1 if the `setpgrp' function takes no argument. */
 #undef SETPGRP_VOID
