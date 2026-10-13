@@ -28662,16 +28662,19 @@ $as_echo "${PYTHON_CFLAGS}" >&6; }
 
   # On x64 Windows, Python's include headers, and pyconfig.h in
   # particular, rely on MS_WIN64 macro to detect that it's a 64bit
-  # version of Windows.  Unfortunately, MS_WIN64 is only defined if
-  # _MSC_VER, a Microsoft-specific macro, is defined.  So, when
-  # building on x64 Windows with GCC, we define MS_WIN64 ourselves.
-  # The issue was reported to the Python community, but still isn't
-  # solved as of 2012-10-02 (http://bugs.python.org/issue4709).
+  # version of Windows.  Before Python 3.12, MS_WIN64 is only defined
+  # if _MSC_VER, a Microsoft-specific macro, is defined.  So, when
+  # building on x64 Windows with GCC, we define MS_WIN64 ourselves
+  # (http://bugs.python.org/issue4709).  Python 3.12 and later define
+  # it as empty for MinGW too, so define it as empty as well here too.
+  #
+  # This can be removed when support for Python 3.12 and below is
+  # dropped.
 
   case "$gdb_host" in
     mingw64)
 	   if test "${GCC}" = yes; then
-	     CPPFLAGS="$CPPFLAGS -DMS_WIN64"
+	     CPPFLAGS="$CPPFLAGS -DMS_WIN64="
 	   fi
 	   ;;
   esac
