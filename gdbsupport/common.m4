@@ -44,7 +44,6 @@ AC_CHECK_HEADERS([ \
   linux/elf.h \
   linux/perf_event.h  \
   locale.h \
-  memory.h \
   poll.h \
   proc_service.h \
   signal.h \
