@@ -41,7 +41,8 @@ kern ()
 	 the barrier while the first wave is still in this block.  */
       for (int i = 0; i < 100; i++)
 	__builtin_amdgcn_s_sleep (8);
-      /* Break here.  */
+
+      volatile int var = 42; /* Break here.  */
     }
   __syncthreads ();
 }
