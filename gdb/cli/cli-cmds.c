@@ -1171,7 +1171,14 @@ pipe_command (const char *arg, int from_tty)
        since that is done during Python initialization.  */
     scoped_ignore_sigpipe ignore_sigpipe;
 
-    SCOPE_EXIT { exit_status = pclose (to_shell_command); };
+    SCOPE_EXIT
+      {
+	/* Flush explicitly, ignoring errors, so that a failure to write
+	   buffered output (for instance, with EPIPE) doesn't make pclose fail
+	   and hide the exit status of the shell command.  */
+	fflush (to_shell_command);
+	exit_status = pclose (to_shell_command);
+      };
 
     stdio_file pipe_file (to_shell_command);
 
