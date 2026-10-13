@@ -73,7 +73,6 @@ AC_CHECK_HEADERS([ \
   netinet/in.h \
   netinet/tcp.h \
   signal.h \
-  string.h \
   sys/file.h \
   sys/ioctl.h \
   sys/procfs.h \
