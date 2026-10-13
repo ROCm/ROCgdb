@@ -102,9 +102,6 @@
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
 
-/* Define if <sys/procfs.h> has fpregset_t. */
-#undef HAVE_FPREGSET_T
-
 /* Define to 1 if you have the `getauxval' function. */
 #undef HAVE_GETAUXVAL
 
@@ -119,9 +116,6 @@
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #undef HAVE_GETTEXT
-
-/* Define if <sys/procfs.h> has gregset_t. */
-#undef HAVE_GREGSET_T
 
 /* Define if you have the iconv() function and it works. */
 #undef HAVE_ICONV
@@ -153,9 +147,6 @@
 /* Define to 1 if the system has the type `long long'. */
 #undef HAVE_LONG_LONG
 
-/* Define if <sys/procfs.h> has lwpid_t. */
-#undef HAVE_LWPID_T
-
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
@@ -174,20 +165,8 @@
 /* Define to 1 if you have the <poll.h> header file. */
 #undef HAVE_POLL_H
 
-/* Define if <sys/procfs.h> has prfpregset_t. */
-#undef HAVE_PRFPREGSET_T
-
-/* Define if <sys/procfs.h> has prgregset32_t. */
-#undef HAVE_PRGREGSET32_T
-
-/* Define if <sys/procfs.h> has prgregset_t. */
-#undef HAVE_PRGREGSET_T
-
 /* Define to 1 if you have the <proc_service.h> header file. */
 #undef HAVE_PROC_SERVICE_H
-
-/* Define if <sys/procfs.h> has psaddr_t. */
-#undef HAVE_PSADDR_T
 
 /* Have PTHREAD_PRIO_INHERIT. */
 #undef HAVE_PTHREAD_PRIO_INHERIT

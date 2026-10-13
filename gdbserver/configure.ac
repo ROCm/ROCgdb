@@ -243,16 +243,6 @@ if test "${srv_linux_btrace}" = "yes"; then
 	    [Define if the target supports branch tracing.])
 fi
 
-dnl Some systems (e.g., Android) have lwpid_t defined in libthread_db.h.
-if test "$bfd_cv_have_sys_procfs_type_lwpid_t" != yes; then
-  GDBSERVER_HAVE_THREAD_DB_TYPE(lwpid_t)
-fi
-
-dnl Some systems (e.g., Android) have psaddr_t defined in libthread_db.h.
-if test "$bfd_cv_have_sys_procfs_type_psaddr_t" != yes; then
-  GDBSERVER_HAVE_THREAD_DB_TYPE(psaddr_t)
-fi
-
 dnl Check for libdl, but do not add it to LIBS as only gdbserver
 dnl needs it (and gdbreplay doesn't).
 old_LIBS="$LIBS"
