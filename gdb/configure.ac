@@ -1491,7 +1491,6 @@ AC_CHECK_HEADERS([execinfo.h])
 
 libiberty_INIT
 
-AC_CHECK_DECLS([snprintf])
 AM_LC_MESSAGES
 
 # ------------------ #

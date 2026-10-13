@@ -39,8 +39,11 @@
    around technique as above.  */
 #undef _FILE_OFFSET_BITS
 
-/* A kludge to avoid redefinition of snprintf on Windows by pyerrors.h.  */
-#if defined(_WIN32) && defined(HAVE_DECL_SNPRINTF)
+/* A kludge to avoid redefinition of snprintf on Windows by pyerrors.h.
+
+   This is only needed for Python <= 3.8, so it can go once support for those
+   Python versions is dropped.  */
+#ifdef _WIN32
 #define HAVE_SNPRINTF 1
 #endif
 
