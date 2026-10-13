@@ -171,6 +171,9 @@
 /* Define to 1 if you have the `mprotect' function. */
 #undef HAVE_MPROTECT
 
+/* Defined if MSVC demangler support is enabled. */
+#undef HAVE_MSVC_DEMANGLER
+
 /* Define if <sys/procfs.h> has prpsinfo32_t. */
 #undef HAVE_PRPSINFO32_T
 

@@ -412,6 +412,19 @@ AM_CPPFLAGS = -I. -I$(srcdir) -I../bfd -I$(srcdir)/config \
 
 GASLIBS = @OPCODES_LIB@ ../bfd/libbfd.la ../libiberty/libiberty.a
 
+# libbfd links libdemangle-msvc, a C++ library, so every program that
+# links libbfd needs C++ linking when it is enabled.
+if ENABLE_MSVC_DEMANGLER
+GAS_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXX) $(AM_CXXFLAGS) $(CXXFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+else
+GAS_LINK = $(LINK)
+endif
+
+as_new_LINK = $(GAS_LINK)
+itbl_test_LINK = $(GAS_LINK)
+
 # Files to be copied away after each stage in building.
 STAGESTUFF = *.@OBJEXT@ $(noinst_PROGRAMS)
 

@@ -133,6 +133,27 @@ if test "${enable_libctf}" = yes; then
 fi
 AM_CONDITIONAL(ENABLE_LIBCTF, test "${enable_libctf}" = yes)
 
+AC_ARG_WITH([msvc-demangler],
+	    [AS_HELP_STRING([--with-msvc-demangler],
+			    [MSVC symbol demangling (default: enabled for Windows targets)])],
+	    ,
+	    [with_msvc_demangler=no])
+
+dnl The MSVC demangler is a C++ library.  AC_PROG_CXX must be called
+dnl unconditionally so automake always defines am__fastdepCXX.
+AC_PROG_CXX
+
+if test "x${with_msvc_demangler}" != "xno"; then
+    AC_DEFINE(HAVE_MSVC_DEMANGLER, 1,
+	      [Defined if MSVC demangler was requested.])
+    MSVC_DEMANGLER_INCLUDE='-I$(srcdir)/../libdemangle-msvc'
+else
+    MSVC_DEMANGLER_INCLUDE=
+fi
+AC_SUBST(MSVC_DEMANGLER_INCLUDE)
+
+AM_CONDITIONAL(ENABLE_MSVC_DEMANGLER, test "x${with_msvc_demangler}" != "xno")
+
 AM_BINUTILS_WARNINGS
 
 AC_CONFIG_HEADERS(config.h:config.in)

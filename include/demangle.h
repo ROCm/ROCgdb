@@ -57,9 +57,16 @@ extern "C" {
 #define DMGL_GNAT	 (1 << 15)
 #define DMGL_DLANG	 (1 << 16)
 #define DMGL_RUST	 (1 << 17)	/* Rust wraps GNU_V3 style mangling.  */
+#define DMGL_MSVC	 (1 << 19)	/* Demangle as MSVC (Microsoft Visual
+					   C++ ABI).  When set, MSVC-specific
+					   decorations (calling conventions,
+					   access specifiers, special symbols)
+					   are preserved in the output; under
+					   DMGL_AUTO they are stripped to match
+					   Itanium output style.  */
 
 /* If none of these are set, use 'current_demangling_style' as the default. */
-#define DMGL_STYLE_MASK (DMGL_AUTO|DMGL_GNU_V3|DMGL_JAVA|DMGL_GNAT|DMGL_DLANG|DMGL_RUST)
+#define DMGL_STYLE_MASK (DMGL_AUTO|DMGL_GNU_V3|DMGL_JAVA|DMGL_GNAT|DMGL_DLANG|DMGL_RUST|DMGL_MSVC)
 
 /* Disable a limit on the depth of recursion in mangled strings.
    Note if this limit is disabled then stack exhaustion is possible when
@@ -89,7 +96,8 @@ extern enum demangling_styles
   java_demangling = DMGL_JAVA,
   gnat_demangling = DMGL_GNAT,
   dlang_demangling = DMGL_DLANG,
-  rust_demangling = DMGL_RUST
+  rust_demangling = DMGL_RUST,
+  msvc_demangling = DMGL_MSVC
 } current_demangling_style;
 
 /* Define string names for the various demangling styles. */
@@ -101,6 +109,7 @@ extern enum demangling_styles
 #define GNAT_DEMANGLING_STYLE_STRING          "gnat"
 #define DLANG_DEMANGLING_STYLE_STRING         "dlang"
 #define RUST_DEMANGLING_STYLE_STRING          "rust"
+#define MSVC_DEMANGLING_STYLE_STRING          "msvc"
 
 /* Some macros to test what demangling style is active. */
 
@@ -111,6 +120,7 @@ extern enum demangling_styles
 #define GNAT_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_GNAT)
 #define DLANG_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_DLANG)
 #define RUST_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_RUST)
+#define MSVC_DEMANGLING (((int) CURRENT_DEMANGLING_STYLE) & DMGL_MSVC)
 
 /* Provide information about the available demangle styles. This code is
    pulled from gdb into libiberty because it is useful to binutils also.  */
@@ -203,6 +213,54 @@ enum gnu_v3_dtor_kinds {
    it is.  */
 extern enum gnu_v3_dtor_kinds
 	is_gnu_v3_mangled_dtor (const char *name);
+
+/* Callbacks of an external MSVC demangler (libdemangle-msvc).  The
+   others are called only for names that MANGLED_START returns unchanged.
+   String results are malloc-allocated or NULL.  */
+
+struct msvc_demangler_ops
+{
+  /* Start of the MSVC-mangled part of NAME (NAME itself or a suffix
+     after a tag prefix), or NULL if NAME is not MSVC-mangled.  */
+  const char *(*mangled_start) (const char *name);
+  char *(*demangle) (const char *mangled, int options);
+  enum gnu_v3_ctor_kinds (*ctor_kind) (const char *mangled);
+  enum gnu_v3_dtor_kinds (*dtor_kind) (const char *mangled);
+  char *(*class_name_from_physname) (const char *physname);
+  char *(*method_name_from_physname) (const char *physname);
+};
+
+/* Register OPS (NULL disables MSVC demangling).  Sets global state, not
+   thread-safe.  */
+
+extern void
+cplus_demangle_set_msvc_ops (const struct msvc_demangler_ops *ops);
+
+/* Start of the MSVC-mangled part of NAME, or NULL if no MSVC demangler
+   is registered or NAME is not MSVC-mangled.  Text before it is a prefix
+   to print in front of the demangled part.  */
+
+extern const char *
+cplus_demangle_msvc_mangled_start (const char *name);
+
+/* MSVC counterparts of is_gnu_v3_mangled_ctor/dtor.  Return 0 when no
+   MSVC demangler is registered or NAME is not an MSVC structor.  */
+
+extern enum gnu_v3_ctor_kinds
+	is_msvc_mangled_ctor (const char *name);
+
+extern enum gnu_v3_dtor_kinds
+	is_msvc_mangled_dtor (const char *name);
+
+/* Qualified class name and unqualified method name of the MSVC-mangled
+   PHYSNAME, malloc-allocated, or NULL when no MSVC demangler is
+   registered or PHYSNAME is not an MSVC method.  */
+
+extern char *
+cplus_demangle_msvc_class_name (const char *physname);
+
+extern char *
+cplus_demangle_msvc_method_name (const char *physname);
 
 /* The V3 demangler works in two passes.  The first pass builds a tree
    representation of the mangled name, and the second pass turns the
