@@ -1685,19 +1685,6 @@ AC_CHECK_MEMBERS([struct ptrace_lwpinfo.pl_tdname], [], [],
 AC_CHECK_MEMBERS([struct ptrace_lwpinfo.pl_syscall_code], [], [],
 		 [#include <sys/ptrace.h>])
 
-# Check if the compiler supports the `long long' type.
-
-AC_CACHE_CHECK([for long long support in compiler], gdb_cv_c_long_long,
-	       [AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
-[[extern long long foo;]],
-[[switch (foo & 2) { case 0: return 1; }]])],
-				  gdb_cv_c_long_long=yes,
-				  gdb_cv_c_long_long=no)])
-if test "$gdb_cv_c_long_long" != yes; then
-  # libdecnumber requires long long.
-  AC_MSG_ERROR([Compiler must support long long for GDB.])
-fi
-
 # Check if the compiler and runtime support printing decfloats.
 
 AC_CACHE_CHECK([for decfloat support in printf],
