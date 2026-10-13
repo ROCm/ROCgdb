@@ -1459,9 +1459,6 @@ AC_CHECK_HEADERS([ \
   sys/procctl.h \
   sys/ptrace.h \
   sys/reg.h \
-  sys/resource.h \
-  termios.h \
-  thread_db.h \
 ])
 
 AC_CHECK_HEADERS(sys/user.h, [], [],
@@ -1485,7 +1482,6 @@ AC_CHECK_HEADERS(term.h, [], [],
 #endif
 ])
 
-AC_CHECK_HEADERS([sys/socket.h])
 AC_CHECK_HEADERS([ws2tcpip.h])
 AC_CHECK_HEADERS([execinfo.h])
 
@@ -1528,7 +1524,6 @@ AC_CHECK_FUNCS([ \
   clearenv \
   getgid \
   getpgid \
-  getrlimit \
   getuid \
   iconvlist \
   init_extended_color \
@@ -1546,8 +1541,6 @@ AC_CHECK_FUNCS([ \
   use_default_colors \
   wresize \
 ])
-
-AM_LANGINFO_CODESET
 
 # Check the return and argument types of ptrace.
 GDB_AC_PTRACE

@@ -68,7 +68,6 @@ ZW_GNU_GETTEXT_SISTER_DIR
 AC_CHECK_HEADERS([ \
   arpa/inet.h \
   fcntl.h \
-  linux/elf.h \
   netdb.h \
   netinet/in.h \
   netinet/tcp.h \
@@ -77,12 +76,9 @@ AC_CHECK_HEADERS([ \
   sys/ioctl.h \
   sys/procfs.h \
   sys/reg.h \
-  sys/socket.h \
-  termios.h \
   ws2tcpip.h \
 ])
 
-AC_FUNC_FORK
 AC_CHECK_FUNCS([ \
   pread \
   pread64 \
