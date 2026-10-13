@@ -41,7 +41,7 @@ with_rocm_gpu_lock {
 	}
 
 	set bp_line [gdb_get_line_number "break-here"]
-	gdb_breakpoint "$bp_line" -allow-pending -temporary
+	gdb_breakpoint "$bp_line" allow-pending temporary
 	gdb_continue_to_breakpoint "break-here"
 
 	# Expect grid and workgroup dimensions.
@@ -71,7 +71,7 @@ with_rocm_gpu_lock {
     }
 
     set bp_line [gdb_get_line_number "break-here"]
-    gdb_breakpoint "$bp_line" -allow-pending -temporary
+    gdb_breakpoint "$bp_line" allow-pending temporary
     gdb_continue_to_breakpoint "break-here"
 
     set dispatch_pos "$decimal:$decimal:$decimal:$decimal"
