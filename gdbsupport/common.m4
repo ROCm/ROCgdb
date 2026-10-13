@@ -88,8 +88,6 @@ AC_CHECK_HEADERS([ \
   # only in linux/personality.h.
   AC_CHECK_DECLS([ADDR_NO_RANDOMIZE],,, [#include <sys/personality.h>])
 
-  AC_CHECK_DECLS([strstr])
-
   # ----------------------- #
   # Checks for structures.  #
   # ----------------------- #
