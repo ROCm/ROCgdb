@@ -43,10 +43,8 @@ AC_CHECK_HEADERS([ \
   dlfcn.h \
   linux/elf.h \
   linux/perf_event.h  \
-  locale.h \
   poll.h \
   proc_service.h \
-  signal.h \
   sys/poll.h \
   sys/resource.h \
   sys/select.h \

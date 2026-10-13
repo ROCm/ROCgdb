@@ -8041,10 +8041,8 @@ for ac_header in  \
   dlfcn.h \
   linux/elf.h \
   linux/perf_event.h  \
-  locale.h \
   poll.h \
   proc_service.h \
-  signal.h \
   sys/poll.h \
   sys/resource.h \
   sys/select.h \
@@ -12546,11 +12544,9 @@ fi
 
 for ac_header in  \
   arpa/inet.h \
-  fcntl.h \
   netdb.h \
   netinet/in.h \
   netinet/tcp.h \
-  signal.h \
   sys/file.h \
   sys/ioctl.h \
   sys/procfs.h \

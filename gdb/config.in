@@ -303,9 +303,6 @@
 /* Define to 1 if you have the <linux/perf_event.h> header file. */
 #undef HAVE_LINUX_PERF_EVENT_H
 
-/* Define to 1 if you have the <locale.h> header file. */
-#undef HAVE_LOCALE_H
-
 /* Define to 1 if the system has the type `long long'. */
 #undef HAVE_LONG_LONG
 
@@ -428,9 +425,6 @@
 
 /* Define to 1 if you have the `sigaltstack' function. */
 #undef HAVE_SIGALTSTACK
-
-/* Define to 1 if you have the <signal.h> header file. */
-#undef HAVE_SIGNAL_H
 
 /* Define to 1 if you have the `sigprocmask' function. */
 #undef HAVE_SIGPROCMASK

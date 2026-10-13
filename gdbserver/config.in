@@ -105,9 +105,6 @@
 /* Define if <sys/procfs.h> has elf_fpregset_t. */
 #undef HAVE_ELF_FPREGSET_T
 
-/* Define to 1 if you have the <fcntl.h> header file. */
-#undef HAVE_FCNTL_H
-
 /* Define to 1 if you have the `fdwalk' function. */
 #undef HAVE_FDWALK
 
@@ -164,9 +161,6 @@
 
 /* Define if the target supports PTRACE_PEEKUSR for register access. */
 #undef HAVE_LINUX_USRREGS
-
-/* Define to 1 if you have the <locale.h> header file. */
-#undef HAVE_LOCALE_H
 
 /* Define to 1 if the system has the type `long long'. */
 #undef HAVE_LONG_LONG
@@ -252,9 +246,6 @@
 
 /* Define to 1 if you have the `sigaltstack' function. */
 #undef HAVE_SIGALTSTACK
-
-/* Define to 1 if you have the <signal.h> header file. */
-#undef HAVE_SIGNAL_H
 
 /* Define to 1 if you have the `sigprocmask' function. */
 #undef HAVE_SIGPROCMASK

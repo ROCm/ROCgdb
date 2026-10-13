@@ -67,11 +67,9 @@ ZW_GNU_GETTEXT_SISTER_DIR
 
 AC_CHECK_HEADERS([ \
   arpa/inet.h \
-  fcntl.h \
   netdb.h \
   netinet/in.h \
   netinet/tcp.h \
-  signal.h \
   sys/file.h \
   sys/ioctl.h \
   sys/procfs.h \
