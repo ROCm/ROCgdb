@@ -102,8 +102,6 @@ LIBS="$old_LIBS"
 
 libiberty_INIT
 
-AC_CHECK_DECLS([perror, vasprintf, vsnprintf])
-
 AC_CHECK_TYPES(socklen_t, [], [],
 [#include <sys/types.h>
 #if HAVE_SYS_SOCKET_H
