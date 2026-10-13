@@ -36,7 +36,7 @@ with_rocm_gpu_lock {
 	return
     }
 
-    gdb_breakpoint "kern" -allow-pending -temporary
+    gdb_breakpoint "kern" allow-pending temporary
     gdb_continue_to_breakpoint "kernel bp"
 
     set trailer "\[^\r\n\]*(?=\r\n)"
