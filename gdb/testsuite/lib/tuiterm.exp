@@ -315,7 +315,6 @@ proc Term::_csi_F {args} {
     _log_cur "Cursor Previous Line ($arg)" {
 	variable _cur_col
 	variable _cur_row
-	variable _rows
 
 	set _cur_col 0
 	set _cur_row [expr {max ($_cur_row - $arg, 0)}]
@@ -427,7 +426,6 @@ proc Term::_csi_L {args} {
     set arg [_default [lindex $args 0] 1]
 
     _log_cur "Insert Line ($arg)" {
-	variable _cur_col
 	variable _cur_row
 	variable _rows
 	variable _cols
@@ -506,8 +504,6 @@ proc Term::_csi_S {args} {
     set count [_default [lindex $args 0] 1]
 
     _log_cur "Pan Down ($count)" {
-	variable _cur_col
-	variable _cur_row
 	variable _cols
 	variable _rows
 	variable _chars
@@ -540,8 +536,6 @@ proc Term::_csi_T {args} {
     set count [_default [lindex $args 0] 1]
 
     _log_cur "Pan Up ($count)" {
-	variable _cur_col
-	variable _cur_row
 	variable _cols
 	variable _rows
 	variable _chars
@@ -1610,7 +1604,6 @@ proc Term::get_region { x y width height sep { attrs false } } {
 # the contents within a box (though check_box_contents is a better
 # choice for boxes with a border).  Return 1 if check succeeded.
 proc Term::check_region_contents_p { x y width height regexp } {
-    variable _chars
     dump_box $x $y $width $height
 
     # Now grab the contents of the box, join each line together
@@ -1634,8 +1627,6 @@ proc Term::check_region_contents { test_name x y width height regexp } {
 # box where expected, if there is then the contents of the box are
 # matched against REGEXP.
 proc Term::check_box_contents {test_name x y width height regexp} {
-    variable _chars
-
     dump_box $x $y $width $height
     set why [_check_box $x $y $width $height]
     if {$why != ""} {
