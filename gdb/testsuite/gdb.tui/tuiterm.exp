@@ -207,7 +207,7 @@ proc test_pan_down { } {
 proc test_pan_up { } {
     Term::_move_cursor 1 2
     Term::_csi_T
-    check "pan down, default arg" {
+    check "pan up, default arg" {
 	"        "
 	"abcdefgh"
 	"ijklmnop"
@@ -215,7 +215,7 @@ proc test_pan_up { } {
     } 1 2
 
     Term::_csi_T 2
-    check "pan down, explicit arg" {
+    check "pan up, explicit arg" {
 	"        "
 	"        "
 	"        "
@@ -223,7 +223,7 @@ proc test_pan_up { } {
     } 1 2
 
     Term::_csi_T 100
-    check "pan down, excessive arg" {
+    check "pan up, excessive arg" {
 	"        "
 	"        "
 	"        "
@@ -336,7 +336,7 @@ proc test_cursor_position { } {
     Term::_move_cursor 1 1
 
     Term::_csi_H 3 5
-    check "cursor horizontal absolute 2" $::small_initial 4 2
+    check "cursor position absolute" $::small_initial 4 2
 
     Term::_csi_H 10 10
     check "cursor position absolute, out of bounds" $::small_initial 7 3
