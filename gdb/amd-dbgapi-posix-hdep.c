@@ -19,6 +19,7 @@
 
 #include "amd-dbgapi-hdep.h"
 #include <amd-dbgapi/amd-dbgapi.h>
+#include <dlfcn.h>
 
 /* See amd-dbgapi-hdep.h.  */
 const amd_dbgapi_notifier_t null_amd_dbgapi_notifier = -1;
@@ -52,4 +53,15 @@ void
 amd_dbgapi_notifier_release (amd_dbgapi_notifier_t notifier)
 {
   /* Nothing to do.  */
+}
+
+/* See amd-dbgapi-hdep.h.  */
+
+const char *
+get_amd_dbgapi_library_pathname ()
+{
+  Dl_info dl_info {};
+  if (!dladdr ((void *) amd_dbgapi_get_version, &dl_info))
+    return "";
+  return dl_info.dli_fname;
 }
