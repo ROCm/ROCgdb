@@ -618,6 +618,81 @@ rocm_solib_ops::bfd_iovec_open (bfd *abfd)
     }
 }
 
+/* Validate that at least one agent in PROCESS_ID supports ARCHITECTURE_ID.
+   Throws an error with a descriptive message if validation fails.  Possible
+   failure scenarios:
+   - Agent list enumeration fails
+   - All agent architecture queries fail
+   - No matching agent is found
+
+   FILENAME and ARCH_DISPLAY_NAME are used in error messages.  */
+
+static void
+validate_code_object_has_active_agent
+  (amd_dbgapi_process_id_t process_id,
+   amd_dbgapi_architecture_id_t architecture_id,
+   const char *filename,
+   const char *arch_display_name)
+{
+  amd_dbgapi_agent_id_t *agent_list;
+  size_t agent_count;
+
+  amd_dbgapi_status_t agent_list_status
+    = amd_dbgapi_process_agent_list (process_id, &agent_count,
+				     &agent_list, nullptr);
+
+  if (agent_list_status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("'%s': Failed to enumerate agents: %s"),
+	   filename, get_status_string (agent_list_status));
+
+  bool found_matching_agent = false;
+  size_t failed_queries = 0;
+
+  for (size_t i = 0; i < agent_count; ++i)
+    {
+      amd_dbgapi_architecture_id_t agent_arch;
+      amd_dbgapi_status_t status
+	= amd_dbgapi_agent_get_info
+	    (agent_list[i], AMD_DBGAPI_AGENT_INFO_ARCHITECTURE,
+	     sizeof (agent_arch), &agent_arch);
+
+      if (status == AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE)
+	{
+	  /* Agent has unsupported architecture - this is expected.
+	     Skip this agent and check the next one.  */
+	  continue;
+	}
+      else if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  /* Genuine error querying agent architecture.  */
+	  ++failed_queries;
+	  continue;
+	}
+
+      if (agent_arch == architecture_id)
+	{
+	  found_matching_agent = true;
+	  break;
+	}
+    }
+
+  xfree (agent_list);
+
+  if (!found_matching_agent)
+    {
+      /* If all queries failed, report that instead of "no matching
+	 agent".  */
+      if (failed_queries == agent_count && agent_count > 0)
+	error (_("'%s': Failed to query agent architectures for code "
+		 "object validation."),
+	       filename);
+
+      /* Otherwise, genuinely no matching agent found.  */
+      error (_("'%s': No active agent for AMDGCN architecture %s."),
+	     filename, arch_display_name);
+    }
+}
+
 gdb_bfd_ref_ptr
 rocm_solib_ops::bfd_open (const char *pathname)
 {
@@ -719,67 +794,9 @@ rocm_solib_ops::bfd_open (const char *pathname)
   /* Check if any agent in the current inferior has this architecture.  */
   amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (m_inf);
   if (process_id.handle != AMD_DBGAPI_PROCESS_NONE.handle)
-    {
-      amd_dbgapi_agent_id_t *agent_list;
-      size_t agent_count;
-
-      amd_dbgapi_status_t agent_list_status
-	= amd_dbgapi_process_agent_list (process_id, &agent_count,
-					 &agent_list, nullptr);
-
-      if (agent_list_status != AMD_DBGAPI_STATUS_SUCCESS)
-	error (_("'%s': Failed to enumerate agents: %s"),
-	       bfd_get_filename (abfd.get ()),
-	       get_status_string (agent_list_status));
-
-      bool found_matching_agent = false;
-      size_t failed_queries = 0;
-
-      for (size_t i = 0; i < agent_count; ++i)
-	{
-	  amd_dbgapi_architecture_id_t agent_arch;
-	  amd_dbgapi_status_t status
-	    = amd_dbgapi_agent_get_info
-		(agent_list[i], AMD_DBGAPI_AGENT_INFO_ARCHITECTURE,
-		 sizeof (agent_arch), &agent_arch);
-
-	  if (status == AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE)
-	    {
-	      /* Agent has unsupported architecture - this is expected.
-		 Skip this agent and check the next one.  */
-	      continue;
-	    }
-	  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
-	    {
-	      /* Genuine error querying agent architecture.  */
-	      ++failed_queries;
-	      continue;
-	    }
-
-	  if (agent_arch == architecture_id)
-	    {
-	      found_matching_agent = true;
-	      break;
-	    }
-	}
-
-      xfree (agent_list);
-
-      if (!found_matching_agent)
-	{
-	  /* If all queries failed, report that instead of "no matching
-	     agent".  */
-	  if (failed_queries == agent_count && agent_count > 0)
-	    error (_("'%s': Failed to query agent architectures for code "
-		     "object validation."),
-		   bfd_get_filename (abfd.get ()));
-
-	  /* Otherwise, genuinely no matching agent found.  */
-	  error (_("'%s': No active agent for AMDGCN architecture %s."),
-		 bfd_get_filename (abfd.get ()),
-		 arch_display_name.c_str ());
-	}
-    }
+    validate_code_object_has_active_agent (process_id, architecture_id,
+					   bfd_get_filename (abfd.get ()),
+					   arch_display_name.c_str ());
 
   gdb_assert (is_amdgpu_arch (abfd.get ()));
 
