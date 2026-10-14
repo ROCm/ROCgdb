@@ -1,0 +1,68 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Debug the destruction of an object with a shared virtual base.
+#
+# Under the MSVC C++ ABI the compiler emits a separate "vbase
+# destructor" (mangled "??_D") that runs D's own destructor and then
+# destroys the virtual base V.  Under the Itanium ABI the same work is
+# done by the complete-object destructor.  In both cases GDB must stop
+# in D's destructor body, read the virtual base through the vbtable
+# (or vtable) while D is still alive, and show the virtual base being
+# destroyed exactly once, called from D's destructor.
+
+require allow_cplus_tests
+
+standard_testfile .cc
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug c++}]} {
+    return
+}
+
+if {![runto [gdb_get_line_number "Delete D."]]} {
+    return
+}
+
+gdb_breakpoint [gdb_get_line_number "D dtor."]
+gdb_breakpoint [gdb_get_line_number "V dtor."]
+gdb_breakpoint [gdb_get_line_number "After delete."]
+
+# Stop in D's destructor body, before it modifies D.
+gdb_continue_to_breakpoint "D dtor" ".*D dtor\\..*"
+gdb_test "print d" " = 4" "D is intact in D's destructor"
+
+# Reading the virtual base requires the C++ ABI's virtual base offset
+# lookup.  A wrong lookup reads V from the wrong address.
+gdb_test "print *this" \
+    " = \{<A> = \{<V> = \{v = 1\}, .*a = 2\}, <B> = \{.*b = 3\}, d = 4\}" \
+    "virtual base read through this in D's destructor"
+gdb_test "print v_dtor_count" " = 0" "V not yet destroyed in D's destructor"
+
+# The virtual base is destroyed after D's destructor body, from D's
+# destructor (the vbase destructor under MSVC, the complete-object
+# destructor under Itanium), on behalf of main.
+gdb_continue_to_breakpoint "V dtor" ".*V dtor\\..*"
+gdb_test "print v" " = 1" "V is intact in V's destructor"
+gdb_test "bt" \
+    [multi_line \
+	 "#0 +(V::)?~V \\(this=$hex\\) at \[^\r\n\]+" \
+	 "#1 +$hex in (D::)?~D \\(this=$hex\[^\r\n\]*\\) at \[^\r\n\]+" \
+	 "#2 +$hex in main \\(\\) at \[^\r\n\]+"] \
+    "backtrace from V's destructor"
+
+# V is destroyed exactly once.
+gdb_continue_to_breakpoint "after delete" ".*After delete\\..*"
+gdb_test "print v_dtor_count" " = 1" "V destroyed exactly once"
