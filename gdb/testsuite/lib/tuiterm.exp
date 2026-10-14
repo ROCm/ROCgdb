@@ -133,7 +133,7 @@ proc Term::_ctl_0x08 { {bw -1} } {
 	}
 
 	# Wrap to previous line.
-	set _cur_col [expr $_cols - 1]
+	set _cur_col [expr {$_cols - 1}]
 	incr _cur_row -1
     }
 }
@@ -162,8 +162,8 @@ proc Term::_ctl_0x0a {} {
 	    # cursor back on the screen.  But we wrap the
 	    # scrolling inside a while loop just to be on the safe
 	    # side.
-	    for {set y 0} {$y < [expr $_rows - 1]} {incr y} {
-		set next_y [expr $y + 1]
+	    for {set y 0} {$y < $_rows - 1} {incr y} {
+		set next_y [expr {$y + 1}]
 		_copy_line $next_y $y
 	    }
 
@@ -226,13 +226,13 @@ proc Term::_csi_@ {args} {
 
 	# Move characters right of the cursor right by N positions,
 	# starting with the rightmost one.
-	for {set in_col [expr $_cols - $n - 1]} {$in_col >= $_cur_col} {incr in_col -1} {
-	    set out_col [expr $in_col + $n]
+	for {set in_col [expr {$_cols - $n - 1}]} {$in_col >= $_cur_col} {incr in_col -1} {
+	    set out_col [expr {$in_col + $n}]
 	    set _chars($out_col,$_cur_row) $_chars($in_col,$_cur_row)
 	}
 
 	# Write N blank spaces starting from the cursor.
-	_clear_in_line $_cur_col [expr $_cur_col + $n] $_cur_row
+	_clear_in_line $_cur_col [expr {$_cur_col + $n}] $_cur_row
     }
 }
 
@@ -339,7 +339,7 @@ proc Term::_csi_G {args} {
 	variable _cur_col
 	variable _cols
 
-	set _cur_col [expr {min ($arg, $_cols)} - 1]
+	set _cur_col [expr {min ($arg, $_cols) - 1}]
     }
 }
 
@@ -402,7 +402,7 @@ proc Term::_csi_J {args} {
 	} elseif {$arg == 1} {
 	    # Beginning of display to cursor (inclusive).
 	    _clear_lines 0 $_cur_row
-	    _clear_in_line 0 [expr $_cur_col + 1] $_cur_row
+	    _clear_in_line 0 [expr {$_cur_col + 1}] $_cur_row
 	} elseif {$arg == 2} {
 	    # Entire display.
 	    _clear_lines 0 $_rows
@@ -426,7 +426,7 @@ proc Term::_csi_K {args} {
 	    _clear_in_line $_cur_col $_cols $_cur_row
 	} elseif {$arg == 1} {
 	    # Beginning of line to cursor (inclusive).
-	    _clear_in_line 0 [expr $_cur_col + 1] $_cur_row
+	    _clear_in_line 0 [expr {$_cur_col + 1}] $_cur_row
 	} elseif {$arg == 2} {
 	    # Entire line.
 	    _clear_in_line 0 $_cols $_cur_row
@@ -493,7 +493,7 @@ proc Term::_csi_L {args} {
 	    incr next_y -1
 	}
 
-	_clear_lines $_cur_row [expr $_cur_row + $arg]
+	_clear_lines $_cur_row [expr {$_cur_row + $arg}]
     }
 }
 
@@ -531,8 +531,8 @@ proc Term::_csi_P {args} {
 	variable _cols
 
 	# Move all characters right of the cursor N positions left.
-	set out_col [expr $_cur_col]
-	set in_col [expr $_cur_col + $count]
+	set out_col $_cur_col
+	set in_col [expr {$_cur_col + $count}]
 
 	while {$in_col < $_cols} {
 	    set _chars($out_col,$_cur_row) $_chars($in_col,$_cur_row)
@@ -664,7 +664,7 @@ proc Term::_csi_d {args} {
 	variable _cur_row
 	variable _rows
 
-	set _cur_row [expr min ($row - 1, $_rows - 1)]
+	set _cur_row [expr {min ($row - 1, $_rows - 1)}]
     }
 }
 
@@ -886,13 +886,13 @@ proc Term::_csi_m {args} {
 		    set _attrs(invisible) 0
 		}
 		30 - 31 - 32 - 33 - 34 - 35 - 36 - 37 {
-		    set _attrs(fg) [_color_attr [expr $item - 30]]
+		    set _attrs(fg) [_color_attr [expr {$item - 30}]]
 		}
 		39 {
 		    set _attrs(fg) default
 		}
 		40 - 41 - 42 - 43 - 44 - 45 - 46 - 47 {
-		    set _attrs(bg) [_color_attr [expr $item - 40]]
+		    set _attrs(bg) [_color_attr [expr {$item - 40}]]
 		}
 		49 {
 		    set _attrs(bg) default
