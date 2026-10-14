@@ -164,7 +164,7 @@ def _with_rocm_gpu_lock(args, parser):
 
 
 def _ns_term_log_cur(args, parser):
-    return _script_last_arg("Term::log_cur", 2, args, parser)
+    return _script_last_arg("Term::_log_cur", 2, args, parser)
 
 
 def _ns_term_with_term(args, parser):
