@@ -93,8 +93,6 @@ extern gdb::unique_xmalloc_ptr<char> cp_canonicalize_string_full
 extern gdb::unique_xmalloc_ptr<char> cp_class_name_from_physname
   (const char *physname);
 
-extern char *method_name_from_physname (const char *physname);
-
 extern unsigned int cp_find_first_component (const char *name);
 
 extern unsigned int cp_entire_prefix_len (const char *name);

@@ -858,32 +858,6 @@ unqualified_name_from_comp (struct demangle_component *comp)
   return ret_comp;
 }
 
-/* Return the name of the method whose linkage name is PHYSNAME.  */
-
-char *
-method_name_from_physname (const char *physname)
-{
-  void *storage = NULL;
-  gdb::unique_xmalloc_ptr<char> demangled_name;
-  gdb::unique_xmalloc_ptr<char> ret;
-  struct demangle_component *ret_comp;
-  demangle_parse_info_up info
-    = mangled_name_to_comp (physname, DMGL_ANSI, &storage, &demangled_name);
-
-  if (info == nullptr)
-    return nullptr;
-
-  ret_comp = unqualified_name_from_comp (info->tree);
-
-  if (ret_comp != NULL)
-    /* The ten is completely arbitrary; we don't have a good
-       estimate.  */
-    ret = cp_comp_to_string (ret_comp, 10);
-
-  xfree (storage);
-  return ret.release ();
-}
-
 /* If FULL_NAME is the demangled name of a C++ function (including an
    arg list, possibly including namespace/class qualifications),
    return a new string containing only the function name (without the
