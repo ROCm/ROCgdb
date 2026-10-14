@@ -447,7 +447,8 @@ struct language_defn
   }
 
   /* Return class name of a mangled method name or NULL.  */
-  virtual char *class_name_from_physname (const char *physname) const
+  virtual gdb::unique_xmalloc_ptr<char> class_name_from_physname
+    (const char *physname) const
   {
     return nullptr;
   }

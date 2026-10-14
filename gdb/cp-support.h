@@ -90,7 +90,8 @@ using canonicalization_ftype = const char * (struct type *, void *);
 extern gdb::unique_xmalloc_ptr<char> cp_canonicalize_string_full
   (const char *string, canonicalization_ftype *finder, void *data);
 
-extern char *cp_class_name_from_physname (const char *physname);
+extern gdb::unique_xmalloc_ptr<char> cp_class_name_from_physname
+  (const char *physname);
 
 extern char *method_name_from_physname (const char *physname);
 

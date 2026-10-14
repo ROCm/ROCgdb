@@ -953,7 +953,8 @@ public:
 
   /* See language.h.  */
 
-  char *class_name_from_physname (const char *physname) const override
+  gdb::unique_xmalloc_ptr<char> class_name_from_physname
+    (const char *physname) const override
   {
     return cp_class_name_from_physname (physname);
   }

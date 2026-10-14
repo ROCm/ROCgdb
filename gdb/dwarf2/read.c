@@ -16279,7 +16279,7 @@ guess_full_die_structure_name (struct die_info *die, struct dwarf2_cu *cu)
 	  if (linkage_name != NULL)
 	    {
 	      gdb::unique_xmalloc_ptr<char> actual_name
-		(cu->language_defn->class_name_from_physname (linkage_name));
+		= cu->language_defn->class_name_from_physname (linkage_name);
 	      const char *name = NULL;
 
 	      if (actual_name != NULL)

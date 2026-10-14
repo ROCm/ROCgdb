@@ -714,7 +714,7 @@ mangled_name_to_comp (const char *mangled_name, int options,
 
 /* Return the name of the class containing method PHYSNAME.  */
 
-char *
+gdb::unique_xmalloc_ptr<char>
 cp_class_name_from_physname (const char *physname)
 {
   void *storage = NULL;
@@ -797,7 +797,7 @@ cp_class_name_from_physname (const char *physname)
     }
 
   xfree (storage);
-  return ret.release ();
+  return ret;
 }
 
 /* Return the child of COMP which is the basename of a method,
