@@ -49,7 +49,6 @@
 #include "elf/amdgpu.h"
 #include "cp-support.h"
 
-#include <dlfcn.h>
 #include <map>
 #include <sstream>
 
@@ -3779,15 +3778,6 @@ get_effective_precise_alu_exception_mode ()
   return info.precise_alu_exceptions.enabled;
 }
 
-static const char *
-get_dbgapi_library_file_path ()
-{
-  Dl_info dl_info{};
-  if (!dladdr ((void*) amd_dbgapi_get_version, &dl_info))
-    return "";
-  return dl_info.dli_fname;
-}
-
 static void
 show_dbgapi_version (const char *args, int from_tty)
 {
@@ -3798,7 +3788,7 @@ show_dbgapi_version (const char *args, int from_tty)
 	      version_style.style ().ptr (), major, minor, patch,
 	      amd_dbgapi_get_build_name (), nullptr,
 	      styled_string (file_name_style.style (),
-			     get_dbgapi_library_file_path ()));
+			     get_amd_dbgapi_library_pathname ()));
 }
 
 /* List of set/show amdgpu commands.  */

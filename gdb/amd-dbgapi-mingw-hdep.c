@@ -26,6 +26,8 @@
 #include <cstdio>
 #include <unordered_map>
 #include <algorithm>
+#include <string>
+#include <string_view>
 
 #include "serial.h"
 
@@ -169,4 +171,81 @@ amd_dbgapi_notifier_release (amd_dbgapi_notifier_t notifier)
       serial_event_cache.erase (it);
       serial_unref (get_serial_event (notifier));
     }
+}
+
+/* Convert the UTF-16 string WS to the current ANSI code page.
+   Characters the code page cannot represent are replaced with a
+   best-fit match or the code page's default character, which is
+   acceptable as the result is used for display only.  Returns an
+   empty string if the conversion fails.  */
+
+static std::string
+ansi_from_utf16 (std::wstring_view ws)
+{
+  if (ws.empty ())
+    return {};
+  int needed = WideCharToMultiByte (CP_ACP, 0, ws.data (), (int) ws.size (),
+				    nullptr, 0, nullptr, nullptr);
+  if (needed <= 0)
+    return {};
+
+  std::string result;
+  result.resize (needed);
+  int written = WideCharToMultiByte (CP_ACP, 0, ws.data (), (int) ws.size (),
+				     &result[0], needed, nullptr, nullptr);
+  if (written == 0)
+    return {};
+
+  result.resize (written);
+  return result;
+}
+
+/* See amd-dbgapi-hdep.h.  */
+
+const char *
+get_amd_dbgapi_library_pathname ()
+{
+  /* The library cannot move while it is loaded, so compute the path
+     once and hand out the same string on every call.  */
+  static const std::string path = [] () -> std::string
+    {
+      HMODULE m = nullptr;
+      if (!GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
+			       | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			       (LPCWSTR) amd_dbgapi_get_version, &m))
+	return {};
+
+      /* We loop because GetModuleFileNameW reports a truncated path
+	 the same way it reports success, by returning the size it was
+	 given.  */
+      std::wstring wpath;
+      DWORD size = MAX_PATH;
+      while (true)
+	{
+	  wpath.resize (size);
+
+	  DWORD len = GetModuleFileNameW (m, &wpath[0], size);
+	  if (len == 0)
+	    break;
+
+	  if (len < size)
+	    {
+	      wpath.resize (len);
+
+	      /* Normalize in UTF-16 before conversion, where a
+		 separator is still unambiguous.  (In a DBCS code page
+		 0x5C can be a character's trailing byte, for
+		 example.)  */
+	      std::replace (wpath.begin (), wpath.end (), L'\\', L'/');
+
+	      return ansi_from_utf16 (wpath);
+	    }
+
+	  size *= 2;
+	}
+
+      return {};
+    } ();
+
+  return path.c_str ();
 }
