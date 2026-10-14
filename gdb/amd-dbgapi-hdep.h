@@ -35,4 +35,8 @@ extern int amd_dbgapi_notifier_get_fd (amd_dbgapi_notifier_t notifier);
    to get invalidated.  */
 extern void amd_dbgapi_notifier_release (amd_dbgapi_notifier_t notifier);
 
+/* Get the amd-dbgapi shared library pathname, or an empty string if it
+   cannot be determined.  */
+extern const char *get_amd_dbgapi_library_pathname ();
+
 #endif /* GDB_AMD_DBGAPI_HDEP_H */
