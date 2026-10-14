@@ -1,0 +1,98 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test reading an index containing a Rust "legacy" mangled linkage
+# name.  These names contain ".." sequences, which the .gdb_index
+# reader used to split into empty components, leading to a crash.
+# The .debug_names index is tested too, for completeness.
+#
+# Note that the crash only happened with libstdc++ assertions enabled
+# (e.g. with -D_GLIBCXX_DEBUG).  Otherwise, it was silent undefined
+# behavior.
+
+load_lib dwarf.exp
+
+require dwarf2_support
+require !readnow
+
+standard_testfile .c -dw.S
+
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    cu {} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_Rust
+	    DW_AT_name lib.rs
+	} {
+	    DW_TAG_namespace {
+		DW_AT_name foo
+	    } {
+		# The linkage name demangles to foo::bar<foo::Baz>.
+		DW_TAG_subprogram {
+		    DW_AT_name "bar<foo::Baz>"
+		    DW_AT_linkage_name \
+			"_ZN3foo19bar\$LT\$foo..Baz\$GT\$17h0123456789abcdefE"
+		    DW_AT_external 1 DW_FORM_flag
+		    MACRO_AT_range {func}
+		}
+	    }
+	}
+    }
+}
+
+if { [build_executable "failed to prepare" ${testfile} \
+	  [list $srcfile $asm_file] {nodebug}] == -1 } {
+    return
+}
+
+# For simplicity, skip the test if the executable already has an index (e.g.
+# with the cc-with-gdb-index board).  The test will be covered when running
+# with the unix board.
+clean_restart $testfile
+if { [get_index_type $binfile "check index type"] ne "cooked" } {
+    unsupported "executable already has an index"
+    return
+}
+
+foreach_with_prefix index_type { gdb_index debug_names } {
+    set testfile_with_index ${testfile}-${index_type}
+    set binfile_with_index [standard_output_file $testfile_with_index]
+    remote_exec build "cp $binfile $binfile_with_index"
+
+    if { $index_type eq "gdb_index" } {
+	set style ""
+    } else {
+	set style "-dwarf-5"
+    }
+
+    if { [add_gdb_index $binfile_with_index $style] != 1 } {
+	untested "error adding index"
+	continue
+    }
+
+    clean_restart $testfile_with_index
+    gdb_assert { [have_index $binfile_with_index] eq $index_type } \
+	"index used"
+
+    # Check that the function can be found.
+    set re "^foo::bar<foo::Baz>$"
+    gdb_test "info functions $re" \
+	[multi_line \
+	     [string_to_regexp \
+		  "All functions matching regular expression \"$re\":"] \
+	     "" \
+	     "File lib.rs:" \
+	     "\[^\r\n\]*[string_to_regexp "fn foo::bar<foo::Baz>();"]"]
+}

@@ -52,11 +52,22 @@ split_name (const char *name, split_style style)
 	   iter != nullptr;
 	   iter = strchr (iter, '.'))
 	{
+	  /* If the name contains a leading dot or consecutive dots, it's not a
+	     valid qualified dot-separated name.  */
+	  if (iter == &name[previous_len])
+	    return { name };
+
 	  result.emplace_back (&name[previous_len],
 			       iter - &name[previous_len]);
 	  ++iter;
 	  previous_len = iter - name;
 	}
+
+      /* If there is a trailing dot, it's not a valid qualified dot-separated
+	 name either.  */
+      if (name[previous_len] == '\0')
+	return { name };
+
       break;
 
     default:
@@ -223,19 +234,18 @@ test_split_name_dot_style ()
   check_split_name ("pkg.\"+\"", split_style::DOT_STYLE,
 		    { "pkg", "\"+\"" });
 
-  /* Leading, trailing or consecutive dots produce empty components.  */
-  check_split_name (".", split_style::DOT_STYLE, { "", "" });
-  check_split_name ("..", split_style::DOT_STYLE, { "", "", "" });
-  check_split_name (".a", split_style::DOT_STYLE, { "", "a" });
-  check_split_name ("a.", split_style::DOT_STYLE, { "a", "" });
-  check_split_name ("a..b", split_style::DOT_STYLE, { "a", "", "b" });
-  check_split_name (".a.b", split_style::DOT_STYLE, { "", "a", "b" });
-  check_split_name ("a.b.", split_style::DOT_STYLE, { "a", "b", "" });
-  check_split_name ("a.b..c", split_style::DOT_STYLE,
-		    { "a", "b", "", "c" });
-  check_split_name ("a..b.c", split_style::DOT_STYLE,
-		    { "a", "", "b", "c" });
-  check_split_name ("a...b", split_style::DOT_STYLE, { "a", "", "", "b" });
+  /* Names with leading, trailing or consecutive dots are not recognized as
+     qualified names are are returned as-is.  */
+  check_split_name (".", split_style::DOT_STYLE, { "." });
+  check_split_name ("..", split_style::DOT_STYLE, { ".." });
+  check_split_name (".a", split_style::DOT_STYLE, { ".a" });
+  check_split_name ("a.", split_style::DOT_STYLE, { "a." });
+  check_split_name ("a..b", split_style::DOT_STYLE, { "a..b" });
+  check_split_name (".a.b", split_style::DOT_STYLE, { ".a.b" });
+  check_split_name ("a.b.", split_style::DOT_STYLE, { "a.b." });
+  check_split_name ("a.b..c", split_style::DOT_STYLE, { "a.b..c" });
+  check_split_name ("a..b.c", split_style::DOT_STYLE, { "a..b.c" });
+  check_split_name ("a...b", split_style::DOT_STYLE, { "a...b" });
 }
 
 } /* namespace selftests */
