@@ -138,13 +138,21 @@ proc Term::_ctl_0x08 { {bw -1} } {
     }
 }
 
+# Helper function.  Copy line FROM to TO.
+proc Term::_copy_line { from to } {
+    variable _cols
+    variable _chars
+
+    for {set x 0} {$x < $_cols} {incr x} {
+	set _chars($x,$to) $_chars($x,$from)
+    }
+}
+
 # Linefeed.
 proc Term::_ctl_0x0a {} {
     _log_cur "Line feed" {
 	variable _cur_row
 	variable _rows
-	variable _cols
-	variable _chars
 
 	incr _cur_row 1
 	while {$_cur_row >= $_rows} {
@@ -156,9 +164,7 @@ proc Term::_ctl_0x0a {} {
 	    # side.
 	    for {set y 0} {$y < [expr $_rows - 1]} {incr y} {
 		set next_y [expr $y + 1]
-		for {set x 0} {$x < $_cols} {incr x} {
-		    set _chars($x,$y) $_chars($x,$next_y)
-		}
+		_copy_line $next_y $y
 	    }
 
 	    incr _cur_row -1
@@ -428,15 +434,11 @@ proc Term::_csi_L {args} {
     _log_cur "Insert Line ($arg)" {
 	variable _cur_row
 	variable _rows
-	variable _cols
-	variable _chars
 
 	set y [expr $_rows - 2]
 	set next_y [expr $y + $arg]
 	while {$y >= $_cur_row} {
-	    for {set x 0} {$x < $_cols} {incr x} {
-		set _chars($x,$next_y) $_chars($x,$y)
-	    }
+	    _copy_line $y $next_y
 	    incr y -1
 	    incr next_y -1
 	}
@@ -454,15 +456,11 @@ proc Term::_csi_M {args} {
     _log_cur "Delete line ($count)" {
 	variable _cur_row
 	variable _rows
-	variable _cols
-	variable _chars
 
 	set y $_cur_row
 	set next_y [expr {$y + $count}]
 	while {$next_y < $_rows} {
-	    for {set x 0} {$x < $_cols} {incr x} {
-		set _chars($x,$y) $_chars($x,$next_y)
-	    }
+	    _copy_line $next_y $y
 	    incr y
 	    incr next_y
 	}
@@ -504,9 +502,7 @@ proc Term::_csi_S {args} {
     set count [_default [lindex $args 0] 1]
 
     _log_cur "Pan Down ($count)" {
-	variable _cols
 	variable _rows
-	variable _chars
 
 	# The following code is written without consideration for
 	# the scroll margins.  At this time this comment was
@@ -518,9 +514,7 @@ proc Term::_csi_S {args} {
 	set y $count
 
 	while {$y < $_rows} {
-	    for {set x 0} {$x < $_cols} {incr x} {
-		set _chars($x,$dy) $_chars($x,$y)
-	    }
+	    _copy_line $y $dy
 	    incr y 1
 	    incr dy 1
 	}
@@ -536,9 +530,7 @@ proc Term::_csi_T {args} {
     set count [_default [lindex $args 0] 1]
 
     _log_cur "Pan Up ($count)" {
-	variable _cols
 	variable _rows
-	variable _chars
 
 	# The following code is written without consideration for
 	# the scroll margins.  At this time this comment was
@@ -550,9 +542,7 @@ proc Term::_csi_T {args} {
 	set dy $_rows
 
 	while {$dy >= $count} {
-	    for {set x 0} {$x < $_cols} {incr x} {
-		set _chars($x,$dy) $_chars($x,$y)
-	    }
+	    _copy_line $y $dy
 	    incr y -1
 	    incr dy -1
 	}
