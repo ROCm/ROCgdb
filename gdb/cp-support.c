@@ -1678,14 +1678,15 @@ gdb_demangle (const char *name, int options)
 
 /* See cp-support.h.  */
 
-char *
+gdb::unique_xmalloc_ptr<char>
 gdb_cplus_demangle_print (int options,
 			  struct demangle_component *tree,
 			  int estimated_length,
 			  size_t *p_allocated_size)
 {
-  return cplus_demangle_print (options | DMGL_VERBOSE, tree,
-			       estimated_length, p_allocated_size);
+  return gdb::unique_xmalloc_ptr<char>
+    (cplus_demangle_print (options | DMGL_VERBOSE, tree,
+			   estimated_length, p_allocated_size));
 }
 
 /* A wrapper for cplus_demangle_v3_components that forces

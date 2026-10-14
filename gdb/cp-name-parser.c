@@ -382,9 +382,8 @@ cp_comp_to_string (struct demangle_component *result, int estimated_len)
 {
   size_t err;
 
-  char *res = gdb_cplus_demangle_print (DMGL_PARAMS | DMGL_ANSI,
-					result, estimated_len, &err);
-  return gdb::unique_xmalloc_ptr<char> (res);
+  return gdb_cplus_demangle_print (DMGL_PARAMS | DMGL_ANSI, result,
+				   estimated_len, &err);
 }
 
 /* Merge the two parse trees given by DEST and SRC.  The parse tree

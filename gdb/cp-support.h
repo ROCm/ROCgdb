@@ -202,10 +202,9 @@ gdb::unique_xmalloc_ptr<char> gdb_demangle (const char *name, int options);
 
 /* A wrapper for cplus_demangle_print.  */
 
-extern char *gdb_cplus_demangle_print (int options,
-				       struct demangle_component *tree,
-				       int estimated_length,
-				       size_t *p_allocated_size);
+extern gdb::unique_xmalloc_ptr<char> gdb_cplus_demangle_print
+  (int options, struct demangle_component *tree, int estimated_length,
+   size_t *p_allocated_size);
 
 /* Find an instance of the character C in the string S that is outside
    of all parenthesis pairs, single-quoted strings, and double-quoted
