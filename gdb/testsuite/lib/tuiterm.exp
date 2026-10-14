@@ -222,6 +222,8 @@ proc Term::_csi_@ {args} {
 	variable _cols
 	variable _chars
 
+	set n [expr {min($n, $_cols - $_cur_col)}]
+
 	# Move characters right of the cursor right by N positions,
 	# starting with the rightmost one.
 	for {set in_col [expr $_cols - $n - 1]} {$in_col >= $_cur_col} {incr in_col -1} {
@@ -351,6 +353,13 @@ proc Term::_csi_H {args} {
     _log_cur "Cursor Position ($row, $col)" {
 	variable _cur_col
 	variable _cur_row
+	variable _rows
+	variable _cols
+
+	set row [expr {min($row, $_rows)}]
+	set col [expr {min($col, $_cols)}]
+	set row [expr {max($row, 1)}]
+	set col [expr {max($col, 1)}]
 
 	set _cur_row [expr {$row - 1}]
 	set _cur_col [expr {$col - 1}]
@@ -425,6 +434,45 @@ proc Term::_csi_K {args} {
     }
 }
 
+# Check that the tuiterm doesn't grow beyond its dimensions, and that the
+# cursor stays in bounds.
+proc Term::check_size {} {
+    variable _chars
+    variable _cols
+    variable _rows
+    variable _cur_col
+    variable _cur_row
+
+    if { ![array exists _chars] } {
+	# Not set up yet.
+	return
+    }
+
+    if { ! ($_cur_row >= 0 && $_cur_col >= 0
+	    && $_cur_row < $_rows && $_cur_col < $_cols) } {
+	set pos "($_cur_row, $_cur_col)"
+	set dims "($_rows, $_cols)"
+	error "cursor out of bounds: $pos in $dims"
+    }
+
+    if {[array size _chars] != $_rows * $_cols} {
+	verbose -log "size: [array size _chars]"
+	verbose -log "rows: $_rows"
+	verbose -log "cols: $_cols"
+	verbose -log "rows * cols: [expr {$_cols * $_rows}]"
+	foreach elem [array names _chars] {
+	    set res [split $elem ,]
+	    set col [lindex $res 0]
+	    set row [lindex $res 1]
+	    if { !($row >= 0 && $col >= 0
+		   && $row < $_rows && $col < $_cols) } {
+		verbose -log "$elem"
+	    }
+	}
+	error "_chars has incorrect size"
+    }
+}
+
 # Insert Line
 #
 # https://vt100.net/docs/vt510-rm/IL.html
@@ -435,8 +483,10 @@ proc Term::_csi_L {args} {
 	variable _cur_row
 	variable _rows
 
-	set y [expr $_rows - 2]
-	set next_y [expr $y + $arg]
+	set arg [expr {min($arg, $_rows - $_cur_row)}]
+
+	set y [expr {$_rows - $arg - 1}]
+	set next_y [expr {$_rows - 1}]
 	while {$y >= $_cur_row} {
 	    _copy_line $y $next_y
 	    incr y -1
@@ -532,14 +582,16 @@ proc Term::_csi_T {args} {
     _log_cur "Pan Up ($count)" {
 	variable _rows
 
+	set count [expr {min($count, $_rows)}]
+
 	# The following code is written without consideration for
 	# the scroll margins.  At this time this comment was
 	# written the tuiterm library doesn't support the scroll
 	# margins.  If/when that changes, then the following will
 	# need to be updated.
 
-	set y [expr $_rows - $count]
-	set dy $_rows
+	set y [expr {$_rows - $count - 1}]
+	set dy [expr {$_rows - 1}]
 
 	while {$dy >= $count} {
 	    _copy_line $y $dy
@@ -563,6 +615,9 @@ proc Term::_csi_X {args} {
 	variable _cur_row
 	variable _attrs
 	variable _chars
+	variable _cols
+
+	set n [expr {min($n, $_cols - $_cur_col)}]
 
 	set lattr [array get _attrs]
 	set x $_cur_col
@@ -977,6 +1032,7 @@ proc Term::_setup {rows cols} {
     variable _cur_row
     variable _attrs
     variable _resize_count
+    variable _chars
 
     set _rows $rows
     set _cols $cols
@@ -985,6 +1041,7 @@ proc Term::_setup {rows cols} {
     set _resize_count 0
     _reset_attrs _attrs
 
+    array unset _chars
     _clear_lines 0 $_rows
 }
 
@@ -1668,13 +1725,15 @@ proc Term::_do_resize {rows cols} {
     variable _chars
     variable _rows
     variable _cols
+    variable _cur_row
+    variable _cur_col
 
     set old_rows [expr {min ($_rows, $rows)}]
     set old_cols [expr {min ($_cols, $cols)}]
 
     # Copy locally.
     array set local_chars [array get _chars]
-    unset _chars
+    array unset _chars
 
     set _rows $rows
     set _cols $cols
@@ -1685,6 +1744,9 @@ proc Term::_do_resize {rows cols} {
 	    set _chars($x,$y) $local_chars($x,$y)
 	}
     }
+
+    set _cur_row [expr {min($_cur_row, $_rows - 1)}]
+    set _cur_col [expr {min($_cur_col, $_cols - 1)}]
 }
 
 proc Term::resize {rows cols {wait_for_msg 1}} {

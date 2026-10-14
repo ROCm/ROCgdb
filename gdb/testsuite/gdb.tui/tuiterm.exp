@@ -337,6 +337,15 @@ proc test_cursor_position { } {
 
     Term::_csi_H 3 5
     check "cursor horizontal absolute 2" $::small_initial 4 2
+
+    Term::_csi_H 10 10
+    check "cursor position absolute, out of bounds" $::small_initial 7 3
+
+    Term::_csi_H
+    check "cursor position absolute, default" $::small_initial 0 0
+
+    Term::_csi_H 0 0
+    check "cursor position absolute, zero" $::small_initial 0 0
 }
 
 proc test_cursor_horizontal_forward_tabulation { } {
@@ -494,6 +503,15 @@ proc test_erase_character { } {
 	"qrs uvwx"
 	"y    34 "
     } 1 3
+
+    Term::_move_cursor 1 0
+    Term::_csi_X 20
+    check "erase character, more than number of columns" {
+	"a       "
+	"ijklmnop"
+	"qrs uvwx"
+	"y    34 "
+    } 1 0
 }
 
 proc test_cursor_backward_tabulation { } {
@@ -569,6 +587,18 @@ proc test_insert_line { } {
 	"        "
 	"        "
     } 2 0
+}
+
+proc test_insert_line_2 { } {
+    # As in test_insert_line, but start after row 0.
+    Term::_move_cursor 0 1
+    Term::_csi_L 12
+    check "insert line after first line, insert more lines than display has" {
+	"abcdefgh"
+	"        "
+	"        "
+	"        "
+    } 0 1
 }
 
 proc test_attrs {} {
@@ -682,11 +712,20 @@ proc_with_prefix test_with_tuiterm {} {
     }
 }
 
+proc_with_prefix test_resize {} {
+    setup_terminal 8 4
+    Term::_move_cursor 7 3
+    Term::_do_resize 2 4
+    check_cursor_position "cursor after resize" 3 1
+    Term::check_size
+}
+
 # Run proc TEST_PROC_NAME with a "small" terminal.
 
 proc run_one_test_small { test_proc_name } {
     setup_small
     $test_proc_name
+    Term::check_size
 }
 
 # Run proc TEST_PROC_NAME with a "large" terminal.
@@ -694,6 +733,7 @@ proc run_one_test_small { test_proc_name } {
 proc run_one_test_large { test_proc_name } {
     setup_large
     $test_proc_name
+    Term::check_size
 }
 
 foreach_with_prefix test {
@@ -718,6 +758,7 @@ foreach_with_prefix test {
     test_repeat
     test_vertical_line_position_absolute
     test_insert_line
+    test_insert_line_2
     test_pan_up
     test_pan_down
 } {
@@ -735,3 +776,4 @@ test_attrs
 
 test_with_term
 test_with_tuiterm
+test_resize
