@@ -68,7 +68,9 @@ proc test_server_exit {} {
 
 proc return_if_fail { result } {
     if {$result != 0} {
-	return -code return
+	transparent_uplevel {
+	    return
+	}
     }
 }
 

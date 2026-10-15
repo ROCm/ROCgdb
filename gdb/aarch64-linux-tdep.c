@@ -53,6 +53,7 @@
 
 #include "arch/aarch64-fpmr-linux.h"
 #include "arch/aarch64-gcs-linux.h"
+#include "arch/aarch64-poe-linux.h"
 #include "arch/aarch64-mte.h"
 #include "arch/aarch64-mte-linux.h"
 #include "arch/aarch64-pauth-linux.h"
@@ -170,6 +171,7 @@
 #define AARCH64_ZT_MAGIC			0x5a544e01
 #define AARCH64_GCS_MAGIC			0x47435300
 #define AARCH64_FPMR_MAGIC			0x46504d52
+#define AARCH64_POE_MAGIC			0x504f4530
 
 /* Defines for the extra_context that follows an AARCH64_EXTRA_MAGIC.  */
 #define AARCH64_EXTRA_DATAP_OFFSET		8
@@ -218,6 +220,9 @@
 
 /* FPMR constants.  */
 #define AARCH64_FPMR_OFFSET			8
+
+/* POE constants.  */
+#define AARCH64_POE_OFFSET			8
 
 /* Holds information about the signal frame.  */
 struct aarch64_linux_sigframe
@@ -272,6 +277,10 @@ struct aarch64_linux_sigframe
   /* FPMR value.  */
   CORE_ADDR fpmr = 0;
 
+  /* True if we have a POE entry in the signal context, false otherwise.  */
+  bool poe_available = false;
+  /* POE value.  */
+  CORE_ADDR poe = 0;
 };
 
 /* Read an aarch64_ctx, returning the magic value, and setting *SIZE to the
@@ -604,6 +613,22 @@ aarch64_linux_read_signal_frame_info (const frame_info_ptr &this_frame,
 	    section += size;
 	    break;
 	  }
+	case AARCH64_POE_MAGIC:
+	  {
+	    gdb_byte buf[8];
+	    if (target_read_memory (section + AARCH64_POE_OFFSET,
+				    buf, 8) != 0)
+	      {
+		warning (_("Failed to read the POE section address from the"
+			   " signal frame context."));
+		section += size;
+		break;
+	      }
+	    signal_frame.poe = extract_unsigned_integer (buf, 8, byte_order);
+	    signal_frame.poe_available = true;
+	    section += size;
+	    break;
+	  }
 	case AARCH64_EXTRA_MAGIC:
 	  {
 	    /* Extra is always the last valid section in reserved and points to
@@ -774,6 +799,10 @@ aarch64_linux_sigframe_init (const struct tramp_frame *self,
 			      signal_frame.fpmr);
   }
 
+  /* Handle POE register.  */
+  if (tdep->has_poe () && signal_frame.poe_available)
+    trad_frame_set_reg_value (this_cache, tdep->poe_regnum, signal_frame.poe);
+
   /* Restore the tpidr2 register, if the target supports it and if there is
      an entry for it.  */
   if (signal_frame.tpidr2_section != 0 && tdep->has_tls ()
@@ -827,6 +856,7 @@ aarch64_linux_sigframe_prev_arch (const frame_info_ptr &this_frame,
   features.vq = sve_vq_from_vl (signal_frame.vl);
   features.svq = (uint8_t) sve_vq_from_vl (signal_frame.svl);
   features.fpmr = signal_frame.fpmr_available;
+  features.poe = signal_frame.poe_available;
 
   struct gdbarch_info info;
   info.bfd_arch_info = bfd_lookup_arch (bfd_arch_aarch64, bfd_mach_aarch64);
@@ -1654,6 +1684,23 @@ aarch64_linux_iterate_over_regset_sections (struct gdbarch *gdbarch,
 	  &aarch64_linux_fpmr_regset, "FPMR", cb_data);
     }
 
+  if (tdep->has_poe ())
+    {
+      const struct regcache_map_entry poe_regmap[] =
+	{
+	  { 1, tdep->poe_regnum, sizeof (uint64_t) },
+	  { 0 }
+	};
+
+      const struct regset aarch64_linux_poe_regset =
+	{
+	  poe_regmap, regcache_supply_regset, regcache_collect_regset
+	};
+
+      cb (".reg-aarch-poe", sizeof (uint64_t), sizeof (uint64_t),
+	  &aarch64_linux_poe_regset, "POE register", cb_data);
+    }
+
   if (tdep->has_pauth ())
     {
       /* Create this on the fly in order to handle the variable location.  */
@@ -1767,6 +1814,7 @@ aarch64_linux_core_read_description (struct gdbarch *gdbarch,
   features.gcs = features.gcs_linux = hwcap & AARCH64_HWCAP_GCS;
   features.mte = hwcap2 & AARCH64_HWCAP2_MTE;
   features.fpmr = hwcap2 & AARCH64_HWCAP2_FPMR;
+  features.poe = hwcap2 & AARCH64_HWCAP2_POE;
 
   /* Handle the TLS section.  */
   asection *tls = bfd_get_section_by_name (abfd, ".reg-aarch-tls");
@@ -2675,11 +2723,12 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 {
   aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
 
-  if (!(tdep->has_mte () || tdep->has_gcs ()) || siggnal != GDB_SIGNAL_SEGV)
+  if (!(tdep->has_mte () || tdep->has_gcs () || tdep->has_poe ())
+      || siggnal != GDB_SIGNAL_SEGV)
     return;
 
   CORE_ADDR fault_addr = 0;
-  long si_code = 0, si_errno = 0;
+  long si_code = 0, si_errno = 0, si_pkey = -1;
 
   try
     {
@@ -2689,6 +2738,8 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 	 violation.  */
       si_code = parse_and_eval_long (gdb_si::get (si_key::siginfo_code));
       si_errno = parse_and_eval_long (gdb_si::get (si_key::siginfo_errno));
+      if (tdep->has_poe ())
+	si_pkey = parse_and_eval_long (gdb_si::get (si_key::siginfo_pkey));
 
       fault_addr
 	= parse_and_eval_long (gdb_si::get (si_key::siginfo_addr));
@@ -2705,6 +2756,8 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
     meaning = _("Memory tag violation");
   else if (si_code == AARCH64_SEGV_CPERR && si_errno == 0)
     meaning = _("Guarded Control Stack error");
+  else if (si_code == AARCH64_SEGV_PKUERR)
+    meaning = _("Protection Key Violation");
   else
     return;
 
@@ -2735,6 +2788,15 @@ aarch64_linux_report_signal_info (struct gdbarch *gdbarch,
 	  uiout->text (_("Logical tag "));
 	  uiout->field_string ("logical-tag", hex_string (ltag));
 	}
+    }
+  /* Additional information for SIGSEGV caused by a permission overlay
+     violation.  */
+  else if (si_code == AARCH64_SEGV_PKUERR)
+    {
+      uiout->text (_(" while accessing address "));
+      uiout->field_core_addr ("fault-addr", gdbarch, fault_addr);
+      uiout->text (_(" with Protection Key = "));
+      uiout->field_signed ("protection-key", si_pkey);
     }
   else if (si_code != AARCH64_SEGV_CPERR)
     {
@@ -3056,7 +3118,7 @@ aarch64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 					 aarch64_linux_decode_memtag_section);
     }
 
-  if (tdep->has_mte () || tdep->has_gcs ())
+  if (tdep->has_mte () || tdep->has_gcs () || tdep->has_poe ())
     set_gdbarch_report_signal_info (gdbarch, aarch64_linux_report_signal_info);
 
   /* Initialize the aarch64_linux_record_tdep.  */

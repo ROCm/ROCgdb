@@ -110,6 +110,13 @@ read_unit_head (struct unit_head *header, const gdb_byte *info_ptr,
       header->addr_size = read_1_byte (abfd, info_ptr);
       info_ptr += 1;
     }
+
+  if (!dwarf2_addr_size_is_supported (header->addr_size))
+    error (_(DWARF_ERROR_PREFIX
+	     "unsupported address size in unit header "
+	     "(is %u, should be 2, 4 or 8) [in module %s]"),
+	   header->addr_size, filename);
+
   signed_addr = bfd_get_sign_extend_vma (abfd);
   if (signed_addr < 0)
     internal_error (_("read_unit_head: dwarf from non elf file"));

@@ -9,13 +9,13 @@ _start:
 sym_local:
 	nop
 
-.global sym_global
-sym_global:
-	nop
-
 .global sym_hidden
 .hidden sym_hidden
 sym_hidden:
+	nop
+
+.global sym_global
+sym_global:
 	nop
 
 .global sym_global_abs
@@ -39,15 +39,15 @@ sym_hidden:
 discard_local:
 .quad sym_local
 
-.section .discard.global,"a"
-.p2align 1
-discard_global:
-.quad sym_global
-
 .section .discard.hidden,"a"
 .p2align 1
 discard_hidden:
 .quad sym_hidden
+
+.section .discard.global,"a"
+.p2align 1
+discard_global:
+.quad sym_global
 
 .section .discard.global_abs,"a"
 .p2align 1

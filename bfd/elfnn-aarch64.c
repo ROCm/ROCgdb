@@ -9246,7 +9246,7 @@ record_relr_dyn_got_relocs (struct elf_link_hash_entry *h, void *inf)
     h = (struct elf_link_hash_entry *) h->root.u.i.link;
   if (h->type == STT_GNU_IFUNC && h->def_regular)
     return true;
-  if (h->got.refcount <= 0)
+  if (h->got.offset == (bfd_vma) -1)
     return true;
   if (elf_aarch64_hash_entry (h)->got_type != GOT_NORMAL)
     return true;

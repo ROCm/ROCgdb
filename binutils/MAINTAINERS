@@ -85,7 +85,7 @@ responsibility among the other maintainers.
   FR30		   Nick Clifton <nickc@redhat.com>
   FRV		   Nick Clifton <nickc@redhat.com>
   FRV		   Alexandre Oliva <aoliva@sourceware.org>
-  GOLD		   Ian Lance Taylor <iant@google.com>
+  GOLD		   Ian Lance Taylor <ian@airs.com>
   GOLD		   Cary Coutant <ccoutant@gmail.com>
   gprofng	   Claudiu Zissulescu <claziss@gmail.com>
   gprofng	   Jose E. Marchesi <jemarch@gnu.org>

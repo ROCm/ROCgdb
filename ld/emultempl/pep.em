@@ -1021,6 +1021,7 @@ gld${EMULATION_NAME}_after_parse (void)
 }
 
 #ifdef DLL_SUPPORT
+#if !defined (COFF_WITH_peAArch64)
 static bfd_vma
 read_addend (arelent *rel, asection *s)
 {
@@ -1072,6 +1073,7 @@ read_addend (arelent *rel, asection *s)
 	   s->owner, s, rel->address);
   return addend;
 }
+#endif
 
 static void
 make_import_fixup (arelent *rel, asection *s, char *name, const char *symname)
@@ -1083,7 +1085,11 @@ make_import_fixup (arelent *rel, asection *s, char *name, const char *symname)
     printf ("arelent: %s@%#lx: add=%li\n", sym->name,
 	    (unsigned long) rel->address, (long) rel->addend);
 
+#if defined (COFF_WITH_peAArch64)
+  addend = 0;
+#else
   addend = read_addend (rel, s);
+#endif
 
   if (pep_dll_extra_pe_debug)
     {

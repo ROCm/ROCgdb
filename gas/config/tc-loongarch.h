@@ -126,6 +126,10 @@ extern int tc_loongarch_regname_to_dw2regnum (char *);
 
 extern void loongarch_pre_output_hook (void);
 #define md_pre_output_hook loongarch_pre_output_hook ()
+
+extern void loongarch_frob_file_before_fix (void);
+#define tc_frob_file_before_fix loongarch_frob_file_before_fix
+
 #define GAS_SORT_RELOCS 1
 
 #define SUB_SEGMENT_ALIGN(SEG, FRCHAIN) 0

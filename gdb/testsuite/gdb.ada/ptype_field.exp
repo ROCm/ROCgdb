@@ -65,9 +65,9 @@ gdb_test "complete ptype pck.c" "ptype pck\\.circle"
 # We can't query the members of a package yet, and this yields a bit
 # too much output, so comment out for now instead of kfailing.
 # gdb_test "complete ptype pck." \
-    #     [multi_line \
-    # 	 "ptype pck\\.circle" \
-    # 	 "ptype pck\\.position"]
+#     [multi_line \
+# 	 "ptype pck\\.circle" \
+# 	 "ptype pck\\.position"]
 
 gdb_test "complete ptype circle.pos." \
     [multi_line \

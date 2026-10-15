@@ -42,6 +42,7 @@
 #include "cp-support.h"
 #include "frame.h"
 #include "c-lang.h"
+#include "c-exp-parser.h"
 #include <algorithm>
 #include "gdbarch.h"
 
@@ -1133,7 +1134,7 @@ language_lookup_builtin_symbol (const struct language_defn *la,
 
 lang_vars_shadowing get_lang_vars_shadowing_option (enum language lang)
 {
-  switch (lang)
+  switch (strip_cplus_dialect (lang))
     {
     case language_c:
     case language_cplus:

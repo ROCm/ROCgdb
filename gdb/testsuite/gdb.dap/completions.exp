@@ -1,0 +1,107 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test "completions" request.
+
+require allow_dap_tests
+
+load_lib dap-support.exp
+
+standard_testfile
+
+if {[build_executable ${testfile}.exp $testfile] == -1} {
+    return
+}
+
+if {[dap_initialize] == ""} {
+    return
+}
+
+set launch_id [dap_launch $testfile]
+
+set line [gdb_get_line_number "BREAK"]
+set obj [dap_check_request_and_response "set breakpoint by line number" \
+	     setBreakpoints \
+	     [format {o source [o path [%s]] breakpoints [a [o line [i %d]]]} \
+		  [list s $srcfile] $line]]
+set line_bpno [dap_get_breakpoint_number $obj]
+
+dap_check_request_and_response "configurationDone" configurationDone
+
+dap_check_response "launch response" launch $launch_id
+
+dap_wait_for_event_and_check "inferior started" thread "body reason" started
+
+dap_wait_for_event_and_check "stopped at line breakpoint" stopped \
+    "body reason" breakpoint \
+    "body hitBreakpointIds" $line_bpno
+
+set bt [lindex [dap_check_request_and_response "backtrace" stackTrace \
+		    {o threadId [i 1]}] \
+	    0]
+set inner_frame_id [dict get [lindex [dict get $bt body stackFrames] 0] id]
+set outer_frame_id [dict get [lindex [dict get $bt body stackFrames] 1] id]
+
+set pfx "print unique_enough_prefix_"
+set col [string length $pfx]
+
+proc check_results {actual args} {
+    foreach item $actual suffix $args {
+	set value [dict get $item label]
+	gdb_assert {$value == [string cat $::pfx $suffix]} \
+	    "checking suffix $suffix"
+    }
+}
+
+set result [lindex [dap_check_request_and_response \
+			"completions in inner frame" completions \
+			[format {o frameId [i %s] text [s {%s}] column [i %s]} \
+			     $inner_frame_id $pfx $col]] \
+		0]
+
+with_test_prefix inner_frame {
+    check_results [dict get $result body targets] "" 1 2 4
+}
+
+set result [lindex [dap_check_request_and_response \
+			"completions in outer frame" completions \
+			[format {o frameId [i %s] text [s {%s}] column [i %s]} \
+			     $outer_frame_id $pfx $col]] \
+		0]
+
+with_test_prefix outer_frame {
+    # The empty string here is wrong.  gdb should not return the
+    # argument text.  See PR dap/34592.
+    check_results [dict get $result body targets] "" 1 2 3
+}
+
+set result [lindex [dap_check_request_and_response \
+			"completions without frame" completions \
+			[format {o text [s {%s}] column [i %s]} \
+			     $pfx $col]] \
+		0]
+
+with_test_prefix "no frame" {
+    # Note that the result '3' here is actually wrong.  gdb should
+    # ignore the selected frame.  See PR dap/34591.
+    check_results [dict get $result body targets] "" 1 2 3
+}
+
+# The result here isn't important, this is just checking that the
+# request doesn't fail.
+dap_check_request_and_response "completion of empty string" completions \
+    {o text [s {}] column [i 0]}
+
+dap_shutdown

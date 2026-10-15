@@ -17,8 +17,9 @@
 .src1:
 .asciz "bar"
 
+/* Make the unpadded DBI source-info substream size non-aligned.  */
 .src2:
-.asciz "baz"
+.asciz "bazz"
 
 .strings_end:
 

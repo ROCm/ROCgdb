@@ -53,18 +53,18 @@ repos:
   #  - gdb/testsuite/*.py
   #
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 26.5.1
+    rev: 26.10.1
     hooks:
       - id: black
         files: &gdb_python_files '^gdb/.*\.py$'
   - repo: https://github.com/pycqa/flake8
-    rev: 7.4.0
+    rev: 7.4.1
     hooks:
       - id: flake8
         files: *gdb_python_files
         args: [--config, gdb/setup.cfg]
   - repo: https://github.com/pycqa/isort
-    rev: 9.0.1
+    rev: 9.0.2
     hooks:
       - id: isort
         files: *gdb_python_files

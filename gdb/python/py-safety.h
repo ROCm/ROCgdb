@@ -71,17 +71,13 @@ namespace safety_details
    used in gdb, these are all Python-facing and will return NULL on
    error.  */
 
-static inline PyObject *
-to_python (bool value)
-{
-  return PyBool_FromLong (value);
-}
-
 template<typename T, typename = gdb::Requires<std::is_integral<T>>>
 static inline PyObject *
 to_python (T value)
 {
-  if constexpr (std::is_signed<T>::value)
+  if constexpr (std::is_same<T, bool>::value)
+    return PyBool_FromLong (value);
+  else if constexpr (std::is_signed<T>::value)
     return gdb_py_object_from_longest (value).release ();
   else
     return gdb_py_object_from_ulongest (value).release ();
@@ -233,6 +229,27 @@ varargs_wrapper (PyObject *self, PyObject *args, PyObject *kw)
 
 } /* namespace safety_details */
 
+/* Create a PyMethodDef for a no-argument function.  It takes the
+   underlying function F as template parameters, and the name and
+   documentation as arguments.  The function F is wrapped to call
+   to_python and to catch exceptions per the safety protocol.  F
+   should not accept any arguments.  */
+template<auto F>
+constexpr PyMethodDef
+noargs_function (const char *name, const char *doc)
+{
+  using namespace safety_details;
+  return {
+    name,
+    [] (PyObject *self, PyObject *args) -> PyObject *
+    {
+      return wrapped_function<F> ();
+    },
+    METH_NOARGS,
+    doc,
+  };
+}
+
 /* Create a PyMethodDef for a no-argument method.  It takes the
    underlying class C and a pointer-to-method M as template
    parameters, and the name and documentation as arguments.  The
@@ -341,6 +358,38 @@ wrap_setter (PyObject *arg, PyObject *value, void *closure)
     }
 
   return 0;
+}
+
+/* A function that wraps a richcompare method.
+
+   A Python tp_richcompare function can either raise an exception,
+   return True or False, or return "not implemented".  The wrapped
+   method must return a std::optional<bool>, which allows all these
+   results: exceptions are simply thrown, true and false are ordinary
+   returns, and the return of an empty optional means "not
+   implemented".  */
+template<typename C, std::optional<bool> (C::*M) (gdbpy_borrowed_ref<>, int)>
+PyObject *
+wrap_richcompare (PyObject *arg, PyObject *value, int op)
+{
+  using namespace safety_details;
+  try
+    {
+      C *self = static_cast<C *> (arg);
+      std::optional<bool> result = (self->*M) (value, op);
+      if (result.has_value ())
+	return to_python (*result);
+      return py_notimplemented ().release ();
+    }
+  catch (const gdb_python_exception &pye)
+    {
+      gdb_assert (PyErr_Occurred () != nullptr);
+      return nullptr;
+    }
+  catch (const gdb_exception &exc)
+    {
+      return gdbpy_handle_gdb_exception (nullptr, exc);
+    }
 }
 
 #endif /* GDB_PYTHON_PY_SAFETY_H */

@@ -146,25 +146,18 @@ rename load_lib saved_load_lib
 proc load_lib { file } {
     array set known_global {}
     foreach varname [info globals] {
-       set known_globals($varname) 1
+	set known_globals($varname) 1
     }
 
-    set code [catch {saved_load_lib $file} result]
-
-    foreach varname [info globals] {
-       if { ![info exists known_globals($varname)] } {
-	   gdb_persistent_global_no_decl $varname
-       }
+    try {
+	saved_load_lib $file
+    } finally {
+	foreach varname [info globals] {
+	    if { ![info exists known_globals($varname)] } {
+		gdb_persistent_global_no_decl $varname
+	    }
+	}
     }
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code error -errorinfo $errorInfo -errorcode $errorCode $result
-    } elseif {$code > 1} {
-	return -code $code $result
-    }
-
-    return $result
 }
 
 # Tcl 9.0 changed the default channel encoding profile to "strict".
@@ -620,10 +613,10 @@ proc gdb_run_cmd { {inferior_args {}} } {
 	}
     }
     send_gdb "run $inferior_args\n"
-# This doesn't work quite right yet.
-# Use -notransfer here so that test cases (like chng-sym.exp)
-# may test for additional start-up messages.
-   gdb_expect 60 {
+    # This doesn't work quite right yet.
+    # Use -notransfer here so that test cases (like chng-sym.exp)
+    # may test for additional start-up messages.
+    gdb_expect 60 {
 	-re "The program .* has been started already.*y or n. $" {
 	    send_gdb "y\n" answer
 	    exp_continue
@@ -788,16 +781,16 @@ proc gdb_breakpoint { linespec args } {
 	-re "$break_message \[0-9\]*: file .*, line $decimal.\r\n$gdb_prompt $" {}
 	-re "$break_message \[0-9\]* at .*$gdb_prompt $" {}
 	-re "$break_message \[0-9\]* \\(.*\\) pending.*$gdb_prompt $" {
-		if {$pending_response == "n"} {
-			if { $print_fail } {
-				fail $gdb_test_name
-			}
-			return 0
+	    if {$pending_response == "n"} {
+		if { $print_fail } {
+		    fail $gdb_test_name
 		}
+		return 0
+	    }
 	}
 	-re "Make breakpoint pending.*y or \\\[n\\\]. $" {
-		send_gdb "$pending_response\n"
-		exp_continue
+	    send_gdb "$pending_response\n"
+	    exp_continue
 	}
 	-re "$gdb_prompt $" {
 	    if { $print_fail } {
@@ -1268,7 +1261,7 @@ proc gdb_test_multiple { command message args } {
 
     if {$use_gdb_stub
 	&& [regexp -nocase {^\s*(r|run|star|start|at|att|atta|attac|attach)\M} \
-	    $command]} {
+		$command]} {
 	error "gdbserver does not support $command without extended-remote"
     }
 
@@ -1380,7 +1373,6 @@ proc gdb_test_multiple { command message args } {
 	send_user "Message is \"$message\"\n"
     }
 
-    set result -1
     set string "${command}\n"
     if { $command != "" } {
 	set multi_line_re "\[\r\n\] *>"
@@ -1533,11 +1525,11 @@ proc gdb_test_multiple { command message args } {
     }
 
     if {$line_by_line} {
-       append code {
-	   -re "\r\n\[^\r\n\]*(?=\r\n)" {
-	       exp_continue
-	   }
-       }
+	append code {
+	    -re "\r\n\[^\r\n\]*(?=\r\n)" {
+		exp_continue
+	    }
+	}
     }
 
     # Now patterns that apply to any spawn id specified.
@@ -1589,25 +1581,25 @@ proc gdb_test_multiple { command message args } {
     }
     set gdb_test_name "$message"
 
-    set result 0
-    set code [catch {gdb_expect $code} string]
-
-    # Clean up the gdb_test_name variable.  If we had a
-    # previous value then restore it, otherwise, delete the variable
-    # from the parent scope.
-    if { [info exists gdb_test_name_old] } {
-	set gdb_test_name "$gdb_test_name_old"
-    } else {
-	unset gdb_test_name
+    try {
+	if {[info exists result]} {
+	    error "result set but not used"
+	}
+	set result 0
+	if {[catch {gdb_expect $code} string opts] == 0} {
+	    return $result
+	}
+	return -options [dict incr opts -level] $string
+    } finally {
+	# Clean up the gdb_test_name variable.  If we had a
+	# previous value then restore it, otherwise, delete the variable
+	# from the parent scope.
+	if { [info exists gdb_test_name_old] } {
+	    set gdb_test_name "$gdb_test_name_old"
+	} else {
+	    unset gdb_test_name
+	}
     }
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code error -errorinfo $errorInfo -errorcode $errorCode $string
-    } elseif {$code > 1} {
-	return -code $code $string
-    }
-    return $result
 }
 
 # Usage: gdb_test_multiline NAME INPUT RESULT {INPUT RESULT} ...
@@ -2506,6 +2498,20 @@ proc gdb_reinitialize_dir { subdir } {
     }
 }
 
+# Clean up after the current gdb instance that has exited.
+
+proc gdb_exit_cleanup {} {
+    if {![is_remote host]} {
+	if {[catch { remote_close host } message]} {
+	    warning "closing gdb failed with: $message"
+	}
+    }
+
+    unset ::gdb_spawn_id
+    unset ::gdb_tty_name
+    unset ::inferior_spawn_id
+}
+
 #
 # gdb_exit -- exit the GDB, killing the target program if necessary
 #
@@ -2548,14 +2554,7 @@ proc default_gdb_exit {} {
 	}
     }
 
-    if {![is_remote host]} {
-	if {[catch { remote_close host } message]} {
-	    warning "closing gdb failed with: $message"
-	}
-    }
-    unset gdb_spawn_id
-    unset ::gdb_tty_name
-    unset inferior_spawn_id
+    gdb_exit_cleanup
 }
 
 # Load a file into the debugger.
@@ -2673,7 +2672,7 @@ proc gdb_file_cmd { arg {kill_flag 1} } {
 	-re "$gdb_prompt $" {
 	    perror "Couldn't load $basename into GDB."
 	    return -1
-	    }
+	}
 	timeout {
 	    perror "Couldn't load $basename into GDB (timeout)."
 	    return -1
@@ -3139,6 +3138,9 @@ gdb_caching_proc allow_dlmopen_tests {} {
 	    return 42;
 	}
     }
+
+    # Note: we use a "for ... if (1) ..." trick to make emacs tcl-mode indent
+    # the for loop as if it was an if.
     set src {
 	#define _GNU_SOURCE
 	#include <dlfcn.h>
@@ -3160,9 +3162,11 @@ gdb_caching_proc allow_dlmopen_tests {} {
 
 	    r_debug = 0;
 	    /* Taken from /usr/include/link.h.  */
-	    for (dyn = _DYNAMIC; dyn->d_tag != DT_NULL; ++dyn)
-		if (dyn->d_tag == DT_DEBUG)
+	    for (dyn = _DYNAMIC; dyn->d_tag != DT_NULL; ++dyn) if (1) {
+		if (dyn->d_tag == DT_DEBUG) {
 		    r_debug = (struct r_debug *) dyn->d_un.d_ptr;
+		}
+	    }
 
 	    if (!r_debug) {
 		printf ("r_debug not found.\n");
@@ -3228,6 +3232,53 @@ gdb_caching_proc allow_tui_tests {} {
     }
     set output [remote_exec host $::GDB "$::INTERNAL_GDBFLAGS --configuration"]
     return [expr {[string first "--enable-tui" $output] != -1}]
+}
+
+# Run BODY in the context of the caller's caller.
+#
+# To be used in a proc foo:
+#   proc foo {body} {
+#       transparent_uplevel $body
+#   }
+# to make "foo body" have the same effect as "body".
+#
+# It ensures this by doing two things:
+# - evaluating the body in the context of the caller of foo
+# - propagating any return, exceptional or not, to the caller of foo.
+#
+# Typically used in conjunction with try/finally, to ensure something
+# happens before and after body.  For instance, this:
+#   proc foo {body} {
+#       try {
+#           puts "foo: enter"
+#           transparent_uplevel $body
+#       } finally {
+#           puts "foo: exit"
+#       }
+#   }
+#
+#   for {set i 0} {$i < 5} {incr i} {
+#       puts $i
+#       foo {
+#           if {$i == 2} {
+#               break
+#           }
+#       }
+#   }
+# produces:
+#   0
+#   foo: enter
+#   foo: exit
+#   1
+#   foo: enter
+#   foo: exit
+#   2
+#   foo: enter
+#   foo: exit
+
+proc transparent_uplevel { body } {
+    catch {uplevel 2 $body} result opts
+    return -options [dict incr opts -level 2] $result
 }
 
 # Test files shall make sure all the test result lines in gdb.sum are
@@ -3306,14 +3357,10 @@ proc with_test_prefix { prefix body } {
 
     set saved $pf_prefix
     append pf_prefix " " $prefix ":"
-    set code [catch {uplevel 1 $body} result]
-    set pf_prefix $saved
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+    try {
+	transparent_uplevel $body
+    } finally {
+	set pf_prefix $saved
     }
 }
 
@@ -3321,21 +3368,13 @@ proc with_test_prefix { prefix body } {
 # including the iterator's name and current value in the prefix.
 
 proc foreach_with_prefix {var list body} {
-    upvar 1 $var myvar
-    foreach myvar $list {
-	with_test_prefix "$var=$myvar" {
-	    set code [catch {uplevel 1 $body} result]
+    transparent_uplevel [subst_vars {
+	foreach $var {$list} {
+	    with_test_prefix "$var=[set $var]" {
+		$body
+	    }
 	}
-
-	if {$code == 1} {
-	    global errorInfo errorCode
-	    return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-	} elseif {$code == 3} {
-	    break
-	} elseif {$code == 2} {
-	    return -code $code $result
-	}
-    }
+    }]
 }
 
 # Like TCL's native proc, but defines a procedure that wraps its body
@@ -3416,26 +3455,21 @@ proc save_vars { vars body } {
 	}
     }
 
-    set code [catch {uplevel 1 $body} result]
+    try {
+	transparent_uplevel $body
+    } finally {
+	foreach {var value} [array get saved_scalars] {
+	    uplevel 1 [list set $var $value]
+	}
 
-    foreach {var value} [array get saved_scalars] {
-	uplevel 1 [list set $var $value]
-    }
+	foreach {var value} [array get saved_arrays] {
+	    uplevel 1 [list unset $var]
+	    uplevel 1 [list array set $var $value]
+	}
 
-    foreach {var value} [array get saved_arrays] {
-	uplevel 1 [list unset $var]
-	uplevel 1 [list array set $var $value]
-    }
-
-    foreach var $unset_vars {
-	uplevel 1 [list unset -nocomplain $var]
-    }
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+	foreach var $unset_vars {
+	    uplevel 1 [list unset -nocomplain $var]
+	}
     }
 }
 
@@ -3467,22 +3501,17 @@ proc save_target_board_info { vars body } {
 	}
     }
 
-    set code [catch {uplevel 1 $body} result]
+    try {
+	transparent_uplevel $body
+    } finally {
+	foreach {var value} [array get saved_target_board_info] {
+	    unset_board_info $var
+	    set_board_info $var $value
+	}
 
-    foreach {var value} [array get saved_target_board_info] {
-	unset_board_info $var
-	set_board_info $var $value
-    }
-
-    foreach var $unset_target_board_info {
-	unset_board_info $var
-    }
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+	foreach var $unset_target_board_info {
+	    unset_board_info $var
+	}
     }
 }
 
@@ -3498,16 +3527,11 @@ proc with_cwd { dir body } {
     verbose -log "Switching to directory $dir (saved CWD: $saved_dir)."
     cd $dir
 
-    set code [catch {uplevel 1 $body} result]
-
-    verbose -log "Switching back to $saved_dir."
-    cd $saved_dir
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+    try {
+	transparent_uplevel $body
+    } finally {
+	verbose -log "Switching back to $saved_dir."
+	cd $saved_dir
     }
 }
 
@@ -3582,42 +3606,37 @@ proc with_gdb_cwd { dir body } {
 	return
     }
 
-    set code [catch {uplevel 1 $body} result]
-
-    verbose -log "Switching back to $saved_dir."
-    if {![gdb_cd $saved_dir]} {
-	return
-    }
-
-    # Check that GDB is still alive.  If GDB crashed in the above code
-    # then any corefile will have been left in DIR, not the root
-    # testsuite directory.  As a result the corefile will not be
-    # brought to the users attention.  Instead, if GDB crashed, then
-    # this check should cause a FAIL, which should be enough to alert
-    # the user.
-    set saw_result false
-    gdb_test_multiple "p 123" "" {
-	-re "p 123\r\n" {
-	    exp_continue
+    try {
+	transparent_uplevel $body
+    } finally {
+	verbose -log "Switching back to $saved_dir."
+	if {![gdb_cd $saved_dir]} {
+	    return
 	}
 
-	-re "^${::valnum_re} = 123\r\n" {
-	    set saw_result true
-	    exp_continue
-	}
+	# Check that GDB is still alive.  If GDB crashed in the above code
+	# then any corefile will have been left in DIR, not the root
+	# testsuite directory.  As a result the corefile will not be
+	# brought to the users attention.  Instead, if GDB crashed, then
+	# this check should cause a FAIL, which should be enough to alert
+	# the user.
+	set saw_result false
+	gdb_test_multiple "p 123" "" {
+	    -re "p 123\r\n" {
+		exp_continue
+	    }
 
-	-re "^$::gdb_prompt $" {
-	    if { !$saw_result } {
-		fail "check gdb is alive in with_gdb_cwd"
+	    -re "^${::valnum_re} = 123\r\n" {
+		set saw_result true
+		exp_continue
+	    }
+
+	    -re "^$::gdb_prompt $" {
+		if { !$saw_result } {
+		    fail "check gdb is alive in with_gdb_cwd"
+		}
 	    }
 	}
-    }
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
     }
 }
 
@@ -3650,7 +3669,9 @@ proc with_gdb_prompt { prompt body } {
     # we start recording both forms separately instead of just $gdb_prompt.
     # The testsuite is pretty-much hardwired to interpret $gdb_prompt as the
     # regexp form.
-    regsub -all {[]*+.|()^$\[\\]} $prompt {\\&} prompt
+    # We use a backslash to escape the closing square bracket, even if it's
+    # the first character, to unconfuse emacs tcl-mode.
+    regsub -all {[\]*+.|()^$\[\\]} $prompt {\\&} prompt
 
     set saved $gdb_prompt
 
@@ -3658,17 +3679,12 @@ proc with_gdb_prompt { prompt body } {
     set gdb_prompt $prompt
     gdb_test_no_output "set prompt $prompt " ""
 
-    set code [catch {uplevel 1 $body} result]
-
-    verbose -log "Restoring gdb prompt to \"$saved \"."
-    set gdb_prompt $saved
-    gdb_test_no_output "set prompt $saved " ""
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+    try {
+	transparent_uplevel $body
+    } finally {
+	verbose -log "Restoring gdb prompt to \"$saved \"."
+	set gdb_prompt $saved
+	gdb_test_no_output "set prompt $saved " ""
     }
 }
 
@@ -3693,15 +3709,10 @@ proc with_target_charset { target_charset body } {
 
     gdb_test_no_output -nopass "set target-charset $target_charset"
 
-    set code [catch {uplevel 1 $body} result]
-
-    gdb_test_no_output -nopass "set target-charset $saved"
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+    try {
+	transparent_uplevel $body
+    } finally {
+	gdb_test_no_output -nopass "set target-charset $saved"
     }
 }
 
@@ -3723,15 +3734,10 @@ proc with_max_value_size { size body } {
 
     gdb_test_no_output -nopass "set max-value-size $size"
 
-    set code [catch {uplevel 1 $body} result]
-
-    gdb_test_no_output -nopass "set max-value-size $saved"
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+    try {
+	transparent_uplevel $body
+    } finally {
+	gdb_test_no_output -nopass "set max-value-size $saved"
     }
 }
 
@@ -3769,19 +3775,14 @@ proc with_spawn_id { spawn_id body } {
 
     switch_gdb_spawn_id $spawn_id
 
-    set code [catch {uplevel 1 $body} result]
-
-    if {[info exists saved_spawn_id]} {
-	switch_gdb_spawn_id $saved_spawn_id
-    } else {
-	clear_gdb_spawn_id
-    }
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+    try {
+	transparent_uplevel $body
+    } finally {
+	if {[info exists saved_spawn_id]} {
+	    switch_gdb_spawn_id $saved_spawn_id
+	} else {
+	    clear_gdb_spawn_id
+	}
     }
 }
 
@@ -3810,7 +3811,7 @@ proc get_largest_timeout {} {
 
     set tmt 0
     if {[info exists timeout]} {
-      set tmt $timeout
+	set tmt $timeout
     }
     if { [info exists gtimeout] && $gtimeout > $tmt } {
 	set tmt $gtimeout
@@ -3836,14 +3837,10 @@ proc with_timeout_factor { factor body } {
     set savedtimeout $timeout
 
     set timeout [expr {[get_largest_timeout] * $factor}]
-    set code [catch {uplevel 1 $body} result]
-
-    set timeout $savedtimeout
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+    try {
+	transparent_uplevel $body
+    } finally {
+	set timeout $savedtimeout
     }
 }
 
@@ -3911,7 +3908,7 @@ gdb_caching_proc supports_memtag {} {
 
     gdb_test_multiple "memory-tag check" "" {
 	-re "Memory tagging not supported or disabled by the current architecture\..*$gdb_prompt $" {
-	  return 0
+	    return 0
 	}
 	-re "Argument required \\(address or pointer\\).*$gdb_prompt $" {
 	    return 1
@@ -4393,7 +4390,7 @@ gdb_caching_proc allow_altivec_tests {} {
 	    set allow_vmx_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_vmx_tests 0
 	}
     }
@@ -4413,11 +4410,11 @@ gdb_caching_proc allow_power_isa_3_1_tests {} {
     # Compile a test program containing ISA 3.1 instructions.
     set src {
 	int main() {
-	asm volatile ("pnop"); // marker
-		asm volatile ("nop");
-		return 0;
-	    }
+	    asm volatile ("pnop"); // marker
+	    asm volatile ("nop");
+	    return 0;
 	}
+    }
 
     if {![gdb_simple_compile $me $src executable ]} {
 	return 0
@@ -4509,7 +4506,7 @@ gdb_caching_proc allow_vsx_tests {} {
 	    set allow_vsx_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_vsx_tests 0
 	}
     }
@@ -4756,23 +4753,23 @@ gdb_caching_proc allow_lam_tests {} {
 
     # Compile a test program.
     set src {
-      #define _GNU_SOURCE
-      #include <unistd.h>
-      #include <sys/syscall.h>
-      #include <assert.h>
-      #include <errno.h>
-      #include <asm/prctl.h>
+	#define _GNU_SOURCE
+	#include <unistd.h>
+	#include <sys/syscall.h>
+	#include <assert.h>
+	#include <errno.h>
+	#include <asm/prctl.h>
 
-      int configure_lam ()
-      {
-	errno = 0;
-	syscall (SYS_arch_prctl, ARCH_ENABLE_TAGGED_ADDR, 6);
-	assert_perror (errno);
-	return errno;
-      }
+	int configure_lam ()
+	{
+	    errno = 0;
+	    syscall (SYS_arch_prctl, ARCH_ENABLE_TAGGED_ADDR, 6);
+	    assert_perror (errno);
+	    return errno;
+	}
 
-      int
-      main () { return configure_lam (); }
+	int
+	main () { return configure_lam (); }
     }
 
     if {![gdb_simple_compile $me $src executable ""]} {
@@ -4925,8 +4922,8 @@ gdb_caching_proc allow_btrace_ptw_tests {} {
 	int
 	main ()
 	{
-	  _ptwrite32 (0x42);
-	  return 0;
+	    _ptwrite32 (0x42);
+	    return 0;
 	}
     }
 
@@ -4964,15 +4961,15 @@ gdb_caching_proc allow_btrace_ptw_tests {} {
 
 	gdb_test_multiple "maintenance btrace packet-history 0,1000" \
 	    "$me: check decoding support" {
-	    -re  "ptw" {
-		verbose -log "$me:  ptwrite decoding support detected."
-		set allow_btrace_ptw_tests 1
+		-re  "ptw" {
+		    verbose -log "$me:  ptwrite decoding support detected."
+		    set allow_btrace_ptw_tests 1
+		}
+		-re -wrap "" {
+		    verbose -log "$me:  ptwrite decoding support not detected."
+		    set allow_btrace_ptw_tests 0
+		}
 	    }
-	    -re -wrap "" {
-		verbose -log "$me:  ptwrite decoding support not detected."
-		set allow_btrace_ptw_tests 0
-	    }
-	}
     }
 
     gdb_exit
@@ -4995,7 +4992,7 @@ gdb_caching_proc allow_btrace_pt_event_trace_tests {} {
 	int
 	main ()
 	{
-	  return 0;
+	    return 0;
 	}
     }
 
@@ -5078,7 +5075,7 @@ gdb_caching_proc allow_aarch64_sve_tests {} {
 	    set allow_sve_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_sve_tests 0
 	}
     }
@@ -5139,12 +5136,12 @@ gdb_caching_proc aarch64_initialize_sve_information { } {
 
     # Go through the data and extract the supported SVE vector lengths.
     set vl_count [get_valueof "" "supported_vl_count" "0" \
-			      "fetch value of supported_vl_count"]
+		      "fetch value of supported_vl_count"]
     verbose -log "Found $vl_count supported SVE vector length values"
 
     for {set vl_index 0} {$vl_index < $vl_count} {incr vl_index} {
 	set test_vl [get_valueof "" "supported_vl\[$vl_index\]" "0" \
-				 "fetch value of supported_vl\[$vl_index\]"]
+			 "fetch value of supported_vl\[$vl_index\]"]
 
 	# Mark this vector length as supported.
 	if {$test_vl != 0} {
@@ -5237,7 +5234,7 @@ gdb_caching_proc allow_aarch64_sme_tests {} {
 	    set allow_sme_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_sme_tests 0
 	}
     }
@@ -5298,12 +5295,12 @@ gdb_caching_proc aarch64_initialize_sme_information { } {
 
     # Go through the data and extract the supported SME vector lengths.
     set svl_count [get_valueof "" "supported_svl_count" "0" \
-			       "fetch value of supported_svl_count"]
+		       "fetch value of supported_svl_count"]
     verbose -log "Found $svl_count supported SME vector length values"
 
     for {set svl_index 0} {$svl_index < $svl_count} {incr svl_index} {
 	set test_svl [get_valueof "" "supported_svl\[$svl_index\]" "0" \
-				  "fetch value of supported_svl\[$svl_index\]"]
+			  "fetch value of supported_svl\[$svl_index\]"]
 
 	# Mark this streaming vector length as supported.
 	if {$test_svl != 0} {
@@ -5397,7 +5394,7 @@ gdb_caching_proc allow_aarch64_fpmr_tests {} {
 	    set allow_fpmr_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_fpmr_tests 0
 	}
     }
@@ -5451,7 +5448,7 @@ gdb_caching_proc allow_aarch64_lrcpc3_tests {} {
     gdb_load $obj
     gdb_run_cmd
     gdb_expect {
-    -re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	-re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
 	    verbose -log "\n$me: lrcpc3 support detected"
 	    set allow_lrcpc3_tests 1
 	}
@@ -5490,7 +5487,7 @@ gdb_caching_proc allow_aarch64_cssc_tests {} {
     }
 
     if {![gdb_simple_compile $me $src executable $compile_flags]} {
-	    return 0
+	return 0
     }
 
     # Compilation succeeded so now run it via gdb.
@@ -5508,7 +5505,7 @@ gdb_caching_proc allow_aarch64_cssc_tests {} {
 	    set allow_cssc_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_cssc_tests 0
 	}
     }
@@ -5535,9 +5532,9 @@ gdb_caching_proc allow_aarch64_lse128_tests {} {
 
     # Compile a test program reading LSE128.
     set src {
-    #include <stdint.h>
+	#include <stdint.h>
 
-    int main() {
+	int main() {
 	    __attribute__((aligned(16))) uint64_t mem[2] = { 0x0, 0x1 };
 	    uint64_t *ptr = mem;
 	    __asm__ volatile ("ldclrp x0, x1, [%0]\n" :: "r"(ptr) : "x0", "x1", "memory");
@@ -5546,7 +5543,7 @@ gdb_caching_proc allow_aarch64_lse128_tests {} {
     }
 
     if {![gdb_simple_compile $me $src executable $compile_flags]} {
-	    return 0
+	return 0
     }
 
     # Compilation succeeded so now run it via gdb.
@@ -5564,7 +5561,7 @@ gdb_caching_proc allow_aarch64_lse128_tests {} {
 	    set allow_lse128_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_lse128_tests 0
 	}
     }
@@ -5626,7 +5623,7 @@ gdb_caching_proc allow_aarch64_mops_tests {} {
 	    set allow_mops_tests 1
 	}
 	default {
-	  warning "\n$me: default case taken"
+	    warning "\n$me: default case taken"
 	    set allow_mops_tests 0
 	}
     }
@@ -5690,6 +5687,61 @@ gdb_caching_proc allow_aarch64_gcs_tests {} {
 
     verbose "$me:  returning $allow_gcs_tests" 2
     return $allow_gcs_tests
+}
+
+# Run a test on the target to see if it supports AArch64 POE extensions.
+# Return 1 if so, 0 if it does not.  Note this causes a restart of GDB.
+
+gdb_caching_proc allow_aarch64_poe_tests {} {
+    global srcdir subdir gdb_prompt inferior_exited_re
+
+    set me "allow_aarch64_poe_tests"
+
+    if {![is_aarch64_target]} {
+	return 0
+    }
+
+    # Compile a program that tests the POE feature.
+    set src {
+	#include <stdbool.h>
+	#include <sys/auxv.h>
+
+	/* Feature check for POE feature.  */
+	#ifndef HWCAP2_POE
+	#define HWCAP2_POE (1ULL << 63)
+	#endif
+
+	int main (void) {
+	    bool poe_supported = getauxval (AT_HWCAP2) & HWCAP2_POE;
+
+	    /* Return success if POE is supported.  */
+	    return !poe_supported;
+	}
+    }
+
+    if {![gdb_simple_compile $me $src executable]} {
+	return 0
+    }
+
+    # Compilation succeeded so now run it via gdb.
+    set allow_poe_tests 0
+    clean_restart
+    gdb_load $obj
+    gdb_run_cmd
+    gdb_expect {
+	-re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	    verbose -log "\n$me: poe support detected"
+	    set allow_poe_tests 1
+	}
+	-re ".*$inferior_exited_re with code 01.*${gdb_prompt} $" {
+	    verbose -log "\n$me: poe support not detected"
+	}
+    }
+    gdb_exit
+
+    remote_file build delete $obj
+    verbose "$me: returning $allow_poe_tests" 2
+    return $allow_poe_tests
 }
 
 # A helper that compiles a test case to see if __int128 is supported.
@@ -5996,13 +6048,13 @@ proc is_any_target {args} {
 # check for skipping respective tests.
 
 proc use_gdb_stub {} {
-  global use_gdb_stub
+    global use_gdb_stub
 
-  if {[info exists use_gdb_stub]} {
-     return $use_gdb_stub
-  }
+    if {[info exists use_gdb_stub]} {
+	return $use_gdb_stub
+    }
 
-  return [target_info exists use_gdb_stub]
+    return [target_info exists use_gdb_stub]
 }
 
 # Return 1 if the current remote target is an instance of our GDBserver, 0
@@ -6442,7 +6494,7 @@ proc escape_for_host { str } {
     if { [is_remote host] } {
 	set map {
 	    {$} {\\$}
-       }
+	}
     } else {
 	set map {
 	    {$} {\$}
@@ -6470,18 +6522,14 @@ proc quote_for_host { args } {
 # atomic commit, and it doesn't matter which one wins, as all the
 # copies are identical.
 proc file_rename_atomic {src dst} {
-    set rc [catch { file rename -force -- $src $dst } err opts]
-
-    if {$rc} {
-	set code [dict get $opts -errorcode]
-	if {[llength $code] >= 2 && [lindex $code 1] eq "EBUSY"} {
-	    # Normal parallel race loss.
-	} else {
-	    error $err $opts
-	}
+    try {
+	file rename -force -- $src $dst
+    } trap "POSIX EBUSY" {} {
+	# Normal parallel race loss.
+	return 0
     }
 
-    return $rc
+    return 1
 }
 
 # Set while linker_supports_manifest_embed is running its test link,
@@ -6850,7 +6898,7 @@ proc gdb_compile {source dest type options} {
 			|| [istarget *-*-pe*])} {
 		lappend source "${shlib_name}.a"
 	    } else {
-	       lappend source $shlib_name
+		lappend source $shlib_name
 	    }
 	    if { $shlib_found == 0 } {
 		set shlib_found 1
@@ -6919,7 +6967,7 @@ proc gdb_compile {source dest type options} {
 
 	} elseif { $opt == "dwarf5" } {
 	    if {[test_compiler_info {gcc-*}] \
-		|| [test_compiler_info {clang-*}]} {
+		    || [test_compiler_info {clang-*}]} {
 		lappend new_options "additional_flags=-gdwarf-5"
 	    } else {
 		error "No idea how to force DWARF-5 in this compiler"
@@ -7159,16 +7207,16 @@ proc gdb_compile {source dest type options} {
 	lappend options "$flag"
     }
 
-  set macros [lsearch -exact $options macros]
-  if {$macros != -1} {
-      if { [test_compiler_info "clang-*"] } {
-	  set flag "additional_flags=-fdebug-macro"
-      } else {
-	  set flag "additional_flags=-g3"
-      }
+    set macros [lsearch -exact $options macros]
+    if {$macros != -1} {
+	if { [test_compiler_info "clang-*"] } {
+	    set flag "additional_flags=-fdebug-macro"
+	} else {
+	    set flag "additional_flags=-g3"
+	}
 
-      set options [lreplace $options $macros $macros $flag]
-  }
+	set options [lreplace $options $macros $macros $flag]
+    }
 
     if { $type == "executable" } {
 	if { ([istarget "*-*-mingw*"]
@@ -7332,8 +7380,8 @@ proc gdb_compile {source dest type options} {
 
     cond_wrap [expr {$pie != -1 || $nopie != -1}] \
 	with_PIE_multilib_flags_filtered {
-	set result [target_compile $source $dest $type $options]
-    }
+	    set result [target_compile $source $dest $type $options]
+	}
 
     # Prune uninteresting compiler (and linker) output.
     regsub "Creating library file: \[^\r\n\]*\[\r\n\]+" $result "" result
@@ -7465,17 +7513,17 @@ proc gdb_compile_shlib_1 {sources dest options} {
 	}
 	"gcc-*" {
 	    if { [istarget "powerpc*-*-aix*"]
-		   || [istarget "rs6000*-*-aix*"]
-		   || [istarget "*-*-cygwin*"]
-		   || [istarget "*-*-mingw*"]
-		   || [istarget "*-*-pe*"] } {
+		 || [istarget "rs6000*-*-aix*"]
+		 || [istarget "*-*-cygwin*"]
+		 || [istarget "*-*-mingw*"]
+		 || [istarget "*-*-pe*"] } {
 		lappend obj_options "additional_flags=-fPIC"
 	    } else {
 		lappend obj_options "additional_flags=-fpic"
 	    }
 	}
 	"icc-*" {
-		lappend obj_options "additional_flags=-fpic"
+	    lappend obj_options "additional_flags=-fpic"
 	}
 	default {
 	    # don't know what the compiler is...
@@ -7761,16 +7809,9 @@ proc gdb_expect { args } {
 	set tmt [get_largest_timeout]
     }
 
-    set code [catch \
-	{uplevel remote_expect host $tmt $expcode} string]
-
-    if {$code == 1} {
-	global errorInfo errorCode
-
-	return -code error -errorinfo $errorInfo -errorcode $errorCode $string
-    } else {
-	return -code $code $string
-    }
+    transparent_uplevel [subst_vars {
+	remote_expect host $tmt $expcode
+    }]
 }
 
 # gdb_expect_list TEST SENTINEL LIST -- expect a sequence of outputs
@@ -8376,10 +8417,10 @@ proc exec_symbol_file { binfile } {
 # to BINFILE2, but some targets require multiple binary files.
 proc gdb_rename_execfile { binfile1 binfile2 } {
     file rename -force [exec_target_file ${binfile1}] \
-		       [exec_target_file ${binfile2}]
+	[exec_target_file ${binfile2}]
     if { [exec_target_file ${binfile1}] != [exec_symbol_file ${binfile1}] } {
 	file rename -force [exec_symbol_file ${binfile1}] \
-			   [exec_symbol_file ${binfile2}]
+	    [exec_symbol_file ${binfile2}]
     }
 }
 
@@ -8551,23 +8592,18 @@ proc with_set { var val body } {
 	}
     }
 
-    set code [catch {uplevel 1 $body} result]
-
-    # Restore saved setting.
-    if { $save != "" } {
-	gdb_test_multiple "set $var $save" "" {
-	    -re -wrap "^" {
-	    }
-	    -re -wrap "is set to \"?$save\"?( \\(\[^)\]*\\))?\\." {
+    try {
+	transparent_uplevel $body
+    } finally {
+	# Restore saved setting.
+	if { $save != "" } {
+	    gdb_test_multiple "set $var $save" "" {
+		-re -wrap "^" {
+		}
+		-re -wrap "is set to \"?$save\"?( \\(\[^)\]*\\))?\\." {
+		}
 	    }
 	}
-    }
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
     }
 }
 
@@ -8952,7 +8988,7 @@ proc standard_output_file_with_gdb_instance {basename} {
     set count $gdb_instances
 
     if {$count == 0} {
-      return [standard_output_file $basename]
+	return [standard_output_file $basename]
     }
     return [standard_output_file ${basename}.${count}]
 }
@@ -8972,18 +9008,13 @@ proc standard_temp_file {basename} {
 # as is and delete A.  Return 1 if rename happened.
 
 proc tentative_rename { a b } {
-    global errorInfo errorCode
-    set code [catch {file rename -- $a $b} result]
-    if { $code == 1 && [lindex $errorCode 0] == "POSIX" \
-	     && [lindex $errorCode 1] == "EEXIST" } {
+    try {
+	file rename -- $a $b
+    } trap "POSIX EEXIST" {} {
 	file delete $a
 	return 0
     }
-    if {$code == 1} {
-	return -code error -errorinfo $errorInfo -errorcode $errorCode $result
-    } elseif {$code > 1} {
-	return -code $code $result
-    }
+
     return 1
 }
 
@@ -9190,7 +9221,7 @@ proc gdb_finish { } {
 
     if { [info procs ::gdb_tcl_unknown] != "" } {
 	# Restore dejagnu's version of proc unknown.
-	rename ::unknown ""
+	unproc ::unknown
 	rename ::dejagnu_unknown ::unknown
     }
 
@@ -9413,87 +9444,87 @@ proc gdb_get_line_number { text { file "" } } {
 #	is accepted.
 
 proc gdb_continue_to_end {{mssg ""} {command continue} {allow_extra 0}} {
-  global inferior_exited_re use_gdb_stub
+    global inferior_exited_re use_gdb_stub
 
-  if {$mssg == ""} {
-      set text "continue until exit"
-  } else {
-      set text "continue until exit at $mssg"
-  }
-
-  if {$allow_extra} {
-      set extra ".*"
-  } elseif {[istarget *-*-cygwin*] || [istarget *-*-mingw*]} {
-      # On Windows, even on supposedly single-threaded programs, we
-      # may see thread exit output when running to end, for threads
-      # spawned by the runtime.  E.g.:
-      #
-      #  (gdb) continue
-      #  Continuing.
-      #  [Thread 14364.0x21d4 exited with code 0]
-      #  [Thread 14364.0x4374 exited with code 0]
-      #  [Thread 14364.0x3aec exited with code 0]
-      #  [Thread 14364.0x3368 exited with code 0]
-      #  [Inferior 1 (process 14364) exited normally]
-      #
-      set extra "(\\\[Thread \[^\r\n\]+ exited with code $::decimal\\\]\r\n)*"
-  } else {
-      set extra ""
-  }
-
-  # By default, we don't rely on exit() behavior of remote stubs --
-  # it's common for exit() to be implemented as a simple infinite
-  # loop, or a forced crash/reset.  For native targets, by default, we
-  # assume process exit is reported as such.  If a non-reliable target
-  # is used, we set a breakpoint at exit, and continue to that.
-  if { [target_info exists exit_is_reliable] } {
-      set exit_is_reliable [target_info exit_is_reliable]
-  } else {
-      set exit_is_reliable [expr {! $use_gdb_stub}]
-  }
-
-  if { ! $exit_is_reliable } {
-    if {![gdb_breakpoint "exit"]} {
-      return 0
+    if {$mssg == ""} {
+	set text "continue until exit"
+    } else {
+	set text "continue until exit at $mssg"
     }
-    gdb_test $command "Continuing..*Breakpoint .*exit.*" \
-	$text
-  } else {
-    # Continue until we exit.  Should not stop again.
-    # Don't bother to check the output of the program, that may be
-    # extremely tough for some remote systems.
-    gdb_test $command \
-      "Continuing.\[\r\n0-9\]+${extra}(... EXIT code 0\[\r\n\]+|$inferior_exited_re normally).*"\
-	$text
-  }
+
+    if {$allow_extra} {
+	set extra ".*"
+    } elseif {[istarget *-*-cygwin*] || [istarget *-*-mingw*]} {
+	# On Windows, even on supposedly single-threaded programs, we
+	# may see thread exit output when running to end, for threads
+	# spawned by the runtime.  E.g.:
+	#
+	#  (gdb) continue
+	#  Continuing.
+	#  [Thread 14364.0x21d4 exited with code 0]
+	#  [Thread 14364.0x4374 exited with code 0]
+	#  [Thread 14364.0x3aec exited with code 0]
+	#  [Thread 14364.0x3368 exited with code 0]
+	#  [Inferior 1 (process 14364) exited normally]
+	#
+	set extra "(\\\[Thread \[^\r\n\]+ exited with code $::decimal\\\]\r\n)*"
+    } else {
+	set extra ""
+    }
+
+    # By default, we don't rely on exit() behavior of remote stubs --
+    # it's common for exit() to be implemented as a simple infinite
+    # loop, or a forced crash/reset.  For native targets, by default, we
+    # assume process exit is reported as such.  If a non-reliable target
+    # is used, we set a breakpoint at exit, and continue to that.
+    if { [target_info exists exit_is_reliable] } {
+	set exit_is_reliable [target_info exit_is_reliable]
+    } else {
+	set exit_is_reliable [expr {! $use_gdb_stub}]
+    }
+
+    if { ! $exit_is_reliable } {
+	if {![gdb_breakpoint "exit"]} {
+	    return 0
+	}
+	gdb_test $command "Continuing..*Breakpoint .*exit.*" \
+	    $text
+    } else {
+	# Continue until we exit.  Should not stop again.
+	# Don't bother to check the output of the program, that may be
+	# extremely tough for some remote systems.
+	gdb_test $command \
+	    "Continuing.\[\r\n0-9\]+${extra}(... EXIT code 0\[\r\n\]+|$inferior_exited_re normally).*"\
+	    $text
+    }
 }
 
 proc rerun_to_main {} {
-  global gdb_prompt use_gdb_stub
+    global gdb_prompt use_gdb_stub
 
-  if {$use_gdb_stub} {
-    gdb_run_cmd
-    gdb_expect {
-      -re ".*Breakpoint .*main .*$gdb_prompt $"\
-	      {pass "rerun to main" ; return 0}
-      -re "$gdb_prompt $"\
-	      {fail "rerun to main" ; return 0}
-      timeout {fail "(timeout) rerun to main" ; return 0}
+    if {$use_gdb_stub} {
+	gdb_run_cmd
+	gdb_expect {
+	    -re ".*Breakpoint .*main .*$gdb_prompt $"\
+		{pass "rerun to main" ; return 0}
+	    -re "$gdb_prompt $"\
+		{fail "rerun to main" ; return 0}
+	    timeout {fail "(timeout) rerun to main" ; return 0}
+	}
+    } else {
+	send_gdb "run\n"
+	gdb_expect {
+	    -re "The program .* has been started already.*y or n. $" {
+		send_gdb "y\n" answer
+		exp_continue
+	    }
+	    -re "Starting program.*$gdb_prompt $"\
+		{pass "rerun to main" ; return 0}
+	    -re "$gdb_prompt $"\
+		{fail "rerun to main" ; return 0}
+	    timeout {fail "(timeout) rerun to main" ; return 0}
+	}
     }
-  } else {
-    send_gdb "run\n"
-    gdb_expect {
-      -re "The program .* has been started already.*y or n. $" {
-	  send_gdb "y\n" answer
-	  exp_continue
-      }
-      -re "Starting program.*$gdb_prompt $"\
-	      {pass "rerun to main" ; return 0}
-      -re "$gdb_prompt $"\
-	      {fail "rerun to main" ; return 0}
-      timeout {fail "(timeout) rerun to main" ; return 0}
-    }
-  }
 }
 
 # Return true if EXECUTABLE contains a .gdb_index or .debug_names index section.
@@ -9792,21 +9823,21 @@ gdb_caching_proc gdb_has_argv0 {} {
     file delete $obj
 
     if { !$result
-      && ([istarget *-*-linux*]
-	  || [istarget *-*-freebsd*] || [istarget *-*-kfreebsd*]
-	  || [istarget *-*-netbsd*] || [istarget *-*-knetbsd*]
-	  || [istarget *-*-openbsd*]
-	  || [istarget *-*-darwin*]
-	  || [istarget *-*-solaris*]
-	  || [istarget *-*-aix*]
-	  || [istarget *-*-gnu*]
-	  || [istarget *-*-cygwin*] || [istarget *-*-mingw32*]
-	  || [istarget *-*-*djgpp*] || [istarget *-*-go32*]
-	  || [istarget *-wince-pe] || [istarget *-*-mingw32ce*]
-	  || [istarget *-*-osf*]
-	  || [istarget *-*-dicos*]
-	  || [istarget *-*-*vms*]
-	  || [istarget *-*-lynx*178]) } {
+	 && ([istarget *-*-linux*]
+	     || [istarget *-*-freebsd*] || [istarget *-*-kfreebsd*]
+	     || [istarget *-*-netbsd*] || [istarget *-*-knetbsd*]
+	     || [istarget *-*-openbsd*]
+	     || [istarget *-*-darwin*]
+	     || [istarget *-*-solaris*]
+	     || [istarget *-*-aix*]
+	     || [istarget *-*-gnu*]
+	     || [istarget *-*-cygwin*] || [istarget *-*-mingw32*]
+	     || [istarget *-*-*djgpp*] || [istarget *-*-go32*]
+	     || [istarget *-wince-pe] || [istarget *-*-mingw32ce*]
+	     || [istarget *-*-osf*]
+	     || [istarget *-*-dicos*]
+	     || [istarget *-*-*vms*]
+	     || [istarget *-*-lynx*178]) } {
 	fail "argv\[0\] should be available on this target"
     }
 
@@ -9919,7 +9950,7 @@ proc gdb_gnu_strip_debug { dest args } {
     verbose "result is $result"
     verbose "output is $output"
     if {$result == 1} {
-      return 1
+	return 1
     }
 
     # Workaround PR binutils/10802:
@@ -9933,7 +9964,7 @@ proc gdb_gnu_strip_debug { dest args } {
     verbose "result is $result"
     verbose "output is $output"
     if {$result == 1} {
-      return 1
+	return 1
     }
 
     # If no-main is passed, strip the symbol for main from the separate
@@ -10025,7 +10056,7 @@ proc test_class_help { command_class expected_initial_lines {list_of_commands {}
 	"Type \"help\" followed by command name for full documentation\.[\r\n]+"
     }
     set l_entire_body [concat $expected_initial_lines $l_list_of_commands \
-		       $l_stock_body $help_list_trailer]
+			   $l_stock_body $help_list_trailer]
 
     help_test_raw "help ${command_class}" $l_entire_body $testname
 }
@@ -10058,8 +10089,8 @@ proc test_prefix_command_help { command_list expected_initial_lines args } {
     # Use 'list' and not just {} because we want variables to
     # be expanded in this list.
     set l_stock_body [list\
-	 "List of \"$full_command\" subcommands\:.*\[\r\n\]+"\
-	 "Type \"help $full_command\" followed by subcommand name for full documentation\.\[\r\n\]+"]
+			  "List of \"$full_command\" subcommands\:.*\[\r\n\]+"\
+			  "Type \"help $full_command\" followed by subcommand name for full documentation\.\[\r\n\]+"]
     set l_entire_body [concat $expected_initial_lines $l_stock_body $help_list_trailer]
     if {[llength $args]>0} {
 	help_test_raw "help ${command}" $l_entire_body [lindex $args 0]
@@ -10700,8 +10731,8 @@ gdb_caching_proc gdb_target_symbol_prefix {} {
     set result [catch {exec $objdump_program --syms $obj} output]
 
     if { $result == 0 \
-	&& ![regexp -lineanchor \
-	     { ([^ a-zA-Z0-9]*)main$} $output dummy prefix] } {
+	     && ![regexp -lineanchor \
+		      { ([^ a-zA-Z0-9]*)main$} $output dummy prefix] } {
 	verbose "gdb_target_symbol_prefix: Could not find main in objdump output; returning null prefix" 2
     }
 
@@ -10788,8 +10819,8 @@ gdb_caching_proc support_nested_function_tests {} {
 # prepended.  (See gdb_target_symbol_prefix, above.)
 
 proc gdb_target_symbol { symbol } {
-  set prefix [gdb_target_symbol_prefix]
-  return "${prefix}${symbol}"
+    set prefix [gdb_target_symbol_prefix]
+    return "${prefix}${symbol}"
 }
 
 # gdb_target_symbol_prefix_flags_asm returns a string that can be
@@ -11051,6 +11082,24 @@ proc multi_line { args } {
     return [join $args "\r\n"]
 }
 
+# As multi_line, but deals with text translation mode.  On windows, if the
+# translation mode of an output stream of an executable is set to text, every
+# '\n' is translated to '\r\n'.  For GDB, we work around this using
+# -binary-output, so we can just use multi_line.  But for other executables,
+# we need to handle this.
+
+proc multi_line_ttm { args } {
+    if { ![ishost "*-*-mingw*"] } {
+	return [multi_line {*}$args]
+    }
+
+    if { [llength $args] == 1 } {
+	set hint "forgot {*} before list argument?"
+	error "multi_line_ttm called with one argument ($hint)"
+    }
+    return [join $args "\r\r\n"]
+}
+
 # Similar to the above, but while multi_line is meant to be used to
 # match GDB output, this one is meant to be used to build strings to
 # send as GDB input.
@@ -11202,7 +11251,7 @@ proc gdb_debug_init { } {
     global gdb_prompt
 
     if {![gdb_debug_enabled]} {
-      return;
+	return;
     }
 
     # First ensure logging is off.
@@ -11215,7 +11264,7 @@ proc gdb_debug_init { } {
 
     global gdbdebug
     foreach entry [split $gdbdebug ,] {
-      send_gdb "set debug $entry 1\n"
+	send_gdb "set debug $entry 1\n"
     }
 
     # Now that everything is set, enable logging.
@@ -11266,7 +11315,7 @@ proc gdb_stdin_log_write { message {type standard} } {
 
     global in_file
     if {![info exists in_file]} {
-      return
+	return
     }
 
     # Check message types.
@@ -11382,7 +11431,7 @@ gdb_caching_proc supports_fcf_protection {} {
 	int main () {
 	    return 0;
 	}
-  } executable "additional_flags=-fcf-protection=full"]
+    } executable "additional_flags=-fcf-protection=full"]
 }
 
 # Return true if symbols were read in using -readnow.  Otherwise,
@@ -11623,25 +11672,17 @@ proc with_override { name override body } {
     proc $name $new_args $new_body
 
     # Execute body.
-    set code [catch {uplevel 1 $body} result]
-
-    # Restore old proc if it existed on entry, else delete it.
-    if { $existed } {
-	# tclint-disable-next-line command-args
-	proc $name $old_args $old_body
-    } else {
-	rename $name ""
+    try {
+	transparent_uplevel $body
+    } finally {
+	# Restore old proc if it existed on entry, else delete it.
+	if { $existed } {
+	    # tclint-disable-next-line command-args
+	    proc $name $old_args $old_body
+	} else {
+	    unproc $name
+	}
     }
-
-    # Return as appropriate.
-    if { $code == 1 } {
-	global errorInfo errorCode
-	return -code error -errorinfo $errorInfo -errorcode $errorCode $result
-    } elseif { $code > 1 } {
-	return -code $code $result
-    }
-
-    return $result
 }
 
 # Run BODY after setting the TERM environment variable to 'ansi', and
@@ -11657,14 +11698,7 @@ proc with_ansi_styling_terminal { body } {
 	unset -nocomplain ::env(NO_COLOR)
 	unset -nocomplain ::env(COLORTERM)
 
-	set code [catch {uplevel 1 $body} result]
-    }
-
-    if {$code == 1} {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+	transparent_uplevel $body
     }
 }
 
@@ -11800,18 +11834,20 @@ gdb_caching_proc have_avx {} {
 
     # Compile a test program.
     set src {
-       #include "nat/x86-cpuid.h"
+	#include "nat/x86-cpuid.h"
 
 	int main() {
-	  unsigned int eax, ebx, ecx, edx;
+	    unsigned int eax, ebx, ecx, edx;
 
-	if (!x86_cpuid (1, &eax, &ebx, &ecx, &edx))
-	  return 0;
+	    if (!x86_cpuid (1, &eax, &ebx, &ecx, &edx)) {
+		return 0;
+	    }
 
-	if ((ecx & (bit_AVX | bit_OSXSAVE)) == (bit_AVX | bit_OSXSAVE))
-	  return 1;
-	else
-	  return 0;
+	    if ((ecx & (bit_AVX | bit_OSXSAVE)) == (bit_AVX | bit_OSXSAVE)) {
+		return 1;
+	    } else {
+		return 0;
+	    }
 	}
     }
     set compile_flags "incdir=${srcdir}/.."
@@ -11835,47 +11871,49 @@ gdb_caching_proc have_avx {} {
 
 # Return 1 if target supports avx2, otherwise return 0.
 gdb_caching_proc have_avx2 {} {
-	global srcdir
+    global srcdir
 
-	set me "have_avx2"
-	if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
-	    verbose "$me: target does not support avx2, returning 0" 2
-	    return 0
-	}
+    set me "have_avx2"
+    if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
+	verbose "$me: target does not support avx2, returning 0" 2
+	return 0
+    }
 
-	# Compile a test program.
-	set src {
-	   #include "nat/x86-cpuid.h"
+    # Compile a test program.
+    set src {
+	#include "nat/x86-cpuid.h"
 
-	    int main() {
-	      unsigned int eax, ebx, ecx, edx;
+	int main() {
+	    unsigned int eax, ebx, ecx, edx;
 
-	    if (!x86_cpuid_count (7, 0, &eax, &ebx, &ecx, &edx))
-	      return 0;
+	    if (!x86_cpuid_count (7, 0, &eax, &ebx, &ecx, &edx)) {
+		return 0;
+	    }
 
-	    if ((ebx & bit_AVX2) == bit_AVX2)
-	      return 1;
-	    else
-	      return 0;
+	    if ((ebx & bit_AVX2) == bit_AVX2) {
+		return 1;
+	    } else {
+		return 0;
 	    }
 	}
-	set compile_flags "incdir=${srcdir}/.."
-	if {![gdb_simple_compile $me $src executable $compile_flags]} {
-	    return 0
-	}
+    }
+    set compile_flags "incdir=${srcdir}/.."
+    if {![gdb_simple_compile $me $src executable $compile_flags]} {
+	return 0
+    }
 
-	set target_obj [gdb_remote_download target $obj]
-	set result [remote_exec target $target_obj]
-	set status [lindex $result 0]
-	set output [lindex $result 1]
-	if { $output != "" } {
-	    set status 0
-	}
+    set target_obj [gdb_remote_download target $obj]
+    set result [remote_exec target $target_obj]
+    set status [lindex $result 0]
+    set output [lindex $result 1]
+    if { $output != "" } {
+	set status 0
+    }
 
-	remote_file build delete $obj
+    remote_file build delete $obj
 
-	verbose "$me: returning $status" 2
-	return $status
+    verbose "$me: returning $status" 2
+    return $status
 }
 
 # Called as
@@ -11913,14 +11951,18 @@ proc require { args } {
 	    error "proc $fn returned a list of unexpected length $len"
 	}
 
-	if {$required_val != !!$actual_val} {
-	    if { [string length $msg] > 0 } {
-		unsupported "require failed: $arg ($msg)"
-	    } else {
-		unsupported "require failed: $arg"
-	    }
+	if {$required_val == !!$actual_val} {
+	    continue
+	}
 
-	    return -code return 0
+	if { [string length $msg] > 0 } {
+	    unsupported "require failed: $arg ($msg)"
+	} else {
+	    unsupported "require failed: $arg"
+	}
+
+	transparent_uplevel {
+	    return 0
 	}
     }
 }
@@ -11960,8 +12002,9 @@ gdb_caching_proc has_hw_wp_support {} {
 	int main (void) {
 	    volatile int local;
 	    local = 1;
-	    if (local == 1)
+	    if (local == 1) {
 		return 1;
+	    }
 	    return 0;
 	}
     }
@@ -12258,7 +12301,7 @@ gdb_caching_proc have_epilogue_line_info {} {
 	}
     }
     if {![gdb_simple_compile "simple_program" $main]} {
-	 return False
+	return False
     }
 
     clean_restart
@@ -12744,6 +12787,41 @@ proc unprintable_to_octal { input_string } {
 
 # Ignore args and don't do anything.  Can be used with proc with_override.
 proc nop {args} {}
+
+# Delete proc P.
+proc unproc {p} {
+    # Renaming to an empty string deletes proc P.
+    uplevel 1 [list rename $p {}]
+}
+
+# Return 1 if SIG can be delivered to a spawn_id on board.
+proc remote_kill_spawn_id_p { board sig } {
+    if {$board == "host" || $board == "target"} {
+	if {[isremote $board]} {
+	    # For remote host/target, the spawn_id holds the pid of the ssh
+	    # session, so we'd end up sending signals to ssh instead.
+	    return 0
+	}
+    }
+
+    return 1
+}
+
+# Send SIG to PID on BOARD.
+proc remote_kill_spawn_id { board spawn_id sig } {
+    set pid [exp_pid -i $spawn_id]
+
+    if {![remote_kill_spawn_id_p $board $sig]} {
+	error "Can't send signal $sig to $pid on remote $board"
+    }
+
+    return [remote_exec $board "kill -$sig $pid"]
+}
+
+# Send SIG to GDB.
+proc kill_gdb { sig } {
+    return [remote_kill_spawn_id host $::gdb_spawn_id $sig]
+}
 
 require {tcl_version_at_least 8 6 2}
 

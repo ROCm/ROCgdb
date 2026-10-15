@@ -579,7 +579,6 @@ _bfd_coff_internal_syment_name (bfd *abfd,
     {
       const char *strings;
 
-      BFD_ASSERT (sym->_n._n_n._n_offset >= STRING_SIZE_SIZE);
       strings = obj_coff_strings (abfd);
       if (strings == NULL)
 	{
@@ -587,7 +586,8 @@ _bfd_coff_internal_syment_name (bfd *abfd,
 	  if (strings == NULL)
 	    return NULL;
 	}
-      if (sym->_n._n_n._n_offset >= obj_coff_strings_len (abfd))
+      if (sym->_n._n_n._n_offset < STRING_SIZE_SIZE
+	  || sym->_n._n_n._n_offset >= obj_coff_strings_len (abfd))
 	return NULL;
       return strings + sym->_n._n_n._n_offset;
     }
@@ -1857,6 +1857,71 @@ _bfd_coff_free_symbols (bfd *abfd)
       free (obj_coff_strings (abfd));
       obj_coff_strings (abfd) = NULL;
       obj_coff_strings_len (abfd) = 0;
+    }
+
+  return true;
+}
+
+/* Check that the symbol table of ABFD is self consistent before it is
+   walked.  The symbol table walks in coff_link_add_symbols,
+   xcoff_link_add_symbols, and the final link input passes advance
+   per-symbol arrays (such as sym_hashes, csect_cache, and sym_indices)
+   by (1 + n_numaux) entries for every symbol, while those arrays are
+   sized from the symbol count declared in the file header.  An object
+   whose n_numaux values claim more auxiliary entries than the table
+   actually holds therefore runs those arrays, and the raw symbol buffer
+   cursor itself, off the end of their allocated memory.  */
+
+bool
+_bfd_coff_check_symbol_table (bfd *abfd)
+{
+  size_t symesz;
+  size_t size;
+  bfd_byte *esym;
+  bfd_byte *esym_end;
+
+  if (obj_raw_syment_count (abfd) == 0)
+    return true;
+
+  if (obj_coff_external_syms (abfd) == NULL)
+    {
+      bfd_set_error (bfd_error_bad_value);
+      return false;
+    }
+
+  symesz = bfd_coff_symesz (abfd);
+  if (symesz == 0
+      || _bfd_mul_overflow (obj_raw_syment_count (abfd), symesz, &size))
+    {
+      bfd_set_error (bfd_error_bad_value);
+      return false;
+    }
+
+  esym = obj_coff_external_syms (abfd);
+  esym_end = esym + size;
+
+  while (esym < esym_end)
+    {
+      struct internal_syment sym;
+
+      bfd_coff_swap_sym_in (abfd, esym, &sym);
+
+      /* Bytes remaining from this symbol to the end of the table;
+	 must cover the symbol plus its aux entries.  */
+      if ((sym.n_numaux + 1) * symesz > (size_t) (esym_end - esym))
+	{
+	  char buf[SYMNMLEN + 1];
+	  const char *name = _bfd_coff_internal_syment_name (abfd, &sym, buf);
+
+	  _bfd_error_handler
+	    /* xgettext:c-format */
+	    (_("%pB: class %d symbol '%s' has missing aux entries"),
+	     abfd, sym.n_sclass, name ? name : "");
+	  bfd_set_error (bfd_error_bad_value);
+	  return false;
+	}
+
+      esym += (sym.n_numaux + 1) * symesz;
     }
 
   return true;

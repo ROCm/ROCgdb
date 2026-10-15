@@ -119,5 +119,5 @@ Disassembly of section .text:
  +[a-f0-9]+:	62 ec fc 0c 69 c9 20 20 60 00 	\{nf\} imul \$0x602020,%r17,%r17
  +[a-f0-9]+:	62 fc fc 08 69 d1 20 20 60 00 	imul   \$0x602020,%r17,%rdx
  +[a-f0-9]+:	62 e4 fc 08 69 d1 20 20 60 00 	imul   \$0x602020,%rcx,%r18
- +[a-f0-9]+:	2e d5 00 68 20 20 60 00 	cs \{rex2 0x0\} push \$0x602020
+ +[a-f0-9]+:	2e d5 00 68 20 20 60 00 	cs \{rex2\} push \$0x602020
 #pass

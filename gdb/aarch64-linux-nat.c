@@ -34,6 +34,7 @@
 #include "arch/arm.h"
 #include "nat/aarch64-fpmr-linux.h"
 #include "nat/aarch64-gcs-linux.h"
+#include "nat/aarch64-poe-linux.h"
 #include "nat/aarch64-linux.h"
 #include "nat/aarch64-linux-hw-point.h"
 #include "nat/aarch64-mte-linux-ptrace.h"
@@ -602,6 +603,54 @@ store_gcsregs_to_thread (regcache *regcache)
     perror_with_name (_("Unable to store GCS registers"));
 }
 
+/* Fill GDB's register array with the POE register value from the current
+   thread.  */
+
+static void
+fetch_poeregs_from_thread (regcache *regcache)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+
+  gdb_assert (tdep->has_poe ());
+
+  uint64_t user_poe;
+  iovec iovec;
+
+  iovec.iov_base = &user_poe;
+  iovec.iov_len = sizeof (user_poe);
+
+  int tid = get_ptrace_pid (regcache->ptid ());
+  if (ptrace (PTRACE_GETREGSET, tid, NT_ARM_POE, &iovec) != 0)
+    perror_with_name (_("Unable to fetch POE register"));
+
+  regcache->raw_supply (tdep->poe_regnum, &user_poe);
+}
+
+/* Store the NT_ARM_POE register value from GDB's REGCACHE to the thread
+   associated with REGCACHE.  */
+
+static void
+store_poeregs_to_thread (regcache *regcache)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (regcache->arch ());
+
+  gdb_assert (tdep->has_poe ());
+
+  int tid = regcache->ptid ().lwp ();
+
+  iovec iovec;
+  uint64_t user_poe;
+  iovec.iov_base = &user_poe;
+  iovec.iov_len = sizeof (user_poe);
+
+  regcache->raw_collect (tdep->poe_regnum, &user_poe);
+
+  if (ptrace (PTRACE_SETREGSET, tid, NT_ARM_POE, &iovec) != 0)
+    perror_with_name (_("Unable to store POE register"));
+}
+
 /* Fill GDB's REGCACHE with the FPMR register set content from the
    thread associated with REGCACHE.  */
 
@@ -683,6 +732,9 @@ aarch64_fetch_registers (struct regcache *regcache, int regno)
       if (tdep->has_gcs_linux ())
 	fetch_gcsregs_from_thread (regcache);
 
+      if (tdep->has_poe ())
+	fetch_poeregs_from_thread (regcache);
+
       if (tdep->has_fpmr ())
 	fetch_fpmr_from_thread (regcache);
     }
@@ -722,6 +774,9 @@ aarch64_fetch_registers (struct regcache *regcache, int regno)
 	   && (regno == tdep->gcs_reg_base || regno == tdep->gcs_linux_reg_base
 	       || regno == tdep->gcs_linux_reg_base + 1))
     fetch_gcsregs_from_thread (regcache);
+  /* POE register?  */
+  else if (tdep->has_poe () && (regno == tdep->poe_regnum))
+    fetch_poeregs_from_thread (regcache);
   /* FPMR?  */
   else if (tdep->has_fpmr () && (regno == tdep->fpmr_regnum))
     fetch_fpmr_from_thread (regcache);
@@ -802,6 +857,9 @@ aarch64_store_registers (struct regcache *regcache, int regno)
 
       if (tdep->has_fpmr ())
 	store_fpmr_to_thread (regcache);
+
+      if (tdep->has_poe ())
+	store_poeregs_to_thread (regcache);
     }
   /* General purpose register?  */
   else if (regno < AARCH64_V0_REGNUM)
@@ -836,6 +894,9 @@ aarch64_store_registers (struct regcache *regcache, int regno)
   /* FPMR?  */
   else if (tdep->has_fpmr () && regno == tdep->fpmr_regnum)
     store_fpmr_to_thread (regcache);
+  /* POE register?  */
+  else if (tdep->has_poe () && regno == tdep->poe_regnum)
+    store_poeregs_to_thread (regcache);
 
   /* PAuth registers are read-only.  */
 }
@@ -1023,6 +1084,9 @@ aarch64_linux_nat_target::read_description ()
 
   /* Check for FPMR.  */
   features.fpmr = hwcap2 & HWCAP2_FPMR;
+
+  /* Check for POE support.  */
+  features.poe = hwcap2 & HWCAP2_POE;
 
   return aarch64_read_description (features);
 }

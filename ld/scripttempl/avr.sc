@@ -191,6 +191,9 @@ test -z "${RELOCATING}" || cat <<EOF
     *(.vectors)
     KEEP(*(.vectors))
 
+    /* For code that should immediately follow the interrupt vector table.  */
+    *(SORT(.vectortext*))
+
     /* For data that needs to reside in the lower 64k of progmem.
        For data accessed with ELPM use .progmemx.* instead
        so that no lower 64k .progmem addresses are wasted.  */

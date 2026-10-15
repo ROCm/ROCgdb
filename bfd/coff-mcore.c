@@ -406,6 +406,15 @@ coff_mcore_relocate_section (bfd * output_bfd,
 	  h = NULL;
 	  sym = NULL;
 	}
+      else if (! coff_symndx_in_range (input_bfd, symndx))
+	{
+	  _bfd_error_handler
+	    /* xgettext: c-format */
+	    (_("%pB: invalid symbol index %ld in relocs"),
+	     input_bfd, symndx);
+	  bfd_set_error (bfd_error_bad_value);
+	  return false;
+	}
       else
 	{
 	  h = obj_coff_sym_hashes (input_bfd)[symndx];

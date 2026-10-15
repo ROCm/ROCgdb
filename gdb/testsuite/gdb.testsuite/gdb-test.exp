@@ -94,6 +94,57 @@ if {![is_remote host]} {
     }
 }
 
+foreach_with_prefix variant {0 1 2} {
+    proc level_2_inner {} {
+	if {$::variant == 0} {
+	    return -level 2 "return_level_2"
+	} elseif {$::variant == 1} {
+	    send_gdb "print 1\n"
+	    set prompt_re [string_to_regexp "(gdb) "]
+	    remote_expect host 10 {
+		-re " = 1\r\n$prompt_re$" {
+		    return -level 2 "return_level_2"
+		}
+	    }
+	} else {
+	    gdb_test_multiple "print 1" "" {
+		-re -wrap " = 1" {
+		    return -level 2 "return_level_2"
+		}
+	    }
+	}
+	return "inner"
+    }
+
+    proc level_2_outer {} {
+	level_2_inner
+	return "outer"
+    }
+
+    try {
+	set res "initial"
+	set res [level_2_outer]
+    } finally {
+	if {$variant == 0} {
+	    # trivial case.
+	    gdb_assert {$res == "return_level_2"}
+	} elseif {$variant == 1} {
+	    # Remote_expect case.
+	    if {$res == "outer"} {
+		# Dejagnu bug.
+		# https://debbugs.gnu.org/cgi/bugreport.cgi?bug=81691
+		setup_xfail *-*-*
+	    }
+	    gdb_assert {$res == "return_level_2"}
+	    set variant1_res $res
+	} else {
+	    # Gdb_test_multiple case. This should work if the remote_expect
+	    # case works.
+	    gdb_assert {$res == $variant1_res}
+	}
+    }
+}
+
 # Change the prompt.
 set prompt "(GDB) "
 set prompt_re "\\(GDB\\) $"

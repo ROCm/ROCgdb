@@ -136,6 +136,15 @@ typedef uint64_t bpf_insn_word;
 #define BPF_OFFSET16_MOVS8 ((uint64_t)8 << 32)
 #define BPF_OFFSET16_MOVS16 ((uint64_t)16 << 32)
 #define BPF_OFFSET16_MOVS32 ((uint64_t)32 << 32)
+#define BPF_OFFSET16_ASCAST ((uint64_t)0x1 << 32)
+
+/* In an address space cast the immediate holds the destination address
+   space in its upper half and the source address space in its lower
+   half.  Only the generic address space 0 and the arena address space
+   1 exist, so only these two combinations are meaningful.  */
+
+#define BPF_IMM32_ASCAST_K ((uint64_t)0x00000001) /* 0 <- 1.  */
+#define BPF_IMM32_ASCAST_U ((uint64_t)0x00010000) /* 1 <- 0.  */
 
 #define BPF_IMM32_END16 ((uint64_t)0x00000010)
 #define BPF_IMM32_END32 ((uint64_t)0x00000020)
@@ -155,6 +164,8 @@ typedef uint64_t bpf_insn_word;
 #define BPF_IMM32_AFXOR ((uint64_t)0x000000a1)
 #define BPF_IMM32_AXCHG ((uint64_t)0x000000e1)
 #define BPF_IMM32_ACMP  ((uint64_t)0x000000f1)
+#define BPF_IMM32_LDACQ ((uint64_t)0x00000100)
+#define BPF_IMM32_STREL ((uint64_t)0x00000110)
 
 /* Unique identifiers for BPF instructions.  */
 
@@ -172,7 +183,7 @@ enum bpf_insn_id
   BPF_INSN_NEGR, BPF_INSN_LSHR, BPF_INSN_LSHI,
   BPF_INSN_RSHR, BPF_INSN_RSHI, BPF_INSN_ARSHR, BPF_INSN_ARSHI,
   BPF_INSN_MOVS8R, BPF_INSN_MOVS16R, BPF_INSN_MOVS32R,
-  BPF_INSN_MOVR, BPF_INSN_MOVI,
+  BPF_INSN_ASCASTK, BPF_INSN_ASCASTU, BPF_INSN_MOVR, BPF_INSN_MOVI,
   /* ALU32 instructions.  */
   BPF_INSN_ADD32R, BPF_INSN_ADD32I, BPF_INSN_SUB32R, BPF_INSN_SUB32I,
   BPF_INSN_MUL32R, BPF_INSN_MUL32I, BPF_INSN_SDIV32R, BPF_INSN_SDIV32I,
@@ -203,7 +214,7 @@ enum bpf_insn_id
   BPF_INSN_JAR, BPF_INSN_JEQR, BPF_INSN_JGTR, BPF_INSN_JSGTR,
   BPF_INSN_JGER, BPF_INSN_JSGER, BPF_INSN_JLTR, BPF_INSN_JSLTR,
   BPF_INSN_JSLER, BPF_INSN_JLER, BPF_INSN_JSETR, BPF_INSN_JNER,
-  BPF_INSN_CALLR, BPF_INSN_CALL, BPF_INSN_EXIT,
+  BPF_INSN_JAX, BPF_INSN_CALLR, BPF_INSN_CALL, BPF_INSN_EXIT,
   /* Compare-and-jump instructions (reg OP imm.)  */
   BPF_INSN_JEQI, BPF_INSN_JGTI, BPF_INSN_JSGTI,
   BPF_INSN_JGEI, BPF_INSN_JSGEI, BPF_INSN_JLTI, BPF_INSN_JSLTI,
@@ -230,6 +241,9 @@ enum bpf_insn_id
   BPF_INSN_ACMP, BPF_INSN_AXCHG,
   /* Atomic compare-and-swap, atomic exchange (32-bit).  */
   BPF_INSN_ACMP32, BPF_INSN_AXCHG32,
+  /* Load-acquire and store-release.  */
+  BPF_INSN_LDACQB, BPF_INSN_LDACQH, BPF_INSN_LDACQW, BPF_INSN_LDACQDW,
+  BPF_INSN_STRELB, BPF_INSN_STRELH, BPF_INSN_STRELW, BPF_INSN_STRELDW,
   /* Conditional pseudo-jump "may_goto".  A NOP until the BPF runtime
      decides it isn't.  */
   BPF_INSN_JCOND,

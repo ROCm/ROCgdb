@@ -37,6 +37,7 @@
 #include "language.h"
 #include "varobj.h"
 #include "go-lang.h"
+#include "go-exp-parser.h"
 #include "c-lang.h"
 #include "parser-defs.h"
 #include "gdbarch.h"
@@ -452,6 +453,14 @@ go_block_package_name (const struct block *block)
     }
 
   return NULL;
+}
+
+/* See language.h.  */
+
+int
+go_language::parser (struct parser_state *ps) const
+{
+  return go_parse (ps);
 }
 
 /* See language.h.  */

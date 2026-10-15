@@ -4667,18 +4667,16 @@ symbol_search::compare_search_syms (const symbol_search &sym_a,
     return -1;
 }
 
-/* Returns true if the type_name of symbol_type of SYM matches TREG.
-   If SYM has no symbol_type or symbol_name, returns false.  */
+/* See symtab.h.  */
 
 bool
-treg_matches_sym_type_name (const compiled_regex &treg,
-			    const struct symbol *sym)
+regex_matches_sym_type_name (const compiled_regex &type_regex,
+			     const symbol *sym)
 {
   struct type *sym_type;
   std::string printed_sym_type_name;
 
-  symbol_lookup_debug_printf_v ("treg_matches_sym_type_name, sym %s",
-				sym->natural_name ());
+  symbol_lookup_debug_printf_v ("sym %s", sym->natural_name ());
 
   sym_type = sym->type ();
   if (sym_type == NULL)
@@ -4696,14 +4694,34 @@ treg_matches_sym_type_name (const compiled_regex &treg,
   if (printed_sym_type_name.empty ())
     return false;
 
-  return treg.exec (printed_sym_type_name.c_str (), 0, NULL, 0) == 0;
+  return type_regex.exec (printed_sym_type_name.c_str (), 0, nullptr, 0) == 0;
+}
+
+/* Return the domain search flags matching symbols of kind KIND.  */
+
+static domain_search_flags
+to_search_flags (symbol_search_kind kind)
+{
+  switch (kind)
+    {
+    case symbol_search_kind::VARIABLE:
+      return SEARCH_VAR_DOMAIN;
+    case symbol_search_kind::FUNCTION:
+      return SEARCH_FUNCTION_DOMAIN;
+    case symbol_search_kind::TYPE:
+      return SEARCH_TYPE_DOMAIN | SEARCH_STRUCT_DOMAIN;
+    case symbol_search_kind::MODULE:
+      return SEARCH_MODULE_DOMAIN;
+    }
+
+  gdb_assert_not_reached ("invalid symbol_search_kind");
 }
 
 /* See symtab.h.  */
 
 bool
 global_symbol_searcher::is_suitable_msymbol
-	(const domain_search_flags kind, const minimal_symbol *msymbol)
+	(const minimal_symbol *msymbol) const
 {
   switch (msymbol->type ())
     {
@@ -4711,25 +4729,115 @@ global_symbol_searcher::is_suitable_msymbol
     case mst_bss:
     case mst_file_data:
     case mst_file_bss:
-      return (kind & SEARCH_VAR_DOMAIN) != 0;
+      return m_kind == symbol_search_kind::VARIABLE;
     case mst_text:
     case mst_file_text:
     case mst_solib_trampoline:
     case mst_text_gnu_ifunc:
-      return (kind & SEARCH_FUNCTION_DOMAIN) != 0;
+      return m_kind == symbol_search_kind::FUNCTION;
     default:
       return false;
     }
+}
+
+/* Return true if NAME matches NAME_REGEX, or if NAME_REGEX is empty.  */
+
+static bool
+name_matches (const std::optional<compiled_regex> &name_regex,
+	      const char *name)
+{
+  return (!name_regex.has_value ()
+	  || name_regex->exec (name, 0, nullptr, 0) == 0);
+}
+
+/* See symtab.h.  */
+
+bool
+global_symbol_searcher::symtab_matches_filenames (symtab *symtab) const
+{
+  /* Check first sole SYMTAB->FILENAME.  It does not need to be a substring
+     of symtab_to_fullname as it may contain "./" etc.  */
+  if (file_matches (symtab->filename (), m_filenames, false))
+    return true;
+
+  if (!basenames_may_differ
+      && !file_matches (lbasename (symtab->filename ()), m_filenames, true))
+    return false;
+
+  return file_matches (symtab_to_fullname (symtab), m_filenames, false);
+}
+
+/* See symtab.h.  */
+
+bool
+global_symbol_searcher::symbol_matches
+	(const symbol *sym,
+	 const std::optional<compiled_regex> &name_regex,
+	 const std::optional<compiled_regex> &type_regex) const
+{
+  if (!symtab_matches_filenames (sym->symtab ()))
+    return false;
+
+  if (!sym->matches (to_search_flags (m_kind)))
+    return false;
+
+  if (!name_matches (name_regex, sym->natural_name ()))
+    return false;
+
+  switch (m_kind)
+    {
+    case symbol_search_kind::VARIABLE:
+      /* LOC_CONST can be used for more than just enums, e.g., C++ static
+	 const members.  We only want to skip enums here.  */
+      if (sym->loc_class () == LOC_UNRESOLVED
+	  || (sym->loc_class () == LOC_CONST
+	      && sym->type ()->code () == TYPE_CODE_ENUM))
+	return false;
+      [[fallthrough]];
+
+    case symbol_search_kind::FUNCTION:
+      if (type_regex.has_value ()
+	  && !regex_matches_sym_type_name (*type_regex, sym))
+	return false;
+      break;
+
+    case symbol_search_kind::TYPE:
+      break;
+
+    case symbol_search_kind::MODULE:
+      /* Skip module declarations, keep only definitions.  */
+      if (sym->line () == 0)
+	return false;
+      break;
+    }
+
+  return true;
+}
+
+/* See symtab.h.  */
+
+bool
+global_symbol_searcher::msymbol_matches
+	(const minimal_symbol *msymbol,
+	 const std::optional<compiled_regex> &name_regex) const
+{
+  if (msymbol->created_by_gdb)
+    return false;
+
+  if (!is_suitable_msymbol (msymbol))
+    return false;
+
+  return name_matches (name_regex, msymbol->natural_name ());
 }
 
 /* See symtab.h.  */
 
 bool
 global_symbol_searcher::expand_symtabs
-	(objfile *objfile, const std::optional<compiled_regex> &preg) const
+	(objfile &objfile,
+	 const std::optional<compiled_regex> &name_regex) const
 {
-  domain_search_flags kind = m_kind;
-  bool found_msymbol = false;
+  bool found_func_msymbol_without_debug_info = false;
 
   auto do_file_match = [&] (const char *filename, bool basenames)
     {
@@ -4739,82 +4847,64 @@ global_symbol_searcher::expand_symtabs
   if (!m_filenames.empty ())
     file_matcher = do_file_match;
 
-  objfile->search
+  objfile.search
     (file_matcher,
      &lookup_name_info::match_any (),
      [&] (const char *symname)
      {
-       return (!preg.has_value ()
-	       || preg->exec (symname, 0, NULL, 0) == 0);
+       return name_matches (name_regex, symname);
      },
      NULL,
      SEARCH_GLOBAL_BLOCK | SEARCH_STATIC_BLOCK,
-     kind);
+     to_search_flags (m_kind));
 
-  /* Here, we search through the minimal symbol tables for functions and
-     variables that match, and force their symbols to be read.  This is in
-     particular necessary for demangled variable names, which are no longer
-     put into the partial symbol tables.  The symbol will then be found
+  /* Here, we search through the minimal symbol tables for functions that
+     match, and force their symbols to be read.  The symbol will then be found
      during the scan of symtabs later.
 
-     For functions, find_pc_symtab should succeed if we have debug info for
-     the function, for variables we have to call
-     lookup_symbol_in_objfile_from_linkage_name to determine if the
-     variable has debug info.  If the lookup fails, set found_msymbol so
-     that we will rescan to print any matching symbols without debug info.
-     We only search the objfile the msymbol came from, we no longer search
-     all objfiles.  In large programs (1000s of shared libs) searching all
-     objfiles is not worth the pain.  */
+     find_compunit_symtab_for_pc should succeed if we have debug info for the
+     function.  If it fails, set found_func_msymbol_without_debug_info so that
+     we will rescan to print any matching symbols without debug info.  We only
+     search the objfile the msymbol came from, we no longer search all
+     objfiles.
+
+     Variables are not handled here, and looking them up does not expand any
+     symtab.  When no file names were given the caller rescans the minimal
+     symbols for variables.  */
   if (m_filenames.empty ()
-      && (kind & (SEARCH_VAR_DOMAIN | SEARCH_FUNCTION_DOMAIN)) != 0)
+      && m_kind == symbol_search_kind::FUNCTION)
     {
-      for (minimal_symbol *msymbol : objfile->msymbols ())
+      for (minimal_symbol *msymbol : objfile.msymbols ())
 	{
 	  QUIT;
 
-	  if (msymbol->created_by_gdb)
+	  if (!msymbol_matches (msymbol, name_regex))
 	    continue;
 
-	  if (is_suitable_msymbol (kind, msymbol))
-	    {
-	      if (!preg.has_value ()
-		  || preg->exec (msymbol->natural_name (), 0,
-				 NULL, 0) == 0)
-		{
-		  /* An important side-effect of these lookup functions is
-		     to expand the symbol table if msymbol is found, later
-		     in the process we will add matching symbols or
-		     msymbols to the results list, and that requires that
-		     the symbols tables are expanded.  */
-		  if ((kind & SEARCH_FUNCTION_DOMAIN) != 0
-		      ? (find_compunit_symtab_for_pc
-			 (msymbol->value_address (objfile)) == NULL)
-		      : (lookup_symbol_in_objfile_from_linkage_name
-			 (objfile, msymbol->linkage_name (),
-			  SEARCH_VFT)
-			 .symbol == NULL))
-		    found_msymbol = true;
-		}
-	    }
+	  /* An important side-effect of this lookup function is to expand
+	     the symbol table if msymbol is found, later in the process we
+	     will add matching symbols or msymbols to the results list, and
+	     that requires that the symbols tables are expanded.  */
+	  if (find_compunit_symtab_for_pc
+		(msymbol->value_address (&objfile)) == nullptr)
+	    found_func_msymbol_without_debug_info = true;
 	}
     }
 
-  return found_msymbol;
+  return found_func_msymbol_without_debug_info;
 }
 
 /* See symtab.h.  */
 
 bool
 global_symbol_searcher::add_matching_symbols
-	(objfile *objfile,
-	 const std::optional<compiled_regex> &preg,
-	 const std::optional<compiled_regex> &treg,
-	 std::set<symbol_search> *result_set) const
+	(objfile &objfile,
+	 const std::optional<compiled_regex> &name_regex,
+	 const std::optional<compiled_regex> &type_regex,
+	 std::set<symbol_search> &result_set) const
 {
-  domain_search_flags kind = m_kind;
-
   /* Add matching symbols (if not already present).  */
-  for (compunit_symtab &cust : objfile->compunits ())
+  for (compunit_symtab &cust : objfile.compunits ())
     {
       const struct blockvector *bv  = cust.blockvector ();
 
@@ -4824,55 +4914,14 @@ global_symbol_searcher::add_matching_symbols
 
 	  for (struct symbol *sym : block_iterator_range (b))
 	    {
-	      struct symtab *real_symtab = sym->symtab ();
-
 	      QUIT;
 
-	      /* Check first sole REAL_SYMTAB->FILENAME.  It does
-		 not need to be a substring of symtab_to_fullname as
-		 it may contain "./" etc.  */
-	      if (!(file_matches (real_symtab->filename (), m_filenames, false)
-		    || ((basenames_may_differ
-			 || file_matches (lbasename (real_symtab->filename ()),
-					  m_filenames, true))
-			&& file_matches (symtab_to_fullname (real_symtab),
-					 m_filenames, false))))
+	      if (!symbol_matches (sym, name_regex, type_regex))
 		continue;
 
-	      if (!sym->matches (kind))
-		continue;
-
-	      if (preg.has_value () && preg->exec (sym->natural_name (), 0,
-						   nullptr, 0) != 0)
-		continue;
-
-	      if (((sym->domain () == VAR_DOMAIN
-		    || sym->domain () == FUNCTION_DOMAIN)
-		   && treg.has_value ()
-		   && !treg_matches_sym_type_name (*treg, sym)))
-		continue;
-
-	      if ((kind & SEARCH_VAR_DOMAIN) != 0)
-		{
-		  if (sym->loc_class () == LOC_UNRESOLVED
-		      /* LOC_CONST can be used for more than
-			 just enums, e.g., c++ static const
-			 members.  We only want to skip enums
-			 here.  */
-		      || (sym->loc_class () == LOC_CONST
-			  && (sym->type ()->code () == TYPE_CODE_ENUM)))
-		    continue;
-		}
-	      if (sym->domain () == MODULE_DOMAIN && sym->line () == 0)
-		continue;
-
-	      if (result_set->size () < m_max_search_results)
-		{
-		  /* Match, insert if not already in the results.  */
-		  symbol_search ss (block, sym);
-		  if (result_set->find (ss) == result_set->end ())
-		    result_set->insert (ss);
-		}
+	      /* Match, insert if not already in the results.  */
+	      if (result_set.size () < m_max_search_results)
+		result_set.emplace (block, sym);
 	      else
 		return false;
 	    }
@@ -4886,43 +4935,32 @@ global_symbol_searcher::add_matching_symbols
 
 bool
 global_symbol_searcher::add_matching_msymbols
-	(objfile *objfile, const std::optional<compiled_regex> &preg,
-	 std::vector<symbol_search> *results) const
+	(objfile &objfile, const std::optional<compiled_regex> &name_regex,
+	 std::vector<symbol_search> &results) const
 {
-  domain_search_flags kind = m_kind;
-
-  for (minimal_symbol *msymbol : objfile->msymbols ())
+  for (minimal_symbol *msymbol : objfile.msymbols ())
     {
       QUIT;
 
-      if (msymbol->created_by_gdb)
+      if (!msymbol_matches (msymbol, name_regex))
 	continue;
 
-      if (is_suitable_msymbol (kind, msymbol))
-	{
-	  if (!preg.has_value ()
-	      || preg->exec (msymbol->natural_name (), 0,
-			     NULL, 0) == 0)
-	    {
-	      /* For functions we can do a quick check of whether the
-		 symbol might be found via find_pc_symtab.  */
-	      if ((kind & SEARCH_FUNCTION_DOMAIN) == 0
-		  || (find_compunit_symtab_for_pc
-		      (msymbol->value_address (objfile)) == NULL))
-		{
-		  if (lookup_symbol_in_objfile_from_linkage_name
-		      (objfile, msymbol->linkage_name (),
-		       SEARCH_VFT).symbol == NULL)
-		    {
-		      /* Matching msymbol, add it to the results list.  */
-		      if (results->size () < m_max_search_results)
-			results->emplace_back (GLOBAL_BLOCK, msymbol, objfile);
-		      else
-			return false;
-		    }
-		}
-	    }
-	}
+      /* For functions we can do a quick check of whether the
+	 symbol might be found via find_compunit_symtab_for_pc.  */
+      if (m_kind == symbol_search_kind::FUNCTION
+	  && (find_compunit_symtab_for_pc
+	      (msymbol->value_address (&objfile)) != nullptr))
+	continue;
+
+      if (lookup_symbol_in_objfile_from_linkage_name
+	    (&objfile, msymbol->linkage_name (), SEARCH_VFT).symbol != nullptr)
+	continue;
+
+      /* Matching msymbol, add it to the results list.  */
+      if (results.size () < m_max_search_results)
+	results.emplace_back (GLOBAL_BLOCK, msymbol, &objfile);
+      else
+	return false;
     }
 
   return true;
@@ -4930,77 +4968,96 @@ global_symbol_searcher::add_matching_msymbols
 
 /* See symtab.h.  */
 
+std::optional<compiled_regex>
+compile_symbol_search_regex (const char *regexp)
+{
+  if (regexp == nullptr)
+    return {};
+
+  int cflags
+    = REG_NOSUB | (case_sensitivity == case_sensitive_off ? REG_ICASE : 0);
+
+  return std::make_optional<compiled_regex> (regexp, cflags,
+					     _("Invalid regexp"));
+}
+
+/* See symtab.h.  */
+
+std::optional<compiled_regex>
+global_symbol_searcher::compile_name_regex () const
+{
+  if (m_symbol_name_regexp == nullptr)
+    return {};
+
+  const char *symbol_name_regexp = m_symbol_name_regexp;
+  std::string symbol_name_regexp_holder;
+
+  /* Make sure spacing is right for C++ operators.
+     This is just a courtesy to make the matching less sensitive
+     to how many spaces the user leaves between 'operator'
+     and <TYPENAME> or <OPERATOR>.  */
+  const char *op_end;
+  const char *opname = operator_chars (symbol_name_regexp, &op_end);
+
+  if (*opname)
+    {
+      /* -1 means ok; otherwise number of spaces needed.  */
+      int fix = -1;
+
+      if (c_isalpha (*opname) || *opname == '_' || *opname == '$')
+	{
+	  /* There should be 1 space between 'operator' and 'TYPENAME'.  */
+	  if (opname[-1] != ' ' || opname[-2] == ' ')
+	    fix = 1;
+	}
+      else
+	{
+	  /* There should be 0 spaces between 'operator' and 'OPERATOR'.  */
+	  if (opname[-1] == ' ')
+	    fix = 0;
+	}
+      /* If wrong number of spaces, fix it.  */
+      if (fix >= 0)
+	{
+	  symbol_name_regexp_holder
+	    = string_printf ("operator%.*s%s", fix, " ", opname);
+	  symbol_name_regexp = symbol_name_regexp_holder.c_str ();
+	}
+    }
+
+  return compile_symbol_search_regex (symbol_name_regexp);
+}
+
+/* See symtab.h.  */
+
+std::optional<compiled_regex>
+global_symbol_searcher::compile_type_regex () const
+{
+  return compile_symbol_search_regex (m_symbol_type_regexp);
+}
+
+/* See symtab.h.  */
+
 std::vector<symbol_search>
 global_symbol_searcher::search () const
 {
-  std::optional<compiled_regex> preg;
-  std::optional<compiled_regex> treg;
+  std::optional<compiled_regex> name_regex = compile_name_regex ();
+  std::optional<compiled_regex> type_regex = compile_type_regex ();
 
-  if (m_symbol_name_regexp != NULL)
-    {
-      const char *symbol_name_regexp = m_symbol_name_regexp;
-      std::string symbol_name_regexp_holder;
-
-      /* Make sure spacing is right for C++ operators.
-	 This is just a courtesy to make the matching less sensitive
-	 to how many spaces the user leaves between 'operator'
-	 and <TYPENAME> or <OPERATOR>.  */
-      const char *op_end;
-      const char *opname = operator_chars (symbol_name_regexp, &op_end);
-
-      if (*opname)
-	{
-	  int fix = -1;		/* -1 means ok; otherwise number of
-				    spaces needed.  */
-
-	  if (c_isalpha (*opname) || *opname == '_' || *opname == '$')
-	    {
-	      /* There should 1 space between 'operator' and 'TYPENAME'.  */
-	      if (opname[-1] != ' ' || opname[-2] == ' ')
-		fix = 1;
-	    }
-	  else
-	    {
-	      /* There should 0 spaces between 'operator' and 'OPERATOR'.  */
-	      if (opname[-1] == ' ')
-		fix = 0;
-	    }
-	  /* If wrong number of spaces, fix it.  */
-	  if (fix >= 0)
-	    {
-	      symbol_name_regexp_holder
-		= string_printf ("operator%.*s%s", fix, " ", opname);
-	      symbol_name_regexp = symbol_name_regexp_holder.c_str ();
-	    }
-	}
-
-      int cflags = REG_NOSUB | (case_sensitivity == case_sensitive_off
-				? REG_ICASE : 0);
-      preg.emplace (symbol_name_regexp, cflags,
-		    _("Invalid regexp"));
-    }
-
-  if (m_symbol_type_regexp != NULL)
-    {
-      int cflags = REG_NOSUB | (case_sensitivity == case_sensitive_off
-				? REG_ICASE : 0);
-      treg.emplace (m_symbol_type_regexp, cflags,
-		    _("Invalid regexp"));
-    }
-
-  bool found_msymbol = false;
+  bool found_func_msymbol_without_debug_info = false;
   std::set<symbol_search> result_set;
   for (objfile &objfile : current_program_space->objfiles ())
     {
       /* Expand symtabs within objfile that possibly contain matching
 	 symbols.  */
-      found_msymbol |= expand_symtabs (&objfile, preg);
+      found_func_msymbol_without_debug_info
+	|= expand_symtabs (objfile, name_regex);
 
       /* Find matching symbols within OBJFILE and add them in to the
 	 RESULT_SET set.  Use a set here so that we can easily detect
 	 duplicates as we go, and can therefore track how many unique
 	 matches we have found so far.  */
-      if (!add_matching_symbols (&objfile, preg, treg, &result_set))
+      if (!add_matching_symbols (objfile, name_regex, type_regex, result_set))
 	break;
     }
 
@@ -5012,15 +5069,15 @@ global_symbol_searcher::search () const
      user wants to see symbols matching a type regexp, then never give a
      minimal symbol, as we assume that a minimal symbol does not have a
      type.  */
-  if ((found_msymbol
-       || (m_filenames.empty () && (m_kind & SEARCH_VAR_DOMAIN) != 0))
+  if ((found_func_msymbol_without_debug_info
+       || (m_filenames.empty () && m_kind == symbol_search_kind::VARIABLE))
       && !m_exclude_minsyms
-      && !treg.has_value ())
+      && !type_regex.has_value ())
     {
-      gdb_assert ((m_kind & (SEARCH_VAR_DOMAIN | SEARCH_FUNCTION_DOMAIN))
-		  != 0);
+      gdb_assert (m_kind == symbol_search_kind::VARIABLE
+		  || m_kind == symbol_search_kind::FUNCTION);
       for (objfile &objfile : current_program_space->objfiles ())
-	if (!add_matching_msymbols (&objfile, preg, &result))
+	if (!add_matching_msymbols (objfile, name_regex, result))
 	  break;
     }
 
@@ -5150,7 +5207,7 @@ print_msymbol_info (bound_minimal_symbol msymbol)
 
 static void
 symtab_symbol_info (bool quiet, bool exclude_minsyms,
-		    const char *regexp, domain_enum kind,
+		    const char *regexp, symbol_search_kind kind,
 		    const char *t_regexp, int from_tty)
 {
   const char *last_filename = "";
@@ -5159,35 +5216,32 @@ symtab_symbol_info (bool quiet, bool exclude_minsyms,
   if (regexp != nullptr && *regexp == '\0')
     regexp = nullptr;
 
-  domain_search_flags flags = to_search_flags (kind);
-  if (kind == TYPE_DOMAIN)
-    flags |= SEARCH_STRUCT_DOMAIN;
-
-  global_symbol_searcher spec (flags, regexp);
+  global_symbol_searcher spec (kind, regexp);
   spec.set_symbol_type_regexp (t_regexp);
   spec.set_exclude_minsyms (exclude_minsyms);
   std::vector<symbol_search> symbols = spec.search ();
 
   if (!quiet)
     {
-      const char *classname;
+      const char *classname = nullptr;
+
       switch (kind)
 	{
-	case VAR_DOMAIN:
+	case symbol_search_kind::VARIABLE:
 	  classname = "variable";
 	  break;
-	case FUNCTION_DOMAIN:
+	case symbol_search_kind::FUNCTION:
 	  classname = "function";
 	  break;
-	case TYPE_DOMAIN:
+	case symbol_search_kind::TYPE:
 	  classname = "type";
 	  break;
-	case MODULE_DOMAIN:
+	case symbol_search_kind::MODULE:
 	  classname = "module";
 	  break;
-	default:
-	  gdb_assert_not_reached ("invalid domain enum");
 	}
+
+      gdb_assert (classname != nullptr);
 
       if (regexp != NULL)
 	{
@@ -5311,7 +5365,7 @@ info_variables_command (const char *args, int from_tty)
     args = nullptr;
 
   symtab_symbol_info
-    (opts.quiet, opts.exclude_minsyms, args, VAR_DOMAIN,
+    (opts.quiet, opts.exclude_minsyms, args, symbol_search_kind::VARIABLE,
      opts.type_regexp.empty () ? nullptr : opts.type_regexp.c_str (),
      from_tty);
 }
@@ -5330,7 +5384,7 @@ info_functions_command (const char *args, int from_tty)
     args = nullptr;
 
   symtab_symbol_info
-    (opts.quiet, opts.exclude_minsyms, args, FUNCTION_DOMAIN,
+    (opts.quiet, opts.exclude_minsyms, args, symbol_search_kind::FUNCTION,
      opts.type_regexp.empty () ? nullptr : opts.type_regexp.c_str (),
      from_tty);
 }
@@ -5373,8 +5427,8 @@ info_types_command (const char *args, int from_tty)
     (&args, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, grp);
   if (args != nullptr && *args == '\0')
     args = nullptr;
-  symtab_symbol_info (opts.quiet, false, args, TYPE_DOMAIN, nullptr,
-		      from_tty);
+  symtab_symbol_info (opts.quiet, false, args, symbol_search_kind::TYPE,
+		      nullptr, from_tty);
 }
 
 /* Command completer for 'info types' command.  */
@@ -5406,8 +5460,8 @@ info_modules_command (const char *args, int from_tty)
     (&args, gdb::option::PROCESS_OPTIONS_UNKNOWN_IS_OPERAND, grp);
   if (args != nullptr && *args == '\0')
     args = nullptr;
-  symtab_symbol_info (opts.quiet, true, args, MODULE_DOMAIN, nullptr,
-		      from_tty);
+  symtab_symbol_info (opts.quiet, true, args, symbol_search_kind::MODULE,
+		      nullptr, from_tty);
 }
 
 /* Implement the 'info main' command.  */
@@ -5448,7 +5502,7 @@ rbreak_command (const char *regexp, int from_tty)
      because the std::move nullifies file_name.  */
   bool file_name_p = file_name != nullptr;
 
-  global_symbol_searcher spec (SEARCH_FUNCTION_DOMAIN, regexp);
+  global_symbol_searcher spec (symbol_search_kind::FUNCTION, regexp);
   if (file_name_p)
     spec.add_filename (std::move (file_name));
   std::vector<symbol_search> symbols = spec.search ();
@@ -6660,12 +6714,12 @@ static struct cmd_list_element *info_module_cmdlist = NULL;
 
 std::vector<module_symbol_search>
 search_module_symbols (const char *module_regexp, const char *regexp,
-		       const char *type_regexp, domain_search_flags kind)
+		       const char *type_regexp, symbol_search_kind kind)
 {
   std::vector<module_symbol_search> results;
 
   /* Search for all modules matching MODULE_REGEXP.  */
-  global_symbol_searcher spec1 (SEARCH_MODULE_DOMAIN, module_regexp);
+  global_symbol_searcher spec1 (symbol_search_kind::MODULE, module_regexp);
   spec1.set_exclude_minsyms (true);
   std::vector<symbol_search> modules = spec1.search ();
 
@@ -6711,9 +6765,10 @@ search_module_symbols (const char *module_regexp, const char *regexp,
 static void
 info_module_subcommand (bool quiet, const char *module_regexp,
 			const char *regexp, const char *type_regexp,
-			domain_search_flags kind)
+			symbol_search_kind kind)
 {
-  gdb_assert (kind == SEARCH_FUNCTION_DOMAIN || kind == SEARCH_VAR_DOMAIN);
+  gdb_assert (kind == symbol_search_kind::FUNCTION
+	      || kind == symbol_search_kind::VARIABLE);
 
   /* Print a header line.  Don't build the header line bit by bit as this
      prevents internationalisation.  */
@@ -6724,12 +6779,12 @@ info_module_subcommand (bool quiet, const char *module_regexp,
 	  if (type_regexp == nullptr)
 	    {
 	      if (regexp == nullptr)
-		gdb_printf ((kind == SEARCH_VAR_DOMAIN
+		gdb_printf ((kind == symbol_search_kind::VARIABLE
 			     ? _("All variables in all modules:")
 			     : _("All functions in all modules:")));
 	      else
 		gdb_printf
-		  ((kind == SEARCH_VAR_DOMAIN
+		  ((kind == symbol_search_kind::VARIABLE
 		    ? _("All variables matching regular expression"
 			" \"%s\" in all modules:")
 		    : _("All functions matching regular expression"
@@ -6740,7 +6795,7 @@ info_module_subcommand (bool quiet, const char *module_regexp,
 	    {
 	      if (regexp == nullptr)
 		gdb_printf
-		  ((kind == SEARCH_VAR_DOMAIN
+		  ((kind == symbol_search_kind::VARIABLE
 		    ? _("All variables with type matching regular "
 			"expression \"%s\" in all modules:")
 		    : _("All functions with type matching regular "
@@ -6748,7 +6803,7 @@ info_module_subcommand (bool quiet, const char *module_regexp,
 		   type_regexp);
 	      else
 		gdb_printf
-		  ((kind == SEARCH_VAR_DOMAIN
+		  ((kind == symbol_search_kind::VARIABLE
 		    ? _("All variables matching regular expression "
 			"\"%s\",\n\twith type matching regular "
 			"expression \"%s\" in all modules:")
@@ -6764,7 +6819,7 @@ info_module_subcommand (bool quiet, const char *module_regexp,
 	    {
 	      if (regexp == nullptr)
 		gdb_printf
-		  ((kind == SEARCH_VAR_DOMAIN
+		  ((kind == symbol_search_kind::VARIABLE
 		    ? _("All variables in all modules matching regular "
 			"expression \"%s\":")
 		    : _("All functions in all modules matching regular "
@@ -6772,7 +6827,7 @@ info_module_subcommand (bool quiet, const char *module_regexp,
 		   module_regexp);
 	      else
 		gdb_printf
-		  ((kind == SEARCH_VAR_DOMAIN
+		  ((kind == symbol_search_kind::VARIABLE
 		    ? _("All variables matching regular expression "
 			"\"%s\",\n\tin all modules matching regular "
 			"expression \"%s\":")
@@ -6785,7 +6840,7 @@ info_module_subcommand (bool quiet, const char *module_regexp,
 	    {
 	      if (regexp == nullptr)
 		gdb_printf
-		  ((kind == SEARCH_VAR_DOMAIN
+		  ((kind == symbol_search_kind::VARIABLE
 		    ? _("All variables with type matching regular "
 			"expression \"%s\"\n\tin all modules matching "
 			"regular expression \"%s\":")
@@ -6795,7 +6850,7 @@ info_module_subcommand (bool quiet, const char *module_regexp,
 		   type_regexp, module_regexp);
 	      else
 		gdb_printf
-		  ((kind == SEARCH_VAR_DOMAIN
+		  ((kind == symbol_search_kind::VARIABLE
 		    ? _("All variables matching regular expression "
 			"\"%s\",\n\twith type matching regular expression "
 			"\"%s\",\n\tin all modules matching regular "
@@ -6907,7 +6962,7 @@ info_module_functions_command (const char *args, int from_tty)
     (opts.quiet,
      opts.module_regexp.empty () ? nullptr : opts.module_regexp.c_str (), args,
      opts.type_regexp.empty () ? nullptr : opts.type_regexp.c_str (),
-     SEARCH_FUNCTION_DOMAIN);
+     symbol_search_kind::FUNCTION);
 }
 
 /* Implements the 'info module variables' command.  */
@@ -6926,7 +6981,7 @@ info_module_variables_command (const char *args, int from_tty)
     (opts.quiet,
      opts.module_regexp.empty () ? nullptr : opts.module_regexp.c_str (), args,
      opts.type_regexp.empty () ? nullptr : opts.type_regexp.c_str (),
-     SEARCH_VAR_DOMAIN);
+     symbol_search_kind::VARIABLE);
 }
 
 /* Command completer for 'info module ...' sub-commands.  */

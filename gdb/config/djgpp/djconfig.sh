@@ -184,3 +184,10 @@ echo "Running the configure script..."
 if test -f "${srcdir}/install-" ; then
   mv "${srcdir}/install-" "${srcdir}/install-.sh"
 fi
+
+# Local Variables:
+# mode:shell-script
+# sh-indentation:2
+# sh-basic-offset:2
+# End:
+# vi:sw=2

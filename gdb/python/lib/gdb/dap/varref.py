@@ -107,8 +107,10 @@ class BaseReference(ABC):
         """Fetch one child of this variable.
 
         INDEX is the index of the child to fetch.
-        This should return a tuple of the form (NAME, VALUE), where
-        NAME is the name of the variable, and VALUE is a gdb.Value."""
+        This should return a tuple of the form (NAME, VALUE, EVAL_NAME),
+        where NAME is the name of the variable, and VALUE is a gdb.Value.
+        EVAL_NAME may either be None, or a string that is used as the
+        variable's 'evaluateName'."""
         return
 
     @abstractmethod
@@ -153,9 +155,9 @@ class BaseReference(ABC):
             if idx >= len(self._children):
                 break
             if self._children[idx] is None:
-                name, value = self.fetch_one_child(idx)
+                name, value, eval_name = self.fetch_one_child(idx)
                 name = self._compute_name(name)
-                var = VariableReference(name, value)
+                var = VariableReference(name, value, eval_name=eval_name)
                 self._children[idx] = var
                 self._by_name[name] = var
             yield self._children[idx]
@@ -176,7 +178,7 @@ class BaseReference(ABC):
 class VariableReference(BaseReference):
     """Concrete subclass of BaseReference that handles gdb.Value."""
 
-    def __init__(self, name, value, result_name="value"):
+    def __init__(self, name, value, result_name="value", eval_name=None):
         """Initializer.
 
         NAME is the name of this reference, see superclass.
@@ -186,6 +188,7 @@ class VariableReference(BaseReference):
         super().__init__(name)
         self._result_name = result_name
         self._value = value
+        self._eval_name = eval_name
         self._update_value()
 
     # Internal method to update local data when the value changes.
@@ -261,6 +264,8 @@ class VariableReference(BaseReference):
                 result["memoryReference"] = hex(int(self._value))
         if client_bool_capability("supportsVariableType"):
             result["type"] = str(self._value.type)
+        if self._eval_name is not None:
+            result["evaluateName"] = self._eval_name
         return result
 
     @in_gdb_thread
@@ -275,7 +280,7 @@ class VariableReference(BaseReference):
         # gdb.Value, but it must be convertible.
         if not isinstance(val, gdb.Value):
             val = gdb.Value(val)
-        return (name, val)
+        return (name, val, None)
 
 
 @in_gdb_thread

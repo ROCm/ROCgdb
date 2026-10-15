@@ -50,11 +50,16 @@ if { [is_remote target] } {
 # Start with a fresh GDB, with verbosity enabled, and run to main.  On
 # error, behave as "return", so we don't try to continue testing with
 # a borked session.
-proc setup_gdb { binfile srcfile } {
+proc setup_gdb { binfile srcfile {message ""} } {
     clean_restart $binfile
 
     if {![runto_main]} {
-	return -code return
+	if {$message != ""} {
+	    unsupported $message
+	}
+	transparent_uplevel {
+	    return
+	}
     }
 
     gdb_breakpoint [gdb_get_line_number " VFORK " $srcfile] -temporary
@@ -62,14 +67,7 @@ proc setup_gdb { binfile srcfile } {
 }
 
 proc check_vfork_catchpoints {} {
-  # Because setup_gdb uses 'return -code return' which would return to
-  # our caller we need to wrap this call, spot when setup_gdb failed
-  # (with return code 2), and then issue our own 'return -code return'.
-  set code [catch {setup_gdb $::binfile $::srcfile} string]
-  if { $code == 2 } {
-    unsupported "vfork catchpoints"
-    return -code return
-  }
+  setup_gdb $::binfile $::srcfile "vfork catchpoints"
 
   # Verify that the system supports "catch vfork".
   gdb_test "catch vfork" "Catchpoint \[0-9\]* \\(vfork\\)" "insert first vfork catchpoint"
@@ -85,8 +83,10 @@ proc check_vfork_catchpoints {} {
   }
 
   if {$has_vfork_catchpoints == 0} {
-    unsupported "vfork catchpoints"
-    return -code return
+      unsupported "vfork catchpoints"
+      transparent_uplevel {
+	  return
+      }
   }
 }
 

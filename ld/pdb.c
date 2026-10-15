@@ -3811,6 +3811,7 @@ create_linker_symbols (bfd *abfd, uint8_t **syms, uint32_t *sym_byte_size,
   env_size += strlen (exeval) + 1;
   env_size += sizeof (pdb);
   env_size += strlen (pdbval) + 1;
+  env_size++; /* Terminating empty string.  */
 
   if (env_size % 4)
     padding2 = 4 - (env_size % 4);
@@ -3883,6 +3884,8 @@ create_linker_symbols (bfd *abfd, uint8_t **syms, uint32_t *sym_byte_size,
   memcpy (ptr, pdbval, strlen (pdbval) + 1);
   ptr += strlen (pdbval) + 1;
 
+  *ptr++ = 0;
+
   /* Microsoft's LINK also includes "cmd", the command-line options passed
      to the linker, but unfortunately we don't have access to argc and argv
      at this stage.  */
@@ -3933,10 +3936,7 @@ populate_module_stream (bfd *stream, bfd *mod, uint32_t *sym_byte_size,
 	    {
 	      if (!handle_debugt_section (s, mod, types, ids, mod_num, strings,
 					  &map, &num_types))
-		{
-		  free (mod_source->files);
-		  return false;
-		}
+		return false;
 
 	      break;
 	    }
@@ -3955,7 +3955,6 @@ populate_module_stream (bfd *stream, bfd *mod, uint32_t *sym_byte_size,
 		{
 		  free (c13_info);
 		  free (syms);
-		  free (mod_source->files);
 		  free (map);
 		  return false;
 		}
@@ -4360,7 +4359,7 @@ create_source_info_substream (void **data, uint32_t *size,
 			      struct source_files_info *source)
 {
   uint16_t dedupe_source_files_count = 0;
-  uint16_t source_files_count = 0;
+  unsigned int source_files_count = 0;
   uint32_t strings_len = 0;
   uint8_t *ptr;
 
@@ -4390,6 +4389,9 @@ create_source_info_substream (void **data, uint32_t *size,
   *size += (sizeof (uint16_t) + sizeof (uint16_t)) * source->mod_count;
   *size += sizeof (uint32_t) * source_files_count;
   *size += strings_len;
+
+  /* Subsequent DBI substreams must be 4-byte aligned.  */
+  *size = (*size + 3) & ~3;
 
   *data = xmalloc (*size);
 
@@ -4456,6 +4458,7 @@ create_source_info_substream (void **data, uint32_t *size,
 	    }
 	}
     }
+  memset (ptr, 0, (uint8_t *) *data + *size - ptr);
 }
 
 /* Used as parameter to qsort, to sort globals by hash.  */
@@ -5402,7 +5405,14 @@ create_pdb_file (bfd *abfd, const char *pdb_name, const unsigned char *guid)
   ret = true;
 
 end:
-  bfd_close (pdb);
+  if (!bfd_close (pdb))
+    {
+      einfo (_("%P: cannot write PDB file: %E\n"));
+      ret = false;
+    }
+
+  if (!ret)
+    unlink_if_ordinary (pdb_name);
 
   htab_delete (strings.hashmap);
 

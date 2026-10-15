@@ -25,7 +25,9 @@ if { !([istarget "xtensa*-*-*"]) } {
 
 run_dump_test "call_overflow"
 run_dump_test "coalesce"
+run_dump_test "coalesce-merge"
 run_dump_test "diff_overflow"
+run_dump_test "gc-prop"
 run_dump_test "lcall"
 run_dump_test "relax-diff1"
 run_dump_test "relax-loc"
@@ -43,5 +45,10 @@ run_dump_test "relax-undef-weak-pie-export-dynamic"
 run_dump_test "relax-undef-weak-local-pie"
 run_dump_test "relax-undef-weak-shared"
 run_dump_test "relax-undef-weak-local-shared"
+
+run_dump_test "reloc-abs32"
+run_dump_test "reloc-abs32-r"
+run_dump_test "reloc-coalesce-abs32"
+run_dump_test "reloc-prop-abs32"
 
 run_dump_test "startstop"

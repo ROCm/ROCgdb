@@ -63,7 +63,9 @@ proc enable_debug {enable} {
 
 proc return_if_nonzero { result } {
     if {$result != 0} {
-	return -code return $result
+	transparent_uplevel {
+	    return $result
+	}
     }
 }
 

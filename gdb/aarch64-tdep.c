@@ -164,6 +164,11 @@ static const char *const aarch64_gcs_register_names[] = {
   "gcspr"
 };
 
+static const char *const aarch64_poe_register_names[] = {
+  /* Permission Overlay Extension Register.  */
+  "por_el0"
+};
+
 static const char *const aarch64_gcs_linux_register_names[] = {
   /* Field in struct user_gcs.  */
   "gcs_features_enabled",
@@ -2892,6 +2897,21 @@ is_w_pseudo_register (struct gdbarch *gdbarch, int regnum)
   return false;
 }
 
+/* Return TRUE if REGNUM is a POE pseudo-register number.  Return FALSE
+   otherwise.  */
+
+static bool
+is_poe_pseudo_register (gdbarch *gdbarch, int regnum)
+{
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  if (tdep->poe_pseudo_base <= regnum
+      && regnum < tdep->poe_pseudo_base + tdep->poe_pseudo_count)
+    return true;
+
+  return false;
+}
+
 /* Return TRUE if REGNUM is a SME pseudo-register number.  Return FALSE
    otherwise.  */
 
@@ -3088,6 +3108,21 @@ aarch64_pseudo_register_name (struct gdbarch *gdbarch, int regnum)
   if (tdep->has_pauth () && regnum == tdep->ra_sign_state_regnum)
     return "";
 
+  if (tdep->has_poe ())
+    {
+      static const char *const poe_name[] =
+	{
+	  "por_p0", "por_p1", "por_p2", "por_p3",
+	  "por_p4", "por_p5", "por_p6", "por_p7",
+	  "por_p8", "por_p9", "por_p10", "por_p11",
+	  "por_p12", "por_p13", "por_p14", "por_p15",
+	};
+
+      /* POE pseudo-registers.  */
+      if (is_poe_pseudo_register (gdbarch, regnum))
+	return poe_name[regnum - tdep->poe_pseudo_base];
+    }
+
   internal_error (_("aarch64_pseudo_register_name: bad register number %d"),
 		  p_regnum);
 }
@@ -3130,8 +3165,128 @@ aarch64_pseudo_register_type (struct gdbarch *gdbarch, int regnum)
   if (tdep->has_pauth () && regnum == tdep->ra_sign_state_regnum)
     return builtin_type (gdbarch)->builtin_uint64;
 
+  /* POE pseudo-registers are 8-bit.  */
+  if (is_poe_pseudo_register (gdbarch, regnum))
+    return builtin_type (gdbarch)->builtin_uint8;
+
   internal_error (_("aarch64_pseudo_register_type: bad register number %d"),
 		  p_regnum);
+}
+
+/* Convert a POR_EL0 Perm<m> overlay permission encoding into rwx-style string.
+   For example:
+     0b0011 -> "r-x" (3)
+     0b0101 -> "rw-" (5)
+     0b0111 -> "rwx" (7)
+     0b0000 -> "---" (0)
+   Reserved encodings (0b1xxx) are returned as "???".  */
+
+static const char *
+aarch64_perm_overlay_decode (unsigned int perm)
+{
+  switch (perm)
+   {
+     case 0: return "---";
+     case 1: return "r--";
+     case 2: return "--x";
+     case 3: return "r-x";
+     case 4: return "-w-";
+     case 5: return "rw-";
+     case 6: return "-wx";
+     case 7: return "rwx";
+     default: return "???";
+   }
+}
+
+/* Display POE register POR_EL0 in the following format for the 'info registers'
+   and 'info all-registers' commands:
+   <register-name> <hex-value> [<decoded per-protection-key permissions>]  */
+
+static void
+aarch64_print_poe_register_info (ui_file *file, int regnum, const char *name,
+				 const frame_info_ptr &frame)
+{
+  value *val = value_of_register (regnum, get_next_frame_sentinel_okay (frame));
+  ULONGEST por_el0 = (ULONGEST) value_as_long (val);
+  gdb_printf (file, "%-14s 0x%s [ ", name, phex (por_el0, 8));
+  const int line_wrap_count = 36;
+
+  for (int i = 15, line_wrap = 0; i >= 0; --i)
+    {
+      unsigned int perm = (por_el0 >> (i * 4)) & 0xf;
+      if (perm)
+	{
+	  if (line_wrap != 0 && (line_wrap % 4) == 0)
+	    gdb_printf (file, "\n%*s", line_wrap_count, "");
+	  gdb_printf (file, "P%d=%s ", i, aarch64_perm_overlay_decode (perm));
+	  line_wrap++;
+	}
+    }
+  gdb_puts ("]\n", file);
+}
+
+/* Custom display for POE pseudo registers.  */
+
+static void
+aarch64_print_poe_pseudo_register_info (ui_file *file, int regnum,
+					const char *name,
+					const frame_info_ptr &frame)
+{
+  value *val = value_of_register (regnum, get_next_frame_sentinel_okay (frame));
+  gdbarch *gdbarch = get_frame_arch (frame);
+  unsigned int perm = extract_unsigned_integer (val->contents (),
+						gdbarch_byte_order (gdbarch));
+
+  /* Extract only the least significant 4 bits.  */
+  perm &= 0xf;
+
+  gdb_printf (file, "%-14s 0x%-16x %s\n", name, perm,
+	      aarch64_perm_overlay_decode (perm));
+}
+
+/* For 'info registers' and 'info all-registers', print POE POR_EL0 register and
+   POE pseudo registers using the custom register printer and all other
+   registers using the default register printer.  */
+
+static void
+aarch64_print_registers_info (gdbarch *gdbarch, ui_file *file,
+			      const frame_info_ptr &frame,
+			      int regnum,
+			      bool print_all)
+{
+  const int numregs = gdbarch_num_cooked_regs (gdbarch);
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  /* When no register is specified.  */
+  if (regnum == -1)
+    {
+      for (int i = 0; i < numregs; i++)
+	{
+	  if (i == tdep->poe_regnum)
+	    {
+	      aarch64_print_poe_register_info
+		(file, i, gdbarch_register_name (gdbarch, i), frame);
+	      continue;
+	    }
+	  else if (is_poe_pseudo_register (gdbarch, i))
+	    {
+	      aarch64_print_poe_pseudo_register_info
+		(file, i, gdbarch_register_name (gdbarch, i), frame);
+	      continue;
+	    }
+	  default_print_registers_info (gdbarch, file, frame, i, print_all);
+	}
+    }
+  /* When POE por_el0 register is specified.  */
+  else if (regnum == tdep->poe_regnum)
+    aarch64_print_poe_register_info
+      (file, regnum, gdbarch_register_name (gdbarch, regnum), frame);
+  /* When individual POE pseudo register is specified.  */
+  else if (is_poe_pseudo_register (gdbarch, regnum))
+    aarch64_print_poe_pseudo_register_info
+      (file, regnum, gdbarch_register_name (gdbarch, regnum), frame);
+  else
+    default_print_registers_info (gdbarch, file, frame, regnum, print_all);
 }
 
 /* Implement the "pseudo_register_reggroup_p" tdesc_arch_data method.  */
@@ -3161,6 +3316,8 @@ aarch64_pseudo_register_reggroup_p (struct gdbarch *gdbarch, int regnum,
     return group == all_reggroup || group == vector_reggroup;
   else if (is_sme_pseudo_register (gdbarch, regnum))
     return group == all_reggroup || group == vector_reggroup;
+  else if (is_poe_pseudo_register (gdbarch, regnum))
+    return group == all_reggroup || group == reggroup_find (gdbarch, "por");
   /* RA_STATE is used for unwinding only.  Do not assign it to any groups.  */
   if (tdep->has_pauth () && regnum == tdep->ra_sign_state_regnum)
     return false;
@@ -3290,7 +3447,36 @@ aarch64_sme_pseudo_register_read (gdbarch *gdbarch, const frame_info_ptr &next_f
       za_value->contents_copy (result, dst_offset, src_offset,
 			       offsets.chunk_size);
     }
+  return result;
+}
 
+/* Given REGNUM, a POE pseudo-register number, return its value in RESULT.  */
+
+static value *
+aarch64_poe_pseudo_register_read (gdbarch *gdbarch,
+				  const frame_info_ptr &next_frame,
+				  const int pseudo_reg_num)
+{
+  aarch64_gdbarch_tdep *tdep = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  gdb_assert (tdep->has_poe ());
+  gdb_assert (tdep->poe_pseudo_base <= pseudo_reg_num);
+  gdb_assert (pseudo_reg_num < tdep->poe_pseudo_base + tdep->poe_pseudo_count);
+
+  unsigned int pkey = pseudo_reg_num - tdep->poe_pseudo_base;
+  unsigned int shift = pkey * 4;
+
+  value *por_value = value_of_register (tdep->poe_regnum, next_frame);
+  value *result = value::allocate_register (next_frame, pseudo_reg_num);
+
+  ULONGEST por_el0
+    = extract_unsigned_integer (por_value->contents (),
+				gdbarch_byte_order (gdbarch));
+
+  ULONGEST pseudo_reg_value = (por_el0 >> shift) & 0xf;
+
+  store_unsigned_integer (result->contents_raw (), gdbarch_byte_order (gdbarch),
+			  pseudo_reg_value);
   return result;
 }
 
@@ -3321,6 +3507,9 @@ aarch64_pseudo_read_value (gdbarch *gdbarch, const frame_info_ptr &next_frame,
     }
   else if (is_sme_pseudo_register (gdbarch, pseudo_reg_num))
     return aarch64_sme_pseudo_register_read (gdbarch, next_frame,
+					     pseudo_reg_num);
+  else if (is_poe_pseudo_register (gdbarch, pseudo_reg_num))
+    return aarch64_poe_pseudo_register_read (gdbarch, next_frame,
 					     pseudo_reg_num);
 
   /* Offset in the "pseudo-register space".  */
@@ -3428,6 +3617,48 @@ aarch64_sme_pseudo_register_write (gdbarch *gdbarch, const frame_info_ptr &next_
 		      za_value->contents_raw ());
 }
 
+/* Given PSEUDO_REG_NUM, a POE pseudo-register number, store DATA in the
+   corresponding field of POR_EL0.  */
+
+static void
+aarch64_poe_pseudo_register_write (gdbarch *gdbarch,
+				   const frame_info_ptr &next_frame,
+				   const int pseudo_reg_num,
+				   gdb::array_view<const gdb_byte> data)
+{
+  aarch64_gdbarch_tdep *tdep
+    = gdbarch_tdep<aarch64_gdbarch_tdep> (gdbarch);
+
+  gdb_assert (tdep->has_poe ());
+  gdb_assert (tdep->poe_pseudo_base <= pseudo_reg_num);
+  gdb_assert (pseudo_reg_num < tdep->poe_pseudo_base + tdep->poe_pseudo_count);
+
+  unsigned int pkey = pseudo_reg_num - tdep->poe_pseudo_base;
+  unsigned int shift = pkey * 4;
+
+  ULONGEST pseudo_reg_value
+    = extract_unsigned_integer (data, gdbarch_byte_order (gdbarch));
+
+  if (pseudo_reg_value > 0xf)
+    error (_("POE pseudo-register value must be between 0 and 15."));
+
+  /* Fetch the current POR_EL0 value.  */
+  value *por_value = value_of_register (tdep->poe_regnum, next_frame);
+
+  ULONGEST por_el0
+    = extract_unsigned_integer (por_value->contents (),
+				gdbarch_byte_order (gdbarch));
+
+  ULONGEST mask = ULONGEST (0xf) << shift;
+
+  por_el0 = (por_el0 & ~mask) | (pseudo_reg_value << shift);
+
+  store_unsigned_integer (por_value->contents_writeable (),
+			  gdbarch_byte_order (gdbarch), por_el0);
+
+  put_frame_register (next_frame, tdep->poe_regnum, por_value->contents_raw ());
+}
+
 /* Implement the "pseudo_register_write" gdbarch method.  */
 
 static void
@@ -3461,6 +3692,12 @@ aarch64_pseudo_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
   else if (is_sme_pseudo_register (gdbarch, pseudo_reg_num))
     {
       aarch64_sme_pseudo_register_write (gdbarch, next_frame, pseudo_reg_num,
+					 buf);
+      return;
+    }
+  else if (is_poe_pseudo_register (gdbarch, pseudo_reg_num))
+    {
+      aarch64_poe_pseudo_register_write (gdbarch, next_frame, pseudo_reg_num,
 					 buf);
       return;
     }
@@ -4140,6 +4377,10 @@ aarch64_features_from_target_desc (const struct target_desc *tdesc)
   features.fpmr = (tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.fpmr")
 		   != nullptr);
 
+  /* Check for POE feature.  */
+  features.poe = (tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.poe")
+		  != nullptr);
+
   return features;
 }
 
@@ -4560,6 +4801,24 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 					  fpmr_regnum, "fpmr");
     }
 
+  int poe_regnum = -1;
+  int first_poe_pseudo_regnum = -1;
+  const tdesc_feature *feature_poe
+      = tdesc_find_feature (tdesc, "org.gnu.gdb.aarch64.poe");
+  if (feature_poe != nullptr)
+    {
+      poe_regnum = num_regs;
+      for (i = 0; i < ARRAY_SIZE (aarch64_poe_register_names); i++)
+	valid_p &= tdesc_numbered_register (feature_poe, tdesc_data.get (),
+					    poe_regnum + i,
+					    aarch64_poe_register_names[i]);
+
+      /* POE pseudo-registers.  */
+      first_poe_pseudo_regnum = num_pseudo_regs;
+      num_pseudo_regs += 16;
+      num_regs++;
+    }
+
   int first_sme_regnum = -1;
   int first_sme2_regnum = -1;
   int first_sme_pseudo_regnum = -1;
@@ -4760,6 +5019,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   tdep->gcs_reg_base = first_gcs_regnum;
   tdep->gcs_linux_reg_base = first_gcs_linux_regnum;
   tdep->fpmr_regnum = fpmr_regnum;
+  tdep->poe_regnum = poe_regnum;
 
   /* Set the SME register set details.  The pseudo-registers will be adjusted
      later.  */
@@ -4802,6 +5062,7 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_tdesc_pseudo_register_reggroup_p (gdbarch,
 					aarch64_pseudo_register_reggroup_p);
   set_gdbarch_cannot_store_register (gdbarch, aarch64_cannot_store_register);
+  set_gdbarch_print_registers_info (gdbarch, aarch64_print_registers_info);
 
   /* Set the allocation tag granule size to 16 bytes.  */
   set_gdbarch_memtag_granule_size (gdbarch, AARCH64_MTE_GRANULE_SIZE);
@@ -4898,6 +5159,13 @@ aarch64_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Setup W pseudo-register numbers.  */
   tdep->w_pseudo_base = first_w_regnum + num_regs;
   tdep->w_pseudo_count = 31;
+
+  /* Setup POE pseudo-register numbers.  */
+  if (tdep->has_poe () && first_poe_pseudo_regnum != -1)
+    {
+      tdep->poe_pseudo_base = first_poe_pseudo_regnum + num_regs;
+      tdep->poe_pseudo_count = 16;
+    }
 
   /* Pointer authentication pseudo-registers.  */
   if (tdep->has_pauth ())

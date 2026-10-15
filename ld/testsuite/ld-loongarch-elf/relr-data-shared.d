@@ -1,5 +1,5 @@
 #source: relr-data.s
-#ld: -shared -z pack-relative-relocs -T relr-relocs.ld
+#ld: -shared -z pack-relative-relocs --hash-style=both -T relr-relocs.ld
 #readelf: -rW
 
 Relocation section '\.rela\.dyn' at offset 0x[0-9a-f]+ contains 6 entries:

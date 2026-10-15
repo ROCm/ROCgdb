@@ -6044,6 +6044,14 @@ ENUMDOC
   for virtually every function.
 
 ENUM
+  BFD_RELOC_XTENSA_32_ABS
+ENUMDOC
+  Xtensa 32-bit absolute address, computed as S + A with the addend taken
+  only from the r_addend field.  Unlike R_XTENSA_32, to which BFD_RELOC_32
+  maps and which is partial_inplace, the contents of the relocated word do
+  not contribute to the result.
+
+ENUM
   BFD_RELOC_Z80_DISP8
 ENUMDOC
   8 bit signed offset in (ix+d) or (iy+d).

@@ -1018,13 +1018,25 @@ python_context_changed (user_selected_what selection)
     }
 
   gdbpy_ref<> frame_obj;
-  if (has_stack_frames ())
-    frame_obj = gdbpy_ref<> (gdbpy_selected_frame (nullptr, nullptr));
-  else
-    frame_obj = py_none ();
-
-  if (frame_obj == nullptr)
+  /* FIXME: Python safety.  Eventually this function will be converted
+     and this try/catch can be removed.  */
+  try
     {
+      if (has_stack_frames ())
+	frame_obj = gdbpy_selected_frame ();
+      else
+	frame_obj = py_none ();
+    }
+  catch (const gdb_python_exception &e)
+    {
+      gdbpy_print_stack ();
+      return;
+    }
+  catch (const gdb_exception &exc)
+    {
+      /* This is a bit roundabout but we're going to be deleting this
+	 code someday anyway.  */
+      (void) gdbpy_handle_gdb_exception (nullptr, exc);
       gdbpy_print_stack ();
       return;
     }

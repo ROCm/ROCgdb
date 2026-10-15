@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!-- Copyright (C) 2025-2026 Free Software Foundation, Inc.
+     Copying and distribution of this file, with or without modification,
+     are permitted in any medium without royalty provided the copyright
+     notice and this notice are preserved.  -->
+
+<!-- Dense Math Registers.  -->
+<!DOCTYPE feature SYSTEM "gdb-target.dtd">
+<feature name="org.gnu.gdb.power.dmr">
+
+  <!-- Define one 1024-bit vector composed of eight 128-bit lanes -->
+  <vector id="v8uint128" type="uint128" count="8"/>
+
+  <!-- Eight 1024-bit Dense Math Registers -->
+  <reg name="dmr0" bitsize="1024" type="v8uint128"/>
+  <reg name="dmr1" bitsize="1024" type="v8uint128"/>
+  <reg name="dmr2" bitsize="1024" type="v8uint128"/>
+  <reg name="dmr3" bitsize="1024" type="v8uint128"/>
+  <reg name="dmr4" bitsize="1024" type="v8uint128"/>
+  <reg name="dmr5" bitsize="1024" type="v8uint128"/>
+  <reg name="dmr6" bitsize="1024" type="v8uint128"/>
+  <reg name="dmr7" bitsize="1024" type="v8uint128"/>
+</feature>

@@ -87,7 +87,8 @@ Statements and assembly directives are separated by newlines and
 @cindex BPF register names
 @cindex register names, BPF
 The eBPF processor provides ten general-purpose 64-bit registers,
-which are read-write, and a read-only frame pointer register:
+which are read-write, a read-only frame pointer register, and a stack
+argument register:
 
 @noindent
 In normal syntax:
@@ -98,6 +99,8 @@ General-purpose registers.
 @item %r10
 @itemx %fp
 Read-only frame pointer register.
+@item %r11
+Stack argument register.
 @end table
 
 All BPF registers are 64-bit long.  However, in the Pseudo-C syntax
@@ -116,7 +119,14 @@ General-purpose register in an instruction that operates on its value
 as if it was a 32-bit value.
 @item r10
 Read-only frame pointer register.
+@item r11
+Stack argument register.
 @end table
+
+The stack argument register is used to pass arguments beyond the fifth
+to a BPF function: it is the base register of 64-bit stores of
+outgoing arguments, at negative offsets, and of 64-bit loads of
+incoming arguments, at positive offsets.
 
 @noindent
 Note that in the Pseudo-C syntax register names are not preceded by
@@ -270,7 +280,14 @@ registers.
 @item neg rd
 @itemx rd = - rd
 64-bit arithmetic negation.
+@end table
 
+@subsection Data movement instructions
+
+Note that in pseudoc syntax these instructions should use @code{r}
+registers.
+
+@table @code
 @item mov rd, rs
 @itemx mov rd, imm32
 @itemx rd = rs
@@ -289,6 +306,16 @@ Move the sign-extended 16-bit value in @code{rs} to @code{rd}.
 @item movs rd, rs, 32
 @itemx rd = (s32) rs
 Move the sign-extended 32-bit value in @code{rs} to @code{rd}.
+
+@item addrc rd, rs, 0, 1
+@itemx rd = addr_space_cast (rs, 0, 1)
+Convert the pointer in @code{rs}, which is in the arena address space
+1, to the generic address space 0, and store it in @code{rd}.
+
+@item addrc rd, rs, 1, 0
+@itemx rd = addr_space_cast (rs, 1, 0)
+Convert the pointer in @code{rs}, which is in the generic address
+space 0, to the arena address space 1, and store it in @code{rd}.
 @end table
 
 @subsection 32-bit arithmetic instructions
@@ -369,7 +396,15 @@ in the same instruction.
 @item neg32 rd
 @itemx rd = - rd
 32-bit arithmetic negation.
+@end table
 
+@subsection 32-bit data movement instructions
+
+Note that in pseudoc syntax these instructions should use @code{w}
+registers.  It is not allowed to mix @code{w} and @code{r} registers
+in the same instruction.
+
+@table @code
 @item mov32 rd, rs
 @itemx mov32 rd, imm32
 @itemx rd = rs
@@ -580,6 +615,12 @@ Jump-always.
 @item jal disp32
 @itemx gotol disp32
 Jump-always, long range.
+
+@item ja rd
+@itemx gotox rd
+Jump-always, indirect: jump to the location held in @code{rd},
+typically loaded from a jump table.  Only available in BPF v4 or
+later.
 
 @item jeq rd, rs, disp16
 @itemx jeq rd, imm32, disp16
@@ -883,3 +924,40 @@ compatibility:
 @item xaddw [rd + offset16], rs
 Alias to @code{aadd32}.
 @end table
+
+@subsection Load-acquire and store-release instructions
+
+These instructions load or store an 8-bit, 16-bit, 32-bit or 64-bit
+value with acquire or release ordering semantics.  The 8-bit, 16-bit
+and 32-bit loads zero-extend the loaded value into @code{rd}.
+
+Note that in pseudoc syntax the 8-bit, 16-bit and 32-bit variants
+should use @code{w} registers for the loaded or stored value, and the
+64-bit variants @code{r} registers.
+
+@table @code
+@item ldacqb rd, [rs + offset16]
+@itemx ldacqh rd, [rs + offset16]
+@itemx ldacqw rd, [rs + offset16]
+@itemx ldacqdw rd, [rs + offset16]
+@itemx wd = load_acquire ((u8 *)(rs + offset16))
+@itemx wd = load_acquire ((u16 *)(rs + offset16))
+@itemx wd = load_acquire ((u32 *)(rs + offset16))
+@itemx rd = load_acquire ((u64 *)(rs + offset16))
+Load-acquire.  Load the value addressed by @code{rs + offset16} into
+@code{rd}, ordered before any memory access that follows it.
+
+@item strelb [rd + offset16], rs
+@itemx strelh [rd + offset16], rs
+@itemx strelw [rd + offset16], rs
+@itemx streldw [rd + offset16], rs
+@itemx store_release ((u8 *)(rd + offset16), ws)
+@itemx store_release ((u16 *)(rd + offset16), ws)
+@itemx store_release ((u32 *)(rd + offset16), ws)
+@itemx store_release ((u64 *)(rd + offset16), rs)
+Store-release.  Store the value in @code{rs} to the address
+@code{rd + offset16}, ordered after any memory access that precedes
+it.
+@end table
+
+These instructions are only available in BPF v4 or later.

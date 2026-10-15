@@ -83,6 +83,8 @@
 #include "features/rs6000/powerpc-isa205-ppr-dscr-vsx64l.c"
 #include "features/rs6000/powerpc-isa207-vsx64l.c"
 #include "features/rs6000/powerpc-isa207-htm-vsx64l.c"
+#include "features/rs6000/powerpc-isa32-vsx32l.c"
+#include "features/rs6000/powerpc-isa32-vsx64l.c"
 #include "features/rs6000/powerpc-e500l.c"
 #include "dwarf2/frame.h"
 
@@ -660,6 +662,30 @@ const struct regset ppc32_linux_pmuregset = {
   regcache_collect_regset
 };
 
+/* Dense Math Register map.  */
+
+static const struct regcache_map_entry ppc32_regmap_dmr[] =
+  {
+      /* Each DMR register is 128 bytes (1024 bits).  */
+      { 1, PPC_DMR0_REGNUM, 128 },
+      { 1, PPC_DMR1_REGNUM, 128 },
+      { 1, PPC_DMR2_REGNUM, 128 },
+      { 1, PPC_DMR3_REGNUM, 128 },
+      { 1, PPC_DMR4_REGNUM, 128 },
+      { 1, PPC_DMR5_REGNUM, 128 },
+      { 1, PPC_DMR6_REGNUM, 128 },
+      { 1, PPC_DMR7_REGNUM, 128 },
+      { 0 }
+  };
+
+/* Dense Math Register set.  */
+
+const struct regset ppc32_linux_dmrregset = {
+  ppc32_regmap_dmr,
+  regcache_supply_regset,
+  regcache_collect_regset
+};
+
 /* Hardware Transactional Memory special-purpose register regmap.  */
 
 static const struct regcache_map_entry ppc32_regmap_tm_spr[] =
@@ -1073,6 +1099,11 @@ ppc_linux_iterate_over_regset_sections (struct gdbarch *gdbarch,
 	&ppc32_linux_tm_sprregset,
 	"Hardware Transactional Memory Special Purpose Registers",
 	cb_data);
+
+  if (tdep->ppc_dmr0_regnum != -1)
+    cb (".reg-ppc-dmr", PPC_LINUX_SIZEOF_DMRREGSET,
+	PPC_LINUX_SIZEOF_DMRREGSET,
+	&ppc32_linux_dmrregset, "Dense Math Registers", cb_data);
 
   /* Checkpointed registers can be unavailable, don't call back if
      we are generating a core file.  */
@@ -2414,6 +2445,7 @@ INIT_GDB_FILE (ppc_linux_tdep)
   initialize_tdesc_powerpc_isa205_ppr_dscr_vsx32l ();
   initialize_tdesc_powerpc_isa207_vsx32l ();
   initialize_tdesc_powerpc_isa207_htm_vsx32l ();
+  initialize_tdesc_powerpc_isa32_vsx32l ();
   initialize_tdesc_powerpc_64l ();
   initialize_tdesc_powerpc_altivec64l ();
   initialize_tdesc_powerpc_vsx64l ();
@@ -2423,5 +2455,6 @@ INIT_GDB_FILE (ppc_linux_tdep)
   initialize_tdesc_powerpc_isa205_ppr_dscr_vsx64l ();
   initialize_tdesc_powerpc_isa207_vsx64l ();
   initialize_tdesc_powerpc_isa207_htm_vsx64l ();
+  initialize_tdesc_powerpc_isa32_vsx64l ();
   initialize_tdesc_powerpc_e500l ();
 }

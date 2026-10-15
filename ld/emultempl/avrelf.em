@@ -43,6 +43,7 @@ static bool avr_debug_relax = false;
 static bool avr_debug_stubs = false;
 static bool avr_replace_call_ret_sequences = true;
 static bool avr_elide_rjmp0 = true;
+static bool avr_prune_vectab = false;
 static bfd_vma avr_pc_wrap_around = 0x10000000;
 
 /* Transfers information to the bfd frontend.  */
@@ -58,7 +59,8 @@ avr_elf_set_global_bfd_parameters (void)
 			  avr_debug_relax,
 			  avr_pc_wrap_around,
 			  avr_replace_call_ret_sequences,
-			  avr_elide_rjmp0);
+			  avr_elide_rjmp0,
+			  avr_prune_vectab);
 }
 
 
@@ -219,6 +221,8 @@ PARSE_AND_LIST_LONGOPTS='
     NULL, OPTION_NO_ELIDE_RJMP0},
   { "pmem-wrap-around", required_argument,
     NULL, OPTION_PMEM_WRAP_AROUND},
+  { "prune-vectab", no_argument,
+    NULL, OPTION_PRUNE_VECTAB },
   { "no-stubs", no_argument,
     NULL, OPTION_NO_STUBS},
   { "debug-stubs", no_argument,
@@ -242,7 +246,7 @@ PARSE_AND_LIST_OPTIONS='
 		   "  instructions by a single jump instruction.\n"
 		   "                              "
 		   "  This option disables this optimization.\n"));
-  fprintf (file, _("  --no-elide-rjmp0   "
+  fprintf (file, _("  --no-elide-rjmp0            "
 		   "The relaxation machine normally will\n"
 		   "                              "
 		   "  remove an rjmp instruction when it targets a\n"
@@ -250,6 +254,10 @@ PARSE_AND_LIST_OPTIONS='
 		   "  global symbol at a jump offset of 0.\n"
 		   "                              "
 		   "  This option disables this optimization.\n"));
+  fprintf (file, _("  --prune-vectab              "
+		   "Prune AVR-LibC vector table provided relaxation\n"
+		   "                              "
+		   "  is on.\n"));
   fprintf (file, _("  --no-stubs                  "
 		   "If the linker detects to attempt to access\n"
 		   "                              "
@@ -306,6 +314,11 @@ PARSE_AND_LIST_ARGS_CASES='
 	/* This variable is defined in the bfd library.  */
 	avr_elide_rjmp0 = false;
       }
+      break;
+
+    case OPTION_PRUNE_VECTAB:
+      /* This variable is defined in the bfd library.  */
+      avr_prune_vectab = true;
       break;
 '
 

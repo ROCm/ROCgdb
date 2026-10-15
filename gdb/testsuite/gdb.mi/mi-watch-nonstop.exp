@@ -23,7 +23,9 @@ proc mi_nonstop_resume { command test } {
 	# If a resume fails, assume non-stop is broken or unsupported
 	# for this target.  We have logged a FAIL or UNSUPPORTED; skip
 	# the remaining tests to limit timeouts.
-	return -code continue
+	transparent_uplevel {
+	    continue
+	}
     }
 }
 

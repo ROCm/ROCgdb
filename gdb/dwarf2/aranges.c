@@ -137,11 +137,11 @@ read_addrmap_from_aranges (dwarf2_per_objfile *per_objfile,
       dwarf2_per_cu *const per_cu = per_cu_it->second;
 
       const uint8_t address_size = *addr++;
-      if (address_size < 1 || address_size > 8)
+      if (!dwarf2_addr_size_is_supported (address_size))
 	{
 	  warn->warn
 	    (_("Section .debug_aranges in %ps entry at offset %s "
-	       "address_size %u is invalid, ignoring .debug_aranges."),
+	       "address_size %u is not supported, ignoring .debug_aranges."),
 	     styled_string (file_name_style.style (),
 			    objfile_name (objfile)),
 	     plongest (entry_addr - section->buffer), address_size);

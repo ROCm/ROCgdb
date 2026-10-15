@@ -1207,6 +1207,7 @@ static const arch_entry cpu_arch[] =
   SUBARCH (pconfig, PCONFIG, PCONFIG, false),
   SUBARCH (waitpkg, WAITPKG, WAITPKG, false),
   SUBARCH (cldemote, CLDEMOTE, CLDEMOTE, false),
+  SUBARCH (ace_v1, ACE_V1, ANY_ACE_V1, false),
   SUBARCH (amx_int8, AMX_INT8, ANY_AMX_INT8, false),
   SUBARCH (amx_bf16, AMX_BF16, ANY_AMX_BF16, false),
   SUBARCH (amx_fp16, AMX_FP16, ANY_AMX_FP16, false),
@@ -1907,6 +1908,7 @@ _is_cpu (const i386_cpu_attr *a, enum i386_cpu cpu)
     case CpuAPX_F:    return a->bitfield.cpuapx_f;
     case CpuAVX10_2:  return a->bitfield.cpuavx10_2;
     case CpuAMX_TRANSPOSE:  return a->bitfield.cpuamx_transpose;
+    case CpuACE_V1:   return a->bitfield.cpuace_v1;
     case Cpu64:       return a->bitfield.cpu64;
     case CpuNo64:     return a->bitfield.cpuno64;
     default:
@@ -2360,7 +2362,7 @@ cpu_flags_match (const insn_template *t)
 	      || any.bitfield.cpuavx512dq || any.bitfield.cpuamx_tile
 	      || any.bitfield.cpucmpccxadd || any.bitfield.cpuuser_msr
 	      || any.bitfield.cpumsr_imm || any.bitfield.cpuamx_transpose
-	      || any.bitfield.cpuamx_movrs))
+	      || any.bitfield.cpuamx_movrs || any.bitfield.cputile))
 	{
 	  /* These checks (verifying that APX_F() was properly used in the
 	     opcode table entry) make sure there's no need for an "else" to
@@ -2611,7 +2613,10 @@ match_simd_size (const i386_operand_type *t_types, unsigned int wanted,
 	   || (i.types[given].bitfield.zmmword
 	       && !t_types[wanted].bitfield.zmmword)
 	   || (i.types[given].bitfield.tmmword
-	       && !t_types[wanted].bitfield.tmmword));
+	       && !t_types[wanted].bitfield.tmmword)
+	   /* RegSIMD|Byte marks %bsr0; it is not the operand size.  */
+	   || (i.types[given].bitfield.byte
+	       && !t_types[wanted].bitfield.byte));
 }
 
 /* Return 1 if there is no conflict in any size between operand GIVEN
@@ -3352,6 +3357,15 @@ static void isa_disable (unsigned int idx)
 
   cpu_arch_isa_flags
     = cpu_flags_and_not (cpu_arch_isa_flags, cpu_arch[idx].disable);
+
+  /* TILE is internal. .noamx_tile and .noace_v1 do not automatically clear
+     it.  */
+  if (!cpu_arch_flags.bitfield.cpuamx_tile
+      && !cpu_arch_flags.bitfield.cpuace_v1)
+    {
+      cpu_arch_flags.bitfield.cputile = 0;
+      cpu_arch_isa_flags.bitfield.cputile = 0;
+    }
 }
 
 static void
@@ -3959,6 +3973,7 @@ const type_names[] =
   { { .bitfield = { .class = RegSIMD, .ymmword = 1 } }, "rYMM" },
   { { .bitfield = { .class = RegSIMD, .zmmword = 1 } }, "rZMM" },
   { { .bitfield = { .class = RegSIMD, .tmmword = 1 } }, "rTMM" },
+  { { .bitfield = { .class = RegSIMD, .byte = 1 } }, "bsr" },
   { { .bitfield = { .class = RegMask } }, "Mask reg" },
   { { .bitfield = { .class = RegBND } }, "rBND" },
 };
@@ -4303,7 +4318,7 @@ install_template (const insn_template *t)
 	   || maybe_cpu (t, CpuAVX512BW) || maybe_cpu (t, CpuBMI)
 	   || maybe_cpu (t, CpuBMI2) || maybe_cpu (t, CpuUSER_MSR)
 	   || maybe_cpu (t, CpuMSR_IMM) || maybe_cpu (t, CpuAMX_TRANSPOSE)
-	   || maybe_cpu (t, CpuAMX_MOVRS))
+	   || maybe_cpu (t, CpuAMX_MOVRS) || maybe_cpu (t, CpuTILE))
 	  && maybe_cpu (t, CpuAPX_F))
 	{
 	  if (need_evex_encoding (t))
@@ -9900,7 +9915,8 @@ match_template (char mnem_suffix)
 		      && (intel_syntax || intel_mnemonic))
 		    found_reverse_match |= Opcode_FloatR;
 		}
-	      else if (is_cpu (t, CpuFMA4) || is_cpu (t, CpuXOP))
+	      else if (is_cpu (t, CpuFMA4) || is_cpu (t, CpuXOP)
+		       || is_cpu (t, CpuACE_V1))
 		{
 		  found_reverse_match = Opcode_VexW;
 		  goto check_operands_345;
@@ -10225,8 +10241,10 @@ match_template (char mnem_suffix)
 	 flipping VEX.W.  */
       i.tm.opcode_modifier.vexw ^= VEXW0 ^ VEXW1;
 
-      /* In 3-operand insns XOP.W changes which operand goes into XOP.vvvv.  */
-      i.tm.opcode_modifier.vexvvvv = VexVVVV_SRC1;
+      /* In most 3-operand insns XOP.W changes which operand goes into
+	 XOP.vvvv.  */
+      if (!is_cpu (t, CpuACE_V1))
+	i.tm.opcode_modifier.vexvvvv = VexVVVV_SRC1;
 
     swap_first_2:
       j = i.tm_types[0].bitfield.imm8;
@@ -11102,11 +11120,11 @@ process_operands (void)
   else if (i.tm.opcode_modifier.immext)
     process_immext ();
 
-  /* TILEZERO is unusual in that it has a single operand encoded in ModR/M.reg,
-     not ModR/M.rm.  To avoid special casing this in build_modrm_byte(), fake a
-     new destination operand here, while converting the source one to register
-     number 0.  */
-  if (i.tm.mnem_off == MN_tilezero)
+  /* TILEZERO and BSRINIT are unusual in that they have a single operand
+     encoded in ModR/M.reg, not ModR/M.rm.  To avoid special casing this in
+     build_modrm_byte(), fake a new destination operand here, while converting
+     the source one to register number 0.  */
+  if (i.tm.mnem_off == MN_tilezero || i.tm.mnem_off == MN_bsrinit)
     {
       copy_operand (1, 0);
       i.op[0].regs -= i.op[0].regs->reg_num;
@@ -12588,7 +12606,7 @@ output_insn (const struct last_insn *last_insn)
       unsigned int feature_2_used = 0;
 
       if ((i.xstate & xstate_tmm) == xstate_tmm
-	  || is_cpu (&i.tm, CpuAMX_TILE))
+	  || is_cpu (&i.tm, CpuTILE))
 	feature_2_used |= GNU_PROPERTY_X86_FEATURE_2_TMM;
 
       if (is_cpu (&i.tm, Cpu8087)
@@ -17073,8 +17091,14 @@ static bool check_register (const reg_entry *r)
     return false;
 
   if (r->reg_type.bitfield.tmmword
-      && (!cpu_arch_flags.bitfield.cpuamx_tile
+      && (!cpu_arch_flags.bitfield.cputile
           || flag_code != CODE_64BIT))
+    return false;
+
+  if (r->reg_type.bitfield.class == RegSIMD
+      && r->reg_type.bitfield.byte
+      && (!cpu_arch_flags.bitfield.cpuace_v1
+	  || flag_code != CODE_64BIT))
     return false;
 
   if (r->reg_type.bitfield.class == RegBND && !cpu_arch_flags.bitfield.cpumpx)

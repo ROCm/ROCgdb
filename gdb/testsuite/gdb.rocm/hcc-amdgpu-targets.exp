@@ -24,13 +24,18 @@ load_lib rocm.exp
 # Run BODY with find_amdgpu_devices stubbed to return DEVICES, then
 # restore the original proc.
 proc with_stub_devices {devices body} {
-    rename find_amdgpu_devices __saved_find_amdgpu_devices
     # tclint-disable-next-line command-args
-    proc find_amdgpu_devices {} [list return $devices]
-    set code [catch {uplevel 1 $body} result]
-    rename find_amdgpu_devices {}
-    rename __saved_find_amdgpu_devices find_amdgpu_devices
-    return -code $code $result
+    proc with_stub_devices_find_amdgpu_devices {} [list return $devices]
+
+    try {
+	with_override \
+	    find_amdgpu_devices with_stub_devices_find_amdgpu_devices \
+	    {
+		transparent_uplevel $body
+	    }
+    } finally {
+	unproc with_stub_devices_find_amdgpu_devices
+    }
 }
 
 # Tests using find_amdgpu_devices (no HCC_AMDGPU_TARGET env var).

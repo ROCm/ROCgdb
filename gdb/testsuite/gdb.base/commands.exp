@@ -41,7 +41,9 @@ if { [prepare_for_testing "failed to prepare" $testfile $srcfile $flags] } {
 
 proc runto_or_return {function} {
     if { ![runto factorial] } {
-	return -code return
+	transparent_uplevel {
+	    return
+	}
     }
 }
 

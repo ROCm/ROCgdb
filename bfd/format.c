@@ -120,6 +120,7 @@ struct bfd_preserve
   unsigned int symcount;
   bool read_only;
   bfd_vma start_address;
+  ufile_ptr origin;
   struct bfd_hash_table section_htab;
 };
 
@@ -148,6 +149,7 @@ bfd_preserve_save (bfd *abfd, struct bfd_preserve *preserve,
   preserve->symcount = abfd->symcount;
   preserve->read_only = abfd->read_only;
   preserve->start_address = abfd->start_address;
+  preserve->origin = abfd->origin;
   preserve->section_htab = abfd->section_htab;
   preserve->marker = bfd_alloc (abfd, 1);
   preserve->build_id = abfd->build_id;
@@ -207,6 +209,8 @@ bfd_reinit (bfd *abfd, unsigned int section_id,
   abfd->symcount = 0;
   abfd->read_only = 0;
   abfd->start_address = 0;
+  if (abfd->my_archive == NULL)
+    abfd->origin = 0;
   abfd->build_id = NULL;
   bfd_section_list_clear (abfd);
 }
@@ -229,6 +233,7 @@ bfd_preserve_restore (bfd *abfd, struct bfd_preserve *preserve)
   abfd->symcount = preserve->symcount;
   abfd->read_only = preserve->read_only;
   abfd->start_address = preserve->start_address;
+  abfd->origin = preserve->origin;
   abfd->build_id = preserve->build_id;
 
   /* bfd_release frees all memory more recently bfd_alloc'd than
@@ -450,7 +455,8 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
   const bfd_target **matching_vector;
   const bfd_target *save_targ, *right_targ, *ar_right_targ, *match_targ;
   const bfd_target *fail_targ;
-  int match_count, best_count, best_match;
+  int match_count, best_count;
+  unsigned int best_match;
   int ar_match_index;
   unsigned int initial_section_id;
   struct bfd_preserve preserve, preserve_match;
@@ -566,7 +572,7 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
   right_targ = NULL;
   ar_right_targ = NULL;
   match_targ = NULL;
-  best_match = 256;
+  best_match = -1u;
   best_count = 0;
   match_count = 0;
   ar_match_index = _bfd_target_vector_entries;
@@ -634,7 +640,7 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
 	      matching_vector[match_count] = abfd->xvec;
 	      match_count++;
 
-	      int match_priority = abfd->xvec->match_priority;
+	      unsigned int match_priority = abfd->xvec->match_priority;
 	      if (match_priority == 1
 		  && bfd_get_flavour (abfd) == bfd_target_elf_flavour)
 		{
@@ -646,6 +652,13 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
 		      && i_ehdrp->e_ident[EI_OSABI] == bed->elf_osabi)
 		    match_priority = 0;
 		}
+	      match_priority <<= 16;
+	      /* A target that produces more sections is given a higher
+		 priority (smaller values of match_priority are higher
+		 priority) in order to prefer targets that decode note
+		 sections in core files.  */
+	      if (abfd->section_count < 0xffff)
+		match_priority |= 0xffff - abfd->section_count;
 	      if (match_priority < best_match)
 		{
 		  best_match = match_priority;
@@ -715,7 +728,7 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
 
 	  while (--i >= 0)
 	    if (matching_vector[i] == right_targ
-		&& right_targ->match_priority <= best_match)
+		&& right_targ->match_priority <= best_match >> 16)
 	      break;
 
 	  if (i >= 0)
@@ -736,7 +749,7 @@ bfd_check_format_matches (bfd *abfd, bfd_format format, char ***matching)
       for (i = 0; i < match_count; i++)
 	{
 	  right_targ = matching_vector[i];
-	  if (right_targ->match_priority <= best_match)
+	  if (right_targ->match_priority <= best_match >> 16)
 	    break;
 	}
       match_count = 1;

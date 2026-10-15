@@ -112,5 +112,5 @@ Disassembly of section .text:
  +[a-f0-9]+:	62 e4 fc 0c af 0d 2e 0d 20 00 	\{nf\} imul 0x200d2e\(%rip\),%r17        # 2020e0 <.*>
  +[a-f0-9]+:	62 e4 ec 18 af 0d 24 0d 20 00 	imul   0x200d24\(%rip\),%r17,%rdx        # 2020e0 <.*>
  +[a-f0-9]+:	62 f4 ec 10 af 0d 1a 0d 20 00 	imul   0x200d1a\(%rip\),%rcx,%r18        # 2020e0 <.*>
- +[a-f0-9]+:	d5 00 ff 35 12 0d 20 00 	\{rex2 0x0\} push 0x200d12\(%rip\)        # 2020e0 <.*>
+ +[a-f0-9]+:	d5 00 ff 35 12 0d 20 00 	\{rex2\} push 0x200d12\(%rip\)        # 2020e0 <.*>
 #pass

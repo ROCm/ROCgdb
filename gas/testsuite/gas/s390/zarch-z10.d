@@ -1,4 +1,4 @@
-#name: s390x opcodes (z10)
+#name: s390x opcodes (z10 / arch8)
 #objdump: -drw
 
 .*: +file format .*

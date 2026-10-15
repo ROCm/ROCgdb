@@ -76,6 +76,7 @@ gdb_expect {
     }
     eof {
 	pass "GDB exits after multi-threaded program exits messily"
+	gdb_exit_cleanup
     }
     -re "Cannot find thread ${decimal}: generic error\[\r\n\]*$gdb_prompt $" {
 	kfail "gdb/568" "GDB exits after multi-threaded program exits messily"

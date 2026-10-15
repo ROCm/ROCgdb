@@ -51,7 +51,7 @@ set re_hole \
 	 {$hex:\s+Cannot access memory at address $hex}]
 
 set section_hole -1
-gdb_test_multiple "x /cx bar-1" "" {
+gdb_test_multiple "x /bx bar-1" "" {
     -re -wrap $re_no_hole {
 	set section_hole 0
     }

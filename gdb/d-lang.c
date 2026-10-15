@@ -21,6 +21,7 @@
 #include "language.h"
 #include "varobj.h"
 #include "d-lang.h"
+#include "d-exp-parser.h"
 #include "c-lang.h"
 #include "demangle.h"
 #include "cp-support.h"

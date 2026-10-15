@@ -272,3 +272,10 @@ then
 fi
 
 exit 0
+
+# Local Variables:
+# mode:shell-script
+# sh-indentation:2
+# sh-basic-offset:2
+# End:
+# vi:sw=2

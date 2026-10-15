@@ -1,0 +1,80 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test of the source tracking breakpoint feature when trying to place
+# a breakpoint on inline functions.  As the breakpoint resolves to
+# multiple locations we don't currently source track these
+# breakpoints.
+
+standard_testfile -1.c -2.c
+
+set build_srcfile [standard_output_file ${testfile}.c]
+
+remote_exec build "cp $srcdir/$subdir/$srcfile $build_srcfile"
+if { [prepare_for_testing "failed to prepare" $testfile $build_srcfile] } {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+gdb_test_no_output "set breakpoint source-tracking enabled on" \
+    "enable source tracking breakpoints"
+
+set lineno [gdb_get_line_number "Breakpoint here." $build_srcfile]
+
+# The breakpoint is on an inline function called from two places,
+# so it resolves to 2 locations.
+gdb_test "break ${testfile}.c:$lineno" \
+    "^Breakpoint $decimal at $hex: ${testfile}.c:$lineno\\. \\(2 locations\\)"
+
+# Check that we are tracking the expected number of lines.
+#
+# With the multi-location fix, this breakpoint should NOT be tracked
+# because it has 2 locations (inline function called from two places).
+# The output should show <MULTIPLE> but NOT "source-tracking enabled".
+gdb_test_multiple "info breakpoints" \
+  "multi-location breakpoint not tracked" {
+    -re -wrap "source-tracking enabled.*" {
+      fail "$gdb_test_name (tracking incorrectly enabled)"
+    }
+    -re -wrap "<MULTIPLE>.*" {
+      pass $gdb_test_name
+    }
+}
+
+sleep 1
+remote_exec build "cp $srcdir/$subdir/$srcfile2 $build_srcfile"
+if { [build_executable "failed to build" $testfile $build_srcfile] } {
+    return
+}
+
+# Reload the executable.  'start' internally uses 'tbreak main', which
+# is not a file:line breakpoint, so it will not be source-tracked.
+gdb_test "with confirm off -- start"
+
+# After reload, the breakpoint should still NOT be tracked because it
+# still has 2 locations.  This verifies we don't try to track
+# multi-location breakpoints even after reload.
+gdb_test_multiple "info breakpoints" \
+    "multi-location breakpoint still not tracked after reload" {
+    -re -wrap "source-tracking enabled.*" {
+	fail "$gdb_test_name (tracking incorrectly enabled)"
+    }
+    -re -wrap "<MULTIPLE>.*" {
+	pass $gdb_test_name
+    }
+}

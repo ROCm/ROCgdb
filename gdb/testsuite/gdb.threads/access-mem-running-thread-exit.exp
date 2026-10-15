@@ -144,8 +144,10 @@ proc test { non_stop } {
 	if {[gdb_test -nopass \
 		 $cmd $pattern "access mem ($message, inf=$inf, iter=$iter)"] \
 		!= 0} {
-	    uplevel 1 {set ok 0}
-	    return -code break
+	    transparent_uplevel {
+		set ok 0
+		break
+	    }
 	}
     }
 

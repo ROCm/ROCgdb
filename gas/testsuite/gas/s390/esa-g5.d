@@ -1,4 +1,4 @@
-#name: s390 opcode (esa g5)
+#name: s390 opcode (g5 / arch3)
 #objdump: -drw
 
 .*: +file format .*
@@ -117,16 +117,16 @@ Disassembly of section .text:
 .*:	b3 ba 90 54 [	 ]*cfxr	%r5,9,%f4
 .*:	49 65 af ff [	 ]*ch	%r6,4095\(%r5,%r10\)
 .*:	a7 6e 80 01 [	 ]*chi	%r6,-32767
-.*:	b2 41 00 69 [	 ]*cksm	%r6,%r9
+.*:	b2 41 00 68 [	 ]*cksm	%r6,%r8
 .*:	55 65 af ff [	 ]*cl	%r6,4095\(%r5,%r10\)
 .*:	d5 ff 5f ff af ff [	 ]*clc	4095\(256,%r5\),4095\(%r10\)
-.*:	0f 69 [	 ]*clcl	%r6,%r9
-.*:	a9 69 5f ff [	 ]*clcle	%r6,%r9,4095\(%r5\)
+.*:	0f 68 [	 ]*clcl	%r6,%r8
+.*:	a9 68 5f ff [	 ]*clcle	%r6,%r8,4095\(%r5\)
 .*:	95 ff 5f ff [	 ]*cli	4095\(%r5\),255
 .*:	bd 6a 5f ff [	 ]*clm	%r6,10,4095\(%r5\)
 .*:	15 69 [	 ]*clr	%r6,%r9
 .*:	b2 5d 00 69 [	 ]*clst	%r6,%r9
-.*:	b2 63 00 69 [	 ]*cmpsc	%r6,%r9
+.*:	b2 63 00 68 [	 ]*cmpsc	%r6,%r8
 .*:	f9 58 5f ff af ff [	 ]*cp	4095\(6,%r5\),4095\(9,%r10\)
 .*:	b2 4d 00 69 [	 ]*cpya	%a6,%a9
 .*:	19 69 [	 ]*cr	%r6,%r9
@@ -232,7 +232,7 @@ Disassembly of section .text:
 .*:	b3 18 00 69 [	 ]*kdbr	%f6,%f9
 .*:	ed 65 af ff 00 08 [	 ]*keb	%f6,4095\(%r5,%r10\)
 .*:	b3 08 00 69 [	 ]*kebr	%f6,%f9
-.*:	b3 48 00 69 [	 ]*kxbr	%f6,%f9
+.*:	b3 48 00 58 [	 ]*kxbr	%f5,%f8
 .*:	58 65 af ff [	 ]*l	%r6,4095\(%r5,%r10\)
 .*:	41 65 af ff [	 ]*la	%r6,4095\(%r5,%r10\)
 .*:	51 65 af ff [	 ]*lae	%r6,4095\(%r5,%r10\)
@@ -339,7 +339,7 @@ Disassembly of section .text:
 .*:	e5 0f 5f ff af ff [	 ]*mvcdk	4095\(%r5\),4095\(%r10\)
 .*:	e8 ff 5f ff af ff [	 ]*mvcin	4095\(256,%r5\),4095\(%r10\)
 .*:	d9 69 5f ff af ff [	 ]*mvck	4095\(%r6,%r5\),4095\(%r10\),%r9
-.*:	0e 69 [	 ]*mvcl	%r6,%r9
+.*:	0e 68 [	 ]*mvcl	%r6,%r8
 .*:	a8 68 5f ff [	 ]*mvcle	%r6,%r8,4095\(%r5\)
 .*:	eb 68 5f ff 00 8e [	 ]*mvclu	%r6,%r8,4095\(%r5\)
 .*:	da 69 5f ff af ff [	 ]*mvcp	4095\(%r6,%r5\),4095\(%r10\),%r9

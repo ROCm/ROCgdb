@@ -142,6 +142,7 @@ All available -march extensions for RISC-V:
 	smrnmi                                  1.0
 	smstateen                               1.0
 	smdbltrp                                1.0
+	ss                                      1.11, 1.12, 1.13
 	ssaia                                   1.0
 	ssccfg                                  1.0
 	ssccptr                                 1.0

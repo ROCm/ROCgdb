@@ -17,14 +17,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include "gdbsupport/gdb_obstack.h"
 #include "macrotab.h"
 #include "macroexp.h"
 #include "macroscope.h"
-#include "c-lang.h"
-
-
-
+#include "c-exp-parser.h"
 
 /* A string type that we can use to refer to substrings of other
    strings.  */

@@ -160,6 +160,22 @@ static int do_relax = 1;
 
 static int isa_spec = BPF_V4;
 
+/* Return the name of ISA spec VERSION, as spelled in -misa-spec=.  */
+
+static const char *
+bpf_version_name (int version)
+{
+  switch (version)
+    {
+    case BPF_V1: return "v1";
+    case BPF_V2: return "v2";
+    case BPF_V3: return "v3";
+    case BPF_V4: return "v4";
+    case BPF_XBPF: return "xbpf";
+    default: return "unknown";
+    }
+}
+
 /* The assembler supports two different dialects: "normal" syntax and
    "pseudoc" syntax.  The dialect to use can be configured using
    command-line options.  */
@@ -1300,6 +1316,11 @@ parse_bpf_register (char *s, char rw, uint8_t *regno)
           *regno = 10;
           s += 2;
         }
+      else if (*(s + 1) == '1')
+        {
+          *regno = 11;
+          s += 2;
+        }
       else
         {
           *regno = 1;
@@ -1401,15 +1422,36 @@ bpf_parse_name (const char *name, expressionS *exp, enum expr_mode mode)
   return true;
 }
 
+/* Discard the symbols deferred by a parse that we are not committing to.
+   They may potentially be reused in the future from the orphan list.  */
+
+static void
+discard_deferred_symbols (void)
+{
+  while (deferred_sym_rootP)
+    {
+      symbolS *sym = deferred_sym_rootP;
+      symbol_remove (sym, &deferred_sym_rootP, &deferred_sym_lastP);
+      symbol_append (sym, orphan_sym_lastP, &orphan_sym_rootP,
+		     &orphan_sym_lastP);
+    }
+}
+
 /* Collect a parse error message.  */
 
 static int partial_match_length = 0;
 static char *errmsg = NULL;
 
+/* Set while attempting to match a template that is not available in the
+   selected ISA spec.  Such templates are tried only to improve diagnostics,
+   so their parse errors must not compete with those of the templates that
+   are actually available.  */
+static bool matching_gated_insn = false;
+
 static void
 parse_error (int length, const char *fmt, ...)
 {
-  if (length > partial_match_length)
+  if (!matching_gated_insn && length > partial_match_length)
     {
       va_list args;
 
@@ -1420,15 +1462,7 @@ parse_error (int length, const char *fmt, ...)
       partial_match_length = length;
     }
 
-  /* Discard deferred symbols from the failed parse.  They may potentially
-     be reused in the future from the orphan list.  */
-  while (deferred_sym_rootP)
-    {
-      symbolS *sym = deferred_sym_rootP;
-      symbol_remove (sym, &deferred_sym_rootP, &deferred_sym_lastP);
-      symbol_append (sym, orphan_sym_lastP, &orphan_sym_rootP,
-		     &orphan_sym_lastP);
-    }
+  discard_deferred_symbols ();
 }
 
 /* Assemble a machine instruction in STR and emit the frags/bytes it
@@ -1460,11 +1494,13 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
   unsigned int idx = 0;
   struct bpf_insn insn;
   const struct bpf_opcode *opcode;
+  const struct bpf_opcode *gated_opcode = NULL;
 
   /* Initialize the global diagnostic variables.  See the parse_error
      function above.  */
   partial_match_length = 0;
   errmsg = NULL;
+  matching_gated_insn = false;
   g_curr_insn_str = str;
 
 #define PARSE_ERROR(...) parse_error (s > str ? s - str : 0, __VA_ARGS__)
@@ -1476,9 +1512,14 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
       const char *template
         = (asm_dialect == DIALECT_PSEUDOC ? opcode->pseudoc : opcode->normal);
 
-      /* Do not try to match opcodes with a higher version than the
-         selected ISA spec.  */
-      if (opcode->version > isa_spec)
+      /* Opcodes with a higher version than the selected ISA spec cannot be
+         used, but still try to match them: if one matches we can tell the
+         user which ISA spec the instruction needs, rather than leaving them
+         with a parse error for whatever unrelated template happened to get
+         furthest.  Remember the first such match in GATED_OPCODE and keep
+         looking for a usable template.  */
+      matching_gated_insn = (opcode->version > isa_spec);
+      if (matching_gated_insn && gated_opcode != NULL)
         continue;
 
       memset (&insn, 0, sizeof (struct bpf_insn));
@@ -1722,15 +1763,41 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
           while (is_whitespace (*s))
             s += 1;
           if (is_end_of_stmt (*s))
-            /* We parsed an instruction successfully.  */
-            break;
+            {
+              if (!matching_gated_insn)
+                /* We parsed an instruction successfully.  */
+                break;
+
+              /* The instruction exists, but not in the selected ISA spec.
+                 Remember it for the diagnostic below and carry on: some
+                 other template may still match within the ISA spec.  */
+              gated_opcode = opcode;
+              discard_deferred_symbols ();
+              continue;
+            }
           PARSE_ERROR ("extra junk at end of line");
         }
     }
 
+  matching_gated_insn = false;
+
   /* Mark that we are no longer parsing an instruction, bpf_parse_name does
      not interfere with symbols in e.g. assembler directives.  */
   parsing_insn_operands = false;
+
+  if (opcode == NULL && gated_opcode != NULL)
+    {
+      /* XBPF is a superset of the BPF specs rather than a later version of
+         them, so `or later' would be misleading for its own instructions.  */
+      if (gated_opcode->version == BPF_XBPF)
+        as_bad (_("`%s' requires ISA spec xbpf"), str);
+      else
+        as_bad (_("`%s' requires ISA spec %s or later"),
+                str, bpf_version_name (gated_opcode->version));
+      free (errmsg);
+      errmsg = NULL;
+      return;
+    }
 
   if (opcode == NULL)
     {

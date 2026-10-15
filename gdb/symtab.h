@@ -2580,15 +2580,41 @@ private:
 				  const symbol_search &sym_b);
 };
 
+/* The kind of symbols searched for by global_symbol_searcher.  */
+
+enum class symbol_search_kind
+{
+  /* Variables, excluding enum constants.  */
+  VARIABLE,
+
+  /* Functions.  */
+  FUNCTION,
+
+  /* Type names, including those with a struct/union/enum prefix (STRUCT
+     domain).  */
+  TYPE,
+
+  /* Fortran modules.  */
+  MODULE,
+};
+
+/* Compile REGEXP, a regexp used to match symbol names or types.  The regexp
+   is case-insensitive if case sensitivity is off.
+
+   If REGEXP is nullptr, return an empty optional.  */
+
+extern std::optional<compiled_regex> compile_symbol_search_regex
+  (const char *regexp);
+
 /* In order to search for global symbols of a particular kind matching
-   particular regular expressions, create an instance of this structure and
-   call the SEARCH member function.  */
+   particular regular expressions, create an instance of this class and call
+   the SEARCH member function.  */
 class global_symbol_searcher
 {
 public:
 
   /* Constructor.  */
-  global_symbol_searcher (domain_search_flags kind,
+  global_symbol_searcher (symbol_search_kind kind,
 			  const char *symbol_name_regexp)
     : m_kind (kind),
       m_symbol_name_regexp (symbol_name_regexp)
@@ -2629,14 +2655,8 @@ private:
   /* The set of source files to search in for matching symbols.  */
   std::vector<gdb::unique_xmalloc_ptr<char>> m_filenames;
 
-  /* The kind of symbols are we searching for.
-     VARIABLES_DOMAIN - Search all symbols, excluding functions, type
-			names, and constants (enums).
-     FUNCTIONS_DOMAIN - Search all functions..
-     TYPES_DOMAIN     - Search all type names.
-     MODULES_DOMAIN   - Search all Fortran modules.
-     ALL_DOMAIN       - Not valid for this function.  */
-  domain_search_flags m_kind;
+  /* The kind of symbols we are searching for.  */
+  symbol_search_kind m_kind;
 
   /* Regular expression to match against the symbol name.  */
   const char *m_symbol_name_regexp = nullptr;
@@ -2644,44 +2664,70 @@ private:
   /* Regular expression to match against the symbol type.  */
   const char *m_symbol_type_regexp = nullptr;
 
-  /* When this flag is false then minsyms that match M_SYMBOL_REGEXP will
-     be included in the results, otherwise they are excluded.  */
+  /* When this flag is false then minsyms that match M_SYMBOL_NAME_REGEXP
+     will be included in the results, otherwise they are excluded.  */
   bool m_exclude_minsyms = false;
 
   /* Maximum number of search results.  We currently impose a hard limit
      of SIZE_MAX, there is no "unlimited".  */
   size_t m_max_search_results = SIZE_MAX;
 
-  /* Expand symtabs in OBJFILE that match PREG, are of type M_KIND.  Return
-     true if any msymbols were seen that we should later consider adding to
-     the results list.  */
-  bool expand_symtabs (objfile *objfile,
-		       const std::optional<compiled_regex> &preg) const;
+  /* Compile M_SYMBOL_NAME_REGEXP, if set.
 
-  /* Add symbols from symtabs in OBJFILE that match PREG, and TREG, and are
-     of type M_KIND, to the results set RESULTS_SET.  Return false if we
-     stop adding results early due to having already found too many results
-     (based on M_MAX_SEARCH_RESULTS limit), otherwise return true.
+     This function normalizes the spacing when it detects a C++ operator in the
+     regexp.  */
+  std::optional<compiled_regex> compile_name_regex () const;
+
+  /* Compile M_SYMBOL_TYPE_REGEXP, if set.  */
+  std::optional<compiled_regex> compile_type_regex () const;
+
+  /* Return true if SYMTAB matches one of M_FILENAMES.  */
+  bool symtab_matches_filenames (symtab *symtab) const;
+
+  /* Return true if SYM is of kind M_KIND, is in a file matching
+     M_FILENAMES, and matches NAME_REGEX and TYPE_REGEX.  */
+  bool symbol_matches (const symbol *sym,
+		       const std::optional<compiled_regex> &name_regex,
+		       const std::optional<compiled_regex> &type_regex) const;
+
+  /* Return true if MSYMBOL is of kind M_KIND and matches NAME_REGEX.
+
+     This function also filters out the minimal symbols artificially created by
+     GDB.  */
+  bool msymbol_matches (const minimal_symbol *msymbol,
+			const std::optional<compiled_regex> &name_regex) const;
+
+  /* Expand symtabs in OBJFILE that match NAME_REGEX and are of type M_KIND.
+     Return true if a matching function msymbol without debug info was
+     seen, meaning that msymbols should later be considered for the results
+     list.  */
+  bool expand_symtabs (objfile &objfile,
+		       const std::optional<compiled_regex> &name_regex) const;
+
+  /* Add symbols from symtabs in OBJFILE that match NAME_REGEX, and
+     TYPE_REGEX, and are of type M_KIND, to the results set RESULT_SET.
+     Return false if we stop adding results early due to having already
+     found too many results (based on M_MAX_SEARCH_RESULTS limit),
+     otherwise return true.
      Returning true does not indicate that any results were added, just
-     that we didn't _not_ add a result due to reaching MAX_SEARCH_RESULTS.  */
-  bool add_matching_symbols (objfile *objfile,
-			     const std::optional<compiled_regex> &preg,
-			     const std::optional<compiled_regex> &treg,
-			     std::set<symbol_search> *result_set) const;
+     that we didn't _not_ add a result due to reaching M_MAX_SEARCH_RESULTS.  */
+  bool add_matching_symbols (objfile &objfile,
+			     const std::optional<compiled_regex> &name_regex,
+			     const std::optional<compiled_regex> &type_regex,
+			     std::set<symbol_search> &result_set) const;
 
-  /* Add msymbols from OBJFILE that match PREG and M_KIND, to the results
-     vector RESULTS.  Return false if we stop adding results early due to
-     having already found too many results (based on max search results
-     limit M_MAX_SEARCH_RESULTS), otherwise return true.  Returning true
-     does not indicate that any results were added, just that we didn't
-     _not_ add a result due to reaching MAX_SEARCH_RESULTS.  */
-  bool add_matching_msymbols (objfile *objfile,
-			      const std::optional<compiled_regex> &preg,
-			      std::vector<symbol_search> *results) const;
+  /* Add msymbols from OBJFILE that match NAME_REGEX and M_KIND, to the
+     results vector RESULTS.  Return false if we stop adding results early
+     due to having already found too many results (based on max search
+     results limit M_MAX_SEARCH_RESULTS), otherwise return true.  Returning
+     true does not indicate that any results were added, just that we
+     didn't _not_ add a result due to reaching M_MAX_SEARCH_RESULTS.  */
+  bool add_matching_msymbols (objfile &objfile,
+			      const std::optional<compiled_regex> &name_regex,
+			      std::vector<symbol_search> &results) const;
 
-  /* Return true if MSYMBOL is of type KIND.  */
-  static bool is_suitable_msymbol (const domain_search_flags kind,
-				   const minimal_symbol *msymbol);
+  /* Return true if MSYMBOL is of type M_KIND.  */
+  bool is_suitable_msymbol (const minimal_symbol *msymbol) const;
 };
 
 /* When searching for Fortran symbols within modules (functions/variables)
@@ -2697,7 +2743,7 @@ using module_symbol_search = std::pair<symbol_search, symbol_search>;
    within the module.  */
 extern std::vector<module_symbol_search> search_module_symbols
 	(const char *module_regexp, const char *regexp,
-	 const char *type_regexp, domain_search_flags kind);
+	 const char *type_regexp, symbol_search_kind kind);
 
 /* Convert a global or static symbol SYM (based on BLOCK, which should be
    either GLOBAL_BLOCK or STATIC_BLOCK) into a string for use in 'info'
@@ -2705,8 +2751,11 @@ extern std::vector<module_symbol_search> search_module_symbols
 
 extern std::string symbol_to_info_string (struct symbol *sym, int block);
 
-extern bool treg_matches_sym_type_name (const compiled_regex &treg,
-					const struct symbol *sym);
+/* Returns true if the SYM's type name matches TYPE_REGEX.
+   If SYM has no type name, returns false.  */
+
+extern bool regex_matches_sym_type_name (const compiled_regex &type_regex,
+					 const symbol *sym);
 
 /* The name of the ``main'' function.  */
 extern const char *main_name ();

@@ -153,6 +153,12 @@ lassign [dap_check_request_and_response "fetch all registers" \
 # If any register has children, try to fetch those as well.  This is a
 # regression test for part of PR dap/33228.
 foreach var [dict get $val body variables] {
+    # Check that gdb emits an evaluateName for each register.
+    set name [dict get $var name]
+    set evalName [dict get $var evaluateName]
+    gdb_assert {[string cat "$" $name] == $evalName} \
+	"evaluateName for register $name"
+
     set regvar [dict get $var variablesReference]
     if {$regvar > 0} {
 	# If variablesReference is non-zero, then there must be either

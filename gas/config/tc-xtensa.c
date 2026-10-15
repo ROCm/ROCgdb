@@ -494,6 +494,10 @@ static fixS *xg_append_jump (fragS *fragP, symbolS *sym, offsetT offset);
 static void xtensa_maybe_create_literal_pool_frag (bool, bool);
 static bool auto_litpools = false;
 static int auto_litpool_limit = 0;
+/* Loaders of relocatable objects, such as kernel module loaders, may only
+   know R_XTENSA_32, so R_XTENSA_32_ABS is the default only when configured
+   with --enable-r-xtensa-32-abs.  */
+static bool use_abs32_rela = DEFAULT_R_XTENSA_32_ABS;
 static bool xtensa_is_init_fini (segT seg);
 
 /* Alignment Functions.  */
@@ -733,6 +737,9 @@ enum
 
   option_abi_windowed,
   option_abi_call0,
+
+  option_abs32_rela,
+  option_no_abs32_rela,
 };
 
 const char md_shortopts[] = "";
@@ -816,6 +823,9 @@ const struct option md_longopts[] =
 
   { "abi-windowed", no_argument, NULL, option_abi_windowed },
   { "abi-call0", no_argument, NULL, option_abi_call0 },
+
+  { "abs32-rela", no_argument, NULL, option_abs32_rela },
+  { "no-abs32-rela", no_argument, NULL, option_no_abs32_rela },
 
   { NULL, no_argument, NULL, 0 }
 };
@@ -1052,6 +1062,14 @@ md_parse_option (int c, const char *arg)
       elf32xtensa_abi = XTHAL_ABI_CALL0;
       return 1;
 
+    case option_abs32_rela:
+      use_abs32_rela = true;
+      return 1;
+
+    case option_no_abs32_rela:
+      use_abs32_rela = false;
+      return 1;
+
     default:
       return 0;
     }
@@ -1086,7 +1104,12 @@ Xtensa options:\n\
   --[no-]separate-prop-tables\n\
                           [Do not] place Xtensa property records into\n\
                           individual property sections for each section.\n\
-                          Default is to generate single property section.\n", stream);
+                          Default is to generate single property section.\n\
+  --[no-]abs32-rela       [Do not] emit R_XTENSA_32_ABS rather than\n\
+                          R_XTENSA_32 for 32-bit absolute data.\n", stream);
+  fprintf (stream, "\
+                          Default is %s.\n",
+	   DEFAULT_R_XTENSA_32_ABS ? "R_XTENSA_32_ABS" : "R_XTENSA_32");
 }
 
 
@@ -6160,6 +6183,7 @@ arelent *
 tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 {
   arelent *reloc;
+  bfd_reloc_code_real_type r_type;
 
   reloc = notes_alloc (sizeof (arelent));
   reloc->sym_ptr_ptr = notes_alloc (sizeof (asymbol *));
@@ -6172,18 +6196,22 @@ tc_gen_reloc (asection *section ATTRIBUTE_UNUSED, fixS *fixp)
 
   reloc->addend = fixp->fx_offset;
 
-  reloc->howto = bfd_reloc_type_lookup (stdoutput, fixp->fx_r_type);
+  r_type = fixp->fx_r_type;
+  if (r_type == BFD_RELOC_32 && use_abs32_rela)
+    r_type = BFD_RELOC_XTENSA_32_ABS;
+
+  reloc->howto = bfd_reloc_type_lookup (stdoutput, r_type);
   if (reloc->howto == NULL)
     {
       as_bad_where (fixp->fx_file, fixp->fx_line,
 		    _("cannot represent `%s' relocation in object file"),
-		    bfd_get_reloc_code_name (fixp->fx_r_type));
+		    bfd_get_reloc_code_name (r_type));
       return NULL;
     }
 
   if (!fixp->fx_pcrel != !reloc->howto->pc_relative)
     as_fatal (_("internal error; cannot generate `%s' relocation"),
-	      bfd_get_reloc_code_name (fixp->fx_r_type));
+	      bfd_get_reloc_code_name (r_type));
 
   return reloc;
 }

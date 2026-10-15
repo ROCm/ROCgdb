@@ -28,6 +28,7 @@
 #include "language.h"
 #include "varobj.h"
 #include "p-lang.h"
+#include "p-exp-parser.h"
 #include "valprint.h"
 #include "value.h"
 #include "c-lang.h"
@@ -159,6 +160,14 @@ public:
       wchar_printer::print_char (w);
   }
 };
+
+/* See language.h.  */
+
+int
+pascal_language::parser (struct parser_state *ps) const
+{
+  return pascal_parse (ps);
+}
 
 /* See language.h.  */
 

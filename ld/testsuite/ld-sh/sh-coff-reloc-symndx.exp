@@ -1,0 +1,335 @@
+# Expect script for the SH COFF relocation symbol index regression tests.
+#
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This file is part of the GNU Binutils.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <http://www.gnu.org/licenses/>.
+
+# Functions sh_relax_section and sh_relax_delete_bytes in bfd/coff-sh.c
+# used the r_symndx field of a COFF relocation without bounds checks.
+# Four sites were affected:
+#
+#   coff-sh.c, sh_relax_section: external symbols array
+#   coff-sh.c, sh_relax_delete_bytes: case R_SH_IMM32
+#   coff-sh.c, sh_relax_delete_bytes: case R_SH_PCDISP
+#   coff-sh.c, sh_relax_delete_bytes: cross-section loop
+#
+# Malformed objects with out-of-bounds indices caused heap reads outside
+# the external symbols buffer. Reaching this code requires relaxing
+# enabled via "ld -m sh --relax".
+#
+# The test objects below are written directly in hex rather than
+# assembled. All objects are big-endian coff-sh.
+# The ctrl-* and oob-1* fixtures declare 3 symbols (valid indices 0..2).
+# The oob-842 fixtures declare 2 symbols (valid indices 0..1).
+# The oob-0sym-zero fixture declares 0 symbols (all indices invalid).
+#
+# An unpatched linker crashes with SIGABRT under AddressSanitizer.
+# A patched linker reports "invalid symbol index ... in relocs", sets
+# bfd_error_bad_value, and fails the link with exit status 1.
+# The -1 sentinel represents "no symbol" for absolute relocations;
+# relaxation skips it silently and the link completes with status 0.
+
+# Objects are generated into the local tmpdir, so skip remote configurations.
+if { [is_remote host] } {
+    return
+}
+
+# Emulation sh is the COFF SH linker.
+if { ![ld_supports_emul "sh"] } {
+    return
+}
+
+set tmpdir tmpdir
+
+# Run LD over OBJ, writing OUTFILE, and return {status output}.
+proc run_ld_capture { ld opts obj outfile } {
+    set cmd "$ld $opts -o $outfile $obj 2>&1; echo SHCOFF_EXIT:\$?"
+    set out [lindex [remote_exec host [concat sh -c [list $cmd]]] 1]
+    set status -1
+    if { [regexp {SHCOFF_EXIT:(\d+)} $out -> status] } {
+	regsub {SHCOFF_EXIT:\d+\s*$} $out "" out
+    }
+    return [list $status $out]
+}
+
+# Return 1 if OUT indicates a crash or sanitizer error.
+proc crashed { out } {
+    foreach pat { "*AddressSanitizer*" "*LeakSanitizer*"
+		  "*Segmentation fault*" "*core dumped*" "*SIGABRT*"
+		  "*SIGSEGV*" "*runtime error:*"
+		  "*free(): invalid size*" "*malloc(): *"
+		  "*corrupted size vs. prev_size*" "*assertion fail*"
+		  "*Aborted*" } {
+	if { [string match $pat $out] } {
+	    return 1
+	}
+    }
+    return 0
+}
+
+# Write an embedded hex string to FILE.
+proc write_object { file hex } {
+    regsub -all {\s+} $hex "" clean_hex
+    set f [open $file "wb"]
+    fconfigure $f -translation binary
+    puts -nonewline $f [binary format H* $clean_hex]
+    close $f
+}
+
+# Link OBJ and require LD to succeed: status 0 and output binary exists.
+proc expect_clean_link { ld opts obj bin what } {
+    file delete -force $bin
+    set result [run_ld_capture $ld $opts $obj $bin]
+    set status [lindex $result 0]
+    set out [lindex $result 1]
+    if { $status == 0 && ! [crashed $out] && [file exists $bin] } {
+	pass "SH COFF $what: links cleanly"
+    } else {
+	fail "SH COFF $what: did not link cleanly (status $status): $out"
+    }
+    file delete -force $bin
+    file delete -force $obj
+}
+
+# Link OBJ and require LD to reject invalid relocation symbol index:
+# status 1, error message emitted, and no crash.
+proc expect_clean_rejection { ld opts obj bin what } {
+    file delete -force $bin
+    set result [run_ld_capture $ld $opts $obj $bin]
+    set status [lindex $result 0]
+    set out [lindex $result 1]
+    if { $status == 1
+	 && ! [crashed $out]
+	 && [string match "*invalid symbol index*" $out] } {
+	pass "SH COFF $what: rejected cleanly"
+    } else {
+	fail "SH COFF $what: expected rejection with status 1: $out"
+    }
+    file delete -force $bin
+    file delete -force $obj
+}
+
+proc sh_coff_reloc_symndx_test {} {
+    global ld tmpdir
+
+    # In-range control: R_SH_IMM32 index 1 of 3, mid table.
+    set ctrl_1174_mid_hex {
+	05000001000000000000007c00000003000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000030000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b5343000000040000000100000000000e53430000000c000000010000
+	0000000e53435f66000000000000000000100001000002005f670000000
+	00000000000100001000002005f68000000000000000000100001000002
+	0000000004
+    }
+    set ctrl_1174_mid "$tmpdir/ctrl-1174-mid.o"
+    write_object $ctrl_1174_mid $ctrl_1174_mid_hex
+
+    # Boundary control: R_SH_IMM32 index 2 == nsyms-1, highest valid.
+    set ctrl_1174_last_hex {
+	05000001000000000000007c00000003000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000030000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b5343000000040000000200000000000e53430000000c000000010000
+	0000000e53435f66000000000000000000100001000002005f670000000
+	00000000000100001000002005f68000000000000000000100001000002
+	0000000004
+    }
+    set ctrl_1174_last "$tmpdir/ctrl-1174-last.o"
+    write_object $ctrl_1174_last $ctrl_1174_last_hex
+
+    # Boundary control: R_SH_PCDISP index 2 == nsyms-1, highest valid.
+    set ctrl_1203_last_hex {
+	05000001000000000000007c00000003000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000030000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b5343000000040000000200000000000c53430000000c000000010000
+	0000000e53435f66000000000000000000100001000002005f670000000
+	00000000000100001000002005f68000000000000000000100001000002
+	0000000004
+    }
+    set ctrl_1203_last "$tmpdir/ctrl-1203-last.o"
+    write_object $ctrl_1203_last $ctrl_1203_last_hex
+
+    # Sentinel control: sh_relax_section index -1 (sentinel, links cleanly).
+    set ctrl_842_neg1_hex {
+	05000001000000000000006c00000002000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000020000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b53430000000cffffffff00000000000e53432e66696c650000000000
+	0000fffe000067010000000000000000000000000000000000000000000
+	4
+    }
+    set ctrl_842_neg1 "$tmpdir/ctrl-842-neg1.o"
+    write_object $ctrl_842_neg1 $ctrl_842_neg1_hex
+
+    # Sentinel control: sh_relax_delete_bytes index -1 (links cleanly).
+    set ctrl_1174_neg1_hex {
+	05000001000000000000007c00000003000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000030000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b534300000004ffffffff00000000000e53430000000c000000010000
+	0000000e53435f66000000000000000000100001000002005f670000000
+	00000000000100001000002005f68000000000000000000100001000002
+	0000000004
+    }
+    set ctrl_1174_neg1 "$tmpdir/ctrl-1174-neg1.o"
+    write_object $ctrl_1174_neg1 $ctrl_1174_neg1_hex
+
+    # Rejection: sh_relax_section index 3 > nsyms (2 symbols in table).
+    set oob_842_first_hex {
+	05000001000000000000006c00000002000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000020000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b53430000000c0000000300000000000e53432e66696c650000000000
+	0000fffe000067010000000000000000000000000000000000000000000
+	4
+    }
+    set oob_842_first "$tmpdir/oob-842-first.o"
+    write_object $oob_842_first $oob_842_first_hex
+
+    # Rejection: sh_relax_delete_bytes R_SH_IMM32 index 3 == nsyms.
+    set oob_1174_first_hex {
+	05000001000000000000007c00000003000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000030000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b5343000000040000000300000000000e53430000000c000000010000
+	0000000e53435f66000000000000000000100001000002005f670000000
+	00000000000100001000002005f68000000000000000000100001000002
+	0000000004
+    }
+    set oob_1174_first "$tmpdir/oob-1174-first.o"
+    write_object $oob_1174_first $oob_1174_first_hex
+
+    # Rejection: sh_relax_delete_bytes R_SH_PCDISP index 3 == nsyms.
+    set oob_1203_first_hex {
+	05000001000000000000007c00000003000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000030000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b5343000000040000000300000000000c53430000000c000000010000
+	0000000e53435f66000000000000000000100001000002005f670000000
+	00000000000100001000002005f68000000000000000000100001000002
+	0000000004
+    }
+    set oob_1203_first "$tmpdir/oob-1203-first.o"
+    write_object $oob_1203_first $oob_1203_first_hex
+
+    # Rejection: sh_relax_delete_bytes other section: index 3 == nsyms.
+    set oob_1397_first_hex {
+	0500000200000000000000ac00000003000000002e74657874000000000
+	00000000000000000001000000064000000740000000000020000000000
+	202e64617461000000000000000000010000000008000000940000009c0
+	000000000010000000000400b00000000000000d0000000000000000000
+	00000000000000000004001b53430000000c0000000100000000000e534
+	30000000000000000000000000000000300000000000e53435f66000000
+	000000000000100001000002005f6700000000000000000010000100000
+	2005f680000000000000000001000010000020000000004
+    }
+    set oob_1397_first "$tmpdir/oob-1397-first.o"
+    write_object $oob_1397_first $oob_1397_first_hex
+
+    # Rejection: sh_relax_section negative index -2.
+    set oob_842_neg2_hex {
+	05000001000000000000006c00000002000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000020000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b53430000000cfffffffe00000000000e53432e66696c650000000000
+	0000fffe000067010000000000000000000000000000000000000000000
+	4
+    }
+    set oob_842_neg2 "$tmpdir/oob-842-neg2.o"
+    write_object $oob_842_neg2 $oob_842_neg2_hex
+
+    # Rejection: sh_relax_delete_bytes R_SH_IMM32 negative index -2.
+    set oob_1174_neg2_hex {
+	05000001000000000000007c00000003000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000030000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b534300000004fffffffe00000000000e53430000000c000000010000
+	0000000e53435f66000000000000000000100001000002005f670000000
+	00000000000100001000002005f68000000000000000000100001000002
+	0000000004
+    }
+    set oob_1174_neg2 "$tmpdir/oob-1174-neg2.o"
+    write_object $oob_1174_neg2 $oob_1174_neg2_hex
+
+    # Rejection: sh_relax_section huge index 0x40000000.
+    set oob_842_wild_hex {
+	05000001000000000000006c00000002000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000020000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b53430000000c4000000000000000000e53432e66696c650000000000
+	0000fffe000067010000000000000000000000000000000000000000000
+	4
+    }
+    set oob_842_wild "$tmpdir/oob-842-wild.o"
+    write_object $oob_842_wild $oob_842_wild_hex
+
+    # Rejection: empty symbol table (obj_raw_syment_count == 0).
+    set oob_0sym_zero_hex {
+	05000001000000000000006c00000000000000002e74657874000000000
+	0000000000000000000100000003c0000004c0000000000020000000000
+	200b00000000000000d0000000000000000000000000000000000000040
+	01b53430000000c0000000000000000000e534300000004
+    }
+    set oob_0sym_zero "$tmpdir/oob-0sym-zero.o"
+    write_object $oob_0sym_zero $oob_0sym_zero_hex
+
+    set opts "-m sh --relax"
+
+    # Positive controls:
+    expect_clean_link $ld $opts $ctrl_1174_mid \
+	"$tmpdir/ctrl-1174-mid" "ctrl-1174-mid"
+
+    expect_clean_link $ld $opts $ctrl_1174_last \
+	"$tmpdir/ctrl-1174-last" "ctrl-1174-last"
+
+    expect_clean_link $ld $opts $ctrl_1203_last \
+	"$tmpdir/ctrl-1203-last" "ctrl-1203-last"
+
+    expect_clean_link $ld $opts $ctrl_842_neg1 \
+	"$tmpdir/ctrl-842-neg1" "ctrl-842-neg1"
+
+    expect_clean_link $ld $opts $ctrl_1174_neg1 \
+	"$tmpdir/ctrl-1174-neg1" "ctrl-1174-neg1"
+
+    # Negative rejections:
+    expect_clean_rejection $ld $opts $oob_842_first \
+	"$tmpdir/oob-842-first" "oob-842-first"
+
+    expect_clean_rejection $ld $opts $oob_1174_first \
+	"$tmpdir/oob-1174-first" "oob-1174-first"
+
+    expect_clean_rejection $ld $opts $oob_1203_first \
+	"$tmpdir/oob-1203-first" "oob-1203-first"
+
+    expect_clean_rejection $ld $opts $oob_1397_first \
+	"$tmpdir/oob-1397-first" "oob-1397-first"
+
+    expect_clean_rejection $ld $opts $oob_842_neg2 \
+	"$tmpdir/oob-842-neg2" "oob-842-neg2"
+
+    expect_clean_rejection $ld $opts $oob_1174_neg2 \
+	"$tmpdir/oob-1174-neg2" "oob-1174-neg2"
+
+    expect_clean_rejection $ld $opts $oob_842_wild \
+	"$tmpdir/oob-842-wild" "oob-842-wild"
+
+    expect_clean_rejection $ld $opts $oob_0sym_zero \
+	"$tmpdir/oob-0sym-zero" "oob-0sym-zero"
+}
+
+sh_coff_reloc_symndx_test

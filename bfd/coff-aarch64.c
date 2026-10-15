@@ -517,9 +517,53 @@ coff_pe_aarch64_relocate_section (bfd *output_bfd,
 	continue;
 
       symndx = rel->r_symndx;
+
+      if (! coff_symndx_in_range (input_bfd, symndx))
+	{
+	  _bfd_error_handler
+	    /* xgettext: c-format */
+	    (_("%pB: invalid symbol index %ld in relocs"),
+	     input_bfd, symndx);
+	  bfd_set_error (bfd_error_bad_value);
+	  return false;
+	}
+
       sym_value = syms[symndx].n_value;
 
       h = obj_coff_sym_hashes (input_bfd)[symndx];
+
+      if (h && h->root.type == bfd_link_hash_defweak)
+	switch (rel->r_type)
+	  {
+	  case IMAGE_REL_ARM64_PAGEOFFSET_12A:
+	  case IMAGE_REL_ARM64_PAGEOFFSET_12L:
+	    {
+	      rel->r_ignore = 1;
+	      continue;
+	    }
+	  case IMAGE_REL_ARM64_BRANCH26:
+	    {
+	      const unsigned char prefix_length = sizeof("__imp_") - 1;
+	      h = (struct coff_link_hash_entry*)
+		  bfd_link_hash_lookup (info->hash, h->root.root.string
+					+ prefix_length, 0, 0, 1);
+	      break;
+	    }
+	  case IMAGE_REL_ARM64_PAGEBASE_REL21:
+	    {
+	      uint32_t opcode = 0x14000000; /* b <label>.  */
+	      bfd_putl32 (opcode, contents + rel->r_vaddr);
+	      rel->r_type = IMAGE_REL_ARM64_BRANCH26;
+
+	      char* imp_label = xasprintf("%s_%x_%lx", h->root.root.string,
+					  input_section->id,
+					  (long unsigned) rel->r_vaddr);
+	      h = (struct coff_link_hash_entry*)
+		  bfd_link_hash_lookup (info->hash, imp_label, 0, 0, 1);
+	      free(imp_label);
+	      break;
+	    }
+	  }
 
       if (h && h->root.type == bfd_link_hash_defined)
 	{
@@ -541,10 +585,6 @@ coff_pe_aarch64_relocate_section (bfd *output_bfd,
 	continue;
 
       dest_vma = sec->output_section->vma + sec->output_offset + sym_value;
-
-      if (symndx < 0
-	  || (unsigned long) symndx >= obj_raw_syment_count (input_bfd))
-	continue;
 
       /* All the relocs handled below operate on 4 bytes.  */
       if (input_section->size < rel->r_vaddr

@@ -57,6 +57,7 @@
 #define RegYMM Class=RegSIMD|Ymmword
 #define RegZMM Class=RegSIMD|Zmmword
 #define RegTMM Class=RegSIMD|Tmmword
+#define RegBSR Class=RegSIMD|Byte
 
 #define RegMask Class=RegMask
 
@@ -3239,30 +3240,49 @@ xresldtrk, 0xf20f01e9, TSXLDTRK, NoSuf, {}
 
 // TSXLDTRK instructions end.
 
-// AMX instructions.
+// AMX and ACE shared instructions.
 
-ldtilecfg, 0x49/0, APX_F(AMX_TILE), Modrm|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex }
-sttilecfg, 0x6649/0, APX_F(AMX_TILE), Modrm|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex }
+ldtilecfg, 0x49/0, APX_F(TILE), Modrm|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex }
+sttilecfg, 0x6649/0, APX_F(TILE), Modrm|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex }
+
+tilerelease, 0x49c0, TILE, Vex128|Space0F38|VexW0|NoSuf, {}
+
+tilezero, 0xf249, TILE, Modrm|Vex128|Space0F38|VexW0|NoSuf, { RegTMM }
+
+tcvtrowd2ps, 0xf34a, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tcvtrowd2ps, 0xf307, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+
+tcvtrowps2bf16h, 0xf26d, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tcvtrowps2bf16h, 0xf207, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+tcvtrowps2bf16l, 0xf36d, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tcvtrowps2bf16l, 0xf377, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+tcvtrowps2phh, 0x6d, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tcvtrowps2phh, 0x07, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+tcvtrowps2phl, 0x666d, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tcvtrowps2phl, 0xf277, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+
+tilemovrow, 0x664a, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
+tilemovrow, 0x6607, AMX_AVX512|ACE_V1, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
+
+// AMX and ACE shared instructions end.
+
+// AMX instructions.
 
 tcmmimfp16ps, 0x666c, AMX_COMPLEX, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 tcmmrlfp16ps, 0x6c, AMX_COMPLEX, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 
 tdpbf16ps, 0xf35c, AMX_BF16, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 tdpfp16ps, 0xf25c, AMX_FP16, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
-tdpbssd, 0xf25e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
-tdpbuud, 0x5e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
-tdpbusd, 0x665e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
-tdpbsud, 0xf35e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
+
+<tdpb:pfx, uu:, us:66, su:f3, ss:f2>
+
+tdpb<tdpb>d, 0x<tdpb:pfx>5e, AMX_INT8, Modrm|Vex128|Space0F38|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 
 tileloadd, 0xf24b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
 tileloaddt1, 0x664b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
 tileloaddrs, 0xf24a, APX_F(AMX_MOVRS), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
 tileloaddrst1, 0x664a, APX_F(AMX_MOVRS), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { Unspecified|BaseIndex, RegTMM }
 tilestored, 0xf34b, APX_F(AMX_TILE), Sibmem|Vex128|EVex128|Space0F38|VexW0|NoSuf, { RegTMM, Unspecified|BaseIndex }
-
-tilerelease, 0x49c0, AMX_TILE, Vex128|Space0F38|VexW0|NoSuf, {}
-
-tilezero, 0xf249, AMX_TILE, Modrm|Vex128|Space0F38|VexW0|NoSuf, { RegTMM }
 
 <z:pfx, z0:, z1:66>
 
@@ -3293,22 +3313,34 @@ tdpbhf8ps, 0xf2fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, Re
 tdphbf8ps, 0xf3fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 tdphf8ps, 0x66fd, AMX_FP8, Modrm|Vex128|Map5|Src2VVVV|VexW0|NoSuf, { RegTMM, RegTMM, RegTMM }
 
-tcvtrowd2ps, 0xf34a, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tcvtrowd2ps, 0xf307, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-
-tcvtrowps2bf16h, 0xf26d, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tcvtrowps2bf16h, 0xf207, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-tcvtrowps2bf16l, 0xf36d, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tcvtrowps2bf16l, 0xf377, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-tcvtrowps2phh, 0x6d, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tcvtrowps2phh, 0x07, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-tcvtrowps2phl, 0x666d, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tcvtrowps2phl, 0xf277, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-
-tilemovrow, 0x664a, AMX_AVX512, Modrm|EVex512|Space0F38|Src2VVVV|VexW0|NoSuf, { Reg32, RegTMM, RegZMM }
-tilemovrow, 0x6607, AMX_AVX512, Modrm|EVex512|Space0F3A|VexW0|NoSuf, { Imm8, RegTMM, RegZMM }
-
 // AMX instructions end.
+
+// ACE instructions.
+
+bsrinit, 0xf249, ACE_V1, Modrm|Vex128|Space0F38|VexW1|NoSuf, { RegBSR }
+bsrmovf, 0x95, ACE_V1, Modrm|EVex512|Map6|VexW1|Src1VVVV|Disp8MemShift=6|NoSuf, { RegZMM|Unspecified|BaseIndex, RegZMM, RegBSR }
+bsrmovh, 0xf295, ACE_V1, D|Modrm|EVex512|Map6|VexW|Disp8MemShift=6|NoSuf, { RegBSR, RegZMM|Unspecified|BaseIndex }
+bsrmovl, 0xf395, ACE_V1, D|Modrm|EVex512|Map6|VexW|Disp8MemShift=6|NoSuf, { RegBSR, RegZMM|Unspecified|BaseIndex }
+
+tilemovcol, 0x662f, ACE_V1, Modrm|EVex512|Space0F3A|VexW1|NoSuf, { Imm8, RegZMM, RegTMM }
+tilemovcol, 0x664b, ACE_V1, Modrm|EVex512|Space0F38|VexW1|Src2VVVV|NoSuf, { Reg32, RegZMM, RegTMM }
+tilemovrow, 0x6607, ACE_V1, Modrm|EVex512|Space0F3A|VexW1|NoSuf, { Imm8, RegZMM, RegTMM }
+tilemovrow, 0x664a, ACE_V1, Modrm|EVex512|Space0F38|VexW1|Src2VVVV|NoSuf, { Reg32, RegZMM, RegTMM }
+
+top2bf16ps, 0xf35c, ACE_V1, Modrm|EVex512|Space0F38|VexW0|Src2VVVV|NoSuf, { RegZMM, RegZMM, RegTMM }
+top4b<tdpb>d, 0x<tdpb:pfx>5e, ACE_V1, Modrm|EVex512|Space0F38|VexW0|Src2VVVV|NoSuf, { RegZMM, RegZMM, RegTMM }
+
+<tdpb>
+
+<top4:pfx, bf:, hf:66, hbf:f3, bhf:f2>
+
+top4mx<top4>8ps, 0x<top4:pfx>8d, ACE_V1, Modrm|EVex512|Space0F3A|VexW0|Src2VVVV|NoSuf, { Imm8, RegZMM, RegZMM, RegTMM }
+
+<top4>
+
+top4mxbssps, 0xf28f, ACE_V1, Modrm|EVex512|Space0F3A|VexW0|Src2VVVV|NoSuf, { Imm8, RegZMM, RegZMM, RegTMM }
+
+// ACE instructions end.
 
 // KEYLOCKER instructions.
 

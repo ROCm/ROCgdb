@@ -111,16 +111,16 @@ foo:
 	cfxr	%r5,9,%f4
 	ch	%r6,4095(%r5,%r10)
 	chi	%r6,-32767
-	cksm	%r6,%r9
+	cksm	%r6,%r8
 	cl	%r6,4095(%r5,%r10)
 	clc	4095(256,%r5),4095(%r10)
-	clcl	%r6,%r9
-	clcle	%r6,%r9,4095(%r5)
+	clcl	%r6,%r8
+	clcle	%r6,%r8,4095(%r5)
 	cli	4095(%r5),255
 	clm	%r6,10,4095(%r5)
 	clr	%r6,%r9
 	clst	%r6,%r9
-	cmpsc	%r6,%r9
+	cmpsc	%r6,%r8
 	cp	4095(6,%r5),4095(9,%r10)
 	cpya	%a6,%a9
 	cr	%r6,%r9
@@ -226,7 +226,7 @@ foo:
 	kdbr	%f6,%f9
 	keb	%f6,4095(%r5,%r10)
 	kebr	%f6,%f9
-	kxbr	%f6,%f9
+	kxbr	%f5,%f8
 	l	%r6,4095(%r5,%r10)
 	la	%r6,4095(%r5,%r10)
 	lae	%r6,4095(%r5,%r10)
@@ -333,7 +333,7 @@ foo:
 	mvcdk	4095(%r5),4095(%r10)
 	mvcin	4095(256,%r5),4095(%r10)
 	mvck	4095(%r6,%r5),4095(%r10),%r9
-	mvcl	%r6,%r9
+	mvcl	%r6,%r8
 	mvcle	%r6,%r8,4095(%r5)
 	mvclu	%r6,%r8,4095(%r5)
 	mvcp	4095(%r6,%r5),4095(%r10),%r9

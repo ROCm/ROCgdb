@@ -11,7 +11,7 @@
 
 RELOCATION RECORDS FOR \[.xt.prop\]:
 OFFSET +TYPE +VALUE
-0+ R_XTENSA_32 +.text.*
+0+ R_XTENSA_32(_ABS)? +.text.*
 
 Contents of section .debug_info:
  0000 c801.*

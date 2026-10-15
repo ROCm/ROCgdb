@@ -58,7 +58,23 @@ cooked_index::wait (cooked_state desired_state, bool allow_quit)
   if (m_state == nullptr)
     return;
 
-  if (m_state->wait (desired_state, allow_quit))
+  bool done = m_state->wait (desired_state, allow_quit);
+
+  /* Emit any cached complaints if we have finalized and we are on the
+     main thread.  Check for the requested state or the DONE flag
+     here, we might have only asked for MAIN_AVAILABLE, but if the
+     workers are quick then they might be done, in which case we
+     should emit the complaints now.  */
+  if (!m_finalize_complaints_emitted
+      && is_main_thread ()
+      && (desired_state >= cooked_state::FINALIZED || done))
+    {
+      m_finalize_complaints_emitted = true;
+      for (const auto &shard : m_shards)
+	re_emit_complaints (shard->release_finalize_complaints ());
+    }
+
+  if (done)
     {
       /* Only the main thread can modify this.  */
       gdb_assert (is_main_thread ());
@@ -74,31 +90,148 @@ cooked_index::set_contents ()
 
   m_state->set (cooked_state::MAIN_AVAILABLE);
 
-  /* This is run after finalization is done -- but not before.  If
-     this task were submitted earlier, it would have to wait for
-     finalization.  However, that would take a slot in the global
-     thread pool, and if enough such tasks were submitted at once, it
-     would cause a livelock.  */
-  gdb::task_group finalizers ([this] ()
-  {
-    m_state->set (cooked_state::FINALIZED);
-    m_state->write_to_cache (index_for_writing ());
-    m_state->set (cooked_state::CACHE_DONE);
-  });
+  /* Start the first step of index finalization.  */
+  this->start_resolve_deferred_names ();
+}
 
-  for (auto &shard : m_shards)
+/* See cooked-index.h.  */
+
+void
+cooked_index::start_resolve_deferred_names ()
+{
+  gdb::task_group group ([this] ()
     {
-      auto this_shard = shard.get ();
-      const parent_map_map *parent_maps = m_state->get_parent_map_map ();
-      finalizers.add_task ([this, this_shard, parent_maps] ()
+      this->start_resolve_deferred_parents ();
+    });
+
+  /* Arrange to call resolve_deferred_names on each shard that has
+     deferred names.  */
+  for (const cooked_index_shard_up &shard : m_shards)
+    {
+      if (!shard->m_have_deferred_names)
+	continue;
+
+      group.add_task ([this, this_shard = shard.get ()] ()
 	{
-	  scoped_time_it time_it ("DWARF finalize worker",
+	  complaint_interceptor complaint_handler;
+	  scoped_time_it time_it ("DWARF resolve deferred names worker",
 				  m_state->m_per_command_time);
-	  this_shard->finalize (parent_maps);
+
+	  if (this_shard->resolve_deferred_names (m_state->get_sig_name_map ()))
+	    m_have_nameless_entries.store (true);
+
+	  this_shard->merge_finalize_complaints (complaint_handler.release ());
 	});
     }
 
-  finalizers.start ();
+  group.start ();
+}
+
+/* See cooked-index.h.  */
+
+void
+cooked_index::start_resolve_deferred_parents ()
+{
+  gdb::task_group group ([this] ()
+    {
+      this->start_prune_nameless_entries ();
+    });
+
+  /* Arrange to call resolve_deferred_parents on each shard that has at least
+     one deferred parent link.  */
+  for (const cooked_index_shard_up &shard : m_shards)
+    {
+      if (!shard->m_have_deferred_parents)
+	continue;
+
+      group.add_task ([this, this_shard = shard.get ()] ()
+	{
+	  complaint_interceptor complaint_handler;
+	  scoped_time_it time_it ("DWARF resolve deferred parents worker",
+				  m_state->m_per_command_time);
+
+	  this_shard->resolve_deferred_parents (m_state->get_parent_map_map ());
+	  this_shard->merge_finalize_complaints (complaint_handler.release ());
+	});
+    }
+
+  group.start ();
+}
+
+/* See cooked-index.h.  */
+
+void
+cooked_index::start_prune_nameless_entries ()
+{
+  gdb::task_group group ([this] ()
+    {
+      this->start_canonicalize_names ();
+    });
+
+  /* Remove index entries whose name we could not resolve.
+
+     If there is any nameless entry, this step needs to run on all the shards,
+     because there could be children of a nameless entry in other shards,
+     whose parent links we want to break.
+
+     This step normally only runs in case there is something wrong with the
+     DWARF info.  */
+  if (m_have_nameless_entries.load ())
+    for (const cooked_index_shard_up &shard : m_shards)
+      {
+	group.add_task ([this, this_shard = shard.get ()] ()
+	  {
+	    complaint_interceptor complaint_handler;
+
+	    scoped_time_it time_it ("DWARF prune nameless entries worker",
+				    m_state->m_per_command_time);
+
+	    this_shard->prune_nameless_entries ();
+
+	    this_shard->merge_finalize_complaints
+	      (complaint_handler.release ());
+	  });
+      }
+
+  group.start ();
+}
+
+/* See cooked-index.h.  */
+
+void
+cooked_index::start_canonicalize_names ()
+{
+  gdb::task_group group ([this] ()
+    {
+      /* The index is considered finalized (fully usable) at this point.  */
+      m_state->set (cooked_state::FINALIZED);
+      this->write_to_cache ();
+    });
+
+  /* Arrange to call canonicalize_names on each shard.  */
+  for (const cooked_index_shard_up &shard : m_shards)
+    {
+      group.add_task ([this, this_shard = shard.get ()] ()
+	{
+	  complaint_interceptor complaint_handler;
+	  scoped_time_it time_it ("DWARF canonicalize names worker",
+				  m_state->m_per_command_time);
+
+	  this_shard->canonicalize_names ();
+	  this_shard->merge_finalize_complaints (complaint_handler.release ());
+	});
+    }
+
+  group.start ();
+}
+
+/* See cooked-index.h.  */
+
+void
+cooked_index::write_to_cache ()
+{
+  m_state->write_to_cache (index_for_writing ());
+  m_state->set (cooked_state::CACHE_DONE);
 }
 
 cooked_index::~cooked_index ()
@@ -190,14 +323,14 @@ cooked_index::get_main () const
 	  if ((entry->flags & IS_MAIN) != 0)
 	    {
 	      /* This should be kept in sync with
-		 cooked_index_shard::finalize.  Note that there, C
+		 cooked_index_shard::canonicalize_names.  Note that there, C
 		 requires canonicalization -- but that is only for
 		 types, 'main' doesn't count.  Similarly, C++ requires
 		 canonicalization, but again "main" is an
 		 exception.  */
 	      if ((entry->lang != language_ada
 		   && !is_cplus_dialect (entry->lang))
-		  || streq (entry->name, "main"))
+		  || streq (entry->name (), "main"))
 		{
 		  /* There won't be one better than this.  */
 		  return entry;
@@ -247,7 +380,7 @@ cooked_index::dump (gdbarch *arch)
 
       gdb_printf ("    [%zu] ((cooked_index_entry *) %p)\n", i++, entry);
       gdb_printf ("    name:       %ps\n", styled_string (style,
-							  entry->name));
+							  entry->name ()));
       gdb_printf ("    canonical:  %ps\n", styled_string (style,
 							  entry->canonical));
       gdb_printf ("    qualified:  %ps\n",
@@ -258,12 +391,12 @@ cooked_index::dump (gdbarch *arch)
       gdb_printf ("    DIE offset: %s\n", sect_offset_str (entry->die_offset));
       gdb_printf ("    CU index:   %u\n", entry->per_cu->index);
 
-      if ((entry->flags & IS_PARENT_DEFERRED) != 0)
+      if (entry->parent_is_deferred ())
 	gdb_printf ("    parent:     deferred (%" PRIx64 ")\n",
 		    entry->get_deferred_parent ());
       else if (entry->get_parent () != nullptr)
 	gdb_printf ("    parent:     ((cooked_index_entry *) %p) [%s]\n",
-		    entry->get_parent (), entry->get_parent ()->name);
+		    entry->get_parent (), entry->get_parent ()->name ());
       else
 	gdb_printf ("    parent:     ((cooked_index_entry *) 0)\n");
 
@@ -273,7 +406,7 @@ cooked_index::dump (gdbarch *arch)
   const cooked_index_entry *main_entry = this->get_main ();
   if (main_entry != nullptr)
     gdb_printf ("  main: ((cooked_index_entry *) %p) [%s]\n", main_entry,
-		  main_entry->name);
+		  main_entry->name ());
   else
     gdb_printf ("  main: ((cooked_index_entry *) 0)\n");
 

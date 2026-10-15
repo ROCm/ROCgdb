@@ -274,12 +274,11 @@ disassemble_annotate_one (insn_t insn, struct disassemble_info *info)
 
 	  /* dbar imm[4:0] annotate layout:
 	     CRW|RW
-	     │││ ││
-	     │││ │└─ bit 0
-	     │││ └── bit 1
-	     ││└──── bit 2
-	     │└───── bit 3
-	     └────── bit 4
+	     ||| ||_ bit 0
+	     ||| |__ bit 1
+	     |||____ bit 2
+	     ||_____ bit 3
+	     |______ bit 4
 	     Bit 0: false denotes W, true denotes null, W declare store after this
 	     dbar are constrained by the barrier.
 	     Bit 1: false denotes R, true denotes null, R declare load after this
@@ -404,6 +403,7 @@ disassemble_one (insn_t insn, struct disassemble_info *info)
 int
 print_insn_loongarch (bfd_vma memaddr, struct disassemble_info *info)
 {
+  bfd_byte buffer[4];
   insn_t insn;
   int status;
 
@@ -420,12 +420,14 @@ print_insn_loongarch (bfd_vma memaddr, struct disassemble_info *info)
   info->insn_info_valid = 1;
   info->target = memaddr;
 
-  if ((status = info->read_memory_func (memaddr, (bfd_byte *) &insn,
-					sizeof (insn), info)) != 0)
+  if ((status = info->read_memory_func (memaddr, buffer, sizeof (buffer),
+					info)) != 0)
     {
       info->memory_error_func (status, memaddr, info);
       return -1; /* loongarch_insn_length (0); */
     }
+
+  insn = bfd_getl32 (buffer);
 
   disassemble_one (insn, info);
 
@@ -448,7 +450,7 @@ with the -M switch (multiple options should be separated by commas):\n"));
   fprintf (stream, _("\
 		  dbar annotate layout:\n\
 		  'C': only cached load and store operations are constrained by the barrier;\n\
-		  '|' left‑side 'RW': all load and store before the dbar are constrained by the barrier;\n\
-		  '|' right‑side 'RW': all load and store after the dbar are constrained by the barrier.\n"));
+		  '|' left-side 'RW': all load and store before the dbar are constrained by the barrier;\n\
+		  '|' right-side 'RW': all load and store after the dbar are constrained by the barrier.\n"));
   fprintf (stream, _("\n"));
 }

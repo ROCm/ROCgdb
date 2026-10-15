@@ -2986,12 +2986,12 @@ static bool
 coff_compute_section_file_positions (bfd * abfd)
 {
   asection *current;
-  file_ptr sofar = bfd_coff_filhsz (abfd);
+  ufile_ptr sofar = bfd_coff_filhsz (abfd);
   bool align_adjust;
   unsigned int target_index;
 #ifdef ALIGN_SECTIONS_IN_FILE
   asection *previous = NULL;
-  file_ptr old_sofar;
+  ufile_ptr old_sofar;
 #endif
 
 #ifdef COFF_IMAGE_WITH_PE
@@ -4325,8 +4325,9 @@ coff_write_object_contents (bfd * abfd)
        but before header is written so we can update it to point to debug directory.  */
     struct pe_tdata *pe = pe_data (abfd);
 
-    if (pe->build_id.after_write_object_contents != NULL)
-      (*pe->build_id.after_write_object_contents) (abfd);
+    if (pe->build_id.after_write_object_contents != NULL
+	&& !(*pe->build_id.after_write_object_contents) (abfd))
+      return false;
   }
 #endif
 

@@ -16,15 +16,8 @@ if test `echo "$host" | sed -e s/64//` = `echo "$target" | sed -e s/64//`; then
   esac
 fi
 
-# Enable shared library support for everything except an embedded elf target.
-case "$target" in
-  loongarch*-elf)
-    ;;
-  *)
-    GENERATE_SHLIB_SCRIPT=yes
-    GENERATE_PIE_SCRIPT=yes
-    ;;
-esac
+GENERATE_SHLIB_SCRIPT=yes
+GENERATE_PIE_SCRIPT=yes
 
 # In all cases, the number is big-endian.
 # LoongArch nop is 'andi $r0,$r0,0'.

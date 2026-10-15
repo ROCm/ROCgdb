@@ -1031,77 +1031,70 @@ proc_with_prefix stepping_over_trampolines { } {
     }
 }
 
-set prev_timeout $timeout
-if {[istarget "mips*tx39-*"]} {
-    set timeout 300
-} else {
-    set timeout 60
-}
+with_timeout_factor 6 {
+    # Determine expected output for unsigned long variables,
+    # the output varies with sizeof (unsigned long).
 
-# Determine expected output for unsigned long variables,
-# the output varies with sizeof (unsigned long).
-
-gdb_test_multiple "print sizeof (long)" "getting sizeof long" {
-    -re ".\[0-9\]* = 4.*$gdb_prompt $" {
-	set target_sizeof_long 4
-	# pass silently
+    gdb_test_multiple "print sizeof (long)" "getting sizeof long" {
+	-re ".\[0-9\]* = 4.*$gdb_prompt $" {
+	    set target_sizeof_long 4
+	    # pass silently
+	}
+	-re ".\[0-9\]* = 8.*$gdb_prompt $" {
+	    set target_sizeof_long 8
+	    # pass silently
+	}
     }
-    -re ".\[0-9\]* = 8.*$gdb_prompt $" {
-	set target_sizeof_long 8
-	# pass silently
+
+    gdb_test_multiple "print sizeof (int)" "getting sizeof int" {
+	-re ".\[0-9\]* = 2.*$gdb_prompt $" {
+	    set target_sizeof_int 2
+	    # pass silently
+	}
+	-re ".\[0-9\]* = 4.*$gdb_prompt $" {
+	    set target_sizeof_int 4
+	    # pass silently
+	}
+	-re ".\[0-9\]* = 8.*$gdb_prompt $" {
+	    set target_sizeof_int 8
+	    # pass silently
+	}
     }
-}
 
-gdb_test_multiple "print sizeof (int)" "getting sizeof int" {
-    -re ".\[0-9\]* = 2.*$gdb_prompt $" {
-	set target_sizeof_int 2
-	# pass silently
+    switch [get_endianness] {
+	little { set target_bigendian_p 0 }
+	big { set target_bigendian_p 1 }
     }
-    -re ".\[0-9\]* = 4.*$gdb_prompt $" {
-	set target_sizeof_int 4
-	# pass silently
-    }
-    -re ".\[0-9\]* = 8.*$gdb_prompt $" {
-	set target_sizeof_int 8
-	# pass silently
-    }
-}
 
-switch [get_endianness] {
-    little { set target_bigendian_p 0 }
-    big { set target_bigendian_p 1 }
-}
+    # Perform tests
 
-# Perform tests
+    gdb_test_no_output "set print frame-arguments all"
 
-gdb_test_no_output "set print frame-arguments all"
-
-integral_args
-unsigned_integral_args
-if {$allow_float_test} {
-  float_and_integral_args
-}
-
-# Test _Complex type here if supported.
-if {[support_complex_tests]} {
-    complex_args
-
-    complex_integral_args
-
+    integral_args
+    unsigned_integral_args
     if {$allow_float_test} {
-	complex_float_integral_args
+	float_and_integral_args
     }
+
+    # Test _Complex type here if supported.
+    if {[support_complex_tests]} {
+	complex_args
+
+	complex_integral_args
+
+	if {$allow_float_test} {
+	    complex_float_integral_args
+	}
+    }
+
+    pointer_args
+    structs_by_reference
+    structs_by_value
+    discard_and_shuffle
+    shuffle_round_robin
+    recursive_structs_by_value
+    localvars_after_alloca
+    call_after_alloca
+    localvars_in_indirect_call
+    stepping_over_trampolines
 }
-
-pointer_args
-structs_by_reference
-structs_by_value
-discard_and_shuffle
-shuffle_round_robin
-recursive_structs_by_value
-localvars_after_alloca
-call_after_alloca
-localvars_in_indirect_call
-stepping_over_trampolines
-
-set timeout $prev_timeout

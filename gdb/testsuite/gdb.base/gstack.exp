@@ -33,8 +33,12 @@ set test_spawn_id $res
 
 # Wait for the spawned program to loop.
 set test "wait for inferior to loop"
+set re \
+    [multi_line_ttm \
+	 "looping" \
+	 ""]
 gdb_expect {
-    -re "looping\r\n" {
+    -re $re {
 	pass $test
     }
     eof {

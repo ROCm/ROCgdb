@@ -278,6 +278,8 @@ wchar_printer::count_next_character (wchar_iterator *iter,
 
       while (1)
 	{
+	  QUIT;
+
 	  /* Get the next character.  */
 	  d.num_chars = iter->iterate (&d.result, &chars, &d.buf, &d.buflen);
 
@@ -525,8 +527,6 @@ wchar_printer::print (struct ui_file *stream, const gdb_byte *string,
   while (i < print_max_chars)
     {
       int r;
-
-      QUIT;
 
       /* Grab the next character and repeat count.  */
       r = count_next_character (&iter, &converted_chars);

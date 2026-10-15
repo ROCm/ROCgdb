@@ -746,6 +746,15 @@ struct riscv_opcode
    disassembler, and requires special treatment by the assembler.  */
 #define INSN_MACRO		0xffffffff
 
+/* Define Zcmt jump table constants.  */
+#define ZCMT_TOTAL_ENTRIES 256
+#define ZCMT_JT_BEGIN 0
+#define ZCMT_JT_END 31
+#define ZCMT_JT_NUM_ENTRIES (ZCMT_JT_END - ZCMT_JT_BEGIN + 1)
+#define ZCMT_JALT_BEGIN (ZCMT_JT_END + 1)
+#define ZCMT_JALT_END (ZCMT_TOTAL_ENTRIES - 1)
+#define ZCMT_JALT_NUM_ENTRIES (ZCMT_JALT_END - ZCMT_JALT_BEGIN + 1)
+
 /* This is a list of macro expanded instructions.  */
 enum
 {

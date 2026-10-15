@@ -63,7 +63,8 @@ if {![runto_main]} {
     return
 }
 
-gdb_test "info proc" "process ${decimal}.*" "info proc with process"
+gdb_test "info proc" "Reading /proc for process ${decimal}.*" \
+    "info proc with process"
 
 gdb_test "info proc mapping" \
 	".*Mapped address spaces:.*${hex}${ws}${hex}${ws}${hex}${ws}${hex}.*"

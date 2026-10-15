@@ -278,6 +278,8 @@ enum i386_cpu
   CpuAMX_AVX512,
   /* AMX-TILE instructions required */
   CpuAMX_TILE,
+  /* Tile management instructions required (internal). */
+  CpuTILE,
   /* GFNI instructions required */
   CpuGFNI,
   /* VAES instructions required */
@@ -367,6 +369,8 @@ enum i386_cpu
   CpuAVX10_2,
   /* Intel AMX-TRANSPOSE Instructions support required.  */
   CpuAMX_TRANSPOSE,
+  /* ACE V1 instructions support required.  */
+  CpuACE_V1,
   /* Not supported in the 64bit mode  */
   CpuNo64,
 
@@ -405,6 +409,7 @@ enum i386_cpu
 		   cpuapx_f:1, \
 		   cpuavx10_2:1, \
 		   cpuamx_transpose:1, \
+		   cpuace_v1:1, \
       /* NOTE: This field needs to remain last. */ \
 		   cpuno64:1
 
@@ -552,6 +557,7 @@ typedef union i386_cpu_flags
       unsigned int cpuamx_movrs:1;
       unsigned int cpuamx_avx512:1;
       unsigned int cpuamx_tile:1;
+      unsigned int cputile:1;
       unsigned int cpugfni:1;
       unsigned int cpuvaes:1;
       unsigned int cpuvpclmulqdq:1;

@@ -85,10 +85,10 @@ foo:
 	llxaq	%r6,-10000(%r9,%r11)
 	bextg	%r6,%r9,%r11
 	bdepg	%r6,%r9,%r11
-	kimd	%r6,%r9
-	kimd	%r6,%r9,13
-	klmd	%r6,%r9
-	klmd	%r6,%r9,13
+	kimd	%r6,%r8
+	kimd	%r6,%r8,13
+	klmd	%r6,%r8
+	klmd	%r6,%r8,13
 	vcvbq	%v15,%v17,13
 	vcvdq	%v15,%v17,253,12
 	vtp	%v15

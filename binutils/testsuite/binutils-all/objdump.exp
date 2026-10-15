@@ -939,7 +939,29 @@ proc test_objdump_S { } {
 
     set test "objdump --source-comment"
 
-    set got [binutils_run $OBJDUMP "$OBJDUMPFLAGS --disassemble-all --source-comment=// tmpdir/testprog${exe}"]
+    if { [ishost *-*-mingw*] } then {
+	# Under Windows/MSYS2, command-line arguments are subject to automatic
+	# conversion of Unix-style paths to Windows-style paths, which can
+	# sometimes cause problems, as in this case.
+
+	# Save the current value of MSYS2_ARG_CONV_EXCL.
+	set conv_excl_was_set [info exists ::env(MSYS2_ARG_CONV_EXCL)]
+	if {$conv_excl_was_set} {
+	    set conv_excl $::env(MSYS2_ARG_CONV_EXCL)
+	}
+
+	set ::env(MSYS2_ARG_CONV_EXCL) "--source-comment="
+	set got [binutils_run $OBJDUMP "$OBJDUMPFLAGS --disassemble-all --source-comment=// tmpdir/testprog${exe}"]
+
+	# Restore the previous value of MSYS2_ARG_CONV_EXCL.
+	if {$conv_excl_was_set} {
+	    set ::env(MSYS2_ARG_CONV_EXCL) $conv_excl
+	} else {
+	    unset ::env(MSYS2_ARG_CONV_EXCL)
+	}
+    } else {
+	set got [binutils_run $OBJDUMP "$OBJDUMPFLAGS --disassemble-all --source-comment=// tmpdir/testprog${exe}"]
+    }
 
     set want "//static int local = 2"
 

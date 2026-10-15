@@ -697,7 +697,7 @@ public:
     if ((entry->flags & IS_SYNTHESIZED) != 0)
       return;
 
-    m_name_to_value_set[entry->name].emplace_back (entry);
+    m_name_to_value_set[entry->name ()].emplace_back (entry);
   }
 
   /* Build all the tables.  All symbols must be already inserted.

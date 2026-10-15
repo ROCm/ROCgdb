@@ -1,4 +1,3 @@
-#as: -mignore-start-align
 #ld: -e0
 #objdump: -d
 

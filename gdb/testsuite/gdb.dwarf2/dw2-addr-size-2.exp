@@ -1,0 +1,75 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test a CU with an address size that is neither 4 nor 8.
+#
+# In particular, test reading DW_FORM_addrx attributes from a CU whose address
+# size is 2, which used to crash GDB. This is seen in binaries produced by
+# Clang for AVR.
+
+load_lib dwarf.exp
+
+require dwarf2_support
+
+standard_testfile .c -dw.S
+
+set func_one_addr 0x1234
+set func_two_addr 0x1238
+
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    cu {
+	version 5
+	addr_size 2
+    } {
+	# Start this CU's contribution to .debug_addr and capture a label to
+	# its first entry.
+	set addr_base_lbl [debug_addr_label { version 5 }]
+
+	compile_unit {
+	    DW_AT_name dw2-addr-size-2.c
+	    DW_AT_comp_dir /tmp
+	    DW_AT_addr_base $addr_base_lbl
+	    DW_AT_low_pc $::func_one_addr DW_FORM_addrx
+	    DW_AT_high_pc 8 DW_FORM_data1
+	} {
+	    subprogram {
+		DW_AT_name func_one
+		DW_AT_low_pc $::func_one_addr DW_FORM_addrx
+		DW_AT_high_pc 4 DW_FORM_data1
+		DW_AT_external 1 flag
+	    } {
+	    }
+	    subprogram {
+		DW_AT_name func_two
+		DW_AT_low_pc $::func_two_addr DW_FORM_addrx
+		DW_AT_high_pc 4 DW_FORM_data1
+		DW_AT_external 1 flag
+	    } {
+	    }
+	}
+    }
+}
+
+if { [prepare_for_testing "failed to prepare" ${testfile} \
+	  [list $srcfile $asm_file] {nodebug}] } {
+    return -1
+}
+
+gdb_test "info address func_one" \
+    "Symbol \"func_one\" is a function at address $func_one_addr\\."
+
+gdb_test "info address func_two" \
+    "Symbol \"func_two\" is a function at address $func_two_addr\\."

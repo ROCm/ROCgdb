@@ -129,8 +129,8 @@ COMPILE = $(ECHO_CXX) $(COMPILE.pre) $(INTERNAL_CFLAGS) $(CXXFLAGS) \
 
 YACC = @YACC@
 
-# This is used to rebuild ada-lex.c from ada-lex.l.  If the program is
-# not defined, but ada-lex.c is present, compilation will continue,
+# This is used to rebuild ada-lex-gen.c from ada-lex.l.  If the program
+# is not defined, but ada-lex-gen.c is present, compilation will continue,
 # possibly with a warning.
 FLEX = flex
 
@@ -1033,6 +1033,7 @@ TARGET_FLAGS_TO_PASS = \
 # Files that should wind up in SFILES and whose corresponding .o
 # should be in COMMON_OBS.
 COMMON_SFILES = \
+	ada-exp-parser.c \
 	ada-lang.c \
 	ada-tasks.c \
 	ada-typeprint.c \
@@ -1066,6 +1067,7 @@ COMMON_SFILES = \
 	buffered-streams.c \
 	build-id.c \
 	buildsym.c \
+	c-exp-parser.c \
 	c-lang.c \
 	c-typeprint.c \
 	c-valprint.c \
@@ -1079,10 +1081,12 @@ COMMON_SFILES = \
 	corefile.c \
 	corelow.c \
 	cp-abi.c \
+	cp-name-parser.c \
 	cp-namespace.c \
 	cp-support.c \
 	cp-valprint.c \
 	ctfread.c \
+	d-exp-parser.c \
 	d-lang.c \
 	d-namespace.c \
 	d-valprint.c \
@@ -1101,6 +1105,7 @@ COMMON_SFILES = \
 	expanded-symbol.c \
 	expprint.c \
 	extension.c \
+	f-exp-parser.c \
 	f-lang.c \
 	f-typeprint.c \
 	f-valprint.c \
@@ -1118,6 +1123,7 @@ COMMON_SFILES = \
 	gmp-utils.c \
 	gnu-v2-abi.c \
 	gnu-v3-abi.c \
+	go-exp-parser.c \
 	go-lang.c \
 	go-typeprint.c \
 	go-valprint.c \
@@ -1135,6 +1141,7 @@ COMMON_SFILES = \
 	linespec.c \
 	local-fileio-target.c \
 	location.c \
+	m2-exp-parser.c \
 	m2-lang.c \
 	m2-typeprint.c \
 	m2-valprint.c \
@@ -1160,6 +1167,7 @@ COMMON_SFILES = \
 	opencl-lang.c \
 	osabi.c \
 	osdata.c \
+	p-exp-parser.c \
 	p-lang.c \
 	p-typeprint.c \
 	p-valprint.c \
@@ -1235,19 +1243,19 @@ COMMON_SFILES = \
 # Links made at configuration time should not be specified here, since
 # SFILES is used in building the distribution archive.
 SFILES = \
-	ada-exp.y \
+	ada-exp-parser.y \
 	arch/i386.c \
-	c-exp.y \
+	c-exp-parser.y \
 	cp-name-parser.y \
-	d-exp.y \
+	d-exp-parser.y \
 	dtrace-probe.c \
 	elf-none-tdep.c \
-	f-exp.y \
+	f-exp-parser.y \
 	gcore-elf.c \
 	gdb.c \
-	go-exp.y \
-	m2-exp.y \
-	p-exp.y \
+	go-exp-parser.y \
+	m2-exp-parser.y \
+	p-exp-parser.y \
 	proc-service.list \
 	ser-base.c \
 	ser-unix.c \
@@ -1277,6 +1285,7 @@ HFILES_NO_SRCDIR = \
 	aarch64-ravenscar-thread.h \
 	aarch64-tdep.h \
 	ada-casefold.h \
+	ada-exp-parser.h \
 	ada-exp.h \
 	ada-lang.h \
 	addrmap.h \
@@ -1301,6 +1310,7 @@ HFILES_NO_SRCDIR = \
 	arch/aarch64-mte.h \
 	arch/aarch64-mte-linux.h \
 	arch/aarch64-pauth-linux.h \
+	arch/aarch64-poe-linux.h \
 	arch/aarch64-scalable-linux.h \
 	arch/amd64.h \
 	arch/amd64-linux-tdesc.h \
@@ -1346,6 +1356,7 @@ HFILES_NO_SRCDIR = \
 	buffered-streams.h \
 	build-id.h \
 	buildsym.h \
+	c-exp-parser.h \
 	c-exp.h \
 	cgen-remap.h \
 	charset.h \
@@ -1378,6 +1389,7 @@ HFILES_NO_SRCDIR = \
 	config/nm-linux.h \
 	config/sparc/nm-sol2.h \
 	cp-abi.h \
+	cp-name-parser.h \
 	cp-support.h \
 	cris-tdep.h \
 	csky-tdep.h \
@@ -1393,6 +1405,7 @@ HFILES_NO_SRCDIR = \
 	disasm.h \
 	disasm-selftests.h \
 	displaced-stepping.h \
+	d-exp-parser.h \
 	d-lang.h \
 	dummy-frame.h \
 	dwarf2/abbrev.h \
@@ -1451,6 +1464,7 @@ HFILES_NO_SRCDIR = \
 	filesystem.h \
 	find-memory-region.h \
 	finish-thread-state.h \
+	f-exp-parser.h \
 	f-lang.h \
 	frame-base.h \
 	frame.h \
@@ -1476,6 +1490,7 @@ HFILES_NO_SRCDIR = \
 	gmp-utils.h \
 	gnu-nat.h \
 	gnu-nat-mig.h \
+	go-exp-parser.h \
 	go-lang.h \
 	gregset.h \
 	guile/guile.h \
@@ -1511,6 +1526,7 @@ HFILES_NO_SRCDIR = \
 	local-fileio-target.h \
 	location.h \
 	loongarch-tdep.h \
+	m2-exp-parser.h \
 	m2-exp.h \
 	m2-lang.h \
 	m32r-tdep.h \
@@ -1550,9 +1566,9 @@ HFILES_NO_SRCDIR = \
 	nat/aarch64-linux-hw-point.h \
 	nat/aarch64-mte-linux-ptrace.h \
 	nat/aarch64-pauth-linux.h \
+	nat/aarch64-poe-linux.h \
 	nat/aarch64-scalable-linux-ptrace.h \
 	nat/aarch64-scalable-linux-sigcontext.h \
-	nat/amd64-linux.h \
 	nat/amd64-linux-siginfo.h \
 	nat/fork-inferior.h \
 	nat/gdb_ptrace.h \
@@ -1597,6 +1613,7 @@ HFILES_NO_SRCDIR = \
 	osdata.h \
 	pager.h \
 	parser-defs.h \
+	p-exp-parser.h \
 	p-lang.h \
 	ppc64-tdep.h \
 	ppc-fbsd-tdep.h \
@@ -1746,7 +1763,6 @@ HFILES_NO_SRCDIR = \
 	xml-syscall.h \
 	xml-tdesc.h \
 	xtensa-tdep.h \
-	yy-remap.h \
 	z80-tdep.h
 
 # Header files that already have srcdir in them, or which are in objdir.
@@ -2063,38 +2079,74 @@ REQUIRED_SUBDIRS = doc | testsuite | data-directory
 
 # Parser intermediate files.
 YYFILES = \
-	ada-exp.c \
-	ada-lex.c \
-	c-exp.c \
-	cp-name-parser.c \
-	d-exp.c \
-	f-exp.c \
-	go-exp.c \
-	m2-exp.c \
-	p-exp.c
+	ada-exp-parser-gen.c \
+	ada-lex-gen.c \
+	c-exp-parser-gen.c \
+	cp-name-parser-gen.c \
+	d-exp-parser-gen.c \
+	f-exp-parser-gen.c \
+	go-exp-parser-gen.c \
+	m2-exp-parser-gen.c \
+	p-exp-parser-gen.c
 
-# ada-lex.c is included by another file, so it shouldn't wind up as a
-# .o itself.
-YYOBJ = $(filter-out ada-lex.o,$(patsubst %.c,%.o,$(YYFILES)))
+# ada-lex-gen.c is included by another file, so it shouldn't wind up as
+# a .o itself.
+YYOBJ = $(filter-out ada-lex-gen.o,$(patsubst %.c,%.o,$(YYFILES)))
+
+# The headers bison/byacc and flex generate alongside the files above.
+YYHFILES = $(patsubst %-gen.c,%-gen.h,$(YYFILES))
+
+# Files that used to be generated in the build directory (for builds from git
+# at least), but are now committed source files.  A leftover copy in an
+# existing build directory would shadow the real source file with the same name
+# and cause a hard to debug build failure.
+#
+# Files in there can be removed after a while, once build directories with them
+# are unlikely to be around.
+STALE_GENERATED_FILES = cp-name-parser.c
 
 # Things which need to be built when making a distribution.
 
-DISTSTUFF = $(YYFILES)
+DISTSTUFF = $(YYFILES) $(YYHFILES)
 
 
 # All generated files which can be included by another file.
 generated_files = \
-	ada-lex.c \
+	ada-lex-gen.c \
 	config.h \
 	jit-reader.h \
+	$(YYHFILES) \
 	$(NAT_GENERATED_FILES) \
 	$(NM_H)
 
 # Flags needed to compile Python code
 PYTHON_CFLAGS = @PYTHON_CFLAGS@
 
-all: gdb$(EXEEXT) $(CONFIG_ALL) gcore gstack gdb-add-index
+all: check-stale-generated-files gdb$(EXEEXT) $(CONFIG_ALL) gcore \
+	gstack gdb-add-index
 	@$(MAKE) $(FLAGS_TO_PASS) DO=all "DODIRS=$(SUBDIRS)" subdir_do
+
+# Error out if the build directory contains known stale generated files, which
+# would shadow the source files with the same name and cause a hard to debug
+# build failure.  See STALE_GENERATED_FILES above.
+.PHONY: check-stale-generated-files
+check-stale-generated-files:
+	@if test "$(srcdir)" != "."; then \
+		stale=""; \
+		for f in $(STALE_GENERATED_FILES); do \
+			if test -f "$$f"; then \
+				stale="$$stale $$f"; \
+			fi; \
+		done; \
+		if test -n "$$stale"; then \
+			echo "Error: stale generated files found in the build directory:" >&2; \
+			echo "   $$stale" >&2; \
+			echo "They are left over from an older build of GDB and shadow the" >&2; \
+			echo "source files with the same name.  Run \"make clean\" (or delete" >&2; \
+			echo "them manually) then build again." >&2; \
+			exit 1; \
+		fi; \
+	fi
 
 # Rule for compiling .c files.
 %.o: %.c
@@ -2344,7 +2396,7 @@ INIT_FILES_FILTER_OUT = \
 
 INIT_FILES = \
 	$(patsubst %.o,%.c, \
-	  $(patsubst %-exp.o,%-exp.y, \
+	  $(patsubst %-exp-parser-gen.o,%-exp-parser.y, \
 	    $(filter-out $(INIT_FILES_FILTER_OUT), $(COMMON_OBS))))
 
 init.c: stamp-init; @true
@@ -2419,6 +2471,9 @@ clean mostlyclean: $(CONFIG_CLEAN)
 	for d in $(ALL_DEPDIRS); do \
 		if test -d "$$d"; then rmdir "$$d" || exit 1; fi; \
 	done
+	if test "$(srcdir)" != "."; then \
+		rm -f $(STALE_GENERATED_FILES); \
+	fi
 
 # This used to depend on c-exp.c m2-exp.c TAGS
 # I believe this is wrong; the makefile standards for distclean just
@@ -2443,7 +2498,7 @@ local-maintainer-clean:
 	@echo "This command is intended for maintainers to use;"
 	@echo "it deletes files that may require special tools to rebuild."
 	rm -f TAGS
-	rm -f $(YYFILES)
+	rm -f $(YYFILES) $(YYHFILES)
 	rm -f nm.h config.status
 
 do-maintainer-clean:
@@ -2683,47 +2738,59 @@ po/$(PACKAGE).pot: force
 #
 # YACC/LEX dependencies
 #
-# LANG-exp.c is generated in objdir from LANG-exp.y if it doesn't
-# exist in srcdir, then compiled in objdir to LANG-exp.o.  If we
-# said LANG-exp.c rather than ./c-exp.c some makes would
-# sometimes re-write it into $(srcdir)/c-exp.c.  Remove bogus
+# LANG-exp-parser-gen.c is generated in objdir from LANG-exp-parser.y if
+# it doesn't exist in srcdir, then compiled in objdir to
+# LANG-exp-parser-gen.o.  If we said LANG-exp-parser-gen.c rather than
+# ./c-exp-parser-gen.c some makes would sometimes re-write it into
+# $(srcdir)/c-exp-parser-gen.c.  Remove bogus
 # decls for malloc/realloc/free which conflict with everything else.
-# Strictly speaking c-exp.c should therefore depend on
+# Strictly speaking c-exp-parser-gen.c should therefore depend on
 # Makefile.in, but that was a pretty big annoyance.
 
+# Cancel make's built-in rules for producing a .c file from a .y or .l
+# file, to avoid them producing a <build>/foo-exp.c file from
+# <source>/foo-exp.y, when we also have a hand-written <source>/foo-exp.c
+# file.
 %.c: %.y
-	$(ECHO_YACC) $(SHELL) $(YLWRAP) $< y.tab.c $@.tmp -- \
-		$(YACC) $(YFLAGS) || (rm -f $@.tmp; false)
-	@sed -e '/extern.*malloc/d' \
-	     -e '/extern.*realloc/d' \
-	     -e '/extern.*free/d' \
-	     -e '/include.*malloc.h/d' \
-	     -e 's/\([^x]\)malloc/\1xmalloc/g' \
-	     -e 's/\([^x]\)realloc/\1xrealloc/g' \
-	     -e 's/\([ \t;,(]\)free\([ \t]*[&(),]\)/\1xfree\2/g' \
-	     -e 's/\([ \t;,(]\)free$$/\1xfree/g' \
-	     -e '/^#line.*y.tab.c/d' \
-	     -e 's/YY_NULL/YY_NULLPTR/g' \
-	     -e "s/YYSTYPE/$(subst -,_,$*)_YYSTYPE/g" \
-	     -e "s/yyalloc/$(subst -,_,$*)_yyalloc/g" \
-	     -e "s/yysymbol_kind_t/$(subst -,_,$*)_yysymbol_kind_t/g" \
-	  < $@.tmp > $@.new && \
-	  rm -f $@.tmp && \
-	  mv $@.new $@
 %.c: %.l
-	$(ECHO_LEX) $(FLEX) -t $< > $@.tmp || (rm -f $@.tmp; false)
-	@sed -e '/extern.*malloc/d' \
-	     -e '/extern.*realloc/d' \
-	     -e '/extern.*free/d' \
-	     -e '/include.*malloc.h/d' \
-	     -e 's/\([^x]\)malloc/\1xmalloc/g' \
-	     -e 's/\([^x]\)realloc/\1xrealloc/g' \
-	     -e 's/\([ \t;,(]\)free\([ \t]*[&(),]\)/\1xfree\2/g' \
-	     -e 's/\([ \t;,(]\)free$$/\1xfree/g' \
-	     -e 's/yy_flex_xrealloc/yyxrealloc/g' \
-	     < $@.tmp > $@.new && \
-	     rm -f $@.tmp && \
-	     mv $@.new $@
+
+# Post-process a file produced by a parser generator, see the script
+# for details.
+POST_PROCESS_PARSER_OUTPUT_SH = $(srcdir)/post-process-parser-output.sh
+POST_PROCESS_PARSER_OUTPUT = $(SHELL) $(POST_PROCESS_PARSER_OUTPUT_SH)
+
+# The prefix to give to the symbols each parser or lexer generator
+# produces, so that they can coexist in the same program.  There is no
+# rule tying it to the file name, so spell it out for each one.
+YY_PREFIX_ada-exp-parser = ada_yy
+YY_PREFIX_ada-lex = ada_yy
+YY_PREFIX_c-exp-parser = c_yy
+YY_PREFIX_cp-name-parser = cpname_yy
+YY_PREFIX_d-exp-parser = d_yy
+YY_PREFIX_f-exp-parser = f_yy
+YY_PREFIX_go-exp-parser = go_yy
+YY_PREFIX_m2-exp-parser = m2_yy
+YY_PREFIX_p-exp-parser = pascal_yy
+
+%-gen.c %-gen.h: %.y $(POST_PROCESS_PARSER_OUTPUT_SH)
+	$(ECHO_YACC) $(SHELL) $(YLWRAP) $< \
+		y.tab.c $*-gen.c.tmp \
+		y.tab.h $*-gen.h.tmp -- \
+		$(YACC) $(YFLAGS) -p $(YY_PREFIX_$*) -t -d \
+			|| (rm -f $*-gen.c.tmp $*-gen.h.tmp; false)
+	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $*-gen.c.tmp > $*-gen.c.new \
+		&& rm -f $*-gen.c.tmp && mv $*-gen.c.new $*-gen.c
+	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $*-gen.h.tmp > $*-gen.h.new \
+		&& rm -f $*-gen.h.tmp && mv $*-gen.h.new $*-gen.h
+
+%-gen.c %-gen.h: %.l $(POST_PROCESS_PARSER_OUTPUT_SH)
+	$(ECHO_LEX) $(FLEX) -t -P $(YY_PREFIX_$*) \
+		--header-file=$*-gen.h.tmp $< > $*-gen.c.tmp \
+			|| (rm -f $*-gen.c.tmp $*-gen.h.tmp; false)
+	@$(POST_PROCESS_PARSER_OUTPUT) flex $* < $*-gen.c.tmp > $*-gen.c.new \
+		&& rm -f $*-gen.c.tmp && mv $*-gen.c.new $*-gen.c
+	@$(POST_PROCESS_PARSER_OUTPUT) flex $* < $*-gen.h.tmp > $*-gen.h.new \
+		&& rm -f $*-gen.h.tmp && mv $*-gen.h.new $*-gen.h
 
 # XML rules
 

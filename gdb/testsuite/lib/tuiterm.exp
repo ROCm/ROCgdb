@@ -56,15 +56,12 @@ proc Term::_log_cur { what body } {
     set orig_cur_row $_cur_row
     set orig_cur_col $_cur_col
 
-    set code [catch {uplevel $body} result]
-
-    _log "$what, cursor: ($orig_cur_row, $orig_cur_col) -> ($_cur_row, $_cur_col)"
-
-    if { $code == 1 } {
-	global errorInfo errorCode
-	return -code $code -errorinfo $errorInfo -errorcode $errorCode $result
-    } else {
-	return -code $code $result
+    try {
+	transparent_uplevel $body
+    } finally {
+	set before "($orig_cur_row, $orig_cur_col)"
+	set after "($_cur_row, $_cur_col)"
+	_log "$what, cursor: $before -> $after"
     }
 }
 
@@ -708,6 +705,9 @@ proc Term::_csi_0x3f_h { args } {
 	    1006 {
 		_log "ignored: Enable SGR Mouse Mode"
 	    }
+	    1034 {
+		_log "ignored: Interpret meta key"
+	    }
 	    1049 {
 		_log "switch to alternate screen"
 		_set_alternate 1
@@ -736,6 +736,9 @@ proc Term::_csi_0x3f_l { args } {
 	    }
 	    1006 {
 		_log "ignored: Disable SGR Mouse Mode"
+	    }
+	    1034 {
+		_log "ignored: Don't interpret meta key"
 	    }
 	    1049 {
 		_log "switch from alternate screen"

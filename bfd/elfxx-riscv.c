@@ -961,6 +961,64 @@ static const reloc_howto_type howto_table_internal[] =
 	 0,				/* src_mask */
 	 ENCODE_STYPE_IMM (-1U),	/* dst_mask */
 	 false),			/* pcrel_offset */
+
+  /* R_RISCV_TABLE_JUMP.  */
+  EMPTY_HOWTO (0),
+
+  /* TLSDESC relaxed to Initial Exec.  */
+  HOWTO (R_RISCV_TLSDESC_IE_HI,		/* type */
+	 0,				/* rightshift */
+	 4,				/* size */
+	 32,				/* bitsize */
+	 true,				/* pc_relative */
+	 0,				/* bitpos */
+	 complain_overflow_signed,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,		/* special_function */
+	 "R_RISCV_TLSDESC_IE_HI",	/* name */
+	 false,				/* partial_inplace */
+	 0,				/* src_mask */
+	 ENCODE_UTYPE_IMM (-1U),	/* dst_mask */
+	 false),			/* pcrel_offset */
+  HOWTO (R_RISCV_TLSDESC_IE_LO,		/* type */
+	 0,				/* rightshift */
+	 4,				/* size */
+	 32,				/* bitsize */
+	 false,				/* pc_relative */
+	 0,				/* bitpos */
+	 complain_overflow_signed,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,		/* special_function */
+	 "R_RISCV_TLSDESC_IE_LO",	/* name */
+	 false,				/* partial_inplace */
+	 0,				/* src_mask */
+	 ENCODE_ITYPE_IMM (-1U),	/* dst_mask */
+	 false),			/* pcrel_offset */
+  /* TLSDESC relaxed to Local Exec.  */
+  HOWTO (R_RISCV_TLSDESC_LE_HI,		/* type */
+	 0,				/* rightshift */
+	 4,				/* size */
+	 32,				/* bitsize */
+	 false,				/* pc_relative */
+	 0,				/* bitpos */
+	 complain_overflow_signed,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,		/* special_function */
+	 "R_RISCV_TLSDESC_LE_HI",	/* name */
+	 false,				/* partial_inplace */
+	 0,				/* src_mask */
+	 ENCODE_UTYPE_IMM (-1U),	/* dst_mask */
+	 false),			/* pcrel_offset */
+  HOWTO (R_RISCV_TLSDESC_LE_LO,		/* type */
+	 0,				/* rightshift */
+	 4,				/* size */
+	 32,				/* bitsize */
+	 false,				/* pc_relative */
+	 0,				/* bitpos */
+	 complain_overflow_signed,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,		/* special_function */
+	 "R_RISCV_TLSDESC_LE_LO",	/* name */
+	 false,				/* partial_inplace */
+	 0,				/* src_mask */
+	 ENCODE_ITYPE_IMM (-1U),	/* dst_mask */
+	 false),			/* pcrel_offset */
 };
 
 /* A mapping from BFD reloc types to RISC-V ELF reloc types.  */
@@ -1233,8 +1291,8 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"xxtvarith", "+v",	check_implicit_always},
   {"xxtvcoder", "+v",	check_implicit_always},
 
-  {"xsmtvdot", "+zve32x", check_implicit_always},
   {"xsmtvdotii", "+xsmtvdot", check_implicit_always},
+  {"xsmtvdot", "+zve32x", check_implicit_always},
 
   {"v", "+zve64d,+zvl128b", check_implicit_always},
   {"zvabd", "+zve32x", check_implicit_always},
@@ -1623,6 +1681,9 @@ static const struct riscv_supported_ext riscv_supported_std_s_ext[] =
   {"smrnmi",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smstateen",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"smdbltrp",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
+  {"ss",		ISA_SPEC_CLASS_DRAFT,		1, 11, 0 },
+  {"ss",		ISA_SPEC_CLASS_DRAFT,		1, 12, 0 },
+  {"ss",		ISA_SPEC_CLASS_DRAFT,		1, 13, 0 },
   {"ssaia",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssccfg",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
   {"ssccptr",		ISA_SPEC_CLASS_DRAFT,		1, 0, 0 },
@@ -3543,6 +3604,14 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xsmtvdot";
     case INSN_CLASS_XSMTVDOTII:
       return "xsmtvdotii";
+    case INSN_CLASS_XMIPSCBOP:
+      return "xmipscbop";
+    case INSN_CLASS_XMIPSCMOV:
+      return "xmipscmov";
+    case INSN_CLASS_XMIPSEXECTL:
+      return "xmipsexectl";
+    case INSN_CLASS_XMIPSLSP:
+      return "xmipslsp";
     case INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII:
       return _("xsmtvdot' or `xsmtvdotii");
     default:

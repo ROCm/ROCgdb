@@ -4698,8 +4698,8 @@ Arguments are separated by spaces and may be quoted.
 Example:
 
 @smallexample
-print(gdb.string_to_argv ("1 2\ \\\"3 '4 \"5' \"6 '7\""))
-['1', '2 "3', '4 "5', "6 '7"]
+print(gdb.string_to_argv (r"""1 2\ \"3 "4 '5" '6 "7'"""))
+['1', '2 "3', "4 '5", '6 "7']
 @end smallexample
 
 @end defun

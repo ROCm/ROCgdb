@@ -34,6 +34,8 @@ if [ -z "$AWK" ]; then
 	test -n "$awk_prog" && break
     done
     AWK="$awk_prog"
+else
+    AWK=$(command -v "$AWK")
 fi
 if [ ! -x "$AWK" ]; then
     echo "$0: could not find usable awk interpreter" 1>&2

@@ -245,6 +245,7 @@ accept various extension mnemonics.  For example,
 @code{amx_movrs},
 @code{amx_avx512},
 @code{amx_tile},
+@code{ace_v1},
 @code{vmx},
 @code{vmfunc},
 @code{smx},
@@ -1737,7 +1738,7 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.amx_int8} @tab @samp{.amx_bf16} @tab @samp{.amx_fp16}
 @item @samp{.amx_complex} @tab @samp{.amx_transpose} @tab @samp{.amx_tf32}
 @item @samp{.amx_fp8} @tab @samp{.amx_movrs} @tab @samp{.amx_avx512}
-@item @samp{.amx_tile}
+@item @samp{.amx_tile} @tab @samp{.ace_v1}
 @item @samp{.kl} @tab @samp{.widekl} @tab @samp{.uintr} @tab @samp{.hreset}
 @item @samp{.3dnow} @tab @samp{.3dnowa} @tab @samp{.sse4a} @tab @samp{.sse5}
 @item @samp{.syscall} @tab @samp{.rdtscp} @tab @samp{.svme}

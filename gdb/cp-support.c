@@ -19,6 +19,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "cp-support.h"
+#include "cp-name-parser.h"
 #include "language.h"
 #include "demangle.h"
 #include "cli/cli-cmds.h"
@@ -42,9 +43,6 @@
 #include "run-on-main-thread.h"
 #include "typeprint.h"
 #include "inferior.h"
-
-#define d_left(dc) (dc)->u.s_binary.left
-#define d_right(dc) (dc)->u.s_binary.right
 
 /* Functions related to demangled name parsing.  */
 

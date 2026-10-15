@@ -1,0 +1,60 @@
+# Copyright (C) 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test a binary that uses POE and exposed POR_EL0 register.
+
+global hex
+global decimal
+
+require allow_aarch64_poe_tests
+
+standard_testfile
+if { [prepare_for_testing "failed to prepare" ${testfile} ${srcfile}] } {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+# Validate the presence of the POE register.
+gdb_test "info registers por_el0" \
+	 "por_el0\[ \t\]+$hex.*" \
+	 "info register por_el0 available"
+
+gdb_test "p \$por_el0" \
+	"\\$\[0-9\]+ = .*" \
+	"print por_el0 available"
+
+gdb_test "p/x \$por_el0" \
+	 "\\$\[0-9\]+ = ${hex}" \
+	 "print/x por_el0 available"
+
+gdb_test "info registers por" \
+	 "por_el0\[ \t\]+$hex.*por_p\[0-9\]+\[ \t\]+$hex.*" \
+	 "info registers por group available"
+
+gdb_test_no_output "set \$por_el0 = 0x007" \
+	 "initialize POR_EL0"
+
+gdb_test_no_output "set \$por_p1 = 0x07" \
+	 "write por_p1 pseudo-register"
+
+gdb_test_no_output "set \$por_p3 = 0x07" \
+	 "write por_p3 pseudo-register"
+
+gdb_test "p/x \$por_el0" \
+	 "\\$\[0-9\]+ = 0x7077" \
+	 "POE pseudo-register writes reflected in POR_EL0"

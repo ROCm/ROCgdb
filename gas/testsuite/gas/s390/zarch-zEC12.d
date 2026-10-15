@@ -1,4 +1,4 @@
-#name: s390x opcodes (zEC12)
+#name: s390x opcodes (zEC12 / arch10)
 #objdump: -dr
 
 .*: +file format .*

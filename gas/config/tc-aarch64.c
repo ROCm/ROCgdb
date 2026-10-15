@@ -6844,23 +6844,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SVE_Rm:
 	  po_int_fp_reg_or_fail (REG_TYPE_R_ZR);
 
-	  /* In LS64 load/store instructions Rt register number must be even
-	     and <=22.  */
-	  if (operands[i] == AARCH64_OPND_Rt_LS64)
-	    {
-	      /* We've already checked if this is valid register.
-		This will check if register number (Rt) is not undefined for
-		LS64 instructions:
-		if Rt<4:3> == '11' || Rt<0> == '1' then UNDEFINED.  */
-	      if ((info->reg.regno & 0x18) == 0x18
-		  || (info->reg.regno & 0x01) == 0x01)
-		{
-		  set_syntax_error
-		    (_("invalid Rt register number in 64-byte load/store"));
-		  goto failure;
-		}
-	    }
-	  else if (operands[i] == AARCH64_OPND_X16)
+	  if (operands[i] == AARCH64_OPND_X16)
 	    {
 	      if (info->reg.regno != 16)
 		{

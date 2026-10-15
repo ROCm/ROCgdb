@@ -85,7 +85,9 @@ struct dwarf2_cie
   /* Encoding of addresses.  */
   gdb_byte encoding;
 
-  /* Target address size in bytes.  */
+  /* Target address size in bytes.
+
+     Contains one of the values accepted by dwarf2_addr_size_is_supported.  */
   int addr_size;
 
   /* Target pointer size in bytes.  */
@@ -892,7 +894,9 @@ struct dwarf2_frame_cache
   /* Return address register.  */
   struct dwarf2_frame_state_reg retaddr_reg;
 
-  /* Target address size in bytes.  */
+  /* Target address size in bytes.
+
+     Contains one of the values accepted by dwarf2_addr_size_is_supported.  */
   int addr_size;
 
   /* The dwarf2_per_objfile from which this frame description came.  */
@@ -1839,6 +1843,11 @@ decode_frame_entry_1 (struct gdbarch *gdbarch,
 	  /* FIXME: check that this is the same as from the CU header.  */
 	  cie->addr_size = read_1_byte (unit->abfd, buf);
 	  ++buf;
+
+	  if (!dwarf2_addr_size_is_supported (cie->addr_size))
+	    error (_("Unsupported address size in CIE "
+		     "(is %u, should be 2, 4 or 8)."), cie->addr_size);
+
 	  cie->segment_size = read_1_byte (unit->abfd, buf);
 	  ++buf;
 	}

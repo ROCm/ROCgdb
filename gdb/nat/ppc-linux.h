@@ -63,6 +63,9 @@
 #ifndef PPC_FEATURE2_HTM
 #define PPC_FEATURE2_HTM 0x40000000
 #endif
+#ifndef PPC_FEATURE2_DMF
+#define PPC_FEATURE2_DMF 0x00008000
+#endif
 
 /* Glibc's headers don't define PTRACE_GETVRREGS so we cannot use a
    configure time check.  Some older glibc's (for instance 2.2.1)

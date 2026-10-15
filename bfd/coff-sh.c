@@ -839,6 +839,17 @@ sh_relax_section (bfd *abfd,
       /* Get the value of the symbol referred to by the reloc.  */
       if (! _bfd_coff_get_external_symbols (abfd))
 	goto error_return;
+      /* Sentinel -1 indicates no symbol; skip.  */
+      if (irelfn->r_symndx == -1)
+	continue;
+      if (! coff_symndx_in_range (abfd, irelfn->r_symndx))
+	{
+	  _bfd_error_handler
+	    /* xgettext: c-format */
+	    (_("%pB: %#" PRIx64 ": invalid symbol index %ld in relocs"),
+	     abfd, (uint64_t) irelfn->r_vaddr, irelfn->r_symndx);
+	  continue;
+	}
       bfd_coff_swap_sym_in (abfd,
 			    ((bfd_byte *) obj_coff_external_syms (abfd)
 			     + (irelfn->r_symndx
@@ -1167,6 +1178,24 @@ sh_relax_delete_bytes (bfd *abfd,
 	case R_SH_IMM32CE:
 	case R_SH_IMAGEBASE:
 #endif
+	  /* Sentinel -1 indicates no symbol; nothing to adjust.  */
+	  if (irel->r_symndx == -1)
+	    {
+	      start = stop = addr;
+	      break;
+	    }
+	  /* Skip adjusting this relocation for an invalid symbol index while
+	     allowing error recovery.  */
+	  if (! coff_symndx_in_range (abfd, irel->r_symndx))
+	    {
+	      _bfd_error_handler
+		/* xgettext: c-format */
+		(_("%pB: %#" PRIx64 ": invalid symbol index %ld in relocs"),
+		 abfd, (uint64_t) irel->r_vaddr, irel->r_symndx);
+	      start = stop = addr;
+	      break;
+	    }
+
 	  /* If this reloc is against a symbol defined in this
 	     section, and the symbol will not be adjusted below, we
 	     must check the addend to see it will put the value in
@@ -1199,6 +1228,21 @@ sh_relax_delete_bytes (bfd *abfd,
 	  break;
 
 	case R_SH_PCDISP:
+	  /* Sentinel -1 indicates no symbol; nothing to adjust.  */
+	  if (irel->r_symndx == -1)
+	    {
+	      start = stop = addr;
+	      break;
+	    }
+	  if (! coff_symndx_in_range (abfd, irel->r_symndx))
+	    {
+	      _bfd_error_handler
+		/* xgettext: c-format */
+		(_("%pB: %#" PRIx64 ": invalid symbol index %ld in relocs"),
+		 abfd, (uint64_t) irel->r_vaddr, irel->r_symndx);
+	      start = stop = addr;
+	      break;
+	    }
 	  bfd_coff_swap_sym_in (abfd,
 				((bfd_byte *) obj_coff_external_syms (abfd)
 				 + (irel->r_symndx
@@ -1393,6 +1437,17 @@ sh_relax_delete_bytes (bfd *abfd,
 #endif
 	    continue;
 
+	  /* Sentinel -1 indicates no symbol; skip.  */
+	  if (irelscan->r_symndx == -1)
+	    continue;
+	  if (! coff_symndx_in_range (abfd, irelscan->r_symndx))
+	    {
+	      _bfd_error_handler
+		/* xgettext: c-format */
+		(_("%pB: %#" PRIx64 ": invalid symbol index %ld in relocs"),
+		 abfd, (uint64_t) irelscan->r_vaddr, irelscan->r_symndx);
+	      continue;
+	    }
 	  bfd_coff_swap_sym_in (abfd,
 				((bfd_byte *) obj_coff_external_syms (abfd)
 				 + (irelscan->r_symndx
@@ -2768,7 +2823,7 @@ sh_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	    {
 	      _bfd_error_handler
 		/* xgettext: c-format */
-		(_("%pB: illegal symbol index %ld in relocs"),
+		(_("%pB: invalid symbol index %ld in relocs"),
 		 input_bfd, symndx);
 	      bfd_set_error (bfd_error_bad_value);
 	      return false;

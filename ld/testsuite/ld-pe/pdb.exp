@@ -1837,6 +1837,28 @@ proc test10 { } {
     }
 }
 
+# Check that a PDB file with more than 65535 source file references can be
+# created.
+
+proc test11 { } {
+    global as
+    global ld
+    global srcdir
+    global subdir
+
+    if { ![ld_assemble $as $srcdir/$subdir/pdb4a.s tmpdir/pdb4a.o]
+	 || ![ld_assemble $as $srcdir/$subdir/pdb4b.s tmpdir/pdb4b.o] } {
+	unsupported "Build pdb4a.o and pdb4b.o"
+	return
+    }
+
+    if ![ld_link $ld "tmpdir/pdb4.exe" "--pdb=tmpdir/pdb4.pdb -e main tmpdir/pdb4a.o tmpdir/pdb4b.o"] {
+	fail "Create PDB file with more than 65535 source file references"
+    } else {
+	pass "Create PDB file with more than 65535 source file references"
+    }
+}
+
 test1
 test2
 test3
@@ -1847,3 +1869,4 @@ test7
 test8
 test9
 test10
+test11
