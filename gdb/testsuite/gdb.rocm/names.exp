@@ -210,8 +210,8 @@ foreach entry $all_kernels_info {
     do_test_prefix $func
 }
 
-# Test running all kernels at once outside the debugger first, to make
-# sure the runtime respects GPU_MAX_HW_QUEUES properly.
+# Check that the program completes outside the debugger before testing
+# concurrent breakpoint hits.
 set result [remote_exec target "env $inferior_env $binfile all"]
 set status [lindex $result 0]
 gdb_assert {$status == 0} "runs correctly outside debugger"
