@@ -17,6 +17,12 @@ Full documentation for ROCgdb is available at
   in the target id of a GPU thread, if the dispatch is running in cluster
   mode.  Also, the "info dispatch" command shows cluster dimensions.
 
+### Resolved issues
+
+- If a GPU thread caused SIGSEGV, which is by default reported imprecisely,
+  but also hit a breakpoint, ROCgdb would hide SIGSEGV and show the
+  breakpoint hit.  This is fixed to prioritize and show SIGSEGV instead.
+
 ## ROCgdb-16.3 for ROCm-10.1
 
 ### Added
