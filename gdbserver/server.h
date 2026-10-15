@@ -33,19 +33,6 @@ static_assert (sizeof (CORE_ADDR) >= sizeof (void *));
 
 #include "gdbsupport/version.h"
 
-#if !HAVE_DECL_PERROR
-#ifndef perror
-extern void perror (const char *);
-#endif
-#endif
-
-#if !HAVE_DECL_VASPRINTF
-extern int vasprintf(char **strp, const char *fmt, va_list ap);
-#endif
-#if !HAVE_DECL_VSNPRINTF
-int vsnprintf(char *str, size_t size, const char *format, va_list ap);
-#endif
-
 #ifdef IN_PROCESS_AGENT
 #  define PROG "ipa"
 #else

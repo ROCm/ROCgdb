@@ -1547,6 +1547,15 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	    }
 	  break;
 
+	case AARCH64_OPND_Rd_NOT_ZR:
+	  if (opnd->reg.regno == 31)
+	    {
+	      set_other_error (mismatch_detail, idx,
+			       _("xzr is not allowed"));
+	      return false;
+	    }
+	  break;
+
 	default:
 	  break;
 	}
@@ -2144,6 +2153,7 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 
 	case AARCH64_OPND_ADDR_PCREL9:
 	case AARCH64_OPND_ADDR_PCREL14:
+	case AARCH64_OPND_ADDR_UPCREL16:
 	case AARCH64_OPND_ADDR_PCREL19:
 	case AARCH64_OPND_ADDR_PCREL21:
 	case AARCH64_OPND_ADDR_PCREL26:
@@ -3848,6 +3858,7 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
   switch (opnd->type)
     {
     case AARCH64_OPND_Rd:
+    case AARCH64_OPND_Rd_NOT_ZR:
     case AARCH64_OPND_Rn:
     case AARCH64_OPND_Rm:
     case AARCH64_OPND_Rt:
@@ -4544,10 +4555,14 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
 
     case AARCH64_OPND_ADDR_PCREL9:
     case AARCH64_OPND_ADDR_PCREL14:
+    case AARCH64_OPND_ADDR_UPCREL16:
     case AARCH64_OPND_ADDR_PCREL19:
     case AARCH64_OPND_ADDR_PCREL21:
     case AARCH64_OPND_ADDR_PCREL26:
-      addr = pc + AARCH64_PCREL_OFFSET + opnd->imm.value;
+      if (opnd->type == AARCH64_OPND_ADDR_UPCREL16)
+	addr = pc + AARCH64_PCREL_OFFSET - opnd->imm.value;
+      else
+	addr = pc + AARCH64_PCREL_OFFSET + opnd->imm.value;
       if (pcrel_p)
 	*pcrel_p = 1;
       if (address)

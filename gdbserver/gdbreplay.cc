@@ -29,9 +29,7 @@
 #if HAVE_SYS_FILE_H
 #include <sys/file.h>
 #endif
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 #include <unistd.h>
 #ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>

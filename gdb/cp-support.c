@@ -714,7 +714,7 @@ mangled_name_to_comp (const char *mangled_name, int options,
 
 /* Return the name of the class containing method PHYSNAME.  */
 
-char *
+gdb::unique_xmalloc_ptr<char>
 cp_class_name_from_physname (const char *physname)
 {
   void *storage = NULL;
@@ -797,7 +797,7 @@ cp_class_name_from_physname (const char *physname)
     }
 
   xfree (storage);
-  return ret.release ();
+  return ret;
 }
 
 /* Return the child of COMP which is the basename of a method,
@@ -856,32 +856,6 @@ unqualified_name_from_comp (struct demangle_component *comp)
     }
 
   return ret_comp;
-}
-
-/* Return the name of the method whose linkage name is PHYSNAME.  */
-
-char *
-method_name_from_physname (const char *physname)
-{
-  void *storage = NULL;
-  gdb::unique_xmalloc_ptr<char> demangled_name;
-  gdb::unique_xmalloc_ptr<char> ret;
-  struct demangle_component *ret_comp;
-  demangle_parse_info_up info
-    = mangled_name_to_comp (physname, DMGL_ANSI, &storage, &demangled_name);
-
-  if (info == nullptr)
-    return nullptr;
-
-  ret_comp = unqualified_name_from_comp (info->tree);
-
-  if (ret_comp != NULL)
-    /* The ten is completely arbitrary; we don't have a good
-       estimate.  */
-    ret = cp_comp_to_string (ret_comp, 10);
-
-  xfree (storage);
-  return ret.release ();
 }
 
 /* If FULL_NAME is the demangled name of a C++ function (including an
@@ -1678,14 +1652,15 @@ gdb_demangle (const char *name, int options)
 
 /* See cp-support.h.  */
 
-char *
+gdb::unique_xmalloc_ptr<char>
 gdb_cplus_demangle_print (int options,
 			  struct demangle_component *tree,
 			  int estimated_length,
 			  size_t *p_allocated_size)
 {
-  return cplus_demangle_print (options | DMGL_VERBOSE, tree,
-			       estimated_length, p_allocated_size);
+  return gdb::unique_xmalloc_ptr<char>
+    (cplus_demangle_print (options | DMGL_VERBOSE, tree,
+			   estimated_length, p_allocated_size));
 }
 
 /* A wrapper for cplus_demangle_v3_components that forces

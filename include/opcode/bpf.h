@@ -279,6 +279,9 @@ struct bpf_opcode
      %w - expect zero or more white spaces and print a single space.
      %W - expect one or more white spaces and print a single space.
      %t - expect the end of a mnemonic, and print nothing.
+     %DIGIT - a decimal constant that the opcode already encodes; expect
+              any spelling of its value, e.g. `0x1' for %1, and print
+              the digits.
 
      %t consumes no input.  It only asserts that the mnemonic just
      matched ends there, that is, that the input does not continue it

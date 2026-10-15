@@ -51,12 +51,8 @@
 #if HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
-#if HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
 #include "gdbsupport/gdb_sys_time.h"
 #include <unistd.h>
 #if HAVE_ARPA_INET_H

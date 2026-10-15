@@ -18,9 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 
-#ifdef HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 
 #include "gdb_signals.h"
 

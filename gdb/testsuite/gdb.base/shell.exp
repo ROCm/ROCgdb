@@ -195,3 +195,46 @@ foreach cmd {"pipe " "| " "|"} {
     test_gdb_complete_none \
 	"${cmd}-d set maint set "
 }
+
+# Test piping a lot of output to a shell command that exits without
+# reading its input.  The output is larger than the pipe buffer, so GDB
+# necessarily writes to the pipe after the shell command has exited,
+# regardless of timing.  GDB must not get killed by SIGPIPE, and must
+# report the exit status of the shell command.
+
+proc_with_prefix test_pipe_reader_exits_early {} {
+    clean_restart
+
+    # When Python is initialized, it sets SIGPIPE to be ignored.  Restore
+    # the default action, to test the behavior of a GDB built without
+    # Python.
+    if { [allow_python_tests] } {
+	gdb_test_no_output \
+	    "python import signal; signal.signal(signal.SIGPIPE, signal.SIG_DFL)" \
+	    "restore default SIGPIPE action"
+    }
+
+    # Define the "lots" command, which outputs 1000 lines of 200
+    # characters.
+    set line [string repeat "this is a line of output " 8]
+    gdb_define_cmd "lots" [list \
+			       {set $i = 0} \
+			       {while $i < 1000} \
+			       "echo $line\\n" \
+			       {set $i = $i + 1} \
+			       {end}]
+
+    gdb_test_no_output "pipe lots | exit 0"
+    gdb_test "p \$_shell_exitcode" " = 0" "exit 0 exitcode"
+    gdb_test "p \$_shell_exitsignal" " = void" "exit 0 exitsignal"
+
+    gdb_test_no_output "pipe lots | exit 1"
+    gdb_test "p \$_shell_exitcode" " = 1" "exit 1 exitcode"
+    gdb_test "p \$_shell_exitsignal" " = void" "exit 1 exitsignal"
+
+    gdb_test "pipe lots | head -1" "^$line"
+    gdb_test "p \$_shell_exitcode" " = 0" "head -1 exitcode"
+    gdb_test "p \$_shell_exitsignal" " = void" "head -1 exitsignal"
+}
+
+test_pipe_reader_exits_early

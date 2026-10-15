@@ -81,14 +81,18 @@ gdbpy_bytes_as_string (gdbpy_borrowed_ref<> ref)
   return result;
 }
 
-/* Wrapper for PyBytes_AsStringAndSize.  */
+/* Wrapper for PyBytes_AsStringAndSize.  Note that, unlike the
+   underlying Python function, this attempts to be const-correct --
+   the caller should not write to the returned buffer.  */
 static inline void
 gdbpy_bytes_as_string_and_size (gdbpy_borrowed_ref<> ref,
-				char **buffer,
+				const char **buffer,
 				Py_ssize_t *length)
 {
-  if (PyBytes_AsStringAndSize (ref, buffer, length) == -1)
+  char *temp;
+  if (PyBytes_AsStringAndSize (ref, &temp, length) == -1)
     throw gdb_python_exception ();
+  *buffer = temp;
 }
 
 /* Wrapper for PyBytes_FromString.  */
@@ -103,13 +107,14 @@ gdbpy_bytes_from_string (const char *str)
 }
 
 /* Wrapper for PyBytes_FromStringAndSize.  */
-static inline gdbpy_ref<>
-gdbpy_bytes_from_string_and_size (const char *str, Py_ssize_t len)
+template<typename T>
+gdbpy_ref<>
+gdbpy_bytes_from_string_and_size (gdb::array_view<T> data)
 {
   /* Python allows STR==nullptr but it leaves the object
      uninitialized, and I think we should avoid this in gdb.  */
-  gdb_assert (str != nullptr);
-  gdbpy_ref<> result (PyBytes_FromStringAndSize (str, len));
+  gdb_assert (data.data () != nullptr);
+  gdbpy_ref<> result (PyBytes_FromStringAndSize (data.data (), data.size ()));
   if (result == nullptr)
     throw gdb_python_exception ();
   return result;
@@ -212,6 +217,16 @@ gdbpy_ref<>
 gdbpy_unicode_from_format (const char *fmt, Arg... args)
 {
   gdbpy_ref<> result (PyUnicode_FromFormat (fmt, args...));
+  if (result == nullptr)
+    throw gdb_python_exception ();
+  return result;
+}
+
+/* Wrapper for PyUnicode_AsASCIIString.  */
+static inline gdbpy_ref<>
+gdbpy_unicode_as_ascii_string (gdbpy_borrowed_ref<> arg)
+{
+  gdbpy_ref<> result (PyUnicode_AsASCIIString (arg));
   if (result == nullptr)
     throw gdb_python_exception ();
   return result;
