@@ -110,36 +110,37 @@ cpname_state::make_name (const char *name, int len)
    may already be qualified; duplicate qualifiers are not created.  */
 
 struct demangle_component *
-cpname_state::d_qualify (struct demangle_component *lhs, int qualifiers,
-			 int is_method)
+cpname_state::d_qualify (struct demangle_component *lhs,
+			 qual_flags qualifiers, int is_method)
 {
-  struct demangle_component **inner_p;
-  enum demangle_component_type type;
+  demangle_component **inner_p = &lhs;
+  demangle_component_type type = (*inner_p)->type;
+
+  auto handle_qual = [&] (demangle_component_type qual_type,
+			  demangle_component_type method_qual_type,
+			  qual_flag qual)
+    {
+      if ((qualifiers & qual) && type != qual_type && type != method_qual_type)
+	{
+	  *inner_p = fill_comp (is_method ? method_qual_type : qual_type,
+				*inner_p, nullptr);
+	  inner_p = &d_left (*inner_p);
+	  type = (*inner_p)->type;
+	}
+      else if (type == qual_type || type == method_qual_type)
+	{
+	  inner_p = &d_left (*inner_p);
+	  type = (*inner_p)->type;
+	}
+    };
 
   /* For now the order is CONST (innermost), VOLATILE, RESTRICT.  */
-
-#define HANDLE_QUAL(TYPE, MTYPE, QUAL)				\
-  if ((qualifiers & QUAL) && (type != TYPE) && (type != MTYPE))	\
-    {								\
-      *inner_p = fill_comp (is_method ? MTYPE : TYPE,		\
-			    *inner_p, NULL);			\
-      inner_p = &d_left (*inner_p);				\
-      type = (*inner_p)->type;					\
-    }								\
-  else if (type == TYPE || type == MTYPE)			\
-    {								\
-      inner_p = &d_left (*inner_p);				\
-      type = (*inner_p)->type;					\
-    }
-
-  inner_p = &lhs;
-
-  type = (*inner_p)->type;
-
-  HANDLE_QUAL (DEMANGLE_COMPONENT_RESTRICT, DEMANGLE_COMPONENT_RESTRICT_THIS, QUAL_RESTRICT);
-  HANDLE_QUAL (DEMANGLE_COMPONENT_VOLATILE, DEMANGLE_COMPONENT_VOLATILE_THIS, QUAL_VOLATILE);
-  HANDLE_QUAL (DEMANGLE_COMPONENT_CONST, DEMANGLE_COMPONENT_CONST_THIS, QUAL_CONST);
-#undef HANDLE_QUAL
+  handle_qual (DEMANGLE_COMPONENT_RESTRICT, DEMANGLE_COMPONENT_RESTRICT_THIS,
+	       QUAL_RESTRICT);
+  handle_qual (DEMANGLE_COMPONENT_VOLATILE, DEMANGLE_COMPONENT_VOLATILE_THIS,
+	       QUAL_VOLATILE);
+  handle_qual (DEMANGLE_COMPONENT_CONST, DEMANGLE_COMPONENT_CONST_THIS,
+	       QUAL_CONST);
 
   return lhs;
 }
@@ -147,7 +148,7 @@ cpname_state::d_qualify (struct demangle_component *lhs, int qualifiers,
 /* Return a builtin type corresponding to FLAGS.  */
 
 struct demangle_component *
-cpname_state::d_int_type (int flags)
+cpname_state::d_int_type (int_flags flags)
 {
   const char *name;
 
@@ -162,7 +163,7 @@ cpname_state::d_int_type (int flags)
     case INT_UNSIGNED | INT_CHAR:
       name = "unsigned char";
       break;
-    case 0:
+    case INT_NONE:
     case INT_SIGNED:
       name = "int";
       break;
@@ -381,9 +382,8 @@ cp_comp_to_string (struct demangle_component *result, int estimated_len)
 {
   size_t err;
 
-  char *res = gdb_cplus_demangle_print (DMGL_PARAMS | DMGL_ANSI,
-					result, estimated_len, &err);
-  return gdb::unique_xmalloc_ptr<char> (res);
+  return gdb_cplus_demangle_print (DMGL_PARAMS | DMGL_ANSI, result,
+				   estimated_len, &err);
 }
 
 /* Merge the two parse trees given by DEST and SRC.  The parse tree
@@ -546,30 +546,6 @@ cp_parse_escape (const char **string_ptr)
       }
 }
 
-#define HANDLE_SPECIAL(string, comp)				\
-  if (startswith (tokstart, string))				\
-    {								\
-      state->lexptr = tokstart + sizeof (string) - 1;			\
-      lvalp->lval = comp;					\
-      return DEMANGLER_SPECIAL;					\
-    }
-
-#define HANDLE_TOKEN2(string, token)			\
-  if (state->lexptr[1] == string[1])				\
-    {							\
-      state->lexptr += 2;					\
-      lvalp->opname = string;				\
-      return token;					\
-    }
-
-#define HANDLE_TOKEN3(string, token)			\
-  if (state->lexptr[1] == string[1] && state->lexptr[2] == string[2])	\
-    {							\
-      state->lexptr += 3;					\
-      lvalp->opname = string;				\
-      return token;					\
-    }
-
 void
 cpname_yyerror (cp_name_parser::cpname_state *state, const char *msg)
 {
@@ -590,6 +566,30 @@ cpname_yylex (cp_name_parser_YYSTYPE *lvalp,
   int namelen;
   const char *tokstart;
   char *copy;
+
+  /* If the input starts with OP_STR, consume it, use OP_STR as the
+     token's operator name and return true.  Otherwise, return false.  */
+  auto match_op_token = [&] (const char *op_str)
+    {
+      if (!startswith (tokstart, op_str))
+	return false;
+
+      state->lexptr = tokstart + strlen (op_str);
+      lvalp->opname = op_str;
+      return true;
+    };
+
+  /* If the input starts with STR, consume it, use COMP as the token
+     value and return true.  Otherwise, return false.  */
+  auto match_special = [&] (const char *str, demangle_component_type comp)
+    {
+      if (!startswith (tokstart, str))
+	return false;
+
+      state->lexptr = tokstart + strlen (str);
+      lvalp->lval = comp;
+      return true;
+    };
 
  retry:
   state->prev_lexptr = state->lexptr;
@@ -667,9 +667,12 @@ cpname_yylex (cp_name_parser_YYSTYPE *lvalp,
       goto try_number;
 
     case '-':
-      HANDLE_TOKEN2 ("-=", ASSIGN_MODIFY);
-      HANDLE_TOKEN2 ("--", DECREMENT);
-      HANDLE_TOKEN2 ("->", ARROW);
+      if (match_op_token ("-="))
+	return ASSIGN_MODIFY;
+      if (match_op_token ("--"))
+	return DECREMENT;
+      if (match_op_token ("->"))
+	return ARROW;
 
       /* For construction vtables.  This is kind of hokey.  */
       if (startswith (tokstart, "-in-"))
@@ -771,59 +774,79 @@ cpname_yylex (cp_name_parser_YYSTYPE *lvalp,
       }
 
     case '+':
-      HANDLE_TOKEN2 ("+=", ASSIGN_MODIFY);
-      HANDLE_TOKEN2 ("++", INCREMENT);
+      if (match_op_token ("+="))
+	return ASSIGN_MODIFY;
+      if (match_op_token ("++"))
+	return INCREMENT;
       state->lexptr++;
       return c;
     case '*':
-      HANDLE_TOKEN2 ("*=", ASSIGN_MODIFY);
+      if (match_op_token ("*="))
+	return ASSIGN_MODIFY;
       state->lexptr++;
       return c;
     case '/':
-      HANDLE_TOKEN2 ("/=", ASSIGN_MODIFY);
+      if (match_op_token ("/="))
+	return ASSIGN_MODIFY;
       state->lexptr++;
       return c;
     case '%':
-      HANDLE_TOKEN2 ("%=", ASSIGN_MODIFY);
+      if (match_op_token ("%="))
+	return ASSIGN_MODIFY;
       state->lexptr++;
       return c;
     case '|':
-      HANDLE_TOKEN2 ("|=", ASSIGN_MODIFY);
-      HANDLE_TOKEN2 ("||", OROR);
+      if (match_op_token ("|="))
+	return ASSIGN_MODIFY;
+      if (match_op_token ("||"))
+	return OROR;
       state->lexptr++;
       return c;
     case '&':
-      HANDLE_TOKEN2 ("&=", ASSIGN_MODIFY);
-      HANDLE_TOKEN2 ("&&", ANDAND);
+      if (match_op_token ("&="))
+	return ASSIGN_MODIFY;
+      if (match_op_token ("&&"))
+	return ANDAND;
       state->lexptr++;
       return c;
     case '^':
-      HANDLE_TOKEN2 ("^=", ASSIGN_MODIFY);
+      if (match_op_token ("^="))
+	return ASSIGN_MODIFY;
       state->lexptr++;
       return c;
     case '!':
-      HANDLE_TOKEN2 ("!=", NOTEQUAL);
+      if (match_op_token ("!="))
+	return NOTEQUAL;
       state->lexptr++;
       return c;
     case '<':
-      HANDLE_TOKEN3 ("<<=", ASSIGN_MODIFY);
-      HANDLE_TOKEN3 ("<=>", SPACESHIP);
-      HANDLE_TOKEN2 ("<=", LEQ);
-      HANDLE_TOKEN2 ("<<", LSH);
+      if (match_op_token ("<<="))
+	return ASSIGN_MODIFY;
+      if (match_op_token ("<=>"))
+	return SPACESHIP;
+      if (match_op_token ("<="))
+	return LEQ;
+      if (match_op_token ("<<"))
+	return LSH;
       state->lexptr++;
       return c;
     case '>':
-      HANDLE_TOKEN3 (">>=", ASSIGN_MODIFY);
-      HANDLE_TOKEN2 (">=", GEQ);
-      HANDLE_TOKEN2 (">>", RSH);
+      if (match_op_token (">>="))
+	return ASSIGN_MODIFY;
+      if (match_op_token (">="))
+	return GEQ;
+      if (match_op_token (">>"))
+	return RSH;
       state->lexptr++;
       return c;
     case '=':
-      HANDLE_TOKEN2 ("==", EQUAL);
+      if (match_op_token ("=="))
+	return EQUAL;
       state->lexptr++;
       return c;
     case ':':
-      HANDLE_TOKEN2 ("::", COLONCOLON);
+      if (match_op_token ("::"))
+	return COLONCOLON;
       state->lexptr++;
       return c;
 
@@ -882,13 +905,21 @@ cpname_yylex (cp_name_parser_YYSTYPE *lvalp,
 	return STATIC_CAST;
       break;
     case 9:
-      HANDLE_SPECIAL ("covariant return thunk to ", DEMANGLE_COMPONENT_COVARIANT_THUNK);
-      HANDLE_SPECIAL ("reference temporary for ", DEMANGLE_COMPONENT_REFTEMP);
+      if (match_special ("covariant return thunk to ",
+			 DEMANGLE_COMPONENT_COVARIANT_THUNK))
+	return DEMANGLER_SPECIAL;
+      if (match_special ("reference temporary for ",
+			 DEMANGLE_COMPONENT_REFTEMP))
+	return DEMANGLER_SPECIAL;
       break;
     case 8:
-      HANDLE_SPECIAL ("typeinfo for ", DEMANGLE_COMPONENT_TYPEINFO);
-      HANDLE_SPECIAL ("typeinfo fn for ", DEMANGLE_COMPONENT_TYPEINFO_FN);
-      HANDLE_SPECIAL ("typeinfo name for ", DEMANGLE_COMPONENT_TYPEINFO_NAME);
+      if (match_special ("typeinfo for ", DEMANGLE_COMPONENT_TYPEINFO))
+	return DEMANGLER_SPECIAL;
+      if (match_special ("typeinfo fn for ", DEMANGLE_COMPONENT_TYPEINFO_FN))
+	return DEMANGLER_SPECIAL;
+      if (match_special ("typeinfo name for ",
+			 DEMANGLE_COMPONENT_TYPEINFO_NAME))
+	return DEMANGLER_SPECIAL;
       if (startswith (tokstart, "operator"))
 	return OPERATOR;
       if (startswith (tokstart, "restrict"))
@@ -901,7 +932,9 @@ cpname_yylex (cp_name_parser_YYSTYPE *lvalp,
 	return VOLATILE_KEYWORD;
       break;
     case 7:
-      HANDLE_SPECIAL ("virtual thunk to ", DEMANGLE_COMPONENT_VIRTUAL_THUNK);
+      if (match_special ("virtual thunk to ",
+			 DEMANGLE_COMPONENT_VIRTUAL_THUNK))
+	return DEMANGLER_SPECIAL;
       if (startswith (tokstart, "wchar_t"))
 	return WCHAR_T;
       break;
@@ -929,7 +962,8 @@ cpname_yylex (cp_name_parser_YYSTYPE *lvalp,
 	  return DEMANGLER_SPECIAL;
 	}
 
-      HANDLE_SPECIAL ("vtable for ", DEMANGLE_COMPONENT_VTABLE);
+      if (match_special ("vtable for ", DEMANGLE_COMPONENT_VTABLE))
+	return DEMANGLER_SPECIAL;
       if (startswith (tokstart, "delete"))
 	return DELETE;
       if (startswith (tokstart, "struct"))
@@ -942,7 +976,8 @@ cpname_yylex (cp_name_parser_YYSTYPE *lvalp,
 	return DOUBLE_KEYWORD;
       break;
     case 5:
-      HANDLE_SPECIAL ("guard variable for ", DEMANGLE_COMPONENT_GUARD);
+      if (match_special ("guard variable for ", DEMANGLE_COMPONENT_GUARD))
+	return DEMANGLER_SPECIAL;
       if (startswith (tokstart, "false"))
 	return FALSEKEYWORD;
       if (startswith (tokstart, "class"))
@@ -971,8 +1006,10 @@ cpname_yylex (cp_name_parser_YYSTYPE *lvalp,
 	return TRUEKEYWORD;
       break;
     case 3:
-      HANDLE_SPECIAL ("VTT for ", DEMANGLE_COMPONENT_VTT);
-      HANDLE_SPECIAL ("non-virtual thunk to ", DEMANGLE_COMPONENT_THUNK);
+      if (match_special ("VTT for ", DEMANGLE_COMPONENT_VTT))
+	return DEMANGLER_SPECIAL;
+      if (match_special ("non-virtual thunk to ", DEMANGLE_COMPONENT_THUNK))
+	return DEMANGLER_SPECIAL;
       if (startswith (tokstart, "new"))
 	return NEW;
       if (startswith (tokstart, "int"))

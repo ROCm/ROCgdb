@@ -27,6 +27,7 @@
 #include "elf/bpf.h"
 #include "dwarf2dbg.h"
 #include "libiberty.h"
+#include "safe-ctype.h"
 #include <ctype.h>
 
 /* Data structure representing a parsed BPF instruction.  */
@@ -1726,6 +1727,25 @@ md_assemble (char *str ATTRIBUTE_UNUSED)
                   insn.has_imm64 = 1;
                   insn.size = 16;
                   p += 4;
+                }
+              else if (ISDIGIT (p[1]))
+                {
+                  /* %DIGIT is a constant the opcode already encodes, such
+                     as either address space of an addr_space_cast.
+                     Compare values rather than characters, so that every
+                     spelling of the constant is accepted: the kernel
+                     writes those address spaces as 0x0 and 0x1.  */
+                  char *p_end, *s_end;
+                  uint64_t want = strtoull (p + 1, &p_end, 0);
+                  uint64_t got = strtoull (s, &s_end, 0);
+
+                  if (s_end == s || got != want)
+                    {
+                      PARSE_ERROR ("expected %lu", (unsigned long) want);
+                      break;
+                    }
+                  p = p_end;
+                  s = s_end;
                 }
               else
                 as_fatal (_("invalid %%-tag in BPF opcode '%s'\n"), template);

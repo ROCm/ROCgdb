@@ -39,3 +39,7 @@
 
 	autibsp
 	hint #0x1f
+
+	/* FEAT_PAuth_LR Pointer Authentication, HINT alias instructions. */
+	pacm
+	hint #0x27

@@ -529,6 +529,7 @@ aarch64_find_real_opcode (const aarch64_opcode *opcode)
     case A64_OPID_d503225f_tsb_BARRIER_PSB:
     case A64_OPID_d503223f_psb_BARRIER_PSB:
     case A64_OPID_d503221f_esb:
+    case A64_OPID_d50324ff_pacm:
     case A64_OPID_d50321df_autib1716:
     case A64_OPID_d503219f_autia1716:
     case A64_OPID_d503215f_pacib1716:
@@ -778,6 +779,7 @@ aarch64_insert_operand (const aarch64_operand *self,
   switch (key)
     {
     case AARCH64_OPND_Rd:
+    case AARCH64_OPND_Rd_NOT_ZR:
     case AARCH64_OPND_Rn:
     case AARCH64_OPND_Rm:
     case AARCH64_OPND_Rt:
@@ -937,6 +939,7 @@ aarch64_insert_operand (const aarch64_operand *self,
     case AARCH64_OPND_NZCV:
     case AARCH64_OPND_ADDR_PCREL9:
     case AARCH64_OPND_ADDR_PCREL14:
+    case AARCH64_OPND_ADDR_UPCREL16:
     case AARCH64_OPND_ADDR_PCREL19:
     case AARCH64_OPND_ADDR_PCREL21:
     case AARCH64_OPND_ADDR_PCREL26:

@@ -43,11 +43,8 @@ AC_CHECK_HEADERS([ \
   dlfcn.h \
   linux/elf.h \
   linux/perf_event.h  \
-  locale.h \
-  memory.h \
   poll.h \
   proc_service.h \
-  signal.h \
   sys/poll.h \
   sys/resource.h \
   sys/select.h \
@@ -87,8 +84,6 @@ AC_CHECK_HEADERS([ \
   # These did not define ADDR_NO_RANDOMIZE in sys/personality.h,
   # only in linux/personality.h.
   AC_CHECK_DECLS([ADDR_NO_RANDOMIZE],,, [#include <sys/personality.h>])
-
-  AC_CHECK_DECLS([strstr])
 
   # ----------------------- #
   # Checks for structures.  #
@@ -255,13 +250,6 @@ AC_CHECK_HEADERS([ \
 
   BFD_SYS_PROCFS_H
   if test "$ac_cv_header_sys_procfs_h" = yes; then
-    BFD_HAVE_SYS_PROCFS_TYPE(gregset_t)
-    BFD_HAVE_SYS_PROCFS_TYPE(fpregset_t)
-    BFD_HAVE_SYS_PROCFS_TYPE(prgregset_t)
-    BFD_HAVE_SYS_PROCFS_TYPE(prfpregset_t)
-    BFD_HAVE_SYS_PROCFS_TYPE(prgregset32_t)
-    BFD_HAVE_SYS_PROCFS_TYPE(lwpid_t)
-    BFD_HAVE_SYS_PROCFS_TYPE(psaddr_t)
     BFD_HAVE_SYS_PROCFS_TYPE(elf_fpregset_t)
   fi
 

@@ -40,6 +40,53 @@ struct connection_object : public PyObject
      indicates that this Python object is now in the invalid state (see
      the is_valid() method below).  */
   struct process_stratum_target *target;
+
+  /* Require that this object be valid.  */
+  void require_valid () const;
+
+  /* Implement is_valid method.  */
+  bool is_valid () const
+  {
+    return target != nullptr;
+  }
+
+  /* Return the id number of this connection.  */
+  int get_connection_num () const
+  {
+    require_valid ();
+    return target->connection_number;
+  }
+
+  /* Return a string that gives the short name for this connection type.  */
+  const char *get_connection_type () const
+  {
+    require_valid ();
+    return target->shortname ();
+  }
+
+  /* Return a string that gives a longer description of this
+     connection type.  */
+  const char *get_description () const
+  {
+    require_valid ();
+    return target->longname ();
+  }
+
+  /* Return a string that gives additional details about this
+     connection, or None, if there are no additional details for this
+     connection type.  */
+  const char *get_connection_details () const
+  {
+    require_valid ();
+    return target->connection_string ();
+  }
+
+  /* Implement repr() for gdb.TargetConnection.  */
+  gdbpy_ref<> repr ();
+
+  /* The send_packet method.  */
+  gdbpy_ref<> send_packet (gdbpy_borrowed_ref<> args,
+			   gdbpy_opt_borrowed_ref<> kw);
 };
 
 static_assert (gdb::is_python_allocatable_v<connection_object>);
@@ -48,22 +95,19 @@ extern PyTypeObject connection_object_type;
 
 extern PyTypeObject remote_connection_object_type;
 
-/* Require that CONNECTION be valid.  */
-#define CONNPY_REQUIRE_VALID(connection)			\
-  do {								\
-    if (connection->target == nullptr)				\
-      {								\
-	PyErr_SetString (PyExc_RuntimeError,			\
-			 _("Connection no longer exists."));	\
-	return nullptr;						\
-      }								\
-  } while (0)
-
 /* A map between process_stratum targets and the Python object representing
    them.  We actually hold a gdbpy_ref around the Python object so that
    reference counts are handled correctly when entries are deleted.  */
 static gdb::unordered_map<process_stratum_target *,
 			  gdbpy_ref<connection_object>> all_connection_objects;
+
+void
+connection_object::require_valid () const
+{
+  if (!is_valid ())
+    gdbpy_err_set_string (PyExc_RuntimeError,
+			  _("Connection no longer exists."));
+}
 
 /* Return a reference to a gdb.TargetConnection object for TARGET.  If
    TARGET is nullptr then a reference to None is returned.
@@ -107,27 +151,26 @@ target_to_connection_object (process_stratum_target *target)
 /* Return a list of gdb.TargetConnection objects, one for each currently
    active connection.  The returned list is in no particular order.  */
 
-PyObject *
-gdbpy_connections (PyObject *self, PyObject *args)
+gdbpy_ref<>
+gdbpy_connections ()
 {
-  gdbpy_ref<> list (PyList_New (0));
-  if (list == nullptr)
-    return nullptr;
+  gdbpy_ref<> list = gdbpy_list_new (0);
 
   for (process_stratum_target *target : all_non_exited_process_targets ())
     {
       gdb_assert (target != nullptr);
 
       gdbpy_ref<> conn = target_to_connection_object (target);
+      /* FIXME: Python safety.  target_to_connection_object should
+	 throw on error.  */
       if (conn == nullptr)
 	return nullptr;
       gdb_assert (conn.get () != Py_None);
 
-      if (PyList_Append (list.get (), conn.get ()) < 0)
-	return nullptr;
+      gdbpy_list_append (list, conn);
     }
 
-  return list.release ();
+  return list;
 }
 
 /* Emit a connection event for TARGET to REGISTRY.  Return 0 on success, or
@@ -194,90 +237,20 @@ connpy_connection_dealloc (PyObject *obj)
 
 /* Implement repr() for gdb.TargetConnection.  */
 
-static PyObject *
-connpy_repr (PyObject *obj)
+gdbpy_ref<>
+connection_object::repr ()
 {
-  connection_object *self = (connection_object *) obj;
-  process_stratum_target *target = self->target;
-
   if (target == nullptr)
-    return gdb_py_invalid_object_repr (obj);
+    /* FIXME: Python safety.  gdb_py_invalid_object_repr ought to
+       throw on error, and return gdbpy_ref<>, but currently does
+       not.  */
+    return gdbpy_ref<> (gdb_py_invalid_object_repr (this));
 
-  return PyUnicode_FromFormat ("<%s num=%d, what=\"%s\">",
-			       gdbpy_py_obj_tp_name (obj).c_str (),
-			       target->connection_number,
-			       make_target_connection_string (target).c_str ());
-}
-
-/* Implementation of gdb.TargetConnection.is_valid() -> Boolean.  Returns
-   True if this connection object is still associated with a
-   process_stratum_target, otherwise, returns False.  */
-
-static PyObject *
-connpy_is_valid (PyObject *self, PyObject *args)
-{
-  connection_object *conn = (connection_object *) self;
-
-  if (conn->target == nullptr)
-    return py_false ().release ();
-
-  return py_true ().release ();
-}
-
-/* Return the id number of this connection.  */
-
-static PyObject *
-connpy_get_connection_num (PyObject *self, void *closure)
-{
-  connection_object *conn = (connection_object *) self;
-
-  CONNPY_REQUIRE_VALID (conn);
-
-  auto num = conn->target->connection_number;
-  return gdb_py_object_from_longest (num).release ();
-}
-
-/* Return a string that gives the short name for this connection type.  */
-
-static PyObject *
-connpy_get_connection_type (PyObject *self, void *closure)
-{
-  connection_object *conn = (connection_object *) self;
-
-  CONNPY_REQUIRE_VALID (conn);
-
-  const char *shortname = conn->target->shortname ();
-  return host_string_to_python_string (shortname).release ();
-}
-
-/* Return a string that gives a longer description of this connection type.  */
-
-static PyObject *
-connpy_get_description (PyObject *self, void *closure)
-{
-  connection_object *conn = (connection_object *) self;
-
-  CONNPY_REQUIRE_VALID (conn);
-
-  const char *longname = conn->target->longname ();
-  return host_string_to_python_string (longname).release ();
-}
-
-/* Return a string that gives additional details about this connection, or
-   None, if there are no additional details for this connection type.  */
-
-static PyObject *
-connpy_get_connection_details (PyObject *self, void *closure)
-{
-  connection_object *conn = (connection_object *) self;
-
-  CONNPY_REQUIRE_VALID (conn);
-
-  const char *details = conn->target->connection_string ();
-  if (details != nullptr)
-    return host_string_to_python_string (details).release ();
-  else
-    return py_none ().release ();
+  return (gdbpy_unicode_from_format
+	  ("<%s num=%d, what=\"%s\">",
+	   gdbpy_py_obj_tp_name (this).c_str (),
+	   target->connection_number,
+	   make_target_connection_string (target).c_str ()));
 }
 
 /* Python specific initialization for this file.  */
@@ -311,16 +284,16 @@ struct py_send_packet_callbacks : public send_remote_packet_callbacks
   void sending (gdb::array_view<const char> &buf) override
   { /* Nothing.  */ }
 
-  /* When the result is returned create a Python object and assign this
-     into M_RESULT.  If for any reason we can't create a Python object to
-     represent the result then M_RESULT is set to nullptr, and Python's
-     internal error flags will be set.  If the result we got back from the
-     remote is empty then set the result to None.  */
+  /* When the result is returned create a Python object and assign
+     this into M_RESULT.  If for any reason we can't create a Python
+     object to represent the result then an exception is thrown.  If
+     the result we got back from the remote is empty then set the
+     result to None.  */
 
   void received (gdb::array_view<const char> &buf) override
   {
     if (buf.size () > 0 && buf.data ()[0] != '\0')
-      m_result.reset (PyBytes_FromStringAndSize (buf.data (), buf.size ()));
+      m_result = gdbpy_bytes_from_string_and_size (buf);
     else
       {
 	/* We didn't get back any result data; set the result to None.  */
@@ -328,22 +301,14 @@ struct py_send_packet_callbacks : public send_remote_packet_callbacks
       }
   }
 
-  /* Get a reference to the result as a Python object.  It is invalid to
-     call this before sending a packet to the remote and processing the
-     reply.
+  /* Return the resulting Python object.  It is invalid to call this
+     before sending a packet to the remote and processing the reply.
 
-     The result value is setup in the RECEIVED call above.  If the RECEIVED
-     call causes an error then the result value will be set to nullptr,
-     and the error reason is left stored in Python's global error state.
+     The result value is setup in the RECEIVED call above.  */
 
-     It is important that the result is inspected immediately after sending
-     a packet to the remote, and any error fetched,  calling any other
-     Python functions that might clear the error state, or rely on an error
-     not being set will cause undefined behavior.  */
-
-  gdbpy_ref<> result () const
+  gdbpy_ref<> &&result ()
   {
-    return m_result;
+    return std::move (m_result);
   }
 
 private:
@@ -358,70 +323,45 @@ private:
    the packet to be sent must be non-empty, otherwise an exception will be
    thrown.  */
 
-static PyObject *
-connpy_send_packet (PyObject *self, PyObject *args, PyObject *kw)
+gdbpy_ref<>
+connection_object::send_packet (gdbpy_borrowed_ref<> args,
+				gdbpy_opt_borrowed_ref<> kw)
 {
-  connection_object *conn = (connection_object *) self;
-
-  CONNPY_REQUIRE_VALID (conn);
+  require_valid ();
 
   static const char *keywords[] = {"packet", nullptr};
   PyObject *packet_obj;
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kw, "O", keywords,
-					&packet_obj))
-    return nullptr;
+  gdbpy_arg_parse_tuple_and_keywords (args, kw, "O", keywords, &packet_obj);
 
   /* If the packet is a unicode string then convert it to a bytes object.  */
+  gdbpy_ref<> ascii_object;
   if (PyUnicode_Check (packet_obj))
     {
       /* We encode the string to bytes using the ascii codec, if this fails
 	 then a suitable error will have been set.  */
-      packet_obj = PyUnicode_AsASCIIString (packet_obj);
-      if (packet_obj == nullptr)
-	return nullptr;
+      ascii_object = gdbpy_unicode_as_ascii_string (packet_obj);
+      packet_obj = ascii_object.get ();
     }
 
   /* Check the packet is now a bytes object.  */
   if (!PyBytes_Check (packet_obj))
-    {
-      PyErr_SetString (PyExc_TypeError, _("Packet is not a bytes object"));
-      return nullptr;
-    }
+    gdbpy_err_set_string (PyExc_TypeError, _("Packet is not a bytes object"));
 
   Py_ssize_t packet_len = 0;
-  char *packet_str_nonconst = nullptr;
-  if (PyBytes_AsStringAndSize (packet_obj, &packet_str_nonconst,
-			       &packet_len) < 0)
-    return nullptr;
-  const char *packet_str = packet_str_nonconst;
-  gdb_assert (packet_str != nullptr);
+  const char *packet_str = nullptr;
+  gdbpy_bytes_as_string_and_size (packet_obj, &packet_str, &packet_len);
 
   if (packet_len == 0)
-    {
-      PyErr_SetString (PyExc_ValueError, _("Packet must not be empty"));
-      return nullptr;
-    }
+    gdbpy_err_set_string (PyExc_ValueError, _("Packet must not be empty"));
 
-  try
-    {
-      scoped_restore_current_thread restore_thread;
-      switch_to_target_no_thread (conn->target);
+  scoped_restore_current_thread restore_thread;
+  switch_to_target_no_thread (target);
 
-      gdb::array_view<const char> view (packet_str, packet_len);
-      py_send_packet_callbacks callbacks;
-      send_remote_packet (view, &callbacks);
-      PyObject *result = callbacks.result ().release ();
-      /* If we encountered an error converting the reply to a Python
-	 object, then the result here can be nullptr.  In that case, Python
-	 should be aware that an error occurred.  */
-      gdb_assert ((result == nullptr) == (PyErr_Occurred () != nullptr));
-      return result;
-    }
-  catch (const gdb_exception &except)
-    {
-      return gdbpy_handle_gdb_exception (nullptr, except);
-    }
+  gdb::array_view<const char> view (packet_str, packet_len);
+  py_send_packet_callbacks callbacks;
+  send_remote_packet (view, &callbacks);
+  return callbacks.result ();
 }
 
 /* Global initialization for this file.  */
@@ -438,36 +378,48 @@ GDBPY_INITIALIZE_FILE (gdbpy_initialize_connection);
 
 static PyMethodDef connection_object_methods[] =
 {
-  { "is_valid", connpy_is_valid, METH_NOARGS,
+  noargs_method<connection_object, &connection_object::is_valid> ("is_valid",
     "is_valid () -> Boolean.\n\
-Return true if this TargetConnection is valid, false if not." },
-  { NULL }
+Return true if this TargetConnection is valid, false if not."),
+  { nullptr }
 };
 
 /* Methods for the gdb.RemoteTargetConnection object type.  */
 
 static PyMethodDef remote_connection_object_methods[] =
 {
-  { "send_packet", (PyCFunction) connpy_send_packet,
-    METH_VARARGS | METH_KEYWORDS,
+  varargs_method<connection_object, &connection_object::send_packet>
+   ("send_packet",
     "send_packet (PACKET) -> Bytes\n\
-Send PACKET to a remote target, return the reply as a bytes array." },
-  { NULL }
+Send PACKET to a remote target, return the reply as a bytes array."),
+  { nullptr }
 };
 
 /* Attributes for the gdb.TargetConnection object type.  */
 
 static gdb_PyGetSetDef connection_object_getset[] =
 {
-  { "num", connpy_get_connection_num, NULL,
-    "ID number of this connection, as assigned by GDB.", NULL },
-  { "type", connpy_get_connection_type, NULL,
-    "A short string that is the name for this connection type.", NULL },
-  { "description", connpy_get_description, NULL,
-    "A longer string describing this connection type.", NULL },
-  { "details", connpy_get_connection_details, NULL,
-    "A string containing additional connection details.", NULL },
-  { NULL }
+  { "num",
+    wrap_getter<connection_object, &connection_object::get_connection_num>,
+    nullptr,
+    "ID number of this connection, as assigned by GDB.",
+    nullptr },
+  { "type",
+    wrap_getter<connection_object, &connection_object::get_connection_type>,
+    nullptr,
+    "A short string that is the name for this connection type.",
+    nullptr },
+  { "description",
+    wrap_getter<connection_object, &connection_object::get_description>,
+    nullptr,
+    "A longer string describing this connection type.",
+    nullptr },
+  { "details",
+    wrap_getter<connection_object, &connection_object::get_connection_details>,
+    nullptr,
+    "A string containing additional connection details.",
+    nullptr },
+  { nullptr }
 };
 
 /* Define the gdb.TargetConnection object type.  */
@@ -483,7 +435,7 @@ PyTypeObject connection_object_type =
   0,				  /* tp_getattr */
   0,				  /* tp_setattr */
   0,				  /* tp_compare */
-  connpy_repr,			  /* tp_repr */
+  wrap_tp_callback<connection_object, &connection_object::repr>, /* tp_repr */
   0,				  /* tp_as_number */
   0,				  /* tp_as_sequence */
   0,				  /* tp_as_mapping */
@@ -526,7 +478,7 @@ PyTypeObject remote_connection_object_type =
   0,				  /* tp_getattr */
   0,				  /* tp_setattr */
   0,				  /* tp_compare */
-  connpy_repr,			  /* tp_repr */
+  wrap_tp_callback<connection_object, &connection_object::repr>, /* tp_repr */
   0,				  /* tp_as_number */
   0,				  /* tp_as_sequence */
   0,				  /* tp_as_mapping */

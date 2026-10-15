@@ -27,6 +27,7 @@ const struct aarch64_operand aarch64_operands[] =
 {
   {AARCH64_OPND_CLASS_NIL, "", 0, {}, "<none>"},
   {AARCH64_OPND_CLASS_INT_REG, "Rd", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 0, false}}, "an integer register"},
+  {AARCH64_OPND_CLASS_INT_REG, "Rd_NOT_ZR", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 0, false}}, "an integer register"},
   {AARCH64_OPND_CLASS_INT_REG, "Rn", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 5, false}}, "an integer register"},
   {AARCH64_OPND_CLASS_INT_REG, "Rm", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 16, false}}, "an integer register"},
   {AARCH64_OPND_CLASS_INT_REG, "Rt", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 0, false}}, "an integer register"},
@@ -120,6 +121,7 @@ const struct aarch64_operand aarch64_operands[] =
   {AARCH64_OPND_CLASS_ADDRESS, "ADDR_ADRP", OPD_F_SEXT | OPD_F_HAS_EXTRACTOR, {{19, 5, false}, {2, 29, false}}, "21-bit PC-relative address of a 4KB page"},
   {AARCH64_OPND_CLASS_ADDRESS, "ADDR_PCREL9", OPD_F_SEXT | OPD_F_SHIFT_BY_2 | OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{9, 5, false}}, "9-bit PC-relative address"},
   {AARCH64_OPND_CLASS_ADDRESS, "ADDR_PCREL14", OPD_F_SEXT | OPD_F_SHIFT_BY_2 | OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{14, 5, false}}, "14-bit PC-relative address"},
+  {AARCH64_OPND_CLASS_ADDRESS, "ADDR_UPCREL16", OPD_F_UNSIGNED | OPD_F_SHIFT_BY_2 | OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{16, 5, false}}, "unsigned 16-bit PC-relative offset (imm16:'00')"},
   {AARCH64_OPND_CLASS_ADDRESS, "ADDR_PCREL19", OPD_F_SEXT | OPD_F_SHIFT_BY_2 | OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{19, 5, false}}, "19-bit PC-relative address"},
   {AARCH64_OPND_CLASS_ADDRESS, "ADDR_PCREL21", OPD_F_SEXT | OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{19, 5, false}, {2, 29, false}}, "21-bit PC-relative address"},
   {AARCH64_OPND_CLASS_ADDRESS, "ADDR_PCREL26", OPD_F_SEXT | OPD_F_SHIFT_BY_2 | OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{26, 0, false}}, "26-bit PC-relative address"},
