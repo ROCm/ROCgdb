@@ -23,6 +23,9 @@ Full documentation for ROCgdb is available at
   `print alignof(decltype(threadIdx))`, failing with a syntax error when a
   loaded library with debug information, such as a debug build of the ROCm
   runtime, contains the `std::nullptr_t` type.
+- If a GPU thread caused SIGSEGV, which is by default reported imprecisely,
+  but also hit a breakpoint, ROCgdb would hide SIGSEGV and show the
+  breakpoint hit.  This is fixed to prioritize and show SIGSEGV instead.
 
 ## ROCgdb-16.3 for ROCm-10.1
 
