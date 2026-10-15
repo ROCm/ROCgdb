@@ -28,6 +28,7 @@ require isnative
 # I/O bandwidth.
 
 if { [istarget "*-*-*bsd*"]
+     || [istarget "*-*-aix*"]
      || [istarget "*-*-solaris*"]
      || [istarget "*-*-darwin*"]
      || [istarget "*-*-cygwin*"] } {
