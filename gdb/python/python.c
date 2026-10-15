@@ -3268,9 +3268,9 @@ Register a TUI window constructor."),
     "architecture_names () -> List.\n\
 Return a list of all the architecture names GDB understands." },
 
-  { "connections", gdbpy_connections, METH_NOARGS,
+  noargs_function<gdbpy_connections> ("connections",
     "connections () -> List.\n\
-Return a list of gdb.TargetConnection objects." },
+Return a list of gdb.TargetConnection objects."),
 
   { "format_address", (PyCFunction) gdbpy_format_address,
     METH_VARARGS | METH_KEYWORDS,

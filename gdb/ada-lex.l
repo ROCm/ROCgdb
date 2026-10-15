@@ -39,8 +39,8 @@ OPER    ([-+*/=<>&]|"<="|">="|"**"|"/="|"and"|"or"|"xor"|"not"|"mod"|"rem"|"abs"
 EXP	(e[+-]{NUM10})
 POSEXP  (e"+"?{NUM10})
 
-/* This must agree with COMPLETION_CHAR below.  See the comment there
-   for the explanation.  */
+/* This must agree with COMPLETE_CHAR in ada-exp-parser.h.  See the
+   comment on ada_parse_state::returned_complete for the explanation.  */
 COMPLETE "\001"
 NOT_COMPLETE [^\001]
 

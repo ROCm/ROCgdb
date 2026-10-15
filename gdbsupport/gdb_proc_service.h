@@ -83,22 +83,6 @@ enum ps_err_e
   PS_NOFREGS		/* FPU register set not available for given LWP.  */
 };
 
-#ifndef HAVE_LWPID_T
-using lwpid_t = unsigned int;
-#endif
-
-#ifndef HAVE_PSADDR_T
-using psaddr_t = void *;
-#endif
-
-#ifndef HAVE_PRGREGSET_T
-using prgregset_t = elf_gregset_t;
-#endif
-
-#ifndef HAVE_PRFPREGSET_T
-using prfpregset_t = elf_fpregset_t;
-#endif
-
 /* This type is opaque in this interface.  It's defined by the user of
    libthread_db.  GDB's version is defined below.  */
 struct ps_prochandle;
