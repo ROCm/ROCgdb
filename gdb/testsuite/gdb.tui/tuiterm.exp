@@ -177,6 +177,18 @@ proc test_insert_characters { } {
     } 0 1
 }
 
+proc test_insert_characters_2 { } {
+    # As in test_insert_characters, but start at initial state.
+    Term::_move_cursor 0 0
+    Term::_csi_@ 20
+    check "insert characters 4" {
+	"        "
+	"ijklmnop"
+	"qrstuvwx"
+	"yz01234 "
+    } 0 0
+}
+
 proc test_pan_down { } {
     Term::_move_cursor 1 2
     Term::_csi_S
@@ -204,6 +216,18 @@ proc test_pan_down { } {
     } 1 2
 }
 
+proc test_pan_down_2 { } {
+    # As in test_pan_down, but start at initial state.
+    Term::_move_cursor 0 0
+    Term::_csi_S 100
+    check "pan down, initial state, excessive arg" {
+	"        "
+	"        "
+	"        "
+	"        "
+    } 0 0
+}
+
 proc test_pan_up { } {
     Term::_move_cursor 1 2
     Term::_csi_T
@@ -229,6 +253,18 @@ proc test_pan_up { } {
 	"        "
 	"        "
     } 1 2
+}
+
+proc test_pan_up_2 { } {
+    # As in test_pan_up, but start at initial state.
+    Term::_move_cursor 0 0
+    Term::_csi_T 100
+    check "pan up, initial state, excessive arg" {
+	"        "
+	"        "
+	"        "
+	"        "
+    } 0 0
 }
 
 proc test_cursor_up { } {
@@ -455,6 +491,18 @@ proc test_delete_line { } {
 	"        "
 	"        "
     } 3 0
+}
+
+proc test_delete_line_2 { } {
+    # Excessive param at initial state.
+    Term::_move_cursor 3 2
+    Term::_csi_M 100
+    check "delete line, excessive param" {
+	"abcdefgh"
+	"ijklmnop"
+	"        "
+	"        "
+    } 3 2
 }
 
 proc test_delete_character { } {
@@ -742,6 +790,7 @@ foreach_with_prefix test {
     test_linefeed_scroll
     test_carriage_return
     test_insert_characters
+    test_insert_characters_2
     test_cursor_up
     test_cursor_down
     test_cursor_forward
@@ -753,6 +802,7 @@ foreach_with_prefix test {
     test_erase_in_display
     test_erase_in_line
     test_delete_line
+    test_delete_line_2
     test_delete_character
     test_erase_character
     test_repeat
@@ -760,7 +810,9 @@ foreach_with_prefix test {
     test_insert_line
     test_insert_line_2
     test_pan_up
+    test_pan_up_2
     test_pan_down
+    test_pan_down_2
 } {
     run_one_test_small $test
 }
