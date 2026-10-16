@@ -1866,7 +1866,7 @@ riscv_recognized_prefixed_ext (const char *ext)
 }
 
 /* Canonical order for single letter extensions.  */
-static const char riscv_ext_canonical_order[] = "eigmafdqlcbkjtpvnh";
+static const char riscv_ext_canonical_order[] = "eigmafdqlcbkjtvph";
 
 /* Array is used to compare the orders of standard extensions quickly.  */
 static int riscv_ext_order[26] = {0};
