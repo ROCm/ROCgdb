@@ -119,40 +119,13 @@ proc test {mode} {
 	gdb_test_no_output "set scheduler-locking on"
     }
 
-    if {$mode != "sched-lock"} {
-	gdb_test_multiple "run" "run in device function" {
-	    -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
-		send_gdb "y\n"
-		run_and_wait_break_hits $mode "" $bp_hit_re $gdb_test_name
-	    }
-	}
-    } else {
-	# When scheduler-locking is in effect, new waves aren't allowed to run,
-	# so we will never hit the breakpoint in the GPU code, and the resumed
-	# host thread will wait indefinitely.  Verify that we don't see the
-	# prompt for a few seconds.
-	gdb_test_multiple "run" "run in device function" {
-	    -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
-		send_gdb "y\n"
-		exp_continue
-	    }
-
-	    -timeout 5
-	    -re "$gdb_prompt " {
-		fail $gdb_test_name
-	    }
-
-	    timeout {
-		pass $gdb_test_name
-	    }
-	}
-
-	# Verify that we can interrupt the host thread.
-	send_gdb "\003"
-	gdb_test_multiple "" "interrupt after run" {
-	    -re -wrap "" {
-		pass $gdb_test_name
-	    }
+    # Even when scheduler-locking is in effect, new waves are allowed to run
+    # while the program is starting up, so the restarted program reaches the
+    # breakpoint in the GPU code.
+    gdb_test_multiple "run" "run in device function" {
+	-re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
+	    send_gdb "y\n"
+	    run_and_wait_break_hits $mode "" $bp_hit_re $gdb_test_name
 	}
     }
 
@@ -169,7 +142,10 @@ proc test {mode} {
     if { $mode != "sched-lock" } {
 	run_and_wait_break_hits $mode "continue" $bp_hit_re
     } else {
-	# Same idea as above, we won't see a breakpoint hit in GPU code.
+	# Once the program has stopped, new waves aren't allowed to run when
+	# scheduler-locking is in effect, so we will never hit the breakpoint in
+	# the GPU code, and the resumed host thread will wait indefinitely.
+	# Verify that we don't see the prompt for a few seconds.
 	gdb_test_multiple "continue" "" {
 	    -timeout 5
 	    -re "$gdb_prompt " {

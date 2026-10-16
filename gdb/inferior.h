@@ -684,6 +684,13 @@ public:
      the target architecture/description.  */
   bool starting_up = false;
 
+  /* True from the time "run", "start" or "starti" creates the process
+     until its first stop is reported to the user.  Scheduler-locking
+     does not apply meanwhile: the program may depend on threads it
+     creates while starting up (e.g. runtime worker threads), and would
+     never reach its first stop if they were held stopped.  */
+  bool first_stop_pending = false;
+
   /* True when we are reading the library list of the inferior during an
      attach or handling a fork child.  */
   bool in_initial_library_scan = false;

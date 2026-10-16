@@ -1,0 +1,52 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that restarting a program with "run" while scheduler-locking is
+# on lets the program reach its first stop, even though the program
+# waits for a thread it creates while starting up.  Then test that
+# scheduler-locking is enforced again after that first stop.
+
+standard_testfile
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug pthreads}]} {
+    return
+}
+
+set bp_line [gdb_get_line_number "break here"]
+
+# Scheduler-locking can only be enabled once the program is running.
+if {![runto $srcfile:$bp_line]} {
+    return
+}
+
+gdb_breakpoint $srcfile:$bp_line
+gdb_test_no_output "set scheduler-locking on"
+
+gdb_run_cmd
+gdb_test "" "Breakpoint $decimal, main \\(\\) at .*break here.*" \
+    "run reaches breakpoint"
+
+gdb_test "show scheduler-locking" \
+    "Mode for locking scheduler during execution is \"on\"\\." \
+    "scheduler-locking is still on"
+
+# The thread created after the first stop must be held stopped, so main
+# reaches its end without the late thread hitting its breakpoint.
+gdb_breakpoint "late_thread_func"
+gdb_breakpoint $srcfile:[gdb_get_line_number "break after late thread"]
+gdb_test "continue" \
+    "Breakpoint $decimal, main \\(\\) at .*break after late thread.*" \
+    "continue does not stop in late thread"

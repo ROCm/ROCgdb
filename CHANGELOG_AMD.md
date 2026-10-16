@@ -27,6 +27,14 @@ Full documentation for ROCgdb is available at
   but also hit a breakpoint, ROCgdb would hide SIGSEGV and show the
   breakpoint hit.  This is fixed to prioritize and show SIGSEGV instead.
 
+### Changed
+
+- Scheduler-locking no longer applies while `run`, `start` or `starti`
+  is starting the program, until the program first stops.  Previously,
+  restarting a program with scheduler-locking on could hang if the
+  program waited for threads it creates while starting up, which HIP
+  programs always do.
+
 ## ROCgdb-16.3 for ROCm-10.1
 
 ### Added
