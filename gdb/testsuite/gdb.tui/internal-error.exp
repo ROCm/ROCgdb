@@ -1,0 +1,59 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Check handling of internal-error in TUI.
+
+tuiterm_env
+
+require allow_tui_tests
+
+foreach_with_prefix quit {yes no} {
+    Term::clean_restart 24 80
+
+    gdb_test_no_output "maint set internal-error corefile no"
+    gdb_test_no_output "maint set internal-error quit $quit"
+
+    require Term::enter_tui
+
+    send_gdb "maint internal-error\n"
+    set re_msg_line \
+	[string_to_regexp \
+	     "This is a bug, please report it."]
+    set re_msg \
+	[multi_line \
+	     "" \
+	     $re_msg_line]
+    gdb_assert \
+	{[Term::wait_for_region_contents 0 0 80 24 $re_msg]} \
+	"saw message"
+
+    if {$quit == "yes"} {
+	set seen_eof 0
+	gdb_expect {
+	    eof {
+		set seen_eof 1
+		gdb_exit_cleanup
+	    }
+	}
+
+	gdb_assert {$seen_eof} "exited"
+    } else {
+	gdb_assert {[Term::wait_for ""]} "got prompt"
+	gdb_assert {[Term::command "print 1"]} "responsive prompt"
+	send_gdb "info win\n"
+	set re_no_tui [string_to_regexp "The TUI is not active."]
+	gdb_assert {[Term::wait_for $re_no_tui]} "TUI disabled"
+    }
+}
