@@ -89,7 +89,10 @@ use_shared ()
      memory.  */
   __syncthreads ();
 
-  /* Break here.  */
+  if (blockIdx.x == 23 && threadIdx.x == 0)
+    {
+      volatile int var = 42;  /* Break here.  */
+    }
 
   /* The debugger only stops one wave in the selected work-group.  Make sure
      that all waves in the work-group synchronize here to avoid waves not
