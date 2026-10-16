@@ -148,6 +148,35 @@ proc Term::_copy_line { from to } {
     }
 }
 
+# Helper function.  Copy the lines [SY, EY) to [DY, ...).  Return the size of
+# the source range.
+proc Term::_copy_lines { sy ey dy } {
+    set cnt [expr {max($ey - $sy, 0)}]
+    if {$cnt == 0} {
+	# Empty source range.
+	return $cnt
+    }
+
+    if {$sy == $dy} {
+	# Copy has no effect.
+	return $cnt
+    }
+
+    # Handle overlapping source and destination ranges by choosing iteration
+    # order.
+    if {$sy > $dy} {
+	for {set n 0} {$n < $cnt} {incr n} {
+	    _copy_line [expr {$sy + $n}] [expr {$dy + $n}]
+	}
+    } else {
+	for {set n [expr {$cnt - 1}]} {$n >= 0} {incr n -1} {
+	    _copy_line [expr {$sy + $n}] [expr {$dy + $n}]
+	}
+    }
+
+    return $cnt
+}
+
 # Linefeed.
 proc Term::_ctl_0x0a {} {
     _log_cur "Line feed" {
@@ -162,10 +191,7 @@ proc Term::_ctl_0x0a {} {
 	    # cursor back on the screen.  But we wrap the
 	    # scrolling inside a while loop just to be on the safe
 	    # side.
-	    for {set y 0} {$y < $_rows - 1} {incr y} {
-		set next_y [expr {$y + 1}]
-		_copy_line $next_y $y
-	    }
+	    _copy_lines 1 $_rows 0
 
 	    incr _cur_row -1
 	    _clear_lines $_cur_row $_rows
@@ -485,15 +511,10 @@ proc Term::_csi_L {args} {
 
 	set arg [expr {min($arg, $_rows - $_cur_row)}]
 
-	set y [expr {$_rows - $arg - 1}]
-	set next_y [expr {$_rows - 1}]
-	while {$y >= $_cur_row} {
-	    _copy_line $y $next_y
-	    incr y -1
-	    incr next_y -1
-	}
+	set dy [expr {$_cur_row + $arg}]
+	_copy_lines $_cur_row [expr {$_rows - $arg}] $dy
 
-	_clear_lines $_cur_row [expr {$_cur_row + $arg}]
+	_clear_lines $_cur_row $dy
     }
 }
 
@@ -507,14 +528,10 @@ proc Term::_csi_M {args} {
 	variable _cur_row
 	variable _rows
 
-	set y $_cur_row
-	set next_y [expr {$y + $count}]
-	while {$next_y < $_rows} {
-	    _copy_line $next_y $y
-	    incr y
-	    incr next_y
-	}
-	_clear_lines $y $_rows
+	set sy [expr {$_cur_row + $count}]
+	set copy_cnt [_copy_lines $sy $_rows $_cur_row]
+
+	_clear_lines [expr {$_cur_row + $copy_cnt}] $_rows
     }
 }
 
@@ -560,16 +577,9 @@ proc Term::_csi_S {args} {
 	# margins.  If/when that changes, then the following will
 	# need to be updated.
 
-	set dy 0
-	set y $count
+	set copy_cnt [_copy_lines $count $_rows 0]
 
-	while {$y < $_rows} {
-	    _copy_line $y $dy
-	    incr y 1
-	    incr dy 1
-	}
-
-	_clear_lines $dy $_rows
+	_clear_lines $copy_cnt $_rows
     }
 }
 
@@ -590,14 +600,7 @@ proc Term::_csi_T {args} {
 	# margins.  If/when that changes, then the following will
 	# need to be updated.
 
-	set y [expr {$_rows - $count - 1}]
-	set dy [expr {$_rows - 1}]
-
-	while {$dy >= $count} {
-	    _copy_line $y $dy
-	    incr y -1
-	    incr dy -1
-	}
+	_copy_lines 0 [expr {$_rows - $count}] $count
 
 	_clear_lines 0 $count
     }
