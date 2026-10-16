@@ -922,7 +922,6 @@ proc Term::_insert {str} {
 
 	variable _cur_col
 	variable _cur_row
-	variable _rows
 	variable _cols
 	variable _attrs
 	variable _chars
@@ -934,9 +933,7 @@ proc Term::_insert {str} {
 		if {$_cur_col >= $_cols} {
 		    set _cur_col 0
 		    incr _cur_row
-		    if {$_cur_row >= $_rows} {
-			error "FIXME scroll"
-		    }
+		    _scroll
 		}
 	    }
 	}

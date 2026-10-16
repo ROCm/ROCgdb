@@ -81,8 +81,7 @@ set small_initial {
 #   yz01234
 #
 # The bottom right cell is left blank: trying to write to it using _insert
-# would move the cursor past the screen, causing a scroll, but scrolling is
-# not implemented at the moment.
+# would move the cursor past the screen, causing a scroll.
 
 proc setup_small {} {
     setup_terminal 8 4
@@ -594,6 +593,15 @@ proc test_repeat { } {
 	"qrstuvwx"
 	"yz01234 "
     } 5 1
+
+    Term::_move_cursor 7 3
+    Term::_csi_b 1
+    check "repeat at bottom-right corner" {
+	"xxXXXnop"
+	"qrstuvwx"
+	"yz01234X"
+	"        "
+    } 0 3
 }
 
 proc test_vertical_line_position_absolute { } {
