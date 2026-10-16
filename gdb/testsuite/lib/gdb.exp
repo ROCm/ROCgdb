@@ -10303,7 +10303,9 @@ proc find_core_file {pid} {
     } elseif {$pid != -1} {
 	lappend files core.$pid
     }
-    lappend files ${::testfile}.core
+    if {[info exists ::testfile]} {
+	lappend files ${::testfile}.core
+    }
     lappend files core
 
     foreach file $files {
