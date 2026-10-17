@@ -53,9 +53,13 @@ gdb_assert \
     {[Term::wait_for_region_contents {*}$last_line "$gdb_prompt"]} \
     "got back prompt"
 
-# Send ^L to get prompt at left border.  Echo doesn't add an implicit newline,
-# so the prompt is now near the right border.
-send_gdb "\014"
+# The echo command doesn't add an implicit newline, so after
+# "echo $str60$str10" the prompt ends up near the right border.  Send an echo
+# without arguments to get the prompt at the left border.
+#   (gdb) echo 0123456789...0123456789
+#   0123456789...0123456789(gdb) echo
+#   (gdb)
+send_gdb "echo\n"
 gdb_assert {[Term::wait_for ""]} "prompt at left border"
 
 # Check that gdb is responsive.
