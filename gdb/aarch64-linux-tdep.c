@@ -3328,7 +3328,7 @@ aarch64_linux_ltag_tests (void)
       SELF_CHECK (aarch64_mte_get_ltag (addr) == (i & 0xf));
 
       addr = aarch64_mte_set_ltag (0xdeadbeef, i);
-      SELF_CHECK (addr = ((CORE_ADDR) (i & 0xf) << 56) | 0xdeadbeef);
+      SELF_CHECK (addr == (((CORE_ADDR) (i & 0xf) << 56) | 0xdeadbeef));
     }
 }
 
