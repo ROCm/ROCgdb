@@ -55,9 +55,10 @@ with_rocm_gpu_lock {
 	"This is verbose trap.*" \
 	"verbose trap message appears in backtrace"
 
-    # Test single stepping to the trap line.
-    # Expected: step should stop at __builtin_verbose_trap line, then
-    # next step triggers the trap.
+    # Test single stepping through the trap.
+    # At higher optimization levels (e.g. -O3), the number of "next"
+    # commands needed to reach the trap varies by target, so step
+    # repeatedly, bounded by max_steps, until SIGABRT is seen.
     clean_restart $testfile
 
     if {![runto test_trap_kernel -allow-pending]} {
@@ -80,19 +81,29 @@ with_rocm_gpu_lock {
 	}
     }
 
-    gdb_test_multiple "next" "step to trap line" {
+    # Step repeatedly until SIGABRT is seen.  The number of "next"
+    # commands taken to get there is incidental and must not affect the
+    # number of PASS/FAIL results recorded, so the whole sequence is a
+    # single test.
+    set max_steps 10
+    set steps_taken 0
+
+    gdb_test_multiple "next" "step triggers trap" {
 	-re -wrap "SIGABRT.*" {
 	    if {$has_line_table_bug} {
 		xfail "$gdb_test_name (compiler line table bug)"
 	    } else {
-		fail "$gdb_test_name"
+		pass $gdb_test_name
 	    }
 	}
-	-re -wrap "__builtin_verbose_trap.*" {
-	    pass $gdb_test_name
-
-	    # Next step should trigger the trap.
-	    gdb_test "next" "SIGABRT.*" "step triggers trap"
+	-re -wrap ".*" {
+	    incr steps_taken
+	    if {$steps_taken < $max_steps} {
+		send_gdb "next\n"
+		exp_continue
+	    } else {
+		fail "$gdb_test_name (did not trigger trap after $max_steps next commands)"
+	    }
 	}
     }
 }
