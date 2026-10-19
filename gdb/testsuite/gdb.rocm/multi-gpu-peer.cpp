@@ -56,13 +56,17 @@ store_kernel (int *val)
     __builtin_amdgcn_s_sleep (8);
 }
 
-/* Inspected by the test.  The arrays have one element per visible GPU.  */
+/* Inspected by the test.  The arrays have one element per visible GPU.
+   Pointers are declared "volatile" to prevent the optimizer from
+   eliminating their storage and keeping the values in registers
+   instead.  num_devices stays a plain int because its address is
+   passed to hipGetDeviceCount, which takes a plain "int *".  */
 int num_devices;
-unsigned int *pci_location;	/* (domain << 16) | (bus << 8) | device.  */
-int *can_access;		/* Can the compute GPU access this memory?  */
-int *buf;			/* Memory allocated on alloc_dev.  */
-int *hold;			/* Wait flag on the allocation GPU.  */
-int alloc_dev = -1;
+unsigned int *volatile pci_location;	/* (domain << 16) | (bus << 8) | device.  */
+int *volatile can_access;	/* Can the compute GPU access this memory?  */
+int *volatile buf;		/* Memory allocated on alloc_dev.  */
+int *volatile hold;		/* Wait flag on the allocation GPU.  */
+volatile int alloc_dev = -1;
 
 int
 main ()
@@ -101,7 +105,7 @@ main ()
 
       alloc_dev = dev;
       CHECK (hipSetDevice (alloc_dev));
-      CHECK (hipMalloc (&buf, sizeof (int)));
+      CHECK (hipMalloc ((int **) &buf, sizeof (int)));
       CHECK (hipMemcpy (buf, &value, sizeof (int), hipMemcpyHostToDevice));
 
       CHECK (hipSetDevice (compute_dev));
@@ -114,7 +118,7 @@ main ()
 
       int hold_val = 1;
       CHECK (hipSetDevice (alloc_dev));
-      CHECK (hipMalloc (&hold, sizeof (int)));
+      CHECK (hipMalloc ((int **) &hold, sizeof (int)));
       CHECK (hipMemcpy (hold, &hold_val, sizeof (int),
 			hipMemcpyHostToDevice));
 
