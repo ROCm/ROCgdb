@@ -43,8 +43,6 @@ fragment <<EOF
 #include "ldlex.h"
 #include "ldemul.h"
 
-static int coff_version;
-
 /* TI COFF extra command line options */
 
 static void
@@ -83,7 +81,6 @@ gld${EMULATION_NAME}_handle_option (int optc)
 	  && optarg[1] == '\0')
 	{
 	  static char buf[] = "coffX-${OUTPUT_FORMAT_TEMPLATE}";
-	  coff_version = *optarg - '0';
 	  buf[4] = *optarg;
 	  lang_add_output_format (buf, NULL, NULL, 0);
 	}
