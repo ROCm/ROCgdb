@@ -39,7 +39,6 @@ bool mclex_want_line = false;
 bool mclex_want_filename = false;
 
 /* Local globals.  */
-static unichar *input_stream = NULL;
 static unichar *input_stream_pos = NULL;
 static int input_line = 1;
 static const char *input_filename = NULL;
@@ -49,7 +48,7 @@ mc_set_content (const unichar *src)
 {
   if (!src)
     return;
-  input_stream = input_stream_pos = unichar_dup (src);
+  input_stream_pos = unichar_dup (src);
 }
 
 void
