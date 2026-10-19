@@ -75,7 +75,6 @@ static SCM length_keyword;
 
 /* Possible #:errors values.  */
 static SCM error_symbol;
-static SCM escape_symbol;
 static SCM substitute_symbol;
 
 /* Administrivia for value smobs.  */
@@ -1541,6 +1540,5 @@ gdbscm_initialize_values (void)
   length_keyword = scm_from_latin1_keyword ("length");
 
   error_symbol = scm_from_latin1_symbol ("error");
-  escape_symbol = scm_from_latin1_symbol ("escape");
   substitute_symbol = scm_from_latin1_symbol ("substitute");
 }
