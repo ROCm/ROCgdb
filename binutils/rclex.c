@@ -142,6 +142,7 @@ cpp_line (void)
   const char *s = rclex_tok;
   int line;
   char *send, *fn;
+  const char *quote;
   size_t len, mlen;
 
   ++s;
@@ -215,13 +216,13 @@ cpp_line (void)
     return;
 
   ++s;
-  send = strchr (s, '"');
-  if (send == NULL)
+  quote = strchr (s, '"');
+  if (quote == NULL)
     return;
 
-  fn = xmalloc (send - s + 1);
-  strncpy (fn, s, send - s);
-  fn[send - s] = '\0';
+  fn = xmalloc (quote - s + 1);
+  strncpy (fn, s, quote - s);
+  fn[quote - s] = '\0';
 
   free (rc_filename);
   rc_filename = fn;
