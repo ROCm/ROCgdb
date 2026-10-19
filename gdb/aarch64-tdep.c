@@ -6179,20 +6179,24 @@ aarch64_record_load_store (aarch64_insn_decode_record *aarch64_insn_r)
 	debug_printf ("Process record: load/store (register offset)\n");
       opc = bits (aarch64_insn_r->aarch64_insn, 22, 23);
       if (!(opc >> 1))
-	if (opc & 0x01)
-	  ld_flag = 0x01;
-	else
-	  ld_flag = 0x0;
+	{
+	  if (opc & 0x01)
+	    ld_flag = 0x01;
+	  else
+	    ld_flag = 0x0;
+	}
       else
-	if (size_bits != 0x03)
-	  ld_flag = 0x01;
-	else if (size_bits == 0x3 && vector_flag == 0x0 && opc == 0x2)
-	  {
-	    /* PRFM (register) or RPRFM */
-	    return AARCH64_RECORD_SUCCESS;
-	  }
-	else
-	  return AARCH64_RECORD_UNKNOWN;
+	{
+	  if (size_bits != 0x03)
+	    ld_flag = 0x01;
+	  else if (size_bits == 0x3 && vector_flag == 0x0 && opc == 0x2)
+	    {
+	      /* PRFM (register) or RPRFM */
+	      return AARCH64_RECORD_SUCCESS;
+	    }
+	  else
+	    return AARCH64_RECORD_UNKNOWN;
+	}
 
       if (!ld_flag)
 	{
@@ -6232,19 +6236,22 @@ aarch64_record_load_store (aarch64_insn_decode_record *aarch64_insn_r)
 	}
       opc = bits (aarch64_insn_r->aarch64_insn, 22, 23);
       if (!(opc >> 1))
-	if (opc & 0x01)
-	  ld_flag = 0x01;
-	else
-	  ld_flag = 0x0;
+	{
+	  if (opc & 0x01)
+	    ld_flag = 0x01;
+	  else
+	    ld_flag = 0x0;
+	}
       else
-	if (size_bits != 0x03)
-	  ld_flag = 0x01;
-	else
-	  if (insn_bits10_11 == 0)
+	{
+	  if (size_bits != 0x03)
+	    ld_flag = 0x01;
+	  else if (insn_bits10_11 == 0)
 	    /* PRFUM instruction.  */
 	    return AARCH64_RECORD_SUCCESS;
-      else
-	return AARCH64_RECORD_UNKNOWN;
+	  else
+	    return AARCH64_RECORD_UNKNOWN;
+	}
 
       if (!ld_flag)
 	{
