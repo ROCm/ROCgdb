@@ -1165,16 +1165,6 @@ rl78_elf_set_private_flags (bfd * abfd, flagword flags)
   return true;
 }
 
-static bool no_warn_mismatch = false;
-
-void bfd_elf32_rl78_set_target_flags (bool);
-
-void
-bfd_elf32_rl78_set_target_flags (bool user_no_warn_mismatch)
-{
-  no_warn_mismatch = user_no_warn_mismatch;
-}
-
 static const char *
 rl78_cpu_name (flagword flags)
 {
