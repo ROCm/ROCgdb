@@ -181,7 +181,6 @@ static struct internal_extra_pe_aouthdr pep;
 static int dll;
 static int pep_subsystem = ${SUBSYSTEM};
 static flagword real_flags = IMAGE_FILE_LARGE_ADDRESS_AWARE;
-static int support_old_code = 0;
 static lang_assignment_statement_type *image_base_statement = 0;
 static unsigned short pe_dll_characteristics = DEFAULT_DLL_CHARACTERISTICS;
 static bool insert_timestamp = true;
@@ -725,7 +724,6 @@ gld${EMULATION_NAME}_handle_option (int optc)
       set_pep_value ("__image_base__");
       break;
     case OPTION_SUPPORT_OLD_CODE:
-      support_old_code = 1;
       break;
     case OPTION_USE_NUL_PREFIXED_IMPORT_TABLES:
       pep_use_nul_prefixed_import_tables = true;
