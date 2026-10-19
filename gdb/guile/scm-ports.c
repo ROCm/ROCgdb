@@ -67,12 +67,6 @@ struct ioscm_memory_port
   ULONGEST current;
 };
 
-/* Copies of the original system input/output/error ports.
-   These are recorded for debugging purposes.  */
-static SCM orig_input_port_scm;
-static SCM orig_output_port_scm;
-static SCM orig_error_port_scm;
-
 /* This is the stdio port descriptor, scm_ptob_descriptor.  */
 static scm_t_port_type *stdio_port_desc;
 
@@ -797,12 +791,6 @@ This procedure is experimental." },
 void
 gdbscm_initialize_ports (void)
 {
-  /* Save the original stdio ports for debugging purposes.  */
-
-  orig_input_port_scm = scm_current_input_port ();
-  orig_output_port_scm = scm_current_output_port ();
-  orig_error_port_scm = scm_current_error_port ();
-
   /* Set up the stdio ports.  */
 
   ioscm_init_gdb_stdio_port ();
