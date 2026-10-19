@@ -18,7 +18,15 @@ concurrency:
 jobs:
   setup:
     runs-on: ubuntu-24.04
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'ci:skip') }}
+    # Single-arch CI is now opt-in: multi-arch CI (therock-multi-arch-ci.yml) is
+    # the default, so this runs only on PRs carrying the `ci:single-arch` label
+    # (manual workflow_dispatch still runs).
+    if: >-
+      ${{
+        !contains(github.event.pull_request.labels.*.name, 'ci:skip') &&
+        (github.event_name != 'pull_request' ||
+         contains(github.event.pull_request.labels.*.name, 'ci:single-arch'))
+      }}
     env:
       BASE_REF: HEAD^
     outputs:
