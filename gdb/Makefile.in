@@ -2571,7 +2571,6 @@ aclocal_m4_deps = \
 	acx_configure_dir.m4 \
 	transform.m4 \
 	../bfd/bfd.m4 \
-	../config/acinclude.m4 \
 	../config/enable.m4 \
 	../config/plugins.m4 \
 	../config/lead-dot.m4 \
