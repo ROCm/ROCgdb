@@ -21,6 +21,11 @@
 
 load_lib rocm.exp
 
+# Each instance writes its corefile under its own outputs/ directory
+# and only inspects per-inferior state, so allow it to run concurrently
+# with other gdb.rocm tests.
+set rocm_gpu_concurrency parallel
+
 require allow_rocm_core_tests
 require allow_hip_tests
 

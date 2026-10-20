@@ -275,7 +275,7 @@ endef
 check-parallel:
 	-rm -f *core*
 	-rm -rf cache outputs temp
-	-rm -f gpu-parallel.lock
+	-rm -f gpu-parallel*.lock
 	$(MAKE) -k do-check-parallel; \
 	result=$$?; \
 	if test -d outputs; then \
