@@ -671,7 +671,15 @@ validate_code_object_has_active_agent
 	  continue;
 	}
 
-      if (agent_arch == architecture_id)
+      /* Check if code object is compatible with agent architecture.
+	 This handles generic code objects (gfx9-4-generic, gfx10-3-generic,
+	 gfx11-generic) that can run on multiple specific architectures.  */
+      bool is_compatible = false;
+      status = amd_dbgapi_architecture_is_compatible (architecture_id,
+						       agent_arch,
+						       &is_compatible);
+
+      if (status == AMD_DBGAPI_STATUS_SUCCESS && is_compatible)
 	{
 	  found_matching_agent = true;
 	  break;
