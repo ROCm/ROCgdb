@@ -25105,6 +25105,27 @@ $as_echo "#define HAVE_AMD_DBGAPI 1" >>confdefs.h
 	as_fn_error $? "amd-dbgapi not supported for host ${gdb_host}" "$LINENO" 5
 	;;
     esac
+
+    # Detect if AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE can be used.
+    # This value is available with amd-dbgapi version 0.78.0.
+    save_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $AMD_DBGAPI_CFLAGS"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE is available" >&5
+$as_echo_n "checking whether AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE is available... " >&6; }
+    ac_fn_c_check_decl "$LINENO" "AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE" "ac_cv_have_decl_AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE" "#include <amd-dbgapi/amd-dbgapi.h>
+"
+if test "x$ac_cv_have_decl_AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE $ac_have_decl
+_ACEOF
+
+    CPPFLAGS="$save_CPPFLAGS"
+
   elif test "$gdb_require_amd_dbgapi" = true -o "$with_amd_dbgapi" = yes; then
     # amd-dbgapi was not found and...
     #
