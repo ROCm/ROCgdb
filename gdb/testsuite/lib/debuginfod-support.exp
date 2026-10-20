@@ -33,6 +33,22 @@ proc allow_debuginfod_tests {} {
 	return false
     }
 
+    if {[using_fission]} {
+	# Debuginfod test-cases tend to split off debuginfo and move it to a
+	# place where gdb can't find it, but debuginfod can.
+	#
+	# Fission is another way to split off debuginfo, in the sense that only
+	# the skeleton units stay in the executable.  We'd like to test that
+	# debuginfod can serve .dwo or .dwp files, but that's currently not
+	# supported (PR debuginfod/32184).
+	#
+	# Return false because most debuginfod test-cases assume one
+	# particular type of split-off debuginfo.  There are a few that don't,
+	# but allowing those to run with fission doesn't actually test the
+	# fission+debuginfod behavior that we want to test.
+	return false
+    }
+
     # Skip testing if gdb was not configured with debuginfod.
     #
     # If GDB is built with ASan, it warns that some signal handlers
