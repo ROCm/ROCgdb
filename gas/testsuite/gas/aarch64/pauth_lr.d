@@ -31,8 +31,8 @@ Disassembly of section \.text:
       50:	5500001f 	retaasppc	50 <lr_signing\+0x10>
       54:	5500001f 	retaasppc	54 <lr_signing\+0x14>
       58:	5500003f 	retaasppc	54 <lr_signing\+0x14>
-      5c:	5500011f 	retaasppc	3c <lr_signing-0x4>
-      60:	550002df 	retaasppc	8 <lr_signing-0x38>
+      5c:	5500011f 	retaasppc	3c <(lr_signing-0x4|\.text\+0x3c)>
+      60:	550002df 	retaasppc	8 <(lr_signing-0x38|\.text\+0x8)>
 #...
    40000:	55091a7f 	retaasppc	2dcb4 <lr_signing\+0x2dc74>
-   40004:	551fffff 	retaasppc	8 <lr_signing-0x38>
+   40004:	551fffff 	retaasppc	8 <(lr_signing-0x38|\.text\+0x8)>
