@@ -149,13 +149,25 @@ contains the full symbol definition.
 
 ## PDB Discovery
 
-The PDB is looked for in three places, in this order: next to the EXE under
-the base name the RSDS record of the executable's debug directory gives,
-next to the EXE under the EXE's own name with `.pdb` for its extension, and
-at the full path the RSDS record gives. That path is not opened when it is
-a network or device path (`\\host\share\...`, `\\?\...`), as opening one
-makes Windows send the user's credentials to that host, or when it is not
-absolute on the host GDB runs on.
+The PDB is looked for in this order: next to the EXE under the base name the
+RSDS record of the executable's debug directory gives, next to the EXE under
+the EXE's own name with `.pdb` for its extension, in each entry of GDB's
+`debug-file-directory` (`set debug-file-directory`), at the full path the
+RSDS record gives, then in the directories `_NT_ALT_SYMBOL_PATH` and
+`_NT_SYMBOL_PATH` name and, on Windows, those of the registry's
+`SymbolSearchPath`.
+
+TODO: Download PDBs from the symbol servers that `SRV*` entries name, as
+Windows debuggers do for the system DLLs.
+
+TODO: Search the local symbol stores that debuggers fill from a symbol
+server: `<store>/<pdb>/<GUID><age>/<pdb>`, for plain `_NT_SYMBOL_PATH`
+directories and the local directories of `SRV*` and `CACHE*` entries.
+
+A network path (`\\host\share\...`) or device path recorded in the RSDS
+record is not opened: opening it from an untrusted executable would make
+Windows send the user's credentials to that host. Nor is a recorded path
+that is not absolute on the host GDB runs on.
 
 ### Path Conversion (MSYS2)
 
@@ -247,6 +259,10 @@ stops at a depth of 1000 with an unsupported type.
   `S_GPROC32`/`S_LPROC32` with the signature in the PDB for the `_ID`
   records clang-cl and cl put in an object.
 - `maintenance info pdb-loaded-files`.
+- The PDB is also looked for in each `debug-file-directory` entry, in the
+  directories that `_NT_ALT_SYMBOL_PATH` and `_NT_SYMBOL_PATH` list, and on a
+  Windows host in the `SymbolSearchPath` registry value.  Symbol server
+  entries are skipped.
 
 ## Memory Allocations
 
@@ -356,7 +372,13 @@ Searches for the PDB file using multiple strategies in priority order:
 
 1. RSDS basename in the EXE directory
 2. `<exe-name>.pdb` next to the executable
-3. Full RSDS embedded path
+3. Each entry in `debug-file-directory`: `<dir>/<pdb-basename>`
+4. Full RSDS embedded path
+5. `_NT_ALT_SYMBOL_PATH` / `_NT_SYMBOL_PATH` (semicolon-separated;
+   `SRV*`/`SYMSRV*`/`CACHE*` entries are skipped: symbol servers are not
+   supported)
+6. Windows registry `Software\Microsoft\VisualStudio\MSPDB\SymbolSearchPath`
+   (HKCU then HKLM)
 
 Also contains `pdb_read_rsds_info()` which reads the RSDS debug directory
 entry from the PE executable to extract GUID, age, and PDB path, and

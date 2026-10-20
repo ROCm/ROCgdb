@@ -26,8 +26,12 @@
   without DWARF, GDB reads the PDB that the executable's debug directory
   names, when its GUID matches the executable's, its age is at least the
   executable's and its DBI age, if it has one, is the executable's.  GDB
-  looks for the PDB next to the executable and at the path that the
-  executable records.
+  looks for the PDB next to the executable, in the directories of
+  "set debug-file-directory", at the path that the executable records,
+  in the directories that the _NT_ALT_SYMBOL_PATH and _NT_SYMBOL_PATH
+  environment variables list, and on a Windows host in those of the
+  SymbolSearchPath registry value.  GDB does not download PDBs from
+  symbol servers.
 
   GDB reads from the PDB:
 

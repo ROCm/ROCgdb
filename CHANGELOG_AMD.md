@@ -13,10 +13,12 @@ Full documentation for ROCgdb is available at
   produce.  For an executable without DWARF, GDB reads the PDB that the
   executable's debug directory names, when its GUID matches, its age is
   at least the executable's and its DBI age, if it has one, is the
-  executable's.  GDB reads its public symbols, line tables and functions.
-  The reader is built for Windows targets and with --enable-targets=all;
-  the new configure option --enable-gdb-pdb-support=yes|no|auto overrides
-  that.
+  executable's.  GDB also looks for the PDB in the debug-file-directory,
+  in the _NT_ALT_SYMBOL_PATH and _NT_SYMBOL_PATH directories and in the
+  registry's SymbolSearchPath.  GDB reads its public symbols, line tables
+  and functions.  The reader is built for Windows targets and with
+  --enable-targets=all; the new configure option
+  --enable-gdb-pdb-support=yes|no|auto overrides that.
   "set debug pdb-read" reports what the reader does.
   "maint info pdb-loaded-files" lists the PDB files read.
 

@@ -132,9 +132,9 @@ Every compiled test uses `pdb_prepare_for_testing` with the selected board.
 ## 1.2 Which PDB gets loaded
 
 Where the reader looks for a PDB, and whether it accepts the one it finds,
-are checked by the selftests `pdb-find-pdb-file`, `pdb-rsds-info` and
-`pdb-validate-guid`, on PE images and PDBs they build in memory. The tests
-below load what a compiler produced.
+are checked by the selftests `pdb-find-pdb-file`, `pdb-find-pdb-file-search`,
+`pdb-rsds-info` and `pdb-validate-guid`, on PE images and PDBs they build in
+memory. The tests below load what a compiler produced.
 
 | Test | Covers |
 |---|---|

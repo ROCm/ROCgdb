@@ -24,6 +24,12 @@ if {![string match "*-mingw*" $host_triplet]} {
     error "This board requires a Windows-hosted GDB."
 }
 
+# GDB looks for a PDB in the directories these variables name; keep the
+# user's symbol paths away from every GDB the tests start.
+foreach hip_sdk_var {_NT_SYMBOL_PATH _NT_ALT_SYMBOL_PATH} {
+    unset -nocomplain env($hip_sdk_var)
+}
+
 if {![info exists env(HIP_SDK)] || $env(HIP_SDK) eq ""} {
     error "HIP_SDK must name the HIP SDK installation."
 }

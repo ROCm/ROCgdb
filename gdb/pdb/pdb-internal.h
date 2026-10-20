@@ -501,8 +501,19 @@ extern std::string pdb_format_guid (const gdb_byte *guid);
    the following order:
     1. <EXE dir>/<PDB basename from RSDS>.
     2. <EXE path with extension replaced by .pdb>.
-    3. The full RSDS path, unless it is a network or device path or is not
-       absolute on this host.  */
+    3. For each entry of 'set debug-file-directory': <entry>/<PDB name>,
+       the PDB name being the RSDS basename, else the EXE's name with
+       .pdb.
+    4. The full RSDS path, unless it is a network or device path or is not
+       absolute on this host.
+    5. Each directory <dir> of _NT_ALT_SYMBOL_PATH, then _NT_SYMBOL_PATH:
+       <dir>/<EXE extension>/<PDB name>, then <dir>/<PDB name>.  See
+       https://learn.microsoft.com/en-us/windows/win32/debug/symbol-paths
+       and microsoft-pdb PDB/dbi/locator.cpp.
+    6. The same for the registry's SymbolSearchPath, under
+       HKEY_CURRENT_USER then HKEY_LOCAL_MACHINE, on a Windows host.
+   Symbol server entries (SRV*, SYMSRV*, CACHE*) in 5 and 6 are skipped.
+   TODO: Download the PDB they name.  */
 extern std::string pdb_find_pdb_file (const objfile *objfile,
 				      const pdb_rsds_info &rsds);
 

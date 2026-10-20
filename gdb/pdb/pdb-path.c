@@ -24,6 +24,7 @@
 #include "objfiles.h"
 #include "pdb/pdb-internal.h"
 #include "gdb_bfd.h"
+#include "gdbsupport/gdb_vecs.h"
 
 #include "coff/internal.h"
 #include "libcoff.h"
@@ -32,10 +33,39 @@
 #include <algorithm>
 #include <array>
 #include <set>
+#include <vector>
+#ifdef _WIN32
+#include <stdint.h>
+#endif
 #include "filenames.h"
 #include "gdbsupport/selftest.h"
+#include "gdbsupport/scope-exit.h"
 #include <unistd.h>
 #include <sys/stat.h>
+
+/* <windows.h>, which <winsock2.h> also includes, cannot be included: its
+   ISPTR, ISFCN, ISARY and ISTAG macros clash with coff/internal.h's.
+   FIXME: Move these declarations into a separate file.  */
+#ifdef _WIN32
+extern "C"
+{
+  /* advapi32.dll: registry.  */
+  long __stdcall RegOpenKeyExA (void *, const char *, unsigned long,
+				unsigned long, void **);
+  long __stdcall RegQueryValueExA (void *, const char *, unsigned long *,
+				   unsigned long *, unsigned char *,
+				   unsigned long *);
+  long __stdcall RegCloseKey (void *);
+  /* kernel32.dll.  */
+  unsigned long __stdcall ExpandEnvironmentStringsA (const char *, char *,
+						     unsigned long);
+}
+
+#define PDB_HKCU ((void *) (intptr_t) 0x80000001)
+#define PDB_HKLM ((void *) (intptr_t) 0x80000002)
+#define PDB_KEY_QUERY_VALUE 0x0001
+
+#endif
 
 namespace pdb
 {
@@ -221,6 +251,166 @@ pdb_get_basename (std::string_view path, strip_ext strip = strip_ext::no)
 
   return path;
 }
+
+/* The extension of the file PATH names, without its dot ("exe" for
+   "dir/prog.exe"), or "" when it has none.  Returns a view into PATH.  */
+
+static std::string_view
+pdb_get_extension (std::string_view path)
+{
+  size_t slash = path.find_last_of ("/\\");
+  size_t dot = path.find_last_of ('.');
+
+  if (dot == std::string_view::npos
+      || (slash != std::string_view::npos && dot < slash))
+    return {};
+
+  return path.substr (dot + 1);
+}
+
+/* Whether DIR, an entry of a symbol path, names a symbol server or its
+   cache (SRV*..., SYMSRV*..., CACHE*...), in any case, as Microsoft's
+   symbol handler reads them.  */
+
+static bool
+pdb_symbol_server_entry (const std::string &dir)
+{
+  for (const char *prefix : { "SRV*", "SYMSRV*", "CACHE*" })
+    if (strncasecmp (dir.c_str (), prefix, strlen (prefix)) == 0)
+      return true;
+  return false;
+}
+
+/* Walk SEARCH_PATH, a ';'-separated list of directories, for PDB_NAME.
+   Each directory DIR is tried as DIR/EXE_EXT/PDB_NAME, when EXE_EXT, the
+   executable's extension ("exe", "dll"), is not empty, and then as
+   DIR/PDB_NAME.  Empty entries and symbol server entries are skipped:
+   GDB does not download PDBs.  Return the first path PRESENT accepts, or
+   "".  */
+
+static std::string
+pdb_search_path (const char *search_path, std::string_view pdb_name,
+		 std::string_view exe_ext, pdb_file_present_ftype present)
+{
+  if (search_path == nullptr || pdb_name.empty ())
+    return "";
+
+  const char *p = search_path;
+  while (*p != '\0')
+    {
+      const char *semicolon = strchr (p, ';');
+      size_t len = semicolon != nullptr ? semicolon - p : strlen (p);
+      std::string dir (p, len);
+      p += len + (semicolon != nullptr ? 1 : 0);
+
+      if (dir.empty () || pdb_symbol_server_entry (dir))
+	continue;
+
+      if (!IS_DIR_SEPARATOR (dir.back ()))
+	dir += '/';
+
+      if (!exe_ext.empty ())
+	{
+	  std::string path = (dir + std::string (exe_ext) + "/"
+			      + std::string (pdb_name));
+	  if (present (path))
+	    return path;
+	}
+
+      std::string path = dir + std::string (pdb_name);
+      if (present (path))
+	return path;
+    }
+
+  return "";
+}
+
+#ifdef _WIN32
+
+/* Registry value types.  */
+inline constexpr unsigned long PDB_REG_SZ = 1;
+inline constexpr unsigned long PDB_REG_EXPAND_SZ = 2;
+
+/* The search path a registry value of TYPE whose data is VALUE gives:
+   VALUE without its terminating NULs for a REG_SZ, with its %VAR%
+   references expanded for a REG_EXPAND_SZ, and "" for any other type.  */
+
+static std::string
+pdb_registry_value_path (unsigned long type, std::string value)
+{
+  while (!value.empty () && value.back () == '\0')
+    value.pop_back ();
+
+  if (type == PDB_REG_SZ)
+    return value;
+  if (type != PDB_REG_EXPAND_SZ || value.empty ())
+    return "";
+
+  unsigned long needed = ExpandEnvironmentStringsA (value.c_str (), nullptr,
+						    0);
+  if (needed == 0)
+    return "";
+  std::string expanded (needed, '\0');
+  unsigned long written = ExpandEnvironmentStringsA (value.c_str (),
+						     &expanded[0], needed);
+  /* A variable changed between the two calls.  */
+  if (written == 0 || written > needed)
+    return "";
+  expanded.resize (written);
+  while (!expanded.empty () && expanded.back () == '\0')
+    expanded.pop_back ();
+  return expanded;
+}
+
+/* Read the SymbolSearchPath value under ROOT_KEY's
+   Software\Microsoft\VisualStudio\MSPDB, which Microsoft's PDB locator
+   (microsoft-pdb, PDB/dbi/locator.cpp) reads under HKEY_CURRENT_USER and
+   HKEY_LOCAL_MACHINE.  Return the search path it gives, or "".  */
+
+static std::string
+pdb_read_win_registry_search_path (void *root_key)
+{
+  void *hkey;
+  if (RegOpenKeyExA (root_key, "Software\\Microsoft\\VisualStudio\\MSPDB",
+		     0, PDB_KEY_QUERY_VALUE, &hkey) != 0)
+    return "";
+  SCOPE_EXIT { RegCloseKey (hkey); };
+
+  unsigned long size = 0;
+  if (RegQueryValueExA (hkey, "SymbolSearchPath", nullptr, nullptr, nullptr,
+			&size) != 0
+      || size == 0)
+    return "";
+
+  std::string value (size, '\0');
+  unsigned long type;
+  if (RegQueryValueExA (hkey, "SymbolSearchPath", nullptr, &type,
+			(unsigned char *) &value[0], &size) != 0)
+    return "";
+  value.resize (std::min<size_t> (size, value.size ()));
+
+  return pdb_registry_value_path (type, std::move (value));
+}
+
+#endif /* _WIN32 */
+
+/* The registry's SymbolSearchPath under HKEY_LOCAL_MACHINE when MACHINE,
+   else under HKEY_CURRENT_USER; "" on a host other than Windows.  */
+
+static std::string
+pdb_registry_search_path (bool machine)
+{
+#ifdef _WIN32
+  return pdb_read_win_registry_search_path (machine ? PDB_HKLM : PDB_HKCU);
+#else
+  return "";
+#endif
+}
+
+/* How pdb_find_pdb_file reads the registry; a selftest replaces it.  */
+
+static std::string (*pdb_registry_reader) (bool machine)
+  = pdb_registry_search_path;
 
 /* The index in IMAGE's sections of the one containing the virtual address
    range [VA, VA + SIZE), or -1.  */
@@ -455,6 +645,7 @@ pdb_find_pdb_file (const char *exe_path, const pdb_rsds_info &rsds,
 
   std::string_view exe_dir = pdb_get_dirname (exe_path);
   std::string_view exe_name = pdb_get_basename (exe_path, strip_ext::yes);
+  std::string_view exe_ext = pdb_get_extension (exe_path);
   std::string path;
 
   /* Derive the PDB basename from the RSDS record when it is present.  */
@@ -484,6 +675,25 @@ pdb_find_pdb_file (const char *exe_path, const pdb_rsds_info &rsds,
 	return path;
     }
 
+  /* The PDB's name in the directories searched below: the one the RSDS
+     record gives, else the executable's with ".pdb".  */
+  std::string pdb_name (pdb_basename);
+  if (pdb_name.empty () && !exe_name.empty ())
+    pdb_name = std::string (exe_name) + ".pdb";
+
+  /* Try each entry in debug-file-directory.  */
+  if (!debug_file_directory.empty () && !pdb_name.empty ())
+    {
+      std::vector<gdb::unique_xmalloc_ptr<char>> dirs
+	= dirnames_to_char_ptr_vec (debug_file_directory.c_str ());
+      for (const auto &dir : dirs)
+	{
+	  path = std::string (dir.get ()) + "/" + pdb_name;
+	  if (found (path, "Using PDB from debug-file-directory"))
+	    return path;
+	}
+    }
+
   /* Try the RSDS path as-is, unless it is a network path
      (\\host\share\...) or a device path (\\?\..., \\.\...): opening one
      named by an untrusted executable makes Windows send the user's
@@ -507,6 +717,36 @@ pdb_find_pdb_file (const char *exe_path, const pdb_rsds_info &rsds,
     {
       path = pdb_path;
       if (found (path, "Using PDB path from RSDS"))
+	return path;
+    }
+
+  /* The symbol paths, in the order Microsoft's PDB locator reads them
+     (https://learn.microsoft.com/en-us/windows/win32/debug/symbol-paths,
+     microsoft-pdb PDB/dbi/locator.cpp), then the registry's, which is
+     read only on a Windows host.  Each is read only when the ones before
+     it do not give the PDB.  */
+  static const char *const symbol_path_msgs[] = {
+    "Using PDB path from _NT_ALT_SYMBOL_PATH",
+    "Using PDB path from _NT_SYMBOL_PATH",
+    "Using PDB path from HKCU",
+    "Using PDB path from HKLM",
+  };
+  for (int i = 0; i < 4; i++)
+    {
+      std::string search_path;
+      if (i < 2)
+	{
+	  const char *value = getenv (i == 0 ? "_NT_ALT_SYMBOL_PATH"
+				      : "_NT_SYMBOL_PATH");
+	  if (value != nullptr)
+	    search_path = value;
+	}
+      else
+	search_path = pdb_registry_reader (i == 3);
+
+      path = pdb_search_path (search_path.c_str (), pdb_name, exe_ext,
+			      present);
+      if (found (path, symbol_path_msgs[i]))
 	return path;
     }
 
@@ -774,7 +1014,129 @@ test_find_pdb_file ()
     }
 }
 
-/* The directory and base name of a path, with either separator.  */
+/* Where the PDB is looked for when it is not next to the executable:
+   each directory of debug-file-directory in order, then the RSDS path,
+   then _NT_ALT_SYMBOL_PATH, _NT_SYMBOL_PATH and the registry's
+   SymbolSearchPath under HKEY_CURRENT_USER and HKEY_LOCAL_MACHINE.  */
+
+static void
+test_find_pdb_file_search ()
+{
+  const std::string saved_dirs = debug_file_directory;
+  const char *alt = getenv ("_NT_ALT_SYMBOL_PATH");
+  const char *sym = getenv ("_NT_SYMBOL_PATH");
+  const std::string saved_alt = alt != nullptr ? alt : "";
+  const std::string saved_sym = sym != nullptr ? sym : "";
+  const bool had_alt = alt != nullptr, had_sym = sym != nullptr;
+  SCOPE_EXIT
+    {
+      debug_file_directory = saved_dirs;
+      if (had_alt)
+	setenv ("_NT_ALT_SYMBOL_PATH", saved_alt.c_str (), 1);
+      else
+	unsetenv ("_NT_ALT_SYMBOL_PATH");
+      if (had_sym)
+	setenv ("_NT_SYMBOL_PATH", saved_sym.c_str (), 1);
+      else
+	unsetenv ("_NT_SYMBOL_PATH");
+      pdb_registry_reader = pdb_registry_search_path;
+    };
+
+  /* The registry's search paths, under HKEY_CURRENT_USER and
+     HKEY_LOCAL_MACHINE.  */
+  static std::string registry[2];
+  static int registry_reads;
+  registry[0] = registry[1] = "";
+  pdb_registry_reader = [] (bool machine)
+    {
+      registry_reads++;
+      return registry[machine];
+    };
+
+  std::set<std::string> files = { "first/linked.pdb", "second/linked.pdb",
+				  "env/linked.pdb", "env/exe/linked.pdb" };
+  auto present = [&] (const std::string &path)
+    {
+      return files.count (path) != 0;
+    };
+
+  /* An absolute path on this host, as the RSDS record spells it and as
+     GDB tries it.  */
+#ifdef _WIN32
+  const char *abs_rsds = "C:\\nowhere\\linked.pdb";
+  const char *abs_path = "C:/nowhere/linked.pdb";
+#else
+  const char *abs_rsds = "/nowhere/linked.pdb";
+  const char *abs_path = "/nowhere/linked.pdb";
+#endif
+
+  pdb_rsds_info rsds;
+  rsds.pdb_path = abs_rsds;
+  auto find = [&] (const std::string &dirs, const char *alt_path,
+		   const char *sym_path)
+    {
+      debug_file_directory = dirs;
+      setenv ("_NT_ALT_SYMBOL_PATH", alt_path, 1);
+      setenv ("_NT_SYMBOL_PATH", sym_path, 1);
+      return pdb_find_pdb_file ("dir/prog.exe", rsds, true, present);
+    };
+
+  const std::string sep (1, DIRNAME_SEPARATOR);
+
+  /* The debug directories in their order, a missing one skipped, and
+     before the environment.  */
+  SELF_CHECK (find ("first" + sep + "second", "env", "env")
+	      == "first/linked.pdb");
+  SELF_CHECK (find ("second" + sep + "first", "", "") == "second/linked.pdb");
+  SELF_CHECK (find ("none" + sep + "second", "", "") == "second/linked.pdb");
+
+  /* The RSDS path after the debug directories, before the environment.  */
+  files.insert (abs_path);
+  SELF_CHECK (find ("first", "env", "env") == "first/linked.pdb");
+  SELF_CHECK (find ("", "env", "env") == abs_path);
+  files.erase (abs_path);
+
+  /* _NT_ALT_SYMBOL_PATH before _NT_SYMBOL_PATH, and in each directory
+     the executable's extension subdirectory first.  */
+  SELF_CHECK (find ("", "env", "first") == "env/exe/linked.pdb");
+  SELF_CHECK (find ("", "", "env") == "env/exe/linked.pdb");
+  files.erase ("env/exe/linked.pdb");
+  SELF_CHECK (find ("", "", "env") == "env/linked.pdb");
+  SELF_CHECK (find ("", "", ";first;;env;") == "first/linked.pdb");
+
+  /* A Windows path in the environment.  */
+  files.insert ("C:\\sym\\env/linked.pdb");
+  SELF_CHECK (find ("", "C:\\sym\\env", "") == "C:\\sym\\env/linked.pdb");
+
+  /* The registry after the environment, HKEY_CURRENT_USER first.  */
+  files = { "env/linked.pdb", "user/linked.pdb", "machine/linked.pdb" };
+  registry[0] = "user";
+  registry[1] = "machine";
+  registry_reads = 0;
+  SELF_CHECK (find ("", "", "env") == "env/linked.pdb");
+  /* The registry is not read when the environment gives the PDB.  */
+  SELF_CHECK (registry_reads == 0);
+  SELF_CHECK (find ("", "", "") == "user/linked.pdb");
+  SELF_CHECK (registry_reads == 1);
+  registry[0] = "srv*c:/symbols*https://msdl.example;none";
+  SELF_CHECK (find ("", "", "") == "machine/linked.pdb");
+  SELF_CHECK (registry_reads == 3);
+  registry[0] = registry[1] = "";
+
+  /* With no PDB name in the RSDS record, the executable's name with
+     ".pdb", in the debug directories and the symbol paths.  */
+  rsds.pdb_path.clear ();
+  files = { "first/prog.pdb", "env/exe/prog.pdb" };
+  SELF_CHECK (find ("first", "env", "") == "first/prog.pdb");
+  SELF_CHECK (find ("", "env", "") == "env/exe/prog.pdb");
+  rsds.pdb_path = abs_rsds;
+
+  files.clear ();
+  SELF_CHECK (find ("first", "env", "env").empty ());
+}
+
+/* Splitting a path into its directory, base name and extension; both
+   separators count.  */
 
 static void
 test_path_parts ()
@@ -788,6 +1150,11 @@ test_path_parts ()
   SELF_CHECK (pdb_get_basename ("/a/b.c.pdb", strip_ext::yes) == "b.c");
   SELF_CHECK (pdb_get_basename ("noext", strip_ext::yes) == "noext");
   SELF_CHECK (pdb_get_basename ("a/").empty ());
+
+  SELF_CHECK (pdb_get_extension ("a/b.exe") == "exe");
+  SELF_CHECK (pdb_get_extension ("a.b/c").empty ());
+  SELF_CHECK (pdb_get_extension ("a\\b.c.dll") == "dll");
+  SELF_CHECK (pdb_get_extension ("noext").empty ());
 }
 
 /* A path that names no Unix root is kept, with '/' separators; a Unix path
@@ -806,6 +1173,74 @@ test_convert_path ()
 	      == "/home/u/C:/pdb-selftest-none/a.c");
 }
 
+/* The symbol path: ';'-separated directories, each tried as
+   <dir>/<ext>/<pdb> before <dir>/<pdb>; empty entries and symbol servers,
+   in any case, are skipped.  */
+
+static void
+test_search_path ()
+{
+  std::set<std::string> files = { "two/x.pdb", "two/exe/x.pdb",
+				  "C:\\sym\\x.pdb" };
+  auto present = [&] (const std::string &path)
+    {
+      return files.count (path) != 0;
+    };
+
+  std::string path = "one;two";
+  SELF_CHECK (pdb_search_path (path.c_str (), "x.pdb", "exe", present)
+	      == "two/exe/x.pdb");
+  SELF_CHECK (pdb_search_path (path.c_str (), "x.pdb", "", present)
+	      == "two/x.pdb");
+  SELF_CHECK (pdb_search_path (path.c_str (), "x.pdb", "dll", present)
+	      == "two/x.pdb");
+
+  /* A directory that ends in a separator gets no other.  */
+  SELF_CHECK (pdb_search_path ("C:\\sym\\", "x.pdb", "", present)
+	      == "C:\\sym\\x.pdb");
+
+  path = ";;SRV*cache*https://msdl.example;SYMSRV*x;CACHE*y;two/";
+  SELF_CHECK (pdb_search_path (path.c_str (), "x.pdb", "", present)
+	      == "two/x.pdb");
+  files.insert ("srv*two/x.pdb");
+  files.insert ("Cache*two/x.pdb");
+  SELF_CHECK (pdb_search_path ("srv*two;Cache*two", "x.pdb", "", present)
+	      .empty ());
+  SELF_CHECK (pdb_search_path (path.c_str (), "missing.pdb", "exe",
+			       present).empty ());
+  SELF_CHECK (pdb_search_path (path.c_str (), "", "", present).empty ());
+  SELF_CHECK (pdb_search_path (nullptr, "x.pdb", "", present).empty ());
+  SELF_CHECK (pdb_search_path ("", "x.pdb", "", present).empty ());
+}
+
+#ifdef _WIN32
+
+/* A registry value's search path: a REG_SZ as it is, a REG_EXPAND_SZ
+   with its %VAR% references expanded, without the terminating NULs the
+   registry may store; nothing from another type.  */
+
+static void
+test_registry_value_path ()
+{
+  /* Every Windows process has SystemRoot in its environment.  */
+  const char *root = getenv ("SystemRoot");
+  SELF_CHECK (root != nullptr);
+  if (root == nullptr)
+    return;
+
+  using namespace std::string_literals;
+  SELF_CHECK (pdb_registry_value_path (PDB_REG_SZ, "a;%SystemRoot%\0"s)
+	      == "a;%SystemRoot%");
+  SELF_CHECK (pdb_registry_value_path (PDB_REG_EXPAND_SZ,
+				       "a;%SystemRoot%\0\0"s)
+	      == "a;" + std::string (root));
+  SELF_CHECK (pdb_registry_value_path (PDB_REG_EXPAND_SZ, "\0"s).empty ());
+  /* REG_DWORD.  */
+  SELF_CHECK (pdb_registry_value_path (4, "a").empty ());
+}
+
+#endif /* _WIN32 */
+
 } /* namespace selftests */
 
 #endif /* GDB_SELF_TEST */
@@ -819,7 +1254,15 @@ INIT_GDB_FILE (pdb_path)
   selftests::register_test ("pdb-rsds-info", pdb::selftests::test_rsds_info);
   selftests::register_test ("pdb-find-pdb-file",
 			    pdb::selftests::test_find_pdb_file);
+  selftests::register_test ("pdb-find-pdb-file-search",
+			    pdb::selftests::test_find_pdb_file_search);
   selftests::register_test ("pdb-convert-path",
 			    pdb::selftests::test_convert_path);
+  selftests::register_test ("pdb-search-path",
+			    pdb::selftests::test_search_path);
+#ifdef _WIN32
+  selftests::register_test ("pdb-registry-value-path",
+			    pdb::selftests::test_registry_value_path);
+#endif
 #endif
 }

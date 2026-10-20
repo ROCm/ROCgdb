@@ -21133,10 +21133,18 @@ say that none was loaded.
 An executable names its PDB in its debug directory, with a GUID and an
 age.  @value{GDBN} looks for that PDB next to the executable, first
 under the name the executable records and then under the executable's
-own name with the extension @file{.pdb}, and then at the full path the
-executable records.  That path is not opened when it is a network or
-device path, such as @file{\\host\share\@dots{}}, or when it is not
-absolute on the host.  A PDB is loaded only when its GUID is the
+own name with the extension @file{.pdb}; then in each directory of
+@code{debug-file-directory} (@pxref{Separate Debug Files}); then at the
+full path the executable records; and then in the directories that the
+environment variables @env{_NT_ALT_SYMBOL_PATH} and
+@env{_NT_SYMBOL_PATH} name and, on Windows, the registry's
+@code{SymbolSearchPath}.  In each directory @var{dir} of those, the PDB
+is looked for in @file{@var{dir}/@var{ext}}, where @var{ext} is the
+executable's extension, such as @samp{exe}, before @var{dir}; symbol
+server entries (@samp{SRV*}, @samp{SYMSRV*} and @samp{CACHE*}) are
+skipped, as @value{GDBN} does not download PDBs.  The recorded path is not opened when it is a
+network or device path, such as @file{\\host\share\@dots{}}, or when it
+is not absolute on the host.  A PDB is loaded only when its GUID is the
 executable's, the age in its PDB Info stream is at least the executable's
 (writing to a PDB after the link raises it), and the age in its DBI stream,
 when that is not 0, is the executable's.
