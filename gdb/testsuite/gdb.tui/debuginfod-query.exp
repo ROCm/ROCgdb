@@ -29,10 +29,7 @@ if { [build_executable "build executable" $testfile $srcfile] == -1 } {
     return
 }
 
-if {[section_get $binfile ".gnu_debuglink"] ne ""} {
-    unsupported "debug information has already been split out"
-    return
-}
+require {!have_gnu_debuglink $binfile}
 
 # Assume that GDB is in TUI mode, in the SRC layout, and that a
 # debuginfod prompt is currently active in the CMD window.

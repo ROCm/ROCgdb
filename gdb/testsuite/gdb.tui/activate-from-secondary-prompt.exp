@@ -129,15 +129,12 @@ proc_with_prefix test_from_debuginfod_prompt {} {
 	return
     }
 
+    require {!have_gnu_debuglink $::binfile}
+
     set stripped_binfile [standard_output_file ${::testfile}-stripped]
     file copy -force $::binfile $stripped_binfile
     if {[gdb_gnu_strip_debug $stripped_binfile no-debuglink]} {
 	unsupported "produce separate debug info for [file tail $stripped_binfile]"
-	return
-    }
-
-    if {[section_get $stripped_binfile ".gnu_debuglink"] ne ""} {
-	unsupported "debug information has already been split out"
 	return
     }
 

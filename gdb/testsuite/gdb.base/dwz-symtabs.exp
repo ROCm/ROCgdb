@@ -58,10 +58,7 @@ if {[build_executable "build libbar.so" $libbar_filename \
 # adds a .gnu_debuglink, then this test isn't going to work.  We want to be
 # in control of splitting out the debug information, and we definitely don't
 # want a .gnu_debuglink otherwise debuginfod isn't going to be needed.
-if {[section_get $libbar_filename ".gnu_debuglink"] ne ""} {
-    unsupported "debug information has already been split out"
-    return
-}
+require {!have_gnu_debuglink $libbar_filename}
 
 # Compile libfoo.so.
 if {[build_executable "build libfoo.so" $libfoo_filename \

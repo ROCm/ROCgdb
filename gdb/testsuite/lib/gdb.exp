@@ -12335,6 +12335,11 @@ proc section_get {exec section} {
     }
 }
 
+# Return true if BINFILE has a .gnu_debuglink section.
+proc have_gnu_debuglink {binfile} {
+    return [expr {[section_get $binfile ".gnu_debuglink"] ne ""}]
+}
+
 # Return true if we expect the build-id from FILENAME to be included
 # in a core file.
 #
