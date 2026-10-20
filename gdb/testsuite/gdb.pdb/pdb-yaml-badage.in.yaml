@@ -1,0 +1,37 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# A PDB with the companion PE's GUID and a different age, __BAD_AGE__.  The
+# reader checks the identity right after the PDB info stream and refuses the
+# file there, so no other stream of it is read.
+---
+PdbStream:
+  Age:             __BAD_AGE__
+  Guid:            '__GUID__'
+  Signature:       0
+  Features:        [ VC140 ]
+  Version:         VC70
+DbiStream:
+  VerHeader:       V70
+  Age:             __BAD_AGE__
+  MachineType:     Amd64
+  Modules:         []
+TpiStream:
+  Version:         VC80
+  Records:         []
+IpiStream:
+  Version:         VC80
+  Records:         []
+...

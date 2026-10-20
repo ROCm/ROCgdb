@@ -9364,7 +9364,7 @@ proc gdb_get_line_number { text { file "" } } {
     if {"$file" == ""} {
 	set file "$srcfile"
     }
-    if {![regexp "^/" "$file"]} {
+    if {![regexp {^(/|[A-Za-z]:/)} "$file"]} {
 	set file "$srcdir/$subdir/$file"
     }
 
@@ -10097,7 +10097,7 @@ proc build_executable_from_specs {testname executable options args} {
     if {[string match gdb_compile_shlib* $func]} {
 	set sources_path {}
 	foreach {s local_options} $args {
-	    if {[regexp "^/" "$s"]} {
+	    if {[regexp {^(/|[A-Za-z]:/)} "$s"]} {
 		lappend sources_path "$s"
 	    } else {
 		lappend sources_path "$srcdir/$subdir/$s"
@@ -10107,7 +10107,7 @@ proc build_executable_from_specs {testname executable options args} {
     } elseif {[lsearch -exact $options rust] != -1} {
 	set sources_path {}
 	foreach {s local_options} $args {
-	    if {[regexp "^/" "$s"]} {
+	    if {[regexp {^(/|[A-Za-z]:/)} "$s"]} {
 		lappend sources_path "$s"
 	    } else {
 		lappend sources_path "$srcdir/$subdir/$s"
@@ -10118,7 +10118,7 @@ proc build_executable_from_specs {testname executable options args} {
 	set objects {}
 	set i 0
 	foreach {s local_options} $args {
-	    if {![regexp "^/" "$s"]} {
+	    if {![regexp {^(/|[A-Za-z]:/)} "$s"]} {
 		set s "$srcdir/$subdir/$s"
 	    }
 	    if  { [$func "${s}" "${binfile}${i}.o" object $local_options] != "" } {
@@ -10459,6 +10459,12 @@ gdb_caching_proc target_endianness {} {
 # will return "ls".
 
 proc relative_filename {root full} {
+    # On a MinGW host one may be spelled /home/... and the other
+    # C:/msys64/home/...
+    if {[ishost *-*-mingw*]} {
+	set root [host_file_normalize $root]
+	set full [host_file_normalize $full]
+    }
     set root_split [file split $root]
     set full_split [file split $full]
 

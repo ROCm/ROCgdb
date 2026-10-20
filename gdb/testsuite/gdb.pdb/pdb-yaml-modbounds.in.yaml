@@ -1,0 +1,153 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Two modules whose code interleaves: module A has `afirst` at .text+0x0
+# and `alast` at .text+0x100, module B has `bmid` at .text+0x80, in the
+# gap between A's procedures.  The test gives each module half of the
+# first .text page as its DBI section contribution, so B's contribution
+# starts above its only procedure.
+---
+PdbStream:
+  Age:             __AGE__
+  Guid:            '__GUID__'
+  Signature:       0
+  Features:        [ VC140 ]
+  Version:         VC70
+DbiStream:
+  VerHeader:       V70
+  Age:             __AGE__
+  MachineType:     Amd64
+  Modules:
+    - Module:          pdb-yaml-modbounds-a.obj
+      ObjFile:         pdb-yaml-modbounds-a.obj
+      SourceFiles:
+        - pdb-yaml-modbounds-a.cpp
+      Subsections:
+        - !FileChecksums
+          Checksums:
+            - FileName:        pdb-yaml-modbounds-a.cpp
+              Kind:            MD5
+              Checksum:        000102030405060708090A0B0C0D0E0F
+        - !Lines
+          CodeSize:        16
+          Flags:           [  ]
+          RelocOffset:     0
+          RelocSegment:    1
+          Blocks:
+            - FileName:        pdb-yaml-modbounds-a.cpp
+              Lines:
+                - Offset:          0
+                  LineStart:       10
+                  IsStatement:     true
+                  EndDelta:        0
+              Columns:         []
+        - !Lines
+          CodeSize:        16
+          Flags:           [  ]
+          RelocOffset:     256
+          RelocSegment:    1
+          Blocks:
+            - FileName:        pdb-yaml-modbounds-a.cpp
+              Lines:
+                - Offset:          0
+                  LineStart:       20
+                  IsStatement:     true
+                  EndDelta:        0
+              Columns:         []
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrParent: 0
+              PtrEnd: 0
+              PtrNext: 0
+              CodeSize: 16
+              DbgStart: 0
+              DbgEnd: 15
+              FunctionType: 4097
+              Offset: 0
+              Segment: 1
+              Flags: [  ]
+              DisplayName: afirst
+          - Kind:            S_END
+            ScopeEndSym: {}
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrParent: 0
+              PtrEnd: 0
+              PtrNext: 0
+              CodeSize: 16
+              DbgStart: 0
+              DbgEnd: 15
+              FunctionType: 4097
+              Offset: 256
+              Segment: 1
+              Flags: [  ]
+              DisplayName: alast
+          - Kind:            S_END
+            ScopeEndSym: {}
+    - Module:          pdb-yaml-modbounds-b.obj
+      ObjFile:         pdb-yaml-modbounds-b.obj
+      SourceFiles:
+        - pdb-yaml-modbounds-b.cpp
+      Subsections:
+        - !FileChecksums
+          Checksums:
+            - FileName:        pdb-yaml-modbounds-b.cpp
+              Kind:            MD5
+              Checksum:        101112131415161718191A1B1C1D1E1F
+        - !Lines
+          CodeSize:        16
+          Flags:           [  ]
+          RelocOffset:     128
+          RelocSegment:    1
+          Blocks:
+            - FileName:        pdb-yaml-modbounds-b.cpp
+              Lines:
+                - Offset:          0
+                  LineStart:       30
+                  IsStatement:     true
+                  EndDelta:        0
+              Columns:         []
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrParent: 0
+              PtrEnd: 0
+              PtrNext: 0
+              CodeSize: 16
+              DbgStart: 0
+              DbgEnd: 15
+              FunctionType: 4097
+              Offset: 128
+              Segment: 1
+              Flags: [  ]
+              DisplayName: bmid
+          - Kind:            S_END
+            ScopeEndSym: {}
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_ARGLIST
+      ArgList: { ArgIndices: [  ] }
+    - Kind:            LF_PROCEDURE
+      Procedure: { ReturnType: 116, CallConv: NearC, Options: [ None ], ParameterCount: 0, ArgumentList: 4096 }
+IpiStream:
+  Version:         VC80
+  Records:         []
+...

@@ -1,0 +1,53 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# A TPI header (stream 2) whose type index range is inverted, larger than
+# its record bytes can hold, or not based at 0x1000 is rejected before
+# anything is allocated for it, and GDB keeps running.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+standard_testfile
+
+foreach_with_prefix stream {2} {
+    foreach_with_prefix range {{4096 4095} {4096 2147483647}
+			       {4096 4294967295} {8192 8192}} {
+	set exe [standard_output_file \
+		     "stream-$stream-range-[join $range -]/header.exe"]
+	if {![pdb_prepare_yaml pdb-yaml-onefunc $exe]} {
+	    continue
+	}
+
+	# TypeIndexBegin and TypeIndexEnd follow Version and HeaderSize at
+	# the start of the stream.
+	set pdb [file join [file dirname $exe] pdb-yaml-stub.pdb]
+	lassign [pdb_test_stream $pdb $stream] block_size blocks data
+	set channel [open $pdb r+b]
+	seek $channel [expr {[lindex $blocks 0] * $block_size + 8}]
+	puts -nonewline $channel [binary format ii {*}$range]
+	close $channel
+
+	clean_restart
+	disable_pdb_symbol_server
+	gdb_test "file [host_file_normalize $exe]" \
+	    ".*invalid type index range.*" "header is rejected"
+	gdb_test "print 1 + 1" " = 2" "GDB keeps running"
+    }
+}

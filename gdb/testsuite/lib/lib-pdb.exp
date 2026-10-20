@@ -1,0 +1,277 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Utilities for PDB format testing
+
+# Return the little-endian 32-bit unsigned value at byte OFFSET of BYTES.
+
+proc pdb_test_u32 {bytes offset} {
+    binary scan $bytes @${offset}i value
+    return [expr {$value & 0xffffffff}]
+}
+
+# Read stream INDEX of the PDB file PATH through its MSF directory.
+# Return a list of the MSF block size, the stream's block numbers and the
+# stream's bytes.
+
+proc pdb_test_stream {path index} {
+    set channel [open $path rb]
+    set bytes [read $channel]
+    close $channel
+
+    # MSF superblock: block size at 32, directory size at 44, and the
+    # block holding the directory's block map at 52.
+    set block_size [pdb_test_u32 $bytes 32]
+    set directory_size [pdb_test_u32 $bytes 44]
+    set block_map [pdb_test_u32 $bytes 52]
+    set directory ""
+    for {set offset 0} {$offset < $directory_size} {incr offset $block_size} {
+	set block [pdb_test_u32 $bytes \
+		       [expr {$block_map * $block_size + 4 * ($offset / $block_size)}]]
+	append directory [string range $bytes [expr {$block * $block_size}] \
+			      [expr {($block + 1) * $block_size - 1}]]
+    }
+
+    # The directory holds the stream count, each stream's size, then each
+    # stream's block numbers in order.
+    set count [pdb_test_u32 $directory 0]
+    if {$index >= $count} {
+	error "missing PDB stream $index"
+    }
+    set cursor [expr {4 + 4 * $count}]
+    for {set stream 0} {$stream < $index} {incr stream} {
+	set size [pdb_test_u32 $directory [expr {4 + 4 * $stream}]]
+	if {$size != 0xffffffff} {
+	    incr cursor [expr {4 * (($size + $block_size - 1) / $block_size)}]
+	}
+    }
+    set size [pdb_test_u32 $directory [expr {4 + 4 * $index}]]
+    set blocks {}
+    set data ""
+    for {set offset 0} {$offset < $size} {incr offset $block_size} {
+	set block [pdb_test_u32 $directory $cursor]
+	incr cursor 4
+	lappend blocks $block
+	append data [string range $bytes [expr {$block * $block_size}] \
+			 [expr {($block + 1) * $block_size - 1}]]
+    }
+    return [list $block_size $blocks [string range $data 0 [expr {$size - 1}]]]
+}
+
+# Return true if the GDB under test has the PDB reader compiled in.  Its
+# maintenance commands are built only with the reader (PDB_SRCS in
+# gdb/Makefile.in), so their presence is the test.
+#
+# NOTE: This must be called while gdb is *not* running.
+
+gdb_caching_proc pdb_support {} {
+    global gdb_spawn_id
+    global gdb_prompt
+
+    if { [info exists gdb_spawn_id] } {
+	error "GDB must not be running in pdb_support."
+    }
+
+    gdb_start
+    set missing 0
+    gdb_test_multiple "maintenance info pdb-loaded-files" "" {
+	-re "Undefined maintenance info command.*$gdb_prompt $" {
+	    set missing 1
+	}
+	-re ".*$gdb_prompt $" { }
+    }
+    gdb_exit
+    return [expr {!$missing}]
+}
+
+proc pdb_prepare_for_testing {testname executable sources options} {
+    gdb_exit
+    set result [prepare_for_testing $testname $executable $sources $options]
+    if {$result != 0} {
+	fail "$testname: compilation"
+	return $result
+    }
+
+    set pdb_name [file rootname [file tail $executable]].pdb
+    return [gdb_test "maintenance info pdb-loaded-files" \
+		".*[string_to_regexp $pdb_name]" \
+		"$testname: generated PDB is loaded"]
+}
+
+# Clear _NT_SYMBOL_PATH for subsequently started processes and attempt to
+# clear debug-file-directory in the running GDB.
+proc disable_pdb_symbol_server {} {
+    set ::env(_NT_SYMBOL_PATH) ""
+
+    catch {
+	send_gdb "set debug-file-directory \"\"\n"
+	gdb_expect 5 {
+	    -re "$::gdb_prompt $" {}
+	    timeout {}
+	}
+    }
+}
+
+# Locate llvm-pdbutil.
+#
+# GDB cannot validate its own view of a PDB.  A second, independent reader
+# is needed for that, and llvm-pdbutil is the one the fixture generator
+# already depends on.
+#
+# Returns the program path, or "" when it is not installed -- callers should
+# treat that as unsupported rather than as a failure, since running the tests
+# does not otherwise require the LLVM tools.
+gdb_caching_proc pdb_llvm_pdbutil {} {
+    set candidates {}
+
+    foreach var {LLVM_BIN HIP_SDK HIP_PATH} {
+	if {[info exists ::env($var)] && $::env($var) ne ""} {
+	    set root $::env($var)
+	    foreach sub {{} bin {Bin bin}} {
+		lappend candidates \
+		    [file join $root {*}$sub llvm-pdbutil.exe]
+	    }
+	}
+    }
+
+    lappend candidates "C:/Program Files/LLVM/bin/llvm-pdbutil.exe"
+
+    foreach dir [lsort -decreasing [glob -nocomplain \
+	    "C:/AMD/ROCm/*/Bin/bin" "C:/AMD/ROCm/*/bin"]] {
+	lappend candidates [file join $dir llvm-pdbutil.exe]
+    }
+
+    foreach prog $candidates {
+	if {[file executable $prog]} {
+	    verbose "pdb_llvm_pdbutil: $prog"
+	    return $prog
+	}
+    }
+
+    # Anything on PATH, under either name.
+    foreach name {llvm-pdbutil llvm-pdbutil.exe} {
+	if {![catch {exec where $name} out]} {
+	    set prog [string trim [lindex [split $out "\n"] 0]]
+	    if {[file executable $prog]} {
+		verbose "pdb_llvm_pdbutil: $prog"
+		return $prog
+	    }
+	}
+    }
+
+    verbose "pdb_llvm_pdbutil: not found"
+    return ""
+}
+
+# Build the companion PE the generated PDBs are stamped against, in
+# DIRECTORY, and return its path ("" on failure).  Its RSDS identity is read
+# back from the built file, so a different GUID on every build is fine; what
+# must not change is the PDB base name the RSDS records, since
+# pdb_prepare_yaml writes the generated PDB under it.
+proc pdb_yaml_stub {directory} {
+    global srcdir subdir
+
+    set stub [file join $directory pdb-yaml-stub.exe]
+    if {[file exists $stub]} {
+	return $stub
+    }
+
+    set source $srcdir/$subdir/pdb-yaml-stub.c
+    if {![file exists $source]} {
+	perror "companion PE source missing: $source"
+	return ""
+    }
+
+    if {[gdb_compile $source $stub executable {debug}] != ""} {
+	return ""
+    }
+
+    return $stub
+}
+
+# Generate the PDB of YAML fixture FIXTURE for EXECUTABLE, a copy of the
+# companion PE.  The first CONTRIBUTIONS modules split the first 4096 bytes
+# of .text into equal code section contributions in module order, as
+# yaml2pdb writes none; 0 leaves every module without.
+proc pdb_prepare_yaml {fixture executable {contributions 1}} {
+    global srcdir subdir
+
+    set pdbutil [pdb_llvm_pdbutil]
+    if {$pdbutil eq ""} {
+	unsupported "llvm-pdbutil is required to generate $fixture"
+	return 0
+    }
+    set readobj [file join [file dirname $pdbutil] llvm-readobj.exe]
+    if {![file executable $readobj]} {
+	unsupported "llvm-readobj is required to generate $fixture"
+	return 0
+    }
+
+    set source $srcdir/$subdir/${fixture}.in.yaml
+    if {![file exists $source]} {
+	perror "YAML fixture source missing: $fixture"
+	return 0
+    }
+
+    gdb_exit
+    set directory [file dirname $executable]
+    file mkdir $directory
+    set stub [pdb_yaml_stub $directory]
+    if {$stub eq ""} {
+	unsupported "cannot build the companion PE for $fixture"
+	return 0
+    }
+    file copy -force $stub $executable
+    if {[catch {exec $readobj --coff-debug-directory \
+		    [host_file_normalize $executable]} output]
+    || ![regexp {PDBGUID: (\{[[:xdigit:]-]+\})} $output -> guid]
+	|| ![regexp {PDBAge: ([0-9]+)} $output -> age]} {
+	perror "cannot read companion PE identity: $output"
+	return 0
+    }
+
+    set channel [open $source r]
+    set yaml [string map [list __GUID__ $guid __AGE__ $age \
+			      __BAD_AGE__ [expr {$age + 98}]] [read $channel]]
+    close $channel
+    set generated [file join $directory ${fixture}.yaml]
+    set channel [open $generated w]
+    puts -nonewline $channel $yaml
+    close $channel
+
+    set pdb [file join $directory pdb-yaml-stub.pdb]
+    set status [catch {exec $pdbutil yaml2pdb \
+			  --pdb=[host_file_normalize $pdb] \
+			  [host_file_normalize $generated] 2>@1} output]
+    if {$status || [regexp -nocase {error:} $output]} {
+	perror "yaml2pdb failed for $fixture: $output"
+	return 0
+    }
+
+    if {[regexp {\mModi:} $yaml]} {
+	for {set module 0} {$module < $contributions} {incr module} {
+	    set size [expr {4096 / $contributions}]
+	    # -B keeps Python from dropping __pycache__ beside the script,
+	    # which lives in the source tree.
+	    if {[catch {exec python3 -B $srcdir/$subdir/pdb-yaml-setsc.py \
+			    $pdb 1 [expr {$module * $size}] $size $module \
+			    2>@1} output]} {
+		perror "section contribution patch failed for $fixture: $output"
+		return 0
+	    }
+	}
+    }
+    return 1
+}

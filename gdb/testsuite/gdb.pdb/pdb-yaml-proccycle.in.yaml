@@ -1,0 +1,64 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# One procedure, `selfret`, whose LF_PROCEDURE at 0x1001 names itself as
+# its return type.
+---
+PdbStream:
+  Age:             __AGE__
+  Guid:            '__GUID__'
+  Signature:       0
+  Features:        [ VC140 ]
+  Version:         VC70
+DbiStream:
+  VerHeader:       V70
+  Age:             __AGE__
+  MachineType:     Amd64
+  Modules:
+    - Module:          pdb-yaml-proccycle.obj
+      ObjFile:         pdb-yaml-proccycle.obj
+      SourceFiles:
+        - pdb-yaml-proccycle.cpp
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_GPROC32
+            ProcSym:
+              PtrParent: 0
+              PtrEnd: 0
+              PtrNext: 0
+              CodeSize: 16
+              DbgStart: 0
+              DbgEnd: 15
+              FunctionType: 4097
+              Offset: 0
+              Segment: 1
+              Flags: [  ]
+              DisplayName: selfret
+          - Kind:            S_END
+            ScopeEndSym: {}
+TpiStream:
+  Version:         VC80
+  Records:
+    # 0x1000 (void)
+    - Kind:            LF_ARGLIST
+      ArgList: { ArgIndices: [ ] }
+    # 0x1001 a procedure returning itself
+    - Kind:            LF_PROCEDURE
+      Procedure: { ReturnType: 4097, CallConv: NearC, Options: [ None ], ParameterCount: 0, ArgumentList: 4096 }
+IpiStream:
+  Version:         VC80
+  Records:         []
+...

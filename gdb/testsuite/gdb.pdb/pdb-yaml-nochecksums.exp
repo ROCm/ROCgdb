@@ -1,0 +1,56 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# A module with line blocks but no DEBUG_S_FILECHKSMS subsection: its rows
+# keep their lines under an unknown file, and reading them prints nothing.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+set testfile pdb-yaml-nochecksums
+standard_testfile
+
+set exe ${binfile}.exe
+
+if {![pdb_prepare_yaml pdb-yaml-modbounds $exe 2]} {
+    return
+}
+
+# yaml2pdb cannot write line blocks without their checksums, so hide the
+# checksums of module A after generation.
+set pdb [file join [file dirname $exe] pdb-yaml-stub.pdb]
+if {[catch {exec python3 -B $srcdir/$subdir/pdb-yaml-setsc.py \
+		$pdb hide 0xf4 0 2>@1} output]} {
+    perror "cannot hide the checksums: $output"
+    return
+}
+
+clean_restart
+disable_pdb_symbol_server
+
+# Every module is expanded while the file loads.
+gdb_test "file $exe" \
+    "Reading symbols from \[^\r\n\]*\\.\\.\\.(\r\nExpanding full symbols from \[^\r\n\]*\\.\\.\\.)?" \
+    "load prints nothing about the missing checksums"
+
+gdb_test_no_output "maintenance expand-symtabs" "expand the modules"
+
+gdb_test "info line *0x140001000" \
+    "Line 10 of \"<unknown>\" starts at address 0x140001000\[^\r\n\]*" \
+    "a row without its file keeps its line"

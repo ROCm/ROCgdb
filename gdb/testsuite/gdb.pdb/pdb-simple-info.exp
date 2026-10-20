@@ -1,0 +1,118 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test PDB debugging: breakpoints, stepping, public symbols, info commands.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+# The fixtures are Windows executables, so starting one needs a native host.
+require isnative
+
+standard_testfile pdb-test.cpp
+
+set exe ${binfile}.exe
+if {[pdb_prepare_for_testing "prepare fixture" [file tail $exe] \
+     $srcfile {debug c++ optimize=-O0}]} {
+    return
+}
+
+disable_pdb_symbol_server
+
+# Increase expect buffer — unfiltered info commands can produce
+# more output than the default 16 KB
+match_max 131072
+
+# info sources — should mention pdb-test.cpp
+gdb_test "info sources" \
+    ".*pdb-test\\.cpp.*" \
+    "info sources lists pdb-test.cpp"
+
+# Line tables and public symbols are enough for source-level control: a stop
+# and the backtrace show file:line, and 'list', 'next' and 'step' work by
+# line.  A global is reached through its public symbol.
+with_test_prefix "source level" {
+    set main_line [gdb_get_line_number "volatile int local_int = 42;"]
+    set call_line [gdb_get_line_number "int sum = compute1 (local_int, 10, adder);"]
+    set callee_line [gdb_get_line_number "constexpr int shadow_const = 11;"]
+
+    gdb_breakpoint "main"
+    gdb_run_cmd
+    gdb_test "" "main \\(\\) at \[^\r\n\]*pdb-test\\.cpp:$main_line\r\n$main_line\t.*" \
+	"stop at main shows file:line"
+    gdb_test "backtrace" "#0 +main \\(\\) at \[^\r\n\]*pdb-test\\.cpp:$main_line" \
+	"backtrace shows file:line"
+    gdb_test "info line *\$pc" "Line $main_line of \"\[^\"\]*pdb-test\\.cpp\" .*" \
+	"info line at the stop"
+    gdb_test "list $main_line,$main_line" \
+	"$main_line\[ \t\]+volatile int local_int = 42;" \
+	"list the stop line"
+    gdb_test "next" "[expr {$main_line + 1}]\[ \t\]+double local_double = 3\\.14;" \
+	"next goes to the following line"
+
+    gdb_breakpoint "pdb-test.cpp:$call_line"
+    gdb_continue_to_breakpoint "the call to compute1" \
+	".*pdb-test\\.cpp:$call_line\r\n.*"
+    gdb_test "step" "$callee_line\[ \t\]+constexpr int shadow_const = 11;" \
+	"step into compute1"
+    gdb_test "backtrace" \
+	"#0 \[^\r\n\]* at \[^\r\n\]*pdb-test\\.cpp:$callee_line\r\n#1 \[^\r\n\]*main \\(\\) at \[^\r\n\]*pdb-test\\.cpp:$call_line" \
+	"backtrace in compute1"
+    gdb_test "finish" "Run till exit from .*" "finish to main"
+
+    gdb_test "x/i \$pc" "=> $hex <\[^\r\n\]*>:\t.*" "disassemble at the pc"
+    gdb_test "print &g_counter" " = \\(\[^\r\n\]*\\*\\) $hex <g_counter>" \
+	"address of a global"
+    gdb_test "print (int) g_counter" " = 3" "global through a cast"
+
+    delete_breakpoints
+}
+
+# info functions
+gdb_test "info functions main" \
+    ".*main.*" \
+    "info functions lists main"
+
+# A procedure record names its LF_PROCEDURE signature in the TPI.
+gdb_test "info functions add_values" \
+    "File \[^\r\n\]*pdb-test\\.cpp:\r\n\tint add_values\\(int, int\\);" \
+    "info functions add_values"
+gdb_test "ptype main" "type = int \\(void\\)"
+gdb_test "ptype add_values" "type = int \\(int, int\\)"
+gdb_test "whatis static_helper" "type = int \\(int, int\\)"
+
+gdb_test "info functions compute1" \
+    ".*compute1.*" \
+    "info functions compute1"
+
+gdb_test "info functions static_helper" \
+    ".*static_helper.*" \
+    "info functions static_helper (file-static)"
+
+gdb_test "info functions process_point" \
+    ".*process_point.*" \
+    "info functions process_point"
+
+gdb_test "info functions modify_volatile" \
+    ".*modify_volatile.*" \
+    "info functions modify_volatile"
+
+gdb_test "info functions fast_abs" \
+    ".*fast_abs.*" \
+    "info functions fast_abs"

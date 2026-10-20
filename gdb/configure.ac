@@ -249,6 +249,7 @@ fi
 TARGET_OBS=
 all_targets=
 HAVE_NATIVE_GCORE_TARGET=
+any_windows_target=no
 
 # File formats that will be enabled based on the selected
 # target(s).  These are chosen because they are required to
@@ -278,6 +279,10 @@ do
 
     AS_IF([test -z "${gdb_target_obs}"],
       [AC_MSG_ERROR([configuration ${targ} is unsupported.])])
+
+    if test x${gdb_windows_target} = xyes; then
+      any_windows_target=yes
+    fi
 
     # Target-specific object files
     for i in ${gdb_target_obs}; do
@@ -315,6 +320,14 @@ if test $gdb_native = yes; then
    HAVE_GSTACK=1
 fi
 AC_SUBST(HAVE_GSTACK)
+
+# PDB debug format support.
+# Enable PDB if any Windows target is present or --enable-targets=all.
+AC_ARG_ENABLE(gdb-pdb-support,
+	      [AS_HELP_STRING([--enable-gdb-pdb-support],
+			      [PDB debuginfo format (yes / no / auto, default: enabled for Windows targets)])],
+	      [GDB_CHECK_YES_NO_AUTO_VAL([$enableval], [--enable-gdb-pdb-support])],
+	      [enable_gdb_pdb_support=auto])
 
 # AMD debugger API support.
 
@@ -384,6 +397,24 @@ AC_SUBST(HAVE_NATIVE_GCORE_TARGET)
 gdb_sim=
 gdb_osabi=
 targ=$target; . ${srcdir}/configure.tgt
+
+# Resolve --enable-gdb-pdb-support=auto from all the enabled targets.
+if test "x${enable_gdb_pdb_support}" = "xauto"; then
+  if test x${all_targets} = xtrue \
+     || test x${gdb_windows_target} = xyes \
+     || test x${any_windows_target} = xyes; then
+    enable_gdb_pdb_support=yes
+  else
+    enable_gdb_pdb_support=no
+  fi
+fi
+
+if test "x${enable_gdb_pdb_support}" != "xno"; then
+    AC_DEFINE(PDB_FORMAT_AVAILABLE, 1,
+	      [Defined if PDB format was requested.])
+    CONFIG_SRCS="$CONFIG_SRCS \$(PDB_SRCS)"
+    CONFIG_OBS="$CONFIG_OBS \$(PDB_OBS)"
+fi
 
 # Fetch the default architecture and default target vector from BFD.
 targ=$target; . $srcdir/../bfd/config.bfd

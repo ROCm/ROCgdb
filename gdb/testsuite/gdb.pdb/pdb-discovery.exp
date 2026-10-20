@@ -1,0 +1,114 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Where the reader looks for a PDB.  The search order is documented in
+# README.md; this covers the outcomes a user can observe: found next to the
+# executable, and not found at all.
+#
+# The stub PE is used because its RSDS names a PDB that does not exist in
+# the source directory, so the "full RSDS path" strategy cannot succeed and
+# the remaining strategies are what decide the result.  A compiled fixture
+# would always load through its embedded absolute path.
+#
+# Which file was chosen is read back from `maint info pdb-loaded-files`
+# rather than from the load-time message, so the test states the outcome
+# instead of the wording.
+#
+# The reader owns the file's mapping while it is loaded, so GDB is exited
+# before each rearrangement of the files on disk.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+set testfile pdb-discovery
+standard_testfile
+
+set exe ${binfile}.exe
+set workdir [file dirname $binfile]
+set altdir [file join $workdir "alternate symbols"]
+set seconddir [file join $workdir "second symbols"]
+set envdir [file join $workdir "environment symbols"]
+
+if {![pdb_prepare_yaml pdb-yaml-onefunc $exe]} {
+    return
+}
+set input_pdb [file join $workdir generated-symbols.pdb]
+file rename -force [file join $workdir pdb-yaml-stub.pdb] $input_pdb
+
+catch {file mkdir $altdir}
+file mkdir $seconddir
+file mkdir [file join $envdir exe]
+
+# The RSDS record names pdb-yaml-stub.pdb, so that is the name every
+# strategy looks for.
+set local_pdb [file join $workdir pdb-yaml-stub.pdb]
+set alt_pdb [file join $altdir pdb-yaml-stub.pdb]
+set second_pdb [file join $seconddir pdb-yaml-stub.pdb]
+set env_pdb [file join $envdir pdb-yaml-stub.pdb]
+set ext_pdb [file join $envdir exe pdb-yaml-stub.pdb]
+set fallback_pdb ${binfile}.pdb
+
+proc pdb_discovery_check {name expected {directories ""} {alternate ""} {symbols ""}} {
+    global exe env
+
+    with_test_prefix $name {
+    save_vars {env(_NT_ALT_SYMBOL_PATH) env(_NT_SYMBOL_PATH)} {
+	set env(_NT_ALT_SYMBOL_PATH) $alternate
+	set env(_NT_SYMBOL_PATH) $symbols
+	clean_restart
+	gdb_test_no_output "set debug-file-directory $directories" \
+	"set debug directory list"
+	gdb_load $exe
+	if {$expected eq ""} {
+	gdb_test "maintenance info pdb-loaded-files" "No PDB loaded\\."
+	gdb_test "ptype gfunc" \
+	    "(No symbol .*gfunc.*|No symbol table is loaded\\..*)"
+	} else {
+	set output [capture_command_output \
+		"maintenance info pdb-loaded-files" ""]
+	set output [string map {\\ /} $output]
+	set expected [string map {\\ /} \
+		  [host_file_normalize $expected]]
+	gdb_assert {[string first $expected $output] >= 0} \
+	    "selected PDB path"
+	gdb_test "ptype gfunc" {type = int \(int\)}
+	}
+	gdb_exit
+    }
+    }
+}
+
+gdb_exit
+foreach candidate [list $local_pdb $alt_pdb $second_pdb $env_pdb \
+	       $ext_pdb $fallback_pdb] {
+    file delete -force $candidate
+}
+
+set host_altdir [host_file_normalize $altdir]
+set host_seconddir [host_file_normalize $seconddir]
+set host_envdir [host_file_normalize $envdir]
+
+foreach candidate [list $local_pdb $fallback_pdb $alt_pdb $second_pdb] {
+    file copy -force $input_pdb $candidate
+}
+pdb_discovery_check "adjacent RSDS name first" $local_pdb $host_altdir
+file delete $local_pdb
+pdb_discovery_check "executable basename fallback" $fallback_pdb $host_altdir
+file delete $fallback_pdb
+pdb_discovery_check "missing PDB" ""

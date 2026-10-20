@@ -1,0 +1,39 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# A procedure type that is its own return type gets an unsupported return
+# type instead of recursing without end.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+standard_testfile
+set exe ${binfile}.exe
+
+if {![pdb_prepare_yaml pdb-yaml-proccycle $exe]} {
+    return
+}
+
+clean_restart [file tail $exe]
+disable_pdb_symbol_server
+
+gdb_test "ptype selfret" \
+    "type = <unsupported PDB type> \\(void\\)" \
+    "a procedure returning itself"
+gdb_test "print 1 + 1" " = 2" "GDB keeps running"

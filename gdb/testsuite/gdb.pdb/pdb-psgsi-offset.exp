@@ -1,0 +1,53 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# A public-symbol (PSGSI) hash record whose symbol offset is so large that
+# adding the record header size wraps past 2^32 is rejected, and GDB keeps
+# running.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+standard_testfile
+
+set exe [pdb_yaml_stub [file dirname [standard_output_file pdb-yaml-stub.exe]]]
+if {$exe eq ""} {
+    return
+}
+set pdb [file rootname $exe].pdb
+
+# The DBI header holds the PSGSI stream number at offset 16.  The PSGSI
+# stream starts with the 28-byte publics header and the 16-byte GSI hash
+# header; the first hash record's first field is its symbol offset plus 1.
+lassign [pdb_test_stream $pdb 3] - - dbi
+binary scan $dbi @16s psgsi
+lassign [pdb_test_stream $pdb [expr {$psgsi & 0xffff}]] block_size blocks
+set offset 44
+set channel [open $pdb r+b]
+seek $channel [expr {[lindex $blocks [expr {$offset / $block_size}]] \
+                         * $block_size + $offset % $block_size}]
+puts -nonewline $channel [binary format i 0xfffffffe]
+close $channel
+
+clean_restart
+disable_pdb_symbol_server
+gdb_test "file [host_file_normalize $exe]" \
+    ".*PSGSI hash record 0: offset 4294967293 out of range.*" \
+    "the wrapping offset is rejected"
+gdb_test "print 1 + 1" " = 2" "GDB keeps running"

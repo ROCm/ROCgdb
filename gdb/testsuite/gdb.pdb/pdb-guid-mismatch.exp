@@ -1,0 +1,133 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# A PDB is only usable by the executable it was built for.  The RSDS record
+# in the PE carries a GUID and an age that the PDB must match; a stale or
+# foreign PDB left under the expected name would otherwise be read as if it
+# described this program, giving a wrong answer for every symbol in it.
+#
+# The stub PE is used because the PDB its RSDS names does not exist in the
+# source tree.  That removes the absolute-RSDS-path fallback, so the only
+# candidate is the file placed here deliberately and the GUID check is what
+# decides the outcome.
+#
+# The reader owns the file's mapping while it is loaded, so GDB is exited
+# before the file on disk is replaced.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+set testfile pdb-guid-mismatch
+standard_testfile
+
+set exe ${binfile}.exe
+set workdir [file dirname $binfile]
+
+# A PDB from a different build.  Linking other sources produces a fresh GUID,
+# so this file is foreign to the executable under test while still defining
+# Circle -- which is what shows no type leaked out of a refused PDB.
+set foreign_exe ${testfile}-foreign.exe
+if {[pdb_prepare_for_testing "foreign build" $foreign_exe \
+	 pdb-test.cpp [list debug c++ optimize=-O0]]} {
+    return
+}
+gdb_exit
+
+set src_foreign_pdb [file join $workdir [file rootname $foreign_exe].pdb]
+if {![file exists $src_foreign_pdb]} {
+    perror "foreign PDB not produced: $src_foreign_pdb"
+    return
+}
+
+if {![pdb_prepare_yaml pdb-yaml-onefunc $exe]} {
+    return
+}
+set matching_pdb [file join $workdir generated-symbols.pdb]
+file rename -force [file join $workdir pdb-yaml-stub.pdb] $matching_pdb
+
+# The RSDS record names pdb-yaml-stub.pdb; that is the name to put a file
+# under to get it considered at all.
+set pdb [file join $workdir pdb-yaml-stub.pdb]
+
+# A PDB belonging to another program, under the name this one asks for.
+file copy -force $src_foreign_pdb $pdb
+
+clean_restart [file tail $exe]
+disable_pdb_symbol_server
+
+# Refusing it means loading nothing, not loading it anyway with a warning.
+gdb_test "maintenance info pdb-loaded-files" \
+    "No PDB loaded\\." \
+    "a PDB built for another program is not loaded"
+
+# Circle is defined in the foreign PDB and nowhere else here, so its
+# absence shows nothing was taken from the file that was refused.  With no
+# PDB accepted there is no symbol table at all, which GDB says instead.
+gdb_test "ptype Circle" \
+    "No symbol table is loaded\\.  Use the \"file\" command\\." \
+    "no type is taken from the refused PDB"
+
+# Loading it again reports why, naming both identities so the mismatch can
+# be acted on.
+set test "the refusal names the identity wanted and the one found"
+gdb_test_multiple "file [host_file_normalize $exe]" $test {
+    -re "different GUID/age, file skipped.*EXE expects GUID=\[0-9A-F-\]+ age=\[0-9\]+.*PDB provides GUID=\[0-9A-F-\]+ age=\[0-9\]+.*$gdb_prompt $" {
+	pass $test
+    }
+}
+
+# The matching PDB is accepted from that same path, so what was refused was
+# the identity and not the location.
+gdb_exit
+
+file copy -force $matching_pdb $pdb
+
+clean_restart [file tail $exe]
+disable_pdb_symbol_server
+
+gdb_test "maintenance info pdb-loaded-files" \
+    ".*pdb-guid-mismatch\[/\\\\\]+pdb-yaml-stub\\.pdb.*" \
+    "a matching PDB is accepted from the same path"
+
+gdb_test "info functions gfunc" \
+    ".*int gfunc\\(int\\);.*" \
+    "symbols come from the accepted PDB"
+
+# Age is checked as well as GUID.  This fixture carries the stub's own GUID
+# and a different age, so it isolates the half of the identity that a rebuild
+# of the same sources bumps: the GUID can match and the file still be stale.
+gdb_exit
+
+if {![pdb_prepare_yaml pdb-yaml-badage $exe]} {
+    return
+}
+
+clean_restart [file tail $exe]
+disable_pdb_symbol_server
+
+gdb_test "maintenance info pdb-loaded-files" \
+    "No PDB loaded\\." \
+    "a PDB with the right GUID but the wrong age is not loaded"
+
+set test "the refusal shows the same GUID on both sides"
+gdb_test_multiple "file [host_file_normalize $exe]" $test {
+    -re "EXE expects GUID=(\[0-9A-F-\]+) age=\[0-9\]+.*PDB provides GUID=\\1 age=\[0-9\]+.*$gdb_prompt $" {
+	pass $test
+    }
+}

@@ -1,0 +1,355 @@
+load_board_description "local-board"
+load_generic_config "unix"
+process_multilib_options ""
+
+if {![string match "*-mingw*" $host_triplet]} {
+    error "This board requires a Windows-hosted GDB."
+}
+
+if {![info exists env(HIP_SDK)] || $env(HIP_SDK) eq ""} {
+    error "HIP_SDK must name the HIP SDK installation."
+}
+
+set hip_sdk [string map {\\ /} $env(HIP_SDK)]
+foreach hip_sdk_tool {clang-cl.exe lld-link.exe} {
+    set tool_path [file join $hip_sdk bin $hip_sdk_tool]
+    if {![file executable $tool_path]} {
+	error "HIP SDK tool not found: $tool_path"
+    }
+}
+
+set CC_FOR_TARGET [list [file join $hip_sdk bin clang-cl.exe] -TC]
+set CXX_FOR_TARGET [list [file join $hip_sdk bin clang-cl.exe] -TP -EHsc]
+set_board_info compiler $CC_FOR_TARGET
+set_board_info c++compiler $CXX_FOR_TARGET
+set hip_sdk_flags "-nologo --target=x86_64-pc-windows-msvc"
+set hip_sdk_resource [string map {\\ /} [string trim \
+    [exec [file join $hip_sdk bin clang-cl.exe] -print-resource-dir]]]
+if {![file isdirectory $hip_sdk_resource]} {
+    set hip_sdk_resource [file join $hip_sdk bin lib clang \
+			      [file tail $hip_sdk_resource]]
+    if {![file isdirectory $hip_sdk_resource]} {
+	error "HIP SDK compiler resource directory not found: $hip_sdk_resource"
+    }
+    append hip_sdk_flags " [list -resource-dir=$hip_sdk_resource]"
+}
+# The static CRT's CodeView for ~200 modules floods listings such as
+# "maint info symtabs" past the test timeouts; -MD keeps it in DLLs.
+if {![info exists HIP_PDB_CRT]} {
+    set HIP_PDB_CRT "-MD"
+}
+# gdb_compile fails on any compiler output, so silence the CRT deprecation
+# warnings and those GCC-oriented sources give only under clang-cl.
+# -fgnu-keywords accepts typeof, as GCC's GNU dialects do.
+append hip_sdk_flags " $HIP_PDB_CRT" \
+    " -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS" \
+    " -Wno-unknown-attributes -Wno-int-to-pointer-cast" \
+    " -Wno-pointer-to-int-cast -Wno-void-pointer-to-int-cast" \
+    " -Wno-literal-conversion -Wno-unused-value -Wno-vla-cxx-extension" \
+    " -Wno-dangling -Wno-reinterpret-base-class -clang:-fgnu-keywords"
+set_board_info cflags $hip_sdk_flags
+# clang-cl's CodeView omits columns unless asked; without them a later
+# inline site in a statement has no line row of its own.
+if {![info exists HIP_PDB_DEBUG_FLAGS]} {
+    set HIP_PDB_DEBUG_FLAGS "-Z7 -clang:-gcolumn-info"
+}
+if {![info exists HIP_PDB_LDFLAGS]} {
+    set HIP_PDB_LDFLAGS "-fuse-ld=lld"
+}
+set_board_info debug_flags $HIP_PDB_DEBUG_FLAGS
+set_board_info ldflags $HIP_PDB_LDFLAGS
+set_board_info multitop ""
+
+# GCC options and their clang-cl spelling; an empty one drops the option,
+# as clang-cl warns about it and gdb_compile fails on any compiler output.
+set hip_sdk_pdb_gcc_options {
+    -shared -LD -Wl,--gc-sections {-Xlinker -opt:ref}
+    -Wl,-gc-sections {-Xlinker -opt:ref}
+    -fPIC {} -fpic {} -fPIE {} -fpie {} -fno-pie {} -no-pie {} -pie {}
+    -static {} -static-libgcc {} -static-libstdc++ {}
+    -fvar-tracking {} -fno-var-tracking {} -gstatement-frontiers {}
+    -Wl,--enable-auto-import {} -Wl,--no-as-needed {}
+    -fuse-ld=gold {} -fuse-ld=bfd {} -fuse-ld=mold {}
+}
+
+# GCC options clang-cl lacks but clang's own driver has: given with -clang:.
+set hip_sdk_pdb_clang_re "^-([join {O([0-9gsz]|fast) mindirect-branch=.*
+    f(no-)?(omit-frame-pointer|function-sections|data-sections)
+    f(no-)?(stack-protector.*|short-enums|(asynchronous-)?unwind-tables)
+    f(no-)?(debug-types-section|debug-prefix-map=.*)} |])\$"
+
+# Translate the GCC options FLAGS for clang-cl.  TYPE is the gdb_compile
+# output type; COMPILING is false for a link-only command.
+
+proc hip_sdk_pdb_flags {flags type compiling} {
+    set translated {}
+    set pending ""
+    foreach flag $flags {
+	if {$pending eq "-x"} {
+	    switch -- $flag {
+		c++ { lappend translated -TP }
+		c { lappend translated -TC }
+		default { lappend translated -x $flag }
+	    }
+	    set pending ""
+	    continue
+	}
+	if {$pending eq "-L"} {
+	    set flag -L$flag
+	    set pending ""
+	}
+	if {$flag in {-x -L}} {
+	    set pending $flag
+	} elseif {[dict exists $::hip_sdk_pdb_gcc_options $flag]} {
+	    lappend translated {*}[dict get $::hip_sdk_pdb_gcc_options $flag]
+	} elseif {($flag in {-EHsc -TP -TC} && !$compiling)
+		  || [string match -Wl,-e,* $flag]} {
+	    # The CRT startup stays the entry point: it pulls in the C runtime.
+	    continue
+	} elseif {[string match -L?* $flag]} {
+	    if {$type eq "executable"} {
+		lappend translated -Xlinker \
+		    -libpath:[host_file_normalize [string range $flag 2 end]]
+	    }
+	} elseif {[regexp $::hip_sdk_pdb_clang_re $flag]} {
+	    lappend translated -clang:$flag
+	} elseif {[regexp {^-std=(c|gnu)\+\+} $flag]
+		  && [info exists ::hip_sdk_pdb_c_compile]
+		  && $::hip_sdk_pdb_c_compile} {
+	    # GCC only warns that a C++ standard does not apply to C.
+	    continue
+	} elseif {[regexp {^-std=(c|gnu)\+\+(98|03|0x|11)$} $flag -> dialect]} {
+	    # The MSVC STL headers need C++14.
+	    lappend translated -clang:-std=${dialect}++14
+	} elseif {[string match "-std=*" $flag]} {
+	    lappend translated -clang:$flag
+	} elseif {$flag eq "-nostdlib"} {
+	    # As with GNU ld: no default libraries, entry point _start.  -GS-
+	    # is a compile option; clang-cl warns about it on a link.
+	    if {$compiling} {
+		lappend translated -GS-
+	    }
+	    if {$type ni {object preprocess assembly}} {
+		lappend translated -Xlinker -nodefaultlib -Xlinker -entry:_start \
+		    -Xlinker -subsystem:console
+	    }
+	} elseif {[regexp {^-Wl,--out-implib,(.*)$} $flag -> implib]} {
+	    lappend translated -Xlinker -implib:[host_file_normalize $implib]
+	} else {
+	    lappend translated $flag
+	}
+    }
+    if {$pending ne ""} {
+	error "Missing argument after $pending"
+    }
+    return $translated
+}
+
+# MinGW's GNU ld exports every external a DLL defines; lld-link exports only
+# dllexport ones, and its MinGW mode also exports the DLL's CRT startup.
+# Return -export options for the externals the objects OBJECTS define, as
+# read from their COFF symbol tables.
+
+proc hip_sdk_pdb_exports {objects} {
+    global hip_sdk
+    set objdump [file join $hip_sdk bin llvm-objdump.exe]
+    set exports {}
+    foreach object $objects {
+	if {[catch {exec $objdump -t [host_file_normalize $object]} table]} {
+	    continue
+	}
+	foreach line [split $table \n] {
+	    if {[regexp {\(sec +([0-9]+)\).*\(scl +2\) \(nx [0-9]+\) 0x[0-9a-f]+ (\S+)$} \
+		     $line -> section name]
+		&& $section != 0 && ![string match {\?\?_C@*} $name]
+		&& $name ni $exports} {
+		lappend exports $name
+	    }
+	}
+    }
+    set options {}
+    foreach name $exports {
+	lappend options -Xlinker -export:$name
+    }
+    return $options
+}
+
+proc hip-sdk-pdb_compile {source dest type options} {
+    global CC_FOR_TARGET CXX_FOR_TARGET CFLAGS_FOR_TARGET LDFLAGS_FOR_TARGET
+
+    foreach language {ada d f77 f90 go rust hip} {
+	if {$language in $options} {
+	    return [default_target_compile $source $dest $type $options]
+	}
+    }
+
+    # gdb_compile names a DLL's import library NAME.a; under -TC/-TP
+    # clang-cl would compile it as source, so hand it to the linker.
+    set compiling [expr {$type ne "executable"}]
+    set cxx_source 0
+    set inputs {}
+    foreach filename $source {
+	set extension [file extension $filename]
+	if {$extension eq ".a"} {
+	    lappend options "ldflags=-Xlinker [host_file_normalize $filename]"
+	    continue
+	}
+	lappend inputs $filename
+	if {$extension in {.c .cc .cpp .cxx .C .CPP .c++}} {
+	    set compiling 1
+	}
+	if {$extension in {.cc .cpp .cxx .c++ .C .CPP}} {
+	    set cxx_source 1
+	}
+    }
+    set source $inputs
+
+    set shared [regexp {(^|[\s=])-shared(\s|$)} [join $options]]
+    if {$shared} {
+	lappend options "ldflags=[hip_sdk_pdb_exports $source]"
+	# lld names the PDB after the output's stem, so NAME.so and NAME.exe
+	# would overwrite one NAME.pdb.
+	if {"debug" in $options} {
+	    lappend options "ldflags=-Xlinker -pdb:[host_file_normalize $dest].pdb"
+	}
+    }
+
+    set compiler $CC_FOR_TARGET
+    set prepared {}
+    if {"c++" in $options} {
+	set compiler $CXX_FOR_TARGET
+	if {[target_info exists cxxflags]} {
+	    lappend prepared "additional_flags=[target_info cxxflags]"
+	}
+	lappend prepared "additional_flags=[g++_include_flags]"
+	if {$type eq "executable"} {
+	    lappend prepared "ldflags=[g++_link_flags]"
+	}
+    }
+    set compiler [hip_sdk_pdb_flags $compiler $type $compiling]
+    # A test's own "-x LANG" (now -TP/-TC) replaces the compiler's.  As with
+    # GCC, a C++ source given without "c++" is compiled as C++.
+    if {[regexp {(^|[\s=])-x\s} [join $options]]} {
+	set compiler [lsearch -all -inline -not -regexp $compiler {^-T[PC]$}]
+    } elseif {$cxx_source && "c++" ni $options} {
+	set compiler [lsearch -all -inline -not -exact $compiler -TC]
+	lappend compiler -EHsc
+    }
+    set ::hip_sdk_pdb_c_compile [expr {"-TC" in $compiler}]
+    # GCC compiles C++ as C++17 by default, clang-cl as C++14.
+    if {!$::hip_sdk_pdb_c_compile && $compiling
+	&& ($cxx_source || "c++" in $options)
+	&& ![regexp {(^|[\s=])-(std=|x\s)} [join $options]]} {
+	lappend compiler -clang:-std=c++17
+    }
+    set translated [list compiler=$compiler]
+    foreach option [concat $prepared $options] {
+	if {$option eq "c++"} {
+	    continue
+	}
+	if {[regexp {^(early_flags|additional_flags|ldflags|libs|optimize|compiler)=(.*)$} \
+		 $option -> key flags]} {
+	    lappend translated \
+		"$key=[hip_sdk_pdb_flags $flags $type $compiling]"
+	} else {
+	    lappend translated $option
+	}
+    }
+    # DejaGnu adds the board ldflags only to type "executable", but other
+    # types, such as "binfile", link too.
+    if {$type ni {executable object preprocess assembly}
+	&& [target_info exists ldflags]} {
+	lappend translated "additional_flags=[hip_sdk_pdb_flags \
+	    [target_info ldflags] executable $compiling]"
+    }
+    # A link without -debug writes no PDB and no COFF symbol table, leaving
+    # GDB no minimal symbols, where a no-debug ELF image keeps .symtab.
+    if {$type ni {object preprocess assembly} && "debug" ni $options
+	&& ![string match "*-debug*" [target_info ldflags]]} {
+	lappend translated "additional_flags=-Xlinker -debug:symtab"
+    }
+
+    # Windows refuses to overwrite a loaded image but lets it be renamed,
+    # unless GDB holds it open as its executable; then GDB must exit.
+    if {$type ni {object preprocess assembly}} {
+	foreach image [list $dest "$dest.exe" "$dest.dll"] {
+	    if {[file isfile $image]
+		&& [catch {file rename -force $image "$image.old[clock clicks]"}]} {
+		gdb_exit
+		catch {file rename -force $image "$image.old[clock clicks]"}
+	    }
+	}
+    }
+
+    set keys {cflags debug_flags ldflags libs multilib_flags mathlib}
+    save_target_board_info $keys {
+	foreach key $keys {
+	    if {[target_info exists $key]} {
+		set flags [hip_sdk_pdb_flags [target_info $key] $type $compiling]
+		unset_board_info $key
+		set_board_info $key $flags
+	    }
+	}
+	# Without a board mathlib DejaGnu links -lm, which MSVC lacks.  It is
+	# set only here: tests such as nostdlib.exp handle a board mathlib
+	# differently.
+	if {![target_info exists mathlib]} {
+	    set_board_info mathlib ""
+	}
+	save_vars {CFLAGS_FOR_TARGET LDFLAGS_FOR_TARGET} {
+	    foreach variable {CFLAGS_FOR_TARGET LDFLAGS_FOR_TARGET} {
+		if {[info exists $variable]} {
+		    set $variable \
+			[hip_sdk_pdb_flags [set $variable] $type $compiling]
+		}
+	    }
+	    set result [default_target_compile $source $dest $type $translated]
+	}
+    }
+    # -LD names an extension-less DLL NAME.dll; tests expect NAME itself.
+    if {$shared && ![file exists $dest] && [file exists "$dest.dll"]} {
+	file rename -force "$dest.dll" $dest
+    }
+    return $result
+}
+
+# Tests name executables without .exe; the linker writes NAME.exe.
+proc exec_target_file { binfile } {
+    if {[file extension $binfile] eq "" && ![file exists $binfile]} {
+	return "$binfile.exe"
+    }
+    return $binfile
+}
+
+# Windows refuses to rename the image of a running process ("file busy"):
+# kill the program and retry.  Tests do this to make GDB reread the file.
+proc gdb_rename_execfile { binfile1 binfile2 } {
+    set from [exec_target_file $binfile1]
+    set to [exec_target_file $binfile2]
+    if {[catch {file rename -force $from $to} err]} {
+	if {![string match "*busy*" $err]} {
+	    error $err
+	}
+	gdb_test "kill" ".*" "kill to rename [file tail $from]" \
+	    "Kill the program being debugged\\? \\(y or n\\) $" "y"
+	file rename -force $from $to
+    }
+}
+
+proc gdb_init {args} {
+    set result [default_gdb_init {*}$args]
+    match_max -d 2097152
+    match_max [match_max -d]
+    return $result
+}
+
+proc gdb_load {arg} {
+    if {$arg eq ""} {
+	return 0
+    }
+    return [gdb_file_cmd [host_file_normalize $arg]]
+}
+
+# A test's Ctrl-C to GDB (send_gdb "\003") can also reach runtest, whose
+# SIGINT trap would end the whole run.
+trap SIG_IGN SIGINT

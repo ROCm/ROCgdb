@@ -1,0 +1,40 @@
+/* PDB debugging format support for GDB - Public header.
+
+   Copyright (C) 2026 Free Software Foundation, Inc.
+   Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+   This file is part of GDB.
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+
+/* Public PDB API consumed by code outside the PDB reader.  */
+
+#ifndef GDB_PDB_PDB_H
+#define GDB_PDB_PDB_H
+
+struct objfile;
+
+/* Try PDB initialization for OBJFILE from the COFF symbol reader.
+   Return true when the PDB named by the executable's RSDS record was
+   found, matches the executable's GUID and age, and was read.  Return
+   false when there is no RSDS record, or the PDB cannot be found, read
+   or matched, so the caller can try another debug format.  With
+   OBJF_READNEVER only the minimal symbols are read.  Malformed required
+   PDB data throws an error rather than returning false.  A successful load
+   expands every module.  */
+
+extern bool pdb_initialize_objfile (struct objfile *objfile);
+
+/* GDB_PDB_PDB_H */
+#endif
