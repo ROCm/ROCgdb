@@ -103,14 +103,12 @@ require {expect_build_id_in_core_file $binfile}
 # If the board file is automatically splitting the debug information
 # into a separate file (e.g. the cc-with-gnu-debuglink.exp board) then
 # this test isn't going to work.
+require {!have_gnu_debuglink $binfile}
+
 clean_restart
 gdb_file_cmd $binfile
 if {$gdb_file_cmd_debug_info ne "debug"} {
     unsupported "failed to find debug information"
-    return
-}
-if {[regexp "${testfile}.debug" $gdb_file_cmd_msg]} {
-    unsupported "debug information has been split to a separate file"
     return
 }
 
