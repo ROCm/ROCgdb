@@ -30,6 +30,8 @@ if {[build_executable "build executable" ${testfile} ${srcfile} \
     return
 }
 
+require {!have_gnu_debuglink $binfile}
+
 # Split debug information from BINFILE into BINFILE.debug.
 #
 # By passing the "no-debuglink" flag we prevent this proc from adding

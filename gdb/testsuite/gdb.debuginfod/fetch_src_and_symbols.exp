@@ -37,6 +37,8 @@ if { [gdb_compile "$sourcetmp" "$binfile" executable {debug build-id}] != "" } {
     return
 }
 
+require {!have_gnu_debuglink $binfile}
+
 if { [gdb_compile "$sourcetmp" "${binfile}2" executable {debug build-id}] != "" } {
     fail "compile"
     return
