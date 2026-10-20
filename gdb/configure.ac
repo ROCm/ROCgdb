@@ -354,6 +354,16 @@ if test "$gdb_require_amd_dbgapi" = true \
 	AC_MSG_ERROR([amd-dbgapi not supported for host ${gdb_host}])
 	;;
     esac
+
+    # Detect if AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE can be used.
+    # This value is available with amd-dbgapi version 0.78.0.
+    save_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $AMD_DBGAPI_CFLAGS"
+    AC_MSG_CHECKING([whether AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE is available])
+    AC_CHECK_DECLS(AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE,
+		   [], [], [[#include <amd-dbgapi/amd-dbgapi.h>]])
+    CPPFLAGS="$save_CPPFLAGS"
+
   elif test "$gdb_require_amd_dbgapi" = true -o "$with_amd_dbgapi" = yes; then
     # amd-dbgapi was not found and...
     #
