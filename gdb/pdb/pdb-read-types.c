@@ -57,6 +57,92 @@ namespace pdb
 
 /* Raw TPI record access and decoding.  */
 
+/* Decode an integer CodeView numeric leaf, used for sizes, member offsets,
+   enumerators and constants.  Return the bytes consumed, including the tag,
+   or 0 for truncation or an unsupported encoding.
+
+   A leading uint16_t below 0x8000 is the value itself (2 bytes consumed).
+   Otherwise it identifies the following payload: LF_CHAR has 1 byte,
+   LF_SHORT/LF_USHORT 2, LF_LONG/LF_ULONG 4, and LF_QUADWORD/LF_UQUADWORD 8.
+   Other numeric kinds, such as floating-point leaves, are not decoded here.
+
+   Store the result in *VALUE.  Signed values are represented modulo 2^64;
+   the caller supplies the interpretation and advances by the returned size
+   before reading the next field.  */
+
+uint32_t
+pdb_cv_read_numeric (const gdb_byte *data, uint32_t max_len, uint64_t *value)
+{
+  if (max_len < 2)
+    return 0;
+
+  auto leaf = read_u16 (data);
+
+  /* Simple leaf value - encoded directly in the leaf (2 bytes).  */
+  if (leaf < LF_NUMERIC)
+    {
+      *value = leaf;
+      return 2;
+    }
+
+  const gdb_byte *payload = data + 2;
+
+  switch (leaf)
+    {
+    case LF_CHAR:
+      if (max_len < 3)
+	return 0;
+      *value = read_i8 (payload);
+      return 3;
+    case LF_SHORT:
+      if (max_len < 4)
+	return 0;
+      *value = read_i16 (payload);
+      return 4;
+    case LF_USHORT:
+      if (max_len < 4)
+	return 0;
+      *value = read_u16 (payload);
+      return 4;
+    case LF_LONG:
+      if (max_len < 6)
+	return 0;
+      *value = read_i32 (payload);
+      return 6;
+    case LF_ULONG:
+      if (max_len < 6)
+	return 0;
+      *value = read_u32 (payload);
+      return 6;
+    case LF_QUADWORD:
+    case LF_UQUADWORD:
+      if (max_len < 10)
+	return 0;
+      *value = read_u64 (payload);
+      return 10;
+    default:
+      pdb_complaint ("numeric leaf 0x%04x is not an integer", leaf);
+      return 0;
+    }
+}
+
+/* See pdb-internal.h.  */
+
+const char *
+pdb_cv_numeric_and_name (const pdb_tpi_type *rec, uint32_t offs,
+			 uint64_t *value)
+{
+  if (offs >= rec->data_len)
+    return nullptr;
+
+  uint32_t nr = pdb_cv_read_numeric (rec->data + offs, rec->data_len - offs,
+				     value);
+  if (nr == 0)
+    return nullptr;
+  return pdb_extract_string (rec->data + offs + nr,
+			     rec->data + rec->data_len);
+}
+
 /* Check that a type record has at least MIN_SIZE bytes of data.
    Returns true if OK.  Emits a warning and returns false if truncated.  */
 
@@ -566,6 +652,261 @@ pdb_tpi_resolve_simple_type (pdb_per_objfile *pdb, uint32_t type_idx)
   return *ptr_type;
 }
 
+/* LF_MODIFIER: apply the recorded const and volatile qualifiers.  */
+
+static type &
+pdb_tpi_make_modifier (pdb_per_objfile *pdb, const pdb_tpi_type *rec)
+{
+  if (!pdb_check_record_size (rec, LF_MOD_SIZE, "LF_MODIFIER"))
+    return pdb_tpi_get_unsupported_type (pdb);
+
+  auto type_idx = read_u32 (rec->data + LF_MOD_TYPE_OFFS);
+  auto attr = read_u16 (rec->data + LF_MOD_ATTR_OFFS);
+
+  auto *base = &pdb_tpi_resolve_type (pdb, type_idx);
+
+  bool is_const = (attr & CV_MODIFIER_CONST) != 0;
+  bool is_volatile = (attr & CV_MODIFIER_VOLATILE) != 0;
+  if (is_const || is_volatile)
+    base = make_cv_type (is_const || base->is_const (),
+			is_volatile || base->is_volatile (), base);
+
+  return *base;
+}
+
+/* LF_POINTER: construct a pointer, reference or member-pointer type.
+
+   The attr's pointer type (CV_ptrtype_e) says how the address is stored.
+   Only flat addresses are read: CV_PTR_NEAR32 (4 bytes) and CV_PTR_64
+   (8 bytes), and only when the width is the target's.  16-bit segmented
+   pointers (near, far, huge) and 16:32 far pointers are ignored; GDB does
+   not support segmented addresses.  MSVC's __based pointers (an offset
+   from a base pointer) and __ptr32 pointers on a 64-bit target are not
+   supported.  All of these become the unsupported type.  A pointer or
+   reference has the length GDB gives it, 8 bytes on x64.
+
+   The size field in attr is checked only for a plain pointer, where it
+   must equal the width; a mismatch is a complaint.  It is never read for
+   a reference: for a parameter that x64 passes by address, clang-cl types
+   the parameter as a reference and records the referenced type's size
+   there (16 for a _Complex double, 0 for a typedef).
+
+   Member-pointer lengths come from GDB's C++ ABI layer.  */
+
+static type &
+pdb_tpi_make_pointer (pdb_per_objfile *pdb, const pdb_tpi_type *rec)
+{
+  if (!pdb_check_record_size (rec, LF_POINTER_SIZE, "LF_POINTER"))
+    return pdb_tpi_get_unsupported_type (pdb);
+
+  uint32_t utype = read_u32 (rec->data + LF_POINTER_UTYPE_OFFS);
+  uint32_t attr = read_u32 (rec->data + LF_POINTER_ATTR_OFFS);
+
+  uint32_t ptrmode = cv_ptr_mode (attr);
+  bool is_const = (attr & LF_POINTER_ATTR_ISCONST) != 0;
+  bool is_volatile = (attr & LF_POINTER_ATTR_ISVOLATILE) != 0;
+  bool is_restrict = (attr & LF_POINTER_ATTR_ISRESTRICT) != 0;
+
+  uint32_t ptrtype = cv_ptr_type (attr);
+  uint32_t width = cv_ptr_type_width (ptrtype);
+  uint32_t arch_ptr_size = gdbarch_ptr_bit (pdb->objfile->arch ()) / 8;
+  if (width != arch_ptr_size)
+    {
+      pdb_complaint ("LF_POINTER to type 0x%x has pointer type 0x%x, not a"
+		     " %u-byte address", utype, ptrtype, arch_ptr_size);
+      return pdb_tpi_get_unsupported_type (pdb);
+    }
+
+  if (ptrmode == CV_PTRMODE_POINTER)
+    {
+      uint32_t size = cv_ptr_size (attr);
+      if (size != 0 && size != width)
+	pdb_complaint ("LF_POINTER to type 0x%x records size %u for a %u-byte"
+		       " pointer", utype, size, width);
+    }
+
+  auto *pointee = &pdb_tpi_resolve_type (pdb, utype);
+
+  type *result;
+  switch (ptrmode)
+    {
+    case CV_PTRMODE_LVALUE_REF:
+      result = lookup_lvalue_reference_type (pointee);
+      break;
+    case CV_PTRMODE_RVALUE_REF:
+      result = lookup_rvalue_reference_type (pointee);
+      break;
+    case CV_PTRMODE_PMFUNC:
+      pdb_complaint ("LF_POINTER to member function 0x%x is not a method"
+		     " type", utype);
+      return pdb_tpi_get_unsupported_type (pdb);
+    case CV_PTRMODE_PMEM:
+      {
+	/* Make a pointer to data member of the class that follows the fixed
+	   part of the record.  The class must be there and must be a
+	   class.  */
+	if (rec->data_len < LF_POINTER_PMCLASS_OFFS + 4)
+	  {
+	    pdb_complaint ("LF_POINTER to member 0x%x has no class", utype);
+	    return pdb_tpi_get_unsupported_type (pdb);
+	  }
+
+	uint32_t pmclass_ti = read_u32 (rec->data + LF_POINTER_PMCLASS_OFFS);
+	type *domain = &pdb_tpi_resolve_type (pdb, pmclass_ti);
+	if (domain->code () != TYPE_CODE_STRUCT
+	    && domain->code () != TYPE_CODE_UNION)
+	  {
+	    pdb_complaint ("LF_POINTER to member 0x%x names class 0x%x, which"
+			   " is not a class", utype, pmclass_ti);
+	    return pdb_tpi_get_unsupported_type (pdb);
+	  }
+	result = lookup_memberptr_type (pointee, domain);
+	break;
+      }
+    case CV_PTRMODE_POINTER:
+    default:
+      result = lookup_pointer_type (pointee);
+      break;
+    }
+
+  if (is_const || is_volatile)
+    result = make_cv_type (is_const, is_volatile, result);
+  if (is_restrict)
+    result = make_restrict_type (result);
+
+  return *result;
+}
+
+/* LF_ARRAY.  */
+
+static type &
+pdb_tpi_make_array (pdb_per_objfile *pdb, const pdb_tpi_type *rec)
+{
+  if (!pdb_check_record_size (rec, LF_ARRAY_MIN_SIZE, "LF_ARRAY"))
+    return pdb_tpi_get_unsupported_type (pdb);
+
+  uint32_t elem_ti = read_u32 (rec->data + LF_ARRAY_ELEMTYPE_OFFS);
+  uint32_t idx_ti = read_u32 (rec->data + LF_ARRAY_IDXTYPE_OFFS);
+
+  auto *elem_type = &pdb_tpi_resolve_type (pdb, elem_ti);
+  auto *idx_type = &pdb_tpi_resolve_type (pdb, idx_ti);
+
+  /* Replace an index type that is not an integer with a size by unsigned
+     long long.  A record can name void or an empty structure, and
+     create_range_type asserts on both.  */
+  if (!is_integral_type (idx_type) || idx_type->length () == 0)
+    {
+      pdb_complaint ("LF_ARRAY index type 0x%x is not an integer type",
+		     idx_ti);
+      idx_type
+	= builtin_type (pdb->objfile->arch ())->builtin_unsigned_long_long;
+    }
+
+  /* Trailing data: numeric leaf for total size in bytes, then a
+     NUL-terminated name (may be empty).  */
+  const gdb_byte *d = rec->data + LF_ARRAY_DATA_OFFS;
+  const gdb_byte *end = rec->data + rec->data_len;
+  uint32_t data_len = rec->data_len - LF_ARRAY_DATA_OFFS;
+
+  uint64_t total_size = 0;
+  uint32_t consumed = 0;
+  if (data_len > 0)
+    consumed = pdb_cv_read_numeric (d, data_len, &total_size);
+
+  if (consumed == 0 && data_len > 0)
+    pdb_complaint ("LF_ARRAY: failed to read numeric leaf for array size");
+
+  const char *name = nullptr;
+  if (consumed > 0)
+    name = pdb_extract_string (d + consumed, end);
+
+  uint64_t elem_size = elem_type->length ();
+
+  /* Member-pointer lengths come from GDB's C++ ABI rather than from the
+     PDB, so count elements with the size the record itself declares.  */
+  if (elem_type->code () == TYPE_CODE_METHODPTR
+      || elem_type->code () == TYPE_CODE_MEMBERPTR)
+    {
+      /* A qualified element names the modifier, which names the pointer.  */
+      uint32_t ptr_ti = elem_ti;
+      const pdb_tpi_type *elem_rec = pdb_tpi_get_type (&pdb->tpi, ptr_ti);
+      if (elem_rec != nullptr && elem_rec->leaf == LF_MODIFIER
+	  && elem_rec->data_len >= LF_MOD_SIZE)
+	{
+	  ptr_ti = read_u32 (elem_rec->data + LF_MOD_TYPE_OFFS);
+	  elem_rec = pdb_tpi_get_type (&pdb->tpi, ptr_ti);
+	}
+
+      if (elem_rec != nullptr && elem_rec->leaf == LF_POINTER
+	  && elem_rec->data_len >= LF_POINTER_SIZE)
+	{
+	  uint32_t cv_size
+	    = cv_ptr_size (read_u32 (elem_rec->data + LF_POINTER_ATTR_OFFS));
+	  if (cv_size > 0)
+	    elem_size = cv_size;
+	}
+    }
+
+  uint64_t num_elements = 0;
+  if (elem_size > 0)
+    {
+      num_elements = total_size / elem_size;
+      if (total_size % elem_size != 0)
+	pdb_complaint ("LF_ARRAY: total size %" PRIu64 " not a multiple of"
+		       " element size %" PRIu64,
+		       total_size, elem_size);
+    }
+
+  /* An undefined upper bound accommodates flexible members, but does not
+     distinguish them from fixed zero-length arrays.  */
+  LONGEST high_bound = num_elements > 0 ? (LONGEST) num_elements - 1 : 0;
+
+  type_allocator alloc (pdb->objfile, language_c);
+  auto *range_type = create_static_range_type (alloc, idx_type, 0, high_bound);
+  if (num_elements == 0)
+    range_type->bounds ()->high.set_undefined ();
+  auto *array_type = create_array_type (alloc, elem_type, range_type);
+
+  /* Reserve enough bytes for GDB to walk NUM_ELEMENTS using ELEM_TYPE's
+     length, even if it exceeds the encoded element size.  This protects
+     that walk's bounds; it does not correct the member-pointer layout.  */
+  uint64_t walk_size = num_elements * (uint64_t) elem_type->length ();
+  array_type->set_length (walk_size > total_size ? walk_size : total_size);
+
+  if (name != nullptr && *name != '\0')
+    array_type->set_name (name);
+  return *array_type;
+}
+
+/* LF_BITFIELD.  */
+
+static type &
+pdb_tpi_make_bitfield (pdb_per_objfile *pdb, const pdb_tpi_type *rec)
+{
+  if (!pdb_check_record_size (rec, LF_BITFIELD_SIZE, "LF_BITFIELD"))
+    return pdb_tpi_get_unsupported_type (pdb);
+
+  auto base_ti = read_u32 (rec->data + LF_BITFIELD_TYPE_OFFS);
+
+  return pdb_tpi_resolve_type (pdb, base_ti);
+}
+
+/* Return the underlying type of an enumeration, UTYPE_TI.  A malformed
+   record can name a type that is not an integer; complain and use int
+   instead.  */
+
+static type *
+pdb_enum_underlying_type (pdb_per_objfile *pdb, uint32_t utype_ti)
+{
+  type *utype = &pdb_tpi_resolve_type (pdb, utype_ti);
+  if (is_integral_type (utype) && utype->length () > 0)
+    return utype;
+
+  pdb_complaint ("LF_ENUM underlying type 0x%x is not an integer type",
+		 utype_ti);
+  return builtin_type (pdb->objfile->arch ())->builtin_int;
+}
+
 /* Resolve the LF_ARGLIST record ARGLIST_TI into FUNC_TYPE's fields.  */
 
 static void
@@ -783,6 +1124,71 @@ pdb_function_name (pdb_per_objfile *pdb, const char *name,
     (pdb_canonical_name (pdb, buffer.string ().c_str ()));
 }
 
+/* Until their members are read, a class, structure, union or enumeration
+   is an incomplete type with the name and size of its record.  */
+
+static type &
+pdb_tpi_make_incomplete_tag (pdb_per_objfile *pdb, const pdb_tpi_type *rec)
+{
+  enum type_code code = TYPE_CODE_STRUCT;
+  uint32_t min_size = LF_STRUCT_MIN_SIZE;
+  uint32_t data_offs = LF_STRUCT_DATA_OFFS;
+  const char *what = "LF_STRUCTURE/CLASS";
+  if (rec->leaf == LF_UNION)
+    {
+      code = TYPE_CODE_UNION;
+      min_size = LF_UNION_MIN_SIZE;
+      data_offs = LF_UNION_DATA_OFFS;
+      what = "LF_UNION";
+    }
+  else if (rec->leaf == LF_ENUM)
+    {
+      code = TYPE_CODE_ENUM;
+      min_size = LF_ENUM_MIN_SIZE;
+      data_offs = LF_ENUM_NAME_OFFS;
+      what = "LF_ENUM";
+    }
+
+  if (!pdb_check_record_size (rec, min_size, what))
+    return pdb_tpi_get_unsupported_type (pdb);
+
+  type *underlying = nullptr;
+  uint64_t size = 0;
+  const char *name = nullptr;
+  if (code == TYPE_CODE_ENUM)
+    {
+      uint32_t utype_ti = read_u32 (rec->data + LF_ENUM_UTYPE_OFFS);
+      underlying = pdb_enum_underlying_type (pdb, utype_ti);
+      size = underlying->length ();
+      name = pdb_extract_string (rec->data + data_offs,
+				 rec->data + rec->data_len);
+    }
+  else
+    {
+      name = pdb_cv_numeric_and_name (rec, data_offs, &size);
+      if (name == nullptr)
+	return pdb_tpi_get_unsupported_type (pdb);
+    }
+
+  type_allocator alloc (pdb->objfile, language_c);
+  type *result = alloc.new_type ();
+  if (code != TYPE_CODE_ENUM)
+    INIT_CPLUS_SPECIFIC (result);
+  result->set_code (code);
+  result->set_length (size);
+  result->set_is_stub (true);
+  if (name != nullptr && name[0] != '\0')
+    result->set_name (pdb_canonical_name (pdb, name));
+  if (rec->leaf == LF_CLASS)
+    result->set_is_declared_class (true);
+  if (underlying != nullptr)
+    {
+      result->set_target_type (underlying);
+      result->set_is_unsigned (underlying->is_unsigned ());
+    }
+  return *result;
+}
+
 /* Build the GDB type for TPI record REC with the pdb_tpi_make_* helper
    of its leaf.  A non-type leaf resolves to builtin void, and an unknown
    leaf to the cached "<unsupported PDB type>".  The result is never
@@ -793,8 +1199,21 @@ pdb_tpi_build_type (pdb_per_objfile *pdb, const pdb_tpi_type *rec)
 {
   switch (rec->leaf)
     {
+    case LF_MODIFIER:
+      return pdb_tpi_make_modifier (pdb, rec);
     case LF_PROCEDURE:
       return pdb_tpi_make_procedure (pdb, rec);
+    case LF_POINTER:
+      return pdb_tpi_make_pointer (pdb, rec);
+    case LF_ARRAY:
+      return pdb_tpi_make_array (pdb, rec);
+    case LF_BITFIELD:
+      return pdb_tpi_make_bitfield (pdb, rec);
+    case LF_STRUCTURE:
+    case LF_CLASS:
+    case LF_UNION:
+    case LF_ENUM:
+      return pdb_tpi_make_incomplete_tag (pdb, rec);
     case LF_ARGLIST:
     case LF_FIELDLIST:
     case LF_VTSHAPE:
@@ -873,6 +1292,358 @@ pdb_tpi_resolve_type (pdb_per_objfile *pdb, uint32_t type_idx)
 #if GDB_SELF_TEST
 
 namespace selftests {
+
+/* Numeric leaves: a value below LF_NUMERIC is the leaf itself; above, the
+   leaf names a little-endian value of 1, 2, 4 or 8 bytes after it.  A leaf
+   cut short anywhere, or another kind, reads nothing.  */
+
+static void
+test_cv_read_numeric ()
+{
+  struct numeric_case
+  {
+    std::vector<gdb_byte> bytes;
+    uint64_t value;
+  };
+  const numeric_case cases[] = {
+    { { 0x00, 0x00 }, 0 },
+    { { 0xff, 0x7f }, 0x7fff },
+    /* LF_CHAR -5.  */
+    { { 0x00, 0x80, 0xfb }, (uint64_t) -5 },
+    /* LF_SHORT -2, LF_USHORT 0xfffe.  */
+    { { 0x01, 0x80, 0xfe, 0xff }, (uint64_t) -2 },
+    { { 0x02, 0x80, 0xfe, 0xff }, 0xfffe },
+    /* LF_LONG -0x12345678, LF_ULONG 0x87654321.  */
+    { { 0x03, 0x80, 0x88, 0xa9, 0xcb, 0xed }, (uint64_t) -0x12345678 },
+    { { 0x04, 0x80, 0x21, 0x43, 0x65, 0x87 }, 0x87654321 },
+    /* LF_QUADWORD -0x123456789.  */
+    { { 0x09, 0x80, 0x77, 0x98, 0xba, 0xdc, 0xfe, 0xff, 0xff, 0xff },
+      (uint64_t) -0x123456789 },
+    /* What clang-cl writes for the enumerators 0x123456789ABCDEF0 of an
+       unsigned long long enum and -0x123456789 of a long long one: both
+       LF_UQUADWORD.  */
+    { { 0x0a, 0x80, 0xf0, 0xde, 0xbc, 0x9a, 0x78, 0x56, 0x34, 0x12 },
+      0x123456789abcdef0 },
+    { { 0x0a, 0x80, 0x77, 0x98, 0xba, 0xdc, 0xfe, 0xff, 0xff, 0xff },
+      (uint64_t) -0x123456789 },
+  };
+
+  for (const numeric_case &c : cases)
+    {
+      uint64_t value = 0;
+      SELF_CHECK (pdb_cv_read_numeric (c.bytes.data (), c.bytes.size (),
+				       &value) == c.bytes.size ());
+      SELF_CHECK (value == c.value);
+
+      /* Trailing bytes are not read.  */
+      std::vector<gdb_byte> longer = c.bytes;
+      longer.push_back (0xaa);
+      SELF_CHECK (pdb_cv_read_numeric (longer.data (), longer.size (),
+				       &value) == c.bytes.size ());
+
+      for (size_t len = 0; len < c.bytes.size (); len++)
+	SELF_CHECK (pdb_cv_read_numeric (c.bytes.data (), len, &value) == 0);
+    }
+
+  /* LF_REAL32, LF_COMPLEX32 and an unknown kind are not integers.  */
+  for (uint16_t leaf : { 0x8005, 0x800c, 0x8fff })
+    {
+      gdb_byte bytes[16] = { (gdb_byte) leaf, (gdb_byte) (leaf >> 8) };
+      uint64_t value;
+      SELF_CHECK (pdb_cv_read_numeric (bytes, sizeof bytes, &value) == 0);
+    }
+}
+
+/* Build the body of an LF_POINTER record to TARGET in pointer mode MODE.
+   The pointer is a 64-bit, 8-byte pointer with the attribute bits EXTRA
+   added.  When PMCLASS is not 0, the body ends with it as the class of a
+   pointer to member.  */
+
+static gdb::byte_vector
+pointer_body (uint32_t target, uint32_t mode, uint32_t extra = 0,
+	      uint32_t pmclass = 0)
+{
+  gdb::byte_vector body;
+  put_u32 (body, 0, target);
+  put_u32 (body, 4, (CV_PTRTYPE_64 | (mode << LF_POINTER_ATTR_PTRMODE_SHIFT)
+		     | (8 << LF_POINTER_ATTR_SIZE_SHIFT) | extra));
+  if (pmclass != 0)
+    put_u32 (body, 8, pmclass);
+  return body;
+}
+
+/* Build the body of an LF_STRUCTURE, LF_CLASS or LF_UNION record (LEAF)
+   named NAME, of SIZE bytes, with the property bits PROPERTY.  The size
+   is written as a direct numeric leaf.  */
+
+static gdb::byte_vector
+tag_body (uint16_t leaf, uint16_t size, const char *name,
+	  uint16_t property = 0)
+{
+  gdb::byte_vector body;
+  body.push_back (0);
+  body.push_back (0);
+  body.push_back (property & 0xff);
+  body.push_back (property >> 8);
+  put_u32 (body, 4, 0);
+  if (leaf != LF_UNION)
+    {
+      put_u32 (body, 8, 0);
+      put_u32 (body, 12, 0);
+    }
+  body.push_back (size & 0xff);
+  body.push_back (size >> 8);
+  body.insert (body.end (), name, name + strlen (name) + 1);
+  return body;
+}
+
+/* Build the body of an LF_ENUM record named NAME whose underlying type
+   is UTYPE.  */
+
+static gdb::byte_vector
+enum_body (uint32_t utype, const char *name)
+{
+  gdb::byte_vector body (4, 0);
+  put_u32 (body, 4, utype);
+  put_u32 (body, 8, 0);
+  body.insert (body.end (), name, name + strlen (name) + 1);
+  return body;
+}
+
+/* Build the body of an LF_ARRAY record named NAME, of SIZE bytes, whose
+   elements are ELEM and whose index type is IDX.  */
+
+static gdb::byte_vector
+array_body (uint32_t elem, uint32_t idx, uint16_t size, const char *name)
+{
+  gdb::byte_vector body;
+  put_u32 (body, 0, elem);
+  put_u32 (body, 4, idx);
+  body.push_back (size & 0xff);
+  body.push_back (size >> 8);
+  body.insert (body.end (), name, name + strlen (name) + 1);
+  return body;
+}
+
+/* Test the types LF_POINTER records give.  Check a pointer, the two
+   kinds of reference, the const, volatile and restrict qualifiers, and a
+   pointer to data member of a class.  Check that the unsupported type
+   comes from a 32-bit pointer on x64, a pointer to member whose class is
+   missing or is not a class, a pointer to member function whose target
+   is not a method, and a record cut short.  */
+
+static void
+test_pointer_types ()
+{
+  test_tpi tpi;
+  uint32_t cls = tpi.add (LF_STRUCTURE, tag_body (LF_STRUCTURE, 4, "Cls"));
+  uint32_t ptr = tpi.add (LF_POINTER, pointer_body (0x74, CV_PTRMODE_POINTER));
+  uint32_t lref
+    = tpi.add (LF_POINTER, pointer_body (0x74, CV_PTRMODE_LVALUE_REF));
+  uint32_t rref
+    = tpi.add (LF_POINTER, pointer_body (0x74, CV_PTRMODE_RVALUE_REF));
+  uint32_t cvr = tpi.add (LF_POINTER,
+			  pointer_body (0x74, CV_PTRMODE_POINTER,
+					(LF_POINTER_ATTR_ISCONST
+					 | LF_POINTER_ATTR_ISVOLATILE
+					 | LF_POINTER_ATTR_ISRESTRICT)));
+  gdb::byte_vector near32 = pointer_body (0x74, CV_PTRMODE_POINTER);
+  put_u32 (near32, 4, CV_PTRTYPE_NEAR32 | (4 << LF_POINTER_ATTR_SIZE_SHIFT));
+  uint32_t ptr32 = tpi.add (LF_POINTER, near32);
+  uint32_t pmem
+    = tpi.add (LF_POINTER, pointer_body (0x74, CV_PTRMODE_PMEM, 0, cls));
+  uint32_t pmem_short
+    = tpi.add (LF_POINTER, pointer_body (0x74, CV_PTRMODE_PMEM));
+  uint32_t pmem_int
+    = tpi.add (LF_POINTER, pointer_body (0x74, CV_PTRMODE_PMEM, 0, 0x74));
+  uint32_t pmfunc
+    = tpi.add (LF_POINTER, pointer_body (0x74, CV_PTRMODE_PMFUNC, 0, cls));
+  uint32_t cut = tpi.add (LF_POINTER, gdb::byte_vector (4, 0));
+
+  test_read_modules ({}, {}, tpi, nullptr, [&] (pdb_per_objfile *pdb)
+    {
+      auto resolve = [&] (uint32_t ti)
+	{
+	  return &pdb_tpi_resolve_type (pdb, ti);
+	};
+
+      type *t = resolve (ptr);
+      SELF_CHECK (t->code () == TYPE_CODE_PTR && t->length () == 8
+		  && t->target_type ()->code () == TYPE_CODE_INT);
+      SELF_CHECK (resolve (lref)->code () == TYPE_CODE_REF);
+      SELF_CHECK (resolve (rref)->code () == TYPE_CODE_RVALUE_REF);
+      t = resolve (cvr);
+      SELF_CHECK (t->code () == TYPE_CODE_PTR && t->is_const ()
+		  && t->is_volatile () && t->is_restrict ());
+
+      t = resolve (pmem);
+      SELF_CHECK (t->code () == TYPE_CODE_MEMBERPTR
+		  && TYPE_SELF_TYPE (t) == resolve (cls));
+
+      for (uint32_t bad : { ptr32, pmem_short, pmem_int, pmfunc, cut })
+	SELF_CHECK (resolve (bad)->code () == TYPE_CODE_ERROR);
+    });
+}
+
+/* Test the types LF_ARRAY records give.  Check that the element count is
+   the array's size divided by the element size, that a size of 0 leaves
+   the upper bound undefined, and that the array gets the record's name.
+   Check that an index type GDB's ranges cannot take, void or an empty
+   structure, is replaced, and that a record cut short gives the
+   unsupported type.  */
+
+static void
+test_array_types ()
+{
+  test_tpi tpi;
+  uint32_t fwd = tpi.add (LF_STRUCTURE,
+			  tag_body (LF_STRUCTURE, 0, "Fwd", CV_PROP_FWDREF));
+  uint32_t arr = tpi.add (LF_ARRAY, array_body (0x74, 0x23, 12, "arr"));
+  uint32_t empty = tpi.add (LF_ARRAY, array_body (0x74, 0x23, 0, ""));
+  uint32_t odd = tpi.add (LF_ARRAY, array_body (0x74, 0x23, 10, ""));
+  uint32_t void_idx = tpi.add (LF_ARRAY, array_body (0x74, 0x03, 8, ""));
+  uint32_t fwd_idx = tpi.add (LF_ARRAY, array_body (0x74, fwd, 8, ""));
+  uint32_t cut = tpi.add (LF_ARRAY, gdb::byte_vector (4, 0));
+
+  test_read_modules ({}, {}, tpi, nullptr, [&] (pdb_per_objfile *pdb)
+    {
+      auto high = [] (type *t)
+	{
+	  return t->index_type ()->bounds ()->high;
+	};
+
+      type *t = &pdb_tpi_resolve_type (pdb, arr);
+      SELF_CHECK (t->code () == TYPE_CODE_ARRAY && t->length () == 12
+		  && high (t).is_constant () && high (t).const_val () == 2
+		  && t->name () != nullptr && strcmp (t->name (), "arr") == 0);
+
+      t = &pdb_tpi_resolve_type (pdb, empty);
+      SELF_CHECK (t->code () == TYPE_CODE_ARRAY
+		  && high (t).kind () == PROP_UNDEFINED);
+
+      t = &pdb_tpi_resolve_type (pdb, odd);
+      SELF_CHECK (t->length () == 10 && high (t).const_val () == 1);
+
+      for (uint32_t bad_idx : { void_idx, fwd_idx })
+	{
+	  t = &pdb_tpi_resolve_type (pdb, bad_idx);
+	  SELF_CHECK (t->code () == TYPE_CODE_ARRAY
+		      && is_integral_type (t->index_type ()->target_type ())
+		      && high (t).const_val () == 1);
+	}
+
+      SELF_CHECK (pdb_tpi_resolve_type (pdb, cut).code () == TYPE_CODE_ERROR);
+    });
+}
+
+/* Test the types LF_MODIFIER and LF_BITFIELD records give.  Check that a
+   modifier adds its qualifiers to those its type already has, and that a
+   bit-field gives its underlying type.  Check that a record of either
+   kind cut short gives the unsupported type.  */
+
+static void
+test_modifier_bitfield_types ()
+{
+  test_tpi tpi;
+  auto modifier = [&] (uint32_t target, uint16_t attr)
+    {
+      gdb::byte_vector body;
+      put_u32 (body, 0, target);
+      body.push_back (attr & 0xff);
+      body.push_back (attr >> 8);
+      return tpi.add (LF_MODIFIER, body);
+    };
+  uint32_t c = modifier (0x74, CV_MODIFIER_CONST);
+  uint32_t v = modifier (0x74, CV_MODIFIER_VOLATILE);
+  uint32_t cv = modifier (0x74, CV_MODIFIER_CONST | CV_MODIFIER_VOLATILE);
+  uint32_t none = modifier (0x74, 0);
+  uint32_t vc = modifier (c, CV_MODIFIER_VOLATILE);
+  gdb::byte_vector bits;
+  put_u32 (bits, 0, 0x75);
+  bits.push_back (3);
+  bits.push_back (2);
+  uint32_t bitfield = tpi.add (LF_BITFIELD, bits);
+  uint32_t mod_cut = tpi.add (LF_MODIFIER, gdb::byte_vector (4, 0));
+  uint32_t bit_cut = tpi.add (LF_BITFIELD, gdb::byte_vector (4, 0));
+
+  test_read_modules ({}, {}, tpi, nullptr, [&] (pdb_per_objfile *pdb)
+    {
+      auto resolve = [&] (uint32_t ti)
+	{
+	  return &pdb_tpi_resolve_type (pdb, ti);
+	};
+
+      SELF_CHECK (resolve (c)->is_const () && !resolve (c)->is_volatile ());
+      SELF_CHECK (!resolve (v)->is_const () && resolve (v)->is_volatile ());
+      SELF_CHECK (resolve (cv)->is_const () && resolve (cv)->is_volatile ());
+      SELF_CHECK (!resolve (none)->is_const ()
+		  && resolve (none)->code () == TYPE_CODE_INT);
+      SELF_CHECK (resolve (vc)->is_const () && resolve (vc)->is_volatile ());
+
+      type *t = resolve (bitfield);
+      SELF_CHECK (t->code () == TYPE_CODE_INT && t->is_unsigned ()
+		  && t->length () == 4);
+
+      SELF_CHECK (resolve (mod_cut)->code () == TYPE_CODE_ERROR);
+      SELF_CHECK (resolve (bit_cut)->code () == TYPE_CODE_ERROR);
+    });
+}
+
+/* Test the incomplete types of tag records.  Check that a structure, a
+   class and a union get the name and size of their record, and that an
+   LF_CLASS is declared a class.  Check that an enumeration gets the size
+   and signedness of its underlying type, and int when that is not an
+   integer.  Check that a size cut short gives the unsupported type.  */
+
+static void
+test_incomplete_tags ()
+{
+  test_tpi tpi;
+  uint32_t s = tpi.add (LF_STRUCTURE, tag_body (LF_STRUCTURE, 8, "S"));
+  uint32_t c = tpi.add (LF_CLASS, tag_body (LF_CLASS, 4, "C"));
+  gdb::byte_vector big = tag_body (LF_UNION, 0, "U");
+  /* An LF_USHORT size, 0x9000.  */
+  big.resize (8);
+  big.insert (big.end (), { 0x02, 0x80, 0x00, 0x90, 'U', 0 });
+  uint32_t u = tpi.add (LF_UNION, big);
+  uint32_t e = tpi.add (LF_ENUM, enum_body (0x75, "E"));
+  uint32_t e_ptr = tpi.add (LF_ENUM, enum_body (0x0603, "EP"));
+  gdb::byte_vector cut = tag_body (LF_STRUCTURE, 0, "");
+  /* An LF_ULONG size with two of its four bytes.  */
+  cut.resize (16);
+  for (gdb_byte b : { 0x04, 0x80, 0x01, 0x00 })
+    cut.push_back (b);
+  uint32_t s_cut = tpi.add (LF_STRUCTURE, cut);
+
+  test_read_modules ({}, {}, tpi, nullptr, [&] (pdb_per_objfile *pdb)
+    {
+      auto resolve = [&] (uint32_t ti)
+	{
+	  return &pdb_tpi_resolve_type (pdb, ti);
+	};
+      auto named = [] (type *t, const char *name)
+	{
+	  return t->name () != nullptr && strcmp (t->name (), name) == 0;
+	};
+
+      type *t = resolve (s);
+      SELF_CHECK (t->code () == TYPE_CODE_STRUCT && t->length () == 8
+		  && named (t, "S") && !t->is_declared_class ());
+      t = resolve (c);
+      SELF_CHECK (t->code () == TYPE_CODE_STRUCT && t->length () == 4
+		  && named (t, "C") && t->is_declared_class ());
+      t = resolve (u);
+      SELF_CHECK (t->code () == TYPE_CODE_UNION && t->length () == 0x9000
+		  && named (t, "U"));
+      t = resolve (e);
+      SELF_CHECK (t->code () == TYPE_CODE_ENUM && t->length () == 4
+		  && t->is_unsigned () && named (t, "E"));
+      t = resolve (e_ptr);
+      SELF_CHECK (t->code () == TYPE_CODE_ENUM && t->length () == 4
+		  && t->target_type ()->code () == TYPE_CODE_INT);
+      SELF_CHECK (resolve (s_cut)->code () == TYPE_CODE_ERROR);
+    });
+}
 
 /* A TPI stream whose header is VERSION, HDR_SIZE, [BEGIN, END) and
    REC_BYTES, followed by zero bytes up to STREAM_SIZE.  */
@@ -1013,9 +1784,11 @@ test_procedure_owner ()
 }
 
 /* A C++ function's name has its parameter list, unless printing it would
-   take too long: more parameters than PDB_MAX_PARAMS.  Such a function
-   keeps its bare name, and its type's list is not tried again for the
-   next function of that type.  */
+   take too long: more parameters than PDB_MAX_PARAMS, or a list that
+   prints longer than PDB_MAX_PARAMS_LENGTH, as one of pointers to
+   functions whose parameters are pointers to functions doubles at each
+   level.  Such a function keeps its bare name, and its type's list is
+   not tried again for the next function of that type.  */
 
 static void
 test_function_names ()
@@ -1024,6 +1797,12 @@ test_function_names ()
   uint32_t one_int = tpi.procedure (0x74, tpi.arglist ({ 0x74 }), 1);
   uint32_t many = tpi.procedure (3, tpi.arglist (std::vector<uint32_t>
 						  (2000, 0x74)), 2000);
+  uint32_t bomb = tpi.procedure (3, tpi.arglist ({}), 0);
+  for (int i = 0; i < 30; i++)
+    {
+      uint32_t ptr = tpi.pointer (bomb);
+      bomb = tpi.procedure (3, tpi.arglist ({ ptr, ptr }), 2);
+    }
 
   test_read_modules ({}, {}, tpi, nullptr, [&] (pdb_per_objfile *pdb)
     {
@@ -1042,25 +1821,8 @@ test_function_names ()
       SELF_CHECK (printed != pdb->tpi.printed_param_lists.end ()
 		  && printed->second == nullptr);
       SELF_CHECK (name ("big2", many, language_cplus_) == "big2");
-    });
 
-  /* Parameter lists that double at each level: a procedure taking two
-     procedures, each taking two, 14 levels down, prints far past
-     PDB_MAX_PARAMS_LENGTH, so its function keeps its bare name.  */
-  test_tpi doubling;
-  uint32_t p = doubling.procedure (0x74, doubling.arglist ({}), 0);
-  for (int k = 0; k < 14; k++)
-    p = doubling.procedure (0x74, doubling.arglist ({ p, p }), 2);
-  uint32_t f = doubling.procedure (3, doubling.arglist ({ p }), 1);
-
-  test_read_modules ({}, {}, doubling, nullptr, [&] (pdb_per_objfile *pdb)
-    {
-      type *ftype = &pdb_tpi_resolve_type (pdb, f);
-      SELF_CHECK (strcmp (pdb_function_name (pdb, "f", ftype, language_cplus_),
-			  "f") == 0);
-      auto printed = pdb->tpi.printed_param_lists.find (ftype);
-      SELF_CHECK (printed != pdb->tpi.printed_param_lists.end ()
-		  && printed->second == nullptr);
+      SELF_CHECK (name ("bomb", bomb, language_cplus_) == "bomb");
     });
 }
 
@@ -1079,6 +1841,16 @@ INIT_GDB_FILE (pdb_read_types)
 			    pdb::selftests::test_procedure_owner);
   selftests::register_test ("pdb-function-names",
 			    pdb::selftests::test_function_names);
+  selftests::register_test ("pdb-cv-read-numeric",
+			    pdb::selftests::test_cv_read_numeric);
+  selftests::register_test ("pdb-pointer-types",
+			    pdb::selftests::test_pointer_types);
+  selftests::register_test ("pdb-array-types",
+			    pdb::selftests::test_array_types);
+  selftests::register_test ("pdb-modifier-bitfield-types",
+			    pdb::selftests::test_modifier_bitfield_types);
+  selftests::register_test ("pdb-incomplete-tags",
+			    pdb::selftests::test_incomplete_tags);
   selftests::register_test ("pdb-type-stream-headers",
 			    pdb::selftests::test_type_stream_headers);
 #endif

@@ -183,9 +183,10 @@ into common msys2/mingw64 directories.
 ## Maintenance Commands
 
 `pdb-loaded-files` takes no arguments.  `pdb-streams` accepts
-`path=<pdb-path>` and `blocks=on|off`, and the
-others accept `path=` and `modi=N` to select a specific PDB / module.  If
-omitted, the default (main program) PDB and all modules are used.  An unknown
+`path=<pdb-path>` and `blocks=on|off`, `pdb-types`
+accepts `path=` and `kind=`, and the others
+accept `path=` and `modi=N` to select a specific PDB / module.  If omitted,
+the default (main program) PDB and all modules are used.  An unknown
 argument, a PDB that is not loaded or a module that is not there is an error.
 
 | Command                            | What it shows                                             |
@@ -200,6 +201,7 @@ argument, a PDB that is not loaded or a module that is not there is an error.
 | `maintenance info pdb-files-c13`   | Source files per module (C13 checksums), with checksum    |
 |                                    | type (MD5/SHA-1/SHA-256) and hash values                  |
 | `maintenance info pdb-lines`       | C13 line info: section:offset ranges and line mappings    |
+| `maintenance info pdb-types`       | TPI type records from the PDB                             |
 
 ## GDB Integration and Initialization Order
 
@@ -280,6 +282,9 @@ stops at a depth of 1000 with an unsupported type.
   entries are skipped.
 - `maintenance info pdb-streams`, `pdb-modules`, `pdb-files`,
   `pdb-files-c13` and `pdb-lines`.
+- Pointers, references and pointers to members (`LF_POINTER`), `const` and
+  `volatile` (`LF_MODIFIER`), arrays (`LF_ARRAY`) and bit-fields
+  (`LF_BITFIELD`).  `maintenance info pdb-types`.
 
 ## Memory Allocations
 
@@ -369,7 +374,7 @@ indices to GDB `struct type` on demand with caching.
 `pdb_read_tpi_stream()` is the entry point: it indexes every record without
 resolving it.  `pdb_tpi_resolve_type()` is the on-demand resolver — it builds
 and caches a `struct type` the first time a symbol references an index,
-dispatching per leaf kind.
+dispatching per leaf kind (pointer, array, ...).
 
 ### `pdb-read-symbols.c` — CodeView Symbol Parsing
 

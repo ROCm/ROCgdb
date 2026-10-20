@@ -45,6 +45,7 @@
      names the MSYS2 root directory.
   ** Functions and their prototypes, except for functions recorded by id
      (S_GPROC32_ID, S_LPROC32_ID), whose type is unknown.
+  ** Pointer, reference, const, volatile, array and bitfield types.
 
   GDB reads every module of the PDB when it loads the PDB.
 
@@ -107,6 +108,10 @@ maintenance info pdb-lines [path=PDB-PATH] [modi=N]
   Print the layout of a loaded PDB: its streams, its modules, the source
   files of each module from the DBI stream or from its C13 checksum
   table, and its line tables.
+
+maintenance info pdb-types [path=PDB-PATH] [kind=LEAF]
+  Print the TPI type records of a loaded PDB, each with the type indices
+  it refers to.
 
 * Changed commands
 
