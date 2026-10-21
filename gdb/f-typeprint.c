@@ -85,6 +85,26 @@ f_language::print_type (struct type *type, const char *varstring,
    }
 }
 
+/* Return true if any dimension of the Fortran array TYPE has a bound that
+   can only be computed from an object (e.g. a bound given by another
+   variable).  */
+
+static bool
+f_array_has_dynamic_bounds (struct type *type)
+{
+  for (; type->code () == TYPE_CODE_ARRAY; type = type->target_type ())
+    {
+      const range_bounds *bounds = type->bounds ();
+
+      if (!bounds->low.is_constant ()
+	  || !(bounds->high.is_constant ()
+	       || bounds->high.kind () == PROP_UNDEFINED))
+	return true;
+    }
+
+  return false;
+}
+
 /* See f-lang.h.  */
 
 void
@@ -182,6 +202,13 @@ f_language::f_type_print_varspec_suffix (struct type *type,
 	{
 	  /* This case exist when we ptype a typename which has the dynamic
 	     properties but cannot be resolved as there is no object.  */
+	  print_rank_only = true;
+	}
+      else if (f_array_has_dynamic_bounds (type))
+	{
+	  /* Likewise for bounds that cannot be resolved.  PRINT_RANK_ONLY is
+	     only passed down to the inner dimensions, so check all of them
+	     here so that either all or none of them are printed.  */
 	  print_rank_only = true;
 	}
 

@@ -1,0 +1,61 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test printing the type of a subroutine whose array parameters have
+# bounds given by other parameters (PR fortran/34698).
+
+require allow_fortran_tests
+
+standard_testfile .f90
+load_lib fortran.exp
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug f90}]} {
+    return
+}
+
+set int4 [fortran_int4]
+
+# The type of SUB has no associated object, so the bounds of its array
+# parameters cannot be resolved, even when SUB is executing.  Only the
+# rank of these arrays is printed.
+set sub_args "$int4 \\(:\\), $int4, $int4, $int4 \\(:,:\\)"
+set sub_type "void \\($sub_args\\)"
+
+gdb_test "print sub" " = \\{$sub_type\\} $hex <sub_?>" \
+    "print sub before running"
+gdb_test "ptype sub" "type = $sub_type" "ptype sub before running"
+gdb_test "whatis sub" "type = $sub_type" "whatis sub before running"
+gdb_test "info functions ^sub\$" "$decimal:\\s+void sub\\($sub_args\\);" \
+    "info functions sub before running"
+
+if {![fortran_runto_main]} {
+    return
+}
+
+gdb_breakpoint [gdb_get_line_number "Break here"]
+gdb_continue_to_breakpoint "Break here"
+
+gdb_test_no_output "set print frame-arguments all"
+
+gdb_test "frame" \
+    [multi_line \
+	 "#0  sub \\(a=\\(2, 3, 4, 5, 6\\), n1=2, n2=6, b=\\(\\(1, 2, 3, 4, 5\\) \\(6, 7, 8, 9, 10\\) \\(11, 12, 13, 14, 15\\)\\)\\) at \[^\r\n\]+" \
+	 "$decimal\\s+print \\*, a\\s+! Break here\\."]
+gdb_test "print a" " = \\(2, 3, 4, 5, 6\\)"
+gdb_test "ptype a" "type = $int4 \\(2:6\\)"
+gdb_test "ptype b" "type = $int4 \\(2:6,3\\)"
+gdb_test "print sub" " = \\{$sub_type\\} $hex <sub_?>" \
+    "print sub with frame"

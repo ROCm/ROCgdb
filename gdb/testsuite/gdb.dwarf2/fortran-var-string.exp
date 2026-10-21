@@ -150,24 +150,13 @@ gdb_test_no_output "set language fortran"
 gdb_test "info functions test_1_func" \
     "2:\\s+integer test_1_func\\(character\\*\\(\\*\\)\\);"
 
-# We print `1` here as the bound because GDB treats this as an assumed
-# size array, and just reports the lower bound value for the upper
-# bound.
-#
-# We might, in the future, decide that there's a better way we could
-# tell the user about the type of this array argument, when that
-# happens it's OK to change the expected results here.
+# The array bounds are dynamic and there is no object to resolve them
+# against, so only the rank of the array is printed.
 gdb_test "info functions test_2_func" \
-    "3:\\s+integer test_2_func\\(integer \\(1\\)\\);"
+    "3:\\s+integer test_2_func\\(integer \\(:\\)\\);"
 
-# It's not completely clear that this error is correct here.  Why
-# can't the lower bound be a dynamic expression?
-#
-# This test was initially added to guard against the case where GDB
-# was crashing if/when it saw this situation.
-#
-# If later on, GDB's handling of array types with a dynamic loewr
-# bound changes, then it is possible that the expected result here
-# should change.
+# Likewise for a dynamic lower bound.  This test was initially added to
+# guard against the case where GDB was crashing if/when it saw this
+# situation.
 gdb_test "info functions test_3_func" \
-    "4:\\s+Lower bound may not be '\\*' in F77"
+    "4:\\s+integer test_3_func\\(integer \\(:\\)\\);"
