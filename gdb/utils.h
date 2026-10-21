@@ -87,8 +87,6 @@ extern int strncmp_iw (const char *string1, const char *string2,
    therefore be avoided if a more suitable language is available.  */
 extern int strcmp_iw (const char *string1, const char *string2);
 
-extern int strcmp_iw_ordered (const char *, const char *);
-
 /* Reset the prompt_for_continue clock.  */
 void reset_prompt_for_continue_wait_time (void);
 /* Return the time spent in prompt_for_continue.  */
