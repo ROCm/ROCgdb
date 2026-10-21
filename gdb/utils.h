@@ -315,10 +315,6 @@ extern void (*deprecated_error_begin_hook) (void);
 
 extern const char *warning_pre_print;
 
-extern void demangler_vwarning (const char *file, int line,
-			       const char *, va_list ap)
-     ATTRIBUTE_PRINTF (3, 0);
-
 extern void demangler_warning (const char *file, int line,
 			      const char *, ...) ATTRIBUTE_PRINTF (3, 4);
 

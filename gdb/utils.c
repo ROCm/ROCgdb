@@ -532,18 +532,12 @@ static struct internal_problem demangler_warning_problem = {
 };
 
 void
-demangler_vwarning (const char *file, int line, const char *fmt, va_list ap)
-{
-  internal_vproblem (&demangler_warning_problem, file, line, fmt, ap);
-}
-
-void
-demangler_warning (const char *file, int line, const char *string, ...)
+demangler_warning (const char *file, int line, const char *fmt, ...)
 {
   va_list ap;
 
-  va_start (ap, string);
-  demangler_vwarning (file, line, string, ap);
+  va_start (ap, fmt);
+  internal_vproblem (&demangler_warning_problem, file, line, fmt, ap);
   va_end (ap);
 }
 
