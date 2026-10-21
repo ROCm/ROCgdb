@@ -1052,12 +1052,20 @@ rs6000_software_single_step (struct regcache *regcache)
   return next_pcs;
 }
 
-/* Implement the "auto_wide_charset" gdbarch method for this platform.  */
+/* Implement the "auto_wide_charset" gdbarch method for this platform.
+   wchar_t is 2 bytes in 32-bit mode and 4 bytes in 64-bit mode, see
+   the set_gdbarch_wchar_bit calls in rs6000_aix_init_osabi.  */
 
 static const char *
-rs6000_aix_auto_wide_charset (void)
+rs6000_aix_auto_wide_charset_32 ()
 {
   return "UTF-16";
+}
+
+static const char *
+rs6000_aix_auto_wide_charset_64 ()
+{
+  return "UTF-32";
 }
 
 /* Implement an osabi sniffer for RS6000/AIX.
@@ -1404,11 +1412,16 @@ rs6000_aix_init_osabi (struct gdbarch_info info, struct gdbarch *gdbarch)
     set_gdbarch_frame_red_zone_size (gdbarch, 288);
 
   if (tdep->wordsize == 8)
-    set_gdbarch_wchar_bit (gdbarch, 32);
+    {
+      set_gdbarch_wchar_bit (gdbarch, 32);
+      set_gdbarch_auto_wide_charset (gdbarch, rs6000_aix_auto_wide_charset_64);
+    }
   else
-    set_gdbarch_wchar_bit (gdbarch, 16);
+    {
+      set_gdbarch_wchar_bit (gdbarch, 16);
+      set_gdbarch_auto_wide_charset (gdbarch, rs6000_aix_auto_wide_charset_32);
+    }
   set_gdbarch_wchar_signed (gdbarch, false);
-  set_gdbarch_auto_wide_charset (gdbarch, rs6000_aix_auto_wide_charset);
 
   set_gdbarch_make_solib_ops (gdbarch, make_aix_solib_ops);
   frame_unwind_append_unwinder (gdbarch, &aix_sighandle_frame_unwind);
