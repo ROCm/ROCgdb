@@ -5787,7 +5787,7 @@ $as_echo "found xgettext program is not GNU xgettext; ignore it" >&6; }
         rm -f messages.po
   fi
 
-  ac_config_commands="$ac_config_commands default-1"
+  ac_config_commands="$ac_config_commands posubdirs"
 
 
 
@@ -5946,6 +5946,7 @@ if test "${enable_rpath+set}" = set; then :
 else
   enable_rpath=yes
 fi
+
 
 
 
@@ -6800,6 +6801,7 @@ $as_echo "$LIBICONV" >&6; }
     LIBICONV=
     LTLIBICONV=
   fi
+
 
 
 
@@ -13970,7 +13972,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 13973 "configure"
+#line 13975 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -14076,7 +14078,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 14079 "configure"
+#line 14081 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -18429,7 +18431,7 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
-    "default-1") CONFIG_COMMANDS="$CONFIG_COMMANDS default-1" ;;
+    "posubdirs") CONFIG_COMMANDS="$CONFIG_COMMANDS posubdirs" ;;
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
@@ -19121,7 +19123,7 @@ $as_echo X"$file" |
   done
 }
  ;;
-    "default-1":C)
+    "posubdirs":C)
     for ac_file in $CONFIG_FILES; do
       # Support "outfile[:infile[:infile...]]"
       case "$ac_file" in

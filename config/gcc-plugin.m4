@@ -107,8 +107,8 @@ AC_DEFUN([GCC_ENABLE_PLUGINS],
        ;;
      esac
      AC_MSG_CHECKING([for -fPIC -shared])
-     AC_TRY_LINK(
-       [extern int X;],[return X == 0;],
+     AC_LINK_IFELSE([AC_LANG_PROGRAM(
+       [[extern int X;]],[[return X == 0;]])],
        [AC_MSG_RESULT([yes]); have_pic_shared=yes],
        [AC_MSG_RESULT([no]); have_pic_shared=no])
      if test x"$have_pic_shared" != x"yes" -o x"$ac_cv_search_dlopen" = x"no"; then
@@ -183,11 +183,11 @@ fi
 saved_CC="$CC"
 CC="$COMPILER_FOR_TARGET"
 AC_CACHE_CHECK([for gcc for target], gcc_target_cv_working, [
-  AC_TRY_COMPILE(
-  [],
-  [],
-  gcc_target_cv_working=yes,
-  gcc_target_cv_working=no)])
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
+  [[]],
+  [[]])],
+  [gcc_target_cv_working=yes],
+  [gcc_target_cv_working=no])])
 CC="$saved_CC"
 AC_MSG_CHECKING([for target -plugin option])
 plugin_option=

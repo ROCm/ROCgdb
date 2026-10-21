@@ -16699,7 +16699,7 @@ $as_echo "found xgettext program is not GNU xgettext; ignore it" >&6; }
         rm -f messages.po
   fi
 
-  ac_config_commands="$ac_config_commands default-1"
+  ac_config_commands="$ac_config_commands posubdirs"
 
 
 
@@ -16858,6 +16858,7 @@ if test "${enable_rpath+set}" = set; then :
 else
   enable_rpath=yes
 fi
+
 
 
 
@@ -17712,6 +17713,7 @@ $as_echo "$LIBICONV" >&6; }
     LIBICONV=
     LTLIBICONV=
   fi
+
 
 
 
@@ -18621,7 +18623,15 @@ if ${gcc_cv_prog_cmp_skip+:} false; then :
 else
    echo abfoo >t1
   echo cdfoo >t2
-  gcc_cv_prog_cmp_skip='tail -c +17 $$f1 > tmp-foo1; tail -c +17 $$f2 > tmp-foo2; cmp tmp-foo1 tmp-foo2'
+  gcc_cv_prog_cmp_skip='(trap ":; rm -f tmp-foo1.$$$$ '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'tmp-foo2.$$$$" 0; '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'trap "exit 2" 1 2 3 15; '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'tail -c +17 $$f1 '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'> tmp-foo1.$$$$ || exit 2; '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'tail -c +17 $$f2 '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'> tmp-foo2.$$$$ || exit 2; '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'cmp tmp-foo1.$$$$ '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'tmp-foo2.$$$$; exit $$?)'
   if cmp t1 t2 2 2 > /dev/null 2>&1; then
     if cmp t1 t2 1 1 > /dev/null 2>&1; then
       :
@@ -20667,7 +20677,7 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h:config.in" ;;
-    "default-1") CONFIG_COMMANDS="$CONFIG_COMMANDS default-1" ;;
+    "posubdirs") CONFIG_COMMANDS="$CONFIG_COMMANDS posubdirs" ;;
     "default") CONFIG_COMMANDS="$CONFIG_COMMANDS default" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "po/Makefile.in") CONFIG_FILES="$CONFIG_FILES po/Makefile.in:po/Make-in" ;;
@@ -22169,7 +22179,7 @@ compiler_lib_search_path=$lt_compiler_lib_search_path_CXX
 _LT_EOF
 
  ;;
-    "default-1":C)
+    "posubdirs":C)
     for ac_file in $CONFIG_FILES; do
       # Support "outfile[:infile[:infile...]]"
       case "$ac_file" in
