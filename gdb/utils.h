@@ -133,10 +133,6 @@ extern int gdb_filename_fnmatch (const char *pattern, const char *string,
 
 std::string gdb_ldirname (const char *filename);
 
-extern int count_path_elements (const char *path);
-
-extern const char *strip_leading_path_elements (const char *path, int n);
-
 /* Wrapper around readline's tilde_expand, to return a unique pointer.  */
 
 extern gdb::unique_xmalloc_ptr<char> gdb_rl_tilde_expand (const char *path);
