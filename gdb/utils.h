@@ -257,9 +257,6 @@ extern void print_spaces (int, struct ui_file *);
 
 extern const char *n_spaces (int);
 
-/* Return nonzero if filtered printing is initialized.  */
-extern int filtered_printing_initialized (void);
-
 /* Like gdb_printf, but styles the output according to STYLE,
    when appropriate.  */
 
