@@ -87,9 +87,8 @@ void (*deprecated_error_begin_hook) (void);
 /* Prototypes for local functions */
 
 static void set_screen_size (void);
-static void set_width (void);
 
-/* True once set_width has run and filtered printing can be used.  */
+/* True once init_page_info has run and filtered printing can be used.  */
 
 static bool filtered_printing_initialized = false;
 
@@ -1176,7 +1175,7 @@ init_page_info (void)
   rl_catch_sigwinch = 0;
 
   set_screen_size ();
-  set_width ();
+  filtered_printing_initialized = true;
 }
 
 set_batch_flag_and_restore_page_info::set_batch_flag_and_restore_page_info ()
@@ -1195,7 +1194,6 @@ set_batch_flag_and_restore_page_info::~set_batch_flag_and_restore_page_info ()
   lines_per_page = m_save_lines_per_page;
 
   set_screen_size ();
-  set_width ();
 }
 
 /* An approximation of SQRT(INT_MAX) that is:
@@ -1242,27 +1240,11 @@ set_screen_size (void)
   rl_set_screen_size (rows, cols);
 }
 
-/* Initialize the page info if needed, and mark filtered printing as
-   initialized.  */
+/* Callback for "set width" and "set height".  */
 
 static void
-set_width ()
-{
-  if (chars_per_line == 0)
-    init_page_info ();
-
-  filtered_printing_initialized = true;
-}
-
-static void
-set_width_command (const char *args, int from_tty, struct cmd_list_element *c)
-{
-  set_screen_size ();
-  set_width ();
-}
-
-static void
-set_height_command (const char *args, int from_tty, struct cmd_list_element *c)
+set_screen_size_command (const char *args, int from_tty,
+			 cmd_list_element *c)
 {
   set_screen_size ();
 }
@@ -1276,7 +1258,6 @@ set_screen_width_and_height (int width, int height)
   chars_per_line = width;
 
   set_screen_size ();
-  set_width ();
 }
 
 /* Import termcap variable UP (instead of readline private variable
@@ -3678,7 +3659,7 @@ Set number of characters where GDB should wrap lines of its output."), _("\
 Show number of characters where GDB should wrap lines of its output."), _("\
 This affects where GDB wraps its output to fit the screen width.\n\
 Setting this to \"unlimited\" or zero prevents GDB from wrapping its output."),
-			    set_width_command,
+			    set_screen_size_command,
 			    show_chars_per_line,
 			    &setlist, &showlist);
 
@@ -3688,7 +3669,7 @@ Show number of lines in a page for GDB output pagination."), _("\
 This affects the number of lines after which GDB will pause\n\
 its output and ask you whether to continue.\n\
 Setting this to \"unlimited\" or zero causes GDB never pause during output."),
-			    set_height_command,
+			    set_screen_size_command,
 			    show_lines_per_page,
 			    &setlist, &showlist);
 
