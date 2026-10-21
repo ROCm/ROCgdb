@@ -589,7 +589,7 @@
 /* Define to 1 if you have the <ws2tcpip.h> header file. */
 #undef HAVE_WS2TCPIP_H
 
-/* Define to 1 if zstd is enabled. */
+/* Define if zstd is available. */
 #undef HAVE_ZSTD
 
 /* Define to 1 if your system has the _etext variable. */

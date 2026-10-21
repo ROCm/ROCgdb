@@ -251,7 +251,7 @@ dllwrap_DEPENDENCIES =   $(LIBINTL_DEP) $(LIBIBERTY)
 bfdtest1_DEPENDENCIES =  $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 bfdtest2_DEPENDENCIES =  $(LIBINTL_DEP) $(LIBIBERTY) $(BFDLIB)
 
-LDADD = $(BFDLIB) $(LIBIBERTY) $(LIBINTL)
+LDADD = $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(ZSTD_LIBS)
 
 size_SOURCES = size.c $(BULIBS)
 
@@ -271,7 +271,7 @@ nm_new_SOURCES = nm.c demanguse.c $(BULIBS)
 
 objdump_SOURCES = objdump.c dwarf.c prdbg.c demanguse.c $(DEBUG_SRCS) $(BULIBS) $(ELFLIBS)
 EXTRA_objdump_SOURCES = od-elf32_avr.c od-macho.c od-xcoff.c od-pe.c
-objdump_LDADD = $(OBJDUMP_PRIVATE_OFILES) $(OPCODES) $(LIBCTF) $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(DEBUGINFOD_LIBS) $(LIBSFRAME)
+objdump_LDADD = $(OBJDUMP_PRIVATE_OFILES) $(OPCODES) $(LIBCTF) $(BFDLIB) $(LIBIBERTY) $(LIBINTL) $(ZSTD_LIBS) $(DEBUGINFOD_LIBS) $(LIBSFRAME)
 
 objdump.@OBJEXT@:objdump.c
 if am__fastdepCC
@@ -290,11 +290,11 @@ cxxfilt_SOURCES = cxxfilt.c $(BULIBS)
 ar_SOURCES = arparse.y arlex.l not-ranlib.c arsup.c rename.c binemul.c \
 	emul_$(EMULATION).c $(BULIBS)
 EXTRA_ar_SOURCES = $(CFILES)
-ar_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL)
+ar_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL) $(ZSTD_LIBS)
 
 ranlib_SOURCES = arparse.y arlex.l is-ranlib.c arsup.c rename.c binemul.c \
 	emul_$(EMULATION).c $(BULIBS)
-ranlib_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL)
+ranlib_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL) $(ZSTD_LIBS)
 
 addr2line_SOURCES = addr2line.c $(BULIBS)
 
@@ -485,7 +485,7 @@ srconv_SOURCES = srconv.c coffgrok.c $(BULIBS)
 srconv.@OBJEXT@: sysroff.c
 
 dlltool_SOURCES = dlltool.c defparse.y deflex.l $(BULIBS)
-dlltool_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL)
+dlltool_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL) $(ZSTD_LIBS)
 
 dlltool.@OBJEXT@:
 if am__fastdepCC
@@ -518,11 +518,11 @@ sysdump.@OBJEXT@: sysroff.c
 
 windres_SOURCES = windres.c resrc.c rescoff.c resbin.c rcparse.y rclex.c \
 	winduni.c resres.c $(BULIBS)
-windres_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL) $(LIBICONV)
+windres_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL) $(LIBICONV) $(ZSTD_LIBS)
 
 windmc_SOURCES = windmc.c mcparse.y mclex.c \
 	winduni.c $(BULIBS)
-windmc_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL) $(LIBICONV)
+windmc_LDADD = $(BFDLIB) $(LIBIBERTY) $(LEXLIB) $(LIBINTL) $(LIBICONV) $(ZSTD_LIBS)
 
 dllwrap_SOURCES = dllwrap.c version.c
 dllwrap_LDADD = $(LIBIBERTY) $(LIBINTL)

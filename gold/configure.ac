@@ -566,7 +566,7 @@ fi
 # Link in zlib/zstd if we can.  This allows us to write compressed sections.
 AM_ZLIB
 AC_ZSTD
-AM_CONDITIONAL(HAVE_ZSTD, test "$pkg_cv_ZSTD_LIBS" != "")
+AM_CONDITIONAL(HAVE_ZSTD, test "$zstd_enabled" = yes)
 
 AC_ARG_ENABLE([threads],
 [[  --enable-threads[=ARG]  multi-threaded linking [ARG={auto,yes,no}]]],

@@ -224,7 +224,7 @@
 /* Define to 1 if you have the <windows.h> header file. */
 #undef HAVE_WINDOWS_H
 
-/* Define to 1 if zstd is enabled. */
+/* Define if zstd is available. */
 #undef HAVE_ZSTD
 
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
