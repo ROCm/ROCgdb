@@ -8742,7 +8742,7 @@ $as_echo "found xgettext program is not GNU xgettext; ignore it" >&6; }
         rm -f messages.po
   fi
 
-  ac_config_commands="$ac_config_commands default-1"
+  ac_config_commands="$ac_config_commands posubdirs"
 
 
 
@@ -8901,6 +8901,7 @@ if test "${enable_rpath+set}" = set; then :
 else
   enable_rpath=yes
 fi
+
 
 
 
@@ -9755,6 +9756,7 @@ $as_echo "$LIBICONV" >&6; }
     LIBICONV=
     LTLIBICONV=
   fi
+
 
 
 
@@ -10940,11 +10942,8 @@ for ac_header in  \
   dlfcn.h \
   linux/elf.h \
   linux/perf_event.h  \
-  locale.h \
-  memory.h \
   poll.h \
   proc_service.h \
-  signal.h \
   sys/poll.h \
   sys/resource.h \
   sys/select.h \
@@ -11463,18 +11462,6 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-  ac_fn_c_check_decl "$LINENO" "strstr" "ac_cv_have_decl_strstr" "$ac_includes_default"
-if test "x$ac_cv_have_decl_strstr" = xyes; then :
-  ac_have_decl=1
-else
-  ac_have_decl=0
-fi
-
-cat >>confdefs.h <<_ACEOF
-#define HAVE_DECL_STRSTR $ac_have_decl
-_ACEOF
-
-
   # ----------------------- #
   # Checks for structures.  #
   # ----------------------- #
@@ -11760,7 +11747,30 @@ fi
 # correctly enabled
 
 case $host_os in
-        darwin* | hpux* | linux* | osf* | solaris*)
+        solaris*)
+        # Solaris 11.4 introduced XPG7 support and did away with the need for
+        # _REENTRANT.
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#            undef _XOPEN_SOURCE
+#            include <sys/feature_tests.h>
+#            if _XOPEN_VERSION < 700
+             AX_PTHREAD_SOLARIS__REENTRANT
+#            endif
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "AX_PTHREAD_SOLARIS__REENTRANT" >/dev/null 2>&1; then :
+  ax_pthread_check_macro="_REENTRANT"
+else
+  ax_pthread_check_macro="--"
+fi
+rm -f conftest*
+
+        ;;
+        darwin* | hpux* | linux* | osf*)
         ax_pthread_check_macro="_REENTRANT"
         ;;
 
@@ -12404,6 +12414,7 @@ $as_echo "$as_me: WARNING: linux/perf_event.h missing or too old; some features 
 
 
 
+
     use_additional=yes
 
   acl_save_prefix="$prefix"
@@ -12993,258 +13004,6 @@ done
 
   if test "$ac_cv_header_sys_procfs_h" = yes; then
 
- { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gregset_t in sys/procfs.h" >&5
-$as_echo_n "checking for gregset_t in sys/procfs.h... " >&6; }
- if ${bfd_cv_have_sys_procfs_type_gregset_t+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define _SYSCALL32
-#include <sys/procfs.h>
-int
-main ()
-{
-gregset_t avar
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  bfd_cv_have_sys_procfs_type_gregset_t=yes
-else
-  bfd_cv_have_sys_procfs_type_gregset_t=no
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-
- if test $bfd_cv_have_sys_procfs_type_gregset_t = yes; then
-
-$as_echo "#define HAVE_GREGSET_T 1" >>confdefs.h
-
- fi
- { $as_echo "$as_me:${as_lineno-$LINENO}: result: $bfd_cv_have_sys_procfs_type_gregset_t" >&5
-$as_echo "$bfd_cv_have_sys_procfs_type_gregset_t" >&6; }
-
-
- { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fpregset_t in sys/procfs.h" >&5
-$as_echo_n "checking for fpregset_t in sys/procfs.h... " >&6; }
- if ${bfd_cv_have_sys_procfs_type_fpregset_t+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define _SYSCALL32
-#include <sys/procfs.h>
-int
-main ()
-{
-fpregset_t avar
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  bfd_cv_have_sys_procfs_type_fpregset_t=yes
-else
-  bfd_cv_have_sys_procfs_type_fpregset_t=no
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-
- if test $bfd_cv_have_sys_procfs_type_fpregset_t = yes; then
-
-$as_echo "#define HAVE_FPREGSET_T 1" >>confdefs.h
-
- fi
- { $as_echo "$as_me:${as_lineno-$LINENO}: result: $bfd_cv_have_sys_procfs_type_fpregset_t" >&5
-$as_echo "$bfd_cv_have_sys_procfs_type_fpregset_t" >&6; }
-
-
- { $as_echo "$as_me:${as_lineno-$LINENO}: checking for prgregset_t in sys/procfs.h" >&5
-$as_echo_n "checking for prgregset_t in sys/procfs.h... " >&6; }
- if ${bfd_cv_have_sys_procfs_type_prgregset_t+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define _SYSCALL32
-#include <sys/procfs.h>
-int
-main ()
-{
-prgregset_t avar
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  bfd_cv_have_sys_procfs_type_prgregset_t=yes
-else
-  bfd_cv_have_sys_procfs_type_prgregset_t=no
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-
- if test $bfd_cv_have_sys_procfs_type_prgregset_t = yes; then
-
-$as_echo "#define HAVE_PRGREGSET_T 1" >>confdefs.h
-
- fi
- { $as_echo "$as_me:${as_lineno-$LINENO}: result: $bfd_cv_have_sys_procfs_type_prgregset_t" >&5
-$as_echo "$bfd_cv_have_sys_procfs_type_prgregset_t" >&6; }
-
-
- { $as_echo "$as_me:${as_lineno-$LINENO}: checking for prfpregset_t in sys/procfs.h" >&5
-$as_echo_n "checking for prfpregset_t in sys/procfs.h... " >&6; }
- if ${bfd_cv_have_sys_procfs_type_prfpregset_t+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define _SYSCALL32
-#include <sys/procfs.h>
-int
-main ()
-{
-prfpregset_t avar
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  bfd_cv_have_sys_procfs_type_prfpregset_t=yes
-else
-  bfd_cv_have_sys_procfs_type_prfpregset_t=no
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-
- if test $bfd_cv_have_sys_procfs_type_prfpregset_t = yes; then
-
-$as_echo "#define HAVE_PRFPREGSET_T 1" >>confdefs.h
-
- fi
- { $as_echo "$as_me:${as_lineno-$LINENO}: result: $bfd_cv_have_sys_procfs_type_prfpregset_t" >&5
-$as_echo "$bfd_cv_have_sys_procfs_type_prfpregset_t" >&6; }
-
-
- { $as_echo "$as_me:${as_lineno-$LINENO}: checking for prgregset32_t in sys/procfs.h" >&5
-$as_echo_n "checking for prgregset32_t in sys/procfs.h... " >&6; }
- if ${bfd_cv_have_sys_procfs_type_prgregset32_t+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define _SYSCALL32
-#include <sys/procfs.h>
-int
-main ()
-{
-prgregset32_t avar
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  bfd_cv_have_sys_procfs_type_prgregset32_t=yes
-else
-  bfd_cv_have_sys_procfs_type_prgregset32_t=no
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-
- if test $bfd_cv_have_sys_procfs_type_prgregset32_t = yes; then
-
-$as_echo "#define HAVE_PRGREGSET32_T 1" >>confdefs.h
-
- fi
- { $as_echo "$as_me:${as_lineno-$LINENO}: result: $bfd_cv_have_sys_procfs_type_prgregset32_t" >&5
-$as_echo "$bfd_cv_have_sys_procfs_type_prgregset32_t" >&6; }
-
-
- { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lwpid_t in sys/procfs.h" >&5
-$as_echo_n "checking for lwpid_t in sys/procfs.h... " >&6; }
- if ${bfd_cv_have_sys_procfs_type_lwpid_t+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define _SYSCALL32
-#include <sys/procfs.h>
-int
-main ()
-{
-lwpid_t avar
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  bfd_cv_have_sys_procfs_type_lwpid_t=yes
-else
-  bfd_cv_have_sys_procfs_type_lwpid_t=no
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-
- if test $bfd_cv_have_sys_procfs_type_lwpid_t = yes; then
-
-$as_echo "#define HAVE_LWPID_T 1" >>confdefs.h
-
- fi
- { $as_echo "$as_me:${as_lineno-$LINENO}: result: $bfd_cv_have_sys_procfs_type_lwpid_t" >&5
-$as_echo "$bfd_cv_have_sys_procfs_type_lwpid_t" >&6; }
-
-
- { $as_echo "$as_me:${as_lineno-$LINENO}: checking for psaddr_t in sys/procfs.h" >&5
-$as_echo_n "checking for psaddr_t in sys/procfs.h... " >&6; }
- if ${bfd_cv_have_sys_procfs_type_psaddr_t+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#define _SYSCALL32
-#include <sys/procfs.h>
-int
-main ()
-{
-psaddr_t avar
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  bfd_cv_have_sys_procfs_type_psaddr_t=yes
-else
-  bfd_cv_have_sys_procfs_type_psaddr_t=no
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-
- if test $bfd_cv_have_sys_procfs_type_psaddr_t = yes; then
-
-$as_echo "#define HAVE_PSADDR_T 1" >>confdefs.h
-
- fi
- { $as_echo "$as_me:${as_lineno-$LINENO}: result: $bfd_cv_have_sys_procfs_type_psaddr_t" >&5
-$as_echo "$bfd_cv_have_sys_procfs_type_psaddr_t" >&6; }
-
-
  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for elf_fpregset_t in sys/procfs.h" >&5
 $as_echo_n "checking for elf_fpregset_t in sys/procfs.h... " >&6; }
  if ${bfd_cv_have_sys_procfs_type_elf_fpregset_t+:} false; then :
@@ -13293,6 +13052,7 @@ fi
 
 
   if test "x$with_xxhash" != "xno"; then
+
 
 
 
@@ -15117,7 +14877,7 @@ do
   case $ac_config_target in
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h:config.in" ;;
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
-    "default-1") CONFIG_COMMANDS="$CONFIG_COMMANDS default-1" ;;
+    "posubdirs") CONFIG_COMMANDS="$CONFIG_COMMANDS posubdirs" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
@@ -15807,7 +15567,7 @@ $as_echo X"$file" |
   done
 }
  ;;
-    "default-1":C)
+    "posubdirs":C)
     for ac_file in $CONFIG_FILES; do
       # Support "outfile[:infile[:infile...]]"
       case "$ac_file" in

@@ -362,10 +362,6 @@ bpf_pc_set (sim_cpu *cpu, sim_cia pc)
 
 static int64_t skb_data_offset;
 
-/* String with the name of the section containing the BPF program to
-   run.  */
-static char *bpf_program_section = NULL;
-
 
 /***** Handle BPF-specific command line options.  *****/
 
@@ -416,7 +412,6 @@ bpf_option_handler (SIM_DESC sd, sim_cpu *cpu ATTRIBUTE_UNUSED, int opt,
     case OPTION_BPF_SET_PROGRAM:
       /* XXX: check that the section exists and tell the user about a
          new start_address.  */
-      bpf_program_section = xstrdup (arg);
       break;
 
     case OPTION_BPF_SKB_DATA_OFFSET:

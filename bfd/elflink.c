@@ -8108,8 +8108,10 @@ bfd_elf_size_dynsym_hash_dynstr (struct bfd_link_info *info)
 	      s->alloced = 1;
 	      /* 1 empty bucket.  */
 	      bfd_put_32 (info->output_bfd, 1, contents);
-	      /* SYMIDX above the special symbol 0.  */
-	      bfd_put_32 (info->output_bfd, 1, contents + 4);
+	      /* SYMINDX is the number of .dynsym symbols which cannot
+		 be looked up using .gnu.hash.  That's all of them in
+		 this case.  */
+	      bfd_put_32 (info->output_bfd, dynsymcount, contents + 4);
 	      /* Just one word for bitmask.  */
 	      bfd_put_32 (info->output_bfd, 1, contents + 8);
 	      /* Only hash fn bloom filter.  */

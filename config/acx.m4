@@ -340,6 +340,11 @@ rm conftest.c
 AC_DEFUN([ACX_CHECK_INSTALLED_TARGET_TOOL], [
 AC_REQUIRE([ACX_TOOL_DIRS])
 AC_REQUIRE([ACX_HAVE_GCC_FOR_TARGET])
+if test -n "[$]$1"; then
+  ac_cv_path_$1=[$]$1
+elif test -n "$ac_cv_path_$1"; then
+  $1=$ac_cv_path_$1
+fi
 if test -z "$ac_cv_path_$1" ; then
   if test -n "$with_build_time_tools"; then
     AC_MSG_CHECKING([for $2 in $with_build_time_tools])
@@ -389,8 +394,7 @@ ac_c_preproc_warn_flag=yes])# AC_PROG_CPP_WERROR
 # Sets the shell variable have_gnat to yes or no as appropriate, and
 # substitutes GNATBIND and GNATMAKE.
 AC_DEFUN([ACX_PROG_GNAT],
-[AC_REQUIRE([AC_CHECK_TOOL_PREFIX])
-AC_REQUIRE([AC_PROG_CC])
+[AC_REQUIRE([AC_PROG_CC])
 AC_CHECK_TOOL(GNATBIND, gnatbind, no)
 AC_CHECK_TOOL(GNATMAKE, gnatmake, no)
 AC_CACHE_CHECK([whether compiler driver understands Ada and is recent enough],
@@ -434,10 +438,14 @@ else
   have_cargo=no
 fi])
 
+# Test for Algol 68
+AC_DEFUN([ACX_PROG_A68],
+[AC_REQUIRE([AC_PROG_CC])
+AC_CHECK_TOOL(A68, ga68, no)])
+
 # Test for D.
 AC_DEFUN([ACX_PROG_GDC],
-[AC_REQUIRE([AC_CHECK_TOOL_PREFIX])
-AC_REQUIRE([AC_PROG_CC])
+[AC_REQUIRE([AC_PROG_CC])
 AC_CHECK_TOOL(GDC, gdc, no)
 AC_CACHE_CHECK([whether the D compiler works],
 		 acx_cv_d_compiler_works,
@@ -464,12 +472,24 @@ dnl skip bytes instead of using tail.  The test being performed is
 dnl "if cmp --ignore-initial=2 t1 t2 && ! cmp --ignore-initial=1 t1 t2"
 dnl but we need to sink errors and handle broken shells.  We also test
 dnl for the parameter format "cmp file1 file2 skip1 skip2" which is
-dnl accepted by cmp on some systems.
+dnl accepted by cmp on some systems.  The fallback ends its subshell with
+dnl a builtin so that the exit trap runs, and the trap starts with ':'
+dnl because older bash does not preserve the exit status across an exit
+dnl trap that consists of a single command, which would report a differing
+dnl pair of objects as equal.
 AC_DEFUN([ACX_PROG_CMP_IGNORE_INITIAL],
 [AC_CACHE_CHECK([how to compare bootstrapped objects], gcc_cv_prog_cmp_skip,
 [ echo abfoo >t1
   echo cdfoo >t2
-  gcc_cv_prog_cmp_skip='tail -c +17 $$f1 > tmp-foo1; tail -c +17 $$f2 > tmp-foo2; cmp tmp-foo1 tmp-foo2'
+  gcc_cv_prog_cmp_skip='(trap ":; rm -f tmp-foo1.$$$$ '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'tmp-foo2.$$$$" 0; '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'trap "exit 2" 1 2 3 15; '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'tail -c +17 $$f1 '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'> tmp-foo1.$$$$ || exit 2; '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'tail -c +17 $$f2 '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'> tmp-foo2.$$$$ || exit 2; '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'cmp tmp-foo1.$$$$ '
+  gcc_cv_prog_cmp_skip="$gcc_cv_prog_cmp_skip"'tmp-foo2.$$$$; exit $$?)'
   if cmp t1 t2 2 2 > /dev/null 2>&1; then
     if cmp t1 t2 1 1 > /dev/null 2>&1; then
       :
@@ -494,8 +514,9 @@ dnl See whether we can include both string.h and strings.h.
 AC_DEFUN([ACX_HEADER_STRING],
 [AC_CACHE_CHECK([whether string.h and strings.h may both be included],
   gcc_cv_header_string,
-[AC_TRY_COMPILE([#include <string.h>
-#include <strings.h>], , gcc_cv_header_string=yes, gcc_cv_header_string=no)])
+[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <string.h>
+#include <strings.h>]], [[]])],
+		   [gcc_cv_header_string=yes], [gcc_cv_header_string=no])])
 if test $gcc_cv_header_string = yes; then
   AC_DEFINE(STRING_WITH_STRINGS, 1, [Define if you can safely include both <string.h> and <strings.h>.])
 fi

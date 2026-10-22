@@ -3,6 +3,10 @@
 
 *** Changes since GDB 18
 
+* Support for Intel APX registers on amd64 GNU/Linux.
+  Support displaying and modifying Intel APX registers (Extended GPRs
+  $r16 - $r31) including byte, word and dword pseudo registers.
+
 * GDB now distinguishes between the GNU (MinGW) and MSVC Windows ABIs.
 
   The "set osabi" command accepts two new values, "Windows-GNU" and

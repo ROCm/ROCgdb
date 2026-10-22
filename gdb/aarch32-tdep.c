@@ -17,7 +17,6 @@
 
 #include "aarch32-tdep.h"
 
-#include "gdbsupport/common-regcache.h"
 #include "arch/aarch32.h"
 
 static const_target_desc_up tdesc_aarch32_list[2];

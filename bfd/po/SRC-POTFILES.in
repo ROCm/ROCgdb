@@ -30,7 +30,6 @@ coff-stgo32.c
 coff-tic30.c
 coff-tic4x.c
 coff-tic54x.c
-coff-x86_64.c
 coff-z80.c
 coff-z8k.c
 coff64-rs6000.c

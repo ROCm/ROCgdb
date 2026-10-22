@@ -1010,7 +1010,6 @@ BFD64_BACKENDS = \
 	aix5ppc-core.lo \
 	aout64.lo \
 	coff-alpha.lo \
-	coff-x86_64.lo \
 	coff64-rs6000.lo \
 	elf32-aarch64.lo \
 	elf32-ia64.lo \
@@ -1069,7 +1068,6 @@ BFD64_BACKENDS_CFILES = \
 	aix5ppc-core.c \
 	aout64.c \
 	coff-alpha.c \
-	coff-x86_64.c \
 	coff64-rs6000.c \
 	elf32-mips.c \
 	elf32-score.c \
@@ -1468,7 +1466,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coff-tic30.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coff-tic4x.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coff-tic54x.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coff-x86_64.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coff-z80.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coff-z8k.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/coff64-rs6000.Plo@am__quote@

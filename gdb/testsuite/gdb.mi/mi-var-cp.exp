@@ -56,6 +56,7 @@ mi_execute_to "exec-continue" "breakpoint-hit" \
 
 set tree {
   Anonymous a {
+    AnonymousBase AnonymousBase {}
     {} public {
       anonymous struct {
 	{} public {
@@ -90,8 +91,29 @@ set tree {
 		  char j {}
 		}
 	      }
+	      "struct {...}" with_name {
+		{} public {
+		  int k {}
+		}
+		{} private {
+		  anonymous union {
+		    {} public {
+		      int l {}
+		      char m {}
+		    }
+		  }
+		}
+	      }
 	    }
 	  }
+	}
+      }
+    }
+    {} private {
+      int priv {}
+      SameName SameName {
+	{} public {
+	  int x {}
 	}
       }
     }

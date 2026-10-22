@@ -368,6 +368,16 @@ if test "$gdb_require_amd_dbgapi" = true \
 	AC_MSG_ERROR([amd-dbgapi not supported for host ${gdb_host}])
 	;;
     esac
+
+    # Detect if AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE can be used.
+    # This value is available with amd-dbgapi version 0.78.0.
+    save_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $AMD_DBGAPI_CFLAGS"
+    AC_MSG_CHECKING([whether AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE is available])
+    AC_CHECK_DECLS(AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE,
+		   [], [], [[#include <amd-dbgapi/amd-dbgapi.h>]])
+    CPPFLAGS="$save_CPPFLAGS"
+
   elif test "$gdb_require_amd_dbgapi" = true -o "$with_amd_dbgapi" = yes; then
     # amd-dbgapi was not found and...
     #
@@ -1075,16 +1085,19 @@ if test "${have_libpython}" != no; then
 
   # On x64 Windows, Python's include headers, and pyconfig.h in
   # particular, rely on MS_WIN64 macro to detect that it's a 64bit
-  # version of Windows.  Unfortunately, MS_WIN64 is only defined if
-  # _MSC_VER, a Microsoft-specific macro, is defined.  So, when
-  # building on x64 Windows with GCC, we define MS_WIN64 ourselves.
-  # The issue was reported to the Python community, but still isn't
-  # solved as of 2012-10-02 (http://bugs.python.org/issue4709).
+  # version of Windows.  Before Python 3.12, MS_WIN64 is only defined
+  # if _MSC_VER, a Microsoft-specific macro, is defined.  So, when
+  # building on x64 Windows with GCC, we define MS_WIN64 ourselves
+  # (http://bugs.python.org/issue4709).  Python 3.12 and later define
+  # it as empty for MinGW too, so define it as empty as well here too.
+  #
+  # This can be removed when support for Python 3.12 and below is
+  # dropped.
 
   case "$gdb_host" in
     mingw64)
 	   if test "${GCC}" = yes; then
-	     CPPFLAGS="$CPPFLAGS -DMS_WIN64"
+	     CPPFLAGS="$CPPFLAGS -DMS_WIN64="
 	   fi
 	   ;;
   esac
@@ -1449,7 +1462,6 @@ AC_CHECK_HEADERS([ \
   machine/reg.h \
   nlist.h \
   ptrace.h \
-  sys/debugreg.h \
   sys/file.h \
   sys/filio.h \
   sys/ioctl.h \
@@ -1457,9 +1469,6 @@ AC_CHECK_HEADERS([ \
   sys/procctl.h \
   sys/ptrace.h \
   sys/reg.h \
-  sys/resource.h \
-  termios.h \
-  thread_db.h \
 ])
 
 AC_CHECK_HEADERS(sys/user.h, [], [],
@@ -1483,7 +1492,6 @@ AC_CHECK_HEADERS(term.h, [], [],
 #endif
 ])
 
-AC_CHECK_HEADERS([sys/socket.h])
 AC_CHECK_HEADERS([ws2tcpip.h])
 AC_CHECK_HEADERS([execinfo.h])
 
@@ -1493,7 +1501,6 @@ AC_CHECK_HEADERS([execinfo.h])
 
 libiberty_INIT
 
-AC_CHECK_DECLS([snprintf])
 AM_LC_MESSAGES
 
 # ------------------ #
@@ -1513,8 +1520,6 @@ AC_CHECK_TYPES(socklen_t, [], [],
 # Checks for compiler characteristics.  #
 # ------------------------------------- #
 
-AC_C_CONST
-AC_C_INLINE
 AC_C_BIGENDIAN
 
 # ------------------------------ #
@@ -1526,7 +1531,6 @@ AC_CHECK_FUNCS([ \
   clearenv \
   getgid \
   getpgid \
-  getrlimit \
   getuid \
   iconvlist \
   init_extended_color \
@@ -1541,13 +1545,9 @@ AC_CHECK_FUNCS([ \
   setlocale \
   setrlimit \
   setsid \
-  sigsetmask \
-  ttrace \
   use_default_colors \
   wresize \
 ])
-
-AM_LANGINFO_CODESET
 
 # Check the return and argument types of ptrace.
 GDB_AC_PTRACE
@@ -1692,19 +1692,6 @@ AC_CHECK_MEMBERS([struct ptrace_lwpinfo.pl_tdname], [], [],
 AC_CHECK_MEMBERS([struct ptrace_lwpinfo.pl_syscall_code], [], [],
 		 [#include <sys/ptrace.h>])
 
-# Check if the compiler supports the `long long' type.
-
-AC_CACHE_CHECK([for long long support in compiler], gdb_cv_c_long_long,
-	       [AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
-[[extern long long foo;]],
-[[switch (foo & 2) { case 0: return 1; }]])],
-				  gdb_cv_c_long_long=yes,
-				  gdb_cv_c_long_long=no)])
-if test "$gdb_cv_c_long_long" != yes; then
-  # libdecnumber requires long long.
-  AC_MSG_ERROR([Compiler must support long long for GDB.])
-fi
-
 # Check if the compiler and runtime support printing decfloats.
 
 AC_CACHE_CHECK([for decfloat support in printf],
@@ -1722,55 +1709,6 @@ AC_CACHE_CHECK([for decfloat support in printf],
 if test "$gdb_cv_printf_has_decfloat" = yes; then
   AC_DEFINE(PRINTF_HAS_DECFLOAT, 1,
 	    [Define to 1 if the "%H, %D and %DD" formats work to print decfloats.])
-fi
-
-# Check if the compiler supports the `long double' type.  We can't use
-# AC_C_LONG_DOUBLE because that one does additional checks on the
-# constants defined in <float.h> that fail on some systems,
-# e.g. FreeBSD/i386 4.7 and OpenBSD/i386 3.6.
-
-AC_CACHE_CHECK([for long double support in compiler], gdb_cv_c_long_double,
-	       [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[long double foo;]])],
-				  gdb_cv_c_long_double=yes,
-				  gdb_cv_c_long_double=no)])
-if test "$gdb_cv_c_long_double" = yes; then
-  AC_DEFINE(HAVE_LONG_DOUBLE, 1,
-	   [Define to 1 if the compiler supports long double.])
-fi
-
-# Check if the compiler and runtime support printing long doubles.
-
-AC_CACHE_CHECK([for long double support in printf],
-	       gdb_cv_printf_has_long_double,
-	       [AC_RUN_IFELSE([AC_LANG_PROGRAM([AC_INCLUDES_DEFAULT],
-[[char buf[16];
-  long double f = 3.141592653;
-  sprintf (buf, "%Lg", f);
-  return (strncmp ("3.14159", buf, 7));]])],
-			      gdb_cv_printf_has_long_double=yes,
-			      gdb_cv_printf_has_long_double=no,
-			      gdb_cv_printf_has_long_double=no)])
-if test "$gdb_cv_printf_has_long_double" = yes; then
-  AC_DEFINE(PRINTF_HAS_LONG_DOUBLE, 1,
-	    [Define to 1 if the "%Lg" format works to print long doubles.])
-fi
-
-# Check if the compiler and runtime support scanning long doubles.
-
-AC_CACHE_CHECK([for long double support in scanf],
-	       gdb_cv_scanf_has_long_double,
-	       [AC_RUN_IFELSE([AC_LANG_PROGRAM(
-[[#include <stdio.h>]],
-[[char *buf = "3.141592653";
-  long double f = 0;
-  sscanf (buf, "%Lg", &f);
-  return !(f > 3.14159 && f < 3.14160);]])],
-			      gdb_cv_scanf_has_long_double=yes,
-			      gdb_cv_scanf_has_long_double=no,
-			      gdb_cv_scanf_has_long_double=no)])
-if test "$gdb_cv_scanf_has_long_double" = yes; then
-  AC_DEFINE(SCANF_HAS_LONG_DOUBLE, 1,
-	    [Define to 1 if the "%Lg" format works to scan long doubles.])
 fi
 
 case ${host_os} in
@@ -2063,10 +2001,6 @@ if test "$gdb_cv_var_bfd_elf" = yes; then
   CONFIG_OBS="$CONFIG_OBS gcore-elf.o elf-none-tdep.o"
   AC_DEFINE(HAVE_ELF, 1,
 	    [Define if ELF support should be included.])
-  # -ldl is provided by bfd/Makefile.am (LIBDL) <PLUGINS>.
-  if test "$plugins" = "yes"; then
-    AC_SEARCH_LIBS(dlopen, dl)
-  fi
   bfd_supports_elf=yes
   all_binary_file_srcs="$all_binary_file_srcs \$(elf_SRCS)"
 fi

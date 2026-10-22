@@ -55,7 +55,7 @@ the Guile interpreter to locate all scripts installed at this location.
 
 @value{GDBN} provides two commands for accessing the Guile interpreter:
 
-@table @code
+@table @kbd
 @kindex guile-repl
 @kindex gr
 @item guile-repl
@@ -104,7 +104,7 @@ containing @code{end}.  For example:
 It is also possible to execute a Guile script from the @value{GDBN}
 interpreter:
 
-@table @code
+@table @kbd
 @item source @file{script-name}
 The script name must end with @samp{.scm} and @value{GDBN} must be configured
 to recognize the script language based on filename extension using
@@ -229,13 +229,13 @@ for more information
 Example:
 
 @smallexample
-(gdb) guile (value-type (make-value 1))
+(@value{GDBP}) guile (value-type (make-value 1))
 ERROR: Unbound variable: value-type
 Error while executing Scheme code.
-(gdb) guile (use-modules (gdb))
-(gdb) guile (value-type (make-value 1))
+(@value{GDBP}) guile (use-modules (gdb))
+(@value{GDBP}) guile (value-type (make-value 1))
 int
-(gdb)
+(@value{GDBP})
 @end smallexample
 
 The @code{(gdb)} module provides these basic Guile functions.
@@ -326,12 +326,12 @@ Return a string containing the @value{GDBN} version.
 
 @deffn {Scheme Procedure} host-config
 Return a string containing the host configuration.
-This is the string passed to @code{--host} when @value{GDBN} was configured.
+This is the string passed to @option{--host} when @value{GDBN} was configured.
 @end deffn
 
 @deffn {Scheme Procedure} target-config
 Return a string containing the target configuration.
-This is the string passed to @code{--target} when @value{GDBN} was configured.
+This is the string passed to @option{--target} when @value{GDBN} was configured.
 @end deffn
 
 @node GDB Scheme Data Types
@@ -565,9 +565,9 @@ fetching values when necessary.
 @code{make-value} always returns a fresh object.
 
 @smallexample
-(gdb) guile (eq? (make-value 1) (make-value 1))
+(@value{GDBP}) guile (eq? (make-value 1) (make-value 1))
 $1 = #f
-(gdb) guile (equal? (make-value 1) (make-value 1))
+(@value{GDBP}) guile (equal? (make-value 1) (make-value 1))
 $1 = #t
 @end smallexample
 
@@ -1724,7 +1724,7 @@ Finally, when this printer is loaded into @value{GDBN}, here is the
 corresponding output of @samp{info pretty-printer}:
 
 @smallexample
-(gdb) info pretty-printer
+(@value{GDBP}) info pretty-printer
 my_library.so:
   my-library
     foo
@@ -1845,14 +1845,14 @@ This is used when the command detects a user error of some kind,
 say a bad command argument.
 
 @smallexample
-(gdb) guile (use-modules (gdb))
-(gdb) guile
+(@value{GDBP}) guile (use-modules (gdb))
+(@value{GDBP}) guile
 (register-command! (make-command "test-user-error"
   #:command-class COMMAND_OBSCURE
   #:invoke (lambda (self arg from-tty)
     (throw-user-error "Bad argument ~a" arg))))
 end
-(gdb) test-user-error ugh
+(@value{GDBP}) test-user-error ugh
 ERROR: Bad argument ugh
 @end smallexample
 @end deffn
@@ -2012,13 +2012,13 @@ The following code snippet shows how a trivial CLI command can be
 implemented in Guile:
 
 @smallexample
-(gdb) guile
+(@value{GDBP}) guile
 (register-command! (make-command "hello-world"
   #:command-class COMMAND_USER
   #:doc "Greet the whole world."
   #:invoke (lambda (self args from-tty) (display "Hello, World!\n"))))
 end
-(gdb) hello-world
+(@value{GDBP}) hello-world
 Hello, World!
 @end smallexample
 
@@ -3531,7 +3531,7 @@ of architecture @var{arch}.
 Example:
 
 @smallexample
-(gdb) guile (type-name (arch-uchar-type (current-arch)))
+(@value{GDBP}) guile (type-name (arch-uchar-type (current-arch)))
 "unsigned char"
 @end smallexample
 
@@ -3559,13 +3559,13 @@ for @var{port} is offset by the same amount.
 
 Example:
 @smallexample
-(gdb) guile (use-modules (rnrs io ports))
-(gdb) guile (define pc (value->integer (parse-and-eval "$pc")))
-(gdb) guile (define mem (open-memory #:start pc))
-(gdb) guile (define bv (get-bytevector-n mem 10))
-(gdb) guile (define bv-port (open-bytevector-input-port bv))
-(gdb) guile (define arch (current-arch))
-(gdb) guile (arch-disassemble arch pc #:port bv-port #:offset pc)
+(@value{GDBP}) guile (use-modules (rnrs io ports))
+(@value{GDBP}) guile (define pc (value->integer (parse-and-eval "$pc")))
+(@value{GDBP}) guile (define mem (open-memory #:start pc))
+(@value{GDBP}) guile (define bv (get-bytevector-n mem 10))
+(@value{GDBP}) guile (define bv-port (open-bytevector-input-port bv))
+(@value{GDBP}) guile (define arch (current-arch))
+(@value{GDBP}) guile (arch-disassemble arch pc #:port bv-port #:offset pc)
 (((address . 4195516) (asm . "mov    $0x4005c8,%edi") (length . 5)))
 @end smallexample
 
@@ -3920,10 +3920,10 @@ debugging commands and scripts.
 Auto-loading can be enabled or disabled,
 and the list of auto-loaded scripts can be printed.
 
-@table @code
+@table @kbd
 @anchor{set auto-load guile-scripts}
 @kindex set auto-load guile-scripts
-@item set auto-load guile-scripts [on|off]
+@item set auto-load guile-scripts @r{[}on@r{|}off@r{]}
 Enable or disable the auto-loading of Guile scripts.
 
 @anchor{show auto-load guile-scripts}
@@ -3934,7 +3934,7 @@ Show whether auto-loading of Guile scripts is enabled or disabled.
 @anchor{info auto-load guile-scripts}
 @kindex info auto-load guile-scripts
 @cindex print list of auto-loaded Guile scripts
-@item info auto-load guile-scripts [@var{regexp}]
+@item info auto-load guile-scripts @r{[}@var{regexp}@r{]}
 Print the list of all Guile scripts that @value{GDBN} auto-loaded.
 
 Also printed is the list of Guile scripts that were mentioned in
@@ -3948,7 +3948,7 @@ If @var{regexp} is supplied only Guile scripts with matching names are printed.
 Example:
 
 @smallexample
-(gdb) info auto-load guile-scripts
+(@value{GDBP}) info auto-load guile-scripts
 Loaded Script
 Yes    scm-section-script.scm
        full name: /tmp/scm-section-script.scm
@@ -4026,10 +4026,10 @@ int main () @{ return 0; @}
 Then in gdb:
 
 @smallexample
-(gdb) start
-(gdb) guile (use-modules (gdb) (gdb types))
-(gdb) guile (define foo-ref (parse-and-eval "foo_ref"))
-(gdb) guile (get-basic-type (value-type foo-ref))
+(@value{GDBP}) start
+(@value{GDBP}) guile (use-modules (gdb) (gdb types))
+(@value{GDBP}) guile (define foo-ref (parse-and-eval "foo_ref"))
+(@value{GDBP}) guile (get-basic-type (value-type foo-ref))
 #<gdb:type int>
 @end smallexample
 @end deffn

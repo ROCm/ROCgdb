@@ -27,6 +27,7 @@
 #include "ui-out.h"
 #include "utils.h"
 #include "gdbsupport/gdb-checked-static-cast.h"
+#include "gdbsupport/selftest.h"
 
 /* Mark beginning of a table.  */
 
@@ -141,22 +142,6 @@ mi_ui_out::do_field_string (int fldno, int width, ui_align align,
 }
 
 void
-mi_ui_out::do_field_fmt (int fldno, int width, ui_align align,
-			 const char *fldname, const ui_file_style &style,
-			 const char *format, va_list args)
-{
-  ui_file *stream = m_streams.back ();
-  field_separator ();
-
-  if (fldname)
-    gdb_printf (stream, "%s=\"", fldname);
-  else
-    gdb_puts ("\"", stream);
-  gdb_vprintf (stream, format, args);
-  gdb_puts ("\"", stream);
-}
-
-void
 mi_ui_out::do_spaces (int numspaces)
 {
 }
@@ -257,7 +242,7 @@ mi_ui_out::main_stream ()
 {
   gdb_assert (m_streams.size () == 1);
 
-  return (string_file *) m_streams.back ();
+  return gdb::checked_static_cast<string_file *> (m_streams.back ());
 }
 
 /* Initialize a progress update to be displayed with
@@ -370,4 +355,39 @@ void
 mi_out_rewind (ui_out *uiout)
 {
   return as_mi_ui_out (uiout)->rewind ();
+}
+
+#if GDB_SELF_TEST
+
+namespace selftests
+{
+
+static void
+mi_check (mi_ui_out &uiout, const char *expected)
+{
+  string_file *stream
+    = gdb::checked_static_cast<string_file *> (uiout.current_stream ());
+  SELF_CHECK (stream->string () == expected);
+  uiout.rewind ();
+}
+
+static void
+test_mi_out ()
+{
+  /* The version doesn't matter for these tests.  */
+  mi_ui_out uiout (2);
+
+  uiout.field_fmt ("field", "%s", "test \"quoted\"");
+  mi_check (uiout, ",field=\"test \\\"quoted\\\"\"");
+}
+
+}
+
+#endif
+
+INIT_GDB_FILE (mi_out)
+{
+#if GDB_SELF_TEST
+  selftests::register_test ("mi-out", selftests::test_mi_out);
+#endif /* GDB_SELF_TEST */
 }

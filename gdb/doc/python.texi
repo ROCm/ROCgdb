@@ -48,7 +48,7 @@ automatically imported when @value{GDBN} starts.
 @value{GDBN} provides two commands for accessing the Python interpreter,
 and one related setting:
 
-@table @code
+@table @kbd
 @kindex python-interactive
 @kindex pi
 @item python-interactive @r{[}@var{command}@r{]}
@@ -150,7 +150,7 @@ This option is equivalent to passing @option{-B} to the real
 It is also possible to execute a Python script from the @value{GDBN}
 interpreter:
 
-@table @code
+@table @kbd
 @item source @file{script-name}
 The script name must end with @samp{.py} and @value{GDBN} must be configured
 to recognize the script language based on filename extension using
@@ -159,7 +159,7 @@ the @code{script-extension} setting.  @xref{Extending GDB, ,Extending GDB}.
 
 The following commands are intended to help debug @value{GDBN} itself:
 
-@table @code
+@table @kbd
 @kindex set debug py-breakpoint
 @kindex show debug py-breakpoint
 @item set debug py-breakpoint on@r{|}off
@@ -805,7 +805,7 @@ displayed.  @value{GDBN} does not throw this exception itself, but
 rather recognizes it when thrown from user Python code.  Example:
 
 @smallexample
-(gdb) python
+(@value{GDBP}) python
 >class HelloWorld (gdb.Command):
 >  """Greet the whole world."""
 >  def __init__ (self):
@@ -817,7 +817,7 @@ rather recognizes it when thrown from user Python code.  Example:
 >    print ("Hello, World!")
 >HelloWorld ()
 >end
-(gdb) hello-world 42
+(@value{GDBP}) hello-world 42
 hello-world takes no arguments
 @end smallexample
 @end ftable
@@ -1945,7 +1945,7 @@ settings.  During a @code{print} or other operation, the values will
 reflect any flags that are temporarily in effect.
 
 @smallexample
-(gdb) python print(gdb.print_options ()['max_elements'])
+(@value{GDBP}) python print(gdb.print_options ()['max_elements'])
 200
 @end smallexample
 @end defun
@@ -2171,7 +2171,7 @@ Finally, when this printer is loaded into @value{GDBN}, here is the
 corresponding output of @samp{info pretty-printer}:
 
 @smallexample
-(gdb) info pretty-printer
+(@value{GDBP}) info pretty-printer
 my_library.so:
   my_library
     foo
@@ -3174,7 +3174,7 @@ gdb.unwinder.register_unwinder(<locus>, MyUnwinder(), <replace>)
 @value{GDBN} defines 3 commands to manage registered unwinders.  These
 are:
 
-@table @code
+@table @kbd
 @item info unwinder @r{[} @var{locus} @r{[} @var{name-regexp} @r{]} @r{]}
 Lists all registered unwinders.  Arguments @var{locus} and
 @var{name-regexp} are both optional and can be used to filter which
@@ -3492,10 +3492,10 @@ the operator @code{+} on @code{obj} will invoke the xmethods
 defined above:
 
 @smallexample
-(gdb) p obj.geta()
+(@value{GDBP}) p obj.geta()
 $1 = 5
 
-(gdb) p obj + obj
+(@value{GDBP}) p obj + obj
 $2 = 10
 @end smallexample
 
@@ -3949,7 +3949,7 @@ this emits an event of type @code{gdb.InferiorCallPostEvent}.
 
 @table @code
 @tindex gdb.InferiorCallPreEvent
-@item @code{gdb.InferiorCallPreEvent}
+@item gdb.InferiorCallPreEvent
 Indicates that a function in the inferior is about to be called.
 
 @defvar InferiorCallPreEvent.ptid
@@ -3961,7 +3961,7 @@ The location of the function to be called.
 @end defvar
 
 @tindex gdb.InferiorCallPostEvent
-@item @code{gdb.InferiorCallPostEvent}
+@item gdb.InferiorCallPostEvent
 Indicates that a function in the inferior has just been called.
 
 @defvar InferiorCallPostEvent.ptid
@@ -5635,7 +5635,7 @@ Python code is read into @value{GDBN}, you may need to import the
 Now you can use the function in an expression:
 
 @smallexample
-(gdb) print $greet("Bob")
+(@value{GDBP}) print $greet("Bob")
 $1 = "Hello, Bob!"
 @end smallexample
 
@@ -8949,7 +8949,7 @@ called.
 @value{GDBN} defines the following commands to manage registered
 missing-objfile handlers:
 
-@table @code
+@table @kbd
 
 @kindex info missing-objfile-handlers
 @item info missing-objfile-handlers @r{[} @var{locus} @r{[} @var{name-regexp} @r{]} @r{]}
@@ -9099,10 +9099,10 @@ debugging commands and scripts.
 Auto-loading can be enabled or disabled,
 and the list of auto-loaded scripts can be printed.
 
-@table @code
+@table @kbd
 @anchor{set auto-load python-scripts}
 @kindex set auto-load python-scripts
-@item set auto-load python-scripts [on|off]
+@item set auto-load python-scripts @r{[}on@r{|}off@r{]}
 Enable or disable the auto-loading of Python scripts.
 
 @anchor{show auto-load python-scripts}
@@ -9113,7 +9113,7 @@ Show whether auto-loading of Python scripts is enabled or disabled.
 @anchor{info auto-load python-scripts}
 @kindex info auto-load python-scripts
 @cindex print list of auto-loaded Python scripts
-@item info auto-load python-scripts [@var{regexp}]
+@item info auto-load python-scripts @r{[}@var{regexp}@r{]}
 Print the list of all Python scripts that @value{GDBN} auto-loaded.
 
 Also printed is the list of Python scripts that were mentioned in
@@ -9129,7 +9129,7 @@ If @var{regexp} is supplied only Python scripts with matching names are printed.
 Example:
 
 @smallexample
-(gdb) info auto-load python-scripts
+(@value{GDBP}) info auto-load python-scripts
 Loaded Script
 Yes    py-section-script.py
        full name: /tmp/py-section-script.py
@@ -9215,10 +9215,10 @@ int main () @{ return 0; @}
 Then in gdb:
 
 @smallexample
-(gdb) start
-(gdb) python import gdb.types
-(gdb) python foo_ref = gdb.parse_and_eval("foo_ref")
-(gdb) python print(gdb.types.get_basic_type(foo_ref.type))
+(@value{GDBP}) start
+(@value{GDBP}) python import gdb.types
+(@value{GDBP}) python foo_ref = gdb.parse_and_eval("foo_ref")
+(@value{GDBP}) python print(gdb.types.get_basic_type(foo_ref.type))
 int
 @end smallexample
 
@@ -9391,11 +9391,11 @@ main (void)
 @exdent @value{GDBN} output after recording the sample program in pt format:
 @smallexample
 @group
-(gdb) record instruction-history 12,14
+(@value{GDBP}) record instruction-history 12,14
 12         0x0040074c <ptwrite64+16>:   ptwrite %rbx
 13           [0x42]
 14         0x00400751 <ptwrite64+21>:   mov -0x8(%rbp),%rbx
-(gdb) record function-call-history
+(@value{GDBP}) record function-call-history
 1       main
 2       ptwrite64
           [0x42]
@@ -9432,7 +9432,7 @@ An example:
 
 @smallexample
 @group
-(gdb) python-interactive
+(@value{GDBP}) python-interactive
 >>> class my_filter():
 ...    def __init__(self):
 ...        self.var = 0
@@ -9452,7 +9452,7 @@ An example:
 @end group
 
 @group
-(gdb) record function-call-history 59,64
+(@value{GDBP}) record function-call-history 59,64
 59      pthread_create@@GLIBC_2.2.5
 60      job()
 61      task(void*)
@@ -9464,7 +9464,7 @@ An example:
 @end group
 
 @group
-(gdb) info threads
+(@value{GDBP}) info threads
 * 1    Thread 0x7ffff7fd8740 (LWP 25796) "ptw_threads" task ()
     at bin/ptwrite/ptw_threads.c:45
   2    Thread 0x7ffff6eb8700 (LWP 25797) "ptw_threads" task ()
@@ -9472,14 +9472,14 @@ An example:
 @end group
 
 @group
-(gdb) thread 2
+(@value{GDBP}) thread 2
 [Switching to thread 2 (Thread 0x7ffff6eb8700 (LWP 25797))]
 #0  task (arg=0x0) at ptwrite_threads.c:45
 45        return NULL;
 @end group
 
 @group
-(gdb) record function-call-history 10,14
+(@value{GDBP}) record function-call-history 10,14
 10    start_thread
 11    task(void*)
 12    ptwrite64(unsigned long)

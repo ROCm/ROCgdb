@@ -32,10 +32,10 @@ if {![runto_main]} {
 }
 
 # Build a regexp string that represents the __repr__ of a
-# gdb.BreakpointLocation object.  Accepts arguments -enabled, -address,
+# gdb.BreakpointLocation object.  Accepts arguments -enabled,
 # -source, -line, and -func.
 proc build_bpl_regexp { args } {
-    parse_args [list {enabled True} [list address "$::hex"] {source ".*"} \
+    parse_args [list {enabled True} {source ".*"} \
 		    [list line "$::decimal"] {func ""}]
 
     set pattern "<gdb.BreakpointLocation"
@@ -46,12 +46,7 @@ proc build_bpl_regexp { args } {
 	set pattern "$pattern disabled"
     }
 
-    set pattern "$pattern address=${address}(?: requested_address=$::hex)?"
-    set pattern "$pattern source=${source}:${line}"
-    if {$func ne ""} {
-	set pattern "$pattern in ${func}"
-    }
-    set pattern "$pattern>"
+    append pattern " in ${func} at ${source}:${line}>"
     return $pattern
 }
 

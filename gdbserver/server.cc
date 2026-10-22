@@ -23,9 +23,7 @@
 #include "gdbsupport/rsp-low.h"
 #include "gdbsupport/signals-state-save-restore.h"
 #include <unistd.h>
-#if HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 #include "gdbsupport/gdb_vecs.h"
 #include "gdbsupport/gdb_wait.h"
 #include "gdbsupport/btrace-common.h"

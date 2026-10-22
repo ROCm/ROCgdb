@@ -29,11 +29,13 @@
 #define X86_XSTATE_ZMM_ID	7
 #define X86_XSTATE_PKRU_ID	9
 #define X86_XSTATE_CET_U_ID	11
+#define X86_XSTATE_APX_F_ID	19
 
 /* The extended state feature bits.  */
 #define X86_XSTATE_X87		(1ULL << X86_XSTATE_X87_ID)
 #define X86_XSTATE_SSE		(1ULL << X86_XSTATE_SSE_ID)
 #define X86_XSTATE_AVX		(1ULL << X86_XSTATE_AVX_ID)
+#define X86_XSTATE_APX_F	(1ULL << X86_XSTATE_APX_F_ID)
 
 /* AVX 512 adds three feature bits.  All three must be enabled.  */
 #define X86_XSTATE_K		(1ULL << X86_XSTATE_K_ID)
@@ -53,6 +55,7 @@ struct x86_xsave_layout
 {
   int sizeof_xsave = 0;
   int avx_offset = 0;
+  int apx_offset = 0;
   int k_offset = 0;
   int zmm_h_offset = 0;
   int zmm_offset = 0;
@@ -64,6 +67,7 @@ constexpr bool operator== (const x86_xsave_layout &lhs,
 {
   return lhs.sizeof_xsave == rhs.sizeof_xsave
     && lhs.avx_offset == rhs.avx_offset
+    && lhs.apx_offset == rhs.apx_offset
     && lhs.k_offset == rhs.k_offset
     && lhs.zmm_h_offset == rhs.zmm_h_offset
     && lhs.zmm_offset == rhs.zmm_offset
@@ -84,11 +88,13 @@ constexpr bool operator!= (const x86_xsave_layout &lhs,
 #define X86_XSTATE_AVX_AVX512_MASK	(X86_XSTATE_AVX_MASK | X86_XSTATE_AVX512)
 #define X86_XSTATE_AVX_AVX512_PKU_MASK 	(X86_XSTATE_AVX_MASK\
 					| X86_XSTATE_AVX512 | X86_XSTATE_PKRU)
+#define X86_XSTATE_AVX_AVX512_PKU_APX_MASK\
+  (X86_XSTATE_AVX_AVX512_PKU_MASK | X86_XSTATE_APX_F)
 
 /* Supported mask of state-component bitmap xstate_bv.  The SDM defines
    xstate_bv as XCR0 | IA32_XSS.  */
 
-#define X86_XSTATE_ALL_MASK		(X86_XSTATE_AVX_AVX512_PKU_MASK\
+#define X86_XSTATE_ALL_MASK		(X86_XSTATE_AVX_AVX512_PKU_APX_MASK\
 					| X86_XSTATE_CET_U)
 
 #define X86_XSTATE_SSE_SIZE	576
@@ -97,6 +103,7 @@ constexpr bool operator!= (const x86_xsave_layout &lhs,
 
 #define HAS_AVX(XCR0) (((XCR0) & X86_XSTATE_AVX) != 0)
 #define HAS_AVX512(XCR0) (((XCR0) & X86_XSTATE_AVX512) != 0)
+#define HAS_APX(XCR0) (((XCR0) & X86_XSTATE_APX_F) != 0)
 #define HAS_PKRU(XCR0) (((XCR0) & X86_XSTATE_PKRU) != 0)
 
 /* Initial value for fctrl register, as defined in the X86 manual, and

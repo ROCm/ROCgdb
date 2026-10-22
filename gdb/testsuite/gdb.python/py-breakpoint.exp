@@ -388,6 +388,8 @@ proc_with_prefix test_watchpoints { } {
     gdb_test "continue" \
 	".*\[Ww\]atchpoint.*result.*Old value = 0.*New value = 25.*main.*" \
 	"Test watchpoint write"
+
+    gdb_test "python print(repr(wp1.locations\[0\]))"
 }
 
 proc_with_prefix test_bkpt_internal { } {

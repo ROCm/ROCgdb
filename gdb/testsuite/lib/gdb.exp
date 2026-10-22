@@ -4803,6 +4803,64 @@ gdb_caching_proc allow_lam_tests {} {
     return $allow_lam_tests
 }
 
+# Run a test on the target to see if it supports APX.  Return 1 if so,
+# 0 if it does not.
+
+gdb_caching_proc allow_apx_tests {} {
+    global srcdir subdir gdb_prompt inferior_exited_re
+
+    set me "allow_apx_tests"
+    if { ![istarget "i?86-*-*"] && ![istarget "x86_64-*-*"] } {
+	verbose "$me:  target does not support apx, returning 0" 2
+	return 0
+    }
+
+    # Compile a test program.
+    set src {
+	int data[] = {12345};
+
+	int
+	main (int argc, char **argv)
+	  {
+	    asm ("mov 0(%0), %%r30\n\t"
+		 :  /* no output operands */
+		 : "r" (data));
+	    return 0;
+	  }
+    }
+    set compile_flags "{additional_flags=-mapxf}"
+    if { ![gdb_simple_compile $me $src executable $compile_flags] } {
+	return 0
+    }
+
+    # No error message, compilation succeeded so now run it via gdb.
+
+    gdb_exit
+    gdb_start
+    gdb_reinitialize_dir $srcdir/$subdir
+    gdb_load "$obj"
+    gdb_run_cmd
+    gdb_expect {
+	-re ".*Illegal instruction.*${gdb_prompt} $" {
+	    verbose -log "$me:  apx hardware not detected."
+	    set allow_apx_tests 0
+	}
+	-re ".*$inferior_exited_re normally.*${gdb_prompt} $" {
+	    verbose -log "$me:  apx hardware detected."
+	    set allow_apx_tests 1
+	}
+	default {
+	    warning "\n$me:  default case taken."
+	    set allow_apx_tests 0
+	}
+    }
+    gdb_exit
+    remote_file build delete $obj
+
+    verbose "$me:  returning $allow_apx_tests" 2
+    return $allow_apx_tests
+}
+
 # Run a test on the target to see if it supports btrace hardware.  Return 1 if so,
 # 0 if it does not.  Based on 'check_vmx_hw_available' from the GCC testsuite.
 
@@ -10563,7 +10621,9 @@ proc find_core_file {pid} {
     } elseif {$pid != -1} {
 	lappend files core.$pid
     }
-    lappend files ${::testfile}.core
+    if {[info exists ::testfile]} {
+	lappend files ${::testfile}.core
+    }
     lappend files core
 
     foreach file $files {
@@ -12582,32 +12642,39 @@ gdb_caching_proc root_user {} {
 # for sections ".interp" or ".gnu_debuglink".
 
 proc section_get {exec section} {
-    global subdir
-    set tmp [standard_output_file section_get.tmp]
-    set objcopy_program [gdb_find_objcopy]
+    try {
+	set tmp [standard_output_file section_get.tmp]
+	set objcopy_program [gdb_find_objcopy]
+	set command "exec $objcopy_program -O binary --set-section-flags $section=A --change-section-address $section=0 -j $section $exec $tmp"
+	verbose -log "command is $command"
+	set result [catch {{*}$command} output]
+	verbose -log "result is $result"
+	verbose -log "output is $output"
+	if {$result == 1} {
+	    return ""
+	}
+	set fi [open $tmp]
+	fconfigure $fi -translation binary
+	set data [read $fi]
+	close $fi
+	# .interp has size $len + 1 but .gnu_debuglink contains garbage after
+	# \000.
+	set len [string first \000 $data]
+	if {$len < 0} {
+	    verbose -log "section $section not found"
+	    return ""
+	}
+	set retval [string range $data 0 [expr {$len - 1}]]
+	verbose -log "section $section is <$retval>"
+	return $retval
+    } finally {
+	file delete $tmp
+    }
+}
 
-    set command "exec $objcopy_program -O binary --set-section-flags $section=A --change-section-address $section=0 -j $section $exec $tmp"
-    verbose -log "command is $command"
-    set result [catch {{*}$command} output]
-    verbose -log "result is $result"
-    verbose -log "output is $output"
-    if {$result == 1} {
-	return ""
-    }
-    set fi [open $tmp]
-    fconfigure $fi -translation binary
-    set data [read $fi]
-    close $fi
-    file delete $tmp
-    # .interp has size $len + 1 but .gnu_debuglink contains garbage after \000.
-    set len [string first \000 $data]
-    if {$len < 0} {
-	verbose -log "section $section not found"
-	return ""
-    }
-    set retval [string range $data 0 [expr {$len - 1}]]
-    verbose -log "section $section is <$retval>"
-    return $retval
+# Return true if BINFILE has a .gnu_debuglink section.
+proc have_gnu_debuglink {binfile} {
+    return [expr {[section_get $binfile ".gnu_debuglink"] ne ""}]
 }
 
 # Return true if we expect the build-id from FILENAME to be included

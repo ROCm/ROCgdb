@@ -130,10 +130,86 @@ proc print_floats {} {
     gdb_test_internal "print 1.0f" " = 1" "print, float"
 }
 
+# Exercise printing various kinds of data and code pointers, with and
+# without a format, on architecture ARCH.  This is not necessarily a
+# source of truth, the test just matches what GDB happened to output
+# for each arch at the time of writing.
+
+proc print_pointers {arch} {
+    # Without a format, the pointer is converted to an address using
+    # gdbarch_pointer_to_address, which is sometimes in a different
+    # representation.
+    set data_addr 0x1234
+    set code_addr 0x1234
+
+    if {[string match "avr*" $arch]} {
+	# Data pointers point to SRAM, which starts at 0x800000 in the
+	# imaginary unified address space.
+	#
+	# Code pointers are word-addressed and are converted to a byte address
+	# in flash.
+	set data_addr 0x801234
+	set code_addr 0x2468
+    } elseif {[string match "ft32*" $arch]} {
+	# Data pointers point to RAM, which starts at 0x800000.
+	#
+	# Pointers with the flash address class (see the @flash
+	# pointers below) point to flash, so start at 0.
+	#
+	# Function pointers and pointers to @code behave like data pointers,
+	# not sure if it's a bug or not (maybe they should behave like @flash
+	# pointers).
+	set data_addr 0x801234
+	set code_addr 0x801234
+    } elseif {$arch == "rl78"} {
+	# Data pointers point to the 64 KiB region starting at
+	# 0xf0000.
+	set data_addr 0xf1234
+    } elseif {$arch == "iq2000" || $arch == "iq10"} {
+	# Code pointers have the 0x80000000 bit set.
+	set code_addr 0x80001234
+    }
+
+    # Each element is: test prefix, type, type regexp as printed by
+    # GDB, expected address.
+    #
+    # The @code and @data qualifiers apply to the pointed-to type, and
+    # are understood by all architectures.
+    set pointers [list \
+		      [list "data pointer" "void *" "void \\*" $data_addr] \
+		      [list "code pointer" "void (*) (void)"  "void \\(\\*\\)\\(void\\)" $code_addr] \
+		      [list "@data pointer" "void @data *" "@data void \\*" $data_addr] \
+		      [list "@code pointer" "void @code *" "@code void \\*" $code_addr]]
+
+    # AVR and FT32 have a "flash" address class, which applies to the
+    # pointer type itself.
+    if {[string match "avr*" $arch] || [string match "ft32*" $arch]} {
+	lappend pointers \
+	    [list "@flash data pointer" "void * @flash" "void \\* @flash" 0x1234] \
+	    [list "@flash code pointer" "void (* @flash) (void)" "void \\(\\* @flash\\)\\(void\\)" 0x1234]
+    }
+
+    foreach ptr $pointers {
+	lassign $ptr kind type_name type_name_re addr
+
+	with_test_prefix $kind {
+	    gdb_test_internal "print ($type_name) 0x1234" \
+		" = \\($type_name_re\\) $addr" "print"
+
+	    # With a format, the pointer's bytes are printed as is.
+	    gdb_test_internal "print/x ($type_name) 0x1234" " = 0x1234" "print/x"
+	    gdb_test_internal "print/d ($type_name) 0x1234" " = 4660" "print/d"
+	    gdb_test_internal "print/o ($type_name) 0x1234" " = 011064" "print/o"
+	    gdb_test_internal "print/t ($type_name) 0x1234" " = 1001000110100" "print/t"
+	}
+    }
+}
+
 # Run tests on the current architecture ARCH.
 
 proc do_arch_tests {arch} {
     print_floats
+    print_pointers $arch
 
     # When we disassemble using the default architecture then we
     # expect that the only error we should get from the disassembler

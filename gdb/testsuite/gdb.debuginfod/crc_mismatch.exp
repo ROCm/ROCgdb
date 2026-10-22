@@ -31,6 +31,8 @@ if {[build_executable "build executable" $testfile $srcfile debug] == -1} {
     return
 }
 
+require {!have_gnu_debuglink $binfile}
+
 # The procedure gdb_gnu_strip_debug will produce an executable called
 # ${binfile}, which is just like the executable ($binfile) but without
 # the debuginfo. Instead $binfile has a .gnu_debuglink section which

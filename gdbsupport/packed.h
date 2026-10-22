@@ -18,7 +18,7 @@
 #ifndef GDBSUPPORT_PACKED_H
 #define GDBSUPPORT_PACKED_H
 
-#include "traits.h"
+#include "host-defs.h"
 #include <atomic>
 
 /* Each instantiation and full specialization of the packed template

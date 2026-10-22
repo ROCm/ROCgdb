@@ -1419,11 +1419,13 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 				      address_space_id, segment_address, &len,
 				      writebuf);
 
+#if HAVE_DECL_AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE
   if (status == AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE)
     {
       *xfered_len = requested_len;
       return TARGET_XFER_UNAVAILABLE;
     }
+#endif
 
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     return TARGET_XFER_E_IO;
@@ -3419,8 +3421,10 @@ amd_dbgapi_xfer_global_memory_callback
 
   if (status == TARGET_XFER_EOF)
     return AMD_DBGAPI_STATUS_ERROR_PROCESS_EXITED;
+#if HAVE_DECL_AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE
   else if (status == TARGET_XFER_UNAVAILABLE)
     return AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE;
+#endif
   else if (status != TARGET_XFER_OK)
     return AMD_DBGAPI_STATUS_ERROR_MEMORY_ACCESS;
 

@@ -1301,6 +1301,14 @@ value_print_scalar_formatted (struct value *val,
 
   gdb_assert (val != NULL);
 
+  /* Treat a function or a method as if it were a pointer.  */
+  if (type->code () == TYPE_CODE_FUNC
+      || type->code () == TYPE_CODE_METHOD)
+    {
+      val = value_addr (val);
+      type = check_typedef (val->type ());
+    }
+
   /* If we get here with a string format, try again without it.  Go
      all the way back to the language printers, which may call us
      again.  */

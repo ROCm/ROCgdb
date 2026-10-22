@@ -1,0 +1,66 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Regression test for "FIXME scroll" in Term::_insert.  Insert a character when
+# the current position is at the bottom-right corner.
+
+tuiterm_env
+
+require allow_tui_tests
+
+Term::clean_restart 24 80
+
+set last_line {0 23 80 1}
+
+# Get prompt on last line.
+set cmd "echo "
+for { set i 0 } { $i < 24 } { incr i } {
+    set cmd "${cmd}${i}\\n"
+}
+send_gdb "$cmd\n"
+gdb_assert \
+    {[Term::wait_for_region_contents {*}$last_line "^$gdb_prompt"]} \
+    "prompt on last line"
+
+set str10 0123456789
+set str60 $str10$str10$str10$str10$str10$str10
+send_gdb "echo $str60"
+gdb_assert \
+    {[Term::wait_for_region_contents {*}$last_line "^$gdb_prompt echo $str60"]} \
+    "setup for scroll"
+
+# Trigger scroll in Term::_insert.  This used to trigger error "FIXME scroll".
+send_gdb "$str10"
+gdb_assert \
+    {[Term::wait_for_region_contents {*}$last_line "^9"]} \
+    "scroll"
+
+# Get back prompt.
+send_gdb "\n"
+gdb_assert \
+    {[Term::wait_for_region_contents {*}$last_line "$gdb_prompt"]} \
+    "got back prompt"
+
+# The echo command doesn't add an implicit newline, so after
+# "echo $str60$str10" the prompt ends up near the right border.  Send an echo
+# without arguments to get the prompt at the left border.
+#   (gdb) echo 0123456789...0123456789
+#   0123456789...0123456789(gdb) echo
+#   (gdb)
+send_gdb "echo\n"
+gdb_assert {[Term::wait_for ""]} "prompt at left border"
+
+# Check that gdb is responsive.
+gdb_assert {[Term::command "print 1"]} "responsive prompt"

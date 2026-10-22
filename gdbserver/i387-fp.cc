@@ -23,6 +23,7 @@
 /* Default to SSE.  */
 static uint64_t x86_xstate_bv = X86_XSTATE_SSE_MASK;
 
+static const int num_apx_registers = 16;
 static const int num_avx512_k_registers = 8;
 static const int num_pkeys_registers = 1;
 
@@ -115,6 +116,10 @@ public:
   /* Memory address of eight upper 128-bit YMM values, or 16 on x86-64.  */
   unsigned char *ymmh_space ()
   { return xsave () + xsave_layout.avx_offset; }
+
+  /* Memory address of 16 EGPR register values of 64 bits.  */
+  unsigned char *apx_space ()
+  { return xsave () + xsave_layout.apx_offset; }
 
   /* Memory address of 8 OpMask register values of 64 bits.  */
   unsigned char *k_space ()
@@ -312,6 +317,10 @@ i387_cache_to_xsave (struct regcache *regcache, void *buf)
       if ((clear_bv & X86_XSTATE_PKRU))
 	for (i = 0; i < num_pkeys_registers; i++)
 	  memset (fp->pkru_space () + i * 4, 0, 4);
+
+      if (amd64 && (clear_bv & X86_XSTATE_APX_F) != 0)
+	for (i = 0; i < num_apx_registers; i++)
+	  memset (fp->apx_space () + i * 8, 0, 8);
     }
 
   /* Check if any x87 registers are changed.  */
@@ -462,6 +471,23 @@ i387_cache_to_xsave (struct regcache *regcache, void *buf)
 	       & (X86_XSTATE_SSE | X86_XSTATE_AVX)) == 0)
 	    xstate_bv |= X86_XSTATE_SSE;
 	  memcpy (&fp->mxcsr, raw, 4);
+	}
+    }
+
+  /* Check if any APX registers are changed.  */
+  if (amd64 && (x86_xstate_bv & X86_XSTATE_APX_F) != 0)
+    {
+      int r16_regnum = find_regno (regcache->tdesc, "r16");
+
+      for (i = 0; i < num_apx_registers; i++)
+	{
+	  collect_register (regcache, i + r16_regnum, raw);
+	  p = fp->apx_space () + i * 8;
+	  if (memcmp (raw, p, 8) != 0)
+	    {
+	      xstate_bv |= X86_XSTATE_APX_F;
+	      memcpy (p, raw, 8);
+	    }
 	}
     }
 
@@ -787,6 +813,23 @@ i387_xsave_to_cache (struct regcache *regcache, const void *buf)
 	  p = fp->pkru_space ();
 	  for (i = 0; i < num_pkeys_registers; i++)
 	    supply_register (regcache, i + pkru_regnum, p + i * 4);
+	}
+    }
+
+  if (amd64 && (x86_xstate_bv & X86_XSTATE_APX_F) != 0)
+    {
+      int r16_regnum = find_regno (regcache->tdesc, "r16");
+
+      if ((clear_bv & X86_XSTATE_APX_F) != 0)
+	{
+	  for (i = 0; i < num_apx_registers; i++)
+	    supply_register_zeroed (regcache, i + r16_regnum);
+	}
+      else
+	{
+	  p = fp->apx_space ();
+	  for (i = 0; i < num_apx_registers; i++)
+	    supply_register (regcache, i + r16_regnum, p + i * 8);
 	}
     }
 

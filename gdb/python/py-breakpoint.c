@@ -1724,27 +1724,23 @@ bplocpy_repr (PyObject *py_self)
       || self->owner->bp != self->bp_loc->owner)
     return gdb_py_invalid_object_repr (py_self);
 
-  const auto enabled = self->bp_loc->enabled ? "enabled" : "disabled";
-
+  /* For most things we just defer to bp_location::to_string, but that
+     doesn't include the enabled/disabled information, which is kind
+     of handy here.  */
+  const auto enabled = self->bp_loc->enabled ? "enabled " : "disabled ";
   std::string str (enabled);
 
-  str += string_printf (" address=%s",
-			paddress (self->bp_loc->owner->gdbarch,
-				  self->bp_loc->address));
-
-  if (self->bp_loc->requested_address != self->bp_loc->address)
-    str += string_printf (" requested_address=%s",
-			  paddress (self->bp_loc->owner->gdbarch,
-				    self->bp_loc->requested_address));
-  if (self->bp_loc->symtab != nullptr)
-    str += string_printf (" source=%s:%d", self->bp_loc->symtab->filename (),
-			  self->bp_loc->line_number);
-
-  const auto fn_name = self->bp_loc->function_name.get ();
-  if (fn_name != nullptr)
+  try
     {
-      str += " in ";
-      str += fn_name;
+      str += self->bp_loc->to_string ();
+    }
+  catch (const gdb_exception_error &ignore)
+    {
+      return gdb_py_invalid_object_repr (py_self);
+    }
+  catch (const gdb_exception &except)
+    {
+      return gdbpy_handle_gdb_exception (nullptr, except);
     }
 
   return PyUnicode_FromFormat ("<%s %s>",

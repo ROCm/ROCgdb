@@ -44,6 +44,7 @@ set found_gcc [find_gcc]
 set found_gxx [find_g++]
 set found_gnatmake [find_gnatmake]
 set found_f90 [find_gfortran]
+set found_rustc [find_rustc]
 set_board_info compiler "$found_gcc"
 
 set contrib_dir [file normalize $srcdir/../contrib]
@@ -63,6 +64,10 @@ if ![info exists F90_FOR_TARGET] {
     set F90_FOR_TARGET "$found_f90"
 }
 set F90_FOR_TARGET "$contrib_dir/cc-with-tweaks.sh $CC_WITH_TWEAKS_FLAGS $F90_FOR_TARGET"
+if ![info exists RUSTC_FOR_TARGET] {
+    set RUSTC_FOR_TARGET "$found_rustc"
+}
+set RUSTC_FOR_TARGET "$contrib_dir/cc-with-tweaks.sh $CC_WITH_TWEAKS_FLAGS $RUSTC_FOR_TARGET"
 
 set env(GDB) \
     [cached_file gdb.sh "$GDB $INTERNAL_GDBFLAGS $GDBFLAGS \"\$@\"" 1]

@@ -39,8 +39,11 @@
    around technique as above.  */
 #undef _FILE_OFFSET_BITS
 
-/* A kludge to avoid redefinition of snprintf on Windows by pyerrors.h.  */
-#if defined(_WIN32) && defined(HAVE_DECL_SNPRINTF)
+/* A kludge to avoid redefinition of snprintf on Windows by pyerrors.h.
+
+   This is only needed for Python <= 3.8, so it can go once support for those
+   Python versions is dropped.  */
+#ifdef _WIN32
 #define HAVE_SNPRINTF 1
 #endif
 
@@ -589,11 +592,11 @@ PyObject *objfpy_get_xmethods (PyObject *, void *);
 PyObject *gdbpy_lookup_objfile (PyObject *self, PyObject *args, PyObject *kw);
 
 gdbpy_ref<> gdbarch_to_arch_object (struct gdbarch *gdbarch);
-PyObject *gdbpy_all_architecture_names (PyObject *self, PyObject *args);
+gdbpy_ref<> gdbpy_all_architecture_names ();
 
-PyObject *gdbpy_new_register_descriptor_iterator (struct gdbarch *gdbarch,
-						  const char *group_name);
-PyObject *gdbpy_new_reggroup_iterator (struct gdbarch *gdbarch);
+gdbpy_ref<> gdbpy_new_register_descriptor_iterator (struct gdbarch *gdbarch,
+						    const char *group_name);
+gdbpy_ref<> gdbpy_new_reggroup_iterator (struct gdbarch *gdbarch);
 
 gdbpy_ref<thread_object> create_thread_object (struct thread_info *tp);
 gdbpy_ref<> thread_to_thread_object (thread_info *thr);;
@@ -604,7 +607,7 @@ PyObject *gdbpy_buffer_to_membuf (gdb::unique_xmalloc_ptr<gdb_byte> buffer,
 
 struct process_stratum_target;
 gdbpy_ref<> target_to_connection_object (process_stratum_target *target);
-PyObject *gdbpy_connections (PyObject *self, PyObject *args);
+gdbpy_ref<> gdbpy_connections ();
 
 const struct block *block_object_to_block (PyObject *obj);
 struct symbol *symbol_object_to_symbol (PyObject *obj);

@@ -12217,7 +12217,7 @@ $as_echo "found xgettext program is not GNU xgettext; ignore it" >&6; }
         rm -f messages.po
   fi
 
-  ac_config_commands="$ac_config_commands default-1"
+  ac_config_commands="$ac_config_commands posubdirs"
 
 
 
@@ -12376,6 +12376,7 @@ if test "${enable_rpath+set}" = set; then :
 else
   enable_rpath=yes
 fi
+
 
 
 
@@ -13230,6 +13231,7 @@ $as_echo "$LIBICONV" >&6; }
     LIBICONV=
     LTLIBICONV=
   fi
+
 
 
 
@@ -15502,7 +15504,7 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h:config.in" ;;
-    "default-1") CONFIG_COMMANDS="$CONFIG_COMMANDS default-1" ;;
+    "posubdirs") CONFIG_COMMANDS="$CONFIG_COMMANDS posubdirs" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "po/Makefile.in") CONFIG_FILES="$CONFIG_FILES po/Makefile.in:po/Make-in" ;;
 
@@ -16832,7 +16834,7 @@ _LT_EOF
   chmod +x "$ofile"
 
  ;;
-    "default-1":C)
+    "posubdirs":C)
     for ac_file in $CONFIG_FILES; do
       # Support "outfile[:infile[:infile...]]"
       case "$ac_file" in

@@ -380,6 +380,7 @@ target_debug_print_x86_xsave_layout (const x86_xsave_layout &layout)
   POFFS(zmm_h);
   POFFS(zmm);
   POFFS(pkru);
+  POFFS(apx);
 
 #undef POFFS
 

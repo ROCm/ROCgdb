@@ -90,9 +90,8 @@ using canonicalization_ftype = const char * (struct type *, void *);
 extern gdb::unique_xmalloc_ptr<char> cp_canonicalize_string_full
   (const char *string, canonicalization_ftype *finder, void *data);
 
-extern char *cp_class_name_from_physname (const char *physname);
-
-extern char *method_name_from_physname (const char *physname);
+extern gdb::unique_xmalloc_ptr<char> cp_class_name_from_physname
+  (const char *physname);
 
 extern unsigned int cp_find_first_component (const char *name);
 
@@ -201,10 +200,9 @@ gdb::unique_xmalloc_ptr<char> gdb_demangle (const char *name, int options);
 
 /* A wrapper for cplus_demangle_print.  */
 
-extern char *gdb_cplus_demangle_print (int options,
-				       struct demangle_component *tree,
-				       int estimated_length,
-				       size_t *p_allocated_size);
+extern gdb::unique_xmalloc_ptr<char> gdb_cplus_demangle_print
+  (int options, struct demangle_component *tree, int estimated_length,
+   size_t *p_allocated_size);
 
 /* Find an instance of the character C in the string S that is outside
    of all parenthesis pairs, single-quoted strings, and double-quoted

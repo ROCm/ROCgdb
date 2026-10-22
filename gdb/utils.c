@@ -534,18 +534,12 @@ static struct internal_problem demangler_warning_problem = {
 };
 
 void
-demangler_vwarning (const char *file, int line, const char *fmt, va_list ap)
-{
-  internal_vproblem (&demangler_warning_problem, file, line, fmt, ap);
-}
-
-void
-demangler_warning (const char *file, int line, const char *string, ...)
+demangler_warning (const char *file, int line, const char *fmt, ...)
 {
   va_list ap;
 
-  va_start (ap, string);
-  demangler_vwarning (file, line, string, ap);
+  va_start (ap, fmt);
+  internal_vproblem (&demangler_warning_problem, file, line, fmt, ap);
   va_end (ap);
 }
 
@@ -3126,121 +3120,6 @@ strcmp_iw (const char *string1, const char *string2)
 			       strncmp_iw_mode::MATCH_PARAMS, language_minimal);
 }
 
-/* This is like strcmp except that it ignores whitespace and treats
-   '(' as the first non-NULL character in terms of ordering.  Like
-   strcmp (and unlike strcmp_iw), it returns negative if STRING1 <
-   STRING2, 0 if STRING2 = STRING2, and positive if STRING1 > STRING2
-   according to that ordering.
-
-   If a list is sorted according to this function and if you want to
-   find names in the list that match some fixed NAME according to
-   strcmp_iw(LIST_ELT, NAME), then the place to start looking is right
-   where this function would put NAME.
-
-   This function must be neutral to the CASE_SENSITIVITY setting as the user
-   may choose it during later lookup.  Therefore this function always sorts
-   primarily case-insensitively and secondarily case-sensitively.
-
-   Here are some examples of why using strcmp to sort is a bad idea:
-
-   Whitespace example:
-
-   Say your partial symtab contains: "foo<char *>", "goo".  Then, if
-   we try to do a search for "foo<char*>", strcmp will locate this
-   after "foo<char *>" and before "goo".  Then lookup_partial_symbol
-   will start looking at strings beginning with "goo", and will never
-   see the correct match of "foo<char *>".
-
-   Parenthesis example:
-
-   In practice, this is less like to be an issue, but I'll give it a
-   shot.  Let's assume that '$' is a legitimate character to occur in
-   symbols.  (Which may well even be the case on some systems.)  Then
-   say that the partial symbol table contains "foo$" and "foo(int)".
-   strcmp will put them in this order, since '$' < '('.  Now, if the
-   user searches for "foo", then strcmp will sort "foo" before "foo$".
-   Then lookup_partial_symbol will notice that strcmp_iw("foo$",
-   "foo") is false, so it won't proceed to the actual match of
-   "foo(int)" with "foo".  */
-
-int
-strcmp_iw_ordered (const char *string1, const char *string2)
-{
-  const char *saved_string1 = string1, *saved_string2 = string2;
-  enum case_sensitivity case_pass = case_sensitive_off;
-
-  for (;;)
-    {
-      /* C1 and C2 are valid only if *string1 != '\0' && *string2 != '\0'.
-	 Provide stub characters if we are already at the end of one of the
-	 strings.  */
-      char c1 = 'X', c2 = 'X';
-
-      while (*string1 != '\0' && *string2 != '\0')
-	{
-	  while (c_isspace (*string1))
-	    string1++;
-	  while (c_isspace (*string2))
-	    string2++;
-
-	  switch (case_pass)
-	  {
-	    case case_sensitive_off:
-	      c1 = c_tolower (*string1);
-	      c2 = c_tolower (*string2);
-	      break;
-	    case case_sensitive_on:
-	      c1 = *string1;
-	      c2 = *string2;
-	      break;
-	  }
-	  if (c1 != c2)
-	    break;
-
-	  if (*string1 != '\0')
-	    {
-	      string1++;
-	      string2++;
-	    }
-	}
-
-      switch (*string1)
-	{
-	  /* Characters are non-equal unless they're both '\0'; we want to
-	     make sure we get the comparison right according to our
-	     comparison in the cases where one of them is '\0' or '('.  */
-	case '\0':
-	  if (*string2 == '\0')
-	    break;
-	  else
-	    return -1;
-	case '(':
-	  if (*string2 == '\0')
-	    return 1;
-	  else
-	    return -1;
-	default:
-	  if (*string2 == '\0' || *string2 == '(')
-	    return 1;
-	  else if (c1 > c2)
-	    return 1;
-	  else if (c1 < c2)
-	    return -1;
-	  /* PASSTHRU */
-	}
-
-      if (case_pass == case_sensitive_on)
-	return 0;
-
-      /* Otherwise the strings were equal in case insensitive way, make
-	 a more fine grained comparison in a case sensitive way.  */
-
-      case_pass = case_sensitive_on;
-      string1 = saved_string1;
-      string2 = saved_string2;
-    }
-}
-
 
 
 static void
@@ -3569,83 +3448,6 @@ gdb_filename_fnmatch (const char *pattern, const char *string, int flags)
 #endif /* HAVE_CASE_INSENSITIVE_FILE_SYSTEM */
 
   return fnmatch (pattern, string, flags);
-}
-
-/* Return the number of path elements in PATH.
-   / = 1
-   /foo = 2
-   /foo/ = 2
-   foo/bar = 2
-   foo/ = 1  */
-
-int
-count_path_elements (const char *path)
-{
-  int count = 0;
-  const char *p = path;
-
-  if (HAS_DRIVE_SPEC (p))
-    {
-      p = STRIP_DRIVE_SPEC (p);
-      ++count;
-    }
-
-  while (*p != '\0')
-    {
-      if (IS_DIR_SEPARATOR (*p))
-	++count;
-      ++p;
-    }
-
-  /* Backup one if last character is /, unless it's the only one.  */
-  if (p > path + 1 && IS_DIR_SEPARATOR (p[-1]))
-    --count;
-
-  /* Add one for the file name, if present.  */
-  if (p > path && !IS_DIR_SEPARATOR (p[-1]))
-    ++count;
-
-  return count;
-}
-
-/* Remove N leading path elements from PATH.
-   N must be non-negative.
-   If PATH has more than N path elements then return NULL.
-   If PATH has exactly N path elements then return "".
-   See count_path_elements for a description of how we do the counting.  */
-
-const char *
-strip_leading_path_elements (const char *path, int n)
-{
-  int i = 0;
-  const char *p = path;
-
-  gdb_assert (n >= 0);
-
-  if (n == 0)
-    return p;
-
-  if (HAS_DRIVE_SPEC (p))
-    {
-      p = STRIP_DRIVE_SPEC (p);
-      ++i;
-    }
-
-  while (i < n)
-    {
-      while (*p != '\0' && !IS_DIR_SEPARATOR (*p))
-	++p;
-      if (*p == '\0')
-	{
-	  if (i + 1 == n)
-	    return "";
-	  return NULL;
-	}
-      ++p;
-      ++i;
-    }
-
-  return p;
 }
 
 /* See utils.h.  */

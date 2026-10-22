@@ -114,7 +114,7 @@ proc run_test { version } {
 	# The path reported in the complaint message is always
 	# absolute.  Handle this with an optional prefix pattern.
 	set binfile_re "\[^\r\n\]*[string_to_regexp $host_binfile]"
-    } elseif {[section_get $binfile_name ".gnu_debuglink"] ne ""} {
+    } elseif {[have_gnu_debuglink $binfile_name]} {
 	set binfile_re "\[^\r\n\]+[string_to_regexp ${testfile_name}.debug]"
     } else {
 	set binfile_re [string_to_regexp $binfile_name]

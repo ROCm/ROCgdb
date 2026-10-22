@@ -88,8 +88,6 @@ extern int strncmp_iw (const char *string1, const char *string2,
    therefore be avoided if a more suitable language is available.  */
 extern int strcmp_iw (const char *string1, const char *string2);
 
-extern int strcmp_iw_ordered (const char *, const char *);
-
 /* Reset the prompt_for_continue clock.  */
 void reset_prompt_for_continue_wait_time (void);
 /* Return the time spent in prompt_for_continue.  */
@@ -135,10 +133,6 @@ extern int gdb_filename_fnmatch (const char *pattern, const char *string,
 				 int flags);
 
 std::string gdb_ldirname (const char *filename);
-
-extern int count_path_elements (const char *path);
-
-extern const char *strip_leading_path_elements (const char *path, int n);
 
 /* Wrapper around readline's tilde_expand, to return a unique pointer.  */
 
@@ -345,10 +339,6 @@ extern void (*deprecated_error_begin_hook) (void);
 /* Message to be printed before the warning message, when a warning occurs.  */
 
 extern const char *warning_pre_print;
-
-extern void demangler_vwarning (const char *file, int line,
-			       const char *, va_list ap)
-     ATTRIBUTE_PRINTF (3, 0);
 
 extern void demangler_warning (const char *file, int line,
 			      const char *, ...) ATTRIBUTE_PRINTF (3, 4);

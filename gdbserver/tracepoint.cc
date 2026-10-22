@@ -747,11 +747,6 @@ IP_AGENT_EXPORT_VAR int expr_eval_result = expr_eval_no_error;
 
 #ifndef IN_PROCESS_AGENT
 
-/* Pointer to the last tracepoint in the list, new tracepoints are
-   linked in at the end.  */
-
-static struct tracepoint *last_tracepoint;
-
 static const char * const eval_result_names[] =
   {
 #define AX_RESULT_TYPE(ENUM,STR) STR,
@@ -1738,7 +1733,6 @@ add_tracepoint (int num, CORE_ADDR addr)
     ;
   tpoint->next = *tp_next;
   *tp_next = tpoint;
-  last_tracepoint = tpoint;
 
   seen_step_action_flag = 0;
 
@@ -2260,7 +2254,6 @@ cmd_qtinit (char *packet)
   clear_readonly_regions ();
 
   tracepoints = NULL;
-  last_tracepoint = NULL;
 
   /* Clear out any leftover trace state variables.  Ones with target
      defined getters should be kept however.  */

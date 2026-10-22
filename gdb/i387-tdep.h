@@ -37,6 +37,9 @@ struct x86_xsave_layout;
 #define I387_NUM_YMM_REGS(tdep) ((tdep)->num_ymm_regs)
 #define I387_YMM0H_REGNUM(tdep) ((tdep)->ymm0h_regnum)
 
+#define I387_R16_REGNUM(tdep) ((tdep)->r16_regnum)
+#define I387_NUM_APX_REGS(tdep) ((tdep)->num_apx_regs)
+
 /* Set of constants used for 32 and 64-bit.  */
 #define I387_NUM_K_REGS 8
 #define I387_NUM_PKEYS_REGS 1
@@ -74,6 +77,9 @@ struct x86_xsave_layout;
   (I387_YMM16H_REGNUM (tdep) + I387_NUM_YMM_AVX512_REGS (tdep))
 #define I387_XMM_AVX512_END_REGNUM(tdep) \
   (I387_XMM16_REGNUM (tdep) + I387_NUM_XMM_AVX512_REGS (tdep))
+
+#define I387_APX_END_REGNUM(tdep) \
+  (I387_R16_REGNUM (tdep) + I387_NUM_APX_REGS (tdep))
 
 #define I387_PKEYSEND_REGNUM(tdep) \
   (I387_PKRU_REGNUM (tdep) + I387_NUM_PKEYS_REGS)
