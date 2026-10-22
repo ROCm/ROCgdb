@@ -54,9 +54,6 @@
 /* Define default value for RISC-V -misa-spec. */
 #undef DEFAULT_RISCV_ISA_SPEC
 
-/* Define default value for RISC-V -mpriv-spec */
-#undef DEFAULT_RISCV_PRIV_SPEC
-
 /* Define to 1 if you want to emit R_XTENSA_32_ABS for 32-bit absolute data by
    default. */
 #undef DEFAULT_R_XTENSA_32_ABS

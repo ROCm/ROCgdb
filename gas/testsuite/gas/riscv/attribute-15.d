@@ -1,4 +1,4 @@
-#as: -march-attr -mpriv-spec=1.13
+#as: -march-attr
 #readelf: -A
 #source: attribute-11.s
 Attribute Section: riscv

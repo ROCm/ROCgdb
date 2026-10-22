@@ -1,5 +1,5 @@
-#as: -march=rv32i_zicsr_sspmpen -mpriv-spec=1.13 -mcsr-check --fatal-warnings
-#objdump: -dr -Mpriv-spec=1.13
+#as: -march=rv32i_zicsr_sspmpen -mcsr-check --fatal-warnings
+#objdump: -dr
 #source: spmpen-rv32.s
 .*:[ 	]+file format .*
 

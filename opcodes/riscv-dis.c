@@ -37,8 +37,11 @@
    disassemble_info::fprintf_func which is for unstyled output.  */
 #define fprintf_func please_use_fprintf_styled_func_instead
 
-/* The earliest privilege spec supported by disassembler. */
+/* The earliest privilege spec listed for the deprecated priv-spec option.  */
 #define PRIV_SPEC_EARLIEST PRIV_SPEC_CLASS_1P10
+
+/* The privilege spec used to print the CSR names.  */
+#define PRIV_SPEC_DEFAULT PRIV_SPEC_CLASS_1P13
 
 struct riscv_private_data
 {
@@ -55,8 +58,6 @@ struct riscv_private_data
   unsigned xlen;
   /* Default ISA specification version.  */
   enum riscv_spec_class default_isa_spec;
-  /* Default privileged specification.  */
-  enum riscv_spec_class default_priv_spec;
   /* Used for architecture parser.  */
   riscv_parse_subset_t riscv_rps_dis;
   /* Default architecture string for the object file.  It will be changed once
@@ -192,25 +193,10 @@ parse_riscv_dis_option (char *option, struct disassemble_info *info)
   if (strcmp (option, "arch") == 0)
     riscv_dis_set_arch (info, value);
   else if (strcmp (option, "priv-spec") == 0)
-    {
-      struct riscv_private_data *pd = info->private_data;
-      enum riscv_spec_class priv_spec = PRIV_SPEC_CLASS_NONE;
-      const char *name = NULL;
-
-      RISCV_GET_PRIV_SPEC_CLASS (value, priv_spec);
-      if (priv_spec < PRIV_SPEC_EARLIEST)
-	opcodes_error_handler (_("unknown privileged spec set by %s=%s"),
-			       option, value);
-      else if (pd->default_priv_spec == PRIV_SPEC_CLASS_NONE)
-	pd->default_priv_spec = priv_spec;
-      else if (pd->default_priv_spec != priv_spec)
-	{
-	  RISCV_GET_PRIV_SPEC_NAME (name, pd->default_priv_spec);
-	  opcodes_error_handler (_("mis-matched privilege spec set by %s=%s, "
-				   "the elf privilege attribute is %s"),
-				 option, value, name);
-	}
-    }
+    opcodes_error_handler (_("%s=%s is deprecated and ignored, the "
+			     "privileged spec is always 1.13; use binutils "
+			     "2.47 or earlier to select another version"),
+			   option, value);
   else
     {
       /* xgettext:c-format */
@@ -767,16 +753,12 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		for (i = 0; i < 4096; i++)
 		  riscv_csr_hash[i] = NULL;
 
-		/* Set to the newest privileged version.  */
-		if (pd->default_priv_spec == PRIV_SPEC_CLASS_NONE)
-		  pd->default_priv_spec = PRIV_SPEC_CLASS_DRAFT - 1;
-
 #define DECLARE_CSR(name, num, class, define_version, abort_version)	\
 		if (riscv_csr_hash[num] == NULL 			\
 		    && ((define_version == PRIV_SPEC_CLASS_NONE 	\
 			 && abort_version == PRIV_SPEC_CLASS_NONE)	\
-			|| (pd->default_priv_spec >= define_version 	\
-			    && pd->default_priv_spec < abort_version)))	\
+			|| (PRIV_SPEC_DEFAULT >= define_version 	\
+			    && PRIV_SPEC_DEFAULT < abort_version)))	\
 		  riscv_csr_hash[num] = #name;
 #define DECLARE_CSR_ALIAS(name, num, class, define_version, abort_version) \
 		DECLARE_CSR (name, num, class, define_version, abort_version)
@@ -1745,7 +1727,6 @@ riscv_init_disasm_info (struct disassemble_info *info)
   pd->xlen = 0;
   riscv_set_xlen_from_elf (pd, info);
   pd->default_isa_spec = ISA_SPEC_CLASS_DRAFT - 1;
-  pd->default_priv_spec = PRIV_SPEC_CLASS_NONE;
 
   pd->riscv_rps_dis.subset_list = xcalloc (1, sizeof (riscv_parse_subset_t));
   pd->riscv_rps_dis.error_handler = opcodes_error_handler;
@@ -1763,13 +1744,6 @@ riscv_init_disasm_info (struct disassemble_info *info)
 	  if (bfd_get_section_by_name (abfd, sec_name) != NULL)
 	    {
 	      obj_attribute *attr = elf_known_obj_attributes_proc (abfd);
-	      unsigned int Tag_a = Tag_RISCV_priv_spec;
-	      unsigned int Tag_b = Tag_RISCV_priv_spec_minor;
-	      unsigned int Tag_c = Tag_RISCV_priv_spec_revision;
-	      riscv_get_priv_spec_class_from_numbers (attr[Tag_a].i,
-						      attr[Tag_b].i,
-						      attr[Tag_c].i,
-						      &pd->default_priv_spec);
 	      pd->default_arch = attr[Tag_RISCV_arch].s;
 	    }
 	}
@@ -1951,7 +1925,8 @@ static const struct
     N_("Disassemble only into canonical instructions."),
     RISCV_OPTION_ARG_NONE },
   { "priv-spec=",
-    N_("Print the CSR according to the chosen privilege spec."),
+    N_("Deprecated and ignored, the CSR is printed according to the "
+       "privilege spec 1.13."),
     RISCV_OPTION_ARG_PRIV_SPEC },
   { "arch=",
     N_("Disassemble according to the given ISA string."),

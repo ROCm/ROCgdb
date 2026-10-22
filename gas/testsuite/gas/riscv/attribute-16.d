@@ -1,4 +1,4 @@
-#as: -march-attr -mpriv-spec=1.13
+#as: -march-attr
 #readelf: -A
 #source: empty.s
 Attribute Section: riscv

@@ -165,15 +165,11 @@ struct riscv_ip_error
 #define DEFAULT_RISCV_ISA_SPEC "20191213"
 #endif
 
-#ifndef DEFAULT_RISCV_PRIV_SPEC
-#define DEFAULT_RISCV_PRIV_SPEC "1.11"
-#endif
-
 static const char default_arch[] = DEFAULT_ARCH;
 static const char *default_arch_with_ext = DEFAULT_RISCV_ARCH_WITH_EXT;
 static const char *file_arch_str = NULL;
 static enum riscv_spec_class default_isa_spec = ISA_SPEC_CLASS_NONE;
-static enum riscv_spec_class default_priv_spec = PRIV_SPEC_CLASS_NONE;
+static const enum riscv_spec_class default_priv_spec = PRIV_SPEC_CLASS_1P13;
 
 static unsigned xlen = 0; /* The width of an x-register.  */
 static unsigned abi_xlen = 0; /* The width of a pointer in the ABI.  */
@@ -215,54 +211,6 @@ riscv_set_default_isa_spec (const char *s)
   else
     default_isa_spec = class;
   return 1;
-}
-
-/* Set the default_priv_spec.  Find the privileged elf attributes when
-   the input string is NULL.  Return 0 if the spec isn't supported.
-   Otherwise, return 1.  */
-
-static int
-riscv_set_default_priv_spec (const char *s)
-{
-  enum riscv_spec_class class = PRIV_SPEC_CLASS_NONE;
-  unsigned major, minor, revision;
-  obj_attribute *attr;
-
-  RISCV_GET_PRIV_SPEC_CLASS (s, class);
-  if (class != PRIV_SPEC_CLASS_NONE
-      && class != PRIV_SPEC_CLASS_1P9P1)
-    {
-      default_priv_spec = class;
-      return 1;
-    }
-
-  if (s != NULL)
-    {
-      as_bad (_("unknown default privileged spec `%s' set by "
-		"-mpriv-spec or --with-priv-spec"), s);
-      return 0;
-    }
-
-  /* Set the default_priv_spec by the privileged elf attributes.  */
-  attr = elf_known_obj_attributes_proc (stdoutput);
-  major = (unsigned) attr[Tag_RISCV_priv_spec].i;
-  minor = (unsigned) attr[Tag_RISCV_priv_spec_minor].i;
-  revision = (unsigned) attr[Tag_RISCV_priv_spec_revision].i;
-  /* Version 0.0.0 is the default value and meningless.  */
-  if (major == 0 && minor == 0 && revision == 0)
-    return 1;
-
-  riscv_get_priv_spec_class_from_numbers (major, minor, revision, &class);
-  if (class != PRIV_SPEC_CLASS_NONE)
-    {
-      default_priv_spec = class;
-      return 1;
-    }
-
-  /* Still can not find the privileged spec class.  */
-  as_bad (_("unknown default privileged spec `%d.%d.%d' set by "
-	    "privileged elf attributes"), major, minor, revision);
-  return 0;
 }
 
 /* This is the set of options which the .option pseudo-op may modify.  */
@@ -4672,16 +4620,13 @@ riscv_ip_hardcode (char *str,
   return NULL;
 }
 
-/* The architecture and privileged elf attributes should be set before
-   assembling.  */
-static bool
+/* The architecture elf attribute should be set before assembling.  */
+static void
 start_assembly (void)
 {
   start_assemble = true;
 
   riscv_set_abi_by_arch ();
-
-  return riscv_set_default_priv_spec (NULL);
 }
 
 void
@@ -4691,8 +4636,8 @@ md_assemble (char *str)
   expressionS imm_expr;
   bfd_reloc_code_real_type imm_reloc = BFD_RELOC_UNUSED;
 
-  if (!start_assemble && !start_assembly())
-    return;
+  if (!start_assemble)
+    start_assembly ();
 
   riscv_mapping_state (MAP_INSN, 0, false/* fr_align_code */);
 
@@ -4850,7 +4795,10 @@ md_parse_option (int c, const char *arg)
       return riscv_set_default_isa_spec (arg);
 
     case OPTION_MPRIV_SPEC:
-      return riscv_set_default_priv_spec (arg);
+      as_warn (_("-mpriv-spec is deprecated and has no effect, the "
+		 "privileged spec is always 1.13; use binutils 2.47 or "
+		 "earlier to select another version"));
+      break;
 
     case OPTION_BIG_ENDIAN:
       target_big_endian = 1;
@@ -4885,8 +4833,6 @@ riscv_after_parse_args (void)
   /* Set default specs.  */
   if (default_isa_spec == ISA_SPEC_CLASS_NONE)
     riscv_set_default_isa_spec (DEFAULT_RISCV_ISA_SPEC);
-  if (default_priv_spec == PRIV_SPEC_CLASS_NONE)
-    riscv_set_default_priv_spec (DEFAULT_RISCV_PRIV_SPEC);
 
   riscv_set_arch (default_arch_with_ext);
 
@@ -5810,7 +5756,7 @@ RISC-V options:\n\
   -fno-pic                    don't generate position-independent code (default)\n\
   -march=ISA                  set the RISC-V architecture\n\
   -misa-spec=ISAspec          set the RISC-V ISA spec (2.2, 20190608, 20191213)\n\
-  -mpriv-spec=PRIVspec        set the RISC-V privilege spec (1.10, 1.11, 1.12, 1.13)\n\
+  -mpriv-spec=PRIVspec        deprecated and ignored (always 1.13)\n\
   -mabi=ABI                   set the RISC-V ABI\n\
   -mrelax                     enable relax (default)\n\
   -mno-relax                  disable relax\n\
@@ -5911,8 +5857,8 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
   bfd_reloc_code_real_type imm_reloc = BFD_RELOC_UNUSED;
   char save_c;
 
-  if (!start_assemble && !start_assembly())
-    return;
+  if (!start_assemble)
+    start_assembly ();
 
   while (!is_end_of_stmt (*input_line_pointer))
     ++input_line_pointer;
@@ -5968,16 +5914,8 @@ riscv_write_out_attrs (void)
 	      bfd_errmsg (bfd_get_error ()));
   free ((void *) file_arch_str);
 
-  /* For the file without any instruction, we don't set the default_priv_spec
-     according to the privileged elf attributes since the md_assemble isn't
-     called.  */
-  if (!start_assemble
-      && !riscv_set_default_priv_spec (NULL))
-    return;
-
-  /* If we already have set privileged elf attributes, then no need to do
-     anything.  Otherwise, don't generate or update them when no CSR and
-     privileged instructions are used.  */
+  /* Don't generate privileged elf attributes when no CSR and privileged
+     instructions are used.  */
   if (!explicit_priv_attr)
     return;
 
@@ -6164,9 +6102,10 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
     case Tag_RISCV_priv_spec:
     case Tag_RISCV_priv_spec_minor:
     case Tag_RISCV_priv_spec_revision:
-      if (start_assemble)
-       as_fatal (_("privileged elf attributes must be set before "
-		   "any instructions"));
+      as_warn (_("privileged elf attributes are deprecated and ignored, the "
+		 "privileged spec is always 1.13; use binutils 2.47 or "
+		 "earlier to select another version"));
+      elf_known_obj_attributes_proc (stdoutput)[tag].i = 0;
       break;
 
     case Tag_RISCV_stack_align:

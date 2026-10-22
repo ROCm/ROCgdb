@@ -58,10 +58,10 @@ check the default configure setting --with-isa-spec=ISAspec.
 
 @cindex @samp{-mpriv-spec=PRIVspec} option, RISC-V
 @item -mpriv-spec=PRIVspec
-Select the privileged spec version.  We can decide whether the CSR is valid or
-not according to the chosen spec.  If this option and the privilege attributes
-aren't set, then assembler will check the default configure setting
---with-priv-spec=PRIVspec.
+This option is deprecated and has no effect.  The assembler always uses
+the privileged spec version 1.13.
+The configure setting --with-priv-spec=PRIVspec is also deprecated and has
+no effect.  Use binutils 2.47 or earlier to select another version.
 
 @cindex @samp{-mabi=ABI} option, RISC-V
 @item -mabi=ABI
@@ -267,6 +267,7 @@ The @var{tag} is either an attribute number, or one of the following:
 @code{Tag_RISCV_arch}, @code{Tag_RISCV_stack_align},
 @code{Tag_RISCV_unaligned_access}, @code{Tag_RISCV_priv_spec},
 @code{Tag_RISCV_priv_spec_minor}, @code{Tag_RISCV_priv_spec_revision}.
+The privileged spec tags are deprecated and ignored, see @samp{-mpriv-spec}.
 
 @cindex @code{.bfloat16} directive, RISC-V
 @item .bfloat16 @var{value}
@@ -764,8 +765,10 @@ memory accesses, and 1 for files that do allow unaligned memory accesses.
 @item Tag_RISCV_priv_spec_minor (10)
 @item Tag_RISCV_priv_spec_revision (12)
 Tag_RISCV_priv_spec contains the major/minor/revision version information of
-the privileged specification.  It will report errors if object files of
-different privileged specification versions are merged.
+the privileged specification.  The assembler ignores these tags when set by
+@code{.attribute}, and only emits version 1.13 when CSR or privileged
+instructions are used.  The linker keeps the newest version when object
+files of different privileged specification versions are merged.
 
 @end table
 
