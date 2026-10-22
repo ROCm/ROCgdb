@@ -19,9 +19,7 @@
 #ifndef GDBSUPPORT_GDB_LOCALE_H
 #define GDBSUPPORT_GDB_LOCALE_H
 
-#ifdef HAVE_LOCALE_H
-# include <locale.h>
-#endif
+#include <locale.h>
 
 #ifdef ENABLE_NLS
 # include <libintl.h>

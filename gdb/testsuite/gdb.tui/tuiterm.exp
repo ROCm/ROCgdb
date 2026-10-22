@@ -64,6 +64,14 @@ proc setup_terminal { cols rows } {
     }
 }
 
+# Variable that represents the state of the small terminal after setup_small.
+set small_initial {
+    "abcdefgh"
+    "ijklmnop"
+    "qrstuvwx"
+    "yz01234 "
+}
+
 # Most tests are fine with a small terminal.  This proc initializes the terminal
 # with 8 columns and 4 rows, with the following content:
 #
@@ -73,23 +81,16 @@ proc setup_terminal { cols rows } {
 #   yz01234
 #
 # The bottom right cell is left blank: trying to write to it using _insert
-# would move the cursor past the screen, causing a scroll, but scrolling is
-# not implemented at the moment.
+# would move the cursor past the screen, causing a scroll.
 
 proc setup_small {} {
     setup_terminal 8 4
 
-    Term::_insert "abcdefgh"
-    Term::_insert "ijklmnop"
-    Term::_insert "qrstuvwx"
-    Term::_insert "yz01234"
+    foreach line $::small_initial {
+	Term::_insert [string trim $line]
+    }
 
-    check "check after setup" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 7 3
+    check "check after setup" $::small_initial 7 3
 }
 
 # Some tests require a larger terminal.  This proc initializes the terminal with
@@ -108,41 +109,21 @@ proc test_backspace {} {
     Term::_move_cursor 1 2
 
     Term::_ctl_0x08 0
-    check "backspace one" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 2
+    check "backspace one" $::small_initial 0 2
 
     # Cursor should not move if it is already at column 0.
     Term::_ctl_0x08 0
-    check "backspace 2" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 2
+    check "backspace 2" $::small_initial 0 2
 
     # Cursor should wrap to previous line.
     Term::_ctl_0x08 1
-    check "backspace 3" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 7 1
+    check "backspace 3" $::small_initial 7 1
 }
 
 proc test_linefeed { } {
     Term::_move_cursor 1 2
     Term::_ctl_0x0a
-    check "linefeed" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 1 3
+    check "linefeed" $::small_initial 1 3
 }
 
 proc test_linefeed_scroll { } {
@@ -160,20 +141,10 @@ proc test_linefeed_scroll { } {
 proc test_carriage_return { } {
     Term::_move_cursor 1 2
     Term::_ctl_0x0d
-    check "carriage return 1" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 2
+    check "carriage return 1" $::small_initial 0 2
 
     Term::_ctl_0x0d
-    check "carriage return 2" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 2
+    check "carriage return 2" $::small_initial 0 2
 }
 
 proc test_insert_characters { } {
@@ -205,6 +176,18 @@ proc test_insert_characters { } {
     } 0 1
 }
 
+proc test_insert_characters_2 { } {
+    # As in test_insert_characters, but start at initial state.
+    Term::_move_cursor 0 0
+    Term::_csi_@ 20
+    check "insert characters 4" {
+	"        "
+	"ijklmnop"
+	"qrstuvwx"
+	"yz01234 "
+    } 0 0
+}
+
 proc test_pan_down { } {
     Term::_move_cursor 1 2
     Term::_csi_S
@@ -232,10 +215,22 @@ proc test_pan_down { } {
     } 1 2
 }
 
+proc test_pan_down_2 { } {
+    # As in test_pan_down, but start at initial state.
+    Term::_move_cursor 0 0
+    Term::_csi_S 100
+    check "pan down, initial state, excessive arg" {
+	"        "
+	"        "
+	"        "
+	"        "
+    } 0 0
+}
+
 proc test_pan_up { } {
     Term::_move_cursor 1 2
     Term::_csi_T
-    check "pan down, default arg" {
+    check "pan up, default arg" {
 	"        "
 	"abcdefgh"
 	"ijklmnop"
@@ -243,7 +238,7 @@ proc test_pan_up { } {
     } 1 2
 
     Term::_csi_T 2
-    check "pan down, explicit arg" {
+    check "pan up, explicit arg" {
 	"        "
 	"        "
 	"        "
@@ -251,7 +246,7 @@ proc test_pan_up { } {
     } 1 2
 
     Term::_csi_T 100
-    check "pan down, excessive arg" {
+    check "pan up, excessive arg" {
 	"        "
 	"        "
 	"        "
@@ -259,232 +254,133 @@ proc test_pan_up { } {
     } 1 2
 }
 
+proc test_pan_up_2 { } {
+    # As in test_pan_up, but start at initial state.
+    Term::_move_cursor 0 0
+    Term::_csi_T 100
+    check "pan up, initial state, excessive arg" {
+	"        "
+	"        "
+	"        "
+	"        "
+    } 0 0
+}
+
 proc test_cursor_up { } {
     Term::_move_cursor 2 3
 
     Term::_csi_A
-    check "cursor up 1" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 2 2
+    check "cursor up 1" $::small_initial 2 2
 
     Term::_csi_A 2
-    check "cursor up 2" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 2 0
+    check "cursor up 2" $::small_initial 2 0
 
     Term::_csi_A 1
-    check "cursor up 3" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 2 0
+    check "cursor up 3" $::small_initial 2 0
 }
 
 proc test_cursor_down { } {
     Term::_move_cursor 1 0
 
     Term::_csi_B
-    check "cursor down 1" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 1 1
+    check "cursor down 1" $::small_initial 1 1
 
     Term::_csi_B 2
-    check "cursor down 2" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 1 3
+    check "cursor down 2" $::small_initial 1 3
 
     Term::_csi_B 1
-    check "cursor down 3" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 1 3
+    check "cursor down 3" $::small_initial 1 3
 }
 
 proc test_cursor_forward { } {
     Term::_move_cursor 0 1
 
     Term::_csi_C
-    check "cursor forward 1" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 1 1
+    check "cursor forward 1" $::small_initial 1 1
 
     Term::_csi_C 6
-    check "cursor forward 2" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 7 1
+    check "cursor forward 2" $::small_initial 7 1
 
     Term::_csi_C 1
-    check "cursor forward 3" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 7 1
+    check "cursor forward 3" $::small_initial 7 1
 }
 
 proc test_cursor_backward { } {
     Term::_move_cursor 7 1
 
     Term::_csi_D
-    check "cursor backward 1" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 6 1
+    check "cursor backward 1" $::small_initial 6 1
 
     Term::_csi_D 6
-    check "cursor backward 2" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 1
+    check "cursor backward 2" $::small_initial 0 1
 
     Term::_csi_D 1
-    check "cursor backward 3" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 1
+    check "cursor backward 3" $::small_initial 0 1
 }
 
 proc test_cursor_next_line { } {
     Term::_move_cursor 2 0
 
     Term::_csi_E
-    check "cursor next line 1" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 1
+    check "cursor next line 1" $::small_initial 0 1
 
     Term::_move_cursor 2 1
     Term::_csi_E 2
-    check "cursor next line 2" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 3
+    check "cursor next line 2" $::small_initial 0 3
 
     Term::_move_cursor 2 3
     Term::_csi_E 1
-    check "cursor next line 3" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 3
+    check "cursor next line 3" $::small_initial 0 3
 }
 
 proc test_cursor_previous_line { } {
     Term::_move_cursor 2 3
 
     Term::_csi_F
-    check "cursor previous line 1" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 2
+    check "cursor previous line 1" $::small_initial 0 2
 
     Term::_move_cursor 2 2
     Term::_csi_F 2
-    check "cursor previous line 2" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 0
+    check "cursor previous line 2" $::small_initial 0 0
 
     Term::_move_cursor 2 0
     Term::_csi_F 1
-    check "cursor previous line 3" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 0
+    check "cursor previous line 3" $::small_initial 0 0
 }
 
 proc test_horizontal_absolute { } {
     Term::_move_cursor 2 2
     Term::_csi_G
-    check "cursor horizontal absolute 1" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 2
+    check "cursor horizontal absolute 1" $::small_initial 0 2
 
     Term::_move_cursor 2 2
     Term::_csi_G 4
-    check "cursor horizontal absolute 2" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 3 2
+    check "cursor horizontal absolute 2" $::small_initial 3 2
 
     Term::_csi_G 8
-    check "cursor horizontal absolute 3" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 7 2
+    check "cursor horizontal absolute 3" $::small_initial 7 2
 
     Term::_csi_G 9
-    check "cursor horizontal absolute 4" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 7 2
+    check "cursor horizontal absolute 4" $::small_initial 7 2
 
     Term::_csi_`
-    check "horizontal position absolute 1" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 0 2
+    check "horizontal position absolute 1" $::small_initial 0 2
 }
 
 proc test_cursor_position { } {
     Term::_move_cursor 1 1
 
     Term::_csi_H 3 5
-    check "cursor horizontal absolute 2" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 4 2
+    check "cursor position absolute" $::small_initial 4 2
+
+    Term::_csi_H 10 10
+    check "cursor position absolute, out of bounds" $::small_initial 7 3
+
+    Term::_csi_H
+    check "cursor position absolute, default" $::small_initial 0 0
+
+    Term::_csi_H 0 0
+    check "cursor position absolute, zero" $::small_initial 0 0
 }
 
 proc test_cursor_horizontal_forward_tabulation { } {
@@ -596,6 +492,18 @@ proc test_delete_line { } {
     } 3 0
 }
 
+proc test_delete_line_2 { } {
+    # Excessive param at initial state.
+    Term::_move_cursor 3 2
+    Term::_csi_M 100
+    check "delete line, excessive param" {
+	"abcdefgh"
+	"ijklmnop"
+	"        "
+	"        "
+    } 3 2
+}
+
 proc test_delete_character { } {
     Term::_move_cursor 2 1
 
@@ -642,6 +550,15 @@ proc test_erase_character { } {
 	"qrs uvwx"
 	"y    34 "
     } 1 3
+
+    Term::_move_cursor 1 0
+    Term::_csi_X 20
+    check "erase character, more than number of columns" {
+	"a       "
+	"ijklmnop"
+	"qrs uvwx"
+	"y    34 "
+    } 1 0
 }
 
 proc test_cursor_backward_tabulation { } {
@@ -676,34 +593,28 @@ proc test_repeat { } {
 	"qrstuvwx"
 	"yz01234 "
     } 5 1
+
+    Term::_move_cursor 7 3
+    Term::_csi_b 1
+    check "repeat at bottom-right corner" {
+	"xxXXXnop"
+	"qrstuvwx"
+	"yz01234X"
+	"        "
+    } 0 3
 }
 
 proc test_vertical_line_position_absolute { } {
     Term::_move_cursor 2 1
 
     Term::_csi_d
-    check "default param" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 2 0
+    check "default param" $::small_initial 2 0
 
     Term::_csi_d 3
-    check "explicit param" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 2 2
+    check "explicit param" $::small_initial 2 2
 
     Term::_csi_d 100
-    check "try to move off-display" {
-	"abcdefgh"
-	"ijklmnop"
-	"qrstuvwx"
-	"yz01234 "
-    } 2 3
+    check "try to move off-display" $::small_initial 2 3
 }
 
 proc test_insert_line { } {
@@ -732,6 +643,18 @@ proc test_insert_line { } {
 	"        "
 	"        "
     } 2 0
+}
+
+proc test_insert_line_2 { } {
+    # As in test_insert_line, but start after row 0.
+    Term::_move_cursor 0 1
+    Term::_csi_L 12
+    check "insert line after first line, insert more lines than display has" {
+	"abcdefgh"
+	"        "
+	"        "
+	"        "
+    } 0 1
 }
 
 proc test_attrs {} {
@@ -845,11 +768,20 @@ proc_with_prefix test_with_tuiterm {} {
     }
 }
 
+proc_with_prefix test_resize {} {
+    setup_terminal 8 4
+    Term::_move_cursor 7 3
+    Term::_do_resize 2 4
+    check_cursor_position "cursor after resize" 3 1
+    Term::check_size
+}
+
 # Run proc TEST_PROC_NAME with a "small" terminal.
 
 proc run_one_test_small { test_proc_name } {
     setup_small
     $test_proc_name
+    Term::check_size
 }
 
 # Run proc TEST_PROC_NAME with a "large" terminal.
@@ -857,6 +789,7 @@ proc run_one_test_small { test_proc_name } {
 proc run_one_test_large { test_proc_name } {
     setup_large
     $test_proc_name
+    Term::check_size
 }
 
 foreach_with_prefix test {
@@ -865,6 +798,7 @@ foreach_with_prefix test {
     test_linefeed_scroll
     test_carriage_return
     test_insert_characters
+    test_insert_characters_2
     test_cursor_up
     test_cursor_down
     test_cursor_forward
@@ -876,13 +810,17 @@ foreach_with_prefix test {
     test_erase_in_display
     test_erase_in_line
     test_delete_line
+    test_delete_line_2
     test_delete_character
     test_erase_character
     test_repeat
     test_vertical_line_position_absolute
     test_insert_line
+    test_insert_line_2
     test_pan_up
+    test_pan_up_2
     test_pan_down
+    test_pan_down_2
 } {
     run_one_test_small $test
 }
@@ -898,3 +836,4 @@ test_attrs
 
 test_with_term
 test_with_tuiterm
+test_resize

@@ -32,3 +32,5 @@ Disassembly of section \.text:
 .*:	d50323df 	autibz
 .*:	d50323ff 	autibsp
 .*:	d50323ff 	autibsp
+.*:	d50324ff 	pacm
+.*:	d50324ff 	pacm

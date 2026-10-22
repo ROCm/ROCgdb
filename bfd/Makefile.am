@@ -540,7 +540,6 @@ BFD64_BACKENDS = \
 	aix5ppc-core.lo \
 	aout64.lo \
 	coff-alpha.lo \
-	coff-x86_64.lo \
 	coff64-rs6000.lo \
 	elf32-aarch64.lo \
 	elf32-ia64.lo \
@@ -599,7 +598,6 @@ BFD64_BACKENDS_CFILES = \
 	aix5ppc-core.c \
 	aout64.c \
 	coff-alpha.c \
-	coff-x86_64.c \
 	coff64-rs6000.c \
 	elf32-mips.c \
 	elf32-score.c \

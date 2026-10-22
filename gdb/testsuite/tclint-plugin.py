@@ -164,7 +164,7 @@ def _with_rocm_gpu_lock(args, parser):
 
 
 def _ns_term_log_cur(args, parser):
-    return _script_last_arg("Term::log_cur", 2, args, parser)
+    return _script_last_arg("Term::_log_cur", 2, args, parser)
 
 
 def _ns_term_with_term(args, parser):
@@ -207,8 +207,14 @@ commands = commands_schema(
         "with_ansi_styling_terminal": _with_ansi_styling_terminal,
         "with_lock": _with_lock,
         "with_rocm_gpu_lock": _with_rocm_gpu_lock,
+        # Calls without explicit namespace prefix are not caught, so for now
+        # we add both.  This may clash with procs outside the namespace.
+        # https://github.com/nmoroze/tclint/issues/174
         "Term::_log_cur": _ns_term_log_cur,
+        "_log_cur": _ns_term_log_cur,
         "Term::with_term": _ns_term_with_term,
+        "with_term": _ns_term_with_term,
         "Term::with_tuiterm": _ns_term_with_tuiterm,
+        "with_tuiterm": _ns_term_with_tuiterm,
     }
 )

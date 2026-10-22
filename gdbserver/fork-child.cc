@@ -19,9 +19,7 @@
 #include "gdbsupport/job-control.h"
 #include "gdbsupport/scoped_restore.h"
 #include "nat/fork-inferior.h"
-#ifdef HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 
 #ifdef SIGTTOU
 /* A file descriptor for the controlling terminal.  */
