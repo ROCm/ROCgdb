@@ -239,6 +239,18 @@ them, both to stdout and in the test suite log file.
 
 This setting is only meaningful in conjunction with GDB_PARALLEL.
 
+AMD_LOG_TO_FILE
+
+The ROCm runtime prints verbose logs to stderr when the AMD_LOG_LEVEL
+environment variable is set, and these logs interfere with the test
+results.  Set AMD_LOG_TO_FILE on the runtest command line to send them
+to files named amd_log_<pid> in each test case's output directory
+instead.
+
+Example:
+
+	AMD_LOG_LEVEL=4 make check RUNTESTFLAGS="AMD_LOG_TO_FILE=1"
+
 TESTS
 
 This variable is used to specify which set of tests to run.

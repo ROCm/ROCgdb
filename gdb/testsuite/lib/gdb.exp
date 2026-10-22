@@ -8912,6 +8912,16 @@ proc default_gdb_init { test_file_name } {
 
     clean_standard_output_dir
 
+    # If AMD_LOG_TO_FILE is given, send the ROCm runtime's AMD_LOG_LEVEL
+    # output to a file in the test case's output directory instead of
+    # stderr, where it would interfere with the test results.  The
+    # runtime appends "_<pid>" to the file name.  This must come after
+    # clean_standard_output_dir, which removes the output directory.
+    global AMD_LOG_TO_FILE
+    if {[info exists AMD_LOG_TO_FILE]} {
+	setenv AMD_LOG_LEVEL_FILE [standard_output_file amd_log]
+    }
+
     # Make sure that the wrapper is rebuilt
     # with the appropriate multilib option.
     if { $gdb_wrapper_target != [current_target_name] } {
