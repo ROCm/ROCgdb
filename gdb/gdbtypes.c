@@ -5070,8 +5070,6 @@ recursive_dump_type (struct type *type, int spaces)
 	gdb_printf (" private");
       else if (fld.is_protected ())
 	gdb_printf (" protected");
-      else if (fld.is_ignored ())
-	gdb_printf (" ignored");
 
       gdb_printf ("\n");
       if (fld.type () != NULL)

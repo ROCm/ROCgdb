@@ -492,27 +492,19 @@ print_field_values (struct value *value, struct value *outer_value,
 	{
 	  /* Bitfields require special handling, especially due to byte
 	     order problems.  */
-	  if (type->field (i).is_ignored ())
-	    {
-	      fputs_styled (_("<optimized out or zero length>"),
-			    metadata_style.style (), stream);
-	    }
-	  else
-	    {
-	      struct value *v;
-	      int bit_pos = type->field (i).loc_bitpos ();
-	      int bit_size = type->field (i).bitsize ();
-	      value_print_options opts;
+	  struct value *v;
+	  int bit_pos = type->field (i).loc_bitpos ();
+	  int bit_size = type->field (i).bitsize ();
+	  value_print_options opts;
 
-	      v = ada_value_primitive_packed_val
-		    (value, nullptr,
-		     bit_pos / HOST_CHAR_BIT,
-		     bit_pos % HOST_CHAR_BIT,
-		     bit_size, type->field (i).type ());
-	      opts = options;
-	      opts.deref_ref = false;
-	      common_val_print (v, stream, recurse + 1, opts, language);
-	    }
+	  v = ada_value_primitive_packed_val
+	    (value, nullptr,
+	     bit_pos / HOST_CHAR_BIT,
+	     bit_pos % HOST_CHAR_BIT,
+	     bit_size, type->field (i).type ());
+	  opts = options;
+	  opts.deref_ref = false;
+	  common_val_print (v, stream, recurse + 1, opts, language);
 	}
       else
 	{

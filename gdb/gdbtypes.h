@@ -738,17 +738,6 @@ struct field
   void set_virtual ()
   { m_virtual = true; }
 
-  /* True if this field is 'ignored'.  */
-  bool is_ignored () const
-  { return m_ignored; }
-
-  /* Set the field's "ignored" flag.  Note that the 'ignored' bit is
-     deprecated.  It was used by some unknown stabs generator, and has
-     been replaced by the optimized-out approach -- however, it
-     remains because the stabs reader was never updated.  */
-  void set_ignored ()
-  { m_ignored = true; }
-
   union field_location m_loc;
 
   /* For a function or member type, this is 1 if the argument is
@@ -760,8 +749,6 @@ struct field
 
   /* Whether the field is 'virtual'.  */
   bool m_virtual : 1;
-  /* Whether the field is 'ignored'.  */
-  bool m_ignored : 1;
 
   /* Discriminant for union field_location.  */
 
