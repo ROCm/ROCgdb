@@ -205,7 +205,9 @@ int path_expression ()
   /*: END: path_expression :*/
 }
 
-class Anonymous
+class AnonymousBase {};
+struct SameName { int x; };
+class Anonymous : AnonymousBase
 {
 public:
   struct { /* index: 0 */
@@ -229,8 +231,26 @@ public:
 	int i;
 	char j;
       };
+      struct {
+	int k;
+      private:
+	union {
+	  int l;
+	  char m;
+	};
+      } with_name;
     };
   };
+
+  /* The vptr is an artificial private field and must not be listed
+     among the private children.  */
+  virtual ~Anonymous () {}
+
+private:
+  int priv = 9;
+  /* A member whose name matches its type must not be mistaken for a
+     base class.  */
+  struct SameName SameName;
 };
 
 /* Test anonymous structs and unions.  */

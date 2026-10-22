@@ -838,7 +838,4 @@ primary	:	'*' primary		%prec '.'
 /* yylex defined in ada-lex-gen.c: Reads one token, getting characters */
 /* through lexptr.  */
 
-/* The following kludge was found necessary to prevent conflicts between */
-/* defs.h and non-standard stdlib.h files.  */
-#define qsort __qsort__dummy
 #include "ada-lex-gen.c"

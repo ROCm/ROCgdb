@@ -24,7 +24,7 @@
 #include "parser-defs.h"
 
 /* The character we use to represent the completion point.  */
-#define COMPLETE_CHAR '\001'
+constexpr char COMPLETE_CHAR = '\001';
 
 namespace ada_exp_parser
 {

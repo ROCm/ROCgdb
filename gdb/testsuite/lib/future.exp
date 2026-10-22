@@ -359,8 +359,8 @@ proc gdb_default_target_compile_1 {source destfile type options} {
 	    if {[board_info $dest exists rustflags]} {
 		append add_flags " [target_info rustflags]"
 	    }
-	    if {[board_info $dest exists rustflags]} {
-		set compiler [target_info rustflags]
+	    if {[board_info $dest exists rustcompiler]} {
+		set compiler [target_info rustcompiler]
 	    } else {
 		set compiler [find_rustc]
 	    }

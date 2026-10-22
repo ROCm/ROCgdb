@@ -58,17 +58,9 @@
 /* Define to 1 if you have the declaration of `ffs', and to 0 if you don't. */
 #undef HAVE_DECL_FFS
 
-/* Define to 1 if you have the declaration of `perror', and to 0 if you don't.
-   */
-#undef HAVE_DECL_PERROR
-
 /* Define to 1 if you have the declaration of `snprintf', and to 0 if you
    don't. */
 #undef HAVE_DECL_SNPRINTF
-
-/* Define to 1 if you have the declaration of `strstr', and to 0 if you don't.
-   */
-#undef HAVE_DECL_STRSTR
 
 /* Define to 1 if you have the declaration of `strtol', and to 0 if you don't.
    */
@@ -113,17 +105,11 @@
 /* Define if <sys/procfs.h> has elf_fpregset_t. */
 #undef HAVE_ELF_FPREGSET_T
 
-/* Define to 1 if you have the <fcntl.h> header file. */
-#undef HAVE_FCNTL_H
-
 /* Define to 1 if you have the `fdwalk' function. */
 #undef HAVE_FDWALK
 
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
-
-/* Define if <sys/procfs.h> has fpregset_t. */
-#undef HAVE_FPREGSET_T
 
 /* Define to 1 if you have the `getauxval' function. */
 #undef HAVE_GETAUXVAL
@@ -139,9 +125,6 @@
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #undef HAVE_GETTEXT
-
-/* Define if <sys/procfs.h> has gregset_t. */
-#undef HAVE_GREGSET_T
 
 /* Define if you have the iconv() function and it works. */
 #undef HAVE_ICONV
@@ -179,14 +162,8 @@
 /* Define if the target supports PTRACE_PEEKUSR for register access. */
 #undef HAVE_LINUX_USRREGS
 
-/* Define to 1 if you have the <locale.h> header file. */
-#undef HAVE_LOCALE_H
-
 /* Define to 1 if the system has the type `long long'. */
 #undef HAVE_LONG_LONG
-
-/* Define if <thread_db.h> has lwpid_t. */
-#undef HAVE_LWPID_T
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
@@ -221,20 +198,8 @@
 /* Define to 1 if you have the `pread64' function. */
 #undef HAVE_PREAD64
 
-/* Define if <sys/procfs.h> has prfpregset_t. */
-#undef HAVE_PRFPREGSET_T
-
-/* Define if <sys/procfs.h> has prgregset32_t. */
-#undef HAVE_PRGREGSET32_T
-
-/* Define if <sys/procfs.h> has prgregset_t. */
-#undef HAVE_PRGREGSET_T
-
 /* Define to 1 if you have the <proc_service.h> header file. */
 #undef HAVE_PROC_SERVICE_H
-
-/* Define if <thread_db.h> has psaddr_t. */
-#undef HAVE_PSADDR_T
 
 /* Have PTHREAD_PRIO_INHERIT. */
 #undef HAVE_PTHREAD_PRIO_INHERIT
@@ -282,9 +247,6 @@
 /* Define to 1 if you have the `sigaltstack' function. */
 #undef HAVE_SIGALTSTACK
 
-/* Define to 1 if you have the <signal.h> header file. */
-#undef HAVE_SIGNAL_H
-
 /* Define to 1 if you have the `sigprocmask' function. */
 #undef HAVE_SIGPROCMASK
 
@@ -326,9 +288,6 @@
 
 /* Define to 1 if `st_blocks' is a member of `struct stat'. */
 #undef HAVE_STRUCT_STAT_ST_BLOCKS
-
-/* Define to 1 if the target supports __sync_*_compare_and_swap */
-#undef HAVE_SYNC_BUILTINS
 
 /* Define to 1 if you have the <sys/file.h> header file. */
 #undef HAVE_SYS_FILE_H
