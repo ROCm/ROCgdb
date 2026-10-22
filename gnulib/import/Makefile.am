@@ -44,6 +44,7 @@
 #  dirent \
 #  dirfd \
 #  errno \
+#  fcntl-h \
 #  ffs \
 #  fnmatch-gnu \
 #  frexpl \

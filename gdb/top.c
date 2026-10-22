@@ -80,10 +80,6 @@
 # include "tui/tui-io.h"
 #endif
 
-#ifndef O_NOCTTY
-# define O_NOCTTY 0
-#endif
-
 extern void initialize_all_files (void);
 
 /* Default command line prompt.  This is overridden in some configs.  */

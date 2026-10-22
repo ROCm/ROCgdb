@@ -49,6 +49,7 @@
 #  dirent \
 #  dirfd \
 #  errno \
+#  fcntl-h \
 #  ffs \
 #  fnmatch-gnu \
 #  frexpl \
@@ -105,6 +106,7 @@ gl_MODULES([
   dirent
   dirfd
   errno
+  fcntl-h
   ffs
   fnmatch-gnu
   frexpl
