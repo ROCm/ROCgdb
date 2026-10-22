@@ -543,7 +543,7 @@ type
 			    = lookup_typename (pstate->language (),
 					       copy_name ($1).c_str (),
 					       pstate->expression_context_block,
-					       0);
+					       false);
 			}
 
 	;

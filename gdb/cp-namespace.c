@@ -609,7 +609,7 @@ cp_lookup_symbol_imports (const char *scope,
 		  name_copy.erase (prefix_len);
 		  context = lookup_typename (lang,
 					     name_copy.c_str (),
-					     parent, 1);
+					     parent, true);
 		}
 
 	      if (context == NULL)

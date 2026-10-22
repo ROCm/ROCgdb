@@ -2739,7 +2739,7 @@ extern struct type *check_typedef (struct type *);
 extern char *gdb_mangle_name (struct type *, int, int);
 
 /* Lookup a typedef or primitive type named NAME, visible in lexical block
-   BLOCK.  If NOERR is nonzero, return zero if NAME is not suitably
+   BLOCK.  If NOERR is true, return nullptr if NAME is not suitably
    defined.
 
    If this function finds a suitable type then check_typedef is called on
@@ -2747,9 +2747,8 @@ extern char *gdb_mangle_name (struct type *, int, int);
    then the length of the type will be correct.  The original typedef will
    still be returned, not the result of calling check_typedef.  */
 
-extern struct type *lookup_typename (const struct language_defn *language,
-				     const char *name,
-				     const struct block *block, int noerr);
+extern type *lookup_typename (const language_defn *language, const char *name,
+			      const block *block, bool noerr);
 
 extern struct type *lookup_template_type (const char *, struct type *,
 					  const struct block *);

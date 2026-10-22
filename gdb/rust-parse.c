@@ -458,8 +458,8 @@ rust_parser::rust_lookup_type (const char *name)
       return result.symbol->type ();
     }
 
-  type = lookup_typename (language (), name, NULL, 1);
-  if (type != NULL)
+  type = lookup_typename (language (), name, nullptr, true);
+  if (type != nullptr)
     return type;
 
   /* Last chance, try a built-in type.  */

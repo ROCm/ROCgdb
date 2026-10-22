@@ -400,8 +400,10 @@ m2_yylex (void)
 			 SEARCH_VFT, 0).symbol;
     if (sym && sym->loc_class () == LOC_BLOCK)
       return BLOCKNAME;
+
     if (lookup_typename (pstate->language (),
-			 tmp.c_str (), pstate->expression_context_block, 1))
+			 tmp.c_str (), pstate->expression_context_block, true)
+	!= nullptr)
       return TYPENAME;
 
     if(sym)

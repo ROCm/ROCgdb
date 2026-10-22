@@ -589,13 +589,13 @@ c_string_operation::evaluate (struct type *expect_type,
 					exp->gdbarch);
       break;
     case C_WIDE_STRING:
-      type = lookup_typename (exp->language_defn, "wchar_t", NULL, 0);
+      type = lookup_typename (exp->language_defn, "wchar_t", nullptr, false);
       break;
     case C_STRING_16:
-      type = lookup_typename (exp->language_defn, "char16_t", NULL, 0);
+      type = lookup_typename (exp->language_defn, "char16_t", nullptr, false);
       break;
     case C_STRING_32:
-      type = lookup_typename (exp->language_defn, "char32_t", NULL, 0);
+      type = lookup_typename (exp->language_defn, "char32_t", nullptr, false);
       break;
     default:
       internal_error (_("unhandled c_string_type"));

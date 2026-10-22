@@ -1248,7 +1248,7 @@ tyscm_lookup_typename (const char *type_name, const struct block *block)
 	type = lookup_enum (type_name + 5, NULL);
       else
 	type = lookup_typename (current_language,
-				type_name, block, 0);
+				type_name, block, false);
     }
   catch (const gdb_exception &except)
     {

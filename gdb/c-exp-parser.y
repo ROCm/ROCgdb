@@ -1344,19 +1344,14 @@ scalar_type:
 							 "short"); }
 	|	DOUBLE_KEYWORD
 			{ $$ = lookup_typename (pstate->language (),
-						"double",
-						NULL,
-						0); }
+						"double", nullptr, false); }
 	|	FLOAT_KEYWORD
 			{ $$ = lookup_typename (pstate->language (),
-						"float",
-						NULL,
-						0); }
+						"float", nullptr, false); }
 	|	LONG DOUBLE_KEYWORD
 			{ $$ = lookup_typename (pstate->language (),
-						"long double",
-						NULL,
-						0); }
+						"long double", nullptr,
+						false); }
 	|	UNSIGNED type_name
 			{ $$ = lookup_unsigned_typename (pstate->language (),
 							 $2.type->name ()); }

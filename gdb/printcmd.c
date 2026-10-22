@@ -2528,7 +2528,7 @@ printf_wide_c_string (struct ui_file *stream, const char *format,
   size_t len;
   struct gdbarch *gdbarch = value->type ()->arch ();
   struct type *wctype = lookup_typename (current_language,
-					 "wchar_t", NULL, 0);
+					 "wchar_t", nullptr, false);
   int wcwidth = wctype->length ();
   std::optional<gdb::byte_vector> tem_str;
 
@@ -2820,7 +2820,7 @@ ui_printf (const char *arg, struct ui_file *stream)
 	    {
 	      struct gdbarch *gdbarch = val_args[i]->type ()->arch ();
 	      struct type *wctype = lookup_typename (current_language,
-						     "wchar_t", NULL, 0);
+						     "wchar_t", nullptr, false);
 	      struct type *valtype;
 	      const gdb_byte *bytes;
 

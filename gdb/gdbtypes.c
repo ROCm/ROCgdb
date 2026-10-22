@@ -1424,25 +1424,24 @@ type_name_or_error (struct type *type)
 
 /* See gdbtypes.h.  */
 
-struct type *
-lookup_typename (const struct language_defn *language,
-		 const char *name,
-		 const struct block *block, int noerr)
+type *
+lookup_typename (const language_defn *language, const char *name,
+		 const block *block, bool noerr)
 {
-  struct symbol *sym;
-
-  sym = lookup_symbol_in_language (name, block, SEARCH_TYPE_DOMAIN,
-				   language->la_language, NULL).symbol;
-  if (sym != nullptr)
+  if (block_symbol bsym
+	= lookup_symbol_in_language (name, block, SEARCH_TYPE_DOMAIN,
+				     language->la_language, nullptr);
+      bsym.symbol != nullptr)
     {
-      struct type *type = sym->type ();
+      type *type = bsym.symbol->type ();
       /* Ensure the length of TYPE is valid.  */
       check_typedef (type);
       return type;
     }
 
   if (noerr)
-    return NULL;
+    return nullptr;
+
   error (_("No type named %s."), name);
 }
 
@@ -1455,7 +1454,7 @@ lookup_unsigned_typename (const struct language_defn *language,
   uns = "unsigned ";
   uns += name;
 
-  return lookup_typename (language, uns.c_str (), NULL, 0);
+  return lookup_typename (language, uns.c_str (), nullptr, false);
 }
 
 struct type *
@@ -1464,7 +1463,8 @@ lookup_signed_typename (const struct language_defn *language, const char *name)
   /* In C and C++, "char" and "signed char" are distinct types.  */
   if (streq (name, "char"))
     name = "signed char";
-  return lookup_typename (language, name, NULL, 0);
+
+  return lookup_typename (language, name, nullptr, false);
 }
 
 /* Lookup a structure type named "struct NAME",
