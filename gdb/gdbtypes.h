@@ -2495,8 +2495,6 @@ extern struct type *make_unqualified_type (struct type *);
 
 extern struct type *make_atomic_type (struct type *);
 
-extern void replace_type (struct type *, struct type *);
-
 extern struct type *make_type_with_harvard_address_space
   (struct type *type, enum harvard_address_space aspace);
 

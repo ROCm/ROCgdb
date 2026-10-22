@@ -652,52 +652,6 @@ make_atomic_type (struct type *type)
   return make_qualified_type (type, new_flags, nullptr);
 }
 
-/* Replace the contents of ntype with the type *type.  This changes the
-   contents, rather than the pointer for TYPE_MAIN_TYPE (ntype); thus
-   the changes are propagated to all types in the TYPE_CHAIN.
-
-   In order to build recursive types, it's inevitable that we'll need
-   to update types in place --- but this sort of indiscriminate
-   smashing is ugly, and needs to be replaced with something more
-   controlled.  TYPE_MAIN_TYPE is a step in this direction; it's not
-   clear if more steps are needed.  */
-
-void
-replace_type (struct type *ntype, struct type *type)
-{
-  struct type *chain;
-
-  /* These two types had better be in the same objfile.  Otherwise,
-     the assignment of one type's main type structure to the other
-     will produce a type with references to objects (names; field
-     lists; etc.) allocated on an objfile other than its own.  */
-  gdb_assert (ntype->objfile_owner () == type->objfile_owner ());
-
-  *ntype->main_type = *type->main_type;
-
-  /* The type length is not a part of the main type.  Update it for
-     each type on the variant chain.  */
-  chain = ntype;
-  do
-    {
-      /* Assert that this element of the chain has no address-class bits
-	 set in its flags.  Such type variants might have type lengths
-	 which are supposed to be different from the non-address-class
-	 variants.  This assertion shouldn't ever be triggered because
-	 symbol readers which do construct address-class variants don't
-	 call replace_type().  */
-      gdb_assert (chain->address_class () == 0);
-
-      chain->set_length (type->length ());
-      chain = chain->chain;
-    }
-  while (ntype != chain);
-
-  /* Assert that the two types have equivalent instance qualifiers.
-     This should be true for at least all of our debug readers.  */
-  gdb_assert (ntype->instance_flags () == type->instance_flags ());
-}
-
 /* See gdbtypes.h.  */
 
 type *
