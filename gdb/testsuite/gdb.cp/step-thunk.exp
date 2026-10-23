@@ -1,0 +1,55 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Step into virtual calls that go through a this-adjusting thunk.
+# GDB must skip the thunk, which has no line information, and stop in
+# the final overrider.  Under the MSVC C++ ABI these are the adjustor
+# and vtordisp thunks; under the Itanium ABI the first call goes
+# through a non-virtual thunk and the others are direct.
+
+require allow_cplus_tests
+
+standard_testfile .cc
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug c++}]} {
+    return
+}
+
+if {![runto_main]} {
+    return
+}
+
+# Step into the call at the line marked COMMENT and expect to stop in
+# the body of CLASS::METHOD, called from CALLER (a regexp).  The class
+# qualifier is optional in the backtrace because frames of MSVC-ABI
+# programs may show only the method name.
+proc step_into_thunk {comment class method caller name} {
+    with_test_prefix $name {
+	gdb_breakpoint [gdb_get_line_number $comment]
+	gdb_continue_to_breakpoint "call" ".*[string_to_regexp $comment].*"
+	gdb_test "step" ".*[string_to_regexp "${class}::$method body."].*" \
+	    "step into ${class}::$method"
+	gdb_test "bt 2" \
+	    [multi_line \
+		 "#0 +(${class}::)?$method \\(this=$::hex\\) at \[^\r\n\]+" \
+		 "#1 +$::hex in $caller \\(\[^\r\n\]*\\) at \[^\r\n\]+.*"] \
+	    "backtrace"
+    }
+}
+
+step_into_thunk "Call from W's constructor." "W" "g" "(W::)?W" "vtordisp"
+step_into_thunk "Call through B." "M" "f" "main" "adjustor"
+step_into_thunk "Call through V." "W" "g" "main" "virtual base"

@@ -1370,9 +1370,12 @@ is_move_constructor_type (struct type *class_type,
    constructor or destructor is trivial.  For GCC and DWARF5 debug
    information, we can check the calling_convention attribute,
    the 'artificial' flag, the 'defaulted' attribute, and the
-   'deleted' attribute.  */
+   'deleted' attribute.
 
-static struct language_pass_by_ref_info
+   Not static: the MSVC ABI (msvc-abi.c) uses it for the triviality
+   analysis.  */
+
+struct language_pass_by_ref_info
 gnuv3_pass_by_reference (struct type *type)
 {
   int fieldnum, fieldelem;
