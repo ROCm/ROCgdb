@@ -1,4 +1,3 @@
-	# The csr is explicit used, so we need to generate the priv spec
-	# attributes even if the attributes are not set.
+	# The priv spec attributes are not generated even if the csr is used.
 	.option arch, +zicsr
 	csrr a0, 0x0

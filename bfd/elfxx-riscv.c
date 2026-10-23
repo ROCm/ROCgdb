@@ -3988,7 +3988,6 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
   obj_attribute *in_attr;
   obj_attribute *out_attr;
   bool result = true;
-  bool priv_attrs_merged = false;
   const char *sec_name = get_elf_backend_data (ibfd)->obj_attrs_section;
   unsigned int i;
 
@@ -4017,6 +4016,13 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
 	{
 	  switch (i)
 	    {
+	    /* The privileged spec tags are deprecated, drop them.  */
+	    case Tag_RISCV_priv_spec:
+	    case Tag_RISCV_priv_spec_minor:
+	    case Tag_RISCV_priv_spec_revision:
+	      out_attr[i].i = 0;
+	      break;
+
 	    case Tag_RISCV_unaligned_access:
 	      if (out_attr[i].i <= 1)
 		break;
@@ -4073,59 +4079,10 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
 	  }
 	break;
 
+      /* The privileged spec tags are deprecated, ignore them.  */
       case Tag_RISCV_priv_spec:
       case Tag_RISCV_priv_spec_minor:
       case Tag_RISCV_priv_spec_revision:
-	/* If we have handled the privileged elf attributes, then skip it.  */
-	if (!priv_attrs_merged)
-	  {
-	    unsigned int Tag_a = Tag_RISCV_priv_spec;
-	    unsigned int Tag_b = Tag_RISCV_priv_spec_minor;
-	    unsigned int Tag_c = Tag_RISCV_priv_spec_revision;
-	    enum riscv_spec_class in_priv_spec = PRIV_SPEC_CLASS_NONE;
-	    enum riscv_spec_class out_priv_spec = PRIV_SPEC_CLASS_NONE;
-
-	    /* Get the privileged spec class from elf attributes.  */
-	    riscv_get_priv_spec_class_from_numbers (in_attr[Tag_a].i,
-						    in_attr[Tag_b].i,
-						    in_attr[Tag_c].i,
-						    &in_priv_spec);
-	    riscv_get_priv_spec_class_from_numbers (out_attr[Tag_a].i,
-						    out_attr[Tag_b].i,
-						    out_attr[Tag_c].i,
-						    &out_priv_spec);
-
-	    /* Allow to link the object without the privileged specs.  */
-	    if (out_priv_spec == PRIV_SPEC_CLASS_NONE)
-	      {
-		out_attr[Tag_a].i = in_attr[Tag_a].i;
-		out_attr[Tag_b].i = in_attr[Tag_b].i;
-		out_attr[Tag_c].i = in_attr[Tag_c].i;
-	      }
-	    else if (in_priv_spec != PRIV_SPEC_CLASS_NONE
-		     && in_priv_spec != out_priv_spec)
-	      {
-		/* The abandoned privileged spec v1.9.1 can not be linked with
-		   others since the conflicts.  Keep the check since compatible
-		   issue.  */
-		if (in_priv_spec == PRIV_SPEC_CLASS_1P9P1
-		    || out_priv_spec == PRIV_SPEC_CLASS_1P9P1)
-		  {
-		    _bfd_error_handler
-		      (_("warning: privileged spec version 1.9.1 can not be "
-			 "linked with other spec versions"));
-		  }
-
-		/* Update the output privileged spec to the newest one.  */
-		if (in_priv_spec > out_priv_spec)
-		  {
-		    out_attr[Tag_a].i = in_attr[Tag_a].i;
-		    out_attr[Tag_b].i = in_attr[Tag_b].i;
-		    out_attr[Tag_c].i = in_attr[Tag_c].i;
-		  }
-	      }
-	    priv_attrs_merged = true;
-	  }
 	break;
 
       case Tag_RISCV_unaligned_access:

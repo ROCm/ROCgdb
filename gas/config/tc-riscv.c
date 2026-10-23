@@ -220,7 +220,7 @@ struct riscv_set_options
   int rvc; /* Generate RVC code.  */
   int relax; /* Emit relocs the linker is allowed to relax.  */
   int exact; /* Emit instructions without compression or relaxation.  */
-  int arch_attr; /* Emit architecture and privileged elf attributes.  */
+  int arch_attr; /* Emit architecture elf attribute.  */
   int csr_check; /* Enable the CSR checking.  */
 };
 
@@ -436,9 +436,6 @@ const char FLT_CHARS[] = "rRsSfFdDxXpPhHbB";
 
 /* Indicate ELF attributes are explicitly set.  */
 static bool explicit_attr = false;
-
-/* Indicate CSR or priv instructions are explicitly used.  */
-static bool explicit_priv_attr = false;
 
 static char *expr_parse_end;
 
@@ -2870,28 +2867,6 @@ riscv_csr_read_only_check (insn_t insn)
   return true;
 }
 
-/* Return true if it is a privileged instruction.  Otherwise, return false.
-
-   uret is actually a N-ext instruction.  So it is better to regard it as
-   an user instruction rather than the priv instruction.
-
-   hret is used to return from traps in H-mode.  H-mode is removed since
-   the v1.10 priv spec, but probably be added in the new hypervisor spec.
-   Therefore, hret should be controlled by the hypervisor spec rather than
-   priv spec in the future.
-
-   dret is defined in the debug spec, so it should be checked in the future,
-   too.  */
-
-static bool
-riscv_is_priv_insn (insn_t insn)
-{
-  return (((insn ^ MATCH_SRET) & MASK_SRET) == 0
-	  || ((insn ^ MATCH_MRET) & MASK_MRET) == 0
-	  || ((insn ^ MATCH_SFENCE_VMA) & MASK_SFENCE_VMA) == 0
-	  || ((insn ^ MATCH_WFI) & MASK_WFI) == 0);
-}
-
 static symbolS *deferred_sym_rootP;
 static symbolS *deferred_sym_lastP;
 /* Since symbols can't easily be freed, try to recycle ones which weren't
@@ -3007,9 +2982,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 					 : insn->match) == 2
 		      && !riscv_opts.rvc)
 		    break;
-
-		  if (riscv_is_priv_insn (ip->insn_opcode))
-		    explicit_priv_attr = true;
 
 		  /* Check if we write a read-only CSR by the CSR
 		     instruction.  */
@@ -3570,7 +3542,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 	    case 'E': /* Control register.  */
 	      insn_with_csr = true;
-	      explicit_priv_attr = true;
 	      if (reg_lookup (&asarg, RCLASS_CSR, &regno))
 		INSERT_OPERAND (CSR, *ip, regno);
 	      else
@@ -5895,58 +5866,17 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
   demand_empty_rest_of_line ();
 }
 
-/* Update architecture and privileged elf attributes.  If we don't set
-   them, then try to output the default ones.  */
+/* Update architecture elf attribute.  If we don't set it, then try to
+   output the default one.  */
 
 static void
 riscv_write_out_attrs (void)
 {
-  const char *priv_str, *p;
-  /* versions[0]: major version.
-     versions[1]: minor version.
-     versions[2]: revision version.  */
-  unsigned versions[3] = {0}, number = 0;
-  unsigned int i;
-
   /* Re-write architecture elf attribute.  */
   if (!bfd_elf_add_proc_attr_string (stdoutput, Tag_RISCV_arch, file_arch_str))
     as_fatal (_("error adding attribute: %s"),
 	      bfd_errmsg (bfd_get_error ()));
   free ((void *) file_arch_str);
-
-  /* Don't generate privileged elf attributes when no CSR and privileged
-     instructions are used.  */
-  if (!explicit_priv_attr)
-    return;
-
-  RISCV_GET_PRIV_SPEC_NAME (priv_str, default_priv_spec);
-  p = priv_str;
-  for (i = 0; *p; ++p)
-    {
-      if (*p == '.' && i < 3)
-       {
-         versions[i++] = number;
-         number = 0;
-       }
-      else if (ISDIGIT (*p))
-       number = (number * 10) + (*p - '0');
-      else
-       {
-         as_bad (_("internal: bad RISC-V privileged spec (%s)"), priv_str);
-         return;
-       }
-    }
-  versions[i] = number;
-
-  /* Re-write privileged elf attributes.  */
-  if (!bfd_elf_add_proc_attr_int (stdoutput, Tag_RISCV_priv_spec,
-				  versions[0])
-      || !bfd_elf_add_proc_attr_int (stdoutput, Tag_RISCV_priv_spec_minor,
-				     versions[1])
-      || !bfd_elf_add_proc_attr_int (stdoutput, Tag_RISCV_priv_spec_revision,
-				     versions[2]))
-    as_fatal (_("error adding attribute: %s"),
-	      bfd_errmsg (bfd_get_error ()));
 }
 
 /* Add the default contents for the .riscv.attributes section.  */

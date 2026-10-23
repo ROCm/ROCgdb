@@ -84,9 +84,8 @@ Don't do linker relaxations.
 Generate the default contents for the riscv elf attribute section if the
 .attribute directives are not set.  This section is used to record the
 information that a linker or runtime loader needs to check compatibility.
-This information includes ISA string, stack alignment requirement, unaligned
-memory accesses, and the major, minor and revision version of privileged
-specification.
+This information includes ISA string, stack alignment requirement and
+unaligned memory accesses.
 
 @cindex @samp{-mno-arch-attr} option, RISC-V
 @item -mno-arch-attr
@@ -765,10 +764,8 @@ memory accesses, and 1 for files that do allow unaligned memory accesses.
 @item Tag_RISCV_priv_spec_minor (10)
 @item Tag_RISCV_priv_spec_revision (12)
 Tag_RISCV_priv_spec contains the major/minor/revision version information of
-the privileged specification.  The assembler ignores these tags when set by
-@code{.attribute}, and only emits version 1.13 when CSR or privileged
-instructions are used.  The linker keeps the newest version when object
-files of different privileged specification versions are merged.
+the privileged specification.  These tags are deprecated by the RISC-V psABI.
+The assembler never emits them, and the linker ignores them.
 
 @end table
 
