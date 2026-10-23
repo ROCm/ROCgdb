@@ -908,7 +908,7 @@ value_dynamic_cast (struct type *type, struct value *arg)
      most-derived object.  */
   if (resolved_type->code () == TYPE_CODE_PTR
       && resolved_type->target_type ()->code () == TYPE_CODE_VOID)
-    return value_at_lazy (type, addr);
+    return value_from_pointer (type, addr);
 
   tem = value_at (resolved_type->target_type (), addr);
   type = (is_ref
