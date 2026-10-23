@@ -32,6 +32,8 @@ if {[istarget bpf*-*-*]} {
     run_dump_test alu-pseudoc
     run_dump_test alu32
     run_dump_test alu32-pseudoc
+    run_dump_test hmul
+    run_dump_test hmul-pseudoc
     run_dump_test mem
     run_dump_test mem-pseudoc
     run_dump_test jump
@@ -75,6 +77,8 @@ if {[istarget bpf*-*-*]} {
     run_dump_test alu-be-pseudoc
     run_dump_test alu32-be
     run_dump_test alu32-be-pseudoc
+    run_dump_test hmul-be
+    run_dump_test hmul-be-pseudoc
     run_dump_test mem-be
     run_dump_test mem-be-pseudoc
     run_dump_test jump-be

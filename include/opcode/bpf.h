@@ -44,6 +44,7 @@ typedef uint64_t bpf_insn_word;
 #define BPF_V2 0x2
 #define BPF_V3 0x3
 #define BPF_V4 0x4
+#define BPF_V5 0x5
 #define BPF_XBPF 0xf
 
 /* Masks for the several instruction fields in a BPF instruction.
@@ -133,6 +134,8 @@ typedef uint64_t bpf_insn_word;
    even if these are multi-byte or infra-byte.  Bleh.  */
 
 #define BPF_OFFSET16_SDIVMOD ((uint64_t)0x1 << 32)
+#define BPF_OFFSET16_UHMUL ((uint64_t) 0x1 << 32)
+#define BPF_OFFSET16_SHMUL ((uint64_t) 0x2 << 32)
 #define BPF_OFFSET16_MOVS8 ((uint64_t)8 << 32)
 #define BPF_OFFSET16_MOVS16 ((uint64_t)16 << 32)
 #define BPF_OFFSET16_MOVS32 ((uint64_t)32 << 32)
@@ -176,6 +179,7 @@ enum bpf_insn_id
   BPF_INSN_LDDW,
   /* ALU instructions.  */
   BPF_INSN_ADDR, BPF_INSN_ADDI, BPF_INSN_SUBR, BPF_INSN_SUBI,
+  BPF_INSN_UHMULR, BPF_INSN_UHMULI, BPF_INSN_SHMULR, BPF_INSN_SHMULI,
   BPF_INSN_MULR, BPF_INSN_MULI, BPF_INSN_SDIVR, BPF_INSN_SDIVI,
   BPF_INSN_SMODR, BPF_INSN_SMODI, BPF_INSN_DIVR, BPF_INSN_DIVI,
   BPF_INSN_MODR, BPF_INSN_MODI, BPF_INSN_ORR, BPF_INSN_ORI,
