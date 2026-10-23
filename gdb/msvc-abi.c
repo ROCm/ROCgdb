@@ -33,7 +33,12 @@
 #include "valprint.h"
 #include "gdbcore.h"
 
-/* "??0" constructor, "??$?0" template constructor.  */
+/* "??0" constructor, "??$?0" template constructor.
+
+   FIXME: The name checks in this file use raw MSVC mangling prefixes.
+   Once GDB has an MSVC demangler, recognise these special members from
+   the demangled name instead, which also covers forms not listed
+   here.  */
 
 static enum ctor_kinds
 msvc_is_constructor_name (const char *name)
@@ -300,7 +305,12 @@ msvc_inheritance_model (struct type *type)
    is incomplete where the pointer type is formed.  This is called while
    the debug info is read, when the class's bases may not be known yet,
    so return the single inheritance size here and check the model when
-   the pointer is used (msvc_check_single_method_ptr).  */
+   the pointer is used (msvc_check_single_method_ptr).
+
+   FIXME: sizeof gives 8 for multiple and virtual inheritance pointers,
+   which are 16 bytes in the inferior.  Fixing this needs the model to
+   be decided after the class is complete, e.g. when the pointer type
+   is resolved by check_typedef.  */
 
 static int
 msvc_method_ptr_size (struct type *type)
@@ -376,6 +386,13 @@ msvc_print_method_ptr (const gdb_byte *contents,
       return;
     }
 
+  /* FIXME: For a virtual function this prints the raw vcall thunk
+     symbol (e.g. "??_9S@@$B7AA").  Gnu-v3 prints "&virtual S::g()";
+     doing the same needs the vtable slot from the thunk (the
+     "$B<offset>" part of its name, or a decode of its code, see
+     amd64-windows-tdep.c) mapped back to the virtual function.  Once
+     GDB has an MSVC demangler, at least print the demangled thunk
+     name.  */
   const value_print_options &opts = get_user_print_options ();
   print_address_demangle (opts, gdbarch, func_addr, stream, demangle);
 }
