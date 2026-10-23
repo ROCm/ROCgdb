@@ -26,6 +26,11 @@ Full documentation for ROCgdb is available at
 - If a GPU thread caused SIGSEGV, which is by default reported imprecisely,
   but also hit a breakpoint, ROCgdb would hide SIGSEGV and show the
   breakpoint hit.  This is fixed to prioritize and show SIGSEGV instead.
+- Fixed the problem where dereferencing a generic pointer in a HIP
+  program, as in `print *ptr`, was giving a "Cannot access memory..."
+  error.  Related to that, bugs involving casting and assignment of
+  pointer variables and `#`-specified address-space addresses
+  (e.g. `local#0x1234`) are fixed.
 
 ## ROCgdb-16.3 for ROCm-10.1
 
