@@ -24,8 +24,9 @@ if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug c++}]} {
 proc do_typeid_tests {started} {
     global hex
 
-    # We might see the standard type or gdb's internal type.
-    set type_re "(std::type_info|gdb_gnu_v3_type_info)"
+    # We might see the standard type or gdb's internal type.  Under the
+    # MSVC runtime, type_info is in the global namespace.
+    set type_re "((std::)?type_info|gdb_gnu_v3_type_info|gdb_msvc_type_info)"
 
     # The typeinfo for some of these variables may or may not be present
     # before the inferior has started.  Mark these by listing them in
