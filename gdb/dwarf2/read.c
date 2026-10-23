@@ -527,10 +527,6 @@ static const char *read_indirect_string (dwarf2_per_objfile *per_objfile, bfd *,
 					 const gdb_byte *, const unit_head *,
 					 unsigned int *);
 
-static unrelocated_addr read_addr_index_from_leb128 (struct dwarf2_cu *,
-						     const gdb_byte *,
-						     unsigned int *);
-
 static const char *read_stub_str_index (struct dwarf2_cu *cu,
 					ULONGEST str_index);
 
@@ -572,11 +568,6 @@ static struct type *read_subrange_index_type (struct die_info *die,
 					      struct dwarf2_cu *cu);
 
 static struct type *die_type (struct die_info *, struct dwarf2_cu *);
-
-static bool need_gnat_info (struct dwarf2_cu *);
-
-static struct type *die_descriptive_type (struct die_info *,
-					  struct dwarf2_cu *);
 
 static void set_descriptive_type (struct type *, struct die_info *,
 				  struct dwarf2_cu *);
@@ -629,17 +620,6 @@ static void get_scope_pc_bounds (struct die_info *,
 static void dwarf2_record_block_ranges (struct die_info *, struct block *,
 					struct dwarf2_cu *);
 
-static void dwarf2_attach_fields_to_type (struct field_info *,
-					  struct type *, struct dwarf2_cu *);
-
-static void dwarf2_add_member_fn (struct field_info *,
-				  struct die_info *, struct type *,
-				  struct dwarf2_cu *);
-
-static void dwarf2_attach_fn_fields_to_type (struct field_info *,
-					     struct type *,
-					     struct dwarf2_cu *);
-
 static void process_structure_scope (struct die_info *, struct dwarf2_cu *);
 
 static void read_common_block (struct die_info *, struct dwarf2_cu *);
@@ -648,14 +628,9 @@ static void read_namespace (struct die_info *die, struct dwarf2_cu *);
 
 static void read_module (struct die_info *die, struct dwarf2_cu *cu);
 
-static struct using_direct **using_directives (struct dwarf2_cu *cu);
-
 static void read_import_statement (struct die_info *die, struct dwarf2_cu *);
 
 static bool read_alias (struct die_info *die, struct dwarf2_cu *cu);
-
-static struct type *read_module_type (struct die_info *die,
-				      struct dwarf2_cu *cu);
 
 static const char *namespace_name (struct die_info *die,
 				   int *is_anonymous, struct dwarf2_cu *);
@@ -692,13 +667,6 @@ static struct die_info *follow_die_ref_or_sig (struct die_info *,
 static struct die_info *follow_die_ref (struct die_info *,
 					const struct attribute *,
 					struct dwarf2_cu **);
-
-static void fill_in_sig_entry_from_dwo_entry (dwarf2_per_objfile *per_objfile,
-					      signatured_type *sig_entry,
-					      dwo_unit *dwo_entry);
-
-static void fill_in_sig_entry_from_per_cu_hint
-  (dwarf2_per_objfile &per_objfile, signatured_type &sig_type);
 
 static struct die_info *follow_die_sig (struct die_info *,
 					const struct attribute *,
