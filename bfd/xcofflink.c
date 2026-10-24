@@ -4135,6 +4135,11 @@ bfd_xcoff_build_dynamic_sections (bfd *output_bfd,
   bfd *sub;
   asection *sec;
 
+  /* The AIX emulations allow a linker script to select a non-XCOFF
+     output format, which uses a generic hash table.  */
+  if (bfd_get_flavour (output_bfd) != bfd_target_xcoff_flavour)
+    return true;
+
   ldinfo = &(xcoff_hash_table (info)->ldinfo);
 
   if (xcoff_hash_table (info)->loader_section
