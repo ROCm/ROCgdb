@@ -4141,9 +4141,10 @@ bfd_xcoff_build_dynamic_sections (bfd *output_bfd,
       && !xcoff_build_loader_section (ldinfo))
     return false;
 
-  /* Allocate space for the magic sections.  */
+  /* Allocate space for the magic sections.  They are created only
+     when an XCOFF input is added, so any of them may be NULL.  */
   sec = xcoff_hash_table (info)->linkage_section;
-  if (sec->size > 0)
+  if (sec != NULL && sec->size != 0)
     {
       sec->contents = bfd_zalloc (output_bfd, sec->size);
       if (sec->contents == NULL)
@@ -4151,7 +4152,7 @@ bfd_xcoff_build_dynamic_sections (bfd *output_bfd,
       sec->alloced = 1;
     }
   sec = xcoff_hash_table (info)->toc_section;
-  if (sec->size > 0)
+  if (sec != NULL && sec->size != 0)
     {
       sec->contents = bfd_zalloc (output_bfd, sec->size);
       if (sec->contents == NULL)
@@ -4159,7 +4160,7 @@ bfd_xcoff_build_dynamic_sections (bfd *output_bfd,
       sec->alloced = 1;
     }
   sec = xcoff_hash_table (info)->descriptor_section;
-  if (sec->size > 0)
+  if (sec != NULL && sec->size != 0)
     {
       sec->contents = bfd_zalloc (output_bfd, sec->size);
       if (sec->contents == NULL)
