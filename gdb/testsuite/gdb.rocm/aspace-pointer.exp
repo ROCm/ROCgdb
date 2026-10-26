@@ -49,6 +49,12 @@ with_rocm_gpu_lock {
 	gdb_test "print *priv_ptr0" "Cannot access memory.*"
     }
 
+    with_test_prefix "reference type" {
+	gdb_test "print priv_var_ref" "= \\(short &\\) @generic#$hex: 42"
+	gdb_test "print &priv_var_ref" "= \\(short \\*\\) generic#$hex"
+	gdb_test "print *(&priv_var_ref)" "= 42"
+    }
+
     with_test_prefix "sizeof" {
 	gdb_test "print sizeof_generic_ptr == sizeof(generic_ptr0)" "= true"
 	gdb_test "print sizeof_local_ptr == sizeof(local_ptr0)" "= true"
