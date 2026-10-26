@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+load_lib completion-support.exp
 
 standard_testfile macscp1.c
 set objfile [standard_output_file ${testfile}.o]
@@ -750,3 +751,29 @@ gdb_test "macro expand siginfo.si_addr" \
 gdb_test "print __FILE__" " = \".*macscp1.c\""
 gdb_test "print __LINE__" \
     " = [gdb_get_line_number {stopping point for line test}]"
+
+# Regression test for bug 34876.
+
+with_test_prefix "max-completions reached" {
+    with_set max-completions 2 {
+	# Macros from the program, visited by foreach_macro_in_scope.  All
+	# the BEFORE_<func> macros are in scope at this point.  The macros
+	# are visited in alphabetical order.
+	test_gdb_complete_multiple "macro expand " "BEFORE_" "MACSCP1_" {
+	    "BEFORE_MACSCP1_1"
+	    "BEFORE_MACSCP1_2"
+	} "" "" true "program macros"
+
+	# User-defined macros, visited by foreach_macro.
+	gdb_test_no_output "macro define USER_MACRO_A 1"
+	gdb_test_no_output "macro define USER_MACRO_B 2"
+	gdb_test_no_output "macro define USER_MACRO_C 3"
+	test_gdb_complete_multiple "macro expand " "USER_MACRO_" "" {
+	    "USER_MACRO_A"
+	    "USER_MACRO_B"
+	} "" "" true "user macros"
+	gdb_test_no_output "macro undef USER_MACRO_A"
+	gdb_test_no_output "macro undef USER_MACRO_B"
+	gdb_test_no_output "macro undef USER_MACRO_C"
+    }
+}

@@ -945,22 +945,31 @@ struct macro_for_each_data
   gdb::function_view<macro_callback_fn> fn;
   struct macro_source_file *file;
   int line;
+  std::exception_ptr exception;
 };
 
 /* Helper function for macro_for_each.  */
 static int
-foreach_macro (splay_tree_node node, void *arg)
+foreach_macro (splay_tree_node node, void *arg) noexcept
 {
-  struct macro_for_each_data *datum = (struct macro_for_each_data *) arg;
-  struct macro_key *key = (struct macro_key *) node->key;
-  struct macro_definition *def;
+  auto datum = static_cast<macro_for_each_data *> (arg);
 
-  std::string key_fullname = macro_source_fullname (key->start_file);
-  def = fixup_definition (key_fullname.c_str (), key->start_line,
-			  (struct macro_definition *) node->value);
+  try
+    {
+      auto key = reinterpret_cast<macro_key *> (node->key);
+      auto value = reinterpret_cast<macro_definition *> (node->value);
+      std::string key_fullname = macro_source_fullname (key->start_file);
+      macro_definition *def = fixup_definition (key_fullname.c_str (),
+						key->start_line, value);
 
-  datum->fn (key->name, def, key->start_file, key->start_line);
-  return 0;
+      datum->fn (key->name, def, key->start_file, key->start_line);
+      return 0;
+    }
+  catch (...)
+    {
+      datum->exception = std::current_exception ();
+      return 1;
+    }
 }
 
 /* Call FN for every macro in TABLE.  */
@@ -971,31 +980,42 @@ macro_for_each (struct macro_table *table,
   struct macro_for_each_data datum;
 
   datum.fn = fn;
-  datum.file = NULL;
+  datum.file = nullptr;
   datum.line = 0;
   splay_tree_foreach (table->definitions, foreach_macro, &datum);
+
+  if (datum.exception != nullptr)
+    std::rethrow_exception (datum.exception);
 }
 
 static int
-foreach_macro_in_scope (splay_tree_node node, void *info)
+foreach_macro_in_scope (splay_tree_node node, void *info) noexcept
 {
-  struct macro_for_each_data *datum = (struct macro_for_each_data *) info;
-  struct macro_key *key = (struct macro_key *) node->key;
-  struct macro_definition *def;
+  auto datum = static_cast<macro_for_each_data *> (info);
 
-  std::string datum_fullname = macro_source_fullname (datum->file);
-  def = fixup_definition (datum_fullname.c_str (), datum->line,
-			  (struct macro_definition *) node->value);
+  try
+    {
+      auto key = reinterpret_cast<macro_key *> (node->key);
+      auto value = reinterpret_cast<macro_definition *> (node->value);
+      std::string datum_fullname = macro_source_fullname (datum->file);
+      macro_definition *def = fixup_definition (datum_fullname.c_str (),
+						datum->line, value);
 
-  /* See if this macro is defined before the passed-in line, and
-     extends past that line.  */
-  if (compare_locations (key->start_file, key->start_line,
-			 datum->file, datum->line) < 0
-      && (!key->end_file
-	  || compare_locations (key->end_file, key->end_line,
-				datum->file, datum->line) >= 0))
-    datum->fn (key->name, def, key->start_file, key->start_line);
-  return 0;
+      /* See if this macro is defined before the passed-in line, and
+	 extends past that line.  */
+      if (compare_locations (key->start_file, key->start_line,
+			     datum->file, datum->line) < 0
+	  && (key->end_file == nullptr
+	      || compare_locations (key->end_file, key->end_line,
+				    datum->file, datum->line) >= 0))
+	datum->fn (key->name, def, key->start_file, key->start_line);
+      return 0;
+    }
+  catch (...)
+    {
+      datum->exception = std::current_exception ();
+      return 1;
+    }
 }
 
 /* Call FN for every macro is visible in SCOPE.  */
@@ -1010,6 +1030,9 @@ macro_for_each_in_scope (struct macro_source_file *file, int line,
   datum.line = line;
   splay_tree_foreach (file->table->definitions,
 		      foreach_macro_in_scope, &datum);
+
+  if (datum.exception != nullptr)
+    std::rethrow_exception (datum.exception);
 }
 
 
