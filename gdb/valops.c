@@ -1631,13 +1631,24 @@ value_addr (struct value *arg1)
 	  /* Copy the value, but change the type from (T&) to (T*).  We
 	     keep the same location information, which is efficient, and
 	     allows &(&X) to get the location containing the reference.
-	     Do the same to its enclosing type for consistency.  */
+	     Do the same to its enclosing type for consistency.
+	     Preserve the address space information.  */
 	  struct type *type_ptr
 	    = lookup_pointer_type (type->target_type ());
+
+	  if (arch_addr_space_id aspace = type->address_space ();
+	      aspace != 0)
+	    type_ptr = make_type_with_address_space (type_ptr, aspace);
+
 	  struct type *enclosing_type
 	    = check_typedef (arg1->enclosing_type ());
 	  struct type *enclosing_type_ptr
 	    = lookup_pointer_type (enclosing_type->target_type ());
+
+	  if (arch_addr_space_id aspace = enclosing_type->address_space ();
+	      aspace != 0)
+	    enclosing_type_ptr
+	      = make_type_with_address_space (enclosing_type_ptr, aspace);
 
 	  arg2 = arg1->copy ();
 	  arg2->deprecated_set_type (type_ptr);
