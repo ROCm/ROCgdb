@@ -50,7 +50,11 @@
 using namespace expr;
 using namespace ada_exp_parser;
 
-static int yylex (void);
+static int
+yylex ()
+{
+  return ada_parser->lex ();
+}
 
 %}
 
@@ -834,8 +838,3 @@ primary	:	'*' primary		%prec '.'
 	;
 
 %%
-
-/* yylex defined in ada-lex-gen.c: Reads one token, getting characters */
-/* through lexptr.  */
-
-#include "ada-lex-gen.c"

@@ -14,7 +14,6 @@ ECHO_GEN_XML_BUILTIN_GENERATED = \
 ECHO_INIT_C = @echo "  GEN    init.c"
 ECHO_SIGN =   @echo "  SIGN   gdb";
 ECHO_YACC =   @echo "  YACC   $@";
-ECHO_LEX  =   @echo "  LEX    $@";
 ECHO_AR =     @echo "  AR     $@";
 ECHO_RANLIB = @echo "  RANLIB $@";
 ECHO_DVIPS =  @echo "  DVIPS    $@";

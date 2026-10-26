@@ -128,11 +128,6 @@ COMPILE = $(ECHO_CXX) $(COMPILE.pre) $(INTERNAL_CFLAGS) $(CXXFLAGS) \
 
 YACC = @YACC@
 
-# This is used to rebuild ada-lex-gen.c from ada-lex.l.  If the program
-# is not defined, but ada-lex-gen.c is present, compilation will continue,
-# possibly with a warning.
-FLEX = flex
-
 YLWRAP = $(srcdir)/../ylwrap
 
 # where to find makeinfo, preferably one designed for texinfo-2
@@ -2128,7 +2123,6 @@ REQUIRED_SUBDIRS = doc | testsuite | data-directory
 # Parser intermediate files.
 YYFILES = \
 	ada-exp-parser-gen.c \
-	ada-lex-gen.c \
 	c-exp-parser-gen.c \
 	cp-name-parser-gen.c \
 	d-exp-parser-gen.c \
@@ -2137,11 +2131,9 @@ YYFILES = \
 	m2-exp-parser-gen.c \
 	p-exp-parser-gen.c
 
-# ada-lex-gen.c is included by another file, so it shouldn't wind up as
-# a .o itself.
-YYOBJ = $(filter-out ada-lex-gen.o,$(patsubst %.c,%.o,$(YYFILES)))
+YYOBJ = $(patsubst %.c,%.o,$(YYFILES))
 
-# The headers bison/byacc and flex generate alongside the files above.
+# The headers bison/byacc generate alongside the files above.
 YYHFILES = $(patsubst %-gen.c,%-gen.h,$(YYFILES))
 
 # Files that used to be generated in the build directory (for builds from git
@@ -2160,7 +2152,6 @@ DISTSTUFF = $(YYFILES) $(YYHFILES)
 
 # All generated files which can be included by another file.
 generated_files = \
-	ada-lex-gen.c \
 	config.h \
 	jit-reader.h \
 	$(YYHFILES) \
@@ -2783,7 +2774,7 @@ po/$(PACKAGE).pot: force
 
 
 #
-# YACC/LEX dependencies
+# YACC dependencies
 #
 # LANG-exp-parser-gen.c is generated in objdir from LANG-exp-parser.y if
 # it doesn't exist in srcdir, then compiled in objdir to
@@ -2794,23 +2785,21 @@ po/$(PACKAGE).pot: force
 # Strictly speaking c-exp-parser-gen.c should therefore depend on
 # Makefile.in, but that was a pretty big annoyance.
 
-# Cancel make's built-in rules for producing a .c file from a .y or .l
+# Cancel make's built-in rules for producing a .c file from a .y
 # file, to avoid them producing a <build>/foo-exp.c file from
 # <source>/foo-exp.y, when we also have a hand-written <source>/foo-exp.c
 # file.
 %.c: %.y
-%.c: %.l
 
 # Post-process a file produced by a parser generator, see the script
 # for details.
 POST_PROCESS_PARSER_OUTPUT_SH = $(srcdir)/post-process-parser-output.sh
 POST_PROCESS_PARSER_OUTPUT = $(SHELL) $(POST_PROCESS_PARSER_OUTPUT_SH)
 
-# The prefix to give to the symbols each parser or lexer generator
+# The prefix to give to the symbols each parser generator
 # produces, so that they can coexist in the same program.  There is no
 # rule tying it to the file name, so spell it out for each one.
 YY_PREFIX_ada-exp-parser = ada_yy
-YY_PREFIX_ada-lex = ada_yy
 YY_PREFIX_c-exp-parser = c_yy
 YY_PREFIX_cp-name-parser = cpname_yy
 YY_PREFIX_d-exp-parser = d_yy
@@ -2828,15 +2817,6 @@ YY_PREFIX_p-exp-parser = pascal_yy
 	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $*-gen.c.tmp > $*-gen.c.new \
 		&& rm -f $*-gen.c.tmp && mv $*-gen.c.new $*-gen.c
 	@$(POST_PROCESS_PARSER_OUTPUT) bison $* < $*-gen.h.tmp > $*-gen.h.new \
-		&& rm -f $*-gen.h.tmp && mv $*-gen.h.new $*-gen.h
-
-%-gen.c %-gen.h: %.l $(POST_PROCESS_PARSER_OUTPUT_SH)
-	$(ECHO_LEX) $(FLEX) -t -P $(YY_PREFIX_$*) \
-		--header-file=$*-gen.h.tmp $< > $*-gen.c.tmp \
-			|| (rm -f $*-gen.c.tmp $*-gen.h.tmp; false)
-	@$(POST_PROCESS_PARSER_OUTPUT) flex $* < $*-gen.c.tmp > $*-gen.c.new \
-		&& rm -f $*-gen.c.tmp && mv $*-gen.c.new $*-gen.c
-	@$(POST_PROCESS_PARSER_OUTPUT) flex $* < $*-gen.h.tmp > $*-gen.h.new \
 		&& rm -f $*-gen.h.tmp && mv $*-gen.h.new $*-gen.h
 
 # XML rules

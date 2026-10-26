@@ -7,8 +7,6 @@
 
 /ada-exp-parser-gen.c
 /ada-exp-parser-gen.h
-/ada-lex-gen.c
-/ada-lex-gen.h
 /c-exp-parser-gen.c
 /c-exp-parser-gen.h
 /cp-name-parser-gen.c

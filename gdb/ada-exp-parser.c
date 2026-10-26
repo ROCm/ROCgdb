@@ -20,11 +20,13 @@
 #include "ada-exp-parser.h"
 #include "ada-exp-parser-gen.h"
 #include "ada-lang.h"
-#include "ada-lex-gen.h"
 #include "block.h"
 #include "cli/cli-style.h"
+#include "gdbsupport/gdb_regex.h"
 #include "gdbsupport/scoped_restore.h"
+#include "gdbsupport/selftest.h"
 #include "parser-defs.h"
+#include "inferior.h"
 
 using namespace expr;
 
@@ -38,8 +40,78 @@ int ada_yyparse ();
 
 extern int ada_yydebug;
 
+/* A regular expression matching Ada numbers.  */
+
+static const char number_regex_text[] =
+  /* We have to match the first character.  */
+  "^"
+
+  /* Hex number.  */
+  "(0x[0-9a-f][0-9a-f]*)"
+#define HEX_NUMBER 1
+  "|"
+
+  /* Floating point number with positive exponent.  */
+  "([0-9][0-9_]*e[+]?[0-9][0-9_]*)"
+#define FLOAT_POSEXP 2
+  "|"
+
+  /* Floating point number with optional exponent.  */
+  "([0-9][0-9_]*\\.[0-9][0-9_]*(e[+-][0-9][0-9_]*)?)"
+#define FLOAT_OPTEXP 3
+  "|"
+
+  /* Floating point numbers but in another base.  The "llf" is a gdb
+     extension, see lex_number.  The regexp is a little funny so that
+     it can match only 0, 1, or 2 "l"s.  */
+  "([0-9][0-9_]*(l?l?f)?#[0-9a-f][0-9a-f_]*#(e[+]?[0-9][0-9_]*)?)"
+#define FLOAT_EXTENSION 5
+#define EXPONENT 7
+  "|"
+
+  /* Based real literals.  */
+  "([0-9][0-9_]*#[0-9a-f][0-9a-f_]*\\.[0-9a-f][0-9a-f_]*#(e[+-][0-9][0-9_]*)?)"
+#define BASED_REAL 8
+  "|"
+
+  /* Lowly integers.  */
+  "[0-9][0-9_]*";
+
+/* The number of subexpressions to allocate space for, including the
+   "0th" whole match subexpression.  */
+#define NUM_SUBEXPRESSIONS 10
+
+/* The compiled number-matching regex.  */
+
+static compiled_regex number_regex (number_regex_text,
+				    REG_EXTENDED | REG_ICASE,
+				    _("internal error"));
+
+/* A regular expression matching an Ada operator, surrounded by
+   quotes.  */
+
+static const char operator_regex_text[] =
+  "^\"(<=|>=|\\*\\*|/=|and|or|xor|not|mod|rem|abs|[-+*/=<>&])\"";
+
+/* The number of subexpressions to allocate space for, including the
+   "0th" whole match subexpression.  */
+#define NUM_OPER_SUBEXPRESSIONS 2
+
+/* The compiled operator-matching regex.  */
+
+static compiled_regex operator_regex (operator_regex_text,
+				      REG_EXTENDED | REG_ICASE,
+				      _("internal error"));
+
 namespace ada_exp_parser
 {
+
+/* Map a string to a code.  */
+struct code_entry
+{
+  const char *name;
+  int code;
+};
 
 /* See ada-exp-parser.h.  */
 
@@ -49,12 +121,13 @@ struct parser_state *pstate;
 
 struct ada_parse_state *ada_parser;
 
-/* See ada-exp-parser.h.  */
+/* Copy S2 to S1, removing all underscores, and downcasing all
+   letters.  Stops at END.  */
 
-void
-canonicalizeNumeral (char *s1, const char *s2)
+static void
+canonicalize_numeral (char *s1, const char *s2, const char *end)
 {
-  for (; *s2 != '\000'; s2 += 1)
+  for (; s2 != end; s2 += 1)
     {
       if (*s2 != '_')
 	{
@@ -207,51 +280,46 @@ processReal (struct parser_state *par_state, const char *num0)
 /* See ada-exp-parser.h.  */
 
 struct stoken
-processId (const char *name0, int len)
+ada_parse_state::process_id (std::string_view name0)
 {
-  char *name = (char *) obstack_alloc (&ada_parser->temp_space, len + 11);
-  int i0, i;
+  char *name = (char *) obstack_alloc (&temp_space, name0.size () + 11);
   struct stoken result;
 
   result.ptr = name;
-  while (len > 0 && c_isspace (name0[len-1]))
-    len -= 1;
+  while (!name0.empty () && c_isspace (name0.back ()))
+    name0.remove_suffix (1);
 
-  if (name0[0] == '<' || strstr (name0, "___") != NULL)
+  if (!name0.empty ()
+      && (name0[0] == '<' || name0.find ("___") != std::string_view::npos))
     {
-      strncpy (name, name0, len);
+      size_t len = name0.size ();
+      strncpy (name, name0.data (), len);
       name[len] = '\000';
       result.length = len;
       return result;
     }
 
   bool in_quotes = false;
-  i = i0 = 0;
-  while (i0 < len)
+  int i = 0;
+  for (char c : name0)
     {
-      if (name0[i0] == COMPLETE_CHAR)
+      if (in_quotes)
+	name[i++] = c;
+      else if (c_isalnum (c))
+	name[i++] = c_tolower (c);
+      else if (c_isspace (c))
 	{
-	  /* Just ignore.  */
-	  ++i0;
+	  /* Nothing.  */
 	}
-      else if (in_quotes)
-	name[i++] = name0[i0++];
-      else if (c_isalnum (name0[i0]))
-	{
-	  name[i] = c_tolower (name0[i0]);
-	  i += 1; i0 += 1;
-	}
-      else if (c_isspace (name0[i0]))
-	i0 += 1;
-      else if (name0[i0] == '\'')
+      else if (c == '\'')
 	{
 	  /* Copy the starting quote, but not the ending quote.  */
 	  if (!in_quotes)
-	    name[i++] = name0[i0++];
+	    name[i++] = c;
 	  in_quotes = !in_quotes;
 	}
       else
-	name[i++] = name0[i0++];
+	name[i++] = c;
     }
   name[i] = '\000';
 
@@ -300,29 +368,6 @@ processString (const char *text, int len)
   return result;
 }
 
-/* See ada-exp-parser.h.  */
-
-int
-find_dot_all (const char *str)
-{
-  int i;
-
-  for (i = 0; str[i] != '\000'; i++)
-    if (str[i] == '.')
-      {
-	int i0 = i;
-
-	do
-	  i += 1;
-	while (c_isspace (str[i]));
-
-	if (strncasecmp (str + i, "all", 3) == 0
-	    && !c_isalnum (str[i + 3]) && str[i + 3] != '_')
-	  return i0;
-      }
-  return -1;
-}
-
 /* Returns non-zero iff string SUBSEQ matches a subsequence of STR, ignoring
    case.  */
 
@@ -340,8 +385,8 @@ subseqMatch (const char *subseq, const char *str)
 }
 
 
-static const struct { const char *name; int code; }
-attributes[] = {
+static const struct code_entry attributes[] =
+{
   { "address", TICK_ADDRESS },
   { "unchecked_access", TICK_ACCESS },
   { "unrestricted_access", TICK_ACCESS },
@@ -365,39 +410,31 @@ attributes[] = {
 /* See ada-exp-parser.h.  */
 
 int
-processAttribute (const char *str)
+ada_parse_state::process_attribute (const std::string &str, bool completing)
 {
-  gdb_assert (*str == '\'');
-  ++str;
-  while (c_isspace (*str))
-    ++str;
-
-  int len = strlen (str);
-  if (len > 0 && str[len - 1] == COMPLETE_CHAR)
+  size_t len = str.length ();
+  if (completing)
     {
-      /* This is enforced by YY_INPUT.  */
-      gdb_assert (pstate->parse_completion);
-      ada_yylval.sval.ptr = obstack_strndup (&ada_parser->temp_space,
-					 str, len - 1);
-      ada_yylval.sval.length = len - 1;
+      ada_yylval.sval.ptr = obstack_strndup (&temp_space, str.c_str (), len);
+      ada_yylval.sval.length = len;
       return TICK_COMPLETE;
     }
 
   for (const auto &item : attributes)
-    if (strcasecmp (str, item.name) == 0)
+    if (strcasecmp (str.c_str (), item.name) == 0)
       return item.code;
 
   std::optional<int> found;
   for (const auto &item : attributes)
-    if (subseqMatch (str, item.name))
+    if (subseqMatch (str.c_str (), item.name))
       {
 	if (!found.has_value ())
 	  found = item.code;
 	else
-	  error (_("ambiguous attribute name: \"%s\""), str);
+	  error (_("ambiguous attribute name: \"%s\""), str.c_str ());
       }
   if (!found.has_value ())
-    error (_("unrecognized attribute: \"%s\""), str);
+    error (_("unrecognized attribute: \"%s\""), str.c_str ());
 
   return *found;
 }
@@ -416,16 +453,785 @@ ada_tick_completer::complete (struct expression *exp,
   return true;
 }
 
-/* See ada-exp-parser.h.  */
+int
+ada_parse_state::lex_number ()
+{
+  const char *num_start = pstate->lexptr;
+  gdb_assert (c_isdigit (*num_start));
+
+  regmatch_t subexps[NUM_SUBEXPRESSIONS];
+  int match = number_regex.exec (num_start, ARRAY_SIZE (subexps), subexps, 0);
+  /* Failure means the regexp is broken.  */
+  gdb_assert (match == 0);
+
+  pstate->lexptr += subexps[0].rm_eo;
+
+#define NUMERAL_WIDTH 256
+  char numbuf[NUMERAL_WIDTH];
+  if (subexps[HEX_NUMBER].rm_so != -1)
+    {
+      canonicalize_numeral (numbuf, num_start + 2, pstate->lexptr);
+      return processInt (pstate, "16#", numbuf, nullptr);
+    }
+  else if (subexps[FLOAT_POSEXP].rm_so != -1)
+    {
+      canonicalize_numeral (numbuf, num_start, pstate->lexptr);
+      char *e_ptr = strrchr (numbuf, 'e');
+      *e_ptr = '\0';
+      return processInt (pstate, nullptr, numbuf, e_ptr + 1);
+    }
+  else if (subexps[FLOAT_OPTEXP].rm_so != -1)
+    {
+      canonicalize_numeral (numbuf, num_start, pstate->lexptr);
+      return processReal (pstate, numbuf);
+    }
+  else if (subexps[FLOAT_EXTENSION].rm_so != -1)
+    {
+      canonicalize_numeral (numbuf, num_start, pstate->lexptr);
+      char *e_ptr = nullptr;
+      if (subexps[EXPONENT].rm_so != -1)
+	{
+	  /* We can't use the 'rm_so' here because
+	     canonicalize_numeral might have removed some underscores.
+	     But we know the 'e' appears after the '#' so we can
+	     search for it and not get one of the (possibly hex)
+	     numerals.  */
+	  e_ptr = strrchr (numbuf, 'e');
+	  gdb_assert (e_ptr != nullptr);
+	  *e_ptr = '\0';
+	  ++e_ptr;
+	}
+      return processInt (pstate, numbuf, strchr (numbuf, '#') + 1, e_ptr);
+    }
+  else if (subexps[BASED_REAL].rm_so != -1)
+    error (_("Based real literals not implemented yet."));
+
+  /* Must be a simple integer.  */
+  canonicalize_numeral (numbuf, num_start, pstate->lexptr);
+  return processInt (pstate, nullptr, numbuf, nullptr);
+}
+
+static const code_entry keywords[] =
+{
+  { "abs", ABS },
+  { "and", _AND_ },
+  { "delta", DELTA },
+  { "else", ELSE },
+  { "for", FOR },
+  { "in", IN },
+  { "mod", MOD },
+  { "new", NEW },
+  { "not", NOT },
+  { "null", NULL_PTR },
+  { "or", OR },
+  { "others", OTHERS },
+  { "rem", REM },
+  { "then", THEN },
+  { "with", WITH },
+  { "xor", XOR },
+  /* True and False are not keywords in Ada, but rather enumeration
+     constants.  However, the boolean type is no longer represented as
+     an enum, so True and False are no longer defined in symbol
+     tables.  We compromise by making them keywords (when bare). */
+  { "true", TRUEKEYWORD },
+  { "false", FALSEKEYWORD },
+  { "if", 0 },
+  { "task", 0 },
+  { "thread", -1 },
+};
+
+bool
+ada_parse_state::check_thread_keyword (const char *text)
+{
+  /* "thread" has to be followed by whitespace and then a digit in
+     order to be treated as a keyword.  */
+  if (!c_isspace (*text))
+    return false;
+  const char *after = skip_spaces (text);
+  return c_isdigit (*after);
+}
+
+std::optional<int>
+ada_parse_state::check_keyword (size_t len)
+{
+  const char *start = pstate->lexptr;
+  for (const code_entry &entry : keywords)
+    {
+      if (strlen (entry.name) == len
+	  && strncasecmp (entry.name, start, len) == 0)
+	{
+	  int result = entry.code;
+	  if (result == -1)
+	    {
+	      /* Special handling for the "thread" keyword.  */
+	      if (!check_thread_keyword (pstate->lexptr + len))
+		continue;
+	      result = 0;
+	    }
+	  return result;
+	}
+    }
+
+  return std::nullopt;
+}
+
+const char *
+ada_parse_state::lex_operator (const char *start)
+{
+  gdb_assert (*start == '"');
+  regmatch_t subexps[NUM_OPER_SUBEXPRESSIONS];
+  int match = operator_regex.exec (start, ARRAY_SIZE (subexps), subexps, 0);
+  if (match != 0)
+    return nullptr;
+  return start + subexps[0].rm_eo;
+}
+
+int
+ada_parse_state::lex_identifier (const char *id_end)
+{
+  bool is_quoted = *pstate->lexptr == '<';
+  bool completing = *id_end == '\0' && pstate->parse_completion;
+
+  /* Only check keywords when the identifier is unquoted, and when not
+     completing.  */
+  if (!is_quoted && !completing)
+    {
+      std::optional<int> result = check_keyword (id_end - pstate->lexptr);
+      if (result.has_value ())
+	{
+	  /* If the keyword results in an EOF, leave the parser's
+	     lexptr pointing at the start of the keyword.  Otherwise,
+	     update to the end.  */
+	  if (*result != 0)
+	    pstate->lexptr = id_end;
+	  return *result;
+	}
+    }
+
+  while (true)
+    {
+      const char *iter = skip_spaces (id_end);
+      if (*iter != '.')
+	break;
+      iter = skip_spaces (iter + 1);
+
+      const char *new_id_end = nullptr;
+      if (*iter == '"')
+	new_id_end = lex_operator (iter);
+      else if (c_isalpha (*iter) || *iter == '_' || *iter == '<')
+	new_id_end = lex_simple_identifier (iter);
+      if (new_id_end == nullptr)
+	break;
+
+      /* Skip ".all" and leave it for a later DOT_ID lex.  */
+      if (new_id_end - iter == 3 && strncasecmp (iter, "all", 3) == 0)
+	break;
+
+      id_end = new_id_end;
+      completing = *id_end == '\0' && pstate->parse_completion;
+    }
+
+  ada_yylval.sval = process_id ({ pstate->lexptr,
+				  (size_t) (id_end - pstate->lexptr) });
+
+  id_end = skip_spaces (id_end);
+  if (*id_end == '\'')
+    m_before_qual_quote = true;
+
+  pstate->lexptr = id_end;
+  return completing ? NAME_COMPLETE : NAME;
+}
 
 void
-rewind_to_char (int ch)
+ada_parse_state::invalid_char ()
 {
-  pstate->lexptr -= ada_yyleng;
-  while (c_toupper (*pstate->lexptr) != c_toupper (ch))
-    pstate->lexptr -= 1;
-  ada_yyrestart (NULL);
+  error (_("Invalid character '%c' in expression."), *pstate->lexptr);
 }
+
+const char *
+ada_parse_state::lex_simple_identifier (const char *text)
+{
+  gdb_assert (c_isalpha (*text) || *text == '_' || *text == '<');
+
+  const char *iter = text;
+  bool quoted = (*iter == '<');
+  if (quoted)
+    {
+      ++iter;
+      if (!c_isalpha (*iter) && *iter != '_')
+	return nullptr;
+      ++iter;
+    }
+
+  auto as_unsigned = [] (const char *ptr)
+    {
+      return *(const unsigned char *) ptr;
+    };
+
+  while (c_isalnum (*iter) || *iter == '_'
+	 || (!quoted && as_unsigned (iter) >= 0x80
+	     && as_unsigned (iter) <= 0xff))
+    ++iter;
+
+  if (quoted)
+    {
+      /* A quirk of the flex lexer was that completion didn't work for
+	 Ada-quoted symbols like <some_encoded_name>.  Perhaps TAB
+	 somewhere before the '>' ought to work.  */
+      if (*iter != '>')
+	return nullptr;
+      ++iter;
+    }
+
+  return iter;
+}
+
+int
+ada_parse_state::lex_dot ()
+{
+  gdb_assert (*pstate->lexptr == '.');
+  const char *save = pstate->lexptr;
+  pstate->lexptr = skip_spaces (pstate->lexptr + 1);
+
+  int name_token = 0;
+  if (*pstate->lexptr == '<' || *pstate->lexptr == '_'
+      || c_isalpha (*pstate->lexptr))
+    {
+      const char *id_end = lex_simple_identifier (pstate->lexptr);
+      if (id_end != nullptr)
+	{
+	  pstate->lexptr = id_end;
+	  name_token = NAME;
+	}
+    }
+
+  if (*pstate->lexptr == '\0' && pstate->parse_completion)
+    name_token = NAME_COMPLETE;
+
+  if (name_token != NAME && name_token != NAME_COMPLETE)
+    {
+      pstate->lexptr = save;
+      invalid_char ();
+    }
+
+  ada_yylval.sval = process_id ({ save + 1,
+				(size_t) (pstate->lexptr - save - 1) });
+  return name_token == NAME_COMPLETE ? DOT_COMPLETE : DOT_ID;
+}
+
+const char *
+ada_parse_state::recognize_encoded_char (const char *bracket)
+{
+  if (bracket[0] == '[' && bracket[1] == '"')
+    {
+      const char *start = bracket + 2;
+      const char *iter = start;
+
+      /* Handle the weird case of ["""], which just means a double
+	 quote.  */
+      if (*iter == '"')
+	++iter;
+      else
+	{
+	  while (c_isxdigit (*iter))
+	    ++iter;
+	  if (iter - start < 2)
+	    return nullptr;
+	}
+
+      if (iter[0] == '"' && iter[1] == ']')
+	{
+	  /* Ada-style quoted character.  */
+	  return iter + 2;
+	}
+    }
+  return nullptr;
+}
+
+int
+ada_parse_state::lex_single_quote ()
+{
+  gdb_assert (*pstate->lexptr == '\'');
+
+  bool before_qual_quote = m_before_qual_quote;
+  m_before_qual_quote = false;
+
+  if (!before_qual_quote)
+    {
+      /* Look for the GDB block extension "'STUFF'::".  */
+      const char *block_iter = pstate->lexptr + 1;
+      while (*block_iter != '\0' && *block_iter != '\'')
+	++block_iter;
+      /* Require a non-empty block.  */
+      if (block_iter[0] == '\'' && block_iter - pstate->lexptr - 1 > 0)
+	{
+	  const char *block_end = skip_spaces (block_iter + 1);
+	  if (block_end[0] == ':' && block_end[1] == ':')
+	    {
+	      ada_yylval.sval
+		= process_id ({ pstate->lexptr,
+				(size_t) (block_end - pstate->lexptr) });
+	      /* Leave the "::" to be lexed later.  */
+	      pstate->lexptr = block_end;
+	      return NAME;
+	    }
+	}
+
+      if (c_isprint (pstate->lexptr[1]) && pstate->lexptr[2] == '\'')
+	{
+	  /* Ordinary character literal.  */
+	  int the_char = pstate->lexptr[1];
+	  ada_yylval.typed_char.val = the_char;
+	  ada_yylval.typed_char.type = type_for_char (pstate, the_char);
+	  pstate->lexptr += 3;
+	  return CHARLIT;
+	}
+
+      const char *end_bracket = recognize_encoded_char (pstate->lexptr + 1);
+      if (end_bracket != nullptr)
+	{
+	  if (*end_bracket != '\'')
+	    {
+	      /* We saw something pretty odd.  */
+	      error (_("Unterminated character literal"));
+	    }
+	  /* The character starts at an offset from the initial single
+	     quote.  */
+	  ULONGEST v = strtoulst (pstate->lexptr + 3, nullptr, 16);
+	  ada_yylval.typed_char.val = v;
+	  ada_yylval.typed_char.type = type_for_char (pstate, v);
+	  pstate->lexptr = end_bracket + 1;
+	  return CHARLIT;
+	}
+    }
+
+  /* Handle 'ATTRIBUTE; with a special case when completing just after
+     a single quote.  */
+  const char *attr_start = skip_spaces (pstate->lexptr + 1);
+  if (c_isalpha (*attr_start)
+      || (pstate->parse_completion && *attr_start == '\0'))
+    {
+      const char *iter = attr_start;
+      while (*iter == '_' || c_isalpha (*iter))
+	++iter;
+      bool completing = pstate->parse_completion && *iter == '\0';
+      pstate->lexptr = iter;
+      return process_attribute (std::string (attr_start, iter - attr_start),
+				completing);
+    }
+
+  ++pstate->lexptr;
+  return '\'';
+}
+
+int
+ada_parse_state::lex_double_quote ()
+{
+  gdb_assert (*pstate->lexptr == '"');
+  const char *start = pstate->lexptr + 1;
+
+  const char *iter = start;
+  while (*iter != '"' && *iter != '\0')
+    {
+      /* Note that we don't handle bracket sequences of more than 2
+	 digits here.  Currently there's no support for wide or
+	 wide-wide strings.  */
+      const char *end_bracket = recognize_encoded_char (iter);
+      if (end_bracket != nullptr)
+	iter = end_bracket;
+      else if (c_isprint (*iter))
+	++iter;
+      else
+	break;
+    }
+
+  if (*iter != '"')
+    error (_("ill-formed or non-terminated string literal"));
+
+  ada_yylval.sval = processString (start, iter - start);
+  pstate->lexptr = iter + 1;
+  return STRING;
+}
+
+int
+ada_parse_state::lex_dollar ()
+{
+  gdb_assert (*pstate->lexptr == '$');
+  const char *start = pstate->lexptr++;
+  while (c_isalnum (*pstate->lexptr) || *pstate->lexptr == '_'
+	 || *pstate->lexptr == '$')
+    ++pstate->lexptr;
+  ada_yylval.sval.ptr = start;
+  ada_yylval.sval.length = pstate->lexptr - start;
+  return DOLLAR_VARIABLE;
+}
+
+static const code_entry punct[] =
+{
+  { "=>", ARROW },
+  { "..", DOTDOT },
+  { "**", STARSTAR },
+  { ":=", ASSIGN },
+  { "/=", NOTEQUAL },
+  { "<=", LEQ },
+  { ">=", GEQ },
+  { "::", COLONCOLON },
+  /* "--" is documented in the manual as being a comment.  */
+  { "--", 0 },
+};
+
+int
+ada_parse_state::lex ()
+{
+  /* If m_before_qual_quote is set, we must be examining a single
+     quote.  */
+  gdb_assert (!m_before_qual_quote || *pstate->lexptr == '\'');
+
+  pstate->lexptr = skip_spaces (pstate->lexptr);
+
+  if (pstate->lexptr[0] != '\0' && pstate->lexptr[1] != '\0')
+    for (const code_entry &entry : punct)
+      {
+	size_t len = strlen (entry.name);
+	gdb_assert (len == 2);
+	if (strncmp (entry.name, pstate->lexptr, len) == 0)
+	  {
+	    /* Handle the "--" comment case specially.  */
+	    if (entry.code == 0)
+	      {
+		size_t rest = strlen (pstate->lexptr);
+		pstate->lexptr += rest;
+	      }
+	    else
+	      pstate->lexptr += len;
+	    return entry.code;
+	  }
+      }
+
+  switch (*pstate->lexptr)
+    {
+    case '\0':
+      return 0;
+
+    case '-':
+    case '=':
+    case '*':
+    case ':':
+    case '&':
+    case '+':
+    case '{':
+    case '}':
+    case '@':
+    case '/':
+    case '>':
+    case '|':
+    case ';':
+    case '[':
+    case ']':
+      return *pstate->lexptr++;
+
+    case ',':
+      if (m_paren_depth == 0 && pstate->comma_terminates)
+	return 0;
+      else
+	return *pstate->lexptr++;
+
+    case '(':
+      ++m_paren_depth;
+      return *pstate->lexptr++;
+
+    case ')':
+      if (m_paren_depth == 0)
+	return 0;
+      --m_paren_depth;
+      return *pstate->lexptr++;
+
+    case '\'':
+      return lex_single_quote ();
+
+    case '"':
+      return lex_double_quote ();
+
+    case '$':
+      return lex_dollar ();
+
+    case '.':
+      return lex_dot ();
+    }
+
+  if (c_isalpha (*pstate->lexptr) || *pstate->lexptr == '_'
+      || *pstate->lexptr == '<')
+    {
+      const char *id_end = lex_simple_identifier (pstate->lexptr);
+      if (id_end == nullptr)
+	{
+	  /* It shouldn't be possible to reach here when starting with
+	     a letter or underscore.  */
+	  gdb_assert (*pstate->lexptr == '<');
+	  return *pstate->lexptr++;
+	}
+      return lex_identifier (id_end);
+    }
+
+  if (c_isdigit (*pstate->lexptr))
+    return lex_number ();
+
+  invalid_char ();
+}
+
+#if GDB_SELF_TEST
+
+namespace selftests
+{
+
+/* Helper that checks that a given lex causes an exception.  */
+static void
+ada_lex_test_error (const char *input)
+{
+  /* We need a dummy parser.  */
+  parser_state ps (language_def (language_ada), current_inferior ()->arch (),
+		   nullptr, 0, 0, input, false, nullptr);
+  scoped_restore save_parser = make_scoped_restore (&pstate, &ps);
+
+  ada_parse_state ada_ps (input);
+  /* This is probably not needed, but also it doesn't hurt.  */
+  scoped_restore save_aps = make_scoped_restore (&ada_parser, &ada_ps);
+
+  bool saw_failure = false;
+  try
+    {
+      ada_ps.lex ();
+    }
+  catch (const gdb_exception_error &err)
+    {
+      saw_failure = true;
+    }
+  SELF_CHECK (saw_failure);
+}
+
+/* Helper to check a lexing sequence, also checking string values of
+   tokens.  */
+static void
+ada_lex_test_sequence (const char *input,
+		       gdb::span<const code_entry> expected,
+		       bool completion = false)
+{
+  /* We need a dummy parser.  */
+  parser_state ps (language_def (language_ada), current_inferior ()->arch (),
+		   nullptr, 0, 0, input, completion, nullptr);
+  scoped_restore save_parser = make_scoped_restore (&pstate, &ps);
+
+  ada_parse_state ada_ps (input);
+  /* This is probably not needed, but also it doesn't hurt.  */
+  scoped_restore save_aps = make_scoped_restore (&ada_parser, &ada_ps);
+  for (const code_entry &entry : expected)
+    {
+      int token = ada_ps.lex ();
+      SELF_CHECK (token == entry.code);
+
+      bool has_string_value = (token == NAME || token == NAME_COMPLETE
+			       || token == DOT_ID || token == DOT_COMPLETE
+			       || token == STRING
+			       || token == DOLLAR_VARIABLE
+			       || token == TICK_COMPLETE);
+      if (has_string_value)
+	{
+	  std::string_view contents (ada_yylval.sval.ptr,
+				     ada_yylval.sval.length);
+	  SELF_CHECK (contents == entry.name);
+	}
+      else
+	SELF_CHECK (entry.name == nullptr);
+    }
+
+  /* Test that all the input was used.  */
+  SELF_CHECK (*ps.lexptr == '\0');
+}
+
+/* Helper that checks an integer value.  */
+static void
+ada_lex_test_integer (const char *input, int value)
+{
+  /* We need a dummy parser.  */
+  parser_state ps (language_def (language_ada), current_inferior ()->arch (),
+		   nullptr, 0, 0, input, false, nullptr);
+  scoped_restore save_parser = make_scoped_restore (&pstate, &ps);
+
+  ada_parse_state ada_ps (input);
+  /* This is probably not needed, but also it doesn't hurt.  */
+  scoped_restore save_aps = make_scoped_restore (&ada_parser, &ada_ps);
+
+  int token = ada_ps.lex ();
+  SELF_CHECK (token == INT);
+  SELF_CHECK (*ada_yylval.typed_val.val == value);
+}
+
+static void
+ada_lex_tests ()
+{
+  const code_entry cc_test[] =
+    {
+      { "blockname", NAME },
+      { nullptr, COLONCOLON },
+      { "duck", NAME },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("blockname::duck", cc_test);
+
+  const code_entry ccq_test[] =
+    {
+      { "'blockname'", NAME },
+      { nullptr, COLONCOLON },
+      { "duck", NAME },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("'blockname'::duck", ccq_test);
+  ada_lex_test_sequence ("'blockname'  ::  duck", ccq_test);
+
+  /* This should not lex as a character literal.  */
+  const code_entry ccq2_test[] =
+    {
+      { "'a'", NAME },
+      { nullptr, COLONCOLON },
+      { "duck", NAME },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("'a'::duck", ccq2_test);
+
+  const code_entry comment_test[] =
+    {
+      { "variable", NAME },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("variable -- comment text here", comment_test);
+
+  const code_entry oper_test[] =
+    {
+      { "name.\"mod\"", NAME },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("   name . \"MoD\"   ", oper_test);
+
+  const code_entry quote_test[] =
+    {
+      { "<some__Weird_Name>.whatever", NAME },
+      { "all", DOT_ID },
+      { "rest", DOT_ID },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("<some__Weird_Name>.whatever.all.rest", quote_test);
+
+  const code_entry uquote_test[] =
+    {
+      { "<__leading_uscore>", NAME },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("<__leading_uscore>", uquote_test);
+
+  const code_entry qual_test[] =
+    {
+      { "char_enum", NAME },
+      { nullptr, '\'' },
+      { nullptr, '(' },
+      { nullptr, CHARLIT },
+      { nullptr, ')' },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("  Char_Enum ' ( 'B' )  ", qual_test);
+
+  /* This failed historically since the TAB character is not
+     "printable".  */
+  ada_lex_test_error ("\"\t\"");
+
+  /* This should fail due to unbalanced quotes.  */
+  ada_lex_test_error ("'[\"61\"]x");
+
+  const code_entry char_test[] =
+    {
+      { nullptr, CHARLIT },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("'[\"61\"]'", char_test);
+  ada_lex_test_sequence ("'\"'", char_test);
+  ada_lex_test_sequence ("' '", char_test);
+
+  const code_entry str_test[] =
+    {
+      { "a string \"", STRING },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("\"[\"61\"] string [\"\"\"]\"", str_test);
+
+  const code_entry compl_test[] =
+    {
+      { "duck.duck", NAME },
+      { "goose", TICK_COMPLETE },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("duck.duck'goose", compl_test, true);
+
+  const code_entry compl2_test[] =
+    {
+      { "pck.inner", NAME },
+      { "", DOT_COMPLETE },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("pck.inner.", compl2_test, true);
+
+  const code_entry compl3_test[] =
+    {
+      { nullptr, '(' },
+      { "name", NAME },
+      { nullptr, ')' },
+      { "", DOT_COMPLETE },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("(name).", compl3_test, true);
+
+  const code_entry compl4_test[] =
+    {
+      { nullptr, '(' },
+      { "name", NAME },
+      { nullptr, ')' },
+      { "fl", DOT_COMPLETE },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("(name).fl", compl4_test, true);
+
+  const code_entry tick_test[] =
+    {
+      { "duck.duck", NAME },
+      { nullptr, TICK_MIN },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("duck.duck  '  min", tick_test);
+
+  const code_entry us3_test[] =
+    {
+      { "x", NAME },
+      { nullptr, '+' },
+      { "a___b", NAME },
+      { nullptr, 0 }
+    };
+  ada_lex_test_sequence ("X + a___b", us3_test);
+
+  ada_lex_test_integer ("0xff", 255);
+  ada_lex_test_integer ("0xffff", 65535);
+  ada_lex_test_integer ("019", 19);
+  ada_lex_test_integer ("0", 0);
+  ada_lex_test_integer ("16#ff#", 255);
+  ada_lex_test_integer ("16#ee#", 238);
+  ada_lex_test_integer ("16#EE#", 238);
+  ada_lex_test_integer ("8#77#", 63);
+
+  /* Based reals aren't handled.  */
+  ada_lex_test_error ("16#abcd.ef01#");
+  ada_lex_test_error ("16#abcd.ef01#e+23");
+}
+
+} /* namespace selftests */
+
+#endif /* GDB_SELF_TEST */
 
 /* See ada-exp-parser.h.  */
 
@@ -1337,8 +2143,6 @@ ada_parse (struct parser_state *par_state)
   scoped_restore restore_yydebug = make_scoped_restore (&ada_yydebug,
 							par_state->debug);
 
-  lexer_init (ada_yyin);		/* (Re-)initialize lexer.  */
-
   int result = ada_yyparse ();
   if (!result)
     {
@@ -1348,4 +2152,11 @@ ada_parse (struct parser_state *par_state)
       pstate->set_operation (ada_pop (true, context_type));
     }
   return result;
+}
+
+INIT_GDB_FILE (ada_exp_parser)
+{
+#if GDB_SELF_TEST
+  selftests::register_test ("ada-lex", ada_exp_parser::selftests::ada_lex_tests);
+#endif
 }
