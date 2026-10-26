@@ -2780,6 +2780,16 @@ but the result again may not be as you expect.
 For RISC-V, the following options are supported:
 
 @table @code
+@item arch=@var{ISA}
+Disassemble according to the given ISA string (e.g., @code{rv64gcv}), in place
+of the architecture attribute of the object being disassembled or, where the
+object carries none, of the built-in default. Unlike @code{max}, which decodes
+every known extension and so may pick the wrong meaning of an overlapping
+opcode, this decodes exactly the given ISA. It is useful when the ISA is known
+from elsewhere, but the object does not record it, as in a core file or a raw
+binary. A @code{$xrv} mapping symbol, which names its own ISA, still takes
+precedence.
+
 @item max
 Disassemble without checking architecture string. This is a best effort mode, so
 for overlapping ISA extensions the first match (possibly incorrect in a given

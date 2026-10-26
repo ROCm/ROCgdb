@@ -1,5 +1,9 @@
 -*- text -*-
 
+* RISC-V disassembly now supports the -M arch=ISA option, which names the ISA
+  to disassemble for in place of the one the object records.  It is useful for
+  an object that records none, such as a core file or a raw binary.
+
 Changes in 2.47:
 
 * The s390 32-bit target (s390-*) is deprecated and planned for removal in a
