@@ -38,6 +38,7 @@ kernel ()
 
   short priv_var1 = 41;
   short priv_var2 = 42;
+  short &priv_var_ref = priv_var2;
 
   short *generic_ptr0 = nullptr;
   short *generic_ptr1 = &global_var;
