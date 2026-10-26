@@ -3305,6 +3305,26 @@ schedlock_applies (struct thread_info *tp)
 	      && target_record_will_replay (tp->ptid, execution_direction)));
 }
 
+/* Warn the user that the new thread CHILD is held stopped because
+   scheduler-locking is in effect.  If the program waits for CHILD, it
+   never makes progress, which would otherwise look like a hang.  Only
+   warn once per process.  */
+
+static void
+maybe_warn_schedlock_new_thread (thread_info *child)
+{
+  inferior *inf = child->inf;
+
+  if (inf->warned_schedlock_new_thread)
+    return;
+
+  inf->warned_schedlock_new_thread = true;
+  warning (_("%s is held stopped because scheduler-locking is in effect.\n"
+	     "The program may hang if it waits for this thread.  "
+	     "Use \"set scheduler-locking off\" to let new threads run."),
+	   target_pid_to_str (child->ptid).c_str ());
+}
+
 /* When FORCE_P is false, set process_stratum_target::COMMIT_RESUMED_STATE
    in all target stacks that have threads executing and don't have threads
    with pending events.
@@ -6626,6 +6646,10 @@ handle_inferior_event (struct execution_control_state *ecs)
 		  && (follow_child
 		      || (!detach_fork && (non_stop || sched_multi)))))
 	    child->set_state (THREAD_RUNNING);
+
+	  if (ecs->ws.kind () == TARGET_WAITKIND_THREAD_CLONED
+	      && schedlock_applies (ecs->event_thread))
+	    maybe_warn_schedlock_new_thread (child);
 
 	  /* In non-stop mode, also resume the other branch.  */
 	  if ((ecs->ws.kind () == TARGET_WAITKIND_THREAD_CLONED

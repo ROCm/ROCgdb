@@ -127,13 +127,21 @@ proc test {mode} {
 	    }
 	}
     } else {
-	# When scheduler-locking is in effect, new waves aren't allowed to run,
-	# so we will never hit the breakpoint in the GPU code, and the resumed
-	# host thread will wait indefinitely.  Verify that we don't see the
-	# prompt for a few seconds.
+	# When scheduler-locking is in effect, new host threads and new waves
+	# aren't allowed to run, so we will never hit the breakpoint in the
+	# GPU code, and the resumed host thread will wait indefinitely.
+	# Verify that GDB warns about the new host threads the HIP runtime
+	# creates while starting up, and that we don't see the prompt for a
+	# few seconds.
+	set saw_warning 0
 	gdb_test_multiple "run" "run in device function" {
 	    -re "The program being debugged has been started already.*Start it from the beginning.*y or n. $" {
 		send_gdb "y\n"
+		exp_continue
+	    }
+
+	    -re "warning: \[^\r\n\]* is held stopped because scheduler-locking is in effect\\." {
+		set saw_warning 1
 		exp_continue
 	    }
 
@@ -143,7 +151,7 @@ proc test {mode} {
 	    }
 
 	    timeout {
-		pass $gdb_test_name
+		gdb_assert {$saw_warning} $gdb_test_name
 	    }
 	}
 
