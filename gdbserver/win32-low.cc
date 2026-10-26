@@ -337,6 +337,7 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
 	  || status.kind () == TARGET_WAITKIND_STOPPED)
 	{
 	  windows_process.cached_status = status;
+	  windows_process.cached_ptid = current_thread->id;
 	  break;
 	}
 
@@ -1145,8 +1146,8 @@ win32_process_target::wait (ptid_t ptid, target_waitstatus *ourstatus,
 	 fails).  Report it now.  */
       *ourstatus = windows_process.cached_status;
       windows_process.cached_status.set_ignore ();
-      return ptid_t (windows_process.process_id,
-		     windows_process.main_thread_id, 0);
+      switch_to_thread (find_thread_ptid (windows_process.cached_ptid));
+      return windows_process.cached_ptid;
     }
 
   while (1)

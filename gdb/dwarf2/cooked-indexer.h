@@ -86,6 +86,7 @@ private:
 				   parent_map::addr_type *maybe_defer,
 				   bool *is_enum_class,
 				   bool *is_inlined,
+				   std::optional<ULONGEST> *signature,
 				   bool for_specification);
 
   /* Handle DW_TAG_imported_unit, by scanning the DIE to find

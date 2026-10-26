@@ -80,6 +80,12 @@ gdb_mpz_as_integer ()
   v -= 1;
 
   SELF_CHECK (v.as_integer<ULONGEST> () == ul_expected);
+
+  /* This is from PR gdb/34601.  */
+  LONGEST neg = (LONGEST) 0x8000000000000001ull;
+  gdb_mpz a (neg);
+  gdb_mpz b (0x1234);
+  SELF_CHECK ((a * b).as_integer_truncate<int64_t> () == 0x1234);
 }
 
 /* A helper function which calls the given gdb_mpz object's as_integer

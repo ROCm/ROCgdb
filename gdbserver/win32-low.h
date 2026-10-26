@@ -193,6 +193,8 @@ struct gdbserver_windows_process : public windows_nat::windows_process_info
      win32_wait should return it next, instead of fetching the next
      debug event off the win32 API.  */
   struct target_waitstatus cached_status;
+  /* The ptid corresponding to the above status.  */
+  ptid_t cached_ptid;
 
   /* True if current_process_handle needs to be closed.  */
   bool open_process_used = false;

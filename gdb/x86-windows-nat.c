@@ -42,6 +42,10 @@ enum
 
 #define DR6_CLEAR_VALUE 0xffff0ff0
 
+/* The CONTEXT_DEBUG_REGISTERS define without the arch-specific bit
+   (CONTEXT_i386 or CONTEXT_AMD64).  */
+#define CONTEXT_DEBUG_REG_FLAG (CONTEXT_DEBUG_REGISTERS & ~CONTEXT_CONTROL)
+
 struct x86_windows_per_inferior : public windows_per_inferior
 {
   /* The function to use in order to determine whether a register is
@@ -142,7 +146,7 @@ x86_windows_nat_target::thread_context_continue (windows_thread_info *th,
 	{
 	  windows_process->fill_thread_context (th);
 
-	  gdb_assert ((context->ContextFlags & CONTEXT_DEBUG_REGISTERS) != 0);
+	  gdb_assert ((context->ContextFlags & CONTEXT_DEBUG_REG_FLAG) != 0);
 
 	  /* Check whether the thread has Dr6 set indicating a
 	     watchpoint hit, and we haven't seen the watchpoint event
@@ -173,13 +177,13 @@ x86_windows_nat_target::thread_context_continue (windows_thread_info *th,
 		     update the debug registers later when the thread
 		     is re-resumed by the core after the watchpoint
 		     event.  */
-		  context->ContextFlags &= ~CONTEXT_DEBUG_REGISTERS;
+		  context->ContextFlags &= ~CONTEXT_DEBUG_REG_FLAG;
 		}
 	    }
 	  else
 	    DEBUG_EVENTS ("0x%x has no dr6 set", th->tid);
 
-	  if ((context->ContextFlags & CONTEXT_DEBUG_REGISTERS) != 0)
+	  if ((context->ContextFlags & CONTEXT_DEBUG_REG_FLAG) != 0)
 	    {
 	      DEBUG_EVENTS ("0x%x changing dregs", th->tid);
 	      context->Dr0 = state->dr_mirror[0];

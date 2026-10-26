@@ -68,7 +68,7 @@ public:
      cooked-index.h.  The new entry is returned.  */
   cooked_index_entry *add (sect_offset die_offset, enum dwarf_tag tag,
 			   cooked_index_flag flags, enum language lang,
-			   const char *name,
+			   cooked_index_entry_name_ref name,
 			   cooked_index_entry_ref parent_entry,
 			   dwarf2_per_cu *per_cu)
   {
@@ -81,6 +81,15 @@ public:
   const char *add (std::string_view name)
   {
     return m_shard->add (name);
+  }
+
+  /* Called when processing TUs to record that the primary type within
+     a type unit with SIGNATURE, was called NAME.  This information
+     will be used during finalization to fix-up the name of any
+     entries carrying the IS_NAME_DEFERRED flag.  */
+  void add_signatured_type_name (ULONGEST signature, const char *name)
+  {
+    m_sig_name_map.emplace (signature, name);
   }
 
   /* Install the current addrmap into the shard being constructed,
@@ -153,6 +162,12 @@ public:
      discovered.  */
   void invert_cu_inclusions ();
 
+  /* The signature to name map for this worker.  */
+  const signature_to_name_map &get_sig_name_map () const
+  {
+    return m_sig_name_map;
+  }
+
 private:
   /* The abbrev table cache used by this indexer.  */
   abbrev_table_cache m_abbrev_table_cache;
@@ -187,6 +202,9 @@ private:
 
   /* Parent map for each CU that is read.  */
   parent_map m_parent_map;
+
+  /* Signature to name map for the primary type in a TU.  */
+  signature_to_name_map m_sig_name_map;
 
   /* A writeable addrmap being constructed by this scanner.  */
   addrmap_mutable m_addrmap;
@@ -272,6 +290,12 @@ public:
     return &m_all_parents_map;
   }
 
+  /* Return the map containing the complete signature to name information.  */
+  const signature_to_name_map &get_sig_name_map () const
+  {
+    return m_all_sig_names_map;
+  }
+
 protected:
 
   /* Let cooked_index call the 'set' and 'write_to_cache' methods.  */
@@ -318,6 +342,10 @@ protected:
   /* A map of all parent maps.  Used during finalization to fix up
      parent relationships.  */
   parent_map_map m_all_parents_map;
+
+  /* Map from signature to name of primary type within a TU.  This is
+     the combined map, built after all the workers have finished.  */
+  signature_to_name_map m_all_sig_names_map;
 
   /* Current state of this object.  */
   cooked_state m_state = cooked_state::INITIAL;

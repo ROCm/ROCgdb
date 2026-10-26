@@ -1,0 +1,81 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This test reproduces a case that caused a crash in the DWARF indexer, where
+# we were trying to compute the full name of an index entry whose parent's
+# parent link was not yet resolved.
+
+load_lib dwarf.exp
+
+# This test can only be run on targets which support DWARF-2 and use gas.
+require dwarf2_support
+
+standard_testfile main.c -debug.S
+
+set asm_file [standard_output_file $srcfile2]
+Dwarf::assemble $asm_file {
+    declare_labels v_decl pkg_decl myint
+
+    cu {} {
+	DW_TAG_compile_unit {
+	    DW_AT_language @DW_LANG_Ada95
+	} {
+	    # The definition of variable "v".  Its DW_AT_specification
+	    # points forward, so its parent link is deferred.
+	    #
+	    # The crash would happen when the index attempted to create a
+	    # "full name" entry for this variable.
+	    DW_TAG_variable {
+		DW_AT_specification %$v_decl
+		DW_AT_location {
+		    DW_OP_const1u 23
+		    DW_OP_stack_value
+		} SPECIAL_expr
+	    }
+
+	    # The definition of package "pkg".  Its DW_AT_specification
+	    # points forward, so its parent link is also deferred.
+	    DW_TAG_module {
+		DW_AT_specification %$pkg_decl
+	    } {
+		v_decl: DW_TAG_variable {
+		    DW_AT_name v
+		    DW_AT_type :$myint
+		    DW_AT_declaration 1 DW_FORM_flag_present
+		}
+	    }
+
+	    pkg_decl: DW_TAG_module {
+		DW_AT_name pkg
+		DW_AT_declaration 1 DW_FORM_flag_present
+	    } {}
+
+	    myint: DW_TAG_base_type {
+		DW_AT_byte_size 4 DW_FORM_sdata
+		DW_AT_encoding  @DW_ATE_signed
+		DW_AT_name      myint
+	    }
+	}
+    }
+}
+
+if {[build_executable "failed to build executable" ${testfile} \
+	 [list $srcfile $asm_file] {nodebug}]} {
+    return
+}
+
+clean_restart $testfile
+
+gdb_test "with language ada -- print pkg.v" " = 23"

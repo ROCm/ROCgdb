@@ -24,6 +24,8 @@
 #define NOINLINE __attribute__ ((noinline))
 #endif
 
+volatile int should_dump_core_p = 1;
+
 unsigned int have_pkru (void) NOINLINE;
 
 static inline unsigned long
@@ -82,6 +84,13 @@ main (int argc, char **argv)
     {
       wrpkru (wr_value);
       asm ("nop\n\t");	/* break here 1.  */
+
+      /* Crash for OS core file.  */
+      if (should_dump_core_p)
+	{
+	  /* Generate SIGSEGV to crash.  */
+	  *(volatile int *) 0;
+	}
 
       rd_value = rdpkru ();
       asm ("nop\n\t");	/* break here 2.  */
