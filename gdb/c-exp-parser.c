@@ -350,8 +350,7 @@ parse_number (struct parser_state *par_state, const char *buf, int len,
 }
 
 /* Temporary obstack used for holding strings.  */
-static struct obstack tempbuf;
-static int tempbuf_init;
+static auto_obstack tempbuf;
 
 /* Parse a string or character literal from TOKPTR.  The string or
    character may be wide or unicode.  *OUTPTR is set to just after the
@@ -377,11 +376,7 @@ parse_string_or_char (const char *tokptr, const char **outptr,
      (as well as strings in other languages) with embedded null
      bytes */
 
-  if (!tempbuf_init)
-    tempbuf_init = 1;
-  else
-    obstack_free (&tempbuf, NULL);
-  obstack_init (&tempbuf);
+  tempbuf.clear ();
 
   /* Record the string type.  */
   if (*tokptr == 'L')
