@@ -1,6 +1,6 @@
 {
-  "therock_commit_ref": "a5f5ad0c079de9b2417585cbb0869af474c26b09",
-  "therock_commit_created": "2026-10-18T18:49:30Z",
+  "therock_commit_ref": "b6b24b2b8b40aeb6ddd1262283cc1c87442e4f50",
+  "therock_commit_created": "2026-10-24T07:00:01Z",
   "build_image": "ghcr.io/rocm/therock_build_manylinux_x86_64@sha256:34ac4cb83216f760d8132ec2fabed4062f8c1fe40c94c70f58e8d7f8a7931ada",
   "build_image_created": "2026-10-01T09:40:37.007927532Z"
 }
