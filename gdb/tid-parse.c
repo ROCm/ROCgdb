@@ -302,13 +302,13 @@ tid_range_parser::get_tid_or_range (int *inf_num,
 
       if (thr_end != NULL)
 	*thr_end = *thr_start;
+
+      return (*inf_num != 0 && *thr_start != 0);
     }
 
   /* If we're midway through a range, and the caller wants the end
      value, return it and skip to the end of the range.  */
-  if (thr_end != NULL
-      && (m_state == STATE_THREAD_RANGE
-	  || m_state == STATE_STAR_RANGE))
+  if (thr_end != NULL)
     {
       *thr_end = m_range_parser.end_value ();
 
