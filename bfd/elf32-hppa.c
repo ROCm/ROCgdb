@@ -3226,18 +3226,34 @@ final_link_relocate (asection *input_section,
 	      if ((insn & 0xfc000000) == OP_ADDIL << 26)
 		insn = ADDIL_DP;
 	      else
-		/* We must have a ldil instruction.  It's too hard to find
-		   and convert the associated add instruction, so issue an
-		   error.  */
-		_bfd_error_handler
-		  /* xgettext:c-format */
-		  (_("%pB(%pA+%#" PRIx64 "): %s fixup for insn %#x "
-		     "is not supported in a non-shared link"),
-		   input_bfd,
-		   input_section,
-		   (uint64_t) offset,
-		   howto->name,
-		   insn);
+		{
+		  /* We must have a ldil instruction.  In general, it's
+		     hard to find and convert the associated add instruction.
+		     However, gcc emits the addl immediately after the ldil.
+		     So if the next instruction is an r19 addl, convert it
+		     to use dp.  Otherwise, issue an error.  */
+		  unsigned int next = bfd_get_32 (input_bfd, hit_data + 4);
+
+		  /* Check for "addl %r0,%r19,%r0" and ldil/addl
+		     target/input register match.  */
+		  if ((next & 0xffe0ffe0) == 0x0a600a00
+		      && ((next >> 16) & 0x1f) == (insn & 0x1f))
+		    {
+		      /* Change register to dp.  */
+		      next = (next & 0xfc1fffff) | (27 << 21);
+		      bfd_put_32 (input_bfd, (bfd_vma) next, hit_data + 4);
+		    }
+		  else
+		    _bfd_error_handler
+		      /* xgettext:c-format */
+		      (_("%pB(%pA+%#" PRIx64 "): %s fixup for insn %#x "
+			 "is not supported in a non-shared link"),
+		       input_bfd,
+		       input_section,
+		       (uint64_t) offset,
+		       howto->name,
+		       insn);
+		}
 	    }
 	  else if (r_type == R_PARISC_DPREL14F)
 	    {
@@ -3260,10 +3276,26 @@ final_link_relocate (asection *input_section,
 	  if ((insn & ((0x3fu << 26) | (0x1f << 21)))
 	      == ((OP_ADDIL << 26) | (27 << 21)))
 	    {
+	      /* We have a dp relative addil.  */
 	      insn &= ~ (0x1f << 21);
 	    }
-	  /* Now try to make things easy for the dynamic linker.  */
+	  else if ((insn & (0x3fu << 26)) == (OP_LDIL << 26))
+	    {
+	      /* We have an ldil.  */
+	      unsigned int next = bfd_get_32 (input_bfd, hit_data + 4);
 
+	      /* Check for "addl %r0,%dp,%r0" and ldil/addl
+		 target/input register match.  */
+	      if ((next & 0xffe0ffe0) == 0x0b600a00
+		  && ((next >> 16) & 0x1f) == (insn & 0x1f))
+		{
+		  /* Change dp register in addl to r0.  */
+		  next &= ~ (0x1f << 21);
+		  bfd_put_32 (input_bfd, (bfd_vma) next, hit_data + 4);
+		}
+	    }
+
+	  /* Now try to make things easy for the dynamic linker.  */
 	  break;
 	}
       /* Fall thru.  */
