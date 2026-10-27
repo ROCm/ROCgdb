@@ -85,6 +85,12 @@ PACKAGE = @PACKAGE@
 PKGVERSION = @PKGVERSION@
 BUGURL_TEXI = @REPORT_BUGS_TEXI@
 
+# List of extra stylesheets to brand the HTML manual.  Each stylesheet
+# is referenced with --css-ref and copied into the output directory.
+# It is empty by default and can be set on the make command line, so a
+# build can theme the manual without editing the sources.
+MANUAL_CSS =
+
 # Where is the source dir for the READLINE library doc?
 # Traditionally readline is in .. or .
 READLINE_DIR = ${gdbdir}/../readline/readline/doc
@@ -542,11 +548,24 @@ gdb.mm: $(GDB_DOC_FILES) links2roff
 
 # GDB MANUAL: HTML file
 
-gdb/index.html: ${GDB_DOC_FILES}
+# Wire in the TOC navigation sidebar with the HTML manual.
+#
+TOC_SIDEBAR_DIR = $(srcdir)/../../texinfo/toc-sidebar
+TOC_SIDEBAR_ASSETS = $(TOC_SIDEBAR_DIR)/toc-sidebar.css \
+		     $(TOC_SIDEBAR_DIR)/toc-sidebar.js
+TOC_SIDEBAR_INIT = $(TOC_SIDEBAR_DIR)/toc-sidebar.init
+
+# ROCm branding.
+MANUAL_CSS += $(srcdir)/../../rocm-theme.css
+
+gdb/index.html: ${GDB_DOC_FILES} $(TOC_SIDEBAR_INIT) $(TOC_SIDEBAR_ASSETS) $(MANUAL_CSS)
 	$(ECHO_GEN) $(MAKEHTML) $(MAKEHTMLFLAGS) \
+		--init-file=$(TOC_SIDEBAR_INIT) \
+		$(foreach css,$(MANUAL_CSS),--css-ref=$(notdir $(css))) \
 		-o gdb \
 		$(READLINE_TEXI_INCFLAG) -I ${GDBMI_DIR} -I $(srcdir) \
 		$(srcdir)/gdb.texinfo
+	$(SILENCE) cp $(TOC_SIDEBAR_ASSETS) $(MANUAL_CSS) gdb/
 
 # ANNOTATE DOCUMENTATION: TeX dvi file
 annotate.dvi : $(ANNOTATE_DOC_FILES)
