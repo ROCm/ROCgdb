@@ -180,7 +180,13 @@ jobs:
       rocm_rpm_package_version: ${{ needs.setup.outputs.rocm_rpm_package_version }}
       test_type: ${{ needs.setup.outputs.test_type }}
       external_repo_config: ${{ needs.setup.outputs.external_repo_config }}
-      changed_projects: "" # Test selection driven by test_labels alone.
+      # Scope tests to the rocgdb components (rocgdb-cpu/gpu/corefile) via the
+      # project graph, which holds even when ci:run-all-archs expands families.
+      # (test_labels alone is not enough: TheRock appends the PR's ci:* labels and
+      # drops test:rocgdb, so an unscoped run would test the whole ROCm suite.)
+      # rocgdb resolves to exactly rocgdb-cpu/gpu/corefile -- no rocr-debug-agent
+      # or amd-dbgapi tests.
+      changed_projects: "rocgdb"
       repository: ROCm/TheRock
       ref: ${{ needs.configure.outputs.therock_ref }}
     permissions:
