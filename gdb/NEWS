@@ -83,6 +83,12 @@ info locals
   The new "-shadowed on|off" option overrides the "set print shadowed"
   setting for a single invocation of the command.
 
+* Python API
+
+  ** The gdb.Breakpoint constructor now takes an optional
+     'allow_pending' argument.  Setting it to False causes GDB to raise
+     an error instead of creating a pending breakpoint.
+
 *** Changes in GDB 18
 
 * Support for the Common Trace Format (CTF) has been removed.  GDB now

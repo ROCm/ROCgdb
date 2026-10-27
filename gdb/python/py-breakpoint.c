@@ -914,7 +914,8 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 {
   static const char *keywords[] = { "spec", "type", "wp_class", "internal",
 				    "temporary","source", "function",
-				    "label", "line", "qualified", NULL };
+				    "label", "line", "qualified",
+				    "allow_pending", nullptr };
   const char *spec = NULL;
   enum bptype type = bp_breakpoint;
   int access_type = hw_write;
@@ -928,13 +929,16 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
   char *source = NULL;
   char *function = NULL;
   PyObject *qualified = Py_False;
+  PyObject *allow_pending = Py_True;
 
-  if (!gdb_PyArg_ParseTupleAndKeywords (args, kwargs, "|siiOOsssOO!", keywords,
+  if (!gdb_PyArg_ParseTupleAndKeywords (args, kwargs, "|siiOOsssOO!O!",
+					keywords,
 					&spec, &type, &access_type,
 					&internal,
 					&temporary, &source,
 					&function, &label, &lineobj,
-					&PyBool_Type, &qualified))
+					&PyBool_Type, &qualified,
+					&PyBool_Type, &allow_pending))
     return -1;
 
 
@@ -1022,12 +1026,16 @@ bppy_init (PyObject *self, PyObject *args, PyObject *kwargs)
 	    const struct breakpoint_ops *ops
 	      = breakpoint_ops_for_location_spec (locspec.get (), false);
 
+	    auto_boolean pending_enabled
+	      = (allow_pending == Py_True
+		 ? AUTO_BOOLEAN_TRUE
+		 : AUTO_BOOLEAN_FALSE);
 	    create_breakpoint (gdbpy_enter::get_gdbarch (),
 			       locspec.get (), NULL, -1, -1, NULL, false,
 			       0,
 			       temporary_bp, type,
 			       0,
-			       AUTO_BOOLEAN_TRUE,
+			       pending_enabled,
 			       ops,
 			       0, 1, internal_bp, 0);
 	    break;

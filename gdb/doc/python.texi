@@ -6953,7 +6953,7 @@ create both breakpoints and watchpoints.  The second accepts separate Python
 arguments similar to @ref{Explicit Locations}, and can only be used to create
 breakpoints.
 
-@defun Breakpoint.__init__ (spec @r{[}, type @r{][}, wp_class @r{][}, internal @r{][}, temporary @r{][}, qualified @r{]})
+@defun Breakpoint.__init__ (spec @r{[}, type @r{][}, wp_class @r{][}, internal @r{][}, temporary @r{][}, qualified @r{][}, allow_pending @r{]})
 Create a new breakpoint according to @var{spec}, which is a string naming the
 location of a breakpoint, or an expression that defines a watchpoint.  The
 string should describe a location in a format recognized by the @code{break}
@@ -6983,16 +6983,25 @@ the function passed in @code{spec} as a fully-qualified name.  It is equivalent
 to @code{break}'s @code{-qualified} flag (@pxref{Linespec Locations} and
 @ref{Explicit Locations}).
 
+The optional @var{allow_pending} argument is a boolean that controls whether
+the created breakpoint can be pending or not
+(@pxref{Set Breaks,,Pending Breakpoints}).  The @var{allow_pending} argument is
+set to @code{True} by default and is only considered when @var{type} is
+@code{gdb.BP_BREAKPOINT} or @code{gdb.BP_HARDWARE_BREAKPOINT}.  If
+the @var{allow_pending} argument is set to @code{False} and the breakpoint
+location cannot be resolved, a @code{gdb.error} exception is raised
+instead of creating a pending breakpoint.
+
 @end defun
 
-@defun Breakpoint.__init__ (@r{[} source @r{][}, function @r{][}, label @r{][}, line @r{]}, @r{][} internal @r{][}, temporary @r{][}, qualified @r{]})
+@defun Breakpoint.__init__ (@r{[} source @r{][}, function @r{][}, label @r{][}, line @r{]}, @r{][} internal @r{][}, temporary @r{][}, qualified @r{][}, allow_pending @r{]})
 This second form of creating a new breakpoint specifies the explicit
 location (@pxref{Explicit Locations}) using keywords.  The new breakpoint will
 be created in the specified source file @var{source}, at the specified
 @var{function}, @var{label} and @var{line}.
 
-@var{internal}, @var{temporary} and @var{qualified} have the same usage as
-explained previously.
+@var{internal}, @var{temporary}, @var{qualified} and @var{allow_pending} have
+the same usage as explained previously.
 @end defun
 
 The available types are represented by constants defined in the @code{gdb}
