@@ -80,7 +80,9 @@ kernel ()
 int
 main ()
 {
-  gdb_watchdog (30);
+  #ifdef TIMEOUT
+    gdb_watchdog (TIMEOUT * 3);
+  #endif
 
  /* If the wavefront size is 64 lanes, then this results in 2 waves, 1
      with 64 lanes used, and 1 with 5 lanes used.  If the wavefront
