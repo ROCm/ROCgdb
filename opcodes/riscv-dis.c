@@ -37,12 +37,6 @@
    disassemble_info::fprintf_func which is for unstyled output.  */
 #define fprintf_func please_use_fprintf_styled_func_instead
 
-/* The earliest privilege spec listed for the deprecated priv-spec option.  */
-#define PRIV_SPEC_EARLIEST PRIV_SPEC_CLASS_1P10
-
-/* The privilege spec used to print the CSR names.  */
-#define PRIV_SPEC_DEFAULT PRIV_SPEC_CLASS_1P13
-
 struct riscv_private_data
 {
   bfd_vma gp;
@@ -753,15 +747,11 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		for (i = 0; i < 4096; i++)
 		  riscv_csr_hash[i] = NULL;
 
-#define DECLARE_CSR(name, num, class, define_version, abort_version)	\
-		if (riscv_csr_hash[num] == NULL 			\
-		    && ((define_version == PRIV_SPEC_CLASS_NONE 	\
-			 && abort_version == PRIV_SPEC_CLASS_NONE)	\
-			|| (PRIV_SPEC_DEFAULT >= define_version 	\
-			    && PRIV_SPEC_DEFAULT < abort_version)))	\
+#define DECLARE_CSR(name, num, class)				\
+		if (riscv_csr_hash[num] == NULL)			\
 		  riscv_csr_hash[num] = #name;
-#define DECLARE_CSR_ALIAS(name, num, class, define_version, abort_version) \
-		DECLARE_CSR (name, num, class, define_version, abort_version)
+#define DECLARE_CSR_ALIAS(name, num, class)			\
+		DECLARE_CSR (name, num, class)
 #include "opcode/riscv-opc.h"
 #undef DECLARE_CSR
 	      }
@@ -1948,19 +1938,13 @@ disassembler_options_riscv (void)
       size_t num_args = RISCV_OPTION_ARG_COUNT;
       disasm_option_arg_t *args;
       disasm_options_t *opts;
-      size_t i, priv_spec_count;
+      size_t i;
 
       args = XNEWVEC (disasm_option_arg_t, num_args + 1);
 
       args[RISCV_OPTION_ARG_PRIV_SPEC].name = "SPEC";
-      priv_spec_count = PRIV_SPEC_CLASS_DRAFT - PRIV_SPEC_EARLIEST;
-      args[RISCV_OPTION_ARG_PRIV_SPEC].values
-        = XNEWVEC (const char *, priv_spec_count + 1);
-      for (i = 0; i < priv_spec_count; i++)
-	args[RISCV_OPTION_ARG_PRIV_SPEC].values[i]
-	  = riscv_priv_specs[PRIV_SPEC_EARLIEST - PRIV_SPEC_CLASS_NONE - 1 + i].name;
-      /* The array we return must be NULL terminated.  */
-      args[RISCV_OPTION_ARG_PRIV_SPEC].values[i] = NULL;
+      /* The option is deprecated, so accept any value.  */
+      args[RISCV_OPTION_ARG_PRIV_SPEC].values = NULL;
 
       /* Any ISA string is accepted, so no candidate value list.  */
       args[RISCV_OPTION_ARG_ARCH].name = "ISA";

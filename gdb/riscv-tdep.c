@@ -564,7 +564,7 @@ struct riscv_csr_feature : public riscv_register_feature
     : riscv_register_feature (riscv_feature_name_csr)
   {
     m_registers = {
-#define DECLARE_CSR(NAME,VALUE,CLASS,DEFINE_VER,ABORT_VER)		\
+#define DECLARE_CSR(NAME,VALUE,CLASS)					\
       { RISCV_ ## VALUE ## _REGNUM, { # NAME } },
 #include "opcode/riscv-opc.h"
 #undef DECLARE_CSR
@@ -1358,7 +1358,7 @@ riscv_is_regnum_a_named_csr (int regnum)
 
   switch (regnum)
     {
-#define DECLARE_CSR(name, num, class, define_ver, abort_ver) case RISCV_ ## num ## _REGNUM:
+#define DECLARE_CSR(name, num, class) case RISCV_ ## num ## _REGNUM:
 #include "opcode/riscv-opc.h"
 #undef DECLARE_CSR
       return true;

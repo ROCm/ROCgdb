@@ -119,18 +119,7 @@ struct riscv_csr_extra
      not this CSR is legal in the current -march context.  */
   enum riscv_csr_class csr_class;
 
-  /* CSR may have differnet numbers in the previous priv spec.  */
   unsigned address;
-
-  /* Record the CSR is defined/valid in which versions.  */
-  enum riscv_spec_class define_version;
-
-  /* Record the CSR is aborted/invalid from which versions.  If it isn't
-     aborted in the current version, then it should be PRIV_SPEC_CLASS_DRAFT.  */
-  enum riscv_spec_class abort_version;
-
-  /* The CSR may have more than one setting.  */
-  struct riscv_csr_extra *next;
 };
 
 /* This structure contains information about errors that occur within the
@@ -169,7 +158,6 @@ static const char default_arch[] = DEFAULT_ARCH;
 static const char *default_arch_with_ext = DEFAULT_RISCV_ARCH_WITH_EXT;
 static const char *file_arch_str = NULL;
 static enum riscv_spec_class default_isa_spec = ISA_SPEC_CLASS_NONE;
-static const enum riscv_spec_class default_priv_spec = PRIV_SPEC_CLASS_1P13;
 
 static unsigned xlen = 0; /* The width of an x-register.  */
 static unsigned abi_xlen = 0; /* The width of a pointer in the ABI.  */
@@ -962,50 +950,22 @@ hash_reg_names (enum reg_class class, const char names[][NRC], unsigned n)
 static void
 riscv_init_csr_hash (const char *name,
 		     unsigned address,
-		     enum riscv_csr_class class,
-		     enum riscv_spec_class define_version,
-		     enum riscv_spec_class abort_version)
+		     enum riscv_csr_class class)
 {
-  struct riscv_csr_extra *entry, *pre_entry;
-  bool need_enrty = true;
-
-  pre_entry = NULL;
-  entry = str_hash_find (csr_extra_hash, name);
-  while (need_enrty && entry != NULL)
-    {
-      if (entry->csr_class == class
-	  && entry->address == address
-	  && entry->define_version == define_version
-	  && entry->abort_version == abort_version)
-	need_enrty = false;
-      pre_entry = entry;
-      entry = entry->next;
-    }
-
-  /* Duplicate CSR.  */
-  if (!need_enrty)
-    return;
+  struct riscv_csr_extra *entry;
 
   entry = notes_alloc (sizeof (*entry));
   entry->csr_class = class;
   entry->address = address;
-  entry->define_version = define_version;
-  entry->abort_version = abort_version;
-  entry->next = NULL;
-
-  if (pre_entry == NULL)
-    str_hash_insert (csr_extra_hash, name, entry, 0);
-  else
-    pre_entry->next = entry;
+  str_hash_insert (csr_extra_hash, name, entry, 0);
 }
 
-/* Return the CSR address after checking the ISA dependency and
-   the privileged spec version.
+/* Return the CSR address after checking the ISA dependency.
 
    There are one warning and two errors for CSR,
 
-   Invalid CSR: the CSR was defined, but isn't allowed for the current ISA
-   or the privileged spec, report warning only if -mcsr-check is set.
+   Invalid CSR: the CSR was defined, but isn't allowed for the current ISA,
+   report warning only if -mcsr-check is set.
    Unknown CSR: the CSR has never been defined, report error.
    Improper CSR: the CSR number over the range (> 0xfff), report error.  */
 
@@ -1013,9 +973,7 @@ static unsigned int
 riscv_csr_address (const char *csr_name,
 		   struct riscv_csr_extra *entry)
 {
-  struct riscv_csr_extra *saved_entry = entry;
   enum riscv_csr_class csr_class = entry->csr_class;
-  bool need_check_version = false;
   bool is_rv32_only = false;
   bool is_h_required = false;
   const char* extension = NULL;
@@ -1026,7 +984,6 @@ riscv_csr_address (const char *csr_name,
       is_rv32_only = true;
       /* Fall through.  */
     case CSR_CLASS_I:
-      need_check_version = true;
       extension = "i";
       break;
     case CSR_CLASS_H_32:
@@ -1066,7 +1023,6 @@ riscv_csr_address (const char *csr_name,
       is_rv32_only = true;
       /* Fall through.  */
     case CSR_CLASS_SMCNTRPMF:
-      need_check_version = true;
       extension = "smcntrpmf";
       break;
     case CSR_CLASS_SMRNMI:
@@ -1160,30 +1116,7 @@ riscv_csr_address (const char *csr_name,
 		 csr_name, extension);
     }
 
-  while (entry != NULL)
-    {
-      if (!need_check_version
-	  || (default_priv_spec >= entry->define_version
-	      && default_priv_spec < entry->abort_version))
-       {
-         /* Find the CSR according to the specific version.  */
-         return entry->address;
-       }
-      entry = entry->next;
-    }
-
-  /* Can not find the CSR address from the chosen privileged version,
-     so use the newly defined value.  */
-  if (riscv_opts.csr_check)
-    {
-      const char *priv_name = NULL;
-      RISCV_GET_PRIV_SPEC_NAME (priv_name, default_priv_spec);
-      if (priv_name != NULL)
-	as_warn (_("invalid CSR `%s' for the privileged spec `%s'"),
-		 csr_name, priv_name);
-    }
-
-  return saved_entry->address;
+  return entry->address;
 }
 
 /* Return -1 if the CSR has never been defined.  Otherwise, return
@@ -1951,10 +1884,10 @@ md_begin (void)
 
   /* Create and insert CSR hash tables.  */
   csr_extra_hash = str_htab_create ();
-#define DECLARE_CSR(name, num, class, define_version, abort_version) \
-  riscv_init_csr_hash (#name, num, class, define_version, abort_version);
-#define DECLARE_CSR_ALIAS(name, num, class, define_version, abort_version) \
-  DECLARE_CSR(name, num, class, define_version, abort_version);
+#define DECLARE_CSR(name, num, class) \
+  riscv_init_csr_hash (#name, num, class);
+#define DECLARE_CSR_ALIAS(name, num, class) \
+  DECLARE_CSR(name, num, class);
 #include "opcode/riscv-opc.h"
 #undef DECLARE_CSR
 
@@ -5733,8 +5666,8 @@ RISC-V options:\n\
   -mno-relax                  disable relax\n\
   -march-attr                 generate RISC-V arch attribute\n\
   -mno-arch-attr              don't generate RISC-V arch attribute\n\
-  -mcsr-check                 enable the csr ISA and privilege spec version checks\n\
-  -mno-csr-check              disable the csr ISA and privilege spec version checks (default)\n\
+  -mcsr-check                 enable the csr ISA checks\n\
+  -mno-csr-check              disable the csr ISA checks (default)\n\
   -mbig-endian                assemble for big-endian\n\
   -mlittle-endian             assemble for little-endian\n\
 "));

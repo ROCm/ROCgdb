@@ -10108,7 +10108,7 @@ regname_internal_riscv (unsigned int regno)
 	 document.  */
       switch (regno)
 	{
-#define DECLARE_CSR(NAME,VALUE,CLASS,DEFINE_VER,ABORT_VER) \
+#define DECLARE_CSR(NAME,VALUE,CLASS) \
   case VALUE + 4096: name = #NAME; break;
 #include "opcode/riscv-opc.h"
 #undef DECLARE_CSR

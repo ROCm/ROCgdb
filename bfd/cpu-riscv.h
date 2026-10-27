@@ -26,15 +26,6 @@ enum riscv_spec_class
   ISA_SPEC_CLASS_20190608,
   ISA_SPEC_CLASS_20191213,
   ISA_SPEC_CLASS_DRAFT,
-
-  /* Privileged spec.  */
-  PRIV_SPEC_CLASS_NONE,
-  PRIV_SPEC_CLASS_1P9P1,
-  PRIV_SPEC_CLASS_1P10,
-  PRIV_SPEC_CLASS_1P11,
-  PRIV_SPEC_CLASS_1P12,
-  PRIV_SPEC_CLASS_1P13,
-  PRIV_SPEC_CLASS_DRAFT,
 };
 
 struct riscv_spec
@@ -44,7 +35,6 @@ struct riscv_spec
 };
 
 extern const struct riscv_spec riscv_isa_specs[];
-extern const struct riscv_spec riscv_priv_specs[];
 
 #define RISCV_GET_SPEC_CLASS(UTYPE, LTYPE, NAME, CLASS)			\
   do									\
@@ -66,21 +56,8 @@ extern const struct riscv_spec riscv_priv_specs[];
     }									\
   while (0)
 
-#define RISCV_GET_SPEC_NAME(UTYPE, LTYPE, NAME, CLASS)			\
-  (NAME) = riscv_##LTYPE##_specs[(CLASS) - UTYPE##_SPEC_CLASS_NONE - 1].name
-
 #define RISCV_GET_ISA_SPEC_CLASS(NAME, CLASS)	\
   RISCV_GET_SPEC_CLASS(ISA, isa, NAME, CLASS)
-#define RISCV_GET_PRIV_SPEC_CLASS(NAME, CLASS)	\
-  RISCV_GET_SPEC_CLASS(PRIV, priv, NAME, CLASS)
-#define RISCV_GET_PRIV_SPEC_NAME(NAME, CLASS)	\
-  RISCV_GET_SPEC_NAME(PRIV, priv, NAME, CLASS)
-
-extern void
-riscv_get_priv_spec_class_from_numbers (unsigned int,
-					unsigned int,
-					unsigned int,
-					enum riscv_spec_class *);
 
 extern bool
 riscv_elf_is_mapping_symbols (const char *);
