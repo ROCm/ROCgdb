@@ -40,14 +40,14 @@ __device__ static bool lock = true;
 __global__ void
 kern ()
 {
-  while (__hip_atomic_load (&lock, __ATOMIC_RELAXED,
-			    __HIP_MEMORY_SCOPE_AGENT))
+  while (__scoped_atomic_load_n (&lock, __ATOMIC_RELAXED,
+				 __MEMORY_SCOPE_DEVICE))
     {
       if (blockIdx.x == 0)
 	{
 	  foo ();
-	  __hip_atomic_store (&lock, false, __ATOMIC_RELAXED,
-			      __HIP_MEMORY_SCOPE_AGENT);
+	  __scoped_atomic_store_n (&lock, false, __ATOMIC_RELAXED,
+				   __MEMORY_SCOPE_DEVICE);
 	}
       __builtin_amdgcn_s_sleep (1);
     }
