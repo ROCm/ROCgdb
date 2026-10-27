@@ -7,6 +7,10 @@ Full documentation for ROCgdb is available at
 
 ### Added
 
+- `rocgdb-emulate`, a wrapper that runs ROCgdb against a mirage-emulated
+  GPU (MI300X, MI350X, MI450X), auto-detecting the target from `--profile`,
+  `ROCGDB_EMULATE_PROFILE`, the program's offload bundle, or the ROCm tree's
+  build configuration, in that order.
 - Support for the following architectures:
   - `gfx1170`
   - `gfx1171`
