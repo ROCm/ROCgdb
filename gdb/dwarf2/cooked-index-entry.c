@@ -62,6 +62,10 @@ cooked_index_entry::compare (const char *stra, const char *strb,
       return c_tolower (c);
     };
 
+  /* Optimization: entries with the same name often share the same string.  */
+  if (stra == strb)
+    return 0;
+
   unsigned char a = munge (*stra);
   unsigned char b = munge (*strb);
 
