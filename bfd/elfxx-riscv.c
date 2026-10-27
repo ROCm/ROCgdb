@@ -1285,14 +1285,14 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"xsfvqmaccdod", "+zve32x,+zvl128b", check_implicit_always},
   {"xsfvfnrclipxfqf", "+zve32f", check_implicit_always},
 
+  {"xsmtvdot", "+zve32x", check_implicit_always},
+  {"xsmtvdotii", "+xsmtvdot", check_implicit_always},
+
   {"xtheadvector", "+zicsr", check_implicit_always},
   {"xtheadzvamo", "+zaamo", check_implicit_always},
 
   {"xxtvarith", "+v",	check_implicit_always},
   {"xxtvcoder", "+v",	check_implicit_always},
-
-  {"xsmtvdotii", "+xsmtvdot", check_implicit_always},
-  {"xsmtvdot", "+zve32x", check_implicit_always},
 
   {"v", "+zve64d,+zvl128b", check_implicit_always},
   {"zvabd", "+zve32x", check_implicit_always},
@@ -1726,10 +1726,10 @@ static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
 {
   {"xandesbfhcvt",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
   {"xandesvbfhcvt",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
-  {"xandesvsintload",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
-  {"xandesvpackfph",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
   {"xandesvdot",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
+  {"xandesvpackfph",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
   {"xandesvsinth",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
+  {"xandesvsintload",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
   {"xcvalu",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xcvbi",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xcvbitmanip",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
@@ -1737,6 +1737,17 @@ static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xcvmac",		ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {"xcvmem",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xcvsimd",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipscbop",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipscmov",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipsexectl",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipslsp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfcease",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfvfnrclipxfqf",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfvqmaccdod",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfvqmaccqoq",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsmtvdot",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsmtvdotii",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadba",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadbb",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadbs",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
@@ -1749,23 +1760,12 @@ static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xtheadmemidx",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadmempair",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadsync",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadvector",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadvdot",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadvector",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadzvamo",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xxtvarith",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xxtvcoder",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xventanacondops",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfcease",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvqmaccqoq",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvqmaccdod",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvfnrclipxfqf",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipscbop",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipscmov",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipsexectl",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipslsp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsmtvdot",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsmtvdotii",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xxtvarith",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xxtvcoder",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -3532,14 +3532,14 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xandesbfhcvt";
     case INSN_CLASS_XANDESVBFHCVT:
       return "xandesvbfhcvt";
-    case INSN_CLASS_XANDESVSINTLOAD:
-      return "xandesvsintload";
-    case INSN_CLASS_XANDESVPACKFPH:
-      return "xandesvpackfph";
     case INSN_CLASS_XANDESVDOT:
       return "xandesvdot";
+    case INSN_CLASS_XANDESVPACKFPH:
+      return "xandesvpackfph";
     case INSN_CLASS_XANDESVSINTH:
       return "xandesvsinth";
+    case INSN_CLASS_XANDESVSINTLOAD:
+      return "xandesvsintload";
     case INSN_CLASS_XCVALU:
       return "xcvalu";
     case INSN_CLASS_XCVBI:
@@ -3554,6 +3554,30 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xcvmem";
     case INSN_CLASS_XCVSIMD:
       return "xcvsimd";
+    case INSN_CLASS_XMIPSCBOP:
+      return "xmipscbop";
+    case INSN_CLASS_XMIPSCMOV:
+      return "xmipscmov";
+    case INSN_CLASS_XMIPSEXECTL:
+      return "xmipsexectl";
+    case INSN_CLASS_XMIPSLSP:
+      return "xmipslsp";
+    case INSN_CLASS_XSFCEASE:
+      return "xsfcease";
+    case INSN_CLASS_XSFVCP:
+      return "xsfvcp";
+    case INSN_CLASS_XSFVFNRCLIPXFQF:
+      return "xsfvfnrclipxfqf";
+    case INSN_CLASS_XSFVQMACCDOD:
+      return "xsfvqmaccdod";
+    case INSN_CLASS_XSFVQMACCQOQ:
+      return "xsfvqmaccqoq";
+    case INSN_CLASS_XSMTVDOT:
+      return "xsmtvdot";
+    case INSN_CLASS_XSMTVDOTII:
+      return "xsmtvdotii";
+    case INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII:
+      return _("xsmtvdot' or `xsmtvdotii");
     case INSN_CLASS_XTHEADBA:
       return "xtheadba";
     case INSN_CLASS_XTHEADBB:
@@ -3578,42 +3602,18 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xtheadmempair";
     case INSN_CLASS_XTHEADSYNC:
       return "xtheadsync";
-    case INSN_CLASS_XTHEADVECTOR:
-      return "xtheadvector";
     case INSN_CLASS_XTHEADVDOT:
       return "xtheadvdot";
-    case INSN_CLASS_XXTVARITH:
-      return "xxtvarith";
-    case INSN_CLASS_XXTVCODER:
-      return "xxtvcoder";
+    case INSN_CLASS_XTHEADVECTOR:
+      return "xtheadvector";
     case INSN_CLASS_XTHEADZVAMO:
       return "xtheadzvamo";
     case INSN_CLASS_XVENTANACONDOPS:
       return "xventanacondops";
-    case INSN_CLASS_XSFVCP:
-      return "xsfvcp";
-    case INSN_CLASS_XSFCEASE:
-      return "xsfcease";
-    case INSN_CLASS_XSFVQMACCQOQ:
-      return "xsfvqmaccqoq";
-    case INSN_CLASS_XSFVQMACCDOD:
-      return "xsfvqmaccdod";
-    case INSN_CLASS_XSFVFNRCLIPXFQF:
-      return "xsfvfnrclipxfqf";
-    case INSN_CLASS_XSMTVDOT:
-      return "xsmtvdot";
-    case INSN_CLASS_XSMTVDOTII:
-      return "xsmtvdotii";
-    case INSN_CLASS_XMIPSCBOP:
-      return "xmipscbop";
-    case INSN_CLASS_XMIPSCMOV:
-      return "xmipscmov";
-    case INSN_CLASS_XMIPSEXECTL:
-      return "xmipsexectl";
-    case INSN_CLASS_XMIPSLSP:
-      return "xmipslsp";
-    case INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII:
-      return _("xsmtvdot' or `xsmtvdotii");
+    case INSN_CLASS_XXTVARITH:
+      return "xxtvarith";
+    case INSN_CLASS_XXTVCODER:
+      return "xxtvcoder";
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
