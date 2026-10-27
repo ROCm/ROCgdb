@@ -60,7 +60,7 @@ gdb_test "thread $threadnum" \
   "\\\[Switching to thread $threadnum.*\\\].*" \
   "thread \$threadnum"
 
-gdb_test "next" ".*__hip_atomic_store.*"
+gdb_test "next" ".*__scoped_atomic_store_n.*"
 
 gdb_continue_to_end "" continue 1
 
