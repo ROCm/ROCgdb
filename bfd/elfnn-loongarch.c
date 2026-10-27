@@ -3557,6 +3557,7 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
       bfd_vma relocation, off, ie_off, desc_off;
       int i, j;
       bool resolve_pcrel_undef_weak = false;
+      bool ignored = false;
 
       /* When an unrecognized relocation is encountered, which usually
 	 occurs when using a newer assembler but an older linker, an error
@@ -3604,7 +3605,7 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 	}
       else
 	{
-	  bool warned, ignored;
+	  bool warned;
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
@@ -4282,7 +4283,8 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 	  bool via_plt =
 	    plt != NULL && h != NULL && h->plt.offset != (bfd_vma) - 1;
 
-	  if (is_undefweak)
+	  bool ignored_undef = (ignored && !via_plt);
+	  if (is_undefweak || ignored_undef)
 	    {
 	      relocation = 0;
 
@@ -4321,6 +4323,12 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 		}
 	    }
 
+	  /* B16 and B21 cannot be rewritten as an unconditional jump
+	     without changing their semantics.  Apply a zero displacement,
+	     matching the existing undefined weak symbol behavior.  */
+	  if (ignored_undef && !via_plt)
+	    break;
+
 	  if (resolved_local)
 	    {
 	      relocation -= pc;
@@ -4328,18 +4336,23 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 	    }
 	  else if (resolved_dynly)
 	    {
-	      BFD_ASSERT (h
-			  && (h->plt.offset != MINUS_ONE
-			      || ELF_ST_VISIBILITY (h->other) != STV_DEFAULT)
-			  && rel->r_addend == 0);
+	      BFD_ASSERT (rel->r_addend == 0);
 	      if (h && h->plt.offset == MINUS_ONE
 		  && ELF_ST_VISIBILITY (h->other) != STV_DEFAULT)
 		{
 		  relocation -= pc;
 		  relocation += rel->r_addend;
 		}
-	      else
+	      else if (via_plt)
 		relocation = sec_addr (plt) + h->plt.offset - pc;
+	      else
+		{
+		  fatal = loongarch_reloc_is_fatal
+		    (info, input_bfd, input_section, rel, howto,
+		     bfd_reloc_notsupported, is_undefweak, name,
+		     _("cannot resolve a dynamic branch without a PLT entry"));
+		  break;
+		}
 	    }
 
 	  break;

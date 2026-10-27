@@ -54,6 +54,7 @@ if [istarget "loongarch64-*-*"] {
     run_dump_test "relax-sym-size-1"
     run_dump_test "relax-sym-size-2"
     run_dump_test "check_got_relax"
+    run_dump_test "unresolved-ignore-all"
 
     # Tidy up, to not leave huge intermediate files.
     remote_file host delete tmpdir/relax-medium-call.o
@@ -229,6 +230,7 @@ if [istarget "loongarch64-*-*"] {
     run_dump_test "weak-undef-hidden-shared"
     run_dump_test "overflow_32_pcrel"
     run_dump_test "underflow_32_pcrel"
+    run_dump_test "dynamic-branch-no-plt"
   }
 
   if [check_pie_support] {
