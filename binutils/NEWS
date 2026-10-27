@@ -4,6 +4,10 @@
   to disassemble for in place of the one the object records.  It is useful for
   an object that records none, such as a core file or a raw binary.
 
+* The RISC-V disassembler option -M priv-spec is deprecated and has no
+  effect, and the privileged elf attributes are ignored.  Use binutils 2.47
+  or earlier to select another privileged spec version.
+
 Changes in 2.47:
 
 * The s390 32-bit target (s390-*) is deprecated and planned for removal in a

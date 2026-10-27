@@ -16,6 +16,12 @@
 * Add support for RISC-V standard extensions:
   ziccamoc 1.0, zama16b v1.0, sspmp v1.0, sspmpen v1.0 and smpmpdeleg v1.0.
 
+* The RISC-V option -mpriv-spec, the configure option --with-priv-spec and
+  the privileged elf attributes set by .attribute are deprecated and have no
+  effect.  The RISC-V assembler no longer emits the privileged elf
+  attributes, which are deprecated by the RISC-V psABI.  Use binutils 2.47
+  or earlier to select another privileged spec version.
+
 Changes in 2.47:
 
 * New command line option --reloc-section-sym=[all|internal|none]

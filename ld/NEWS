@@ -31,6 +31,9 @@
   -z zicfiss-report=[none|warning|error] to report inputs without them.
   These follow the RISC-V toolchain conventions.
 
+* The RISC-V linker ignores the privileged spec elf attributes, which are
+  deprecated by the RISC-V psABI, and no longer outputs them.
+
 Changes in 2.47:
 
 * Add a linker optimization level of zero.  Using "-O 0" on the linker command
