@@ -113,6 +113,54 @@ struct code_entry
   int code;
 };
 
+static const struct code_entry attributes[] =
+{
+  { "address", TICK_ADDRESS },
+  { "unchecked_access", TICK_ACCESS },
+  { "unrestricted_access", TICK_ACCESS },
+  { "access", TICK_ACCESS },
+  { "first", TICK_FIRST },
+  { "last", TICK_LAST },
+  { "length", TICK_LENGTH },
+  { "max", TICK_MAX },
+  { "min", TICK_MIN },
+  { "modulus", TICK_MODULUS },
+  { "object_size", TICK_OBJECT_SIZE },
+  { "pos", TICK_POS },
+  { "range", TICK_RANGE },
+  { "size", TICK_SIZE },
+  { "tag", TICK_TAG },
+  { "val", TICK_VAL },
+  { "enum_rep", TICK_ENUM_REP },
+  { "enum_val", TICK_ENUM_VAL },
+};
+
+/* Expression completer for attributes.  */
+struct ada_tick_completer : public expr_completion_base
+{
+  explicit ada_tick_completer (std::string &&name)
+    : m_name (std::move (name))
+  {
+  }
+
+  bool complete (struct expression *exp,
+		 completion_tracker &tracker) override
+  {
+    completion_list output;
+    for (const auto &item : attributes)
+      {
+	if (strncasecmp (item.name, m_name.c_str (), m_name.length ()) == 0)
+	  output.push_back (make_unique_xstrdup (item.name));
+      }
+    tracker.add_completions (std::move (output));
+    return true;
+  }
+
+private:
+
+  std::string m_name;
+};
+
 /* See ada-exp-parser.h.  */
 
 struct parser_state *pstate;
@@ -384,29 +432,6 @@ subseqMatch (const char *subseq, const char *str)
     return subseqMatch (subseq, str+1);
 }
 
-
-static const struct code_entry attributes[] =
-{
-  { "address", TICK_ADDRESS },
-  { "unchecked_access", TICK_ACCESS },
-  { "unrestricted_access", TICK_ACCESS },
-  { "access", TICK_ACCESS },
-  { "first", TICK_FIRST },
-  { "last", TICK_LAST },
-  { "length", TICK_LENGTH },
-  { "max", TICK_MAX },
-  { "min", TICK_MIN },
-  { "modulus", TICK_MODULUS },
-  { "object_size", TICK_OBJECT_SIZE },
-  { "pos", TICK_POS },
-  { "range", TICK_RANGE },
-  { "size", TICK_SIZE },
-  { "tag", TICK_TAG },
-  { "val", TICK_VAL },
-  { "enum_rep", TICK_ENUM_REP },
-  { "enum_val", TICK_ENUM_VAL },
-};
-
 /* See ada-exp-parser.h.  */
 
 int
@@ -437,20 +462,6 @@ ada_parse_state::process_attribute (const std::string &str, bool completing)
     error (_("unrecognized attribute: \"%s\""), str.c_str ());
 
   return *found;
-}
-
-bool
-ada_tick_completer::complete (struct expression *exp,
-			      completion_tracker &tracker)
-{
-  completion_list output;
-  for (const auto &item : attributes)
-    {
-      if (strncasecmp (item.name, m_name.c_str (), m_name.length ()) == 0)
-	output.emplace_back (xstrdup (item.name));
-    }
-  tracker.add_completions (std::move (output));
-  return true;
 }
 
 int

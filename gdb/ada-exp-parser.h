@@ -159,22 +159,6 @@ private:
   bool m_before_qual_quote = false;
 };
 
-/* Expression completer for attributes.  */
-struct ada_tick_completer : public expr_completion_base
-{
-  explicit ada_tick_completer (std::string &&name)
-    : m_name (std::move (name))
-  {
-  }
-
-  bool complete (struct expression *exp,
-		 completion_tracker &tracker) override;
-
-private:
-
-  std::string m_name;
-};
-
 /* The current state of the parser, used internally when parsing an
    expression.  */
 
