@@ -1966,6 +1966,106 @@ def validate_rocgdb(rocgdb_bin: Path, env_vars: Dict[str, str]) -> None:
         _log_error_and_exit(f"ROCgdb python validation failed: {result.stderr}")
 
 
+def validate_rocgdb_auto_load_paths(rocgdb_bin: Path, env_vars: Dict[str, str]) -> None:
+    """
+    Validate the ROCgdb launcher's auto-load path injection.
+
+    Args:
+        rocgdb_bin: Path to ROCgdb executable (the wrapper script).
+        env_vars: Prepared environment (PATH/LD_LIBRARY_PATH/sanitizer options)
+            to use for the validation subprocesses.
+
+    Returns:
+        None
+
+    Exits:
+        Code 1 if the launcher's auto-load behavior doesn't match expectations.
+    """
+    print_section("ROCgdb auto-load path validation", border_char="-", inline=True)
+
+    system_auto_load_dir = "/usr/share/gdb/auto-load"
+
+    # These wrapper env vars affect the behavior under test, so every check
+    # below must clear them from the ambient environment first and set only
+    # the ones it actually intends to exercise. Otherwise a user who already
+    # has e.g. ROCGDB_WRAPPER_AUTO_LOAD_SYSTEM_PATHS=0 exported when invoking
+    # this script would make the "default behavior" checks spuriously fail.
+    auto_load_env_keys = (
+        "ROCGDB_WRAPPER_DEBUG",
+        "ROCGDB_WRAPPER_AUTO_LOAD_SYSTEM_PATHS",
+        "ROCGDB_WRAPPER_AUTO_LOAD_EXTRA_PATHS",
+    )
+
+    def _clean_env() -> Dict[str, str]:
+        env = env_vars.copy()
+        for key in auto_load_env_keys:
+            env.pop(key, None)
+        return env
+
+    # By default the launcher should inject the system auto-load path.
+    env = _clean_env()
+    env["ROCGDB_WRAPPER_DEBUG"] = "1"
+    result = _run_command([str(rocgdb_bin), "--version"], env=env, capture_output=True)
+    if f"add-auto-load-safe-path {system_auto_load_dir}" not in result.stderr:
+        _log_error_and_exit(
+            "ROCgdb launcher did not inject the default system auto-load "
+            f"safe-path ({system_auto_load_dir}) when "
+            "ROCGDB_WRAPPER_AUTO_LOAD_SYSTEM_PATHS was left at its default."
+        )
+    if f"add-auto-load-scripts-directory {system_auto_load_dir}" not in result.stderr:
+        _log_error_and_exit(
+            "ROCgdb launcher did not inject the default system auto-load "
+            f"scripts-directory ({system_auto_load_dir}) when "
+            "ROCGDB_WRAPPER_AUTO_LOAD_SYSTEM_PATHS was left at its default."
+        )
+    logger.info("ROCgdb launcher injects the default system auto-load path.")
+
+    # ROCGDB_WRAPPER_AUTO_LOAD_SYSTEM_PATHS=0 should disable the injection.
+    env = _clean_env()
+    env["ROCGDB_WRAPPER_DEBUG"] = "1"
+    env["ROCGDB_WRAPPER_AUTO_LOAD_SYSTEM_PATHS"] = "0"
+    result = _run_command([str(rocgdb_bin), "--version"], env=env, capture_output=True)
+    if system_auto_load_dir in result.stderr:
+        _log_error_and_exit(
+            "ROCgdb launcher still injected the system auto-load path with "
+            "ROCGDB_WRAPPER_AUTO_LOAD_SYSTEM_PATHS=0."
+        )
+    logger.info("ROCGDB_WRAPPER_AUTO_LOAD_SYSTEM_PATHS=0 disables the injection.")
+
+    # The system auto-load path should actually be registered with GDB.
+    result = _run_command(
+        [str(rocgdb_bin), "-batch", "-ex", "show auto-load safe-path"],
+        env=_clean_env(),
+        capture_output=True,
+    )
+    if system_auto_load_dir not in result.stdout:
+        _log_error_and_exit(
+            f"GDB's auto-load safe-path does not include {system_auto_load_dir}: "
+            f"{result.stdout}"
+        )
+    logger.info("GDB's auto-load safe-path includes the default system path.")
+
+    # User-supplied extra paths should be registered alongside the default.
+    env = _clean_env()
+    env["ROCGDB_WRAPPER_AUTO_LOAD_EXTRA_PATHS"] = (
+        "/tmp/rocgdb-test-foo:/tmp/rocgdb-test-bar"
+    )
+    result = _run_command(
+        [str(rocgdb_bin), "-batch", "-ex", "show auto-load safe-path"],
+        env=env,
+        capture_output=True,
+    )
+    if (
+        "/tmp/rocgdb-test-foo" not in result.stdout
+        or "/tmp/rocgdb-test-bar" not in result.stdout
+    ):
+        _log_error_and_exit(
+            "GDB's auto-load safe-path does not include the user-supplied "
+            f"extra paths: {result.stdout}"
+        )
+    logger.info("ROCGDB_WRAPPER_AUTO_LOAD_EXTRA_PATHS adds user-supplied paths.")
+
+
 def run_tests(
     test_suite_dir: Path,
     rocgdb_bin: Path,
@@ -2382,6 +2482,7 @@ def main() -> None:
 
     # Validate that we can run rocgdb.
     validate_rocgdb(rocgdb_bin, env_vars)
+    validate_rocgdb_auto_load_paths(rocgdb_bin, env_vars)
     compilers = [
         (
             TOOLCHAINS[name]["cc"],
