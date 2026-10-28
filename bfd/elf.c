@@ -471,7 +471,8 @@ bfd_elf_get_elf_syms (bfd *ibfd,
   if (elf_use_dt_symtab_p (ibfd))
     {
       /* Use dynamic symbol table.  */
-      if (elf_tdata (ibfd)->dt_symtab_count != symcount + symoffset)
+      if (symoffset >= elf_tdata (ibfd)->dt_symtab_count
+	  || symcount > elf_tdata (ibfd)->dt_symtab_count - symoffset)
 	{
 	  bfd_set_error (bfd_error_invalid_operation);
 	  return NULL;
