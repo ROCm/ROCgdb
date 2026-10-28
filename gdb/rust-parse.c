@@ -2301,7 +2301,7 @@ rust_lex_test_push_back (rust_parser *parser)
 /* Unit test the lexer.  */
 
 static void
-rust_lex_tests (void)
+rust_lex_tests ()
 {
   /* Set up dummy "parser", so that rust_type works.  */
   parser_state ps (language_def (language_rust), current_inferior ()->arch (),
