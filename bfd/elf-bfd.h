@@ -3441,11 +3441,6 @@ extern asection bfd_elf_large_com_section;
 				unresolved_reloc, warned, ignored)	\
   do									\
     {									\
-      /* It seems this can happen with erroneous or unsupported		\
-	 input (mixing a.out and elf in an archive, for example.)  */	\
-      if (sym_hashes == NULL)						\
-	return false;							\
-									\
       h = sym_hashes[r_symndx - symtab_hdr->sh_info];			\
 									\
       if (info->wrap_hash != NULL					\
