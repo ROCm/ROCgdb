@@ -1581,7 +1581,7 @@ struct tilepro_decoded_instruction
 {
   const struct tilepro_opcode *opcode;
   const struct tilepro_operand *operands[TILEPRO_MAX_OPERANDS];
-  int operand_values[TILEPRO_MAX_OPERANDS];
+  unsigned int operand_values[TILEPRO_MAX_OPERANDS];
 };
 
 

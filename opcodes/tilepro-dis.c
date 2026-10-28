@@ -32,10 +32,10 @@
 
 static int
 contains_insn (tilepro_mnemonic expected_mnemonic,
-	       int expected_first_operand,
-	       int expected_second_operand,
+	       unsigned int expected_first_operand,
+	       unsigned int expected_second_operand,
 	       bfd_vma memaddr,
-	       int *last_operand_ret,
+	       unsigned int *last_operand_ret,
 	       disassemble_info *info)
 {
   struct tilepro_decoded_instruction
@@ -59,11 +59,11 @@ contains_insn (tilepro_mnemonic expected_mnemonic,
       if (opcode->mnemonic != expected_mnemonic)
 	continue;
 
-      if (expected_first_operand != -1
+      if (expected_first_operand != -1u
 	  && decoded[i].operand_values[0] != expected_first_operand)
 	continue;
 
-      if (expected_second_operand != -1
+      if (expected_second_operand != -1u
 	  && decoded[i].operand_values[1] != expected_second_operand)
 	continue;
 
@@ -141,7 +141,7 @@ print_insn_tilepro (bfd_vma memaddr, disassemble_info *info)
 
       for (j = 0; j < opcode->num_operands; j++)
 	{
-	  int num;
+	  unsigned int num;
 	  const struct tilepro_operand *op;
 	  const char *spr_name;
 
@@ -171,7 +171,7 @@ print_insn_tilepro (bfd_vma memaddr, disassemble_info *info)
 	      {
 		bfd_vma addr = 0;
 		int found_addr = 0;
-		int addr_piece;
+		unsigned int addr_piece;
 
 		switch (opcode->mnemonic)
 		  {
@@ -191,7 +191,7 @@ print_insn_tilepro (bfd_vma memaddr, disassemble_info *info)
 		  case TILEPRO_OPC_AULI:
 		    if (contains_insn (TILEPRO_OPC_MOVELI,
 				       decoded[i].operand_values[1],
-				       -1,
+				       -1u,
 				       memaddr - TILEPRO_BUNDLE_SIZE_IN_BYTES,
 				       &addr_piece,
 				       info))
@@ -218,7 +218,7 @@ print_insn_tilepro (bfd_vma memaddr, disassemble_info *info)
 	      break;
 
 	    case TILEPRO_OP_TYPE_ADDRESS:
-	      info->print_address_func ((bfd_vma)(unsigned int) num, info);
+	      info->print_address_func ((bfd_vma) num, info);
 	      break;
 
 	    default:

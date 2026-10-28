@@ -1258,7 +1258,7 @@ struct tilegx_decoded_instruction
 {
   const struct tilegx_opcode *opcode;
   const struct tilegx_operand *operands[TILEGX_MAX_OPERANDS];
-  long long operand_values[TILEGX_MAX_OPERANDS];
+  unsigned int operand_values[TILEGX_MAX_OPERANDS];
 };
 
 
