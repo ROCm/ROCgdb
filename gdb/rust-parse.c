@@ -1544,17 +1544,18 @@ rust_parser::parse_field (operation_up &&lhs)
     case COMPLETE:
       {
 	bool is_complete = current_token == COMPLETE;
-	auto struct_op = new rust_structop (std::move (lhs),
-					    std::string (current_string_val));
+	auto struct_op
+	  = std::make_unique<rust_structop> (std::move (lhs),
+					     std::string (current_string_val));
 	lex ();
 	if (is_complete)
 	  {
-	    completion_op.reset (struct_op);
-	    pstate->mark_struct_expression (struct_op);
+	    pstate->mark_struct_expression (struct_op.get ());
+	    completion_op = std::move (struct_op);
 	    /* Throw to the outermost level of the parser.  */
 	    error (_("not really an error"));
 	  }
-	result.reset (struct_op);
+	result = std::move (struct_op);
       }
       break;
 
