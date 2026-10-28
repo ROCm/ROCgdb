@@ -3696,9 +3696,7 @@ elf32_arm_get_local_dynreloc_list (bfd *abfd, unsigned long r_symndx,
     }
   else
     {
-      /* Track dynamic relocs needed for local syms too.
-	 We really need local syms available to do this
-	 easily.  Oh well.  */
+      /* Track dynamic relocs needed for local syms too.  */
       asection *s;
       void *vpp;
 

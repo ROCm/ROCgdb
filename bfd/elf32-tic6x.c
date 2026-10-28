@@ -2855,9 +2855,7 @@ elf32_tic6x_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		}
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
+		  /* Track dynamic relocs needed for local syms too.  */
 		  void **vpp;
 		  asection *s;
 

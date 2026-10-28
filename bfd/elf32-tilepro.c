@@ -1711,10 +1711,7 @@ tilepro_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		head = &h->dyn_relocs;
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
-
+		  /* Track dynamic relocs needed for local syms too.  */
 		  asection *s;
 		  void *vpp;
 		  Elf_Internal_Sym *isym;

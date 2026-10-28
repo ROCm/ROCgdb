@@ -3472,9 +3472,7 @@ ppc_elf_check_relocs (bfd *abfd,
 		}
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
+		  /* Track dynamic relocs needed for local syms too.  */
 		  struct ppc_dyn_relocs *p;
 		  struct ppc_dyn_relocs **rel_head;
 		  bool is_ifunc;

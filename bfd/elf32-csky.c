@@ -2602,18 +2602,11 @@ csky_elf_check_relocs (bfd * abfd,
 		}
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
+		  /* Track dynamic relocs needed for local syms too.  */
 		  void **vpp;
 		  asection *s;
-		  Elf_Internal_Sym *loc_isym;
 
-		  loc_isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
-						    abfd, r_symndx);
-		  if (loc_isym == NULL)
-		    return false;
-		  s = bfd_section_from_elf_index (abfd, loc_isym->st_shndx);
+		  s = bfd_section_from_elf_index (abfd, isym->st_shndx);
 		  if (s == NULL)
 		    s = sec;
 		  vpp = &elf_section_data (s)->local_dynrel;

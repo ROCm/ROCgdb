@@ -7956,7 +7956,7 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
       unsigned int r_type;
       bfd_reloc_code_real_type bfd_r_type;
       struct elf_link_hash_entry *h;
-      const Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym = NULL;
 
       r_symndx = ELFNN_R_SYM (rel->r_info);
       r_type = ELFNN_R_TYPE (rel->r_info);
@@ -8181,22 +8181,12 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    /* If this is a global symbol, we count the number of
 	       relocations we need for this symbol.  */
 	    if (h != NULL)
-	      {
-		head = &h->dyn_relocs;
-	      }
+	      head = &h->dyn_relocs;
 	    else
 	      {
-		/* Track dynamic relocs needed for local syms too.
-		   We really need local syms available to do this
-		   easily.  Oh well.  */
-
+		/* Track dynamic relocs needed for local syms too.  */
 		asection *s;
 		void **vpp;
-
-		isym = bfd_sym_from_r_symndx (&htab->root.sym_cache,
-					      abfd, r_symndx);
-		if (isym == NULL)
-		  return false;
 
 		s = bfd_section_from_elf_index (abfd, isym->st_shndx);
 		if (s == NULL)

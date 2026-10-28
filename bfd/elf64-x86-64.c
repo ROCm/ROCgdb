@@ -3015,16 +3015,9 @@ need_got:
 		head = &h->dyn_relocs;
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
+		  /* Track dynamic relocs needed for local syms too.  */
 		  asection *s;
 		  void **vpp;
-
-		  isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
-						abfd, r_symndx);
-		  if (isym == NULL)
-		    goto error_return;
 
 		  s = bfd_section_from_elf_index (abfd, isym->st_shndx);
 		  if (s == NULL)
