@@ -2860,6 +2860,8 @@ elf_link_read_relocs_from_section (bfd *abfd,
   const bfd_byte *erelaend;
   Elf_Internal_Rela *irela;
   Elf_Internal_Shdr *symtab_hdr;
+  struct elf_link_hash_entry **sym_hashes;
+  bool hash_check;
   size_t nsyms;
   void *external_relocs = *external_relocs_addr;
 
@@ -2876,6 +2878,8 @@ elf_link_read_relocs_from_section (bfd *abfd,
 
   symtab_hdr = &elf_symtab_hdr (abfd);
   nsyms = NUM_SHDR_ENTRIES (symtab_hdr);
+  sym_hashes = elf_sym_hashes (abfd);
+  hash_check = elf_sym_hashes_valid (abfd);
 
   bed = get_elf_backend_data (abfd);
 
@@ -2903,29 +2907,17 @@ elf_link_read_relocs_from_section (bfd *abfd,
       r_symndx = ELF32_R_SYM (irela->r_info);
       if (bed->s->arch_size == 64)
 	r_symndx >>= 24;
-      if (nsyms > 0)
-	{
-	  if ((size_t) r_symndx >= nsyms)
-	    {
-	      _bfd_error_handler
-		/* xgettext:c-format */
-		(_("%pB: bad reloc symbol index (%#" PRIx64 " >= %#lx)"
-		   " for offset %#" PRIx64 " in section `%pA'"),
-		 abfd, (uint64_t) r_symndx, (unsigned long) nsyms,
-		 (uint64_t) irela->r_offset, sec);
-	      bfd_set_error (bfd_error_bad_value);
-	      return false;
-	    }
-	}
-      else if (r_symndx != STN_UNDEF)
+      if (r_symndx >= nsyms
+	  || (hash_check
+	      && r_symndx >= symtab_hdr->sh_info
+	      && (sym_hashes == NULL
+		  || (!elf_bad_symtab (abfd)
+		      && sym_hashes[r_symndx - symtab_hdr->sh_info] == NULL))))
 	{
 	  _bfd_error_handler
 	    /* xgettext:c-format */
-	    (_("%pB: non-zero symbol index (%#" PRIx64 ")"
-	       " for offset %#" PRIx64 " in section `%pA'"
-	       " when the object file has no symbol table"),
-	     abfd, (uint64_t) r_symndx,
-	     (uint64_t) irela->r_offset, sec);
+	    (_("%pB:(%pA+%#" PRIx64 "): bad reloc symbol index %#" PRIx64),
+	     abfd, sec, (uint64_t) irela->r_offset, (uint64_t) r_symndx);
 	  bfd_set_error (bfd_error_bad_value);
 	  return false;
 	}
@@ -11654,6 +11646,8 @@ elf_link_input_bfd (struct elf_final_link_info *flinfo, bfd *input_bfd)
       else if (ret == 1)
 	*pindex = indx;
     }
+
+  elf_sym_hashes_valid (input_bfd) = true;
 
   if (bed->s->arch_size == 32)
     {

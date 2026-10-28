@@ -2273,6 +2273,10 @@ struct elf_obj_tdata
   /* Set if DT_FLAGS_1 has DF_1_PIE set.  */
   unsigned int is_pie : 1;
 
+  /* Set after the sym_hashes array has been assigned in
+     elf_link_input_bfd.  */
+  unsigned int sym_hashes_valid : 1;
+
   /* Information grabbed from an elf core file.  */
   struct core_elf_obj_tdata *core;
 
@@ -2315,6 +2319,8 @@ struct elf_obj_tdata
 #define elf_gp(bfd)		(elf_tdata(bfd) -> gp)
 #define elf_gp_size(bfd)	(elf_tdata(bfd) -> gp_size)
 #define elf_sym_hashes(bfd)	(elf_tdata(bfd) -> sym_hashes)
+#define elf_sym_hashes_valid(bfd) \
+				(elf_tdata(bfd) -> sym_hashes_valid)
 #define elf_loc_shndx(bfd)	(elf_tdata(bfd) -> loc_shndx)
 #define elf_local_got_refcounts(bfd) (elf_tdata(bfd) -> local_got.refcounts)
 #define elf_local_got_offsets(bfd) (elf_tdata(bfd) -> local_got.offsets)
