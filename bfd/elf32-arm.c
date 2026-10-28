@@ -15217,7 +15217,6 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
   bool call_reloc_p;
   bool may_become_dynamic_p;
   bool may_need_local_target_p;
-  unsigned long nsyms;
 
   if (bfd_link_relocatable (info))
     return true;
@@ -15238,7 +15237,6 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
   symtab_hdr = & elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
-  nsyms = NUM_SHDR_ENTRIES (symtab_hdr);
 
   rel_end = relocs + sec->reloc_count;
   for (rel = relocs; rel < rel_end; rel++)
@@ -15255,23 +15253,20 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
       h = NULL;
       isym = NULL;
-      if (nsyms > 0)
+      if (r_symndx < symtab_hdr->sh_info)
 	{
-	  if (r_symndx < symtab_hdr->sh_info)
-	    {
-	      /* A local symbol.  */
-	      isym = bfd_sym_from_r_symndx (&htab->root.sym_cache,
-					    abfd, r_symndx);
-	      if (isym == NULL)
-		return false;
-	    }
-	  else
-	    {
-	      h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	      while (h->root.type == bfd_link_hash_indirect
-		     || h->root.type == bfd_link_hash_warning)
-		h = (struct elf_link_hash_entry *) h->root.u.i.link;
-	    }
+	  /* A local symbol.  */
+	  isym = bfd_sym_from_r_symndx (&htab->root.sym_cache,
+					abfd, r_symndx);
+	  if (isym == NULL)
+	    return false;
+	}
+      else
+	{
+	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
+	  while (h->root.type == bfd_link_hash_indirect
+		 || h->root.type == bfd_link_hash_warning)
+	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
 	}
 
       eh = (struct elf32_arm_link_hash_entry *) h;
