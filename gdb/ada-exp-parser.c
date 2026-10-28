@@ -189,8 +189,8 @@ canonicalize_numeral (char *s1, const char *s2, const char *end)
 /* See ada-exp-parser.h.  */
 
 int
-processInt (struct parser_state *par_state, const char *base0,
-	    const char *num0, const char *exp0)
+ada_parse_state::process_int (const char *base_str, const char *num,
+			      const char *exp_str)
 {
   long exp;
   int base;
@@ -200,12 +200,12 @@ processInt (struct parser_state *par_state, const char *base0,
      means no "f".  */
   int floating_point_l_count = -1;
 
-  if (base0 == NULL)
+  if (base_str == NULL)
     base = 10;
   else
     {
       char *end_of_base;
-      base = strtol (base0, &end_of_base, 10);
+      base = strtol (base_str, &end_of_base, 10);
       if (base < 2 || base > 16)
 	error (_("Invalid base: %d."), base);
       while (*end_of_base == 'l')
@@ -224,20 +224,20 @@ processInt (struct parser_state *par_state, const char *base0,
       gdb_assert (*end_of_base == '#');
     }
 
-  if (exp0 == NULL)
+  if (exp_str == NULL)
     exp = 0;
   else
-    exp = strtol(exp0, (char **) NULL, 10);
+    exp = strtol (exp_str, nullptr, 10);
 
   gdb_mpz result;
-  while (c_isxdigit (*num0))
+  while (c_isxdigit (*num))
     {
-      int dig = fromhex (*num0);
+      int dig = fromhex (*num);
       if (dig >= base)
-	error (_("Invalid digit \"%c\" in based literal"), *num0);
+	error (_("Invalid digit \"%c\" in based literal"), *num);
       result *= base;
       result += dig;
-      ++num0;
+      ++num;
     }
 
   while (exp > 0)
@@ -250,58 +250,58 @@ processInt (struct parser_state *par_state, const char *base0,
     {
       struct type *fp_type;
       if (floating_point_l_count == 0)
-	fp_type = language_lookup_primitive_type (par_state->language (),
-						  par_state->gdbarch (),
+	fp_type = language_lookup_primitive_type (pstate->language (),
+						  pstate->gdbarch (),
 						  "float");
       else if (floating_point_l_count == 1)
-	fp_type = language_lookup_primitive_type (par_state->language (),
-						  par_state->gdbarch (),
+	fp_type = language_lookup_primitive_type (pstate->language (),
+						  pstate->gdbarch (),
 						  "long_float");
       else
 	{
 	  /* This assertion is ensured by the pattern.  */
 	  gdb_assert (floating_point_l_count == 2);
-	  fp_type = language_lookup_primitive_type (par_state->language (),
-						    par_state->gdbarch (),
+	  fp_type = language_lookup_primitive_type (pstate->language (),
+						    pstate->gdbarch (),
 						    "long_long_float");
 	}
 
       ada_yylval.typed_val_float.type = fp_type;
       result.write (gdb::make_span (ada_yylval.typed_val_float.val,
-					  fp_type->length ()),
+				    fp_type->length ()),
 		    type_byte_order (fp_type),
 		    true);
 
       return FLOAT;
     }
 
-  const gdb_mpz *value = ada_parser->push_integer (std::move (result));
+  const gdb_mpz *value = push_integer (std::move (result));
 
-  int int_bits = gdbarch_int_bit (par_state->gdbarch ());
-  int long_bits = gdbarch_long_bit (par_state->gdbarch ());
-  int long_long_bits = gdbarch_long_long_bit (par_state->gdbarch ());
+  int int_bits = gdbarch_int_bit (pstate->gdbarch ());
+  int long_bits = gdbarch_long_bit (pstate->gdbarch ());
+  int long_long_bits = gdbarch_long_long_bit (pstate->gdbarch ());
 
   if (fits_in_type (1, *value, int_bits, true))
-    ada_yylval.typed_val.type = parse_type (par_state)->builtin_int;
+    ada_yylval.typed_val.type = parse_type (pstate)->builtin_int;
   else if (fits_in_type (1, *value, long_bits, true))
-    ada_yylval.typed_val.type = parse_type (par_state)->builtin_long;
+    ada_yylval.typed_val.type = parse_type (pstate)->builtin_long;
   else if (fits_in_type (1, *value, long_bits, false))
     ada_yylval.typed_val.type
-      = builtin_type (par_state->gdbarch ())->builtin_unsigned_long;
+      = builtin_type (pstate->gdbarch ())->builtin_unsigned_long;
   else if (fits_in_type (1, *value, long_long_bits, true))
-    ada_yylval.typed_val.type = parse_type (par_state)->builtin_long_long;
+    ada_yylval.typed_val.type = parse_type (pstate)->builtin_long_long;
   else if (fits_in_type (1, *value, long_long_bits, false))
     ada_yylval.typed_val.type
-      = builtin_type (par_state->gdbarch ())->builtin_unsigned_long_long;
+      = builtin_type (pstate->gdbarch ())->builtin_unsigned_long_long;
   else if (fits_in_type (1, *value, 128, true))
     ada_yylval.typed_val.type
-      = language_lookup_primitive_type (par_state->language (),
-					par_state->gdbarch (),
+      = language_lookup_primitive_type (pstate->language (),
+					pstate->gdbarch (),
 					"long_long_long_integer");
   else if (fits_in_type (1, *value, 128, false))
     ada_yylval.typed_val.type
-      = language_lookup_primitive_type (par_state->language (),
-					par_state->gdbarch (),
+      = language_lookup_primitive_type (pstate->language (),
+					pstate->gdbarch (),
 					"unsigned_long_long_long_integer");
   else
     error (_("Integer literal out of range"));
@@ -313,9 +313,9 @@ processInt (struct parser_state *par_state, const char *base0,
 /* See ada-exp-parser.h.  */
 
 int
-processReal (struct parser_state *par_state, const char *num0)
+ada_parse_state::process_real (const char *num0)
 {
-  ada_yylval.typed_val_float.type = parse_type (par_state)->builtin_long_double;
+  ada_yylval.typed_val_float.type = parse_type (pstate)->builtin_long_double;
 
   bool parsed = parse_float (num0, strlen (num0),
 			     ada_yylval.typed_val_float.type,
@@ -378,40 +378,39 @@ ada_parse_state::process_id (std::string_view name0)
 /* See ada-exp-parser.h.  */
 
 struct stoken
-processString (const char *text, int len)
+ada_parse_state::process_string (const char *text, const char *lim)
 {
   const char *p;
   char *q;
-  const char *lim = text + len;
   struct stoken result;
 
-  q = (char *) obstack_alloc (&ada_parser->temp_space, len);
+  q = (char *) obstack_alloc (&temp_space, lim - text);
   result.ptr = q;
   p = text;
   while (p < lim)
     {
       if (p[0] == '[' && p[1] == '"' && p+2 < lim)
-	 {
-	   if (p[2] == '"')  /* "...["""]... */
-	     {
-	       *q = '"';
-	       p += 4;
-	     }
-	   else
-	     {
-	       const char *end;
-	       ULONGEST chr = strtoulst (p + 2, &end, 16);
-	       if (chr > 0xff)
-		 error (_("wide strings are not yet supported"));
-	       *q = (char) chr;
-	       p = end + 1;
-	     }
-	 }
-       else
-	 *q = *p;
-       q += 1;
-       p += 1;
-     }
+	{
+	  if (p[2] == '"')  /* "...["""]... */
+	    {
+	      *q = '"';
+	      p += 4;
+	    }
+	  else
+	    {
+	      const char *end;
+	      ULONGEST chr = strtoulst (p + 2, &end, 16);
+	      if (chr > 0xff)
+		error (_("wide strings are not yet supported"));
+	      *q = (char) chr;
+	      p = end + 1;
+	    }
+	}
+      else
+	*q = *p;
+      q += 1;
+      p += 1;
+    }
   result.length = q - result.ptr;
   return result;
 }
@@ -420,16 +419,16 @@ processString (const char *text, int len)
    case.  */
 
 static int
-subseqMatch (const char *subseq, const char *str)
+subseq_match (const char *subseq, const char *str)
 {
   if (subseq[0] == '\0')
     return 1;
   else if (str[0] == '\0')
     return 0;
   else if (c_tolower (subseq[0]) == c_tolower (str[0]))
-    return subseqMatch (subseq+1, str+1) || subseqMatch (subseq, str+1);
+    return subseq_match (subseq+1, str+1) || subseq_match (subseq, str+1);
   else
-    return subseqMatch (subseq, str+1);
+    return subseq_match (subseq, str+1);
 }
 
 /* See ada-exp-parser.h.  */
@@ -451,7 +450,7 @@ ada_parse_state::process_attribute (const std::string &str, bool completing)
 
   std::optional<int> found;
   for (const auto &item : attributes)
-    if (subseqMatch (str.c_str (), item.name))
+    if (subseq_match (str.c_str (), item.name))
       {
 	if (!found.has_value ())
 	  found = item.code;
@@ -482,19 +481,19 @@ ada_parse_state::lex_number ()
   if (subexps[HEX_NUMBER].rm_so != -1)
     {
       canonicalize_numeral (numbuf, num_start + 2, pstate->lexptr);
-      return processInt (pstate, "16#", numbuf, nullptr);
+      return process_int ("16#", numbuf, nullptr);
     }
   else if (subexps[FLOAT_POSEXP].rm_so != -1)
     {
       canonicalize_numeral (numbuf, num_start, pstate->lexptr);
       char *e_ptr = strrchr (numbuf, 'e');
       *e_ptr = '\0';
-      return processInt (pstate, nullptr, numbuf, e_ptr + 1);
+      return process_int (nullptr, numbuf, e_ptr + 1);
     }
   else if (subexps[FLOAT_OPTEXP].rm_so != -1)
     {
       canonicalize_numeral (numbuf, num_start, pstate->lexptr);
-      return processReal (pstate, numbuf);
+      return process_real (numbuf);
     }
   else if (subexps[FLOAT_EXTENSION].rm_so != -1)
     {
@@ -512,14 +511,14 @@ ada_parse_state::lex_number ()
 	  *e_ptr = '\0';
 	  ++e_ptr;
 	}
-      return processInt (pstate, numbuf, strchr (numbuf, '#') + 1, e_ptr);
+      return process_int (numbuf, strchr (numbuf, '#') + 1, e_ptr);
     }
   else if (subexps[BASED_REAL].rm_so != -1)
     error (_("Based real literals not implemented yet."));
 
   /* Must be a simple integer.  */
   canonicalize_numeral (numbuf, num_start, pstate->lexptr);
-  return processInt (pstate, nullptr, numbuf, nullptr);
+  return process_int (nullptr, numbuf, nullptr);
 }
 
 static const code_entry keywords[] =
@@ -859,7 +858,7 @@ ada_parse_state::lex_double_quote ()
   if (*iter != '"')
     error (_("ill-formed or non-terminated string literal"));
 
-  ada_yylval.sval = processString (start, iter - start);
+  ada_yylval.sval = process_string (start, iter);
   pstate->lexptr = iter + 1;
   return STRING;
 }

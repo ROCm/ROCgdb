@@ -137,6 +137,23 @@ private:
   */
   stoken process_id (std::string_view name0);
 
+  /* Return TEXT (up to LIM), a string literal without surrounding
+     quotes, with special hex character notations replaced with
+     characters.  Result valid until the next call to ada_parse.  */
+  struct stoken process_string (const char *text, const char *lim);
+
+  /* Interprets the prefix of NUM that consists of digits of the given BASE
+     as an integer of that BASE, with the string EXP as an exponent.
+     Puts value in yylval, and returns INT, if the string is valid.  Causes
+     an error if the number is improperly formatted.  BASE, if NULL, defaults
+     to "10", and EXP to "1".  The EXP does not contain a leading 'e' or 'E'.
+  */
+  int process_int (const char *base_str, const char *num, const char *exp_str);
+
+  /* Parse NUM0 as a floating-point literal, store the result in
+     yylval, and return the FLOAT token.  */
+  int process_real (const char *num0);
+
   /* Throw an exception when lexing, indicating that an invalid
      character was seen.  */
   [[noreturn]] void invalid_char ();
@@ -167,27 +184,6 @@ extern struct parser_state *pstate;
 /* The current Ada parser object.  */
 
 extern struct ada_parse_state *ada_parser;
-
-/* Return TEXT[0..LEN-1], a string literal without surrounding quotes,
-   with special hex character notations replaced with characters.
-   Result valid until the next call to ada_parse.  */
-
-stoken processString (const char *text, int len);
-
-/* Interprets the prefix of NUM that consists of digits of the given BASE
-   as an integer of that BASE, with the string EXP as an exponent.
-   Puts value in yylval, and returns INT, if the string is valid.  Causes
-   an error if the number is improperly formatted.   BASE, if NULL, defaults
-   to "10", and EXP to "1".  The EXP does not contain a leading 'e' or 'E'.
- */
-
-int processInt (parser_state *par_state, const char *base0, const char *num0,
-		const char *exp0);
-
-/* Parse NUM0 as a floating-point literal, store the result in yylval,
-   and return the FLOAT token.  */
-
-int processReal (struct parser_state *par_state, const char *num0);
 
 /* Like parser_state::pop, but handles Ada type resolution.
    DEPROCEDURE_P and CONTEXT_TYPE are passed to the resolve method, if
