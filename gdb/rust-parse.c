@@ -314,21 +314,6 @@ struct rust_parser
 				     const domain_search_flags domain);
   struct type *rust_lookup_type (const char *name);
 
-  /* Clear some state.  This is only used for testing.  */
-#if GDB_SELF_TEST
-  void reset (const char *input)
-  {
-    pstate->prev_lexptr = nullptr;
-    pstate->lexptr = input;
-    paren_depth = 0;
-    current_token = 0;
-    current_int_val = {};
-    current_float_val = {};
-    current_string_val = {};
-    current_opcode = OP_NULL;
-  }
-#endif /* GDB_SELF_TEST */
-
   /* Storage for use while parsing.  */
   auto_obstack obstack;
 
@@ -2172,13 +2157,9 @@ rust_language::parser (struct parser_state *state) const
 /* A test helper that lexes a string, expecting a single token.  */
 
 static void
-rust_lex_test_one (rust_parser *parser, const char *input, int expected)
+rust_lex_test_one (rust_parser *parser, int expected)
 {
-  int token;
-
-  parser->reset (input);
-
-  token = parser->lex_one_token (false);
+  int token = parser->lex_one_token (false);
   SELF_CHECK (token == expected);
 
   if (token)
@@ -2191,23 +2172,27 @@ rust_lex_test_one (rust_parser *parser, const char *input, int expected)
 /* Test that INPUT lexes as the integer VALUE.  */
 
 static void
-rust_lex_int_test (rust_parser *parser, const char *input,
-		   ULONGEST value, int kind)
+rust_lex_int_test (const char *input, ULONGEST value, int kind)
 {
-  rust_lex_test_one (parser, input, kind);
-  SELF_CHECK (parser->current_int_val.val == value);
+  parser_state ps (language_def (language_rust), current_inferior ()->arch (),
+		   nullptr, 0, 0, input, false, nullptr);
+  rust_parser parser (&ps);
+  rust_lex_test_one (&parser, kind);
+  SELF_CHECK (parser.current_int_val.val == value);
 }
 
 /* Test that INPUT throws an exception with text ERR.  */
 
 static void
-rust_lex_exception_test (rust_parser *parser, const char *input,
-			 const char *err)
+rust_lex_exception_test (const char *input, const char *err)
 {
+  parser_state ps (language_def (language_rust), current_inferior ()->arch (),
+		   nullptr, 0, 0, input, false, nullptr);
+  rust_parser parser (&ps);
   try
     {
       /* The "kind" doesn't matter.  */
-      rust_lex_test_one (parser, input, DECIMAL_INTEGER);
+      rust_lex_test_one (&parser, DECIMAL_INTEGER);
       SELF_CHECK (0);
     }
   catch (const gdb_exception_error &except)
@@ -2220,24 +2205,28 @@ rust_lex_exception_test (rust_parser *parser, const char *input,
    VALUE.  KIND holds the expected token kind.  */
 
 static void
-rust_lex_stringish_test (rust_parser *parser, const char *input,
-			 const char *value, int kind)
+rust_lex_stringish_test (const char *input, const char *value, int kind)
 {
-  rust_lex_test_one (parser, input, kind);
-  SELF_CHECK (parser->current_string_val == value);
+  parser_state ps (language_def (language_rust), current_inferior ()->arch (),
+		   nullptr, 0, 0, input, false, nullptr);
+  rust_parser parser (&ps);
+  rust_lex_test_one (&parser, kind);
+  SELF_CHECK (parser.current_string_val == value);
 }
 
 /* Helper to test that a string parses as a given token sequence.  */
 
 static void
-rust_lex_test_sequence (rust_parser *parser, const char *input, int len,
-			const int expected[])
+rust_lex_test_sequence (const char *input, int len, const int expected[],
+			bool completion = false)
 {
-  parser->reset (input);
+  parser_state ps (language_def (language_rust), current_inferior ()->arch (),
+		   nullptr, 0, 0, input, completion, nullptr);
+  rust_parser parser (&ps);
 
   for (int i = 0; i < len; ++i)
     {
-      int token = parser->lex_one_token (false);
+      int token = parser.lex_one_token (false);
       SELF_CHECK (token == expected[i]);
     }
 }
@@ -2245,58 +2234,63 @@ rust_lex_test_sequence (rust_parser *parser, const char *input, int len,
 /* Tests for an integer-parsing corner case.  */
 
 static void
-rust_lex_test_trailing_dot (rust_parser *parser)
+rust_lex_test_trailing_dot ()
 {
   const int expected1[] = { INTEGER, '.', IDENT, '(', ')', 0 };
   const int expected2[] = { INTEGER, '.', IDENT, '(', ')', 0 };
   const int expected3[] = { FLOAT, EQEQ, '(', ')', 0 };
   const int expected4[] = { INTEGER, DOTDOT, INTEGER, 0 };
 
-  rust_lex_test_sequence (parser, "23.g()", ARRAY_SIZE (expected1), expected1);
-  rust_lex_test_sequence (parser, "23_0.g()", ARRAY_SIZE (expected2),
-			  expected2);
-  rust_lex_test_sequence (parser, "23.==()", ARRAY_SIZE (expected3),
-			  expected3);
-  rust_lex_test_sequence (parser, "23..25", ARRAY_SIZE (expected4), expected4);
+  rust_lex_test_sequence ("23.g()", ARRAY_SIZE (expected1), expected1);
+  rust_lex_test_sequence ("23_0.g()", ARRAY_SIZE (expected2), expected2);
+  rust_lex_test_sequence ("23.==()", ARRAY_SIZE (expected3), expected3);
+  rust_lex_test_sequence ("23..25", ARRAY_SIZE (expected4), expected4);
 }
 
 /* Tests of completion.  */
 
 static void
-rust_lex_test_completion (rust_parser *parser)
+rust_lex_test_completion ()
 {
   const int expected[] = { IDENT, '.', COMPLETE, 0 };
 
-  parser->pstate->parse_completion = true;
-
-  rust_lex_test_sequence (parser, "something.wha", ARRAY_SIZE (expected),
-			  expected);
-  rust_lex_test_sequence (parser, "something.", ARRAY_SIZE (expected),
-			  expected);
-
-  parser->pstate->parse_completion = false;
+  rust_lex_test_sequence ("something.wha", ARRAY_SIZE (expected),
+			  expected, true);
+  rust_lex_test_sequence ("something.", ARRAY_SIZE (expected),
+			  expected, true);
 }
 
 /* Test pushback.  */
 
 static void
-rust_lex_test_push_back (rust_parser *parser)
+rust_lex_test_push_back ()
 {
-  int token;
+  parser_state ps (language_def (language_rust), current_inferior ()->arch (),
+		   nullptr, 0, 0, ">>=", false, nullptr);
+  rust_parser parser (&ps);
 
-  parser->reset (">>=");
-
-  token = parser->lex_one_token (false);
+  int token = parser.lex_one_token (false);
   SELF_CHECK (token == COMPOUND_ASSIGN);
-  SELF_CHECK (parser->current_opcode == BINOP_RSH);
+  SELF_CHECK (parser.current_opcode == BINOP_RSH);
 
-  parser->push_back ('=');
+  parser.push_back ('=');
 
-  token = parser->lex_one_token (false);
+  token = parser.lex_one_token (false);
   SELF_CHECK (token == '=');
 
-  token = parser->lex_one_token (false);
+  token = parser.lex_one_token (false);
   SELF_CHECK (token == 0);
+}
+
+/* Test a simple parse.  */
+
+static void
+rust_simple (const char *input, int expected)
+{
+  parser_state ps (language_def (language_rust), current_inferior ()->arch (),
+		   nullptr, 0, 0, input, false, nullptr);
+  rust_parser parser (&ps);
+  rust_lex_test_one (&parser, expected);
 }
 
 /* Unit test the lexer.  */
@@ -2304,108 +2298,103 @@ rust_lex_test_push_back (rust_parser *parser)
 static void
 rust_lex_tests ()
 {
-  /* Set up dummy "parser", so that rust_type works.  */
-  parser_state ps (language_def (language_rust), current_inferior ()->arch (),
-		   nullptr, 0, 0, nullptr, 0, nullptr);
-  rust_parser parser (&ps);
+  rust_simple ("", 0);
+  rust_simple ("    \t  \n \r  ", 0);
+  rust_simple ("thread 23", 0);
+  rust_simple ("task 23", 0);
+  rust_simple ("th 104", 0);
+  rust_simple ("ta 97", 0);
 
-  rust_lex_test_one (&parser, "", 0);
-  rust_lex_test_one (&parser, "    \t  \n \r  ", 0);
-  rust_lex_test_one (&parser, "thread 23", 0);
-  rust_lex_test_one (&parser, "task 23", 0);
-  rust_lex_test_one (&parser, "th 104", 0);
-  rust_lex_test_one (&parser, "ta 97", 0);
-
-  rust_lex_int_test (&parser, "'z'", 'z', INTEGER);
-  rust_lex_int_test (&parser, "'\\xff'", 0xff, INTEGER);
-  rust_lex_int_test (&parser, "'\\u{1016f}'", 0x1016f, INTEGER);
-  rust_lex_int_test (&parser, "b'z'", 'z', INTEGER);
-  rust_lex_int_test (&parser, "b'\\xfe'", 0xfe, INTEGER);
-  rust_lex_int_test (&parser, "b'\\xFE'", 0xfe, INTEGER);
-  rust_lex_int_test (&parser, "b'\\xfE'", 0xfe, INTEGER);
+  rust_lex_int_test ("'z'", 'z', INTEGER);
+  rust_lex_int_test ("'\\xff'", 0xff, INTEGER);
+  rust_lex_int_test ("'\\u{1016f}'", 0x1016f, INTEGER);
+  rust_lex_int_test ("b'z'", 'z', INTEGER);
+  rust_lex_int_test ("b'\\xfe'", 0xfe, INTEGER);
+  rust_lex_int_test ("b'\\xFE'", 0xfe, INTEGER);
+  rust_lex_int_test ("b'\\xfE'", 0xfe, INTEGER);
 
   /* Test all escapes in both modes.  */
-  rust_lex_int_test (&parser, "'\\n'", '\n', INTEGER);
-  rust_lex_int_test (&parser, "'\\r'", '\r', INTEGER);
-  rust_lex_int_test (&parser, "'\\t'", '\t', INTEGER);
-  rust_lex_int_test (&parser, "'\\\\'", '\\', INTEGER);
-  rust_lex_int_test (&parser, "'\\0'", '\0', INTEGER);
-  rust_lex_int_test (&parser, "'\\''", '\'', INTEGER);
-  rust_lex_int_test (&parser, "'\\\"'", '"', INTEGER);
+  rust_lex_int_test ("'\\n'", '\n', INTEGER);
+  rust_lex_int_test ("'\\r'", '\r', INTEGER);
+  rust_lex_int_test ("'\\t'", '\t', INTEGER);
+  rust_lex_int_test ("'\\\\'", '\\', INTEGER);
+  rust_lex_int_test ("'\\0'", '\0', INTEGER);
+  rust_lex_int_test ("'\\''", '\'', INTEGER);
+  rust_lex_int_test ("'\\\"'", '"', INTEGER);
 
-  rust_lex_int_test (&parser, "b'\\n'", '\n', INTEGER);
-  rust_lex_int_test (&parser, "b'\\r'", '\r', INTEGER);
-  rust_lex_int_test (&parser, "b'\\t'", '\t', INTEGER);
-  rust_lex_int_test (&parser, "b'\\\\'", '\\', INTEGER);
-  rust_lex_int_test (&parser, "b'\\0'", '\0', INTEGER);
-  rust_lex_int_test (&parser, "b'\\''", '\'', INTEGER);
-  rust_lex_int_test (&parser, "b'\\\"'", '"', INTEGER);
+  rust_lex_int_test ("b'\\n'", '\n', INTEGER);
+  rust_lex_int_test ("b'\\r'", '\r', INTEGER);
+  rust_lex_int_test ("b'\\t'", '\t', INTEGER);
+  rust_lex_int_test ("b'\\\\'", '\\', INTEGER);
+  rust_lex_int_test ("b'\\0'", '\0', INTEGER);
+  rust_lex_int_test ("b'\\''", '\'', INTEGER);
+  rust_lex_int_test ("b'\\\"'", '"', INTEGER);
 
-  rust_lex_exception_test (&parser, "'z", "Unterminated character literal");
-  rust_lex_exception_test (&parser, "b'\\x0'", "Not enough hex digits seen");
-  rust_lex_exception_test (&parser, "b'\\u{0}'",
+  rust_lex_exception_test ("'z", "Unterminated character literal");
+  rust_lex_exception_test ("b'\\x0'", "Not enough hex digits seen");
+  rust_lex_exception_test ("b'\\u{0}'",
 			   "Unicode escape in byte literal");
-  rust_lex_exception_test (&parser, "'\\x0'", "Not enough hex digits seen");
-  rust_lex_exception_test (&parser, "'\\u0'", "Missing '{' in Unicode escape");
-  rust_lex_exception_test (&parser, "'\\u{0", "Missing '}' in Unicode escape");
-  rust_lex_exception_test (&parser, "'\\u{0000007}", "Overlong hex escape");
-  rust_lex_exception_test (&parser, "'\\u{}", "Not enough hex digits seen");
-  rust_lex_exception_test (&parser, "'\\Q'", "Invalid escape \\Q in literal");
-  rust_lex_exception_test (&parser, "b'\\Q'", "Invalid escape \\Q in literal");
+  rust_lex_exception_test ("'\\x0'", "Not enough hex digits seen");
+  rust_lex_exception_test ("'\\u0'", "Missing '{' in Unicode escape");
+  rust_lex_exception_test ("'\\u{0", "Missing '}' in Unicode escape");
+  rust_lex_exception_test ("'\\u{0000007}", "Overlong hex escape");
+  rust_lex_exception_test ("'\\u{}", "Not enough hex digits seen");
+  rust_lex_exception_test ("'\\Q'", "Invalid escape \\Q in literal");
+  rust_lex_exception_test ("b'\\Q'", "Invalid escape \\Q in literal");
 
-  rust_lex_int_test (&parser, "23", 23, INTEGER);
-  rust_lex_int_test (&parser, "2_344__29", 234429, INTEGER);
-  rust_lex_int_test (&parser, "0x1f", 0x1f, INTEGER);
-  rust_lex_int_test (&parser, "23usize", 23, INTEGER);
-  rust_lex_int_test (&parser, "23i32", 23, INTEGER);
-  rust_lex_int_test (&parser, "0x1_f", 0x1f, INTEGER);
-  rust_lex_int_test (&parser, "0b1_101011__", 0x6b, INTEGER);
-  rust_lex_int_test (&parser, "0o001177i64", 639, INTEGER);
-  rust_lex_int_test (&parser, "0x123456789u64", 0x123456789ull, INTEGER);
+  rust_lex_int_test ("23", 23, INTEGER);
+  rust_lex_int_test ("2_344__29", 234429, INTEGER);
+  rust_lex_int_test ("0x1f", 0x1f, INTEGER);
+  rust_lex_int_test ("23usize", 23, INTEGER);
+  rust_lex_int_test ("23i32", 23, INTEGER);
+  rust_lex_int_test ("0x1_f", 0x1f, INTEGER);
+  rust_lex_int_test ("0b1_101011__", 0x6b, INTEGER);
+  rust_lex_int_test ("0o001177i64", 639, INTEGER);
+  rust_lex_int_test ("0x123456789u64", 0x123456789ull, INTEGER);
 
-  rust_lex_test_trailing_dot (&parser);
+  rust_lex_test_trailing_dot ();
 
-  rust_lex_test_one (&parser, "23.", FLOAT);
-  rust_lex_test_one (&parser, "23.99f32", FLOAT);
-  rust_lex_test_one (&parser, "23e7", FLOAT);
-  rust_lex_test_one (&parser, "23E-7", FLOAT);
-  rust_lex_test_one (&parser, "23e+7", FLOAT);
-  rust_lex_test_one (&parser, "23.99e+7f64", FLOAT);
-  rust_lex_test_one (&parser, "23.82f32", FLOAT);
+  rust_simple ("23.", FLOAT);
+  rust_simple ("23.99f32", FLOAT);
+  rust_simple ("23e7", FLOAT);
+  rust_simple ("23E-7", FLOAT);
+  rust_simple ("23e+7", FLOAT);
+  rust_simple ("23.99e+7f64", FLOAT);
+  rust_simple ("23.82f32", FLOAT);
 
-  rust_lex_stringish_test (&parser, "hibob", "hibob", IDENT);
-  rust_lex_stringish_test (&parser, "hibob__93", "hibob__93", IDENT);
-  rust_lex_stringish_test (&parser, "thread", "thread", IDENT);
-  rust_lex_stringish_test (&parser, "r#true", "true", IDENT);
+  rust_lex_stringish_test ("hibob", "hibob", IDENT);
+  rust_lex_stringish_test ("hibob__93", "hibob__93", IDENT);
+  rust_lex_stringish_test ("thread", "thread", IDENT);
+  rust_lex_stringish_test ("r#true", "true", IDENT);
 
   const int expected1[] = { IDENT, INTEGER, 0 };
-  rust_lex_test_sequence (&parser, "r#thread 23", ARRAY_SIZE (expected1),
+  rust_lex_test_sequence ("r#thread 23", ARRAY_SIZE (expected1),
 			  expected1);
   const int expected2[] = { IDENT, '#', 0 };
-  rust_lex_test_sequence (&parser, "r#", ARRAY_SIZE (expected2), expected2);
+  rust_lex_test_sequence ("r#", ARRAY_SIZE (expected2), expected2);
 
-  rust_lex_stringish_test (&parser, "\"string\"", "string", STRING);
-  rust_lex_stringish_test (&parser, "\"str\\ting\"", "str\ting", STRING);
-  rust_lex_stringish_test (&parser, "\"str\\\"ing\"", "str\"ing", STRING);
-  rust_lex_stringish_test (&parser, "r\"str\\ing\"", "str\\ing", STRING);
-  rust_lex_stringish_test (&parser, "r#\"str\\ting\"#", "str\\ting", STRING);
-  rust_lex_stringish_test (&parser, "r###\"str\\\"ing\"###", "str\\\"ing",
+  rust_lex_stringish_test ("\"string\"", "string", STRING);
+  rust_lex_stringish_test ("\"str\\ting\"", "str\ting", STRING);
+  rust_lex_stringish_test ("\"str\\\"ing\"", "str\"ing", STRING);
+  rust_lex_stringish_test ("r\"str\\ing\"", "str\\ing", STRING);
+  rust_lex_stringish_test ("r#\"str\\ting\"#", "str\\ting", STRING);
+  rust_lex_stringish_test ("r###\"str\\\"ing\"###", "str\\\"ing",
 			   STRING);
 
-  rust_lex_stringish_test (&parser, "b\"string\"", "string", BYTESTRING);
-  rust_lex_stringish_test (&parser, "b\"\x73tring\"", "string", BYTESTRING);
-  rust_lex_stringish_test (&parser, "b\"str\\\"ing\"", "str\"ing", BYTESTRING);
-  rust_lex_stringish_test (&parser, "br####\"\\x73tring\"####", "\\x73tring",
+  rust_lex_stringish_test ("b\"string\"", "string", BYTESTRING);
+  rust_lex_stringish_test ("b\"\x73tring\"", "string", BYTESTRING);
+  rust_lex_stringish_test ("b\"str\\\"ing\"", "str\"ing", BYTESTRING);
+  rust_lex_stringish_test ("br####\"\\x73tring\"####", "\\x73tring",
 			   BYTESTRING);
 
   for (const auto &candidate : identifier_tokens)
-    rust_lex_test_one (&parser, candidate.name, candidate.value);
+    rust_simple (candidate.name, candidate.value);
 
   for (const auto &candidate : operator_tokens)
-    rust_lex_test_one (&parser, candidate.name, candidate.value);
+    rust_simple (candidate.name, candidate.value);
 
-  rust_lex_test_completion (&parser);
-  rust_lex_test_push_back (&parser);
+  rust_lex_test_completion ();
+  rust_lex_test_push_back ();
 }
 
 #endif /* GDB_SELF_TEST */
