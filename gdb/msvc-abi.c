@@ -485,6 +485,147 @@ msvc_method_ptr_to_value (struct value **this_p, struct value *method_ptr)
 
 static struct cp_abi_ops msvc_abi_ops;
 
+/* Forward declaration for msvc_find_vfptr (defined in the RTTI section).  */
+static CORE_ADDR msvc_find_vfptr (struct type *type, CORE_ADDR addr);
+
+/* Virtual dispatch.  */
+
+/* Return true if any fn_fieldlist of TYPE declares a virtual function
+   whose bare name matches NAME.  */
+
+static bool
+msvc_type_has_virtual_named (struct type *type, const char *name)
+{
+  type = check_typedef (type);
+  for (int i = 0; i < TYPE_NFN_FIELDS (type); i++)
+    if (strcmp (TYPE_FN_FIELDLIST_NAME (type, i), name) == 0)
+      {
+	struct fn_field *fl = TYPE_FN_FIELDLIST1 (type, i);
+	int len = TYPE_FN_FIELDLIST_LENGTH (type, i);
+	for (int j = 0; j < len; j++)
+	  if (TYPE_FN_FIELD_VIRTUAL_P (fl, j))
+	    return true;
+      }
+  return false;
+}
+
+/* Find the base subobject that first introduced the virtual function
+   named NAME into the hierarchy rooted at TYPE.  Set *BASE_TYPE to
+   that base's type and *BASE_ADDR to its address.  Non-virtual bases
+   are tried before virtual bases, matching MSVC's layout order
+   (primary base first).  */
+
+static void
+msvc_find_introducing_base (struct type *type, CORE_ADDR addr,
+			    const char *name,
+			    struct type **base_type, CORE_ADDR *base_addr)
+{
+  type = check_typedef (type);
+
+  /* Non-virtual bases first.  */
+  for (int i = 0; i < TYPE_N_BASECLASSES (type); i++)
+    if (!BASETYPE_VIA_VIRTUAL (type, i))
+      {
+	struct type *bt = check_typedef (type->field (i).type ());
+	CORE_ADDR ba = addr + TYPE_BASECLASS_BITPOS (type, i) / 8;
+	if (msvc_type_has_virtual_named (bt, name))
+	  {
+	    msvc_find_introducing_base (bt, ba, name,
+					base_type, base_addr);
+	    return;
+	  }
+      }
+
+  /* Virtual bases.  */
+  for (int i = 0; i < TYPE_N_BASECLASSES (type); i++)
+    if (BASETYPE_VIA_VIRTUAL (type, i))
+      {
+	struct type *bt = check_typedef (type->field (i).type ());
+	if (msvc_type_has_virtual_named (bt, name))
+	  {
+	    int off = msvc_baseclass_offset (type, i, nullptr, 0, addr,
+					     nullptr);
+	    msvc_find_introducing_base (bt, addr + off, name,
+					base_type, base_addr);
+	    return;
+	  }
+      }
+
+  /* No base declares NAME as virtual: TYPE introduces it.  */
+  *base_type = type;
+  *base_addr = addr;
+}
+
+/* Implement the "virtual_fn_field" method.
+   Locate the vftable slot for method F[J] in *VALUE_P, set *VALUE_P
+   to the introducing subobject (which infcall uses as "this"), and
+   return the function address as a value.  */
+
+static struct value *
+msvc_virtual_fn_field (struct value **value_p,
+		       struct fn_field *f, int j,
+		       struct type *type, int offset)
+{
+  /* Step 1: find the introducing base subobject.
+     Walk the fn_fieldlists to recover the bare method name from F.  */
+  const char *name = nullptr;
+  for (int i = 0; i < TYPE_NFN_FIELDS (type); i++)
+    if (TYPE_FN_FIELDLIST1 (type, i) == f)
+      {
+	name = TYPE_FN_FIELDLIST_NAME (type, i);
+	break;
+      }
+  if (name == nullptr)
+    error (_("Cannot find virtual function name in type %s"),
+	   type->name () != nullptr ? type->name () : "<anonymous>");
+
+  /* Refuse to dispatch virtual destructors: slot 0 holds the scalar
+     deleting destructor (??_G), which frees the object when called.
+     Detect via the fieldlist name (starts with '~'), since the physname
+     under MSVC is the demangled form, not the raw mangled one.  */
+  if (name[0] == '~')
+    error (_("Cannot call a virtual destructor through the vftable"
+	     " under the MSVC C++ ABI"));
+
+  struct type *values_type = check_typedef ((*value_p)->type ());
+  if (values_type->code () != TYPE_CODE_STRUCT)
+    error (_("Only classes can have virtual functions."));
+
+  struct gdbarch *gdbarch = values_type->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int ptr_len = builtin_type (gdbarch)->builtin_data_ptr->length ();
+
+  CORE_ADDR addr = (*value_p)->address ()
+    + (*value_p)->embedded_offset () + offset;
+
+  struct type *intro_type;
+  CORE_ADDR intro_addr;
+  msvc_find_introducing_base (type, addr, name, &intro_type, &intro_addr);
+
+  /* Step 2: get the vfptr of the introducing subobject.  */
+  CORE_ADDR vfptr_addr = msvc_find_vfptr (intro_type, intro_addr);
+  if (vfptr_addr == 0)
+    vfptr_addr = intro_addr;
+
+  /* Step 3: read the function address from the slot.  */
+  ULONGEST voffset = TYPE_FN_FIELD_VOFFSET (f, j);
+  CORE_ADDR vftable
+    = read_memory_unsigned_integer (vfptr_addr, ptr_len, byte_order);
+  CORE_ADDR fn_addr
+    = read_memory_unsigned_integer (vftable + voffset * ptr_len,
+				    ptr_len, byte_order);
+
+  /* Step 4: adjust *value_p to the introducing subobject so infcall
+     passes the right "this".  Create the subobject as a struct value
+     at intro_addr (same shape as gnu-v3's value_cast to the base).  */
+  *value_p = value_from_contents_and_address (intro_type, nullptr,
+					       intro_addr);
+
+  /* Step 5: return the function as a pointer-to-method value.  */
+  return value_from_pointer (
+    lookup_pointer_type (TYPE_FN_FIELD_TYPE (f, j)), fn_addr);
+}
+
 /* RTTI.
 
    On x64 the slot before the first virtual function of each vftable
@@ -1264,10 +1405,11 @@ init_msvc_abi_ops (void)
   msvc_abi_ops.get_typename_from_type_info
     = msvc_get_typename_from_type_info;
 
-  /* Remaining ops (virtual_fn_field, print_vtable, skip_trampoline) are
-     left NULL -- follow-up work; cp-abi.c returns "not supported" for
-     NULL entries.  Thunks are skipped by the gdbarch hook in
-     amd64-windows-tdep.c.  */
+  msvc_abi_ops.virtual_fn_field = msvc_virtual_fn_field;
+
+  /* Remaining ops (print_vtable, skip_trampoline) are left NULL --
+     follow-up work; cp-abi.c returns "not supported" for NULL entries.
+     Thunks are skipped by the gdbarch hook in amd64-windows-tdep.c.  */
 }
 
 /* Select the C++ ABI from the main executable's mangled names, or
