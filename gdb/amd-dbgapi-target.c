@@ -1396,16 +1396,32 @@ amd_dbgapi_target::xfer_partial (enum target_object object, const char *annex,
 				  ? inferior_thread ()->current_simd_lane ()
 				  : AMD_DBGAPI_LANE_NONE);
 
-  amd_dbgapi_architecture_id_t architecture_id;
   amd_dbgapi_address_space_id_t address_space_id;
 
-  if (amd_dbgapi_wave_get_info (wave_id, AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
-				sizeof (architecture_id), &architecture_id)
-	!= AMD_DBGAPI_STATUS_SUCCESS
-      || amd_dbgapi_dwarf_address_space_to_address_space (
-	   architecture_id, dwarf_address_space, &address_space_id)
+  if (wave_id == AMD_DBGAPI_WAVE_NONE)
+    {
+      /* amd_dbgapi_wave_get_info rejects WAVE_NONE.  Without a wave
+	 there is no architecture to translate the DWARF address space
+	 with.  However, only the global address space makes sense for
+	 a host thread, and dbgapi gives that one the same ID in every
+	 architecture.  */
+      if (dwarf_address_space != 0)
+	return TARGET_XFER_E_IO;
+      address_space_id = AMD_DBGAPI_ADDRESS_SPACE_GLOBAL;
+    }
+  else
+    {
+      amd_dbgapi_architecture_id_t architecture_id;
+
+      if ((amd_dbgapi_wave_get_info (wave_id,
+				     AMD_DBGAPI_WAVE_INFO_ARCHITECTURE,
+				     sizeof (architecture_id), &architecture_id)
 	   != AMD_DBGAPI_STATUS_SUCCESS)
-    return TARGET_XFER_E_IO;
+	  || (amd_dbgapi_dwarf_address_space_to_address_space
+	      (architecture_id, dwarf_address_space, &address_space_id)
+	      != AMD_DBGAPI_STATUS_SUCCESS))
+	return TARGET_XFER_E_IO;
+    }
 
   size_t len = requested_len;
   amd_dbgapi_status_t status;
