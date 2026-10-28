@@ -2558,14 +2558,6 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
       if (r_type == R_X86_64_NONE)
 	continue;
 
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"),
-			      abfd, r_symndx);
-	  goto error_return;
-	}
-
       howto = elf_x86_64_rtype_to_howto (abfd, r_type);
       if (howto == NULL)
 	{

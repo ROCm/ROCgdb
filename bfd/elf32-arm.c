@@ -15253,17 +15253,6 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
       r_type = ELF32_R_TYPE (rel->r_info);
       r_type = arm_real_reloc_type (htab, r_type);
 
-      if (r_symndx >= nsyms
-	  /* PR 9934: It is possible to have relocations that do not
-	     refer to symbols, thus it is also possible to have an
-	     object file containing relocations but no symbol table.  */
-	  && (r_symndx > STN_UNDEF || nsyms > 0))
-	{
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"), abfd,
-			      r_symndx);
-	  return false;
-	}
-
       h = NULL;
       isym = NULL;
       if (nsyms > 0)

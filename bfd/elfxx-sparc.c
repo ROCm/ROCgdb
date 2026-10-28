@@ -1380,13 +1380,6 @@ _bfd_sparc_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       r_symndx = SPARC_ELF_R_SYMNDX (htab, rel->r_info);
       r_type = SPARC_ELF_R_TYPE (rel->r_info);
 
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"), abfd, r_symndx);
-	  return false;
-	}
-
       isym = NULL;
       if (r_symndx < symtab_hdr->sh_info)
 	{

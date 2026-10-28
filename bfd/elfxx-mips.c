@@ -8794,15 +8794,6 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
       if (r_symndx < extsymoff)
 	h = NULL;
-      else if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  _bfd_error_handler
-	    /* xgettext:c-format */
-	    (_("%pB: malformed reloc detected for section %s"),
-	     abfd, name);
-	  bfd_set_error (bfd_error_bad_value);
-	  return false;
-	}
       else
 	{
 	  h = sym_hashes[r_symndx - extsymoff];

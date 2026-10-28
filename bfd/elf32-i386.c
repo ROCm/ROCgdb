@@ -1584,14 +1584,6 @@ elf_i386_scan_relocs (bfd *abfd,
       if (r_type == R_386_NONE)
 	continue;
 
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"),
-			      abfd, r_symndx);
-	  goto error_return;
-	}
-
       howto = elf_i386_rtype_to_howto (r_type);
       if (rel->r_offset + bfd_get_reloc_size (howto) > sec->size)
 	{

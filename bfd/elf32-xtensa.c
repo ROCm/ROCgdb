@@ -1117,14 +1117,6 @@ elf_xtensa_check_relocs (bfd *abfd,
       r_symndx = ELF32_R_SYM (rel->r_info);
       r_type = ELF32_R_TYPE (rel->r_info);
 
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"),
-			      abfd, r_symndx);
-	  return false;
-	}
-
       if (r_symndx >= symtab_hdr->sh_info)
 	{
 	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];

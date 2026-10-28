@@ -1151,12 +1151,6 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       r_symndx = ELFNN_R_SYM (rel->r_info);
       r_type = ELFNN_R_TYPE (rel->r_info);
 
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"), abfd, r_symndx);
-	  return false;
-	}
-
       if (r_symndx < symtab_hdr->sh_info)
 	{
 	  /* A local symbol.  */
