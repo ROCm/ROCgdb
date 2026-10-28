@@ -3363,6 +3363,7 @@ lookup_address_in_function_table (struct comp_unit *unit,
 	    continue;
 
 	  if (arange->high - arange->low < best_fit_len
+	      || best_fit == NULL
 	      /* Among matches of the same length take the one later in the
 		 DIE stream.  */
 	      || (arange->high - arange->low == best_fit_len
