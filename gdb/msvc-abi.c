@@ -150,6 +150,63 @@ msvc_match_vbase_expr (const dwarf2_locexpr_baton *baton,
   return (p == end);
 }
 
+static bool msvc_has_virtual_base (struct type *type);
+
+/* Return the offset of the vbptr of class TYPE in an object of TYPE at
+   ADDR.  A class shares the vbptr of its first non-virtual base, in
+   declaration order, that has virtual bases; otherwise it has its own,
+   usually after its own vfptr.  Find that one by scanning: the first
+   entry of its vbtable is minus its offset.  */
+
+static LONGEST
+msvc_find_vbptr_offset (struct type *type, CORE_ADDR addr)
+{
+  type = check_typedef (type);
+  for (int i = 0; i < TYPE_N_BASECLASSES (type); i++)
+    {
+      struct type *base = check_typedef (type->field (i).type ());
+      if (!BASETYPE_VIA_VIRTUAL (type, i) && msvc_has_virtual_base (base))
+	{
+	  LONGEST off = TYPE_BASECLASS_BITPOS (type, i) / 8;
+	  return off + msvc_find_vbptr_offset (base, addr + off);
+	}
+    }
+
+  struct gdbarch *gdbarch = type->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int ptr_len = builtin_type (gdbarch)->builtin_data_ptr->length ();
+  LONGEST found = -1;
+  for (LONGEST s = 0; s + ptr_len <= type->length (); s += ptr_len)
+    {
+      CORE_ADDR vbtable;
+      try
+	{
+	  vbtable = read_memory_unsigned_integer (addr + s, ptr_len,
+						  byte_order);
+	  if (read_memory_integer (vbtable, 4, byte_order) != -s)
+	    continue;
+	}
+      catch (const gdb_exception_error &)
+	{
+	  continue;
+	}
+
+      /* Prefer a vbtable that has a "??_8" symbol; without symbols,
+	 take the first match.  */
+      bound_minimal_symbol bmsym = lookup_minimal_symbol_by_pc (vbtable);
+      if (bmsym.minsym != nullptr
+	  && startswith (bmsym.minsym->linkage_name (), "??_8"))
+	return s;
+      if (found < 0)
+	found = s;
+    }
+
+  if (found < 0)
+    error (_("Cannot find the vbtable pointer in %s"),
+	   type->name () != nullptr ? type->name () : "<anonymous>");
+  return found;
+}
+
 /* Return the byte offset of base class INDEX within TYPE.
 
    For non-virtual bases the static DWARF bitpos is used.  For virtual
@@ -177,23 +234,26 @@ msvc_baseclass_offset (struct type *type, int index,
 	{
 	  /* See msvc_match_vbase_expr.  vbtable entries are 32-bit.
 
-	     FIXME: this assumes the vbptr is at offset 0 of the object.
-	     When the class also has its own vfptr, MSVC puts the vfptr
-	     there and the vbptr after it, and this reads the vfptr
-	     instead.  The DWARF does not give the vbptr's offset.  */
+	     The DWARF expression assumes the vbptr is at offset 0 of the
+	     subobject, but MSVC places the class's own vfptr first and the
+	     vbptr after it.  Scan pointer-aligned slots to find the vbptr.
+	     A slot S holds the vbptr when the vbtable it points to has
+	     entry[0] == -S (entries are signed offsets from the vbptr address,
+	     so entry[0] records the negated vbptr offset within the object).
+	     Prefer a slot whose vbtable address matches a "??_8" minsym.  */
 	  CORE_ADDR object_addr = address + embedded_offset;
 	  struct gdbarch *gdbarch = type->arch ();
 	  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 	  int ptr_len
 	    = builtin_type (gdbarch)->builtin_data_ptr->length ();
+	  LONGEST vbptr_off = msvc_find_vbptr_offset (type, object_addr);
 
-	  CORE_ADDR vbptr
-	    = read_memory_unsigned_integer (object_addr, ptr_len, byte_order);
-
+	  CORE_ADDR vbtable
+	    = read_memory_unsigned_integer (object_addr + vbptr_off,
+					    ptr_len, byte_order);
 	  LONGEST vbase_disp
-	    = read_memory_integer (vbptr + slot_offset, 4, byte_order);
-
-	  return (int) vbase_disp;
+	    = read_memory_integer (vbtable + slot_offset, 4, byte_order);
+	  return (int) (vbptr_off + vbase_disp);
 	}
 
       /* Non-canonical: fall back to the generic DWARF evaluator.  */
@@ -493,8 +553,7 @@ msvc_find_vfptr (struct type *type, CORE_ADDR addr)
       }
 
   /* Only reached when the class has no vfptr outside its virtual bases.
-     The offset of the virtual base comes from msvc_baseclass_offset;
-     see the FIXME there about the vbptr offset.  */
+     The offset of the virtual base comes from msvc_baseclass_offset.  */
   for (int i = 0; i < TYPE_N_BASECLASSES (type); i++)
     if (BASETYPE_VIA_VIRTUAL (type, i)
 	&& msvc_is_polymorphic (type->field (i).type ()))

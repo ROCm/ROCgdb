@@ -18,7 +18,10 @@
 /* Classes with a virtual base.  W also declares a virtual function, so
    under the MSVC C++ ABI it has its own vfptr, which comes before the
    vbptr.  Q has a vfptr too, but its virtual base comes through P, a
-   non-virtual base with its own vbptr.  */
+   non-virtual base with its own vbptr.  F and H have a virtual base of
+   their own and reuse the vbptr of a non-virtual base that is not at
+   offset 0: in F that base comes after X; in H, P is declared first but
+   W, which has a vfptr, is laid out first.  */
 
 struct V
 {
@@ -42,11 +45,35 @@ struct Q : P
   int qq = 44;
 };
 
+struct X
+{
+  virtual int x ();
+  int xx = 55;
+};
+
+struct B
+{
+  int b = 66;
+};
+
+struct F : X, W, virtual B
+{
+  int f = 77;
+};
+
+struct H : P, W, virtual B
+{
+  int h = 88;
+};
+
 int W::n () { return w; }
 int Q::q () { return qq; }
+int X::x () { return xx; }
 
 W gw;
 Q gq;
+F gf;
+H gh;
 
 int
 main ()
