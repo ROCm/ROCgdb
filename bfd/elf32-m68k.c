@@ -4391,9 +4391,8 @@ bfd_m68k_elf32_create_embedded_relocs (bfd *abfd, struct bfd_link_info *info,
   symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, datasec, NULL, (Elf_Internal_Rela *) NULL,
-		      info->keep_memory));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, datasec, NULL, NULL,
+					       info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
 

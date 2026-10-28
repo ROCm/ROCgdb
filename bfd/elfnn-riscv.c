@@ -1921,9 +1921,9 @@ record_relr_non_got_relocs (bfd *input_bfd, struct bfd_link_info *info,
   struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
   Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (input_bfd);
   struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (input_bfd);
-  const Elf_Internal_Rela * relocs =
-	_bfd_elf_link_info_read_relocs (input_bfd, info, sec, NULL, NULL,
-					info->keep_memory);
+  const Elf_Internal_Rela *relocs
+    = _bfd_elf_link_info_read_relocs (input_bfd, info, sec, NULL, NULL,
+				      info->keep_memory);
   BFD_ASSERT (relocs != NULL);
 
   const Elf_Internal_Rela *rel = relocs;

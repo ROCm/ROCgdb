@@ -4398,8 +4398,7 @@ avr_elf32_load_records_from_section (bfd *abfd, asection *sec)
 
   /* Load the relocations for the '.avr.prop' section if there are any, and
      sort them.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, sec, NULL, NULL, false));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL, false);
   if (internal_relocs)
     qsort (internal_relocs, sec->reloc_count,
 	   sizeof (Elf_Internal_Rela), internal_reloc_compare);

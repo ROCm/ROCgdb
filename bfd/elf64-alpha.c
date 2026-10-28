@@ -3462,10 +3462,9 @@ elf64_alpha_relax_opt_call (struct alpha_relax_info *info, bfd_vma symval)
 	}
       else
 	{
-	  tsec_relocs = (_bfd_elf_link_read_relocs
-			 (info->abfd, info->tsec, NULL,
-			 (Elf_Internal_Rela *) NULL,
-			 info->link_info->keep_memory));
+	  tsec_relocs
+	    = _bfd_elf_link_read_relocs (info->abfd, info->tsec, NULL, NULL,
+					 info->link_info->keep_memory);
 	  if (tsec_relocs == NULL)
 	    return 0;
 	  tsec_relend = tsec_relocs + info->tsec->reloc_count;
@@ -4083,9 +4082,9 @@ elf64_alpha_relax_section (bfd *abfd, asection *sec,
   local_got_entries = alpha_elf_tdata(abfd)->local_got_entries;
 
   /* Load the relocations for this section.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, sec, NULL, (Elf_Internal_Rela *) NULL,
-		      link_info->keep_memory));
+  internal_relocs
+    = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+				 link_info->keep_memory);
   if (internal_relocs == NULL)
     return false;
 

@@ -2102,7 +2102,8 @@ lm32_elf_late_size_sections (struct bfd_link_info *info)
 		  Elf_Internal_Rela *internal_relocs, *end;
 		  internal_relocs = elf_section_data (s)->relocs;
 		  if (internal_relocs == NULL)
-		    internal_relocs = (_bfd_elf_link_read_relocs (ibfd, s, NULL, NULL, false));
+		    internal_relocs
+		      = _bfd_elf_link_read_relocs (ibfd, s, NULL, NULL, false);
 		  if (internal_relocs != NULL)
 		    {
 		      end = internal_relocs + s->reloc_count;

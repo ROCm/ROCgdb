@@ -587,9 +587,8 @@ mn10200_elf_relax_section (bfd *abfd,
   symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, sec, NULL, (Elf_Internal_Rela *) NULL,
-		      link_info->keep_memory));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+					       link_info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
 
@@ -1310,9 +1309,8 @@ mn10200_elf_get_relocated_section_contents
       asection **secpp;
       bfd_size_type amt;
 
-      internal_relocs = (_bfd_elf_link_read_relocs
-			 (input_bfd, input_section, NULL,
-			  (Elf_Internal_Rela *) NULL, false));
+      internal_relocs = _bfd_elf_link_read_relocs (input_bfd, input_section,
+						   NULL, NULL, false);
       if (internal_relocs == NULL)
 	goto error_return;
 

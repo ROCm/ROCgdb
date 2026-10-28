@@ -6910,8 +6910,8 @@ retrieve_internal_relocs (bfd *abfd, asection *sec, bool keep_memory)
 
   internal_relocs = elf_section_data (sec)->relocs;
   if (internal_relocs == NULL)
-    internal_relocs = (_bfd_elf_link_read_relocs
-		       (abfd, sec, NULL, NULL, keep_memory));
+    internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+						 keep_memory);
   return internal_relocs;
 }
 

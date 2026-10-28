@@ -4358,9 +4358,9 @@ _bfd_elf_link_iterate_on_relocs
 	      || bfd_is_abs_section (o->output_section))
 	    continue;
 
-	  internal_relocs = _bfd_elf_link_info_read_relocs
-	    (abfd, info, o, NULL, NULL,
-	     _bfd_elf_link_keep_memory (info));
+	  internal_relocs
+	    = _bfd_elf_link_info_read_relocs (abfd, info, o, NULL, NULL,
+					      _bfd_elf_link_keep_memory (info));
 	  if (internal_relocs == NULL)
 	    return false;
 
@@ -5841,9 +5841,9 @@ elf_link_add_object_symbols (bfd *abfd, struct bfd_link_info *info)
 	      || (s->flags & SEC_DEBUGGING) != 0)
 	    continue;
 
-	  internal_relocs = _bfd_elf_link_info_read_relocs
-	    (abfd, info, s, NULL, NULL,
-	     _bfd_elf_link_keep_memory (info));
+	  internal_relocs
+	    = _bfd_elf_link_info_read_relocs (abfd, info, s, NULL, NULL,
+					      _bfd_elf_link_keep_memory (info));
 	  if (internal_relocs == NULL)
 	    goto error_free_vers;
 
@@ -13972,9 +13972,10 @@ init_reloc_cookie_rels (struct elf_reloc_cookie *cookie,
     }
   else
     {
-      cookie->rels = _bfd_elf_link_info_read_relocs
-	(abfd, info, sec, NULL, NULL,
-	 keep_memory || _bfd_elf_link_keep_memory (info));
+      keep_memory = keep_memory || _bfd_elf_link_keep_memory (info);
+      cookie->rels
+	= _bfd_elf_link_info_read_relocs (abfd, info, sec, NULL, NULL,
+					  keep_memory);
       if (cookie->rels == NULL)
 	return false;
       cookie->rel = cookie->rels;

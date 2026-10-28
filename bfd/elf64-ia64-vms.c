@@ -384,9 +384,8 @@ elf64_ia64_relax_section (bfd *abfd, asection *sec,
   symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Load the relocations for this section.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, sec, NULL, (Elf_Internal_Rela *) NULL,
-		      link_info->keep_memory));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+					       link_info->keep_memory);
   if (internal_relocs == NULL)
     return false;
 

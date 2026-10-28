@@ -3475,10 +3475,9 @@ elf32_csky_size_stubs (bfd *output_bfd,
 		continue;
 
 	      /* Get the relocs.  */
-	      internal_relocs = _bfd_elf_link_read_relocs (input_bfd,
-							   section,
-							   NULL, NULL,
-							   info->keep_memory);
+	      internal_relocs
+		= _bfd_elf_link_read_relocs (input_bfd, section, NULL, NULL,
+					     info->keep_memory);
 
 	      if (internal_relocs == NULL)
 		goto error_ret_free_local;

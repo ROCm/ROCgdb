@@ -9320,7 +9320,7 @@ nds32_elf_relax_delete_blanks (bfd *abfd, asection *sec,
 
       /* Relocations MUST be kept in memory, because relaxation adjust them.  */
       internal_relocs = _bfd_elf_link_read_relocs (abfd, sect, NULL, NULL,
-						   true /* keep_memory */);
+						   true);
       irelend = internal_relocs + sect->reloc_count;
 
       blank_t = blank_head;
@@ -12260,7 +12260,7 @@ nds32_elf_relax_section (bfd *abfd, asection *sec,
   symtab_hdr = &elf_symtab_hdr (abfd);
   /* Relocations MUST be kept in memory, because relaxation adjust them.  */
   internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
-					       true /* keep_memory */);
+					       true);
   if (internal_relocs == NULL)
     goto error_return;
 
@@ -13399,8 +13399,7 @@ elf32_nds32_check_relax_group (bfd *abfd, asection *asec)
   do
     {
       /* Relocations MUST be kept in memory, because relaxation adjust them.  */
-      relocs = _bfd_elf_link_read_relocs (abfd, asec, NULL, NULL,
-					  true /* keep_memory  */);
+      relocs = _bfd_elf_link_read_relocs (abfd, asec, NULL, NULL, true);
       if (relocs == NULL)
 	break;
 
@@ -13528,8 +13527,7 @@ elf32_nds32_unify_relax_group (bfd *abfd, asection *asec)
 	break; /* Hit, the section id has handled.  */
 
       /* Relocations MUST be kept in memory, because relaxation adjust them.  */
-      relocs = _bfd_elf_link_read_relocs (abfd, asec, NULL, NULL,
-					  true /* keep_memory  */);
+      relocs = _bfd_elf_link_read_relocs (abfd, asec, NULL, NULL, true);
       if (relocs == NULL)
 	{
 	  BFD_ASSERT (0); /* feed me */
@@ -13592,8 +13590,7 @@ nds32_elf_unify_tls_model (bfd *inbfd, asection *insec, bfd_byte *incontents,
     }
 
   /* Relocations MUST be kept in memory, because relaxation adjust them.  */
-  internal_relocs = _bfd_elf_link_read_relocs (inbfd, insec, NULL, NULL,
-					       true /* keep_memory  */);
+  internal_relocs = _bfd_elf_link_read_relocs (inbfd, insec, NULL, NULL, true);
   if (internal_relocs == NULL)
     goto error_return;
 

@@ -3847,7 +3847,8 @@ s3_bfd_score_elf_discard_info (bfd *abfd, struct elf_reloc_cookie *cookie,
   if (!tdata)
     return false;
 
-  cookie->rels = _bfd_elf_link_read_relocs (abfd, o, NULL, NULL, info->keep_memory);
+  cookie->rels = _bfd_elf_link_read_relocs (abfd, o, NULL, NULL,
+					    info->keep_memory);
   if (!cookie->rels)
     {
       free (tdata);

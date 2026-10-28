@@ -1125,8 +1125,7 @@ _bfd_x86_elf_link_relax_section (bfd *abfd ATTRIBUTE_UNUSED,
 
   /* Load the relocations for this section.  */
   internal_relocs =
-    _bfd_elf_link_info_read_relocs (abfd, info, input_section, NULL,
-				    (Elf_Internal_Rela *) NULL,
+    _bfd_elf_link_info_read_relocs (abfd, info, input_section, NULL, NULL,
 				    info->keep_memory);
   if (internal_relocs == NULL)
     return false;
