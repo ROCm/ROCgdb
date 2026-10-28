@@ -2843,7 +2843,7 @@ s3_bfd_score_elf_check_relocs (bfd *abfd,
 	{
 	  h = NULL;
 	}
-      else if (r_symndx >= extsymoff + NUM_SHDR_ENTRIES (symtab_hdr))
+      else if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
 	{
 	  _bfd_error_handler
 	    /* xgettext:c-format */
