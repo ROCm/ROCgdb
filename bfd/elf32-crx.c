@@ -849,7 +849,7 @@ elf32_crx_relocate_section (struct bfd_link_info *info,
       int r_type;
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h;
       bfd_vma relocation;

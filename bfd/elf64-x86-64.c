@@ -1513,7 +1513,7 @@ elf_x86_64_tls_transition (struct bfd_link_info *info, bfd *abfd,
 			   const Elf_Internal_Rela *rel,
 			   const Elf_Internal_Rela *relend,
 			   struct elf_link_hash_entry *h,
-			   Elf_Internal_Sym *sym,
+			   const Elf_Internal_Sym *sym,
 			   bool from_relocate_section)
 {
   unsigned int from_type = *r_type;
@@ -1684,7 +1684,7 @@ elf_x86_64_need_pic (struct bfd_link_info *info,
 		     bfd *input_bfd, asection *sec,
 		     struct elf_link_hash_entry *h,
 		     Elf_Internal_Shdr *symtab_hdr,
-		     Elf_Internal_Sym *isym,
+		     const Elf_Internal_Sym *isym,
 		     reloc_howto_type *howto)
 {
   const char *v = "";
@@ -2544,7 +2544,7 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
       struct elf_x86_link_hash_entry *eh;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
       const char *name;
       bool size_reloc;
       bool converted_reloc;
@@ -3209,7 +3209,7 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
       struct elf_x86_link_hash_entry *eh;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma off, offplt, plt_offset;
       bfd_vma relocation;

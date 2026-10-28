@@ -1523,7 +1523,7 @@ elf32_avr_relocate_section (struct bfd_link_info *info, bfd *input_bfd,
       unsigned long r_symndx = ELF32_R_SYM (rel->r_info);
       reloc_howto_type *howto = elf_avr_howto_table + r_type;
       struct elf_link_hash_entry *h = NULL;
-      Elf_Internal_Sym *sym = NULL;
+      const Elf_Internal_Sym *sym = NULL;
       asection *sec = NULL;
 
       if (r_symndx < symtab_hdr->sh_info)

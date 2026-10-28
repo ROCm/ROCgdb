@@ -2493,7 +2493,7 @@ csky_elf_check_relocs (bfd * abfd,
     {
       struct elf_link_hash_entry *h;
       unsigned long r_symndx;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
       int r_type;
 
       r_symndx = ELF32_R_SYM (rel->r_info);
@@ -4303,7 +4303,7 @@ csky_elf_relocate_section (struct bfd_link_info * info,
 	= (enum elf_csky_reloc_type) ELF32_R_TYPE (rel->r_info);
       unsigned long r_symndx;
       reloc_howto_type *howto;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma relocation;
       bfd_vma off;

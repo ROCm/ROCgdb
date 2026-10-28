@@ -925,7 +925,7 @@ elf_s390_check_relocs (bfd *abfd,
       unsigned int r_type;
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
 
       r_symndx = ELF64_R_SYM (rel->r_info);
 
@@ -2334,7 +2334,7 @@ elf_s390_relocate_section (struct bfd_link_info *info,
       reloc_howto_type *howto;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma off;
       bfd_vma relocation;

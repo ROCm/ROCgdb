@@ -1807,7 +1807,7 @@ elf64_alpha_sort_relocs_p (asection *sec)
 
 static bool
 elf64_alpha_ifunc_p (struct alpha_elf_link_hash_entry *h,
-		     Elf_Internal_Sym *sym)
+		     const Elf_Internal_Sym *sym)
 {
   if (h != NULL)
     return h->root.type == STT_GNU_IFUNC && h->root.def_regular;
@@ -1831,7 +1831,7 @@ elf64_alpha_ifunc_reloc_p (unsigned long r_type)
 
 static bool
 elf64_alpha_ifunc_irelplt_p (struct alpha_elf_link_hash_entry *h,
-			     Elf_Internal_Sym *sym,
+			     const Elf_Internal_Sym *sym,
 			     struct bfd_link_info *info)
 {
   if (!elf64_alpha_ifunc_p (h, sym) || bfd_link_pic (info))
@@ -2114,7 +2114,7 @@ elf64_alpha_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
       unsigned long r_symndx, r_type;
       struct alpha_elf_link_hash_entry *h;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
       unsigned int gotent_flags;
       bool maybe_dynamic;
       unsigned int need;
@@ -4460,7 +4460,7 @@ elf64_alpha_relocate_section_r (struct bfd_link_info *info ATTRIBUTE_UNUSED,
 static const char *
 elf64_alpha_sym_name (bfd *abfd, Elf_Internal_Shdr *symtab_hdr,
 		      struct alpha_elf_link_hash_entry *h,
-		      Elf_Internal_Sym *sym, asection *sec)
+		      const Elf_Internal_Sym *sym, asection *sec)
 {
   if (h != NULL)
     return h->root.root.root.string;
@@ -4541,7 +4541,7 @@ elf64_alpha_relocate_section (struct bfd_link_info *info,
       bfd_reloc_status_type r;
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym = NULL;
+      const Elf_Internal_Sym *sym = NULL;
       asection *sec = NULL;
       bfd_vma value;
       bfd_vma addend;

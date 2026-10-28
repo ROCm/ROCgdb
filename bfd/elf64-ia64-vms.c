@@ -3414,7 +3414,7 @@ elf64_ia64_relocate_section (struct bfd_link_info *info,
       bfd_reloc_status_type r;
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       unsigned int r_type;
       bfd_vma value;
       asection *sym_sec;

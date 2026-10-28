@@ -1061,7 +1061,7 @@ microblaze_elf_relocate_section (struct bfd_link_info *info,
       bfd_vma addend = rel->r_addend;
       bfd_vma offset = rel->r_offset;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       asection *sym_sec;
       const char *sym_name;

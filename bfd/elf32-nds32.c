@@ -5114,7 +5114,7 @@ nds32_elf_relocate_section (struct bfd_link_info * info,
       reloc_howto_type *howto = NULL;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h = NULL;
-      Elf_Internal_Sym *sym = NULL;
+      const Elf_Internal_Sym *sym = NULL;
       asection *sec;
       bfd_vma relocation;
       bfd_vma relocation_sym = 0xdeadbeef;

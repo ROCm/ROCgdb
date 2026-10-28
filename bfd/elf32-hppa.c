@@ -3560,7 +3560,7 @@ elf32_hppa_relocate_section (struct bfd_link_info *info,
       reloc_howto_type *howto;
       unsigned int r_symndx;
       struct elf32_hppa_link_hash_entry *hh;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sym_sec;
       bfd_vma relocation;
       bfd_reloc_status_type rstatus;

@@ -2631,7 +2631,7 @@ elf_xtensa_relocate_section (struct bfd_link_info *info,
       reloc_howto_type *howto;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       char sym_type;
       const char *name;
       asection *sec;

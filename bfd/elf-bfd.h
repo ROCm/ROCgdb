@@ -2381,7 +2381,7 @@ extern Elf_Internal_Sym *bfd_elf_get_elf_syms
    Elf_External_Sym_Shndx *);
 extern char * bfd_elf_get_str_section (bfd *, unsigned int);
 extern const char *bfd_elf_sym_name
-  (bfd *, Elf_Internal_Shdr *, Elf_Internal_Sym *, asection *);
+  (bfd *, Elf_Internal_Shdr *, const Elf_Internal_Sym *, asection *);
 
 extern bool _bfd_elf_copy_private_bfd_data
   (bfd *, bfd *) ATTRIBUTE_HIDDEN;
@@ -2405,10 +2405,10 @@ extern enum elf_reloc_type_class _bfd_elf_reloc_type_class
   (const struct bfd_link_info *, const asection *,
    const Elf_Internal_Rela *) ATTRIBUTE_HIDDEN;
 extern bfd_vma _bfd_elf_rela_local_sym
-  (bfd *, Elf_Internal_Sym *, asection **, Elf_Internal_Rela *)
+  (bfd *, const Elf_Internal_Sym *, asection **, Elf_Internal_Rela *)
   ATTRIBUTE_HIDDEN;
 extern bfd_vma _bfd_elf_rel_local_sym
-  (bfd *, Elf_Internal_Sym *, asection **, bfd_vma) ATTRIBUTE_HIDDEN;
+  (bfd *, const Elf_Internal_Sym *, asection **, bfd_vma) ATTRIBUTE_HIDDEN;
 extern bfd_vma _bfd_elf_section_offset
   (bfd *, struct bfd_link_info *, asection *, bfd_vma) ATTRIBUTE_HIDDEN;
 

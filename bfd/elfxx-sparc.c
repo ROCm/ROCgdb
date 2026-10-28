@@ -1375,7 +1375,7 @@ _bfd_sparc_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
       struct _bfd_sparc_elf_link_hash_entry *eh;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
 
       r_symndx = SPARC_ELF_R_SYMNDX (htab, rel->r_info);
       r_type = SPARC_ELF_R_TYPE (rel->r_info);
@@ -2813,7 +2813,7 @@ _bfd_sparc_elf_relocate_section (struct bfd_link_info *info,
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
       struct _bfd_sparc_elf_link_hash_entry *eh;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma relocation, off;
       bfd_reloc_status_type r;

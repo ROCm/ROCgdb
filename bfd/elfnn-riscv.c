@@ -1064,6 +1064,7 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       unsigned int r_type;
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
+      const Elf_Internal_Sym *isym;
       bool is_abs_symbol = false;
 
       r_symndx = ELFNN_R_SYM (rel->r_info);
@@ -1072,12 +1073,11 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       if (r_symndx < symtab_hdr->sh_info)
 	{
 	  /* A local symbol.  */
-	  Elf_Internal_Sym *isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
-							  abfd, r_symndx);
+	  isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache, abfd, r_symndx);
 	  if (isym == NULL)
 	    return false;
 
-	  is_abs_symbol = isym->st_shndx == SHN_ABS ? true : false;
+	  is_abs_symbol = isym->st_shndx == SHN_ABS;
 
 	  /* Check relocation against local STT_GNU_IFUNC symbol.  */
 	  if (ELF_ST_TYPE (isym->st_info) == STT_GNU_IFUNC)
@@ -1105,7 +1105,7 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
 
-	  is_abs_symbol = bfd_is_abs_symbol (&h->root) ? true : false;
+	  is_abs_symbol = bfd_is_abs_symbol (&h->root);
 	}
 
       if (h != NULL)
@@ -1328,7 +1328,6 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
 		  asection *s;
 		  void *vpp;
-		  Elf_Internal_Sym *isym;
 
 		  isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
 						abfd, r_symndx);
@@ -3077,7 +3076,7 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
     {
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma relocation;
       bfd_reloc_status_type r = bfd_reloc_ok;

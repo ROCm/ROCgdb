@@ -960,7 +960,7 @@ elf32_m68hc11_relocate_section (struct bfd_link_info *info,
       arelent arel;
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma relocation = 0;
       bfd_reloc_status_type r = bfd_reloc_undefined;

@@ -1064,7 +1064,7 @@ elf_i386_tls_transition (struct bfd_link_info *info, bfd *abfd,
 			 const Elf_Internal_Rela *rel,
 			 const Elf_Internal_Rela *relend,
 			 struct elf_link_hash_entry *h,
-			 Elf_Internal_Sym *sym,
+			 const Elf_Internal_Sym *sym,
 			 bool from_relocate_section)
 {
   unsigned int from_type = *r_type;
@@ -1571,7 +1571,7 @@ elf_i386_scan_relocs (bfd *abfd,
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
       struct elf_x86_link_hash_entry *eh;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
       const char *name;
       bool size_reloc;
       bool no_dynreloc;
@@ -2165,7 +2165,7 @@ elf_i386_relocate_section (struct bfd_link_info *info,
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
       struct elf_x86_link_hash_entry *eh;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma off, offplt, plt_offset;
       bfd_vma relocation;

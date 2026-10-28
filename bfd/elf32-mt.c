@@ -316,7 +316,7 @@ mt_elf_relocate_section
     {
       reloc_howto_type *	   howto;
       unsigned long		   r_symndx;
-      Elf_Internal_Sym *	   sym;
+      const Elf_Internal_Sym *	   sym;
       asection *		   sec;
       struct elf_link_hash_entry * h;
       bfd_vma			   relocation;

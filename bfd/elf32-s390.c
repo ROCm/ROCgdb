@@ -893,7 +893,6 @@ elf_s390_check_relocs (bfd *abfd,
   asection *sreloc;
   bfd_signed_vma *local_got_refcounts;
   int tls_type, old_tls_type;
-  Elf_Internal_Sym *isym;
 
   if (bfd_link_relocatable (info))
     return true;
@@ -913,6 +912,7 @@ elf_s390_check_relocs (bfd *abfd,
       unsigned int r_type;
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
+      const Elf_Internal_Sym *isym;
 
       r_symndx = ELF32_R_SYM (rel->r_info);
 
@@ -2044,7 +2044,7 @@ elf_s390_relocate_section (struct bfd_link_info *info,
       reloc_howto_type *howto;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma off;
       bfd_vma relocation;

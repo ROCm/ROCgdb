@@ -2165,7 +2165,7 @@ elf32_tic6x_relocate_section (struct bfd_link_info *info,
       unsigned long r_symndx;
       arelent bfd_reloc;
       reloc_howto_type *howto;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h;
       bfd_vma off, off2, relocation;
@@ -2705,7 +2705,7 @@ elf32_tic6x_check_relocs (bfd *abfd, struct bfd_link_info *info,
       unsigned int r_type;
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
 
       r_symndx = ELF32_R_SYM (rel->r_info);
       r_type = ELF32_R_TYPE (rel->r_info);

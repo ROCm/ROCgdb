@@ -627,7 +627,7 @@ bfd_elf_get_elf_syms (bfd *ibfd,
 static const char *
 bfd_elf_sym_name_raw (bfd *abfd,
 		      Elf_Internal_Shdr *symtab_hdr,
-		      Elf_Internal_Sym *isym)
+		      const Elf_Internal_Sym *isym)
 {
   unsigned int iname = isym->st_name;
   unsigned int shindex = symtab_hdr->sh_link;
@@ -646,7 +646,7 @@ bfd_elf_sym_name_raw (bfd *abfd,
 const char *
 bfd_elf_sym_name (bfd *abfd,
 		  Elf_Internal_Shdr *symtab_hdr,
-		  Elf_Internal_Sym *isym,
+		  const Elf_Internal_Sym *isym,
 		  asection *sym_sec)
 {
   const char *name = bfd_elf_sym_name_raw (abfd, symtab_hdr, isym);
@@ -13319,7 +13319,7 @@ _bfd_elf_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
 
 bfd_vma
 _bfd_elf_rela_local_sym (bfd *abfd,
-			 Elf_Internal_Sym *sym,
+			 const Elf_Internal_Sym *sym,
 			 asection **psec,
 			 Elf_Internal_Rela *rel)
 {
@@ -13355,7 +13355,7 @@ _bfd_elf_rela_local_sym (bfd *abfd,
 
 bfd_vma
 _bfd_elf_rel_local_sym (bfd *abfd,
-			Elf_Internal_Sym *sym,
+			const Elf_Internal_Sym *sym,
 			asection **psec,
 			bfd_vma addend)
 {

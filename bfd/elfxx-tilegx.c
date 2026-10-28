@@ -2824,7 +2824,7 @@ tilegx_elf_relocate_section (struct bfd_link_info *info,
       reloc_howto_type *howto;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       tilegx_create_func create_func;
       asection *sec;
       bfd_vma relocation;

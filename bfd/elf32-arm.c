@@ -3683,7 +3683,7 @@ elf32_arm_plt_needs_thumb_stub_p (struct bfd_link_info *info,
 
 static struct elf_dyn_relocs **
 elf32_arm_get_local_dynreloc_list (bfd *abfd, unsigned long r_symndx,
-				   Elf_Internal_Sym *isym)
+				   const Elf_Internal_Sym *isym)
 {
   if (ELF32_ST_TYPE (isym->st_info) == STT_GNU_IFUNC)
     {
@@ -13040,7 +13040,7 @@ elf32_arm_relocate_section (struct bfd_link_info * info,
       int			   r_type;
       reloc_howto_type *	   howto;
       unsigned long		   r_symndx;
-      Elf_Internal_Sym *	   sym;
+      const Elf_Internal_Sym *	   sym;
       asection *		   sec;
       struct elf_link_hash_entry * h;
       bfd_vma			   relocation;
@@ -15241,7 +15241,7 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
   rel_end = relocs + sec->reloc_count;
   for (rel = relocs; rel < rel_end; rel++)
     {
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
       struct elf_link_hash_entry *h;
       struct elf32_arm_link_hash_entry *eh;
       unsigned int r_symndx;

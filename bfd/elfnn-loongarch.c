@@ -1049,7 +1049,7 @@ bad_static_reloc (struct bfd_link_info *info,
 		  bfd *abfd, const Elf_Internal_Rela *rel,
 		  asection *sec, unsigned r_type,
 		  struct elf_link_hash_entry *h,
-		  Elf_Internal_Sym *isym)
+		  const Elf_Internal_Sym *isym)
 {
   reloc_howto_type * r = loongarch_elf_rtype_to_howto (abfd, r_type);
   const char *object;
@@ -1145,8 +1145,8 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       unsigned int r_type;
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
+      const Elf_Internal_Sym *isym = NULL;
       bool is_abs_symbol = false;
-      Elf_Internal_Sym *isym = NULL;
 
       r_symndx = ELFNN_R_SYM (rel->r_info);
       r_type = ELFNN_R_TYPE (rel->r_info);
@@ -3248,7 +3248,7 @@ static struct
   bfd_vma r_offset;
   int r_type;
   bfd_vma relocation;
-  Elf_Internal_Sym *sym;
+  const Elf_Internal_Sym *sym;
   struct elf_link_hash_entry *h;
   bfd_vma addend;
   int64_t top_then;
@@ -3258,7 +3258,7 @@ static size_t larch_reloc_queue_tail = 0;
 
 static const char *
 loongarch_sym_name (bfd *input_bfd, struct elf_link_hash_entry *h,
-		    Elf_Internal_Sym *sym)
+		    const Elf_Internal_Sym *sym)
 {
   const char *ret = NULL;
   if (sym)
@@ -3275,7 +3275,7 @@ loongarch_sym_name (bfd *input_bfd, struct elf_link_hash_entry *h,
 
 static void
 loongarch_record_one_reloc (bfd *abfd, asection *section, int r_type,
-			    bfd_vma r_offset, Elf_Internal_Sym *sym,
+			    bfd_vma r_offset, const Elf_Internal_Sym *sym,
 			    struct elf_link_hash_entry *h, bfd_vma addend)
 {
   if ((larch_reloc_queue_head == 0
@@ -3550,7 +3550,7 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
       bfd_vma pc = sec_addr (input_section) + rel->r_offset;
       reloc_howto_type *howto = NULL;
       asection *sec = NULL;
-      Elf_Internal_Sym *sym = NULL;
+      const Elf_Internal_Sym *sym = NULL;
       struct elf_link_hash_entry *h = NULL;
       const char *name;
       bfd_reloc_status_type r = bfd_reloc_ok;
