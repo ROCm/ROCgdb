@@ -488,6 +488,9 @@ static struct cp_abi_ops msvc_abi_ops;
 /* Forward declaration for msvc_find_vfptr (defined in the RTTI section).  */
 static CORE_ADDR msvc_find_vfptr (struct type *type, CORE_ADDR addr);
 
+/* Forward declaration for msvc_is_vfptr_field_name (defined in RTTI section).  */
+static bool msvc_is_vfptr_field_name (const char *name);
+
 /* Virtual dispatch.  */
 
 /* Return true if any fn_fieldlist of TYPE declares a virtual function
@@ -624,6 +627,237 @@ msvc_virtual_fn_field (struct value **value_p,
   /* Step 5: return the function as a pointer-to-method value.  */
   return value_from_pointer (
     lookup_pointer_type (TYPE_FN_FIELD_TYPE (f, j)), fn_addr);
+}
+
+/* print_vtable.  */
+
+/* Collect all (subobj_type, subobj_addr) pairs in the hierarchy of
+   TYPE at ADDR that own a vftable, appending to OUT.
+   Non-virtual bases first, then virtual bases.
+
+   MSVC layout rules:
+   - A class with its own _vptr$ field has a primary vftable.
+   - A class with no own _vptr$ inherits a primary vftable from its
+     first non-virtual base that has one.  In that case record (TYPE,
+     ADDR), not the base's type -- TYPE IS the subobject being printed.
+   - Non-primary (secondary) non-virtual bases that have their own
+     vfptr contribute a separate vftable entry.
+   - Virtual bases with their own vfptr also contribute separately.  */
+
+static void
+msvc_collect_vfptr_subobjects (struct type *type, CORE_ADDR addr,
+				std::vector<std::pair<struct type *,
+						      CORE_ADDR>> &out)
+{
+  type = check_typedef (type);
+
+  /* Check whether TYPE itself has a _vptr$ field.  */
+  bool has_own_vfptr = false;
+  for (int i = TYPE_N_BASECLASSES (type); i < type->num_fields (); i++)
+    if (!type->field (i).is_static ()
+	&& type->field (i).loc_kind () == FIELD_LOC_KIND_BITPOS
+	&& msvc_is_vfptr_field_name (type->field (i).name ()))
+      {
+	has_own_vfptr = true;
+	break;
+      }
+
+  if (has_own_vfptr)
+    {
+      /* TYPE introduces its own vftable.  Record it as the subobject.  */
+      out.emplace_back (type, addr);
+
+      /* Recurse into SECONDARY non-virtual bases (i > 0): they may
+	 have their own separate vftable.  Skip the primary base (i==0):
+	 its slots are merged into TYPE's vftable.  */
+      for (int i = 1; i < TYPE_N_BASECLASSES (type); i++)
+	if (!BASETYPE_VIA_VIRTUAL (type, i))
+	  msvc_collect_vfptr_subobjects (
+	    check_typedef (type->field (i).type ()),
+	    addr + TYPE_BASECLASS_BITPOS (type, i) / 8, out);
+    }
+  else
+    {
+      /* TYPE has no own _vptr$: it inherits a primary vftable from its
+	 first non-virtual base that is polymorphic.  Record (TYPE, ADDR)
+	 when we find that base (so the printed name is TYPE's, not the
+	 deep base's).  */
+      bool found_primary = false;
+      for (int i = 0; i < TYPE_N_BASECLASSES (type); i++)
+	if (!BASETYPE_VIA_VIRTUAL (type, i))
+	  {
+	    struct type *bt = check_typedef (type->field (i).type ());
+	    CORE_ADDR ba = addr + TYPE_BASECLASS_BITPOS (type, i) / 8;
+	    if (!found_primary && msvc_is_polymorphic (bt))
+	      {
+		/* Primary: record TYPE (not bt) as the subobject.  */
+		out.emplace_back (type, addr);
+		found_primary = true;
+		/* Continue to pick up secondary vftables.  */
+	      }
+	    else if (found_primary)
+	      {
+		/* Secondary: recurse normally.  */
+		msvc_collect_vfptr_subobjects (bt, ba, out);
+	      }
+	  }
+    }
+
+  /* Virtual bases.  */
+  for (int i = 0; i < TYPE_N_BASECLASSES (type); i++)
+    if (BASETYPE_VIA_VIRTUAL (type, i))
+      {
+	struct type *bt = check_typedef (type->field (i).type ());
+	if (msvc_is_polymorphic (bt))
+	  {
+	    int off = msvc_baseclass_offset (type, i, nullptr, 0, addr,
+					     nullptr);
+	    msvc_collect_vfptr_subobjects (bt, addr + off, out);
+	  }
+      }
+}
+
+/* Return the number of function-pointer slots in a MSVC vftable whose
+   first slot is at VFTABLE.  Uses the minsym size when available
+   (set for ELF; not set for PE/COFF).  Falls back to scanning entries:
+   stops at a null entry OR at an entry whose address belongs to an RTTI
+   or vftable symbol (??_R or ??_7 prefix) -- those are COL pointers
+   that precede the next vftable, not function slots.  Caps at
+   MAX_SLOTS for safety.  */
+
+static int
+msvc_count_vtable_slots (CORE_ADDR vftable,
+			 int ptr_len,
+			 enum bfd_endian byte_order)
+{
+  const int MAX_SLOTS = 512;
+
+  /* Prefer the minsym size when available (ELF targets).  */
+  bound_minimal_symbol msym = lookup_minimal_symbol_by_pc (vftable);
+  if (msym.minsym != nullptr && msym.minsym->has_size ())
+    {
+      unsigned long sz = msym.minsym->size ();
+      if (sz > 0 && (sz % ptr_len) == 0)
+	return (int) (sz / ptr_len);
+    }
+
+  /* Fallback for PE/COFF (no minsym sizes): scan entries and stop at
+     null or at an RTTI/vftable symbol (a COL that begins the next
+     vftable block in .rdata).  */
+  for (int n = 0; n < MAX_SLOTS; n++)
+    {
+      CORE_ADDR entry;
+      try
+	{
+	  entry = read_memory_unsigned_integer (vftable + n * ptr_len,
+					       ptr_len, byte_order);
+	}
+      catch (const gdb_exception_error &)
+	{
+	  return n;
+	}
+      if (entry == 0)
+	return n;
+      /* Stop if this entry looks like an RTTI or vftable data symbol.  */
+      bound_minimal_symbol esym = lookup_minimal_symbol_by_pc (entry);
+      if (esym.minsym != nullptr)
+	{
+	  const char *name = esym.minsym->linkage_name ();
+	  if (startswith (name, "??_R") || startswith (name, "??_7"))
+	    return n;
+	}
+    }
+  return MAX_SLOTS;
+}
+
+/* Print a single vftable for the subobject at SUBOBJ_ADDR whose type
+   owns the vfptr.  */
+
+static void
+msvc_print_one_vtable (struct gdbarch *gdbarch,
+		       enum bfd_endian byte_order,
+		       struct type *subobj_type, CORE_ADDR subobj_addr,
+		       const value_print_options &opts)
+{
+  int ptr_len = builtin_type (gdbarch)->builtin_data_ptr->length ();
+
+  CORE_ADDR vfptr_addr = msvc_find_vfptr (subobj_type, subobj_addr);
+  if (vfptr_addr == 0)
+    return;
+
+  CORE_ADDR vftable
+    = read_memory_unsigned_integer (vfptr_addr, ptr_len, byte_order);
+
+  int n_slots = msvc_count_vtable_slots (vftable, ptr_len, byte_order);
+  if (n_slots == 0)
+    return;
+
+  gdb_printf (_("vtable for '%s' @ %s (subobject @ %s):\n"),
+	      subobj_type->safe_name (),
+	      paddress (gdbarch, vftable),
+	      paddress (gdbarch, subobj_addr));
+
+  for (int slot = 0; slot < n_slots; slot++)
+    {
+      CORE_ADDR fn_addr
+	= read_memory_unsigned_integer (vftable + slot * ptr_len,
+					ptr_len, byte_order);
+      gdb_printf ("[%d]: ", slot);
+      print_function_pointer_address (opts, gdbarch, fn_addr, gdb_stdout);
+      gdb_printf ("\n");
+    }
+}
+
+/* Implementation of the print_vtable method for the MSVC C++ ABI.  */
+
+static void
+msvc_print_vtable (struct value *value)
+{
+  value = coerce_ref (value);
+  struct type *type = check_typedef (value->type ());
+  if (type->code () == TYPE_CODE_PTR)
+    {
+      value = value_ind (value);
+      type = check_typedef (value->type ());
+    }
+
+  if (type->code () != TYPE_CODE_STRUCT)
+    {
+      gdb_printf (_("This object does not have a virtual function table\n"));
+      return;
+    }
+
+  const value_print_options &opts = get_user_print_options ();
+  if (opts.objectprint)
+    {
+      value = value_full_object (value, nullptr, 0, 0, 0);
+      type = check_typedef (value->type ());
+    }
+
+  CORE_ADDR addr = value->address () + value->embedded_offset ();
+
+  /* Collect all subobjects with their own vfptr.  */
+  std::vector<std::pair<struct type *, CORE_ADDR>> vfptr_subobjs;
+  msvc_collect_vfptr_subobjects (type, addr, vfptr_subobjs);
+
+  if (vfptr_subobjs.empty ())
+    {
+      gdb_printf (_("This object does not have a virtual function table\n"));
+      return;
+    }
+
+  struct gdbarch *gdbarch = type->arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  int count = 0;
+  for (auto &[subobj_type, subobj_addr] : vfptr_subobjs)
+    {
+      if (count > 0)
+	gdb_printf ("\n");
+      msvc_print_one_vtable (gdbarch, byte_order,
+			     subobj_type, subobj_addr, opts);
+      ++count;
+    }
 }
 
 /* RTTI.
@@ -1406,8 +1640,9 @@ init_msvc_abi_ops (void)
     = msvc_get_typename_from_type_info;
 
   msvc_abi_ops.virtual_fn_field = msvc_virtual_fn_field;
+  msvc_abi_ops.print_vtable = msvc_print_vtable;
 
-  /* Remaining ops (print_vtable, skip_trampoline) are left NULL --
+  /* Remaining ops (skip_trampoline) are left NULL --
      follow-up work; cp-abi.c returns "not supported" for NULL entries.
      Thunks are skipped by the gdbarch hook in amd64-windows-tdep.c.  */
 }
