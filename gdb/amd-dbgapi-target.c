@@ -216,6 +216,111 @@ struct wave_info
 /* Big enough to hold the size of the largest register in bytes.  */
 #define AMDGPU_MAX_REGISTER_SIZE 256
 
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+/* amd-dbgapi-specific property data.  */
+
+/* Properties' names we're interested in.  */
+static const char *PROPERTY_PRECISE_MEMORY = "precise-memory";
+static const char *PROPERTY_PRECISE_ALU = "precise-alu-exceptions";
+
+struct dbgapi_property_t
+{
+  amd_dbgapi_property_id_t property_id;
+  gdb::unique_xmalloc_ptr<char> name;
+  gdb::unique_xmalloc_ptr<char> description;
+
+  dbgapi_property_t (amd_dbgapi_property_id_t property_id,
+		     gdb::unique_xmalloc_ptr<char> name,
+		     gdb::unique_xmalloc_ptr<char> descr)
+    : property_id (property_id), name (std::move (name)),
+      description (std::move (descr))
+    {
+    }
+};
+
+static std::unordered_map<const char *, dbgapi_property_t>
+  amd_dbgapi_properties;
+
+/* Initialize "amd_dbgapi_properties" with the properties that we
+   care about: PROPERTY_{PRECISE_MEMORY,PRECISE_ALU}.  */
+
+static void
+fetch_amd_dbgapi_properties ()
+{
+  size_t count;
+  amd_dbgapi_property_id_t *properties;
+  amd_dbgapi_status_t status = amd_dbgapi_property_list (&count, &properties);
+  if (status != AMD_DBGAPI_STATUS_SUCCESS)
+    error (_("amd-dbgapi failed to get list of properties (%s)"),
+	   get_status_string (status));
+
+  if (properties == nullptr)
+    error (_("amd-dbgapi provided a NULL property list"));
+
+  /* Wrap the returned array so it's released on every exit path.  */
+  gdb::unique_xmalloc_ptr<amd_dbgapi_property_id_t[]>
+    properties_holder (properties);
+
+  for (size_t i = 0; i < count; ++i)
+    {
+      char *name;
+      status = amd_dbgapi_property_get_info (properties[i],
+					     AMD_DBGAPI_PROPERTY_INFO_NAME,
+					     sizeof (name), &name);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd-dbgapi failed to get property name (%s)"),
+	       get_status_string (status));
+
+      /* This will automatically free NAME.  */
+      gdb::unique_xmalloc_ptr<char> name_holder (name);
+
+      const char *key;
+      if (strcmp (name, PROPERTY_PRECISE_MEMORY) == 0)
+	key = PROPERTY_PRECISE_MEMORY;
+      else if (strcmp (name, PROPERTY_PRECISE_ALU) == 0)
+	key = PROPERTY_PRECISE_ALU;
+      else
+	continue;
+
+      /* Look for process properties that can only be enabled/disabled.
+	 That's all we support for now.  */
+      amd_dbgapi_property_type_t type;
+      amd_dbgapi_property_scope_t scope;
+
+      status = amd_dbgapi_property_get_info (properties[i],
+					     AMD_DBGAPI_PROPERTY_INFO_TYPE,
+					     sizeof (type), &type);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd-dbgapi failed to get property type (%s)"),
+	       get_status_string (status));
+      if (type != AMD_DBGAPI_PROPERTY_TYPE_BOOL)
+	continue;
+
+      status = amd_dbgapi_property_get_info (properties[i],
+					     AMD_DBGAPI_PROPERTY_INFO_SCOPE,
+					     sizeof (scope), &scope);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd-dbgapi failed to get property scope (%s)"),
+	       get_status_string (status));
+      if (scope != AMD_DBGAPI_PROPERTY_SCOPE_PROCESS)
+	continue;
+
+      char *descr;
+      status = amd_dbgapi_property_get_info (properties[i],
+					     AMD_DBGAPI_PROPERTY_INFO_DESCRIPTION,
+					     sizeof (descr), &descr);
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("amd-dbgapi failed to get property description (%s)"),
+	       get_status_string (status));
+
+      amd_dbgapi_properties.insert_or_assign
+	(key, dbgapi_property_t (properties[i],
+				 std::move (name_holder),
+				 gdb::unique_xmalloc_ptr<char> (descr)));
+    }
+}
+#endif /* HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY  */
+
 /* amd-dbgapi-specific inferior data.  */
 
 struct amd_dbgapi_inferior_info
@@ -2535,6 +2640,43 @@ amd_dbgapi_target::stopped_by_hw_breakpoint ()
   return false;
 }
 
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+
+/* Set the process property.
+
+   Warn if the requested feature is not supported by at least one of the agents
+   in the process.  */
+
+static void
+set_process_property (
+  amd_dbgapi_process_id_t process_id,
+  const char *property_name,
+  amd_dbgapi_inferior_info::dbgapi_feature_request &feature)
+{
+  if (amd_dbgapi_properties.find (property_name)
+      == amd_dbgapi_properties.end ())
+    {
+      warning (_("AMDGPU %s property could not be found."), property_name);
+      return;
+    }
+
+  const dbgapi_property_t &property = amd_dbgapi_properties.at (property_name);
+  amd_dbgapi_property_bool_t value = feature.requested;
+  amd_dbgapi_status_t status
+    = amd_dbgapi_process_set_property (process_id, property.property_id,
+				       sizeof (value), &value);
+
+  if (status == AMD_DBGAPI_STATUS_SUCCESS)
+    feature.enabled = feature.requested;
+  else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
+    warning (_("AMDGPU %s could not be enabled."),
+	     property.description.get ());
+  else
+    error (_("amd_dbgapi_process_set_property (..., %s, ...) failed (%s)"),
+	   property_name, get_status_string (status));
+}
+#endif
+
 /* Set the process' memory access reporting precision mode.
 
    Warn if the requested mode is not supported on at least one agent in the
@@ -2545,19 +2687,23 @@ amd_dbgapi_target::stopped_by_hw_breakpoint ()
 static void
 set_process_memory_precision (amd_dbgapi_inferior_info &info)
 {
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  set_process_property (info.process_id, PROPERTY_PRECISE_MEMORY,
+			info.precise_memory);
+#else
   auto mode = (info.precise_memory.requested
 	       ? AMD_DBGAPI_MEMORY_PRECISION_PRECISE
 	       : AMD_DBGAPI_MEMORY_PRECISION_NONE);
   amd_dbgapi_status_t status
     = amd_dbgapi_set_memory_precision (info.process_id, mode);
-
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
     info.precise_memory.enabled = info.precise_memory.requested;
   else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
     warning (_("AMDGPU precise memory access reporting could not be enabled."));
-  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
+  else
     error (_("amd_dbgapi_set_memory_precision failed (%s)"),
 	   get_status_string (status));
+#endif
 }
 
 /* Set the process' alu exception reporting precision mode.
@@ -2568,21 +2714,25 @@ set_process_memory_precision (amd_dbgapi_inferior_info &info)
 static void
 set_process_alu_exceptions_precision (amd_dbgapi_inferior_info &info)
 {
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  set_process_property (info.process_id, PROPERTY_PRECISE_ALU,
+			info.precise_alu_exceptions);
+#else
   auto mode = (info.precise_alu_exceptions.requested
 	       ? AMD_DBGAPI_ALU_EXCEPTIONS_PRECISION_PRECISE
 	       : AMD_DBGAPI_ALU_EXCEPTIONS_PRECISION_NONE);
 
   amd_dbgapi_status_t status
     = amd_dbgapi_set_alu_exceptions_precision (info.process_id, mode);
-
   if (status == AMD_DBGAPI_STATUS_SUCCESS)
     info.precise_alu_exceptions.enabled
       = info.precise_alu_exceptions.requested;
   else if (status == AMD_DBGAPI_STATUS_ERROR_NOT_SUPPORTED)
     warning (_("AMDGPU precise ALU exceptions reporting could not be enabled."));
-  else if (status != AMD_DBGAPI_STATUS_SUCCESS)
+  else
     error (_("amd_dbgapi_set_alu_exceptions_precision failed (%s)"),
 	   get_status_string (status));
+#endif
 }
 
 /* Handle extra initialisation after we have attached to a AMDGPU corefile.  */
@@ -5243,6 +5393,10 @@ maybe_reset_amd_dbgapi ()
 	return;
     }
 
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  amd_dbgapi_properties.clear ();
+#endif
+
   amd_dbgapi_status_t status = amd_dbgapi_finalize ();
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd-dbgapi failed to finalize (%s)"),
@@ -5252,6 +5406,10 @@ maybe_reset_amd_dbgapi ()
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd-dbgapi failed to initialize (%s)"),
 	   get_status_string (status));
+
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  fetch_amd_dbgapi_properties ();
+#endif
 }
 
 INIT_GDB_FILE (amd_dbgapi_target)
@@ -5270,6 +5428,11 @@ INIT_GDB_FILE (amd_dbgapi_target)
   if (status != AMD_DBGAPI_STATUS_SUCCESS)
     error (_("amd-dbgapi failed to initialize (%s)"),
 	   get_status_string (status));
+
+#if HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+  /* Get all the properties beknown to dbgapi.  */
+  fetch_amd_dbgapi_properties ();
+#endif
 
   /* Set the initial log level.  */
   amd_dbgapi_set_log_level (get_debug_amd_dbgapi_lib_log_level ());
