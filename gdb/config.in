@@ -137,6 +137,10 @@
 #undef HAVE_DECL_ADDR_NO_RANDOMIZE
 
 /* Define to 1 if you have the declaration of
+   `amd_dbgapi_process_set_property', and to 0 if you don't. */
+#undef HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY
+
+/* Define to 1 if you have the declaration of
    `AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE', and to 0 if you don't. */
 #undef HAVE_DECL_AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE
 
