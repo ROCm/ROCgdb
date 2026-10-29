@@ -25458,10 +25458,11 @@ $as_echo "#define HAVE_AMD_DBGAPI 1" >>confdefs.h
 	;;
     esac
 
-    # Detect if AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE can be used.
-    # This value is available with amd-dbgapi version 0.78.0.
     save_CPPFLAGS="$CPPFLAGS"
     CPPFLAGS="$CPPFLAGS $AMD_DBGAPI_CFLAGS"
+
+    # Detect if AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE can be used.
+    # This value is available with amd-dbgapi version 0.78.0.
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE is available" >&5
 $as_echo_n "checking whether AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE is available... " >&6; }
     ac_fn_c_check_decl "$LINENO" "AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE" "ac_cv_have_decl_AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE" "#include <amd-dbgapi/amd-dbgapi.h>
@@ -25475,6 +25476,23 @@ fi
 cat >>confdefs.h <<_ACEOF
 #define HAVE_DECL_AMD_DBGAPI_STATUS_ERROR_MEMORY_UNAVAILABLE $ac_have_decl
 _ACEOF
+
+
+    # Detect if amd_dbgapi_set_process_property is available.
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether amd_dbgapi_process_set_property is available" >&5
+$as_echo_n "checking whether amd_dbgapi_process_set_property is available... " >&6; }
+    ac_fn_c_check_decl "$LINENO" "amd_dbgapi_process_set_property" "ac_cv_have_decl_amd_dbgapi_process_set_property" "#include <amd-dbgapi/amd-dbgapi.h>
+"
+if test "x$ac_cv_have_decl_amd_dbgapi_process_set_property" = xyes; then :
+  ac_have_decl=1
+else
+  ac_have_decl=0
+fi
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_DECL_AMD_DBGAPI_PROCESS_SET_PROPERTY $ac_have_decl
+_ACEOF
+
 
     CPPFLAGS="$save_CPPFLAGS"
 
