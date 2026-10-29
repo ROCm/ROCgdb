@@ -3326,11 +3326,15 @@ loongarch_dump_reloc_record (void (*p) (const char *fmt, ...))
 	 loongarch_sym_name (larch_reloc_queue[i].bfd, larch_reloc_queue[i].h,
 			     larch_reloc_queue[i].sym));
 
-      long addend = larch_reloc_queue[i].addend;
+      bfd_signed_vma addend = larch_reloc_queue[i].addend;
       if (addend < 0)
-	p (" - %ld", -addend);
+	{
+	  bfd_vma addend_u = (bfd_vma) 0 - (bfd_vma) addend;
+	  p (" - %" PRIu64, (uint64_t) addend_u);
+	}
       else if (0 < addend)
-	p (" + %ld(0x%v)", addend, larch_reloc_queue[i].addend);
+	p (" + %" PRId64 "(0x%v)", (int64_t) addend,
+	   larch_reloc_queue[i].addend);
 
       p ("\n");
       i = (i + 1) % LARCH_RECENT_RELOC_QUEUE_LENGTH;

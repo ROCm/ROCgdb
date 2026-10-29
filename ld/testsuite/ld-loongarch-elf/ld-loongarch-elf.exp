@@ -29,6 +29,7 @@ if [istarget "loongarch64-*-*"] {
     run_dump_test "disas-jirl"
     run_dump_test "local-ifunc-reloc"
     run_dump_test "anno-sym"
+    run_dump_test "reloc-addend"
     run_dump_test "pcala64"
     run_dump_test "overflow_s_10_5"
     run_dump_test "overflow_s_10_12"
