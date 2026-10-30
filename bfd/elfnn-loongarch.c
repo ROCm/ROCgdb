@@ -3535,6 +3535,12 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
   asection *got = htab->elf.sgot;
   uint32_t insn;
 
+  if (!is_loongarch_elf (input_bfd))
+    {
+      bfd_set_error (bfd_error_wrong_format);
+      return false;
+    }
+
   loongarch_pcrel_relocs pcrel_relocs;
   if (!loongarch_init_pcrel_relocs (&pcrel_relocs))
     return false;
