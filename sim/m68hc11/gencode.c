@@ -1140,7 +1140,6 @@ static struct m6811_opcode_def m6812_page2_opcodes[] = {
 
 
 static int indent_level = 2;
-static int current_insn_size = 0;
 
 /* Fatal error message and exit.  This method is called when an inconsistency
    is detected in the generation table.	 */
@@ -1344,7 +1343,6 @@ gen_fetch_operands (FILE *fp, int col,
 	    fatal_error (opcode, "Wrong use of '*', 'addr' already used");
 	  
 	  addr_set = 1;
-	  current_insn_size += 1;
 	  print (fp, col, "addr = (uint16_t) cpu_fetch8 (cpu);");
 	  print (fp, col, "%s%s = memory_read%s (cpu, addr);",
 		 vars[cur_var], operand_size, operand_size);
@@ -1357,25 +1355,21 @@ gen_fetch_operands (FILE *fp, int col,
 	  addr_set = 1;
 	  if (strncmp (operands, "(x)", 3) == 0)
 	    {
-	      current_insn_size += 1;
 	      print (fp, col, "addr = cpu_get_x (cpu) + (uint16_t) cpu_fetch8 (cpu);");
 	      operands += 3;
 	    }
 	  else if (strncmp (operands, "(y)", 3) == 0)
 	    {
-	      current_insn_size += 1;
 	      print (fp, col, "addr = cpu_get_y (cpu) + (uint16_t) cpu_fetch8 (cpu);");
 	      operands += 3;
 	    }
 	  else if (strncmp (operands, "()", 2) == 0)
 	    {
-	      current_insn_size += 2;
 	      print (fp, col, "addr = cpu_fetch16 (cpu);");
 	      operands += 2;
 	    }
 	  else if (strncmp (operands, "[]", 2) == 0)
 	    {
-	      current_insn_size += 1;
 	      print (fp, col, "addr = cpu_get_indexed_operand_addr (cpu, 0);");
 	      operands += 2;
 	    }
@@ -1395,7 +1389,6 @@ gen_fetch_operands (FILE *fp, int col,
 	  if (strncmp (operands, "x)", 2) == 0)
 	    {
 	      addr_set = 1;
-	      current_insn_size += 1;
 	      print (fp, col, "addr = cpu_get_x (cpu) + (uint16_t) cpu_fetch8 (cpu);");
 	      print (fp, col, "%s%s = memory_read%s (cpu, addr);",
 		     vars[cur_var], operand_size, operand_size);
@@ -1404,7 +1397,6 @@ gen_fetch_operands (FILE *fp, int col,
 	  else if (strncmp (operands, "y)", 2) == 0)
 	    {
 	      addr_set = 1;
-	      current_insn_size += 1;
 	      print (fp, col, "addr = cpu_get_y (cpu) + (uint16_t) cpu_fetch8 (cpu);");
 	      print (fp, col, "%s%s = memory_read%s (cpu, addr);",
 		     vars[cur_var], operand_size, operand_size);
@@ -1413,7 +1405,6 @@ gen_fetch_operands (FILE *fp, int col,
 	  else if (strncmp (operands, ")", 1) == 0)
 	    {
 	      addr_set = 1;
-	      current_insn_size += 2;
 	      print (fp, col, "addr = cpu_fetch16 (cpu);");
 	      print (fp, col, "%s%s = memory_read%s (cpu, addr);",
 		     vars[cur_var], operand_size, operand_size);
@@ -1421,7 +1412,6 @@ gen_fetch_operands (FILE *fp, int col,
 	    }
 	  else if (strncmp (operands, "@)", 2) == 0)
 	    {
-	      current_insn_size += 2;
 	      print (fp, col, "addr = cpu_fetch16 (cpu);");
 	      print (fp, col, "%s%s = memory_read%s (cpu, addr);",
 		     vars[cur_var], operand_size, operand_size);
@@ -1451,7 +1441,6 @@ gen_fetch_operands (FILE *fp, int col,
 	  if (strncmp (operands, "]", 1) == 0)
 	    {
 	      addr_set = 1;
-	      current_insn_size += 1;
 	      print (fp, col, "addr = cpu_get_indexed_operand_addr (cpu,0);");
 	      print (fp, col, "%s%s = memory_read%s (cpu, addr);",
 		     vars[cur_var], operand_size, operand_size);
@@ -1461,7 +1450,6 @@ gen_fetch_operands (FILE *fp, int col,
 	 removed because it may be that there is a typo in strncmp test below.  */
 	  else if (strncmp (operands, "]", 1) == 0)
 	    {
-	      current_insn_size += 1;
 	      print (fp, col, "%s%s = cpu_get_indexed_operand%s (cpu,0);",
 		     vars[cur_var], operand_size, operand_size);
 	      operands += 1;
@@ -1482,7 +1470,6 @@ gen_fetch_operands (FILE *fp, int col,
 	  
 	  if (strncmp (operands, "}", 1) == 0)
 	    {
-	      current_insn_size += 1;
 	      print (fp, col, "%s%s = cpu_get_indexed_operand%s (cpu, 1);",
 		     vars[cur_var], operand_size, operand_size);
 	      operands += 1;
@@ -1525,7 +1512,6 @@ gen_fetch_operands (FILE *fp, int col,
 	    fatal_error (opcode, "Wrong use of 'r'");
 
 	  addr_set = 1;
-	  current_insn_size += 1;
 	  print (fp, col, "addr = cpu_fetch_relbranch (cpu);");
 	  break;
 
@@ -1534,19 +1520,10 @@ gen_fetch_operands (FILE *fp, int col,
 	    fatal_error (opcode, "Wrong use of 'R'");
 
 	  addr_set = 1;
-	  current_insn_size += 2;
 	  print (fp, col, "addr = cpu_fetch_relbranch16 (cpu);");
 	  break;
 
 	case '#':
-	  if (strcmp (operand_size, "8") == 0)
-	    {
-	      current_insn_size += 1;
-	    }
-	  else
-	    {
-	      current_insn_size += 2;
-	    }
 	  print (fp, col, "%s%s = cpu_fetch%s (cpu);", vars[cur_var],
 		 operand_size, operand_size);
 	  break;
@@ -1655,7 +1632,6 @@ gen_save_result (FILE *fp, int col,
     case '*':
       if (addr_set == 0)
 	{
-	  current_insn_size += 1;
 	  print (fp, col, "addr = (uint16_t) cpu_fetch8 (cpu);");
 	}
       result_size = operand_size;
@@ -1668,7 +1644,6 @@ gen_save_result (FILE *fp, int col,
 	{
 	  if (addr_set == 0)
 	    {
-	      current_insn_size += 1;
 	      print (fp, col, "addr = cpu_get_x (cpu) + cpu_fetch8 (cpu);");
 	    }
 	  print (fp, col, "memory_write%s (cpu, addr, dst%s);",
@@ -1680,7 +1655,6 @@ gen_save_result (FILE *fp, int col,
 	{
 	  if (addr_set == 0)
 	    {
-	      current_insn_size += 1;
 	      print (fp, col, "addr = cpu_get_y (cpu) + cpu_fetch8 (cpu);");
 	    }
 	  print (fp, col, "memory_write%s (cpu, addr, dst%s);",
@@ -1692,7 +1666,6 @@ gen_save_result (FILE *fp, int col,
 	{
 	  if (addr_set == 0)
 	    {
-	      current_insn_size += 2;
 	      print (fp, col, "addr = cpu_fetch16 (cpu);");
 	    }
 	  print (fp, col, "memory_write%s (cpu, addr, dst%s);",
@@ -1719,7 +1692,6 @@ gen_save_result (FILE *fp, int col,
 	{
 	  if (addr_set == 0)
 	    {
-	      current_insn_size += 1;
 	      print (fp, col, "addr = cpu_get_indexed_operand_addr (cpu,0);");
 	    }
 	  print (fp, col, "memory_write%s (cpu, addr, dst%s);",
@@ -1736,7 +1708,6 @@ gen_save_result (FILE *fp, int col,
     case '{':
       if (strncmp (operands, "}", 1) == 0)
 	{
-	  current_insn_size += 1;
 	  print (fp, col, "addr = cpu_get_indexed_operand_addr (cpu, 1);");
 	  print (fp, col, "memory_write%s (cpu, addr, dst%s);",
 		 operand_size, operand_size);
@@ -1880,11 +1851,7 @@ gen_interpreter_for_table (FILE *fp, int col,
 			   const char *cycles_table_name)
 {
   int i;
-  int init_size;
 
-  init_size = table == m6811_page1_opcodes
-    || table == m6812_page1_opcodes? 1 : 2;
-  
   /* Get the opcode and dispatch directly.  */
   print (fp, col, "op = cpu_fetch8 (cpu);");
   print (fp, col, "cpu_add_cycles (cpu, %s[op]);", cycles_table_name);
@@ -1899,15 +1866,7 @@ gen_interpreter_for_table (FILE *fp, int col,
       if (i > 0 && table[i].insn_code == table[i - 1].insn_code)
 	continue;
 
-      current_insn_size = init_size;
       gen_interp (fp, col, &table[i]);
-#if 0
-      if (current_insn_size != table[i].insn_size)
-	{
-	  fatal_error (&table[i], "Insn size %ld inconsistent with %ld",
-		       current_insn_size, table[i].insn_size);
-	}
-#endif
     }
 
   print (fp, col, "default:\n");
