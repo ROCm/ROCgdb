@@ -74,7 +74,8 @@ set bpnum [mi_get_valueof "/d" "\$bpnum" "INVALID" \
 	       "get number for dprintf breakpoint"]
 
 # Use 'next' to step over loading the shared library.
-mi_gdb_test "220-exec-next" ".*" "next over dlopen"
+set re_last_line [string_to_regexp {*running,thread-id="all"}]
+mi_gdb_test "220-exec-next" ".*$re_last_line" "next over dlopen"
 
 # Now wait for the 'stopped' notification.  While we wait we should
 # see a 'library-loaded' notification for the loading of the shared
