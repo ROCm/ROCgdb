@@ -405,6 +405,32 @@ msvc_check_single_method_ptr (struct type *methodptr_type)
 	   name);
 }
 
+/* Copy the MSVC pointer to member function in METHOD_PTR to BUF, which
+   has room for 16 bytes, and return its inheritance model.  The type
+   may be shorter than the pointer in the inferior (see
+   msvc_method_ptr_size); then the pointer is read from memory.  */
+
+static enum msvc_inheritance_model
+msvc_read_method_ptr (struct value *method_ptr, gdb_byte *buf)
+{
+  struct type *type = check_typedef (method_ptr->type ());
+  struct type *self_type = TYPE_SELF_TYPE (type);
+  enum msvc_inheritance_model model = msvc_inheritance_model (self_type);
+  int need = (model == MSVC_INHERITANCE_SINGLE ? 8 : 16);
+
+  memset (buf, 0, 16);
+  if (type->length () >= need)
+    memcpy (buf, method_ptr->contents ().data (), need);
+  else if (method_ptr->lval () == lval_memory)
+    read_memory (method_ptr->address (), buf, need);
+  else
+    error (_("Cannot read a pointer to member function of class %s:"
+	     " the value is not in memory"),
+	   (check_typedef (self_type)->name () != nullptr
+	    ? check_typedef (self_type)->name () : "<anonymous>"));
+  return model;
+}
+
 /* Store a pointer to a member function of TYPE in CONTENTS.  VALUE is
    the function's address, or its vtable offset if IS_VIRTUAL.  */
 
@@ -412,7 +438,9 @@ static void
 msvc_make_method_ptr (struct type *type, gdb_byte *contents,
 		      CORE_ADDR value, int is_virtual)
 {
-  /* A null pointer is all zeros in every model.  */
+  /* Programs test only the function address for null.  The compiler
+     puts -1 in the vbtable index of a null in the virtual inheritance
+     model, but all zeros is a null too.  */
   if (value == 0 && is_virtual == 0)
     {
       memset (contents, 0, type->length ());
@@ -439,7 +467,11 @@ msvc_print_method_ptr (const gdb_byte *contents,
 		       struct type *type,
 		       struct ui_file *stream)
 {
-  msvc_check_single_method_ptr (type);
+  /* The function address comes first in every model except the
+     unknown one, whose layout is not known.  */
+  if (msvc_inheritance_model (TYPE_SELF_TYPE (type))
+      == MSVC_INHERITANCE_UNKNOWN)
+    msvc_check_single_method_ptr (type);
 
   struct gdbarch *gdbarch = type->arch ();
   struct type *funcptr_type = builtin_type (gdbarch)->builtin_func_ptr;
@@ -470,16 +502,47 @@ static struct value *
 msvc_method_ptr_to_value (struct value **this_p, struct value *method_ptr)
 {
   struct type *methodptr_type = check_typedef (method_ptr->type ());
-  msvc_check_single_method_ptr (methodptr_type);
-
   struct type *self_type = TYPE_SELF_TYPE (methodptr_type);
   struct type *method_type = methodptr_type->target_type ();
   struct gdbarch *gdbarch = self_type->arch ();
   struct type *funcptr_type = builtin_type (gdbarch)->builtin_func_ptr;
-  CORE_ADDR func_addr
-    = extract_typed_address (method_ptr->contents ().data (), funcptr_type);
+  gdb_byte buf[16];
+
+  enum msvc_inheritance_model model = msvc_read_method_ptr (method_ptr, buf);
+  if (model == MSVC_INHERITANCE_UNKNOWN)
+    msvc_check_single_method_ptr (methodptr_type);
+
+  CORE_ADDR func_addr = extract_typed_address (buf, funcptr_type);
 
   *this_p = value_cast (lookup_pointer_type (self_type), *this_p);
+  if (model == MSVC_INHERITANCE_MULTIPLE)
+    {
+      LONGEST adj = extract_signed_integer (buf + 8, 4,
+					    type_byte_order (methodptr_type));
+      /* Adjust in bytes, not in units of the class.  */
+      *this_p = value_cast (builtin_type (gdbarch)->builtin_data_ptr,
+			    *this_p);
+      *this_p = value_ptradd (*this_p, adj);
+      *this_p = value_cast (lookup_pointer_type (self_type), *this_p);
+    }
+  else if (model == MSVC_INHERITANCE_VIRTUAL)
+    {
+      enum bfd_endian byte_order = type_byte_order (methodptr_type);
+      int ptr_len = builtin_type (gdbarch)->builtin_data_ptr->length ();
+      LONGEST adj = extract_signed_integer (buf + 8, 4, byte_order);
+      LONGEST vbindex = extract_signed_integer (buf + 12, 4, byte_order);
+      CORE_ADDR obj = value_as_address (*this_p);
+
+      /* VBINDEX is a byte offset into the class's vbtable; it selects
+	 the base the function belongs to.  ADJ is relative to that base.  */
+      LONGEST vbptr_off = msvc_find_vbptr_offset (self_type, obj);
+      CORE_ADDR vbtable = read_memory_unsigned_integer (obj + vbptr_off,
+							 ptr_len, byte_order);
+      LONGEST disp = read_memory_integer (vbtable + (vbindex & ~3), 4,
+					  byte_order);
+      *this_p = value_from_pointer (lookup_pointer_type (self_type),
+				    obj + vbptr_off + disp + adj);
+    }
   return value_from_pointer (lookup_pointer_type (method_type), func_addr);
 }
 
