@@ -156,13 +156,11 @@ static uint32_t   mec_ffar;
 static uint32_t   mec_ipr;
 static uint32_t   mec_imr;
 static uint32_t   mec_isr;
-static uint32_t   mec_icr;
 static uint32_t   mec_ifr;
 static uint32_t   mec_mcr;	/* MEC control register */
 static uint32_t   mec_memcfg;	/* Memory control register */
 static uint32_t   mec_wcr;	/* MEC waitstate register */
 static uint32_t   mec_iocr;	/* MEC IO control register */
-static uint32_t   posted_irq;
 static uint32_t   mec_ersr;	/* MEC error and status register */
 static uint32_t   mec_tcr;	/* MEC test comtrol register */
 
@@ -244,7 +242,7 @@ static int      f1open = 0, f2open = 0;
 
 static char     uarta_sreg, uarta_hreg, uartb_sreg, uartb_hreg;
 static uint32_t   uart_stat_reg;
-static uint32_t   uarta_data, uartb_data;
+ATTRIBUTE_UNUSED static uint32_t uarta_data, uartb_data;
 
 #ifdef ERA
 int era = 0;
@@ -504,7 +502,6 @@ mec_reset(void)
     mec_ipr = 0;
     mec_imr = 0x7ffe;
     mec_isr = 0;
-    mec_icr = 0;
     mec_ifr = 0;
     mec_memcfg = 0x10000;
     mec_wcr = -1;
@@ -515,7 +512,6 @@ mec_reset(void)
     decode_wcr();
     decode_mcr();
 
-    posted_irq = 0;
     wnuma = wnumb = 0;
     anum = aind = bnum = bind = 0;
 
