@@ -4,6 +4,7 @@
 
 import argparse
 import atexit
+import ctypes
 import glob
 import json
 import logging
@@ -22,6 +23,10 @@ import types
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, NoReturn, Optional, Set, Tuple, Union
+
+# True on Linux, where the script can follow a test's whole process tree
+# through /proc and pidfds (see _kill_descendants).
+IS_LINUX = sys.platform.startswith("linux")
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s"
@@ -108,6 +113,171 @@ def _log_error_and_exit(message: str, exit_code: int = 1) -> NoReturn:
     sys.exit(exit_code)
 
 
+# Killing the test process tree on Linux.
+#
+# "make check" runs in a session of its own, so its process group holds the
+# processes it starts, except those that start sessions of their own, as
+# expect's spawn does for gdb, which then takes the pty as its controlling
+# terminal.  So killing "make check"'s process group would not kill every
+# subchild.  Instead, while "make check" runs, the script is a child subreaper,
+# which makes every process the make command started the script's descendant
+# even after that process's parent dies.  On a timeout, or once the command
+# ends, the script kills them all (see _run_command).
+
+
+# The prctl option, from linux/prctl.h.
+_PR_SET_CHILD_SUBREAPER = 36
+
+
+def _set_child_subreaper(enable: bool) -> None:
+    """
+    Linux only: make this process a child subreaper, or stop it being one.
+    While it is one, a process whose parent dies is reparented to this
+    process instead of to init, so that every process this process
+    started, directly or not, stays its descendant until it exits.
+
+    Args:
+        enable: Whether to become a subreaper.
+    """
+    libc = ctypes.CDLL(None, use_errno=True)
+    if libc.prctl(_PR_SET_CHILD_SUBREAPER, int(enable), 0, 0, 0) != 0:
+        errno = ctypes.get_errno()
+        raise OSError(errno, f"prctl(PR_SET_CHILD_SUBREAPER): {os.strerror(errno)}")
+
+
+def _read_process_table() -> Dict[int, Tuple[int, str]]:
+    """
+    Linux only: read every process's parent PID and state letter from /proc.
+
+    Returns:
+        A map from PID to (parent PID, state), state "Z" for a zombie.
+    """
+    table = {}
+    for entry in os.listdir("/proc"):
+        if entry.isdigit():
+            stat = _read_proc_stat(int(entry))
+            if stat is not None:
+                table[int(entry)] = stat
+    return table
+
+
+def _read_proc_stat(pid: int) -> Optional[Tuple[int, str]]:
+    """
+    Linux only: read a process's parent PID and state letter from /proc.
+
+    Args:
+        pid: The process.
+
+    Returns:
+        (parent PID, state), or None if there is no such process.
+    """
+    try:
+        with open(f"/proc/{pid}/stat") as f:
+            stat = f.read()
+    except OSError:
+        return None
+    # The command name, in parentheses, may itself hold spaces and
+    # parentheses, so count the fields that follow it from the last ")".
+    fields = stat[stat.rindex(")") + 2 :].split()
+    return int(fields[1]), fields[0]
+
+
+def _kill_descendants(
+    spare: Optional[int] = None, timeout: float = 10.0
+) -> List[str]:
+    """
+    Linux only: kill every descendant of this process, and reap the ones
+    that were reparented to it, until none is left alive or the timeout
+    passes.  Logs those still alive then.  This process must be a child
+    subreaper (see _set_child_subreaper), or descendants whose parent died
+    are out of its reach.
+
+    Args:
+        spare: A child of this process to kill but not reap, because a Popen
+            object will.
+        timeout: Seconds to keep trying, for processes that take long to die,
+            such as one stuck in a driver.
+
+    Returns:
+        The processes sent SIGKILL, each as "PID (command line)".
+    """
+    me = os.getpid()
+    deadline = time.monotonic() + timeout
+    # Keyed by PID, as a process that takes a while to die is signaled
+    # again on the next pass.
+    killed = {}
+    while True:
+        table = _read_process_table()
+        children = defaultdict(list)
+        for pid, (ppid, _) in table.items():
+            children[ppid].append(pid)
+        tree = set()
+        pending = [me]
+        while pending:
+            for child in children[pending.pop()]:
+                if child not in tree:
+                    tree.add(child)
+                    pending.append(child)
+        alive = sorted(pid for pid in tree if table[pid][1] != "Z")
+        for pid in alive:
+            name = _kill_tree_process(pid, tree | {me})
+            if name is not None:
+                killed.setdefault(pid, f"{pid} ({name})")
+        # A zombie child of this process holds its PID until reaped, so
+        # reaping by PID here can't hit another process.
+        for pid in tree:
+            if table[pid][0] == me and pid != spare:
+                try:
+                    os.waitpid(pid, os.WNOHANG)
+                except ChildProcessError:
+                    pass
+        if not alive:
+            return list(killed.values())
+        if time.monotonic() > deadline:
+            logger.warning(f"Processes still alive after SIGKILL: {alive}")
+            return list(killed.values())
+        time.sleep(0.05)
+
+
+def _kill_tree_process(pid: int, tree: Set[int]) -> Optional[str]:
+    """
+    Linux only: send SIGKILL to a process found in this process's tree,
+    unless its PID now belongs to a process outside the tree.
+
+    Args:
+        pid: The process.
+        tree: This process and its descendants, as last read.
+
+    Returns:
+        The start of the process's command line if the signal was sent,
+        else None.
+    """
+    try:
+        pidfd = os.pidfd_open(pid)
+    except ProcessLookupError:
+        return None
+    try:
+        # The pidfd refers to the process that had the PID when it was
+        # opened, and the signal goes to that process or to none, never to a
+        # later holder of the PID.  Checking the parent after opening it tells
+        # whether that process is in the tree: a new process with the PID is
+        # only accepted if its parent is in the tree, so a descendant too.
+        stat = _read_proc_stat(pid)
+        if stat is None or stat[0] not in tree:
+            return None
+        try:
+            with open(f"/proc/{pid}/cmdline") as f:
+                name = f.read().replace("\0", " ").strip()[:100]
+        except OSError:
+            name = "?"
+        signal.pidfd_send_signal(pidfd, signal.SIGKILL)
+        return name
+    except ProcessLookupError:
+        return None
+    finally:
+        os.close(pidfd)
+
+
 def _run_command(
     cmd: List[str],
     cwd: Optional[Path] = None,
@@ -116,7 +286,7 @@ def _run_command(
     check: bool = True,
     error_msg: Optional[str] = None,
     timeout: Optional[int] = None,
-    kill_process_group: bool = False,
+    kill_process_tree: bool = False,
 ) -> subprocess.CompletedProcess:
     """
     Run a command with consistent error handling.
@@ -130,9 +300,11 @@ def _run_command(
         error_msg: Custom error message on failure.
         timeout: Optional wall-clock timeout in seconds; raises
             subprocess.TimeoutExpired if exceeded.
-        kill_process_group: Run the command in a new process group/session and,
-            on TimeoutExpired, SIGKILL the entire group so descendants
-            (e.g. runtest/expect/gdb spawned by `make`) are not orphaned.
+        kill_process_tree: On TimeoutExpired, kill the command along with
+            its descendants (e.g. runtest/expect/gdb spawned by `make`) so they
+            are not orphaned, and kill whatever is left when the command
+            ends.  On Linux the script tracks them as its descendants (see
+            _kill_descendants).
 
     Returns:
         CompletedProcess result.
@@ -146,40 +318,61 @@ def _run_command(
     """
     stdout = subprocess.PIPE if capture_output else None
     stderr = subprocess.PIPE if capture_output else None
+    # On Linux, the session of its own is not enough: expect's spawn starts
+    # gdb in another session, out of the process group's reach.  As a
+    # subreaper, this process can find and kill the whole tree instead.
+    subreaper = kill_process_tree and IS_LINUX
+    process = None
     try:
-        process = subprocess.Popen(
-            cmd,
-            cwd=str(cwd) if cwd else None,
-            env=env,
-            text=True,
-            stdout=stdout,
-            stderr=stderr,
-            start_new_session=kill_process_group,
-        )
-    except OSError as e:
-        if error_msg:
-            _log_error_and_exit(f"{error_msg}: {e}")
-        else:
-            _log_error_and_exit(f"Failed to execute {cmd[0]!r}: {e}")
-    try:
-        out, err = process.communicate(timeout=timeout)
-    except BaseException:
-        # Cover TimeoutExpired and any other escaping exception
-        # (KeyboardInterrupt, OSError mid-read, etc.) so the make /
-        # runtest / expect / gdb process tree is never orphaned. With a new
-        # session we can SIGKILL the whole group; otherwise just the child.
-        if kill_process_group:
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-        else:
-            process.kill()
+        if subreaper:
+            _set_child_subreaper(True)
         try:
-            out, err = process.communicate()
-        except Exception:
-            out, err = None, None
-        raise
+            process = subprocess.Popen(
+                cmd,
+                cwd=str(cwd) if cwd else None,
+                env=env,
+                text=True,
+                stdout=stdout,
+                stderr=stderr,
+                # A session of its own keeps the terminal's signals, such as
+                # a Ctrl-C typed there, away from the test processes, which
+                # this script kills itself (see _kill_descendants).
+                start_new_session=subreaper,
+            )
+        except OSError as e:
+            if error_msg:
+                _log_error_and_exit(f"{error_msg}: {e}")
+            else:
+                _log_error_and_exit(f"Failed to execute {cmd[0]!r}: {e}")
+        try:
+            out, err = process.communicate(timeout=timeout)
+        except BaseException:
+            # Cover TimeoutExpired and any other escaping exception
+            # (KeyboardInterrupt, OSError mid-read, etc.) so the make /
+            # runtest / expect / gdb process tree is never orphaned.
+            if subreaper:
+                _kill_descendants(spare=process.pid)
+            else:
+                process.kill()
+            try:
+                out, err = process.communicate()
+            except Exception:
+                out, err = None, None
+            raise
+    finally:
+        if subreaper:
+            # Kill what the command left behind, and reap what was
+            # reparented to this process.  A normal run of the testsuite
+            # leaves a "sleep 5" here: DejaGnu's close_wait_program cancels
+            # its kill watchdog by killing the watchdog's shell, but not the
+            # sleep that shell is running.
+            left = _kill_descendants(spare=process.pid if process else None)
+            if left:
+                logger.info(
+                    f"Killed {len(left)} processes left behind by {cmd[0]}: "
+                    + ", ".join(left)
+                )
+            _set_child_subreaper(False)
     result = subprocess.CompletedProcess(cmd, process.returncode, out, err)
     if check and process.returncode != 0:
         exc = subprocess.CalledProcessError(process.returncode, cmd, out, err)
@@ -2099,7 +2292,7 @@ def run_tests(
                 env=env_vars,
                 capture_output=args.quiet,
                 check=False,
-                kill_process_group=True,
+                kill_process_tree=True,
             )
 
         duration = time.perf_counter() - start_time
@@ -2739,7 +2932,7 @@ def _run_sanity_check(
             capture_output=True,
             check=False,
             timeout=timeout,
-            kill_process_group=True,
+            kill_process_tree=True,
         )
     except subprocess.TimeoutExpired as exc:
         reason = f"sanity check timed out after {timeout}s"
@@ -2864,7 +3057,7 @@ def _execute_one_by_one(
                 capture_output=quiet,
                 check=False,
                 timeout=wall_clock_timeout,
-                kill_process_group=True,
+                kill_process_tree=True,
             )
         except subprocess.TimeoutExpired:
             wall_clock_timed_out = True
