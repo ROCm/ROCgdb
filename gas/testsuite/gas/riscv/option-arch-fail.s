@@ -8,6 +8,7 @@
 .option arch, +zsubset2p0
 .option arch, +f2p0_d2p0
 .option arch, +
+.option arch, +t
 .option arch, +xvendor2p
 .option pop
 .option pop
