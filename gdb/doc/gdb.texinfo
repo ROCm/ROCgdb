@@ -7600,7 +7600,10 @@ mode or during normal execution.  This is the default mode.
 @end table
 
 If supported by the target, when scheduler-locking is in effect, new
-threads created by the resumed thread are held stopped.
+threads created by the resumed thread are held stopped.  The first
+time this happens in a process, @value{GDBN} prints a warning, because
+the program cannot make progress if it waits for a thread that is held
+stopped.
 
 @item show scheduler-locking
 Display the current scheduler locking mode.

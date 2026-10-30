@@ -688,6 +688,11 @@ public:
      attach or handling a fork child.  */
   bool in_initial_library_scan = false;
 
+  /* True if GDB already warned that a new thread of this process was
+     held stopped because scheduler-locking is in effect.  The warning
+     is only issued once per process.  */
+  bool warned_schedlock_new_thread = false;
+
   /* Private data used by the process_stratum target.  */
   std::unique_ptr<private_inferior> priv;
 

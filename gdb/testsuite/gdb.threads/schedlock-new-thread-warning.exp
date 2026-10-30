@@ -1,0 +1,90 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that GDB warns the first time a new thread is held stopped
+# because scheduler-locking is in effect, that it only warns once per
+# process, and that it warns again after the program is restarted.
+
+# The test restarts the program with "run".
+require !use_gdb_stub
+
+standard_testfile
+
+if {[build_executable "failed to prepare" $testfile $srcfile \
+	 {debug pthreads}] == -1} {
+    return
+}
+
+set warning_re \
+    "warning: \[^\r\n\]* is held stopped because scheduler-locking is in effect\\."
+set break_re \
+    "Breakpoint $decimal, main \\(\\) at \[^\r\n\]*\r\n$decimal\[ \t\]+return 0; /\\* break here \\*/"
+
+# Resume the program with CMD until it reaches the "break here"
+# breakpoint, and check that the scheduler-locking warning was printed
+# EXPECTED times.
+
+proc resume_and_count_warnings {cmd expected} {
+    set count 0
+    gdb_test_multiple $cmd "$cmd, warning printed $expected time(s)" {
+	-re "The program being debugged has been started already.*Start it from the beginning\\? \\(y or n\\) $" {
+	    send_gdb "y\n" answer
+	    exp_continue
+	}
+	-re $::warning_re {
+	    incr count
+	    exp_continue
+	}
+	-re -wrap $::break_re {
+	    gdb_assert {$count == $expected} $gdb_test_name
+	}
+    }
+}
+
+proc test {non-stop} {
+    save_vars ::GDBFLAGS {
+	append ::GDBFLAGS " -ex \"set non-stop ${non-stop}\""
+	clean_restart $::testfile
+    }
+
+    if {![runto_main]} {
+	return
+    }
+
+    delete_breakpoints
+    gdb_breakpoint [gdb_get_line_number "break here"]
+
+    # Both new threads are held stopped, but GDB only warns about the
+    # first one.
+    with_test_prefix "continue with scheduler-locking on" {
+	gdb_test_no_output "set scheduler-locking on"
+	resume_and_count_warnings "continue" 1
+    }
+
+    # Restarting the program creates a new process, so GDB warns again.
+    with_test_prefix "restart with scheduler-locking on" {
+	resume_and_count_warnings "run" 1
+    }
+
+    # New threads aren't held stopped, so GDB doesn't warn.
+    with_test_prefix "restart with scheduler-locking off" {
+	gdb_test_no_output "set scheduler-locking off"
+	resume_and_count_warnings "run" 0
+    }
+}
+
+foreach_with_prefix non-stop {off on} {
+    test ${non-stop}
+}
