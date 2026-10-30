@@ -18,8 +18,8 @@
   flavor": GDB uses the configured default OS ABI (from --target) when
   that is a Windows flavor, and otherwise assumes the GNU flavor.  For
   example, --target=x86_64-pc-windows-msvc defaults to the MSVC ABI,
-  and --target=x86_64-w64-mingw32 defaults to GNU ABI.  Similarly for
-  the i686 and AArch64 variants.  See "New targets" entry below.
+  and --target=x86_64-w64-mingw32 defaults to the GNU ABI.  Similarly for
+  the i686 and AArch64 variants.  See the "New targets" entry below.
 
   Currently, GDB is aware that "long double" differs between the two
   ABIs.  GDB does not yet support the MSVC C++ ABI (demangling scheme,
@@ -68,7 +68,7 @@ show breakpoint source-tracking enabled
   recompilations.
 
 maintenance info source-tracking-context BPNUM
-  Displays the captured source context that GDB uses to track and
+  Display the captured source context that GDB uses to track and
   adjust a breakpoint when source changes.
 
 * Changed commands
@@ -99,7 +99,7 @@ info locals
 
 * Support for DWP (DWARF Package File) version 1 has been removed.
 
-* Support for Guile 2.0 has been removed.  Guile 2.2 is now the minimal
+* Support for Guile 2.0 has been removed.  Guile 2.2 is now the minimum
   supported Guile version.
 
 * GDB now accepts --no-escape-args as an alternative to --args on the
@@ -114,14 +114,14 @@ info locals
   now give a warning, and create the new inferior without a
   connection, when the current inferior's connection, at the time the
   command is given, is unshareable.  For example, the core-file target
-  cannot be shared between inferiors, nor can the Window native
+  cannot be shared between inferiors, nor can the Windows native
   target.  These targets could never really be shared.  Attempting to
   share them would usually lead to GDB crashing.  GDB now prevents
   this invalid sharing.
 
 * When connecting to a remote server, if the server supports the new
   qExecAndArgs packet, then GDB will copy the argument string from the
-  server and update the 'args' setting, as if 'set args ...'  had been
+  server and update the 'args' setting, as if 'set args ...' had been
   used.  This means that the arguments are visible from GDB using
   'show args', and that, if using the extended-remote protocol,
   subsequent runs of the inferior will use the same arguments as the
@@ -199,7 +199,7 @@ info locals
   removal in a future release, along with the elf32-s390 target
   format.  configure now emits an error for this target, which can be
   overridden using --enable-obsolete.
-  Linux Kernel 6.19 removed s390 32-bit compatibility support.
+  Linux kernel 6.19 removed s390 32-bit compatibility support.
   Glibc 2.43 and GCC 16.1 have deprecated s390 32-bit, both with the
   intent to remove it in a future release.
   The s390 64-bit target (s390x-*) remains supported.
@@ -293,6 +293,14 @@ info locals
   GDB now shows the "shadowed" annotation and the location information
   for variables that are shadowed, or which are shadowing.
 
+set args
+run
+start
+starti
+  These commands now all allow for entering inferior arguments that
+  contain a newline character.  The newline must be contained within a
+  single or double quoted argument.
+
 * Removed commands
 
 target ctf
@@ -304,7 +312,7 @@ maint print psymbols
   These commands have been removed, as GDB no longer uses partial
   symbol tables internally.
 
-* Debugger Adapter Protocol changes
+* Debug Adapter Protocol changes
 
   ** Unhandled Ada exceptions can now be caught using the "unhandled"
      exception filter.
@@ -324,14 +332,6 @@ single-inf-arg in qSupported
   arguments as a single string within the vRun packet.  The stub can
   reply with the single-inf-arg feature to indicate that it is able to
   accept arguments as a single string.
-
-set args
-run
-start
-starti
-  These commands now all allow for entering inferior arguments that
-  contain a newline character.  The newline must be contained within a
-  single or double quoted argument.
 
 * New remote packets
 
@@ -373,7 +373,7 @@ qExecAndArgs
      region of a file (see gdb.CorefileMappedFile above).  Has
      read-only attributes start, end, and file_offset.
 
-  ** New Inferior.corefile attribute.  This read only attribute
+  ** New Inferior.corefile attribute.  This read-only attribute
      contains the gdb.Corefile object if a core file is loaded into
      the inferior, otherwise, this contains None.
 
@@ -384,10 +384,10 @@ qExecAndArgs
      'thread' and 'frame' attributes containing gdb.Inferior,
      gdb.InferiorThread, and gdb.Frame objects respectively.
 
-  ** New method gdb.Symtab.source_lines(start, end, unstyled).  This
+  ** New method gdb.Symtab.source_lines(first, last, unstyled).  This
      returns a tuple of strings, each string represents a single
-     source line for the file associated with the symtab.  The 'start'
-     and 'end' are line numbers, and allow for only some lines to be
+     source line for the file associated with the symtab.  The 'first'
+     and 'last' are line numbers, and allow for only some lines to be
      returned, these default to the first and last lines in the file
      respectively.  If 'unstyled' is true then the returned lines will
      have no styling applied, otherwise, styling will be applied if
@@ -399,8 +399,8 @@ qExecAndArgs
      strings in the disassembler output can contain ANSI escape
      sequences to indicate styling.
 
-  ** New gdb.Block.ranges attribute.  This read only attribute contains
-     a tuple of pairs each representing a single range.  Contiguous blocks
+  ** New gdb.Block.ranges attribute.  This read-only attribute contains
+     a tuple of pairs, each representing a single range.  Contiguous blocks
      have only one range.
 
   ** New event registry gdb.events.corefile_changed, which emits a
@@ -412,15 +412,15 @@ qExecAndArgs
 
   ** Procedures 'memory-port-read-buffer-size',
      'set-memory-port-read-buffer-size!', 'memory-port-write-buffer-size',
-     and 'set-memory-port-write-buffer-size!' have been removed.  They were
-     deprecated since GDB 10.  Users who need to control the size of a
+     and 'set-memory-port-write-buffer-size!' have been removed.  They have
+     been deprecated since GDB 10.  Users who need to control the size of a
      memory port's internal buffer can use the 'setvbuf' procedure.
 
 * Removed targets and native configurations
 
   GDB no longer supports AIX 7.1.  The minimum supported
   AIX version is now AIX 7.2 TL5.  GDB will only support
-  DWARF debugging in AIX, going forward.
+  DWARF debugging on AIX, going forward.
 
 *** Changes in GDB 17
 
@@ -430,18 +430,18 @@ qExecAndArgs
 * Support for the shadow stack pointer register on x86-64 or x86-64 with
   32-bit pointer size (X32) GNU/Linux.
 
-* Debugger Adapter Protocol changes
+* Debug Adapter Protocol changes
 
   ** GDB now supports the "completions" request.
 
-* "set style" commands now supports numeric format for basic colors
+* "set style" commands now support numeric format for basic colors
   from 0 to 255 and #RRGGBB format for TrueColor.
 
-* New built-in convenience variable $_colorsupport provides comma-separated
-  list of color space names supported by terminal.  Each color space name is one
-  of monochrome, ansi_8color, aixterm_16color, xterm_256color or rgb_24bit.
-  It is handy for conditionally using styling colors based on terminal features.
-  For example:
+* New built-in convenience variable $_colorsupport provides a comma-separated
+  list of color space names supported by the terminal.  Each color space name
+  is one of monochrome, ansi_8color, aixterm_16color, xterm_256color or
+  rgb_24bit.  It is handy for conditionally using styling colors based on
+  terminal features.  For example:
 
   (gdb) if $_regex ($_colorsupport, ".*(^|,)rgb_24bit($|,).*")
    >set style filename background #FACADE
@@ -459,7 +459,7 @@ qExecAndArgs
 
 * The gcore and gdb-add-index scripts now have a -v or --version
   option, which prints the version number, and then exits.  As well as
-  a -h or --help option, which prints each options and a brief
+  a -h or --help option, which prints each option and a brief
   description.
 
 * The gcore script now has a -g option that lets you specify the GDB
@@ -470,17 +470,17 @@ qExecAndArgs
   namespace into which the library was loaded, if more than one namespace
   is active.
 
-* New built-in convenience variables $linker_namespace_count and
+* New built-in convenience variables $_linker_namespace_count and
   $_linker_namespace.  These show the number of active linker
-  namespaces, and the namespace to which the current location belongs to.
-  In systems that don't support linker namespaces, or if the inferior hasn't
+  namespaces, and the namespace to which the current location belongs.
+  On systems that don't support linker namespaces, or if the inferior hasn't
   started yet, these always return the integer 0.
 
 * The 'org.gnu.gdb.i386.linux' target description feature can now
   contain three additional registers which provide access to the TLS
   related GDT entries on i386 (and x86-64 when compiling with -m32).
 
-* Add record full support for rv64gc architectures
+* Add record full support for rv64gc architectures.
 
 * Debugging Linux programs that use AArch64 Guarded Control Stacks is now
   supported.
@@ -504,9 +504,9 @@ maintenance canonicalize
 
 set riscv numeric-register-names on|off
 show riscv numeric-register-names
-  Controls whether GDB refers to risc-v registers by their numeric names
-  (e.g 'x1') or their abi names (e.g. 'ra').
-  Defaults to 'off', matching the old behaviour (abi names).
+  Controls whether GDB refers to RISC-V registers by their numeric names
+  (e.g. 'x1') or their ABI names (e.g. 'ra').
+  Defaults to 'off', matching the old behaviour (ABI names).
 
 set style emoji on|off|auto
 show style emoji
@@ -516,6 +516,8 @@ show style emoji
 
 set style warning-prefix STRING
 set style error-prefix STRING
+show style warning-prefix
+show style error-prefix
   These commands control the prefix that is printed before warnings
   and errors, respectively.  This functionality is intended for use
   with emoji display, and so the prefixes are only displayed if emoji
@@ -576,8 +578,8 @@ info threads [-gid] [-stopped] [-running] [ID]...
 
   ** New class gdb.Color for dealing with colors.
 
-  ** New constant gdb.PARAM_COLOR represents color type of a
-     gdb.Parameter.value.  Parameter's value is gdb.Color instance.
+  ** New constant gdb.PARAM_COLOR represents the color type of a
+     gdb.Parameter.value.  Parameter's value is a gdb.Color instance.
 
   ** The memory_source argument (the second argument) has been removed
      from gdb.disassembler.builtin_disassemble.  This argument was
@@ -591,7 +593,7 @@ info threads [-gid] [-stopped] [-running] [ID]...
      going to a string.
 
   ** Setting the documentation string (__doc__) of a gdb.Parameter
-     sub-class to the empty string, means GDB will only display the
+     sub-class to the empty string means GDB will only display the
      set_doc or show_doc strings in the set/show help output.
 
   ** New gdb.ParameterPrefix class.  This can be used to create 'set'
@@ -615,13 +617,14 @@ info threads [-gid] [-stopped] [-running] [ID]...
 
   ** New type <gdb:color> for dealing with colors.
 
-  ** New constant PARAM_COLOR represents color type of a value
-     of a <gdb:parameter> object.  Parameter's value is <gdb::color> instance.
+  ** New constant PARAM_COLOR represents the color type of a value
+     of a <gdb:parameter> object.  Parameter's value is a <gdb:color>
+     instance.
 
   ** Eliding the #:doc string from make-parameter now means that GDB
      will use a default documentation string.  Setting #:doc to the
      empty string for make-parameter means GDB will only display the
-     #:set_doc or #:show_doc strings in the set/show help output.
+     #:set-doc or #:show-doc strings in the set/show help output.
 
   ** Prefix commands (using make-command) that don't have a #:invoke
      property will now behave like builtin prefix commands when
@@ -632,15 +635,15 @@ info threads [-gid] [-stopped] [-running] [ID]...
 * New remote packets
 
 binary-upload in qSupported reply
-  If the stub sends back 'binary-upload+' in it's qSupported reply,
+  If the stub sends back 'binary-upload+' in its qSupported reply,
   then GDB will, where possible, make use of the 'x' packet.  If the
-  stub doesn't report this feature supported, then GDB will not use
-  the 'x' packet.
+  stub doesn't report this feature as supported, then GDB will not
+  use the 'x' packet.
 
 vFile:lstat
   Return information about files on the remote system.  Like
   vFile:stat but if the filename is a symbolic link, return
-  information about the link itself, the file the link refers to.
+  information about the link itself, not the file the link refers to.
 
 * Changed remote packets
 
@@ -682,7 +685,7 @@ multi-wp-addr in qSupported
    other cases, this field will have the value 'false'.
 
 ** GDB now shows the "shadowed", "filename", "fullname" and "line"
-   fields in the output of '-stack-list-locals/variables' mi
+   fields in the output of '-stack-list-locals/variables' MI
    commands for variables that are shadowed, or which are shadowing.
 
 * Support for stabs debugging format and the a.out/dbx object format is
@@ -813,7 +816,7 @@ multi-wp-addr in qSupported
   ** Added gdb.Architecture.void_type. Returns a gdb.Type representing "void"
      type for that architecture.
 
-* Debugger Adapter Protocol changes
+* Debug Adapter Protocol changes
 
   ** The "scopes" request will now return a scope holding global
      variables from the stack frame's compilation unit.
@@ -1110,7 +1113,7 @@ show unwind-on-signal
      domains.  Symbol lookup can now search in multiple domains at
      once, and can also narrowly search for just a type or function.
 
-* Debugger Adapter Protocol changes
+* Debug Adapter Protocol changes
 
   ** GDB now emits the "process" event.
 
@@ -1208,7 +1211,7 @@ qIsAddressTagged
   currently selected target.  If no remote target is selected, the default
   configuration for future connections is shown.
 
-* GDB has initial built-in support for the Debugger Adapter Protocol.
+* GDB has initial built-in support for the Debug Adapter Protocol.
   This support requires that GDB be built with Python scripting
   enabled.
 
