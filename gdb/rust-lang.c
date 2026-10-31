@@ -302,7 +302,17 @@ rewrite_slice_type (struct type *in_type, struct type **new_type,
     {
       if (additional_length == nullptr)
 	return true;
-      rewritten = lookup_array_range_type (field_type, 0, bound);
+      /* Rust changed to emit an array type here.  This is an
+	 improvement, but it puts gdb in a bind, because which variant
+	 is in use isn't readily knowable here.  We use the heuristic
+	 that if the trailing member is an array without an upper
+	 bound, then it is "new style".  */
+      if (field_type->code () == TYPE_CODE_ARRAY
+	  && field_type->bounds ()->high.kind () == PROP_UNDEFINED)
+	rewritten = lookup_array_range_type (field_type->target_type (),
+					     0, bound);
+      else
+	rewritten = lookup_array_range_type (field_type, 0, bound);
       *additional_length = rewritten->length ();
     }
   else
