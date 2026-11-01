@@ -39,9 +39,10 @@ proc test_memory_changed_observer { var mi_command } {
 	mi_execute_to "exec-continue" "breakpoint-hit" "main" "" ".*" ".*" \
 	    { "" {disp="keep"} } "breakpoint hit"
 
-	set re_0 "0"
-	set re_1 "1"
-	set re_42 "42"
+	set re_char {( '[^'\r\n]+')?}
+	set re_0 "0$re_char"
+	set re_1 "1$re_char"
+	set re_42 "42$re_char"
 
 	mi_execute_to "exec-continue" "watchpoint-trigger" "main" "" ".*" ".*" \
 	    [list \
@@ -66,7 +67,5 @@ proc test_memory_changed_observer { var mi_command } {
     }
 }
 
-test_memory_changed_observer x {data-write-memory-bytes &x "01"}
-# We want to trigger a target memory write here, so the word size (4 or 8)
-# is not that important.
+test_memory_changed_observer b {data-write-memory-bytes &b "01"}
 test_memory_changed_observer x {data-write-memory &x x 4 "01"}
