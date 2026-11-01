@@ -575,21 +575,26 @@ foreach type {Instruction LazyString Membuf Record RecordFunctionSegment \
 	"gdb.$type is registered"
 }
 
-set logfile [host_standard_output_file gdb.txt]
-gdb_test_no_output "set logging file $logfile" \
-    "set logging file [file tail $logfile]"
-gdb_test_no_output "set logging redirect on" \
-    "enable logging redirect via python"
-gdb_test_no_output "python gdb.execute('set logging enabled on')" \
-    "enable logging via python"
+# The combination of logging and !readline_is_used means we don't get a
+# visible prompt (PR cli/34926), so skip this part.
+set readline_is_used [readline_is_used]
+if {$readline_is_used} {
+    set logfile [host_standard_output_file gdb.txt]
+    gdb_test_no_output "set logging file $logfile" \
+	"set logging file [file tail $logfile]"
+    gdb_test_no_output "set logging redirect on" \
+	"enable logging redirect via python"
+    gdb_test_no_output "python gdb.execute('set logging enabled on')" \
+	"enable logging via python"
 
-# Even with logging redirect on, this should capture the output.
-gdb_test_no_output "python x = gdb.execute('print 23', to_string=True)" \
-    "print from python with logging redirect"
+    # Even with logging redirect on, this should capture the output.
+    gdb_test_no_output "python x = gdb.execute('print 23', to_string=True)" \
+	"print from python with logging redirect"
 
-gdb_test "set logging enabled off" \
-    "Done logging to .*gdb.txt." \
-    "disable logging"
+    gdb_test "set logging enabled off" \
+	"Done logging to .*gdb.txt." \
+	"disable logging"
 
-gdb_test "python print(x)" " = 23.*" \
-    "python still captured output"
+    gdb_test "python print(x)" " = 23.*" \
+	"python still captured output"
+}
