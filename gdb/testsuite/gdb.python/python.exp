@@ -74,6 +74,10 @@ with_test_prefix "python interactive help" {
     }
 }
 
+# A timeout in the previous test would have gdb stuck at the "help>" prompt,
+# causing all following tests to fail.  Start a clean session.
+clean_restart
+
 gdb_test_multiline "show python command" \
   "define zzq" "Type commands for definition of .* just \"end\"\\.*" \
   "python" "" \
