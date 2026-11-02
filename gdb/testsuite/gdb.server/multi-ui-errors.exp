@@ -141,9 +141,20 @@ remote_exec target "kill -9 $gdbserver_pid"
 # The point is that we should be able to interact with GDB from either
 # interpreter now.
 
+# Handle a variety of error messages that occur depending on when the KILL
+# signal arrives.
+set re_closed_1 "Remote connection closed"
+set re_closed_2 \
+    {Remote communication error[.]  Target disconnected: [^\r\n]*[.]}
+set re_command_aborted [string_to_regexp "Command aborted."]
+set re_closed \
+    [multi_line \
+	 "($re_closed_1|$re_closed_2)(" \
+	 "$re_command_aborted)?"]
+
 with_spawn_id $gdb_main_spawn_id {
     gdb_test_multiple "" "remote connection closed - main UI" {
-	-re -wrap "Remote connection closed" {
+	-re -wrap $re_closed {
 	    pass $gdb_test_name
 	}
     }
