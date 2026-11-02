@@ -207,6 +207,10 @@ info locals
 * The gcore script now has a -g option that lets you specify the GDB
   binary invoked by gcore.
 
+* The 'org.gnu.gdb.i386.linux' target description feature can now
+  contain three additional registers which provide access to the TLS
+  related GDT entries on i386 (and x86-64 when compiling with -m32).
+
 * Configure changes
 
 ** --with-babeltrace has been removed.  The babeltrace library was
@@ -475,10 +479,6 @@ qExecAndArgs
   namespaces, and the namespace to which the current location belongs.
   On systems that don't support linker namespaces, or if the inferior hasn't
   started yet, these always return the integer 0.
-
-* The 'org.gnu.gdb.i386.linux' target description feature can now
-  contain three additional registers which provide access to the TLS
-  related GDT entries on i386 (and x86-64 when compiling with -m32).
 
 * Add record full support for rv64gc architectures.
 
