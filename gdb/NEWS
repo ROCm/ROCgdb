@@ -25,10 +25,6 @@
   ABIs.  GDB does not yet support the MSVC C++ ABI (demangling scheme,
   C++ object layout, etc.) or PDB debug information.
 
-* GDB can now read OS-generated core files on systems with Intel AMX
-  support.  The AMX registers themselves are not yet readable, but
-  other xsave state can be read.
-
 * There have been changes to how inferior arguments are passed to
   remote targets.  When using the latest GDB and gdbserver the new
   single-inf-arg feature will be used for argument passing.  When
@@ -203,6 +199,10 @@ info locals
   Glibc 2.43 and GCC 16.1 have deprecated s390 32-bit, both with the
   intent to remove it in a future release.
   The s390 64-bit target (s390x-*) remains supported.
+
+* GDB can now read OS-generated core files on systems with Intel AMX
+  support.  The AMX registers themselves are not yet readable, but
+  other xsave state can be read.
 
 * Configure changes
 
