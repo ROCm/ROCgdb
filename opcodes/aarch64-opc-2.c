@@ -156,6 +156,7 @@ const struct aarch64_operand aarch64_operands[] =
   {AARCH64_OPND_CLASS_SYSTEM, "BTI_TARGET", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "BTI targets r/j/c/jc"},
   {AARCH64_OPND_CLASS_SYSTEM, "STSHH_POLICY", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "an STSHH policy (keep/strm)"},
   {AARCH64_OPND_CLASS_SYSTEM, "SHUH_PHINT", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "an optional priority hint (ph)"},
+  {AARCH64_OPND_CLASS_SYSTEM, "SRLS_STSHSTRM", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {}, "an optional store shared stream hint (stshstrm)"},
   {AARCH64_OPND_CLASS_SYSTEM, "BRBOP", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{1, 5, false}}, "Branch Record Buffer operation operand"},
   {AARCH64_OPND_CLASS_INT_REG, "Rt_IN_SYS_ALIASES", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 0, false}}, "Rt register with defaults for SYS aliases"},
   {AARCH64_OPND_CLASS_INT_REG, "LSE128_Rt", OPD_F_HAS_INSERTER | OPD_F_HAS_EXTRACTOR, {{5, 0, false}}, "an integer register"},

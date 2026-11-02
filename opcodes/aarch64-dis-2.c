@@ -37727,6 +37727,12 @@ aarch64_find_next_alias_opcode (const aarch64_opcode *opcode)
       value = A64_OPID_d503201f_nop;
       break;
     case A64_OPID_d503201f_nop:
+      value = A64_OPID_d50326df_srls_SRLS_STSHSTRM;
+      break;
+    case A64_OPID_d50326df_srls_SRLS_STSHSTRM:
+      value = A64_OPID_d503271f_slbnd;
+      break;
+    case A64_OPID_d503271f_slbnd:
       value = A64_OPID_d503265f_shuh_SHUH_PHINT;
       break;
     case A64_OPID_d503265f_shuh_SHUH_PHINT:
@@ -38217,6 +38223,7 @@ aarch64_extract_operand (const aarch64_operand *self,
     case AARCH64_OPND_BTI_TARGET:
     case AARCH64_OPND_STSHH_POLICY:
     case AARCH64_OPND_SHUH_PHINT:
+    case AARCH64_OPND_SRLS_STSHSTRM:
       return aarch64_ext_hint (self, info, code, inst, errors);
     case AARCH64_OPND_SVE_ADDR_RI_S4x16:
     case AARCH64_OPND_SVE_ADDR_RI_S4x32:

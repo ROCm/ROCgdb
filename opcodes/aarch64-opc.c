@@ -369,10 +369,11 @@ const struct aarch64_name_value_pair aarch64_barrier_dsb_nxs_options[4] =
 const struct aarch64_name_value_pair aarch64_hint_options[] =
 {
   /* BTI.  This is also the F_DEFAULT entry for AARCH64_OPND_BTI_TARGET.
-     BTI R and SHUH must be the first and second entries respectively
-     so that F_DEFAULT refers to the correct table entries.  */
+     BTI R, SHUH and SRLS must be the first, second and third entries
+     respectively so that F_DEFAULT refers to the correct table entries.  */
   { "r",	HINT_OPD_R },		/* BTI R.  */
   { "",		HINT_OPD_NPHINT},	/* SHUH. */
+  { "",		HINT_OPD_NSTSHSTRM},	/* SRLS. */
   { "csync",	HINT_OPD_CSYNC },	/* PSB CSYNC.  */
   { "dsync",	HINT_OPD_DSYNC },	/* GCSB DSYNC.  */
   { "c",	HINT_OPD_C },		/* BTI C.  */
@@ -381,6 +382,7 @@ const struct aarch64_name_value_pair aarch64_hint_options[] =
   { "keep",	HINT_OPD_KEEP },	/* STSHH KEEP  */
   { "strm",	HINT_OPD_STRM },	/* STSHH STRM  */
   { "ph",	HINT_OPD_PHINT },	/* SHUH PH.  */
+  { "stshstrm",	HINT_OPD_STSHSTRM },	/* SRLS STSHSTRM.  */
   { NULL,	HINT_OPD_NULL },
 };
 
@@ -4874,6 +4876,12 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       break;
 
     case AARCH64_OPND_SHUH_PHINT:
+      if (*(opnd->hint_option->name))
+	snprintf (buf, size, "%s",
+		  style_sub_mnem (styler, opnd->hint_option->name));
+      break;
+
+    case AARCH64_OPND_SRLS_STSHSTRM:
       if (*(opnd->hint_option->name))
 	snprintf (buf, size, "%s",
 		  style_sub_mnem (styler, opnd->hint_option->name));

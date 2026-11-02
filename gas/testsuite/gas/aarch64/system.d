@@ -72,9 +72,9 @@ Disassembly of section \.text:
 .*:	d503267f 	(hint	#0x33|shuh	ph)
 .*:	d503269f 	(hint	#0x34|stcph)
 .*:	d50326bf 	hint	#0x35
-.*:	d50326df 	hint	#0x36
-.*:	d50326ff 	hint	#0x37
-.*:	d503271f 	hint	#0x38
+.*:	d50326df 	(hint	#0x36|srls)
+.*:	d50326ff 	(hint	#0x37|srls	stshstrm)
+.*:	d503271f 	(hint	#0x38|slbnd)
 .*:	d503273f 	hint	#0x39
 .*:	d503275f 	hint	#0x3a
 .*:	d503277f 	hint	#0x3b

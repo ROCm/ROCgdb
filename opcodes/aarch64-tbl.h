@@ -5194,6 +5194,9 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   CORE_INSN ("stshh", 0xd503261f, 0xffffffdf, ic_system, 0, OP1 (STSHH_POLICY), QL_NIL1, F_ALIAS),
   CORE_INSN ("stcph", 0xd503269f, 0xffffffff, ic_system, 0, OP0 (), QL_0, F_ALIAS),
   CORE_INSN ("shuh", 0xd503265f, 0xffffffdf, ic_system, 0, OP1 (SHUH_PHINT), QL_NIL1, F_ALIAS | F_OPD0_OPT | F_DEFAULT (0x1)),
+  /* RLCS aliases in the HINT encoding space.  */
+  CORE_INSN ("slbnd", 0xd503271f, 0xffffffff, ic_system, 0, OP0 (), QL_0, F_ALIAS),
+  CORE_INSN ("srls", 0xd50326df, 0xffffffdf, ic_system, 0, OP1 (SRLS_STSHSTRM), QL_NIL1, F_ALIAS | F_OPD0_OPT | F_DEFAULT (0x2)),
   CORE_INSN ("msr", 0xd500401f, 0xfff8f01f, ic_system, 0, OP2 (PSTATEFIELD, UIMM4), QL_NIL2, F_SYS_WRITE),
   CORE_INSN ("hint",0xd503201f, 0xfffff01f, ic_system, 0, OP1 (UIMM7), QL_NIL1, F_HAS_ALIAS),
   CORE_INSN ("nop", 0xd503201f, 0xffffffff, ic_system, 0, OP0 (), QL_0, F_ALIAS),
@@ -8262,6 +8265,8 @@ const struct aarch64_opcode aarch64_opcode_table[] =
       "an STSHH policy (keep/strm)")					\
     Y(SYSTEM, hint, "SHUH_PHINT", 0, F(),				\
       "an optional priority hint (ph)")						\
+    Y(SYSTEM, hint, "SRLS_STSHSTRM", 0, F(),				\
+      "an optional store shared stream hint (stshstrm)")			\
     Y(SYSTEM, imm, "BRBOP", 0, F(FLD(5, 1)),				\
       "Branch Record Buffer operation operand")				\
     Y(INT_REG, regno, "Rt_IN_SYS_ALIASES", 0, F(FLD(0, 5)),		\

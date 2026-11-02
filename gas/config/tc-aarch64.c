@@ -4674,7 +4674,9 @@ parse_hint_opt (const char *name, char **str,
       || ((strcmp ("stshh", name) == 0)
 	  && (o->value != HINT_OPD_KEEP && o->value != HINT_OPD_STRM))
       || ((strcmp ("shuh", name) == 0)
-	  && (o->value != HINT_OPD_PHINT)))
+	  && (o->value != HINT_OPD_PHINT))
+      || ((strcmp ("srls", name) == 0)
+	  && (o->value != HINT_OPD_STSHSTRM)))
       return false;
 
   *str = q;
@@ -6510,6 +6512,7 @@ process_omitted_operand (enum aarch64_opnd type, const aarch64_opcode *opcode,
 
     case AARCH64_OPND_BTI_TARGET:
     case AARCH64_OPND_SHUH_PHINT:
+    case AARCH64_OPND_SRLS_STSHSTRM:
       operand->hint_option = aarch64_hint_options + default_value;
       break;
 
@@ -8422,6 +8425,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 
 	case AARCH64_OPND_BTI_TARGET:
 	case AARCH64_OPND_SHUH_PHINT:
+	case AARCH64_OPND_SRLS_STSHSTRM:
 	  if (!parse_hint_opt (opcode->name, &str, &(info->hint_option)))
 	    goto failure;
 	  info->qualifier = AARCH64_OPND_QLF_NIL;
