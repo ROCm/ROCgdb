@@ -211,6 +211,8 @@ info locals
   contain three additional registers which provide access to the TLS
   related GDT entries on i386 (and x86-64 when compiling with -m32).
 
+* The "catch syscall" command now works on riscv*-linux* targets.
+
 * Configure changes
 
 ** --with-babeltrace has been removed.  The babeltrace library was
@@ -488,8 +490,6 @@ qExecAndArgs
 * New "--binary-output" command line option instructs GDB to set the
   translation mode of its stdout/stderr to binary mode.  This disables
   Line Feed translation.  MS-Windows only.
-
-* The "catch syscall" command now works on riscv*-linux* targets.
 
 * New commands
 
