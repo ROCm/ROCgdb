@@ -323,6 +323,15 @@ bpf_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   gdbarch *gdbarch
     = gdbarch_alloc (&info, gdbarch_tdep_up (new bpf_gdbarch_tdep));
 
+  /* Bit sizes of the fundamental types.  BPF is a 64-bit ISA; with the
+     32-bit defaults, bpf_register_type would return 4-byte pointer
+     types for r10 and pc, while the frame unwinders access them as
+     8-byte registers.  addr_bit defaults to ptr_bit, and the defaults
+     for short_bit, int_bit and long_long_bit (16, 32 and 64) are
+     already correct for BPF, so only these two need to be set.  */
+  set_gdbarch_long_bit (gdbarch, 64);
+  set_gdbarch_ptr_bit (gdbarch, 64);
+
   /* Information about registers, etc.  */
   set_gdbarch_num_regs (gdbarch, BPF_NUM_REGS);
   set_gdbarch_register_name (gdbarch, bpf_register_name);
