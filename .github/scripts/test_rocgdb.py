@@ -2127,10 +2127,26 @@ def run_tests(
         test_results.update_results(compiler_label, current_tests, results_file)
 
         failed_tests = test_results.get_failed_tests(compiler_label)
+        # Totals per result category (cumulative over the iterations so far),
+        # so a run that passed because nothing ran is visible. TIMEOUT is a
+        # subset of FAIL and FLAKY is derived, so neither is counted here.
+        label_data = test_results.test_data.get(compiler_label, {})
+        counts = {
+            category: sum(len(names) for names in label_data.get(category, {}).values())
+            for category in TEST_CATEGORIES
+            if category not in ("TIMEOUT", "FLAKY")
+        }
+        counts_text = " ".join(f"{k}={v}" for k, v in counts.items() if v)
         _note(
             f"{compiler_label} iteration {iteration}: {duration:.0f}s, "
-            f"{len(failed_tests)} failing test(s)"
+            f"{len(failed_tests)} failing test file(s), results: "
+            f"{counts_text or 'none'}"
         )
+        if not any(counts.values()):
+            _note(
+                f"{STATUS_WARN} No test results were recorded for "
+                f"{compiler_label}: the tests may not have run"
+            )
         for t in sorted(failed_tests):
             _note(f"  {t}")
 
@@ -2832,18 +2848,26 @@ def _diag_section(
     return out
 
 
-def _read_dmesg(env: Dict[str, str]) -> Optional[List[str]]:
+def _read_dmesg(env: Dict[str, str]) -> Tuple[Optional[List[str]], str]:
     """
-    Return the kernel log lines, or None if unreadable.
+    Return the kernel log lines, and a description of what was tried.
 
     Many systems restrict dmesg (kernel.dmesg_restrict), so fall back to
-    non interactive `sudo -n`, which never blocks on a password prompt.
+    non interactive `sudo -n`, which never blocks on a password prompt. Inside
+    a container, even sudo does not help unless the container has CAP_SYSLOG,
+    so the reason for each failure is kept and reported.
+
+    Returns:
+        (lines, notes). lines is None if the log could not be read.
     """
+    notes = []
     for cmd in (["dmesg"], ["sudo", "-n", "dmesg"]):
         rc, out = _diag_capture(cmd, env)
         if rc == 0 and out:
-            return out.splitlines()
-    return None
+            return out.splitlines(), ""
+        first = out.strip().splitlines()[0] if out.strip() else "no output"
+        notes.append(f"{shlex.join(cmd)}: exit status {rc}: {first}")
+    return None, "\n".join(notes)
 
 
 def _gpu_fd_holders() -> List[Tuple[int, str, str]]:
@@ -2884,6 +2908,75 @@ def _gpu_fd_holders() -> List[Tuple[int, str, str]]:
         except OSError:
             continue
     return sorted(holders)
+
+
+def _proc_description(pid: int) -> str:
+    """
+    Describe a process by its command line, state and cgroup.
+
+    PIDs reported by the KFD are host PIDs. Inside a container only the
+    container's own processes can be resolved; anything else is reported as
+    belonging to another PID namespace, i.e. another container or the host.
+    """
+    proc = Path("/proc") / str(pid)
+    try:
+        cmdline = (
+            (proc / "cmdline")
+            .read_bytes()
+            .replace(b"\0", b" ")
+            .decode(errors="replace")
+        ).strip() or (proc / "comm").read_text(errors="replace").strip()
+    except OSError:
+        return "<not in this PID namespace: another container or the host>"
+    try:
+        cgroup = (proc / "cgroup").read_text(errors="replace").strip().splitlines()[-1]
+    except (OSError, IndexError):
+        cgroup = "?"
+    return f"{cmdline}  [cgroup {cgroup}]"
+
+
+def _kfd_processes(gpu_names: Dict[str, str]) -> List[str]:
+    """
+    List every process using the KFD, with per GPU VRAM and its command line.
+
+    /sys/class/kfd/kfd/proc is not namespaced, so it lists processes of all
+    containers on the host, unlike /proc. Each entry has the process' VRAM
+    use per GPU (vram_<gpu_id>) and its queues. Every file is read
+    defensively, since the exact layout varies between kernel versions.
+
+    Args:
+        gpu_names: Maps KFD gpu_id to a printable GPU name.
+
+    Returns:
+        One line per process, plus indented detail lines.
+    """
+    root = Path("/sys/class/kfd/kfd/proc")
+    try:
+        entries = sorted(
+            (e for e in root.iterdir() if e.name.isdigit()), key=lambda e: int(e.name)
+        )
+    except OSError as e:
+        return [f"<{root} unreadable: {e.strerror}>"]
+    lines = []
+    for entry in entries:
+        pid = int(entry.name)
+        vram = []
+        for f in sorted(entry.glob("vram_*")):
+            try:
+                used = int(f.read_text().strip())
+            except (OSError, ValueError):
+                continue
+            if used:
+                gid = f.name[len("vram_") :]
+                name = gpu_names.get(gid, f"gpu_id {gid}")
+                vram.append(f"{name}: {used / 2**20:.0f} MiB")
+        try:
+            queues = len(list((entry / "queues").iterdir()))
+        except OSError:
+            queues = -1
+        lines.append(f"pid {pid} queues={queues} vram: {', '.join(vram) or 'none'}")
+        lines.append(f"    {_proc_description(pid)}")
+    return lines or ["<no KFD processes>"]
 
 
 def _proc_kernel_state(pid: int) -> str:
@@ -2947,6 +3040,7 @@ def collect_gpu_diagnostics(phase: str, env_vars: Dict[str, str]) -> None:
     _diag_section("Device nodes", ["ls", "-l", "/dev/kfd", "/dev/dri"], env)
     nodes = sorted(Path("/sys/class/kfd/kfd/topology/nodes").glob("*/properties"))
     gpu_count = 0
+    gpu_names: Dict[str, str] = {}
     _diag_group("KFD topology nodes")
     for props in nodes:
         try:
@@ -2961,6 +3055,15 @@ def collect_gpu_diagnostics(phase: str, env_vars: Dict[str, str]) -> None:
         )
         is_gpu = fields.get("simd_count", "0") != "0"
         gpu_count += is_gpu
+        if is_gpu:
+            try:
+                gid = (props.parent / "gpu_id").read_text().strip()
+                gpu_names[gid] = (
+                    f"node {props.parent.name} "
+                    f"(renderD{fields.get('drm_render_minor', '?')})"
+                )
+            except OSError:
+                pass
         wanted = ("gfx_target_version", "device_id", "simd_count", "drm_render_minor")
         print(
             f"node {props.parent.name}: "
@@ -2976,6 +3079,13 @@ def collect_gpu_diagnostics(phase: str, env_vars: Dict[str, str]) -> None:
     if not holders:
         print("<none visible from this PID namespace>")
     _diag_endgroup()
+
+    _diag_group("KFD processes from all containers (sysfs), matched to command lines")
+    kfd_lines = _kfd_processes(gpu_names)
+    print("\n".join(kfd_lines))
+    _diag_endgroup()
+    foreign = sum("<not in this PID namespace" in line for line in kfd_lines)
+    kfd_procs = sum(line.startswith("pid ") for line in kfd_lines)
 
     _diag_section("rocm-smi processes", ["rocm-smi", "--showpids"], env)
     _diag_section(
@@ -3026,10 +3136,11 @@ def collect_gpu_diagnostics(phase: str, env_vars: Dict[str, str]) -> None:
 
     # Kernel log: the full log at baseline (recording its length), and only the
     # lines added since then afterwards.
-    lines = _read_dmesg(env)
+    lines, dmesg_notes = _read_dmesg(env)
     _diag_group("dmesg" + ("" if is_baseline else " (new since baseline)"))
     if lines is None:
-        print("<dmesg unavailable: missing binary or insufficient privileges>")
+        print("<dmesg unavailable>")
+        print(dmesg_notes)
     elif is_baseline:
         _diag_state.baseline_dmesg_lines = len(lines)
         print("\n".join(lines[-100:]))
@@ -3041,7 +3152,8 @@ def collect_gpu_diagnostics(phase: str, env_vars: Dict[str, str]) -> None:
 
     _note(
         f"GPU diagnostics summary ({phase}): GPUs={gpu_count} "
-        f"fd holders={len(holders)} D state processes={len(stuck)} "
+        f"fd holders={len(holders)} KFD processes={kfd_procs} "
+        f"(in other namespaces: {foreign}) D state processes={len(stuck)} "
         f"zombies={zombies} "
         f"visibility vars cleared={cleared or 'none set'}"
     )
