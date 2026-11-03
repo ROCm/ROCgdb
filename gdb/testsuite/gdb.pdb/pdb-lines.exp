@@ -1,0 +1,137 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# A PDB's line tables: a source line maps to its code and an address to
+# its line, for a line breakpoint and "list".  The program is built with
+# /Gy, which gives every function a section contribution of its own while
+# the module header names only the first, by the selected board and by
+# Microsoft cl linked by Microsoft link.  The selftests cover the rows
+# themselves.
+# The functions are named by their public symbols; later readers give
+# them full symbols, which the patterns also accept.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+standard_testfile .c
+
+set first_line [gdb_get_line_number "first body"]
+set second_line [gdb_get_line_number "second body"]
+set main_line [gdb_get_line_number "main body"]
+
+# Check the lines of the program GDB has loaded.
+
+proc check_lines {} {
+    global srcfile first_line second_line main_line hex decimal
+
+    set file "\"\[^\r\n\]*[string_to_regexp $srcfile]\""
+    # A full symbol shows its parameter list.
+    set params "(\\(int\\)|\\(void\\)|\\(\\))?"
+    foreach {func line} [list first $first_line second $second_line \
+			     main $main_line] {
+	gdb_test "info line $srcfile:$line" \
+	    "Line $line of $file starts at address $hex <${func}${params}\\+$decimal> and ends at $hex <${func}.*>\\." \
+	    "line $line of $func maps to its code"
+	gdb_test "info line *$func" \
+	    "Line $decimal of $file starts at address $hex <${func}${params}> and ends at .*" \
+	    "$func's address maps to a line"
+    }
+
+    gdb_test "break $srcfile:$second_line" \
+	"Breakpoint $decimal at $hex: file \[^\r\n\]*[string_to_regexp $srcfile], line $second_line\\." \
+	"a line breakpoint in second"
+    gdb_test "list $srcfile:$main_line,$main_line" \
+	"$main_line\[ \t\]+return first \\(1\\) \\+ second \\(2\\);.*" \
+	"list the line of main"
+}
+
+# With /Gy, the layouts of section contributions per function: the
+# board's build, by clang-cl linked by lld-link, and Microsoft cl's
+# linked by lld-link and by Microsoft link.
+with_test_prefix "board" {
+    if {[pdb_prepare_for_testing "prepare fixture" ${testfile}.exe $srcfile \
+	     {debug optimize=-O0 additional_flags=-Gy}] == 0} {
+	check_lines
+
+	# The padding before second is in no code contribution, so the
+	# lookup of its PC ends without a search of the compunits.
+	set pad_pc ""
+	gdb_test_multiple "x/i (char *) second - 1" "read the padding before second" {
+	    -re -wrap "($hex) <first\\+$decimal>:\\s+int3\\s*" {
+		set pad_pc $expect_out(1,string)
+		pass $gdb_test_name
+	    }
+	    -re -wrap "" {
+		unsupported $gdb_test_name
+	    }
+	}
+	if {$pad_pc ne ""} {
+	    gdb_test_no_output "set debug pdb-read 2"
+	    set output ""
+	    gdb_test_multiple "info line *$pad_pc" "look up a PC in padding" {
+		-re "(.*)$gdb_prompt $" {
+		    set output $expect_out(1,string)
+		    pass $gdb_test_name
+		}
+	    }
+	    gdb_assert {[regexp {find_pc_sect: no match} $output]
+			&& ![regexp {scanning compunits} $output]} \
+		"a PC in no contribution searches no compunit"
+	    # A debug message can still come before the prompt.
+	    gdb_test "set debug pdb-read 0" ".*"
+	}
+    }
+}
+
+set exe [standard_output_file ${testfile}.exe]
+if {[file exists [file rootname $exe].pdb]} {
+    # A file checksum record starts with its name's /names offset.
+    pdb_check_corrupt file-name $exe \
+	[list subsections set 0xf4 0 0 4 0x7fffffff] "bad /names offset"
+    # DEBUG_S_LINES: offset, section, flags and code size, then a file
+    # block's file id, line count and size.
+    pdb_check_corrupt line-offset $exe \
+	[list subsections set 0xf2 0 0 4 0x7fffff00] \
+	"line $decimal is outside its section"
+    pdb_check_corrupt line-count $exe \
+	[list subsections set 0xf2 0 16 4 0x7fffffff] \
+	"bad DEBUG_S_LINES file block"
+    pdb_check_corrupt block-size $exe \
+	[list subsections set 0xf2 0 20 4 0x7fffffff] \
+	"bad DEBUG_S_LINES file block"
+    pdb_check_corrupt name-offset $exe [list namemap set 0 0 0 4 0x7fffffff] \
+	"bad named stream map name offset"
+    # The DBI header holds the section contribution substream's size.
+    pdb_check_corrupt contributions $exe [list dbi set 0 0 28 4 0x7ffffff0] \
+	"bad section contribution substream size"
+}
+
+with_test_prefix "cl-lld" {
+    if {[pdb_cl_prepare_for_testing "prepare fixture" ${binfile}-cl-lld.exe \
+	     $srcdir/$subdir/$srcfile c "/Od /Gy"] == 0} {
+	check_lines
+    }
+}
+
+with_test_prefix "cl" {
+    if {[pdb_cl_prepare_for_testing "prepare fixture" ${binfile}-cl.exe \
+	     $srcdir/$subdir/$srcfile c "/Od /Gy" link] == 0} {
+	check_lines
+    }
+}

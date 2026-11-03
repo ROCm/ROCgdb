@@ -24,8 +24,9 @@ STREAM selects the records: "tpi" for the TPI stream, "module" for the
 symbol records of the first module, "globals" for the global symbol
 records, "subsections" for the first module's C13 subsections, or
 "filenames" for the DBI File Info names buffer, "names" for the /names
-string data or "psgsi" for the whole PSGSI stream, each a single record of
-kind 0.
+string data, "namemap" for the named stream map's (string offset, stream
+index) pair of /names, "dbi" for the whole DBI stream or "psgsi" for the
+whole PSGSI stream, each a single record of kind 0.
 KIND is the record's leaf, symbol or subsection kind and INDEX selects among
 the records of that kind in stream order.  OFFSET counts from the record's
 data, which follows its RecordLen and RecordKind fields (a subsection's
@@ -162,7 +163,8 @@ def walk_subsections(stream, offset, end):
 
 
 def names_stream(msf):
-    """Return the index of the /names stream.  The named stream map is a
+    """Return the index of the /names stream and the offset in the PDB Info
+    stream of its (string offset, stream index) pair.  The named stream map is a
     string buffer, then a hash table: size, capacity, the present and
     deleted bit vectors (each a word count and words), and one (string
     offset, stream index) pair per present bucket."""
@@ -178,17 +180,19 @@ def names_stream(msf):
         key = read_u32(info, pos + 8 * i)
         end = info.index(0, strings + key)
         if info[strings + key : end] == b"/names":
-            return read_u32(info, pos + 8 * i + 4)
+            return read_u32(info, pos + 8 * i + 4), pos + 8 * i
     raise ValueError("no /names stream")
 
 
 def stream_records(msf, name):
     """Return the index of stream NAME and the records it holds."""
     if name == "names":
-        index = names_stream(msf)
+        index = names_stream(msf)[0]
         stream = msf.read_stream(index)
         size = read_u32(stream, NAMES_DATA_SIZE_OFFS)
         return index, [(None, 0, NAMES_DATA_OFFS, size)]
+    if name == "namemap":
+        return INFO_STREAM, [(None, 0, names_stream(msf)[1], 8)]
     if name == "tpi":
         stream = msf.read_stream(TPI_STREAM)
         offset = read_u32(stream, 4)
@@ -197,6 +201,8 @@ def stream_records(msf, name):
         return TPI_STREAM, list(walk_records(stream, offset, end, first))
 
     dbi = msf.read_stream(DBI_STREAM)
+    if name == "dbi":
+        return DBI_STREAM, [(None, 0, 0, len(dbi))]
     if name == "module":
         index = read_u16(dbi, DBI_HEADER_SIZE + MODI_STREAM_NUM_OFFS)
         end = read_u32(dbi, DBI_HEADER_SIZE + MODI_SYM_BYTES_OFFS)

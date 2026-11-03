@@ -128,6 +128,7 @@ Every compiled test uses `pdb_prepare_for_testing` with the selected board.
 | [`pdb-readnever.exp`](pdb-readnever.exp) | built at test time | `pdb-test.cpp` | no | `symbol-file -readnever` still loads the PDB for its public symbols, so `main` is a minimal symbol, but reads no symbol table |
 | [`pdb-bss-tail.exp`](pdb-bss-tail.exp) | built at test time | `pdb-bss-tail.c` | no | A global in the uninitialized tail of `.data`, past the bytes `.data` has in the file, as lld links `.bss`, still gets the minimal symbol of its public |
 | [`pdb-i386.exp`](pdb-i386.exp) | built at test time (clang-cl i686, lld-link, no CRT) | `pdb-i386.c` | no | The PDB of an i386 image is refused with a warning; only x86-64 is read |
+| [`pdb-lines.exp`](pdb-lines.exp) | built at test time with `/Gy`, by the board and by Microsoft cl and link | `pdb-lines.c` | no | Line tables of functions that each have a section contribution of their own: a source line maps to its code and a function's address to its line, a line breakpoint and `list` |
 
 ## 1.2 Which PDB gets loaded
 

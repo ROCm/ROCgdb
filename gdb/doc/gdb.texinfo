@@ -21163,6 +21163,19 @@ executable's, the age in its PDB Info stream is at least the executable's
 (writing to a PDB after the link raises it), and the age in its DBI stream,
 when that is not 0, is the executable's.
 
+@cindex @env{MSYS2_ROOT}, environment variable
+A PDB's line tables name source files as the compiler recorded them.
+@value{GDBN} converts a Unix path that MSYS2 tools recorded, such as
+@file{/home/user/src/file.c}, to a Windows path, which it uses when that
+file exists.  It prefixes the path with the MSYS2 root directory that the
+environment variable @env{MSYS2_ROOT} names, such as @file{C:/msys64}.
+When that is not set or the file is not there, it takes a path such as
+@file{/c/src/file.c} as @file{C:/src/file.c}, and then tries the roots
+@file{@var{d}:/msys64} and @file{@var{d}:/msys2} on each drive @var{d}.
+A Windows path after a Unix directory, such as
+@file{/home/user/C:\include\file.h}, becomes the Windows path.  A path that
+cannot be converted is kept.
+
 @kindex set always-read-ctf @r{[}on@r{|}off@r{]}
 @kindex show always-read-ctf
 @cindex always-read-ctf

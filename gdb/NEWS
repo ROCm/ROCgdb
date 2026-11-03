@@ -36,6 +36,11 @@
   GDB reads from the PDB:
 
   ** Public symbols, as minimal symbols.
+  ** Line tables.  Source file paths that MSYS2 tools recorded are
+     converted to Windows paths; the MSYS2_ROOT environment variable
+     names the MSYS2 root directory.
+
+  GDB reads every module of the PDB when it loads the PDB.
 
 * There have been changes to how inferior arguments are passed to
   remote targets.  When using the latest GDB and gdbserver the new

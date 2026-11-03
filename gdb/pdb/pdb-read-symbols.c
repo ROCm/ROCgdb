@@ -146,6 +146,95 @@ pdb_sym_body_valid (uint16_t rectype, const gdb_byte *body, size_t body_size)
 	       != nullptr);
 }
 
+/* CV_CFL_LANG codes carried in the iLanguage field of S_COMPILE*.  D is
+   not in Microsoft's list; DMD writes the character 'D'.  */
+inline constexpr uint8_t CV_CFL_C = 0x00;
+inline constexpr uint8_t CV_CFL_FORTRAN = 0x02;
+inline constexpr uint8_t CV_CFL_MASM = 0x03;
+inline constexpr uint8_t CV_CFL_PASCAL = 0x04;
+inline constexpr uint8_t CV_CFL_OBJC = 0x11;
+inline constexpr uint8_t CV_CFL_RUST = 0x15;
+inline constexpr uint8_t CV_CFL_GO = 0x16;
+inline constexpr uint8_t CV_CFL_D = 'D';
+
+/* iLanguage is the low byte of the flags dword, which is the first
+   field of S_COMPILE*.  */
+inline constexpr auto PDB_SYMBOL_COMPILE_FLAGS_OFFS = 0;
+
+/* Map a CV_CFL_LANG code to a GDB language.  CV_CFL_CXX, and the codes of
+   languages GDB does not know, map to C++.  */
+
+static enum language
+pdb_cv_lang_to_language (uint8_t cv_lang)
+{
+  switch (cv_lang)
+    {
+    case CV_CFL_C:
+      return language_c;
+    case CV_CFL_FORTRAN:
+      return language_fortran;
+    case CV_CFL_MASM:
+      return language_asm;
+    case CV_CFL_PASCAL:
+      return language_pascal;
+    case CV_CFL_OBJC:
+      return language_objc;
+    case CV_CFL_RUST:
+      return language_rust;
+    case CV_CFL_GO:
+      return language_go;
+    case CV_CFL_D:
+      return language_d;
+    default:
+      return language_cplus_;
+    }
+}
+
+/* See pdb-internal.h.  */
+
+enum language
+pdb_module_language (pdb_per_objfile *pdb, pdb_module_info *mod_info)
+{
+  if (mod_info->language != language_unknown)
+    return mod_info->language;
+
+  mod_info->language = language_cplus_;
+  uint16_t stream = mod_info->stream_number;
+  uint32_t syms_end = mod_info->sym_byte_size;
+  if (stream == MODI_NO_STREAM || stream >= pdb->streams.size ()
+      || syms_end > pdb->streams[stream].size)
+    return mod_info->language;
+
+  gdb::byte_vector scratch;
+  uint32_t off = PDB_MODULE_SYMBOLS_OFFS;
+  while (off + PDB_RECORD_HDR_SIZE <= syms_end)
+    {
+      const gdb_byte *rec
+	= pdb_stream_bytes (pdb, stream, off, PDB_RECORD_HDR_SIZE, scratch);
+      size_t rec_size = read_u16 (rec) + sizeof (uint16_t);
+      if (rec_size > syms_end - off)
+	break;
+
+      rec = pdb_stream_bytes (pdb, stream, off, rec_size, scratch);
+      auto hdr = pdb_parse_sym_record_hdr (rec, rec + rec_size);
+      if (!hdr)
+	break;
+
+      if ((hdr->type == S_COMPILE2 || hdr->type == S_COMPILE3)
+	  && rec_size - PDB_RECORD_DATA_OFFS > PDB_SYMBOL_COMPILE_FLAGS_OFFS)
+	{
+	  uint8_t cv_lang = read_u8 (rec + PDB_RECORD_DATA_OFFS
+				     + PDB_SYMBOL_COMPILE_FLAGS_OFFS);
+	  mod_info->language = pdb_cv_lang_to_language (cv_lang);
+	  break;
+	}
+
+      off += rec_size;
+    }
+
+  return mod_info->language;
+}
+
 /* See pdb-internal.h.  */
 
 void
@@ -898,6 +987,26 @@ test_minsyms ()
 		&& msym->linkage_name ()[0] != '\0');
 }
 
+/* Test pdb_cv_lang_to_language.  Check each CV_CFL_LANG code that names a
+   language GDB knows, C++, and codes of languages GDB does not know.  */
+
+static void
+test_cv_language ()
+{
+  SELF_CHECK (pdb_cv_lang_to_language (CV_CFL_C) == language_c);
+  SELF_CHECK (pdb_cv_lang_to_language (0x01) == language_cplus_);
+  SELF_CHECK (pdb_cv_lang_to_language (CV_CFL_FORTRAN) == language_fortran);
+  SELF_CHECK (pdb_cv_lang_to_language (CV_CFL_MASM) == language_asm);
+  SELF_CHECK (pdb_cv_lang_to_language (CV_CFL_PASCAL) == language_pascal);
+  SELF_CHECK (pdb_cv_lang_to_language (CV_CFL_OBJC) == language_objc);
+  SELF_CHECK (pdb_cv_lang_to_language (CV_CFL_RUST) == language_rust);
+  SELF_CHECK (pdb_cv_lang_to_language (CV_CFL_GO) == language_go);
+  SELF_CHECK (pdb_cv_lang_to_language (CV_CFL_D) == language_d);
+  /* COBOL, C#, Objective-C++ and Swift.  */
+  for (uint8_t code : { 0x06, 0x0a, 0x12, 0x13 })
+    SELF_CHECK (pdb_cv_lang_to_language (code) == language_cplus_);
+}
+
 } /* namespace selftests */
 
 #endif /* GDB_SELF_TEST */
@@ -925,5 +1034,7 @@ INIT_GDB_FILE (pdb_read_symbols)
 			    pdb::selftests::test_data_names);
   selftests::register_test ("pdb-minsyms",
 			    pdb::selftests::test_minsyms);
+  selftests::register_test ("pdb-cv-language",
+			    pdb::selftests::test_cv_language);
 #endif
 }

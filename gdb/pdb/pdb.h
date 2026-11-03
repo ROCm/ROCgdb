@@ -33,7 +33,8 @@ struct objfile;
    cannot be found, read or matched, so the caller can look for debug
    information elsewhere.  A mismatched or malformed PDB is reported (a
    warning for the main objfile, a complaint otherwise) and nothing is
-   read from it.  */
+   read from it.  With OBJF_READNEVER only the minimal symbols are read.
+   A successful load expands every module.  */
 
 extern bool pdb_initialize_objfile (struct objfile *objfile);
 
