@@ -817,17 +817,20 @@ read_debug_names_from_section (dwarf2_per_objfile *per_objfile,
 			       aug_repr.c_str ());
     }
 
-  if (augmentation_string == gdb::make_span (dwarf5_augmentation_1))
+  if (gdb::ranges::equal (augmentation_string,
+			  gdb::make_span (dwarf5_augmentation_1)))
     {
       warning (_(".debug_names created by an old version of gdb; ignoring"));
       return false;
     }
-  else if (augmentation_string == gdb::make_span (dwarf5_augmentation_2))
+  else if (gdb::ranges::equal (augmentation_string,
+			       gdb::make_span (dwarf5_augmentation_2)))
     {
       map.augmentation_is_gdb = true;
       map.gdb_augmentation_version = 2;
     }
-  else if (augmentation_string == gdb::make_span (dwarf5_augmentation_3))
+  else if (gdb::ranges::equal (augmentation_string,
+			       gdb::make_span (dwarf5_augmentation_3)))
     {
       map.augmentation_is_gdb = true;
       map.gdb_augmentation_version = 3;
