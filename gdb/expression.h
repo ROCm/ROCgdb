@@ -366,7 +366,7 @@ extern expression_up parse_exp_1 (const char **, CORE_ADDR pc,
 extern struct value *evaluate_subexp_do_call (expression *exp,
 					      enum noside noside,
 					      value *callee,
-					      gdb::array_view<value *> argvec,
+					      gdb::span<value *> argvec,
 					      const char *function_name,
 					      type *default_return_type);
 

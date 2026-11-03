@@ -320,7 +320,7 @@ thpy_thread_handle (PyObject *self, PyObject *args)
   thread_object *thread_obj = (thread_object *) self;
   THPY_REQUIRE_VALID (thread_obj);
 
-  gdb::array_view<const gdb_byte> hv;
+  gdb::span<const gdb_byte> hv;
 
   try
     {

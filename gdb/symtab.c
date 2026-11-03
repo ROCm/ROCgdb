@@ -6521,7 +6521,7 @@ static struct symbol_impl symbol_impl[MAX_SYMBOL_IMPLS];
 /* The globally visible pointer.  This is separate from 'symbol_impl'
    so that it can be const.  */
 
-gdb::array_view<const struct symbol_impl> symbol_impls (symbol_impl);
+gdb::span<const struct symbol_impl> symbol_impls (symbol_impl);
 
 /* Make sure we saved enough room in struct symbol.  */
 
@@ -6678,7 +6678,7 @@ symbol::value_block () const
 /* See symtab.h.  */
 
 void
-symbol::relocate (gdb::array_view<const CORE_ADDR> delta)
+symbol::relocate (gdb::span<const CORE_ADDR> delta)
 {
   if ((loc_class () == LOC_LABEL || loc_class () == LOC_STATIC)
       && section_index () >= 0)

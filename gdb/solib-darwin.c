@@ -170,7 +170,7 @@ lookup_symbol_from_bfd (bfd *abfd, const char *symname)
 {
   CORE_ADDR symaddr = 0;
 
-  gdb::array_view<asymbol *> symbol_table
+  gdb::span<asymbol *> symbol_table
     = gdb_bfd_canonicalize_symtab (abfd, false);
 
   for (const asymbol *sym : symbol_table)

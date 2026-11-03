@@ -259,7 +259,7 @@ x86_linux_store_ssp (const regcache *regcache, const int tid)
 
 static void
 i386_supply_tls_regs (regcache *regcache, int regnum,
-		      gdb::array_view<user_desc> buffer)
+		      gdb::span<user_desc> buffer)
 {
   gdb_assert (buffer.size () == 3);
 
@@ -276,7 +276,7 @@ i386_supply_tls_regs (regcache *regcache, int regnum,
 
 static void
 i386_collect_tls_regs (regcache *regcache, int regnum,
-			gdb::array_view<user_desc> buffer)
+			gdb::span<user_desc> buffer)
 {
   gdb_assert (buffer.size () == 3);
 

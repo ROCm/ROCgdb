@@ -22,7 +22,7 @@
 
 template<typename T, typename>
 T
-extract_integer (gdb::array_view<const gdb_byte> buf, enum bfd_endian byte_order)
+extract_integer (gdb::span<const gdb_byte> buf, enum bfd_endian byte_order)
 {
   typename std::make_unsigned<T>::type retval = 0;
 
@@ -115,10 +115,10 @@ extract_integer (gdb::array_view<const gdb_byte> buf, enum bfd_endian byte_order
 }
 
 /* Explicit instantiations.  */
-template LONGEST extract_integer<LONGEST> (gdb::array_view<const gdb_byte> buf,
+template LONGEST extract_integer<LONGEST> (gdb::span<const gdb_byte> buf,
 					   enum bfd_endian byte_order);
 template ULONGEST extract_integer<ULONGEST>
-  (gdb::array_view<const gdb_byte> buf, enum bfd_endian byte_order);
+  (gdb::span<const gdb_byte> buf, enum bfd_endian byte_order);
 
 /* Treat the bytes at BUF as a pointer of type TYPE, and return the
    address it represents.  */
@@ -133,7 +133,7 @@ extract_typed_address (const gdb_byte *buf, struct type *type)
 
 template<typename T, typename>
 void
-store_integer (gdb::array_view<gdb_byte> dst, enum bfd_endian byte_order,
+store_integer (gdb::span<gdb_byte> dst, enum bfd_endian byte_order,
 	       T val)
 {
   gdb_byte *p;
@@ -161,10 +161,10 @@ store_integer (gdb::array_view<gdb_byte> dst, enum bfd_endian byte_order,
 }
 
 /* Explicit instantiations.  */
-template void store_integer (gdb::array_view<gdb_byte> dst,
+template void store_integer (gdb::span<gdb_byte> dst,
 			     bfd_endian byte_order, LONGEST val);
 
-template void store_integer (gdb::array_view<gdb_byte> dst,
+template void store_integer (gdb::span<gdb_byte> dst,
 			     bfd_endian byte_order, ULONGEST val);
 
 /* Store the address ADDR as a pointer of type TYPE at BUF, in target

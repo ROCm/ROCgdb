@@ -73,7 +73,7 @@ dicos_load_module_p (bfd *abfd, int header_size)
   /* Dicos LMs always have a "Dicos_loadModuleInfo" symbol
      defined.  Look for it.  */
 
-  gdb::array_view<asymbol *> symbol_table
+  gdb::span<asymbol *> symbol_table
     = gdb_bfd_canonicalize_symtab (abfd, false);
 
   for (asymbol *sym : symbol_table)

@@ -193,7 +193,7 @@ private:
 
 struct displaced_step_buffers
 {
-  explicit displaced_step_buffers (gdb::array_view<CORE_ADDR> buffer_addrs)
+  explicit displaced_step_buffers (gdb::span<CORE_ADDR> buffer_addrs)
   {
     gdb_assert (buffer_addrs.size () > 0);
 

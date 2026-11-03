@@ -372,7 +372,7 @@ block::static_link () const
 
 void
 block::relocate (struct objfile *objfile,
-		 gdb::array_view<const CORE_ADDR> offsets)
+		 gdb::span<const CORE_ADDR> offsets)
 {
   int block_line_section = SECT_OFF_TEXT (objfile);
 
@@ -874,7 +874,7 @@ blockvector::~blockvector ()
 
 void
 blockvector::relocate (struct objfile *objfile,
-		       gdb::array_view<const CORE_ADDR> offsets)
+		       gdb::span<const CORE_ADDR> offsets)
 {
   int block_line_section = SECT_OFF_TEXT (objfile);
 

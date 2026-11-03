@@ -77,7 +77,7 @@ compute_stack_depth_worker (int start, int *need_tempvar,
 			    std::vector<struct insn_info> *info,
 			    std::vector<int> *to_do,
 			    enum bfd_endian byte_order, unsigned int addr_size,
-			    gdb::array_view<const gdb_byte> expr)
+			    gdb::span<const gdb_byte> expr)
 {
   const gdb_byte *const base = expr.data ();
   const gdb_byte *op_ptr = expr.data ();
@@ -390,7 +390,7 @@ compute_stack_depth_worker (int start, int *need_tempvar,
 static int
 compute_stack_depth (enum bfd_endian byte_order, unsigned int addr_size,
 		     int *need_tempvar, int *is_tls,
-		     gdb::array_view<const gdb_byte> expr,
+		     gdb::span<const gdb_byte> expr,
 		     int initial_depth,
 		     std::vector<struct insn_info> *info)
 {
@@ -596,7 +596,7 @@ do_compile_dwarf_expr_to_c (int indent, string_file *stream,
 			    struct gdbarch *arch,
 			    std::vector<bool> &registers_used,
 			    unsigned int addr_size,
-			    gdb::array_view<const gdb_byte> expr,
+			    gdb::span<const gdb_byte> expr,
 			    CORE_ADDR *initial,
 			    dwarf2_per_cu *per_cu,
 			    dwarf2_per_objfile *per_objfile)
@@ -1074,7 +1074,7 @@ do_compile_dwarf_expr_to_c (int indent, string_file *stream,
 	    int regnum;
 	    CORE_ADDR text_offset;
 	    LONGEST off;
-	    gdb::array_view<const gdb_byte> cfa_expr;
+	    gdb::span<const gdb_byte> cfa_expr;
 
 	    if (dwarf2_fetch_cfa_info (arch, pc, per_cu, &regnum, &off,
 				       &text_offset, cfa_expr))
@@ -1144,7 +1144,7 @@ compile_dwarf_expr_to_c (string_file *stream, const char *result_name,
 			 struct gdbarch *arch,
 			 std::vector<bool> &registers_used,
 			 unsigned int addr_size,
-			 gdb::array_view<const gdb_byte> expr,
+			 gdb::span<const gdb_byte> expr,
 			 dwarf2_per_cu *per_cu,
 			 dwarf2_per_objfile *per_objfile)
 {
@@ -1163,7 +1163,7 @@ compile_dwarf_bounds_to_c (string_file *stream,
 			   struct gdbarch *arch,
 			   std::vector<bool> &registers_used,
 			   unsigned int addr_size,
-			   gdb::array_view<const gdb_byte> expr,
+			   gdb::span<const gdb_byte> expr,
 			   dwarf2_per_cu *per_cu,
 			   dwarf2_per_objfile *per_objfile)
 {

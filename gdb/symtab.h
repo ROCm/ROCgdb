@@ -1154,7 +1154,7 @@ struct symbol_block_ops
   /* Return the DWARF block data of function FRAMEFUNC valid for inferior
      context address PC.  Return an empty view if no such location is
      valid for PC.  */
-  gdb::array_view<const gdb_byte> (*find_frame_base_location)
+  gdb::span<const gdb_byte> (*find_frame_base_location)
     (struct symbol *framefunc, CORE_ADDR pc);
 
   /* Return the frame base address.  FRAME is the frame for which we want to
@@ -1222,7 +1222,7 @@ enum symbol_subclass_kind
   SYMBOL_RUST_VTABLE
 };
 
-extern gdb::array_view<const struct symbol_impl> symbol_impls;
+extern gdb::span<const struct symbol_impl> symbol_impls;
 
 /* This structure is space critical.  See space comments at the top.  */
 
@@ -1443,7 +1443,7 @@ struct symbol : public general_symbol_info, public allocate_on_obstack<symbol>
 
   /* Relocate this symbol.  OFFSETS is the relocation offsets to use.  */
 
-  void relocate (gdb::array_view<const CORE_ADDR> offsets);
+  void relocate (gdb::span<const CORE_ADDR> offsets);
 
   /* Data type of value */
 

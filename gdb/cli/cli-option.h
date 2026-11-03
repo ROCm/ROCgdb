@@ -116,7 +116,7 @@ public:
 
   /* Convenience method that returns THIS as an option_def.  Useful
      when you're putting an option_def subclass in an option_def
-     array_view.  */
+     span.  */
   const option_def &def () const
   {
     return *this;
@@ -354,7 +354,7 @@ struct color_option_def : option_def
 struct option_def_group
 {
   /* The list of options.  */
-  gdb::array_view<const option_def> options;
+  gdb::span<const option_def> options;
 
   /* The context pointer to pass to the options' get-current-value
      callbacks.  */
@@ -385,7 +385,7 @@ enum process_options_mode
 extern bool process_options
   (const char **args,
    process_options_mode mode,
-   gdb::array_view<const option_def_group> options_group);
+   gdb::span<const option_def_group> options_group);
 
 /* Complete ARGS on options listed by OPTIONS_GROUP.  Returns true if
    the string has been fully parsed and there are no operands to
@@ -395,25 +395,25 @@ extern bool complete_options
   (completion_tracker &tracker,
    const char **args,
    process_options_mode mode,
-   gdb::array_view<const option_def_group> options_group);
+   gdb::span<const option_def_group> options_group);
 
 /* Complete on all options listed by OPTIONS_GROUP.  */
 extern void
   complete_on_all_options (completion_tracker &tracker,
-			   gdb::array_view<const option_def_group> options_group);
+			   gdb::span<const option_def_group> options_group);
 
 /* Return a string with the result of replacing %OPTIONS% in HELP_TMLP
    with an auto-generated "help" string fragment for all the options
    in OPTIONS_GROUP.  */
 extern std::string build_help
   (const char *help_tmpl,
-   gdb::array_view<const option_def_group> options_group);
+   gdb::span<const option_def_group> options_group);
 
 /* Install set/show commands for options defined in OPTIONS.  DATA is
    a pointer to the structure that holds the data associated with the
    OPTIONS array.  */
 extern void add_setshow_cmds_for_options (command_class cmd_class, void *data,
-					  gdb::array_view<const option_def> options,
+					  gdb::span<const option_def> options,
 					  struct cmd_list_element **set_list,
 					  struct cmd_list_element **show_list);
 

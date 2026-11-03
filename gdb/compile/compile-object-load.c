@@ -333,7 +333,7 @@ private:
 
 static void
 copy_section (bfd *abfd, asection *sect,
-	      gdb::array_view<asymbol *> symbol_table)
+	      gdb::span<asymbol *> symbol_table)
 {
   bfd_byte *sect_data_got;
   struct bfd_link_info link_info;
@@ -689,7 +689,7 @@ compile_object_load (const compile_file_names &file_names,
 	   GCC_FE_WRAPPER_FUNCTION,
 	   styled_string (file_name_style.style (), objfile_name (objfile)));
 
-  gdb::array_view<asymbol *> symbol_table
+  gdb::span<asymbol *> symbol_table
     = gdb_bfd_canonicalize_symtab (abfd.get ());
 
   missing_symbols = 0;

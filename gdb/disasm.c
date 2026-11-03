@@ -1224,7 +1224,7 @@ struct gdb_non_printing_buffer_disassembler
      contains the instruction to disassemble, and INSN_ADDRESS is the
      address (in target memory) of the instruction to disassemble.  */
   gdb_non_printing_buffer_disassembler (struct gdbarch *gdbarch,
-					gdb::array_view<const gdb_byte> buffer,
+					gdb::span<const gdb_byte> buffer,
 					CORE_ADDR insn_address)
     : gdb_non_printing_disassembler (gdbarch, nullptr)
   {
@@ -1242,7 +1242,7 @@ int
 gdb_buffered_insn_length (struct gdbarch *gdbarch,
 			  const gdb_byte *insn, int max_len, CORE_ADDR addr)
 {
-  gdb::array_view<const gdb_byte> buffer
+  gdb::span<const gdb_byte> buffer
     = gdb::make_array_view (insn, max_len);
   gdb_non_printing_buffer_disassembler dis (gdbarch, buffer, addr);
   int result = gdb_print_insn_1 (gdbarch, addr, dis.disasm_info ());

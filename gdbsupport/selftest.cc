@@ -69,7 +69,7 @@ run_verbose ()
 /* See selftest.h.  */
 
 void
-run_tests (gdb::array_view<const char *const> filters, bool verbose)
+run_tests (gdb::span<const char *const> filters, bool verbose)
 {
   int ran = 0;
   run_verbose_ = verbose;

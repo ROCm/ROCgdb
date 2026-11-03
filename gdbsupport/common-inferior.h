@@ -64,6 +64,6 @@ extern bool startup_with_shell;
 template<typename T>
 extern std::string
 construct_inferior_arguments
-	(gdb::array_view<T const> argv, bool escape_shell_char);
+	(gdb::span<T const> argv, bool escape_shell_char);
 
 #endif /* GDBSUPPORT_COMMON_INFERIOR_H */

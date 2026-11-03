@@ -1326,7 +1326,7 @@ class minimal_symbol_install_worker
 public:
   minimal_symbol_install_worker
     (minimal_symbol *msymbols,
-     gdb::array_view<computed_hash_values> hash_values,
+     gdb::span<computed_hash_values> hash_values,
      objfile_per_bfd_storage *per_bfd,
      gdb::mutex &demangled_mutex)
     : m_time_it ("minsym install worker"),
@@ -1387,7 +1387,7 @@ public:
 private:
   scoped_time_it m_time_it;
   minimal_symbol *m_msymbols;
-  gdb::array_view<computed_hash_values> m_hash_values;
+  gdb::span<computed_hash_values> m_hash_values;
   objfile_per_bfd_storage *m_per_bfd;
   gdb::mutex &m_demangled_mutex;
 };
@@ -1461,7 +1461,7 @@ minimal_symbol_reader::install ()
 
       gdb::parallel_for_each<1000, minimal_symbol *, minimal_symbol_install_worker>
 	(&msymbols[0], &msymbols[mcount], msymbols,
-	 gdb::array_view<computed_hash_values> (hash_values),
+	 gdb::span<computed_hash_values> (hash_values),
 	 m_objfile->per_bfd,
 	 demangled_mutex);
 

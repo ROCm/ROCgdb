@@ -24,7 +24,7 @@
 
 struct ravenscar_arch_ops
 {
-  ravenscar_arch_ops (gdb::array_view<const int> offsets_,
+  ravenscar_arch_ops (gdb::span<const int> offsets_,
 		      int first_stack = -1,
 		      int last_stack = -1,
 		      int v_init = -1,
@@ -90,7 +90,7 @@ private:
      are offsets.  The offsets are either in the thread descriptor or
      the stack, depending on the other fields.  An offset of -1 means
      that the corresponding register is not stored.  */
-  const gdb::array_view<const int> offsets;
+  const gdb::span<const int> offsets;
 
   /* If these are -1, then all registers for this architecture are
      stored in the thread descriptor.  Otherwise, these mark a range

@@ -23,14 +23,14 @@
 #include <type_traits>
 #include "gdbsupport/gdb_assert.h"
 
-/* An array_view is an abstraction that provides a non-owning view
+/* A span is an abstraction that provides a non-owning view
    over a sequence of contiguous objects.
 
-   A way to put it is that array_view is to std::vector (and
+   A way to put it is that span is to std::vector (and
    std::array and built-in arrays with rank==1) like std::string_view
    is to std::string.
 
-   The main intent of array_view is to use it as function input
+   The main intent of span is to use it as function input
    parameter type, making it possible to pass in any sequence of
    contiguous objects, irrespective of whether the objects live on the
    stack or heap and what actual container owns them.  Implicit
@@ -39,7 +39,7 @@
    have one element (usually on the stack).  For example:
 
     struct A { .... };
-    void function (gdb::array_view<A> as);
+    void function (gdb::span<A> as);
 
     std::vector<A> std_vec = ...;
     std::array<A, N> std_array = ...;
@@ -52,13 +52,13 @@
     function (elem);
 
    Views can be either mutable or const.  A const view is simply
-   created by specifying a const T as array_view template parameter,
-   in which case operator[] of non-const array_view objects ends up
-   returning const references.  Making the array_view itself const is
+   created by specifying a const T as span template parameter,
+   in which case operator[] of non-const span objects ends up
+   returning const references.  Making the span itself const is
    analogous to making a pointer itself be const.  I.e., disables
    re-seating the view/pointer.
 
-   Since array_view objects are small (pointer plus size), and
+   Since span objects are small (pointer plus size), and
    designed to be trivially copyable, they should generally be passed
    around by value.
 
@@ -68,7 +68,7 @@
 namespace gdb {
 
 template <typename T>
-class array_view
+class span
 {
   /* True iff decayed T is the same as decayed U.  E.g., we want to
      say that 'T&' is the same as 'const T'.  */
@@ -92,53 +92,53 @@ public:
   using iterator = T *;
 
   /* Default construction creates an empty view.  */
-  constexpr array_view () noexcept
+  constexpr span () noexcept
     : m_array (nullptr), m_size (0)
   {}
 
-  /* Create an array view over a single object of the type of an
-     array_view element.  The created view as size==1.  This is
-     templated on U to allow constructing a array_view<const T> over a
+  /* Create a span over a single object of the type of an
+     span element.  The created view as size==1.  This is
+     templated on U to allow constructing a span<const T> over a
      (non-const) T.  The "convertible" requirement makes sure that you
-     can't create an array_view<T> over a const T.  */
+     can't create a span<T> over a const T.  */
   template<typename U,
 	   typename = Requires<DecayedConvertible<U>>>
-  constexpr array_view (U &elem) noexcept
+  constexpr span (U &elem) noexcept
     : m_array (&elem), m_size (1)
   {}
 
   /* Same as above, for rvalue references.  */
   template<typename U,
 	   typename = Requires<DecayedConvertible<U>>>
-  constexpr array_view (U &&elem) noexcept
+  constexpr span (U &&elem) noexcept
     : m_array (&elem), m_size (1)
   {}
 
-  /* Create an array view from a pointer to an array and an element
+  /* Create a span from a pointer to an array and an element
      count.  */
   template<typename U,
 	   typename = Requires<DecayedConvertible<U>>>
-  constexpr array_view (U *array, size_t size) noexcept
+  constexpr span (U *array, size_t size) noexcept
     : m_array (array), m_size (size)
   {}
 
-  /* Create an array view from a range.  This is templated on both U
+  /* Create a span from a range.  This is templated on both U
      an V to allow passing in a mix of 'const T *' and 'T *'.  */
   template<typename U, typename V,
 	   typename = Requires<DecayedConvertible<U>>,
 	   typename = Requires<DecayedConvertible<V>>>
-  constexpr array_view (U *begin, V *end) noexcept
+  constexpr span (U *begin, V *end) noexcept
     : m_array (begin), m_size (end - begin)
   {}
 
-  /* Create an array view from an array.  */
+  /* Create a span from an array.  */
   template<typename U, size_t Size,
 	   typename = Requires<DecayedConvertible<U>>>
-  constexpr array_view (U (&array)[Size]) noexcept
+  constexpr span (U (&array)[Size]) noexcept
     : m_array (array), m_size (Size)
   {}
 
-  /* Create an array view from a contiguous container.  E.g.,
+  /* Create a span from a contiguous container.  E.g.,
      std::vector and std::array.  */
   template<typename Container,
 	   typename = Requires<gdb::Not<IsDecayedT<Container>>>,
@@ -151,7 +151,7 @@ public:
 	     = Requires<std::is_convertible
 			<decltype (std::declval<Container> ().size ()),
 			 size_type>>>
-  constexpr array_view (Container &&c) noexcept
+  constexpr span (Container &&c) noexcept
     : m_array (c.data ()), m_size (c.size ())
   {}
 
@@ -183,11 +183,11 @@ public:
   constexpr size_type size () const noexcept { return m_size; }
   constexpr bool empty () const noexcept { return m_size == 0; }
 
-  /* Slice an array view.  */
+  /* Slice a span.  */
 
-  /* Return a new array view over SIZE elements starting at START.  */
+  /* Return a new span over SIZE elements starting at START.  */
   [[nodiscard]]
-  constexpr array_view<T> slice (size_type start, size_type size) const noexcept
+  constexpr span<T> slice (size_type start, size_type size) const noexcept
   {
 #if defined(_GLIBCXX_DEBUG)
     gdb_assert (start + size <= m_size);
@@ -195,10 +195,10 @@ public:
     return {m_array + start, size};
   }
 
-  /* Return a new array view over all the elements after START,
+  /* Return a new span over all the elements after START,
      inclusive.  */
   [[nodiscard]]
-  constexpr array_view<T> slice (size_type start) const noexcept
+  constexpr span<T> slice (size_type start) const noexcept
   {
 #if defined(_GLIBCXX_DEBUG)
     gdb_assert (start <= m_size);
@@ -211,12 +211,12 @@ private:
   size_type m_size;
 };
 
-/* Copy the contents referenced by the array view SRC to the array view DEST.
+/* Copy the contents referenced by the span SRC to the span DEST.
 
-   The two array views must have the same length.  */
+   The two spans must have the same length.  */
 
 template <typename U, typename T>
-void copy (gdb::array_view<U> src, gdb::array_view<T> dest)
+void copy (gdb::span<U> src, gdb::span<T> dest)
 {
   gdb_assert (dest.size () == src.size ());
   if (dest.data () < src.data ())
@@ -231,7 +231,7 @@ void copy (gdb::array_view<U> src, gdb::array_view<T> dest)
 
 template <typename T>
 bool
-operator== (const gdb::array_view<T> &lhs, const gdb::array_view<T> &rhs)
+operator== (const gdb::span<T> &lhs, const gdb::span<T> &rhs)
 {
   if (lhs.size () != rhs.size ())
     return false;
@@ -243,26 +243,26 @@ operator== (const gdb::array_view<T> &lhs, const gdb::array_view<T> &rhs)
   return true;
 }
 
-/* Compare two array_views for inequality.  */
+/* Compare two spans for inequality.  */
 
 template <typename T>
 bool
-operator!= (const gdb::array_view<T> &lhs, const gdb::array_view<T> &rhs)
+operator!= (const gdb::span<T> &lhs, const gdb::span<T> &rhs)
 {
   return !(lhs == rhs);
 }
 
-/* Create an array view from a pointer to an array and an element
+/* Create a span from a pointer to an array and an element
    count.
 
-   This is useful as alternative to constructing an array_view using
+   This is useful as alternative to constructing a span using
    brace initialization when the size variable you have handy is of
    signed type, since otherwise without an explicit cast the code
    would be ill-formed.
 
    For example, with:
 
-     extern void foo (int, int, gdb::array_view<value *>);
+     extern void foo (int, int, gdb::span<value *>);
 
      value *args[2];
      int nargs;
@@ -277,27 +277,27 @@ operator!= (const gdb::array_view<T> &lhs, const gdb::array_view<T> &rhs)
 
      foo (1, 2, {values, (size_t) nargs});
 
-   Or by instantiating an array_view explicitly:
+   Or by instantiating a span explicitly:
 
-     foo (1, 2, gdb::array_view<value *>(values, nargs));
+     foo (1, 2, gdb::span<value *>(values, nargs));
 
-   Or, better, using make_array_view, which has the advantage of
-   inferring the array_view element's type:
+   Or, better, using make_span, which has the advantage of
+   inferring the span element's type:
 
-     foo (1, 2, gdb::make_array_view (values, nargs));
+     foo (1, 2, gdb::make_span (values, nargs));
 */
 
 template<typename U>
-constexpr inline array_view<U>
+constexpr inline span<U>
 make_array_view (U *array, size_t size) noexcept
 {
   return {array, size};
 }
 
-/* Create an array view from an array.  */
+/* Create a span from an array.  */
 
 template <typename U, std::size_t Size>
-constexpr inline array_view<U>
+constexpr inline span<U>
 make_array_view (U (&array)[Size])
 {
   return {array};

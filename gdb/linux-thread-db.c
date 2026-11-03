@@ -105,7 +105,7 @@ public:
   thread_info *thread_handle_to_thread_info (const gdb_byte *thread_handle,
 					     int handle_len,
 					     inferior *inf) override;
-  gdb::array_view<const gdb_byte> thread_info_to_thread_handle (struct thread_info *) override;
+  gdb::span<const gdb_byte> thread_info_to_thread_handle (struct thread_info *) override;
 };
 
 static std::string libthread_db_search_path = LIBTHREAD_DB_SEARCH_PATH;
@@ -1717,7 +1717,7 @@ thread_db_target::thread_handle_to_thread_info (const gdb_byte *thread_handle,
 
 /* Return the thread handle associated the thread_info pointer TP.  */
 
-gdb::array_view<const gdb_byte>
+gdb::span<const gdb_byte>
 thread_db_target::thread_info_to_thread_handle (struct thread_info *tp)
 {
   thread_db_thread_info *priv = get_thread_db_thread_info (tp);

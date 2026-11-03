@@ -1605,7 +1605,7 @@ gdb_bfd_lookup_symbol_from_symtab (
   bfd *abfd, gdb::function_view<bool (const asymbol *)> match_sym)
 {
   CORE_ADDR symaddr = 0;
-  gdb::array_view<asymbol *> symbol_table
+  gdb::span<asymbol *> symbol_table
     = gdb_bfd_canonicalize_symtab (abfd, false);
 
   for (asymbol *sym : symbol_table)

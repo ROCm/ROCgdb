@@ -286,7 +286,7 @@ extern void gdb_bfd_init ();
    exception if symbols could not be read.  When SHOULD_THROW is
    false, an empty view is returned instead.  */
 
-extern gdb::array_view<asymbol *> gdb_bfd_canonicalize_symtab
+extern gdb::span<asymbol *> gdb_bfd_canonicalize_symtab
      (bfd *abfd, bool should_throw = true);
 
 /* A wrapper for bfd_check_format that acquires the BFD lock.  */

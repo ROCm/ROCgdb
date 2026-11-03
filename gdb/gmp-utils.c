@@ -56,7 +56,7 @@ debug (const gdb_mpz &val)
 /* See gmp-utils.h.  */
 
 void
-gdb_mpz::read (gdb::array_view<const gdb_byte> buf, enum bfd_endian byte_order,
+gdb_mpz::read (gdb::span<const gdb_byte> buf, enum bfd_endian byte_order,
 	       bool unsigned_p)
 {
   mpz_import (m_val, 1 /* count */, -1 /* order */, buf.size () /* size */,
@@ -79,7 +79,7 @@ gdb_mpz::read (gdb::array_view<const gdb_byte> buf, enum bfd_endian byte_order,
 /* See gmp-utils.h.  */
 
 void
-gdb_mpz::export_bits (gdb::array_view<gdb_byte> buf, int endian, bool unsigned_p,
+gdb_mpz::export_bits (gdb::span<gdb_byte> buf, int endian, bool unsigned_p,
 		      bool safe) const
 {
   int sign = mpz_sgn (m_val);
@@ -207,7 +207,7 @@ gdb_mpq::get_rounded () const
 /* See gmp-utils.h.  */
 
 void
-gdb_mpq::read_fixed_point (gdb::array_view<const gdb_byte> buf,
+gdb_mpq::read_fixed_point (gdb::span<const gdb_byte> buf,
 			   enum bfd_endian byte_order, bool unsigned_p,
 			   const gdb_mpq &scaling_factor)
 {
@@ -221,7 +221,7 @@ gdb_mpq::read_fixed_point (gdb::array_view<const gdb_byte> buf,
 /* See gmp-utils.h.  */
 
 void
-gdb_mpq::write_fixed_point (gdb::array_view<gdb_byte> buf,
+gdb_mpq::write_fixed_point (gdb::span<gdb_byte> buf,
 			    enum bfd_endian byte_order, bool unsigned_p,
 			    const gdb_mpq &scaling_factor) const
 {

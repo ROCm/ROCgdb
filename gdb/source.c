@@ -1472,7 +1472,7 @@ info_line_command (const char *arg, int from_tty)
 
   std::vector<symtab_and_line> decoded_sals;
   symtab_and_line curr_sal;
-  gdb::array_view<symtab_and_line> sals;
+  gdb::span<symtab_and_line> sals;
 
   if (arg == 0)
     {

@@ -1106,7 +1106,7 @@ elf_read_minimal_symbols (struct objfile *objfile, int symfile_flags,
 
   /* Process the normal ELF symbol table first.  */
 
-  gdb::array_view<asymbol *> symbol_table
+  gdb::span<asymbol *> symbol_table
     = gdb_bfd_canonicalize_symtab (objfile->obfd.get ());
 
   elf_symtab_read (reader, objfile, ST_REGULAR, symbol_table.size (),

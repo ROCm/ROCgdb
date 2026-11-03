@@ -96,7 +96,7 @@ class data_buf
 {
 public:
   /* Copy ARRAY to the end of the buffer.  */
-  void append_array (gdb::array_view<const gdb_byte> array)
+  void append_array (gdb::span<const gdb_byte> array)
   {
     std::copy (array.begin (), array.end (), grow (array.size ()));
   }

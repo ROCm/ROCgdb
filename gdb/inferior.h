@@ -558,7 +558,7 @@ public:
      escaped, When false only the characters that GDB sees as special will
      be escaped.  See construct_inferior_arguments for more details.  */
   template<typename T>
-  void set_args (gdb::array_view<T const> args, bool escape_shell_char)
+  void set_args (gdb::span<T const> args, bool escape_shell_char)
   {
     this->set_args (construct_inferior_arguments (args, escape_shell_char));
   }

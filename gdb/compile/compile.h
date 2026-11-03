@@ -213,7 +213,7 @@ extern void compile_dwarf_expr_to_c (string_file *stream,
 				     struct gdbarch *arch,
 				     std::vector<bool> &registers_used,
 				     unsigned int addr_size,
-				     gdb::array_view<const gdb_byte> expr,
+				     gdb::span<const gdb_byte> expr,
 				     dwarf2_per_cu *per_cu,
 				     dwarf2_per_objfile *per_objfile);
 
@@ -251,7 +251,7 @@ extern void compile_dwarf_bounds_to_c (string_file *stream,
 				       struct gdbarch *arch,
 				       std::vector<bool> &registers_used,
 				       unsigned int addr_size,
-				       gdb::array_view<const gdb_byte> expr,
+				       gdb::span<const gdb_byte> expr,
 				       dwarf2_per_cu *per_cu,
 				       dwarf2_per_objfile *per_objfile);
 

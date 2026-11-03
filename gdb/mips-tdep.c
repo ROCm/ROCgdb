@@ -950,8 +950,8 @@ mips_register_to_value (const frame_info_ptr &frame, int regnum,
 
   if (mips_convert_register_float_case_p (gdbarch, regnum, type))
     {
-      gdb::array_view<gdb_byte> first_half = gdb::make_array_view (to, 4);
-      gdb::array_view<gdb_byte> second_half = gdb::make_array_view (to + 4, 4);
+      gdb::span<gdb_byte> first_half = gdb::make_array_view (to, 4);
+      gdb::span<gdb_byte> second_half = gdb::make_array_view (to + 4, 4);
 
       get_frame_register (frame, regnum + 0, second_half);
       get_frame_register (frame, regnum + 1, first_half);
@@ -6249,7 +6249,7 @@ mips_o64_return_value (struct gdbarch *gdbarch, struct value *function,
 
 static void
 mips_read_fp_register_single (const frame_info_ptr &frame, int regno,
-			      gdb::array_view<gdb_byte> rare_buffer)
+			      gdb::span<gdb_byte> rare_buffer)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   int raw_size = register_size (gdbarch, regno);
@@ -6283,7 +6283,7 @@ mips_read_fp_register_single (const frame_info_ptr &frame, int regno,
 
 static void
 mips_read_fp_register_double (const frame_info_ptr &frame, int regno,
-			      gdb::array_view<gdb_byte> rare_buffer)
+			      gdb::span<gdb_byte> rare_buffer)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   int raw_size = register_size (gdbarch, regno);

@@ -157,7 +157,7 @@ struct block : public allocate_on_obstack<block>
   { m_multidict = multidict; }
 
   /* Return a view on this block's ranges.  */
-  gdb::array_view<blockrange> ranges ()
+  gdb::span<blockrange> ranges ()
   {
     if (m_ranges == nullptr)
       return {};
@@ -166,7 +166,7 @@ struct block : public allocate_on_obstack<block>
   }
 
   /* Const version of the above.  */
-  gdb::array_view<const blockrange> ranges () const
+  gdb::span<const blockrange> ranges () const
   {
     if (m_ranges == nullptr)
       return {};
@@ -319,7 +319,7 @@ struct block : public allocate_on_obstack<block>
      objfile holding this block, and OFFSETS is the relocation offsets
      to use.  */
   void relocate (struct objfile *objfile,
-		 gdb::array_view<const CORE_ADDR> offsets);
+		 gdb::span<const CORE_ADDR> offsets);
 
 private:
 
@@ -435,17 +435,17 @@ struct blockvector
   DISABLE_COPY_AND_ASSIGN (blockvector);
 
   /* Return a view on the blocks of this blockvector.  */
-  gdb::array_view<struct block *> blocks ()
+  gdb::span<struct block *> blocks ()
   {
-    return gdb::array_view<struct block *> (m_blocks.data (),
+    return gdb::span<struct block *> (m_blocks.data (),
 					    m_blocks.size ());
   }
 
   /* Const version of the above.  */
-  gdb::array_view<const struct block *const> blocks () const
+  gdb::span<const struct block *const> blocks () const
   {
     const struct block **blocks = (const struct block **) m_blocks.data ();
-    return gdb::array_view<const struct block *const> (blocks,
+    return gdb::span<const struct block *const> (blocks,
 						       m_blocks.size ());
   }
 
@@ -519,7 +519,7 @@ struct blockvector
      the objfile holding this blockvector, and OFFSETS is the
      relocation offsets to use.  */
   void relocate (struct objfile *objfile,
-		 gdb::array_view<const CORE_ADDR> offsets);
+		 gdb::span<const CORE_ADDR> offsets);
 
 private:
   /* An address map mapping addresses to blocks in this blockvector.

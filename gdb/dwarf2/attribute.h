@@ -34,7 +34,7 @@
 struct dwarf_block
 {
   /* Return the contents of this block.  */
-  gdb::array_view<const gdb_byte> view () const
+  gdb::span<const gdb_byte> view () const
   { return gdb::make_array_view (data, size); }
 
   size_t size;

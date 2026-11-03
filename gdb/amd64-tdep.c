@@ -527,7 +527,7 @@ amd64_pseudo_register_read_value (gdbarch *gdbarch, const frame_info_ptr &next_f
 
 static void
 amd64_pseudo_register_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
-			     int regnum, gdb::array_view<const gdb_byte> buf)
+			     int regnum, gdb::span<const gdb_byte> buf)
 {
   i386_gdbarch_tdep *tdep = gdbarch_tdep<i386_gdbarch_tdep> (gdbarch);
 

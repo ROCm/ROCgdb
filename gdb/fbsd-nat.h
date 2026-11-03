@@ -114,7 +114,7 @@ public:
   int remove_exec_catchpoint (int) override;
 
 #ifdef HAVE_STRUCT_PTRACE_LWPINFO_PL_SYSCALL_CODE
-  int set_syscall_catchpoint (int, bool, int, gdb::array_view<const int>)
+  int set_syscall_catchpoint (int, bool, int, gdb::span<const int>)
     override;
 #endif
 

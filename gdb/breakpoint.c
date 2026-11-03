@@ -794,7 +794,7 @@ maintenance_info_source_tracking_context (const char *args, int from_tty)
    empty structure if capture fails.  Does not print the lines.  */
 
 static breakpoint_source
-breakpoint_source_capture (gdb::array_view<const symtab_and_line> sals,
+breakpoint_source_capture (gdb::span<const symtab_and_line> sals,
 			   int num_of_lines)
 {
   /* Check if we have a valid symtab - if not, we can't capture source lines.
@@ -9032,7 +9032,7 @@ update_dprintf_commands (const char *args, int from_tty,
 
 code_breakpoint::code_breakpoint (struct gdbarch *gdbarch_,
 				  enum bptype type_,
-				  gdb::array_view<const symtab_and_line> sals,
+				  gdb::span<const symtab_and_line> sals,
 				  location_spec_up &&locspec_,
 				  gdb::unique_xmalloc_ptr<char> filter_,
 				  gdb::unique_xmalloc_ptr<char> cond_string_,
@@ -9161,7 +9161,7 @@ code_breakpoint::code_breakpoint (struct gdbarch *gdbarch_,
 
 static void
 create_breakpoint_sal (struct gdbarch *gdbarch,
-		       gdb::array_view<const symtab_and_line> sals,
+		       gdb::span<const symtab_and_line> sals,
 		       location_spec_up &&locspec,
 		       gdb::unique_xmalloc_ptr<char> filter,
 		       gdb::unique_xmalloc_ptr<char> cond_string,
@@ -9377,7 +9377,7 @@ breakpoint_sals_to_pc (std::vector<symtab_and_line> &sals)
 
 static void
 check_fast_tracepoint_sals (struct gdbarch *gdbarch,
-			    gdb::array_view<const symtab_and_line> sals)
+			    gdb::span<const symtab_and_line> sals)
 {
   for (const auto &sal : sals)
     {
@@ -11340,7 +11340,7 @@ clear_command (const char *arg, int from_tty)
 
   std::vector<symtab_and_line> decoded_sals;
   symtab_and_line last_sal;
-  gdb::array_view<symtab_and_line> sals;
+  gdb::span<symtab_and_line> sals;
   if (arg)
     {
       decoded_sals
@@ -13285,8 +13285,8 @@ breakpoint::steal_locations (program_space *pspace)
 void
 update_breakpoint_locations (code_breakpoint *b,
 			     struct program_space *filter_pspace,
-			     gdb::array_view<const symtab_and_line> sals,
-			     gdb::array_view<const symtab_and_line> sals_end)
+			     gdb::span<const symtab_and_line> sals,
+			     gdb::span<const symtab_and_line> sals_end)
 {
   if (!sals_end.empty () && (sals.size () != 1 || sals_end.size () != 1))
     {

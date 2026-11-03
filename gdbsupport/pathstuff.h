@@ -93,7 +93,7 @@ extern const char *child_path (const char *parent, const char *child);
    with a directory separator, or an element starts with a directory
    separator, then these will be collapsed into a single separator.  */
 
-extern std::string path_join (gdb::array_view<const char *> paths);
+extern std::string path_join (gdb::span<const char *> paths);
 
 /* Same as the above, but accept paths as distinct parameters.  */
 
@@ -107,7 +107,7 @@ path_join (Args... paths)
   std::array<const char *, sizeof... (Args)> path_array
     { paths... };
 
-  return path_join (gdb::array_view<const char *> (path_array));
+  return path_join (gdb::span<const char *> (path_array));
 }
 
 /* Return whether PATH contains a directory separator character.  */

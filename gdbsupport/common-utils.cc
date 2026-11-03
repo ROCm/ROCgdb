@@ -484,7 +484,7 @@ hex2bin (const char *hex)
 /* See gdbsupport/common-utils.h.  */
 
 std::string
-bytes_to_string (gdb::array_view<const gdb_byte> bytes)
+bytes_to_string (gdb::span<const gdb_byte> bytes)
 {
   std::string ret;
 

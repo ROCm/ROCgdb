@@ -211,8 +211,8 @@ void set_gdbarch_pseudo_register_read_value (struct gdbarch *gdbarch, gdbarch_ps
 
 bool gdbarch_pseudo_register_write_p (struct gdbarch *gdbarch);
 
-using gdbarch_pseudo_register_write_ftype = void (struct gdbarch *gdbarch, const frame_info_ptr &next_frame, int pseudo_reg_num, gdb::array_view<const gdb_byte> buf);
-void gdbarch_pseudo_register_write (struct gdbarch *gdbarch, const frame_info_ptr &next_frame, int pseudo_reg_num, gdb::array_view<const gdb_byte> buf);
+using gdbarch_pseudo_register_write_ftype = void (struct gdbarch *gdbarch, const frame_info_ptr &next_frame, int pseudo_reg_num, gdb::span<const gdb_byte> buf);
+void gdbarch_pseudo_register_write (struct gdbarch *gdbarch, const frame_info_ptr &next_frame, int pseudo_reg_num, gdb::span<const gdb_byte> buf);
 void set_gdbarch_pseudo_register_write (struct gdbarch *gdbarch, gdbarch_pseudo_register_write_ftype *pseudo_register_write);
 
 /* Write bytes to a pseudo register.

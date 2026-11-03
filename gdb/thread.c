@@ -592,7 +592,7 @@ find_thread_id (struct inferior *inf, int thr_num)
 /* See gdbthread.h.  */
 
 struct thread_info *
-find_thread_by_handle (gdb::array_view<const gdb_byte> handle,
+find_thread_by_handle (gdb::span<const gdb_byte> handle,
 		       struct inferior *inf)
 {
   return target_thread_handle_to_thread_info (handle.data (),

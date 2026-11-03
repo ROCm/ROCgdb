@@ -334,7 +334,7 @@ memory_error_test (struct gdbarch *gdbarch)
 
 static std::string
 disassemble_one_insn_to_string (struct gdbarch *gdbarch,
-				gdb::array_view<const gdb_byte> insn)
+				gdb::span<const gdb_byte> insn)
 {
   string_file buffer;
 
@@ -343,7 +343,7 @@ disassemble_one_insn_to_string (struct gdbarch *gdbarch,
   public:
 
     explicit gdb_disassembler_test (struct gdbarch *gdbarch,
-				    gdb::array_view<const gdb_byte> insn,
+				    gdb::span<const gdb_byte> insn,
 				    string_file &buffer)
       : gdb_disassembler (gdbarch,
 			  &buffer,
@@ -366,7 +366,7 @@ disassemble_one_insn_to_string (struct gdbarch *gdbarch,
     }
 
   private:
-    gdb::array_view<const gdb_byte> m_insn;
+    gdb::span<const gdb_byte> m_insn;
 
     static int read_memory (bfd_vma memaddr, gdb_byte *myaddr,
 			    unsigned int len,

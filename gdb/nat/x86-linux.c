@@ -188,7 +188,7 @@ x86_check_ssp_support (const int tid)
 /* See nat/x86-linux.h.  */
 
 bool
-i386_ptrace_get_tls_data (int pid, gdb::array_view<user_desc> buffer)
+i386_ptrace_get_tls_data (int pid, gdb::span<user_desc> buffer)
 {
   gdb_assert (buffer.size () == 3);
 
@@ -200,7 +200,7 @@ i386_ptrace_get_tls_data (int pid, gdb::array_view<user_desc> buffer)
 /* See nat/x86-linux.h.  */
 
 bool
-i386_ptrace_set_tls_data (int pid, gdb::array_view<user_desc> buffer)
+i386_ptrace_set_tls_data (int pid, gdb::span<user_desc> buffer)
 {
   gdb_assert (buffer.size () == 3);
 

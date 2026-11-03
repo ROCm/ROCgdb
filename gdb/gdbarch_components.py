@@ -439,7 +439,7 @@ NEXT_FRAME.
     params=[
         ("const frame_info_ptr &", "next_frame"),
         ("int", "pseudo_reg_num"),
-        ("gdb::array_view<const gdb_byte>", "buf"),
+        ("gdb::span<const gdb_byte>", "buf"),
     ],
     predicate=True,
 )

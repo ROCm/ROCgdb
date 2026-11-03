@@ -126,14 +126,14 @@ public:
 
   /* Return the arguments array as an array view.  */
 
-  gdb::array_view<char *> as_array_view ()
+  gdb::span<char *> as_array_view ()
   {
-    return gdb::array_view<char *> (this->get (), this->count ());
+    return gdb::span<char *> (this->get (), this->count ());
   }
 
-  gdb::array_view<const char * const> as_array_view () const
+  gdb::span<const char * const> as_array_view () const
   {
-    return gdb::array_view<const char * const> (this->get (), this->count ());
+    return gdb::span<const char * const> (this->get (), this->count ());
   }
 
   /* Append arguments to this array.  */

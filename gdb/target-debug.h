@@ -277,8 +277,8 @@ target_debug_print_traceframe_info_up (std::unique_ptr<traceframe_info> &info)
 { return host_address_to_string (info.get ()); }
 
 static std::string
-target_debug_print_gdb_array_view_const_int
-  (const gdb::array_view<const int> &view)
+target_debug_print_gdb_span_const_int
+  (const gdb::span<const int> &view)
 { return host_address_to_string (view.data ()); }
 
 static std::string
@@ -325,7 +325,7 @@ target_debug_print_target_wait_flags (target_wait_flags options)
 { return target_options_to_string (options); }
 
 static std::string
-target_debug_print_signals (gdb::array_view<const unsigned char> sigs)
+target_debug_print_signals (gdb::span<const unsigned char> sigs)
 {
   std::string s = "{";
 
@@ -346,7 +346,7 @@ target_debug_print_size_t (size_t size)
 }
 
 static std::string
-target_debug_print_gdb_array_view_const_gdb_byte (gdb::array_view<const gdb_byte> vector)
+target_debug_print_gdb_span_const_gdb_byte (gdb::span<const gdb_byte> vector)
 {
   std::string s = "{";
 
@@ -360,7 +360,7 @@ target_debug_print_gdb_array_view_const_gdb_byte (gdb::array_view<const gdb_byte
 
 static std::string
 target_debug_print_const_gdb_byte_vector_r (const gdb::byte_vector &vector)
-{ return target_debug_print_gdb_array_view_const_gdb_byte (vector); }
+{ return target_debug_print_gdb_span_const_gdb_byte (vector); }
 
 static std::string
 target_debug_print_gdb_byte_vector_r (gdb::byte_vector &vector)

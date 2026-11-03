@@ -950,7 +950,7 @@ struct code_breakpoint : public breakpoint
      expression.  If LOCATION is NULL then create an "address
      location" from the address in the SAL.  */
   code_breakpoint (struct gdbarch *gdbarch, bptype type,
-		   gdb::array_view<const symtab_and_line> sals,
+		   gdb::span<const symtab_and_line> sals,
 		   location_spec_up &&locspec,
 		   gdb::unique_xmalloc_ptr<char> filter,
 		   gdb::unique_xmalloc_ptr<char> cond_string,
@@ -1532,8 +1532,8 @@ extern void until_break_command (const char *, int, int);
 extern void update_breakpoint_locations
   (code_breakpoint *b,
    struct program_space *filter_pspace,
-   gdb::array_view<const symtab_and_line> sals,
-   gdb::array_view<const symtab_and_line> sals_end);
+   gdb::span<const symtab_and_line> sals,
+   gdb::span<const symtab_and_line> sals_end);
 
 extern void breakpoint_re_set (void);
 

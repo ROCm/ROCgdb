@@ -329,7 +329,7 @@ target_remove_exec_catchpoint (int pid)
 
 int
 target_set_syscall_catchpoint (int pid, bool needed, int any_count,
-			       gdb::array_view<const int> syscall_counts)
+			       gdb::span<const int> syscall_counts)
 {
   target_ops *target = current_inferior ()->top_target ();
 
@@ -2646,7 +2646,7 @@ target_thread_handle_to_thread_info (const gdb_byte *thread_handle,
 
 /* See target.h.  */
 
-gdb::array_view<const gdb_byte>
+gdb::span<const gdb_byte>
 target_thread_info_to_thread_handle (struct thread_info *tip)
 {
   target_ops *target = current_inferior ()->top_target ();
@@ -2696,13 +2696,13 @@ target_has_pending_events ()
 }
 
 void
-target_pass_signals (gdb::array_view<const unsigned char> pass_signals)
+target_pass_signals (gdb::span<const unsigned char> pass_signals)
 {
   current_inferior ()->top_target ()->pass_signals (pass_signals);
 }
 
 void
-target_program_signals (gdb::array_view<const unsigned char> program_signals)
+target_program_signals (gdb::span<const unsigned char> program_signals)
 {
   current_inferior ()->top_target ()->program_signals (program_signals);
 }

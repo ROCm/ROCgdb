@@ -3234,7 +3234,7 @@ gdb_argv_as_array_view_test ()
   {
     gdb_argv argv;
 
-    gdb::array_view<char *> view = argv.as_array_view ();
+    gdb::span<char *> view = argv.as_array_view ();
 
     SELF_CHECK (view.data () == nullptr);
     SELF_CHECK (view.size () == 0);
@@ -3242,7 +3242,7 @@ gdb_argv_as_array_view_test ()
   {
     gdb_argv argv ("une bonne 50");
 
-    gdb::array_view<char *> view = argv.as_array_view ();
+    gdb::span<char *> view = argv.as_array_view ();
 
     SELF_CHECK (view.size () == 3);
     SELF_CHECK (streq (view[0], "une"));

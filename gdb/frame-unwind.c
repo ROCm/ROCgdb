@@ -338,13 +338,13 @@ frame_unwind_got_constant (const frame_info_ptr &frame, int regnum,
 
 struct value *
 frame_unwind_got_bytes (const frame_info_ptr &frame, int regnum,
-			gdb::array_view<const gdb_byte> buf)
+			gdb::span<const gdb_byte> buf)
 {
   struct gdbarch *gdbarch = frame_unwind_arch (frame);
   struct value *reg_val;
 
   reg_val = value::zero (register_type (gdbarch, regnum), not_lval);
-  gdb::array_view<gdb_byte> val_contents = reg_val->contents_raw ();
+  gdb::span<gdb_byte> val_contents = reg_val->contents_raw ();
 
   /* The value's contents buffer is zeroed on allocation so if buf is
      smaller, the remaining space will be filled with zero.

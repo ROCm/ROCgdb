@@ -44,7 +44,7 @@ struct python_xmethod_worker : xmethod_worker
 
   /* Implementation of xmethod_worker::invoke for Python.  */
 
-  value *invoke (value *obj, gdb::array_view<value *> args) override;
+  value *invoke (value *obj, gdb::span<value *> args) override;
 
   /* Implementation of xmethod_worker::do_get_arg_types for Python.  */
 
@@ -56,7 +56,7 @@ struct python_xmethod_worker : xmethod_worker
      result type, if the get_result_type operation is not provided by WORKER
      then EXT_LANG_RC_OK is returned and NULL is returned in *RESULT_TYPE.  */
 
-  ext_lang_rc do_get_result_type (value *obj, gdb::array_view<value *> args,
+  ext_lang_rc do_get_result_type (value *obj, gdb::span<value *> args,
 				  type **result_type_ptr) override;
 
 private:
@@ -402,7 +402,7 @@ python_xmethod_worker::do_get_arg_types (std::vector<type *> *arg_types)
 
 ext_lang_rc
 python_xmethod_worker::do_get_result_type (value *obj,
-					   gdb::array_view<value *> args,
+					   gdb::span<value *> args,
 					   type **result_type_ptr)
 {
   struct type *obj_type, *this_type;
@@ -508,7 +508,7 @@ python_xmethod_worker::do_get_result_type (value *obj,
 
 struct value *
 python_xmethod_worker::invoke (struct value *obj,
-			       gdb::array_view<value *> args)
+			       gdb::span<value *> args)
 {
   gdbpy_enter enter_py;
 

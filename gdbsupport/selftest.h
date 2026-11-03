@@ -78,7 +78,7 @@ extern void add_lazy_generator (selftests_generator generator);
    If FILTERS is not empty, only run tests with names containing one of the
    element of FILTERS.  */
 
-extern void run_tests (gdb::array_view<const char *const> filters,
+extern void run_tests (gdb::span<const char *const> filters,
 		       bool verbose = false);
 
 /* Reset GDB or GDBserver's internal state.  */

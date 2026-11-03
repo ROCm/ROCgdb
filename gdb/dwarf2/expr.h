@@ -139,7 +139,7 @@ struct dwarf_expr_context
 
      The ADDR_INFO property can be specified to override the range of
      memory addresses with the passed in buffer.  */
-  value *evaluate (gdb::array_view<const gdb_byte> expr, bool as_lval,
+  value *evaluate (gdb::span<const gdb_byte> expr, bool as_lval,
 		   dwarf2_per_cu *per_cu, const frame_info_ptr &frame,
 		   const struct property_addr_info *addr_info = nullptr,
 		   struct type *type = nullptr,
@@ -207,12 +207,12 @@ private:
   /* Property address info used for the evaluation.  */
   const struct property_addr_info *m_addr_info = nullptr;
 
-  void eval (gdb::array_view<const gdb_byte> expr);
+  void eval (gdb::span<const gdb_byte> expr);
   struct type *address_type () const;
   void push (struct value *value, bool in_stack_memory);
   bool stack_empty_p () const;
   void add_piece (ULONGEST size, ULONGEST offset, enum dwarf_location_atom op);
-  void execute_stack_op (gdb::array_view<const gdb_byte> expr);
+  void execute_stack_op (gdb::span<const gdb_byte> expr);
   void pop ();
   struct value *fetch (int n);
   CORE_ADDR fetch_address (int n);
@@ -229,7 +229,7 @@ private:
   /* Return the location expression for the frame base attribute.  The
      result must be live until the current expression evaluation is
      complete.  */
-  gdb::array_view<const gdb_byte> get_frame_base ();
+  gdb::span<const gdb_byte> get_frame_base ();
 
   /* Return the base type given by the indicated DIE at DIE_CU_OFF.
      This can throw an exception if the DIE is invalid or does not
@@ -268,16 +268,16 @@ CORE_ADDR read_addr_from_reg (const frame_info_ptr &frame, int reg);
 void dwarf_expr_require_composition (const gdb_byte *, const gdb_byte *,
 				     const char *);
 
-int dwarf_block_to_dwarf_reg (gdb::array_view<const gdb_byte> block);
+int dwarf_block_to_dwarf_reg (gdb::span<const gdb_byte> block);
 
-int dwarf_block_to_dwarf_reg_deref (gdb::array_view<const gdb_byte> block,
+int dwarf_block_to_dwarf_reg_deref (gdb::span<const gdb_byte> block,
 				    CORE_ADDR *deref_size_return);
 
 /* If BLOCK contains DW_FORM_block* with single DW_OP_fbreg(X) fill in
    FB_OFFSET_RETURN with the X offset and return true.  Otherwise return
    false.  */
 
-bool dwarf_block_to_fb_offset (gdb::array_view<const gdb_byte> block,
+bool dwarf_block_to_fb_offset (gdb::span<const gdb_byte> block,
 			       CORE_ADDR *fb_offset_return);
 
 /* If BLOCK contains DW_FORM_block* with single DW_OP_bregSP(X) fill in
@@ -285,7 +285,7 @@ bool dwarf_block_to_fb_offset (gdb::array_view<const gdb_byte> block,
    false.  The matched SP register number depends on GDBARCH.  */
 
 bool dwarf_block_to_sp_offset (struct gdbarch *gdbarch,
-			       gdb::array_view<const gdb_byte> block,
+			       gdb::span<const gdb_byte> block,
 			       CORE_ADDR *sp_offset_return);
 
 /* Wrappers around the leb128 reader routines to simplify them for our

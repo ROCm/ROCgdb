@@ -2027,7 +2027,7 @@ dwarf2_base_index_functions::has_unexpanded_symtabs (struct objfile *objfile)
    to either a dwarf2_per_bfd or dwz_file object.  */
 
 template <typename T>
-static gdb::array_view<const gdb_byte>
+static gdb::span<const gdb_byte>
 get_gdb_index_contents_from_section (objfile *obj, T *section_owner)
 {
   dwarf2_section_info *section = &section_owner->gdb_index;
@@ -2043,7 +2043,7 @@ get_gdb_index_contents_from_section (objfile *obj, T *section_owner)
   section->read (obj);
 
   /* dwarf2_section_info::size is a bfd_size_type, while
-     gdb::array_view works with size_t.  On 32-bit hosts, with
+     gdb::span works with size_t.  On 32-bit hosts, with
      --enable-64-bit-bfd, bfd_size_type is a 64-bit type, while size_t
      is 32-bit.  So we need an explicit narrowing conversion here.
      This is fine, because it's impossible to allocate or mmap an
@@ -2054,7 +2054,7 @@ get_gdb_index_contents_from_section (objfile *obj, T *section_owner)
 /* Lookup the index cache for the contents of the index associated to
    DWARF2_OBJ.  */
 
-static gdb::array_view<const gdb_byte>
+static gdb::span<const gdb_byte>
 get_gdb_index_contents_from_cache (objfile *obj, dwarf2_per_bfd *dwarf2_per_bfd)
 {
   const bfd_build_id *build_id = build_id_bfd_get (obj->obfd.get ());
@@ -2071,7 +2071,7 @@ get_gdb_index_contents_from_cache (objfile *obj, dwarf2_per_bfd *dwarf2_per_bfd)
 
 /* Same as the above, but for DWZ.  */
 
-static gdb::array_view<const gdb_byte>
+static gdb::span<const gdb_byte>
 get_gdb_index_contents_from_cache_dwz (objfile *obj, dwz_file *dwz)
 {
   const bfd_build_id *build_id = build_id_bfd_get (dwz->dwz_bfd.get ());
@@ -4003,7 +4003,7 @@ rust_fully_qualify (struct obstack *obstack, const char *p1, const char *p2)
 static void
 alloc_rust_variant (struct obstack *obstack, struct type *type,
 		    int discriminant_index, int default_index,
-		    gdb::array_view<discriminant_range> ranges)
+		    gdb::span<discriminant_range> ranges)
 {
   /* When DISCRIMINANT_INDEX == -1, we have a univariant enum.  */
   gdb_assert (discriminant_index == -1
@@ -4050,11 +4050,11 @@ alloc_rust_variant (struct obstack *obstack, struct type *type,
     = (discriminant_index == -1
        ? false
        : type->field (discriminant_index).type ()->is_unsigned ());
-  part->variants = gdb::array_view<variant> (variants, n_variants);
+  part->variants = gdb::span<variant> (variants, n_variants);
 
-  void *storage = obstack_alloc (obstack, sizeof (gdb::array_view<variant_part>));
-  gdb::array_view<variant_part> *prop_value
-    = new (storage) gdb::array_view<variant_part> (part, 1);
+  void *storage = obstack_alloc (obstack, sizeof (gdb::span<variant_part>));
+  gdb::span<variant_part> *prop_value
+    = new (storage) gdb::span<variant_part> (part, 1);
 
   struct dynamic_prop prop;
   prop.set_variant_parts (prop_value);
@@ -4287,7 +4287,7 @@ quirk_rust_enum (struct type *type, struct objfile *objfile)
 
       /* Indicate that this is a variant type.  */
       alloc_rust_variant (&objfile->objfile_obstack, type, 0, -1,
-			  gdb::array_view<discriminant_range> (ranges,
+			  gdb::span<discriminant_range> (ranges,
 							       n_fields - 1));
     }
 }
@@ -9461,7 +9461,7 @@ using offset_map_type = gdb::unordered_map<sect_offset, int>;
    process.  IS_UNSIGNED indicates whether the discriminant is signed
    or unsigned.  */
 
-static const gdb::array_view<discriminant_range>
+static const gdb::span<discriminant_range>
 convert_variant_range (struct obstack *obstack, const variant_field &variant,
 		       bool is_unsigned)
 {
@@ -9484,7 +9484,7 @@ convert_variant_range (struct obstack *obstack, const variant_field &variant,
     }
   else
     {
-      gdb::array_view<const gdb_byte> data (variant.discr_list_data->data,
+      gdb::span<const gdb_byte> data (variant.discr_list_data->data,
 					    variant.discr_list_data->size);
       while (!data.empty ())
 	{
@@ -9536,10 +9536,10 @@ convert_variant_range (struct obstack *obstack, const variant_field &variant,
   discriminant_range *result = XOBNEWVEC (obstack, discriminant_range,
 					  ranges.size ());
   std::copy (ranges.begin (), ranges.end (), result);
-  return gdb::array_view<discriminant_range> (result, ranges.size ());
+  return gdb::span<discriminant_range> (result, ranges.size ());
 }
 
-static const gdb::array_view<variant_part> create_variant_parts
+static const gdb::span<variant_part> create_variant_parts
   (struct obstack *obstack,
    const offset_map_type &offset_map,
    struct field_info *fi,
@@ -9599,7 +9599,7 @@ create_one_variant_part (variant_part &result,
     create_one_variant (output[i], obstack, offset_map, fi,
 			builder.variants[i], result.is_unsigned);
 
-  result.variants = gdb::array_view<variant> (output, n);
+  result.variants = gdb::span<variant> (output, n);
 }
 
 /* Create a vector of variant parts that can be attached to a type.
@@ -9608,7 +9608,7 @@ create_one_variant_part (variant_part &result,
    describes the fields of the type we're processing.  VARIANT_PARTS
    is the vector to convert.  */
 
-static const gdb::array_view<variant_part>
+static const gdb::span<variant_part>
 create_variant_parts (struct obstack *obstack,
 		      const offset_map_type &offset_map,
 		      struct field_info *fi,
@@ -9623,7 +9623,7 @@ create_variant_parts (struct obstack *obstack,
     create_one_variant_part (result[i], obstack, offset_map, fi,
 			     variant_parts[i]);
 
-  return gdb::array_view<variant_part> (result, n);
+  return gdb::span<variant_part> (result, n);
 }
 
 /* Compute the variant part vector for FIP, attaching it to TYPE when
@@ -9641,12 +9641,12 @@ add_variant_property (struct field_info *fip, struct type *type,
     offset_map[fip->fields[i].offset] = i;
 
   struct objfile *objfile = cu->per_objfile->objfile;
-  gdb::array_view<const variant_part> parts
+  gdb::span<const variant_part> parts
     = create_variant_parts (&objfile->objfile_obstack, offset_map, fip,
 			    fip->variant_parts);
 
   struct dynamic_prop prop;
-  prop.set_variant_parts ((gdb::array_view<variant_part> *)
+  prop.set_variant_parts ((gdb::span<variant_part> *)
 			  obstack_copy (&objfile->objfile_obstack, &parts,
 					sizeof (parts)));
 
@@ -13749,7 +13749,7 @@ cutu_reader::read_full_die (int num_extra_attrs, bool allow_reprocess)
    child, next, and parent fields.  */
 
 die_info *
-cutu_reader::read_toplevel_die (gdb::array_view<attribute *> extra_attrs)
+cutu_reader::read_toplevel_die (gdb::span<attribute *> extra_attrs)
 {
   m_cu->per_objfile->per_bfd->nr_toplevel_dies_read++;
   const gdb_byte *begin_info_ptr = m_info_ptr;
@@ -16919,7 +16919,7 @@ dwarf2_fetch_die_loc_sect_off (sect_offset sect_off, dwarf2_per_cu *per_cu,
   if (!attr)
     {
       /* DWARF: "If there is no such attribute, then there is no effect.".  */
-      retval.set_expr (gdb::array_view<const gdb_byte> ());
+      retval.set_expr (gdb::span<const gdb_byte> ());
     }
   else if (attr->form_is_section_offset ())
     {

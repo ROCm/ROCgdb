@@ -92,7 +92,7 @@ struct send_remote_packet_callbacks
      (before any of the protocol specific prefix, suffix, or escaping is
      applied).  */
 
-  virtual void sending (gdb::array_view<const char> &buf) = 0;
+  virtual void sending (gdb::span<const char> &buf) = 0;
 
   /* The RECEIVED callback is called once a reply has been received from
      the remote target.  The content of the reply is in BUF which can't be
@@ -100,7 +100,7 @@ struct send_remote_packet_callbacks
      RECEIVED call has returned.  If you need to preserve the contents of
      BUF then a copy should be taken.  */
 
-  virtual void received (gdb::array_view<const char> &buf) = 0;
+  virtual void received (gdb::span<const char> &buf) = 0;
 };
 
 /* Send BUF to the current remote target.  If BUF points to an empty
@@ -112,7 +112,7 @@ struct send_remote_packet_callbacks
    target, and calls CALLBACKS->received() with the reply once this is
    received from the remote target.  */
 
-extern void send_remote_packet (gdb::array_view<const char> &buf,
+extern void send_remote_packet (gdb::span<const char> &buf,
 				send_remote_packet_callbacks *callbacks);
 
 

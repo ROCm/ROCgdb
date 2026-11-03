@@ -414,31 +414,31 @@ public:
      Note: The contents pointer is adjusted by the offset required to
      get to the real subobject, if the value happens to represent
      something embedded in a larger run-time object.  */
-  gdb::array_view<gdb_byte> contents_raw ();
+  gdb::span<gdb_byte> contents_raw ();
 
   /* Actual contents of the value.  For use of this value; setting it
      uses the stuff above.  Not valid if lazy is nonzero.  Target
      byte-order.  We force it to be aligned properly for any possible
      value.  Note that a value therefore extends beyond what is
      declared here.  */
-  gdb::array_view<const gdb_byte> contents ();
+  gdb::span<const gdb_byte> contents ();
 
   /* The ALL variants of the above two methods do not adjust the
      returned pointer by the embedded_offset value.  */
-  gdb::array_view<const gdb_byte> contents_all ();
-  gdb::array_view<gdb_byte> contents_all_raw ();
+  gdb::span<const gdb_byte> contents_all ();
+  gdb::span<gdb_byte> contents_all_raw ();
 
-  gdb::array_view<gdb_byte> contents_writeable ();
+  gdb::span<gdb_byte> contents_writeable ();
 
   /* Like contents_all, but does not require that the returned bits be
      valid.  This should only be used in situations where you plan to
      check the validity manually.  */
-  gdb::array_view<const gdb_byte> contents_for_printing ();
+  gdb::span<const gdb_byte> contents_for_printing ();
 
   /* Like contents_for_printing, but accepts a constant value pointer.
      Unlike contents_for_printing however, the pointed value must
      _not_ be lazy.  */
-  gdb::array_view<const gdb_byte> contents_for_printing () const;
+  gdb::span<const gdb_byte> contents_for_printing () const;
 
   /* Load the actual content of a lazy value.  Fetch the data from the
      user's process and clear the lazy flag to indicate that the data in
@@ -592,11 +592,11 @@ public:
   static struct value *from_xmethod (xmethod_worker_up &&worker);
 
   /* Return the type of the result of TYPE_CODE_XMETHOD value METHOD.  */
-  struct type *result_type_of_xmethod (gdb::array_view<value *> argv);
+  struct type *result_type_of_xmethod (gdb::span<value *> argv);
 
   /* Call the xmethod corresponding to the TYPE_CODE_XMETHOD value
      METHOD.  */
-  struct value *call_xmethod (gdb::array_view<value *> argv);
+  struct value *call_xmethod (gdb::span<value *> argv);
 
   /* Update this value before discarding OBJFILE.  COPIED_TYPES is
      used to prevent cycles / duplicates.  */
@@ -1284,7 +1284,7 @@ inline struct value *value_string (const char *ptr, ssize_t count,
 }
 
 extern struct value *value_array (int lowbound,
-				  gdb::array_view<struct value *> elemvec);
+				  gdb::span<struct value *> elemvec);
 
 extern struct value *value_concat (struct value *arg1, struct value *arg2);
 
@@ -1327,7 +1327,7 @@ extern struct value *value_neg (struct value *arg1);
 extern struct value *value_complement (struct value *arg1);
 
 extern struct value *value_struct_elt (struct value **argp,
-				       std::optional<gdb::array_view <value *>> args,
+				       std::optional<gdb::span <value *>> args,
 				       const char *name, int *static_memfuncp,
 				       const char *err);
 
@@ -1345,7 +1345,7 @@ extern struct value *value_static_field (struct type *type, int fieldno);
 
 enum oload_search_type { NON_METHOD, METHOD, BOTH };
 
-extern int find_overload_match (gdb::array_view<value *> args,
+extern int find_overload_match (gdb::span<value *> args,
 				const char *name,
 				enum oload_search_type method,
 				struct value **objp, struct symbol *fsym,
@@ -1758,7 +1758,7 @@ value *pseudo_from_raw_part (const frame_info_ptr &next_frame, int pseudo_reg_nu
    RAW_REG_NUM starting at RAW_OFFSET.  */
 
 void pseudo_to_raw_part (const frame_info_ptr &next_frame,
-			 gdb::array_view<const gdb_byte> pseudo_buf,
+			 gdb::span<const gdb_byte> pseudo_buf,
 			 int raw_reg_num, int raw_offset);
 
 /* Create a value for pseudo register PSEUDO_REG_NUM by concatenating raw
@@ -1774,7 +1774,7 @@ value *pseudo_from_concat_raw (const frame_info_ptr &next_frame, int pseudo_reg_
    RAW_REG_1_NUM and RAW_REG_2_NUM.  */
 
 void pseudo_to_concat_raw (const frame_info_ptr &next_frame,
-			   gdb::array_view<const gdb_byte> pseudo_buf,
+			   gdb::span<const gdb_byte> pseudo_buf,
 			   int raw_reg_1_num, int raw_reg_2_num);
 
 /* Same as the above, but with three raw registers.  */
@@ -1787,7 +1787,7 @@ value *pseudo_from_concat_raw (const frame_info_ptr &next_frame, int pseudo_reg_
    registers RAW_REG_1_NUM, RAW_REG_2_NUM and RAW_REG_3_NUM.  */
 
 void pseudo_to_concat_raw (const frame_info_ptr &next_frame,
-			   gdb::array_view<const gdb_byte> pseudo_buf,
+			   gdb::span<const gdb_byte> pseudo_buf,
 			   int raw_reg_1_num, int raw_reg_2_num,
 			   int raw_reg_3_num);
 

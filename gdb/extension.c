@@ -994,7 +994,7 @@ xmethod_worker::get_arg_types ()
 /* See extension.h.  */
 
 struct type *
-xmethod_worker::get_result_type (value *object, gdb::array_view<value *> args)
+xmethod_worker::get_result_type (value *object, gdb::span<value *> args)
 {
   type *result_type;
 

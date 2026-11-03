@@ -249,7 +249,7 @@ read_xcoff_minimal_symbols (objfile *objfile)
 {
   bfd *abfd = objfile->obfd.get ();
 
-  gdb::array_view<asymbol *> symbol_table
+  gdb::span<asymbol *> symbol_table
     = gdb_bfd_canonicalize_symtab (abfd, false);
   /* Get the number of symbols we need.  */
   int number_of_symbols = symbol_table.size ();

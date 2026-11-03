@@ -1184,7 +1184,7 @@ get_frame_func (const frame_info_ptr &this_frame)
 std::unique_ptr<readonly_detached_regcache>
 frame_save_as_regcache (const frame_info_ptr &this_frame)
 {
-  auto cooked_read = [this_frame] (int regnum, gdb::array_view<gdb_byte> buf)
+  auto cooked_read = [this_frame] (int regnum, gdb::span<gdb_byte> buf)
     {
       if (!deprecated_frame_register_read (this_frame, regnum, buf))
 	return REG_UNAVAILABLE;
@@ -1252,7 +1252,7 @@ frame_register_unwind (const frame_info_ptr &next_frame, int regnum,
 		       bool *optimizedp, bool *unavailablep,
 		       enum lval_type *lvalp, CORE_ADDR *addrp,
 		       int *realnump,
-		       gdb::array_view<gdb_byte> buffer)
+		       gdb::span<gdb_byte> buffer)
 {
   struct value *value;
 
@@ -1294,7 +1294,7 @@ frame_register_unwind (const frame_info_ptr &next_frame, int regnum,
 
 void
 frame_unwind_register (const frame_info_ptr &next_frame, int regnum,
-		       gdb::array_view<gdb_byte> buf)
+		       gdb::span<gdb_byte> buf)
 {
   bool optimized;
   bool unavailable;
@@ -1315,7 +1315,7 @@ frame_unwind_register (const frame_info_ptr &next_frame, int regnum,
 
 void
 get_frame_register (const frame_info_ptr &frame,
-		    int regnum, gdb::array_view<gdb_byte> buf)
+		    int regnum, gdb::span<gdb_byte> buf)
 {
   frame_unwind_register (frame_info_ptr (frame->next), regnum, buf);
 }
@@ -1396,7 +1396,7 @@ frame_unwind_register_value (const frame_info_ptr &next_frame, int regnum)
 	  else if (value->entirely_available ())
 	    {
 	      int i;
-	      gdb::array_view<const gdb_byte> buf = value->contents ();
+	      gdb::span<const gdb_byte> buf = value->contents ();
 
 	      gdb_printf (&debug_file, " bytes=");
 	      gdb_printf (&debug_file, "[");
@@ -1511,7 +1511,7 @@ read_frame_register_unsigned (const frame_info_ptr &frame, int regnum,
 
 void
 put_frame_register (const frame_info_ptr &next_frame, int regnum,
-		     gdb::array_view<const gdb_byte> buf)
+		     gdb::span<const gdb_byte> buf)
 {
   gdbarch *gdbarch = frame_unwind_arch (next_frame);
   int realnum;
@@ -1559,7 +1559,7 @@ put_frame_register (const frame_info_ptr &next_frame, int regnum,
 
 bool
 deprecated_frame_register_read (const frame_info_ptr &frame, int regnum,
-				gdb::array_view<gdb_byte> myaddr)
+				gdb::span<gdb_byte> myaddr)
 {
   bool optimized;
   bool unavailable;
@@ -1576,7 +1576,7 @@ deprecated_frame_register_read (const frame_info_ptr &frame, int regnum,
 
 bool
 get_frame_register_bytes (const frame_info_ptr &next_frame, int regnum,
-			  CORE_ADDR offset, gdb::array_view<gdb_byte> buffer,
+			  CORE_ADDR offset, gdb::span<gdb_byte> buffer,
 			  bool *optimizedp, bool *unavailablep)
 {
   gdbarch *gdbarch = frame_unwind_arch (next_frame);
@@ -1654,7 +1654,7 @@ get_frame_register_bytes (const frame_info_ptr &next_frame, int regnum,
 void
 put_frame_register_bytes (const frame_info_ptr &next_frame, int regnum,
 			  CORE_ADDR offset,
-			  gdb::array_view<const gdb_byte> buffer)
+			  gdb::span<const gdb_byte> buffer)
 {
   gdbarch *gdbarch = frame_unwind_arch (next_frame);
 
@@ -3094,7 +3094,7 @@ get_frame_address_space (const frame_info_ptr &frame)
 
 void
 get_frame_memory (const frame_info_ptr &this_frame, CORE_ADDR addr,
-		  gdb::array_view<gdb_byte> buffer)
+		  gdb::span<gdb_byte> buffer)
 {
   read_memory (addr, buffer.data (), buffer.size ());
 }
@@ -3121,7 +3121,7 @@ get_frame_memory_unsigned (const frame_info_ptr &this_frame, CORE_ADDR addr,
 
 bool
 safe_frame_unwind_memory (const frame_info_ptr &this_frame,
-			  CORE_ADDR addr, gdb::array_view<gdb_byte> buffer)
+			  CORE_ADDR addr, gdb::span<gdb_byte> buffer)
 {
   /* NOTE: target_read_memory returns zero on success!  */
   return target_read_memory (addr, buffer.data (), buffer.size ()) == 0;

@@ -923,7 +923,7 @@ extern void build_objfile_section_table (struct objfile *);
 extern void free_objfile_separate_debug (struct objfile *);
 
 extern void objfile_relocate (struct objfile *,
-			      gdb::array_view<const CORE_ADDR>);
+			      gdb::span<const CORE_ADDR>);
 extern void objfile_rebase (struct objfile *, CORE_ADDR);
 
 extern void objfile_set_sym_fns (struct objfile *objfile,

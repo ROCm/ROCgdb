@@ -408,7 +408,7 @@ extern value *i386_pseudo_register_read_value (gdbarch *gdbarch,
 
 extern void i386_pseudo_register_write (gdbarch *gdbarch,
 					const frame_info_ptr &next_frame, int regnum,
-					gdb::array_view<const gdb_byte> buf);
+					gdb::span<const gdb_byte> buf);
 
 extern void i386_ax_pseudo_register_collect (struct gdbarch *gdbarch,
 					     struct agent_expr *ax,

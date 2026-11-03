@@ -1354,7 +1354,7 @@ add_symbol_overload_list_adl_namespace (struct type *type,
    FUNC_NAME found through argument dependent lookup.  */
 
 void
-add_symbol_overload_list_adl (gdb::array_view<type *> arg_types,
+add_symbol_overload_list_adl (gdb::span<type *> arg_types,
 			      const char *func_name,
 			      std::vector<symbol *> *overload_list)
 {

@@ -205,7 +205,7 @@ static void
 amd64_windows_store_arg_in_reg (struct regcache *regcache,
 				struct value *arg, int regno)
 {
-  gdb::array_view<const gdb_byte> valbuf = arg->contents ();
+  gdb::span<const gdb_byte> valbuf = arg->contents ();
   /* We only set 8 bytes, buf if it's a XMM register, 16 bytes are read.  */
   std::array<gdb_byte, 16> buf {};
 
@@ -213,7 +213,7 @@ amd64_windows_store_arg_in_reg (struct regcache *regcache,
   std::copy (valbuf.begin (), valbuf.end (), buf.begin ());
   size_t reg_size = regcache->register_size (regno);
   gdb_assert (reg_size <= buf.size ());
-  gdb::array_view<gdb_byte> view (buf);
+  gdb::span<gdb_byte> view (buf);
   regcache->cooked_write (regno, view.slice (0, reg_size));
 }
 
@@ -1337,7 +1337,7 @@ static const gdb_byte amd64_sigdelayed_bytes[] = {
   /* 4 bytes for tls::stackptr operand.  */
 };
 
-static const gdb::array_view<const gdb_byte> amd64_sig_patterns[] {
+static const gdb::span<const gdb_byte> amd64_sig_patterns[] {
   { amd64_sigbe_bytes },
   { amd64_sigdelayed_bytes },
 };

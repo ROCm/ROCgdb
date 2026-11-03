@@ -478,7 +478,7 @@ objfile::~objfile ()
 
 static int
 objfile_relocate1 (struct objfile *objfile,
-		   gdb::array_view<const CORE_ADDR> new_offsets)
+		   gdb::span<const CORE_ADDR> new_offsets)
 {
   std::vector<CORE_ADDR> delta (objfile->section_offsets.size ());
 
@@ -531,7 +531,7 @@ objfile_relocate1 (struct objfile *objfile,
 
 void
 objfile_relocate (struct objfile *objfile,
-		  gdb::array_view<const CORE_ADDR> new_offsets)
+		  gdb::span<const CORE_ADDR> new_offsets)
 {
   int changed = 0;
 

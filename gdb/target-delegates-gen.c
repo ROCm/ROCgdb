@@ -80,17 +80,17 @@ struct dummy_target : public target_ops
   int insert_exec_catchpoint (int arg0) override;
   int remove_exec_catchpoint (int arg0) override;
   void follow_exec (inferior *arg0, ptid_t arg1, const char *arg2) override;
-  int set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::array_view<const int> arg3) override;
+  int set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::span<const int> arg3) override;
   void mourn_inferior () override;
-  void pass_signals (gdb::array_view<const unsigned char> arg0) override;
-  void program_signals (gdb::array_view<const unsigned char> arg0) override;
+  void pass_signals (gdb::span<const unsigned char> arg0) override;
+  void program_signals (gdb::span<const unsigned char> arg0) override;
   bool thread_alive (ptid_t arg0) override;
   void update_thread_list () override;
   std::string pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
   const char *thread_name (thread_info *arg0) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
-  gdb::array_view<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *arg0) override;
+  gdb::span<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
   void interrupt () override;
   void pass_ctrlc () override;
@@ -261,17 +261,17 @@ struct debug_target : public target_ops
   int insert_exec_catchpoint (int arg0) override;
   int remove_exec_catchpoint (int arg0) override;
   void follow_exec (inferior *arg0, ptid_t arg1, const char *arg2) override;
-  int set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::array_view<const int> arg3) override;
+  int set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::span<const int> arg3) override;
   void mourn_inferior () override;
-  void pass_signals (gdb::array_view<const unsigned char> arg0) override;
-  void program_signals (gdb::array_view<const unsigned char> arg0) override;
+  void pass_signals (gdb::span<const unsigned char> arg0) override;
+  void program_signals (gdb::span<const unsigned char> arg0) override;
   bool thread_alive (ptid_t arg0) override;
   void update_thread_list () override;
   std::string pid_to_str (ptid_t arg0) override;
   const char *extra_thread_info (thread_info *arg0) override;
   const char *thread_name (thread_info *arg0) override;
   thread_info *thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, inferior *arg2) override;
-  gdb::array_view<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *arg0) override;
+  gdb::span<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *arg0) override;
   void stop (ptid_t arg0) override;
   void interrupt () override;
   void pass_ctrlc () override;
@@ -1588,19 +1588,19 @@ debug_target::follow_exec (inferior *arg0, ptid_t arg1, const char *arg2)
 }
 
 int
-target_ops::set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::array_view<const int> arg3)
+target_ops::set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::span<const int> arg3)
 {
   return this->beneath ()->set_syscall_catchpoint (arg0, arg1, arg2, arg3);
 }
 
 int
-dummy_target::set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::array_view<const int> arg3)
+dummy_target::set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::span<const int> arg3)
 {
   return 1;
 }
 
 int
-debug_target::set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::array_view<const int> arg3)
+debug_target::set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::span<const int> arg3)
 {
   target_debug_printf_nofunc ("-> %s->set_syscall_catchpoint (...)", this->beneath ()->shortname ());
   int result
@@ -1610,7 +1610,7 @@ debug_target::set_syscall_catchpoint (int arg0, bool arg1, int arg2, gdb::array_
 	      target_debug_print_int (arg0).c_str (),
 	      target_debug_print_bool (arg1).c_str (),
 	      target_debug_print_int (arg2).c_str (),
-	      target_debug_print_gdb_array_view_const_int (arg3).c_str (),
+	      target_debug_print_gdb_span_const_int (arg3).c_str (),
 	      target_debug_print_int (result).c_str ());
   return result;
 }
@@ -1637,18 +1637,18 @@ debug_target::mourn_inferior ()
 }
 
 void
-target_ops::pass_signals (gdb::array_view<const unsigned char> arg0)
+target_ops::pass_signals (gdb::span<const unsigned char> arg0)
 {
   this->beneath ()->pass_signals (arg0);
 }
 
 void
-dummy_target::pass_signals (gdb::array_view<const unsigned char> arg0)
+dummy_target::pass_signals (gdb::span<const unsigned char> arg0)
 {
 }
 
 void
-debug_target::pass_signals (gdb::array_view<const unsigned char> arg0)
+debug_target::pass_signals (gdb::span<const unsigned char> arg0)
 {
   target_debug_printf_nofunc ("-> %s->pass_signals (...)", this->beneath ()->shortname ());
   this->beneath ()->pass_signals (arg0);
@@ -1658,18 +1658,18 @@ debug_target::pass_signals (gdb::array_view<const unsigned char> arg0)
 }
 
 void
-target_ops::program_signals (gdb::array_view<const unsigned char> arg0)
+target_ops::program_signals (gdb::span<const unsigned char> arg0)
 {
   this->beneath ()->program_signals (arg0);
 }
 
 void
-dummy_target::program_signals (gdb::array_view<const unsigned char> arg0)
+dummy_target::program_signals (gdb::span<const unsigned char> arg0)
 {
 }
 
 void
-debug_target::program_signals (gdb::array_view<const unsigned char> arg0)
+debug_target::program_signals (gdb::span<const unsigned char> arg0)
 {
   target_debug_printf_nofunc ("-> %s->program_signals (...)", this->beneath ()->shortname ());
   this->beneath ()->program_signals (arg0);
@@ -1825,28 +1825,28 @@ debug_target::thread_handle_to_thread_info (const gdb_byte *arg0, int arg1, infe
   return result;
 }
 
-gdb::array_view<const_gdb_byte>
+gdb::span<const_gdb_byte>
 target_ops::thread_info_to_thread_handle (struct thread_info *arg0)
 {
   return this->beneath ()->thread_info_to_thread_handle (arg0);
 }
 
-gdb::array_view<const_gdb_byte>
+gdb::span<const_gdb_byte>
 dummy_target::thread_info_to_thread_handle (struct thread_info *arg0)
 {
-  return gdb::array_view<const gdb_byte> ();
+  return gdb::span<const gdb_byte> ();
 }
 
-gdb::array_view<const_gdb_byte>
+gdb::span<const_gdb_byte>
 debug_target::thread_info_to_thread_handle (struct thread_info *arg0)
 {
   target_debug_printf_nofunc ("-> %s->thread_info_to_thread_handle (...)", this->beneath ()->shortname ());
-  gdb::array_view<const_gdb_byte> result
+  gdb::span<const_gdb_byte> result
     = this->beneath ()->thread_info_to_thread_handle (arg0);
   target_debug_printf_nofunc ("<- %s->thread_info_to_thread_handle (%s) = %s",
 	      this->beneath ()->shortname (),
 	      target_debug_print_thread_info_p (arg0).c_str (),
-	      target_debug_print_gdb_array_view_const_gdb_byte (result).c_str ());
+	      target_debug_print_gdb_span_const_gdb_byte (result).c_str ());
   return result;
 }
 

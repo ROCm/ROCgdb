@@ -135,14 +135,14 @@ struct gdb_mpz
      the byte array's size.
 
      UNSIGNED_P indicates whether the number has an unsigned type.  */
-  void read (gdb::array_view<const gdb_byte> buf, enum bfd_endian byte_order,
+  void read (gdb::span<const gdb_byte> buf, enum bfd_endian byte_order,
 	     bool unsigned_p);
 
   /* Write VAL into BUF as a number whose byte size is the size of BUF,
      using the given BYTE_ORDER.
 
      UNSIGNED_P indicates whether the number has an unsigned type.  */
-  void write (gdb::array_view<gdb_byte> buf, enum bfd_endian byte_order,
+  void write (gdb::span<gdb_byte> buf, enum bfd_endian byte_order,
 	      bool unsigned_p) const
   {
     export_bits (buf, byte_order == BFD_ENDIAN_BIG ? 1 : -1 /* endian */,
@@ -151,7 +151,7 @@ struct gdb_mpz
 
   /* Like write, but truncates the value to the desired number of
      bytes.  */
-  void truncate (gdb::array_view<gdb_byte> buf, enum bfd_endian byte_order,
+  void truncate (gdb::span<gdb_byte> buf, enum bfd_endian byte_order,
 		 bool unsigned_p) const
   {
     export_bits (buf, byte_order == BFD_ENDIAN_BIG ? 1 : -1 /* endian */,
@@ -410,7 +410,7 @@ private:
     If SAFE is true, an error is raised if BUF is not large enough to
     contain the value being exported.  If SAFE is false, the value is
     truncated to fit in BUF.  */
-  void export_bits (gdb::array_view<gdb_byte> buf, int endian, bool unsigned_p,
+  void export_bits (gdb::span<gdb_byte> buf, int endian, bool unsigned_p,
 		    bool safe) const;
 
   friend struct gdb_mpq;
@@ -566,7 +566,7 @@ struct gdb_mpq
      UNSIGNED_P indicates whether the number has an unsigned type.
      SCALING_FACTOR is the scaling factor to apply after having
      read the unscaled value from our buffer.  */
-  void read_fixed_point (gdb::array_view<const gdb_byte> buf,
+  void read_fixed_point (gdb::span<const gdb_byte> buf,
 			 enum bfd_endian byte_order, bool unsigned_p,
 			 const gdb_mpq &scaling_factor);
 
@@ -576,7 +576,7 @@ struct gdb_mpq
      UNSIGNED_P indicates whether the number has an unsigned type.
      SCALING_FACTOR is the scaling factor to apply before writing
      the unscaled value to our buffer.  */
-  void write_fixed_point (gdb::array_view<gdb_byte> buf,
+  void write_fixed_point (gdb::span<gdb_byte> buf,
 			  enum bfd_endian byte_order, bool unsigned_p,
 			  const gdb_mpq &scaling_factor) const;
 
@@ -609,7 +609,7 @@ struct gdb_mpf
      UNSIGNED_P indicates whether the number has an unsigned type.
      SCALING_FACTOR is the scaling factor to apply after having
      read the unscaled value from our buffer.  */
-  void read_fixed_point (gdb::array_view<const gdb_byte> buf,
+  void read_fixed_point (gdb::span<const gdb_byte> buf,
 			 enum bfd_endian byte_order, bool unsigned_p,
 			 const gdb_mpq &scaling_factor)
   {

@@ -40,6 +40,6 @@ end
 
 # Trivial and uninteresting functions to skip.
 skip -rfu "^enum_flags<.*>::enum_flags"
-skip -rfu "^gdb::array_view<.*>::array_view"
+skip -rfu "^gdb::span<.*>::span"
 skip -rfu "^gdb::function_view<.*>::function_view"
 skip -rfu "^gdb::ref_ptr<.*>::get"

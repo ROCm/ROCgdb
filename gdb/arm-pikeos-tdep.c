@@ -48,7 +48,7 @@ arm_pikeos_osabi_sniffer (bfd *abfd)
      OS ABI sniffers are called before the minimal symtabs are
      created. So inspect the symbol table using BFD.  */
 
-  gdb::array_view<asymbol *> symbol_table
+  gdb::span<asymbol *> symbol_table
     = gdb_bfd_canonicalize_symtab (abfd, false);
 
   if (symbol_table.empty ())

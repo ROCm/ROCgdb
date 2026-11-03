@@ -109,7 +109,7 @@ gdbpy_bytes_from_string (const char *str)
 /* Wrapper for PyBytes_FromStringAndSize.  */
 template<typename T>
 gdbpy_ref<>
-gdbpy_bytes_from_string_and_size (gdb::array_view<T> data)
+gdbpy_bytes_from_string_and_size (gdb::span<T> data)
 {
   /* Python allows STR==nullptr but it leaves the object
      uninitialized, and I think we should avoid this in gdb.  */

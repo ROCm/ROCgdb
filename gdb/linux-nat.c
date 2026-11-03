@@ -637,7 +637,7 @@ linux_nat_target::remove_exec_catchpoint (int pid)
 
 int
 linux_nat_target::set_syscall_catchpoint (int pid, bool needed, int any_count,
-					  gdb::array_view<const int> syscall_counts)
+					  gdb::span<const int> syscall_counts)
 {
   /* On GNU/Linux, we ignore the arguments.  It means that we only
      enable the syscall catchpoints, but do not disable them.
@@ -778,7 +778,7 @@ static sigset_t pass_mask;
 /* Update signals to pass to the inferior.  */
 void
 linux_nat_target::pass_signals
-  (gdb::array_view<const unsigned char> pass_signals)
+  (gdb::span<const unsigned char> pass_signals)
 {
   int signo;
 

@@ -220,7 +220,7 @@ regcache::regcache (inferior *inf_for_target_calls, gdbarch *gdbarch)
 readonly_detached_regcache::readonly_detached_regcache (regcache &src)
   : readonly_detached_regcache (src.arch (),
 				[&src] (int regnum,
-					gdb::array_view<gdb_byte> buf)
+					gdb::span<gdb_byte> buf)
 				  { return src.cooked_read (regnum, buf); })
 {
 }
@@ -234,18 +234,18 @@ reg_buffer::arch () const
 /* Helper for reg_buffer::register_buffer.  */
 
 template<typename ElemType>
-gdb::array_view<ElemType>
+gdb::span<ElemType>
 reg_buffer::register_buffer (int regnum) const
 {
   assert_regnum (regnum);
   ElemType *start = &m_registers[m_descr->register_offset[regnum]];
   int size = m_descr->sizeof_register[regnum];
-  return gdb::array_view<ElemType> (start, size);
+  return gdb::span<ElemType> (start, size);
 }
 
 /* See regcache.h.  */
 
-gdb::array_view<const gdb_byte>
+gdb::span<const gdb_byte>
 reg_buffer::register_buffer (int regnum) const
 {
   return register_buffer<const gdb_byte> (regnum);
@@ -253,7 +253,7 @@ reg_buffer::register_buffer (int regnum) const
 
 /* See regcache.h.  */
 
-gdb::array_view<gdb_byte>
+gdb::span<gdb_byte>
 reg_buffer::register_buffer (int regnum)
 {
   return register_buffer<gdb_byte> (regnum);
@@ -277,7 +277,7 @@ reg_buffer::save (register_read_ftype cooked_read)
     {
       if (gdbarch_register_reggroup_p (gdbarch, regnum, save_reggroup))
 	{
-	  gdb::array_view<gdb_byte> dst_buf = register_buffer (regnum);
+	  gdb::span<gdb_byte> dst_buf = register_buffer (regnum);
 	  register_status status = cooked_read (regnum, dst_buf);
 
 	  gdb_assert (status != REG_UNKNOWN);
@@ -612,7 +612,7 @@ regcache::raw_update (int regnum)
 }
 
 register_status
-readable_regcache::raw_read (int regnum, gdb::array_view<gdb_byte> dst)
+readable_regcache::raw_read (int regnum, gdb::span<gdb_byte> dst)
 {
   assert_regnum (regnum);
   gdb_assert (dst.size () == m_descr->sizeof_register[regnum]);
@@ -713,7 +713,7 @@ regcache_raw_get_signed (struct regcache *regcache, int regnum)
 /* See regcache.h.  */
 
 register_status
-readable_regcache::cooked_read (int regnum, gdb::array_view<gdb_byte> dst)
+readable_regcache::cooked_read (int regnum, gdb::span<gdb_byte> dst)
 {
   gdb_assert (regnum >= 0);
   gdb_assert (regnum < m_descr->nr_cooked_registers);
@@ -858,7 +858,7 @@ regcache_cooked_write_unsigned (struct regcache *regcache, int regnum,
 }
 
 void
-regcache::raw_write (int regnum, gdb::array_view<const gdb_byte> src)
+regcache::raw_write (int regnum, gdb::span<const gdb_byte> src)
 {
   assert_regnum (regnum);
   gdb_assert (src.size () == m_descr->sizeof_register[regnum]);
@@ -907,7 +907,7 @@ regcache::raw_write (int regnum, const gdb_byte *src)
 /* See regcache.h.  */
 
 void
-regcache::cooked_write (int regnum, gdb::array_view<const gdb_byte> src)
+regcache::cooked_write (int regnum, gdb::span<const gdb_byte> src)
 {
   gdb_assert (regnum >= 0);
   gdb_assert (regnum < m_descr->nr_cooked_registers);
@@ -939,7 +939,7 @@ regcache::cooked_write (int regnum, const gdb_byte *src)
 
 register_status
 readable_regcache::read_part (int regnum, int offset,
-			      gdb::array_view<gdb_byte> dst, bool is_raw)
+			      gdb::span<gdb_byte> dst, bool is_raw)
 {
   int reg_size = register_size (regnum);
 
@@ -983,7 +983,7 @@ readable_regcache::read_part (int regnum, int offset,
 
 void
 reg_buffer::raw_collect_part (int regnum, int offset,
-			      gdb::array_view<gdb_byte> dst) const
+			      gdb::span<gdb_byte> dst) const
 {
   int reg_size = register_size (regnum);
 
@@ -1013,7 +1013,7 @@ reg_buffer::raw_collect_part (int regnum, int offset,
 
 register_status
 regcache::write_part (int regnum, int offset,
-		      gdb::array_view<const gdb_byte> src, bool is_raw)
+		      gdb::span<const gdb_byte> src, bool is_raw)
 {
   int reg_size = register_size (regnum);
 
@@ -1065,7 +1065,7 @@ regcache::write_part (int regnum, int offset,
 
 void
 reg_buffer::raw_supply_part (int regnum, int offset,
-			     gdb::array_view<const gdb_byte> src)
+			     gdb::span<const gdb_byte> src)
 {
   int reg_size = register_size (regnum);
 
@@ -1096,7 +1096,7 @@ reg_buffer::raw_supply_part (int regnum, int offset,
 
 register_status
 readable_regcache::raw_read_part (int regnum, int offset,
-				  gdb::array_view<gdb_byte> dst)
+				  gdb::span<gdb_byte> dst)
 {
   assert_regnum (regnum);
   return read_part (regnum, offset, dst, true);
@@ -1106,7 +1106,7 @@ readable_regcache::raw_read_part (int regnum, int offset,
 
 void
 regcache::raw_write_part (int regnum, int offset,
-			  gdb::array_view<const gdb_byte> src)
+			  gdb::span<const gdb_byte> src)
 {
   assert_regnum (regnum);
   write_part (regnum, offset, src, true);
@@ -1116,7 +1116,7 @@ regcache::raw_write_part (int regnum, int offset,
 
 register_status
 readable_regcache::cooked_read_part (int regnum, int offset,
-				     gdb::array_view<gdb_byte> dst)
+				     gdb::span<gdb_byte> dst)
 {
   gdb_assert (regnum >= 0 && regnum < m_descr->nr_cooked_registers);
   return read_part (regnum, offset, dst, false);
@@ -1126,7 +1126,7 @@ readable_regcache::cooked_read_part (int regnum, int offset,
 
 void
 regcache::cooked_write_part (int regnum, int offset,
-			     gdb::array_view<const gdb_byte> src)
+			     gdb::span<const gdb_byte> src)
 {
   gdb_assert (regnum >= 0 && regnum < m_descr->nr_cooked_registers);
   write_part (regnum, offset, src, false);
@@ -1135,9 +1135,9 @@ regcache::cooked_write_part (int regnum, int offset,
 /* See gdbsupport/common-regcache.h.  */
 
 void
-reg_buffer::raw_supply (int regnum, gdb::array_view<const gdb_byte> src)
+reg_buffer::raw_supply (int regnum, gdb::span<const gdb_byte> src)
 {
-  gdb::array_view<gdb_byte> dst = register_buffer (regnum);
+  gdb::span<gdb_byte> dst = register_buffer (regnum);
 
   if (src.data () != nullptr)
     {
@@ -1171,7 +1171,7 @@ void
 reg_buffer::raw_supply_integer (int regnum, const gdb_byte *addr, int addr_len,
 				bool is_signed)
 {
-  gdb::array_view<gdb_byte> dst = register_buffer (regnum);
+  gdb::span<gdb_byte> dst = register_buffer (regnum);
   bfd_endian byte_order = gdbarch_byte_order (m_descr->gdbarch);
 
   copy_integer_to_size (dst.data (), dst.size (), addr, addr_len, is_signed,
@@ -1184,7 +1184,7 @@ reg_buffer::raw_supply_integer (int regnum, const gdb_byte *addr, int addr_len,
 void
 reg_buffer::raw_supply_zeroed (int regnum)
 {
-  gdb::array_view<gdb_byte> dst = register_buffer (regnum);
+  gdb::span<gdb_byte> dst = register_buffer (regnum);
   memset (dst.data (), 0, dst.size ());
   m_register_status[regnum] = REG_VALID;
 }
@@ -1194,7 +1194,7 @@ reg_buffer::raw_supply_zeroed (int regnum)
 void
 reg_buffer::raw_supply_part_zeroed (int regnum, int offset, size_t size)
 {
-  gdb::array_view<gdb_byte> dst = register_buffer (regnum).slice (offset, size);
+  gdb::span<gdb_byte> dst = register_buffer (regnum).slice (offset, size);
   memset (dst.data (), 0, dst.size ());
   m_register_status[regnum] = REG_VALID;
 }
@@ -1202,9 +1202,9 @@ reg_buffer::raw_supply_part_zeroed (int regnum, int offset, size_t size)
 /* See gdbsupport/common-regcache.h.  */
 
 void
-reg_buffer::raw_collect (int regnum, gdb::array_view<gdb_byte> dst) const
+reg_buffer::raw_collect (int regnum, gdb::span<gdb_byte> dst) const
 {
-  gdb::array_view<const gdb_byte> src = register_buffer (regnum);
+  gdb::span<const gdb_byte> src = register_buffer (regnum);
   copy (src, dst);
 }
 
@@ -1225,7 +1225,7 @@ void
 reg_buffer::raw_collect_integer (int regnum, gdb_byte *addr, int addr_len,
 				 bool is_signed) const
 {
-  gdb::array_view<const gdb_byte> dst = register_buffer (regnum);
+  gdb::span<const gdb_byte> dst = register_buffer (regnum);
   bfd_endian byte_order = gdbarch_byte_order (m_descr->gdbarch);
   copy_integer_to_size (addr, addr_len, dst.data (), dst.size (), is_signed,
 			byte_order);
@@ -1396,7 +1396,7 @@ reg_buffer::raw_compare (int regnum, const void *buf, int offset) const
 {
   gdb_assert (buf != NULL);
 
-  gdb::array_view<const gdb_byte> regbuf = register_buffer (regnum);
+  gdb::span<const gdb_byte> regbuf = register_buffer (regnum);
   gdb_assert (offset <= regbuf.size ());
   regbuf = regbuf.slice (offset);
 
@@ -1488,7 +1488,7 @@ regcache::register_debug_string (int regno)
 
   if (regno >= 0 && regno < gdbarch_num_regs (gdbarch))
     {
-      gdb::array_view<gdb_byte> buf = register_buffer (regno);
+      gdb::span<gdb_byte> buf = register_buffer (regno);
 
       string_appendf (s, " = ");
 

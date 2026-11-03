@@ -114,7 +114,7 @@ public:
 
   bool supports_z_point_type (char z_type) override;
 
-  void process_qsupported (gdb::array_view<const char * const> features) override;
+  void process_qsupported (gdb::span<const char * const> features) override;
 
   bool supports_tracepoints () override;
 
@@ -1068,7 +1068,7 @@ x86_target::update_xmltarget ()
    PTRACE_GETREGSET.  */
 
 void
-x86_target::process_qsupported (gdb::array_view<const char * const> features)
+x86_target::process_qsupported (gdb::span<const char * const> features)
 {
   /* Return if gdb doesn't support XML.  If gdb sends "xmlRegisters="
      with "i386" in qSupported query, it supports x86 XML target

@@ -38,7 +38,7 @@ struct axs_value;
 extern unsigned int entry_values_debug;
 
 /* Find a particular location expression from a location list.  */
-gdb::array_view<const gdb_byte> dwarf2_find_location_expression
+gdb::span<const gdb_byte> dwarf2_find_location_expression
   (const dwarf2_loclist_baton *baton, CORE_ADDR pc, bool at_entry = false);
 
 /* Find the frame base information for FRAMEFUNC at PC and return the
@@ -46,7 +46,7 @@ gdb::array_view<const gdb_byte> dwarf2_find_location_expression
 
    Throw an exception if no expression is found.  */
 
-gdb::array_view<const gdb_byte> func_get_frame_base_dwarf_block
+gdb::span<const gdb_byte> func_get_frame_base_dwarf_block
   (struct symbol *framefunc, CORE_ADDR pc);
 
 /* A helper function to find the definition of NAME and compute its
@@ -72,7 +72,7 @@ call_site_parameter *dwarf_expr_reg_to_entry_parameter
    description.  */
 
 value *dwarf2_evaluate_loc_desc (type *type, const frame_info_ptr &frame,
-				 gdb::array_view<const gdb_byte> loc_desc,
+				 gdb::span<const gdb_byte> loc_desc,
 				 dwarf2_per_cu *per_cu,
 				 dwarf2_per_objfile *per_objfile,
 				 bool as_lval = true);
@@ -87,7 +87,7 @@ struct property_addr_info
   struct type *type;
 
   /* If not NULL, a buffer containing the object's value.  */
-  gdb::array_view<const gdb_byte> valaddr;
+  gdb::span<const gdb_byte> valaddr;
 
   /* The address of that object.  */
   CORE_ADDR addr;
@@ -127,11 +127,11 @@ void dwarf2_compile_property_to_c (string_file *stream,
 struct dwarf2_locexpr_baton
 {
   /* Return the expression in this baton.  */
-  gdb::array_view<const gdb_byte> expr () const
+  gdb::span<const gdb_byte> expr () const
   { return gdb::make_array_view (data, size); }
 
   /* Set the expression in this baton from EXPR.  */
-  void set_expr (gdb::array_view<const gdb_byte> expr)
+  void set_expr (gdb::span<const gdb_byte> expr)
   {
     data = expr.data ();
     size = expr.size ();
@@ -189,7 +189,7 @@ struct dwarf2_field_location_baton : public dwarf2_locexpr_baton
 struct dwarf2_loclist_baton
 {
   /* Return the location list in this baton.  */
-  gdb::array_view<const gdb_byte> expr () const
+  gdb::span<const gdb_byte> expr () const
   { return gdb::make_array_view (data, size); }
 
   /* The initial base address for the location list, based on the compilation
@@ -327,7 +327,7 @@ bool dwarf2_evaluate_property (const struct dynamic_prop *prop,
 			       const frame_info_ptr &frame,
 			       const property_addr_info *addr_stack,
 			       CORE_ADDR *value,
-			       gdb::array_view<CORE_ADDR> push_values = {});
+			       gdb::span<CORE_ADDR> push_values = {});
 
 extern struct value *value_of_dwarf_reg_entry (struct type *type,
 					       const frame_info_ptr &frame,
@@ -339,7 +339,7 @@ extern struct value *value_of_dwarf_reg_entry (struct type *type,
 static inline bool
 dwarf2_evaluate_property (const struct dynamic_prop *, const frame_info_ptr &,
 			  const property_addr_info *, CORE_ADDR *,
-			  gdb::array_view<CORE_ADDR> = {})
+			  gdb::span<CORE_ADDR> = {})
 {
   return false;
 }

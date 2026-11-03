@@ -993,7 +993,7 @@ gdbpy_decode_line (PyObject *self, PyObject *args)
 
   std::vector<symtab_and_line> decoded_sals;
   symtab_and_line def_sal;
-  gdb::array_view<symtab_and_line> sals;
+  gdb::span<symtab_and_line> sals;
   try
     {
       if (locspec != NULL)

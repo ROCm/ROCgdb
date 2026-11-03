@@ -156,7 +156,7 @@ to_char_ptr (const std::string &arg)
 
 template<typename T>
 std::string
-construct_inferior_arguments (gdb::array_view<T const> argv,
+construct_inferior_arguments (gdb::span<T const> argv,
 			      bool escape_shell_char)
 {
   /* Select the desired escape function.  */
@@ -182,19 +182,19 @@ construct_inferior_arguments (gdb::array_view<T const> argv,
 template
 std::string
 construct_inferior_arguments
-  (gdb::array_view<gdb::unique_xmalloc_ptr<char> const> argv,
+  (gdb::span<gdb::unique_xmalloc_ptr<char> const> argv,
    bool escape_shell_char);
 
 /* Instantiate for T = 'char *'.  */
 
 template
 std::string
-construct_inferior_arguments (gdb::array_view<char * const> argv,
+construct_inferior_arguments (gdb::span<char * const> argv,
 			      bool escape_shell_char);
 
 /* Instantiate for T = 'std::string'.  */
 
 template
 std::string
-construct_inferior_arguments (gdb::array_view<std::string const> argv,
+construct_inferior_arguments (gdb::span<std::string const> argv,
 			      bool escape_shell_char);

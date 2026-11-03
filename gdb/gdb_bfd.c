@@ -1154,7 +1154,7 @@ gdb_bfd_errmsg (bfd_error_type error_tag, char **matching)
 
 /* See gdb_bfd.h.  */
 
-gdb::array_view<asymbol *>
+gdb::span<asymbol *>
 gdb_bfd_canonicalize_symtab (bfd *abfd, bool should_throw)
 {
   struct gdb_bfd_data *gdata = (struct gdb_bfd_data *) bfd_usrdata (abfd);
@@ -1194,7 +1194,7 @@ gdb_bfd_canonicalize_symtab (bfd *abfd, bool should_throw)
     return {};
 
   /* bfd_canonicalize_symtab adds a trailing NULL, but don't include
-     this in the array view.  */
+     this in the span.  */
   gdb_assert (symbol_table.back () == nullptr);
   return gdb::make_array_view (symbol_table.data (),
 			       symbol_table.size () - 1);

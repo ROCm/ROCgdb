@@ -1112,7 +1112,7 @@ captured_main_1 (struct captured_main_args *context)
       symarg = argv[optind];
       execarg = argv[optind];
       ++optind;
-      gdb::array_view<char * const> arg_view (&argv[optind], argc - optind);
+      gdb::span<char * const> arg_view (&argv[optind], argc - optind);
       current_inferior ()->set_args (arg_view, (set_args == SET_ESC_ARGS));
    }
   else

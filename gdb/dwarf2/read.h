@@ -1123,7 +1123,7 @@ private:
 
   /* Helpers to build the in-memory DIE tree.  */
 
-  die_info *read_toplevel_die (gdb::array_view<attribute *> extra_attrs = {});
+  die_info *read_toplevel_die (gdb::span<attribute *> extra_attrs = {});
 
   die_info *read_die_and_siblings (die_info *parent);
 

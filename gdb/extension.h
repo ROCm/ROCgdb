@@ -198,7 +198,7 @@ struct xmethod_worker
   /* Invoke the xmethod encapsulated in this worker and return the result.
      The method is invoked on OBJ with arguments in the ARGS array.  */
 
-  virtual value *invoke (value *obj, gdb::array_view<value *> args) = 0;
+  virtual value *invoke (value *obj, gdb::span<value *> args) = 0;
 
   /* Return the arg types of the xmethod encapsulated in this worker.
      The type of the 'this' object is returned as the first element of
@@ -209,7 +209,7 @@ struct xmethod_worker
   /* Return the type of the result of the xmethod encapsulated in this worker.
      OBJECT and ARGS are the same as for invoke.  */
 
-  type *get_result_type (value *object, gdb::array_view<value *> args);
+  type *get_result_type (value *object, gdb::span<value *> args);
 
 private:
 
@@ -224,7 +224,7 @@ private:
      The result type is stored in *RESULT_TYPE.  */
 
   virtual enum ext_lang_rc do_get_result_type
-    (struct value *obj, gdb::array_view<value *> args,
+    (struct value *obj, gdb::span<value *> args,
      struct type **result_type_ptr) = 0;
 
   /* The language the xmethod worker is implemented in.  */

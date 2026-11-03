@@ -85,13 +85,13 @@ extern bool x86_check_ssp_support (const int tid);
    length 3.  */
 
 extern bool i386_ptrace_get_tls_data
-  (int pid, gdb::array_view<user_desc> buffer);
+  (int pid, gdb::span<user_desc> buffer);
 
 /* Store the three TLS related GDT (Global Descriptor Table) entries held
    in BUFFER back into the kernel for thread PID.  BUFFER must have a
    length of three.  */
 
 extern bool i386_ptrace_set_tls_data
-  (int pid, gdb::array_view<user_desc> buffer);
+  (int pid, gdb::span<user_desc> buffer);
 
 #endif /* GDB_NAT_X86_LINUX_H */

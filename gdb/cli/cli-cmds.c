@@ -73,7 +73,7 @@
 
 static void print_sal_location (const symtab_and_line &sal);
 
-static void ambiguous_line_spec (gdb::array_view<const symtab_and_line> sals,
+static void ambiguous_line_spec (gdb::span<const symtab_and_line> sals,
 				 const char *format, ...)
   ATTRIBUTE_PRINTF (2, 3);
 
@@ -2332,7 +2332,7 @@ print_sal_location (const symtab_and_line &sal)
    ambiguous.  */
 
 static void
-ambiguous_line_spec (gdb::array_view<const symtab_and_line> sals,
+ambiguous_line_spec (gdb::span<const symtab_and_line> sals,
 		     const char *format, ...)
 {
   va_list ap;

@@ -48,7 +48,7 @@ public:
 
   ptid_t wait (ptid_t, struct target_waitstatus *, target_wait_flags) override;
 
-  void pass_signals (gdb::array_view<const unsigned char>) override;
+  void pass_signals (gdb::span<const unsigned char>) override;
 
   enum target_xfer_status xfer_partial (enum target_object object,
 					const char *annex,
@@ -124,7 +124,7 @@ public:
   int remove_exec_catchpoint (int) override;
 
   int set_syscall_catchpoint (int pid, bool needed, int any_count,
-			      gdb::array_view<const int> syscall_counts) override;
+			      gdb::span<const int> syscall_counts) override;
 
   const char *pid_to_exec_file (int pid) override;
 

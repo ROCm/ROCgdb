@@ -169,7 +169,7 @@ static const gdb_byte i386_sigbe_bytes[] = {
   /* 4 bytes for tls::stackptr operand.  */
 };
 
-static const gdb::array_view<const gdb_byte> i386_sig_patterns[] {
+static const gdb::span<const gdb_byte> i386_sig_patterns[] {
   { i386_sigbe_bytes },
 };
 

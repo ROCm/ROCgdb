@@ -9868,7 +9868,7 @@ arm_neon_quad_write (struct gdbarch *gdbarch, struct regcache *regcache,
 
 static void
 arm_neon_quad_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
-		     int quad_reg_index, gdb::array_view<const gdb_byte> buf)
+		     int quad_reg_index, gdb::span<const gdb_byte> buf)
 {
   std::string raw_reg_name = string_printf ("d%d", quad_reg_index << 1);
   int double_regnum
@@ -9881,7 +9881,7 @@ arm_neon_quad_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
 
 static void
 arm_mve_pseudo_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
-		      int pseudo_reg_num, gdb::array_view<const gdb_byte> buf)
+		      int pseudo_reg_num, gdb::span<const gdb_byte> buf)
 {
   arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
 
@@ -9892,7 +9892,7 @@ arm_mve_pseudo_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
 static void
 arm_pseudo_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
 		  const int pseudo_reg_num,
-		  gdb::array_view<const gdb_byte> buf)
+		  gdb::span<const gdb_byte> buf)
 {
   arm_gdbarch_tdep *tdep = gdbarch_tdep<arm_gdbarch_tdep> (gdbarch);
 
@@ -14761,7 +14761,7 @@ arm_record_test (void)
 class test_arm_instruction_reader : public arm_instruction_reader
 {
 public:
-  explicit test_arm_instruction_reader (gdb::array_view<const uint32_t> insns)
+  explicit test_arm_instruction_reader (gdb::span<const uint32_t> insns)
     : m_insns (insns)
   {}
 
@@ -14774,7 +14774,7 @@ public:
   }
 
 private:
-  const gdb::array_view<const uint32_t> m_insns;
+  const gdb::span<const uint32_t> m_insns;
 };
 
 static void

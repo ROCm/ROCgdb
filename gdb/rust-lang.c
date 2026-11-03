@@ -648,7 +648,7 @@ rust_language::print_enum (struct value *val, struct ui_file *stream,
   opts.deref_ref = false;
 
   gdb_assert (rust_enum_p (type));
-  gdb::array_view<const gdb_byte> view
+  gdb::span<const gdb_byte> view
     (val->contents_for_printing ().data (),
      val->type ()->length ());
   type = resolve_dynamic_type (type, view, val->address ());

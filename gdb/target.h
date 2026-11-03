@@ -666,7 +666,7 @@ struct target_ops
     virtual void follow_exec (inferior *, ptid_t, const char *)
       TARGET_DEFAULT_IGNORE ();
     virtual int set_syscall_catchpoint (int, bool, int,
-					gdb::array_view<const int>)
+					gdb::span<const int>)
       TARGET_DEFAULT_RETURN (1);
     virtual void mourn_inferior ()
       TARGET_DEFAULT_FUNC (default_mourn_inferior);
@@ -678,12 +678,12 @@ struct target_ops
 
     /* Documentation of this routine is provided with the corresponding
        target_* macro.  */
-    virtual void pass_signals (gdb::array_view<const unsigned char> TARGET_DEBUG_PRINTER (target_debug_print_signals))
+    virtual void pass_signals (gdb::span<const unsigned char> TARGET_DEBUG_PRINTER (target_debug_print_signals))
       TARGET_DEFAULT_IGNORE ();
 
     /* Documentation of this routine is provided with the
        corresponding target_* function.  */
-    virtual void program_signals (gdb::array_view<const unsigned char> TARGET_DEBUG_PRINTER (target_debug_print_signals))
+    virtual void program_signals (gdb::span<const unsigned char> TARGET_DEBUG_PRINTER (target_debug_print_signals))
       TARGET_DEFAULT_IGNORE ();
 
     virtual bool thread_alive (ptid_t ptid)
@@ -701,8 +701,8 @@ struct target_ops
 						       inferior *inf)
       TARGET_DEFAULT_RETURN (NULL);
     /* See target_thread_info_to_thread_handle.  */
-    virtual gdb::array_view<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *)
-      TARGET_DEFAULT_RETURN (gdb::array_view<const gdb_byte> ());
+    virtual gdb::span<const_gdb_byte> thread_info_to_thread_handle (struct thread_info *)
+      TARGET_DEFAULT_RETURN (gdb::span<const gdb_byte> ());
     virtual void stop (ptid_t)
       TARGET_DEFAULT_IGNORE ();
     virtual void interrupt ()
@@ -1832,7 +1832,7 @@ extern int target_remove_exec_catchpoint (int pid);
 
 extern int target_set_syscall_catchpoint
   (int pid, bool needed, int any_count,
-   gdb::array_view<const int> syscall_counts);
+   gdb::span<const int> syscall_counts);
 
 /* The debugger has completed a blocking wait() call.  There is now
    some process event that must be processed.  This function should
@@ -1858,7 +1858,7 @@ extern int target_can_run ();
    if mentioned in a previous target_pass_signals call.  */
 
 extern void target_pass_signals
-  (gdb::array_view<const unsigned char> pass_signals);
+  (gdb::span<const unsigned char> pass_signals);
 
 /* Set list of signals the target may pass to the inferior.  This
    directly maps to the "handle SIGNAL pass/nopass" setting.
@@ -1875,7 +1875,7 @@ extern void target_pass_signals
    pending signals not reported to GDB).  */
 
 extern void target_program_signals
-  (gdb::array_view<const unsigned char> program_signals);
+  (gdb::span<const unsigned char> program_signals);
 
 /* Check to see if a thread is still alive.  */
 
@@ -2015,7 +2015,7 @@ extern struct thread_info *target_thread_handle_to_thread_info
 /* Given a thread, return the thread handle, a target-specific sequence of
    bytes which serves as a thread identifier within the program being
    debugged.  */
-extern gdb::array_view<const gdb_byte> target_thread_info_to_thread_handle
+extern gdb::span<const gdb_byte> target_thread_info_to_thread_handle
   (struct thread_info *);
 
 /* Attempts to find the pathname of the executable file

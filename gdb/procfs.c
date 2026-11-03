@@ -118,7 +118,7 @@ public:
 					ULONGEST offset, ULONGEST len,
 					ULONGEST *xfered_len) override;
 
-  void pass_signals (gdb::array_view<const unsigned char>) override;
+  void pass_signals (gdb::span<const unsigned char>) override;
 
   void files_info () override;
 
@@ -2501,7 +2501,7 @@ procfs_target::resume (ptid_t scope_ptid, int step, enum gdb_signal signo)
 /* Set up to trace signals in the child process.  */
 
 void
-procfs_target::pass_signals (gdb::array_view<const unsigned char> pass_signals)
+procfs_target::pass_signals (gdb::span<const unsigned char> pass_signals)
 {
   sigset_t signals;
   procinfo *pi = find_procinfo_or_die (inferior_ptid.pid (), 0);

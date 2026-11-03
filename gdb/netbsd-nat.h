@@ -44,7 +44,7 @@ struct nbsd_nat_target : public inf_ptrace_target
   int insert_exec_catchpoint (int pid) override;
   int remove_exec_catchpoint (int pid) override;
   int set_syscall_catchpoint (int pid, bool needed, int any_count,
-			      gdb::array_view<const int> syscall_counts)
+			      gdb::span<const int> syscall_counts)
     override;
 
   bool supports_multi_process () override;

@@ -825,7 +825,7 @@ dwarf_expr_context::fetch (int n)
 
 /* See expr.h.  */
 
-gdb::array_view<const gdb_byte>
+gdb::span<const gdb_byte>
 dwarf_expr_context::get_frame_base ()
 {
   ensure_have_frame (this->m_frame, "DW_OP_fbreg");
@@ -1158,7 +1158,7 @@ dwarf_expr_context::fetch_result (struct type *type, struct type *subobj_type,
 /* See expr.h.  */
 
 value *
-dwarf_expr_context::evaluate (gdb::array_view<const gdb_byte> expr,
+dwarf_expr_context::evaluate (gdb::span<const gdb_byte> expr,
 			      bool as_lval, dwarf2_per_cu *per_cu,
 			      const frame_info_ptr &frame,
 			      const struct property_addr_info *addr_info,
@@ -1327,7 +1327,7 @@ dwarf_expr_context::add_piece (ULONGEST size, ULONGEST offset,
 /* Evaluate the expression EXPR.  */
 
 void
-dwarf_expr_context::eval (gdb::array_view<const gdb_byte> expr)
+dwarf_expr_context::eval (gdb::span<const gdb_byte> expr)
 {
   int old_recursion_depth = this->m_recursion_depth;
 
@@ -1408,7 +1408,7 @@ base_types_equal_p (struct type *t1, struct type *t2)
    DWARF register number.  Otherwise return -1.  */
 
 int
-dwarf_block_to_dwarf_reg (gdb::array_view<const gdb_byte> block)
+dwarf_block_to_dwarf_reg (gdb::span<const gdb_byte> block)
 {
   uint64_t dwarf_reg;
   const gdb_byte *buf = block.data ();
@@ -1453,7 +1453,7 @@ dwarf_block_to_dwarf_reg (gdb::array_view<const gdb_byte> block)
    DW_OP_deref_size.  */
 
 int
-dwarf_block_to_dwarf_reg_deref (gdb::array_view<const gdb_byte> block,
+dwarf_block_to_dwarf_reg_deref (gdb::span<const gdb_byte> block,
 				CORE_ADDR *deref_size_return)
 {
   uint64_t dwarf_reg;
@@ -1513,7 +1513,7 @@ dwarf_block_to_dwarf_reg_deref (gdb::array_view<const gdb_byte> block,
 /* See expr.h.  */
 
 bool
-dwarf_block_to_fb_offset (gdb::array_view<const gdb_byte> block,
+dwarf_block_to_fb_offset (gdb::span<const gdb_byte> block,
 			  CORE_ADDR *fb_offset_return)
 {
   int64_t fb_offset;
@@ -1541,7 +1541,7 @@ dwarf_block_to_fb_offset (gdb::array_view<const gdb_byte> block,
 
 bool
 dwarf_block_to_sp_offset (struct gdbarch *gdbarch,
-			  gdb::array_view<const gdb_byte> block,
+			  gdb::span<const gdb_byte> block,
 			  CORE_ADDR *sp_offset_return)
 {
   uint64_t dwarf_reg;
@@ -1606,7 +1606,7 @@ trivial_entry_value (frame_info_ptr frame)
    object, evaluate the expression EXPR.  */
 
 void
-dwarf_expr_context::execute_stack_op (gdb::array_view<const gdb_byte> expr)
+dwarf_expr_context::execute_stack_op (gdb::span<const gdb_byte> expr)
 {
   gdbarch *arch = this->m_per_objfile->objfile->arch ();
   bfd_endian byte_order = gdbarch_byte_order (arch);

@@ -649,7 +649,7 @@ print_selected_record_field_types (struct type *type, struct type *outer_type,
 }
 
 static void print_record_field_types_dynamic
-  (const gdb::array_view<variant_part> &parts,
+  (const gdb::span<variant_part> &parts,
    int from, int to, struct type *type, struct ui_file *stream,
    int show, int level, const struct type_print_options *flags);
 
@@ -735,7 +735,7 @@ print_variant_part (const variant_part &part,
    and TO are the range of fields to print.  */
 
 static void
-print_record_field_types_dynamic (const gdb::array_view<variant_part> &parts,
+print_record_field_types_dynamic (const gdb::span<variant_part> &parts,
 				  int from, int to,
 				  struct type *type, struct ui_file *stream,
 				  int show, int level,

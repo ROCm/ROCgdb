@@ -171,7 +171,7 @@ trad_frame_set_reg_regmap (struct trad_frame_cache *this_trad_cache,
 void
 trad_frame_set_reg_value_bytes (struct trad_frame_cache *this_trad_cache,
 				int regnum,
-				gdb::array_view<const gdb_byte> bytes)
+				gdb::span<const gdb_byte> bytes)
 {
   /* External interface for users of trad_frame_cache
      (who cannot access the prev_regs object directly).  */

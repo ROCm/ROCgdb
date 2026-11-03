@@ -4573,7 +4573,7 @@ captured_main (int argc, char *argv[])
 	error (_("No program to debug"));
 
       int n = argc - (next_arg - argv);
-      gdb::array_view<char * const> args_view (&next_arg[1], &next_arg[n]);
+      gdb::span<char * const> args_view (&next_arg[1], &next_arg[n]);
       program_args = construct_inferior_arguments (args_view, escape_args);
 
       /* Wait till we are at first instruction in program.  */

@@ -1874,7 +1874,7 @@ gdbarch_pseudo_register_write_p (struct gdbarch *gdbarch)
 }
 
 void
-gdbarch_pseudo_register_write (struct gdbarch *gdbarch, const frame_info_ptr &next_frame, int pseudo_reg_num, gdb::array_view<const gdb_byte> buf)
+gdbarch_pseudo_register_write (struct gdbarch *gdbarch, const frame_info_ptr &next_frame, int pseudo_reg_num, gdb::span<const gdb_byte> buf)
 {
   gdb_assert (gdbarch != nullptr);
   gdb_assert (gdbarch->pseudo_register_write != nullptr);

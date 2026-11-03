@@ -1347,7 +1347,7 @@ valpy_get_bytes (PyObject *self, void *closure)
       return value_obj->content_bytes;
     }
 
-  gdb::array_view<const gdb_byte> contents;
+  gdb::span<const gdb_byte> contents;
   try
     {
       contents = value->contents ();
@@ -1881,7 +1881,7 @@ valpy_long (PyObject *self)
 	  && type->code () != TYPE_CODE_PTR)
 	error (_("Cannot convert value to long."));
 
-      gdb::array_view<const gdb_byte> contents = value->contents ();
+      gdb::span<const gdb_byte> contents = value->contents ();
 #if PY_VERSION_HEX >= 0x030d0000
       int flags = (type_byte_order (type) == BFD_ENDIAN_BIG
 		   ? Py_ASNATIVEBYTES_BIG_ENDIAN

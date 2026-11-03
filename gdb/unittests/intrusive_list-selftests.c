@@ -81,7 +81,7 @@ struct item_with_member
 template <typename ListType>
 static void
 verify_items (const ListType &list,
-	      gdb::array_view<const typename ListType::value_type *> expected)
+	      gdb::span<const typename ListType::value_type *> expected)
 {
   using item_type = typename ListType::value_type;
 

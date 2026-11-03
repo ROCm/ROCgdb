@@ -42,7 +42,7 @@ arm_get_next_pcs_ctor (struct arm_get_next_pcs *self,
 /* Return true if INSN matches one of the <value,mask> pairs in MATCHES.  */
 
 static bool
-insn_matches (uint32_t insn, gdb::array_view<const uint32_t> matches)
+insn_matches (uint32_t insn, gdb::span<const uint32_t> matches)
 {
   gdb_assert (matches.size () % 2 == 0);
 

@@ -78,7 +78,7 @@ struct reg_buffer_common
 
   /* Supply register REGNUM, whose contents are stored in SRC, to this register
      buffer.  */
-  virtual void raw_supply (int regnum, gdb::array_view<const gdb_byte> src)
+  virtual void raw_supply (int regnum, gdb::span<const gdb_byte> src)
     = 0;
 
   void raw_supply (int regnum, const uint64_t *src)
@@ -98,7 +98,7 @@ struct reg_buffer_common
 
   /* Collect register REGNUM from this register buffer and store its contents in
      DST.  */
-  virtual void raw_collect (int regnum, gdb::array_view<gdb_byte> dst) const
+  virtual void raw_collect (int regnum, gdb::span<gdb_byte> dst) const
     = 0;
 
   void raw_collect (int regnum, uint64_t *dst) const

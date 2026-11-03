@@ -2584,7 +2584,7 @@ decode_constrained_packed_array (struct value *arr)
      sizes.  */
   const gdb_byte *valaddr = arr->contents_for_printing ().data ();
   CORE_ADDR address = arr->address ();
-  gdb::array_view<const gdb_byte> view
+  gdb::span<const gdb_byte> view
     = gdb::make_array_view (valaddr, type->length ());
   type = resolve_dynamic_type (type, view, address);
   recursively_update_array_bitsize (type);
@@ -6360,7 +6360,7 @@ value_tag_from_contents_and_address (struct type *type,
   int tag_byte_offset;
   struct type *tag_type;
 
-  gdb::array_view<const gdb_byte> contents;
+  gdb::span<const gdb_byte> contents;
   if (valaddr != nullptr)
     contents = gdb::make_array_view (valaddr, type->length ());
   struct type *resolved_type = resolve_dynamic_type (type, contents, address);
@@ -9204,7 +9204,7 @@ ada_promote_array_of_integrals (struct type *type, struct value *val)
     error (_("unable to determine array bounds"));
 
   value *res = value::allocate (type);
-  gdb::array_view<gdb_byte> res_contents = res->contents_writeable ();
+  gdb::span<gdb_byte> res_contents = res->contents_writeable ();
 
   /* Promote each array element.  */
   for (i = 0; i < hi - lo + 1; i++)

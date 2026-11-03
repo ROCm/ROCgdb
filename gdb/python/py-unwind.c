@@ -966,7 +966,7 @@ frame_unwind_python::sniff (const frame_info_ptr &this_frame,
 	cached_reg_t *cached = new (&cached_frame->reg[i]) cached_reg_t ();
 	cached->num = reg->number;
 	cached->data.resize (data_size);
-	gdb::array_view<const gdb_byte> contents = value->contents ();
+	gdb::span<const gdb_byte> contents = value->contents ();
 	cached->data.assign (contents.begin (), contents.end ());
       }
   }

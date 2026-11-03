@@ -698,7 +698,7 @@ extern void frame_register_unwind (const frame_info_ptr &frame, int regnum,
 				   bool *optimizedp, bool *unavailablep,
 				   enum lval_type *lvalp,
 				   CORE_ADDR *addrp, int *realnump,
-				   gdb::array_view<gdb_byte> value = {});
+				   gdb::span<gdb_byte> value = {});
 
 /* Fetch a register from this, or unwind a register from the next
    frame.  Note that the get_frame methods are wrappers to
@@ -707,9 +707,9 @@ extern void frame_register_unwind (const frame_info_ptr &frame, int regnum,
    do return a lazy value.  */
 
 extern void frame_unwind_register (const frame_info_ptr &next_frame,
-				   int regnum, gdb::array_view<gdb_byte> buf);
+				   int regnum, gdb::span<gdb_byte> buf);
 extern void get_frame_register (const frame_info_ptr &frame,
-				int regnum, gdb::array_view<gdb_byte> buf);
+				int regnum, gdb::span<gdb_byte> buf);
 
 struct value *frame_unwind_register_value (const frame_info_ptr &next_frame,
 					   int regnum);
@@ -737,7 +737,7 @@ extern bool read_frame_register_unsigned (const frame_info_ptr &frame,
    Note: this call makes the frame's state undefined.  The register and frame
    caches must be flushed.  */
 extern void put_frame_register (const frame_info_ptr &next_frame, int regnum,
-				gdb::array_view<const gdb_byte> buf);
+				gdb::span<const gdb_byte> buf);
 
 /* Read LEN bytes from one or multiple registers starting with REGNUM in
    NEXT_FRAME's previous frame, starting at OFFSET, into BUF.  If the register
@@ -745,14 +745,14 @@ extern void put_frame_register (const frame_info_ptr &next_frame, int regnum,
    accordingly.  */
 extern bool get_frame_register_bytes (const frame_info_ptr &next_frame,
 				      int regnum, CORE_ADDR offset,
-				      gdb::array_view<gdb_byte> buffer,
+				      gdb::span<gdb_byte> buffer,
 				      bool *optimizedp, bool *unavailablep);
 
 /* Write bytes from BUFFER to one or multiple registers starting with REGNUM
    in NEXT_FRAME's previous frame, starting at OFFSET.  */
 extern void put_frame_register_bytes (const frame_info_ptr &next_frame,
 				      int regnum, CORE_ADDR offset,
-				      gdb::array_view<const gdb_byte> buffer);
+				      gdb::span<const gdb_byte> buffer);
 
 /* Unwind the PC.  Strictly speaking return the resume address of the
    calling frame.  For GDB, `pc' is the resume address and not a
@@ -778,7 +778,7 @@ extern void frame_pop (const frame_info_ptr &frame);
    adaptor frames this should be ok.  */
 
 extern void get_frame_memory (const frame_info_ptr &this_frame, CORE_ADDR addr,
-			      gdb::array_view<gdb_byte> buffer);
+			      gdb::span<gdb_byte> buffer);
 extern LONGEST get_frame_memory_signed (const frame_info_ptr &this_frame,
 					CORE_ADDR memaddr, int len);
 extern ULONGEST get_frame_memory_unsigned (const frame_info_ptr &this_frame,
@@ -787,7 +787,7 @@ extern ULONGEST get_frame_memory_unsigned (const frame_info_ptr &this_frame,
 /* Same as above, but return true zero when the entire memory read
    succeeds, false otherwise.  */
 extern bool safe_frame_unwind_memory (const frame_info_ptr &this_frame, CORE_ADDR addr,
-				      gdb::array_view<gdb_byte> buffer);
+				      gdb::span<gdb_byte> buffer);
 
 /* Return this frame's architecture.  */
 extern gdbarch *get_frame_arch (const frame_info_ptr &this_frame);
@@ -910,7 +910,7 @@ extern void print_frame_info (const frame_print_options &fp_opts,
 extern frame_info_ptr block_innermost_frame (const struct block *);
 
 extern bool deprecated_frame_register_read (const frame_info_ptr &frame, int regnum,
-					    gdb::array_view<gdb_byte> buf);
+					    gdb::span<gdb_byte> buf);
 
 /* From stack.c.  */
 

@@ -225,7 +225,7 @@ register %s (#%d) at %s"),
 }
 
 static CORE_ADDR
-execute_stack_op (gdb::array_view<const gdb_byte> expr, int addr_size,
+execute_stack_op (gdb::span<const gdb_byte> expr, int addr_size,
 		  const frame_info_ptr &this_frame, CORE_ADDR initial,
 		  int initial_in_stack_memory, dwarf2_per_objfile *per_objfile)
 {
@@ -755,7 +755,7 @@ bool
 dwarf2_fetch_cfa_info (struct gdbarch *gdbarch, CORE_ADDR pc,
 		       dwarf2_per_cu *data, int *regnum_out,
 		       LONGEST *offset_out, CORE_ADDR *text_offset_out,
-		       gdb::array_view<const gdb_byte> &cfa_expr_out)
+		       gdb::span<const gdb_byte> &cfa_expr_out)
 {
   struct dwarf2_fde *fde;
   dwarf2_per_objfile *per_objfile;

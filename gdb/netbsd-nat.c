@@ -713,7 +713,7 @@ nbsd_nat_target::remove_exec_catchpoint (int pid)
 int
 nbsd_nat_target::set_syscall_catchpoint (int pid, bool needed,
 					 int any_count,
-					 gdb::array_view<const int> syscall_counts)
+					 gdb::span<const int> syscall_counts)
 {
   /* Ignore the arguments.  inf-ptrace.c will use PT_SYSCALL which
      will catch all system call entries and exits.  The system calls

@@ -745,7 +745,7 @@ infpy_thread_from_thread_handle (PyObject *self, PyObject *args, PyObject *kw)
       struct thread_info *thread_info;
 
       thread_info = find_thread_by_handle
-	(gdb::array_view<const gdb_byte> (bytes, bytes_len),
+	(gdb::span<const gdb_byte> (bytes, bytes_len),
 	 inf_obj->inferior);
       if (thread_info != NULL)
 	return thread_to_thread_object (thread_info).release ();
@@ -894,7 +894,7 @@ infpy_set_args (PyObject *self, PyObject *value, void *closure)
 	    return -1;
 	  args.push_back (std::move (str));
 	}
-      gdb::array_view<gdb::unique_xmalloc_ptr<char> const> args_view (args);
+      gdb::span<gdb::unique_xmalloc_ptr<char> const> args_view (args);
       inf->inferior->set_args (args_view, true);
     }
   else

@@ -463,7 +463,7 @@ find_function_addr (struct value *function,
 static CORE_ADDR
 push_dummy_code (struct gdbarch *gdbarch,
 		 CORE_ADDR sp, CORE_ADDR funaddr,
-		 gdb::array_view<value *> args,
+		 gdb::span<value *> args,
 		 struct type *value_type,
 		 CORE_ADDR *real_pc, CORE_ADDR *bp_addr,
 		 struct regcache *regcache)
@@ -1038,7 +1038,7 @@ call_destructors (const std::list<destructor_info> &dtors_to_invoke,
 struct value *
 call_function_by_hand (struct value *function,
 		       type *default_return_type,
-		       gdb::array_view<value *> args)
+		       gdb::span<value *> args)
 {
   return call_function_by_hand_dummy (function, default_return_type,
 				      args, NULL, NULL);
@@ -1065,7 +1065,7 @@ call_function_by_hand (struct value *function,
 struct value *
 call_function_by_hand_dummy (struct value *function,
 			     type *default_return_type,
-			     gdb::array_view<value *> args,
+			     gdb::span<value *> args,
 			     dummy_frame_dtor_ftype *dummy_dtor,
 			     void *dummy_dtor_data)
 {

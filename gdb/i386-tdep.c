@@ -3348,7 +3348,7 @@ i386_pseudo_register_read_value (gdbarch *gdbarch, const frame_info_ptr &next_fr
 void
 i386_pseudo_register_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
 			    const int pseudo_reg_num,
-			    gdb::array_view<const gdb_byte> buf)
+			    gdb::span<const gdb_byte> buf)
 {
   if (i386_mmx_regnum_p (gdbarch, pseudo_reg_num))
     {

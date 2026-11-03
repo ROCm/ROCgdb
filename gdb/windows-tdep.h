@@ -66,7 +66,7 @@ class cygwin_sigwrapper_frame_unwind : public frame_unwind
 {
 public:
   explicit cygwin_sigwrapper_frame_unwind
-    (gdb::array_view<const gdb::array_view<const gdb_byte>> patterns_list);
+    (gdb::span<const gdb::span<const gdb_byte>> patterns_list);
 
   /* Architecture-specific list of instruction patterns to match.
      It's a list of patterns instead of single pattern because some
@@ -75,7 +75,7 @@ public:
      sequence is assumed to be followed by 4 bytes for tls::stackptr.
      If any pattern in the list matches, then the frame is assumed to
      be a sigwrapper frame.  */
-  gdb::array_view<const gdb::array_view<const gdb_byte>> patterns_list;
+  gdb::span<const gdb::span<const gdb_byte>> patterns_list;
 
   /* Calculate the frame ID of a cygwin wrapper.  */
   void this_id (const frame_info_ptr &this_frame, void **this_prologue_cache,

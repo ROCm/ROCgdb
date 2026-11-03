@@ -44,7 +44,7 @@ run_tests ()
   /* With non-owning container.  */
   {
     std::array<int, 4> array = {1, 2, 3, 2};
-    gdb::array_view<int> view = array;
+    gdb::span<int> view = array;
     gdb::ranges::replace (view, 2, 1);
     SELF_CHECK (array[0] == 1);
     SELF_CHECK (array[1] == 1);

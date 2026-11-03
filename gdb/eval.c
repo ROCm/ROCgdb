@@ -582,7 +582,7 @@ evaluate_var_msym_value (enum noside noside,
 value *
 evaluate_subexp_do_call (expression *exp, enum noside noside,
 			 value *callee,
-			 gdb::array_view<value *> argvec,
+			 gdb::span<value *> argvec,
 			 const char *function_name,
 			 type *default_return_type)
 {
@@ -771,7 +771,7 @@ scope_operation::evaluate_funcall (struct type *expect_type,
 
   for (int i = 0; i < args.size (); ++i)
     argvec[i + 1] = args[i]->evaluate_with_coercion (exp, noside);
-  gdb::array_view<value *> arg_view = argvec;
+  gdb::span<value *> arg_view = argvec;
 
   value *callee = nullptr;
   if (function_name != nullptr)
@@ -820,7 +820,7 @@ structop_member_base::evaluate_funcall (struct type *expect_type,
     lhs = std::get<0> (m_storage)->evaluate (nullptr, exp, noside);
 
   std::vector<value *> vals (args.size () + 1);
-  gdb::array_view<value *> val_view = vals;
+  gdb::span<value *> val_view = vals;
   /* If the function is a virtual function, then the aggregate
      value (providing the structure) plays its part by providing
      the vtable.  Otherwise, it is just along for the ride: call
@@ -926,8 +926,8 @@ structop_base_operation::evaluate_funcall
   for (int i = 0; i < args.size (); ++i)
     vals[i + 1] = args[i]->evaluate_with_coercion (exp, noside);
 
-  /* The array view includes the `this' pointer.  */
-  gdb::array_view<value *> arg_view (vals);
+  /* The span includes the `this' pointer.  */
+  gdb::span<value *> arg_view (vals);
 
   int static_memfuncp;
   value *callee;
@@ -1914,7 +1914,7 @@ eval_binop_assign_modify (struct type *expect_type, struct expression *exp,
 static struct value *
 eval_multi_subscript (struct type *expect_type, struct expression *exp,
 		      enum noside noside, value *arg1,
-		      gdb::array_view<value *> args)
+		      gdb::span<value *> args)
 {
   for (value *arg2 : args)
     {

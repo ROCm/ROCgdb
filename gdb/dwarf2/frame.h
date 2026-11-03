@@ -79,7 +79,7 @@ struct dwarf2_frame_state_reg
     struct
     {
       /* Return this expression.  */
-      gdb::array_view<const gdb_byte> view () const
+      gdb::span<const gdb_byte> view () const
       { return gdb::make_array_view (start, len); }
 
       const gdb_byte *start;
@@ -147,7 +147,7 @@ struct dwarf2_frame_state_reg_info
   LONGEST cfa_offset = 0;
   ULONGEST cfa_reg = 0;
   enum cfa_how_kind cfa_how = CFA_UNSET;
-  gdb::array_view<const gdb_byte> cfa_exp;
+  gdb::span<const gdb_byte> cfa_exp;
 
   /* Used to implement DW_CFA_remember_state.  */
   struct dwarf2_frame_state_reg_info *prev = NULL;
@@ -265,7 +265,7 @@ CORE_ADDR dwarf2_frame_cfa (const frame_info_ptr &this_frame);
 extern bool dwarf2_fetch_cfa_info
   (struct gdbarch *gdbarch, CORE_ADDR pc, dwarf2_per_cu *data, int *regnum_out,
    LONGEST *offset_out, CORE_ADDR *text_offset_out,
-   gdb::array_view<const gdb_byte> &cfa_expr_out);
+   gdb::span<const gdb_byte> &cfa_expr_out);
 
 /* Allocate a new instance of the function unique data.
 

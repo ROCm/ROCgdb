@@ -1378,7 +1378,7 @@ smash_to_methodptr_type (struct type *type, struct type *to_type)
 
 void
 smash_to_method_type (struct type *type, struct type *self_type,
-		      struct type *to_type, gdb::array_view<struct field> args,
+		      struct type *to_type, gdb::span<struct field> args,
 		      int varargs)
 {
   smash_type (type);
@@ -2492,7 +2492,7 @@ static void
 compute_variant_fields (struct type *type,
 			struct type *resolved_type,
 			const property_addr_info *addr_stack,
-			const gdb::array_view<variant_part> &parts)
+			const gdb::span<variant_part> &parts)
 {
   /* Assume all fields are included by default.  */
   std::vector<bool> flags (resolved_type->num_fields (), true);
@@ -2828,7 +2828,7 @@ resolve_dynamic_type_internal (struct type *type,
 
 struct type *
 resolve_dynamic_type (struct type *type,
-		      gdb::array_view<const gdb_byte> valaddr,
+		      gdb::span<const gdb_byte> valaddr,
 		      CORE_ADDR addr,
 		      const frame_info_ptr *in_frame)
 {
@@ -3846,8 +3846,8 @@ compare_badness (const badness_vector &a, const badness_vector &b)
    has ARGS.size() + 1 entries.  */
 
 badness_vector
-rank_function (gdb::array_view<type *> parms,
-	       gdb::array_view<value *> args,
+rank_function (gdb::span<type *> parms,
+	       gdb::span<value *> args,
 	       bool varargs)
 {
   /* add 1 for the length-match rank.  */
@@ -4714,7 +4714,7 @@ rank_one_type (struct type *parm, struct type *arg, struct value *value)
    situation.  */
 
 static void
-print_args (gdb::array_view<struct field> args, int spaces)
+print_args (gdb::span<struct field> args, int spaces)
 {
   for (auto [i, arg] : gdb::ranges::views::enumerate (args))
     {

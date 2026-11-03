@@ -50,7 +50,7 @@
 
 static struct value *dwarf2_evaluate_loc_desc_full
   (struct type *type, const frame_info_ptr &frame,
-   gdb::array_view<const gdb_byte> loc_desc, dwarf2_per_cu *per_cu,
+   gdb::span<const gdb_byte> loc_desc, dwarf2_per_cu *per_cu,
    dwarf2_per_objfile *per_objfile, struct type *subobj_type,
    LONGEST subobj_byte_offset, bool as_lval = true);
 
@@ -362,7 +362,7 @@ decode_debug_loc_dwo_addresses (dwarf2_per_cu *per_cu,
    For now, only return the first matching location expression; there
    can be more than one in the list.  */
 
-gdb::array_view<const gdb_byte>
+gdb::span<const gdb_byte>
 dwarf2_find_location_expression (const dwarf2_loclist_baton *baton,
 				 const CORE_ADDR pc, bool at_entry)
 {
@@ -481,7 +481,7 @@ dwarf2_find_location_expression (const dwarf2_loclist_baton *baton,
 /* Implement find_frame_base_location method for LOC_BLOCK functions using
    DWARF expression for its DW_AT_frame_base.  */
 
-static gdb::array_view<const gdb_byte>
+static gdb::span<const gdb_byte>
 locexpr_find_frame_base_location (struct symbol *framefunc, CORE_ADDR pc)
 {
   struct dwarf2_locexpr_baton *symbaton
@@ -536,7 +536,7 @@ const struct symbol_block_ops dwarf2_block_frame_base_locexpr_funcs =
 /* Implement find_frame_base_location method for LOC_BLOCK functions using
    DWARF location list for its DW_AT_frame_base.  */
 
-static gdb::array_view<const gdb_byte>
+static gdb::span<const gdb_byte>
 loclist_find_frame_base_location (struct symbol *framefunc, CORE_ADDR pc)
 {
   struct dwarf2_loclist_baton *symbaton
@@ -590,10 +590,10 @@ const struct symbol_block_ops dwarf2_block_frame_base_loclist_funcs =
 
 /* See dwarf2/loc.h.  */
 
-gdb::array_view<const gdb_byte>
+gdb::span<const gdb_byte>
 func_get_frame_base_dwarf_block (struct symbol *framefunc, CORE_ADDR pc)
 {
-  gdb::array_view<const gdb_byte> block;
+  gdb::span<const gdb_byte> block;
 
   if (const symbol_block_ops *block_ops = framefunc->block_ops ();
       block_ops != nullptr)
@@ -1380,7 +1380,7 @@ value_of_dwarf_reg_entry (struct type *type, const frame_info_ptr &frame,
 
 static struct value *
 value_of_dwarf_block_entry (struct type *type, const frame_info_ptr &frame,
-			    gdb::array_view<const gdb_byte> block)
+			    gdb::span<const gdb_byte> block)
 {
   union call_site_parameter_u kind_u;
 
@@ -1479,7 +1479,7 @@ indirect_synthetic_pointer (sect_offset die, LONGEST byte_offset,
 
 static struct value *
 dwarf2_evaluate_loc_desc_full (struct type *type, const frame_info_ptr &frame,
-			       gdb::array_view<const gdb_byte> loc_desc,
+			       gdb::span<const gdb_byte> loc_desc,
 			       dwarf2_per_cu *per_cu,
 			       dwarf2_per_objfile *per_objfile,
 			       struct type *subobj_type,
@@ -1544,7 +1544,7 @@ dwarf2_evaluate_loc_desc_full (struct type *type, const frame_info_ptr &frame,
 
 struct value *
 dwarf2_evaluate_loc_desc (struct type *type, const frame_info_ptr &frame,
-			  gdb::array_view<const gdb_byte> loc_desc,
+			  gdb::span<const gdb_byte> loc_desc,
 			  dwarf2_per_cu *per_cu,
 			  dwarf2_per_objfile *per_objfile, bool as_lval)
 {
@@ -1569,7 +1569,7 @@ dwarf2_locexpr_baton_eval (const struct dwarf2_locexpr_baton *dlbaton,
 			   const frame_info_ptr &frame,
 			   const struct property_addr_info *addr_stack,
 			   CORE_ADDR *valp,
-			   gdb::array_view<CORE_ADDR> push_values,
+			   gdb::span<CORE_ADDR> push_values,
 			   bool *is_reference)
 {
   if (dlbaton->size == 0)
@@ -1630,7 +1630,7 @@ dwarf2_evaluate_property (const dynamic_prop *prop,
 			  const frame_info_ptr &initial_frame,
 			  const property_addr_info *addr_stack,
 			  CORE_ADDR *value,
-			  gdb::array_view<CORE_ADDR> push_values)
+			  gdb::span<CORE_ADDR> push_values)
 {
   /* Evaluating a property should not change the current language.
      Without this here this could happen if the code below selects a
@@ -1792,7 +1792,7 @@ dwarf2_compile_property_to_c (string_file *stream,
 {
 #if defined (HAVE_COMPILE)
   const dwarf2_property_baton *baton = prop->baton ();
-  gdb::array_view<const gdb_byte> expr;
+  gdb::span<const gdb_byte> expr;
   dwarf2_per_cu *per_cu;
   dwarf2_per_objfile *per_objfile;
 
@@ -1826,7 +1826,7 @@ dwarf2_compile_property_to_c (string_file *stream,
    expression.  */
 
 static enum symbol_needs_kind
-dwarf2_get_symbol_read_needs (gdb::array_view<const gdb_byte> expr,
+dwarf2_get_symbol_read_needs (gdb::span<const gdb_byte> expr,
 			      dwarf2_per_cu *per_cu,
 			      dwarf2_per_objfile *per_objfile,
 			      bfd_endian byte_order,
@@ -2379,7 +2379,7 @@ access_memory (struct gdbarch *arch, struct agent_expr *expr, ULONGEST nbits)
 static void
 dwarf2_compile_expr_to_ax (struct agent_expr *ax, struct axs_value *loc,
 			   unsigned int addr_size,
-			   gdb::array_view<const gdb_byte> expr,
+			   gdb::span<const gdb_byte> expr,
 			   dwarf2_per_cu *per_cu,
 			   dwarf2_per_objfile *per_objfile)
 {
@@ -2878,7 +2878,7 @@ dwarf2_compile_expr_to_ax (struct agent_expr *ax, struct axs_value *loc,
 	    int regnum;
 	    CORE_ADDR text_offset;
 	    LONGEST off;
-	    gdb::array_view<const gdb_byte> cfa_expr;
+	    gdb::span<const gdb_byte> cfa_expr;
 
 	    if (dwarf2_fetch_cfa_info (arch, ax->scope, per_cu, &regnum,
 				       &off, &text_offset, cfa_expr))
@@ -3722,7 +3722,7 @@ show_dwarf_always_disassemble (struct ui_file *file, int from_tty,
 static void
 locexpr_describe_location_1 (struct symbol *symbol, CORE_ADDR addr,
 			     struct ui_file *stream,
-			     gdb::array_view<const gdb_byte> expr,
+			     gdb::span<const gdb_byte> expr,
 			     unsigned int addr_size,
 			     int offset_size, dwarf2_per_cu *per_cu,
 			     dwarf2_per_objfile *per_objfile)

@@ -21,10 +21,10 @@
 #include <type_traits>
 
 template<typename T, typename = std::is_integral<T>>
-T extract_integer (gdb::array_view<const gdb_byte>, enum bfd_endian byte_order);
+T extract_integer (gdb::span<const gdb_byte>, enum bfd_endian byte_order);
 
 static inline LONGEST
-extract_signed_integer (gdb::array_view<const gdb_byte> buf,
+extract_signed_integer (gdb::span<const gdb_byte> buf,
 			enum bfd_endian byte_order)
 {
   return extract_integer<LONGEST> (buf, byte_order);
@@ -34,12 +34,12 @@ static inline LONGEST
 extract_signed_integer (const gdb_byte *addr, int len,
 			enum bfd_endian byte_order)
 {
-  return extract_signed_integer (gdb::array_view<const gdb_byte> (addr, len),
+  return extract_signed_integer (gdb::span<const gdb_byte> (addr, len),
 				 byte_order);
 }
 
 static inline ULONGEST
-extract_unsigned_integer (gdb::array_view<const gdb_byte> buf,
+extract_unsigned_integer (gdb::span<const gdb_byte> buf,
 			  enum bfd_endian byte_order)
 {
   return extract_integer<ULONGEST> (buf, byte_order);
@@ -49,7 +49,7 @@ static inline ULONGEST
 extract_unsigned_integer (const gdb_byte *addr, int len,
 			  enum bfd_endian byte_order)
 {
-  return extract_unsigned_integer (gdb::array_view<const gdb_byte> (addr, len),
+  return extract_unsigned_integer (gdb::span<const gdb_byte> (addr, len),
 				   byte_order);
 }
 
@@ -60,7 +60,7 @@ extern CORE_ADDR extract_typed_address (const gdb_byte *buf,
    DST.  */
 
 template<typename T, typename = RequireLongest<T>>
-extern void store_integer (gdb::array_view<gdb_byte> dst,
+extern void store_integer (gdb::span<gdb_byte> dst,
 			   bfd_endian byte_order, T val);
 
 /* Take host-format integer VAL and store it as target-format integer at
@@ -77,7 +77,7 @@ store_integer (gdb_byte *addr, int len, bfd_endian byte_order, T val)
    signed integer at DST.  */
 
 static inline void
-store_signed_integer (gdb::array_view<gdb_byte> dst, bfd_endian byte_order,
+store_signed_integer (gdb::span<gdb_byte> dst, bfd_endian byte_order,
 		      LONGEST val)
 {
   return store_integer (dst, byte_order, val);
@@ -98,7 +98,7 @@ store_signed_integer (gdb_byte *addr, int len, bfd_endian byte_order,
    unsigned integer at DST.  */
 
 static inline void
-store_unsigned_integer (gdb::array_view<gdb_byte> dst, bfd_endian byte_order,
+store_unsigned_integer (gdb::span<gdb_byte> dst, bfd_endian byte_order,
 			ULONGEST val)
 {
   return store_integer (dst, byte_order, val);

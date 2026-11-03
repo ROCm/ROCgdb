@@ -336,7 +336,7 @@ unop_user_defined_p (enum exp_opcode op, struct value *arg1)
    situations or combinations thereof.  */
 
 static struct value *
-value_user_defined_cpp_op (gdb::array_view<value *> args, char *oper,
+value_user_defined_cpp_op (gdb::span<value *> args, char *oper,
 			   int *static_memfuncp, enum noside noside)
 {
 
@@ -367,7 +367,7 @@ value_user_defined_cpp_op (gdb::array_view<value *> args, char *oper,
    function, otherwise return NULL.  */
 
 static struct value *
-value_user_defined_op (struct value **argp, gdb::array_view<value *> args,
+value_user_defined_op (struct value **argp, gdb::span<value *> args,
 		       char *name, int *static_memfuncp, enum noside noside)
 {
   struct value *result = NULL;
@@ -411,7 +411,7 @@ value_x_binop (struct value *arg1, struct value *arg2, enum exp_opcode op,
     error (_("Can't do that binary op on that type"));	/* FIXME be explicit */
 
   value *argvec_storage[3];
-  gdb::array_view<value *> argvec = argvec_storage;
+  gdb::span<value *> argvec = argvec_storage;
 
   argvec[1] = value_addr (arg1);
   argvec[2] = arg2;
@@ -587,7 +587,7 @@ value_x_unop (struct value *arg1, enum exp_opcode op, enum noside noside)
     error (_("Can't do that unary op on that type"));	/* FIXME be explicit */
 
   value *argvec_storage[3];
-  gdb::array_view<value *> argvec = argvec_storage;
+  gdb::span<value *> argvec = argvec_storage;
 
   argvec[1] = value_addr (arg1);
   argvec[2] = 0;
@@ -732,9 +732,9 @@ value_concat (struct value *arg1, struct value *arg2)
 						lowbound + n_elts - 1);
 
   struct value *result = value::allocate (atype);
-  gdb::array_view<gdb_byte> contents = result->contents_raw ();
-  gdb::array_view<const gdb_byte> lhs_contents = arg1->contents ();
-  gdb::array_view<const gdb_byte> rhs_contents = arg2->contents ();
+  gdb::span<gdb_byte> contents = result->contents_raw ();
+  gdb::span<const gdb_byte> lhs_contents = arg1->contents ();
+  gdb::span<const gdb_byte> rhs_contents = arg2->contents ();
   gdb::copy (lhs_contents, contents.slice (0, lhs_contents.size ()));
   gdb::copy (rhs_contents, contents.slice (lhs_contents.size ()));
 
@@ -1415,7 +1415,7 @@ value_vector_widen (struct value *scalar_value, struct type *vector_type)
     error (_("conversion of scalar to vector involves truncation"));
 
   value *val = value::allocate (vector_type);
-  gdb::array_view<gdb_byte> val_contents = val->contents_writeable ();
+  gdb::span<gdb_byte> val_contents = val->contents_writeable ();
   int elt_len = eltype->length ();
 
   for (i = 0; i < high_bound - low_bound + 1; i++)
@@ -1462,7 +1462,7 @@ vector_binop (struct value *val1, struct value *val2, enum exp_opcode op)
     error (_("Cannot perform operation on vectors with different types"));
 
   value *val = value::allocate (type1);
-  gdb::array_view<gdb_byte> val_contents = val->contents_writeable ();
+  gdb::span<gdb_byte> val_contents = val->contents_writeable ();
   scoped_value_mark mark;
   for (i = 0; i < high_bound1 - low_bound1 + 1; i++)
     {
@@ -1757,7 +1757,7 @@ value_neg (struct value *arg1)
       if (!get_array_bounds (type, &low_bound, &high_bound))
 	error (_("Could not determine the vector bounds"));
 
-      gdb::array_view<gdb_byte> val_contents = val->contents_writeable ();
+      gdb::span<gdb_byte> val_contents = val->contents_writeable ();
       int elt_len = eltype->length ();
 
       for (i = 0; i < high_bound - low_bound + 1; i++)
@@ -1808,7 +1808,7 @@ value_complement (struct value *arg1)
 	error (_("Could not determine the vector bounds"));
 
       val = value::allocate (type);
-      gdb::array_view<gdb_byte> val_contents = val->contents_writeable ();
+      gdb::span<gdb_byte> val_contents = val->contents_writeable ();
       int elt_len = eltype->length ();
 
       for (i = 0; i < high_bound - low_bound + 1; i++)

@@ -152,7 +152,7 @@ find_end_options_delimiter (const char *args)
 /* Complete TEXT/WORD on all options in OPTIONS_GROUP.  */
 
 static void
-complete_on_options (gdb::array_view<const option_def_group> options_group,
+complete_on_options (gdb::span<const option_def_group> options_group,
 		     completion_tracker &tracker,
 		     const char *text, const char *word)
 {
@@ -170,7 +170,7 @@ complete_on_options (gdb::array_view<const option_def_group> options_group,
 
 void
 complete_on_all_options (completion_tracker &tracker,
-			 gdb::array_view<const option_def_group> options_group)
+			 gdb::span<const option_def_group> options_group)
 {
   static const char opt[] = "-";
   complete_on_options (options_group, tracker, opt + 1, opt);
@@ -180,7 +180,7 @@ complete_on_all_options (completion_tracker &tracker,
    whole ARGS line included the "--" options-terminator delimiter.  */
 
 static std::optional<option_def_and_value>
-parse_option (gdb::array_view<const option_def_group> options_group,
+parse_option (gdb::span<const option_def_group> options_group,
 	      process_options_mode mode,
 	      bool have_delimiter,
 	      const char **args,
@@ -570,7 +570,7 @@ bool
 complete_options (completion_tracker &tracker,
 		  const char **args,
 		  process_options_mode mode,
-		  gdb::array_view<const option_def_group> options_group)
+		  gdb::span<const option_def_group> options_group)
 {
   const char *text = *args;
 
@@ -734,7 +734,7 @@ save_option_value_in_ctx (std::optional<option_def_and_value> &ov)
 bool
 process_options (const char **args,
 		 process_options_mode mode,
-		 gdb::array_view<const option_def_group> options_group)
+		 gdb::span<const option_def_group> options_group)
 {
   if (*args == nullptr)
     return false;
@@ -866,7 +866,7 @@ append_indented_doc (const char *doc, std::string &help)
    OPTIONS.  */
 
 static void
-build_help_option (gdb::array_view<const option_def> options,
+build_help_option (gdb::span<const option_def> options,
 		   std::string &help)
 {
   std::string buffer;
@@ -895,7 +895,7 @@ build_help_option (gdb::array_view<const option_def> options,
 
 std::string
 build_help (const char *help_tmpl,
-	    gdb::array_view<const option_def_group> options_group)
+	    gdb::span<const option_def_group> options_group)
 {
   bool need_newlines = false;
   std::string help_str;
@@ -924,7 +924,7 @@ build_help (const char *help_tmpl,
 void
 add_setshow_cmds_for_options (command_class cmd_class,
 			      void *data,
-			      gdb::array_view<const option_def> options,
+			      gdb::span<const option_def> options,
 			      struct cmd_list_element **set_list,
 			      struct cmd_list_element **show_list)
 {
