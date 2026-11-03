@@ -20,7 +20,7 @@
 #ifndef GDB_DWARF2_INDEX_CACHE_H
 #define GDB_DWARF2_INDEX_CACHE_H
 
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 
 class dwarf2_per_bfd;
 class index_cache;

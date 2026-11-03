@@ -18,7 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "gdbsupport/selftest.h"
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include <array>
 #include <vector>
 
@@ -695,7 +695,7 @@ run_copy_tests ()
 } /* namespace array_view_tests */
 } /* namespace selftests */
 
-INIT_GDB_FILE (array_view_selftests)
+INIT_GDB_FILE (span_selftests)
 {
   selftests::register_test ("array_view",
 			    selftests::array_view_tests::run_tests);

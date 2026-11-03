@@ -20,7 +20,7 @@
 #ifndef GDB_REGCACHE_H
 #define GDB_REGCACHE_H
 
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include "gdbsupport/common-regcache.h"
 #include "gdbsupport/function-view.h"
 #include "gdbsupport/traits.h"

@@ -24,7 +24,7 @@
 
 #include "symtab.h"
 #include "gdbsupport/gdb_obstack.h"
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include <vector>
 
 /* Opaque declarations.  */

@@ -79,7 +79,7 @@
 #include "extension.h"
 #include <algorithm>
 #include "progspace-and-thread.h"
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include <optional>
 #include "gdbsupport/common-utils.h"
 

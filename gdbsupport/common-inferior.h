@@ -21,7 +21,7 @@
 #ifndef GDBSUPPORT_COMMON_INFERIOR_H
 #define GDBSUPPORT_COMMON_INFERIOR_H
 
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 
 /* Return the exec wrapper to be used when starting the inferior, or NULL
    otherwise.  */

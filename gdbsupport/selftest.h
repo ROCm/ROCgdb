@@ -19,7 +19,7 @@
 #ifndef GDBSUPPORT_SELFTEST_H
 #define GDBSUPPORT_SELFTEST_H
 
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include "gdbsupport/function-view.h"
 #include "gdbsupport/iterator-range.h"
 #include <set>

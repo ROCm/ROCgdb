@@ -21,7 +21,7 @@
 #define GDB_BLOCK_H
 
 #include "dictionary.h"
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include "gdbsupport/next-iterator.h"
 
 /* Opaque declarations.  */

@@ -20,7 +20,7 @@
 #ifndef GDB_DISPLACED_STEPPING_H
 #define GDB_DISPLACED_STEPPING_H
 
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include "gdbsupport/byte-vector.h"
 
 struct gdbarch;

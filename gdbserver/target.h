@@ -27,7 +27,7 @@
 #include "target/wait.h"
 #include "target/waitstatus.h"
 #include "mem-break.h"
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include "gdbsupport/btrace-common.h"
 #include <vector>
 #include "gdbsupport/byte-vector.h"

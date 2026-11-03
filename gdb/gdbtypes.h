@@ -41,7 +41,7 @@
    written such that they can be used as both rvalues and lvalues.
  */
 
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include <optional>
 #include "gdbsupport/enum-flags.h"
 #include "dwarf2.h"

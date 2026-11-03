@@ -46,7 +46,7 @@
 #include "completer.h"
 #include "gdbsupport/cleanups.h"
 #include "gdbsupport/selftest.h"
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include "cli/cli-style.h"
 #include "expop.h"
 #include "inferior.h"

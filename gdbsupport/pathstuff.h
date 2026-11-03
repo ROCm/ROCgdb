@@ -21,7 +21,7 @@
 #define GDBSUPPORT_PATHSTUFF_H
 
 #include "gdbsupport/byte-vector.h"
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>

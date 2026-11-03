@@ -21,7 +21,7 @@
 #define GDB_EXTENSION_H
 
 #include "mi/mi-cmds.h"
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include <optional>
 #include "gdbtypes.h"
 

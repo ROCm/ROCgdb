@@ -21,7 +21,7 @@
 #define GDB_INFCALL_H
 
 #include "dummy-frame.h"
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 
 struct value;
 struct type;

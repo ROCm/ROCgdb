@@ -27,7 +27,7 @@
 #include "probe.h"
 #include "location.h"
 #include <vector>
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include "gdbsupport/filtered-iterator.h"
 #include "gdbsupport/iterator-range.h"
 #include "gdbsupport/refcounted-object.h"

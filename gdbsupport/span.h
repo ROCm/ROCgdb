@@ -15,8 +15,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#ifndef GDBSUPPORT_ARRAY_VIEW_H
-#define GDBSUPPORT_ARRAY_VIEW_H
+#ifndef GDBSUPPORT_SPAN_H
+#define GDBSUPPORT_SPAN_H
 
 #include "traits.h"
 #include <algorithm>
@@ -63,7 +63,7 @@
    around by value.
 
    You can find unit tests covering the whole API in
-   unittests/array-view-selftests.c.  */
+   unittests/span-selftests.c.  */
 
 namespace gdb {
 
@@ -305,4 +305,4 @@ make_array_view (U (&array)[Size])
 
 } /* namespace gdb */
 
-#endif /* GDBSUPPORT_ARRAY_VIEW_H */
+#endif /* GDBSUPPORT_SPAN_H */

@@ -21,7 +21,7 @@
 #define GDB_CLI_CLI_OPTION_H
 
 #include <optional>
-#include "gdbsupport/array-view.h"
+#include "gdbsupport/span.h"
 #include "completer.h"
 #include <string>
 #include "command.h"
