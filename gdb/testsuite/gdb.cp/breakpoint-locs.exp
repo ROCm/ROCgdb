@@ -28,7 +28,9 @@ if { [prepare_for_testing "failed to prepare" $testfile "$srcfile $srcfile2"\
 
 gdb_test "break N1::C1::baz" "\\(2 locations\\)"
 
-if {[have_index $binfile] == ""} {
+# Only DWARF gives an index to save, whether GDB indexed it itself or read
+# it all with --readnow; a PDB executable has none.
+if {[get_index_type [file tail $binfile]] in {cooked readnow}} {
     set index_dir [host_standard_output_file ""]
     # This is a regression test for a crash that occurred in the
     # dwz+inlining series.  See PR symtab/30728.

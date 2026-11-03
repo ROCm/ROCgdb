@@ -1,0 +1,235 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Utilities for PDB format testing.
+
+# Return true if the board's compiler writes a PDB beside a debug
+# executable, as clang-cl or cl with lld-link does.
+
+gdb_caching_proc pdb_board_writes_pdb {} {
+    set src [standard_temp_file pdb-probe.c]
+    set exe [standard_temp_file pdb-probe.exe]
+    gdb_produce_source $src {
+	int main (void) { return 0; }
+    }
+    if {[gdb_compile $src $exe executable {debug}] != ""} {
+	return 0
+    }
+    return [file exists [file rootname $exe].pdb]
+}
+
+# Return true if the GDB under test has the PDB reader compiled in and the
+# PDB fixtures can be built: the host is Windows, where the fixtures are
+# built and their PDBs read, and the board writes PDBs.  The reader's
+# maintenance commands are built only with the reader (PDB_SRCS in
+# gdb/Makefile.in), so their presence is the test for the reader.
+#
+# NOTE: This must be called while gdb is *not* running.
+
+gdb_caching_proc pdb_support {} {
+    global gdb_spawn_id
+    global gdb_prompt
+
+    if { [info exists gdb_spawn_id] } {
+	error "GDB must not be running in pdb_support."
+    }
+
+    if {![ishost *-*-mingw*] || ![pdb_board_writes_pdb]} {
+	return 0
+    }
+
+    gdb_start
+    set missing 0
+    gdb_test_multiple "maintenance info pdb-loaded-files" "" {
+	-re "Undefined maintenance info command.*$gdb_prompt $" {
+	    set missing 1
+	}
+	-re ".*$gdb_prompt $" { }
+    }
+    gdb_exit
+    return [expr {!$missing}]
+}
+
+# Build EXECUTABLE from SOURCES with OPTIONS and start GDB on it, as
+# prepare_for_testing does, then check that GDB loaded its PDB.  Like
+# prepare_for_testing, return 0 on success and nonzero on failure.
+
+proc pdb_prepare_for_testing {testname executable sources options} {
+    # Windows does not let the linker replace a file that a running GDB
+    # holds open, and GDB keeps a loaded PDB mapped for as long as its
+    # objfile lives.  Exit GDB first, so that the build can replace both
+    # the executable and its PDB: the hip-sdk-pdb board's gdb_compile only
+    # moves an executable aside, and exits GDB only when it cannot.
+    gdb_exit
+    set result [prepare_for_testing $testname $executable $sources $options]
+    if {$result != 0} {
+	return $result
+    }
+
+    set pdb_name [file rootname [file tail $executable]].pdb
+    return [gdb_test "maintenance info pdb-loaded-files" \
+		".*[string_to_regexp $pdb_name]" \
+		"$testname: generated PDB is loaded"]
+}
+
+# Return the Visual Studio script that sets up Microsoft cl for x64
+# (vcvars64.bat), or "" when there is none.  PDB_VCVARS names it
+# explicitly; otherwise vswhere finds the newest installation with the C++
+# tools.
+
+gdb_caching_proc pdb_cl_vcvars {} {
+    if {[info exists ::env(PDB_VCVARS)] && $::env(PDB_VCVARS) ne ""} {
+	set script [string map {\\ /} $::env(PDB_VCVARS)]
+	if {[file exists $script]} {
+	    return $script
+	}
+	return ""
+    }
+
+    set vswhere "C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+    if {![file executable $vswhere]
+	|| [catch {exec $vswhere -latest -products * -requires \
+		       Microsoft.VisualStudio.Component.VC.Tools.x86.x64 \
+		       -property installationPath} root]} {
+	return ""
+    }
+    set script [file join [string map {\\ /} [string trim $root]] \
+		    VC Auxiliary Build vcvars64.bat]
+    if {[file exists $script]} {
+	return $script
+    }
+    return ""
+}
+
+# Build EXECUTABLE from the LANGUAGE (c or c++) files SOURCES with
+# Microsoft cl, optimized with the cl option OPTIMIZE.  LINKER is "lld" for
+# LLVM's lld-link (see pdb_lld_link) or "link" for Microsoft link, which
+# writes some records differently.  The CodeView goes into the objects
+# (/Z7) and from there into a PDB beside EXECUTABLE.  Then start GDB on it
+# and check that the PDB is loaded.  Return 0 on success; without cl, or
+# without lld-link when LINKER is "lld", the test is unsupported, and when
+# the build fails it is untested.
+
+proc pdb_cl_prepare_for_testing {testname executable sources language
+				 optimize {linker lld}} {
+    set vcvars [pdb_cl_vcvars]
+    if {$vcvars eq ""} {
+	unsupported "$testname: Microsoft cl not found"
+	return -1
+    }
+    if {$linker eq "link"} {
+	set link link
+    } else {
+	set lld [pdb_lld_link]
+	if {$lld eq ""} {
+	    unsupported "$testname: lld-link not found"
+	    return -1
+	}
+	set link "\"[string map {/ \\} $lld]\""
+    }
+
+    gdb_exit
+    set exe [host_file_normalize $executable]
+    set script [file rootname $exe]-cl.bat
+    set lang [expr {$language eq "c++" ? "/TP /EHsc" : "/TC"}]
+
+    # cmd.exe takes backslashed paths.
+    foreach {var path} [list vcvars $vcvars exe $exe script $script] {
+	set win($var) [string map {/ \\} $path]
+    }
+
+    # cl and the linker find the headers and libraries through the
+    # environment that vcvars64.bat sets, so all run in one cmd session.
+    set channel [open $script w]
+    fconfigure $channel -translation crlf
+    puts $channel "@call \"$win(vcvars)\" >nul || exit /b 1"
+    set objs {}
+    foreach source $sources {
+	set src [string map {/ \\} [host_file_normalize $source]]
+	set obj [string map {/ \\} \
+		     "[file rootname $exe]-[file rootname [file tail $source]].obj"]
+	puts $channel "cl /nologo /Z7 $optimize $lang /c \"$src\"\
+		       /Fo\"$obj\" || exit /b 1"
+	append objs " \"$obj\""
+    }
+    puts $channel "$link /nologo /debug /out:\"$win(exe)\"$objs || exit /b 1"
+    close $channel
+
+    if {[catch {exec cmd.exe //c $win(script)} output]} {
+	verbose -log "cl build failed: $output"
+	untested "$testname: compilation with cl"
+	return -1
+    }
+
+    clean_restart [file tail $executable]
+    set pdb_name [file rootname [file tail $executable]].pdb
+    return [gdb_test "maintenance info pdb-loaded-files" \
+		".*[string_to_regexp $pdb_name]" \
+		"$testname: generated PDB is loaded"]
+}
+
+# Return the path of the LLVM tool TOOL (e.g. "lld-link"), or "" when
+# it is not installed.  Look in LLVM_BIN, HIP_SDK and HIP_PATH, in the
+# default LLVM installation, in the ROCm installations, newest first, and
+# then on PATH.
+
+proc pdb_find_llvm_tool {tool} {
+    set candidates {}
+
+    foreach var {LLVM_BIN HIP_SDK HIP_PATH} {
+	if {[info exists ::env($var)] && $::env($var) ne ""} {
+	    set root $::env($var)
+	    foreach sub {{} bin {Bin bin}} {
+		lappend candidates [file join $root {*}$sub $tool.exe]
+	    }
+	}
+    }
+
+    lappend candidates "C:/Program Files/LLVM/bin/$tool.exe"
+
+    foreach dir [lsort -decreasing -dictionary [glob -nocomplain \
+	    "C:/AMD/ROCm/*/Bin/bin" "C:/AMD/ROCm/*/bin"]] {
+	lappend candidates [file join $dir $tool.exe]
+    }
+
+    foreach prog $candidates {
+	if {[file executable $prog]} {
+	    verbose "$tool: $prog"
+	    return $prog
+	}
+    }
+
+    # Anything on PATH, under either name.
+    foreach name [list $tool $tool.exe] {
+	if {![catch {exec where $name} out]} {
+	    set prog [string trim [lindex [split $out "\n"] 0]]
+	    if {[file executable $prog]} {
+		verbose "$tool: $prog"
+		return $prog
+	    }
+	}
+    }
+
+    verbose "$tool: not found"
+    return ""
+}
+
+# Locate the lld-link that links Microsoft cl's objects, or return "" when
+# it is not installed.
+
+gdb_caching_proc pdb_lld_link {} {
+    return [pdb_find_llvm_tool lld-link]
+}
+
