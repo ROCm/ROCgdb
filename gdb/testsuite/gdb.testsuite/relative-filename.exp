@@ -1,0 +1,29 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Testsuite self-tests for relative_filename.
+
+gdb_assert {[relative_filename /usr/src /usr/src/dir/a.c] eq "dir/a.c"} \
+    "relative_filename"
+
+# On a MinGW host the same directory can be spelled as a Unix path or as
+# the Windows path it is mounted on; GDB reports the latter.
+if {[ishost *-*-mingw*]} {
+    set root [pwd]
+    set full [host_file_normalize [file join $root dir a.c]]
+    verbose -log "relative_filename $root $full"
+    gdb_assert {[relative_filename $root $full] eq "dir/a.c"} \
+	"relative_filename with a Windows-spelled file"
+}
