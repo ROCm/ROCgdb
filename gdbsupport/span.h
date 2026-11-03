@@ -60,6 +60,33 @@
    You can find unit tests covering the whole API in
    unittests/span-selftests.c.  */
 
+#if __cplusplus >= 202002L
+
+#include <span>
+
+namespace gdb {
+
+/* gdb::span.  */
+template<typename T> using span = std::span<T>;
+
+namespace ranges
+{
+
+/* gdb::ranges::equal.  */
+
+template<typename R1, typename R2>
+constexpr bool
+equal (R1 &&r1, R2 &&r2)
+{
+  return std::ranges::equal (r1, r2);
+}
+
+} /* namespace ranges */
+
+} /* namespace gdb */
+
+#else /* __cplusplus < 202002L */
+
 namespace gdb {
 
 template <typename T>
@@ -197,20 +224,6 @@ private:
   size_type m_size;
 };
 
-/* Copy the contents referenced by the span SRC to the span DEST.
-
-   The two spans must have the same length.  */
-
-template <typename U, typename T>
-void copy (gdb::span<U> src, gdb::span<T> dest)
-{
-  gdb_assert (dest.size () == src.size ());
-  if (dest.data () < src.data ())
-    std::copy (src.begin (), src.end (), dest.begin ());
-  else if (dest.data () > src.data ())
-    std::copy_backward (src.begin (), src.end (), dest.end ());
-}
-
 namespace ranges
 {
 
@@ -233,6 +246,27 @@ equal (const gdb::span<T> &lhs, const gdb::span<T> &rhs)
 }
 
 } /* namespace ranges */
+
+} /* namespace gdb */
+
+#endif /* __cplusplus < 202002L */
+
+namespace gdb
+{
+
+/* Copy the contents referenced by the span SRC to the span DEST.
+
+   The two spans must have the same length.  */
+
+template <typename U, typename T>
+void copy (gdb::span<U> src, gdb::span<T> dest)
+{
+  gdb_assert (dest.size () == src.size ());
+  if (dest.data () < src.data ())
+    std::copy (src.begin (), src.end (), dest.begin ());
+  else if (dest.data () > src.data ())
+    std::copy_backward (src.begin (), src.end (), dest.end ());
+}
 
 /* Create a span from a pointer to an array and an element
    count.
