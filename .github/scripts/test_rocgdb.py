@@ -18,6 +18,7 @@ import signal
 import subprocess
 import sys
 import sysconfig
+import threading
 import time
 import types
 from collections import defaultdict
@@ -341,10 +342,11 @@ def _linux_kill_tree_process(pid: int, tree: Set[int]) -> Optional[str]:
 # one.
 #
 # "make check" runs in a job object (_WindowsJob), so that a timeout can
-# kill the whole test process tree (see _WindowsLauncher).  The test
-# programs find the HIP runtime under test through the DLL directory that
-# _windows_set_dll_directory sets.  A packaged Python, whose children don't
-# inherit it, is refused (see main).
+# kill the whole test process tree, and under a native Python also in a
+# hidden console of its own, so that a test's Ctrl-C can't reach the script
+# (see _WindowsLauncher).  The test programs find the HIP runtime under test
+# through the DLL directory that _windows_set_dll_directory sets.  A packaged
+# Python, whose children don't inherit it, is refused (see main).
 #
 # The Win32 structures below mirror winnt.h field for field: ctypes lays
 # them out from _fields_, and SetInformationJobObject rejects a structure of
@@ -653,6 +655,33 @@ def _msys2_cygpath(option: str, path: Union[str, Path]) -> str:
     return result.stdout.strip()
 
 
+def _windows_relay_output(stream) -> None:
+    """
+    Used on Windows only, though nothing in it depends on Windows: copy a
+    child's binary output stream to this process's stdout, line by line,
+    until the stream closes.  If this process's stdout fails, keep reading
+    the stream and drop what is read.
+
+    Args:
+        stream: The child's stdout, opened in binary mode.
+    """
+    for line in iter(stream.readline, b""):
+        try:
+            # Text written through sys.stdout, by print() say, would
+            # otherwise come out after this line.
+            sys.stdout.flush()
+            sys.stdout.buffer.write(line)
+            sys.stdout.buffer.flush()
+        except (OSError, ValueError, AttributeError):
+            # Such as a BrokenPipeError when this process's stdout is a
+            # closed pipe, a ValueError when sys.stdout is closed, or an
+            # AttributeError when it is None (pythonw) or has no buffer.
+            # Stopping reading would leave the child blocked on a full pipe
+            # until the timeout.
+            pass
+    stream.close()
+
+
 class _Launcher:
     """
     Starts a command for _run_command, and kills and cleans up after it.
@@ -802,7 +831,9 @@ class _WindowsLauncher(_Launcher):
     """
     Windows only: a _Launcher that finds the command's program as the child
     would, and can run the command in a job object (see _WindowsJob), so
-    that killing the job kills the command's whole process tree.
+    that killing the job kills the command's whole process tree, and under a
+    native Python, in a hidden console of its own, with its output relayed
+    (see own_console in _run_command).
     """
 
     def __init__(
@@ -812,12 +843,15 @@ class _WindowsLauncher(_Launcher):
         env: Optional[Dict[str, str]],
         capture_output: bool,
         kill_process_tree: bool,
+        own_console: bool,
     ) -> None:
         """
         See _Launcher, and also:
 
         Args:
             kill_process_tree: Whether to run the command in a job object.
+            own_console: Whether to run the command in a console of its own,
+                under a native Python.
         """
         if IS_NATIVE_WINDOWS:
             # CreateProcess looks for a plain program name in this process's
@@ -829,18 +863,46 @@ class _WindowsLauncher(_Launcher):
             if resolved:
                 cmd = [resolved, *cmd[1:]]
         super().__init__(cmd, cwd, env, capture_output)
+        # Whether the command's output comes back through a pipe, for a
+        # thread to copy to this process's stdout (see
+        # _windows_relay_output), and that thread once started.
+        self._relay = False
+        self._relay_thread: Optional[threading.Thread] = None
         # The job holding the command and every process it starts.
         self._job: Optional[_WindowsJob] = None
         # The gate's pipe: the gate shell reads from _gate_read, and this
         # process writes to _gate_write once the shell is in the job.
         self._gate_read: Optional[int] = None
         self._gate_write: Optional[int] = None
+        if own_console and IS_NATIVE_WINDOWS:
+            # When expect sends ^C (send_gdb "\003") to the native
+            # rocgdb.exe, MSYS2's pty raises a console Ctrl-C event, which
+            # reaches every process on rocgdb's console.  Sharing this
+            # process's console, the testsuite would take this script down
+            # with KeyboardInterrupt.
+            self._popen_kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = subprocess.SW_HIDE
+            self._popen_kwargs["startupinfo"] = startupinfo
+            # This process's console handles are no use in another console,
+            # so the child gets no stdin, and output that is not captured
+            # comes back through a pipe.
+            self._popen_kwargs["stdin"] = subprocess.DEVNULL
+            if not capture_output:
+                self._popen_kwargs["stdout"] = subprocess.PIPE
+                self._popen_kwargs["stderr"] = subprocess.STDOUT
+                # Relayed output is copied as bytes, with no decoding to fail.
+                self._popen_kwargs["text"] = False
+                self._relay = True
         if kill_process_tree:
             self._job = _WindowsJob()
             # The command must not start anything before it is in the job, or
             # that would escape it.
             if IS_NATIVE_WINDOWS:
-                self._popen_kwargs["creationflags"] = _CREATE_SUSPENDED
+                self._popen_kwargs["creationflags"] = (
+                    self._popen_kwargs.get("creationflags", 0) | _CREATE_SUSPENDED
+                )
             else:
                 # In an MSYS2 Python, subprocess starts processes through
                 # the runtime's fork and exec, which have no suspended start.
@@ -892,6 +954,21 @@ class _WindowsLauncher(_Launcher):
                     os.write(self._gate_write, b"\n")
             finally:
                 self._close_gate()
+        if self._relay:
+            self._relay_thread = threading.Thread(
+                target=_windows_relay_output, args=(process.stdout,), daemon=True
+            )
+            self._relay_thread.start()
+
+    def wait(
+        self, process: subprocess.Popen, timeout: Optional[float]
+    ) -> Tuple[Optional[str], Optional[str]]:
+        if self._relay_thread is None:
+            return super().wait(process, timeout)
+        # The relay thread owns the pipe, so wait instead of communicating.
+        # close joins the thread.
+        process.wait(timeout=timeout)
+        return None, None
 
     def kill(self, process: subprocess.Popen) -> None:
         if self._job is None:
@@ -916,6 +993,11 @@ class _WindowsLauncher(_Launcher):
         if self._job is not None:
             # Closing the job kills whatever the command left running.
             self._job.close()
+        if self._relay_thread is not None:
+            # Let the thread copy what the command wrote last.  With the job
+            # closed, nothing can hold the pipe open any more, so this ends
+            # promptly.  The timeout is for a command run without a job.
+            self._relay_thread.join(timeout=10)
 
 
 def _new_launcher(
@@ -924,10 +1006,13 @@ def _new_launcher(
     env: Optional[Dict[str, str]],
     capture_output: bool,
     kill_process_tree: bool,
+    own_console: bool,
 ) -> _Launcher:
     """The _Launcher for this platform and these _run_command arguments."""
     if IS_WINDOWS:
-        return _WindowsLauncher(cmd, cwd, env, capture_output, kill_process_tree)
+        return _WindowsLauncher(
+            cmd, cwd, env, capture_output, kill_process_tree, own_console
+        )
     if IS_LINUX and kill_process_tree:
         return _LinuxLauncher(cmd, cwd, env, capture_output)
     return _Launcher(cmd, cwd, env, capture_output)
@@ -942,6 +1027,7 @@ def _run_command(
     error_msg: Optional[str] = None,
     timeout: Optional[int] = None,
     kill_process_tree: bool = False,
+    own_console: bool = False,
 ) -> subprocess.CompletedProcess:
     """
     Run a command with consistent error handling.
@@ -962,6 +1048,13 @@ def _run_command(
             and on Linux the script tracks them as its descendants (see
             _linux_kill_descendants).  Elsewhere only the command itself is
             killed.
+        own_console: In a native Windows Python, run the command in a hidden
+            console of its own, with no stdin, so that a console Ctrl-C event
+            raised inside it doesn't reach this process.  Output that is not
+            captured is relayed to this process's stdout.  Under an MSYS2
+            Python or on Linux it has no effect.  An MSYS2 Python survives
+            such an event, whether it was started from an MSYS2 shell or
+            from cmd.exe.
 
     Returns:
         CompletedProcess result.
@@ -973,7 +1066,9 @@ def _run_command(
         CalledProcessError if check=True, command exits with non-zero status, and error_msg is None.
         TimeoutExpired if timeout is set and exceeded.
     """
-    launcher = _new_launcher(cmd, cwd, env, capture_output, kill_process_tree)
+    launcher = _new_launcher(
+        cmd, cwd, env, capture_output, kill_process_tree, own_console
+    )
     cmd = launcher.cmd
     process = None
     try:
@@ -3090,6 +3185,7 @@ def run_tests(
                 capture_output=args.quiet,
                 check=False,
                 kill_process_tree=True,
+                own_console=True,
             )
 
         duration = time.perf_counter() - start_time
@@ -3968,6 +4064,7 @@ def _execute_one_by_one(
                 check=False,
                 timeout=wall_clock_timeout,
                 kill_process_tree=True,
+                own_console=True,
             )
         except subprocess.TimeoutExpired:
             wall_clock_timed_out = True
