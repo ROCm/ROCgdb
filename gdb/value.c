@@ -1064,7 +1064,7 @@ value::contents_raw ()
   allocate_contents (true);
 
   ULONGEST length = type ()->length ();
-  return gdb::make_array_view
+  return gdb::make_span
     (m_contents.get () + m_embedded_offset * unit_size, length);
 }
 
@@ -1074,7 +1074,7 @@ value::contents_all_raw ()
   allocate_contents (true);
 
   ULONGEST length = enclosing_type ()->length ();
-  return gdb::make_array_view (m_contents.get (), length);
+  return gdb::make_span (m_contents.get (), length);
 }
 
 /* Look at value.h for description.  */
@@ -1158,7 +1158,7 @@ value::contents_for_printing ()
     fetch_lazy ();
 
   ULONGEST length = enclosing_type ()->length ();
-  return gdb::make_array_view (m_contents.get (), length);
+  return gdb::make_span (m_contents.get (), length);
 }
 
 gdb::span<const gdb_byte>
@@ -1167,7 +1167,7 @@ value::contents_for_printing () const
   gdb_assert (!m_lazy);
 
   ULONGEST length = enclosing_type ()->length ();
-  return gdb::make_array_view (m_contents.get (), length);
+  return gdb::make_span (m_contents.get (), length);
 }
 
 gdb::span<const gdb_byte>
@@ -1573,7 +1573,7 @@ value::copy () const
 
       gdb_assert (m_contents != nullptr);
       const auto &arg_view
-	= gdb::make_array_view (m_contents.get (), length);
+	= gdb::make_span (m_contents.get (), length);
 
       val->allocate_contents (false);
       gdb::span<gdb_byte> val_contents
@@ -2902,7 +2902,7 @@ unpack_long (struct type *type, const gdb_byte *valaddr)
     case TYPE_CODE_FIXED_POINT:
       {
 	gdb_mpq vq;
-	vq.read_fixed_point (gdb::make_array_view (valaddr, len),
+	vq.read_fixed_point (gdb::make_span (valaddr, len),
 			     byte_order, nosign,
 			     type->fixed_point_scaling_factor ());
 
@@ -3654,7 +3654,7 @@ value_from_contents_and_address (struct type *type,
 {
   gdb::span<const gdb_byte> view;
   if (valaddr != nullptr)
-    view = gdb::make_array_view (valaddr, type->length ());
+    view = gdb::make_span (valaddr, type->length ());
   struct type *resolved_type = resolve_dynamic_type (type, view, address,
 						     &frame);
   struct type *resolved_type_no_typedef = check_typedef (resolved_type);

@@ -84,11 +84,11 @@ struct reg_buffer_common
   void raw_supply (int regnum, const uint64_t *src)
   {
     raw_supply (regnum,
-		gdb::make_array_view ((const gdb_byte *) src, sizeof (*src)));
+		gdb::make_span ((const gdb_byte *) src, sizeof (*src)));
   }
 
   void raw_supply (int regnum, const gdb_byte *src)
-  { raw_supply (regnum, gdb::make_array_view (src, register_size (regnum))); }
+  { raw_supply (regnum, gdb::make_span (src, register_size (regnum))); }
 
   /* Supply part of register REGNUM with zeroed value.  Start at OFFSET in
      the register, with size SIZE.  The rest of the register is left
@@ -104,11 +104,11 @@ struct reg_buffer_common
   void raw_collect (int regnum, uint64_t *dst) const
   {
     raw_collect (regnum,
-		 gdb::make_array_view ((gdb_byte *) dst, sizeof (*dst)));
+		 gdb::make_span ((gdb_byte *) dst, sizeof (*dst)));
   };
 
   void raw_collect (int regnum, gdb_byte *dst)
-  { raw_collect (regnum, gdb::make_array_view (dst, register_size (regnum))); }
+  { raw_collect (regnum, gdb::make_span (dst, register_size (regnum))); }
 
   /* Compare the contents of the register stored in the regcache (ignoring the
      first OFFSET bytes) to the contents of BUF (without any offset).  Returns

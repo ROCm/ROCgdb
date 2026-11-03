@@ -128,7 +128,7 @@ struct dwarf2_locexpr_baton
 {
   /* Return the expression in this baton.  */
   gdb::span<const gdb_byte> expr () const
-  { return gdb::make_array_view (data, size); }
+  { return gdb::make_span (data, size); }
 
   /* Set the expression in this baton from EXPR.  */
   void set_expr (gdb::span<const gdb_byte> expr)
@@ -190,7 +190,7 @@ struct dwarf2_loclist_baton
 {
   /* Return the location list in this baton.  */
   gdb::span<const gdb_byte> expr () const
-  { return gdb::make_array_view (data, size); }
+  { return gdb::make_span (data, size); }
 
   /* The initial base address for the location list, based on the compilation
      unit.  */

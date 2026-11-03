@@ -35,7 +35,7 @@ struct riscv_ravenscar_ops : public ravenscar_arch_ops
 };
 
 riscv_ravenscar_ops::riscv_ravenscar_ops (struct gdbarch *arch)
-  : ravenscar_arch_ops (gdb::make_array_view (reg_offsets, LAST_REGISTER + 1))
+  : ravenscar_arch_ops (gdb::make_span (reg_offsets, LAST_REGISTER + 1))
 {
   int reg_size = riscv_isa_xlen (arch);
 

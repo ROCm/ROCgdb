@@ -80,7 +80,7 @@ struct dwarf2_frame_state_reg
     {
       /* Return this expression.  */
       gdb::span<const gdb_byte> view () const
-      { return gdb::make_array_view (start, len); }
+      { return gdb::make_span (start, len); }
 
       const gdb_byte *start;
       ULONGEST len;

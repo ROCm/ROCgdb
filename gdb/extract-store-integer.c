@@ -302,7 +302,7 @@ do_extract_test (gdb_byte byte1, gdb_byte byte2, enum bfd_endian endian,
   try
     {
       const gdb_byte val[2] = { byte1, byte2 };
-      result = extract_integer<T> (gdb::make_array_view (val, 2), endian);
+      result = extract_integer<T> (gdb::make_span (val, 2), endian);
     }
   catch (const gdb_exception_error &)
     {

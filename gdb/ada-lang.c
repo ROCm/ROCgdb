@@ -2585,7 +2585,7 @@ decode_constrained_packed_array (struct value *arr)
   const gdb_byte *valaddr = arr->contents_for_printing ().data ();
   CORE_ADDR address = arr->address ();
   gdb::span<const gdb_byte> view
-    = gdb::make_array_view (valaddr, type->length ());
+    = gdb::make_span (valaddr, type->length ());
   type = resolve_dynamic_type (type, view, address);
   recursively_update_array_bitsize (type);
 
@@ -6362,7 +6362,7 @@ value_tag_from_contents_and_address (struct type *type,
 
   gdb::span<const gdb_byte> contents;
   if (valaddr != nullptr)
-    contents = gdb::make_array_view (valaddr, type->length ());
+    contents = gdb::make_span (valaddr, type->length ());
   struct type *resolved_type = resolve_dynamic_type (type, contents, address);
   if (find_struct_field ("_tag", resolved_type, 0, &tag_type, &tag_byte_offset,
 			 NULL, NULL, NULL))

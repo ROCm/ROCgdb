@@ -806,7 +806,7 @@ gdbscm_value_call (SCM self, SCM args)
     {
       scoped_value_mark free_values;
 
-      auto av = gdb::make_array_view (vargs, args_count);
+      auto av = gdb::make_span (vargs, args_count);
       value *return_value = call_function_by_hand (function, NULL, av);
       return vlscm_scm_from_value (return_value);
     });

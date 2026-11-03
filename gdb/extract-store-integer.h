@@ -70,7 +70,7 @@ template<typename T>
 static inline void
 store_integer (gdb_byte *addr, int len, bfd_endian byte_order, T val)
 {
-  return store_integer (gdb::make_array_view (addr, len), byte_order, val);
+  return store_integer (gdb::make_span (addr, len), byte_order, val);
 }
 
 /* Take host-format signed integer VAL and store it as target-format
@@ -90,7 +90,7 @@ static inline void
 store_signed_integer (gdb_byte *addr, int len, bfd_endian byte_order,
 		      LONGEST val)
 {
-  return store_signed_integer (gdb::make_array_view (addr, len), byte_order,
+  return store_signed_integer (gdb::make_span (addr, len), byte_order,
 			       val);
 }
 
@@ -111,7 +111,7 @@ static inline void
 store_unsigned_integer (gdb_byte *addr, int len, bfd_endian byte_order,
 			ULONGEST val)
 {
-  return store_unsigned_integer (gdb::make_array_view (addr, len), byte_order,
+  return store_unsigned_integer (gdb::make_span (addr, len), byte_order,
 				 val);
 }
 

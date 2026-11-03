@@ -1112,7 +1112,7 @@ struct type
   /* Return a span of the fields.  */
   gdb::span<struct field> fields () const
   {
-    return gdb::make_array_view (this->main_type->flds_bnds.fields,
+    return gdb::make_span (this->main_type->flds_bnds.fields,
 				 num_fields ());
   }
 

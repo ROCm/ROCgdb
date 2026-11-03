@@ -9145,9 +9145,9 @@ arm_store_return_value (struct type *type, struct regcache *regs,
 	  if (is_fixed_point_type (type))
 	    {
 	      gdb_mpz unscaled;
-	      unscaled.read (gdb::make_array_view (valbuf, type->length ()),
+	      unscaled.read (gdb::make_span (valbuf, type->length ()),
 			     byte_order, type->is_unsigned ());
-	      unscaled.write (gdb::make_array_view (tmpbuf, sizeof (tmpbuf)),
+	      unscaled.write (gdb::make_span (tmpbuf, sizeof (tmpbuf)),
 			      byte_order, type->is_unsigned ());
 	    }
 	  else

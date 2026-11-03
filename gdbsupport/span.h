@@ -289,7 +289,7 @@ operator!= (const gdb::span<T> &lhs, const gdb::span<T> &rhs)
 
 template<typename U>
 constexpr inline span<U>
-make_array_view (U *array, size_t size) noexcept
+make_span (U *array, size_t size) noexcept
 {
   return {array, size};
 }
@@ -298,7 +298,7 @@ make_array_view (U *array, size_t size) noexcept
 
 template <typename U, std::size_t Size>
 constexpr inline span<U>
-make_array_view (U (&array)[Size])
+make_span (U (&array)[Size])
 {
   return {array};
 }

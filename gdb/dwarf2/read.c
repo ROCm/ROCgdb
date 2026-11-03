@@ -2048,7 +2048,7 @@ get_gdb_index_contents_from_section (objfile *obj, T *section_owner)
      is 32-bit.  So we need an explicit narrowing conversion here.
      This is fine, because it's impossible to allocate or mmap an
      array/buffer larger than what size_t can represent.  */
-  return gdb::make_array_view (section->buffer, section->size);
+  return gdb::make_span (section->buffer, section->size);
 }
 
 /* Lookup the index cache for the contents of the index associated to
@@ -2564,7 +2564,7 @@ cutu_reader::read_cutu_die_from_dwo (dwarf2_cu *cu, dwo_unit *dwo_unit,
      work to maintain the illusion of a single
      DW_TAG_{compile,type}_unit DIE is done here.  */
   m_top_level_die
-    = this->read_toplevel_die (gdb::make_array_view (attributes,
+    = this->read_toplevel_die (gdb::make_span (attributes,
 						     next_attr_idx));
 }
 
@@ -11634,7 +11634,7 @@ mark_common_block_symbol_computed (struct symbol *sym,
   *ptr++ = DW_OP_plus;
   gdb_assert (ptr - start == size);
 
-  baton->set_expr (gdb::make_array_view (start, size));
+  baton->set_expr (gdb::make_span (start, size));
 
   SYMBOL_LOCATION_BATON (sym) = baton;
   sym->set_loc_class_index (dwarf2_locexpr_index);
@@ -12593,7 +12593,7 @@ get_mpz_for_rational (dwarf2_cu *cu, gdb_mpz *value, attribute *attr)
 						   &len);
 	  if (ptr - blk->data + len <= blk->size)
 	    {
-	      value->read (gdb::make_array_view (ptr, len),
+	      value->read (gdb::make_span (ptr, len),
 			   bfd_big_endian (cu->per_objfile->objfile->obfd.get ())
 			   ? BFD_ENDIAN_BIG : BFD_ENDIAN_LITTLE,
 			   true);
@@ -15855,7 +15855,7 @@ dwarf2_const_value_attr (const struct attribute *attr, struct type *type,
 
 	std::size_t size = 2 + cu_header->addr_size;
 	data = (gdb_byte *) obstack_alloc (obstack, size);
-	(*baton)->set_expr (gdb::make_array_view (data, size));
+	(*baton)->set_expr (gdb::make_span (data, size));
 
 	data[0] = DW_OP_addr;
 	store_unsigned_integer (&data[1], cu_header->addr_size,

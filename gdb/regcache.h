@@ -217,7 +217,7 @@ public:
 
   /* Deprecated overload of the above.  */
   void raw_collect_part (int regnum, int offset, int len, gdb_byte *dst) const
-  { raw_collect_part (regnum, offset, gdb::make_array_view (dst, len)); }
+  { raw_collect_part (regnum, offset, gdb::make_span (dst, len)); }
 
   /* See gdbsupport/common-regcache.h.  */
   void raw_supply (int regnum, gdb::span<const gdb_byte> src) override;
@@ -315,7 +315,7 @@ public:
   /* Deprecated overload of the above.  */
   register_status raw_read_part (int regnum, int offset, int len,
 				 gdb_byte *dst)
-  { return raw_read_part (regnum, offset, gdb::make_array_view (dst, len)); }
+  { return raw_read_part (regnum, offset, gdb::make_span (dst, len)); }
 
   /* Make certain that the register REGNUM is up-to-date.  */
   virtual void raw_update (int regnum) = 0;
@@ -334,7 +334,7 @@ public:
 
   /* Deprecated overload of the above.  */
   register_status cooked_read_part (int regnum, int offset, int len, gdb_byte *src)
-  { return cooked_read_part (regnum, offset, gdb::make_array_view (src, len)); }
+  { return cooked_read_part (regnum, offset, gdb::make_span (src, len)); }
 
   /* Read register REGNUM from the regcache and return a new value.  This
      will call mark_value_bytes_unavailable as appropriate.  */
@@ -407,7 +407,7 @@ public:
 
   /* Deprecated overload of the above.  */
   void raw_write_part (int regnum, int offset, int len, const gdb_byte *src)
-  { raw_write_part (regnum, offset, gdb::make_array_view (src, len)); }
+  { raw_write_part (regnum, offset, gdb::make_span (src, len)); }
 
   /* Partial transfer of a cooked register.  Perform read, modify, write style
      operations.  */
@@ -416,7 +416,7 @@ public:
 
   /* Deprecated overload of the above.  */
   void cooked_write_part (int regnum, int offset, int len, const gdb_byte *src)
-  { cooked_write_part (regnum, offset, gdb::make_array_view (src, len)); }
+  { cooked_write_part (regnum, offset, gdb::make_span (src, len)); }
 
   /* Transfer a set of registers (as described by REGSET) between
      REGCACHE and BUF.  If REGNUM == -1, transfer all registers

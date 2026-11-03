@@ -1196,7 +1196,7 @@ gdb_bfd_canonicalize_symtab (bfd *abfd, bool should_throw)
   /* bfd_canonicalize_symtab adds a trailing NULL, but don't include
      this in the span.  */
   gdb_assert (symbol_table.back () == nullptr);
-  return gdb::make_array_view (symbol_table.data (),
+  return gdb::make_span (symbol_table.data (),
 			       symbol_table.size () - 1);
 }
 

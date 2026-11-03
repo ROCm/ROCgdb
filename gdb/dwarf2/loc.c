@@ -468,11 +468,11 @@ dwarf2_find_location_expression (const dwarf2_loclist_baton *baton,
 	    pc_func = pc_block->linkage_function ();
 
 	  if (pc_func && pc == pc_func->value_block ()->entry_pc ())
-	    return gdb::make_array_view (loc_ptr, length);
+	    return gdb::make_span (loc_ptr, length);
 	}
 
       if (unrel_pc >= low && unrel_pc < high)
-	return gdb::make_array_view (loc_ptr, length);
+	return gdb::make_span (loc_ptr, length);
 
       loc_ptr += length;
     }
@@ -1262,7 +1262,7 @@ dwarf_entry_parameter_to_value (struct call_site_parameter *parameter,
 		 _("Cannot resolve DW_AT_call_data_value"));
 
   return dwarf2_evaluate_loc_desc (type, caller_frame,
-				   gdb::make_array_view (data_src, size),
+				   gdb::make_span (data_src, size),
 				   per_cu, per_objfile, false);
 }
 
@@ -4053,7 +4053,7 @@ loclist_describe_location (struct symbol *symbol, CORE_ADDR addr,
 
       /* Now describe this particular location.  */
       locexpr_describe_location_1 (symbol, low_reloc, stream,
-				   gdb::make_array_view (loc_ptr, length),
+				   gdb::make_span (loc_ptr, length),
 				   addr_size, offset_size, dlbaton->per_cu,
 				   per_objfile);
 

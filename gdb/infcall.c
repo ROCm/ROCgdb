@@ -1029,7 +1029,7 @@ call_destructors (const std::list<destructor_info> &dtors_to_invoke,
   for (auto vals : dtors_to_invoke)
     {
       call_function_by_hand (vals.function, default_return_type,
-			     gdb::make_array_view (&(vals.self), 1));
+			     gdb::make_span (&(vals.self), 1));
     }
 }
 
@@ -1400,7 +1400,7 @@ call_function_by_hand_dummy (struct value *function,
 	{
 	  value *copy_ctor;
 	  value *cctor_args[2] = { clone_ptr, original_arg };
-	  find_overload_match (gdb::make_array_view (cctor_args, 2),
+	  find_overload_match (gdb::make_span (cctor_args, 2),
 			       param_type->name (), METHOD,
 			       &clone_ptr, nullptr, &copy_ctor, nullptr,
 			       nullptr, 0, EVAL_NORMAL);
@@ -1411,7 +1411,7 @@ call_function_by_hand_dummy (struct value *function,
 		     "(maybe inlined?)"), param_type->name ());
 
 	  call_function_by_hand (copy_ctor, default_return_type,
-				 gdb::make_array_view (cctor_args, 2));
+				 gdb::make_span (cctor_args, 2));
 	}
 
       /* If the argument has a destructor, remember it so that we

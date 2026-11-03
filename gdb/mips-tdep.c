@@ -950,8 +950,8 @@ mips_register_to_value (const frame_info_ptr &frame, int regnum,
 
   if (mips_convert_register_float_case_p (gdbarch, regnum, type))
     {
-      gdb::span<gdb_byte> first_half = gdb::make_array_view (to, 4);
-      gdb::span<gdb_byte> second_half = gdb::make_array_view (to + 4, 4);
+      gdb::span<gdb_byte> first_half = gdb::make_span (to, 4);
+      gdb::span<gdb_byte> second_half = gdb::make_span (to + 4, 4);
 
       get_frame_register (frame, regnum + 0, second_half);
       get_frame_register (frame, regnum + 1, first_half);
@@ -993,7 +993,7 @@ mips_value_to_register (const frame_info_ptr &frame, int regnum,
 
   if (mips_convert_register_float_case_p (gdbarch, regnum, type))
     {
-      auto from_view = gdb::make_array_view (from, 8);
+      auto from_view = gdb::make_span (from, 8);
       frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
       put_frame_register (next_frame, regnum, from_view.slice (4));
       put_frame_register (next_frame, regnum + 1, from_view.slice (0, 4));

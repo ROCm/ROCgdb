@@ -1243,7 +1243,7 @@ gdb_buffered_insn_length (struct gdbarch *gdbarch,
 			  const gdb_byte *insn, int max_len, CORE_ADDR addr)
 {
   gdb::span<const gdb_byte> buffer
-    = gdb::make_array_view (insn, max_len);
+    = gdb::make_span (insn, max_len);
   gdb_non_printing_buffer_disassembler dis (gdbarch, buffer, addr);
   int result = gdb_print_insn_1 (gdbarch, addr, dis.disasm_info ());
   return result;

@@ -2362,7 +2362,7 @@ dwarf_expr_context::execute_stack_op (gdb::span<const gdb_byte> expr)
 	    if (op_ptr + len > op_end)
 	      error (_("DW_OP_entry_value: too few bytes available."));
 
-	    auto entry_value_expr = gdb::make_array_view (op_ptr, len);
+	    auto entry_value_expr = gdb::make_span (op_ptr, len);
 	    kind_u.dwarf_reg = dwarf_block_to_dwarf_reg (entry_value_expr);
 	    if (kind_u.dwarf_reg != -1)
 	      {

@@ -145,12 +145,12 @@ struct call_site_parameter
 {
   /* Return the DW_AT_call_value DWARF expression.  */
   gdb::span<const gdb_byte> value_expr () const
-  { return gdb::make_array_view (value, value_size); }
+  { return gdb::make_span (value, value_size); }
 
   /* Return the DW_AT_call_data_value DWARF expression.  Returns an empty
      view if not provided by DWARF.  */
   gdb::span<const gdb_byte> data_value_expr () const
-  { return gdb::make_array_view (data_value, data_value_size); }
+  { return gdb::make_span (data_value, data_value_size); }
 
   call_site_parameter_kind kind : 2;
 

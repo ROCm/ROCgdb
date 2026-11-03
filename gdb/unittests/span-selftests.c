@@ -541,11 +541,11 @@ run_tests ()
     SELF_CHECK (view_elem.size () == 1);
   }
 
-  /* gdb::make_array_view, int length.  */
+  /* gdb::make_span, int length.  */
   {
     gdb_byte data[] = {0x55, 0x66, 0x77, 0x88};
     int len = sizeof (data) / sizeof (data[0]);
-    auto view = gdb::make_array_view (data, len);
+    auto view = gdb::make_span (data, len);
 
     SELF_CHECK (view.data () == data);
     SELF_CHECK (view.size () == len);
@@ -554,11 +554,11 @@ run_tests ()
       SELF_CHECK (view[i] == data[i]);
   }
 
-  /* gdb::make_array_view with an array.  */
+  /* gdb::make_span with an array.  */
   {
     const gdb_byte data[] = {0x55, 0x66, 0x77, 0x88};
     const auto len = sizeof (data) / sizeof (data[0]);
-    const auto view = gdb::make_array_view (data);
+    const auto view = gdb::make_span (data);
 
     SELF_CHECK (view.data () == data);
     SELF_CHECK (view.size () == len);

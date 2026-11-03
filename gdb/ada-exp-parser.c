@@ -146,7 +146,7 @@ processInt (struct parser_state *par_state, const char *base0,
 	}
 
       ada_yylval.typed_val_float.type = fp_type;
-      result.write (gdb::make_array_view (ada_yylval.typed_val_float.val,
+      result.write (gdb::make_span (ada_yylval.typed_val_float.val,
 					  fp_type->length ()),
 		    type_byte_order (fp_type),
 		    true);

@@ -1003,7 +1003,7 @@ jit_unwind_reg_get_impl (struct gdb_unwind_callbacks *cb, int regnum)
 	   xmalloc (sizeof (struct gdb_reg_value) + size - 1));
   value->defined
     = deprecated_frame_register_read (priv->this_frame, gdb_reg,
-				      gdb::make_array_view (value->value,
+				      gdb::make_span (value->value,
 							    size));
   value->size = size;
   value->free = reg_value_free_impl;

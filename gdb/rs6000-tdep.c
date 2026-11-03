@@ -2708,7 +2708,7 @@ rs6000_register_to_value (const frame_info_ptr &frame,
   regnum = ieee_128_float_regnum_adjust (gdbarch, type, regnum);
 
   auto from_view
-    = gdb::make_array_view (from, register_size (gdbarch, regnum));
+    = gdb::make_span (from, register_size (gdbarch, regnum));
   frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
   if (!get_frame_register_bytes (next_frame, regnum, 0, from_view, optimizedp,
 				 unavailablep))
@@ -2737,7 +2737,7 @@ rs6000_value_to_register (const frame_info_ptr &frame,
 
   struct type *to_type = builtin_type (gdbarch)->builtin_double;
   target_float_convert (from, type, to, to_type);
-  auto to_view = gdb::make_array_view (to, to_type->length ());
+  auto to_view = gdb::make_span (to, to_type->length ());
   put_frame_register (get_next_frame_sentinel_okay (frame), regnum, to_view);
 }
 

@@ -2250,7 +2250,7 @@ multi_subscript_operation::evaluate (struct type *expect_type,
   for (int ix = 0; ix < values.size (); ++ix)
     argvec[ix] = values[ix]->evaluate_with_coercion (exp, noside);
   return eval_multi_subscript (expect_type, exp, noside, arg1,
-			       gdb::make_array_view (argvec, values.size ()));
+			       gdb::make_span (argvec, values.size ()));
 }
 
 value *

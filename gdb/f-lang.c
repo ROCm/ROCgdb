@@ -1620,7 +1620,7 @@ fortran_structop_operation::evaluate (struct type *expect_type,
 	  const gdb_byte *valaddr = elt->contents_for_printing ().data ();
 	  CORE_ADDR address = elt->address ();
 	  gdb::span<const gdb_byte> view
-	    = gdb::make_array_view (valaddr, elt_type->length ());
+	    = gdb::make_span (valaddr, elt_type->length ());
 	  elt_type = resolve_dynamic_type (elt_type, view, address);
 	}
       elt = value::zero (elt_type, elt->lval ());

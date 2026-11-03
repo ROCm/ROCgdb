@@ -405,7 +405,7 @@ bad CFI data; mismatched DW_CFA_restore_state at %s"),
 
 	    case DW_CFA_def_cfa_expression:
 	      insn_ptr = safe_read_uleb128 (insn_ptr, insn_end, &utmp);
-	      fs->regs.cfa_exp = gdb::make_array_view (insn_ptr, utmp);
+	      fs->regs.cfa_exp = gdb::make_span (insn_ptr, utmp);
 	      fs->regs.cfa_how = CFA_EXP;
 	      insn_ptr += utmp;
 	      break;

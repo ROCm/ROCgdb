@@ -1227,7 +1227,7 @@ ia64_register_to_value (const frame_info_ptr &frame, int regnum,
   gdb_byte in[IA64_FP_REGISTER_SIZE];
 
   /* Convert to TYPE.  */
-  auto in_view = gdb::make_array_view (in, register_size (gdbarch, regnum));
+  auto in_view = gdb::make_span (in, register_size (gdbarch, regnum));
   frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
   if (!get_frame_register_bytes (next_frame, regnum, 0, in_view, optimizedp,
 				 unavailablep))
@@ -1246,7 +1246,7 @@ ia64_value_to_register (const frame_info_ptr &frame, int regnum,
   gdb_byte out[IA64_FP_REGISTER_SIZE];
   type *to_type = ia64_ext_type (gdbarch);
   target_float_convert (in, valtype, out, to_type);
-  auto out_view = gdb::make_array_view (out, to_type->length ());
+  auto out_view = gdb::make_span (out, to_type->length ());
   put_frame_register (get_next_frame_sentinel_okay (frame), regnum, out_view);
 }
 

@@ -12689,7 +12689,7 @@ cli_packet_command (const char *args, int from_tty)
 {
   cli_packet_command_callbacks cb;
   gdb::span<const char> view
-    = gdb::make_array_view (args, args == nullptr ? 0 : strlen (args));
+    = gdb::make_span (args, args == nullptr ? 0 : strlen (args));
   send_remote_packet (view, &cb);
 }
 

@@ -2519,7 +2519,7 @@ find_method_list (struct value **argp, const char *method,
 	    {
 	      int len = TYPE_FN_FIELDLIST_LENGTH (type, i);
 	      f = TYPE_FN_FIELDLIST1 (type, i);
-	      *methods = gdb::make_array_view (f, len);
+	      *methods = gdb::make_span (f, len);
 
 	      *basetype = type;
 	      *boffset = offset;

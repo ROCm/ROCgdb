@@ -160,7 +160,7 @@ compile_object_run (compile_module_up &&mod)
 	  ++current_arg;
 	}
       gdb_assert (current_arg == func_type->num_fields ());
-      auto args = gdb::make_array_view (vargs, func_type->num_fields ());
+      auto args = gdb::make_span (vargs, func_type->num_fields ());
       call_function_by_hand_dummy (func_val, NULL, args,
 				   do_module_cleanup, data);
     }

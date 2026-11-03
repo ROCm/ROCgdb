@@ -1824,7 +1824,7 @@ ppc64_sysv_abi_return_value_base (struct gdbarch *gdbarch, struct type *valtype,
 	      /* Fixed point type values need to be returned unscaled.  */
 	      gdb_mpz unscaled;
 
-	      unscaled.read (gdb::make_array_view (writebuf,
+	      unscaled.read (gdb::make_span (writebuf,
 						   valtype->length ()),
 			     type_byte_order (valtype),
 			     valtype->is_unsigned ());

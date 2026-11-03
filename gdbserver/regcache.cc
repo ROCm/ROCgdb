@@ -282,7 +282,7 @@ static gdb::span<gdb_byte>
 register_data (const struct regcache *regcache, int n)
 {
   const gdb::reg &reg = find_register_by_number (regcache->tdesc, n);
-  return gdb::make_array_view (regcache->registers + reg.offset / 8,
+  return gdb::make_span (regcache->registers + reg.offset / 8,
 			       reg.size / 8);
 }
 
@@ -291,7 +291,7 @@ supply_register (struct regcache *regcache, int n, const void *vbuf)
 {
   const gdb::reg &reg = find_register_by_number (regcache->tdesc, n);
   const gdb_byte *buf = static_cast<const gdb_byte *> (vbuf);
-  return regcache->raw_supply (n, gdb::make_array_view (buf, reg.size / 8));
+  return regcache->raw_supply (n, gdb::make_span (buf, reg.size / 8));
 }
 
 /* See gdbsupport/common-regcache.h.  */
@@ -384,7 +384,7 @@ collect_register (struct regcache *regcache, int n, void *vbuf)
 {
   const gdb::reg &reg = find_register_by_number (regcache->tdesc, n);
   gdb_byte *buf = static_cast<gdb_byte *> (vbuf);
-  regcache->raw_collect (n, gdb::make_array_view (buf, reg.size / 8));
+  regcache->raw_collect (n, gdb::make_span (buf, reg.size / 8));
 }
 
 /* See gdbsupport/common-regcache.h.  */

@@ -3647,7 +3647,7 @@ riscv_return_value (struct gdbarch  *gdbarch,
 		 unscaled.  */
 	      gdb_mpz unscaled;
 
-	      unscaled.read (gdb::make_array_view (writebuf,
+	      unscaled.read (gdb::make_span (writebuf,
 						   arg_type->length ()),
 			     type_byte_order (arg_type),
 			     arg_type->is_unsigned ());

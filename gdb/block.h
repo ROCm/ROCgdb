@@ -162,7 +162,7 @@ struct block : public allocate_on_obstack<block>
     if (m_ranges == nullptr)
       return {};
     else
-      return gdb::make_array_view (m_ranges->range, m_ranges->nranges);
+      return gdb::make_span (m_ranges->range, m_ranges->nranges);
   }
 
   /* Const version of the above.  */
@@ -171,7 +171,7 @@ struct block : public allocate_on_obstack<block>
     if (m_ranges == nullptr)
       return {};
     else
-      return gdb::make_array_view (m_ranges->range, m_ranges->nranges);
+      return gdb::make_span (m_ranges->range, m_ranges->nranges);
   }
 
   /* Set this block's ranges array.  */

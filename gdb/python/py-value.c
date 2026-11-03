@@ -1231,7 +1231,7 @@ valpy_call (PyObject *self, PyObject *args, PyObject *keywords)
       else
 	return_value
 	  = call_function_by_hand (function, NULL,
-				   gdb::make_array_view (vargs, args_count));
+				   gdb::make_span (vargs, args_count));
       result = value_to_value_object (return_value);
     }
   catch (const gdb_exception &except)

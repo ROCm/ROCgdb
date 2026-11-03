@@ -1005,7 +1005,7 @@ amd_dbgapi_target::stopped_data_addresses ()
 
   std::vector<CORE_ADDR> watch_addr_hit;
   for (amd_dbgapi_watchpoint_id_t watch_id
-       : gdb::make_array_view (watchpoints.watchpoint_ids, watchpoints.count))
+       : gdb::make_span (watchpoints.watchpoint_ids, watchpoints.count))
     {
       auto it = std::find_if (info.watchpoint_map.begin (),
 			      info.watchpoint_map.end (),

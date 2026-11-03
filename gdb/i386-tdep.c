@@ -3561,7 +3561,7 @@ i386_register_to_value (const frame_info_ptr &frame, int regnum,
       gdb_assert (register_size (gdbarch, regnum) == 4);
 
       auto to_view
-	= gdb::make_array_view (to, register_size (gdbarch, regnum));
+	= gdb::make_span (to, register_size (gdbarch, regnum));
       frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
       if (!get_frame_register_bytes (next_frame, regnum, 0, to_view,
 				     optimizedp, unavailablep))
@@ -3600,7 +3600,7 @@ i386_value_to_register (const frame_info_ptr &frame, int regnum,
       gdb_assert (regnum != -1);
       gdb_assert (register_size (get_frame_arch (frame), regnum) == 4);
 
-      auto from_view = gdb::make_array_view (from, 4);
+      auto from_view = gdb::make_span (from, 4);
       put_frame_register (get_next_frame_sentinel_okay (frame), regnum,
 			  from_view);
       regnum = i386_next_regnum (regnum);

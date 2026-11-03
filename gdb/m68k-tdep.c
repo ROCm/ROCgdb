@@ -217,7 +217,7 @@ m68k_register_to_value (const frame_info_ptr &frame, int regnum,
 
   /* Convert to TYPE.  */
   auto from_view
-    = gdb::make_array_view (from, register_size (gdbarch, regnum));
+    = gdb::make_span (from, register_size (gdbarch, regnum));
   frame_info_ptr next_frame = get_next_frame_sentinel_okay (frame);
   if (!get_frame_register_bytes (next_frame, regnum, 0, from_view, optimizedp,
 				 unavailablep))
@@ -249,7 +249,7 @@ m68k_value_to_register (const frame_info_ptr &frame, int regnum,
 
   /* Convert from TYPE.  */
   target_float_convert (from, type, to, fpreg_type);
-  auto to_view = gdb::make_array_view (to, fpreg_type->length ());
+  auto to_view = gdb::make_span (to, fpreg_type->length ());
   put_frame_register (get_next_frame_sentinel_okay (frame), regnum, to_view);
 }
 
