@@ -32,6 +32,11 @@
   GDB reads from the PDB:
 
   ** Public symbols, as minimal symbols.
+  ** Line tables.  Source file paths that MSYS2 tools recorded are
+     converted to Windows paths; the MSYS2_ROOT environment variable
+     names the MSYS2 root directory.
+
+  GDB reads every module of the PDB when it loads the PDB.
 
 * GDB can now read OS-generated core files on systems with Intel AMX
   support.  The AMX registers themselves are not yet readable, but

@@ -145,6 +145,76 @@ pdb_sym_body_valid (uint16_t rectype, const gdb_byte *body, size_t body_size)
 	       != nullptr);
 }
 
+/* CV_CFL_LANG codes carried in the iLanguage field of S_COMPILE*.  */
+inline constexpr uint8_t CV_CFL_C = 0x00;
+inline constexpr uint8_t CV_CFL_MASM = 0x03;
+
+/* iLanguage is the low byte of the flags dword, which is the first
+   field of S_COMPILE*.  */
+inline constexpr auto PDB_SYMBOL_COMPILE_FLAGS_OFFS = 0;
+
+/* Map a CV_CFL_LANG code to a GDB language: C++ for CV_CFL_CXX and the
+   codes GDB does not tell apart.  */
+
+static enum language
+pdb_cv_lang_to_language (uint8_t cv_lang)
+{
+  switch (cv_lang)
+    {
+    case CV_CFL_C:
+      return language_c;
+    case CV_CFL_MASM:
+      return language_asm;
+    default:
+      return language_cplus;
+    }
+}
+
+/* See pdb-internal.h.  */
+
+enum language
+pdb_module_language (pdb_per_objfile *pdb, pdb_module_info *mod_info)
+{
+  if (mod_info->language != language_unknown)
+    return mod_info->language;
+
+  mod_info->language = language_cplus;
+  uint16_t stream = mod_info->stream_number;
+  uint32_t syms_end = mod_info->sym_byte_size;
+  if (stream == MODI_NO_STREAM || stream >= pdb->streams.size ()
+      || syms_end > pdb->streams[stream].size)
+    return mod_info->language;
+
+  gdb::byte_vector scratch;
+  uint32_t off = PDB_MODULE_SYMBOLS_OFFS;
+  while (off + PDB_RECORD_HDR_SIZE <= syms_end)
+    {
+      const gdb_byte *rec
+	= pdb_stream_bytes (pdb, stream, off, PDB_RECORD_HDR_SIZE, scratch);
+      size_t rec_size = read_u16 (rec) + sizeof (uint16_t);
+      if (rec_size > syms_end - off)
+	break;
+
+      rec = pdb_stream_bytes (pdb, stream, off, rec_size, scratch);
+      auto hdr = pdb_parse_sym_record_hdr (rec, rec + rec_size);
+      if (!hdr)
+	break;
+
+      if ((hdr->type == S_COMPILE2 || hdr->type == S_COMPILE3)
+	  && rec_size - PDB_RECORD_DATA_OFFS > PDB_SYMBOL_COMPILE_FLAGS_OFFS)
+	{
+	  uint8_t cv_lang = read_u8 (rec + PDB_RECORD_DATA_OFFS
+				     + PDB_SYMBOL_COMPILE_FLAGS_OFFS);
+	  mod_info->language = pdb_cv_lang_to_language (cv_lang);
+	  break;
+	}
+
+      off += rec_size;
+    }
+
+  return mod_info->language;
+}
+
 /* See pdb-internal.h.  */
 
 void
