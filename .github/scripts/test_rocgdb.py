@@ -5,13 +5,13 @@
 import argparse
 import atexit
 import ctypes
+import functools
 import glob
 import json
 import logging
 import os
 import platform
 import re
-import resource
 import shlex
 import shutil
 import signal
@@ -21,11 +21,25 @@ import sysconfig
 import time
 import types
 from collections import defaultdict
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Dict, List, NoReturn, Optional, Set, Tuple, Union
 
+# True if this Python runs on Windows, natively or built against the Cygwin or
+# MSYS2 runtime, which reports sys.platform "cygwin".
+IS_WINDOWS = sys.platform in ("win32", "cygwin")
+# True if this Python uses Windows' own APIs, processes and drive-letter paths.
+# A Cygwin or MSYS2 Python on Windows uses POSIX ones instead.
+IS_NATIVE_WINDOWS = sys.platform == "win32"
+# True if this Python is built against the Cygwin or MSYS2 runtime, which runs
+# on Windows but takes POSIX paths.
+IS_POSIX_WINDOWS = IS_WINDOWS and not IS_NATIVE_WINDOWS
 # True if this Python runs on Linux.
 IS_LINUX = sys.platform.startswith("linux")
+
+# "resource" doesn't exist in a native Windows Python.  Its only user,
+# setup_core_file_info(), runs on Linux only.
+if not IS_NATIVE_WINDOWS:
+    import resource
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s"
@@ -312,6 +326,70 @@ def _linux_kill_tree_process(pid: int, tree: Set[int]) -> Optional[str]:
             os.close(pidfd)
 
 
+# Windows support.
+#
+# On Windows, the testsuite's shell, make and DejaGnu come from MSYS2 (see
+# _windows_resolve_msys2_root), and the script runs under either of two kinds
+# of Python: a native one, such as python.org's or MSYS2's UCRT64 one, or one
+# built against the MSYS2 runtime, such as MSYS2's /usr/bin/python3 (see
+# IS_WINDOWS, IS_NATIVE_WINDOWS, IS_POSIX_WINDOWS and _is_msys2_python).  An
+# MSYS2 Python uses POSIX paths, so the paths the script is given go through
+# host_path.  A Cygwin Python is refused (see main).
+#
+# The functions and classes that only work on Windows carry a _windows_ or
+# _Windows prefix, and those that only work under an MSYS2 Python an _msys2_
+# one.
+
+
+# Cached, since each WinDLL or CDLL call returns a new library object, and
+# the prototypes set below only apply to the object they are set on.  A
+# function instead of a module-level object, as kernel32 only exists on
+# Windows.
+@functools.lru_cache(maxsize=None)
+def _windows_kernel32():
+    """
+    Windows only: kernel32, with the prototypes of the functions this script
+    calls, from a native, Cygwin or MSYS2 Python.
+    """
+    if IS_NATIVE_WINDOWS:
+        kernel32 = ctypes.WinDLL("kernel32")
+    else:
+        # A Cygwin or MSYS2 Python has no WinDLL, but x86-64 Windows has a
+        # single calling convention, so CDLL calls into kernel32 just as well.
+        kernel32 = ctypes.CDLL("kernel32.dll")
+    handle = ctypes.c_void_p
+    for name, argtypes, restype in (("GetModuleHandleW", [ctypes.c_wchar_p], handle),):
+        function = getattr(kernel32, name)
+        function.argtypes = argtypes
+        function.restype = restype
+    return kernel32
+
+
+def _msys2_cygpath(option: str, path: Union[str, Path]) -> str:
+    """
+    MSYS2 Python only: convert a path with MSYS2's cygpath.
+
+    Args:
+        option: cygpath's conversion option, "-u" for the POSIX form or "-w"
+            for the Windows one.
+        path: The path to convert.
+
+    Returns:
+        The converted path.
+    """
+    # Run by its full path in this Python's own MSYS2, since PATH has no
+    # /usr/bin when the script is started from cmd.exe instead of an MSYS2
+    # shell.  Not from the directory of sys.executable, which in a venv is
+    # the venv's own bin.
+    result = subprocess.run(
+        ["/usr/bin/cygpath", option, str(path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
 class _Launcher:
     """
     Starts a command for _run_command, and kills and cleans up after it.
@@ -451,6 +529,32 @@ class _LinuxLauncher(_Launcher):
             _linux_set_child_subreaper(False)
 
 
+class _WindowsLauncher(_Launcher):
+    """
+    Windows only: a _Launcher that finds the command's program as the child
+    would.
+    """
+
+    def __init__(
+        self,
+        cmd: List[str],
+        cwd: Optional[Path],
+        env: Optional[Dict[str, str]],
+        capture_output: bool,
+    ) -> None:
+        """See _Launcher."""
+        if IS_NATIVE_WINDOWS:
+            # CreateProcess looks for a plain program name in this process's
+            # PATH, not in the PATH of the environment the child is given,
+            # which is where setup_environment put the MSYS2 tools.  Resolve
+            # it here.
+            search_path = (env if env is not None else os.environ).get("PATH")
+            resolved = shutil.which(cmd[0], path=search_path)
+            if resolved:
+                cmd = [resolved, *cmd[1:]]
+        super().__init__(cmd, cwd, env, capture_output)
+
+
 def _new_launcher(
     cmd: List[str],
     cwd: Optional[Path],
@@ -459,6 +563,8 @@ def _new_launcher(
     kill_process_tree: bool,
 ) -> _Launcher:
     """The _Launcher for this platform and these _run_command arguments."""
+    if IS_WINDOWS:
+        return _WindowsLauncher(cmd, cwd, env, capture_output)
     if IS_LINUX and kill_process_tree:
         return _LinuxLauncher(cmd, cwd, env, capture_output)
     return _Launcher(cmd, cwd, env, capture_output)
@@ -504,6 +610,7 @@ def _run_command(
         TimeoutExpired if timeout is set and exceeded.
     """
     launcher = _new_launcher(cmd, cwd, env, capture_output, kill_process_tree)
+    cmd = launcher.cmd
     process = None
     try:
         try:
@@ -752,7 +859,8 @@ def _load_emulator_support() -> types.ModuleType:
 def host_path(value: str) -> Path:
     """
     Turn a path given on the command line or in the environment into one this
-    Python can use.
+    Python can use.  In an MSYS2 Python, a Windows path such as
+    C:\\rocm becomes its POSIX form, /c/rocm.
 
     Args:
         value: The path as given.
@@ -761,7 +869,8 @@ def host_path(value: str) -> Path:
         The path.
 
     Raises:
-        argparse.ArgumentTypeError: If the path is empty.
+        argparse.ArgumentTypeError: If the path is empty, or cygpath can't
+            convert it.
     """
     # Path("") is the current directory, which a forgotten or mistyped value
     # would otherwise quietly stand for.  As an option's type=, argparse
@@ -769,6 +878,17 @@ def host_path(value: str) -> Path:
     # not as a traceback.
     if not value:
         raise argparse.ArgumentTypeError("the path is empty")
+    # Such a Python takes no drive letters, and the colon after a drive
+    # letter would split a PATH entry built from the path.  cygpath -u
+    # leaves a path that is already POSIX as it is.
+    if IS_POSIX_WINDOWS:
+        try:
+            return Path(_msys2_cygpath("-u", value))
+        except subprocess.CalledProcessError as e:
+            # cygpath's own message already says what failed.
+            raise argparse.ArgumentTypeError(
+                e.stderr.strip() or f"cygpath can't convert {value!r}"
+            ) from None
     return Path(value)
 
 
@@ -897,8 +1017,17 @@ def parse_arguments() -> argparse.Namespace:
         "--rocgdb-bin",
         type=host_path,
         help="Path to the ROCgdb executable. Validated for existence when "
-        "supplied. Default: <rocm_dir>/bin/rocgdb, where rocm_dir is "
-        "auto-discovered (see --try-rocm-path).",
+        "supplied. Default: <rocm_dir>/bin/rocgdb (rocgdb.exe on Windows), "
+        "where rocm_dir is auto-discovered (see --try-rocm-path).",
+    )
+    parser.add_argument(
+        "--msys2-root",
+        type=host_path,
+        help="Windows only: the MSYS2 installation (the directory holding "
+        "usr/bin) whose sh, make and DejaGnu run the testsuite. "
+        "Default: the MSYS2 this script runs from, when started from an "
+        "MSYS2 shell, else C:/msys64. Under MSYS2's own Python, only that "
+        "Python's installation is accepted, and is the default.",
     )
     parser.add_argument(
         "--runtestflags",
@@ -969,7 +1098,8 @@ def parse_arguments() -> argparse.Namespace:
         "hardware; no AMD GPU needed. GPU is a mirage profile (mi300x, "
         "mi350x, mi450x) or the gfx target it emulates (gfx942, gfx950, "
         "gfx1250), which the ROCm tree must have been built for. Raises "
-        "--default-timeout, since emulated tests are slower.",
+        "--default-timeout, since emulated tests are slower. Not supported "
+        "on Windows.",
     )
     parser.add_argument(
         "--try-rocm-path",
@@ -1097,6 +1227,12 @@ def parse_arguments() -> argparse.Namespace:
         _log_error_and_exit(
             "--one-by-one-log-dir / --one-by-one-test-timeout require --one-by-one."
         )
+
+    # rocjitsu has no Windows KMD, so it can't emulate a GPU there.  Ignoring
+    # the option instead would run the tests on the real GPU while the command
+    # line says they are emulated.
+    if args.emulate is not None and IS_WINDOWS:
+        _log_error_and_exit("--emulate is not supported on Windows.")
 
     # An emulated GPU can't wedge the way this probe catches: it is built fresh
     # per test, and dmesg says nothing about a userspace device. Ignore rather
@@ -1888,7 +2024,9 @@ def setup_sanitizer_environment(env_vars: Dict[str, str], testsuite_dir: Path) -
     _log_aligned_fields(fields)
 
 
-def setup_environment(artifacts_dir: Path, try_rocm_path: bool) -> Dict[str, str]:
+def setup_environment(
+    artifacts_dir: Path, try_rocm_path: bool, msys2_root: Optional[Path] = None
+) -> Dict[str, str]:
     """
     Configure environment variables for test suite execution.
 
@@ -1898,6 +2036,9 @@ def setup_environment(artifacts_dir: Path, try_rocm_path: bool) -> Dict[str, str
             ROCM_PATH is removed from the environment so a system-wide
             setting cannot interfere with the LLVM toolchain paths we
             configure explicitly.
+        msys2_root: On Windows, the MSYS2 installation whose sh, make and
+            DejaGnu run the testsuite.  Its usr/bin is put on PATH.  Unused
+            elsewhere.
 
     Returns:
         Updated environment variables dictionary.
@@ -1931,10 +2072,11 @@ def setup_environment(artifacts_dir: Path, try_rocm_path: bool) -> Dict[str, str
         f"{artifacts_dir}/lib/llvm/lib",
     ]
 
-    # Determine target triple
+    # Determine target triple.  It only extends LD_LIBRARY_PATH, which Windows
+    # doesn't use (see below).
     target_triple = None
     amdclang_path = artifacts_dir / "lib" / "llvm" / "bin" / "amdclang++"
-    if amdclang_path.exists():
+    if not IS_WINDOWS and amdclang_path.exists():
         try:
             target_triple = subprocess.run(
                 [str(amdclang_path), "--print-target-triple"],
@@ -1952,8 +2094,30 @@ def setup_environment(artifacts_dir: Path, try_rocm_path: bool) -> Dict[str, str
     if target_triple:
         ld_library_parts += [f"{artifacts_dir}/lib/llvm/lib/{target_triple}"]
 
+    if IS_WINDOWS:
+        # The Windows loader finds DLLs via PATH, and TheRock installs them next
+        # to the executables in bin/, so there is no library path to set.  The
+        # testsuite's configure, make and DejaGnu come from MSYS2.  Its usr/bin
+        # goes ahead of the system directories, so that the shell scripts get
+        # MSYS2's `find` and `sort` instead of Windows'.
+        ld_library_parts = []
+        path_parts.append(str(msys2_root / "usr" / "bin"))
+        # Without MSYSTEM, MSYS2's uname would describe the MSYS environment
+        # itself, so the testsuite's configure would pick a *-msys triplet, and
+        # the gdb.rocm tests would end up all UNSUPPORTED.
+        env_vars["MSYSTEM"] = "UCRT64"
+        # An MSYS2 login shell points CONFIG_SITE at its environment's
+        # config.site, which the testsuite's configure would then read.
+        if env_vars.pop("CONFIG_SITE", None) is not None:
+            logger.info("Dropped CONFIG_SITE from environment")
+
     _prepend_to_path_var(env_vars, "PATH", path_parts)
-    _prepend_to_path_var(env_vars, "LD_LIBRARY_PATH", ld_library_parts)
+    fields = [("PATH (prepended)", os.pathsep.join(path_parts))]
+    if ld_library_parts:
+        _prepend_to_path_var(env_vars, "LD_LIBRARY_PATH", ld_library_parts)
+        fields.append(
+            ("LD_LIBRARY_PATH (prepended)", os.pathsep.join(ld_library_parts))
+        )
 
     # Check if we are running within a github actions context, where a
     # non-system version of Python is being used. If so, we have
@@ -1964,16 +2128,34 @@ def setup_environment(artifacts_dir: Path, try_rocm_path: bool) -> Dict[str, str
         pythonhome_value = env_vars["PYTHONHOME"]
     else:
         pythonhome_value = "not set (no pythonLocation env var)"
+    fields.append(("PYTHONHOME", pythonhome_value))
 
-    _log_aligned_fields(
-        [
-            ("PATH (prepended)", os.pathsep.join(path_parts)),
-            ("LD_LIBRARY_PATH (prepended)", os.pathsep.join(ld_library_parts)),
-            ("PYTHONHOME", pythonhome_value),
-        ]
-    )
+    _log_aligned_fields(fields)
 
     return env_vars
+
+
+def _windows_find_file(name: str, search_path: Optional[str]) -> Optional[str]:
+    """
+    Native Windows Python only: find a file named exactly `name` in the
+    directories of a PATH value, whether or not its extension is in PATHEXT.
+
+    Args:
+        name: The file name.
+        search_path: The PATH value to search.
+
+    Returns:
+        The file's path, or None if no directory has it.
+    """
+    # Windows has no executable bit, and a native Python's which() only takes
+    # a name with an extension from PATHEXT, as cmd.exe does.  Before Python
+    # 3.12 it never tries the name as given, and from 3.12.8 and 3.13.1 on
+    # (gh-127001), it no longer does when looking for an executable.  That
+    # misses MSYS2's runtest, a shell script that make runs through sh.
+    for directory in (search_path or "").split(os.pathsep):
+        if directory and os.path.isfile(os.path.join(directory, name)):
+            return os.path.join(directory, name)
+    return None
 
 
 def check_executables(executables: List[str], env_vars: Dict[str, str]) -> None:
@@ -1996,6 +2178,10 @@ def check_executables(executables: List[str], env_vars: Dict[str, str]) -> None:
 
     for exe in executables:
         path = shutil.which(exe, path=search_path)
+        # An MSYS2 Python's which() has the runtime's own idea of executable,
+        # which MSYS2's runtest passes, but a native Python's does not.
+        if path is None and IS_NATIVE_WINDOWS:
+            path = _windows_find_file(exe, search_path)
         if path:
             logger.info(f"{STATUS_PASS} {exe:15} found at: {path}")
         else:
@@ -2169,6 +2355,22 @@ def discover_test_directories(
     return sorted(test_dirs)
 
 
+def _glob_posix(pattern: str, root: Path) -> List[str]:
+    """
+    Find the paths under `root` that match `pattern`.
+
+    Args:
+        pattern: The glob pattern, relative to `root`.
+        root: The directory to search.
+
+    Returns:
+        The matching paths, sorted, relative to `root` and with forward
+        slashes, as runtest requires in TESTS.
+    """
+    # glob separates with backslashes on Windows.
+    return sorted(Path(m).as_posix() for m in glob.glob(pattern, root_dir=str(root)))
+
+
 def expand_test_paths(test_list: List[str], testsuite_dir: Path) -> List[str]:
     """
     Expand test paths to a list of .exp files, validating existence.
@@ -2186,9 +2388,15 @@ def expand_test_paths(test_list: List[str], testsuite_dir: Path) -> List[str]:
     expanded_tests: List[str] = []
 
     for test_path in test_list:
+        # On Windows, gdb.rocm\simple.exp names a test as well, but runtest
+        # requires forward slashes in TESTS.  PureWindowsPath, since under an
+        # MSYS2 Python a Path is a POSIX one, which takes the backslash as
+        # part of a name, and so would glob.
+        if IS_WINDOWS:
+            test_path = PureWindowsPath(test_path).as_posix()
         if not test_path.endswith(".exp"):
             pattern = f"{test_path}/*.exp"
-            matches = sorted(glob.glob(pattern, root_dir=str(testsuite_dir)))
+            matches = _glob_posix(pattern, testsuite_dir)
             if matches:
                 expanded_tests.extend(matches)
                 logger.info(
@@ -2574,6 +2782,78 @@ def run_tests(
                     )
 
 
+@functools.lru_cache(maxsize=None)
+def _is_msys2_python() -> bool:
+    """
+    Whether this Python is built against the MSYS2 runtime, as opposed to a
+    native Windows one, a Cygwin one, or one on another OS.
+    """
+    if not IS_POSIX_WINDOWS:
+        return False
+    # Ask which runtime this process has loaded.  uname, and so
+    # platform.system(), can't tell: MSYS2's follows MSYSTEM, and reports
+    # MSYS_NT only in the MSYS environment, MINGW64_NT and the like in the
+    # others.  GetModuleHandleW never loads the DLL it is asked about.
+    return bool(_windows_kernel32().GetModuleHandleW("msys-2.0.dll"))
+
+
+def _windows_resolve_msys2_root(msys2_root: Optional[Path]) -> Path:
+    """
+    Windows only: pick the MSYS2 installation that runs the testsuite, and
+    log which one and why.  In an MSYS2 Python that is the Python's own
+    installation, "/".  Otherwise it is --msys2-root if given, else the MSYS2
+    this script was started from, else C:/msys64.
+
+    Args:
+        msys2_root: The --msys2-root value, or None if it was not given.
+
+    Returns:
+        The MSYS2 root directory.
+
+    Exits:
+        Code 1 if an MSYS2 Python is given another installation.
+    """
+    if _is_msys2_python():
+        # An MSYS2 program hands any MSYS2 program it starts, even one from
+        # another installation, the environment's paths in POSIX form.  A
+        # program from another installation reads them through its own mount
+        # table, where they can name other directories (/tmp, say, as
+        # C:\WINDOWS), and configure then can't run the compiler.
+        own_root = Path("/")
+        if msys2_root is not None:
+            # Compare the directories, not the names: the root can also be
+            # spelled in its POSIX form, such as /c/msys64, which is "/" only
+            # as a directory.  A directory that doesn't exist isn't it either.
+            try:
+                same = msys2_root.samefile(own_root)
+            except OSError:
+                same = False
+            if not same:
+                _log_error_and_exit(
+                    f"--msys2-root {msys2_root} is not this MSYS2 Python's own "
+                    f"installation ({_msys2_cygpath('-w', own_root)}).  Drop "
+                    "--msys2-root, or run the script with that installation's "
+                    "Python or with a native Windows Python."
+                )
+        logger.info(f"Using this MSYS2 Python's own MSYS2: {own_root}")
+        return own_root
+    if msys2_root is not None:
+        logger.info(f"Using MSYS2 from --msys2-root: {msys2_root}")
+        return msys2_root
+    # An MSYS2 login shell sets MSYSTEM_PREFIX to its environment's prefix,
+    # such as /ucrt64, or /usr for MSYS, always a directory directly under
+    # the MSYS2 root.  A native program started from the shell sees it in
+    # Windows form, C:/msys64/ucrt64.
+    prefix = os.environ.get("MSYSTEM_PREFIX")
+    if prefix:
+        root = host_path(prefix).parent
+        logger.info(f"Using the MSYS2 this script runs from: {root}")
+        return root
+    root = host_path("C:/msys64")
+    logger.info(f"Using the default MSYS2: {root}")
+    return root
+
+
 def _resolve_rocm_paths(args: argparse.Namespace) -> Tuple[Path, Path, Path]:
     """
     Resolve the ROCm tree root, ROCgdb binary, and testsuite directory.
@@ -2636,8 +2916,13 @@ def _resolve_rocm_paths(args: argparse.Namespace) -> Tuple[Path, Path, Path]:
             rocm_dir = script_path.parent.parent.parent
             logger.info(f"Using script-based path: {rocm_dir}")
 
+    # Windows has no launcher wrapper script choosing between Python variants,
+    # so the executable itself is the default there.
+    default_rocgdb = "rocgdb.exe" if IS_WINDOWS else "rocgdb"
     rocgdb_bin = (
-        args.rocgdb_bin if args.rocgdb_bin is not None else rocm_dir / "bin" / "rocgdb"
+        args.rocgdb_bin
+        if args.rocgdb_bin is not None
+        else rocm_dir / "bin" / default_rocgdb
     )
     rocgdb_testsuite_dir = (
         args.testsuite_dir
@@ -2660,6 +2945,17 @@ def main() -> None:
     Exits:
         Code 0 if all tests pass or are expected failures, Code 1 otherwise.
     """
+    # A Cygwin Python works in Cygwin paths (/cygdrive/c/...), which mean
+    # nothing to the testsuite's MSYS2 programs.  For a non-Cygwin program it
+    # starts, MSYS2's included, Cygwin converts a few environment variables,
+    # such as PATH, but not the arguments, so any path passed as an argument,
+    # such as the path to the testsuite's configure script, would reach the
+    # program unusable.
+    if IS_POSIX_WINDOWS and not _is_msys2_python():
+        _log_error_and_exit(
+            "A Cygwin Python can't run the testsuite's MSYS2 programs.  "
+            "Use a native Windows Python or MSYS2's."
+        )
     args = parse_arguments()
 
     # Determine ignore list file path.
@@ -2695,9 +2991,7 @@ def main() -> None:
         args.tests = ["gdb.rocm"]
         logger.info("Using --gpu-tests: running gdb.rocm tests only")
     elif args.gpu_corefile_tests:
-        corefile_tests = sorted(
-            glob.glob("gdb.rocm/runtime-core*.exp", root_dir=str(rocgdb_testsuite_dir))
-        )
+        corefile_tests = _glob_posix("gdb.rocm/runtime-core*.exp", rocgdb_testsuite_dir)
         if not corefile_tests:
             _log_error_and_exit(
                 "No GPU corefile tests found matching gdb.rocm/runtime-core*.exp"
@@ -2746,19 +3040,22 @@ def main() -> None:
     xfailed_tests = load_ignore_list_from_json(args.ignore_list_file)
 
     # Validate critical files exist.
-    validate_required_files(
-        {
-            "ROCgdb launcher": rocgdb_bin,
-            "ROCgdb configure script": rocgdb_configure_script,
-        }
-    )
+    required_files = {
+        # Windows has no launcher script (see _resolve_rocm_paths).
+        "ROCgdb executable" if IS_WINDOWS else "ROCgdb launcher": rocgdb_bin,
+        "ROCgdb configure script": rocgdb_configure_script,
+    }
+    if IS_WINDOWS:
+        args.msys2_root = _windows_resolve_msys2_root(args.msys2_root)
+        required_files["MSYS2 shell"] = args.msys2_root / "usr" / "bin" / "sh.exe"
+    validate_required_files(required_files)
 
     if IS_LINUX:
         # Set core dump file limit and display info.
         setup_core_file_info()
 
     # Prepare environment for tests.
-    env_vars = setup_environment(rocm_dir, args.try_rocm_path)
+    env_vars = setup_environment(rocm_dir, args.try_rocm_path, args.msys2_root)
     setup_sanitizer_environment(env_vars, rocgdb_testsuite_dir)
 
     # Validate that we can run rocgdb.
@@ -2925,8 +3222,10 @@ def _build_runtestflags(
     Returns:
         Complete RUNTESTFLAGS string.
     """
+    # Use forward slashes because on Windows the path ends up in Tcl, where a
+    # backslash is an escape character.
     parts = [
-        f"GDB={shlex.quote(str(rocgdb_bin))}",
+        f"GDB={shlex.quote(rocgdb_bin.as_posix())}",
         f"CC_FOR_TARGET={shlex.quote(cc)}",
         f"CXX_FOR_TARGET={shlex.quote(cxx)}",
         f"F77_FOR_TARGET={shlex.quote(fc)}",
@@ -2970,11 +3269,11 @@ def _build_sanity_check_executable(
     simple.cpp is a self-contained HIP program with its own main() that launches
     a trivial kernel and asserts the result, so it compiles directly with
     amdclang++ and needs none of the testsuite's wrapper/driver machinery. The
-    executable is written to <log_dir>/sanity_check and rebuilt unconditionally
-    on every invocation: --offload-arch=native bakes in the build-time GPU, so
-    a binary left over from a previous run (possibly on different hardware)
-    must never be reused, or it could cause a spurious "system unreliable"
-    abort.
+    executable is written to <log_dir>/sanity_check (sanity_check.exe on
+    Windows) and rebuilt unconditionally on every invocation:
+    --offload-arch=native bakes in the build-time GPU, so a binary left over
+    from a previous run (possibly on different hardware) must never be
+    reused, or it could cause a spurious "system unreliable" abort.
 
     Args:
         test_suite_dir: Path to the testsuite directory (source of simple.cpp).
@@ -2995,7 +3294,8 @@ def _build_sanity_check_executable(
     if not src.is_file():
         _log_error_and_exit(f"Sanity-check source not found: {src}")
 
-    out = log_dir / "sanity_check"
+    # On Windows the linker and CreateProcess both expect the .exe.
+    out = log_dir / ("sanity_check.exe" if IS_WINDOWS else "sanity_check")
 
     try:
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -3037,7 +3337,8 @@ def _build_sanity_check_executable(
 
 def _dump_dmesg(log_dir: Path, env_vars: Dict[str, str]) -> None:
     """
-    Capture kernel ring buffer output to <log_dir>/dmesg.log.
+    Capture kernel ring buffer output to <log_dir>/dmesg.log.  On Windows,
+    only warn that there is nothing to capture.
 
     On many systems reading the kernel log is restricted
     (kernel.dmesg_restrict), so a plain `dmesg` fails for non-root users. We
@@ -3057,6 +3358,10 @@ def _dump_dmesg(log_dir: Path, env_vars: Dict[str, str]) -> None:
     Returns:
         None
     """
+    if IS_WINDOWS:
+        logger.warning(f"{STATUS_WARN} No kernel log to capture on Windows.")
+        return
+
     dmesg_path = log_dir / "dmesg.log"
 
     def _try(cmd: List[str]) -> Optional[str]:
