@@ -30,6 +30,8 @@
 
 #include "objfiles.h"
 #include "complaints.h"
+#include "osabi.h"
+#include "gdbarch.h"
 #include "pdb/pdb-internal.h"
 #include "cli/cli-cmds.h"
 #include "gdbsupport/common-utils.h"
@@ -615,6 +617,8 @@ pdb_read_dbi_stream (pdb_per_objfile *pdb)
     pdb_error ("DBI module info (%u bytes) overflows the stream",
 	       mod_info_size);
   pdb->dbi_age = read_u32 (dbi_hdr + DBI_HDR_AGE_OFFS);
+  pdb->psgsi_stream = read_u16 (dbi_hdr + DBI_HDR_PSGSI_STREAM_OFFS);
+  pdb->sym_record_stream = read_u16 (dbi_hdr + DBI_HDR_SYM_RECORD_STREAM_OFFS);
 
   /* Module info starts right after the DBI header.  */
   const gdb_byte *mod_info = dbi_hdr + DBI_HDR_MODULE_INFO_OFFS;
@@ -661,6 +665,50 @@ pdb_read_dbi_stream (pdb_per_objfile *pdb)
 	 rounding the address rounds the offset.  */
       p = std::min (align_up (p, 4), mod_info_end);
     }
+}
+
+/* Read section addresses from BFD.  */
+
+static bool
+pdb_read_section_addresses (pdb_per_objfile *pdb)
+{
+  if (pdb->objfile->obfd == nullptr)
+    {
+      pdb_load_diagnostic (pdb->objfile,
+			   "No BFD available for section mapping");
+      return false;
+    }
+
+  for (asection *sect : gdb_bfd_sections (pdb->objfile->obfd))
+    {
+      pdb->section_addresses.push_back (bfd_section_vma (sect));
+      pdb->section_sizes.push_back
+	(pdb_section_extent (pdb->objfile->obfd.get (), sect));
+    }
+
+  if (pdb->section_addresses.empty ())
+    {
+      pdb_load_diagnostic (pdb->objfile, "No sections found in BFD");
+      return false;
+    }
+
+  return true;
+}
+
+/* See pdb-internal.h.  */
+
+CORE_ADDR
+pdb_per_objfile::map_section_offset_unrelocated (uint16_t section,
+						 uint32_t offset)
+{
+  if (!section_valid (section))
+    {
+      pdb_complaint ("Invalid section number %u (max %zu)", section,
+		     section_addresses.size ());
+      return 0;
+    }
+
+  return section_addresses[section - 1] + offset;
 }
 
 /* Load the PDB file for the given pdb context: find it and map it
@@ -726,6 +774,16 @@ pdb_read_pdb_file (objfile *objfile, const pdb_rsds_info &rsds)
   pdb_read_dbi_stream (pdb);
   if (!pdb_validate_guid (pdb, rsds, info, pdb->dbi_age))
     return nullptr;
+
+  /* Read section addresses from BFD for (section, offset) -> PC mapping.  */
+  if (!pdb_read_section_addresses (pdb))
+    return nullptr;
+
+  /* Read and cache the symbol record stream.  */
+  pdb_read_sym_record_stream (pdb);
+
+  /* Build minimal symbols from S_PUB32 records in the public symbol stream.  */
+  pdb_build_minsyms (pdb);
 
   if (info_verbose)
     gdb_printf ("\nUsing PDB file: %s\n", pdb->pdb_file_path.c_str ());
@@ -908,6 +966,58 @@ test_pdb_reader::read_msf ()
 {
   pdb_read_msf_header (&pdb);
   pdb_read_stream_directory (&pdb);
+}
+
+/* See pdb-internal.h.  */
+
+test_objfile::test_objfile (size_t num_sections)
+{
+  gdbarch_info info;
+  info.bfd_arch_info = bfd_scan_arch ("i386:x86-64");
+  info.osabi = GDB_OSABI_WINDOWS;
+  gdbarch *arch = gdbarch_find_by_info (info);
+  if (arch == nullptr)
+    return;
+
+  objfile = objfile::make (nullptr, current_program_space, "pdb-selftest",
+			   OBJF_NOT_FILENAME);
+  objfile->section_offsets.assign (num_sections, 0);
+  objfile->sect_index_text = 0;
+  objfile->per_bfd->gdbarch = arch;
+}
+
+test_objfile::~test_objfile ()
+{
+  if (objfile != nullptr)
+    objfile->unlink ();
+}
+
+/* See pdb-internal.h.  */
+
+test_module_reader::test_module_reader (const test_pdb &file,
+					size_t num_sections)
+  : obj (num_sections)
+{
+  if (obj.objfile == nullptr)
+    return;
+
+  pdb = get_or_create_pdb_per_objfile (obj.objfile);
+  pdb->file_mapping.base = file.bytes.data ();
+  pdb->file_mapping.size = file.bytes.size ();
+  pdb_read_msf_header (pdb);
+  pdb_read_stream_directory (pdb);
+  for (size_t i = 0; i < num_sections; i++)
+    {
+      pdb->section_addresses.push_back (0x140001000 + 0x1000 * i);
+      pdb->section_sizes.push_back (0x1000);
+    }
+}
+
+test_module_reader::~test_module_reader ()
+{
+  /* The bytes belong to the test_pdb: nothing to unmap.  */
+  if (pdb != nullptr)
+    pdb->file_mapping.base = nullptr;
 }
 
 /* A test_pdb of BLOCK_SIZE blocks with three streams, of 1, 2 and 3

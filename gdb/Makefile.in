@@ -2047,6 +2047,7 @@ DWARF2_OBS = $(patsubst %.c,%.o, $(DWARF2_SRCS))
 PDB_SRCS = \
 	pdb/pdb-cmd.c \
 	pdb/pdb-path.c \
+	pdb/pdb-read-symbols.c \
 	pdb/pdb.c
 PDB_OBS = $(patsubst %.c,%.o, $(PDB_SRCS))
 

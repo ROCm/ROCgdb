@@ -1,0 +1,70 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# The public symbols of a PDB give minimal symbols: lld-link writes no COFF
+# symbol table, so they are the program's only symbol names when nothing
+# else is read.  A C++ global variable's public has a decorated name
+# (?g_counter@@3HA); its minimal symbol takes the variable's source name
+# from its global record.  A function called through an import thunk is
+# a trampoline.  Later readers give these names full symbols, so each check also
+# accepts the full symbol's form.  The program is built with the selected
+# board, and with Microsoft cl linked by lld-link and by Microsoft link.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+standard_testfile .cpp
+
+# Check the minimal symbols of the program GDB has loaded.
+
+proc check_publics {} {
+    global hex
+
+    gdb_test "info address main" \
+	"Symbol \"main(\\(\\))?\" is (a function )?at (address )?$hex.*" \
+	"a function's public gives its address"
+    gdb_test "info symbol main" \
+	"main(\\(\\))? in section \\.text" \
+	"the public's address names the function"
+    gdb_test "info address g_counter" \
+	"Symbol \"g_counter\" is (static storage )?at (address )?$hex.*" \
+	"a global variable is found by its source name"
+
+    gdb_test_lines "maintenance print msymbols" \
+	"a function called through an import thunk is a trampoline" \
+	"\\\] S $hex GetCurrentProcessId section \\.text"
+
+}
+
+with_test_prefix "board" {
+    if {[pdb_prepare_for_testing "prepare fixture" ${testfile}.exe \
+	     $srcfile {debug c++ optimize=-O0}] == 0} {
+	check_publics
+    }
+}
+
+foreach_with_prefix linker {lld link} {
+    set exe ${binfile}-${linker}.exe
+    if {[pdb_cl_prepare_for_testing "prepare fixture" $exe \
+	     $srcdir/$subdir/$srcfile c++ /Od $linker] != 0} {
+	continue
+    }
+
+    check_publics
+}

@@ -29,6 +29,10 @@
   looks for the PDB next to the executable and at the path that the
   executable records.
 
+  GDB reads from the PDB:
+
+  ** Public symbols, as minimal symbols.
+
 * GDB can now read OS-generated core files on systems with Intel AMX
   support.  The AMX registers themselves are not yet readable, but
   other xsave state can be read.
