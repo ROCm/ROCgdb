@@ -18,7 +18,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-   This file implements PDB file path discovery for PE/COFF executables.  */
+   This file implements PDB file path discovery for PE/COFF executables
+   and the conversion of MSYS2 source paths recorded in a PDB.  */
 
 #include "objfiles.h"
 #include "pdb/pdb-internal.h"
@@ -33,10 +34,147 @@
 #include <set>
 #include "filenames.h"
 #include "gdbsupport/selftest.h"
+#include <unistd.h>
 #include <sys/stat.h>
 
 namespace pdb
 {
+
+/* Path conversion debug statements, at "set debug pdb-read 2".  */
+#define pdb_cvt_printf(fmt, ...)                                      \
+  debug_prefixed_printf_cond (pdb_read_debug >= 2, "pdb cvt", fmt, \
+			      ##__VA_ARGS__)
+
+/* Convert a Unix-style path to a Windows path.  GDB has problems with MSVC
+   compiled PDBs that may contain paths like /home/rocm/... when built under
+   MSYS2.  The conversion is used before the file paths are stored to lineinfo.
+   When a path is converted, the converted path is checked for presence, and the
+   original path is returned if the converted one does not exist.  These are the
+   path issues to solve:
+   1. Under MSYS2, the linker prepends the work dir to the file path.  E.g.
+      /home/user/test/C:\Program Files\...\include/__msvc_ostream.hpp
+      The work dir is stripped, e.g. /<WHATEVER>/<DRIVE>:\ becomes <DRIVE>:\
+   2. A pure Unix-style path, e.g. /home/user/test/file.cpp, needs the MSYS2
+      Windows root prepended to it, e.g. C:/msys2/home/user/test/file.cpp.
+      The MSYS2 root is not derivable, because neither the configure-time gdbdir
+      nor the gdb executable dir gives it for every layout.
+      For example:
+	C:/msys2/mingw64/WHATEVER/gdb -> Root is C:/msys2
+	C:/msys2/WHATEVER/gdb -> Root is C:/msys2
+      but C:/mypath/share/gdb yields nothing.  The MSYS2_ROOT environment
+      variable names the root.  When it is not set, or the file is not
+      under it, some well known places are tried:
+       a) E.g. /<DRIVE>/WHATEVER - search for <DRIVE>:/WHATEVER
+       b) Assume the root is <DRIVE>:/msys64 or <DRIVE>:/msys2.
+      TODO: cache the conversions, as each C13 file block converts its path
+      again, and probe the drives only on a Windows host, where an absent
+      network drive can stall each probe.  */
+
+static std::string
+pdb_resolve_path (const char *path)
+{
+  if (path == nullptr || path[0] == '\0')
+    return std::string ();
+
+  /* Non-Unix paths are returned as-is.  */
+  if (path[0] != '/')
+    return std::string (path);
+
+  pdb_cvt_printf ("converting path: '%s'", path);
+
+  /* Case 1: a Windows path is embedded in a Unix prefix, e.g.
+     /home/user/test/C:\Program Files\...\include/file.c.  Strip everything
+     before the drive letter, which a ':' finds in the pattern /X:\ or /X:/.  */
+  std::string spath (path);
+  if (size_t pos = spath.find (':'); pos != std::string::npos && pos >= 2)
+    {
+      if (spath[pos - 2] == '/' && isalpha ((unsigned char) spath[pos - 1])
+	  && pos + 1 < spath.size ()
+	  && (spath[pos + 1] == '\\' || spath[pos + 1] == '/'))
+	{
+	  std::string result = spath.substr (pos - 1);
+	  if (access (result.c_str (), F_OK) == 0)
+	    {
+	      pdb_cvt_printf ("Converted: '%s' -> '%s'", path,
+			      result.c_str ());
+	      return result;
+	    }
+	}
+
+      /* If file is not found return the original string.
+	 TODO: decide whether the later schemes should still be tried
+	 once a drive letter was found.  */
+      return spath;
+    }
+
+  /* Case 2: Unix-style path.  */
+
+  /* First, try the MSYS2_ROOT environment variable.  */
+  const char *env_root = getenv ("MSYS2_ROOT");
+  if (env_root != nullptr && env_root[0] != '\0')
+    {
+      std::string result = std::string (env_root) + path;
+      /* Make all directory separators the same, because the root and the path
+	 may use different ones.  It is not clear whether anything else needs
+	 replacing.  */
+      std::replace (result.begin (), result.end (), '\\', '/');
+      if (access (result.c_str (), F_OK) == 0)
+	{
+	  pdb_cvt_printf ("MSYS2_ROOT convert: '%s' -> '%s'", path,
+			  result.c_str ());
+	  return result;
+	}
+    }
+
+  /* Fallback (a): map a drive-letter mount such as /c/foo to C:/foo.  */
+  if (isalpha ((unsigned char) path[1]) && (path[2] == '/' || path[2] == '\0'))
+    {
+      std::string result;
+      result += (char) toupper ((unsigned char) path[1]);
+      result += ':';
+      result += (path[2] == '/') ? &path[2] : "/";
+      if (access (result.c_str (), F_OK) == 0)
+	{
+	  pdb_cvt_printf ("fallback (a) drive mount: '%s' -> '%s'", path,
+			  result.c_str ());
+	  return result;
+	}
+    }
+
+  /* Fallback (b): Try well-known MSYS2 installation roots on all
+     drive letters.  */
+  static constexpr std::array<std::string_view, 2> known_suffixes
+    = { ":/msys64", ":/msys2" };
+
+  for (char drive = 'A'; drive <= 'Z'; drive++)
+    {
+      for (const auto &suffix : known_suffixes)
+	{
+	  std::string full_path = std::string (1, drive) + std::string (suffix)
+				  + path;
+	  if (access (full_path.c_str (), F_OK) == 0)
+	    {
+	      pdb_cvt_printf ("fallback (b) known root: '%s' -> '%s'", path,
+			      full_path.c_str ());
+	      return full_path;
+	    }
+	}
+    }
+
+  /* Nothing resolved; return the original path unchanged.  */
+  return std::string (path);
+}
+
+/* See pdb-internal.h.  */
+
+std::string
+pdb_convert_path (const char *path)
+{
+  /* Non-DOS hosts do not treat '\' as a separator; Windows takes both.  */
+  std::string result = pdb_resolve_path (path);
+  std::replace (result.begin (), result.end (), '\\', '/');
+  return result;
+}
 
 /* Return whether PATH is a regular file.  A FIFO or a device by the PDB's
    name is passed over, because opening one could block.  A path that
@@ -661,6 +799,23 @@ test_path_parts ()
   SELF_CHECK (pdb_get_basename ("a/").empty ());
 }
 
+/* Test pdb_convert_path.  Check that a path that names no Unix root is kept,
+   with '/' separators, and that a Unix path that nothing on the host resolves
+   is kept.  */
+
+static void
+test_convert_path ()
+{
+  SELF_CHECK (pdb_convert_path (nullptr).empty ());
+  SELF_CHECK (pdb_convert_path ("").empty ());
+  SELF_CHECK (pdb_convert_path ("C:\\src\\a.c") == "C:/src/a.c");
+  SELF_CHECK (pdb_convert_path ("rel\\a.c") == "rel/a.c");
+  SELF_CHECK (pdb_convert_path ("/pdb-selftest-none/a.c")
+	      == "/pdb-selftest-none/a.c");
+  SELF_CHECK (pdb_convert_path ("/home/u/C:\\pdb-selftest-none\\a.c")
+	      == "/home/u/C:/pdb-selftest-none/a.c");
+}
+
 } /* namespace selftests */
 
 #endif /* GDB_SELF_TEST */
@@ -674,5 +829,7 @@ INIT_GDB_FILE (pdb_path)
   selftests::register_test ("pdb-rsds-info", pdb::selftests::test_rsds_info);
   selftests::register_test ("pdb-find-pdb-file",
 			    pdb::selftests::test_find_pdb_file);
+  selftests::register_test ("pdb-convert-path",
+			    pdb::selftests::test_convert_path);
 #endif
 }

@@ -27,15 +27,51 @@ With the information from the stream directory, we are able to parse any stream.
 ### PDB Info stream (stream 1)
 
 Basic information stream - it holds the GUID and age that identify the build
-that wrote the PDB.
+that wrote the PDB, and the named stream map, which locates the "/names"
+stream (the String Table) that names all the files compiled into the PDB.
+
+### Names stream (String Table)
+
+Contains info on all the files used by all modules compiled into the PDB.
+The names are read into the String Table, loaded eagerly because almost any
+operation (break, info sources ...) references a module's files to get line
+information, so preloading avoids repeated lookups.
 
 ### DBI stream (stream 3)
 
 DBI stream contains the debug information (line numbers, symbols, etc.) for all
 the modules (object files) linked into the program. Each module's debug info is
-in a different stream. The reader reads the header, which holds the DBI age
-and the stream numbers of the global streams, and the module records, which
-say which stream holds each module's debug info.
+in a different stream. The reader reads the header, which holds the DBI age and
+the stream numbers of the global streams, the module records, which say which
+stream holds each module's debug info, and the Section Contribution and File
+Info substreams; then it reads every module's stream.
+
+### DBI Section Contribution substream
+
+One entry per contribution: the bytes an object file put in a section of the
+image. A module's record names only its first contribution, while a module
+compiled with a section per function (`/Gy`) has one per function, so the
+reader takes a module's code from its code contributions here.
+
+### DBI File Info substream
+
+Substream is just a piece of data located at a given offset in a stream.
+The File Info substream contains info on all the files used by all the modules
+compiled into the PDB - the Names Buffer. Names Buffer actually duplicates the
+String Table but it also adds the information on files that go into each module.
+Getting a module's files from the String Table instead would mean reading
+the module's stream for the file checksums that refer to them.
+
+### Module Streams
+
+Module streams contain the debug information for individual modules (object
+files). Various debug sections are specified using identifiers — e.g. symbols
+or line information or file info. The line information is in C13 sections
+(C11 sections are obsolete). C13 sections are split into subsections, most
+importantly Checksums and Lines. The Checksums subsection references the
+String Table to provide the source files that belong to the module, while the
+Lines subsection maps addresses to source lines (analogous to `.debug_line` in
+DWARF).
 
 ### Symbol Record Stream / PSGSI
 
@@ -86,6 +122,17 @@ a network or device path (`\\host\share\...`, `\\?\...`), as opening one
 makes Windows send the user's credentials to that host, or when it is not
 absolute on the host GDB runs on.
 
+### Path Conversion (MSYS2)
+
+PDBs produced under MSYS2 can have Linux style paths which are converted into
+Windows style paths before storing them to symtab linetables, so that GDB
+can load them. This either requires prepending the MSYS2 root
+(e.g. /home/PATH -> C:/msys2/PATH) or converting drive information
+(e.g. /c/PATH -> C:/PATH).
+
+The MSYS2_ROOT environment variable names the MSYS2 root; without it, or for a
+file not under it, the reader tries the usual `msys64` and `msys2` roots.
+
 ## Maintenance Commands
 
 `pdb-loaded-files` takes no arguments.
@@ -110,8 +157,8 @@ Initialization then loads the PDB in this order:
 
 1. Map the PDB file read-only, validate the MSF magic and header, and read
    the stream directory (which maps every stream to its blocks).
-2. Read the PDB Info stream and validate its GUID/age against the EXE's
-   RSDS record.  A mismatch aborts the load:
+2. Read the PDB Info stream, validate its GUID/age against the EXE's RSDS
+   record, and load the `/names` string table.  A mismatch aborts the load:
    symbol offsets, line tables and type indices are all keyed to the exact
    build that produced the EXE, so a PDB from another build cannot be used
    at all.  Aborting also discards the `pdb_per_objfile` that steps 1-2 had
@@ -123,11 +170,13 @@ Initialization then loads the PDB in this order:
 4. Read PE section addresses from BFD, used to relocate section:offset pairs
    into real addresses.
 5. Build minimal symbols from the public symbol stream.
+6. Expand every module (`pdb_expand_all_modules()`) into a compunit.
 
 A malformed PDB that fails a check in steps 1-5 is dropped as a mismatched
-one is, with the error shown as a warning.  Counts and sizes read from the
-file are checked against the bytes that hold them in 64-bit arithmetic, and
-a stream cannot have more blocks than the file.
+one is, with the error shown as a warning.  A module whose stream is
+malformed loses its own lines only, and is skipped with a warning.  Counts
+and sizes read from the file are checked against the bytes that hold them in
+64-bit arithmetic, and a stream cannot have more blocks than the file.
 
 ## Build & Configuration
 
@@ -150,15 +199,25 @@ a stream cannot have more blocks than the file.
   DWARF is read as DWARF, and the PDB it names is not read.
 - Minimal symbols from the public symbols (`S_PUB32`).  A data object is
   named by the source name of its global record.
+- Line tables (`DEBUG_S_LINES`, `DEBUG_S_FILECHKSMS`), for breakpoints by
+  line, stepping and `list`.  MSYS2 paths are converted to Windows paths.
 - `maintenance info pdb-loaded-files`.
 
 ## Memory Allocations
 
+Most of the allocations use the objfile obstack.
+
+Non obstack allocations:
+
 - `pdb_per_objfile` — registered via `registry<objfile>::key`, deleted
   with the objfile.
+- `buildsym_compunit` — a local of the function building a compunit, such
+  as `pdb_build_module()`.
 - Streams are copied out of the file mapping into `gdb::byte_vector`s by
-  `read_stream()`.  The ones kept for the objfile's lifetime live in
-  `pdb_per_objfile` (`info_data`, `dbi_data`, `sym_record_data`).
+  `read_stream()`.  The ones kept for the
+  objfile's lifetime live in `pdb_per_objfile` (`info_data`, `names_data`,
+  `dbi_data`, `sym_record_data`); the others, such as a module's stream, are
+  freed when the reading function returns.
 
 **Memory-mapped:**
 - The whole PDB file is mapped read-only for the objfile's lifetime
@@ -183,8 +242,9 @@ a stream cannot have more blocks than the file.
 holds the types, constants and prototypes shared by the reader's files.  One
 context object per objfile holds everything read from the file -- stream
 layout, module list and section addresses -- and dies with the objfile.
+It also holds one record per module.
 
-### `pdb.c` — MSF Parsing and Stream Assembly
+### `pdb.c` — MSF Parsing, Stream Assembly, Module Expansion
 
 The orchestrator: file I/O, block assembly and stream parsing.  It is the
 entry point the COFF reader calls, and it drives the other readers in the
@@ -194,10 +254,30 @@ Serving stream bytes is its job too.  A range inside a single block is handed
 out as a pointer into the mapped file; only a range crossing a block boundary
 is copied.
 
+Expanding a module produces a compilation unit with its line table.  These
+details are easy to get wrong and are handled here:
+- **Line ordering across files.**  Rows are collected and sorted by address
+  before being handed over, so a run of lines from one file is closed where
+  another file's code begins -- which happens whenever a header is inlined.
+  At one address an end marker goes first, since buildsym drops the rows at
+  an end marker's address: Microsoft cl can list a procedure's line block
+  before the block that ends where the procedure starts.
+- **Primary file.**  The compilation unit is named after the module.
+- **Modules with no code or no lines.**  A module whose DBI record has no
+  section contribution, or that has no line data, gets no compilation unit.
+  Nor does a module without a symbol stream (an object compiled without
+  debug info), as DWARF gives such an object no CU.
+
+What GDB gets from all this is a compilation unit per module tagged as
+`CodeView`, with its line table.  Every module is expanded when the PDB is
+loaded.
+
 ### `pdb-read-symbols.c` — CodeView Symbol Parsing
 
 Parses the global symbol record stream and the public symbols.
-`pdb_build_minsyms()` builds minimal symbols from public symbols.
+`pdb_build_minsyms()` builds minimal symbols from public symbols, and
+`pdb_module_language()` reads a module's language from its `S_COMPILE2` or
+`S_COMPILE3` record.
 
 ### `pdb-path.c` — PDB File Discovery
 
@@ -208,7 +288,9 @@ Searches for the PDB file using multiple strategies in priority order:
 3. Full RSDS embedded path
 
 Also contains `pdb_read_rsds_info()` which reads the RSDS debug directory
-entry from the PE executable to extract GUID, age, and PDB path.
+entry from the PE executable to extract GUID, age, and PDB path, and
+`pdb_convert_path()`, which converts MSYS2 source paths
+(see [Path Conversion](#path-conversion-msys2)).
 
 ### `pdb-cmd.c` — Diagnostic / Introspection Commands
 

@@ -29,7 +29,10 @@
 #include "pdb/pdb.h"
 
 #include "objfiles.h"
+#include "buildsym.h"
 #include "complaints.h"
+#include "block.h"
+#include "symfile.h"
 #include "osabi.h"
 #include "gdbarch.h"
 #include "pdb/pdb-internal.h"
@@ -43,6 +46,7 @@
 #include <algorithm>
 #include <vector>
 #include <optional>
+#include <chrono>
 
 #ifdef _WIN32
 /* Define NOMINMAX so <windows.h> does not clobber std::min / std::max.  */
@@ -64,6 +68,10 @@ namespace pdb
 
 /* PDB read debug statements.  */
 unsigned int pdb_read_debug = 0;
+
+/* Quick functions debug statements.  */
+#define pdb_qf_printf(fmt, ...) \
+  debug_prefixed_printf_cond (pdb_read_debug >= 2, "pdb qf", fmt, ##__VA_ARGS__)
 
 /* One PDB loaded per object file.  */
 static const registry<objfile>::key<pdb_per_objfile> pdb_objfile_data_key;
@@ -499,8 +507,8 @@ struct pdb_info_stream
 
 /* Decode the fixed header (version, signature, age, GUID) of the PDB Info
    stream bytes DATA.  map/map_size are set to the bytes that follow the
-   fixed header.  The returned struct holds pointers into DATA, not
-   copies.  */
+   fixed header so the caller can hand them to pdb_parse_named_stream_map.
+   The returned struct holds pointers into DATA, not copies.  */
 
 static pdb_info_stream
 pdb_decode_info_stream (const gdb::byte_vector &data)
@@ -571,6 +579,236 @@ pdb_validate_guid (pdb_per_objfile *pdb, const pdb_rsds_info &rsds,
   return false;
 }
 
+/* One entry in the Named Stream Map, which maps a stream name to a stream
+   index.  NAME points into the cached PDB info stream StringBuffer, so it stays
+   valid for the lifetime of the pdb_per_objfile.  */
+struct pdb_named_stream
+{
+  const char *name;
+  uint32_t stream_idx;
+};
+
+/* The Named Stream Map decoded from the PDB info stream.  An empty `entries`
+   vector means that the map was missing or corrupt.  Callers can treat that the
+   same as "name not found" via lookup().  */
+struct pdb_named_stream_map
+{
+  std::vector<pdb_named_stream> entries;
+
+  /* Return the stream index registered for NAME, or PDB_NO_STREAM if
+     NAME is not present in the map.  */
+  uint32_t lookup (const char *name) const
+  {
+    for (const auto &e : entries)
+      if (strcmp (e.name, name) == 0)
+	return e.stream_idx;
+    return PDB_NO_STREAM;
+  }
+};
+
+/* One present bucket of a serialized PDB hash table.  It holds the raw uint32
+   key and value, which the caller interprets.  */
+struct pdb_hash_bucket
+{
+  uint32_t key;
+  uint32_t value;
+};
+
+/* Decode the serialized hash table beginning at HT, bounded by END.  On
+   corruption, emit a warning and return std::nullopt.  The on-disk layout
+   (microsoft-pdb HashTable) is:
+     uint32_t Size;
+     uint32_t Capacity;
+     uint32_t PresentWordCount;  uint32_t Present[PresentWordCount];
+     uint32_t DeletedWordCount;  uint32_t Deleted[DeletedWordCount];
+     { uint32_t Key; uint32_t Value; } Buckets[popcount (Present)];
+   One bucket is stored per set bit in the Present bit-vector.  */
+
+static std::optional<std::vector<pdb_hash_bucket>>
+pdb_decode_hash_table (const gdb_byte *ht, const gdb_byte *end)
+{
+  if (end - ht < HASH_TABLE_PRESENT_WORD_OFFS)
+    {
+      pdb_warning ("PDB hash table too small for header");
+      return {};
+    }
+
+  uint32_t size = read_u32 (ht + HASH_TABLE_SIZE_OFFS);
+  uint32_t capacity = read_u32 (ht + HASH_TABLE_CAPACITY_OFFS);
+  uint32_t present_words = read_u32 (ht + HASH_TABLE_PRESENT_CNT_OFFS);
+  const gdb_byte *present_bits = ht + HASH_TABLE_PRESENT_WORD_OFFS;
+
+  /* Compare the counts with the words left before forming any pointer from
+     them, because the counts are file data.  The present bit vector and the
+     DeletedWordCount field must fit.  */
+  size_t words_left = (end - present_bits) / HASH_TABLE_BYTES_PER_WORD;
+  if (present_words >= words_left)
+    {
+      pdb_warning ("PDB hash table too small for header "
+		   "and present bit vector");
+      return {};
+    }
+
+  const gdb_byte *deleted_cnt_ptr
+    = present_bits + (size_t) present_words * HASH_TABLE_BYTES_PER_WORD;
+  uint32_t deleted_words = read_u32 (deleted_cnt_ptr);
+  if (deleted_words > words_left - present_words - 1)
+    {
+      pdb_warning ("PDB hash table too small for deleted bit vector");
+      return {};
+    }
+
+  const gdb_byte *table
+    = (deleted_cnt_ptr
+       + ((size_t) deleted_words + 1) * HASH_TABLE_BYTES_PER_WORD);
+
+  /* Only a set bit of the present vector has a bucket, so neither SIZE
+     nor a CAPACITY past the vector's bits can add one.  */
+  std::vector<pdb_hash_bucket> buckets;
+  buckets.reserve (std::min<size_t> (size,
+				     (end - table) / HASH_TABLE_ENTRY_SIZE));
+  uint64_t num_bits
+    = std::min<uint64_t> (capacity,
+			  (uint64_t) present_words * HASH_TABLE_BIT_WORD_SIZE);
+
+  for (uint64_t i = 0; i < num_bits; i++)
+    {
+      uint32_t word_idx = i / HASH_TABLE_BIT_WORD_SIZE;
+      uint32_t bit_idx = i % HASH_TABLE_BIT_WORD_SIZE;
+      if (!(read_u32 (present_bits + word_idx * HASH_TABLE_BYTES_PER_WORD)
+	    & (1u << bit_idx)))
+	continue;
+
+      /* The bucket array holds only present entries and the on-disk table
+	 may end right after the last one.  */
+      if (end - table < HASH_TABLE_ENTRY_SIZE)
+	{
+	  pdb_warning ("PDB hash table truncated past entry %" PRIu64, i);
+	  break;
+	}
+
+      uint32_t key = read_u32 (table + 0);
+      uint32_t value = read_u32 (table + HASH_TABLE_KEY_SIZE);
+      table += HASH_TABLE_ENTRY_SIZE;
+
+      buckets.push_back ({ key, value });
+    }
+
+  return buckets;
+}
+
+/* Parse the Named Stream Map embedded in the PDB info stream and return
+   it as a flat list of (name, stream_idx) pairs.  See LLVM "PDB Info
+   Stream" docs for the on-disk layout.  On corruption, emits a warning
+   and returns an empty map.  */
+
+static pdb_named_stream_map
+pdb_parse_named_stream_map (const pdb_info_stream &info)
+{
+  pdb_named_stream_map result;
+
+  const gdb_byte *map = info.map;
+  uint32_t map_size = info.map_size;
+  const gdb_byte *map_end = map + map_size;
+
+  /* Check that the map's header is whole: 4 bytes each for StringBuffer
+     Size, HashTable Size/Capacity, PresentWordCount and DeletedWordCount,
+     20 bytes total.  */
+  if (map_size < NAMES_MAP_STRBUF_SIZE_OFFS + 5 * NAMES_MAP_UINT32_SIZE)
+    {
+      /* TODO: distinguish an absent named stream map (map_size == 0) from
+	 a corrupt one.  */
+      pdb_warning ("PDB info stream too small for named stream map header");
+      return result;
+    }
+
+  /* Get pointer to StringBuffer and its size.  */
+  const gdb_byte *strbuf = map + NAMES_MAP_STRBUF_OFFS;
+  uint32_t strbuf_size = read_u32 (map + NAMES_MAP_STRBUF_SIZE_OFFS);
+  if (strbuf_size > map_size - NAMES_MAP_STRBUF_OFFS)
+    {
+      pdb_warning ("PDB named stream map string buffer overflows its stream");
+      return result;
+    }
+  const gdb_byte *strbuf_end = strbuf + strbuf_size;
+
+  /* The serialized hash table follows the StringBuffer; each bucket key is
+     an offset into that buffer and each value a stream index.  */
+  auto buckets = pdb_decode_hash_table (strbuf_end, map_end);
+  if (!buckets)
+    return result;
+
+  result.entries.reserve (buckets->size ());
+  for (const auto &b : *buckets)
+    {
+      if (b.key >= strbuf_size)
+	continue;
+
+      const char *name = pdb_extract_string (strbuf + b.key, strbuf_end);
+      if (name == nullptr)
+	continue;
+      result.entries.push_back ({ name, b.value });
+    }
+
+  return result;
+}
+
+/* Read the /names stream and fill the global string table.
+   INFO is the already-decoded PDB info stream header; we reuse it for
+   the named-stream map.  */
+
+static bool
+pdb_read_names_stream (pdb_per_objfile *pdb, const pdb_info_stream &info)
+{
+  pdb->string_table = nullptr;
+  pdb->string_table_size = 0;
+
+  /* Decode the Named Stream Map and look up "/names".  */
+  auto nsm = pdb_parse_named_stream_map (info);
+  uint32_t names_stream = nsm.lookup ("/names");
+
+  if (names_stream == PDB_NO_STREAM || names_stream >= pdb->streams.size ())
+    {
+      pdb_load_diagnostic (pdb->objfile, "/names stream not found");
+      return false;
+    }
+
+  /* Read the /names stream and fill the global string table.  The data moves
+     into pdb->names_data, and string_table points into it for the objfile
+     lifetime.  */
+
+  pdb->names_data = pdb->read_stream (names_stream);
+  if (pdb->names_data.empty ())
+    {
+      pdb_load_diagnostic (pdb->objfile, "No data in /names stream");
+      return false;
+    }
+
+  gdb_byte *names_p = pdb->names_data.data ();
+  size_t names_size = pdb->names_data.size ();
+
+  if (names_size < NAMES_STREAM_MIN_SIZE)
+    {
+      pdb_load_diagnostic (pdb->objfile,
+			   "/names stream too small (%zu bytes)", names_size);
+      return false;
+    }
+
+  uint32_t names_sig = read_u32 (names_p + NAMES_STREAM_SIGNATURE_OFFS);
+  uint32_t data_sz = read_u32 (names_p + NAMES_STREAM_DATA_SIZE_OFFS);
+
+  if (names_sig != NAMES_STREAM_SIGNATURE_VAL)
+    pdb_error ("unexpected /names signature");
+
+  if (data_sz > names_size - NAMES_STREAM_MIN_SIZE)
+    pdb_error ("/names string data extends beyond stream");
+
+  pdb->string_table = names_p + NAMES_STREAM_MIN_SIZE;
+  pdb->string_table_size = data_sz;
+
+  return true;
+}
+
 /* Find the end of a null-terminated string at P within [P, END).  Returns a
    pointer past the null terminator.  Calls pdb_error with MSG if no null
    byte is found within bounds.  */
@@ -585,6 +823,57 @@ pdb_skip_cstring (const gdb_byte *p, const gdb_byte *end, const char *msg)
   return nul + 1;
 }
 
+/* Read the code contributions of the Section Contribution substream,
+   which follows the MOD_INFO_SIZE bytes of Module Info, into
+   pdb->code_contribs.  A module header names only one contribution; a
+   module compiled with a section per function (/Gy) has one per function.
+   An absent or malformed substream leaves the list empty.  */
+
+static void
+pdb_read_section_contribs (pdb_per_objfile *pdb, uint32_t mod_info_size)
+{
+  const gdb_byte *dbi = pdb->dbi_data.data ();
+  uint64_t offset = (uint64_t) DBI_HDR_SIZE + mod_info_size;
+  uint32_t size = read_u32 (dbi + DBI_HDR_SECT_CONTRIB_OFFS);
+  if (size < 4 || offset > pdb->dbi_data.size ()
+      || size > pdb->dbi_data.size () - offset)
+    return;
+
+  const gdb_byte *p = dbi + offset;
+  uint32_t version = read_u32 (p);
+  size_t entry_size;
+  if (version == DBI_SC_VER_60)
+    entry_size = DBI_SC_ENTRY_SIZE;
+  else if (version == DBI_SC_VER_2)
+    entry_size = DBI_SC2_ENTRY_SIZE;
+  else
+    {
+      pdb_load_diagnostic (pdb->objfile,
+			   "unknown section contribution version 0x%x",
+			   version);
+      return;
+    }
+
+  size_t count = (size - 4) / entry_size;
+  p += 4;
+  for (size_t i = 0; i < count; i++, p += entry_size)
+    {
+      uint32_t characteristics = read_u32 (p + DBI_SC_CHARACTERISTICS_OFFS);
+      uint32_t contrib_size = read_u32 (p + DBI_SC_SIZE_OFFS);
+      uint16_t imod = read_u16 (p + DBI_SC_IMOD_OFFS);
+      if (contrib_size == 0 || imod >= pdb->modules.size ()
+	  || (characteristics & (PDB_SCN_CODE | PDB_SCN_EXECUTE)) == 0)
+	continue;
+
+      pdb->code_contribs.push_back ({ read_u16 (p + DBI_SC_ISECT_OFFS), imod,
+				      read_u32 (p + DBI_SC_OFFSET_OFFS),
+				      contrib_size });
+    }
+
+  pdb_dbg_printf ("DBI code section contributions: %zu",
+		  pdb->code_contribs.size ());
+}
+
 /* Read DBI (Debug Info) stream.  Reads headers and Module Info Records in order
    to obtain the sizes and stream numbers of the debug information for each
    module (object file).  Throws via pdb_error on failure.  */
@@ -592,7 +881,8 @@ pdb_skip_cstring (const gdb_byte *p, const gdb_byte *end, const char *msg)
 static void
 pdb_read_dbi_stream (pdb_per_objfile *pdb)
 {
-  /* Read DBI stream into the owned buffer; module names point into it.  */
+  /* Read DBI stream into the owned buffer; module names and
+     file_info_names_buffer point into it.  */
   pdb->dbi_data = pdb->read_stream (PDB_STREAM_DBI);
   if (pdb->dbi_data.empty ())
     pdb_error ("Failed to read DBI stream");
@@ -663,6 +953,8 @@ pdb_read_dbi_stream (pdb_per_objfile *pdb)
 	 4-aligned, so rounding the address rounds the offset.  */
       p = std::min (align_up (p, 4), mod_info_end);
     }
+
+  pdb_read_section_contribs (pdb, mod_info_size);
 }
 
 /* Read section addresses from BFD.  */
@@ -696,6 +988,38 @@ pdb_read_section_addresses (pdb_per_objfile *pdb)
 /* See pdb-internal.h.  */
 
 CORE_ADDR
+pdb_per_objfile::map_section_offset_to_pc (uint16_t section,
+					   uint64_t offset) const
+{
+  if (!section_valid (section))
+    {
+      pdb_complaint ("Invalid section number %u (max %zu)", section,
+		     section_addresses.size ());
+      return 0;
+    }
+
+  if (offset > UINT32_MAX)
+    {
+      pdb_complaint ("section %u offset 0x%" PRIx64 " out of range", section,
+		     offset);
+      return 0;
+    }
+
+  /* Get section base address (VMA from PE header).  */
+  CORE_ADDR section_base = section_addresses[section - 1];
+
+  /* Apply relocation offset (difference between linked and loaded address).  */
+  CORE_ADDR reloc_offset = objfile->section_offsets[section - 1];
+
+  /* Calculate final address: section VMA + relocation + offset.  */
+  CORE_ADDR result = section_base + reloc_offset + offset;
+
+  return result;
+}
+
+/* See pdb-internal.h.  */
+
+CORE_ADDR
 pdb_per_objfile::map_section_offset_unrelocated (uint16_t section,
 						 uint32_t offset)
 {
@@ -707,6 +1031,534 @@ pdb_per_objfile::map_section_offset_unrelocated (uint16_t section,
     }
 
   return section_addresses[section - 1] + offset;
+}
+
+/* See pdb-internal.h.  */
+
+pdb_module_info *
+pdb_module_at_pc (pdb_per_objfile *pdb, CORE_ADDR pc)
+{
+  for (const auto &c : pdb->code_contribs)
+    {
+      if (c.module_index >= pdb->modules.size ()
+	  || !pdb->range_in_section (c.section, c.offset, c.size))
+	continue;
+      CORE_ADDR start = pdb->map_section_offset_to_pc (c.section, c.offset);
+      if (pc >= start && pc - start < c.size)
+	return &pdb->modules[c.module_index];
+    }
+  return nullptr;
+}
+
+/* Call CALLBACK (KIND, DATA, SIZE) for each C13 subsection of MODULE, whose
+   stream bytes are MODULE_STREAM.  The C13 data follows the symbols and the
+   C11 lines and may start with the CV signature; each subsection is a kind,
+   a size and SIZE bytes of data padded to 4 bytes.  Throws via pdb_error
+   when a subsection overflows the C13 data.  */
+
+template<typename Callback>
+static void
+pdb_for_each_c13_subsection (const pdb_module_info *module,
+			     gdb_byte *module_stream, Callback &&callback)
+{
+  gdb_byte *c13 = module_stream + module->sym_byte_size
+		  + module->c11_byte_size;
+  gdb_byte *p = c13;
+  const gdb_byte *c13_end = p + module->c13_byte_size;
+
+  if (p + CV_SIGNATURE_SIZE <= c13_end
+      && read_u32 (p) == CV_SIGNATURE_C13)
+    p += CV_SIGNATURE_SIZE;
+
+  while (p + C13_SUBSECT_HEADER_SIZE <= c13_end)
+    {
+      uint32_t kind = read_u32 (p);
+      uint32_t size = read_u32 (p + 4);
+      p += C13_SUBSECT_HEADER_SIZE;
+
+      if (size > (size_t) (c13_end - p))
+	pdb_error ("C13 subsection type 0x%x size %u overflows stream", kind,
+		   size);
+
+      callback (kind, p, size);
+      /* Subsections are padded to 4 bytes from the start of the C13
+	 data.  */
+      p = c13 + align_up ((size_t) (p - c13) + size, 4);
+    }
+}
+
+/* Read a module stream and extract C13 file checksums.  Returns an owned
+   buffer containing the stream data; the caller keeps it alive as long as
+   the data is needed (for line walking).
+   File checksums are copied onto the objfile obstack so they survive
+   after the buffer is freed.  */
+
+gdb::byte_vector
+pdb_read_module_stream (pdb_per_objfile *pdb, pdb_module_info *module)
+{
+  if (module->stream_number == MODI_NO_STREAM)
+    return {};
+
+  auto buf = pdb->read_stream (module->stream_number);
+  if (buf.empty ())
+    return {};
+
+  uint32_t stream_size = pdb->streams[module->stream_number].size;
+
+  /* Validate that sym + c11 + c13 sizes fit within the stream.  */
+  uint64_t fixed_part_size = (uint64_t) module->sym_byte_size
+			     + (uint64_t) module->c11_byte_size;
+
+  if (fixed_part_size > stream_size)
+    pdb_error ("Module %u: sym+c11 sizes exceed stream size",
+	       module->stream_number);
+
+  if (module->c13_byte_size > stream_size - fixed_part_size)
+    pdb_error ("Module %u: c13 size exceeds stream size",
+	       module->stream_number);
+
+  /* Copy SIZE bytes at DATA onto the objfile obstack into *COPY, unless
+     they are there already, so that they outlive the stream buffer.  */
+  auto keep = [pdb] (const gdb_byte **copy, uint32_t *copy_size,
+		     const gdb_byte *data, uint32_t size)
+    {
+      if (*copy != nullptr)
+	return;
+      gdb_byte *mem
+	= (gdb_byte *) obstack_alloc (&pdb->objfile->objfile_obstack, size);
+      memcpy (mem, data, size);
+      *copy = mem;
+      *copy_size = size;
+    };
+
+  /* DEBUG_S_LINES is read when the module is expanded.  */
+  pdb_for_each_c13_subsection
+    (module, buf.data (),
+     [&] (uint32_t kind, const gdb_byte *data, uint32_t size)
+       {
+	 if (kind == DEBUG_S_FILECHKSMS)
+	   keep (&module->file_checksums, &module->file_checksums_size, data,
+		 size);
+       });
+
+  return buf;
+}
+
+/* Get string from the global string table (/names stream) at given offset.  */
+
+static const char *
+pdb_string_table_get (const gdb_byte *string_table, uint32_t table_size,
+		      uint32_t offset)
+{
+  if (string_table == nullptr || offset >= table_size)
+    return nullptr;
+
+  return pdb_extract_string (string_table + offset, string_table + table_size);
+}
+
+/* Resolve a DEBUG_S_FILECHKSMS file id to a source filename via the /names
+   string table.  Returns nullptr if MODULE has no checksums, FILE_ID is
+   out of range, or the name is not in the string table.  */
+
+static const char *
+pdb_get_filename_from_file_id (const pdb_per_objfile *pdb,
+			       pdb_module_info *module, uint32_t file_id)
+{
+  if (module->file_checksums == nullptr)
+    return nullptr;
+
+  /* Access filename through the global string table from /names stream.  */
+  if (pdb->string_table == nullptr)
+    return nullptr;
+
+  const gdb_byte *p = module->file_checksums;
+
+  /* Check that FILE_ID, a byte offset into the DEBUG_S_FILECHKSMS subsection,
+     leaves the checksum record header there whole.  A block whose file cannot
+     be found keeps its lines, under an unknown file.  */
+  if (file_id >= module->file_checksums_size
+      || module->file_checksums_size - file_id < CV_FileChecksum::HDR_SIZE)
+    {
+      pdb_complaint ("file_id %u beyond file checksums size %u", file_id,
+		     module->file_checksums_size);
+      return nullptr;
+    }
+
+  CV_FileChecksum checksum (p + file_id);
+
+  return pdb_string_table_get (pdb->string_table, pdb->string_table_size,
+			       checksum.file_name_offs);
+}
+
+/* Walk all DEBUG_S_LINES subsections in a module's C13 data.  For each file
+   block, invokes CALLBACK with the resolved filename and the raw line array
+   view.  MODULE_STREAM is the raw module stream data.  */
+
+static void
+pdb_walk_c13_line_blocks (const pdb_per_objfile *pdb, pdb_module_info *module,
+			  gdb_byte *module_stream, pdb_line_block_fn callback)
+{
+  /* Callers must verify there is C13 data before calling.  */
+  gdb_assert (module->c13_byte_size > 0);
+
+  /* See pdb-internal.h for the C13 layout.  */
+  pdb_for_each_c13_subsection
+    (module, module_stream,
+     [&] (uint32_t kind, gdb_byte *data, uint32_t size)
+       {
+	 if (kind != DEBUG_S_LINES)
+	   return;
+
+	 gdb_byte *sp = data;
+	 const gdb_byte *sp_end = data + size;
+
+	 /* Ensure there's enough space for the header.  */
+	 if (sp + CV_LineSection::SIZE > sp_end)
+	   pdb_error ("DEBUG_S_LINES subsection too small for header"
+		      " (%u bytes)", size);
+
+	 CV_LineSection ls (sp);
+	 sp += CV_LineSection::SIZE;
+
+	 /* Each line has a CV_Line and, with CV_LINES_HAVE_COLUMNS, a 4-byte
+	    column record.  */
+	 uint64_t entry_size
+	   = CV_Line::SIZE + ((ls.flags & CV_LINES_HAVE_COLUMNS) != 0 ? 4 : 0);
+
+	 /* Iterate file blocks within this subsection.  */
+	 while (sp + CV_FileBlock::SIZE <= sp_end)
+	   {
+	     CV_FileBlock fb (sp);
+	     uint32_t file_id = fb.file_id;
+	     uint32_t num_lines = fb.num_lines;
+	     uint32_t block_size = fb.block_size;
+
+	     if (block_size < CV_FileBlock::SIZE
+		 || block_size > (size_t) (sp_end - sp))
+	       break;
+
+	     gdb_byte *line_data = sp + CV_FileBlock::SIZE;
+	     if (num_lines * entry_size > block_size - CV_FileBlock::SIZE)
+	       break;
+
+	     /* Resolve filename from file checksums + string table.  */
+	     auto fname = pdb_get_filename_from_file_id (pdb, module, file_id);
+	     if (fname == nullptr)
+	       fname = "<unknown>";
+
+	     callback (fname, ls, line_data, num_lines);
+
+	     sp += block_size;
+	   }
+       });
+}
+
+/* Callback body for pdb_walk_c13_line_blocks: queue one file's line rows
+   for CU.  Converts the file path for display, opens a subfile, then
+   resolves each CV_Line to a PC via the section map and queues a row for
+   it; pdb_emit_lines records them unrelocated.  Lines that don't map
+   to any PC (pc == 0) are skipped.
+
+   Each DEBUG_S_LINES subsection covers one contiguous code range
+   (CV_LineSection.code_sz bytes from sect:offs).  We close it with an
+   end-of-sequence marker (line 0) at its end PC so the last line does not
+   extend into whatever code follows the range.  */
+
+static void
+pdb_record_line_block (pdb_per_objfile *pdb, buildsym_compunit *cu,
+		       const char *filename, CV_LineSection line_sect,
+		       const gdb_byte *lines, uint32_t num_lines,
+		       pdb_symbol_lines *sym_lines)
+{
+  uint16_t sect = line_sect.seci;
+  uint32_t sect_offs = line_sect.offs;
+
+  /* Convert MSYS2/Unix paths to Windows paths for source display.  */
+  std::string path = pdb_convert_path (filename);
+
+  cu->start_subfile (path.c_str (), path.c_str ());
+  subfile *current_subfile = cu->get_current_subfile ();
+
+  for (uint32_t i = 0; i < num_lines; i++)
+    {
+      CV_Line line (lines + i * CV_Line::SIZE);
+      uint32_t offs = line.offs;
+      uint32_t line_num = line.line_start;
+
+      /* A row outside its section maps to no code of this module.  */
+      uint64_t row_offs = (uint64_t) sect_offs + offs;
+      if (row_offs > UINT32_MAX
+	  || !pdb->range_in_section (sect, (uint32_t) row_offs, 0))
+	continue;
+
+      CORE_ADDR pc = pdb->map_section_offset_to_pc (sect, row_offs);
+      if (pc == 0)
+	continue;
+
+      /* End the previous line at a row of 0xfeefee or 0xf00f00.  These values
+	 mark code that belongs to no source line, such as compiler-generated
+	 code.  */
+      if (line_num == 0xfeefee || line_num == 0xf00f00)
+	{
+	  sym_lines->rows.push_back ({ pc, 0, current_subfile, LEF_IS_STMT });
+	  continue;
+	}
+
+      /* Every row is a statement.  The CV_Line fStatement bit carries no
+	 per-row information from either producer: Microsoft cl clears no
+	 row's bit and clang-cl sets no row's bit, at /Od and /O2 alike.
+	 GDB places line breakpoints and ends steps only at statement rows,
+	 so taking clang-cl's bit at its word would remove them all.  */
+      linetable_entry_flags flags = LEF_IS_STMT;
+
+      sym_lines->rows.push_back ({ pc, (int) line_num, current_subfile,
+				   flags });
+    }
+
+  /* Close the contribution with an end-of-sequence marker at its end PC, so
+     the last line stops here instead of extending into the following code.  */
+  if (line_sect.code_sz != 0)
+    {
+      uint64_t end_offset = (uint64_t) sect_offs + line_sect.code_sz;
+      CORE_ADDR end_pc = 0;
+      if (end_offset <= UINT32_MAX
+	  && pdb->range_in_section (sect, (uint32_t) end_offset, 0))
+	end_pc = pdb->map_section_offset_to_pc (sect, end_offset);
+      if (end_pc != 0)
+	sym_lines->rows.push_back ({ end_pc, 0, current_subfile, LEF_IS_STMT });
+    }
+}
+
+/* Hand the module's collected rows to buildsym in address order, closing a
+   file's run wherever the next code belongs to a different file.
+
+   CodeView gives each file its own line blocks, and their address ranges
+   interleave when one function's code comes from several files (#line
+   directives, inlining).  Each file's table alone would then show a line
+   running over the other file's code, and GDB takes a line's extent from the
+   next entry in the same table, so `next` would step straight past the
+   other file's statement.
+
+   A DWARF line program is already one address-ordered stream, so
+   lnp_state_machine just watches for the file to change and closes the
+   previous run (gdb/dwarf2/line-program.c).  Sorting is what CodeView needs
+   extra; the loop below is that same rule.  */
+
+static void
+pdb_emit_lines (pdb_per_objfile *pdb, buildsym_compunit *cu,
+		pdb_symbol_lines *sym_lines)
+{
+  auto &rows = sym_lines->rows;
+
+  /* Put an end marker first among the rows at one PC.  It ends the block below,
+     and buildsym drops the rows recorded at an end marker's PC.  */
+  std::stable_sort (rows.begin (), rows.end (),
+		    [] (const pdb_symbol_lines::row &a,
+			const pdb_symbol_lines::row &b)
+		    {
+		      if (a.pc != b.pc)
+			return a.pc < b.pc;
+		      return a.line == 0 && b.line != 0;
+		    });
+
+  CORE_ADDR text_off = pdb->objfile->text_section_offset ();
+  subfile *last_subfile = nullptr;
+  int last_line = 0;
+
+  for (const auto &r : rows)
+    {
+      unrelocated_addr addr { r.pc - text_off };
+
+      if (r.line == 0)
+	{
+	  cu->record_line (r.subfile, 0, addr, LEF_IS_STMT);
+	  last_subfile = nullptr;
+	  continue;
+	}
+
+      if (last_subfile != nullptr && last_subfile != r.subfile)
+	cu->record_line (last_subfile, 0, addr, LEF_IS_STMT);
+
+      /* clang-cl writes one CV_Line per source line by default, and one
+	 per expression with -gcolumn-info, so a line can have several
+	 consecutive rows.  Only the first of them is a statement, as in
+	 clang's DWARF.  */
+      linetable_entry_flags flags = r.flags;
+      if (last_subfile == r.subfile && last_line == r.line)
+	flags &= ~LEF_IS_STMT;
+
+      cu->record_line (r.subfile, r.line, addr, flags);
+      last_subfile = r.subfile;
+      last_line = r.line;
+    }
+}
+
+static void pdb_read_module_files (pdb_per_objfile *pdb,
+				   pdb_module_info *mod);
+
+/* Build MODULE's compunit, for pdb_build_module.  Throws via pdb_error on
+   malformed module data.  */
+
+static compunit_symtab *
+pdb_build_module_or_throw (pdb_per_objfile *pdb, pdb_module_info *module)
+{
+  /* Lookups issued while the compunit is built would re-enter the reader;
+     the flag makes them bail out instead.  */
+  scoped_restore decrementer = increment_reading_symtab ();
+
+  /* Read module stream, owned locally and freed at scope exit.  */
+  auto stream_buf = pdb_read_module_stream (pdb, module);
+
+  /* Cache file list by reading File Info substream.  */
+  pdb_read_module_files (pdb, module);
+
+  /* A module without a symbol stream (an object built without debug
+     info) gets no compunit, as DWARF gives such an object no CU.  */
+  bool has_code = pdb->section_valid (module->sc_section);
+  if (stream_buf.empty ())
+    return nullptr;
+
+  /* Compute module address range based on section contribution from DBI.
+     A module compiled with a section per function (/Gy) has more code
+     than this; pdb_module_at_pc finds a PC in any of it.  */
+  CORE_ADDR low_pc = 0;
+  CORE_ADDR high_pc = 0;
+  if (has_code)
+    {
+      low_pc = pdb->map_section_offset_to_pc (module->sc_section,
+					      module->sc_offset);
+      high_pc = low_pc + module->sc_size;
+      if (high_pc <= low_pc)
+	high_pc = low_pc + 1;
+    }
+
+  /* The module's symbols are not read yet, so its compunit holds only
+     its line table: a module without code or without line data gets
+     none.  */
+  if (!has_code || module->c13_byte_size == 0)
+    return nullptr;
+
+  /* The compunit is named after the module.  */
+  std::string cu_name = module->module_name;
+
+  enum language lang = pdb_module_language (pdb, module);
+
+  /* The compunit starts at 0; its global and static blocks are given the
+     module's start once it is built.  */
+  buildsym_compunit cu (pdb->objfile, cu_name.c_str (),
+			"",
+			lang, 0);
+  cu.record_debugformat ("CodeView");
+
+  /* Record the line table.  */
+  pdb_symbol_lines sym_lines;
+  pdb_walk_c13_line_blocks
+    (pdb, module, stream_buf.data (),
+     [pdb, &cu, &sym_lines] (const char *filename,
+			     CV_LineSection line_sect,
+			     const gdb_byte *lines,
+			     uint32_t num_lines)
+       {
+	 pdb_record_line_block (pdb, &cu, filename, line_sect, lines,
+				num_lines, &sym_lines);
+       });
+  pdb_emit_lines (pdb, &cu, &sym_lines);
+
+  /* Give the main subfile the module's language, because the compunit takes its
+     language from the main subfile.  As start_subfile does for C subfiles, a C
+     module whose source is a C++ or f2c file name takes that language, as
+     DWARF's CU name gives.  */
+  enum language main_lang = lang;
+  if (lang == language_c)
+    {
+      for (uint16_t i = 0; module->files != nullptr && i < module->num_files;
+	   i++)
+	{
+	  enum language l = deduce_language_from_filename (module->files[i]);
+	  if (is_cplus_dialect (l) || l == language_fortran)
+	    {
+	      main_lang = l;
+	      break;
+	    }
+	}
+    }
+  cu.start_subfile (cu_name.c_str (), cu_name.c_str ());
+  subfile *main_subfile = cu.get_current_subfile ();
+  main_subfile->language = main_lang;
+
+  block *static_block = cu.end_compunit_symtab_get_static_block (high_pc,
+								 false, true);
+
+  module->cu = cu.end_compunit_symtab_from_static_block (static_block, false);
+
+  if (module->cu != nullptr)
+    {
+      blockvector *bv = module->cu->blockvector ();
+      bv->global_block ()->set_start (low_pc);
+      bv->static_block ()->set_start (low_pc);
+    }
+
+  /* Set the primary source file's language to the module's, from its
+     S_COMPILE2/S_COMPILE3 record, instead of the one GDB took from the
+     file name, as DWARF does with DW_AT_language: a ".c" file compiled
+     as C++ (-TP) is C++.  A C module whose file name gave a language
+     keeps it: GDB turns the C files of a compunit that also has a C++ or
+     Fortran file name (as f2c output does) into C++ or Fortran.  */
+  if (module->cu != nullptr
+      && !(lang == language_c
+	   && module->cu->primary_filetab ()->language () != language_unknown))
+    module->cu->primary_filetab ()->set_language (lang);
+
+  return module->cu;
+}
+
+/* Expand module into its own compunit_symtab.  Returns the cached CU on
+   subsequent calls.  Returns nullptr if the module has no useful debug
+   data, or after warning that its data is malformed.  */
+
+static compunit_symtab *
+pdb_build_module (pdb_per_objfile *pdb, pdb_module_info *module)
+{
+  if (module->expanded)
+    return module->cu;
+
+  module->expanded = true;
+
+  /* A malformed module loses only its own symbols, and only once.  It stays
+     expanded, without a compunit.  */
+  try
+    {
+      return pdb_build_module_or_throw (pdb, module);
+    }
+  catch (const gdb_exception_error &ex)
+    {
+      pdb_load_diagnostic (pdb->objfile, "module %s skipped: %s",
+			   module->module_name, ex.what ());
+      return nullptr;
+    }
+}
+
+/* Expand all modules.  Called during initial PDB load.  */
+
+static void
+pdb_expand_all_modules (pdb_per_objfile *pdb)
+{
+  using clock = std::chrono::steady_clock;
+  auto start = clock::now ();
+
+  unsigned int expanded = 0;
+  for (auto &module : pdb->modules)
+    {
+      if (module.expanded)
+	continue;
+      pdb_build_module (pdb, &module);
+      expanded++;
+    }
+
+  double ms = std::chrono::duration<double, std::milli>
+    (clock::now () - start).count ();
+  pdb_dbg_printf ("expanded all %u/%zu modules in %.2f ms", expanded,
+		  pdb->modules.size (), ms);
 }
 
 /* Load the PDB file for the given pdb context: find it and map it
@@ -731,12 +1583,104 @@ pdb_load_pdb_file (pdb_per_objfile *pdb, const pdb_rsds_info &rsds)
   return true;
 }
 
+/* Process the File Info substream from the DBI stream.
+   Create the Names Buffer and precompute module pointers into the Names Buffer.
+   Layout:
+     uint16_t  NumModules;
+     uint16_t  NumSourceFiles;
+     uint16_t  ModIndices[NumModules];                skipped
+     uint16_t  ModFileCounts[NumModules];             file count per module
+     uint32_t  FileNameOffsets[Sum(ModFileCounts)];   offsets into NamesBuffer
+     char      NamesBuffer[];                         filename strings.  */
+
+static void
+pdb_read_file_info_substream (pdb_per_objfile *pdb)
+{
+  if (pdb->dbi_data.empty ())
+    pdb_error ("Can't read file info: DBI stream not loaded");
+
+  gdb_byte *dbi = pdb->dbi_data.data ();
+
+  uint32_t mod_info_size = read_u32 (dbi + DBI_HDR_MODULE_SIZE_OFFS);
+  uint32_t sect_contrib_size = read_u32 (dbi + DBI_HDR_SECT_CONTRIB_OFFS);
+  uint32_t sect_map_size = read_u32 (dbi + DBI_HDR_SECT_MAP_OFFS);
+  uint32_t source_info_size = read_u32 (dbi + DBI_HDR_SOURCE_INFO_OFFS);
+
+  /* Sum the substream sizes without wrapping, because they are file data.  */
+  uint64_t offset = ((uint64_t) DBI_HDR_SIZE + mod_info_size
+		     + sect_contrib_size + sect_map_size);
+
+  if (offset + source_info_size > pdb->dbi_data.size ())
+    pdb_error ("File Info substream out of bounds");
+
+  /* Without a File Info substream the modules name no files.  */
+  if (source_info_size == 0)
+    return;
+
+  if (source_info_size < 4)
+    pdb_error ("File Info substream too small");
+
+  gdb_byte *fi = dbi + offset;
+  const gdb_byte *fi_end = fi + source_info_size;
+
+  /* Check NumModules against the low 16 bits of the module count.  NumModules
+     is 16 bits wide, so a PDB of 65536 or more modules keeps only the low bits
+     of the count, while the arrays have an entry per module.  */
+  uint16_t fi_num_mods = read_u16 (fi + FILE_INFO_HDR_NUM_MODULES_OFFS);
+  size_t num_mods = pdb->modules.size ();
+  if (fi_num_mods != (uint16_t) num_mods)
+    pdb_error ("File Info module count (%u), expected %zu", fi_num_mods,
+	       num_mods);
+
+  /* The ModIndices and ModFileCounts arrays must fit within the
+     substream.  */
+  uint64_t counts_offs = (uint64_t) FILE_INFO_MOD_INDICES_OFFS
+			 + num_mods * FILE_INFO_ELEMENT_SIZE;
+  if (counts_offs + num_mods * FILE_INFO_ELEMENT_SIZE > source_info_size)
+    pdb_error ("File info substream too small");
+
+  gdb_byte *mod_file_counts = fi + counts_offs;
+
+  /* FileNameOffsets array starts after ModFileCounts.  */
+  gdb_byte *offsets_base = mod_file_counts
+			   + num_mods * FILE_INFO_ELEMENT_SIZE;
+
+  /* Record the file name offsets of all the modules.  The FileNameOffsets array
+     does not mark module boundaries, so the loop finds them from
+     ModFileCounts.  */
+  uint64_t sum = 0;
+  for (size_t i = 0; i < num_mods; i++)
+    sum += read_u16 (mod_file_counts + i * FILE_INFO_ELEMENT_SIZE);
+
+  /* Names Buffer follows FileNameOffsets and contains null-terminated
+     filename strings.  A module naming no source file leaves the buffer
+     empty, so it may start exactly at the end of the substream.  */
+  if (sum > (uint64_t) (fi_end - offsets_base) / 4)
+    pdb_error ("File info names buffer out of bounds");
+
+  sum = 0;
+  for (size_t i = 0; i < num_mods; i++)
+    {
+      pdb->modules[i].file_name_offsets = offsets_base + sum * 4;
+      uint16_t fc = read_u16 (mod_file_counts + i * FILE_INFO_ELEMENT_SIZE);
+      pdb->modules[i].num_files = fc;
+      /* Skip past this module's offsets.  */
+      sum += fc;
+    }
+
+  gdb_byte *names_buf = offsets_base + sum * 4;
+  pdb->file_info_names_buffer = names_buf;
+  pdb->file_info_names_buffer_size = static_cast<uint32_t> (fi_end
+							    - names_buf);
+}
+
 /* Read the PDB that RSDS names for OBJFILE; pdb_initialize_objfile is the
    reader's entry point.  PDB parsing starts by reading the MSF SuperBlock,
    which contains basic info about the file and location of the stream
    directory.  Each stream spans multiple blocks that are not necessarily
    contiguous and the layout of every single stream is described in the
    stream directory.
+   Next, we parse the /names stream which contains the global string table.
    Then we continue with the DBI stream, which describes the modules.  From
    it we get the list of modules, with the stream number and the sizes of
    each module's debug information.  */
@@ -759,7 +1703,8 @@ pdb_read_pdb_file (objfile *objfile, const pdb_rsds_info &rsds)
   pdb_read_msf_header (pdb);
   pdb_read_stream_directory (pdb);
 
-  /* Read & decode the PDB Info stream, which holds the GUID and age.  */
+  /* Read & decode the PDB Info stream once; both GUID validation and the
+     /names lookup consume it.  */
   pdb_info_stream info = pdb_read_info_stream (pdb);
 
   /* Validate PDB GUID/age against the EXE's RSDS record.  A mismatch means
@@ -768,10 +1713,17 @@ pdb_read_pdb_file (objfile *objfile, const pdb_rsds_info &rsds)
   if (!pdb_validate_guid (pdb, rsds, info, 0))
     return nullptr;
 
+  /* Read the /names stream for global string table.  A /names stream
+     that is missing or too small is reported there; the PDB is still
+     read, without file names.  */
+  pdb_read_names_stream (pdb, info);
+
   /* Read DBI stream (contains modules and line info).  */
   pdb_read_dbi_stream (pdb);
   if (!pdb_validate_guid (pdb, rsds, info, pdb->dbi_age))
     return nullptr;
+
+  pdb_read_file_info_substream (pdb);
 
   /* Read section addresses from BFD to map a section and offset to a
      PC.  */
@@ -787,6 +1739,184 @@ pdb_read_pdb_file (objfile *objfile, const pdb_rsds_info &rsds)
   if (info_verbose)
     gdb_printf ("\nUsing PDB file: %s\n", pdb->pdb_file_path.c_str ());
   return pdb;
+}
+
+/* The PDB reader expands all modules when it loads the PDB.  Below are
+   minimal quick functions to support this use model.  */
+struct pdb_readnow_functions : public quick_symbol_functions
+{
+  bool has_symbols (objfile *) override
+  {
+    return true;
+  }
+
+  bool has_unexpanded_symtabs (objfile *) override
+  {
+    return false;
+  }
+
+  symtab *find_last_source_symtab (objfile *) override
+  {
+    return nullptr;
+  }
+
+  void forget_cached_source_info (objfile *) override
+  {
+    /* PDB has no internal file name cache.  Symtab fullname cleanup is handled
+       by GDB generically.  */
+  }
+
+  enum language lookup_global_symbol_language (objfile *, const char *,
+					       domain_search_flags,
+					       bool *symbol_found_p) override
+  {
+    *symbol_found_p = false;
+    return language_unknown;
+  }
+
+  void print_stats (objfile *, bool) override
+  {
+  }
+
+  void dump (objfile *) override
+  {
+  }
+
+  void expand_all_symtabs (objfile *) override
+  {
+  }
+
+  iteration_status
+  search (objfile *objfile, search_symtabs_file_matcher file_matcher,
+	  const lookup_name_info *,
+	  search_symtabs_symbol_matcher,
+	  compunit_symtab_iteration_callback compunit_callback,
+	  block_search_flags, domain_search_flags,
+	  search_symtabs_lang_matcher = nullptr) override
+  {
+    if (compunit_callback == nullptr)
+      return iteration_status::keep_going;
+
+    for (compunit_symtab &cu : objfile->compunits ())
+      {
+	/* If a file matcher is supplied, check whether any filetab
+	   in this compunit matches.  */
+	if (file_matcher != nullptr)
+	  {
+	    bool match = false;
+	    for (const symtab *s : cu.filetabs ())
+	      {
+		if (file_matcher (s->filename (), false)
+		    || file_matcher (lbasename (s->filename ()), true))
+		  {
+		    match = true;
+		    break;
+		  }
+	      }
+
+	    if (!match)
+	      continue;
+	  }
+
+	if (compunit_callback (&cu) == iteration_status::stop)
+	  return iteration_status::stop;
+      }
+
+    return iteration_status::keep_going;
+  }
+
+  compunit_symtab *find_pc_sect_compunit_symtab (objfile *objfile,
+						 bound_minimal_symbol,
+						 CORE_ADDR pc,
+						 obj_section *,
+						 int) override
+  {
+    /* Iterate PDB modules directly to find matching PC.  */
+    pdb_per_objfile *pdb = pdb_objfile_data_key.get (objfile);
+    if (pdb == nullptr)
+      return nullptr;
+
+    /* A module's code contributions, of which its compunit's range is
+       only the first.  */
+    if (pdb_module_info *module = pdb_module_at_pc (pdb, pc);
+	module != nullptr && module->cu != nullptr)
+      {
+	pdb_qf_printf ("find_pc_sect: module %zu matched by contribution",
+		       (size_t) (module - pdb->modules.data ()));
+	return module->cu;
+      }
+
+    for (uint32_t i = 0; i < pdb->modules.size (); i++)
+      {
+	pdb_module_info *module = &pdb->modules[i];
+
+	/* Skip modules without a compunit.  */
+	if (module->cu == nullptr)
+	  continue;
+
+	const blockvector *bv = module->cu->blockvector ();
+
+	if (bv->contains (pc))
+	  {
+	    pdb_qf_printf ("find_pc_sect: module %u matched", i);
+	    return module->cu;
+	  }
+      }
+
+    pdb_qf_printf ("find_pc_sect: no match");
+    return nullptr;
+  }
+
+  symbol *find_symbol_by_address (objfile *objfile, CORE_ADDR address) override
+  {
+    /* Readnow has expanded every module, so the built compunits hold the
+       answer.  */
+    for (compunit_symtab &cu : objfile->compunits ())
+      {
+	if (symbol *sym = cu.symbol_at_address (address))
+	  return sym;
+      }
+    return nullptr;
+  }
+
+  void map_symbol_filenames (objfile *, symbol_filename_listener,
+			     bool) override
+  {
+  }
+};
+
+/* Get module's file names from its precomputed file_name_offsets[] pointers
+   into the global Names Buffer.  */
+
+static void
+pdb_read_module_files (pdb_per_objfile *pdb, pdb_module_info *module)
+{
+  /* Already populated.  */
+  if (module->files != nullptr)
+    return;
+
+  if (module->file_name_offsets == nullptr
+      || pdb->file_info_names_buffer == nullptr)
+    return;
+
+  uint16_t file_count = module->num_files;
+  if (file_count == 0)
+    return;
+
+  const gdb_byte *my_offsets = module->file_name_offsets;
+  const gdb_byte *nb = pdb->file_info_names_buffer;
+  uint32_t nb_size = pdb->file_info_names_buffer_size;
+
+  module->files = OBSTACK_CALLOC (&pdb->objfile->objfile_obstack, file_count,
+				  const char *);
+  for (uint16_t i = 0; i < file_count; i++)
+    {
+      uint32_t name_offset = read_u32 (my_offsets + i * sizeof (uint32_t));
+      if (name_offset < nb_size)
+	module->files[i] = pdb_extract_string (nb + name_offset, nb + nb_size);
+      else
+	module->files[i] = nullptr;
+    }
 }
 } /* namespace pdb */
 
@@ -845,6 +1975,13 @@ pdb_initialize_objfile (objfile *objfile)
       pdb_objfile_data_key.clear (objfile);
       return false;
     }
+
+  if ((objfile->flags & OBJF_READNEVER) != 0)
+    return true;
+
+  /* Expand all modules eagerly.  */
+  pdb_expand_all_modules (pdb);
+  objfile->qf.emplace_front (new pdb_readnow_functions);
 
   return true;
 }
@@ -966,58 +2103,6 @@ test_pdb_reader::read_msf ()
 {
   pdb_read_msf_header (&pdb);
   pdb_read_stream_directory (&pdb);
-}
-
-/* See pdb-internal.h.  */
-
-test_objfile::test_objfile (size_t num_sections)
-{
-  gdbarch_info info;
-  info.bfd_arch_info = bfd_scan_arch ("i386:x86-64");
-  info.osabi = GDB_OSABI_WINDOWS;
-  gdbarch *arch = gdbarch_find_by_info (info);
-  if (arch == nullptr)
-    return;
-
-  objfile = objfile::make (nullptr, current_program_space, "pdb-selftest",
-			   OBJF_NOT_FILENAME);
-  objfile->section_offsets.assign (num_sections, 0);
-  objfile->sect_index_text = 0;
-  objfile->per_bfd->gdbarch = arch;
-}
-
-test_objfile::~test_objfile ()
-{
-  if (objfile != nullptr)
-    objfile->unlink ();
-}
-
-/* See pdb-internal.h.  */
-
-test_module_reader::test_module_reader (const test_pdb &file,
-					size_t num_sections)
-  : obj (num_sections)
-{
-  if (obj.objfile == nullptr)
-    return;
-
-  pdb = get_or_create_pdb_per_objfile (obj.objfile);
-  pdb->file_mapping.base = file.bytes.data ();
-  pdb->file_mapping.size = file.bytes.size ();
-  pdb_read_msf_header (pdb);
-  pdb_read_stream_directory (pdb);
-  for (size_t i = 0; i < num_sections; i++)
-    {
-      pdb->section_addresses.push_back (0x140001000 + 0x1000 * i);
-      pdb->section_sizes.push_back (0x1000);
-    }
-}
-
-test_module_reader::~test_module_reader ()
-{
-  /* The bytes belong to the test_pdb: nothing to unmap.  */
-  if (pdb != nullptr)
-    pdb->file_mapping.base = nullptr;
 }
 
 /* Return a test_pdb of BLOCK_SIZE blocks with three streams, of 1, 2 and
@@ -1516,6 +2601,678 @@ test_dbi_header ()
   SELF_CHECK (read ({}, &names) == "Failed to read DBI stream");
 }
 
+/* Return the bytes of a PDB Info stream whose named stream map holds NAMES,
+   each name mapped to the stream number at its position plus 10.  CAPACITY is
+   the hash table's capacity, and every name is in a present bucket.  */
+
+static gdb::byte_vector
+info_stream (const std::vector<std::string> &names, uint32_t capacity = 8)
+{
+  gdb::byte_vector info (INFO_STREAM_HASH_MAP_OFFS, 0);
+  put_u32 (info, 0, 20000404);
+
+  std::string strbuf;
+  std::vector<uint32_t> keys;
+  for (const std::string &name : names)
+    {
+      keys.push_back (strbuf.size ());
+      strbuf += name;
+      strbuf += '\0';
+    }
+  put_u32 (info, info.size (), strbuf.size ());
+  info.insert (info.end (), strbuf.begin (), strbuf.end ());
+
+  put_u32 (info, info.size (), names.size ());
+  put_u32 (info, info.size (), capacity);
+  uint32_t words = (capacity + 31) / 32;
+  put_u32 (info, info.size (), words);
+  for (uint32_t w = 0; w < words; w++)
+    {
+      uint32_t bits = 0;
+      for (uint32_t b = 0; b < 32; b++)
+	if (w * 32 + b < names.size ())
+	  bits |= 1u << b;
+      put_u32 (info, info.size (), bits);
+    }
+  put_u32 (info, info.size (), 0);
+  for (size_t i = 0; i < names.size (); i++)
+    {
+      put_u32 (info, info.size (), keys[i]);
+      put_u32 (info, info.size (), i + 10);
+    }
+  return info;
+}
+
+/* Return the offset of the hash table in an info_stream, past the string buffer
+   of NAMES.  */
+
+static size_t
+hash_table_offset (const std::vector<std::string> &names)
+{
+  size_t strbuf = 0;
+  for (const std::string &name : names)
+    strbuf += name.size () + 1;
+  return INFO_STREAM_HASH_MAP_OFFS + 4 + strbuf;
+}
+
+/* Test the named stream map of the PDB Info stream.  Build a valid map and maps
+   with corrupt counts, offsets and names, and check that the reader checks each
+   count, in 64 bits, before it uses it, because the counts are file data.  */
+
+static void
+test_named_stream_map ()
+{
+  const std::vector<std::string> names { "/names", "/LinkInfo",
+					 "/src/headerblock" };
+  size_t ht = hash_table_offset (names);
+
+  auto parse = [] (const gdb::byte_vector &info)
+    {
+      return pdb_parse_named_stream_map (pdb_decode_info_stream (info));
+    };
+
+  gdb::byte_vector info = info_stream (names);
+  pdb_named_stream_map map = parse (info);
+  SELF_CHECK (map.entries.size () == 3);
+  SELF_CHECK (map.lookup ("/names") == 10);
+  SELF_CHECK (map.lookup ("/src/headerblock") == 12);
+  SELF_CHECK (map.lookup ("/missing") == PDB_NO_STREAM);
+
+  /* PresentWordCount * 4 wraps to 4, so a 32-bit check would pass.  */
+  gdb::byte_vector bad = info;
+  put_u32 (bad, ht + 8, 0x40000001);
+  SELF_CHECK (parse (bad).entries.empty ());
+
+  /* Check a DeletedWordCount past the stream.  */
+  bad = info;
+  put_u32 (bad, ht + 16, 0x40000000);
+  SELF_CHECK (parse (bad).entries.empty ());
+
+  /* No bucket exists past the present bits, so neither a huge Size nor a
+     huge Capacity is acted on.  */
+  for (size_t field : { 0, 4 })
+    {
+      bad = info;
+      put_u32 (bad, ht + field, 0xffffffff);
+      SELF_CHECK (parse (bad).lookup ("/names") == 10);
+    }
+
+  /* The table may end right after its last present bucket.  */
+  bad = info_stream (names, 64);
+  SELF_CHECK (parse (bad).entries.size () == 3);
+
+  /* Check a table with one bucket fewer than the present bits promise.  */
+  bad = info;
+  bad.resize (bad.size () - 8);
+  SELF_CHECK (parse (bad).entries.size () == 2);
+
+  /* Check a string buffer past the stream.  */
+  bad = info;
+  put_u32 (bad, INFO_STREAM_HASH_MAP_OFFS, 0x7fffffff);
+  SELF_CHECK (parse (bad).entries.empty ());
+
+  /* Check a key past the string buffer, and a name without its terminator.  */
+  bad = info;
+  put_u32 (bad, bad.size () - 16, 1000);
+  SELF_CHECK (parse (bad).lookup ("/LinkInfo") == PDB_NO_STREAM);
+  SELF_CHECK (parse (bad).lookup ("/names") == 10);
+  bad = info_stream ({ "/names" });
+  bad[INFO_STREAM_HASH_MAP_OFFS + 4 + 6] = 'X';
+  SELF_CHECK (parse (bad).entries.empty ());
+
+  /* Check a stream too small for the map's header.  */
+  bad.resize (INFO_STREAM_HASH_MAP_OFFS + 8);
+  SELF_CHECK (parse (bad).entries.empty ());
+
+  /* Check an info stream smaller than its fixed header.  */
+  bad.resize (INFO_STREAM_MIN_SIZE - 1);
+  SELF_CHECK (error_of ([&] { pdb_decode_info_stream (bad); })
+	      .find ("too small") != std::string::npos);
+}
+
+/* Test reading the /names stream, whose data size is file data.  Build a valid
+   stream, streams whose data size wraps or passes the stream, one with a bad
+   signature and one too small for its header, and check how each is read.  */
+
+static void
+test_names_stream ()
+{
+  gdb::byte_vector names;
+  put_u32 (names, NAMES_STREAM_SIGNATURE_OFFS, NAMES_STREAM_SIGNATURE_VAL);
+  put_u32 (names, 4, 1);
+  const char data[] = "\0a.c\0b.h";
+  put_u32 (names, NAMES_STREAM_DATA_SIZE_OFFS, sizeof data);
+  names.insert (names.end (), data, data + sizeof data);
+
+  auto read = [&] (const gdb::byte_vector &stream, bool *found)
+    {
+      test_pdb file;
+      file.streams.resize (11);
+      file.streams[1] = info_stream ({ "/names" });
+      file.streams[10] = stream;
+      file.build ();
+      test_pdb_reader r (file);
+      r.read_msf ();
+      pdb_info_stream info = pdb_read_info_stream (&r.pdb);
+      std::string err = error_of ([&]
+	{ *found = pdb_read_names_stream (&r.pdb, info); });
+      if (*found)
+	*found = (r.pdb.string_table_size == sizeof data
+		  && strcmp ((const char *) r.pdb.string_table + 1,
+			     "a.c") == 0);
+      return err;
+    };
+
+  bool found;
+  SELF_CHECK (read (names, &found).empty () && found);
+
+  /* The 12 bytes of the header plus a data size of 0xfffffff8 wrap to 4.  */
+  gdb::byte_vector bad = names;
+  put_u32 (bad, NAMES_STREAM_DATA_SIZE_OFFS, 0xfffffff8);
+  SELF_CHECK (read (bad, &found) == "/names string data extends beyond stream");
+
+  bad = names;
+  put_u32 (bad, NAMES_STREAM_DATA_SIZE_OFFS, sizeof data + 1);
+  SELF_CHECK (read (bad, &found) == "/names string data extends beyond stream");
+
+  bad = names;
+  put_u32 (bad, NAMES_STREAM_SIGNATURE_OFFS, 0x12345678);
+  SELF_CHECK (read (bad, &found) == "unexpected /names signature");
+
+  /* Check that a stream too small for its header leaves the PDB read without
+     file names.  */
+  bad.assign (names.begin (), names.begin () + 8);
+  SELF_CHECK (read (bad, &found).empty () && !found);
+}
+
+/* Test reading the File Info substream.  Check that the DBI header's substream
+   sizes, which are file data, are summed without wrapping.  */
+
+static void
+test_dbi_substreams ()
+{
+  pdb_per_objfile pdb (nullptr);
+  pdb.dbi_data.assign (DBI_HDR_SIZE + 0x200, 0);
+  put_u32 (pdb.dbi_data, DBI_HDR_SIGNATURE_OFFS, DBI_HDR_SIGNATURE_VAL);
+
+  /* Summed in 32 bits, these would place the File Info substream inside
+     the module records.  */
+  put_u32 (pdb.dbi_data, DBI_HDR_MODULE_SIZE_OFFS, 0x10);
+  put_u32 (pdb.dbi_data, DBI_HDR_SECT_CONTRIB_OFFS, 0xffffff00);
+  put_u32 (pdb.dbi_data, DBI_HDR_SECT_MAP_OFFS, 0x90);
+  put_u32 (pdb.dbi_data, DBI_HDR_SOURCE_INFO_OFFS, 0x20);
+  SELF_CHECK (error_of ([&] { pdb_read_file_info_substream (&pdb); })
+	      == "File Info substream out of bounds");
+
+  put_u32 (pdb.dbi_data, DBI_HDR_SECT_CONTRIB_OFFS, 0);
+  put_u32 (pdb.dbi_data, DBI_HDR_SECT_MAP_OFFS, 0);
+  put_u32 (pdb.dbi_data, DBI_HDR_SOURCE_INFO_OFFS, 0x200);
+  SELF_CHECK (error_of ([&] { pdb_read_file_info_substream (&pdb); })
+	      == "File Info substream out of bounds");
+
+  /* Without a File Info substream the modules name no files.  */
+  put_u32 (pdb.dbi_data, DBI_HDR_MODULE_SIZE_OFFS, 0);
+  put_u32 (pdb.dbi_data, DBI_HDR_SOURCE_INFO_OFFS, 0);
+  SELF_CHECK (error_of ([&] { pdb_read_file_info_substream (&pdb); })
+	      .empty ());
+
+  /* Check 65536 modules.  The 16-bit module count reads 0, and the arrays have
+     an entry per module.  */
+  pdb_per_objfile many (nullptr);
+  many.modules.resize (65536);
+  uint32_t fi_size = 4 + 65536 * 2 * FILE_INFO_ELEMENT_SIZE;
+  many.dbi_data.assign (DBI_HDR_SIZE + fi_size, 0);
+  put_u32 (many.dbi_data, DBI_HDR_SIGNATURE_OFFS, DBI_HDR_SIGNATURE_VAL);
+  put_u32 (many.dbi_data, DBI_HDR_SOURCE_INFO_OFFS, fi_size);
+  SELF_CHECK (error_of ([&] { pdb_read_file_info_substream (&many); })
+	      .empty ());
+
+  /* Check arrays that are one module short.  */
+  put_u32 (many.dbi_data, DBI_HDR_SOURCE_INFO_OFFS, fi_size - 2);
+  SELF_CHECK (error_of ([&] { pdb_read_file_info_substream (&many); })
+	      == "File info substream too small");
+}
+
+/* See pdb-internal.h.  */
+
+test_objfile::test_objfile (size_t num_sections)
+{
+  gdbarch_info info;
+  info.bfd_arch_info = bfd_scan_arch ("i386:x86-64");
+  info.osabi = GDB_OSABI_WINDOWS;
+  gdbarch *arch = gdbarch_find_by_info (info);
+  if (arch == nullptr)
+    return;
+
+  objfile = objfile::make (nullptr, current_program_space, "pdb-selftest",
+			   OBJF_NOT_FILENAME);
+  objfile->section_offsets.assign (num_sections, 0);
+  objfile->sect_index_text = 0;
+  objfile->per_bfd->gdbarch = arch;
+}
+
+test_objfile::~test_objfile ()
+{
+  if (objfile != nullptr)
+    objfile->unlink ();
+}
+
+/* Append the LEN low bytes of V to BYTES, little-endian.  */
+
+static void
+append_le (gdb::byte_vector &bytes, uint64_t v, int len)
+{
+  for (int i = 0; i < len; i++)
+    bytes.push_back ((v >> (8 * i)) & 0xff);
+}
+
+/* See pdb-internal.h.  */
+
+void
+test_module::symbol (uint16_t kind, const gdb::byte_vector &body)
+{
+  /* Records are padded to 4 bytes, as the linker writes them.  */
+  size_t padded = align_up (body.size () + 4, 4) - 4;
+  append_le (syms, padded + 2, 2);
+  append_le (syms, kind, 2);
+  syms.insert (syms.end (), body.begin (), body.end ());
+  syms.resize (syms.size () + padded - body.size (), 0);
+}
+
+/* See pdb-internal.h.  */
+
+void
+test_module::procedure (const char *name, uint16_t section, uint32_t offset,
+			uint32_t size, uint32_t type)
+{
+  /* No parent, end or next record; the whole procedure between DbgStart
+     and DbgEnd; no flags.  */
+  gdb::byte_vector body;
+  append_le (body, 0, 4);
+  append_le (body, 0, 4);
+  append_le (body, 0, 4);
+  append_le (body, size, 4);
+  append_le (body, 0, 4);
+  append_le (body, size, 4);
+  append_le (body, type, 4);
+  append_le (body, offset, 4);
+  append_le (body, section, 2);
+  body.push_back (0);
+  body.insert (body.end (), name, name + strlen (name) + 1);
+  symbol (S_GPROC32, body);
+  symbol (S_END, {});
+}
+
+/* See pdb-internal.h.  */
+
+uint32_t
+test_module::file (uint32_t name_offset)
+{
+  uint32_t id = checksums.size ();
+  /* Write the name and no checksum, and pad the entry to 4 bytes.  */
+  append_le (checksums, name_offset, 4);
+  append_le (checksums, 0, 4);
+  return id;
+}
+
+/* See pdb-internal.h.  */
+
+void
+test_module::lines (uint16_t section, uint32_t offset, uint32_t size,
+		    uint32_t file_id,
+		    const std::vector<std::pair<uint32_t, uint32_t>> &rows)
+{
+  gdb::byte_vector sub;
+  append_le (sub, offset, 4);
+  append_le (sub, section, 2);
+  append_le (sub, 0, 2);
+  append_le (sub, size, 4);
+  append_le (sub, file_id, 4);
+  append_le (sub, rows.size (), 4);
+  append_le (sub, 12 + 8 * rows.size (), 4);
+  for (const auto &[row_offset, line] : rows)
+    {
+      append_le (sub, row_offset, 4);
+      append_le (sub, line | 0x80000000, 4);
+    }
+  line_subsections.push_back (std::move (sub));
+}
+
+/* See pdb-internal.h.  */
+
+gdb::byte_vector
+test_module::stream (pdb_module_info *module) const
+{
+  gdb::byte_vector c13;
+  auto subsection = [&] (uint32_t kind, const gdb::byte_vector &data)
+    {
+      append_le (c13, kind, 4);
+      append_le (c13, data.size (), 4);
+      c13.insert (c13.end (), data.begin (), data.end ());
+      c13.resize (align_up (c13.size (), 4), 0);
+    };
+  if (!checksums.empty ())
+    subsection (DEBUG_S_FILECHKSMS, checksums);
+  for (const gdb::byte_vector &sub : line_subsections)
+    subsection (DEBUG_S_LINES, sub);
+
+  gdb::byte_vector bytes = syms;
+  bytes.insert (bytes.end (), c13.begin (), c13.end ());
+  module->sym_byte_size = syms.size ();
+  module->c11_byte_size = 0;
+  module->c13_byte_size = c13.size ();
+  return bytes;
+}
+
+/* See pdb-internal.h.  */
+
+test_module_reader::test_module_reader (const test_pdb &file,
+					size_t num_sections)
+  : obj (num_sections)
+{
+  if (obj.objfile == nullptr)
+    return;
+
+  pdb = get_or_create_pdb_per_objfile (obj.objfile);
+  pdb->file_mapping.base = file.bytes.data ();
+  pdb->file_mapping.size = file.bytes.size ();
+  pdb_read_msf_header (pdb);
+  pdb_read_stream_directory (pdb);
+  for (size_t i = 0; i < num_sections; i++)
+    {
+      pdb->section_addresses.push_back (0x140001000 + 0x1000 * i);
+      pdb->section_sizes.push_back (0x1000);
+    }
+}
+
+test_module_reader::~test_module_reader ()
+{
+  /* The bytes belong to the test_pdb: nothing to unmap.  */
+  if (pdb != nullptr)
+    pdb->file_mapping.base = nullptr;
+}
+
+/* The /names data naming a.cpp at offset 1 and b.cpp at offset 7.  */
+
+static char test_names[] = { 0, 'a', '.', 'c', 'p', 'p', 0,
+			     'b', '.', 'c', 'p', 'p', 0 };
+
+/* Read MODULES, whose streams are STREAMS, into compunits as expanding
+   them does, in order, after calling SETUP, if any, with the reader;
+   then call CHECK with it.  The modules' files are named from
+   test_names.  */
+
+static void
+with_modules (std::vector<pdb_module_info> modules,
+	      const std::vector<gdb::byte_vector> &streams,
+	      gdb::function_view<void (pdb_per_objfile *pdb)> check,
+	      gdb::function_view<void (pdb_per_objfile *pdb)> setup = nullptr)
+{
+  test_pdb file;
+  file.streams.resize (5);
+  for (size_t i = 0; i < streams.size (); i++)
+    {
+      modules[i].stream_number = file.streams.size ();
+      file.streams.push_back (streams[i]);
+    }
+  file.build ();
+
+  test_module_reader r (file, 1);
+  if (r.pdb == nullptr)
+    return;
+  r.pdb->string_table = (const gdb_byte *) test_names;
+  r.pdb->string_table_size = sizeof test_names;
+  r.pdb->modules = std::move (modules);
+  if (setup != nullptr)
+    setup (r.pdb);
+  for (pdb_module_info &m : r.pdb->modules)
+    pdb_build_module (r.pdb, &m);
+  check (r.pdb);
+}
+
+/* Return the line at PC as its number and the base name of its file, or 0 and
+   "" when PC has none.  */
+
+static std::pair<int, std::string>
+line_at (CORE_ADDR pc)
+{
+  symtab_and_line sal = find_sal_for_pc (pc, 0);
+  if (sal.symtab == nullptr)
+    return { 0, "" };
+  return { sal.line, lbasename (sal.symtab->filename ()) };
+}
+
+/* Build two modules laid out as the linker lays them out.  A's procedures are
+   at 0 and 0x100, and B's lies in the gap between them at 0x80.  Each module's
+   lines are in its own file.  */
+
+static void
+two_modules (std::vector<pdb_module_info> *modules,
+	     std::vector<gdb::byte_vector> *streams)
+{
+  test_module a, b;
+  uint32_t fa = a.file (1), fb = b.file (7);
+  a.procedure ("afirst", 1, 0, 16);
+  a.procedure ("alast", 1, 0x100, 16);
+  a.lines (1, 0, 16, fa, { { 0, 10 } });
+  a.lines (1, 0x100, 16, fa, { { 0, 20 } });
+  b.procedure ("bmid", 1, 0x80, 16);
+  b.lines (1, 0x80, 16, fb, { { 0, 30 } });
+
+  modules->resize (2);
+  (*modules)[0].module_name = (char *) "a.obj";
+  (*modules)[1].module_name = (char *) "b.obj";
+  streams->push_back (a.stream (&(*modules)[0]));
+  streams->push_back (b.stream (&(*modules)[1]));
+}
+
+/* Test that a damaged module costs only its own symbols and lines.  Build two
+   modules, the C13 size of one overflowing its stream, and check that it is
+   skipped and the other keeps its own.  Check also that a line whose section
+   offset plus code offset passes 2^32 gets no row instead of one at the wrapped
+   address.  */
+
+static void
+test_bad_module ()
+{
+  std::vector<pdb_module_info> modules;
+  std::vector<gdb::byte_vector> streams;
+  two_modules (&modules, &streams);
+  modules[0].sc_section = modules[1].sc_section = 1;
+  modules[0].sc_size = 0x110;
+  modules[1].sc_offset = 0x80;
+  modules[1].sc_size = 0x10;
+
+  /* Do what with_modules does, but make A's C13 size overflow its stream after
+     building the streams.  */
+  test_pdb file;
+  file.streams.resize (5);
+  for (size_t i = 0; i < 2; i++)
+    {
+      modules[i].stream_number = file.streams.size ();
+      file.streams.push_back (streams[i]);
+    }
+  modules[0].c13_byte_size = 0x7fffffff;
+  file.build ();
+
+  test_module_reader r (file, 1);
+  if (r.pdb == nullptr)
+    return;
+  r.pdb->string_table = (const gdb_byte *) test_names;
+  r.pdb->string_table_size = sizeof test_names;
+  r.pdb->modules = std::move (modules);
+  SELF_CHECK (pdb_build_module (r.pdb, &r.pdb->modules[0]) == nullptr);
+  SELF_CHECK (pdb_build_module (r.pdb, &r.pdb->modules[1]) != nullptr);
+  SELF_CHECK (line_at (0x140001080) == std::make_pair (30,
+						       std::string ("b.cpp")));
+  SELF_CHECK (line_at (0x140001000).first == 0);
+
+  /* Map a line block at section offset 0xfffffff0 whose row is 0x20 bytes in.
+     The sum is not a 32-bit section offset.  */
+  pdb_per_objfile pdb (r.obj.objfile);
+  pdb.section_addresses = { 0x140001000 };
+  pdb.section_sizes = { 0x1000 };
+  SELF_CHECK (pdb.map_section_offset_to_pc (1, 0xfffffff0ull + 0x20) == 0);
+  SELF_CHECK (pdb.map_section_offset_to_pc (1, 0x10) == 0x140001010);
+  SELF_CHECK (pdb.map_section_offset_to_pc (2, 0x10) == 0);
+}
+
+/* Test that a procedure keeps the line at its first address when the line block
+   that ends there comes after the procedure's own block.  Build two procedures
+   with their blocks in that order, and check that the first procedure's line
+   ends where the second starts.  */
+
+static void
+test_line_order ()
+{
+  test_module m;
+  uint32_t f = m.file (1);
+  m.procedure ("first", 1, 0, 16);
+  m.procedure ("second", 1, 16, 16);
+  m.lines (1, 16, 16, f, { { 0, 20 }, { 4, 21 } });
+  m.lines (1, 0, 16, f, { { 0, 10 } });
+
+  std::vector<pdb_module_info> modules (1);
+  modules[0].module_name = (char *) "a.obj";
+  modules[0].sc_section = 1;
+  modules[0].sc_size = 32;
+  std::vector<gdb::byte_vector> streams { m.stream (&modules[0]) };
+
+  with_modules (modules, streams, [] (pdb_per_objfile *)
+    {
+      symtab_and_line first = find_sal_for_pc (0x140001000, 0);
+      SELF_CHECK (first.line == 10 && first.pc == 0x140001000
+		  && first.end == 0x140001010);
+      symtab_and_line second = find_sal_for_pc (0x140001010, 0);
+      SELF_CHECK (second.line == 20 && second.pc == 0x140001010
+		  && second.end == 0x140001014);
+    });
+}
+
+/* Test a module with line blocks but no file checksum table.  Check that its
+   rows keep their lines, under an unknown file.  */
+
+static void
+test_no_checksums ()
+{
+  test_module m;
+  m.procedure ("f", 1, 0, 16);
+  m.lines (1, 0, 16, 0, { { 0, 10 } });
+
+  std::vector<pdb_module_info> modules (1);
+  modules[0].module_name = (char *) "a.obj";
+  modules[0].sc_section = 1;
+  modules[0].sc_size = 16;
+  std::vector<gdb::byte_vector> streams { m.stream (&modules[0]) };
+
+  with_modules (modules, streams, [] (pdb_per_objfile *)
+    {
+      SELF_CHECK (line_at (0x140001000)
+		  == std::make_pair (10, std::string ("<unknown>")));
+    });
+}
+
+/* Test a line block that passes the end of its 0x1000-byte section.  Check that
+   its rows past the end, and its end marker there, are dropped, and that the
+   rows inside keep their lines.  */
+
+static void
+test_line_section_bounds ()
+{
+  test_module m;
+  uint32_t f = m.file (1);
+  m.lines (1, 0xff0, 0x20, f, { { 0, 10 }, { 0x18, 11 } });
+
+  std::vector<pdb_module_info> modules (1);
+  modules[0].module_name = (char *) "a.obj";
+  modules[0].sc_section = 1;
+  modules[0].sc_size = 0x1000;
+  std::vector<gdb::byte_vector> streams { m.stream (&modules[0]) };
+
+  with_modules (modules, streams, [] (pdb_per_objfile *pdb)
+    {
+      SELF_CHECK (line_at (0x140001ff0)
+		  == std::make_pair (10, std::string ("a.cpp")));
+      for (compunit_symtab &cu : pdb->objfile->compunits ())
+	for (symtab *s : cu.filetabs ())
+	  if (const linetable *lt = s->linetable ())
+	    for (int i = 0; i < lt->nitems; i++)
+	      SELF_CHECK (lt->item[i].pc (pdb->objfile) < 0x140002000);
+    });
+}
+
+/* Test line blocks whose file cannot be named.  Build one whose checksum entry
+   names a string past the /names data, and one whose file id lies past the
+   checksum table.  Check that each keeps its lines, under an unknown file, and
+   costs no other block its file.  */
+
+static void
+test_bad_file ()
+{
+  test_module m;
+  uint32_t good = m.file (1);
+  uint32_t bad_name = m.file (1000);
+  m.lines (1, 0, 16, good, { { 0, 10 } });
+  m.lines (1, 0x10, 16, bad_name, { { 0, 20 } });
+  m.lines (1, 0x20, 16, 0xffff0000, { { 0, 30 } });
+
+  std::vector<pdb_module_info> modules (1);
+  modules[0].module_name = (char *) "a.obj";
+  modules[0].sc_section = 1;
+  modules[0].sc_size = 0x30;
+  std::vector<gdb::byte_vector> streams { m.stream (&modules[0]) };
+
+  with_modules (modules, streams, [] (pdb_per_objfile *pdb)
+    {
+      SELF_CHECK (pdb->modules[0].cu != nullptr);
+      SELF_CHECK (line_at (0x140001000)
+		  == std::make_pair (10, std::string ("a.cpp")));
+      SELF_CHECK (line_at (0x140001010)
+		  == std::make_pair (20, std::string ("<unknown>")));
+      SELF_CHECK (line_at (0x140001020)
+		  == std::make_pair (30, std::string ("<unknown>")));
+    });
+}
+
+/* Test a module compiled with a section per function (/Gy), which has a code
+   contribution per function while its header names only the first.  Check that
+   a PC in any of them finds the module, whose line table has its line, and that
+   a PC in none of them finds no module.  */
+
+static void
+test_code_contribs ()
+{
+  test_module m;
+  uint32_t f = m.file (1);
+  m.lines (1, 0, 16, f, { { 0, 10 } });
+  m.lines (1, 0x200, 16, f, { { 0, 40 } });
+
+  std::vector<pdb_module_info> modules (1);
+  modules[0].module_name = (char *) "a.obj";
+  modules[0].sc_section = 1;
+  modules[0].sc_size = 0x10;
+  std::vector<gdb::byte_vector> streams { m.stream (&modules[0]) };
+
+  with_modules (modules, streams, [] (pdb_per_objfile *pdb)
+    {
+      SELF_CHECK (pdb_module_at_pc (pdb, 0x140001000) == &pdb->modules[0]);
+      SELF_CHECK (pdb_module_at_pc (pdb, 0x140001208) == &pdb->modules[0]);
+      SELF_CHECK (pdb_module_at_pc (pdb, 0x140001100) == nullptr);
+
+      bool found = false;
+      for (symtab *s : pdb->modules[0].cu->filetabs ())
+	if (const linetable *lt = s->linetable ())
+	  for (int i = 0; i < lt->nitems; i++)
+	    if (lt->item[i].pc (pdb->objfile) == 0x140001200)
+	      found = lt->item[i].line == 40;
+      SELF_CHECK (found);
+    },
+    [] (pdb_per_objfile *pdb)
+      {
+	pdb->code_contribs = { { 1, 0, 0, 0x10 }, { 1, 0, 0x200, 0x10 } };
+      });
+}
+
 } /* namespace pdb::selftests */
 
 #endif /* GDB_SELF_TEST */
@@ -1528,7 +3285,8 @@ INIT_GDB_FILE (pdb_read)
 Set debugging of the PDB reader."), _("\
 Show debugging of the PDB reader."), _("\
 When enabled (non-zero), debugging messages are printed during PDB\n\
-reading."),
+reading and symtab expansion.  A value of 2 also traces PC lookups and\n\
+source path conversion."),
 			     nullptr, nullptr, &setdebuglist, &showdebuglist);
 
 #if GDB_SELF_TEST
@@ -1546,5 +3304,23 @@ reading."),
 			      pdb::selftests::test_validate_guid);
   ::selftests::register_test ("pdb-dbi-header",
 			      pdb::selftests::test_dbi_header);
+  ::selftests::register_test ("pdb-named-stream-map",
+			      pdb::selftests::test_named_stream_map);
+  ::selftests::register_test ("pdb-names-stream",
+			      pdb::selftests::test_names_stream);
+  ::selftests::register_test ("pdb-dbi-substreams",
+			      pdb::selftests::test_dbi_substreams);
+  ::selftests::register_test ("pdb-bad-module",
+			      pdb::selftests::test_bad_module);
+  ::selftests::register_test ("pdb-line-order",
+			      pdb::selftests::test_line_order);
+  ::selftests::register_test ("pdb-no-checksums",
+			      pdb::selftests::test_no_checksums);
+  ::selftests::register_test ("pdb-line-section-bounds",
+			      pdb::selftests::test_line_section_bounds);
+  ::selftests::register_test ("pdb-bad-file",
+			      pdb::selftests::test_bad_file);
+  ::selftests::register_test ("pdb-code-contribs",
+			      pdb::selftests::test_code_contribs);
 #endif
 }
