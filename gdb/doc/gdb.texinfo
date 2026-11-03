@@ -21124,6 +21124,23 @@ first instruction following a function prologue.  The @samp{EPILOGUE-BEGIN}
 column indicates that a given address marks the point where a block's frame is
 destroyed, making local variables hard or impossible to find.
 
+@kindex maint info pdb-loaded-files
+@cindex PDB files, listing
+@item maint info pdb-loaded-files
+List the Microsoft PDB files that @value{GDBN} read, one per line, or
+say that none was loaded.
+
+An executable names its PDB in its debug directory, with a GUID and an
+age.  @value{GDBN} looks for that PDB next to the executable, first
+under the name the executable records and then under the executable's
+own name with the extension @file{.pdb}, and then at the full path the
+executable records.  That path is not opened when it is a network or
+device path, such as @file{\\host\share\@dots{}}, or when it is not
+absolute on the host.  A PDB is loaded only when its GUID is the
+executable's, the age in its PDB Info stream is at least the executable's
+(writing to a PDB after the link raises it), and the age in its DBI stream,
+when that is not 0, is the executable's.
+
 @kindex set always-read-ctf [on|off]
 @kindex show always-read-ctf
 @cindex always-read-ctf
@@ -32190,6 +32207,16 @@ parser.  @xref{Tracing, , Tracing Your Parser, bison, Bison}, for
 details.  The default is off.
 @item show debug parser
 Show the current state of expression parser debugging.
+
+@item set debug pdb-read @var{level}
+@cindex PDB reading
+Set the level of debugging messages related to reading Microsoft PDB
+debug information.  The default is 0 (off).
+A value of 1 reports which PDB file is loaded and what @value{GDBN}
+reads from it.  A value greater than 1 also traces lookups and the
+conversion of source file paths.
+@item show debug pdb-read
+Show the current state of PDB reader debugging.
 
 @cindex packets, reporting on stdout
 @cindex serial connections, debugging
@@ -45001,6 +45028,11 @@ after it is built.
 
 @item --enable-64-bit-bfd
 Enable 64-bit support in BFD on 32-bit hosts.
+
+@item --enable-gdb-pdb-support=@r{[}yes@r{|}no@r{|}auto@r{]}
+Build @value{GDBN} with the reader for Microsoft PDB debug information.
+The default, @samp{auto}, builds it when a Windows target is
+configured or with @samp{--enable-targets=all}.
 
 @item --disable-gdbmi
 Build @value{GDBN} without the GDB/MI machine interface

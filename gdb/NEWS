@@ -8,7 +8,7 @@
   The "set osabi" command accepts two new values, "Windows-GNU" and
   "Windows-MSVC".  The GNU ABI is for code produced by MinGW
   toolchains, while the MSVC ABI is for code produced by Microsoft's
-  MSVC compiler (though see the PDB note below), or Clang targeting
+  MSVC compiler, or Clang targeting
   one of {i686,aarch64,x86_64}-pc-windows-msvc.  The existing
   "Windows" value continues to work and now means "let GDB pick the
   flavor": GDB uses the configured default OS ABI (from --target) when
@@ -19,7 +19,15 @@
 
   Currently, GDB is aware that "long double" differs between the two
   ABIs.  GDB does not yet support the MSVC C++ ABI (demangling scheme,
-  C++ object layout, etc.) or PDB debug information.
+  C++ object layout, etc.).
+
+* GDB can now read Microsoft PDB debug information, which clang-cl,
+  lld-link and MSVC produce for Windows programs.  For an executable
+  without DWARF, GDB reads the PDB that the executable's debug directory
+  names, when its GUID matches the executable's, its age is at least the
+  executable's and its DBI age, if it has one, is the executable's.  GDB
+  looks for the PDB next to the executable and at the path that the
+  executable records.
 
 * GDB can now read OS-generated core files on systems with Intel AMX
   support.  The AMX registers themselves are not yet readable, but
@@ -49,11 +57,27 @@ show print shadowed
   "off", shadowed variables will be omitted from the output.  The default is
   to print shadowed variables.
 
+set debug pdb-read LEVEL
+show debug pdb-read
+  Print debugging messages about reading Microsoft PDB debug
+  information: at level 1 which PDB is loaded and what is read from it,
+  at level 2 also lookups and the conversion of source file paths.
+
+maintenance info pdb-loaded-files
+  List the Microsoft PDB files GDB read.
+
 * Changed commands
 
 info locals
   The new "-shadowed on|off" option overrides the "set print shadowed"
   setting for a single invocation of the command.
+
+* Configure changes
+
+--enable-gdb-pdb-support=[yes|no|auto]
+  Build GDB with the reader for Microsoft PDB debug information.  The
+  default, auto, builds it when a Windows target is configured or with
+  --enable-targets=all.
 
 *** Changes in GDB 18
 
