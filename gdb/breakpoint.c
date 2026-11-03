@@ -11338,29 +11338,25 @@ clear_command (const char *arg, int from_tty)
 {
   int default_match;
 
-  std::vector<symtab_and_line> decoded_sals;
-  symtab_and_line last_sal;
-  gdb::span<symtab_and_line> sals;
+  std::vector<symtab_and_line> sals;
   if (arg)
     {
-      decoded_sals
-	= decode_line_with_current_source (arg,
-					   (DECODE_LINE_FUNFIRSTLINE
-					    | DECODE_LINE_LIST_MODE));
+      sals = decode_line_with_current_source (arg,
+					      (DECODE_LINE_FUNFIRSTLINE
+					       | DECODE_LINE_LIST_MODE));
       default_match = 0;
-      sals = decoded_sals;
     }
   else
     {
       /* Set sal's line, symtab, pc, and pspace to the values
 	 corresponding to the last call to print_frame_info.  If the
 	 codepoint is not valid, this will set all the fields to 0.  */
-      last_sal = get_last_displayed_sal ();
+      symtab_and_line last_sal = get_last_displayed_sal ();
       if (last_sal.symtab == 0)
 	error (_("No source file specified."));
 
       default_match = 1;
-      sals = last_sal;
+      sals.emplace_back (std::move (last_sal));
     }
 
   /* We don't call resolve_sal_pc here.  That's not as bad as it
@@ -12833,7 +12829,7 @@ strace_marker_create_breakpoints_sal (struct gdbarch *gdbarch,
       std::unique_ptr<tracepoint> tp
 	(new tracepoint (gdbarch,
 			 type_wanted,
-			 lsal.sals[i],
+			 gdb::make_span (&lsal.sals[i], 1),
 			 std::move (locspec),
 			 NULL,
 			 std::move (cond_string),

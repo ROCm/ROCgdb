@@ -191,7 +191,7 @@ value_allocate_space_in_inferior (int len)
   blocklen = value_from_longest (builtin_type (gdbarch)->builtin_int, len);
   val = call_function_by_hand (val,
 			       builtin_type (gdbarch)->builtin_data_ptr,
-			       blocklen);
+			       gdb::make_span (&blocklen, 1));
   if (value_logical_not (val))
     {
       if (!target_has_execution ())

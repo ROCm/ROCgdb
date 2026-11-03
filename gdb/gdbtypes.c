@@ -2008,11 +2008,13 @@ resolve_dynamic_range (struct type *dyn_range_type,
   gdb_assert (dyn_range_type->code () == TYPE_CODE_RANGE);
   gdb_assert (rank >= 0);
 
+  CORE_ADDR core_rank = rank;
+
   const struct dynamic_prop *prop = &dyn_range_type->bounds ()->low;
   if (resolve_p)
     {
       if (dwarf2_evaluate_property (prop, frame, addr_stack, &value,
-				    { (CORE_ADDR) rank }))
+				    gdb::make_span (&core_rank, 1)))
 	low_bound.set_const_val (value);
       else if (prop->kind () == PROP_UNDEFINED)
 	low_bound.set_undefined ();
@@ -2026,7 +2028,7 @@ resolve_dynamic_range (struct type *dyn_range_type,
   if (resolve_p)
     {
       if (dwarf2_evaluate_property (prop, frame, addr_stack, &value,
-				    { (CORE_ADDR) rank }))
+				    gdb::make_span (&core_rank, 1)))
 	{
 	  high_bound.set_const_val (value);
 
@@ -2045,7 +2047,7 @@ resolve_dynamic_range (struct type *dyn_range_type,
   bool byte_stride_p = dyn_range_type->bounds ()->flag_is_byte_stride;
   prop = &dyn_range_type->bounds ()->stride;
   if (resolve_p && dwarf2_evaluate_property (prop, frame, addr_stack, &value,
-					     { (CORE_ADDR) rank }))
+					     gdb::make_span (&core_rank, 1)))
     {
       stride.set_const_val (value);
 

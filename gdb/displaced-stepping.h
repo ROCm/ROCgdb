@@ -203,6 +203,11 @@ struct displaced_step_buffers
       m_buffers.emplace_back (buffer_addr);
   }
 
+  explicit displaced_step_buffers (CORE_ADDR addr)
+  {
+    m_buffers.emplace_back (addr);
+  }
+
   displaced_step_prepare_status prepare (thread_info *thread,
 					 CORE_ADDR &displaced_pc);
 

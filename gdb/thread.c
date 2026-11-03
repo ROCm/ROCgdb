@@ -1725,7 +1725,7 @@ make_thread_apply_all_options_def_group (bool *ascending,
 					 qcs_flags *flags)
 {
   return {{
-    { {ascending_option_def.def ()}, ascending},
+    { gdb::make_span (&ascending_option_def.def (), 1), ascending},
     { {thr_qcs_flags_option_defs}, flags },
   }};
 }

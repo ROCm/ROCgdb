@@ -991,21 +991,17 @@ gdbpy_decode_line (PyObject *self, PyObject *args)
     locspec = string_to_location_spec_basic (&arg, current_language,
 					     symbol_name_match_type::WILD);
 
-  std::vector<symtab_and_line> decoded_sals;
-  symtab_and_line def_sal;
-  gdb::span<symtab_and_line> sals;
+  std::vector<symtab_and_line> sals;
   try
     {
       if (locspec != NULL)
-	{
-	  decoded_sals = decode_line_1 (locspec.get (), 0, NULL, NULL, 0);
-	  sals = decoded_sals;
-	}
+	sals = decode_line_1 (locspec.get (), 0, nullptr, nullptr, 0);
       else
 	{
 	  set_default_source_symtab_and_line ();
-	  def_sal = get_current_source_symtab_and_line (current_program_space);
-	  sals = def_sal;
+	  symtab_and_line def_sal
+	    = get_current_source_symtab_and_line (current_program_space);
+	  sals.emplace_back (std::move (def_sal));
 	}
     }
   catch (const gdb_exception &ex)

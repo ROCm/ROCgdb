@@ -116,9 +116,11 @@ lookup_objc_class (struct gdbarch *gdbarch, const char *classname)
 
   classval = value_string (classname, strlen (classname) + 1, char_type);
   classval = value_coerce_array (classval);
-  return (CORE_ADDR) value_as_long (call_function_by_hand (function,
-							   NULL,
-							   classval));
+  return ((CORE_ADDR)
+	  value_as_long (call_function_by_hand
+			 (function,
+			  nullptr,
+			  gdb::make_span (&classval, 1))));
 }
 
 CORE_ADDR
@@ -148,7 +150,8 @@ lookup_child_selector (struct gdbarch *gdbarch, const char *selname)
   selstring = value_coerce_array (value_string (selname,
 						strlen (selname) + 1,
 						char_type));
-  return value_as_long (call_function_by_hand (function, NULL, selstring));
+  return value_as_long (call_function_by_hand (function, nullptr,
+					       gdb::make_span (&selstring, 1)));
 }
 
 namespace expr
@@ -179,13 +182,17 @@ objc_nsstring_operation::evaluate (struct type *expect_type,
 			     "_NSNewStringFromCString").minsym != nullptr)
     {
       function = find_function_in_inferior("_NSNewStringFromCString", NULL);
-      nsstringValue = call_function_by_hand(function, NULL, stringValue[2]);
+      nsstringValue
+	= call_function_by_hand(function, nullptr,
+				gdb::make_span (&stringValue[2], 1));
     }
   else if (lookup_minimal_symbol (current_program_space,
 				  "istr").minsym != nullptr)
     {
       function = find_function_in_inferior("istr", NULL);
-      nsstringValue = call_function_by_hand(function, NULL, stringValue[2]);
+      nsstringValue
+	= call_function_by_hand(function, nullptr,
+				gdb::make_span (&stringValue[2], 1));
     }
   else if (lookup_minimal_symbol (current_program_space,
 				  "+[NSString stringWithCString:]").minsym
@@ -1217,7 +1224,8 @@ print_object_command (const char *args, int from_tty)
   if (function == NULL)
     error (_("Unable to locate _NSPrintForDebugger in child process"));
 
-  description = call_function_by_hand (function, NULL, object);
+  description = call_function_by_hand (function, nullptr,
+				       gdb::make_span (&object, 1));
 
   string_addr = value_as_long (description);
   if (string_addr == 0)

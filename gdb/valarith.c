@@ -655,13 +655,14 @@ value_x_unop (struct value *arg1, enum exp_opcode op, enum noside noside)
 	  if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	    {
 	      struct type *return_type
-		= argvec[0]->result_type_of_xmethod (argvec[1]);
+		= (argvec[0]->result_type_of_xmethod
+		   (gdb::make_span (&argvec[1], 1)));
 
 	      if (return_type == NULL)
 		error (_("Xmethod is missing return type."));
 	      return value::zero (return_type, arg1->lval ());
 	    }
-	  return argvec[0]->call_xmethod (argvec[1]);
+	  return argvec[0]->call_xmethod (gdb::make_span (&argvec[1], 1));
 	}
       if (noside == EVAL_AVOID_SIDE_EFFECTS)
 	{

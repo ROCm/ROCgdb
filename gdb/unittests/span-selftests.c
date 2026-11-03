@@ -431,9 +431,9 @@ run_tests ()
     SELF_CHECK (check_container_view (view, array));
 
     gdb_byte elem = 0;
-    view = elem;
+    view = gdb::make_span (&elem, 1);
     SELF_CHECK (check_elem_view (view, elem));
-    view = std::move (elem);
+    view = std::move (gdb::make_span (&elem, 1));
     SELF_CHECK (check_elem_view (view, elem));
   }
 
@@ -519,7 +519,7 @@ run_tests ()
     SELF_CHECK (view_array.size () == 3);
 
     Vec elem;
-    gdb::span<Vec> view_elem = elem;
+    gdb::span<Vec> view_elem = gdb::make_span (&elem, 1);
     SELF_CHECK (view_elem.size () == 1);
   }
 

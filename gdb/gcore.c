@@ -294,7 +294,7 @@ call_target_sbrk (int sbrk_arg)
   gdb_assert (target_sbrk_arg);
   ret = call_function_by_hand (sbrk_fn,
 			       builtin_type (gdbarch)->builtin_data_ptr,
-			       target_sbrk_arg);
+			       gdb::make_span (&target_sbrk_arg, 1));
   if (ret == NULL)
     return (bfd_vma) 0;
 

@@ -1470,14 +1470,12 @@ info_line_command (const char *arg, int from_tty)
 {
   CORE_ADDR start_pc, end_pc;
 
-  std::vector<symtab_and_line> decoded_sals;
-  symtab_and_line curr_sal;
-  gdb::span<symtab_and_line> sals;
-
+  std::vector<symtab_and_line> sals;
   if (arg == 0)
     {
       current_source_location *loc
 	= get_source_location (current_program_space);
+      symtab_and_line curr_sal;
       curr_sal.symtab = loc->symtab ();
       curr_sal.pspace = current_program_space;
       if (last_line_listed != 0)
@@ -1485,14 +1483,11 @@ info_line_command (const char *arg, int from_tty)
       else
 	curr_sal.line = loc->line ();
 
-      sals = curr_sal;
+      sals.emplace_back (std::move (curr_sal));
     }
   else
     {
-      decoded_sals = decode_line_with_last_displayed (arg,
-						      DECODE_LINE_LIST_MODE);
-      sals = decoded_sals;
-
+      sals = decode_line_with_last_displayed (arg, DECODE_LINE_LIST_MODE);
       dont_repeat ();
     }
 

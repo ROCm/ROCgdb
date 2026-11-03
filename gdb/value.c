@@ -4410,7 +4410,7 @@ test_insert_into_bit_range_vector ()
   {
     insert_into_bit_range_vector (&ranges, 11, 4);
     static const range expected = {10, 5};
-    SELF_CHECK (check_ranges_vector (ranges, expected));
+    SELF_CHECK (check_ranges_vector (ranges, gdb::make_span (&expected, 1)));
   }
 
   /* [10, 14] [20, 24] */
@@ -4468,7 +4468,7 @@ test_insert_into_bit_range_vector ()
   {
     insert_into_bit_range_vector (&ranges, 4, 30);
     static const range expected = {2, 32};
-    SELF_CHECK (check_ranges_vector (ranges, expected));
+    SELF_CHECK (check_ranges_vector (ranges, gdb::make_span (&expected, 1)));
   }
 }
 

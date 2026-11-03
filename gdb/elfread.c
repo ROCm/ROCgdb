@@ -935,7 +935,8 @@ elf_gnu_ifunc_resolve_addr (struct gdbarch *gdbarch, CORE_ADDR pc)
   target_auxv_search (AT_HWCAP, &hwcap);
   hwcap_val = value_from_longest (builtin_type (gdbarch)
 				  ->builtin_unsigned_long, hwcap);
-  address_val = call_function_by_hand (function, NULL, hwcap_val);
+  address_val = call_function_by_hand (function, nullptr,
+				       gdb::make_span (&hwcap_val, 1));
   address = value_as_address (address_val);
   address = gdbarch_convert_from_func_ptr_addr
     (gdbarch, address, current_inferior ()->top_target ());
@@ -1068,9 +1069,9 @@ elf_gnu_ifunc_resolver_return_stop (code_breakpoint *b)
   elf_gnu_ifunc_record_cache (b->locspec->to_string (), resolved_pc);
 
   b->type = bp_breakpoint;
+  symtab_and_line sal = find_function_start_sal (resolved_pc, nullptr, true);
   update_breakpoint_locations (b, current_program_space,
-			       find_function_start_sal (resolved_pc, nullptr, true),
-			       {});
+			       gdb::make_span (&sal, 1), {});
 }
 
 /* A helper function for elf_symfile_read that reads the minimal

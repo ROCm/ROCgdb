@@ -495,7 +495,7 @@ gnuv3_baseclass_offset (struct type *type, int index,
 
       CORE_ADDR result;
       if (dwarf2_evaluate_property (&prop, nullptr, &addr_stack, &result,
-				    {addr_stack.addr}))
+				    gdb::make_span (&addr_stack.addr, 1)))
 	return (int) (result - addr_stack.addr);
     }
 
