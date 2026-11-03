@@ -33,10 +33,7 @@
    The main intent of span is to use it as function input
    parameter type, making it possible to pass in any sequence of
    contiguous objects, irrespective of whether the objects live on the
-   stack or heap and what actual container owns them.  Implicit
-   construction from the element type is supported too, making it easy
-   to call functions that expect an array of elements when you only
-   have one element (usually on the stack).  For example:
+   stack or heap and what actual container owns them.  For example:
 
     struct A { .... };
     void function (gdb::span<A> as);
@@ -44,12 +41,10 @@
     std::vector<A> std_vec = ...;
     std::array<A, N> std_array = ...;
     A array[] = {...};
-    A elem;
 
     function (std_vec);
     function (std_array);
     function (array);
-    function (elem);
 
    Views can be either mutable or const.  A const view is simply
    created by specifying a const T as span template parameter,
@@ -88,30 +83,11 @@ public:
   using reference = T &;
   using const_reference = const T &;
   using size_type = size_t;
-  using const_iterator = const T *;
   using iterator = T *;
 
   /* Default construction creates an empty view.  */
   constexpr span () noexcept
     : m_array (nullptr), m_size (0)
-  {}
-
-  /* Create a span over a single object of the type of an
-     span element.  The created view as size==1.  This is
-     templated on U to allow constructing a span<const T> over a
-     (non-const) T.  The "convertible" requirement makes sure that you
-     can't create a span<T> over a const T.  */
-  template<typename U,
-	   typename = Requires<DecayedConvertible<U>>>
-  constexpr span (U &elem) noexcept
-    : m_array (&elem), m_size (1)
-  {}
-
-  /* Same as above, for rvalue references.  */
-  template<typename U,
-	   typename = Requires<DecayedConvertible<U>>>
-  constexpr span (U &&elem) noexcept
-    : m_array (&elem), m_size (1)
   {}
 
   /* Create a span from a pointer to an array and an element
@@ -172,10 +148,8 @@ public:
   constexpr const T *data () const noexcept { return m_array; }
 
   constexpr iterator begin () const noexcept { return m_array; }
-  constexpr const_iterator cbegin () const noexcept { return m_array; }
 
   constexpr iterator end () const noexcept { return m_array + m_size; }
-  constexpr const_iterator cend () const noexcept { return m_array + m_size; }
 
   constexpr reference operator[] (size_t index) noexcept
   {

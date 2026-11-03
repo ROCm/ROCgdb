@@ -56,13 +56,13 @@ using gdb::span;
 /* immutable span */
 static_assert ( is_convertible<const T (&) [1],	span<const T>> ());
 static_assert ( is_convertible<T (&) [1], 	span<const T>> ());
-static_assert ( is_convertible<const T,		span<const T>> ());
-static_assert ( is_convertible<T,		span<const T>> ());
+static_assert (!is_convertible<const T,		span<const T>> ());
+static_assert (!is_convertible<T,		span<const T>> ());
 
 /* mutable span */
 static_assert ( is_convertible<T (&) [1],	span<T>> ());
 static_assert (!is_convertible<const T (&) [1],	span<T>> ());
-static_assert ( is_convertible<T,		span<T>> ());
+static_assert (!is_convertible<T,		span<T>> ());
 static_assert (!is_convertible<const T,		span<T>> ());
 
 /* While float is implicitly convertible to gdb_byte, we don't want
@@ -93,12 +93,12 @@ static_assert (!is_convertible <C (&)[1], span<B>> ());
 
 /* Same, for elem->view.  */
 
-static_assert ( is_convertible <A, span<A>> ());
+static_assert (!is_convertible <A, span<A>> ());
 static_assert (!is_convertible <B, span<A>> ());
 static_assert (!is_convertible <C, span<A>> ());
 
 static_assert (!is_convertible <A, span<B>> ());
-static_assert ( is_convertible <B, span<B>> ());
+static_assert (!is_convertible <B, span<B>> ());
 static_assert (!is_convertible <C, span<B>> ());
 
 /* Check that there's no container->view conversion for containers of derived
@@ -369,21 +369,6 @@ check_iterator ()
   SELF_CHECK (sum == 2 + 4 + 6 + 8);
 }
 
-template<typename T>
-static void
-check_const_iterator ()
-{
-  T data[] = {1, 2, 3, 4};
-  gdb::span<T> view (data);
-
-  typename std::decay<T>::type sum = 0;
-  for (typename gdb::span<T>::const_iterator it = view.cbegin ();
-       it != view.cend (); it++)
-    sum += *it;
-
-  SELF_CHECK (sum == 1 + 2 + 3 + 4);
-}
-
 /* Entry point.  */
 
 static void
@@ -421,7 +406,7 @@ run_tests ()
     SELF_CHECK (check_container_view (cview, array));
   }
 
-  /* op=(std::vector/std::array/elem) */
+  /* op=(std::vector/std::array) */
   {
     gdb::span<gdb_byte> view;
 
@@ -430,12 +415,6 @@ run_tests ()
 
     view = array;
     SELF_CHECK (check_container_view (view, array));
-
-    gdb_byte elem = 0;
-    view = gdb::make_span (&elem, 1);
-    SELF_CHECK (check_elem_view (view, elem));
-    view = std::move (gdb::make_span (&elem, 1));
-    SELF_CHECK (check_elem_view (view, elem));
   }
 
   /* Test copy/move ctor and mutable->immutable conversion.  */
@@ -507,8 +486,6 @@ run_tests ()
   check_range_for<gdb_byte> ();
   check_range_for<const gdb_byte> ();
   check_iterator<gdb_byte> ();
-  check_const_iterator<gdb_byte> ();
-  check_const_iterator<const gdb_byte> ();
 
   /* Check that the right ctor overloads are taken when the element is
      a container.  */
