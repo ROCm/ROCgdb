@@ -1635,8 +1635,8 @@ get_frame_register_bytes (const frame_info_ptr &next_frame, int regnum,
 	      return false;
 	    }
 
-	  copy (value->contents_all ().subspan (offset, curr_len),
-		buffer.subspan (0, curr_len));
+	  gdb::copy (value->contents_all ().subspan (offset, curr_len),
+		     buffer.subspan (0, curr_len));
 	  release_value (value);
 	}
 
@@ -1678,8 +1678,8 @@ put_frame_register_bytes (const frame_info_ptr &next_frame, int regnum,
 	  value *value = frame_unwind_register_value (next_frame, regnum);
 	  gdb_assert (value != nullptr);
 
-	  copy (buffer.subspan (0, curr_len),
-		value->contents_writeable ().subspan (offset, curr_len));
+	  gdb::copy (buffer.subspan (0, curr_len),
+		     value->contents_writeable ().subspan (offset, curr_len));
 	  put_frame_register (next_frame, regnum, value->contents_raw ());
 	  release_value (value);
 	}

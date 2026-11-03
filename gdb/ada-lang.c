@@ -4706,7 +4706,7 @@ ada_convert_actual (struct value *actual, struct type *formal_type0)
 
 	      actual_type = ada_check_typedef (actual->type ());
 	      val = value::allocate (actual_type);
-	      copy (actual->contents (), val->contents_raw ());
+	      gdb::copy (actual->contents (), val->contents_raw ());
 	      actual = ensure_lval (val);
 	    }
 	  result = value_addr (actual);
@@ -9212,7 +9212,8 @@ ada_promote_array_of_integrals (struct type *type, struct value *val)
       struct value *elt = value_cast (elt_type, value_subscript (val, lo + i));
       int elt_len = elt_type->length ();
 
-      copy (elt->contents_all (), res_contents.subspan (elt_len * i, elt_len));
+      gdb::copy (elt->contents_all (),
+		 res_contents.subspan (elt_len * i, elt_len));
     }
 
   return res;

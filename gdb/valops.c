@@ -983,8 +983,8 @@ value_one (struct type *type)
       for (i = 0; i < high_bound - low_bound + 1; i++)
 	{
 	  value *tmp = value_one (eltype);
-	  copy (tmp->contents_all (),
-		val_contents.subspan (i * elt_len, elt_len));
+	  gdb::copy (tmp->contents_all (),
+		     val_contents.subspan (i * elt_len, elt_len));
 	}
     }
   else
@@ -1353,7 +1353,7 @@ value_assign (struct value *toval, struct value *fromval)
      implies the returned value is not lazy, even if TOVAL was.  */
   val = toval->copy ();
   val->set_lazy (false);
-  copy (fromval->contents (), val->contents_raw ());
+  gdb::copy (fromval->contents (), val->contents_raw ());
 
   /* We copy over the enclosing type and pointed-to offset from FROMVAL
      in the case of pointer types.  For object types, the enclosing type
@@ -4109,10 +4109,10 @@ value_literal_complex (struct value *arg1,
 
   int len = real_type->length ();
 
-  copy (arg1->contents (),
-	val->contents_raw ().subspan (0, len));
-  copy (arg2->contents (),
-	val->contents_raw ().subspan (len, len));
+  gdb::copy (arg1->contents (),
+	     val->contents_raw ().subspan (0, len));
+  gdb::copy (arg2->contents (),
+	     val->contents_raw ().subspan (len, len));
 
   return val;
 }
@@ -4156,10 +4156,10 @@ cast_into_complex (struct type *type, struct value *val)
       struct value *im_val = value::allocate (val_real_type);
       int len = val_real_type->length ();
 
-      copy (val->contents ().subspan (0, len),
-	    re_val->contents_raw ());
-      copy (val->contents ().subspan (len, len),
-	    im_val->contents_raw ());
+      gdb::copy (val->contents ().subspan (0, len),
+		 re_val->contents_raw ());
+      gdb::copy (val->contents ().subspan (len, len),
+		 im_val->contents_raw ());
 
       return value_literal_complex (re_val, im_val, type);
     }

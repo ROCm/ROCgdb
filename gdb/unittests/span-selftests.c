@@ -600,7 +600,7 @@ run_copy_test ()
     std::vector<T> dest_v (4, -1);
 
     SELF_CHECK (dest_v != src_v);
-    copy (gdb::span<const T> (src_v), gdb::span<T> (dest_v));
+    gdb::copy (gdb::span<const T> (src_v), gdb::span<T> (dest_v));
     SELF_CHECK (dest_v == src_v);
   }
 
@@ -609,8 +609,8 @@ run_copy_test ()
     std::vector<T> vec = {1, 2, 3, 4, 5, 6, 7, 8};
     gdb::span<T> v = vec;
 
-    copy (v.subspan (1, 4),
-	  v.subspan (2, 4));
+    gdb::copy (v.subspan (1, 4),
+	       v.subspan (2, 4));
 
     std::vector<T> expected = {1, 2, 2, 3, 4, 5, 7, 8};
     SELF_CHECK (vec == expected);
@@ -621,8 +621,8 @@ run_copy_test ()
     std::vector<T> vec = {1, 2, 3, 4, 5, 6, 7, 8};
     gdb::span<T> v = vec;
 
-    copy (v.subspan (2, 4),
-	  v.subspan (1, 4));
+    gdb::copy (v.subspan (2, 4),
+	       v.subspan (1, 4));
 
     std::vector<T> expected = {1, 3, 4, 5, 6, 6, 7, 8};
     SELF_CHECK (vec == expected);
@@ -633,8 +633,8 @@ run_copy_test ()
     std::vector<T> vec = {1, 2, 3, 4, 5, 6, 7, 8};
     gdb::span<T> v = vec;
 
-    copy (v.subspan (2, 4),
-	  v.subspan (2, 4));
+    gdb::copy (v.subspan (2, 4),
+	       v.subspan (2, 4));
 
     std::vector<T> expected = {1, 2, 3, 4, 5, 6, 7, 8};
     SELF_CHECK (vec == expected);

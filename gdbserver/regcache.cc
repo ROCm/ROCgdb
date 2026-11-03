@@ -303,7 +303,7 @@ regcache::raw_supply (int n, gdb::span<const gdb_byte> src)
 
   if (src.data () != nullptr)
     {
-      copy (src, dst);
+      gdb::copy (src, dst);
 #ifndef IN_PROCESS_AGENT
       set_register_status (n, REG_VALID);
 #endif
@@ -393,7 +393,7 @@ void
 regcache::raw_collect (int n, gdb::span<gdb_byte> dst) const
 {
   auto src = register_data (this, n);
-  copy (src, dst);
+  gdb::copy (src, dst);
 }
 
 enum register_status

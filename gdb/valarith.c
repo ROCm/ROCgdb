@@ -1420,8 +1420,8 @@ value_vector_widen (struct value *scalar_value, struct type *vector_type)
 
   for (i = 0; i < high_bound - low_bound + 1; i++)
     /* Duplicate the contents of elval into the destination vector.  */
-    copy (elval->contents_all (),
-	  val_contents.subspan (i * elt_len, elt_len));
+    gdb::copy (elval->contents_all (),
+	       val_contents.subspan (i * elt_len, elt_len));
 
   return val;
 }
@@ -1468,8 +1468,8 @@ vector_binop (struct value *val1, struct value *val2, enum exp_opcode op)
     {
       value *tmp = value_binop (value_subscript (val1, i),
 				value_subscript (val2, i), op);
-      copy (tmp->contents_all (),
-	    val_contents.subspan (i * elsize, elsize));
+      gdb::copy (tmp->contents_all (),
+		 val_contents.subspan (i * elsize, elsize));
      }
 
   return val;
@@ -1763,8 +1763,8 @@ value_neg (struct value *arg1)
       for (i = 0; i < high_bound - low_bound + 1; i++)
 	{
 	  value *tmp = value_neg (value_subscript (arg1, i));
-	  copy (tmp->contents_all (),
-		val_contents.subspan (i * elt_len, elt_len));
+	  gdb::copy (tmp->contents_all (),
+		     val_contents.subspan (i * elt_len, elt_len));
 	}
       return val;
     }
@@ -1814,8 +1814,8 @@ value_complement (struct value *arg1)
       for (i = 0; i < high_bound - low_bound + 1; i++)
 	{
 	  value *tmp = value_complement (value_subscript (arg1, i));
-	  copy (tmp->contents_all (),
-		val_contents.subspan (i * elt_len, elt_len));
+	  gdb::copy (tmp->contents_all (),
+		     val_contents.subspan (i * elt_len, elt_len));
 	}
     }
   else if (type->code () == TYPE_CODE_COMPLEX)

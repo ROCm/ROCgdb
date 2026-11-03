@@ -3570,7 +3570,7 @@ aarch64_pseudo_write_1 (gdbarch *gdbarch, const frame_info_ptr &next_frame,
   static_assert (AARCH64_V0_REGNUM == AARCH64_SVE_Z0_REGNUM);
 
   gdb::span<gdb_byte> raw_view (raw_buf);
-  copy (buf, raw_view.subspan (0, buf.size ()));
+  gdb::copy (buf, raw_view.subspan (0, buf.size ()));
   put_frame_register (next_frame, raw_regnum, raw_view);
 }
 
@@ -3608,7 +3608,7 @@ aarch64_sme_pseudo_register_write (gdbarch *gdbarch, const frame_info_ptr &next_
 	  = data.subspan (chunks * offsets.chunk_size, offsets.chunk_size);
 	gdb::span<gdb_byte> dst
 	  = za_view.subspan (chunks * offsets.stride_size, offsets.chunk_size);
-	copy (src, dst);
+	gdb::copy (src, dst);
       }
   }
 
@@ -3683,7 +3683,7 @@ aarch64_pseudo_write (gdbarch *gdbarch, const frame_info_ptr &next_frame,
       /* First zero-out the contents of X.  */
       gdb_byte bytes[8] {};
       gdb::span<gdb_byte> bytes_view (bytes);
-      copy (buf, bytes_view.subspan (offset, 4));
+      gdb::copy (buf, bytes_view.subspan (offset, 4));
 
       /* Write to the bottom 4 bytes of X.  */
       put_frame_register (next_frame, x_regnum, bytes_view);
