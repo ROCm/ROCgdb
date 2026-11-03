@@ -1,3 +1,52 @@
+2026-11-02  Pietro Monteiro  <pietro@sociotechnical.xyz>
+
+	* Makefile.in (aclocal_deps): Depend on
+	../config/clang-plugin.m4, ../config/hwcaps.m4, and
+	../config/mmap.m4.
+	(./filedescriptor.$(objext)): Update dependencies.
+	(./filename_cmp.$(objext)): Likewise.
+	(./memrchr.$(objext)): Likewise.
+	( ./pex-unix.$(objext)): Likewise.
+	(./setenv.$(objext)): Likewise.
+	( ./xmalloc.$(objext)): Likewise.
+	* acinclude.m4: Stop including ../config/mmap.m4.
+	* aclocal.m4: Regenerate.
+	* functions.texi: Likewise.
+
+2026-10-16  Pietro Monteiro  <pietro@sociotechnical.xyz>
+
+	* acinclude.m4: Change AC_FUNC_MMAP to GCC_AC_FUNC_MMAP.
+	* configure: Regenerate.
+
+2026-10-15  Sam James  <sam@gentoo.org>
+
+	PR bootstrap/112422
+	* config.in: Regenerate.
+	* configure: Regenerate.
+	* configure.ac: Drop AC_C_CONST and AC_C_INLINE.
+
+2026-07-01  Alan Modra  <amodra@gmail.com>
+
+	* cp-demangle.c (d_compact_number): Avoid signed overflow.
+
+2026-06-29  Pietro Monteiro  <pietro@sociotechnical.xyz>
+
+	PR bootstrap/103459
+	* acinclude.m4: Replace AC_TRY_RUN with AC_RUN_IFELSE.  Replace
+	AC_TRY_COMPILE with AC_COMPILE_IFELSE.
+	* configure.ac: Replace AC_TRY_COMPILE with AC_COMPILE_IFELSE.  Replace
+	AC_ISC_POSIX with AC_SEARCH_LIBS([strerror],[cposix]).
+
+2026-06-13  Sunil Dora  <sunilkumar.dora@windriver.com>
+
+	PR driver/111527
+	* argv.c (expandargstr): New function.
+
+2026-06-10  Pietro Monteiro  <pietro@sociotechnical.xyz>
+
+	* simple-object-mach-o.c (MACH_O_MH_DYLIB): New definition.
+	(simple_object_mach_o_match): Accept dylibs as well as object files.
+
 2026-06-07  Andrew Burgess  <aburgess@redhat.com>
 
 	* d-demangle.c (struct dlang_info::options): New field,
