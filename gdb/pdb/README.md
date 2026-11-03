@@ -55,9 +55,19 @@ absolute on the host GDB runs on.
 |------------------------------------|-----------------------------------------------------------|
 | `maintenance info pdb-loaded-files`| Paths of the PDB files GDB read                           |
 
-## Initialization Order
+## GDB Integration and Initialization Order
 
-`pdb_initialize_objfile()` loads the PDB in this order:
+`coff_reader::symfile_read()` reads DWARF first, then looks for a separate
+debug file, and calls `pdb_initialize_objfile()` only for an executable that
+has neither.  lld-link writes a PDB for every link with `-debug`, so a DWARF
+build names one too; it holds only the C runtime's CodeView, which is why a
+separate debug file comes first.  `pdb_initialize_objfile()` returns true
+only when it loaded the PDB that the executable's RSDS record names.  An
+RSDS record with an empty path, as lld-link `/build-id` writes, names none.
+A missing, mismatched or malformed PDB returns false, and GDB reads no debug
+information.  When PDB support is not compiled in, a stub returns false.
+
+Initialization then loads the PDB in this order:
 
 1. Map the PDB file read-only, validate the MSF magic and header, and read
    the stream directory (which maps every stream to its blocks).
@@ -76,12 +86,25 @@ one is, with the error shown as a warning.  Counts and sizes read from the
 file are checked against the bytes that hold them in 64-bit arithmetic, and
 a stream cannot have more blocks than the file.
 
+## Build & Configuration
+
+- `gdb/configure.ac` / `gdb/configure` — PDB support is built when any Windows
+  target is configured or when `--enable-targets=all` is used.  Can be forced
+  with `--enable-gdb-pdb-support=yes` or disabled with `=no`.  Defines
+  `PDB_FORMAT_AVAILABLE`.
+- `gdb/Makefile.in` — adds `pdb` subdir; defines `PDB_SRCS` / `PDB_OBS`,
+  which hold the whole reader and are built only with it.
+- `gdb/config.in` — `PDB_FORMAT_AVAILABLE` macro.  Without it, `pdb.h`
+  defines `pdb_initialize_objfile` as an inline function that loads no
+  PDB, as `dwarf2/public.h` does for DWARF.
+
 ## Supported
 
 - The PDB that the executable's RSDS debug record names, found next to the
   executable under that name, as `<executable>.pdb`, or at the recorded
   path.  A PDB whose GUID differs from the executable's, or whose age is
-  lower, is refused, and nothing is read from it.
+  lower, is refused, and nothing is read from it.  An executable with
+  DWARF is read as DWARF, and the PDB it names is not read.
 - `maintenance info pdb-loaded-files`.
 
 ## Memory Allocations

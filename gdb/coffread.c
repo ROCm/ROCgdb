@@ -26,6 +26,7 @@
 #include "objfiles.h"
 #include "target.h"
 #include "dwarf2/public.h"
+#include "pdb/pdb.h"
 #include "coff-pe-read.h"
 #include "cli/cli-style.h"
 
@@ -349,14 +350,20 @@ coff_reader::symfile_read (symfile_add_flags symfile_flags)
     {
       /* Nothing.  */
     }
-
-  /* Try to add separate debug file if no symbols table found.  */
+  /* Try to add separate debug file if no symbols table found.  It comes
+     before the PDB: lld-link writes a PDB for a DWARF build too, and it
+     holds only the C runtime's CodeView.  */
   else if (!coffread_objfile->has_partial_symbols ()
 	   && coffread_objfile->separate_debug_objfile == NULL
-	   && coffread_objfile->separate_debug_objfile_backlink == NULL)
+	   && coffread_objfile->separate_debug_objfile_backlink == NULL
+	   && coffread_objfile->find_and_add_separate_symbol_file
+		(symfile_flags))
     {
-      if (coffread_objfile->find_and_add_separate_symbol_file (symfile_flags))
-	gdb_assert (coffread_objfile->separate_debug_objfile != nullptr);
+      gdb_assert (coffread_objfile->separate_debug_objfile != nullptr);
+    }
+  else if (pdb_initialize_objfile (coffread_objfile))
+    {
+      /* Nothing.  */
     }
 }
 
