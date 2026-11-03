@@ -62,6 +62,38 @@ gdb_caching_proc pdb_support {} {
     return [expr {!$missing}]
 }
 
+# With the test prefix NAME, copy EXECUTABLE and its PDB (by default
+# EXECUTABLE with the extension .pdb) into the output directory NAME, apply
+# PATCH (the gdb.pdb/pdb-yaml-corrupt.py arguments after the PDB) to the
+# copy, load it, read all of its symbols and check that the output matches
+# PATTERN.
+
+proc pdb_check_corrupt {name executable patch pattern {pdb ""}} {
+    global srcdir
+
+    if {$pdb == ""} {
+	set pdb [file rootname $executable].pdb
+    }
+    with_test_prefix $name {
+	gdb_exit
+	set dest [standard_output_file $name]
+	file mkdir $dest
+	file copy -force $executable $pdb $dest
+	if {[catch {exec python3 -B $srcdir/gdb.pdb/pdb-yaml-corrupt.py \
+			$dest/[file tail $pdb] {*}$patch 2>@1} output]} {
+	    perror "corrupting $pdb failed: $output"
+	    return
+	}
+	clean_restart
+	gdb_test_no_output "set complaints 100"
+	set output [capture_command_output \
+			"file $dest/[file tail $executable]" ""]
+	append output [capture_command_output "maint expand-symtabs" ""]
+	gdb_assert {[regexp -- $pattern $output]} "the defect is reported"
+	gdb_test "print 1 + 1" " = 2" "session continues"
+    }
+}
+
 # Build EXECUTABLE from SOURCES with OPTIONS and start GDB on it, as
 # prepare_for_testing does, then check that GDB loaded its PDB.  Like
 # prepare_for_testing, return 0 on success and nonzero on failure.

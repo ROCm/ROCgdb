@@ -124,6 +124,10 @@ Every compiled test uses `pdb_prepare_for_testing` with the selected board.
 | Test | Loads | Named source | Inferior | Covers |
 |---|---|---|---|---|
 | [`pdb-load.exp`](pdb-load.exp) | built at test time | `pdb-test.cpp` | no | A program the selected board compiled gets its PDB loaded |
+| [`pdb-publics.exp`](pdb-publics.exp) | built at test time, also with Microsoft cl | `pdb-publics.cpp` | no | Public symbols as minimal symbols: `main` is found by its address and section, the C++ global `g_counter` by its source name rather than its decorated public name, and a function called through an import thunk is a trampoline |
+| [`pdb-readnever.exp`](pdb-readnever.exp) | built at test time | `pdb-test.cpp` | no | `symbol-file -readnever` still loads the PDB for its public symbols, so `main` is a minimal symbol, but reads no symbol table |
+| [`pdb-bss-tail.exp`](pdb-bss-tail.exp) | built at test time | `pdb-bss-tail.c` | no | A global in the uninitialized tail of `.data`, past the bytes `.data` has in the file, as lld links `.bss`, still gets the minimal symbol of its public |
+| [`pdb-i386.exp`](pdb-i386.exp) | built at test time (clang-cl i686, lld-link, no CRT) | `pdb-i386.c` | no | The PDB of an i386 image is refused with a warning; only x86-64 is read |
 
 ## 1.2 Which PDB gets loaded
 

@@ -386,6 +386,20 @@ pdb_find_pdb_file (const char *exe_path, const pdb_rsds_info &rsds,
   return "";
 }
 
+/* See pdb-internal.h.  */
+
+bfd_size_type
+pdb_section_extent (bfd *abfd, asection *sect)
+{
+  bfd_size_type size = bfd_section_size (sect);
+  if (bfd_get_flavour (abfd) == bfd_target_coff_flavour
+      && obj_pe (abfd)
+      && coff_section_data (abfd, sect) != nullptr
+      && pei_section_data (abfd, sect) != nullptr)
+    size = std::max (size, pei_section_data (abfd, sect)->virt_size);
+  return size;
+}
+
 #if GDB_SELF_TEST
 
 namespace selftests

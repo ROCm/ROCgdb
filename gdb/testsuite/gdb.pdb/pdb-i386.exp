@@ -1,0 +1,60 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# The reader reads only the PDB of an x86-64 image.  GDB warns about the
+# PDB of an i386 image and does not load it.  The image is linked without
+# a C runtime, which needs no i386 libraries.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+set clang_cl [pdb_find_llvm_tool clang-cl]
+set lld [pdb_lld_link]
+if {$clang_cl eq "" || $lld eq ""} {
+    unsupported "clang-cl or lld-link not found"
+    return
+}
+
+standard_testfile .c
+set exe ${binfile}.exe
+set obj [host_file_normalize ${binfile}.obj]
+
+# Keep MSYS from rewriting the paths in -Fo and -out:.
+save_vars { ::env(MSYS2_ARG_CONV_EXCL) } {
+    set ::env(MSYS2_ARG_CONV_EXCL) "*"
+    set failed [expr {[catch {exec $clang_cl --target=i686-pc-windows-msvc \
+				  -Z7 -Od -c \
+				  [host_file_normalize $srcdir/$subdir/$srcfile] \
+				  -Fo$obj} output]
+		      || [catch {exec $lld -debug -nodefaultlib -entry:main \
+				     -subsystem:console $obj \
+				     -out:[host_file_normalize $exe]} output]}]
+}
+if {$failed} {
+    verbose -log "i386 build failed: $output"
+    untested "build the i386 image"
+    return
+}
+
+clean_restart
+gdb_test "file $exe" \
+    "warning: \[^\r\n\]*$testfile\\.exe: not reading its PDB, only x86-64 images are supported.*" \
+    "the PDB of an i386 image is refused"
+gdb_test "maintenance info pdb-loaded-files" "No PDB loaded\\." \
+    "no PDB is loaded"

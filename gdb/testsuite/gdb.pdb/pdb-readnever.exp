@@ -1,0 +1,48 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test "symbol-file -readnever" on a program with a PDB.  GDB still loads
+# the PDB, because its public symbols are the program's minimal symbols:
+# lld-link writes no COFF symbol table.  It reads no symbol table.
+
+load_lib lib-pdb.exp
+
+require !readnow
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+standard_testfile pdb-test.cpp
+
+if {[pdb_prepare_for_testing "prepare fixture" ${testfile}.exe $srcfile \
+	 {debug c++ optimize=-O0}] != 0} {
+    return
+}
+
+clean_restart
+gdb_test "symbol-file -readnever ${binfile}.exe" \
+    "Reading symbols from .*" \
+    "load the program with -readnever"
+
+gdb_test "maintenance info pdb-loaded-files" \
+    ".*[string_to_regexp $testfile.pdb]" \
+    "the PDB is loaded"
+gdb_test_no_output "maintenance info symtabs" \
+    "no symbol table is read"
+gdb_test "info address main" \
+    "Symbol \"main\" is at $hex in a file compiled without debugging\\." \
+    "main is a minimal symbol"
