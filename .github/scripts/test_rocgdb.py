@@ -339,6 +339,10 @@ def _linux_kill_tree_process(pid: int, tree: Set[int]) -> Optional[str]:
 # The functions and classes that only work on Windows carry a _windows_ or
 # _Windows prefix, and those that only work under an MSYS2 Python an _msys2_
 # one.
+#
+# The test programs find the HIP runtime under test through the DLL
+# directory that _windows_set_dll_directory sets.  A packaged Python, whose
+# children don't inherit it, is refused (see main).
 
 
 # Cached, since each WinDLL or CDLL call returns a new library object, and
@@ -352,17 +356,66 @@ def _windows_kernel32():
     calls, from a native, Cygwin or MSYS2 Python.
     """
     if IS_NATIVE_WINDOWS:
-        kernel32 = ctypes.WinDLL("kernel32")
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     else:
         # A Cygwin or MSYS2 Python has no WinDLL, but x86-64 Windows has a
         # single calling convention, so CDLL calls into kernel32 just as well.
         kernel32 = ctypes.CDLL("kernel32.dll")
     handle = ctypes.c_void_p
-    for name, argtypes, restype in (("GetModuleHandleW", [ctypes.c_wchar_p], handle),):
+    for name, argtypes, restype in (
+        ("SetDllDirectoryW", [ctypes.c_wchar_p], ctypes.c_int),
+        (
+            "GetCurrentPackageFullName",
+            [ctypes.POINTER(ctypes.c_uint32), ctypes.c_wchar_p],
+            ctypes.c_long,
+        ),
+        ("GetLastError", [], ctypes.c_uint32),
+        ("GetModuleHandleW", [ctypes.c_wchar_p], handle),
+    ):
         function = getattr(kernel32, name)
         function.argtypes = argtypes
         function.restype = restype
     return kernel32
+
+
+def _windows_last_error() -> int:
+    """
+    Windows only: the Win32 error code of the last kernel32 call that failed.
+    Under a Cygwin or MSYS2 Python it is best effort, and may come from a
+    Win32 call the runtime made since.
+    """
+    if IS_NATIVE_WINDOWS:
+        # Saved by ctypes right after the call, as kernel32 was loaded with
+        # use_last_error.
+        return ctypes.get_last_error()
+    # ctypes only supports use_last_error where os.name is "nt", so this
+    # reads the thread's error code later, in a call of its own.
+    return _windows_kernel32().GetLastError()
+
+
+def _windows_check_result(result: Optional[int], what: str) -> None:
+    """
+    Windows only: raise OSError if a kernel32 call reported failure.
+
+    Args:
+        result: The call's result, false on failure.
+        what: The function called, for the message.
+    """
+    if not result:
+        raise OSError(f"{what} failed with error {_windows_last_error()}")
+
+
+def _windows_path(path: Union[str, Path]) -> str:
+    """
+    Windows only: the Windows form of a path, as Win32 functions take it.
+    Under an MSYS2 Python, the path is in its POSIX form and is converted.
+
+    Args:
+        path: The path to convert.
+    """
+    if IS_NATIVE_WINDOWS:
+        return str(path)
+    return _msys2_cygpath("-w", path)
 
 
 def _msys2_cygpath(option: str, path: Union[str, Path]) -> str:
@@ -2135,6 +2188,45 @@ def setup_environment(
     return env_vars
 
 
+def _windows_is_packaged() -> bool:
+    """
+    Native Windows Python only: whether this process runs as a packaged app,
+    as the Microsoft Store's Python does.
+    """
+    # With no buffer, a packaged process gets ERROR_INSUFFICIENT_BUFFER, as its
+    # package name doesn't fit, and any other gets APPMODEL_ERROR_NO_PACKAGE.
+    error_insufficient_buffer = 122
+    length = ctypes.c_uint32(0)
+    result = _windows_kernel32().GetCurrentPackageFullName(
+        ctypes.byref(length), None
+    )
+    return result == error_insufficient_buffer
+
+
+def _windows_set_dll_directory(path: Path) -> None:
+    """
+    Windows only: search `path` for DLLs ahead of the system directories, in
+    this process and in every process it starts.  This process must not be a
+    packaged one, such as the Microsoft Store's Python, as the processes a
+    packaged one starts don't inherit the setting.
+
+    Args:
+        path: Directory holding the DLLs to prefer.
+    """
+    # The loader searches C:\Windows\System32 before PATH, so a HIP runtime that
+    # Adrenalin installed in System32 would be loaded by the test programs
+    # instead of the one under test.  The SetDllDirectoryW directory is
+    # searched before System32, and child processes inherit it, down through
+    # make, sh, expect and rocgdb to the test programs.  SetDllDirectoryW's
+    # documentation limits the inheritance to processes that are not packaged
+    # or protected ones.
+    win_path = _windows_path(path)
+    _windows_check_result(
+        _windows_kernel32().SetDllDirectoryW(win_path),
+        f"SetDllDirectoryW({win_path!r})",
+    )
+
+
 def _windows_find_file(name: str, search_path: Optional[str]) -> Optional[str]:
     """
     Native Windows Python only: find a file named exactly `name` in the
@@ -2956,6 +3048,17 @@ def main() -> None:
             "A Cygwin Python can't run the testsuite's MSYS2 programs.  "
             "Use a native Windows Python or MSYS2's."
         )
+    # The processes a packaged Python starts don't inherit the DLL directory
+    # that _windows_set_dll_directory sets, so the test programs would load
+    # the HIP runtime that Adrenalin installs in System32 instead of the one
+    # under test, and every result would be for the wrong runtime, with
+    # nothing to show it.
+    if IS_NATIVE_WINDOWS and _windows_is_packaged():
+        _log_error_and_exit(
+            "A packaged Python, such as the Microsoft Store's, can't make the "
+            "test programs use the HIP runtime under test.  Use one from "
+            "python.org, or MSYS2's."
+        )
     args = parse_arguments()
 
     # Determine ignore list file path.
@@ -3056,6 +3159,8 @@ def main() -> None:
 
     # Prepare environment for tests.
     env_vars = setup_environment(rocm_dir, args.try_rocm_path, args.msys2_root)
+    if IS_WINDOWS:
+        _windows_set_dll_directory(rocm_dir / "bin")
     setup_sanitizer_environment(env_vars, rocgdb_testsuite_dir)
 
     # Validate that we can run rocgdb.
