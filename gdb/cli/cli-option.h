@@ -387,6 +387,15 @@ extern bool process_options
    process_options_mode mode,
    gdb::span<const option_def_group> options_group);
 
+/* An overload of process_options that accepts a single option.  */
+static inline bool
+process_options (const char **args,
+		 process_options_mode mode,
+		 const option_def_group &options_group)
+{
+  return process_options (args, mode, gdb::make_span (&options_group, 1));
+}
+
 /* Complete ARGS on options listed by OPTIONS_GROUP.  Returns true if
    the string has been fully parsed and there are no operands to
    handle by the caller.  Return false if options were parsed, and
@@ -397,10 +406,30 @@ extern bool complete_options
    process_options_mode mode,
    gdb::span<const option_def_group> options_group);
 
+/* An overload of complete_options that accepts a single option.  */
+static inline bool
+complete_options (completion_tracker &tracker,
+		  const char **args,
+		  process_options_mode mode,
+		  const option_def_group &options_group)
+{
+  return complete_options (tracker, args, mode,
+			   gdb::make_span (&options_group, 1));
+}
+
 /* Complete on all options listed by OPTIONS_GROUP.  */
 extern void
   complete_on_all_options (completion_tracker &tracker,
 			   gdb::span<const option_def_group> options_group);
+
+/* An overload of complete_on_all_options that accepts a single
+   option.  */
+static inline void
+complete_on_all_options (completion_tracker &tracker,
+			 const option_def_group &options_group)
+{
+  complete_on_all_options (tracker, gdb::make_span (&options_group, 1));
+}
 
 /* Return a string with the result of replacing %OPTIONS% in HELP_TMLP
    with an auto-generated "help" string fragment for all the options
@@ -408,6 +437,14 @@ extern void
 extern std::string build_help
   (const char *help_tmpl,
    gdb::span<const option_def_group> options_group);
+
+/* An overload of build_help that accepts a single option.  */
+static inline std::string
+build_help (const char *help_tmpl,
+	    const option_def_group &options_group)
+{
+  return build_help (help_tmpl, gdb::make_span (&options_group, 1));
+}
 
 /* Install set/show commands for options defined in OPTIONS.  DATA is
    a pointer to the structure that holds the data associated with the
