@@ -755,6 +755,57 @@ pdb_parse_named_stream_map (const pdb_info_stream &info)
   return result;
 }
 
+/* See pdb-internal.h.  */
+
+void
+pdb_print_streams (const pdb_per_objfile *pdb, bool blocks)
+{
+  gdb_printf ("MSF: block size %u, %u blocks, directory %u bytes,"
+	      " block map at block %u\n",
+	      pdb->block_size, pdb->num_blocks, pdb->num_dir_bytes,
+	      pdb->block_map_addr);
+
+  if (!pdb->info_data.empty ())
+    {
+      pdb_info_stream info = pdb_decode_info_stream (pdb->info_data);
+      gdb_printf ("PDB info: version %u, signature 0x%08x, age %u,"
+		  " GUID %s\n",
+		  info.version, info.signature, info.age,
+		  pdb_format_guid (info.guid).c_str ());
+      gdb_printf ("Named streams:\n");
+      pdb_named_stream_map named = pdb_parse_named_stream_map (info);
+      for (const pdb_named_stream &e : named.entries)
+	gdb_printf ("  %s -> stream %u\n", e.name, e.stream_idx);
+    }
+
+  gdb_printf ("DBI: public symbols stream %u, symbol records stream %u\n",
+	      pdb->psgsi_stream, pdb->sym_record_stream);
+
+  gdb_printf ("Streams: %zu\n", pdb->streams.size ());
+  for (size_t i = 0; i < pdb->streams.size (); i++)
+    {
+      const msf_stream &stream = pdb->streams[i];
+      if (stream.size == 0)
+	{
+	  gdb_printf ("  %zu: <unused>\n", i);
+	  continue;
+	}
+
+      gdb_printf ("  %zu: %u bytes\n", i, stream.size);
+      if (!blocks)
+	continue;
+
+      std::string list;
+      for (uint32_t block : stream.block_nums)
+	{
+	  if (!list.empty ())
+	    list += ", ";
+	  list += std::to_string (block);
+	}
+      gdb_printf ("     blocks: %s\n", list.c_str ());
+    }
+}
+
 /* Read the /names stream and fill the global string table.
    INFO is the already-decoded PDB info stream header; we reuse it for
    the named-stream map.  */
@@ -947,7 +998,8 @@ pdb_read_dbi_stream (pdb_per_objfile *pdb)
       module.module_name = (const char *) p;
       p = pdb_skip_cstring (p, mod_info_end, "module name");
 
-      /* Skip the object file name.  */
+      /* Read object file name.  */
+      module.obj_file_name = (const char *) p;
       p = pdb_skip_cstring (p, mod_info_end, "obj file name");
 
       /* Records are padded to 4 bytes.  Round P up to the next record, but
@@ -1196,7 +1248,7 @@ pdb_get_filename_from_file_id (const pdb_per_objfile *pdb,
    block, invokes CALLBACK with the resolved filename and the raw line array
    view.  MODULE_STREAM is the raw module stream data.  */
 
-static void
+void
 pdb_walk_c13_line_blocks (const pdb_per_objfile *pdb, pdb_module_info *module,
 			  gdb_byte *module_stream, pdb_line_block_fn callback)
 {
@@ -1409,9 +1461,6 @@ pdb_apply_symbol_lines (const pdb_symbol_lines &sym_lines)
     if (p.subfile != nullptr && p.subfile->symtab != nullptr)
       p.sym->set_symtab (p.subfile->symtab);
 }
-
-static void pdb_read_module_files (pdb_per_objfile *pdb,
-				   pdb_module_info *mod);
 
 /* Build MODULE's compunit, for pdb_build_module.  Throws via pdb_error on
    malformed module data.  */
@@ -2002,7 +2051,7 @@ struct pdb_readnow_functions : public quick_symbol_functions
 /* Get module's file names from its precomputed file_name_offsets[] pointers
    into the global Names Buffer.  */
 
-static void
+void
 pdb_read_module_files (pdb_per_objfile *pdb, pdb_module_info *module)
 {
   /* Already populated.  */
@@ -2032,6 +2081,56 @@ pdb_read_module_files (pdb_per_objfile *pdb, pdb_module_info *module)
 	module->files[i] = nullptr;
     }
 }
+
+/* See pdb-internal.h.  */
+
+void
+pdb_read_module_files_c13 (pdb_per_objfile *pdb, pdb_module_info *module)
+{
+  if (module->files_c13_read || module->file_checksums == nullptr)
+    return;
+  module->files_c13_read = true;
+
+  const gdb_byte *table = module->file_checksums;
+  size_t size = module->file_checksums_size;
+  constexpr size_t hdr_size = CV_FileChecksum::HDR_SIZE;
+
+  /* The offset of the entry after the one at OFF, whose header is in the
+     table.  It may lie past the end of the table.  */
+  auto next = [&] (size_t off)
+    {
+      return align_up (off + hdr_size
+		       + CV_FileChecksum (table + off).checksum_size,
+		       (size_t) 4);
+    };
+
+  uint32_t count = 0;
+  for (size_t off = 0; off + hdr_size <= size; off = next (off))
+    count++;
+  if (count == 0)
+    return;
+
+  module->files_c13 = OBSTACK_CALLOC (&pdb->objfile->objfile_obstack, count,
+				      pdb_file_info);
+  for (size_t off = 0; off + hdr_size <= size; off = next (off))
+    {
+      CV_FileChecksum ck (table + off);
+      pdb_file_info *fi = &module->files_c13[module->num_files_c13++];
+      fi->filename = pdb_string_table_get (pdb->string_table,
+					   pdb->string_table_size,
+					   ck.file_name_offs);
+      fi->checksum_type = ck.checksum_type;
+
+      /* An entry cut short by the end of the table keeps no checksum.  */
+      if (ck.checksum_size > 0
+	  && off + hdr_size + ck.checksum_size <= size)
+	{
+	  fi->checksum_size = ck.checksum_size;
+	  fi->checksum = ck.checksum;
+	}
+    }
+}
+
 } /* namespace pdb */
 
 /* See pdb.h.  */

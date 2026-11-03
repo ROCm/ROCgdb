@@ -533,6 +533,25 @@ extern std::string pdb_find_pdb_file (const char *exe_path,
    Unix-style is returned unchanged.  */
 std::string pdb_convert_path (const char *path);
 
+/* The checksum kinds of a DEBUG_S_FILECHKSMS entry.  */
+inline constexpr uint8_t CHKSUM_TYPE_NONE = 0;
+inline constexpr uint8_t CHKSUM_TYPE_MD5 = 1;
+inline constexpr uint8_t CHKSUM_TYPE_SHA1 = 2;
+inline constexpr uint8_t CHKSUM_TYPE_SHA_256 = 3;
+
+/* Per-file info from DEBUG_S_FILECHKSMS.  */
+struct pdb_file_info
+{
+  /* Filename borrowed from names_data; null if unresolved.  */
+  const char *filename;
+  /* Checksum kind, a CHKSUM_TYPE_* value.  */
+  uint8_t checksum_type;
+  /* Valid checksum length in bytes.  */
+  uint8_t checksum_size;
+  /* Checksum borrowed from the module's obstack-backed file_checksums.  */
+  const gdb_byte *checksum;
+};
+
 /* A module's stream number when the module has no stream.  */
 inline constexpr uint16_t MODI_NO_STREAM = 0xFFFF;
 
@@ -541,6 +560,9 @@ struct pdb_module_info
 {
   /* Module name borrowed from pdb_per_objfile::dbi_data.  */
   const char *module_name = nullptr;
+
+  /* Object filename borrowed from pdb_per_objfile::dbi_data.  */
+  const char *obj_file_name = nullptr;
 
   /* Module debug stream index; 0xFFFF means no stream.  */
   uint16_t stream_number = MODI_NO_STREAM;
@@ -587,6 +609,13 @@ struct pdb_module_info
      the location of each module's offset slice depends on the sizes of the
      slices before it.  */
   const gdb_byte *file_name_offsets = nullptr;
+
+  /* C13 file list for maintenance info pdb-files-c13.  The entry array
+     uses the objfile obstack and borrows names/checksums via pdb_file_info.
+     Its count is not limited to a 16-bit field.  */
+  bool files_c13_read = false;
+  pdb_file_info *files_c13 = nullptr;
+  uint32_t num_files_c13 = 0;
 };
 
 /* Indexed raw TPI record.  Payload bytes borrow the PDB mapping or an
@@ -867,18 +896,25 @@ struct CV_FileBlock
 /* An entry of the module's file table, DEBUG_S_FILECHKSMS: the source
    file's name, as an offset in /names, and its checksum.  The 6-byte
    header (offFileName, cbChecksum, ChecksumKind) is followed by cbChecksum
-   checksum bytes, and the entry is padded to 4 bytes.  See microsoft-pdb
+   checksum bytes, and the entry is padded to 4 bytes; CHECKSUM points at
+   the bytes, or is nullptr if there are none.  See microsoft-pdb
    cvinfo.h.  */
 struct CV_FileChecksum
 {
   static constexpr uint32_t HDR_SIZE = 6;
 
   explicit CV_FileChecksum (const gdb_byte *p)
-    : file_name_offs (read_u32 (p + 0))
+    : file_name_offs (read_u32 (p + 0)),
+      checksum_size (read_u8 (p + 4)),
+      checksum_type (read_u8 (p + 5)),
+      checksum (checksum_size != 0 ? p + HDR_SIZE : nullptr)
   {
   }
 
   uint32_t file_name_offs;
+  uint8_t checksum_size;
+  uint8_t checksum_type;
+  const gdb_byte *checksum;
 };
 
 /* A line entry: maps a code address, given as an offset from the start
@@ -1009,6 +1045,17 @@ extern const gdb_byte *pdb_stream_bytes (const pdb_per_objfile *pdb,
 					 uint32_t stream_idx, uint32_t off,
 					 uint32_t len,
 					 gdb::byte_vector &scratch);
+
+/* Resolve the names of MOD's source files into MOD->files, from the
+   offsets into the DBI File Info substream's names buffer that
+   pdb_read_file_info_substream found.  Only the first call reads
+   them.  */
+extern void pdb_read_module_files (pdb_per_objfile *pdb, pdb_module_info *mod);
+
+/* Print the MSF layout of PDB: its block geometry, the PDB Info stream
+   header, the named streams, the DBI symbol stream numbers and the size
+   of every stream, with BLOCKS also each stream's blocks.  */
+extern void pdb_print_streams (const pdb_per_objfile *pdb, bool blocks);
 
 /* Read a module's debug stream and extract file checksums onto the
    objfile obstack.  Returns an owned buffer with the raw stream data;
@@ -1311,6 +1358,19 @@ struct pdb_sym_record_hdr
     return len + sizeof (len);
   }
 };
+
+/* Read MOD's source files, with their checksums, from its C13 file
+   checksum table (DEBUG_S_FILECHKSMS) into MOD->files_c13, for "maint
+   info pdb-files-c13".  Unlike the DBI File Info substream, whose file
+   count per module is 16 bits, the table has no count limit.  Only the
+   first call reads them.  */
+void pdb_read_module_files_c13 (pdb_per_objfile *pdb, pdb_module_info *mod);
+
+/* Walk all DEBUG_S_LINES file blocks in a module's C13 data,
+   invoking CALLBACK for each one.  */
+void pdb_walk_c13_line_blocks (const pdb_per_objfile *pdb,
+			       pdb_module_info *mod, gdb_byte *module_stream,
+			       pdb_line_block_fn callback);
 
 /* The header of the record that PSGSI hash record I of HR names in PDB's
    symbol record stream, with its offset there in *OFFSET.  A hash record

@@ -21149,6 +21149,38 @@ executable's, the age in its PDB Info stream is at least the executable's
 (writing to a PDB after the link raises it), and the age in its DBI stream,
 when that is not 0, is the executable's.
 
+The @code{maint info pdb-@dots{}} commands below print the raw contents
+of a loaded PDB.  Each takes the optional argument
+@samp{path=@var{pdb-path}} to select one of the loaded PDBs, by default
+the main program's.  The commands that print per-module data also take
+@samp{modi=@var{n}} to select module @var{n}, by default all modules.
+An unknown argument, a PDB that is not loaded or a module that is not
+there is an error.
+
+@kindex maint info pdb-streams
+@item maint info pdb-streams @r{[}path=@var{pdb-path}@r{]} @r{[}blocks=on|off@r{]}
+The MSF block geometry, the PDB Info stream header, the named streams,
+the DBI symbol stream numbers and the size of every stream.  With
+@samp{blocks=on}, also the MSF blocks of each stream.
+
+@kindex maint info pdb-modules
+@item maint info pdb-modules @r{[}path=@var{pdb-path}@r{]} @r{[}modi=@var{n}@r{]}
+The modules, with their stream numbers, file counts, and the sizes of
+their symbol, C11 and C13 data.
+
+@kindex maint info pdb-files
+@item maint info pdb-files @r{[}path=@var{pdb-path}@r{]} @r{[}modi=@var{n}@r{]}
+The source files of each module, from the DBI File Info substream.
+
+@kindex maint info pdb-files-c13
+@item maint info pdb-files-c13 @r{[}path=@var{pdb-path}@r{]} @r{[}modi=@var{n}@r{]}
+The source files of each module from its C13 checksum table, with the
+checksum kind and value.
+
+@kindex maint info pdb-lines
+@item maint info pdb-lines @r{[}path=@var{pdb-path}@r{]} @r{[}modi=@var{n}@r{]}
+The C13 line tables: section and offset ranges and their lines.
+
 @kindex set always-read-ctf [on|off]
 @kindex show always-read-ctf
 @cindex always-read-ctf

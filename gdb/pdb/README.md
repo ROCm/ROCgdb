@@ -182,11 +182,24 @@ into common msys2/mingw64 directories.
 
 ## Maintenance Commands
 
-`pdb-loaded-files` takes no arguments.
+`pdb-loaded-files` takes no arguments.  `pdb-streams` accepts
+`path=<pdb-path>` and `blocks=on|off`, and the
+others accept `path=` and `modi=N` to select a specific PDB / module.  If
+omitted, the default (main program) PDB and all modules are used.  An unknown
+argument, a PDB that is not loaded or a module that is not there is an error.
 
 | Command                            | What it shows                                             |
 |------------------------------------|-----------------------------------------------------------|
 | `maintenance info pdb-loaded-files`| Paths of the PDB files GDB read                           |
+| `maintenance info pdb-streams`     | MSF block geometry, PDB Info header (version, signature,  |
+|                                    | age, GUID), named streams, DBI symbol stream numbers and  |
+|                                    | stream sizes; `blocks=on` adds each stream's MSF blocks   |
+| `maintenance info pdb-modules`     | Modules with stream numbers, file counts and the byte     |
+|                                    | sizes of their symbol, C11 and C13 parts                  |
+| `maintenance info pdb-files`       | Source files per module (DBI File Info substream)         |
+| `maintenance info pdb-files-c13`   | Source files per module (C13 checksums), with checksum    |
+|                                    | type (MD5/SHA-1/SHA-256) and hash values                  |
+| `maintenance info pdb-lines`       | C13 line info: section:offset ranges and line mappings    |
 
 ## GDB Integration and Initialization Order
 
@@ -263,6 +276,8 @@ stops at a depth of 1000 with an unsupported type.
   directories that `_NT_ALT_SYMBOL_PATH` and `_NT_SYMBOL_PATH` list, and on a
   Windows host in the `SymbolSearchPath` registry value.  Symbol server
   entries are skipped.
+- `maintenance info pdb-streams`, `pdb-modules`, `pdb-files`,
+  `pdb-files-c13` and `pdb-lines`.
 
 ## Memory Allocations
 
@@ -387,5 +402,5 @@ entry from the PE executable to extract GUID, age, and PDB path, and
 
 ### `pdb-cmd.c` — Diagnostic / Introspection Commands
 
-Registers `maintenance info pdb-loaded-files` (see
-[Maintenance Commands](#maintenance-commands)).
+Registers all `maintenance info pdb-*` commands (listed under
+[Maintenance Commands](#maintenance-commands)), with their arguments.

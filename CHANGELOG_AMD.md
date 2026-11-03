@@ -20,7 +20,8 @@ Full documentation for ROCgdb is available at
   --enable-targets=all; the new configure option
   --enable-gdb-pdb-support=yes|no|auto overrides that.
   "set debug pdb-read" reports what the reader does.
-  "maint info pdb-loaded-files" lists the PDB files read.
+  "maint info pdb-loaded-files" lists the PDB files read, and the other
+  "maint info pdb-*" commands print their contents.
 
 ## ROCgdb-16.3 for ROCm-10.1
 

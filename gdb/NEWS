@@ -81,6 +81,15 @@ show debug pdb-read
 maintenance info pdb-loaded-files
   List the Microsoft PDB files GDB read.
 
+maintenance info pdb-streams [path=PDB-PATH] [blocks=on|off]
+maintenance info pdb-modules [path=PDB-PATH] [modi=N]
+maintenance info pdb-files [path=PDB-PATH] [modi=N]
+maintenance info pdb-files-c13 [path=PDB-PATH] [modi=N]
+maintenance info pdb-lines [path=PDB-PATH] [modi=N]
+  Print the layout of a loaded PDB: its streams, its modules, the source
+  files of each module from the DBI stream or from its C13 checksum
+  table, and its line tables.
+
 * Changed commands
 
 info locals
