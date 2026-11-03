@@ -340,9 +340,83 @@ def _linux_kill_tree_process(pid: int, tree: Set[int]) -> Optional[str]:
 # _Windows prefix, and those that only work under an MSYS2 Python an _msys2_
 # one.
 #
-# The test programs find the HIP runtime under test through the DLL
-# directory that _windows_set_dll_directory sets.  A packaged Python, whose
-# children don't inherit it, is refused (see main).
+# "make check" runs in a job object (_WindowsJob), so that a timeout can
+# kill the whole test process tree (see _WindowsLauncher).  The test
+# programs find the HIP runtime under test through the DLL directory that
+# _windows_set_dll_directory sets.  A packaged Python, whose children don't
+# inherit it, is refused (see main).
+#
+# The Win32 structures below mirror winnt.h field for field: ctypes lays
+# them out from _fields_, and SetInformationJobObject rejects a structure of
+# the wrong size.
+
+
+class _WindowsIoCounters(ctypes.Structure):
+    """Win32 IO_COUNTERS, a member of JOBOBJECT_EXTENDED_LIMIT_INFORMATION."""
+
+    _fields_ = [
+        (name, ctypes.c_uint64)
+        for name in (
+            "ReadOperationCount",
+            "WriteOperationCount",
+            "OtherOperationCount",
+            "ReadTransferCount",
+            "WriteTransferCount",
+            "OtherTransferCount",
+        )
+    ]
+
+
+class _WindowsJobObjectBasicLimitInformation(ctypes.Structure):
+    """
+    Win32 JOBOBJECT_BASIC_LIMIT_INFORMATION, a member of
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION.  Its LimitFlags selects the limits
+    a job enforces.
+    """
+
+    _fields_ = [
+        ("PerProcessUserTimeLimit", ctypes.c_int64),
+        ("PerJobUserTimeLimit", ctypes.c_int64),
+        ("LimitFlags", ctypes.c_uint32),
+        ("MinimumWorkingSetSize", ctypes.c_size_t),
+        ("MaximumWorkingSetSize", ctypes.c_size_t),
+        ("ActiveProcessLimit", ctypes.c_uint32),
+        ("Affinity", ctypes.c_size_t),
+        ("PriorityClass", ctypes.c_uint32),
+        ("SchedulingClass", ctypes.c_uint32),
+    ]
+
+
+class _WindowsJobObjectExtendedLimitInformation(ctypes.Structure):
+    """
+    Win32 JOBOBJECT_EXTENDED_LIMIT_INFORMATION, which sets a job's limits
+    through SetInformationJobObject.  JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE is
+    only accepted in this structure, not in the basic one alone.
+    """
+
+    _fields_ = [
+        ("BasicLimitInformation", _WindowsJobObjectBasicLimitInformation),
+        ("IoInfo", _WindowsIoCounters),
+        ("ProcessMemoryLimit", ctypes.c_size_t),
+        ("JobMemoryLimit", ctypes.c_size_t),
+        ("PeakProcessMemoryUsed", ctypes.c_size_t),
+        ("PeakJobMemoryUsed", ctypes.c_size_t),
+    ]
+
+
+# Win32 values, from winbase.h and winnt.h.
+#
+# A CreateProcess flag.  subprocess exports some of CreateProcess's flags,
+# but not this one.
+_CREATE_SUSPENDED = 0x00000004
+# The information class of SetInformationJobObject that takes a
+# JOBOBJECT_EXTENDED_LIMIT_INFORMATION.
+_JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
+# A job limit flag: closing the last handle to the job kills its processes.
+_JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000
+# The OpenProcess access rights that AssignProcessToJobObject requires.
+_PROCESS_TERMINATE = 0x0001
+_PROCESS_SET_QUOTA = 0x0100
 
 
 # Cached, since each WinDLL or CDLL call returns a new library object, and
@@ -363,6 +437,16 @@ def _windows_kernel32():
         kernel32 = ctypes.CDLL("kernel32.dll")
     handle = ctypes.c_void_p
     for name, argtypes, restype in (
+        ("CreateJobObjectW", [ctypes.c_void_p, ctypes.c_wchar_p], handle),
+        (
+            "SetInformationJobObject",
+            [handle, ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32],
+            ctypes.c_int,
+        ),
+        ("AssignProcessToJobObject", [handle, handle], ctypes.c_int),
+        ("TerminateJobObject", [handle, ctypes.c_uint32], ctypes.c_int),
+        ("OpenProcess", [ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32], handle),
+        ("CloseHandle", [handle], ctypes.c_int),
         ("SetDllDirectoryW", [ctypes.c_wchar_p], ctypes.c_int),
         (
             "GetCurrentPackageFullName",
@@ -418,6 +502,132 @@ def _windows_path(path: Union[str, Path]) -> str:
     return _msys2_cygpath("-w", path)
 
 
+def _windows_process_handle(process: subprocess.Popen) -> int:
+    """
+    Native Windows Python only: the process handle of a process Popen
+    started.
+
+    Args:
+        process: The process.
+    """
+    # Popen has no public way to get the handle CreateProcess returned, so
+    # this reads CPython's private attribute for it, on Windows a Handle,
+    # which converts to the handle's value.
+    return int(process._handle)
+
+
+class _WindowsJob:
+    """
+    Windows only: a job object holding a process and every process it
+    starts, so that the whole tree can be killed at once.  Closing the job
+    kills whatever is still in it.
+    """
+
+    def __init__(self) -> None:
+        """Create an empty job, set to kill its processes when closed."""
+        kernel32 = _windows_kernel32()
+        self._handle = kernel32.CreateJobObjectW(None, None)
+        _windows_check_result(self._handle, "CreateJobObjectW")
+        info = _WindowsJobObjectExtendedLimitInformation()
+        # Don't add JOB_OBJECT_LIMIT_BREAKAWAY_OK: the MSYS2 runtime, like
+        # Cygwin's, then starts its children with CREATE_BREAKAWAY_FROM_JOB,
+        # and they would escape the job.
+        info.BasicLimitInformation.LimitFlags = _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+        try:
+            _windows_check_result(
+                kernel32.SetInformationJobObject(
+                    self._handle,
+                    _JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+                    ctypes.byref(info),
+                    ctypes.sizeof(info),
+                ),
+                "SetInformationJobObject",
+            )
+        except OSError:
+            self.close()
+            raise
+
+    def add(self, process: subprocess.Popen) -> None:
+        """
+        Put a process in the job.  It must not have started any process of
+        its own yet, since a process started before this wouldn't be in the
+        job: a native Python creates it suspended and resumes it afterwards,
+        and an MSYS2 Python starts it held at a gate (see _WindowsLauncher).
+
+        Args:
+            process: The process to add.
+        """
+        # A process started by a process in a job is in the job too, whatever
+        # its session, which is what a process group can't do: expect puts
+        # what it spawns in a session of its own.
+        kernel32 = _windows_kernel32()
+        if IS_NATIVE_WINDOWS:
+            _windows_check_result(
+                kernel32.AssignProcessToJobObject(
+                    self._handle, _windows_process_handle(process)
+                ),
+                "AssignProcessToJobObject",
+            )
+            return
+        # An MSYS2 Python has the process's Windows PID in /proc.  Popen only
+        # returns once the child has exec'd the gate shell, and the MSYS2
+        # runtime points winpid at the Windows process an exec creates before
+        # then, so this is the shell's process, not the forked one's.
+        winpid = int(Path(f"/proc/{process.pid}/winpid").read_text())
+        handle = kernel32.OpenProcess(
+            _PROCESS_SET_QUOTA | _PROCESS_TERMINATE, False, winpid
+        )
+        _windows_check_result(handle, "OpenProcess")
+        try:
+            _windows_check_result(
+                kernel32.AssignProcessToJobObject(self._handle, handle),
+                "AssignProcessToJobObject",
+            )
+        finally:
+            kernel32.CloseHandle(handle)
+
+    def kill(self) -> None:
+        """Kill every process in the job, or warn if that fails."""
+        if not _windows_kernel32().TerminateJobObject(self._handle, 1):
+            logger.warning(
+                f"{STATUS_WARN} TerminateJobObject failed with error "
+                f"{_windows_last_error()}: the test's processes may be left "
+                "running until the job is closed."
+            )
+
+    def close(self) -> None:
+        """Close the job, killing whatever is still in it."""
+        if self._handle:
+            _windows_kernel32().CloseHandle(self._handle)
+            self._handle = None
+
+
+# Cached, as _windows_kernel32 is.
+@functools.lru_cache(maxsize=None)
+def _windows_ntdll():
+    """Native Windows Python only: ntdll, with NtResumeProcess's prototype."""
+    ntdll = ctypes.WinDLL("ntdll")
+    ntdll.NtResumeProcess.argtypes = [ctypes.c_void_p]
+    ntdll.NtResumeProcess.restype = ctypes.c_long
+    return ntdll
+
+
+def _windows_resume_process(process: subprocess.Popen) -> None:
+    """
+    Native Windows Python only: resume a process created with
+    CREATE_SUSPENDED.
+
+    Args:
+        process: The process to resume.
+    """
+    # Popen closes the handle to the process's initial thread, so resume the
+    # whole process instead.  NtResumeProcess isn't in the Win32 API, but
+    # has been exported by ntdll since Windows XP.
+    status = _windows_ntdll().NtResumeProcess(_windows_process_handle(process))
+    if status != 0:
+        raise OSError(f"NtResumeProcess failed with status {status:#x}")
+
+
 def _msys2_cygpath(option: str, path: Union[str, Path]) -> str:
     """
     MSYS2 Python only: convert a path with MSYS2's cygpath.
@@ -447,7 +657,8 @@ class _Launcher:
     """
     Starts a command for _run_command, and kills and cleans up after it.
     This base class starts the command as it is, and kills only the command
-    itself.  _LinuxLauncher can also kill every process the command starts.
+    itself.  _LinuxLauncher and _WindowsLauncher can also kill every process
+    the command starts.
     """
 
     def __init__(
@@ -466,7 +677,9 @@ class _Launcher:
         """
         # The command, as results and errors report it.
         self.cmd = cmd
-        # Popen's keyword arguments, which a subclass may adjust.
+        # What Popen starts, and its keyword arguments.  A subclass may adjust
+        # both.
+        self._argv = cmd
         pipe = subprocess.PIPE if capture_output else None
         self._popen_kwargs = {
             "cwd": str(cwd) if cwd else None,
@@ -478,7 +691,10 @@ class _Launcher:
 
     def popen(self) -> subprocess.Popen:
         """Start the command."""
-        return subprocess.Popen(self.cmd, **self._popen_kwargs)
+        return subprocess.Popen(self._argv, **self._popen_kwargs)
+
+    def started(self, process: subprocess.Popen) -> None:
+        """Finish starting the command, once popen has returned."""
 
     def wait(
         self, process: subprocess.Popen, timeout: Optional[float]
@@ -585,7 +801,8 @@ class _LinuxLauncher(_Launcher):
 class _WindowsLauncher(_Launcher):
     """
     Windows only: a _Launcher that finds the command's program as the child
-    would.
+    would, and can run the command in a job object (see _WindowsJob), so
+    that killing the job kills the command's whole process tree.
     """
 
     def __init__(
@@ -594,8 +811,14 @@ class _WindowsLauncher(_Launcher):
         cwd: Optional[Path],
         env: Optional[Dict[str, str]],
         capture_output: bool,
+        kill_process_tree: bool,
     ) -> None:
-        """See _Launcher."""
+        """
+        See _Launcher, and also:
+
+        Args:
+            kill_process_tree: Whether to run the command in a job object.
+        """
         if IS_NATIVE_WINDOWS:
             # CreateProcess looks for a plain program name in this process's
             # PATH, not in the PATH of the environment the child is given,
@@ -606,6 +829,93 @@ class _WindowsLauncher(_Launcher):
             if resolved:
                 cmd = [resolved, *cmd[1:]]
         super().__init__(cmd, cwd, env, capture_output)
+        # The job holding the command and every process it starts.
+        self._job: Optional[_WindowsJob] = None
+        # The gate's pipe: the gate shell reads from _gate_read, and this
+        # process writes to _gate_write once the shell is in the job.
+        self._gate_read: Optional[int] = None
+        self._gate_write: Optional[int] = None
+        if kill_process_tree:
+            self._job = _WindowsJob()
+            # The command must not start anything before it is in the job, or
+            # that would escape it.
+            if IS_NATIVE_WINDOWS:
+                self._popen_kwargs["creationflags"] = _CREATE_SUSPENDED
+            else:
+                # In an MSYS2 Python, subprocess starts processes through
+                # the runtime's fork and exec, which have no suspended start.
+                # Calling CreateProcess directly would leave converting the
+                # environment and arguments, and waiting, to this script.
+                # Instead the command starts held at a gate: a shell that
+                # waits for a line on a pipe, written once the shell is in the
+                # job, and then execs the command.  The MSYS2 runtime creates
+                # an exec'd program as a new Windows process started by the
+                # shell's, so it is in the job too.  If the pipe closes with
+                # no line, the shell exits instead.
+                self._gate_read, self._gate_write = os.pipe()
+                gate = (
+                    f"read -r _ <&{self._gate_read} || exit 125; "
+                    f'exec {self._gate_read}<&-; exec "$@"'
+                )
+                # /usr/bin/sh for the same reason as /usr/bin/cygpath in
+                # _msys2_cygpath.
+                self._argv = ["/usr/bin/sh", "-c", gate, "sh", *cmd]
+                self._popen_kwargs["pass_fds"] = (self._gate_read,)
+
+    def _close_gate(self) -> None:
+        """Close this process's end of the gate's pipe, if still open."""
+        if self._gate_write is not None:
+            os.close(self._gate_write)
+            self._gate_write = None
+
+    def popen(self) -> subprocess.Popen:
+        try:
+            return super().popen()
+        finally:
+            # The gate shell has its own copy of the read end by now, or
+            # never will.
+            if self._gate_read is not None:
+                os.close(self._gate_read)
+                self._gate_read = None
+
+    def started(self, process: subprocess.Popen) -> None:
+        if self._job is not None:
+            # The command only runs once it is in the job.  If adding it
+            # fails, it never runs: a native Python's stays suspended until
+            # _run_command kills it, and an MSYS2 Python's gate shell sees the
+            # pipe close with no line, and exits.
+            try:
+                self._job.add(process)
+                if IS_NATIVE_WINDOWS:
+                    _windows_resume_process(process)
+                else:
+                    os.write(self._gate_write, b"\n")
+            finally:
+                self._close_gate()
+
+    def kill(self, process: subprocess.Popen) -> None:
+        if self._job is None:
+            super().kill(process)
+            return
+        self._job.kill()
+        # The job normally held the command, so this is a fallback for a
+        # Ctrl-C that arrived before the command was added to the job, or
+        # for adding it failing, which isn't expected: none of the failures
+        # Microsoft documents applies to an empty job with no limits other
+        # than JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, like this one.  Either way
+        # the command is still held, suspended or at the gate, so it has
+        # started nothing.  Under an MSYS2 Python, killing a process the job
+        # already killed fails with EPERM, which Popen doesn't ignore.
+        try:
+            process.kill()
+        except OSError:
+            pass
+
+    def close(self, process: Optional[subprocess.Popen]) -> None:
+        self._close_gate()
+        if self._job is not None:
+            # Closing the job kills whatever the command left running.
+            self._job.close()
 
 
 def _new_launcher(
@@ -617,7 +927,7 @@ def _new_launcher(
 ) -> _Launcher:
     """The _Launcher for this platform and these _run_command arguments."""
     if IS_WINDOWS:
-        return _WindowsLauncher(cmd, cwd, env, capture_output)
+        return _WindowsLauncher(cmd, cwd, env, capture_output, kill_process_tree)
     if IS_LINUX and kill_process_tree:
         return _LinuxLauncher(cmd, cwd, env, capture_output)
     return _Launcher(cmd, cwd, env, capture_output)
@@ -648,7 +958,8 @@ def _run_command(
         kill_process_tree: On TimeoutExpired, kill the command along with
             its descendants (e.g. runtest/expect/gdb spawned by `make`) so they
             are not orphaned, and kill whatever is left when the command
-            ends.  On Linux the script tracks them as its descendants (see
+            ends.  On Windows they run in a job object (see _WindowsJob),
+            and on Linux the script tracks them as its descendants (see
             _linux_kill_descendants).  Elsewhere only the command itself is
             killed.
 
@@ -674,6 +985,7 @@ def _run_command(
             else:
                 _log_error_and_exit(f"Failed to execute {cmd[0]!r}: {e}")
         try:
+            launcher.started(process)
             out, err = launcher.wait(process, timeout)
         except BaseException:
             # Cover TimeoutExpired and any other escaping exception
