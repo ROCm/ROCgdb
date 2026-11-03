@@ -2512,6 +2512,8 @@ def main() -> None:
     # for a final snapshot if the job is cancelled or its step times out.
     if emulator is None:
         _diag_state.base_env = env_vars
+        _diag_state.tool_dir = rocgdb_bin.parent
+        _diag_state.rocm_dir = rocm_dir
         collect_gpu_diagnostics("baseline", env_vars)
         _install_sigterm_snapshot(env_vars)
 
@@ -2797,6 +2799,19 @@ def _diag_capture(
         (returncode, output). returncode is None if the command could not be
         run or timed out.
     """
+    # Prefer the copy that sits next to rocgdb, so the tools come from the same
+    # ROCm tree as the debugger under test and not from whatever else is on
+    # PATH.
+    tool_dir = _diag_state.tool_dir
+    if tool_dir is not None and os.sep not in cmd[0]:
+        candidate = tool_dir / cmd[0]
+        if candidate.exists() or candidate.is_symlink():
+            if not os.access(candidate, os.X_OK):
+                detail = (
+                    "dangling symlink" if not candidate.exists() else "not executable"
+                )
+                return None, f"<{candidate}: {detail}>"
+            cmd = [str(candidate)] + cmd[1:]
     if shutil.which(cmd[0], path=env.get("PATH")) is None:
         return None, f"<{cmd[0]}: not found>"
     try:
@@ -2996,6 +3011,10 @@ class _DiagState:
     """Process wide diagnostics state, shared by the watchdog and handlers."""
 
     def __init__(self) -> None:
+        # Directory of rocgdb, where the diagnostic tools are looked up first.
+        self.tool_dir: Optional[Path] = None
+        # Root of the ROCm tree, searched for SMI tools when they go missing.
+        self.rocm_dir: Optional[Path] = None
         self.baseline_dmesg_lines: Optional[int] = None
         self.fired: Set[str] = set()
         self.base_env: Dict[str, str] = {}
@@ -3078,6 +3097,27 @@ def collect_gpu_diagnostics(phase: str, env_vars: Dict[str, str]) -> None:
         print(f"pid {pid} state {state}: {cmdline}")
     if not holders:
         print("<none visible from this PID namespace>")
+    _diag_endgroup()
+
+    _diag_group("SMI tools in the ROCm tree")
+    print(f"tool directory (next to rocgdb): {_diag_state.tool_dir}")
+    if _diag_state.rocm_dir is not None:
+        rc, out = _diag_capture(
+            [
+                "find",
+                str(_diag_state.rocm_dir),
+                "-maxdepth",
+                "4",
+                "-iname",
+                "*smi*",
+                "-not",
+                "-path",
+                "*/tests/*",
+                "-ls",
+            ],
+            env,
+        )
+        print(out.rstrip() or "<no *smi* files found>")
     _diag_endgroup()
 
     _diag_group("KFD processes from all containers (sysfs), matched to command lines")
