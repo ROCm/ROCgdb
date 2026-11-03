@@ -863,31 +863,25 @@ append_indented_doc (const char *doc, std::string &help)
 }
 
 /* Fill HELP with an auto-generated "help" string fragment for
-   OPTIONS.  */
+   OPTION.  */
 
 static void
-build_help_option (gdb::span<const option_def> options,
-		   std::string &help)
+build_help_option (const option_def &option, std::string &help)
 {
-  std::string buffer;
+  if (option.set_doc == nullptr)
+    return;
 
-  for (const auto &o : options)
+  size_t initial_len = help.length ();
+  help += "  -";
+  help += option.name;
+
+  append_val_type_str (help, option, initial_len);
+  help += "\n";
+  append_indented_doc (option.set_doc, help);
+  if (option.help_doc != nullptr)
     {
-      if (o.set_doc == nullptr)
-	continue;
-
-      size_t initial_len = help.length ();
-      help += "  -";
-      help += o.name;
-
-      append_val_type_str (help, o, initial_len);
       help += "\n";
-      append_indented_doc (o.set_doc, help);
-      if (o.help_doc != nullptr)
-	{
-	  help += "\n";
-	  append_indented_doc (o.help_doc, help);
-	}
+      append_indented_doc (option.help_doc, help);
     }
 }
 
