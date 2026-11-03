@@ -790,12 +790,12 @@ scope_operation::evaluate_funcall (struct type *expect_type,
 				function_name));
 	}
 
-      arg_view = arg_view.slice (1);
+      arg_view = arg_view.subspan (1);
     }
   else
     {
       symbol *symp;
-      arg_view = arg_view.slice (1);
+      arg_view = arg_view.subspan (1);
       find_overload_match (arg_view, nullptr,
 			   NON_METHOD, nullptr, function,
 			   nullptr, &symp, nullptr, 1, noside);
@@ -854,7 +854,7 @@ structop_member_base::evaluate_funcall (struct type *expect_type,
 				   value_as_long (lhs) + mem_offset);
       callee = value_ind (callee);
 
-      val_view = val_view.slice (1);
+      val_view = val_view.subspan (1);
     }
   else
     error (_("Non-pointer-to-member value used in pointer-to-member "
@@ -962,7 +962,7 @@ structop_base_operation::evaluate_funcall
 
   /* Take out `this' if needed.  */
   if (static_memfuncp)
-    arg_view = arg_view.slice (1);
+    arg_view = arg_view.subspan (1);
 
   return evaluate_subexp_do_call (exp, noside, callee, arg_view,
 				  nullptr, expect_type);

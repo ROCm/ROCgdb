@@ -984,7 +984,7 @@ value_one (struct type *type)
 	{
 	  value *tmp = value_one (eltype);
 	  copy (tmp->contents_all (),
-		val_contents.slice (i * elt_len, elt_len));
+		val_contents.subspan (i * elt_len, elt_len));
 	}
     }
   else
@@ -1712,7 +1712,7 @@ value_array (int lowbound, gdb::span<struct value *> elemvec)
     error (_("size of the array element must not be zero"));
 
   typelength = type_length_units (elemvec[0]->enclosing_type ());
-  for (struct value *other : elemvec.slice (1))
+  for (struct value *other : elemvec.subspan (1))
     {
       if (type_length_units (other->enclosing_type ()) != typelength)
 	{
@@ -1804,7 +1804,7 @@ typecmp (bool staticp, bool varargs,
   /* Skip ``this'' argument if applicable.  T2 will always include
      THIS.  */
   if (staticp)
-    t2 = t2.slice (1);
+    t2 = t2.subspan (1);
 
   for (i = 0;
        (i < t1.size ()) && t1[i].type ()->code () != TYPE_CODE_VOID;
@@ -3260,7 +3260,7 @@ find_oload_champ (gdb::span<value *> args,
       /* Compare parameter types to supplied argument types.  Skip
 	 THIS for static methods.  */
       bv = rank_function (parm_types,
-			  args.slice (static_offset),
+			  args.subspan (static_offset),
 			  varargs);
 
       if (overload_debug)
@@ -4110,9 +4110,9 @@ value_literal_complex (struct value *arg1,
   int len = real_type->length ();
 
   copy (arg1->contents (),
-	val->contents_raw ().slice (0, len));
+	val->contents_raw ().subspan (0, len));
   copy (arg2->contents (),
-	val->contents_raw ().slice (len, len));
+	val->contents_raw ().subspan (len, len));
 
   return val;
 }
@@ -4156,9 +4156,9 @@ cast_into_complex (struct type *type, struct value *val)
       struct value *im_val = value::allocate (val_real_type);
       int len = val_real_type->length ();
 
-      copy (val->contents ().slice (0, len),
+      copy (val->contents ().subspan (0, len),
 	    re_val->contents_raw ());
-      copy (val->contents ().slice (len, len),
+      copy (val->contents ().subspan (len, len),
 	    im_val->contents_raw ());
 
       return value_literal_complex (re_val, im_val, type);

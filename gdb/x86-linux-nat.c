@@ -267,7 +267,7 @@ i386_supply_tls_regs (regcache *regcache, int regnum,
     {
       if (regnum == -1 || regnum == I386_LINUX_TLS_GDT_0 + i)
 	regcache->raw_supply (I386_LINUX_TLS_GDT_0 + i,
-			      buffer.slice (i, 1).data ());
+			      buffer.subspan (i, 1).data ());
     }
 }
 
@@ -284,7 +284,7 @@ i386_collect_tls_regs (regcache *regcache, int regnum,
     {
       if (regnum == -1 || regnum == I386_LINUX_TLS_GDT_0 + i)
 	regcache->raw_collect (I386_LINUX_TLS_GDT_0 + i,
-			       buffer.slice (i, 1).data ());
+			       buffer.subspan (i, 1).data ());
     }
 }
 

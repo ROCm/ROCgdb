@@ -52,7 +52,7 @@ extract_integer (gdb::span<const gdb_byte> buf, enum bfd_endian byte_order)
 		  break;
 		}
 	    }
-	  buf = buf.slice (end);
+	  buf = buf.subspan (end);
 	}
       else
 	{
@@ -75,7 +75,7 @@ extract_integer (gdb::span<const gdb_byte> buf, enum bfd_endian byte_order)
 		  break;
 		}
 	    }
-	  buf = buf.slice (0, end);
+	  buf = buf.subspan (0, end);
 	}
     }
 

@@ -214,7 +214,7 @@ amd64_windows_store_arg_in_reg (struct regcache *regcache,
   size_t reg_size = regcache->register_size (regno);
   gdb_assert (reg_size <= buf.size ());
   gdb::span<gdb_byte> view (buf);
-  regcache->cooked_write (regno, view.slice (0, reg_size));
+  regcache->cooked_write (regno, view.subspan (0, reg_size));
 }
 
 /* Push the arguments for an inferior function call, and return

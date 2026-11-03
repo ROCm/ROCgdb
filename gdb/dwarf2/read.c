@@ -4032,7 +4032,7 @@ alloc_rust_variant (struct obstack *obstack, struct type *type,
 	 We skipped the discriminant above.  */
       if (i != default_index)
 	{
-	  variants[var_idx].discriminants = ranges.slice (range_idx, 1);
+	  variants[var_idx].discriminants = ranges.subspan (range_idx, 1);
 	  ++range_idx;
 	}
 
@@ -9494,7 +9494,7 @@ convert_variant_range (struct obstack *obstack, const variant_field &variant,
 	      break;
 	    }
 	  bool is_range = data[0] == DW_DSC_range;
-	  data = data.slice (1);
+	  data = data.subspan (1);
 
 	  ULONGEST low, high;
 	  unsigned int bytes_read;
@@ -9509,7 +9509,7 @@ convert_variant_range (struct obstack *obstack, const variant_field &variant,
 	  else
 	    low = (ULONGEST) read_signed_leb128 (nullptr, data.data (),
 						 &bytes_read);
-	  data = data.slice (bytes_read);
+	  data = data.subspan (bytes_read);
 
 	  if (is_range)
 	    {
@@ -9524,7 +9524,7 @@ convert_variant_range (struct obstack *obstack, const variant_field &variant,
 	      else
 		high = (LONGEST) read_signed_leb128 (nullptr, data.data (),
 						     &bytes_read);
-	      data = data.slice (bytes_read);
+	      data = data.subspan (bytes_read);
 	    }
 	  else
 	    high = low;

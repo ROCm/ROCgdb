@@ -183,11 +183,11 @@ public:
   constexpr size_type size () const noexcept { return m_size; }
   constexpr bool empty () const noexcept { return m_size == 0; }
 
-  /* Slice a span.  */
+  /* Subspan of a span.  */
 
   /* Return a new span over SIZE elements starting at START.  */
   [[nodiscard]]
-  constexpr span<T> slice (size_type start, size_type size) const noexcept
+  constexpr span<T> subspan (size_type start, size_type size) const noexcept
   {
 #if defined(_GLIBCXX_DEBUG)
     gdb_assert (start + size <= m_size);
@@ -198,7 +198,7 @@ public:
   /* Return a new span over all the elements after START,
      inclusive.  */
   [[nodiscard]]
-  constexpr span<T> slice (size_type start) const noexcept
+  constexpr span<T> subspan (size_type start) const noexcept
   {
 #if defined(_GLIBCXX_DEBUG)
     gdb_assert (start <= m_size);

@@ -257,7 +257,7 @@ mapped_gdb_index::build_name_components (dwarf2_per_objfile *per_objfile)
 	}
 
       std::vector<cooked_index_entry *> these_entries;
-      offset_view vec (constant_pool.slice (symbol_vec_index (idx)));
+      offset_view vec (constant_pool.subspan (symbol_vec_index (idx)));
       offset_type vec_len = vec[0];
       for (offset_type vec_idx = 0; vec_idx < vec_len; ++vec_idx)
 	{
@@ -491,7 +491,7 @@ read_gdb_index_from_buffer (const char *filename,
       ++i;
     }
 
-  map->constant_pool = buffer.slice (metadata[i]);
+  map->constant_pool = buffer.subspan (metadata[i]);
 
   if (map->constant_pool.empty () && !map->symbol_table.empty ())
     {

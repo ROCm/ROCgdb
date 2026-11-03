@@ -2613,7 +2613,7 @@ resolve_dynamic_field (struct field &field,
   size_t offset = field.loc_bitpos () / TARGET_CHAR_BIT;
   pinfo.valaddr = addr_stack->valaddr;
   if (!pinfo.valaddr.empty ())
-    pinfo.valaddr = pinfo.valaddr.slice (offset);
+    pinfo.valaddr = pinfo.valaddr.subspan (offset);
   pinfo.addr = addr_stack->addr + offset;
   pinfo.next = addr_stack;
 

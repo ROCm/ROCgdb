@@ -1635,12 +1635,12 @@ get_frame_register_bytes (const frame_info_ptr &next_frame, int regnum,
 	      return false;
 	    }
 
-	  copy (value->contents_all ().slice (offset, curr_len),
-		buffer.slice (0, curr_len));
+	  copy (value->contents_all ().subspan (offset, curr_len),
+		buffer.subspan (0, curr_len));
 	  release_value (value);
 	}
 
-      buffer = buffer.slice (curr_len);
+      buffer = buffer.subspan (curr_len);
       offset = 0;
       regnum++;
     }
@@ -1672,19 +1672,19 @@ put_frame_register_bytes (const frame_info_ptr &next_frame, int regnum,
 				    buffer.size ());
 
       if (curr_len == register_size (gdbarch, regnum))
-	put_frame_register (next_frame, regnum, buffer.slice (0, curr_len));
+	put_frame_register (next_frame, regnum, buffer.subspan (0, curr_len));
       else
 	{
 	  value *value = frame_unwind_register_value (next_frame, regnum);
 	  gdb_assert (value != nullptr);
 
-	  copy (buffer.slice (0, curr_len),
-		value->contents_writeable ().slice (offset, curr_len));
+	  copy (buffer.subspan (0, curr_len),
+		value->contents_writeable ().subspan (offset, curr_len));
 	  put_frame_register (next_frame, regnum, value->contents_raw ());
 	  release_value (value);
 	}
 
-      buffer = buffer.slice (curr_len);
+      buffer = buffer.subspan (curr_len);
       offset = 0;
       regnum++;
     }

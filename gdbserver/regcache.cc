@@ -332,7 +332,7 @@ supply_register_zeroed (struct regcache *regcache, int n)
 void
 regcache::raw_supply_part_zeroed (int regnum, int offset, size_t size)
 {
-  auto dst = register_data (this, regnum).slice (offset, size);
+  auto dst = register_data (this, regnum).subspan (offset, size);
   memset (dst.data (), 0, dst.size ());
 #ifndef IN_PROCESS_AGENT
   set_register_status (regnum, REG_VALID);
@@ -503,7 +503,7 @@ regcache::raw_compare (int regnum, const void *buf, int offset) const
 
   gdb::span<const gdb_byte> regbuf = register_data (this, regnum);
   gdb_assert (offset <= regbuf.size ());
-  regbuf = regbuf.slice (offset);
+  regbuf = regbuf.subspan (offset);
 
   return memcmp (buf, regbuf.data (), regbuf.size ()) == 0;
 }
