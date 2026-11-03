@@ -137,6 +137,9 @@ class minimal_symbol_reader
     record_full (name, true, address, ms_type, section);
   }
 
+  /* Return the number of minimal symbols recorded.  */
+  size_t count () const { return m_msyms.size (); }
+
  private:
 
   DISABLE_COPY_AND_ASSIGN (minimal_symbol_reader);

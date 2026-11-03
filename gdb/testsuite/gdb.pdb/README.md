@@ -124,6 +124,8 @@ Every compiled test uses `pdb_prepare_for_testing` with the selected board.
 | Test | Loads | Named source | Inferior | Covers |
 |---|---|---|---|---|
 | [`pdb-load.exp`](pdb-load.exp) | built at test time | `pdb-test.cpp` | no | A program the selected board compiled gets its PDB loaded |
+| [`pdb-publics.exp`](pdb-publics.exp) | built at test time, also with Microsoft cl | `pdb-publics.cpp` | no | Public symbols as minimal symbols: `main` is found by its address and section, the C++ global `g_counter` by its source name rather than its decorated public name, and a function called through an import thunk is a trampoline |
+| [`pdb-bss-tail.exp`](pdb-bss-tail.exp) | built at test time | `pdb-bss-tail.c` | no | A global in the uninitialized tail of `.data`, past the bytes `.data` has in the file, as lld links `.bss`, still gets the minimal symbol of its public |
 
 ## 1.2 Which PDB gets loaded
 
