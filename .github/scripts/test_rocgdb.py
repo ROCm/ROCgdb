@@ -17,6 +17,7 @@ import signal
 import subprocess
 import sys
 import sysconfig
+import threading
 import time
 import types
 from collections import defaultdict
@@ -2036,6 +2037,18 @@ def run_tests(
             rocgdb_bin, cc, cxx, fc, args.optimization, args.runtestflags
         )
 
+        # Watch the GPU and the test results while the tests run. Stopped
+        # right after the tests finish; a SystemExit in between leaves only a
+        # daemon thread, which dies with the process.
+        ignored = (
+            set(xfailed_tests.get("Generic", []))
+            | set(xfailed_tests.get(compiler_label, []))
+            if xfailed_tests
+            else set()
+        )
+        watchdog = GpuWatchdog(test_suite_dir, env_vars, sanity_check_exe, ignored)
+        watchdog.__enter__()
+
         if args.one_by_one:
             if args.one_by_one_test_timeout is not None:
                 wall_clock = args.one_by_one_test_timeout
@@ -2101,6 +2114,7 @@ def run_tests(
                 check=False,
                 kill_process_group=True,
             )
+        watchdog.__exit__(None, None, None)
 
         duration = time.perf_counter() - start_time
 
@@ -2113,6 +2127,12 @@ def run_tests(
         test_results.update_results(compiler_label, current_tests, results_file)
 
         failed_tests = test_results.get_failed_tests(compiler_label)
+        _note(
+            f"{compiler_label} iteration {iteration}: {duration:.0f}s, "
+            f"{len(failed_tests)} failing test(s)"
+        )
+        for t in sorted(failed_tests):
+            _note(f"  {t}")
 
         # Detect flaky tests: tests we ran this iteration that now have PASS
         # entries (and are no longer in failed_tests). Restrict to tests we
@@ -2281,6 +2301,16 @@ def main() -> None:
     """
     args = parse_arguments()
 
+    # This script is currently used to chase GPU runners that go bad in the
+    # middle of a run, and the only output worth having is what helps with
+    # that. Silence the informational logging (configuration, environment,
+    # per test progress, summaries), capture the output of `make`, and skip
+    # the gdb.log dump. Warnings and errors, and everything printed with
+    # _note(), remain visible.
+    logger.setLevel(logging.WARNING)
+    args.quiet = True
+    args.dump_failed_test_log = False
+
     # Determine ignore list file path.
     if args.ignore_list_file is None:
         # Default to rocgdb_ignore_list.json in the same directory as this script.
@@ -2446,12 +2476,28 @@ def main() -> None:
     # Build the sanity-check executable once per invocation. It is rebuilt
     # unconditionally so a binary left over from a previous run (possibly for a
     # different GPU) can never cause a spurious "system unreliable" abort.
+    #
+    # The probe is built by default whenever real GPU tests are in scope, as the
+    # watchdog uses it to notice a GPU going bad mid run. A build failure is
+    # fatal only if --sanity-check was asked for explicitly.
     sanity_check_exe = None
-    if args.sanity_check:
+    if args.sanity_check or (has_rocm_tests and emulator is None):
         log_dir = args.one_by_one_log_dir or (rocgdb_testsuite_dir / "one_by_one_logs")
-        sanity_check_exe = _build_sanity_check_executable(
-            rocgdb_testsuite_dir, log_dir, env_vars
-        )
+        try:
+            sanity_check_exe = _build_sanity_check_executable(
+                rocgdb_testsuite_dir, log_dir, env_vars
+            )
+        except SystemExit:
+            if args.sanity_check:
+                raise
+            _note(f"{STATUS_WARN} GPU probe unavailable, watching test results only")
+
+    # Record the state of the machine before any test touches it, and arrange
+    # for a final snapshot if the job is cancelled or its step times out.
+    if emulator is None:
+        _diag_state.base_env = env_vars
+        collect_gpu_diagnostics("baseline", env_vars)
+        _install_sigterm_snapshot(env_vars)
 
     # Initialize test result tracking.
     test_results = TestResults()
@@ -2475,9 +2521,12 @@ def main() -> None:
             emulator,
         )
 
-    # Final summaries.
-    test_results.print_all_summaries()
+    # Final result. The detailed summaries are skipped, the per iteration
+    # lines from run_tests already list every failing test.
     overall_pass = test_results.print_final_status(xfailed_tests, args.no_xfail)
+    _note(f"Overall result: {'PASS' if overall_pass else 'FAIL'}")
+    if not overall_pass and emulator is None:
+        _snapshot_once("end of run with failures", env_vars)
 
     # Write the per-test timing log if requested.
     if args.timing:
@@ -2654,56 +2703,493 @@ def _build_sanity_check_executable(
     return out
 
 
-def _dump_dmesg(log_dir: Path, env_vars: Dict[str, str]) -> None:
+# Environment variables that restrict which GPUs a process can see. The
+# diagnostics must see every GPU on the host, because whatever is disturbing a
+# test may be running on a GPU the test itself cannot see.
+GPU_VISIBILITY_VARS = (
+    "ROCR_VISIBLE_DEVICES",
+    "HIP_VISIBLE_DEVICES",
+    "CUDA_VISIBLE_DEVICES",
+    "GPU_DEVICE_ORDINAL",
+    "HSA_VISIBLE_DEVICES",
+)
+
+# Environment variable prefixes that can change runtime behavior.
+GPU_ENV_PREFIXES = ("ROCR_", "HSA_", "HIP_", "AMD_", "ROCM_", "ROCP_")
+
+# Seconds between watchdog iterations.
+WATCHDOG_INTERVAL = 10
+# Wall-clock timeout for the watchdog's GPU probe. Generous, since the probe
+# runs while the tests are loading the GPU and the host.
+WATCHDOG_PROBE_TIMEOUT = 60
+# Seconds without any gdb.sum growth before a stall snapshot is taken.
+WATCHDOG_STALL_SECONDS = 600
+# Consecutive unexpected failures that trigger a snapshot. A single one is
+# enough: once a runner goes bad it stays bad, so the first failure is the
+# most informative moment.
+WATCHDOG_FAIL_STREAK = 1
+# Per command timeout and output cap for snapshot commands.
+DIAG_CMD_TIMEOUT = 20
+DIAG_MAX_OUTPUT_BYTES = 100_000
+
+# Result lines that count as a failure signal. XFAIL and KFAIL are expected.
+_BAD_RESULT_RE = re.compile(r"^(FAIL|UNRESOLVED|ERROR): (.+)$")
+
+
+def _note(message: str) -> None:
     """
-    Capture kernel ring buffer output to <log_dir>/dmesg.log.
+    Print a line that must always be visible.
 
-    On many systems reading the kernel log is restricted
-    (kernel.dmesg_restrict), so a plain `dmesg` fails for non-root users. We
-    first try `dmesg`, then fall back to non-interactive `sudo -n dmesg` (which
-    never blocks on a password prompt). If neither yields output, we warn and
-    write nothing rather than saving a misleading file containing only the
-    permission error.
+    The logger is set to WARNING by default (see main), so everything this
+    script wants on the console regardless goes through here.
+    """
+    print(f"{time.strftime('%H:%M:%S')} {message}", flush=True)
 
-    Best-effort throughout: a missing binary, a non-zero exit, or a write
-    failure is warned about but never raised, so it cannot mask the
-    unreliable-system exit that calls it.
 
-    Args:
-        log_dir: Directory to write dmesg.log into.
-        env_vars: Prepared environment for the dmesg invocation.
+def _diag_group(title: str) -> None:
+    """Open a collapsible log group (GitHub Actions) or a plain header."""
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"::group::{title}", flush=True)
+    else:
+        print(f"----- {title} -----", flush=True)
+
+
+def _diag_endgroup() -> None:
+    """Close the group opened by _diag_group."""
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print("::endgroup::", flush=True)
+
+
+def _diag_env(env_vars: Dict[str, str]) -> Dict[str, str]:
+    """Return env_vars without any GPU visibility restriction."""
+    return {k: v for k, v in env_vars.items() if k not in GPU_VISIBILITY_VARS}
+
+
+def _diag_capture(
+    cmd: List[str], env: Dict[str, str], timeout: int = DIAG_CMD_TIMEOUT
+) -> Tuple[Optional[int], str]:
+    """
+    Run a diagnostic command and return (returncode, combined output).
+
+    Never raises and never exits: a missing binary, a timeout, or any other
+    failure is reported in the returned text, since in a diagnostics context
+    "this tool is missing or hangs" is itself a data point. The command runs
+    in its own session so a hung tool (rocm-smi on a wedged GPU) is killed
+    together with its children.
 
     Returns:
-        None
+        (returncode, output). returncode is None if the command could not be
+        run or timed out.
     """
-    dmesg_path = log_dir / "dmesg.log"
-
-    def _try(cmd: List[str]) -> Optional[str]:
-        try:
-            result = _run_command(cmd, env=env_vars, capture_output=True, check=False)
-        except SystemExit:
-            # _run_command calls _log_error_and_exit on OSError (e.g. the
-            # binary is missing) even with no error_msg; treat that as "this
-            # command is unavailable" so diagnostics never abort the abort.
-            return None
-        if result.returncode == 0 and result.stdout:
-            return result.stdout
-        return None
-
-    output = _try(["dmesg"]) or _try(["sudo", "-n", "dmesg"])
-    if not output:
-        logger.warning(
-            f"{STATUS_WARN} Could not capture dmesg (missing binary or "
-            f"insufficient privileges); skipping {dmesg_path}."
-        )
-        return
-
+    if shutil.which(cmd[0], path=env.get("PATH")) is None:
+        return None, f"<{cmd[0]}: not found>"
     try:
-        log_dir.mkdir(parents=True, exist_ok=True)
-        dmesg_path.write_text(output, encoding="utf-8")
-        logger.info(f"{STATUS_WARN} dmesg captured to {dmesg_path}")
+        proc = subprocess.Popen(
+            cmd,
+            env=env,
+            text=True,
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
     except OSError as e:
-        logger.warning(f"{STATUS_WARN} Failed to write {dmesg_path}: {e}")
+        return None, f"<failed to run {cmd[0]}: {e}>"
+    try:
+        out, _ = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        out, _ = proc.communicate()
+        out = (out or "") + f"\n<{cmd[0]}: killed after {timeout}s timeout>"
+        return None, out
+    out = out or ""
+    if len(out) > DIAG_MAX_OUTPUT_BYTES:
+        out = out[:DIAG_MAX_OUTPUT_BYTES] + "\n<output truncated>"
+    return proc.returncode, out
+
+
+def _diag_section(
+    title: str, cmd: List[str], env: Dict[str, str], max_lines: Optional[int] = None
+) -> str:
+    """
+    Run cmd and print its output as a group.
+
+    Returns:
+        The complete output, even if only max_lines of it were printed.
+    """
+    _diag_group(f"{title}: {shlex.join(cmd)}")
+    rc, out = _diag_capture(cmd, env)
+    shown = out.rstrip().splitlines()
+    if max_lines is not None and len(shown) > max_lines:
+        shown = shown[:max_lines] + [f"<{len(shown) - max_lines} more lines omitted>"]
+    print("\n".join(shown), flush=True)
+    if rc not in (0, None):
+        print(f"<exit status {rc}>", flush=True)
+    _diag_endgroup()
+    return out
+
+
+def _read_dmesg(env: Dict[str, str]) -> Optional[List[str]]:
+    """
+    Return the kernel log lines, or None if unreadable.
+
+    Many systems restrict dmesg (kernel.dmesg_restrict), so fall back to
+    non interactive `sudo -n`, which never blocks on a password prompt.
+    """
+    for cmd in (["dmesg"], ["sudo", "-n", "dmesg"]):
+        rc, out = _diag_capture(cmd, env)
+        if rc == 0 and out:
+            return out.splitlines()
+    return None
+
+
+def _gpu_fd_holders() -> List[Tuple[int, str, str]]:
+    """
+    Find processes that hold /dev/kfd or /dev/dri/* open.
+
+    Scans /proc directly, as that works without any SMI tool and covers
+    processes the SMI tools fail to report. Only processes visible from this
+    PID namespace can be listed.
+
+    Returns:
+        (pid, state, cmdline) tuples.
+    """
+    holders = []
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            for fd in (entry / "fd").iterdir():
+                try:
+                    target = os.readlink(fd)
+                except OSError:
+                    continue
+                if target == "/dev/kfd" or target.startswith("/dev/dri/"):
+                    break
+            else:
+                continue
+            status = (entry / "status").read_text(errors="replace")
+            m = re.search(r"^State:\s+(\S+)", status, re.MULTILINE)
+            state = m.group(1) if m else "?"
+            cmdline = (
+                (entry / "cmdline")
+                .read_bytes()
+                .replace(b"\0", b" ")
+                .decode(errors="replace")
+            ).strip() or (entry / "comm").read_text(errors="replace").strip()
+            holders.append((int(entry.name), state, cmdline))
+        except OSError:
+            continue
+    return sorted(holders)
+
+
+def _proc_kernel_state(pid: int) -> str:
+    """Return wchan and kernel stack of a process, best effort."""
+    parts = []
+    for name in ("wchan", "stack"):
+        try:
+            parts.append(
+                f"{name}: {(Path('/proc') / str(pid) / name).read_text().strip()}"
+            )
+        except OSError as e:
+            parts.append(f"{name}: <unreadable: {e.strerror}>")
+    return "\n".join(parts)
+
+
+class _DiagState:
+    """Process wide diagnostics state, shared by the watchdog and handlers."""
+
+    def __init__(self) -> None:
+        self.baseline_dmesg_lines: Optional[int] = None
+        self.fired: Set[str] = set()
+        self.base_env: Dict[str, str] = {}
+
+
+_diag_state = _DiagState()
+
+
+def collect_gpu_diagnostics(phase: str, env_vars: Dict[str, str]) -> None:
+    """
+    Print a snapshot of GPU, driver and process state to the console.
+
+    Visibility restrictions (ROCR_VISIBLE_DEVICES and friends) are removed from
+    the environment of every command, so the snapshot covers all GPUs on the
+    host and not just the one the tests use. Everything goes to the console
+    inside collapsible log groups, with a short summary outside them.
+
+    Best effort throughout: nothing here raises, so a diagnostics problem can
+    never mask the failure being diagnosed.
+
+    Args:
+        phase: Short description, e.g. "baseline" or "first failure".
+        env_vars: The test environment; used only as the starting point.
+    """
+    is_baseline = phase == "baseline"
+    env = _diag_env(env_vars)
+    cleared = {k: env_vars[k] for k in GPU_VISIBILITY_VARS if k in env_vars}
+
+    _note(f"===== GPU diagnostics: {phase} =====")
+    if not is_baseline and os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"::error::GPU diagnostics snapshot: {phase}", flush=True)
+
+    # Visibility variables and other behavior altering variables.
+    _diag_group("Environment (GPU visibility and runtime variables)")
+    for k in GPU_VISIBILITY_VARS:
+        print(f"{k}={env_vars.get(k, '<unset>')}  (cleared for diagnostics)")
+    for k in sorted(os.environ):
+        if k.startswith(GPU_ENV_PREFIXES) and k not in GPU_VISIBILITY_VARS:
+            print(f"{k}={os.environ[k]}")
+    _diag_endgroup()
+
+    _diag_section("Device nodes", ["ls", "-l", "/dev/kfd", "/dev/dri"], env)
+    nodes = sorted(Path("/sys/class/kfd/kfd/topology/nodes").glob("*/properties"))
+    gpu_count = 0
+    _diag_group("KFD topology nodes")
+    for props in nodes:
+        try:
+            text = props.read_text(errors="replace")
+        except OSError as e:
+            print(f"{props}: <unreadable: {e.strerror}>")
+            continue
+        fields = dict(
+            line.split(None, 1)
+            for line in text.splitlines()
+            if len(line.split(None, 1)) == 2
+        )
+        is_gpu = fields.get("simd_count", "0") != "0"
+        gpu_count += is_gpu
+        wanted = ("gfx_target_version", "device_id", "simd_count", "drm_render_minor")
+        print(
+            f"node {props.parent.name}: "
+            + " ".join(f"{k}={fields.get(k, '?')}" for k in wanted)
+        )
+    _diag_endgroup()
+
+    # Who is using the GPUs, from the kernel's point of view.
+    holders = _gpu_fd_holders()
+    _diag_group("Processes holding /dev/kfd or /dev/dri/*")
+    for pid, state, cmdline in holders:
+        print(f"pid {pid} state {state}: {cmdline}")
+    if not holders:
+        print("<none visible from this PID namespace>")
+    _diag_endgroup()
+
+    _diag_section("rocm-smi processes", ["rocm-smi", "--showpids"], env)
+    _diag_section(
+        "rocm-smi per GPU activity",
+        ["rocm-smi", "--showuse", "--showmemuse", "--showtemp", "--showpower"],
+        env,
+    )
+    _diag_section("amd-smi processes", ["amd-smi", "process"], env)
+
+    # Everything else that could compete for the GPU, CPU or memory.
+    ps_out = _diag_section(
+        "Processes by CPU use",
+        [
+            "ps",
+            "-eo",
+            "pid,ppid,pgid,user,stat,etime,pcpu,pmem,wchan:24,args",
+            "--sort=-pcpu",
+        ],
+        env,
+        max_lines=40,
+    )
+    stuck = []
+    zombies = 0
+    for line in ps_out.splitlines()[1:]:
+        cols = line.split(None, 5)
+        if len(cols) > 5 and cols[0].isdigit():
+            if cols[4][:1] == "D":
+                stuck.append(int(cols[0]))
+            elif cols[4][:1] == "Z":
+                zombies += 1
+    _diag_group("Uninterruptible (D state) processes: kernel state")
+    for pid in stuck:
+        print(f"pid {pid}\n{_proc_kernel_state(pid)}")
+    if not stuck:
+        print("<none>")
+    _diag_endgroup()
+
+    _diag_section("Load", ["uptime"], env)
+    _diag_group("Pressure stall information and memory")
+    for name in ("cpu", "memory", "io"):
+        try:
+            print(f"{name}: {Path('/proc/pressure/' + name).read_text().strip()}")
+        except OSError:
+            print(f"{name}: <unavailable>")
+    _diag_endgroup()
+    _diag_section("Memory", ["free", "-m"], env)
+    _diag_section("Shared memory", ["df", "-h", "/dev/shm"], env)
+
+    # Kernel log: the full log at baseline (recording its length), and only the
+    # lines added since then afterwards.
+    lines = _read_dmesg(env)
+    _diag_group("dmesg" + ("" if is_baseline else " (new since baseline)"))
+    if lines is None:
+        print("<dmesg unavailable: missing binary or insufficient privileges>")
+    elif is_baseline:
+        _diag_state.baseline_dmesg_lines = len(lines)
+        print("\n".join(lines[-100:]))
+    else:
+        start = _diag_state.baseline_dmesg_lines or 0
+        new = lines[start:] if start <= len(lines) else lines
+        print("\n".join(new[-300:]) or "<no new lines>")
+    _diag_endgroup()
+
+    _note(
+        f"GPU diagnostics summary ({phase}): GPUs={gpu_count} "
+        f"fd holders={len(holders)} D state processes={len(stuck)} "
+        f"zombies={zombies} "
+        f"visibility vars cleared={cleared or 'none set'}"
+    )
+
+
+def _snapshot_once(reason: str, env_vars: Dict[str, str]) -> None:
+    """Take a failure snapshot unless one was already taken for this reason."""
+    key = reason.split(":")[0]
+    if key in _diag_state.fired:
+        return
+    _diag_state.fired.add(key)
+    collect_gpu_diagnostics(reason, env_vars)
+
+
+def _run_probe(exe: Path, env_vars: Dict[str, str], timeout: int) -> Optional[str]:
+    """
+    Run the sanity check executable once.
+
+    Returns:
+        None if the probe is healthy, else a description of the failure.
+    """
+    start = time.perf_counter()
+    rc, out = _diag_capture([str(exe)], env_vars, timeout=timeout)
+    if rc == 0:
+        return None
+    took = time.perf_counter() - start
+    detail = out.strip().splitlines()[-1] if out.strip() else ""
+    status = "timed out" if rc is None else f"exit status {rc}"
+    return f"sanity probe {status} after {took:.1f}s {detail}".strip()
+
+
+class GpuWatchdog:
+    """
+    Background monitor that runs alongside a `make check`.
+
+    The tests run as one blocking `make`, so failure detection cannot live in
+    the test loop. This thread wakes every WATCHDOG_INTERVAL seconds and
+    triggers a one time snapshot when:
+
+      probe:   a known good HIP program no longer runs on the GPU.
+      streak:  WATCHDOG_FAIL_STREAK results in a row are failures, timeouts,
+               or errors for tests not on the ignore list.
+      timeout: a test result carries "(timeout)".
+      stall:   no gdb.sum anywhere has grown for WATCHDOG_STALL_SECONDS.
+    """
+
+    def __init__(
+        self,
+        test_suite_dir: Path,
+        env_vars: Dict[str, str],
+        probe_exe: Optional[Path],
+        ignored_tests: Set[str],
+    ) -> None:
+        self._dir = test_suite_dir
+        self._env = env_vars
+        self._probe = probe_exe
+        self._ignored = ignored_tests
+        self._stop = threading.Event()
+        self._thread = threading.Thread(
+            target=self._run, name="gpu-watchdog", daemon=True
+        )
+        self._offsets: Dict[Path, int] = {}
+        self._streak = 0
+        self._last_growth = time.monotonic()
+
+    def __enter__(self) -> "GpuWatchdog":
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self._stop.set()
+        self._thread.join(timeout=WATCHDOG_PROBE_TIMEOUT + 5)
+
+    def _sum_files(self) -> List[Path]:
+        # Serial runs write gdb.sum in the testsuite directory; parallel runs
+        # write one per test under outputs/.
+        files = [self._dir / "gdb.sum"]
+        files += (self._dir / "outputs").glob("**/gdb.sum")
+        return files
+
+    def _scan_results(self) -> Optional[str]:
+        """Read new result lines. Returns a trigger reason, if any."""
+        reason = None
+        for path in self._sum_files():
+            try:
+                size = path.stat().st_size
+            except OSError:
+                continue
+            offset = self._offsets.get(path, 0)
+            if size < offset:
+                offset = 0  # File was recreated, e.g. by the next iteration.
+            if size == offset:
+                continue
+            self._last_growth = time.monotonic()
+            try:
+                with open(path, "r", errors="replace") as f:
+                    f.seek(offset)
+                    data = f.read()
+                    self._offsets[path] = f.tell()
+            except OSError:
+                continue
+            for line in data.splitlines():
+                m = _BAD_RESULT_RE.match(line)
+                if not m:
+                    if line.startswith("PASS:"):
+                        self._streak = 0
+                    continue
+                if _extract_test_file_from_name(m.group(2)) in self._ignored:
+                    continue
+                self._streak += 1
+                if TIMEOUT_RE.search(line) and reason is None:
+                    reason = f"timeout: {line}"
+                elif self._streak >= WATCHDOG_FAIL_STREAK and reason is None:
+                    reason = f"streak: unexpected failure: {line}"
+        return reason
+
+    def _run(self) -> None:
+        try:
+            while not self._stop.wait(WATCHDOG_INTERVAL):
+                reason = self._scan_results()
+                if reason is None and (
+                    time.monotonic() - self._last_growth > WATCHDOG_STALL_SECONDS
+                ):
+                    reason = f"stall: no test results for {WATCHDOG_STALL_SECONDS}s"
+                if reason is None and self._probe is not None:
+                    reason = _run_probe(self._probe, self._env, WATCHDOG_PROBE_TIMEOUT)
+                    if reason is not None:
+                        reason = f"probe: {reason}"
+                if reason is not None:
+                    _snapshot_once(reason, self._env)
+        except Exception as e:  # Never let the watchdog take the run down.
+            _note(f"{STATUS_WARN} GPU watchdog stopped: {e!r}")
+
+
+def _install_sigterm_snapshot(env_vars: Dict[str, str]) -> None:
+    """
+    Print a snapshot when the job is cancelled or its step times out.
+
+    GitHub Actions sends SIGTERM before SIGKILL. Exiting through SystemExit
+    unwinds _run_command, which kills the whole make/runtest/gdb process group.
+    """
+
+    def handler(signum, _frame):
+        _note(f"{STATUS_FAIL} Received signal {signum}, taking a final snapshot")
+        _snapshot_once("job killed", env_vars)
+        sys.exit(128 + signum)
+
+    signal.signal(signal.SIGTERM, handler)
 
 
 def _run_sanity_check(
@@ -2762,7 +3248,7 @@ def _run_sanity_check(
             logger.error(f"{STATUS_FAIL} Sanity check output:")
             for line in output.splitlines():
                 logger.error(f"       {line}")
-        _dump_dmesg(log_dir, env_vars)
+        collect_gpu_diagnostics(f"sanity check failed: {reason}", env_vars)
         sys.exit(1)
 
     print_section(f"{STATUS_PASS} Sanity check passed in {duration:.2f}s")
