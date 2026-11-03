@@ -12,7 +12,7 @@
   The "set osabi" command accepts two new values, "Windows-GNU" and
   "Windows-MSVC".  The GNU ABI is for code produced by MinGW
   toolchains, while the MSVC ABI is for code produced by Microsoft's
-  MSVC compiler (though see the PDB note below), or Clang targeting
+  MSVC compiler, or Clang targeting
   one of {i686,aarch64,x86_64}-pc-windows-msvc.  The existing
   "Windows" value continues to work and now means "let GDB pick the
   flavor": GDB uses the configured default OS ABI (from --target) when
@@ -23,7 +23,15 @@
 
   Currently, GDB is aware that "long double" differs between the two
   ABIs.  GDB does not yet support the MSVC C++ ABI (demangling scheme,
-  C++ object layout, etc.) or PDB debug information.
+  C++ object layout, etc.).
+
+* GDB can now read Microsoft PDB debug information, which clang-cl,
+  lld-link and MSVC produce for Windows programs.  For an executable
+  without DWARF, GDB reads the PDB that the executable's debug directory
+  names, when its GUID matches the executable's, its age is at least the
+  executable's and its DBI age, if it has one, is the executable's.  GDB
+  looks for the PDB next to the executable and at the path that the
+  executable records.
 
 * There have been changes to how inferior arguments are passed to
   remote targets.  When using the latest GDB and gdbserver the new
@@ -67,6 +75,15 @@ maintenance info source-tracking-context BPNUM
   Display the captured source context that GDB uses to track and
   adjust a breakpoint when source changes.
 
+set debug pdb-read LEVEL
+show debug pdb-read
+  Print debugging messages about reading Microsoft PDB debug
+  information: at level 1 which PDB is loaded and what is read from it,
+  at level 2 also lookups and the conversion of source file paths.
+
+maintenance info pdb-loaded-files
+  List the Microsoft PDB files GDB read.
+
 * Changed commands
 
 set stop-on-solib-events on|off
@@ -84,6 +101,13 @@ info locals
   ** The gdb.Breakpoint constructor now takes an optional
      'allow_pending' argument.  Setting it to False causes GDB to raise
      an error instead of creating a pending breakpoint.
+
+* Configure changes
+
+--enable-gdb-pdb-support=[yes|no|auto]
+  Build GDB with the reader for Microsoft PDB debug information.  The
+  default, auto, builds it when a Windows target is configured or with
+  --enable-targets=all.
 
 *** Changes in GDB 18
 
