@@ -26,8 +26,11 @@
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "objfiles.h"
+#include "buildsym.h"
 #include "complaints.h"
 #include "pdb/pdb-internal.h"
+#include "event-top.h"
+#include "gdbsupport/scoped_restore.h"
 
 #include <string.h>
 #include <string>
@@ -37,6 +40,94 @@
 
 namespace pdb
 {
+
+/* Parser for a CodeView symbol stream.  */
+
+class pdb_sym_parser
+{
+public:
+  pdb_sym_parser (pdb_per_objfile *pdb_, buildsym_compunit *cu_,
+		  pdb_range_pair_vec *func_ranges_,
+		  enum language lang_,
+		  pdb_symbol_lines *sym_lines_)
+    : m_pdb (pdb_),
+      m_cu (cu_),
+      m_func_ranges (func_ranges_),
+      m_lang (lang_),
+      m_sym_lines (sym_lines_)
+  {
+  }
+
+  DISABLE_COPY_AND_ASSIGN (pdb_sym_parser);
+
+  enum language lang () const
+  {
+    return m_lang;
+  }
+
+  /* Give the function FUNC, whose code starts at ENTRY_PC, the symtab of
+     its source file once the compunit is built; see pdb_symbol_lines.  */
+  void queue_function_file (symbol *func, CORE_ADDR entry_pc)
+  {
+    if (m_sym_lines == nullptr)
+      return;
+    auto it = m_sym_lines->at_pc.find (entry_pc);
+    if (it == m_sym_lines->at_pc.end ())
+      return;
+    m_sym_lines->to_apply.push_back ({ func, it->second });
+  }
+
+  /* CodeView record handlers.  */
+  void handle_func_sym (gdb_byte *rec_data, uint16_t rectype);
+  void handle_thunk_sym ();
+  void handle_scope_end_sym ();
+  void push_empty_scope ();
+
+  /* Expose open scopes for end-of-stream recovery.  */
+  pdb_scope_stack &scope_stack ()
+  {
+    return m_scope_stack;
+  }
+
+private:
+
+  pdb_per_objfile *m_pdb;
+  buildsym_compunit *m_cu;
+  pdb_range_pair_vec *m_func_ranges;
+  enum language m_lang;
+
+  /* The module's C13 line table: line rows by address, and the symbols
+     waiting to be given their source file and line once the compunit is
+     built.  Null when the records are only dumped.  */
+  pdb_symbol_lines *m_sym_lines = nullptr;
+
+  pdb_scope_stack m_scope_stack;
+};
+
+/* There are about 200 different symbol types in microsoft-pdb cvinfo.h.
+   Below are the supported record types.  */
+
+/* S_GPROC32 / S_LPROC32 - Global/local functions [cvinfo.h: PROCSYM32]
+       uint32_t pParent
+       uint32_t pEnd
+       uint32_t pNext
+       uint32_t len          procedure code size
+       uint32_t DbgStart
+       uint32_t DbgEnd
+       uint32_t typind       type index
+       uint32_t off          offset in section
+       uint16_t seg          section number
+       uint8_t  flags
+       char     name[]  */
+inline constexpr auto PDB_SYMBOL_FUNC_TYPE_OFFS = 24;
+inline constexpr auto PDB_SYMBOL_FUNC_CODE_SIZE_OFFS = 12;
+inline constexpr auto PDB_SYMBOL_FUNC_SECTION_OFFS_OFFS = 28;
+inline constexpr auto PDB_SYMBOL_FUNC_SECTION_NUM_OFFS = 32;
+inline constexpr auto PDB_SYMBOL_FUNC_FLAGS_OFFS = 34;
+
+/* CV_PROCFLAGS bit for a procedure that does not return.  */
+inline constexpr uint8_t CV_PFLAG_NEVER = 0x08;
+
 /* S_GDATA32 / S_LDATA32 - Global/local data/variable [cvinfo.h: DATASYM32]
        uint32_t typind      TPI type index
        uint32_t offset      offset within section
@@ -58,6 +149,17 @@ inline constexpr auto PDB_SYMBOL_PUB_NAME_OFFS = 10;
 
 /* S_PUB32 flag bits (CV_PUBSYMFLAGS in cvinfo.h).  */
 inline constexpr uint32_t CV_PUBSYMFLAGS_FUNCTION = 0x02;
+
+/* S_THUNK32 - Thunk record for indirect calls [cvinfo.h: THUNKSYM32]
+       uint32_t pParent    pointer to the parent
+       uint32_t pEnd       pointer to this blocks end
+       uint32_t pNext      pointer to next symbol
+       uint32_t off        offset within section
+       uint16_t seg        section number
+       uint16_t len        length of thunk
+       uint8_t  ord        type of thunk
+       char     name[]    */
+inline constexpr auto PDB_SYMBOL_THUNK_NAME_OFFS = 21;
 
 /* Decode the symbol record header at REC, where END is one past the
    buffer.  Return std::nullopt if fewer than PDB_RECORD_HDR_SIZE bytes
@@ -92,6 +194,265 @@ pdb_extract_string (const gdb_byte *p, const gdb_byte *end)
   return (const char *) p;
 }
 
+/* Parsed symbol fields shared by the record-specific builders.  */
+struct pdb_sym
+{
+  uint16_t rectype;
+  const char *name = nullptr;
+  uint32_t type_index = 0;
+  pdb_per_objfile *pdb;
+  gdb_byte *rec_data;
+  buildsym_compunit *cu;
+  symbol *sym = nullptr;
+
+protected:
+  pdb_sym (gdb_byte *rec_data_in, uint16_t rectype_in, pdb_per_objfile *pdb_in,
+	   buildsym_compunit *cu_in = nullptr)
+    : rectype (rectype_in),
+      pdb (pdb_in),
+      rec_data (rec_data_in),
+      cu (cu_in)
+  {
+  }
+
+  /* Set name from a byte offset into rec_data.  */
+  void set_name (uint32_t offset)
+  {
+    name = pdb_canonical_name (pdb, CSTR (rec_data + offset));
+  }
+
+  /* Set type_index from a byte offset into rec_data.  */
+  void set_type (uint32_t offset)
+  {
+    type_index = read_u32 (rec_data + offset);
+  }
+
+  /* pub_mangled_names is keyed unrelocated, so undo any load bias in ADDR.  */
+  CORE_ADDR unrelocated_pub_key (CORE_ADDR addr) const
+  {
+    return addr - pdb->objfile->text_section_offset ();
+  }
+
+  /* The S_PUB32 public at ADDR that names this record: one that is the
+     record's own name, as for a C or extern "C" function, or else a
+     decorated one ("?...").  When identical code folding gave the address
+     several decorated publics, only one whose decoration starts with the
+     record's unqualified name ("?name@") is taken.  Null when none.  */
+
+  const char *find_linkage_public (CORE_ADDR addr) const
+  {
+    auto it = pdb->pub_mangled_names.find (unrelocated_pub_key (addr));
+    if (it == pdb->pub_mangled_names.end ())
+      return nullptr;
+
+    const pdb_publics_at &pubs = it->second;
+    if (name != nullptr)
+      {
+	auto own = pubs.names.find (name);
+	if (own != pubs.names.end ())
+	  return own->data ();
+      }
+    if (pubs.num_decorated <= 1 || name == nullptr)
+      return pubs.num_decorated == 1 ? pubs.decorated : nullptr;
+
+    const char *last = name;
+    for (const char *p = strstr (name, "::"); p != nullptr;
+	 p = strstr (p + 2, "::"))
+      last = p + 2;
+    auto found = pubs.decorated_by_name.find (std::string_view (last));
+    return found == pubs.decorated_by_name.end () ? nullptr : found->second;
+  }
+
+  /* Name the symbol.  GDB keeps both a symbol's natural name and its
+     linkage name; the CodeView record gives only the natural name,
+     NATURAL, and the linkage name is that of an S_PUB32 public symbol at
+     ADDR, see find_linkage_public; without one the symbol has NATURAL
+     only.  */
+
+  void set_symbol_names (CORE_ADDR addr, const char *natural)
+  {
+    natural = pdb_canonical_name (pdb, natural);
+
+    const char *linkage = find_linkage_public (addr);
+    if (linkage != nullptr)
+      {
+	sym->compute_and_set_names (linkage, true, pdb->objfile->per_bfd);
+	/* Set the demangled name from the CodeView record.  */
+	const char *demangled
+	  = obstack_strdup (&pdb->objfile->objfile_obstack, natural);
+	sym->set_demangled_name (demangled, &pdb->objfile->objfile_obstack);
+      }
+    else
+      sym->compute_and_set_names (natural, true, pdb->objfile->per_bfd);
+  }
+
+  /* Allocate a symbol using the public name at ADDR when available.  */
+
+  void allocate_symbol_named (domain_enum domain, CORE_ADDR addr,
+			      const char *natural)
+  {
+    sym = pdb->objfile->new_symbol<symbol> ();
+    gdb_assert (pdb->cur_parser != nullptr);
+    sym->set_language (pdb->cur_parser->lang (),
+		       &pdb->objfile->objfile_obstack);
+    set_symbol_names (addr, natural);
+    sym->set_domain (domain);
+  }
+};
+
+/* S_GPROC32 / S_LPROC32 / S_GPROC32_ID / S_LPROC32_ID.  */
+struct pdb_func_sym final : pdb_sym
+{
+  uint32_t code_sz;
+  uint32_t sect_offs;
+  uint16_t sect_num;
+
+  pdb_func_sym (gdb_byte *rec_data, uint16_t rectype, pdb_per_objfile *pdb,
+		buildsym_compunit *cu)
+    : pdb_sym (rec_data, rectype, pdb, cu)
+  {
+    set_type (PDB_SYMBOL_FUNC_TYPE_OFFS);
+    set_name (PDB_SYMBOL_FUNC_NAME_OFFS);
+
+    /* The type of an _ID record is an IPI id, not a TPI index.  */
+    if (rectype == S_GPROC32_ID || rectype == S_LPROC32_ID)
+      type_index = 0;
+
+    code_sz = read_u32 (rec_data + PDB_SYMBOL_FUNC_CODE_SIZE_OFFS);
+    sect_offs = read_u32 (rec_data + PDB_SYMBOL_FUNC_SECTION_OFFS_OFFS);
+    sect_num = read_u16 (rec_data + PDB_SYMBOL_FUNC_SECTION_NUM_OFFS);
+    m_flags = read_u8 (rec_data + PDB_SYMBOL_FUNC_FLAGS_OFFS);
+  }
+
+  /* Make the function's symbol; ADDR is its address, from the record's
+     section and offset.  */
+  symbol *create_gdb_sym (CORE_ADDR addr)
+  {
+    /* PDB stores a C++ function name without its parameter list
+       (e.g. "ns_a::ns_a_func"), and GDB expects the natural name of a C++
+       function to carry one so overloads stay distinct.  C has no
+       overloads and its natural name is the bare identifier, so a list
+       there would corrupt every frame line and symbol print.  */
+    gdb_assert (pdb->cur_parser != nullptr);
+    enum language lang = pdb->cur_parser->lang ();
+
+    type *func_type = &pdb_tpi_resolve_function_type (pdb, type_index);
+    const char *natural = pdb_function_name (pdb, name, func_type, lang);
+
+    /* Mark a function that never returns (CV_PFLAG_NEVER, as for exit
+       or a [[noreturn]] function), so that "finish" and "return" warn
+       that it does not return normally.  GDB keeps the mark in the
+       function's type, and functions with the same signature share one
+       type, so the functions of a signature that do not return share a
+       marked copy of it.  */
+    if ((m_flags & CV_PFLAG_NEVER) != 0)
+      {
+	type *&copy = pdb->tpi.no_return_types[func_type];
+	if (copy == nullptr)
+	  {
+	    copy = copy_type (func_type);
+	    INIT_FUNC_SPECIFIC (copy);
+	    *copy->main_type->type_specific.func_stuff
+	      = *func_type->main_type->type_specific.func_stuff;
+	    TYPE_NO_RETURN (copy) = 1;
+	  }
+	func_type = copy;
+      }
+
+    /* The address also gives the function's linkage name, from a public
+       there; see set_symbol_names.  */
+    allocate_symbol_named (FUNCTION_DOMAIN, addr, natural);
+
+    pdb->cur_parser->queue_function_file (sym, addr);
+    sym->set_loc_class_index (LOC_BLOCK);
+    sym->set_type (func_type);
+    sym->set_section_index (sect_num - 1);
+    bool is_global = (rectype == S_GPROC32 || rectype == S_GPROC32_ID);
+    auto &list = is_global ? cu->get_global_symbols ()
+			   : cu->get_file_symbols ();
+    add_symbol_to_list (sym, list);
+    return sym;
+  }
+
+private:
+  uint8_t m_flags;
+};
+
+/* Handle S_GPROC32 / S_LPROC32 / S_GPROC32_ID / S_LPROC32_ID, whose body
+   pdb_sym_body_valid has checked.  Opens a scope; the matching S_END will
+   close it.  */
+
+void
+pdb_sym_parser::handle_func_sym (gdb_byte *rec_data, uint16_t rectype)
+{
+  pdb_func_sym fsym (rec_data, rectype, m_pdb, m_cu);
+
+  if (!m_pdb->section_valid (fsym.sect_num))
+    {
+      pdb_complaint ("bad section %u for function '%s'", fsym.sect_num,
+		     fsym.name);
+      push_empty_scope ();
+      return;
+    }
+
+  /* A range past the end of its section would make the function's block,
+     and its compunit's, claim the addresses of other code.  */
+  if (!m_pdb->range_in_section (fsym.sect_num, fsym.sect_offs, fsym.code_sz))
+    {
+      pdb_complaint ("function '%s' at %u:0x%x, 0x%x bytes, runs past "
+		     "its section", fsym.name, fsym.sect_num, fsym.sect_offs,
+		     fsym.code_sz);
+      push_empty_scope ();
+      return;
+    }
+
+  CORE_ADDR start = m_pdb->map_section_offset_to_pc (fsym.sect_num,
+						     fsym.sect_offs);
+  auto *sym = fsym.create_gdb_sym (start);
+
+  CORE_ADDR end = start + fsym.code_sz;
+  m_cu->push_context (start);
+  m_cu->set_current_context_function (sym);
+
+  if (m_func_ranges != nullptr)
+    m_func_ranges->push_back ({ start, end });
+
+  pdb_scope_frame frame { end };
+  m_scope_stack.push_back (frame);
+}
+
+/* Handle S_THUNK32.  Opens a scope; the matching S_END will close it.  */
+
+void
+pdb_sym_parser::handle_thunk_sym ()
+{
+  push_empty_scope ();
+}
+
+/* Open a scope with no code range and no symbols, for a record whose own
+   scope is not read; see pdb_sym_opens_scope.  */
+
+void
+pdb_sym_parser::push_empty_scope ()
+{
+  m_cu->push_context (0);
+  m_scope_stack.push_back ({ 0 });
+}
+
+/* Handle S_END / S_PROC_ID_END.
+   Close the innermost open scope.  */
+
+void
+pdb_sym_parser::handle_scope_end_sym ()
+{
+  if (!m_scope_stack.empty ())
+    {
+      pdb_scope_frame frame = m_scope_stack.back ();
+      m_scope_stack.pop_back ();
+      m_cu->pop_context (frame.end, nullptr, frame.end != 0);
+    }
+}
+
 /* Minimum number of record-body bytes (the bytes following the 2-byte
    record type) required to safely read RECTYPE's fixed fields.  For a
    record whose name is its last field (pdb_sym_has_trailing_name), this is
@@ -103,11 +464,18 @@ pdb_sym_min_body_size (uint16_t rectype)
 {
   switch (rectype)
     {
+    case S_GPROC32:
+    case S_LPROC32:
+    case S_GPROC32_ID:
+    case S_LPROC32_ID:
+      return PDB_SYMBOL_FUNC_NAME_OFFS + 1;
     case S_PUB32:
       return PDB_SYMBOL_PUB_NAME_OFFS + 1;
     case S_GDATA32:
     case S_LDATA32:
       return PDB_SYMBOL_VAR_NAME_OFFS + 1;
+    case S_THUNK32:
+      return PDB_SYMBOL_THUNK_NAME_OFFS + 1;
     default:
       return 0;
     }
@@ -121,9 +489,14 @@ pdb_sym_has_trailing_name (uint16_t rectype)
 {
   switch (rectype)
     {
+    case S_GPROC32:
+    case S_LPROC32:
+    case S_GPROC32_ID:
+    case S_LPROC32_ID:
     case S_PUB32:
     case S_GDATA32:
     case S_LDATA32:
+    case S_THUNK32:
       return true;
     default:
       return false;
@@ -143,6 +516,33 @@ pdb_sym_body_valid (uint16_t rectype, const gdb_byte *body, size_t body_size)
   return (!pdb_sym_has_trailing_name (rectype)
 	  || memchr (body + min_body - 1, 0, body_size - (min_body - 1))
 	       != nullptr);
+}
+
+/* Whether a RECTYPE record opens a scope that an S_END or S_PROC_ID_END
+   closes.  A record skipped as unsupported or malformed still opens one,
+   so that its end does not close the enclosing scope.  */
+
+static bool
+pdb_sym_opens_scope (uint16_t rectype)
+{
+  switch (rectype)
+    {
+    case S_GPROC32:
+    case S_LPROC32:
+    case S_GPROC32_ID:
+    case S_LPROC32_ID:
+    case S_LPROC32_DPC:
+    case S_LPROC32_DPC_ID:
+    case S_GMANPROC:
+    case S_LMANPROC:
+    case S_BLOCK32:
+    case S_THUNK32:
+    case S_WITH32:
+    case S_SEPCODE:
+      return true;
+    default:
+      return false;
+    }
 }
 
 /* CV_CFL_LANG codes carried in the iLanguage field of S_COMPILE*.  */
@@ -218,6 +618,98 @@ pdb_module_language (pdb_per_objfile *pdb, pdb_module_info *mod_info)
 /* See pdb-internal.h.  */
 
 void
+pdb_parse_symbols (pdb_per_objfile *pdb, pdb_module_info *mod_info,
+		   gdb_byte *module_stream, buildsym_compunit *cu,
+		   pdb_range_pair_vec *func_ranges,
+		   enum language lang, pdb_symbol_lines *sym_lines)
+{
+  /* The symbols follow the stream's 4-byte CodeView signature.  */
+  if (mod_info->sym_byte_size < PDB_MODULE_SYMBOLS_OFFS)
+    return;
+
+  gdb_byte *syms_start = module_stream + PDB_MODULE_SYMBOLS_OFFS;
+  const gdb_byte *syms_end = module_stream + mod_info->sym_byte_size;
+  pdb_sym_parser parser (pdb, cu, func_ranges, lang,
+			 sym_lines);
+  scoped_restore restore_parser
+    = make_scoped_restore (&pdb->cur_parser, &parser);
+
+  /* We iterate by grabbing two values at a time: reclen and rectype.  In each
+     loop check if there are 2 values available.  */
+  gdb_byte *data = syms_start;
+  while (data + PDB_RECORD_HDR_SIZE <= syms_end)
+    {
+      QUIT;
+      auto hdr = pdb_parse_sym_record_hdr (data, syms_end);
+      if (!hdr)
+	{
+	  pdb_load_diagnostic (pdb->objfile,
+			       "bad record header at offset %td, stopping",
+			       (ptrdiff_t) (data - syms_start));
+	  break;
+	}
+      uint16_t rectype = hdr->type;
+      size_t rec_size = hdr->rec_size ();
+
+      gdb_byte *rec_data = data + PDB_RECORD_DATA_OFFS;
+
+      /* Reject records too small to hold their fixed fields, or whose name
+	 runs past the record, before any handler reads them.  */
+      size_t body_size = rec_size - PDB_RECORD_DATA_OFFS;
+      if (!pdb_sym_body_valid (rectype, rec_data, body_size))
+	{
+	  if (pdb_sym_opens_scope (rectype))
+	    parser.push_empty_scope ();
+	  data += rec_size;
+	  continue;
+	}
+
+      switch (rectype)
+	{
+	case S_GPROC32:
+	case S_LPROC32:
+	case S_GPROC32_ID:
+	case S_LPROC32_ID:
+	  parser.handle_func_sym (rec_data, rectype);
+	  break;
+
+	case S_THUNK32:
+	  parser.handle_thunk_sym ();
+	  break;
+
+	/* Records not read yet that open a scope, which their S_END
+	   closes.  */
+	case S_BLOCK32:
+	case S_GMANPROC:
+	case S_LMANPROC:
+	case S_LPROC32_DPC:
+	case S_LPROC32_DPC_ID:
+	case S_WITH32:
+	case S_SEPCODE:
+	  parser.push_empty_scope ();
+	  break;
+
+	case S_END:
+	case S_PROC_ID_END:
+	  parser.handle_scope_end_sym ();
+	  break;
+	}
+
+      data += rec_size;
+    }
+
+  /* Close any remaining open scopes.  */
+  while (!parser.scope_stack ().empty ())
+    {
+      CORE_ADDR end_addr = parser.scope_stack ().back ().end;
+      parser.scope_stack ().pop_back ();
+      cu->pop_context (end_addr, nullptr, end_addr != 0);
+    }
+}
+
+/* See pdb-internal.h.  */
+
+void
 pdb_read_sym_record_stream (pdb_per_objfile *pdb)
 {
   uint16_t idx = pdb->sym_record_stream;
@@ -263,6 +755,23 @@ pdb_parse_gsi_hash_header (gdb_byte *data, uint32_t data_size)
 
   hdr.hr = gdb::make_array_view (data + GSI_HASH_HDR_SIZE, hr_bytes);
   return hdr;
+}
+
+/* See pdb-internal.h.  */
+
+void
+pdb_publics_at::add (const char *name)
+{
+  /* The GSI may list one public twice.  */
+  if (!names.emplace (name).second || name[0] != '?')
+    return;
+
+  decorated = name;
+  num_decorated++;
+  const char *at = strchr (name + 1, '@');
+  if (at != nullptr)
+    decorated_by_name.emplace (std::string_view (name + 1, at - (name + 1)),
+			       name);
 }
 
 /* See pdb-internal.h.  */
@@ -471,6 +980,7 @@ pdb_build_minsyms (pdb_per_objfile *pdb)
       if (startswith (name, "??_C@"))
 	continue;
 
+      pdb->pub_mangled_names[unrel].add (name);
       const bool decorated = name[0] == '?';
 
       /* CV_PUBSYMFLAGS cvpsfFunction: the public is code.  */
@@ -730,7 +1240,10 @@ test_gsi_hash_header ()
 static void
 test_sym_body_valid ()
 {
-  const uint16_t kinds[] = { S_PUB32, S_GDATA32, S_LDATA32 };
+  const uint16_t kinds[] = {
+    S_GPROC32, S_LPROC32, S_GPROC32_ID, S_LPROC32_ID, S_PUB32, S_GDATA32,
+    S_LDATA32, S_THUNK32,
+  };
 
   for (uint16_t kind : kinds)
     {

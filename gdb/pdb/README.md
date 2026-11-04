@@ -26,9 +26,9 @@ With the information from the stream directory, we are able to parse any stream.
 
 ### PDB Info stream (stream 1)
 
-Basic information stream - it holds the GUID and age that identify the build
-that wrote the PDB, and the named stream map, which locates the "/names"
-stream (the String Table) that names all the files compiled into the PDB.
+Basic information stream - its most significant part is the location of the
+"/names" stream (the String Table) which contains the list of all the files
+compiled into the PDB.
 
 ### Names stream (String Table)
 
@@ -41,17 +41,8 @@ information, so preloading avoids repeated lookups.
 
 DBI stream contains the debug information (line numbers, symbols, etc.) for all
 the modules (object files) linked into the program. Each module's debug info is
-in a different stream. The reader reads the header, which holds the DBI age and
-the stream numbers of the global streams, the module records, which say which
-stream holds each module's debug info, and the Section Contribution and File
-Info substreams; then it reads every module's stream.
-
-### DBI Section Contribution substream
-
-One entry per contribution: the bytes an object file put in a section of the
-image. A module's record names only its first contribution, while a module
-compiled with a section per function (`/Gy`) has one per function, so the
-reader takes a module's code from its code contributions here.
+in a different stream and we read those streams on request. Eagerly we only load
+the header which contains info on per module streams (debug info is per module).
 
 ### DBI File Info substream
 
@@ -59,8 +50,46 @@ Substream is just a piece of data located at a given offset in a stream.
 The File Info substream contains info on all the files used by all the modules
 compiled into the PDB - the Names Buffer. Names Buffer actually duplicates the
 String Table but it also adds the information on files that go into each module.
-Getting a module's files from the String Table instead would mean reading
-the module's stream for the file checksums that refer to them.
+This is suitable for Quick Functions that check if a file is in a module;
+obtaining this info from the String Table would require expanding the parts
+of the module stream, to get the sections that reference per module files
+(indices into String Buffer).
+
+### TPI stream (stream 2)
+
+The TPI (Type Program Information) stream contains all non-builtin type
+records used by the program — pointers, modifiers, arrays, procedures, member
+functions, structs, classes, unions, enums, bitfields, argument lists, etc.
+
+A **type index** is a 32-bit integer that uniquely identifies a type. Indices
+below 0x1000 are reserved for simple/builtin types (encoded within the index).
+Indices 0x1000 and above correspond to records in the TPI stream, assigned
+sequentially: the first record is 0x1000, the second 0x1001, etc. Symbol records
+and other type records reference types by their type index.
+
+Each record in the stream has variable length consisting of a 2-byte
+`RecordLen`, a 2-byte `RecordKind` (the "leaf type" identifier such as `LF_POINTER`,
+`LF_MODIFIER`, `LF_ARRAY`, `LF_PROCEDURE`, `LF_ARGLIST`...), and a payload whose
+layout depends on the leaf type. Fields within a record can reference other
+types by their type index, forming a directed graph (e.g. an `LF_POINTER` record
+contains the type index of the pointee type).
+
+Reading the stream at load time only *indexes* it; no GDB type is created then.
+Two structures come out of that, and each exists because CodeView leaves out
+something DWARF gives a reader for free:
+
+- **A table of records, addressed by type index.**  Records are variable length
+  and refer to each other by number, so nothing can jump to type 0x1234 without
+  having already walked everything before it.  Walking the stream once and
+  remembering where each record starts turns every later reference into an
+  array lookup.  DWARF needs no equivalent, because a reference to another DIE
+  is already a byte offset.
+
+- **A cache of the GDB types already built.**  Filled as types are requested,
+  so an index is converted at most once.
+
+A record becomes a GDB type only when something asks for it -- printing a
+variable, running `ptype`, or setting a breakpoint on a method.
 
 ### Module Streams
 
@@ -73,7 +102,7 @@ String Table to provide the source files that belong to the module, while the
 Lines subsection maps addresses to source lines (analogous to `.debug_line` in
 DWARF).
 
-### Symbol Record Stream / PSGSI
+### Symbol Record Stream / GSI / PSGSI
 
 The Symbol Record Stream (referenced by the DBI header) contains all global
 symbol records — procedures and global data, the file-static data that the
@@ -112,6 +141,12 @@ entry:
 
 If the publics index stream is absent, no minimal symbols are built.
 
+The GSI (Global Symbol Index) stream is a hash table for O(1) name to symbol
+lookup similar to DWARF's .debug_names. It indexes cross-reference records
+(S_PROCREF, S_LPROCREF, S_DATAREF) that point into module streams — each
+reference carries module index and offset, telling the reader which module
+contains the full symbol definition.
+
 ## PDB Discovery
 
 The PDB is looked for in three places, in this order: next to the EXE under
@@ -130,8 +165,8 @@ can load them. This either requires prepending the MSYS2 root
 (e.g. /home/PATH -> C:/msys2/PATH) or converting drive information
 (e.g. /c/PATH -> C:/PATH).
 
-The MSYS2_ROOT environment variable names the MSYS2 root; without it, or for a
-file not under it, the reader tries the usual `msys64` and `msys2` roots.
+The MSYS2 root must be specified using MSYS2_ROOT env. var, otherwise we look
+into common msys2/mingw64 directories.
 
 ## Maintenance Commands
 
@@ -163,20 +198,24 @@ Initialization then loads the PDB in this order:
    build that produced the EXE, so a PDB from another build cannot be used
    at all.  Aborting also discards the `pdb_per_objfile` that steps 1-2 had
    already attached to the objfile, so the refused file is not left behind
-   for `maint info pdb-loaded-files` to report as loaded.
-3. Parse the DBI stream: its header, whose age, when not 0, must match the
-   EXE's, the stream numbers of the symbol record and PSGSI streams, and
-   the module records.
-4. Read PE section addresses from BFD, used to relocate section:offset pairs
+   for `maint info pdb-loaded-files` and the other maintenance commands to
+   report as loaded.
+3. Parse the DBI stream: module headers and the stream indices for the symbol,
+   GSI and PSGSI streams.
+4. Index the TPI (types) stream.  Records are indexed but not resolved; a
+   type is built the first time a symbol references it.
+5. Read PE section addresses from BFD, used to relocate section:offset pairs
    into real addresses.
-5. Build minimal symbols from the public symbol stream.
-6. Expand every module (`pdb_expand_all_modules()`) into a compunit.
+6. Build minimal symbols from the public symbol stream.
+7. Expand every module (`pdb_expand_all_modules()`) into a compunit.
 
-A malformed PDB that fails a check in steps 1-5 is dropped as a mismatched
+A malformed PDB that fails a check in steps 1-6 is dropped as a mismatched
 one is, with the error shown as a warning.  A module whose stream is
-malformed loses its own lines only, and is skipped with a warning.  Counts
-and sizes read from the file are checked against the bytes that hold them in
-64-bit arithmetic, and a stream cannot have more blocks than the file.
+malformed loses its own symbols and lines only, and is skipped with a
+warning.  Counts and sizes read from the file are checked against the
+bytes that hold them in 64-bit arithmetic, a stream cannot have more
+blocks than the file, and a chain of types that refer to one another
+stops at a depth of 1000 with an unsupported type.
 
 ## Build & Configuration
 
@@ -201,6 +240,12 @@ and sizes read from the file are checked against the bytes that hold them in
   named by the source name of its global record.
 - Line tables (`DEBUG_S_LINES`, `DEBUG_S_FILECHKSMS`), for breakpoints by
   line, stepping and `list`.  MSYS2 paths are converted to Windows paths.
+- Functions (`S_GPROC32`, `S_LPROC32`, `S_THUNK32`) with their address
+  ranges, and function types built from built-in types (`LF_PROCEDURE`,
+  `LF_ARGLIST`).  A function recorded by id (`S_GPROC32_ID`,
+  `S_LPROC32_ID`) loses its type, which shows as `void`.  lld-link writes
+  `S_GPROC32`/`S_LPROC32` with the signature in the PDB for the `_ID`
+  records clang-cl and cl put in an object.
 - `maintenance info pdb-loaded-files`.
 
 ## Memory Allocations
@@ -241,21 +286,22 @@ Non obstack allocations:
 `pdb.h` declares the entry point the COFF reader calls.  `pdb-internal.h`
 holds the types, constants and prototypes shared by the reader's files.  One
 context object per objfile holds everything read from the file -- stream
-layout, module list and section addresses -- and dies with the objfile.
-It also holds one record per module.
+layout, module list, section addresses, the type and symbol indexes -- and
+dies with the objfile.  It also holds one record per module and the type
+stream with its cache.
 
 ### `pdb.c` — MSF Parsing, Stream Assembly, Module Expansion
 
-The orchestrator: file I/O, block assembly and stream parsing.  It is the
-entry point the COFF reader calls, and it drives the other readers in the
-order listed above.
+The orchestrator: file I/O, block assembly, stream parsing, and turning a
+module into something GDB can use.  It is the entry point the COFF reader
+calls, and it drives the other readers in the order listed above.
 
 Serving stream bytes is its job too.  A range inside a single block is handed
 out as a pointer into the mapped file; only a range crossing a block boundary
 is copied.
 
-Expanding a module produces a compilation unit with its line table.  These
-details are easy to get wrong and are handled here:
+Expanding a module produces a compilation unit with its line table and block
+tree.  These details are easy to get wrong and are handled here:
 - **Line ordering across files.**  Rows are collected and sorted by address
   before being handed over, so a run of lines from one file is closed where
   another file's code begins -- which happens whenever a header is inlined.
@@ -263,21 +309,46 @@ details are easy to get wrong and are handled here:
   an end marker's address: Microsoft cl can list a procedure's line block
   before the block that ends where the procedure starts.
 - **Primary file.**  The compilation unit is named after the module.
-- **Modules with no code or no lines.**  A module whose DBI record has no
-  section contribution, or that has no line data, gets no compilation unit.
-  Nor does a module without a symbol stream (an object compiled without
-  debug info), as DWARF gives such an object no CU.
+- **Modules with no code.**  A module whose DBI record has no section
+  contribution (it declares only data, constants or types) is still read
+  when it has a symbol stream.  Its compilation unit gets an empty address
+  range, so it never claims a PC, and is dropped if it holds procedures,
+  which cannot be placed without a range, or no file or global symbols.
+  A module without a symbol stream (an object compiled without debug info)
+  gets no compilation unit, as DWARF gives such
+  an object no CU; a PC in its code has no symbol table.  Nor does a module
+  that has code but declares nothing and has no lines: lld's `Import:DLL`
+  modules describe their import thunks only with `S_THUNK32`, and a
+  compilation unit over a thunk would hide its minimal symbol from
+  `info functions`.
 
 What GDB gets from all this is a compilation unit per module tagged as
-`CodeView`, with its line table.  Every module is expanded when the PDB is
-loaded.
+`CodeView`, the usual block tree and the hooks GDB calls to look symbols up.
+Every module is expanded when the PDB is loaded.
+
+### `pdb-read-types.c` — TPI Stream Parsing & Type Resolution
+
+Reads the TPI stream header, builds an indexed array of `pdb_tpi_type` records
+(pointers into the file mapping, or into a copy for a record that crosses
+an MSF block), and resolves type
+indices to GDB `struct type` on demand with caching.
+
+`pdb_read_tpi_stream()` is the entry point: it indexes every record without
+resolving it.  `pdb_tpi_resolve_type()` is the on-demand resolver — it builds
+and caches a `struct type` the first time a symbol references an index,
+dispatching per leaf kind.
 
 ### `pdb-read-symbols.c` — CodeView Symbol Parsing
 
-Parses the global symbol record stream and the public symbols.
-`pdb_build_minsyms()` builds minimal symbols from public symbols, and
-`pdb_module_language()` reads a module's language from its `S_COMPILE2` or
-`S_COMPILE3` record.
+Parses CodeView symbol records from module streams and the global symbol record
+stream. Creates GDB symbols with resolved types and locations.
+
+`pdb_parse_symbols()` is the per-module entry point and `pdb_build_minsyms()`
+builds minimal symbols from public symbols.
+
+The `pdb_sym` wrapper structs are stack-allocated during parsing — they
+exist only long enough to extract fields from the raw record and call
+`create_gdb_sym()`, which creates the obstack-allocated GDB symbol.
 
 ### `pdb-path.c` — PDB File Discovery
 

@@ -22,6 +22,7 @@
 #define GDB_PDB_PDB_INTERNAL_H
 
 #include "pdb/pdb.h"
+#include "gdbtypes.h"
 #include "symtab.h"
 #include "buildsym.h"
 #include "gdbsupport/filestuff.h"
@@ -35,13 +36,29 @@
 #include <memory>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 
 struct objfile;
 
 namespace pdb
 {
 
+/* Half-open PC ranges [first, second).  */
+using pdb_range_pair_vec = std::vector<std::pair<CORE_ADDR, CORE_ADDR>>;
+
 struct pdb_per_objfile;
+
+/* Open scope while walking a module's symbols.  */
+struct pdb_scope_frame
+{
+  /* End address handed to buildsym pop_context.  */
+  CORE_ADDR end;
+};
+
+/* Scopes opened and not yet closed while walking a module's symbols,
+   innermost last.  */
+using pdb_scope_stack = std::vector<pdb_scope_frame>;
 
 /* Return the little-endian 32-bit value at P.  */
 
@@ -92,8 +109,11 @@ is_power_of_2 (uint32_t n)
   return (n & (n - 1)) == 0;
 }
 
+/* DATA, the bytes of a NUL-terminated name, as a C string.  */
+#define CSTR(data) ((const char *) (data))
+
 /* "set debug pdb-read": reader debug messages when non-zero; at 2 and
-   above also traces of PC lookups and source path conversion.  */
+   above also symbol lookup and source path conversion traces.  */
 extern unsigned int pdb_read_debug;
 
 /* Print a "pdb" debug statement if pdb_read_debug is non-zero.  */
@@ -149,9 +169,13 @@ inline constexpr auto MSF_BLOCK_MAP_ADDR_OFFS = 52;
 
 /* PDB streams.  */
 inline constexpr auto PDB_STREAM_PDB = 1;
+inline constexpr auto PDB_STREAM_TPI = 2;
 inline constexpr auto PDB_STREAM_DBI = 3;
 /* Invalid stream - microsoft-pdb/msf.cpp.  */
 inline constexpr auto PDB_NO_STREAM = 0xFFFFFFFF;
+
+/* Size of the per-record header: uint16_t RecordLen + uint16_t RecordKind.  */
+inline constexpr auto CV_REC_HDR_SIZE = 4;
 
 /* The PDB info stream (stream 1) contains version/age/GUID followed by
    the "named stream map" which is a hash table that maps stream identifiers
@@ -517,7 +541,8 @@ struct pdb_module_info
   uint32_t c13_byte_size = 0;
 
   /* The section contribution in the module's Module Info record.  It tells
-     whether the module has code, and is the compunit's range.
+     whether the module has code, and is the compunit's range only for a
+     module without functions; otherwise its functions give that range.
      1-based section index; 0 means none.  */
   uint16_t sc_section = 0;
   /* Offset within section.  */
@@ -525,15 +550,15 @@ struct pdb_module_info
   /* Size of contribution in bytes.  */
   uint32_t sc_size = 0;
 
-  /* The module's DEBUG_S_FILECHKSMS subsection.  A line block names its
-     source file by the byte offset of the file's entry here, and the entry
-     holds the file name's offset in /names.  */
+  /* The module's DEBUG_S_FILECHKSMS subsection.  A line block or an inline
+     site names its source file by the byte offset of the file's entry
+     here, and the entry holds the file name's offset in /names.  */
   const gdb_byte *file_checksums = nullptr;
   uint32_t file_checksums_size = 0;
 
-  /* Set when pdb_build_module starts on this module, so that it is built
-     only once.  It stays set when the module yields no compunit; CU is the
-     result, or null.  */
+  /* Set when pdb_build_module starts on this module, so a lookup made
+     during the build does not build it again.  It stays set when the
+     module yields no compunit; CU is the result, or null.  */
   bool expanded = false;
   compunit_symtab *cu = nullptr;
 
@@ -551,6 +576,57 @@ struct pdb_module_info
      the location of each module's offset slice depends on the sizes of the
      slices before it.  */
   const gdb_byte *file_name_offsets = nullptr;
+};
+
+/* Indexed raw TPI record.  Payload bytes borrow the PDB mapping or an
+   objfile-obstack copy when the payload spans MSF blocks.  */
+struct pdb_tpi_type
+{
+  /* CodeView record type (LF_*).  */
+  uint16_t leaf;
+  /* Payload after RecordKind, excluding both header words.  */
+  const gdb_byte *data;
+  /* Size of data: RecordLen less the 2 bytes of RecordKind.  */
+  uint32_t data_len;
+};
+
+/* TPI record index.  */
+struct pdb_tpi_context
+{
+  /* The raw TPI records, one per type index, read when the PDB is loaded.
+     A type index finds its record here; the GDB type is built from the
+     record later, the first time it is needed.  */
+  pdb_tpi_type *types = nullptr;
+  /* Type index of the first record; smaller indices are built-in types.  */
+  uint32_t type_idx_begin = 0;
+  /* One past the last type index.  */
+  uint32_t type_idx_end = 0;
+
+  /* Cache of the GDB types built so far, by type index; null until a type
+     is built.  Built-in types are cached here too.  */
+  type **type_cache = nullptr;
+
+  /* Type used for unsupported types.  */
+  type *undefined_type = nullptr;
+
+  /* Type of a procedure whose type index names no procedure type; see
+     pdb_tpi_resolve_function_type.  */
+  type *untyped_function_type = nullptr;
+
+  /* The parameter list pdb_function_name printed for each function type,
+     or null when it was too long to print, so that it is printed once
+     however many procedures have the type.  */
+  std::unordered_map<const type *, const char *> printed_param_lists;
+
+  /* The copy of each function type that marks a function that does not
+     return (CV_PFLAG_NEVER), shared by the functions of the type.  */
+  std::unordered_map<type *, type *> no_return_types;
+
+  /* Type indices whose types are being built right now.  Reaching one of
+     them again means the types refer to each other in a cycle; the reader
+     then reports it and uses a placeholder type instead of recursing
+     forever.  */
+  std::vector<uint32_t> types_in_progress;
 };
 
 /* MSF stream.  */
@@ -581,7 +657,29 @@ struct pdb_file_mapping
   uint64_t size = 0;
 };
 
+/* The names of the S_PUB32 public symbols at one address, indexed so that
+   finding a record's public costs the same however many share the
+   address.  Names point into the symbol record stream.  */
+
+struct pdb_publics_at
+{
+  /* Add the public NAME.  */
+  void add (const char *name);
+
+  /* Every public at the address.  */
+  std::unordered_set<std::string_view> names;
+
+  /* The decorated publics ("?..."), each under the unqualified name its
+     decoration starts with ("?name@"); the first one added wins.  */
+  std::unordered_map<std::string_view, const char *> decorated_by_name;
+
+  /* The last decorated public added, and the number of them.  */
+  const char *decorated = nullptr;
+  size_t num_decorated = 0;
+};
+
 /* PDB per-objfile data.  */
+
 struct pdb_per_objfile
 {
   explicit pdb_per_objfile (::objfile *objfile)
@@ -608,9 +706,9 @@ struct pdb_per_objfile
 
   /* Owned, cached stream buffers.  These are read once at PDB load
      time and never reassigned or resized afterwards, so interior
-     pointers (module names, string_table, file_info_names_buffer and
-     per-module file_name_offsets) stay valid for the objfile's
-     lifetime.  */
+     pointers (string_table, file_info_names_buffer, per-module
+     file_name_offsets, GSI/PSI record pointers) stay valid for the
+     objfile's lifetime.  */
   /* PDB_STREAM_PDB.  */
   gdb::byte_vector info_data;
   /* /names stream.  */
@@ -622,13 +720,22 @@ struct pdb_per_objfile
   /* PDB file mapping.  */
   pdb_file_mapping file_mapping;
 
+  /* The S_PUB32 public symbols at each unrelocated address; identical
+     code folding (/OPT:ICF) gives several functions one address.  A
+     procedure record gives only a function's natural name; its linkage
+     name is that of a public at its address.  Keys are unrelocated
+     because the map is filled when the PDB is loaded, before the image is
+     relocated.  */
+  std::unordered_map<CORE_ADDR, pdb_publics_at> pub_mangled_names;
+
   /* Module info.  */
   std::vector<pdb_module_info> modules;
 
   /* Section mapping: per-section VMA from the PE/COFF BFD, indexed by
      (CodeView section number - 1).  */
   std::vector<CORE_ADDR> section_addresses;
-  /* Size of each section in section_addresses.  */
+  /* Size of each section in section_addresses, the larger of its raw
+     and virtual sizes.  */
   std::vector<bfd_size_type> section_sizes;
 
   /* A section contribution: SIZE bytes at OFFSET in SECTION of the image
@@ -645,6 +752,11 @@ struct pdb_per_objfile
   /* Every code contribution; empty when the substream is absent or
      unreadable.  */
   std::vector<pdb_section_contrib> code_contribs;
+
+  /* Back-link to the symbol parser currently walking a symbol stream
+     (if any).  Set for the parser's lifetime by the function that
+     creates it.  */
+  class pdb_sym_parser *cur_parser = nullptr;
 
   /* The File Info substream's Names Buffer.  It is per PDB, not per
      module, so it is read with the PDB, and points into the DBI stream,
@@ -664,6 +776,9 @@ struct pdb_per_objfile
      CV_FileChecksum entry.  Points into names_data.  */
   const gdb_byte *string_table = nullptr;
   uint32_t string_table_size = 0;
+
+  /* Parsed TPI stream; empty when the PDB has none or it is malformed.  */
+  pdb_tpi_context tpi;
 
   /* Copy a stream by index out of the file mapping.  Returns an owned
      buffer.  To cache a stream for the lifetime of the objfile, move the
@@ -794,13 +909,38 @@ extern pdb_module_info *pdb_module_at_pc (pdb_per_objfile *pdb,
    no PDB data has been loaded for this objfile.  */
 extern pdb_per_objfile *get_pdb_per_objfile (objfile *objfile);
 
-/* A module's line table.  ROWS are the line table entries of the whole
-   module: one per CV_Line that maps to a PC, plus one the reader adds at
-   the end of each code range.  They are sorted by PC and recorded in the
-   compunit once all line blocks are read.  */
+/* Source files for a module's procedure symbols, and the module's line
+   table.
+
+   A procedure record (S_GPROC32, S_LPROC32) gives a function's name,
+   type, address and size, but not the source file it is defined in;
+   only the line table shows that, by the file of the line entry at the
+   function's entry PC.  AT_PC maps the PC of every line entry in the
+   module to its file's subfile, and each procedure symbol is queued in
+   TO_APPLY with the subfile at its entry PC.  A subfile gets its symtab
+   only when the compunit is built, so each queued symbol is given that
+   symtab afterwards (otherwise GDB's buildsym puts the symbol in the
+   module's main source file).
+
+   ROWS are the line table entries of the whole module: one per CV_Line
+   that maps to a PC, plus one the reader adds at the end of each code
+   range.  They are sorted by PC and recorded in the compunit once all
+   line blocks are read.  */
 
 struct pdb_symbol_lines
 {
+  struct pending
+  {
+    struct symbol *sym;
+    struct ::subfile *subfile;
+  };
+
+  /* Row PC -> the file of the first row there.  */
+  std::unordered_map<CORE_ADDR, struct ::subfile *> at_pc;
+
+  /* Symbols awaiting their symtab, applied after the compunit is built.  */
+  std::vector<pending> to_apply;
+
   /* Every row of the module, across all files.  Collected first and emitted
      in address order, so a file's run can be closed where the next file's
      code starts.  */
@@ -814,6 +954,18 @@ struct pdb_symbol_lines
   };
   std::vector<row> rows;
 };
+
+/* Parse CodeView symbol records from a module stream into GDB symbols.
+   MODULE_STREAM is the raw module stream data (caller owns it).
+   If FUNC_RANGES is non-null, each function's [start, end) is appended
+   so the caller can register discontiguous block ranges.  LANG is the
+   module's language, and SYM_LINES the module's line rows, which give
+   each function its source file.  */
+extern void pdb_parse_symbols (pdb_per_objfile *pdb, pdb_module_info *mod_info,
+			       gdb_byte *module_stream, buildsym_compunit *cu,
+			       pdb_range_pair_vec *func_ranges,
+			       enum language lang,
+			       pdb_symbol_lines *sym_lines);
 
 /* Return a module's language from its first S_COMPILE2/S_COMPILE3 record,
    cached in the module; C++ when there is none or its language code is
@@ -853,6 +1005,84 @@ extern const gdb_byte *pdb_stream_bytes (const pdb_per_objfile *pdb,
    an empty vector if the module has no stream.  */
 extern gdb::byte_vector pdb_read_module_stream (pdb_per_objfile *pdb,
 						pdb_module_info *mod);
+
+/* CodeView simple types (cvinfo.h).  Indices below 0x1000 encode kind in
+   bits 0-7 and pointer mode in bits 8-10; bit 11 is reserved.  */
+
+/* Extract kind (bits 0-7) from a simple type index.  */
+inline uint32_t
+cv_simple_kind (uint32_t ti)
+{
+  return ti & 0xFF;
+}
+
+/* Extract mode (bits 8-11, of which bit 11 is reserved) from a simple
+   type index.  */
+inline uint32_t
+cv_simple_mode (uint32_t ti)
+{
+  return (ti >> 8) & 0x0F;
+}
+
+/* True if TI is a simple (built-in) type index.  */
+inline bool
+cv_ti_is_simple (uint32_t ti)
+{
+  return ti < 0x1000;
+}
+
+/* SimpleTypeKind values.  */
+inline constexpr auto CV_NONE = 0x00;
+inline constexpr auto CV_VOID = 0x03;
+inline constexpr auto CV_HRESULT = 0x08;
+inline constexpr auto CV_SIGNED_CHAR = 0x10;
+inline constexpr auto CV_UNSIGNED_CHAR = 0x20;
+inline constexpr auto CV_NARROW_CHAR = 0x70;
+inline constexpr auto CV_WIDE_CHAR = 0x71;
+inline constexpr auto CV_CHAR16 = 0x7a;
+inline constexpr auto CV_CHAR32 = 0x7b;
+inline constexpr auto CV_CHAR8 = 0x7c;
+inline constexpr auto CV_SHORT = 0x11;
+inline constexpr auto CV_USHORT = 0x21;
+inline constexpr auto CV_INT8 = 0x68;
+inline constexpr auto CV_UINT8 = 0x69;
+inline constexpr auto CV_LONG = 0x12;
+inline constexpr auto CV_ULONG = 0x22;
+inline constexpr auto CV_QUAD = 0x13;
+inline constexpr auto CV_UQUAD = 0x23;
+inline constexpr auto CV_INT16 = 0x72;
+inline constexpr auto CV_UINT16 = 0x73;
+inline constexpr auto CV_INT32 = 0x74;
+inline constexpr auto CV_UINT32 = 0x75;
+inline constexpr auto CV_INT64 = 0x76;
+inline constexpr auto CV_UINT64 = 0x77;
+inline constexpr auto CV_OCT = 0x14;
+inline constexpr auto CV_UOCT = 0x24;
+inline constexpr auto CV_INT128 = 0x78;
+inline constexpr auto CV_UINT128 = 0x79;
+inline constexpr auto CV_FLOAT32 = 0x40;
+inline constexpr auto CV_FLOAT64 = 0x41;
+inline constexpr auto CV_FLOAT80 = 0x42;
+inline constexpr auto CV_COMPLEX32 = 0x50;
+inline constexpr auto CV_COMPLEX64 = 0x51;
+inline constexpr auto CV_COMPLEX80 = 0x52;
+inline constexpr auto CV_BOOL8 = 0x30;
+
+/* SimpleTypeMode values.  */
+/* No indirection.  */
+inline constexpr auto CV_TM_DIRECT = 0;
+/* 16-bit near, far and huge pointers.  */
+inline constexpr auto CV_TM_NPTR = 1;
+inline constexpr auto CV_TM_FPTR = 2;
+inline constexpr auto CV_TM_HPTR = 3;
+/* 32-bit near pointer.  */
+inline constexpr auto CV_TM_NPTR32 = 4;
+/* 32-bit far pointer.  */
+inline constexpr auto CV_TM_FPTR32 = 5;
+/* 64-bit near pointer.  */
+inline constexpr auto CV_TM_NPTR64 = 6;
+/* 128-bit near pointer.  */
+inline constexpr auto CV_TM_NPTR128 = 7;
 
 /* Global Symbol Streams.
 
@@ -928,6 +1158,12 @@ struct pdb_gsi_hdr
 /* CodeView symbol record kinds.  */
 /* Global procedure.  */
 inline constexpr auto S_GPROC32 = 0x1110;
+/* Local procedure.  */
+inline constexpr auto S_LPROC32 = 0x110f;
+/* Global procedure with ID.  */
+inline constexpr auto S_GPROC32_ID = 0x1147;
+/* Local procedure with ID.  */
+inline constexpr auto S_LPROC32_ID = 0x1146;
 /* Global data.  */
 inline constexpr auto S_GDATA32 = 0x110d;
 /* Local data.  */
@@ -936,6 +1172,24 @@ inline constexpr auto S_LDATA32 = 0x110c;
 inline constexpr auto S_PUB32 = 0x110e;
 /* End of scope.  */
 inline constexpr auto S_END = 0x0006;
+/* Closes procedure scope.  */
+inline constexpr auto S_PROC_ID_END = 0x114f;
+/* Thunk (opens scope).  */
+inline constexpr auto S_THUNK32 = 0x1102;
+/* Block scope.  */
+inline constexpr auto S_BLOCK32 = 0x1103;
+/* WITH scope.  */
+inline constexpr auto S_WITH32 = 0x1104;
+/* Managed global procedure.  */
+inline constexpr auto S_GMANPROC = 0x112a;
+/* Managed local procedure.  */
+inline constexpr auto S_LMANPROC = 0x112b;
+/* Separated code.  */
+inline constexpr auto S_SEPCODE = 0x1132;
+/* DPC local procedure.  */
+inline constexpr auto S_LPROC32_DPC = 0x1155;
+/* DPC local procedure with ID.  */
+inline constexpr auto S_LPROC32_DPC_ID = 0x1156;
 /* Compiler info v2.  */
 inline constexpr auto S_COMPILE2 = 0x1116;
 /* Compiler info v3.  */
@@ -951,13 +1205,84 @@ inline constexpr auto PDB_RECORD_DATA_OFFS = 4;
 inline constexpr auto PDB_RECORD_HDR_SIZE = 4;
 
 /* Name/field offsets in module symbol record bodies.  */
+inline constexpr auto PDB_SYMBOL_FUNC_NAME_OFFS = 35;
 inline constexpr auto PDB_SYMBOL_VAR_NAME_OFFS = 10;
+
+/* CodeView type and id leaf kinds.  */
+
+/* Virtual function table shape.  */
+inline constexpr auto LF_VTSHAPE = 0x000a;
+/* Label type.  */
+inline constexpr auto LF_LABEL = 0x000e;
+
+/* Procedure type.  */
+inline constexpr auto LF_PROCEDURE = 0x1008;
+/* Argument list for procedures.  */
+inline constexpr auto LF_ARGLIST = 0x1201;
+/* Field list for structs/classes.  */
+inline constexpr auto LF_FIELDLIST = 0x1203;
+/* Method overload list.  */
+inline constexpr auto LF_METHODLIST = 0x1206;
+
+/* LF_PROCEDURE payload (after RecordKind).
+       uint32_t rvtype      return type index
+       uint8_t  calltype    calling convention (CV_call_e)
+       uint8_t  funcattr    attributes (unused)
+       uint16_t parmcount   number of parameters
+       uint32_t arglist     type index of argument list  */
+inline constexpr auto LF_PROC_RVTYPE_OFFS = 0;
+inline constexpr auto LF_PROC_CALLTYPE_OFFS = 4;
+inline constexpr auto LF_PROC_ARGLIST_OFFS = 8;
+/* Minimum record data size.  */
+inline constexpr auto LF_PROC_SIZE = 12;
+
+/* CV_call_e value for the platform's ordinary C calling convention.  */
+inline constexpr uint8_t CV_CALL_NEAR_C = 0x00;
+
+/* LF_ARGLIST sub-record layout.
+       uint32_t count         number of type indices
+       uint32_t arg[count]    array of type indices.
+   A trailing type index 0 marks an ellipsis, not a void parameter.  The
+   count includes that marker; it excludes an implicit 'this' parameter.  */
+inline constexpr auto LF_ARGLIST_COUNT_OFFS = 0;
+inline constexpr auto LF_ARGLIST_ARGS_OFFS = 4;
+inline constexpr auto LF_ARGLIST_MIN_SIZE = 4;
+
+/* Index raw TPI records (stream 2) and allocate the type cache.  Missing
+   streams and detected format errors raise pdb_error.  Record indexing
+   does not construct GDB types.  */
+extern void pdb_read_tpi_stream (pdb_per_objfile *pdb);
 
 /* Extract a NUL-terminated string from a bounded buffer [P, END).
    Returns the string pointer if a NUL byte exists in the range,
    nullptr otherwise.  Used to safely read variable-length name fields
    from PDB records without risking out-of-bounds reads.  */
 const char *pdb_extract_string (const gdb_byte *p, const gdb_byte *end);
+
+/* Resolve a TPI index to a GDB type after TPI initialization.  Unsupported
+   indices/leaves return an error placeholder.  */
+type &pdb_tpi_resolve_type (pdb_per_objfile *pdb, uint32_t type_index);
+
+/* Resolve TYPE_INDEX as the type of a procedure.  An index that names no
+   procedure type (none, a simple type, another kind of record) gives a
+   non-prototyped function returning void, as GDB requires a function's
+   symbol to have a function type.  */
+type &pdb_tpi_resolve_function_type (pdb_per_objfile *pdb,
+				     uint32_t type_index);
+
+/* Return NAME, the name of a function of type FUNCTION_TYPE, as GDB names
+   it: a C++ function's name is followed by its parameter list and
+   canonicalized.  NAME is returned unchanged for other languages.  */
+const char *pdb_function_name (pdb_per_objfile *pdb, const char *name,
+			       type *function_type, enum language lang);
+
+/* Return the canonical C++ spelling of NAME for tag and symbol lookup.
+   Callers retain the returned pointer: unchanged names must already have
+   persistent storage, and rewritten names must last for the objfile's
+   lifetime.  Canonicalization reconciles spellings such as "Buffer<int,3>"
+   and "Buffer<int, 3>".  */
+extern const char *pdb_canonical_name (pdb_per_objfile *pdb,
+				       const char *name);
 
 /* Header of a symbol record in the PDB symbol stream.  */
 
@@ -1078,10 +1403,10 @@ struct test_module
   /* Append a symbol record of KIND whose body is BODY.  */
   void symbol (uint16_t kind, const gdb::byte_vector &body);
 
-  /* Append an S_GPROC32 named NAME, of type TYPE, for the SIZE bytes at
-     SECTION:OFFSET, and its S_END.  */
+  /* Append an S_GPROC32 named NAME, of type TYPE and CV_PROCFLAGS FLAGS,
+     for the SIZE bytes at SECTION:OFFSET, and its S_END.  */
   void procedure (const char *name, uint16_t section, uint32_t offset,
-		  uint32_t size, uint32_t type = 0);
+		  uint32_t size, uint32_t type = 0, uint8_t flags = 0);
 
   /* Add a file to the checksum table, its name at NAME_OFFSET in the
      /names stream; return its file id.  */
@@ -1117,6 +1442,41 @@ struct test_module_reader
   test_objfile obj;
   pdb_per_objfile *pdb = nullptr;
 };
+
+/* The records of a TPI or IPI stream, built in memory.  */
+
+struct test_tpi
+{
+  /* Append a record of LEAF whose body is BODY, padded as the linker
+     pads it; return its type index.  */
+  uint32_t add (uint16_t leaf, const gdb::byte_vector &body);
+
+  /* An LF_ARGLIST of ARGS; return its type index.  */
+  uint32_t arglist (const std::vector<uint32_t> &args);
+
+  /* An LF_PROCEDURE returning RET, with the parameters ARGLIST lists
+     (COUNT of them); return its type index.  */
+  uint32_t procedure (uint32_t ret, uint32_t arglist, uint16_t count);
+
+  /* The stream: a TPI_VERSION_V80 header, then the records.  */
+  gdb::byte_vector stream () const;
+
+  gdb::byte_vector records;
+  uint32_t next = 0x1000;
+};
+
+/* Read MODULES, whose streams are STREAMS, with the types of TPI, into
+   compunits as expanding them does, in order, for a test_objfile of one
+   section; call SETUP before reading them and CHECK after.  The files of
+   the modules are named from the /names data "\0a.cpp\0b.cpp\0", at
+   offsets 1 and 7.  Nothing is called when GDB has no x86-64 Windows
+   architecture.  */
+
+void test_read_modules
+  (std::vector<pdb_module_info> modules,
+   const std::vector<gdb::byte_vector> &streams, const test_tpi &tpi,
+   gdb::function_view<void (pdb_per_objfile *pdb)> setup,
+   gdb::function_view<void (pdb_per_objfile *pdb)> check);
 
 /* Write V to BYTES at OFFSET, little-endian.  */
 void put_u32 (gdb::byte_vector &bytes, size_t offset, uint32_t v);

@@ -2048,6 +2048,7 @@ PDB_SRCS = \
 	pdb/pdb-cmd.c \
 	pdb/pdb-path.c \
 	pdb/pdb-read-symbols.c \
+	pdb/pdb-read-types.c \
 	pdb/pdb.c
 PDB_OBS = $(patsubst %.c,%.o, $(PDB_SRCS))
 
