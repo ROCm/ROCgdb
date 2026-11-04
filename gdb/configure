@@ -25493,7 +25493,8 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-    # Detect if amd_dbgapi_set_process_property is available.
+    # Detect if amd_dbgapi_process_set_property is available.
+    # This function became available since amd-dbgapi version 0.83.0.
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether amd_dbgapi_process_set_property is available" >&5
 $as_echo_n "checking whether amd_dbgapi_process_set_property is available... " >&6; }
     ac_fn_c_check_decl "$LINENO" "amd_dbgapi_process_set_property" "ac_cv_have_decl_amd_dbgapi_process_set_property" "#include <amd-dbgapi/amd-dbgapi.h>
