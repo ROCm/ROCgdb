@@ -1,0 +1,80 @@
+# Copyright 2026 Free Software Foundation, Inc.
+# Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test dereferencing a pointer that points to globally accessible
+# swizzled (private_lane) memory.  When we switch lane, the pointer
+# continues pointing to the same place.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+require no_optimized_code
+
+standard_testfile .cpp
+
+if {[hip_device_is_less_than gfx1250]} {
+    # Devices before gfx1250 do not have globally accessible swizzled
+    # memory.  For those, see deref-scoped-pointer.exp.
+    unsupported "test is aimed at devices with global swizzled memory"
+    return
+}
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug hip}]} {
+    return
+}
+
+with_rocm_gpu_lock {
+    set bpline [gdb_get_line_number "break-here"]
+
+    if {![runto "$::srcfile:$bpline" -allow-pending -message]} {
+	return
+    }
+
+    # The test program made 'global_ptr' point to the 'local_var'
+    # variable, which being a local variable should end up in the
+    # private_lane address space.  Iterating over lanes and
+    # dereferencing that pointer should print *the same* value per
+    # lane because of global swizzled addressing.
+    with_test_prefix "global swizzled ptr" {
+	foreach_with_prefix lane {0 1} {
+	    gdb_test "lane $lane" "Switching to .* lane $lane .*"
+	    gdb_test "print global_ptr" " generic#$::hex"
+	    gdb_test "print *global_ptr" " = 10"
+	}
+    }
+
+    # Now set the global pointer from GDB in the context of lane 1.
+    with_test_prefix "set pointer from GDB" {
+	gdb_test "lane 1" "Switching to .* lane 1 .*"
+	gdb_test "print global_ptr = &local_var" " generic#$::hex"
+	foreach_with_prefix lane {0 1} {
+	    gdb_test "lane $lane" "Switching to .* lane $lane .*"
+	    gdb_test "print *global_ptr" " = 11"
+	}
+    }
+
+    # Now use a convenience variable for the pointer instead of a
+    # global variable in the program.  Because the address is in
+    # private_lane address space, we should see lane-scoped values.
+    with_test_prefix "conv var" {
+	gdb_test "print \$conv_var = &local_var" \
+	    "\\\(size_t \\\*\\\) private_lane#$::hex"
+	foreach_with_prefix lane {0 1} {
+	    gdb_test "lane $lane"
+	    gdb_test "print *\$conv_var" " = [expr {${lane} + 10}]"
+	}
+    }
+}
