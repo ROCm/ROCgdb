@@ -1089,7 +1089,7 @@ pdb_for_each_c13_subsection (const pdb_module_info *module,
 
 /* Read a module stream and extract C13 file checksums.  Returns an owned
    buffer containing the stream data; the caller keeps it alive as long as
-   the data is needed (for line walking).
+   the data is needed (for symbol parsing, line walking, etc.).
    File checksums are copied onto the objfile obstack so they survive
    after the buffer is freed.  */
 
@@ -1313,6 +1313,10 @@ pdb_record_line_block (pdb_per_objfile *pdb, buildsym_compunit *cu,
 
       sym_lines->rows.push_back ({ pc, (int) line_num, current_subfile,
 				   flags });
+
+      /* Remember the file the line at PC counts within, for a symbol that
+	 starts at PC.  First entry wins.  */
+      sym_lines->at_pc.emplace (pc, current_subfile);
     }
 
   /* Close the contribution with an end-of-sequence marker at its end PC, so
@@ -1393,6 +1397,18 @@ pdb_emit_lines (pdb_per_objfile *pdb, buildsym_compunit *cu,
     }
 }
 
+/* Give each symbol queued in SYM_LINES its symtab.  Call once the
+   compunit has ended, so its subfiles have symtabs, and before it is
+   destroyed.  */
+
+static void
+pdb_apply_symbol_lines (const pdb_symbol_lines &sym_lines)
+{
+  for (const auto &p : sym_lines.to_apply)
+    if (p.subfile != nullptr && p.subfile->symtab != nullptr)
+      p.sym->set_symtab (p.subfile->symtab);
+}
+
 static void pdb_read_module_files (pdb_per_objfile *pdb,
 				   pdb_module_info *mod);
 
@@ -1402,8 +1418,9 @@ static void pdb_read_module_files (pdb_per_objfile *pdb,
 static compunit_symtab *
 pdb_build_module_or_throw (pdb_per_objfile *pdb, pdb_module_info *module)
 {
-  /* Lookups issued while the compunit is built would re-enter the reader;
-     the flag makes them bail out instead.  */
+  /* Make symbol lookups issued from inside symtab construction (e.g.
+     from check_typedef) bail out.  Without the flag they would re-enter
+     the reader.  */
   scoped_restore decrementer = increment_reading_symtab ();
 
   /* Read module stream, owned locally and freed at scope exit.  */
@@ -1412,8 +1429,10 @@ pdb_build_module_or_throw (pdb_per_objfile *pdb, pdb_module_info *module)
   /* Cache file list by reading File Info substream.  */
   pdb_read_module_files (pdb, module);
 
-  /* A module without a symbol stream (an object built without debug
-     info) gets no compunit, as DWARF gives such an object no CU.  */
+  /* A module with no code contribution (linker-generated, resource or
+     import modules) has no address range.  A module without a symbol
+     stream (an object built without debug info) gets no compunit, as
+     DWARF gives such an object no CU.  */
   bool has_code = pdb->section_valid (module->sc_section);
   if (stream_buf.empty ())
     return nullptr;
@@ -1432,37 +1451,77 @@ pdb_build_module_or_throw (pdb_per_objfile *pdb, pdb_module_info *module)
 	high_pc = low_pc + 1;
     }
 
-  /* The module's symbols are not read yet, so its compunit holds only
-     its line table: a module without code or without line data gets
-     none.  */
-  if (!has_code || module->c13_byte_size == 0)
-    return nullptr;
-
   /* The compunit is named after the module.  */
   std::string cu_name = module->module_name;
 
   enum language lang = pdb_module_language (pdb, module);
 
-  /* The compunit starts at 0; its global and static blocks are given the
-     module's start once it is built.  */
+  /* Start the compunit at 0, because its start is known only once the
+     procedures are read.  Address 0 keeps its global and static blocks
+     ahead of the procedure blocks in the blockvector.  */
   buildsym_compunit cu (pdb->objfile, cu_name.c_str (),
 			"",
 			lang, 0);
   cu.record_debugformat ("CodeView");
 
-  /* Record the line table.  */
+  /* Record line tables (only if C13 data exists).  */
   pdb_symbol_lines sym_lines;
-  pdb_walk_c13_line_blocks
-    (pdb, module, stream_buf.data (),
-     [pdb, &cu, &sym_lines] (const char *filename,
-			     CV_LineSection line_sect,
-			     const gdb_byte *lines,
-			     uint32_t num_lines)
-       {
-	 pdb_record_line_block (pdb, &cu, filename, line_sect, lines,
-				num_lines, &sym_lines);
-       });
-  pdb_emit_lines (pdb, &cu, &sym_lines);
+  if (module->c13_byte_size > 0)
+    {
+      pdb_walk_c13_line_blocks
+	(pdb, module, stream_buf.data (),
+	 [pdb, &cu, &sym_lines] (const char *filename,
+				 CV_LineSection line_sect,
+				 const gdb_byte *lines,
+				 uint32_t num_lines)
+	   {
+	     pdb_record_line_block (pdb, &cu, filename, line_sect, lines,
+				    num_lines, &sym_lines);
+	   });
+
+      pdb_emit_lines (pdb, &cu, &sym_lines);
+    }
+
+  /* Parse CodeView symbol records and collect function ranges.  */
+  pdb_range_pair_vec func_ranges;
+  pdb_parse_symbols (pdb, module, stream_buf.data (), &cu, &func_ranges,
+		       lang, &sym_lines);
+
+  /* A module without a code contribution gets no compunit: it declares
+     nothing but procedures, and those are functions the linker folded
+     into an identical copy in another module, whose records give that
+     copy's address, which the other module's compunit covers.  */
+  if (!has_code)
+    return nullptr;
+  bool declares_nothing = func_ranges.empty ();
+
+  /* A module that declares nothing and has neither procedure records nor
+     line data gets no compunit.  The linker's "Import:<dll>" modules are
+     like this: each holds the import thunks, stubs that jump to the DLL's
+     functions, and describes each thunk only with an S_THUNK32 record,
+     from which no symbol is made.  A compunit for such a module would
+     cover the thunks' addresses, and "info functions" does not list a
+     minimal symbol whose address a compunit covers.  DWARF has no CU for
+     them either.  */
+  if (declares_nothing && func_ranges.empty () && module->c13_byte_size == 0)
+    return nullptr;
+
+  /* A module with procedures spans them, as a DWARF CU's ranges cover its
+     code.  The DBI section contribution can lie above them or cover only
+     the first, and a span reaching past a single procedure would claim
+     other modules' PCs, since one range gets no address map.  */
+  if (!func_ranges.empty ())
+    {
+      low_pc = func_ranges[0].first;
+      high_pc = func_ranges[0].second;
+    }
+  for (const auto &range : func_ranges)
+    {
+      low_pc = std::min (low_pc, range.first);
+      high_pc = std::max (high_pc, range.second);
+    }
+  if (high_pc <= low_pc)
+    high_pc = low_pc + 1;
 
   /* Give the main subfile the module's language, because the compunit takes its
      language from the main subfile.  As start_subfile does for C subfiles, a C
@@ -1486,8 +1545,18 @@ pdb_build_module_or_throw (pdb_per_objfile *pdb, pdb_module_info *module)
   subfile *main_subfile = cu.get_current_subfile ();
   main_subfile->language = main_lang;
 
+  /* Register function ranges on the static block so the CU-level scope
+     covers all functions even when they are scattered at non-contiguous
+     addresses.  */
   block *static_block = cu.end_compunit_symtab_get_static_block (high_pc,
 								 false, true);
+
+  std::vector<blockrange> rangevec;
+  rangevec.reserve (func_ranges.size ());
+  for (auto &range : func_ranges)
+    rangevec.emplace_back (range.first, range.second);
+  if (!rangevec.empty ())
+    static_block->set_ranges (make_blockranges (pdb->objfile, rangevec));
 
   module->cu = cu.end_compunit_symtab_from_static_block (static_block, false);
 
@@ -1508,6 +1577,17 @@ pdb_build_module_or_throw (pdb_per_objfile *pdb, pdb_module_info *module)
       && !(lang == language_c
 	   && module->cu->primary_filetab ()->language () != language_unknown))
     module->cu->primary_filetab ()->set_language (lang);
+
+  /* The subfiles now have symtabs, so each queued function can be filed
+     under the source file its code actually came from.
+
+     Its line is deliberately not set.  CodeView records no declaration
+     line, and the only candidate, the first line-table entry at the entry
+     PC, is the first executable line rather than the declaration.  Giving
+     a function a line later than its declaration stops GDB advancing
+     "break FILE:LINE" from a line with no code to the next one that has
+     some.  */
+  pdb_apply_symbol_lines (sym_lines);
 
   return module->cu;
 }
@@ -1674,6 +1754,31 @@ pdb_read_file_info_substream (pdb_per_objfile *pdb)
 							    - names_buf);
 }
 
+/* Index the TPI records of PDB.  A malformed TPI costs the types, not
+   the PDB.  The reader reports it and reads the PDB with no type record,
+   its functions without types, and its line tables and public symbols as
+   they are.  The built-in types are still cached.  */
+
+static void
+pdb_read_tpi_or_none (pdb_per_objfile *pdb)
+{
+  try
+    {
+      pdb_read_tpi_stream (pdb);
+    }
+  catch (const gdb_exception_error &ex)
+    {
+      std::string message = ex.what ();
+      if (startswith (message, "PDB Error: "))
+	message.erase (0, strlen ("PDB Error: "));
+      pdb_load_diagnostic (pdb->objfile, "%s: %s; types are not read",
+			   pdb->pdb_file_path.c_str (), message.c_str ());
+      pdb->tpi = pdb_tpi_context ();
+      pdb->tpi.type_cache = OBSTACK_CALLOC (&pdb->objfile->objfile_obstack,
+					    0x1000, type *);
+    }
+}
+
 /* Read the PDB that RSDS names for OBJFILE; pdb_initialize_objfile is the
    reader's entry point.  PDB parsing starts by reading the MSF SuperBlock,
    which contains basic info about the file and location of the stream
@@ -1688,6 +1793,11 @@ pdb_read_file_info_substream (pdb_per_objfile *pdb)
 static pdb_per_objfile *
 pdb_read_pdb_file (objfile *objfile, const pdb_rsds_info &rsds)
 {
+  /* Read only the minimal symbols with OBJF_READNEVER.  They are still
+     needed because lld writes no COFF symbol table, so the publics are the
+     image's only symbol names, as .symtab is for an ELF file.  */
+  const bool readnever = (objfile->flags & OBJF_READNEVER) != 0;
+
   gdb_assert (objfile->obfd != nullptr);
 
   /* Initialize PDB reader: create and register per_objfile.  */
@@ -1724,6 +1834,11 @@ pdb_read_pdb_file (objfile *objfile, const pdb_rsds_info &rsds)
     return nullptr;
 
   pdb_read_file_info_substream (pdb);
+
+  /* Index the TPI records; a type is built the first time a symbol needs
+     it.  */
+  if (!readnever)
+    pdb_read_tpi_or_none (pdb);
 
   /* Read section addresses from BFD to map a section and offset to a
      PC.  */
@@ -2883,10 +2998,10 @@ test_module::symbol (uint16_t kind, const gdb::byte_vector &body)
 
 void
 test_module::procedure (const char *name, uint16_t section, uint32_t offset,
-			uint32_t size, uint32_t type)
+			uint32_t size, uint32_t type, uint8_t flags)
 {
-  /* No parent, end or next record; the whole procedure between DbgStart
-     and DbgEnd; no flags.  */
+  /* The record has no parent, end or next record, and the whole procedure lies
+     between DbgStart and DbgEnd.  */
   gdb::byte_vector body;
   append_le (body, 0, 4);
   append_le (body, 0, 4);
@@ -2897,7 +3012,7 @@ test_module::procedure (const char *name, uint16_t section, uint32_t offset,
   append_le (body, type, 4);
   append_le (body, offset, 4);
   append_le (body, section, 2);
-  body.push_back (0);
+  body.push_back (flags);
   body.insert (body.end (), name, name + strlen (name) + 1);
   symbol (S_GPROC32, body);
   symbol (S_END, {});
@@ -2992,24 +3107,84 @@ test_module_reader::~test_module_reader ()
     pdb->file_mapping.base = nullptr;
 }
 
+/* See pdb-internal.h.  */
+
+uint32_t
+test_tpi::add (uint16_t leaf, const gdb::byte_vector &body)
+{
+  /* The record is padded to 4 bytes with LF_PAD bytes, each counting the
+     bytes left to the end.  */
+  size_t padded = align_up (body.size () + 4, 4) - 4;
+  append_le (records, padded + 2, 2);
+  append_le (records, leaf, 2);
+  records.insert (records.end (), body.begin (), body.end ());
+  for (size_t left = padded - body.size (); left > 0; left--)
+    records.push_back (0xf0 + left);
+  return next++;
+}
+
+/* See pdb-internal.h.  */
+
+uint32_t
+test_tpi::arglist (const std::vector<uint32_t> &args)
+{
+  gdb::byte_vector body;
+  append_le (body, args.size (), 4);
+  for (uint32_t arg : args)
+    append_le (body, arg, 4);
+  return add (LF_ARGLIST, body);
+}
+
+/* See pdb-internal.h.  */
+
+uint32_t
+test_tpi::procedure (uint32_t ret, uint32_t arglist, uint16_t count)
+{
+  /* Write the return type, the near C calling convention and no
+     attributes.  */
+  gdb::byte_vector body;
+  append_le (body, ret, 4);
+  append_le (body, 0, 2);
+  append_le (body, count, 2);
+  append_le (body, arglist, 4);
+  return add (LF_PROCEDURE, body);
+}
+
+/* See pdb-internal.h.  */
+
+gdb::byte_vector
+test_tpi::stream () const
+{
+  /* Write the header, which holds TPI_VERSION_V80, the header size of 56
+     bytes, the index range and the records' size.  */
+  gdb::byte_vector tpi;
+  put_u32 (tpi, 0, 20040203);
+  put_u32 (tpi, 4, 56);
+  put_u32 (tpi, 8, 0x1000);
+  put_u32 (tpi, 12, next);
+  put_u32 (tpi, 16, records.size ());
+  tpi.resize (56, 0);
+  tpi.insert (tpi.end (), records.begin (), records.end ());
+  return tpi;
+}
+
 /* The /names data naming a.cpp at offset 1 and b.cpp at offset 7.  */
 
 static char test_names[] = { 0, 'a', '.', 'c', 'p', 'p', 0,
 			     'b', '.', 'c', 'p', 'p', 0 };
 
-/* Read MODULES, whose streams are STREAMS, into compunits as expanding
-   them does, in order, after calling SETUP, if any, with the reader;
-   then call CHECK with it.  The modules' files are named from
-   test_names.  */
+/* See pdb-internal.h.  */
 
-static void
-with_modules (std::vector<pdb_module_info> modules,
-	      const std::vector<gdb::byte_vector> &streams,
-	      gdb::function_view<void (pdb_per_objfile *pdb)> check,
-	      gdb::function_view<void (pdb_per_objfile *pdb)> setup = nullptr)
+void
+test_read_modules (std::vector<pdb_module_info> modules,
+		   const std::vector<gdb::byte_vector> &streams,
+		   const test_tpi &tpi,
+		   gdb::function_view<void (pdb_per_objfile *pdb)> setup,
+		   gdb::function_view<void (pdb_per_objfile *pdb)> check)
 {
   test_pdb file;
   file.streams.resize (5);
+  file.streams[PDB_STREAM_TPI] = tpi.stream ();
   for (size_t i = 0; i < streams.size (); i++)
     {
       modules[i].stream_number = file.streams.size ();
@@ -3022,12 +3197,24 @@ with_modules (std::vector<pdb_module_info> modules,
     return;
   r.pdb->string_table = (const gdb_byte *) test_names;
   r.pdb->string_table_size = sizeof test_names;
+  pdb_read_tpi_stream (r.pdb);
   r.pdb->modules = std::move (modules);
   if (setup != nullptr)
     setup (r.pdb);
   for (pdb_module_info &m : r.pdb->modules)
     pdb_build_module (r.pdb, &m);
   check (r.pdb);
+}
+
+/* Call test_read_modules for modules with no types and no setup.  */
+
+static void
+with_modules (std::vector<pdb_module_info> modules,
+	      const std::vector<gdb::byte_vector> &streams,
+	      gdb::function_view<void (pdb_per_objfile *pdb)> check)
+{
+  test_read_modules (std::move (modules), streams, test_tpi (), nullptr,
+		     check);
 }
 
 /* Return the line at PC as its number and the base name of its file, or 0 and
@@ -3066,6 +3253,50 @@ two_modules (std::vector<pdb_module_info> *modules,
   streams->push_back (b.stream (&(*modules)[1]));
 }
 
+/* Test that a PC belongs to the module whose procedures cover it,
+   whatever the modules' DBI section contributions say.  Build modules
+   where B's contribution starts above its procedure or covers A's
+   procedures, and where B comes first or second.  */
+
+static void
+test_module_bounds ()
+{
+  struct layout
+  {
+    uint32_t a_offset, a_size, b_offset, b_size;
+    bool b_first;
+  };
+  /* Place B's contribution above its procedure, then put B first with
+     its contribution covering A's procedures.  */
+  for (const layout &l : { layout { 0, 0x110, 0x90, 0x10, false },
+			   layout { 0, 0x110, 0, 0x200, true } })
+    {
+      std::vector<pdb_module_info> modules;
+      std::vector<gdb::byte_vector> streams;
+      two_modules (&modules, &streams);
+      modules[0].sc_section = modules[1].sc_section = 1;
+      modules[0].sc_offset = l.a_offset;
+      modules[0].sc_size = l.a_size;
+      modules[1].sc_offset = l.b_offset;
+      modules[1].sc_size = l.b_size;
+      if (l.b_first)
+	{
+	  std::swap (modules[0], modules[1]);
+	  std::swap (streams[0], streams[1]);
+	}
+
+      with_modules (modules, streams, [] (pdb_per_objfile *)
+	{
+	  SELF_CHECK (line_at (0x140001000) == std::make_pair (10,
+							std::string ("a.cpp")));
+	  SELF_CHECK (line_at (0x140001080) == std::make_pair (30,
+							std::string ("b.cpp")));
+	  SELF_CHECK (line_at (0x140001100) == std::make_pair (20,
+							std::string ("a.cpp")));
+	});
+    }
+}
+
 /* Test that a damaged module costs only its own symbols and lines.  Build two
    modules, the C13 size of one overflowing its stream, and check that it is
    skipped and the other keeps its own.  Check also that a line whose section
@@ -3087,6 +3318,7 @@ test_bad_module ()
      building the streams.  */
   test_pdb file;
   file.streams.resize (5);
+  file.streams[PDB_STREAM_TPI] = test_tpi ().stream ();
   for (size_t i = 0; i < 2; i++)
     {
       modules[i].stream_number = file.streams.size ();
@@ -3100,12 +3332,16 @@ test_bad_module ()
     return;
   r.pdb->string_table = (const gdb_byte *) test_names;
   r.pdb->string_table_size = sizeof test_names;
+  pdb_read_tpi_stream (r.pdb);
   r.pdb->modules = std::move (modules);
   SELF_CHECK (pdb_build_module (r.pdb, &r.pdb->modules[0]) == nullptr);
   SELF_CHECK (pdb_build_module (r.pdb, &r.pdb->modules[1]) != nullptr);
   SELF_CHECK (line_at (0x140001080) == std::make_pair (30,
 						       std::string ("b.cpp")));
   SELF_CHECK (line_at (0x140001000).first == 0);
+  SELF_CHECK (find_symbol_for_pc (0x140001080) != nullptr
+	      && strcmp (find_symbol_for_pc (0x140001080)->search_name (),
+			 "bmid()") == 0);
 
   /* Map a line block at section offset 0xfffffff0 whose row is 0x20 bytes in.
      The sum is not a 32-bit section offset.  */
@@ -3253,7 +3489,12 @@ test_code_contribs ()
   modules[0].sc_size = 0x10;
   std::vector<gdb::byte_vector> streams { m.stream (&modules[0]) };
 
-  with_modules (modules, streams, [] (pdb_per_objfile *pdb)
+  auto setup = [] (pdb_per_objfile *pdb)
+    {
+      pdb->code_contribs = { { 1, 0, 0, 0x10 }, { 1, 0, 0x200, 0x10 } };
+    };
+  test_read_modules (modules, streams, test_tpi (), setup,
+		     [] (pdb_per_objfile *pdb)
     {
       SELF_CHECK (pdb_module_at_pc (pdb, 0x140001000) == &pdb->modules[0]);
       SELF_CHECK (pdb_module_at_pc (pdb, 0x140001208) == &pdb->modules[0]);
@@ -3266,11 +3507,180 @@ test_code_contribs ()
 	    if (lt->item[i].pc (pdb->objfile) == 0x140001200)
 	      found = lt->item[i].line == 40;
       SELF_CHECK (found);
-    },
-    [] (pdb_per_objfile *pdb)
-      {
-	pdb->code_contribs = { { 1, 0, 0, 0x10 }, { 1, 0, 0x200, 0x10 } };
-      });
+    });
+}
+
+/* Return the function named NAME among the global and static symbols of
+   OBJFILE's compunits, or null.  */
+
+static symbol *
+function_named (objfile *objfile, const char *name)
+{
+  for (compunit_symtab &cust : objfile->compunits ())
+    for (const block *b : std::initializer_list<const block *>
+	   { cust.blockvector ()->global_block (),
+	     cust.blockvector ()->static_block () })
+      for (symbol *sym : block_iterator_range (b))
+	if (sym->loc_class () == LOC_BLOCK
+	    && strcmp (sym->search_name (), name) == 0)
+	  return sym;
+  return nullptr;
+}
+
+/* Test that a procedure whose code runs past the end of its section is
+   not read, so that it does not claim the addresses of other code.  Build
+   one procedure longer than the section, one that starts inside it and
+   ends past it, and one after them.  Check that only the last is read.  */
+
+static void
+test_procedure_range ()
+{
+  test_module m;
+  m.procedure ("huge", 1, 0x10, 0xffffffff);
+  m.procedure ("past", 1, 0xff8, 0x10);
+  m.procedure ("fine", 1, 0x100, 0x10);
+
+  std::vector<pdb_module_info> modules (1);
+  modules[0].module_name = (char *) "a.obj";
+  modules[0].sc_section = 1;
+  modules[0].sc_size = 0x1000;
+  std::vector<gdb::byte_vector> streams { m.stream (&modules[0]) };
+
+  with_modules (modules, streams, [] (pdb_per_objfile *pdb)
+    {
+      SELF_CHECK (function_named (pdb->objfile, "fine()") != nullptr);
+      SELF_CHECK (function_named (pdb->objfile, "huge()") == nullptr);
+      SELF_CHECK (function_named (pdb->objfile, "past()") == nullptr);
+      SELF_CHECK (find_symbol_for_pc (0x140001020) == nullptr);
+      SELF_CHECK (find_symbol_for_pc (0x140001ffc) == nullptr);
+    });
+}
+
+/* Test that a procedure takes its linkage name from its own public, not
+   from that of another function.  Identical code folding leaves several
+   functions at one address, each with its own decorated public there.  */
+
+static void
+test_folded_publics ()
+{
+  test_module m;
+  m.procedure ("alpha", 1, 0, 0x10);
+  m.procedure ("beta", 1, 0, 0x10);
+
+  std::vector<pdb_module_info> modules (1);
+  modules[0].module_name = (char *) "a.obj";
+  modules[0].sc_section = 1;
+  modules[0].sc_size = 0x10;
+  std::vector<gdb::byte_vector> streams { m.stream (&modules[0]) };
+
+  auto setup = [] (pdb_per_objfile *pdb)
+    {
+      pdb_publics_at &pubs = pdb->pub_mangled_names[0x140001000];
+      pubs.add ("?alpha@@YAXXZ");
+      pubs.add ("?beta@@YAXXZ");
+    };
+  test_read_modules (modules, streams, test_tpi (), setup,
+		     [] (pdb_per_objfile *pdb)
+    {
+      symbol *alpha = function_named (pdb->objfile, "alpha()");
+      symbol *beta = function_named (pdb->objfile, "beta()");
+      SELF_CHECK (alpha != nullptr
+		  && strcmp (alpha->linkage_name (), "?alpha@@YAXXZ") == 0);
+      SELF_CHECK (beta != nullptr
+		  && strcmp (beta->linkage_name (), "?beta@@YAXXZ") == 0);
+    });
+}
+
+/* Test that two functions of one signature that do not return
+   (CV_PFLAG_NEVER) share the marked copy of their type, and that a
+   function of the signature that returns does not have it.  */
+
+static void
+test_no_return ()
+{
+  test_tpi tpi;
+  uint32_t sig = tpi.procedure (3, tpi.arglist ({}), 0);
+
+  test_module m;
+  /* CV_PFLAG_NEVER.  */
+  const uint8_t never = 0x08;
+  m.procedure ("quit1", 1, 0, 0x10, sig, never);
+  m.procedure ("quit2", 1, 0x10, 0x10, sig, never);
+  m.procedure ("back", 1, 0x20, 0x10, sig);
+
+  std::vector<pdb_module_info> modules (1);
+  modules[0].module_name = (char *) "a.obj";
+  modules[0].sc_section = 1;
+  modules[0].sc_size = 0x30;
+  std::vector<gdb::byte_vector> streams { m.stream (&modules[0]) };
+
+  test_read_modules (modules, streams, tpi, nullptr,
+		     [] (pdb_per_objfile *pdb)
+    {
+      symbol *quit1 = function_named (pdb->objfile, "quit1()");
+      symbol *quit2 = function_named (pdb->objfile, "quit2()");
+      symbol *back = function_named (pdb->objfile, "back()");
+      SELF_CHECK (quit1 != nullptr && quit2 != nullptr && back != nullptr);
+      SELF_CHECK (TYPE_NO_RETURN (quit1->type ())
+		  && quit1->type () == quit2->type ());
+      SELF_CHECK (!TYPE_NO_RETURN (back->type ())
+		  && back->type () != quit1->type ());
+    });
+}
+
+/* Test that a module whose symbol stream is shorter than its 4-byte
+   signature has no symbols to read.  */
+
+static void
+test_short_symbols ()
+{
+  std::vector<pdb_module_info> modules (1);
+  modules[0].module_name = (char *) "a.obj";
+  modules[0].sc_section = 1;
+  modules[0].sc_size = 0x10;
+  modules[0].sym_byte_size = 2;
+  std::vector<gdb::byte_vector> streams { gdb::byte_vector (2, 0) };
+
+  test_read_modules (modules, streams, test_tpi (), nullptr,
+		     [] (pdb_per_objfile *pdb)
+    {
+      SELF_CHECK (pdb->modules[0].cu == nullptr);
+    });
+}
+
+/* Test that a malformed TPI header costs the types, not the PDB.  Build a
+   header whose TypeIndexBegin is other than 0x1000.  Check that it leaves
+   no type record, that the built-in types still resolve and that a
+   record's index gives the unsupported type.  */
+
+static void
+test_bad_tpi ()
+{
+  test_tpi tpi;
+  uint32_t proc = tpi.procedure (0x74, tpi.arglist ({}), 0);
+
+  for (bool bad : { false, true })
+    {
+      gdb::byte_vector stream = tpi.stream ();
+      /* Write a bad TypeIndexBegin, 8 bytes into the header.  */
+      if (bad)
+	put_u32 (stream, 8, 0x2000);
+
+      test_pdb file;
+      file.streams.resize (5);
+      file.streams[PDB_STREAM_TPI] = stream;
+      file.build ();
+      test_module_reader r (file, 1);
+      if (r.pdb == nullptr)
+	return;
+
+      pdb_read_tpi_or_none (r.pdb);
+      SELF_CHECK (r.pdb->tpi.type_cache != nullptr);
+      SELF_CHECK ((r.pdb->tpi.type_idx_end == 0) == bad);
+      SELF_CHECK (pdb_tpi_resolve_type (r.pdb, 0x74).code () == TYPE_CODE_INT);
+      type_code code = pdb_tpi_resolve_type (r.pdb, proc).code ();
+      SELF_CHECK (code == (bad ? TYPE_CODE_ERROR : TYPE_CODE_FUNC));
+    }
 }
 
 } /* namespace pdb::selftests */
@@ -3285,8 +3695,8 @@ INIT_GDB_FILE (pdb_read)
 Set debugging of the PDB reader."), _("\
 Show debugging of the PDB reader."), _("\
 When enabled (non-zero), debugging messages are printed during PDB\n\
-reading and symtab expansion.  A value of 2 also traces PC lookups and\n\
-source path conversion."),
+reading and symtab expansion.  A value of 2 also traces symbol lookups\n\
+and source path conversion."),
 			     nullptr, nullptr, &setdebuglist, &showdebuglist);
 
 #if GDB_SELF_TEST
@@ -3310,6 +3720,8 @@ source path conversion."),
 			      pdb::selftests::test_names_stream);
   ::selftests::register_test ("pdb-dbi-substreams",
 			      pdb::selftests::test_dbi_substreams);
+  ::selftests::register_test ("pdb-module-bounds",
+			      pdb::selftests::test_module_bounds);
   ::selftests::register_test ("pdb-bad-module",
 			      pdb::selftests::test_bad_module);
   ::selftests::register_test ("pdb-line-order",
@@ -3322,5 +3734,15 @@ source path conversion."),
 			      pdb::selftests::test_bad_file);
   ::selftests::register_test ("pdb-code-contribs",
 			      pdb::selftests::test_code_contribs);
+  ::selftests::register_test ("pdb-procedure-range",
+			      pdb::selftests::test_procedure_range);
+  ::selftests::register_test ("pdb-folded-publics",
+			      pdb::selftests::test_folded_publics);
+  ::selftests::register_test ("pdb-no-return",
+			      pdb::selftests::test_no_return);
+  ::selftests::register_test ("pdb-short-symbols",
+			      pdb::selftests::test_short_symbols);
+  ::selftests::register_test ("pdb-bad-tpi",
+			      pdb::selftests::test_bad_tpi);
 #endif
 }

@@ -39,6 +39,8 @@
   ** Line tables.  Source file paths that MSYS2 tools recorded are
      converted to Windows paths; the MSYS2_ROOT environment variable
      names the MSYS2 root directory.
+  ** Functions and their prototypes, except for functions recorded by id
+     (S_GPROC32_ID, S_LPROC32_ID), whose type is unknown.
 
   GDB reads every module of the PDB when it loads the PDB.
 
