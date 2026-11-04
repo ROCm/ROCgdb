@@ -40,7 +40,7 @@ require no_optimized_code
 standard_testfile .cpp
 
 if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
-    return -1
+    return
 }
 
 # Test printing PRINT_WHAT for each lane.  There are only two lanes in
