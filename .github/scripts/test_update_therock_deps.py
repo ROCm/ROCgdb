@@ -524,6 +524,75 @@ class TestGetBuildDigest(unittest.TestCase):
             m.get_build_digest()
         self.assertIn("'created'", str(ctx.exception))
 
+    def _index_resp(self, image_digest, with_amd64=True):
+        manifests = [
+            {
+                "digest": "sha256:" + "9" * 64,
+                "platform": {"architecture": "unknown", "os": "unknown"},
+            }
+        ]
+        if with_amd64:
+            manifests.insert(
+                0,
+                {
+                    "digest": image_digest,
+                    "platform": {"architecture": "amd64", "os": "linux"},
+                },
+            )
+        return _make_response(
+            {
+                "mediaType": "application/vnd.oci.image.index.v1+json",
+                "manifests": manifests,
+            },
+            headers={"Docker-Content-Digest": DIGEST},
+        )
+
+    @patch("update_therock_deps.urlopen_with_retry")
+    def test_index_follows_amd64_manifest(self, mock_open):
+        img = "sha256:" + "a" * 64
+        mock_open.side_effect = [
+            self._token_resp(),
+            self._index_resp(img),
+            self._manifest_resp(image_digest=img),
+            self._config_blob_resp(),
+        ]
+        digest, created = m.get_build_digest()
+        # Pins the index digest, not the child image digest.
+        self.assertEqual(digest, DIGEST)
+        self.assertEqual(created, "2026-07-27T09:37:30.626203739Z")
+        child_req = mock_open.call_args_list[2].args[0]
+        self.assertTrue(child_req.full_url.endswith(f"/manifests/{img}"))
+
+    @patch("update_therock_deps.urlopen_with_retry")
+    def test_index_no_timestamp_skips_child_fetch(self, mock_open):
+        mock_open.side_effect = [
+            self._token_resp(),
+            self._index_resp("sha256:" + "a" * 64),
+        ]
+        digest, created = m.get_build_digest(fetch_timestamp=False)
+        self.assertEqual(digest, DIGEST)
+        self.assertIsNone(created)
+        self.assertEqual(mock_open.call_count, 2)
+
+    @patch("update_therock_deps.urlopen_with_retry")
+    def test_index_without_amd64_raises(self, mock_open):
+        mock_open.side_effect = [
+            self._token_resp(),
+            self._index_resp("sha256:" + "a" * 64, with_amd64=False),
+        ]
+        with self.assertRaises(ValueError) as ctx:
+            m.get_build_digest()
+        self.assertIn("linux/amd64", str(ctx.exception))
+
+    @patch("update_therock_deps.urlopen_with_retry")
+    def test_accept_header_includes_index_types(self, mock_open):
+        mock_open.side_effect = [self._token_resp(), self._manifest_resp()]
+        m.get_build_digest(fetch_timestamp=False)
+        req = mock_open.call_args_list[1].args[0]
+        accept = req.get_header("Accept")
+        self.assertIn("application/vnd.oci.image.index.v1+json", accept)
+        self.assertIn("application/vnd.oci.image.manifest.v1+json", accept)
+
     @patch("update_therock_deps.urlopen_with_retry")
     def test_nanosecond_precision_preserved(self, mock_open):
         ts = "2026-07-27T09:37:30.626203739Z"
