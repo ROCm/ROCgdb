@@ -24,10 +24,10 @@ shift 3
 
 major=$("$prog" --version \
 	    | grep "GNU texinfo" \
-	    | sed 's/^.* \([0-9][0-9]*\)\.[0-9][0-9]*\(.*\)\?$/\1/')
+	    | sed 's/^.* \([0-9][0-9]*\)\.[0-9][0-9]*.*$/\1/')
 minor=$("$prog" --version \
 	    | grep "GNU texinfo" \
-	    | sed 's/^.* [0-9][0-9]*\.\([0-9][0-9]*\)\(.*\)\?$/\1/')
+	    | sed 's/^.* [0-9][0-9]*\.\([0-9][0-9]*\).*$/\1/')
 
 if [ "$major" = "" ] || [ "$major" = "" ]; then
     echo "Cannot determine makeinfo version for $prog.  Info documentation will not be build."
