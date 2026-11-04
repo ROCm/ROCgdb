@@ -42,6 +42,18 @@ BRANCH_PREFIX = "users/github/update-therock-refs"
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
+INDEX_MEDIA_TYPES = (
+    "application/vnd.oci.image.index.v1+json",
+    "application/vnd.docker.distribution.manifest.list.v2+json",
+)
+MANIFEST_ACCEPT = ",".join(
+    (
+        "application/vnd.docker.distribution.manifest.v2+json",
+        "application/vnd.oci.image.manifest.v1+json",
+        *INDEX_MEDIA_TYPES,
+    )
+)
+
 MAX_RETRIES = 3  # number of retries for network requests
 
 # Never pass secrets as CLI args — use env vars (e.g. GH_TOKEN) instead.
@@ -197,7 +209,9 @@ def get_build_digest(fetch_timestamp: bool = True) -> tuple[str, str | None]:
     """Return (digest, build_created) for the latest build container image.
 
     Uses the OCI Distribution API directly — no external tools required.
-    The digest comes from the Docker-Content-Digest response header.
+    The digest comes from the Docker-Content-Digest response header.  If the tag
+    resolves to an OCI index (e.g. with buildx attestations), that index digest is
+    returned and the linux/amd64 manifest is followed to reach the config blob.
     The image creation timestamp comes from the OCI config blob's 'created' field.
 
     If fetch_timestamp is False, the config blob is not fetched and None is returned
@@ -217,25 +231,45 @@ def get_build_digest(fetch_timestamp: bool = True) -> tuple[str, str | None]:
         )
 
     auth_header = {"Authorization": f"Bearer {token}"}
-    req = urllib.request.Request(
-        f"https://ghcr.io/v2/{image_path}/manifests/latest",
-        headers={
-            **auth_header,
-            "Accept": (
-                "application/vnd.docker.distribution.manifest.v2+json,"
-                "application/vnd.oci.image.manifest.v1+json"
-            ),
-        },
-    )
-    with urlopen_with_retry(req) as resp:
-        digest = resp.headers.get("Docker-Content-Digest", "")
-        manifest = json.loads(resp.read())
+
+    def fetch_manifest(reference: str) -> tuple[str, dict]:
+        # The Accept header must list index types too.  GHCR answers 404
+        # MANIFEST_UNKNOWN for a tag that resolves to an OCI index (as produced
+        # when buildx attaches provenance attestations) if they are missing.
+        req = urllib.request.Request(
+            f"https://ghcr.io/v2/{image_path}/manifests/{reference}",
+            headers={**auth_header, "Accept": MANIFEST_ACCEPT},
+        )
+        with urlopen_with_retry(req) as resp:
+            return resp.headers.get("Docker-Content-Digest", ""), json.loads(
+                resp.read()
+            )
+
+    # Pin the digest of what the tag points to (the index, if it is one), since
+    # that is the reference users pull.
+    digest, manifest = fetch_manifest("latest")
 
     if not DIGEST_RE.match(digest):
         raise ValueError(f"Invalid build image digest received: {digest!r}")
 
     if not fetch_timestamp:
         return digest, None
+
+    if manifest.get("mediaType") in INDEX_MEDIA_TYPES or "manifests" in manifest:
+        # Pick the real image, skipping attestation manifests (platform
+        # "unknown/unknown") that buildx adds next to it.
+        image_digest = next(
+            (
+                entry.get("digest")
+                for entry in manifest.get("manifests") or []
+                if (entry.get("platform") or {}).get("os") == "linux"
+                and (entry.get("platform") or {}).get("architecture") == "amd64"
+            ),
+            None,
+        )
+        if not image_digest or not DIGEST_RE.match(image_digest):
+            raise ValueError("Image index has no linux/amd64 manifest")
+        _, manifest = fetch_manifest(image_digest)
 
     config_digest = (manifest.get("config") or {}).get("digest")
     if not config_digest:
