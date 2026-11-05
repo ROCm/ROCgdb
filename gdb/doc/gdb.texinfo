@@ -28426,6 +28426,8 @@ most hosts defaulting to @samp{on}.
 
 If the @env{NO_COLOR} environment variable is set to a non-empty
 value, then @value{GDBN} will change this to @samp{off} at startup.
+See @url{https://no-color.org/} for more information on
+@env{NO_COLOR}.
 
 @item show style enabled
 Show the current state of styling.
@@ -28565,34 +28567,8 @@ So, use @command{show style} to see the complete list of styles,
 their characteristics and the visual aspect of each style.
 
 The style-able objects are:
+
 @table @code
-@item command
-Control the styling of any @value{GDBN} commands that are displayed by
-@value{GDBN}.  By default, this style's intensity is bold.
-
-@item filename
-Control the styling of file names and URLs.  By default, this style's
-foreground color is green.
-
-@item function
-Control the styling of function names.  These are managed with the
-@code{set style function} family of commands.  By default, this
-style's foreground color is yellow.
-
-This style is also used for symbol names in styled disassembler output
-if @value{GDBN} is using its builtin disassembler library for styling
-(@pxref{style_disassembler_enabled,,@kbd{set style disassembler
-enabled}}).
-
-@item line-number
-Control the styling of line numbers.  By default, this style's
-intensity is dim.
-
-@item variable
-Control the styling of variable names.  These are managed with the
-@code{set style variable} family of commands.  By default, this style's
-foreground color is cyan.
-
 @item address
 Control the styling of addresses.  These are managed with the
 @code{set style address} family of commands.  By default, this style's
@@ -28603,52 +28579,13 @@ if @value{GDBN} is using its builtin disassembler library for styling
 (@pxref{style_disassembler_enabled,,@kbd{set style disassembler
 enabled}}).
 
-@item version
-Control the styling of @value{GDBN}'s version number text.  By
-default, this style's foreground color is magenta and it has bold
-intensity.  The version number is displayed in two places, the output
-of @command{show version}, and when @value{GDBN} starts up.
+@item command
+Control the styling of any @value{GDBN} commands that are displayed by
+@value{GDBN}.  By default, this style's intensity is bold.
 
-In order to control how @value{GDBN} styles the version number at
-startup, add the @code{set style version} family of commands to the
-early initialization command file (@pxref{Initialization
-Files}).
-
-@item title
-Control the styling of titles.  These are managed with the
-@code{set style title} family of commands.  By default, this style's
-intensity is bold.  The title style is used when displaying the header
-line of a list, for example the first line of the output of
-@code{info breakpoints} (@pxref{Set Breaks}).
-
-@item highlight
-Control the styling of highlightings.  These are managed with the
-@code{set style highlight} family of commands.  By default, this style's
-foreground color is red.  Commands are using the highlight style to draw
-the user attention to some specific parts of their output.  For example,
-the command @command{apropos -v REGEXP} uses the highlight style to
-mark the documentation parts matching @var{regexp}.
-
-@item metadata
-Control the styling of data annotations added by @value{GDBN} to data
-it displays.  By default, this style's intensity is dim.  Metadata
-annotations include the @samp{repeats @var{n} times} annotation for
-suppressed display of repeated array elements (@pxref{Print Settings}),
-@samp{<unavailable>} and @w{@samp{<error @var{descr}>}} annotations
-for errors and @samp{<optimized-out>} annotations for optimized-out
-values in displaying stack frame information in backtraces
-(@pxref{Backtrace}), etc.
-
-@item tui-border
-Control the styling of the TUI border.  Note that, unlike other
-styling options, only the color of the border can be controlled via
-@code{set style}.  This was done for compatibility reasons, as TUI
-controls to set the border's intensity predated the addition of
-general styling to @value{GDBN}.  @xref{TUI Configuration}.
-
-@item tui-active-border
-Control the styling of the active TUI border; that is, the TUI window
-that has the focus.
+@item disassembler address
+Control the styling of address operands in the disassembler output.
+This is an alias for the @samp{address} style.
 
 @item disassembler comment
 Control the styling of comments in the disassembler output.  These are
@@ -28668,14 +28605,6 @@ style is used.  This style is only used when @value{GDBN} is styling
 using its builtin disassembler library.  By default, this style's
 foreground color is blue.
 
-@item disassembler address
-Control the styling of address operands in the disassembler output.
-This is an alias for the @samp{address} style.
-
-@item disassembler symbol
-Control the styling of symbol names in the disassembler output.  This
-is an alias for the @samp{function} style.
-
 @item disassembler mnemonic
 Control the styling of instruction mnemonics in the disassembler
 output.  These are managed with the @code{set style disassembler
@@ -28690,6 +28619,80 @@ These are managed with the @code{set style disassembler register}
 family of commands.  This style is only used when @value{GDBN} is
 styling using its builtin disassembler library.  By default, this style's
 foreground color is red.
+
+@item disassembler symbol
+Control the styling of symbol names in the disassembler output.  This
+is an alias for the @samp{function} style.
+
+@item filename
+Control the styling of file names and URLs.  By default, this style's
+foreground color is green.
+
+@item function
+Control the styling of function names.  These are managed with the
+@code{set style function} family of commands.  By default, this
+style's foreground color is yellow.
+
+This style is also used for symbol names in styled disassembler output
+if @value{GDBN} is using its builtin disassembler library for styling
+(@pxref{style_disassembler_enabled,,@kbd{set style disassembler
+enabled}}).
+
+@item highlight
+Control the styling of highlightings.  These are managed with the
+@code{set style highlight} family of commands.  By default, this style's
+foreground color is red.  Commands are using the highlight style to draw
+the user attention to some specific parts of their output.  For example,
+the command @command{apropos -v REGEXP} uses the highlight style to
+mark the documentation parts matching @var{regexp}.
+
+@item line-number
+Control the styling of line numbers.  By default, this style's
+intensity is dim.
+
+@item metadata
+Control the styling of data annotations added by @value{GDBN} to data
+it displays.  By default, this style's intensity is dim.  Metadata
+annotations include the @samp{repeats @var{n} times} annotation for
+suppressed display of repeated array elements (@pxref{Print Settings}),
+@samp{<unavailable>} and @w{@samp{<error @var{descr}>}} annotations
+for errors and @samp{<optimized-out>} annotations for optimized-out
+values in displaying stack frame information in backtraces
+(@pxref{Backtrace}), etc.
+
+@item title
+Control the styling of titles.  These are managed with the
+@code{set style title} family of commands.  By default, this style's
+intensity is bold.  The title style is used when displaying the header
+line of a list, for example the first line of the output of
+@code{info breakpoints} (@pxref{Set Breaks}).
+
+@item tui-active-border
+Control the styling of the active TUI border; that is, the TUI window
+that has the focus.
+
+@item tui-border
+Control the styling of the TUI border.  Note that, unlike other
+styling options, only the color of the border can be controlled via
+@code{set style}.  This was done for compatibility reasons, as TUI
+controls to set the border's intensity predated the addition of
+general styling to @value{GDBN}.  @xref{TUI Configuration}.
+
+@item variable
+Control the styling of variable names.  These are managed with the
+@code{set style variable} family of commands.  By default, this style's
+foreground color is cyan.
+
+@item version
+Control the styling of @value{GDBN}'s version number text.  By
+default, this style's foreground color is magenta and it has bold
+intensity.  The version number is displayed in two places, the output
+of @command{show version}, and when @value{GDBN} starts up.
+
+In order to control how @value{GDBN} styles the version number at
+startup, add the @code{set style version} family of commands to the
+early initialization command file (@pxref{Initialization
+Files}).
 
 @end table
 
