@@ -9507,7 +9507,7 @@ without the additional information supplied by dllimport/dllexport decorations.
 The standard auto-import feature described above is unable to resolve these
 references.
 
-The @samp{--enable-runtime-pseudo-relocs} switch allows these references to
+The @samp{--enable-runtime-pseudo-reloc} switch allows these references to
 be resolved without error, while leaving the task of adjusting the references
 themselves (with their non-zero addends) to specialized code provided by the
 runtime environment.  Recent versions of the cygwin and mingw environments and
@@ -9515,8 +9515,7 @@ compilers provide this runtime support; older versions do not.  However, the
 support is only necessary on the developer's platform; the compiled result will
 run without error on an older system.
 
-@samp{--enable-runtime-pseudo-relocs} is not the default; it must be explicitly
-enabled as needed.
+@samp{--enable-runtime-pseudo-reloc} is the default for recent linker versions.
 
 @cindex direct linking to a dll
 @item direct linking to a dll
@@ -9618,7 +9617,7 @@ lib/
 
 Linking directly to a dll without using an import lib will work
 even when auto-import features are exercised, and even when
-@samp{--enable-runtime-pseudo-relocs} is used.
+@samp{--enable-runtime-pseudo-reloc} is used.
 
 Given the improvements in speed and memory usage, one might justifiably
 wonder why import libraries are used at all.  There are three reasons:
