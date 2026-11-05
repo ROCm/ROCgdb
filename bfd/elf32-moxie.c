@@ -219,7 +219,7 @@ moxie_elf_relocate_section (struct bfd_link_info *info,
     {
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h;
       bfd_vma relocation;
@@ -311,48 +311,6 @@ moxie_elf_relocate_section (struct bfd_link_info *info,
   return true;
 }
 
-/* Look through the relocs for a section during the first phase.
-   Since we don't do .gots or .plts, we just need to consider the
-   virtual table relocs for gc.  */
-
-static bool
-moxie_elf_check_relocs (bfd *abfd,
-			struct bfd_link_info *info,
-			asection *sec,
-			const Elf_Internal_Rela *relocs)
-{
-  Elf_Internal_Shdr *symtab_hdr;
-  struct elf_link_hash_entry **sym_hashes;
-  const Elf_Internal_Rela *rel;
-  const Elf_Internal_Rela *rel_end;
-
-  if (bfd_link_relocatable (info))
-    return true;
-
-  symtab_hdr = &elf_symtab_hdr (abfd);
-  sym_hashes = elf_sym_hashes (abfd);
-
-  rel_end = relocs + sec->reloc_count;
-  for (rel = relocs; rel < rel_end; rel++)
-    {
-      struct elf_link_hash_entry *h;
-      unsigned long r_symndx;
-
-      r_symndx = ELF32_R_SYM (rel->r_info);
-      if (r_symndx < symtab_hdr->sh_info)
-	h = NULL;
-      else
-	{
-	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	  while (h->root.type == bfd_link_hash_indirect
-		 || h->root.type == bfd_link_hash_warning)
-	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
-	}
-    }
-
-  return true;
-}
-
 #define ELF_ARCH		bfd_arch_moxie
 #define ELF_MACHINE_CODE	EM_MOXIE
 #define ELF_MACHINE_ALT1	EM_MOXIE_OLD
@@ -366,7 +324,6 @@ moxie_elf_check_relocs (bfd *abfd,
 #define elf_info_to_howto_rel			NULL
 #define elf_info_to_howto			moxie_info_to_howto_rela
 #define elf_backend_relocate_section		moxie_elf_relocate_section
-#define elf_backend_check_relocs		moxie_elf_check_relocs
 
 #define elf_backend_can_gc_sections		1
 #define elf_backend_rela_normal			1

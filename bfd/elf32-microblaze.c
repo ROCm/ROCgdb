@@ -1061,7 +1061,7 @@ microblaze_elf_relocate_section (struct bfd_link_info *info,
       bfd_vma addend = rel->r_addend;
       bfd_vma offset = rel->r_offset;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       asection *sym_sec;
       const char *sym_name;
@@ -1906,7 +1906,8 @@ microblaze_elf_relax_section (bfd *abfd,
 	goto error_return;
     }
 
-  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL, link_info->keep_memory);
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+					       link_info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
   if (! link_info->keep_memory)
@@ -2657,10 +2658,7 @@ microblaze_elf_check_relocs (bfd * abfd,
 		  head = &h->dyn_relocs;
 		else
 		  {
-		    /* Track dynamic relocs needed for local syms too.
-		       We really need local syms available to do this
-		       easily.  Oh well.  */
-
+		    /* Track dynamic relocs needed for local syms too.  */
 		    asection *s;
 		    Elf_Internal_Sym *isym;
 		    void *vpp;

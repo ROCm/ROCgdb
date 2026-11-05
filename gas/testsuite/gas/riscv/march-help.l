@@ -175,10 +175,10 @@ All available -march extensions for RISC-V:
 	supm                                    1.0
 	xandesbfhcvt                            5.0
 	xandesvbfhcvt                           5.0
-	xandesvsintload                         5.0
-	xandesvpackfph                          5.0
 	xandesvdot                              5.0
+	xandesvpackfph                          5.0
 	xandesvsinth                            5.0
+	xandesvsintload                         5.0
 	xcvalu                                  1.0
 	xcvbi                                   1.0
 	xcvbitmanip                             1.0
@@ -186,6 +186,17 @@ All available -march extensions for RISC-V:
 	xcvmac                                  1.0
 	xcvmem                                  1.0
 	xcvsimd                                 1.0
+	xmipscbop                               1.0
+	xmipscmov                               1.0
+	xmipsexectl                             1.0
+	xmipslsp                                1.0
+	xsfcease                                1.0
+	xsfvcp                                  1.0
+	xsfvfnrclipxfqf                         1.0
+	xsfvqmaccdod                            1.0
+	xsfvqmaccqoq                            1.0
+	xsmtvdot                                1.0
+	xsmtvdotii                              1.0
 	xtheadba                                1.0
 	xtheadbb                                1.0
 	xtheadbs                                1.0
@@ -198,20 +209,9 @@ All available -march extensions for RISC-V:
 	xtheadmemidx                            1.0
 	xtheadmempair                           1.0
 	xtheadsync                              1.0
-	xtheadvector                            1.0
 	xtheadvdot                              1.0
+	xtheadvector                            1.0
 	xtheadzvamo                             1.0
+	xventanacondops                         1.0
 	xxtvarith                               1.0
 	xxtvcoder                               1.0
-	xventanacondops                         1.0
-	xsfvcp                                  1.0
-	xsfcease                                1.0
-	xsfvqmaccqoq                            1.0
-	xsfvqmaccdod                            1.0
-	xsfvfnrclipxfqf                         1.0
-	xmipscbop                               1.0
-	xmipscmov                               1.0
-	xmipsexectl                             1.0
-	xmipslsp                                1.0
-	xsmtvdot                                1.0
-	xsmtvdotii                              1.0

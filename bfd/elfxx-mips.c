@@ -7348,8 +7348,8 @@ _bfd_mips_elf_eh_frame_address_size (bfd *abfd, const asection *sec)
       if (sec->reloc_count > 0)
 	{
 	  /* Load the relocations for this section.  */
-	  Elf_Internal_Rela *internal_relocs =
-	    _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL, true);
+	  Elf_Internal_Rela *internal_relocs
+	    = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL, true);
 	  if (internal_relocs == NULL)
 	    return 0;
 
@@ -8566,9 +8566,8 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		  || section_allows_mips16_refs_p (o))
 		continue;
 
-	      sec_relocs
-		= _bfd_elf_link_read_relocs (abfd, o, NULL, NULL,
-					     info->keep_memory);
+	      sec_relocs = _bfd_elf_link_read_relocs (abfd, o, NULL, NULL,
+						      info->keep_memory);
 	      if (sec_relocs == NULL)
 		return false;
 
@@ -8692,9 +8691,8 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		  || section_allows_mips16_refs_p (o))
 		continue;
 
-	      sec_relocs
-		= _bfd_elf_link_read_relocs (abfd, o, NULL, NULL,
-					     info->keep_memory);
+	      sec_relocs = _bfd_elf_link_read_relocs (abfd, o, NULL, NULL,
+						      info->keep_memory);
 	      if (sec_relocs == NULL)
 		return false;
 
@@ -8794,15 +8792,6 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
       if (r_symndx < extsymoff)
 	h = NULL;
-      else if (r_symndx >= extsymoff + NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  _bfd_error_handler
-	    /* xgettext:c-format */
-	    (_("%pB: malformed reloc detected for section %s"),
-	     abfd, name);
-	  bfd_set_error (bfd_error_bad_value);
-	  return false;
-	}
       else
 	{
 	  h = sym_hashes[r_symndx - extsymoff];
@@ -14141,9 +14130,8 @@ _bfd_mips_elf_relax_section (bfd *abfd, asection *sec,
   symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, sec, NULL, (Elf_Internal_Rela *) NULL,
-		      link_info->keep_memory));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+					       link_info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
 

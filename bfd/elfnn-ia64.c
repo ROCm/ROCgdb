@@ -384,9 +384,8 @@ elfNN_ia64_relax_section (bfd *abfd, asection *sec,
   symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Load the relocations for this section.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, sec, NULL, (Elf_Internal_Rela *) NULL,
-		      link_info->keep_memory));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+					       link_info->keep_memory);
   if (internal_relocs == NULL)
     return false;
 
@@ -3805,7 +3804,7 @@ elfNN_ia64_relocate_section (struct bfd_link_info *info,
       bfd_reloc_status_type r;
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       unsigned int r_type;
       bfd_vma value;
       asection *sym_sec;

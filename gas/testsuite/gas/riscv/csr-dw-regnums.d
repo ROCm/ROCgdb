@@ -1,4 +1,4 @@
-#as: -march=rv32if -mpriv-spec=1.12
+#as: -march=rv32if
 #objdump: --dwarf=frames
 
 
@@ -409,16 +409,6 @@ Contents of the .* section:
   DW_CFA_offset_extended_sf: r4686 \(vsctrctl\) at cfa\+2360
   DW_CFA_offset_extended_sf: r4942 \(mctrctl\) at cfa\+3384
   DW_CFA_offset_extended_sf: r4113 \(ssp\) at cfa\+324
-  DW_CFA_offset_extended: r4096 \(ustatus\) at cfa\+0
-  DW_CFA_offset_extended_sf: r4100 \(uie\) at cfa\+16
-  DW_CFA_offset_extended_sf: r4101 \(utvec\) at cfa\+20
-  DW_CFA_offset_extended_sf: r4160 \(uscratch\) at cfa\+256
-  DW_CFA_offset_extended_sf: r4161 \(uepc\) at cfa\+260
-  DW_CFA_offset_extended_sf: r4162 \(ucause\) at cfa\+264
-  DW_CFA_offset_extended_sf: r4163 \(utval\) at cfa\+268
-  DW_CFA_offset_extended_sf: r4164 \(uip\) at cfa\+272
-  DW_CFA_offset_extended_sf: r4354 \(sedeleg\) at cfa\+1032
-  DW_CFA_offset_extended_sf: r4355 \(sideleg\) at cfa\+1036
   DW_CFA_offset_extended_sf: r4097 \(fflags\) at cfa\+4
   DW_CFA_offset_extended_sf: r4098 \(frm\) at cfa\+8
   DW_CFA_offset_extended_sf: r4099 \(fcsr\) at cfa\+12

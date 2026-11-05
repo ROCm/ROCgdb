@@ -752,17 +752,6 @@ struct field
   void set_virtual ()
   { m_virtual = true; }
 
-  /* True if this field is 'ignored'.  */
-  bool is_ignored () const
-  { return m_ignored; }
-
-  /* Set the field's "ignored" flag.  Note that the 'ignored' bit is
-     deprecated.  It was used by some unknown stabs generator, and has
-     been replaced by the optimized-out approach -- however, it
-     remains because the stabs reader was never updated.  */
-  void set_ignored ()
-  { m_ignored = true; }
-
   union field_location m_loc;
 
   /* For a function or member type, this is 1 if the argument is
@@ -774,8 +763,6 @@ struct field
 
   /* Whether the field is 'virtual'.  */
   bool m_virtual : 1;
-  /* Whether the field is 'ignored'.  */
-  bool m_ignored : 1;
 
   /* Discriminant for union field_location.  */
 
@@ -2528,8 +2515,6 @@ extern struct type *make_unqualified_type (struct type *);
 
 extern struct type *make_atomic_type (struct type *);
 
-extern void replace_type (struct type *, struct type *);
-
 extern struct type *make_type_with_harvard_address_space
   (struct type *type, enum harvard_address_space aspace);
 
@@ -2777,7 +2762,7 @@ extern struct type *check_typedef (struct type *);
 extern char *gdb_mangle_name (struct type *, int, int);
 
 /* Lookup a typedef or primitive type named NAME, visible in lexical block
-   BLOCK.  If NOERR is nonzero, return zero if NAME is not suitably
+   BLOCK.  If NOERR is true, return nullptr if NAME is not suitably
    defined.
 
    If this function finds a suitable type then check_typedef is called on
@@ -2785,9 +2770,8 @@ extern char *gdb_mangle_name (struct type *, int, int);
    then the length of the type will be correct.  The original typedef will
    still be returned, not the result of calling check_typedef.  */
 
-extern struct type *lookup_typename (const struct language_defn *language,
-				     const char *name,
-				     const struct block *block, int noerr);
+extern type *lookup_typename (const language_defn *language, const char *name,
+			      const block *block, bool noerr);
 
 extern struct type *lookup_template_type (const char *, struct type *,
 					  const struct block *);

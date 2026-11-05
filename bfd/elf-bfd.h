@@ -2273,6 +2273,10 @@ struct elf_obj_tdata
   /* Set if DT_FLAGS_1 has DF_1_PIE set.  */
   unsigned int is_pie : 1;
 
+  /* Set after the sym_hashes array has been assigned in
+     elf_link_input_bfd.  */
+  unsigned int sym_hashes_valid : 1;
+
   /* Information grabbed from an elf core file.  */
   struct core_elf_obj_tdata *core;
 
@@ -2315,6 +2319,8 @@ struct elf_obj_tdata
 #define elf_gp(bfd)		(elf_tdata(bfd) -> gp)
 #define elf_gp_size(bfd)	(elf_tdata(bfd) -> gp_size)
 #define elf_sym_hashes(bfd)	(elf_tdata(bfd) -> sym_hashes)
+#define elf_sym_hashes_valid(bfd) \
+				(elf_tdata(bfd) -> sym_hashes_valid)
 #define elf_loc_shndx(bfd)	(elf_tdata(bfd) -> loc_shndx)
 #define elf_local_got_refcounts(bfd) (elf_tdata(bfd) -> local_got.refcounts)
 #define elf_local_got_offsets(bfd) (elf_tdata(bfd) -> local_got.offsets)
@@ -2375,7 +2381,7 @@ extern Elf_Internal_Sym *bfd_elf_get_elf_syms
    Elf_External_Sym_Shndx *);
 extern char * bfd_elf_get_str_section (bfd *, unsigned int);
 extern const char *bfd_elf_sym_name
-  (bfd *, Elf_Internal_Shdr *, Elf_Internal_Sym *, asection *);
+  (bfd *, Elf_Internal_Shdr *, const Elf_Internal_Sym *, asection *);
 
 extern bool _bfd_elf_copy_private_bfd_data
   (bfd *, bfd *) ATTRIBUTE_HIDDEN;
@@ -2399,10 +2405,10 @@ extern enum elf_reloc_type_class _bfd_elf_reloc_type_class
   (const struct bfd_link_info *, const asection *,
    const Elf_Internal_Rela *) ATTRIBUTE_HIDDEN;
 extern bfd_vma _bfd_elf_rela_local_sym
-  (bfd *, Elf_Internal_Sym *, asection **, Elf_Internal_Rela *)
+  (bfd *, const Elf_Internal_Sym *, asection **, Elf_Internal_Rela *)
   ATTRIBUTE_HIDDEN;
 extern bfd_vma _bfd_elf_rel_local_sym
-  (bfd *, Elf_Internal_Sym *, asection **, bfd_vma) ATTRIBUTE_HIDDEN;
+  (bfd *, const Elf_Internal_Sym *, asection **, bfd_vma) ATTRIBUTE_HIDDEN;
 extern bfd_vma _bfd_elf_section_offset
   (bfd *, struct bfd_link_info *, asection *, bfd_vma) ATTRIBUTE_HIDDEN;
 
@@ -3435,11 +3441,6 @@ extern asection bfd_elf_large_com_section;
 				unresolved_reloc, warned, ignored)	\
   do									\
     {									\
-      /* It seems this can happen with erroneous or unsupported		\
-	 input (mixing a.out and elf in an archive, for example.)  */	\
-      if (sym_hashes == NULL)						\
-	return false;							\
-									\
       h = sym_hashes[r_symndx - symtab_hdr->sh_info];			\
 									\
       if (info->wrap_hash != NULL					\

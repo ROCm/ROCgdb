@@ -13021,18 +13021,11 @@ _ACEOF
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_isa_spec" >&5
 $as_echo "$with_isa_spec" >&6; }
 
-        # --with-priv-spec=[1.9.1|1.10|1.11|1.12|1.13].
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for default configuration of --with-priv-spec" >&5
-$as_echo_n "checking for default configuration of --with-priv-spec... " >&6; }
+        # --with-priv-spec is deprecated and has no effect.
         if test "x${with_priv_spec}" != x; then
-
-cat >>confdefs.h <<_ACEOF
-#define DEFAULT_RISCV_PRIV_SPEC "$with_priv_spec"
-_ACEOF
-
+          { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: --with-priv-spec is deprecated and has no effect, the privileged spec is always 1.13; use binutils 2.47 or earlier to select another version" >&5
+$as_echo "$as_me: WARNING: --with-priv-spec is deprecated and has no effect, the privileged spec is always 1.13; use binutils 2.47 or earlier to select another version" >&2;}
         fi
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_priv_spec" >&5
-$as_echo "$with_priv_spec" >&6; }
         ;;
 
       rl78)

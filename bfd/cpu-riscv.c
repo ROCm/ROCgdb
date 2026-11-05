@@ -111,38 +111,6 @@ const struct riscv_spec riscv_isa_specs[] =
   {"20191213", ISA_SPEC_CLASS_20191213},
 };
 
-/* List for all supported privileged spec versions.  */
-const struct riscv_spec riscv_priv_specs[] =
-{
-  {"1.9.1", PRIV_SPEC_CLASS_1P9P1},
-  {"1.10",  PRIV_SPEC_CLASS_1P10},
-  {"1.11",  PRIV_SPEC_CLASS_1P11},
-  {"1.12",  PRIV_SPEC_CLASS_1P12},
-  {"1.13",  PRIV_SPEC_CLASS_1P13},
-};
-
-/* Get the corresponding CSR version class by giving privilege
-   version numbers.  It is usually used to convert the priv
-   attribute numbers into the corresponding class.  */
-
-void
-riscv_get_priv_spec_class_from_numbers (unsigned int major,
-					unsigned int minor,
-					unsigned int revision,
-					enum riscv_spec_class *class)
-{
-  enum riscv_spec_class class_t = *class;
-  char buf[36];
-
-  if (revision != 0)
-    snprintf (buf, sizeof (buf), "%u.%u.%u", major, minor, revision);
-  else
-    snprintf (buf, sizeof (buf), "%u.%u", major, minor);
-
-  RISCV_GET_PRIV_SPEC_CLASS (buf, class_t);
-  *class = class_t;
-}
-
 /* Define mapping symbols for riscv.  */
 
 bool

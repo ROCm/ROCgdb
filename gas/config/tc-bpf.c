@@ -155,11 +155,11 @@ extern int target_big_endian;
 
 static int do_relax = 1;
 
-/* The ISA specification can be one of BPF_V1, BPF_V2, BPF_V3, BPF_V4
-   or BPF_XPBF.  The ISA spec to use can be configured using
+/* The ISA specification can be one of BPF_V1, BPF_V2, BPF_V3, BPF_V4,
+   BPF_V5 or BPF_XPBF.  The ISA spec to use can be configured using
    command-line options.  It defaults to the latest BPF spec.  */
 
-static int isa_spec = BPF_V4;
+static int isa_spec = BPF_V5;
 
 /* Return the name of ISA spec VERSION, as spelled in -misa-spec=.  */
 
@@ -172,6 +172,7 @@ bpf_version_name (int version)
     case BPF_V2: return "v2";
     case BPF_V3: return "v3";
     case BPF_V4: return "v4";
+    case BPF_V5: return "v5";
     case BPF_XBPF: return "xbpf";
     default: return "unknown";
     }
@@ -220,10 +221,12 @@ md_parse_option (int c, const char * arg)
         isa_spec = BPF_V3;
       else if (strcmp (arg, "v4") == 0)
         isa_spec = BPF_V4;
+      else if (strcmp (arg, "v5") == 0)
+        isa_spec = BPF_V5;
       else if (strcmp (arg, "xbpf") == 0)
         isa_spec = BPF_XBPF;
       else
-        as_fatal (_("-misa-spec=%s is not valid.  Expected v1, v2, v3, v4 o xbpf"),
+        as_fatal (_("-misa-spec=%s is not valid.  Expected v1, v2, v3, v4, v5 or xbpf"),
                   arg);
       break;
     case OPTION_XBPF:
@@ -249,7 +252,7 @@ BPF options:\n\
   -EL                         generate code for a little endian machine\n\
   -EB                         generate code for a big endian machine\n\
   -mdialect=DIALECT           set the assembly dialect (normal, pseudoc)\n\
-  -misa-spec                  set the BPF ISA spec (v1, v2, v3, v4, xbpf)\n\
+  -misa-spec                  set the BPF ISA spec (v1, v2, v3, v4, v5, xbpf)\n\
   -mxbpf                      alias for -misa-spec=xbpf\n"));
 }
 

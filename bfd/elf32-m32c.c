@@ -1330,8 +1330,6 @@ m32c_offset_for_reloc (bfd *abfd,
   return symval;
 }
 
-static int bytes_saved = 0;
-
 static int bytes_to_reloc[] = {
   R_M32C_NONE,
   R_M32C_8,
@@ -1512,9 +1510,8 @@ m32c_elf_relax_section (bfd *abfd,
     }
 
   /* Get a copy of the native relocations.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, sec, NULL, (Elf_Internal_Rela *) NULL,
-		      link_info->keep_memory));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+					       link_info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
   if (! link_info->keep_memory)
@@ -1897,8 +1894,6 @@ m32c_elf_relax_section (bfd *abfd,
 
       symtab_hdr->contents = (bfd_byte *) intsyms;
       free_intsyms = NULL;
-
-      bytes_saved += gap_size;
 
       if (! m32c_elf_relax_delete_bytes(abfd, sec, gap - contents, gap_size))
 	goto error_return;

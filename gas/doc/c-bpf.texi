@@ -48,7 +48,7 @@ assembling.  The assembler supports @option{normal} and
 @cindex @option{-misa-spec} command-line options, BPF
 @item -misa-spec=@var{spec}
 This option specifies the version of the BPF instruction set to use
-when assembling.  The BPF ISA versions supported are @option{v1} @option{v2}, @option{v3} and @option{v4}.
+when assembling.  The BPF ISA versions supported are @option{v1} @option{v2}, @option{v3}, @option{v4} and @option{v5}.
 
 The value @option{xbpf} can be specified to recognize extra
 instructions that are used by GCC for testing purposes.  But beware
@@ -228,6 +228,20 @@ registers.
 @itemx rd *= rs
 @itemx rd *= imm32
 64-bit arithmetic multiplication.
+
+@item uhmul rd, rs
+@itemx uhmul rd, imm32
+@itemx rd uh*= rs
+@itemx rd uh*= imm32
+Unsigned high-half 64-bit arithmetic multiplication.
+Available in BPF v5 or later.
+
+@item shmul rd, rs
+@itemx shmul rd, imm32
+@itemx rd sh*= rs
+@itemx rd sh*= imm32
+Signed high-half 64-bit arithmetic multiplication.
+Available in BPF v5 or later.
 
 @item div rd, rs
 @itemx div rd, imm32

@@ -1375,17 +1375,10 @@ _bfd_sparc_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
       struct _bfd_sparc_elf_link_hash_entry *eh;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
 
       r_symndx = SPARC_ELF_R_SYMNDX (htab, rel->r_info);
       r_type = SPARC_ELF_R_TYPE (rel->r_info);
-
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"), abfd, r_symndx);
-	  return false;
-	}
 
       isym = NULL;
       if (r_symndx < symtab_hdr->sh_info)
@@ -1768,9 +1761,7 @@ _bfd_sparc_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		head = &h->dyn_relocs;
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
+		  /* Track dynamic relocs needed for local syms too.  */
 		  asection *s;
 		  void *vpp;
 
@@ -2820,7 +2811,7 @@ _bfd_sparc_elf_relocate_section (struct bfd_link_info *info,
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
       struct _bfd_sparc_elf_link_hash_entry *eh;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma relocation, off;
       bfd_reloc_status_type r;

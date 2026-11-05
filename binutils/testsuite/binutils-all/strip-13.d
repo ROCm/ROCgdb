@@ -2,6 +2,5 @@
 #strip: -g
 #error: \A[^\n]*: unsupported relocation type 0x[0-9a-f]+\Z
 #notarget: rx-*
-# The RX targets do not complain about unrecognised relocs, unless they
-#  are actually used
-#  (which is what should really happen with the other targets...)
+# The RX target text section is called "P" rather than ".text", so
+# creating .rela.text by hand is wrong.

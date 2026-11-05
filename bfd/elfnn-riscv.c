@@ -1064,27 +1064,20 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       unsigned int r_type;
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
+      const Elf_Internal_Sym *isym = NULL;
       bool is_abs_symbol = false;
 
       r_symndx = ELFNN_R_SYM (rel->r_info);
       r_type = ELFNN_R_TYPE (rel->r_info);
 
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  (*_bfd_error_handler) (_("%pB: bad symbol index: %d"),
-				 abfd, r_symndx);
-	  return false;
-	}
-
       if (r_symndx < symtab_hdr->sh_info)
 	{
 	  /* A local symbol.  */
-	  Elf_Internal_Sym *isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
-							  abfd, r_symndx);
+	  isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache, abfd, r_symndx);
 	  if (isym == NULL)
 	    return false;
 
-	  is_abs_symbol = isym->st_shndx == SHN_ABS ? true : false;
+	  is_abs_symbol = isym->st_shndx == SHN_ABS;
 
 	  /* Check relocation against local STT_GNU_IFUNC symbol.  */
 	  if (ELF_ST_TYPE (isym->st_info) == STT_GNU_IFUNC)
@@ -1112,7 +1105,7 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
 
-	  is_abs_symbol = bfd_is_abs_symbol (&h->root) ? true : false;
+	  is_abs_symbol = bfd_is_abs_symbol (&h->root);
 	}
 
       if (h != NULL)
@@ -1329,18 +1322,9 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		head = &h->dyn_relocs;
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
-
+		  /* Track dynamic relocs needed for local syms too.  */
 		  asection *s;
 		  void *vpp;
-		  Elf_Internal_Sym *isym;
-
-		  isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
-						abfd, r_symndx);
-		  if (isym == NULL)
-		    return false;
 
 		  s = bfd_section_from_elf_index (abfd, isym->st_shndx);
 		  if (s == NULL)
@@ -1937,9 +1921,9 @@ record_relr_non_got_relocs (bfd *input_bfd, struct bfd_link_info *info,
   struct riscv_elf_link_hash_table *htab = riscv_elf_hash_table (info);
   Elf_Internal_Shdr *symtab_hdr = &elf_symtab_hdr (input_bfd);
   struct elf_link_hash_entry **sym_hashes = elf_sym_hashes (input_bfd);
-  const Elf_Internal_Rela * relocs =
-	_bfd_elf_link_info_read_relocs (input_bfd, info, sec, NULL, NULL,
-					info->keep_memory);
+  const Elf_Internal_Rela *relocs
+    = _bfd_elf_link_info_read_relocs (input_bfd, info, sec, NULL, NULL,
+				      info->keep_memory);
   BFD_ASSERT (relocs != NULL);
 
   const Elf_Internal_Rela *rel = relocs;
@@ -3084,7 +3068,7 @@ riscv_elf_relocate_section (struct bfd_link_info *info,
     {
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma relocation;
       bfd_reloc_status_type r = bfd_reloc_ok;

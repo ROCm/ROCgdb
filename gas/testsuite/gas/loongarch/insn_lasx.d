@@ -590,148 +590,147 @@ Disassembly of section .text:
  90c:	769f0420 	xvreplgr2vr.h	\$xr0, \$ra
  910:	769f0820 	xvreplgr2vr.w	\$xr0, \$ra
  914:	769f0c20 	xvreplgr2vr.d	\$xr0, \$ra
- 918:	769f8420 	xvhseli.d   	\$xr0, \$xr1, 0x1
- 91c:	76a02420 	xvrotri.b   	\$xr0, \$xr1, 0x1
- 920:	76a04420 	xvrotri.h   	\$xr0, \$xr1, 0x1
- 924:	76a08420 	xvrotri.w   	\$xr0, \$xr1, 0x1
- 928:	76a10420 	xvrotri.d   	\$xr0, \$xr1, 0x1
- 92c:	76a42420 	xvsrlri.b   	\$xr0, \$xr1, 0x1
- 930:	76a44420 	xvsrlri.h   	\$xr0, \$xr1, 0x1
- 934:	76a48420 	xvsrlri.w   	\$xr0, \$xr1, 0x1
- 938:	76a50420 	xvsrlri.d   	\$xr0, \$xr1, 0x1
- 93c:	76a82420 	xvsrari.b   	\$xr0, \$xr1, 0x1
- 940:	76a84420 	xvsrari.h   	\$xr0, \$xr1, 0x1
- 944:	76a88420 	xvsrari.w   	\$xr0, \$xr1, 0x1
- 948:	76a90420 	xvsrari.d   	\$xr0, \$xr1, 0x1
- 94c:	76ebc420 	xvinsgr2vr.w	\$xr0, \$ra, 0x1
- 950:	76ebe420 	xvinsgr2vr.d	\$xr0, \$ra, 0x1
- 954:	76efc420 	xvpickve2gr.w	\$zero, \$xr1, 0x1
- 958:	76efe420 	xvpickve2gr.d	\$zero, \$xr1, 0x1
- 95c:	76f3c420 	xvpickve2gr.wu	\$zero, \$xr1, 0x1
- 960:	76f3e420 	xvpickve2gr.du	\$zero, \$xr1, 0x1
- 964:	76f78420 	xvrepl128vei.b	\$xr0, \$xr1, 0x1
- 968:	76f7c420 	xvrepl128vei.h	\$xr0, \$xr1, 0x1
- 96c:	76f7e420 	xvrepl128vei.w	\$xr0, \$xr1, 0x1
- 970:	76f7f420 	xvrepl128vei.d	\$xr0, \$xr1, 0x1
- 974:	76ffc420 	xvinsve0.w  	\$xr0, \$xr1, 0x1
- 978:	76ffe420 	xvinsve0.d  	\$xr0, \$xr1, 0x1
- 97c:	7703c420 	xvpickve.w  	\$xr0, \$xr1, 0x1
- 980:	7703e420 	xvpickve.d  	\$xr0, \$xr1, 0x1
- 984:	77070020 	xvreplve0.b 	\$xr0, \$xr1
- 988:	77078020 	xvreplve0.h 	\$xr0, \$xr1
- 98c:	7707c020 	xvreplve0.w 	\$xr0, \$xr1
- 990:	7707e020 	xvreplve0.d 	\$xr0, \$xr1
- 994:	7707f020 	xvreplve0.q 	\$xr0, \$xr1
- 998:	77082420 	xvsllwil.h.b	\$xr0, \$xr1, 0x1
- 99c:	77084420 	xvsllwil.w.h	\$xr0, \$xr1, 0x1
- 9a0:	77088420 	xvsllwil.d.w	\$xr0, \$xr1, 0x1
- 9a4:	77090020 	xvextl.q.d  	\$xr0, \$xr1
- 9a8:	770c2420 	xvsllwil.hu.bu	\$xr0, \$xr1, 0x1
- 9ac:	770c4420 	xvsllwil.wu.hu	\$xr0, \$xr1, 0x1
- 9b0:	770c8420 	xvsllwil.du.wu	\$xr0, \$xr1, 0x1
- 9b4:	770d0020 	xvextl.qu.du	\$xr0, \$xr1
- 9b8:	77102420 	xvbitclri.b 	\$xr0, \$xr1, 0x1
- 9bc:	77104420 	xvbitclri.h 	\$xr0, \$xr1, 0x1
- 9c0:	77108420 	xvbitclri.w 	\$xr0, \$xr1, 0x1
- 9c4:	77110420 	xvbitclri.d 	\$xr0, \$xr1, 0x1
- 9c8:	77142420 	xvbitseti.b 	\$xr0, \$xr1, 0x1
- 9cc:	77144420 	xvbitseti.h 	\$xr0, \$xr1, 0x1
- 9d0:	77148420 	xvbitseti.w 	\$xr0, \$xr1, 0x1
- 9d4:	77150420 	xvbitseti.d 	\$xr0, \$xr1, 0x1
- 9d8:	77182420 	xvbitrevi.b 	\$xr0, \$xr1, 0x1
- 9dc:	77184420 	xvbitrevi.h 	\$xr0, \$xr1, 0x1
- 9e0:	77188420 	xvbitrevi.w 	\$xr0, \$xr1, 0x1
- 9e4:	77190420 	xvbitrevi.d 	\$xr0, \$xr1, 0x1
- 9e8:	77242420 	xvsat.b     	\$xr0, \$xr1, 0x1
- 9ec:	77244420 	xvsat.h     	\$xr0, \$xr1, 0x1
- 9f0:	77248420 	xvsat.w     	\$xr0, \$xr1, 0x1
- 9f4:	77250420 	xvsat.d     	\$xr0, \$xr1, 0x1
- 9f8:	77282420 	xvsat.bu    	\$xr0, \$xr1, 0x1
- 9fc:	77284420 	xvsat.hu    	\$xr0, \$xr1, 0x1
- a00:	77288420 	xvsat.wu    	\$xr0, \$xr1, 0x1
- a04:	77290420 	xvsat.du    	\$xr0, \$xr1, 0x1
- a08:	772c2420 	xvslli.b    	\$xr0, \$xr1, 0x1
- a0c:	772c4420 	xvslli.h    	\$xr0, \$xr1, 0x1
- a10:	772c8420 	xvslli.w    	\$xr0, \$xr1, 0x1
- a14:	772d0420 	xvslli.d    	\$xr0, \$xr1, 0x1
- a18:	77302420 	xvsrli.b    	\$xr0, \$xr1, 0x1
- a1c:	77304420 	xvsrli.h    	\$xr0, \$xr1, 0x1
- a20:	77308420 	xvsrli.w    	\$xr0, \$xr1, 0x1
- a24:	77310420 	xvsrli.d    	\$xr0, \$xr1, 0x1
- a28:	77342420 	xvsrai.b    	\$xr0, \$xr1, 0x1
- a2c:	77344420 	xvsrai.h    	\$xr0, \$xr1, 0x1
- a30:	77348420 	xvsrai.w    	\$xr0, \$xr1, 0x1
- a34:	77350420 	xvsrai.d    	\$xr0, \$xr1, 0x1
- a38:	77404420 	xvsrlni.b.h 	\$xr0, \$xr1, 0x1
- a3c:	77408420 	xvsrlni.h.w 	\$xr0, \$xr1, 0x1
- a40:	77410420 	xvsrlni.w.d 	\$xr0, \$xr1, 0x1
- a44:	77420420 	xvsrlni.d.q 	\$xr0, \$xr1, 0x1
- a48:	77444420 	xvsrlrni.b.h	\$xr0, \$xr1, 0x1
- a4c:	77448420 	xvsrlrni.h.w	\$xr0, \$xr1, 0x1
- a50:	77450420 	xvsrlrni.w.d	\$xr0, \$xr1, 0x1
- a54:	77460420 	xvsrlrni.d.q	\$xr0, \$xr1, 0x1
- a58:	77484420 	xvssrlni.b.h	\$xr0, \$xr1, 0x1
- a5c:	77488420 	xvssrlni.h.w	\$xr0, \$xr1, 0x1
- a60:	77490420 	xvssrlni.w.d	\$xr0, \$xr1, 0x1
- a64:	774a0420 	xvssrlni.d.q	\$xr0, \$xr1, 0x1
- a68:	774c4420 	xvssrlni.bu.h	\$xr0, \$xr1, 0x1
- a6c:	774c8420 	xvssrlni.hu.w	\$xr0, \$xr1, 0x1
- a70:	774d0420 	xvssrlni.wu.d	\$xr0, \$xr1, 0x1
- a74:	774e0420 	xvssrlni.du.q	\$xr0, \$xr1, 0x1
- a78:	77504420 	xvssrlrni.b.h	\$xr0, \$xr1, 0x1
- a7c:	77508420 	xvssrlrni.h.w	\$xr0, \$xr1, 0x1
- a80:	77510420 	xvssrlrni.w.d	\$xr0, \$xr1, 0x1
- a84:	77520420 	xvssrlrni.d.q	\$xr0, \$xr1, 0x1
- a88:	77544420 	xvssrlrni.bu.h	\$xr0, \$xr1, 0x1
- a8c:	77548420 	xvssrlrni.hu.w	\$xr0, \$xr1, 0x1
- a90:	77550420 	xvssrlrni.wu.d	\$xr0, \$xr1, 0x1
- a94:	77560420 	xvssrlrni.du.q	\$xr0, \$xr1, 0x1
- a98:	77584420 	xvsrani.b.h 	\$xr0, \$xr1, 0x1
- a9c:	77588420 	xvsrani.h.w 	\$xr0, \$xr1, 0x1
- aa0:	77590420 	xvsrani.w.d 	\$xr0, \$xr1, 0x1
- aa4:	775a0420 	xvsrani.d.q 	\$xr0, \$xr1, 0x1
- aa8:	775c4420 	xvsrarni.b.h	\$xr0, \$xr1, 0x1
- aac:	775c8420 	xvsrarni.h.w	\$xr0, \$xr1, 0x1
- ab0:	775d0420 	xvsrarni.w.d	\$xr0, \$xr1, 0x1
- ab4:	775e0420 	xvsrarni.d.q	\$xr0, \$xr1, 0x1
- ab8:	77604420 	xvssrani.b.h	\$xr0, \$xr1, 0x1
- abc:	77608420 	xvssrani.h.w	\$xr0, \$xr1, 0x1
- ac0:	77610420 	xvssrani.w.d	\$xr0, \$xr1, 0x1
- ac4:	77620420 	xvssrani.d.q	\$xr0, \$xr1, 0x1
- ac8:	77644420 	xvssrani.bu.h	\$xr0, \$xr1, 0x1
- acc:	77648420 	xvssrani.hu.w	\$xr0, \$xr1, 0x1
- ad0:	77650420 	xvssrani.wu.d	\$xr0, \$xr1, 0x1
- ad4:	77660420 	xvssrani.du.q	\$xr0, \$xr1, 0x1
- ad8:	77684420 	xvssrarni.b.h	\$xr0, \$xr1, 0x1
- adc:	77688420 	xvssrarni.h.w	\$xr0, \$xr1, 0x1
- ae0:	77690420 	xvssrarni.w.d	\$xr0, \$xr1, 0x1
- ae4:	776a0420 	xvssrarni.d.q	\$xr0, \$xr1, 0x1
- ae8:	776c4420 	xvssrarni.bu.h	\$xr0, \$xr1, 0x1
- aec:	776c8420 	xvssrarni.hu.w	\$xr0, \$xr1, 0x1
- af0:	776d0420 	xvssrarni.wu.d	\$xr0, \$xr1, 0x1
- af4:	776e0420 	xvssrarni.du.q	\$xr0, \$xr1, 0x1
- af8:	77800420 	xvextrins.d 	\$xr0, \$xr1, 0x1
- afc:	77840420 	xvextrins.w 	\$xr0, \$xr1, 0x1
- b00:	77880420 	xvextrins.h 	\$xr0, \$xr1, 0x1
- b04:	778c0420 	xvextrins.b 	\$xr0, \$xr1, 0x1
- b08:	77900420 	xvshuf4i.b  	\$xr0, \$xr1, 0x1
- b0c:	77940420 	xvshuf4i.h  	\$xr0, \$xr1, 0x1
- b10:	77980420 	xvshuf4i.w  	\$xr0, \$xr1, 0x1
- b14:	779c0420 	xvshuf4i.d  	\$xr0, \$xr1, 0x1
- b18:	77c40420 	xvbitseli.b 	\$xr0, \$xr1, 0x1
- b1c:	77d00420 	xvandi.b    	\$xr0, \$xr1, 0x1
- b20:	77d40420 	xvori.b     	\$xr0, \$xr1, 0x1
- b24:	77d80420 	xvxori.b    	\$xr0, \$xr1, 0x1
- b28:	77dc0420 	xvnori.b    	\$xr0, \$xr1, 0x1
- b2c:	77e00020 	xvldi       	\$xr0, 1
- b30:	77e18020 	xvldi       	\$xr0, 3073
- b34:	77e08020 	xvldi       	\$xr0, 1025
- b38:	77e10020 	xvldi       	\$xr0, 2049
- b3c:	77e00020 	xvldi       	\$xr0, 1
- b40:	77e40420 	xvpermi.w   	\$xr0, \$xr1, 0x1
- b44:	77e80420 	xvpermi.d   	\$xr0, \$xr1, 0x1
- b48:	77ec0420 	xvpermi.q   	\$xr0, \$xr1, 0x1
- b4c:	769d1420 	xvfrecipe.s 	\$xr0, \$xr1
- b50:	769d1820 	xvfrecipe.d 	\$xr0, \$xr1
- b54:	769d2420 	xvfrsqrte.s 	\$xr0, \$xr1
- b58:	769d2820 	xvfrsqrte.d 	\$xr0, \$xr1
+ 918:	76a02420 	xvrotri.b   	\$xr0, \$xr1, 0x1
+ 91c:	76a04420 	xvrotri.h   	\$xr0, \$xr1, 0x1
+ 920:	76a08420 	xvrotri.w   	\$xr0, \$xr1, 0x1
+ 924:	76a10420 	xvrotri.d   	\$xr0, \$xr1, 0x1
+ 928:	76a42420 	xvsrlri.b   	\$xr0, \$xr1, 0x1
+ 92c:	76a44420 	xvsrlri.h   	\$xr0, \$xr1, 0x1
+ 930:	76a48420 	xvsrlri.w   	\$xr0, \$xr1, 0x1
+ 934:	76a50420 	xvsrlri.d   	\$xr0, \$xr1, 0x1
+ 938:	76a82420 	xvsrari.b   	\$xr0, \$xr1, 0x1
+ 93c:	76a84420 	xvsrari.h   	\$xr0, \$xr1, 0x1
+ 940:	76a88420 	xvsrari.w   	\$xr0, \$xr1, 0x1
+ 944:	76a90420 	xvsrari.d   	\$xr0, \$xr1, 0x1
+ 948:	76ebc420 	xvinsgr2vr.w	\$xr0, \$ra, 0x1
+ 94c:	76ebe420 	xvinsgr2vr.d	\$xr0, \$ra, 0x1
+ 950:	76efc420 	xvpickve2gr.w	\$zero, \$xr1, 0x1
+ 954:	76efe420 	xvpickve2gr.d	\$zero, \$xr1, 0x1
+ 958:	76f3c420 	xvpickve2gr.wu	\$zero, \$xr1, 0x1
+ 95c:	76f3e420 	xvpickve2gr.du	\$zero, \$xr1, 0x1
+ 960:	76f78420 	xvrepl128vei.b	\$xr0, \$xr1, 0x1
+ 964:	76f7c420 	xvrepl128vei.h	\$xr0, \$xr1, 0x1
+ 968:	76f7e420 	xvrepl128vei.w	\$xr0, \$xr1, 0x1
+ 96c:	76f7f420 	xvrepl128vei.d	\$xr0, \$xr1, 0x1
+ 970:	76ffc420 	xvinsve0.w  	\$xr0, \$xr1, 0x1
+ 974:	76ffe420 	xvinsve0.d  	\$xr0, \$xr1, 0x1
+ 978:	7703c420 	xvpickve.w  	\$xr0, \$xr1, 0x1
+ 97c:	7703e420 	xvpickve.d  	\$xr0, \$xr1, 0x1
+ 980:	77070020 	xvreplve0.b 	\$xr0, \$xr1
+ 984:	77078020 	xvreplve0.h 	\$xr0, \$xr1
+ 988:	7707c020 	xvreplve0.w 	\$xr0, \$xr1
+ 98c:	7707e020 	xvreplve0.d 	\$xr0, \$xr1
+ 990:	7707f020 	xvreplve0.q 	\$xr0, \$xr1
+ 994:	77082420 	xvsllwil.h.b	\$xr0, \$xr1, 0x1
+ 998:	77084420 	xvsllwil.w.h	\$xr0, \$xr1, 0x1
+ 99c:	77088420 	xvsllwil.d.w	\$xr0, \$xr1, 0x1
+ 9a0:	77090020 	xvextl.q.d  	\$xr0, \$xr1
+ 9a4:	770c2420 	xvsllwil.hu.bu	\$xr0, \$xr1, 0x1
+ 9a8:	770c4420 	xvsllwil.wu.hu	\$xr0, \$xr1, 0x1
+ 9ac:	770c8420 	xvsllwil.du.wu	\$xr0, \$xr1, 0x1
+ 9b0:	770d0020 	xvextl.qu.du	\$xr0, \$xr1
+ 9b4:	77102420 	xvbitclri.b 	\$xr0, \$xr1, 0x1
+ 9b8:	77104420 	xvbitclri.h 	\$xr0, \$xr1, 0x1
+ 9bc:	77108420 	xvbitclri.w 	\$xr0, \$xr1, 0x1
+ 9c0:	77110420 	xvbitclri.d 	\$xr0, \$xr1, 0x1
+ 9c4:	77142420 	xvbitseti.b 	\$xr0, \$xr1, 0x1
+ 9c8:	77144420 	xvbitseti.h 	\$xr0, \$xr1, 0x1
+ 9cc:	77148420 	xvbitseti.w 	\$xr0, \$xr1, 0x1
+ 9d0:	77150420 	xvbitseti.d 	\$xr0, \$xr1, 0x1
+ 9d4:	77182420 	xvbitrevi.b 	\$xr0, \$xr1, 0x1
+ 9d8:	77184420 	xvbitrevi.h 	\$xr0, \$xr1, 0x1
+ 9dc:	77188420 	xvbitrevi.w 	\$xr0, \$xr1, 0x1
+ 9e0:	77190420 	xvbitrevi.d 	\$xr0, \$xr1, 0x1
+ 9e4:	77242420 	xvsat.b     	\$xr0, \$xr1, 0x1
+ 9e8:	77244420 	xvsat.h     	\$xr0, \$xr1, 0x1
+ 9ec:	77248420 	xvsat.w     	\$xr0, \$xr1, 0x1
+ 9f0:	77250420 	xvsat.d     	\$xr0, \$xr1, 0x1
+ 9f4:	77282420 	xvsat.bu    	\$xr0, \$xr1, 0x1
+ 9f8:	77284420 	xvsat.hu    	\$xr0, \$xr1, 0x1
+ 9fc:	77288420 	xvsat.wu    	\$xr0, \$xr1, 0x1
+ a00:	77290420 	xvsat.du    	\$xr0, \$xr1, 0x1
+ a04:	772c2420 	xvslli.b    	\$xr0, \$xr1, 0x1
+ a08:	772c4420 	xvslli.h    	\$xr0, \$xr1, 0x1
+ a0c:	772c8420 	xvslli.w    	\$xr0, \$xr1, 0x1
+ a10:	772d0420 	xvslli.d    	\$xr0, \$xr1, 0x1
+ a14:	77302420 	xvsrli.b    	\$xr0, \$xr1, 0x1
+ a18:	77304420 	xvsrli.h    	\$xr0, \$xr1, 0x1
+ a1c:	77308420 	xvsrli.w    	\$xr0, \$xr1, 0x1
+ a20:	77310420 	xvsrli.d    	\$xr0, \$xr1, 0x1
+ a24:	77342420 	xvsrai.b    	\$xr0, \$xr1, 0x1
+ a28:	77344420 	xvsrai.h    	\$xr0, \$xr1, 0x1
+ a2c:	77348420 	xvsrai.w    	\$xr0, \$xr1, 0x1
+ a30:	77350420 	xvsrai.d    	\$xr0, \$xr1, 0x1
+ a34:	77404420 	xvsrlni.b.h 	\$xr0, \$xr1, 0x1
+ a38:	77408420 	xvsrlni.h.w 	\$xr0, \$xr1, 0x1
+ a3c:	77410420 	xvsrlni.w.d 	\$xr0, \$xr1, 0x1
+ a40:	77420420 	xvsrlni.d.q 	\$xr0, \$xr1, 0x1
+ a44:	77444420 	xvsrlrni.b.h	\$xr0, \$xr1, 0x1
+ a48:	77448420 	xvsrlrni.h.w	\$xr0, \$xr1, 0x1
+ a4c:	77450420 	xvsrlrni.w.d	\$xr0, \$xr1, 0x1
+ a50:	77460420 	xvsrlrni.d.q	\$xr0, \$xr1, 0x1
+ a54:	77484420 	xvssrlni.b.h	\$xr0, \$xr1, 0x1
+ a58:	77488420 	xvssrlni.h.w	\$xr0, \$xr1, 0x1
+ a5c:	77490420 	xvssrlni.w.d	\$xr0, \$xr1, 0x1
+ a60:	774a0420 	xvssrlni.d.q	\$xr0, \$xr1, 0x1
+ a64:	774c4420 	xvssrlni.bu.h	\$xr0, \$xr1, 0x1
+ a68:	774c8420 	xvssrlni.hu.w	\$xr0, \$xr1, 0x1
+ a6c:	774d0420 	xvssrlni.wu.d	\$xr0, \$xr1, 0x1
+ a70:	774e0420 	xvssrlni.du.q	\$xr0, \$xr1, 0x1
+ a74:	77504420 	xvssrlrni.b.h	\$xr0, \$xr1, 0x1
+ a78:	77508420 	xvssrlrni.h.w	\$xr0, \$xr1, 0x1
+ a7c:	77510420 	xvssrlrni.w.d	\$xr0, \$xr1, 0x1
+ a80:	77520420 	xvssrlrni.d.q	\$xr0, \$xr1, 0x1
+ a84:	77544420 	xvssrlrni.bu.h	\$xr0, \$xr1, 0x1
+ a88:	77548420 	xvssrlrni.hu.w	\$xr0, \$xr1, 0x1
+ a8c:	77550420 	xvssrlrni.wu.d	\$xr0, \$xr1, 0x1
+ a90:	77560420 	xvssrlrni.du.q	\$xr0, \$xr1, 0x1
+ a94:	77584420 	xvsrani.b.h 	\$xr0, \$xr1, 0x1
+ a98:	77588420 	xvsrani.h.w 	\$xr0, \$xr1, 0x1
+ a9c:	77590420 	xvsrani.w.d 	\$xr0, \$xr1, 0x1
+ aa0:	775a0420 	xvsrani.d.q 	\$xr0, \$xr1, 0x1
+ aa4:	775c4420 	xvsrarni.b.h	\$xr0, \$xr1, 0x1
+ aa8:	775c8420 	xvsrarni.h.w	\$xr0, \$xr1, 0x1
+ aac:	775d0420 	xvsrarni.w.d	\$xr0, \$xr1, 0x1
+ ab0:	775e0420 	xvsrarni.d.q	\$xr0, \$xr1, 0x1
+ ab4:	77604420 	xvssrani.b.h	\$xr0, \$xr1, 0x1
+ ab8:	77608420 	xvssrani.h.w	\$xr0, \$xr1, 0x1
+ abc:	77610420 	xvssrani.w.d	\$xr0, \$xr1, 0x1
+ ac0:	77620420 	xvssrani.d.q	\$xr0, \$xr1, 0x1
+ ac4:	77644420 	xvssrani.bu.h	\$xr0, \$xr1, 0x1
+ ac8:	77648420 	xvssrani.hu.w	\$xr0, \$xr1, 0x1
+ acc:	77650420 	xvssrani.wu.d	\$xr0, \$xr1, 0x1
+ ad0:	77660420 	xvssrani.du.q	\$xr0, \$xr1, 0x1
+ ad4:	77684420 	xvssrarni.b.h	\$xr0, \$xr1, 0x1
+ ad8:	77688420 	xvssrarni.h.w	\$xr0, \$xr1, 0x1
+ adc:	77690420 	xvssrarni.w.d	\$xr0, \$xr1, 0x1
+ ae0:	776a0420 	xvssrarni.d.q	\$xr0, \$xr1, 0x1
+ ae4:	776c4420 	xvssrarni.bu.h	\$xr0, \$xr1, 0x1
+ ae8:	776c8420 	xvssrarni.hu.w	\$xr0, \$xr1, 0x1
+ aec:	776d0420 	xvssrarni.wu.d	\$xr0, \$xr1, 0x1
+ af0:	776e0420 	xvssrarni.du.q	\$xr0, \$xr1, 0x1
+ af4:	77800420 	xvextrins.d 	\$xr0, \$xr1, 0x1
+ af8:	77840420 	xvextrins.w 	\$xr0, \$xr1, 0x1
+ afc:	77880420 	xvextrins.h 	\$xr0, \$xr1, 0x1
+ b00:	778c0420 	xvextrins.b 	\$xr0, \$xr1, 0x1
+ b04:	77900420 	xvshuf4i.b  	\$xr0, \$xr1, 0x1
+ b08:	77940420 	xvshuf4i.h  	\$xr0, \$xr1, 0x1
+ b0c:	77980420 	xvshuf4i.w  	\$xr0, \$xr1, 0x1
+ b10:	779c0420 	xvshuf4i.d  	\$xr0, \$xr1, 0x1
+ b14:	77c40420 	xvbitseli.b 	\$xr0, \$xr1, 0x1
+ b18:	77d00420 	xvandi.b    	\$xr0, \$xr1, 0x1
+ b1c:	77d40420 	xvori.b     	\$xr0, \$xr1, 0x1
+ b20:	77d80420 	xvxori.b    	\$xr0, \$xr1, 0x1
+ b24:	77dc0420 	xvnori.b    	\$xr0, \$xr1, 0x1
+ b28:	77e00020 	xvldi       	\$xr0, 1
+ b2c:	77e18020 	xvldi       	\$xr0, 3073
+ b30:	77e08020 	xvldi       	\$xr0, 1025
+ b34:	77e10020 	xvldi       	\$xr0, 2049
+ b38:	77e00020 	xvldi       	\$xr0, 1
+ b3c:	77e40420 	xvpermi.w   	\$xr0, \$xr1, 0x1
+ b40:	77e80420 	xvpermi.d   	\$xr0, \$xr1, 0x1
+ b44:	77ec0420 	xvpermi.q   	\$xr0, \$xr1, 0x1
+ b48:	769d1420 	xvfrecipe.s 	\$xr0, \$xr1
+ b4c:	769d1820 	xvfrecipe.d 	\$xr0, \$xr1
+ b50:	769d2420 	xvfrsqrte.s 	\$xr0, \$xr1
+ b54:	769d2820 	xvfrsqrte.d 	\$xr0, \$xr1

@@ -119,18 +119,7 @@ struct riscv_csr_extra
      not this CSR is legal in the current -march context.  */
   enum riscv_csr_class csr_class;
 
-  /* CSR may have differnet numbers in the previous priv spec.  */
   unsigned address;
-
-  /* Record the CSR is defined/valid in which versions.  */
-  enum riscv_spec_class define_version;
-
-  /* Record the CSR is aborted/invalid from which versions.  If it isn't
-     aborted in the current version, then it should be PRIV_SPEC_CLASS_DRAFT.  */
-  enum riscv_spec_class abort_version;
-
-  /* The CSR may have more than one setting.  */
-  struct riscv_csr_extra *next;
 };
 
 /* This structure contains information about errors that occur within the
@@ -165,15 +154,10 @@ struct riscv_ip_error
 #define DEFAULT_RISCV_ISA_SPEC "20191213"
 #endif
 
-#ifndef DEFAULT_RISCV_PRIV_SPEC
-#define DEFAULT_RISCV_PRIV_SPEC "1.11"
-#endif
-
 static const char default_arch[] = DEFAULT_ARCH;
 static const char *default_arch_with_ext = DEFAULT_RISCV_ARCH_WITH_EXT;
 static const char *file_arch_str = NULL;
 static enum riscv_spec_class default_isa_spec = ISA_SPEC_CLASS_NONE;
-static enum riscv_spec_class default_priv_spec = PRIV_SPEC_CLASS_NONE;
 
 static unsigned xlen = 0; /* The width of an x-register.  */
 static unsigned abi_xlen = 0; /* The width of a pointer in the ABI.  */
@@ -217,61 +201,14 @@ riscv_set_default_isa_spec (const char *s)
   return 1;
 }
 
-/* Set the default_priv_spec.  Find the privileged elf attributes when
-   the input string is NULL.  Return 0 if the spec isn't supported.
-   Otherwise, return 1.  */
-
-static int
-riscv_set_default_priv_spec (const char *s)
-{
-  enum riscv_spec_class class = PRIV_SPEC_CLASS_NONE;
-  unsigned major, minor, revision;
-  obj_attribute *attr;
-
-  RISCV_GET_PRIV_SPEC_CLASS (s, class);
-  if (class != PRIV_SPEC_CLASS_NONE
-      && class != PRIV_SPEC_CLASS_1P9P1)
-    {
-      default_priv_spec = class;
-      return 1;
-    }
-
-  if (s != NULL)
-    {
-      as_bad (_("unknown default privileged spec `%s' set by "
-		"-mpriv-spec or --with-priv-spec"), s);
-      return 0;
-    }
-
-  /* Set the default_priv_spec by the privileged elf attributes.  */
-  attr = elf_known_obj_attributes_proc (stdoutput);
-  major = (unsigned) attr[Tag_RISCV_priv_spec].i;
-  minor = (unsigned) attr[Tag_RISCV_priv_spec_minor].i;
-  revision = (unsigned) attr[Tag_RISCV_priv_spec_revision].i;
-  /* Version 0.0.0 is the default value and meningless.  */
-  if (major == 0 && minor == 0 && revision == 0)
-    return 1;
-
-  riscv_get_priv_spec_class_from_numbers (major, minor, revision, &class);
-  if (class != PRIV_SPEC_CLASS_NONE)
-    {
-      default_priv_spec = class;
-      return 1;
-    }
-
-  /* Still can not find the privileged spec class.  */
-  as_bad (_("unknown default privileged spec `%d.%d.%d' set by "
-	    "privileged elf attributes"), major, minor, revision);
-  return 0;
-}
-
 /* This is the set of options which the .option pseudo-op may modify.  */
 struct riscv_set_options
 {
   int pic; /* Generate position-independent code.  */
   int rvc; /* Generate RVC code.  */
   int relax; /* Emit relocs the linker is allowed to relax.  */
-  int arch_attr; /* Emit architecture and privileged elf attributes.  */
+  int exact; /* Emit instructions without compression or relaxation.  */
+  int arch_attr; /* Emit architecture elf attribute.  */
   int csr_check; /* Enable the CSR checking.  */
 };
 
@@ -280,6 +217,7 @@ static struct riscv_set_options riscv_opts =
   0, /* pic */
   0, /* rvc */
   1, /* relax */
+  0, /* exact */
   DEFAULT_RISCV_ATTR, /* arch_attr */
   0, /* csr_check */
 };
@@ -487,22 +425,21 @@ const char FLT_CHARS[] = "rRsSfFdDxXpPhHbB";
 /* Indicate ELF attributes are explicitly set.  */
 static bool explicit_attr = false;
 
-/* Indicate CSR or priv instructions are explicitly used.  */
-static bool explicit_priv_attr = false;
-
 static char *expr_parse_end;
 
 /* Macros for encoding relaxation state for RVC branches and far jumps.  */
-#define RELAX_BRANCH_ENCODE(uncond, rvc, length)	\
+#define RELAX_BRANCH_ENCODE(uncond, rvc, length, exact)	\
   ((relax_substateT) 					\
    (0xc0000000						\
     | ((uncond) ? 1 : 0)				\
     | ((rvc) ? 2 : 0)					\
-    | ((length) << 2)))
+    | ((exact) ? 4 : 0)					\
+    | ((length) << 3)))
 #define RELAX_BRANCH_P(i) (((i) & 0xf0000000) == 0xc0000000)
-#define RELAX_BRANCH_LENGTH(i) (((i) >> 2) & 0xF)
+#define RELAX_BRANCH_LENGTH(i) (((i) >> 3) & 0xF)
 #define RELAX_BRANCH_RVC(i) (((i) & 2) != 0)
 #define RELAX_BRANCH_UNCOND(i) (((i) & 1) != 0)
+#define RELAX_BRANCH_EXACT(i) (((i) & 4) != 0)
 
 /* Is the given value a sign-extended 32-bit value?  */
 #define IS_SEXT_32BIT_NUM(x)						\
@@ -832,22 +769,25 @@ add_relaxed_insn (struct riscv_cl_insn *insn, int max_chars, int var,
 static unsigned
 relaxed_branch_length (fragS *fragp, asection *sec, int update)
 {
-  int jump, rvc, length = 8;
+  int jump, rvc, exact, length = 8;
 
   if (!fragp)
     return length;
 
   jump = RELAX_BRANCH_UNCOND (fragp->fr_subtype);
   rvc = RELAX_BRANCH_RVC (fragp->fr_subtype);
+  exact = RELAX_BRANCH_EXACT (fragp->fr_subtype);
   length = RELAX_BRANCH_LENGTH (fragp->fr_subtype);
 
   /* Assume jumps are in range; the linker will catch any that aren't.  */
   length = jump ? 4 : 8;
 
-  if (fragp->fr_symbol != NULL
-      && S_IS_DEFINED (fragp->fr_symbol)
-      && !S_IS_WEAK (fragp->fr_symbol)
-      && sec == S_GET_SEGMENT (fragp->fr_symbol))
+  if (exact)
+    length = rvc ? 2 : 4;
+  else if (fragp->fr_symbol != NULL
+	   && S_IS_DEFINED (fragp->fr_symbol)
+	   && !S_IS_WEAK (fragp->fr_symbol)
+	   && sec == S_GET_SEGMENT (fragp->fr_symbol))
     {
       offsetT val = S_GET_VALUE (fragp->fr_symbol) + fragp->fr_offset;
       bfd_vma rvc_range = jump ? RVC_JUMP_REACH : RVC_BRANCH_REACH;
@@ -862,7 +802,7 @@ relaxed_branch_length (fragS *fragp, asection *sec, int update)
     }
 
   if (update)
-    fragp->fr_subtype = RELAX_BRANCH_ENCODE (jump, rvc, length);
+    fragp->fr_subtype = RELAX_BRANCH_ENCODE (jump, rvc, length, exact);
 
   return length;
 }
@@ -1010,50 +950,22 @@ hash_reg_names (enum reg_class class, const char names[][NRC], unsigned n)
 static void
 riscv_init_csr_hash (const char *name,
 		     unsigned address,
-		     enum riscv_csr_class class,
-		     enum riscv_spec_class define_version,
-		     enum riscv_spec_class abort_version)
+		     enum riscv_csr_class class)
 {
-  struct riscv_csr_extra *entry, *pre_entry;
-  bool need_enrty = true;
-
-  pre_entry = NULL;
-  entry = str_hash_find (csr_extra_hash, name);
-  while (need_enrty && entry != NULL)
-    {
-      if (entry->csr_class == class
-	  && entry->address == address
-	  && entry->define_version == define_version
-	  && entry->abort_version == abort_version)
-	need_enrty = false;
-      pre_entry = entry;
-      entry = entry->next;
-    }
-
-  /* Duplicate CSR.  */
-  if (!need_enrty)
-    return;
+  struct riscv_csr_extra *entry;
 
   entry = notes_alloc (sizeof (*entry));
   entry->csr_class = class;
   entry->address = address;
-  entry->define_version = define_version;
-  entry->abort_version = abort_version;
-  entry->next = NULL;
-
-  if (pre_entry == NULL)
-    str_hash_insert (csr_extra_hash, name, entry, 0);
-  else
-    pre_entry->next = entry;
+  str_hash_insert (csr_extra_hash, name, entry, 0);
 }
 
-/* Return the CSR address after checking the ISA dependency and
-   the privileged spec version.
+/* Return the CSR address after checking the ISA dependency.
 
    There are one warning and two errors for CSR,
 
-   Invalid CSR: the CSR was defined, but isn't allowed for the current ISA
-   or the privileged spec, report warning only if -mcsr-check is set.
+   Invalid CSR: the CSR was defined, but isn't allowed for the current ISA,
+   report warning only if -mcsr-check is set.
    Unknown CSR: the CSR has never been defined, report error.
    Improper CSR: the CSR number over the range (> 0xfff), report error.  */
 
@@ -1061,9 +973,7 @@ static unsigned int
 riscv_csr_address (const char *csr_name,
 		   struct riscv_csr_extra *entry)
 {
-  struct riscv_csr_extra *saved_entry = entry;
   enum riscv_csr_class csr_class = entry->csr_class;
-  bool need_check_version = false;
   bool is_rv32_only = false;
   bool is_h_required = false;
   const char* extension = NULL;
@@ -1074,7 +984,6 @@ riscv_csr_address (const char *csr_name,
       is_rv32_only = true;
       /* Fall through.  */
     case CSR_CLASS_I:
-      need_check_version = true;
       extension = "i";
       break;
     case CSR_CLASS_H_32:
@@ -1114,7 +1023,6 @@ riscv_csr_address (const char *csr_name,
       is_rv32_only = true;
       /* Fall through.  */
     case CSR_CLASS_SMCNTRPMF:
-      need_check_version = true;
       extension = "smcntrpmf";
       break;
     case CSR_CLASS_SMRNMI:
@@ -1208,30 +1116,7 @@ riscv_csr_address (const char *csr_name,
 		 csr_name, extension);
     }
 
-  while (entry != NULL)
-    {
-      if (!need_check_version
-	  || (default_priv_spec >= entry->define_version
-	      && default_priv_spec < entry->abort_version))
-       {
-         /* Find the CSR according to the specific version.  */
-         return entry->address;
-       }
-      entry = entry->next;
-    }
-
-  /* Can not find the CSR address from the chosen privileged version,
-     so use the newly defined value.  */
-  if (riscv_opts.csr_check)
-    {
-      const char *priv_name = NULL;
-      RISCV_GET_PRIV_SPEC_NAME (priv_name, default_priv_spec);
-      if (priv_name != NULL)
-	as_warn (_("invalid CSR `%s' for the privileged spec `%s'"),
-		 csr_name, priv_name);
-    }
-
-  return saved_entry->address;
+  return entry->address;
 }
 
 /* Return -1 if the CSR has never been defined.  Otherwise, return
@@ -1999,10 +1884,10 @@ md_begin (void)
 
   /* Create and insert CSR hash tables.  */
   csr_extra_hash = str_htab_create ();
-#define DECLARE_CSR(name, num, class, define_version, abort_version) \
-  riscv_init_csr_hash (#name, num, class, define_version, abort_version);
-#define DECLARE_CSR_ALIAS(name, num, class, define_version, abort_version) \
-  DECLARE_CSR(name, num, class, define_version, abort_version);
+#define DECLARE_CSR(name, num, class) \
+  riscv_init_csr_hash (#name, num, class);
+#define DECLARE_CSR_ALIAS(name, num, class) \
+  DECLARE_CSR(name, num, class);
 #include "opcode/riscv-opc.h"
 #undef DECLARE_CSR
 
@@ -2069,7 +1954,8 @@ append_insn (struct riscv_cl_insn *ip, expressionS *address_expr,
 	    }
 
 	  add_relaxed_insn (ip, worst_case, best_case,
-			    RELAX_BRANCH_ENCODE (j, best_case == 2, worst_case),
+			    RELAX_BRANCH_ENCODE (j, best_case == 2, worst_case,
+						 riscv_opts.exact),
 			    address_expr->X_add_symbol,
 			    address_expr->X_add_number);
 	  return;
@@ -2914,28 +2800,6 @@ riscv_csr_read_only_check (insn_t insn)
   return true;
 }
 
-/* Return true if it is a privileged instruction.  Otherwise, return false.
-
-   uret is actually a N-ext instruction.  So it is better to regard it as
-   an user instruction rather than the priv instruction.
-
-   hret is used to return from traps in H-mode.  H-mode is removed since
-   the v1.10 priv spec, but probably be added in the new hypervisor spec.
-   Therefore, hret should be controlled by the hypervisor spec rather than
-   priv spec in the future.
-
-   dret is defined in the debug spec, so it should be checked in the future,
-   too.  */
-
-static bool
-riscv_is_priv_insn (insn_t insn)
-{
-  return (((insn ^ MATCH_SRET) & MASK_SRET) == 0
-	  || ((insn ^ MATCH_MRET) & MASK_MRET) == 0
-	  || ((insn ^ MATCH_SFENCE_VMA) & MASK_SFENCE_VMA) == 0
-	  || ((insn ^ MATCH_WFI) & MASK_WFI) == 0);
-}
-
 static symbolS *deferred_sym_rootP;
 static symbolS *deferred_sym_lastP;
 /* Since symbols can't easily be freed, try to recycle ones which weren't
@@ -2985,6 +2849,10 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
   for ( ; insn && insn->name && strcmp (insn->name, str) == 0; insn++)
     {
       if ((insn->xlen_requirement != 0) && (xlen != insn->xlen_requirement))
+	continue;
+
+      if (insn->pinfo != INSN_MACRO && riscv_opts.exact
+	  && (insn->pinfo & INSN_NON_EXACT))
 	continue;
 
       if (!riscv_multi_subset_supports (&riscv_rps_as, insn->insn_class))
@@ -3047,9 +2915,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 					 : insn->match) == 2
 		      && !riscv_opts.rvc)
 		    break;
-
-		  if (riscv_is_priv_insn (ip->insn_opcode))
-		    explicit_priv_attr = true;
 
 		  /* Check if we write a read-only CSR by the CSR
 		     instruction.  */
@@ -3610,7 +3475,6 @@ riscv_ip (char *str, struct riscv_cl_insn *ip, expressionS *imm_expr,
 
 	    case 'E': /* Control register.  */
 	      insn_with_csr = true;
-	      explicit_priv_attr = true;
 	      if (reg_lookup (&asarg, RCLASS_CSR, &regno))
 		INSERT_OPERAND (CSR, *ip, regno);
 	      else
@@ -4660,16 +4524,13 @@ riscv_ip_hardcode (char *str,
   return NULL;
 }
 
-/* The architecture and privileged elf attributes should be set before
-   assembling.  */
-static bool
+/* The architecture elf attribute should be set before assembling.  */
+static void
 start_assembly (void)
 {
   start_assemble = true;
 
   riscv_set_abi_by_arch ();
-
-  return riscv_set_default_priv_spec (NULL);
 }
 
 void
@@ -4679,8 +4540,8 @@ md_assemble (char *str)
   expressionS imm_expr;
   bfd_reloc_code_real_type imm_reloc = BFD_RELOC_UNUSED;
 
-  if (!start_assemble && !start_assembly())
-    return;
+  if (!start_assemble)
+    start_assembly ();
 
   riscv_mapping_state (MAP_INSN, 0, false/* fr_align_code */);
 
@@ -4838,7 +4699,10 @@ md_parse_option (int c, const char *arg)
       return riscv_set_default_isa_spec (arg);
 
     case OPTION_MPRIV_SPEC:
-      return riscv_set_default_priv_spec (arg);
+      as_warn (_("-mpriv-spec is deprecated and has no effect, the "
+		 "privileged spec is always 1.13; use binutils 2.47 or "
+		 "earlier to select another version"));
+      break;
 
     case OPTION_BIG_ENDIAN:
       target_big_endian = 1;
@@ -4873,8 +4737,6 @@ riscv_after_parse_args (void)
   /* Set default specs.  */
   if (default_isa_spec == ISA_SPEC_CLASS_NONE)
     riscv_set_default_isa_spec (DEFAULT_RISCV_ISA_SPEC);
-  if (default_priv_spec == PRIV_SPEC_CLASS_NONE)
-    riscv_set_default_priv_spec (DEFAULT_RISCV_PRIV_SPEC);
 
   riscv_set_arch (default_arch_with_ext);
 
@@ -5369,6 +5231,16 @@ s_riscv_option (int x ATTRIBUTE_UNUSED)
     riscv_opts.relax = true;
   else if (strcmp (name, "norelax") == 0)
     riscv_opts.relax = false;
+  else if (strcmp (name, "exact") == 0)
+    {
+      riscv_opts.exact = true;
+      riscv_opts.relax = false;
+    }
+  else if (strcmp (name, "noexact") == 0)
+    {
+      riscv_opts.exact = false;
+      riscv_opts.relax = true;
+    }
   else if (strcmp (name, "csr-check") == 0)
     riscv_opts.csr_check = true;
   else if (strcmp (name, "no-csr-check") == 0)
@@ -5788,14 +5660,14 @@ RISC-V options:\n\
   -fno-pic                    don't generate position-independent code (default)\n\
   -march=ISA                  set the RISC-V architecture\n\
   -misa-spec=ISAspec          set the RISC-V ISA spec (2.2, 20190608, 20191213)\n\
-  -mpriv-spec=PRIVspec        set the RISC-V privilege spec (1.10, 1.11, 1.12, 1.13)\n\
+  -mpriv-spec=PRIVspec        deprecated and ignored (always 1.13)\n\
   -mabi=ABI                   set the RISC-V ABI\n\
   -mrelax                     enable relax (default)\n\
   -mno-relax                  disable relax\n\
   -march-attr                 generate RISC-V arch attribute\n\
   -mno-arch-attr              don't generate RISC-V arch attribute\n\
-  -mcsr-check                 enable the csr ISA and privilege spec version checks\n\
-  -mno-csr-check              disable the csr ISA and privilege spec version checks (default)\n\
+  -mcsr-check                 enable the csr ISA checks\n\
+  -mno-csr-check              disable the csr ISA checks (default)\n\
   -mbig-endian                assemble for big-endian\n\
   -mlittle-endian             assemble for little-endian\n\
 "));
@@ -5889,8 +5761,8 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
   bfd_reloc_code_real_type imm_reloc = BFD_RELOC_UNUSED;
   char save_c;
 
-  if (!start_assemble && !start_assembly())
-    return;
+  if (!start_assemble)
+    start_assembly ();
 
   while (!is_end_of_stmt (*input_line_pointer))
     ++input_line_pointer;
@@ -5927,66 +5799,17 @@ s_riscv_insn (int x ATTRIBUTE_UNUSED)
   demand_empty_rest_of_line ();
 }
 
-/* Update architecture and privileged elf attributes.  If we don't set
-   them, then try to output the default ones.  */
+/* Update architecture elf attribute.  If we don't set it, then try to
+   output the default one.  */
 
 static void
 riscv_write_out_attrs (void)
 {
-  const char *priv_str, *p;
-  /* versions[0]: major version.
-     versions[1]: minor version.
-     versions[2]: revision version.  */
-  unsigned versions[3] = {0}, number = 0;
-  unsigned int i;
-
   /* Re-write architecture elf attribute.  */
   if (!bfd_elf_add_proc_attr_string (stdoutput, Tag_RISCV_arch, file_arch_str))
     as_fatal (_("error adding attribute: %s"),
 	      bfd_errmsg (bfd_get_error ()));
   free ((void *) file_arch_str);
-
-  /* For the file without any instruction, we don't set the default_priv_spec
-     according to the privileged elf attributes since the md_assemble isn't
-     called.  */
-  if (!start_assemble
-      && !riscv_set_default_priv_spec (NULL))
-    return;
-
-  /* If we already have set privileged elf attributes, then no need to do
-     anything.  Otherwise, don't generate or update them when no CSR and
-     privileged instructions are used.  */
-  if (!explicit_priv_attr)
-    return;
-
-  RISCV_GET_PRIV_SPEC_NAME (priv_str, default_priv_spec);
-  p = priv_str;
-  for (i = 0; *p; ++p)
-    {
-      if (*p == '.' && i < 3)
-       {
-         versions[i++] = number;
-         number = 0;
-       }
-      else if (ISDIGIT (*p))
-       number = (number * 10) + (*p - '0');
-      else
-       {
-         as_bad (_("internal: bad RISC-V privileged spec (%s)"), priv_str);
-         return;
-       }
-    }
-  versions[i] = number;
-
-  /* Re-write privileged elf attributes.  */
-  if (!bfd_elf_add_proc_attr_int (stdoutput, Tag_RISCV_priv_spec,
-				  versions[0])
-      || !bfd_elf_add_proc_attr_int (stdoutput, Tag_RISCV_priv_spec_minor,
-				     versions[1])
-      || !bfd_elf_add_proc_attr_int (stdoutput, Tag_RISCV_priv_spec_revision,
-				     versions[2]))
-    as_fatal (_("error adding attribute: %s"),
-	      bfd_errmsg (bfd_get_error ()));
 }
 
 /* Add the default contents for the .riscv.attributes section.  */
@@ -6142,9 +5965,10 @@ s_riscv_attribute (int ignored ATTRIBUTE_UNUSED)
     case Tag_RISCV_priv_spec:
     case Tag_RISCV_priv_spec_minor:
     case Tag_RISCV_priv_spec_revision:
-      if (start_assemble)
-       as_fatal (_("privileged elf attributes must be set before "
-		   "any instructions"));
+      as_warn (_("privileged elf attributes are deprecated and ignored, the "
+		 "privileged spec is always 1.13; use binutils 2.47 or "
+		 "earlier to select another version"));
+      elf_known_obj_attributes_proc (stdoutput)[tag].i = 0;
       break;
 
     case Tag_RISCV_stack_align:

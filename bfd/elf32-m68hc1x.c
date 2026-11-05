@@ -425,8 +425,7 @@ elf32_m68hc11_size_stubs (bfd *output_bfd, bfd *stub_bfd,
 
 	  /* Get the relocs.  */
 	  internal_relocs
-	    = _bfd_elf_link_read_relocs (input_bfd, section, NULL,
-					 (Elf_Internal_Rela *) NULL,
+	    = _bfd_elf_link_read_relocs (input_bfd, section, NULL, NULL,
 					 info->keep_memory);
 	  if (internal_relocs == NULL)
 	    goto error_ret_free_local;
@@ -960,7 +959,7 @@ elf32_m68hc11_relocate_section (struct bfd_link_info *info,
       arelent arel;
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma relocation = 0;
       bfd_reloc_status_type r = bfd_reloc_undefined;

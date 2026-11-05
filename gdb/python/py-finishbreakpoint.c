@@ -325,7 +325,7 @@ bpfinishpy_init (PyObject *self, PyObject *args, PyObject *kwargs)
     }
 
   self_bpfinish->bp->frame_id = frame_id;
-  self_bpfinish->is_finish_bp = 1;
+  self_bpfinish->is_finish_bp = true;
   self_bpfinish->initiating_frame = get_frame_id (frame);
 
   /* Bind the breakpoint with the current program space.  */

@@ -37,9 +37,6 @@
    disassemble_info::fprintf_func which is for unstyled output.  */
 #define fprintf_func please_use_fprintf_styled_func_instead
 
-/* The earliest privilege spec supported by disassembler. */
-#define PRIV_SPEC_EARLIEST PRIV_SPEC_CLASS_1P10
-
 struct riscv_private_data
 {
   bfd_vma gp;
@@ -55,13 +52,15 @@ struct riscv_private_data
   unsigned xlen;
   /* Default ISA specification version.  */
   enum riscv_spec_class default_isa_spec;
-  /* Default privileged specification.  */
-  enum riscv_spec_class default_priv_spec;
   /* Used for architecture parser.  */
   riscv_parse_subset_t riscv_rps_dis;
   /* Default architecture string for the object file.  It will be changed once
      elf architecture attribute exits.  This is used for mapping symbol $x.  */
   const char* default_arch;
+  /* Owning copy of the ISA string given by the "arch=" option, which
+     DEFAULT_ARCH points at while the option is in effect.  The option
+     string itself is freed once the options are parsed.  */
+  char *arch_option;
   /* Used for mapping symbols.  */
   int last_map_symbol;
   bfd_vma last_stop_offset;
@@ -88,6 +87,35 @@ set_default_riscv_dis_options (struct disassemble_info *info)
   pd->riscv_fpr_names = riscv_fpr_names_abi;
   pd->no_aliases = false;
   pd->all_ext = false;
+}
+
+static void riscv_dis_parse_subset (struct disassemble_info *, const char *);
+
+/* Disassemble according to ISA from now on.  If ISA does not parse,
+   keep the previous ISA.  */
+
+static void
+riscv_dis_set_arch (struct disassemble_info *info, const char *isa)
+{
+  struct riscv_private_data *pd = info->private_data;
+
+  riscv_release_subset_list (pd->riscv_rps_dis.subset_list);
+  if (!riscv_parse_subset (&pd->riscv_rps_dis, isa))
+    {
+      /* The subset list now holds whatever parsed before the error, and
+	 has no ISA string, so this parses the previous ISA again.  */
+      riscv_release_subset_list (pd->riscv_rps_dis.subset_list);
+      riscv_dis_parse_subset (info, pd->default_arch);
+      return;
+    }
+  riscv_arch_str (pd->xlen, pd->riscv_rps_dis.subset_list, true/* update */);
+
+  /* Keep an owning copy: ISA points into the option string, which is
+     freed once the options are parsed, while DEFAULT_ARCH is read again
+     on every "$x" mapping symbol.  */
+  free (pd->arch_option);
+  pd->arch_option = xstrdup (isa);
+  pd->default_arch = pd->arch_option;
 }
 
 /* Parse RISC-V disassembler option (without arguments).  */
@@ -156,26 +184,13 @@ parse_riscv_dis_option (char *option, struct disassemble_info *info)
 
   *equal = '\0';
   value = equal + 1;
-  if (strcmp (option, "priv-spec") == 0)
-    {
-      struct riscv_private_data *pd = info->private_data;
-      enum riscv_spec_class priv_spec = PRIV_SPEC_CLASS_NONE;
-      const char *name = NULL;
-
-      RISCV_GET_PRIV_SPEC_CLASS (value, priv_spec);
-      if (priv_spec < PRIV_SPEC_EARLIEST)
-	opcodes_error_handler (_("unknown privileged spec set by %s=%s"),
-			       option, value);
-      else if (pd->default_priv_spec == PRIV_SPEC_CLASS_NONE)
-	pd->default_priv_spec = priv_spec;
-      else if (pd->default_priv_spec != priv_spec)
-	{
-	  RISCV_GET_PRIV_SPEC_NAME (name, pd->default_priv_spec);
-	  opcodes_error_handler (_("mis-matched privilege spec set by %s=%s, "
-				   "the elf privilege attribute is %s"),
-				 option, value, name);
-	}
-    }
+  if (strcmp (option, "arch") == 0)
+    riscv_dis_set_arch (info, value);
+  else if (strcmp (option, "priv-spec") == 0)
+    opcodes_error_handler (_("%s=%s is deprecated and ignored, the "
+			     "privileged spec is always 1.13; use binutils "
+			     "2.47 or earlier to select another version"),
+			   option, value);
   else
     {
       /* xgettext:c-format */
@@ -732,19 +747,11 @@ print_insn_args (const char *oparg, insn_t l, bfd_vma pc, disassemble_info *info
 		for (i = 0; i < 4096; i++)
 		  riscv_csr_hash[i] = NULL;
 
-		/* Set to the newest privileged version.  */
-		if (pd->default_priv_spec == PRIV_SPEC_CLASS_NONE)
-		  pd->default_priv_spec = PRIV_SPEC_CLASS_DRAFT - 1;
-
-#define DECLARE_CSR(name, num, class, define_version, abort_version)	\
-		if (riscv_csr_hash[num] == NULL 			\
-		    && ((define_version == PRIV_SPEC_CLASS_NONE 	\
-			 && abort_version == PRIV_SPEC_CLASS_NONE)	\
-			|| (pd->default_priv_spec >= define_version 	\
-			    && pd->default_priv_spec < abort_version)))	\
+#define DECLARE_CSR(name, num, class)				\
+		if (riscv_csr_hash[num] == NULL)			\
 		  riscv_csr_hash[num] = #name;
-#define DECLARE_CSR_ALIAS(name, num, class, define_version, abort_version) \
-		DECLARE_CSR (name, num, class, define_version, abort_version)
+#define DECLARE_CSR_ALIAS(name, num, class)			\
+		DECLARE_CSR (name, num, class)
 #include "opcode/riscv-opc.h"
 #undef DECLARE_CSR
 	      }
@@ -1710,7 +1717,6 @@ riscv_init_disasm_info (struct disassemble_info *info)
   pd->xlen = 0;
   riscv_set_xlen_from_elf (pd, info);
   pd->default_isa_spec = ISA_SPEC_CLASS_DRAFT - 1;
-  pd->default_priv_spec = PRIV_SPEC_CLASS_NONE;
 
   pd->riscv_rps_dis.subset_list = xcalloc (1, sizeof (riscv_parse_subset_t));
   pd->riscv_rps_dis.error_handler = opcodes_error_handler;
@@ -1728,13 +1734,6 @@ riscv_init_disasm_info (struct disassemble_info *info)
 	  if (bfd_get_section_by_name (abfd, sec_name) != NULL)
 	    {
 	      obj_attribute *attr = elf_known_obj_attributes_proc (abfd);
-	      unsigned int Tag_a = Tag_RISCV_priv_spec;
-	      unsigned int Tag_b = Tag_RISCV_priv_spec_minor;
-	      unsigned int Tag_c = Tag_RISCV_priv_spec_revision;
-	      riscv_get_priv_spec_class_from_numbers (attr[Tag_a].i,
-						      attr[Tag_b].i,
-						      attr[Tag_c].i,
-						      &pd->default_priv_spec);
 	      pd->default_arch = attr[Tag_RISCV_arch].s;
 	    }
 	}
@@ -1892,6 +1891,7 @@ typedef enum
 {
   RISCV_OPTION_ARG_NONE = -1,
   RISCV_OPTION_ARG_PRIV_SPEC,
+  RISCV_OPTION_ARG_ARCH,
 
   RISCV_OPTION_ARG_COUNT
 } riscv_option_arg_t;
@@ -1915,8 +1915,12 @@ static const struct
     N_("Disassemble only into canonical instructions."),
     RISCV_OPTION_ARG_NONE },
   { "priv-spec=",
-    N_("Print the CSR according to the chosen privilege spec."),
-    RISCV_OPTION_ARG_PRIV_SPEC }
+    N_("Deprecated and ignored, the CSR is printed according to the "
+       "privilege spec 1.13."),
+    RISCV_OPTION_ARG_PRIV_SPEC },
+  { "arch=",
+    N_("Disassemble according to the given ISA string."),
+    RISCV_OPTION_ARG_ARCH }
 };
 
 /* Build the structure representing valid RISCV disassembler options.
@@ -1934,19 +1938,17 @@ disassembler_options_riscv (void)
       size_t num_args = RISCV_OPTION_ARG_COUNT;
       disasm_option_arg_t *args;
       disasm_options_t *opts;
-      size_t i, priv_spec_count;
+      size_t i;
 
       args = XNEWVEC (disasm_option_arg_t, num_args + 1);
 
       args[RISCV_OPTION_ARG_PRIV_SPEC].name = "SPEC";
-      priv_spec_count = PRIV_SPEC_CLASS_DRAFT - PRIV_SPEC_EARLIEST;
-      args[RISCV_OPTION_ARG_PRIV_SPEC].values
-        = XNEWVEC (const char *, priv_spec_count + 1);
-      for (i = 0; i < priv_spec_count; i++)
-	args[RISCV_OPTION_ARG_PRIV_SPEC].values[i]
-	  = riscv_priv_specs[PRIV_SPEC_EARLIEST - PRIV_SPEC_CLASS_NONE - 1 + i].name;
-      /* The array we return must be NULL terminated.  */
-      args[RISCV_OPTION_ARG_PRIV_SPEC].values[i] = NULL;
+      /* The option is deprecated, so accept any value.  */
+      args[RISCV_OPTION_ARG_PRIV_SPEC].values = NULL;
+
+      /* Any ISA string is accepted, so no candidate value list.  */
+      args[RISCV_OPTION_ARG_ARCH].name = "ISA";
+      args[RISCV_OPTION_ARG_ARCH].values = NULL;
 
       /* The array we return must be NULL terminated.  */
       args[num_args].name = NULL;
@@ -2047,5 +2049,6 @@ void disassemble_free_riscv (struct disassemble_info *info ATTRIBUTE_UNUSED)
       riscv_release_subset_list (pd->riscv_rps_dis.subset_list);
       free (pd->riscv_rps_dis.subset_list);
       free (pd->jvt_content);
+      free (pd->arch_option);
     }
 }

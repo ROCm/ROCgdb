@@ -1531,6 +1531,17 @@ namespace eval Dwarf {
 	_op .byte $size
     }
 
+    proc _handle_DW_OP_deref_type {size label} {
+	variable _cu_label
+
+	_op .byte $size
+	_op .uleb128 "$label - $_cu_label"
+    }
+
+    proc _handle_DW_OP_GNU_deref_type {size label} {
+	_handle_DW_OP_deref_type $size $label
+    }
+
     # A handler for DW_OP_breg<n> is missing from upstream code.  Meanwhile
     # add support for the entries we need until support is upstream.
     proc _handle_DW_OP_breg0 {offset} {

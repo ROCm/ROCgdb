@@ -583,8 +583,7 @@ compile_cplus_convert_struct_or_union_members
     {
       const char *field_name = type->field (i).name ();
 
-      if (type->field (i).is_ignored ()
-	  || type->field (i).is_artificial ())
+      if (type->field (i).is_artificial ())
 	continue;
 
       /* GDB records unnamed/anonymous fields with empty string names.  */

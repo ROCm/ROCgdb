@@ -608,10 +608,10 @@ enum riscv_insn_class
   INSN_CLASS_H,
   INSN_CLASS_XANDESBFHCVT,
   INSN_CLASS_XANDESVBFHCVT,
-  INSN_CLASS_XANDESVSINTLOAD,
-  INSN_CLASS_XANDESVPACKFPH,
   INSN_CLASS_XANDESVDOT,
+  INSN_CLASS_XANDESVPACKFPH,
   INSN_CLASS_XANDESVSINTH,
+  INSN_CLASS_XANDESVSINTLOAD,
   INSN_CLASS_XCVALU,
   INSN_CLASS_XCVBI,
   INSN_CLASS_XCVBITMANIP,
@@ -619,6 +619,18 @@ enum riscv_insn_class
   INSN_CLASS_XCVMAC,
   INSN_CLASS_XCVMEM,
   INSN_CLASS_XCVSIMD,
+  INSN_CLASS_XMIPSCBOP,
+  INSN_CLASS_XMIPSCMOV,
+  INSN_CLASS_XMIPSEXECTL,
+  INSN_CLASS_XMIPSLSP,
+  INSN_CLASS_XSFCEASE,
+  INSN_CLASS_XSFVCP,
+  INSN_CLASS_XSFVFNRCLIPXFQF,
+  INSN_CLASS_XSFVQMACCDOD,
+  INSN_CLASS_XSFVQMACCQOQ,
+  INSN_CLASS_XSMTVDOT,
+  INSN_CLASS_XSMTVDOTII,
+  INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII,
   INSN_CLASS_XTHEADBA,
   INSN_CLASS_XTHEADBB,
   INSN_CLASS_XTHEADBS,
@@ -631,24 +643,12 @@ enum riscv_insn_class
   INSN_CLASS_XTHEADMEMIDX,
   INSN_CLASS_XTHEADMEMPAIR,
   INSN_CLASS_XTHEADSYNC,
-  INSN_CLASS_XTHEADVECTOR,
   INSN_CLASS_XTHEADVDOT,
+  INSN_CLASS_XTHEADVECTOR,
   INSN_CLASS_XTHEADZVAMO,
+  INSN_CLASS_XVENTANACONDOPS,
   INSN_CLASS_XXTVARITH,
   INSN_CLASS_XXTVCODER,
-  INSN_CLASS_XVENTANACONDOPS,
-  INSN_CLASS_XSFVCP,
-  INSN_CLASS_XSFCEASE,
-  INSN_CLASS_XSFVQMACCQOQ,
-  INSN_CLASS_XSFVQMACCDOD,
-  INSN_CLASS_XSFVFNRCLIPXFQF,
-  INSN_CLASS_XMIPSCBOP,
-  INSN_CLASS_XMIPSCMOV,
-  INSN_CLASS_XMIPSEXECTL,
-  INSN_CLASS_XMIPSLSP,
-  INSN_CLASS_XSMTVDOT,
-  INSN_CLASS_XSMTVDOTII,
-  INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII,
 };
 
 /* This structure holds information for a particular instruction.  */
@@ -716,6 +716,20 @@ struct riscv_opcode
 #define INSN_4_BYTE		0x00000030
 #define INSN_8_BYTE		0x00000040
 #define INSN_16_BYTE		0x00000050
+
+/* Instruction is prohibited in the exact mode.
+
+   Of instruction aliases, this flag shall be also set if:
+
+   (1) there are multiple valid candidates with the same instruction
+   name and operands (e.g. "sgt" alias should not set this flag) and
+   (2) there is another candidate with either more canonical instruction
+   length or less relaxation (e.g. a "lui" alias which expands to
+   "c.lui" shall set this flag).
+
+   Currently, this flag is set on compressed aliases of an instruction
+   with non-compressed encodings.  */
+#define INSN_NON_EXACT		0x00000080
 
 /* Operands required to be an even-numbered register (pair) in RV32.  */
 #define INSN_RV32_EVEN_D	0x00000100

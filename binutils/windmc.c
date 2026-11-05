@@ -111,10 +111,6 @@ static int mcset_bin_out_is_unicode = 1;
 /* Set by -c. Sets the Customer bit in all the message ID's.  */
 int mcset_custom_bit = 0;
 
-/* Set by -o. Generate OLE2 header file. Use HRESULT definition instead of
-   status code definition.  */
-static int mcset_use_hresult = 0;
-
 /* Set by -m <msglen>. Generate a warning if the size of any message exceeds
    maxmsglen characters.  */
 rc_uint_type mcset_max_message_length = 0;
@@ -1016,7 +1012,6 @@ main (int argc, char **argv)
 	  mcset_automatic_null_termination = 1;
 	  break;
 	case 'o':
-	  mcset_use_hresult = 1;
 	  fatal ("option -o is not implemented until yet.\n");
 	  break;
 	case 'F':

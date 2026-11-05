@@ -85,7 +85,14 @@ private:
   }
 
   /* Contains characters which are waiting to be output (they have
-     already been counted in chars_printed).  */
+     already been counted in chars_printed).
+
+     All output is accumulated here.  A call to wrap_here flushes the
+     buffer and records the current column as a possible line break
+     point.  A newline flushes the buffer and cancels the break point.
+     If the line overflows while a break point is set, a newline and
+     the indentation are emitted at that point, and the buffered text
+     follows on the next line.  */
   std::string m_wrap_buffer;
 
   /* Amount to indent by if the wrap occurs.  */

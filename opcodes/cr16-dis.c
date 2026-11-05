@@ -79,10 +79,6 @@ static ins cr16_currInsn;
 static wordU cr16_words[3];
 /* Contains all words in appropriate order.  */
 static ULONGLONG cr16_allWords;
-/* Holds the current processed argument number.  */
-static int processing_argument_number;
-/* Nonzero means a IMM4 instruction.  */
-static int imm4flag;
 /* Nonzero means the instruction's original size is
    incremented (escape sequence is used).  */
 static int size_changed;
@@ -704,8 +700,6 @@ print_arguments (ins *currentInsn, bfd_vma memaddr, struct disassemble_info *inf
 
   for (i = 0; i < currentInsn->nargs; i++)
     {
-      processing_argument_number = i;
-
       /* For "bal (ra), disp17" instruction only.  */
       if ((IS_INSN_MNEMONIC ("bal")) && (i == 0) && instruction->size == 2)
 	{
@@ -790,7 +784,6 @@ print_insn_cr16 (bfd_vma memaddr, struct disassemble_info *info)
   int is_decoded;     /* Nonzero means instruction has a match.  */
 
   /* Initialize global variables.  */
-  imm4flag = 0;
   size_changed = 0;
 
   /* Retrieve the encoding from current memory location.  */

@@ -24,20 +24,20 @@ shift 3
 
 major=$("$prog" --version \
 	    | grep "GNU texinfo" \
-	    | sed 's/^.* \([0-9][0-9]*\)\.[0-9][0-9]*\(.*\)\?$/\1/')
+	    | sed -n 's/^.* \([0-9][0-9]*\)\.[0-9][0-9]*.*$/\1/p')
 minor=$("$prog" --version \
 	    | grep "GNU texinfo" \
-	    | sed 's/^.* [0-9][0-9]*\.\([0-9][0-9]*\)\(.*\)\?$/\1/')
+	    | sed -n 's/^.* [0-9][0-9]*\.\([0-9][0-9]*\).*$/\1/p')
 
-if [ "$major" = "" ] || [ "$major" = "" ]; then
-    echo "Cannot determine makeinfo version for $prog.  Info documentation will not be build."
+if [ "$major" = "" ] || [ "$minor" = "" ]; then
+    echo "Cannot determine makeinfo version for $prog.  Info documentation will not be built."
     exit
 fi
 
 if [ "$major" -lt "$required_major" ] \
        || { [ "$major" -eq "$required_major" ] \
 		&& [ "$minor" -lt "$required_minor" ]; }; then
-    echo "$prog is too old, have $major.$minor, require $required_major.$required_minor.  Info documentation will not be build."
+    echo "$prog is too old, have $major.$minor, require $required_major.$required_minor.  Info documentation will not be built."
     exit
 fi
 

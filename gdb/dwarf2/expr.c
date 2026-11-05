@@ -4329,7 +4329,8 @@ dwarf_expr_context::execute_stack_op (gdb::array_view<const gdb_byte> expr)
 	case DW_OP_deref_type:
 	case DW_OP_GNU_deref_type:
 	  {
-	    int addr_size = (op == DW_OP_deref ? this->m_addr_size : *op_ptr++);
+	    int deref_size
+	      = (op == DW_OP_deref ? this->m_addr_size : *op_ptr++);
 	    struct type *type = address_type;
 
 	    if (op == DW_OP_deref_type || op == DW_OP_GNU_deref_type)
@@ -4337,12 +4338,17 @@ dwarf_expr_context::execute_stack_op (gdb::array_view<const gdb_byte> expr)
 		op_ptr = safe_read_uleb128 (op_ptr, op_end, &uoffset);
 		cu_offset type_die_cu_off = (cu_offset) uoffset;
 		type = get_base_type (type_die_cu_off);
-		addr_size = type->length ();
+		if (type->length () != deref_size)
+		  error (_("%s has dereference size %d, but its "
+			   "type has size %s"),
+			 get_DW_OP_name (op), deref_size,
+			 pulongest (type->length ()));
+		deref_size = type->length ();
 	      }
 
 	    auto location = fetch (0)->to_location (arch);
 	    result_entry = location->deref (this->m_frame, this->m_addr_info,
-					    type, addr_size);
+					    type, deref_size);
 	    pop ();
 	  }
 	  break;

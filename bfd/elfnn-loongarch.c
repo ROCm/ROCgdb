@@ -1049,7 +1049,7 @@ bad_static_reloc (struct bfd_link_info *info,
 		  bfd *abfd, const Elf_Internal_Rela *rel,
 		  asection *sec, unsigned r_type,
 		  struct elf_link_hash_entry *h,
-		  Elf_Internal_Sym *isym)
+		  const Elf_Internal_Sym *isym)
 {
   reloc_howto_type * r = loongarch_elf_rtype_to_howto (abfd, r_type);
   const char *object;
@@ -1145,17 +1145,11 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       unsigned int r_type;
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
+      const Elf_Internal_Sym *isym = NULL;
       bool is_abs_symbol = false;
-      Elf_Internal_Sym *isym = NULL;
 
       r_symndx = ELFNN_R_SYM (rel->r_info);
       r_type = ELFNN_R_TYPE (rel->r_info);
-
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"), abfd, r_symndx);
-	  return false;
-	}
 
       if (r_symndx < symtab_hdr->sh_info)
 	{
@@ -1535,10 +1529,7 @@ loongarch_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    head = &h->dyn_relocs;
 	  else
 	    {
-	      /* Track dynamic relocs needed for local syms too.
-		 We really need local syms available to do this
-		 easily.  Oh well.  */
-
+	      /* Track dynamic relocs needed for local syms too.  */
 	      asection *s;
 	      void *vpp;
 
@@ -3254,7 +3245,7 @@ static struct
   bfd_vma r_offset;
   int r_type;
   bfd_vma relocation;
-  Elf_Internal_Sym *sym;
+  const Elf_Internal_Sym *sym;
   struct elf_link_hash_entry *h;
   bfd_vma addend;
   int64_t top_then;
@@ -3264,7 +3255,7 @@ static size_t larch_reloc_queue_tail = 0;
 
 static const char *
 loongarch_sym_name (bfd *input_bfd, struct elf_link_hash_entry *h,
-		    Elf_Internal_Sym *sym)
+		    const Elf_Internal_Sym *sym)
 {
   const char *ret = NULL;
   if (sym)
@@ -3281,7 +3272,7 @@ loongarch_sym_name (bfd *input_bfd, struct elf_link_hash_entry *h,
 
 static void
 loongarch_record_one_reloc (bfd *abfd, asection *section, int r_type,
-			    bfd_vma r_offset, Elf_Internal_Sym *sym,
+			    bfd_vma r_offset, const Elf_Internal_Sym *sym,
 			    struct elf_link_hash_entry *h, bfd_vma addend)
 {
   if ((larch_reloc_queue_head == 0
@@ -3556,7 +3547,7 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
       bfd_vma pc = sec_addr (input_section) + rel->r_offset;
       reloc_howto_type *howto = NULL;
       asection *sec = NULL;
-      Elf_Internal_Sym *sym = NULL;
+      const Elf_Internal_Sym *sym = NULL;
       struct elf_link_hash_entry *h = NULL;
       const char *name;
       bfd_reloc_status_type r = bfd_reloc_ok;
@@ -3566,6 +3557,7 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
       bfd_vma relocation, off, ie_off, desc_off;
       int i, j;
       bool resolve_pcrel_undef_weak = false;
+      bool ignored = false;
 
       /* When an unrecognized relocation is encountered, which usually
 	 occurs when using a newer assembler but an older linker, an error
@@ -3613,7 +3605,7 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 	}
       else
 	{
-	  bool warned, ignored;
+	  bool warned;
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
@@ -4291,7 +4283,8 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 	  bool via_plt =
 	    plt != NULL && h != NULL && h->plt.offset != (bfd_vma) - 1;
 
-	  if (is_undefweak)
+	  bool ignored_undef = (ignored && !via_plt);
+	  if (is_undefweak || ignored_undef)
 	    {
 	      relocation = 0;
 
@@ -4330,6 +4323,12 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 		}
 	    }
 
+	  /* B16 and B21 cannot be rewritten as an unconditional jump
+	     without changing their semantics.  Apply a zero displacement,
+	     matching the existing undefined weak symbol behavior.  */
+	  if (ignored_undef && !via_plt)
+	    break;
+
 	  if (resolved_local)
 	    {
 	      relocation -= pc;
@@ -4337,18 +4336,23 @@ loongarch_elf_relocate_section (struct bfd_link_info *info,
 	    }
 	  else if (resolved_dynly)
 	    {
-	      BFD_ASSERT (h
-			  && (h->plt.offset != MINUS_ONE
-			      || ELF_ST_VISIBILITY (h->other) != STV_DEFAULT)
-			  && rel->r_addend == 0);
+	      BFD_ASSERT (rel->r_addend == 0);
 	      if (h && h->plt.offset == MINUS_ONE
 		  && ELF_ST_VISIBILITY (h->other) != STV_DEFAULT)
 		{
 		  relocation -= pc;
 		  relocation += rel->r_addend;
 		}
-	      else
+	      else if (via_plt)
 		relocation = sec_addr (plt) + h->plt.offset - pc;
+	      else
+		{
+		  fatal = loongarch_reloc_is_fatal
+		    (info, input_bfd, input_section, rel, howto,
+		     bfd_reloc_notsupported, is_undefweak, name,
+		     _("cannot resolve a dynamic branch without a PLT entry"));
+		  break;
+		}
 	    }
 
 	  break;

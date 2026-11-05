@@ -4473,6 +4473,11 @@ global_compare_hash (const void *s1, const void *s2)
   if (g1->hash > g2->hash)
     return 1;
 
+  if (g1->offset < g2->offset)
+    return -1;
+  if (g1->offset > g2->offset)
+    return 1;
+
   return 0;
 }
 

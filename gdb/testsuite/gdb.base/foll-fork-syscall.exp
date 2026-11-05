@@ -120,11 +120,18 @@ proc_with_prefix test_catch_syscall {follow-fork-mode detach-on-fork} {
 	append expected_re " process.*"
     }
     append expected_re "Breakpoint .*set breakpoint here.*"
-    gdb_test "continue" $expected_re "continue to breakpoint after fork"
+
+    # Use -no-prompt-anchor in the following tests to account for an
+    # "I am the child" message which may occur at any moment following the
+    # fork, for follow-fork-mode=parent and detach-on-fork=on.  Likewise for
+    # an "I am the parent" message and follow-fork-mode=child.
+    gdb_test -no-prompt-anchor continue $expected_re \
+	"continue to breakpoint after fork"
 
     # Next stop should be the syscall catchpoint.
     set expected_re ".*Catchpoint . \\(call to syscall chdir\\).*"
-    gdb_test continue $expected_re "continue to chdir syscall"
+    gdb_test -no-prompt-anchor continue $expected_re \
+	"continue to chdir syscall"
 }
 
 # Check for follow-fork support.

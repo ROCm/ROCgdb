@@ -562,8 +562,8 @@ i387_cache_to_xsave (struct regcache *regcache, void *buf)
 	}
     }
 
-  /* Update the corresponding bits in xstate_bv if any SSE/AVX
-     registers are changed.  */
+  /* Update the corresponding bits in xstate_bv if any of the above
+     xsave registers are changed.  */
   fp->xstate_bv |= xstate_bv;
 }
 

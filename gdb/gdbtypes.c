@@ -671,53 +671,6 @@ make_atomic_type (struct type *type)
   return make_qualified_type (type, new_flags, nullptr);
 }
 
-/* Replace the contents of ntype with the type *type.  This changes the
-   contents, rather than the pointer for TYPE_MAIN_TYPE (ntype); thus
-   the changes are propagated to all types in the TYPE_CHAIN.
-
-   In order to build recursive types, it's inevitable that we'll need
-   to update types in place --- but this sort of indiscriminate
-   smashing is ugly, and needs to be replaced with something more
-   controlled.  TYPE_MAIN_TYPE is a step in this direction; it's not
-   clear if more steps are needed.  */
-
-void
-replace_type (struct type *ntype, struct type *type)
-{
-  struct type *chain;
-
-  /* These two types had better be in the same objfile.  Otherwise,
-     the assignment of one type's main type structure to the other
-     will produce a type with references to objects (names; field
-     lists; etc.) allocated on an objfile other than its own.  */
-  gdb_assert (ntype->objfile_owner () == type->objfile_owner ());
-
-  *ntype->main_type = *type->main_type;
-
-  /* The type length is not a part of the main type.  Update it for
-     each type on the variant chain.  */
-  chain = ntype;
-  do
-    {
-      /* Assert that this element of the chain has no address-class bits
-	 set in its flags.  Such type variants might have type lengths
-	 which are supposed to be different from the non-address-class
-	 variants.  This assertion shouldn't ever be triggered because
-	 symbol readers which do construct address-class variants don't
-	 call replace_type().  */
-      gdb_assert (chain->address_class () == 0);
-      gdb_assert (chain->address_space () == 0);
-
-      chain->set_length (type->length ());
-      chain = chain->chain;
-    }
-  while (ntype != chain);
-
-  /* Assert that the two types have equivalent instance qualifiers.
-     This should be true for at least all of our debug readers.  */
-  gdb_assert (ntype->instance_flags () == type->instance_flags ());
-}
-
 /* See gdbtypes.h.  */
 
 type *
@@ -1490,25 +1443,24 @@ type_name_or_error (struct type *type)
 
 /* See gdbtypes.h.  */
 
-struct type *
-lookup_typename (const struct language_defn *language,
-		 const char *name,
-		 const struct block *block, int noerr)
+type *
+lookup_typename (const language_defn *language, const char *name,
+		 const block *block, bool noerr)
 {
-  struct symbol *sym;
-
-  sym = lookup_symbol_in_language (name, block, SEARCH_TYPE_DOMAIN,
-				   language->la_language, NULL).symbol;
-  if (sym != nullptr)
+  if (block_symbol bsym
+	= lookup_symbol_in_language (name, block, SEARCH_TYPE_DOMAIN,
+				     language->la_language, nullptr);
+      bsym.symbol != nullptr)
     {
-      struct type *type = sym->type ();
+      type *type = bsym.symbol->type ();
       /* Ensure the length of TYPE is valid.  */
       check_typedef (type);
       return type;
     }
 
   if (noerr)
-    return NULL;
+    return nullptr;
+
   error (_("No type named %s."), name);
 }
 
@@ -1521,7 +1473,7 @@ lookup_unsigned_typename (const struct language_defn *language,
   uns = "unsigned ";
   uns += name;
 
-  return lookup_typename (language, uns.c_str (), NULL, 0);
+  return lookup_typename (language, uns.c_str (), nullptr, false);
 }
 
 struct type *
@@ -1530,7 +1482,8 @@ lookup_signed_typename (const struct language_defn *language, const char *name)
   /* In C and C++, "char" and "signed char" are distinct types.  */
   if (streq (name, "char"))
     name = "signed char";
-  return lookup_typename (language, name, NULL, 0);
+
+  return lookup_typename (language, name, nullptr, false);
 }
 
 /* Lookup a structure type named "struct NAME",
@@ -5092,8 +5045,6 @@ recursive_dump_type (struct type *type, int spaces)
 	gdb_printf (" private");
       else if (fld.is_protected ())
 	gdb_printf (" protected");
-      else if (fld.is_ignored ())
-	gdb_printf (" ignored");
 
       gdb_printf ("\n");
       if (fld.type () != NULL)

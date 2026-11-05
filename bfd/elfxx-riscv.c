@@ -1285,14 +1285,14 @@ static const struct riscv_implicit_subset riscv_implicit_subsets[] =
   {"xsfvqmaccdod", "+zve32x,+zvl128b", check_implicit_always},
   {"xsfvfnrclipxfqf", "+zve32f", check_implicit_always},
 
+  {"xsmtvdot", "+zve32x", check_implicit_always},
+  {"xsmtvdotii", "+xsmtvdot", check_implicit_always},
+
   {"xtheadvector", "+zicsr", check_implicit_always},
   {"xtheadzvamo", "+zaamo", check_implicit_always},
 
   {"xxtvarith", "+v",	check_implicit_always},
   {"xxtvcoder", "+v",	check_implicit_always},
-
-  {"xsmtvdotii", "+xsmtvdot", check_implicit_always},
-  {"xsmtvdot", "+zve32x", check_implicit_always},
 
   {"v", "+zve64d,+zvl128b", check_implicit_always},
   {"zvabd", "+zve32x", check_implicit_always},
@@ -1726,10 +1726,10 @@ static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
 {
   {"xandesbfhcvt",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
   {"xandesvbfhcvt",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
-  {"xandesvsintload",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
-  {"xandesvpackfph",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
   {"xandesvdot",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
+  {"xandesvpackfph",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
   {"xandesvsinth",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
+  {"xandesvsintload",	ISA_SPEC_CLASS_DRAFT,	5, 0, 0 },
   {"xcvalu",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xcvbi",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xcvbitmanip",	ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
@@ -1737,6 +1737,17 @@ static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xcvmac",		ISA_SPEC_CLASS_DRAFT,   1, 0, 0 },
   {"xcvmem",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xcvsimd",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipscbop",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipscmov",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipsexectl",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xmipslsp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfcease",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfvfnrclipxfqf",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfvqmaccdod",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsfvqmaccqoq",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsmtvdot",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xsmtvdotii",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadba",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadbb",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadbs",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
@@ -1749,23 +1760,12 @@ static const struct riscv_supported_ext riscv_supported_vendor_x_ext[] =
   {"xtheadmemidx",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadmempair",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadsync",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xtheadvector",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadvdot",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xtheadvector",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xtheadzvamo",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xxtvarith",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xxtvcoder",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {"xventanacondops",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvcp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfcease",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvqmaccqoq",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvqmaccdod",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsfvfnrclipxfqf",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipscbop",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipscmov",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipsexectl",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xmipslsp",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsmtvdot",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
-  {"xsmtvdotii",	ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xxtvarith",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
+  {"xxtvcoder",		ISA_SPEC_CLASS_DRAFT,	1, 0, 0 },
   {NULL, 0, 0, 0, 0}
 };
 
@@ -2305,7 +2305,7 @@ riscv_parse_extensions (riscv_parse_subset_t *rps,
 }
 
 static bool
-riscv_update_subset1 (riscv_parse_subset_t *, riscv_subset_t *, const char *);
+riscv_update_subset1 (riscv_parse_subset_t *, const char *, bool);
 
 /* Add the implicit extensions.  */
 
@@ -2318,7 +2318,7 @@ riscv_parse_add_implicit_subsets (riscv_parse_subset_t *rps)
       riscv_subset_t *subset = NULL;
       if (riscv_lookup_subset (rps->subset_list, t->ext, &subset)
 	&& t->check_func (rps, subset))
-      riscv_update_subset1 (rps, subset, t->implicit_exts);
+      riscv_update_subset1 (rps, t->implicit_exts, true /* implicit */);
     }
 }
 
@@ -2740,21 +2740,21 @@ riscv_remove_subset (riscv_subset_list_t *subset_list,
 /* Auxiliary to add/remove extensions to/from the subset list.
    This is called from riscv_update_subset or riscv_parse_add_implicit_subsets.
 
-   The EXPLICIT_SUBSET, the corresponding explicit extension.  It is NULL means
-   called from riscv_update_subset./
-
-   The IMPLICIT_EXTS, +extension[version] [,...,+extension_n[version_n]]
+   The EXTS, +extension[version] [,...,+extension_n[version_n]]
 		      (Deprecated) -extension [,...,-extension_n],
-		      full ISA.  */
+		      full ISA.
+
+   IMPLICT is false when called from riscv_update_subset(), i.e. when dealing
+	   with the operand of ".option arch".  */
 
 static bool
 riscv_update_subset1 (riscv_parse_subset_t *rps,
-		      riscv_subset_t *explicit_subset,
-		      const char *implicit_exts)
+		      const char *exts,
+		      bool implicit)
 {
-  const char *p = implicit_exts;
-  const char *errmsg_internal = explicit_subset == NULL ? "" : _("internal: ");
-  const char *errmsg_caller = explicit_subset == NULL
+  const char *p = exts;
+  const char *errmsg_internal = !implicit ? "" : _("internal: ");
+  const char *errmsg_caller = !implicit
 			      ? ".option arch" : "riscv_implicit_subsets";
 
   do
@@ -2807,7 +2807,7 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
 	  q[1] = '\0';
 	  rps->error_handler
 	    (_("%sinvalid ISA extension `%s' ends with <number>p in %s `%s'"),
-	       errmsg_internal, subset, errmsg_caller, implicit_exts);
+	       errmsg_internal, subset, errmsg_caller, exts);
 	  free (subset);
 	  return false;
 	}
@@ -2828,18 +2828,18 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
 	{
 	  rps->error_handler
 	    (_("%sunknown ISA extension `%s' in %s `%s'"),
-	     errmsg_internal, subset, errmsg_caller, implicit_exts);
+	     errmsg_internal, subset, errmsg_caller, exts);
 	  free (subset);
 	  return false;
 	}
 
-      if (explicit_subset == NULL)
+      if (!implicit)
 	{
 	  if (removed)
 	    {
 	      rps->error_handler
 		(_("deprecated - extension `%s' in %s `%s'"),
-		   subset, errmsg_caller, implicit_exts);
+		   subset, errmsg_caller, exts);
 	      free (subset);
 	      return false;
 	    }
@@ -2849,7 +2849,7 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
 	    {
 	      rps->error_handler
 		(_("cannot + base extension `%s' in %s `%s'"),
-		   subset, errmsg_caller, implicit_exts);
+		   subset, errmsg_caller, exts);
 	      free (subset);
 	      return false;
 	    }
@@ -2862,7 +2862,7 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
 	  riscv_subset_t *isubset = NULL;
 	  if (!riscv_lookup_subset (rps->subset_list, subset, &isubset))
 	    riscv_parse_add_subset (rps, subset, major_version, minor_version,
-				    true/* implicit */);
+				    implicit);
 	}
       p += end_of_version - subset;
       free (subset);
@@ -2870,7 +2870,7 @@ riscv_update_subset1 (riscv_parse_subset_t *rps,
   while (*p++ == ',');
 
   bool no_conflict = true;
-  if (explicit_subset == NULL)
+  if (!implicit)
     {
       riscv_parse_add_implicit_subsets (rps);
       no_conflict = riscv_parse_check_conflicts (rps);
@@ -2894,7 +2894,7 @@ riscv_update_subset (riscv_parse_subset_t *rps,
     .check_unknown_prefixed_ext = rps->check_unknown_prefixed_ext,
   };
 
-  if (!riscv_update_subset1 (&newrps, NULL, str))
+  if (!riscv_update_subset1 (&newrps, str, false /* implicit */))
     {
       riscv_release_subset_list (newrps.subset_list);
       free (newrps.subset_list);
@@ -2914,9 +2914,10 @@ riscv_update_subset (riscv_parse_subset_t *rps,
 bool
 riscv_update_subset_norvc (riscv_parse_subset_t *rps)
 {
-  return riscv_update_subset1 (rps, rps->subset_list->head,
+  return riscv_update_subset1 (rps,
 			       "-c,-zca,-zcd,-zcf,-zcb,-zce,-zcmp,-zcmt,"
-			       "-zcmop,-zclsd");
+			       "-zcmop,-zclsd",
+			       true /* implicit */);
 }
 
 /* Check if the FEATURE subset is supported or not in the subset list.
@@ -3532,14 +3533,14 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xandesbfhcvt";
     case INSN_CLASS_XANDESVBFHCVT:
       return "xandesvbfhcvt";
-    case INSN_CLASS_XANDESVSINTLOAD:
-      return "xandesvsintload";
-    case INSN_CLASS_XANDESVPACKFPH:
-      return "xandesvpackfph";
     case INSN_CLASS_XANDESVDOT:
       return "xandesvdot";
+    case INSN_CLASS_XANDESVPACKFPH:
+      return "xandesvpackfph";
     case INSN_CLASS_XANDESVSINTH:
       return "xandesvsinth";
+    case INSN_CLASS_XANDESVSINTLOAD:
+      return "xandesvsintload";
     case INSN_CLASS_XCVALU:
       return "xcvalu";
     case INSN_CLASS_XCVBI:
@@ -3554,6 +3555,30 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xcvmem";
     case INSN_CLASS_XCVSIMD:
       return "xcvsimd";
+    case INSN_CLASS_XMIPSCBOP:
+      return "xmipscbop";
+    case INSN_CLASS_XMIPSCMOV:
+      return "xmipscmov";
+    case INSN_CLASS_XMIPSEXECTL:
+      return "xmipsexectl";
+    case INSN_CLASS_XMIPSLSP:
+      return "xmipslsp";
+    case INSN_CLASS_XSFCEASE:
+      return "xsfcease";
+    case INSN_CLASS_XSFVCP:
+      return "xsfvcp";
+    case INSN_CLASS_XSFVFNRCLIPXFQF:
+      return "xsfvfnrclipxfqf";
+    case INSN_CLASS_XSFVQMACCDOD:
+      return "xsfvqmaccdod";
+    case INSN_CLASS_XSFVQMACCQOQ:
+      return "xsfvqmaccqoq";
+    case INSN_CLASS_XSMTVDOT:
+      return "xsmtvdot";
+    case INSN_CLASS_XSMTVDOTII:
+      return "xsmtvdotii";
+    case INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII:
+      return _("xsmtvdot' or `xsmtvdotii");
     case INSN_CLASS_XTHEADBA:
       return "xtheadba";
     case INSN_CLASS_XTHEADBB:
@@ -3578,42 +3603,18 @@ riscv_multi_subset_supports_ext (riscv_parse_subset_t *rps,
       return "xtheadmempair";
     case INSN_CLASS_XTHEADSYNC:
       return "xtheadsync";
-    case INSN_CLASS_XTHEADVECTOR:
-      return "xtheadvector";
     case INSN_CLASS_XTHEADVDOT:
       return "xtheadvdot";
-    case INSN_CLASS_XXTVARITH:
-      return "xxtvarith";
-    case INSN_CLASS_XXTVCODER:
-      return "xxtvcoder";
+    case INSN_CLASS_XTHEADVECTOR:
+      return "xtheadvector";
     case INSN_CLASS_XTHEADZVAMO:
       return "xtheadzvamo";
     case INSN_CLASS_XVENTANACONDOPS:
       return "xventanacondops";
-    case INSN_CLASS_XSFVCP:
-      return "xsfvcp";
-    case INSN_CLASS_XSFCEASE:
-      return "xsfcease";
-    case INSN_CLASS_XSFVQMACCQOQ:
-      return "xsfvqmaccqoq";
-    case INSN_CLASS_XSFVQMACCDOD:
-      return "xsfvqmaccdod";
-    case INSN_CLASS_XSFVFNRCLIPXFQF:
-      return "xsfvfnrclipxfqf";
-    case INSN_CLASS_XSMTVDOT:
-      return "xsmtvdot";
-    case INSN_CLASS_XSMTVDOTII:
-      return "xsmtvdotii";
-    case INSN_CLASS_XMIPSCBOP:
-      return "xmipscbop";
-    case INSN_CLASS_XMIPSCMOV:
-      return "xmipscmov";
-    case INSN_CLASS_XMIPSEXECTL:
-      return "xmipsexectl";
-    case INSN_CLASS_XMIPSLSP:
-      return "xmipslsp";
-    case INSN_CLASS_XSMTVDOT_OR_XSMTVDOTII:
-      return _("xsmtvdot' or `xsmtvdotii");
+    case INSN_CLASS_XXTVARITH:
+      return "xxtvarith";
+    case INSN_CLASS_XXTVCODER:
+      return "xxtvcoder";
     default:
       rps->error_handler
         (_("internal: unreachable INSN_CLASS_*"));
@@ -3987,7 +3988,6 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
   obj_attribute *in_attr;
   obj_attribute *out_attr;
   bool result = true;
-  bool priv_attrs_merged = false;
   const char *sec_name = get_elf_backend_data (ibfd)->obj_attrs_section;
   unsigned int i;
 
@@ -4016,6 +4016,13 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
 	{
 	  switch (i)
 	    {
+	    /* The privileged spec tags are deprecated, drop them.  */
+	    case Tag_RISCV_priv_spec:
+	    case Tag_RISCV_priv_spec_minor:
+	    case Tag_RISCV_priv_spec_revision:
+	      out_attr[i].i = 0;
+	      break;
+
 	    case Tag_RISCV_unaligned_access:
 	      if (out_attr[i].i <= 1)
 		break;
@@ -4072,59 +4079,10 @@ riscv_merge_attributes (bfd *ibfd, struct bfd_link_info *info,
 	  }
 	break;
 
+      /* The privileged spec tags are deprecated, ignore them.  */
       case Tag_RISCV_priv_spec:
       case Tag_RISCV_priv_spec_minor:
       case Tag_RISCV_priv_spec_revision:
-	/* If we have handled the privileged elf attributes, then skip it.  */
-	if (!priv_attrs_merged)
-	  {
-	    unsigned int Tag_a = Tag_RISCV_priv_spec;
-	    unsigned int Tag_b = Tag_RISCV_priv_spec_minor;
-	    unsigned int Tag_c = Tag_RISCV_priv_spec_revision;
-	    enum riscv_spec_class in_priv_spec = PRIV_SPEC_CLASS_NONE;
-	    enum riscv_spec_class out_priv_spec = PRIV_SPEC_CLASS_NONE;
-
-	    /* Get the privileged spec class from elf attributes.  */
-	    riscv_get_priv_spec_class_from_numbers (in_attr[Tag_a].i,
-						    in_attr[Tag_b].i,
-						    in_attr[Tag_c].i,
-						    &in_priv_spec);
-	    riscv_get_priv_spec_class_from_numbers (out_attr[Tag_a].i,
-						    out_attr[Tag_b].i,
-						    out_attr[Tag_c].i,
-						    &out_priv_spec);
-
-	    /* Allow to link the object without the privileged specs.  */
-	    if (out_priv_spec == PRIV_SPEC_CLASS_NONE)
-	      {
-		out_attr[Tag_a].i = in_attr[Tag_a].i;
-		out_attr[Tag_b].i = in_attr[Tag_b].i;
-		out_attr[Tag_c].i = in_attr[Tag_c].i;
-	      }
-	    else if (in_priv_spec != PRIV_SPEC_CLASS_NONE
-		     && in_priv_spec != out_priv_spec)
-	      {
-		/* The abandoned privileged spec v1.9.1 can not be linked with
-		   others since the conflicts.  Keep the check since compatible
-		   issue.  */
-		if (in_priv_spec == PRIV_SPEC_CLASS_1P9P1
-		    || out_priv_spec == PRIV_SPEC_CLASS_1P9P1)
-		  {
-		    _bfd_error_handler
-		      (_("warning: privileged spec version 1.9.1 can not be "
-			 "linked with other spec versions"));
-		  }
-
-		/* Update the output privileged spec to the newest one.  */
-		if (in_priv_spec > out_priv_spec)
-		  {
-		    out_attr[Tag_a].i = in_attr[Tag_a].i;
-		    out_attr[Tag_b].i = in_attr[Tag_b].i;
-		    out_attr[Tag_c].i = in_attr[Tag_c].i;
-		  }
-	      }
-	    priv_attrs_merged = true;
-	  }
 	break;
 
       case Tag_RISCV_unaligned_access:

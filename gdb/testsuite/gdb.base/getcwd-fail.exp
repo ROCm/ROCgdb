@@ -1,0 +1,76 @@
+# Copyright 2026 Free Software Foundation, Inc.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test GDB when current working directory has been deleted.
+# Reproduces crash: getcwd() returns NULL.
+
+# Run the test only on native configurations.
+require isnative
+require {!is_remote target}
+
+require {is_any_target "*-*-linux*" "*-*-aix*"}
+
+standard_testfile .c
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile {debug}]} {
+    return -1
+}
+
+# Compile helper program
+set helper_src "${srcdir}/${subdir}/getcwd-fail-helper.c"
+set helper_bin [standard_output_file "getcwd-fail-helper"]
+
+# Debug needs to be there so we can trigger getcwd the dwarf2/read.c code.
+if {[gdb_compile $helper_src $helper_bin executable {debug}] != ""} {
+    untested "failed to compile helper"
+    return -1
+}
+
+set temp_dir [standard_output_file "temp_getcwd_test"]
+set gdb_path [transform $GDB]
+
+# The test code creates temp dir, child deletes it, parent execs GDB
+set test "gdb in deleted cwd"
+set spawn_id [remote_spawn host "$helper_bin $temp_dir $gdb_path -nw -nx -q $binfile"]
+
+set crashed 0
+
+remote_expect host 30 {
+    -re "terminate called.*logic_error.*basic_string.*construction from null" {
+	set crashed 1
+	exp_continue
+    }
+    -re "Fatal signal.*IOT/Abort" {
+	set crashed 1
+	exp_continue
+    }
+    -re "$gdb_prompt $" {
+	if {$crashed} {
+	    fail "$test - crashed"
+	} else {
+	    pass "$test"
+	}
+    }
+    eof {
+	if {$crashed} {
+	    fail "$test - crashed with std::logic_error"
+	} else {
+	    pass "$test"
+	}
+    }
+    timeout {
+	fail "$test - timeout"
+    }
+}

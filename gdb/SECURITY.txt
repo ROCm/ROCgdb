@@ -17,7 +17,7 @@ Introduction
 Policy Objectives
 -----------------
 
-  The objective of this policy is define what the GDB project
+  The objective of this policy is to define what the GDB project
   considers a security bug and what is a non-security bug, and how
   bugs can be reported.
 
@@ -122,9 +122,10 @@ What Is Not A Security Bug
   GDB provides 3 different turing complete languages, Guile, Python
   and direct access to the shell.  Making use of these languages can
   have unknown effects, including outside of the GDB process.  Such
-  effects will only be considered security bugs if they fit some of the
-  definitions in this document and the effect can only be reproduced
-  when executed in the GDB environment.
+  effects will only be considered security bugs if they fit some of
+  the definitions in this document and the effect is caused by a bug
+  in GDB's implementation rather than being an inherent consequence of
+  the executed code, or being a bug in the underlying language.
 
   Any issues that arise from running an untrusted program outside of a
   secure environment are not security bugs in GDB.  Any issues that
@@ -184,31 +185,57 @@ Security Realities Of The GDB Project
 
   When using GDB to examine, but not execute, an untrusted program
   (with gdbserver, the program will be started, but paused at the
-  first instruction and not run further), there should be no security
-  risks, however the GDB maintainers don't currently believe that GDB
-  or gdbserver is reliable enough to ensure that there are no security
-  risks.
+  first instruction and not run further), ideally there should be no
+  security risks.  However, there are known bugs in GDB related to
+  loading malformed executables and parsing the debug information, a
+  consequence of these bugs is that a malicious program could trigger
+  undefined behavior in GDB, which could be used to trigger arbitrary
+  code execution.  This means that even just loading an untrusted
+  executable into GDB, without executing the program, can pose a
+  security risk.
 
-  There are known bugs in GDB related to loading malformed executables
-  and parsing the debug information, a consequence of these bugs is
-  that a malicious program could trigger undefined behavior in GDB,
-  which could be used to trigger arbitrary code execution.
+  Given these risks, the advice of the GDB project is that, when
+  examining or debugging an untrusted binary, always do so in a
+  secure, sandboxed environment.
 
-  Given these risks, the advice of the GDB project is that, when using
-  GDB with an untrusted binary, always do so in a secure, sandboxed
-  environment.
-
-  As there are already known bugs in GDB relating to undefined
-  behavior triggered from malformed programs, further bugs in this
-  area should still be reported, but are unlikely to be given high
-  priority.  Bugs in GDB that are triggered by well-formed programs
-  should also be reported, and are likely to be treated as higher
-  priority as these are more likely to impact normal use of GDB.
+  Bugs related to parsing malformed executables and debug information
+  can meet the definition of a security bug as described in this
+  document.  However, the GDB project believes there are likely to be
+  many such bugs, and addressing all of them as high priority security
+  issues is not feasible given current project resources.  Users
+  should instead rely on sandboxing as the primary mitigation.  Bugs
+  in this area should still be reported through the normal bug
+  reporting process and will be addressed when possible.  Bugs in GDB
+  that are triggered by well-formed programs should also be reported,
+  and are likely to be treated as higher priority as these are more
+  likely to impact normal use of GDB.
 
   When using GDB and gdbserver to perform remote debug, the connection
   between the two components is by design insecure.  It is up to the
   user to protect this connection, for example, by only starting
   gdbserver within a secure network.
+
+  Additionally, when GDB connects to a remote target, it will, by
+  default, automatically download the executable and shared libraries
+  from the remote system and parse them locally, without prompting the
+  user.  This means that the risks described above relating to parsing
+  malformed executables also apply when performing remote debugging.
+
+  If the remote target is untrusted, or the connection to the remote
+  target is untrusted, malicious or malformed binaries could be served
+  to GDB, resulting in any of the issues described above.  Any bugs in
+  GDB triggered by such files are evaluated against the definitions in
+  this document independently of how the files were obtained.
+
+  Any bug related to remote debugging, whether the remote connection
+  or target is trusted or not, is a security bug if the bug meets the
+  other definitions in this document.  If an untrusted remote target,
+  or use of an untrusted connection makes use of a documented GDB
+  behaviour, then this is not a security bug in GDB.
+
+  Users should apply the same precautions when performing remote
+  debugging as when analysing an untrusted binary locally, including
+  running GDB in a secure, sandboxed environment.
 
 Reporting Non-Security Bugs
 ---------------------------
@@ -221,6 +248,13 @@ Reporting Non-Security Bugs
   found here:
 
     https://sourceware.org/bugzilla/
+
+  Bugs related to parsing malformed executables and debug information
+  should be reported through the public bugzilla.  This is an area of
+  GDB containing known bugs, and as discussed above, it is advised
+  that users mitigate these bugs by running within a sandboxed
+  environment.  As such, these bugs are considered to pose limited
+  risk to users.
 
 Reporting Security Bugs
 -----------------------

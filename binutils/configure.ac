@@ -374,7 +374,7 @@ changequote([,])dnl
     esac
 
     case $targ in
-    aarch64-*-mingw*)
+    aarch64-*-pe* | aarch64-*-mingw*)
 	BUILD_DLLTOOL='$(DLLTOOL_PROG)$(EXEEXT)'
 	if test -z "$DLLTOOL_DEFAULT"; then
 	    DLLTOOL_DEFAULT="-DDLLTOOL_DEFAULT_AARCH64"

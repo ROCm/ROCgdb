@@ -492,19 +492,6 @@
 	csr spmpen
 	csr spmpenh
 
-	# Supported in previous priv spec, but dropped now
-
-	csr ustatus		# 0x0   in 1.10, dropped in 1.12
-	csr uie			# 0x4   in 1.10, dropped in 1.12
-	csr utvec		# 0x5   in 1.10, dropped in 1.12
-	csr uscratch		# 0x40  in 1.10, dropped in 1.12
-	csr uepc		# 0x41  in 1.10, dropped in 1.12
-	csr ucause		# 0x42  in 1.10, dropped in 1.12
-	csr utval		# 0x43  in 1.10,  dropped in 1.12
-	csr uip			# 0x44  in 1.10, dropped in 1.12
-	csr sedeleg		# 0x102 in 1.10, dropped in 1.12
-	csr sideleg		# 0x103 in 1.10, dropped in 1.12
-
 	# Unprivileged CSR which are not controlled by privilege spec
 
 	# Float

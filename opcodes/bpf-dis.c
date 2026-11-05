@@ -59,7 +59,7 @@ with the -M switch (multiple options should be separated by commas):\n"));
   fprintf (stream, "\n");
   fprintf (stream, _("\
       pseudoc                  Use pseudo-c syntax.\n\
-      v1,v2,v3,v4,xbpf         Version of the BPF ISA to use.\n\
+      v1,v2,v3,v4,v5,xbpf      Version of the BPF ISA to use.\n\
       hex,oct,dec              Output numerical base for immediates.\n"));
 }
 
@@ -78,6 +78,8 @@ parse_bpf_dis_option (const char *option)
     asm_bpf_version = BPF_V3;
   else if (strcmp (option, "v4") == 0)
     asm_bpf_version = BPF_V4;
+  else if (strcmp (option, "v5") == 0)
+    asm_bpf_version = BPF_V5;
   else if (strcmp (option, "xbpf") == 0)
     asm_bpf_version = BPF_XBPF;
   else if (strcmp (option, "hex") == 0)
@@ -156,11 +158,12 @@ print_insn_bpf (bfd_vma pc, disassemble_info *info)
 
       switch (cpu_version)
         {
-        case 0: asm_bpf_version = BPF_V4; break;
+        case 0: asm_bpf_version = BPF_V5; break;
         case 1: asm_bpf_version = BPF_V1; break;
         case 2: asm_bpf_version = BPF_V2; break;
         case 3: asm_bpf_version = BPF_V3; break;
         case 4: asm_bpf_version = BPF_V4; break;
+        case 5: asm_bpf_version = BPF_V5; break;
         case 0xf: asm_bpf_version = BPF_XBPF; break;
         default:
           /* xgettext:c-format */

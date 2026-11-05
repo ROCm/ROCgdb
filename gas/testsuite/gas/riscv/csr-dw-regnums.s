@@ -413,17 +413,6 @@ _start:
 	.cfi_offset mctrctl, 3384
 	# Zicfiss extension
 	.cfi_offset ssp, 324
-	# dropped
-	.cfi_offset ustatus, 0
-	.cfi_offset uie, 16
-	.cfi_offset utvec, 20
-	.cfi_offset uscratch, 256
-	.cfi_offset uepc, 260
-	.cfi_offset ucause, 264
-	.cfi_offset utval, 268
-	.cfi_offset uip, 272
-	.cfi_offset sedeleg, 1032
-	.cfi_offset sideleg, 1036
 	# unprivileged
 	.cfi_offset fflags, 4
 	.cfi_offset frm, 8

@@ -754,46 +754,6 @@ msp430_info_to_howto_rela (bfd * abfd,
   return true;
 }
 
-/* Look through the relocs for a section during the first phase.
-   Since we don't do .gots or .plts, we just need to consider the
-   virtual table relocs for gc.  */
-
-static bool
-elf32_msp430_check_relocs (bfd * abfd, struct bfd_link_info * info,
-			   asection * sec, const Elf_Internal_Rela * relocs)
-{
-  Elf_Internal_Shdr *symtab_hdr;
-  struct elf_link_hash_entry **sym_hashes;
-  const Elf_Internal_Rela *rel;
-  const Elf_Internal_Rela *rel_end;
-
-  if (bfd_link_relocatable (info))
-    return true;
-
-  symtab_hdr = &elf_symtab_hdr (abfd);
-  sym_hashes = elf_sym_hashes (abfd);
-
-  rel_end = relocs + sec->reloc_count;
-  for (rel = relocs; rel < rel_end; rel++)
-    {
-      struct elf_link_hash_entry *h;
-      unsigned long r_symndx;
-
-      r_symndx = ELF32_R_SYM (rel->r_info);
-      if (r_symndx < symtab_hdr->sh_info)
-	h = NULL;
-      else
-	{
-	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	  while (h->root.type == bfd_link_hash_indirect
-		 || h->root.type == bfd_link_hash_warning)
-	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
-	}
-    }
-
-  return true;
-}
-
 /* Perform a single relocation.  By default we use the standard BFD
    routines, but a few relocs, we have to do them ourselves.  */
 
@@ -1435,7 +1395,7 @@ elf32_msp430_relocate_section (struct bfd_link_info * info,
     {
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h;
       bfd_vma relocation;
@@ -2030,8 +1990,8 @@ msp430_elf_relax_section (bfd * abfd, asection * sec,
   symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
-  internal_relocs =
-    _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL, link_info->keep_memory);
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+					       link_info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
 
@@ -2963,7 +2923,6 @@ elf32_msp430_eh_frame_address_size (bfd *abfd,
 #define elf_info_to_howto		     msp430_info_to_howto_rela
 #define elf_info_to_howto_rel		     NULL
 #define elf_backend_relocate_section	     elf32_msp430_relocate_section
-#define elf_backend_check_relocs	     elf32_msp430_check_relocs
 #define elf_backend_can_gc_sections	     1
 #define elf_backend_final_write_processing   bfd_elf_msp430_final_write_processing
 #define elf_backend_object_p		     elf32_msp430_object_p

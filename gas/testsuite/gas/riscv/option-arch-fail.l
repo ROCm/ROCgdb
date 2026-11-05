@@ -7,5 +7,6 @@
 .*Error: unknown ISA extension `zsubset' in .option arch `\+zsubset2p0'
 .*Error: unknown ISA extension `f2p0_d' in .option arch `\+f2p0_d2p0'
 .*Error: unknown ISA extension `' in .option arch `\+'
+.*Error: cannot find default versions of the ISA extension `t'
 .*Error: invalid ISA extension `xvendor2p' ends with <number>p in .option arch `\+xvendor2p'
 .*Error: .option pop with no .option push

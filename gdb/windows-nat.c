@@ -289,12 +289,19 @@ bool debug_memory = false;	/* show target memory accesses */
 bool debug_exceptions = false;	/* show target exceptions */
 
 /* User options.  */
+
 static bool new_console = false;
 #ifdef __CYGWIN__
 static bool cygwin_exceptions = false;
 #endif
 static bool new_group = true;
-static bool useshell = false;		/* use shell for subprocesses */
+
+/* Use shell for subprocesses.  */
+#ifdef __CYGWIN__
+static bool useshell = false;
+#else
+static constexpr bool useshell = false;
+#endif
 
 /* See windows_nat_target::resume to understand why this is commented
    out.  */

@@ -1653,14 +1653,6 @@ tilegx_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       r_symndx = TILEGX_ELF_R_SYMNDX (htab, rel->r_info);
       r_type = TILEGX_ELF_R_TYPE (rel->r_info);
 
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"),
-			      abfd, r_symndx);
-	  return false;
-	}
-
       if (r_symndx < symtab_hdr->sh_info)
 	h = NULL;
       else
@@ -1966,10 +1958,7 @@ tilegx_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		head = &h->dyn_relocs;
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
-
+		  /* Track dynamic relocs needed for local syms too.  */
 		  asection *s;
 		  void *vpp;
 		  Elf_Internal_Sym *isym;
@@ -2832,7 +2821,7 @@ tilegx_elf_relocate_section (struct bfd_link_info *info,
       reloc_howto_type *howto;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       tilegx_create_func create_func;
       asection *sec;
       bfd_vma relocation;

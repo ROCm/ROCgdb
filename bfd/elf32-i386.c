@@ -1064,7 +1064,7 @@ elf_i386_tls_transition (struct bfd_link_info *info, bfd *abfd,
 			 const Elf_Internal_Rela *rel,
 			 const Elf_Internal_Rela *relend,
 			 struct elf_link_hash_entry *h,
-			 Elf_Internal_Sym *sym,
+			 const Elf_Internal_Sym *sym,
 			 bool from_relocate_section)
 {
   unsigned int from_type = *r_type;
@@ -1571,7 +1571,7 @@ elf_i386_scan_relocs (bfd *abfd,
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
       struct elf_x86_link_hash_entry *eh;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
       const char *name;
       bool size_reloc;
       bool no_dynreloc;
@@ -1583,14 +1583,6 @@ elf_i386_scan_relocs (bfd *abfd,
       /* Don't check R_386_NONE.  */
       if (r_type == R_386_NONE)
 	continue;
-
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"),
-			      abfd, r_symndx);
-	  goto error_return;
-	}
 
       howto = elf_i386_rtype_to_howto (r_type);
       if (rel->r_offset + bfd_get_reloc_size (howto) > sec->size)
@@ -1956,16 +1948,9 @@ elf_i386_scan_relocs (bfd *abfd,
 		}
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
+		  /* Track dynamic relocs needed for local syms too.  */
 		  void **vpp;
 		  asection *s;
-
-		  isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
-						abfd, r_symndx);
-		  if (isym == NULL)
-		    goto error_return;
 
 		  s = bfd_section_from_elf_index (abfd, isym->st_shndx);
 		  if (s == NULL)
@@ -2173,7 +2158,7 @@ elf_i386_relocate_section (struct bfd_link_info *info,
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
       struct elf_x86_link_hash_entry *eh;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma off, offplt, plt_offset;
       bfd_vma relocation;

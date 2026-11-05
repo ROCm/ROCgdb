@@ -4097,12 +4097,12 @@ static bool
 bfd_mach_o_read_prebound_dylib (bfd *abfd,
 				bfd_mach_o_load_command *command)
 {
+  bfd_mach_o_data_struct *mdata = bfd_mach_o_get_data (abfd);
   bfd_mach_o_prebound_dylib_command *cmd = &command->command.prebound_dylib;
   struct mach_o_prebound_dylib_command_external raw;
   unsigned int nameoff;
   unsigned int modoff;
-  unsigned int str_len;
-  unsigned char *str;
+  uint64_t modlen;
 
   if (command->len < sizeof (raw) + 8)
     return false;
@@ -4114,18 +4114,21 @@ bfd_mach_o_read_prebound_dylib (bfd *abfd,
   if (nameoff > command->len || modoff > command->len)
     return false;
 
-  str_len = command->len - sizeof (raw);
-  str = _bfd_alloc_and_read (abfd, str_len, str_len);
-  if (str == NULL)
-    return false;
-
   cmd->name_offset = command->offset + nameoff;
   cmd->nmodules = bfd_h_get_32 (abfd, raw.nmodules);
   cmd->linked_modules_offset = command->offset + modoff;
 
-  cmd->name_str = (char *)str + nameoff - (sizeof (raw) + BFD_MACH_O_LC_SIZE);
-  cmd->linked_modules = str + modoff - (sizeof (raw) + BFD_MACH_O_LC_SIZE);
-  return true;
+  cmd->name_str = (char *) bfd_mach_o_alloc_and_read
+    (abfd, mdata->hdr_offset + cmd->name_offset, command->len - nameoff, 1);
+  if (cmd->name_str == NULL)
+    return false;
+
+  modlen = ((uint64_t) cmd->nmodules + 7) / 8;
+  if (modlen > command->len - modoff)
+    return false;
+  cmd->linked_modules = bfd_mach_o_alloc_and_read
+    (abfd, mdata->hdr_offset + cmd->linked_modules_offset, modlen, 0);
+  return cmd->linked_modules != NULL;
 }
 
 static bool

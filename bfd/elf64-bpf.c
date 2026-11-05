@@ -194,7 +194,7 @@ bpf_elf_relocate_section (struct bfd_link_info *info,
       reloc_howto_type *	   howto;
       unsigned int		   howto_index;
       unsigned long		   r_symndx;
-      Elf_Internal_Sym *	   sym;
+      const Elf_Internal_Sym *	   sym;
       asection *		   sec;
       struct elf_link_hash_entry * h;
       bfd_vma			   relocation;

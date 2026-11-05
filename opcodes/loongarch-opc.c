@@ -2403,7 +2403,6 @@ static struct loongarch_opcode loongarch_lasx_opcodes[] =
   { 0x769f3400, 0xfffffc00, "vext2xv.wu.hu",	"x0:5,x5:5",		0, 0, 0, 0},
   { 0x769f3800, 0xfffffc00, "vext2xv.du.hu",	"x0:5,x5:5",		0, 0, 0, 0},
   { 0x769f3c00, 0xfffffc00, "vext2xv.du.wu",	"x0:5,x5:5",		0, 0, 0, 0},
-  { 0x769f8000, 0xffff8000, "xvhseli.d",	"x0:5,x5:5,u10:5",	0, 0, 0, 0},
   { 0x76a02000, 0xffffe000, "xvrotri.b",	"x0:5,x5:5,u10:3",	0, 0, 0, 0},
   { 0x76a04000, 0xffffc000, "xvrotri.h",	"x0:5,x5:5,u10:4",	0, 0, 0, 0},
   { 0x76a08000, 0xffff8000, "xvrotri.w",	"x0:5,x5:5,u10:5",	0, 0, 0, 0},

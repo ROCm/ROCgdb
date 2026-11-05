@@ -1523,7 +1523,7 @@ elf32_avr_relocate_section (struct bfd_link_info *info, bfd *input_bfd,
       unsigned long r_symndx = ELF32_R_SYM (rel->r_info);
       reloc_howto_type *howto = elf_avr_howto_table + r_type;
       struct elf_link_hash_entry *h = NULL;
-      Elf_Internal_Sym *sym = NULL;
+      const Elf_Internal_Sym *sym = NULL;
       asection *sec = NULL;
 
       if (r_symndx < symtab_hdr->sh_info)
@@ -4398,8 +4398,7 @@ avr_elf32_load_records_from_section (bfd *abfd, asection *sec)
 
   /* Load the relocations for the '.avr.prop' section if there are any, and
      sort them.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, sec, NULL, NULL, false));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL, false);
   if (internal_relocs)
     qsort (internal_relocs, sec->reloc_count,
 	   sizeof (Elf_Internal_Rela), internal_reloc_compare);

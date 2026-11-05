@@ -4799,7 +4799,7 @@ ppc64_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
     {
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
       enum elf_ppc64_reloc_type r_type;
       int tls_type;
       struct _ppc64_elf_section_data *ppc64_sec;
@@ -15563,7 +15563,7 @@ ppc64_elf_relocate_section (struct bfd_link_info *info,
       enum elf_ppc64_reloc_type r_type;
       bfd_vma addend;
       bfd_reloc_status_type r;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h_elf;
       struct ppc_link_hash_entry *h;

@@ -2715,9 +2715,9 @@ mn10300_elf_relax_section (bfd *abfd,
 		  && section->reloc_count != 0)
 		{
 		  /* Get a copy of the native relocations.  */
-		  internal_relocs = _bfd_elf_link_read_relocs (input_bfd, section,
-							       NULL, NULL,
-							       link_info->keep_memory);
+		  internal_relocs
+		    = _bfd_elf_link_read_relocs (input_bfd, section, NULL, NULL,
+						 link_info->keep_memory);
 		  if (internal_relocs == NULL)
 		    goto error_return;
 
@@ -3042,9 +3042,9 @@ mn10300_elf_relax_section (bfd *abfd,
 	      if (section->reloc_count != 0)
 		{
 		  /* Get a copy of the native relocations.  */
-		  internal_relocs = _bfd_elf_link_read_relocs (input_bfd, section,
-							       NULL, NULL,
-							       link_info->keep_memory);
+		  internal_relocs
+		    = _bfd_elf_link_read_relocs (input_bfd, section, NULL, NULL,
+						 link_info->keep_memory);
 		  if (internal_relocs == NULL)
 		    goto error_return;
 		}

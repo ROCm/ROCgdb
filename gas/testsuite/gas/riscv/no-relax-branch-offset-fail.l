@@ -5,4 +5,7 @@
 .*:10: Error: invalid J-type offset \(-1048578\)
 .*:14: Error: invalid J-type offset \(\+1048576\)
 .*:17: Error: invalid J-type offset \(-1048578\)
-.*:20: Error: invalid CJ-type offset \(\+1\)
+.*:20: Error: invalid J-type offset \(\+7\)
+.*:21: Error: invalid B-type offset \(\+5\)
+.*:22: Error: invalid CJ-type offset \(\+3\)
+.*:23: Error: invalid CB-type offset \(\+1\)

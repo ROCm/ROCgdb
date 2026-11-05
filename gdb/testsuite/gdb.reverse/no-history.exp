@@ -1,0 +1,40 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+
+# This file is part of the GDB testsuite.  It tests the printing of
+# the "out of history" warnings.
+
+require supports_reverse
+
+standard_testfile
+
+if { [prepare_for_testing "failed to prepare" $testfile $srcfile] } {
+    return
+}
+
+runto_main
+
+if {[supports_process_record]} {
+    # Activate process record/replay
+    gdb_test_no_output "record" "turn on process record"
+}
+
+gdb_test "next" "x\\\+\\\+;" "Record a line of execution"
+gdb_test "reverse-next" \
+    ".*Reached end of recorded history; stopping.*" \
+    "Reverse to start of history"
+gdb_test "next" \
+    ".*Reached end of recorded history; stopping.*" \
+    "Forward to end of history"

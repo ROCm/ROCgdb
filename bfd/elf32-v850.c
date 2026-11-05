@@ -2199,7 +2199,7 @@ v850_elf_relocate_section (struct bfd_link_info *info,
       unsigned int r_type;
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h;
       bfd_vma relocation;
@@ -3452,8 +3452,8 @@ v850_elf_relax_section (bfd *abfd,
 
   symtab_hdr = &elf_symtab_hdr (abfd);
 
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, sec, NULL, NULL, link_info->keep_memory));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+					       link_info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
 

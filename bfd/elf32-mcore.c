@@ -425,7 +425,7 @@ mcore_elf_relocate_section (struct bfd_link_info * info,
       asection *		   sec = NULL;
       reloc_howto_type *	   howto;
       bfd_vma			   relocation;
-      Elf_Internal_Sym *	   sym = NULL;
+      const Elf_Internal_Sym *	   sym = NULL;
       unsigned long		   r_symndx;
       struct elf_link_hash_entry * h = NULL;
       unsigned short		   oldinst = 0;

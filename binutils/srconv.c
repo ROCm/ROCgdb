@@ -53,7 +53,6 @@ static void wr_globals (struct coff_ofile *, struct coff_sfile *, int);
 static FILE *file;
 static bfd *abfd;
 static int debug = 0;
-static int quick = 0;
 static int noprescan = 0;
 static struct coff_ofile *tree;
 /* Obsolete ??
@@ -1743,7 +1742,7 @@ main (int ac, char **av)
       switch (opt)
 	{
 	case 'q':
-	  quick = 1;
+	  /* Obsolete, ignored.  */
 	  break;
 	case 'n':
 	  noprescan = 1;

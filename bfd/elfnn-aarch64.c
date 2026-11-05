@@ -5756,7 +5756,7 @@ elfNN_aarch64_final_link_relocate (reloc_howto_type *howto,
 				   bool *unresolved_reloc_p,
 				   bool save_addend,
 				   bfd_vma *saved_addend,
-				   Elf_Internal_Sym *sym)
+				   const Elf_Internal_Sym *sym)
 {
   Elf_Internal_Shdr *symtab_hdr;
   unsigned int r_type = howto->type;
@@ -7081,7 +7081,7 @@ elfNN_aarch64_relocate_section (struct bfd_link_info *info,
       bfd_reloc_code_real_type relaxed_bfd_r_type;
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h;
       bfd_vma relocation;
@@ -7952,27 +7952,19 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
   rel_end = relocs + sec->reloc_count;
   for (rel = relocs; rel < rel_end; rel++)
     {
-      struct elf_link_hash_entry *h;
       unsigned int r_symndx;
       unsigned int r_type;
       bfd_reloc_code_real_type bfd_r_type;
-      Elf_Internal_Sym *isym;
+      struct elf_link_hash_entry *h;
+      const Elf_Internal_Sym *isym = NULL;
 
       r_symndx = ELFNN_R_SYM (rel->r_info);
       r_type = ELFNN_R_TYPE (rel->r_info);
 
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"), abfd, r_symndx);
-	  return false;
-	}
-
       if (r_symndx < symtab_hdr->sh_info)
 	{
 	  /* A local symbol.  */
-	  isym = bfd_sym_from_r_symndx (&htab->root.sym_cache,
-					abfd, r_symndx);
+	  isym = bfd_sym_from_r_symndx (&htab->root.sym_cache, abfd, r_symndx);
 	  if (isym == NULL)
 	    return false;
 
@@ -8189,22 +8181,12 @@ elfNN_aarch64_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	    /* If this is a global symbol, we count the number of
 	       relocations we need for this symbol.  */
 	    if (h != NULL)
-	      {
-		head = &h->dyn_relocs;
-	      }
+	      head = &h->dyn_relocs;
 	    else
 	      {
-		/* Track dynamic relocs needed for local syms too.
-		   We really need local syms available to do this
-		   easily.  Oh well.  */
-
+		/* Track dynamic relocs needed for local syms too.  */
 		asection *s;
 		void **vpp;
-
-		isym = bfd_sym_from_r_symndx (&htab->root.sym_cache,
-					      abfd, r_symndx);
-		if (isym == NULL)
-		  return false;
 
 		s = bfd_section_from_elf_index (abfd, isym->st_shndx);
 		if (s == NULL)

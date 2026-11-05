@@ -1,12 +1,12 @@
 pseudo_csr_insn:
 	# i-ext
-	csrr t0, 0x0
-	csrw 0x0, t0
-	csrs 0x0, t0
-	csrc 0x0, t0
-	csrwi 0x0, 31
-	csrsi 0x0, 31
-	csrci 0x0, 31
+	csrr t0, 0x340
+	csrw 0x340, t0
+	csrs 0x340, t0
+	csrc 0x340, t0
+	csrwi 0x340, 31
+	csrsi 0x340, 31
+	csrci 0x340, 31
 
 	rdcycle t0
 	rdtime t0

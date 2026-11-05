@@ -739,7 +739,7 @@ rl78_elf_relocate_section
     {
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h;
       bfd_vma relocation;
@@ -1163,16 +1163,6 @@ rl78_elf_set_private_flags (bfd * abfd, flagword flags)
   elf_elfheader (abfd)->e_flags = flags;
   elf_flags_init (abfd) = true;
   return true;
-}
-
-static bool no_warn_mismatch = false;
-
-void bfd_elf32_rl78_set_target_flags (bool);
-
-void
-bfd_elf32_rl78_set_target_flags (bool user_no_warn_mismatch)
-{
-  no_warn_mismatch = user_no_warn_mismatch;
 }
 
 static const char *
@@ -2172,9 +2162,8 @@ rl78_elf_relax_section (bfd *abfd,
     }
 
   /* Get a copy of the native relocations.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, sec, NULL, (Elf_Internal_Rela *) NULL,
-		      link_info->keep_memory));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+					       link_info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
   if (! link_info->keep_memory)

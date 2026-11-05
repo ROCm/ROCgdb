@@ -3683,7 +3683,7 @@ elf32_arm_plt_needs_thumb_stub_p (struct bfd_link_info *info,
 
 static struct elf_dyn_relocs **
 elf32_arm_get_local_dynreloc_list (bfd *abfd, unsigned long r_symndx,
-				   Elf_Internal_Sym *isym)
+				   const Elf_Internal_Sym *isym)
 {
   if (ELF32_ST_TYPE (isym->st_info) == STT_GNU_IFUNC)
     {
@@ -3696,9 +3696,7 @@ elf32_arm_get_local_dynreloc_list (bfd *abfd, unsigned long r_symndx,
     }
   else
     {
-      /* Track dynamic relocs needed for local syms too.
-	 We really need local syms available to do this
-	 easily.  Oh well.  */
+      /* Track dynamic relocs needed for local syms too.  */
       asection *s;
       void *vpp;
 
@@ -6472,8 +6470,8 @@ elf32_arm_size_stubs (bfd *output_bfd,
 
 	      /* Get the relocs.  */
 	      internal_relocs
-		= _bfd_elf_link_read_relocs (input_bfd, section, NULL,
-					     NULL, info->keep_memory);
+		= _bfd_elf_link_read_relocs (input_bfd, section, NULL, NULL,
+					     info->keep_memory);
 	      if (internal_relocs == NULL)
 		goto error_ret_free_local;
 
@@ -13040,7 +13038,7 @@ elf32_arm_relocate_section (struct bfd_link_info * info,
       int			   r_type;
       reloc_howto_type *	   howto;
       unsigned long		   r_symndx;
-      Elf_Internal_Sym *	   sym;
+      const Elf_Internal_Sym *	   sym;
       asection *		   sec;
       struct elf_link_hash_entry * h;
       bfd_vma			   relocation;
@@ -15217,7 +15215,6 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
   bool call_reloc_p;
   bool may_become_dynamic_p;
   bool may_need_local_target_p;
-  unsigned long nsyms;
 
   if (bfd_link_relocatable (info))
     return true;
@@ -15238,12 +15235,11 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
 
   symtab_hdr = & elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
-  nsyms = NUM_SHDR_ENTRIES (symtab_hdr);
 
   rel_end = relocs + sec->reloc_count;
   for (rel = relocs; rel < rel_end; rel++)
     {
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
       struct elf_link_hash_entry *h;
       struct elf32_arm_link_hash_entry *eh;
       unsigned int r_symndx;
@@ -15253,36 +15249,22 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
       r_type = ELF32_R_TYPE (rel->r_info);
       r_type = arm_real_reloc_type (htab, r_type);
 
-      if (r_symndx >= nsyms
-	  /* PR 9934: It is possible to have relocations that do not
-	     refer to symbols, thus it is also possible to have an
-	     object file containing relocations but no symbol table.  */
-	  && (r_symndx > STN_UNDEF || nsyms > 0))
-	{
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"), abfd,
-			      r_symndx);
-	  return false;
-	}
-
       h = NULL;
       isym = NULL;
-      if (nsyms > 0)
+      if (r_symndx < symtab_hdr->sh_info)
 	{
-	  if (r_symndx < symtab_hdr->sh_info)
-	    {
-	      /* A local symbol.  */
-	      isym = bfd_sym_from_r_symndx (&htab->root.sym_cache,
-					    abfd, r_symndx);
-	      if (isym == NULL)
-		return false;
-	    }
-	  else
-	    {
-	      h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	      while (h->root.type == bfd_link_hash_indirect
-		     || h->root.type == bfd_link_hash_warning)
-		h = (struct elf_link_hash_entry *) h->root.u.i.link;
-	    }
+	  /* A local symbol.  */
+	  isym = bfd_sym_from_r_symndx (&htab->root.sym_cache,
+					abfd, r_symndx);
+	  if (isym == NULL)
+	    return false;
+	}
+      else
+	{
+	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
+	  while (h->root.type == bfd_link_hash_indirect
+		 || h->root.type == bfd_link_hash_warning)
+	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
 	}
 
       eh = (struct elf32_arm_link_hash_entry *) h;

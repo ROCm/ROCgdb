@@ -1117,14 +1117,6 @@ elf_xtensa_check_relocs (bfd *abfd,
       r_symndx = ELF32_R_SYM (rel->r_info);
       r_type = ELF32_R_TYPE (rel->r_info);
 
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"),
-			      abfd, r_symndx);
-	  return false;
-	}
-
       if (r_symndx >= symtab_hdr->sh_info)
 	{
 	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
@@ -2639,7 +2631,7 @@ elf_xtensa_relocate_section (struct bfd_link_info *info,
       reloc_howto_type *howto;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       char sym_type;
       const char *name;
       asection *sec;
@@ -6918,8 +6910,8 @@ retrieve_internal_relocs (bfd *abfd, asection *sec, bool keep_memory)
 
   internal_relocs = elf_section_data (sec)->relocs;
   if (internal_relocs == NULL)
-    internal_relocs = (_bfd_elf_link_read_relocs
-		       (abfd, sec, NULL, NULL, keep_memory));
+    internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
+						 keep_memory);
   return internal_relocs;
 }
 

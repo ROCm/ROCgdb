@@ -165,7 +165,7 @@ proc_with_prefix replay_with_log { remote_log expect_error non_stop } {
 	    lappend expected_output "\\\[Switching to thread \[^\r\n\]+\\\]"
 	}
 
-	gdb_test "continue" [multi_line {*}$expected_output]
+	gdb_test -no-prompt-anchor "continue" [multi_line {*}$expected_output]
     } else {
 	# This is the original behaviour, we see this when running
 	# with the unmodified log.

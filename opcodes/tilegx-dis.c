@@ -94,7 +94,7 @@ print_insn_tilegx (bfd_vma memaddr, disassemble_info *info)
 
       for (j = 0; j < opcode->num_operands; j++)
 	{
-	  bfd_vma num;
+	  unsigned int num;
 	  const struct tilegx_operand *op;
 	  const char *spr_name;
 
@@ -109,20 +109,20 @@ print_insn_tilegx (bfd_vma memaddr, disassemble_info *info)
 	    {
 	    case TILEGX_OP_TYPE_REGISTER:
 	      info->fprintf_func (info->stream, "%s",
-				  tilegx_register_names[(int) num]);
+				  tilegx_register_names[num]);
 	      break;
 	    case TILEGX_OP_TYPE_SPR:
 	      spr_name = get_tilegx_spr_name (num);
 	      if (spr_name != NULL)
 		info->fprintf_func (info->stream, "%s", spr_name);
 	      else
-		info->fprintf_func (info->stream, "%d", (int)num);
+		info->fprintf_func (info->stream, "%d", num);
 	      break;
 	    case TILEGX_OP_TYPE_IMMEDIATE:
-	      info->fprintf_func (info->stream, "%d", (int)num);
+	      info->fprintf_func (info->stream, "%d", num);
 	      break;
 	    case TILEGX_OP_TYPE_ADDRESS:
-	      info->print_address_func (num, info);
+	      info->print_address_func ((bfd_vma) num, info);
 	      break;
 	    default:
 	      abort ();

@@ -604,14 +604,8 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 
 	      /* Bitfields require special handling, especially due to byte
 		 order problems.  */
-	      if (type->field (i).is_ignored ())
-		{
-		  fputs_styled ("<optimized out or zero length>",
-				metadata_style.style (), stream);
-		}
-	      else if (val->bits_synthetic_pointer
-		       (type->field (i).loc_bitpos (),
-			type->field (i).bitsize ()))
+	      if (val->bits_synthetic_pointer (type->field (i).loc_bitpos (),
+					       type->field (i).bitsize ()))
 		{
 		  fputs_styled (_("<synthetic pointer>"),
 				metadata_style.style (), stream);
@@ -629,12 +623,7 @@ pascal_object_print_value_fields (struct value *val, struct ui_file *stream,
 	    }
 	  else
 	    {
-	      if (type->field (i).is_ignored ())
-		{
-		  fputs_styled ("<optimized out or zero length>",
-				metadata_style.style (), stream);
-		}
-	      else if (type->field (i).is_static ())
+	      if (type->field (i).is_static ())
 		{
 		  /* struct value *v = value_static_field (type, i);
 		     v4.17 specific.  */

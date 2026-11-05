@@ -1353,7 +1353,7 @@ or1k_elf_relocate_section (struct bfd_link_info *info,
     {
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h;
       bfd_vma relocation;
@@ -2232,10 +2232,7 @@ or1k_elf_check_relocs (bfd *abfd,
 		  head = &h->dyn_relocs;
 		else
 		  {
-		    /* Track dynamic relocs needed for local syms too.
-		       We really need local syms available to do this
-		       easily.  Oh well.  */
-
+		    /* Track dynamic relocs needed for local syms too.  */
 		    asection *s;
 		    Elf_Internal_Sym *isym;
 		    void *vpp;

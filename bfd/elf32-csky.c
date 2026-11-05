@@ -2493,7 +2493,7 @@ csky_elf_check_relocs (bfd * abfd,
     {
       struct elf_link_hash_entry *h;
       unsigned long r_symndx;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
       int r_type;
 
       r_symndx = ELF32_R_SYM (rel->r_info);
@@ -2602,18 +2602,11 @@ csky_elf_check_relocs (bfd * abfd,
 		}
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
+		  /* Track dynamic relocs needed for local syms too.  */
 		  void **vpp;
 		  asection *s;
-		  Elf_Internal_Sym *loc_isym;
 
-		  loc_isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
-						    abfd, r_symndx);
-		  if (loc_isym == NULL)
-		    return false;
-		  s = bfd_section_from_elf_index (abfd, loc_isym->st_shndx);
+		  s = bfd_section_from_elf_index (abfd, isym->st_shndx);
 		  if (s == NULL)
 		    s = sec;
 		  vpp = &elf_section_data (s)->local_dynrel;
@@ -3482,10 +3475,9 @@ elf32_csky_size_stubs (bfd *output_bfd,
 		continue;
 
 	      /* Get the relocs.  */
-	      internal_relocs = _bfd_elf_link_read_relocs (input_bfd,
-							   section,
-							   NULL, NULL,
-							   info->keep_memory);
+	      internal_relocs
+		= _bfd_elf_link_read_relocs (input_bfd, section, NULL, NULL,
+					     info->keep_memory);
 
 	      if (internal_relocs == NULL)
 		goto error_ret_free_local;
@@ -4303,7 +4295,7 @@ csky_elf_relocate_section (struct bfd_link_info * info,
 	= (enum elf_csky_reloc_type) ELF32_R_TYPE (rel->r_info);
       unsigned long r_symndx;
       reloc_howto_type *howto;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma relocation;
       bfd_vma off;

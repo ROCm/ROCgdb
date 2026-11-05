@@ -1355,7 +1355,7 @@ elf32_cr16_relocate_section (struct bfd_link_info *info,
       int r_type;
       reloc_howto_type *howto;
       unsigned long r_symndx;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h;
       bfd_vma relocation;
@@ -2682,8 +2682,8 @@ bfd_cr16_elf32_create_embedded_relocs (bfd *abfd,
   symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, datasec, NULL, NULL, info->keep_memory));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, datasec, NULL, NULL,
+					       info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
 

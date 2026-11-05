@@ -15,7 +15,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-int x;
+#include <stdint.h>
+
+int32_t x;
+int8_t b;
 
 int
 main ()
@@ -24,7 +27,7 @@ main ()
 
   for (i = 0; i < 500; ++i) {
     j = 0;  /* break here */
-    x = 42;
+    x = b = 42;
     j = i;  /* expect HW watchpoint stop */
   }
   return 0;

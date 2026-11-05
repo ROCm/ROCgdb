@@ -89,7 +89,10 @@ void (*deprecated_error_begin_hook) (void);
 /* Prototypes for local functions */
 
 static void set_screen_size (void);
-static void set_width (void);
+
+/* True once init_page_info has run and filtered printing can be used.  */
+
+static bool filtered_printing_initialized = false;
 
 /* Time spent in prompt_for_continue in the currently executing command
    waiting for user to respond.
@@ -421,13 +424,13 @@ internal_vproblem (struct internal_problem *problem,
       term_state.emplace ();
       target_terminal::ours_for_output ();
     }
-  if (filtered_printing_initialized ())
+  if (filtered_printing_initialized)
     begin_line ();
 
   /* Emit the message unless query will emit it below.  */
   if (problem->should_quit != internal_problem_ask
       || !confirm
-      || !filtered_printing_initialized ()
+      || !filtered_printing_initialized
       || !readline_initialized (current_ui)
       || problem->should_print_backtrace)
     gdb_printf (gdb_stderr, "%s\n", reason.c_str ());
@@ -440,7 +443,7 @@ internal_vproblem (struct internal_problem *problem,
       /* Default (yes/batch case) is to quit GDB.  When in batch mode
 	 this lessens the likelihood of GDB going into an infinite
 	 loop.  */
-      if (!confirm || !filtered_printing_initialized ()
+      if (!confirm || !filtered_printing_initialized
 	  || !readline_initialized (current_ui))
 	quit_p = 1;
       else
@@ -465,7 +468,7 @@ internal_vproblem (struct internal_problem *problem,
     {
       if (!can_dump_core_warn (LIMIT_MAX, reason.c_str ()))
 	dump_core_p = 0;
-      else if (!filtered_printing_initialized ()
+      else if (!filtered_printing_initialized
 	       || !readline_initialized (current_ui))
 	dump_core_p = 1;
       else
@@ -1093,16 +1096,6 @@ static unsigned int lines_printed, chars_printed;
 
 static bool pagination_disabled_for_command;
 
-/* Buffer and start column of buffered text, for doing smarter word-
-   wrapping.  When someone calls wrap_here(), we start buffering output
-   that comes through gdb_puts().  If we see a newline, we just
-   spit it out and forget about the wrap_here().  If we see another
-   wrap_here(), we spit it out and remember the newer one.  If we see
-   the end of the line, we spit out a newline, the indent, and then
-   the buffered output.  */
-
-static bool filter_initialized = false;
-
 
 
 /* See utils.h.  */
@@ -1184,14 +1177,7 @@ init_page_info (void)
   rl_catch_sigwinch = 0;
 
   set_screen_size ();
-  set_width ();
-}
-
-/* Return nonzero if filtered printing is initialized.  */
-int
-filtered_printing_initialized (void)
-{
-  return filter_initialized;
+  filtered_printing_initialized = true;
 }
 
 set_batch_flag_and_restore_page_info::set_batch_flag_and_restore_page_info ()
@@ -1210,7 +1196,6 @@ set_batch_flag_and_restore_page_info::~set_batch_flag_and_restore_page_info ()
   lines_per_page = m_save_lines_per_page;
 
   set_screen_size ();
-  set_width ();
 }
 
 /* An approximation of SQRT(INT_MAX) that is:
@@ -1257,26 +1242,11 @@ set_screen_size (void)
   rl_set_screen_size (rows, cols);
 }
 
-/* Reinitialize WRAP_BUFFER.  */
+/* Callback for "set width" and "set height".  */
 
 static void
-set_width (void)
-{
-  if (chars_per_line == 0)
-    init_page_info ();
-
-  filter_initialized = true;
-}
-
-static void
-set_width_command (const char *args, int from_tty, struct cmd_list_element *c)
-{
-  set_screen_size ();
-  set_width ();
-}
-
-static void
-set_height_command (const char *args, int from_tty, struct cmd_list_element *c)
+set_screen_size_command (const char *args, int from_tty,
+			 cmd_list_element *c)
 {
   set_screen_size ();
 }
@@ -1290,7 +1260,6 @@ set_screen_width_and_height (int width, int height)
   chars_per_line = width;
 
   set_screen_size ();
-  set_width ();
 }
 
 /* Import termcap variable UP (instead of readline private variable
@@ -1567,7 +1536,7 @@ void
 pager_file::wrap_here (int indent)
 {
   /* This should have been allocated, but be paranoid anyway.  */
-  gdb_assert (filter_initialized);
+  gdb_assert (filtered_printing_initialized);
 
   flush_wrap_buffer ();
   if (chars_per_line == UINT_MAX)	/* No line overflow checking.  */
@@ -3711,7 +3680,7 @@ Set number of characters where GDB should wrap lines of its output."), _("\
 Show number of characters where GDB should wrap lines of its output."), _("\
 This affects where GDB wraps its output to fit the screen width.\n\
 Setting this to \"unlimited\" or zero prevents GDB from wrapping its output."),
-			    set_width_command,
+			    set_screen_size_command,
 			    show_chars_per_line,
 			    &setlist, &showlist);
 
@@ -3721,7 +3690,7 @@ Show number of lines in a page for GDB output pagination."), _("\
 This affects the number of lines after which GDB will pause\n\
 its output and ask you whether to continue.\n\
 Setting this to \"unlimited\" or zero causes GDB never pause during output."),
-			    set_height_command,
+			    set_screen_size_command,
 			    show_lines_per_page,
 			    &setlist, &showlist);
 

@@ -1513,7 +1513,7 @@ elf_x86_64_tls_transition (struct bfd_link_info *info, bfd *abfd,
 			   const Elf_Internal_Rela *rel,
 			   const Elf_Internal_Rela *relend,
 			   struct elf_link_hash_entry *h,
-			   Elf_Internal_Sym *sym,
+			   const Elf_Internal_Sym *sym,
 			   bool from_relocate_section)
 {
   unsigned int from_type = *r_type;
@@ -1684,7 +1684,7 @@ elf_x86_64_need_pic (struct bfd_link_info *info,
 		     bfd *input_bfd, asection *sec,
 		     struct elf_link_hash_entry *h,
 		     Elf_Internal_Shdr *symtab_hdr,
-		     Elf_Internal_Sym *isym,
+		     const Elf_Internal_Sym *isym,
 		     reloc_howto_type *howto)
 {
   const char *v = "";
@@ -2544,7 +2544,7 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
       struct elf_x86_link_hash_entry *eh;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym;
       const char *name;
       bool size_reloc;
       bool converted_reloc;
@@ -2557,14 +2557,6 @@ elf_x86_64_scan_relocs (bfd *abfd, struct bfd_link_info *info,
       /* Don't check R_X86_64_NONE.  */
       if (r_type == R_X86_64_NONE)
 	continue;
-
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"),
-			      abfd, r_symndx);
-	  goto error_return;
-	}
 
       howto = elf_x86_64_rtype_to_howto (abfd, r_type);
       if (howto == NULL)
@@ -3023,16 +3015,9 @@ need_got:
 		head = &h->dyn_relocs;
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
+		  /* Track dynamic relocs needed for local syms too.  */
 		  asection *s;
 		  void **vpp;
-
-		  isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
-						abfd, r_symndx);
-		  if (isym == NULL)
-		    goto error_return;
 
 		  s = bfd_section_from_elf_index (abfd, isym->st_shndx);
 		  if (s == NULL)
@@ -3217,7 +3202,7 @@ elf_x86_64_relocate_section (struct bfd_link_info *info,
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
       struct elf_x86_link_hash_entry *eh;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma off, offplt, plt_offset;
       bfd_vma relocation;

@@ -316,7 +316,7 @@ mt_elf_relocate_section
     {
       reloc_howto_type *	   howto;
       unsigned long		   r_symndx;
-      Elf_Internal_Sym *	   sym;
+      const Elf_Internal_Sym *	   sym;
       asection *		   sec;
       struct elf_link_hash_entry * h;
       bfd_vma			   relocation;
@@ -411,48 +411,6 @@ mt_elf_relocate_section
 	  if (msg)
 	    (*info->callbacks->warning) (info, msg, name, input_bfd,
 					 input_section, rel->r_offset);
-	}
-    }
-
-  return true;
-}
-
-/* Look through the relocs for a section during the first phase.
-   Since we don't do .gots or .plts, we just need to consider the
-   virtual table relocs for gc.  */
-
-static bool
-mt_elf_check_relocs (bfd *abfd,
-		     struct bfd_link_info *info,
-		     asection *sec,
-		     const Elf_Internal_Rela *relocs)
-{
-  Elf_Internal_Shdr *symtab_hdr;
-  struct elf_link_hash_entry **sym_hashes;
-  const Elf_Internal_Rela *rel;
-  const Elf_Internal_Rela *rel_end;
-
-  if (bfd_link_relocatable (info))
-    return true;
-
-  symtab_hdr = &elf_symtab_hdr (abfd);
-  sym_hashes = elf_sym_hashes (abfd);
-
-  rel_end = relocs + sec->reloc_count;
-  for (rel = relocs; rel < rel_end; rel++)
-    {
-      struct elf_link_hash_entry *h;
-      unsigned long r_symndx;
-
-      r_symndx = ELF32_R_SYM (rel->r_info);
-      if (r_symndx < symtab_hdr->sh_info)
-	h = NULL;
-      else
-	{
-	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
-	  while (h->root.type == bfd_link_hash_indirect
-		 || h->root.type == bfd_link_hash_warning)
-	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
 	}
     }
 
@@ -585,7 +543,6 @@ mt_elf_print_private_bfd_data (bfd *abfd, void *ptr)
 #define bfd_elf32_bfd_reloc_type_lookup		mt_reloc_type_lookup
 #define bfd_elf32_bfd_reloc_name_lookup	  mt_reloc_name_lookup
 
-#define elf_backend_check_relocs		mt_elf_check_relocs
 #define elf_backend_object_p			mt_elf_object_p
 #define elf_backend_rela_normal			1
 

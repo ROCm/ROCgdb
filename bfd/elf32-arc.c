@@ -1468,7 +1468,7 @@ elf_arc_relocate_section (struct bfd_link_info *  info,
       reloc_howto_type *howto;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       struct elf_link_hash_entry *h2;
       const char *msg;
@@ -3003,7 +3003,7 @@ arc_elf_relax_section (bfd *abfd, asection *sec,
 
   /* Get a copy of the native relocations.  */
   internal_relocs = _bfd_elf_link_read_relocs (abfd, sec, NULL, NULL,
-                                               link_info->keep_memory);
+					       link_info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
 

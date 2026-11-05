@@ -665,13 +665,10 @@ changequote([,])dnl
         fi
         AC_MSG_RESULT($with_isa_spec)
 
-        # --with-priv-spec=[1.9.1|1.10|1.11|1.12|1.13].
-        AC_MSG_CHECKING(for default configuration of --with-priv-spec)
+        # --with-priv-spec is deprecated and has no effect.
         if test "x${with_priv_spec}" != x; then
-          AC_DEFINE_UNQUOTED(DEFAULT_RISCV_PRIV_SPEC, "$with_priv_spec",
-                             [Define default value for RISC-V -mpriv-spec])
+          AC_MSG_WARN([--with-priv-spec is deprecated and has no effect, the privileged spec is always 1.13; use binutils 2.47 or earlier to select another version])
         fi
-        AC_MSG_RESULT($with_priv_spec)
         ;;
 
       rl78)

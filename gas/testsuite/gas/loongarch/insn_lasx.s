@@ -580,7 +580,6 @@ xvreplgr2vr.b	$xr0, $r1
 xvreplgr2vr.h	$xr0, $r1
 xvreplgr2vr.w	$xr0, $r1
 xvreplgr2vr.d	$xr0, $r1
-xvhseli.d	$xr0, $xr1, 1
 xvrotri.b	$xr0, $xr1, 1
 xvrotri.h	$xr0, $xr1, 1
 xvrotri.w	$xr0, $xr1, 1

@@ -925,17 +925,9 @@ elf_s390_check_relocs (bfd *abfd,
       unsigned int r_type;
       unsigned int r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *isym;
+      const Elf_Internal_Sym *isym = NULL;
 
       r_symndx = ELF64_R_SYM (rel->r_info);
-
-      if (r_symndx >= NUM_SHDR_ENTRIES (symtab_hdr))
-	{
-	  /* xgettext:c-format */
-	  _bfd_error_handler (_("%pB: bad symbol index: %d"),
-			      abfd, r_symndx);
-	  return false;
-	}
 
       if (r_symndx < symtab_hdr->sh_info)
 	{
@@ -1336,21 +1328,12 @@ elf_s390_check_relocs (bfd *abfd,
 	      /* If this is a global symbol, we count the number of
 		 relocations we need for this symbol.  */
 	      if (h != NULL)
-		{
-		  head = &h->dyn_relocs;
-		}
+		head = &h->dyn_relocs;
 	      else
 		{
-		  /* Track dynamic relocs needed for local syms too.
-		     We really need local syms available to do this
-		     easily.  Oh well.  */
+		  /* Track dynamic relocs needed for local syms too.  */
 		  asection *s;
 		  void *vpp;
-
-		  isym = bfd_sym_from_r_symndx (&htab->elf.sym_cache,
-						abfd, r_symndx);
-		  if (isym == NULL)
-		    return false;
 
 		  s = bfd_section_from_elf_index (abfd, isym->st_shndx);
 		  if (s == NULL)
@@ -2342,7 +2325,7 @@ elf_s390_relocate_section (struct bfd_link_info *info,
       reloc_howto_type *howto;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma off;
       bfd_vma relocation;

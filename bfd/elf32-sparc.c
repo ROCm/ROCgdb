@@ -32,6 +32,34 @@
 /* Support for core dump NOTE sections.  */
 
 static bool
+elf32_sparc_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
+{
+  int offset;
+  size_t size;
+
+  switch (note->descsz)
+    {
+    default:
+      return false;
+    case 228:
+      /* pr_cursig */
+      elf_tdata (abfd)->core->signal = bfd_get_16 (abfd, note->descdata + 12);
+
+      /* pr_pid */
+      elf_tdata (abfd)->core->lwpid = bfd_get_32 (abfd, note->descdata + 24);
+
+      /* pr_reg */
+      offset = 72;
+      size = 152;
+
+      break;
+    }
+
+  /* Make a ".reg/999" section.  */
+  return _bfd_elfcore_make_pseudosection (abfd, ".reg", size, note->descpos + offset);
+}
+
+static bool
 elf32_sparc_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
 {
   switch (note->descsz)
@@ -230,6 +258,7 @@ elf32_sparc_reloc_type_class (const struct bfd_link_info *info,
 					elf32_sparc_merge_private_bfd_data
 #define elf_backend_final_write_processing \
 					elf32_sparc_final_write_processing
+#define elf_backend_grok_prstatus	elf32_sparc_grok_prstatus
 #define elf_backend_grok_psinfo		elf32_sparc_grok_psinfo
 #define elf_backend_reloc_type_class	elf32_sparc_reloc_type_class
 

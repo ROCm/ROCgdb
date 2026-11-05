@@ -74,6 +74,10 @@ with_test_prefix "python interactive help" {
     }
 }
 
+# A timeout in the previous test would have gdb stuck at the "help>" prompt,
+# causing all following tests to fail.  Start a clean session.
+clean_restart
+
 gdb_test_multiline "show python command" \
   "define zzq" "Type commands for definition of .* just \"end\"\\.*" \
   "python" "" \
@@ -94,11 +98,12 @@ gdb_test "source $remote_source2_py" "yes" "source source2.py"
 gdb_test "source -s source2.py" "yes"
 
 set remote_source2_symlink_notpy \
-    [gdb_remote_download host ${srcdir}/${subdir}/source2.py \
-	 [standard_output_file "source2-symlink.notpy"]]
-set remote_source2_symlink_py [standard_output_file "source2-symlink.py"]
+    [gdb_remote_download host $srcdir/$subdir/source2.py source2-symlink.notpy]
+set remote_source2_symlink_py [host_standard_output_file source2-symlink.py]
 remote_file host delete $remote_source2_symlink_py
-set status [remote_exec host "ln -sf $remote_source2_symlink_notpy $remote_source2_symlink_py"]
+set status \
+    [remote_exec host \
+	 "ln -sf $remote_source2_symlink_notpy $remote_source2_symlink_py"]
 set test "source -s source2-symlink.py"
 if {[lindex $status 0] == 0} {
     gdb_test "source -s $remote_source2_symlink_py" "yes" $test
@@ -570,21 +575,26 @@ foreach type {Instruction LazyString Membuf Record RecordFunctionSegment \
 	"gdb.$type is registered"
 }
 
-set logfile [host_standard_output_file gdb.txt]
-gdb_test_no_output "set logging file $logfile" \
-    "set logging file [file tail $logfile]"
-gdb_test_no_output "set logging redirect on" \
-    "enable logging redirect via python"
-gdb_test_no_output "python gdb.execute('set logging enabled on')" \
-    "enable logging via python"
+# The combination of logging and !readline_is_used means we don't get a
+# visible prompt (PR cli/34926), so skip this part.
+set readline_is_used [readline_is_used]
+if {$readline_is_used} {
+    set logfile [host_standard_output_file gdb.txt]
+    gdb_test_no_output "set logging file $logfile" \
+	"set logging file [file tail $logfile]"
+    gdb_test_no_output "set logging redirect on" \
+	"enable logging redirect via python"
+    gdb_test_no_output "python gdb.execute('set logging enabled on')" \
+	"enable logging via python"
 
-# Even with logging redirect on, this should capture the output.
-gdb_test_no_output "python x = gdb.execute('print 23', to_string=True)" \
-    "print from python with logging redirect"
+    # Even with logging redirect on, this should capture the output.
+    gdb_test_no_output "python x = gdb.execute('print 23', to_string=True)" \
+	"print from python with logging redirect"
 
-gdb_test "set logging enabled off" \
-    "Done logging to .*gdb.txt." \
-    "disable logging"
+    gdb_test "set logging enabled off" \
+	"Done logging to .*gdb.txt." \
+	"disable logging"
 
-gdb_test "python print(x)" " = 23.*" \
-    "python still captured output"
+    gdb_test "python print(x)" " = 23.*" \
+	"python still captured output"
+}

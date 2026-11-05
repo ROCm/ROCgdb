@@ -20,46 +20,52 @@ set MIFLAGS "-i=mi"
 
 standard_testfile .c
 
-if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug}] != "" } {
-     untested "failed to compile"
-     return
+if {[build_executable "failed to prepare" $testfile]} {
+    return
 }
 
-proc test_memory_changed_observer { mi_command } {
+proc test_memory_changed_observer { var mi_command } {
     with_test_prefix "${mi_command}" {
-	global srcfile binfile
-
 	mi_clean_restart $::testfile
 	mi_runto_main
 
 	set line_number [gdb_get_line_number "break here"]
-	mi_gdb_test "-break-insert ${srcfile}:${line_number}" \
+	mi_gdb_test "-break-insert $::srcfile:$line_number" \
 	    {\^done,bkpt=.number="2",type="breakpoint".*\}} \
 	    "set breakpoint"
 
-	mi_gdb_test "watch x" ".*" "set watchpoint"
+	mi_gdb_test "watch $var" ".*" "set watchpoint"
 
 	mi_execute_to "exec-continue" "breakpoint-hit" "main" "" ".*" ".*" \
-	    { "" "disp=\"keep\"" } "breakpoint hit"
+	    { "" {disp="keep"} } "breakpoint hit"
+
+	set re_char {( '[^'\r\n]+')?}
+	set re_0 "0$re_char"
+	set re_1 "1$re_char"
+	set re_42 "42$re_char"
 
 	mi_execute_to "exec-continue" "watchpoint-trigger" "main" "" ".*" ".*" \
-	    { "" "wpt=\{number=\"3\",exp=\"x\"\},value=\{old=\"0\",new=\"42\"\}" } \
+	    [list \
+		 "" \
+		 [subst_vars \
+		      {wpt={number="3",exp="$var"},value={old="$re_0",new="$re_42"}}]] \
 	    "watchpoint hit"
 
 	mi_execute_to "exec-continue" "breakpoint-hit" "main" "" ".*" ".*" \
-	    { "" "disp=\"keep\"" } "breakpoint hit 2"
+	    { "" {disp="keep"} } "breakpoint hit 2"
 
-	mi_gdb_test "-${mi_command}" {\^done} "set x"
+	mi_gdb_test "-${mi_command}" {\^done} "set $var"
 
 	mi_execute_to "exec-continue" "watchpoint-trigger" "main" "" ".*" ".*" \
-	    { "" "wpt=\{number=\"3\",exp=\"x\"\},value=\{old=\"1\",new=\"42\"\}" } \
+	    [list \
+		 "" \
+		 [subst_vars \
+		      {wpt={number="3",exp="$var"},value={old="$re_1",new="$re_42"}}]] \
 	    "watchpoint hit 2"
 
 	mi_gdb_exit
     }
 }
 
-test_memory_changed_observer "data-write-memory-bytes &x \"01\""
-# We want to trigger a target memory write here, so the word size (4 or 8)
-# is not that important.
-test_memory_changed_observer "data-write-memory &x x 4 \"01\""
+test_memory_changed_observer b {data-write-memory-bytes &b "01"}
+test_memory_changed_observer x {data-write-memory &x x 4 "01"}

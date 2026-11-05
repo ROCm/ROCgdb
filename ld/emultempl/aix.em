@@ -132,9 +132,6 @@ static unsigned int symbol_mode = 0x04;
 /* Which symbol modes are valid */
 static unsigned int symbol_mode_mask = 0x0d;
 
-/* Whether this is a 64 bit link */
-static int is_64bit = 0;
-
 /* Which syscalls from import file are valid */
 static unsigned int syscall_mask = 0x77;
 
@@ -601,13 +598,11 @@ gld${EMULATION_NAME}_handle_option (int optc)
       break;
 
     case OPTION_32:
-      is_64bit = 0;
       syscall_mask = 0x77;
       symbol_mode_mask = 0x0d;
       break;
 
     case OPTION_64:
-      is_64bit = 1;
       syscall_mask = 0xcc;
       symbol_mode_mask = 0x0e;
       break;

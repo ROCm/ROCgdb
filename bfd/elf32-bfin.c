@@ -1391,7 +1391,7 @@ bfin_relocate_section (struct bfd_link_info *info,
       reloc_howto_type *howto;
       unsigned long r_symndx;
       struct elf_link_hash_entry *h;
-      Elf_Internal_Sym *sym;
+      const Elf_Internal_Sym *sym;
       asection *sec;
       bfd_vma relocation = 0;
       bool unresolved_reloc;
@@ -5302,9 +5302,8 @@ bfd_bfin_elf32_create_embedded_relocs (bfd *abfd,
   symtab_hdr = &elf_symtab_hdr (abfd);
 
   /* Get a copy of the native relocations.  */
-  internal_relocs = (_bfd_elf_link_read_relocs
-		     (abfd, datasec, NULL, (Elf_Internal_Rela *) NULL,
-		      info->keep_memory));
+  internal_relocs = _bfd_elf_link_read_relocs (abfd, datasec, NULL, NULL,
+					       info->keep_memory);
   if (internal_relocs == NULL)
     goto error_return;
 

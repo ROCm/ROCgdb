@@ -43,10 +43,6 @@
 #include <sys/cygwin.h>
 #endif
 
-#ifndef O_NOCTTY
-#define O_NOCTTY 0
-#endif
-
 static void pass_signal (int);
 
 static int gdb_has_a_terminal (void);

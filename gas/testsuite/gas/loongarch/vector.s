@@ -1308,7 +1308,6 @@ vext2xv.du.bu	$xr0, $xr1
 vext2xv.wu.hu	$xr0, $xr1
 vext2xv.du.hu	$xr0, $xr1
 vext2xv.du.wu	$xr0, $xr1
-xvhseli.d	$xr0, $xr1, 1
 xvrotri.b	$xr0, $xr1, 1
 xvrotri.h	$xr0, $xr1, 1
 xvrotri.w	$xr0, $xr1, 1
