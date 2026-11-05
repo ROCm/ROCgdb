@@ -749,6 +749,29 @@ def _load_emulator_support() -> types.ModuleType:
     return rocjitsu_emulator
 
 
+def host_path(value: str) -> Path:
+    """
+    Turn a path given on the command line or in the environment into one this
+    Python can use.
+
+    Args:
+        value: The path as given.
+
+    Returns:
+        The path.
+
+    Raises:
+        argparse.ArgumentTypeError: If the path is empty.
+    """
+    # Path("") is the current directory, which a forgotten or mistyped value
+    # would otherwise quietly stand for.  As an option's type=, argparse
+    # reports an ArgumentTypeError as a usage error after the option's name,
+    # not as a traceback.
+    if not value:
+        raise argparse.ArgumentTypeError("the path is empty")
+    return Path(value)
+
+
 def parse_arguments() -> argparse.Namespace:
     """
     Parse and validate command-line arguments for the ROCgdb test suite.
@@ -872,7 +895,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--rocgdb-bin",
-        type=Path,
+        type=host_path,
         help="Path to the ROCgdb executable. Validated for existence when "
         "supplied. Default: <rocm_dir>/bin/rocgdb, where rocm_dir is "
         "auto-discovered (see --try-rocm-path).",
@@ -918,7 +941,7 @@ def parse_arguments() -> argparse.Namespace:
 
     parser.add_argument(
         "--testsuite-dir",
-        type=Path,
+        type=host_path,
         help="Path to the GDB testsuite directory. Validated for existence "
         "when supplied. Default: <rocm_dir>/tests/rocgdb/gdb/testsuite, "
         "where rocm_dir is auto-discovered (see --try-rocm-path).",
@@ -970,7 +993,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--ignore-list-file",
-        type=Path,
+        type=host_path,
         required=False,
         metavar="PATH",
         help="Path to JSON file containing test ignore lists. "
@@ -979,7 +1002,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-ignore-list-file",
-        type=Path,
+        type=host_path,
         required=False,
         metavar="PATH",
         help="Path to output JSON file for generating a new ignore list from test failures. "
@@ -997,7 +1020,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--one-by-one-log-dir",
-        type=Path,
+        type=host_path,
         default=None,
         metavar="PATH",
         help="Root directory for per-test gdb.log captures in --one-by-one mode. "
@@ -1038,7 +1061,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--timing-log-file",
-        type=Path,
+        type=host_path,
         default=None,
         metavar="PATH",
         help="Output path for the timing log. Default: "
@@ -2574,10 +2597,12 @@ def _resolve_rocm_paths(args: argparse.Namespace) -> Tuple[Path, Path, Path]:
     """
     rocm_dir = None
 
+    # An environment variable set to the empty string counts as unset, as an
+    # empty path would otherwise mean the current directory.
     if args.try_rocm_path:
         rocm_path_env = os.getenv("ROCM_PATH")
-        if rocm_path_env is not None:
-            tmp_dir = Path(rocm_path_env).resolve()
+        if rocm_path_env:
+            tmp_dir = host_path(rocm_path_env).resolve()
             if not tmp_dir.is_dir():
                 _log_error_and_exit(
                     f"ROCM_PATH is set to '{tmp_dir}' but the path does not exist"
@@ -2586,15 +2611,16 @@ def _resolve_rocm_paths(args: argparse.Namespace) -> Tuple[Path, Path, Path]:
             logger.info(f"Using ROCM_PATH: {rocm_dir}")
         else:
             logger.info(
-                "--try-rocm-path flag set but ROCM_PATH environment variable is not set. "
+                "--try-rocm-path flag set but ROCM_PATH environment variable is not "
+                "set or is empty. "
                 "Falling back to OUTPUT_ARTIFACTS_DIR or script location."
             )
 
     if rocm_dir is None:
         output_artifacts_dir = os.getenv("OUTPUT_ARTIFACTS_DIR")
-        if output_artifacts_dir is not None:
+        if output_artifacts_dir:
             # OUTPUT_ARTIFACTS_DIR is set, verify it exists.
-            rocm_dir = Path(output_artifacts_dir).resolve()
+            rocm_dir = host_path(output_artifacts_dir).resolve()
             if not rocm_dir.is_dir():
                 _log_error_and_exit(
                     f"OUTPUT_ARTIFACTS_DIR is set to '{rocm_dir}' but the path does not exist"
