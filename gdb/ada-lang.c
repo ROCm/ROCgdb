@@ -11291,7 +11291,7 @@ ada_funcall_operation::evaluate (struct type *expect_type,
 	  type = ada_check_typedef (type->target_type ());
 	  break;
 	default:
-	  error (_("cannot subscript or call something of type \"%s\"'"),
+	  error (_("cannot subscript or call something of type \"%s\""),
 		 ada_type_name (callee->type ()));
 	  break;
 	}

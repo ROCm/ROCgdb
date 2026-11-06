@@ -74,7 +74,7 @@ foreach_gnat_encoding scenario flags {all minimal} {
     }
 
     set xfail_cannot_subscript_re \
-	"cannot subscript or call something of type `foo__packed_array_ptr'"
+	{cannot subscript or call something of type "foo__packed_array_ptr"}
 
     gdb_test_multiple "print pa_ptr(3)" "" {
 	-re -wrap " = 30" {
