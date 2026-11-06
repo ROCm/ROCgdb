@@ -71,7 +71,8 @@ proc run_test { spawn_inferior } {
 
 	set escapedbinfile  [string_to_regexp $::binfile]
 	gdb_test -no-prompt-anchor "attach $testpid" \
-	    "Attaching to program.*`?$escapedbinfile'?, process $testpid.*" \
+	    [subst_vars \
+		 {Attaching to program: $escapedbinfile, process $testpid.*}] \
 	    "attach to the inferior"
 
 	# Attaching to a multi-threaded application in non-stop mode

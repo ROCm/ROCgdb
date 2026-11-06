@@ -54,13 +54,13 @@ proc corefunc { threadtype executable } {
 	while { $passes < 3 && $attempt <= $attempts } {
 	    set test "attach (pass $passes), pending signal catch"
 	    if {[gdb_test_multiple "attach $testpid" $test {
-		-re "Attaching to program.*`?$escapedbinfile'?, process $testpid.* received signal SIGALRM.*$gdb_prompt $" {
+		-re -wrap "Attaching to program: $escapedbinfile, process $testpid.* received signal SIGALRM.*" {
 		    # nonthreaded:
 		    pass $test
 		    verbose -log "$test succeeded on the attempt # $attempt of $attempts"
 		    set passes [expr {$passes + 1}]
 		}
-		-re "Attaching to program.*`?$escapedbinfile'?, process $testpid.*$gdb_prompt $" {
+		-re -wrap "Attaching to program: $escapedbinfile, process $testpid.*" {
 		    set ok 0
 
 		    if { $threadtype == "threaded" } {
