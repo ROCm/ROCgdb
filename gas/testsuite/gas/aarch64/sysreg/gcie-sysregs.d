@@ -113,6 +113,10 @@ Disassembly of section \.text:
 .*:	d53cca40 	mrs	x0, ich_ppi_enabler0_el2
 .*:	d51cca60 	msr	ich_ppi_enabler1_el2, x0
 .*:	d53cca60 	mrs	x0, ich_ppi_enabler1_el2
+.*:	d51cc700 	msr	ich_ppi_hvir0_el2, x0
+.*:	d53cc700 	mrs	x0, ich_ppi_hvir0_el2
+.*:	d51cc720 	msr	ich_ppi_hvir1_el2, x0
+.*:	d53cc720 	mrs	x0, ich_ppi_hvir1_el2
 .*:	d51cca80 	msr	ich_ppi_pendr0_el2, x0
 .*:	d53cca80 	mrs	x0, ich_ppi_pendr0_el2
 .*:	d51ccaa0 	msr	ich_ppi_pendr1_el2, x0
