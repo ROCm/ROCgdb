@@ -99,6 +99,9 @@ int macro_nest;
 static const char *physical_input_file;
 static const char *logical_input_file;
 
+static const char *primary_input_file;
+static const char *primary_logical_file;
+
 /* 1-origin line number in a source file.  */
 /* A line ends in '\n' or eof.  */
 static unsigned int physical_input_line;
@@ -247,6 +250,8 @@ input_scrub_begin (void)
 	|| (AFTER_STRING[0] == '\0' && AFTER_SIZE == 1));
 
   physical_input_file = NULL;	/* No file read yet.  */
+  primary_input_file = NULL;
+  primary_logical_file = NULL;
   next_saved_file = NULL;	/* At EOF, don't pop to any other file */
   macro_nest = 0;
   input_scrub_reinit ();
@@ -269,6 +274,8 @@ input_scrub_new_file (const char *filename)
 {
   input_file_open (filename, !flag_no_comments);
   physical_input_file = filename[0] ? filename : _("{standard input}");
+  if (primary_input_file == NULL)
+    primary_input_file = physical_input_file;
   physical_input_line = 0;
 
   partial_size = 0;
@@ -521,10 +528,19 @@ new_logical_line_flags (const char *fname, /* DON'T destroy it!  We point to it!
       fname = NULL;
     }
 
-  if (fname
-      && (logical_input_file == NULL
-	  || filename_cmp (logical_input_file, fname)))
-    logical_input_file = fname;
+  if (fname)
+    {
+      if (logical_input_file == NULL
+	  || filename_cmp (logical_input_file, fname))
+	logical_input_file = fname;
+
+      /* The first top-level CPP line marker names the primary source.  */
+      if (primary_logical_file == NULL && *fname
+	  && next_saved_file == NULL
+	  && physical_input_file == primary_input_file
+	  && flags == 0)
+	primary_logical_file = fname;
+    }
 }
 
 void
@@ -560,6 +576,14 @@ as_report_context (void)
     }
 }
 
+/* Return the primary source file name, if known.  */
+
+const char *
+as_where_primary (void)
+{
+  return primary_logical_file ? primary_logical_file : primary_input_file;
+}
+
 /* Return the current physical input file name and line number, if known  */
 
 const char *

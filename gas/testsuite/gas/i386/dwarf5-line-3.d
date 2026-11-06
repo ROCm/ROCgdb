@@ -35,12 +35,14 @@ Raw dump of debug contents of section \.z?debug_line:
   Entry	Name
   0	\(indirect line string, offset: 0.*\): .*
 
- The File Name Table \(offset 0x.*, lines 2, columns 2\):
+ The File Name Table \(offset 0x.*, lines 3, columns 2\):
   Entry	Dir	Name
-  0	0	\(indirect line string, offset: 0x.*\): dwarf5-line-3.S
-  1	0	\(indirect line string, offset: 0x.*\): dwarf5-line-3.S
+  0	0	\(indirect line string, offset: 0x.*\): foo.S
+  1	0	\(indirect line string, offset: 0x.*\): foo.S
+  2	0	\(indirect line string, offset: 0x.*\): dwarf5-line-3.S
 
  Line Number Statements:
+  \[0x.*\]  Set File Name to entry 2 in the File Name Table
   \[0x.*\]  Extended opcode 2: set Address to (0x)?0
   \[0x.*\]  Special opcode 7: advance Address by 0 to (0x)?0 and Line by 2 to 3
   \[0x.*\]  Advance PC by 1 to 0x1

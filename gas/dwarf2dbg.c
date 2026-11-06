@@ -3044,10 +3044,9 @@ out_debug_str (segT str_seg, symbolS **name_sym, symbolS **comp_dir_sym,
 
   subseg_set (str_seg, 0);
 
-  /* DW_AT_name.  We don't have the actual file name that was present
-     on the command line, so assume files[first_file] is the main input file.
-     We're not supposed to get called unless at least one line number
-     entry was emitted, so this should always be defined.  */
+  /* DW_AT_name.  The first file-table entry names the CU.  For gas-generated
+     line info, dwarf2_finish registers the primary source before other files.
+     There is at least one line entry when we get here.  */
   *name_sym = symbol_temp_new_now_octets ();
 
   if (files[first_file].dir)
@@ -3191,6 +3190,10 @@ dwarf2_finish (void)
       bfd_set_section_flags (line_seg,
 			     SEC_READONLY | SEC_DEBUGGING | SEC_OCTETS);
     }
+
+  /* Register the primary source before files from line entries.  */
+  if (debug_type == DEBUG_DWARF2 && all_segs != NULL)
+    allocate_filenum (as_where_primary ());
 
   for (s = all_segs; s; s = s->next)
     {
