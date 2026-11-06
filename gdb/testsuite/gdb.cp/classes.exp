@@ -594,7 +594,7 @@ proc test_enums {} {
 	-re "${::valnum_re} = (ClassWithEnum::)?yellow$nl$gdb_prompt $" {
 	    pass "print (ClassWithEnum::PrivEnum) 42"
 	}
-	-re "A (parse|syntax) error in expression, near `42'.$nl$gdb_prompt $" {
+	-re -wrap {A (parse|syntax) error in expression, near "42"[.]} {
 	    # "parse error" is bison 1.35.
 	    # "syntax error" is bison 1.875.
 	    kfail "gdb/1588" "print (ClassWithEnum::PrivEnum) 42"
