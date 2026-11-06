@@ -22,8 +22,9 @@
 #   - Start a first inferior.  Not all of its waves are created because of the
 #     hogging process.
 #   - Stop the hogging process.
-#   - Start a second inferior (while the first one is stopped).  A faulty GDB
-#     would present a stop in newly created waves of the first inferior.
+#   - Start a second inferior (while the first one is stopped) and run it to
+#     its kernel.  A faulty GDB would present a stop in newly created waves of
+#     the first inferior.
 
 load_lib rocm.exp
 
@@ -60,52 +61,81 @@ proc do_test { } {
 	    return
 	}
 
-	set hog_pid [spawn ${::binfile_hog}]
-	if { $hog_pid == 0 } {
-	    fail "start hog"
+	set hog_info [spawn_rocm_hog $::binfile_hog]
+	if { [llength $hog_info] != 3 } {
 	    return
 	}
-
-	set hog_spawn_id $spawn_id
-	verbose -log "spawned hog as pid $hog_pid, spawn id $spawn_id"
+	set hog_spawn_id [lindex $hog_info 0]
+	set device_max [lindex $hog_info 2]
 
 	gdb_breakpoint bit_extract_kernel -allow-pending
 
 	set res [gdb_test "continue" "Thread $::decimal .* hit Breakpoint $::decimal.*" \
 		    "continue to kernel"]
+
+	set count [info_threads_get_wave_count 1]
+	verbose -log "Inferior 1 has $count waves"
+
 	# Do a blocking wait to make sure the hog process really goes
 	# away before we proceed.
 	kill_wait_spawned_process $hog_spawn_id -block
 	if { $res != 0 } {
 	    return
 	}
+	if { ![assert_below_full_occupancy $count $device_max] } {
+	    return
+	}
 
-	set count [info_threads_get_wave_count 1]
-	verbose -log "Inferior 1 has $count waves"
+	# Drop the breakpoint on main so "run" of inferior 2 is not a
+	# host-only stop.  Keep a breakpoint on the kernel so newly
+	# created inferior 1 waves would still present as a stop.
+	delete_breakpoints
+	gdb_breakpoint bit_extract_kernel -allow-pending
 
 	gdb_test "add-inferior" "Added inferior 2 .*"
 	gdb_test "inferior 2" "Switching to inferior 2 .*"
 	gdb_test "file ${::binfile}" "Reading symbols from .*" "load file"
 
 	# Make sure "run" results in a stop in inferior 2.
-	gdb_test_multiple "run" "" {
-	    -re -wrap "At least one agent is busy.*" {
-		if {[hip_devices_support_debug_multi_process]} {
-		    fail $gdb_test_name
-		} else {
-		    unsupported $gdb_test_name
-		}
-
+	set res [gdb_test_multiple "run" "" {
+	    -re -wrap ".*At least one agent is busy.*" {
+		# Another process already owns GPU debugging, so this
+		# run cannot exercise the intended multi-inferior stop
+		# behavior.
+		unsupported $gdb_test_name
 		return
 	    }
 
-	    -re -wrap "Thread 2\\.$::decimal .* hit Breakpoint .*" {
+	    -re -wrap "Thread 1\\.$::decimal .* hit Breakpoint .*" {
+		fail "$gdb_test_name (spurious stop in inferior 1)"
+		return
+	    }
+
+	    -re -wrap "Thread 2\\.$::decimal .* hit Breakpoint .*bit_extract_kernel.*" {
 		pass $gdb_test_name
 	    }
+
+	    -re -wrap "Thread 2\\.$::decimal .* hit Breakpoint .*" {
+		fail "$gdb_test_name (not stopped in kernel)"
+		return
+	    }
+
+	    -re -wrap "Inferior 2 .* exited.*" {
+		fail "$gdb_test_name (inferior 2 exited)"
+		return
+	    }
+	}]
+	if { $res != 0 } {
+	    return
 	}
 
 	set count [info_threads_get_wave_count 2]
 	verbose -log "Inferior 2 has $count waves"
+	gdb_assert { $count > 0 } "inferior 2 has GPU waves"
+
+	# Inferior 2 is sitting in a kernel.  Kill it to free those
+	# slots.
+	gdb_test_no_output "kill inferiors 2"
 
 	# Try to continue inferior 1 to completion.
 	gdb_test "inferior 1"
@@ -114,4 +144,8 @@ proc do_test { } {
     }
 }
 
-do_test
+# Make the hog and both inferiors use the same GPU.
+save_vars { ::env(ROCR_VISIBLE_DEVICES) } {
+    set ::env(ROCR_VISIBLE_DEVICES) [rocm_hog_device]
+    do_test
+}

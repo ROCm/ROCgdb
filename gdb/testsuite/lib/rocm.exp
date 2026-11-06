@@ -586,6 +586,95 @@ proc info_threads_get_wave_count { inf_num } {
     return $wave_count
 }
 
+# Return the GPU to which a hog and GDB's inferiors should be pinned
+# so that they compete for the same wave slots: the first device in
+# ROCR_VISIBLE_DEVICES if it is set, otherwise device 0.
+
+proc rocm_hog_device { } {
+    if { [info exists ::env(ROCR_VISIBLE_DEVICES)]
+	 && $::env(ROCR_VISIBLE_DEVICES) ne "" } {
+	return [lindex [split $::env(ROCR_VISIBLE_DEVICES) ","] 0]
+    }
+    return 0
+}
+
+# Start BINFILE (the hog) and wait until it reports that it has parked
+# wave slots.  On success, return a 3-element list:
+#   { hog_spawn_id  hog_waves  device_max }
+# On failure, emit a FAIL and return an empty list.
+
+proc spawn_rocm_hog { binfile } {
+    global spawn_id
+    global gdb_spawn_id
+    global expect_out
+
+    # The hog gives up if its workgroups have not all started within
+    # READY_SECS.  Wait a bit longer than that for its report.
+    set ready_secs [get_largest_timeout]
+    set hog_pid [spawn $binfile $ready_secs]
+    if { $hog_pid == 0 } {
+	fail "start hog"
+	set spawn_id $gdb_spawn_id
+	return {}
+    }
+    set hog_spawn_id $spawn_id
+    set spawn_id $gdb_spawn_id
+    verbose -log "spawned hog as pid $hog_pid, spawn id $hog_spawn_id"
+
+    set result {}
+    expect {
+	-i $hog_spawn_id
+	-timeout [expr {$ready_secs + 20}]
+	-re "hog ready: parked ($::decimal) waves \\(device_max=($::decimal)\\)\[\r\n\]+" {
+	    set hog_waves $expect_out(1,string)
+	    set device_max $expect_out(2,string)
+	    pass "hog ready"
+	    verbose -log "hog parked $hog_waves waves (device_max=$device_max)"
+	    set result [list $hog_spawn_id $hog_waves $device_max]
+	}
+	-re "error: hog parked ($::decimal) of ($::decimal) waves \\(device_max=($::decimal)\\)" {
+	    verbose -log "hog parked $expect_out(1,string) of\
+			  $expect_out(2,string) waves\
+			  (device_max=$expect_out(3,string))"
+	    fail "hog ready (not all hog workgroups started)"
+	    catch { close -i $hog_spawn_id }
+	    catch { wait -i $hog_spawn_id }
+	}
+	timeout {
+	    # Unlike the error and eof cases, the hog may still be
+	    # running, so it must be killed before it is reaped.
+	    fail "hog ready (timeout waiting for handshake)"
+	    kill_wait_spawned_process $hog_spawn_id -block
+	}
+	eof {
+	    verbose -log "hog exited before handshake, output: $expect_out(buffer)"
+	    fail "hog ready (hog exited before handshake)"
+	    catch { close -i $hog_spawn_id }
+	    catch { wait -i $hog_spawn_id }
+	}
+    }
+    return $result
+}
+
+# WAVE_COUNT is the inferior's GDB-visible GPU wave count while the hog
+# is still running.  Fail with an occupancy-specific message if the
+# device is already full: later "new waves created" asserts would then
+# be misleading.
+
+proc assert_below_full_occupancy { wave_count device_max } {
+    if { $device_max <= 0 } {
+	fail "inferior below full occupancy (unknown device_max)"
+	return 0
+    }
+    verbose -log "occupancy check: waves=$wave_count device_max=$device_max"
+    if { $wave_count >= $device_max } {
+	fail "inferior below full occupancy (inferior already at full occupancy)"
+	return 0
+    }
+    pass "inferior below full occupancy"
+    return 1
+}
+
 # Return a list of valid "AMDGPU Wave" thread IDs.
 
 proc info_thread_get_wave_list { } {

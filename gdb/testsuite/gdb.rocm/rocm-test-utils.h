@@ -18,6 +18,7 @@
 #ifndef ROCM_TEST_UTILS_H
 #define ROCM_TEST_UTILS_H
 
+#include <hip/hip_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -58,5 +59,17 @@
    that we can set a breakpoint on without getting optimized away.  */
 
 #define HOST_NOP asm volatile ("nop")
+
+/* Return how many waves the device can hold at once, ignoring register,
+   LDS and scratch limits, or 0 if that cannot be determined.  */
+
+static inline int
+device_max_waves (const hipDeviceProp_t *props)
+{
+  if (props->warpSize <= 0)
+    return 0;
+  return props->multiProcessorCount
+	 * (props->maxThreadsPerMultiProcessor / props->warpSize);
+}
 
 #endif /* ROCM_TEST_UTILS_H */
