@@ -173,10 +173,17 @@ for {set i 0} {$i < [llength $queue_ids]} {incr i} {
 }
 gdb_assert $ok "queue numbers in expected order"
 
-# Check that we can get infos for queues individually.
+# Check that we can get infos for queues individually.  The width of the
+# "Target Id" column depends on the widest entry being printed, so the
+# padding in the "info queue N" output can differ from the one in the
+# "info queues" output.  Compare the fields, ignoring the amount of
+# whitespace between them.
 for { set i 0 } { $i < [llength $queue_ids] } { incr i } {
+    set row [string_to_regexp [string trim [lindex $queue_info_lines $i]]]
+    regsub -all {\s+} $row {\\s+} row
+
     gdb_test "info queue [lindex $queue_ids $i]" \
-	"$table_header_regex\r\n[string_to_regexp [lindex $queue_info_lines $i]]" \
+	"$table_header_regex\r\n${ws}*$row${ws}*" \
 	"info queue, queue $i"
 
 }
