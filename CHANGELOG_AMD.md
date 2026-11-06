@@ -20,6 +20,12 @@ Full documentation for ROCgdb is available at
   default `auto-load` search path and can be adjusted with the standard
   `set auto-load` settings.
 
+### Changed
+
+- ROCgdb is now based on GDB 18, previously GDB 16.  This brings in the
+  upstream GDB changes between the two releases.  See the GDB `NEWS` file
+  for details.
+
 ## ROCgdb-16.3 for ROCm-10.2
 
 ### Added
