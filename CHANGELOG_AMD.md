@@ -54,6 +54,15 @@ Full documentation for ROCgdb is available at
 - Support for workgroup clusters.  GDB now includes cluster coordinates
   in the target id of a GPU thread, if the dispatch is running in cluster
   mode.  Also, the "info dispatch" command shows cluster dimensions.
+- ROCgdb now prints a warning the first time a new thread of a process is
+  held stopped because scheduler-locking is in effect.  For example, with
+  `set scheduler-locking on`, restarting a HIP program with `run` appears
+  to hang, because the HIP runtime waits for threads that are held
+  stopped.  The warning names the thread that is held stopped and shows
+  the current scheduler-locking setting.  Scheduler-locking also holds new
+  GPU waves, but ROCgdb doesn't warn about them, so a program that only
+  waits for GPU work, for example in `hipDeviceSynchronize`, can still
+  appear to hang without a warning.
 
 ### Resolved issues
 

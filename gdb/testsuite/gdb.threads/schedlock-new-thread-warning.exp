@@ -1,0 +1,157 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that GDB warns the first time a new thread is held stopped
+# because scheduler-locking is in effect, that it only warns once per
+# process, and that it warns again after the program is restarted or
+# executes a new program.  With scheduler-locking "step", test that GDB
+# only warns when a new thread is created while stepping.
+
+# The test restarts the program with "run".
+require !use_gdb_stub
+require target_supports_scheduler_locking
+
+standard_testfile
+
+if {[build_executable "failed to prepare" $testfile $srcfile \
+	 {debug pthreads}] == -1} {
+    return
+}
+
+set warning_re \
+    "warning: \[^\r\n\]* is held stopped because scheduler-locking is in effect \\(currently set to \"(\[^\"\]+)\"\\)\\."
+set break_re \
+    "Breakpoint $bkptno_numopt_re, main \\(\[^\r\n\]*\\) at \[^\r\n\]*\r\n$decimal\[ \t\]+if \\(do_exec\\) /\\* break here \\*/"
+set create_re \
+    "Temporary breakpoint $decimal, main \\(\[^\r\n\]*\\) at \[^\r\n\]*\r\n$decimal\[ \t\]+ret = pthread_create \[^\r\n\]*/\\* create \\*/"
+set next_re "$decimal\[ \t\]+assert \\(ret == 0\\);"
+
+# Resume the program with CMD until it stops at STOP_RE, the "break
+# here" breakpoint by default.  Check that the scheduler-locking
+# warning was printed EXPECTED times, and that each warning shows MODE
+# as the current scheduler-locking setting.
+
+proc resume_and_count_warnings {cmd mode expected {stop_re ""}} {
+    if {$stop_re == ""} {
+	set stop_re $::break_re
+    }
+
+    set count 0
+    set mode_ok 1
+    gdb_test_multiple $cmd "$cmd, warning printed $expected time(s)" {
+	-re "The program being debugged has been started already.*Start it from the beginning\\? \\(y or n\\) $" {
+	    send_gdb "y\n" answer
+	    exp_continue
+	}
+	-re $::warning_re {
+	    incr count
+	    if {$expect_out(1,string) != $mode} {
+		set mode_ok 0
+	    }
+	    exp_continue
+	}
+	-re -wrap $stop_re {
+	    gdb_assert {$count == $expected && $mode_ok} $gdb_test_name
+	}
+    }
+}
+
+proc test {non-stop} {
+    save_vars ::GDBFLAGS {
+	append ::GDBFLAGS " -ex \"set non-stop ${non-stop}\""
+	clean_restart $::testfile
+    }
+
+    if {![runto_main]} {
+	return
+    }
+
+    delete_breakpoints
+    gdb_breakpoint [gdb_get_line_number "break here"]
+
+    # Both new threads are held stopped, but GDB only warns about the
+    # first one.
+    with_test_prefix "continue with scheduler-locking on" {
+	gdb_test_no_output "set scheduler-locking on"
+	resume_and_count_warnings "continue" on 1
+    }
+
+    # Restarting the program creates a new process, so GDB warns again.
+    with_test_prefix "restart with scheduler-locking on" {
+	resume_and_count_warnings "run" on 1
+    }
+
+    # With scheduler-locking "step", new threads are only held stopped
+    # while stepping.  Each case restarts the program and stops before
+    # the first thread is created, so that GDB hasn't warned yet for the
+    # new process.
+    with_test_prefix "scheduler-locking step" {
+	gdb_test_no_output "set scheduler-locking step"
+	set create_line [gdb_get_line_number "/* create */"]
+
+	with_test_prefix "continue" {
+	    gdb_breakpoint $create_line -temporary
+	    resume_and_count_warnings "run" step 0 $::create_re
+	    resume_and_count_warnings "continue" step 0
+	}
+
+	with_test_prefix "next" {
+	    gdb_breakpoint $create_line -temporary
+	    resume_and_count_warnings "run" step 0 $::create_re
+	    resume_and_count_warnings "next" step 1 $::next_re
+	}
+    }
+
+    # New threads aren't held stopped, so GDB doesn't warn.
+    with_test_prefix "restart with scheduler-locking off" {
+	gdb_test_no_output "set scheduler-locking off"
+	resume_and_count_warnings "run" off 0
+    }
+}
+
+# Test that GDB warns again after the program executes a new program,
+# with "set follow-exec-mode MODE".
+
+proc test_exec {mode} {
+    clean_restart $::testfile
+
+    if {![runto_main]} {
+	return
+    }
+
+    delete_breakpoints
+    gdb_breakpoint [gdb_get_line_number "break here"]
+    gdb_test_no_output "set follow-exec-mode $mode"
+    gdb_test_no_output "set scheduler-locking on"
+
+    with_test_prefix "before exec" {
+	resume_and_count_warnings "continue" on 1
+    }
+
+    # The new program creates its threads and stops at the same
+    # breakpoint.
+    with_test_prefix "after exec" {
+	gdb_test_no_output "set var do_exec = 1"
+	resume_and_count_warnings "continue" on 1
+    }
+}
+
+foreach_with_prefix non-stop {off on} {
+    test ${non-stop}
+}
+
+foreach_with_prefix follow-exec-mode {same new} {
+    test_exec ${follow-exec-mode}
+}

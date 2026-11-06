@@ -7600,7 +7600,13 @@ mode or during normal execution.  This is the default mode.
 @end table
 
 If supported by the target, when scheduler-locking is in effect, new
-threads created by the resumed thread are held stopped.
+threads created by the resumed thread are held stopped.  The first
+time this happens in a process, and again after the process executes
+a new program, @value{GDBN} prints a warning, because the program
+cannot make progress while it waits for a thread that is held
+stopped.  To let new threads run, use @code{set scheduler-locking off},
+or, with @code{set scheduler-locking step}, resume the program with a
+command that doesn't step, such as @code{continue}.
 
 @item show scheduler-locking
 Display the current scheduler locking mode.
@@ -29418,7 +29424,8 @@ when @value{GDBN} is not attached (@pxref{AMD GPU Attaching Restrictions, ,
 
 When scheduler-locking is in effect (@pxref{set scheduler-locking}),
 new wavefronts created by the resumed thread (either CPU thread or GPU
-wavefront) are held in the halt state.
+wavefront) are held in the halt state.  Unlike for new host threads,
+@value{GDBN} doesn't print a warning when it holds new wavefronts.
 
 @subsubsection @acronym{AMD} @acronym{GPU} Registers
 
