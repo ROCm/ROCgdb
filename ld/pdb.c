@@ -1957,6 +1957,9 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
 
 	  if (symbols[i].n_scnum > 0)
 	    sectlist[i] = coff_section_from_bfd_index (mod, symbols[i].n_scnum);
+
+	  memset (&symbols[i + 1], 0, symbols[i].n_numaux * sizeof (*symbols));
+	  i += symbols[i].n_numaux;
 	}
 
       if (!bfd_coff_relocate_section (abfd, coff_data (abfd)->link_info, mod,
