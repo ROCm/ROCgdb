@@ -13,6 +13,12 @@ Full documentation for ROCgdb is available at
   can be set and viewed with:
   - `set  amdgpu lds-exception [on|off]`
   - `show amdgpu lds-exception`
+- Helper scripts installed by the distribution under `/usr/share/gdb/auto-load`
+  and `/usr/local/share/gdb/auto-load`, such as the python3-dbg
+  pretty-printers, are now auto-loaded on Linux.  Previously, ROCgdb's custom
+  datadir caused these locations to be ignored.  The paths are part of the
+  default `auto-load` search path and can be adjusted with the standard
+  `set auto-load` settings.
 
 ## ROCgdb-16.3 for ROCm-10.2
 
