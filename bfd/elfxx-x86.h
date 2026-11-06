@@ -108,8 +108,20 @@
    shared lib.  */
 #define ELIMINATE_COPY_RELOCS 1
 
+/* Return true if ID names an x86 ELF backend, so that struct
+   elf_x86_link_hash_table is the correct layout of the link hash table.
+   ID is the target id of the output backend, which a linker script can
+   retarget with OUTPUT_FORMAT, so it need not name an x86 backend.  */
+
+static inline bool
+elf_x86_target_id_p (enum elf_target_id id)
+{
+  return id == X86_64_ELF_DATA || id == I386_ELF_DATA;
+}
+
 #define elf_x86_hash_table(p, id) \
   (is_elf_hash_table ((p)->hash) \
+   && elf_x86_target_id_p (id) \
    && elf_hash_table_id ((struct elf_link_hash_table *) ((p)->hash)) == (id) \
     ? ((struct elf_x86_link_hash_table *) ((p)->hash)) : NULL)
 
