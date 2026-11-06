@@ -239,6 +239,33 @@ them, both to stdout and in the test suite log file.
 
 This setting is only meaningful in conjunction with GDB_PARALLEL.
 
+AMD_REDIRECT_LOG
+
+When the AMD_LOG_LEVEL environment variable is set, the ROCm runtime
+prints verbose logs to stderr, and these logs can interfere with the
+test results.  Set AMD_REDIRECT_LOG to a log level on the runtest
+command line to have the testsuite set AMD_LOG_LEVEL to that level and
+send the logs to files named <testcase>.amd_log_<pid> in each test
+case's output directory instead.  This overrides AMD_LOG_LEVEL and
+AMD_LOG_LEVEL_FILE if they are set in the environment.
+
+The level must be 0 or more, and is otherwise passed to the runtime
+unchecked.  The runtime logs every message up to the given level, so
+a level above the highest one it defines logs everything.
+
+Some ROCm programs, such as the one that detects the GPUs, only run
+once per test run, so their logs are in the output directory of the
+first test case that needed them.
+
+	make check RUNTESTFLAGS="AMD_REDIRECT_LOG=4"
+
+To keep the logs interleaved with the test output instead, set
+AMD_LOG_LEVEL in the environment and don't set AMD_REDIRECT_LOG.  In
+that case, also set HCC_AMDGPU_TARGET, so that the logs don't
+interfere with detecting which GPU targets to compile for.
+
+	AMD_LOG_LEVEL=4 HCC_AMDGPU_TARGET=gfx942 make check
+
 TESTS
 
 This variable is used to specify which set of tests to run.
