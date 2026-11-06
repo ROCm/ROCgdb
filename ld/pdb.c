@@ -1940,7 +1940,6 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
       struct internal_syment *symbols;
       asection **sectlist;
       unsigned int syment_count;
-      int sect_num;
       struct external_syment *ext;
 
       syment_count = obj_raw_syment_count (mod);
@@ -1955,19 +1954,9 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
       for (unsigned int i = 0; i < syment_count; i++)
 	{
 	  bfd_coff_swap_sym_in (mod, &ext[i], &symbols[i]);
-	}
 
-      sect_num = 1;
-
-      for (asection *sect = mod->sections; sect; sect = sect->next)
-	{
-	  for (unsigned int i = 0; i < syment_count; i++)
-	    {
-	      if (symbols[i].n_scnum == sect_num)
-		sectlist[i] = sect;
-	    }
-
-	  sect_num++;
+	  if (symbols[i].n_scnum > 0)
+	    sectlist[i] = coff_section_from_bfd_index (mod, symbols[i].n_scnum);
 	}
 
       if (!bfd_coff_relocate_section (abfd, coff_data (abfd)->link_info, mod,
