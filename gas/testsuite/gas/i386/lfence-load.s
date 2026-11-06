@@ -2,6 +2,7 @@
 _start:
 	vldmxcsr (%ebp)
 	lgdt (%ebp)
+	lidt (%ebp)
 	vmptrld (%ebp)
 	vmptrst (%ebp)
 	vmclear (%ebp)
@@ -57,6 +58,7 @@ _start:
 	popl (%eax)
 	popl %eax
 	rclw	(%ecx)
+	rcrb	$0,(%ecx)
 	testl	$1,(%ecx)
 	incl	(%ecx)
 	notl	(%ecx)
@@ -75,6 +77,7 @@ _start:
 	addl $1, (%eax)
 	btl $1, (%eax)
 	bt %eax, (%ecx)
+	shld $0, %eax, (%ecx)
 	shld $1, %eax, (%ecx)
 	shrd %cl, %eax, (%ecx)
 	cmpxchg %eax, (%ebx)

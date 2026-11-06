@@ -2,6 +2,7 @@
 _start:
 	vldmxcsr (%rbp)
 	lgdt (%rbp)
+	lidt (%rbp)
 	vmptrld (%rbp)
 	vmptrst (%rbp)
 	vmclear (%rbp)
@@ -64,6 +65,7 @@ _start:
 	popq (%rax)
 	popq %rax
 	rclw	(%rcx)
+	rcrq	$0,(%rcx)
 	testl	$1,(%rcx)
 	incl	(%rcx)
 	notl	(%rcx)
@@ -82,6 +84,7 @@ _start:
 	addl $1, (%r11)
 	btl $1, (%r11)
 	btc %eax, (%rcx)
+	shrd $0, %eax, (%rcx)
 	shrd $1, %eax, (%rcx)
 	shld %cl, %eax, (%rcx)
 	cmpxchg %rax, (%rbx)

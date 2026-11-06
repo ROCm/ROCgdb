@@ -13,6 +13,7 @@ Disassembly of section .text:
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	0f 01 55 00          	lgdtl  0x0\(%ebp\)
  +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	0f 01 5d 00          	lidtl  0x0\(%ebp\)
  +[a-f0-9]+:	0f c7 75 00          	vmptrld 0x0\(%ebp\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	0f c7 7d 00          	vmptrst 0x0\(%ebp\)
@@ -24,7 +25,6 @@ Disassembly of section .text:
  +[a-f0-9]+:	0f 78 0b             	vmread %ecx,\(%ebx\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	66 0f 38 82 55 00    	invpcid 0x0\(%ebp\),%edx
- +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	0f 01 7d 00          	invlpg 0x0\(%ebp\)
  +[a-f0-9]+:	0f ae 7d 00          	clflush 0x0\(%ebp\)
  +[a-f0-9]+:	66 0f ae 7d 00       	clflushopt 0x0\(%ebp\)
@@ -92,17 +92,16 @@ Disassembly of section .text:
  +[a-f0-9]+:	0f 0f 66 02 b0       	pfcmpeq 0x2\(%esi\),%mm4
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	8f 00                	pop    \(%eax\)
- +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	58                   	pop    %eax
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	66 d1 11             	rclw   \$1,\(%ecx\)
  +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	c0 19 00             	rcrb   \$(0x)?0,\(%ecx\)
  +[a-f0-9]+:	f7 01 01 00 00 00    	testl  \$0x1,\(%ecx\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	ff 01                	incl   \(%ecx\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	f7 11                	notl   \(%ecx\)
- +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	f7 31                	divl   \(%ecx\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	f7 21                	mull   \(%ecx\)
@@ -131,6 +130,7 @@ Disassembly of section .text:
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	0f a3 01             	bt     %eax,\(%ecx\)
  +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	0f a4 01 00          	shld   \$(0x)?0,%eax,\(%ecx\)
  +[a-f0-9]+:	0f a4 01 01          	shld   \$(0x)?1,%eax,\(%ecx\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	0f ad 01             	shrd   %cl,%eax,\(%ecx\)

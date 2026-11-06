@@ -6655,20 +6655,12 @@ static int
 load_insn_p (void)
 {
   unsigned int dest;
-  int any_vex_p = is_any_vex_encoding (&i.tm);
   unsigned int base_opcode = i.tm.base_opcode | 1;
 
-  if (!any_vex_p)
-    {
-      /* Anysize insns: lea, invlpg, clflush, prefetch*, bndmk, bndcl, bndcu,
-	 bndcn, bndstx, bndldx, clflushopt, clwb, cldemote.  */
-      if (i.tm.opcode_modifier.operandconstraint == ANY_SIZE)
-	return 0;
-
-      /* pop.   */
-      if (i.tm.mnem_off == MN_pop)
-	return 1;
-    }
+  /* Anysize insns: lea, invlpg, clflush, prefetch*, bndmk, bndcl, bndcu,
+     bndcn, bndstx, bndldx, clflushopt, clwb, cldemote.  */
+  if (i.tm.opcode_modifier.operandconstraint == ANY_SIZE)
+    return 0;
 
   if (i.tm.opcode_space == SPACE_BASE)
     {
@@ -6691,9 +6683,15 @@ load_insn_p (void)
 
   /* No memory operand.  */
   if (!i.mem_operands)
-    return 0;
+    {
+      /* pop.   */
+      if (i.tm.mnem_off == MN_pop)
+	return 1;
 
-  if (any_vex_p)
+    return 0;
+    }
+
+  if (is_any_vex_encoding (&i.tm))
     {
       if (i.tm.mnem_off == MN_vldmxcsr)
 	return 1;
@@ -6705,8 +6703,8 @@ load_insn_p (void)
 	  || (base_opcode | 2) == 0x87)
 	return 1;
 
-      /* test, not, neg, mul, imul, div, idiv.  */
-      if (base_opcode == 0xf7 && i.tm.extension_opcode != 1)
+      /* test, neg, mul, imul, div, idiv.  */
+      if (base_opcode == 0xf7 && i.tm.extension_opcode != 2)
 	return 1;
 
       /* inc, dec.  */
@@ -6719,7 +6717,9 @@ load_insn_p (void)
 
       /* rol, ror, rcl, rcr, shl/sal, shr, sar. */
       if ((base_opcode == 0xc1 || (base_opcode | 2) == 0xd3)
-	  && i.tm.extension_opcode != 6)
+	  && (!operand_type_check (i.types[0], imm)
+	      || i.op[0].imms->X_op != O_constant
+	      || i.op[0].imms->X_add_number != 0))
 	return 1;
 
       /* arpl.  (Also movxsd, which otherwise would be covered towards
@@ -6776,7 +6776,10 @@ load_insn_p (void)
 	return 1;
 
       /* shld, shrd.  */
-      if ((base_opcode | 8) == 0xad)
+      if ((base_opcode | 8) == 0xad
+	  && (!operand_type_check (i.types[0], imm)
+	      || i.op[0].imms->X_op != O_constant
+	      || i.op[0].imms->X_add_number != 0))
 	return 1;
 
       /* cmpxchg8b, cmpxchg16b, xrstors, vmptrld, vmxon, vmclear, vmptrst.  */
@@ -6806,16 +6809,21 @@ load_insn_p (void)
 	      || (i.tm.extension_opcode | 1) == 5))
 	return 1;
 
-      /* lgdt, lidt, lmsw.  */
+      /* lgdt, lmsw.  */
       if (i.tm.base_opcode == 0x01
-	  && (i.tm.extension_opcode == 2
-	      || i.tm.extension_opcode == 3
-	      || i.tm.extension_opcode == 6))
+	  && (i.tm.extension_opcode | 4) == 6)
 	return 1;
 
       /* cmpxchg, xadd.  */
       if (base_opcode == 0xb1 || base_opcode == 0xc1)
 	return 1;
+    }
+  else if (i.tm.opcode_space == SPACE_0F38)
+    {
+      /* invpcid.  */
+      if (i.tm.base_opcode == 0x82
+	  && i.tm.opcode_modifier.opcodeprefix == PREFIX_0X66)
+	return 0;
     }
 
   dest = i.operands - 1;
