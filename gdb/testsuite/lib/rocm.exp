@@ -25,6 +25,61 @@ if {[info exists ::env(ROCM_PATH)]} {
     set rocm_path "/opt/rocm"
 }
 
+# Point AMD_LOG_LEVEL_FILE to a file named after the current test case,
+# in its output directory.  The runtime appends "_<pid>" to the file
+# name, so each process gets its own file.  Cached procs such as
+# find_amdgpu_devices only run once, so their logs end up in the output
+# directory of the first test case that calls them.
+
+proc rocm_redirect_log_to_output_dir { args } {
+    # A board file can load this file before any test case starts.
+    # No ROCm program runs until then, and default_gdb_init calls this
+    # proc again once the first test case is set up.
+    if {![info exists ::gdb_test_file_name]} {
+	return
+    }
+
+    setenv AMD_LOG_LEVEL_FILE \
+	[standard_output_file $::gdb_test_file_name.amd_log]
+}
+
+# If AMD_REDIRECT_LOG is given on the runtest command line, set the ROCm
+# runtime's log level (AMD_LOG_LEVEL) to its value, and send the logs
+# to a file in each test case's output directory instead of stderr,
+# where they can interfere with the test results.  To get the logs
+# interleaved with the test output instead, set AMD_LOG_LEVEL in the
+# environment and don't pass AMD_REDIRECT_LOG.
+
+if {[info exists ::AMD_REDIRECT_LOG]} {
+    # The runtime logs every message up to the given level, so any
+    # level above the highest one logs everything.  A negative level
+    # logs nothing, which defeats the purpose of AMD_REDIRECT_LOG.
+    if {![string is integer -strict $::AMD_REDIRECT_LOG]
+	|| $::AMD_REDIRECT_LOG < 0} {
+	error [format "AMD_REDIRECT_LOG must be 0 or more, got \"%s\"" \
+		   $::AMD_REDIRECT_LOG]
+    }
+
+    if {[info exists ::env(AMD_LOG_LEVEL)]
+	&& $::env(AMD_LOG_LEVEL) != $::AMD_REDIRECT_LOG} {
+	warning [format "AMD_REDIRECT_LOG overrides AMD_LOG_LEVEL=%s" \
+		     $::env(AMD_LOG_LEVEL)]
+    }
+    if {[info exists ::env(AMD_LOG_LEVEL_FILE)]} {
+	warning [format "AMD_REDIRECT_LOG overrides AMD_LOG_LEVEL_FILE=%s" \
+		     $::env(AMD_LOG_LEVEL_FILE)]
+    }
+    setenv AMD_LOG_LEVEL $::AMD_REDIRECT_LOG
+
+    # This file is only loaded once, so update the file name after
+    # default_gdb_init has set up each test case, including cleaning
+    # its output directory.  The trace doesn't fire for the test case
+    # that is loading this file, because default_gdb_init has already
+    # run for it, so call the proc directly once as well.
+    trace add execution default_gdb_init leave rocm_redirect_log_to_output_dir
+    rocm_redirect_log_to_output_dir
+}
+
 # Act as a drop-in replacement for "remote_exec host"
 # that logs the failures.
 
