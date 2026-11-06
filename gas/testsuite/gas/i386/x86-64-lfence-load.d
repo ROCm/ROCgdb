@@ -15,7 +15,14 @@ Disassembly of section .text:
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	0f c7 75 00          	vmptrld 0x0\(%rbp\)
  +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	0f c7 7d 00          	vmptrst 0x0\(%rbp\)
+ +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	66 0f c7 75 00       	vmclear 0x0\(%rbp\)
+ +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	f3 0f c7 33          	vmxon  \(%rbx\)
+ +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	0f 78 0b             	vmread %rcx,\(%rbx\)
+ +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	66 0f 38 82 55 00    	invpcid 0x0\(%rbp\),%rdx
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	67 0f 01 38          	invlpg \(%eax\)
@@ -41,6 +48,10 @@ Disassembly of section .text:
  +[a-f0-9]+:	9d                   	popf
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	d7                   	xlat   \(%rbx\)
+ +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	0f 00 12             	lldt   \(%rdx\)
+ +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	0f 00 2a             	verw   \(%rdx\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	d9 55 00             	fsts   0x0\(%rbp\)
  +[a-f0-9]+:	d9 45 00             	flds   0x0\(%rbp\)
@@ -124,6 +135,14 @@ Disassembly of section .text:
  +[a-f0-9]+:	41 83 03 01          	addl   \$0x1,\(%r11\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	41 0f ba 23 01       	btl    \$0x1,\(%r11\)
+ +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	0f bb 01             	btc    %eax,\(%rcx\)
+ +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	0f ac 01 01          	shrd   \$(0x)?1,%eax,\(%rcx\)
+ +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	0f a5 01             	shld   %cl,%eax,\(%rcx\)
+ +[a-f0-9]+:	0f ae e8             	lfence
+ +[a-f0-9]+:	48 0f b1 03          	cmpxchg %rax,\(%rbx\)
  +[a-f0-9]+:	0f ae e8             	lfence
  +[a-f0-9]+:	48 0f c1 03          	xadd   %rax,\(%rbx\)
  +[a-f0-9]+:	0f ae e8             	lfence

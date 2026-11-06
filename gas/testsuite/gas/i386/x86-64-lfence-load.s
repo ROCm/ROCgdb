@@ -3,7 +3,10 @@ _start:
 	vldmxcsr (%rbp)
 	lgdt (%rbp)
 	vmptrld (%rbp)
+	vmptrst (%rbp)
 	vmclear (%rbp)
+	vmxon (%rbx)
+	vmread %rcx, (%rbx)
 	invpcid (%rbp), %rdx
 	invlpg (%eax)
 	clflush (%rbp)
@@ -26,6 +29,8 @@ _start:
 	pop %fs
 	popf
 	xlatb (%rbx)
+	lldt (%rdx)
+	verw (%rdx)
 	fsts (%rbp)
 	flds (%rbp)
 	fistl (%rbp)
@@ -76,6 +81,10 @@ _start:
 	rep lodsl
 	addl $1, (%r11)
 	btl $1, (%r11)
+	btc %eax, (%rcx)
+	shrd $1, %eax, (%rcx)
+	shld %cl, %eax, (%rcx)
+	cmpxchg %rax, (%rbx)
 	xadd %rax,(%rbx)
 	xadd %rax,%rbx
 	xchg %rax,(%rbx)
