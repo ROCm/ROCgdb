@@ -1,0 +1,96 @@
+toc-sidebar: a navigation sidebar for texinfo HTML manuals
+==========================================================
+
+These files add a persistent navigation sidebar -- a table-of-contents
+pane on the left of every page -- to the HTML build of a texinfo
+manual.
+
+texinfo has no built-in support for a sidebar, but it can be driven
+through a texi2any init file, which is enough to build a sidebar
+ourselves.  The init file uses a texi2any init API introduced in
+version 7.0 and guards on it, falling back to the default
+contents-only manual on older texi2any.
+
+The files here are manual-agnostic.  Each manual's HTML build rule
+wires the files here in (see that manual's Makefile).  This directory
+is just the shared implementation.
+
+The files
+---------
+
+toc-sidebar.init
+    A texi2any init file, loaded with --init-file.  On every page it
+    injects an empty sidebar.  Once, at the end of the manual
+    generation, it writes the manual's whole table of contents and its
+    title to toc-sidebar-data.js in the output directory.
+
+toc-sidebar.js
+    Loaded on every page.  Fills in the sidebar shell from the
+    contents tree of toc-sidebar-data.js, and handles all the sidebar
+    logic.
+
+toc-sidebar.css
+    The sidebar's layout and default theme.
+
+toc-sidebar-data.js
+    Not in this directory: generated into the output directory at build
+    time by toc-sidebar.init.  Holds the shared contents tree and title
+    that every page's toc-sidebar.js reads.
+
+
+How it fits together
+--------------------
+
+The contents tree exists only in index.html.  Rather than inline it
+into all the pages (about 90 MB across a manual the size of gdb's) or
+fetch it at runtime (blocked under file://), toc-sidebar.init writes
+it once to the shared toc-sidebar-data.js.  Every page loads that one
+file with a plain <script> tag and builds its own sidebar from it.
+Because every page reads the identical tree, the hrefs match across
+pages, which is what lets toc-sidebar.js remember the open sections
+and scroll position as the user moves around.
+
+
+Coupling to texinfo
+-------------------
+
+The sidebar builds on texinfo in two places, with different stability
+guarantees.
+
+toc-sidebar.init drives texi2any through its init-file and converter
+customization API (texinfo_register_handler, format_contents, and the
+other $converter calls).  texinfo documents this API as not yet
+stable.  The version guard at the top of the init file disables the
+whole feature when the API is absent (texi2any before 7.0), so an
+older texi2any still builds a plain, working manual instead of
+breaking the build.
+
+toc-sidebar.js parses the contents tree that format_contents emits.
+Its shape is not a documented contract, but the script depends only on
+the parts that hold across texinfo versions: the generic nested
+<ul>/<li>/<a href> structure of a table of contents.  texinfo also
+attaches class names, an id on each entry, and section numbers in the
+link text, but none of that is read, so the sidebar is unaffected if
+texinfo changes them.  The script does not assume any particular
+node-to-filename scheme either -- the hrefs in the contents tree and
+the actual per-node filenames both come from the same texi2any, so
+they always stay consistent with each other.
+
+
+Theming
+-------
+
+toc-sidebar.css reads every style value -- layout metrics and colors
+alike -- from CSS custom properties named --toc-sidebar-*.  A theme
+stylesheet that sets those same properties restyles the whole manual
+without touching these files.  Each manual's build wires such a theme
+in via its MANUAL_CSS make variable.
+
+
+Without JavaScript
+------------------
+
+The sidebar needs JavaScript to work.  With JavaScript off, the
+stylesheet hides the sidebar's empty shell, and the page falls back to
+the plain single-column content-only manual, navigable through
+texinfo's own prev/next/up links.
