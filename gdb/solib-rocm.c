@@ -618,6 +618,101 @@ rocm_solib_ops::bfd_iovec_open (bfd *abfd)
     }
 }
 
+/* Return true if at least one agent in PROCESS_ID can run a code object
+   built for ARCHITECTURE_ID, false if no agent can.  Agents that do not
+   support debugging (unsupported architecture, firmware or driver) are
+   skipped.
+
+   This does not throw.  If the agent list cannot be enumerated, or an
+   agent state, agent architecture or architecture compatibility query
+   fails, a warning mentioning FILENAME is emitted and false is
+   returned.  */
+
+static bool
+validate_code_object_has_active_agent
+  (amd_dbgapi_process_id_t process_id,
+   amd_dbgapi_architecture_id_t architecture_id,
+   const char *filename)
+{
+  amd_dbgapi_agent_id_t *agent_list;
+  size_t agent_count;
+
+  amd_dbgapi_status_t agent_list_status
+    = amd_dbgapi_process_agent_list (process_id, &agent_count,
+				     &agent_list, nullptr);
+
+  if (agent_list_status != AMD_DBGAPI_STATUS_SUCCESS)
+    {
+      warning (_("'%s': Failed to enumerate agents: %s"),
+	       filename, get_status_string (agent_list_status));
+      return false;
+    }
+
+  gdb::unique_xmalloc_ptr<amd_dbgapi_agent_id_t> agent_list_holder
+    (agent_list);
+
+  for (size_t i = 0; i < agent_count; ++i)
+    {
+      amd_dbgapi_agent_state_t agent_state;
+      amd_dbgapi_status_t status
+	= amd_dbgapi_agent_get_info
+	    (agent_list[i], AMD_DBGAPI_AGENT_INFO_STATE,
+	     sizeof (agent_state), &agent_state);
+
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  warning (_("'%s': Failed to query agent state: %s"),
+		   filename, get_status_string (status));
+	  return false;
+	}
+
+      /* amd-dbgapi reports no queues or waves for an agent that does not
+	 support debugging, so breakpoints in code objects running on it
+	 would never be reported.  This is not a hard error, the agent just
+	 cannot run this code object.  */
+      if (agent_state != AMD_DBGAPI_AGENT_STATE_SUPPORTED)
+	continue;
+
+      amd_dbgapi_architecture_id_t agent_arch;
+      status = amd_dbgapi_agent_get_info
+	(agent_list[i], AMD_DBGAPI_AGENT_INFO_ARCHITECTURE,
+	 sizeof (agent_arch), &agent_arch);
+
+      /* An agent that supports debugging always has a known
+	 architecture, but stay defensive about it.  */
+      if (status == AMD_DBGAPI_STATUS_ERROR_NOT_AVAILABLE)
+	continue;
+
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  warning (_("'%s': Failed to query agent architecture: %s"),
+		   filename, get_status_string (status));
+	  return false;
+	}
+
+      /* Check if code object is compatible with agent architecture.
+	 This also accepts generic code objects that can run on several
+	 specific architectures.  */
+      amd_dbgapi_architecture_compatibility_state_t compat_state
+	= AMD_DBGAPI_ARCHITECTURE_INCOMPATIBLE;
+      status = amd_dbgapi_architecture_is_compatible (architecture_id,
+						       agent_arch,
+						       &compat_state);
+
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	{
+	  warning (_("'%s': Failed to query architecture compatibility: %s"),
+		   filename, get_status_string (status));
+	  return false;
+	}
+
+      if (compat_state == AMD_DBGAPI_ARCHITECTURE_COMPATIBLE)
+	return true;
+    }
+
+  return false;
+}
+
 gdb_bfd_ref_ptr
 rocm_solib_ops::bfd_open (const char *pathname)
 {
@@ -698,6 +793,17 @@ rocm_solib_ops::bfd_open (const char *pathname)
 		 arch_name);
 	}
     }
+
+  /* Check that at least one agent in this inferior can run this code
+     object.  */
+  amd_dbgapi_process_id_t process_id = get_amd_dbgapi_process_id (m_inf);
+  if (process_id != AMD_DBGAPI_PROCESS_NONE
+      && !validate_code_object_has_active_agent
+	    (process_id, architecture_id, bfd_get_filename (abfd.get ())))
+    error (_("'%s': Ignoring code object, no agent in this process that "
+	     "supports debugging can run code objects for AMDGCN "
+	     "architecture %s."),
+	   bfd_get_filename (abfd.get ()), bfd_arch_info->printable_name);
 
   gdb_assert (is_amdgpu_arch (abfd.get ()));
 
