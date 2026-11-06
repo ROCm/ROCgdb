@@ -39,8 +39,15 @@ require no_optimized_code
 
 standard_testfile .cpp
 
+if {![hip_device_is_less_than gfx1250]} {
+    # gfx1250 has globally accessible swizzled memory, where
+    # the global pointer is no longer scoped for the lane.
+    # This test is aimed at devices written for scoped pointers.
+    return
+}
+
 if {[build_executable "failed to prepare" $testfile $srcfile {debug hip}]} {
-    return -1
+    return
 }
 
 # Test printing PRINT_WHAT for each lane.  There are only two lanes in
