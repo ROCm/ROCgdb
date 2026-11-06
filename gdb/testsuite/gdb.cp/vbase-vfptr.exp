@@ -1,0 +1,64 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Read a virtual base of a class that also has its own virtual
+# functions.  Under the MSVC C++ ABI such a class starts with its vfptr
+# and the vbptr comes after it.  The DWARF does not record where the
+# vbptr is, and GDB reads it from the start of the object, so it reads
+# the vfptr instead.  That case is a known failure under the msvc C++
+# ABI.
+
+require allow_cplus_tests
+
+standard_testfile .cc
+
+if {[prepare_for_testing "failed to prepare" $testfile $srcfile \
+	 {debug c++}]} {
+    return
+}
+
+if {![runto [gdb_get_line_number "Break here."]]} {
+    return
+}
+
+set msvc_abi 0
+gdb_test_multiple "show cp-abi" "" {
+    -re -wrap "\\(currently \"msvc\"\\)\\." {
+	set msvc_abi 1
+	pass $gdb_test_name
+    }
+    -re -wrap "" {
+	pass $gdb_test_name
+    }
+}
+
+# The virtual base comes through a non-virtual base that has its own
+# vbptr.
+gdb_test "print gq.v" " = 11" "virtual base through a non-virtual base"
+gdb_test "print gq" \
+    " = \{<P> = \{<V> = \{v = 11\}, .*p = 33\}, .*qq = 44\}" \
+    "print object, virtual base through a non-virtual base"
+
+# The class itself has the vbptr, after its vfptr.  No bug number
+# has been filed for this yet.
+if {$msvc_abi} {
+    setup_kfail "gdb/NNNN" *-*-*
+}
+gdb_test "print gw.v" " = 11" "virtual base of a class with a vfptr"
+if {$msvc_abi} {
+    setup_kfail "gdb/NNNN" *-*-*
+}
+gdb_test "print gw" " = \{<V> = \{v = 11\}, .*w = 22\}" \
+    "print object, virtual base of a class with a vfptr"

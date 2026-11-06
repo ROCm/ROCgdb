@@ -255,4 +255,8 @@ struct cp_abi_ops
 extern int register_cp_abi (struct cp_abi_ops *abi);
 extern void set_cp_abi_as_auto_default (const char *short_name);
 
+/* The gnu-v3 implementation of the pass_by_reference method.  */
+extern struct language_pass_by_ref_info
+gnuv3_pass_by_reference (struct type *type);
+
 #endif /* GDB_CP_ABI_H */
