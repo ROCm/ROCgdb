@@ -42,8 +42,9 @@ if {!$use_gdb_stub} {
     gdb_test_multiple "attach" "attach" {
 	-re "Argument required .(process-id|program) to attach.*$gdb_prompt $"\
 	    { pass "attach" }
-	-re "You can't do that when your target is `None'.*$gdb_prompt $"\
-	    { pass "attach" }
+	-re -wrap {You can't do that when your target is "None".*} {
+	    pass "attach"
+	}
 	-re "You can't do that without a process to debug.*$gdb_prompt $"\
 	    { pass "attach" }
 	-re "Don't know how to attach.  Try \"help target\"..*$gdb_prompt $"\
@@ -489,7 +490,7 @@ gdb_test "list" "No symbol table is loaded.  Use the \"file\" command.*"
 # The ``takes a file name'' case is for vxgdb.
 # The ``Use the "file" command'' case is for newer GDB versions which try
 # to deduce the filename from the exec file.
-gdb_test "load" "You can't do that when your target is `None'.*|The load command takes a file name.*|Must specify at least a file name with the load command.*|.*Use the .file. or .exec-file. command.*"
+gdb_test "load" {You can't do that when your target is "None".*|The load command takes a file name.*|Must specify at least a file name with the load command.*|.*Use the .file. or .exec-file. command.*}
 #test next "n" abbreviation
 gdb_test "n" "The program is not being run." "next \"n\" abbreviation"
 #test next
@@ -531,8 +532,9 @@ if {$use_gdb_stub} {
     # Only extended-remote supports "run".
 } else {
     gdb_test_multiple "r" "run \"r\" abbreviation" {
-	-re "Starting program:  .*You can't do that when your target is `None'.*$gdb_prompt $"\
-	    { pass "run \"r\" abbreviation" }
+	-re -wrap {Starting program:  .*You can't do that when your target is "None".*} {
+	    pass "run \"r\" abbreviation"
+	}
 	-re "Starting program:  .*No executable file specified.*Use the \"file\" or \"exec-file\" command.*$gdb_prompt $"\
 	    { pass "run \"r\" abbreviation" }
 	-re "Starting program:  .*No executable specified, use .target exec.\\..*$gdb_prompt $"\
@@ -553,8 +555,9 @@ if {$use_gdb_stub} {
     # Only extended-remote supports "run".
 } else {
     gdb_test_multiple "run" "run" {
-	-re "Starting program:.*You can't do that when your target is `None'.*$gdb_prompt $"\
-	    { pass "run" }
+	-re -wrap {Starting program:.*You can't do that when your target is "None".*} {
+	    pass "run"
+	}
 	-re "Starting program:  .*No executable file specified.*Use the \"file\" or \"exec-file\" command.*$gdb_prompt $"\
 	    { pass "run" }
 	-re "Starting program:  .*No executable specified, use .target exec.\\..*$gdb_prompt $"\
