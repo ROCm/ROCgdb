@@ -70,7 +70,7 @@ gdb_test_no_output "set tdesc filename $remote_file" \
     "load the new target description"
 
 # Check that an alias for an unknown CSR will give a suitable error.
-gdb_test "info registers \$csr0" "Invalid register `csr0'"
+gdb_test "info registers \$csr0" {Invalid register "csr0"}
 
 # Return the number of times REGISTER should appear in GROUP, this
 # will either be 0 or 1.

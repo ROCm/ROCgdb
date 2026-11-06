@@ -140,10 +140,13 @@ proc check_exec_file {file} {
 	return
     }
 
+    set re_file [string_to_regexp $file]
+    set re [subst_vars {\r\n[\t ]+"$re_file"[^\r\n]*}]
+
     # Get subsequent line with $file.
     set ok 0
     gdb_test_multiple "" $test_name -lbl {
-	-re "\r\n\[\t\ \]+`[string_to_regexp $file]'\[^\r\n\]*" {
+	-re $re {
 	    set ok 1
 	}
     }

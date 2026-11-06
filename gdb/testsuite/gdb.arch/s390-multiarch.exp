@@ -60,7 +60,7 @@ proc test_linux_v2 {} {
 	    pass "$test"
 	    return 1
 	}
-	-re "Invalid register `system_call'.*\r\n$gdb_prompt $" {
+	-re -wrap {Invalid register "system_call".*} {
 	    unsupported "$test (no system_call reg)"
 	    return 0
 	}
@@ -76,7 +76,7 @@ proc test_register_valid {reg} {
 
 proc test_register_invalid {reg} {
     gdb_test "info reg $reg" \
-	"Invalid register `$reg'.*" \
+	[subst_vars {Invalid register "$reg".*}] \
 	"'$reg' must not exist"
 }
 

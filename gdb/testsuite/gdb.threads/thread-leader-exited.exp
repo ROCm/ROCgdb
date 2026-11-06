@@ -77,8 +77,8 @@ gdb_gcore_cmd "$corefile" "save a corefile"
 # Do not run "info threads" before "gcore" as it could workaround the bug
 # by discarding non-current exited threads.
 gdb_test "info threads" \
-	 {The current thread <Thread ID 1> has terminated\.  See `help thread'\.} \
-	 "exited thread is current due to non-stop"
+    {The current thread <Thread ID 1> has terminated[.]  See "help thread"[.]} \
+    "exited thread is current due to non-stop"
 
 # Verify that "info proc stat" reads the /proc entry for the selected thread.
 proc check_info_proc_stat { thread_id } {

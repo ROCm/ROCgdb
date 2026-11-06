@@ -159,7 +159,7 @@ set skip_freg_tests 0
 set freg_extension "INVALID"
 set message "check format of float registers"
 gdb_test_multiple "info registers \$ft0" $message {
-    -re -wrap "Invalid register `ft0'" {
+    -re -wrap {Invalid register "ft0"} {
 	set skip_freg_tests 1
 	set freg_extension "NONE"
 	pass $message
