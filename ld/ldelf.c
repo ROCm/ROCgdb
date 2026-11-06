@@ -78,6 +78,11 @@ ldelf_after_open_output (void)
   if (bfd_get_flavour (link_info.output_bfd) != bfd_target_elf_flavour)
     return;
 
+  /* An ELF output does not imply an ELF link hash table: a linker
+     script can select an ELF flavour that uses a generic one.  */
+  if (!is_elf_hash_table (link_info.hash))
+    return;
+
   struct elf_link_hash_table *htab = elf_hash_table (&link_info);
   if (elf_object_id (link_info.output_bfd) != elf_hash_table_id (htab))
     return;
