@@ -138,7 +138,7 @@
   *** INLINEE LINES
 
   InlineeId  FileId  StaringLine
-       1003       0           42
+       1003      18           42
        1004      18           28
 */
 
@@ -150,7 +150,7 @@
 .long CV_INLINEE_SOURCE_LINE_SIGNATURE
 
 .long 0x1003
-.long .file1 - .chksms_start
+.long .file2 - .chksms_start
 .long 42
 
 .long 0x1004

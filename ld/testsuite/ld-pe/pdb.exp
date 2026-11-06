@@ -1763,7 +1763,7 @@ proc test10 { } {
     }
 
     if ![ld_link $ld "tmpdir/pdb-inlineelines1.exe" "--pdb=tmpdir/pdb-inlineelines1.pdb tmpdir/pdb-inlineelines1a.o tmpdir/pdb-inlineelines1b.o"] {
-	unsupported "Create PE image with PDB file"
+	fail "Create PE image with PDB file"
 	return
     }
 
@@ -1805,7 +1805,7 @@ proc test10 { } {
     # *** INLINEE LINES
     #
     # InlineeId  FileId  StaringLine
-    #      1002       0           42
+    #      1002       1           42
     #      1003       1           28
 
     # For some reason it numbers file IDs in bytes for object files but as an
