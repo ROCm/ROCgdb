@@ -85,6 +85,10 @@ struct fork_info
   off_t *filepos = nullptr;
 
   int maxfd = 0;
+
+  /* Saved inferior::warned_schedlock_new_thread, so that each fork
+     tracks whether GDB already warned about it.  */
+  bool warned_schedlock_new_thread = false;
 };
 
 /* Per-inferior checkpoint data.  */
@@ -359,6 +363,9 @@ fork_load_infrun_state (struct fork_info *fp)
   inferior_thread ()->set_internal_state (THREAD_INT_STOPPED);
   nullify_last_target_wait_ptid ();
 
+  current_inferior ()->warned_schedlock_new_thread
+    = fp->warned_schedlock_new_thread;
+
   /* Now restore the file positions of open file descriptors.  */
   if (fp->filepos)
     {
@@ -386,6 +393,8 @@ fork_save_infrun_state (struct fork_info *fp)
   fp->savedregs = new readonly_detached_regcache
     (*get_thread_regcache (inferior_thread ()));
   fp->pc = regcache_read_pc (get_thread_regcache (inferior_thread ()));
+  fp->warned_schedlock_new_thread
+    = current_inferior ()->warned_schedlock_new_thread;
 
   /* Now save the 'state' (file position) of all open file descriptors.
      Unfortunately fork does not take care of that for us...  */
