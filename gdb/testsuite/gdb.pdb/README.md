@@ -1,4 +1,4 @@
-# gdb.pdb — the PDB reader test suite
+# gdb.pdb â€” the PDB reader test suite
 
 Tests for GDB's Microsoft PDB debug-format reader (`gdb/pdb/`). Tests build
 their programs during the test, with the selected DejaGnu board or with
@@ -124,6 +124,7 @@ Every compiled test uses `pdb_prepare_for_testing` with the selected board.
 | Test | Loads | Named source | Inferior | Covers |
 |---|---|---|---|---|
 | [`pdb-load.exp`](pdb-load.exp) | built at test time | `pdb-test.cpp` | no | A program the selected board compiled gets its PDB loaded |
+| [`pdb-simple-info.exp`](pdb-simple-info.exp) | built at test time | `pdb-test.cpp` | yes | End-to-end session: breakpoints, `info sources/functions/line`, `backtrace`, `list`, stepping, `finish`, function types, public symbols |
 | [`pdb-publics.exp`](pdb-publics.exp) | built at test time, also with Microsoft cl | `pdb-publics.cpp` | no | Public symbols as minimal symbols: `main` is found by its address and section, the C++ global `g_counter` by its source name rather than its decorated public name, and a function called through an import thunk is a trampoline |
 | [`pdb-bss-tail.exp`](pdb-bss-tail.exp) | built at test time | `pdb-bss-tail.c` | no | A global in the uninitialized tail of `.data`, past the bytes `.data` has in the file, as lld links `.bss`, still gets the minimal symbol of its public |
 | [`pdb-lines.exp`](pdb-lines.exp) | built at test time with `/Gy`, by the board and by Microsoft cl and link | `pdb-lines.c` | no | Line tables of functions that each have a section contribution of their own: a source line maps to its code and a function's address to its line, a line breakpoint and `list` |
