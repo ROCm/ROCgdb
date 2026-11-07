@@ -37,6 +37,45 @@ in a different stream. The reader reads the header, which holds the DBI age
 and the stream numbers of the global streams, and the module records, which
 say which stream holds each module's debug info.
 
+### Symbol Record Stream / PSGSI
+
+The Symbol Record Stream (referenced by the DBI header) contains all global
+symbol records — procedures and global data, the file-static data that the
+publics never mention, the cross-reference records the GSI indexes, and the
+public symbols themselves.
+
+The PSGSI (Public Symbol Index) stream is PDB's equivalent of the ELF symbol
+table (`.symtab`/`.dynsym`) — it contains a hash table whose hash records point
+into the Symbol Record Stream to locate the public symbols stored there.
+The stream also carries an address-sorted map of the same publics.  The reader
+ignores that map and iterates the hash records instead, because building
+minimal symbols needs to visit every public exactly once and does not care
+about their order.
+
+#### How the minimal symbol table is built
+
+Minimal symbols are the address-to-name table GDB falls back on when it has no
+full symbol — `info symbol`, `x/` and the names annotating disassembly all come
+from here.  Building it needs both streams above, and takes two passes.
+
+First the reader walks the symbol record stream and notes, for every global and
+file-static *data* object, its plain source-level name and the section it lives
+in, keyed by address.
+
+Then it walks the publics hash table.  Each public supplies an address, a
+decorated name, and a flag saying whether it is code or data, which decides
+whether the minimal symbol is a text or a data one.  Two things happen per
+entry:
+
+- The decorated name is filed under that address.  It is the only place a
+  linkage name exists in the file, and other parts of the reader attach it to a
+  full symbol later.
+- For a data address, the plain name from the first pass is preferred over the
+  decorated one — with no MSVC demangler, the decorated form is what the user
+  would otherwise be shown.
+
+If the publics index stream is absent, no minimal symbols are built.
+
 ## PDB Discovery
 
 The PDB is looked for in three places, in this order: next to the EXE under
@@ -79,9 +118,13 @@ Initialization then loads the PDB in this order:
    already attached to the objfile, so the refused file is not left behind
    for `maint info pdb-loaded-files` to report as loaded.
 3. Parse the DBI stream: its header, whose age, when not 0, must match the
-   EXE's, and the module records.
+   EXE's, the stream numbers of the symbol record and PSGSI streams, and
+   the module records.
+4. Read PE section addresses from BFD, used to relocate section:offset pairs
+   into real addresses.
+5. Build minimal symbols from the public symbol stream.
 
-A malformed PDB that fails a check in steps 1-3 is dropped as a mismatched
+A malformed PDB that fails a check in steps 1-5 is dropped as a mismatched
 one is, with the error shown as a warning.  Counts and sizes read from the
 file are checked against the bytes that hold them in 64-bit arithmetic, and
 a stream cannot have more blocks than the file.
@@ -105,6 +148,8 @@ a stream cannot have more blocks than the file.
   path.  A PDB whose GUID differs from the executable's, or whose age is
   lower, is refused, and nothing is read from it.  An executable with
   DWARF is read as DWARF, and the PDB it names is not read.
+- Minimal symbols from the public symbols (`S_PUB32`).  A data object is
+  named by the source name of its global record.
 - `maintenance info pdb-loaded-files`.
 
 ## Memory Allocations
@@ -113,7 +158,7 @@ a stream cannot have more blocks than the file.
   with the objfile.
 - Streams are copied out of the file mapping into `gdb::byte_vector`s by
   `read_stream()`.  The ones kept for the objfile's lifetime live in
-  `pdb_per_objfile` (`info_data`, `dbi_data`).
+  `pdb_per_objfile` (`info_data`, `dbi_data`, `sym_record_data`).
 
 **Memory-mapped:**
 - The whole PDB file is mapped read-only for the objfile's lifetime
@@ -137,16 +182,22 @@ a stream cannot have more blocks than the file.
 `pdb.h` declares the entry point the COFF reader calls.  `pdb-internal.h`
 holds the types, constants and prototypes shared by the reader's files.  One
 context object per objfile holds everything read from the file -- stream
-layout and module list -- and dies with the objfile.
+layout, module list and section addresses -- and dies with the objfile.
 
 ### `pdb.c` — MSF Parsing and Stream Assembly
 
 The orchestrator: file I/O, block assembly and stream parsing.  It is the
-entry point the COFF reader calls.
+entry point the COFF reader calls, and it drives the other readers in the
+order listed above.
 
 Serving stream bytes is its job too.  A range inside a single block is handed
 out as a pointer into the mapped file; only a range crossing a block boundary
 is copied.
+
+### `pdb-read-symbols.c` — CodeView Symbol Parsing
+
+Parses the global symbol record stream and the public symbols.
+`pdb_build_minsyms()` builds minimal symbols from public symbols.
 
 ### `pdb-path.c` — PDB File Discovery
 

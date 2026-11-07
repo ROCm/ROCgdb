@@ -23,6 +23,7 @@
 
 #include "pdb/pdb.h"
 #include "gdbsupport/filestuff.h"
+#include "gdbsupport/array-view.h"
 #include "gdbsupport/byte-vector.h"
 #include "gdbsupport/function-view.h"
 
@@ -190,6 +191,10 @@ inline constexpr auto INFO_STREAM_MIN_SIZE = 28;
 inline constexpr auto DBI_HDR_SIGNATURE_OFFS = 0;
 /* Age (4 bytes).  */
 inline constexpr auto DBI_HDR_AGE_OFFS = 8;
+/* Public Symbol Stream Index (2 bytes).  */
+inline constexpr auto DBI_HDR_PSGSI_STREAM_OFFS = 16;
+/* Symbol Record Stream (2 bytes).  */
+inline constexpr auto DBI_HDR_SYM_RECORD_STREAM_OFFS = 20;
 /* Module Info Size (4 bytes).  */
 inline constexpr auto DBI_HDR_MODULE_SIZE_OFFS = 24;
 
@@ -271,6 +276,13 @@ struct pdb_pe_image
 /* Return the RSDS record of the debug directory of IMAGE, as
    pdb_read_rsds_info returns it.  */
 extern std::optional<pdb_rsds_info> pdb_parse_rsds (const pdb_pe_image &image);
+
+/* Return the number of bytes SECT spans in memory.  BFD gives an
+   initialized PE section its raw size, which is less than its virtual
+   size when the section ends in uninitialized data.  .data ends so when
+   lld merges .bss into it, and the objects in that tail still belong to
+   the section.  */
+extern bfd_size_type pdb_section_extent (bfd *abfd, asection *sect);
 
 /* Return the 16-byte CodeView GUID at GUID formatted as a canonical
    XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX string.  */
@@ -382,25 +394,64 @@ struct pdb_per_objfile
   gdb::byte_vector info_data;
   /* PDB_STREAM_DBI.  */
   gdb::byte_vector dbi_data;
+  /* Symbol record stream.  */
+  gdb::byte_vector sym_record_data;
   /* PDB file mapping.  */
   pdb_file_mapping file_mapping;
 
   /* Module info.  */
   std::vector<pdb_module_info> modules;
 
+  /* The VMA of each section from the PE/COFF BFD, indexed by the
+     CodeView section number minus 1.  */
+  std::vector<CORE_ADDR> section_addresses;
+  /* Size of each section in section_addresses.  */
+  std::vector<bfd_size_type> section_sizes;
+
   /* Age from the DBI header; 0 in old PDBs.  */
   uint32_t dbi_age = 0;
+  /* Symbol record stream number from DBI header.  */
+  uint16_t sym_record_stream = 0;
+  /* Public Symbol Information stream index.  */
+  uint16_t psgsi_stream = 0;
 
   /* Copy a stream by index out of the file mapping.  Returns an owned
      buffer.  To cache a stream for the lifetime of the objfile, move the
      result into one of the dedicated owning fields above (info_data,
-     dbi_data).  Returns an empty vector if the stream doesn't exist.  */
+     dbi_data, sym_record_data).  Returns an empty vector if the stream
+     doesn't exist.  */
   gdb::byte_vector read_stream (uint32_t stream_idx) const;
+
+  CORE_ADDR map_section_offset_unrelocated (uint16_t section, uint32_t offset);
+
+  /* True if SECTION is valid (maps to a known section address).
+     Section 0 is reserved.  */
+  bool section_valid (uint16_t section) const
+  {
+    return section != 0 && section <= section_addresses.size ();
+  }
+
+  /* True if SECTION is valid and holds the SIZE bytes at OFFSET.  */
+  bool range_in_section (uint16_t section, uint32_t offset,
+			 uint32_t size) const
+  {
+    if (!section_valid (section))
+      return false;
+    bfd_size_type section_size = section_sizes[section - 1];
+    return offset <= section_size && size <= section_size - offset;
+  }
 };
 
 /* Return the pdb_per_objfile associated with OBJFILE, or nullptr if
    no PDB data has been loaded for this objfile.  */
 extern pdb_per_objfile *get_pdb_per_objfile (objfile *objfile);
+
+/* Read the symbol record stream into pdb->sym_record_data.  */
+extern void pdb_read_sym_record_stream (pdb_per_objfile *pdb);
+
+/* Build minimal symbols from S_PUB32 records in the PSGSI stream.
+   PDB init calls this after the sections are available.  */
+extern void pdb_build_minsyms (pdb_per_objfile *pdb);
 
 /* Read LEN bytes from stream STREAM_IDX starting at OFF, where OFF is a
    logical offset into the stream (the stream seen as one flat array).
@@ -419,6 +470,153 @@ extern const gdb_byte *pdb_stream_bytes (const pdb_per_objfile *pdb,
 					 uint32_t stream_idx, uint32_t off,
 					 uint32_t len,
 					 gdb::byte_vector &scratch);
+
+/* Global Symbol Streams.
+
+   The DBI header references the streams of the global symbol
+   infrastructure.  Two of them are read here:
+
+   1. Symbol Records Stream: index at DBI_HDR_SYM_RECORD_STREAM_OFFS.
+      Array of symbol records that the PSGSI stream references.
+      Layout of each symbol record matches the layout of CodeView symbol
+      records in module streams:
+	  uint16_t reclen    : length of data after this field
+	  uint16_t rectype   : CodeView record type
+	  uint8_t  data[]    : record-type-specific payload
+   2. PSGSI stream (DBI_HDR_PSGSI_STREAM_OFFS): Public Symbol Index
+      Indexes the publicly exported symbols (S_PUB32 only).
+      Embeds a GSI hash table after a metadata header.
+      Layout (byte offsets from stream start):
+
+	Offset 0-27: PublicsStreamHeader (28 bytes = PSGSI_HDR_SIZE):
+	  0-3:   uint32_t SymHash;         byte size of embedded GSI hash data
+	  4-7:   uint32_t AddrMap;        byte size of address map
+	  8-11:  uint32_t NumThunks;      number of thunk records
+	  12-15: uint32_t SizeOfThunk;    size of each thunk
+	  16-17: uint16_t ISectThunkTable; PE section of thunk table
+	  18-19: uint16_t padding;        reserved
+	  20-23: uint32_t OffThunkTable;  offset to thunk table
+	  24-27: uint32_t NumSections;    number of sections
+
+	Offset 28+: GSI Hash Data (SymHash bytes):
+	  GSI Header (GSIHashHdr in microsoft-pdb gsi.h):
+	    uint32_t VerSignature  (0)  always 0xFFFFFFFF
+	    uint32_t VerHdr        (4)  always 0xeffe0000 + 19990810
+	    uint32_t cbHr          (8)  byte count of hash records
+	    uint32_t cbBuckets     (12) byte count of bucket data
+	  HashRecord[cbHr/8]:
+	    uint32_t Off   (0)  1-based byte offset into SymRecordStream
+	    uint32_t CRef  (4)  reference count (vestigial, always 1)
+	  Bucket data (cbBuckets bytes).
+
+	Offset 28 + SymHash+: Address map (AddrMap bytes)
+	  uint32_t AddrMap[]             (sorted address-order indices)
+
+   Usage during init (pdb_read_pdb_file):
+     - pdb_read_sym_record_stream: caches SymRecordStream into
+       pdb->sym_record_data.
+     - pdb_build_minsyms: walks PSGSI hash records, resolves each
+       S_PUB32 in sym_record_data, creates minimal_symbol entries.  */
+
+/* On-disk size of the GSI hash header (first 4 uint32_t fields).  */
+inline constexpr auto GSI_HASH_HDR_SIZE = 16;
+/* VerSignature and VerHdr of the only layout read (GSIHashSCImpvV70).  */
+inline constexpr uint32_t GSI_HASH_HDR_SIGNATURE = 0xFFFFFFFF;
+inline constexpr uint32_t GSI_HASH_HDR_VERSION = 0xeffe0000 + 19990810;
+
+inline constexpr auto PSGSI_HDR_SIZE = 28;
+inline constexpr auto PSGSI_HDR_SYM_HASH_OFFS = 0;
+
+inline constexpr auto GSI_HASH_RECORD_SIZE = 8;
+inline constexpr auto GSI_HASH_RECORD_SYMOFFS_OFFS = 0;
+
+/* GSI hash header (GSIHashHdr in microsoft-pdb gsi.h).
+   For PSGSI, it comes after PublicsStreamHeader main header.  */
+struct pdb_gsi_hdr
+{
+  /* VerSignature (always 0xFFFFFFFF).  */
+  uint32_t sig;
+  /* VerHdr.  */
+  uint32_t ver;
+  /* HashRecord array.  */
+  gdb::array_view<gdb_byte> hr;
+};
+
+/* CodeView symbol record kinds.  */
+/* Global data.  */
+inline constexpr auto S_GDATA32 = 0x110d;
+/* Local data.  */
+inline constexpr auto S_LDATA32 = 0x110c;
+/* Public symbol.  */
+inline constexpr auto S_PUB32 = 0x110e;
+
+/* Symbol record.  Layout:
+     uint16_t reclen    (length of data following reclen)
+     uint16_t rectype   (symbol type)
+     ...  record-type-specific data ...  */
+inline constexpr auto PDB_RECORD_LEN_OFFS = 0;
+inline constexpr auto PDB_RECORD_TYPE_OFFS = 2;
+inline constexpr auto PDB_RECORD_DATA_OFFS = 4;
+inline constexpr auto PDB_RECORD_HDR_SIZE = 4;
+
+/* Name/field offsets in module symbol record bodies.  */
+inline constexpr auto PDB_SYMBOL_VAR_NAME_OFFS = 10;
+
+/* Return the NUL-terminated string at P in the bounded buffer [P, END),
+   or nullptr if the range holds no NUL byte.  The reader uses this to
+   read variable-length name fields from PDB records without reading out
+   of bounds.  */
+const char *pdb_extract_string (const gdb_byte *p, const gdb_byte *end);
+
+/* Header of a symbol record in the PDB symbol stream.  */
+
+struct pdb_sym_record_hdr
+{
+  /* Length of the data following LEN.  */
+  uint16_t len;
+
+  /* Symbol record type.  */
+  uint16_t type;
+
+  /* Size of the full record.  */
+  size_t rec_size () const
+  {
+    return len + sizeof (len);
+  }
+};
+
+/* Return the header of the record that PSGSI hash record I of HR names
+   in PDB's symbol record stream, and store its offset there in *OFFSET.
+   A hash record stores the offset plus one, and 0 marks an empty slot.
+   Return std::nullopt for an empty slot, and also, after a complaint,
+   for a record that does not lie in the stream.  */
+
+std::optional<pdb_sym_record_hdr>
+pdb_psgsi_hash_record (const pdb_per_objfile *pdb,
+		       gdb::array_view<const gdb_byte> hr, uint32_t i,
+		       uint32_t *offset);
+
+/* A public symbol of the PSGSI.  It holds the symbol's name, its
+   CV_PUBSYMFLAGS, and the section and offset where the symbol is.  */
+
+struct pdb_public
+{
+  const char *name;
+  uint32_t flags;
+  uint16_t section;
+  uint32_t offset;
+};
+
+/* Return the public that PSGSI hash record I of HR names.  Return
+   std::nullopt for an empty slot or a record of another kind.  Also
+   return std::nullopt, after a complaint, for an S_PUB32 that is cut
+   short, whose name has no terminator or is empty, or whose offset is
+   past the end of its section.  Pass over a public in no section of the
+   image silently.  */
+
+std::optional<pdb_public>
+pdb_psgsi_public (const pdb_per_objfile *pdb,
+		  gdb::array_view<const gdb_byte> hr, uint32_t i);
 
 #if GDB_SELF_TEST
 
@@ -469,6 +667,34 @@ struct test_pdb_reader
   void read_msf ();
 
   pdb_per_objfile pdb;
+};
+
+/* An objfile with no file, as the JIT reader makes, on which the reader
+   builds types and compunits.  It describes an x86-64 Windows program of
+   NUM_SECTIONS sections, none of them relocated.  OBJFILE is null when
+   GDB has no such architecture.  The objfile is removed with the
+   object.  */
+
+struct test_objfile
+{
+  explicit test_objfile (size_t num_sections);
+  ~test_objfile ();
+
+  ::objfile *objfile = nullptr;
+};
+
+/* A pdb_per_objfile that reads the PDB FILE for a test_objfile of
+   NUM_SECTIONS sections and is registered on it as for a loaded program.
+   Its MSF is read.  Section I + 1 is at 0x140001000 + 0x1000 * I and is
+   0x1000 bytes long.  PDB is null when OBJFILE is.  */
+
+struct test_module_reader
+{
+  test_module_reader (const test_pdb &file, size_t num_sections);
+  ~test_module_reader ();
+
+  test_objfile obj;
+  pdb_per_objfile *pdb = nullptr;
 };
 
 /* Write V to BYTES at OFFSET, little-endian.  */

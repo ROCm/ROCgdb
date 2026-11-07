@@ -33,6 +33,10 @@
   looks for the PDB next to the executable and at the path that the
   executable records.
 
+  GDB reads from the PDB:
+
+  ** Public symbols, as minimal symbols.
+
 * There have been changes to how inferior arguments are passed to
   remote targets.  When using the latest GDB and gdbserver the new
   single-inf-arg feature will be used for argument passing.  When
