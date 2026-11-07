@@ -1,0 +1,67 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test that GDB reads an executable's DWARF from its separate debug file
+# even when its RSDS record names a PDB.  GDB looks for a separate debug
+# file before the PDB, because lld-link writes a PDB for a DWARF build too,
+# and that PDB holds only the C runtime's CodeView.
+
+load_lib lib-pdb.exp
+
+if {![pdb_support]} {
+    unsupported "PDB not supported on this target"
+    return
+}
+
+standard_testfile pdb-test.cpp
+
+# Build the program with DWARF (-gdwarf); the link writes a PDB as well.
+# Link with -ignore:longsections, because lld-link warns that the DWARF
+# section names are longer than 8 characters, and the warning would fail
+# the build.
+if {[build_executable "build $testfile" $testfile $srcfile \
+	 {c++ additional_flags=-gdwarf \
+	  "ldflags=-Xlinker -debug -Xlinker -ignore:longsections"}] == -1} {
+    return
+}
+
+# clang-cl adds .exe to the output name.
+set exe [exec_target_file $binfile].exe
+if {![file exists [file rootname $exe].pdb]} {
+    unsupported "the link wrote no PDB"
+    return
+}
+
+# Move the DWARF to a separate debug file named by a debuglink.  strip
+# --only-keep-debug fails on a PE image, whose debug directory it drops,
+# so the separate debug file is a full copy of the executable.
+set debug_file ${exe}.debug
+file copy -force $exe $debug_file
+if {[catch {exec [transform strip] --strip-debug $exe -o ${exe}.stripped}]
+    || [catch {exec [gdb_find_objcopy] --add-gnu-debuglink=$debug_file \
+		   ${exe}.stripped $exe}]} {
+    unsupported "cannot split the DWARF from the executable"
+    return
+}
+
+clean_restart $testfile
+
+# The PDB is not read.
+gdb_test "maintenance info pdb-loaded-files" "No PDB loaded\\." \
+    "the PDB is not read"
+
+# The DWARF of the separate debug file is.
+gdb_test "info line main" "Line $decimal of \".*pdb-test\\.cpp\".*" \
+    "main is found in the DWARF"

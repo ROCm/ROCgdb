@@ -643,6 +643,9 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* Define if the PDB debug format reader is built. */
+#undef PDB_FORMAT_AVAILABLE
+
 /* Additional package description */
 #undef PKGVERSION
 

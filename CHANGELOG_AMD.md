@@ -13,6 +13,16 @@ Full documentation for ROCgdb is available at
   can be set and viewed with:
   - `set  amdgpu lds-exception [on|off]`
   - `show amdgpu lds-exception`
+- Add support for reading Microsoft PDB debug information for Windows
+  executables, such as the PDB files clang-cl, lld-link and Microsoft cl
+  produce.  For an executable without DWARF, GDB reads the PDB that the
+  executable's debug directory names, when its GUID matches, its age is
+  at least the executable's and its DBI age, if it has one, is the
+  executable's.  The reader is built for Windows targets and with
+  --enable-targets=all; the new configure option
+  --enable-gdb-pdb-support=yes|no|auto overrides that.
+  "set debug pdb-read" reports what the reader does.
+  "maint info pdb-loaded-files" lists the PDB files read.
 
 ## ROCgdb-16.3 for ROCm-10.2
 
