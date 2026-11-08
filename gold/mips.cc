@@ -4194,7 +4194,6 @@ class Target_mips : public Sized_target<size, big_endian>
     this->add_extension(mach_mips4400, mach_mips4000);
     this->add_extension(mach_mips4300, mach_mips4000);
     this->add_extension(mach_mips4100, mach_mips4000);
-    this->add_extension(mach_mips4010, mach_mips4000);
     this->add_extension(mach_mips5900, mach_mips4000);
 
     // MIPS32 extensions.
@@ -4203,6 +4202,7 @@ class Target_mips : public Sized_target<size, big_endian>
     // MIPS II extensions.
     this->add_extension(mach_mips4000, mach_mips6000);
     this->add_extension(mach_mipsisa32, mach_mips6000);
+    this->add_extension(mach_mips4010, mach_mips6000);
 
     // MIPS I extensions.
     this->add_extension(mach_mips6000, mach_mips3000);
