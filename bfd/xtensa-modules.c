@@ -19,7 +19,7 @@
    02110-1301, USA.  */
 
 #include "ansidecl.h"
-#include <xtensa-isa.h>
+#include "xtensa-isa.h"
 #include "xtensa-isa-internal.h"
 
 

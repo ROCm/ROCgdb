@@ -24,10 +24,10 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <string.h>
-#include "xtensa-isa.h"
 #include "ansidecl.h"
 #include "libiberty.h"
 #include "bfd.h"
+#include "xtensa-isa.h"
 #include "elf/xtensa.h"
 #include "disassemble.h"
 

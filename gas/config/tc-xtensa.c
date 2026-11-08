@@ -543,7 +543,7 @@ static bool tinsn_has_invalid_symbolic_operands (const TInsn *);
 static bool tinsn_has_complex_operands (const TInsn *);
 static bool tinsn_to_insnbuf (TInsn *, xtensa_insnbuf);
 static bool tinsn_check_arguments (const TInsn *);
-static void tinsn_from_chars (TInsn *, char *, int);
+static void tinsn_from_frag (TInsn *, const fragS *, int);
 static void tinsn_immed_from_frag (TInsn *, fragS *, int);
 static int get_num_stack_text_bytes (IStack *);
 static int get_num_stack_literal_bytes (IStack *);
@@ -558,7 +558,7 @@ static bool vinsn_has_specific_opcodes (vliw_insn *);
 static void xg_free_vinsn (vliw_insn *);
 static bool vinsn_to_insnbuf
   (vliw_insn *, char *, fragS *, bool);
-static void vinsn_from_chars (vliw_insn *, char *);
+static void vinsn_from_frag (vliw_insn *, const fragS *);
 
 /* Expression Utilities.  */
 
@@ -2665,9 +2665,21 @@ get_relaxable_immed (xtensa_opcode opcode)
   return last_immed;
 }
 
+/* Wrapper for xtensa_insnbuf_from_chars to convert frag bytes
+   to xtensa_insnbuf.  */
+
+static bool
+xtensa_insnbuf_from_frag (xtensa_isa isa, xtensa_insnbuf insnbuf,
+			  const fragS *frag, size_t off)
+{
+  const unsigned char *buf = (const unsigned char *) frag->fr_literal + off;
+  size_t len = frag->fr_fix - off;
+  gas_assert (frag->fr_fix > off);
+  return xtensa_insnbuf_from_chars (isa, insnbuf, buf, len) >= 0;
+}
 
 static xtensa_opcode
-get_opcode_from_buf (const char *buf, int slot)
+get_opcode_from_frag (const fragS *frag, size_t off, int slot)
 {
   static xtensa_insnbuf insnbuf = NULL;
   static xtensa_insnbuf slotbuf = NULL;
@@ -2680,7 +2692,8 @@ get_opcode_from_buf (const char *buf, int slot)
       slotbuf = xtensa_insnbuf_alloc (isa);
     }
 
-  xtensa_insnbuf_from_chars (isa, insnbuf, (const unsigned char *) buf, 0);
+  if (!xtensa_insnbuf_from_frag (isa, insnbuf, frag, off))
+    return XTENSA_UNDEFINED;
   fmt = xtensa_format_decode (isa, insnbuf);
   if (fmt == XTENSA_UNDEFINED)
     return XTENSA_UNDEFINED;
@@ -4595,7 +4608,7 @@ next_frag_opcode_is_loop (const fragS *fragP, xtensa_opcode *opcode)
   if (next_fragP == NULL)
     return false;
 
-  out_opcode = get_opcode_from_buf (next_fragP->fr_literal, 0);
+  out_opcode = get_opcode_from_frag (next_fragP, 0, 0);
   if (xtensa_opcode_is_loop (xtensa_default_isa, out_opcode) == 1)
     {
       *opcode = out_opcode;
@@ -4619,9 +4632,8 @@ frag_format_size (const fragS *fragP)
   if (fragP == NULL)
     return XTENSA_UNDEFINED;
 
-  xtensa_insnbuf_from_chars (isa, insnbuf,
-			     (unsigned char *) fragP->fr_literal, 0);
-
+  if (!xtensa_insnbuf_from_frag (isa, insnbuf, fragP, 0))
+    return XTENSA_UNDEFINED;
   fmt = xtensa_format_decode (isa, insnbuf);
   if (fmt == XTENSA_UNDEFINED)
     return XTENSA_UNDEFINED;
@@ -5140,8 +5152,7 @@ xtensa_find_unaligned_branch_targets (bfd *abfd ATTRIBUTE_UNUSED,
 	      addressT branch_align, frag_addr;
 	      xtensa_format fmt;
 
-	      xtensa_insnbuf_from_chars
-		(isa, insnbuf, (unsigned char *) frag->fr_literal, 0);
+	      xtensa_insnbuf_from_frag (isa, insnbuf, frag, 0);
 	      fmt = xtensa_format_decode (isa, insnbuf);
 	      op_size = xtensa_format_length (isa, fmt);
 	      branch_align = 1 << branch_align_power (sec);
@@ -5184,8 +5195,7 @@ xtensa_find_unaligned_loops (bfd *abfd ATTRIBUTE_UNUSED,
 
 	      if (frag)
 		{
-		  xtensa_insnbuf_from_chars
-		    (isa, insnbuf, (unsigned char *) frag->fr_literal, 0);
+		  xtensa_insnbuf_from_frag (isa, insnbuf, frag, 0);
 		  fmt = xtensa_format_decode (isa, insnbuf);
 		  op_size = xtensa_format_length (isa, fmt);
 		  frag_addr = frag->fr_address % xtensa_fetch_width;
@@ -5225,7 +5235,8 @@ xg_apply_fix_value (fixS *fixP, valueT val)
       slotbuf = xtensa_insnbuf_alloc (isa);
     }
 
-  xtensa_insnbuf_from_chars (isa, insnbuf, (unsigned char *) fixpos, 0);
+  if (!xtensa_insnbuf_from_frag (isa, insnbuf, fixP->fx_frag, fixP->fx_where))
+    as_fatal (_("undecodable fix"));
   fmt = xtensa_format_decode (isa, insnbuf);
   if (fmt == XTENSA_UNDEFINED)
     as_fatal (_("undecodable fix"));
@@ -5817,7 +5828,6 @@ md_section_align (segT segment ATTRIBUTE_UNUSED, valueT size)
 long
 md_pcrel_from (fixS *fixP)
 {
-  char *insn_p;
   static xtensa_insnbuf insnbuf = NULL;
   static xtensa_insnbuf slotbuf = NULL;
   int opnum;
@@ -5841,8 +5851,8 @@ md_pcrel_from (fixS *fixP)
       slotbuf = xtensa_insnbuf_alloc (isa);
     }
 
-  insn_p = &fixP->fx_frag->fr_literal[fixP->fx_where];
-  xtensa_insnbuf_from_chars (isa, insnbuf, (unsigned char *) insn_p, 0);
+  if (!xtensa_insnbuf_from_frag (isa, insnbuf, fixP->fx_frag, fixP->fx_where))
+    as_fatal (_("bad instruction format"));
   fmt = xtensa_format_decode (isa, insnbuf);
 
   if (fmt == XTENSA_UNDEFINED)
@@ -8131,7 +8141,7 @@ xtensa_mark_narrow_branches (void)
 	      {
 		vliw_insn vinsn;
 
-		vinsn_from_chars (&vinsn, fragP->fr_opcode);
+		vinsn_from_frag (&vinsn, fragP);
 		tinsn_immed_from_frag (&vinsn.slots[0], fragP, 0);
 
 		if (vinsn.num_slots == 1
@@ -8478,8 +8488,8 @@ next_instrs_are_b_retw (fragS *fragP)
     return false;
 
   /* Check for the conditional branch.  */
-  xtensa_insnbuf_from_chars
-    (isa, insnbuf, (unsigned char *) &next_fragP->fr_literal[offset], 0);
+  if (!xtensa_insnbuf_from_frag (isa, insnbuf, next_fragP, offset))
+    return false;
   fmt = xtensa_format_decode (isa, insnbuf);
   if (fmt == XTENSA_UNDEFINED)
     return false;
@@ -8507,8 +8517,8 @@ next_instrs_are_b_retw (fragS *fragP)
     return false;
 
   /* Check for the retw/retw.n.  */
-  xtensa_insnbuf_from_chars
-    (isa, insnbuf, (unsigned char *) &next_fragP->fr_literal[offset], 0);
+  if (!xtensa_insnbuf_from_frag (isa, insnbuf, next_fragP, offset))
+    return false;
   fmt = xtensa_format_decode (isa, insnbuf);
 
   /* Because RETW[.N] is not bundleable, a VLIW bundle here means that we
@@ -8789,7 +8799,7 @@ xtensa_fix_short_loop_frags (void)
 	      {
 		TInsn t_insn;
 		fragS *loop_frag = next_non_empty_frag (fragP);
-		tinsn_from_chars (&t_insn, loop_frag->fr_opcode, 0);
+		tinsn_from_frag (&t_insn, loop_frag, 0);
 		current_opcode = t_insn.opcode;
 		gas_assert (xtensa_opcode_is_loop (xtensa_default_isa,
 					       current_opcode) == 1);
@@ -8871,11 +8881,8 @@ unrelaxed_frag_min_insn_count (fragS *fragP)
     {
       xtensa_format fmt;
 
-      xtensa_insnbuf_from_chars
-	(isa, insnbuf, (unsigned char *) fragP->fr_literal + offset, 0);
-      fmt = xtensa_format_decode (isa, insnbuf);
-
-      if (fmt == XTENSA_UNDEFINED)
+      if (!xtensa_insnbuf_from_frag (isa, insnbuf, fragP, offset)
+	  || (fmt = xtensa_format_decode (isa, insnbuf)) == XTENSA_UNDEFINED)
 	{
 	  as_fatal (_("undecodable instruction in instruction frag"));
 	  return insn_count;
@@ -8925,16 +8932,15 @@ unrelaxed_frag_has_b_j (fragS *fragP)
       xtensa_format fmt;
       int slot;
 
-      xtensa_insnbuf_from_chars
-	(isa, insnbuf, (unsigned char *) fragP->fr_literal + offset, 0);
+      if (!xtensa_insnbuf_from_frag (isa, insnbuf, fragP, offset))
+	return false;
       fmt = xtensa_format_decode (isa, insnbuf);
       if (fmt == XTENSA_UNDEFINED)
 	return false;
 
       for (slot = 0; slot < xtensa_format_num_slots (isa, fmt); slot++)
 	{
-	  xtensa_opcode opcode =
-	    get_opcode_from_buf (fragP->fr_literal + offset, slot);
+	  xtensa_opcode opcode = get_opcode_from_frag (fragP, offset, slot);
 	  if (xtensa_opcode_is_branch (isa, opcode) == 1
 	      || xtensa_opcode_is_jump (isa, opcode) == 1)
 	    return true;
@@ -8978,7 +8984,7 @@ xtensa_sanity_check (void)
 		  {
 		    if (!insnbuf)
 		      insnbuf = xtensa_insnbuf_alloc (xtensa_default_isa);
-		    tinsn_from_chars (&t_insn, fragP->fr_opcode, 0);
+		    tinsn_from_frag (&t_insn, fragP, 0);
 		    tinsn_immed_from_frag (&t_insn, fragP, 0);
 
 		    if (xtensa_opcode_is_loop (xtensa_default_isa,
@@ -9611,9 +9617,8 @@ static bool xg_is_relaxable_fixup (fixS *fixP)
   if (vma_abs (delta) < J_RANGE - J_MARGIN)
     return false;
 
-  xtensa_insnbuf_from_chars (isa, trampoline_buf,
-			     (unsigned char *) fixP->fx_frag->fr_literal +
-			     fixP->fx_where, 0);
+  gas_assert (xtensa_insnbuf_from_frag (isa, trampoline_buf,
+					fixP->fx_frag, fixP->fx_where));
   fmt = xtensa_format_decode (isa, trampoline_buf);
   gas_assert (fmt != XTENSA_UNDEFINED);
   slot = fixP->tc_fix_data.slot;
@@ -9729,8 +9734,8 @@ xtensa_relax_frag (fragS *fragP, long stretch, int *stretched_p)
       if (vbuf == NULL)
 	vbuf = xtensa_insnbuf_alloc (isa);
 
-      xtensa_insnbuf_from_chars
-	(isa, vbuf, (unsigned char *) fragP->fr_opcode, 0);
+      xtensa_insnbuf_from_frag (isa, vbuf, fragP,
+				fragP->fr_opcode - fragP->fr_literal);
       fmt = xtensa_format_decode (isa, vbuf);
       num_slots = xtensa_format_num_slots (isa, fmt);
 
@@ -10407,7 +10412,7 @@ relax_frag_immed (segT segP,
   gas_assert (fragP->fr_opcode != NULL);
 
   xg_clear_vinsn (&cur_vinsn);
-  vinsn_from_chars (&cur_vinsn, fragP->fr_opcode);
+  vinsn_from_frag (&cur_vinsn, fragP);
   if (cur_vinsn.num_slots > 1)
     from_wide_insn = true;
 
@@ -10621,8 +10626,8 @@ md_convert_frag (bfd *abfd ATTRIBUTE_UNUSED, segT sec, fragS *fragp)
       if (vbuf == NULL)
 	vbuf = xtensa_insnbuf_alloc (isa);
 
-      xtensa_insnbuf_from_chars
-	(isa, vbuf, (unsigned char *) fragp->fr_opcode, 0);
+      xtensa_insnbuf_from_frag (isa, vbuf, fragp,
+				fragp->fr_opcode - fragp->fr_literal);
       fmt = xtensa_format_decode (isa, vbuf);
       num_slots = xtensa_format_num_slots (isa, fmt);
 
@@ -10744,7 +10749,7 @@ convert_frag_narrow (segT segP, fragS *fragP, xtensa_format fmt, int slot)
   offsetT frag_offset;
 
   gas_assert (slot == 0);
-  tinsn_from_chars (&tinsn, fragP->fr_opcode, 0);
+  tinsn_from_frag (&tinsn, fragP, 0);
 
   if (fragP->tc_frag_data.is_aligning_branch == 1)
     {
@@ -10842,7 +10847,7 @@ convert_frag_immed (segT segP,
 
   xg_clear_vinsn (&cur_vinsn);
 
-  vinsn_from_chars (&cur_vinsn, fr_opcode);
+  vinsn_from_frag (&cur_vinsn, fragP);
   if (cur_vinsn.num_slots > 1)
     from_wide_insn = true;
 
@@ -12983,12 +12988,12 @@ tinsn_check_arguments (const TInsn *insn)
 /* Load an instruction from its encoded form.  */
 
 static void
-tinsn_from_chars (TInsn *tinsn, char *f, int slot)
+tinsn_from_frag (TInsn *tinsn, const fragS *frag, int slot)
 {
   vliw_insn vinsn;
 
   xg_init_vinsn (&vinsn);
-  vinsn_from_chars (&vinsn, f);
+  vinsn_from_frag (&vinsn, frag);
 
   *tinsn = vinsn.slots[slot];
   xg_free_vinsn (&vinsn);
@@ -13248,7 +13253,7 @@ vinsn_to_insnbuf (vliw_insn *vinsn,
 
 
 static void
-vinsn_from_chars (vliw_insn *vinsn, char *f)
+vinsn_from_frag (vliw_insn *vinsn, const fragS *frag)
 {
   static xtensa_insnbuf insnbuf = NULL;
   static xtensa_insnbuf slotbuf = NULL;
@@ -13262,9 +13267,9 @@ vinsn_from_chars (vliw_insn *vinsn, char *f)
       slotbuf = xtensa_insnbuf_alloc (isa);
     }
 
-  xtensa_insnbuf_from_chars (isa, insnbuf, (unsigned char *) f, 0);
-  fmt = xtensa_format_decode (isa, insnbuf);
-  if (fmt == XTENSA_UNDEFINED)
+  if (!xtensa_insnbuf_from_frag (isa, insnbuf, frag,
+				 frag->fr_opcode - frag->fr_literal)
+      || (fmt = xtensa_format_decode (isa, insnbuf)) == XTENSA_UNDEFINED)
     as_fatal (_("cannot decode instruction format"));
   vinsn->format = fmt;
   vinsn->num_slots = xtensa_format_num_slots (isa, fmt);

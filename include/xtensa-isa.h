@@ -200,17 +200,16 @@ xtensa_insnbuf_free (xtensa_isa isa, xtensa_insnbuf buf);
    XTENSA_UNDEFINED on error.  The "from_chars" function first reads the
    minimal number of bytes required to decode the instruction length and
    then proceeds to copy the entire instruction into the buffer; if the
-   memory does not contain a valid instruction, it copies the maximum
-   number of bytes required for the longest Xtensa instruction.  The
-   "num_chars" argument may be used to limit the number of bytes that
-   can be read or written.  Otherwise, if "num_chars" is zero, the
-   functions may read or write past the end of the code.  */
+   memory does not contain a valid instruction it returns
+   XTENSA_UNDEFINED.  Zero is returned on success.  The "num_chars"
+   argument may be used to limit the number of bytes that can be read
+   or written.  */
 
 extern int
 xtensa_insnbuf_to_chars (xtensa_isa isa, const xtensa_insnbuf insn,
 			 unsigned char *cp, int num_chars);
 
-extern void
+extern int
 xtensa_insnbuf_from_chars (xtensa_isa isa, xtensa_insnbuf insn,
 			   const unsigned char *cp, int num_chars);
 
