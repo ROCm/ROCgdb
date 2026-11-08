@@ -818,6 +818,7 @@ NAME (aout, machine_type) (enum bfd_architecture arch,
 	case bfd_mach_mips_octeon2:
 	case bfd_mach_mips_octeon3:
 	case bfd_mach_mips_xlr:
+	case bfd_mach_mips_interaptiv_mr2:
 	  /* FIXME: These should be MIPS3, MIPS4, MIPS16, MIPS32, etc.  */
 	  arch_flags = M_MIPS2;
 	  break;

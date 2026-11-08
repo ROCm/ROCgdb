@@ -3990,6 +3990,7 @@ class Target_mips : public Sized_target<size, big_endian>
     mach_mips_octeon2         = 6502,
     mach_mips_octeon3         = 6503,
     mach_mips_xlr             = 887682,   // decimal 'XLR'
+    mach_mips_interaptiv_mr2  = 736550,   // decimal 'IA2'
     mach_mipsisa32            = 32,
     mach_mipsisa32r2          = 33,
     mach_mipsisa32r3          = 34,
@@ -4195,6 +4196,9 @@ class Target_mips : public Sized_target<size, big_endian>
     this->add_extension(mach_mips4300, mach_mips4000);
     this->add_extension(mach_mips4100, mach_mips4000);
     this->add_extension(mach_mips5900, mach_mips4000);
+
+    // MIPS32r2 extensions.
+    this->add_extension(mach_mips_interaptiv_mr2, mach_mipsisa32r2);
 
     // MIPS32 extensions.
     this->add_extension(mach_mipsisa32r2, mach_mipsisa32);
@@ -8920,6 +8924,9 @@ Target_mips<size, big_endian>::elf_mips_mach(elfcpp::Elf_Word flags)
     case elfcpp::EF_MIPS_MACH_XLR:
       return mach_mips_xlr;
 
+    case elfcpp::EF_MIPS_MACH_IAMR2:
+      return mach_mips_interaptiv_mr2;
+
     default:
       switch (flags & elfcpp::EF_MIPS_ARCH)
         {
@@ -9024,6 +9031,9 @@ Target_mips<size, big_endian>::mips_isa_ext_mach(unsigned int isa_ext)
     case elfcpp::AFL_EXT_XLR:
       return mach_mips_xlr;
 
+    case elfcpp::AFL_EXT_INTERAPTIV_MR2:
+      return mach_mips_interaptiv_mr2;
+
     default:
       return mach_mips3000;
     }
@@ -9090,6 +9100,9 @@ Target_mips<size, big_endian>::mips_isa_ext(unsigned int mips_mach)
 
     case mach_mips_xlr:
       return elfcpp::AFL_EXT_XLR;
+
+    case mach_mips_interaptiv_mr2:
+      return elfcpp::AFL_EXT_INTERAPTIV_MR2;
 
     default:
       return 0;
@@ -12596,6 +12609,8 @@ Target_mips<size, big_endian>::elf_mips_mach_name(elfcpp::Elf_Word e_flags)
       return "mips:octeon3";
     case elfcpp::EF_MIPS_MACH_XLR:
       return "mips:xlr";
+    case elfcpp::EF_MIPS_MACH_IAMR2:
+      return "mips:interaptiv-mr2";
     default:
       switch (e_flags & elfcpp::EF_MIPS_ARCH)
         {

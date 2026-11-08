@@ -14800,6 +14800,7 @@ bfd_mips_isa_ext_mach (unsigned int isa_ext)
     case AFL_EXT_OCTEON2:     return bfd_mach_mips_octeon2;
     case AFL_EXT_OCTEON3:     return bfd_mach_mips_octeon3;
     case AFL_EXT_XLR:	      return bfd_mach_mips_xlr;
+    case AFL_EXT_INTERAPTIV_MR2: return bfd_mach_mips_interaptiv_mr2;
     default:		      return bfd_mach_mips3000;
     }
 }
