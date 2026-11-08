@@ -1322,6 +1322,7 @@ extern void bfd_mips_elf_swap_abiflags_v0_out
 #define AFL_EXT_LOONGSON_2F  18  /* ST Microelectronics Loongson 2F.  */
 #define AFL_EXT_OCTEON3      19  /* Cavium Networks Octeon3.  */
 #define AFL_EXT_INTERAPTIV_MR2 20  /* Imagination interAptiv MR2.  */
+#define AFL_EXT_ALLEGREX     21  /* Sony PSP Allegrex.  */
 
 /* Masks for the flags1 word of an ABI flags structure.  */
 #define AFL_FLAGS1_ODDSPREG   1	 /* Uses odd single-precision registers.  */

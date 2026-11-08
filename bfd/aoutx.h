@@ -786,6 +786,7 @@ NAME (aout, machine_type) (enum bfd_architecture arch,
 	  break;
 	case bfd_mach_mips6000:
 	case bfd_mach_mips4010:
+	case bfd_mach_mips_allegrex:
 	  arch_flags = M_MIPS2;
 	  break;
 	case bfd_mach_mips4000:

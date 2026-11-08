@@ -1198,6 +1198,7 @@ if { [istarget mips*-*-vxworks*] } {
     run_dump_test "elf_ase_micromips-2"
 
     # Verify that machine markings are handled properly.
+    run_dump_test "elf_mach_allegrex"
     run_dump_test "elf_mach_5900"
     run_dump_test "elf_mach_interaptiv-mr2"
     run_dump_test "elf_mach_p6600"
