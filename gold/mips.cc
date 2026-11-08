@@ -9018,6 +9018,9 @@ Target_mips<size, big_endian>::mips_isa_ext_mach(unsigned int isa_ext)
     case elfcpp::AFL_EXT_OCTEON2:
       return mach_mips_octeon2;
 
+    case elfcpp::AFL_EXT_OCTEON3:
+      return mach_mips_octeon3;
+
     case elfcpp::AFL_EXT_XLR:
       return mach_mips_xlr;
 
