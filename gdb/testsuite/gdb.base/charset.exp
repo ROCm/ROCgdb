@@ -519,6 +519,10 @@ foreach val {0 1 2 3 4 5 6 7 8 9 a b c d e f} {
     gdb_test "print \"\\0\" \"${val}\"" " = \"\\\\000${val}\""
 }
 
+# Regression test for PR exp/34976.
+gdb_test {print "abc\xe0"} \
+    [string_to_regexp { = "abc", <incomplete sequence \340>}]
+
 # Tests for wide- or unicode- strings.  L is the prefix letter to use,
 # either "L" (for wide strings), "u" (for UTF-16), or "U" (for UTF-32).
 # NAME is used in the test names and should be related to the prefix

@@ -663,8 +663,13 @@ wchar_iterator::iterate (enum wchar_iterate_result *out_result,
 	      continue;
 
 	    case EINVAL:
-	      /* Incomplete input sequence.  Let the caller know, and
-		 arrange for future calls to see EOF.  */
+	      /* Incomplete input sequence.  We still might have converted a
+		 character; if so, return it.  */
+	      if (out_avail < out_request * sizeof (gdb_wchar_t))
+		break;
+
+	      /* Otherwise, let the caller know and arrange for future calls
+		 to see EOF.  */
 	      *out_result = wchar_iterate_incomplete;
 	      *ptr = m_input;
 	      *len = m_bytes;
