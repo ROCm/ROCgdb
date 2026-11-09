@@ -1205,10 +1205,7 @@ add_breakpoint_condition (struct gdb_breakpoint *bp, const char **condition)
   cond = gdb_parse_agent_expr (&actparm);
 
   if (cond == NULL)
-    {
-      warning (_("Condition evaluation failed. Assuming unconditional."));
-      return 0;
-    }
+    return 0;
 
   add_condition_to_breakpoint (bp, cond);
 
@@ -1304,10 +1301,7 @@ add_breakpoint_commands (struct gdb_breakpoint *bp, const char **command,
   cmd = gdb_parse_agent_expr (&actparm);
 
   if (cmd == NULL)
-    {
-      warning (_("Command evaluation failed. Disabling."));
-      return 0;
-    }
+    return 0;
 
   add_commands_to_breakpoint (bp, cmd, persist);
 

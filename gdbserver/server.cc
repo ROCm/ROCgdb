@@ -4753,17 +4753,20 @@ main (int argc, char *argv[])
 
 /* Process options coming from Z packets for a breakpoint.  PACKET is
    the packet buffer.  *PACKET is updated to point to the first char
-   after the last processed option.  */
+   after the last processed option.  Return true on success and false
+   if caller should report an error.  */
 
-static void
+static bool
 process_point_options (struct gdb_breakpoint *bp, const char **packet)
 {
   const char *dataptr = *packet;
   int persist;
 
-  /* Check if data has the correct format.  */
+  /* Return success if the next character is not semicolon; the semicolon
+     introduces optional conditional and/or bytecode expressions to
+     evaluate/execute.  */
   if (*dataptr != ';')
-    return;
+    return true;
 
   dataptr++;
 
@@ -4777,7 +4780,7 @@ process_point_options (struct gdb_breakpoint *bp, const char **packet)
 	  /* Conditional expression.  */
 	  threads_debug_printf ("Found breakpoint condition.");
 	  if (!add_breakpoint_condition (bp, &dataptr))
-	    dataptr = strchrnul (dataptr, ';');
+	    return false;
 	}
       else if (startswith (dataptr, "cmds:"))
 	{
@@ -4785,8 +4788,9 @@ process_point_options (struct gdb_breakpoint *bp, const char **packet)
 	  threads_debug_printf ("Found breakpoint commands %s.", dataptr);
 	  persist = (*dataptr == '1');
 	  dataptr += 2;
-	  if (add_breakpoint_commands (bp, &dataptr, persist))
-	    dataptr = strchrnul (dataptr, ';');
+	  if (!add_breakpoint_commands (bp, &dataptr, persist))
+	    return false;
+	  dataptr = strchrnul (dataptr, ';');
 	}
       else
 	{
@@ -4797,6 +4801,7 @@ process_point_options (struct gdb_breakpoint *bp, const char **packet)
 	}
     }
   *packet = dataptr;
+  return true;
 }
 
 /* Event loop callback that handles a serial event.  The first byte in
@@ -5067,7 +5072,13 @@ process_serial_event (void)
 		   instead.  */
 		clear_breakpoint_conditions_and_commands (bp);
 		const char *options = dataptr;
-		process_point_options (bp, &options);
+		if (!process_point_options (bp, &options))
+		  {
+		    /* Error: remove breakpoint and write error.  */
+		    delete_gdb_breakpoint (type, addr, kind);
+		    write_enn (cs.own_buf);
+		    break;
+		  }
 	      }
 	  }
 	else

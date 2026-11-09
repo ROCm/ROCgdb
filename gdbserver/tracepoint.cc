@@ -1800,9 +1800,12 @@ find_next_tracepoint_by_number (struct tracepoint *prev_tp, int num)
 
 #endif
 
-/* Append another action to perform when the tracepoint triggers.  */
+/* Append another action to perform when the tracepoint triggers.
+   PACKET holds the action(s) from a QTDP packet.  Return true on
+   success, or false if an action is malformed, in which case the
+   caller should report an error.  */
 
-static void
+static bool
 add_tracepoint_action (struct tracepoint *tpoint, const char *packet)
 {
   const char *act;
@@ -1877,6 +1880,11 @@ add_tracepoint_action (struct tracepoint *tpoint, const char *packet)
 
 	    trace_debug ("Want to evaluate expression");
 	    xaction->expr = gdb_parse_agent_expr (&act);
+	    if (xaction->expr == nullptr)
+	      {
+		free (xaction);
+		return false;
+	      }
 	    break;
 	  }
 	default:
@@ -1916,6 +1924,7 @@ add_tracepoint_action (struct tracepoint *tpoint, const char *packet)
 	    = savestring (act_start, act - act_start);
 	}
     }
+  return true;
 }
 
 #endif
@@ -2404,6 +2413,13 @@ cmd_qtdp (char *own_buf)
 	  else if (*packet == 'X')
 	    {
 	      tpoint->cond = gdb_parse_agent_expr (&packet);
+	      if (tpoint->cond == nullptr)
+		{
+		  trace_debug ("Malformed agent expression for conditional");
+		  write_enn (own_buf);
+		  remove_tracepoint (tpoint);
+		  return;
+		}
 	    }
 	  else if (*packet == '-')
 	    break;
@@ -2425,7 +2441,15 @@ cmd_qtdp (char *own_buf)
 		   tpoint->step_count, tpoint->pass_count);
     }
   else if (tpoint)
-    add_tracepoint_action (tpoint, packet);
+    {
+      if (!add_tracepoint_action (tpoint, packet))
+	{
+	  trace_debug ("Malformed tracepoint action");
+	  write_enn (own_buf);
+	  remove_tracepoint (tpoint);
+	  return;
+	}
+    }
   else
     {
       trace_debug ("Tracepoint error: tracepoint %d at 0x%s not found",

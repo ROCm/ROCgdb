@@ -1,0 +1,215 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Send a variety of malformed Z0 and QTDP packets to gdbserver.  These
+# malformed packets could, at one time, crash gdbserver or provide access
+# to its memory.
+
+load_lib gdbserver-support.exp
+
+require allow_gdbserver_tests
+
+standard_testfile normal.c
+
+if {[build_executable "failed to prepare" $testfile $srcfile]} {
+    return
+}
+
+# Send a packet to gdbserver using "maintenance packet".  Returns the
+# response from gdbserver.
+proc maint_packet { packet testname } {
+    set answer ""
+    gdb_test_multiple "maintenance packet $packet" $testname {
+	-re -wrap {received: "([^"]*)"} {
+	    set answer $expect_out(1,string)
+	}
+    }
+    return $answer
+}
+
+# Do the routine things needed to set up gdbserver.
+proc prepare_server { } {
+    clean_restart $::testfile
+    gdb_test "disconnect" ".*"
+    gdbserver_run ""
+}
+
+# Send out Z0 / z0 (breakpoint) packets for this test.  Use "main" for the
+# address at which to place the breakpoint.
+proc test_Z0 {exp testname} {
+    with_test_prefix $testname {
+	prepare_server
+	set addr [format %x [get_hexadecimal_valueof "&main" 0]]
+
+	set result [maint_packet "Z0,$addr,1;$exp" "maint packet Z0"]
+	gdb_assert {[regexp {^E\d\d} $result]} "Z0 packet returns error"
+
+	# Check that a failed insert didn't leave a breakpoint.
+	set result [maint_packet "z0,$addr,1" "maint packet z0"]
+	gdb_assert {[regexp {^E\d\d} $result]} \
+	    "z0 packet confirms breakpoint was not inserted"
+    }
+}
+
+# Send/receive tracepoint related packets for this test.
+proc test_QTDP {cond action testname} {
+    with_test_prefix $testname {
+	prepare_server
+	set addr [format %x [get_hexadecimal_valueof "&main" 0]]
+
+	set result [maint_packet "QTinit" "maint packet QTinit"]
+	gdb_assert {$result eq "OK"} "QTinit packet returns OK"
+
+	set pcond ""
+	set pcont ""
+	if { $cond ne "" } {
+	    set pcond ":$cond"
+	}
+	if { $action ne "" } {
+	    set pcont "-"
+	}
+
+	set result \
+	    [maint_packet "QTDP:1:$addr:E:0:0$pcond$pcont" "maint packet QTDP"]
+	if {$pcond eq ""} {
+	    gdb_assert {$result eq "OK"} "QTDP packet returns OK"
+	} else {
+	    gdb_assert {[regexp {^E\d\d} $result]} "QTDP packet returns error"
+	}
+
+	if { $action ne "" } {
+	    set result [maint_packet "QTDP:-1:$addr:$action" \
+		"maint packet QTDP continuation"]
+	    gdb_assert {[regexp {^E\d\d} $result]} \
+		"QTDP continuation packet returns error"
+	}
+
+	set result [maint_packet "qTfP" "maint packet qTfP"]
+	gdb_assert {$result eq "l"} "tracepoint list is empty"
+    }
+}
+
+# Check whether gdbserver supports the Z0 packet; return 1 if so, otherwise
+# return 0 and show that tests involving Z0 packets are unsupported.
+proc check_Z0_breakpoint_support {} {
+    with_test_prefix "check Z0 support" {
+	prepare_server
+	set addr [format %x [get_hexadecimal_valueof "&main" 0]]
+
+	# The hex agent expression below pushes 1 onto the evaluation stack
+	# and then returns it.
+	set result [maint_packet "Z0,$addr,1;X03,220127" "maint packet Z0"]
+	if {$result eq ""} {
+	    unsupported "Z0 packets"
+	    return 0
+	}
+	gdb_assert {$result eq "OK"} "Z0 packet returns OK"
+
+	# Attempt to delete the breakpoint created above.  Probably
+	# overkill, but we'll note it as unsupported if it doesn't work.
+	set result [maint_packet "z0,$addr,1" "maint packet z0"]
+	if {$result eq ""} {
+	    unsupported "z0 packets"
+	    return 0
+	}
+	gdb_assert {$result eq "OK"} "z0 packet returns OK"
+
+	return 1
+    }
+}
+
+# Tracepoint support predicate; this one just checks whether QTinit works.
+# Return 0 and show an "unsupported" message if not supported; otherwise
+# return 1 when supported.
+proc check_tracepoint_support {} {
+    with_test_prefix "check tracepoint support" {
+	prepare_server
+	set addr [format %x [get_hexadecimal_valueof "&main" 0]]
+
+	set result [maint_packet "QTinit" "maint packet QTinit"]
+	if {$result eq ""} {
+	    unsupported "tracepoints"
+	    return 0
+	}
+
+	gdb_assert {$result eq "OK"} "QTinit packet returns OK"
+
+	# Check that a valid expression passes; the agent expression pushes
+	# 1 and returns it.
+	set result [maint_packet "QTDP:1:$addr:E:0:0:X03,220127" \
+	    "good maint packet QTDP"]
+	gdb_assert {$result eq "OK"} "good maint packet QTDP returns OK"
+
+	# Fetch the tracepoint list; it should contain the tracepoint
+	# defined above.
+	set result [maint_packet "qTfP" "maint packet qTfP"]
+	gdb_assert {[regexp {^T1:} $result]} "tracepoint list is not empty"
+	return 1
+    }
+}
+
+# Conditions for both Z0 and QTDP packets.  Note that "cc" and "ee" aren't
+# real opcodes.  This does not matter because each of these expressions is
+# malformed in some way.
+set large_cond "X20,cc"
+set huge_cond "X800000,cc"
+set no_comma_cond "X04"
+
+# Z0 commands:
+set large_exp "cmds:0,X20,ee"
+set huge_exp "cmds:0,X800000,ee"
+set no_comma_exp "cmds:0,X04"
+
+# QTDP actions:
+set large_action "X20,ee"
+set huge_action "X800000,ee"
+set no_comma_action "X04"
+
+if {[check_Z0_breakpoint_support]} {
+    with_test_prefix "breakpoint tests" {
+	test_Z0 $large_cond "over-long condition"
+	test_Z0 $huge_cond "massively over-long condition"
+	test_Z0 $no_comma_cond "missing comma before condition"
+	test_Z0 $large_exp "over-long expression"
+	test_Z0 $huge_exp "massively over-long expression"
+	test_Z0 $no_comma_exp "missing comma before expression"
+    }
+}
+
+if {[check_tracepoint_support]} {
+    with_test_prefix "tracepoint tests" {
+	test_QTDP $large_cond "" "over-long condition"
+	test_QTDP $huge_cond "" "massively over-long condition"
+	test_QTDP $no_comma_cond "" "missing comma before condition"
+
+	test_QTDP "" $large_action "over-long action"
+	test_QTDP "" $huge_action "massively over-long action"
+	test_QTDP "" $no_comma_action "missing comma before action"
+
+	test_QTDP $large_cond $large_action \
+	    "over-long condition and over-long action"
+	test_QTDP $large_cond $huge_action \
+	    "over-long condition and massively over-long action"
+	test_QTDP $large_cond $no_comma_action \
+	    "over-long condition and missing comma before action"
+
+	test_QTDP $huge_cond $large_action \
+	    "massively over-long condition and over-long action"
+	test_QTDP $huge_cond $huge_action \
+	    "massively over-long condition and massively over-long action"
+	test_QTDP $huge_cond $no_comma_action \
+	    "massively over-long condition and missing comma before action"
+    }
+}

@@ -91,8 +91,7 @@ gdb_agent_op_name (int op)
 
 #ifndef IN_PROCESS_AGENT
 
-/* The packet form of an agent expression consists of an 'X', number
-   of bytes in expression, a comma, and then the bytes.  */
+/* See ax.h.  */
 
 struct agent_expr *
 gdb_parse_agent_expr (const char **actparm)
@@ -103,7 +102,15 @@ gdb_parse_agent_expr (const char **actparm)
 
   ++act;  /* skip the X */
   act = unpack_varlen_hex (act, &xlen);
-  ++act;  /* skip a comma */
+
+  if (*act != ',')
+    return nullptr;
+  ++act;  /* skip the comma */
+
+  /* Return error if provided length exceeds size of actual hex string.  */
+  if (xlen > ((ULONGEST) strspn (act, "0123456789abcdefABCDEF") / 2))
+    return nullptr;
+
   aexpr = XNEW (struct agent_expr);
   aexpr->length = xlen;
   aexpr->bytes = (unsigned char *) xmalloc (xlen);

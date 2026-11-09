@@ -48,7 +48,9 @@ struct agent_expr
 #ifndef IN_PROCESS_AGENT
 
 /* The packet form of an agent expression consists of an 'X', number
-   of bytes in expression, a comma, and then the bytes.  */
+   of bytes in expression, a comma, and then the bytes.  Parse one at
+   *ACTPARM, advancing *ACTPARM past it.  Return nullptr, leaving
+   *ACTPARM unchanged, if the expression is malformed.  */
 struct agent_expr *gdb_parse_agent_expr (const char **actparm);
 
 /* Release an agent expression.  */
