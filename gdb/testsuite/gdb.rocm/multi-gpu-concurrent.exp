@@ -1,0 +1,493 @@
+# Copyright 2026 Free Software Foundation, Inc.
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test one process that launches a kernel on every visible GPU before
+# any of them finishes.  In non-stop mode every GPU hits a breakpoint
+# while the others are still live.  Resuming one GPU must let its PC
+# advance while the other GPUs stay stopped, and an interrupt must
+# stop every GPU.  Each GPU's memory is read from its own wave.
+#
+# Results are aggregated over all GPUs, so the test names and count do
+# not depend on how many GPUs are visible.  Per-GPU details go to the
+# log.  Each step uses gdb_test -nopass or gdb_test_multiple, which
+# only record a result when GDB's output is wrong, so a failing step
+# records its own FAIL.  The aggregated pass or fail for each check is
+# recorded when that check's GPU loop ends.  A failed check stops the
+# test, and the checks after it are unresolved.
+
+load_lib rocm.exp
+
+require allow_hip_tests
+
+standard_testfile .cpp
+
+# Waves per GPU.  Passed to the .cpp as WAVES, so the two cannot drift.
+set waves_per_gpu 4
+
+set options [list debug hip additional_flags=-DWAVES=$waves_per_gpu]
+if {[build_executable "failed to prepare" $testfile $srcfile $options]} {
+    return
+}
+
+# The checks, in order, as a list of check name and PASS message.
+# Keeping the list fixed keeps the .sum independent of the GPU count.
+
+set checks [list \
+		breakpoints "every GPU hit the breakpoint" \
+		waves "info threads lists waves on every GPU" \
+		memory "each GPU's memory is readable" \
+		pc "resumed GPU's PC advances" \
+		stayed "other GPUs stay stopped" \
+		interrupt "interrupt stops every GPU"]
+
+# Return a dict from agent id to its PCI location, without the PCI
+# function number.  Agents that have no location are left out.
+
+proc agent_locations {} {
+    set locs [dict create]
+    set loc_re "\r\n\[* \t\]*($::decimal) \[^\r\n\]*"
+    append loc_re " (\[0-9a-f\]+:\[0-9a-f\]+:\[0-9a-f\]+)\\.\[0-7\]"
+    append loc_re "\[^\r\n\]*(?=\\r\\n)"
+    # The prompt ends the query.  Nothing is recorded for it: a timeout
+    # or a mismatch already recorded a FAIL, and a PASS would count
+    # queries, which depends on timing.
+    gdb_test_multiple "info agents" "" -lbl {
+	-re $loc_re {
+	    dict set locs $expect_out(1,string) $expect_out(2,string)
+	    exp_continue
+	}
+	-re -wrap "" {
+	}
+    }
+    return $locs
+}
+
+# Return a dict describing every AMDGPU wave.  The keys are the GDB
+# thread numbers.  Each value is a dict with keys agent, dev and
+# running.  dev is the device index in LOCATIONS, or -1 if the agent
+# matches none of them.
+
+proc wave_state { locations } {
+    set agents [agent_locations]
+    set waves [dict create]
+    set wave_re "\r\n\\*?\[ \t\]+($::decimal)\[ \t\]+"
+    # The lookahead keeps a one-byte read from cutting the line short
+    # before "(running)".
+    append wave_re "AMDGPU Wave ($::decimal):(\[^\r\n\]*)(?=\\r\\n)"
+    # The prompt ends the query.  Nothing is recorded for it: a timeout
+    # or a mismatch already recorded a FAIL, and a PASS would count
+    # queries, which depends on timing.
+    gdb_test_multiple "info threads" "" -lbl {
+	-re $wave_re {
+	    set tid $expect_out(1,string)
+	    set agent $expect_out(2,string)
+	    set dev -1
+	    if {[dict exists $agents $agent]} {
+		set dev [lsearch -exact $locations \
+			     [dict get $agents $agent]]
+	    }
+	    dict set waves $tid [dict create \
+				     agent $agent \
+				     dev $dev \
+				     running [string match \
+						  "*(running)*" \
+						  $expect_out(3,string)]]
+	    exp_continue
+	}
+	-re -wrap "" {
+	}
+    }
+    verbose -log "waves: $waves"
+    return $waves
+}
+
+# Return the number of running threads, host threads included.
+
+proc running_thread_count {} {
+    set count 0
+    set running_re "\r\n\\*?\[ \t\]+$::decimal\[ \t\]+\[^\r\n\]*"
+    append running_re "\\(running\\)(?=\\r\\n)"
+    # The prompt ends the query.  Nothing is recorded for it: a timeout
+    # or a mismatch already recorded a FAIL, and a PASS would count
+    # queries, which depends on timing.
+    gdb_test_multiple "info threads" "" -lbl {
+	-re $running_re {
+	    incr count
+	    exp_continue
+	}
+	-re -wrap "" {
+	}
+    }
+    verbose -log "running threads: $count"
+    return $count
+}
+
+# Return the thread number of one stopped wave on device DEV, or -1.
+
+proc stopped_wave { waves dev } {
+    dict for {tid info} $waves {
+	if {[dict get $info dev] == $dev && ![dict get $info running]} {
+	    return $tid
+	}
+    }
+    return -1
+}
+
+# Return the PC of thread TID, or "".  Printing after a thread switch
+# can emit "warning: location number not found for breakpoint", so the
+# PC pattern allows one warning line.
+
+proc read_pc { tid } {
+    set pc ""
+    if {[gdb_test -nopass "thread $tid" \
+	     "Switching to thread $tid\[ ,\].*"]} {
+	return ""
+    }
+    set pc_re "^$::valnum_re = ($::hex)"
+    append pc_re "(?:\r\nwarning:\[^\r\n\]*)?"
+    gdb_test_multiple "print /x \$pc" "" {
+	-re -wrap $pc_re {
+	    set pc $expect_out(1,string)
+	}
+    }
+    verbose -log "thread $tid pc $pc"
+    return $pc
+}
+
+# Resume the host and wait until it reaches the breakpoint after the
+# launches and every GPU has reported one.  Return 1 on success.
+# NGPUS is the visible GPU count.
+
+proc continue_for_breakpoints { ngpus } {
+    set hits 0
+    set host 0
+    # "with lane N" is only present on a GPU stop.  One pattern, so
+    # the earlier stop in a single read wins.  Separate arms would let
+    # a later GPU stop hide the host stop in the same read.
+    set hit_re "hit Breakpoint $::decimal\[.0-9\]*, "
+    gdb_test_multiple "continue" "" {
+	-re "${hit_re}(with lane $::decimal, work_kernel|main) " {
+	    if {[string match "main" $expect_out(1,string)]} {
+		set host 1
+		exp_continue
+	    } else {
+		incr hits
+		# A GPU stop can be printed after the prompt.  End on
+		# that stop once the host has stopped too, so no prompt
+		# is left unread.
+		if {!$host || $hits < $ngpus} {
+		    exp_continue
+		}
+	    }
+	}
+	-re -wrap "" {
+	    if {!$host || $hits < $ngpus} {
+		exp_continue
+	    }
+	}
+    }
+    verbose -log "breakpoint hits: $hits, host stopped: $host"
+    return [expr {$host && $hits >= $ngpus}]
+}
+
+# Record the results after the check FAILED fails.  The checks before
+# it have already passed, and the checks after it are unresolved.  The
+# caller returns, and with_rocm_gpu_lock exits GDB.
+
+proc fail_at { failed } {
+    set after 0
+    foreach {check name} $::checks {
+	if {$after} {
+	    unresolved $name
+	} elseif {$check eq $failed} {
+	    fail $name
+	    set after 1
+	}
+    }
+    unresolved "continue until exit"
+}
+
+# LOCATIONS holds every visible GPU's PCI location, indexed by device.
+# The locations must be unique.
+
+proc test_concurrent { locations } {
+    set ngpus [llength $locations]
+
+    with_rocm_gpu_lock {
+	clean_restart $::testfile
+	# Non-stop can only be selected before the program starts.
+	# HIP_ENABLE_DEFERRED_LOADING=0 loads device code at startup, so
+	# the kernel breakpoints can be set before the kernels launch.
+	# They stay pending until that code is loaded.
+	gdb_test_no_output -nopass "set non-stop on"
+	gdb_test_no_output -nopass \
+	    "set environment HIP_ENABLE_DEFERRED_LOADING=0"
+	# gdb_breakpoint records its own FAIL.  Skip the run so a missed
+	# breakpoint does not wait on the kernel's hold flag.
+	if {![gdb_breakpoint [gdb_get_line_number "Break before launch"]]
+	    || ![gdb_breakpoint [gdb_get_line_number "Break before spin"] \
+		     -allow-pending]
+	    || ![gdb_breakpoint [gdb_get_line_number "Break in spin"] \
+		     -allow-pending]
+	    || ![gdb_breakpoint \
+		     [gdb_get_line_number "Break after launch"]]} {
+	    fail_at breakpoints
+	    return
+	}
+
+	set started 0
+	gdb_test_multiple "run" "" {
+	    -re "hit Breakpoint $::decimal, main " {
+		set started 1
+		exp_continue
+	    }
+	    -re -wrap "" {
+		# A prompt before the breakpoint means the run failed.
+		# Waiting for another prompt would turn that into a
+		# timeout.
+		if {!$started} {
+		    fail $gdb_test_name
+		}
+	    }
+	}
+	if {!$started || ![continue_for_breakpoints $ngpus]} {
+	    fail_at breakpoints
+	    return
+	}
+
+	set waves [wave_state $locations]
+	for {set dev 0} {$dev < $ngpus} {incr dev} {
+	    if {[stopped_wave $waves $dev] < 0} {
+		verbose -log "no stopped wave on GPU $dev"
+		fail_at breakpoints
+		return
+	    }
+	}
+	pass [dict get $::checks breakpoints]
+
+	for {set dev 0} {$dev < $ngpus} {incr dev} {
+	    set count 0
+	    dict for {tid info} $waves {
+		if {[dict get $info dev] == $dev} {
+		    incr count
+		}
+	    }
+	    if {$count < $::waves_per_gpu} {
+		verbose -log "GPU $dev has $count waves, expected\
+			      $::waves_per_gpu"
+		fail_at waves
+		return
+	    }
+	}
+	pass [dict get $::checks waves]
+
+	for {set dev 0} {$dev < $ngpus} {incr dev} {
+	    set tid [stopped_wave $waves $dev]
+	    # Each GPU is read from its own wave while every kernel is
+	    # still live.  The buffer is not mapped into the other GPUs,
+	    # so the wave on this GPU is the one that can read it.
+	    set expect [expr {100 + $dev}]
+	    set value_re "${::valnum_re} = $expect"
+	    append value_re "(?:\r\nwarning:\[^\r\n\]*)?"
+	    if {[gdb_test -nopass "thread $tid" \
+		     "Switching to thread $tid\[ ,\].*"]
+		|| [gdb_test -nopass "print /d *bufs\[$dev\]" \
+			$value_re]} {
+		verbose -log "GPU $dev memory read failed"
+		fail_at memory
+		return
+	    }
+	}
+	pass [dict get $::checks memory]
+
+	# Resume the first GPU's stopped wave.  In non-stop mode that
+	# leaves every other stopped wave where it is.
+	set resumed_tid [stopped_wave $waves 0]
+	set resumed_pc [read_pc $resumed_tid]
+	if {$resumed_pc eq ""} {
+	    fail_at pc
+	    return
+	}
+	set stayed_pc [dict create]
+	for {set dev 1} {$dev < $ngpus} {incr dev} {
+	    set pc [read_pc [stopped_wave $waves $dev]]
+	    if {$pc eq ""} {
+		fail_at pc
+		return
+	    }
+	    dict set stayed_pc $dev $pc
+	}
+	# In non-stop mode, a foreground continue resumes only the
+	# selected thread and returns when that thread stops again.  The
+	# wave runs from "Break before spin" to "Break in spin".  It is
+	# stopped again by the time the PC is read, so the PC is
+	# different.
+	set spin_re "hit Breakpoint $::decimal\[.0-9\]*, with lane"
+	append spin_re " $::decimal, work_kernel\[^\r\n\]*"
+	append spin_re "\r\n\[^\r\n\]*Break in spin.*"
+	if {[gdb_test -nopass "thread $resumed_tid" \
+		 "Switching to thread $resumed_tid\[ ,\].*"]
+	    || [gdb_test -nopass "continue" $spin_re]} {
+	    fail_at pc
+	    return
+	}
+	set now [read_pc $resumed_tid]
+	if {$now eq ""} {
+	    # read_pc failed to read the PC.
+	    fail_at pc
+	    return
+	}
+	if {$now eq $resumed_pc} {
+	    verbose -log "resumed PC did not change from $resumed_pc"
+	    fail_at pc
+	    return
+	}
+	pass [dict get $::checks pc]
+
+	dict for {dev pc} $stayed_pc {
+	    set now [read_pc [stopped_wave $waves $dev]]
+	    if {$now ne $pc} {
+		verbose -log "GPU $dev PC changed from $pc to $now"
+		fail_at stayed
+		return
+	    }
+	}
+	pass [dict get $::checks stayed]
+
+	# Before the interrupt, every GPU must have waves still running.
+	# Otherwise "no wave is running" afterwards proves nothing.
+	set waves [wave_state $locations]
+	for {set dev 0} {$dev < $ngpus} {incr dev} {
+	    set running_count 0
+	    dict for {tid info} $waves {
+		if {[dict get $info dev] == $dev \
+			&& [dict get $info running]} {
+		    incr running_count
+		}
+	    }
+	    if {$running_count < $::waves_per_gpu - 1} {
+		verbose -log "GPU $dev has $running_count running\
+			      waves before interrupt"
+		fail_at interrupt
+		return
+	    }
+	}
+
+	# Every running thread, host threads included, reports one stop
+	# message.  The messages can come before or after the prompt of
+	# interrupt -a, so wait for all of them, rather than for the
+	# prompt or for the output to go quiet.  The timeout only bounds
+	# a hang, so it is generous for a slow or loaded machine.
+	set expected [running_thread_count]
+	set stops 0
+	gdb_test_multiple "interrupt -a" "" {
+	    -timeout 30
+	    -re "stopped\\." {
+		incr stops
+		if {$stops < $expected} {
+		    exp_continue
+		}
+	    }
+	    -re -wrap "" {
+		if {$stops < $expected} {
+		    exp_continue
+		}
+	    }
+	}
+	verbose -log "stop messages: $stops, expected $expected"
+	if {$expected == 0 || $stops < $expected} {
+	    fail_at interrupt
+	    return
+	}
+
+	set waves [wave_state $locations]
+	dict for {tid info} $waves {
+	    if {[dict get $info running]} {
+		verbose -log "wave $tid is still running after interrupt"
+		fail_at interrupt
+		return
+	    }
+	}
+	pass [dict get $::checks interrupt]
+
+	delete_breakpoints
+	# hold is also the kernel parameter.  Select the host thread
+	# so the assignment hits the global.
+	gdb_test -nopass "thread 1" "Switching to thread 1\[ ,\].*"
+	gdb_test_no_output -nopass "set variable *hold = 0"
+	gdb_continue_to_end "" "continue -a" 1
+    }
+}
+
+set ngpus 0
+set locations {}
+set run_test 0
+
+with_rocm_gpu_lock {
+    clean_restart $::testfile
+    if {![runto [gdb_get_line_number "Break before launch"]]} {
+	# runto already recorded the FAIL.
+    } else {
+	set ngpus [get_integer_valueof "num_devices" -1 \
+		       "read visible GPU count"]
+	verbose -log "visible GPUs: $ngpus"
+	if {$ngpus < 0} {
+	    # get_integer_valueof already recorded the FAIL.
+	} elseif {$ngpus < 2} {
+	    unsupported "need at least 2 visible GPUs"
+	} else {
+	    # Read each GPU's location without recording a PASS, so the
+	    # test count does not depend on the number of GPUs.
+	    set readable 1
+	    for {set dev 0} {$dev < $ngpus} {incr dev} {
+		set loc -1
+		gdb_test_multiple "print /x pci_location\[$dev\]" "" {
+		    -re -wrap "= ($::hex)" {
+			set loc $expect_out(1,string)
+		    }
+		}
+		if {$loc < 0} {
+		    # An empty message is replaced with the command, so a
+		    # mismatch or a timeout already recorded a FAIL.
+		    set readable 0
+		    break
+		}
+		lappend locations [format "%04x:%02x:%02x" \
+				       [expr {($loc >> 16) & 0xffff}] \
+				       [expr {($loc >> 8) & 0xff}] \
+				       [expr {$loc & 0xff}]]
+	    }
+	    if {$readable} {
+		pass "read device information"
+		verbose -log "GPU PCI locations: $locations"
+		if {[llength [lsort -unique $locations]] \
+			!= [llength $locations]} {
+		    verbose -log "GPUs share PCI locations, can't\
+				  identify agents"
+		    foreach {check name} $::checks {
+			unsupported $name
+		    }
+		    unsupported "continue until exit"
+		} else {
+		    set run_test 1
+		}
+	    }
+	}
+    }
+}
+
+if {$run_test} {
+    test_concurrent $locations
+}
