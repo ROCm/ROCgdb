@@ -55,7 +55,6 @@ struct notif_server
   /* Write event EVENT to OWN_BUF.  */
   void (*write) (struct notif_event *event, char *own_buf);
 };
-using notif_server_p = struct notif_server *;
 
 extern struct notif_server notif_stop;
 
