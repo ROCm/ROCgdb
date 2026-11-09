@@ -6380,6 +6380,42 @@ optimize_nf_encoding (void)
 	  copy_operand (2, 1);
 	}
     }
+  else if (i.tm.base_opcode == 0x6b
+	   && i.op[0].imms->X_op == O_constant
+	   && i.op[0].imms->X_add_number == -1
+	   && (!i.types[i.operands - 1].bitfield.word
+	       || i.tm.mnem_off == MN_imulzu
+	       || i.operands == 2
+	       || (i.reg_operands == 2
+		   && i.op[1].regs == i.op[2].regs)))
+    {
+      /* Optimize: -O:
+	   {nf} imulzuw $~0, %M/m, %N  -> {nf} negw %M/m, %N
+	   {nf} imulzuw $~0, %N        -> {nf} negw %N, %N
+	   {nf} imulw   $~0, %N, %N    -> {nf} negw %N
+	   {nf} imulw   $~0, %N        -> {nf} negw %N
+
+	   {nf} imull   $~0, ...       -> {nf} negl ...
+	   {nf} imulq   $~0, ...       -> {nf} negq ...
+       */
+      i.tm.base_opcode = 0xf7;
+      i.tm.extension_opcode = 3;
+      i.tm.opcode_modifier.operandconstraint = 0;
+
+      copy_operand (0, 1);
+      if (i.operands == 3)
+	copy_operand (1, 2);
+
+      i.imm_operands = 0;
+      if (!i.types[1].bitfield.word)
+	--i.operands;
+      else
+	i.operands = 1 + (i.tm.mnem_off == MN_imulzu);
+      i.reg_operands = i.operands - i.mem_operands;
+
+      if (i.operands == 2)
+	i.tm.opcode_modifier.vexvvvv = VexVVVV_DST;
+    }
 
   if (optimize_for_space
       && pp.encoding != encoding_evex

@@ -1500,6 +1500,22 @@ Disassembly of section \.text:
 [ 	]*[a-f0-9]+:[ 	]*62 f4 74 18 f7 10[ 	]+not    \(%rax\),%ecx
 [ 	]*[a-f0-9]+:[ 	]*48 f7 10[ 	]+notq   \(%rax\)
 [ 	]*[a-f0-9]+:[ 	]*62 f4 b4 18 f7 10[ 	]+not    \(%rax\),%r9
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c f7 da[ 	]+\{nf\} neg %dx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 6b da ff[ 	]+\{nf\} imul \$0xffff,%dx,%bx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c f7 db[ 	]+\{nf\} neg %bx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6d 1c f7 da[ 	]+\{nf\} neg %dx,%dx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 65 1c f7 da[ 	]+\{nf\} neg %dx,%bx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 65 1c f7 db[ 	]+\{nf\} neg %bx,%bx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c f7 d9[ 	]+\{nf\} neg %ecx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c f7 d9[ 	]+\{nf\} neg %ecx,%edx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c f7 da[ 	]+\{nf\} neg %edx,%edx
+[ 	]*[a-f0-9]+:[ 	]*62 d4 fc 0c f7 d9[ 	]+\{nf\} neg %r9
+[ 	]*[a-f0-9]+:[ 	]*62 d4 84 14 f7 d9[ 	]+\{nf\} neg %r9,%r31
+[ 	]*[a-f0-9]+:[ 	]*62 dc 84 14 f7 df[ 	]+\{nf\} neg %r31,%r31
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 6b 10 ff[ 	]+\{nf\} imul \$0xffff,\(%rax\),%dx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 65 1c f7 18[ 	]+\{nf\} neg \(%rax\),%bx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 74 1c f7 18[ 	]+\{nf\} neg \(%rax\),%ecx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 b4 1c f7 18[ 	]+\{nf\} neg \(%rax\),%r9
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c d0 ca[ 	]+\{nf\} ror \$1,%dl
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 1c d0 ca[ 	]+\{nf\} ror \$1,%dl,%al
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c d1 ca[ 	]+\{nf\} ror \$1,%dx

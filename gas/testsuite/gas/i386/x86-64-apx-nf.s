@@ -1455,6 +1455,23 @@ optimize:
 	{nf}	xorq	$-1, (%rax)
 	{nf}	xor	$-1, (%rax), %r9
 
+	{nf}	imul	$-1, %dx
+	{nf}	imul	$-1, %dx, %bx
+	{nf}	imul	$-1, %bx, %bx
+	{nf}	imulzu	$-1, %dx
+	{nf}	imulzu	$-1, %dx, %bx
+	{nf}	imulzu	$-1, %bx, %bx
+	{nf}	imul	$-1, %ecx
+	{nf}	imul	$-1, %ecx, %edx
+	{nf}	imul	$-1, %edx, %edx
+	{nf}	imul	$-1, %r9
+	{nf}	imul	$-1, %r9, %r31
+	{nf}	imul	$-1, %r31, %r31
+	{nf}	imul	$-1, (%rax), %dx
+	{nf}	imulzu	$-1, (%rax), %bx
+	{nf}	imul	$-1, (%rax), %ecx
+	{nf}	imul	$-1, (%rax), %r9
+
 	.irp dir, l, r
 	{nf}	ro\dir	$7, %dl
 	{nf}	ro\dir	$7, %dl, %al
