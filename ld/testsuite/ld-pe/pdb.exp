@@ -839,7 +839,7 @@ proc extract_c13_info { pdb mod_info } {
     return $data
 }
 
-proc test4 { } {
+proc test4 { asflags } {
     global as
     global ar
     global ld
@@ -847,18 +847,24 @@ proc test4 { } {
     global srcdir
     global subdir
 
-    if ![ld_assemble $as $srcdir/$subdir/pdb3a.s tmpdir/pdb3a.o] {
-	unsupported "Build pdb3a.o"
+    if { $asflags eq "" } {
+	set desc ""
+    } else {
+	set desc " ($asflags)"
+    }
+
+    if ![ld_assemble_flags $as $asflags $srcdir/$subdir/pdb3a.s tmpdir/pdb3a.o] {
+	unsupported "Build pdb3a.o$desc"
 	return
     }
 
-    if ![ld_assemble $as $srcdir/$subdir/pdb3b.s tmpdir/pdb3b.o] {
-	unsupported "Build pdb3b.o"
+    if ![ld_assemble_flags $as $asflags $srcdir/$subdir/pdb3b.s tmpdir/pdb3b.o] {
+	unsupported "Build pdb3b.o$desc"
 	return
     }
 
     if ![ld_link $ld "tmpdir/pdb3.exe" "--pdb=tmpdir/pdb3.pdb --gc-sections -e main tmpdir/pdb3a.o tmpdir/pdb3b.o"] {
-	unsupported "Create PE image with PDB file"
+	unsupported "Create PE image with PDB file$desc"
 	return
     }
 
@@ -867,10 +873,10 @@ proc test4 { } {
     set exec_output [run_host_cmd "$ar" "x --output tmpdir tmpdir/pdb3.pdb 0003"]
 
     if ![string match "" $exec_output] {
-	fail "Could not extract DBI stream"
+	fail "Could not extract DBI stream$desc"
 	return
     } else {
-	pass "Extracted DBI stream"
+	pass "Extracted DBI stream$desc"
     }
 
     set fi [open tmpdir/0003]
@@ -913,9 +919,9 @@ proc test4 { } {
     set got [run_host_cmd "$objdump" "-s --target=binary tmpdir/pdb3-source-info"]
 
     if [string match $exp $got] {
-	pass "Correct source info substream"
+	pass "Correct source info substream$desc"
     } else {
-	fail "Incorrect source info substream"
+	fail "Incorrect source info substream$desc"
     }
 
     # check C13 info in first module
@@ -931,9 +937,9 @@ proc test4 { } {
     set got [run_host_cmd "$objdump" "-s --target=binary tmpdir/pdb3-c13-info1"]
 
     if [string match $exp $got] {
-	pass "Correct C13 info for first module"
+	pass "Correct C13 info for first module$desc"
     } else {
-	fail "Incorrect C13 info for first module"
+	fail "Incorrect C13 info for first module$desc"
     }
 
     # check C13 info in second module
@@ -958,9 +964,9 @@ proc test4 { } {
     set got [run_host_cmd "$objdump" "-s --target=binary tmpdir/pdb3-c13-info2"]
 
     if [string match $exp $got] {
-	pass "Correct C13 info for second module"
+	pass "Correct C13 info for second module$desc"
     } else {
-	fail "Incorrect C13 info for second module"
+	fail "Incorrect C13 info for second module$desc"
     }
 }
 
@@ -1862,7 +1868,10 @@ proc test11 { } {
 test1
 test2
 test3
-test4
+test4 ""
+if { [istarget i*86-*-*] || [istarget x86_64-*-*] || [istarget aarch64-*-*] } {
+    test4 "-mbig-obj"
+}
 test5
 test6
 test7

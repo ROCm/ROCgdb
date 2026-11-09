@@ -1940,7 +1940,8 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
       struct internal_syment *symbols;
       asection **sectlist;
       unsigned int syment_count;
-      struct external_syment *ext;
+      bfd_byte *ext = coff_data (mod)->external_syms;
+      bfd_size_type symesz = bfd_coff_symesz (mod);
 
       syment_count = obj_raw_syment_count (mod);
 
@@ -1949,11 +1950,9 @@ handle_debugs_section (asection *s, bfd *mod, struct string_table *strings,
       symbols = xmalloc (sizeof (struct internal_syment) * syment_count);
       sectlist = xcalloc (syment_count, sizeof (*sectlist));
 
-      ext = (struct external_syment *) (coff_data (mod)->external_syms);
-
       for (unsigned int i = 0; i < syment_count; i++)
 	{
-	  bfd_coff_swap_sym_in (mod, &ext[i], &symbols[i]);
+	  bfd_coff_swap_sym_in (mod, ext + i * symesz, &symbols[i]);
 
 	  if (symbols[i].n_scnum > 0)
 	    sectlist[i] = coff_section_from_bfd_index (mod, symbols[i].n_scnum);
