@@ -142,10 +142,17 @@ m68hc11elf_after_open_output (void)
 {
   ldelf_after_open_output ();
 
+  /* ldelf_after_open_output only creates the stub file when the output
+     backend wants one.  If it did not, there is nowhere to link the
+     m68hc11 stub sections into, and m68hc11elf_after_allocation
+     dereferences stub_file unconditionally.  Refuse the link here, as
+     every other emulation with a stub file does, rather than warn and
+     continue into that dereference.  */
+
   if (stub_file == NULL)
     {
-      einfo (_("%X%P: changing output format whilst linking "
-	       "is not supported\n"));
+      fatal (_("%P: error: cannot change output format "
+	       "whilst linking %s binaries\n"), "M68HC11");
       return;
     }
 }

@@ -1,0 +1,124 @@
+# Expect script for the stub_file NULL dereference after OUTPUT_FORMAT
+# retargeting.
+#
+# Copyright (C) 2026 Free Software Foundation, Inc.
+#
+# This file is part of the GNU Binutils.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <http://www.gnu.org/licenses/>.
+
+# ld/ldelf.c creates the global stub_file only when the output backend
+# wants a stub bfd.  The AVR and m68hc1x emulations dereference it
+# unconditionally.  A linker script can retarget the output to an ELF
+# format whose backend does not want a stub bfd, so the emulation must
+# notice that stub_file is NULL and refuse the link.
+#
+# Before the fix both emulations segfaulted on an ordinary executable
+# link: no sanitizer, no unusual build, and no malformed input.  AVR
+# tested the output flavour, which is ELF in exactly the failing case,
+# and m68hc1x warned with einfo and then carried on into the
+# dereference.
+
+# The linker scripts are written to the local tmpdir, which a remote
+# host cannot see.
+if { [is_remote host] } {
+    return
+}
+
+if { ![ld_assemble $as "--64 $srcdir/$subdir/stub-file-retarget.s" \
+	 tmpdir/stub-file-retarget.o] } {
+    return
+}
+
+proc write_retarget_script { path format } {
+    set fp [open $path w]
+    puts $fp "OUTPUT_FORMAT(\"$format\")"
+    puts $fp "SECTIONS"
+    puts $fp "{"
+    puts $fp "  .text : { *(.text) }"
+    puts $fp "}"
+    close $fp
+}
+
+# Check whether TARGET is among the linker's supported targets.
+proc ld_supports_target { target } {
+    global ld
+    set cmd_output [remote_exec host $ld "--help"]
+    set text [lindex $cmd_output 1]
+    if { [regexp -line {supported targets: ([^\r\n]+)} $text -> targets] } {
+	return [expr {[lsearch -exact [split $targets] $target] >= 0}]
+    }
+    return 0
+}
+
+# The generic ELF backends report the ELF flavour but do not want a
+# stub bfd, which is the case under test.  A build without them cannot
+# run these tests, so probe supported targets first.
+set retarget_formats {}
+foreach format { elf32-little elf64-little elf32-big elf64-big } {
+    if { [ld_supports_target $format] } {
+	lappend retarget_formats $format
+    }
+}
+
+if { [llength $retarget_formats] == 0 } {
+    unsupported "No generic ELF output format is available for the retarget tests."
+    return
+}
+
+# Each case links with -m<emul> and a script that retargets the output.
+# The link is expected to fail, because the object is not an <emul>
+# object, and it must fail with the emulation's refusal message rather
+# than a crash.  binutils' run_host_cmd returns the output text only,
+# so a segfaulting linker is caught by the absence of that message: the
+# link dies before printing one.
+#
+# Note: m68hc1xelf.em is shared by the m68hc11 and m68hc12 emulations and
+# always names M68HC11 in this refusal message.
+set stub_file_cases {
+    { avr1	"cannot change output format whilst linking AVR binaries" }
+    { avr6	"cannot change output format whilst linking AVR binaries" }
+    { avrxmega7	"cannot change output format whilst linking AVR binaries" }
+    { m68hc11elf	"cannot change output format whilst linking M68HC11 binaries" }
+    { m68hc12elf	"cannot change output format whilst linking M68HC11 binaries" }
+}
+
+foreach format $retarget_formats {
+    set script tmpdir/stub-file-retarget-$format.t
+    write_retarget_script $script $format
+
+    foreach emul_case $stub_file_cases {
+	set emul [lindex $emul_case 0]
+	set expected [lindex $emul_case 1]
+	set test "$emul refuses a retargeted $format output"
+
+	if { ![ld_supports_emul $emul] } {
+	    unsupported "$test (emulation not supported)"
+	    continue
+	}
+
+	set out tmpdir/stub-file-retarget-$emul.out
+	catch { file delete -force $out }
+	set got [run_host_cmd "$ld" \
+		    "-m$emul -T $script -o $out tmpdir/stub-file-retarget.o"]
+
+	if { [string match "*$expected*" $got] } {
+	    pass $test
+	} else {
+	    fail $test
+	    verbose -log "expected the refusal: $expected"
+	    verbose -log "linker output was: $got"
+	}
+    }
+}
