@@ -2586,7 +2586,7 @@ rl78_elf_relax_section (bfd *abfd,
 
   free (free_intsyms);
 
-  return true;
+  return false;
 }
 
 
