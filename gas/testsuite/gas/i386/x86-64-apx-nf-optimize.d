@@ -1480,6 +1480,26 @@ Disassembly of section \.text:
 [ 	]*[a-f0-9]+:[ 	]*62 f4 74 1c ff 00[ 	]+\{nf\} inc \(%rax\),%ecx
 [ 	]*[a-f0-9]+:[ 	]*62 f4 fc 0c ff 00[ 	]+\{nf\} incq \(%rax\)
 [ 	]*[a-f0-9]+:[ 	]*62 f4 b4 1c ff 00[ 	]+\{nf\} inc \(%rax\),%r9
+[ 	]*[a-f0-9]+:[ 	]*f6 d3[ 	]+not    %bl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 18 f6 d3[ 	]+not    %bl,%dl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 18 f6 d2[ 	]+not    %dl,%dl
+[ 	]*[a-f0-9]+:[ 	]*66 f7 d2[ 	]+not    %dx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 18 f7 d2[ 	]+not    %dx,%ax
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 18 f7 d0[ 	]+not    %ax,%ax
+[ 	]*[a-f0-9]+:[ 	]*f7 d1[ 	]+not    %ecx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 18 f7 d1[ 	]+not    %ecx,%edx
+[ 	]*[a-f0-9]+:[ 	]*f7 d2[ 	]+not    %edx
+[ 	]*[a-f0-9]+:[ 	]*49 f7 d1[ 	]+not    %r9
+[ 	]*[a-f0-9]+:[ 	]*62 d4 84 10 f7 d1[ 	]+not    %r9,%r31
+[ 	]*[a-f0-9]+:[ 	]*d5 19 f7 d7[ 	]+not    %r31
+[ 	]*[a-f0-9]+:[ 	]*f6 10[ 	]+notb   \(%rax\)
+[ 	]*[a-f0-9]+:[ 	]*62 f4 64 18 f6 10[ 	]+not    \(%rax\),%bl
+[ 	]*[a-f0-9]+:[ 	]*66 f7 10[ 	]+notw   \(%rax\)
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6d 18 f7 10[ 	]+not    \(%rax\),%dx
+[ 	]*[a-f0-9]+:[ 	]*f7 10[ 	]+notl   \(%rax\)
+[ 	]*[a-f0-9]+:[ 	]*62 f4 74 18 f7 10[ 	]+not    \(%rax\),%ecx
+[ 	]*[a-f0-9]+:[ 	]*48 f7 10[ 	]+notq   \(%rax\)
+[ 	]*[a-f0-9]+:[ 	]*62 f4 b4 18 f7 10[ 	]+not    \(%rax\),%r9
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c d0 ca[ 	]+\{nf\} ror \$1,%dl
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 1c d0 ca[ 	]+\{nf\} ror \$1,%dl,%al
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c d1 ca[ 	]+\{nf\} ror \$1,%dx

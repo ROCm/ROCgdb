@@ -6247,6 +6247,52 @@ optimize_nf_encoding (void)
       i.imm_operands = 0;
       --i.operands;
     }
+  else if ((i.tm.base_opcode | 3) == 0x83
+      && i.tm.extension_opcode == 6
+      && i.op[0].imms->X_op == O_constant
+      && (i.op[0].imms->X_add_number == -1
+	  /* See comment above.  */
+	  || (i.op[0].imms->X_add_number == 0xff
+	      && (i.suffix == BYTE_MNEM_SUFFIX
+		  || i.types[i.operands - 1].bitfield.byte))))
+    {
+      /* Optimize: -O:
+	   {nf} xorb $~0, ...       -> notb ...
+	   {nf} xorb $0xff, ...     -> notb ...
+
+	   {nf} xorw $~0, ...       -> notw ...
+
+	   {nf} xorl $~0, %N, %N    -> notl %N
+	   {nf} xorl $~0, %M/m, %N  -> notl %M/m, %N
+	   {nf} xorl $~0, %N/m      -> notl %N/m
+
+	   {nf} xorq $~0, %N, %N    -> notq %N
+	   {nf} xorq $~0, %M/m, %N  -> notq %M/m, %N
+	   {nf} xorq $~0, %N/m      -> notq %N/m
+       */
+      i.tm.base_opcode = 0xf6;
+      i.tm.extension_opcode = 2;
+      i.tm.opcode_modifier.w = 1;
+      pp.has_nf = false;
+
+      copy_operand (0, 1);
+      copy_operand (1, 2);
+
+      i.imm_operands = 0;
+      if (i.operands == 2
+	  || (i.reg_operands == 2
+	      && (i.types[1].bitfield.dword || i.types[1].bitfield.qword)
+	      && i.op[0].regs == i.op[1].regs))
+	{
+       i.tm.opcode_space = SPACE_BASE;
+       i.tm.opcode_modifier.evex = 0;
+       i.tm.opcode_modifier.vexvvvv = 0;
+	  i.operands = 1;
+	}
+      else
+	i.operands = 2;
+      i.reg_operands = i.operands - i.mem_operands;
+    }
   else if (i.tm.base_opcode == 0xc0
 	   && i.op[0].imms->X_op == O_constant
 	   && i.op[0].imms->X_add_number

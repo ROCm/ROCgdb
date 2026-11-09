@@ -1434,6 +1434,27 @@ optimize:
 	{nf}	\op	$-1, (%rax), %r9
 	.endr
 
+	{nf}	xor	$0xff, %bl
+	{nf}	xor	$-1, %bl, %dl
+	{nf}	xor	$-1, %dl, %dl
+	{nf}	xor	$0xffff, %dx
+	{nf}	xor	$-1, %dx, %ax
+	{nf}	xor	$-1, %ax, %ax
+	{nf}	xor	$0xffffffff, %ecx
+	{nf}	xor	$-1, %ecx, %edx
+	{nf}	xor	$-1, %edx, %edx
+	{nf}	xor	$-1, %r9
+	{nf}	xor	$-1, %r9, %r31
+	{nf}	xor	$-1, %r31, %r31
+	{nf}	xorb	$0xff, (%rax)
+	{nf}	xor	$-1, (%rax), %bl
+	{nf}	xorw	$0xffff, (%rax)
+	{nf}	xor	$-1, (%rax), %dx
+	{nf}	xorl	$0xffffffff, (%rax)
+	{nf}	xor	$-1, (%rax), %ecx
+	{nf}	xorq	$-1, (%rax)
+	{nf}	xor	$-1, (%rax), %r9
+
 	.irp dir, l, r
 	{nf}	ro\dir	$7, %dl
 	{nf}	ro\dir	$7, %dl, %al
