@@ -6349,6 +6349,57 @@ optimize_nf_encoding (void)
       i.types[0].bitfield.imm32 = 0;
       i.types[0].bitfield.imm32s = 0;
     }
+  else if (optimize_for_space
+	   && i.tm.base_opcode == 0x80
+	   && i.tm.extension_opcode == 4
+	   && i.reg_operands + 1 == i.operands
+	   && !i.prefix[DATA_PREFIX]
+	   && !i.prefix[REX_PREFIX]
+	   && i.op[0].imms->X_op == O_constant
+	   && i.op[0].imms->X_add_number < 0
+	   && i.op[0].imms->X_add_number >= ~0xffff
+	   && is_plausible_suffix (1)
+	   && (i.types[1].bitfield.qword
+	       ? (i.reg_operands == 1
+		  || i.op[1].regs == i.op[2].regs)
+	       : (i.types[1].bitfield.word
+		  && i.reg_operands == 1
+		  && i.op[0].imms->X_add_number >= ~0xff)))
+    {
+      /* Optimize: -Os:
+	   {nf} andq $~imm8, %rN, %rN   -> {nf} andb $~imm8, %rN
+	   {nf} andq $~imm8, %rN        -> {nf} andb $~imm8, %rN
+	   {nf} andw $~imm8, %rN        -> {nf} andb $~imm8, %rN
+
+	   {nf} andq $~imm16, %rN, %rN  -> {nf} andw $~imm16, %rN
+	   {nf} andq $~imm16, %rN       -> {nf} andw $~imm16, %rN
+       */
+      if (i.reg_operands == 2)
+	{
+	  i.tm.opcode_modifier.vexvvvv = 0;
+	  i.reg_operands = 1;
+	  i.operands = 2;
+	}
+
+      if (i.op[0].imms->X_add_number >= ~0xff)
+	{
+	  i.types[0].bitfield.imm8 = 1;
+	  i.types[0].bitfield.imm16 = 0;
+	  i.types[1].bitfield.byte = 1;
+	  i.suffix = 0;
+	  i.tm.opcode_modifier.w = 0;
+	  i.tm.opcode_modifier.vexw = VEXWIG;
+	}
+      else
+	{
+	  i.types[0].bitfield.imm16 = 1;
+	  i.tm.opcode_modifier.size = SIZE16;
+	  i.tm.opcode_modifier.vexw = VEXW0;
+	}
+
+      i.types[0].bitfield.imm32 = 0;
+      i.types[0].bitfield.imm32s = 0;
+    }
   else if (i.tm.base_opcode == 0xc0
 	   && i.op[0].imms->X_op == O_constant
 	   && i.op[0].imms->X_add_number
