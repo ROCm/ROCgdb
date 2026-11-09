@@ -48,6 +48,7 @@ vxworks_after_open (void)
   if (!force_dynamic
       && !bfd_link_pic (&link_info)
       && bfd_get_flavour (link_info.output_bfd) == bfd_target_elf_flavour
+      && is_elf_hash_table (link_info.hash)
       && elf_hash_table (&link_info)->dynamic_sections_created)
     einfo (_("%X%P: dynamic sections created in non-dynamic link\n"));
 }
