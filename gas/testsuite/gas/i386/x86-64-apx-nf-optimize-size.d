@@ -1530,6 +1530,16 @@ Disassembly of section \.text:
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c 80 e1 55[ 	]+\{nf\} and \$0x55,%cl
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 81 e1 aa 55[ 	]+\{nf\} and \$0x55aa,%cx
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 81 e1 aa 55[ 	]+\{nf\} and \$0x55aa,%cx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c 80 c9 aa[ 	]+\{nf\} or \$0xaa,%cl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c 80 c9 aa[ 	]+\{nf\} or \$0xaa,%cl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c 80 c9 aa[ 	]+\{nf\} or \$0xaa,%cl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 81 c9 55 aa[ 	]+\{nf\} or \$0xaa55,%cx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 81 c9 55 aa[ 	]+\{nf\} or \$0xaa55,%cx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c 80 f1 aa[ 	]+\{nf\} xor \$0xaa,%cl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c 80 f1 aa[ 	]+\{nf\} xor \$0xaa,%cl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c 80 f1 aa[ 	]+\{nf\} xor \$0xaa,%cl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 81 f1 55 aa[ 	]+\{nf\} xor \$0xaa55,%cx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c 81 f1 55 aa[ 	]+\{nf\} xor \$0xaa55,%cx
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c d0 ca[ 	]+\{nf\} ror \$1,%dl
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 1c d0 ca[ 	]+\{nf\} ror \$1,%dl,%al
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c d1 ca[ 	]+\{nf\} ror \$1,%dx

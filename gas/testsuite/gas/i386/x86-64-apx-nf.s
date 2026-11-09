@@ -1488,6 +1488,14 @@ optimize:
 	{nf}	and	$~0xaa55, %rcx, %rcx
 	{nf}	and	$~0xaa55, %rcx
 
+	.irp op, or, xor
+	{nf}	\op	$0xaa, %rcx, %rcx
+	{nf}	\op	$0xaa, %rcx
+	{nf}	\op	$0xaa, %cx
+	{nf}	\op	$0xaa55, %rcx, %rcx
+	{nf}	\op	$0xaa55, %rcx
+	.endr
+
 	.irp dir, l, r
 	{nf}	ro\dir	$7, %dl
 	{nf}	ro\dir	$7, %dl, %al

@@ -319,7 +319,7 @@ sti, 0xfb, 0, NoSuf, {}
 
 <alu2:opc:c:optz:optt:opti:optiE:nf, +
     add:0:C:::::NF|Optimize, +
-    or:1:C::Optimize:::NF, +
+    or:1:C::Optimize::Optimize:NF, +
     adc:2:C:::::, +
     sbb:3::::::, +
     and:4:C::Optimize:Optimize:Optimize:NF, +
