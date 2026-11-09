@@ -1516,6 +1516,15 @@ Disassembly of section \.text:
 [ 	]*[a-f0-9]+:[ 	]*62 f4 65 1c f7 18[ 	]+\{nf\} neg \(%rax\),%bx
 [ 	]*[a-f0-9]+:[ 	]*62 f4 74 1c f7 18[ 	]+\{nf\} neg \(%rax\),%ecx
 [ 	]*[a-f0-9]+:[ 	]*62 f4 b4 1c f7 18[ 	]+\{nf\} neg \(%rax\),%r9
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c 80 e1 aa[ 	]+\{nf\} and \$0xaa,%cl,%dl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c 80 e1 aa[ 	]+\{nf\} and \$0xaa,%cl,%dl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c 80 e1 aa[ 	]+\{nf\} and \$0xaa,%cl,%dl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 74 1c 80 e1 aa[ 	]+\{nf\} and \$0xaa,%cl,%cl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 74 1c 80 e1 aa[ 	]+\{nf\} and \$0xaa,%cl,%cl
+[ 	]*[a-f0-9]+:[ 	]*62 f4 ec 1c 81 e1 55 aa 00 00[ 	]+\{nf\} and \$0xaa55,%rcx,%rdx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 6c 1c 81 e1 55 aa 00 00[ 	]+\{nf\} and \$0xaa55,%ecx,%edx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 fc 0c 81 e1 55 aa 00 00[ 	]+\{nf\} and \$0xaa55,%rcx
+[ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c 81 e1 55 aa 00 00[ 	]+\{nf\} and \$0xaa55,%ecx
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 0c d0 ca[ 	]+\{nf\} ror \$1,%dl
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7c 1c d0 ca[ 	]+\{nf\} ror \$1,%dl,%al
 [ 	]*[a-f0-9]+:[ 	]*62 f4 7d 0c d1 ca[ 	]+\{nf\} ror \$1,%dx

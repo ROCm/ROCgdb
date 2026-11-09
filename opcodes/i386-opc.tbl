@@ -322,7 +322,7 @@ sti, 0xfb, 0, NoSuf, {}
     or:1:C::Optimize:::NF, +
     adc:2:C:::::, +
     sbb:3::::::, +
-    and:4:C::Optimize:Optimize::NF, +
+    and:4:C::Optimize:Optimize:Optimize:NF, +
     sub:5::Optimize:::Optimize:NF, +
     xor:6:C:Optimize:::Optimize:NF>
 

@@ -1472,6 +1472,16 @@ optimize:
 	{nf}	imul	$-1, (%rax), %ecx
 	{nf}	imul	$-1, (%rax), %r9
 
+	{nf}	and	$0xaa, %rcx, %rdx
+	{nf}	and	$0xaa, %ecx, %edx
+	{nf}	and	$0xaa, %cx, %dx
+	{nf}	and	$0xaa, %rcx
+	{nf}	and	$0xaa, %ecx
+	{nf}	and	$0xaa55, %rcx, %rdx
+	{nf}	and	$0xaa55, %ecx, %edx
+	{nf}	and	$0xaa55, %rcx
+	{nf}	and	$0xaa55, %ecx
+
 	.irp dir, l, r
 	{nf}	ro\dir	$7, %dl
 	{nf}	ro\dir	$7, %dl, %al

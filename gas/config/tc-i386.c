@@ -6293,6 +6293,62 @@ optimize_nf_encoding (void)
 	i.operands = 2;
       i.reg_operands = i.operands - i.mem_operands;
     }
+  else if (i.tm.base_opcode == 0x80
+	   && i.tm.extension_opcode == 4
+	   && i.reg_operands + 1 == i.operands
+	   && !i.prefix[DATA_PREFIX]
+	   && !i.prefix[REX_PREFIX]
+	   && i.op[0].imms->X_op == O_constant
+	   && i.op[0].imms->X_add_number >= 0
+	   && i.op[0].imms->X_add_number <= (optimize_for_space ? 0xffff : 0xff)
+	   && is_plausible_suffix (1)
+	   && !i.types[1].bitfield.byte
+	   && (!i.types[1].bitfield.word
+	       || (i.reg_operands == 2
+		   && i.op[0].imms->X_add_number <= 0xff)))
+    {
+      /* Optimize: -O:
+	   {nf} andq $imm8, %rN, %rM   -> {nf} andb $imm8, %rN, %rM
+	   {nf} andl $imm8, %rN, %rM   -> {nf} andb $imm8, %rN, %rM
+	   {nf} andw $imm8, %rN, %rM   -> {nf} andb $imm8, %rN, %rM
+
+	   {nf} andq $imm8, %rN        -> {nf} andb $imm8, %rN, %rN
+	   {nf} andl $imm8, %rN        -> {nf} andb $imm8, %rN, %rN
+
+	 Optimize: -Os:
+	   {nf} andq $imm16, %rN, %rM  -> {nf} andw $imm16, %rN, %rM
+	   {nf} andl $imm16, %rN, %rM  -> {nf} andw $imm16, %rN, %rM
+
+	   {nf} andq $imm16, %rN       -> {nf} andw $imm16, %rN, %rN
+	   {nf} andl $imm16, %rN       -> {nf} andw $imm16, %rN, %rN
+       */
+      if (i.reg_operands == 1)
+	{
+	  copy_operand (2, 1);
+	  i.tm.opcode_modifier.vexvvvv = VexVVVV_DST;
+	  i.reg_operands = 2;
+	  i.operands = 3;
+	}
+
+      if (i.op[0].imms->X_add_number <= 0xff)
+	{
+	  i.types[0].bitfield.imm8 = 1;
+	  i.types[0].bitfield.imm16 = 0;
+	  i.types[2].bitfield.byte = 1;
+	  i.suffix = 0;
+	  i.tm.opcode_modifier.w = 0;
+	  i.tm.opcode_modifier.vexw = VEXWIG;
+	}
+      else
+	{
+	  i.types[0].bitfield.imm16 = 1;
+	  i.tm.opcode_modifier.size = SIZE16;
+	  i.tm.opcode_modifier.vexw = VEXW0;
+	}
+
+      i.types[0].bitfield.imm32 = 0;
+      i.types[0].bitfield.imm32s = 0;
+    }
   else if (i.tm.base_opcode == 0xc0
 	   && i.op[0].imms->X_op == O_constant
 	   && i.op[0].imms->X_add_number
