@@ -409,6 +409,13 @@ as follows:
 .insn ris,0xec00000000fe,R1,I2,M3,D4(B4)
 @end example
 
+The following instruction formats use an operand order that differs from
+the field index order:
+
+@itemize @bullet
+@item RIE (@code{rie}; not RIE-a/b/c/d/e/f/g): @code{R1,R3,RI2}
+@end itemize
+
 An instruction is two, four, or six bytes in length and must be aligned
 on a 2 byte boundary. The first two bits of the instruction specify the
 length of the instruction, 00 indicates a two byte instruction, 01 and 10

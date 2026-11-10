@@ -312,7 +312,9 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RIE_RRP      6, { R_8,R_12,J16_16,0,0,0 }          /* e.g. brxhg */
 #define INSTR_RIE_RRPU     6, { R_8,R_12,U4_32,J16_16,0,0 }      /* e.g. crj   */
 #define INSTR_RIE_RRP0     6, { R_8,R_12,J16_16,0,0,0 }          /* e.g. cgrjne */
+#define INSTR_RIE_RRP02    6, { R_8,J16_16,R_12,0,0,0 }          /* e.g. .insn rie_e */
 #define INSTR_RIE_RRI0     6, { R_8,R_12,I16_16,0,0,0 }          /* e.g. ahik  */
+#define INSTR_RIE_RRU0     6, { R_8,U16_16,R_12,0,0,0 }          /* e.g. .insn rie_d */
 #define INSTR_RIE_RUPI     6, { R_8,I8_32,U4_12,J16_16,0,0 }     /* e.g. cij   */
 #define INSTR_RIE_R0PI     6, { R_8,I8_32,J16_16,0,0,0 }         /* e.g. cijne */
 #define INSTR_RIE_RUPU     6, { R_8,U8_32,U4_12,J16_16,0,0 }     /* e.g. clij  */
@@ -322,6 +324,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RIE_R0UU     6, { R_8,U16_16,U4_32,0,0,0 }         /* e.g. clfit */
 #define INSTR_RIE_R0U0     6, { R_8,U16_16,0,0,0,0 }             /* e.g. clfitne */
 #define INSTR_RIE_RUI0     6, { R_8,I16_16,U4_12,0,0,0 }         /* e.g. lochi */
+#define INSTR_RIE_RUU0     6, { R_8,U16_16,U4_12,0,0,0 }         /* e.g. .insn rie_g */
 #define INSTR_RIE_RRUUU    6, { R_8,R_12,U8_16,U8_24,U8_32,0 }   /* e.g. rnsbg */
 #define INSTR_RIE_RRUUU2   INSTR_RIE_RRUUU                       /* e.g. risbgz */
 #define INSTR_RIE_RRUUU3   INSTR_RIE_RRUUU                       /* e.g. risbhg */
@@ -547,7 +550,9 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RIE_RRP      { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIE_RRPU     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIE_RRP0     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
+#define MASK_RIE_RRP02    { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_RIE_RRI0     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
+#define MASK_RIE_RRU0     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_RIE_RUPI     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIE_R0PI     { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIE_RUPU     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
@@ -557,6 +562,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RIE_R0UU     { 0xff, 0x0f, 0x00, 0x00, 0x0f, 0xff }
 #define MASK_RIE_R0U0     { 0xff, 0x0f, 0x00, 0x00, 0xff, 0xff }
 #define MASK_RIE_RUI0     { 0xff, 0x00, 0x00, 0x00, 0xff, 0xff }
+#define MASK_RIE_RUU0     { 0xff, 0x00, 0x00, 0x00, 0xff, 0xff }
 #define MASK_RIE_RRUUU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIE_RRUUU2   { 0xff, 0x00, 0x00, 0x80, 0x00, 0xff }
 #define MASK_RIE_RRUUU3   { 0xff, 0x00, 0x00, 0x80, 0x00, 0xff }
@@ -790,6 +796,13 @@ const struct s390_opcode s390_opformats[] =
   { "ri_b", OP8(0x00LL), MASK_RI_RP,	   INSTR_RI_RP,	      3,  0, 256, NULL },
   { "ri_c", OP8(0x00LL), MASK_RI_UP,	   INSTR_RI_UP,	      3,  0, 256, NULL },
   { "rie",  OP8(0x00LL), MASK_RIE_RRP,	   INSTR_RIE_RRP,     2,  2, 256, NULL },
+  { "rie_a",OP8(0x00LL), MASK_RIE_R0UU,	   INSTR_RIE_R0UU,    2,  6, 256, NULL },
+  { "rie_b",OP8(0x00LL), MASK_RIE_RRPU,	   INSTR_RIE_RRPU,    2,  6, 256, NULL },
+  { "rie_c",OP8(0x00LL), MASK_RIE_RUPU,	   INSTR_RIE_RUPU,    2,  6, 256, NULL },
+  { "rie_d",OP8(0x00LL), MASK_RIE_RRU0,	   INSTR_RIE_RRU0,    2,  7, 256, NULL },
+  { "rie_e",OP8(0x00LL), MASK_RIE_RRP02,   INSTR_RIE_RRP02,   2,  2, 256, NULL },
+  { "rie_f",OP8(0x00LL), MASK_RIE_RRUUU,   INSTR_RIE_RRUUU,   2,  6, 256, NULL },
+  { "rie_g",OP8(0x00LL), MASK_RIE_RUU0,	   INSTR_RIE_RUU0,    2,  9, 256, NULL },
   { "ril",  OP8(0x00LL), MASK_RIL_RP,	   INSTR_RIL_RP,      3,  2, 256, NULL },
   { "rilu", OP8(0x00LL), MASK_RIL_RU,	   INSTR_RIL_RU,      2,  4, 256, NULL },
   { "ris",  OP8(0x00LL), MASK_RIS_RURDI,   INSTR_RIS_RURDI,   2,  6, 256, NULL },
