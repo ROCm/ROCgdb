@@ -227,4 +227,7 @@ Disassembly of section .text:
 .*:	e7 13 20 de 40 21 [	 ]*vlgv	%r1,%v3,222\(%r2\),4
 # VRS-d
 .*:	e6 03 20 de 10 37 [	 ]*vlrlr	%v1,%r3,222\(%r2\)
+# VRV
+.*:	e7 13 20 de 40 13 [	 ]*vgef	%v1,222\(%v3,%r2\),4
+.*:	e7 13 20 de 00 13 [	 ]*vgef	%v1,222\(%v3,%r2\),0
 #?.*:	07 07 [	 ]*nopr	%r7

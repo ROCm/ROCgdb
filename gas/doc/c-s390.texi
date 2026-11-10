@@ -701,7 +701,7 @@ with the @samp{.insn} pseudo directive:
 0         8    12   16   20             32   36            47
 @end verbatim
 
-@item VRV format: <insn> V1,D2(V2,B2),M3
+@item VRV format: <insn> V1,D2(V2,B2)[,M3]
 @verbatim
 +---------+----+----+----+--------------+----+--------------+
 | OpCode  | V1 | V2 | B2 |      D2      | M3 |    OpCode    |
