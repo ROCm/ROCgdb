@@ -92,3 +92,29 @@ foo:
 	.insn vri_j,0xe6000000004a,%v1,%v2,33,4		# vcvdq %v1,%v2,33,4
 	.insn vri_k,0xe70000000088,%v1,%v2,%v3,%v4,55	# veval %v1,%v2,%v3,%v4,55
 	.insn vri_l,0xe6000000007f,%v1,%v2,33333	# vtz %v1,%v2,33333
+	.insn vrr_a,0xe700000000c3,%v1,%v2,3,4,5	# vcfps %v1,%v2,3,4,5
+	.insn vrr_a,0xe700000000c3,%v1,%v2,3,4		# vcfps %v1,%v2,3,4
+	.insn vrr_a,0xe700000000c3,%v1,%v2,3		# vcfps %v1,%v2,3
+	.insn vrr_a,0xe700000000c3,%v1,%v2		# vcfps %v1,%v2
+	.insn vrr_b,0xe70000000097,%v1,%v2,%v3,4,5	# vpks %v1,%v2,%v3,4,5
+	.insn vrr_b,0xe70000000097,%v1,%v2,%v3,4	# vpks %v1,%v2,%v3,4
+	.insn vrr_b,0xe70000000097,%v1,%v2,%v3		# vpks %v1,%v2,%v3
+	.insn vrr_c,0xe700000000e8,%v1,%v2,%v3,4,5,6	# vfce %v1,%v2,%v3,4,5,6
+	.insn vrr_c,0xe700000000e8,%v1,%v2,%v3,4,5	# vfce %v1,%v2,%v3,4,5
+	.insn vrr_c,0xe700000000e8,%v1,%v2,%v3,4	# vfce %v1,%v2,%v3,4
+	.insn vrr_c,0xe700000000e8,%v1,%v2,%v3		# vfce %v1,%v2,%v3
+	.insn vrr_d,0xe700000000b8,%v1,%v2,%v3,%v4,5,6	# vmsl %v1,%v2,%v3,%v4,5,6
+	.insn vrr_d,0xe700000000b8,%v1,%v2,%v3,%v4,5	# vmsl %v1,%v2,%v3,%v4,5
+	.insn vrr_d,0xe700000000b8,%v1,%v2,%v3,%v4	# vmsl %v1,%v2,%v3,%v4
+	.insn vrr_e,0xe7000000008f,%v1,%v2,%v3,%v4,5,6	# vfma %v1,%v2,%v3,%v4,5,6
+	.insn vrr_e,0xe7000000008f,%v1,%v2,%v3,%v4,5	# vfma %v1,%v2,%v3,%v4,5
+	.insn vrr_e,0xe7000000008f,%v1,%v2,%v3,%v4	# vfma %v1,%v2,%v3,%v4
+	.insn vrr_f,0xe70000000062,%v1,%r2,%r3		# vlvgp %v1,%r2,%r3
+	.insn vrr_g,0xe6000000005f,%v1,22222		# vtp %v1,22222
+	.insn vrr_g,0xe6000000005f,%v1			# vtp %v1
+	.insn vrr_h,0xe60000000077,%v1,%v2,3		# vcp %v1,%v2,3
+	.insn vrr_h,0xe60000000077,%v1,%v2		# vcp %v1,%v2
+	.insn vrr_i,0xe60000000050,%r1,%v2,3,4		# vcvb %r1,%v2,3,4
+	.insn vrr_i,0xe60000000050,%r1,%v2,3		# vcvb %r1,%v2,3
+	.insn vrr_j,0xe6000000007d,%v1,%v2,%v3,4	# vcsph %v1,%v2,%v3,4
+	.insn vrr_k,0xe6000000004e,%v1,%v2,3		# vcvbq %v1,%v2,3
