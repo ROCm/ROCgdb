@@ -668,6 +668,14 @@ with the @samp{.insn} pseudo directive:
 0                   16   20             32                 47
 @end verbatim
 
+@item SMI format: <insn> M1,RI2,D3(B3)
+@verbatim
++---------+----+----+----+--------------+-------------------+
+| OpCode  | M1 |////| B3 |      D3      |        RI2        |
++---------+----+----+----+--------------+-------------------+
+0         8    12   16   20             32                 47
+@end verbatim
+
 @item SS format: <insn> D1(R1,B1),D2(B2),R3
 @verbatim
 +---------+----+----+----+--------------+----+--------------+

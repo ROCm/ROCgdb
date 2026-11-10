@@ -134,5 +134,7 @@ Disassembly of section .text:
 # SIY
 .*:	eb 16 1b 67 02 7a [	 ]*agsi	11111\(%r1\),22
 .*:	eb 00 1b 67 02 71 [	 ]*lpswey	11111\(%r1\)
+# SMI
+ *([\da-f]+):	c7 10 31 4d 00 00 [	 ]*bpp	1,\1 <foo\+0x\1>,333\(%r3\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7
