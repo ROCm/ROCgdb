@@ -853,7 +853,7 @@ const struct s390_opcode s390_opformats[] =
   { "rxy_b",OP8(0x00LL), MASK_RXY_URRD,	   INSTR_RXY_URRD,    2,  6, 256, NULL },
   { "rxy_c",OP8(0x00LL), MASK_RXY_RRRD,	   INSTR_RXY_RRRD,    2, 13, 256, NULL },
   { "s",    OP8(0x00LL), MASK_S_RD,	   INSTR_S_RD,	      3,  0, 256|1, NULL },
-  { "si",   OP8(0x00LL), MASK_SI_URD,	   INSTR_SI_URD,      3,  0, 256, NULL },
+  { "si",   OP8(0x00LL), MASK_SI_URD,	   INSTR_SI_URD,      3,  0, 256|1, NULL },
   { "sil",  OP8(0x00LL), MASK_SIL_RDI,     INSTR_SIL_RDI,     2,  6, 256, NULL },
   { "siy",  OP8(0x00LL), MASK_SIY_URD,	   INSTR_SIY_URD,     2,  3, 256, NULL },
   { "ss",   OP8(0x00LL), MASK_SS_RRRDRD,   INSTR_SS_RRRDRD,   3,  0, 256, NULL },

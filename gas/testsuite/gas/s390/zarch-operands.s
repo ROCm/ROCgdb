@@ -63,4 +63,6 @@ foo:
 	.insn rxy_c,0xe30000000060,%r1,22222(%r2,%r3)	# lxab %r1,22222(%r2,%r3)
 	.insn s,0xb2330000,111(%r1)			# ssch 111(%r1)
 	.insn s,0xb2310000				# hsch
+	.insn si,0x95000000,111(%r1),22			# cli 111(%r1),22
+	.insn si,0x93000000,111(%r1)			# ts 111(%r1)
 	.insn ssf,0xc80000000000,1(%r2),3(%r4),%r5
