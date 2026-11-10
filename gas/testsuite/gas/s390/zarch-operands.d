@@ -90,6 +90,7 @@ Disassembly of section .text:
 .*:	8f 10 20 de [	 ]*slda	%r1,222\(%r2\)
 # RS-b
 .*:	bd 13 20 de [	 ]*clm	%r1,3,222\(%r2\)
-.*:	eb 12 40 03 00 0d [	 ]*sllg	%r1,%r2,3\(%r4\)
+# RSE
+.*:	eb 13 20 de 00 0d [	 ]*sllg	%r1,%r3,222\(%r2\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7
