@@ -339,11 +339,76 @@ instruction formats:
 @item Rx @tab Register number for operand x.
 @item Xx @tab Index register number for operand x.
 @item Vx @tab Vector register number for operand x.
+@item VXx @tab Vector index register number for operand x.
 @item Ix @tab Signed immediate for operand x.
 @item Ux @tab Unsigned immediate for operand x.
 @item RIx @tab Signed PC-relative immediate for operand x.
 @end multitable
 @end display
+
+In general, the operand order for an @code{.insn} directive can be derived
+from the field indices of the respective instruction format as listed in
+the @emph{ESA/390} and @emph{z/Architecture Principles of Operation} manuals,
+chapter @emph{Program Execution}, section @emph{Instruction Formats}. The
+operands need to be specified in ascending order of their field indices.
+Exceptions, where the operand order differs from the index order, are listed
+below.
+
+Register (Rx) operands may be a general register (GR), floating-point
+register (FPR), access register (AR), or control register (CR) number
+(0-15) or register name (@code{%r0}-@code{%r15}, @code{%f0}-@code{%f15},
+@code{%a0}-@code{%a15}, @code{%c0}-@code{%c15}).
+
+Vector register (Vx) operands may be a vector register (VR) number
+(0-31) or register name (@code{%v0}-@code{%v31}).
+
+Immediate (Ix) and mask (Mx) operands may be signed or unsigned. That
+is their value must be in range @code{SIGNED_MIN} to @code{UNSIGNED_MAX}
+inclusive for their respective bit field width. This enables coding
+these operand values naturally, depending on whether individual
+instructions define their operand values as signed or unsigned.
+
+Relative immediate (RIx) operands are treated as signed.
+
+Composite operands are grouped by field index and need to be coded in
+their natural form: Dx(Bx), Dx(Xx,Bx), Dx(Lx,Bx), Dx(VXx,Bx). They are
+treated as one operand and can be recognized by their shared index
+(e.g. fields B4 and D4 indicate a composite operand @code{D4(B4)}).
+
+For example, for instruction format RIS:
+
+@example
++---------+----+----+----+--------------+---------+---------+
+| OpCode  | R1 | M3 | B4 |      D4      |    I2   | OpCode  |
++---------+----+----+----+--------------+---------+---------+
+0         8    12   16   20             32        40       47
+@end example
+
+@noindent
+the operands and operand order can be deduced from the instruction
+field indices as follows:
+
+@enumerate
+@item R1: register operand; GR, FPR, AR, or CR register number or name
+@item I2: immediate operand; 8-bit signed or unsigned
+@item M3: mask operand; 4-bit signed or unsigned
+@item D4(B4): composite operand (displacement and base register)
+@end enumerate
+
+An instruction using the RIS format therefore needs to be coded
+as follows:
+
+@example
+.insn <format-name>,<insn-template>,R1,I2,M3,D4(B4)
+@end example
+
+Specifically, the RIS format @emph{Compare Immediate and Branch} (@code{cib})
+instruction with operation code @code{0xecfe} would need to be coded
+as follows:
+
+@example
+.insn ris,0xec00000000fe,R1,I2,M3,D4(B4)
+@end example
 
 An instruction is two, four, or six bytes in length and must be aligned
 on a 2 byte boundary. The first two bits of the instruction specify the
