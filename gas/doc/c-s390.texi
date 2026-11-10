@@ -246,9 +246,10 @@ of Operation.
 Instruction operands can be grouped into three classes, operands located
 in registers, immediate operands, and operands in storage.
 
-A register operand can be located in general, floating-point, access,
-or control register. The register is identified by a four-bit field.
-The field containing the register operand is called the R field.
+Register operands can be located in a general, floating-point, vector,
+access, or control register.  The register is identified by a four-bit
+R field and, in case of vector registers, an additional bit in the four-bit
+RXB field.
 
 Immediate operands are contained within the instruction and can have
 8, 16 or 32 bits. The field containing the immediate operand is called
@@ -259,12 +260,12 @@ A storage operand consists of an address and a length. The address of a
 storage operands can be specified in any of these ways:
 
 @itemize
-@item The content of a single general R
+@item The content of a single general register R
 @item The sum of the content of a general register called the base
 register B plus the content of a displacement field D
 @item The sum of the contents of two general registers called the
 index register X and the base register B plus the content of a
-displacement field
+displacement field D
 @item The sum of the current instruction address and a 32-bit signed
 immediate field multiplied by two.
 @end itemize
@@ -273,9 +274,9 @@ The length of a storage operand can be:
 
 @itemize
 @item Implied by the instruction
-@item Specified by a bitmask
+@item Specified by a four-bit mask M
 @item Specified by a four-bit or eight-bit length field L
-@item Specified by the content of a general register
+@item Specified by the content of a general register R
 @end itemize
 
 The notation for storage operand addresses formed from multiple fields is
@@ -288,7 +289,7 @@ register Bn called the base register and the displacement field Dn.
 @item Dn(Xn,Bn)
 the address for operand number n is formed from the content of general
 register Xn called the index register, general register Bn called the
-base register and the displacement field Dn.
+base register, and the displacement field Dn.
 @item Dn(Ln,Bn)
 the address for operand number n is formed from the content of general
 register Bn called the base register and the displacement field Dn.
@@ -326,14 +327,18 @@ The following table lists the abbreviations used in the table of
 instruction formats:
 
 @display
-@multitable {OpCode / OpCd} {Displacement lower 12 bits for operand x.}
-@item OpCode / OpCd @tab Part of the op code.
+@multitable {OpCode / OpCd} {Signed PC-relative immediate for operand x.}
+@headitem Abbreviation @tab Description
+@item OpCode / OpCd @tab Part of the operation code.
 @item Bx @tab Base register number for operand x.
 @item Dx @tab Displacement for operand x.
 @item DLx @tab Displacement lower 12 bits for operand x.
-@item DHx @tab Displacement higher 8-bits for operand x.
+@item DHx @tab Displacement higher 8 bits for operand x.
+@item Mx @tab Mask for operand x.
+@item Lx @tab Length for operand x.
 @item Rx @tab Register number for operand x.
 @item Xx @tab Index register number for operand x.
+@item Vx @tab Vector register number for operand x.
 @item Ix @tab Signed immediate for operand x.
 @item Ux @tab Unsigned immediate for operand x.
 @end multitable
