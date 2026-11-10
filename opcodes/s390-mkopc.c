@@ -486,6 +486,10 @@ main (void)
 		       && (str[8] == 0 || str[8] == ',')) {
 	      flag_bits |= S390_INSTR_FLAG_OPTPARM2;
 	      str += 8;
+	    } else if (strncmp (str, "optparm3", 8) == 0
+		       && (str[8] == 0 || str[8] == ',')) {
+	      flag_bits |= S390_INSTR_FLAG_OPTPARM3;
+	      str += 8;
 	    } else if (strncmp (str, "htm", 3) == 0
 		       && (str[3] == 0 || str[3] == ',')) {
 	      flag_bits |= S390_INSTR_FLAG_HTM;

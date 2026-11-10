@@ -51,9 +51,11 @@ enum s390_opcode_cpu_val
 
 /* Values defined for the flags field of a struct s390_opcode.  */
 
-/* Last one or two instruction operands are optional.  */
+/* Trailing one, two, or three instruction operands are optional.  */
 #define S390_INSTR_FLAG_OPTPARM 0x1
 #define S390_INSTR_FLAG_OPTPARM2 0x2
+#define S390_INSTR_FLAG_OPTPARM3 0x3
+#define S390_INSTR_FLAG_OPTPARM_MASK 0x3
 
 /* Instruction requires a specific facility.  */
 #define S390_INSTR_FLAG_HTM 0x4

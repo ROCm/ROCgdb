@@ -1419,18 +1419,12 @@ operand_count (const unsigned char *opindex_ptr)
 static bool
 skip_optargs_p (unsigned int opcode_flags, const unsigned char *opindex_ptr)
 {
-  if ((opcode_flags & (S390_INSTR_FLAG_OPTPARM | S390_INSTR_FLAG_OPTPARM2)))
-    {
-      unsigned int opcount = operand_count (opindex_ptr);
+  unsigned int optparm = opcode_flags & S390_INSTR_FLAG_OPTPARM_MASK;
+  unsigned int opcount;
 
-      if (opcount == 1)
-	return true;
-
-      if ((opcode_flags & S390_INSTR_FLAG_OPTPARM2) && opcount == 2)
-	return true;
-    }
-
-  return false;
+  return (optparm > 0
+	  && (opcount = operand_count (opindex_ptr)) > 0
+	  && opcount <= optparm);
 }
 
 /* We need to keep a list of fixups.  We can't simply generate them as
