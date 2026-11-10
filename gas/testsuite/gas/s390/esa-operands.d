@@ -23,6 +23,7 @@ Disassembly of section .text:
 # RSI
  *([\da-f]+):	84 12 00 00 [	 ]*brxh	%r1,%r2,\1 <foo\+0x\1>
 .*: R_390_PC16DBL	test_rsi\+0x2
+# RX
 .*:	58 13 40 02 [	 ]*l	%r1,2\(%r3,%r4\)
 .*:	ed 10 30 02 00 1a [	 ]*adb	%f1,2\(%r3\)
 .*:	ed 24 50 03 10 1e [	 ]*madb	%f1,%f2,3\(%r4,%r5\)

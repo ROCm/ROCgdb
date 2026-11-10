@@ -104,5 +104,11 @@ Disassembly of section .text:
 .*:	eb 13 2f ff ff 1d [	 ]*rll	%r1,%r3,-1\(%r2\)
 # RSY-b
 .*:	eb 13 2f ff ff 81 [	 ]*icmy	%r1,3,-1\(%r2\)
+# RX
+.*:	58 13 20 de [	 ]*l	%r1,222\(%r3,%r2\)
+# RX-a
+.*:	5a 13 20 de [	 ]*a	%r1,222\(%r3,%r2\)
+# RX-b
+.*:	47 13 20 de [	 ]*bo	222\(%r3,%r2\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7

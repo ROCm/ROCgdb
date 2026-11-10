@@ -844,6 +844,8 @@ const struct s390_opcode s390_opformats[] =
   { "rsy_a",OP8(0x00LL), MASK_RSY_RRRD2,   INSTR_RSY_RRRD2,   3,  3, 256, NULL },
   { "rsy_b",OP8(0x00LL), MASK_RSY_RURD2,   INSTR_RSY_RURD2,   2,  3, 256, NULL },
   { "rx",   OP8(0x00LL), MASK_RX_RRRD,	   INSTR_RX_RRRD,     3,  0, 256, NULL },
+  { "rx_a", OP8(0x00LL), MASK_RX_RRRD,	   INSTR_RX_RRRD,     3,  0, 256, NULL },
+  { "rx_b", OP8(0x00LL), MASK_RX_URRD,	   INSTR_RX_URRD,     3,  0, 256, NULL },
   { "rxe",  OP8(0x00LL), MASK_RXE_RRRD,	   INSTR_RXE_RRRD,    3,  0, 256, NULL },
   { "rxf",  OP8(0x00LL), MASK_RXF_RRRDR,   INSTR_RXF_RRRDR,   3,  0, 256, NULL },
   { "rxy",  OP8(0x00LL), MASK_RXY_RRRD,	   INSTR_RXY_RRRD,    3,  3, 256, NULL },
