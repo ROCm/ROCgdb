@@ -6,9 +6,10 @@
 Disassembly of section .text:
 
 .* <foo>:
-   0:	ec 12 00 00 00 45 [ 	]*brxlg	%r1,%r2,0 <foo>
-[ 	]*2: R_390_PC16DBL	test_rie\+0x2
-   6:	c0 e5 00 00 00 00 [ 	]*brasl	%r14,6 <foo\+0x6>
-[ 	]*8: R_390_PC32DBL	test_ril\+0x2
-   c:	eb 12 40 03 00 0d [ 	]*sllg	%r1,%r2,3\(%r4\)
-  12:	c8 50 20 01 40 03 [ 	]*mvcos	1\(%r2\),3\(%r4\),%r5
+ *([\da-f]+):	ec 12 00 00 00 45 [	 ]*brxlg	%r1,%r2,\1 <foo>
+.*: R_390_PC16DBL	test_rie\+0x2
+ *([\da-f]+):	c0 e5 00 00 00 00 [	 ]*brasl	%r14,\1 <foo\+0x\1>
+.*: R_390_PC32DBL	test_ril\+0x2
+.*:	eb 12 40 03 00 0d [	 ]*sllg	%r1,%r2,3\(%r4\)
+.*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
+#?.*:	07 07 [	 ]*nopr	%r7
