@@ -340,8 +340,7 @@ instruction formats:
 @item Xx @tab Index register number for operand x.
 @item Vx @tab Vector register number for operand x.
 @item VXx @tab Vector index register number for operand x.
-@item Ix @tab Signed immediate for operand x.
-@item Ux @tab Unsigned immediate for operand x.
+@item Ix @tab Immediate for operand x in range min. signed to max. unsigned.
 @item RIx @tab Signed PC-relative immediate for operand x.
 @end multitable
 @end display
@@ -471,10 +470,10 @@ with the @samp{.insn} pseudo directive:
 0         8    12   16                                     47
 @end verbatim
 
-@item RILU format: <insn> R1,U2
+@item RILU format: <insn> R1,I2
 @verbatim
 +---------+----+----+---------------------------------------+
-| OpCode  | R1 |OpCd|                   U2                  |
+| OpCode  | R1 |OpCd|                   I2                  |
 +---------+----+----+---------------------------------------+
 0         8    12   16                                     47
 @end verbatim
@@ -599,7 +598,7 @@ with the @samp{.insn} pseudo directive:
 0         8         16   20            31
 @end verbatim
 
-@item SIY format: <insn> D1(B1),U2
+@item SIY format: <insn> D1(B1),I2
 @verbatim
 +---------+---------+----+--------------+---------+---------+
 | OpCode  |   I2    | B1 |     DL1      |   DH1   | OpCode  |
