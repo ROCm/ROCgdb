@@ -6,6 +6,7 @@
 Disassembly of section .text:
 
 .* <foo>:
+# E
 .*:	01 01 [	 ]*pr
 .*:	a7 1a 80 01 [	 ]*ahi	%r1,-32767
 .*:	18 12 [	 ]*lr	%r1,%r2
