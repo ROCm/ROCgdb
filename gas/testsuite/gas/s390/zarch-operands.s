@@ -25,5 +25,8 @@ foo:
 	.insn rr,0x1a00,%r1,%r2				# ar %r1,%r2
 	.insn rr,0x0400,%r1				# spm %r1
 	.insn rrd,0xb32e0000,%f1,%f2,%f3		# maer %f1,%f3,%f2
+	.insn rre,0xb9080000,%r1,%r2			# agr %r1,%r2
+	.insn rre,0xb2220000,%r1			# ipm %r1
+	.insn rre,0xb2480000				# palb
 	.insn rse,0xeb000000000d,%r1,%r2,3(%r4)
 	.insn ssf,0xc80000000000,1(%r2),3(%r4),%r5

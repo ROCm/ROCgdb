@@ -60,6 +60,10 @@ Disassembly of section .text:
 .*:	04 10 [	 ]*spm	%r1
 # RRD
 .*:	b3 2e 10 32 [	 ]*maer	%f1,%f3,%f2
+# RRE
+.*:	b9 08 00 12 [	 ]*agr	%r1,%r2
+.*:	b2 22 00 10 [	 ]*ipm	%r1
+.*:	b2 48 00 00 [	 ]*palb
 .*:	eb 12 40 03 00 0d [	 ]*sllg	%r1,%r2,3\(%r4\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7

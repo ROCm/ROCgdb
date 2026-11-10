@@ -813,7 +813,7 @@ const struct s390_opcode s390_opformats[] =
   { "ris",  OP8(0x00LL), MASK_RIS_RURDI,   INSTR_RIS_RURDI,   2,  6, 256, NULL },
   { "rr",   OP8(0x00LL), MASK_RR_RR,	   INSTR_RR_RR,       3,  0, 256|1, NULL },
   { "rrd",  OP8(0x00LL), MASK_RRD_R0RR,	   INSTR_RRD_R0RR,    3,  0, 256, NULL },
-  { "rre",  OP8(0x00LL), MASK_RRE_RR,	   INSTR_RRE_RR,      3,  0, 256, NULL },
+  { "rre",  OP8(0x00LL), MASK_RRE_RR,	   INSTR_RRE_RR,      3,  0, 256|2, NULL },
   { "rrf",  OP8(0x00LL), MASK_RRF_RURR,	   INSTR_RRF_RURR,    3,  0, 256, NULL },
   { "rrs",  OP8(0x00LL), MASK_RRS_RRRDU,   INSTR_RRS_RRRDU,   2,  6, 256, NULL },
   { "rs",   OP8(0x00LL), MASK_RS_RRRD,	   INSTR_RS_RRRD,     3,  0, 256, NULL },

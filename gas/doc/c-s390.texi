@@ -533,7 +533,7 @@ with the @samp{.insn} pseudo directive:
 0                   16   20   24   28  31
 @end verbatim
 
-@item RRE format: <insn> R1,R2
+@item RRE format: <insn> [R1[,R2]]
 @verbatim
 +-------------------+---------+----+----+
 |      OpCode       |/////////| R1 | R2 |
