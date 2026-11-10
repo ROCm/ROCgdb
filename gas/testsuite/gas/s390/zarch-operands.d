@@ -150,5 +150,7 @@ Disassembly of section .text:
 .*:	ef 13 20 de 41 bc [	 ]*lmd	%r1,%r3,222\(%r2\),444\(%r4\)
 # SS-f
 .*:	e1 15 10 6f 20 de [	 ]*pku	111\(%r1\),222\(22,%r2\)
+# SSE
+.*:	e5 0a 10 6f 20 de [	 ]*mvcrl	111\(%r1\),222\(%r2\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7
