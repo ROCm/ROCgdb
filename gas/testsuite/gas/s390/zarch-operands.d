@@ -12,6 +12,10 @@ Disassembly of section .text:
 .*:	0a 01 [	 ]*svc	1
 # IE
 .*:	b2 fa 00 12 [	 ]*niai	1,2
+# MII
+ *([\da-f]+):	c5 10 00 00 00 00 [	 ]*bprp	1,\1 <foo\+0x\1>,\1 <foo\+0x\1>
+.*: R_390_PC12DBL	test_mii\+0x1
+.*: R_390_PC24DBL	test_mii\+0x3
  *([\da-f]+):	ec 12 00 00 00 45 [	 ]*brxlg	%r1,%r2,\1 <foo\+0x\1>
 .*: R_390_PC16DBL	test_rie\+0x2
  *([\da-f]+):	c0 e5 00 00 00 00 [	 ]*brasl	%r14,\1 <foo\+0x\1>
