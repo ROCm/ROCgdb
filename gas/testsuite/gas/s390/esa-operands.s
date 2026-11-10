@@ -5,7 +5,7 @@ foo:
 	.insn ri,0xa70a0000,%r1,-32767			# ahi %r1,-32767
 	.insn rr,0x1800,%r1,%r2				# lr %r1,%r2
 	.insn rre,0xb25e0000,%r1,%r2			# srst %r1,%r2
-	.insn rrf,0xb35b0000,%f1,%f2,9,%f3
+	.insn rrf,0xb35b0000,%f1,%f2,%f3,4		# didbr %f1,%f3,%f2,4
 	.insn rs,0xba000000,%r1,%r2,3(%r4)
 	.insn rsi,0x84000000,%r1,%r2,test_rsi
 	.insn rx,0x58000000,%r1,2(%r3,%r4)

@@ -399,11 +399,13 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RRF_U0RERE   4, { RE_24,RE_28,U4_16,0,0,0 }        /* e.g. cu24  */
 #define INSTR_RRF_00RR     4, { R_24,R_28,0,0,0,0 }              /* e.g. clrtne */
 #define INSTR_RRF_0URF     4, { R_24,F_28,U4_20,0,0,0 }          /* e.g. csdtr  */
+#define INSTR_RRF_0URR     4, { R_24,R_28,U4_20,0,0,0 }          /* e.g. .insn rrf_d */
 #define INSTR_RRF_0UREFE   4, { RE_24,FE_28,U4_20,0,0,0 }        /* e.g. csxtr  */
 #define INSTR_RRF_UUFR     4, { F_24,U4_16,R_28,U4_20,0,0 }      /* e.g. cdgtra */
 #define INSTR_RRF_UUFER    4, { FE_24,U4_16,R_28,U4_20,0,0 }     /* e.g. cxfbra */
 #define INSTR_RRF_UURF     4, { R_24,U4_16,F_28,U4_20,0,0 }      /* e.g. cgdtra */
 #define INSTR_RRF_UURFE    4, { R_24,U4_16,FE_28,U4_20,0,0 }     /* e.g. cfxbra */
+#define INSTR_RRF_UURR     4, { R_24,U4_16,R_28,U4_20,0,0 }      /* e.g. .insn rrf_e */
 #define INSTR_RR_0R        2, { R_12, 0,0,0,0,0 }                /* e.g. br    */
 #define INSTR_RR_FF        2, { F_8,F_12,0,0,0,0 }               /* e.g. adr   */
 #define INSTR_RR_FEF       2, { FE_8,F_12,0,0,0,0 }              /* e.g. mxdr  */
@@ -638,11 +640,13 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RRF_U0RERE   { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRF_00RR     { 0xff, 0xff, 0xff, 0x00, 0x00, 0x00 }
 #define MASK_RRF_0URF     { 0xff, 0xff, 0xf0, 0x00, 0x00, 0x00 }
+#define MASK_RRF_0URR     { 0xff, 0xff, 0xf0, 0x00, 0x00, 0x00 }
 #define MASK_RRF_0UREFE   { 0xff, 0xff, 0xf0, 0x00, 0x00, 0x00 }
 #define MASK_RRF_UUFR     { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRF_UUFER    { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRF_UURF     { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRF_UURFE    { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
+#define MASK_RRF_UURR     { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_0R        { 0xff, 0xf0, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_FF        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_FEF       { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
@@ -815,6 +819,11 @@ const struct s390_opcode s390_opformats[] =
   { "rrd",  OP8(0x00LL), MASK_RRD_R0RR,	   INSTR_RRD_R0RR,    3,  0, 256, NULL },
   { "rre",  OP8(0x00LL), MASK_RRE_RR,	   INSTR_RRE_RR,      3,  0, 256|2, NULL },
   { "rrf",  OP8(0x00LL), MASK_RRF_RURR,	   INSTR_RRF_RURR,    3,  0, 256, NULL },
+  { "rrf_a",OP8(0x00LL), MASK_RRF_RURR,	   INSTR_RRF_RURR,    3,  0, 256|2, NULL },
+  { "rrf_b",OP8(0x00LL), MASK_RRF_RURR2,   INSTR_RRF_RURR2,   3,  0, 256|1, NULL },
+  { "rrf_c",OP8(0x00LL), MASK_RRF_U0RR,	   INSTR_RRF_U0RR,    3,  0, 256|1, NULL },
+  { "rrf_d",OP8(0x00LL), MASK_RRF_0URR,	   INSTR_RRF_0URR,    3,  0, 256, NULL },
+  { "rrf_e",OP8(0x00LL), MASK_RRF_UURR,	   INSTR_RRF_UURR,    3,  0, 256|1, NULL },
   { "rrs",  OP8(0x00LL), MASK_RRS_RRRDU,   INSTR_RRS_RRRDU,   2,  6, 256, NULL },
   { "rs",   OP8(0x00LL), MASK_RS_RRRD,	   INSTR_RS_RRRD,     3,  0, 256, NULL },
   { "rse",  OP8(0x00LL), MASK_RSE_RRRD,	   INSTR_RSE_RRRD,    3,  0, 256, NULL },

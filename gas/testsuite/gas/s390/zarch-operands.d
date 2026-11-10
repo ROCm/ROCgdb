@@ -64,6 +64,23 @@ Disassembly of section .text:
 .*:	b9 08 00 12 [	 ]*agr	%r1,%r2
 .*:	b2 22 00 10 [	 ]*ipm	%r1
 .*:	b2 48 00 00 [	 ]*palb
+# RRF
+.*:	b3 5b 34 12 [	 ]*didbr	%f1,%f3,%f2,4
+# RRF-a
+.*:	b2 21 00 12 [	 ]*ipte	%r1,%r2
+.*:	b2 21 30 12 [	 ]*ipte	%r1,%r2,%r3
+.*:	b2 21 34 12 [	 ]*ipte	%r1,%r2,%r3,4
+# RRF-b
+.*:	b9 8e 30 12 [	 ]*idte	%r1,%r3,%r2
+.*:	b9 8e 34 12 [	 ]*idte	%r1,%r3,%r2,4
+# RRF-c
+.*:	b9 e1 00 12 [	 ]*popcnt	%r1,%r2
+.*:	b9 e1 30 12 [	 ]*popcnt	%r1,%r2,3
+# RRF-d
+.*:	b3 dc 04 12 [	 ]*lxdtr	%f1,%f2,4
+# RRF-e
+.*:	b3 ca 30 12 [	 ]*cgxr	%r1,3,%f2
+.*:	b3 a6 34 12 [	 ]*cxgbra	%f1,3,%r2,4
 .*:	eb 12 40 03 00 0d [	 ]*sllg	%r1,%r2,3\(%r4\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7

@@ -28,5 +28,16 @@ foo:
 	.insn rre,0xb9080000,%r1,%r2			# agr %r1,%r2
 	.insn rre,0xb2220000,%r1			# ipm %r1
 	.insn rre,0xb2480000				# palb
+	.insn rrf,0xb35b0000,%f1,%f2,%f3,4		# didbr %f1,%f3,%f2,4
+	.insn rrf_a,0xb2210000,%r1,%r2			# ipte %r1,%r2
+	.insn rrf_a,0xb2210000,%r1,%r2,%r3		# ipte %r1,%r2,%r3
+	.insn rrf_a,0xb2210000,%r1,%r2,%r3,4		# ipte %r1,%r2,%r3,4
+	.insn rrf_b,0xb98e0000,%r1,%r3,%r2		# idte %r1,%r3,%r2
+	.insn rrf_b,0xb98e0000,%r1,%r3,%r2,4		# idte %r1,%r3,%r2,4
+	.insn rrf_c,0xb9e10000,%r1,%r2			# popcnt %r1,%r2
+	.insn rrf_c,0xb9e10000,%r1,%r2,3		# popcnt %r1,%r2,3
+	.insn rrf_d,0xb3dc0000,%f1,%f2,4		# lxdtr %f1,%f2,4
+	.insn rrf_e,0xb3ca0000,%r1,3,%f2		# cgxr %r1,3,%f2
+	.insn rrf_e,0xb3a60000,%f1,3,%r2,4		# cxgbra %f1,3,%r2,4
 	.insn rse,0xeb000000000d,%r1,%r2,3(%r4)
 	.insn ssf,0xc80000000000,1(%r2),3(%r4),%r5

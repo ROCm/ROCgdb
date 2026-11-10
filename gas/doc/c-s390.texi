@@ -414,6 +414,16 @@ the field index order:
 
 @itemize @bullet
 @item RIE (@code{rie}; not RIE-a/b/c/d/e/f/g): @code{R1,R3,RI2}
+@item RRF-a/b/c/d/e (@code{rrf_a/b/c/d/e}):
+The operand order of instruction formats RRF-a/b/c/d/e is documented in
+a @emph{Programming Note} of the Principles of Operation manual:
+  @itemize @minus
+  @item RRF-a (@code{rrf_a}): @code{R1,R2[,R3[,M4]]}
+  @item RRF-b (@code{rrf_b}): @code{R1,R3,R2[,M4]}
+  @item RRF-c (@code{rrf_c}): @code{R1,R2[,M3]}
+  @item RRF-d (@code{rrf_d}): @code{R1,R2,M4}
+  @item RRF-e (@code{rrf_e}): @code{R1,M3,R2[,M4]}
+  @end itemize
 @end itemize
 
 An instruction is two, four, or six bytes in length and must be aligned
