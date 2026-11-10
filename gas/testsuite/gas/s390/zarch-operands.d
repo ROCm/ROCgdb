@@ -10,6 +10,8 @@ Disassembly of section .text:
 .*:	01 01 [	 ]*pr
 # I
 .*:	0a 01 [	 ]*svc	1
+# IE
+.*:	b2 fa 00 12 [	 ]*niai	1,2
  *([\da-f]+):	ec 12 00 00 00 45 [	 ]*brxlg	%r1,%r2,\1 <foo\+0x\1>
 .*: R_390_PC16DBL	test_rie\+0x2
  *([\da-f]+):	c0 e5 00 00 00 00 [	 ]*brasl	%r14,\1 <foo\+0x\1>

@@ -783,6 +783,7 @@ const struct s390_opcode s390_opformats[] =
   /*NAME,   OPCODE,      MASK,             INSTR,          MODE,CPU,FLAG, DESCRIPTION*/
   { "e",    OP8(0x00LL), MASK_E,	   INSTR_E,	      3,  0, 256, NULL },
   { "i",    OP8(0x00LL), MASK_I_U,	   INSTR_I_U,	      3,  0, 256, NULL },
+  { "ie",   OP8(0x00LL), MASK_IE_UU,	   INSTR_IE_UU,	      2,  8, 256, NULL },
   { "ri",   OP8(0x00LL), MASK_RI_RI,	   INSTR_RI_RI,	      3,  0, 256, NULL },
   { "rie",  OP8(0x00LL), MASK_RIE_RRP,	   INSTR_RIE_RRP,     2,  2, 256, NULL },
   { "ril",  OP8(0x00LL), MASK_RIL_RP,	   INSTR_RIL_RP,      3,  2, 256, NULL },
