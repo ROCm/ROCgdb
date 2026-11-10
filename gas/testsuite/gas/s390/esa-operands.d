@@ -25,6 +25,7 @@ Disassembly of section .text:
 .*: R_390_PC16DBL	test_rsi\+0x2
 # RX
 .*:	58 13 40 02 [	 ]*l	%r1,2\(%r3,%r4\)
+# RXE
 .*:	ed 10 30 02 00 1a [	 ]*adb	%f1,2\(%r3\)
 .*:	ed 24 50 03 10 1e [	 ]*madb	%f1,%f2,3\(%r4,%r5\)
 .*:	b2 33 20 01 [	 ]*ssch	1\(%r2\)
