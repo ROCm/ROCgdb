@@ -217,4 +217,14 @@ Disassembly of section .text:
 .*:	e6 12 30 40 00 7d [	 ]*vcsph	%v1,%v2,%v3,4
 # VRR-k
 .*:	e6 12 00 30 00 4e [	 ]*vcvbq	%v1,%v2,3
+# VRS-a
+.*:	e7 13 20 de 40 36 [	 ]*vlm	%v1,%v3,222\(%r2\),4
+.*:	e7 13 20 de 00 36 [	 ]*vlm	%v1,%v3,222\(%r2\)
+# VRS-b
+.*:	e7 13 20 de 40 22 [	 ]*vlvg	%v1,%r3,222\(%r2\),4
+.*:	e7 13 20 de 00 22 [	 ]*vlvgb	%v1,%r3,222\(%r2\)
+# VRS-c
+.*:	e7 13 20 de 40 21 [	 ]*vlgv	%r1,%v3,222\(%r2\),4
+# VRS-d
+.*:	e6 03 20 de 10 37 [	 ]*vlrlr	%v1,%r3,222\(%r2\)
 #?.*:	07 07 [	 ]*nopr	%r7

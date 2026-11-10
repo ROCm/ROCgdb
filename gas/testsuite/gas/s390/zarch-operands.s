@@ -118,3 +118,9 @@ foo:
 	.insn vrr_i,0xe60000000050,%r1,%v2,3		# vcvb %r1,%v2,3
 	.insn vrr_j,0xe6000000007d,%v1,%v2,%v3,4	# vcsph %v1,%v2,%v3,4
 	.insn vrr_k,0xe6000000004e,%v1,%v2,3		# vcvbq %v1,%v2,3
+	.insn vrs_a,0xe70000000036,%v1,222(%r2),%v3,4	# vlm %v1,%v3,222(%r2),4
+	.insn vrs_a,0xe70000000036,%v1,222(%r2),%v3	# vlm %v1,%v3,222(%r2)
+	.insn vrs_b,0xe70000000022,%v1,222(%r2),%r3,4	# vlvg %v1,%r3,222(%r2),4
+	.insn vrs_b,0xe70000000022,%v1,222(%r2),%r3	# vlvg %v1,%r3,222(%r2)
+	.insn vrs_c,0xe70000000021,%r1,222(%r2),%v3,4	# vlgv %r1,%v3,222(%r2),4
+	.insn vrs_d,0xe60000000037,%v1,222(%r2),%r3	# vlrlr %v1,%r3,222(%r2)

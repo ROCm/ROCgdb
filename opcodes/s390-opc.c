@@ -509,12 +509,16 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_VRX_VRRD     6, { V_8,D_20,X_12,B_16,0,0 }         /* e.g. vl    */
 #define INSTR_VRX_VRRDU    6, { V_8,D_20,X_12,B_16,U4_32,0 }     /* e.g. vlrep */
 #define INSTR_VRS_RVRDU    6, { R_8,V_12,D_20,B_16,U4_32,0 }     /* e.g. vlgv  */
+#define INSTR_VRS_RVRDU2   6, { R_8,D_20,B_16,V_12,U4_32,0 }     /* e.g. .insn vrs_c */
 #define INSTR_VRS_RVRD     6, { R_8,V_12,D_20,B_16,0,0 }         /* e.g. vlgvb */
 #define INSTR_VRS_VVRDU    6, { V_8,V_12,D_20,B_16,U4_32,0 }     /* e.g. verll */
+#define INSTR_VRS_VVRDU2   6, { V_8,D_20,B_16,V_12,U4_32,0 }     /* e.g. .insn vrs_a */
 #define INSTR_VRS_VVRD     6, { V_8,V_12,D_20,B_16,0,0 }         /* e.g. vlm   */
 #define INSTR_VRS_VRRDU    6, { V_8,R_12,D_20,B_16,U4_32,0 }     /* e.g. vlvg  */
+#define INSTR_VRS_VRRDU2   6, { V_8,D_20,B_16,R_12,U4_32,0 }     /* e.g. .insn vrs_b */
 #define INSTR_VRS_VRRD     6, { V_8,R_12,D_20,B_16,0,0 }         /* e.g. vlvgb */
 #define INSTR_VRS_RRDV     6, { V_32,R_12,D_20,B_16,0,0 }        /* e.g. vlrlr */
+#define INSTR_VRS_RRDV2    6, { V_32,D_20,B_16,R_12,0,0 }        /* e.g. .insn vrs_d */
 #define INSTR_VRR_VRR      6, { V_8,R_12,R_16,0,0,0 }            /* e.g. vlvgp */
 #define INSTR_VRR_VVV0U    6, { V_8,V_12,V_16,U4_32,0,0 }        /* e.g. vmrh  */
 #define INSTR_VRR_VVV0U0   6, { V_8,V_12,V_16,U4_24,0,0 }        /* e.g. vfaeb */
@@ -755,12 +759,16 @@ unused_s390_operands_static_asserts (void)
 #define MASK_VRX_VRRD     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRX_VRRDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRS_RVRDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRS_RVRDU2   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRS_RVRD     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRS_VVRDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRS_VVRDU2   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRS_VVRD     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRS_VRRDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRS_VRRDU2   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRS_VRRD     { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRS_RRDV     { 0xff, 0xf0, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRS_RRDV2    { 0xff, 0xf0, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRR_VRR      { 0xff, 0x00, 0x0f, 0xff, 0xf0, 0xff }
 #define MASK_VRR_VVV0U    { 0xff, 0x00, 0x0f, 0xff, 0x00, 0xff }
 #define MASK_VRR_VVV0U0   { 0xff, 0x00, 0x0f, 0x0f, 0xf0, 0xff }
@@ -894,8 +902,10 @@ const struct s390_opcode s390_opformats[] =
   { "vrr_j",OP8(0x00LL), MASK_VRR_VVV0U0,  INSTR_VRR_VVV0U0,  2, 12, 256, NULL },
   { "vrr_k",OP8(0x00LL), MASK_VRR_VV0U2,   INSTR_VRR_VV0U2,   2, 12, 256, NULL },
   { "vrs",  OP8(0x00LL), MASK_VRS_RVRDU,   INSTR_VRS_RVRDU,   2,  9, 256, NULL },
-  { "vrv",  OP8(0x00LL), MASK_VRV_VVXRDU,  INSTR_VRV_VVXRDU,  2,  9, 256, NULL },
-  { "vrx",  OP8(0x00LL), MASK_VRX_VRRDU,   INSTR_VRX_VRRDU,   2,  9, 256, NULL },
+  { "vrs_a",OP8(0x00LL), MASK_VRS_VVRDU2,  INSTR_VRS_VVRDU2,  2,  9, 256|1, NULL },
+  { "vrs_b",OP8(0x00LL), MASK_VRS_VRRDU2,  INSTR_VRS_VRRDU2,  2,  9, 256|1, NULL },
+  { "vrs_c",OP8(0x00LL), MASK_VRS_RVRDU2,  INSTR_VRS_RVRDU2,  2,  9, 256, NULL },
+  { "vrs_d",OP8(0x00LL), MASK_VRS_RRDV2,   INSTR_VRS_RRDV2,   2, 10, 256, NULL },
   { "vsi",  OP8(0x00LL), MASK_VSI_URDV,	   INSTR_VSI_URDV,    2, 10, 256, NULL },
 };
 
