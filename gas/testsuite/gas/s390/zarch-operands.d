@@ -43,8 +43,16 @@ Disassembly of section .text:
 .*:	ec 12 03 04 05 54 [	 ]*rnsbg	%r1,%r2,3,4,5
 # RIE-g
 .*:	ec 1f ff ff 00 42 [	 ]*lochi	%r1,-1,15
+# RIL
  *([\da-f]+):	c0 e5 00 00 00 00 [	 ]*brasl	%r14,\1 <foo\+0x\1>
 .*: R_390_PC32DBL	test_ril\+0x2
+.*:	c2 19 00 00 00 01 [	 ]*afi	%r1,1
+# RIL-a
+.*:	c2 19 ff ff ff ff [	 ]*afi	%r1,-1
+# RIL-b
+ *([\da-f]+):	c0 e5 00 00 00 00 [	 ]*brasl	%r14,\1 <foo\+0x\1>
+# RIL-c
+ *([\da-f]+):	c0 f4 00 00 00 00 [	 ]*jg	\1 <foo\+0x\1>
 .*:	eb 12 40 03 00 0d [	 ]*sllg	%r1,%r2,3\(%r4\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7

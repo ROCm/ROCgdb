@@ -16,6 +16,10 @@ foo:
 	.insn rie_e,0xec0000000044,%r1,.,%r3		# brxhg %r1,%r3,.
 	.insn rie_f,0xec0000000054,%r1,%r2,3,4,5	# rnsbg %r1,%r2,3,4,5
 	.insn rie_g,0xec0000000042,%r1,-1,15		# lochi %r1,-1,15
-	.insn ril,0xc00500000000,%r14,test_ril
+	.insn ril,0xc00500000000,%r14,test_ril		# brasl %r14,test_ril
+	.insn rilu,0xc20900000000,%r1,1			# afi %r1,1
+	.insn ril_a,0xc20900000000,%r1,-1		# afi %r1,-1
+	.insn ril_b,0xc00500000000,%r14,.		# brasl %r14,.
+	.insn ril_c,0xc00400000000,0b1111,.		# brcl 0b1111,.
 	.insn rse,0xeb000000000d,%r1,%r2,3(%r4)
 	.insn ssf,0xc80000000000,1(%r2),3(%r4),%r5
