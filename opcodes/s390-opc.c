@@ -907,6 +907,7 @@ const struct s390_opcode s390_opformats[] =
   { "vrs_c",OP8(0x00LL), MASK_VRS_RVRDU2,  INSTR_VRS_RVRDU2,  2,  9, 256, NULL },
   { "vrs_d",OP8(0x00LL), MASK_VRS_RRDV2,   INSTR_VRS_RRDV2,   2, 10, 256, NULL },
   { "vrv",  OP8(0x00LL), MASK_VRV_VVXRDU,  INSTR_VRV_VVXRDU,  2,  9, 256|1, NULL },
+  { "vrx",  OP8(0x00LL), MASK_VRX_VRRDU,   INSTR_VRX_VRRDU,   2,  9, 256|1, NULL },
   { "vsi",  OP8(0x00LL), MASK_VSI_URDV,	   INSTR_VSI_URDV,    2, 10, 256, NULL },
 };
 

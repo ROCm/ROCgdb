@@ -230,4 +230,7 @@ Disassembly of section .text:
 # VRV
 .*:	e7 13 20 de 40 13 [	 ]*vgef	%v1,222\(%v3,%r2\),4
 .*:	e7 13 20 de 00 13 [	 ]*vgef	%v1,222\(%v3,%r2\),0
+# VRX
+.*:	e7 13 20 de 40 06 [	 ]*vl	%v1,222\(%r3,%r2\),4
+.*:	e7 13 20 de 00 06 [	 ]*vl	%v1,222\(%r3,%r2\)
 #?.*:	07 07 [	 ]*nopr	%r7
