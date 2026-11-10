@@ -446,6 +446,14 @@ with the @samp{.insn} pseudo directive:
 0                  15
 @end verbatim
 
+@item I format: <insn> I1
+@verbatim
++---------+---------+
+| OpCode  |    I1   |
++---------+---------+
+0         8        15
+@end verbatim
+
 @item RI format: <insn> R1,I2
 @verbatim
 +---------+----+----+-------------------+

@@ -223,7 +223,7 @@ b234 stsch S_RD "store subchannel" g5 esa,zarch
 b246 stura RRE_RR "store using real address" g5 esa,zarch
 7f su RX_FRRD "subtract unnormalized (short)" g5 esa,zarch
 3f sur RR_FF "subtract unnormalized (short)" g5 esa,zarch
-0a svc RR_U0 "supervisor call" g5 esa,zarch
+0a svc I_U "supervisor call" g5 esa,zarch
 6f sw RX_FRRD "subtract unnormalized (long)" g5 esa,zarch
 2f swr RR_FF "subtract unnormalized (long)" g5 esa,zarch
 37 sxr RR_FEFE "subtract normalized (ext.)" g5 esa,zarch

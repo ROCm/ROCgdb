@@ -306,6 +306,7 @@ unused_s390_operands_static_asserts (void)
       The instruction format is: INSTR_SS_LLRDRD / MASK_SS_LLRDRD.  */
 
 #define INSTR_E            2, { 0,0,0,0,0,0 }                    /* e.g. pr    */
+#define INSTR_I_U          2, { U8_8,0,0,0,0,0 }                 /* e.g. svc   */
 #define INSTR_IE_UU        4, { U4_24,U4_28,0,0,0,0 }            /* e.g. niai  */
 #define INSTR_MII_UPP      6, { U4_8,J12_12,J24_24 }             /* e.g. bprp  */
 #define INSTR_RIE_RRP      6, { R_8,R_12,J16_16,0,0,0 }          /* e.g. brxhg */
@@ -408,7 +409,6 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RR_RR        2, { R_8,R_12,0,0,0,0 }               /* e.g. lr    */
 #define INSTR_RR_RER       2, { RE_8,R_12,0,0,0,0 }              /* e.g. dr    */
 #define INSTR_RR_RERE      2, { RE_8,RE_12,0,0,0,0 }             /* e.g. clcl  */
-#define INSTR_RR_U0        2, { U8_8, 0,0,0,0,0 }                /* e.g. svc   */
 #define INSTR_RR_UR        2, { U4_8,R_12,0,0,0,0 }              /* e.g. bcr   */
 #define INSTR_RRS_RRRDU    6, { R_8,R_12,U4_32,D_20,B_16 }       /* e.g. crb   */
 #define INSTR_RRS_RRRD0    6, { R_8,R_12,D_20,B_16,0 }           /* e.g. crbne */
@@ -541,6 +541,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_VSI_URDV     6, { V_32,D_20,B_16,U8_8,0,0 }        /* e.g. vlrl  */
 
 #define MASK_E            { 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
+#define MASK_I_U          { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_IE_UU        { 0xff, 0xff, 0xff, 0x00, 0x00, 0x00 }
 #define MASK_MII_UPP      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RIE_RRP      { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
@@ -643,7 +644,6 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RR_RR        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_RER       { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_RERE      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
-#define MASK_RR_U0        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RR_UR        { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RRS_RRRDU    { 0xff, 0x00, 0x00, 0x00, 0x0f, 0xff }
 #define MASK_RRS_RRRD0    { 0xff, 0x00, 0x00, 0x00, 0xff, 0xff }
@@ -782,6 +782,7 @@ const struct s390_opcode s390_opformats[] =
   {
   /*NAME,   OPCODE,      MASK,             INSTR,          MODE,CPU,FLAG, DESCRIPTION*/
   { "e",    OP8(0x00LL), MASK_E,	   INSTR_E,	      3,  0, 256, NULL },
+  { "i",    OP8(0x00LL), MASK_I_U,	   INSTR_I_U,	      3,  0, 256, NULL },
   { "ri",   OP8(0x00LL), MASK_RI_RI,	   INSTR_RI_RI,	      3,  0, 256, NULL },
   { "rie",  OP8(0x00LL), MASK_RIE_RRP,	   INSTR_RIE_RRP,     2,  2, 256, NULL },
   { "ril",  OP8(0x00LL), MASK_RIL_RP,	   INSTR_RIL_RP,      3,  2, 256, NULL },

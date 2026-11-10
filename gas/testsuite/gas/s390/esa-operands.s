@@ -1,6 +1,7 @@
 .text
 foo:
 	.insn e,0x0101					# pr
+	.insn i,0x0a00,1				# svc 1
 	.insn ri,0xa70a0000,%r1,-32767
 	.insn rr,0x1800,%r1,%r2
 	.insn rre,0xb25e0000,%r1,%r2
