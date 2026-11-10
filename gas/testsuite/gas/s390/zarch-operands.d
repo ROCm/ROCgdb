@@ -152,5 +152,6 @@ Disassembly of section .text:
 .*:	e1 15 10 6f 20 de [	 ]*pku	111\(%r1\),222\(22,%r2\)
 # SSE
 .*:	e5 0a 10 6f 20 de [	 ]*mvcrl	111\(%r1\),222\(%r2\)
-.*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
+# SSF
+.*:	c8 30 10 6f 20 de [	 ]*mvcos	111\(%r1\),222\(%r2\),%r3
 #?.*:	07 07 [	 ]*nopr	%r7
