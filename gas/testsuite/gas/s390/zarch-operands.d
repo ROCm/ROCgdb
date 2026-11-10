@@ -81,6 +81,8 @@ Disassembly of section .text:
 # RRF-e
 .*:	b3 ca 30 12 [	 ]*cgxr	%r1,3,%f2
 .*:	b3 a6 34 12 [	 ]*cxgbra	%f1,3,%r2,4
+# RRS
+.*:	ec 12 41 bc 30 f6 [	 ]*crb	%r1,%r2,3,444\(%r4\)
 .*:	eb 12 40 03 00 0d [	 ]*sllg	%r1,%r2,3\(%r4\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7
