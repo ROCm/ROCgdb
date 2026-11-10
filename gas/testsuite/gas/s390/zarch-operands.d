@@ -233,4 +233,6 @@ Disassembly of section .text:
 # VRX
 .*:	e7 13 20 de 40 06 [	 ]*vl	%v1,222\(%r3,%r2\),4
 .*:	e7 13 20 de 00 06 [	 ]*vl	%v1,222\(%r3,%r2\)
+# VSI
+.*:	e6 21 20 de 10 35 [	 ]*vlrl	%v1,222\(%r2\),33
 #?.*:	07 07 [	 ]*nopr	%r7
