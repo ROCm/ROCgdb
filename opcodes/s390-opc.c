@@ -780,6 +780,7 @@ unused_s390_operands_static_asserts (void)
 
 const struct s390_opcode s390_opformats[] =
   {
+  /*NAME,   OPCODE,      MASK,             INSTR,          MODE,CPU,FLAG, DESCRIPTION*/
   { "e",    OP8(0x00LL), MASK_E,	   INSTR_E,	      3,  0, 256, NULL },
   { "ri",   OP8(0x00LL), MASK_RI_RI,	   INSTR_RI_RI,	      3,  0, 256, NULL },
   { "rie",  OP8(0x00LL), MASK_RIE_RRP,	   INSTR_RIE_RRP,     3,  0, 256, NULL },
@@ -800,16 +801,16 @@ const struct s390_opcode s390_opformats[] =
   { "rxy",  OP8(0x00LL), MASK_RXY_RRRD,	   INSTR_RXY_RRRD,    3,  3, 256, NULL },
   { "s",    OP8(0x00LL), MASK_S_RD,	   INSTR_S_RD,	      3,  0, 256, NULL },
   { "si",   OP8(0x00LL), MASK_SI_URD,	   INSTR_SI_URD,      3,  0, 256, NULL },
-  { "siy",  OP8(0x00LL), MASK_SIY_URD,	   INSTR_SIY_URD,     3,  3, 256, NULL },
   { "sil",  OP8(0x00LL), MASK_SIL_RDI,     INSTR_SIL_RDI,     3,  6, 256, NULL },
+  { "siy",  OP8(0x00LL), MASK_SIY_URD,	   INSTR_SIY_URD,     3,  3, 256, NULL },
   { "ss",   OP8(0x00LL), MASK_SS_RRRDRD,   INSTR_SS_RRRDRD,   3,  0, 256, NULL },
   { "sse",  OP8(0x00LL), MASK_SSE_RDRD,	   INSTR_SSE_RDRD,    3,  0, 256, NULL },
   { "ssf",  OP8(0x00LL), MASK_SSF_RRDRD,   INSTR_SSF_RRDRD,   3,  0, 256, NULL },
-  { "vrv",  OP8(0x00LL), MASK_VRV_VVXRDU,  INSTR_VRV_VVXRDU,  3,  9, 256, NULL },
   { "vri",  OP8(0x00LL), MASK_VRI_VVUUU,   INSTR_VRI_VVUUU,   3,  9, 256, NULL },
-  { "vrx",  OP8(0x00LL), MASK_VRX_VRRDU,   INSTR_VRX_VRRDU,   3,  9, 256, NULL },
-  { "vrs",  OP8(0x00LL), MASK_VRS_RVRDU,   INSTR_VRS_RVRDU,   3,  9, 256, NULL },
   { "vrr",  OP8(0x00LL), MASK_VRR_VVV0UUU, INSTR_VRR_VVV0UUU, 3,  9, 256, NULL },
+  { "vrs",  OP8(0x00LL), MASK_VRS_RVRDU,   INSTR_VRS_RVRDU,   3,  9, 256, NULL },
+  { "vrv",  OP8(0x00LL), MASK_VRV_VVXRDU,  INSTR_VRV_VVXRDU,  3,  9, 256, NULL },
+  { "vrx",  OP8(0x00LL), MASK_VRX_VRRDU,   INSTR_VRX_VRRDU,   3,  9, 256, NULL },
   { "vsi",  OP8(0x00LL), MASK_VSI_URDV,	   INSTR_VSI_URDV,    3, 10, 256, NULL },
 };
 
