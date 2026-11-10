@@ -341,6 +341,7 @@ instruction formats:
 @item Vx @tab Vector register number for operand x.
 @item Ix @tab Signed immediate for operand x.
 @item Ux @tab Unsigned immediate for operand x.
+@item RIx @tab Signed PC-relative immediate for operand x.
 @end multitable
 @end display
 
@@ -389,18 +390,18 @@ with the @samp{.insn} pseudo directive:
 0         8    12   16                 31
 @end verbatim
 
-@item RIE format: <insn> R1,R3,I2
+@item RIE format: <insn> R1,R3,RI2
 @verbatim
 +---------+----+----+-------------------+---------+---------+
-| OpCode  | R1 | R3 |         I2        |/////////| OpCode  |
+| OpCode  | R1 | R3 |        RI2        |/////////| OpCode  |
 +---------+----+----+-------------------+---------+---------+
 0         8    12   16                  32        40       47
 @end verbatim
 
-@item RIL format: <insn> R1,I2
+@item RIL format: <insn> R1,RI2
 @verbatim
 +---------+----+----+---------------------------------------+
-| OpCode  | R1 |OpCd|                   I2                  |
+| OpCode  | R1 |OpCd|                  RI2                  |
 +---------+----+----+---------------------------------------+
 0         8    12   16                                     47
 @end verbatim
@@ -469,10 +470,10 @@ with the @samp{.insn} pseudo directive:
 0         8    12   16   20             32        40       47
 @end verbatim
 
-@item RSI format: <insn> R1,R3,I2
+@item RSI format: <insn> R1,R3,RI2
 @verbatim
 +---------+----+----+-------------------+
-| OpCode  | R1 | R3 |         I2        |
+| OpCode  | R1 | R3 |        RI2        |
 +---------+----+----+-------------------+
 0         8    12   16                 31
 @end verbatim
