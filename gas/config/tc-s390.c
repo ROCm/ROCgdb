@@ -2058,7 +2058,10 @@ s390_insn (int ignore ATTRIBUTE_UNUSED)
   else
     as_bad (_("second operand of .insn not a constant\n"));
 
-  if (strcmp (opformat->name, "e") != 0 && *input_line_pointer++ != ',')
+  if (opformat->operands[0] != '\0'
+      && !(skip_optargs_p (opformat->flags, opformat->operands)
+	   && is_end_of_stmt (*input_line_pointer))
+      && *input_line_pointer++ != ',')
     as_bad (_("missing comma after insn constant\n"));
 
   if ((s = strchr (input_line_pointer, '\n')) != NULL)
