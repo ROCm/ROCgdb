@@ -83,6 +83,13 @@ Disassembly of section .text:
 .*:	b3 a6 34 12 [	 ]*cxgbra	%f1,3,%r2,4
 # RRS
 .*:	ec 12 41 bc 30 f6 [	 ]*crb	%r1,%r2,3,444\(%r4\)
+# RS
+.*:	ba 12 31 4d [	 ]*cs	%r1,%r2,333\(%r3\)
+# RS-a
+.*:	86 13 20 de [	 ]*bxh	%r1,%r3,222\(%r2\)
+.*:	8f 10 20 de [	 ]*slda	%r1,222\(%r2\)
+# RS-b
+.*:	bd 13 20 de [	 ]*clm	%r1,3,222\(%r2\)
 .*:	eb 12 40 03 00 0d [	 ]*sllg	%r1,%r2,3\(%r4\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7

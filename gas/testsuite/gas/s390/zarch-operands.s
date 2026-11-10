@@ -40,5 +40,9 @@ foo:
 	.insn rrf_e,0xb3ca0000,%r1,3,%f2		# cgxr %r1,3,%f2
 	.insn rrf_e,0xb3a60000,%f1,3,%r2,4		# cxgbra %f1,3,%r2,4
 	.insn rrs,0xec00000000f6,%r1,%r2,3,444(%r4)	# crb %r1,%r2,3,444(%r4)
+	.insn rs,0xba000000,%r1,%r2,333(%r3)		# cs %r1,%r2,333(%r3)
+	.insn rs_a,0x86000000,%r1,222(%r2),%r3		# bxh %r1,%r3,222(%r2)
+	.insn rs_a,0x8f000000,%r1,222(%r2)		# slda %r1,222(%r2)
+	.insn rs_b,0xbd000000,%r1,222(%r2),3		# clm %r1,3,222(%r2)
 	.insn rse,0xeb000000000d,%r1,%r2,3(%r4)
 	.insn ssf,0xc80000000000,1(%r2),3(%r4),%r5

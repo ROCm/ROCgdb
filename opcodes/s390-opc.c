@@ -438,8 +438,10 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RS_R0RD      4, { R_8,D_20,B_16,0,0,0 }            /* e.g. sll   */
 #define INSTR_RS_RE0RD     4, { RE_8,D_20,B_16,0,0,0 }           /* e.g. slda  */
 #define INSTR_RS_RRRD      4, { R_8,R_12,D_20,B_16,0,0 }         /* e.g. cs    */
+#define INSTR_RS_RRRD2     4, { R_8,D_20,B_16,R_12,0,0 }         /* e.g. .insn rs_a */
 #define INSTR_RS_RERERD    4, { RE_8,RE_12,D_20,B_16,0,0 }       /* e.g. cds   */
 #define INSTR_RS_RURD      4, { R_8,U4_12,D_20,B_16,0,0 }        /* e.g. icm   */
+#define INSTR_RS_RURD2     4, { R_8,D_20,B_16,U4_12,0,0 }        /* e.g. .insn rs_b */
 #define INSTR_RXE_FRRD     6, { F_8,D_20,X_12,B_16,0,0 }         /* e.g. adb   */
 #define INSTR_RXE_FERRD    6, { FE_8,D_20,X_12,B_16,0,0 }        /* e.g. lxdb  */
 #define INSTR_RXE_RRRD     6, { R_8,D_20,X_12,B_16,0,0 }         /* e.g. lg    */
@@ -672,8 +674,10 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RS_R0RD      { 0xff, 0x0f, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_RE0RD     { 0xff, 0x0f, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_RRRD      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
+#define MASK_RS_RRRD2     { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_RERERD    { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_RURD      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
+#define MASK_RS_RURD2     { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RSY_RRRD     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RSY_RERERD   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RSY_RURD     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
@@ -826,6 +830,8 @@ const struct s390_opcode s390_opformats[] =
   { "rrf_e",OP8(0x00LL), MASK_RRF_UURR,	   INSTR_RRF_UURR,    3,  0, 256|1, NULL },
   { "rrs",  OP8(0x00LL), MASK_RRS_RRRDU,   INSTR_RRS_RRRDU,   2,  6, 256, NULL },
   { "rs",   OP8(0x00LL), MASK_RS_RRRD,	   INSTR_RS_RRRD,     3,  0, 256, NULL },
+  { "rs_a", OP8(0x00LL), MASK_RS_RRRD2,	   INSTR_RS_RRRD2,    3,  0, 256|1, NULL },
+  { "rs_b", OP8(0x00LL), MASK_RS_RURD2,	   INSTR_RS_RURD2,    3,  0, 256, NULL },
   { "rse",  OP8(0x00LL), MASK_RSE_RRRD,	   INSTR_RSE_RRRD,    3,  0, 256, NULL },
   { "rsi",  OP8(0x00LL), MASK_RSI_RRP,	   INSTR_RSI_RRP,     3,  0, 256, NULL },
   { "rsy",  OP8(0x00LL), MASK_RSY_RRRD,	   INSTR_RSY_RRRD,    3,  3, 256, NULL },
