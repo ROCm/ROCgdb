@@ -24,5 +24,6 @@ foo:
 	.insn ris,0xec00000000fe,%r1,-2,3,444(%r4)	# cib %r1,-2,3,444(%r4)
 	.insn rr,0x1a00,%r1,%r2				# ar %r1,%r2
 	.insn rr,0x0400,%r1				# spm %r1
+	.insn rrd,0xb32e0000,%f1,%f2,%f3		# maer %f1,%f3,%f2
 	.insn rse,0xeb000000000d,%r1,%r2,3(%r4)
 	.insn ssf,0xc80000000000,1(%r2),3(%r4),%r5

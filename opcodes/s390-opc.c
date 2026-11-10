@@ -343,6 +343,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RIS_R0RDI    6, { R_8,I8_32,D_20,B_16,0,0 }        /* e.g. cibne */
 #define INSTR_RIS_RURDU    6, { R_8,U8_32,U4_12,D_20,B_16,0 }    /* e.g. clib  */
 #define INSTR_RIS_R0RDU    6, { R_8,U8_32,D_20,B_16,0,0 }        /* e.g. clibne*/
+#define INSTR_RRD_R0RR     4, { R_16,R_28,R_24,0,0,0 }           /* e.g. .insn rrd */
 #define INSTR_RRD_F0FF     4, { F_16,F_24,F_28,0,0,0 }           /* e.g. madbr */
 #define INSTR_RRD_FE0FF    4, { FE_16,F_24,F_28,0,0,0 }          /* e.g. myr   */
 #define INSTR_RRE_00       4, { 0,0,0,0,0,0 }                    /* e.g. palb  */
@@ -581,6 +582,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RIS_R0RDI    { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIS_RURDU    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RIS_R0RDU    { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
+#define MASK_RRD_R0RR     { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRD_F0FF     { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRD_FE0FF    { 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00 }
 #define MASK_RRE_00       { 0xff, 0xff, 0xff, 0xff, 0x00, 0x00 }
@@ -810,6 +812,7 @@ const struct s390_opcode s390_opformats[] =
   { "ril_c",OP8(0x00LL), MASK_RIL_UP,	   INSTR_RIL_UP,      3,  2, 256, NULL },
   { "ris",  OP8(0x00LL), MASK_RIS_RURDI,   INSTR_RIS_RURDI,   2,  6, 256, NULL },
   { "rr",   OP8(0x00LL), MASK_RR_RR,	   INSTR_RR_RR,       3,  0, 256|1, NULL },
+  { "rrd",  OP8(0x00LL), MASK_RRD_R0RR,	   INSTR_RRD_R0RR,    3,  0, 256, NULL },
   { "rre",  OP8(0x00LL), MASK_RRE_RR,	   INSTR_RRE_RR,      3,  0, 256, NULL },
   { "rrf",  OP8(0x00LL), MASK_RRF_RURR,	   INSTR_RRF_RURR,    3,  0, 256, NULL },
   { "rrs",  OP8(0x00LL), MASK_RRS_RRRDU,   INSTR_RRS_RRRDU,   2,  6, 256, NULL },
