@@ -131,5 +131,8 @@ Disassembly of section .text:
 .*:	93 00 10 6f [	 ]*ts	111\(%r1\)
 # SIL
 .*:	e5 44 10 6f 56 ce [	 ]*mvhhi	111\(%r1\),22222
+# SIY
+.*:	eb 16 1b 67 02 7a [	 ]*agsi	11111\(%r1\),22
+.*:	eb 00 1b 67 02 71 [	 ]*lpswey	11111\(%r1\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7
