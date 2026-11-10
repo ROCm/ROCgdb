@@ -11,7 +11,7 @@ foo:
 	.insn rx,0x58000000,%r1,2(%r3,%r4)		# l %r1,2(%r3,%r4)
 	.insn rxe,0xed000000001a,%f1,2(%r3)		# adb %f1,2(%r3)
 	.insn rxf,0xed000000001e,%f1,%f2,3(%r4,%r5)	# madb %f1,%f2,3(%r4,%r5)
-	.insn s,0xb2330000,1(%r2)
+	.insn s,0xb2330000,1(%r2)			# ssch 1(%r2)
 	.insn si,0x92000000,1(%r2),3
 	.insn ss,0xd20000000000,1(2,%r3),4(%r5),6
 	.insn sse,0xe50100000000,1(%r2),3(%r4)

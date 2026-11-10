@@ -636,7 +636,7 @@ with the @samp{.insn} pseudo directive:
 0         8    12   16   20             32        40       47
 @end verbatim
 
-@item S format: <insn> D2(B2)
+@item S format: <insn> [D2(B2)]
 @verbatim
 +-------------------+----+--------------+
 |      OpCode       | B2 |      D2      |
