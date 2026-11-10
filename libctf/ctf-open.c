@@ -106,9 +106,16 @@ get_ctt_size_v1 (const ctf_dict_t *fp, const ctf_type_t *tp,
 		 ssize_t *sizep, ssize_t *incrementp)
 {
   ctf_type_v1_t *t1p = (ctf_type_v1_t *) tp;
+  size_t lsize = 0;
+
+  /* The small form does not have lsize fields at all: only evaluate the
+     macro once we know this record really is in large form, or it reads
+     past the end of the record.  */
+  if (t1p->ctt_size == CTF_LSIZE_SENT_V1)
+    lsize = CTF_TYPE_LSIZE (t1p);
 
   return (get_ctt_size_common (fp, tp, sizep, incrementp,
-			       CTF_TYPE_LSIZE (t1p), t1p->ctt_size,
+			       lsize, t1p->ctt_size,
 			       sizeof (ctf_type_v1_t), sizeof (ctf_stype_v1_t),
 			       CTF_LSIZE_SENT_V1));
 }
@@ -120,9 +127,13 @@ get_ctt_size_v2_unconverted (const ctf_dict_t *fp, const ctf_type_t *tp,
 			     ssize_t *sizep, ssize_t *incrementp)
 {
   ctf_type_v1_t *t1p = (ctf_type_v1_t *) tp;
+  size_t lsize = 0;
+
+  if (t1p->ctt_size == CTF_LSIZE_SENT_V1)
+    lsize = CTF_TYPE_LSIZE (t1p);
 
   return (get_ctt_size_common (fp, tp, sizep, incrementp,
-			       CTF_TYPE_LSIZE (t1p), t1p->ctt_size,
+			       lsize, t1p->ctt_size,
 			       sizeof (ctf_type_t), sizeof (ctf_stype_t),
 			       CTF_LSIZE_SENT));
 }
@@ -131,8 +142,16 @@ static ssize_t
 get_ctt_size_v2 (const ctf_dict_t *fp, const ctf_type_t *tp,
 		 ssize_t *sizep, ssize_t *incrementp)
 {
+  size_t lsize = 0;
+
+  /* The small form does not have lsize fields at all: only evaluate the
+     macro once we know this record really is in large form, or it reads
+     past the end of the record.  */
+  if (tp->ctt_size == CTF_LSIZE_SENT)
+    lsize = CTF_TYPE_LSIZE (tp);
+
   return (get_ctt_size_common (fp, tp, sizep, incrementp,
-			       CTF_TYPE_LSIZE (tp), tp->ctt_size,
+			       lsize, tp->ctt_size,
 			       sizeof (ctf_type_t), sizeof (ctf_stype_t),
 			       CTF_LSIZE_SENT));
 }
@@ -742,9 +761,25 @@ init_static_types_internal (ctf_dict_t *fp, ctf_header_t *cth,
 
   for (tp = tbuf; tp < tend; typemax++)
     {
-      unsigned short kind = LCTF_INFO_KIND (fp, tp->ctt_info);
-      unsigned long vlen = LCTF_INFO_VLEN (fp, tp->ctt_info);
+      unsigned short kind;
+      unsigned long vlen;
       ssize_t size, increment, vbytes;
+
+      /* Make sure the record header itself is entirely within the section
+	 before touching any of its fields, and the large-form record's
+	 extended fields too.  */
+
+      if (_libctf_unlikely_ ((uintptr_t) tend - (uintptr_t) tp
+			     < sizeof (ctf_stype_t)))
+	return ECTF_CORRUPT;
+
+      kind = LCTF_INFO_KIND (fp, tp->ctt_info);
+      vlen = LCTF_INFO_VLEN (fp, tp->ctt_info);
+
+      if (_libctf_unlikely_ (tp->ctt_size == CTF_LSIZE_SENT
+			     && (uintptr_t) tend - (uintptr_t) tp
+				< sizeof (ctf_type_t)))
+	return ECTF_CORRUPT;
 
       (void) ctf_get_ctt_size (fp, tp, &size, &increment);
       vbytes = LCTF_VBYTES (fp, kind, size, vlen);
@@ -1155,13 +1190,24 @@ static int
 flip_types (ctf_dict_t *fp, void *start, size_t len, int to_foreign)
 {
   ctf_type_t *t = start;
+  const uintptr_t end = ((uintptr_t) start) + len;
 
-  while ((uintptr_t) t < ((uintptr_t) start) + len)
+  while ((uintptr_t) t < end)
     {
       uint32_t kind;
       size_t size;
       uint32_t vlen;
       size_t vbytes;
+
+      /* Every type record starts with ctf_stype_t; make sure it is
+	 entirely within the section before touching any fields.  */
+
+      if (_libctf_unlikely_ (end - (uintptr_t) t < sizeof (ctf_stype_t)))
+	{
+	  ctf_err_warn (fp, 0, ECTF_CORRUPT,
+			_("truncated CTF type record"));
+	  return ECTF_CORRUPT;
+	}
 
       if (to_foreign)
 	{
@@ -1185,6 +1231,13 @@ flip_types (ctf_dict_t *fp, void *start, size_t len, int to_foreign)
 
       if (_libctf_unlikely_ (size == CTF_LSIZE_SENT))
 	{
+	  if (_libctf_unlikely_ (end - (uintptr_t) t < sizeof (ctf_type_t)))
+	    {
+	      ctf_err_warn (fp, 0, ECTF_CORRUPT,
+			    _("truncated CTF type record"));
+	      return ECTF_CORRUPT;
+	    }
+
 	  if (to_foreign)
 	    size = CTF_TYPE_LSIZE (t);
 
@@ -1198,6 +1251,18 @@ flip_types (ctf_dict_t *fp, void *start, size_t len, int to_foreign)
 	}
       else
 	t = (ctf_type_t *) ((uintptr_t) t + sizeof (ctf_stype_t));
+
+      /* Shuffle vbytes along, but only if the variable-length part is
+	 entirely within the section as well: a malformed record that runs
+	 off the end of the section must be reported, not swapped past the
+	 end of the buffer.  */
+
+      if (_libctf_unlikely_ (end - (uintptr_t) t < vbytes))
+	{
+	  ctf_err_warn (fp, 0, ECTF_CORRUPT,
+			_("truncated CTF type record"));
+	  return ECTF_CORRUPT;
+	}
 
       switch (kind)
 	{
