@@ -113,5 +113,7 @@ Disassembly of section .text:
 # RXE
 .*:	ed 13 20 de 00 25 [	 ]*lxd	%f1,222\(%r3,%r2\)
 .*:	e7 13 20 de 30 27 [	 ]*lcbb	%r1,222\(%r3,%r2\),3
+# RXF
+.*:	ed 34 20 de 10 3e [	 ]*mad	%f1,%f3,222\(%r4,%r2\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7
