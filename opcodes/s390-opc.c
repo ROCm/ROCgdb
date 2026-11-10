@@ -493,6 +493,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_VRI_V0UU     6, { V_8,U8_16,U8_24,0,0,0 }          /* e.g. vgmb  */
 #define INSTR_VRI_V0UU2    6, { V_8,U16_16,U4_32,0,0,0 }         /* e.g. vlip  */
 #define INSTR_VRI_VVUU     6, { V_8,V_12,U16_16,U4_32,0,0 }      /* e.g. vrep  */
+#define INSTR_VRI_VVUU2    6, { V_8,U16_16,V_12,U4_32,0,0 }      /* e.g. .insn vri_c */
 #define INSTR_VRI_VVU      6, { V_8,V_12,U16_16,0,0,0 }          /* e.g. vrepb */
 #define INSTR_VRI_VVU2     6, { V_8,V_12,U12_16,0,0,0 }          /* e.g. vftcidb */
 #define INSTR_VRI_V0IU     6, { V_8,I16_16,U4_32,0,0,0 }         /* e.g. vrepi */
@@ -738,6 +739,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_VRI_V0UU     { 0xff, 0x0f, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRI_V0UU2    { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRI_VVUU     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_VRI_VVUU2    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_VRI_VVU      { 0xff, 0x00, 0x00, 0x00, 0xf0, 0xff }
 #define MASK_VRI_VVU2     { 0xff, 0x00, 0x00, 0x0f, 0xf0, 0xff }
 #define MASK_VRI_V0IU     { 0xff, 0x0f, 0x00, 0x00, 0x00, 0xff }
@@ -867,6 +869,18 @@ const struct s390_opcode s390_opformats[] =
   { "sse",  OP8(0x00LL), MASK_SSE_RDRD,	   INSTR_SSE_RDRD,    3,  0, 256, NULL },
   { "ssf",  OP8(0x00LL), MASK_SSF_RRDRD,   INSTR_SSF_RRDRD,   2,  4, 256, NULL },
   { "vri",  OP8(0x00LL), MASK_VRI_VVUUU,   INSTR_VRI_VVUUU,   2,  9, 256, NULL },
+  { "vri_a",OP8(0x00LL), MASK_VRI_V0IU,	   INSTR_VRI_V0IU,    2,  9, 256|1, NULL },
+  { "vri_b",OP8(0x00LL), MASK_VRI_V0UUU,   INSTR_VRI_V0UUU,   2,  9, 256, NULL },
+  { "vri_c",OP8(0x00LL), MASK_VRI_VVUU2,   INSTR_VRI_VVUU2,   2,  9, 256, NULL },
+  { "vri_d",OP8(0x00LL), MASK_VRI_VVV0UU,  INSTR_VRI_VVV0UU,  2,  9, 256|1, NULL },
+  { "vri_e",OP8(0x00LL), MASK_VRI_VVUUU,   INSTR_VRI_VVUUU,   2,  9, 256, NULL },
+  { "vri_f",OP8(0x00LL), MASK_VRI_VVV0UU2, INSTR_VRI_VVV0UU2, 2, 10, 256, NULL },
+  { "vri_g",OP8(0x00LL), MASK_VRI_VVUUU2,  INSTR_VRI_VVUUU2,  2, 10, 256, NULL },
+  { "vri_h",OP8(0x00LL), MASK_VRI_V0UU2,   INSTR_VRI_V0UU2,   2, 10, 256, NULL },
+  { "vri_i",OP8(0x00LL), MASK_VRI_VR0UU,   INSTR_VRI_VR0UU,   2, 10, 256, NULL },
+  { "vri_j",OP8(0x00LL), MASK_VRI_VV0UU,   INSTR_VRI_VV0UU,   2, 13, 256, NULL },
+  { "vri_k",OP8(0x00LL), MASK_VRI_VVV0UV,  INSTR_VRI_VVV0UV,  2, 13, 256, NULL },
+  { "vri_l",OP8(0x00LL), MASK_VRI_0VVU,	   INSTR_VRI_0VVU,    2, 13, 256, NULL },
   { "vrr",  OP8(0x00LL), MASK_VRR_VVV0UUU, INSTR_VRR_VVV0UUU, 2,  9, 256, NULL },
   { "vrs",  OP8(0x00LL), MASK_VRS_RVRDU,   INSTR_VRS_RVRDU,   2,  9, 256, NULL },
   { "vrv",  OP8(0x00LL), MASK_VRV_VVXRDU,  INSTR_VRV_VVXRDU,  2,  9, 256, NULL },

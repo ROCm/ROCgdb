@@ -78,3 +78,17 @@ foo:
 	.insn ss_f,0xe10000000000,111(%r1),222(22,%r2)	# pku 111(%r1),222(22,%r2)
 	.insn sse,0xe50a00000000,111(%r1),222(%r2)	# mvcrl 111(%r1),222(%r2)
 	.insn ssf,0xc80000000000,111(%r1),222(%r2),%r3	# mvcos 111(%r1),222(%r2),%r3
+	.insn vri_a,0xe70000000044,%v1,22222		# vgbm %v1,22222
+	.insn vri_a,0xe70000000040,%v1,22222,3		# vleib %v1,22222,3
+	.insn vri_b,0xe70000000046,%v1,22,33,4		# vgm %v1,22,33,4
+	.insn vri_c,0xe7000000004d,%v1,22222,%v3,4	# vrep %v1,%v3,22222,4
+	.insn vri_d,0xe70000000086,%v1,%v2,%v3,44	# vsld %v1,%v2,%v3,44
+	.insn vri_d,0xe70000000072,%v1,%v2,%v3,44,5	# verim %v1,%v2,%v3,44,5
+	.insn vri_e,0xe7000000004a,%v1,%v2,3333,4,5	# vftci %v1,%v2,3333,4,5
+	.insn vri_f,0xe60000000071,%v1,%v2,%v3,44,5	# vap %v1,%v2,%v3,44,5
+	.insn vri_g,0xe6000000005b,%v1,%v2,33,44,5	# vpsop %v1,%v2,33,44,5
+	.insn vri_h,0xe60000000049,%v1,22222,3		# vlip %v1,22222,3
+	.insn vri_i,0xe6000000005a,%v1,%r2,33,4		# vcvdg %v1,%r2,33,4
+	.insn vri_j,0xe6000000004a,%v1,%v2,33,4		# vcvdq %v1,%v2,33,4
+	.insn vri_k,0xe70000000088,%v1,%v2,%v3,%v4,55	# veval %v1,%v2,%v3,%v4,55
+	.insn vri_l,0xe6000000007f,%v1,%v2,33333	# vtz %v1,%v2,33333
