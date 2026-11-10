@@ -426,6 +426,7 @@ a @emph{Programming Note} of the Principles of Operation manual:
   @end itemize
 @item RS (@code{rs}; not RS-a/b): @code{R1,R3,D2(B2)}
 @item RSE (@code{rse}): @code{R1,R3,D2(B2)}
+@item RSI (@code{rsi}): @code{R1,R3,RI2}
 @end itemize
 
 An instruction is two, four, or six bytes in length and must be aligned

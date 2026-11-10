@@ -92,5 +92,7 @@ Disassembly of section .text:
 .*:	bd 13 20 de [	 ]*clm	%r1,3,222\(%r2\)
 # RSE
 .*:	eb 13 20 de 00 0d [	 ]*sllg	%r1,%r3,222\(%r2\)
+# RSI
+ *([\da-f]+):	84 13 00 00 [	 ]*brxh	%r1,%r3,\1 <foo\+0x\1>
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7

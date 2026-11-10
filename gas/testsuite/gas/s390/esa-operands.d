@@ -20,6 +20,7 @@ Disassembly of section .text:
 .*:	b3 5b 34 12 [	 ]*didbr	%f1,%f3,%f2,4
 # RS
 .*:	ba 12 40 03 [	 ]*cs	%r1,%r2,3\(%r4\)
+# RSI
  *([\da-f]+):	84 12 00 00 [	 ]*brxh	%r1,%r2,\1 <foo\+0x\1>
 .*: R_390_PC16DBL	test_rsi\+0x2
 .*:	58 13 40 02 [	 ]*l	%r1,2\(%r3,%r4\)

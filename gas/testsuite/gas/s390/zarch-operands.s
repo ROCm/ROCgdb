@@ -45,4 +45,5 @@ foo:
 	.insn rs_a,0x8f000000,%r1,222(%r2)		# slda %r1,222(%r2)
 	.insn rs_b,0xbd000000,%r1,222(%r2),3		# clm %r1,3,222(%r2)
 	.insn rse,0xeb000000000d,%r1,%r3,222(%r2)	# sllg %r1,%r3,222(%r2)
+	.insn rsi,0x84000000,%r1,%r3,.			# brxh %r1,%r3,.
 	.insn ssf,0xc80000000000,1(%r2),3(%r4),%r5
