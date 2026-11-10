@@ -53,6 +53,8 @@ Disassembly of section .text:
  *([\da-f]+):	c0 e5 00 00 00 00 [	 ]*brasl	%r14,\1 <foo\+0x\1>
 # RIL-c
  *([\da-f]+):	c0 f4 00 00 00 00 [	 ]*jg	\1 <foo\+0x\1>
+# RIS
+.*:	ec 13 41 bc fe fe [	 ]*cib	%r1,-2,3,444\(%r4\)
 .*:	eb 12 40 03 00 0d [	 ]*sllg	%r1,%r2,3\(%r4\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7
