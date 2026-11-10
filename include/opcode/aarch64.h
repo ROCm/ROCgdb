@@ -79,6 +79,8 @@ enum aarch64_feature_bit {
   AARCH64_FEATURE_SME,
   /* Atomic 64-byte load/store.  */
   AARCH64_FEATURE_LS64,
+  /* Atomic 64-byte load/store consistency.  */
+  AARCH64_FEATURE_LSC64B,
   /* v8.3 Pointer Authentication.  */
   AARCH64_FEATURE_PAUTH,
   /* Pointer Authentication LR signing extension.  */
@@ -631,7 +633,7 @@ enum aarch64_opnd
   AARCH64_OPND_Rt,	/* Integer register used in ld/st instructions.  */
   AARCH64_OPND_Rt2,	/* Integer register used in ld/st pair instructions.  */
   AARCH64_OPND_X16,	/* Integer register x16 in chkfeat instruction.  */
-  AARCH64_OPND_Rt_LS64,	/* Integer register used in LS64 instructions.  */
+  AARCH64_OPND_Rt_LS64,	/* Integer register used in LS64/LSC64B instructions.  */
   AARCH64_OPND_Rt_SP,	/* Integer Rt or SP used in STG instructions.  */
   AARCH64_OPND_Rs,	/* Integer register used in ld/st exclusive.  */
   AARCH64_OPND_Ra,	/* Integer register used in ddp_3src instructions.  */

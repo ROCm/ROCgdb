@@ -249,9 +249,11 @@ automatically cause those extensions to be disabled.
 @item @code{lor} @tab
  @tab Enable Limited Ordering Regions extensions.
 @item @code{ls64} @tab
- @tab Enable the 64 Byte Loads/Stores extensions.
+ @tab Enable the 64 Byte Load/Store instructions.
 @item @code{lscp} @tab
  @tab Enable the load acquire and store release pair extension.
+@item @code{lsc64b} @tab @code{lscp}
+ @tab Enable the 64 Byte Load/Store Consistency instructions.
 @item @code{lse} @tab
  @tab Enable Large System extensions.
 @item @code{lse128} @tab @code{lse}

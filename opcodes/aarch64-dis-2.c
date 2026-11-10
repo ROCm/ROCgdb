@@ -9415,10 +9415,20 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                                 }
                                                               else
                                                                 {
-                                                                  /* 33222222222211111111110000000000
-                                                                     10987654321098765432109876543210
-                                                                     x1111000011xxxxx101000xxxxxxxxxx.  */
-                                                                  return A64_OPID_7860a000_rcwsswpl_Rs_Rt_ADDR_SIMPLE;
+                                                                  if (((word >> 31) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         01111000011xxxxx101000xxxxxxxxxx.  */
+                                                                      return A64_OPID_7860a000_rcwsswpl_Rs_Rt_ADDR_SIMPLE;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         11111000011xxxxx101000xxxxxxxxxx.  */
+                                                                      return A64_OPID_f860a000_stl64bv0_Rs_Rt_LS64_ADDR_SIMPLE;
+                                                                    }
                                                                 }
                                                             }
                                                           else
@@ -9745,10 +9755,20 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                                 }
                                                               else
                                                                 {
-                                                                  /* 33222222222211111111110000000000
-                                                                     10987654321098765432109876543210
-                                                                     x1111000011xxxxx100100xxxxxxxxxx.  */
-                                                                  return A64_OPID_78609000_rcwsclrl_Rs_Rt_ADDR_SIMPLE;
+                                                                  if (((word >> 31) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         01111000011xxxxx100100xxxxxxxxxx.  */
+                                                                      return A64_OPID_78609000_rcwsclrl_Rs_Rt_ADDR_SIMPLE;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         11111000011xxxxx100100xxxxxxxxxx.  */
+                                                                      return A64_OPID_f87f9000_stl64b_Rt_LS64_ADDR_SIMPLE;
+                                                                    }
                                                                 }
                                                             }
                                                           else
@@ -9892,10 +9912,20 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                     }
                                                   else
                                                     {
-                                                      /* 33222222222211111111110000000000
-                                                         10987654321098765432109876543210
-                                                         xx111000xx1xxxxx110100xxxxxxxxxx.  */
-                                                      return A64_OPID_f83fd000_ld64b_Rt_LS64_ADDR_SIMPLE;
+                                                      if (((word >> 23) & 0x1) == 0)
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             xx1110000x1xxxxx110100xxxxxxxxxx.  */
+                                                          return A64_OPID_f83fd000_ld64b_Rt_LS64_ADDR_SIMPLE;
+                                                        }
+                                                      else
+                                                        {
+                                                          /* 33222222222211111111110000000000
+                                                             10987654321098765432109876543210
+                                                             xx1110001x1xxxxx110100xxxxxxxxxx.  */
+                                                          return A64_OPID_f8bfd000_lda64b_Rt_LS64_ADDR_SIMPLE;
+                                                        }
                                                     }
                                                 }
                                             }
@@ -10082,10 +10112,20 @@ aarch64_opcode_lookup_1 (uint32_t word)
                                                                 }
                                                               else
                                                                 {
-                                                                  /* 33222222222211111111110000000000
-                                                                     10987654321098765432109876543210
-                                                                     x1111000011xxxxx101100xxxxxxxxxx.  */
-                                                                  return A64_OPID_7860b000_rcwssetl_Rs_Rt_ADDR_SIMPLE;
+                                                                  if (((word >> 31) & 0x1) == 0)
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         01111000011xxxxx101100xxxxxxxxxx.  */
+                                                                      return A64_OPID_7860b000_rcwssetl_Rs_Rt_ADDR_SIMPLE;
+                                                                    }
+                                                                  else
+                                                                    {
+                                                                      /* 33222222222211111111110000000000
+                                                                         10987654321098765432109876543210
+                                                                         11111000011xxxxx101100xxxxxxxxxx.  */
+                                                                      return A64_OPID_f860b000_stl64bv_Rs_Rt_LS64_ADDR_SIMPLE;
+                                                                    }
                                                                 }
                                                             }
                                                           else

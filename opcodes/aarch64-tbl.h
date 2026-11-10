@@ -2998,6 +2998,8 @@ static const aarch64_feature_set aarch64_feature_v8r =
   AARCH64_FEATURE (V8R);
 static const aarch64_feature_set aarch64_feature_ls64 =
   AARCH64_FEATURE (LS64);
+static const aarch64_feature_set aarch64_feature_lsc64b =
+  AARCH64_FEATURES (2, LSC64B, LS64);
 static const aarch64_feature_set aarch64_feature_lscp =
   AARCH64_FEATURE (LSCP);
 static const aarch64_feature_set aarch64_feature_flagm =
@@ -3219,6 +3221,7 @@ static const aarch64_feature_set aarch64_feature_tev =
 #define I8MM      &aarch64_feature_i8mm
 #define ARMV8R	  &aarch64_feature_v8r
 #define LS64	  &aarch64_feature_ls64
+#define LSC64B	  &aarch64_feature_lsc64b
 #define LSCP	  &aarch64_feature_lscp
 #define FLAGM	  &aarch64_feature_flagm
 #define XS	  &aarch64_feature_xs
@@ -3486,6 +3489,8 @@ static const aarch64_feature_set aarch64_feature_tev =
   { NAME, OPCODE, MASK, CLASS, 0, WFXT, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define _LS64_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, 0, LS64, OPS, QUALS, FLAGS, 0, 0, NULL }
+#define _LSC64B_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
+  { NAME, OPCODE, MASK, CLASS, 0, LSC64B, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define _LSCP_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
   { NAME, OPCODE, MASK, CLASS, 0, LSCP, OPS, QUALS, FLAGS, 0, 0, NULL }
 #define FLAGM_INSN(NAME,OPCODE,MASK,CLASS,OPS,QUALS,FLAGS) \
@@ -4882,6 +4887,11 @@ const struct aarch64_opcode aarch64_opcode_table[] =
   _LS64_INSN ("st64b",   0xf83f9000, 0xfffffc00, lse_atomic, OP2 (Rt_LS64, ADDR_SIMPLE), QL_X1NIL, 0),
   _LS64_INSN ("st64bv",  0xf820b000, 0xffe0fc00, lse_atomic, OP3 (Rs, Rt_LS64, ADDR_SIMPLE), QL_X2NIL, 0),
   _LS64_INSN ("st64bv0", 0xf820a000, 0xffe0fc00, lse_atomic, OP3 (Rs, Rt_LS64, ADDR_SIMPLE), QL_X2NIL, 0),
+  /* Atomic 64-byte load/store consistency in Armv9a.  */
+  _LSC64B_INSN ("lda64b",   0xf8bfd000, 0xfffffc00, lse_atomic, OP2 (Rt_LS64, ADDR_SIMPLE), QL_X1NIL, 0),
+  _LSC64B_INSN ("stl64b",   0xf87f9000, 0xfffffc00, lse_atomic, OP2 (Rt_LS64, ADDR_SIMPLE), QL_X1NIL, 0),
+  _LSC64B_INSN ("stl64bv",  0xf860b000, 0xffe0fc00, lse_atomic, OP3 (Rs, Rt_LS64, ADDR_SIMPLE), QL_X2NIL, 0),
+  _LSC64B_INSN ("stl64bv0", 0xf860a000, 0xffe0fc00, lse_atomic, OP3 (Rs, Rt_LS64, ADDR_SIMPLE), QL_X2NIL, 0),
   /* Logical (immediate).  */
   CORE_INSN ("and", 0x12000000, 0x7f800000, log_imm, 0, OP3 (Rd_SP, Rn, LIMM), QL_R2NIL, F_HAS_ALIAS | F_SF),
   CORE_INSN ("bic", 0x12000000, 0x7f800000, log_imm, OP_BIC, OP3 (Rd_SP, Rn, LIMM), QL_R2NIL, F_ALIAS | F_PSEUDO | F_SF),
