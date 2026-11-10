@@ -94,5 +94,9 @@ Disassembly of section .text:
 .*:	eb 13 20 de 00 0d [	 ]*sllg	%r1,%r3,222\(%r2\)
 # RSI
  *([\da-f]+):	84 13 00 00 [	 ]*brxh	%r1,%r3,\1 <foo\+0x\1>
+# RSL-a
+.*:	eb a0 10 6f 00 c0 [	 ]*tp	111\(11,%r1\)
+# RSL-b
+.*:	ed 15 20 de 13 ae [	 ]*cdpt	%f1,222\(22,%r2\),3
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7
