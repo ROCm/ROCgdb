@@ -623,8 +623,9 @@ rocm_solib_ops::bfd_iovec_open (bfd *abfd)
    architecture is not supported by amd-dbgapi are skipped.
 
    Throw an error mentioning FILENAME if the agent list cannot be
-   enumerated, or if an agent architecture query fails for a reason other
-   than the architecture not being supported.  */
+   enumerated, if an agent architecture query fails for a reason other
+   than the architecture not being supported, or if the architecture
+   compatibility query fails.  */
 
 static bool
 validate_code_object_has_active_agent
@@ -663,7 +664,20 @@ validate_code_object_has_active_agent
 	error (_("'%s': Failed to query agent architecture: %s"),
 	       filename, get_status_string (status));
 
-      if (agent_arch == architecture_id)
+      /* Check if code object is compatible with agent architecture.
+	 This also accepts generic code objects that can run on several
+	 specific architectures.  */
+      amd_dbgapi_architecture_compatibility_state_t compat_state
+	= AMD_DBGAPI_ARCHITECTURE_INCOMPATIBLE;
+      status = amd_dbgapi_architecture_is_compatible (architecture_id,
+						       agent_arch,
+						       &compat_state);
+
+      if (status != AMD_DBGAPI_STATUS_SUCCESS)
+	error (_("'%s': Failed to query architecture compatibility: %s"),
+	       filename, get_status_string (status));
+
+      if (compat_state == AMD_DBGAPI_ARCHITECTURE_COMPATIBLE)
 	return true;
     }
 
