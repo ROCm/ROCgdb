@@ -428,6 +428,7 @@ unused_s390_operands_static_asserts (void)
 #define INSTR_RSL_LRDRU    6, { R_32,D_20,L8_8,B_16,U4_36,0 }    /* e.g. .insn rsl_b */
 #define INSTR_RSI_RRP      4, { R_8,R_12,J16_16,0,0,0 }          /* e.g. brxh  */
 #define INSTR_RSY_RRRD     6, { R_8,R_12,D20_20,B_16,0,0 }       /* e.g. stmy  */
+#define INSTR_RSY_RRRD2    6, { R_8,D20_20,B_16,R_12,0,0 }       /* e.g. .insn rsy_a */
 #define INSTR_RSY_RERERD   6, { RE_8,RE_12,D20_20,B_16,0,0 }     /* e.g. cdsy  */
 #define INSTR_RSY_RURD     6, { R_8,U4_12,D20_20,B_16,0,0 }      /* e.g. icmh  */
 #define INSTR_RSY_RURD2    6, { R_8,D20_20,B_16,U4_12,0,0 }      /* e.g. loc   */
@@ -681,6 +682,7 @@ unused_s390_operands_static_asserts (void)
 #define MASK_RS_RURD      { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RS_RURD2     { 0xff, 0x00, 0x00, 0x00, 0x00, 0x00 }
 #define MASK_RSY_RRRD     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
+#define MASK_RSY_RRRD2    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RSY_RERERD   { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RSY_RURD     { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
 #define MASK_RSY_RURD2    { 0xff, 0x00, 0x00, 0x00, 0x00, 0xff }
@@ -839,6 +841,8 @@ const struct s390_opcode s390_opformats[] =
   { "rsl_a",OP8(0x00LL), MASK_RSL_R0RD,	   INSTR_RSL_R0RD,    3,  0, 256, NULL },
   { "rsl_b",OP8(0x00LL), MASK_RSL_LRDRU,   INSTR_RSL_LRDRU,   2,  8, 256, NULL },
   { "rsy",  OP8(0x00LL), MASK_RSY_RRRD,	   INSTR_RSY_RRRD,    3,  3, 256, NULL },
+  { "rsy_a",OP8(0x00LL), MASK_RSY_RRRD2,   INSTR_RSY_RRRD2,   3,  3, 256, NULL },
+  { "rsy_b",OP8(0x00LL), MASK_RSY_RURD2,   INSTR_RSY_RURD2,   2,  3, 256, NULL },
   { "rx",   OP8(0x00LL), MASK_RX_RRRD,	   INSTR_RX_RRRD,     3,  0, 256, NULL },
   { "rxe",  OP8(0x00LL), MASK_RXE_RRRD,	   INSTR_RXE_RRRD,    3,  0, 256, NULL },
   { "rxf",  OP8(0x00LL), MASK_RXF_RRRDR,   INSTR_RXF_RRRDR,   3,  0, 256, NULL },

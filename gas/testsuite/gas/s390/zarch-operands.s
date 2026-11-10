@@ -48,4 +48,7 @@ foo:
 	.insn rsi,0x84000000,%r1,%r3,.			# brxh %r1,%r3,.
 	.insn rsl_a,0xeb00000000c0,111(11,%r1)		# tp 111(11,%r1)
 	.insn rsl_b,0xed00000000ae,%f1,222(22,%r2),3	# cdpt %f1,222(22,%r2),3
+	.insn rsy,0xeb000000001d,%r1,%r3,22222(%r2)	# rll %r1,%r3,22222(%r2)
+	.insn rsy_a,0xeb000000001d,%r1,-1(%r2),%r3	# rll %r1,%r3,-1(%r2)
+	.insn rsy_b,0xeb0000000081,%r1,-1(%r2),3	# icmy %r1,3,-1(%r2)
 	.insn ssf,0xc80000000000,1(%r2),3(%r4),%r5

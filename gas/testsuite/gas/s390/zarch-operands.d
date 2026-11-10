@@ -98,5 +98,11 @@ Disassembly of section .text:
 .*:	eb a0 10 6f 00 c0 [	 ]*tp	111\(11,%r1\)
 # RSL-b
 .*:	ed 15 20 de 13 ae [	 ]*cdpt	%f1,222\(22,%r2\),3
+# RSY
+.*:	eb 13 26 ce 05 1d [	 ]*rll	%r1,%r3,22222\(%r2\)
+# RSY-a
+.*:	eb 13 2f ff ff 1d [	 ]*rll	%r1,%r3,-1\(%r2\)
+# RSY-b
+.*:	eb 13 2f ff ff 81 [	 ]*icmy	%r1,3,-1\(%r2\)
 .*:	c8 50 20 01 40 03 [	 ]*mvcos	1\(%r2\),3\(%r4\),%r5
 #?.*:	07 07 [	 ]*nopr	%r7
