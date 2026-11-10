@@ -10,6 +10,7 @@ Disassembly of section .text:
 .*:	01 01 [	 ]*pr
 # I
 .*:	0a 01 [	 ]*svc	1
+# RI
 .*:	a7 1a 80 01 [	 ]*ahi	%r1,-32767
 .*:	18 12 [	 ]*lr	%r1,%r2
 .*:	b2 5e 00 12 [	 ]*srst	%r1,%r2

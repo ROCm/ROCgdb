@@ -16,6 +16,16 @@ Disassembly of section .text:
  *([\da-f]+):	c5 10 00 00 00 00 [	 ]*bprp	1,\1 <foo\+0x\1>,\1 <foo\+0x\1>
 .*: R_390_PC12DBL	test_mii\+0x1
 .*: R_390_PC24DBL	test_mii\+0x3
+# RI
+.*:	a7 1a 00 01 [	 ]*ahi	%r1,1
+# RI-a
+.*:	a7 1a ff ff [	 ]*ahi	%r1,-1
+# RI-b
+ *([\da-f]+):	a7 16 00 00 [	 ]*brct	%r1,\1 <foo\+0x\1>
+.*: R_390_PC16DBL	test_ri_b\+0x2
+# RI-c
+ *([\da-f]+):	a7 f4 00 00 [	 ]*j	\1 <foo\+0x\1>
+.*: R_390_PC16DBL	test_ri_c\+0x2
  *([\da-f]+):	ec 12 00 00 00 45 [	 ]*brxlg	%r1,%r2,\1 <foo\+0x\1>
 .*: R_390_PC16DBL	test_rie\+0x2
  *([\da-f]+):	c0 e5 00 00 00 00 [	 ]*brasl	%r14,\1 <foo\+0x\1>
