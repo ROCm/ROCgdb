@@ -45,6 +45,7 @@
 #include <vector>
 #include "completer.h"
 #include "gdbsupport/cleanups.h"
+#include "gdbsupport/ranges.h"
 #include "gdbsupport/selftest.h"
 #include "gdbsupport/span.h"
 #include "cli/cli-style.h"

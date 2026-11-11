@@ -29,6 +29,7 @@
 #include "read.h"
 #include "stringify.h"
 #include "extract-store-integer.h"
+#include "gdbsupport/ranges.h"
 #include "gdbsupport/thread-pool.h"
 #include "cli/cli-style.h"
 

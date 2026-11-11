@@ -20,8 +20,35 @@
 
 #include <algorithm>
 
+/* The 'equal' wrapper here only works on spans, so include this.
+   When moving to C++20, this will be removed -- in fact this entire
+   file should be removed.  */
+#include "gdbsupport/span.h"
+
 namespace gdb {
 namespace ranges {
+
+/* Compare LHS and RHS for (deep) equality.  That is, whether LHS and
+   RHS have the same sizes, and whether each pair of elements of LHS
+   and RHS at the same position compares equal.  */
+
+template <typename T>
+bool
+equal (const gdb::span<T> &lhs, const gdb::span<T> &rhs)
+{
+#if __cplusplus >= 202002L
+  return std::ranges::equal (lhs, rhs);
+#else
+  if (lhs.size () != rhs.size ())
+    return false;
+
+  for (size_t i = 0; i < lhs.size (); i++)
+    if (!(lhs[i] == rhs[i]))
+      return false;
+
+  return true;
+#endif
+}
 
 /* Replace all occurrences of a value in the provided range.
 

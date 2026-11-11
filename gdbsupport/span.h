@@ -69,20 +69,6 @@ namespace gdb {
 /* gdb::span.  */
 template<typename T> using span = std::span<T>;
 
-namespace ranges
-{
-
-/* gdb::ranges::equal.  */
-
-template<typename R1, typename R2>
-constexpr bool
-equal (R1 &&r1, R2 &&r2)
-{
-  return std::ranges::equal (r1, r2);
-}
-
-} /* namespace ranges */
-
 } /* namespace gdb */
 
 #else /* __cplusplus < 202002L */
@@ -223,29 +209,6 @@ private:
   T *m_array;
   size_type m_size;
 };
-
-namespace ranges
-{
-
-/* Compare LHS and RHS for (deep) equality.  That is, whether LHS and
-   RHS have the same sizes, and whether each pair of elements of LHS
-   and RHS at the same position compares equal.  */
-
-template <typename T>
-bool
-equal (const gdb::span<T> &lhs, const gdb::span<T> &rhs)
-{
-  if (lhs.size () != rhs.size ())
-    return false;
-
-  for (size_t i = 0; i < lhs.size (); i++)
-    if (!(lhs[i] == rhs[i]))
-      return false;
-
-  return true;
-}
-
-} /* namespace ranges */
 
 } /* namespace gdb */
 
