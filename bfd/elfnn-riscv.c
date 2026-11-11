@@ -5760,7 +5760,9 @@ typedef struct riscv_relax_pass
 
   /* Decide how to relax RELOCS[*I].  Set *FUNC to the relax function, or
      leave it NULL to skip the reloc.  May step *I over a paired
-     R_RISCV_RELAX.  Return false on error.  */
+     R_RISCV_RELAX.  Return false on error.  If SELECT itself is NULL,
+     nothing is relaxed in this pass so that section addresses are
+     recalculated first.  */
   bool (*select) (bfd *, asection *, struct bfd_link_info *,
 		  Elf_Internal_Rela *, unsigned int *, relax_func_t *);
 
@@ -5855,6 +5857,11 @@ riscv_relax_select_align (bfd *abfd ATTRIBUTE_UNUSED,
   return true;
 }
 
+/* No-op pass to recalculate output section VMAs (e.g. after .eh_frame
+   edits or SIZEOF_HEADERS changes) before shortening instructions.  */
+static const riscv_relax_pass riscv_relax_pass_layout =
+  { "layout", false, NULL, NULL, NULL };
+
 static const riscv_relax_pass riscv_relax_pass_shorten =
   { "shorten", false, riscv_relax_select_shorten, NULL, NULL };
 
@@ -5894,6 +5901,7 @@ bfd_elfNN_riscv_init_relax_passes (struct bfd_link_info *info)
   htab->num_relax_passes = 0;
   htab->cur_relax_pass = -1;
 
+  riscv_add_relax_pass (htab, &riscv_relax_pass_layout);
   riscv_add_relax_pass (htab, &riscv_relax_pass_shorten);
   riscv_add_relax_pass (htab, &riscv_relax_pass_align);
 
@@ -5932,6 +5940,7 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
   pass = htab->relax_passes[info->relax_pass];
 
   if (bfd_link_relocatable (info)
+      || pass->select == NULL
       || sec->sec_flg0
       || sec->reloc_count == 0
       || (sec->flags & SEC_RELOC) == 0

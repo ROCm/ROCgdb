@@ -286,6 +286,8 @@ if [istarget "riscv*-*-*"] {
 
     run_dump_test "pie-bind-locally-rv32"
     run_dump_test "pie-bind-locally-rv64"
+    run_dump_test "pr34979-rv32"
+    run_dump_test "pr34979-rv64"
 
     run_dump_test "discard-exe"
     run_dump_test "discard-pie"
