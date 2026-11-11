@@ -2720,6 +2720,26 @@ set_process_lds_exception (amd_dbgapi_inferior_info &info)
 			info.lds_exception);
 }
 
+/* Handle inferior PID assignment for stand alone GPU core dumps.  */
+
+static void
+amd_dbgapi_inferior_appeared (inferior *inf)
+{
+  bfd *core_bfd = get_inferior_core_bfd (inf);
+
+  /* Nothing to do if not a core dump nor stand alone GPU core dump.  */
+  if (core_bfd == nullptr || bfd_core_file_pid (core_bfd) != 0)
+    return;
+
+  /* Replace PID CORELOW_PID with core dump target PID in note.  */
+  asection *sec = bfd_get_section_by_name (core_bfd, ".note.amdgpu.core_target_pid");
+  int pid = 0;
+  if (sec != nullptr
+      && bfd_section_size (sec) >= sizeof (pid)
+      && bfd_get_section_contents (core_bfd, sec, &pid, 0, sizeof (pid)))
+    inf->pid = pid;
+}
+
 /* Handle extra initialisation after we have attached to a AMDGPU corefile.  */
 
 static void
@@ -5493,6 +5513,7 @@ INIT_GDB_FILE (amd_dbgapi_target)
   gdb::observers::inferior_exit.attach (amd_dbgapi_inferior_exited, "amd-dbgapi");
   gdb::observers::inferior_pre_detach.attach (amd_dbgapi_inferior_pre_detach, "amd-dbgapi");
   gdb::observers::thread_deleted.attach (amd_dbgapi_thread_deleted, "amd-dbgapi");
+  gdb::observers::inferior_appeared.attach (amd_dbgapi_inferior_appeared, "amd-dbgapi");
   gdb::observers::core_opened.attach (amd_dbgapi_finalize_core_attach, "amd-dbgapi");
 
   create_internalvar_type_lazy ("_wave_id", &amd_dbgapi_wave_id_funcs, NULL);

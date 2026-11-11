@@ -11180,6 +11180,10 @@ elfcore_grok_amdgpu_note (bfd *abfd, Elf_Internal_Note *note)
       return elfcore_make_note_pseudosection (abfd,
 					      ".note.amdgpu.core_state",
 					      note);
+    case NT_AMDGPU_CORE_TARGET_PID:
+      return elfcore_make_note_pseudosection (abfd,
+					      ".note.amdgpu.core_target_pid",
+					      note);
     default:
       return true;
     }

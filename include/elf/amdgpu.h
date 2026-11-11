@@ -141,6 +141,7 @@
 
 #define NT_AMDGPU_METADATA                32
 #define NT_AMDGPU_CORE_STATE              33
+#define NT_AMDGPU_CORE_TARGET_PID         34
 
 /* Relocations.
 

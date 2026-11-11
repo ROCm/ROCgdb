@@ -257,6 +257,19 @@ gather_load_segments (bfd *ibfd, Elf_Internal_Phdr *phdr,
 	  return 0;
 	}
 
+      /* Check if new segment is included in current segment and skip
+	 to avoid duplication.  */
+      if (head->iphdr->p_filesz > 0
+	  && phdr_contains (head->iphdr, phdr->p_vaddr)
+	  && phdr_contains (head->iphdr, phdr->p_vaddr + phdr->p_memsz - 1))
+	{
+	  verbose_printf ("  Skipping segment at %#lx: included by current "
+			  "segment at %#lx from %s\n",
+			  phdr->p_vaddr, head->iphdr->p_vaddr,
+			  bfd_get_filename (head->ibfd));
+	  return 0;
+	}
+
       if (phdr_contains (head->iphdr, phdr->p_vaddr)
 	  || phdr_contains (head->iphdr, phdr->p_vaddr + phdr->p_memsz - 1)
 	  || phdr_contains (phdr, head->iphdr->p_vaddr)
